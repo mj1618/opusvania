@@ -142,3 +142,32 @@ Hollow Knight and Ori keep the player visibly behind centre while running; ours 
 - Trauma² with `shakeMaxPx 24` makes anything under trauma 0.45 invisible (< 5 px).
 - `__game.input()` queues persist across `load()`; call `clearInput()` before every scripted probe.
 - Golden tape inputs can be replayed with `input(tape.inputs)` after `load(room)`; abilities come from the room.
+
+## Status after fix pass
+
+Fix pass on 2026-09-28 (commits `L2 fix: ...`). Each fix has a regression test that fails on the playtested build and passes now. Clips are in `clips/L2-fix/` (gitignored): `walljump-chain*` (gym-07, a wall jump 1 frame after every contact; 4 clean hops up the shaft, where the playtest build managed 1), `landing-juice*` + `landing-juice-frames.png` (gym-09 hard landing), `death-pop*` + `death-pop-frames.png`, `camera-zones*` + `camera-zone-exit-frames.png` (gym-14), `live-gym07-wallslide.png` (running game).
+
+**Fixed**
+
+- **P0 wall retention.** Retention is cancelled when `vx` has the opposite sign, and `retainTimer` is cleared by every jump (incl. wall jump, via `jumpCommon`) and dash (`src/sim/player/player.ts`). The playtester's `L+J1 L+J5 L4 R+J10 R30` now kicks off the wall and crosses to the pillar in all presets, where it used to snap back to x = 64 (checked in the running game). Tests: `tests/unit/movement/wall-retention.test.ts` (wall jump on frames 0..4 after contact = a late wall jump, for L+J / J / R+J × opus / celeste / hk; holding away never oscillates; no ground reversal hitch). `VRetain` (the dash-corner use) still passes.
+- **P1 camera zone cut.** The blend offset is now measured and applied on the *clamped* target (`place()` clamps, adds the offset, then clamps again), and the blend moves at most `zoneBlendMaxPx` 32 px/frame (`zoneLerp` 0.08 → 0.10). The gym-14 lock-zone exit went from 392/74/238 px steps to a steady 30 px/frame pan; entering the lock zone is a 31 px/frame pan instead of 72. The lock zone is now 28 tiles wide (clampY zone widened to meet it), so the body stays on screen (right edge at most 1836 of 1920). Tests: C9 (≤ 40 px/frame for 12 frames after each zone change on the gym-14 tape), C9b (dash out of the lock zone).
+- **P1 juice.** Trauma: hard land 0.3 → 0.55 (7 px), death 0.5 → 0.8 (15 px). Landing dust: ~2.5× speed, bigger, more lift, 10 particles on a big landing, plus 12 big particles and 2 floor streaks on a hard landing. Death: 2-frame white body flash, 6-frame red swell (×1.35), then a 24-particle pop, plus an 8-frame white screen flash. Wall slide: a 6–9 px chip every 2 frames drifting down. Every number is in `fxTuning` (`src/render/fx.ts`) or `cameraTuning`. Tests: `tests/unit/fx.test.ts`.
+- **P2 look-ahead.** `lookaheadX` 200, `lerpX` 0.15: effective lead at full run 146 px (was 74), stop drift 64 px (was 96). Horizontal follow is capped at max(24, 1.25·|vx|) px/frame, so the 400 px reversal swing pans at 24 px/frame instead of starting at 60 (dashes still keep up). Test: C10.
+- **P2 wall slide.** Cap ramps from 2.5 px/f by 0.25/frame to 6.5 px/f (new `wall.slideStartMax`, `wall.slideRamp`; per-slide counter `player.slideT`, state version 3). A 17-tile slide takes under 200 frames (was ~270). `celeste` now uses Celeste's real ramp (20 → 160 px/s over 1.2 s); `hk` keeps a constant 8.53 px/f (HK `WALLSLIDE_SPEED`, no ramp). Tests: `tests/unit/movement/l2-tuning.test.ts`.
+- **P2 celeste stop.** `groundDecel` 8/9, `airDecel` (8/9)·0.65 (`RunReduce`); turning still uses `RunAccel`. Stop from full run: 14 frames / 75 px (was 6 f / 27 px). `hk` checked: its instant accel/decel/turn match HK's direct velocity set; nothing changed.
+- **P3 look up/down.** `lookDelay` 12, `lookLerp` 0.12: 90 % of the offset within 32 frames of the press (was ~57). C5 asserts it.
+- **P3 gym-01** has 7 air rows (a full jump no longer bonks); **gym-04** stepping stones are 2 wide; **gym-09** `G` moved beside the landing spot so the golden route lands hard first. Tests: `tests/unit/gym-fixes.test.ts`.
+- **P3 readability.** Every exposed solid face gets an edge (sides/bottoms 4 px in a dimmer slate, tops 6 px as before); one-ways get a downward chevron.
+- **P3 docs.** Neutral wall jump and the "double jump right after takeoff is lower than one full jump" behaviour are documented in movement-spec §2.5/§2.6 as intended.
+- **Blind A/B** moved from B to the debug key F3 (B is reserved for Levy in L3); e2e test in `tests/e2e/boot.spec.ts`.
+
+Golden tapes: gym-04, 07, 07-g, 08, 09, 13 and 13.celeste no longer reached their goals (the old bot routes leaned on the retention glitch or the old layouts) and were re-solved with the bot (`npm run tape -- update --resolve`). All 18 reach their goals with 0 deaths; all 23 bot claims PASS (`docs/reports/L2-bot.md`). Feel report: only `celeste` stop distance changed (`docs/reports/L2-feel.md`).
+
+**Deferred**
+
+- gym-03 "teach" variant with a 1-tile-lower spike band (the hold 11 / 12 cliff stays as a test).
+- gym-06/07 spawn apron (feet at 92–94 % of the view): cosmetic.
+- Lighter solid colour (only edges were added); one-way affordance beyond the chevron.
+- Speed-scaled look-ahead (`feet.x + focusDir·lookahead + vx·8`): not needed after the lerp/look-ahead change; revisit with a human A/B.
+- Dash-jump cancel with no direction held decays to 0 (noted, unchanged).
+- A second human-style playtest of wall-jump chains, as recommended above.

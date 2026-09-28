@@ -1,10 +1,12 @@
-<!-- `npm run feel:report -- --all-presets` on main after the L2 merge. Definitions: memory/feel-report.md. -->
+<!-- `npm run feel:report -- --all-presets` after the L2 fix pass. Definitions: memory/feel-report.md. -->
 
 # Feel report (2026-09-28)
 
-Build 08ad71347d, sim 9020d2324b. Envelope = [min, max] of Celeste and Hollow Knight (movement-spec §3.4); **OUT** = outside by more than 15%, near = outside by up to 15%.
+Build a4195655b8-dirty, sim 0a9090a59b. Envelope = [min, max] of Celeste and Hollow Knight (movement-spec §3.4); **OUT** = outside by more than 15%, near = outside by up to 15%.
 
-## Preset `opus` (70 ms)
+> **L2 fix pass:** the only metric that moved is `celeste` stop distance, 27 → 75 px: the preset now stops at Celeste's `RunReduce` (400 px/s², 13.5 f; real Celeste stops in ~81 px at our scale) instead of `RunAccel`. Wall slide (now a 2.5 → 6.5 px/f ramp on `opus`) and the camera are not measured by this tool; see tests/unit/movement/l2-tuning.test.ts and tests/unit/camera.test.ts (C9, C10).
+
+## Preset `opus` (61 ms)
 
 | Metric | Value | Celeste | HK | spec opus | Verdict |
 |---|---|---|---|---|---|
@@ -36,7 +38,7 @@ Other: stop distance 10 px, turn-around 5 f, full jump 276 px in 26 f, tap jump 
 
 **Flags:** Jump buffer.
 
-## Preset `celeste` (47 ms)
+## Preset `celeste` (41 ms)
 
 | Metric | Value | Celeste | HK | spec opus | Verdict |
 |---|---|---|---|---|---|
@@ -57,7 +59,7 @@ Other: stop distance 10 px, turn-around 5 f, full jump 276 px in 26 f, tap jump 
 | Coyote time (ms) | 100 | 100 | 40 | 100 | in |
 | Jump buffer (ms) | 83 | 80 | 40 | 100 | near (+4%) |
 
-Other: stop distance 27 px, turn-around 11 f, full jump 228 px in 21 f, tap jump 56 px, player height 80 px.
+Other: stop distance 75 px, turn-around 11 f, full jump 228 px in 21 f, tap jump 56 px, player height 80 px.
 
 **Forgiveness** (press-timing windows while running; a wider window = more forgiving):
 
@@ -68,7 +70,7 @@ Other: stop distance 27 px, turn-around 11 f, full jump 228 px in 21 f, tap jump
 
 **Flags:** Frames to full run speed.
 
-## Preset `hk` (76 ms)
+## Preset `hk` (60 ms)
 
 | Metric | Value | Celeste | HK | spec opus | Verdict |
 |---|---|---|---|---|---|

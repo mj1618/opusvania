@@ -18,7 +18,14 @@ Spec: `docs/design/movement-spec.md`. Code: `src/sim/player/player.ts` (controll
 - **Landing preference** uses the jump-buffer window, so jumpBuffer off also disables it (V19 is owned
   by both assists in the isolation matrix).
 - **Wall speed retention** stores vx only on the first block (Celeste); re-storing every blocked frame
-  would retain the tiny re-accelerated vx instead.
+  would retain the tiny re-accelerated vx instead. It **must** be cancelled by opposite-sign vx and
+  cleared by jumps/wall jumps/dashes (`jumpCommon`, `startDash`): the L2 build did neither, so a wall
+  jump within 4 f of contact was undone next frame and the player glued to walls (playtest P0). Old
+  bot tapes had learned routes around the glitch and had to be re-solved.
+- **Wall slide cap ramps** (L2 fix): `min(slideMax, slideStartMax + slideRamp·slideT)`, `slideT` =
+  frames in the current slide (reset on slide start). opus 2.5 → 6.5 (+0.25/f); celeste is real
+  Celeste (20 → 160 px/s over 72 f); hk constant 8.53. The `celeste` preset stops with `RunReduce`
+  (groundDecel 8/9), accelerates/turns with `RunAccel` (20/9).
 - **Profiles** (weight classes next loop): `tuning.profiles[name] = {shape?, set?, scale?}` with
   `group.key` paths; `state.player.profile` selects one; `setProfile(p, name, events)` switches it from
   sim code (emits `profileChange`); debug: `__game.profile(name)`. Profiles live in tuning, so replays

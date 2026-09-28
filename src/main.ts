@@ -14,8 +14,8 @@ import { GYM_ROOMS } from './sim/world/rooms';
 /**
  * Boot. URL params: ?seed=<n> &room=<id> &spawn=<name> &preset=<opus|celeste|hk>
  * &manual (start paused; drive via __game.step).
- * Keys: 1-9 / 0 load gym-01..10, Shift+1-4 gym-11..14, H hub, B blind A/B swap, F1/F2 hitboxes,
- * ` tuning panel.
+ * Keys: 1-9 / 0 load gym-01..10, Shift+1-4 gym-11..14, H hub, F1/F2 hitboxes, F3 blind A/B swap
+ * (debug-only; B is reserved for gameplay), ` tuning panel.
  */
 async function boot(): Promise<void> {
   const params = new URLSearchParams(location.search);
@@ -72,8 +72,9 @@ async function boot(): Promise<void> {
     else if (e.code === 'F1' || e.code === 'F2') {
       overlay.toggle();
       e.preventDefault();
-    } else if (e.code === 'KeyB' && !e.repeat) {
-      renderer.hudExtra = `A/B slot ${panel.swapAB()}`;
+    } else if (e.code === 'F3') {
+      e.preventDefault();
+      if (!e.repeat) renderer.hudExtra = `A/B slot ${panel.swapAB()}`;
     } else if (e.code === 'KeyH' && !e.repeat) game.load('hub');
     else if (/^Digit\d$/.test(e.code) && !e.repeat) {
       const d = Number(e.code.slice(5));

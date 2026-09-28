@@ -29,7 +29,7 @@ Options: `--budget` child nodes (300k), `--k` frames per macro (4), `--weight` (
 - **Deterministic:** heap ties break on insertion order; same inputs give the same tape and node counts.
 - Speed, single-threaded: Phase 0 controller ~1.8M sim frames/s. The spec controller steps ~200k
   frames/s in Node (clone ~1M/s and key ~5M/s are not the bottleneck; the step is). L2 merged tree:
-  all 23 gym claims PASS, `bot:all` ~27 s total; found paths 5 ms–1.3 s (docs/reports/L2-bot.md).
+  all 23 gym claims PASS, `bot:all` ~23 s total (after the L2 fix pass); found paths 5 ms–1.3 s (docs/reports/L2-bot.md).
 - `k=4` means jump holds come in multiples of 4 frames; precise short hops may need `--k 2`.
 - Solutions are not human-like (hopping, jitter): use them for reachability and golden tapes, not feel.
   Clip them with `npm run clip -- --tape <file> --trail` to see the route.

@@ -130,7 +130,7 @@ Why not Hollow Knight's instant velocity?
 | **Head-bump corner correction** | `moveY` blocked while `vy < 0` | Try horizontal shifts s = 1…`HEAD_CORRECT_PX`, nearest first. When `vx ≠ 0`, only in the `vx` direction; when `vx = 0`, both, with ties going toward facing. Take the first shift where `box(x±s, y−1)` is free, apply it and keep rising. Otherwise **bonk**: `vy = 0`, emit `headBump`. | 20 px (half the hitbox width; Celeste uses 4 of 8 = 50%) |
 | **Ledge pop-up** (Hollow Knight's `CheckForBump`) | Airborne, `moveX` blocked, and the blocking tile's top is ≤ `LEDGE_POP_PX` above the feet | Raise the actor by that amount if the space is free, set `vy = min(vy, 0)` and continue the horizontal move. Emit `cornerCorrect{kind:'ledge'}`. | 16 px |
 | **Dash corner correction** | During DASH, `moveX` blocked | Try vertical shifts ±1…`DASH_CORRECT_PX`, nearest first, up before down. | 24 px |
-| **Wall speed retention** | `vx` zeroed by a wall | If the wall has gone within `WALL_RETAIN_FRAMES` (for example, a dash clipped a corner), restore the stored `vx`. | 4 f |
+| **Wall speed retention** | `vx` zeroed by a wall | If the wall has gone within `WALL_RETAIN_FRAMES` (for example, a dash clipped a corner), restore the stored `vx`. Cancelled when `vx` has the opposite sign, and by any jump, wall jump or dash (Celeste does the same; without it a wall jump within 4 f of contact was undone, L2 playtest P0). | 4 f |
 
 ### 2.5 Vertical model
 
@@ -150,16 +150,18 @@ else:
   if cut && releaseMode=='zero' && framesSinceJump ≥ minJumpFrames && vy < 0: vy = 0   // HK JumpReleased
 ```
 - **Double jump:** `vy = −DJ_V`, regardless of the current vy. Variable height applies. One per airtime, refilled on ground, on wall jump (toggle) and on pogo.
+  - By design, a double jump 2 frames after takeoff reaches *less* total height (256 px) than one full jump (276 px): the first jump's release cut applies before the fixed 192 px double jump. Hollow Knight behaves the same. Don't "fix" it.
 - **Landing preference** (assist): in the air with no coyote and no wall in range, a jump press with double jump available is **buffered instead** if the ground is within `vy × JUMP_BUFFER_FRAMES` px below. That way a slightly early press becomes a ground jump, not a wasted double jump.
 
 ### 2.6 Wall slide and wall jump
 
 - **Enter WALL_SLIDE:** airborne, `vy ≥ 0`, touching a wall (1 px probe) on side `d`, and `inputX == d`.
-- **While sliding:** `vy = vy > WALL_SLIDE_MAX ? max(vy − WALL_SLIDE_DECEL, WALL_SLIDE_MAX) : min(vy + G_UP*FALL_MULT, WALL_SLIDE_MAX)`. Facing is `−d`.
+- **While sliding:** `cap = min(WALL_SLIDE_MAX, WALL_SLIDE_START_MAX + WALL_SLIDE_RAMP·slideFrames)`; `vy = vy > cap ? max(vy − WALL_SLIDE_DECEL, cap) : min(vy + G_UP*FALL_MULT, cap)`. Facing is `−d`. The ramp (Celeste's `WallSlideStartMax`/`WallSlideTime`) keeps a quick touch-and-jump calm while a long slide gets out of the way.
   - Neutral input keeps the slide (Hollow Knight-like; less thumb strain).
   - Holding away for more than `WALL_STICK_FRAMES` detaches. During the stick, `vx = 0`.
 - **Exit:** grounded, lost contact, or unstuck. The air dash and double jump refill on **wall jump** (Hollow Knight's `DoWallJump`, toggle), not on slide contact.
 - **Wall jump** fires on a jump press when airborne, with no coyote, and a solid within `WALLJUMP_CHECK_PX` on side `d`. This is the grace distance: it works while not touching the wall.
+  - A **neutral** wall jump (no direction held) gets no force frames: vx 13.44 decays at `airDecel` to 0 in 11 f (~100 px), then drifts back. That is Celeste-style neutral climbing (+1 tile per hop on one wall), by design.
   - If both walls are in range, the nearer one wins; on a tie, the wall behind facing.
   - It sets `vx = −d·WALLJUMP_VX` and `vy = −JUMP_V` (variable height applies).
   - If `inputX ≠ 0`, `forceDir = −d` for `WALLJUMP_FORCE_FRAMES` (Celeste semantics). A neutral wall jump has no force, which enables Celeste's neutral-jump climbing.
@@ -247,7 +249,7 @@ Every constant below lives here, and none is inline (CLAUDE.md). When an assist 
 | | `LEDGE_POP_PX` | 16 | | 0.25 tile |
 | | `DASH_CORRECT_PX` | 24 | | Celeste 4 px ×8 would be 32; reduced for the narrower body |
 | | `WALL_RETAIN_FRAMES` | 4 | | Celeste 0.06 s |
-| Wall | `WALL_SLIDE_MAX / WALL_SLIDE_DECEL` | 4.0 / 1.5 | 240 | 3.75 tiles/s; HK 8 u/s, Celeste 20→160 px/s ramp |
+| Wall | `WALL_SLIDE_START_MAX → WALL_SLIDE_MAX` (+`WALL_SLIDE_RAMP`/f) / `WALL_SLIDE_DECEL` | 2.5 → 6.5 (+0.25/f) / 1.5 | 150 → 390 | 6.1 tiles/s after 16 f (L2 fix pass; was a flat 4.0); HK 8 u/s, Celeste 20→160 px/s ramp |
 | | `WALL_STICK_FRAMES` | 5 | | HK `WALL_STICKY_STEPS` 3 (at 50 Hz) |
 | | `WALLJUMP_VX` | 13.44 | 806 | 1.4× run: Celeste 1.44×, HK 1.93× decaying |
 | | `WALLJUMP_FORCE_FRAMES` | 8 | | Celeste 0.16 s (10 f); HK lock 0.1–0.2 s |
@@ -271,17 +273,17 @@ Every constant below lives here, and none is inline (CLAUDE.md). When an assist 
 | sustainFrames / minJumpFrames / releaseMode | 0 / 0 / gravity×4 | 12 / 0 / 'gravity'×1 | 12 / 5 / 'zero' |
 | FALL_MULT, apex hang | 1.6, on | 1.0, \|vy\|<5.33 ×0.5 | 1.0, off |
 | MAX_RUN px/f | 9.6 | 12.0 | 8.853 |
-| Ground / air accel | 3 f / 4 f | 5.4 f / ×0.65 | instant / instant |
+| Ground / air accel | 3 f / 4 f | 5.4 f / ×0.65 (stop: `RunReduce`, 13.5 f) | instant / instant |
 | Coyote / buffer (f) | 6 / 6 | 6 / 5 | 2 / 2 (DJ and dash queue 12) |
 | Head / ledge correction | 20 / 16 | 32 / 0 | 0 / 16 |
-| Wall slide max px/f | 4.0 | 2.67 | 8.53 |
+| Wall slide cap px/f (start → max, ramp/f) | 2.5 → 6.5, 0.25 | 2.67 → 21.33, 0.26 | 8.53 (no ramp) |
 | Wall-jump vx / force frames | 13.44 / 8 | 17.33 / 10 | 17.07 / 6 |
 | Dash (speed × frames, freeze, cooldown) | 24×12, 2, 24 | 32×9, 3, 12 | 21.33×15, 0, 36 |
 
 - **Celeste values** are from [`Player.cs`](https://github.com/NoelFB/Celeste/blob/master/Source/Player/Player.cs): `Gravity 900`, `JumpSpeed −105`, `VarJumpTime .2`, `HalfGravThreshold 40`, `MaxRun 90`, `RunAccel 1000`, `AirMult .65`, `JumpGraceTime .1`, `UpwardCornerCorrection 4`, `WallJumpCheckDist 3`, `WallJumpForceTime .16`, `WallJumpHSpeed 130`, `DashSpeed 240`, `DashTime .15`, `Freeze(.05)` on dash.
 - **Hollow Knight values** are from the decompiled `HeroController` ([constants dump](https://github.com/Jeffjewett27/AriadneAgent/blob/main/physics/hero_controller_constants.txt), [source](https://github.com/nickc01/WeaverCore/blob/master/Hollow%20Knight/HeroController.cs), physics at 50 Hz with `Physics2D.gravity.y = −60` ×0.79 per [hkrl](https://github.com/Ramora0/hkrl)): `RUN_SPEED 8.3`, `JUMP_SPEED 16.65`, `JUMP_STEPS 9`, `JUMP_STEPS_MIN 4`, release sets vy to 0, `MAX_FALL_VELOCITY 20`, `DASH_SPEED 20`, `DASH_TIME .25`, `DASH_COOLDOWN .6`, `WALLSLIDE_SPEED −8`, `WJ_KICKOFF_SPEED 16`, `LEDGE_BUFFER_STEPS 2`, `JUMP_QUEUE_STEPS 2`.
 - **The Hollow Knight preset is approximate:** its wall-jump kick decays linearly, and its double jump has a 3-step pause, and neither is modelled.
-- **Blind A/B:** the `B` key swaps between two preset slots chosen in Tweakpane. The HUD shows only "slot 1" or "slot 2", and the mapping is logged to the console for later reveal.
+- **Blind A/B:** the `F3` debug key (it was `B` until the L2 fix pass; L3 binds `B` to Levy) swaps between two preset slots chosen in Tweakpane. The HUD shows only "slot 1" or "slot 2", and the mapping is logged to the console for later reveal.
 
 ### 3.4 Reference feel envelope (computed with our integrator; used by `feel:report`, §7.5)
 
@@ -314,14 +316,14 @@ Based on [Keren, "Scroll Back"](https://www.gamedeveloper.com/design/scroll-back
 | Feature | Rule | Constants |
 |---|---|---|
 | Anchor | The player's feet sit at `ANCHOR_Y` of the view height; horizontally centred before look-ahead | `ANCHOR_Y 0.55` |
-| Horizontal: dual forward focus | `targetX = px + facingFocus·LOOKAHEAD_X`. The focus flips only after the player moves `FOCUS_SWITCH_PX` in the new direction. `x += (targetX−x)·LERP_X` (`LERP_X_DASH` while dashing). | 160 px (2.5 tiles), 48 px, 0.10, 0.18 |
+| Horizontal: dual forward focus | `targetX = px + facingFocus·LOOKAHEAD_X`. The focus flips only after the player moves `FOCUS_SWITCH_PX` in the new direction. `x += (targetX−x)·LERP_X` (`LERP_X_DASH` while dashing). | 200 px, 48 px, 0.15, 0.18 (effective lead ~136 px at full run; pan capped at max(24, 1.25·\|vx\|) px/f) |
 | Vertical: platform snapping | `targetY` updates only on landing, during a wall slide, or when the feet leave the window `[WIN_TOP, WIN_BOT]` of the view. `y += (targetY−y)·LERP_Y`. A full jump from the anchor takes the feet to 0.294, so it stays inside the window. | 0.25 / 0.72, 0.08 |
 | Fast-fall follow | When `vy > FALL_FOLLOW_VY`: `targetY = feet + FALL_LOOKAHEAD`, lerp `LERP_Y_FALL` | 12 px/f, 128 px, 0.22 |
-| Look up / down | Grounded, no x input, holding U or D for `LOOK_DELAY` frames → offset by `LOOK_UP` or `LOOK_DOWN`, eased; released → back | 24 f, 224 / 256 px, 0.06 |
+| Look up / down | Grounded, no x input, holding U or D for `LOOK_DELAY` frames → offset by `LOOK_UP` or `LOOK_DOWN`, eased; released → back | 12 f, 224 / 256 px, 0.12 |
 | Room bounds | Clamp after all offsets. If the room is smaller than the view on an axis, centre it. Shake is added **after** clamping, and rooms draw a 1-tile solid apron so shake never shows void. | |
-| Trauma shake | `trauma ∈ [0,1]`; offset = `SHAKE_MAX_PX·trauma²·noise(seed, t)`, using 1-D value noise from the **render RNG**; decays by `TRAUMA_DECAY` each frame. Sources: hard land 0.3, death 0.5, (Phase 2: hits). | 24 px, 18 Hz, 0.03/f |
+| Trauma shake | `trauma ∈ [0,1]`; offset = `SHAKE_MAX_PX·trauma²·noise(seed, t)`, using 1-D value noise from the **render RNG**; decays by `TRAUMA_DECAY` each frame. Sources: hard land 0.55, death 0.8, (Phase 2: hits). Below trauma ~0.45 the shake is under 5 px, i.e. invisible. | 24 px, 18 Hz, 0.03/f |
 | Dash kick | A directional impulse of `DASH_KICK_PX` in the dash direction, ×0.8 per frame (Celeste's `DirectionalShake`) | 10 px |
-| Camera zones | Room data holds `{rect (tiles), mode: 'lock' \| 'clampX' \| 'clampY' \| 'bounds', value?}`. When the player's centre is inside, it overrides the target (lock = fixed centre; clampX/Y = fix one axis; bounds = sub-bounds). The last zone entered wins. Blend with `ZONE_LERP`. | 0.08 |
+| Camera zones | Room data holds `{rect (tiles), mode: 'lock' \| 'clampX' \| 'clampY' \| 'bounds', value?}`. When the player's centre is inside, it overrides the target (lock = fixed centre; clampX/Y = fix one axis; bounds = sub-bounds). The last zone entered wins. Blend: the jump in (clamped) target decays by `ZONE_LERP`/frame, moving at most `ZONE_BLEND_MAX_PX`/frame; the offset is applied to the clamped target, then clamped again. | 0.10, 32 px |
 
 ---
 
@@ -340,8 +342,8 @@ The render RNG is seeded separately from the sim RNG (D8), so juice can never ch
 |---|---|
 | Greybox | Tiles are flat colours: solid is a slate colour, one-way a thin bar, spikes red triangles, orbs yellow circles. The player is a rounded rectangle, 40×80, with an "eye" dot on the facing side. The hitbox overlay toggles with F1. |
 | Squash & stretch (scale about the feet) | Jump (0.7, 1.3); double jump or wall jump (0.75, 1.25); land `s = min(vy/FAST_FALL_MAX, 1)` → (lerp 1→1.5, lerp 1→0.55); dash (1.35, 0.75); fast-fall stretch (0.8, 1.2); head bump (1.15, 0.85). Scale recovers toward 1 by 0.03 per frame. (Celeste: jump (.6, 1.4), land up to (1.6, .4), recovery 1.75/s.) |
-| Dust (v8 `ParticleContainer`, pooled) | Jump: 4 upward. Land: 8 if `vy ≥ MAX_FALL/2`, else 3. Turn-around skid: 3. Wall slide: 1 every 4 frames at the contact point. Double jump: a ring of 6. Dash: an afterimage every 3 frames (fades over 12 frames) plus 6 streaks. Death: 16 burst. |
-| Landing impact | "Hard land" when `fallPx ≥ 320` or `vy ≥ MAX_FALL`: trauma 0.3, a big dust puff and the heavy SFX. **No stun** (Hollow Knight's 0.8 s hard-landing lock is deliberately not copied). |
+| Dust (v8 `ParticleContainer`, pooled) | Values in `fxTuning` (src/render/fx.ts); raised ~2.5× after the L2 playtest. Jump: 6 upward. Land: 10 fast if `vy ≥ MAX_FALL/2`, else 5; hard land adds 12 big + 2 floor streaks. Turn-around skid: 4. Wall slide: a 6–9 px chip every 2 frames drifting down. Double jump: a ring of 8. Dash: an afterimage every 3 frames (fades over 12 frames) plus 6 streaks. Death: 2-frame white body flash, 6-frame swell, then a 24-particle pop, plus a brief white screen flash. |
+| Landing impact | "Hard land" when `fallPx ≥ 320` or `vy ≥ MAX_FALL`: trauma 0.55, a big dust puff and the heavy SFX. **No stun** (Hollow Knight's 0.8 s hard-landing lock is deliberately not copied). |
 | SFX ([ZzFX](https://github.com/KilledByAPixel/ZzFX), vendored as `src/audio/zzfx.ts`; definitions in `content/audio/sfx.json`) | jump (short rising square blip), double jump (two-note chirp, a fifth up), wall jump (noise-clicked blip), land-soft (low thump), land-hard (thump + noise + bitcrush), step (tick, pitch ±5%), wall-slide (looped filtered noise, gain ∝ vy), dash (downward noise sweep), head-bump (dull knock), pogo (bright ping), death (descending buzz), respawn (rising shimmer). Use `AudioContext({latencyHint:'interactive'})`, resumed on the first input. ZzFX randomness uses `Math.random`, which is fine because audio is outside the sim and clips are video only. |
 
 ---
@@ -379,10 +381,10 @@ Key reach numbers:
 
 | Room | Name | Abilities | Probes | Bot claims |
 |---|---|---|---|---|
-| gym-01 (60×7) | Run & stop | none | Accel, decel and skid (V01, V02 in situ); horizontal look-ahead and focus flip (C6, C7); footsteps. 1-tile bumps of width 1/2/3 need small hops. | G with: none |
+| gym-01 (60×9) | Run & stop | none | Accel, decel and skid (V01, V02 in situ); horizontal look-ahead and focus flip (C6, C7); footsteps. 1-tile bumps of width 1/2/3 need small hops. | G with: none |
 | gym-02 (40×14) | Jump heights | none | Ledges 2/3/4 tiles from the floor, with G on the 4-tile ledge (a 20 px margin, so ledge pop-up fires on sloppy approaches). `g` is on a **5-tile** pillar, 15 tiles from anything, and needs a double jump. | G with: none · g with: doubleJump · g without: doubleJump |
 | gym-03 (40×9) | Short hops | none | The ceiling spike hitbox is 288 px above the floor, so the head hits at a jump height ≥ 208: holds ≤ 10 f are safe and ≥ 12 f die. Floor spikes need ≥ 32 px of clearance across 88 px. Full jumps are punished. | G with: none · G without: variableJump (every jump is full, so it dies) |
-| gym-04 (48×10) | Coyote & buffer | none | Two **7-tile** pits (max flat is about 8.2), so there's a window-sweep target for coyote. Then stepping stones: 1-wide pillars 1 tile tall with 2-tile spike pits between them, a rhythm where buffered presses fire on landing. | G with: none · window(coyote on) ≥ window(off)+5 · buffer adds ≥ 4 f |
+| gym-04 (48×10) | Coyote & buffer | none | Two **7-tile** pits (max flat is about 8.2), so there's a window-sweep target for coyote. Then stepping stones: 2-wide pillars 1 tile tall with 2-tile spike pits between them (1-wide was B-side precision for a forgiveness room, L2 playtest), a rhythm where buffered presses fire on landing. | G with: none · window(coyote on) ≥ window(off)+5 · buffer adds ≥ 4 f |
 | gym-05 (30×16) | Corner lab | none | Three 1-tile slabs with **1-tile holes** (64 px against the 40 px body gives 24 px of slack). There are 3 tiles of headroom and a 4-tile climb to each next level, and the holes are offset so the approach is imprecise and head-bump correction fires. | G with: none · robustness(headCorrect on) > robustness(off) |
 | gym-06 (30×16) | One-ways | none | A one-way tower (+3 tiles per step, alternating sides) up to a bridge. The goal box is sealed by three **full-width** one-ways, so Down+Jump drop-through is required. | G with: none |
 | gym-07 (30×30) | Chimney | wallJump | A 4-wide chimney, 21 tiles tall (vertical camera follow, wall-slide particles). `g` sits on a lone 17-tile pillar, so single-wall climbing (neutral jump) is required. | G with: wallJump · G without: wallJump · g with: wallJump |
@@ -399,6 +401,8 @@ Key reach numbers:
 **gym-01: Run & stop**
 ```
 ############################################################
+#..........................................................#
+#..........................................................#
 #..........................................................#
 #..........................................................#
 #..........................................................#
@@ -446,9 +450,9 @@ Key reach numbers:
 #..............................................#
 #..............................................#
 #............................................G.#
-#.P...........R..........R......#..#..#..#..####
-######.......####.......####....#..#..#..#..####
-######^^^^^^^####^^^^^^^####^^^^#^^#^^#^^#^^####
+#.P...........R..........R......##..##..##..####
+######.......####.......####....##..##..##..####
+######^^^^^^^####^^^^^^^####^^^^##^^##^^##^^####
 ################################################
 ```
 
@@ -601,7 +605,7 @@ Key reach numbers:
 ##########..........##########
 ##########..........##########
 ##########..........##########
-##########.....G....##########
+##########.........G##########
 ##############################
 ##############################
 ```

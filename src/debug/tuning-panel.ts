@@ -29,7 +29,7 @@ export interface TuningPanelHooks {
  * Presets and assists switch live; shape edits re-derive the jump constants. "Copy JSON" copies
  * the current values so they can be written back into src/sim/tuning.ts.
  *
- * Blind A/B (spec §3.3): pick two presets for slots 1 and 2; the B key swaps between them and the
+ * Blind A/B (spec §3.3): pick two presets for slots 1 and 2; the F3 key swaps between them and the
  * HUD only shows the slot number (the mapping is logged to the console for later reveal).
  */
 export class TuningPanel {

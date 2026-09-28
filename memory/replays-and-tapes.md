@@ -33,7 +33,9 @@ __game.tape.record(); ...; __game.tape.stop({name, expect: {target: 'G'}})   # i
 npm run tape -- check [files]            # same checks as npm run check, readable output
 npm run tape -- update [--resolve]       # refresh goldens; --resolve re-solves broken tapes with the bot
 ```
-`npm run replays:update` = `tape update`. Cross-runtime (spec §7.3.3): `tests/e2e/movement.spec.ts` runs
+`npm run replays:update` = `tape update`. After a movement change, `tape update --resolve` re-solves
+only the tapes that stop reaching their target (seconds); check the re-solved routes still exercise what
+the room is for (e.g. the audio-router test needed its own wall-slide drive when no tape slid any more). Cross-runtime (spec §7.3.3): `tests/e2e/movement.spec.ts` runs
 every committed tape in Chrome via `tape.check` (no rendering) and compares hashes with Node;
 `tests/e2e/tools.spec.ts` covers browser-recorded tapes checked in Node and vice versa.
 `tests/unit/mirror.test.ts` (V22) also replays every tape's inputs mirrored in a mirrored room.

@@ -32,4 +32,6 @@ Options: `--seed` (1), `--pre` settle steps before recording (10), `--scale` of 
 - Without `--url` it starts its own Vite dev server on a free port (no need to run `npm run dev`).
 - Speed: ~150 frames in ~9s. Most of the cost is PNG encode + base64 transfer; lower `--scale` if slow.
 - Script syntax is the same as `__game.input()` (see debug-api.md).
+- `--keep-frames` PNGs are numbered from the first *recorded* frame, so file `N` = sim frame `N + pre`
+  (default pre 10; `--tape` clips with `--pre 0` line up). Read the burned-in `f123` label to be sure.
 - Thumbnails at 320px are too small for marker letters; use `--sheet events` (480px) or read full frames.

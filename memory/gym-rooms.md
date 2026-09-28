@@ -17,5 +17,10 @@
   pogos off spikes (spikes are pogo-able by design).
 - "Without" claims checked in L2 (not found within 200k expansions): 07 wallJump, 10 dash,
   11 doubleJump, 12 pogo, 13 wallJump.
+- L2 fix pass: gym-01 has 7 air rows (60×9; full jumps used to bonk), gym-04 stepping stones are
+  2 wide, gym-09 `G` sits beside the landing (a `G` in the fall line fires before the hard landing),
+  gym-14's lock zone is 28 tiles (one tile narrower than the view each side so the body never pokes
+  off-screen before release) and the clampY zone was widened to meet it.
+- gym-07: the spawn shaft is cols 1–5 and closed by the col-6 pillar; scripted probes jump left first.
 - gym-14 (camera lab) is laid out by us (spec gave a schematic): g sits 11 tiles above the start ledge
   so it is only in view with Look-Up; the spikes under the one-way ledge only with Look-Down.

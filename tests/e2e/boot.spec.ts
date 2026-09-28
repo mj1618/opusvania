@@ -36,6 +36,18 @@ test('boots, steps 60 frames via window.__game and reads state back', async ({ p
   expect(errors).toEqual([]);
 });
 
+test('blind A/B swap is on the debug key F3, not B (B is reserved for Levy)', async ({ page }) => {
+  const errors = await boot(page);
+  const current = () => page.evaluate(() => window.__game.preset().current);
+  expect(await current()).toBe('opus');
+  await page.keyboard.press('b');
+  expect(await current()).toBe('opus');
+  await page.keyboard.press('F3'); // slot 1 (opus)
+  await page.keyboard.press('F3'); // slot 2 (celeste)
+  expect(await current()).toBe('celeste');
+  expect(errors).toEqual([]);
+});
+
 test('renders with WebGL and screenshot() returns a PNG', async ({ page }) => {
   await boot(page);
   expect((await page.evaluate(() => window.__game.info())).renderer).toBe('webgl');
