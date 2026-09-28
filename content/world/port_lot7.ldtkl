@@ -1,0 +1,1007 @@
+{
+	"__header__": {
+		"fileType": "LDtk Project JSON",
+		"app": "LDtk",
+		"doc": "https://ldtk.io/json",
+		"schema": "https://ldtk.io/files/JSON_SCHEMA.json",
+		"appAuthor": "Sebastien 'deepnight' Benard",
+		"appVersion": "1.5.3",
+		"url": "https://ldtk.io"
+	},
+	"identifier": "port_lot7",
+	"iid": "36410238-b76c-5684-9d0b-9a15a2d5c7fa",
+	"uid": 131,
+	"worldX": 6400,
+	"worldY": 2560,
+	"worldDepth": 0,
+	"pxWid": 3072,
+	"pxHei": 1280,
+	"__bgColor": "#E8F0F8",
+	"bgColor": null,
+	"useAutoIdentifier": false,
+	"bgRelPath": null,
+	"bgPos": null,
+	"bgPivotX": 0.5,
+	"bgPivotY": 0.5,
+	"__smartColor": "#F3F7FB",
+	"__bgPos": null,
+	"fieldInstances": [
+		{
+			"__identifier": "name",
+			"__type": "String",
+			"__value": "Lot 7 (seize / levy)",
+			"__tile": null,
+			"defUid": 122,
+			"realEditorValues": [{"id":"V_String","params":["Lot 7 (seize / levy)"]}]
+		},
+		{
+			"__identifier": "abilities",
+			"__type": "Array<LocalEnum.Ability>",
+			"__value": ["seize","levy"],
+			"__tile": null,
+			"defUid": 123,
+			"realEditorValues": [{"id":"V_String","params":["seize"]},{"id":"V_String","params":["levy"]}]
+		},
+		{
+			"__identifier": "hazard",
+			"__type": "LocalEnum.Hazard",
+			"__value": "death",
+			"__tile": null,
+			"defUid": 124,
+			"realEditorValues": [{"id":"V_String","params":["death"]}]
+		},
+		{
+			"__identifier": "spawnGrace",
+			"__type": "Int",
+			"__value": 0,
+			"__tile": null,
+			"defUid": 125,
+			"realEditorValues": [{"id":"V_Int","params":[0]}]
+		},
+		{
+			"__identifier": "next",
+			"__type": "String",
+			"__value": "hub",
+			"__tile": null,
+			"defUid": 126,
+			"realEditorValues": [{"id":"V_String","params":["hub"]}]
+		},
+		{
+			"__identifier": "draft",
+			"__type": "Bool",
+			"__value": true,
+			"__tile": null,
+			"defUid": 127,
+			"realEditorValues": [{"id":"V_Bool","params":[true]}]
+		},
+		{
+			"__identifier": "claims",
+			"__type": "Multilines",
+			"__value": "{\"G\":{\"with\":[\"seize\",\"levy\"],\"without\":[\"seize\",\"levy\"],\"info\":true,\"budget\":1000000},\"rect:1536,512,64,256\":{\"with\":[\"seize\",\"levy\"],\"without\":[\"levy\"],\"info\":true,\"budget\":1000000}}",
+			"__tile": null,
+			"defUid": 128,
+			"realEditorValues": [
+				{
+					"id": "V_String",
+					"params": [
+						"{\"G\":{\"with\":[\"seize\",\"levy\"],\"without\":[\"seize\",\"levy\"],\"info\":true,\"budget\":1000000},\"rect:1536,512,64,256\":{\"with\":[\"seize\",\"levy\"],\"without\":[\"levy\"],\"info\":true,\"budget\":1000000}}"
+					]
+				}
+			]
+		},
+		{
+			"__identifier": "notes",
+			"__type": "Multilines",
+			"__value": "L3 brief §4.2. Seize the pink partition (H), spring up the 6-tile hall with a pink levy, seize the brown furnace (F1; F2 is optional bulk), then press the plate with a brown slab (route A) or by standing on it heavy (route B), and cut weight to clear the 3-tile exit step. The W strip is white static: it hums but can't be seized.",
+			"__tile": null,
+			"defUid": 129,
+			"realEditorValues": [
+				{
+					"id": "V_String",
+					"params": [
+						"L3 brief §4.2. Seize the pink partition (H), spring up the 6-tile hall with a pink levy, seize the brown furnace (F1; F2 is optional bulk), then press the plate with a brown slab (route A) or by standing on it heavy (route B), and cut weight to clear the 3-tile exit step. The W strip is white static: it hums but can't be seized."
+					]
+				}
+			]
+		}
+	],
+	"__neighbours": [],
+	"externalRelPath": null,
+	"layerInstances": [
+		{
+			"__identifier": "Entities",
+			"__type": "Entities",
+			"__cWid": 48,
+			"__cHei": 20,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "70c27df1-bfbc-5735-8156-6d4eafe9dced",
+			"levelId": 131,
+			"layerDefUid": 118,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [],
+			"autoLayerTiles": [],
+			"seed": 1000,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": [
+				{
+					"__identifier": "Source",
+					"__grid": [32,8],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 8448,
+					"__worldY": 3072,
+					"iid": "f166ae83-451a-5f3a-92bb-44dc591a480d",
+					"width": 128,
+					"height": 256,
+					"defUid": 73,
+					"px": [2048,512],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "furnace",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["furnace"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "brown",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["brown"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": "F",
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [{"id":"V_String","params":["F"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Gate",
+					"__grid": [40,8],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#8080FF",
+					"__worldX": 8960,
+					"__worldY": 3072,
+					"iid": "62c996da-0ff0-59b2-9bef-a5b6a7b99db5",
+					"width": 64,
+					"height": 256,
+					"defUid": 81,
+					"px": [2560,512],
+					"fieldInstances": [
+						{
+							"__identifier": "opensOn",
+							"__type": "LocalEnum.OpensOn",
+							"__value": "plate",
+							"__tile": null,
+							"defUid": 82,
+							"realEditorValues": [{"id":"V_String","params":["plate"]}]
+						},
+						{
+							"__identifier": "requires",
+							"__type": "Array<LocalEnum.Ability>",
+							"__value": ["seize"],
+							"__tile": null,
+							"defUid": 83,
+							"realEditorValues": [{"id":"V_String","params":["seize"]}]
+						},
+						{
+							"__identifier": "hold",
+							"__type": "LocalEnum.Hold",
+							"__value": "sealed",
+							"__tile": null,
+							"defUid": 84,
+							"realEditorValues": [{"id":"V_String","params":["sealed"]}]
+						},
+						{
+							"__identifier": "moves",
+							"__type": "Array<String>",
+							"__value": [],
+							"__tile": null,
+							"defUid": 85,
+							"realEditorValues": []
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": "D",
+							"__tile": null,
+							"defUid": 86,
+							"realEditorValues": [{"id":"V_String","params":["D"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Goal",
+					"__grid": [45,8],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#FFE040",
+					"__worldX": 9280,
+					"__worldY": 3072,
+					"iid": "9e84e010-ac9b-52e9-80fb-cb9c7c3673c5",
+					"width": 64,
+					"height": 64,
+					"defUid": 65,
+					"px": [2880,512],
+					"fieldInstances": [
+						{
+							"__identifier": "optional",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 66,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [27,10],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 8128,
+					"__worldY": 3200,
+					"iid": "4854c5ef-aecf-5ade-8146-305a12c9fdab",
+					"width": 128,
+					"height": 128,
+					"defUid": 73,
+					"px": [1728,640],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "furnace",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["furnace"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "brown",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["brown"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": "F",
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [{"id":"V_String","params":["F"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Plate",
+					"__grid": [36,12],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#A0A0B0",
+					"__worldX": 8704,
+					"__worldY": 3328,
+					"iid": "988026cb-7fab-5646-9e07-b470705bb0cf",
+					"width": 128,
+					"height": 64,
+					"defUid": 78,
+					"px": [2304,768],
+					"fieldInstances": [
+						{
+							"__identifier": "pressedBy",
+							"__type": "Array<LocalEnum.PressedBy>",
+							"__value": ["slab","heavy"],
+							"__tile": null,
+							"defUid": 79,
+							"realEditorValues": [{"id":"V_String","params":["slab"]},{"id":"V_String","params":["heavy"]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": "_",
+							"__tile": null,
+							"defUid": 80,
+							"realEditorValues": [{"id":"V_String","params":["_"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [10,14],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 7040,
+					"__worldY": 3456,
+					"iid": "434b8c15-d07a-5d89-bce6-010f2f8947c7",
+					"width": 128,
+					"height": 256,
+					"defUid": 73,
+					"px": [640,896],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "partition",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["partition"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "pink",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["pink"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": "H",
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [{"id":"V_String","params":["H"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Spawn",
+					"__grid": [2,17],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#3CE070",
+					"__worldX": 6528,
+					"__worldY": 3648,
+					"iid": "0443d4e0-6fc7-5ba7-97a6-f56a02a81569",
+					"width": 64,
+					"height": 64,
+					"defUid": 63,
+					"px": [128,1088],
+					"fieldInstances": []
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [5,18],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 6720,
+					"__worldY": 3712,
+					"iid": "021b4812-9140-548e-a1ad-f23c8ba435ec",
+					"width": 192,
+					"height": 64,
+					"defUid": 73,
+					"px": [320,1152],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "static",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["static"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "white",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["white"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": "W",
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [{"id":"V_String","params":["W"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Lock",
+					"__grid": [24,8],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#FF8040",
+					"__worldX": 7936,
+					"__worldY": 3072,
+					"iid": "c993e5cb-b2dc-56c1-9ed7-e289554b3898",
+					"width": 64,
+					"height": 256,
+					"defUid": 104,
+					"px": [1536,512],
+					"fieldInstances": [
+						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": "spring-hall",
+							"__tile": null,
+							"defUid": 105,
+							"realEditorValues": [{"id":"V_String","params":["spring-hall"]}]
+						},
+						{
+							"__identifier": "requires",
+							"__type": "Array<LocalEnum.Ability>",
+							"__value": ["levy"],
+							"__tile": null,
+							"defUid": 106,
+							"realEditorValues": [{"id":"V_String","params":["levy"]}]
+						},
+						{
+							"__identifier": "target",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 107,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "from",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 108,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "prelude",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 109,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "moves",
+							"__type": "Array<String>",
+							"__value": [],
+							"__tile": null,
+							"defUid": 110,
+							"realEditorValues": []
+						},
+						{
+							"__identifier": "hold",
+							"__type": "LocalEnum.Hold",
+							"__value": "reach",
+							"__tile": null,
+							"defUid": 111,
+							"realEditorValues": [{"id":"V_String","params":["reach"]}]
+						},
+						{
+							"__identifier": "teachGate",
+							"__type": "Bool",
+							"__value": true,
+							"__tile": null,
+							"defUid": 112,
+							"realEditorValues": [{"id":"V_Bool","params":[true]}]
+						},
+						{
+							"__identifier": "region",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 113,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "note",
+							"__type": "Multilines",
+							"__value": "The 6-tile hall is climbed on a pink levy spring (L3 brief §4.2); the upper corridor must need Levy (L3 audit item 3).",
+							"__tile": null,
+							"defUid": 114,
+							"realEditorValues": [
+								{
+									"id": "V_String",
+									"params": [
+										"The 6-tile hall is climbed on a pink levy spring (L3 brief §4.2); the upper corridor must need Levy (L3 audit item 3)."
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"__identifier": "Brushes",
+			"__type": "Entities",
+			"__cWid": 48,
+			"__cHei": 20,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "30a7f062-8c8e-5310-9b19-496524eb25f5",
+			"levelId": 131,
+			"layerDefUid": 119,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [],
+			"autoLayerTiles": [],
+			"seed": 1001,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": [
+				{
+					"__identifier": "Fill",
+					"__grid": [0,0],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 6400,
+					"__worldY": 2560,
+					"iid": "63d3f61b-49cd-556e-ac9c-e55b8722379a",
+					"width": 64,
+					"height": 64,
+					"defUid": 14,
+					"px": [0,0],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 12,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 13,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [17,3],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 7488,
+					"__worldY": 2752,
+					"iid": "a0af3a73-8706-588f-953d-f650662c8945",
+					"width": 448,
+					"height": 960,
+					"defUid": 18,
+					"px": [1088,192],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [40,3],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 8960,
+					"__worldY": 2752,
+					"iid": "bbc44a79-9570-5879-a1b7-2a78521f589f",
+					"width": 448,
+					"height": 384,
+					"defUid": 18,
+					"px": [2560,192],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [24,8],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 7936,
+					"__worldY": 3072,
+					"iid": "b99eb35e-6628-5a4e-98d8-2d620225fddb",
+					"width": 1024,
+					"height": 256,
+					"defUid": 18,
+					"px": [1536,512],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [40,9],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 8960,
+					"__worldY": 3136,
+					"iid": "685ecd3d-268d-5ff9-95b1-55874b5c77de",
+					"width": 256,
+					"height": 192,
+					"defUid": 18,
+					"px": [2560,576],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [36,12],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 8704,
+					"__worldY": 3328,
+					"iid": "962d2be3-2aee-57c1-9b08-7cd73c18fb09",
+					"width": 128,
+					"height": 64,
+					"defUid": 18,
+					"px": [2304,768],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [1,14],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 6464,
+					"__worldY": 3456,
+					"iid": "91d420b4-e1f1-5e3e-920d-82a604ad17b4",
+					"width": 1024,
+					"height": 256,
+					"defUid": 18,
+					"px": [64,896],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [5,18],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 6720,
+					"__worldY": 3712,
+					"iid": "44d44f49-b2b6-5168-80af-b75009455a04",
+					"width": 192,
+					"height": 64,
+					"defUid": 18,
+					"px": [320,1152],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [null]
+						}
+					]
+				}
+			]
+		},
+		{
+			"__identifier": "Paint",
+			"__type": "IntGrid",
+			"__cWid": 48,
+			"__cHei": 20,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "dee6e8da-67b2-5790-a312-e790ed81e7a2",
+			"levelId": 131,
+			"layerDefUid": 120,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			"autoLayerTiles": [],
+			"seed": 1002,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": []
+		},
+		{
+			"__identifier": "Collision",
+			"__type": "IntGrid",
+			"__cWid": 48,
+			"__cHei": 20,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "1041a2fa-89e0-57fe-92b5-5e17467b43a5",
+			"levelId": 131,
+			"layerDefUid": 121,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+			],
+			"autoLayerTiles": [],
+			"seed": 1003,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": []
+		}
+	]
+}

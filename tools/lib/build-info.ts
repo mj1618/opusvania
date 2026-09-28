@@ -47,6 +47,7 @@ export function simFingerprint(): string {
     ...listFiles(join(ROOT, 'content/gym')),
     ...listFiles(join(ROOT, 'content/enemies')),
     join(ROOT, 'content/moves.json'),
+    join(ROOT, 'content/world.compiled.json'),
   ];
   for (const f of files) {
     h.update(relative(ROOT, f).replaceAll('\\', '/'));

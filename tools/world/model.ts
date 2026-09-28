@@ -1,0 +1,655 @@
+/**
+ * The level model the world tools work on, and its text form, the ROOM SHEET
+ * (docs/research/level-toolchain.md §2.4). One table (`ENTITY_SPECS`, `BRUSH_FIELDS`,
+ * `LEVEL_FIELDS`) defines every brush, entity and level field: the LDtk defs (defs.ts), the
+ * LDtk <-> model conversion (level.ts) and the sheet's Zod schema are all generated from it.
+ *
+ * Coordinates are TILES relative to the room's top-left; `at` is the room's world position in
+ * tiles. Entities are `[x, y]` (a point = one tile) or `[x, y, w, h]` (a rect).
+ */
+import { z } from 'zod';
+import type { FieldKind } from './ldtk';
+
+// ---------------------------------------------------------------------------------------------
+// Collision values (IntGrid). Same numbers as the sim's `Tile` (src/sim/world/rooms.ts).
+// 8..15 are reserved for slope tiles (level-toolchain §3.3). Paint uses 16 for "force air".
+
+export const TILE_NAMES = [
+  'solid',
+  'oneWay',
+  'spikeUp',
+  'spikeDown',
+  'spikeLeft',
+  'spikeRight',
+  'orb',
+] as const;
+export type TileName = (typeof TILE_NAMES)[number];
+export const tileValue = (t: TileName): number => TILE_NAMES.indexOf(t) + 1;
+export const tileName = (v: number): TileName | undefined => TILE_NAMES[v - 1];
+export const TILE_CHAR: Record<number, string> = {
+  0: '.',
+  1: '#',
+  2: '=',
+  3: '^',
+  4: 'v',
+  5: '<',
+  6: '>',
+  7: 'o',
+};
+export const PAINT_AIR = 16;
+export const PAINT_NAMES = [...TILE_NAMES, 'air'] as const;
+export type PaintName = (typeof PAINT_NAMES)[number];
+export const paintValue = (p: PaintName): number => (p === 'air' ? PAINT_AIR : tileValue(p));
+export const paintName = (v: number): PaintName | undefined => (v === PAINT_AIR ? 'air' : tileName(v));
+
+// ---------------------------------------------------------------------------------------------
+// Enums (LDtk local enums; ids must be identifiers).
+
+export const ENUMS = {
+  Tile: TILE_NAMES,
+  Op: ['add', 'carve'],
+  Ability: ['wallJump', 'dash', 'doubleJump', 'pogo', 'seize', 'levy'],
+  Colour: ['brown', 'pink', 'violet', 'white'],
+  Enemy: ['auctioneer', 'barker', 'clerk', 'grinder', 'gull', 'runner'],
+  CameraMode: ['lock', 'clampX', 'clampY', 'bounds'],
+  PromptKey: ['left', 'right', 'up', 'down', 'jump', 'dash', 'attack', 'seize', 'levy', 'special'],
+  Hold: ['sealed', 'reach'],
+  OpensOn: ['plate', 'clear'],
+  PressedBy: ['slab', 'heavy'],
+  Hazard: ['death', 'pip'],
+} as const satisfies Record<string, readonly string[]>;
+export type EnumName = keyof typeof ENUMS;
+
+export interface FieldSpec {
+  name: string;
+  kind: FieldKind;
+  array?: boolean;
+  /** Nullable in LDtk; omitted from the sheet when null. */
+  optional?: boolean;
+  /** Value used when the sheet omits the field (and omitted again when equal on export). */
+  def?: unknown;
+  doc?: string;
+}
+
+const f = (name: string, kind: FieldKind, extra: Omit<FieldSpec, 'name' | 'kind'> = {}): FieldSpec => ({
+  name,
+  kind,
+  ...extra,
+});
+const opt = (name: string, kind: FieldKind, doc?: string): FieldSpec => ({ name, kind, optional: true, doc });
+const list = (name: string, kind: FieldKind, doc?: string): FieldSpec => ({
+  name,
+  kind,
+  array: true,
+  def: [],
+  doc,
+});
+const CHAR = opt(
+  'char',
+  'String',
+  'Pin the RoomFile character (ports, and doors other rooms refer to). Default: allocated.',
+);
+
+// ---------------------------------------------------------------------------------------------
+// Brushes: shape primitives on the `Brushes` layer, applied in list order (CSG) by bake.ts.
+
+export const SHAPES = [
+  'fill',
+  'rect',
+  'blob',
+  'tunnel',
+  'shaft',
+  'arch',
+  'ledges',
+  'poly',
+  'ramp',
+  'stamp',
+] as const;
+export type Shape = (typeof SHAPES)[number];
+/** Shapes whose geometry is the entity's own rectangle (resizable in LDtk). */
+export const RECT_SHAPES: readonly Shape[] = ['rect', 'blob', 'shaft', 'arch'];
+/** Shapes whose geometry is the `pts` field (drawn as a path in LDtk). */
+export const PATH_SHAPES: readonly Shape[] = ['tunnel', 'ledges', 'poly', 'ramp'];
+
+export const BRUSH_DOCS: Record<Shape, string> = {
+  fill: 'Whole room. Usually the first brush (start from solid, then carve).',
+  rect: 'Axis-aligned rectangle.',
+  blob: 'Ellipse inscribed in the rect; `rough` tiles of seeded boundary noise. Organic chambers.',
+  tunnel: 'Capsule along the `pts` polyline, `width` tiles across; `rough` wobbles the width. Caves.',
+  shaft: 'A rect (vertical shaft); same raster as rect, named for intent.',
+  arch: 'Upper half-ellipse of the rect (a vault or doorway top); `thick` > 0 = only a band that thick.',
+  ledges: 'A platform `width` tiles long starting at each point (its top row), `thick` rows deep.',
+  poly: 'Filled polygon through `pts` (tile-centre sampling).',
+  ramp: 'Staircase under the line pts[0] -> pts[1], down to the lower end (slopes later).',
+  stamp: 'Pastes content/stamps/<name>.json (ASCII; space = keep) at the entity; `flipX` mirrors.',
+};
+
+export const BRUSH_FIELDS: FieldSpec[] = [
+  f('op', 'Enum:Op', { def: 'add', doc: 'add = write `tile`; carve = air.' }),
+  f('tile', 'Enum:Tile', { def: 'solid' }),
+  list('pts', 'Point', 'Path points (tunnel, ledges, poly, ramp), in tiles.'),
+  f('width', 'Int', { def: 0, doc: 'Tunnel diameter / ledge length, tiles.' }),
+  f('thick', 'Int', { def: 0, doc: 'Arch band / ledge depth, tiles (0 = default).' }),
+  f('rough', 'Int', { def: 0, doc: 'Boundary noise amplitude, tiles.' }),
+  f('seed', 'Int', { def: 0 }),
+  opt('name', 'String', 'Stamp name.'),
+  f('flipX', 'Bool', { def: false }),
+  opt('tag', 'String', 'Free label (critical path, keep...).'),
+];
+
+export interface Brush {
+  shape: Shape;
+  op: 'add' | 'carve';
+  tile: TileName;
+  /** Rect shapes and stamps: [x, y, w, h] (stamps: w/h = stamp size). */
+  rect?: [number, number, number, number];
+  pts: [number, number][];
+  width: number;
+  thick: number;
+  rough: number;
+  seed: number;
+  name?: string;
+  flipX: boolean;
+  tag?: string;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Gameplay entities (`Entities` layer). `rect: true` = resizable (a tile rect), else one tile.
+
+export const ENTITY_KINDS = [
+  'spawn',
+  'respawn',
+  'goal',
+  'corner',
+  'door',
+  'source',
+  'plate',
+  'gate',
+  'enemy',
+  'pickup',
+  'rest',
+  'prompt',
+  'camera',
+  'lock',
+  'landmark',
+] as const;
+export type EntityKind = (typeof ENTITY_KINDS)[number];
+
+export interface EntitySpec {
+  kind: EntityKind;
+  rect: boolean;
+  color: string;
+  toc?: boolean;
+  doc: string;
+  fields: FieldSpec[];
+}
+
+export const ENTITY_SPECS: Record<EntityKind, EntitySpec> = {
+  spawn: {
+    kind: 'spawn',
+    rect: false,
+    color: '#3CE070',
+    doc: 'Default spawn (P). Exactly one per room.',
+    fields: [],
+  },
+  respawn: { kind: 'respawn', rect: false, color: '#9CE0A0', doc: 'Respawn marker (R).', fields: [] },
+  goal: {
+    kind: 'goal',
+    rect: false,
+    color: '#FFE040',
+    doc: 'Goal (G), or optional goal (g). G leads to the level field `next`.',
+    fields: [f('optional', 'Bool', { def: false })],
+  },
+  corner: {
+    kind: 'corner',
+    rect: false,
+    color: '#E0A040',
+    toc: true,
+    doc: 'A Corner stool (+).',
+    fields: [],
+  },
+  door: {
+    kind: 'door',
+    rect: false,
+    color: '#40D0FF',
+    toc: true,
+    doc: 'Up-press door. `to` = room id; `toDoor` = a door name in that room (LDtk rooms) or its door char (ASCII rooms); omitted = its default spawn.',
+    fields: [
+      f('name', 'String', { doc: 'Unique in the room; other doors refer to it.' }),
+      f('to', 'String'),
+      opt('toDoor', 'String'),
+      CHAR,
+    ],
+  },
+  source: {
+    kind: 'source',
+    rect: true,
+    color: '#C07418',
+    doc: 'Humming object (rect = the source).',
+    fields: [f('sound', 'String'), f('colour', 'Enum:Colour'), f('locked', 'Bool', { def: false }), CHAR],
+  },
+  plate: {
+    kind: 'plate',
+    rect: true,
+    color: '#A0A0B0',
+    doc: 'Pressure plate (solid tiles).',
+    fields: [list('pressedBy', 'Enum:PressedBy'), CHAR],
+  },
+  gate: {
+    kind: 'gate',
+    rect: true,
+    color: '#8080FF',
+    toc: true,
+    doc: 'Gate: solid until a plate is pressed or the room is clear.',
+    fields: [
+      f('opensOn', 'Enum:OpensOn', { def: 'plate' }),
+      list('requires', 'Enum:Ability'),
+      opt('hold', 'Enum:Hold'),
+      list('moves', 'String'),
+      CHAR,
+    ],
+  },
+  enemy: {
+    kind: 'enemy',
+    rect: false,
+    color: '#FF4040',
+    doc: 'Enemy spawn (feet on this tile floor).',
+    fields: [f('type', 'Enum:Enemy'), CHAR],
+  },
+  pickup: {
+    kind: 'pickup',
+    rect: false,
+    color: '#FF80FF',
+    toc: true,
+    doc: 'Ability pickup (progression).',
+    fields: [list('grants', 'Enum:Ability'), opt('id', 'String'), CHAR],
+  },
+  rest: {
+    kind: 'rest',
+    rect: false,
+    color: '#FFFFFF',
+    toc: true,
+    doc: 'Rest bench (progression).',
+    fields: [opt('name', 'String'), CHAR],
+  },
+  prompt: {
+    kind: 'prompt',
+    rect: false,
+    color: '#C0C0C0',
+    doc: 'In-world key glyph (render-only).',
+    fields: [list('keys', 'Enum:PromptKey'), opt('until', 'String'), opt('near', 'Float')],
+  },
+  camera: {
+    kind: 'camera',
+    rect: true,
+    color: '#60A0FF',
+    doc: 'Camera zone. `value` = view centre (tiles) for lock/clampX/clampY; default = rect centre.',
+    fields: [f('mode', 'Enum:CameraMode', { def: 'bounds' }), opt('value', 'Point')],
+  },
+  lock: {
+    kind: 'lock',
+    rect: true,
+    color: '#FF8040',
+    toc: true,
+    doc: 'Progression lock: the rect (or `target`) should need `requires`.',
+    fields: [
+      f('name', 'String'),
+      list('requires', 'Enum:Ability'),
+      opt('target', 'String', 'Bot target instead of the rect (e.g. G).'),
+      opt('from', 'String'),
+      opt('prelude', 'String'),
+      list('moves', 'String'),
+      f('hold', 'Enum:Hold', { def: 'reach' }),
+      f('teachGate', 'Bool', { def: false }),
+      opt('region', 'String'),
+      opt('note', 'Multilines'),
+    ],
+  },
+  landmark: {
+    kind: 'landmark',
+    rect: true,
+    color: '#FFD700',
+    toc: true,
+    doc: 'A named landmark (level-toolchain §4.3). Not compiled yet: drawn on the world map and listed in the toc.',
+    fields: [f('name', 'String'), opt('note', 'Multilines')],
+  },
+};
+
+export interface Ent {
+  kind: EntityKind;
+  /** Tiles. Point entities have w = h = 1. */
+  rect: [number, number, number, number];
+  props: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Level fields.
+
+export const LEVEL_FIELDS: FieldSpec[] = [
+  f('name', 'String', { def: '' }),
+  list('abilities', 'Enum:Ability', 'Abilities granted on entry (gym semantics, as RoomFile).'),
+  f('hazard', 'Enum:Hazard', { def: 'death' }),
+  f('spawnGrace', 'Int', { def: 0 }),
+  opt('next', 'String', 'Where G leads.'),
+  f('draft', 'Bool', {
+    def: false,
+    doc: 'Draft rooms load in the game but are not in the progression graph.',
+  }),
+  opt('claims', 'Multilines', 'RoomFile `claims` as JSON.'),
+  opt('notes', 'Multilines'),
+];
+
+export interface LevelModel {
+  id: string;
+  /** World position, tiles. */
+  at: [number, number];
+  /** Size, tiles. */
+  size: [number, number];
+  fields: Record<string, unknown>;
+  brushes: Brush[];
+  entities: Ent[];
+  /** Paint overrides, row-major, 0 = none (tile values, PAINT_AIR = air). */
+  paint: Uint8Array;
+  /** Baked collision as stored (row-major tile values). */
+  collision: Uint8Array;
+}
+
+// ---------------------------------------------------------------------------------------------
+// The room sheet (text form).
+
+const Int = z.number().int();
+const Pt = z.tuple([Int, Int]);
+const RectT = z.tuple([Int, Int, Int.positive(), Int.positive()]);
+const Op = z.enum(['add', 'carve']);
+const BrushOpts = z.strictObject({
+  tile: z.enum(TILE_NAMES).optional(),
+  rough: Int.nonnegative().optional(),
+  seed: Int.optional(),
+  thick: Int.nonnegative().optional(),
+  flipX: z.boolean().optional(),
+  tag: z.string().optional(),
+});
+type BrushOptsT = z.infer<typeof BrushOpts>;
+const SPIKE_DIRS = { up: 'spikeUp', down: 'spikeDown', left: 'spikeLeft', right: 'spikeRight' } as const;
+
+const BrushTuple = z.union([
+  z.tuple([z.literal('fill')], z.unknown()),
+  z.tuple([z.enum(['rect', 'blob', 'shaft', 'arch']), Op, RectT], BrushOpts),
+  z.tuple([z.enum(['tunnel', 'ledges']), Op, z.array(Pt).min(1), Int.positive()], BrushOpts),
+  z.tuple([z.literal('poly'), Op, z.array(Pt).min(3)], BrushOpts),
+  z.tuple([z.literal('ramp'), Op, Pt, Pt], BrushOpts),
+  z.tuple([z.literal('stamp'), z.string().min(1), Pt], BrushOpts),
+  z.tuple([z.literal('oneway'), Pt, Int.positive()], BrushOpts),
+  z.tuple([z.literal('spikes'), z.enum(['up', 'down', 'left', 'right']), RectT], BrushOpts),
+]);
+
+const EntTuple = z.union([
+  z.tuple([z.enum(ENTITY_KINDS), Pt]),
+  z.tuple([z.enum(ENTITY_KINDS), Pt, z.record(z.string(), z.unknown())]),
+  z.tuple([z.enum(ENTITY_KINDS), RectT]),
+  z.tuple([z.enum(ENTITY_KINDS), RectT, z.record(z.string(), z.unknown())]),
+]);
+
+export const SheetSchema = z.strictObject({
+  id: z.string().regex(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/, 'room ids are kebab-case: <region>-<room>'),
+  at: Pt,
+  size: z.tuple([Int.positive(), Int.positive()]),
+  name: z.string().optional(),
+  abilities: z.array(z.enum(ENUMS.Ability)).optional(),
+  hazard: z.enum(ENUMS.Hazard).optional(),
+  spawnGrace: Int.nonnegative().optional(),
+  next: z.string().optional(),
+  draft: z.boolean().optional(),
+  claims: z.record(z.string(), z.unknown()).optional(),
+  notes: z.string().optional(),
+  brushes: z.array(BrushTuple),
+  entities: z.array(EntTuple).default([]),
+  paint: z.array(z.tuple([Int, Int, Int.positive(), Int.positive(), z.enum(PAINT_NAMES)])).default([]),
+});
+export type Sheet = z.input<typeof SheetSchema>;
+
+/** Zod for one entity's props, from its field specs (sheet form: Points are [x, y]). */
+function propSchema(spec: EntitySpec) {
+  const shape: Record<string, z.ZodType> = {};
+  for (const fs of spec.fields) {
+    let t: z.ZodType;
+    if (fs.kind === 'Int') t = Int;
+    else if (fs.kind === 'Float') t = z.number();
+    else if (fs.kind === 'Bool') t = z.boolean();
+    else if (fs.kind === 'Point') t = Pt;
+    else if (fs.kind.startsWith('Enum:'))
+      t = z.enum(ENUMS[fs.kind.slice(5) as EnumName] as unknown as readonly [string, ...string[]]);
+    else t = z.string();
+    if (fs.name === 'char') t = z.string().length(1);
+    if (fs.array) t = z.array(t);
+    const required = !fs.optional && fs.def === undefined;
+    shape[fs.name] = required ? t : t.optional();
+  }
+  return z.strictObject(shape);
+}
+const PROP_SCHEMAS = Object.fromEntries(
+  ENTITY_KINDS.map((k) => [k, propSchema(ENTITY_SPECS[k])]),
+) as unknown as Record<EntityKind, z.ZodType<Record<string, unknown>>>;
+
+function brushFromTuple(t: z.infer<typeof BrushTuple>): Brush {
+  const b: Brush = {
+    shape: 'fill',
+    op: 'add',
+    tile: 'solid',
+    pts: [],
+    width: 0,
+    thick: 0,
+    rough: 0,
+    seed: 0,
+    flipX: false,
+  };
+  const opts = (o: unknown) => {
+    const x = (o ?? {}) as BrushOptsT;
+    if (x.tile) b.tile = x.tile;
+    if (x.rough !== undefined) b.rough = x.rough;
+    if (x.seed !== undefined) b.seed = x.seed;
+    if (x.thick !== undefined) b.thick = x.thick;
+    if (x.flipX !== undefined) b.flipX = x.flipX;
+    if (x.tag !== undefined) b.tag = x.tag;
+  };
+  const [head] = t;
+  if (head === 'fill') {
+    const tile = t[1];
+    if (typeof tile === 'string') b.tile = z.enum(TILE_NAMES).parse(tile);
+  } else if (head === 'rect' || head === 'blob' || head === 'shaft' || head === 'arch') {
+    const [shape, op, rect, o] = t as [Shape, 'add' | 'carve', Brush['rect'], unknown];
+    Object.assign(b, { shape, op, rect });
+    opts(o);
+  } else if (head === 'tunnel' || head === 'ledges') {
+    const [shape, op, pts, width, o] = t as [Shape, 'add' | 'carve', [number, number][], number, unknown];
+    Object.assign(b, { shape, op, pts, width });
+    opts(o);
+  } else if (head === 'poly') {
+    const [, op, pts, o] = t as [Shape, 'add' | 'carve', [number, number][], unknown];
+    Object.assign(b, { shape: 'poly', op, pts });
+    opts(o);
+  } else if (head === 'ramp') {
+    const [, op, a, c, o] = t as [Shape, 'add' | 'carve', [number, number], [number, number], unknown];
+    Object.assign(b, { shape: 'ramp', op, pts: [a, c] });
+    opts(o);
+  } else if (head === 'stamp') {
+    const [, name, at, o] = t as [Shape, string, [number, number], unknown];
+    Object.assign(b, { shape: 'stamp', name, rect: [at[0], at[1], 1, 1] });
+    opts(o);
+  } else if (head === 'oneway') {
+    const [, at, w, o] = t as ['oneway', [number, number], number, unknown];
+    Object.assign(b, { shape: 'rect', rect: [at[0], at[1], w, 1] });
+    opts(o);
+    b.tile = 'oneWay';
+  } else if (head === 'spikes') {
+    const [, dir, rect, o] = t as ['spikes', keyof typeof SPIKE_DIRS, Brush['rect'], unknown];
+    Object.assign(b, { shape: 'rect', rect });
+    opts(o);
+    b.tile = SPIKE_DIRS[dir];
+  }
+  return b;
+}
+
+function brushToTuple(b: Brush): unknown[] {
+  const o: Record<string, unknown> = {};
+  if (b.rough) o.rough = b.rough;
+  if (b.seed) o.seed = b.seed;
+  if (b.thick) o.thick = b.thick;
+  if (b.flipX) o.flipX = true;
+  if (b.tag) o.tag = b.tag;
+  const withTile = () => (b.tile !== 'solid' ? { tile: b.tile, ...o } : o);
+  const tail = (x: Record<string, unknown>) => (Object.keys(x).length ? [x] : []);
+  switch (b.shape) {
+    case 'fill':
+      return b.tile === 'solid' ? ['fill'] : ['fill', b.tile];
+    case 'rect': {
+      const r = b.rect as [number, number, number, number];
+      if (b.op === 'add' && b.tile === 'oneWay' && r[3] === 1)
+        return ['oneway', [r[0], r[1]], r[2], ...tail(o)];
+      const dir = Object.entries(SPIKE_DIRS).find(([, v]) => v === b.tile)?.[0];
+      if (b.op === 'add' && dir) return ['spikes', dir, r, ...tail(o)];
+      return ['rect', b.op, r, ...tail(b.op === 'add' ? withTile() : o)];
+    }
+    case 'blob':
+    case 'shaft':
+    case 'arch':
+      return [b.shape, b.op, b.rect, ...tail(b.op === 'add' ? withTile() : o)];
+    case 'tunnel':
+    case 'ledges':
+      return [b.shape, b.op, b.pts, b.width, ...tail(b.op === 'add' ? withTile() : o)];
+    case 'poly':
+      return ['poly', b.op, b.pts, ...tail(b.op === 'add' ? withTile() : o)];
+    case 'ramp':
+      return ['ramp', b.op, b.pts[0], b.pts[1], ...tail(b.op === 'add' ? withTile() : o)];
+    case 'stamp': {
+      const r = b.rect as [number, number, number, number];
+      return ['stamp', b.name, [r[0], r[1]], ...tail(o)];
+    }
+  }
+}
+
+/** Sheet props -> full props (defaults filled). Throws with the entity index on bad props. */
+function entFromTuple(t: z.infer<typeof EntTuple>, i: number): Ent {
+  const [kind, pos, props] = t as [EntityKind, number[], Record<string, unknown> | undefined];
+  const spec = ENTITY_SPECS[kind];
+  const rect: Ent['rect'] =
+    pos.length === 4 ? (pos as Ent['rect']) : [pos[0] as number, pos[1] as number, 1, 1];
+  if (!spec.rect && (rect[2] !== 1 || rect[3] !== 1))
+    throw new Error(`entities[${i}] ${kind} is a point entity: give [x, y]`);
+  const parsed = PROP_SCHEMAS[kind].safeParse(props ?? {});
+  if (!parsed.success)
+    throw new Error(
+      `entities[${i}] ${kind}: ${parsed.error.issues.map((x) => `${x.path.join('.')} ${x.message}`).join('; ')}`,
+    );
+  const full: Record<string, unknown> = {};
+  for (const fs of spec.fields) {
+    const v = parsed.data[fs.name];
+    if (v !== undefined) full[fs.name] = v;
+    else if (fs.def !== undefined) full[fs.name] = structuredClone(fs.def);
+  }
+  return { kind, rect, props: full };
+}
+
+function entToTuple(e: Ent): unknown[] {
+  const spec = ENTITY_SPECS[e.kind];
+  const props: Record<string, unknown> = {};
+  for (const fs of spec.fields) {
+    const v = e.props[fs.name];
+    if (v === undefined || v === null) continue;
+    if (fs.def !== undefined && JSON.stringify(v) === JSON.stringify(fs.def)) continue;
+    props[fs.name] = v;
+  }
+  const pos = spec.rect ? e.rect : [e.rect[0], e.rect[1]];
+  return Object.keys(props).length ? [e.kind, pos, props] : [e.kind, pos];
+}
+
+/** Parses a sheet into a model. Collision is left empty (bake fills it). */
+export function sheetToModel(input: unknown): LevelModel {
+  const s = SheetSchema.parse(input);
+  const [w, h] = s.size;
+  const paint = new Uint8Array(w * h);
+  for (const [x, y, pw, ph, name] of s.paint)
+    for (let ty = y; ty < y + ph; ty++)
+      for (let tx = x; tx < x + pw; tx++)
+        if (tx >= 0 && ty >= 0 && tx < w && ty < h) paint[ty * w + tx] = paintValue(name);
+  const fields: Record<string, unknown> = {};
+  for (const fs of LEVEL_FIELDS) {
+    const v = (s as Record<string, unknown>)[fs.name];
+    if (v !== undefined) fields[fs.name] = fs.name === 'claims' ? JSON.stringify(v) : v;
+    else if (fs.def !== undefined) fields[fs.name] = structuredClone(fs.def);
+  }
+  return {
+    id: s.id,
+    at: s.at,
+    size: s.size,
+    fields,
+    brushes: s.brushes.map(brushFromTuple),
+    entities: s.entities.map(entFromTuple),
+    paint,
+    collision: new Uint8Array(w * h),
+  };
+}
+
+/** Greedy row-major rectangle cover of equal non-zero values (paint export, ports). */
+export function rectCover(
+  grid: ArrayLike<number>,
+  w: number,
+  h: number,
+  skip = 0,
+): [number, number, number, number, number][] {
+  const done = new Uint8Array(w * h);
+  const out: [number, number, number, number, number][] = [];
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const v = grid[y * w + x] as number;
+      if (v === skip || done[y * w + x]) continue;
+      let rw = 1;
+      while (x + rw < w && grid[y * w + x + rw] === v && !done[y * w + x + rw]) rw++;
+      let rh = 1;
+      grow: while (y + rh < h) {
+        for (let i = 0; i < rw; i++)
+          if (grid[(y + rh) * w + x + i] !== v || done[(y + rh) * w + x + i]) break grow;
+        rh++;
+      }
+      for (let yy = y; yy < y + rh; yy++) for (let xx = x; xx < x + rw; xx++) done[yy * w + xx] = 1;
+      out.push([x, y, rw, rh, v]);
+    }
+  return out;
+}
+
+/** Model -> canonical sheet object (stable key order; defaults omitted). */
+export function modelToSheet(m: LevelModel): Record<string, unknown> {
+  const out: Record<string, unknown> = { id: m.id, at: m.at, size: m.size };
+  for (const fs of LEVEL_FIELDS) {
+    const v = m.fields[fs.name];
+    if (v === undefined || v === null) continue;
+    if (fs.def !== undefined && JSON.stringify(v) === JSON.stringify(fs.def)) continue;
+    out[fs.name] = fs.name === 'claims' ? JSON.parse(String(v)) : v;
+  }
+  out.brushes = m.brushes.map(brushToTuple);
+  out.entities = m.entities.map(entToTuple);
+  const paint = rectCover(m.paint, m.size[0], m.size[1]).map(([x, y, w, h, v]) => [x, y, w, h, paintName(v)]);
+  if (paint.length) out.paint = paint;
+  return out;
+}
+
+/** Sheet JSON with one brush / entity / paint rect per line (what agents read and diff). */
+export function formatSheet(sheet: Record<string, unknown>): string {
+  const lines: string[] = ['{'];
+  const entries = Object.entries(sheet);
+  entries.forEach(([k, v], i) => {
+    const comma = i < entries.length - 1 ? ',' : '';
+    if (Array.isArray(v) && (k === 'brushes' || k === 'entities' || k === 'paint')) {
+      if (v.length === 0) lines.push(`  ${JSON.stringify(k)}: []${comma}`);
+      else {
+        lines.push(`  ${JSON.stringify(k)}: [`);
+        v.forEach((x, j) => {
+          lines.push(`    ${JSON.stringify(x)}${j < v.length - 1 ? ',' : ''}`);
+        });
+        lines.push(`  ]${comma}`);
+      }
+    } else lines.push(`  ${JSON.stringify(k)}: ${JSON.stringify(v)}${comma}`);
+  });
+  lines.push('}');
+  return `${lines.join('\n')}\n`;
+}

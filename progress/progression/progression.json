@@ -1,29 +1,29 @@
 {
  "meta": {
-  "date": "2026-09-28 11:06",
-  "sha": "f5a4cf3ce6-dirty",
-  "engine": "9e35073745",
+  "date": "2026-09-28 12:07",
+  "sha": "9fc710e0f3-dirty",
+  "engine": "4e8bc34ea9",
   "mode": "full",
   "workers": 8,
   "budget": 300000
  },
  "timings": {
   "extract": 2,
-  "solve": 50,
-  "audit": 5,
-  "probes": 17,
-  "design": 15,
-  "total": 89
+  "solve": 64,
+  "audit": 66520,
+  "probes": 68131,
+  "design": 18,
+  "total": 134744
  },
  "oracle": {
   "queries": 651,
   "static": 27,
-  "cache": 327,
-  "inferred": 195,
+  "cache": 239,
+  "inferred": 187,
   "tapes": 102,
-  "searches": 0,
-  "searchMs": 0,
-  "reverified": 0,
+  "searches": 96,
+  "searchMs": 134548,
+  "reverified": 151,
   "stale": 0
  },
  "findings": [
@@ -3327,7 +3327,7 @@
      ],
      "status": "holds",
      "verdict": "unknown",
-     "how": "cache",
+     "how": "bot",
      "budget": 300000,
      "bypasses": []
     },
@@ -3406,7 +3406,7 @@
      ],
      "status": "holds",
      "verdict": "unknown",
-     "how": "cache",
+     "how": "bot",
      "budget": 300000,
      "bypasses": []
     },
@@ -3420,7 +3420,7 @@
      ],
      "status": "holds",
      "verdict": "unknown",
-     "how": "cache",
+     "how": "bot",
      "budget": 300000,
      "bypasses": []
     }
@@ -3455,7 +3455,7 @@
      ],
      "frames": 123,
      "evidence": "tests/replays/stairwell.chain.json",
-     "ms": 0
+     "ms": 1
     }
    },
    {
@@ -3597,11 +3597,11 @@
      ],
      "frames": 1186,
      "evidence": "tests/replays/the-pit.jabOnly.s1.json",
-     "ms": 3
+     "ms": 5
     }
    }
   ],
-  "ms": 17
+  "ms": 68131
  },
  "designs": [
   {
@@ -4098,7 +4098,7 @@
       "detail": "adds: B11 with {levy, seize, slip}; B12 with {levy, seize, slip}; B12c with {levy, seize, slip}; B13 with {levy, seize, slip, flag:boss:auctioneer, fever 1}; X2 with {levy, seize, slip, flag:boss:auctioneer, fever 1}; EX_ROW_ROOFS with {levy, seize, slip, flag:boss:auctioneer, fever 1}; EX_FOUNDRY with {levy, seize, slip, flag:boss:auctioneer, fever 1}"
      }
     ],
-    "ms": 10
+    "ms": 9
    },
    "diff": [
     {

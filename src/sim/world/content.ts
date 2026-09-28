@@ -28,6 +28,7 @@ import ringGull from '../../../content/gym/ring-gull.json' with { type: 'json' }
 import stairwell from '../../../content/gym/stairwell.json' with { type: 'json' };
 import thePit from '../../../content/gym/the-pit.json' with { type: 'json' };
 import yard from '../../../content/gym/yard.json' with { type: 'json' };
+import compiledWorld from '../../../content/world.compiled.json' with { type: 'json' };
 import type { RoomFile } from './rooms';
 
 export const ROOM_FILES = [
@@ -58,4 +59,10 @@ export const ROOM_FILES = [
   ringGrinder,
   ringClerk,
   auction,
+  // LDtk world rooms, compiled by `npm run world -- build` (memory/level-authoring.md).
+  ...compiledWorld.rooms,
 ] as unknown as RoomFile[];
+
+/** World position (tiles) of every LDtk room; `draft` rooms load but are not in the progression graph. */
+export const WORLD_LAYOUT: Record<string, { x: number; y: number; w: number; h: number; draft: boolean }> =
+  compiledWorld.world;

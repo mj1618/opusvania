@@ -7,6 +7,7 @@
  */
 import { createHash } from 'node:crypto';
 import { ABILITIES, type Ability, type RoomLayout, roomIds, roomLayout } from '../../src/debug/sim-adapter';
+import { WORLD_LAYOUT } from '../../src/sim/world/content';
 
 export type { Ability };
 export const ALL: readonly Ability[] = ABILITIES;
@@ -125,7 +126,9 @@ export function roomHash(l: RoomLayout): string {
 const tileTarget = (tx: number, ty: number) => `tile:${tx},${ty}`;
 
 export function extractWorld(opts: { start?: string; rooms?: string[] } = {}): WorldGraph {
-  const ids = opts.rooms ?? roomIds().filter((id) => !id.startsWith('lab-') && !id.includes('~'));
+  const ids =
+    opts.rooms ??
+    roomIds().filter((id) => !id.startsWith('lab-') && !id.includes('~') && !WORLD_LAYOUT[id]?.draft);
   const start = opts.start ?? 'hub';
   const errors: string[] = [];
   const warnings: string[] = [];

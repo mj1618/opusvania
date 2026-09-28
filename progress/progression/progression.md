@@ -1,6 +1,6 @@
 # Progression validator report
 
-Generated 2026-09-28 11:06 by `npm run progression` (full mode) on build f5a4cf3ce6-dirty, engine 9e35073745. 8 search workers, default budget 300000 nodes. Tool: `tools/progression/`; how to read it: `memory/progression.md`.
+Generated 2026-09-28 12:07 by `npm run progression` (full mode) on build 9fc710e0f3-dirty, engine 4e8bc34ea9. 8 search workers, default budget 300000 nodes. Tool: `tools/progression/`; how to read it: `memory/progression.md`.
 
 ## Summary
 
@@ -14,7 +14,7 @@ Generated 2026-09-28 11:06 by `npm run progression` (full mode) on build f5a4cf3
 - **Gate audit:** 6 annotated gates, 2 failing, 0 warning (full-kit bypass only).
 - **Trap probes:** 311 ledges probed, 0 proven traps, 7 suspected.
 - **Findings:** 2 errors (0 not in the baseline `tests/progression/baseline.json`), 10 warnings.
-- **Run time:** extract 0.0 s, solve 0.1 s, audit 0.0 s, probes 0.0 s, design 0.0 s, total 0.1 s.
+- **Run time:** extract 0.0 s, solve 0.1 s, audit 66.5 s, probes 68.1 s, design 0.0 s, total 134.7 s.
 
 ![World graph](progression.svg)
 
@@ -179,7 +179,7 @@ What the sim does today: entering a room sets the abilities to the room's declar
 
 ## In-room trap probes
 
-311 (room, entry, kit, ledge) probes: 301 ledges get back to their entry or an exit, 3 stuck ledges are not reachable anyway, 7 traps. 0.0 s.
+311 (room, entry, kit, ledge) probes: 301 ledges get back to their entry or an exit, 3 stuck ledges are not reachable anyway, 7 traps. 68.1 s.
 
 - Suspected trap: stairwell ledge x10-19,y18 (entry default, kit {wallJump, dash, doubleJump, pogo, seize, levy}); reach tape `.5 J12 U+J+S1 J8 .4 D+V1 .28 D+S1 .36 D+V1 .10 U+S1 .24 D+V1 .9 U+S1 .22 R36 .10 D+V1 .4 R26`
 - Suspected trap: stairwell ledge x10-19,y25 (entry default, kit {wallJump, dash, doubleJump, pogo, seize, levy}); reach tape `.5 J12 U+J+S1 J8 .4 D+V1 .28 D+S1 .36 D+V1 .10 U+S1 .24 D+V1 .9 U+S1 .22 R36 .10 D+V1 .4 R26`
@@ -240,7 +240,7 @@ Design and build agree.
 
 ## Design graph: docs/design/world-design.md
 
-28 rooms, 38 edges. Symbolic solve (abilities × flags × fever): 21 non-stub rooms reachable, 2 not. 10 ms.
+28 rooms, 38 edges. Symbolic solve (abilities × flags × fever): 21 non-stub rooms reachable, 2 not. 9 ms.
 
 | Level | Check | Subject | Detail |
 |---|---|---|---|
@@ -283,5 +283,5 @@ Design and build agree.
 
 ## Oracle and timings
 
-Queries 651: static proofs 27, cache hits 327, inferred by monotonicity 195, committed tapes 102, bot searches 0 (0.0 s wall), tapes re-verified 0, stale records trusted 0.
+Queries 651: static proofs 27, cache hits 239, inferred by monotonicity 187, committed tapes 102, bot searches 96 (134.5 s wall), tapes re-verified 151, stale records trusted 0.
 

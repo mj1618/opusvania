@@ -9,6 +9,8 @@
       "!docs",
       "!progress",
       "!tests/progression/cache.json",
+      "!content/world.compiled.json",
+      "!tools/world/vendor",
       "!clips",
       "!test-results",
       "!playwright-report"
