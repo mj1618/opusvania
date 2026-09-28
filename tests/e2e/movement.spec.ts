@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
 import { parseInputScript } from '../../src/input/script';
 import { createState } from '../../src/sim/index';
-import type { Replay } from '../../src/sim/replay';
+import { type Replay, runReplay } from '../../src/sim/replay';
 import { presetTuning } from '../../src/sim/tuning';
 import type { GoldenReplay } from '../replays/golden';
 
@@ -22,36 +22,27 @@ async function boot(page: Page, query: string) {
 
 /**
  * movement-spec §7.3 (3): the same replay in Node and in Chrome gives identical hash sequences.
- * One page load: each golden is played from a start state built in Node (reloading per room is
- * too slow on CI's software GL).
+ * Runs the sim in the page's JS engine via replay.verify (no rendering: CI's software GL renders
+ * at ~1 fps), at every 60-frame cut and at the goal frame, and compares with Node.
  */
 test('golden gym replays reproduce their Node hashes in the browser', async ({ page }) => {
-  test.setTimeout(120_000);
   const errors = await boot(page, '?manual');
   for (const r of REPLAYS) {
     const tuning = presetTuning(r.preset);
     const start = createState({ seed: r.seed, roomId: r.room }, tuning);
     Object.assign(start.player.abilities, r.abilities);
     const replay: Replay = { version: 1, start, tuning, inputs: parseInputScript(r.inputs) };
-    const got = await page.evaluate(
-      ({ replay, frames }) => {
-        const g = window.__game;
-        g.replay.play(replay);
-        const hashes: string[] = [];
-        let f = 0;
-        while (f + 60 <= frames - 1) {
-          g.step(60);
-          f += 60;
-          hashes.push(g.hash());
-        }
-        const before = g.step(frames - 1 - f).roomStats.goal;
-        const after = g.step(1).roomStats.goal;
-        return { hashes, goal: !before && after ? frames : -1 };
-      },
-      { replay, frames: r.expect.goalFrame },
+    const cuts = [...r.expect.hashes.map((_, i) => 60 * (i + 1)), r.expect.goalFrame];
+    const browser: string[] = await page.evaluate(
+      ({ replay, cuts }) =>
+        cuts.map((n) => window.__game.replay.verify({ ...replay, inputs: replay.inputs.slice(0, n) }).hash),
+      { replay, cuts },
     );
-    expect(got.goal, r.room).toBe(r.expect.goalFrame);
-    expect(got.hashes, r.room).toEqual(r.expect.hashes);
+    const node = cuts.map((n) => runReplay({ ...replay, inputs: replay.inputs.slice(0, n) }).hash);
+    expect(browser, r.room).toEqual(node);
+    expect(browser.slice(0, -1), r.room).toEqual(r.expect.hashes);
+    const end = runReplay({ ...replay, inputs: replay.inputs.slice(0, r.expect.goalFrame) }).state;
+    expect(end.roomStats.goal, r.room).toBe(true);
   }
   expect(errors).toEqual([]);
 });
