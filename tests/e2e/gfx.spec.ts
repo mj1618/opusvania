@@ -43,6 +43,10 @@ const CANON: Array<{ room: string; script: string; steps: number }> = [
   { room: 'gym-05', script: 'R30 .20', steps: 50 },
   // White district, glowing spikes, respawn flag and goal; the player mid-jump.
   { room: 'gym-11', script: 'R20 R+J14', steps: 34 },
+  // L3: Lot 7 after seizing the pink partition (humming brown furnace vs pink ghost, lit floor).
+  { room: 'lot-7', script: 'R60 R+S1 R30', steps: 80 },
+  // L3: the Pit, Barkers and the Grinder armed under the violet lamps.
+  { room: 'the-pit', script: '.90', steps: 90 },
 ];
 
 test('render is deterministic: the same sim state and inputs give identical pixels', async ({ page }) => {

@@ -37,7 +37,7 @@ const render = {
  * bloom, post, particles) is `gfx` (src/render/gfx/pipeline.ts). Read-only with respect to the sim.
  */
 export class WorldRenderer {
-  /** Moved by the camera, lit by the light map: terrain, characters, juice. */
+  /** Moved by the camera, lit by the light map: terrain, door labels, dust (actors: gfx.layers.actors). */
   readonly world = new Container({ label: 'world' });
   /** World-space debug overlays (unlit, un-graded). */
   readonly overlay = new Container({ label: 'debug-overlay' });
@@ -72,15 +72,12 @@ export class WorldRenderer {
     this.gfx = new GfxPipeline(app, this.world);
     this.sig = new SignatureRenderer(game);
     this.bagHud = new BagHud(game);
-    this.world.addChild(
-      this.tiles,
-      this.labels,
-      this.sig.back,
-      this.fxBack,
-      this.player,
-      this.fxFront,
-      this.sig.front,
-    );
+    // Terrain, labels and dust are lit; the L3 readability layer, the player and front juice are
+    // unlit actors (a hum or a telegraph must never depend on a lamp), and sources glow.
+    this.world.addChild(this.tiles, this.labels, this.fxBack);
+    this.gfx.layers.actors.addChild(this.sig.back, this.player, this.fxFront, this.sig.front);
+    this.gfx.layers.emissive.addChild(this.sig.glow);
+    this.gfx.lights.providers.add((out) => this.sig.lights(out));
     this.gfx.layers.overlay.addChild(this.overlay);
     this.gfx.layers.ui.addChildAt(this.screen, 0);
     this.hud = new Text({
@@ -303,6 +300,7 @@ export class WorldRenderer {
     }${stats.optional ? '  +g' : ''}${this.hudExtra ? `   ${this.hudExtra}` : ''}`;
     if (this.hud.text !== text) this.hud.text = text;
     this.hud.visible = this.gfx.toggles.ui;
+    this.bagHud.container.visible = this.gfx.toggles.ui;
     this.labels.visible = this.gfx.toggles.ui;
   }
 }

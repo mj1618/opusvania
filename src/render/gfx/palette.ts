@@ -7,6 +7,7 @@
  * fog colour, nearer layers get darker, and the playfield terrain is the darkest mass with the
  * brightest rims, so the playfield has the most contrast and the background recedes.
  */
+import { PALETTE } from '../palette';
 
 export interface Palette {
   skyTop: number;
@@ -120,12 +121,16 @@ export const PALETTE_NAMES = Object.keys(PALETTES) as PaletteName[];
 
 /**
  * Noise colours for sound-source visuals (humming/ghosted outlines, PLAN §2). Other render code
- * should use these so a brown hum glows the same brown everywhere. `light` is the light it casts.
+ * should use these so a brown hum glows the same brown everywhere. `core` is the L3 readability
+ * token (src/render/palette.ts PALETTE, checked by E1: hue gap >= 60°, contrast >= 3:1), so the
+ * drawn outline, its glow and its light never drift apart; `glow` is the emissive (bloomed) tint
+ * and `light` the light it casts on lit terrain, both within a few degrees of the core hue
+ * (tests/unit/gfx.test.ts).
  */
 export const NOISE_COLOURS = {
-  brown: { core: 0xd07a3c, glow: 0xa0521e, light: 0xff9a50 },
-  pink: { core: 0xff86b0, glow: 0xd04a7c, light: 0xff9ec0 },
-  violet: { core: 0xa88aff, glow: 0x6a4ad8, light: 0xb49cff },
-  white: { core: 0xf0f4ff, glow: 0x9aa4c0, light: 0xe8f0ff },
+  brown: { core: PALETTE.brown, glow: 0xc07418, light: 0xffb454 },
+  pink: { core: PALETTE.pink, glow: 0xd82a80, light: 0xff7ab8 },
+  violet: { core: PALETTE.violet, glow: 0x6a4ad8, light: 0xb49cff },
+  white: { core: PALETTE.white, glow: 0x9aa4c0, light: 0xe8f0ff },
 } as const;
 export type NoiseColour = keyof typeof NOISE_COLOURS;

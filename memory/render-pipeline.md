@@ -17,12 +17,14 @@ while switching tiers and verifies it headless.
   `default` -> family (`gym` for `gym-NN`) -> room, section by section. Light `at` is in sketch tiles
   (before padding), like cameraZones. Districts: brown, pink, violet, white. New rooms fall back to
   `default` (brown); give them a file to pick a district.
-- **Hooks for other render code:** world-space `gfx.layers.emissive` (unlit, additive, blooms);
+- **Hooks for other render code:** world-space `gfx.layers.actors` (unlit, above the lit playfield,
+  still post-graded: L3 sources/enemies, the player, front juice); `gfx.layers.emissive` (unlit, additive, blooms);
   `gfx.lights.providers.add((out, clock) => out.push({x, y, radius, color, intensity, flicker}))`;
   `gfx.layers.playfield` (= `renderer.world`, lit); `NOISE_COLOURS` for hum colours.
 - **Value structure (the look):** sky/fog mid-dark, far layers close to fog, mid a bit darker, terrain
   darkest with bright top rims, player brightest + carried light. Warm lamps vs cool ambient per district.
-- **Readability rules learned by looking:** nothing horizontal and dark in the mid layer (pipes and
+- **Readability rules learned by looking:** anything the player must read (hums, ghosts, telegraphs)
+  goes in `actors`, never under the light map (L3 E1 failed when it was lit); nothing horizontal and dark in the mid layer (pipes and
   hanging signs read as platforms, gym-09); the mid layer is unlit (lit, it went as dark as terrain and
   its pillars read as walls); foreground occluders only hang from the top (bottom ones hid spikes, gym-12);
   particles are hidden over solid tiles (embers over rock read as stars); heavy far-layer blur made the
@@ -49,7 +51,7 @@ while switching tiers and verifies it headless.
   `tests/e2e/perf.spec.ts` launches with `--use-angle=metal` (darwin) and skips on software GL.
   The latency test boots `quality=low` so it is not skipped for fill rate. Canvas `antialias` is off:
   filtered layers never used MSAA anyway, and MSAA on the canvas cost SwiftShader a lot.
-- Screenshot goldens: `tests/e2e/__screenshots__/gfx.spec.ts/*.png` (no platform suffix; fails above 1% of
+- Screenshot goldens: `tests/e2e/__screenshots__/gfx.spec.ts/*.png` (gym-01, gym-05, gym-11, lot-7, the-pit) (no platform suffix; fails above 1% of
   pixels off by YIQ 0.2). After a visual change: `npx playwright test gfx --update-snapshots=all`, then
   look at them. Plain `--update-snapshots` only rewrites goldens that fail, so a change under the
   tolerance silently keeps the old picture. Goldens were made on macOS ARM SwiftShader; CI is x86

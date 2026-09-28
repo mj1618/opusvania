@@ -14,8 +14,9 @@ import {
   roomFamily,
 } from '../../src/render/gfx/dressing';
 import { falloff, flickerFactor } from '../../src/render/gfx/light-model';
-import { PALETTES } from '../../src/render/gfx/palette';
+import { NOISE_COLOURS, PALETTES } from '../../src/render/gfx/palette';
 import { solidDepth } from '../../src/render/gfx/terrain';
+import { hueDeg, hueGap, PALETTE, rgbOf } from '../../src/render/palette';
 import { getRoom, ROOMS, Tile } from '../../src/sim/world/rooms';
 
 describe('room dressing (content/rooms-dressing)', () => {
@@ -142,5 +143,18 @@ describe('terrain depth and helpers', () => {
     expect(Math.min(...xs)).toBeGreaterThanOrEqual(0);
     expect(Math.max(...xs)).toBeLessThan(1);
     expect(new RenderRng(9).next()).toBe(xs[0]);
+  });
+});
+
+describe('noise colours (gfx) agree with the L3 readability palette', () => {
+  it('core is the E1-checked token; glow and light keep its hue', () => {
+    for (const c of ['brown', 'pink', 'violet', 'white'] as const) {
+      const n = NOISE_COLOURS[c];
+      expect(n.core).toBe(PALETTE[c]);
+      if (c === 'white') continue;
+      const h = hueDeg(...rgbOf(n.core));
+      expect(hueGap(h, hueDeg(...rgbOf(n.glow)))).toBeLessThan(15);
+      expect(hueGap(h, hueDeg(...rgbOf(n.light)))).toBeLessThan(15);
+    }
   });
 });

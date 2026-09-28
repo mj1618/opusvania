@@ -104,6 +104,20 @@ export const SIG = {
   hitstopShakePx: 3,
   ribbonFrames: 12,
   needleFrames: 8,
+  /**
+   * Atmosphere hooks (src/render/gfx): humming sources and levied objects glow (emissive layer,
+   * bloomed) and cast a small light in their noise colour; ghosts, pending and white static don't.
+   * Enemies glow faintly while armed and strongly as a telegraph winds up.
+   */
+  glowOutlineAlpha: 0.75,
+  glowFillAlpha: 0.14,
+  glowVoiceAlpha: 0.3,
+  glowTeleAlpha: 0.9,
+  lightIntensity: 0.55,
+  /** Light radius = this + half the source's larger side (px). */
+  lightRadius: 150,
+  enemyLightIntensity: 0.3,
+  enemyLightRadius: 150,
   /** Heavy Kid silhouette (render only): 72 tall, wider stance. */
   heavyScale: [1.3, 72 / 80] as const,
   middleScale: [1.12, 76 / 80] as const,

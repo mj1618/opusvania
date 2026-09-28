@@ -8,7 +8,9 @@
  *   │  │                unlit on purpose: lit, the mid layer went as dark as the playfield and
  *   │  │                its pillars read as walls. Lamps still glow over it through the haze.
  *   │  ├─ lit           [LightingFilter: x light map]
- *   │  │  └─ playfield  the camera-moved world: terrain, characters, juice (WorldRenderer.world)
+ *   │  │  └─ playfield  the camera-moved world: terrain, door labels, dust (WorldRenderer.world)
+ *   │  ├─ actors        world space, unlit: L3 sources/levied/enemies, the player, juice. Anything
+ *   │  │                the player must read (hums, ghosts, telegraphs) never depends on a lamp.
  *   │  ├─ emissive      additive, unlit glowing shapes, world space
  *   │  ├─ bloom         the emissive layer blurred at 1/4 and 1/8 res (BloomPass), additive
  *   │  ├─ ambient       soot (normal) + motes/embers (additive) particles
@@ -18,7 +20,8 @@
  *
  * Hooks for other render code (e.g. sound-source visuals):
  *   - `layers.emissive`: add Graphics/Sprites in world px; they glow (bloom) and ignore lighting.
- *   - `layers.playfield` (= WorldRenderer.world): lit characters/objects.
+ *   - `layers.playfield` (= WorldRenderer.world): lit terrain and props.
+ *   - `layers.actors`: unlit, still graded by post; gameplay-critical shapes.
  *   - `lights.providers.add(fn)`: push per-frame lights (world px, colour, radius, intensity).
  *   - `NOISE_COLOURS` in palette.ts for brown/pink/violet/white hums.
  */
@@ -69,6 +72,8 @@ export class GfxPipeline {
     mid: new Container({ label: 'mid' }),
     /** The camera-moved playfield; WorldRenderer passes its `world` container in. */
     playfield: null as unknown as Container,
+    /** World-space, unlit (post still grades it): readability-critical actors, see the header. */
+    actors: new Container({ label: 'actors' }),
     /** Screen-space holder of the bloom filter; add world-space things to `emissive`. */
     emissiveRoot: new Container({ label: 'emissive-root' }),
     emissive: new Container({ label: 'emissive' }),
@@ -127,7 +132,7 @@ export class GfxPipeline {
     L.emissive.addChild(this.terrainGlow, this.fxGlow, this.playerGlow);
     L.emissiveRoot.addChild(L.emissive);
     L.ambient.addChild(this.ambientView.soot, this.ambientView.glow);
-    this.scene.addChild(L.bg, L.lit, L.emissiveRoot, this.bloom.view, L.ambient, L.fg);
+    this.scene.addChild(L.bg, L.lit, L.actors, L.emissiveRoot, this.bloom.view, L.ambient, L.fg);
     L.ui.addChild(this.perfHud.container);
     app.stage.addChild(this.lights.screenSprite, this.scene, L.overlay, L.ui);
     const gl = (this.renderer as unknown as { gl?: WebGL2RenderingContext }).gl;
@@ -232,6 +237,7 @@ export class GfxPipeline {
     const { camX, camY, clock } = f;
     this.backdrop?.place(camX, camY);
     this.layers.playfield.position.set(-camX, -camY);
+    this.layers.actors.position.set(-camX, -camY);
     this.layers.emissive.position.set(-camX, -camY);
     this.layers.overlay.position.set(-camX, -camY);
 

@@ -4,6 +4,8 @@ import { type AttackDef, enemyDef } from '../sim/ai/schema';
 import type { Colour, SimEvent } from '../sim/events';
 import type { Enemy, Levied, Sound, Source } from '../sim/state';
 import { tuning } from '../sim/tuning';
+import type { Light } from './gfx/lighting';
+import { NOISE_COLOURS } from './gfx/palette';
 import {
   dashedRect,
   drawGhost,
@@ -52,6 +54,10 @@ export class SignatureRenderer {
   readonly back = new Graphics();
   /** Over the player: tethers, count rings, sparks, weight motes. */
   readonly front = new Graphics();
+  /** Emissive copies (gfx.layers.emissive): humming sources, levied, armed voices, telegraphs. */
+  readonly glow = new Graphics({ label: 'sig-glow' });
+  /** Lights for this frame (gfx light provider), filled by draw(). */
+  private frameLights: Light[] = [];
 
   // Deterministic feedback state (stepped per sim frame).
   private flash = new Map<number, number>();
@@ -214,7 +220,9 @@ export class SignatureRenderer {
     const frame = s.frame;
     const g = this.back.clear();
     const f = this.front.clear();
+    const gl = this.glow.clear();
     this.drawn = [];
+    this.frameLights = [];
     const soundOf = (id: number) => L.sounds.find((x) => x.id === id);
     const shake = s.hitstop > 0 ? (s.hitstop % 2 === 0 ? 1 : -1) * SIG.hitstopShakePx : 0;
     const ts = tuning.world.tileSize;
@@ -281,6 +289,7 @@ export class SignatureRenderer {
       } else {
         status = 'humming';
         drawHumming(g, r, colour, frame, this.flash.has(src.id));
+        this.glowHum(gl, r, colour, frame);
       }
       this.drawn.push({ id: src.id, kind: 'object', colour, status, x: src.x, y: src.y, w: src.w, h: src.h });
     }
@@ -292,6 +301,7 @@ export class SignatureRenderer {
       const y = q ? lerp(q.y, l.y, alpha) : l.y;
       const src = L.sources.find((o) => o.kind === 'levied' && o.ent === l.id);
       const status = drawLevied(g, l, x, y, frame);
+      if (status === 'humming') this.glowHum(gl, { x, y, w: l.w, h: l.h }, l.colour, frame);
       this.drawn.push({
         id: src?.id ?? l.id,
         kind: 'levied',
@@ -314,7 +324,7 @@ export class SignatureRenderer {
       if (this.shakeId === e.id || this.shakeId === e.source) x += shake;
       const src = L.sources.find((o) => o.id === e.source);
       const voices = (src?.soundIds ?? []).map(soundOf).filter((v): v is Sound => !!v);
-      const status = this.drawEnemy(g, f, e, x, y, voices, frame);
+      const status = this.drawEnemy(g, f, gl, e, x, y, voices, frame);
       const colour = voices[0]?.colour ?? '';
       this.drawn.push({ id: src?.id ?? e.id, kind: 'enemy', colour, status, x, y, w: e.w, h: e.h });
 
@@ -366,9 +376,40 @@ export class SignatureRenderer {
     this.drawn.push({ id: 0, kind: 'player', colour: '', status: p.profile, ...kr });
   }
 
+  /** A light for this frame's provider call (world px). */
+  private light(x: number, y: number, radius: number, colour: Colour, intensity: number): void {
+    this.frameLights.push({ x, y, radius, color: NOISE_COLOURS[colour].light, intensity });
+  }
+
+  /** Emissive copy of a humming thing (outline + faint fill) and its light. */
+  private glowHum(gl: Graphics, r: Rect, colour: Colour, frame: number): void {
+    const n = NOISE_COLOURS[colour];
+    const { dx, dy } = vibration(colour, frame);
+    const w = SIG.hummingOutline;
+    gl.rect(r.x, r.y, r.w, r.h).fill({ color: n.glow, alpha: SIG.glowFillAlpha });
+    gl.rect(r.x + dx + w / 2, r.y + dy + w / 2, r.w - w, r.h - w).stroke({
+      width: w,
+      color: n.core,
+      alpha: SIG.glowOutlineAlpha,
+    });
+    this.light(
+      r.x + r.w / 2,
+      r.y + r.h / 2,
+      SIG.lightRadius + Math.max(r.w, r.h) / 2,
+      colour,
+      SIG.lightIntensity,
+    );
+  }
+
+  /** Light provider (gfx.lights.providers): the lights of the last drawn frame. */
+  lights(out: Light[]): void {
+    for (const l of this.frameLights) out.push(l);
+  }
+
   private drawEnemy(
     g: Graphics,
     f: Graphics,
+    gl: Graphics,
     e: Enemy,
     x: number,
     y: number,
@@ -423,6 +464,14 @@ export class SignatureRenderer {
           color: oc,
           alpha: 1,
         });
+        // Armed voices glow a little; a winding-up telegraph glows hard (it reads in any light).
+        gl.roundRect(r.x + dx + width / 2, r.y + dy + width / 2, r.w - width, r.h - width, 12).stroke({
+          width,
+          color: NOISE_COLOURS[v.colour].core,
+          alpha: SIG.glowVoiceAlpha + (SIG.glowTeleAlpha - SIG.glowVoiceAlpha) * Math.max(k, pulse),
+        });
+        if (i === 0)
+          this.light(x + W / 2, y + H / 2, SIG.enemyLightRadius + W / 2, v.colour, SIG.enemyLightIntensity);
       } else {
         dashedRect(g, r, Math.max(2, width * 0.5), c, e.state === 'TELEGRAPH' ? 0.9 : SIG.ghostOutlineAlpha);
       }
@@ -435,6 +484,11 @@ export class SignatureRenderer {
         width: 2 + 4 * k,
         color: tint,
         alpha: 0.5 + 0.5 * k,
+      });
+      gl.roundRect(x - pad, y - pad, W + 2 * pad, H + 2 * pad, 12).stroke({
+        width: 2 + 4 * k,
+        color: tint,
+        alpha: SIG.glowTeleAlpha * k,
       });
     }
 

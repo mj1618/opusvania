@@ -8,9 +8,17 @@ Code-drawn Pixi Graphics; render only reads sim state/events.
   `rngFor(frame,id)` render RNG), `src/render/signature.ts` (world layer: plates, gates, object
   sources, levied, enemies, tethers, count ring, sparks, feather motes; `kidTint/kidScale/kidAlpha`),
   `src/render/hud.ts` (bag slots, NEXT caret, weight needle, Chin pips, take/push/snatch ribbons).
-- **Hooks in world.ts** (kept minimal for the parallel post-FX work): `sig.back` sits under fxBack,
-  `sig.front` over fxFront, `bagHud.container` in `screen`; `sig.step`/`bagHud.step` in onStep,
-  `reset()` in syncRoom, `draw` after drawPlayer; drawPlayer multiplies scale/tint/alpha from `sig`.
+- **Hooks in world.ts**: `sig.back`, the player, `fxFront` and `sig.front` live in the unlit
+  `gfx.layers.actors` (above the lit terrain); `sig.glow` is in `gfx.layers.emissive`;
+  `sig.lights(out)` is a `gfx.lights` provider. `bagHud.container` in `screen` (hidden with
+  `gfx.set({ui:false})`, since its Text differs across machines in goldens). `sig.step`/`bagHud.step`
+  in onStep, `reset()` in syncRoom, `draw` after drawPlayer (before `gfx.draw`, which renders lights).
+- **Atmosphere (after the gfx merge):** humming object sources, humming levied and armed enemy voices
+  draw an emissive copy (outline + faint fill; bloomed) and push a light in `NOISE_COLOURS[c].light`;
+  a winding-up telegraph's glow rises to `SIG.glowTeleAlpha`. Ghost, pending and white static get
+  neither. `NOISE_COLOURS.core` *is* the `PALETTE` token (unit test), so outline, glow and light
+  can't drift. Lit, the sources went to ~40% brightness and E1 failed (ghost ratio 1.17, brown
+  contrast 1.6:1): readability-critical shapes must stay out of the LightingFilter.
 - **Determinism:** feedback state (flashes, shake target, sparks, ribbons, needle, gate-open frame) is
   stepped in onStep. Vibration, speckle and motes are functions of `state.frame` (Math.sin is fine
   in render). Sparks freeze during hitstop; ribbons don't (they are UI).
