@@ -539,7 +539,7 @@ Each biome goes through the same stages: greybox → validator → playtest → 
 - Accessibility: remapping, an assist mode, colourblind-safe telegraphs, screen-shake toggle.
 - Gamepad feel on every major controller. Settings persist.
 - A PWA with offline caching, save export, and optionally touch controls.
-- Crash and telemetry reporting, which requires the Sentry connector to be authorised first.
+- Opt-in local telemetry for playtests (deaths, time per room). No third-party crash reporting (Sentry is out, per the user).
 - Hosting: a static site on a CDN, with an itch.io build. Steam later, with its AI disclosure.
 
 ---

@@ -1,0 +1,174 @@
+{
+  "bans": [
+    "No music, instruments or songs as the core theme.",
+    "No fallen kingdoms, plagues, infections or corrupted gods.",
+    "No insects or moths as the protagonist.",
+    "No light-versus-dark themes.",
+    "No amnesiac protagonist.",
+    "No ancient precursor civilisation."
+  ],
+  "packs": [
+    {
+      "pack": 1,
+      "wikipedia": [
+        {
+          "title": "Wercklea",
+          "extract": "Wercklea is a genus of flowering plants in the family Malvaceae."
+        },
+        {
+          "title": "Cumnock and Doon Valley",
+          "extract": "Cumnock and Doon Valley was one of nineteen local government districts in the Strathclyde region of Scotland from 1975 to 1996."
+        },
+        {
+          "title": "Aeroflot Flight 601",
+          "extract": "Aeroflot Flight 601 was a scheduled Soviet domestic passenger flight from Arkhangelsk to Leshukonskoye in the Russian SSR, operated by Aeroflot. The Antonov An-24RV that was involved crashed on 24 December 1983 during approach to Leshukonskoye. Forty-four people were killed; five survived the accident. Pilot error was cited as the cause of the accident."
+        }
+      ],
+      "words": [
+        "astatize",
+        "wagonway",
+        "pycnosporic",
+        "behatted",
+        "gimcrackery",
+        "hexiological"
+      ],
+      "lens": "cooperation with enemies is required",
+      "mood": "dread"
+    },
+    {
+      "pack": 2,
+      "wikipedia": [
+        {
+          "title": "Marginella broderickae",
+          "extract": "Marginella broderickae is a species of sea snail, a marine gastropod mollusk in the family Marginellidae, the margin snails."
+        },
+        {
+          "title": "Blink FM",
+          "extract": "Blink FM was a local FM and Online radio station run by Wycombe Youth Action which used to broadcast to areas of South Buckinghamshire in the United Kingdom and online through their website - areas of FM broadcast reception included High Wycombe, Hazlemere, Downley, Beaconsfield, Penn and the northern area of Marlow."
+        },
+        {
+          "title": "choroiditis",
+          "extract": "(offline fallback: random word)"
+        }
+      ],
+      "words": [
+        "pulverizator",
+        "woodkern",
+        "grapewise",
+        "citrous",
+        "tided",
+        "semostomeous"
+      ],
+      "lens": "the world changes on a timescale the player can feel over the whole game",
+      "mood": "feverish"
+    },
+    {
+      "pack": 3,
+      "wikipedia": [
+        {
+          "title": "deathwatch",
+          "extract": "(offline fallback: random word)"
+        },
+        {
+          "title": "presider",
+          "extract": "(offline fallback: random word)"
+        },
+        {
+          "title": "Sex, Death & the Infinite Void",
+          "extract": "Sex, Death & the Infinite Void is the second studio album by the English rock band Creeper, released on 31 July 2020 by Roadrunner Records. The album was produced by Wax Ltd's Xandy Barry."
+        }
+      ],
+      "words": [
+        "azophenine",
+        "computative",
+        "gutturality",
+        "ungarnish",
+        "violableness",
+        "malleableize"
+      ],
+      "lens": "information is the main reward, not power",
+      "mood": "bureaucratic"
+    },
+    {
+      "pack": 4,
+      "wikipedia": [
+        {
+          "title": "NGC 1560",
+          "extract": "NGC 1560, also known as IC 2062, is an 11th-magnitude spiral galaxy, in the IC 342/Maffei Group. It was discovered by Wilhelm Tempel on August 1, 1883."
+        },
+        {
+          "title": "Mike Honeyman",
+          "extract": "Mike Honeyman was a British boxer who was British featherweight champion between 1920 and 1921."
+        },
+        {
+          "title": "Isa Lang",
+          "extract": "\"Isa Lang\" is a song by Filipino singer-songwriter Arthur Nery. It was released as a single on December 16, 2021, through Viva Records. It is a R&B and soul track that portrays a candid perspective of someone desiring reciprocal feelings from their crush. The music video features Kaila Estrada, and depicts a slow-burning romance between the two leads, characterized by the gradual buildup of romant"
+        }
+      ],
+      "words": [
+        "nonwhite",
+        "redistrainer",
+        "diathetic",
+        "bagful",
+        "apobiotic",
+        "usefullish"
+      ],
+      "lens": "sound, silence or rhythm is physical in the world",
+      "mood": "feverish"
+    },
+    {
+      "pack": 5,
+      "wikipedia": [
+        {
+          "title": "Bardepur",
+          "extract": "Bardepur is a small village in the Kaluahi Block in the Madhubani District of the Indian state of Bihar. It is located on National Highway 105."
+        },
+        {
+          "title": "giblets",
+          "extract": "(offline fallback: random word)"
+        },
+        {
+          "title": "estamene",
+          "extract": "(offline fallback: random word)"
+        }
+      ],
+      "words": [
+        "preterient",
+        "ambiguous",
+        "slorp",
+        "bedpost",
+        "unincumbered",
+        "pseudolegal"
+      ],
+      "lens": "cooperation with enemies is required",
+      "mood": "melancholy"
+    },
+    {
+      "pack": 6,
+      "wikipedia": [
+        {
+          "title": "inkpot",
+          "extract": "(offline fallback: random word)"
+        },
+        {
+          "title": "Puccinia sorghi",
+          "extract": "Puccinia sorghi, or common rust of maize, is a species of rust fungus that infects corn and species from the plant genus Oxalis."
+        },
+        {
+          "title": "Sauterelle",
+          "extract": "The Arbalète sauterelle type A, or simply Sauterelle, was a bomb-throwing crossbow used by French and British forces on the Western Front during World War I. It was designed to throw a hand grenade in a high trajectory into enemy trenches. It was initially dismissed by the French Army but General Henri Berthelot thought it had practical value."
+        }
+      ],
+      "words": [
+        "aspersion",
+        "stickless",
+        "cerebropedal",
+        "megmho",
+        "atheism",
+        "unsaponified"
+      ],
+      "lens": "death is a mechanic, not a punishment",
+      "mood": "feverish"
+    }
+  ]
+}

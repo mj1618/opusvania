@@ -18,6 +18,16 @@ Read this at the start of every orchestrator session and after every context com
   - But don't reinvent everything. Use **industry-proven** metroidvania practice for the parts that aren't our differentiator.
 - Work like a **professional game studio**: iterate, revise what doesn't work, backtrack, build the tools needed to test the game properly, do play-throughs, and design things in the right sequence (e.g. bosses vs map vs artwork).
 
+## 1b. Standing answers from the user (2026-09-28)
+
+- **Builds:** use the `gh` CLI. Repo is `mj1618/opusvania` (private). GitHub Pages is not available for private repos on the user's plan, so see `progress/user-inbox.md` for the build-hosting decision.
+- **Playtests:** the user plays as often as they can, but **don't rely on it**: loops run while they sleep. Never block on feel sign-off; use playtester agents, bots and metrics, and queue items for the user.
+- **Art:** **no real artwork for now.** Work on everything except art: code-drawn placeholder shapes, shaders, particles and lighting are fine. No paid image, audio or video APIs.
+- **Concept:** the orchestrator decides, but it **must be unique**. Inject real randomness into ideation (random Wikipedia articles, random dictionary words, forced constraints, different models per sub-agent) so we don't get the default ideas models are trained on. Re-run this divergence process for any major creative decision.
+- **Duration:** **keep looping until the user stops you**, which could be a week or more.
+- **Clips:** build video/GIF capture of gameplay so agents and the user can judge motion and feel.
+- **No Sentry** or third-party crash reporting.
+
 ## 2. The loop
 
 Each loop has an id `L<n>` and one entry in `progress/loops.md` (create it on first use). Steps:
