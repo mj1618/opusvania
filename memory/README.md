@@ -15,6 +15,7 @@ Keep entries current; delete stale ones.
 - [Sim adapter](sim-adapter.md) — the one file to fix when the controller/rooms change; what tools probe
 - [Replays and tapes](replays-and-tapes.md) — golden tapes in tests/replays, stale vs mismatch, build stamp
 - [Search bot](bot.md) — `npm run bot` / `bot:all`: macro A* reachability, budgets, exhausted vs not-found, speed
+- [Progression validator](progression.md) — `npm run progression`: world graph, oracle + cache, solver, gate audit (G7), trap probes, design-graph diff, baseline
 - [Feel report](feel-report.md) — `npm run feel:report`: metric definitions, envelope, forgiveness sweeps
 - [Loop timing](loop-timing.md) — why the fixed-step loop snaps near-60Hz frame times
 - [Audio](audio.md) — src/audio map, event contract, `npm run audio:render` offline level checks, Web Audio gotchas

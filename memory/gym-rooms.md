@@ -39,3 +39,8 @@
   the left one-way platform, 120 f grace), W/X/Z/Q ring-barker/gull/grinder/clerk (1v1; the exit alcove
   is sealed above the clear gate: random fuzz input jumped over a 4-tile gate), U auction (boss).
   Hub is 87 wide.
+- Progression annotations (L4, all optional, no sim behaviour yet): `pickups` {char: {grants, id?}} and
+  `rests` {char: {name?}} load as empty tiles with `pickup`/`rest` entities; `gates.<c>.requires` +
+  `hold`; `locks` {name: {target, requires, hold, teachGate, from?, region?, note?}}. Lot 7 has gate D
+  requires [seize] and lock `spring-hall` requires [levy]; Stairwell has lock `top`. The validator reads them
+  (progression.md). Rooms' `abilities` are still SET on load (gym semantics); Phase 3 pickups will add instead.

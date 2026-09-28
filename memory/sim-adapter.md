@@ -19,6 +19,9 @@ the L2 merge; git history has them). What it covers:
   kind `goal`/`optionalGoal`), doors as `exit:<char>`, plus every spawn as `spawn:<name>`.
   `registerTestRoom(id, rows)` = `buildRoom({id, rows, abilities: none})` then `registerRoom`. Test rooms:
   only `# . P`, one `P`, at least 30×17 (the loader pads smaller rooms, which shifts `tile:x,y` targets).
-- **Sim calls:** `newState` / `stepState` wrap `createState` / `step`.
+- **Sim calls:** `newState` / `stepState` wrap `createState` / `step`. `placePlayer(state, tx, ty)` puts the
+  player on a tile's floor (searches from a pickup or ledge).
+- **Progression:** `roomLayout(id)` = tile classes, entities, spawns, sources, plates, gates (+ `requires`,
+  `hold`), `locks`, enemies and the room **palette** (seizable colours incl. enemy voices) for tools/progression.
 
 The live-game tap (`src/debug/event-log.ts`) subscribes with `game.bus.onAny` and `game.afterStep`.

@@ -37,3 +37,6 @@ Options: `--budget` child nodes (300k), `--k` frames per macro (4), `--weight` (
   source ghost bits, levied (colour, phase, x>>3, y>>3), plate/gate bits, move+frame>>1, hitstop and
   enemy (state, x>>3, y>>3). The bot can't solve Lot 7 with the verbs in 1M nodes (flow field thinks
   the gate is open; the plate needs a timed levy), so those claims are `info`. `bot:all` is ~140 s now.
+- `bounds` (px rect): prunes states that leave it and switches to reachable-set closure (no maxFrames, a
+  key closes on first visit), so a small region can EXHAUST (proof). The progression validator
+  (progression.md) calls `search()` through `tools/progression/job.ts`, in worker threads, with a cache.

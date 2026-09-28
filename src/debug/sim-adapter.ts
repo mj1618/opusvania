@@ -6,6 +6,7 @@
  *
  * Pure: no DOM, no Node APIs (runs in the browser and in Node).
  */
+import { enemyDef } from '../sim/ai/schema';
 import type { SimEvent } from '../sim/events';
 import { cloneState, createState, type GameState, hashState, step } from '../sim/index';
 import { ActionBit, type InputFrame } from '../sim/input';
@@ -544,3 +545,130 @@ export function stepState(s: GameState, input: InputFrame, t: Tuning, events: Si
 }
 
 export { cloneState, hashState };
+
+/**
+ * Puts the player on the floor of tile (tx, ty) at rest, as a spawn marker there would (progression
+ * validator: start a search at a pickup or on a ledge). Abilities, profile and room state are kept.
+ */
+export function placePlayer(s: GameState, tx: number, ty: number, t: Tuning = defaultTuning): void {
+  const p = s.player;
+  const ts = tileSize(t);
+  p.x = Math.floor(tx * ts + ts / 2 - p.w / 2);
+  p.y = (ty + 1) * ts - p.h;
+  p.rx = 0;
+  p.ry = 0;
+  p.vx = 0;
+  p.vy = 0;
+  p.grounded = false;
+}
+
+/** Tile classes the progression validator cares about (from the room's TileType codes). */
+export type TileClass = 'empty' | 'solid' | 'oneWay' | 'spike' | 'orb';
+
+/**
+ * Everything the progression validator (tools/progression) reads from a room: tiles by class,
+ * entities (goals, doors, pickups, rests, respawns), L3 sources/plates/gates/enemies and the
+ * optional progression annotations (`pickups`, `rests`, `locks`, `gates.*.requires`). Tile coords
+ * are room tiles (after padding); px = tile × tileSize.
+ */
+export interface RoomLayout {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  tileSize: number;
+  padX: number;
+  padY: number;
+  classAt(tx: number, ty: number): TileClass;
+  abilities: Ability[];
+  next?: string;
+  entities: {
+    kind: string;
+    char: string;
+    tx: number;
+    ty: number;
+    to?: string;
+    spawn?: string;
+    grants?: Ability[];
+    id?: string;
+  }[];
+  spawns: Record<string, { tx: number; ty: number }>;
+  /** Sources as tile rects (a source is solid while home; white static can't be seized). */
+  sources: { char: string; colour: string; tx: number; ty: number; tw: number; th: number }[];
+  plates: { char: string; tiles: number[]; pressedBy: string[] }[];
+  gates: { char: string; tiles: number[]; opensOn: string; requires: Ability[]; hold: 'sealed' | 'reach' }[];
+  locks: Record<
+    string,
+    {
+      target: string;
+      from?: string;
+      requires: Ability[];
+      hold: 'sealed' | 'reach';
+      teachGate: boolean;
+      region?: string;
+      note?: string;
+    }
+  >;
+  enemies: string[];
+  /**
+   * Colours of every seizable sound in the room (object sources and enemy voices; white static is
+   * not seizable, so not included). The bag empties on room exit, so this plus the abilities is the
+   * whole kit a gate in this room must hold against (world-design W1/W2).
+   */
+  palette: string[];
+  /** The parsed room file (canonical JSON; hash it to key caches). */
+  file: unknown;
+}
+
+const TILE_CLASS: TileClass[] = ['empty', 'solid', 'oneWay', 'spike', 'spike', 'spike', 'spike', 'orb'];
+
+export function roomLayout(id: string): RoomLayout {
+  const room = roomsModule.getRoom(id);
+  const ts = tileSize();
+  const f = room.file;
+  return {
+    id,
+    name: room.name,
+    width: room.width,
+    height: room.height,
+    tileSize: ts,
+    padX: room.padX,
+    padY: room.padY,
+    classAt: (tx, ty) => TILE_CLASS[roomsModule.tileAt(room, tx, ty)] ?? 'solid',
+    abilities: ABILITIES.filter((a) => room.abilities[a]),
+    ...(room.next ? { next: room.next } : {}),
+    entities: room.entities.map((e) => ({ ...e, ...(e.grants ? { grants: [...e.grants] } : {}) })),
+    spawns: { ...room.spawns },
+    sources: room.sources.map((s) => ({
+      char: s.char,
+      colour: s.colour,
+      tx: s.x / ts,
+      ty: s.y / ts,
+      tw: s.w / ts,
+      th: s.h / ts,
+    })),
+    plates: room.plates.map((p) => ({ char: p.char, tiles: [...p.tiles], pressedBy: [...p.pressedBy] })),
+    gates: room.gates.map((g) => ({
+      char: g.char,
+      tiles: [...g.tiles],
+      opensOn: g.opensOn,
+      requires: [...(f.gates[g.char]?.requires ?? [])],
+      hold: f.gates[g.char]?.hold ?? 'sealed',
+    })),
+    locks: Object.fromEntries(
+      Object.entries(f.locks).map(([k, l]) => [k, { ...l, requires: [...l.requires] }]),
+    ),
+    enemies: room.enemySpawns.map((e) => e.type),
+    palette: [
+      ...new Set([
+        ...room.sources.filter((s) => s.colour !== 'white').map((s) => s.colour as string),
+        ...room.enemySpawns.flatMap((e) =>
+          enemyDef(e.type)
+            .sounds.filter((x) => x.seizable && x.colour !== 'white')
+            .map((x) => x.colour as string),
+        ),
+      ]),
+    ].sort(),
+    file: f,
+  };
+}

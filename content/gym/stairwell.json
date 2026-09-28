@@ -51,6 +51,15 @@
       "colour": "pink"
     }
   },
+  "locks": {
+    "top": {
+      "target": "G",
+      "requires": ["seize", "levy"],
+      "hold": "reach",
+      "teachGate": true,
+      "note": "Expression room: the climb is the up-seize / down-levy spring chain."
+    }
+  },
   "next": "hub",
   "claims": {},
   "notes": "L3 brief \u00a74.5 (stretch, expression): three pink partitions 7 tiles apart and nothing to stand on. Up-seize a partition, down-levy it under your feet, bounce, down-seize the spring you left, repeat."
