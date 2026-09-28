@@ -42,5 +42,9 @@
 - Progression annotations (L4, all optional, no sim behaviour yet): `pickups` {char: {grants, id?}} and
   `rests` {char: {name?}} load as empty tiles with `pickup`/`rest` entities; `gates.<c>.requires` +
   `hold`; `locks` {name: {target, requires, hold, teachGate, from?, region?, note?}}. Lot 7 has gate D
-  requires [seize] and lock `spring-hall` requires [levy]; Stairwell has lock `top`. The validator reads them
-  (progression.md). Rooms' `abilities` are still SET on load (gym semantics); Phase 3 pickups will add instead.
+  requires [seize] and lock `spring-hall` requires [levy]; Stairwell has lock `top`; the Yard has gate D
+  [seize] and aim locks `bar-wall` (moves seize:up) and `ledge` (levy:down) with `prelude`s. The validator
+  reads them (progression.md). Rooms' `abilities` are still SET on load (gym semantics); Phase 3 pickups
+  will add instead.
+- Stairwell tape `stairwell.chain.json` (hand-made): the room is possible but needs a 1-frame spring retake.
+  `yard-bar-wall.fwd-seize.json` is evidence of a known Yard leak; delete it when the Yard is fixed.

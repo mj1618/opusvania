@@ -9,11 +9,11 @@
  },
  "timings": {
   "extract": 2,
-  "solve": 50,
-  "audit": 5,
+  "solve": 52,
+  "audit": 6,
   "probes": 17,
-  "design": 15,
-  "total": 89
+  "design": 16,
+  "total": 93
  },
  "oracle": {
   "queries": 651,

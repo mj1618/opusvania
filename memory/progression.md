@@ -61,8 +61,17 @@ Options: `--budget` (300k; check 150k), `--combo-budget` (2×budget), `--workers
   are errors). The slice design only warns until its rooms are built.
 
 ## Room annotations (all optional; schema in `src/sim/world/rooms.ts`, see gym-rooms.md)
-`gates.<c>.requires` / `hold`; `locks: {name: {target, requires, hold: reach|sealed, teachGate, from,
-region, note}}`; `pickups: {c: {grants, id}}`; `rests: {c: {name}}`. A tile gate's audit target is derived:
+`gates.<c>.requires` / `hold` / `moves`; `locks: {name: {target, requires, moves, hold: reach|sealed, teachGate,
+from, prelude, region, note}}`; `pickups: {c: {grants, id}}`; `rests: {c: {name}}`; a `+` Corner is a Rest.
+- **Aim checks (`moves`, L4 merge):** `["seize:up"]` etc. = aimed moves (a `moveStart` move:dir) the gate
+  should need. The audit asks for the target with the ROOM's own kit and that move forbidden (bot option
+  `forbid`: prunes a state where it started; tapes that use it are rejected), plus a control query with
+  nothing forbidden. "holds" with a failed control is only "the bot found nothing" (a note says so).
+  The bot is weak at aim puzzles, so back a pass with a scripted sweep and put any bypass in
+  `tests/replays` (committed tapes are evidence: see yard-bar-wall.fwd-seize).
+- **`prelude`** = input DSL played from `from` before the search (the Yard's locks start after section A
+  or B, else the bot never gets that far). With a prelude, committed tapes count only if they begin with it.
+A tile gate's audit target is derived:
 the tiles next to it that are cut off from the spawn when it's shut. `region` bounds the audit's bot so it can
 EXHAUST (a proof; G7 asks for that): bounded searches compute the full reachable key set (no frame cap),
 which costs ~250k nodes for a 6×9-tile pit, ~37k for a 1-tile well.
@@ -77,14 +86,31 @@ which costs ~250k nodes for a 6×9-tile pit, ~37k for a 1-tile well.
 - `tests/progression/baseline.json`: accepted findings (id + reason). Check fails only on new errors; it
   prints "fixed?" for baseline entries it no longer finds.
 
-## Results and timings (L4, 19 rooms)
-- Full run ~85 s on 8 workers (cold ~2 min); `--check` 0.3 s warm, ~0.5 s after an engine change.
-- Everything reachable in both semantics; Lot 7 G, the Pit G and the gym G's come from committed tapes.
+## Combat rooms (L4 merge): how they are modelled
+- A clear gate (`opensOn: clear`) is never a static blocker (the jab is free) and the search bot can't
+  fight, so an arena's G is proven by the combat fighter's committed seed-1 tapes (`<room>.signature.s1`,
+  `the-pit.jabOnly.s1`): they play the real fight, so "reached" = the sim's own room completion
+  (`roomClear` opens the gate). Seed-2+ tapes are not evidence (the oracle runs seed 1). A new arena
+  needs such a tape or its G reads unreached. gym-world.json marks these edges `soft: "combat"`.
+- Counted Out (Chin 0 → the hub's Corner) is NOT modelled as an exit: softlock checks demand a real one.
+- Locked lots (`locked: true`) are not in the palette and never block the static fill (the boss sells them).
+- Trap probes start on the ledge tile nearest the middle that is free in a fresh room (the Auction's exit
+  ledge spans the shut clear gate: starting inside it read as a proven trap).
+
+## Results and timings (L4 merge, 25 rooms)
+- Full run ~160 s cold on 8 workers (audit 66 s, probes 91 s); warm re-run and `--check` ~0.5 s.
+- Everything reachable in both semantics, no softlocks; the arenas' G come from fight tapes.
 - **Lot 7 spring hall FAILS G7** (world semantics): minimal bypasses {wallJump, seize} and {doubleJump,
   seize} (the L3 audit's finding, now systematic). Holds under gym semantics (the room sets {seize,levy}).
-  Gate D holds by static proof (no Seize → no plate).
-- **Stairwell G is unproven**: the bot never gets past the first partition even at 2M nodes with the full
-  kit; so entering it is a suspected softlock. Baselined until someone makes a tape.
-- 271 ledge probes, no traps.
+  Gate D holds by static proof (no Seize → no plate). Baselined.
+- **Yard bar-wall FAILS its aim check** (baselined): a forward Seize at the top of a running jump takes bar 1,
+  so section B doesn't need Up+Seize. Yard gate D holds (static); the ledge (Down+Levy) holds: a scripted
+  sweep of 9.7k forward/up/neutral levy timings never reached G (control with Down+Levy: 22/2.4k).
+- **Stairwell G is reachable, but frame-perfect**: tests/replays/stairwell.chain.json. The chain needs the
+  spring retaken on the frame after it launches Kid (Down+Seize pressed exactly 4 frames before contact:
+  one earlier takes it before the bounce, one later whiffs); without it the bounce apex is ~15 px short of
+  bar 2. The bot (k=4 macros) can't hit that; the blind novice got stuck there. Design fix if wanted: bars
+  6 tiles apart (then each bar is in Up+Seize reach from the previous spring's apex).
+- Probes: the only traps left are "suspected" (budget) warnings in the Stairwell, Yard and Pit.
 - The slice design (v2): X3/X5 are later returns (Writ, Ropes); e13's proof ignores B5's brown+violet
   (recoil hops add 4.5 tiles of gap) unless the span is in B6; e33 counts the Rostrum boss voices.

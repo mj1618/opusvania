@@ -40,3 +40,6 @@ Options: `--budget` child nodes (300k), `--k` frames per macro (4), `--weight` (
 - `bounds` (px rect): prunes states that leave it and switches to reachable-set closure (no maxFrames, a
   key closes on first visit), so a small region can EXHAUST (proof). The progression validator
   (progression.md) calls `search()` through `tools/progression/job.ts`, in worker threads, with a cache.
+- `search({forbid: ['seize:up']})` prunes any state where that aimed move started (`moveStart` move:dir);
+  the progression audit's aim checks use it. The bot is weak at aim puzzles (it can't do the Yard's B or C
+  with the aims either): prove leaks with a scripted sweep instead.

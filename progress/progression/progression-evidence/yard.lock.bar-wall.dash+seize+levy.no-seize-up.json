@@ -1,0 +1,43 @@
+{
+  "kind": "tape",
+  "name": "yard.lock.bar-wall.dash+seize+levy.no-seize-up",
+  "inputs": "R15 R+S1 .14 R18 R+V1 .40 R16 R+J16 R24 R+J14 R+J+S1 R+J6 .20 R20 R+V1 .30 R60",
+  "expect": {
+    "target": "rect:1792,960,384,64",
+    "maxDeaths": 0
+  },
+  "source": "progression",
+  "room": "yard",
+  "spawn": "default",
+  "seed": 1,
+  "abilities": {
+    "wallJump": false,
+    "dash": true,
+    "doubleJump": false,
+    "pogo": false,
+    "seize": true,
+    "levy": true
+  },
+  "golden": {
+    "tuningHash": "031c4b0f93afc4",
+    "build": {
+      "sha": "f5a4cf3ce6-dirty",
+      "sim": "5678d2bcc2",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 1966,
+      "y": 902,
+      "frame": 297,
+      "room": "yard"
+    },
+    "hash": "08d8ecf54ace3e",
+    "hashes": [
+      "1568b973214e49",
+      "1b6fe15abfcc24",
+      "169e828457cabf",
+      "0748062c32b7ac"
+    ]
+  },
+  "notes": "Gate audit evidence: yard/lock:bar-wall (requires seize, levy; aim seize:up forbidden) reached with dash+seize+levy after the prelude \"R15 R+S1 .14 R18 R+V1 .40\"."
+}
