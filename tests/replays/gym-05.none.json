@@ -1,0 +1,32 @@
+{
+  "room": "gym-05",
+  "seed": 1,
+  "preset": "opus",
+  "abilities": {
+    "wallJump": false,
+    "dash": false,
+    "doubleJump": false,
+    "pogo": false
+  },
+  "tuningHash": "15e4374ad928c9",
+  "inputs": "R140 .4 J24 L+J8 .10 L122 .4 J24 R+J8 .10 R42 .4 J24 R+J8 R3",
+  "expect": {
+    "maxFrames": 653,
+    "goalFrame": 435,
+    "deaths": 0,
+    "end": {
+      "x": 797,
+      "y": 176,
+      "frame": 435
+    },
+    "hashes": [
+      "0f44c1dbc03837",
+      "109cbb9dd9e013",
+      "1a1e6694d1ec2e",
+      "0d68154d598121",
+      "0f5881a16e1af3",
+      "068f0a687f0f51",
+      "1262ea9660c26d"
+    ]
+  }
+}

@@ -17,7 +17,7 @@ test('boots, steps 60 frames via window.__game and reads state back', async ({ p
   const errors = await boot(page);
   const s0 = await page.evaluate(() => window.__game.state());
   expect(s0.frame).toBe(0);
-  expect(s0.roomId).toBe('gym');
+  expect(s0.roomId).toBe('hub');
 
   const s60: GameState = await page.evaluate(() => window.__game.step(60));
   expect(s60.frame).toBe(60);
@@ -50,9 +50,11 @@ test('renders with WebGL and screenshot() returns a PNG', async ({ page }) => {
 
 test('load() switches rooms and spawns', async ({ page }) => {
   await boot(page);
-  expect(await page.evaluate(() => window.__game.rooms())).toEqual(expect.arrayContaining(['gym', 'hall']));
-  const s = await page.evaluate(() => window.__game.load('hall', 'a'));
-  expect(s.roomId).toBe('hall');
+  expect(await page.evaluate(() => window.__game.rooms())).toEqual(
+    expect.arrayContaining(['hub', 'gym-01', 'gym-14']),
+  );
+  const s = await page.evaluate(() => window.__game.load('hub', '5'));
+  expect(s.roomId).toBe('hub');
   expect(await page.evaluate(() => window.__game.seed())).toBe(1);
 });
 
@@ -101,9 +103,9 @@ test('replays survive load(), seed() and tuning edits mid-recording, in the brow
     g.replay.record();
     g.input('right*20 right+jump*10 _*20 left*30');
     g.step(15);
-    g.load('hall', 'a');
+    g.load('gym-02');
     g.step(15);
-    g.tuning.jump.gravity = 2500;
+    g.tuning.jump.gravity = 0.5;
     g.step(15);
     g.seed(42);
     g.step(35);
@@ -113,12 +115,12 @@ test('replays survive load(), seed() and tuning edits mid-recording, in the brow
   expect(runReplay(replay).matches).toBe(true);
   const played = await page.evaluate((r) => {
     const g = window.__game;
-    g.tuning.jump.gravity = 9999; // playback must use the replay's tuning, not the live one
-    g.load('gym');
+    g.tuning.jump.gravity = 5; // playback must use the replay's tuning, not the live one
+    g.load('hub');
     const n = g.replay.play(r);
     g.step(n);
     return { hash: g.hash(), room: g.state().roomId };
   }, replay);
-  expect(played).toEqual({ hash: replay.endHash, room: 'hall' });
+  expect(played).toEqual({ hash: replay.endHash, room: 'gym-02' });
   await expect(page.evaluate(() => window.__game.step(1.5))).rejects.toThrow(/non-negative integer/);
 });

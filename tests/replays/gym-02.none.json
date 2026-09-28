@@ -1,0 +1,24 @@
+{
+  "room": "gym-02",
+  "seed": 1,
+  "preset": "opus",
+  "abilities": {
+    "wallJump": false,
+    "dash": false,
+    "doubleJump": false,
+    "pogo": false
+  },
+  "tuningHash": "15e4374ad928c9",
+  "inputs": "R+J16 R12 R+J8 R12 R+J4 R8 R+J4 L4 R+J4 R4 R+J4 R14",
+  "expect": {
+    "maxFrames": 141,
+    "goalFrame": 94,
+    "deaths": 0,
+    "end": {
+      "x": 994,
+      "y": 624,
+      "frame": 94
+    },
+    "hashes": ["12a71479d2541c"]
+  }
+}
