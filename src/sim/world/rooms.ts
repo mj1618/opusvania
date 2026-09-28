@@ -105,6 +105,8 @@ const LockDef = z.object({
   hold: z.enum(['sealed', 'reach']).default('reach'),
   /** world-design G8: only has to hold against the kit at the room's earliest visit. */
   teachGate: z.boolean().default(false),
+  /** world-design G7: bounded region (`rect:x,y,w,h`, room px) the audit's bot may not leave, so it can exhaust. */
+  region: z.string().optional(),
   note: z.string().optional(),
 });
 export type LockDef = z.infer<typeof LockDef>;

@@ -87,6 +87,13 @@ export interface SearchOptions extends SimSetup {
    * walls and mazes don't trap the search. 'euclid': straight-line distance (spec §8 original).
    */
   heuristic?: 'flow' | 'euclid';
+  /**
+   * Bounded region (px): states whose player box leaves it are pruned, so a search confined to a
+   * gate's neighbourhood can EXHAUST (a proof) where the whole room would only run out of budget
+   * (world-design G7). Reaching the target still counts wherever it is. Bounded searches compute the
+   * reachable set (no maxFrames cap; a key is closed on its first visit), so found tapes may be long.
+   */
+  bounds?: Rect;
 }
 
 export interface SearchResult {
@@ -238,6 +245,7 @@ export function search(opts: SearchOptions): SearchResult {
   const maxFrames = opts.maxFrames ?? 60 * 60;
   const weight = opts.weight ?? 1.5;
   const speed = opts.speedEstimate ?? 12;
+  const bounds = opts.bounds;
   const abilities = opts.abilities ?? roomAbilities(opts.room);
   const macros = macrosFor(abilities);
   const rootSim = new HeadlessSim({ ...opts, abilities });
@@ -303,10 +311,21 @@ export function search(opts: SearchOptions): SearchResult {
         goal = nodes.length - 1;
         break;
       }
-      if (g >= maxFrames) continue;
+      // Bounded (proof) searches compute the reachable set: no depth cap, first visit closes a key.
+      if (g >= maxFrames && !bounds) continue;
+      if (
+        bounds &&
+        !(
+          v.x >= bounds.x &&
+          v.y >= bounds.y &&
+          v.x + v.w <= bounds.x + bounds.w &&
+          v.y + v.h <= bounds.y + bounds.h
+        )
+      )
+        continue;
       const key = botKey(child.state);
       const prev = best.get(key);
-      if (prev !== undefined && prev <= g) continue;
+      if (prev !== undefined && (prev <= g || bounds)) continue;
       best.set(key, g);
       nodes.push({ parent: id, macro: mi, frames: k, g, sim: child });
       heap.push(g + (weight * h) / speed, seq++, nodes.length - 1);

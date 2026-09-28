@@ -8,6 +8,7 @@
       "!.claude",
       "!docs",
       "!progress",
+      "!tests/progression/cache.json",
       "!clips",
       "!test-results",
       "!playwright-report"

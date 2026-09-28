@@ -28,6 +28,9 @@ const DesignRoom = z
     stub: z.boolean().default(false),
     optional: z.boolean().default(false),
     secret: z.boolean().default(false),
+    /** v2: a sub-area of another room (e.g. a Corner alcove), not a separate room. */
+    zoneOf: z.string().optional(),
+    boss: z.string().optional(),
     /** Per-fever overrides; `palette` replaces the room's palette from that fever up. */
     fever: z
       .record(z.string(), z.object({ palette: z.array(z.string()).optional() }).passthrough())
@@ -50,6 +53,16 @@ const DesignEdge = z
     teachGate: z.boolean().default(false),
     obsoleteAfter: z.string().optional(),
     soft: z.union([z.boolean(), z.string()]).optional(),
+    /** v2: the reach gate's geometric proof (tiles), checked against the §3.1 reach table. */
+    proof: z
+      .object({
+        reqTiles: z.number().optional(),
+        kitWithoutKeyTiles: z.number().optional(),
+        keyKitTiles: z.number().optional(),
+        axis: z.enum(['height', 'gap']).optional(),
+      })
+      .passthrough()
+      .optional(),
     /** Extension: the built exit for from -> to (`door:<char>` or `G`); `viaBack` for to -> from. */
     via: z.string().optional(),
     viaBack: z.string().optional(),
@@ -58,7 +71,7 @@ const DesignEdge = z
 
 export const DesignGraphSchema = z
   .object({
-    version: z.literal(1),
+    version: z.union([z.literal(1), z.literal(2)]),
     slice: z.string().optional(),
     abilities: z.array(z.string()).default([]),
     start: z.object({
@@ -113,10 +126,10 @@ export function loadDesign(path: string): DesignGraph {
       continue;
     }
     const o = v as { version?: unknown; rooms?: unknown; edges?: unknown };
-    if (o && o.version === 1 && Array.isArray(o.rooms) && Array.isArray(o.edges))
+    if (o && (o.version === 1 || o.version === 2) && Array.isArray(o.rooms) && Array.isArray(o.edges))
       return DesignGraphSchema.parse(v);
   }
-  throw new Error(`${path}: no \`\`\`json block with version 1, rooms and edges`);
+  throw new Error(`${path}: no \`\`\`json block with version 1 or 2, rooms and edges`);
 }
 
 const DEFAULT_SIM: Record<string, Ability> = { slip: 'dash', ropeSkip: 'doubleJump', ropes: 'wallJump' };
@@ -326,6 +339,117 @@ function roomStates(sol: DesignSolve, room: string, which: 'min' | 'max'): DStat
   );
 }
 
+const REACH = JSON.parse(readFileSync(new URL('./reach-table.json', import.meta.url), 'utf8')) as {
+  height: Record<'base' | 'ropeSkip' | 'ledgePop' | 'pinkChainAboveApex' | 'brownHop' | 'violetHop', number>;
+  gap: Record<'base' | 'slip' | 'ropeSkip' | 'slipRopeSkip' | 'pinkDrift' | 'brownHop' | 'violetHop', number>;
+  margin: number;
+  cornerMaxRoomsBetween: number;
+  bossDoorMaxRoomsFromCorner: number;
+};
+
+const fmtPal = (p: string[]) => `{${p.join(', ') || 'none'}}`;
+
+/**
+ * Best height or gap (tiles, feather) for design abilities plus a room palette, from the §3.1 table.
+ * Off the Ropes adds nothing: G6 keeps humming facings out of any gate it doesn't key.
+ */
+export function reachTiles(abilities: string[], palette: string[], axis: 'height' | 'gap'): number {
+  const has = (a: string) => abilities.includes(a);
+  // A sound only moves you once it's seized and levied (springs, recoil hops).
+  const n = (c: string) => (has('seize') && has('levy') ? palette.filter((x) => x === c).length : 0);
+  let t: number;
+  if (axis === 'height') {
+    const H = REACH.height;
+    t = has('ropeSkip') ? H.ropeSkip : H.base;
+    if (n('pink') > 0) t = t - H.ledgePop + H.pinkChainAboveApex;
+    t += n('brown') * H.brownHop + n('violet') * H.violetHop;
+  } else {
+    const G = REACH.gap;
+    t =
+      has('slip') && has('ropeSkip')
+        ? G.slipRopeSkip
+        : has('slip')
+          ? G.slip
+          : has('ropeSkip')
+            ? G.ropeSkip
+            : G.base;
+    if (n('pink') > 0) t += G.pinkDrift;
+    t += n('brown') * G.brownHop + n('violet') * G.violetHop;
+  }
+  return Math.round(t * 100) / 100;
+}
+
+/**
+ * Corner spacing (§4.8 check 8): on each goal's critical path at most N rooms between Corners (zones
+ * aren't rooms; a Corner zone resets the count), and every boss door at most M rooms from a Corner.
+ */
+function cornerSpacing(g: DesignGraph, intended: DesignSolve): DesignFinding[] {
+  const out: DesignFinding[] = [];
+  const rooms = new Map(g.rooms.map((r) => [r.id, r]));
+  const corner = (id: string) => isSafe(rooms.get(id)) && !rooms.get(id)?.stub;
+  for (const goal of g.goals) {
+    const st = intended.grants.get(goal);
+    if (!st) continue;
+    const seq = [g.start.room];
+    for (const via of designPath(intended, st.id)) {
+      const e = g.edges.find((x) => x.id === via.replace('(back)', ''));
+      if (e) seq.push(via.endsWith('(back)') ? e.from : e.to);
+    }
+    let run = 0;
+    let worst = 0;
+    let where = '';
+    for (const id of seq) {
+      if (corner(id)) run = 0;
+      else if (!rooms.get(id)?.zoneOf) run++;
+      if (run > worst) {
+        worst = run;
+        where = id;
+      }
+    }
+    if (worst > REACH.cornerMaxRoomsBetween)
+      out.push({
+        level: 'error',
+        check: 'Corner spacing',
+        subject: goal,
+        detail: `${worst} rooms without a Corner (up to ${where}) on the critical path ${seq.join(' > ')}`,
+      });
+  }
+  // Boss doors: every room you enter a boss room from is within M rooms of a Corner (undirected).
+  const adj = new Map<string, string[]>();
+  for (const e of g.edges) {
+    adj.set(e.from, [...(adj.get(e.from) ?? []), e.to]);
+    adj.set(e.to, [...(adj.get(e.to) ?? []), e.from]);
+  }
+  const dist = (from: string) => {
+    const seen = new Map([[from, 0]]);
+    const q = [from];
+    while (q.length > 0) {
+      const id = q.shift() as string;
+      if (corner(id)) return seen.get(id) as number;
+      for (const n of adj.get(id) ?? [])
+        if (!seen.has(n)) {
+          seen.set(n, (seen.get(id) as number) + 1);
+          q.push(n);
+        }
+    }
+    return Number.POSITIVE_INFINITY;
+  };
+  for (const b of g.rooms.filter((r) => r.boss || r.purpose.includes('boss')))
+    for (const e of g.edges.filter((x) => x.to === b.id || (x.dir === 'both' && x.from === b.id))) {
+      const door = e.to === b.id ? e.from : e.to;
+      if (rooms.get(door)?.stub) continue;
+      const d = dist(door);
+      if (d > REACH.bossDoorMaxRoomsFromCorner)
+        out.push({
+          level: 'error',
+          check: 'Corner spacing',
+          subject: `${b.id} door (${e.id} from ${door})`,
+          detail: `${d} rooms from the nearest Corner (max ${REACH.bossDoorMaxRoomsFromCorner})`,
+        });
+    }
+  return out;
+}
+
 export interface DesignFinding {
   level: 'error' | 'warning' | 'info';
   check: string;
@@ -366,25 +490,43 @@ export function checkDesign(g: DesignGraph): DesignReport {
   const rooms = g.rooms.filter((r) => !r.stub);
   const unreachable = rooms.filter((r) => !intended.reached.has(r.id)).map((r) => r.id);
   const onlyWithBreaks = unreachable.filter((id) => withBreaks.reached.has(id));
-  for (const id of unreachable)
+  // Abilities no room grants and the start lacks: rooms behind them are future returns, not bugs.
+  const granted = new Set([
+    ...g.start.abilities,
+    ...g.rooms.flatMap((r) => r.grants.filter((t) => t.startsWith('ability:')).map((t) => t.slice(8))),
+  ]);
+  for (const id of unreachable) {
+    const future = g.edges
+      .filter((e) => e.to === id || (e.dir === 'both' && e.from === id))
+      .flatMap((e) => e.requires.filter((t) => t.startsWith('ability:') && !granted.has(t.slice(8))));
     findings.push({
-      level: onlyWithBreaks.includes(id) ? 'warning' : 'error',
+      level:
+        onlyWithBreaks.includes(id) || future.length > 0 ? (future.length > 0 ? 'info' : 'warning') : 'error',
       check: 'every non-stub room reachable from start',
       subject: id,
-      detail: onlyWithBreaks.includes(id) ? 'reachable only through a sanctioned break' : 'unreachable',
+      detail: onlyWithBreaks.includes(id)
+        ? 'reachable only through a sanctioned break'
+        : future.length > 0
+          ? `behind ${[...new Set(future)].join(', ')}, which nothing in this graph grants (a later return)`
+          : 'unreachable',
     });
-  // Goals.
-  for (const goal of g.goals) {
-    const got =
-      intended.grants.has(goal) || (goal.startsWith('room:') && intended.reached.has(goal.slice(5)));
-    if (!got)
-      findings.push({
-        level: 'error',
-        check: 'goals reachable',
-        subject: goal,
-        detail: 'not granted on any reachable path',
-      });
   }
+  // Goals, with and without the sanctioned breaks.
+  for (const [name, sol] of [
+    ['intended', intended],
+    ['with breaks', withBreaks],
+  ] as const)
+    for (const goal of g.goals) {
+      const got = sol.grants.has(goal) || (goal.startsWith('room:') && sol.reached.has(goal.slice(5)));
+      if (!got)
+        findings.push({
+          level: 'error',
+          check: 'goals reachable',
+          subject: goal,
+          detail: `${name}: not granted on any reachable path`,
+        });
+    }
+  findings.push(...cornerSpacing(g, intended));
   // Softlocks (with and without breaks: a breaker can strand themselves too).
   for (const [name, sol] of [
     ['intended', intended],
@@ -425,59 +567,88 @@ export function checkDesign(g: DesignGraph): DesignReport {
         detail: 'a teachGate is also a sanctioned break',
       });
   }
-  // G3 palette at every reachable fever level, and the G7 plan.
+  // Reach edges: G3 palette arithmetic + G2 margin against the §3.1 table (with the edge's `proof`),
+  // at every fever level the room is reached at, and the G7 plan (kits the bot must fail with).
   const g7: G7Plan[] = [];
   const roomById = new Map(g.rooms.map((r) => [r.id, r]));
   for (const e of g.edges) {
     if (e.hold !== 'reach') continue;
-    const pinkKey = e.requires.includes('local:pink');
-    const fevers = [
-      ...new Set(withBreaks.states.filter((s) => s.room === e.from).map((s) => s.fever)),
-    ].sort();
-    for (const fv of fevers) {
-      const pal = gatePalette(e, roomById.get(e.from), fv);
-      if (pal.includes('pink') && !pinkKey)
-        findings.push({
-          level: e.sanctionedBreak ? 'info' : 'error',
-          check: 'G3 palette',
-          subject: e.id,
-          detail: `reach gate in ${e.from}, whose palette at fever ${fv} has pink (unlimited ladder)`,
-        });
-    }
-    if (e.sanctionedBreak) continue;
     const keys = e.requires.filter((t) => t.startsWith('ability:')).map((t) => t.slice(8));
+    const keyColours = e.requires.filter((t) => t.startsWith('local:')).map((t) => t.slice(6));
+    const plans: { key: string; states: DState[]; palette: (s: DState) => string[] }[] = [];
+    const obsolete = (states: DState[]) => {
+      const ob = e.obsoleteAfter?.replace(/^ability:/, '');
+      return ob ? states.filter((s) => !s.abilities.includes(ob)) : states;
+    };
     for (const k of keys) {
       const sol = solveDesign(g, { breaks: true, strip: [k] });
-      let states = roomStates(sol, e.from, e.teachGate ? 'min' : 'max');
-      if (e.obsoleteAfter) {
-        const ob = e.obsoleteAfter.replace(/^ability:/, '');
-        states = states.filter((s) => !s.abilities.includes(ob));
-      }
-      const kits = states.map((s) => ({
-        kit: label(s),
-        abilities: s.abilities,
-        palette: gatePalette(e, roomById.get(e.from), s.fever),
-      }));
-      const plan: G7Plan = { edge: e.id, from: e.from, to: e.to, key: k, teachGate: e.teachGate, kits };
-      if (simAbility(g, k))
+      plans.push({
+        key: k,
+        states: obsolete(roomStates(sol, e.from, e.teachGate ? 'min' : 'max')),
+        palette: (s) => gatePalette(e, roomById.get(e.from), s.fever),
+      });
+    }
+    // A palette key (`local:<colour>`) without an ability key: kit-without-key = that colour removed.
+    if (keys.length === 0 && keyColours.length > 0)
+      for (const c of keyColours)
+        plans.push({
+          key: `local:${c}`,
+          states: obsolete(roomStates(withBreaks, e.from, e.teachGate ? 'min' : 'max')),
+          palette: (s) => gatePalette(e, roomById.get(e.from), s.fever).filter((x) => x !== c),
+        });
+    for (const p of plans) {
+      const kits = p.states.map((s) => ({ kit: label(s), abilities: s.abilities, palette: p.palette(s) }));
+      const plan: G7Plan = { edge: e.id, from: e.from, to: e.to, key: p.key, teachGate: e.teachGate, kits };
+      if (simAbility(g, p.key) || p.key.startsWith('local:'))
         plan.simKits = kits.map((x) =>
           abil([...simBase(g), ...x.abilities.map((a) => simAbility(g, a)).filter((a): a is Ability => !!a)]),
         );
-      g7.push(plan);
-      if (kits.length === 0)
+      if (!e.sanctionedBreak) g7.push(plan);
+      if (kits.length === 0 && !e.sanctionedBreak)
         findings.push({
           level: 'info',
           check: 'G7',
           subject: e.id,
-          detail: `${e.from} is unreachable without ${k}`,
+          detail: `${e.from} is unreachable without ${p.key}`,
         });
+      // Palette arithmetic (G2/G3/G7 proof).
+      const req = e.proof?.reqTiles;
+      const axis = e.proof?.axis ?? 'height';
+      for (const k of kits) {
+        const est = reachTiles(k.abilities, k.palette, axis);
+        if (req === undefined) {
+          if (k.palette.includes('pink') && !keyColours.includes('pink'))
+            findings.push({
+              level: e.sanctionedBreak ? 'info' : 'error',
+              check: 'G3 palette',
+              subject: e.id,
+              detail: `reach gate without a proof in a room with pink (a floor spring alone is 7 tiles); kit ${k.kit} + ${fmtPal(k.palette)}`,
+            });
+          continue;
+        }
+        if (req < est + REACH.margin && !e.sanctionedBreak)
+          findings.push({
+            level: 'error',
+            check: 'G2/G7 proof',
+            subject: e.id,
+            detail: `${axis} ${req} tiles < kit-without-${p.key} ${k.kit} + palette ${fmtPal(k.palette)} = ${est} + ${REACH.margin} margin (§3.1 table)`,
+          });
+        const claimed = e.proof?.kitWithoutKeyTiles;
+        if (claimed !== undefined && est > claimed + 0.01 && !e.sanctionedBreak)
+          findings.push({
+            level: 'warning',
+            check: 'G7 proof',
+            subject: e.id,
+            detail: `proof says kit-without-key reaches ${claimed} tiles; the §3.1 table gives ${est} for ${k.kit} + ${e.from}'s palette ${fmtPal(k.palette)} (if the gated span is sound-free or in ${e.to}, say so with gate.approachPalette)`,
+          });
+      }
     }
-    if (keys.length === 0)
+    if (plans.length === 0 && !e.sanctionedBreak)
       findings.push({
         level: 'info',
         check: 'G7',
         subject: e.id,
-        detail: 'reach edge with no ability key (flag/fever/weight only): the bot proof needs the built room',
+        detail: 'reach edge keyed by flag/fever/weight only: the bot proof needs the built room',
       });
   }
   // What each sanctioned break changes: rooms and grants it reaches with a smaller kit.
@@ -552,7 +723,7 @@ export async function diffDesign(
   const designed = new Set(g.rooms.map((r) => r.id));
   const builtIds = Object.keys(world.rooms);
   const overlap = builtIds.filter((id) => designed.has(id));
-  const notBuilt = g.rooms.filter((r) => !world.rooms[r.id] && !r.stub).map((r) => r.id);
+  const notBuilt = g.rooms.filter((r) => !world.rooms[r.id] && !r.stub && !r.zoneOf).map((r) => r.id);
   if (notBuilt.length)
     out.push({
       level: 'info',
@@ -580,7 +751,13 @@ export async function diffDesign(
         : kind === 'room'
           ? built.rooms[val]?.reached === true
           : undefined;
-    if (ok === false) out.push({ level: 'error', kind: 'goal-unreachable', subject: goal, detail: 'not reached in the built world' });
+    if (ok === false)
+      out.push({
+        level: 'error',
+        kind: 'goal-unreachable',
+        subject: goal,
+        detail: 'not reached in the built world',
+      });
   }
 
   const exitMatch = (exitId: string, via?: string) =>

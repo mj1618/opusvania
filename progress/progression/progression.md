@@ -1,6 +1,6 @@
 # Progression validator report
 
-Generated 2026-09-28 09:25 by `npm run progression` (full mode) on build 4647c8a1ec-dirty, engine d3f836ab18. 8 search workers, default budget 300000 nodes. Tool: `tools/progression/`; how to read it: `memory/progression.md`.
+Generated 2026-09-28 09:36 by `npm run progression` (full mode) on build 37cfd83b08-dirty, engine d67ef157e3. 8 search workers, default budget 300000 nodes. Tool: `tools/progression/`; how to read it: `memory/progression.md`.
 
 ## Summary
 
@@ -13,8 +13,8 @@ Generated 2026-09-28 09:25 by `npm run progression` (full mode) on build 4647c8a
 
 - **Gate audit:** 3 annotated gates, 1 failing, 0 warning (full-kit bypass only).
 - **Trap probes:** 271 ledges probed, 0 proven traps, 0 suspected.
-- **Findings:** 6 errors (6 not in the baseline `tests/progression/baseline.json`), 1 warnings.
-- **Run time:** extract 0.0 s, solve 8.3 s, audit 44.4 s, probes 31.0 s, design 0.0 s, total 83.7 s.
+- **Findings:** 6 errors (0 not in the baseline `tests/progression/baseline.json`), 3 warnings.
+- **Run time:** extract 0.0 s, solve 0.0 s, audit 0.0 s, probes 0.0 s, design 0.0 s, total 0.1 s.
 
 ![World graph](progression.svg)
 
@@ -24,13 +24,15 @@ Green: reached (world semantics). Red: not reached. Orange: a softlock or trap i
 
 | Level | Baseline | Finding |
 |---|---|---|
-| error | **NEW** | [world] exit stairwell/G never reached: not found in 300000 nodes |
-| error | **NEW** | [world] suspected softlock: stairwell at spawn:default with {wallJump, dash, doubleJump, pogo, seize, levy} can't get back to the start or a Rest (path: hub/exit:S) |
-| error | **NEW** | [gym] exit stairwell/G never reached: not found in 300000 nodes |
-| error | **NEW** | [gym] suspected softlock: stairwell at spawn:default with {seize, levy} can't get back to the start or a Rest (path: hub/exit:S) |
-| error | **NEW** | gate lot-7/lock:spring-hall: G7 minus levy {wallJump, dash, doubleJump, pogo, seize} bypasses it; minimal: {wallJump, seize} or {doubleJump, seize} |
-| error | **NEW** | diff tests/progression/gym-world.json: blocked: stairwell-G stairwell -> hub (stairwell/G): the solver never reached stairwell/G (unknown) |
-| warning |  | design docs/design/world-design.md: every non-stub room reachable from start: X3: unreachable |
+| error | accepted | [world] exit stairwell/G never reached: not found in 300000 nodes |
+| error | accepted | [world] suspected softlock: stairwell at spawn:default with {wallJump, dash, doubleJump, pogo, seize, levy} can't get back to the start or a Rest (path: hub/exit:S) |
+| error | accepted | [gym] exit stairwell/G never reached: not found in 300000 nodes |
+| error | accepted | [gym] suspected softlock: stairwell at spawn:default with {seize, levy} can't get back to the start or a Rest (path: hub/exit:S) |
+| error | accepted | gate lot-7/lock:spring-hall: G7 minus levy {wallJump, dash, doubleJump, pogo, seize} bypasses it; minimal: {wallJump, seize} or {doubleJump, seize} |
+| error | accepted | diff tests/progression/gym-world.json: blocked: stairwell-G stairwell -> hub (stairwell/G): the solver never reached stairwell/G (unknown) |
+| warning |  | design docs/design/world-design.md: G2/G7 proof: e13: gap 10 tiles < kit-without-slip {levy, seize, flag:shortcut:storeLatch} + palette {brown, violet} = 12.1 + 1 margin (§3.1 table) |
+| warning |  | design docs/design/world-design.md: G7 proof: e13: proof says kit-without-key reaches 7.6 tiles; the §3.1 table gives 12.1 for {levy, seize, flag:shortcut:storeLatch} + B5's palette {brown, violet} (if the gated span is sound-free or in B6, say so with gate.approachPalette) |
+| warning |  | design docs/design/world-design.md: G2/G7 proof: e33: gap 28 tiles < kit-without-hueAndCry {levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + palette {violet, brown, pink} = 48.7 + 1 margin (§3.1 table) |
 
 ## Gate audit
 
@@ -52,7 +54,7 @@ Each key ability K of a gate must be necessary. **G7** (governs): the target mus
 
 | Key removed | Basis | Kit | Result | Minimal bypass combos (evidence) |
 |---|---|---|---|---|
-| levy | G7 | {wallJump, dash, doubleJump, pogo, seize} | **BYPASSED** (166 f) | {wallJump, seize} 166 f [tape](progression-evidence/lot-7.lock.spring-hall.wallJump+seize.json); {doubleJump, seize} 156 f [tape](progression-evidence/lot-7.lock.spring-hall.doubleJump+seize.json) (22 combos tried) |
+| levy | G7 | {wallJump, dash, doubleJump, pogo, seize} | **BYPASSED** (156 f) | {wallJump, seize} 166 f [tape](progression-evidence/lot-7.lock.spring-hall.wallJump+seize.json); {doubleJump, seize} 156 f [tape](progression-evidence/lot-7.lock.spring-hall.doubleJump+seize.json) (22 combos tried) |
 
 <details><summary>Bypass tapes (input DSL)</summary>
 
@@ -133,7 +135,7 @@ What the sim does today: entering a room sets the abilities to the room's declar
 
 ## In-room trap probes
 
-271 (room, entry, kit, ledge) probes: 270 ledges get back to their entry or an exit, 1 stuck ledges are not reachable anyway, 0 traps. 31.0 s.
+271 (room, entry, kit, ledge) probes: 270 ledges get back to their entry or an exit, 1 stuck ledges are not reachable anyway, 0 traps. 0.0 s.
 
 
 ## World graph (extracted from room data)
@@ -181,30 +183,37 @@ Every design check passes.
 
 ## Design graph: docs/design/world-design.md
 
-29 rooms, 38 edges. Symbolic solve (abilities × flags × fever): 23 non-stub rooms reachable, 1 not. 7 ms.
+28 rooms, 38 edges. Symbolic solve (abilities × flags × fever): 21 non-stub rooms reachable, 2 not. 9 ms.
 
 | Level | Check | Subject | Detail |
 |---|---|---|---|
-| error | every non-stub room reachable from start | X3 | unreachable |
+| error | G2/G7 proof | e13 | gap 10 tiles < kit-without-slip {levy, seize, flag:shortcut:storeLatch} + palette {brown, violet} = 12.1 + 1 margin (§3.1 table) |
+| warning | G7 proof | e13 | proof says kit-without-key reaches 7.6 tiles; the §3.1 table gives 12.1 for {levy, seize, flag:shortcut:storeLatch} + B5's palette {brown, violet} (if the gated span is sound-free or in B6, say so with gate.approachPalette) |
+| error | G2/G7 proof | e33 | gap 28 tiles < kit-without-hueAndCry {levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + palette {violet, brown, pink} = 48.7 + 1 margin (§3.1 table) |
 
 **Sanctioned breaks:**
 
-- e16: adds: B11 with {levy, seize, slip}; B12 with {levy, seize, slip}; B13 with {levy, seize, slip}; B14 with {levy, seize, slip, flag:boss, fever 1}; B15 with {levy, seize, slip, flag:boss, fever 1}; X2 with {levy, seize, slip, flag:boss, fever 1}; EX_FOUNDRY with {levy, seize, slip, flag:boss, fever 1}
+- e17: adds: B11 with {levy, seize, slip}; B12 with {levy, seize, slip}; B12c with {levy, seize, slip}; B13 with {levy, seize, slip, flag:boss:auctioneer, fever 1}; X2 with {levy, seize, slip, flag:boss:auctioneer, fever 1}; EX_ROW_ROOFS with {levy, seize, slip, flag:boss:auctioneer, fever 1}; EX_FOUNDRY with {levy, seize, slip, flag:boss:auctioneer, fever 1}
 
 **G7 plan** (kits each reach gate must fail against once built; the room palette is part of the kit):
 
 | Edge | Key | Kits without the key (+ room palette) | Sim kits |
 |---|---|---|---|
-| e06 B2→B3 (teach) | levy | {seize} + {pink, white} | {pogo, seize} |
-| e12 B6→B7 | slip | {levy, seize, flag:shortcut:storeLatch} + {brown, violet} | {pogo, seize, levy} |
-| e20 B11→B12 | ropeSkip | {levy, seize, slip, flag:boss, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + {none} | {dash, pogo, seize, levy} |
-| e28 T1→EX_ROW | ropes | {levy, ropeSkip, seize, slip, flag:boss, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + {none} | {dash, doubleJump, pogo, seize, levy} |
-| e32 B15→EX_RECEIVERSHIP | hueAndCry | {levy, ropeSkip, seize, slip, flag:boss, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + {none} | key not in the sim yet |
+| e04 B1→B2 (teach) | levy | {seize} + {pink, white} | {pogo, seize} |
+| e08 B2→X5 | ropes | {levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + {brown, brown, violet} | {dash, doubleJump, pogo, seize, levy} |
+| e13 B5→B6 | slip | {levy, seize, flag:shortcut:storeLatch} + {brown, violet} | {pogo, seize, levy} |
+| e14 B6→B8 (teach) | local:violet | {levy, seize, slip} + {none} | {dash, pogo, seize, levy} |
+| e18 B8→B9 | local:brown | {levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + {none} | {dash, doubleJump, pogo, seize, levy} |
+| e23 B11→B12 | ropeSkip | {levy, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + {none} | {dash, pogo, seize, levy} |
+| e29 T1→EX_ROW | ropeSkip | {levy, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + {brown} | {dash, pogo, seize, levy} |
+| e30 T2→EX_ROW_ROOFS | local:pink | {levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + {brown} | {dash, doubleJump, pogo, seize, levy} |
+| e33 B13→EX_RECEIVERSHIP | hueAndCry | {levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + {violet, brown, pink} | key not in the sim yet |
 
 <details><summary>Notes</summary>
 
-- G7: e15: reach edge with no ability key (flag/fever/weight only): the bot proof needs the built room
-- G7: e17: reach edge with no ability key (flag/fever/weight only): the bot proof needs the built room
+- every non-stub room reachable from start: X3: behind ability:writ, which nothing in this graph grants (a later return)
+- every non-stub room reachable from start: X5: behind ability:ropes, which nothing in this graph grants (a later return)
+- G7: e19: reach edge keyed by flag/fever/weight only: the bot proof needs the built room
 
 </details>
 
@@ -212,10 +221,10 @@ Every design check passes.
 
 | Level | Kind | Subject | Detail |
 |---|---|---|---|
-| info | not-built | 24 rooms | T1, T2, T3, T4, B1, B2, B3, B4, B5, B6, B7, B8, B8a, B9, B10, B11, B12, B13, B14, B15, X1, X2, X3, X4 |
+| info | not-built | 22 rooms | T1, T2, T3, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, X1, X2, X3, X4, X5, X6 |
 | info | not-designed | 19 rooms | built but not in the design: hub, gym-01, gym-02, gym-03, gym-04, gym-05, gym-06, gym-07, gym-08, gym-09, gym-10, gym-11, gym-12, gym-13, gym-14, lot-7, lot-7-control, the-pit, stairwell |
 
 ## Oracle and timings
 
-Queries 511: static proofs 22, cache hits 191, inferred by monotonicity 164, committed tapes 79, bot searches 55 (83.6 s wall), tapes re-verified 123, stale records trusted 0.
+Queries 511: static proofs 22, cache hits 239, inferred by monotonicity 171, committed tapes 79, bot searches 0 (0.0 s wall), tapes re-verified 0, stale records trusted 0.
 

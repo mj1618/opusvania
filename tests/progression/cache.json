@@ -9,7 +9,7 @@
     "tape": "L143",
     "frames": 143,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 7
    },
    {
@@ -38,7 +38,7 @@
     "tape": "L+J4 L16 L+J4 L8 .4 L142",
     "frames": 178,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 14
    },
    {
@@ -67,7 +67,7 @@
     "tape": "L20 L+J4 L16 L+J4 L8 .4 L+J4 L151",
     "frames": 211,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 23
    },
    {
@@ -96,7 +96,7 @@
     "tape": "L+J4 L8 .4 L+J4 L28 L+J4 L16 L+J4 L16 L+J4 L8 .4 L142",
     "frames": 246,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 38
    },
    {
@@ -125,7 +125,7 @@
     "tape": "L20 L+J4 L16 L+J4 L8 .4 L+J4 L28 L+J4 L16 L+J4 L16 L+J4 L8 .4 L142",
     "frames": 286,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 34
    },
    {
@@ -154,7 +154,7 @@
     "tape": "L+J4 L16 L+J4 L44 L+J4 .4 L12 L+J4 L8 .4 L+J4 L28 L+J4 L16 L+J4 L16 L+J4 L8 .4 L142",
     "frames": 334,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 41
    },
    {
@@ -183,7 +183,7 @@
     "tape": "L20 R+J4 L+J4 L24 .4",
     "frames": 56,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 11
    },
    {
@@ -212,7 +212,7 @@
     "tape": "L+J4 J4 L+J4 .4 L28 R+J4 L+J4 L27",
     "frames": 79,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 28
    },
    {
@@ -241,7 +241,7 @@
     "tape": "L12 J4 L4 .4 L4 .4 L16 L+J4 L4 .4 L24 .4 L3",
     "frames": 91,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 14
    },
    {
@@ -270,7 +270,7 @@
     "tape": "L+J8 L4 L+J8 L8 L+J4 J4 L+J12 L3",
     "frames": 51,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 79
    },
    {
@@ -297,22 +297,22 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4602
+    "engine": "d67ef157e3",
+    "ms": 4332
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4358
+    "engine": "d67ef157e3",
+    "ms": 4173
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4313
+    "engine": "d67ef157e3",
+    "ms": 4444
    }
   ],
   "gym-02#e7aeeb7e38e1|@32,9|G|s1|opus": [
@@ -322,7 +322,7 @@
     "tape": "L12 J4 L24 .4 L+J4 J4 L+J12 L16 D+J4 L+J8 J4 L+J12 .4",
     "frames": 112,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 78
    },
    {
@@ -349,22 +349,22 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4065
+    "engine": "d67ef157e3",
+    "ms": 4268
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 3917
+    "engine": "d67ef157e3",
+    "ms": 4199
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 5088
+    "engine": "d67ef157e3",
+    "ms": 5745
    }
   ],
   "gym-02#e7aeeb7e38e1|@36,14|G|s1|opus": [
@@ -372,8 +372,8 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 3700
+    "engine": "d67ef157e3",
+    "ms": 3953
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
@@ -381,7 +381,7 @@
     "tape": "J4 L4 L+J8 J12 X4 .16 L4 X4 .12 L8 L+J20 J4 L+J4 L4 .4 L+J4 L+X4",
     "frames": 120,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 251
    },
    {
@@ -399,22 +399,22 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4763
+    "engine": "d67ef157e3",
+    "ms": 4931
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 3796
+    "engine": "d67ef157e3",
+    "ms": 4025
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 5612
+    "engine": "d67ef157e3",
+    "ms": 5983
    }
   ],
   "gym-02#e7aeeb7e38e1|@5,12|spawn:default|s1|opus": [
@@ -424,7 +424,7 @@
     "tape": "L16",
     "frames": 16,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 1
    },
    {
@@ -453,7 +453,7 @@
     "tape": "L+J8 L28",
     "frames": 36,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 4
    },
    {
@@ -480,8 +480,8 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 3604
+    "engine": "d67ef157e3",
+    "ms": 3796
    }
   ],
   "gym-03#38a292ac3dd9|@11,11|spawn:default|s1|opus": [
@@ -491,7 +491,7 @@
     "tape": "L8 L+J4 L44",
     "frames": 56,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 9
    },
    {
@@ -520,7 +520,7 @@
     "tape": "L8 L+J4 L36 L+J4 L44",
     "frames": 96,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 12
    },
    {
@@ -549,7 +549,7 @@
     "tape": "L8 L+J4 L36 L+J4 L36 L+J4 L44",
     "frames": 136,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 15
    },
    {
@@ -578,7 +578,7 @@
     "tape": "L8 L+J4 L36 L+J4 L36 L+J4 L36 L+J4 L44",
     "frames": 176,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 22
    },
    {
@@ -607,7 +607,7 @@
     "tape": "L12 L+J4 .4 L+J8 L28 L+J4 L36 L+J4 L36 L+J4 L36 L+J4 L44 .1",
     "frames": 225,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 45
    },
    {
@@ -636,7 +636,7 @@
     "tape": "L16 L+J20 L40",
     "frames": 76,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 380
    },
    {
@@ -665,7 +665,7 @@
     "tape": "L16 L+J20 L56 L+J20 .4 L35",
     "frames": 151,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 874
    },
    {
@@ -694,7 +694,7 @@
     "tape": "L12 J4 L4 .4 L44 L+J20 L52 L+J20 L39",
     "frames": 199,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 2246
    },
    {
@@ -723,7 +723,7 @@
     "tape": "L12 J4 L4 .4 L16 L+J4 L4 .4 L44 L+J20 .4 L48 L+J20 J4 L8 .4 L28",
     "frames": 232,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 1338
    },
    {
@@ -752,7 +752,7 @@
     "tape": "L12 J4 L4 .4 L16 L+J4 L4 .4 L16 L+J4 L4 .4 L44 L+J20 L4 .4 L48 L+J20 .4 L35",
     "frames": 259,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 817
    },
    {
@@ -781,7 +781,7 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 0
    },
    {
@@ -790,7 +790,7 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 0
    },
    {
@@ -799,7 +799,7 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 0
    }
   ],
@@ -808,22 +808,22 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4318
+    "engine": "d67ef157e3",
+    "ms": 4532
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4410
+    "engine": "d67ef157e3",
+    "ms": 4670
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4628
+    "engine": "d67ef157e3",
+    "ms": 5067
    }
   ],
   "gym-05#06ee6bbebe43|@1,7|G|s1|opus": [
@@ -842,7 +842,7 @@
     "tape": "R12 L4 R4 L4 .4 R136 L4 .4 L139",
     "frames": 311,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 28
    },
    {
@@ -869,7 +869,7 @@
     "tape": "R80 L4 .4 L139",
     "frames": 227,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 17
    },
    {
@@ -909,7 +909,7 @@
     "tape": "L60 L+J4 L8 .4 L12 .12 R108 R+J4 R8 .4 R12 L4 .4 L139",
     "frames": 383,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 49
    },
    {
@@ -936,7 +936,7 @@
     "tape": "L32 L+J4 J4 L4 J4 .7",
     "frames": 55,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 157
    },
    {
@@ -965,7 +965,7 @@
     "tape": "L20 R4 .4 L139",
     "frames": 167,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 12
    },
    {
@@ -1005,7 +1005,7 @@
     "tape": "R40 L4 .4 L56 R4 .4 R4 .4 R128 .12 L136 .1",
     "frames": 397,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 31
    },
    {
@@ -1041,7 +1041,7 @@
     "tape": "L60 .4 L8 D+J4 .16 L4 D+J4 L4 .9",
     "frames": 113,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 10
    },
    {
@@ -1070,7 +1070,7 @@
     "tape": "J8 L+J4 L8 J8 L+J4 L116 .4 L8 D+J4 L4 .4 L4 .4 L4 .4 D+J4 R4 .1",
     "frames": 197,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 30
    },
    {
@@ -1099,7 +1099,7 @@
     "tape": "J8 L+J4 L8 J12 .8 J8 L+J4 L116 .4 L8 D+J4 L4 .4 L4 .4 L4 .4 D+J4 R4 .1",
     "frames": 217,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 67
    },
    {
@@ -1128,7 +1128,7 @@
     "tape": "L+J12 L124 .4 L4 D+J4 .16 L8 D+J4 .11",
     "frames": 187,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 18
    },
    {
@@ -1157,7 +1157,7 @@
     "tape": "D+J4 .8 L4",
     "frames": 16,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 2
    },
    {
@@ -1186,7 +1186,7 @@
     "tape": "D+J4 .12 D+J4 .4 D+J4 .12 L3",
     "frames": 43,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 4
    },
    {
@@ -1215,7 +1215,7 @@
     "tape": "D+J4 .4 L4 .4 D+J4 L24",
     "frames": 44,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 4
    },
    {
@@ -1244,7 +1244,7 @@
     "tape": "L+J4 J4 .4 J8 L+J4 J4 L+J4 .4 J8 L+J8 J4 .4 J4 L+J8 L4 J4 L+J8 L16 .4 L4 .4 L4 .4 L4 .30",
     "frames": 158,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 24
    },
    {
@@ -1273,7 +1273,7 @@
     "tape": "L12 .4 L4 .4 L24 .4 L4 .4 L4 .33",
     "frames": 97,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 5
    },
    {
@@ -1302,7 +1302,7 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 0
    },
    {
@@ -1311,7 +1311,7 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 0
    },
    {
@@ -1320,8 +1320,8 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 1
+    "engine": "d67ef157e3",
+    "ms": 0
    }
   ],
   "gym-07#d2e4f363b25b|@22,4|spawn:default|s1|opus": [
@@ -1329,22 +1329,22 @@
     "abilities": "wallJump",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 5650
+    "engine": "d67ef157e3",
+    "ms": 5885
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4961
+    "engine": "d67ef157e3",
+    "ms": 5333
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4867
+    "engine": "d67ef157e3",
+    "ms": 5168
    }
   ],
   "gym-07#d2e4f363b25b|@6,11|spawn:default|s1|opus": [
@@ -1354,7 +1354,7 @@
     "tape": "L12 .4 L4 .4 L4 .33",
     "frames": 61,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 5
    },
    {
@@ -1383,7 +1383,7 @@
     "tape": "L40 .4 L4 .4 L4 .4 L4 .4 L4 .20 L4 .4",
     "frames": 100,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 9
    },
    {
@@ -1412,7 +1412,7 @@
     "tape": "R40 .60",
     "frames": 100,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 9
    },
    {
@@ -1441,7 +1441,7 @@
     "tape": "R16 .80 R4 D+J4 R4 .4 R19",
     "frames": 131,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 10
    }
   ],
@@ -1450,8 +1450,8 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4168
+    "engine": "d67ef157e3",
+    "ms": 4993
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
@@ -1459,7 +1459,7 @@
     "tape": "J4 .4 J4 L+J4 L4 J4 .4 J4 L+J8 J8 X4 .8 L8 .4 X4",
     "frames": 76,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 19
    },
    {
@@ -1479,7 +1479,7 @@
     "tape": "R16 .32 R4 D+J4 R4 .4 R19",
     "frames": 83,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 7
    },
    {
@@ -1497,8 +1497,8 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4868
+    "engine": "d67ef157e3",
+    "ms": 5106
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
@@ -1506,7 +1506,7 @@
     "tape": "J4 .4 J4 L+J4 .4 L+J4 J8 L4 L+J4 J4 L+J4 J4 L4 L+J4 J4 .4 J12 .4 J8 L+J4 L4 J4 L+J16 L4 J4 L4 L+J4 J8 X4 .12 L12",
     "frames": 172,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 2425
    },
    {
@@ -1524,7 +1524,7 @@
     "tape": "R30",
     "frames": 30,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 3
    },
    {
@@ -1551,22 +1551,22 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4047
+    "engine": "d67ef157e3",
+    "ms": 4257
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 3943
+    "engine": "d67ef157e3",
+    "ms": 4194
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4755
+    "engine": "d67ef157e3",
+    "ms": 5000
    }
   ],
   "gym-09#d14779c310a1|@17,21|G|s1|opus": [
@@ -1576,7 +1576,7 @@
     "tape": "L8 .4 R4 .56 R4 .4 R12",
     "frames": 92,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 5
    },
    {
@@ -1594,8 +1594,8 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 5090
+    "engine": "d67ef157e3",
+    "ms": 5406
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
@@ -1603,7 +1603,7 @@
     "tape": "J12 L+J4 .4 J4 L+J16 L4 J4 .4 L+J8 J4 L+J4 X4 .8 J4 .4 J4 L+J4 L4 J4 L+J8 L4 X4 .12 L11",
     "frames": 143,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 1290
    },
    {
@@ -1621,7 +1621,7 @@
     "tape": "L8 .4 R4 .8 R4 .4 R12",
     "frames": 44,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 2
    },
    {
@@ -1639,8 +1639,8 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4269
+    "engine": "d67ef157e3",
+    "ms": 4455
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
@@ -1648,7 +1648,7 @@
     "tape": "J12 L+J4 .4 J4 L+J16 L4 J8 L+J8 L4 L+J16 L4 J8 R+J4 .4 L+J8 J4 L+J4 L4 J8 R+J4 J4 R4 J4 .4 L+J4 J8 L+X4 .8 R4 J4 D+A4 J4 L+J4 .4 J4 L4 L+J4 .4 X4 .12 L11",
     "frames": 239,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 3218
    },
    {
@@ -1666,7 +1666,7 @@
     "tape": "L+X4 .12 L+J4 L4 X4 .12 L11",
     "frames": 51,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 12
    },
    {
@@ -1695,7 +1695,7 @@
     "tape": "L+X4 .12 L8 X4 .12 L+J4 .4 L+J4 .4 L4 X4 .8 L+J8 L4 X4 .12 L12 .4 X4 .8 J4 L4 .4 X4 .12 L3",
     "frames": 159,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 867
    },
    {
@@ -1724,7 +1724,7 @@
     "tape": "L24 L+J4 L16 L+J24 L28",
     "frames": 96,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 140
    },
    {
@@ -1753,7 +1753,7 @@
     "tape": "L36 .8 L4 .4 L24 L+J4 .4 L12 L+J28 L4 .4 L22",
     "frames": 154,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 376
    },
    {
@@ -1782,7 +1782,7 @@
     "tape": "L24 L+J4 L4 .4 L12 L+D+A4 L8 .4 L16 L+D+A4 L4 .4 L4 .4 L16 L+D+A4 L32 L+D+A4 L12 .4 L16 L+D+A4 L8 .4 L4 .4 L4 .4 L15",
     "frames": 235,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 84
    },
    {
@@ -1811,7 +1811,7 @@
     "tape": "L+X4 .12 L4 .20 L4 D+A4 .4 L+D+A4 X4 .12 L4",
     "frames": 76,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 14
    },
    {
@@ -1831,7 +1831,7 @@
     "tape": "L+X4 .12 L+J12 .4 X4 .8 J4 L+J4 L4 J4 L4 L+J4 J8 X4 .8 L12 X4 .8 L8 .20 L4 L+D+A4 .4 L+D+A4 .4 X4 .9",
     "frames": 173,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 137
    },
    {
@@ -1851,7 +1851,7 @@
     "tape": "L+X4 .12 L+J12 J4 L+J4 X4 .8 J4 L4 J4 L+J8 .4 J20 X4 .8 L12 X4 .8 L8 .20 L4 L+D+A4 .4 L+D+A4 .4 X4 .10",
     "frames": 190,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 145
    },
    {
@@ -1871,7 +1871,7 @@
     "tape": "X4 J4 R4 R+J4 J4 R+J4 J4 X4 .8 J4 R12 D+A4 R4 J4 X4 .8 J4 R8 .4 X4 .12 R4",
     "frames": 116,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 45
    },
    {
@@ -1889,15 +1889,15 @@
     "abilities": "wallJump+dash+doubleJump+pogo",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4520
+    "engine": "d67ef157e3",
+    "ms": 4956
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4910
+    "engine": "d67ef157e3",
+    "ms": 5283
    }
   ],
   "gym-13#4cf303ecec5b|@34,7|G|s1|opus": [
@@ -1918,7 +1918,7 @@
     "tape": "L+X4 .12 L+J12 .4 X4 .8 J4 L+J4 L4 J4 L+X4 .8 L16 X4 .8 L8 .20 L4 L+D+A4 .4 L+D+A4 .4 X4 .10",
     "frames": 162,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 695
    },
    {
@@ -1936,7 +1936,7 @@
     "tape": "J4 .4 J4 R+J4 R4 J8 R+X4 .12 R11",
     "frames": 55,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 65
    },
    {
@@ -1954,15 +1954,15 @@
     "abilities": "wallJump+dash+doubleJump+pogo",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4811
+    "engine": "d67ef157e3",
+    "ms": 5177
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4968
+    "engine": "d67ef157e3",
+    "ms": 5885
    }
   ],
   "gym-13#4cf303ecec5b|@54,11|G|s1|opus": [
@@ -1983,7 +1983,7 @@
     "tape": "L+X4 .12 L+J4 L4 L+J4 J4 X4 .12 L+J4 L8 L+D+A4 D+J4 L+D+A4 L4 J4 X4 .12 L12 J4 X4 .12 L+J20 J4 L+J4 L8 J4 L+J8 .4 J20 X4 .8 L12 X4 .8 L8 .20 L4 L+D+A4 .4 L+D+A4 .4 X4 .10",
     "frames": 298,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 1642
    },
    {
@@ -2001,7 +2001,7 @@
     "tape": "X4 J4 R12 L4 .16 L4 L+D+A4 .4 L4 X4",
     "frames": 60,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 46
    },
    {
@@ -2021,7 +2021,7 @@
     "tape": "L+X4 .12 L8 X4 .8 L12 X4 .8 L16 X4",
     "frames": 80,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 21
    },
    {
@@ -2041,7 +2041,7 @@
     "tape": "L+X4 .4 L+J4 L4 .4 L8 X4 .16 L4 .4 X4 .8 L12 X4 .8 L15",
     "frames": 107,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 18
    },
    {
@@ -2061,7 +2061,7 @@
     "tape": "L+X4 .12 L8 L+J4 X4 .16 L4 X4 .12 L20 X4 .8 L12 X4 .2",
     "frames": 118,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 22
    },
    {
@@ -2081,7 +2081,7 @@
     "tape": "L+X4 .4 L+J4 L4 .4 L8 X4 .16 L4 J4 X4 .12 L4 .4 L8 X4 .8 L12 X4 .8 L12 X4 .2",
     "frames": 142,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 49
    },
    {
@@ -2101,7 +2101,7 @@
     "tape": "L+X4 .12 L8 L+J4 X4 .8 J4 L4 .4 L4 X4 .4 J4 L4 .4 L8 X4 .16 L4 .4 X4 .8 L12 X4 .8 L15",
     "frames": 163,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 37
    },
    {
@@ -2121,7 +2121,7 @@
     "tape": "L+X4 .4 L+J4 L4 .4 L8 X4 .16 L4 J4 X4 .12 L4 .4 L+J4 X4 .12 L4 .4 X4 .12 L8 X4 .8 L12 X4 .10",
     "frames": 170,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 84
    },
    {
@@ -2141,7 +2141,7 @@
     "tape": "L+X4 .12 L8 L+J4 X4 .8 J4 L4 .4 L4 X4 .4 J4 L4 .4 L8 X4 .16 L4 J4 X4 .12 L4 .4 L8 X4 .8 L12 X4 .8 L12 X4 .2",
     "frames": 198,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 81
    },
    {
@@ -2161,7 +2161,7 @@
     "tape": "L+X4 .12 L12 .4 X4 .8 J4 L4 .4 L8 X4 J4 .4 L8 .4 X4 .4 J8 L4 .4 L+J4 X4 .8 J4 L12 X4 J4 .4 L8 .4 X4 .12 L4 .4 L+J4 X4 .16 L4 .4 X4 .8 L12 X4 .8 L12 X4 .5",
     "frames": 281,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 116
    },
    {
@@ -2181,7 +2181,7 @@
     "tape": "L+X4 .12 L+J4 L4 X4 .4 J8 L4 L+J4 L12 J4 X4 .12 L8 X4 .8 L12 X4 J4 L4 .4 L4 .4 X4 .4 J8 L4 .4 L+J4 X4 .8 J4 L12 X4 J4 .4 L8 .4 X4 .12 L8 X4 .8 L12 X4 .8 L15",
     "frames": 291,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 86
    },
    {
@@ -2201,7 +2201,7 @@
     "tape": "L+X4 .12 L12 .4 L4 .4 X4 .12 L4 L+J4 X4 .12 L8 X4 .8 L4 L+J4 L4 X4 .12 L4 .4 L+J4 X4 .12 J4 L12 X4 .12 L4 .4 L+J4 X4 .12 L8 X4 .4 J4 L4 .4 L8 X4 .16 L4 .4 X4 .8 L12 X4 .8 L15",
     "frames": 331,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 98
    },
    {
@@ -2221,7 +2221,7 @@
     "tape": "J4 .4 J4 L+J4 L4 J4 .4 L+J4 X4 .8 L4 L+J4 L4 X4 .12 L4 .4 L4 L+J4 X4 .12 L4 .4 L+J4 X4 .12 L4 .4 X4 .8 L4 L+J4 L4 X4 .12 L4 .4 L+J4 X4 .8 L8 .4 X4 .8 L4 L+J4 L4 X4 .12 L4 .4 J4 X4 .12 L4 .4 L+J4 X4 .16 L4 .4 X4 .8 L12 X4 .8 L12 X4 .8 L8 .1",
     "frames": 393,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 161
    },
    {
@@ -2241,7 +2241,7 @@
     "tape": "J4 .4 J4 L+J20 L4 J8 L+J4 L4 J8 .4 J4 .4 J4 L+J4 L4 J4 L+J8 .4 J12 L+J4 X4 .8 L8 J4 X4 .12 L4 .4 L+J4 X4 .12 L4 .4 X4 .8 L4 L+J4 L4 X4 .12 L4 .4 L4 L+J4 X4 .12 L4 .4 L+J4 X4 .12 L4 .4 X4 .8 J4 .4 L4 X4 .12 L8 L+J4 X4 .12 L8 J4 X4 .12 L4 .4 L8 X4 .8 L12 X4 .8 L12 X4 .8",
     "frames": 472,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 189
    },
    {
@@ -2261,7 +2261,7 @@
     "tape": "J4 .4 J4 L+J4 J4 L+J4 X4 .12 J8 L+J4 L4 J8 L4 J4 L4 L+J4 J4 X4 .12 L4 L+J4 X4 .12 L8 X4 .8 L4 L+J4 L4 X4 .12 L4 .4 L4 L+J4 X4 .12 L4 .4 L+J4 X4 .12 L4 .4 X4 .4 J4 L4 .4 L8 X4 .16 L4 J4 X4 .12 L4 .4 L+J4 X4 .12 L4 .4 X4 .8 J4 .4 L8 X4 .8 L4 .4 L8 X4 .8 L12 X4 .8 L8 .4 X4",
     "frames": 456,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 208
    },
    {
@@ -2281,7 +2281,7 @@
     "tape": "X4 .4",
     "frames": 8,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 6
    }
   ],
@@ -2292,7 +2292,7 @@
     "tape": "X4 .12 R4",
     "frames": 20,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 8
    }
   ],
@@ -2303,7 +2303,7 @@
     "tape": "X4 .12 R8 X4 .5",
     "frames": 33,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 22
    }
   ],
@@ -2314,7 +2314,7 @@
     "tape": "X4 .12 R8 X4 .8 R8",
     "frames": 44,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 40
    }
   ],
@@ -2325,7 +2325,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .5",
     "frames": 57,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 58
    }
   ],
@@ -2336,7 +2336,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R8",
     "frames": 68,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 25
    }
   ],
@@ -2347,7 +2347,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .5",
     "frames": 81,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 39
    }
   ],
@@ -2358,7 +2358,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R8",
     "frames": 92,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 29
    }
   ],
@@ -2369,7 +2369,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5",
     "frames": 105,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 28
    }
   ],
@@ -2380,7 +2380,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8",
     "frames": 116,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 26
    }
   ],
@@ -2391,7 +2391,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5",
     "frames": 129,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 32
    }
   ],
@@ -2402,7 +2402,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8",
     "frames": 140,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 27
    }
   ],
@@ -2413,7 +2413,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5",
     "frames": 153,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 46
    }
   ],
@@ -2424,7 +2424,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8",
     "frames": 164,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 27
    }
   ],
@@ -2435,7 +2435,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .2",
     "frames": 198,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 39
    }
   ],
@@ -2446,7 +2446,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .10",
     "frames": 182,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 38
    }
   ],
@@ -2457,7 +2457,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .2",
     "frames": 222,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 35
    }
   ],
@@ -2468,7 +2468,7 @@
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .10",
     "frames": 206,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 50
    }
   ],
@@ -2479,7 +2479,7 @@
     "tape": "L28 L+S4 L4 .4 L62",
     "frames": 102,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 443
    },
    {
@@ -2499,7 +2499,7 @@
     "tape": "L16 .8 L4 D+J4 L52 L+V4 L+S4 L4 S4 L62",
     "frames": 162,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 311
    },
    {
@@ -2519,7 +2519,7 @@
     "tape": "L12 .4 L12 .4 L4 .4 L4 .4 L52 L+S4 L4 .4 L8 L+S4 L52",
     "frames": 176,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 634
    },
    {
@@ -2539,7 +2539,7 @@
     "tape": "L+J8 L24 .4 L12 .4 L4 .4 L4 .4 L52 L+S4 L4 .4 L8 L+S4 L52",
     "frames": 196,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 697
    },
    {
@@ -2559,7 +2559,7 @@
     "tape": "L20 L+S4 L4 .4 L8 L+V4 L12 L+V4 L+S4 L4 S4 L4 L+V4 L40 .8 L56 L+S4 L4 .4 L63",
     "frames": 259,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 1886
    },
    {
@@ -2579,7 +2579,7 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 0
    },
    {
@@ -2588,7 +2588,7 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 0
    }
   ],
@@ -2597,15 +2597,15 @@
     "abilities": "seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4669
+    "engine": "d67ef157e3",
+    "ms": 4878
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4689
+    "engine": "d67ef157e3",
+    "ms": 4914
    }
   ],
   "lot-7#6539bb1db797|default|G|s1|opus": [
@@ -2613,8 +2613,8 @@
     "abilities": "wallJump+dash+doubleJump+pogo+seize",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4889
+    "engine": "d67ef157e3",
+    "ms": 5080
    }
   ],
   "lot-7#6539bb1db797|default|rect:1536,512,64,256|s1|opus": [
@@ -2636,15 +2636,15 @@
     "abilities": "dash+pogo+seize",
     "verdict": "unknown",
     "budget": 600000,
-    "engine": "d3f836ab18",
-    "ms": 9046
+    "engine": "d67ef157e3",
+    "ms": 9343
    },
    {
     "abilities": "dash+seize",
     "verdict": "unknown",
     "budget": 600000,
-    "engine": "d3f836ab18",
-    "ms": 8511
+    "engine": "d67ef157e3",
+    "ms": 8681
    },
    {
     "abilities": "doubleJump+pogo+seize",
@@ -2659,22 +2659,22 @@
     "tape": "R+J8 R12 R+J12 .4 R4 R+J4 R+J+S4 J8 R+J8 R4 R+J12 R8 R+J4 R4 R+J4 R4 R+J4 R8 R+J4 J4 R+J4 J4 R4 J4 R+J4 J4 R+J4 R4",
     "frames": 156,
     "budget": 600000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 7929
    },
    {
     "abilities": "pogo+seize",
     "verdict": "unknown",
     "budget": 600000,
-    "engine": "d3f836ab18",
-    "ms": 9970
+    "engine": "d67ef157e3",
+    "ms": 9085
    },
    {
     "abilities": "seize",
     "verdict": "unknown",
     "budget": 600000,
-    "engine": "d3f836ab18",
-    "ms": 9362
+    "engine": "d67ef157e3",
+    "ms": 9830
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize",
@@ -2716,7 +2716,7 @@
     "tape": "R+J8 R4 R+J4 R12 R+J8 R4 R+J4 R+S4 .4 R8 R+J20 R4 .4 R+J20 R8 R+J4 J4 R+J20 R4 J4 R+J4 R10",
     "frames": 166,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 2734
    }
   ],
@@ -2727,7 +2727,7 @@
     "tape": "L12 .4 L35",
     "frames": 51,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 3
    },
    {
@@ -2756,7 +2756,7 @@
     "tape": "L+J8 L4 L+J8 L8 L+J4 J4 L4 .4 L12 .4 L42",
     "frames": 102,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 18
    },
    {
@@ -2785,7 +2785,7 @@
     "tape": "L8 .4 L+J4 L12 J4 L+J4 L72",
     "frames": 108,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 8
    },
    {
@@ -2814,7 +2814,7 @@
     "tape": "L12 .4 L12 .4 L12 L+J8 L4 L+J4 L24 .4 L42",
     "frames": 130,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 23
    },
    {
@@ -2843,7 +2843,7 @@
     "tape": "L36 .8 L16 .4 L+J4 L12 L+J8 L32 .4 L36",
     "frames": 160,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 13
    },
    {
@@ -2872,7 +2872,7 @@
     "tape": "L12 .4 L32 .4 L4 .4 L12 .4 L8 L+J4 L8 L+J4 .4 L+J8 L20 .4 L39",
     "frames": 175,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 44
    },
    {
@@ -2901,7 +2901,7 @@
     "tape": "L+J8 L24 .4 L32 .4 L4 .4 L12 .4 L8 L+J4 L8 L+J4 L4 L+J4 J4 L4 .4 L12 .4 L40",
     "frames": 196,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 46
    },
    {
@@ -2930,7 +2930,7 @@
     "tape": "L12 J4 L28 .4 L40 .4 L12 .4 L8 L+J4 L8 L+J4 L4 L+J4 J4 L4 .4 L12 .4 L40",
     "frames": 208,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 46
    },
    {
@@ -2959,7 +2959,7 @@
     "tape": "L+J4 L16 L+J8 L24 J4 L28 .4 L40 .4 L12 .4 L8 L+J4 L8 L+J4 L4 L+J4 J4 L24 .4 L35",
     "frames": 247,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 71
    },
    {
@@ -2988,7 +2988,7 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 0
    },
    {
@@ -2997,7 +2997,7 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 0
    },
    {
@@ -3006,7 +3006,7 @@
     "tape": "",
     "frames": 0,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 0
    }
   ],
@@ -3015,22 +3015,22 @@
     "abilities": "none",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 5520
+    "engine": "d67ef157e3",
+    "ms": 5650
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4597
+    "engine": "d67ef157e3",
+    "ms": 5028
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4420
+    "engine": "d67ef157e3",
+    "ms": 4232
    }
   ],
   "stairwell#cadae68ca922|default|G|s1|opus": [
@@ -3038,22 +3038,22 @@
     "abilities": "seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4077
+    "engine": "d67ef157e3",
+    "ms": 4386
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4572
+    "engine": "d67ef157e3",
+    "ms": 4806
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 4190
+    "engine": "d67ef157e3",
+    "ms": 4492
    }
   ],
   "the-pit#3bd57649b9aa|@21,9|spawn:default|s1|opus": [
@@ -3063,7 +3063,7 @@
     "tape": "L+X4 .24 L4 .4 X4 .2",
     "frames": 42,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 53
    },
    {
@@ -3083,7 +3083,7 @@
     "tape": "X4 .16 R4 .9",
     "frames": 33,
     "budget": 300000,
-    "engine": "d3f836ab18",
+    "engine": "d67ef157e3",
     "ms": 57
    },
    {
@@ -3101,15 +3101,15 @@
     "abilities": "wallJump+dash+doubleJump+pogo+levy",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 7441
+    "engine": "d67ef157e3",
+    "ms": 7995
    },
    {
     "abilities": "wallJump+dash+doubleJump+pogo+seize",
     "verdict": "unknown",
     "budget": 300000,
-    "engine": "d3f836ab18",
-    "ms": 8461
+    "engine": "d67ef157e3",
+    "ms": 7909
    }
   ]
  }

@@ -68,6 +68,8 @@ export interface GateNode {
   hold: 'sealed' | 'reach';
   /** G8: holds only against the kit at the room's earliest visit. */
   teachGate: boolean;
+  /** G7: bounded search region (`rect:x,y,w,h`) so the bot can exhaust. */
+  region?: string;
   note?: string;
   /** Why the target is what it is, or why the gate could not be audited. */
   derived?: string;
@@ -424,6 +426,7 @@ function extractGates(l: RoomLayout): GateNode[] {
       from: k.from ?? 'default',
       hold: k.hold,
       teachGate: k.teachGate,
+      ...(k.region ? { region: k.region } : {}),
       ...(k.note ? { note: k.note } : {}),
     };
     if (!targetTiles(l, k.target)) node.problem = `unknown target "${k.target}"`;

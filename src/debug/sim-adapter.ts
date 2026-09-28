@@ -605,6 +605,7 @@ export interface RoomLayout {
       requires: Ability[];
       hold: 'sealed' | 'reach';
       teachGate: boolean;
+      region?: string;
       note?: string;
     }
   >;

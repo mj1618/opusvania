@@ -1,0 +1,90 @@
+# Progression validator (`npm run progression`, `tools/progression/`)
+
+Proves the world has no softlocks and every gate holds (PLAN §4.3, world-design.md §3.2 G7).
+
+```
+npm run progression                      # full run: progress/progression/progression.{md,json,dot,svg} + evidence tapes, refreshes the cache
+npm run progression -- --out docs/reports/progression.md
+npm run progression -- --check           # the npm run check subset: cache-backed, read-only, fails on errors not in the baseline
+npm run progression -- --design <file.md|file.json>   # repeatable; default tests/progression/gym-world.json + docs/design/world-design.md
+```
+Options: `--budget` (300k; check 150k), `--combo-budget` (2×budget), `--workers`, `--semantics world,gym`,
+`--no-probes`, `--no-cache`, `--trust-stale`, `--baseline`, `--json`, `--quiet`.
+
+## Pieces
+- `world.ts` extracts the graph through `roomLayout()` in the sim adapter: exits (doors; G → `next`), entries
+  (spawns other rooms arrive at + `default`), pickups (explicit `pickups` + each room's `abilities` as an
+  implicit `grant:<room>` pickup at the entry), Rests, gates/locks, palette (seizable source colours + enemy
+  voices), hazards. Also the static **gravity-free flood fill**: an over-approximation, so "not in the fill"
+  is a proof of unreachability (sources are solid without Seize, white always; a plate gate stays shut
+  without Seize, or Seize+Levy for slab-only plates).
+- `oracle.ts`: "from spawn/tile, with abilities A, can you reach target T?" → yes (tape) / no (proof) /
+  unknown (not found in budget). Order: static proof → cache → committed tapes (`tests/replays`, same
+  start + seed, abilities ⊆ A) → bot search in worker threads (`pool.ts`, `job.ts`, `worker.ts`).
+- **Monotonicity axiom:** extra abilities never remove options (a player can choose not to use them), so a
+  yes with S ⊆ A answers A (the tape is replayed with S), and an exhausted no with S ⊇ A answers A. This is
+  what makes world-semantics queries (full kit, 25 macros) nearly free after the gym ones.
+- `solver.ts`: BFS over states (room, location, abilities). `world` semantics = Phase 3 (abilities persist,
+  grants add); `gym` = today's sim (a room SETS the abilities). Room "kit" = abilities held when taking the
+  exit into it. Softlock = reachable state that can't reach the start room or a Rest; **proven** only when
+  nothing in its forward closure was merely "not found in budget". `strip` removes abilities from every
+  grant (G7).
+- `audit.ts` (gate audit): per key K of each gate/lock, G7 kits = the maximal kits in that room when K is
+  removed from the game (teachGate: the minimal = earliest-visit kits); plus "full kit minus K" as a
+  warning-level future-proof check. Bypasses get minimal ability combos (level by level, skipping supersets
+  of known bypasses; static proofs prune most) and evidence tapes in `<out>-evidence/`.
+- `probes.ts` (in-room traps / one-way drops): every ledge (2 free tiles over ground) statically reachable
+  from an entry that reaches an exit: can it get back to the entry spawn or any exit? If not and it's
+  reachable → trap. Starts from a fresh room load placed on the ledge (`placePlayer`), an approximation.
+- `intended.ts`: the design graph = **world-design.md §4.8 JSON** (version 1 or 2). Symbolic solve over
+  abilities × flags × fever; checks reachability (rooms behind abilities nothing grants are "later returns",
+  info), goals with and without sanctioned breaks, Corner softlocks, teachGate-guards-a-grant (if the gate
+  leaked, would any grant come with a smaller kit?), Corner spacing, reach-edge `proof` arithmetic against
+  `reach-table.json` (§3.1 numbers; a palette only counts with Seize AND Levy), and the G7 plan. Then the
+  diff against built rooms (same ids): missing/unplanned links, G7 bypasses of ability-keyed edges (built
+  kits, bot evidence), blocked links, sequence breaks (built kit smaller than every designed kit incl.
+  sanctioned breaks) and harder-than-designed rooms.
+
+## Design-graph format and our interpretations
+- Tokens: `ability:x`, `flag:x` (ids may contain colons), `fever>=N`, `local:<colour>`, `weight:<class>`
+  (heavy/middle need brown in the palette), `trick:x` (only on `sanctionedBreak` edges). Room `grants`:
+  `ability:x`, `flag:x`, `fever:N`, `item:x`, collected on entry. `opens` sets a flag on traversal.
+  Corner = `corner: true` or purpose `rest`; stubs count as safe. `zoneOf` nodes aren't rooms.
+- `local:`/`weight:` on the reverse of a `both` edge accept either room's palette (lenient; no false softlocks).
+- A reach gate's palette = `gate.roomPalette` / `gate.approachPalette` if given, else the FROM room's.
+  Say which when the gated span is in the to-room or a sound-free segment.
+- Our extensions (ignored by the designer's grammar): `via` / `viaBack` (`door:<char>` | `G`) pin an edge
+  to a built exit; `sim: {abilities: {design: sim}, base: [...]}` maps names (default slip→dash,
+  ropeSkip→doubleJump, ropes→wallJump; `pogo` is base = the jab kit's down-jab). Unmapped abilities
+  (writ, hueAndCry, satchel) are "not in the sim yet".
+- `tests/progression/gym-world.json` is the gym + L3 rooms written in this format (strict: its findings
+  are errors). The slice design only warns until its rooms are built.
+
+## Room annotations (all optional; schema in `src/sim/world/rooms.ts`, see gym-rooms.md)
+`gates.<c>.requires` / `hold`; `locks: {name: {target, requires, hold: reach|sealed, teachGate, from,
+region, note}}`; `pickups: {c: {grants, id}}`; `rests: {c: {name}}`. A tile gate's audit target is derived:
+the tiles next to it that are cut off from the spawn when it's shut. `region` bounds the audit's bot so it can
+EXHAUST (a proof; G7 asks for that): bounded searches compute the full reachable key set (no frame cap),
+which costs ~250k nodes for a 6×9-tile pit, ~37k for a 1-tile well.
+
+## Cache, check mode, baseline
+- `tests/progression/cache.json` (committed): records keyed by room-file hash + start + target (+ region),
+  each with the ability set, verdict, tape, budget and **engine** fingerprint (src/sim minus the room list,
+  enemies, moves, sim-adapter, headless, input script, bot search, job.ts). Editing one room re-searches
+  only that room. Another engine: yes records are re-verified by replaying their tape (ms); no/unknown are
+  re-searched in full runs and trusted (counted "stale") in `--check`. Run `npm run progression` after
+  changing rooms or sim code so check stays at ~0.3 s.
+- `tests/progression/baseline.json`: accepted findings (id + reason). Check fails only on new errors; it
+  prints "fixed?" for baseline entries it no longer finds.
+
+## Results and timings (L4, 19 rooms)
+- Full run ~85 s on 8 workers (cold ~2 min); `--check` 0.3 s warm, ~0.5 s after an engine change.
+- Everything reachable in both semantics; Lot 7 G, the Pit G and the gym G's come from committed tapes.
+- **Lot 7 spring hall FAILS G7** (world semantics): minimal bypasses {wallJump, seize} and {doubleJump,
+  seize} (the L3 audit's finding, now systematic). Holds under gym semantics (the room sets {seize,levy}).
+  Gate D holds by static proof (no Seize → no plate).
+- **Stairwell G is unproven**: the bot never gets past the first partition even at 2M nodes with the full
+  kit; so entering it is a suspected softlock. Baselined until someone makes a tape.
+- 271 ledge probes, no traps.
+- The slice design (v2): X3/X5 are later returns (Writ, Ropes); e13's proof ignores B5's brown+violet
+  (recoil hops add 4.5 tiles of gap) unless the span is in B6; e33 counts the Rostrum boss voices.

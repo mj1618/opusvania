@@ -122,6 +122,7 @@ export async function auditGates(
       from: a.gate.from,
       abilities: c.kit,
       target: a.gate.target,
+      ...(a.gate.region ? { region: a.gate.region } : {}),
       budget: opts.budget,
     })),
   );
@@ -150,6 +151,7 @@ export async function auditGates(
         from: a.gate.from,
         abilities: set,
         target: a.gate.target,
+        ...(a.gate.region ? { region: a.gate.region } : {}),
         budget: opts.comboBudget,
       })),
     );

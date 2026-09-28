@@ -11,7 +11,7 @@
  * --semantics world,gym, --no-probes, --no-cache, --trust-stale, --baseline <file>, --json (print
  * the findings as JSON). See memory/progression.md.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { makeTape } from '../../src/debug/tape';
@@ -197,6 +197,7 @@ async function main(): Promise<number> {
     mkdirSync(dir, { recursive: true });
     // Evidence tapes for gate bypasses (replay / clip them: npm run tape -- check <file>).
     const evDir = join(dir, `${stem}-evidence`);
+    rmSync(evDir, { recursive: true, force: true });
     for (const a of audit)
       for (const c of a.checks)
         for (const b of c.bypasses) {

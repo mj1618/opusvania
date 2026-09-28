@@ -16,6 +16,8 @@ export interface Job {
   budget: number;
   seed: number;
   preset?: string;
+  /** Bounded region (`rect:x,y,w,h`, px): the search may not leave it (so it can exhaust). */
+  region?: string;
 }
 
 export interface JobResult {
@@ -50,7 +52,15 @@ export function jobSetup(j: Pick<Job, 'room' | 'spawn' | 'at' | 'abilities' | 's
 }
 
 export function runJob(j: Job): JobResult {
-  const r = search({ ...jobSetup(j), room: j.room, target: j.target, budget: j.budget });
+  const rm = j.region ? /^rect:(-?\d+),(-?\d+),(\d+),(\d+)$/.exec(j.region) : null;
+  const bounds = rm ? { x: Number(rm[1]), y: Number(rm[2]), w: Number(rm[3]), h: Number(rm[4]) } : undefined;
+  const r = search({
+    ...jobSetup(j),
+    room: j.room,
+    target: j.target,
+    budget: j.budget,
+    ...(bounds ? { bounds } : {}),
+  });
   return {
     found: r.found && r.verified === true,
     exhausted: r.exhausted,

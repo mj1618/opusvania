@@ -1,0 +1,25 @@
+{
+  "//": "Planning reach numbers (tiles, feather) from docs/design/world-design.md section 3.1 and rules G2/G3. The progression validator checks each reach edge's `proof` against them; the bot is the authority. Update this file when section 3.1 changes.",
+  "height": {
+    "base": 4.5,
+    "ropeSkip": 7.6,
+    "ledgePop": 0.25,
+    "pinkChainAboveApex": 12.25,
+    "brownHop": 2.75,
+    "violetHop": 1.5
+  },
+  "gap": {
+    "base": 7.6,
+    "slip": 15.2,
+    "ropeSkip": 14.0,
+    "slipRopeSkip": 23.2,
+    "pinkDrift": 21,
+    "brownHop": 3,
+    "violetHop": 1.5
+  },
+  "margin": 1,
+  "teachMaxOfKeyKit": 0.8,
+  "testMaxOfKeyKit": 0.9,
+  "cornerMaxRoomsBetween": 3,
+  "bossDoorMaxRoomsFromCorner": 1
+}

@@ -1,66 +1,82 @@
 {
  "meta": {
-  "date": "2026-09-28 09:25",
-  "sha": "4647c8a1ec-dirty",
-  "engine": "d3f836ab18",
+  "date": "2026-09-28 09:36",
+  "sha": "37cfd83b08-dirty",
+  "engine": "d67ef157e3",
   "mode": "full",
   "workers": 8,
   "budget": 300000
  },
  "timings": {
   "extract": 1,
-  "solve": 8305,
-  "audit": 44375,
-  "probes": 30960,
-  "design": 12,
-  "total": 83665
+  "solve": 33,
+  "audit": 3,
+  "probes": 9,
+  "design": 13,
+  "total": 59
  },
  "oracle": {
   "queries": 511,
   "static": 22,
-  "cache": 191,
-  "inferred": 164,
+  "cache": 239,
+  "inferred": 171,
   "tapes": 79,
-  "searches": 55,
-  "searchMs": 83551,
-  "reverified": 123,
+  "searches": 0,
+  "searchMs": 0,
+  "reverified": 0,
   "stale": 0
  },
  "findings": [
   {
    "id": "unreached-exit:world:stairwell/G",
    "level": "error",
-   "text": "[world] exit stairwell/G never reached: not found in 300000 nodes"
+   "text": "[world] exit stairwell/G never reached: not found in 300000 nodes",
+   "accepted": "Stairwell is the L3 stretch expression room: no tape exists, the bot can't chain up-seize / down-levy / re-seize within budget, and the L3 novice got stuck after the first bar. Needs a hand-made tape (or an exit door) to prove it."
   },
   {
    "id": "softlock:world:stairwell@spawn:default{wallJump, dash, doubleJump, pogo, seize, levy}",
    "level": "error",
-   "text": "[world] suspected softlock: stairwell at spawn:default with {wallJump, dash, doubleJump, pogo, seize, levy} can't get back to the start or a Rest (path: hub/exit:S)"
+   "text": "[world] suspected softlock: stairwell at spawn:default with {wallJump, dash, doubleJump, pogo, seize, levy} can't get back to the start or a Rest (path: hub/exit:S)",
+   "accepted": "Follows from stairwell/G being unproven: G is the room's only exit. In-game the debug keys (H) get you out."
   },
   {
    "id": "unreached-exit:gym:stairwell/G",
    "level": "error",
-   "text": "[gym] exit stairwell/G never reached: not found in 300000 nodes"
+   "text": "[gym] exit stairwell/G never reached: not found in 300000 nodes",
+   "accepted": "Same as unreached-exit:world:stairwell/G."
   },
   {
    "id": "softlock:gym:stairwell@spawn:default{seize, levy}",
    "level": "error",
-   "text": "[gym] suspected softlock: stairwell at spawn:default with {seize, levy} can't get back to the start or a Rest (path: hub/exit:S)"
+   "text": "[gym] suspected softlock: stairwell at spawn:default with {seize, levy} can't get back to the start or a Rest (path: hub/exit:S)",
+   "accepted": "Same as the world-semantics stairwell softlock."
   },
   {
    "id": "gate-fail:lot-7/lock:spring-hall",
    "level": "error",
-   "text": "gate lot-7/lock:spring-hall: G7 minus levy {wallJump, dash, doubleJump, pogo, seize} bypasses it; minimal: {wallJump, seize} or {doubleJump, seize}"
+   "text": "gate lot-7/lock:spring-hall: G7 minus levy {wallJump, dash, doubleJump, pogo, seize} bypasses it; minimal: {wallJump, seize} or {doubleJump, seize}",
+   "accepted": "Known since the L3 audit (item 3): with Wall Jump or Double Jump (plus Seize) the upper corridor is reached without the pink spring. Harmless today because Lot 7 SETS abilities on entry (gym semantics: the gate holds against {seize}); it becomes real once abilities persist (Phase 3). world-design.md rebuilds this as B2 (teachGate) + B3 (sealed plate door)."
   },
   {
    "id": "diff:tests/progression/gym-world.json:blocked:stairwell-G stairwell -> hub (stairwell/G)",
    "level": "error",
-   "text": "diff tests/progression/gym-world.json: blocked: stairwell-G stairwell -> hub (stairwell/G): the solver never reached stairwell/G (unknown)"
+   "text": "diff tests/progression/gym-world.json: blocked: stairwell-G stairwell -> hub (stairwell/G): the solver never reached stairwell/G (unknown)",
+   "accepted": "Same as unreached-exit:world:stairwell/G."
   },
   {
-   "id": "design:docs/design/world-design.md:every non-stub room reachable from start:X3",
+   "id": "design:docs/design/world-design.md:G2/G7 proof:e13",
    "level": "warning",
-   "text": "design docs/design/world-design.md: every non-stub room reachable from start: X3: unreachable"
+   "text": "design docs/design/world-design.md: G2/G7 proof: e13: gap 10 tiles < kit-without-slip {levy, seize, flag:shortcut:storeLatch} + palette {brown, violet} = 12.1 + 1 margin (§3.1 table)"
+  },
+  {
+   "id": "design:docs/design/world-design.md:G7 proof:e13",
+   "level": "warning",
+   "text": "design docs/design/world-design.md: G7 proof: e13: proof says kit-without-key reaches 7.6 tiles; the §3.1 table gives 12.1 for {levy, seize, flag:shortcut:storeLatch} + B5's palette {brown, violet} (if the gated span is sound-free or in B6, say so with gate.approachPalette)"
+  },
+  {
+   "id": "design:docs/design/world-design.md:G2/G7 proof:e33",
+   "level": "warning",
+   "text": "design docs/design/world-design.md: G2/G7 proof: e33: gap 28 tiles < kit-without-hueAndCry {levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + palette {violet, brown, pink} = 48.7 + 1 margin (§3.1 table)"
   }
  ],
  "rooms": {
@@ -1712,7 +1728,7 @@
     "kits": [],
     "why": {
      "verdict": "unknown",
-     "how": "bot",
+     "how": "cache",
      "budget": 300000
     }
    }
@@ -2208,7 +2224,7 @@
     "kits": [],
     "why": {
      "verdict": "unknown",
-     "how": "bot",
+     "how": "cache",
      "budget": 300000
     }
    }
@@ -2397,7 +2413,7 @@
   "escaped": 270,
   "unreachable": 1,
   "traps": [],
-  "ms": 30959
+  "ms": 8
  },
  "designs": [
   {
@@ -2510,13 +2526,12 @@
    "file": "docs/design/world-design.md",
    "strict": false,
    "report": {
-    "rooms": 29,
+    "rooms": 28,
     "edges": 38,
     "reachable": [
      "T1",
      "T2",
      "T3",
-     "T4",
      "B1",
      "B2",
      "B3",
@@ -2525,47 +2540,65 @@
      "B6",
      "B7",
      "B8",
-     "B8a",
      "B9",
      "B10",
      "B11",
      "B12",
+     "B12c",
      "B13",
-     "B14",
-     "B15",
      "X1",
      "X2",
-     "X4"
+     "X4",
+     "X6"
     ],
     "unreachable": [
-     "X3"
+     "X3",
+     "X5"
     ],
     "onlyWithBreaks": [],
     "findings": [
      {
-      "level": "error",
+      "level": "info",
       "check": "every non-stub room reachable from start",
       "subject": "X3",
-      "detail": "unreachable"
+      "detail": "behind ability:writ, which nothing in this graph grants (a later return)"
+     },
+     {
+      "level": "info",
+      "check": "every non-stub room reachable from start",
+      "subject": "X5",
+      "detail": "behind ability:ropes, which nothing in this graph grants (a later return)"
+     },
+     {
+      "level": "error",
+      "check": "G2/G7 proof",
+      "subject": "e13",
+      "detail": "gap 10 tiles < kit-without-slip {levy, seize, flag:shortcut:storeLatch} + palette {brown, violet} = 12.1 + 1 margin (§3.1 table)"
+     },
+     {
+      "level": "warning",
+      "check": "G7 proof",
+      "subject": "e13",
+      "detail": "proof says kit-without-key reaches 7.6 tiles; the §3.1 table gives 12.1 for {levy, seize, flag:shortcut:storeLatch} + B5's palette {brown, violet} (if the gated span is sound-free or in B6, say so with gate.approachPalette)"
      },
      {
       "level": "info",
       "check": "G7",
-      "subject": "e15",
-      "detail": "reach edge with no ability key (flag/fever/weight only): the bot proof needs the built room"
+      "subject": "e19",
+      "detail": "reach edge keyed by flag/fever/weight only: the bot proof needs the built room"
      },
      {
-      "level": "info",
-      "check": "G7",
-      "subject": "e17",
-      "detail": "reach edge with no ability key (flag/fever/weight only): the bot proof needs the built room"
+      "level": "error",
+      "check": "G2/G7 proof",
+      "subject": "e33",
+      "detail": "gap 28 tiles < kit-without-hueAndCry {levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1} + palette {violet, brown, pink} = 48.7 + 1 margin (§3.1 table)"
      }
     ],
     "g7": [
      {
-      "edge": "e06",
-      "from": "B2",
-      "to": "B3",
+      "edge": "e04",
+      "from": "B1",
+      "to": "B2",
       "key": "levy",
       "teachGate": true,
       "kits": [
@@ -2588,9 +2621,41 @@
       ]
      },
      {
-      "edge": "e12",
-      "from": "B6",
-      "to": "B7",
+      "edge": "e08",
+      "from": "B2",
+      "to": "X5",
+      "key": "ropes",
+      "teachGate": false,
+      "kits": [
+       {
+        "kit": "{levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
+        "abilities": [
+         "levy",
+         "ropeSkip",
+         "seize",
+         "slip"
+        ],
+        "palette": [
+         "brown",
+         "brown",
+         "violet"
+        ]
+       }
+      ],
+      "simKits": [
+       [
+        "dash",
+        "doubleJump",
+        "pogo",
+        "seize",
+        "levy"
+       ]
+      ]
+     },
+     {
+      "edge": "e13",
+      "from": "B5",
+      "to": "B6",
       "key": "slip",
       "teachGate": false,
       "kits": [
@@ -2615,14 +2680,14 @@
       ]
      },
      {
-      "edge": "e20",
-      "from": "B11",
-      "to": "B12",
-      "key": "ropeSkip",
-      "teachGate": false,
+      "edge": "e14",
+      "from": "B6",
+      "to": "B8",
+      "key": "local:violet",
+      "teachGate": true,
       "kits": [
        {
-        "kit": "{levy, seize, slip, flag:boss, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
+        "kit": "{levy, seize, slip}",
         "abilities": [
          "levy",
          "seize",
@@ -2641,14 +2706,14 @@
       ]
      },
      {
-      "edge": "e28",
-      "from": "T1",
-      "to": "EX_ROW",
-      "key": "ropes",
+      "edge": "e18",
+      "from": "B8",
+      "to": "B9",
+      "key": "local:brown",
       "teachGate": false,
       "kits": [
        {
-        "kit": "{levy, ropeSkip, seize, slip, flag:boss, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
+        "kit": "{levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
         "abilities": [
          "levy",
          "ropeSkip",
@@ -2669,39 +2734,127 @@
       ]
      },
      {
-      "edge": "e32",
-      "from": "B15",
-      "to": "EX_RECEIVERSHIP",
-      "key": "hueAndCry",
+      "edge": "e23",
+      "from": "B11",
+      "to": "B12",
+      "key": "ropeSkip",
       "teachGate": false,
       "kits": [
        {
-        "kit": "{levy, ropeSkip, seize, slip, flag:boss, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
+        "kit": "{levy, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
+        "abilities": [
+         "levy",
+         "seize",
+         "slip"
+        ],
+        "palette": []
+       }
+      ],
+      "simKits": [
+       [
+        "dash",
+        "pogo",
+        "seize",
+        "levy"
+       ]
+      ]
+     },
+     {
+      "edge": "e29",
+      "from": "T1",
+      "to": "EX_ROW",
+      "key": "ropeSkip",
+      "teachGate": false,
+      "kits": [
+       {
+        "kit": "{levy, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
+        "abilities": [
+         "levy",
+         "seize",
+         "slip"
+        ],
+        "palette": [
+         "brown"
+        ]
+       }
+      ],
+      "simKits": [
+       [
+        "dash",
+        "pogo",
+        "seize",
+        "levy"
+       ]
+      ]
+     },
+     {
+      "edge": "e30",
+      "from": "T2",
+      "to": "EX_ROW_ROOFS",
+      "key": "local:pink",
+      "teachGate": false,
+      "kits": [
+       {
+        "kit": "{levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
         "abilities": [
          "levy",
          "ropeSkip",
          "seize",
          "slip"
         ],
-        "palette": []
+        "palette": [
+         "brown"
+        ]
+       }
+      ],
+      "simKits": [
+       [
+        "dash",
+        "doubleJump",
+        "pogo",
+        "seize",
+        "levy"
+       ]
+      ]
+     },
+     {
+      "edge": "e33",
+      "from": "B13",
+      "to": "EX_RECEIVERSHIP",
+      "key": "hueAndCry",
+      "teachGate": false,
+      "kits": [
+       {
+        "kit": "{levy, ropeSkip, seize, slip, flag:boss:auctioneer, flag:boss:grindstone, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
+        "abilities": [
+         "levy",
+         "ropeSkip",
+         "seize",
+         "slip"
+        ],
+        "palette": [
+         "violet",
+         "brown",
+         "pink"
+        ]
        }
       ]
      }
     ],
     "breaks": [
      {
-      "edge": "e16",
-      "detail": "adds: B11 with {levy, seize, slip}; B12 with {levy, seize, slip}; B13 with {levy, seize, slip}; B14 with {levy, seize, slip, flag:boss, fever 1}; B15 with {levy, seize, slip, flag:boss, fever 1}; X2 with {levy, seize, slip, flag:boss, fever 1}; EX_FOUNDRY with {levy, seize, slip, flag:boss, fever 1}"
+      "edge": "e17",
+      "detail": "adds: B11 with {levy, seize, slip}; B12 with {levy, seize, slip}; B12c with {levy, seize, slip}; B13 with {levy, seize, slip, flag:boss:auctioneer, fever 1}; X2 with {levy, seize, slip, flag:boss:auctioneer, fever 1}; EX_ROW_ROOFS with {levy, seize, slip, flag:boss:auctioneer, fever 1}; EX_FOUNDRY with {levy, seize, slip, flag:boss:auctioneer, fever 1}"
      }
     ],
-    "ms": 7
+    "ms": 9
    },
    "diff": [
     {
      "level": "info",
      "kind": "not-built",
-     "subject": "24 rooms",
-     "detail": "T1, T2, T3, T4, B1, B2, B3, B4, B5, B6, B7, B8, B8a, B9, B10, B11, B12, B13, B14, B15, X1, X2, X3, X4"
+     "subject": "22 rooms",
+     "detail": "T1, T2, T3, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, X1, X2, X3, X4, X5, X6"
     },
     {
      "level": "info",

@@ -41,6 +41,8 @@ export interface Query {
   abilities: Ability[];
   target: string;
   budget?: number;
+  /** Bounded search region (`rect:x,y,w,h`): a no inside it is a proof only for that region. */
+  region?: string;
 }
 
 export interface Answer {
@@ -196,7 +198,8 @@ export class Oracle {
   private baseKey(q: Query): string {
     const room = this.opts.graph.rooms[q.room];
     const from = q.at ? `@${q.at.tx},${q.at.ty}` : q.from;
-    return `${q.room}#${room?.hash ?? '?'}|${from}|${q.target}|s${this.seed}|${this.opts.preset ?? 'opus'}`;
+    const region = q.region ? `|in:${q.region}` : '';
+    return `${q.room}#${room?.hash ?? '?'}|${from}|${q.target}${region}|s${this.seed}|${this.opts.preset ?? 'opus'}`;
   }
 
   private job(q: Query): Job {
@@ -209,6 +212,7 @@ export class Oracle {
       budget: q.budget ?? this.opts.budget,
       seed: this.seed,
       ...(this.opts.preset ? { preset: this.opts.preset } : {}),
+      ...(q.region ? { region: q.region } : {}),
     };
   }
 

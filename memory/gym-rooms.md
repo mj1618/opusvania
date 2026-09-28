@@ -29,3 +29,8 @@
   optional `seize`/`levy`; claims may set `info: true` (the `with` search is informational) and
   `budget`, and claim keys may be targets like `rect:x,y,w,h`. L3 rooms (lot-7, lot-7-control,
   the-pit, stairwell) hang off the hub's right-hand doors L K T S (hub widened to 62 tiles).
+- Progression annotations (L4, all optional, no sim behaviour yet): `pickups` {char: {grants, id?}} and
+  `rests` {char: {name?}} load as empty tiles with `pickup`/`rest` entities; `gates.<c>.requires` +
+  `hold`; `locks` {name: {target, requires, hold, teachGate, from?, region?, note?}}. Lot 7 has gate D
+  requires [seize] and lock `spring-hall` requires [levy]; Stairwell has lock `top`. The validator reads them
+  (progression.md). Rooms' `abilities` are still SET on load (gym semantics); Phase 3 pickups will add instead.
