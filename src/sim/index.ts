@@ -26,7 +26,7 @@ export function createState(opts: NewGameOptions, t: Tuning, events: SimEvent[] 
   const sp = room.spawns.default;
   if (!sp) throw new Error(`Room "${roomId}" has no spawn`);
   const state: GameState = {
-    version: 2,
+    version: 3,
     frame: 0,
     seed: opts.seed >>> 0,
     rng: seedRng(opts.seed),

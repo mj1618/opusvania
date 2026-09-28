@@ -1,10 +1,10 @@
 {
   "kind": "tape",
   "name": "gym-07-g",
-  "inputs": "J8 R+J16 R4 J8 R+J8 R4 J4 R+J8 R4 J12 R+J8 R4 J4 R+J4",
+  "inputs": "J8 R+J16 R4 J8 R+J8 R4 J4 R+J8 R4 J4 R+J8 R4 J4 R+J8 .4 R4",
   "expect": {
     "target": "g",
-    "maxFrames": 144,
+    "maxFrames": 150,
     "maxDeaths": 0
   },
   "source": "bot",
@@ -17,19 +17,19 @@
     "pogo": false
   },
   "golden": {
-    "tuningHash": "15e4374ad928c9",
+    "tuningHash": "0b99a061443a08",
     "build": {
-      "sha": "127788a71b-dirty",
-      "sim": "9020d2324b",
+      "sha": "a4195655b8-dirty",
+      "sim": "0a9090a59b",
       "stateVersion": 1
     },
     "end": {
-      "x": 346,
-      "y": 673,
-      "frame": 96,
+      "x": 349,
+      "y": 682,
+      "frame": 100,
       "room": "gym-07"
     },
-    "hash": "187165c60b0c35",
-    "hashes": ["186662f1c26997"]
+    "hash": "149bbb638dd777",
+    "hashes": ["059f3e592de2d6"]
   }
 }

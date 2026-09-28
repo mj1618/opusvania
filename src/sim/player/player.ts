@@ -69,6 +69,7 @@ export function createPlayer(
     dashDir: 0,
     freeze: 0,
     stick: 0,
+    slideT: 0,
     retainVx: 0,
     retainTimer: 0,
     dropTimer: 0,
@@ -275,6 +276,7 @@ function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {
   p.sustain = c.P.sustainFrames;
   p.sustainV = p.vy;
   p.framesSinceJump = 0;
+  p.retainTimer = 0; // a jump (incl. wall jump) ends wall speed retention
   c.events.push({ type: 'jump', kind, x: c.fx, y: c.fy, dir });
 }
 
@@ -379,6 +381,7 @@ function startDash(c: Ctx, dir: number): void {
   p.dashBuf = 0;
   if (air) p.airDash--;
   p.forceTimer = 0;
+  p.retainTimer = 0;
   p.fromJump = false;
   p.cut = false;
   p.cutDisabled = false;
@@ -475,10 +478,9 @@ function wallSlide(c: Ctx): void {
       normal(c);
     } else {
       p.vx = 0;
-      p.vy =
-        p.vy > P.slideMax
-          ? Math.max(p.vy - P.slideDecel, P.slideMax)
-          : Math.min(p.vy + P.gravity * P.fallMult, P.slideMax);
+      const cap = Math.min(P.slideMax, P.slideStartMax + P.slideRamp * p.slideT);
+      p.slideT++;
+      p.vy = p.vy > cap ? Math.max(p.vy - P.slideDecel, cap) : Math.min(p.vy + P.gravity * P.fallMult, cap);
     }
   }
 }
@@ -533,7 +535,9 @@ export function updatePlayer(
   const wasGrounded = p.grounded;
   const x0 = p.x;
 
-  // Wall speed retention (§2.4): a wall zeroed vx recently and has gone -> restore it.
+  // Wall speed retention (§2.4): a wall zeroed vx recently and has gone -> restore it. Moving the
+  // other way cancels it (Celeste does the same); otherwise it undoes wall jumps and turn-arounds.
+  if (p.retainTimer > 0 && p.vx !== 0 && sign(p.vx) !== sign(p.retainVx)) p.retainTimer = 0;
   if (p.retainTimer > 0 && p.state !== 'dash' && !c.blockedX(p, sign(p.retainVx))) {
     p.vx = p.retainVx;
     p.retainTimer = 0;
@@ -652,6 +656,7 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
       p.state = 'wallSlide';
       p.wallDir = inX;
       p.stick = 0;
+      p.slideT = 0;
       p.forceTimer = 0;
       p.vx = 0;
       events.push({ type: 'wallSlideStart', x: c.fx, y: c.fy, dir: inX });
@@ -753,6 +758,7 @@ function respawn(state: GameState, room: Room, P: MoveParams, events: SimEvent[]
     dashTimer: 0,
     freeze: 0,
     stick: 0,
+    slideT: 0,
     retainTimer: 0,
     dropTimer: 0,
     pogoTimer: 0,

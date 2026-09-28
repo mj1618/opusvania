@@ -119,7 +119,12 @@ export const defaultTuning = {
     wallRetainFrames: 4,
   },
   wall: {
-    slideMax: 4,
+    /** Slide speed cap: starts at slideStartMax and rises by slideRamp per frame of sliding up to
+     * slideMax (Celeste's WallSlideStartMax/WallSlideTime), so a quick touch-and-jump is calm but a
+     * long slide gets out of the way. L2 playtest: a flat 4 px/f felt glued. */
+    slideMax: 6.5,
+    slideStartMax: 2.5,
+    slideRamp: 0.25,
     slideDecel: 1.5,
     /** Frames of holding away from the wall before a slide detaches. */
     stickFrames: 5,
@@ -239,10 +244,11 @@ export const PRESETS: Record<'opus' | 'celeste' | 'hk', TuningOverrides> = {
     run: {
       maxSpeed: 12,
       groundAccel: 20 / 9,
-      groundDecel: 20 / 9,
+      // RunReduce 400 px/s² (stopping with no input); RunAccel 1000 only when accelerating/turning.
+      groundDecel: 8 / 9,
       groundTurn: 20 / 9,
       airAccel: (20 / 9) * 0.65,
-      airDecel: (20 / 9) * 0.65,
+      airDecel: (8 / 9) * 0.65,
       airTurn: (20 / 9) * 0.65,
       overspeedDecelGround: 8 / 9,
       overspeedDecelAir: (8 / 9) * 0.65,
@@ -254,7 +260,15 @@ export const PRESETS: Record<'opus' | 'celeste' | 'hk', TuningOverrides> = {
       headCorrectPx: 32,
       ledgePopPx: 0,
     },
-    wall: { slideMax: 8 / 3, jumpVx: 52 / 3, forceFrames: 10 },
+    // Celeste's slide cap lerps from WallSlideStartMax 20 px/s to MaxFall 160 px/s over
+    // WallSlideTime 1.2 s (72 f).
+    wall: {
+      slideMax: 64 / 3,
+      slideStartMax: 8 / 3,
+      slideRamp: 56 / 3 / 72,
+      jumpVx: 52 / 3,
+      forceFrames: 10,
+    },
     dash: { speed: 32, frames: 9, freezeFrames: 3, cooldownFrames: 12, endVx: 64 / 3, jumpVx: 104 / 3 },
   },
   hk: {
@@ -288,7 +302,8 @@ export const PRESETS: Record<'opus' | 'celeste' | 'hk', TuningOverrides> = {
       headCorrectPx: 0,
       ledgePopPx: 16,
     },
-    wall: { slideMax: 8.53, jumpVx: 17.07, forceFrames: 6 },
+    // HK slides at a constant WALLSLIDE_SPEED (8 u/s): no ramp.
+    wall: { slideMax: 8.53, slideStartMax: 8.53, slideRamp: 0, jumpVx: 17.07, forceFrames: 6 },
     dash: { speed: 21.33, frames: 15, freezeFrames: 0, cooldownFrames: 36, bufferFrames: 12 },
     assists: { apexHang: false },
   },

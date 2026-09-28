@@ -49,6 +49,8 @@ export interface MoveParams {
 
   wallSlide: boolean;
   slideMax: number;
+  slideStartMax: number;
+  slideRamp: number;
   slideDecel: number;
   stickFrames: number;
   wallJumpVx: number;
@@ -173,6 +175,8 @@ export function resolveParams(base: Tuning, profile: string): MoveParams {
 
     wallSlide: a.wallSlide,
     slideMax: w.slideMax,
+    slideStartMax: w.slideStartMax,
+    slideRamp: w.slideRamp,
     slideDecel: w.slideDecel,
     stickFrames: w.stickFrames,
     wallJumpVx: w.jumpVx,

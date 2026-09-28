@@ -1,10 +1,10 @@
 {
   "kind": "tape",
   "name": "gym-08.wallJump",
-  "inputs": "R+J32 R2 J2 R+J10 R+X2 .2 J2 R+D+A2 R2 R+J4 R2 J2 R+J8 J10 R+J4 R2 L+J2 X2 L+J2 .2 L+J2 .2 L+J2 .2 L+J2 J4 .2 R38",
+  "inputs": "J4 .4 J4 R+J24 R4 J4 R+J4 R4 R+J4 L+J4 J4 L+J16 L4 L+J4 J4 R+J16 R4 J4 R+J4 R50",
   "expect": {
     "target": "G",
-    "maxFrames": 225,
+    "maxFrames": 255,
     "maxDeaths": 0
   },
   "source": "bot",
@@ -18,19 +18,19 @@
     "pogo": false
   },
   "golden": {
-    "tuningHash": "15e4374ad928c9",
+    "tuningHash": "0b99a061443a08",
     "build": {
-      "sha": "127788a71b-dirty",
-      "sim": "9020d2324b",
+      "sha": "a4195655b8-dirty",
+      "sim": "0a9090a59b",
       "stateVersion": 1
     },
     "end": {
-      "x": 1506,
+      "x": 1498,
       "y": 112,
-      "frame": 150,
+      "frame": 170,
       "room": "gym-08"
     },
-    "hash": "09db0f73e008a4",
-    "hashes": ["007539a6ab2121", "172d33987cdfcf"]
+    "hash": "1bd1467598ce7f",
+    "hashes": ["0dcdcf3bdc284a", "1042f794175d85"]
   }
 }

@@ -126,6 +126,8 @@ describe('EventRouter with the real sim', () => {
       }),
     );
     drive(new HeadlessSim({ room: 'audio-spikes' }), 'R60 .90', r);
+    // A held wall slide (the re-solved tapes no longer slide for long): jump at gym-07's left wall.
+    drive(new HeadlessSim({ room: 'gym-07' }), 'L+J20 L40', r);
 
     const want = [
       ...['jump', 'doubleJump', 'wallJump', 'dashJump', 'landSoft', 'landHard', 'footstep'],

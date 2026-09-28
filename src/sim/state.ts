@@ -4,7 +4,7 @@ import type { Abilities, Spawn } from './world/rooms';
 
 /** Everything the sim needs to continue. Plain JSON: no classes, Maps, typed arrays or functions. */
 export interface GameState {
-  version: 2;
+  version: 3;
   /** Sim steps since the state was created. The sim's only clock. */
   frame: number;
   /** Seed the RNG was last seeded with (informational; `rng` is the live RNG state). */
@@ -54,6 +54,8 @@ export interface PlayerState extends Body {
   freeze: number;
   /** Frames holding away from the wall while sliding. */
   stick: number;
+  /** Frames in the current wall slide (the slide speed cap ramps up with it). */
+  slideT: number;
   /** Wall speed retention (spec §2.4): vx that a wall zeroed, restorable for retainTimer frames. */
   retainVx: number;
   retainTimer: number;
