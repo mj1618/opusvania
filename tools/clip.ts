@@ -21,6 +21,8 @@
  * --study = --trail --hitboxes --sheet events.
  * --setup "<js>": evaluated in the page (with `g` = window.__game) after the settle steps, before
  *   the script: spawn enemies, set state (e.g. "g.spawn('barker', 700, 960)").
+ * --audio: renders the clip's sound offline (the real event router, hums, ambience, music) and
+ *   muxes it into the mp4 (clips/<name>.wav too).
  * --slowmo: during combat slow motion (__game.render.timeScale() < 1) capture extra frames
  * rendered between steps, so the mp4 shows the slow-down (frame files then outnumber sim steps).
  *
@@ -66,6 +68,8 @@ const { values: args } = parseArgs({
     'keep-frames': { type: 'boolean', default: false },
     /** Capture combat slow motion as extra interpolated frames (the video then runs longer than the sim). */
     slowmo: { type: 'boolean', default: false },
+    /** Render the game's audio for the clip offline and mux it into the mp4. */
+    audio: { type: 'boolean', default: false },
     /** JS run in the page after load and the settle steps, before the script (e.g. spawns). */
     setup: { type: 'string' },
     url: { type: 'string' },
@@ -233,27 +237,50 @@ async function main(): Promise<void> {
     const trace: TraceFrame[] = [];
     const BATCH = 10;
     let fileNo = 1;
+    // Audio cues: one per sim step, at the video time of its last frame.
+    const cues: unknown[] = [];
     for (let done = 0; done < total; ) {
       const k = Math.min(BATCH, total - done);
-      const batch: { shots: string[]; t: TraceFrame }[] = await page.evaluate(
-        ({ k, s, label, slowmo }) => {
+      const batch: { shots: string[]; t: TraceFrame; cue: unknown }[] = await page.evaluate(
+        ({ k, s, label, slowmo, audio }) => {
           const g = window.__game;
-          const out: { shots: string[]; t: TraceFrame }[] = [];
+          const out: { shots: string[]; t: TraceFrame; cue: unknown }[] = [];
           for (let i = 0; i < k; i++) {
             const t = g.trace(1)[0] as TraceFrame;
+            let cue: unknown = null;
+            if (audio) {
+              const st = g.state();
+              const cam = g.camera();
+              cue = {
+                listener: { x: cam.x + 960, y: cam.y + 540 },
+                events: g.lastEvents().map((e) => e.e.raw),
+                state: {
+                  frame: st.frame,
+                  roomId: st.roomId,
+                  player: st.player,
+                  local: {
+                    sources: st.local.sources,
+                    sounds: st.local.sounds,
+                    levied: st.local.levied,
+                    enemies: st.local.enemies.map((e) => ({ id: e.id, type: e.type })),
+                  },
+                },
+              };
+            }
             const shots: string[] = [];
             const ts = slowmo ? g.render.timeScale() : 1;
             const extra = ts < 0.99 ? Math.max(0, Math.round(1 / ts) - 1) : 0;
             for (let j = 1; j <= extra; j++) shots.push(g.screenshot(s, { label, alpha: j / (extra + 1) }));
             shots.push(g.screenshot(s, { label }));
-            out.push({ shots, t });
+            out.push({ shots, t, cue });
           }
           return out;
         },
-        { k, s: scale, label, slowmo: args.slowmo },
+        { k, s: scale, label, slowmo: args.slowmo, audio: args.audio },
       );
       for (const b of batch) {
         for (const shot of b.shots) writeFrame(fileNo++, shot);
+        if (b.cue) cues.push({ ...(b.cue as object), t: (fileNo - 1) / 60 });
         trace.push(b.t);
       }
       done += k;
@@ -265,12 +292,28 @@ async function main(): Promise<void> {
     mkdirSync(outDir, { recursive: true });
     const input = ['-y', '-framerate', '60', '-i', join(framesDir, '%05d.png')];
     const mp4 = join(outDir, `${name}.mp4`);
+    const wav = join(outDir, `${name}.wav`);
+    let audioIn: string[] = [];
+    if (args.audio) {
+      const seconds = fileNo / 60 + 0.5;
+      const r: { wavBase64: string } = await page.evaluate(
+        ({ cues, seconds }) =>
+          window.__game.audio.renderTrack(
+            cues as Parameters<typeof window.__game.audio.renderTrack>[0],
+            seconds,
+          ),
+        { cues, seconds },
+      );
+      writeFileSync(wav, Buffer.from(r.wavBase64, 'base64'));
+      audioIn = ['-i', wav, '-c:a', 'aac', '-b:a', '192k', '-shortest'];
+    }
     const gif = join(outDir, `${name}.gif`);
     const sheet = join(outDir, `${name}-sheet.png`);
     const traceFile = join(outDir, `${name}-trace.txt`);
     writeFileSync(traceFile, `${formatTrace(trace)}\n`);
     run(ffmpeg, [
       ...input,
+      ...audioIn,
       '-c:v',
       'libx264',
       '-pix_fmt',
