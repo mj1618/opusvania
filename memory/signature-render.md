@@ -21,7 +21,7 @@ Code-drawn Pixi Graphics; render only reads sim state/events.
   contrast 1.6:1): readability-critical shapes must stay out of the LightingFilter.
 - **Determinism:** feedback state (flashes, shake target, sparks, ribbons, needle, gate-open frame) is
   stepped in onStep. Vibration, speckle and motes are functions of `state.frame` (Math.sin is fine
-  in render). Sparks freeze during hitstop; ribbons don't (they are UI).
+  in render). Hit/catch sparks moved to the impact director (combat-juice.md), which animates through the hitstop; ribbons don't freeze (they are UI).
 - **Status rules:** object `ghost` flag → dashed; `pendingSolid` → blinking dashed; white → static.
   Enemy outline per voice (solid+vibrating if home, dashed + mouth "X" if away); a disarmed enemy's
   Snatch telegraph must NOT draw a solid ring (it read as re-armed in the Pit clip). Slab `solid`

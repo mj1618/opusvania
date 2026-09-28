@@ -11,6 +11,7 @@
  */
 import type { HitClass, SimEvent } from '../../sim/events';
 import type { GameState } from '../../sim/index';
+import { VIEW_H, VIEW_W } from '../camera/index';
 import { IMPACT, type ImpactSpec, JUICE } from './tuning';
 
 export interface JSpark {
@@ -56,6 +57,8 @@ export interface JWord {
   size: number;
   angle: number;
   dir: number;
+  /** Priority: a lower one never talks over a higher one (the boss phase line). */
+  pri: number;
 }
 
 export interface JLines {
@@ -244,8 +247,9 @@ export class ImpactDirector {
     this.aberration = Math.max(this.aberration, spec.aberration);
   }
 
-  word(text: string, x: number, y: number, color: number, dir: number, scale: number): void {
-    // One shout at a time: older words get out of the way fast.
+  word(text: string, x: number, y: number, color: number, dir: number, scale: number, pri = 1): void {
+    // One shout at a time: older words get out of the way fast, unless a bigger beat is speaking.
+    if (this.words.some((w) => w.pri > pri && w.age < w.life - 5)) return;
     for (const w of this.words) w.age = Math.max(w.age, w.life - 5);
     this.words.push({
       text,
@@ -255,6 +259,7 @@ export class ImpactDirector {
       life: JUICE.wordLife,
       color,
       size: JUICE.wordSize * scale,
+      pri,
       angle: (this.rand() - 0.5) * 0.3 - dir * 0.06,
       dir,
     });
@@ -301,6 +306,8 @@ export class ImpactDirector {
           break;
         }
         case 'repossess': {
+          // The REPOSSESSED stamp is the word: clear the stage for it.
+          for (const w of this.words) w.age = Math.max(w.age, w.life - 4);
           this.impact(IMPACT.repossess, e.x, e.y, 0, colourOf(e));
           this.startSlow('repossess', e.x, e.y);
           this.inks.push({ x: e.x, y: e.y - 20, age: 0, blobs: this.blobs(9, 70) });
@@ -323,7 +330,11 @@ export class ImpactDirector {
             width: 8,
             delay: 0,
           });
-          this.word('DOWN!', e.x, e.y - 90, 0xffd84a, 1, 1);
+          {
+            // Beside it, away from Kid (the Count ring sits over its head).
+            const side = e.x >= s.player.x + s.player.w / 2 ? 1 : -1;
+            this.word('DOWN!', e.x + side * 130, e.y - 10, 0xffd84a, side, 1);
+          }
           break;
         case 'ko':
           this.trauma = Math.min(1, this.trauma + 0.3);
@@ -349,7 +360,11 @@ export class ImpactDirector {
               width: 12,
               delay: i * 5,
             });
-          this.word('NO RESERVE!', e.x, e.y - 150, 0xff3b3b, 1, 1.6);
+          this.word('NO RESERVE!', e.x, e.y - 150, 0xff3b3b, 1, 1.6, 3);
+          {
+            const w = this.words[this.words.length - 1];
+            if (w) w.life = 80;
+          }
           this.lines.push({ x: e.x, y: e.y, age: 0, life: 24, color: 0xff3b3b, seed: 99 });
           break;
         case 'sold':
@@ -444,21 +459,32 @@ export class ImpactDirector {
     const p = s.player;
     const kx = p.x + p.w / 2;
     const ky = p.y + p.h / 2;
+    // The fight's bounding box: Kid plus every engaged enemy near her.
+    let x0 = kx - p.w;
+    let x1 = kx + p.w;
+    let y0 = ky - p.h;
+    let y1 = ky + p.h;
     let n = 0;
-    let sx = 0;
-    let sy = 0;
     for (const e of s.local.enemies) {
       if (!ENGAGED.has(e.state)) continue;
       const ex = e.x + e.w / 2;
       const ey = e.y + e.h / 2;
       if (Math.abs(ex - kx) > JUICE.combatRange || Math.abs(ey - ky) > JUICE.combatRange * 0.7) continue;
       n++;
-      sx += ex;
-      sy += ey;
+      x0 = Math.min(x0, e.x);
+      x1 = Math.max(x1, e.x + e.w);
+      y0 = Math.min(y0, e.y);
+      y1 = Math.max(y1, e.y + e.h);
     }
     const on = n > 0 && p.state !== 'dead';
-    const tx = on ? kx * (1 - JUICE.combatFocusPull) + (sx / n) * JUICE.combatFocusPull : kx;
-    const ty = on ? ky * (1 - JUICE.combatFocusPull) + (sy / n) * JUICE.combatFocusPull : ky;
+    // Zoom in as far as the whole fight (plus a margin) still fits, up to combatZoom.
+    const fit = Math.min(
+      VIEW_W / (x1 - x0 + 2 * JUICE.combatPadX),
+      VIEW_H / (y1 - y0 + 2 * JUICE.combatPadY),
+    );
+    const target = on ? Math.max(1, Math.min(JUICE.combatZoom, fit)) : 1;
+    const tx = on ? (x0 + x1) / 2 : kx;
+    const ty = on ? (y0 + y1) / 2 : ky;
     if (!this.cfInit) {
       this.cfx = tx;
       this.cfy = ty;
@@ -467,8 +493,7 @@ export class ImpactDirector {
     this.cfx += (tx - this.cfx) * JUICE.combatFocusLerp;
     this.cfy += (ty - this.cfy) * JUICE.combatFocusLerp;
     this.prevCzoom = this.czoom;
-    const target = on ? JUICE.combatZoom : 1;
-    const rate = on ? JUICE.combatZoomIn : JUICE.combatZoomOut;
+    const rate = target > this.czoom ? JUICE.combatZoomIn : JUICE.combatZoomOut;
     this.czoom += Math.max(-rate, Math.min(rate, (target - this.czoom) * 0.08));
   }
 

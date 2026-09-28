@@ -87,7 +87,7 @@ export function drawImpacts(f: Graphics, gl: Graphics, d: ImpactDirector): void 
     const inner = pts.map((v, i) => (i % 2 === 0 ? s.x + (v - s.x) * 0.55 : s.y + (v - s.y) * 0.55));
     f.poly(inner).fill({ color: 0xffffff, alpha: 1 - t * 0.3 });
     gl.poly(pts).fill({ color: s.color, alpha: 0.9 * (1 - t) });
-    gl.circle(s.x, s.y, R * 0.9).fill({ color: 0xffffff, alpha: 0.35 * (1 - t) });
+    gl.circle(s.x, s.y, R * 0.6).fill({ color: 0xffffff, alpha: 0.25 * (1 - t) });
   }
 
   for (const w of d.words) {

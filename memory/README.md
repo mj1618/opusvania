@@ -23,3 +23,4 @@ Keep entries current; delete stale ones.
 - [Signature mechanic](signature-mechanic.md) — L3 seize/levy/bag/weight sim: step order, one source component, dynamic solids, bounce integrator, tapes/fuzz/policies/verdict
 - [Combat](combat.md) — L4 sim: data-driven moves/enemies/shots, boss script, Kid's Count, Ringing, hazards, deviations
 - [Combat bots](combat-bots.md) — `npm run combat:report` / `npm run fight`: fighter model, fork-clock gotcha, how to read F1-F8
+- [Combat juice](combat-juice.md) — impact director, impact frames, render zoom/slow-mo, sound-made-visible, creatures, clip --audio/--slowmo, showcase

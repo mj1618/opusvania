@@ -169,16 +169,18 @@ export const IMPACT: Record<HitClass, ImpactSpec> = {
 
 export const JUICE = {
   /**
-   * Combat framing: the render zooms in this far while an engaged enemy is within combatRange px
-   * of Kid (the Pit framed the whole room: 48 px dogs on a 1920 px screen). Focus = Kid pulled
-   * toward the enemies' centroid; Kid is always kept inside the frame (world.ts).
+   * Combat framing: the render zooms in (up to this, as far as Kid plus every engaged enemy within
+   * combatRange px still fits with combatPad around it; the Pit framed the whole room: 48 px dogs on
+   * a 1920 px screen). Focus = the fight's bounding-box centre; Kid is kept inside the frame (world.ts).
    */
-  combatZoom: 1.3,
+  combatZoom: 1.6,
   combatRange: 900,
-  combatFocusPull: 0.35,
+  /** Padding (world px) kept around the fight's bounding box when choosing the zoom. */
+  combatPadX: 260,
+  combatPadY: 200,
   combatFocusLerp: 0.08,
   /** Max zoom change per step going in / out. */
-  combatZoomIn: 0.006,
+  combatZoomIn: 0.008,
   combatZoomOut: 0.004,
   /** Screen margin (px) Kid is kept inside while zoomed. */
   combatMargin: 160,
