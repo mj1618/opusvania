@@ -19,6 +19,7 @@ import gym12 from '../../../content/gym/gym-12.json' with { type: 'json' };
 import gym13 from '../../../content/gym/gym-13.json' with { type: 'json' };
 import gym14 from '../../../content/gym/gym-14.json' with { type: 'json' };
 import hub from '../../../content/gym/hub.json' with { type: 'json' };
+import labSlopes from '../../../content/gym/lab-slopes.json' with { type: 'json' };
 import lot7 from '../../../content/gym/lot-7.json' with { type: 'json' };
 import lot7Control from '../../../content/gym/lot-7-control.json' with { type: 'json' };
 import ringBarker from '../../../content/gym/ring-barker.json' with { type: 'json' };
@@ -59,6 +60,8 @@ export const ROOM_FILES = [
   ringGrinder,
   ringClerk,
   auction,
+  // L6 labs (not in the progression graph).
+  labSlopes,
   // LDtk world rooms, compiled by `npm run world -- build` (memory/level-authoring.md).
   ...compiledWorld.rooms,
 ] as unknown as RoomFile[];

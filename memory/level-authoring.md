@@ -63,6 +63,15 @@ note}` (target defaults to the rect) · landmark rect `{name, note}` (map + toc 
 Any char-mapped entity takes `char` to pin its RoomFile character (else allocated; ~80 per room).
 
 ## L6 proof kit (sim stream B): slopes, carry, set pieces (sheet syntax; names are the contract)
+**Status (end of L6 stream B):** DONE = slopes (sim for Kid/enemies/levied/shots, `ramp` grade,
+`curve`, lints, `?room=lab-slopes`), source `solid`/`name`, edge exits 4 f with no fade. Every
+entity below is in the model, LDtk defs and the RoomFile (`district`, `weights`, `breakables`,
+`reveals`, `lights`, `barks`, `lines`, `waypoints`, `enemyRoutes`), so rooms can place them now, but
+the SIM IGNORES THEM YET: carry rule, weights/breakables/reveals, `power`/`bark`/`boardLine`/
+`nightStep`/`carryReset`/`steal` events (declared in events.ts, never emitted), `thiefgull`
+(= a plain gull clone), grounded Down+Seize, bot/progression waypoints. Next stream: build those
+against these names; the render must also draw slope tiles (they render as air today: use
+`slopeTop()` from src/sim/physics/slopes.ts).
 - **Level field `district`** (string). Rooms with the same district share the carry state (north
   star §3.4: bag, levied objects and ghosted sources persist across seams and doors). Unset = the
   old per-room reset. Proof: T rooms `"district": "tally"`, C rooms `"district": "cellars"`.
@@ -104,7 +113,7 @@ Any char-mapped entity takes `char` to pin its RoomFile character (else allocate
 - Derived, never authored: a border opening becomes an exit when the neighbouring room has the
   mirror opening over exactly the same world tiles. The compiler writes `exits` into the RoomFile.
 - Sim: outside the room is open 2 tiles deep along the span (`EDGE_DEPTH`); when the body's centre
-  crosses, a `transitionFrames` freeze, then `enterRoomAt` moves the body by the rooms' offset and
+  crosses, a `world.edgeTransitionFrames` (4, <= 8; L6) freeze with no fade (roomExit/roomEnter carry `edge: true`; render skips the fade), then `enterRoomAt` moves the body by the rooms' offset and
   keeps the WHOLE player state (vx/vy, facing, timers, coyote, Chin). Abilities come from the room
   (gym semantics), respawn marker and safe ground reset. Rooms with exits must be >= 30x17 (padding
   would shift the world). Tests: tests/unit/edge-exits.test.ts, tape `sample-cellar-edge`.

@@ -1,6 +1,6 @@
 # Progression validator report
 
-Generated 2026-09-28 12:15 by `npm run progression` (full mode) on build 6dab3e33c2-dirty, engine bb7a46f294. 8 search workers, default budget 300000 nodes. Tool: `tools/progression/`; how to read it: `memory/progression.md`.
+Generated 2026-09-28 13:25 by `npm run progression` (full mode) on build b2b0809a65, engine 14b64cfea8. 8 search workers, default budget 300000 nodes. Tool: `tools/progression/`; how to read it: `memory/progression.md`.
 
 ## Summary
 
@@ -14,7 +14,7 @@ Generated 2026-09-28 12:15 by `npm run progression` (full mode) on build 6dab3e3
 - **Gate audit:** 6 annotated gates, 2 failing, 0 warning (full-kit bypass only).
 - **Trap probes:** 311 ledges probed, 0 proven traps, 7 suspected.
 - **Findings:** 2 errors (0 not in the baseline `tests/progression/baseline.json`), 10 warnings.
-- **Run time:** extract 0.0 s, solve 0.4 s, audit 66.1 s, probes 93.5 s, design 0.0 s, total 160.0 s.
+- **Run time:** extract 0.0 s, solve 0.9 s, audit 160.6 s, probes 168.0 s, design 0.0 s, total 329.4 s.
 
 ![World graph](progression.svg)
 
@@ -179,7 +179,7 @@ What the sim does today: entering a room sets the abilities to the room's declar
 
 ## In-room trap probes
 
-311 (room, entry, kit, ledge) probes: 300 ledges get back to their entry or an exit, 4 stuck ledges are not reachable anyway, 7 traps. 93.5 s.
+311 (room, entry, kit, ledge) probes: 300 ledges get back to their entry or an exit, 4 stuck ledges are not reachable anyway, 7 traps. 168.0 s.
 
 - Suspected trap: stairwell ledge x10-19,y18 (entry default, kit {wallJump, dash, doubleJump, pogo, seize, levy}); reach tape `.5 J12 U+J+S1 J8 .4 D+V1 .28 D+S1 .36 D+V1 .10 U+S1 .24 D+V1 .9 U+S1 .22 R36 .10 D+V1 .4 R26`
 - Suspected trap: stairwell ledge x10-19,y25 (entry default, kit {wallJump, dash, doubleJump, pogo, seize, levy}); reach tape `.5 J12 U+J+S1 J8 .4 D+V1 .28 D+S1 .36 D+V1 .10 U+S1 .24 D+V1 .9 U+S1 .22 R36 .10 D+V1 .4 R26`
@@ -221,7 +221,7 @@ What the sim does today: entering a room sets the abilities to the room's declar
 
 ## Design graph: tests/progression/gym-world.json
 
-25 rooms, 48 edges. Symbolic solve (abilities × flags × fever): 25 non-stub rooms reachable, 0 not. 3 ms.
+25 rooms, 48 edges. Symbolic solve (abilities × flags × fever): 25 non-stub rooms reachable, 0 not. 4 ms.
 
 Every design check passes.
 
@@ -240,7 +240,7 @@ Design and build agree.
 
 ## Design graph: docs/design/world-design.md
 
-28 rooms, 38 edges. Symbolic solve (abilities × flags × fever): 21 non-stub rooms reachable, 2 not. 14 ms.
+28 rooms, 38 edges. Symbolic solve (abilities × flags × fever): 21 non-stub rooms reachable, 2 not. 17 ms.
 
 | Level | Check | Subject | Detail |
 |---|---|---|---|
@@ -283,5 +283,5 @@ Design and build agree.
 
 ## Oracle and timings
 
-Queries 661: static proofs 27, cache hits 101, inferred by monotonicity 30, committed tapes 102, bot searches 401 (159.9 s wall), tapes re-verified 0, stale records trusted 0.
+Queries 661: static proofs 27, cache hits 101, inferred by monotonicity 30, committed tapes 102, bot searches 401 (329.2 s wall), tapes re-verified 0, stale records trusted 0.
 

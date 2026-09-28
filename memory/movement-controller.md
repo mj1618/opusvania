@@ -38,3 +38,13 @@ Spec: `docs/design/movement-spec.md`. Code: `src/sim/player/player.ts` (controll
   `__name` helper call; ~20 closures per step cut the sim from 1.5M to 270k frames/s (bot killer).
   Keep hot loops (solidAt, hazardAt) allocation-free.
 - **Pogo** is `bounce(p, v, P, {refill, cutDisabled})`; Phase 2's nail hitbox should call the same.
+- **Slopes (L6)**, src/sim/physics/slopes.ts: tiles 8..21 (R/L x 1:4 a-d, 1:2 a-b, 1:1), tables
+  `slopeTop`; only the FEET (middle columns `x+(w-1)>>1`, `x+w>>1`) collide with them, boxes never do.
+  Uphill = `onBlockX` step-up (<= slopes.stepPx per px); downhill = `groundStick` after the moves,
+  only if the frame started on slope/shin ground, pulls down <= |dx| + snapExtraPx and zeroes vy
+  (without it vy accumulates and you "fall" down every ramp). The solid tile at a slope's full-height
+  end is derived as `Tile.shin`: its top `slopes.shinPx` (24 > w/2+1) rows are feet-only so the
+  uphill corner can overlap it. A shin top landing edge for boxes was tried and REMOVED: it held Kid
+  on the crest by her corner, then dropped her 20 px when it let go. Every path is gated by
+  `room.slopes`, so rectilinear rooms are bit-identical (all 31 non-edge goldens kept their hashes).
+  Tests: tests/unit/movement/slopes.test.ts (no airborne frames, vx constant, mirror, jump rise).

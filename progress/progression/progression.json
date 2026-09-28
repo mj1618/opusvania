@@ -1,19 +1,19 @@
 {
  "meta": {
-  "date": "2026-09-28 12:15",
-  "sha": "6dab3e33c2-dirty",
-  "engine": "bb7a46f294",
+  "date": "2026-09-28 13:25",
+  "sha": "b2b0809a65",
+  "engine": "14b64cfea8",
   "mode": "full",
   "workers": 8,
   "budget": 300000
  },
  "timings": {
-  "extract": 2,
-  "solve": 357,
-  "audit": 66146,
-  "probes": 93454,
-  "design": 23,
-  "total": 159992
+  "extract": 3,
+  "solve": 869,
+  "audit": 160554,
+  "probes": 167971,
+  "design": 28,
+  "total": 329434
  },
  "oracle": {
   "queries": 661,
@@ -22,7 +22,7 @@
   "inferred": 30,
   "tapes": 102,
   "searches": 401,
-  "searchMs": 159870,
+  "searchMs": 329233,
   "reverified": 0,
   "stale": 0
  },
@@ -3481,7 +3481,7 @@
      ],
      "frames": 46,
      "evidence": "tests/replays/stairwell.chain.json",
-     "ms": 0
+     "ms": 1
     }
    },
    {
@@ -3549,7 +3549,7 @@
      ],
      "frames": 275,
      "evidence": "tests/replays/yard-bar-wall.fwd-seize.json",
-     "ms": 1
+     "ms": 2
     }
    },
    {
@@ -3573,7 +3573,7 @@
      ],
      "frames": 44,
      "evidence": "tests/replays/yard-bar-wall.fwd-seize.json",
-     "ms": 0
+     "ms": 1
     }
    },
    {
@@ -3597,11 +3597,11 @@
      ],
      "frames": 1186,
      "evidence": "tests/replays/the-pit.jabOnly.s1.json",
-     "ms": 3
+     "ms": 8
     }
    }
   ],
-  "ms": 93454
+  "ms": 167971
  },
  "designs": [
   {
@@ -3769,7 +3769,7 @@
      }
     ],
     "breaks": [],
-    "ms": 3
+    "ms": 4
    },
    "diff": []
   },
@@ -4098,7 +4098,7 @@
       "detail": "adds: B11 with {levy, seize, slip}; B12 with {levy, seize, slip}; B12c with {levy, seize, slip}; B13 with {levy, seize, slip, flag:boss:auctioneer, fever 1}; X2 with {levy, seize, slip, flag:boss:auctioneer, fever 1}; EX_ROW_ROOFS with {levy, seize, slip, flag:boss:auctioneer, fever 1}; EX_FOUNDRY with {levy, seize, slip, flag:boss:auctioneer, fever 1}"
      }
     ],
-    "ms": 14
+    "ms": 17
    },
    "diff": [
     {
