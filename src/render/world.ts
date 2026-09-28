@@ -10,17 +10,12 @@ import { makeClock } from './gfx/clock';
 import { GfxPipeline } from './gfx/pipeline';
 import { BagHud } from './hud';
 import { KidRenderer } from './kid';
+import { KidRig } from './rig/index';
 import { SignatureRenderer } from './signature';
 
-/** Player and screen colours (terrain colours live in src/render/gfx/terrain.ts and palette.ts). */
+/** Screen colours (Kid's look lives in src/render/rig/look.ts; terrain in src/render/gfx). */
 const COLORS = {
-  player: 0xe8e4d8,
-  playerDash: 0x8fd3ff,
-  playerEye: 0x141824,
-  dashReady: 0x3fa7ff,
-  dashUsed: 0x4a5064,
   deathFlash: 0xffffff,
-  deathBody: 0xff5a6e,
 };
 
 /** Juice particle colours that glow (emissive) rather than being lit like dust. */
@@ -49,7 +44,6 @@ export class WorldRenderer {
   private readonly tiles = new Graphics();
   private readonly labels = new Container();
   private readonly fxBack = new Graphics();
-  private readonly player = new Graphics();
   private readonly fxFront = new Graphics();
   /** Kid's gloves, Seize hand, Levy arm, Swallow ring, Count (over her body). */
   private readonly kidFront = new Graphics();
@@ -72,6 +66,8 @@ export class WorldRenderer {
   readonly sig: SignatureRenderer;
   readonly bagHud: BagHud;
   readonly kid: KidRenderer;
+  /** Kid Tallow's cutout rig (src/render/rig): body, secondary motion, smears, glow. */
+  readonly rig: KidRig;
   readonly combat: CombatLayer;
   private builtRoomVersion = -1;
   private fadeIn = 0;
@@ -84,6 +80,7 @@ export class WorldRenderer {
     this.sig = new SignatureRenderer(game);
     this.bagHud = new BagHud(game);
     this.kid = new KidRenderer(game);
+    this.rig = new KidRig(game);
     this.combat = new CombatLayer(game);
     // Terrain, labels and dust are lit; the L3 readability layer, the player and front juice are
     // unlit actors (a hum or a telegraph must never depend on a lamp), and sources glow.
@@ -91,7 +88,7 @@ export class WorldRenderer {
     this.gfx.layers.actors.addChild(
       this.sig.back,
       this.sig.enemyLayer,
-      this.player,
+      this.rig.node,
       this.kidFront,
       this.fxFront,
       this.sig.front,
@@ -126,6 +123,7 @@ export class WorldRenderer {
     } else if (this.fadeIn > 0) this.fadeIn--;
     this.juice.step(s, events);
     this.sig.step(events);
+    this.rig.step(events);
     this.kid.step(events);
     this.combat.step(events);
     this.bagHud.step(events);
@@ -141,6 +139,7 @@ export class WorldRenderer {
     this.juice.reset();
     this.sig.reset();
     this.kid.reset();
+    this.rig.reset();
     this.combat.reset();
     this.bagHud.reset();
   }
@@ -194,11 +193,11 @@ export class WorldRenderer {
     // gfx.draw sets this too; set it first so the bag HUD and rects() see this frame's camera.
     this.world.position.set(-cx, -cy);
 
-    this.drawPlayer(px, py);
+    this.drawPlayer(px, py, a);
     this.sig.draw(alpha, { x: px, y: py });
     this.kidFront.clear();
     this.kidGlow.clear();
-    this.kid.draw(this.kidFront, this.kidGlow, { x: px, y: py });
+    this.kid.draw(this.kidFront, this.kidGlow, { x: px, y: py }, this.rig.hands);
     this.combatFront.clear();
     this.combatGlow.clear();
     this.combat.draw(this.combatFront, this.combatGlow);
@@ -224,46 +223,20 @@ export class WorldRenderer {
     });
   }
 
-  private drawPlayer(px: number, py: number): void {
-    const p = this.game.state.player;
-    const g = this.player.clear();
-    const glow = this.gfx.playerGlow.clear();
-    if (p.down) {
-      // Down for her Count: lying on the floor (KidRenderer draws the ring over her).
-      this.player.visible = true;
-      this.player.alpha = 1;
-      this.kid.drawDown(g, p);
-      this.player.position.set(Math.round(px + p.w / 2), Math.round(py + p.h));
-      this.player.scale.set(1, 1);
-      return;
-    }
-    if (p.state === 'dead') {
-      this.drawDeathPop();
-      return;
-    }
-    this.player.visible = true;
-    const w = p.w;
-    const h = p.h;
-    const [kx, ky] = this.sig.kidScale();
-    const body =
-      this.kid.tint() ?? this.sig.kidTint() ?? (p.state === 'dash' ? COLORS.playerDash : COLORS.player);
-    g.roundRect(-w / 2, -h, w, h, 10).fill(body);
-    // Dash-ready band (Celeste's hair-colour trick): blue when an air dash is available. It is
-    // emissive (glows through bloom), so dash readiness reads even in dark rooms.
-    if (p.abilities.dash) {
-      const ready = p.grounded || p.airDash > 0;
-      g.rect(-w / 2, -h * 0.55, w, 10).fill(ready ? COLORS.dashReady : COLORS.dashUsed);
-      if (ready) glow.rect(-w / 2, -h * 0.55, w, 10).fill({ color: COLORS.dashReady, alpha: 0.7 });
-    }
-    if (p.state === 'dash')
-      glow.roundRect(-w / 2, -h, w, h, 10).fill({ color: COLORS.playerDash, alpha: 0.35 });
-    const eyeX = p.facing > 0 ? w / 2 - 14 : -w / 2 + 6;
-    g.rect(eyeX, -h + 18, 8, 12).fill(COLORS.playerEye);
-    for (const n of [this.player, this.gfx.playerGlow]) {
-      n.position.set(Math.round(px + w / 2), Math.round(py + h));
-      n.scale.set(this.juice.sx * kx, this.juice.sy * ky);
-    }
-    this.player.alpha = this.sig.kidAlpha() * this.kid.alpha();
+  private drawPlayer(px: number, py: number, alpha: number): void {
+    const d = this.juice.death;
+    this.rig.draw(this.gfx.playerGlow.clear(), {
+      kid: { x: px, y: py },
+      alpha,
+      squash: [this.juice.sx, this.juice.sy],
+      weight: this.sig.kidScale(),
+      tint: this.kid.tint() ?? this.sig.kidTint(),
+      // No i-frame flicker while she's down for her Count: the pose must read.
+      opacity: this.game.state.player.down ? 1 : this.sig.kidAlpha() * this.kid.alpha(),
+      deathAge: d ? d.age : null,
+      deathHold: fxTuning.deathHoldFrames,
+      deathPopScale: fxTuning.deathPopScale,
+    });
   }
 
   /** Canvas-px rects of L3 things as last drawn (for the E readability checks). */
@@ -277,33 +250,13 @@ export class WorldRenderer {
     return [...out, ...this.bagHud.slotRects().map((r) => ({ ...r }))];
   }
 
-  /** Death: the body flashes white, turns red and swells for the hold, then pops (juice burst). */
-  private drawDeathPop(): void {
-    const d = this.juice.death;
-    this.player.visible = d !== null;
-    this.player.alpha = 1;
-    if (!d) return;
-    const white = d.age < fxTuning.deathFlashFrames;
-    const k = 1 + (fxTuning.deathPopScale - 1) * (d.age / fxTuning.deathHoldFrames);
-    this.player
-      .clear()
-      .roundRect(-d.w / 2, -d.h / 2, d.w, d.h, 10)
-      .fill(white ? COLORS.deathFlash : COLORS.deathBody);
-    this.player.position.set(Math.round(d.x + d.w / 2), Math.round(d.y + d.h / 2));
-    this.player.scale.set(k, k);
-  }
-
   private drawFx(): void {
     const back = this.fxBack.clear();
     const front = this.fxFront.clear();
     // Energetic juice (dash, death, pogo, rings) also draws into the emissive layer so it glows;
     // dust stays matte and lit.
     const glow = this.gfx.fxGlow.clear();
-    for (const ai of this.juice.afterimages) {
-      const t = ai.age / fxTuning.afterimageLife;
-      back.roundRect(ai.x, ai.y, ai.w, ai.h, 10).fill({ color: COLORS.playerDash, alpha: 0.45 * (1 - t) });
-      glow.roundRect(ai.x, ai.y, ai.w, ai.h, 10).fill({ color: COLORS.playerDash, alpha: 0.25 * (1 - t) });
-    }
+    // Slip afterimages are Kid's own silhouette, drawn by the rig.
     for (const q of this.juice.particles) {
       const t = q.age / q.life;
       const alpha = 1 - t;

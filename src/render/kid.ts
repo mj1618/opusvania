@@ -16,6 +16,14 @@ interface Pt {
   y: number;
 }
 
+/** Where the rig last drew Kid's hands and head (world px). */
+export interface RigPoints {
+  F: Pt;
+  B: Pt;
+  head: Pt;
+  mouth: Pt;
+}
+
 /** Move phase: -0.25..0 winding up, 1 at full reach, easing back to 0 in recovery. */
 interface Phase {
   stage: 'startup' | 'active' | 'recovery';
@@ -49,19 +57,17 @@ function phaseOf(m: MoveState): Phase {
 }
 
 /**
- * Kid's combat body language (combat-spec §2, novice playtest §4): gloves that travel along each
- * strike's hitbox, the Seize hand (reach, whiff snap, take), the Levy flick, the Swallow ring,
- * the clean-slip flash and Counter glow, the hazard flash and respawn shimmer, and her own Count
- * when she's down. Render only: reads state and events, stepped once per sim step.
+ * Kid's combat overlays (combat-spec §2, novice playtest §4): the Seize hand (reach, whiff snap,
+ * take) leaving her glove, the Swallow ring, sparks, the clean-slip flash, the respawn shimmer and
+ * her own Count ring. Her body, gloves, strikes, Levy throw and hazard flash are the rig
+ * (src/render/rig). Render only: reads state and events, stepped once per sim step.
  */
 export class KidRenderer {
   private readonly sparks = new SparkSet(31);
   private slipFlash = 0;
   private takeColour: Colour | null = null;
-  private throwColour: Colour = 'white';
   private swallowColour: Colour = 'white';
   private swallowDone: { kind: 'commit' | 'spill' | 'refused'; age: number; colour: Colour } | null = null;
-  private hazard: { x: number; y: number; age: number } | null = null;
   private hazardPending = false;
   private shimmer = -1;
   private countPulse = 0;
@@ -77,7 +83,6 @@ export class KidRenderer {
     this.slipFlash = 0;
     this.takeColour = null;
     this.swallowDone = null;
-    this.hazard = null;
     this.hazardPending = false;
     this.shimmer = -1;
     this.countPulse = 0;
@@ -94,7 +99,6 @@ export class KidRenderer {
     if (this.slipFlash > 0) this.slipFlash--;
     if (this.countPulse > 0) this.countPulse--;
     if (this.swallowDone && ++this.swallowDone.age > 24) this.swallowDone = null;
-    if (this.hazard && ++this.hazard.age > CBT.hazardFlashFrames) this.hazard = null;
     if (this.shimmer >= 0 && ++this.shimmer > CBT.shimmerFrames) this.shimmer = -1;
     if (this.riseBurst >= 0 && ++this.riseBurst > CBT.riseBurstFrames) this.riseBurst = -1;
     if (this.countedOut >= 0) this.countedOut++;
@@ -130,9 +134,6 @@ export class KidRenderer {
         case 'seizeRefused':
           this.guardAge = 0;
           break;
-        case 'levyThrow':
-          this.throwColour = e.colour;
-          break;
         case 'swallowStart':
           this.swallowColour = e.colour;
           this.swallowDone = null;
@@ -160,7 +161,6 @@ export class KidRenderer {
           this.sparks.ring(c.x, c.y, PALETTE.gold, 40, 18, 3);
           break;
         case 'hazard':
-          this.hazard = { x: p.x, y: p.y, age: 0 };
           this.hazardPending = true;
           this.sparks.burst(rnd, e.x, e.y, 14, PALETTE.furious, { speed: 8, size: 8, up: 2 });
           break;
@@ -220,43 +220,16 @@ export class KidRenderer {
     return this.countedOut < 0 ? 0 : Math.min(0.9, this.countedOut / CBT.countedOutFrames);
   }
 
-  /** Kid lying down for her Count: drawn into the (unscaled) player graphics, origin = feet centre. */
-  drawDown(g: Graphics, p: PlayerState): void {
-    const w = p.h;
-    const h = p.w - 6;
-    const head = -p.facing;
-    g.roundRect(-w / 2, -h, w, h, 10).fill(PALETTE.chin);
-    // Closed eyes (x x) at the head end.
-    const ex = head * (w / 2 - 14);
-    for (const dx of [-5, 5]) {
-      const x = ex + dx;
-      g.moveTo(x - 3, -h + 9)
-        .lineTo(x + 3, -h + 15)
-        .moveTo(x + 3, -h + 9)
-        .lineTo(x - 3, -h + 15);
-    }
-    g.stroke({ width: 2.5, color: PALETTE.enemyDark });
-    // Gloves flopped on the floor.
-    g.roundRect(-head * 8 - 11, -12, 22, 12, 5).fill(PALETTE.glove);
-    g.roundRect(head * 14 - 11, -10, 22, 10, 5).fill(PALETTE.glove);
-  }
-
-  /** Draws the move overlays over Kid (world px). `kid` = interpolated top-left. */
-  draw(f: Graphics, gl: Graphics, kid: Pt): void {
+  /**
+   * Draws the move overlays over Kid (world px). `kid` = interpolated top-left; `rig` = her glove,
+   * head and mouth as the rig last drew them (src/render/rig), so the Seize hand leaves her glove.
+   */
+  draw(f: Graphics, gl: Graphics, kid: Pt, rig: RigPoints): void {
     const s = this.game.state;
     const p = s.player;
     const frame = s.frame;
     const cx = kid.x + p.w / 2;
 
-    // Hazard: a red flash where she was hit (she vanishes until the respawn at safe ground).
-    if (this.hazard) {
-      const a = 1 - this.hazard.age / CBT.hazardFlashFrames;
-      const white = this.hazard.age < 2;
-      f.roundRect(this.hazard.x, this.hazard.y, p.w, p.h, 10).fill({
-        color: white ? PALETTE.flash : PALETTE.furious,
-        alpha: a,
-      });
-    }
     // Respawn shimmer: light columns closing in on her.
     if (this.shimmer >= 0 && p.state !== 'dead') {
       const t = this.shimmer / CBT.shimmerFrames;
@@ -276,43 +249,18 @@ export class KidRenderer {
 
     if (p.down) this.drawCount(f, gl, p, kid, frame);
 
-    // Counter window: a gold outline around her, pulsing.
-    if (p.counter > 0 && p.state !== 'dead') {
-      const k = 0.6 + 0.4 * Math.sin(frame * 0.6);
-      const pad = 5;
-      f.roundRect(kid.x - pad, kid.y - pad, p.w + 2 * pad, p.h + 2 * pad, 12).stroke({
-        width: 3,
-        color: PALETTE.gold,
-        alpha: k * Math.min(1, p.counter / 8),
-      });
-      gl.roundRect(kid.x - pad, kid.y - pad, p.w + 2 * pad, p.h + 2 * pad, 12).stroke({
-        width: 6,
-        color: PALETTE.gold,
-        alpha: 0.6 * k,
-      });
-    }
-
     if (p.state === 'dead' || p.down) {
       this.sparks.draw(f, gl);
       return;
     }
+    // Gloves, strikes and the Levy throw are the rig's arms (src/render/rig); here only the
+    // Seize hand and the Swallow ring, which carry reach and progress information.
     const m = p.move;
-    // Resting guard: two small gloves at her chest (combat rooms only).
-    const guard = p.abilities.seize;
-    const face = m ? m.facing : p.facing;
-    const busyArm = m ? moveDef(m.id).kind : '';
-    if (guard) {
-      // The rear glove always rests; the lead glove rests unless a strike/levy uses it.
-      this.glove(f, cx + face * 12, kid.y + 42, 20, 18, face, false, 0.95);
-      if (!m || busyArm === 'swallow') this.glove(f, cx + face * 24, kid.y + 32, 22, 20, face, false, 1);
-    }
     if (m) {
       const d = moveDef(m.id);
       const ph = phaseOf(m);
-      if (d.kind === 'strike') this.drawStrike(f, gl, p, m, ph, kid);
-      else if (d.kind === 'seize') this.drawSeize(f, gl, p, m, ph, kid, frame);
-      else if (d.kind === 'levy') this.drawLevy(f, gl, p, m, ph, kid);
-      else if (d.kind === 'swallow') this.drawSwallow(f, gl, p, m, kid, frame);
+      if (d.kind === 'seize') this.drawSeize(f, gl, p, m, ph, kid, frame, rig.F);
+      else if (d.kind === 'swallow') this.drawSwallow(f, gl, m, rig.mouth, frame);
     }
     if (this.swallowDone?.kind === 'commit') {
       const t = this.swallowDone.age / 24;
@@ -328,42 +276,6 @@ export class KidRenderer {
     this.sparks.draw(f, gl);
   }
 
-  // --- strikes ---
-
-  private glove(
-    f: Graphics,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    face: number,
-    counter: boolean,
-    alpha: number,
-  ): void {
-    f.roundRect(x - w / 2, y - h / 2, w, h, Math.min(w, h) * 0.38).fill({ color: PALETTE.glove, alpha });
-    f.roundRect(x - w / 2, y - h / 2, w, h, Math.min(w, h) * 0.38).stroke({
-      width: counter ? 3 : 2,
-      color: counter ? PALETTE.gold : PALETTE.gloveDark,
-      alpha,
-    });
-    // Cuff on the wrist side, and a knuckle highlight.
-    const cxw = x - (face * w) / 2 + face * 2;
-    f.rect(Math.min(cxw, cxw - face * 5), y - h / 2 + 3, 5, h - 6).fill({ color: PALETTE.gloveCuff, alpha });
-    f.rect(x + face * (w / 2 - 7) - 1.5, y - h / 2 + 4, 3, h * 0.35).fill({
-      color: 0xffffff,
-      alpha: 0.35 * alpha,
-    });
-  }
-
-  private arm(f: Graphics, from: Pt, to: Pt, width: number = CBT.armWidth): void {
-    f.moveTo(from.x, from.y)
-      .lineTo(to.x, to.y)
-      .stroke({ width: width + 3, color: PALETTE.enemyDark, alpha: 0.5, cap: 'round' });
-    f.moveTo(from.x, from.y)
-      .lineTo(to.x, to.y)
-      .stroke({ width, color: PALETTE.sleeve, alpha: 1, cap: 'round' });
-  }
-
   private hitbox(p: PlayerState, m: MoveState, kid: Pt): Rect | null {
     const d = moveDef(m.id);
     const b = d.hitboxes[m.dir] ?? d.hitboxes.fwd;
@@ -376,83 +288,6 @@ export class KidRenderer {
       return { x: r.x - gx, y: r.y - gy, w: r.w + 2 * gx, h: r.h + 2 * gy };
     }
     return r;
-  }
-
-  private drawStrike(f: Graphics, gl: Graphics, p: PlayerState, m: MoveState, ph: Phase, kid: Pt): void {
-    const box = this.hitbox(p, m, kid);
-    if (!box) return;
-    const face = m.facing;
-    const cx = kid.x + p.w / 2;
-    const counter = m.counter;
-    const hot = ph.stage === 'active' || (ph.stage === 'recovery' && ph.n <= 2);
-    let size: readonly [number, number] = CBT.jabGlove;
-    let path: (u: number) => Pt;
-    let shoulder: Pt;
-    if (m.id === 'uppercut') {
-      size = CBT.hookGlove;
-      shoulder = { x: cx + face * 6, y: kid.y + 30 };
-      const a = { x: cx + face * 16, y: kid.y + 56 };
-      const b = { x: cx + face * 10, y: box.y + 16 };
-      const c = { x: cx + face * 46, y: kid.y + 20 };
-      path = (u) => quad(a, c, b, u);
-    } else if (m.id === 'overhand') {
-      size = CBT.hookGlove;
-      shoulder = { x: cx + face * 4, y: kid.y + 26 };
-      const a = { x: cx - face * 4, y: kid.y - 6 };
-      const b = { x: cx + face * 8, y: box.y + box.h - 18 };
-      const c = { x: cx + face * 50, y: kid.y + 24 };
-      path = (u) => quad(a, c, b, u);
-    } else {
-      if (m.id === 'cross') size = CBT.crossGlove;
-      const y = box.y + box.h / 2;
-      const rest = { x: cx + face * 24, y: kid.y + 32 };
-      const far = { x: (face > 0 ? box.x + box.w : box.x) - (face * size[0]) / 2, y };
-      shoulder = { x: cx + face * 4, y: kid.y + 30 };
-      path = (u) => (u < 0 ? { x: rest.x + face * u * 40, y: rest.y } : lerpPt(rest, far, u));
-    }
-    const u = ph.ext;
-    const fist = path(u);
-    // Swoosh trail along the path while it's hot.
-    if (hot) {
-      const n = 8;
-      const u0 = m.id === 'jab' || m.id === 'cross' ? Math.max(0, u - 0.7) : 0;
-      for (let i = 0; i < n; i++) {
-        const q0 = path(u0 + ((u - u0) * i) / n);
-        const q1 = path(u0 + ((u - u0) * (i + 1)) / n);
-        const w = (m.id === 'cross' ? 4 : 2) + (i / n) * (m.id === 'jab' ? 8 : 14);
-        const col = counter ? PALETTE.gold : PALETTE.seizeHand;
-        f.moveTo(q0.x, q0.y)
-          .lineTo(q1.x, q1.y)
-          .stroke({ width: w, color: col, alpha: 0.12 + (0.4 * i) / n, cap: 'round' });
-      }
-      if (m.id === 'jab' || m.id === 'cross') {
-        // Speed lines behind the glove.
-        const lines = m.id === 'cross' ? 4 : 3;
-        for (let i = 0; i < lines; i++) {
-          const yy = fist.y + (i - (lines - 1) / 2) * 7;
-          const len = 26 + (i % 2) * 14;
-          const x0 = fist.x - face * (size[0] / 2 + 6);
-          f.moveTo(x0, yy)
-            .lineTo(x0 - face * len, yy)
-            .stroke({ width: 2, color: PALETTE.seizeHand, alpha: 0.55 });
-        }
-      }
-    }
-    this.arm(f, shoulder, fist);
-    if (counter) {
-      gl.circle(fist.x, fist.y, size[0] * 0.9).fill({ color: PALETTE.gold, alpha: 0.55 });
-      f.circle(fist.x, fist.y, size[0] * 0.85).stroke({ width: 3, color: PALETTE.gold, alpha: 0.9 });
-    }
-    const gw = m.id === 'uppercut' || m.id === 'overhand' ? size[1] : size[0];
-    const gh = m.id === 'uppercut' || m.id === 'overhand' ? size[0] : size[1];
-    this.glove(f, fist.x, fist.y, gw, gh, face, counter, 1);
-    // First active frame: a small white star at the knuckles.
-    if (ph.stage === 'active' && ph.n === 1) {
-      const kx = fist.x + (m.id === 'uppercut' ? 0 : face * (gw / 2 + 4));
-      const ky = fist.y + (m.id === 'uppercut' ? -gh / 2 - 4 : m.id === 'overhand' ? gh / 2 + 4 : 0);
-      f.star(kx, ky, 5, 12, 5).fill({ color: counter ? PALETTE.gold : PALETTE.flash, alpha: 0.95 });
-      gl.star(kx, ky, 5, 14, 6).fill({ color: counter ? PALETTE.gold : PALETTE.flash, alpha: 0.6 });
-    }
   }
 
   // --- seize ---
@@ -506,8 +341,10 @@ export class KidRenderer {
     ph: Phase,
     kid: Pt,
     frame: number,
+    glove: Pt,
   ): void {
-    const { base, tip, angle } = this.seizePath(p, m, kid.x, kid.y);
+    const { tip, angle } = this.seizePath(p, m, kid.x, kid.y);
+    const base = glove;
     const missed = m.outcome === 'whiff' || m.outcome === 'guard' || m.outcome === 'refused';
     let ext: number;
     let open: number;
@@ -577,75 +414,16 @@ export class KidRenderer {
     );
   }
 
-  // --- levy ---
-
-  private drawLevy(f: Graphics, gl: Graphics, p: PlayerState, m: MoveState, ph: Phase, kid: Pt): void {
-    const face = m.facing;
-    const cx = kid.x + p.w / 2;
-    const sh = { x: cx + face * 4, y: kid.y + 28 };
-    // Angles in facing-local space (0 = forward, -pi/2 = up).
-    const A: Record<string, [number, number, number]> = {
-      fwd: [-2.3, 0, 0.6],
-      up: [0.9, -Math.PI / 2, -1.95],
-      down: [-1.7, Math.PI / 2, 1.95],
-    };
-    const [cock, rel, fol] = A[m.dir] ?? A.fwd ?? [0, 0, 0];
-    const rest = 0.9;
-    let a: number;
-    let alpha = 1;
-    if (ph.stage === 'startup') a = rest + (cock - rest) * ph.t;
-    else if (ph.stage === 'active') a = rel;
-    else {
-      a = rel + (fol - rel) * Math.min(1, ph.t * 2);
-      alpha = 1 - Math.max(0, ph.t - 0.5) * 2;
-    }
-    const L = 36;
-    const toWorld = (ang: number, r: number): Pt => ({
-      x: sh.x + face * Math.cos(ang) * r,
-      y: sh.y + Math.sin(ang) * r,
-    });
-    const hand = toWorld(a, L);
-    // Whoosh arc from the cocked angle to the release on the throw frame and just after.
-    if (ph.stage === 'active' || (ph.stage === 'recovery' && ph.n <= 3)) {
-      const k = ph.stage === 'active' ? 1 : 1 - ph.n / 4;
-      const c = m.outcome === 'whiff' ? PALETTE.hudDim : colourHex(this.throwColour);
-      const n = 10;
-      for (let i = 0; i < n; i++) {
-        const q0 = toWorld(cock + ((rel - cock) * i) / n, L + 6);
-        const q1 = toWorld(cock + ((rel - cock) * (i + 1)) / n, L + 6);
-        f.moveTo(q0.x, q0.y)
-          .lineTo(q1.x, q1.y)
-          .stroke({ width: 2 + i, color: c, alpha: k * (0.15 + (0.6 * i) / n), cap: 'round' });
-      }
-      if (m.outcome !== 'whiff') gl.circle(hand.x, hand.y, 16).fill({ color: c, alpha: 0.35 * k });
-    }
-    f.moveTo(sh.x, sh.y)
-      .lineTo(hand.x, hand.y)
-      .stroke({ width: CBT.armWidth, color: PALETTE.sleeve, alpha, cap: 'round' });
-    const handAngle = face > 0 ? a : Math.PI - a;
-    drawHand(
-      f,
-      hand.x,
-      hand.y,
-      18,
-      handAngle,
-      PALETTE.glove,
-      alpha,
-      ph.stage === 'startup' ? 0.1 : 0.8,
-      PALETTE.gloveDark,
-    );
-  }
-
   // --- swallow ---
 
-  private drawSwallow(f: Graphics, gl: Graphics, p: PlayerState, m: MoveState, kid: Pt, frame: number): void {
+  private drawSwallow(f: Graphics, gl: Graphics, m: MoveState, mouth: Pt, frame: number): void {
     if (m.outcome === 'refused' || !m.soundId) return;
     const channel = Math.max(1, m.len - moveDef('swallow').recovery);
     const k = Math.min(1, m.frame / channel);
     if (m.frame > channel) return;
     const c = colourHex(this.swallowColour);
-    const cx = kid.x + p.w / 2;
-    const cy = kid.y + 28;
+    const cx = mouth.x;
+    const cy = mouth.y + 6;
     const R = 36;
     f.circle(cx, cy, R).stroke({ width: 7, color: PALETTE.bg, alpha: 0.6 });
     f.circle(cx, cy, R).stroke({ width: 2, color: c, alpha: 0.5 });
@@ -739,10 +517,4 @@ function tickAngle(i: number, n: number): number {
 
 function lerpPt(a: Pt, b: Pt, u: number): Pt {
   return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u };
-}
-
-function quad(a: Pt, c: Pt, b: Pt, u0: number): Pt {
-  const u = Math.max(0, Math.min(1, u0));
-  const v = 1 - u;
-  return { x: v * v * a.x + 2 * v * u * c.x + u * u * b.x, y: v * v * a.y + 2 * v * u * c.y + u * u * b.y };
 }

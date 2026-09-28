@@ -29,7 +29,8 @@
     "policy": "tsx tools/bot/policies/cli.ts",
     "combat:report": "tsx tools/combat/report.ts",
     "fight": "tsx tools/combat/cli.ts",
-    "progression": "tsx tools/progression/cli.ts"
+    "progression": "tsx tools/progression/cli.ts",
+    "rig:shots": "tsx tools/rig-shots.ts"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",
