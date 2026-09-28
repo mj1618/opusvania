@@ -134,7 +134,9 @@ describe('edge exits', () => {
     const exit = frames.findIndex((f) => f.ev.includes('roomExit'));
     const enter = frames.findIndex((f) => f.ev.includes('roomEnter'));
     expect(exit).toBeGreaterThan(0);
-    expect(enter - exit).toBe(t.world.transitionFrames);
+    expect(enter - exit).toBe(t.world.edgeTransitionFrames);
+    // North star §3.3: edge exits take at most 8 frames and never fade (the events say so).
+    expect(t.world.edgeTransitionFrames).toBeLessThanOrEqual(8);
     const a = frames[exit] as (typeof frames)[number];
     const b = frames[enter] as (typeof frames)[number];
     expect(b.room).toBe('edge-b');

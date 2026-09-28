@@ -62,6 +62,29 @@ export const defaultTuning = {
     /** Minimum room size in tiles; smaller rooms are padded with solid (spec §6.1). */
     minRoomW: 30,
     minRoomH: 17,
+    /** Edge exits (north star §3.3): the freeze before the body moves into the neighbour (<= 8, no fade). */
+    edgeTransitionFrames: 4,
+    /** The night clock (north star §3.5): a `nightStep` event every this many sim frames (6 min). */
+    nightStepFrames: 21600,
+  },
+  /** Floor slopes (north star §3.2; level-toolchain §3.3): 1:4, 1:2 and 1:1 heightfield tiles. */
+  slopes: {
+    /** Most px the feet may step up per 1 px of horizontal movement (a 45° slope needs 1, +1 for the column switch). */
+    stepPx: 2,
+    /** Ground stick running downhill: search this many px below |dx| for the surface. */
+    snapExtraPx: 2,
+    /**
+     * The top band of a solid tile at a slope's high end ("shin" tile) that only the feet collide
+     * with, so the body's uphill corner can overlap it (up to w/2 + 1 = 21 px at 45°).
+     */
+    shinPx: 24,
+    /** A grounded dash follows the slope down (ground stick) instead of flying off it. */
+    dashStick: true,
+  },
+  /** The carry rule (north star §3.4): what persists across the rooms of a district. */
+  carry: {
+    /** Levied objects a district holds; placing another sends the oldest home. */
+    maxPlaced: 6,
   },
   body: {
     width: 40,

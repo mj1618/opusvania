@@ -1,10 +1,11 @@
 import type { Colour, MoveDir, SimEvent } from './events';
 import { type Body, type Collider, Move, moveX, moveY, oneWayUnder, solidAt } from './physics/aabb';
+import { feetEmbedded, slopeGround } from './physics/slopes';
 import type { MoveParams } from './player/params';
 import { bounce } from './player/player';
 import { bagNewest, bagRemove, removeLevied, sendHome } from './sound';
 import type { GameState, Levied, PlayerState, Sound } from './state';
-import { speedForHeight, type Tuning } from './tuning';
+import { defaultTuning, speedForHeight, type Tuning } from './tuning';
 import { addDynSolid, dynSolidAt, solidAny } from './world/dynamic';
 import type { Room } from './world/rooms';
 
@@ -22,16 +23,36 @@ class LeviedCollider implements Collider {
   ts = 0;
   skip = -1;
 
+  stepPx = 0;
+
+  box(b: Body, x: number, y: number): boolean {
+    return solidAt(this.room as Room, this.ts, x, y, b.w, b.h) || dynSolidAt(x, y, b.w, b.h, this.skip);
+  }
+
   blockedX(b: Body, dir: number): boolean {
-    const r = this.room as Room;
-    return solidAt(r, this.ts, b.x + dir, b.y, b.w, b.h) || dynSolidAt(b.x + dir, b.y, b.w, b.h, this.skip);
+    if (this.box(b, b.x + dir, b.y)) return true;
+    return feetEmbedded(this.room as Room, b.x + dir, b.y, b.w, b.h);
   }
 
   blockedY(b: Body, dir: number): boolean {
     const r = this.room as Room;
-    if (solidAt(r, this.ts, b.x, b.y + dir, b.w, b.h) || dynSolidAt(b.x, b.y + dir, b.w, b.h, this.skip))
-      return true;
-    return dir > 0 && oneWayUnder(r, this.ts, b.x, b.y, b.w, b.h);
+    if (this.box(b, b.x, b.y + dir)) return true;
+    if (dir <= 0) return false;
+    return slopeGround(r, b.x, b.y, b.w, b.h) || oneWayUnder(r, this.ts, b.x, b.y, b.w, b.h);
+  }
+
+  /** Slopes: a thrown object sliding into a rising surface rides up it (as Kid's feet do). */
+  onBlockX(b: Body, dir: number): boolean {
+    const r = this.room as Room;
+    if (!r.slopes || this.box(b, b.x + dir, b.y)) return false;
+    for (let k = 1; k <= this.stepPx; k++) {
+      if (this.box(b, b.x + dir, b.y - k)) return false;
+      if (!feetEmbedded(r, b.x + dir, b.y - k, b.w, b.h)) {
+        b.y -= k;
+        return true;
+      }
+    }
+    return false;
   }
 
   hazard(): boolean {
@@ -40,6 +61,8 @@ class LeviedCollider implements Collider {
 }
 
 const col = new LeviedCollider();
+/** Placement (spawn slides) uses the default step: it runs before this step's tuning is read. */
+const SLOPE_STEP_PX = defaultTuning.slopes.stepPx;
 
 export interface ColourDims {
   w: number;
@@ -143,6 +166,7 @@ function place(
   col.room = room;
   col.ts = ts;
   col.skip = -1;
+  col.stepPx = SLOPE_STEP_PX;
   moveX(start, x1 - start.x, col);
   start.rx = 0;
   moveY(start, y1 - start.y, col);
@@ -282,6 +306,7 @@ export function updateLevied(state: GameState, room: Room, t: Tuning, events: Si
   const ts = t.world.tileSize;
   col.room = room;
   col.ts = ts;
+  col.stepPx = SLOPE_STEP_PX;
   const g = t.jump.gravity;
   const cap = t.jump.fastFallMax;
   // Darts whose life ran out fly home to their owner (combat-spec §1.5).
@@ -307,7 +332,8 @@ export function updateLevied(state: GameState, room: Room, t: Tuning, events: Si
         const supported =
           solidAt(room, ts, l.x, l.y + 1, l.w, l.h) ||
           dynSolidAt(l.x, l.y + 1, l.w, l.h, l.id) ||
-          oneWayUnder(room, ts, l.x, l.y, l.w, l.h);
+          oneWayUnder(room, ts, l.x, l.y, l.w, l.h) ||
+          slopeGround(room, l.x, l.y, l.w, l.h);
         if (!supported) {
           l.phase = 'flight';
           l.solid = false;

@@ -4,11 +4,12 @@ import { SeizePri, type SeizePriority } from '../combat/priority';
 import type { HitClass, SimEvent } from '../events';
 import { sineAt } from '../math/sine';
 import { type Body, type Collider, Move, moveX, moveY, oneWayUnder, solidAt } from '../physics/aabb';
+import { feetEmbedded, floorAheadOnSlope, onSlopeGround, slopeGround } from '../physics/slopes';
 import { rngInt } from '../rng';
 import { pay } from '../run';
 import { refreshSource, sendHome, soundById, sourceById } from '../sound';
 import type { Enemy, EnemyMode, GameState, LocalState, Sound, Source } from '../state';
-import { speedForHeight, type Tuning } from '../tuning';
+import { defaultTuning, speedForHeight, type Tuning } from '../tuning';
 import { dynSolidAt } from '../world/dynamic';
 import type { Room } from '../world/rooms';
 import { bossCountSeized, bossOnDamage, bossReturnHit, bossStep, isBoss } from './boss';
@@ -31,16 +32,34 @@ class EnemyCollider implements Collider {
   room: Room | null = null;
   ts = 0;
 
+  box(b: Body, x: number, y: number): boolean {
+    return solidAt(this.room as Room, this.ts, x, y, b.w, b.h) || dynSolidAt(x, y, b.w, b.h);
+  }
+
   blockedX(b: Body, dir: number): boolean {
-    return (
-      solidAt(this.room as Room, this.ts, b.x + dir, b.y, b.w, b.h) || dynSolidAt(b.x + dir, b.y, b.w, b.h)
-    );
+    if (this.box(b, b.x + dir, b.y)) return true;
+    return feetEmbedded(this.room as Room, b.x + dir, b.y, b.w, b.h);
   }
 
   blockedY(b: Body, dir: number): boolean {
     const r = this.room as Room;
-    if (solidAt(r, this.ts, b.x, b.y + dir, b.w, b.h) || dynSolidAt(b.x, b.y + dir, b.w, b.h)) return true;
-    return dir > 0 && oneWayUnder(r, this.ts, b.x, b.y, b.w, b.h);
+    if (this.box(b, b.x, b.y + dir)) return true;
+    if (dir <= 0) return false;
+    return slopeGround(r, b.x, b.y, b.w, b.h) || oneWayUnder(r, this.ts, b.x, b.y, b.w, b.h);
+  }
+
+  /** Slopes: walkers ride up a rising surface (feet sensor), as Kid does. */
+  onBlockX(b: Body, dir: number): boolean {
+    const r = this.room as Room;
+    if (!r.slopes || this.box(b, b.x + dir, b.y)) return false;
+    for (let k = 1; k <= SLOPE_STEP_PX; k++) {
+      if (this.box(b, b.x + dir, b.y - k)) return false;
+      if (!feetEmbedded(r, b.x + dir, b.y - k, b.w, b.h)) {
+        b.y -= k;
+        return true;
+      }
+    }
+    return false;
   }
 
   hazard(): boolean {
@@ -48,6 +67,8 @@ class EnemyCollider implements Collider {
   }
 }
 const col = new EnemyCollider();
+const SLOPE_STEP_PX = defaultTuning.slopes.stepPx;
+const SLOPE_SNAP_PX = defaultTuning.slopes.snapExtraPx;
 
 const INERT: ReadonlySet<EnemyMode> = new Set(['KO', 'REPOSSESSED']);
 /** States in which the enemy's voices are open to a Seize (besides `rattled`). */
@@ -320,7 +341,9 @@ function groundAhead(room: Room, ts: number, e: Enemy, dir: number): boolean {
   return (
     solidAt(room, ts, x, e.y + 1, 1, e.h) ||
     dynSolidAt(x, e.y + 1, 1, e.h) ||
-    oneWayUnder(room, ts, x, e.y, 1, e.h)
+    oneWayUnder(room, ts, x, e.y, 1, e.h) ||
+    // A downhill slope drops away from the leading edge (at 45° by half the body width).
+    floorAheadOnSlope(room, x, e.y + e.h, (e.w >> 1) + SLOPE_SNAP_PX)
   );
 }
 
@@ -790,12 +813,25 @@ function physics(e: Enemy, d: EnemyDef, t: Tuning): void {
   if (falls) e.vy = Math.min(c.enemyMaxFall, e.vy + c.enemyGravity);
   let vx = e.vx + e.kb;
   if (e.kb !== 0) e.kb = Math.abs(e.kb) <= c.enemyKbDecay ? 0 : e.kb - Math.sign(e.kb) * c.enemyKbDecay;
+  const room = col.room as Room;
+  const x0 = e.x;
+  const onSlope = falls && e.grounded && onSlopeGround(room, e.x, e.y, e.w, e.h);
   if (moveX(e, vx, col) === Move.blocked) {
     vx = 0;
     e.kb = 0;
   }
   const my = moveY(e, e.vy, col);
   if (my === Move.blocked) e.vy = 0;
+  // Ground stick down slopes (as Kid's controller does).
+  if (onSlope && e.vy >= 0 && !col.blockedY(e, 1)) {
+    const y0 = e.y;
+    const max = Math.abs(e.x - x0) + SLOPE_SNAP_PX;
+    for (let k = 0; k < max && !col.blockedY(e, 1); k++) e.y++;
+    if (col.blockedY(e, 1)) {
+      e.vy = 0;
+      e.ry = 0;
+    } else e.y = y0;
+  }
   e.grounded = falls ? e.vy >= 0 && col.blockedY(e, 1) : false;
 }
 

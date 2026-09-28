@@ -120,9 +120,11 @@ export class WorldRenderer {
     this.syncRoom(room);
     this.prevCam = { ...this.camera };
     stepCamera(this.camera, s, room, events);
-    if (events.some((e) => e.type === 'roomEnter')) {
+    const enter = events.find((e) => e.type === 'roomEnter');
+    if (enter) {
       this.prevCam = { ...this.camera };
-      this.fadeIn = render.fadeInFrames;
+      // Edge exits never fade to black (north star §3.3); doors and warps do.
+      this.fadeIn = enter.edge ? 0 : render.fadeInFrames;
     } else if (this.fadeIn > 0) this.fadeIn--;
     this.juice.step(s, events);
     this.sig.step(events);
@@ -323,7 +325,8 @@ export class WorldRenderer {
     const s = this.game.state;
     const room = getRoom(s.roomId);
     let fade = 0;
-    if (s.transition) fade = 1 - (s.transition.timer - alpha) / tuning.world.transitionFrames;
+    if (s.transition && !s.transition.offset)
+      fade = 1 - (s.transition.timer - alpha) / tuning.world.transitionFrames;
     else if (this.fadeIn > 0) fade = (this.fadeIn - alpha) / render.fadeInFrames;
     fade = Math.min(1, Math.max(0, fade, this.kid.screenDim()));
     this.combatScreen.clear();

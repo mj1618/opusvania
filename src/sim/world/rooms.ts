@@ -8,8 +8,13 @@ import {
   type COLOURS,
   type EdgeExitDef,
   type EdgeSide,
+  isSlopeTile,
+  mirrorSlope,
   type RoomFile,
   RoomFileSchema,
+  SLOPE_SHAPES,
+  type SlopeShape,
+  slopeShape,
   TILE_CHARS,
   Tile,
   type TileType,
@@ -57,10 +62,34 @@ export interface RoomSource {
   sound: string;
   colour: (typeof COLOURS)[number];
   locked: boolean;
+  /** Link name (weights, lights, reveals), if any. */
+  name?: string;
+  /** Solid while armed (default). */
+  solid: boolean;
   x: number;
   y: number;
   w: number;
   h: number;
+}
+
+/** A px rect (after padding). */
+export interface PxRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** L6 set pieces, in px after padding (memory/level-authoring.md "L6 proof kit"). */
+export interface RoomSetPieces {
+  weights: (PxRect & { on: string })[];
+  breakables: (PxRect & { name: string; by: string[] })[];
+  reveals: (PxRect & { after: string })[];
+  lights: (PxRect & { source?: string; radius?: number; colour?: string })[];
+  barks: (PxRect & { text: string; speaker: string; once: boolean })[];
+  lines: (PxRect & { name: string })[];
+  /** Waypoints by route, in order: tile (after padding). */
+  routes: Record<string, { tx: number; ty: number }[]>;
 }
 
 export interface Room {
@@ -82,7 +111,12 @@ export interface Room {
   sources: RoomSource[];
   plates: { char: string; tiles: number[]; pressedBy: ('slab' | 'heavy')[] }[];
   gates: { char: string; tiles: number[]; opensOn: 'plate' | 'clear' }[];
-  enemySpawns: { type: string; tx: number; ty: number }[];
+  enemySpawns: { type: string; tx: number; ty: number; route?: string }[];
+  /** Has slope tiles: the feet sensor and ground stick run (physics/slopes.ts). False = the L2 physics exactly. */
+  slopes: boolean;
+  /** The carry district (north star §3.4), if any. */
+  district?: string;
+  set: RoomSetPieces;
   /** Tiles of solid padding added on the left/top (sketch tile + pad = room tile). */
   padX: number;
   padY: number;
@@ -135,7 +169,12 @@ export function buildRoom(input: RoomFile): Room {
       } else if (ch in f.sources || ch in f.pickups || ch in f.rests) tile = Tile.empty;
       else if (ch in f.enemies) {
         tile = Tile.empty;
-        enemySpawns.push({ type: f.enemies[ch] as string, tx, ty });
+        const route = f.enemyRoutes[ch];
+        enemySpawns.push(
+          route
+            ? { type: f.enemies[ch] as string, tx, ty, route }
+            : { type: f.enemies[ch] as string, tx, ty },
+        );
       }
       tiles[ty * width + tx] = tile;
       if (ch === 'P') spawns.default = { tx, ty };
@@ -193,6 +232,8 @@ export function buildRoom(input: RoomFile): Room {
         sound: def.sound,
         colour: def.colour,
         locked: def.locked,
+        ...(def.name !== undefined ? { name: def.name } : {}),
+        solid: def.solid,
         x: x0 * TS,
         y: y0 * TS,
         w: (x1 - x0 + 1) * TS,
@@ -217,6 +258,44 @@ export function buildRoom(input: RoomFile): Room {
     const [vx, vy] = z.value ?? [zx + zw / 2, zy + zh / 2];
     return { x, y, w: zw * TS, h: zh * TS, mode: z.mode, cx: (vx + padX) * TS, cy: (vy + padY) * TS };
   });
+  // Slopes: the flag gates every slope code path; a solid tile at a slope's full-height edge is a shin.
+  let slopes = false;
+  for (let ty = 0; ty < height; ty++)
+    for (let tx = 0; tx < width; tx++) {
+      const t = tiles[ty * width + tx] as number;
+      if (!isSlopeTile(t)) continue;
+      slopes = true;
+      const s = slopeShape(t) as SlopeShape;
+      if (s.k !== s.run - 1) continue;
+      const nx = tx + s.dir;
+      if (nx >= 0 && nx < width && tiles[ty * width + nx] === Tile.solid) tiles[ty * width + nx] = Tile.shin;
+    }
+  const px = (r: readonly [number, number, number, number]): PxRect => ({
+    x: (r[0] + padX) * TS,
+    y: (r[1] + padY) * TS,
+    w: r[2] * TS,
+    h: r[3] * TS,
+  });
+  const routes: RoomSetPieces['routes'] = {};
+  for (const w of [...f.waypoints].sort((a, b) => a.order - b.order)) {
+    const list = routes[w.route] ?? [];
+    list.push({ tx: w.at[0] + padX, ty: w.at[1] + padY });
+    routes[w.route] = list;
+  }
+  const set: RoomSetPieces = {
+    weights: f.weights.map((w) => ({ ...px(w.rect), on: w.on })),
+    breakables: f.breakables.map((b, i) => ({ ...px(b.rect), name: b.name ?? `#${i}`, by: [...b.by] })),
+    reveals: f.reveals.map((v) => ({ ...px(v.rect), after: v.after })),
+    lights: f.lights.map((l) => ({
+      ...px(l.rect),
+      ...(l.source !== undefined ? { source: l.source } : {}),
+      ...(l.radius !== undefined ? { radius: l.radius } : {}),
+      ...(l.colour !== undefined ? { colour: l.colour } : {}),
+    })),
+    barks: f.barks.map((b) => ({ ...px(b.rect), text: b.text, speaker: b.speaker, once: b.once })),
+    lines: f.lines.map((l, i) => ({ ...px(l.rect), name: l.name ?? `#${i}` })),
+    routes,
+  };
   // Edge exits: open border spans, an arrival spawn per exit and an `edge` entity for tools.
   let edge: Room['edge'] = null;
   if (f.exits.length > 0) {
@@ -264,6 +343,9 @@ export function buildRoom(input: RoomFile): Room {
     sources,
     plates,
     gates,
+    slopes,
+    ...(f.district !== undefined ? { district: f.district } : {}),
+    set,
     enemySpawns,
     padX,
     padY,
@@ -282,10 +364,18 @@ export function edgeName(x: { side: EdgeSide; from: number }): string {
 export const EDGE_DEPTH = 2;
 
 const MIRROR: Record<string, string> = { '<': '>', '>': '<' };
+for (const s of SLOPE_SHAPES) {
+  const m = slopeShape(mirrorSlope(s.tile)) as SlopeShape;
+  MIRROR[s.char] = m.char;
+}
 
 /** Left-right mirror of a room file (for the mirror-symmetry test). */
 export function mirrorRoomFile(f: RoomFile, id = `${f.id}~m`): RoomFile {
   const w = f.rows[0]?.length ?? 0;
+  const mr = <T extends { rect: [number, number, number, number] }>(o: T): T => ({
+    ...o,
+    rect: [w - o.rect[0] - o.rect[2], o.rect[1], o.rect[2], o.rect[3]],
+  });
   return {
     ...f,
     id,
@@ -300,6 +390,13 @@ export function mirrorRoomFile(f: RoomFile, id = `${f.id}~m`): RoomFile {
       rect: [w - z.rect[0] - z.rect[2], z.rect[1], z.rect[2], z.rect[3]],
       value: z.value ? [w - z.value[0], z.value[1]] : undefined,
     })),
+    weights: (f.weights ?? []).map(mr),
+    breakables: (f.breakables ?? []).map(mr),
+    reveals: (f.reveals ?? []).map(mr),
+    lights: (f.lights ?? []).map(mr),
+    barks: (f.barks ?? []).map(mr),
+    lines: (f.lines ?? []).map(mr),
+    waypoints: (f.waypoints ?? []).map((p) => ({ ...p, at: [w - 1 - p.at[0], p.at[1]] })),
   };
 }
 
@@ -343,6 +440,8 @@ export function tileAt(room: Room, tx: number, ty: number): number {
   return room.tiles[ty * room.width + tx] ?? Tile.solid;
 }
 
+/** A solid tile (shin tiles included; slopes are not: they are passable air above their surface). */
 export function isSolidTile(room: Room, tx: number, ty: number): boolean {
-  return tileAt(room, tx, ty) === Tile.solid;
+  const t = tileAt(room, tx, ty);
+  return t === Tile.solid || t === Tile.shin;
 }

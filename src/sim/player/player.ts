@@ -12,6 +12,7 @@ import {
   pogoTargetAt,
   solidAt,
 } from '../physics/aabb';
+import { feetEmbedded, liftOut, onSlopeGround, slopeGround } from '../physics/slopes';
 import type { GameState, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
 import { dynSolidAt, solidAny } from '../world/dynamic';
@@ -46,7 +47,8 @@ export function createPlayer(
   const w = t.body.width;
   const h = t.body.height;
   const x = Math.floor(spawn.tx * ts + ts / 2 - w / 2);
-  const y = (spawn.ty + 1) * ts - h;
+  // On a slope the spawn tile's floor is its surface, not the tile bottom.
+  const y = (spawn.ty + 1) * ts - h - Math.max(0, liftOut(room, x, (spawn.ty + 1) * ts - h, w, h, ts));
   const p: PlayerState = {
     x,
     y,
@@ -108,7 +110,8 @@ export function createPlayer(
     recoilVx: 0,
     recoilT: 0,
   };
-  p.grounded = solidAny(room, ts, x, y + 1, w, h) || oneWayUnder(room, ts, x, y, w, h);
+  p.grounded =
+    solidAny(room, ts, x, y + 1, w, h) || oneWayUnder(room, ts, x, y, w, h) || slopeGround(room, x, y, w, h);
   return p;
 }
 
@@ -192,13 +195,18 @@ class Ctx implements Collider {
 
   // Collider.
   blockedX(b: Body, dir: number): boolean {
-    return solidAt(this.room, this.ts, b.x + dir, b.y, b.w, b.h) || dynSolidAt(b.x + dir, b.y, b.w, b.h);
+    if (solidAt(this.room, this.ts, b.x + dir, b.y, b.w, b.h) || dynSolidAt(b.x + dir, b.y, b.w, b.h))
+      return true;
+    // Slopes: the step would put the feet inside the floor (onBlockX steps up).
+    return this.room.slopes && feetEmbedded(this.room, b.x + dir, b.y, b.w, b.h);
   }
 
   blockedY(b: Body, dir: number): boolean {
     if (solidAt(this.room, this.ts, b.x, b.y + dir, b.w, b.h) || dynSolidAt(b.x, b.y + dir, b.w, b.h))
       return true;
-    return dir > 0 && !this.dropping(b.y) && oneWayUnder(this.room, this.ts, b.x, b.y, b.w, b.h);
+    if (dir <= 0) return false;
+    if (this.room.slopes && slopeGround(this.room, b.x, b.y, b.w, b.h)) return true;
+    return !this.dropping(b.y) && oneWayUnder(this.room, this.ts, b.x, b.y, b.w, b.h);
   }
 
   hazard(b: Body): boolean {
@@ -208,13 +216,27 @@ class Ctx implements Collider {
   /** Standing on something if the body were at (x, y). */
   groundAt(x: number, y: number): boolean {
     if (this.solid(x, y + 1)) return true;
+    if (this.room.slopes && slopeGround(this.room, x, y, this.p.w, this.p.h)) return true;
     return !this.dropping(y) && oneWayUnder(this.room, this.ts, x, y, this.p.w, this.p.h);
   }
 
-  /** X blocked: dash corner correction, or ledge pop-up when airborne (spec §2.4). */
+  /**
+   * X blocked: a slope step-up (the feet met a rising surface and the head is clear), else dash
+   * corner correction, or ledge pop-up when airborne (spec §2.4).
+   */
   onBlockX(b: Body, dir: number): boolean {
     const p = this.p;
     const P = this.P;
+    if (this.room.slopes && !this.solid(b.x + dir, b.y)) {
+      for (let k = 1; k <= P.slopeStepPx; k++) {
+        if (this.solid(b.x, b.y - k) || this.solid(b.x + dir, b.y - k)) return false;
+        if (!feetEmbedded(this.room, b.x + dir, b.y - k, b.w, b.h)) {
+          b.y -= k;
+          return true;
+        }
+      }
+      return false;
+    }
     if (p.state === 'dash') {
       for (let k = 1; k <= P.dashCorrectPx; k++) {
         for (let s = -1; s <= 1; s += 2) {
@@ -563,6 +585,8 @@ export function updatePlayer(
   c.inX = axisX(input);
   const wasGrounded = p.grounded;
   const x0 = p.x;
+  // Standing on a slope (or a shin top) at the start: ground stick may pull the feet down after the move.
+  const onSlope0 = room.slopes && wasGrounded && onSlopeGround(room, p.x, p.y, p.w, p.h);
 
   // Wall speed retention (§2.4): a wall zeroed vx recently and has gone -> restore it. Moving the
   // other way cancels it (Celeste does the same); otherwise it undoes wall jumps and turn-arounds.
@@ -604,12 +628,33 @@ export function updatePlayer(
       }
     }
   }
+  if (onSlope0 && !killed) groundStick(c, x0);
   if (killed || c.hazard(p)) {
     if (room.hazard === 'pip') hazardHit(state, P, events);
     else die(state, P, events);
     return;
   }
   post(c, wasGrounded, x0, impactVy);
+}
+
+/**
+ * Ground stick (north star §3.2: slopes add no momentum and no crest launches you). Running down
+ * a slope moves the body off the surface each frame; if it started the frame on slope ground and
+ * isn't rising, pull it down to the surface when that is within |dx| + snapExtraPx (45°: 1 px per
+ * px). Otherwise it walked off an edge and falls as usual.
+ */
+function groundStick(c: Ctx, x0: number): void {
+  const p = c.p;
+  const P = c.P;
+  if (p.vy < 0 || p.state === 'wallSlide' || (p.state === 'dash' && !P.slopeDashStick)) return;
+  if (c.groundAt(p.x, p.y)) return;
+  const max = Math.abs(p.x - x0) + P.slopeSnapExtraPx;
+  const y0 = p.y;
+  for (let k = 0; k < max && !c.blockedY(p, 1); k++) p.y++;
+  if (c.groundAt(p.x, p.y)) {
+    p.vy = 0;
+    p.ry = 0;
+  } else p.y = y0;
 }
 
 /** 5. Post: timers, ground probe, walls, transitions, facing, events, triggers. */
@@ -641,7 +686,9 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
   // solid (a lot can be sold from under you; a slab can be taken back).
   if (
     p.grounded &&
-    (solidAt(room, ts, p.x, p.y + 1, p.w, p.h) || oneWayUnder(room, ts, p.x, p.y, p.w, p.h)) &&
+    (solidAt(room, ts, p.x, p.y + 1, p.w, p.h) ||
+      oneWayUnder(room, ts, p.x, p.y, p.w, p.h) ||
+      slopeGround(room, p.x, p.y, p.w, p.h)) &&
     !dynSolidAt(p.x, p.y + 1, p.w, p.h)
   ) {
     p.safeX = p.x + p.w / 2;
@@ -775,7 +822,7 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
       const along = Math.floor((side === 'w' || side === 'e' ? cy : cx) / ts);
       for (const x of room.exits) {
         if (x.side !== side || along < x.from || along > x.to) continue;
-        startTransition(state, x.room, undefined, P, events, P.transitionFrames, [
+        startTransition(state, x.room, undefined, P, events, P.edgeTransitionFrames, [
           x.offset[0] * ts,
           x.offset[1] * ts,
         ]);
@@ -798,7 +845,9 @@ export function startTransition(
   const p = state.player;
   state.transition = spawn === undefined ? { to, timer: frames } : { to, spawn, timer: frames };
   if (offset) state.transition.offset = offset;
-  events.push({ type: 'roomExit', roomId: state.roomId, to, x: p.x + p.w / 2, y: p.y + p.h });
+  const exit: SimEvent = { type: 'roomExit', roomId: state.roomId, to, x: p.x + p.w / 2, y: p.y + p.h };
+  if (offset) exit.edge = true;
+  events.push(exit);
 }
 
 /** Kills the player (hazards, and Chin reaching 0). */
@@ -846,6 +895,7 @@ function respawn(state: GameState, room: Room, P: MoveParams, events: SimEvent[]
   let y = hz ? old.safeY - old.h : (sp.ty + 1) * ts - old.h;
   // Something landed on the safe spot since (a slab): stand on top of it instead.
   if (hz) for (let dy = 0; dy <= 3 * ts && solidAny(room, ts, x, y, old.w, old.h); dy += 8) y -= 8;
+  y -= Math.max(0, liftOut(room, x, y, old.w, old.h, ts));
   const p: PlayerState = {
     ...old,
     x,
@@ -855,7 +905,10 @@ function respawn(state: GameState, room: Room, P: MoveParams, events: SimEvent[]
     vx: 0,
     vy: 0,
     state: 'normal',
-    grounded: solidAny(room, ts, x, y + 1, old.w, old.h) || oneWayUnder(room, ts, x, y, old.w, old.h),
+    grounded:
+      solidAny(room, ts, x, y + 1, old.w, old.h) ||
+      oneWayUnder(room, ts, x, y, old.w, old.h) ||
+      slopeGround(room, x, y, old.w, old.h),
     wallDir: 0,
     coyote: 0,
     jumpBuf: 0,

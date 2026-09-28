@@ -159,7 +159,7 @@ export function enterRoomAt(
   rebuildSolids(state, t.world.tileSize);
   state.transition = null;
   state.roomStats = { deaths: 0, goal: false, optional: false, frames: 0 };
-  events.push({ type: 'roomEnter', roomId, x: p.x + p.w / 2, y: p.y + p.h });
+  events.push({ type: 'roomEnter', roomId, x: p.x + p.w / 2, y: p.y + p.h, edge: true });
 }
 
 export function reseed(state: GameState, seed: number): void {

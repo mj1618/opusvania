@@ -1,3 +1,4 @@
+import { defaultTuning } from '../tuning';
 import { type Room, Tile, tileAt } from '../world/rooms';
 
 /**
@@ -52,7 +53,13 @@ function anyTile(
   return false;
 }
 
-/** True if a w×h box at integer (x, y) overlaps any solid tile. Hot path: no closures. */
+/** A shin tile's top band (slopes.shinPx) is feet-only floor (physics/slopes.ts); below it the tile is solid. */
+const SHIN_PX = defaultTuning.slopes.shinPx;
+
+/**
+ * True if a w×h box at integer (x, y) overlaps any solid tile (a shin tile only below its top
+ * band; slope tiles never: only the feet collide with them). Hot path: no closures.
+ */
 export function solidAt(room: Room, ts: number, x: number, y: number, w: number, h: number): boolean {
   const x0 = Math.floor(x / ts);
   const y0 = Math.floor(y / ts);
@@ -60,7 +67,9 @@ export function solidAt(room: Room, ts: number, x: number, y: number, w: number,
   const y1 = Math.floor((y + h - 1) / ts);
   for (let ty = y0; ty <= y1; ty++) {
     for (let tx = x0; tx <= x1; tx++) {
-      if (tileAt(room, tx, ty) === Tile.solid) return true;
+      const t = tileAt(room, tx, ty);
+      if (t === Tile.solid) return true;
+      if (t === Tile.shin && y + h > ty * ts + SHIN_PX) return true;
     }
   }
   return false;

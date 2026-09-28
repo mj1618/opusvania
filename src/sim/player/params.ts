@@ -87,6 +87,11 @@ export interface MoveParams {
   hazardDmg: number;
   hazardRespawnFrames: number;
   hazardIframes: number;
+  /** Slopes (physics/slopes.ts): max uphill step per px, downhill ground-stick margin, dash sticks. */
+  slopeStepPx: number;
+  slopeSnapExtraPx: number;
+  slopeDashStick: boolean;
+  edgeTransitionFrames: number;
 }
 
 type Groups = Record<string, Record<string, unknown>>;
@@ -219,5 +224,9 @@ export function resolveParams(base: Tuning, profile: string): MoveParams {
     hazardDmg: t.kid.hazardDmg,
     hazardRespawnFrames: t.kid.hazardRespawnFrames,
     hazardIframes: t.kid.iframes,
+    slopeStepPx: t.slopes.stepPx,
+    slopeSnapExtraPx: t.slopes.snapExtraPx,
+    slopeDashStick: t.slopes.dashStick,
+    edgeTransitionFrames: t.world.edgeTransitionFrames,
   };
 }

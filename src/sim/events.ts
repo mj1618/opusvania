@@ -21,8 +21,8 @@ export type JumpKind = 'ground' | 'coyote' | 'buffered' | 'wall' | 'double' | 'd
 export type CornerKind = 'head' | 'ledge' | 'dash';
 
 export type SimEvent =
-  | { type: 'roomEnter'; roomId: string; x: number; y: number }
-  | { type: 'roomExit'; roomId: string; to: string; x: number; y: number }
+  | { type: 'roomEnter'; roomId: string; x: number; y: number; edge?: true }
+  | { type: 'roomExit'; roomId: string; to: string; x: number; y: number; edge?: true }
   | { type: 'jump'; kind: JumpKind; x: number; y: number; dir: number }
   | { type: 'land'; x: number; y: number; vy: number; fallPx: number; hard: boolean }
   | { type: 'step'; x: number; y: number }
@@ -134,7 +134,41 @@ export type SimEvent =
   | { type: 'soldBag'; enemy: number; soundId: number; x: number; y: number }
   | { type: 'outbid'; enemy: number; lot: number; x: number; y: number }
   | { type: 'bossPhase'; enemy: number; phase: number; x: number; y: number }
-  | { type: 'fever'; level: number; x: number; y: number };
+  | { type: 'fever'; level: number; x: number; y: number }
+  // --- L6 proof kit (memory/level-authoring.md "L6 proof kit"; sim-architecture.md). Positions:
+  // the thing's centre unless stated.
+  /**
+   * The carry state was filed (north star §3.4): every carried sound ribbons home. `reason` rest =
+   * a Corner, line = a district line, death = Counted Out / died, district = entered another district.
+   * `sounds` = how many were away from home. Position = Kid's centre.
+   */
+  | {
+      type: 'carryReset';
+      reason: 'rest' | 'line' | 'death' | 'district';
+      sounds: number;
+      x: number;
+      y: number;
+    }
+  /** A named source that runs lights went quiet (on false: its lights go dark) or re-armed. */
+  | { type: 'power'; name: string; on: boolean; x: number; y: number }
+  /** A hanging weight starts to fall (its source was seized); `index` into room.set.weights. */
+  | { type: 'weightDrop'; index: number; x: number; y: number }
+  /** A falling weight came to rest (heavy: shake the camera, boom). */
+  | { type: 'weightLand'; index: number; x: number; y: number }
+  /** A breakable was smashed (`by` weight | strike | slab). */
+  | { type: 'break'; name: string; by: string; x: number; y: number }
+  /** A reveal rect became solid (a debris stair appears). */
+  | { type: 'reveal'; after: string; x: number; y: number }
+  /** A text bark: `text` is a short id the render looks up; `speaker` who says it. Position = the rect's centre. */
+  | { type: 'bark'; text: string; speaker: string; x: number; y: number }
+  /** The Ticker Board flips to a line (`text` id). */
+  | { type: 'boardLine'; text: string; x: number; y: number }
+  /** The night clock stepped (every world.nightStepFrames): the crowd and ticker step up. Position = Kid. */
+  | { type: 'nightStep'; step: number; x: number; y: number }
+  /** A thief took a sound (from the bag, or a landed levied object) and flees with it. */
+  | { type: 'steal'; soundId: number; enemy: number; from: 'bag' | 'placed'; x: number; y: number }
+  /** A thief dropped what it stole (hit or caught): it falls as a levied object. */
+  | { type: 'stealDrop'; soundId: number; enemy: number; x: number; y: number };
 
 export type SimEventType = SimEvent['type'];
 export type SimEventOf<T extends SimEventType> = Extract<SimEvent, { type: T }>;

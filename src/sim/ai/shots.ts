@@ -1,6 +1,7 @@
 import { boxAt, KID_HURTBOX, rectsOverlap } from '../combat/boxes';
 import type { Colour, SimEvent } from '../events';
 import { type Body, type Collider, Move, moveX, moveY, solidAt } from '../physics/aabb';
+import { feetEmbedded, slopeGround } from '../physics/slopes';
 import type { Enemy, GameState, LocalState, Shot } from '../state';
 import type { Tuning } from '../tuning';
 import { dynSolidAt } from '../world/dynamic';
@@ -20,13 +21,17 @@ class ShotCollider implements Collider {
 
   blockedX(b: Body, dir: number): boolean {
     return (
-      solidAt(this.room as Room, this.ts, b.x + dir, b.y, b.w, b.h) || dynSolidAt(b.x + dir, b.y, b.w, b.h)
+      solidAt(this.room as Room, this.ts, b.x + dir, b.y, b.w, b.h) ||
+      dynSolidAt(b.x + dir, b.y, b.w, b.h) ||
+      feetEmbedded(this.room as Room, b.x + dir, b.y, b.w, b.h)
     );
   }
 
   blockedY(b: Body, dir: number): boolean {
     return (
-      solidAt(this.room as Room, this.ts, b.x, b.y + dir, b.w, b.h) || dynSolidAt(b.x, b.y + dir, b.w, b.h)
+      solidAt(this.room as Room, this.ts, b.x, b.y + dir, b.w, b.h) ||
+      dynSolidAt(b.x, b.y + dir, b.w, b.h) ||
+      (dir > 0 && slopeGround(this.room as Room, b.x, b.y, b.w, b.h))
     );
   }
 
