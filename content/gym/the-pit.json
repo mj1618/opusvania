@@ -19,12 +19,12 @@
     "#..........................###",
     "#..........................###",
     "#..........................###",
-    "#....................b.....###",
+    "#......P.............b.....###",
     "#....=====.........=====...###",
     "#..........................D.#",
     "#..........................D.#",
     "#..........................D.#",
-    "#..b.........P..........q..DG#",
+    "#..b....................q..DG#",
     "##############################",
     "##############################"
   ],
@@ -39,5 +39,15 @@
   },
   "next": "hub",
   "claims": {},
-  "notes": "L3 brief \u00a74.4: one screen, two one-way platforms. The gate opens when every enemy is KO'd or repossessed. Jab (C/J), Slip (X/Shift), Seize (V/I), Levy (B/O)."
+  "notes": "L3 brief \u00a74.4, fixed in L4 for newcomers (novice playtest): Kid spawns on the left one-way platform, out of the Grinder's charge lane (rangeY 96) and above the Barkers' hop (maxRise 192); every enemy waits spawnGrace (120 f) before its first attack; the Grinder backs up 48 px before a charge; at most 2 attackers at once (tokens). The gate opens when every enemy is KO'd or repossessed.",
+  "hazard": "pip",
+  "prompts": [
+    {
+      "at": [7, 7],
+      "keys": ["down", "jump"],
+      "until": "dropThrough",
+      "near": 3
+    }
+  ],
+  "spawnGrace": 120
 }

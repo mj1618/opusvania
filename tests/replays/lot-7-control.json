@@ -10,10 +10,10 @@
   "room": "lot-7-control",
   "seed": 1,
   "golden": {
-    "tuningHash": "0b78049094206f",
+    "tuningHash": "031c4b0f93afc4",
     "build": {
-      "sha": "72505a8679-dirty",
-      "sim": "6dee6c42c8",
+      "sha": "dec6925f4b-dirty",
+      "sim": "9784b8ec33",
       "stateVersion": 1
     },
     "end": {
@@ -22,8 +22,8 @@
       "frame": 280,
       "room": "lot-7-control"
     },
-    "hash": "18576290c0b297",
-    "hashes": ["0c36abdd458f94", "16e8b139fc4cc8", "1cefc875eb4bdb", "0dbbfca645c409"]
+    "hash": "11de4286365f00",
+    "hashes": ["0f21abcf6cb923", "02882253c85125", "06bf7d64d7553e", "14e91f0d703f10"]
   },
   "notes": "L3 control (jumps only): the same route with every gate replaced by a jump. Hand-scripted (local search over jump timings, the same optimiser used for the Lot 7 tapes), then tape trim."
 }

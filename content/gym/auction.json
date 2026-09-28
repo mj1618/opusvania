@@ -1,0 +1,50 @@
+{
+  "id": "auction",
+  "name": "The Auction (boss: the Auctioneer)",
+  "abilities": {
+    "wallJump": false,
+    "dash": true,
+    "doubleJump": false,
+    "pogo": false,
+    "seize": true,
+    "levy": true
+  },
+  "hazard": "pip",
+  "rows": [
+    "##############################",
+    "#..........................###",
+    "#..........................###",
+    "#..........................###",
+    "#..........................###",
+    "#..........................###",
+    "#..........................###",
+    "#..........................###",
+    "#..........................###",
+    "#..........................###",
+    "#....=====..........=====..D.#",
+    "#..........................D.#",
+    "#..........................D.#",
+    "#P............A............DG#",
+    "###LL#LL#LL########LL#LL#LL###",
+    "#^^^^^^^^^^^^^^^^^^^^^^^^^^^^#",
+    "##############################"
+  ],
+  "sources": {
+    "L": {
+      "sound": "lot",
+      "colour": "brown",
+      "locked": true
+    }
+  },
+  "gates": {
+    "D": {
+      "opensOn": "clear"
+    }
+  },
+  "enemies": {
+    "A": "auctioneer"
+  },
+  "next": "hub",
+  "claims": {},
+  "notes": "combat-spec \u00a75 greybox arena (30x17). 6 floor lots (L: humming, locked: 'under the hammer'; the spec's 8 don't fit with a 4-tile lectern and safe edges) over a static pit (^: 1 pip + safe-ground respawn); 1-tile posts and the edges are safe ground. The Auctioneer stands on the 4-tile lectern, a solid block level with the floor (the spec raises it; raised, grounded jabs couldn't reach him, L4 report) and hops between its ends. Gallery one-ways at row 10. Exit (G) bottom-right behind a clear gate."
+}

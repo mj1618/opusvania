@@ -1,0 +1,265 @@
+{
+  "//": "The Auctioneer (combat-spec §5), greybox boss, 2 phases. The generic FSM runs his stagger/down/Count; his move choice, Cadence (Going once... twice... SOLD), Selling Your Bag and the phase change are scripted in src/sim/ai/boss.ts from these attacks and params. Lots are the room's locked sources, left to right.",
+  "id": "auctioneer",
+  "body": {
+    "w": 128,
+    "h": 192
+  },
+  "hurtbox": [8, 8, 112, 184],
+  "hp": 28,
+  "contactDmg": 1,
+  "kbScale": 0,
+  "poundage": 40,
+  "flying": false,
+  "class": "boss",
+  "flinchFrames": 0,
+  "staggerFrames": 60,
+  "sounds": [
+    {
+      "id": "gavel",
+      "colour": "brown",
+      "seizable": true
+    },
+    {
+      "id": "patter",
+      "colour": "violet",
+      "seizable": true
+    },
+    {
+      "id": "cadence",
+      "colour": "pink",
+      "seizable": true
+    }
+  ],
+  "seizeOrder": ["gavel", "patter", "cadence"],
+  "attacks": {
+    "patter": {
+      "sound": "patter",
+      "trigger": {
+        "rangeX": 2000,
+        "rangeY": 2000,
+        "cooldown": 0,
+        "weight": 3
+      },
+      "telegraph": 24,
+      "active": 50,
+      "recovery": 30,
+      "hitboxes": [],
+      "projectile": {
+        "kind": "dart",
+        "w": 24,
+        "h": 12,
+        "from": [104, 56],
+        "speed": 9,
+        "count": 5,
+        "interval": 10,
+        "life": 160,
+        "dmg": 1
+      },
+      "dmg": 1,
+      "cue": {
+        "tint": "violet",
+        "audio": "patterWindup",
+        "pulses": 3
+      }
+    },
+    "gavel": {
+      "sound": "gavel",
+      "trigger": {
+        "rangeX": 256,
+        "rangeY": 320,
+        "cooldown": 0,
+        "weight": 3
+      },
+      "telegraph": 22,
+      "active": 6,
+      "recovery": 40,
+      "hitboxes": [
+        {
+          "fromFrame": 1,
+          "toFrame": 6,
+          "box": [120, 72, 168, 184]
+        }
+      ],
+      "dmg": 2,
+      "cue": {
+        "tint": "brown",
+        "audio": "gavelWindup",
+        "pulses": 1
+      }
+    },
+    "cadence": {
+      "sound": "cadence",
+      "trigger": {
+        "rangeX": 2000,
+        "rangeY": 2000,
+        "cooldown": 0,
+        "weight": 2
+      },
+      "telegraph": 60,
+      "active": 1,
+      "recovery": 45,
+      "hitboxes": [],
+      "projectile": {
+        "kind": "wave",
+        "w": 40,
+        "h": 32,
+        "from": [0, 0],
+        "speed": 12,
+        "life": 120,
+        "dmg": 1,
+        "seizable": false
+      },
+      "dmg": 1,
+      "cue": {
+        "tint": "pink",
+        "audio": "cadenceBeat",
+        "pulses": 2
+      }
+    },
+    "sellBag": {
+      "sound": "cadence",
+      "trigger": {
+        "rangeX": 2000,
+        "rangeY": 2000,
+        "cooldown": 0,
+        "weight": 2
+      },
+      "telegraph": 60,
+      "active": 1,
+      "recovery": 45,
+      "hitboxes": [],
+      "dmg": 1,
+      "cue": {
+        "tint": "pink",
+        "audio": "cadenceBeat",
+        "pulses": 2
+      }
+    },
+    "hop": {
+      "sound": null,
+      "trigger": {
+        "rangeX": 2000,
+        "rangeY": 2000,
+        "cooldown": 0,
+        "weight": 1
+      },
+      "telegraph": 16,
+      "active": 12,
+      "recovery": 12,
+      "hitboxes": [],
+      "dmg": 0,
+      "cue": {
+        "tint": "white",
+        "audio": "hopWindup"
+      }
+    },
+    "useBrown": {
+      "sound": null,
+      "trigger": {
+        "rangeX": 2000,
+        "rangeY": 2000,
+        "cooldown": 0,
+        "weight": 1
+      },
+      "telegraph": 20,
+      "active": 30,
+      "recovery": 30,
+      "hitboxes": [],
+      "projectile": {
+        "kind": "slab",
+        "w": 64,
+        "h": 48,
+        "from": [0, 0],
+        "speed": 24,
+        "life": 90,
+        "dmg": 2
+      },
+      "dmg": 2,
+      "cue": {
+        "tint": "brown",
+        "audio": "boughtWindup"
+      }
+    },
+    "usePink": {
+      "sound": null,
+      "trigger": {
+        "rangeX": 2000,
+        "rangeY": 2000,
+        "cooldown": 0,
+        "weight": 1
+      },
+      "telegraph": 20,
+      "active": 16,
+      "recovery": 30,
+      "hitboxes": [],
+      "dmg": 0,
+      "cue": {
+        "tint": "pink",
+        "audio": "boughtWindup"
+      }
+    },
+    "useViolet": {
+      "sound": null,
+      "trigger": {
+        "rangeX": 2000,
+        "rangeY": 2000,
+        "cooldown": 0,
+        "weight": 1
+      },
+      "telegraph": 20,
+      "active": 4,
+      "recovery": 30,
+      "hitboxes": [],
+      "projectile": {
+        "kind": "dart",
+        "w": 24,
+        "h": 12,
+        "from": [104, 56],
+        "speed": 9,
+        "fan": [-3, 0, 3],
+        "life": 160,
+        "dmg": 1
+      },
+      "dmg": 1,
+      "cue": {
+        "tint": "violet",
+        "audio": "boughtWindup"
+      }
+    }
+  },
+  "movement": {
+    "kind": "static",
+    "patrolSpeed": 0,
+    "chaseSpeed": 0,
+    "aggroRange": 4000
+  },
+  "furious": {
+    "speedMult": 1,
+    "telegraphDelta": 0
+  },
+  "params": {
+    "phase2Hp": 32,
+    "finalRiseHpPct": 25,
+    "cadenceEvery": 3,
+    "cadenceBeat": [30, 30, 26, 22, 22],
+    "patterInterval": [10, 9, 8, 7, 7],
+    "soldGhostFrames": 300,
+    "twiceStun": 90,
+    "outbidStun": 45,
+    "flusterFrames": 40,
+    "returnStagger": 90,
+    "wordW": 96,
+    "wordH": 48,
+    "wordRise": 128,
+    "followLag": 20,
+    "wordHeadGap": 72,
+    "slabHangPx": 224,
+    "idleFrames": 36,
+    "gavelRangePx": 192,
+    "springVy": -14,
+    "hopPx": 96,
+    "springPx": 96,
+    "hopVy": -8
+  }
+}

@@ -36,6 +36,7 @@ const TILE_CHARS: Record<string, TileType> = {
   R: Tile.empty,
   G: Tile.empty,
   g: Tile.empty,
+  '+': Tile.empty,
 };
 
 const Abilities = z.object({
@@ -69,7 +70,36 @@ export const NO_ABILITIES: Abilities = {
 
 export const COLOURS = ['brown', 'pink', 'violet', 'white'] as const;
 const Char = z.string().length(1);
-const SourceDef = z.object({ sound: z.string(), colour: z.enum(COLOURS) });
+const SourceDef = z.object({
+  sound: z.string(),
+  colour: z.enum(COLOURS),
+  /** Hums but Kid can't seize it (the Auctioneer's lots, "under the hammer"). */
+  locked: z.boolean().default(false),
+});
+/** Buttons a prompt glyph can show (render-only; drawn in code, no text). */
+export const PROMPT_KEYS = [
+  'left',
+  'right',
+  'up',
+  'down',
+  'jump',
+  'dash',
+  'attack',
+  'seize',
+  'levy',
+  'special',
+] as const;
+const Prompt = z.object({
+  /** Sketch tile (before padding) the glyph is centred on. */
+  at: z.tuple([z.number(), z.number()]),
+  /** Keys shown together, e.g. ["up", "seize"] = Up + Seize. */
+  keys: z.array(z.enum(PROMPT_KEYS)).min(1),
+  /** Hidden once this has happened in the room: `move:seize:up` (a moveStart), or an event type. */
+  until: z.string().optional(),
+  /** Only shown within this many tiles of Kid (default 6). */
+  near: z.number().positive().optional(),
+});
+export type PromptDef = z.infer<typeof Prompt>;
 const PlateDef = z.object({ pressedBy: z.array(z.enum(['slab', 'heavy'])).default(['slab', 'heavy']) });
 const GateDef = z.object({ opensOn: z.enum(['plate', 'clear']) });
 
@@ -121,6 +151,12 @@ export const RoomFileSchema = z
     gates: z.record(Char, GateDef).default({}),
     /** Enemy spawn chars -> content/enemies/<id>.json; feet on this tile's floor. */
     enemies: z.record(Char, z.string()).default({}),
+    /** In-world button glyphs (render-only teaching; combat L4). */
+    prompts: z.array(Prompt).default([]),
+    /** Frames enemies wait after the room loads before their first attack (a newcomer's grace, e.g. the Pit). */
+    spawnGrace: z.number().int().nonnegative().default(0),
+    /** Hazards: `death` (gym: die, respawn at R/P) or `pip` (combat: cost Chin, respawn at the last safe ground). */
+    hazard: z.enum(['death', 'pip']).default('death'),
     notes: z.string().default(''),
   })
   .superRefine((r, ctx) => {
@@ -165,7 +201,7 @@ export interface Spawn {
   ty: number;
 }
 
-export type EntityKind = 'goal' | 'optionalGoal' | 'respawn' | 'door';
+export type EntityKind = 'goal' | 'optionalGoal' | 'respawn' | 'door' | 'corner';
 export interface Entity {
   kind: EntityKind;
   tx: number;
@@ -192,6 +228,7 @@ export interface RoomSource {
   char: string;
   sound: string;
   colour: (typeof COLOURS)[number];
+  locked: boolean;
   x: number;
   y: number;
   w: number;
@@ -211,6 +248,8 @@ export interface Room {
   abilities: Abilities;
   cameraZones: CameraZone[];
   next?: string;
+  hazard: 'death' | 'pip';
+  spawnGrace: number;
   /** L3: humming objects (one per connected component of a source char), px rects, scan order. */
   sources: RoomSource[];
   plates: { char: string; tiles: number[]; pressedBy: ('slab' | 'heavy')[] }[];
@@ -266,7 +305,10 @@ export function buildRoom(input: RoomFile): Room {
       else if (ch === 'R') entities.push({ kind: 'respawn', tx, ty, char: ch });
       else if (ch === 'G') entities.push({ kind: 'goal', tx, ty, char: ch });
       else if (ch === 'g') entities.push({ kind: 'optionalGoal', tx, ty, char: ch });
-      else if (door) {
+      else if (ch === '+') {
+        entities.push({ kind: 'corner', tx, ty, char: ch });
+        spawns.corner = { tx, ty };
+      } else if (door) {
         entities.push({ kind: 'door', tx, ty, char: ch, to: door.to, spawn: door.spawn });
         spawns[ch] = { tx, ty };
       }
@@ -309,6 +351,7 @@ export function buildRoom(input: RoomFile): Room {
         char: ch,
         sound: def.sound,
         colour: def.colour,
+        locked: def.locked,
         x: x0 * TS,
         y: y0 * TS,
         w: (x1 - x0 + 1) * TS,
@@ -344,6 +387,8 @@ export function buildRoom(input: RoomFile): Room {
     abilities: { ...f.abilities },
     cameraZones,
     next: f.next,
+    hazard: f.hazard,
+    spawnGrace: f.spawnGrace,
     sources,
     plates,
     gates,

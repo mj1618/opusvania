@@ -8,7 +8,7 @@ import { contrastRatio, hueDeg, hueGap, PALETTE, rgbOf } from '../../src/render/
  * L3 brief §6.3 E1–E3: signature-mechanic readability, measured on the rendered canvas.
  * Pixels are sampled in the page (canvas getImageData, no new dependency) at four checkpoints:
  *   cp1 Lot 7 start (H humming), cp2 20 f after the H take, cp3 slab landed on the plate (F1
- *   ghost), cp4 the-pit with one Barker telegraphing and one disarmed.
+ *   ghost), cp4 the Barker ring with one Barker telegraphing and one disarmed.
  * Writes progress/l3/e-checks.json (read by `npm run l3:verdict`) and PNGs to progress/l3/.
  * Thresholds are the brief's; if a check fails, fix the rendering, not the numbers.
  * CI renders at ~1 fps: every step(n) and screenshot is one render, so keep the count small.
@@ -20,9 +20,16 @@ const SLAB_TAPE = path.resolve('tests/replays/lot-7.slab.json');
 const ROUTE_A = 'R37 R+S1 R48 R+J10 D+V1 R51 R+J20 R19 R+S1 R22 R+V1 R40 R+J24 R150';
 /** E3: run into the partition, stand pressed against it, seize, keep holding right. */
 const E3_SCRIPT = 'R60 R+S1 R30';
-/** cp4: a spawned Barker lunges from the right; Seize during its telegraph (a Catch) disarms it. */
-const PIT_SPAWN = { type: 'barker', x: 1150, y: 960 };
-const PIT_SCRIPT = 'R1 .72 S1 .200';
+/**
+ * cp4 (moved from the Pit to the Barker ring in L4, when the Pit got a safe spawn platform): a
+ * Barker spawned next to Kid telegraphs at once and the Seize Catches it; a second one lunges after.
+ */
+const PIT_ROOM = 'ring-barker';
+const PIT_SPAWNS = [
+  { type: 'barker', x: 320, y: 896 },
+  { type: 'barker', x: 760, y: 896 },
+];
+const PIT_SCRIPT = 'S1 .200';
 
 const BG = rgbOf(PALETTE.bg);
 
@@ -339,13 +346,16 @@ test('E1–E3 signature readability (writes progress/l3/e-checks.json)', async (
   const e3png = await checkpoint(page, 0, 'e3');
   savePng('e-e3-after', e3png.png);
 
-  // --- cp4: the-pit, one Barker telegraphing and one disarmed.
-  await page.evaluate((sp) => {
-    const g = window.__game;
-    g.clearInput();
-    g.load('the-pit');
-    g.spawn(sp.type, sp.x, sp.y);
-  }, PIT_SPAWN);
+  // --- cp4: one Barker telegraphing and one disarmed.
+  await page.evaluate(
+    ({ room, spawns }) => {
+      const g = window.__game;
+      g.clearInput();
+      g.load(room);
+      for (const sp of spawns) g.spawn(sp.type, sp.x, sp.y);
+    },
+    { room: PIT_ROOM, spawns: PIT_SPAWNS },
+  );
   const pitEvs = await headlessEvents(page, PIT_SCRIPT);
   const pit0 = await page.evaluate(() => window.__game.state().frame);
   const caught = pitEvs.find((e) => e.e.type === 'catch');

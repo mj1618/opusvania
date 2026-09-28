@@ -1,12 +1,16 @@
 import { z } from 'zod';
+import auctioneer from '../../../content/enemies/auctioneer.json' with { type: 'json' };
 import barker from '../../../content/enemies/barker.json' with { type: 'json' };
+import clerk from '../../../content/enemies/clerk.json' with { type: 'json' };
 import grinder from '../../../content/enemies/grinder.json' with { type: 'json' };
+import gull from '../../../content/enemies/gull.json' with { type: 'json' };
+import runner from '../../../content/enemies/runner.json' with { type: 'json' };
 import { COLOURS } from '../world/rooms';
 
 /**
- * Enemy data schema (combat-spec §4.1, L3 subset). Boxes are [x, y, w, h] in px relative to the
- * enemy's top-left when facing right (mirrored as x' = bodyW - x - w when facing left).
- * Telegraphs are validated >= 15 frames (the 250 ms pillar, check D3).
+ * Enemy data schema (combat-spec §4.1). Boxes are [x, y, w, h] in px relative to the enemy's
+ * top-left when facing right (mirrored as x' = bodyW - x - w when facing left). Telegraphs are
+ * validated >= 15 frames (the 250 ms pillar, T1), including after the furious modifier.
  */
 const Box = z.tuple([
   z.number().int(),
@@ -16,10 +20,41 @@ const Box = z.tuple([
 ]);
 export type Box = z.infer<typeof Box>;
 
-const MIN_TELEGRAPH = 15;
+export const MIN_TELEGRAPH = 15;
+
+/** A projectile an attack fires on its first active frame (and every `interval` after, `count` times). */
+const Projectile = z.object({
+  /** dart (straight), mortar (ballistic to a locked x), wave (along the floor), word, slab (drops). */
+  kind: z.enum(['dart', 'mortar', 'wave', 'word', 'slab']),
+  w: z.number().int().positive(),
+  h: z.number().int().positive(),
+  /** Spawn point: top-left offset from the body, facing right (mirrored). */
+  from: z.tuple([z.number(), z.number()]),
+  /** dart: px/f toward Kid's centre (at fire time); wave: px/f outward. */
+  speed: z.number().nonnegative().default(0),
+  /** Extra vy per dart of a fan (px/f), one entry per dart fired together. */
+  fan: z.array(z.number()).default([0]),
+  gravity: z.number().default(0),
+  count: z.number().int().positive().default(1),
+  interval: z.number().int().nonnegative().default(0),
+  /** mortar: frames to reach the target x (it lands at the x locked on the telegraph's first frame). */
+  flightFrames: z.number().int().positive().default(60),
+  life: z.number().int().positive().default(120),
+  dmg: z.number().int().nonnegative(),
+  seizable: z.boolean().default(true),
+  /** mortar: on landing it becomes a shockwave w x h for `frames`. */
+  land: z
+    .object({
+      w: z.number().int().positive(),
+      h: z.number().int().positive(),
+      frames: z.number().int().positive(),
+    })
+    .optional(),
+});
+export type ProjectileDef = z.infer<typeof Projectile>;
 
 const Attack = z.object({
-  /** Sound id this attack comes from; it is armed only while that sound is home. null = generic (Snatch). */
+  /** Sound id this attack comes from; it is armed only while that sound is home. null = generic (Snatch, Hop). */
   sound: z.string().nullable(),
   /** Snatch: only used while retrieving a sound from Kid's bag. */
   snatch: z.boolean().default(false),
@@ -27,16 +62,21 @@ const Attack = z.object({
     /** Kid's centre within rangeX horizontally (either side; the enemy turns) and rangeY vertically. */
     rangeX: z.number().positive(),
     rangeY: z.number().nonnegative(),
+    /** Only when Kid is at least this far away horizontally (px). */
+    minX: z.number().nonnegative().default(0),
     cooldown: z.number().int().nonnegative(),
     weight: z.number().int().positive(),
   }),
   telegraph: z.number().int().min(MIN_TELEGRAPH),
   /** Backs up this far over the telegraph (px). */
   teleBackPx: z.number().nonnegative().default(0),
+  /** Rises this far over the telegraph (px; the Gull's dive wind-up). */
+  teleRisePx: z.number().nonnegative().default(0),
   active: z.number().int().positive(),
   recovery: z.number().int().positive(),
-  /** Recovery after hitting a wall (wall stun). */
+  /** Recovery after hitting a wall (wall stun) or getting stuck in the floor (the Gull's beak). */
   wallStunRecovery: z.number().int().positive().optional(),
+  stuckRecovery: z.number().int().positive().optional(),
   hitboxes: z.array(
     z.object({ fromFrame: z.number().int().positive(), toFrame: z.number().int().positive(), box: Box }),
   ),
@@ -44,6 +84,10 @@ const Attack = z.object({
   vx: z.number().default(0),
   stopAtWall: z.boolean().default(false),
   stopAtLedge: z.boolean().default(false),
+  /** A dive: while active it flies at `dive` px/f along the vector to Kid locked on telegraph frame `aimLockFrame`. */
+  dive: z.number().positive().optional(),
+  aimLockFrame: z.number().int().positive().optional(),
+  projectile: Projectile.optional(),
   dmg: z.number().int().nonnegative(),
   /** Snatch push on Kid (px/f). */
   push: z.number().default(0),
@@ -55,6 +99,53 @@ const Attack = z.object({
 });
 export type AttackDef = z.infer<typeof Attack>;
 
+const Movement = z.object({
+  /** walk (patrol, chase), fly (hover above Kid), keepAway (the Clerk), flee (the Runner), static (the boss). */
+  kind: z.enum(['walk', 'fly', 'keepAway', 'flee', 'static']).default('walk'),
+  patrolSpeed: z.number().nonnegative(),
+  chaseSpeed: z.number().nonnegative(),
+  aggroRange: z.number().positive(),
+  /** Hop toward Kid when she is up to maxRisePx higher and within withinPx horizontally. */
+  jump: z
+    .object({
+      risePx: z.number().positive(),
+      maxRisePx: z.number().positive(),
+      withinPx: z.number().positive(),
+    })
+    .optional(),
+  /** fly: hover this high above Kid's head (px), bobbing +-bobPx over bobPeriod frames. */
+  hover: z
+    .object({
+      heightPx: z.number().positive(),
+      offsetX: z.number().nonnegative(),
+      bobPx: z.number().nonnegative(),
+      bobPeriod: z.number().int().positive(),
+    })
+    .optional(),
+  /** keepAway: stays between minPx and maxPx from Kid; closer than hopPx, hops back hopBackPx over hopFrames. */
+  keep: z
+    .object({
+      minPx: z.number().positive(),
+      maxPx: z.number().positive(),
+      hopPx: z.number().positive(),
+      hopBackPx: z.number().positive(),
+      hopFrames: z.number().int().positive(),
+      hopVy: z.number(),
+    })
+    .optional(),
+  /** flee: runs from Kid at `speed`, jumping gaps; slips the first `slips` Seizes with a hop; a punch downs it. */
+  flee: z
+    .object({
+      speed: z.number().positive(),
+      jumpPx: z.number().positive(),
+      slips: z.number().int().nonnegative(),
+      slipFrames: z.number().int().positive(),
+      slipVy: z.number(),
+      downFrames: z.number().int().positive(),
+    })
+    .optional(),
+});
+
 export const EnemySchema = z
   .object({
     id: z.string(),
@@ -65,24 +156,18 @@ export const EnemySchema = z
     kbScale: z.number().min(0).max(1.5),
     poundage: z.number().int().nonnegative(),
     flying: z.boolean(),
-    class: z.enum(['fodder', 'elite', 'boss']),
+    class: z.enum(['fodder', 'elite', 'boss', 'runner']),
+    /** Hitstun after a punch while not attacking (a visible flinch; 0 = super armour). */
+    flinchFrames: z.number().int().nonnegative().default(0),
+    /** Stagger after a Catch (combat.staggerFrames when absent). */
+    staggerFrames: z.number().int().positive().optional(),
     sounds: z.array(z.object({ id: z.string(), colour: z.enum(COLOURS), seizable: z.boolean() })).min(1),
     seizeOrder: z.array(z.string()),
     attacks: z.record(z.string(), Attack),
-    movement: z.object({
-      patrolSpeed: z.number().nonnegative(),
-      chaseSpeed: z.number().nonnegative(),
-      aggroRange: z.number().positive(),
-      /** Hop toward Kid when she is up to maxRisePx higher and within withinPx horizontally. */
-      jump: z
-        .object({
-          risePx: z.number().positive(),
-          maxRisePx: z.number().positive(),
-          withinPx: z.number().positive(),
-        })
-        .optional(),
-    }),
+    movement: Movement,
     furious: z.object({ speedMult: z.number().positive(), telegraphDelta: z.number().int() }),
+    /** Behaviour-specific numbers (the boss script reads these; the generic FSM ignores them). */
+    params: z.record(z.string(), z.union([z.number(), z.array(z.number())])).default({}),
   })
   .superRefine((e, ctx) => {
     const ids = new Set(e.sounds.map((s) => s.id));
@@ -101,15 +186,23 @@ export const EnemySchema = z
       const snd = e.sounds.find((s) => s.id === a.sound);
       if (snd && a.cue.tint !== snd.colour)
         ctx.addIssue({ code: 'custom', message: `${e.id}.${aid}: cue tint must be its sound's colour (T3)` });
-      if (a.telegraph + e.furious.telegraphDelta < MIN_TELEGRAPH && e.furious.telegraphDelta < 0) {
-        // Furious telegraphs are clamped at runtime (combat.minTelegraph); nothing to report.
-      }
+      if (!a.cue.audio)
+        ctx.addIssue({ code: 'custom', message: `${e.id}.${aid}: every telegraph needs an audio cue (T3)` });
+      // Furious telegraphs are clamped at runtime to combat.minTelegraph (>= 15, T1).
+      if (a.dive !== undefined && a.aimLockFrame === undefined)
+        ctx.addIssue({ code: 'custom', message: `${e.id}.${aid}: a dive needs aimLockFrame` });
     }
+    if (e.movement.kind === 'fly' && !e.movement.hover)
+      ctx.addIssue({ code: 'custom', message: `${e.id}: fly movement needs hover` });
+    if (e.movement.kind === 'keepAway' && !e.movement.keep)
+      ctx.addIssue({ code: 'custom', message: `${e.id}: keepAway movement needs keep` });
+    if (e.movement.kind === 'flee' && !e.movement.flee)
+      ctx.addIssue({ code: 'custom', message: `${e.id}: flee movement needs flee` });
   });
 export type EnemyDef = z.infer<typeof EnemySchema>;
 
 const DEFS: Record<string, EnemyDef> = {};
-for (const raw of [barker, grinder]) {
+for (const raw of [barker, gull, grinder, clerk, runner, auctioneer]) {
   const d = EnemySchema.parse(raw);
   DEFS[d.id] = d;
 }
@@ -122,4 +215,18 @@ export function enemyDef(type: string): EnemyDef {
 
 export function enemyTypes(): string[] {
   return Object.keys(DEFS);
+}
+
+/** A numeric boss/behaviour parameter (throws when the data lacks it). */
+export function param(d: EnemyDef, key: string): number {
+  const v = d.params[key];
+  if (typeof v !== 'number') throw new Error(`${d.id}: missing numeric param "${key}"`);
+  return v;
+}
+
+/** An array boss/behaviour parameter. */
+export function paramList(d: EnemyDef, key: string): number[] {
+  const v = d.params[key];
+  if (!Array.isArray(v)) throw new Error(`${d.id}: missing list param "${key}"`);
+  return v;
 }

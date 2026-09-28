@@ -1,0 +1,134 @@
+{
+  "//": "Clerk (combat-spec §4.4): a Receiver's clerk with a rubber stamp and a pocket tannoy. Ranged: keeps 5-8 tiles away, hops back 2 tiles when Kid is within 3. Stamp = a catchable mortar (brown); Tannoy = white static ring (never seizable: it teaches the white rule).",
+  "id": "clerk",
+  "body": {
+    "w": 48,
+    "h": 88
+  },
+  "hurtbox": [4, 4, 40, 84],
+  "hp": 14,
+  "contactDmg": 1,
+  "kbScale": 0.75,
+  "poundage": 5,
+  "flying": false,
+  "class": "fodder",
+  "flinchFrames": 10,
+  "sounds": [
+    {
+      "id": "thump",
+      "colour": "brown",
+      "seizable": true
+    },
+    {
+      "id": "tannoy",
+      "colour": "white",
+      "seizable": false
+    }
+  ],
+  "seizeOrder": ["thump"],
+  "attacks": {
+    "stamp": {
+      "sound": "thump",
+      "trigger": {
+        "rangeX": 640,
+        "rangeY": 256,
+        "minX": 160,
+        "cooldown": 70,
+        "weight": 2
+      },
+      "telegraph": 22,
+      "active": 6,
+      "recovery": 34,
+      "hitboxes": [],
+      "projectile": {
+        "kind": "mortar",
+        "w": 48,
+        "h": 32,
+        "from": [0, -36],
+        "flightFrames": 56,
+        "gravity": 0.8,
+        "life": 150,
+        "dmg": 1,
+        "land": {
+          "w": 96,
+          "h": 24,
+          "frames": 6
+        }
+      },
+      "dmg": 1,
+      "cue": {
+        "tint": "brown",
+        "audio": "stampWindup"
+      }
+    },
+    "tannoy": {
+      "sound": "tannoy",
+      "trigger": {
+        "rangeX": 176,
+        "rangeY": 128,
+        "cooldown": 60,
+        "weight": 3
+      },
+      "telegraph": 20,
+      "active": 8,
+      "recovery": 30,
+      "hitboxes": [
+        {
+          "fromFrame": 1,
+          "toFrame": 8,
+          "box": [-72, -52, 192, 192]
+        }
+      ],
+      "dmg": 1,
+      "cue": {
+        "tint": "white",
+        "audio": "tannoyWindup",
+        "pulses": 2
+      }
+    },
+    "snatch": {
+      "sound": null,
+      "snatch": true,
+      "trigger": {
+        "rangeX": 72,
+        "rangeY": 96,
+        "cooldown": 0,
+        "weight": 1
+      },
+      "telegraph": 16,
+      "active": 4,
+      "recovery": 24,
+      "hitboxes": [
+        {
+          "fromFrame": 1,
+          "toFrame": 4,
+          "box": [0, 0, 72, 88]
+        }
+      ],
+      "dmg": 0,
+      "push": 8,
+      "cue": {
+        "tint": "brown",
+        "audio": "snatchWindup"
+      }
+    }
+  },
+  "movement": {
+    "kind": "keepAway",
+    "patrolSpeed": 1.5,
+    "chaseSpeed": 3,
+    "aggroRange": 768,
+    "keep": {
+      "minPx": 320,
+      "maxPx": 512,
+      "hopPx": 192,
+      "hopBackPx": 128,
+      "hopFrames": 12,
+      "hopVy": -7
+    }
+  },
+  "furious": {
+    "speedMult": 1.2,
+    "telegraphDelta": -4
+  }
+}

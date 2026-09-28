@@ -107,13 +107,21 @@ describe('rooms', () => {
     const hub = getRoom('hub');
     const doors = hub.entities.filter((e) => e.kind === 'door').map((e) => e.to);
     expect(doors.filter((to) => to?.startsWith('gym-'))).toEqual(GYM_ROOMS);
-    // L3: the signature-mechanic rooms hang off the hub's right-hand doors.
+    // L3 signature rooms, then the L4 combat rooms, hang off the hub's right-hand doors.
     expect(doors.filter((to) => !to?.startsWith('gym-'))).toEqual([
       'lot-7',
       'lot-7-control',
-      'the-pit',
       'stairwell',
+      'yard',
+      'the-pit',
+      'ring-barker',
+      'ring-gull',
+      'ring-grinder',
+      'ring-clerk',
+      'auction',
     ]);
+    // The Corner (stool) is in the hub.
+    expect(hub.entities.some((e) => e.kind === 'corner')).toBe(true);
   });
 
   it('mirrors a room file (spikes flip)', () => {
@@ -137,7 +145,7 @@ describe('rooms', () => {
     const goal = getRoom('gym-01').entities.find((e) => e.kind === 'goal');
     if (!goal) throw new Error('no goal');
     g.state.player.x = goal.tx * 64 - 50;
-    const evs = run(g.state, g.tuning, 'right*10 _*20');
+    const evs = run(g.state, g.tuning, `right*10 _*${g.tuning.world.goalBeatFrames + 10}`);
     expect(evs.filter((e) => e.type === 'goal')).toHaveLength(1);
     expect(g.state.roomId).toBe('gym-02');
   });

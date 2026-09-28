@@ -1,0 +1,44 @@
+{
+  "kind": "tape",
+  "name": "ring-barker.signature.s1",
+  "inputs": "R94 R+A1 R2 R+A1 L24 .4 L+A1 .1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 .18 R8 .11 L24 R+A1 .2 R+A1 L1 L+A1 R1 R+A1 R1 R+A1 R27 .10 R+S1 .12 R4 .8 R+V1 .4 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20",
+  "expect": {
+    "target": "G",
+    "maxDeaths": 0
+  },
+  "source": "fight:signature",
+  "room": "ring-barker",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "031c4b0f93afc4",
+    "build": {
+      "sha": "dec6925f4b-dirty",
+      "sim": "9784b8ec33",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 4406,
+      "y": 816,
+      "frame": 874,
+      "room": "hub"
+    },
+    "hash": "0b2f994d5ba53d",
+    "hashes": [
+      "0e8f62d4153e3c",
+      "1f7f78c242dfb6",
+      "028c3b8b125193",
+      "0522bf179fe8d6",
+      "1ea94b91e4b007",
+      "192e1226db4ffb",
+      "07f47b0aaddda2",
+      "02d3a18446afbf",
+      "1763a41e9c3c36",
+      "14ae6a9fb9ea3e",
+      "15d2af621e9ac2",
+      "1f1a765d37efff",
+      "0f5498e065198f",
+      "1566e5e9af152c"
+    ]
+  },
+  "notes": "Recorded run of the signature fighter (tools/combat/fighter.ts, 12-step reaction) on seed 1: roomClear at 274, 0 hurts, then a walk to G."
+}

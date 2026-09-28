@@ -1,0 +1,103 @@
+{
+  "id": "yard",
+  "name": "The Yard (aims: up-seize, down-levy)",
+  "abilities": {
+    "wallJump": false,
+    "dash": true,
+    "doubleJump": false,
+    "pogo": false,
+    "seize": true,
+    "levy": true
+  },
+  "hazard": "pip",
+  "rows": [
+    "########################################################",
+    "########################################################",
+    "########################################################",
+    "############################...........................#",
+    "#################......................................#",
+    "#################......................................#",
+    "#################......................................#",
+    "#################...................................G..#",
+    "#################.......................################",
+    "#################.......................################",
+    "#################............HHH........################",
+    "#################.......................################",
+    "#################.......................################",
+    "#################.......................################",
+    "#################.......................################",
+    "#################.......................################",
+    "#################...HHH.....######......################",
+    "#################...........######......################",
+    "#.....F.......D.............######......################",
+    "#.....F.......D.............######......################",
+    "#.....F.......D.............############################",
+    "#.P...F.......D.............############################",
+    "###########_############################################",
+    "########################################################"
+  ],
+  "sources": {
+    "F": {
+      "sound": "furnace",
+      "colour": "brown"
+    },
+    "H": {
+      "sound": "partition",
+      "colour": "pink"
+    }
+  },
+  "plates": {
+    "_": {
+      "pressedBy": ["slab", "heavy"]
+    }
+  },
+  "gates": {
+    "D": {
+      "opensOn": "plate"
+    }
+  },
+  "prompts": [
+    {
+      "at": [4, 18],
+      "keys": ["seize"],
+      "until": "move:seize:fwd"
+    },
+    {
+      "at": [10, 18],
+      "keys": ["levy"],
+      "until": "plate"
+    },
+    {
+      "at": [21, 19],
+      "keys": ["up", "seize"],
+      "until": "move:seize:up",
+      "near": 5
+    },
+    {
+      "at": [26, 20],
+      "keys": ["levy"],
+      "until": "springBounce",
+      "near": 4
+    },
+    {
+      "at": [30, 13],
+      "keys": ["up", "seize"],
+      "until": "move:seize:up",
+      "near": 5
+    },
+    {
+      "at": [33, 12],
+      "keys": ["jump"],
+      "near": 4
+    },
+    {
+      "at": [35, 12],
+      "keys": ["down", "levy"],
+      "until": "move:levy:down",
+      "near": 5
+    }
+  ],
+  "next": "hub",
+  "claims": {},
+  "notes": "L4 teaching strip (novice playtest: aims were never discovered). A: Seize the furnace, throw the slab on the plate to open the gate (the bag is empty again). B: the only pink is a bar 3 tiles overhead: jump + Up+Seize, then Levy at the 6-tile wall for a spring (a brown crate + jump can't clear it). C: over the pit the far ledge is 8 tiles up: jump off the plateau and Down+Levy a spring under your feet mid-air (a forward throw lands in the pit; the pit is 4 deep so a feather jump climbs back out, and a spring on the pit floor can be seized back on foot)."
+}

@@ -1,0 +1,44 @@
+{
+  "kind": "tape",
+  "name": "ring-clerk.signature.s1",
+  "inputs": "R179 R+S1 R1 .13 R3 .4 R1 .1 R+S1 .4 L+X1 L16 R21 R+V1 R1 .14 R5 R+S1 R2 .4 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20",
+  "expect": {
+    "target": "G",
+    "maxDeaths": 0
+  },
+  "source": "fight:signature",
+  "room": "ring-clerk",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "031c4b0f93afc4",
+    "build": {
+      "sha": "dec6925f4b-dirty",
+      "sim": "9784b8ec33",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 4463,
+      "y": 816,
+      "frame": 873,
+      "room": "hub"
+    },
+    "hash": "0c0b07aa5d3682",
+    "hashes": [
+      "094d938f109be3",
+      "19bea0cfe5d97e",
+      "025e080c408590",
+      "1a3bb13f29e797",
+      "1e11759d62abae",
+      "1efb66ef146661",
+      "1eca22898722dd",
+      "16f737416c159d",
+      "16081a2962f7f0",
+      "1f8d287222b3ce",
+      "09e3a3a9cc7315",
+      "0a36e231755a74",
+      "006d5f28aba851",
+      "06d7894ff16c90"
+    ]
+  },
+  "notes": "Recorded run of the signature fighter (tools/combat/fighter.ts, 12-step reaction) on seed 1: roomClear at 273, 0 hurts, then a walk to G."
+}

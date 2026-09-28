@@ -1,0 +1,43 @@
+{
+  "//": "The Runner (combat-spec §3.5): a Receiver's clerk holding your Poundage and Lien. Flees at 7 px/f, jumps gaps, slips your first two Seizes with a hop; a punch knocks it down for 60 f; a Seize catches it (redistrained). No attacks.",
+  "id": "runner",
+  "body": {
+    "w": 40,
+    "h": 72
+  },
+  "hurtbox": [0, 0, 40, 72],
+  "hp": 1,
+  "contactDmg": 0,
+  "kbScale": 1,
+  "poundage": 0,
+  "flying": false,
+  "class": "runner",
+  "flinchFrames": 0,
+  "sounds": [
+    {
+      "id": "ledger",
+      "colour": "violet",
+      "seizable": true
+    }
+  ],
+  "seizeOrder": ["ledger"],
+  "attacks": {},
+  "movement": {
+    "kind": "flee",
+    "patrolSpeed": 0,
+    "chaseSpeed": 7,
+    "aggroRange": 4000,
+    "flee": {
+      "speed": 7,
+      "jumpPx": 176,
+      "slips": 2,
+      "slipFrames": 12,
+      "slipVy": -9,
+      "downFrames": 60
+    }
+  },
+  "furious": {
+    "speedMult": 1,
+    "telegraphDelta": 0
+  }
+}

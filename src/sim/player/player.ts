@@ -30,6 +30,9 @@ import { BASE_PROFILE, type MoveParams } from './params';
 export interface CreatePlayerOptions {
   abilities?: Abilities;
   profile?: string;
+  /** Chin carried in from the last room (defaults to full). */
+  chin?: number;
+  chinMax?: number;
 }
 
 /** A player standing on the floor of the spawn tile, horizontally centred, facing into the room. */
@@ -91,9 +94,17 @@ export function createPlayer(
     respawn: null,
     move: null,
     actBuf: null,
-    chin: t.kid.chin,
+    chin: opts.chin ?? opts.chinMax ?? t.kid.chin,
+    chinMax: opts.chinMax ?? t.kid.chin,
     iframes: 0,
     hurtLock: 0,
+    ring: 0,
+    counter: 0,
+    slipClean: false,
+    safeX: x + w / 2,
+    safeY: y + h,
+    hazardRespawn: false,
+    down: null,
     recoilVx: 0,
     recoilT: 0,
   };
@@ -594,7 +605,8 @@ export function updatePlayer(
     }
   }
   if (killed || c.hazard(p)) {
-    die(state, P, events);
+    if (room.hazard === 'pip') hazardHit(state, P, events);
+    else die(state, P, events);
     return;
   }
   post(c, wasGrounded, x0, impactVy);
@@ -625,6 +637,16 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
   }
 
   p.grounded = p.vy >= 0 && c.groundAt(p.x, p.y);
+  // Last safe ground (combat-spec §3.1): standing on the room's own tiles, never on a dynamic
+  // solid (a lot can be sold from under you; a slab can be taken back).
+  if (
+    p.grounded &&
+    (solidAt(room, ts, p.x, p.y + 1, p.w, p.h) || oneWayUnder(room, ts, p.x, p.y, p.w, p.h)) &&
+    !dynSolidAt(p.x, p.y + 1, p.w, p.h)
+  ) {
+    p.safeX = p.x + p.w / 2;
+    p.safeY = p.y + p.h;
+  }
   if (p.grounded) {
     // Coyote: N usable airborne frames after the frame that left the ground (§2.2).
     p.coyote = P.coyoteFrames;
@@ -697,8 +719,21 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
     }
   }
 
-  // Triggers.
+  // Triggers. Doors are as wide as they are drawn (doorTriggerTiles, centred): the nearest wins.
+  const doorW = P.doorTriggerTiles * ts;
+  let door: (typeof room.entities)[number] | null = null;
+  let doorD = Infinity;
   for (const e of room.entities) {
+    if (e.kind === 'door') {
+      const dx = e.tx * ts + ts / 2 - doorW / 2;
+      if (!overlaps(p, dx, e.ty * ts, doorW, ts)) continue;
+      const d = Math.abs(e.tx * ts + ts / 2 - (p.x + p.w / 2));
+      if (d < doorD) {
+        door = e;
+        doorD = d;
+      }
+      continue;
+    }
     if (!overlaps(p, e.tx * ts, e.ty * ts, ts, ts)) continue;
     if (e.kind === 'respawn') {
       if (p.respawn?.tx !== e.tx || p.respawn?.ty !== e.ty) {
@@ -709,17 +744,27 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
       if (!state.roomStats.goal) {
         state.roomStats.goal = true;
         events.push({ type: 'goal', kind: 'main', roomId: room.id, x: c.fx, y: c.fy });
-        if (room.next) startTransition(state, room.next, undefined, P, events);
+        if (room.next) startTransition(state, room.next, undefined, P, events, P.goalBeatFrames);
       }
     } else if (e.kind === 'optionalGoal') {
       if (!state.roomStats.optional) {
         state.roomStats.optional = true;
         events.push({ type: 'goal', kind: 'optional', roomId: room.id, x: c.fx, y: c.fy });
       }
-    } else if (e.kind === 'door' && e.to && c.pressed(ActionBit.up) && p.grounded && !state.transition) {
-      startTransition(state, e.to, e.spawn, P, events);
+    } else if (e.kind === 'corner') {
+      // A Corner (the stool): full Chin, and Beat the Count is available again.
+      const r = state.run;
+      if (r.corner.roomId !== room.id || p.chin < p.chinMax || r.beatUsed) {
+        r.corner = { roomId: room.id, spawn: 'corner' };
+        r.beatUsed = false;
+        p.chin = p.chinMax;
+        p.ring = 0;
+        events.push({ type: 'corner', x: c.fx, y: c.fy });
+      }
     }
   }
+  if (door?.to && c.pressed(ActionBit.up) && p.grounded && !state.transition)
+    startTransition(state, door.to, door.spawn, P, events);
 }
 
 export function startTransition(
@@ -728,11 +773,11 @@ export function startTransition(
   spawn: string | undefined,
   P: MoveParams,
   events: SimEvent[],
+  frames = P.transitionFrames,
 ): void {
   if (state.transition) return;
   const p = state.player;
-  state.transition =
-    spawn === undefined ? { to, timer: P.transitionFrames } : { to, spawn, timer: P.transitionFrames };
+  state.transition = spawn === undefined ? { to, timer: frames } : { to, spawn, timer: frames };
   events.push({ type: 'roomExit', roomId: state.roomId, to, x: p.x + p.w / 2, y: p.y + p.h });
 }
 
@@ -747,7 +792,28 @@ export function die(state: GameState, P: MoveParams, events: SimEvent[]): void {
   p.vy = 0;
   p.freeze = 0;
   state.roomStats.deaths++;
+  state.run.deaths++;
   events.push({ type: 'death', x: p.x + p.w / 2, y: p.y + p.h / 2 });
+}
+
+/**
+ * A hazard in a combat room (combat-spec §3.1): it costs Chin (never rings), then after a short
+ * freeze Kid respawns at her last safe ground with i-frames. Chin 0 is handled by combat/kid.ts
+ * (she goes down for her Count).
+ */
+export function hazardHit(state: GameState, P: MoveParams, events: SimEvent[]): void {
+  const p = state.player;
+  if (p.state === 'wallSlide')
+    events.push({ type: 'wallSlideEnd', x: p.x + p.w / 2, y: p.y + p.h, dir: p.wallDir });
+  p.chin = Math.max(0, p.chin - P.hazardDmg);
+  p.state = 'dead';
+  p.deathTimer = P.hazardRespawnFrames;
+  p.hazardRespawn = true;
+  p.vx = 0;
+  p.vy = 0;
+  p.freeze = 0;
+  p.move = null;
+  events.push({ type: 'hazard', dmg: P.hazardDmg, x: p.x + p.w / 2, y: p.y + p.h / 2 });
 }
 
 function respawn(state: GameState, room: Room, P: MoveParams, events: SimEvent[]): void {
@@ -755,8 +821,11 @@ function respawn(state: GameState, room: Room, P: MoveParams, events: SimEvent[]
   const sp = old.respawn ?? room.spawns.default;
   if (!sp) throw new Error(`Room ${room.id} has no spawn`);
   const ts = P.tileSize;
-  const x = Math.floor(sp.tx * ts + ts / 2 - old.w / 2);
-  const y = (sp.ty + 1) * ts - old.h;
+  const hz = old.hazardRespawn;
+  const x = hz ? Math.round(old.safeX - old.w / 2) : Math.floor(sp.tx * ts + ts / 2 - old.w / 2);
+  let y = hz ? old.safeY - old.h : (sp.ty + 1) * ts - old.h;
+  // Something landed on the safe spot since (a slab): stand on top of it instead.
+  if (hz) for (let dy = 0; dy <= 3 * ts && solidAny(room, ts, x, y, old.w, old.h); dy += 8) y -= 8;
   const p: PlayerState = {
     ...old,
     x,
@@ -793,10 +862,13 @@ function respawn(state: GameState, room: Room, P: MoveParams, events: SimEvent[]
     skid: false,
     move: null,
     actBuf: null,
-    iframes: 0,
+    iframes: hz ? P.hazardIframes : 0,
     hurtLock: 0,
     recoilVx: 0,
     recoilT: 0,
+    hazardRespawn: false,
+    counter: 0,
+    slipClean: false,
   };
   state.player = p;
   events.push({ type: 'respawn', x: x + p.w / 2, y: y + p.h });

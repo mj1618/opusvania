@@ -1,0 +1,69 @@
+{
+  "kind": "tape",
+  "name": "auction.signature.s1",
+  "inputs": "R49 .1 L24 .1 L24 R5 .13 L12 R+J18 R54 R+A1 R2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R19 .9 R+S1 .19 R+V1 .20 R+S1 .19 R+V1 .20 R+S1 .19 R+V1 .139 R+S1 .135 R+S1 .135 R+S1 .135 R+S1 .135 R+S1 .135 R+S1 .135 R+S1 .135 R+S1 .108 L24 R20 R+S1 R1 .21 R+S1 .19 R+V1 .20 R+S1 .19 R+V1 .20 R+S1 .19 R+V1 .20 R+S1 .19 R+V1 .20 R+S1 .6 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20",
+  "expect": {
+    "target": "G",
+    "maxDeaths": 0
+  },
+  "source": "fight:signature",
+  "room": "auction",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "031c4b0f93afc4",
+    "build": {
+      "sha": "dec6925f4b-dirty",
+      "sim": "9784b8ec33",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 4159,
+      "y": 816,
+      "frame": 2379,
+      "room": "hub"
+    },
+    "hash": "135b1fee6a8183",
+    "hashes": [
+      "0a252d5ce753a0",
+      "0b5012fe196444",
+      "1ca7f08d6df672",
+      "1d48119fd72f59",
+      "02691f9e0f7821",
+      "146a4019d30061",
+      "029c770708b4a2",
+      "1b25a6dbf4a28b",
+      "1d8430a4e7cd7b",
+      "13290e6d4890f2",
+      "163eedaf1e9e89",
+      "11372bc83a17d1",
+      "0aec4c0aaff688",
+      "054a9d842d113b",
+      "073cf0152c8a93",
+      "1ee6014b1c5845",
+      "136c6c768f3e32",
+      "0ab1479ee908ea",
+      "188a8841541173",
+      "13a07287d6032c",
+      "00baabf5c494d4",
+      "1562e4a0fefbb9",
+      "1dc984158f566c",
+      "1bafab8cfa355d",
+      "0c979630e66c91",
+      "06927e7379bde3",
+      "16974234eb3c65",
+      "13a8b9edf14b24",
+      "12c46b6a246bf5",
+      "0078e6c579d58e",
+      "144e829191becc",
+      "1c1745b47b6d7b",
+      "1793955b074ccb",
+      "120eaf6493049c",
+      "0a0c267891f977",
+      "03150df0fd501b",
+      "0c196f1cab14e1",
+      "12ad1850062827",
+      "06f00d572429ff"
+    ]
+  },
+  "notes": "Recorded run of the signature fighter (tools/combat/fighter.ts, 12-step reaction) on seed 1: roomClear at 1779, 0 hurts, then a walk to G."
+}

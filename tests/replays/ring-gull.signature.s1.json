@@ -1,0 +1,45 @@
+{
+  "kind": "tape",
+  "name": "ring-gull.signature.s1",
+  "inputs": "R95 L24 R4 R+A1 R2 R+A1 R1 R+A1 R1 R+A1 R1 L+A1 L1 L+A1 L1 L+A1 L1 D+J1 R15 R+J1 .1 R+S1 L+X1 L16 R+J4 R1 R+J10 R4 R+J3 R+A1 R+J2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+J1 L+J2 L1 L+J2 L24 R1 R+J3 R3 .12 L+A1 R1 .6 R+A1 R1 .19 R9 R+S1 R2 .4 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20",
+  "expect": {
+    "target": "G",
+    "maxDeaths": 0
+  },
+  "source": "fight:signature",
+  "room": "ring-gull",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "031c4b0f93afc4",
+    "build": {
+      "sha": "dec6925f4b-dirty",
+      "sim": "9784b8ec33",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 4406,
+      "y": 816,
+      "frame": 900,
+      "room": "hub"
+    },
+    "hash": "0d9aa5f0500426",
+    "hashes": [
+      "0605a2d5c4bf3c",
+      "110f225d1e600c",
+      "0d6352bf289806",
+      "17202c07ddbcb9",
+      "17c26e880c646f",
+      "0fdf4388ac693b",
+      "09693f0b45593b",
+      "1d5664a3ae3e71",
+      "087dce5dc6edc0",
+      "07a1a06bab03bb",
+      "04889c6e9e6b11",
+      "1220ad2c5a57d3",
+      "0ac4c24a55201c",
+      "0a0ac6df9cc082",
+      "0d9aa5f0500426"
+    ]
+  },
+  "notes": "Recorded run of the signature fighter (tools/combat/fighter.ts, 12-step reaction) on seed 1: roomClear at 300, 0 hurts, then a walk to G."
+}

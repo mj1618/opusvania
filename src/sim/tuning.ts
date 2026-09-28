@@ -55,6 +55,10 @@ export const defaultTuning = {
     tileSize: 64,
     /** Frames the player is frozen while a room transition fades out. */
     transitionFrames: 10,
+    /** Touching G: the freeze before the warp is this long (the "cleared" beat). */
+    goalBeatFrames: 45,
+    /** Door triggers are this many tiles wide, centred on the door tile (the drawn door). */
+    doorTriggerTiles: 3,
     /** Minimum room size in tiles; smaller rooms are padded with solid (spec §6.1). */
     minRoomW: 30,
     minRoomH: 17,
@@ -191,6 +195,7 @@ export const defaultTuning = {
     hitstopHeavy: 10,
     hitstopSeizeTake: 5,
     hitstopCatch: 10,
+    hitstopCounter: 12,
     hitstopRepossess: 16,
     hitstopHurt: 8,
     hitstopCap: 16,
@@ -230,6 +235,32 @@ export const defaultTuning = {
     riseFrames: 12,
     /** Chasers stop closing in when the gap between their body and Kid's is this small (px). */
     chaseGapPx: 24,
+    /** Enemy knockback of a Counter hit (px/f; it also knocks down). */
+    enemyKbCounter: 16,
+    /** Uppercut / launch: vy given to a light enemy (kbScale >= launchMinKbScale). */
+    uppercutVy: -12,
+    launchMinKbScale: 0.5,
+    /** A brown levy knocks down enemies with kbScale above this (heavy enemies only stagger). */
+    knockdownKbScale: 0.5,
+    /** Count beat length by fever 0..4 (combat-spec §4.5). */
+    countBeatByFever: [12, 11, 10, 9, 8],
+    /** An attack may only start with the enemy's hurtbox inside Kid's view, inset by this (px). */
+    viewInsetPx: 32,
+    /** The sim's stand-in for the camera view (combat-spec T5): px, centred on Kid, clamped to the room. */
+    viewW: 1920,
+    viewH: 1080,
+    /** Snatch: Kid is pushed at this speed; Snatch grants no i-frames. */
+    snatchPushFrames: 4,
+    /** Enemies' own seize priority groups (see combat/priority.ts). Boss sounds revoice faster. */
+    bossRevoiceFrames: 240,
+    /** Return to sender on a boss: stagger instead of knockdown. */
+    bossReturnStagger: 90,
+    /** White-static zones leak the bag's oldest sound this often (combat-spec §3.3). */
+    staticLeakFrames: 180,
+    /** Poundage: KO pays x1, repossession x2 (combat-spec §3.4 point 6). */
+    repossessPayMult: 2,
+    /** Beat the Count / the Kid's count uses the same beat as enemies at the room's fever. */
+    kidCountBeats: 10,
   },
   /** Kid Tallow's health and hurt reaction (combat-spec §3.1). */
   kid: {
@@ -241,6 +272,55 @@ export const defaultTuning = {
     hurtVy: -8,
     /** The Slip (dash) is invulnerable on frames 1..slipIframesTo. */
     slipIframesTo: 10,
+    /** A clean Slip (i-frames over a live hitbox) opens a Counter window this long and refunds the cooldown. */
+    counterFrames: 30,
+    counterDmgMult: 2,
+    /** Counter hitboxes grow by this factor (about their centre). */
+    counterBoxScale: 1.25,
+    /** Slip may cancel the hurt control lock from this lock frame ("roll with it"). */
+    standSlipFrom: 8,
+    /** Ringing (the rally): the last lost pip can be won back for this long (combat-spec §3.2). */
+    ringFrames: 120,
+    /** Hazards (spikes, static) cost this much Chin, then respawn at the last safe ground. */
+    hazardDmg: 1,
+    /** Frames between the hazard hit and the respawn at safe ground. */
+    hazardRespawnFrames: 30,
+    /** Beat the Count: press Jump within +-this many frames of beats riseBeatMin..riseBeatMax. */
+    riseWindow: 5,
+    riseBeatMin: 3,
+    riseBeatMax: 8,
+    riseChin: 1,
+    riseIframes: 90,
+    /** Frames of the fade after being Counted Out, before waking at the Corner. */
+    countedOutFrames: 40,
+    /** Assist: Beat the Count automatically when allowed (combat-spec §3.5, ships in Phase 2). */
+    autoBeatCount: false,
+    /** Recoil on Kid when a medium hit lands (px/f; light ones are in combat). */
+    recoilMedium: -5,
+  },
+  /** Swallow (combat-spec §3.4): channel frames and heal per voice colour. */
+  swallow: {
+    channelViolet: 16,
+    channelPink: 24,
+    channelBrown: 40,
+    healViolet: 1,
+    healPink: 1,
+    healBrown: 2,
+    /** Refusal (a deed, or not on the ground for pink/brown) freezes nothing but costs this many frames. */
+    refusalFrames: 6,
+    /** A Hoarse owner turns aggressive: speed x this. */
+    hoarseSpeedMult: 1.2,
+  },
+  /** Death loop (combat-spec §3.5): 'runner' (default) or 'garnish' (debt from future earnings). */
+  death: {
+    mode: 'runner' as 'runner' | 'garnish',
+    lienPips: 1,
+    /** Garnish: this share of every future payout goes to the debt. */
+    garnishShare: 0.5,
+  },
+  /** The Auctioneer's room fever effects (combat-spec §5). */
+  boss: {
+    feverMax: 3,
   },
   bag: {
     slots: 3,
@@ -283,6 +363,13 @@ export const defaultTuning = {
     violetW: 32,
     violetH: 16,
     violetRecoilPx: 96,
+    /** Violet darts: upward drift (px/f² , negative = up), frames in the air before flying home, pierce and ricochets. */
+    violetDrift: -0.05,
+    violetLife: 60,
+    violetPierce: 2,
+    violetBounces: 1,
+    /** Levy placement: how far (px) either side a blocked spawn looks for free space. */
+    placeSearchPx: 32,
     /** Fraction of Kid's vx added to a forward levy (0 = the spec: fixed throw speed). */
     inheritVx: 0,
   },
@@ -343,6 +430,9 @@ export const VALUE_GROUPS = [
   'levy',
   'weight',
   'plate',
+  'swallow',
+  'death',
+  'boss',
 ] as const;
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };

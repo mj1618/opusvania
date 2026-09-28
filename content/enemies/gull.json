@@ -1,0 +1,97 @@
+{
+  "//": "Stock Gull (combat-spec §4.4): a ticker-tape gull. Flyer: hovers above Kid on the integer sine table, dives along a vector locked on telegraph frame 16. Validated by src/sim/ai/schema.ts.",
+  "id": "gull",
+  "body": {
+    "w": 56,
+    "h": 40
+  },
+  "hurtbox": [2, 2, 52, 36],
+  "hp": 6,
+  "contactDmg": 1,
+  "kbScale": 1.2,
+  "poundage": 3,
+  "flying": true,
+  "class": "fodder",
+  "flinchFrames": 10,
+  "sounds": [
+    {
+      "id": "screech",
+      "colour": "violet",
+      "seizable": true
+    }
+  ],
+  "seizeOrder": ["screech"],
+  "attacks": {
+    "dive": {
+      "sound": "screech",
+      "trigger": {
+        "rangeX": 320,
+        "rangeY": 400,
+        "cooldown": 70,
+        "weight": 1
+      },
+      "telegraph": 24,
+      "teleRisePx": 32,
+      "aimLockFrame": 16,
+      "active": 20,
+      "dive": 16,
+      "recovery": 30,
+      "stuckRecovery": 45,
+      "hitboxes": [
+        {
+          "fromFrame": 1,
+          "toFrame": 20,
+          "box": [0, 0, 56, 40]
+        }
+      ],
+      "dmg": 1,
+      "cue": {
+        "tint": "violet",
+        "audio": "screechWindup",
+        "pulses": 2
+      }
+    },
+    "snatch": {
+      "sound": null,
+      "snatch": true,
+      "trigger": {
+        "rangeX": 80,
+        "rangeY": 96,
+        "cooldown": 0,
+        "weight": 1
+      },
+      "telegraph": 16,
+      "active": 4,
+      "recovery": 24,
+      "hitboxes": [
+        {
+          "fromFrame": 1,
+          "toFrame": 4,
+          "box": [0, 0, 80, 40]
+        }
+      ],
+      "dmg": 0,
+      "push": 8,
+      "cue": {
+        "tint": "violet",
+        "audio": "snatchWindup"
+      }
+    }
+  },
+  "movement": {
+    "kind": "fly",
+    "patrolSpeed": 2,
+    "chaseSpeed": 4,
+    "aggroRange": 704,
+    "hover": {
+      "heightPx": 224,
+      "offsetX": 128,
+      "bobPx": 16,
+      "bobPeriod": 90
+    }
+  },
+  "furious": {
+    "speedMult": 1.2,
+    "telegraphDelta": -4
+  }
+}

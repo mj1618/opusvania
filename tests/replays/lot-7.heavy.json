@@ -19,10 +19,10 @@
   "room": "lot-7",
   "seed": 1,
   "golden": {
-    "tuningHash": "0b78049094206f",
+    "tuningHash": "031c4b0f93afc4",
     "build": {
-      "sha": "72505a8679-dirty",
-      "sim": "6dee6c42c8",
+      "sha": "dec6925f4b-dirty",
+      "sim": "9784b8ec33",
       "stateVersion": 1
     },
     "end": {
@@ -31,8 +31,8 @@
       "frame": 307,
       "room": "lot-7"
     },
-    "hash": "084850b20ef331",
-    "hashes": ["079442c50f732d", "1b4860c182e786", "1f1f6c7b5dde62", "037cd51ed04fd2", "0975d73d78f83b"]
+    "hash": "19c8ce6b9d2c76",
+    "hashes": ["13bb1f0bef5642", "10dd1e080155f1", "1d625cc9986bc7", "14817cac2e56c2", "164538f6cc0c2f"]
   },
   "notes": "L3 route B (expert, 5 verbs): seize the partition, down-levy pink under the corridor ceiling and bounce, seize F2 and F1 on the run (heavy), run over the plate (heavy press opens the gate), jump and down-levy brown for the recoil hop over the 3-tile step. Hand-scripted, then tape trim."
 }

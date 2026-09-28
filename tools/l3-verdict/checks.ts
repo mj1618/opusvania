@@ -184,8 +184,16 @@ export function a4Scan(steps: SimEvent[][]): { checked: number; bad: string[] } 
     if (e.type === 'seizeTake') return t.hitstopSeizeTake;
     if (e.type === 'catch') return t.hitstopCatch;
     if (e.type === 'repossess') return t.hitstopRepossess;
+    if (e.type === 'hurt') return t.hitstopHurt;
+    if (e.type === 'counterHit') return t.hitstopCounter;
     if (e.type === 'hit')
-      return e.cls === 'heavy' ? t.hitstopHeavy : e.cls === 'medium' ? t.hitstopMedium : t.hitstopLight;
+      return e.cls === 'counter'
+        ? t.hitstopCounter
+        : e.cls === 'heavy'
+          ? t.hitstopHeavy
+          : e.cls === 'medium'
+            ? t.hitstopMedium
+            : t.hitstopLight;
     return -1;
   };
   let checked = 0;

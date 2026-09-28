@@ -14,6 +14,7 @@ import {
 const READONLY = new Set(['world.tileSize', 'world.minRoomW', 'world.minRoomH']);
 const OPTIONS: Record<string, Record<string, string>> = {
   'jump.releaseMode': { gravity: 'gravity', zero: 'zero' },
+  'death.mode': { runner: 'runner', garnish: 'garnish' },
 };
 
 export interface TuningPanelHooks {

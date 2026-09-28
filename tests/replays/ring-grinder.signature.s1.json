@@ -1,0 +1,44 @@
+{
+  "kind": "tape",
+  "name": "ring-grinder.signature.s1",
+  "inputs": "R79 .1 L48 .25 R+A1 .2 R+A1 .1 R+A1 R1 R+A1 L1 L+A1 L1 L+A1 L1 L+A1 R21 .7 R+S1 .19 R+V1 .15 R2 .3 R+S1 .6 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20",
+  "expect": {
+    "target": "G",
+    "maxDeaths": 0
+  },
+  "source": "fight:signature",
+  "room": "ring-grinder",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "031c4b0f93afc4",
+    "build": {
+      "sha": "dec6925f4b-dirty",
+      "sim": "9784b8ec33",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 3740,
+      "y": 816,
+      "frame": 842,
+      "room": "hub"
+    },
+    "hash": "034b336c1e6dab",
+    "hashes": [
+      "02ca94860b99ed",
+      "085f04d4ae5f29",
+      "14d1f11373f76c",
+      "0c54b14e289da1",
+      "053e4b7e941fe3",
+      "1aa861162ca3bb",
+      "1842a3049b90e8",
+      "1ea53e238b095f",
+      "09645f6c69032e",
+      "1b999fd6508967",
+      "1824a5d1fd6b15",
+      "078b26f134d022",
+      "17b5d6c7f7aacb",
+      "1cba74e8fde255"
+    ]
+  },
+  "notes": "Recorded run of the signature fighter (tools/combat/fighter.ts, 12-step reaction) on seed 1: roomClear at 242, 0 hurts, then a walk to G."
+}

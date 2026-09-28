@@ -7,47 +7,47 @@ import type { Tuning } from '../tuning';
  * applied at step 9, capped at combat.hitstopCap, with one `hitstop` event. During the freeze
  * nothing moves and no timers run; presses are latched (src/sim/index.ts).
  *
- * The request accumulator is per-step scratch (reset by beginHitstopStep), not state.
+ * The request lives in `state.hitstopReq` (L3 audit #4: no module-level scratch). It is cleared at
+ * the start of every non-frozen step and after it is applied, so a request made outside a step
+ * (a debug spawn, a test) can't leak into a later step.
  */
-const req = { frames: 0, cls: 'light' as HitClass };
-
-export function beginHitstopStep(): void {
-  req.frames = 0;
-  req.cls = 'light';
+export function beginHitstopStep(state: GameState): void {
+  state.hitstopReq.frames = 0;
+  state.hitstopReq.cls = 'light';
 }
+
+const KEY: Record<HitClass, keyof Tuning['combat']> = {
+  light: 'hitstopLight',
+  medium: 'hitstopMedium',
+  heavy: 'hitstopHeavy',
+  seizeTake: 'hitstopSeizeTake',
+  catch: 'hitstopCatch',
+  counter: 'hitstopCounter',
+  repossess: 'hitstopRepossess',
+  hurt: 'hitstopHurt',
+};
 
 export function hitstopFrames(cls: HitClass, t: Tuning): number {
-  const c = t.combat;
-  switch (cls) {
-    case 'light':
-      return c.hitstopLight;
-    case 'medium':
-      return c.hitstopMedium;
-    case 'heavy':
-      return c.hitstopHeavy;
-    case 'seizeTake':
-      return c.hitstopSeizeTake;
-    case 'catch':
-      return c.hitstopCatch;
-    case 'repossess':
-      return c.hitstopRepossess;
-    case 'hurt':
-      return c.hitstopHurt;
-  }
+  return t.combat[KEY[cls]] as number;
 }
 
-export function requestHitstop(cls: HitClass, t: Tuning): void {
+/** Asks for a freeze of `cls`'s length this step (the step keeps the max). */
+export function requestHitstop(state: GameState, cls: HitClass, t: Tuning): void {
   const f = hitstopFrames(cls, t);
-  if (f > req.frames) {
-    req.frames = f;
-    req.cls = cls;
+  const r = state.hitstopReq;
+  if (f > r.frames) {
+    r.frames = f;
+    r.cls = cls;
   }
 }
 
 /** Step 9: apply the max of this step's requests and emit one event. */
 export function applyHitstop(state: GameState, t: Tuning, events: SimEvent[]): void {
-  if (req.frames <= 0) return;
-  const f = Math.min(t.combat.hitstopCap, req.frames);
+  const r = state.hitstopReq;
+  if (r.frames <= 0) return;
+  const f = Math.min(t.combat.hitstopCap, r.frames);
   state.hitstop = Math.min(t.combat.hitstopCap, Math.max(state.hitstop, f));
-  events.push({ type: 'hitstop', frames: f, cls: req.cls });
+  events.push({ type: 'hitstop', frames: f, cls: r.cls });
+  r.frames = 0;
+  r.cls = 'light';
 }

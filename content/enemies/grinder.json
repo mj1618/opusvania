@@ -1,45 +1,122 @@
 {
-  "//": "Grinder (combat-spec §4.4, L3 subset: Charge only; Sparks/Whet is violet, deferred). Validated by src/sim/ai/schema.ts.",
+  "//": "Grinder (combat-spec §4.4): a knife-grinder's cart. Charger, elite (a knockdown starts the Count; 0 HP is a KO). teleBackPx 48 (spec 24): the novice playtest never saw the back-up.",
   "id": "grinder",
-  "body": { "w": 112, "h": 112 },
+  "body": {
+    "w": 112,
+    "h": 112
+  },
   "hurtbox": [8, 8, 96, 104],
-  "hp": 18,
+  "hp": 14,
   "contactDmg": 1,
   "kbScale": 0.25,
   "poundage": 8,
   "flying": false,
   "class": "elite",
-  "sounds": [{ "id": "growl", "colour": "brown", "seizable": true }],
-  "seizeOrder": ["growl"],
+  "flinchFrames": 0,
+  "sounds": [
+    {
+      "id": "growl",
+      "colour": "brown",
+      "seizable": true
+    },
+    {
+      "id": "whet",
+      "colour": "violet",
+      "seizable": true
+    }
+  ],
+  "seizeOrder": ["growl", "whet"],
   "attacks": {
     "charge": {
       "sound": "growl",
-      "trigger": { "rangeX": 640, "rangeY": 96, "cooldown": 60, "weight": 1 },
+      "trigger": {
+        "rangeX": 640,
+        "rangeY": 96,
+        "cooldown": 60,
+        "weight": 1,
+        "minX": 160
+      },
       "telegraph": 28,
-      "teleBackPx": 24,
+      "teleBackPx": 48,
       "active": 60,
       "recovery": 36,
       "wallStunRecovery": 60,
-      "hitboxes": [{ "fromFrame": 1, "toFrame": 60, "box": [100, 8, 40, 96] }],
+      "hitboxes": [
+        {
+          "fromFrame": 1,
+          "toFrame": 60,
+          "box": [100, 8, 40, 96]
+        }
+      ],
       "vx": 15,
       "stopAtWall": true,
       "stopAtLedge": true,
       "dmg": 2,
-      "cue": { "tint": "brown", "audio": "growlWindup" }
+      "cue": {
+        "tint": "brown",
+        "audio": "growlWindup"
+      }
     },
     "snatch": {
       "sound": null,
       "snatch": true,
-      "trigger": { "rangeX": 136, "rangeY": 96, "cooldown": 0, "weight": 1 },
+      "trigger": {
+        "rangeX": 136,
+        "rangeY": 96,
+        "cooldown": 0,
+        "weight": 1
+      },
       "telegraph": 16,
       "active": 4,
       "recovery": 24,
-      "hitboxes": [{ "fromFrame": 1, "toFrame": 4, "box": [0, 0, 136, 112] }],
+      "hitboxes": [
+        {
+          "fromFrame": 1,
+          "toFrame": 4,
+          "box": [0, 0, 136, 112]
+        }
+      ],
       "dmg": 0,
       "push": 8,
-      "cue": { "tint": "brown", "audio": "snatchWindup" }
+      "cue": {
+        "tint": "brown",
+        "audio": "snatchWindup"
+      }
+    },
+    "sparks": {
+      "sound": "whet",
+      "trigger": {
+        "rangeX": 192,
+        "rangeY": 96,
+        "cooldown": 40,
+        "weight": 2
+      },
+      "telegraph": 20,
+      "active": 10,
+      "recovery": 24,
+      "hitboxes": [
+        {
+          "fromFrame": 1,
+          "toFrame": 10,
+          "box": [96, 48, 96, 64]
+        }
+      ],
+      "dmg": 1,
+      "cue": {
+        "tint": "violet",
+        "audio": "whetWindup",
+        "pulses": 2
+      }
     }
   },
-  "movement": { "patrolSpeed": 1.5, "chaseSpeed": 1.5, "aggroRange": 640 },
-  "furious": { "speedMult": 1.2, "telegraphDelta": -4 }
+  "movement": {
+    "kind": "walk",
+    "patrolSpeed": 1.5,
+    "chaseSpeed": 1.5,
+    "aggroRange": 640
+  },
+  "furious": {
+    "speedMult": 1.2,
+    "telegraphDelta": -4
+  }
 }

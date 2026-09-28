@@ -19,10 +19,10 @@
   "room": "lot-7",
   "seed": 1,
   "golden": {
-    "tuningHash": "0b78049094206f",
+    "tuningHash": "031c4b0f93afc4",
     "build": {
-      "sha": "72505a8679-dirty",
-      "sim": "6dee6c42c8",
+      "sha": "dec6925f4b-dirty",
+      "sim": "9784b8ec33",
       "stateVersion": 1
     },
     "end": {
@@ -31,8 +31,8 @@
       "frame": 290,
       "room": "lot-7"
     },
-    "hash": "1bcced2e34b81e",
-    "hashes": ["079442c50f732d", "1b4860c182e786", "010bbafaf3abaf", "09d50280080bbb"]
+    "hash": "1e34ec205ad745",
+    "hashes": ["13bb1f0bef5642", "10dd1e080155f1", "11a8f3010990d6", "05484801fc50d0"]
   },
   "notes": "L3 route A (expert, 4 verbs): seize the partition on the run, jump into the corridor ceiling and down-levy pink (the ceiling eats the recoil hop, so Kid drops straight onto the spring), bounce 448 px into the upper corridor, hop F2, seize F1 on the run (middle), levy the brown slab ahead onto the plate while running, hop the exit step. Hand-scripted, then tape trim."
 }

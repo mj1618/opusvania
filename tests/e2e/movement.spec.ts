@@ -24,7 +24,9 @@ async function boot(page: Page, query: string) {
  * Runs every golden tape in the page's JS engine via tape.check (headless, no rendering: CI's
  * software GL renders at ~1 fps) and compares the 60-frame hashes and end hash with Node.
  */
-test('golden gym tapes reproduce their Node hashes in the browser', async ({ page }) => {
+test('golden tapes (gym, L3 and the L4 combat fights) reproduce their Node hashes in the browser', async ({
+  page,
+}) => {
   test.setTimeout(120_000);
   const errors = await boot(page, '?manual');
   const browser = await page.evaluate(

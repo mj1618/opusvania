@@ -3,6 +3,7 @@
  * it (tests/unit/sim-purity.test.ts allows JSON under content/). Order = gym play order.
  */
 
+import auction from '../../../content/gym/auction.json' with { type: 'json' };
 import gym01 from '../../../content/gym/gym-01.json' with { type: 'json' };
 import gym02 from '../../../content/gym/gym-02.json' with { type: 'json' };
 import gym03 from '../../../content/gym/gym-03.json' with { type: 'json' };
@@ -20,8 +21,13 @@ import gym14 from '../../../content/gym/gym-14.json' with { type: 'json' };
 import hub from '../../../content/gym/hub.json' with { type: 'json' };
 import lot7 from '../../../content/gym/lot-7.json' with { type: 'json' };
 import lot7Control from '../../../content/gym/lot-7-control.json' with { type: 'json' };
+import ringBarker from '../../../content/gym/ring-barker.json' with { type: 'json' };
+import ringClerk from '../../../content/gym/ring-clerk.json' with { type: 'json' };
+import ringGrinder from '../../../content/gym/ring-grinder.json' with { type: 'json' };
+import ringGull from '../../../content/gym/ring-gull.json' with { type: 'json' };
 import stairwell from '../../../content/gym/stairwell.json' with { type: 'json' };
 import thePit from '../../../content/gym/the-pit.json' with { type: 'json' };
+import yard from '../../../content/gym/yard.json' with { type: 'json' };
 import type { RoomFile } from './rooms';
 
 export const ROOM_FILES = [
@@ -45,4 +51,11 @@ export const ROOM_FILES = [
   lot7Control,
   thePit,
   stairwell,
+  // L4 combat greybox: the aims tutorial, the sparring rings and the boss arena.
+  yard,
+  ringBarker,
+  ringGull,
+  ringGrinder,
+  ringClerk,
+  auction,
 ] as unknown as RoomFile[];

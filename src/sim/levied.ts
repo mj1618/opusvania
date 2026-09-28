@@ -2,8 +2,8 @@ import type { Colour, MoveDir, SimEvent } from './events';
 import { type Body, type Collider, Move, moveX, moveY, oneWayUnder, solidAt } from './physics/aabb';
 import type { MoveParams } from './player/params';
 import { bounce } from './player/player';
-import { bagNewest, bagRemove } from './sound';
-import type { GameState, Levied, PlayerState } from './state';
+import { bagNewest, bagRemove, removeLevied, sendHome } from './sound';
+import type { GameState, Levied, PlayerState, Sound } from './state';
 import { speedForHeight, type Tuning } from './tuning';
 import { addDynSolid, dynSolidAt, solidAny } from './world/dynamic';
 import type { Room } from './world/rooms';
@@ -19,7 +19,7 @@ import type { Room } from './world/rooms';
 /** Collider for levied actors: tiles, one-ways (landing) and dynamic solids except itself. */
 class LeviedCollider implements Collider {
   room: Room | null = null;
-  ts = 64;
+  ts = 0;
   skip = -1;
 
   blockedX(b: Body, dir: number): boolean {
@@ -122,6 +122,7 @@ function syncSource(state: GameState, l: Levied): void {
 function place(
   room: Room,
   ts: number,
+  search: number,
   w: number,
   h: number,
   x0: number,
@@ -130,7 +131,7 @@ function place(
   y1: number,
 ): Body | null {
   let start: Body | null = null;
-  for (let d = 0; d <= 32 && !start; d++) {
+  for (let d = 0; d <= search && !start; d++) {
     for (const s of d === 0 ? [0] : [d, -d]) {
       if (!solidAny(room, ts, x0 + s, y0, w, h)) {
         start = { x: x0 + s, y: y0, rx: 0, ry: 0, w, h };
@@ -169,18 +170,20 @@ export function spawnLevy(
   if (!sound) return false;
   const d = colourDims(sound.colour, t);
   const ts = P.tileSize;
+  const search = t.levy.placeSearchPx;
   const [ox, oy] = spawns[dir];
   const feet = p.y + p.h;
   const cx0 = Math.round(p.x + p.w / 2 - d.w / 2);
   let body: Body | null;
   if (dir === 'down') {
     // Start overlapping Kid's lowest part (free space), then drop it to just under her feet.
-    body = place(room, ts, d.w, d.h, cx0, feet - d.h, Math.round(p.x + ox - d.w / 2), p.y + oy);
+    body = place(room, ts, search, d.w, d.h, cx0, feet - d.h, Math.round(p.x + ox - d.w / 2), p.y + oy);
   } else if (dir === 'up') {
     // Centred above her head (bottom edge at oy).
     body = place(
       room,
       ts,
+      search,
       d.w,
       d.h,
       cx0,
@@ -191,7 +194,7 @@ export function spawnLevy(
   } else {
     // Forward: (ox, oy) is the box's top-left when facing right (mirrored: x' = w - ox - boxW).
     const x1 = facing > 0 ? p.x + ox : p.x + p.w - ox - d.w;
-    body = place(room, ts, d.w, d.h, cx0, Math.round(p.y + oy), Math.round(x1), Math.round(p.y + oy));
+    body = place(room, ts, search, d.w, d.h, cx0, Math.round(p.y + oy), Math.round(x1), Math.round(p.y + oy));
   }
   if (!body) return false;
   const id = L.nextId++;
@@ -223,6 +226,8 @@ export function spawnLevy(
     hitList: [],
     squash: 0,
     born: state.frame,
+    life: sound.colour === 'violet' ? t.levy.violetLife : 0,
+    bounces: sound.colour === 'violet' ? t.levy.violetBounces : 0,
   };
   L.levied.push(l);
   bagRemove(L, sound.id);
@@ -279,6 +284,15 @@ export function updateLevied(state: GameState, room: Room, t: Tuning, events: Si
   col.ts = ts;
   const g = t.jump.gravity;
   const cap = t.jump.fastFallMax;
+  // Darts whose life ran out fly home to their owner (combat-spec §1.5).
+  for (let i = L.levied.length - 1; i >= 0; i--) {
+    const l = L.levied[i] as Levied;
+    if (l.life > 0 && --l.life === 0) {
+      const s = L.sounds.find((x) => x.id === l.soundId);
+      if (s) sendHome(state, s, events);
+      else removeLevied(L, l.id);
+    }
+  }
   for (const l of L.levied) {
     col.skip = l.id;
     if (l.squash > 0) l.squash--;
@@ -305,6 +319,27 @@ export function updateLevied(state: GameState, room: Room, t: Tuning, events: Si
         syncSource(state, l);
         continue;
       }
+    }
+    if (l.colour === 'violet') {
+      // A dart: straight, drifting up, one ricochet; it flies home when its life runs out.
+      l.vy += t.levy.violetDrift;
+      const mx = moveX(l, l.vx, col);
+      const my = moveY(l, l.vy, col);
+      if (mx === Move.blocked) {
+        if (l.bounces > 0) {
+          l.bounces--;
+          l.vx = -l.vx;
+          l.hitList = [];
+        } else l.life = 1;
+      }
+      if (my === Move.blocked) {
+        if (l.bounces > 0) {
+          l.bounces--;
+          l.vy = -l.vy;
+        } else l.life = 1;
+      }
+      syncSource(state, l);
+      continue;
     }
     l.vy = Math.min(cap, l.vy + g * l.gravityMult);
     const mx = moveX(l, l.vx, col);
@@ -365,4 +400,77 @@ export function springContacts(
     events.push({ type: 'springBounce', levied: l.id, target: 0, x: p.x + p.w / 2, y: p.y + p.h });
     return;
   }
+}
+
+/**
+ * A hit during a Swallow spills the sound (combat-spec §3.4): it drops at Kid's feet as a levied
+ * object of its colour (in flight, falling), and its owner can come and reclaim it.
+ */
+export function spillSound(state: GameState, room: Room, t: Tuning, sound: Sound, events: SimEvent[]): void {
+  const L = state.local;
+  const p = state.player;
+  const d = colourDims(sound.colour, t);
+  const body = place(
+    room,
+    t.world.tileSize,
+    t.levy.placeSearchPx,
+    d.w,
+    d.h,
+    Math.round(p.x + p.w / 2 - d.w / 2),
+    p.y + p.h - d.h,
+    Math.round(p.x + p.w / 2 - d.w / 2),
+    p.y + p.h - d.h,
+  );
+  bagRemove(L, sound.id);
+  if (!body) {
+    sendHome(state, sound, events);
+    return;
+  }
+  const id = L.nextId++;
+  L.levied.push({
+    id,
+    soundId: sound.id,
+    colour: sound.colour,
+    owner: sound.owner,
+    x: body.x,
+    y: body.y,
+    rx: 0,
+    ry: 0,
+    w: d.w,
+    h: d.h,
+    vx: 0,
+    vy: 0,
+    gravityMult: sound.colour === 'violet' ? 0 : d.gravityMult,
+    phase: 'flight',
+    solid: false,
+    dmg: 0,
+    hitList: [],
+    squash: 0,
+    born: state.frame,
+    life: sound.colour === 'violet' ? t.levy.violetLife : 0,
+    bounces: 0,
+  });
+  sound.status = 'flight';
+  sound.at = id;
+  L.sources.push({
+    id: L.nextId++,
+    kind: 'levied',
+    ent: id,
+    char: '',
+    x: body.x,
+    y: body.y,
+    w: d.w,
+    h: d.h,
+    soundIds: [sound.id],
+    solidWhenArmed: false,
+    ghost: false,
+    pendingSolid: false,
+  });
+  events.push({
+    type: 'swallowSpill',
+    colour: sound.colour,
+    soundId: sound.id,
+    x: p.x + p.w / 2,
+    y: p.y + p.h,
+  });
 }

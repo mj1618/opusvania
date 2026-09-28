@@ -53,6 +53,17 @@ import type { TuningPanel } from './tuning-panel';
 /** L3 combat summary added to state() (brief §1.1): Kid's Chin, bag colours, weight, hitstop, i-frames. */
 export interface CombatView {
   chin: number;
+  /** Max Chin under the Lien. */
+  chinMax: number;
+  /** Ringing frames left (the rally), Counter window frames left. */
+  ring: number;
+  counter: number;
+  /** Kid's own Count (Chin 0), or null. */
+  down: GameState['player']['down'];
+  poundage: number;
+  lien: number;
+  deaths: number;
+  fever: number;
   bag: string[];
   weight: string;
   hitstop: number;
@@ -254,6 +265,14 @@ export function installDebugApi({
       ...s,
       combat: {
         chin: s.player.chin,
+        chinMax: s.player.chinMax,
+        ring: s.player.ring,
+        counter: s.player.counter,
+        down: s.player.down,
+        poundage: s.run.poundage,
+        lien: s.run.lien,
+        deaths: s.run.deaths,
+        fever: Math.max(s.run.fever, L.fever),
         bag: L.bag.map((id) => L.sounds.find((x) => x.id === id)?.colour ?? '?'),
         weight: s.player.profile,
         hitstop: s.hitstop,

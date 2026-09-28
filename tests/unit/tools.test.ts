@@ -78,12 +78,13 @@ describe('input DSL', () => {
       0,
       0,
       maskOf(['left', 'jump']),
-      maskOf(['special']),
-      maskOf(['special']),
+      maskOf(['map']),
+      maskOf(['map']),
       maskOf(['right']),
+      maskOf(['special']),
     ];
     const text = formatTape(masks);
-    expect(text).toBe('.2 L+J1 special*2 R1');
+    expect(text).toBe('.2 L+J1 map*2 R1 H1');
     expect(parseTape(text)).toEqual(masks);
     expect(parseTape([{ hold: ['right'], frames: 2 }])).toEqual(parseInputScript('right*2'));
   });

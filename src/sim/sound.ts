@@ -110,7 +110,7 @@ export function actorOverlaps(state: GameState, x: number, y: number, w: number,
  * which case it stays ghost with `pendingSolid` and retries every step (nothing is ever crushed).
  */
 export function refreshSource(state: GameState, src: Source, events: SimEvent[]): void {
-  const armed = isArmed(state.local, src);
+  const armed = isArmed(state.local, src) && !((src.soldT ?? 0) > 0);
   const c = sourceCentre(src);
   if (!armed) {
     src.pendingSolid = false;
@@ -153,6 +153,8 @@ export function conservationProblems(L: LocalState, slots: number): string[] {
     if (s.status === 'bag' && (b !== 1 || lv)) out.push(`sound ${s.id} bag status but bag count ${b}`);
     if ((s.status === 'levied' || s.status === 'flight') && (lv !== 1 || b))
       out.push(`sound ${s.id} levied but levied count ${lv}`);
+    if ((s.status === 'consumed' || s.status === 'held') && (b || lv))
+      out.push(`sound ${s.id} ${s.status} but in bag/levied`);
     if (!sourceById(L, s.owner)) out.push(`sound ${s.id} has no owner source ${s.owner}`);
   }
   for (const id of inBag.keys()) if (!soundById(L, id)) out.push(`bag holds unknown sound ${id}`);

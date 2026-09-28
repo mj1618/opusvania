@@ -81,6 +81,12 @@ export interface MoveParams {
   footstepPx: number;
   hardLandFallPx: number;
   transitionFrames: number;
+  goalBeatFrames: number;
+  doorTriggerTiles: number;
+  /** Combat rooms (the seize kit): hazards cost Chin and respawn at the last safe ground. */
+  hazardDmg: number;
+  hazardRespawnFrames: number;
+  hazardIframes: number;
 }
 
 type Groups = Record<string, Record<string, unknown>>;
@@ -208,5 +214,10 @@ export function resolveParams(base: Tuning, profile: string): MoveParams {
     footstepPx: t.misc.footstepPx,
     hardLandFallPx: t.misc.hardLandFallPx,
     transitionFrames: t.world.transitionFrames,
+    goalBeatFrames: t.world.goalBeatFrames,
+    doorTriggerTiles: t.world.doorTriggerTiles,
+    hazardDmg: t.kid.hazardDmg,
+    hazardRespawnFrames: t.kid.hazardRespawnFrames,
+    hazardIframes: t.kid.iframes,
   };
 }

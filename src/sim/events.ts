@@ -7,7 +7,15 @@
  */
 export type Colour = 'brown' | 'pink' | 'violet' | 'white';
 export type MoveDir = 'fwd' | 'up' | 'down';
-export type HitClass = 'light' | 'medium' | 'heavy' | 'seizeTake' | 'catch' | 'repossess' | 'hurt';
+export type HitClass =
+  | 'light'
+  | 'medium'
+  | 'heavy'
+  | 'seizeTake'
+  | 'catch'
+  | 'counter'
+  | 'repossess'
+  | 'hurt';
 
 export type JumpKind = 'ground' | 'coyote' | 'buffered' | 'wall' | 'double' | 'dashJump';
 export type CornerKind = 'head' | 'ledge' | 'dash';
@@ -35,7 +43,7 @@ export type SimEvent =
   // --- L3 signature mechanic and combat foundations (combat-spec §2, L3 brief §2.4). Positions
   // are world px (the target's centre unless stated). `soundId`/`source`/`enemy` are local ids.
   | { type: 'moveStart'; move: string; dir: MoveDir; x: number; y: number }
-  | { type: 'whiff'; move: string; reason?: 'down'; x: number; y: number }
+  | { type: 'whiff'; move: string; reason?: 'down'; target?: number; x: number; y: number }
   | {
       type: 'hit';
       cls: HitClass;
@@ -70,13 +78,15 @@ export type SimEvent =
   | { type: 'absorb'; soundId: number; enemy: number; x: number; y: number }
   | { type: 'revoice'; soundId: number; enemy: number; x: number; y: number }
   | { type: 'retrieve'; soundId: number; enemy: number; x: number; y: number }
-  | { type: 'hurt'; dmg: number; src: number; x: number; y: number }
+  | { type: 'hurt'; dmg: number; src: number; attack: string; x: number; y: number }
   | {
       type: 'telegraph';
       enemy: number;
       attackId: string;
       colour: Colour;
       frames: number;
+      /** The attack's wind-up sound (`cue.audio` in content/enemies). */
+      cue: string;
       x: number;
       y: number;
     }
@@ -88,7 +98,43 @@ export type SimEvent =
   | { type: 'ko'; enemy: number; x: number; y: number }
   | { type: 'plate'; char: string; by: 'slab' | 'heavy'; x: number; y: number }
   | { type: 'gateOpen'; char: string; x: number; y: number }
-  | { type: 'roomClear'; x: number; y: number };
+  | { type: 'roomClear'; x: number; y: number }
+  // --- L4 combat greybox (combat-spec §2 event names). Positions: Kid's centre for Kid events,
+  // the enemy's centre for enemy events, unless stated.
+  | { type: 'flinch'; enemy: number; x: number; y: number }
+  | { type: 'slipStart'; x: number; y: number }
+  | { type: 'slipClean'; enemy: number; x: number; y: number }
+  | { type: 'counterOpen'; x: number; y: number }
+  | { type: 'counterHit'; enemy: number; move: string; x: number; y: number }
+  | { type: 'ringStart'; x: number; y: number }
+  | { type: 'ringRecover'; x: number; y: number }
+  | { type: 'ringLost'; x: number; y: number }
+  | { type: 'hazard'; dmg: number; x: number; y: number }
+  | { type: 'swallowStart'; colour: Colour; soundId: number; x: number; y: number }
+  | { type: 'swallowCommit'; colour: Colour; soundId: number; heal: number; x: number; y: number }
+  | { type: 'swallowSpill'; colour: Colour; soundId: number; x: number; y: number }
+  | { type: 'swallowRefused'; x: number; y: number }
+  | { type: 'bagLeak'; soundId: number; colour: Colour; x: number; y: number }
+  | { type: 'hoarse'; enemy: number; x: number; y: number }
+  | { type: 'shot'; enemy: number; attackId: string; kind: string; colour: Colour; x: number; y: number }
+  | { type: 'shotLand'; kind: string; colour: Colour; x: number; y: number }
+  | { type: 'hop'; enemy: number; x: number; y: number }
+  | { type: 'runnerSlip'; enemy: number; x: number; y: number }
+  | { type: 'kidDown'; x: number; y: number }
+  | { type: 'beatCountTick'; beat: number; canRise: boolean; x: number; y: number }
+  | { type: 'beatCountRise'; paid: number; x: number; y: number }
+  | { type: 'countedOut'; x: number; y: number }
+  | { type: 'corner'; x: number; y: number }
+  | { type: 'distrained'; poundage: number; lien: number; x: number; y: number }
+  | { type: 'redistrained'; poundage: number; x: number; y: number }
+  | { type: 'auctioned'; poundage: number; x: number; y: number }
+  | { type: 'poundage'; amount: number; x: number; y: number }
+  | { type: 'lotMarked'; enemy: number; lot: number; beat: number; x: number; y: number }
+  | { type: 'sold'; enemy: number; lot: number; x: number; y: number }
+  | { type: 'soldBag'; enemy: number; soundId: number; x: number; y: number }
+  | { type: 'outbid'; enemy: number; lot: number; x: number; y: number }
+  | { type: 'bossPhase'; enemy: number; phase: number; x: number; y: number }
+  | { type: 'fever'; level: number; x: number; y: number };
 
 export type SimEventType = SimEvent['type'];
 export type SimEventOf<T extends SimEventType> = Extract<SimEvent, { type: T }>;

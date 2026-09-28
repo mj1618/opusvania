@@ -23,6 +23,7 @@ import { ActionBit } from '../src/sim/input';
 import { solidAt } from '../src/sim/physics/aabb';
 import { conservationProblems } from '../src/sim/sound';
 import type { GameState } from '../src/sim/state';
+import { defaultTuning } from '../src/sim/tuning';
 import { dynSolidAt, rebuildSolids } from '../src/sim/world/dynamic';
 import { getRoom } from '../src/sim/world/rooms';
 import { a4Scan, d3Scan } from './l3-verdict/checks';
@@ -45,6 +46,9 @@ const LEGAL = new Set([
   'REPOSSESSED',
   'RISE',
   'KO',
+  'FLINCH',
+  'HOP',
+  'FLEE',
 ]);
 
 export interface FuzzOptions {
@@ -89,7 +93,7 @@ function rng(seed: number): () => number {
 export function invariantProblems(s: GameState, slots: number, maxChin: number, maxTokens: number): string[] {
   const out: string[] = [];
   const room = getRoom(s.roomId);
-  const ts = 64;
+  const ts = defaultTuning.world.tileSize;
   rebuildSolids(s, ts);
   const L = s.local;
   for (const l of L.levied) {
@@ -110,6 +114,9 @@ export function invariantProblems(s: GameState, slots: number, maxChin: number, 
   if (p.chin < 0 || p.chin > maxChin) out.push(`chin ${p.chin}`);
   const tokens = L.enemies.filter((e) => e.token).length;
   if (tokens > maxTokens) out.push(`${tokens} attack tokens`);
+  if (p.chin > p.chinMax) out.push(`chin ${p.chin} > max ${p.chinMax}`);
+  for (const sh of L.shots)
+    if (!(sh.life >= 0) || !Number.isFinite(sh.x + sh.y)) out.push(`shot ${sh.id} bad`);
   try {
     hashState(s);
   } catch (err) {
@@ -134,6 +141,7 @@ export function fuzz(o: FuzzOptions): FuzzResult {
   if (ab.dash) actions.push(ActionBit.dash);
   if (o.verbs && ab.seize) actions.push(ActionBit.seize);
   if (o.verbs && ab.levy) actions.push(ActionBit.levy);
+  if (o.verbs && ab.seize) actions.push(ActionBit.special);
   const abilities = o.verbs ? undefined : { seize: false, levy: false };
   const fresh = new HeadlessSim({ room: o.room, ...(abilities ? { abilities } : {}) });
   const goal = resolveTarget(o.room, 'G');
@@ -151,17 +159,21 @@ export function fuzz(o: FuzzOptions): FuzzResult {
     const sim = new HeadlessSim({ room: o.room, seed: run + 1, ...(abilities ? { abilities } : {}) });
     let f = 0;
     let reached = false;
+    let left = false;
     const runSteps: ReturnType<typeof sim.step>[] = [];
     const runFrozen: boolean[] = [];
-    while (f < o.frames && !reached) {
+    while (f < o.frames && !reached && !left) {
       let mask = 0;
       for (const a of actions) if (rand() < 0.3) mask |= a;
       const hold = 1 + Math.floor(rand() * 30);
       for (let i = 0; i < hold && f < o.frames; i++, f++) {
         runFrozen.push(sim.state.hitstop > 0);
-        runSteps.push(sim.step(mask));
+        const evs = sim.step(mask);
+        runSteps.push(evs);
+        if (evs.some((e) => e.type === 'goal')) reached = true;
+        // Left the room (the goal's warp, or Counted Out to the Corner): the run ends.
         if (sim.state.roomId !== o.room) {
-          reached = true;
+          left = true;
           break;
         }
         if (overlaps(sim.view, goal)) reached = true;
@@ -179,6 +191,8 @@ export function fuzz(o: FuzzOptions): FuzzResult {
     for (const b of r3.bad) if (d3.bad.length < 20) d3.bad.push(`run ${run} ${b}`);
     // Regeneration: a reload must equal a fresh load.
     if (sim.state.roomId === o.room) {
+      // A Runner waiting in this room (Kid was Counted Out here) is run state, not regeneration.
+      sim.state.run.runner = null;
       loadRoom(sim.state, o.room, undefined, sim.tuning, []);
       if (JSON.stringify(sim.state.local) !== JSON.stringify(fresh.state.local))
         violations.push(`run ${run}: reloaded local state differs from a fresh load`);
