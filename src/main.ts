@@ -75,19 +75,25 @@ async function boot(): Promise<void> {
 
   const loop = new FixedStepLoop(1000 / 60);
   let last = performance.now();
+  let lastDrawn = '';
   const frame = (now: number) => {
     const elapsed = now - last;
     last = now;
-    let alpha = 1;
     if (game.mode === 'realtime') {
       const n = loop.advance(elapsed);
       for (let i = 0; i < n; i++) game.stepOnce();
-      alpha = loop.alpha;
+      render(loop.alpha);
     } else {
       loop.reset();
       input.flush();
+      // Manual mode: the debug API renders on step()/screenshot(); only redraw here if something
+      // changed (a software-GL CI runner takes ~1 s per frame, which starves page.evaluate).
+      const key = `${game.state.frame}:${game.roomVersion}:${overlay.visible}:${panel.visible}`;
+      if (key !== lastDrawn) {
+        lastDrawn = key;
+        render(1);
+      }
     }
-    render(alpha);
     requestAnimationFrame(frame);
   };
   render(1);

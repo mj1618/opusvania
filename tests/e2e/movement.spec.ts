@@ -26,21 +26,27 @@ async function boot(page: Page, query: string) {
  * at ~1 fps), at every 60-frame cut and at the goal frame, and compares with Node.
  */
 test('golden gym replays reproduce their Node hashes in the browser', async ({ page }) => {
+  test.setTimeout(120_000);
   const errors = await boot(page, '?manual');
-  for (const r of REPLAYS) {
+  const cases = REPLAYS.map((r) => {
     const tuning = presetTuning(r.preset);
     const start = createState({ seed: r.seed, roomId: r.room }, tuning);
     Object.assign(start.player.abilities, r.abilities);
     const replay: Replay = { version: 1, start, tuning, inputs: parseInputScript(r.inputs) };
     const cuts = [...r.expect.hashes.map((_, i) => 60 * (i + 1)), r.expect.goalFrame];
-    const browser: string[] = await page.evaluate(
-      ({ replay, cuts }) =>
+    return { r, replay, cuts };
+  });
+  const browser: string[][] = await page.evaluate(
+    (cs) =>
+      cs.map(({ replay, cuts }) =>
         cuts.map((n) => window.__game.replay.verify({ ...replay, inputs: replay.inputs.slice(0, n) }).hash),
-      { replay, cuts },
-    );
+      ),
+    cases.map(({ replay, cuts }) => ({ replay, cuts })),
+  );
+  for (const [i, { r, replay, cuts }] of cases.entries()) {
     const node = cuts.map((n) => runReplay({ ...replay, inputs: replay.inputs.slice(0, n) }).hash);
-    expect(browser, r.room).toEqual(node);
-    expect(browser.slice(0, -1), r.room).toEqual(r.expect.hashes);
+    expect(browser[i], r.room).toEqual(node);
+    expect(browser[i]?.slice(0, -1), r.room).toEqual(r.expect.hashes);
     const end = runReplay({ ...replay, inputs: replay.inputs.slice(0, r.expect.goalFrame) }).state;
     expect(end.roomStats.goal, r.room).toBe(true);
   }
