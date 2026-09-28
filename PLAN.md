@@ -277,6 +277,11 @@ src/
     ai/           # enemy behaviour (state machines / behaviour trees, data-driven)
     world/        # rooms, transitions, save data, map knowledge, progression flags
     events.ts     # typed event bus → render/audio
+    input.ts      # action bitmask, edge detection, input buffering (in sim so it replays exactly)
+    tuning.ts     # all gameplay numbers (one file for now; split per system when it grows)
+    replay.ts     # replay record/playback, rng.ts, hash.ts
+  game.ts         # runtime harness: prev/current state, scripted input, recorder, event dispatch (no DOM)
+  loop.ts         # fixed-step accumulator
   render/         # Pixi scene graph, camera, parallax, lighting, particles, post-fx
     rig/          # cutout skeletal animation runtime
   audio/          # music director (stems, bar-quantised transitions), SFX, ambience
@@ -295,6 +300,8 @@ tests/
   e2e/            # Playwright: screenshot diffs, smoke, perf
 docs/             # design bible, art bible, audio bible, decisions log
 ```
+
+*Phase 0 deviations (L1):* `tuning.ts` sits at `src/sim/` rather than `sim/player/` because it also holds world and FX numbers. Input buffering lives in `src/sim/input.ts`, not `src/input/`, because buffered presses must be derived inside the sim to replay deterministically; `src/input/` only maps devices to the action bitmask. `src/game.ts` and `src/loop.ts` were added as the DOM-free harness around the sim.
 
 ### 4.3 Key systems and how we make them good
 

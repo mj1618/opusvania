@@ -1,0 +1,70 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "**",
+      "!tools/ideation",
+      "!docs",
+      "!progress",
+      "!clips",
+      "!test-results",
+      "!playwright-report"
+    ]
+  },
+  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 110 },
+  "javascript": { "formatter": { "quoteStyle": "single", "semicolons": "always" } },
+  "linter": {
+    "enabled": true,
+    "rules": { "preset": "recommended" }
+  },
+  "overrides": [
+    {
+      "includes": ["src/sim/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "window": "src/sim must not touch the DOM.",
+                  "document": "src/sim must not touch the DOM.",
+                  "navigator": "src/sim must not touch the DOM.",
+                  "performance": "src/sim must use the frame count, not wall-clock time.",
+                  "requestAnimationFrame": "src/sim is stepped by main, not rAF.",
+                  "setTimeout": "src/sim must use the frame count.",
+                  "setInterval": "src/sim must use the frame count.",
+                  "AudioContext": "src/sim must not play audio; emit an event."
+                }
+              }
+            },
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["pixi.js", "pixi.js/*", "@pixi/*", "tweakpane", "@tweakpane/*"],
+                    "message": "src/sim must not import render/debug libraries."
+                  },
+                  {
+                    "group": [
+                      "**/render/**",
+                      "**/debug/**",
+                      "**/input/**",
+                      "**/audio/**",
+                      "**/ui/**",
+                      "**/main"
+                    ],
+                    "message": "src/sim must not import non-sim code."
+                  },
+                  { "group": ["node:*"], "message": "src/sim must not import Node APIs." }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+clips/
+test-results/
+playwright-report/
+blob-report/
+.playwright-cli/
+*.log
+.DS_Store
+.vite/

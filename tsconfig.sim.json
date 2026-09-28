@@ -1,0 +1,10 @@
+{
+  "//": "Typechecks src/sim with no DOM lib and no ambient types, so any DOM/browser/Node API used in the sim (directly or via an import) is a type error.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": ["src/sim"],
+  "exclude": []
+}
