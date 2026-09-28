@@ -102,3 +102,4 @@ Follow PLAN §7. The principles behind it:
 - Keep your own context lean: delegate file-heavy reading and ask for conclusions, not dumps.
 - `progress/loops.md` is the source of truth for loop state. It must be enough to resume after a compaction.
 - Don't let parallel streams sprawl: 2 to 4 concurrent sub-agents is the normal range.
+- While a sub-agent is working in the main tree, the orchestrator must not `git pull`/rebase there (autostash can disturb its uncommitted work). Commit orchestrator docs only with `git add <paths>` + push, or from a separate worktree.
