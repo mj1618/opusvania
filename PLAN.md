@@ -467,6 +467,14 @@ Each phase has exit criteria. We do not move on until they are met. The phases a
   - Input-to-response time is under 100ms.
 
 ### Phase 2: Combat greybox
+Per `docs/design/combat-spec.md`, which replaces the Hollow Knight-style nail and soul model with Tallage's own:
+- A boxing kit (jab, cross, uppercut, overhand pogo).
+- Seize doubles as a telegraph-window catch/parry, and the Count is the finisher.
+- The bag of sounds is the only resource (throw it, keep it for weight, or swallow it to heal).
+- Ringing is a one-pip rally.
+- "Last safe ground" hazard respawn moves here from Phase 3.
+
+The original bullets:
 - Hitbox and hurtbox system, a nail-style slash in 4 directions, and pogo on enemies and spikes.
 - The full feedback stack: hitstop, flash, knockback, shake, sparks and sound.
 - Player health, invincibility frames, and Resonance used for healing and one spell.
@@ -616,3 +624,10 @@ Each biome goes through the same stages: greybox → validator → playtest → 
     - Phase 1 gets objective exit gates, and the human sign-off is queued.
   - Art is on hold per the user. The build order is now: movement greybox (L2), then the Tallage signature-mechanic greybox experiment (L3), then combat.
   - Research note: Hollow Knight's coyote and buffer windows are only about 40 ms, with no corner correction. We default to Celeste's more generous ~100 ms.
+- **2026-09-28, L2.**
+  - The movement greybox is done and verified objectively: exact tests, bot reachability, feel report inside the reference ranges, and a playtester critique plus fix pass. Human feel sign-off is queued, not waited on.
+  - The combat spec replaces nail and soul with a boxing kit and the bag economy (Phase 2).
+  - The procedural audio foundation landed early, because sound is the concept's core.
+  - Naming: keep **Tallage**.
+  - Next: the L3 signature-mechanic experiment, with an atmosphere/lighting foundation in parallel. Code-drawn visuals only, since art is on hold.
+

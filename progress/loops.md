@@ -57,4 +57,33 @@ Source of truth for loop state. Newest loop at the bottom. Format per STUDIO.md 
 
 **Kill criteria.** None for the controller: it's mandatory work, so it iterates until it's good. If the ASCII room format proves painful, switch to LDtk early.
 
+**Status.** Done (provisional; human feel sign-off is queued in the inbox).
+
+### L2 report
+- **A: Controller.** Physics, all assists, 3 presets, camera, juice, 14 gym rooms plus a hub. The spec's exact tests pass.
+- **B: Tooling.** trace, save and restore; headless runner; search bot; feel report; golden tapes; clip study mode.
+- **C: Audio.** Fully procedural, event-driven, with noise-colour hum, seize and levy voices.
+- **Integration.** One debug API and one tape system. `check` takes about 18 s.
+- **Playtester critique** (`docs/reports/L2-playtest.md`): solid base, with 1 P0 (wall retention cancelled wall jumps) and 2 P1s (camera zone cuts, weak juice). Decision: **improve**. A fix pass resolved P0, both P1s and the P2s. The A/B toggle moved to F3. All 23 bot claims pass and all 18 tapes reach their goals.
+- **Also done.** Combat spec (`docs/design/combat-spec.md`), L3 experiment brief (`docs/design/seize-levy-experiment.md`), naming pass (keep **Tallage**).
+- **Decision: move on** to L3.
+
+---
+
+## L3: Tallage signature-mechanic experiment (started 2026-09-28)
+
+**Goal.** Build Seize, Levy, the bag and weight classes per `docs/design/seize-levy-experiment.md`, plus the shared combat foundations (move table, hitbox module, sound-source component). Decide PASS / IMPROVE / KILL on the concept with `npm run l3:verdict`.
+
+**Hypothesis.** Seize/Levy adds expression without slowing play:
+- Lot 7 flow ratio is at most 1.35 against the jumps-only control room.
+- Stillness is at most 10% of frames.
+- Gates can't be bypassed.
+- Seize/Levy fighting beats jab-only by 25% or more.
+
+**Kill criteria.** Flow ratio above 1.6, stillness above 20%, or a movement-only bypass of Lot 7. On a kill, fall back to THE DISSOLUTION ROLLS in the same harness.
+
+**Streams.**
+- **A: Experiment** (main tree; owns `src/sim/`, rooms, sim tests, render for sources and HUD).
+- **B: Atmosphere foundation** (worktree; owns a new render post-FX and lighting layer, parallax layers, perf HUD, screenshot-diff tests). Code-drawn only, no art assets.
+
 **Status.** In progress.
