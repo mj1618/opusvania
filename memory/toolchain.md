@@ -21,3 +21,9 @@
   `.github/workflows/` is rejected. Push over SSH instead: `git push git@github.com:mj1618/opusvania.git main`.
 - **CI/Pages:** `ci.yml` runs `npm run check` (WebGL works in headless Chromium on ubuntu runners);
   `pages.yml` deploys `main` only after CI succeeds (workflow_run), or on manual dispatch.
+- **Biome and worktrees**: agent worktrees live in `.claude/worktrees/` (untracked); Biome found their
+  `biome.json` as nested roots and refused to run, so `biome.json` excludes `.claude`.
+- **JSON imports need `with { type: 'json' }`**: Playwright loads specs as native Node ESM, which rejects
+  bare JSON imports (Vite and tsx don't care). Anything the sim imports from `content/` must carry it.
+- **Tweakpane clamps bound values** to a binding's min/max when it refreshes, silently rewriting them
+  (the hk preset's 999 accelerations became 12.8). Number bindings in the tuning panel have no min/max.

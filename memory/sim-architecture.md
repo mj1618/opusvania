@@ -1,4 +1,4 @@
-# Sim / runtime architecture (Phase 0)
+# Sim / runtime architecture
 
 - `src/sim/` pure: `step(state, inputMask, tuning, events)` mutates a plain-JSON `GameState` and appends
   `SimEvent`s. `hashState` = cyrb53 over key-sorted JSON. RNG state (`state.rng`, mulberry32) is in the state.
@@ -18,5 +18,25 @@
   helper in `src/sim` (lookup table or polynomial) when needed. `sqrt/floor/round/abs/min/max` are exact.
 - Live keyboard is sampled on every step even when scripted input wins (and flushed while in manual
   mode), so taps made during a script or pause don't fire later.
-- Render FX that animate (dust puffs) are timed by sim frame + alpha, not wall clock, so clips are deterministic.
-- Rooms are hardcoded strings in `src/sim/world/rooms.ts`, validated with Zod; outside the room is solid.
+- Render never runs its own clock: `Game.afterStep` calls render once per sim step with that step's
+  events, and the camera (`src/render/camera/`) and juice (`src/render/fx.ts`) step there. Both are pure
+  TS with a render-side seeded RNG, so clips are deterministic and camera tests run headless.
+- Rooms are JSON in `content/gym/` bundled by `src/sim/world/content.ts` (the one place the sim imports
+  outside `src/sim`; the purity test allows `content/**.json`). See gym-rooms.md.
+- Per-step params: `step()` calls `resolveParams(tuning, player.profile)` (src/sim/player/params.ts),
+  which applies the movement profile and turns disabled assists into 0/false. The controller never
+  reads `tuning` directly.
+- Room transitions are sim state (`state.transition`): touching G (or Up at a door) freezes the player
+  for `world.transitionFrames`, then `loadRoom` runs inside `step`, so replays and hashes cover them.
+
+## Sim events (for audio/render; defined in `src/sim/events.ts`)
+Positions are the player's feet centre unless noted. `dir` is -1/1.
+- `jump {kind: ground|coyote|buffered|wall|double|dashJump, dir}`: wall `dir` = away from the wall.
+- `land {vy, fallPx, hard}`: `vy` = impact speed; `hard` = fallPx >= misc.hardLandFallPx or vy >= maxFall.
+- `step` (footstep every misc.footstepPx grounded), `skid {dir}` (ground turn-around starts).
+- `wallSlideStart/End {dir = wall side}`: slide volume can follow `state.player.vy` while sliding.
+- `dashStart {dir, air}`, `dashEnd {dir}`, `headBump` (y = head), `cornerCorrect {kind: head|ledge|dash, dx, dy}`.
+- `dropThrough`, `pogo {target: orb|spike}` (no `jump` event for a pogo), `death` (y = body centre),
+  `respawn`, `checkpoint` (touched an R marker).
+- `goal {kind: main|optional, roomId}`, `roomExit {roomId, to}` (fade-out starts), `roomEnter {roomId}`,
+  `profileChange {from, to}`.
