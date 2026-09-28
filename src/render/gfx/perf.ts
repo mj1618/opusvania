@@ -118,10 +118,10 @@ export class PerfHud {
     // Text re-layout is not free: refresh 4x a second at 60 fps.
     if (this.every++ % 15 !== 0) return;
     const lines = [
-      `fps     ${p.fps.toFixed(0).padStart(4)}   frame ${p.frameMs.toFixed(1)} ms`,
-      `cpu     ${p.cpuMs.toFixed(2)} ms  p95 ${p.cpuP95.toFixed(2)}`,
-      `draws   ${p.drawCalls}`,
-      ...Object.entries(extra).map(([k, v]) => `${k.padEnd(8)}${v}`),
+      `fps      ${p.fps.toFixed(0).padStart(4)}   frame ${p.frameMs.toFixed(1)} ms`,
+      `cpu      ${p.cpuMs.toFixed(2)} ms  p95 ${p.cpuP95.toFixed(2)}`,
+      `draws    ${p.drawCalls}`,
+      ...Object.entries(extra).map(([k, v]) => `${k.padEnd(9)}${v}`),
     ];
     const text = lines.join('\n');
     if (text === this.lastText) return;

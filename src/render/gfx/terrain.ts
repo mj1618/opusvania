@@ -114,13 +114,13 @@ export function drawTerrain(g: Graphics, glow: Graphics, room: Room, d: Dressing
     }
   }
   // Deep rock: faint large blocks so big solid masses are not flat black.
-  const block = mix(p.terrain, p.terrainDeep, 0.5);
+  const block = mix(p.terrain, p.terrainDeep, 0.25);
   for (let ty = 0; ty < room.height; ty++) {
     for (let tx = (ty % 2) * 1; tx < room.width; tx += 2) {
       const dd = depth[ty * room.width + tx] ?? 0;
       if (dd < 3 || !solid(tx, ty) || !solid(tx + 1, ty)) continue;
       const hsh = ((tx * 73856093) ^ (ty * 19349663)) >>> 0;
-      const a = 0.12 + ((hsh % 100) / 100) * 0.22;
+      const a = 0.2 + ((hsh % 100) / 100) * 0.3;
       g.rect(tx * ts + 3, ty * ts + 3, 2 * ts - 6, ts - 6).fill({ color: block, alpha: a });
     }
   }

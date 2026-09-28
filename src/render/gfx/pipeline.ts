@@ -4,9 +4,10 @@
  *   stage
  *   ├─ lightmap sprite (not rendered; maps filter coords to the light map)
  *   ├─ scene            [PostFilter: haze, grade, vignette, grain, aberration]
- *   │  ├─ bg            far0 / far1 / far2 baked parallax layers (fogged, blurred by depth)
+ *   │  ├─ bg            far0 / far1 / far2 / mid baked parallax layers (fogged, blurred by depth);
+ *   │  │                unlit on purpose: lit, the mid layer went as dark as the playfield and
+ *   │  │                its pillars read as walls. Lamps still glow over it through the haze.
  *   │  ├─ lit           [LightingFilter: x light map]
- *   │  │  ├─ mid        baked near-background layer (lit by lamps)
  *   │  │  └─ playfield  the camera-moved world: terrain, characters, juice (WorldRenderer.world)
  *   │  ├─ emissive      additive, unlit glowing shapes, world space
  *   │  ├─ bloom         the emissive layer blurred at 1/4 and 1/8 res (BloomPass), additive
@@ -93,6 +94,8 @@ export class GfxPipeline {
   readonly terrainGlow = new Graphics({ label: 'terrain-glow' });
   /** The player's emissive accents (drawn by WorldRenderer). */
   readonly playerGlow = new Graphics({ label: 'player-glow' });
+  /** Glowing juice (dash streaks, death burst, rings), drawn by WorldRenderer. */
+  readonly fxGlow = new Graphics({ label: 'fx-glow' });
   private qualityName: QualityName = 'high';
   private q: QualitySettings = QUALITY.high;
   private backdrop: Backdrop | null = null;
@@ -119,8 +122,9 @@ export class GfxPipeline {
     this.scene.filterArea = screen;
     L.lit.filterArea = screen;
     L.emissiveRoot.blendMode = 'add';
-    L.lit.addChild(L.mid, L.playfield);
-    L.emissive.addChild(this.terrainGlow, this.playerGlow);
+    L.bg.addChild(L.mid);
+    L.lit.addChild(L.playfield);
+    L.emissive.addChild(this.terrainGlow, this.fxGlow, this.playerGlow);
     L.emissiveRoot.addChild(L.emissive);
     L.ambient.addChild(this.ambientView.soot, this.ambientView.glow);
     this.scene.addChild(L.bg, L.lit, L.emissiveRoot, this.bloom.view, L.ambient, L.fg);
@@ -201,7 +205,9 @@ export class GfxPipeline {
     this.backdrop?.destroy();
     const b = buildBackdrop(this.renderer, room, tuning.world.tileSize, d, this.q);
     this.backdrop = b;
-    this.layers.bg.addChild(...b.far.map((l) => l.sprite));
+    b.far.forEach((l, i) => {
+      this.layers.bg.addChildAt(l.sprite, i);
+    });
     this.layers.mid.addChild(b.mid.sprite);
     this.layers.fg.addChild(b.fg);
   }

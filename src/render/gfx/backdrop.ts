@@ -29,9 +29,9 @@ export interface LayerSpec {
 
 export const LAYER_SPECS = {
   far0: { name: 'far0', factor: 0.08, fog: 0.7, desat: 0.5, blur: 2.5 },
-  far1: { name: 'far1', factor: 0.22, fog: 0.5, desat: 0.35, blur: 1.2 },
-  far2: { name: 'far2', factor: 0.42, fog: 0.4, desat: 0.25, blur: 0.6 },
-  mid: { name: 'mid', factor: 0.68, fog: 0.34, desat: 0.15, blur: 0 },
+  far1: { name: 'far1', factor: 0.22, fog: 0.58, desat: 0.35, blur: 1.2 },
+  far2: { name: 'far2', factor: 0.42, fog: 0.5, desat: 0.25, blur: 0.6 },
+  mid: { name: 'mid', factor: 0.68, fog: 0.32, desat: 0.15, blur: 0 },
   fg: { name: 'fg', factor: 1.35, fog: 0, desat: 0, blur: 0 },
 } satisfies Record<string, LayerSpec>;
 
@@ -181,7 +181,7 @@ function hangingSign(
     .lineTo(x + 10, y + drop)
     .moveTo(x + w - 10, y)
     .lineTo(x + w - 10, y + drop);
-  g.stroke({ width: 2, color: chain });
+  g.stroke({ width: 3, color: chain });
   g.rect(x, y + drop, w, h).fill(color);
   g.rect(x + 5, y + drop + 5, w - 10, h - 10).stroke({ width: 2, color: trim });
   // A few "lettering" strokes: title-deed signs.
@@ -344,7 +344,9 @@ function drawFar2(g: Graphics, rng: RenderRng, p: Palette, d: Dressing, w: numbe
   const spec = LAYER_SPECS.far2;
   const col = layerColor(p, spec, p.silhouette);
   const plank = layerColor(p, spec, mix(p.silhouette, p.rimSide, 0.35));
-  const trim = layerColor(p, spec, p.rimSide, 0.05);
+  // Signs get extra fog: a dark plank floating mid-air reads as a platform (gym-11 golden).
+  const sign = layerColor(p, spec, mix(p.silhouette, p.rimSide, 0.35), 0.22);
+  const trim = layerColor(p, spec, p.rimSide, 0.25);
   const base = h - MARGIN * 0.4;
   const anchors: Array<[number, number]> = [];
   let x = rng.range(-60, 200);
@@ -356,7 +358,7 @@ function drawFar2(g: Graphics, rng: RenderRng, p: Palette, d: Dressing, w: numbe
       scaffold(g, rng, x, base, sw, sh, col, plank);
       anchors.push([x + sw / 2, base - sh]);
       if (rng.chance(0.6 * d.backdrop.signs))
-        hangingSign(g, rng, x + rng.range(0, sw - 100), base - sh * rng.range(0.4, 0.8), plank, trim, col);
+        hangingSign(g, rng, x + rng.range(0, sw - 100), base - sh * rng.range(0.4, 0.8), sign, trim, col);
       x += sw + rng.range(200, 520);
     } else if (r < 0.7) {
       // Crane: mast, jib, hook line.
@@ -382,7 +384,6 @@ function drawFar2(g: Graphics, rng: RenderRng, p: Palette, d: Dressing, w: numbe
       g.rect(x - 5, base - ph, 10, ph).fill(col);
       g.rect(x - 30, base - ph + 10, 60, 6).fill(col);
       anchors.push([x, base - ph + 12]);
-      if (rng.chance(0.5 * d.backdrop.signs)) hangingSign(g, rng, x - 60, base - ph + 16, plank, trim, col);
       x += rng.range(260, 520);
     }
   }
@@ -448,8 +449,7 @@ function drawMid(g: Graphics, rng: RenderRng, p: Palette, d: Dressing, w: number
     for (let y = 0; y < len; y += 16) g.roundRect(cx - 4, y, 8, 14, 4).stroke({ width: 2, color: edge });
     g.poly([cx - 8, len, cx + 8, len, cx + 12, len + 16, cx, len + 30, cx - 12, len + 16]).fill(dark);
   }
-  if (d.backdrop.signs > 0 && rng.chance(0.7))
-    hangingSign(g, rng, rng.range(100, w - 200), rng.range(0.1, 0.4) * h, dark, edge, edge);
+  // No signs or horizontal beams here: at this depth they read as platforms (gym-09 playtest).
 }
 
 function drawForeground(

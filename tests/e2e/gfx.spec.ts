@@ -73,7 +73,7 @@ for (const c of CANON) {
     const errors = await boot(page);
     const png = await shot(page, c.room, c.script, c.steps);
     // Tolerance absorbs GPU/driver rounding (grain hash, blur); layout or colour changes exceed it.
-    expect(png).toMatchSnapshot(`${c.room}.png`, { maxDiffPixelRatio: 0.02, threshold: 0.2 });
+    expect(png).toMatchSnapshot(`${c.room}.png`, { maxDiffPixelRatio: 0.01, threshold: 0.2 });
     expect(errors).toEqual([]);
   });
 }

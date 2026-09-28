@@ -4,7 +4,7 @@ import type { SimEvent } from '../sim/events';
 import { tuning } from '../sim/tuning';
 import { getRoom, type Room } from '../sim/world/rooms';
 import { type CameraState, createCamera, stepCamera, VIEW_H, VIEW_W } from './camera/index';
-import { fxTuning, Juice } from './fx';
+import { FX_COLORS, fxTuning, Juice } from './fx';
 import { makeClock } from './gfx/clock';
 import { GfxPipeline } from './gfx/pipeline';
 
@@ -18,6 +18,9 @@ const COLORS = {
   deathFlash: 0xffffff,
   deathBody: 0xff5a6e,
 };
+
+/** Juice particle colours that glow (emissive) rather than being lit like dust. */
+const GLOWING_FX = new Set<number>([FX_COLORS.dash, FX_COLORS.death, FX_COLORS.pogo, FX_COLORS.ring]);
 
 const render = {
   /** Frames of fade-in after a room loads (fade-out is the sim's transition freeze). */
@@ -223,16 +226,26 @@ export class WorldRenderer {
   private drawFx(): void {
     const back = this.fxBack.clear();
     const front = this.fxFront.clear();
+    // Energetic juice (dash, death, pogo, rings) also draws into the emissive layer so it glows;
+    // dust stays matte and lit.
+    const glow = this.gfx.fxGlow.clear();
     for (const ai of this.juice.afterimages) {
       const t = ai.age / fxTuning.afterimageLife;
       back.roundRect(ai.x, ai.y, ai.w, ai.h, 10).fill({ color: COLORS.playerDash, alpha: 0.45 * (1 - t) });
+      glow.roundRect(ai.x, ai.y, ai.w, ai.h, 10).fill({ color: COLORS.playerDash, alpha: 0.25 * (1 - t) });
     }
     for (const q of this.juice.particles) {
       const t = q.age / q.life;
       const alpha = 1 - t;
       const s = q.size * (1 - t * 0.5);
-      if (q.shape === 'streak') front.rect(q.x - s, q.y - 2, s * 2, 4).fill({ color: q.color, alpha });
-      else back.rect(q.x - s / 2, q.y - s / 2, s, s).fill({ color: q.color, alpha });
+      const g = GLOWING_FX.has(q.color) ? glow : null;
+      if (q.shape === 'streak') {
+        front.rect(q.x - s, q.y - 2, s * 2, 4).fill({ color: q.color, alpha });
+        g?.rect(q.x - s, q.y - 2, s * 2, 4).fill({ color: q.color, alpha: alpha * 0.6 });
+      } else {
+        back.rect(q.x - s / 2, q.y - s / 2, s, s).fill({ color: q.color, alpha });
+        g?.rect(q.x - s / 2, q.y - s / 2, s, s).fill({ color: q.color, alpha: alpha * 0.6 });
+      }
     }
   }
 
