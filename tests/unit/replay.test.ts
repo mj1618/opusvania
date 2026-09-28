@@ -52,4 +52,62 @@ describe('replay', () => {
     replay.inputs[5] = 0;
     expect(runReplay(replay).matches).toBe(false);
   });
+
+  it('captures load(), reseed(), setState() and tuning edits made while recording', () => {
+    const tuning = cloneTuning(defaultTuning);
+    const game = new Game(tuning, { seed: 3 });
+    game.steps(5);
+    const saved = JSON.parse(JSON.stringify(game.state));
+    game.startRecording();
+    game.queueInput(parseInputScript('right*20 jump*10 _*30 left*20'));
+    game.steps(10);
+    game.load('hall', 'a');
+    game.steps(10);
+    tuning.jump.gravity = 2000; // live Tweakpane-style edit
+    game.steps(10);
+    game.reseed(99);
+    game.steps(20);
+    game.setState(saved);
+    game.steps(10);
+    game.load('gym'); // op after the last input
+    const replay = game.stopRecording();
+    if (!replay) throw new Error('no replay');
+    expect(replay.ops?.map((o) => [o.op, o.at])).toEqual([
+      ['load', 10],
+      ['tuning', 20],
+      ['seed', 30],
+      ['state', 50],
+      ['load', 60],
+    ]);
+    expect(runReplay(JSON.parse(JSON.stringify(replay))).matches).toBe(true);
+
+    // Playing it back through the Game (as window.__game.replay.play does) matches too, even
+    // with different live tuning, and applies the recorded tuning to the live object.
+    const live = cloneTuning(defaultTuning);
+    live.player.runSpeed = 50;
+    const other = new Game(live, { seed: 1 });
+    other.mode = 'manual';
+    const n = other.playReplay(replay);
+    other.steps(n);
+    expect(other.hash()).toBe(replay.endHash);
+    expect(live.jump.gravity).toBe(2000);
+    expect(live.player.runSpeed).toBe(defaultTuning.player.runSpeed);
+  });
+
+  it('re-recording a playback yields an equivalent replay', () => {
+    const game = new Game(cloneTuning(defaultTuning), { seed: 5 });
+    game.startRecording();
+    game.queueInput(parseInputScript('right*15 jump*5 _*10'));
+    game.steps(15);
+    game.load('hall');
+    game.steps(15);
+    const first = game.stopRecording();
+    if (!first) throw new Error('no replay');
+    const n = game.playReplay(first);
+    game.startRecording();
+    game.steps(n);
+    const second = game.stopRecording();
+    expect(second?.endHash).toBe(first.endHash);
+    if (second) expect(runReplay(second).matches).toBe(true);
+  });
 });

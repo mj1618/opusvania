@@ -57,6 +57,7 @@ async function boot(): Promise<void> {
       alpha = loop.alpha;
     } else {
       loop.reset();
+      input.flush();
     }
     render(alpha);
     requestAnimationFrame(frame);

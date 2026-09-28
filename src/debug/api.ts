@@ -36,7 +36,10 @@ export interface GameDebugApi {
   replay: {
     record(): void;
     stop(): Replay | null;
-    /** Loads the replay's start state and queues its inputs; step() through it or resume(). */
+    /**
+     * Loads the replay's start state and tuning (overwrites live tuning), queues its inputs and
+     * applies its ops as they come due; step() through it or resume(). Returns its length in steps.
+     */
     play(r: Replay): number;
     /** Runs the replay headlessly (does not touch the live game). */
     verify(r: Replay): { hash: string; matches: boolean | undefined };
@@ -66,6 +69,8 @@ export function installDebugApi({ game, app, render, overlay, panel }: DebugDeps
   const snapshot = () => JSON.parse(JSON.stringify(game.state)) as GameState;
   const api: GameDebugApi = {
     step(n = 1) {
+      if (!Number.isInteger(n) || n < 0)
+        throw new Error(`step(n): n must be a non-negative integer, got ${n}`);
       game.mode = 'manual';
       game.steps(n);
       render(1);
@@ -119,11 +124,10 @@ export function installDebugApi({ game, app, render, overlay, panel }: DebugDeps
       record: () => game.startRecording(),
       stop: () => game.stopRecording(),
       play(r) {
-        game.setState(r.start);
-        game.clearInput();
-        game.queueInput(r.inputs);
+        const n = game.playReplay(r);
+        panel.refresh();
         render(1);
-        return r.inputs.length;
+        return n;
       },
       verify(r) {
         const res = runReplay(r);

@@ -1,8 +1,8 @@
 import { EventBus, type SimEvent } from './sim/events';
 import { cloneState, createState, type GameState, hashState, loadRoom, reseed, step } from './sim/index';
 import type { InputFrame } from './sim/input';
-import { type Replay, ReplayRecorder } from './sim/replay';
-import type { Tuning } from './sim/tuning';
+import { type Replay, type ReplayOp, ReplayRecorder } from './sim/replay';
+import { assignTuning, type Tuning } from './sim/tuning';
 
 export type RunMode = 'realtime' | 'manual';
 
@@ -20,6 +20,8 @@ export class Game {
   mode: RunMode = 'realtime';
   private scripted: InputFrame[] = [];
   private recorder: ReplayRecorder | null = null;
+  /** Replay being played back: its out-of-band ops, applied as the scripted inputs are consumed. */
+  private playback: { ops: ReplayOp[]; next: number; cursor: number } | null = null;
   private pendingEvents: SimEvent[] = [];
   /** Bumps whenever the room changes, so render can rebuild and skip interpolation. */
   roomVersion = 0;
@@ -36,17 +38,20 @@ export class Game {
 
   /** Runs one sim step. Scripted input wins; otherwise live devices (realtime mode only). */
   stepOnce(): void {
+    // Always sample live devices so taps made while scripted/manual don't fire later.
+    const live = this.liveInput();
     const input =
-      this.scripted.length > 0
-        ? (this.scripted.shift() ?? 0)
-        : this.mode === 'realtime'
-          ? this.liveInput()
-          : 0;
+      this.scripted.length > 0 ? (this.scripted.shift() ?? 0) : this.mode === 'realtime' ? live : 0;
     this.prev = cloneState(this.state);
     const before = this.state.roomId;
+    this.recorder?.syncTuning(this.tuning);
     step(this.state, input, this.tuning, this.pendingEvents);
     if (this.state.roomId !== before) this.roomVersion++;
     this.recorder?.push(input);
+    if (this.playback) {
+      this.playback.cursor++;
+      this.applyPlaybackOps();
+    }
     this.flushEvents();
   }
 
@@ -64,9 +69,12 @@ export class Game {
 
   clearInput(): void {
     this.scripted = [];
+    this.playback = null;
   }
 
   load(roomId: string, spawn?: string): void {
+    this.recorder?.syncTuning(this.tuning);
+    this.recorder?.op(spawn === undefined ? { op: 'load', roomId } : { op: 'load', roomId, spawn });
     loadRoom(this.state, roomId, spawn, this.tuning, this.pendingEvents);
     this.prev = cloneState(this.state);
     this.roomVersion++;
@@ -75,11 +83,13 @@ export class Game {
 
   /** Reseeds the RNG in place (does not reset the world). */
   reseed(seed: number): void {
+    this.recorder?.op({ op: 'seed', seed });
     reseed(this.state, seed);
   }
 
   /** Replaces the whole state (replay playback, save/load). */
   setState(s: GameState): void {
+    this.recorder?.op({ op: 'state', state: s });
     this.state = cloneState(s);
     this.prev = cloneState(s);
     this.roomVersion++;
@@ -87,6 +97,36 @@ export class Game {
 
   hash(): string {
     return hashState(this.state);
+  }
+
+  /**
+   * Starts playing a replay: loads its start state and tuning (into the live tuning object),
+   * replaces queued input with its inputs and applies its ops as they come due. Returns the
+   * number of steps it lasts.
+   */
+  playReplay(r: Replay): number {
+    this.clearInput();
+    this.setState(r.start);
+    assignTuning(this.tuning, r.tuning);
+    this.queueInput(r.inputs);
+    this.playback = { ops: [...(r.ops ?? [])], next: 0, cursor: 0 };
+    this.applyPlaybackOps();
+    this.flushEvents();
+    return r.inputs.length;
+  }
+
+  private applyPlaybackOps(): void {
+    const pb = this.playback;
+    if (!pb) return;
+    while (pb.next < pb.ops.length && (pb.ops[pb.next]?.at ?? 0) <= pb.cursor) {
+      const op = pb.ops[pb.next++];
+      // Go through the public methods so an active recorder captures the op too.
+      if (op?.op === 'load') this.load(op.roomId, op.spawn);
+      else if (op?.op === 'seed') this.reseed(op.seed);
+      else if (op?.op === 'state') this.setState(op.state);
+      else if (op?.op === 'tuning') assignTuning(this.tuning, op.tuning);
+    }
+    if (pb.next >= pb.ops.length) this.playback = null;
   }
 
   startRecording(): void {

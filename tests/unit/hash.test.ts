@@ -15,6 +15,11 @@ describe('state hash', () => {
   it('is a stable 14-hex-char string', () => {
     expect(hashState({ hello: 'world' })).toMatch(/^[0-9a-f]{14}$/);
     // Pinned so an accidental change to the hash function is caught.
-    expect(hashState({ hello: 'world' })).toBe(hashState(JSON.parse('{"hello":"world"}')));
+    expect(hashState({ hello: 'world' })).toBe('0c4ac8a91e2397');
+  });
+
+  it('refuses NaN/Infinity, which JSON would silently turn into null', () => {
+    expect(() => hashState({ p: { vx: Number.NaN } })).toThrow(/\$\.p\.vx/);
+    expect(() => hashState({ a: [1, Number.POSITIVE_INFINITY] })).toThrow(/\$\.a\[1\]/);
   });
 });

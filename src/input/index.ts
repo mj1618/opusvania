@@ -18,4 +18,9 @@ export class InputSampler {
   sample(): InputFrame {
     return this.keyboard.sample() | this.gamepad.sample();
   }
+
+  /** Drops pending taps. Call while the sim isn't consuming live input, so they don't fire later. */
+  flush(): void {
+    this.keyboard.sample();
+  }
 }

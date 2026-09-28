@@ -11,8 +11,12 @@ Source: `src/debug/api.ts` (typed `GameDebugApi`). Everything returns plain JSON
 - In manual mode live keyboard/gamepad input is ignored, so agent runs are deterministic.
 - `state()`, `hash()`, `load(roomId, spawn?)`, `rooms()`, `seed(n?)` (reseeds RNG in place, doesn't reset world).
 - `screenshot(scale=1)` renders and returns a PNG data URL of the canvas.
-- `replay.record()` / `replay.stop()` → `Replay` JSON (start state + tuning + input masks + endHash);
-  `replay.play(r)` loads start state and queues its inputs (then `step(n)`), `replay.verify(r)` runs it headless.
+- `replay.record()` / `replay.stop()` → `Replay` JSON (start state + tuning + input masks + `ops` + endHash).
+  `load()`, `seed()`, Tweakpane/`tuning` edits and state restores made while recording are captured as
+  `ops` (`at` = inputs consumed), so they replay exactly. `replay.play(r)` loads start state **and writes
+  the replay's tuning into the live tuning object**, queues inputs and applies ops as they come due
+  (then `step(n)`); `clearInput()` cancels playback. `replay.verify(r)` runs it headless.
+- `step(n)` throws unless n is a non-negative integer.
 - `debug.hitboxes(on?)` (also F2), `debug.tuningPanel(on?)` (also backquote), `tuning` (live object).
 
 playwright-cli example:

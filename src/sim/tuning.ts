@@ -45,3 +45,14 @@ export const tuning: Tuning = cloneTuning(defaultTuning);
 export function cloneTuning(t: Tuning): Tuning {
   return JSON.parse(JSON.stringify(t)) as Tuning;
 }
+
+/** Copies every value of `src` into `target` in place (keeps object identity for live references). */
+export function assignTuning(target: Tuning, src: Tuning): void {
+  const t = target as unknown as Record<string, Record<string, unknown>>;
+  const s = src as unknown as Record<string, Record<string, unknown>>;
+  for (const group of Object.keys(s)) {
+    const from = s[group];
+    if (!from) continue;
+    t[group] = Object.assign(t[group] ?? {}, JSON.parse(JSON.stringify(from)));
+  }
+}

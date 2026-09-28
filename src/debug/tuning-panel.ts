@@ -38,6 +38,11 @@ export class TuningPanel {
     });
   }
 
+  /** Re-reads the tuning object (after it was changed from code, e.g. replay playback). */
+  refresh(): void {
+    this.pane.refresh();
+  }
+
   get visible(): boolean {
     return !this.pane.hidden;
   }

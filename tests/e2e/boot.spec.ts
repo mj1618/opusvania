@@ -91,3 +91,34 @@ test('real-time mode advances on its own', async ({ page }) => {
   const f1 = await page.evaluate(() => window.__game.state().frame);
   expect(f1).toBeGreaterThan(f0 + 10);
 });
+
+test('replays survive load(), seed() and tuning edits mid-recording, in the browser and in Node', async ({
+  page,
+}) => {
+  await boot(page, '?manual&seed=5');
+  const replay: Replay | null = await page.evaluate(() => {
+    const g = window.__game;
+    g.replay.record();
+    g.input('right*20 right+jump*10 _*20 left*30');
+    g.step(15);
+    g.load('hall', 'a');
+    g.step(15);
+    g.tuning.jump.gravity = 2500;
+    g.step(15);
+    g.seed(42);
+    g.step(35);
+    return g.replay.stop();
+  });
+  if (!replay) throw new Error('no replay');
+  expect(runReplay(replay).matches).toBe(true);
+  const played = await page.evaluate((r) => {
+    const g = window.__game;
+    g.tuning.jump.gravity = 9999; // playback must use the replay's tuning, not the live one
+    g.load('gym');
+    const n = g.replay.play(r);
+    g.step(n);
+    return { hash: g.hash(), room: g.state().roomId };
+  }, replay);
+  expect(played).toEqual({ hash: replay.endHash, room: 'hall' });
+  await expect(page.evaluate(() => window.__game.step(1.5))).rejects.toThrow(/non-negative integer/);
+});

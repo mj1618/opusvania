@@ -16,11 +16,13 @@ export class KeyboardSource {
   ) {
     this.gameCodes = () => new Set(Object.values(this.bindings.keys).flat());
     target.addEventListener('keydown', (e) => {
+      // Typing in a text field (e.g. the Tweakpane tuning panel) must not drive the game.
+      if (isEditable(e.target)) return;
+      // Stop the page scrolling/tabbing on game keys (auto-repeats included).
+      if (this.gameCodes().has(e.code)) e.preventDefault();
       if (e.repeat) return;
       this.held.add(e.code);
       this.tapped.add(e.code);
-      // Stop the page scrolling/tabbing on game keys.
-      if (this.gameCodes().has(e.code)) e.preventDefault();
     });
     target.addEventListener('keyup', (e) => {
       this.held.delete(e.code);
@@ -44,4 +46,9 @@ export class KeyboardSource {
     this.tapped.clear();
     return mask;
   }
+}
+
+function isEditable(t: EventTarget | null): boolean {
+  if (typeof HTMLElement === 'undefined' || !(t instanceof HTMLElement)) return false;
+  return t.isContentEditable || t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement;
 }
