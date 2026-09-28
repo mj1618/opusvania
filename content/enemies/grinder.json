@@ -1,0 +1,45 @@
+{
+  "//": "Grinder (combat-spec §4.4, L3 subset: Charge only; Sparks/Whet is violet, deferred). Validated by src/sim/ai/schema.ts.",
+  "id": "grinder",
+  "body": { "w": 112, "h": 112 },
+  "hurtbox": [8, 8, 96, 104],
+  "hp": 18,
+  "contactDmg": 1,
+  "kbScale": 0.25,
+  "poundage": 8,
+  "flying": false,
+  "class": "elite",
+  "sounds": [{ "id": "growl", "colour": "brown", "seizable": true }],
+  "seizeOrder": ["growl"],
+  "attacks": {
+    "charge": {
+      "sound": "growl",
+      "trigger": { "rangeX": 640, "rangeY": 96, "cooldown": 60, "weight": 1 },
+      "telegraph": 28,
+      "teleBackPx": 24,
+      "active": 60,
+      "recovery": 36,
+      "wallStunRecovery": 60,
+      "hitboxes": [{ "fromFrame": 1, "toFrame": 60, "box": [100, 8, 40, 96] }],
+      "vx": 15,
+      "stopAtWall": true,
+      "stopAtLedge": true,
+      "dmg": 2,
+      "cue": { "tint": "brown", "audio": "growlWindup" }
+    },
+    "snatch": {
+      "sound": null,
+      "snatch": true,
+      "trigger": { "rangeX": 136, "rangeY": 96, "cooldown": 0, "weight": 1 },
+      "telegraph": 16,
+      "active": 4,
+      "recovery": 24,
+      "hitboxes": [{ "fromFrame": 1, "toFrame": 4, "box": [0, 0, 136, 112] }],
+      "dmg": 0,
+      "push": 8,
+      "cue": { "tint": "brown", "audio": "snatchWindup" }
+    }
+  },
+  "movement": { "patrolSpeed": 1.5, "chaseSpeed": 1.5, "aggroRange": 640 },
+  "furious": { "speedMult": 1.2, "telegraphDelta": -4 }
+}

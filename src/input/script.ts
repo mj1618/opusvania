@@ -5,7 +5,7 @@ import { ACTIONS, type Action, ActionBit, type InputFrame, maskOf } from '../sim
  * token (they can be mixed):
  *
  *  - Spec DSL (movement-spec §2.8): `.10 R30 R+J12 D+A1`. Buttons: `.` nothing, L R U D, J jump,
- *    X dash, A attack; the number is frames (default 1).
+ *    X dash, A attack (jab), S seize, V levy; the number is frames (default 1).
  *  - Long form: `right*30 right+jump*12 _*20` (`_` = nothing, count defaults to 1).
  *
  * Edges come from held transitions, so pressing the same button again needs a gap (`J1 .1 J1`).
@@ -22,9 +22,11 @@ export const DSL_LETTERS: Record<string, Action> = {
   J: 'jump',
   X: 'dash',
   A: 'attack',
+  S: 'seize',
+  V: 'levy',
 };
-const LETTER_ORDER = ['L', 'R', 'U', 'D', 'J', 'X', 'A'] as const;
-const DSL_TOKEN = /^(\.|[LRUDJXA](?:\+[LRUDJXA])*)(\d+)?$/;
+const LETTER_ORDER = ['L', 'R', 'U', 'D', 'J', 'X', 'A', 'S', 'V'] as const;
+const DSL_TOKEN = /^(\.|[LRUDJXASV](?:\+[LRUDJXASV])*)(\d+)?$/;
 
 function isAction(s: string): s is Action {
   return (ACTIONS as readonly string[]).includes(s);
@@ -82,7 +84,7 @@ export function formatInputScript(masks: readonly InputFrame[]): string {
     let n = 1;
     while (masks[i + n] === m) n++;
     const tok = maskLabel(m);
-    const isDsl = tok === '.' || /^[LRUDJXA](\+[LRUDJXA])*$/.test(tok);
+    const isDsl = tok === '.' || /^[LRUDJXASV](\+[LRUDJXASV])*$/.test(tok);
     out.push(isDsl ? `${tok}${n}` : `${tok}*${n}`);
     i += n;
   }

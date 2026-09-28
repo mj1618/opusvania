@@ -1,6 +1,6 @@
 import type { SimEvent } from './events';
 import { hashState } from './hash';
-import { loadRoom, reseed, step } from './index';
+import { loadRoom, reseed, spawnEnemyAt, step } from './index';
 import type { InputFrame } from './input';
 import { cloneState, type GameState } from './state';
 import { assignTuning, cloneTuning, type Tuning } from './tuning';
@@ -14,7 +14,8 @@ export type ReplayOp =
   | { at: number; op: 'load'; roomId: string; spawn?: string }
   | { at: number; op: 'seed'; seed: number }
   | { at: number; op: 'tuning'; tuning: Tuning }
-  | { at: number; op: 'state'; state: GameState };
+  | { at: number; op: 'state'; state: GameState }
+  | { at: number; op: 'spawn'; type: string; x: number; y: number };
 
 /**
  * A replay is a starting state (which includes the seed/RNG state), the tuning in force, one
@@ -44,6 +45,9 @@ export function applyReplayOp(state: GameState, op: ReplayOp, tuning: Tuning, ev
       return state;
     case 'state':
       return cloneState(op.state);
+    case 'spawn':
+      spawnEnemyAt(state, op.type, op.x, op.y);
+      return state;
   }
 }
 

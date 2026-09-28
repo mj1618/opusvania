@@ -39,7 +39,7 @@ describe('keyboard source', () => {
     const { kb, send } = setup();
     expect(send('keydown', 'Space').defaultPrevented).toBe(true);
     expect(send('keydown', 'Space', true).defaultPrevented).toBe(true);
-    expect(send('keydown', 'KeyQ').defaultPrevented).toBe(false);
+    expect(send('keydown', 'KeyY').defaultPrevented).toBe(false);
     expect(kb.sample()).toBe(ActionBit.jump);
   });
 });

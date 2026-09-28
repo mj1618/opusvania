@@ -1,0 +1,37 @@
+{
+  "//": "Kid's move table (combat-spec §1.3; L3 has jab, seize, levy). Frame 1 = the press-consuming step; startup S means the first active frame is S+1. Hitboxes [x, y, w, h] relative to the 40x80 body facing right (mirrored x' = 40 - x - w). `cancels` = moves (or jump/dash) that may interrupt from that frame. Validated by src/sim/player/moves.ts.",
+  "jab": {
+    "startup": 4,
+    "active": 3,
+    "recovery": 10,
+    "hitboxes": { "fwd": [28, 16, 80, 32] },
+    "dmg": 2,
+    "cls": "light",
+    "cancels": [
+      { "into": ["seize", "levy", "jump", "dash"], "fromFrame": 8 },
+      { "into": ["dash"], "fromFrame": 1 }
+    ]
+  },
+  "seize": {
+    "startup": 5,
+    "active": 3,
+    "recovery": 6,
+    "whiffRecovery": 10,
+    "hitboxes": { "fwd": [28, 8, 64, 48], "up": [-8, -48, 56, 56], "down": [-8, 64, 56, 56] },
+    "dmg": 1,
+    "cls": "seizeTake",
+    "cancels": [{ "into": ["levy", "jump", "dash"], "fromFrame": 9 }, { "into": ["jab"], "fromFrame": 11 }]
+  },
+  "levy": {
+    "startup": 3,
+    "active": 0,
+    "recovery": 6,
+    "spawnFrame": 4,
+    "dryTotal": 6,
+    "hitboxes": {},
+    "spawns": { "fwd": [44, 24], "up": [20, -24], "down": [20, 80] },
+    "dmg": 0,
+    "cls": "medium",
+    "cancels": [{ "into": ["jump", "dash"], "fromFrame": 6 }]
+  }
+}

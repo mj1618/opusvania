@@ -14,6 +14,7 @@ import {
 } from '../physics/aabb';
 import type { GameState, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
+import { dynSolidAt, solidAny } from '../world/dynamic';
 import { type Abilities, ALL_ABILITIES, type Room, type Spawn } from '../world/rooms';
 import { BASE_PROFILE, type MoveParams } from './params';
 
@@ -88,8 +89,15 @@ export function createPlayer(
     stepDist: 0,
     skid: false,
     respawn: null,
+    move: null,
+    actBuf: null,
+    chin: t.kid.chin,
+    iframes: 0,
+    hurtLock: 0,
+    recoilVx: 0,
+    recoilT: 0,
   };
-  p.grounded = solidAt(room, ts, x, y + 1, w, h) || oneWayUnder(room, ts, x, y, w, h);
+  p.grounded = solidAny(room, ts, x, y + 1, w, h) || oneWayUnder(room, ts, x, y, w, h);
   return p;
 }
 
@@ -164,7 +172,7 @@ class Ctx implements Collider {
   }
 
   solid(x: number, y: number): boolean {
-    return solidAt(this.room, this.ts, x, y, this.p.w, this.p.h);
+    return solidAt(this.room, this.ts, x, y, this.p.w, this.p.h) || dynSolidAt(x, y, this.p.w, this.p.h);
   }
 
   dropping(y: number): boolean {
@@ -173,11 +181,12 @@ class Ctx implements Collider {
 
   // Collider.
   blockedX(b: Body, dir: number): boolean {
-    return solidAt(this.room, this.ts, b.x + dir, b.y, b.w, b.h);
+    return solidAt(this.room, this.ts, b.x + dir, b.y, b.w, b.h) || dynSolidAt(b.x + dir, b.y, b.w, b.h);
   }
 
   blockedY(b: Body, dir: number): boolean {
-    if (solidAt(this.room, this.ts, b.x, b.y + dir, b.w, b.h)) return true;
+    if (solidAt(this.room, this.ts, b.x, b.y + dir, b.w, b.h) || dynSolidAt(b.x, b.y + dir, b.w, b.h))
+      return true;
     return dir > 0 && !this.dropping(b.y) && oneWayUnder(this.room, this.ts, b.x, b.y, b.w, b.h);
   }
 
@@ -187,7 +196,7 @@ class Ctx implements Collider {
 
   /** Standing on something if the body were at (x, y). */
   groundAt(x: number, y: number): boolean {
-    if (solidAt(this.room, this.ts, x, y + 1, this.p.w, this.p.h)) return true;
+    if (this.solid(x, y + 1)) return true;
     return !this.dropping(y) && oneWayUnder(this.room, this.ts, x, y, this.p.w, this.p.h);
   }
 
@@ -250,6 +259,15 @@ class Ctx implements Collider {
     }
     return false;
   }
+}
+
+/**
+ * Global hitstop (combat-spec §2): nothing moves and no timers run, but presses are latched into
+ * the movement buffers so a jump mashed during the freeze comes out on the first free frame.
+ */
+export function latchOnly(state: GameState, room: Room, input: InputFrame, P: MoveParams): void {
+  const c = new Ctx(state, state.player, room, P.tileSize, input, state.prevInput, P, []);
+  latch(c);
 }
 
 function latch(c: Ctx): void {
@@ -718,7 +736,8 @@ export function startTransition(
   events.push({ type: 'roomExit', roomId: state.roomId, to, x: p.x + p.w / 2, y: p.y + p.h });
 }
 
-function die(state: GameState, P: MoveParams, events: SimEvent[]): void {
+/** Kills the player (hazards, and Chin reaching 0). */
+export function die(state: GameState, P: MoveParams, events: SimEvent[]): void {
   const p = state.player;
   if (p.state === 'wallSlide')
     events.push({ type: 'wallSlideEnd', x: p.x + p.w / 2, y: p.y + p.h, dir: p.wallDir });
@@ -747,7 +766,7 @@ function respawn(state: GameState, room: Room, P: MoveParams, events: SimEvent[]
     vx: 0,
     vy: 0,
     state: 'normal',
-    grounded: solidAt(room, ts, x, y + 1, old.w, old.h) || oneWayUnder(room, ts, x, y, old.w, old.h),
+    grounded: solidAny(room, ts, x, y + 1, old.w, old.h) || oneWayUnder(room, ts, x, y, old.w, old.h),
     wallDir: 0,
     coyote: 0,
     jumpBuf: 0,
@@ -772,6 +791,12 @@ function respawn(state: GameState, room: Room, P: MoveParams, events: SimEvent[]
     airTopY: y,
     stepDist: 0,
     skid: false,
+    move: null,
+    actBuf: null,
+    iframes: 0,
+    hurtLock: 0,
+    recoilVx: 0,
+    recoilT: 0,
   };
   state.player = p;
   events.push({ type: 'respawn', x: x + p.w / 2, y: y + p.h });

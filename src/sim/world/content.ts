@@ -18,6 +18,10 @@ import gym12 from '../../../content/gym/gym-12.json' with { type: 'json' };
 import gym13 from '../../../content/gym/gym-13.json' with { type: 'json' };
 import gym14 from '../../../content/gym/gym-14.json' with { type: 'json' };
 import hub from '../../../content/gym/hub.json' with { type: 'json' };
+import lot7 from '../../../content/gym/lot-7.json' with { type: 'json' };
+import lot7Control from '../../../content/gym/lot-7-control.json' with { type: 'json' };
+import stairwell from '../../../content/gym/stairwell.json' with { type: 'json' };
+import thePit from '../../../content/gym/the-pit.json' with { type: 'json' };
 import type { RoomFile } from './rooms';
 
 export const ROOM_FILES = [
@@ -36,4 +40,9 @@ export const ROOM_FILES = [
   gym12,
   gym13,
   gym14,
+  // L3 signature-mechanic rooms (reached from the hub's right-hand doors).
+  lot7,
+  lot7Control,
+  thePit,
+  stairwell,
 ] as unknown as RoomFile[];
