@@ -182,17 +182,139 @@ export const defaultTuning = {
     wallJumpRefill: true,
   },
   /**
-   * Movement profiles (see MovementProfile). `feather` and `heavy` are illustrative placeholders
-   * for the L3 weight-class experiment, not tuned values.
+   * Combat foundations (combat-spec §2, L3 brief §2.3). Hitstop per class in frames; knockback in
+   * px/f; everything else in frames unless stated.
+   */
+  combat: {
+    hitstopLight: 4,
+    hitstopMedium: 6,
+    hitstopHeavy: 10,
+    hitstopSeizeTake: 5,
+    hitstopCatch: 10,
+    hitstopRepossess: 16,
+    hitstopHurt: 8,
+    hitstopCap: 16,
+    actionBufferFrames: 8,
+    /** Frames an enemy's voices stay open after it takes a punch. */
+    rattledFrames: 30,
+    staggerFrames: 36,
+    enemyKbLight: 6,
+    enemyKbMedium: 10,
+    enemyKbHeavy: 14,
+    enemyKbSeizeTug: 4,
+    /** Enemy knockback decays by this much per frame. */
+    enemyKbDecay: 1,
+    kidRecoilGroundLight: -4,
+    kidRecoilAirLight: -6,
+    kidRecoilMedium: -5,
+    kidRecoilFrames: 4,
+    maxAttackTokens: 2,
+    retrieveSpeedMult: 1.25,
+    absorbFrames: 8,
+    revoiceFrames: 480,
+    downFrames: 12,
+    countBeats: 10,
+    countBeatFrames: 12,
+    /** Return to sender damage multiplier (rounded up); it always knocks the owner down. */
+    returnMult: 1.5,
+    launchVy: -14,
+    launchFrames: 30,
+    /** Snatch pushes Kid back at this speed (px/f). */
+    snatchPushVx: 8,
+    /** Enemy physics: gravity (px/f²) and max fall (px/f). */
+    enemyGravity: 0.9,
+    enemyMaxFall: 20,
+    /** Furious rise: telegraphs never drop below this. */
+    minTelegraph: 15,
+    /** Frames an enemy takes to get up after the Count runs out with HP left. */
+    riseFrames: 12,
+    /** Chasers stop closing in when this near Kid (px between centres). */
+    chaseStopPx: 48,
+  },
+  /** Kid Tallow's health and hurt reaction (combat-spec §3.1). */
+  kid: {
+    chin: 5,
+    contactDmg: 1,
+    iframes: 78,
+    hurtLock: 12,
+    hurtVx: 10,
+    hurtVy: -8,
+    /** The Slip (dash) is invulnerable on frames 1..slipIframesTo. */
+    slipIframesTo: 10,
+  },
+  bag: {
+    slots: 3,
+  },
+  /**
+   * Levy by colour (combat-spec §1.5; traversal behaviour from the L3 brief). Flight speeds px/f,
+   * gravity as a multiple of the base (feather) jump gravity. `dropVy` = straight-down speed of a
+   * downward levy; `upVy` = speed of an upward levy; recoil/spring heights in px.
+   */
+  levy: {
+    brownVx: 8,
+    brownVy: -10,
+    brownUpVy: -16,
+    brownDropVy: 24,
+    brownGravityMult: 1.2,
+    brownDmg: 6,
+    brownW: 64,
+    brownH: 48,
+    brownRecoilPx: 176,
+    pinkVx: 6,
+    pinkVy: -12,
+    pinkUpVy: -18,
+    pinkDropVy: 0,
+    pinkGravityMult: 1,
+    pinkDmg: 2,
+    pinkW: 64,
+    pinkH: 16,
+    /** Kid's spring bounce height (brief §8 #4: 448, not the spec's 240). */
+    pinkSpringPx: 448,
+    pinkRecoilPx: 128,
+    pinkEnemyLaunchVy: -14,
+    /** Frames a spring shows compressed after a bounce (render reads it). */
+    pinkSquashFrames: 4,
+    violetVx: 20,
+    violetVy: 0,
+    violetUpVy: -20,
+    violetDropVy: 20,
+    violetGravityMult: 0,
+    violetDmg: 3,
+    violetW: 32,
+    violetH: 16,
+    violetRecoilPx: 96,
+    /** Fraction of Kid's vx added to a forward levy (0 = the spec: fixed throw speed). */
+    inheritVx: 0,
+  },
+  /** Weight class from brown sounds in the bag (critique A graft). */
+  weight: {
+    middleAt: 1,
+    heavyAt: 2,
+    /** Knockback taken per class (heavy ignores it; i-frames still apply). */
+    kbFeather: 1.25,
+    kbMiddle: 1,
+    kbHeavy: 0,
+    /** Extra punch damage while heavy; jab recovery change while feather (frames). */
+    heavyPunchBonus: 1,
+    featherJabRecovery: -2,
+  },
+  plate: {
+    /** A slab presses a plate when it overlaps the plate tiles by at least this much. */
+    minOverlapPx: 16,
+  },
+  /**
+   * Movement profiles (see MovementProfile). The L3 weight classes: `feather` is exactly the
+   * L2-tuned base (brief §8 #3); `middle` and `heavy` are heavier variants (3.5 and 2.5 tiles).
    */
   profiles: {
-    feather: {
-      shape: { jumpHeightPx: 320, apexFrames: 28 },
-      scale: { 'jump.fallMult': 0.8, 'run.maxSpeed': 1.1 },
+    feather: {},
+    middle: {
+      shape: { jumpHeightPx: 224, apexFrames: 22 },
+      scale: { 'jump.fallMult': 1.1, 'run.maxSpeed': 0.95 },
     },
     heavy: {
-      shape: { jumpHeightPx: 176, apexFrames: 20 },
-      scale: { 'jump.fallMult': 1.25, 'run.maxSpeed': 0.85, 'wall.slideMax': 1.5 },
+      shape: { jumpHeightPx: 160, apexFrames: 20 },
+      scale: { 'jump.fallMult': 1.3, 'run.maxSpeed': 0.85, 'wall.slideMax': 1.5 },
     },
   } as Record<string, MovementProfile>,
 };
@@ -215,6 +337,12 @@ export const VALUE_GROUPS = [
   'hazard',
   'misc',
   'assists',
+  'combat',
+  'kid',
+  'bag',
+  'levy',
+  'weight',
+  'plate',
 ] as const;
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };

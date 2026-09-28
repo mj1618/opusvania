@@ -24,7 +24,7 @@ const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !
 const num = (v: unknown, d = 0): number => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 
 export const SIM_HZ = 60;
-export const ABILITIES = ['wallJump', 'dash', 'doubleJump', 'pogo'] as const;
+export const ABILITIES = ['wallJump', 'dash', 'doubleJump', 'pogo', 'seize', 'levy'] as const;
 export type Ability = (typeof ABILITIES)[number];
 export type AbilitySet = Partial<Record<Ability, boolean>>;
 
@@ -71,6 +71,14 @@ export interface PlayerView {
   doubleJump: number;
   dashCooldown: number;
   dead: boolean;
+  /** L3: current move id ('' = none) and its frame (1 = the press step). */
+  move: string;
+  moveFrame: number;
+  /** Bag colours, oldest first. */
+  bag: string[];
+  /** Weight class (the movement profile). */
+  weight: string;
+  chin: number;
 }
 
 export function playerView(s: GameState): PlayerView {
@@ -90,6 +98,11 @@ export function playerView(s: GameState): PlayerView {
     doubleJump: p.dj,
     dashCooldown: p.dashCd,
     dead: p.state === 'dead',
+    move: p.move?.id ?? '',
+    moveFrame: p.move?.frame ?? 0,
+    bag: s.local.bag.map((id) => s.local.sounds.find((x) => x.id === id)?.colour ?? '?'),
+    weight: p.profile,
+    chin: p.chin,
   };
 }
 
@@ -110,7 +123,8 @@ export function lastInput(s: GameState): InputFrame | undefined {
  */
 export function botKey(s: GameState): string {
   const p = s.player;
-  const held = s.prevInput & (ActionBit.jump | ActionBit.dash | ActionBit.attack);
+  const held =
+    s.prevInput & (ActionBit.jump | ActionBit.dash | ActionBit.attack | ActionBit.seize | ActionBit.levy);
   // Rising from a jump that release can still cut.
   const rising = p.fromJump && !p.cut ? 1 : 0;
   // Timers/flags that change what inputs can do.
@@ -139,7 +153,34 @@ export function botKey(s: GameState): string {
     held,
     rising,
     flags,
+    signatureKey(s),
   ].join(',');
+}
+
+/**
+ * The L3 part of the bot key (brief §6.1): bag colours in order, source ghost bits, levied
+ * (colour, phase, x>>3, y>>3), plate and gate bits, the move and its frame>>1, hitstop, enemies
+ * (state, x>>3, y>>3). Empty for rooms with none of it, so gym keys are unchanged in practice.
+ */
+function signatureKey(s: GameState): string {
+  const L = s.local;
+  const p = s.player;
+  let k = '';
+  for (const id of L.bag) {
+    const c = L.sounds.find((x) => x.id === id)?.colour ?? '?';
+    k += c[0];
+  }
+  k += '|';
+  for (const src of L.sources)
+    if (src.kind === 'object') k += src.ghost ? (src.pendingSolid ? 'p' : 'g') : 'a';
+  for (const l of L.levied) k += `|${l.colour[0]}${l.phase[0]}${l.x >> 3},${l.y >> 3}`;
+  for (const pl of L.plates) k += pl.pressed ? 'P' : '_';
+  for (const g of L.gates) k += g.open ? 'O' : 'C';
+  if (p.move) k += `|${p.move.id[0]}${p.move.frame >> 1}${p.move.outcome[0]}`;
+  if (p.actBuf) k += `|b${p.actBuf.id[0]}`;
+  if (s.hitstop > 0) k += '|h';
+  for (const e of L.enemies) k += `|${e.state[0]}${e.state[1]}${e.x >> 3},${e.y >> 3}`;
+  return k;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -182,6 +223,30 @@ export function eventMarker(e: NormEvent): string | undefined {
       return 'X';
     case 'wallSlideStart':
       return 'S';
+    // L3 (brief §6.1). Seize take S clashes with wall slide's S only in rooms with both.
+    case 'seizeTake':
+      return 'S';
+    case 'seizeRefused':
+    case 'seizeGuarded':
+      return 's';
+    case 'catch':
+      return 'K';
+    case 'levyThrow':
+      return 'V';
+    case 'levyLand':
+      return 'v';
+    case 'telegraph':
+      return 'T';
+    case 'hurt':
+      return '!';
+    case 'repossess':
+      return 'C';
+    case 'springBounce':
+      return 'B';
+    case 'plate':
+      return '_';
+    case 'hit':
+      return '*';
     default:
       return undefined;
   }
@@ -441,11 +506,16 @@ export function overlaps(p: PlayerView, r: Rect): boolean {
  * Registers an ASCII test room (feel-report labs, tests) with no abilities and returns its id.
  * Use only `#`, `.` and one `P`, and make it at least 30×17 tiles: the loader pads smaller rooms, which would shift `tile:x,y` targets.
  */
-export function registerTestRoom(id: string, rows: string[]): string {
+export function registerTestRoom(
+  id: string,
+  rows: string[],
+  extra: Partial<Omit<roomsModule.RoomFile, 'id' | 'rows'>> = {},
+): string {
   const def = {
     id,
     rows,
     abilities: { wallJump: false, dash: false, doubleJump: false, pogo: false },
+    ...extra,
   } as unknown as Parameters<typeof roomsModule.buildRoom>[0];
   roomsModule.registerRoom(roomsModule.buildRoom(def));
   return id;

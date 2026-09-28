@@ -43,12 +43,35 @@ const Abilities = z.object({
   dash: z.boolean(),
   doubleJump: z.boolean(),
   pogo: z.boolean(),
+  /** L3 signature verbs (optional in room files; default off). */
+  seize: z.boolean().default(false),
+  levy: z.boolean().default(false),
 });
-export type Abilities = z.infer<typeof Abilities>;
+export type Abilities = z.output<typeof Abilities>;
 export type AbilityName = keyof Abilities;
-export const ABILITY_NAMES: AbilityName[] = ['wallJump', 'dash', 'doubleJump', 'pogo'];
-export const ALL_ABILITIES: Abilities = { wallJump: true, dash: true, doubleJump: true, pogo: true };
-export const NO_ABILITIES: Abilities = { wallJump: false, dash: false, doubleJump: false, pogo: false };
+export const ABILITY_NAMES: AbilityName[] = ['wallJump', 'dash', 'doubleJump', 'pogo', 'seize', 'levy'];
+export const ALL_ABILITIES: Abilities = {
+  wallJump: true,
+  dash: true,
+  doubleJump: true,
+  pogo: true,
+  seize: true,
+  levy: true,
+};
+export const NO_ABILITIES: Abilities = {
+  wallJump: false,
+  dash: false,
+  doubleJump: false,
+  pogo: false,
+  seize: false,
+  levy: false,
+};
+
+export const COLOURS = ['brown', 'pink', 'violet', 'white'] as const;
+const Char = z.string().length(1);
+const SourceDef = z.object({ sound: z.string(), colour: z.enum(COLOURS) });
+const PlateDef = z.object({ pressedBy: z.array(z.enum(['slab', 'heavy'])).default(['slab', 'heavy']) });
+const GateDef = z.object({ opensOn: z.enum(['plate', 'clear']) });
 
 const CameraZone = z.object({
   /** [tx, ty, tw, th] in tiles (sketch coordinates, before padding). */
@@ -86,21 +109,47 @@ export const RoomFileSchema = z
       .object({ G: Claim.nullable().optional(), g: Claim.nullable().optional() })
       .passthrough()
       .default({}),
+    /** L3: each connected component of a source char is one sound source (humming object). */
+    sources: z.record(Char, SourceDef).default({}),
+    /** Plate chars: solid tiles that latch pressed for the visit. */
+    plates: z.record(Char, PlateDef).default({}),
+    /** Gate chars: solid until they open (on a pressed plate, or when the room is clear). */
+    gates: z.record(Char, GateDef).default({}),
+    /** Enemy spawn chars -> content/enemies/<id>.json; feet on this tile's floor. */
+    enemies: z.record(Char, z.string()).default({}),
     notes: z.string().default(''),
   })
   .superRefine((r, ctx) => {
     const w = r.rows[0]?.length ?? 0;
+    const specials = new Set([
+      ...Object.keys(r.sources),
+      ...Object.keys(r.plates),
+      ...Object.keys(r.gates),
+      ...Object.keys(r.enemies),
+    ]);
     r.rows.forEach((row, i) => {
       if (row.length !== w)
         ctx.addIssue({ code: 'custom', message: `row ${i} has length ${row.length}, not ${w}` });
       for (const ch of row) {
-        if (!(ch in TILE_CHARS) && !(ch in r.doors))
+        if (!(ch in TILE_CHARS) && !(ch in r.doors) && !specials.has(ch))
           ctx.addIssue({ code: 'custom', message: `row ${i}: unknown tile character "${ch}"` });
       }
     });
-    for (const ch of Object.keys(r.doors))
-      if (ch in TILE_CHARS)
-        ctx.addIssue({ code: 'custom', message: `door char "${ch}" clashes with a tile` });
+    const seen = new Set<string>();
+    for (const [what, map] of [
+      ['door', r.doors],
+      ['source', r.sources],
+      ['plate', r.plates],
+      ['gate', r.gates],
+      ['enemy', r.enemies],
+    ] as const) {
+      for (const ch of Object.keys(map)) {
+        if (ch in TILE_CHARS)
+          ctx.addIssue({ code: 'custom', message: `${what} char "${ch}" clashes with a tile` });
+        if (seen.has(ch)) ctx.addIssue({ code: 'custom', message: `${what} char "${ch}" is used twice` });
+        seen.add(ch);
+      }
+    }
     if (r.rows.filter((row) => row.includes('P')).length !== 1 || r.rows.join('').split('P').length !== 2)
       ctx.addIssue({ code: 'custom', message: 'room needs exactly one P (spawn)' });
   });
@@ -135,6 +184,16 @@ export interface CameraZone {
   cy: number;
 }
 
+export interface RoomSource {
+  char: string;
+  sound: string;
+  colour: (typeof COLOURS)[number];
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -148,6 +207,11 @@ export interface Room {
   abilities: Abilities;
   cameraZones: CameraZone[];
   next?: string;
+  /** L3: humming objects (one per connected component of a source char), px rects, scan order. */
+  sources: RoomSource[];
+  plates: { char: string; tiles: number[]; pressedBy: ('slab' | 'heavy')[] }[];
+  gates: { char: string; tiles: number[]; opensOn: 'plate' | 'clear' }[];
+  enemySpawns: { type: string; tx: number; ty: number }[];
   /** Tiles of solid padding added on the left/top (sketch tile + pad = room tile). */
   padX: number;
   padY: number;
@@ -169,13 +233,31 @@ export function buildRoom(input: RoomFile): Room {
   const tiles = new Uint8Array(width * height).fill(Tile.solid);
   const spawns: Record<string, Spawn> = {};
   const entities: Entity[] = [];
+  const plateTiles: Record<string, number[]> = {};
+  const gateTiles: Record<string, number[]> = {};
+  const enemySpawns: Room['enemySpawns'] = [];
+  const charAt = (tx: number, ty: number): string => f.rows[ty - padY]?.[tx - padX] ?? '#';
   f.rows.forEach((row, sy) => {
     for (let sx = 0; sx < sw; sx++) {
       const ch = row[sx] ?? '#';
       const tx = sx + padX;
       const ty = sy + padY;
       const door = f.doors[ch];
-      tiles[ty * width + tx] = door ? Tile.empty : (TILE_CHARS[ch] ?? Tile.solid);
+      // Plates are always solid (their pressed state lives in GameState.local); sources, gates
+      // and enemy spawns load as empty tiles (their solidity is dynamic, see world/dynamic.ts).
+      let tile: TileType = door ? Tile.empty : (TILE_CHARS[ch] ?? Tile.solid);
+      if (ch in f.plates) {
+        tile = Tile.solid;
+        plateTiles[ch] = [...(plateTiles[ch] ?? []), tx, ty];
+      } else if (ch in f.gates) {
+        tile = Tile.empty;
+        gateTiles[ch] = [...(gateTiles[ch] ?? []), tx, ty];
+      } else if (ch in f.sources) tile = Tile.empty;
+      else if (ch in f.enemies) {
+        tile = Tile.empty;
+        enemySpawns.push({ type: f.enemies[ch] as string, tx, ty });
+      }
+      tiles[ty * width + tx] = tile;
       if (ch === 'P') spawns.default = { tx, ty };
       else if (ch === 'R') entities.push({ kind: 'respawn', tx, ty, char: ch });
       else if (ch === 'G') entities.push({ kind: 'goal', tx, ty, char: ch });
@@ -186,6 +268,60 @@ export function buildRoom(input: RoomFile): Room {
       }
     }
   });
+  // Sources: 4-connected components of each source char, in scan order of their first tile.
+  const sources: RoomSource[] = [];
+  const seen = new Uint8Array(width * height);
+  for (let ty = 0; ty < height; ty++) {
+    for (let tx = 0; tx < width; tx++) {
+      const ch = charAt(tx, ty);
+      const def = f.sources[ch];
+      if (!def || seen[ty * width + tx]) continue;
+      let x0 = tx;
+      let y0 = ty;
+      let x1 = tx;
+      let y1 = ty;
+      const stack = [tx, ty];
+      seen[ty * width + tx] = 1;
+      while (stack.length > 0) {
+        const cy = stack.pop() as number;
+        const cx = stack.pop() as number;
+        x0 = Math.min(x0, cx);
+        y0 = Math.min(y0, cy);
+        x1 = Math.max(x1, cx);
+        y1 = Math.max(y1, cy);
+        for (const [nx, ny] of [
+          [cx + 1, cy],
+          [cx - 1, cy],
+          [cx, cy + 1],
+          [cx, cy - 1],
+        ] as const) {
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          if (seen[ny * width + nx] || charAt(nx, ny) !== ch) continue;
+          seen[ny * width + nx] = 1;
+          stack.push(nx, ny);
+        }
+      }
+      sources.push({
+        char: ch,
+        sound: def.sound,
+        colour: def.colour,
+        x: x0 * TS,
+        y: y0 * TS,
+        w: (x1 - x0 + 1) * TS,
+        h: (y1 - y0 + 1) * TS,
+      });
+    }
+  }
+  const plates = Object.entries(plateTiles).map(([char, t]) => ({
+    char,
+    tiles: t,
+    pressedBy: f.plates[char]?.pressedBy ?? ['slab', 'heavy'],
+  }));
+  const gates = Object.entries(gateTiles).map(([char, t]) => ({
+    char,
+    tiles: t,
+    opensOn: f.gates[char]?.opensOn ?? 'plate',
+  }));
   const cameraZones = f.cameraZones.map((z): CameraZone => {
     const [zx, zy, zw, zh] = z.rect;
     const x = (zx + padX) * TS;
@@ -204,6 +340,10 @@ export function buildRoom(input: RoomFile): Room {
     abilities: { ...f.abilities },
     cameraZones,
     next: f.next,
+    sources,
+    plates,
+    gates,
+    enemySpawns,
     padX,
     padY,
     file: f,

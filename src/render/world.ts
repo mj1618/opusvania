@@ -262,6 +262,11 @@ export class WorldRenderer {
     this.player.scale.set(this.juice.sx, this.juice.sy);
   }
 
+  /** Canvas-px rects of L3 things as last drawn (for the E readability checks). */
+  rects(): import('../debug/api').RenderRect[] {
+    return [];
+  }
+
   /** Death: the body flashes white, turns red and swells for the hold, then pops (juice burst). */
   private drawDeathPop(): void {
     const d = this.juice.death;

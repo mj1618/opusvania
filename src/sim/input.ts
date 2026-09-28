@@ -14,6 +14,9 @@ export const ACTIONS = [
   'special',
   'map',
   'pause',
+  // L3 (appended so every existing tape mask keeps its meaning): bits 10 and 11.
+  'seize',
+  'levy',
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];

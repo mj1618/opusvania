@@ -47,10 +47,45 @@ import type { TuningPanel } from './tuning-panel';
  * Calling step() or pause() switches to manual mode, where the real-time loop stops advancing
  * the sim; resume() goes back to real time. Documented in memory/debug-api.md.
  */
+/** L3 combat summary added to state() (brief §1.1): Kid's Chin, bag colours, weight, hitstop, i-frames. */
+export interface CombatView {
+  chin: number;
+  bag: string[];
+  weight: string;
+  hitstop: number;
+  iframes: number;
+}
+
+/** state() = the sim state plus read-only L3 conveniences (restore() strips them). */
+export type StateView = GameState & {
+  combat: CombatView;
+  enemies: GameState['local']['enemies'];
+  sounds: GameState['local']['sounds'];
+};
+
+/** A drawn thing in canvas px (render.rects(), for the E readability checks). */
+export interface RenderRect {
+  id: number;
+  kind: string;
+  colour: string;
+  status: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface GameDebugApi {
   /** Advances n sim steps (manual mode), renders, and returns the new state. */
   step(n?: number): GameState;
-  state(): GameState;
+  state(): StateView;
+  /** Spawns an enemy (`barker`, `grinder`) with its feet at world (x, y); a replay op. Returns its id. */
+  spawn(type: string, x: number, y: number): number;
+  /** Render-side queries. */
+  render: {
+    /** Canvas-px rects of every source, levied object, enemy and bag HUD slot as last drawn. */
+    rects(): RenderRect[];
+  };
   hash(): string;
   /** Queues scripted input (spec DSL `R30 R+J12 .5` or `right*30`, see src/input/script.ts). Returns frames queued in total. */
   input(script: InputScript): number;
@@ -178,6 +213,26 @@ export function installDebugApi({
   audio,
 }: DebugDeps): GameDebugApi {
   const snapshot = () => cloneState(game.state);
+  const stateView = (): StateView => {
+    const s = cloneState(game.state);
+    const L = s.local;
+    return {
+      ...s,
+      combat: {
+        chin: s.player.chin,
+        bag: L.bag.map((id) => L.sounds.find((x) => x.id === id)?.colour ?? '?'),
+        weight: s.player.profile,
+        hitstop: s.hitstop,
+        iframes: s.player.iframes,
+      },
+      enemies: L.enemies,
+      sounds: L.sounds,
+    };
+  };
+  const stripView = (s: GameState): GameState => {
+    const { combat: _c, enemies: _e, sounds: _s, ...rest } = s as StateView;
+    return rest as GameState;
+  };
   const log = new EventLog(game);
   const trail = new TrailOverlay(game, log);
   overlay.g.parent?.addChild(trail.container);
@@ -222,7 +277,15 @@ export function installDebugApi({
       render(1);
       return snapshot();
     },
-    state: snapshot,
+    state: stateView,
+    spawn(type, x, y) {
+      const id = game.spawn(type, x, y);
+      render(1);
+      return id;
+    },
+    render: {
+      rects: () => renderer.rects(),
+    },
     hash: () => game.hash(),
     input(script) {
       game.queueInput(parseInputScript(script));
@@ -290,7 +353,7 @@ export function installDebugApi({
     save: snapshot,
     snapshot,
     restore(s) {
-      game.setState(s);
+      game.setState(stripView(s));
       render(1);
       return snapshot();
     },

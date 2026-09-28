@@ -1,5 +1,14 @@
 import { EventBus, type SimEvent } from './sim/events';
-import { cloneState, createState, type GameState, hashState, loadRoom, reseed, step } from './sim/index';
+import {
+  cloneState,
+  createState,
+  type GameState,
+  hashState,
+  loadRoom,
+  reseed,
+  spawnEnemyAt,
+  step,
+} from './sim/index';
 import type { InputFrame } from './sim/input';
 import { type Replay, type ReplayOp, ReplayRecorder } from './sim/replay';
 import { assignTuning, type Tuning } from './sim/tuning';
@@ -88,6 +97,14 @@ export class Game {
     this.flushEvents();
   }
 
+  /** Spawns an enemy with its feet at (x, y) (debug; recorded as a replay op). Returns its id. */
+  spawn(type: string, x: number, y: number): number {
+    this.recorder?.op({ op: 'spawn', type, x, y });
+    const id = spawnEnemyAt(this.state, type, x, y);
+    this.prev = cloneState(this.state);
+    return id;
+  }
+
   /** Reseeds the RNG in place (does not reset the world). */
   reseed(seed: number): void {
     this.recorder?.op({ op: 'seed', seed });
@@ -132,6 +149,7 @@ export class Game {
       else if (op?.op === 'seed') this.reseed(op.seed);
       else if (op?.op === 'state') this.setState(op.state);
       else if (op?.op === 'tuning') assignTuning(this.tuning, op.tuning);
+      else if (op?.op === 'spawn') this.spawn(op.type, op.x, op.y);
     }
     if (pb.next >= pb.ops.length) this.playback = null;
   }

@@ -5,6 +5,10 @@
  * Positions (x, y) are the player's feet centre in world px unless stated. `dir` is -1 / 1.
  * The full list with meanings is in memory/sim-architecture.md.
  */
+export type Colour = 'brown' | 'pink' | 'violet' | 'white';
+export type MoveDir = 'fwd' | 'up' | 'down';
+export type HitClass = 'light' | 'medium' | 'heavy' | 'seizeTake' | 'catch' | 'repossess' | 'hurt';
+
 export type JumpKind = 'ground' | 'coyote' | 'buffered' | 'wall' | 'double' | 'dashJump';
 export type CornerKind = 'head' | 'ledge' | 'dash';
 
@@ -27,7 +31,64 @@ export type SimEvent =
   | { type: 'respawn'; x: number; y: number }
   | { type: 'checkpoint'; x: number; y: number }
   | { type: 'goal'; kind: 'main' | 'optional'; roomId: string; x: number; y: number }
-  | { type: 'profileChange'; from: string; to: string };
+  | { type: 'profileChange'; from: string; to: string }
+  // --- L3 signature mechanic and combat foundations (combat-spec §2, L3 brief §2.4). Positions
+  // are world px (the target's centre unless stated). `soundId`/`source`/`enemy` are local ids.
+  | { type: 'moveStart'; move: string; dir: MoveDir; x: number; y: number }
+  | { type: 'whiff'; move: string; reason?: 'down'; x: number; y: number }
+  | {
+      type: 'hit';
+      cls: HitClass;
+      move: string;
+      target: number;
+      dmg: number;
+      x: number;
+      y: number;
+      dir: number;
+    }
+  | { type: 'hitstop'; frames: number; cls: HitClass }
+  | {
+      type: 'seizeTake';
+      soundId: number;
+      colour: Colour;
+      kind: 'voice' | 'deed';
+      owner: number;
+      x: number;
+      y: number;
+    }
+  | { type: 'seizeGuarded'; target: number; x: number; y: number }
+  | { type: 'seizeRefused'; target: number; x: number; y: number }
+  | { type: 'catch'; enemy: number; attackId: string; x: number; y: number }
+  | { type: 'ghost'; source: number; on: boolean; x: number; y: number }
+  | { type: 'levyThrow'; soundId: number; colour: Colour; dir: MoveDir; levied: number; x: number; y: number }
+  | { type: 'levyLand'; soundId: number; colour: Colour; levied: number; x: number; y: number }
+  | { type: 'levyDry'; x: number; y: number }
+  | { type: 'recoilHop'; colour: Colour; x: number; y: number }
+  | { type: 'springBounce'; levied: number; target: number; x: number; y: number }
+  | { type: 'bagPush'; soundId: number; colour: Colour; owner: number; x: number; y: number }
+  | { type: 'snatch'; soundId: number; enemy: number; x: number; y: number }
+  | { type: 'absorb'; soundId: number; enemy: number; x: number; y: number }
+  | { type: 'revoice'; soundId: number; enemy: number; x: number; y: number }
+  | { type: 'retrieve'; soundId: number; enemy: number; x: number; y: number }
+  | { type: 'hurt'; dmg: number; src: number; x: number; y: number }
+  | {
+      type: 'telegraph';
+      enemy: number;
+      attackId: string;
+      colour: Colour;
+      frames: number;
+      x: number;
+      y: number;
+    }
+  | { type: 'attackActive'; enemy: number; attackId: string; x: number; y: number }
+  | { type: 'down'; enemy: number; x: number; y: number }
+  | { type: 'countTick'; enemy: number; beat: number; x: number; y: number }
+  | { type: 'repossess'; enemy: number; x: number; y: number }
+  | { type: 'rise'; enemy: number; x: number; y: number }
+  | { type: 'ko'; enemy: number; x: number; y: number }
+  | { type: 'plate'; char: string; by: 'slab' | 'heavy'; x: number; y: number }
+  | { type: 'gateOpen'; char: string; x: number; y: number }
+  | { type: 'roomClear'; x: number; y: number };
 
 export type SimEventType = SimEvent['type'];
 export type SimEventOf<T extends SimEventType> = Extract<SimEvent, { type: T }>;

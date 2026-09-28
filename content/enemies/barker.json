@@ -1,0 +1,47 @@
+{
+  "//": "Barker (combat-spec §4.4): a bowler-hatted guard dog. Validated by src/sim/ai/schema.ts.",
+  "id": "barker",
+  "body": { "w": 72, "h": 48 },
+  "hurtbox": [4, 4, 64, 44],
+  "hp": 8,
+  "contactDmg": 1,
+  "kbScale": 1,
+  "poundage": 3,
+  "flying": false,
+  "class": "fodder",
+  "sounds": [{ "id": "bark", "colour": "pink", "seizable": true }],
+  "seizeOrder": ["bark"],
+  "attacks": {
+    "lunge": {
+      "sound": "bark",
+      "trigger": { "rangeX": 256, "rangeY": 64, "cooldown": 40, "weight": 1 },
+      "telegraph": 18,
+      "teleBackPx": 8,
+      "active": 12,
+      "recovery": 26,
+      "hitboxes": [{ "fromFrame": 1, "toFrame": 12, "box": [40, 4, 48, 40] }],
+      "vx": 14,
+      "dmg": 1,
+      "cue": { "tint": "pink", "audio": "barkWindup", "pulses": 3 }
+    },
+    "snatch": {
+      "sound": null,
+      "snatch": true,
+      "trigger": { "rangeX": 96, "rangeY": 64, "cooldown": 0, "weight": 1 },
+      "telegraph": 16,
+      "active": 4,
+      "recovery": 24,
+      "hitboxes": [{ "fromFrame": 1, "toFrame": 4, "box": [0, 0, 96, 48] }],
+      "dmg": 0,
+      "push": 8,
+      "cue": { "tint": "pink", "audio": "snatchWindup" }
+    }
+  },
+  "movement": {
+    "patrolSpeed": 2.5,
+    "chaseSpeed": 5,
+    "aggroRange": 512,
+    "jump": { "risePx": 208, "maxRisePx": 192, "withinPx": 192 }
+  },
+  "furious": { "speedMult": 1.2, "telegraphDelta": -4 }
+}

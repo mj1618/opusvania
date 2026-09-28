@@ -199,7 +199,7 @@ export function runScenario(sc: Scenario): ScenarioResult {
 
 /** Renders a trace as fixed-width text, one line per frame (for agents reading logs). */
 export function formatTrace(trace: readonly TraceFrame[]): string {
-  const lines = ['frame  input   x      y      vx      vy     gnd state      events'];
+  const lines = ['frame  input   x      y      vx      vy     gnd state      move     bag  events'];
   for (const t of trace) {
     const p = t.p;
     const ev = t.ev.map((e) => (e.kind ? `${e.type}:${e.kind}` : e.type)).join(' ');
@@ -213,6 +213,8 @@ export function formatTrace(trace: readonly TraceFrame[]): string {
         p.vy.toFixed(2).padStart(7),
         p.grounded ? ' G ' : ' . ',
         p.state.padEnd(10),
+        (p.move ? `${p.move}${p.moveFrame}` : '-').padEnd(8),
+        (p.bag.map((c) => c[0]).join('') || '-').padEnd(4),
         ev,
       ].join(' '),
     );

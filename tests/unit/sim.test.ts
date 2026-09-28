@@ -105,7 +105,15 @@ describe('rooms', () => {
       expect(r.file.claims.G, id).toBeTruthy();
     }
     const hub = getRoom('hub');
-    expect(hub.entities.filter((e) => e.kind === 'door').map((e) => e.to)).toEqual(GYM_ROOMS);
+    const doors = hub.entities.filter((e) => e.kind === 'door').map((e) => e.to);
+    expect(doors.filter((to) => to?.startsWith('gym-'))).toEqual(GYM_ROOMS);
+    // L3: the signature-mechanic rooms hang off the hub's right-hand doors.
+    expect(doors.filter((to) => !to?.startsWith('gym-'))).toEqual([
+      'lot-7',
+      'lot-7-control',
+      'the-pit',
+      'stairwell',
+    ]);
   });
 
   it('mirrors a room file (spikes flip)', () => {
