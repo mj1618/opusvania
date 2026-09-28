@@ -17,6 +17,9 @@
   `src/debug/headless.ts`; they import only pure modules (no Pixi) and start in under 0.5 s.
 - `vite.config.ts` imports `tools/lib/build-info.ts` for the build-stamp `define`s. Vite warns that
   extensionless config imports won't work with `configLoader: 'native'`; harmless for now.
+- **No pixi-filters:** bloom, lighting and post are ~200 lines of our own GLSL (render-pipeline.md): one
+  fused post pass is cheaper than chained filters and every input is a uniform we control.
+- **Headless Chromium = SwiftShader** even on macOS; pass `--use-angle=metal --enable-gpu` for the real GPU.
 - **Why these deps:** `tsx` runs `tools/*.ts` directly (clip, sim, bot, feel report, tape). `@tweakpane/core` is a dev dep only
   because `tweakpane`'s .d.ts files import it without declaring it.
 - Playwright Test's `chromium` export is reused by the clip tool, so there's one browser install

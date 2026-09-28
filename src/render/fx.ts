@@ -138,6 +138,8 @@ export class Juice {
   private frame = 0;
 
   reset(): void {
+    // Reseed too, so a room rebuilt from the same state renders identically (screenshot tests).
+    this.rng = fxTuning.rngSeed;
     this.sx = 1;
     this.sy = 1;
     this.particles = [];

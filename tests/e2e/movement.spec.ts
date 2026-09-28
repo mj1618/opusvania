@@ -71,7 +71,9 @@ test('a door in the hub leads into its room (Up), and presets/assists switch liv
 test('end-to-end input latency p95 < 100 ms', async ({ page }) => {
   // 40 real-time trials; CI runners are slower than dev machines.
   test.setTimeout(90_000);
-  await boot(page, '?room=gym-01');
+  // quality=low: this measures the input path, not fill rate. Headless Chromium renders with
+  // SwiftShader, where the full pipeline takes ~60 ms a frame and would skip this test.
+  await boot(page, '?room=gym-01&quality=low');
   // If the page can't even hold 20 fps (CI's software GL takes hundreds of ms per frame), this
   // would measure the rasterizer, not our input path. Skip there; it runs on dev machines.
   const frameMs: number = await page.evaluate(async () => {

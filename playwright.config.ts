@@ -10,6 +10,9 @@ const PORT = Number(process.env.E2E_PORT);
 
 export default defineConfig({
   testDir: 'tests/e2e',
+  // Screenshot goldens (tests/e2e/gfx.spec.ts) are shared across platforms: headless Chromium
+  // renders with SwiftShader both locally and on CI, and the tests compare with a tolerance.
+  snapshotPathTemplate: '{testDir}/__screenshots__/{testFileName}/{arg}{ext}',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

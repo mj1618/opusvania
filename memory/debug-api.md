@@ -4,10 +4,10 @@ Source: `src/debug/api.ts` (typed `GameDebugApi`). Everything returns plain JSON
 of the player/tuning/rooms go through `src/debug/sim-adapter.ts` (see sim-adapter.md).
 
 - URL params: `?manual` (start paused, only `step()` advances), `seed=<n>`, `room=<id>` (default `hub`),
-  `spawn=<name>`, `preset=opus|celeste|hk`.
+  `spawn=<name>`, `preset=opus|celeste|hk`, `quality=low|med|high`.
 - Keys: 1-9/0 load gym-01..10, Shift+1-4 gym-11..14, H hub, F3 blind A/B swap (slots in the panel;
   moved off B, which L3 binds to Levy),
-  F1/F2 hitboxes, backquote tuning panel.
+  F1/F2 hitboxes, F4 perf HUD (Shift+F4 cycles quality), backquote tuning panel.
 
 ## L3
 - `state()` also returns `combat {chin, bag, weight, hitstop, iframes}`, `enemies`, `sounds` (restore()
@@ -64,6 +64,13 @@ of the player/tuning/rooms go through `src/debug/sim-adapter.ts` (see sim-adapte
   `hum(colour, x?, y?)` → id, `seize(id)`, `levy(id, x, y)`, `stopHum(id)`, `music('sparse'|'full'|'stop')`,
   `render([scenario])` (offline levels), `scenarios()`. Audio stays `'locked'` until a real gesture
   (`playwright-cli press Space` or a click; a scripted `unlock()` is not a gesture).
+
+## Render (gfx)
+- `gfx.quality(name?)`, `gfx.hud(on?)`, `gfx.stats()` (lights, lamps, particles, draw calls, perf, dressing
+  sources), `gfx.set({lighting, post, bloom, backdrop, foreground, particles, ui})` for A/B looks and
+  text-free screenshots, `gfx.dressing()`, `gfx.lights()`, `gfx.probeLight({x,y,radius,color,intensity}|null)`
+  (a live test light via the provider hook), `gfx.bench(n)` (full frame cost, ms).
+  See render-pipeline.md.
 
 ## Overlays
 - `debug.hitboxes(on?)`, `debug.tuningPanel(on?)`, `debug.trail(on?, {length, every})` (motion trail +
