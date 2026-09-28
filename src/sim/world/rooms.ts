@@ -104,6 +104,12 @@ const Prompt = z.object({
 export type PromptDef = z.infer<typeof Prompt>;
 const PlateDef = z.object({ pressedBy: z.array(z.enum(['slab', 'heavy'])).default(['slab', 'heavy']) });
 const AbilityEnum = z.enum(['wallJump', 'dash', 'doubleJump', 'pogo', 'seize', 'levy']);
+/**
+ * Progression validator: aimed moves a gate is meant to require, as `<move>:<dir>` (a `moveStart`
+ * event, e.g. `seize:up`, `levy:down`). The gate audit forbids each in turn (the bot prunes any
+ * state where it started) with the room's own kit: the target must stay unreachable.
+ */
+const MoveKey = z.string().regex(/^[a-z]+:(up|down|fwd)$/);
 const GateDef = z.object({
   opensOn: z.enum(['plate', 'clear']),
   /**
@@ -113,6 +119,7 @@ const GateDef = z.object({
   requires: z.array(AbilityEnum).optional(),
   /** world-design §3: `sealed` (a barrier; default for tile gates) or `reach` (height/gap/timing). */
   hold: z.enum(['sealed', 'reach']).optional(),
+  moves: z.array(MoveKey).optional(),
 });
 /** Progression validator: an ability pickup (tile char). Sim support comes with Phase 3 saves. */
 const PickupDef = z.object({
@@ -130,7 +137,13 @@ const RestDef = z.object({ name: z.string().optional() });
 const LockDef = z.object({
   target: z.string(),
   from: z.string().optional(),
+  /**
+   * Input DSL played from `from` before the audit's search starts (e.g. solve the room's first
+   * puzzle so the bot starts where the gate is taught, with that room state).
+   */
+  prelude: z.string().optional(),
   requires: z.array(AbilityEnum).min(1),
+  moves: z.array(MoveKey).optional(),
   /** world-design §3: `reach` (default for locks) or `sealed`. Reach gates may not share a room with pink (G3). */
   hold: z.enum(['sealed', 'reach']).default('reach'),
   /** world-design G8: only has to hold against the kit at the room's earliest visit. */

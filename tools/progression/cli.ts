@@ -16,7 +16,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { makeTape } from '../../src/debug/tape';
 import { installBuildInfo } from '../lib/build-info';
-import { auditGates, type GateAudit } from './audit';
+import { auditGates, evidenceKey, type GateAudit } from './audit';
 import { checkDesign, type DesignGraph, diffDesign, loadDesign } from './intended';
 import { abilitySet } from './job';
 import { Oracle } from './oracle';
@@ -202,9 +202,10 @@ async function main(): Promise<number> {
       for (const c of a.checks)
         for (const b of c.bypasses) {
           if (!b.answer.tape) continue;
-          const key = `${a.gate.id}|${b.abilities.join('+')}`;
+          const key = evidenceKey(a.gate.id, c, b.abilities);
           if (run.evidence[key]) continue;
-          const name = `${a.gate.id.replace(/[/:]/g, '.')}.${abilKey(b.answer.tapeAbilities ?? b.abilities)}`;
+          const aim = c.basis === 'room' ? `.no-${c.verb.replace(':', '-')}` : '';
+          const name = `${a.gate.id.replace(/[/:]/g, '.')}.${abilKey(b.answer.tapeAbilities ?? b.abilities)}${aim}`;
           const file = join(evDir, `${name}.json`);
           mkdirSync(evDir, { recursive: true });
           const tape = makeTape(
@@ -215,11 +216,11 @@ async function main(): Promise<number> {
               seed: 1,
               abilities: abilitySet(b.answer.tapeAbilities ?? b.abilities),
             },
-            b.answer.tape,
+            a.gate.prelude ? `${a.gate.prelude} ${b.answer.tape}` : b.answer.tape,
             { target: a.gate.target, maxDeaths: 0 },
             'progression',
           );
-          tape.notes = `Gate audit evidence: ${a.gate.id} (requires ${a.gate.requires.join(', ')}) reached with ${abilKey(b.answer.tapeAbilities ?? b.abilities)}.`;
+          tape.notes = `Gate audit evidence: ${a.gate.id} (requires ${a.gate.requires.join(', ')}${c.basis === 'room' ? `; aim ${c.verb} forbidden` : ''}) reached with ${abilKey(b.answer.tapeAbilities ?? b.abilities)}${a.gate.prelude ? ` after the prelude "${a.gate.prelude}"` : ''}.`;
           writeFileSync(file, `${JSON.stringify(tape, null, 2)}\n`);
           run.evidence[key] = relative(dir, file);
         }
@@ -332,7 +333,7 @@ function jsonReport(r: RunReport, fs: ReturnType<typeof findings>, baseline: Map
           frames: b.answer.frames,
           tape: b.answer.tape,
           tapeAbilities: b.answer.tapeAbilities,
-          file: r.evidence[`${a.gate.id}|${b.abilities.join('+')}`],
+          file: r.evidence[evidenceKey(a.gate.id, c, b.abilities)],
         })),
       })),
     })),

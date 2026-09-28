@@ -60,9 +60,13 @@ export interface GateNode {
   kind: 'gate' | 'lock';
   name: string;
   requires: Ability[];
+  /** Aimed moves (`seize:up`...) it should also require; audited with the room's own kit. */
+  moves: string[];
   /** Bot target that counts as "passed" (a lock's own target; a gate's far-side tiles). */
   target: string;
   from: string;
+  /** Input DSL played from `from` before the audit searches (the lock's `prelude`). */
+  prelude?: string;
   opensOn?: string;
   /** world-design §3: sealed barrier or reach (height/gap/timing) gate. */
   hold: 'sealed' | 'reach';
@@ -173,7 +177,9 @@ export function extractWorld(opts: { start?: string; rooms?: string[] } = {}): W
           tx: e.tx,
           ty: e.ty,
         });
-      } else if (e.kind === 'rest')
+      } else if (e.kind === 'corner')
+        rests.push({ id: `${id}/rest:corner`, room: id, target: tileTarget(e.tx, e.ty) });
+      else if (e.kind === 'rest')
         rests.push({ id: `${id}/rest:${e.id ?? e.char}`, room: id, target: tileTarget(e.tx, e.ty) });
     }
     if (l.abilities.length > 0)
@@ -238,7 +244,8 @@ export function extractWorld(opts: { start?: string; rooms?: string[] } = {}): W
 /**
  * Which tiles block the flood fill for a given ability set. Terrain and plates always; a closed
  * gate unless its opening mechanism is available (plate: seize, and levy for slab-only plates;
- * clear: always, the jab is free); a home source unless it can be seized (white never can).
+ * clear: always, the jab is free); a home source unless it can be seized (white never can; locked
+ * lots never block, since the boss can sell them).
  * Ignores gravity and body size, so everything it calls reachable is a superset of the truth.
  */
 export function blockers(l: RoomLayout, abilities: readonly Ability[], openGates = false): Uint8Array {
@@ -257,7 +264,8 @@ export function blockers(l: RoomLayout, abilities: readonly Ability[], openGates
       out[(g.tiles[i + 1] as number) * w + (g.tiles[i] as number)] = 1;
   }
   for (const s of l.sources) {
-    if (has('seize') && s.colour !== 'white') continue;
+    // A locked lot can't be seized, but the Auctioneer can sell it away: never a sure blocker.
+    if (s.locked || (has('seize') && s.colour !== 'white')) continue;
     for (let y = s.ty; y < s.ty + s.th; y++) for (let x = s.tx; x < s.tx + s.tw; x++) out[y * w + x] = 1;
   }
   return out;
@@ -346,20 +354,21 @@ export function staticallyUnreachable(
 }
 
 /**
- * Tile gates with `requires` get an automatic target: the tiles next to the gate that are cut off
+ * Tile gates with `requires` or `moves` get an automatic target: the tiles next to the gate that are cut off
  * from the audit start when the gate is shut (everything else open). Locks carry their own target.
  */
 function extractGates(l: RoomLayout): GateNode[] {
   const out: GateNode[] = [];
   const sp = l.spawns.default;
   for (const g of l.gates) {
-    if (g.requires.length === 0) continue;
+    if (g.requires.length === 0 && g.moves.length === 0) continue;
     const node: GateNode = {
       id: `${l.id}/gate:${g.char}`,
       room: l.id,
       kind: 'gate',
       name: g.char,
       requires: [...g.requires],
+      moves: [...g.moves],
       target: '',
       from: 'default',
       opensOn: g.opensOn,
@@ -422,8 +431,10 @@ function extractGates(l: RoomLayout): GateNode[] {
       kind: 'lock',
       name,
       requires: [...k.requires],
+      moves: [...(k.moves ?? [])],
       target: k.target,
       from: k.from ?? 'default',
+      ...(k.prelude ? { prelude: k.prelude } : {}),
       hold: k.hold,
       teachGate: k.teachGate,
       ...(k.region ? { region: k.region } : {}),

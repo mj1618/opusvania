@@ -1,0 +1,29 @@
+{
+  "kind": "tape",
+  "name": "stairwell.chain",
+  "inputs": ".5 J12 U+J+S1 J8 .4 D+V1 .28 D+S1 .36 D+V1 .10 U+S1 .24 D+V1 .9 U+S1 .22 R36 .10 D+V1 .4 R26",
+  "expect": {
+    "maxDeaths": 0,
+    "target": "G"
+  },
+  "source": "hand",
+  "room": "stairwell",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "031c4b0f93afc4",
+    "build": {
+      "sha": "f5a4cf3ce6-dirty",
+      "sim": "c3b429279c",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 1114,
+      "y": 496,
+      "frame": 242,
+      "room": "stairwell"
+    },
+    "hash": "0485b3a220c234",
+    "hashes": ["0c6709ef37241c", "040f5cd00373c0", "03979f27c7358c", "10fb0df812a507"]
+  },
+  "notes": "Hand-made proof that Stairwell G is reachable (L4 merge). Chain: jump + Up+Seize bar 1 at the apex; Down+Levy it at the apex (recoil hop + mid-air spring); bounce and Down+Seize the spring on the launch frame (a 1-frame window: pressed on f60, taken on f65, the frame after the bounce; one frame earlier takes it before the bounce, one later whiffs); Down+Levy it at the next apex, recoil into bar 2 and Up+Seize it; Down+Levy bar 2 at the apex, Up+Seize bar 3 on the recoil; bounce, drift right, Down+Levy bar 3 at the apex for the last recoil hop onto the G ledge."
+}

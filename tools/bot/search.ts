@@ -94,6 +94,18 @@ export interface SearchOptions extends SimSetup {
    * reachable set (no maxFrames cap; a key is closed on its first visit), so found tapes may be long.
    */
   bounds?: Rect;
+  /**
+   * Aimed moves the search may not perform (`<move>:<dir>`, e.g. `seize:up`): a state where a
+   * matching `moveStart` fired is pruned (the gate audit's aim checks).
+   */
+  forbid?: readonly string[];
+}
+
+/** True when `e` starts a move listed in `forbid` (`<move>:<dir>`). */
+export function isForbiddenMove(e: { type: string }, forbid: readonly string[] | undefined): boolean {
+  if (!forbid?.length || e.type !== 'moveStart') return false;
+  const m = e as { move?: string; dir?: string };
+  return forbid.includes(`${m.move}:${m.dir}`);
 }
 
 export interface SearchResult {
@@ -290,7 +302,10 @@ export function search(opts: SearchOptions): SearchResult {
       for (let f = 1; f <= k; f++) {
         const evs = child.step(macro.mask);
         simFrames++;
-        if (evs.some((e) => normEvent(e).type === 'death') || child.view.dead) {
+        if (
+          evs.some((e) => normEvent(e).type === 'death' || isForbiddenMove(e, opts.forbid)) ||
+          child.view.dead
+        ) {
           dead = true;
           break;
         }
@@ -363,6 +378,7 @@ export function search(opts: SearchOptions): SearchResult {
       const check = runScenario({ ...opts, abilities, inputs: res.tape, stop: { target } });
       res.verified =
         check.reachedAt !== undefined &&
+        !check.events.some((x) => isForbiddenMove(x.e.raw, opts.forbid)) &&
         check.steps === masks.length &&
         check.deaths === 0 &&
         parseTape(res.tape).length === masks.length;

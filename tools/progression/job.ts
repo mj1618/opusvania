@@ -4,7 +4,8 @@
  */
 import { HeadlessSim, runScenario, type SimSetup } from '../../src/debug/headless';
 import { ABILITIES, type Ability, type AbilitySet, placePlayer } from '../../src/debug/sim-adapter';
-import { search } from '../bot/search';
+import { parseInputScript } from '../../src/input/script';
+import { isForbiddenMove, search } from '../bot/search';
 
 export interface Job {
   room: string;
@@ -18,6 +19,10 @@ export interface Job {
   preset?: string;
   /** Bounded region (`rect:x,y,w,h`, px): the search may not leave it (so it can exhaust). */
   region?: string;
+  /** Aimed moves the bot may not perform (`seize:up`...; the gate audit's aim checks). */
+  forbid?: string[];
+  /** Input DSL played from the spawn first; the search (and tape replays) start after it. */
+  prelude?: string;
 }
 
 export interface JobResult {
@@ -38,16 +43,19 @@ export function abilitySet(list: readonly Ability[]): AbilitySet {
 }
 
 /** The SimSetup a job starts from (also used to replay evidence tapes). */
-export function jobSetup(j: Pick<Job, 'room' | 'spawn' | 'at' | 'abilities' | 'seed' | 'preset'>): SimSetup {
+export function jobSetup(
+  j: Pick<Job, 'room' | 'spawn' | 'at' | 'abilities' | 'seed' | 'preset' | 'prelude'>,
+): SimSetup {
   const base: SimSetup = {
     room: j.room,
     seed: j.seed,
     abilities: abilitySet(j.abilities),
     ...(j.preset ? { preset: j.preset } : {}),
   };
-  if (!j.at) return { ...base, spawn: j.spawn };
+  if (!j.at && !j.prelude) return { ...base, spawn: j.spawn };
   const sim = new HeadlessSim({ ...base, spawn: j.spawn });
-  placePlayer(sim.state, j.at.tx, j.at.ty, sim.tuning);
+  if (j.at) placePlayer(sim.state, j.at.tx, j.at.ty, sim.tuning);
+  for (const m of parseInputScript(j.prelude ?? '')) sim.step(m);
   return { ...base, start: sim.state };
 }
 
@@ -60,6 +68,7 @@ export function runJob(j: Job): JobResult {
     target: j.target,
     budget: j.budget,
     ...(bounds ? { bounds } : {}),
+    ...(j.forbid?.length ? { forbid: j.forbid } : {}),
   });
   return {
     found: r.found && r.verified === true,
@@ -75,9 +84,10 @@ export function runJob(j: Job): JobResult {
 
 /** Replays a tape from the job's start; returns the frame the target was reached (no deaths), if any. */
 export function replayReaches(
-  j: Pick<Job, 'room' | 'spawn' | 'at' | 'abilities' | 'seed' | 'preset' | 'target'>,
+  j: Pick<Job, 'room' | 'spawn' | 'at' | 'abilities' | 'seed' | 'preset' | 'target' | 'forbid' | 'prelude'>,
   tape: string,
 ): number | undefined {
   const r = runScenario({ ...jobSetup(j), inputs: tape, stop: { target: j.target } });
+  if (r.events.some((x) => isForbiddenMove(x.e.raw, j.forbid))) return undefined;
   return r.deaths === 0 ? r.reachedAt : undefined;
 }

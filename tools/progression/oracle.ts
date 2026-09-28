@@ -43,6 +43,10 @@ export interface Query {
   budget?: number;
   /** Bounded search region (`rect:x,y,w,h`): a no inside it is a proof only for that region. */
   region?: string;
+  /** Aimed moves the player may not use (`seize:up`...): the gate audit's aim checks. */
+  forbid?: string[];
+  /** Input DSL played from `from` first (a lock's `prelude`); the search starts after it. */
+  prelude?: string;
 }
 
 export interface Answer {
@@ -197,9 +201,10 @@ export class Oracle {
 
   private baseKey(q: Query): string {
     const room = this.opts.graph.rooms[q.room];
-    const from = q.at ? `@${q.at.tx},${q.at.ty}` : q.from;
+    const from = (q.at ? `@${q.at.tx},${q.at.ty}` : q.from) + (q.prelude ? `+[${q.prelude}]` : '');
     const region = q.region ? `|in:${q.region}` : '';
-    return `${q.room}#${room?.hash ?? '?'}|${from}|${q.target}${region}|s${this.seed}|${this.opts.preset ?? 'opus'}`;
+    const forbid = q.forbid?.length ? `|no:${[...q.forbid].sort().join(',')}` : '';
+    return `${q.room}#${room?.hash ?? '?'}|${from}|${q.target}${region}${forbid}|s${this.seed}|${this.opts.preset ?? 'opus'}`;
   }
 
   private job(q: Query): Job {
@@ -213,6 +218,8 @@ export class Oracle {
       seed: this.seed,
       ...(this.opts.preset ? { preset: this.opts.preset } : {}),
       ...(q.region ? { region: q.region } : {}),
+      ...(q.forbid?.length ? { forbid: [...q.forbid] } : {}),
+      ...(q.prelude ? { prelude: q.prelude } : {}),
     };
   }
 
@@ -278,21 +285,25 @@ export class Oracle {
         ms: ms(),
       };
     }
-    // Committed tapes from the same start with a subset of the abilities.
+    // Committed tapes from the same start with a subset of the abilities. With a prelude, only tapes
+    // that begin with it (replayed whole from the spawn; the evidence is the rest of the tape).
+    const pre = q.prelude?.trim();
     if (!q.at)
       for (const t of this.tapes) {
         if (t.room !== q.room || t.spawn !== q.from || t.seed !== this.seed) continue;
         if (!isSubset(t.abilities, q.abilities)) continue;
-        const mk = `${t.file}|${q.target}`;
-        if (!this.tapeMemo.has(mk))
-          this.tapeMemo.set(mk, replayReaches({ ...this.job(q), abilities: t.abilities }, t.inputs));
+        if (pre && !t.inputs.trim().startsWith(`${pre} `)) continue;
+        const mk = `${t.file}|${q.target}|${q.forbid?.join(',') ?? ''}`;
+        const whole = { ...this.job(q), abilities: t.abilities };
+        delete whole.prelude;
+        if (!this.tapeMemo.has(mk)) this.tapeMemo.set(mk, replayReaches(whole, t.inputs));
         const at = this.tapeMemo.get(mk);
         if (at === undefined) continue;
         this.stats.tapes++;
         return {
           verdict: 'yes',
           how: 'tape',
-          tape: t.inputs,
+          tape: pre ? t.inputs.trim().slice(pre.length).trim() : t.inputs,
           tapeAbilities: t.abilities,
           frames: at,
           evidence: t.file,

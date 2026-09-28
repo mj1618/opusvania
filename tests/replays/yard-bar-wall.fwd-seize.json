@@ -1,0 +1,29 @@
+{
+  "kind": "tape",
+  "name": "yard-bar-wall.fwd-seize",
+  "inputs": "R15 R+S1 .14 R18 R+V1 .40 R16 R+J16 R24 R+J14 R+J+S1 R+J6 .20 R20 R+V1 .30 R60",
+  "expect": {
+    "maxDeaths": 0,
+    "target": "rect:1792,960,384,64"
+  },
+  "source": "hand",
+  "room": "yard",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "031c4b0f93afc4",
+    "build": {
+      "sha": "f5a4cf3ce6-dirty",
+      "sim": "5678d2bcc2",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 1966,
+      "y": 902,
+      "frame": 297,
+      "room": "yard"
+    },
+    "hash": "08d8ecf54ace3e",
+    "hashes": ["1568b973214e49", "1b6fe15abfcc24", "169e828457cabf", "0748062c32b7ac"]
+  },
+  "notes": "KNOWN LEAK (L4 merge, progression gate audit yard/lock:bar-wall): the Yard's section B is meant to need Up+Seize on bar 1, but a FORWARD Seize at the top of a running jump also takes it (the fwd box [28,8,64,72] reaches 15 px into the bar at the apex), and the Levy spring at the wall then climbs the plateau. A sweep from the same start found 678 forward-seize takes in 27.8k timings (vs 2516 in 7k for Up+Seize). Delete this tape when the room is fixed (it will stop reaching the target)."
+}

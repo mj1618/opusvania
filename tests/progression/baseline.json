@@ -6,24 +6,8 @@
       "why": "Known since the L3 audit (item 3): with Wall Jump or Double Jump (plus Seize) the upper corridor is reached without the pink spring. Harmless today because Lot 7 SETS abilities on entry (gym semantics: the gate holds against {seize}); it becomes real once abilities persist (Phase 3). world-design.md rebuilds this as B2 (teachGate) + B3 (sealed plate door)."
     },
     {
-      "id": "unreached-exit:world:stairwell/G",
-      "why": "Stairwell is the L3 stretch expression room: no tape exists, the bot can't chain up-seize / down-levy / re-seize within budget, and the L3 novice got stuck after the first bar. Needs a hand-made tape (or an exit door) to prove it."
-    },
-    {
-      "id": "unreached-exit:gym:stairwell/G",
-      "why": "Same as unreached-exit:world:stairwell/G."
-    },
-    {
-      "id": "softlock:world:stairwell@spawn:default{wallJump, dash, doubleJump, pogo, seize, levy}",
-      "why": "Follows from stairwell/G being unproven: G is the room's only exit. In-game the debug keys (H) get you out."
-    },
-    {
-      "id": "softlock:gym:stairwell@spawn:default{seize, levy}",
-      "why": "Same as the world-semantics stairwell softlock."
-    },
-    {
-      "id": "diff:tests/progression/gym-world.json:blocked:stairwell-G stairwell -> hub (stairwell/G)",
-      "why": "Same as unreached-exit:world:stairwell/G."
+      "id": "gate-fail:yard/lock:bar-wall",
+      "why": "Found at the L4 merge by the new aim check: the Yard's section B is meant to teach Up+Seize (bar 1 overhead), but a forward Seize at the top of a running jump also takes the bar (the fwd box [28,8,64,72] reaches ~15 px into it at the apex), after which the wall spring works as intended. Evidence: tests/replays/yard-bar-wall.fwd-seize.json. Left for the combat/level owner: raising the bar one tile makes the forward seize miss but leaves Up+Seize only a ~7 px window at the apex, so the fix is a design call (bar height vs seize boxes). Section C (Down+Levy to the G ledge) holds: no forward/up/neutral levy reached G in a 9.7k-timing sweep (control with Down+Levy: 22 hits in 2.4k)."
     }
   ]
 }

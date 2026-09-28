@@ -8,22 +8,35 @@
  *   - full kit minus K (informational "future-proof" check: every ability in the sim but K).
  *   - G3 (static): a reach gate may not share a room with a pink sound (a pink spring is an
  *     unlimited ladder) unless pink is the key (Levy), and then it must be a teachGate (G8).
- * For each bypass it finds the minimal ability combos (subsets of the bypassing kit), smallest first,
- * with the bot's tape as evidence.
+ *   - aimed moves (`moves`, e.g. `seize:up`): with the room's own kit and that move forbidden (the
+ *     bot prunes any state where it started), the target must stay unreachable. Room kit only: with
+ *     more abilities the ability checks above already say whether the gate leaks.
+ * For each ability bypass it finds the minimal ability combos (subsets of the bypassing kit), smallest
+ * first, with the bot's tape as evidence.
  */
 import type { Answer, Oracle } from './oracle';
 import type { Solution } from './solver';
 import { type Ability, ALL, abil, abilKey, type GateNode, isSubset, type WorldGraph } from './world';
 
 export interface KitCheck {
-  verb: Ability;
-  basis: 'g7' | 'full';
+  /** The key removed: an ability, or an aimed move (`seize:up`) for `room` checks. */
+  verb: string;
+  /**
+   * g7: kits left in the room when the ability is removed from the game; full: every ability but
+   * it; room: the room's own kit (what the sim grants there) with the aimed move forbidden.
+   */
+  basis: 'g7' | 'full' | 'room';
   kit: Ability[];
   answer: Answer;
   status: 'holds' | 'bypassed';
   /** Minimal ability sets (subsets of `kit`) that reach the target, with evidence. */
   bypasses: { abilities: Ability[]; answer: Answer }[];
   combosTried: number;
+  /**
+   * Aim checks only: the same query with nothing forbidden. A "holds" means little unless this is
+   * a yes (the bot, or a committed tape, gets there WITH the aim).
+   */
+  control?: Answer;
 }
 
 export interface GateAudit {
@@ -71,6 +84,15 @@ function roomKits(sol: Solution, room: string, earliest: boolean): Ability[][] {
   return out;
 }
 
+/** Key of a bypass's evidence tape in RunReport.evidence (aim checks are keyed by the move too). */
+export function evidenceKey(
+  gateId: string,
+  c: Pick<KitCheck, 'basis' | 'verb'>,
+  abilities: Ability[],
+): string {
+  return `${gateId}|${abilities.join('+')}${c.basis === 'room' ? `|no:${c.verb}` : ''}`;
+}
+
 export async function auditGates(
   graph: WorldGraph,
   oracle: Oracle,
@@ -115,14 +137,18 @@ export async function auditGates(
       const full = ALL.filter((x) => x !== v);
       if (!kits.some((k) => abilKey(k) === abilKey(full))) checks.push({ a, c: mk(v, 'full', full) });
     }
+    for (const m of a.gate.moves)
+      checks.push({ a, c: mk(m, 'room', [...(graph.rooms[a.gate.room]?.grant ?? [])]) });
   }
   const answers = await oracle.ask(
     checks.map(({ a, c }) => ({
       room: a.gate.room,
       from: a.gate.from,
+      ...(a.gate.prelude ? { prelude: a.gate.prelude } : {}),
       abilities: c.kit,
       target: a.gate.target,
       ...(a.gate.region ? { region: a.gate.region } : {}),
+      ...(c.basis === 'room' ? { forbid: [c.verb] } : {}),
       budget: opts.budget,
     })),
   );
@@ -131,9 +157,29 @@ export async function auditGates(
     c.status = c.answer.verdict === 'yes' ? 'bypassed' : 'holds';
     a.checks.push(c);
   });
+  const aims = checks.filter(({ c }) => c.basis === 'room' && c.status === 'holds');
+  const controls = await oracle.ask(
+    aims.map(({ a, c }) => ({
+      room: a.gate.room,
+      from: a.gate.from,
+      ...(a.gate.prelude ? { prelude: a.gate.prelude } : {}),
+      abilities: c.kit,
+      target: a.gate.target,
+      ...(a.gate.region ? { region: a.gate.region } : {}),
+      budget: opts.budget,
+    })),
+  );
+  aims.forEach(({ a, c }, i) => {
+    c.control = controls[i] as Answer;
+    if (c.control.verdict !== 'yes')
+      a.notes.push(
+        `aim check "${c.verb}" is inconclusive: the target was not reached even with the aim (${c.control.verdict}), so "holds" only means the bot found nothing`,
+      );
+  });
 
   // Minimal bypass combos, level by level; every bypassed check shares each level's batch.
-  const open = checks.filter(({ c }) => c.status === 'bypassed');
+  // Aim checks keep the room kit as their evidence (no ability combos to minimise).
+  const open = checks.filter(({ c }) => c.status === 'bypassed' && c.basis !== 'room');
   const maxDepth = opts.comboDepth ?? ALL.length;
   for (let k = 0; k <= maxDepth; k++) {
     const batch: { a: GateAudit; c: KitCheck; set: Ability[] }[] = [];
@@ -149,6 +195,7 @@ export async function auditGates(
       batch.map(({ a, set }) => ({
         room: a.gate.room,
         from: a.gate.from,
+        ...(a.gate.prelude ? { prelude: a.gate.prelude } : {}),
         abilities: set,
         target: a.gate.target,
         ...(a.gate.region ? { region: a.gate.region } : {}),
@@ -163,18 +210,19 @@ export async function auditGates(
     });
   }
   // No smaller combo found in budget: the kit itself is the evidence.
-  for (const { c } of open)
-    if (c.bypasses.length === 0) c.bypasses.push({ abilities: c.kit, answer: c.answer });
+  for (const { c } of checks)
+    if (c.status === 'bypassed' && c.bypasses.length === 0)
+      c.bypasses.push({ abilities: c.kit, answer: c.answer });
 
   for (const a of live) {
-    if (a.rules.length > 0 || a.checks.some((c) => c.basis === 'g7' && c.status === 'bypassed'))
+    if (a.rules.length > 0 || a.checks.some((c) => c.basis !== 'full' && c.status === 'bypassed'))
       a.status = 'fail';
     else if (a.checks.some((c) => c.status === 'bypassed')) a.status = 'warn';
   }
   return out;
 }
 
-function mk(verb: Ability, basis: KitCheck['basis'], kit: Ability[]): KitCheck {
+function mk(verb: string, basis: KitCheck['basis'], kit: Ability[]): KitCheck {
   return {
     verb,
     basis,

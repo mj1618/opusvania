@@ -95,9 +95,29 @@ export async function probeTraps(
       if (any) jobs.push({ room: s.room, entry, abilities: s.abilities, ledge: lg });
     }
   }
+  // Start on the ledge tile nearest its middle that is free in a FRESH room (gates shut, sources
+  // home): the Auction's exit alcove ledge spans the clear gate, and placing Kid inside the shut
+  // gate read as a proven trap.
   const at = (j: (typeof jobs)[number]) => {
+    const l = layout(j.room);
+    const shut = blockers(l, [], false);
+    for (const g of l.gates)
+      for (let i = 0; i < g.tiles.length; i += 2)
+        shut[(g.tiles[i + 1] as number) * l.width + (g.tiles[i] as number)] = 1;
+    const ok = (x: number) => !shut[j.ledge.ty * l.width + x] && !shut[(j.ledge.ty - 1) * l.width + x];
     const mid = Math.floor((j.ledge.x0 + j.ledge.x1) / 2);
-    return { tx: mid, ty: j.ledge.ty, label: `${j.room}/ledge:${ledgeName(j.ledge)}` };
+    let tx = mid;
+    for (let d = 0; d <= j.ledge.x1 - j.ledge.x0; d++) {
+      if (mid + d <= j.ledge.x1 && ok(mid + d)) {
+        tx = mid + d;
+        break;
+      }
+      if (mid - d >= j.ledge.x0 && ok(mid - d)) {
+        tx = mid - d;
+        break;
+      }
+    }
+    return { tx, ty: j.ledge.ty, label: `${j.room}/ledge:${ledgeName(j.ledge)}` };
   };
   const base = (j: (typeof jobs)[number]): Omit<Query, 'target'> => ({
     room: j.room,

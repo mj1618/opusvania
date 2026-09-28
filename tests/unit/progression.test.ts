@@ -15,7 +15,7 @@ import {
   simAbility,
   solveDesign,
 } from '../../tools/progression/intended';
-import { runJob } from '../../tools/progression/job';
+import { replayReaches, runJob } from '../../tools/progression/job';
 import type { Answer, Query } from '../../tools/progression/oracle';
 import { Oracle } from '../../tools/progression/oracle';
 import { SearchPool } from '../../tools/progression/pool';
@@ -81,6 +81,14 @@ describe('world graph extraction', () => {
     expect(lot7.exits.map((x) => `${x.target}->${x.to}`)).toEqual(['G->hub']);
     expect(lot7.palette).toEqual(['brown', 'pink']);
     expect(world.rooms['the-pit']?.palette).toEqual(['brown', 'pink', 'violet']); // barker + grinder voices
+    // The Auctioneer's lots are locked (can't be seized): only his voices count.
+    expect(roomLayout('auction').sources.every((x) => x.locked)).toBe(true);
+    expect(hub.rests.map((r) => r.id)).toEqual(['hub/rest:corner']); // the stool (`+`)
+    const yard = world.rooms.yard as RoomNode;
+    expect(yard.gates.find((g) => g.name === 'bar-wall')).toMatchObject({
+      moves: ['seize:up'],
+      prelude: 'R15 R+S1 .14 R18 R+V1 .40',
+    });
     const gate = lot7.gates.find((g) => g.id === 'lot-7/gate:D');
     expect(gate?.target).toBe('rect:2560,448,128,320');
     expect(lot7.gates.find((g) => g.kind === 'lock')).toMatchObject({
@@ -88,6 +96,26 @@ describe('world graph extraction', () => {
       hold: 'reach',
       teachGate: true,
     });
+  });
+
+  it('aim checks and preludes: a forbidden aimed move rejects tapes; a prelude moves the start', () => {
+    // Stairwell: bar 1 is 7 tiles up; only a jump + Up+Seize takes it, then a Down+Levy recoil hop
+    // lifts Kid past where it was (row 25).
+    const job = { room: 'stairwell', spawn: 'default', abilities: ['seize', 'levy'] as Ability[], seed: 1 };
+    const above = 'rect:640,1600,640,64';
+    const tape = '.5 J12 U+J+S1 J8 .4 D+V1 .20';
+    expect(replayReaches({ ...job, target: above }, tape)).toBe(46);
+    expect(replayReaches({ ...job, target: above, forbid: ['seize:up'] }, tape)).toBeUndefined();
+    const r = runJob({ ...job, target: above, budget: 5_000, prelude: '.5 J12 U+J+S1 J8' });
+    expect(r.found).toBe(true); // from mid-air with the bar in the bag: one levy
+    const f = runJob({
+      ...job,
+      target: above,
+      budget: 5_000,
+      prelude: '.5 J12 U+J+S1 J8',
+      forbid: ['levy:down'],
+    });
+    expect(f.found).toBe(false);
   });
 
   it('static proof: without Seize the plate never presses, so the far side of gate D is sealed', () => {

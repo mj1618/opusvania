@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "slice": "gym: the L2 movement gyms, the hub and the L3 rooms, as built (world-design.md section 4.8 format)",
+  "slice": "gym: the L2 movement gyms, the hub, the L3 rooms and the L4 combat greybox, as built (world-design.md section 4.8 format)",
   "sim": {
     "abilities": {},
     "base": []
@@ -14,7 +14,7 @@
   "rooms": [
     {
       "id": "hub",
-      "name": "Gym hub",
+      "name": "Gym hub (Corner: the stool)",
       "purpose": ["hub", "rest"],
       "corner": true,
       "grants": ["ability:wallJump", "ability:dash", "ability:doubleJump", "ability:pogo"]
@@ -136,7 +136,7 @@
       "name": "The Pit (2 Barkers, 1 Grinder)",
       "purpose": ["test"],
       "grants": ["ability:dash", "ability:seize", "ability:levy"],
-      "palette": ["brown", "pink"],
+      "palette": ["brown", "pink", "violet"],
       "enemies": ["barker", "barker", "grinder"]
     },
     {
@@ -145,6 +145,54 @@
       "purpose": ["test"],
       "grants": ["ability:seize", "ability:levy"],
       "palette": ["pink"]
+    },
+    {
+      "id": "yard",
+      "name": "The Yard (aims: up-seize, down-levy)",
+      "purpose": ["teach"],
+      "grants": ["ability:dash", "ability:seize", "ability:levy"],
+      "palette": ["brown", "pink"]
+    },
+    {
+      "id": "ring-barker",
+      "name": "Ring: Barker (walker)",
+      "purpose": ["test"],
+      "grants": ["ability:dash", "ability:seize", "ability:levy"],
+      "palette": ["pink"],
+      "enemies": ["barker"]
+    },
+    {
+      "id": "ring-gull",
+      "name": "Ring: Gull (flyer)",
+      "purpose": ["test"],
+      "grants": ["ability:dash", "ability:seize", "ability:levy"],
+      "palette": ["violet"],
+      "enemies": ["gull"]
+    },
+    {
+      "id": "ring-grinder",
+      "name": "Ring: Grinder (charger)",
+      "purpose": ["test"],
+      "grants": ["ability:dash", "ability:seize", "ability:levy"],
+      "palette": ["brown", "violet"],
+      "enemies": ["grinder"]
+    },
+    {
+      "id": "ring-clerk",
+      "name": "Ring: Clerk (keep-away)",
+      "purpose": ["test"],
+      "grants": ["ability:dash", "ability:seize", "ability:levy"],
+      "palette": ["brown"],
+      "enemies": ["clerk"]
+    },
+    {
+      "id": "auction",
+      "name": "The Auction (boss: the Auctioneer)",
+      "purpose": ["boss"],
+      "grants": ["ability:dash", "ability:seize", "ability:levy"],
+      "palette": ["brown", "pink", "violet"],
+      "enemies": ["auctioneer"],
+      "boss": "auctioneer"
     }
   ],
   "edges": [
@@ -273,6 +321,48 @@
       "to": "stairwell",
       "dir": "oneway",
       "via": "door:S"
+    },
+    {
+      "id": "door-Y",
+      "from": "hub",
+      "to": "yard",
+      "dir": "oneway",
+      "via": "door:Y"
+    },
+    {
+      "id": "door-W",
+      "from": "hub",
+      "to": "ring-barker",
+      "dir": "oneway",
+      "via": "door:W"
+    },
+    {
+      "id": "door-X",
+      "from": "hub",
+      "to": "ring-gull",
+      "dir": "oneway",
+      "via": "door:X"
+    },
+    {
+      "id": "door-Z",
+      "from": "hub",
+      "to": "ring-grinder",
+      "dir": "oneway",
+      "via": "door:Z"
+    },
+    {
+      "id": "door-Q",
+      "from": "hub",
+      "to": "ring-clerk",
+      "dir": "oneway",
+      "via": "door:Q"
+    },
+    {
+      "id": "door-U",
+      "from": "hub",
+      "to": "auction",
+      "dir": "oneway",
+      "via": "door:U"
     },
     {
       "id": "gym-01-G",
@@ -416,6 +506,75 @@
       "gate": {
         "type": "springLadder",
         "note": "expression room: up-seize, down-levy, re-seize"
+      }
+    },
+    {
+      "id": "yard-G",
+      "from": "yard",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G",
+      "requires": ["ability:seize", "ability:levy", "local:brown", "local:pink"],
+      "hold": "reach",
+      "teachGate": true,
+      "gate": {
+        "type": "aimTutorial",
+        "note": "A: furnace slab on the plate opens gate D; B: Up+Seize bar 1, Levy a spring at the 6-tile plateau; C: Up+Seize bar 2, mid-air Down+Levy spring to the G ledge"
+      }
+    },
+    {
+      "id": "ring-barker-G",
+      "from": "ring-barker",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G",
+      "soft": "combat",
+      "gate": {
+        "type": "clearGate"
+      }
+    },
+    {
+      "id": "ring-gull-G",
+      "from": "ring-gull",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G",
+      "soft": "combat",
+      "gate": {
+        "type": "clearGate"
+      }
+    },
+    {
+      "id": "ring-grinder-G",
+      "from": "ring-grinder",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G",
+      "soft": "combat",
+      "gate": {
+        "type": "clearGate"
+      }
+    },
+    {
+      "id": "ring-clerk-G",
+      "from": "ring-clerk",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G",
+      "soft": "combat",
+      "gate": {
+        "type": "clearGate"
+      }
+    },
+    {
+      "id": "auction-G",
+      "from": "auction",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G",
+      "soft": "combat",
+      "gate": {
+        "type": "clearGate"
       }
     }
   ]

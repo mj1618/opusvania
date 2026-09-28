@@ -594,15 +594,33 @@ export interface RoomLayout {
   }[];
   spawns: Record<string, { tx: number; ty: number }>;
   /** Sources as tile rects (a source is solid while home; white static can't be seized). */
-  sources: { char: string; colour: string; tx: number; ty: number; tw: number; th: number }[];
+  /** `locked` = hums but can't be seized (the Auctioneer's lots; the boss can sell them away). */
+  sources: {
+    char: string;
+    colour: string;
+    tx: number;
+    ty: number;
+    tw: number;
+    th: number;
+    locked: boolean;
+  }[];
   plates: { char: string; tiles: number[]; pressedBy: string[] }[];
-  gates: { char: string; tiles: number[]; opensOn: string; requires: Ability[]; hold: 'sealed' | 'reach' }[];
+  gates: {
+    char: string;
+    tiles: number[];
+    opensOn: string;
+    requires: Ability[];
+    moves: string[];
+    hold: 'sealed' | 'reach';
+  }[];
   locks: Record<
     string,
     {
       target: string;
       from?: string;
+      prelude?: string;
       requires: Ability[];
+      moves?: string[];
       hold: 'sealed' | 'reach';
       teachGate: boolean;
       region?: string;
@@ -646,6 +664,7 @@ export function roomLayout(id: string): RoomLayout {
       ty: s.y / ts,
       tw: s.w / ts,
       th: s.h / ts,
+      locked: s.locked,
     })),
     plates: room.plates.map((p) => ({ char: p.char, tiles: [...p.tiles], pressedBy: [...p.pressedBy] })),
     gates: room.gates.map((g) => ({
@@ -653,6 +672,7 @@ export function roomLayout(id: string): RoomLayout {
       tiles: [...g.tiles],
       opensOn: g.opensOn,
       requires: [...(f.gates[g.char]?.requires ?? [])],
+      moves: [...(f.gates[g.char]?.moves ?? [])],
       hold: f.gates[g.char]?.hold ?? 'sealed',
     })),
     locks: Object.fromEntries(
@@ -661,7 +681,7 @@ export function roomLayout(id: string): RoomLayout {
     enemies: room.enemySpawns.map((e) => e.type),
     palette: [
       ...new Set([
-        ...room.sources.filter((s) => s.colour !== 'white').map((s) => s.colour as string),
+        ...room.sources.filter((s) => s.colour !== 'white' && !s.locked).map((s) => s.colour as string),
         ...room.enemySpawns.flatMap((e) =>
           enemyDef(e.type)
             .sounds.filter((x) => x.seizable && x.colour !== 'white')

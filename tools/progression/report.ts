@@ -3,7 +3,7 @@
  * world graph as DOT (-> SVG through graphviz when installed, else our own layered SVG).
  */
 import { execFileSync } from 'node:child_process';
-import type { GateAudit } from './audit';
+import { evidenceKey, type GateAudit } from './audit';
 import type { DesignGraph, DesignReport, DiffItem } from './intended';
 import type { Answer } from './oracle';
 import type { ProbeReport } from './probes';
@@ -97,9 +97,10 @@ export function findings(r: RunReport): Finding[] {
       ...a.rules,
       ...a.checks
         .filter((c) => c.status === 'bypassed')
-        .map(
-          (c) =>
-            `${c.basis === 'g7' ? 'G7' : 'full kit'} minus ${c.verb} ${kit(c.kit)} bypasses it; minimal: ${c.bypasses.map((b) => kit(b.abilities)).join(' or ')}`,
+        .map((c) =>
+          c.basis === 'room'
+            ? `room kit ${kit(c.kit)} without the ${c.verb} aim bypasses it`
+            : `${c.basis === 'g7' ? 'G7' : 'full kit'} minus ${c.verb} ${kit(c.kit)} bypasses it; minimal: ${c.bypasses.map((b) => kit(b.abilities)).join(' or ')}`,
         ),
       ...(a.status === 'error' ? a.notes : []),
     ];
@@ -223,7 +224,7 @@ export function markdown(r: RunReport, fs: Finding[], baseline: Set<string>, svg
 
   L.push('## Gate audit', '');
   L.push(
-    "Each key ability K of a gate must be necessary. **G7** (governs): the target must be unreachable with every kit the player can still have in that room when K is removed from the game (the bag empties on room exit, so the kit is abilities plus the room's own palette, which the bot sim contains). **Full kit**: every sim ability except K (future-proofing). **G3/G8**: a reach gate may not share a room with pink unless pink is the key, and then it must be a teachGate.",
+    "Each key ability K of a gate must be necessary. **G7** (governs): the target must be unreachable with every kit the player can still have in that room when K is removed from the game (the bag empties on room exit, so the kit is abilities plus the room's own palette, which the bot sim contains). **Full kit**: every sim ability except K (future-proofing). **G3/G8**: a reach gate may not share a room with pink unless pink is the key, and then it must be a teachGate. **Aims** (`moves`, e.g. `seize:up`): with the room's own kit and that aimed move forbidden (the bot prunes any state where it started), the target must stay unreachable.",
     '',
   );
   if (r.audit.length === 0)
@@ -231,7 +232,7 @@ export function markdown(r: RunReport, fs: Finding[], baseline: Set<string>, svg
   for (const a of r.audit) {
     L.push(`### ${a.gate.id}: **${a.status.toUpperCase()}**`, '');
     L.push(
-      `- ${a.gate.kind === 'lock' ? `Lock "${a.gate.name}"` : `Tile gate ${a.gate.name} (opens on ${a.gate.opensOn})`}, ${a.gate.hold}${a.gate.teachGate ? ', teachGate' : ''}; requires ${kit(a.gate.requires)}; target \`${a.gate.target}\` from spawn ${a.gate.from}${a.gate.derived ? ` (${a.gate.derived})` : ''}.`,
+      `- ${a.gate.kind === 'lock' ? `Lock "${a.gate.name}"` : `Tile gate ${a.gate.name} (opens on ${a.gate.opensOn})`}, ${a.gate.hold}${a.gate.teachGate ? ', teachGate' : ''}; requires ${kit(a.gate.requires)}; target \`${a.gate.target}\` from spawn ${a.gate.from}${a.gate.prelude ? ` after the prelude \`${a.gate.prelude}\`` : ''}${a.gate.derived ? ` (${a.gate.derived})` : ''}.`,
       `- Room palette: ${kit(a.palette)}.${a.gate.note ? ` Note: ${a.gate.note}` : ''}`,
     );
     for (const x of a.rules) L.push(`- **Rule broken:** ${x}`);
@@ -243,15 +244,15 @@ export function markdown(r: RunReport, fs: Finding[], baseline: Set<string>, svg
           ['Key removed', 'Basis', 'Kit', 'Result', 'Minimal bypass combos (evidence)'],
           a.checks.map((c) => [
             c.verb,
-            c.basis === 'g7' ? 'G7' : 'full kit',
+            c.basis === 'g7' ? 'G7' : c.basis === 'room' ? 'room kit, aim forbidden' : 'full kit',
             kit(c.kit),
             c.status === 'bypassed'
               ? `**BYPASSED** (${c.answer.frames ?? '?'} f)`
-              : `holds: ${why(c.answer)}`,
+              : `holds: ${why(c.answer)}${c.control ? `; with the aim: ${c.control.verdict === 'yes' ? `reached (${c.control.how})` : why(c.control)}` : ''}`,
             c.bypasses
               .map(
                 (b) =>
-                  `${kit(b.abilities)} ${b.answer.frames ?? '?'} f${r.evidence[`${a.gate.id}|${b.abilities.join('+')}`] ? ` [tape](${r.evidence[`${a.gate.id}|${b.abilities.join('+')}`]})` : ''}`,
+                  `${kit(b.abilities)} ${b.answer.frames ?? '?'} f${r.evidence[evidenceKey(a.gate.id, c, b.abilities)] ? ` [tape](${r.evidence[evidenceKey(a.gate.id, c, b.abilities)]})` : ''}`,
               )
               .join('; ') + (c.combosTried ? ` (${c.combosTried} combos tried)` : ''),
           ]),

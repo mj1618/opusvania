@@ -53,7 +53,29 @@
   },
   "gates": {
     "D": {
-      "opensOn": "plate"
+      "opensOn": "plate",
+      "requires": ["seize"],
+      "hold": "sealed"
+    }
+  },
+  "locks": {
+    "bar-wall": {
+      "prelude": "R15 R+S1 .14 R18 R+V1 .40",
+      "target": "rect:1792,960,384,64",
+      "requires": ["seize", "levy"],
+      "moves": ["seize:up"],
+      "hold": "reach",
+      "teachGate": true,
+      "note": "Section B: the top of the 6-tile plateau should need the Up+Seize of bar 1 (then a Levy spring at the wall); a forward seize or a brown crate + jump must not do. The prelude solves section A (furnace slab on the plate, gate open) so the bot starts where B is taught."
+    },
+    "ledge": {
+      "prelude": "R15 R+S1 .14 R18 R+V1 .40 R16 R+J16 R50 J6 U+J+S1 J10 .20 R30 R+V1 .30 R60",
+      "target": "G",
+      "requires": ["seize", "levy"],
+      "moves": ["levy:down"],
+      "hold": "reach",
+      "teachGate": true,
+      "note": "Section C: the G ledge 8 tiles above the pit should need a mid-air Down+Levy spring (a forward throw lands in the pit)."
     }
   },
   "prompts": [
