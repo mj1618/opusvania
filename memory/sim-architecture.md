@@ -5,7 +5,8 @@
 - `src/game.ts` (`Game`) is the harness: keeps `prev` + `state` for render interpolation (JSON-cloned
   every step; fine while state is tiny, revisit if it grows), scripted input queue, replay recorder, and
   dispatches events on an `EventBus`. No DOM, so it runs in Vitest.
-- `src/loop.ts` fixed-step accumulator (max 5 steps/frame, then drops time). `src/main.ts` wires rAF.
+- `src/loop.ts` fixed-step accumulator (max 5 steps/frame, then drops time; snaps near-60Hz frame
+  times, see loop-timing.md). `src/main.ts` wires rAF.
 - Input edge detection and buffering live in the sim (`src/sim/input.ts`, `prevInput` in state), not in
   `src/input/`, so buffered presses replay exactly. `src/input/` only turns devices into a bitmask.
 - Tuning is a mutable module object (`src/sim/tuning.ts`) passed into `step`. Replays snapshot it at the

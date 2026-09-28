@@ -1,8 +1,8 @@
 # Toolchain notes and gotchas
 
 - **Ports:** dev server is 5180 (`npm run dev`); 5173 is often taken by other local projects.
-  E2E uses `vite preview` on 4173 and, locally, **reuses an already-running server on 4173** — kill stale
-  preview servers or you test an old build.
+  E2E builds and serves `vite preview` on a per-run port (20000 + pid % 20000, `E2E_PORT` overrides)
+  and never reuses a running server, so a stale preview can't be tested by mistake (fixed in L2).
 - **`vite preview` needs `isPreview`**: preview runs with `command === 'serve'`, so `base` must check
   `isPreview` too or every asset 404s under `/opusvania/` (see `vite.config.ts`).
 - **TypeScript 7 (native tsc)** works with our config. `structuredClone` is not in the ES lib, so src/sim
@@ -13,7 +13,11 @@
   (restricted imports/globals), and `tests/unit/sim-purity.test.ts` (Math.random incl. `Math['random']`,
   Date, globals reached via `globalThis` casts, eval/Function, Intl/toLocale*, approximated Math,
   imports leaving src/sim incl. side-effect imports). It's regex-based: a determined bypass is possible.
-- **Why these deps:** `tsx` runs `tools/*.ts` directly (clip tool). `@tweakpane/core` is a dev dep only
+- **Headless tools** (`npm run sim | bot | feel:report | tape`) run the sim in Node through
+  `src/debug/headless.ts`; they import only pure modules (no Pixi) and start in under 0.5 s.
+- `vite.config.ts` imports `tools/lib/build-info.ts` for the build-stamp `define`s. Vite warns that
+  extensionless config imports won't work with `configLoader: 'native'`; harmless for now.
+- **Why these deps:** `tsx` runs `tools/*.ts` directly (clip, sim, bot, feel report, tape). `@tweakpane/core` is a dev dep only
   because `tweakpane`'s .d.ts files import it without declaring it.
 - Playwright Test's `chromium` export is reused by the clip tool, so there's one browser install
   (`npx playwright install chromium`). `playwright-cli` keeps its own files in `.playwright-cli/` (gitignored).
