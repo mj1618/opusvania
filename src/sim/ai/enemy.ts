@@ -184,6 +184,7 @@ export function spawnEnemy(L: LocalState, type: string, x: number, feetY: number
       final: false,
       hopTo: ex,
       charge: 0,
+      guardT: 0,
     };
   L.enemies.push(e);
   L.sources.push({
@@ -917,6 +918,8 @@ export function enemySeizePriority(state: GameState, src: Source): SeizePriority
       if (s && s.colour !== 'white') return SeizePri.catch;
     }
   }
+  // The boss after a Return to sender: staggered but guarded (punish with punches, not a re-grab).
+  if (e.boss && e.boss.guardT > 0 && !isDowned(e)) return SeizePri.guarded;
   if (OPEN.has(e.state) || e.rattled > 0) return SeizePri.open;
   return SeizePri.guarded;
 }

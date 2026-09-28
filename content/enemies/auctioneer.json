@@ -6,7 +6,7 @@
     "h": 192
   },
   "hurtbox": [8, 8, 112, 184],
-  "hp": 28,
+  "hp": 36,
   "contactDmg": 1,
   "kbScale": 0,
   "poundage": 40,
@@ -239,7 +239,7 @@
     "telegraphDelta": 0
   },
   "params": {
-    "phase2Hp": 32,
+    "phase2Hp": 44,
     "finalRiseHpPct": 25,
     "cadenceEvery": 3,
     "cadenceBeat": [30, 30, 26, 22, 22],

@@ -224,3 +224,19 @@ describe('the Auctioneer (combat-spec §5)', () => {
     }
   });
 });
+
+describe('the Auctioneer: regressions', () => {
+  it('rising into phase 2 at 0 HP, a hit does not knock him down again (was a DOWN/RISE loop)', () => {
+    const r = arena();
+    const b = r.boss;
+    b.hp = 0;
+    b.state = 'RISE';
+    b.timer = 5;
+    standBeside(r);
+    go(r, 'S1 .10');
+    expect(b.boss?.phase).toBe(2);
+    // (The Seize may land as a guarded 1-damage grab once he's up.)
+    expect(b.hp).toBeGreaterThanOrEqual(param(D, 'phase2Hp') - 1);
+    expect(count(r, 'down')).toBe(0);
+  });
+});

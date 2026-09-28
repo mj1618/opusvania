@@ -320,6 +320,7 @@ export function bossStep(state: GameState, room: Room, e: Enemy, t: Tuning, even
   if (!b) return false;
   const d = enemyDef(e.type);
   const p = state.player;
+  if (b.guardT > 0) b.guardT--;
   const calling = e.state === 'TELEGRAPH' && (e.attackId === 'cadence' || e.attackId === 'sellBag');
   if (b.word && !calling) clearCall(state, e);
   if (b.lots.length && !calling && !(e.state === 'ACTIVE' && e.attackId === 'cadence')) b.lots = [];
@@ -603,7 +604,8 @@ export function bossOnDamage(
   _o: DamageOpts,
 ): void {
   const b = e.boss;
-  if (!b || e.hp > 0) return;
+  // Rising into the next phase (or "one more round") at 0 HP: a hit can't knock him down again.
+  if (!b || e.hp > 0 || e.state === 'RISE') return;
   clearCall(state, e);
   b.final = b.phase === 2;
   knockdown(state, e, t, events);
@@ -617,7 +619,11 @@ export function bossReturnHit(state: GameState, e: Enemy, dmg: number, t: Tuning
     bossOnDamage(state, e, t, events, {});
     return;
   }
+  // A stagger can't be extended, and his voices are guarded through it (L4: take -> return ->
+  // take chains stagger-locked him and emptied both phases in 9 s).
+  if (e.state === 'STAGGER') return;
   stun(state, e, param(enemyDef(e.type), 'returnStagger'));
+  if (e.boss) e.boss.guardT = param(enemyDef(e.type), 'returnStagger');
 }
 
 /**

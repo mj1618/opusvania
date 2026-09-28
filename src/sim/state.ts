@@ -284,6 +284,8 @@ export interface BossState {
   hopTo: number;
   /** Pips Selling Your Bag charges this step (an empty bag pays in Chin); applied with the hits on Kid. */
   charge: number;
+  /** Frames his voices stay guarded after a Return to sender (no grab-throw stagger lock). */
+  guardT: number;
 }
 
 export interface Plate {
