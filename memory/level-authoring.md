@@ -62,6 +62,44 @@ enemy `{type}` · pickup `{grants, id}` · rest `{name}` · prompt `{keys, until
 note}` (target defaults to the rect) · landmark rect `{name, note}` (map + toc only for now).
 Any char-mapped entity takes `char` to pin its RoomFile character (else allocated; ~80 per room).
 
+## L6 proof kit (sim stream B): slopes, carry, set pieces (sheet syntax; names are the contract)
+- **Level field `district`** (string). Rooms with the same district share the carry state (north
+  star §3.4: bag, levied objects and ghosted sources persist across seams and doors). Unset = the
+  old per-room reset. Proof: T rooms `"district": "tally"`, C rooms `"district": "cellars"`.
+- **Slopes (floor only).** `["ramp", "add", [x0,y0], [x1,y1], {grade: "1:4"|"1:2"|"1:1"}]`: the
+  points are the floor surface's end tile CORNERS; |dx| must be 4/2/1 x |dy|; solid fills under
+  the surface down to the lower end's row (the flat floor you step onto). Without `grade` = the old
+  stairs. `["curve", "add", [[x,y],...], {max: "1:1"}]`: a surface through corner points, quantised
+  to the nearest flat/1:4/1:2/1:1 tile chain (max = steepest grade allowed, default 1:2), solid
+  under it down to the lowest point + 1 row. Rules: the tile under a slope is solid; a slope's high
+  end meets flat solid (or another slope); no spikes on slopes (lint).
+- **`source` gains** `name` (other entities link to it) and `solid` (default true; false = hums but
+  is not a platform/wall, e.g. the pawnbroker's chain, the furnace roar).
+- **`weight` rect `{on: <source name>}`**: hangs (solid) until that source is seized, then falls;
+  smashes every `breakable` it falls into (`by` includes `weight`); comes to rest as solid (it IS
+  debris). T05 brass balls: three weights on the chain source.
+- **`breakable` rect `{name, by: ["weight","strike","slab"]}`** (default by = weight + strike):
+  solid until broken (Kid's jab/pogo = strike; a brown slab landing on it = slab). Author air under
+  it (the compiler forces its tiles to air). The T05 barricade and boardwalk.
+- **`reveal` rect `{after: <name>}`**: solid only once the named breakable broke (or named source
+  was seized). T05's debris stair up to the roofs = a few reveal rects after the boardwalk.
+- **`light` rect `{source: <name>, radius, colour}`**: a light the render draws; dark while its
+  source is seized (sim event `power {name, on}`). C02: every hall light on the furnace.
+- **`bark` rect `{text, speaker, once}`**: Kid entering the rect emits `bark {text, speaker}`
+  (`text` = a short text id the render looks up; speaker e.g. `pawnbroker`, `copyist`). With
+  `speaker: "board"` it emits `boardLine {text}` instead (T04 LOT 19). once defaults true.
+- **`line` rect `{name}`**: a district line (Registry threshold): Kid touching it resets the carry
+  (sounds ribbon home, event `carryReset {reason: "line"}`). Put it at the T04 hatch.
+- **`waypoint` point `{route, order}`**: an ordered path. Thief gulls fly it after a snatch
+  (`enemy {type: "thiefgull", route}`); the bot/progression uses routes as staged searches in big
+  rooms (spawn → w0 → w1 ... → target) when a direct search runs out of budget.
+- **Enemy `thiefgull`** (+ enemy field `route`): snatches the newest deed from the bag (or a
+  landed levied object), flees along its route, perches at the end; a hit or a Catch makes it drop
+  the sound, which falls as a levied object (a pink puck lands as a spring). T03.
+- **Hatch you seize from under yourself (C01)**: a solid `source`; grounded Down+Seize now aims
+  down, so standing on it and seizing drops you through.
+- Corners reset the carry (`carryReset {reason: "rest"}`), as does being Counted Out.
+
 ## Edge exits (sim, L5)
 - Derived, never authored: a border opening becomes an exit when the neighbouring room has the
   mirror opening over exactly the same world tiles. The compiler writes `exits` into the RoomFile.
