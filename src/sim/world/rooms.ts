@@ -8,6 +8,8 @@ import { ROOM_FILES } from './content';
  *   `#` solid   `.` air   `=` one-way   `^ v < >` spikes (point direction)   `o` pogo orb
  *   `P` spawn   `R` respawn marker   `G` goal   `g` optional goal
  *   any character listed in `doors` is a door (enter with Up); it is also a spawn of that name.
+ *   Progression markers (optional; read by tools/progression, no sim behaviour yet): chars listed
+ *   in `pickups` (ability pickups) and `rests` (Rest benches) load as empty tiles.
  * Rooms smaller than the minimum size are padded with solid; outside the room is solid.
  */
 export const Tile = {
@@ -71,7 +73,35 @@ export const COLOURS = ['brown', 'pink', 'violet', 'white'] as const;
 const Char = z.string().length(1);
 const SourceDef = z.object({ sound: z.string(), colour: z.enum(COLOURS) });
 const PlateDef = z.object({ pressedBy: z.array(z.enum(['slab', 'heavy'])).default(['slab', 'heavy']) });
-const GateDef = z.object({ opensOn: z.enum(['plate', 'clear']) });
+const AbilityEnum = z.enum(['wallJump', 'dash', 'doubleJump', 'pogo', 'seize', 'levy']);
+const GateDef = z.object({
+  opensOn: z.enum(['plate', 'clear']),
+  /**
+   * Progression validator: abilities this gate is meant to require. Each must be necessary:
+   * the far side must be unreachable with the full kit minus that ability (gate audit).
+   */
+  requires: z.array(AbilityEnum).optional(),
+});
+/** Progression validator: an ability pickup (tile char). Sim support comes with Phase 3 saves. */
+const PickupDef = z.object({
+  grants: z.array(AbilityEnum).min(1),
+  /** Stable id for intended-order annotations (default `<room>:<char>`). */
+  id: z.string().optional(),
+});
+/** Progression validator: a Rest (safe place; softlock checks need a way back to one). */
+const RestDef = z.object({ name: z.string().optional() });
+/**
+ * Progression validator: a geometric lock, i.e. a place that should need `requires` to reach
+ * (a spring climb, a dash gap). `target` is a bot target (`G`, `exit:<c>`, `tile:x,y`, `rect:x,y,w,h`
+ * in room px); `from` is the spawn the audit starts at (default P).
+ */
+const LockDef = z.object({
+  target: z.string(),
+  from: z.string().optional(),
+  requires: z.array(AbilityEnum).min(1),
+  note: z.string().optional(),
+});
+export type LockDef = z.infer<typeof LockDef>;
 
 const CameraZone = z.object({
   /** [tx, ty, tw, th] in tiles (sketch coordinates, before padding). */
@@ -121,6 +151,10 @@ export const RoomFileSchema = z
     gates: z.record(Char, GateDef).default({}),
     /** Enemy spawn chars -> content/enemies/<id>.json; feet on this tile's floor. */
     enemies: z.record(Char, z.string()).default({}),
+    /** Progression validator (tools/progression; memory/gym-rooms.md). All optional. */
+    pickups: z.record(Char, PickupDef).default({}),
+    rests: z.record(Char, RestDef).default({}),
+    locks: z.record(z.string().min(1), LockDef).default({}),
     notes: z.string().default(''),
   })
   .superRefine((r, ctx) => {
@@ -130,6 +164,8 @@ export const RoomFileSchema = z
       ...Object.keys(r.plates),
       ...Object.keys(r.gates),
       ...Object.keys(r.enemies),
+      ...Object.keys(r.pickups),
+      ...Object.keys(r.rests),
     ]);
     r.rows.forEach((row, i) => {
       if (row.length !== w)
@@ -146,6 +182,8 @@ export const RoomFileSchema = z
       ['plate', r.plates],
       ['gate', r.gates],
       ['enemy', r.enemies],
+      ['pickup', r.pickups],
+      ['rest', r.rests],
     ] as const) {
       for (const ch of Object.keys(map)) {
         if (ch in TILE_CHARS)
@@ -165,7 +203,7 @@ export interface Spawn {
   ty: number;
 }
 
-export type EntityKind = 'goal' | 'optionalGoal' | 'respawn' | 'door';
+export type EntityKind = 'goal' | 'optionalGoal' | 'respawn' | 'door' | 'pickup' | 'rest';
 export interface Entity {
   kind: EntityKind;
   tx: number;
@@ -174,6 +212,9 @@ export interface Entity {
   /** Doors: target room and spawn. */
   to?: string;
   spawn?: string;
+  /** Pickups: abilities granted and a stable id. */
+  grants?: AbilityName[];
+  id?: string;
 }
 
 export interface CameraZone {
@@ -247,6 +288,8 @@ export function buildRoom(input: RoomFile): Room {
       const tx = sx + padX;
       const ty = sy + padY;
       const door = f.doors[ch];
+      const pickup = f.pickups[ch];
+      const rest = f.rests[ch];
       // Plates are always solid (their pressed state lives in GameState.local); sources, gates
       // and enemy spawns load as empty tiles (their solidity is dynamic, see world/dynamic.ts).
       let tile: TileType = door ? Tile.empty : (TILE_CHARS[ch] ?? Tile.solid);
@@ -256,7 +299,7 @@ export function buildRoom(input: RoomFile): Room {
       } else if (ch in f.gates) {
         tile = Tile.empty;
         gateTiles[ch] = [...(gateTiles[ch] ?? []), tx, ty];
-      } else if (ch in f.sources) tile = Tile.empty;
+      } else if (ch in f.sources || ch in f.pickups || ch in f.rests) tile = Tile.empty;
       else if (ch in f.enemies) {
         tile = Tile.empty;
         enemySpawns.push({ type: f.enemies[ch] as string, tx, ty });
@@ -266,6 +309,10 @@ export function buildRoom(input: RoomFile): Room {
       else if (ch === 'R') entities.push({ kind: 'respawn', tx, ty, char: ch });
       else if (ch === 'G') entities.push({ kind: 'goal', tx, ty, char: ch });
       else if (ch === 'g') entities.push({ kind: 'optionalGoal', tx, ty, char: ch });
+      else if (pickup) {
+        const id = pickup.id ?? `${f.id}:${ch}`;
+        entities.push({ kind: 'pickup', tx, ty, char: ch, grants: [...pickup.grants], id });
+      } else if (rest) entities.push({ kind: 'rest', tx, ty, char: ch, id: rest.name ?? ch });
       else if (door) {
         entities.push({ kind: 'door', tx, ty, char: ch, to: door.to, spawn: door.spawn });
         spawns[ch] = { tx, ty };
