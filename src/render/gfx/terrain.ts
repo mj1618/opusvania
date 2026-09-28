@@ -175,7 +175,7 @@ export function drawTerrain(g: Graphics, glow: Graphics, room: Room, d: Dressing
       const x = tx * ts;
       const y = ty * ts;
       if (t === Tile.oneWay) {
-        const plank = mix(p.rimSide, p.rim, 0.25);
+        const plank = mix(p.rimSide, p.rim, 0.5);
         g.rect(x + 8, y + 10, 5, 16).fill({ color: plank, alpha: 0.55 });
         g.rect(x + ts - 13, y + 10, 5, 16).fill({ color: plank, alpha: 0.55 });
         g.rect(x, y, ts, 11).fill(plank);

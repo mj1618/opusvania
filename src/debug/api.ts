@@ -199,6 +199,11 @@ export interface GameDebugApi {
     /** Lights drawn last frame (world px). */
     lights(): Light[];
     /**
+     * Adds a debug light through the provider hook (world px; null removes it). For trying light
+     * placements live, and it exercises the same path sound sources use.
+     */
+    probeLight(l: Light | null): number;
+    /**
      * Renders the current frame n times, each forced to finish on the GPU (1-px readPixels), and
      * returns full frame cost in ms (CPU + GPU). Does not step the sim. For the perf benchmark.
      */
@@ -241,6 +246,7 @@ export function installDebugApi({
   audio,
 }: DebugDeps): GameDebugApi {
   const snapshot = () => cloneState(game.state);
+  const probe: { light: Light | null; installed: boolean } = { light: null, installed: false };
   const stateView = (): StateView => {
     const s = cloneState(game.state);
     const L = s.local;
@@ -527,6 +533,17 @@ export function installDebugApi({
       },
       dressing: () => JSON.parse(JSON.stringify(renderer.gfx.dressing)) as unknown,
       lights: () => JSON.parse(JSON.stringify(renderer.gfx.lights.frameLights)) as Light[],
+      probeLight(l) {
+        probe.light = l;
+        if (!probe.installed) {
+          probe.installed = true;
+          renderer.gfx.lights.providers.add((out) => {
+            if (probe.light) out.push(probe.light);
+          });
+        }
+        render(1);
+        return renderer.gfx.lights.frameLights.length;
+      },
       bench(n = 120) {
         const gl = (app.renderer as unknown as { gl: WebGL2RenderingContext }).gl;
         const px = new Uint8Array(4);

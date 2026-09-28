@@ -95,7 +95,24 @@ test('gfx API: quality tiers, toggles, stats, dressing and lights', async ({ pag
     g.gfx.set({ bloom: true, post: true });
     g.gfx.hud(true);
     g.step(2);
-    return { start, d, stats, lights: lights.length, low, toggles, hud: g.gfx.hud(), room: g.state().roomId };
+    // The provider hook (what sound sources use): a light at the player shows up in the drawn set.
+    const p = g.state().player;
+    const before = g.gfx.lights().length;
+    const withProbe = g.gfx.probeLight({ x: p.x, y: p.y, radius: 300, color: 0xff00ff, intensity: 1 });
+    const probed = g.gfx.lights().some((l) => l.color === 0xff00ff);
+    g.gfx.probeLight(null);
+    return {
+      start,
+      d,
+      stats,
+      lights: lights.length,
+      low,
+      toggles,
+      hud: g.gfx.hud(),
+      room: g.state().roomId,
+      probe: withProbe - before,
+      probed,
+    };
   });
   expect(r.start).toBe('med');
   expect(r.room).toBe('gym-07');
@@ -106,6 +123,8 @@ test('gfx API: quality tiers, toggles, stats, dressing and lights', async ({ pag
   expect(r.stats.particles as number).toBeGreaterThan(r.low.particles as number);
   expect(r.toggles.bloom).toBe(false);
   expect(r.hud).toBe(true);
+  expect(r.probe).toBe(1);
+  expect(r.probed).toBe(true);
   await expect(page.evaluate(() => window.__game.gfx.quality('ultra'))).rejects.toThrow(/quality/);
   expect(errors).toEqual([]);
 });

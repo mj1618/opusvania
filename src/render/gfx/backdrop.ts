@@ -365,7 +365,14 @@ function drawFar2(g: Graphics, rng: RenderRng, p: Palette, d: Dressing, w: numbe
       const mh = rng.range(0.55, 0.9) * VIEW_H;
       const jib = rng.range(240, 460) * (rng.chance(0.5) ? 1 : -1);
       g.rect(x - 8, base - mh, 16, mh).fill(col);
-      g.rect(Math.min(x, x + jib), base - mh, Math.abs(jib), 12).fill(col);
+      // Jib as an open truss (a solid bar reads as a platform).
+      const j0 = Math.min(x, x + jib);
+      const jl = Math.abs(jib);
+      g.rect(j0, base - mh, jl, 3).fill(col);
+      g.rect(j0, base - mh + 14, jl, 3).fill(col);
+      for (let k = 0; k + 20 <= jl; k += 20)
+        g.moveTo(j0 + k, base - mh + 15).lineTo(j0 + k + 10, base - mh + 1);
+      g.stroke({ width: 2, color: col });
       g.moveTo(x, base - mh - 50)
         .lineTo(x + jib, base - mh)
         .moveTo(x, base - mh - 50)

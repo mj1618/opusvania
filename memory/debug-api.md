@@ -62,7 +62,8 @@ of the player/tuning/rooms go through `src/debug/sim-adapter.ts` (see sim-adapte
 ## Render (gfx)
 - `gfx.quality(name?)`, `gfx.hud(on?)`, `gfx.stats()` (lights, lamps, particles, draw calls, perf, dressing
   sources), `gfx.set({lighting, post, bloom, backdrop, foreground, particles, ui})` for A/B looks and
-  text-free screenshots, `gfx.dressing()`, `gfx.lights()`, `gfx.bench(n)` (full frame cost, ms).
+  text-free screenshots, `gfx.dressing()`, `gfx.lights()`, `gfx.probeLight({x,y,radius,color,intensity}|null)`
+  (a live test light via the provider hook), `gfx.bench(n)` (full frame cost, ms).
   See render-pipeline.md.
 
 ## Overlays
