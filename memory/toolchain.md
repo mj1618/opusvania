@@ -43,7 +43,8 @@
 - **CI renders at ~1 fps** (software GL on the ubuntu runner; local headless ~30 fps). E2E tests must not
   step-and-render hundreds of frames or reload pages per case: verify sim hashes with
   `__game.replay.verify` (no rendering), and manual mode only redraws when the state changed.
-  Timing tests (latency) skip themselves below 20 fps.
+  Timing tests (latency) skip themselves below 20 fps. The per-test timeout is 90 s on CI (boot and
+  gfx tests took 24-30 s of the old 30 s and failed on slow runners, even on docs-only commits).
 - **`tsx` + `page.evaluate`:** tsx (esbuild keepNames) wraps named inner functions in `__name()`, which
   doesn't exist in the page, so a `const f = () => ...` inside an evaluate callback throws
   `ReferenceError: __name`. Keep tool evaluate callbacks flat, or pass a string.

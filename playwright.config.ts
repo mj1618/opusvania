@@ -16,6 +16,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // CI renders with software GL at ~1 fps: boot/gfx tests took 24-30 s of the default 30 s and
+  // flaked (memory/toolchain.md). Local runs keep the default.
+  timeout: process.env.CI ? 90_000 : 30_000,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
     baseURL: `http://localhost:${PORT}/opusvania/`,
