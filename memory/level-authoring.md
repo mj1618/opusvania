@@ -58,8 +58,13 @@ spawn (exactly one) · respawn · goal `{optional}` · corner · door `{name, to
 `toDoor` = a door NAME in an LDtk room, or a door CHAR in an ASCII room like the hub) · source rect
 `{sound, colour, locked}` · plate rect `{pressedBy}` · gate rect `{opensOn, requires, hold, moves}` ·
 enemy `{type}` · pickup `{grants, id}` · rest `{name}` · prompt `{keys, until, near}` · camera rect
-`{mode, value}` · lock rect `{name, requires, target, from, prelude, moves, hold, teachGate, region,
-note}` (target defaults to the rect) · landmark rect `{name, note}` (map + toc only for now).
+`{mode, value, zoom, weight, shot, shotZoom, hold, repeat}` (modes lock clampX clampY bounds + L6 `open`
+0.9, `vista` 0.8, `frame` (pull toward `value` by `weight`); `shot` = two corner points of the rect to
+frame on entry, see camera.md) · lock rect `{name, requires, target, from, prelude, moves, hold,
+teachGate, region, note}` (target defaults to the rect) · landmark rect `{name, note, beacon, depth}`
+(`beacon` bell|board|scale|glow draws its silhouette in every nearby room's backdrop at parallax
+`depth`, default 0.42; compiled into RoomFile `landmarks`). Point fields (`value`, `shot`) are
+translated by section import/export like rects.
 Any char-mapped entity takes `char` to pin its RoomFile character (else allocated; ~80 per room).
 
 ## Edge exits (sim, L5)
@@ -72,8 +77,9 @@ Any char-mapped entity takes `char` to pin its RoomFile character (else allocate
   would shift the world). Tests: tests/unit/edge-exits.test.ts, tape `sample-cellar-edge`.
 - Tools: an `edge` entity per exit (`char` = `e17` = side + first tile), bot/progression target
   `exit:e17`, arrival spawn `edge-e17` in the room it belongs to. Progression links them like doors.
-- Not done: camera bleed / neighbour peek (the view clamps to the room, so you arrive at the screen
-  edge), arrival input grace, the merged-region option. Up-doors stay for real doors and lifts.
+- Render (L6, camera.md): neighbour peek, seam bleed and a world-anchored backdrop, so a seam shows
+  continuous space and the camera never re-snaps; edge transitions do not fade.
+- Not done: arrival input grace, the merged-region option. Up-doors stay for real doors and lifts.
 
 ## Rules and gotchas
 - `draft: true` rooms load in the game but are NOT in the progression graph (no hub link needed).

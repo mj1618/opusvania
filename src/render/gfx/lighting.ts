@@ -144,8 +144,10 @@ export class LightSystem {
     old.destroy(true);
   }
 
-  /** Renders the light map for a view whose top-left is (camX, camY). */
-  render(clock: RenderClock, camX: number, camY: number): void {
+  /** Renders the light map for a view whose top-left is (camX, camY), at camera `zoom`. */
+  render(clock: RenderClock, camX: number, camY: number, zoom = 1): void {
+    const vw = VIEW_W / zoom;
+    const vh = VIEW_H / zoom;
     const out: Light[] = [];
     for (const l of this.roomLights) out.push(l);
     if (this.playerLightOn) out.push(this.player);
@@ -153,12 +155,12 @@ export class LightSystem {
     const vis = out.filter(
       (l) =>
         l.x + l.radius > camX &&
-        l.x - l.radius < camX + VIEW_W &&
+        l.x - l.radius < camX + vw &&
         l.y + l.radius > camY &&
-        l.y - l.radius < camY + VIEW_H,
+        l.y - l.radius < camY + vh,
     );
     this.frameLights = vis;
-    const k = this.res;
+    const k = this.res * zoom;
     while (this.pool.length < vis.length) {
       const s = new Sprite(this.tex);
       s.anchor.set(0.5);

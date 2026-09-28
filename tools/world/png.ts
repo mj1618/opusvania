@@ -212,6 +212,7 @@ const C = {
   pickup: hex(0xe040e0),
   rest: hex(0x8a8a8a),
   camera: hex(0x3060ff),
+  shot: hex(0xff40c0),
   lock: hex(0xff7010),
   landmark: hex(0xc89600),
   gate: hex(0x5050e0),
@@ -343,10 +344,24 @@ export function renderWorld(
         case 'prompt':
           cv.rect(px, py, s, s, C.rest);
           break;
-        case 'camera':
+        case 'camera': {
           cv.rect(px, py, pw, ph, C.camera, Math.max(1, s >> 3));
-          cv.text(px + 2, py + 2, String(p.mode), C.camera, k);
+          const zoom = typeof p.zoom === 'number' ? ` ${p.zoom}` : '';
+          cv.text(px + 2, py + 2, `${p.mode}${zoom}`, C.camera, k);
+          // Declared shot (north-star §3.1): the framed rect and its zoom.
+          const shot = (p.shot as [number, number][] | undefined) ?? [];
+          const [a, b] = shot;
+          if (a && b) {
+            const sx = X(m.at[0] + Math.min(a[0], b[0]));
+            const sy = Y(m.at[1] + Math.min(a[1], b[1]));
+            const sw = (Math.abs(a[0] - b[0]) + 1) * s;
+            const sh = (Math.abs(a[1] - b[1]) + 1) * s;
+            cv.rect(sx, sy, sw, sh, C.shot, Math.max(1, s >> 2));
+            const sz = typeof p.shotZoom === 'number' ? ` ${p.shotZoom}` : '';
+            cv.text(sx + 2, sy + sh - 10 * k, `SHOT${sz}`, C.shot, k, C.plate);
+          }
           break;
+        }
         case 'lock':
           cv.rect(px, py, pw, ph, C.lock, Math.max(1, s >> 3));
           cv.text(px + 2, py + ph + 2, `LOCK ${p.name}`, C.lock, k, C.plate);

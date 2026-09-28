@@ -6,7 +6,7 @@ import { Game } from './game';
 import { InputSampler } from './input/index';
 import { FixedStepLoop } from './loop';
 import { createApp } from './render/app';
-import { VIEW_H, VIEW_W } from './render/camera/index';
+import { viewCentre } from './render/camera/index';
 import { isQualityName, QUALITY_NAMES } from './render/gfx/quality';
 import { WorldRenderer } from './render/world';
 import { PRESET_NAMES, type PresetName, tuning } from './sim/tuning';
@@ -65,7 +65,7 @@ async function boot(): Promise<void> {
   const audio = new AudioSystem({
     bus: game.bus,
     state: () => game.state,
-    listener: () => ({ x: renderer.camera.x + VIEW_W / 2, y: renderer.camera.y + VIEW_H / 2 }),
+    listener: () => viewCentre(renderer.camera),
   });
 
   const drawn = { x: 0, y: 0, frame: 0 };

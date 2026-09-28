@@ -18,6 +18,7 @@ import {
   BrushTuple,
   brushFromTuple,
   brushToTuple,
+  ENTITY_SPECS,
   type Ent,
   EntTuple,
   entFromTuple,
@@ -91,6 +92,21 @@ function translate(b: Brush, dx: number, dy: number): Brush {
   return out;
 }
 
+/** Moves an entity by (dx, dy): its rect and every Point field (camera `value`, `shot`...). */
+function translateEnt(e: Ent, dx: number, dy: number): Ent {
+  const props = { ...e.props };
+  const move = (p: unknown) => {
+    const [x = 0, y = 0] = p as [number, number];
+    return [x + dx, y + dy];
+  };
+  for (const fs of ENTITY_SPECS[e.kind].fields) {
+    const v = props[fs.name];
+    if (fs.kind !== 'Point' || v === undefined || v === null) continue;
+    props[fs.name] = fs.array ? (v as unknown[]).map(move) : move(v);
+  }
+  return { ...e, rect: [e.rect[0] + dx, e.rect[1] + dy, e.rect[2], e.rect[3]], props };
+}
+
 /** Cuts a section into room models (not baked). */
 export function sectionToModels(input: unknown): { section: string; models: LevelModel[] } {
   const s = SectionSchema.parse(input);
@@ -117,7 +133,7 @@ export function sectionToModels(input: unknown): { section: string; models: Leve
           `entities[${i}] ${e.kind} at ${x},${y} crosses the edge of ${room.id}: keep entities inside one room`,
         );
       owned.add(i);
-      roomEnts.push({ ...e, rect: [x - ox, y - oy, w, h] });
+      roomEnts.push(translateEnt(e, -ox, -oy));
     });
     const paint = s.paint.flatMap(([x, y, w, h, v]) => {
       const x0 = Math.max(x, ox);
@@ -180,10 +196,7 @@ export function modelsToSection(section: string, models: LevelModel[]): Record<s
         looseSeen.add(k);
       }
     }
-    for (const e of m.entities)
-      entities.push(
-        entToTuple({ ...e, rect: [e.rect[0] + m.at[0], e.rect[1] + m.at[1], e.rect[2], e.rect[3]] }),
-      );
+    for (const e of m.entities) entities.push(entToTuple(translateEnt(e, m.at[0], m.at[1])));
     const [w, h] = m.size;
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) {

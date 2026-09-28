@@ -40,26 +40,58 @@ const MARGIN = 96;
 
 /** Size of a layer's content for a room: the view plus the room's scroll range times the factor. */
 export function layerSize(room: Room, tileSize: number, factor: number): { w: number; h: number } {
-  const rw = room.width * tileSize;
-  const rh = room.height * tileSize;
+  return layerSizePx(room.width * tileSize, room.height * tileSize, factor);
+}
+
+/** Layer content size for a box of `bw` x `bh` world px (a room, or a whole region). */
+export function layerSizePx(bw: number, bh: number, factor: number): { w: number; h: number } {
   return {
-    w: Math.ceil(VIEW_W + Math.max(0, rw - VIEW_W) * factor + 2 * MARGIN),
-    h: Math.ceil(VIEW_H + Math.max(0, rh - VIEW_H) * factor + 2 * MARGIN),
+    w: Math.ceil(VIEW_W + Math.max(0, bw - VIEW_W) * factor + 2 * MARGIN),
+    h: Math.ceil(VIEW_H + Math.max(0, bh - VIEW_H) * factor + 2 * MARGIN),
   };
 }
+
+/**
+ * Where the backdrop lives in the world (memory/camera.md "world-anchored backdrop"). Layer content
+ * is generated over `box` (a world room's whole region, so every room of a region shows the same
+ * skyline at the same place and seams never pop), and each room bakes only the window its camera
+ * can see. A layer point u maps to the screen as `VIEW_W/2 + (q(u) - centreX * factor) * zoom`,
+ * with q(u) = u - MARGIN + (VIEW_W/2 + box.x) * factor - VIEW_W/2; for a lone room (box = the
+ * room at the origin, zoom 1) that is exactly the old `-camX * factor - MARGIN`.
+ */
+export interface BackdropFrame {
+  /** Generator box, world px. */
+  box: { x: number; y: number; w: number; h: number };
+  /** The room's tile (0, 0), world px. */
+  origin: { x: number; y: number };
+  /**
+   * Range of the view centre (world px) and the smallest zoom the room uses, for the baked
+   * window. Omitted: bake the whole layer (non-world rooms, as before).
+   */
+  view?: { x0: number; x1: number; y0: number; y1: number; zoomMin: number };
+}
+
+/** Screen-px slack around a baked window (shake, kick, rounding). */
+const WINDOW_PAD = 64;
 
 export interface BakedLayer {
   spec: LayerSpec;
   sprite: Sprite;
   rt: RenderTexture;
+  /** Layer-content coordinate of the texture's top-left, and the bake resolution. */
+  u0: number;
+  v0: number;
+  res: number;
 }
 
 export interface Backdrop {
   far: BakedLayer[];
   mid: BakedLayer;
   fg: Container;
-  /** Positions every layer for a view whose top-left is (camX, camY). */
-  place(camX: number, camY: number): void;
+  /** Positions every layer for a view whose top-left is (camX, camY) room px, at `zoom`. */
+  place(camX: number, camY: number, zoom?: number): void;
+  /** 0..1: fades the whole backdrop (crossfades a region change at a seam). */
+  setAlpha(a: number): void;
   destroy(): void;
 }
 
@@ -537,15 +569,14 @@ function drawForeground(
 function bake(
   renderer: Renderer,
   spec: LayerSpec,
-  w: number,
-  h: number,
+  win: { u0: number; v0: number; w: number; h: number },
   q: QualitySettings,
   draw: (g: Graphics) => void,
 ): BakedLayer {
-  // Keep under 4096 px (max texture size on older GPUs) for very large rooms.
-  const res = Math.min(q.bakeRes, 4096 / w, 4096 / h);
+  const res = bakeRes(q, win.w, win.h);
   const g = new Graphics();
   draw(g);
+  g.position.set(-win.u0, -win.v0);
   const holder = new Container();
   holder.addChild(g);
   holder.scale.set(res);
@@ -555,8 +586,8 @@ function bake(
     g.filters = [f];
   }
   const rt = RenderTexture.create({
-    width: Math.ceil(w * res),
-    height: Math.ceil(h * res),
+    width: Math.ceil(win.w * res),
+    height: Math.ceil(win.h * res),
     antialias: false,
   });
   renderer.render({ container: holder, target: rt, clear: true, clearColor: [0, 0, 0, 0] });
@@ -564,7 +595,37 @@ function bake(
   const sprite = new Sprite(rt);
   sprite.scale.set(1 / res);
   sprite.label = spec.name;
-  return { spec, sprite, rt };
+  return { spec, sprite, rt, u0: win.u0, v0: win.v0, res };
+}
+
+/** Keep under 4096 px (max texture size on older GPUs) for very large rooms. */
+function bakeRes(q: QualitySettings, w: number, h: number): number {
+  return Math.min(q.bakeRes, 4096 / w, 4096 / h);
+}
+
+/** Layer-content window a room needs: [u0, u0 + w] x [v0, v0 + h] (whole layer without `view`). */
+function layerWindow(
+  frame: BackdropFrame,
+  factor: number,
+  size: { w: number; h: number },
+  q: QualitySettings,
+) {
+  const v = frame.view;
+  if (!v) return { u0: 0, v0: 0, w: size.w, h: size.h };
+  const { box } = frame;
+  const toU = (qx: number) => qx + MARGIN - (VIEW_W / 2 + box.x) * factor + VIEW_W / 2;
+  const toV = (qy: number) => qy + MARGIN - (VIEW_H / 2 + box.y) * factor + VIEW_H / 2;
+  const hw = VIEW_W / (2 * v.zoomMin) + WINDOW_PAD;
+  const hh = VIEW_H / (2 * v.zoomMin) + WINDOW_PAD;
+  const u1 = Math.min(size.w, toU(v.x1 * factor + hw));
+  const v1 = Math.min(size.h, toV(v.y1 * factor + hh));
+  let u0 = Math.max(0, toU(v.x0 * factor - hw));
+  let v0 = Math.max(0, toV(v.y0 * factor - hh));
+  // Snap to the bake's texel grid so neighbouring rooms sample the layer identically.
+  const res = bakeRes(q, u1 - u0, v1 - v0);
+  u0 = Math.floor(u0 * res) / res;
+  v0 = Math.floor(v0 * res) / res;
+  return { u0, v0, w: Math.max(1, u1 - u0), h: Math.max(1, v1 - v0) };
 }
 
 export function buildBackdrop(
@@ -573,13 +634,20 @@ export function buildBackdrop(
   tileSize: number,
   d: Dressing,
   q: QualitySettings,
+  frame: BackdropFrame = {
+    box: { x: 0, y: 0, w: room.width * tileSize, h: room.height * tileSize },
+    origin: { x: 0, y: 0 },
+  },
 ): Backdrop {
   const p = d.palette;
   const seed = d.seed;
+  const { box } = frame;
   const layer = (spec: LayerSpec, salt: number, fn: typeof drawFar0) => {
-    const { w, h } = layerSize(room, tileSize, spec.factor);
+    const size = layerSizePx(box.w, box.h, spec.factor);
     const rng = new RenderRng(seed ^ Math.imul(salt, 0x9e3779b1));
-    return bake(renderer, spec, w, h, q, (g) => fn(g, rng, p, d, w, h));
+    return bake(renderer, spec, layerWindow(frame, spec.factor, size, q), q, (g) =>
+      fn(g, rng, p, d, size.w, size.h),
+    );
   };
   const far = [
     layer(LAYER_SPECS.far0, 1, drawFar0),
@@ -589,21 +657,40 @@ export function buildBackdrop(
   const mid = layer(LAYER_SPECS.mid, 4, drawMid);
   const fg = new Container({ label: 'fg' });
   const fgG = new Graphics();
-  const fgSize = layerSize(room, tileSize, LAYER_SPECS.fg.factor);
+  const fgSize = layerSizePx(box.w, box.h, LAYER_SPECS.fg.factor);
   drawForeground(fgG, new RenderRng(seed ^ 0x5bd1e995), p, d, fgSize.w, fgSize.h, q.softForeground);
   fg.addChild(fgG);
-  const all: Array<{ node: Container; factor: number }> = [
-    ...far.map((l) => ({ node: l.sprite as Container, factor: l.spec.factor })),
-    { node: mid.sprite, factor: mid.spec.factor },
-    { node: fg, factor: LAYER_SPECS.fg.factor },
+  const all: Array<{ node: Container; factor: number; u0: number; v0: number; res: number }> = [
+    ...far.map((l) => ({
+      node: l.sprite as Container,
+      factor: l.spec.factor,
+      u0: l.u0,
+      v0: l.v0,
+      res: l.res,
+    })),
+    { node: mid.sprite, factor: mid.spec.factor, u0: mid.u0, v0: mid.v0, res: mid.res },
+    { node: fg, factor: LAYER_SPECS.fg.factor, u0: 0, v0: 0, res: 1 },
   ];
   return {
     far,
     mid,
     fg,
-    place(camX, camY) {
-      for (const { node, factor } of all)
-        node.position.set(Math.round(-camX * factor - MARGIN), Math.round(-camY * factor - MARGIN));
+    place(camX, camY, zoom = 1) {
+      // View centre in world px; each layer point u lands at VIEW_W/2 + (q(u) - cx * f) * zoom.
+      const cx = camX + VIEW_W / (2 * zoom) + frame.origin.x;
+      const cy = camY + VIEW_H / (2 * zoom) + frame.origin.y;
+      for (const { node, factor, u0, v0, res } of all) {
+        const qx = u0 - MARGIN + (VIEW_W / 2 + box.x) * factor - VIEW_W / 2;
+        const qy = v0 - MARGIN + (VIEW_H / 2 + box.y) * factor - VIEW_H / 2;
+        node.position.set(
+          Math.round(VIEW_W / 2 + (qx - cx * factor) * zoom),
+          Math.round(VIEW_H / 2 + (qy - cy * factor) * zoom),
+        );
+        node.scale.set(zoom / res);
+      }
+    },
+    setAlpha(a) {
+      for (const { node } of all) node.alpha = a;
     },
     destroy() {
       for (const l of [...far, mid]) {

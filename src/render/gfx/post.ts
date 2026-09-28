@@ -85,12 +85,13 @@ export class BloomPass {
     return this.view.visible;
   }
 
-  /** Renders the glow targets for a camera top-left (camX, camY). Call before app.render(). */
-  render(camX: number, camY: number): void {
+  /** Renders the glow targets for a view whose screen offset is (-sx, -sy) at `zoom` (world px *
+   * zoom - (sx, sy) = screen px). Call before app.render(). */
+  render(sx: number, sy: number, zoom = 1): void {
     if (!this.view.visible) return;
     for (const l of this.levels) {
       const k = 1 / l.div;
-      this.m.set(k, 0, 0, k, -camX * k, -camY * k);
+      this.m.set(k * zoom, 0, 0, k * zoom, -sx * k, -sy * k);
       this.renderer.render({ container: this.source, target: l.raw, clear: true, transform: this.m });
       this.renderer.render({ container: l.rawSprite, target: l.out, clear: true });
     }
