@@ -415,6 +415,940 @@
       "pitchVar": 2,
       "volVarDb": 3,
       "maxVoices": 3
+    },
+    "hitLight": {
+      "layers": [
+        {
+          "volume": 1.2,
+          "frequency": 180,
+          "release": 0.07,
+          "shape": 3,
+          "slide": -3
+        },
+        {
+          "volume": 0.6,
+          "frequency": 2500,
+          "release": 0.03,
+          "shape": 4,
+          "filter": 1500
+        }
+      ],
+      "duck": "light"
+    },
+    "hitMedium": {
+      "layers": [
+        {
+          "volume": 1.4,
+          "frequency": 130,
+          "sustain": 0.01,
+          "release": 0.12,
+          "shape": 3,
+          "slide": -2.5
+        },
+        {
+          "volume": 0.8,
+          "frequency": 1800,
+          "release": 0.06,
+          "shape": 4,
+          "filter": 1000
+        }
+      ],
+      "duck": "heavy"
+    },
+    "hitHeavy": {
+      "layers": [
+        {
+          "volume": 1.12,
+          "frequency": 70,
+          "sustain": 0.03,
+          "release": 0.3,
+          "shape": 3,
+          "slide": -1
+        },
+        {
+          "volume": 0.7,
+          "frequency": 600,
+          "release": 0.2,
+          "shape": 4,
+          "bitCrush": 0.2,
+          "filter": -2000
+        }
+      ],
+      "duck": "heavy"
+    },
+    "hitCounter": {
+      "layers": [
+        {
+          "volume": 1.05,
+          "frequency": 110,
+          "sustain": 0.02,
+          "release": 0.25,
+          "shape": 3,
+          "slide": -2
+        },
+        {
+          "volume": 0.7,
+          "frequency": 3200,
+          "release": 0.08,
+          "shape": 4,
+          "filter": 2200
+        },
+        {
+          "volume": 0.42,
+          "frequency": 1320,
+          "release": 0.3,
+          "pitchJump": 660,
+          "pitchJumpTime": 0.04
+        }
+      ],
+      "duck": "heavy"
+    },
+    "catchClack": {
+      "layers": [
+        {
+          "volume": 1.4,
+          "frequency": 900,
+          "release": 0.05,
+          "shape": 1,
+          "slide": -20
+        },
+        {
+          "volume": 1.0,
+          "frequency": 4000,
+          "release": 0.03,
+          "shape": 4,
+          "filter": 3000
+        },
+        {
+          "volume": 0.8,
+          "frequency": 140,
+          "release": 0.12,
+          "shape": 3,
+          "slide": -2
+        }
+      ],
+      "duck": "heavy"
+    },
+    "seizeClunk": {
+      "layers": [
+        {
+          "volume": 1.3,
+          "frequency": 160,
+          "release": 0.1,
+          "shape": 1,
+          "slide": -1,
+          "filter": -1200
+        },
+        {
+          "volume": 0.6,
+          "frequency": 420,
+          "release": 0.08,
+          "shape": 2,
+          "filter": -900
+        }
+      ],
+      "pitchVar": 0.3
+    },
+    "whiffSeize": {
+      "layers": [
+        {
+          "volume": 0.5,
+          "frequency": 1200,
+          "attack": 0.02,
+          "release": 0.1,
+          "shape": 4,
+          "slide": -4,
+          "filter": -2500
+        }
+      ]
+    },
+    "whiffPunch": {
+      "layers": [
+        {
+          "volume": 0.525,
+          "frequency": 900,
+          "attack": 0.01,
+          "release": 0.07,
+          "shape": 4,
+          "slide": -6,
+          "filter": -2000
+        }
+      ],
+      "volVarDb": 2
+    },
+    "slipClean": {
+      "layers": [
+        {
+          "volume": 0.7,
+          "frequency": 1800,
+          "sustain": 0.03,
+          "release": 0.2,
+          "pitchJump": 900,
+          "pitchJumpTime": 0.03,
+          "tremolo": 0.3,
+          "repeatTime": 0.04
+        }
+      ]
+    },
+    "counterBell": {
+      "layers": [
+        {
+          "volume": 0.6,
+          "frequency": 1760,
+          "sustain": 0.04,
+          "release": 0.5,
+          "pitchJump": 880,
+          "pitchJumpTime": 0.02
+        }
+      ],
+      "pitchVar": 0
+    },
+    "ringStart": {
+      "layers": [
+        {
+          "volume": 0.39,
+          "frequency": 3800,
+          "attack": 0.02,
+          "sustain": 0.4,
+          "release": 0.5,
+          "tremolo": 0.2
+        }
+      ],
+      "pitchVar": 0.2
+    },
+    "ringRecover": {
+      "layers": [
+        {
+          "volume": 0.8,
+          "frequency": 660,
+          "sustain": 0.04,
+          "release": 0.2,
+          "shape": 1,
+          "pitchJump": 330,
+          "pitchJumpTime": 0.05
+        }
+      ],
+      "pitchVar": 0
+    },
+    "ringLost": {
+      "layers": [
+        {
+          "volume": 0.8,
+          "frequency": 500,
+          "sustain": 0.04,
+          "release": 0.25,
+          "shape": 1,
+          "pitchJump": -200,
+          "pitchJumpTime": 0.06,
+          "bitCrush": 0.2
+        }
+      ],
+      "pitchVar": 0
+    },
+    "hazard": {
+      "layers": [
+        {
+          "volume": 1.0,
+          "frequency": 300,
+          "sustain": 0.05,
+          "release": 0.2,
+          "shape": 2,
+          "slide": -6,
+          "noise": 0.3
+        },
+        {
+          "volume": 0.7,
+          "frequency": 2000,
+          "release": 0.15,
+          "shape": 4,
+          "bitCrush": 0.4
+        }
+      ],
+      "duck": "heavy"
+    },
+    "swallowStart": {
+      "layers": [
+        {
+          "volume": 0.6,
+          "frequency": 200,
+          "attack": 0.05,
+          "sustain": 0.1,
+          "release": 0.1,
+          "slide": 3,
+          "tremolo": 0.5
+        }
+      ]
+    },
+    "swallowCommit": {
+      "layers": [
+        {
+          "volume": 0.9,
+          "frequency": 330,
+          "sustain": 0.05,
+          "release": 0.3,
+          "shape": 1,
+          "pitchJump": 330,
+          "pitchJumpTime": 0.06
+        },
+        {
+          "volume": 0.4,
+          "frequency": 990,
+          "release": 0.3
+        }
+      ],
+      "pitchVar": 0
+    },
+    "swallowSpill": {
+      "layers": [
+        {
+          "volume": 0.9,
+          "frequency": 500,
+          "release": 0.25,
+          "shape": 2,
+          "slide": -8,
+          "filter": -1500
+        }
+      ]
+    },
+    "swallowRefused": {
+      "layers": [
+        {
+          "volume": 0.6,
+          "frequency": 2500,
+          "sustain": 0.05,
+          "release": 0.08,
+          "shape": 4,
+          "bitCrush": 0.6,
+          "filter": 1200
+        }
+      ]
+    },
+    "bagLeak": {
+      "layers": [
+        {
+          "volume": 0.5,
+          "frequency": 3000,
+          "sustain": 0.1,
+          "release": 0.2,
+          "shape": 4,
+          "bitCrush": 0.5,
+          "slide": -3,
+          "filter": 1800
+        }
+      ]
+    },
+    "hoarse": {
+      "layers": [
+        {
+          "volume": 0.8,
+          "frequency": 140,
+          "sustain": 0.1,
+          "release": 0.2,
+          "shape": 2,
+          "noise": 0.6,
+          "slide": -1
+        }
+      ]
+    },
+    "shot": {
+      "layers": [
+        {
+          "volume": 1.2,
+          "frequency": 1400,
+          "release": 0.08,
+          "shape": 1,
+          "slide": -10
+        }
+      ],
+      "cooldown": 0.05
+    },
+    "shotLand": {
+      "layers": [
+        {
+          "volume": 1.2,
+          "frequency": 120,
+          "release": 0.12,
+          "shape": 4,
+          "filter": -1500
+        }
+      ],
+      "cooldown": 0.05
+    },
+    "hop": {
+      "layers": [
+        {
+          "volume": 1.0,
+          "frequency": 300,
+          "release": 0.08,
+          "shape": 1,
+          "slide": 6
+        }
+      ]
+    },
+    "runnerSlip": {
+      "layers": [
+        {
+          "volume": 1.02,
+          "frequency": 800,
+          "release": 0.1,
+          "shape": 1,
+          "slide": 10,
+          "pitchJump": 400,
+          "pitchJumpTime": 0.04
+        }
+      ]
+    },
+    "kidDown": {
+      "layers": [
+        {
+          "volume": 0.96,
+          "frequency": 90,
+          "sustain": 0.05,
+          "release": 0.5,
+          "shape": 3,
+          "slide": -0.5
+        },
+        {
+          "volume": 0.48,
+          "frequency": 400,
+          "release": 0.3,
+          "shape": 4,
+          "filter": -1200
+        }
+      ],
+      "duck": "heavy"
+    },
+    "beatCountTick": {
+      "layers": [
+        {
+          "volume": 1.28,
+          "frequency": 1000,
+          "release": 0.06,
+          "shape": 1
+        }
+      ],
+      "pitchVar": 0
+    },
+    "beatCountRise": {
+      "layers": [
+        {
+          "volume": 1.0,
+          "frequency": 440,
+          "sustain": 0.1,
+          "release": 0.4,
+          "shape": 1,
+          "pitchJump": 220,
+          "pitchJumpTime": 0.08,
+          "repeatTime": 0.08
+        }
+      ],
+      "pitchVar": 0
+    },
+    "countedOut": {
+      "layers": [
+        {
+          "volume": 0.825,
+          "frequency": 660,
+          "sustain": 0.2,
+          "release": 1.2,
+          "tremolo": 0.1
+        },
+        {
+          "volume": 0.375,
+          "frequency": 1650,
+          "sustain": 0.1,
+          "release": 0.9
+        }
+      ],
+      "duck": "heavy",
+      "pitchVar": 0
+    },
+    "corner": {
+      "layers": [
+        {
+          "volume": 0.7,
+          "frequency": 523,
+          "sustain": 0.1,
+          "release": 0.4,
+          "pitchJump": 262,
+          "pitchJumpTime": 0.1,
+          "repeatTime": 0.1
+        }
+      ],
+      "pitchVar": 0
+    },
+    "distrained": {
+      "layers": [
+        {
+          "volume": 0.9,
+          "frequency": 220,
+          "sustain": 0.15,
+          "release": 0.5,
+          "shape": 2,
+          "slide": -1,
+          "bitCrush": 0.2
+        }
+      ]
+    },
+    "redistrained": {
+      "layers": [
+        {
+          "volume": 0.9,
+          "frequency": 440,
+          "sustain": 0.1,
+          "release": 0.4,
+          "shape": 1,
+          "pitchJump": 220,
+          "pitchJumpTime": 0.06,
+          "repeatTime": 0.06
+        }
+      ],
+      "pitchVar": 0
+    },
+    "auctioned": {
+      "layers": [
+        {
+          "volume": 1.56,
+          "frequency": 180,
+          "release": 0.08,
+          "shape": 1,
+          "repeatTime": 0.15,
+          "filter": -1500
+        }
+      ]
+    },
+    "coin": {
+      "layers": [
+        {
+          "volume": 0.96,
+          "frequency": 1760,
+          "release": 0.15,
+          "pitchJump": 880,
+          "pitchJumpTime": 0.04
+        }
+      ],
+      "cooldown": 0.05,
+      "maxVoices": 3
+    },
+    "gavelKnock1": {
+      "layers": [
+        {
+          "volume": 1.56,
+          "frequency": 200,
+          "release": 0.07,
+          "shape": 1,
+          "slide": -2,
+          "filter": -1500
+        },
+        {
+          "volume": 0.78,
+          "frequency": 900,
+          "release": 0.03,
+          "shape": 4,
+          "filter": 800
+        }
+      ],
+      "pitchVar": 0
+    },
+    "gavelKnock2": {
+      "layers": [
+        {
+          "volume": 1.56,
+          "frequency": 260,
+          "release": 0.07,
+          "shape": 1,
+          "slide": -2,
+          "filter": -1800
+        },
+        {
+          "volume": 0.78,
+          "frequency": 1100,
+          "release": 0.03,
+          "shape": 4,
+          "filter": 900
+        }
+      ],
+      "pitchVar": 0
+    },
+    "sold": {
+      "layers": [
+        {
+          "volume": 1.4,
+          "frequency": 150,
+          "release": 0.1,
+          "shape": 1,
+          "filter": -1300
+        },
+        {
+          "volume": 0.6,
+          "frequency": 1320,
+          "sustain": 0.05,
+          "release": 0.5
+        }
+      ],
+      "duck": "heavy",
+      "pitchVar": 0
+    },
+    "soldBag": {
+      "layers": [
+        {
+          "volume": 0.8,
+          "frequency": 1320,
+          "sustain": 0.05,
+          "release": 0.4,
+          "pitchJump": -440,
+          "pitchJumpTime": 0.1
+        }
+      ],
+      "pitchVar": 0
+    },
+    "outbid": {
+      "layers": [
+        {
+          "volume": 1.0,
+          "frequency": 330,
+          "sustain": 0.05,
+          "release": 0.3,
+          "shape": 1,
+          "pitchJump": 330,
+          "pitchJumpTime": 0.05,
+          "repeatTime": 0.1
+        }
+      ],
+      "pitchVar": 0
+    },
+    "bossPhase": {
+      "layers": [
+        {
+          "volume": 0.975,
+          "frequency": 80,
+          "sustain": 0.3,
+          "release": 0.8,
+          "shape": 2,
+          "slide": 0.5,
+          "tremolo": 0.3
+        }
+      ],
+      "duck": "heavy",
+      "pitchVar": 0
+    },
+    "fever": {
+      "layers": [
+        {
+          "volume": 0.8,
+          "frequency": 200,
+          "attack": 0.1,
+          "sustain": 0.2,
+          "release": 0.3,
+          "shape": 2,
+          "slide": 2
+        }
+      ]
+    },
+    "flinch": {
+      "layers": [
+        {
+          "volume": 0.7,
+          "frequency": 250,
+          "release": 0.06,
+          "shape": 2,
+          "slide": -4,
+          "filter": -1500
+        }
+      ]
+    },
+    "countTick": {
+      "layers": [
+        {
+          "volume": 1.26,
+          "frequency": 1200,
+          "release": 0.05,
+          "shape": 1
+        }
+      ],
+      "pitchVar": 0
+    },
+    "repossess": {
+      "layers": [
+        {
+          "volume": 0.96,
+          "frequency": 70,
+          "sustain": 0.02,
+          "release": 0.35,
+          "shape": 3,
+          "slide": -1
+        },
+        {
+          "volume": 0.48,
+          "frequency": 900,
+          "release": 0.12,
+          "shape": 4,
+          "bitCrush": 0.3,
+          "filter": -2500
+        },
+        {
+          "volume": 0.3,
+          "frequency": 1760,
+          "sustain": 0.05,
+          "release": 0.4,
+          "pitchJump": 880,
+          "pitchJumpTime": 0.06
+        }
+      ],
+      "duck": "heavy",
+      "pitchVar": 0
+    },
+    "ko": {
+      "layers": [
+        {
+          "volume": 0.96,
+          "frequency": 100,
+          "sustain": 0.04,
+          "release": 0.35,
+          "shape": 3,
+          "slide": -1.5
+        },
+        {
+          "volume": 0.48,
+          "frequency": 500,
+          "release": 0.25,
+          "shape": 4,
+          "filter": -1500
+        }
+      ],
+      "duck": "heavy"
+    },
+    "downThud": {
+      "layers": [
+        {
+          "volume": 1.105,
+          "frequency": 80,
+          "release": 0.25,
+          "shape": 3,
+          "slide": -1
+        },
+        {
+          "volume": 0.51,
+          "frequency": 300,
+          "release": 0.2,
+          "shape": 4,
+          "filter": -900
+        }
+      ]
+    },
+    "rise": {
+      "layers": [
+        {
+          "volume": 0.7,
+          "frequency": 200,
+          "attack": 0.05,
+          "sustain": 0.1,
+          "release": 0.15,
+          "shape": 2,
+          "slide": 3
+        }
+      ]
+    },
+    "cleared": {
+      "layers": [
+        {
+          "volume": 0.8,
+          "frequency": 523,
+          "sustain": 0.08,
+          "release": 0.5,
+          "shape": 1,
+          "pitchJump": 261,
+          "pitchJumpTime": 0.09,
+          "repeatTime": 0.18
+        },
+        {
+          "volume": 0.5,
+          "frequency": 1046,
+          "sustain": 0.1,
+          "release": 0.6
+        }
+      ],
+      "pitchVar": 0
+    },
+    "barkWindup": {
+      "layers": [
+        {
+          "volume": 0.7,
+          "frequency": 110,
+          "attack": 0.05,
+          "sustain": 0.2,
+          "release": 0.05,
+          "shape": 2,
+          "slide": 1.5,
+          "tremolo": 0.6,
+          "repeatTime": 0.05,
+          "filter": -900
+        }
+      ]
+    },
+    "screechWindup": {
+      "layers": [
+        {
+          "volume": 0.5,
+          "frequency": 1500,
+          "attack": 0.1,
+          "sustain": 0.2,
+          "release": 0.1,
+          "shape": 2,
+          "slide": 6,
+          "filter": 900
+        }
+      ]
+    },
+    "growlWindup": {
+      "layers": [
+        {
+          "volume": 0.8,
+          "frequency": 60,
+          "attack": 0.05,
+          "sustain": 0.35,
+          "release": 0.1,
+          "shape": 2,
+          "slide": 1.2,
+          "modulation": 20,
+          "filter": -700
+        }
+      ]
+    },
+    "whetWindup": {
+      "layers": [
+        {
+          "volume": 0.5,
+          "frequency": 4000,
+          "attack": 0.05,
+          "sustain": 0.25,
+          "release": 0.1,
+          "shape": 4,
+          "slide": 4,
+          "filter": 3000
+        }
+      ]
+    },
+    "stampWindup": {
+      "layers": [
+        {
+          "volume": 0.6,
+          "frequency": 200,
+          "attack": 0.02,
+          "sustain": 0.25,
+          "release": 0.05,
+          "shape": 1,
+          "slide": 2
+        }
+      ]
+    },
+    "tannoyWindup": {
+      "layers": [
+        {
+          "volume": 0.5,
+          "frequency": 2500,
+          "attack": 0.3,
+          "sustain": 0.02,
+          "release": 0.05,
+          "shape": 4,
+          "bitCrush": 0.6,
+          "filter": 1500
+        }
+      ]
+    },
+    "patterWindup": {
+      "layers": [
+        {
+          "volume": 0.72,
+          "frequency": 600,
+          "sustain": 0.3,
+          "release": 0.05,
+          "shape": 1,
+          "slide": 3,
+          "repeatTime": 0.06,
+          "tremolo": 0.8
+        }
+      ]
+    },
+    "gavelWindup": {
+      "layers": [
+        {
+          "volume": 0.6,
+          "frequency": 90,
+          "attack": 0.1,
+          "sustain": 0.2,
+          "release": 0.05,
+          "shape": 2,
+          "slide": 0.5,
+          "modulation": 8,
+          "filter": -800
+        }
+      ]
+    },
+    "cadenceBeat": {
+      "layers": [
+        {
+          "volume": 0.7,
+          "frequency": 1047,
+          "sustain": 0.05,
+          "release": 0.35
+        }
+      ],
+      "pitchVar": 0
+    },
+    "hopWindup": {
+      "layers": [
+        {
+          "volume": 0.65,
+          "frequency": 150,
+          "attack": 0.1,
+          "sustain": 0.05,
+          "release": 0.05,
+          "shape": 1,
+          "slide": 2
+        }
+      ]
+    },
+    "boughtWindup": {
+      "layers": [
+        {
+          "volume": 0.6,
+          "frequency": 400,
+          "attack": 0.1,
+          "sustain": 0.15,
+          "release": 0.1,
+          "shape": 1,
+          "slide": 3,
+          "tremolo": 0.4
+        }
+      ]
+    },
+    "snatchWindup": {
+      "layers": [
+        {
+          "volume": 1.0,
+          "frequency": 700,
+          "attack": 0.05,
+          "sustain": 0.1,
+          "release": 0.05,
+          "shape": 1,
+          "slide": -3,
+          "filter": 500
+        }
+      ]
+    },
+    "telegraph": {
+      "layers": [
+        {
+          "volume": 0.5,
+          "frequency": 300,
+          "attack": 0.05,
+          "sustain": 0.15,
+          "release": 0.05,
+          "shape": 1,
+          "slide": 3
+        }
+      ]
     }
   },
   "loops": {
@@ -436,8 +1370,86 @@
       "death": "death",
       "respawn": "respawn",
       "hurt": "hurt",
-      "hit": "hit",
-      "step": "footstep"
+      "step": "footstep",
+      "catch": "catchClack",
+      "seizeGuarded": "seizeClunk",
+      "slipClean": "slipClean",
+      "counterHit": "counterBell",
+      "ringStart": "ringStart",
+      "ringRecover": "ringRecover",
+      "ringLost": "ringLost",
+      "hazard": "hazard",
+      "swallowStart": "swallowStart",
+      "swallowCommit": "swallowCommit",
+      "swallowSpill": "swallowSpill",
+      "swallowRefused": "swallowRefused",
+      "bagLeak": "bagLeak",
+      "hoarse": "hoarse",
+      "shot": "shot",
+      "shotLand": "shotLand",
+      "hop": "hop",
+      "runnerSlip": "runnerSlip",
+      "kidDown": "kidDown",
+      "beatCountTick": "beatCountTick",
+      "beatCountRise": "beatCountRise",
+      "countedOut": "countedOut",
+      "corner": "corner",
+      "distrained": "distrained",
+      "redistrained": "redistrained",
+      "auctioned": "auctioned",
+      "poundage": "coin",
+      "sold": "sold",
+      "soldBag": "soldBag",
+      "outbid": "outbid",
+      "bossPhase": "bossPhase",
+      "fever": "fever",
+      "flinch": "flinch",
+      "countTick": "countTick",
+      "repossess": "repossess",
+      "ko": "ko",
+      "down": "downThud",
+      "rise": "rise",
+      "roomClear": "cleared"
+    },
+    "hit": {
+      "default": "hit",
+      "byClass": {
+        "light": "hitLight",
+        "medium": "hitMedium",
+        "heavy": "hitHeavy",
+        "counter": "hitCounter",
+        "catch": "catchClack"
+      }
+    },
+    "whiff": {
+      "default": "whiffPunch",
+      "byMove": {
+        "seize": "whiffSeize"
+      }
+    },
+    "telegraph": {
+      "default": "telegraph",
+      "byCue": {
+        "barkWindup": "barkWindup",
+        "screechWindup": "screechWindup",
+        "growlWindup": "growlWindup",
+        "whetWindup": "whetWindup",
+        "stampWindup": "stampWindup",
+        "tannoyWindup": "tannoyWindup",
+        "patterWindup": "patterWindup",
+        "gavelWindup": "gavelWindup",
+        "cadenceBeat": "cadenceBeat",
+        "hopWindup": "hopWindup",
+        "boughtWindup": "boughtWindup",
+        "snatchWindup": "snatchWindup"
+      }
+    },
+    "lotMarked": {
+      "default": "gavelKnock1",
+      "byBeat": {
+        "1": "gavelKnock1",
+        "2": "gavelKnock2"
+      }
     },
     "jump": {
       "default": "jump",

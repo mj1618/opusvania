@@ -1,9 +1,12 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Game } from '../game';
+import { enemyDef, param } from '../sim/ai/schema';
 import type { Colour, SimEvent } from '../sim/events';
 import { tuning } from '../sim/tuning';
+import { VIEW_W } from './camera/index';
+import { drawCoin, drawWaxSeal, strokeText, strokeTextWidth } from './glyphs';
 import { dashPath } from './outline';
-import { colourHex, PALETTE, SIG } from './palette';
+import { CBT, colourHex, PALETTE, SIG } from './palette';
 import type { SigRect } from './signature';
 
 /** Screen-space layout of the bag HUD (px on the 1920x1080 canvas). */
@@ -11,7 +14,7 @@ const LAYOUT = {
   panelX: 16,
   panelY: 56,
   panelW: 252,
-  panelH: 168,
+  panelH: 208,
   slotX: 32,
   slotY: 88,
   slot: 48,
@@ -24,7 +27,19 @@ const LAYOUT = {
   chinX: 40,
   chinGap: 24,
   chinR: 8,
+  coinX: 44,
+  coinY: 246,
+  bossY: 116,
+  bossW: 900,
+  bossH: 20,
 };
+
+interface Coin {
+  x: number;
+  y: number;
+  age: number;
+  delay: number;
+}
 
 /** Needle angle (radians from straight up) per weight class. */
 const NEEDLE: Record<string, number> = { feather: -1, middle: 0, heavy: 1 };
@@ -54,6 +69,12 @@ export class BagHud {
   private ribbons: Ribbon[] = [];
   private needle: { from: number; to: number; age: number } = { from: -1, to: -1, age: SIG.needleFrames };
   private slots: SigRect[] = [];
+  private coins: Coin[] = [];
+  /** Poundage shown on the counter (ticks up as coins land). */
+  private shown = 0;
+  private pending = 0;
+  private coinPing = 0;
+  private ringAge = 0;
 
   constructor(private readonly game: Game) {
     const font = 'ui-monospace, Menlo, monospace';
@@ -73,6 +94,9 @@ export class BagHud {
 
   reset(): void {
     this.ribbons = [];
+    this.coins = [];
+    this.pending = 0;
+    this.shown = this.game.state.run.poundage;
     const a = NEEDLE[this.game.state.player.profile] ?? -1;
     this.needle = { from: a, to: a, age: SIG.needleFrames };
   }
@@ -83,7 +107,24 @@ export class BagHud {
     for (const r of this.ribbons) r.age++;
     this.ribbons = this.ribbons.filter((r) => r.age < SIG.ribbonFrames);
     if (this.needle.age < SIG.needleFrames) this.needle.age++;
+    this.ringAge = s.player.ring > 0 ? this.ringAge + 1 : 0;
+    if (this.coinPing > 0) this.coinPing--;
+    for (const c of this.coins) c.age++;
+    const landed = this.coins.filter((c) => c.age >= c.delay + CBT.coinFrames).length;
+    if (landed > 0) this.coinPing = 6;
+    this.coins = this.coins.filter((c) => c.age < c.delay + CBT.coinFrames);
+    if (this.coins.length === 0) this.pending = 0;
+    const target = s.run.poundage - this.pending;
+    if (this.shown < target)
+      this.shown = Math.min(target, this.shown + Math.max(1, Math.ceil((target - this.shown) / 8)));
+    else if (this.shown > target) this.shown = target;
     for (const e of events) {
+      if (e.type === 'poundage' && e.amount > 0) {
+        // Coins fly from where it was paid to the counter; the number ticks up as they land.
+        this.pending += e.amount;
+        for (let i = 0; i < CBT.coinsPerPayout; i++)
+          this.coins.push({ x: e.x + (i - 2.5) * 10, y: e.y - (i % 2) * 14, age: 0, delay: i * 2 });
+      }
       if (e.type === 'seizeTake') {
         const slot = s.local.bag.indexOf(e.soundId);
         if (slot >= 0)
@@ -118,6 +159,10 @@ export class BagHud {
         this.needle = { from: this.needleAngle(), to: NEEDLE[e.to] ?? 0, age: 0 };
       }
     }
+  }
+
+  private drawBoss(g: Graphics): void {
+    drawBossBar(g, this.game);
   }
 
   private needleAngle(): number {
@@ -217,13 +262,63 @@ export class BagHud {
       .stroke({ width: 3, color: PALETTE.hudInk });
     g.circle(dx, dy, 4).fill(PALETTE.hudInk);
 
-    // Chin pips.
-    const chinMax = tuning.kid.chin;
+    // Chin pips up to max Chin, then Lien pips (red wax seals) for the pips under a Lien.
+    const p = s.player;
+    const chinMax = p.chinMax;
+    const frame = s.frame;
     for (let i = 0; i < chinMax; i++) {
       const x = Lh.chinX + i * Lh.chinGap;
-      if (i < s.player.chin) g.circle(x, Lh.chinY, Lh.chinR).fill(PALETTE.chin);
-      else g.circle(x, Lh.chinY, Lh.chinR - 1).stroke({ width: 2, color: PALETTE.hudDim });
+      if (i < p.chin) g.circle(x, Lh.chinY, Lh.chinR).fill(PALETTE.chin);
+      else if (i === p.chin && p.ring > 0) {
+        // Ringing: the pip just lost vibrates with sound rings; the arc is the window left.
+        const dx = Math.sin(frame * 2.2) * 2;
+        const k = p.ring / tuning.kid.ringFrames;
+        g.circle(x + dx, Lh.chinY, Lh.chinR).fill({
+          color: PALETTE.chin,
+          alpha: 0.45 + 0.3 * Math.sin(frame * 0.9),
+        });
+        for (let r = 0; r < 2; r++) {
+          const u = (((this.ringAge / 14 + r / 2) % 1) + 1) % 1;
+          g.circle(x, Lh.chinY, Lh.chinR + 2 + u * 10).stroke({
+            width: 2,
+            color: PALETTE.chin,
+            alpha: 0.7 * (1 - u),
+          });
+        }
+        g.moveTo(x, Lh.chinY - Lh.chinR - 5)
+          .arc(x, Lh.chinY, Lh.chinR + 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k)
+          .stroke({ width: 2.5, color: PALETTE.gold, alpha: 0.95 });
+      } else g.circle(x, Lh.chinY, Lh.chinR - 1).stroke({ width: 2, color: PALETTE.hudDim });
     }
+    for (let i = 0; i < s.run.lien; i++)
+      drawWaxSeal(g, Lh.chinX + (chinMax + i) * Lh.chinGap, Lh.chinY, Lh.chinR + 2);
+
+    // Poundage: a coin and the count (ticks up); debt in garnish mode.
+    const ping = this.coinPing / 6;
+    drawCoin(g, Lh.coinX, Lh.coinY, 10 * (1 + 0.25 * ping));
+    const txt = String(this.shown);
+    strokeText(g, txt, Lh.coinX + 18 + strokeTextWidth(txt, 16) / 2, Lh.coinY, 16 * (1 + 0.12 * ping), {
+      color: ping > 0 ? PALETTE.coin : PALETTE.hudInk,
+      width: 3,
+    });
+    if (s.run.debt > 0) {
+      const d = `-${s.run.debt}`;
+      strokeText(g, d, Lh.panelX + Lh.panelW - 16 - strokeTextWidth(d, 14) / 2, Lh.coinY, 14, {
+        color: PALETTE.stampRed,
+        width: 3,
+      });
+    }
+    for (const c of this.coins) {
+      if (c.age < c.delay) continue;
+      const t = Math.min(1, (c.age - c.delay) / CBT.coinFrames);
+      const u = t * t;
+      const a0 = { x: c.x + cam.x, y: c.y + cam.y };
+      const x = a0.x + (Lh.coinX - a0.x) * u;
+      const y = a0.y + (Lh.coinY - a0.y) * u - Math.sin(t * Math.PI) * 120;
+      drawCoin(rg, x, y, 13, 1, Math.abs(Math.cos(c.age * 0.5)) * 0.8 + 0.2);
+    }
+
+    this.drawBoss(g);
 
     // Ribbons: 12 f from the target to the slot (take) or from the slot to the source (push).
     const pos = (p: Ribbon['from']): { x: number; y: number } =>
@@ -255,6 +350,57 @@ export class BagHud {
       const h = at(t1);
       rg.circle(h.x, h.y, 10).fill(c);
       rg.circle(h.x, h.y, 10).stroke({ width: 2, color: 0xffffff, alpha: 0.8 });
+    }
+  }
+}
+
+/** Draws the boss bar (top centre) and the fever gauge, when a boss is in the room. */
+function drawBossBar(g: Graphics, game: Game): void {
+  const s = game.state;
+  const boss = s.local.enemies.find((e) => e.boss && e.state !== 'KO' && e.state !== 'REPOSSESSED');
+  const fever = Math.max(s.run.fever, s.local.fever);
+  const cx = VIEW_W / 2;
+  const y = LAYOUT.bossY;
+  if (boss?.boss) {
+    const d = enemyDef(boss.type);
+    const hp1 = d.hp;
+    const hp2 = param(d, 'phase2Hp');
+    const W = LAYOUT.bossW;
+    const H = LAYOUT.bossH;
+    const w1 = (W * hp1) / (hp1 + hp2) - 4;
+    const w2 = W - w1 - 8;
+    const x0 = cx - W / 2;
+    strokeText(g, 'THE AUCTIONEER', cx, y - 20, 16, { color: PALETTE.hudInk, width: 3 });
+    const ph = boss.boss.phase;
+    const f1 = ph === 1 ? Math.max(0, boss.hp) / hp1 : 0;
+    const f2 = ph === 2 ? Math.max(0, boss.hp) / hp2 : 1;
+    for (const [x, w, fill, on] of [
+      [x0, w1, f1, ph === 1],
+      [x0 + w1 + 8, w2, f2, ph === 2],
+    ] as const) {
+      g.rect(x, y, w, H).fill({ color: PALETTE.bossBarBack, alpha: 0.9 });
+      if (fill > 0)
+        g.rect(x, y, w * Math.min(1, fill), H).fill({ color: PALETTE.bossBar, alpha: on ? 1 : 0.35 });
+      g.rect(x, y, w, H).stroke({ width: 2, color: on ? PALETTE.hudInk : PALETTE.hudDim });
+    }
+    // Downed: the bar flashes gold (the Count is the phase gate).
+    if (boss.state === 'DOWN' || boss.state === 'COUNT')
+      g.rect(x0 - 4, y - 4, W + 8, H + 8).stroke({
+        width: 3,
+        color: PALETTE.gold,
+        alpha: 0.5 + 0.5 * Math.sin(s.frame * 0.5),
+      });
+  }
+  if (boss || fever > 0) {
+    // Fever: four segments like a thermometer.
+    const fx = cx + LAYOUT.bossW / 2 + 40;
+    strokeText(g, 'FEVER', fx + 30, y - 20, 12, { color: PALETTE.hudInk, width: 2.5 });
+    for (let i = 0; i < 4; i++) {
+      const on = i < fever;
+      g.roundRect(fx + i * 16, y + 16 - i * 4 - 4, 12, 8 + i * 4, 3).fill({
+        color: on ? PALETTE.furious : PALETTE.bossBarBack,
+        alpha: on ? 1 : 0.8,
+      });
     }
   }
 }

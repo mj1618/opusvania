@@ -1,9 +1,10 @@
-import { Graphics } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import type { Game } from '../game';
-import { type AttackDef, enemyDef } from '../sim/ai/schema';
 import type { Colour, SimEvent } from '../sim/events';
-import type { Enemy, Levied, Sound, Source } from '../sim/state';
+import type { Levied, Sound, Source } from '../sim/state';
 import { tuning } from '../sim/tuning';
+import { getRoom } from '../sim/world/rooms';
+import { drawEnemy, type EnemyFx, enemyPose } from './enemies';
 import type { Light } from './gfx/lighting';
 import { NOISE_COLOURS } from './gfx/palette';
 import {
@@ -17,7 +18,9 @@ import {
   rngFor,
   vibration,
 } from './outline';
-import { colourHex, PALETTE, SIG } from './palette';
+import { CBT, colourHex, PALETTE, SIG } from './palette';
+import { drawShots } from './shots';
+import { SparkSet } from './sparks';
 
 /** A drawn L3 thing (world px here; WorldRenderer.rects() converts to canvas px). */
 export interface SigRect {
@@ -56,6 +59,9 @@ export class SignatureRenderer {
   readonly front = new Graphics();
   /** Emissive copies (gfx.layers.emissive): humming sources, levied, armed voices, telegraphs. */
   readonly glow = new Graphics({ label: 'sig-glow' });
+  /** Enemy bodies, one posed Graphics each (under the player, over `back`). */
+  readonly enemyLayer = new Container({ label: 'sig-enemies' });
+  private readonly pool: Graphics[] = [];
   /** Lights for this frame (gfx light provider), filled by draw(). */
   private frameLights: Light[] = [];
 
@@ -68,6 +74,15 @@ export class SignatureRenderer {
   private sparks: Spark[] = [];
   private stepCount = 0;
   private drawn: SigRect[] = [];
+  // L4 per-enemy feedback (keyed by enemy id).
+  private guard = new Map<number, { frames: number; x: number; y: number }>();
+  private enemyRefused = new Map<number, number>();
+  private countPulse = new Map<number, number>();
+  private countNo = new Map<number, number>();
+  private koAge = new Map<number, number>();
+  private repoAge = new Map<number, number>();
+  /** Exhaust puffs and similar body-attached particles. */
+  private readonly puffs = new SparkSet(17);
 
   constructor(private readonly game: Game) {}
 
@@ -78,6 +93,13 @@ export class SignatureRenderer {
     this.shakeId = -1;
     this.gateOpened.clear();
     this.sparks = [];
+    this.guard.clear();
+    this.enemyRefused.clear();
+    this.countPulse.clear();
+    this.countNo.clear();
+    this.koAge.clear();
+    this.repoAge.clear();
+    this.puffs.clear();
   }
 
   step(events: readonly SimEvent[]): void {
@@ -86,9 +108,54 @@ export class SignatureRenderer {
     for (const [k, v] of this.flash) v <= 1 ? this.flash.delete(k) : this.flash.set(k, v - 1);
     for (const [k, v] of this.refused) v <= 1 ? this.refused.delete(k) : this.refused.set(k, v - 1);
     if (this.kidGold > 0) this.kidGold--;
+    for (const [k, v] of this.guard) v.frames <= 1 ? this.guard.delete(k) : v.frames--;
+    for (const m of [this.enemyRefused, this.countPulse, this.countNo])
+      for (const [k, v] of m) v <= 1 ? m.delete(k) : m.set(k, v - 1);
+    for (const m of [this.koAge, this.repoAge]) for (const [k, v] of m) m.set(k, v + 1);
     const rnd = rngFor(this.stepCount, 7);
+    const prnd = this.puffs.rng();
+    const kp = s.player;
     for (const e of events) {
       switch (e.type) {
+        case 'seizeGuarded': {
+          const en = s.local.enemies.find((o) => o.id === e.target);
+          if (en) {
+            // Contact point: the enemy's edge facing Kid, at her hand height.
+            const kx = kp.x + kp.w / 2;
+            const x = kx < en.x + en.w / 2 ? en.x : en.x + en.w;
+            const y = Math.max(en.y + 12, Math.min(en.y + en.h - 12, kp.y + 34));
+            this.guard.set(e.target, { frames: CBT.guardFrames, x, y });
+          }
+          break;
+        }
+        case 'countTick':
+          this.countPulse.set(e.enemy, CBT.countPulseFrames);
+          break;
+        case 'down':
+          this.countPulse.set(e.enemy, CBT.countPulseFrames);
+          for (let i = 0; i < 8; i++)
+            this.sparks.push({
+              x: e.x + (rnd() - 0.5) * 80,
+              y: e.y + 20,
+              vx: (rnd() - 0.5) * 8,
+              vy: -1 - rnd() * 2,
+              age: 0,
+              life: 18,
+              size: 10,
+              color: PALETTE.dust,
+            });
+          break;
+        case 'whiff':
+          if (e.reason === 'down') {
+            const en = s.local.enemies.find(
+              (o) => e.x >= o.x - 8 && e.x <= o.x + o.w + 8 && e.y >= o.y - 8 && e.y <= o.y + o.h + 8,
+            );
+            if (en) this.countNo.set(en.id, 8);
+          }
+          break;
+        case 'ko':
+          this.koAge.set(e.enemy, 0);
+          break;
         case 'hit': {
           const f = SIG.hitFlash[e.cls] ?? 3;
           if (f > 0) this.flash.set(e.target, f);
@@ -132,6 +199,7 @@ export class SignatureRenderer {
           }
           break;
         case 'repossess':
+          this.repoAge.set(e.enemy, 0);
           this.flash.set(e.enemy, SIG.hitFlash.repossess ?? 6);
           this.shakeId = e.enemy;
           this.sparks.push(ringAt(e.x, e.y, PALETTE.furious));
@@ -140,7 +208,9 @@ export class SignatureRenderer {
           this.shakeId = e.owner;
           break;
         case 'seizeRefused':
-          this.refused.set(e.target, SIG.refusedFlashFrames);
+          this.refused.set(e.target, CBT.refusedFrames);
+          if (s.local.enemies.some((o) => o.id === e.target))
+            this.enemyRefused.set(e.target, CBT.refusedFrames);
           for (let i = 0; i < 6; i++)
             this.sparks.push({
               x: e.x + (rnd() - 0.5) * 60,
@@ -177,6 +247,22 @@ export class SignatureRenderer {
       }
     }
     if (s.hitstop > 0 && !events.some((e) => e.type === 'hitstop')) return;
+    // Grinder: exhaust puffs while it backs up to charge (every 3rd step).
+    if (this.stepCount % 3 === 0)
+      for (const en of s.local.enemies) {
+        if (en.type !== 'grinder' || en.state !== 'TELEGRAPH' || en.attackId !== 'charge') continue;
+        const ex = en.facing > 0 ? en.x + 10 : en.x + en.w - 10;
+        this.puffs.burst(prnd, ex, en.y - 10, 2, 0x8a8f9c, {
+          speed: 2,
+          size: 10,
+          life: 20,
+          kind: 'puff',
+          spread: 0.8,
+          dir: en.facing > 0 ? -2.2 : -0.9,
+          gravity: -0.12,
+        });
+      }
+    this.puffs.step();
     for (const p of this.sparks) {
       p.age++;
       if (p.ring) continue;
@@ -290,6 +376,8 @@ export class SignatureRenderer {
         status = 'humming';
         drawHumming(g, r, colour, frame, this.flash.has(src.id));
         this.glowHum(gl, r, colour, frame);
+        // Refused (a locked lot: "under the hammer"): white flash and static crackle over it.
+        if (this.refused.has(src.id)) drawStatic(g, r, frame, src.id, true);
       }
       this.drawn.push({ id: src.id, kind: 'object', colour, status, x: src.x, y: src.y, w: src.w, h: src.h });
     }
@@ -314,9 +402,12 @@ export class SignatureRenderer {
       });
     }
 
-    // Enemies.
+    // Enemies: each body is its own posed Graphics (lean, crouch, tip over); cues are world-space.
+    let used = 0;
+    const kidC = { x: kid.x + s.player.w / 2, y: kid.y + s.player.h / 2 };
     for (const e of L.enemies) {
-      if (e.state === 'KO') continue;
+      const ko = this.koAge.get(e.id) ?? -1;
+      if (e.state === 'KO' && (ko < 0 || ko >= CBT.koFrames)) continue;
       const q = prev.local.enemies.find((o) => o.id === e.id);
       const far = !q || Math.abs(q.x - e.x) + Math.abs(q.y - e.y) > 200;
       let x = far ? e.x : lerp(q.x, e.x, alpha);
@@ -324,7 +415,32 @@ export class SignatureRenderer {
       if (this.shakeId === e.id || this.shakeId === e.source) x += shake;
       const src = L.sources.find((o) => o.id === e.source);
       const voices = (src?.soundIds ?? []).map(soundOf).filter((v): v is Sound => !!v);
-      const status = this.drawEnemy(g, f, gl, e, x, y, voices, frame);
+      const gd = this.guard.get(e.id);
+      const fx: EnemyFx = {
+        frame,
+        flash: this.flash.has(e.id),
+        guard: gd?.frames ?? 0,
+        guardAt: gd ? { x: gd.x, y: gd.y } : null,
+        refused: this.enemyRefused.get(e.id) ?? 0,
+        countPulse: (this.countPulse.get(e.id) ?? 0) / CBT.countPulseFrames,
+        countNo: (this.countNo.get(e.id) ?? 0) / 8,
+        koAge: ko,
+        repoAge: this.repoAge.get(e.id) ?? -1,
+        kid: kidC,
+        shots: L.shots,
+      };
+      const body = this.enemyGraphics(used++);
+      const pose = enemyPose(e, fx);
+      const { status } = drawEnemy(body, f, gl, e, x, y, voices, fx, pose, (lx, ly, r, c, i) =>
+        this.light(lx, ly, r, c, i),
+      );
+      const piv = pose.centre ? e.h / 2 : 0;
+      body.pivot.set(0, -piv);
+      body.position.set(Math.round(x + e.w / 2 + pose.dx), Math.round(y + e.h - piv + pose.dy));
+      body.rotation = pose.rot;
+      body.scale.set(pose.sx, pose.sy);
+      body.alpha = pose.alpha;
+      if (e.state === 'KO') continue;
       const colour = voices[0]?.colour ?? '';
       this.drawn.push({ id: src?.id ?? e.id, kind: 'enemy', colour, status, x, y, w: e.w, h: e.h });
 
@@ -351,6 +467,13 @@ export class SignatureRenderer {
       }
     }
 
+    for (let i = used; i < this.pool.length; i++) (this.pool[i] as Graphics).visible = false;
+
+    // Enemy shots (darts, mortars, waves, words, slabs).
+    for (const r of drawShots(f, gl, L.shots, prev.local.shots, alpha, frame, getRoom(s.roomId)))
+      this.drawn.push({ ...r, status: 'shot' });
+    this.puffs.draw(f);
+
     // Feather: two small rising motes (render only).
     const p = s.player;
     if (p.abilities.seize && p.profile === 'feather' && p.state !== 'dead') {
@@ -374,6 +497,18 @@ export class SignatureRenderer {
 
     const kr = { x: kid.x, y: kid.y, w: p.w, h: p.h };
     this.drawn.push({ id: 0, kind: 'player', colour: '', status: p.profile, ...kr });
+  }
+
+  /** The i-th pooled enemy body graphics (cleared, visible). */
+  private enemyGraphics(i: number): Graphics {
+    let g = this.pool[i];
+    if (!g) {
+      g = new Graphics();
+      this.pool.push(g);
+      this.enemyLayer.addChild(g);
+    }
+    g.visible = true;
+    return g.clear();
   }
 
   /** A light for this frame's provider call (world px). */
@@ -404,172 +539,6 @@ export class SignatureRenderer {
   /** Light provider (gfx.lights.providers): the lights of the last drawn frame. */
   lights(out: Light[]): void {
     for (const l of this.frameLights) out.push(l);
-  }
-
-  private drawEnemy(
-    g: Graphics,
-    f: Graphics,
-    gl: Graphics,
-    e: Enemy,
-    x: number,
-    y: number,
-    voices: Sound[],
-    frame: number,
-  ): string {
-    const def = enemyDef(e.type);
-    const W = e.w;
-    const H = e.h;
-    const face = e.facing;
-    // Local (facing right) -> world x for a span [lx, lx + lw].
-    const X = (lx: number, lw = 0) => (face > 0 ? x + lx : x + W - lx - lw);
-
-    if (e.state === 'REPOSSESSED') {
-      // Desaturated to an outline: it has nothing left to say.
-      g.roundRect(x, y, W, H, 12).stroke({ width: 3, color: PALETTE.repossessed, alpha: 0.7 });
-      dashedRect(g, { x: x - 4, y: y - 4, w: W + 8, h: H + 8 }, 2, PALETTE.repossessed, 0.4);
-      return 'repossessed';
-    }
-
-    const attack: AttackDef | undefined = e.attackId ? def.attacks[e.attackId] : undefined;
-    let k = 0;
-    if (e.state === 'TELEGRAPH') k = Math.min(1, e.stateFrame / Math.max(1, e.timer));
-    else if (e.state === 'ACTIVE') k = 1;
-    const tint = attack ? colourHex(attack.cue.tint) : PALETTE.enemyBody;
-    const pulses = e.state === 'TELEGRAPH' && attack ? attack.cue.pulses : 0;
-    const pulse = pulses > 0 ? (0.5 - 0.5 * Math.cos(2 * Math.PI * pulses * k)) ** 2 : 0;
-    const flashing = this.flash.has(e.id);
-    const downed = e.state === 'DOWN' || e.state === 'COUNT';
-    // Generic attacks (Snatch, no voice of their own) tint half as much as voiced ones.
-    let body = mix(PALETTE.enemyBody, tint, k * SIG.teleTint * (attack?.sound === null ? 0.5 : 1));
-    if (flashing) body = PALETTE.flash;
-
-    // Voice outlines (one ring per voice, innermost first). Armed = solid + vibrating; taken = dashed.
-    const width = SIG.teleOutline0 + (SIG.teleOutline1 - SIG.teleOutline0) * k + 3 * pulse;
-    let armedAny = false;
-    voices.forEach((v, i) => {
-      const pad = SIG.enemyOutlinePad + i * 7;
-      const c = colourHex(v.colour);
-      const r = { x: x - pad, y: y - pad, w: W + 2 * pad, h: H + 2 * pad };
-      if (v.status === 'home') {
-        armedAny = true;
-        const { dx, dy } = vibration(v.colour, frame);
-        const oc = mix(c, 0xffffff, pulse * 0.7);
-        g.roundRect(r.x - dx + 1, r.y - dy + 1, r.w - 2, r.h - 2, 12).stroke({
-          width: 2,
-          color: c,
-          alpha: 0.35,
-        });
-        g.roundRect(r.x + dx + width / 2, r.y + dy + width / 2, r.w - width, r.h - width, 12).stroke({
-          width,
-          color: oc,
-          alpha: 1,
-        });
-        // Armed voices glow a little; a winding-up telegraph glows hard (it reads in any light).
-        gl.roundRect(r.x + dx + width / 2, r.y + dy + width / 2, r.w - width, r.h - width, 12).stroke({
-          width,
-          color: NOISE_COLOURS[v.colour].core,
-          alpha: SIG.glowVoiceAlpha + (SIG.glowTeleAlpha - SIG.glowVoiceAlpha) * Math.max(k, pulse),
-        });
-        if (i === 0)
-          this.light(x + W / 2, y + H / 2, SIG.enemyLightRadius + W / 2, v.colour, SIG.enemyLightIntensity);
-      } else {
-        dashedRect(g, r, Math.max(2, width * 0.5), c, e.state === 'TELEGRAPH' ? 0.9 : SIG.ghostOutlineAlpha);
-      }
-    });
-    // A voiceless enemy's telegraph still winds up visibly. A disarmed one keeps its dashed ring
-    // (thickening above): a solid ring here would read as "armed again" (Pit clip review).
-    if (voices.length === 0 && e.state === 'TELEGRAPH' && attack) {
-      const pad = SIG.enemyOutlinePad + voices.length * 7;
-      g.roundRect(x - pad, y - pad, W + 2 * pad, H + 2 * pad, 12).stroke({
-        width: 2 + 4 * k,
-        color: tint,
-        alpha: 0.5 + 0.5 * k,
-      });
-      gl.roundRect(x - pad, y - pad, W + 2 * pad, H + 2 * pad, 12).stroke({
-        width: 2 + 4 * k,
-        color: tint,
-        alpha: SIG.glowTeleAlpha * k,
-      });
-    }
-
-    const dark = PALETTE.enemyDark;
-    const eye = e.furious ? PALETTE.furious : dark;
-    const bodyAlpha = downed ? 0.8 : 1;
-    let mouth: [number, number];
-    if (e.type === 'grinder') {
-      g.roundRect(x + 4, y + 10, W - 8, H - 10, 16).fill({ color: body, alpha: bodyAlpha });
-      const wx = X(78);
-      const wy = y + 58;
-      g.circle(wx, wy, 25).fill(dark);
-      const spin = (e.state === 'TELEGRAPH' || e.state === 'ACTIVE' ? 0.5 : 0.08) * frame * face;
-      for (let i = 0; i < 6; i++) {
-        const a = spin + (i * Math.PI) / 3;
-        g.moveTo(wx, wy).lineTo(wx + Math.cos(a) * 21, wy + Math.sin(a) * 21);
-      }
-      g.stroke({ width: 3, color: body, alpha: 0.9 });
-      g.rect(X(84, 12), y + 22, 12, 9).fill(downed ? { color: dark, alpha: 0.5 } : eye);
-      g.rect(X(58, 50), y + 90, 50, 14).fill(dark);
-      for (let i = 0; i < 5; i++) {
-        const tx = X(60 + i * 10, 8);
-        g.poly([tx, y + 90, tx + 8, y + 90, tx + 4, y + 97]).fill(body);
-      }
-      mouth = [X(100), y + 97];
-    } else {
-      g.roundRect(X(2, 54), y + 16, 54, 30, 10).fill({ color: body, alpha: bodyAlpha });
-      g.roundRect(X(40, 32), y + 6, 32, 28, 9).fill({ color: body, alpha: bodyAlpha });
-      g.rect(X(8, 10), y + 42, 10, 6).fill({ color: body, alpha: bodyAlpha });
-      g.rect(X(40, 10), y + 42, 10, 6).fill({ color: body, alpha: bodyAlpha });
-      // Bowler hat.
-      g.rect(X(40, 30), y + 2, 30, 5).fill(dark);
-      g.roundRect(X(46, 18), y - 10, 18, 14, 6).fill(dark);
-      if (downed) g.rect(X(58, 9), y + 16, 9, 3).fill(dark);
-      else g.rect(X(60, 6), y + 13, 6, 6).fill(eye);
-      g.rect(X(62, 10), y + 26, 10, 3).fill(dark);
-      mouth = [X(67), y + 27];
-    }
-    if (e.furious && !downed) {
-      const ex = e.type === 'grinder' ? X(90) : X(63);
-      f.circle(ex, y + (e.type === 'grinder' ? 26 : 16), 9).fill({ color: PALETTE.furious, alpha: 0.35 });
-    }
-
-    // Taken voice: a small "X" at the mouth, in the voice's colour.
-    const taken = voices.find((v) => v.status !== 'home');
-    if (taken) {
-      const c = colourHex(taken.colour);
-      const [mx, my] = mouth;
-      const s = 9;
-      f.moveTo(mx - s, my - s)
-        .lineTo(mx + s, my + s)
-        .moveTo(mx + s, my - s)
-        .lineTo(mx - s, my + s)
-        .stroke({ width: 5.5, color: PALETTE.bg, alpha: 0.9 });
-      f.moveTo(mx - s, my - s)
-        .lineTo(mx + s, my + s)
-        .moveTo(mx + s, my - s)
-        .lineTo(mx - s, my + s)
-        .stroke({ width: 3, color: c, alpha: 1 });
-    }
-
-    // DOWN / COUNT: a ring of 10 ticks overhead, filling with the beat.
-    if (downed) {
-      const cx = x + W / 2;
-      const cy = y - 34;
-      const R = SIG.countRingR;
-      const n = SIG.countTicks;
-      const filled = e.state === 'COUNT' ? e.beat : 0;
-      f.circle(cx, cy, R + 7).fill({ color: PALETTE.bg, alpha: 0.6 });
-      for (let i = 0; i < n; i++) {
-        const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
-        const on = i < filled;
-        f.moveTo(cx + Math.cos(a) * (R - 6), cy + Math.sin(a) * (R - 6))
-          .lineTo(cx + Math.cos(a) * (R + 3), cy + Math.sin(a) * (R + 3))
-          .stroke({ width: on ? 5 : 3, color: on ? PALETTE.gold : PALETTE.hudDim, alpha: 1 });
-      }
-    }
-
-    if (e.state === 'TELEGRAPH') return 'telegraph';
-    if (downed) return e.state === 'COUNT' ? 'count' : 'down';
-    return armedAny ? 'humming' : 'ghost';
   }
 }
 

@@ -80,6 +80,58 @@ describe('EventRouter: events', () => {
     expect(f.loops.map((l) => l.gain)).toEqual([0, 1, w.minGain, 0, 0]);
   });
 
+  it('L4: hits by class, whiffs by move, telegraphs by their wind-up cue, Cadence beats', () => {
+    const f = fakeOut();
+    const r = new EventRouter(f.out, sfx);
+    for (const cls of ['light', 'medium', 'heavy', 'counter'] as const)
+      r.handle({ type: 'hit', cls, move: 'jab', target: 1, dmg: 2, x: 0, y: 0, dir: 1 });
+    r.handle({ type: 'whiff', move: 'seize', x: 0, y: 0 });
+    r.handle({ type: 'whiff', move: 'jab', x: 0, y: 0 });
+    r.handle({
+      type: 'telegraph',
+      enemy: 5,
+      attackId: 'stamp',
+      colour: 'brown',
+      frames: 22,
+      cue: 'stampWindup',
+      x: 0,
+      y: 0,
+    });
+    r.handle({ type: 'lotMarked', enemy: 1, lot: 0, beat: 2, x: 0, y: 0 });
+    expect(f.names()).toEqual([
+      'hitLight',
+      'hitMedium',
+      'hitHeavy',
+      'hitCounter',
+      'whiffSeize',
+      'whiffPunch',
+      'stampWindup',
+      'gavelKnock2',
+    ]);
+  });
+
+  it('L4: every combat event the sim emits has a sound (T7 and the feedback stack)', () => {
+    const f = fakeOut();
+    const r = new EventRouter(f.out, sfx);
+    const c = { x: 0, y: 0 };
+    const evs = [
+      { type: 'catch', enemy: 1, attackId: 'lunge', ...c },
+      { type: 'repossess', enemy: 1, ...c },
+      { type: 'counterHit', enemy: 1, move: 'jab', ...c },
+      { type: 'hurt', dmg: 1, src: 1, attack: 'lunge', ...c },
+      { type: 'seizeGuarded', target: 1, ...c },
+      { type: 'seizeRefused', target: 1, ...c },
+      { type: 'slipClean', enemy: 1, ...c },
+      { type: 'ringRecover', ...c },
+      { type: 'kidDown', ...c },
+      { type: 'beatCountRise', paid: 1, ...c },
+      { type: 'countedOut', ...c },
+      { type: 'sold', enemy: 1, lot: 0, ...c },
+    ] as const;
+    for (const e of evs) r.handle(e as never);
+    expect(f.played.length).toBe(evs.length);
+  });
+
   it('follows room changes made without events (restore, tape playback)', () => {
     const f = fakeOut();
     const r = new EventRouter(f.out, sfx);

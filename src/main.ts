@@ -12,10 +12,20 @@ import { WorldRenderer } from './render/world';
 import { PRESET_NAMES, type PresetName, tuning } from './sim/tuning';
 import { GYM_ROOMS } from './sim/world/rooms';
 
+/** Shift+5..9: the L3/L4 rooms (Shift+1-4 are gym-11..14). */
+const SHIFT_ROOMS: Record<number, string> = {
+  5: 'lot-7',
+  6: 'yard',
+  7: 'the-pit',
+  8: 'auction',
+  9: 'ring-barker',
+};
+
 /**
  * Boot. URL params: ?seed=<n> &room=<id> &spawn=<name> &preset=<opus|celeste|hk>
  * &manual (start paused; drive via __game.step) &quality=<low|med|high>.
- * Keys: 1-9 / 0 load gym-01..10, Shift+1-4 gym-11..14, H hub, F1/F2 hitboxes, F3 blind A/B swap
+ * Keys: 1-9 / 0 load gym-01..10, Shift+1-4 gym-11..14, Shift+5-9 lot-7 / yard / the-pit / auction /
+ * ring-barker, H hub, F1/F2 hitboxes, F3 blind A/B swap
  * (debug-only; B is reserved for gameplay), F4 perf HUD (Shift+F4 cycles quality), ` tuning panel.
  */
 async function boot(): Promise<void> {
@@ -90,6 +100,11 @@ async function boot(): Promise<void> {
     } else if (e.code === 'KeyH' && !e.repeat) game.load('hub');
     else if (/^Digit\d$/.test(e.code) && !e.repeat) {
       const d = Number(e.code.slice(5));
+      const l4 = e.shiftKey ? SHIFT_ROOMS[d] : undefined;
+      if (l4) {
+        game.load(l4);
+        return;
+      }
       const n = e.shiftKey ? 10 + d : d === 0 ? 10 : d;
       const id = GYM_ROOMS[n - 1];
       if (id) game.load(id);

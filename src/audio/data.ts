@@ -62,6 +62,14 @@ export const SfxFileSchema = z
     events: z
       .object({
         simple: z.record(z.string(), z.string()),
+        /** `hit` by the sim's hit class (combat-spec §2: light/medium/heavy/counter distinct). */
+        hit: z.object({ default: z.string(), byClass: z.record(z.string(), z.string()) }).strict(),
+        /** `whiff` by move (a Seize whiff is a hand closing on air). */
+        whiff: z.object({ default: z.string(), byMove: z.record(z.string(), z.string()) }).strict(),
+        /** Enemy `telegraph` by the attack's `cue.audio` name (content/enemies/*.json). */
+        telegraph: z.object({ default: z.string(), byCue: z.record(z.string(), z.string()) }).strict(),
+        /** The Auctioneer's `lotMarked` gavel knock by Cadence beat. */
+        lotMarked: z.object({ default: z.string(), byBeat: z.record(z.string(), z.string()) }).strict(),
         jump: z.object({ default: z.string(), byKind: z.record(z.string(), z.string()) }).strict(),
         land: z
           .object({
@@ -78,8 +86,17 @@ export const SfxFileSchema = z
   })
   .strict()
   .superRefine((f, ctx) => {
+    const e = f.events;
     const soundRefs = [
       ...Object.values(f.events.simple),
+      e.hit.default,
+      ...Object.values(e.hit.byClass),
+      e.whiff.default,
+      ...Object.values(e.whiff.byMove),
+      e.telegraph.default,
+      ...Object.values(e.telegraph.byCue),
+      e.lotMarked.default,
+      ...Object.values(e.lotMarked.byBeat),
       f.events.jump.default,
       ...Object.values(f.events.jump.byKind),
       f.events.land.soft,

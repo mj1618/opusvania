@@ -1,3 +1,4 @@
+import { enemyDef } from '../sim/ai/schema';
 import type { SimEvent } from '../sim/events';
 import type { SfxFile } from './data';
 import type { PlayOpts } from './engine';
@@ -37,6 +38,8 @@ export interface RouterLocal {
   sources: { id: number; x: number; y: number; w: number; h: number }[];
   sounds: { id: number; colour: string; owner: number; status: string; at: number }[];
   levied: { id: number; soundId: number; x: number; y: number; w: number; h: number }[];
+  /** Enemy types, to find a telegraph's wind-up (`cue.audio` in content/enemies). */
+  enemies?: { id: number; type: string }[];
 }
 
 /** The parts of GameState the router reads. */
@@ -114,6 +117,21 @@ export class EventRouter {
       case 'jump':
         this.emit(e.type, ev.jump.byKind[e.kind] ?? ev.jump.default, e);
         return;
+      // --- L4 combat: sounds chosen by a field of the event. ---
+      case 'hit':
+        this.emit(e.type, ev.hit.byClass[e.cls] ?? ev.hit.default, e);
+        return;
+      case 'whiff':
+        this.emit(e.type, ev.whiff.byMove[e.move] ?? ev.whiff.default, e);
+        return;
+      case 'telegraph': {
+        const cue = e.cue || this.cueOf(s, e.enemy, e.attackId);
+        this.emit(e.type, (cue && ev.telegraph.byCue[cue]) || ev.telegraph.default, e);
+        return;
+      }
+      case 'lotMarked':
+        this.emit(e.type, ev.lotMarked.byBeat[String(e.beat)] ?? ev.lotMarked.default, e);
+        return;
       case 'land': {
         const l = ev.land;
         const volume = Math.max(l.minVolume, Math.min(1, e.vy / l.refVyPxPerFrame));
@@ -131,6 +149,17 @@ export class EventRouter {
         if (name && 'x' in e) this.emit(e.type, name, e);
         else if (name) this.emit(e.type, name, {});
       }
+    }
+  }
+
+  /** The wind-up name (`cue.audio`) of an enemy's attack, or null if it can't be found. */
+  private cueOf(s: RouterState | undefined, enemy: number, attackId: string): string | null {
+    const type = s?.local?.enemies?.find((x) => x.id === enemy)?.type;
+    if (!type) return null;
+    try {
+      return enemyDef(type).attacks[attackId]?.cue.audio ?? null;
+    } catch {
+      return null;
     }
   }
 

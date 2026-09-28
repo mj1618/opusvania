@@ -4,10 +4,12 @@ import type { SimEvent } from '../sim/events';
 import { tuning } from '../sim/tuning';
 import { getRoom, type Room } from '../sim/world/rooms';
 import { type CameraState, createCamera, stepCamera, VIEW_H, VIEW_W } from './camera/index';
+import { CombatLayer } from './combat';
 import { FX_COLORS, fxTuning, Juice } from './fx';
 import { makeClock } from './gfx/clock';
 import { GfxPipeline } from './gfx/pipeline';
 import { BagHud } from './hud';
+import { KidRenderer } from './kid';
 import { SignatureRenderer } from './signature';
 
 /** Player and screen colours (terrain colours live in src/render/gfx/terrain.ts and palette.ts). */
@@ -49,6 +51,13 @@ export class WorldRenderer {
   private readonly fxBack = new Graphics();
   private readonly player = new Graphics();
   private readonly fxFront = new Graphics();
+  /** Kid's gloves, Seize hand, Levy arm, Swallow ring, Count (over her body). */
+  private readonly kidFront = new Graphics();
+  private readonly kidGlow = new Graphics({ label: 'kid-glow' });
+  /** Prompts, lots, poofs (world) and screen beats (CLEARED, flashes). */
+  private readonly combatFront = new Graphics();
+  private readonly combatGlow = new Graphics({ label: 'combat-glow' });
+  private readonly combatScreen = new Graphics();
   private readonly fade = new Graphics();
   private readonly flash = new Graphics();
   private readonly hud: Text;
@@ -62,6 +71,8 @@ export class WorldRenderer {
   /** L3 signature-mechanic readability layer (sources, levied, enemies, bag HUD). */
   readonly sig: SignatureRenderer;
   readonly bagHud: BagHud;
+  readonly kid: KidRenderer;
+  readonly combat: CombatLayer;
   private builtRoomVersion = -1;
   private fadeIn = 0;
 
@@ -72,11 +83,21 @@ export class WorldRenderer {
     this.gfx = new GfxPipeline(app, this.world);
     this.sig = new SignatureRenderer(game);
     this.bagHud = new BagHud(game);
+    this.kid = new KidRenderer(game);
+    this.combat = new CombatLayer(game);
     // Terrain, labels and dust are lit; the L3 readability layer, the player and front juice are
     // unlit actors (a hum or a telegraph must never depend on a lamp), and sources glow.
     this.world.addChild(this.tiles, this.labels, this.fxBack);
-    this.gfx.layers.actors.addChild(this.sig.back, this.player, this.fxFront, this.sig.front);
-    this.gfx.layers.emissive.addChild(this.sig.glow);
+    this.gfx.layers.actors.addChild(
+      this.sig.back,
+      this.sig.enemyLayer,
+      this.player,
+      this.kidFront,
+      this.fxFront,
+      this.sig.front,
+      this.combatFront,
+    );
+    this.gfx.layers.emissive.addChild(this.sig.glow, this.kidGlow, this.combatGlow);
     this.gfx.lights.providers.add((out) => this.sig.lights(out));
     this.gfx.layers.overlay.addChild(this.overlay);
     this.gfx.layers.ui.addChildAt(this.screen, 0);
@@ -85,7 +106,7 @@ export class WorldRenderer {
       style: { fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 22, fill: 0xaab3c8 },
     });
     this.hud.position.set(24, 18);
-    this.screen.addChild(this.bagHud.container, this.flash, this.fade, this.hud);
+    this.screen.addChild(this.bagHud.container, this.combatScreen, this.flash, this.fade, this.hud);
     const room = getRoom(game.state.roomId);
     this.camera = createCamera(game.state, room);
     this.prevCam = { ...this.camera };
@@ -105,6 +126,8 @@ export class WorldRenderer {
     } else if (this.fadeIn > 0) this.fadeIn--;
     this.juice.step(s, events);
     this.sig.step(events);
+    this.kid.step(events);
+    this.combat.step(events);
     this.bagHud.step(events);
     this.gfx.step();
   }
@@ -117,6 +140,8 @@ export class WorldRenderer {
     this.prevCam = { ...this.camera };
     this.juice.reset();
     this.sig.reset();
+    this.kid.reset();
+    this.combat.reset();
     this.bagHud.reset();
   }
 
@@ -171,6 +196,12 @@ export class WorldRenderer {
 
     this.drawPlayer(px, py);
     this.sig.draw(alpha, { x: px, y: py });
+    this.kidFront.clear();
+    this.kidGlow.clear();
+    this.kid.draw(this.kidFront, this.kidGlow, { x: px, y: py });
+    this.combatFront.clear();
+    this.combatGlow.clear();
+    this.combat.draw(this.combatFront, this.combatGlow);
     this.bagHud.draw(this.world.position);
     this.drawFx();
     this.drawScreen(alpha);
@@ -197,6 +228,15 @@ export class WorldRenderer {
     const p = this.game.state.player;
     const g = this.player.clear();
     const glow = this.gfx.playerGlow.clear();
+    if (p.down) {
+      // Down for her Count: lying on the floor (KidRenderer draws the ring over her).
+      this.player.visible = true;
+      this.player.alpha = 1;
+      this.kid.drawDown(g, p);
+      this.player.position.set(Math.round(px + p.w / 2), Math.round(py + p.h));
+      this.player.scale.set(1, 1);
+      return;
+    }
     if (p.state === 'dead') {
       this.drawDeathPop();
       return;
@@ -205,7 +245,8 @@ export class WorldRenderer {
     const w = p.w;
     const h = p.h;
     const [kx, ky] = this.sig.kidScale();
-    const body = this.sig.kidTint() ?? (p.state === 'dash' ? COLORS.playerDash : COLORS.player);
+    const body =
+      this.kid.tint() ?? this.sig.kidTint() ?? (p.state === 'dash' ? COLORS.playerDash : COLORS.player);
     g.roundRect(-w / 2, -h, w, h, 10).fill(body);
     // Dash-ready band (Celeste's hair-colour trick): blue when an air dash is available. It is
     // emissive (glows through bloom), so dash readiness reads even in dark rooms.
@@ -222,7 +263,7 @@ export class WorldRenderer {
       n.position.set(Math.round(px + w / 2), Math.round(py + h));
       n.scale.set(this.juice.sx * kx, this.juice.sy * ky);
     }
-    this.player.alpha = this.sig.kidAlpha();
+    this.player.alpha = this.sig.kidAlpha() * this.kid.alpha();
   }
 
   /** Canvas-px rects of L3 things as last drawn (for the E readability checks). */
@@ -284,7 +325,9 @@ export class WorldRenderer {
     let fade = 0;
     if (s.transition) fade = 1 - (s.transition.timer - alpha) / tuning.world.transitionFrames;
     else if (this.fadeIn > 0) fade = (this.fadeIn - alpha) / render.fadeInFrames;
-    fade = Math.min(1, Math.max(0, fade));
+    fade = Math.min(1, Math.max(0, fade, this.kid.screenDim()));
+    this.combatScreen.clear();
+    this.combat.drawScreen(this.combatScreen);
     this.flash.clear();
     if (this.juice.screenFlash > 0)
       this.flash.rect(0, 0, VIEW_W, VIEW_H).fill({ color: COLORS.deathFlash, alpha: this.juice.screenFlash });
@@ -295,12 +338,12 @@ export class WorldRenderer {
       .map(([k]) => k)
       .join(' ');
     const stats = s.roomStats;
-    const text = `${room.id}  ${room.name}   [${ab || 'no abilities'}]   deaths ${stats.deaths}${
+    const text = `${room.id}  ${room.name}   [${ab || 'no abilities'}]   deaths ${s.run.deaths}${
       stats.goal ? '   GOAL' : ''
     }${stats.optional ? '  +g' : ''}${this.hudExtra ? `   ${this.hudExtra}` : ''}`;
     if (this.hud.text !== text) this.hud.text = text;
     this.hud.visible = this.gfx.toggles.ui;
-    this.bagHud.container.visible = this.gfx.toggles.ui;
+    this.bagHud.container.visible = this.gfx.toggles.ui && s.player.abilities.seize;
     this.labels.visible = this.gfx.toggles.ui;
   }
 }

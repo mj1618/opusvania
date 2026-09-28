@@ -34,6 +34,45 @@ export const PALETTE = {
   hudInk: 0xd6dbe6,
   hudDim: 0x5a6378,
   chin: 0xe8e4d8,
+  // --- L4 combat feedback ---
+  /** Kid's boxing gloves (red leather, a pale cuff) and her sleeve. */
+  glove: 0xd9443c,
+  gloveDark: 0x7a1f1c,
+  gloveCuff: 0xf2ead8,
+  sleeve: 0x8d96aa,
+  /** The Seize hand (pale, reads on any district). */
+  seizeHand: 0xf6f0de,
+  /** Ledger red ink: REPOSSESSED / SOLD / CLEARED stamps. */
+  stampRed: 0xe0322f,
+  stampPaper: 0xf3e6c8,
+  /** Keycap prompt glyphs. */
+  keyFace: 0xe9e4d6,
+  keyLip: 0x6d6a62,
+  keyEdge: 0x2a2d36,
+  keyInk: 0x1b1d24,
+  /** Poundage coins. */
+  coin: 0xf0c64a,
+  coinDark: 0x8a6414,
+  /** Lien pips: red wax seal. */
+  wax: 0xb3202a,
+  waxDark: 0x5e0e14,
+  /** The Corner (stool and bucket). */
+  wood: 0x8a5a32,
+  woodDark: 0x4e3019,
+  bucket: 0x9aa4b4,
+  bucketRim: 0xc9cfd9,
+  woodLight: 0xb07a48,
+  ropeRed: 0xd9443c,
+  ropeWhite: 0xe9e4d6,
+  ropeBlue: 0x3f6fd9,
+  /** Boss bar. */
+  bossBar: 0xd9443c,
+  bossBarBack: 0x2a1416,
+  /** Poof / KO dust. */
+  dust: 0xc9c2b0,
+  /** Gull beak, clerk eyeshade. */
+  beak: 0xe0b04a,
+  eyeshade: 0x3f8f5a,
 } as const;
 
 /** The hex for a sound colour. */
@@ -121,6 +160,50 @@ export const SIG = {
   /** Heavy Kid silhouette (render only): 72 tall, wider stance. */
   heavyScale: [1.3, 72 / 80] as const,
   middleScale: [1.12, 76 / 80] as const,
+} as const;
+
+/** Draw constants for the L4 combat feedback layer (render-only numbers). */
+export const CBT = {
+  /** Glove size [w, h] per strike, and the Counter's gold glow. */
+  jabGlove: [28, 24] as const,
+  crossGlove: [36, 30] as const,
+  hookGlove: [32, 28] as const,
+  armWidth: 9,
+  /** Seize reach box outline (dashed) alpha while the hand is out. */
+  reachAlpha: 0.35,
+  handSize: 32,
+  whiffFrames: 10,
+  takeFrames: 8,
+  guardFrames: 10,
+  refusedFrames: 8,
+  slipFlashFrames: 6,
+  /** Enemy Count ring: radius, tick size, number size, pulse frames. */
+  countR: 38,
+  countNum: 30,
+  countPulseFrames: 8,
+  countHandSize: 30,
+  /** Kid's Count ring (over her while she's down). */
+  kidCountR: 54,
+  kidCountNum: 40,
+  /** Stamps: frames of the slam (scale overshoot), start scale. */
+  stampSlamFrames: 10,
+  stampStartScale: 2.4,
+  clearFrames: 70,
+  koFrames: 36,
+  hazardFlashFrames: 8,
+  shimmerFrames: 18,
+  riseBurstFrames: 22,
+  countedOutFrames: 40,
+  /** Prompts: fade speed per frame, bob px, key size px. */
+  promptFade: 0.08,
+  promptBob: 5,
+  keySize: 46,
+  promptNearTiles: 6,
+  /** Flinch lean (radians) and squash while knocked back. */
+  flinchLean: 0.16,
+  kbLeanPer: 0.012,
+  coinFrames: 28,
+  coinsPerPayout: 6,
 } as const;
 
 // --- colour maths (used by paletteChecks and the E1 test) ---

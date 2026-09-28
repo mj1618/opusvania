@@ -7,6 +7,7 @@
 import type { Graphics } from 'pixi.js';
 import { tuning } from '../../sim/tuning';
 import { type Room, Tile, tileAt } from '../../sim/world/rooms';
+import { PALETTE } from '../palette';
 import { mix, RenderRng } from './color';
 import type { Dressing, LightDef } from './dressing';
 import type { Light } from './lighting';
@@ -215,16 +216,27 @@ export function drawTerrain(g: Graphics, glow: Graphics, room: Room, d: Dressing
       glow.star(x + ts / 2, y + ts / 2, 5, 28, 12).fill({ color: C.optional, alpha: 0.3 });
       glow.star(x + ts / 2, y + ts / 2, 5, 22, 10).fill(C.optional);
       entityLight({ x: x + ts / 2, y: y + ts / 2, radius: 240, color: C.optional, intensity: 0.7 });
+    } else if (e.kind === 'corner') {
+      drawCorner(g, glow, x, y, ts, p.lamp);
+      entityLight({ x: x + ts / 2, y: y, radius: 260, color: p.lamp, intensity: 0.6 });
     } else if (e.kind === 'respawn') {
       g.rect(x + 28, y + 8, 6, ts - 8).fill(mix(p.rimSide, p.rim, 0.4));
       glow.poly([x + 34, y + 8, x + 58, y + 18, x + 34, y + 28]).fill(C.respawn);
       entityLight({ x: x + 40, y: y + 18, radius: 200, color: C.respawn, intensity: 0.5 });
     } else if (e.kind === 'door') {
       const frame = mix(p.rimSide, p.rim, 0.35);
-      g.rect(x + 2, y - ts + 4, ts - 4, 2 * ts - 4).fill(frame);
-      g.rect(x + 12, y - ts + 16, ts - 24, 2 * ts - 16).fill(C.door);
+      // The frame spans the sim's trigger (world.doorTriggerTiles, centred on the door tile), less
+      // a small gap so neighbouring hub doors stay separate; the opening stays one tile wide.
+      const tw = tuning.world.doorTriggerTiles * ts - 16;
+      const fx = x + ts / 2 - tw / 2;
+      g.rect(fx, y - ts + 4, tw, 12).fill(frame);
+      g.rect(fx, y - ts + 4, 14, 2 * ts - 4).fill(frame);
+      g.rect(fx + tw - 14, y - ts + 4, 14, 2 * ts - 4).fill(frame);
+      g.rect(fx + 14, y - ts + 16, tw - 28, 2 * ts - 16).fill(C.door);
+      // A doormat across the trigger width.
+      g.rect(fx + 4, y + ts - 6, tw - 8, 6).fill(mix(p.rimSide, p.rim, 0.6));
       // Warm spill at the threshold and a lamp over the lintel.
-      glow.rect(x + 12, y + ts - 22, ts - 24, 22).fill({ color: p.lamp, alpha: 0.12 });
+      glow.rect(fx + 14, y + ts - 22, tw - 28, 22).fill({ color: p.lamp, alpha: 0.12 });
       drawLampBulb(glow, x + ts / 2, y - ts - 2, p.lamp, 0.8);
       g.rect(x + ts / 2 - 14, y - ts - 12, 28, 8).fill(p.terrainDeep);
       entityLight({ x: x + ts / 2, y: y - ts + 10, radius: 300, color: p.lamp, intensity: 0.75, seed: e.tx });
@@ -285,6 +297,28 @@ function dressingLight(g: Graphics, glow: Graphics, room: Room, l: LightDef, d: 
     flicker: l.flicker,
     seed: Math.round(x + y),
   };
+}
+
+/** The Corner (combat-spec §3.5): a boxing-corner post with ropes, a stool and a bucket with a towel. */
+function drawCorner(g: Graphics, glow: Graphics, x: number, y: number, ts: number, lamp: number): void {
+  const floor = y + ts;
+  const P = PALETTE;
+  // Corner post and three ropes running back.
+  g.rect(x - 22, floor - 150, 12, 150).fill(P.bucket);
+  g.rect(x - 26, floor - 158, 20, 12).fill(P.bucketRim);
+  for (let i = 0; i < 3; i++)
+    g.rect(x - 90, floor - 140 + i * 36, 72, 5).fill([P.ropeRed, P.ropeWhite, P.ropeBlue][i] ?? P.ropeRed);
+  // Stool: seat and three legs.
+  g.rect(x + 8, floor - 44, 48, 9).fill(P.wood);
+  g.rect(x + 8, floor - 44, 48, 3).fill(P.woodLight);
+  g.poly([x + 12, floor - 35, x + 18, floor - 35, x + 10, floor, x + 4, floor]).fill(P.woodDark);
+  g.poly([x + 46, floor - 35, x + 52, floor - 35, x + 60, floor, x + 54, floor]).fill(P.woodDark);
+  g.rect(x + 29, floor - 35, 6, 35).fill(P.woodDark);
+  // Bucket with a towel over the rim.
+  g.poly([x + 66, floor - 34, x + 96, floor - 34, x + 92, floor, x + 70, floor]).fill(P.bucket);
+  g.rect(x + 64, floor - 38, 34, 5).fill(P.bucketRim);
+  g.poly([x + 70, floor - 38, x + 84, floor - 38, x + 82, floor - 16, x + 72, floor - 20]).fill(P.ropeWhite);
+  glow.circle(x + 32, floor - 60, 40).fill({ color: lamp, alpha: 0.12 });
 }
 
 function drawLampBulb(glow: Graphics, x: number, y: number, color: number, k: number) {
