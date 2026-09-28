@@ -36,3 +36,6 @@
   step-and-render hundreds of frames or reload pages per case: verify sim hashes with
   `__game.replay.verify` (no rendering), and manual mode only redraws when the state changed.
   Timing tests (latency) skip themselves below 20 fps.
+- **`tsx` + `page.evaluate`:** tsx (esbuild keepNames) wraps named inner functions in `__name()`, which
+  doesn't exist in the page, so a `const f = () => ...` inside an evaluate callback throws
+  `ReferenceError: __name`. Keep tool evaluate callbacks flat, or pass a string.

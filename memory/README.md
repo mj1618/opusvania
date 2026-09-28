@@ -16,3 +16,4 @@ Keep entries current; delete stale ones.
 - [Search bot](bot.md) — `npm run bot` / `bot:all`: macro A* reachability, budgets, exhausted vs not-found, speed
 - [Feel report](feel-report.md) — `npm run feel:report`: metric definitions, envelope, forgiveness sweeps
 - [Loop timing](loop-timing.md) — why the fixed-step loop snaps near-60Hz frame times
+- [Audio](audio.md) — src/audio map, event contract, `npm run audio:render` offline level checks, Web Audio gotchas

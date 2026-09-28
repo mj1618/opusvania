@@ -22,7 +22,8 @@
     "bot:all": "tsx tools/bot/cli.ts --all",
     "feel:report": "tsx tools/feel-report/cli.ts",
     "tape": "tsx tools/tape.ts",
-    "replays:update": "tsx tools/tape.ts update"
+    "replays:update": "tsx tools/tape.ts update",
+    "audio:render": "tsx tools/audio-render.ts"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",

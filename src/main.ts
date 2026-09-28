@@ -1,3 +1,4 @@
+import { AudioSystem } from './audio/index';
 import { installDebugApi } from './debug/api';
 import { HitboxOverlay } from './debug/overlay';
 import { TuningPanel } from './debug/tuning-panel';
@@ -5,6 +6,7 @@ import { Game } from './game';
 import { InputSampler } from './input/index';
 import { FixedStepLoop } from './loop';
 import { createApp } from './render/app';
+import { VIEW_H, VIEW_W } from './render/camera/index';
 import { WorldRenderer } from './render/world';
 import { PRESET_NAMES, type PresetName, tuning } from './sim/tuning';
 import { GYM_ROOMS } from './sim/world/rooms';
@@ -45,6 +47,12 @@ async function boot(): Promise<void> {
   // Through the panel so it (and __game.preset()/info()) know the current preset.
   const preset = params.get('preset');
   if (preset && (PRESET_NAMES as string[]).includes(preset)) panel.applyPreset(preset as PresetName);
+  // Audio listens at the camera centre (pre-shake view, so screen shake doesn't wobble panning).
+  const audio = new AudioSystem({
+    bus: game.bus,
+    state: () => game.state,
+    listener: () => ({ x: renderer.camera.x + VIEW_W / 2, y: renderer.camera.y + VIEW_H / 2 }),
+  });
 
   const drawn = { x: 0, y: 0, frame: 0 };
   const render = (alpha: number) => {
@@ -54,8 +62,9 @@ async function boot(): Promise<void> {
     drawn.x = renderer.drawnPlayer.x;
     drawn.y = renderer.drawnPlayer.y;
     drawn.frame = game.state.frame;
+    audio.update();
   };
-  installDebugApi({ game, app, render, overlay, panel, renderer, drawn });
+  installDebugApi({ game, app, render, overlay, panel, renderer, drawn, audio: audio.debug });
 
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement) return;

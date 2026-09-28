@@ -1,0 +1,462 @@
+{
+  "//": "Placeholder procedural SFX. Each sound is one or more ZzFX layers (param names from src/audio/zzfx.ts) mixed into one buffer. pitchVar is +/- semitones and volVarDb is +/- dB, re-rolled on every play. Validated by src/audio/data.ts.",
+  "sounds": {
+    "jump": {
+      "layers": [
+        {
+          "volume": 1.4,
+          "frequency": 290,
+          "sustain": 0.02,
+          "release": 0.09,
+          "shape": 1,
+          "slide": 7,
+          "shapeCurve": 1.4
+        }
+      ],
+      "pitchVar": 0.8
+    },
+    "doubleJump": {
+      "layers": [
+        {
+          "volume": 1.2,
+          "frequency": 420,
+          "sustain": 0.03,
+          "release": 0.11,
+          "shape": 1,
+          "slide": 3,
+          "pitchJump": 210,
+          "pitchJumpTime": 0.05
+        }
+      ]
+    },
+    "dashJump": {
+      "layers": [
+        {
+          "volume": 1.1,
+          "frequency": 330,
+          "sustain": 0.02,
+          "release": 0.1,
+          "shape": 1,
+          "slide": 9
+        },
+        {
+          "volume": 0.5,
+          "frequency": 1200,
+          "release": 0.12,
+          "shape": 4,
+          "slide": -6,
+          "filter": 900
+        }
+      ]
+    },
+    "wallJump": {
+      "layers": [
+        {
+          "volume": 1.2,
+          "frequency": 360,
+          "sustain": 0.02,
+          "release": 0.08,
+          "shape": 1,
+          "slide": 6
+        },
+        {
+          "volume": 0.8,
+          "frequency": 2400,
+          "release": 0.025,
+          "shape": 4,
+          "filter": 1500
+        }
+      ]
+    },
+    "landSoft": {
+      "layers": [
+        {
+          "volume": 1.4,
+          "frequency": 110,
+          "sustain": 0.015,
+          "release": 0.12,
+          "slide": -1.2
+        },
+        {
+          "volume": 0.35,
+          "frequency": 700,
+          "release": 0.05,
+          "shape": 4,
+          "filter": -1800
+        }
+      ],
+      "pitchVar": 1.2
+    },
+    "landHard": {
+      "layers": [
+        {
+          "volume": 1.6,
+          "frequency": 72,
+          "sustain": 0.04,
+          "release": 0.32,
+          "slide": -0.6
+        },
+        {
+          "volume": 0.9,
+          "frequency": 500,
+          "release": 0.22,
+          "shape": 4,
+          "bitCrush": 0.15,
+          "filter": -2600
+        }
+      ],
+      "duck": "light"
+    },
+    "footstep": {
+      "layers": [
+        {
+          "volume": 0.75,
+          "frequency": 1300,
+          "release": 0.035,
+          "shape": 4,
+          "filter": -3200
+        }
+      ],
+      "pitchVar": 0.9,
+      "volVarDb": 3,
+      "cooldown": 0.06
+    },
+    "dash": {
+      "layers": [
+        {
+          "volume": 0.7,
+          "frequency": 1800,
+          "attack": 0.01,
+          "sustain": 0.04,
+          "release": 0.16,
+          "shape": 4,
+          "slide": -7
+        },
+        {
+          "volume": 0.4,
+          "frequency": 180,
+          "release": 0.12,
+          "shape": 2,
+          "slide": -2,
+          "filter": -900
+        }
+      ]
+    },
+    "headBump": {
+      "layers": [
+        {
+          "volume": 1.4,
+          "frequency": 170,
+          "release": 0.07,
+          "shape": 1,
+          "slide": -2,
+          "filter": -1200
+        }
+      ]
+    },
+    "pogo": {
+      "layers": [
+        {
+          "volume": 1.0,
+          "frequency": 880,
+          "sustain": 0.02,
+          "release": 0.18,
+          "pitchJump": 440,
+          "pitchJumpTime": 0.03
+        }
+      ]
+    },
+    "hurt": {
+      "layers": [
+        {
+          "volume": 0.9,
+          "frequency": 240,
+          "sustain": 0.05,
+          "release": 0.25,
+          "shape": 2,
+          "slide": -4,
+          "noise": 0.4
+        },
+        {
+          "volume": 0.6,
+          "frequency": 900,
+          "release": 0.1,
+          "shape": 4,
+          "bitCrush": 0.3
+        }
+      ],
+      "duck": "heavy"
+    },
+    "hit": {
+      "layers": [
+        {
+          "volume": 1.2,
+          "frequency": 150,
+          "sustain": 0.01,
+          "release": 0.1,
+          "shape": 3,
+          "slide": -3,
+          "shapeCurve": 0.5
+        },
+        {
+          "volume": 0.8,
+          "frequency": 3000,
+          "release": 0.05,
+          "shape": 4,
+          "filter": 800
+        }
+      ],
+      "duck": "heavy"
+    },
+    "death": {
+      "layers": [
+        {
+          "volume": 0.9,
+          "frequency": 320,
+          "sustain": 0.2,
+          "release": 0.5,
+          "shape": 2,
+          "slide": -1.5,
+          "modulation": 12
+        }
+      ],
+      "duck": "heavy"
+    },
+    "respawn": {
+      "layers": [
+        {
+          "volume": 0.8,
+          "frequency": 420,
+          "attack": 0.05,
+          "sustain": 0.2,
+          "release": 0.35,
+          "slide": 1.5,
+          "tremolo": 0.4,
+          "repeatTime": 0.06
+        }
+      ]
+    },
+    "uiMove": {
+      "bus": "ui",
+      "layers": [
+        {
+          "volume": 0.8,
+          "frequency": 1400,
+          "release": 0.03,
+          "shape": 1
+        }
+      ],
+      "pitchVar": 0.3
+    },
+    "uiConfirm": {
+      "bus": "ui",
+      "layers": [
+        {
+          "volume": 0.7,
+          "frequency": 660,
+          "sustain": 0.03,
+          "release": 0.12,
+          "shape": 1,
+          "pitchJump": 330,
+          "pitchJumpTime": 0.05
+        }
+      ],
+      "pitchVar": 0
+    },
+    "uiBack": {
+      "bus": "ui",
+      "layers": [
+        {
+          "volume": 0.7,
+          "frequency": 660,
+          "sustain": 0.03,
+          "release": 0.12,
+          "shape": 1,
+          "pitchJump": -220,
+          "pitchJumpTime": 0.05
+        }
+      ],
+      "pitchVar": 0
+    },
+    "seize": {
+      "layers": [
+        {
+          "volume": 1,
+          "frequency": 700,
+          "release": 0.09,
+          "shape": 3,
+          "slide": -14,
+          "shapeCurve": 0.6
+        },
+        {
+          "volume": 0.9,
+          "frequency": 4000,
+          "release": 0.02,
+          "shape": 4,
+          "filter": 2000
+        }
+      ],
+      "duck": "light"
+    },
+    "seizeRefused": {
+      "layers": [
+        {
+          "volume": 0.6,
+          "frequency": 2500,
+          "sustain": 0.08,
+          "release": 0.1,
+          "shape": 4,
+          "bitCrush": 0.6,
+          "filter": 1200
+        }
+      ],
+      "pitchVar": 0.5
+    },
+    "levyLandBrown": {
+      "layers": [
+        {
+          "volume": 1.8,
+          "frequency": 55,
+          "sustain": 0.06,
+          "release": 0.45,
+          "slide": -0.3
+        },
+        {
+          "volume": 0.9,
+          "frequency": 300,
+          "release": 0.3,
+          "shape": 4,
+          "filter": -700
+        }
+      ],
+      "duck": "heavy"
+    },
+    "levyLandPink": {
+      "layers": [
+        {
+          "volume": 1,
+          "frequency": 190,
+          "sustain": 0.05,
+          "release": 0.3,
+          "shape": 1,
+          "slide": 2.5,
+          "modulation": 9
+        },
+        {
+          "volume": 0.5,
+          "frequency": 900,
+          "release": 0.06,
+          "shape": 4,
+          "filter": -2200
+        }
+      ],
+      "duck": "light"
+    },
+    "levyLandBlue": {
+      "layers": [
+        {
+          "volume": 1.2,
+          "frequency": 1500,
+          "release": 0.1,
+          "shape": 1,
+          "slide": 4
+        }
+      ]
+    },
+    "levyLandViolet": {
+      "layers": [
+        {
+          "volume": 1.0,
+          "frequency": 2200,
+          "release": 0.06,
+          "shape": 1,
+          "slide": 8
+        },
+        {
+          "volume": 0.6,
+          "frequency": 6000,
+          "release": 0.04,
+          "shape": 4,
+          "filter": 5000
+        }
+      ]
+    },
+    "levyLandWhite": {
+      "layers": [
+        {
+          "volume": 0.6,
+          "frequency": 3000,
+          "sustain": 0.05,
+          "release": 0.12,
+          "shape": 4,
+          "bitCrush": 0.5
+        }
+      ]
+    },
+    "clank": {
+      "bus": "ambience",
+      "layers": [
+        {
+          "volume": 1.2,
+          "frequency": 90,
+          "release": 0.25,
+          "shape": 1,
+          "slide": -0.4
+        },
+        {
+          "volume": 0.6,
+          "frequency": 1100,
+          "release": 0.18,
+          "shape": 3,
+          "modulation": 40,
+          "filter": -2500
+        }
+      ],
+      "pitchVar": 2,
+      "volVarDb": 3,
+      "maxVoices": 3
+    }
+  },
+  "loops": {
+    "wallSlide": {
+      "colour": "pink",
+      "filter": {
+        "type": "bandpass",
+        "freq": 2600,
+        "q": 0.8
+      },
+      "gain": 0.9
+    }
+  },
+  "events": {
+    "simple": {
+      "dashStart": "dash",
+      "headBump": "headBump",
+      "pogo": "pogo",
+      "death": "death",
+      "respawn": "respawn",
+      "hurt": "hurt",
+      "hit": "hit",
+      "step": "footstep"
+    },
+    "jump": {
+      "default": "jump",
+      "byKind": {
+        "double": "doubleJump",
+        "wall": "wallJump",
+        "dashJump": "dashJump"
+      }
+    },
+    "land": {
+      "soft": "landSoft",
+      "hard": "landHard",
+      "refVyPxPerFrame": 21.33,
+      "minVolume": 0.3
+    },
+    "wallSlide": {
+      "loop": "wallSlide",
+      "refSpeedPxPerFrame": 10,
+      "minGain": 0.25
+    }
+  }
+}

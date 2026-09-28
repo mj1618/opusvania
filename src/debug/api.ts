@@ -1,4 +1,5 @@
 import type { Application } from 'pixi.js';
+import type { AudioDebugApi } from '../audio/index';
 import type { Game } from '../game';
 import { padReport } from '../input/gamepad';
 import { formatInputScript, type InputScript, maskLabel, parseInputScript } from '../input/script';
@@ -143,6 +144,8 @@ export interface GameDebugApi {
     /** Motion-trail overlay for clips: ghosts every `every` frames for `length` frames + event markers. */
     trail(on?: boolean, opts?: { length?: number; every?: number }): boolean;
   };
+  /** Audio helpers: play, mute, stats, hums, music, offline render (see memory/audio.md). */
+  audio: AudioDebugApi;
 }
 
 declare global {
@@ -161,6 +164,7 @@ export interface DebugDeps {
   renderer: WorldRenderer;
   /** Latest drawn player position (main updates it every render). */
   drawn: { x: number; y: number; frame: number };
+  audio: AudioDebugApi;
 }
 
 export function installDebugApi({
@@ -171,6 +175,7 @@ export function installDebugApi({
   panel,
   renderer,
   drawn,
+  audio,
 }: DebugDeps): GameDebugApi {
   const snapshot = () => cloneState(game.state);
   const log = new EventLog(game);
@@ -409,6 +414,7 @@ export function installDebugApi({
       tuningPanel: (on) => panel.toggle(on),
       trail: (on, opts) => trail.toggle(on, opts),
     },
+    audio,
   };
   window.__game = api;
   return api;

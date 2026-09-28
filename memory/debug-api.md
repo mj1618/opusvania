@@ -51,6 +51,13 @@ of the player/tuning/rooms go through `src/debug/sim-adapter.ts` (see sim-adapte
   runs one headless in the page (cross-runtime check, no rendering); `tape.play(t)` loads it into the live game.
 - `headless(scenario)` runs a scenario in the page without touching the live game.
 
+## Audio
+- `audio.*` (audio.md): `stats()` (context state, voices, playedByName, recent routed events, music),
+  `play(name, {x,y,volume})`, `sounds()`, `mute(on?)`, `volume(bus, v?)`, `muffle('pause'|'underwater'|'none')`,
+  `hum(colour, x?, y?)` → id, `seize(id)`, `levy(id, x, y)`, `stopHum(id)`, `music('sparse'|'full'|'stop')`,
+  `render([scenario])` (offline levels), `scenarios()`. Audio stays `'locked'` until a real gesture
+  (`playwright-cli press Space` or a click; a scripted `unlock()` is not a gesture).
+
 ## Overlays
 - `debug.hitboxes(on?)`, `debug.tuningPanel(on?)`, `debug.trail(on?, {length, every})` (motion trail +
   event markers, see clip-tool.md).

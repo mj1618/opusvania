@@ -1,0 +1,150 @@
+{
+  "//": "Tallage hum voices, one per noise colour: filtered noise + a quiet tonal core + slow wobble. `land` names the sfx.json sound played when a levied sound lands. Validated by src/audio/data.ts.",
+  "colours": {
+    "brown": {
+      "noiseGain": 0.55,
+      "filter": {
+        "type": "lowpass",
+        "freq": 240,
+        "q": 1.2
+      },
+      "tone": {
+        "wave": "sine",
+        "freq": 55,
+        "gain": 0.25,
+        "vibratoHz": 0.4,
+        "vibratoCents": 10
+      },
+      "wobble": {
+        "hz": 0.6,
+        "depth": 0.3
+      },
+      "whoosh": {
+        "fromHz": 180,
+        "toHz": 700
+      },
+      "land": "levyLandBrown",
+      "seizable": true
+    },
+    "pink": {
+      "noiseGain": 0.8,
+      "filter": {
+        "type": "bandpass",
+        "freq": 650,
+        "q": 1.6
+      },
+      "tone": {
+        "wave": "triangle",
+        "freq": 110,
+        "gain": 0.22,
+        "vibratoHz": 3.5,
+        "vibratoCents": 25
+      },
+      "wobble": {
+        "hz": 1.7,
+        "depth": 0.35
+      },
+      "whoosh": {
+        "fromHz": 400,
+        "toHz": 1600
+      },
+      "land": "levyLandPink",
+      "seizable": true
+    },
+    "blue": {
+      "noiseGain": 0.9,
+      "filter": {
+        "type": "bandpass",
+        "freq": 2600,
+        "q": 1.4
+      },
+      "tone": {
+        "wave": "sine",
+        "freq": 440,
+        "gain": 0.08,
+        "vibratoHz": 5,
+        "vibratoCents": 15
+      },
+      "wobble": {
+        "hz": 3,
+        "depth": 0.25
+      },
+      "whoosh": {
+        "fromHz": 1200,
+        "toHz": 4200
+      },
+      "land": "levyLandBlue",
+      "seizable": true
+    },
+    "violet": {
+      "noiseGain": 0.6,
+      "filter": {
+        "type": "highpass",
+        "freq": 4200,
+        "q": 0.9
+      },
+      "tone": {
+        "wave": "sine",
+        "freq": 880,
+        "gain": 0.06,
+        "vibratoHz": 6,
+        "vibratoCents": 20
+      },
+      "wobble": {
+        "hz": 4.5,
+        "depth": 0.3
+      },
+      "whoosh": {
+        "fromHz": 2500,
+        "toHz": 8000
+      },
+      "land": "levyLandViolet",
+      "seizable": true
+    },
+    "white": {
+      "noiseGain": 0.5,
+      "filter": {
+        "type": "highpass",
+        "freq": 200,
+        "q": 0.5
+      },
+      "tone": {
+        "wave": "square",
+        "freq": 60,
+        "gain": 0.02,
+        "vibratoHz": 0,
+        "vibratoCents": 0
+      },
+      "wobble": {
+        "hz": 11,
+        "depth": 0.5
+      },
+      "whoosh": {
+        "fromHz": 800,
+        "toHz": 5000
+      },
+      "land": "levyLandWhite",
+      "seizable": false
+    }
+  },
+  "baseGain": 0.55,
+  "fadeInSecs": 0.4,
+  "seize": {
+    "sound": "seize",
+    "refuseSound": "seizeRefused",
+    "dropRatio": 0.45,
+    "dropSecs": 0.12,
+    "gateAtSecs": 0.09,
+    "gateSecs": 0.015,
+    "reverbSend": 1,
+    "carryGainDb": -16,
+    "carryLowpassHz": 700,
+    "carryFadeSecs": 0.35
+  },
+  "levy": {
+    "flightSecs": 0.35,
+    "whooshGain": 0.8,
+    "rehum": true,
+    "rehumFadeSecs": 0.3
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "//": "Procedural room tone for the feverish boomtown: distant machinery rumble (brown), crowd murmur (pink through vowel-ish formants with slow swells), steam hiss (violet) and occasional distant clanks. Rooms match by exact id, then by family (`gym-05` uses `gym`), else `default`. Validated by src/audio/data.ts.",
+  "fadeSecs": 2,
+  "default": {
+    "gain": 0.8,
+    "rumble": { "colour": "brown", "gain": 0.9, "lowpassHz": 140, "lfoHz": 0.11, "lfoDepth": 0.35 },
+    "murmur": {
+      "colour": "pink",
+      "gain": 0.22,
+      "formantsHz": [340, 820, 1550],
+      "q": 5,
+      "lfoHz": 0.37,
+      "lfoDepth": 0.7
+    },
+    "hiss": { "colour": "violet", "gain": 0.04, "highpassHz": 6500 },
+    "clank": {
+      "sound": "clank",
+      "everySecs": 2.6,
+      "jitterSecs": 1.4,
+      "gain": 0.3,
+      "panSpread": 0.7,
+      "lowpassHz": 1100
+    }
+  },
+  "rooms": {
+    "gym": {
+      "gain": 0.75,
+      "rumble": { "colour": "brown", "gain": 1, "lowpassHz": 120, "lfoHz": 0.09, "lfoDepth": 0.4 },
+      "murmur": {
+        "colour": "pink",
+        "gain": 0.12,
+        "formantsHz": [300, 700, 1300],
+        "q": 6,
+        "lfoHz": 0.3,
+        "lfoDepth": 0.8
+      },
+      "hiss": { "colour": "violet", "gain": 0.03, "highpassHz": 7000 },
+      "clank": {
+        "sound": "clank",
+        "everySecs": 3.2,
+        "jitterSecs": 1.6,
+        "gain": 0.25,
+        "panSpread": 0.8,
+        "lowpassHz": 900
+      }
+    },
+    "hub": {
+      "gain": 0.85,
+      "rumble": { "colour": "brown", "gain": 0.7, "lowpassHz": 180, "lfoHz": 0.17, "lfoDepth": 0.3 },
+      "murmur": {
+        "colour": "pink",
+        "gain": 0.3,
+        "formantsHz": [380, 900, 1700, 2500],
+        "q": 4,
+        "lfoHz": 0.5,
+        "lfoDepth": 0.6
+      },
+      "hiss": { "colour": "violet", "gain": 0.05, "highpassHz": 6000 },
+      "clank": {
+        "sound": "clank",
+        "everySecs": 1.8,
+        "jitterSecs": 1,
+        "gain": 0.35,
+        "panSpread": 0.6,
+        "lowpassHz": 1400
+      }
+    }
+  }
+}
