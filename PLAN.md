@@ -660,4 +660,9 @@ Each biome goes through the same stages: greybox → validator → playtest → 
     - `STUDIO.md` gains world ownership, continuous-run playtests, taste checkpoints, and a rule that every loop advances the real world.
   - The combat rules pass from the L4 critique is **deferred into the region blockout**, so combat is tuned in real spaces.
   - Movement, combat, audio, rendering and the validator all carry over unchanged.
+- **2026-09-28, L5–L6 (end of first session).**
+  - Phase W part 1 is done: teardowns, north star, level toolchain (LDtk, brushes, section import, world renderer, edge exits), slopes, and the big-room camera.
+  - User feedback: "super boring and basic". **Fun is the top criterion** (`STUDIO.md` §1d).
+  - Shipped visible fun: Kid Tallow's animated rig, the combat juice pass, and enemy characters.
+  - The first connected region (the 7-room proof) is playable but not yet fun. Next session starts with its set pieces and behaviours; see `progress/loops.md`, "Next session".
 

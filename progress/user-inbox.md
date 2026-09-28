@@ -4,6 +4,8 @@ Things that need the user. Each item is marked **blocking** or **non-blocking**,
 
 ## Open
 
+- **Non-blocking: play the new build** at https://mj1618.github.io/opusvania/ once the final merge deploys. Start at `?room=tally-yard` (the 7-room proof), or open the hub and take door F. The Pit and the sparring rings show the new combat juice. Tell me the most fun moment, the most boring moment, and when you wanted to stop.
+
 - **Non-blocking: concept direction.** From 12 randomised concepts, two independent critics both picked *DISTRAINT*: Kid Tallow, a disgraced boxer turned bailiff, seizes the sounds that give things legal existence in a feverish boomtown. Seize un-makes things, and throwing a sound builds with it. Summary in `docs/ideas.md`, full pitch in `docs/concepts/raw-L1-p4.md`. It's provisional until a greybox experiment shows it doesn't slow the action. **Default:** proceed. Veto or redirect any time.
 - **Non-blocking: title.** The naming pass covered 58 candidates and checked the top 10 for conflicts (`docs/concepts/naming.md`). It recommends **TALLAGE**: no conflicts found on Steam, itch or IGDB, and tallage.com/.io appear unregistered. Carried sounds get the in-game noun "tonguestone". Runners-up are *Tonguestone* and *Kid Tallow*. **Default:** Tallage.
 - **Non-blocking: gh token scope.** The `gh` token lacks the `workflow` scope, so pushes that change `.github/workflows/` go over SSH instead. To fix it, run `gh auth refresh -s workflow`.

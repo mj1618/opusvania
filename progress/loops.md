@@ -180,4 +180,24 @@ Source of truth for loop state. Newest loop at the bottom. Format per STUDIO.md 
 
 **What metrics can't see.** Whether it's actually fun. That's judged by the blind runner, the critic, and the user.
 
-**Status.** In progress.
+**Status.** Done (final loop of this session, ended by the user).
+
+### L6 report
+- **Fun rig.** Kid Tallow is a code-drawn animated character: flat cap with feather, plum coat, red gloves, glowing sack. She has verlet coat tails and punches timed to the frame data (`src/render/rig/`, `memory/rig.md`). Merged.
+- **Fun juice.**
+  - Impact stack: sparks, comic words, impact frames, slow motion on finishers.
+  - Sound made visible: seize ribbons and hum rings.
+  - All six enemies redrawn as characters.
+  - Fight zoom up to 1.6×.
+
+  Merged (`memory/combat-juice.md`).
+- **7-room proof** (`?room=tally-yard` or hub door F; `docs/design/proof-section.png`). Authored section-first on four height bands, 51 screens², and playable end to end. The world owner says it is **not fun yet**: landmarks and set pieces are missing.
+- **Sim.** Floor slopes (1:4, 1:2, 1:1) with ramp and curve brushes, and 4-frame edge exits with no fade. The proof-kit entities are defined, but their behaviours are **not wired** (carry rule, Gull snatch-and-flee, falling weights, breakables, dying lights, barks and the Board line, night clock, waypoints).
+- **Camera.** Neighbour peek, seam continuity, zoom zones, declared shots, beacons.
+- **Decision.** Session ends here. See "Next session" below.
+
+### Next session: start here
+1. **Make the proof fun** (STUDIO §1d). Wire the proof-kit behaviours (listed in `memory/level-authoring.md`, "L6 proof kit"). Draw the landmarks and set pieces in code: the Board, the Bell, the Great Scale, the cart, the brass balls. Swap the stairs for ramps. Then do a fun review with a blind runner, a critic, and a video for the user.
+2. **Combat rules pass** from `docs/reports/L4-combat-critique.md` (boss stun-lock, knockdown reach, bag heal, body shove), tuned inside the proof.
+3. **Carry rule**, plus updates to the progression validator gate audit and the combat-spec bag rule.
+4. **Then grow the region** to the north star's 22–28 rooms.
