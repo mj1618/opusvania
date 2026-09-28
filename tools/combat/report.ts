@@ -36,6 +36,26 @@ import { type FightResult, runFight } from './run';
 
 installBuildInfo();
 
+/** Hand-written interpretation (kept with the generator so a re-run keeps it; update with the numbers). */
+const NOTES = `## Findings (L4, written with the numbers above)
+
+- **Fairness holds.** Every attack has an escape from telegraph + 15 f (F2, 1,000 forced positions), a 15-frame reactor avoids at least 98.7% of each attack (F1), telegraphs are all >= 15 steps in play (T4), no attack starts off-screen (T5), at most 2 attackers (T6), and every hit/take/Catch/Counter/repossess/hurt has its hitstop and a sound (T7). Caveat: the reactor is a strong model (it has learned every attack and executes perfectly).
+- **The signature loop is not faster than punching fodder** (F4: Barker 0.92, Gull 1.00, Clerk 0.88). It is on the elite Grinder (0.53) and somewhat in the Pit (0.83) and against the Auctioneer (0.77). Fodder dies in 3-7 jabs; the loop needs a telegraph (a Catch) or an open window, then a walk to the body that the Return knocked about 100 px away, so its time is mostly waiting. Untried levers: more fodder HP (costs F3), a shorter Return knockback, longer rattled frames.
+- **F3 misses on the Gull** (217 f vs 180): it hovers out of reach until it dives, and every policy waits for the dive.
+- **F8 misses** (~158 f): the Pit's longest verb-free stretch is the bots waiting for enemies to come to them (the spawn platform included). A human would harass.
+- **Contact damage** (bodies) is most of the damage every bot takes in the Pit, not attacks.
+- **No bot swallows**: the competent bots barely get hurt; F7 counts voices available (takes), which clears the bar easily.
+- **Bot sensitivity**: small policy changes moved the Pit ratio from 0.50 to 1.07 during L4 (memory/combat-bots.md lists every bot change). Treat F3/F4 as numbers for these bots, not for people.
+
+## Deviations from the spec (and why)
+
+- Forward Seize box reaches the floor ([28,8,64,72], spec 48 tall): a spring or slab thrown short can be taken back on foot (the novice's soft-lock).
+- Bodies deal no contact damage while Kid Slips: with i-frames on frames 1-10 of a 14-frame Slip, slipping through a Barker was punished right after.
+- HP: Barker 10 (8), Grinder 14 (18), Clerk 14 (10); Grinder backs up 48 px (24 was invisible); violet dart drift -0.05 px/f² (0.5 rises 100 px in 20 frames).
+- Auctioneer: the lectern is level with the floor (raised, grounded jabs couldn't reach him); 6 lots, not 8 (30-tile arena with safe edges); a Return stagger can't be extended and guards his voices (otherwise grab -> throw -> grab stagger-locks him: 9 s kills); "never guarded" read as the usual open windows; jab-only may make the final Count Seize (the only win).
+- Hazards cost a pip only in combat rooms (\`hazard: pip\`); gym rooms keep the L2 deaths their tapes depend on. The Corner is the hub's stool only. Spawn grace is per room (the Pit 120 f, no aggro either).
+`;
+
 const ROOT = resolve(import.meta.dirname, '../..');
 const { values: args } = parseArgs({
   options: {
@@ -657,7 +677,7 @@ md.push(
 );
 md.push('');
 md.push(
-  `**${passCount}/${rows.length} checks pass.** Misses are listed as misses; nothing below was tuned to make a bot pass.`,
+  `**${passCount}/${rows.length} checks pass.** Misses are listed as misses. Game numbers were changed only with the spec's levers (see Deviations); bot changes were bug fixes, each listed in memory/combat-bots.md.`,
 );
 md.push('');
 md.push('| # | Check | Measured | Target | Result |');
@@ -670,7 +690,7 @@ md.push(
   '- One policy (tools/combat/fighter.ts) with parameters. It sees enemies, shots and sounds `delay` frames late and its own body now.',
 );
 md.push(
-  "- **Evasion** forks the delayed snapshot with Kid's current body, forbids any new attack from starting in the fork (so it can't foresee an attack before its telegraph was visible for `delay` frames), and tries 9 fixed macros (stay, run L/R, jump, jump L/R, Slip L/R, drop) for 45 frames; it takes the first that avoids damage. A wrong read (5% competent, 25% sloppy) picks a random macro. This models an expert who knows the attacks and reacts late; it is a strong evader.",
+  "- **Evasion** forks the delayed snapshot, plays it forward to now with Kid held in place, forbids any new attack from starting in the fork (so it can't foresee an attack before its telegraph was visible for `delay` frames), checks what it intends to do, and if that hurts tries 9 fixed macros (stay, run L/R, jump, jump L/R, Slip L/R, drop) for 45 frames; it takes the first that avoids damage. A wrong read (5% competent, 25% sloppy) picks a random macro. This models an expert who knows the attacks and reacts late; it is a strong evader.",
 );
 md.push(
   "- **Offense** is geometry: strike boxes against extrapolated hurtboxes; Catches when a telegraph is in Seize reach with >= 6 frames left; shots caught when their extrapolated path crosses the Seize box. `signature` also walks in to Seize open enemies; `jabOnly` never seizes or levies, except the Auctioneer's final Count Seize, which is the only way to win that fight (spec §5).",
@@ -716,6 +736,7 @@ md.push('| Room | TTK signature | TTK jabOnly | Ratio | 0.50-0.75 | jabOnly won 
 md.push('|---|---|---|---|---|---|');
 md.push(...ratioLines);
 md.push('');
+md.push(NOTES);
 md.push('## Theoretical damage rates (from the move table)');
 md.push('');
 md.push(

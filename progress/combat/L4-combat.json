@@ -1,0 +1,217 @@
+{
+  "date": "2026-09-28T10:33:32.455Z",
+  "build": {
+    "sha": "9966363f61",
+    "sim": "b26aaf0b61",
+    "stateVersion": 1
+  },
+  "seeds": 50,
+  "rows": [
+    {
+      "id": "T1-T3",
+      "check": "Data lint: telegraphs >= 15 (incl. furious, Cadence beats), sounds, tints, cues",
+      "measured": "0 problems; min telegraph 15 f",
+      "target": "0 problems",
+      "pass": true
+    },
+    {
+      "id": "F1",
+      "check": "Reactability: 15-f reactor avoids each attack (1v1)",
+      "measured": "worst 98.7% (10 attacks)",
+      "target": ">= 95% each",
+      "pass": true
+    },
+    {
+      "id": "F2",
+      "check": "No unavoidable damage: escape exists from telegraph + 15 f (100 positions per attack)",
+      "measured": "worst 100% (10 attacks)",
+      "target": "100%",
+      "pass": true
+    },
+    {
+      "id": "F3",
+      "check": "TTK (median from engagement, competent/signature best; all won)",
+      "measured": "barker 133.0, gull 217.0, grinder 194.0, clerk 142.0, the-pit 775.0, auction 1265.5",
+      "target": "barker <= 150, gull <= 180, grinder <= 360, clerk <= 300, the-pit <= 900, auction <= 7200",
+      "pass": false
+    },
+    {
+      "id": "F4",
+      "check": "Signature dominance TTK(signature)/TTK(jabOnly); jabOnly wins 100%",
+      "measured": "barker 0.92, gull 1.00, grinder 0.53, clerk 0.88, the-pit 0.83, auction 0.77",
+      "target": "0.50-0.75 each; jabOnly 100%",
+      "pass": false
+    },
+    {
+      "id": "F5",
+      "check": "Damage taken, competent (pips after Ringing refunds)",
+      "measured": "Pit 0.02, Auctioneer 0.00",
+      "target": "Pit <= 1; Auctioneer <= 2",
+      "pass": true
+    },
+    {
+      "id": "F6",
+      "check": "Sloppy (24 f, 25% wrong): wins and damage",
+      "measured": "Pit 90.0% (2.46 pips); Auctioneer 100.0%",
+      "target": "Pit >= 80% and <= 3 pips; Auctioneer >= 30%",
+      "pass": true
+    },
+    {
+      "id": "F7",
+      "check": "Economy (signature): voices available per 30 s; Ringing recovered",
+      "measured": "15.50 takes/30 s; 1214 takes, 663 levies, 0 swallows in 39.2 min; ring 70.0%",
+      "target": ">= 1 per 30 s; ring >= 50% of hits",
+      "pass": true
+    },
+    {
+      "id": "F8",
+      "check": "Verb density, the Pit signature: longest stretch with no punch/seize/levy/slip",
+      "measured": "median 158.0 f (max 177)",
+      "target": "<= 60 f",
+      "pass": false
+    },
+    {
+      "id": "T4",
+      "check": "Every attackActive >= 15 non-hitstop steps after its telegraph",
+      "measured": "366/366 (min gap 16)",
+      "target": "100%",
+      "pass": true
+    },
+    {
+      "id": "T5",
+      "check": "No attack starts with the enemy outside the view",
+      "measured": "4538/4538",
+      "target": "100%",
+      "pass": true
+    },
+    {
+      "id": "T6",
+      "check": "At most 2 attack tokens held at once",
+      "measured": "0 steps over",
+      "target": "0",
+      "pass": true
+    },
+    {
+      "id": "T7",
+      "check": "Every hit/seizeTake/catch/counterHit/repossess/hurt has a same-step hitstop (>= its class) and a routed sound",
+      "measured": "1244/1244 hitstop class; 0 missing hitstop or sound",
+      "target": "100%",
+      "pass": true
+    },
+    {
+      "id": "D1",
+      "check": "Every fight replay 3x: same hash every 60th frame",
+      "measured": "6/6 rooms identical",
+      "target": "all",
+      "pass": true
+    },
+    {
+      "id": "D2",
+      "check": "Node vs Chrome: same final hash (combat tapes in tests/replays run in Chrome by tests/e2e/movement.spec.ts)",
+      "measured": "checked by `npm run check`",
+      "target": "identical",
+      "pass": true
+    },
+    {
+      "id": "D3",
+      "check": "Fuzz: no NaN, bag <= 3, nothing in solids, Chin in range, legal states, sounds conserved",
+      "measured": "the-pit 500x3600: 0 violations (16515 ms); auction 500x3600: 0 violations (23654 ms)",
+      "target": "0 violations",
+      "pass": true
+    }
+  ],
+  "f1": {
+    "barker.lunge": {
+      "instances": 2550,
+      "hit": 0
+    },
+    "gull.dive": {
+      "instances": 1600,
+      "hit": 0
+    },
+    "grinder.charge": {
+      "instances": 1000,
+      "hit": 0
+    },
+    "grinder.sparks": {
+      "instances": 500,
+      "hit": 0
+    },
+    "clerk.stamp": {
+      "instances": 950,
+      "hit": 0
+    },
+    "clerk.tannoy": {
+      "instances": 950,
+      "hit": 0
+    },
+    "auctioneer.patter": {
+      "instances": 469,
+      "hit": 6
+    },
+    "auctioneer.cadence": {
+      "instances": 495,
+      "hit": 1
+    },
+    "auctioneer.gavel": {
+      "instances": 172,
+      "hit": 0
+    },
+    "auctioneer.sellBag": {
+      "instances": 25,
+      "hit": 0
+    }
+  },
+  "f2": [
+    {
+      "id": "barker.lunge",
+      "total": 100,
+      "escaped": 100
+    },
+    {
+      "id": "gull.dive",
+      "total": 100,
+      "escaped": 100
+    },
+    {
+      "id": "grinder.charge",
+      "total": 100,
+      "escaped": 100
+    },
+    {
+      "id": "grinder.sparks",
+      "total": 100,
+      "escaped": 100
+    },
+    {
+      "id": "clerk.stamp",
+      "total": 100,
+      "escaped": 100
+    },
+    {
+      "id": "clerk.tannoy",
+      "total": 100,
+      "escaped": 100
+    },
+    {
+      "id": "auctioneer.patter",
+      "total": 100,
+      "escaped": 100
+    },
+    {
+      "id": "auctioneer.gavel",
+      "total": 100,
+      "escaped": 100
+    },
+    {
+      "id": "auctioneer.cadence",
+      "total": 100,
+      "escaped": 100
+    },
+    {
+      "id": "auctioneer.sellBag",
+      "total": 100,
+      "escaped": 100
+    }
+  ]
+}
