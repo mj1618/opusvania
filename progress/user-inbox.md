@@ -7,6 +7,7 @@ Things that need the user. Each item is marked **blocking** or **non-blocking**,
 - **Non-blocking: concept direction.** From 12 randomised concepts, two independent critics both picked *DISTRAINT*: Kid Tallow, a disgraced boxer turned bailiff, seizes the sounds that give things legal existence in a feverish boomtown. Seize un-makes things, and throwing a sound builds with it. Summary in `docs/ideas.md`, full pitch in `docs/concepts/raw-L1-p4.md`. It's provisional until a greybox experiment shows it doesn't slow the action. **Default:** proceed. Veto or redirect any time.
 - **Non-blocking: title.** "Distraint" is already a 2015 game. Working title is **Tallage** (the city). A proper naming pass with a trademark search comes later.
 - **Non-blocking: gh token scope.** The `gh` token lacks the `workflow` scope, so pushes that change `.github/workflows/` go over SSH instead. To fix it, run `gh auth refresh -s workflow`.
+- **Non-blocking: movement feel playtest (when you can, about 10 minutes).** Open https://mj1618.github.io/opusvania/ and play from the hub through the 14 gym rooms with keyboard or gamepad. Press `` ` `` for the tuning panel; the blind A/B preset toggle is moving to F3. Tell me which preset feels best (`opus`, `celeste` or `hk`) and anything floaty, sticky or laggy. Agent critique: `docs/reports/L2-playtest.md`. **Default:** the `opus` preset with the playtester's fixes.
 
 ## Resolved
 
