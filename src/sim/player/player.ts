@@ -765,6 +765,24 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
   }
   if (door?.to && c.pressed(ActionBit.up) && p.grounded && !state.transition)
     startTransition(state, door.to, door.spawn, P, events);
+  // Edge exits: the body's centre crossed the border along an open span (momentum is kept).
+  if (room.edge && !state.transition) {
+    const cx = p.x + p.w / 2;
+    const cy = p.y + p.h / 2;
+    const side =
+      cx < 0 ? 'w' : cx >= room.width * ts ? 'e' : cy < 0 ? 'n' : cy >= room.height * ts ? 's' : null;
+    if (side) {
+      const along = Math.floor((side === 'w' || side === 'e' ? cy : cx) / ts);
+      for (const x of room.exits) {
+        if (x.side !== side || along < x.from || along > x.to) continue;
+        startTransition(state, x.room, undefined, P, events, P.transitionFrames, [
+          x.offset[0] * ts,
+          x.offset[1] * ts,
+        ]);
+        break;
+      }
+    }
+  }
 }
 
 export function startTransition(
@@ -774,10 +792,12 @@ export function startTransition(
   P: MoveParams,
   events: SimEvent[],
   frames = P.transitionFrames,
+  offset?: [number, number],
 ): void {
   if (state.transition) return;
   const p = state.player;
   state.transition = spawn === undefined ? { to, timer: frames } : { to, spawn, timer: frames };
+  if (offset) state.transition.offset = offset;
   events.push({ type: 'roomExit', roomId: state.roomId, to, x: p.x + p.w / 2, y: p.y + p.h });
 }
 

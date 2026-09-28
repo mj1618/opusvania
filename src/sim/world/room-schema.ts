@@ -170,6 +170,22 @@ const CameraZone = z.object({
 });
 export type CameraZoneDef = z.infer<typeof CameraZone>;
 
+export const EDGE_SIDES = ['n', 's', 'e', 'w'] as const;
+export type EdgeSide = (typeof EDGE_SIDES)[number];
+const EdgeExit = z.object({
+  side: z.enum(EDGE_SIDES),
+  /** Span along the edge in tiles (x for n/s, y for e/w), inclusive. */
+  from: z.number().int().nonnegative(),
+  to: z.number().int().nonnegative(),
+  /** Room on the other side. */
+  room: z.string(),
+  /** That room's origin minus this room's origin, tiles (world layout). */
+  offset: z.tuple([z.number().int(), z.number().int()]),
+  /** Arrival spawn in `room` (its matching exit's spawn; used by tools). */
+  spawn: z.string(),
+});
+export type EdgeExitDef = z.infer<typeof EdgeExit>;
+
 const Claim = z.object({
   with: z.array(z.string()),
   without: z.array(z.string()).default([]),
@@ -215,6 +231,12 @@ export const RoomFileSchema = z
     rests: z.record(Char, RestDef).default({}),
     locks: z.record(z.string().min(1), LockDef).default({}),
     notes: z.string().default(''),
+    /**
+     * Edge exits (compiled from the LDtk world, memory/level-authoring.md): along the span the room's
+     * border is open (2 tiles deep), and when the body's centre crosses it the player moves into
+     * `room` at the same world position, keeping velocity and state (a `transitionFrames` fade).
+     */
+    exits: z.array(EdgeExit).default([]),
   })
   .superRefine((r, ctx) => {
     const w = r.rows[0]?.length ?? 0;
@@ -253,5 +275,15 @@ export const RoomFileSchema = z
     }
     if (r.rows.filter((row) => row.includes('P')).length !== 1 || r.rows.join('').split('P').length !== 2)
       ctx.addIssue({ code: 'custom', message: 'room needs exactly one P (spawn)' });
+    const W = r.rows[0]?.length ?? 0;
+    const H = r.rows.length;
+    for (const x of r.exits) {
+      const len = x.side === 'n' || x.side === 's' ? W : H;
+      if (x.to < x.from || x.to >= len)
+        ctx.addIssue({
+          code: 'custom',
+          message: `exit ${x.side}${x.from}-${x.to} is outside the edge (0-${len - 1})`,
+        });
+    }
   });
 export type RoomFile = z.input<typeof RoomFileSchema>;

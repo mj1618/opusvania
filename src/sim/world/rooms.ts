@@ -6,6 +6,8 @@ import {
   type AbilityName,
   type CameraZoneDef,
   type COLOURS,
+  type EdgeExitDef,
+  type EdgeSide,
   type RoomFile,
   RoomFileSchema,
   TILE_CHARS,
@@ -21,7 +23,7 @@ export interface Spawn {
   ty: number;
 }
 
-export type EntityKind = 'goal' | 'optionalGoal' | 'respawn' | 'door' | 'corner' | 'pickup' | 'rest';
+export type EntityKind = 'goal' | 'optionalGoal' | 'respawn' | 'door' | 'corner' | 'pickup' | 'rest' | 'edge';
 export interface Entity {
   kind: EntityKind;
   tx: number;
@@ -33,6 +35,9 @@ export interface Entity {
   /** Pickups: abilities granted and a stable id. */
   grants?: AbilityName[];
   id?: string;
+  /** Edge exits: the span's inner tiles (tx, ty, tw x th); `char` = `<side><from>`, e.g. `e17`. */
+  tw?: number;
+  th?: number;
 }
 
 export interface CameraZone {
@@ -82,6 +87,9 @@ export interface Room {
   padX: number;
   padY: number;
   file: z.output<typeof RoomFileSchema>;
+  /** Edge exits, and per side which border tiles are open (1) for the 2 tiles outside the room. */
+  exits: EdgeExitDef[];
+  edge: Record<EdgeSide, Uint8Array> | null;
 }
 
 const MIN_W = defaultTuning.world.minRoomW;
@@ -96,6 +104,10 @@ export function buildRoom(input: RoomFile): Room {
   const height = Math.max(sh, MIN_H);
   const padX = Math.floor((width - sw) / 2);
   const padY = Math.ceil((height - sh) / 2);
+  if (f.exits.length > 0 && (padX !== 0 || padY !== 0))
+    throw new Error(
+      `room ${f.id}: rooms with edge exits must be at least ${MIN_W}x${MIN_H} (padding would break the world layout)`,
+    );
   const tiles = new Uint8Array(width * height).fill(Tile.solid);
   const spawns: Record<string, Spawn> = {};
   const entities: Entity[] = [];
@@ -205,6 +217,37 @@ export function buildRoom(input: RoomFile): Room {
     const [vx, vy] = z.value ?? [zx + zw / 2, zy + zh / 2];
     return { x, y, w: zw * TS, h: zh * TS, mode: z.mode, cx: (vx + padX) * TS, cy: (vy + padY) * TS };
   });
+  // Edge exits: open border spans, an arrival spawn per exit and an `edge` entity for tools.
+  let edge: Room['edge'] = null;
+  if (f.exits.length > 0) {
+    edge = {
+      n: new Uint8Array(width),
+      s: new Uint8Array(width),
+      e: new Uint8Array(height),
+      w: new Uint8Array(height),
+    };
+    for (const x of f.exits) {
+      const open = edge[x.side];
+      for (let i = x.from; i <= x.to; i++) open[i] = 1;
+      const name = edgeName(x);
+      const horiz = x.side === 'n' || x.side === 's';
+      const tx = horiz ? x.from : x.side === 'w' ? 0 : width - 1;
+      const ty = horiz ? (x.side === 'n' ? 0 : height - 1) : x.from;
+      const n = x.to - x.from + 1;
+      // Arrival: standing on the span's lowest row (e/w), or its middle column (n/s).
+      spawns[name] = horiz ? { tx: x.from + (n >> 1), ty } : { tx, ty: x.to };
+      entities.push({
+        kind: 'edge',
+        tx,
+        ty,
+        tw: horiz ? n : 1,
+        th: horiz ? 1 : n,
+        char: name.slice(5),
+        to: x.room,
+        spawn: x.spawn,
+      });
+    }
+  }
   return {
     id: f.id,
     name: f.name,
@@ -225,8 +268,18 @@ export function buildRoom(input: RoomFile): Room {
     padX,
     padY,
     file: f,
+    exits: f.exits,
+    edge,
   };
 }
+
+/** Spawn name of an edge exit's arrival point: `edge-<side><from>`, e.g. `edge-e17`. */
+export function edgeName(x: { side: EdgeSide; from: number }): string {
+  return `edge-${x.side}${x.from}`;
+}
+
+/** Tiles outside an edge exit's span stay open this deep, so a body can cross until its centre does. */
+export const EDGE_DEPTH = 2;
 
 const MIRROR: Record<string, string> = { '<': '>', '>': '<' };
 
@@ -274,8 +327,19 @@ export function getRoom(id: string): Room {
 }
 
 export function tileAt(room: Room, tx: number, ty: number): number {
-  // Outside the room counts as solid so nothing can leave it.
-  if (tx < 0 || ty < 0 || tx >= room.width || ty >= room.height) return Tile.solid;
+  // Outside the room counts as solid so nothing can leave it, except along an edge exit's span.
+  if (tx < 0 || ty < 0 || tx >= room.width || ty >= room.height) {
+    const e = room.edge;
+    if (!e) return Tile.solid;
+    if (ty >= 0 && ty < room.height) {
+      if (tx < 0 && tx >= -EDGE_DEPTH) return e.w[ty] ? Tile.empty : Tile.solid;
+      if (tx >= room.width && tx < room.width + EDGE_DEPTH) return e.e[ty] ? Tile.empty : Tile.solid;
+    } else if (tx >= 0 && tx < room.width) {
+      if (ty < 0 && ty >= -EDGE_DEPTH) return e.n[tx] ? Tile.empty : Tile.solid;
+      if (ty >= room.height && ty < room.height + EDGE_DEPTH) return e.s[tx] ? Tile.empty : Tile.solid;
+    }
+    return Tile.solid;
+  }
   return room.tiles[ty * room.width + tx] ?? Tile.solid;
 }
 

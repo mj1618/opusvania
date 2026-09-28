@@ -1,29 +1,29 @@
 {
  "meta": {
-  "date": "2026-09-28 12:07",
-  "sha": "9fc710e0f3-dirty",
-  "engine": "4e8bc34ea9",
+  "date": "2026-09-28 12:15",
+  "sha": "6dab3e33c2-dirty",
+  "engine": "bb7a46f294",
   "mode": "full",
   "workers": 8,
   "budget": 300000
  },
  "timings": {
   "extract": 2,
-  "solve": 64,
-  "audit": 66520,
-  "probes": 68131,
-  "design": 18,
-  "total": 134744
+  "solve": 357,
+  "audit": 66146,
+  "probes": 93454,
+  "design": 23,
+  "total": 159992
  },
  "oracle": {
-  "queries": 651,
+  "queries": 661,
   "static": 27,
-  "cache": 239,
-  "inferred": 187,
+  "cache": 101,
+  "inferred": 30,
   "tapes": 102,
-  "searches": 96,
-  "searchMs": 134548,
-  "reverified": 151,
+  "searches": 401,
+  "searchMs": 159870,
+  "reverified": 0,
   "stale": 0
  },
  "findings": [
@@ -1673,7 +1673,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 8,
     "tape": "X4 .4"
    },
@@ -1688,7 +1688,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 20,
     "tape": "X4 .12 R4"
    },
@@ -1703,7 +1703,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 33,
     "tape": "X4 .12 R8 X4 .5"
    },
@@ -1718,7 +1718,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 44,
     "tape": "X4 .12 R8 X4 .8 R8"
    },
@@ -1733,7 +1733,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 57,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .5"
    },
@@ -1748,7 +1748,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 68,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R8"
    },
@@ -1763,7 +1763,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 81,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .5"
    },
@@ -1778,7 +1778,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 92,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R8"
    },
@@ -1793,7 +1793,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 105,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5"
    },
@@ -1808,7 +1808,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 116,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8"
    },
@@ -1823,7 +1823,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 129,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5"
    },
@@ -1838,7 +1838,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 140,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8"
    },
@@ -1853,7 +1853,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 153,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5"
    },
@@ -1868,7 +1868,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 164,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8"
    },
@@ -1883,7 +1883,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 182,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .10"
    },
@@ -1898,7 +1898,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 198,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .2"
    },
@@ -1913,7 +1913,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 206,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .10"
    },
@@ -1928,7 +1928,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 243,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R15"
    },
@@ -1943,7 +1943,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 252,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8"
    },
@@ -1958,7 +1958,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 267,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R15"
    },
@@ -1973,7 +1973,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 276,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8"
    },
@@ -1988,7 +1988,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 291,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R15"
    },
@@ -2003,7 +2003,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 300,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8"
    },
@@ -2018,7 +2018,7 @@
       "pogo"
      ]
     ],
-    "how": "cache",
+    "how": "bot",
     "frames": 315,
     "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R15"
    },
@@ -3169,7 +3169,7 @@
      ],
      "status": "bypassed",
      "verdict": "yes",
-     "how": "subset",
+     "how": "bot",
      "bypasses": [
       {
        "abilities": [
@@ -3429,8 +3429,8 @@
  ],
  "traps": {
   "probed": 311,
-  "escaped": 301,
-  "unreachable": 3,
+  "escaped": 300,
+  "unreachable": 4,
   "traps": [
    {
     "room": "stairwell",
@@ -3597,11 +3597,11 @@
      ],
      "frames": 1186,
      "evidence": "tests/replays/the-pit.jabOnly.s1.json",
-     "ms": 5
+     "ms": 3
     }
    }
   ],
-  "ms": 68131
+  "ms": 93454
  },
  "designs": [
   {
@@ -3769,7 +3769,7 @@
      }
     ],
     "breaks": [],
-    "ms": 2
+    "ms": 3
    },
    "diff": []
   },
@@ -4098,7 +4098,7 @@
       "detail": "adds: B11 with {levy, seize, slip}; B12 with {levy, seize, slip}; B12c with {levy, seize, slip}; B13 with {levy, seize, slip, flag:boss:auctioneer, fever 1}; X2 with {levy, seize, slip, flag:boss:auctioneer, fever 1}; EX_ROW_ROOFS with {levy, seize, slip, flag:boss:auctioneer, fever 1}; EX_FOUNDRY with {levy, seize, slip, flag:boss:auctioneer, fever 1}"
      }
     ],
-    "ms": 9
+    "ms": 14
    },
    "diff": [
     {

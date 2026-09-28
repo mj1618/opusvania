@@ -8,6 +8,7 @@ Keep entries current; delete stale ones.
 - [Clip tool](clip-tool.md) — `npm run clip` mp4/GIF/contact sheets, `--study` motion trail + event keyframes + frame numbers
 - [Sim architecture](sim-architecture.md) — how sim, Game harness, loop, input and replays fit together; **sim event list**
 - [Movement controller](movement-controller.md) — order of ops, rounding, spec deviations, profiles, ability flags, perf rule
+- [Level authoring](level-authoring.md) — **world rooms**: LDtk + room sheets, brushes, entities, `npm run world` / `world:render`, edge exits, drafts
 - [Gym rooms](gym-rooms.md) — room JSON format, padding, doors/next chain, gym claims, how tapes were found
 - [Render pipeline](render-pipeline.md) — gfx layers, lighting, bloom/post, dressing files, hooks for emissive/lights, quality tiers, perf, Pixi gotchas
 - [Camera](camera.md) — camera pipeline, zone blending (clamped basis + speed cap), pan cap, trauma², test interpretations

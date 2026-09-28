@@ -465,12 +465,16 @@ export function roomTargets(roomId: string): Record<string, Rect> {
         ? 'G'
         : kind === 'optionalGoal'
           ? 'g'
-          : kind === 'door'
+          : kind === 'door' || kind === 'edge'
             ? `exit:${String(e.char)}`
             : kind;
     if (!/^(G|g|goal|exit)/.test(name)) return;
-    if (typeof e.tx === 'number' && typeof e.ty === 'number') out[name] = tileRect(e.tx, e.ty);
-    else if (typeof e.x === 'number' && typeof e.y === 'number')
+    if (typeof e.tx === 'number' && typeof e.ty === 'number') {
+      out[name] = tileRect(e.tx, e.ty);
+      // Edge exits: the whole span of border tiles.
+      if (typeof e.tw === 'number' && typeof e.th === 'number')
+        out[name] = { x: e.tx * ts, y: e.ty * ts, w: e.tw * ts, h: e.th * ts };
+    } else if (typeof e.x === 'number' && typeof e.y === 'number')
       out[name] = { x: e.x, y: e.y, w: num(e.w, ts), h: num(e.h, ts) };
   };
   for (const key of ['goals', 'triggers', 'entities']) {
@@ -591,6 +595,9 @@ export interface RoomLayout {
     spawn?: string;
     grants?: Ability[];
     id?: string;
+    /** Edge exits: span size in tiles. */
+    tw?: number;
+    th?: number;
   }[];
   spawns: Record<string, { tx: number; ty: number }>;
   /** Sources as tile rects (a source is solid while home; white static can't be seized). */

@@ -16,7 +16,13 @@ export interface GameState {
   prevInput: InputFrame;
   player: PlayerState;
   /** Set while a room transition fades out; the player is frozen until it loads the target. */
-  transition: { to: string; spawn?: string; timer: number } | null;
+  transition: {
+    to: string;
+    spawn?: string;
+    timer: number;
+    /** Edge exit: px to subtract from the body's position on arrival (the target room's origin minus this one's). */
+    offset?: [number, number];
+  } | null;
   /** Per-visit room stats (reset when a room loads). */
   roomStats: { deaths: number; goal: boolean; optional: boolean; frames: number };
   /** Frames of global freeze left (combat-spec §2): nothing moves, presses are latched. */

@@ -1,6 +1,6 @@
 # Progression validator report
 
-Generated 2026-09-28 12:07 by `npm run progression` (full mode) on build 9fc710e0f3-dirty, engine 4e8bc34ea9. 8 search workers, default budget 300000 nodes. Tool: `tools/progression/`; how to read it: `memory/progression.md`.
+Generated 2026-09-28 12:15 by `npm run progression` (full mode) on build 6dab3e33c2-dirty, engine bb7a46f294. 8 search workers, default budget 300000 nodes. Tool: `tools/progression/`; how to read it: `memory/progression.md`.
 
 ## Summary
 
@@ -14,7 +14,7 @@ Generated 2026-09-28 12:07 by `npm run progression` (full mode) on build 9fc710e
 - **Gate audit:** 6 annotated gates, 2 failing, 0 warning (full-kit bypass only).
 - **Trap probes:** 311 ledges probed, 0 proven traps, 7 suspected.
 - **Findings:** 2 errors (0 not in the baseline `tests/progression/baseline.json`), 10 warnings.
-- **Run time:** extract 0.0 s, solve 0.1 s, audit 66.5 s, probes 68.1 s, design 0.0 s, total 134.7 s.
+- **Run time:** extract 0.0 s, solve 0.4 s, audit 66.1 s, probes 93.5 s, design 0.0 s, total 160.0 s.
 
 ![World graph](progression.svg)
 
@@ -57,7 +57,7 @@ Each key ability K of a gate must be necessary. **G7** (governs): the target mus
 
 | Key removed | Basis | Kit | Result | Minimal bypass combos (evidence) |
 |---|---|---|---|---|
-| levy | G7 | {wallJump, dash, doubleJump, pogo, seize} | **BYPASSED** (156 f) | {wallJump, seize} 166 f [tape](progression-evidence/lot-7.lock.spring-hall.wallJump+seize.json); {doubleJump, seize} 156 f [tape](progression-evidence/lot-7.lock.spring-hall.doubleJump+seize.json) (22 combos tried) |
+| levy | G7 | {wallJump, dash, doubleJump, pogo, seize} | **BYPASSED** (118 f) | {wallJump, seize} 166 f [tape](progression-evidence/lot-7.lock.spring-hall.wallJump+seize.json); {doubleJump, seize} 156 f [tape](progression-evidence/lot-7.lock.spring-hall.doubleJump+seize.json) (22 combos tried) |
 
 <details><summary>Bypass tapes (input DSL)</summary>
 
@@ -119,7 +119,7 @@ Abilities persist and only grow. A room's declared `abilities` are an implicit p
 
 | Room | Reached | Kit on arrival (minimal) | Exits (evidence) |
 |---|---|---|---|
-| hub | ✓ | {none} | exit:1→gym-01 ✓ (cache)<br>exit:2→gym-02 ✓ (cache)<br>exit:3→gym-03 ✓ (cache)<br>exit:4→gym-04 ✓ (cache)<br>exit:5→gym-05 ✓ (cache)<br>exit:6→gym-06 ✓ (cache)<br>exit:7→gym-07 ✓ (cache)<br>exit:8→gym-08 ✓ (cache)<br>exit:9→gym-09 ✓ (cache)<br>exit:A→gym-10 ✓ (cache)<br>exit:B→gym-11 ✓ (cache)<br>exit:C→gym-12 ✓ (cache)<br>exit:D→gym-13 ✓ (cache)<br>exit:E→gym-14 ✓ (cache)<br>exit:L→lot-7 ✓ (cache)<br>exit:K→lot-7-control ✓ (cache)<br>exit:S→stairwell ✓ (cache)<br>exit:Y→yard ✓ (cache)<br>exit:T→the-pit ✓ (cache)<br>exit:W→ring-barker ✓ (cache)<br>exit:X→ring-gull ✓ (cache)<br>exit:Z→ring-grinder ✓ (cache)<br>exit:Q→ring-clerk ✓ (cache)<br>exit:U→auction ✓ (cache) |
+| hub | ✓ | {none} | exit:1→gym-01 ✓ (bot)<br>exit:2→gym-02 ✓ (bot)<br>exit:3→gym-03 ✓ (bot)<br>exit:4→gym-04 ✓ (bot)<br>exit:5→gym-05 ✓ (bot)<br>exit:6→gym-06 ✓ (bot)<br>exit:7→gym-07 ✓ (bot)<br>exit:8→gym-08 ✓ (bot)<br>exit:9→gym-09 ✓ (bot)<br>exit:A→gym-10 ✓ (bot)<br>exit:B→gym-11 ✓ (bot)<br>exit:C→gym-12 ✓ (bot)<br>exit:D→gym-13 ✓ (bot)<br>exit:E→gym-14 ✓ (bot)<br>exit:L→lot-7 ✓ (bot)<br>exit:K→lot-7-control ✓ (bot)<br>exit:S→stairwell ✓ (bot)<br>exit:Y→yard ✓ (bot)<br>exit:T→the-pit ✓ (bot)<br>exit:W→ring-barker ✓ (bot)<br>exit:X→ring-gull ✓ (bot)<br>exit:Z→ring-grinder ✓ (bot)<br>exit:Q→ring-clerk ✓ (bot)<br>exit:U→auction ✓ (bot) |
 | gym-01 | ✓ | {wallJump, dash, doubleJump, pogo} | G→gym-02 ✓ (tape: tests/replays/gym-01.none.json) |
 | gym-02 | ✓ | {wallJump, dash, doubleJump, pogo} | G→gym-03 ✓ (tape: tests/replays/gym-02.none.json) |
 | gym-03 | ✓ | {wallJump, dash, doubleJump, pogo} | G→gym-04 ✓ (tape: tests/replays/gym-03.none.json) |
@@ -179,7 +179,7 @@ What the sim does today: entering a room sets the abilities to the room's declar
 
 ## In-room trap probes
 
-311 (room, entry, kit, ledge) probes: 301 ledges get back to their entry or an exit, 3 stuck ledges are not reachable anyway, 7 traps. 68.1 s.
+311 (room, entry, kit, ledge) probes: 300 ledges get back to their entry or an exit, 4 stuck ledges are not reachable anyway, 7 traps. 93.5 s.
 
 - Suspected trap: stairwell ledge x10-19,y18 (entry default, kit {wallJump, dash, doubleJump, pogo, seize, levy}); reach tape `.5 J12 U+J+S1 J8 .4 D+V1 .28 D+S1 .36 D+V1 .10 U+S1 .24 D+V1 .9 U+S1 .22 R36 .10 D+V1 .4 R26`
 - Suspected trap: stairwell ledge x10-19,y25 (entry default, kit {wallJump, dash, doubleJump, pogo, seize, levy}); reach tape `.5 J12 U+J+S1 J8 .4 D+V1 .28 D+S1 .36 D+V1 .10 U+S1 .24 D+V1 .9 U+S1 .22 R36 .10 D+V1 .4 R26`
@@ -221,7 +221,7 @@ What the sim does today: entering a room sets the abilities to the room's declar
 
 ## Design graph: tests/progression/gym-world.json
 
-25 rooms, 48 edges. Symbolic solve (abilities × flags × fever): 25 non-stub rooms reachable, 0 not. 2 ms.
+25 rooms, 48 edges. Symbolic solve (abilities × flags × fever): 25 non-stub rooms reachable, 0 not. 3 ms.
 
 Every design check passes.
 
@@ -240,7 +240,7 @@ Design and build agree.
 
 ## Design graph: docs/design/world-design.md
 
-28 rooms, 38 edges. Symbolic solve (abilities × flags × fever): 21 non-stub rooms reachable, 2 not. 9 ms.
+28 rooms, 38 edges. Symbolic solve (abilities × flags × fever): 21 non-stub rooms reachable, 2 not. 14 ms.
 
 | Level | Check | Subject | Detail |
 |---|---|---|---|
@@ -283,5 +283,5 @@ Design and build agree.
 
 ## Oracle and timings
 
-Queries 651: static proofs 27, cache hits 239, inferred by monotonicity 187, committed tapes 102, bot searches 96 (134.5 s wall), tapes re-verified 151, stale records trusted 0.
+Queries 661: static proofs 27, cache hits 101, inferred by monotonicity 30, committed tapes 102, bot searches 401 (159.9 s wall), tapes re-verified 0, stale records trusted 0.
 

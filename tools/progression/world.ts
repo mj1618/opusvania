@@ -25,7 +25,7 @@ export interface ExitNode {
   /** `room/exit:<char>` or `room/G`. */
   id: string;
   room: string;
-  kind: 'door' | 'goal';
+  kind: 'door' | 'goal' | 'edge';
   char: string;
   /** Bot target in the room (`exit:<char>` or `G`). */
   target: string;
@@ -143,11 +143,11 @@ export function extractWorld(opts: { start?: string; rooms?: string[] } = {}): W
     let goalOnly: RoomNode['goalOnly'];
     let optionalGoal: string | undefined;
     for (const e of l.entities) {
-      if (e.kind === 'door' && e.to) {
+      if ((e.kind === 'door' || e.kind === 'edge') && e.to) {
         exits.push({
           id: `${id}/exit:${e.char}`,
           room: id,
-          kind: 'door',
+          kind: e.kind,
           char: e.char,
           target: `exit:${e.char}`,
           to: e.to,
@@ -327,9 +327,9 @@ export function targetTiles(
       : target === 'g'
         ? l.entities.find((x) => x.kind === 'optionalGoal')
         : target.startsWith('exit:')
-          ? l.entities.find((x) => x.kind === 'door' && x.char === target.slice(5))
+          ? l.entities.find((x) => (x.kind === 'door' || x.kind === 'edge') && x.char === target.slice(5))
           : undefined;
-  if (e) return { x0: e.tx, y0: e.ty, x1: e.tx, y1: e.ty };
+  if (e) return { x0: e.tx, y0: e.ty, x1: e.tx + (e.tw ?? 1) - 1, y1: e.ty + (e.th ?? 1) - 1 };
   const sp = l.spawns[target.replace(/^spawn:/, '')];
   return sp ? { x0: sp.tx, y0: sp.ty, x1: sp.tx, y1: sp.ty } : undefined;
 }

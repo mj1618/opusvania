@@ -34,19 +34,6 @@
 				{
 					"iids": {
 						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
-						"levelIid": "b806b971-4144-53bb-b271-c9657a121c8f",
-						"layerIid": "4236ea73-76d6-50ae-bfc6-3449373b96a2",
-						"entityIid": "748789d2-943f-5e56-8503-d97e554ecb95"
-					},
-					"worldX": 4288,
-					"worldY": 1280,
-					"widPx": 64,
-					"heiPx": 64,
-					"fields": {"name":"gallery","to":"sample-gallery","toDoor":"cellar","char":null}
-				},
-				{
-					"iids": {
-						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
 						"levelIid": "b630fbc6-9848-5a5e-be73-434f739607f9",
 						"layerIid": "b1bffeba-4dac-503b-bdf9-a4730c69f86c",
 						"entityIid": "23912d2d-8095-5baa-bb3d-d43dedf8aeb8"
@@ -56,19 +43,6 @@
 					"widPx": 64,
 					"heiPx": 64,
 					"fields": {"name":"cellar","to":"sample-cellar","toDoor":"stair","char":null}
-				},
-				{
-					"iids": {
-						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
-						"levelIid": "944e98f8-7fa7-51d5-907c-e49ed44a3567",
-						"layerIid": "f1763078-8069-5f33-9aa7-97399a387fd6",
-						"entityIid": "0259b2e9-2813-54b9-839e-34a3d6c87e87"
-					},
-					"worldX": 4672,
-					"worldY": 1280,
-					"widPx": 64,
-					"heiPx": 64,
-					"fields": {"name":"cellar","to":"sample-cellar","toDoor":"gallery","char":null}
 				}
 			]
 		},
@@ -5150,14 +5124,14 @@
 				{
 					"__identifier": "notes",
 					"__type": "Multilines",
-					"__value": "Worked example of every brush (memory/level-authoring.md). Hall -> cave tunnel east to the Gallery; shaft north to the Stair.",
+					"__value": "Worked example of every brush (memory/level-authoring.md). Hall -> cave tunnel east to the Gallery (edge exit, momentum kept); shaft north to the Stair (edge exit, plus an Up-door pair).",
 					"__tile": null,
 					"defUid": 129,
 					"realEditorValues": [
 						{
 							"id": "V_String",
 							"params": [
-								"Worked example of every brush (memory/level-authoring.md). Hall -> cave tunnel east to the Gallery; shaft north to the Stair."
+								"Worked example of every brush (memory/level-authoring.md). Hall -> cave tunnel east to the Gallery (edge exit, momentum kept); shaft north to the Stair (edge exit, plus an Up-door pair)."
 							]
 						}
 					]

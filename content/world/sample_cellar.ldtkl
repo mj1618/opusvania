@@ -85,14 +85,14 @@
 		{
 			"__identifier": "notes",
 			"__type": "Multilines",
-			"__value": "Worked example of every brush (memory/level-authoring.md). Hall -> cave tunnel east to the Gallery; shaft north to the Stair.",
+			"__value": "Worked example of every brush (memory/level-authoring.md). Hall -> cave tunnel east to the Gallery (edge exit, momentum kept); shaft north to the Stair (edge exit, plus an Up-door pair).",
 			"__tile": null,
 			"defUid": 129,
 			"realEditorValues": [
 				{
 					"id": "V_String",
 					"params": [
-						"Worked example of every brush (memory/level-authoring.md). Hall -> cave tunnel east to the Gallery; shaft north to the Stair."
+						"Worked example of every brush (memory/level-authoring.md). Hall -> cave tunnel east to the Gallery (edge exit, momentum kept); shaft north to the Stair (edge exit, plus an Up-door pair)."
 					]
 				}
 			]
@@ -265,55 +265,6 @@
 					]
 				},
 				{
-					"__identifier": "Door",
-					"__grid": [67,20],
-					"__pivot": [0,0],
-					"__tags": ["game"],
-					"__tile": null,
-					"__smartColor": "#40D0FF",
-					"__worldX": 4288,
-					"__worldY": 1280,
-					"iid": "748789d2-943f-5e56-8503-d97e554ecb95",
-					"width": 64,
-					"height": 64,
-					"defUid": 68,
-					"px": [4288,1280],
-					"fieldInstances": [
-						{
-							"__identifier": "name",
-							"__type": "String",
-							"__value": "gallery",
-							"__tile": null,
-							"defUid": 69,
-							"realEditorValues": [{"id":"V_String","params":["gallery"]}]
-						},
-						{
-							"__identifier": "to",
-							"__type": "String",
-							"__value": "sample-gallery",
-							"__tile": null,
-							"defUid": 70,
-							"realEditorValues": [{"id":"V_String","params":["sample-gallery"]}]
-						},
-						{
-							"__identifier": "toDoor",
-							"__type": "String",
-							"__value": "cellar",
-							"__tile": null,
-							"defUid": 71,
-							"realEditorValues": [{"id":"V_String","params":["cellar"]}]
-						},
-						{
-							"__identifier": "char",
-							"__type": "String",
-							"__value": null,
-							"__tile": null,
-							"defUid": 72,
-							"realEditorValues": [null]
-						}
-					]
-				},
-				{
 					"__identifier": "Camera",
 					"__grid": [52,0],
 					"__pivot": [0,0],
@@ -322,7 +273,7 @@
 					"__smartColor": "#60A0FF",
 					"__worldX": 3328,
 					"__worldY": 0,
-					"iid": "836832bf-0890-5135-a7e1-ccbd766304f6",
+					"iid": "748789d2-943f-5e56-8503-d97e554ecb95",
 					"width": 640,
 					"height": 1536,
 					"defUid": 101,

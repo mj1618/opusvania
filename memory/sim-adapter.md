@@ -16,7 +16,7 @@ the L2 merge; git history has them). What it covers:
 - **Claims:** `room.claims` or `room.file.claims`; only entries with a `with` list are claims; `without`
   may name an ability (removed) or an assist (switched off), e.g. gym-03 `variableJump`.
 - **Rooms/targets:** `ROOMS`/`getRoom`/`isSolidTile`; goals from `goals`/`triggers`/`entities` (`G`, `g`,
-  kind `goal`/`optionalGoal`), doors as `exit:<char>`, plus every spawn as `spawn:<name>`.
+  kind `goal`/`optionalGoal`), doors as `exit:<char>`, edge exits as `exit:<side><from>` (the span's border tiles), plus every spawn as `spawn:<name>`.
   `registerTestRoom(id, rows)` = `buildRoom({id, rows, abilities: none})` then `registerRoom`. Test rooms:
   only `# . P`, one `P`, at least 30×17 (the loader pads smaller rooms, which shifts `tile:x,y` targets).
 - **Sim calls:** `newState` / `stepState` wrap `createState` / `step`. `placePlayer(state, tx, ty)` puts the

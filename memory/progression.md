@@ -11,6 +11,9 @@ npm run progression -- --design <file.md|file.json>   # repeatable; default test
 Options: `--budget` (300k; check 150k), `--combo-budget` (2×budget), `--workers`, `--semantics world,gym`,
 `--no-probes`, `--no-cache`, `--trust-stale`, `--baseline`, `--json`, `--quiet`.
 
+World rooms with `draft: true` (content/world.compiled.json) are skipped. Edge exits (`edge` entities)
+are exits like doors: target `exit:<side><from>`, arrival spawn `edge-<side><from>` (level-authoring.md).
+
 ## Pieces
 - `world.ts` extracts the graph through `roomLayout()` in the sim adapter: exits (doors; G → `next`), entries
   (spawns other rooms arrive at + `default`), pickups (explicit `pickups` + each room's `abilities` as an

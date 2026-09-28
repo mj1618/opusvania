@@ -138,55 +138,6 @@
 					"fieldInstances": []
 				},
 				{
-					"__identifier": "Door",
-					"__grid": [3,20],
-					"__pivot": [0,0],
-					"__tags": ["game"],
-					"__tile": null,
-					"__smartColor": "#40D0FF",
-					"__worldX": 4672,
-					"__worldY": 1280,
-					"iid": "0259b2e9-2813-54b9-839e-34a3d6c87e87",
-					"width": 64,
-					"height": 64,
-					"defUid": 68,
-					"px": [192,1280],
-					"fieldInstances": [
-						{
-							"__identifier": "name",
-							"__type": "String",
-							"__value": "cellar",
-							"__tile": null,
-							"defUid": 69,
-							"realEditorValues": [{"id":"V_String","params":["cellar"]}]
-						},
-						{
-							"__identifier": "to",
-							"__type": "String",
-							"__value": "sample-cellar",
-							"__tile": null,
-							"defUid": 70,
-							"realEditorValues": [{"id":"V_String","params":["sample-cellar"]}]
-						},
-						{
-							"__identifier": "toDoor",
-							"__type": "String",
-							"__value": "gallery",
-							"__tile": null,
-							"defUid": 71,
-							"realEditorValues": [{"id":"V_String","params":["gallery"]}]
-						},
-						{
-							"__identifier": "char",
-							"__type": "String",
-							"__value": null,
-							"__tile": null,
-							"defUid": 72,
-							"realEditorValues": [null]
-						}
-					]
-				},
-				{
 					"__identifier": "Enemy",
 					"__grid": [44,15],
 					"__pivot": [0,0],
@@ -195,7 +146,7 @@
 					"__smartColor": "#FF4040",
 					"__worldX": 7296,
 					"__worldY": 960,
-					"iid": "194989a4-77dc-593c-942f-a4a19c2bec8e",
+					"iid": "0259b2e9-2813-54b9-839e-34a3d6c87e87",
 					"width": 64,
 					"height": 64,
 					"defUid": 87,

@@ -1,0 +1,37 @@
+{
+  "kind": "tape",
+  "name": "sample-cellar-edge.wallJump+dash",
+  "inputs": "X4 .12 R+J4 R4 X4 J4 R+J8 R16 X4 .12 R4 .4 X4 .16 R4 R+J4 J4 X4 .4 J4 R4 .4 R4 .4 X4 .8 R12 X4 .8 R+J4 R12 R+J4 X4 .8 J4 R+J4 .4 R8 X4 .8 J8 R4 X4 .8 J4 R4 .4 X4 J4 R60",
+  "expect": {
+    "maxDeaths": 0,
+    "events": [
+      {
+        "type": "roomEnter",
+        "match": {
+          "roomId": "sample-gallery"
+        },
+        "min": 1
+      }
+    ]
+  },
+  "source": "hand",
+  "room": "sample-cellar",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "031c4b0f93afc4",
+    "build": {
+      "sha": "6dab3e33c2-dirty",
+      "sim": "161dd55a5b",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 378,
+      "y": 1264,
+      "frame": 344,
+      "room": "sample-gallery"
+    },
+    "hash": "0291f08e8a7ee3",
+    "hashes": ["0fd7f7b0c3889b", "0e94a0b40f23b1", "13b9da45b34e9b", "03e9a0394017e4", "15f00b057e8715"]
+  },
+  "notes": "Crosses the Cellar -> Gallery edge exit at run speed (momentum kept). Tools demo room (draft)."
+}

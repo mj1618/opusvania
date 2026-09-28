@@ -123,6 +123,45 @@ export function loadRoom(
   });
 }
 
+/**
+ * Edge exit arrival: the player keeps its whole state (velocity, facing, jump and dash timers,
+ * coyote, Chin) and moves by `offset` px into the target room's coordinates, so the body sits at
+ * the same world position. Room-local state is rebuilt as in loadRoom; room-relative player fields
+ * are translated (fall tracking) or reset to the new room (respawn marker, last safe ground).
+ * Input edge state (`prevInput`) is kept so a held button is not pressed again.
+ */
+export function enterRoomAt(
+  state: GameState,
+  roomId: string,
+  offset: [number, number],
+  t: Tuning,
+  events: SimEvent[],
+): void {
+  const room = getRoom(roomId);
+  const p = state.player;
+  const [ox, oy] = offset;
+  p.x -= ox;
+  p.y -= oy;
+  p.dropY -= oy;
+  p.airTopY -= oy;
+  p.respawn = null;
+  p.safeX = p.x + p.w / 2;
+  p.safeY = p.y + p.h;
+  // Gym semantics, as loadRoom: the room sets the abilities; carrying the bag starts at feather.
+  p.abilities = { ...room.abilities };
+  if (room.abilities.seize) p.profile = 'feather';
+  state.roomId = roomId;
+  state.local = buildLocal(room, t);
+  const r = state.run.runner;
+  if (r && r.roomId === roomId) spawnEnemy(state.local, 'runner', r.x, r.feetY);
+  state.hitstop = 0;
+  state.hitstopReq.frames = 0;
+  rebuildSolids(state, t.world.tileSize);
+  state.transition = null;
+  state.roomStats = { deaths: 0, goal: false, optional: false, frames: 0 };
+  events.push({ type: 'roomEnter', roomId, x: p.x + p.w / 2, y: p.y + p.h });
+}
+
 export function reseed(state: GameState, seed: number): void {
   state.seed = seed >>> 0;
   state.rng = seedRng(seed);
@@ -143,7 +182,10 @@ export function step(state: GameState, input: InputFrame, t: Tuning, events: Sim
   const tr = state.transition;
   if (tr) {
     tr.timer--;
-    if (tr.timer <= 0) loadRoom(state, tr.to, tr.spawn, t, events);
+    if (tr.timer <= 0) {
+      if (tr.offset) enterRoomAt(state, tr.to, tr.offset, t, events);
+      else loadRoom(state, tr.to, tr.spawn, t, events);
+    }
   } else {
     const room = getRoom(state.roomId);
     const P = resolveParams(t, state.player.profile);

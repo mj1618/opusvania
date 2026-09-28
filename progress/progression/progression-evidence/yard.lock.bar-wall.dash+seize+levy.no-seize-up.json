@@ -21,8 +21,8 @@
   "golden": {
     "tuningHash": "031c4b0f93afc4",
     "build": {
-      "sha": "9fc710e0f3-dirty",
-      "sim": "a8ed0d006c",
+      "sha": "6dab3e33c2-dirty",
+      "sim": "161dd55a5b",
       "stateVersion": 1
     },
     "end": {

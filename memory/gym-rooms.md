@@ -1,8 +1,8 @@
 # Gym rooms and golden replays
 
-- **Format decision**: ASCII-in-JSON now (`content/gym/*.json`, Zod `RoomFileSchema` in
-  `src/sim/world/rooms.ts`); the Phase 3 LDtk importer must emit the same room data. Agents can write
-  and diff ASCII; no editor needed.
+- **Format**: ASCII-in-JSON (`content/gym/*.json`, Zod `RoomFileSchema` in
+  `src/sim/world/room-schema.ts`) for gym/test rooms only. World rooms are authored in LDtk through
+  room sheets and compiled to the same format (level-authoring.md).
 - Legend: `#` solid, `=` one-way, `^ v < >` spikes (point direction; hitbox = base half, inset), `o`
   pogo orb, `P` spawn, `R` respawn marker, `G` goal, `g` optional goal. Door chars are declared in
   `doors` (hub uses 1-9, A-E) and are entered with Up. `next` = where G leads (the gym chains

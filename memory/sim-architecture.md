@@ -22,13 +22,15 @@
 - Render never runs its own clock: `Game.afterStep` calls render once per sim step with that step's
   events, and the camera (`src/render/camera/`) and juice (`src/render/fx.ts`) step there. Both are pure
   TS with a render-side seeded RNG, so clips are deterministic and camera tests run headless.
-- Rooms are JSON in `content/gym/` bundled by `src/sim/world/content.ts` (the one place the sim imports
+- Rooms are JSON in `content/gym/` (+ the compiled LDtk world, `content/world.compiled.json`) bundled by `src/sim/world/content.ts` (the one place the sim imports
   outside `src/sim`; the purity test allows `content/**.json`). See gym-rooms.md.
 - Per-step params: `step()` calls `resolveParams(tuning, player.profile)` (src/sim/player/params.ts),
   which applies the movement profile and turns disabled assists into 0/false. The controller never
   reads `tuning` directly.
 - Room transitions are sim state (`state.transition`): touching G (or Up at a door) freezes the player
   for `world.transitionFrames`, then `loadRoom` runs inside `step`, so replays and hashes cover them.
+  Edge exits (level-authoring.md) set `transition.offset` and arrive via `enterRoomAt`, which keeps the
+  player state and translates the body.
 
 ## Sim events (for audio/render; defined in `src/sim/events.ts`)
 Positions are the player's feet centre unless noted. `dir` is -1/1.

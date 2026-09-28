@@ -2,11 +2,13 @@
  * Compiler: LevelModels (baked) -> today's RoomFile (level-toolchain §2.4 item 3, §2.6), so the
  * sim, bot, progression validator, tapes and dressing run world rooms unchanged. Characters for
  * doors, sources, plates, gates, enemies, pickups and rests are allocated per room (entities may
- * pin one with `char`); door targets are resolved across the whole world by door NAME.
+ * pin one with `char`); door targets are resolved across the whole world by door NAME. Edge exits
+ * come from the world layout: every border opening that meets an equal opening in the next room.
  */
 
 import { defaultTuning } from '../../src/sim/tuning';
 import { type RoomFile, RoomFileSchema, TILE_CHARS } from '../../src/sim/world/room-schema';
+import { openings } from './lint';
 import { ENUMS, type Ent, type LevelModel, TILE_CHAR } from './model';
 
 /** Characters the compiler may allocate (tile chars, P R G g +, quotes, backslash and space excluded). */
@@ -291,6 +293,7 @@ export function compileWorld(models: LevelModel[], external: Map<string, RoomFil
     const i = m.entities.findIndex((e) => e.kind === 'door' && e.props.name === name);
     return i >= 0 ? chars.get(roomId)?.get(i) : undefined;
   };
+  const exits = edgeExits(models, err);
   const rooms: RoomFile[] = [];
   for (const [id, r] of compiled) {
     const { doorRefs, ...room } = r;
@@ -315,6 +318,8 @@ export function compileWorld(models: LevelModel[], external: Map<string, RoomFil
     }
     if (room.next && !compiled.has(room.next) && !external.has(room.next))
       err(`${id}: next "${room.next}" is not a room`);
+    const ex = exits.get(id);
+    if (ex?.length) (room as RoomFile & { exits: unknown }).exits = ex;
     const parsed = RoomFileSchema.safeParse(room);
     if (!parsed.success)
       for (const i of parsed.error.issues) err(`${id}: RoomFile ${i.path.join('.')}: ${i.message}`);
@@ -333,6 +338,50 @@ export function compileWorld(models: LevelModel[], external: Map<string, RoomFil
     warnings,
     chars,
   };
+}
+
+const OPPOSITE = { n: 's', s: 'n', e: 'w', w: 'e' } as const;
+
+/**
+ * Edge exits: a border opening becomes an exit when the room on the other side has the mirror
+ * opening over exactly the same tiles (both lint-matched). Rooms with exits must not be padded.
+ */
+function edgeExits(
+  models: LevelModel[],
+  err: (s: string) => void,
+): Map<string, NonNullable<RoomFile['exits']>> {
+  const out = new Map<string, NonNullable<RoomFile['exits']>>();
+  const ops = openings(models).filter((o) => o.matched);
+  const byId = new Map(models.map((m) => [m.id, m]));
+  const MIN_W = defaultTuning.world.minRoomW;
+  const MIN_H = defaultTuning.world.minRoomH;
+  for (const o of ops) {
+    const a = byId.get(o.room) as LevelModel;
+    const b = byId.get(o.into as string) as LevelModel;
+    const horiz = o.side === 'n' || o.side === 's';
+    const shift = horiz ? a.at[0] - b.at[0] : a.at[1] - b.at[1];
+    const opp = OPPOSITE[o.side];
+    const back = ops.find(
+      (x) => x.room === b.id && x.side === opp && x.from === o.from + shift && x.to === o.to + shift,
+    );
+    if (!back) continue; // spans differ: lint already warns about the other side
+    for (const m of [a, b])
+      if (m.size[0] < MIN_W || m.size[1] < MIN_H)
+        err(
+          `${m.id}: rooms with edge exits must be at least ${MIN_W}x${MIN_H} tiles (the sim pads smaller rooms)`,
+        );
+    const list = out.get(a.id) ?? [];
+    list.push({
+      side: o.side,
+      from: o.from,
+      to: o.to,
+      room: b.id,
+      offset: [b.at[0] - a.at[0], b.at[1] - a.at[1]],
+      spawn: `edge-${opp}${back.from}`,
+    });
+    out.set(a.id, list);
+  }
+  return out;
 }
 
 /** The bundle as JSON: one row per line, everything else compact. */
