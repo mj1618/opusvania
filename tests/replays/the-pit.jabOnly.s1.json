@@ -1,7 +1,7 @@
 {
   "kind": "tape",
   "name": "the-pit.jabOnly.s1",
-  "inputs": "D+J1 L20 L+A1 L2 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L8 .11 L8 .2 L+A1 .2 L+A1 L1 L+A1 L1 R+A1 L1 L+A1 L1 .22 R77 L54 R5 .13 R+A1 R2 R+A1 L24 R9 R+A1 R2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 .27 R+A1 .2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 J18 .18 R+A1 .2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 .31 R+A1 .2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 .21 R+A1 .2 R+A1 L1 R+A1 L1 L+A1 R1 R+A1 R1 .21 L+A1 .2 L+A1 R1 L+A1 R1 R+A1 L1 L+A1 L1 .21 R+A1 .2 R+A1 L1 R+A1 L1 L+A1 R1 R+A1 R1 .21 L+A1 R2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R77 R+J12 L+J3 .1 L+J3 U+A1 L+J22 L1 L+J3 J1 R+J8 L+J2 .1 L+J2 .1 L+J1 .2 L+J1 .6 L+J1 .2 L+J1 .17 L+J1 .9 U+A1 .4 L+J1 .6 D+A1 .5 L24 R16 R+A1 .2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 .2 R+A1 .8 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20",
+  "inputs": "D+J1 L20 L+A1 L2 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L8 .11 L8 .1 L+A1 .2 L+A1 L1 L+A1 L1 L+A1 R1 L+A1 L1 L+A1 .1 L+A1 .19 R78 L54 R4 .2 R1 .1 R1 .7 R+A1 .1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 L1 L+A1 L1 .7 R4 .10 R+A1 .2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 .28 R+A1 .2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 .1 R+A1 J18 .12 D+A1 .40 R+A1 .2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 .1 R+A1 .28 R+A1 .2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 .21 R+A1 .2 R+A1 R1 L+A1 L1 L+A1 R1 R+A1 R1 .21 L+A1 .2 R+A1 L1 L+A1 R1 R+A1 R1 L+A1 L1 .21 L+A1 .2 L+A1 R1 R+A1 L1 L+A1 L1 R+A1 R1 .21 R+A1 R2 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R70 R+J12 L+J2 .1 L+J4 U+A1 L+J7 R+J8 L+J7 L1 L+J4 R+J8 L+J2 .1 L+J3 .2 L+J1 .3 L+J1 .1 L+J1 R+J3 L+J4 .5 R+J12 L+J2 .1 L+J3 U+A1 L+J3 R+J14 L+J6 L1 L+J9 R+J5 .1 R+J3 L+J3 U+A1 L+J3 R+J12 R1 L+J9 R+J5 .1 R+J3 U+A1 R+J4 L+J9 R+J10 R1 L+J11 R+J3 .1 R+J5 L+J1 U+A1 L+J7 R+J8 R1 R+J2 L+J12 .1 R+J10 L+J12 L1 R+J9 L+J5 .1 L+J5 U+A1 L+J1 R+J4 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20",
   "expect": {
     "target": "G",
     "maxDeaths": 0
@@ -12,42 +12,45 @@
   "golden": {
     "tuningHash": "031c4b0f93afc4",
     "build": {
-      "sha": "dec6925f4b-dirty",
-      "sim": "9784b8ec33",
+      "sha": "17757b6413-dirty",
+      "sim": "b26aaf0b61",
       "stateVersion": 1
     },
     "end": {
-      "x": 4655,
+      "x": 4786,
       "y": 816,
-      "frame": 1410,
+      "frame": 1565,
       "room": "hub"
     },
-    "hash": "0ad571f65a4505",
+    "hash": "02a580b982efd9",
     "hashes": [
       "189f4ded140b43",
-      "1964c44e98f371",
-      "0bb4072ade8743",
-      "157703e2368c24",
-      "0057ae2ee961cf",
-      "16d719d09fe0ab",
-      "15940c528b145d",
-      "01dbcd1ed7ff69",
-      "1095f3816e848c",
-      "174acc0f96d06b",
-      "006a5e158fdfc9",
-      "010ffa16b2e941",
-      "04d97a294116e9",
-      "06e8e269e5ef6e",
-      "060aecfb9de182",
-      "0e64a82d1f7364",
-      "11aded0d691b8e",
-      "0097798c5f3447",
-      "0a44e8d97dd4a8",
-      "1dc59b0aa58b3f",
-      "17a8b3a29a364d",
-      "1930f219177a68",
-      "1044861fa1f201"
+      "1664bdde5e3e8d",
+      "061daaefae2905",
+      "089ef2d49ab46b",
+      "00fa72e16abe27",
+      "0fd94f126de27e",
+      "0aff27104bc4ef",
+      "0b62397024a180",
+      "14c37341e824c8",
+      "0b291c46eee88e",
+      "0c94c32126ec86",
+      "134cef7c28e839",
+      "10c1a0a01bd8d9",
+      "04f0a65df3ef62",
+      "1d1b26dde39f14",
+      "1eafd549e5af61",
+      "0427c048d2fa28",
+      "1870c1202e9cea",
+      "1633674534839d",
+      "1fbd42576fda81",
+      "101db2eab96251",
+      "111125ba52dab3",
+      "12d39c491f4b72",
+      "07ee7d31760e05",
+      "0b0004f43bba47",
+      "1dc225b90632e2"
     ]
   },
-  "notes": "Recorded run of the jabOnly fighter (tools/combat/fighter.ts, 12-step reaction) on seed 1: roomClear at 810, 0 hurts, then a walk to G."
+  "notes": "Recorded run of the jabOnly fighter (tools/combat/fighter.ts, 12-step reaction) on seed 1: roomClear at 965, 0 hurts, then a walk to G."
 }

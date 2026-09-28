@@ -333,3 +333,17 @@ describe('Clerk (ranged)', () => {
     expect(f.s.local.bag.length).toBe(0);
   });
 });
+
+describe('chasing down from a ledge (regression: the Pit deadlock)', () => {
+  it('a Barker on a platform beside and above Kid walks off it instead of standing at the edge', () => {
+    // A one-way platform 3 tiles up over cols 8-12; the Barker on it, Kid below just past its end.
+    const room = combatLab([[11, 8, '=====']]);
+    const f = fight(room);
+    f.s.player.x = 13 * 64 + 4;
+    const b = put(f, 'barker', 11 * 64 + 32 - (4 * 64 + 32), 11 * 64);
+    b.state = 'CHASE';
+    b.cooldown = 9999;
+    until(f, (x) => enemy(x, b.id).y + enemy(x, b.id).h === 960, 240);
+    expect(enemy(f, b.id).y + enemy(f, b.id).h).toBe(960);
+  });
+});

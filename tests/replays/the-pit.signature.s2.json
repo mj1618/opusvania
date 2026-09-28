@@ -1,7 +1,7 @@
 {
   "kind": "tape",
   "name": "the-pit.signature.s2",
-  "inputs": "D+J1 L20 L+A1 L2 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L8 .11 L8 .80 R24 L+A1 .2 L+A1 R1 R+A1 L1 L+A1 L1 L+A1 L18 .1 L8 .10 L+S1 .24 L+V1 .15 R44 L54 R4 .2 R1 .1 R1 .8 R+A1 .1 R1 R+A1 R1 R+A1 R1 R+A1 R1 R+A1 R1 L+A1 L1 L+A1 L1 .2 R9 .10 R+S1 .19 R+V1 .15 R2 .3 R+S1 .17 R114 U+V1 R+J1 L+J8 .53 L+J18 L10 R21 .3 R+S1 .1 R1 .1 R1 .20 R+V1 .15 R7 R+S1 R2 .4 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20",
+  "inputs": "D+J1 L20 L+A1 L2 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L1 L+A1 L8 .11 L8 .1 L+S1 .19 L+V1 .15 L6 L+S1 L2 .15 R84 .1 L48 .24 R+V1 .16 R+S1 .19 R+V1 .15 R2 .3 R+S1 .17 R33 R+J4 R32 R+J4 R27 U+V1 R+J3 L+J12 .2 U+A1 .2 R+J6 L+J7 L1 .8 R+J8 L+J5 .1 L+J3 U+A1 R+J17 L+J5 L1 L+J1 L4 .25 L+J1 R+J7 .1 R+J4 U+A1 L+J4 R+J19 R1 J1 .28 L+J1 R+J1 .11 L+J6 L1 L+J1 J1 R+J3 L+J3 R+J3 L+J3 .1 R+J2 J1 U+A1 L+J5 J1 L+J11 R+J4 R1 R+J1 .1 R4 .25 R+J1 L+J7 .1 L+J3 .1 U+A1 .1 R+J7 L+J5 L1 L+J1 .8 L+J1 .5 L+J1 .4 R+J11 L+J3 .1 R+J3 U+A1 L+J3 R+J2 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20 .1 R+J19 R20",
   "expect": {
     "target": "G",
     "maxDeaths": 0
@@ -12,41 +12,42 @@
   "golden": {
     "tuningHash": "031c4b0f93afc4",
     "build": {
-      "sha": "dec6925f4b-dirty",
-      "sim": "9784b8ec33",
+      "sha": "17757b6413-dirty",
+      "sim": "b26aaf0b61",
       "stateVersion": 1
     },
     "end": {
-      "x": 4655,
+      "x": 4786,
       "y": 816,
-      "frame": 1347,
+      "frame": 1401,
       "room": "hub"
     },
-    "hash": "17ba7e72607ded",
+    "hash": "11ca95c2665844",
     "hashes": [
       "02ece219d2cf60",
-      "1e9567b7ab75cc",
-      "18b144b593d37a",
-      "0e2e0e90bd836e",
-      "18a23a96df5535",
-      "1cb272dddd2c62",
-      "00da120b3beff8",
-      "15908a4b728d0c",
-      "04d9db190833d8",
-      "0db7f469f75c4f",
-      "0a0a063fcdef4c",
-      "0a0e4aed82905c",
-      "13c5ccedecdc33",
-      "1b7ae74680351b",
-      "024b783bee09de",
-      "1985b38fb4ca86",
-      "1b99937f3b4d4c",
-      "0ec862d4cb4b28",
-      "0be4e8784204df",
-      "112cd232f8be5a",
-      "008bb8d0bce951",
-      "1dcb1782a18774"
+      "0b4bd06017ede5",
+      "041383418cd52f",
+      "18c1daaa542731",
+      "0a8469f7fcfd28",
+      "08472bf97c7636",
+      "024a34278179ba",
+      "1bb7811b9694a9",
+      "039bfae570df0a",
+      "1666f31e7c179c",
+      "0e0b317d90330e",
+      "11de307a7d194e",
+      "019935624e84d5",
+      "04d381d3a0d4af",
+      "18f24e892db9a3",
+      "11aca42229fd58",
+      "06a45cb7dfb29f",
+      "040d806a8de292",
+      "11c583ba874447",
+      "03e2ee97acd415",
+      "065d9629584fc1",
+      "083fa2d44d53d3",
+      "01930d90d8f3e3"
     ]
   },
-  "notes": "Recorded run of the signature fighter (tools/combat/fighter.ts, 12-step reaction) on seed 2: roomClear at 747, 0 hurts, then a walk to G."
+  "notes": "Recorded run of the signature fighter (tools/combat/fighter.ts, 12-step reaction) on seed 2: roomClear at 801, 0 hurts, then a walk to G."
 }

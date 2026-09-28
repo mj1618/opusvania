@@ -223,10 +223,14 @@ export function drawEnemy(
 
   // Voice outlines (one ring per voice, innermost first). Armed = solid + vibrating; open = the ring
   // breaks into marching dashes (a Seize will take it now); taken = sparse dashes.
-  const width = SIG.teleOutline0 + (SIG.teleOutline1 - SIG.teleOutline0) * k + 3 * pulse;
+  const widthAll = SIG.teleOutline0 + (SIG.teleOutline1 - SIG.teleOutline0) * k + 3 * pulse;
   let armedAny = false;
   voices.forEach((v, i) => {
     const pad = SIG.enemyOutlinePad + i * 7;
+    // While it winds up, the voice behind the attack dominates; its other voices go thin and dim
+    // (the Auctioneer's pink ring used to outshine a violet Patter wind-up: L4 boss clip).
+    const quiet = telegraphing && !!attack?.sound && v.name !== attack.sound;
+    const width = quiet ? SIG.teleOutline0 * 0.5 : widthAll;
     let c = colourHex(v.colour);
     if (guardK > 0) c = mix(c, PALETTE.flash, guardK);
     const r = { x: x - pad, y: y - pad, w: W + 2 * pad, h: H + 2 * pad };
@@ -258,8 +262,8 @@ export function drawEnemy(
         });
         g.roundRect(r.x + dx + width / 2, r.y + dy + width / 2, r.w - width, r.h - width, 12).stroke({
           width,
-          color: oc,
-          alpha: 1,
+          color: quiet ? c : oc,
+          alpha: quiet ? 0.45 : 1,
         });
       }
       if (upright) {
@@ -268,7 +272,9 @@ export function drawEnemy(
         gl.roundRect(gwx + dx + width / 2, gwy + dy + width / 2, r.w - width, r.h - width, 12).stroke({
           width,
           color: NOISE_COLOURS[v.colour].core,
-          alpha: SIG.glowVoiceAlpha + (SIG.glowTeleAlpha - SIG.glowVoiceAlpha) * Math.max(k, pulse),
+          alpha: quiet
+            ? SIG.glowVoiceAlpha * 0.4
+            : SIG.glowVoiceAlpha + (SIG.glowTeleAlpha - SIG.glowVoiceAlpha) * Math.max(k, pulse),
         });
       }
       if (i === 0)

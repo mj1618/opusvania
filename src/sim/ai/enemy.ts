@@ -685,9 +685,14 @@ function chaseMove(
       return;
     default: {
       // Kid is below (a tile or more): don't stand over her, keep walking (off the ledge).
+      // (No stopping gap either: standing at a ledge beside her deadlocked the Pit, L4 report.)
       const below = p.y + p.h >= e.y + e.h + ts;
-      if (below && e.grounded && Math.abs(kx - (e.x + e.w / 2)) < e.w) e.vx = e.facing * mv.chaseSpeed * sm;
-      else walkToward(e, kx, mv.chaseSpeed * sm, (e.w + p.w) / 2 + c.chaseGapPx);
+      if (below && e.grounded) {
+        // Turn only when she is clearly to one side; over her, keep going (off the ledge).
+        const dx = kx - (e.x + e.w / 2);
+        if (Math.abs(dx) > e.w / 2) e.facing = dx > 0 ? 1 : -1;
+        e.vx = e.facing * mv.chaseSpeed * sm;
+      } else walkToward(e, kx, mv.chaseSpeed * sm, (e.w + p.w) / 2 + c.chaseGapPx);
       if (mv.jump && e.grounded && p.grounded) hopUp(e, mv.jump, kx, p, ts, c.enemyGravity);
     }
   }
