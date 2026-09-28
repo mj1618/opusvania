@@ -20,8 +20,7 @@ const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !
  * Reads an export the controller may or may not have yet (e.g. `PRESETS`, `registerRoom`) without
  * a static member access, so bundlers don't warn about a missing export before it lands.
  */
-const optionalExport = (mod: object, name: string): unknown =>
-  Object.getOwnPropertyDescriptor(mod, name)?.value as unknown;
+const optionalExport = (mod: object, name: string): unknown => Reflect.get(mod, name) as unknown;
 const num = (v: unknown, d = 0): number => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 
 // ---------------------------------------------------------------------------------------------
@@ -127,7 +126,19 @@ export function botKey(s: GameState): string {
   const p = s.player as unknown as Obj;
   const prev = num((s as unknown as Obj).prevInput);
   const held = prev & (ActionBit.jump | ActionBit.dash | ActionBit.attack);
-  const rising = p.rising === true || p.cut === false ? 1 : 0;
+  // Phase 0: `rising`. Spec controller: rising from a jump that release can still cut.
+  const rising = p.rising === true || (p.fromJump === true && p.cut !== true) ? 1 : 0;
+  // Spec controller timers/flags that change what inputs can do (absent in Phase 0 -> 0).
+  const flags = [
+    num(p.forceTimer) > 0,
+    num(p.coyote) > 0,
+    num(p.jumpBuf) > 0,
+    num(p.dropTimer) > 0,
+    num(p.pogoTimer) > 0,
+    num(p.freeze) > 0,
+    p.cutDisabled === true,
+    (s as unknown as Obj).transition != null,
+  ].reduce((m, b, i) => m | ((b ? 1 : 0) << i), 0);
   return [
     s.roomId,
     v.x >> 3,
@@ -142,6 +153,7 @@ export function botKey(s: GameState): string {
     v.dashCooldown > 0 ? 1 : 0,
     held,
     rising,
+    flags,
   ].join(',');
 }
 
@@ -250,13 +262,18 @@ export function presetNames(): string[] {
   return names.length > 0 ? names : ['default'];
 }
 
-/** Full tuning for a preset: defaults with the preset's values merged on top. */
+/**
+ * Full tuning for a preset ('default' = the defaults). Uses the controller's own `presetTuning`
+ * when it exports one (it re-derives dependent values such as double-jump speed); otherwise
+ * merges the preset's values onto the defaults.
+ */
 export function presetTuning(name = 'default'): Tuning {
   const t = cloneTuning(defaultTuning);
   if (name === 'default') return t;
   const p = controllerPresets()[name];
-  if (!p) throw new Error(`Unknown preset "${name}". Known: ${presetNames().join(', ')}`);
-  // A preset may be a full tuning object or a set of overrides; merging covers both.
+  if (!p) throw new Error(`Unknown preset "${name}". Known: default, ${presetNames().join(', ')}`);
+  const own = optionalExport(tuningModule, 'presetTuning');
+  if (typeof own === 'function') return (own as (n: string) => Tuning)(name);
   mergeInto(t as unknown as Obj, p);
   return t;
 }
@@ -285,6 +302,38 @@ export function setAssists(t: Tuning, assists: AssistSet): Assist[] {
     } else unsupported.push(name);
   }
   return unsupported;
+}
+
+/**
+ * The tuning's own statement of a few feel numbers, so tests can check measurements against the
+ * values the controller was configured with (whatever its tuning layout).
+ */
+export interface NominalFeel {
+  coyoteFrames: number;
+  jumpBufferFrames: number;
+  runPxPerFrame: number;
+  /** Full-jump apex height the tuning aims for, before apex hang (px). */
+  jumpHeightPx: number;
+}
+
+export function nominalFeel(t: Tuning): NominalFeel {
+  const tu = t as unknown as Record<string, Obj>;
+  if (LEGACY_CONTROLLER) {
+    const j = tu.jump ?? {};
+    const g = num(j.gravity);
+    return {
+      coyoteFrames: num(j.coyoteFrames),
+      jumpBufferFrames: num(j.bufferFrames),
+      runPxPerFrame: num(tu.player?.runSpeed) / 60,
+      jumpHeightPx: g > 0 ? num(j.jumpSpeed) ** 2 / (2 * g) : 0,
+    };
+  }
+  return {
+    coyoteFrames: num(tu.assist?.coyoteFrames),
+    jumpBufferFrames: num(tu.assist?.jumpBufferFrames),
+    runPxPerFrame: num(tu.run?.maxSpeed),
+    jumpHeightPx: num(tu.shape?.jumpHeightPx),
+  };
 }
 
 /** Current assist values (undefined for ones this controller doesn't have). */
@@ -327,20 +376,31 @@ export function roomAbilities(roomId: string): AbilitySet {
 
 /** Bot claims for one target (movement-spec §6.1): must be found with, and not without, these. */
 export interface TargetClaim {
+  /** Abilities the bot must reach the target with. */
   with: Ability[];
-  without: Ability[];
+  /** Abilities or assists whose removal must make the target not found. */
+  without: (Ability | Assist)[];
 }
 
-/** Room `claims` (spec room JSON), e.g. `{ G: { with: [], without: ['dash'] }, g: null }`. */
+/**
+ * Room `claims` (spec room JSON), e.g. `{ G: { with: [], without: ['dash'] }, g: null }`. Only
+ * entries shaped like a claim (with a `with` list) count; other keys (`windows`, `camera`...) are
+ * notes for other tools.
+ */
 export function roomClaims(roomId: string): Record<string, TargetClaim> {
   const r = getRawRoom(roomId);
   const out: Record<string, TargetClaim> = {};
-  if (!isObj(r.claims)) return out;
-  for (const [name, c] of Object.entries(r.claims)) {
-    if (!isObj(c)) continue;
+  const claims = isObj(r.claims)
+    ? r.claims
+    : isObj(r.file) && isObj(r.file.claims)
+      ? r.file.claims
+      : undefined;
+  if (!claims) return out;
+  for (const [name, c] of Object.entries(claims)) {
+    if (!isObj(c) || !Array.isArray(c.with)) continue;
     out[name] = {
-      with: Array.isArray(c.with) ? (c.with as Ability[]) : [],
-      without: Array.isArray(c.without) ? (c.without as Ability[]) : [],
+      with: c.with as Ability[],
+      without: Array.isArray(c.without) ? (c.without as (Ability | Assist)[]) : [],
     };
   }
   return out;
@@ -402,7 +462,14 @@ export function roomTargets(roomId: string): Record<string, Rect> {
   const addEntity = (e: unknown, fallbackName?: string) => {
     if (!isObj(e)) return;
     const kind = String(e.kind ?? e.type ?? e.char ?? fallbackName ?? '');
-    const name = kind === 'goal' ? 'G' : kind === 'optionalGoal' ? 'g' : kind;
+    const name =
+      kind === 'goal'
+        ? 'G'
+        : kind === 'optionalGoal'
+          ? 'g'
+          : kind === 'door'
+            ? `exit:${String(e.char)}`
+            : kind;
     if (!/^(G|g|goal|exit)/.test(name)) return;
     if (typeof e.tx === 'number' && typeof e.ty === 'number') out[name] = tileRect(e.tx, e.ty);
     else if (typeof e.x === 'number' && typeof e.y === 'number')
@@ -444,17 +511,21 @@ export function overlaps(p: PlayerView, r: Rect): boolean {
 }
 
 /**
- * Registers an ASCII test room (for feel-report labs and tests) and returns its id. Uses the
- * Phase 0 legend ('#', '.', 'P', 'a'-'z' spawns). Spec controller: swap in its room loader here.
+ * Registers an ASCII test room (feel-report labs, tests) with no abilities and returns its id.
+ * Use only `#`, `.` and one `P` (valid in both the Phase 0 and the spec legend), and make it at
+ * least 30×17 tiles: the spec loader pads smaller rooms, which would shift `tile:x,y` targets.
  */
 export function registerTestRoom(id: string, rows: string[]): string {
+  const def = {
+    id,
+    rows,
+    abilities: { wallJump: false, dash: false, doubleJump: false, pogo: false },
+  } as unknown as Parameters<typeof roomsModule.buildRoom>[0];
+  const room = roomsModule.buildRoom(def);
+  // Spec rooms module: registerRoom(room). Phase 0: ROOMS is a plain Map.
   const reg = optionalExport(roomsModule, 'registerRoom');
-  if (typeof reg === 'function') {
-    (reg as (d: unknown) => void)({ id, rows });
-    return id;
-  }
-  const room = roomsModule.buildRoom({ id, rows });
-  (roomsModule.ROOMS as Map<string, roomsModule.Room>).set(id, room);
+  if (typeof reg === 'function') (reg as (r: unknown) => void)(room);
+  else (roomsModule.ROOMS as Map<string, roomsModule.Room>).set(id, room);
   return id;
 }
 

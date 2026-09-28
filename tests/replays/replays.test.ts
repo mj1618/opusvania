@@ -40,12 +40,7 @@ describe('golden replays (tests/replays/*.json)', () => {
 describe('tape harness self-test', () => {
   const room = registerTestRoom('replay-selftest', [
     '##############################',
-    '#............................#',
-    '#............................#',
-    '#............................#',
-    '#............................#',
-    '#............................#',
-    '#............................#',
+    ...Array.from({ length: 11 }, () => '#............................#'),
     '#.........#####..............#',
     '#............................#',
     '#............................#',
@@ -54,7 +49,7 @@ describe('tape harness self-test', () => {
   ]);
   const inputs = '.10 R40 R+J16 R30 .20 L10';
   const make = (): TapeFile =>
-    makeTape('selftest', { room, seed: 3 }, inputs, { target: 'tile:11,10', maxFrames: 200, maxDeaths: 0 });
+    makeTape('selftest', { room, seed: 3 }, inputs, { target: 'tile:5,15', maxFrames: 200, maxDeaths: 0 });
 
   it('a fresh tape passes behaviourally and matches its goldens', () => {
     const c = checkTape(make());
@@ -65,7 +60,8 @@ describe('tape harness self-test', () => {
 
   it('a tuning change marks goldens stale instead of failing', () => {
     const t = make();
-    const c = checkTape({ ...t, tuning: { fx: { landDustVariants: 5 } } });
+    // An extra key the sim ignores: behaviour is identical, but the tuning hash differs.
+    const c = checkTape({ ...t, tuning: { world: { staleMarker: 1 } } });
     expect(c.golden).toBe('stale');
     expect(c.ok).toBe(true);
   });

@@ -6,17 +6,32 @@ import { describe, expect, it } from 'vitest';
 import { formatTape, parseTape } from '../../src/debug/dsl';
 import { EventLog } from '../../src/debug/event-log';
 import { formatTrace, runScenario } from '../../src/debug/headless';
-import { playerView, registerTestRoom, resolveTarget } from '../../src/debug/sim-adapter';
+import {
+  LEGACY_CONTROLLER,
+  nominalFeel,
+  playerView,
+  presetNames,
+  presetTuning,
+  registerTestRoom,
+  resolveTarget,
+} from '../../src/debug/sim-adapter';
 import { Game } from '../../src/game';
 import { isStandardPad } from '../../src/input/gamepad';
 import { parseInputScript } from '../../src/input/script';
 import { maskOf } from '../../src/sim/input';
+import * as tuningModule from '../../src/sim/tuning';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { search } from '../../tools/bot/search';
 import { measureFeel } from '../../tools/feel-report/metrics';
 
+// Test rooms use only '#', '.', 'P' and are >= 30x17, so they load the same in both room formats.
 const OPEN = registerTestRoom('tools-open', [
   '##############################',
+  '#............................#',
+  '#............................#',
+  '#............................#',
+  '#............................#',
+  '#............................#',
   '#............................#',
   '#............................#',
   '#............................#',
@@ -30,14 +45,13 @@ const OPEN = registerTestRoom('tools-open', [
   '##############################',
 ]);
 
-// The 'a' spawn sits inside a sealed box: unreachable.
+// A pocket at tile (6,2) sealed off from a 4x2-tile spawn area: unreachable, and small enough
+// that the search exhausts quickly on any controller.
 const SEALED = registerTestRoom('tools-sealed', [
-  '#########',
-  '#.......#',
-  '#....####',
-  '#....#a.#',
-  '#.P..####',
-  '#########',
+  '##############################',
+  '#....#########################',
+  '#.P..#.#######################',
+  ...Array.from({ length: 14 }, () => '##############################'),
 ]);
 
 describe('input DSL', () => {
@@ -89,7 +103,7 @@ describe('headless runner', () => {
   });
 
   it('stops at a target and reports the frame', () => {
-    const r = runScenario({ room: OPEN, inputs: 'R200', stop: { target: 'tile:10,10' } });
+    const r = runScenario({ room: OPEN, inputs: 'R200', stop: { target: 'tile:10,15' } });
     expect(r.reachedAt).toBe(r.steps);
     expect(r.steps).toBeLessThan(200);
   });
@@ -100,7 +114,7 @@ describe('headless runner', () => {
       room: OPEN,
       inputs: '.5 J30 .30',
       trace: true,
-      tuning: { jump: { gravity: 3000 } },
+      tuning: { jump: { gravity: defaultTuning.jump.gravity * 0.6 } },
     });
     const minY = (t: typeof base) => Math.min(...(t.trace ?? []).map((f) => f.p.y));
     expect(minY(floaty)).toBeLessThan(minY(base));
@@ -127,7 +141,7 @@ describe('event log tap', () => {
 
 describe('search bot', () => {
   it('finds a verified path onto a platform, deterministically', () => {
-    const opts = { room: OPEN, target: 'tile:17,7', budget: 60_000 };
+    const opts = { room: OPEN, target: 'tile:17,12', budget: 60_000 };
     const a = search(opts);
     expect(a.found).toBe(true);
     expect(a.verified).toBe(true);
@@ -135,43 +149,43 @@ describe('search bot', () => {
     expect(b.tape).toBe(a.tape);
     expect(b.generated).toBe(a.generated);
     // The tape really gets there when replayed on its own.
-    const r = runScenario({ room: OPEN, inputs: a.tape ?? '', stop: { target: 'tile:17,7' } });
+    const r = runScenario({ room: OPEN, inputs: a.tape ?? '', stop: { target: 'tile:17,12' } });
     expect(r.reachedAt).toBeDefined();
   });
 
   it('reports an unreachable target as exhausted', () => {
-    const r = search({ room: SEALED, target: 'a', budget: 400_000 });
+    const r = search({ room: SEALED, target: 'tile:6,2', budget: 400_000 });
     expect(r.found).toBe(false);
     expect(r.exhausted).toBe(true);
-    expect(resolveTarget(SEALED, 'a')).toEqual({ x: 6 * 64, y: 3 * 64, w: 64, h: 64 });
+    expect(resolveTarget(SEALED, 'tile:6,2')).toEqual({ x: 6 * 64, y: 2 * 64, w: 64, h: 64 });
   });
 
   it('respects the budget', () => {
-    const r = search({ room: OPEN, target: 'tile:22,4', budget: 50 });
+    const r = search({ room: OPEN, target: 'tile:22,9', budget: 50 });
     expect(r.generated).toBeLessThanOrEqual(50 + 12);
   });
 });
 
 describe('feel report', () => {
-  it('measures the assists the tuning declares', () => {
-    const t = cloneTuning(defaultTuning);
+  it('measures what the tuning declares', () => {
+    const nominal = nominalFeel(cloneTuning(defaultTuning));
     const f = measureFeel();
-    // Coyote and buffer windows with the spec's meaning equal the frame counts in tuning.
-    expect(f.raw.coyoteFrames).toBe(t.jump.coyoteFrames);
-    expect(f.raw.bufferFrames).toBe(t.jump.bufferFrames);
-    // Closed form for the Phase 0 controller: h ≈ v²/2g.
-    const h = t.jump.jumpSpeed ** 2 / (2 * t.jump.gravity);
-    expect(Math.abs(f.raw.fullJump.heightPx - h)).toBeLessThan(15);
+    // Coyote and buffer windows equal the frame counts in tuning. (The Phase 0 controller spends
+    // one of its coyote frames on the frame that walks off the ledge.)
+    expect(f.raw.coyoteFrames).toBe(LEGACY_CONTROLLER ? nominal.coyoteFrames - 1 : nominal.coyoteFrames);
+    expect(f.raw.bufferFrames).toBe(nominal.jumpBufferFrames);
+    // Apex within 10% of the configured jump height (apex hang may add a few px).
+    expect(Math.abs(f.raw.fullJump.heightPx - nominal.jumpHeightPx)).toBeLessThan(nominal.jumpHeightPx * 0.1);
+    expect(f.raw.run.topSpeed).toBeCloseTo(nominal.runPxPerFrame, 5);
     expect(f.metrics.tapFullRatio).toBeLessThan(0.5);
-    expect(f.metrics.runTilesPerS).toBeCloseTo((t.player.runSpeed / 64) * 1, 1);
     // Coyote widens the gap-jump window.
     const gap = f.forgiveness[0];
-    expect(gap && gap.on.successes - gap.off.successes).toBeGreaterThanOrEqual(t.jump.coyoteFrames - 1);
+    expect(gap && gap.on.successes - gap.off.successes).toBeGreaterThanOrEqual(nominal.coyoteFrames - 1);
   });
 
   it('is deterministic and responds to tuning', () => {
     expect(measureFeel().metrics).toEqual(measureFeel().metrics);
-    const low = measureFeel({ tuning: { jump: { jumpSpeed: 1000 } } });
+    const low = measureFeel({ tuning: { jump: { jumpSpeed: defaultTuning.jump.jumpSpeed * 0.7 } } });
     expect(low.metrics.jumpHeightTiles).toBeLessThan(measureFeel().metrics.jumpHeightTiles);
   });
 });
@@ -184,9 +198,17 @@ describe('gamepad', () => {
   });
 });
 
+describe('sim adapter', () => {
+  it('finds the controller presets when the tuning module exports them', () => {
+    const exported = Reflect.get(tuningModule, 'PRESETS') as Record<string, unknown> | undefined;
+    expect(presetNames()).toEqual(exported ? Object.keys(exported) : ['default']);
+    for (const n of presetNames()) expect(presetTuning(n)).toBeTruthy();
+  });
+});
+
 describe('player view', () => {
-  it('normalises Phase 0 px/s velocities to px/frame', () => {
+  it('reports velocities in px/frame on any controller', () => {
     const r = runScenario({ room: OPEN, inputs: '.5 R30' });
-    expect(playerView(r.final.state).vx).toBeCloseTo(defaultTuning.player.runSpeed / 60, 5);
+    expect(playerView(r.final.state).vx).toBeCloseTo(nominalFeel(defaultTuning).runPxPerFrame, 5);
   });
 });

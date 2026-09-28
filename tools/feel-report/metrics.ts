@@ -113,6 +113,10 @@ export interface JumpShape {
   dwellFrames: number;
   /** Frames from apex back to the takeoff height. */
   fallFrames: number;
+  /** Launch speed (px/f): |vy| after the jump step. */
+  launchSpeed: number;
+  /** Steady fall acceleration (px/f²): the largest vy increase while falling below max fall. */
+  fallAccel: number;
   /** Horizontal distance from takeoff to landing (px), when running. */
   distancePx: number;
 }
@@ -126,6 +130,7 @@ function measureJump(o: FeelOptions, hold: number, runIn = 0): JumpShape {
   const y0 = sim.view.y;
   const x0 = sim.view.x;
   const ys: number[] = [];
+  const vys: number[] = [];
   let apexStep = 0;
   let landStep = 0;
   let minY = y0;
@@ -133,6 +138,7 @@ function measureJump(o: FeelOptions, hold: number, runIn = 0): JumpShape {
     const evs = sim.step((i <= hold ? J : 0) | dir);
     const v = sim.view;
     ys.push(v.y);
+    vys.push(v.vy);
     if (v.y < minY) {
       minY = v.y;
       apexStep = i;
@@ -144,7 +150,16 @@ function measureJump(o: FeelOptions, hold: number, runIn = 0): JumpShape {
   }
   const h = y0 - minY;
   const dwell = ys.filter((y) => y <= minY + 0.1 * h).length;
+  let fallAccel = 0;
+  const vmax = Math.max(...vys);
+  for (let i = 1; i < vys.length - 1; i++) {
+    const a = vys[i - 1] ?? 0;
+    const b = vys[i] ?? 0;
+    if (a >= 0 && b < vmax) fallAccel = Math.max(fallAccel, b - a);
+  }
   return {
+    launchSpeed: Math.abs(vys[0] ?? 0),
+    fallAccel,
     heightPx: h,
     apexFrames: apexStep,
     airFrames: landStep,
@@ -233,25 +248,22 @@ function measureDash(o: FeelOptions): DashShape {
 }
 
 /**
- * Coyote window: walk off the ledge; the largest k such that pressing jump k frames after the
- * last grounded frame still produces a jump.
+ * Coyote window (movement-spec V08): walk off the ledge; L = the step whose movement left the
+ * ground. The window is the largest k such that pressing jump on step L + k still jumps.
  */
 function measureCoyote(o: FeelOptions): number {
   const sim = newSim(o, ledgeRoom());
   settle(sim);
-  let last: HeadlessSim | null = null;
-  for (let i = 0; i < 300; i++) {
-    const before = sim.clone();
+  let left = false;
+  for (let i = 0; i < 300 && !left; i++) {
+    const wasGrounded = sim.view.grounded;
     sim.step(R);
-    if (!sim.view.grounded && before.view.grounded) {
-      last = before; // state at the end of the last grounded frame
-      break;
-    }
+    left = wasGrounded && !sim.view.grounded;
   }
-  if (!last) return 0;
+  if (!left) return 0;
   let best = 0;
   for (let k = 1; k <= 20; k++) {
-    const b = last.clone();
+    const b = sim.clone();
     for (let i = 1; i < k; i++) b.step(R);
     if (hasEvent(b.step(R | J), 'jump')) best = k;
   }
@@ -437,8 +449,6 @@ export function measureFeel(o: FeelOptions = {}): FeelReport {
   const coyote = measureCoyote(o);
   const buffer = measureBuffer(o);
   const round = (v: number, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
-  const rise = full.apexFrames;
-  const fall = full.fallFrames;
   const metrics: FeelMetrics = {
     jumpHeightTiles: round(full.heightPx / ts),
     jumpHeightBodies: round(full.heightPx / bodyH),
@@ -446,7 +456,11 @@ export function measureFeel(o: FeelOptions = {}): FeelReport {
     airTimeS: round(full.airFrames / FPS),
     tapFullRatio: round(tap.heightPx / full.heightPx),
     apexDwellFrames: full.dwellFrames,
-    fallRiseGravityRatio: round((rise / Math.max(1, fall)) ** 2),
+    // Spec §3.4 definition: fall gravity over the average deceleration of the rise (V0 / T_apex).
+    // Celeste's constant-speed sustain makes the rise slow, hence its 3.0.
+    fallRiseGravityRatio: round(
+      full.fallAccel / Math.max(1e-9, full.launchSpeed / Math.max(1, full.apexFrames)),
+    ),
     runTilesPerS: round((run.topSpeed * FPS) / ts),
     runFramesToFull: run.framesToFull,
     stopDistancePx: round(run.stopDistancePx, 1),

@@ -7,7 +7,8 @@
  *   npm run bot -- --room hall --target a --save tests/replays/hall-a.json
  *   npm run bot -- --all                                       # every room's claims (bot:all)
  *
- * Options: --spawn, --seed (1), --preset, --abilities a,b (default: the room's), --budget (300000
+ * Options: --spawn, --seed (1), --preset, --abilities a,b (default: the room's),
+ * --assists-off coyote,variableJump, --budget (300000
  * child nodes), --k (4 frames per macro), --weight (1.5; 1 = shortest path, slower),
  * --max-frames (3600), --json (machine output). See memory/bot.md.
  */
@@ -18,6 +19,7 @@ import {
   ABILITIES,
   type Ability,
   type AbilitySet,
+  type AssistSet,
   roomAbilities,
   roomClaims,
   roomIds,
@@ -37,6 +39,7 @@ const { values: args } = parseArgs({
     seed: { type: 'string', default: '1' },
     preset: { type: 'string' },
     abilities: { type: 'string' },
+    'assists-off': { type: 'string' },
     budget: { type: 'string' },
     k: { type: 'string' },
     weight: { type: 'string' },
@@ -74,6 +77,8 @@ function baseOpts(room: string, target: string, abilities: AbilitySet): SearchOp
   const o: SearchOptions = { room, target, abilities, seed: Number(args.seed) };
   if (args.spawn) o.spawn = args.spawn;
   if (args.preset) o.preset = args.preset;
+  if (args['assists-off'])
+    o.assists = Object.fromEntries(args['assists-off'].split(',').map((a) => [a, false])) as AssistSet;
   if (args.budget) o.budget = Number(args.budget);
   if (args.k) o.macroFrames = Number(args.k);
   if (args.weight) o.weight = Number(args.weight);
@@ -126,7 +131,13 @@ function runAll(): void {
   for (const room of roomIds()) {
     const claims = roomClaims(room);
     const roomAbil = roomAbilities(room);
-    const checks: { target: string; abilities: AbilitySet; expect: boolean | null; label: string }[] = [];
+    const checks: {
+      target: string;
+      abilities: AbilitySet;
+      assists?: AssistSet;
+      expect: boolean | null;
+      label: string;
+    }[] = [];
     if (Object.keys(claims).length === 0) {
       for (const t of Object.keys(roomTargets(room))) {
         if (t === 'spawn:default') continue;
@@ -143,13 +154,25 @@ function runAll(): void {
           label: `${t} with [${c.with.join(',')}]`,
         });
         for (const a of c.without) {
-          const w = { ...roomAbil, ...withSet, [a]: false };
-          checks.push({ target: t, abilities: w, expect: false, label: `${t} without ${a}` });
+          // `without` names an ability (removed) or an assist (switched off), e.g. gym-03 variableJump.
+          const isAbility = (ABILITIES as readonly string[]).includes(a);
+          const w = isAbility ? { ...withSet, [a]: false } : withSet;
+          const assists = isAbility ? undefined : ({ [a]: false } as AssistSet);
+          checks.push({
+            target: t,
+            abilities: w,
+            ...(assists ? { assists } : {}),
+            expect: false,
+            label: `${t} without ${a}`,
+          });
         }
       }
     }
     for (const c of checks) {
-      const r = search(baseOpts(room, c.target, c.abilities));
+      const r = search({
+        ...baseOpts(room, c.target, c.abilities),
+        ...(c.assists ? { assists: c.assists } : {}),
+      });
       const ok = c.expect === null || c.expect === r.found;
       if (!ok) failures++;
       const verdict = r.found ? `found ${r.frames}f` : r.exhausted ? 'unreachable' : 'not found in budget';
