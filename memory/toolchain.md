@@ -15,3 +15,7 @@
   because `tweakpane`'s .d.ts files import it without declaring it.
 - Playwright Test's `chromium` export is reused by the clip tool, so there's one browser install
   (`npx playwright install chromium`). `playwright-cli` keeps its own files in `.playwright-cli/` (gitignored).
+- **Pushing workflow changes:** the `gh` HTTPS token lacks the `workflow` scope, so a push that touches
+  `.github/workflows/` is rejected. Push over SSH instead: `git push git@github.com:mj1618/opusvania.git main`.
+- **CI/Pages:** `ci.yml` runs `npm run check` (WebGL works in headless Chromium on ubuntu runners);
+  `pages.yml` deploys `main` only after CI succeeds (workflow_run), or on manual dispatch.
