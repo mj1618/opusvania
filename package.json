@@ -26,7 +26,9 @@
     "audio:render": "tsx tools/audio-render.ts",
     "fuzz": "tsx tools/fuzz.ts",
     "l3:verdict": "tsx tools/l3-verdict/cli.ts",
-    "policy": "tsx tools/bot/policies/cli.ts"
+    "policy": "tsx tools/bot/policies/cli.ts",
+    "combat:report": "tsx tools/combat/report.ts",
+    "fight": "tsx tools/combat/cli.ts"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",

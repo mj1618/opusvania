@@ -2,12 +2,8 @@
 
 Brief: docs/design/seize-levy-experiment.md. Verdict: `npm run l3:verdict` (docs/reports/L3-verdict.md).
 
-- **Step order** (`src/sim/index.ts#step`): transition → hitstop (decrement, latch movement buffers
-  + `actBuf`, nothing else) → `retryPending` + `rebuildSolids` → `kidAction` (move start/advance,
-  levy spawns on frame 4) → `updatePlayer` (L2 controller; `hurtLock` masks L/R/J/X; `recoilT`
-  overrides vx) → `kidMovementCancels` → `updateLevied` → `updateEnemies` → resolution (kid hits,
-  enemy hits on Kid, levied vs enemies, springs, plates/gates/clear) → `applyHitstop` →
-  `updateWeight` → bookkeeping. A reload happens when Kid respawns with Chin 0.
+- **Step order**: see memory/sim-architecture.md (L4 added shots, Kid's Count and hazards; Chin 0
+  is no longer a reload but her Count, memory/combat.md).
 - **Room-local state** `state.local` is rebuilt by every `loadRoom` (= regeneration). `nextId` lives
   IN `local` so a reload deep-equals a fresh load (the fuzzer asserts this).
 - **One sound-source component** (`src/sim/sources.ts`): `local.sources[]` holds objects, enemies AND
@@ -37,3 +33,5 @@ Brief: docs/design/seize-levy-experiment.md. Verdict: `npm run l3:verdict` (docs
   `npm run clip -- --tape X --skip N --frames M --study` (L3 events are sheet keyframes).
 - **Findings**: Lot 7 flows (route A 290 f vs control 280 f, 0% stillness). Pit policies are chaotic:
   small behaviour changes swing clear times 2x; contact damage + a 12-step reaction delay dominate.
+- L4: the forward Seize box reaches the floor ([28,8,64,72]) so a spring thrown short can be taken
+  back on foot (the novice's soft-lock); the verdict tapes still pass.

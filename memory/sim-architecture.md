@@ -48,3 +48,13 @@ Positions are the player's feet centre unless noted. `dir` is -1/1.
   `bagPush`, `snatch`, `absorb`, `revoice`, `retrieve`, `hurt{dmg,src}`, `telegraph{enemy,attackId,colour,frames}`,
   `attackActive`, `down`, `countTick{beat}`, `repossess`, `rise`, `ko`, `plate{char,by}`, `gateOpen`, `roomClear`.
   Audio hums follow seizeTake/levyThrow/levyLand/bagPush/snatch/absorb/revoice (src/audio/router.ts).
+- L4 (combat-spec §2): `hurt{dmg,src,attack}` (attack id or 'contact'), `hit.cls` adds 'counter',
+  `flinch`, `slipStart`, `slipClean`, `counterOpen`, `counterHit`, `ringStart|Recover|Lost`, `hazard`,
+  `swallowStart|Commit|Spill|Refused`, `bagLeak`, `hoarse`, `shot{kind}`, `shotLand`, `hop`,
+  `runnerSlip`, `kidDown`, `beatCountTick{beat,canRise}`, `beatCountRise{paid}`, `countedOut`,
+  `corner`, `distrained`, `redistrained`, `auctioned`, `poundage{amount}`, boss: `lotMarked{lot,beat}`,
+  `sold`, `soldBag`, `outbid`, `bossPhase`, `fever{level}`.
+- Step order since L4 (src/sim/index.ts): transition → hitstop → sold lots, pending sources, dynamic
+  solids → Kid action (or her Count while down) → movement → levied → shots → enemies → Kid's hits →
+  enemy hits and shots on Kid (clean Slips) → levied hits → springs → plates/gates → static leak →
+  hitstop apply → weight → bookkeeping. `state.run` survives room loads; `state.local` doesn't.

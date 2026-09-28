@@ -13,7 +13,9 @@ of the player/tuning/rooms go through `src/debug/sim-adapter.ts` (see sim-adapte
 - `state()` also returns `combat {chin, bag, weight, hitstop, iframes}`, `enemies`, `sounds` (restore()
   strips them). `spawn(type, x, feetY)` (Game method, recorded as a replay `spawn` op).
   `render.rects()` = canvas-px rects of sources/levied/enemies/HUD slots (memory/signature-render.md).
-- DSL letters: `S` seize, `V` levy (`A` = jab). Keys: V/I seize, B/O levy, Q special; pad North/East.
+- DSL letters: `S` seize, `V` levy, `H` swallow (special) (`A` = jab; Up/airborne-Down aim it). Keys:
+  V/I seize, B/O levy, Q swallow; pad North/East/LB.
+- L4: `state().combat` adds chinMax, ring, counter, down (Kid's Count), poundage, lien, deaths, fever.
 
 ## Stepping and input
 - `step(n)` switches to **manual mode** (real-time loop stops advancing), renders, returns the state.

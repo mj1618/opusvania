@@ -29,3 +29,13 @@
   optional `seize`/`levy`; claims may set `info: true` (the `with` search is informational) and
   `budget`, and claim keys may be targets like `rect:x,y,w,h`. L3 rooms (lot-7, lot-7-control,
   the-pit, stairwell) hang off the hub's right-hand doors L K T S (hub widened to 62 tiles).
+- L4 schema: `prompts` [{at: sketch tile, keys: [up, seize...], until?: `move:<id>:<dir>` or an event
+  type, near?: tiles}] = render-only in-world key glyphs; `hazard: death|pip` (pip = combat rooms:
+  spikes cost Chin, respawn at the last safe ground); `spawnGrace` (frames before enemies aggro or
+  attack); source `locked: true` (hums, can't be seized: the Auctioneer's lots); `+` = a Corner
+  (entity `corner`, spawn `corner`; the hub's stool, where a Counted Out Kid wakes).
+- L4 rooms off the hub's right doors: Y yard (aims tutorial: jump + Up+Seize a bar, Down+Levy over
+  a pit; bars sit 5 tiles up so neither a jump nor a slab + jump can mount them), T the-pit (spawn on
+  the left one-way platform, 120 f grace), W/X/Z/Q ring-barker/gull/grinder/clerk (1v1; the exit alcove
+  is sealed above the clear gate: random fuzz input jumped over a 4-tile gate), U auction (boss).
+  Hub is 87 wide.
