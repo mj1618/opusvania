@@ -98,6 +98,8 @@ export interface Levied {
   hitList: number[];
   /** Frames left showing a spring squash (render). */
   squash: number;
+  /** state.frame of the spawn step: it doesn't move that step, so the spawn position is hit-tested. */
+  born: number;
 }
 
 export type EnemyMode =

@@ -1,0 +1,69 @@
+{
+  "kind": "tape",
+  "name": "the-pit.jabOnly.s1",
+  "inputs": "R35 R+A1 .2 J1 L+J1 L+X1 L+J4 J19 R+X1 J1 L+J1 R+J3 J15 L+J4 J7 L+J3 J6 L+J3 J5 L+J2 J2 R+A1 .2 L6 R+X1 J4 L+J7 J1 L+J7 R+J4 R+X1 R+J4 J31 L9 L+A1 .3 R2 J8 L+J+X1 J2 R+J2 L+J1 R+J3 L+J2 J13 R+J5 J2 L+A1 .4 R1 L1 R2 J8 L+J+X1 J2 R+J2 L+J2 J24 R18 R+A1 J1 L+J11 J7 L+J11 J5 L+J7 J9 R14 R+A1 .2 L1 R+X1 R+J1 R1 R+J5 L1 R+J4 R3 .4 L13 L+A1 .16 L3 L+A1 .8 R+X1 R+J1 R2 .2 L10 R5 L4 R3 .3 L6 .5 J1 L+J+X1 R+J2 L+J1 R+J1 L+J2 J14 R27 R+A1 L1 R+X1 R+J1 R1 R+J5 R1 R+J3 R3 .4 L23 R5 L+A1 .16 L3 L+A1 .7 R+X1 R1 R+J1 R1 R+J1 .2 L10 .3 R2 J1 R+J2 L+J+X1 R+J2 L+J2 J20 R24 R+A1 .2 L4 R+X1 R1 R+X1 R+J1 R1 R+J1 L4 R31 J11 R+J+X1 J1 L+J2 R+J2 J27 L68 L+A1 .14 R1 J19 L+J+X1 J2 R+J2 L+J3 J28 R88 R+A1 R1 .5 L2 J19 R+J+X1 J2 L+J3 R+J2 J28 L94 L+A1 .2 J21 L+J+X1 J2 R+J3 L+J2 J27 R88 R+A1 .7 J20 R+J+X1 J2 L+J2 R+J3 J28 L93 L+A1 .2 J21 L+J+X1 J2 R+J3 L+J2 J27 R88 R+A1 .7 J20 R+J+X1 J2 L+J2 R+J3 J28 L93 L+A1 .2 J21 L+J+X1 J2 R+J3 L+J2 J27 R88 R+A1 .7 J20 R+J+X1 J2 L+J2 R+J3 J28 L93 L+A1 .2 L1 .5 L1 .1 L2 .3 L1 R10 .126 R18 R+J1 R39 R+J1 R39 R+J1 R39 R+J1 R10",
+  "expect": {
+    "target": "G",
+    "maxDeaths": 0
+  },
+  "source": "policy:jabOnly",
+  "room": "the-pit",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "0b78049094206f",
+    "build": {
+      "sha": "72505a8679-dirty",
+      "sim": "6dee6c42c8",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 1816,
+      "y": 818,
+      "frame": 2371,
+      "room": "the-pit"
+    },
+    "hash": "0881545c9ae857",
+    "hashes": [
+      "1acac3fe1dcf6f",
+      "1641574a3b56d9",
+      "061dcccf374be1",
+      "08a08f541d2b3c",
+      "1188ebd4aa8e9f",
+      "09bda9011599dc",
+      "02397ccfdb3499",
+      "07201146696933",
+      "116d9297aaf2fe",
+      "12cc363dbfa084",
+      "0a1223b9cf5775",
+      "10db8a67ce67ed",
+      "1b9855fed35418",
+      "1852f0d9597480",
+      "0460e7e705b7c8",
+      "18d3b2e9f4ec3a",
+      "134fa9ebb19b87",
+      "165f049aef1e59",
+      "1235861e0396b0",
+      "0833f700849fec",
+      "14baeccaa69036",
+      "078e40ccbd7913",
+      "14eff0c953f8fb",
+      "1eee94e1845900",
+      "0aaf6da7076f16",
+      "100be1f90d7b83",
+      "0417c22d4b2fad",
+      "08fd62d6874895",
+      "01d61cef672b55",
+      "0693e80bbae7ee",
+      "1f8c348290c928",
+      "1f5fc21c4db04f",
+      "0c8bfdd5cf77bc",
+      "18583e2fd0ba47",
+      "05d0500494260a",
+      "0f9d7c4c4db5e1",
+      "0205713a24f86a",
+      "1236e488892cc7",
+      "0486f98607c20e"
+    ]
+  },
+  "notes": "Recorded run of the jabOnly policy (tools/bot/policies/fight.ts, 12-step reaction delay) on seed 1: roomClear at 2210, G at 2371, 0 deaths, 1 hurts."
+}

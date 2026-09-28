@@ -224,6 +224,45 @@ export class HumVoice {
     return land;
   }
 
+  /**
+   * Sim-driven levy, part 1 (L3): the sound leaves Kid's hands. A whoosh starts and the voice is
+   * silent and `flying` until `land()` (the sim decides when and where it lands).
+   */
+  fly(from: Point, towards: Point): void {
+    const e = this.engine;
+    const now = e.now;
+    if (this.state === 'stopped') return;
+    e.whoosh(this.colour, from, towards, e.data.hums.levy.flightSecs, now);
+    const g = this.level.gain;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(this.currentLevel(), now);
+    g.linearRampToValueAtTime(0, now + 0.05);
+    this.flightUntil = Number.POSITIVE_INFINITY;
+    this.pos = { ...from };
+  }
+
+  /**
+   * Sim-driven levy, part 2, and every "the sound is back somewhere" case (landed object, pushed
+   * home, snatched, absorbed, revoiced): plays the colour's land thud (optional) and hums again at
+   * `at`, uncarried.
+   */
+  land(at: Point, thud = true): void {
+    const e = this.engine;
+    const now = e.now;
+    if (this.state === 'stopped') return;
+    if (thud) e.play(this.def.land, { x: at.x, y: at.y });
+    this.flightUntil = 0;
+    this.pos = { ...at };
+    this.state = 'humming';
+    this.carry.frequency.setValueAtTime(OPEN_HZ, now);
+    this.send.gain.setValueAtTime(0.08, now);
+    this.applySpatial(now, true);
+    const g = this.level.gain;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(0, now);
+    g.linearRampToValueAtTime(this.targetLevel(), now + e.data.hums.levy.rehumFadeSecs);
+  }
+
   /** Fades out and releases the voice. */
   stop(fadeSecs = 0.1, at = this.engine.now): void {
     if (this.state === 'stopped') return;

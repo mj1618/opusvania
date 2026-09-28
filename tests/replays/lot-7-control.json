@@ -1,0 +1,29 @@
+{
+  "kind": "tape",
+  "name": "lot-7-control",
+  "inputs": "R41 R+J9 R37 R+J9 R9 R+J9 R27 R+J15 R25 R+J18 R41 R+J24 R16",
+  "expect": {
+    "maxDeaths": 0,
+    "target": "G"
+  },
+  "source": "hand+trim+trim",
+  "room": "lot-7-control",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "0b78049094206f",
+    "build": {
+      "sha": "72505a8679-dirty",
+      "sim": "6dee6c42c8",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 2848,
+      "y": 496,
+      "frame": 280,
+      "room": "lot-7-control"
+    },
+    "hash": "18576290c0b297",
+    "hashes": ["0c36abdd458f94", "16e8b139fc4cc8", "1cefc875eb4bdb", "0dbbfca645c409"]
+  },
+  "notes": "L3 control (jumps only): the same route with every gate replaced by a jump. Hand-scripted (local search over jump timings, the same optimiser used for the Lot 7 tapes), then tape trim."
+}

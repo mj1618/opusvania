@@ -5,7 +5,7 @@ import { bounce } from './player/player';
 import { bagNewest, bagRemove } from './sound';
 import type { GameState, Levied, PlayerState } from './state';
 import { speedForHeight, type Tuning } from './tuning';
-import { dynSolidAt, solidAny } from './world/dynamic';
+import { addDynSolid, dynSolidAt, solidAny } from './world/dynamic';
 import type { Room } from './world/rooms';
 
 /**
@@ -170,34 +170,28 @@ export function spawnLevy(
   const d = colourDims(sound.colour, t);
   const ts = P.tileSize;
   const [ox, oy] = spawns[dir];
-  // Desired centre (spawn offsets are relative to the body facing right, mirrored for left).
-  const cx = p.x + (facing > 0 ? ox : p.w - ox);
-  const cy = p.y + oy;
   const feet = p.y + p.h;
+  const cx0 = Math.round(p.x + p.w / 2 - d.w / 2);
   let body: Body | null;
   if (dir === 'down') {
-    // Start overlapping Kid's lowest part (free space), then drop it below her feet.
+    // Start overlapping Kid's lowest part (free space), then drop it to just under her feet.
+    body = place(room, ts, d.w, d.h, cx0, feet - d.h, Math.round(p.x + ox - d.w / 2), p.y + oy);
+  } else if (dir === 'up') {
+    // Centred above her head (bottom edge at oy).
     body = place(
       room,
       ts,
       d.w,
       d.h,
-      Math.round(p.x + p.w / 2 - d.w / 2),
-      feet - d.h,
-      Math.round(cx - d.w / 2),
-      feet,
+      cx0,
+      p.y + p.h / 2 - d.h / 2,
+      Math.round(p.x + ox - d.w / 2),
+      p.y + oy - d.h,
     );
   } else {
-    body = place(
-      room,
-      ts,
-      d.w,
-      d.h,
-      Math.round(p.x + p.w / 2 - d.w / 2),
-      Math.round(p.y + p.h / 2 - d.h / 2),
-      Math.round(cx - d.w / 2),
-      Math.round(cy - d.h / 2),
-    );
+    // Forward: (ox, oy) is the box's top-left when facing right (mirrored: x' = w - ox - boxW).
+    const x1 = facing > 0 ? p.x + ox : p.x + p.w - ox - d.w;
+    body = place(room, ts, d.w, d.h, cx0, Math.round(p.y + oy), Math.round(x1), Math.round(p.y + oy));
   }
   if (!body) return false;
   const id = L.nextId++;
@@ -228,6 +222,7 @@ export function spawnLevy(
     dmg: d.dmg,
     hitList: [],
     squash: 0,
+    born: state.frame,
   };
   L.levied.push(l);
   bagRemove(L, sound.id);
@@ -271,6 +266,11 @@ function overlapsAnyActor(state: GameState, l: Levied): boolean {
   return false;
 }
 
+function materialise(l: Levied): void {
+  l.solid = true;
+  addDynSolid(l.x, l.y, l.w, l.h, l.id);
+}
+
 /** Step 6: levied entities in id order (flight -> landing -> landed; slabs materialise when clear). */
 export function updateLevied(state: GameState, room: Room, t: Tuning, events: SimEvent[]): void {
   const L = state.local;
@@ -282,6 +282,11 @@ export function updateLevied(state: GameState, room: Room, t: Tuning, events: Si
   for (const l of L.levied) {
     col.skip = l.id;
     if (l.squash > 0) l.squash--;
+    if (l.born === state.frame) {
+      // Spawned this step: stays at its spawn position (hit-tested there in step 8.3).
+      syncSource(state, l);
+      continue;
+    }
     if (l.phase === 'landed') {
       if (l.colour === 'brown') {
         // An unsupported slab falls again (its support was un-made).
@@ -294,7 +299,7 @@ export function updateLevied(state: GameState, room: Room, t: Tuning, events: Si
           l.solid = false;
           const s = L.sounds.find((x) => x.id === l.soundId);
           if (s) s.status = 'flight';
-        } else if (!l.solid && !overlapsAnyActor(state, l)) l.solid = true;
+        } else if (!l.solid && !overlapsAnyActor(state, l)) materialise(l);
       }
       if (l.phase === 'landed') {
         syncSource(state, l);
@@ -315,7 +320,7 @@ export function updateLevied(state: GameState, room: Room, t: Tuning, events: Si
         l.ry = 0;
         const s = L.sounds.find((x) => x.id === l.soundId);
         if (s) s.status = 'levied';
-        if (l.colour === 'brown' && !overlapsAnyActor(state, l)) l.solid = true;
+        if (l.colour === 'brown' && !overlapsAnyActor(state, l)) materialise(l);
         events.push({
           type: 'levyLand',
           soundId: l.soundId,

@@ -228,8 +228,8 @@ export const defaultTuning = {
     minTelegraph: 15,
     /** Frames an enemy takes to get up after the Count runs out with HP left. */
     riseFrames: 12,
-    /** Chasers stop closing in when this near Kid (px between centres). */
-    chaseStopPx: 48,
+    /** Chasers stop closing in when the gap between their body and Kid's is this small (px). */
+    chaseGapPx: 24,
   },
   /** Kid Tallow's health and hurt reaction (combat-spec §3.1). */
   kid: {

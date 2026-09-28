@@ -83,11 +83,29 @@ export class AudioSystem {
         play: (name, opts) => this.engine?.play(name, opts) ?? false,
         loopGain: (name, g) => this.engine?.loopGain(name, g),
         setRoom: (id) => this.engine?.setRoom(id),
+        hums: {
+          reset: (list) => {
+            const e = this.engine;
+            if (!e) return;
+            for (const h of e.humInfo()) if (h.id.startsWith('s')) e.getHum(h.id)?.stop(0.2);
+            for (const h of list) e.hum(h.id, h.colour as NoiseColour, h.pos);
+          },
+          seize: (id, holder) => void this.engine?.getHum(id)?.seize(holder),
+          fly: (id, from, towards) => this.engine?.getHum(id)?.fly(from, towards),
+          land: (id, at, thud) => this.engine?.getHum(id)?.land(at, thud),
+          setPosition: (id, at) => {
+            const h = this.engine?.getHum(id);
+            if (h && h.status !== 'carried') h.setPosition(at);
+          },
+        },
       },
       data.sfx,
     );
     // Every sim event goes to the router; it ignores types it has no sound for.
-    deps.bus.onAny((e) => this.router.handle(e, deps.state().frame));
+    deps.bus.onAny((e) => {
+      const s = deps.state();
+      this.router.handle(e, s.frame, s);
+    });
     for (const g of GESTURES) this.target.addEventListener(g, this.onGesture, { capture: true });
     this.target.document?.addEventListener('visibilitychange', this.onVisibility);
     this.debug = this.makeDebugApi();
@@ -115,6 +133,8 @@ export class AudioSystem {
     this.engine = engine;
     engine.listener = this.deps.listener();
     engine.setRoom(this.deps.state().roomId);
+    // Hums for the room we're already in (the roomEnter event came before audio unlocked).
+    this.router.rehum(this.deps.state());
     const m = engine.data.music;
     if (m.autoStart) engine.music.start(m.startLayer);
     ctx.addEventListener('statechange', () => {

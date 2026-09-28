@@ -327,8 +327,8 @@ export function updateEnemies(state: GameState, room: Room, t: Tuning, events: S
         break;
       }
       case 'CHASE': {
-        walkToward(e, kx, mv.chaseSpeed * sm, c.chaseStopPx);
-        if (mv.jump && e.grounded) {
+        walkToward(e, kx, mv.chaseSpeed * sm, (e.w + p.w) / 2 + c.chaseGapPx);
+        if (mv.jump && e.grounded && p.grounded) {
           const rise = e.y + e.h - (p.y + p.h);
           if (
             rise > ts / 2 &&
@@ -355,7 +355,7 @@ export function updateEnemies(state: GameState, room: Room, t: Tuning, events: S
           e,
           pos.x,
           mv.chaseSpeed * c.retrieveSpeedMult * sm,
-          s.status === 'bag' ? c.chaseStopPx : 0,
+          s.status === 'bag' ? (e.w + p.w) / 2 + c.chaseGapPx : 0,
         );
         if (s.status === 'levied' || s.status === 'flight') {
           const l = L.levied.find((x) => x.id === s.at);
@@ -373,7 +373,7 @@ export function updateEnemies(state: GameState, room: Room, t: Tuning, events: S
           const pick = pickAttack(state, e, d, true);
           if (pick) startAttack(state, e, pick[0], pick[1], t, events);
         }
-        if (mv.jump && e.grounded && s.status === 'bag') {
+        if (mv.jump && e.grounded && p.grounded && s.status === 'bag') {
           const rise = e.y + e.h - (p.y + p.h);
           if (
             rise > ts / 2 &&
@@ -738,14 +738,16 @@ export function leviedHitsEnemies(state: GameState, t: Tuning, events: SimEvent[
   }
 }
 
-/** Landed springs launch enemies that land on them (step 8.4). */
+/** Landed springs launch enemies that land on them, once per enemy per spring (step 8.4). */
 export function springEnemies(state: GameState, t: Tuning, events: SimEvent[]): void {
   for (const l of state.local.levied) {
     if (l.colour !== 'pink' || l.phase !== 'landed') continue;
     for (const e of state.local.enemies) {
-      if (isInert(e) || isDowned(e) || e.vy < 0) continue;
+      // Each spring launches a given enemy once (no endless trampolining under a slow walker).
+      if (isInert(e) || isDowned(e) || e.vy < 0 || l.hitList.includes(e.id)) continue;
       const feet = e.y + e.h;
       if (e.x < l.x + l.w && l.x < e.x + e.w && feet >= l.y && feet <= l.y + l.h + 1) {
+        l.hitList.push(e.id);
         e.vy = t.levy.pinkEnemyLaunchVy;
         l.squash = t.levy.pinkSquashFrames;
         events.push({ type: 'springBounce', levied: l.id, target: e.id, x: e.x + e.w / 2, y: feet });

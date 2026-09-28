@@ -23,7 +23,10 @@
     "feel:report": "tsx tools/feel-report/cli.ts",
     "tape": "tsx tools/tape.ts",
     "replays:update": "tsx tools/tape.ts update",
-    "audio:render": "tsx tools/audio-render.ts"
+    "audio:render": "tsx tools/audio-render.ts",
+    "fuzz": "tsx tools/fuzz.ts",
+    "l3:verdict": "tsx tools/l3-verdict/cli.ts",
+    "policy": "tsx tools/bot/policies/cli.ts"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",

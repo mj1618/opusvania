@@ -150,3 +150,42 @@ describe('EventRouter with the real sim', () => {
     expect(withAudio).toEqual(hashes);
   });
 });
+
+describe('EventRouter: L3 hums follow the sim', () => {
+  it('Lot 7 route A: hums start per home sound, the partition is seized, the spring flies and lands', () => {
+    const calls: string[] = [];
+    const f = fakeOut();
+    const out: AudioOut = {
+      ...f.out,
+      hums: {
+        reset: (list) => void calls.push(`reset:${list.map((h) => `${h.id}/${h.colour}`).join(',')}`),
+        seize: (id) => void calls.push(`seize:${id}`),
+        fly: (id) => void calls.push(`fly:${id}`),
+        land: (id, _at, thud) => void calls.push(`${thud ? 'land' : 'rehum'}:${id}`),
+        setPosition: () => {},
+      },
+    };
+    const r = new EventRouter(out, sfx);
+    const tape = JSON.parse(
+      readFileSync(join(import.meta.dirname, '../replays/lot-7.slab.json'), 'utf8'),
+    ) as TapeFile;
+    const sim = new HeadlessSim(tapeSetup(tape));
+    for (const e of sim.initEvents) r.handle(e, 0, sim.state);
+    for (const m of parseInputScript(tape.inputs))
+      for (const e of sim.step(m)) r.handle(e, sim.state.frame, sim.state);
+    // Four object sources: partition (pink), two furnaces (brown), static (white).
+    const colours = (calls[0] ?? '')
+      .replace('reset:', '')
+      .split(',')
+      .map((h) => h.split('/')[1]);
+    expect(colours.sort()).toEqual(['brown', 'brown', 'pink', 'white']);
+    const seizes = calls.filter((c) => c.startsWith('seize:'));
+    const flies = calls.filter((c) => c.startsWith('fly:'));
+    const lands = calls.filter((c) => c.startsWith('land:'));
+    expect(seizes.length).toBe(2);
+    expect(flies.length).toBe(2);
+    expect(lands.length).toBe(2);
+    // The first thing seized is the first thing thrown (the pink partition -> spring).
+    expect(flies[0]?.slice(4)).toBe(seizes[0]?.slice(6));
+  });
+});

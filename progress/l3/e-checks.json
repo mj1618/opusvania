@@ -1,0 +1,77 @@
+{
+  "E1": {
+    "ghostRatio": 0.242,
+    "hueGapMin": 64.5,
+    "contrastMin": 6.05,
+    "pass": true,
+    "detail": {
+      "ratios": {
+        "H": 0.235,
+        "F": 0.242
+      },
+      "hummingMean": {
+        "H": 58.6,
+        "F2": 52.8
+      },
+      "ghostMean": {
+        "H": 13.8,
+        "F1": 12.8
+      },
+      "measuredRgb": {
+        "brown": [
+          232,
+          162,
+          58
+        ],
+        "pink": [
+          255,
+          79,
+          163
+        ]
+      },
+      "hues": {
+        "brown": 35.9,
+        "pink": 331.4,
+        "violet": 252.2
+      },
+      "contrasts": {
+        "brown": 8.47,
+        "pink": 6.05,
+        "violet": 6.29
+      },
+      "note": "violet is the palette token: no L3 room has a violet source. bg = #12141A token. Kid box masked.",
+      "pitBarkerBand": {
+        "telegraph": 52.4,
+        "disarmed": 25.4
+      }
+    }
+  },
+  "E2": {
+    "diffFrac": 1,
+    "pass": true,
+    "detail": {
+      "diffFracWithKid": 1,
+      "pixels": 1796,
+      "bboxPixels": 2048
+    }
+  },
+  "E3": {
+    "ghostSameFrame": true,
+    "passableNext": true,
+    "pass": true,
+    "detail": {
+      "statusBefore": "humming",
+      "statusOnTakeFrame": "ghost",
+      "hitstopStepsAfterTake": 5,
+      "stepsToFirstMove": 6,
+      "note": "The take starts a 5 f global hitstop (combat-spec §2), so the first step on which Kid moves is the \"next\" step; she enters the old wall rect on it."
+    }
+  },
+  "checkpoints": {
+    "cp1": 20,
+    "cp2": 64,
+    "cp3": 240,
+    "cp4": 517,
+    "route": "tests/replays/lot-7.slab.json"
+  }
+}

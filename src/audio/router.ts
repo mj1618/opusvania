@@ -9,10 +9,34 @@ import type { PlayOpts } from './engine';
  * wallSlideStart..wallSlideEnd span is open. Every one-shot sound comes from a real sim event.
  */
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/** Hum voices for the sim's sounds (L3): one per sound id, keyed `s<id>`. */
+export interface HumOut {
+  /** Replaces every hum with these (a room was entered). */
+  reset(hums: { id: string; colour: string; pos: Point }[]): void;
+  seize(id: string, holder: Point): void;
+  fly(id: string, from: Point, towards: Point): void;
+  /** The sound is somewhere again (landed, pushed home, snatched, absorbed, revoiced). */
+  land(id: string, at: Point, thud: boolean): void;
+  setPosition(id: string, at: Point): void;
+}
+
 export interface AudioOut {
   play(name: string, opts?: PlayOpts): boolean;
   loopGain(name: string, gain: number): void;
   setRoom(roomId: string): void;
+  hums?: HumOut;
+}
+
+/** The parts of the sim's room-local state the router reads (hums follow the sounds). */
+export interface RouterLocal {
+  sources: { id: number; x: number; y: number; w: number; h: number }[];
+  sounds: { id: number; colour: string; owner: number; status: string; at: number }[];
+  levied: { id: number; soundId: number; x: number; y: number; w: number; h: number }[];
 }
 
 /** The parts of GameState the router reads. */
@@ -20,7 +44,10 @@ export interface RouterState {
   frame: number;
   roomId: string;
   player: { x: number; y: number; w: number; h: number; vy: number };
+  local?: RouterLocal;
 }
+
+export const humId = (soundId: number): string => `s${soundId}`;
 
 export interface RoutedEvent {
   frame: number;
@@ -41,17 +68,49 @@ export class EventRouter {
     private readonly sfx: SfxFile,
   ) {}
 
-  handle(e: SimEvent, frame = this.frame): void {
+  handle(e: SimEvent, frame = this.frame, s?: RouterState): void {
     this.frame = frame;
     const ev = this.sfx.events;
+    const hums = this.out.hums;
     switch (e.type) {
       case 'roomEnter':
         this.roomId = e.roomId;
         this.out.setRoom(e.roomId);
         this.wallSliding = false;
         this.out.loopGain(ev.wallSlide.loop, 0);
+        this.resetHums(s);
         this.record(e.type, null, false);
         return;
+      // --- L3 hums: they only follow the sim (read-only). ---
+      case 'seizeTake': {
+        const p = s?.player;
+        hums?.seize(humId(e.soundId), p ? { x: p.x + p.w / 2, y: p.y + p.h / 2 } : { x: e.x, y: e.y });
+        this.record(e.type, 'seize', !!hums);
+        return;
+      }
+      case 'seizeRefused':
+        this.emit(e.type, 'seizeRefused', e);
+        return;
+      case 'levyThrow': {
+        const p = s?.player;
+        const from = p ? { x: p.x + p.w / 2, y: p.y + p.h / 2 } : { x: e.x, y: e.y };
+        hums?.fly(humId(e.soundId), from, { x: e.x, y: e.y });
+        this.record(e.type, 'whoosh', !!hums);
+        return;
+      }
+      case 'levyLand':
+        hums?.land(humId(e.soundId), { x: e.x, y: e.y }, true);
+        this.record(e.type, `levyLand${e.colour[0]?.toUpperCase()}${e.colour.slice(1)}`, !!hums);
+        return;
+      case 'bagPush':
+      case 'snatch':
+      case 'absorb':
+      case 'revoice': {
+        const home = this.ownerPos(s, e.soundId) ?? { x: e.x, y: e.y };
+        hums?.land(humId(e.soundId), home, false);
+        this.record(e.type, 'rehum', !!hums);
+        return;
+      }
       case 'jump':
         this.emit(e.type, ev.jump.byKind[e.kind] ?? ev.jump.default, e);
         return;
@@ -75,6 +134,32 @@ export class EventRouter {
     }
   }
 
+  /** Rebuilds the hums from the current state (audio unlocked mid-room). */
+  rehum(s: RouterState): void {
+    this.resetHums(s);
+  }
+
+  private resetHums(s?: RouterState): void {
+    const hums = this.out.hums;
+    const L = s?.local;
+    if (!hums || !L) return;
+    const list: { id: string; colour: string; pos: Point }[] = [];
+    for (const snd of L.sounds) {
+      if (snd.status !== 'home') continue;
+      const pos = this.ownerPos(s, snd.id);
+      if (pos) list.push({ id: humId(snd.id), colour: snd.colour, pos });
+    }
+    hums.reset(list);
+  }
+
+  /** Centre of the source that owns a sound. */
+  private ownerPos(s: RouterState | undefined, soundId: number): Point | null {
+    const L = s?.local;
+    const snd = L?.sounds.find((x) => x.id === soundId);
+    const src = snd ? L?.sources.find((x) => x.id === snd.owner) : undefined;
+    return src ? { x: src.x + src.w / 2, y: src.y + src.h / 2 } : null;
+  }
+
   /**
    * Per render frame: the wall-slide loop follows slide speed while a slide is open. Also follows
    * room changes that bypass events (restore(), replay/tape playback replace the whole state).
@@ -85,6 +170,18 @@ export class EventRouter {
       this.roomId = s.roomId;
       this.wallSliding = false;
       this.out.setRoom(s.roomId);
+      this.resetHums(s);
+    }
+    // Thrown sounds hum where their levied object is; enemy voices follow their owner.
+    const L = s.local;
+    const hums = this.out.hums;
+    if (L && hums) {
+      for (const l of L.levied) hums.setPosition(humId(l.soundId), { x: l.x + l.w / 2, y: l.y + l.h / 2 });
+      for (const snd of L.sounds) {
+        if (snd.status !== 'home') continue;
+        const pos = this.ownerPos(s, snd.id);
+        if (pos) hums.setPosition(humId(snd.id), pos);
+      }
     }
     const w = this.sfx.events.wallSlide;
     const vy = s.player.vy;

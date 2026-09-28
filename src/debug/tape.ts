@@ -13,6 +13,7 @@
  */
 
 import { formatInputScript as formatTape, parseInputScript as parseTape } from '../input/script';
+import type { SimEvent } from '../sim/events';
 import type { GameState } from '../sim/index';
 import type { Tuning } from '../sim/tuning';
 import { type BuildMeta, buildMeta, explainMismatch, sameSim } from './build-info';
@@ -40,6 +41,14 @@ export interface TapeAssert {
   max?: number;
 }
 
+/** An event expectation (L3 brief §6.1): count events of `type` whose raw fields match `match`. */
+export interface TapeEventExpect {
+  type: string;
+  match?: Record<string, unknown>;
+  min?: number;
+  max?: number;
+}
+
 export interface TapeExpect {
   /** Target the player must reach (see resolveTarget: `G`, `spawn:a`, `tile:x,y`...). */
   target?: string;
@@ -48,6 +57,7 @@ export interface TapeExpect {
   /** Max deaths allowed (default 0). */
   maxDeaths?: number;
   assert?: TapeAssert[];
+  events?: TapeEventExpect[];
 }
 
 export interface TapeGolden {
@@ -91,6 +101,8 @@ export interface TapeRun {
   tuningHash: string;
   /** Player view per frame, for assertions. Index i = after step i+1. */
   views: PlayerView[];
+  /** Counts per event expectation (same order as expect.events). */
+  eventCounts: number[];
 }
 
 export function tapeSetup(t: TapeFile): SimSetup {
@@ -113,10 +125,16 @@ export function runTape(t: TapeFile): TapeRun {
   let reachedAt: number | undefined;
   let deaths = 0;
   let steps = 0;
+  const want = t.expect.events ?? [];
+  const eventCounts = want.map(() => 0);
   for (const input of parseTape(t.inputs)) {
     const evs = sim.step(input);
     steps++;
-    for (const e of evs) if (normEvent(e).type === 'death') deaths++;
+    for (const e of evs) {
+      if (normEvent(e).type === 'death') deaths++;
+      for (let i = 0; i < want.length; i++)
+        if (eventMatches(e, want[i] as TapeEventExpect)) eventCounts[i] = (eventCounts[i] ?? 0) + 1;
+    }
     const v = sim.view;
     views.push(v);
     if (target && reachedAt === undefined && overlaps(v, target)) reachedAt = steps;
@@ -131,9 +149,18 @@ export function runTape(t: TapeFile): TapeRun {
     deaths,
     tuningHash: tuningHash(sim.tuning),
     views,
+    eventCounts,
   };
   if (reachedAt !== undefined) run.reachedAt = reachedAt;
   return run;
+}
+
+function eventMatches(e: SimEvent, w: TapeEventExpect): boolean {
+  if (e.type !== w.type) return false;
+  if (!w.match) return true;
+  const r = e as unknown as Record<string, unknown>;
+  for (const [k, v] of Object.entries(w.match)) if (r[k] !== v) return false;
+  return true;
 }
 
 export type GoldenStatus = 'match' | 'stale' | 'mismatch' | 'none';
@@ -166,6 +193,12 @@ export function checkTape(t: TapeFile): TapeCheck {
   }
   const maxDeaths = e.maxDeaths ?? 0;
   if (run.deaths > maxDeaths) failures.push(`${run.deaths} deaths (max ${maxDeaths})`);
+  (e.events ?? []).forEach((w, i) => {
+    const n = run.eventCounts[i] ?? 0;
+    const what = `${w.type}${w.match ? JSON.stringify(w.match) : ''}`;
+    if (w.min !== undefined && n < w.min) failures.push(`${n} ${what} events, expected >= ${w.min}`);
+    if (w.max !== undefined && n > w.max) failures.push(`${n} ${what} events, expected <= ${w.max}`);
+  });
   for (const a of e.assert ?? []) {
     const idx = a.frame === undefined ? run.views.length - 1 : a.frame - 1;
     const v = run.views[idx];
@@ -250,6 +283,48 @@ export function makeTape(
   if (setup.assists !== undefined) t.assists = setup.assists;
   if (setup.abilities !== undefined) t.abilities = setup.abilities;
   return withGolden(t);
+}
+
+/**
+ * Greedy tape trimmer (L3 brief §6.1): repeatedly shortens each input segment by one frame
+ * (dropping it at zero) while the behavioural expectations still pass and the target is reached no
+ * later; cuts everything after the target; repeats until nothing changes. Deterministic, so a
+ * trimmed tape re-trims to the same length (the verdict's integrity guard checks that).
+ */
+export function trimTape(t: TapeFile): { tape: TapeFile; before: number; after: number; tries: number } {
+  const base = { ...t, golden: undefined };
+  const behaves = (inputs: string): TapeRun | null => {
+    const c = checkTape({ ...base, inputs });
+    return c.ok ? c.run : null;
+  };
+  const first = behaves(t.inputs);
+  if (!first) throw new Error(`trimTape: ${t.name} does not pass before trimming`);
+  const cut = (masks: number[], run: TapeRun): number[] =>
+    run.reachedAt !== undefined ? masks.slice(0, run.reachedAt) : masks;
+  let masks = cut(parseTape(t.inputs), first);
+  let best = first.reachedAt ?? masks.length;
+  const before = best;
+  let tries = 0;
+  for (let changed = true; changed; ) {
+    changed = false;
+    // Segments: runs of identical masks.
+    for (let i = 0; i < masks.length; ) {
+      let n = 1;
+      while (masks[i + n] === masks[i]) n++;
+      const next = [...masks.slice(0, i), ...masks.slice(i + 1)];
+      tries++;
+      const run = behaves(formatTape(next));
+      const at = run?.reachedAt ?? next.length;
+      if (run && at <= best) {
+        masks = cut(next, run);
+        best = at;
+        changed = true;
+        // Stay on this segment (it is one frame shorter now, or gone).
+      } else i += n;
+    }
+  }
+  const tape = withGolden({ ...t, inputs: formatTape(masks), source: `${t.source ?? 'hand'}+trim` });
+  return { tape, before, after: best, tries };
 }
 
 export function isTapeFile(x: unknown): x is TapeFile {

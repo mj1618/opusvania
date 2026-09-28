@@ -5,9 +5,11 @@
  *   npm run tape -- check                          # all tests/replays/*.json (tapes and raw replays)
  *   npm run tape -- check tests/replays/x.json
  *   npm run tape -- record --room gym-02 --script "R60 R+J16 R40" --target G --name my-tape
+ *        [--events '[{"type":"plate","match":{"by":"slab"},"min":1}]'] [--notes "..."]
  *   npm run tape -- from-replay dump.json --name bug-12 [--target G]   # a __game.replay.stop() dump
  *   npm run tape -- update [files]                 # re-record goldens (after an intended sim/tuning change)
  *   npm run tape -- update --resolve [files]       # also re-solve with the bot when the inputs no longer reach the target
+ *   npm run tape -- trim tests/replays/x.json      # greedy trim (L3 expert tapes): shorten segments while expect passes
  *
  * From the browser: __game.tape.record(); ...play...; copy(JSON.stringify(__game.tape.stop({name, expect})))
  * or with playwright-cli: eval "JSON.stringify(window.__game.tape.stop({name:'x'}))" > file.
@@ -18,7 +20,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { explainMismatch } from '../src/debug/build-info';
-import { checkTape, isTapeFile, makeTape, type TapeFile, withGolden } from '../src/debug/tape';
+import { checkTape, isTapeFile, makeTape, type TapeFile, trimTape, withGolden } from '../src/debug/tape';
 import { type Replay, runReplay } from '../src/sim/replay';
 import { search } from './bot/search';
 import { installBuildInfo } from './lib/build-info';
@@ -38,6 +40,8 @@ const { values: args, positionals } = parseArgs({
     script: { type: 'string' },
     target: { type: 'string' },
     'max-frames': { type: 'string' },
+    events: { type: 'string' },
+    notes: { type: 'string' },
     name: { type: 'string' },
     out: { type: 'string' },
     resolve: { type: 'boolean', default: false },
@@ -152,7 +156,9 @@ function record(): void {
   const expect: TapeFile['expect'] = { maxDeaths: 0 };
   if (args.target) expect.target = args.target;
   if (args['max-frames']) expect.maxFrames = Number(args['max-frames']);
+  if (args.events) expect.events = JSON.parse(args.events) as TapeFile['expect']['events'];
   const tape = makeTape(name, setup, args.script, expect, 'hand');
+  if (args.notes) tape.notes = args.notes;
   const c = checkTape(tape);
   if (!c.ok) {
     console.log(`not saved: ${c.failures.join('; ')}`);
@@ -186,9 +192,23 @@ function fromReplay(): void {
   write(resolve(args.out ?? join(REPLAY_DIR, `${name}.json`)), tape);
 }
 
+function trim(): void {
+  for (const f of files.map((x) => resolve(x))) {
+    const data = JSON.parse(readFileSync(f, 'utf8')) as unknown;
+    if (!isTapeFile(data)) {
+      console.log(`skip ${basename(f)}: not a tape`);
+      continue;
+    }
+    const r = trimTape(data);
+    console.log(`${basename(f)}: target at ${r.before} -> ${r.after} frames (${r.tries} tries)`);
+    write(f, r.tape);
+  }
+}
+
 if (args.help || !cmd) usage(args.help ? 0 : 1);
 if (cmd === 'check') check();
 else if (cmd === 'update') update();
 else if (cmd === 'record') record();
 else if (cmd === 'from-replay') fromReplay();
+else if (cmd === 'trim') trim();
 else usage(1);

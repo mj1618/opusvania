@@ -1,0 +1,58 @@
+{
+  "kind": "tape",
+  "name": "the-pit.signature.s2",
+  "inputs": "R35 R+A1 .2 J1 L+J1 L+X1 L+J4 J19 R+X1 J1 L+J1 R+J3 J15 L+J4 J7 L+J3 J6 L+J3 J5 L+J2 J2 R+A1 .2 L6 R+X1 R+S1 J3 L+J7 J1 L+J7 R+J4 R+X1 R+J4 J31 L9 L+A1 .3 R2 J8 L+J+X1 J2 R+J2 L+J1 R+J3 L+J2 J13 R+J5 J2 L+A1 .4 R1 L1 R2 J8 L+J+X1 J2 R+J2 L+J2 J24 R18 R+A1 J1 L+J11 J7 L+J11 J5 L+J7 J9 R14 R+A1 .2 L1 R+X1 R+J1 R1 R+J5 L1 R+J4 L+S1 R3 .3 L15 L+S1 .17 R2 L+V1 .15 L9 R5 L4 R2 L13 R1 L1 J1 R+J2 L+J+X1 R+J3 L+J2 J19 R13 R+S1 .17 R16 R+V1 .4 L3 R+X1 R1 R+X1 J3 L+J2 J39 R+X1 R+J8 J7 L10 .2 R2 R+X1 R+J1 R1 R+J2 R3 .1 L9 .1 R5 L17 .1 R4 R+X1 J1 R+J1 L+J1 R+J7 J17 R+J8 J11 R+J4 J2 L+A1 .4 R4 L+X1 L+S1 J3 R+J7 J1 R+J19 L+J3 J18 L7 L+S1 .1 R3 L5 R3 .6 L3 .1 L+S1 .1 J3 L+J+X1 J1 R+J3 L+J2 J18 .1 L+J+X1 J1 .1 R+J2 L+J2 J46 R10 J11 R+J+X1 J1 L+J3 R+J2 J11 L+J8 J7 R3 R+A1 .5 J3 .1 J15 R+J+X1 J2 L+J3 R+J2 J27 L10 J12 L+J+X1 J1 R+J3 L+J2 J26 R13 R+A1 .2 L4 L+X1 L1 L+X1 L+J1 L1 R+S1 R11 .1 R+S1 R1 R+S1 R1 L+S1 L1 L+S1 L1 L+S1 L1 L+S1 L1 L+S1 L1 L+S1 L1 L+S1 L1 L+S1 L1 R2 .1 L14 .2 R+V1 .15 L12 J7 L+J+X1 J1 R+J2 L+J2 J47 R57 R+A1 .3 J21 R+J+X1 J2 L+J2 R+J3 J27 L93 .3 L+S1 .2 R5 .10 R12 L3 D+J1 R57 R+S1 .19 R+V1 L1 .26 R+S1 .17 R16 R+J1 R39 R+J1 R14",
+  "expect": {
+    "target": "G",
+    "maxDeaths": 0
+  },
+  "source": "policy:signature",
+  "room": "the-pit",
+  "seed": 2,
+  "golden": {
+    "tuningHash": "0b78049094206f",
+    "build": {
+      "sha": "72505a8679-dirty",
+      "sim": "6dee6c42c8",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 1757,
+      "y": 880,
+      "frame": 1695,
+      "room": "the-pit"
+    },
+    "hash": "1d0ecda146cdb1",
+    "hashes": [
+      "13780fbcb308dc",
+      "0e2f617d65d296",
+      "1339acbb358ffd",
+      "0ea6c62eb41b78",
+      "0f800666db26b0",
+      "0867dd50d94b86",
+      "01b07f4aeca221",
+      "005b183a061eda",
+      "0e9146282ee1e5",
+      "0eda562ace4d4f",
+      "1ae4d80c07e69f",
+      "0e1cc57e69f957",
+      "0264cb9736ba11",
+      "0f058e8ee2a17f",
+      "03412b71f8f9c2",
+      "0c3c7014bf1a21",
+      "0643a750c4a674",
+      "0258df9e95af1f",
+      "131adf803b2116",
+      "0816961bef6075",
+      "0a84cf7e6ec60f",
+      "127c31d4faee09",
+      "0a714fadb057b5",
+      "13a3bca8119b19",
+      "0582dafd471b25",
+      "08137846f95691",
+      "0a273c1223528d",
+      "177109ab08fa00"
+    ]
+  },
+  "notes": "Recorded run of the signature policy (tools/bot/policies/fight.ts, 12-step reaction delay) on seed 2: roomClear at 1612, G at 1695, 0 deaths, 4 hurts."
+}

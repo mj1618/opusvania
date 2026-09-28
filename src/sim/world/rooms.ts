@@ -90,6 +90,10 @@ export type CameraZoneDef = z.infer<typeof CameraZone>;
 const Claim = z.object({
   with: z.array(z.string()),
   without: z.array(z.string()).default([]),
+  /** The `with` search is informational (may not be found in budget); `without` still must fail. */
+  info: z.boolean().optional(),
+  /** Bot budget (child nodes) for this claim's searches. */
+  budget: z.number().int().positive().optional(),
 });
 
 export const RoomFileSchema = z

@@ -27,11 +27,14 @@ import { ActionBit } from '../../src/sim/input';
 export interface Macro {
   name: string;
   mask: number;
-  /** Ability the macro needs (dash / pogo); others are always available. */
-  needs?: 'dash' | 'pogo';
+  /** Ability the macro needs (dash / pogo / seize / levy); others are always available. */
+  needs?: 'dash' | 'pogo' | 'seize' | 'levy';
 }
 
-/** The spec's 12 macros (`. L R J LJ RJ X LX RX DA LDA RDA`) plus `DJ` for drop-through. */
+/**
+ * The spec's 12 macros (`. L R J LJ RJ X LX RX DA LDA RDA`), `DJ` for drop-through, and the L3
+ * verbs (`S US DS LS RS V UV DV LV RV RJS RJV`).
+ */
 export const ALL_MACROS: Macro[] = [
   { name: '.', mask: 0 },
   { name: 'L', mask: ActionBit.left },
@@ -47,6 +50,19 @@ export const ALL_MACROS: Macro[] = [
   { name: 'DA', mask: ActionBit.down | ActionBit.attack, needs: 'pogo' },
   { name: 'LDA', mask: ActionBit.left | ActionBit.down | ActionBit.attack, needs: 'pogo' },
   { name: 'RDA', mask: ActionBit.right | ActionBit.down | ActionBit.attack, needs: 'pogo' },
+  // L3 brief §3: Seize and Levy (dropped when the room or claim removes the ability).
+  { name: 'S', mask: ActionBit.seize, needs: 'seize' },
+  { name: 'US', mask: ActionBit.up | ActionBit.seize, needs: 'seize' },
+  { name: 'DS', mask: ActionBit.down | ActionBit.seize, needs: 'seize' },
+  { name: 'LS', mask: ActionBit.left | ActionBit.seize, needs: 'seize' },
+  { name: 'RS', mask: ActionBit.right | ActionBit.seize, needs: 'seize' },
+  { name: 'V', mask: ActionBit.levy, needs: 'levy' },
+  { name: 'UV', mask: ActionBit.up | ActionBit.levy, needs: 'levy' },
+  { name: 'DV', mask: ActionBit.down | ActionBit.levy, needs: 'levy' },
+  { name: 'LV', mask: ActionBit.left | ActionBit.levy, needs: 'levy' },
+  { name: 'RV', mask: ActionBit.right | ActionBit.levy, needs: 'levy' },
+  { name: 'RJS', mask: ActionBit.right | ActionBit.jump | ActionBit.seize, needs: 'seize' },
+  { name: 'RJV', mask: ActionBit.right | ActionBit.jump | ActionBit.levy, needs: 'levy' },
 ];
 
 export function macrosFor(abilities: AbilitySet): Macro[] {

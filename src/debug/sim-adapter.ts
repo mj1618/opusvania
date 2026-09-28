@@ -372,6 +372,9 @@ export interface TargetClaim {
   with: Ability[];
   /** Abilities or assists whose removal must make the target not found. */
   without: (Ability | Assist)[];
+  /** The `with` search is informational (not a failure when not found in budget). */
+  info?: boolean;
+  budget?: number;
 }
 
 /**
@@ -393,6 +396,8 @@ export function roomClaims(roomId: string): Record<string, TargetClaim> {
     out[name] = {
       with: c.with as Ability[],
       without: Array.isArray(c.without) ? (c.without as (Ability | Assist)[]) : [],
+      ...(c.info === true ? { info: true } : {}),
+      ...(typeof c.budget === 'number' ? { budget: c.budget } : {}),
     };
   }
   return out;

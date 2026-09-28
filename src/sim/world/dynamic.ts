@@ -32,6 +32,14 @@ function push(x: number, y: number, w: number, h: number, id: number): void {
   count++;
 }
 
+/**
+ * Adds a solid mid-step (a slab that materialises in step 6 must block the enemies that move in
+ * step 7 of the same step; the next rebuild includes it anyway).
+ */
+export function addDynSolid(x: number, y: number, w: number, h: number, id: number): void {
+  push(x, y, w, h, id);
+}
+
 /** Rebuilds the dynamic solid list from state (step 3 of the per-step order). */
 export function rebuildSolids(state: GameState, ts: number): void {
   count = 0;

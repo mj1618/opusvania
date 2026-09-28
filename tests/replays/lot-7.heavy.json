@@ -1,0 +1,38 @@
+{
+  "kind": "tape",
+  "name": "lot-7.heavy",
+  "inputs": "R36 R+S1 R48 R+J10 D+V1 R59 R+S1 R40 R+S1 R63 R+J8 R+D+V1 R38",
+  "expect": {
+    "maxDeaths": 0,
+    "target": "G",
+    "events": [
+      {
+        "type": "plate",
+        "match": {
+          "by": "heavy"
+        },
+        "min": 1
+      }
+    ]
+  },
+  "source": "hand+trim+trim",
+  "room": "lot-7",
+  "seed": 1,
+  "golden": {
+    "tuningHash": "0b78049094206f",
+    "build": {
+      "sha": "72505a8679-dirty",
+      "sim": "6dee6c42c8",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 2843,
+      "y": 496,
+      "frame": 307,
+      "room": "lot-7"
+    },
+    "hash": "084850b20ef331",
+    "hashes": ["079442c50f732d", "1b4860c182e786", "1f1f6c7b5dde62", "037cd51ed04fd2", "0975d73d78f83b"]
+  },
+  "notes": "L3 route B (expert, 5 verbs): seize the partition, down-levy pink under the corridor ceiling and bounce, seize F2 and F1 on the run (heavy), run over the plate (heavy press opens the gate), jump and down-levy brown for the recoil hop over the 3-tile step. Hand-scripted, then tape trim."
+}

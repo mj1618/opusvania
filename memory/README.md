@@ -17,3 +17,4 @@ Keep entries current; delete stale ones.
 - [Feel report](feel-report.md) — `npm run feel:report`: metric definitions, envelope, forgiveness sweeps
 - [Loop timing](loop-timing.md) — why the fixed-step loop snaps near-60Hz frame times
 - [Audio](audio.md) — src/audio map, event contract, `npm run audio:render` offline level checks, Web Audio gotchas
+- [Signature render](signature-render.md) — L3 sources/enemies/bag HUD drawing, palette, `render.rects()`, E-check test

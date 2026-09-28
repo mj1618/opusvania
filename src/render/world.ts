@@ -5,6 +5,8 @@ import { tuning } from '../sim/tuning';
 import { getRoom, type Room, Tile, tileAt } from '../sim/world/rooms';
 import { type CameraState, createCamera, stepCamera, VIEW_H, VIEW_W } from './camera/index';
 import { fxTuning, Juice } from './fx';
+import { BagHud } from './hud';
+import { SignatureRenderer } from './signature';
 
 /** Greybox palette (movement-spec §5). */
 const COLORS = {
@@ -68,6 +70,9 @@ export class WorldRenderer {
   readonly juice = new Juice();
   /** The player position as last drawn (interpolated, before rounding). */
   drawnPlayer = { x: 0, y: 0 };
+  /** L3 signature-mechanic readability layer (sources, levied, enemies, bag HUD). */
+  readonly sig: SignatureRenderer;
+  readonly bagHud: BagHud;
   private builtRoomVersion = -1;
   private fadeIn = 0;
 
@@ -76,13 +81,17 @@ export class WorldRenderer {
     private readonly game: Game,
   ) {
     app.stage.addChild(this.world, this.screen);
+    this.sig = new SignatureRenderer(game);
+    this.bagHud = new BagHud(game);
     this.world.addChild(
       this.bg,
       this.tiles,
       this.labels,
+      this.sig.back,
       this.fxBack,
       this.player,
       this.fxFront,
+      this.sig.front,
       this.overlay,
     );
     this.hud = new Text({
@@ -90,7 +99,7 @@ export class WorldRenderer {
       style: { fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 22, fill: 0xaab3c8 },
     });
     this.hud.position.set(24, 18);
-    this.screen.addChild(this.flash, this.fade, this.hud);
+    this.screen.addChild(this.bagHud.container, this.flash, this.fade, this.hud);
     const room = getRoom(game.state.roomId);
     this.camera = createCamera(game.state, room);
     this.prevCam = { ...this.camera };
@@ -109,6 +118,8 @@ export class WorldRenderer {
       this.fadeIn = render.fadeInFrames;
     } else if (this.fadeIn > 0) this.fadeIn--;
     this.juice.step(s, events);
+    this.sig.step(events);
+    this.bagHud.step(events);
   }
 
   private syncRoom(room: Room): void {
@@ -118,6 +129,8 @@ export class WorldRenderer {
     this.camera = createCamera(this.game.state, room);
     this.prevCam = { ...this.camera };
     this.juice.reset();
+    this.sig.reset();
+    this.bagHud.reset();
   }
 
   private buildRoom(room: Room): void {
@@ -235,6 +248,8 @@ export class WorldRenderer {
     this.world.position.set(-Math.round(camX), -Math.round(camY));
 
     this.drawPlayer(px, py);
+    this.sig.draw(alpha, { x: px, y: py });
+    this.bagHud.draw(this.world.position);
     this.drawFx();
     this.drawScreen(alpha);
   }
@@ -249,7 +264,7 @@ export class WorldRenderer {
     this.player.visible = true;
     const w = p.w;
     const h = p.h;
-    const body = p.state === 'dash' ? COLORS.playerDash : COLORS.player;
+    const body = this.sig.kidTint() ?? (p.state === 'dash' ? COLORS.playerDash : COLORS.player);
     g.roundRect(-w / 2, -h, w, h, 10).fill(body);
     // Dash-ready band (Celeste's hair-colour trick): blue when an air dash is available.
     if (p.abilities.dash) {
@@ -259,18 +274,27 @@ export class WorldRenderer {
     const eyeX = p.facing > 0 ? w / 2 - 14 : -w / 2 + 6;
     g.rect(eyeX, -h + 18, 8, 12).fill(COLORS.playerEye);
     this.player.position.set(Math.round(px + w / 2), Math.round(py + h));
-    this.player.scale.set(this.juice.sx, this.juice.sy);
+    const [kx, ky] = this.sig.kidScale();
+    this.player.scale.set(this.juice.sx * kx, this.juice.sy * ky);
+    this.player.alpha = this.sig.kidAlpha();
   }
 
   /** Canvas-px rects of L3 things as last drawn (for the E readability checks). */
   rects(): import('../debug/api').RenderRect[] {
-    return [];
+    const ox = this.world.position.x;
+    const oy = this.world.position.y;
+    const out = this.sig
+      .worldRects()
+      .filter((r) => r.kind !== 'plate')
+      .map((r) => ({ ...r, x: Math.round(r.x + ox), y: Math.round(r.y + oy) }));
+    return [...out, ...this.bagHud.slotRects().map((r) => ({ ...r }))];
   }
 
   /** Death: the body flashes white, turns red and swells for the hold, then pops (juice burst). */
   private drawDeathPop(): void {
     const d = this.juice.death;
     this.player.visible = d !== null;
+    this.player.alpha = 1;
     if (!d) return;
     const white = d.age < fxTuning.deathFlashFrames;
     const k = 1 + (fxTuning.deathPopScale - 1) * (d.age / fxTuning.deathHoldFrames);

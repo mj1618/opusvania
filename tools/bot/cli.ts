@@ -137,6 +137,7 @@ function runAll(): void {
       assists?: AssistSet;
       expect: boolean | null;
       label: string;
+      budget?: number;
     }[] = [];
     if (Object.keys(claims).length === 0) {
       for (const t of Object.keys(roomTargets(room))) {
@@ -147,11 +148,13 @@ function runAll(): void {
       for (const [t, c] of Object.entries(claims)) {
         const withSet: AbilitySet = {};
         for (const a of ABILITIES) withSet[a] = c.with.includes(a);
+        const budget = c.budget !== undefined ? { budget: c.budget } : {};
         checks.push({
           target: t,
           abilities: withSet,
-          expect: true,
-          label: `${t} with [${c.with.join(',')}]`,
+          expect: c.info ? null : true,
+          label: `${t} with [${c.with.join(',')}]${c.info ? ' (info)' : ''}`,
+          ...budget,
         });
         for (const a of c.without) {
           // `without` names an ability (removed) or an assist (switched off), e.g. gym-03 variableJump.
@@ -164,6 +167,7 @@ function runAll(): void {
             ...(assists ? { assists } : {}),
             expect: false,
             label: `${t} without ${a}`,
+            ...budget,
           });
         }
       }
@@ -172,6 +176,7 @@ function runAll(): void {
       const r = search({
         ...baseOpts(room, c.target, c.abilities),
         ...(c.assists ? { assists: c.assists } : {}),
+        ...(c.budget !== undefined && !args.budget ? { budget: c.budget } : {}),
       });
       const ok = c.expect === null || c.expect === r.found;
       if (!ok) failures++;

@@ -17,10 +17,10 @@
     "pogo": false
   },
   "golden": {
-    "tuningHash": "0b99a061443a08",
+    "tuningHash": "0b78049094206f",
     "build": {
-      "sha": "a4195655b8-dirty",
-      "sim": "0a9090a59b",
+      "sha": "72505a8679-dirty",
+      "sim": "6dee6c42c8",
       "stateVersion": 1
     },
     "end": {
@@ -29,7 +29,7 @@
       "frame": 209,
       "room": "gym-02"
     },
-    "hash": "053e27f7dfbb3b",
-    "hashes": ["12f76b22164294", "11a3cba2cc6aac", "1dce164edec796"]
+    "hash": "194094988588f3",
+    "hashes": ["0d3010e8ba233e", "0a9275752ffed2", "0213e1afb3faae"]
   }
 }
