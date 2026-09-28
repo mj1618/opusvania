@@ -1,0 +1,53 @@
+{
+  "//": "Mixer, ducking, muffle, spatial and voice budget. Bus levels are the mix baseline; user volume settings multiply them. Validated by src/audio/data.ts.",
+  "buses": {
+    "master": 0.8,
+    "music": 0.3,
+    "sfx": 1,
+    "ambience": 0.28,
+    "ui": 0.7
+  },
+  "duck": {
+    "light": {
+      "depthDb": 4,
+      "attackSecs": 0.01,
+      "holdSecs": 0.06,
+      "releaseSecs": 0.35
+    },
+    "heavy": {
+      "depthDb": 9,
+      "attackSecs": 0.005,
+      "holdSecs": 0.15,
+      "releaseSecs": 0.6
+    }
+  },
+  "muffle": {
+    "none": 20000,
+    "pause": 650,
+    "underwater": 420,
+    "tauSecs": 0.08
+  },
+  "spatial": {
+    "panWidthPx": 1100,
+    "panMax": 0.85,
+    "refDistPx": 450,
+    "rolloff": 1,
+    "fadeStartPx": 1800,
+    "maxDistPx": 2600
+  },
+  "reverb": {
+    "seconds": 2.4,
+    "decay": 3.2,
+    "returnGain": 0.5
+  },
+  "limiter": {
+    "thresholdDb": -4,
+    "kneeDb": 3,
+    "ratio": 16,
+    "attackSecs": 0.002,
+    "releaseSecs": 0.12
+  },
+  "maxVoices": 40,
+  "noiseSeconds": 4,
+  "lookaheadSecs": 0.25
+}

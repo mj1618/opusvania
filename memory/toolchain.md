@@ -19,3 +19,6 @@
   `.github/workflows/` is rejected. Push over SSH instead: `git push git@github.com:mj1618/opusvania.git main`.
 - **CI/Pages:** `ci.yml` runs `npm run check` (WebGL works in headless Chromium on ubuntu runners);
   `pages.yml` deploys `main` only after CI succeeds (workflow_run), or on manual dispatch.
+- **`tsx` + `page.evaluate`:** tsx (esbuild keepNames) wraps named inner functions in `__name()`, which
+  doesn't exist in the page, so a `const f = () => ...` inside an evaluate callback throws
+  `ReferenceError: __name`. Keep tool evaluate callbacks flat, or pass a string.

@@ -8,3 +8,4 @@ Keep entries current; delete stale ones.
 - [Clip tool](clip-tool.md) — `npm run clip` for mp4/GIF/contact sheets of scripted gameplay
 - [Sim architecture](sim-architecture.md) — how sim, Game harness, loop, input and replays fit together
 - [Toolchain](toolchain.md) — ports, vite preview base gotcha, TS7/Biome quirks, why each dev dep exists
+- [Audio](audio.md) — src/audio map, event contract, `npm run audio:render` offline level checks, Web Audio gotchas

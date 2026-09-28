@@ -1,3 +1,4 @@
+import { AudioSystem } from './audio/index';
 import { installDebugApi } from './debug/api';
 import { HitboxOverlay } from './debug/overlay';
 import { TuningPanel } from './debug/tuning-panel';
@@ -5,6 +6,7 @@ import { Game } from './game';
 import { InputSampler } from './input/index';
 import { FixedStepLoop } from './loop';
 import { createApp } from './render/app';
+import { VIEW_H, VIEW_W } from './render/camera';
 import { WorldRenderer } from './render/world';
 import { tuning } from './sim/tuning';
 
@@ -29,13 +31,20 @@ async function boot(): Promise<void> {
   const overlay = new HitboxOverlay(game);
   renderer.overlay.addChild(overlay.g);
   const panel = new TuningPanel(tuning, () => game.load(game.state.roomId));
+  // Audio listens at the camera centre (the world container is offset by -camera).
+  const audio = new AudioSystem({
+    bus: game.bus,
+    state: () => game.state,
+    listener: () => ({ x: -renderer.world.x + VIEW_W / 2, y: -renderer.world.y + VIEW_H / 2 }),
+  });
 
   const render = (alpha: number) => {
     renderer.draw(alpha);
     overlay.draw();
     app.render();
+    audio.update();
   };
-  installDebugApi({ game, app, render, overlay, panel });
+  installDebugApi({ game, app, render, overlay, panel, audio: audio.debug });
 
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Backquote') panel.toggle();

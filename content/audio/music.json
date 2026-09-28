@@ -1,0 +1,89 @@
+{
+  "//": "Music director stub: a tiny procedural placeholder loop (not a composition) that proves bar-quantised layer crossfades. Pattern tokens are space-separated, one per sequencer step: '.' rest, 'x' hit, or semitone offsets from rootMidi joined with '+' for chords (e.g. '0+3+7'). Validated by src/audio/data.ts.",
+  "bpm": 92,
+  "beatsPerBar": 4,
+  "stepsPerBeat": 4,
+  "rootMidi": 50,
+  "crossfadeBeats": 2,
+  "minLeadSecs": 0.12,
+  "autoStart": false,
+  "startLayer": "sparse",
+  "instruments": {
+    "bass": {
+      "kind": "tone",
+      "wave": "triangle",
+      "octave": -1,
+      "attackSecs": 0.01,
+      "releaseSecs": 0.45,
+      "lowpassHz": 700,
+      "gain": 0.55
+    },
+    "pad": {
+      "kind": "tone",
+      "wave": "sawtooth",
+      "octave": 0,
+      "attackSecs": 0.5,
+      "releaseSecs": 3,
+      "lowpassHz": 900,
+      "detuneCents": 9,
+      "gain": 0.09
+    },
+    "pluck": {
+      "kind": "tone",
+      "wave": "square",
+      "octave": 0,
+      "attackSecs": 0.003,
+      "releaseSecs": 0.2,
+      "lowpassHz": 2400,
+      "gain": 0.07
+    },
+    "hat": {
+      "kind": "noise",
+      "attackSecs": 0.001,
+      "releaseSecs": 0.045,
+      "highpassHz": 7000,
+      "gain": 0.22
+    },
+    "kick": {
+      "kind": "kick",
+      "startHz": 120,
+      "endHz": 42,
+      "releaseSecs": 0.3,
+      "gain": 0.5
+    }
+  },
+  "layers": {
+    "sparse": [
+      {
+        "instrument": "bass",
+        "pattern": "0 . . . . . . . 0 . . . . . . . -2 . . . . . . . -4 . . . -2 . . ."
+      },
+      {
+        "instrument": "pad",
+        "pattern": "0+3+7 . . . . . . . . . . . . . . . -4+0+3 . . . . . . . . . . . . . . ."
+      }
+    ],
+    "full": [
+      {
+        "instrument": "bass",
+        "pattern": "0 . . 0 . . 0 . 0 . . 0 . . 12 . -2 . . -2 . . -2 . -4 . . -4 . . -2 ."
+      },
+      {
+        "instrument": "pad",
+        "pattern": "0+3+7 . . . . . . . . . . . . . . . -4+0+3 . . . . . . . . . . . . . . ."
+      },
+      {
+        "instrument": "pluck",
+        "pattern": "12 . 15 . 19 . 15 . 12 . 15 . 19 . 22 . 8 . 12 . 15 . 12 . 8 . 12 . 15 . 17 ."
+      },
+      {
+        "instrument": "hat",
+        "pattern": ". . x . . . x . . . x . . . x x . . x . . . x . . . x . . . x ."
+      },
+      {
+        "instrument": "kick",
+        "pattern": "x . . . . . . . x . . x . . . . x . . . . . . . x . . x . . . ."
+      }
+    ]
+  }
+}

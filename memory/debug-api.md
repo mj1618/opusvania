@@ -14,6 +14,11 @@ Source: `src/debug/api.ts` (typed `GameDebugApi`). Everything returns plain JSON
 - `replay.record()` / `replay.stop()` → `Replay` JSON (start state + tuning + input masks + endHash);
   `replay.play(r)` loads start state and queues its inputs (then `step(n)`), `replay.verify(r)` runs it headless.
 - `debug.hitboxes(on?)` (also F2), `debug.tuningPanel(on?)` (also backquote), `tuning` (live object).
+- `audio.*` (memory/audio.md): `stats()` (context state, voices, playedByName, recent routed events, music),
+  `play(name, {x,y,volume})`, `sounds()`, `mute(on?)`, `volume(bus, v?)`, `muffle('pause'|'underwater'|'none')`,
+  `hum(colour, x?, y?)` → id, `seize(id)`, `levy(id, x, y)`, `stopHum(id)`, `music('sparse'|'full'|'stop')`,
+  `render([scenario])` (offline levels), `scenarios()`. Audio stays `'locked'` until a real gesture.
+- If a sandbox rejects `playwright-cli eval`, use `playwright-cli run-code "async page => await page.evaluate(() => ...)"`.
 
 playwright-cli example:
 ```

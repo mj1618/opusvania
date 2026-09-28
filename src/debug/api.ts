@@ -1,4 +1,5 @@
 import type { Application } from 'pixi.js';
+import type { AudioDebugApi } from '../audio/index';
 import type { Game } from '../game';
 import { type InputScript, parseInputScript } from '../input/script';
 import type { GameState } from '../sim/index';
@@ -45,6 +46,8 @@ export interface GameDebugApi {
     hitboxes(on?: boolean): boolean;
     tuningPanel(on?: boolean): boolean;
   };
+  /** Audio helpers: play, mute, stats, hums, music, offline render (see memory/audio.md). */
+  audio: AudioDebugApi;
 }
 
 declare global {
@@ -60,9 +63,10 @@ export interface DebugDeps {
   render(alpha: number): void;
   overlay: HitboxOverlay;
   panel: TuningPanel;
+  audio: AudioDebugApi;
 }
 
-export function installDebugApi({ game, app, render, overlay, panel }: DebugDeps): GameDebugApi {
+export function installDebugApi({ game, app, render, overlay, panel, audio }: DebugDeps): GameDebugApi {
   const snapshot = () => JSON.parse(JSON.stringify(game.state)) as GameState;
   const api: GameDebugApi = {
     step(n = 1) {
@@ -134,6 +138,7 @@ export function installDebugApi({ game, app, render, overlay, panel }: DebugDeps
       hitboxes: (on) => overlay.toggle(on),
       tuningPanel: (on) => panel.toggle(on),
     },
+    audio,
   };
   window.__game = api;
   return api;

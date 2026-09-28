@@ -16,7 +16,8 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm run test && npm run e2e",
-    "clip": "tsx tools/clip.ts"
+    "clip": "tsx tools/clip.ts",
+    "audio:render": "tsx tools/audio-render.ts"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",
