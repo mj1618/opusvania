@@ -10,7 +10,9 @@
 - **Biome 2.5**: `biome migrate` rewrote `rules.recommended: true` to `preset: "none"` (turning lint off).
   Correct value is `"preset": "recommended"`.
 - **Sim purity** is enforced three ways: `tsconfig.sim.json` (no DOM lib), a Biome override for `src/sim/**`
-  (restricted imports/globals), and `tests/unit/sim-purity.test.ts` (Math.random, Date, imports).
+  (restricted imports/globals), and `tests/unit/sim-purity.test.ts` (Math.random incl. `Math['random']`,
+  Date, globals reached via `globalThis` casts, eval/Function, Intl/toLocale*, approximated Math,
+  imports leaving src/sim incl. side-effect imports). It's regex-based: a determined bypass is possible.
 - **Why these deps:** `tsx` runs `tools/*.ts` directly (clip tool). `@tweakpane/core` is a dev dep only
   because `tweakpane`'s .d.ts files import it without declaring it.
 - Playwright Test's `chromium` export is reused by the clip tool, so there's one browser install

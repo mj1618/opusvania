@@ -35,7 +35,15 @@
                   "requestAnimationFrame": "src/sim is stepped by main, not rAF.",
                   "setTimeout": "src/sim must use the frame count.",
                   "setInterval": "src/sim must use the frame count.",
-                  "AudioContext": "src/sim must not play audio; emit an event."
+                  "AudioContext": "src/sim must not play audio; emit an event.",
+                  "globalThis": "src/sim must not reach host globals.",
+                  "self": "src/sim must not reach host globals.",
+                  "crypto": "src/sim must use src/sim/rng.ts.",
+                  "fetch": "src/sim must not do I/O.",
+                  "process": "src/sim must not read the host environment.",
+                  "queueMicrotask": "src/sim must use the frame count.",
+                  "Date": "src/sim must use the frame count, not wall-clock time.",
+                  "Intl": "src/sim must not depend on the locale."
                 }
               }
             },
