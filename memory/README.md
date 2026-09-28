@@ -20,7 +20,9 @@ Keep entries current; delete stale ones.
 - [Feel report](feel-report.md) — `npm run feel:report`: metric definitions, envelope, forgiveness sweeps
 - [Loop timing](loop-timing.md) — why the fixed-step loop snaps near-60Hz frame times
 - [Audio](audio.md) — src/audio map, event contract, `npm run audio:render` offline level checks, Web Audio gotchas
+- [Kid's rig](rig.md) — code-drawn cutout rig: pose per state/move, hitbox honesty, chains, silhouette paint, `npm run rig:shots` close-ups
 - [Signature render](signature-render.md) — L3 sources/enemies/bag HUD drawing, palette, `render.rects()`, E-check test
 - [Signature mechanic](signature-mechanic.md) — L3 seize/levy/bag/weight sim: step order, one source component, dynamic solids, bounce integrator, tapes/fuzz/policies/verdict
 - [Combat](combat.md) — L4 sim: data-driven moves/enemies/shots, boss script, Kid's Count, Ringing, hazards, deviations
 - [Combat bots](combat-bots.md) — `npm run combat:report` / `npm run fight`: fighter model, fork-clock gotcha, how to read F1-F8
+- [Combat juice](combat-juice.md) — impact director, impact frames, render zoom/slow-mo, sound-made-visible, creatures, clip --audio/--slowmo, showcase

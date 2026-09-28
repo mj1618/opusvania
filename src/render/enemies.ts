@@ -4,8 +4,11 @@ import { boxAt } from '../sim/combat/boxes';
 import type { Colour } from '../sim/events';
 import type { Enemy, Shot, Sound } from '../sim/state';
 import { tuning } from '../sim/tuning';
+import { type BodyPoints, CREATURE_BODY, drawCreature } from './creatures';
 import { NOISE_COLOURS } from './gfx/palette';
-import { drawHand, drawKeycap, drawShield, drawStamp, rotRect, strokeText } from './glyphs';
+import { drawHand, drawKeycap, drawShield, drawStamp, strokeText } from './glyphs';
+import { drawVoiceArcs } from './juice/soundviz';
+import { JUICE } from './juice/tuning';
 import { dashPath, rngFor, vibration } from './outline';
 import { CBT, colourHex, PALETTE, SIG } from './palette';
 
@@ -73,20 +76,35 @@ export function enemyPose(e: Enemy, fx: EnemyFx): Pose {
   const k = teleK(e);
   const dp = DOWN_POSE[e.type] ?? { rot: 0.3, sy: 0.8 };
   if (e.state === 'KO') {
-    const t = Math.min(1, fx.koAge / 10);
-    P.rot = back * (Math.PI / 2) * t * t;
-    P.alpha = 1 - Math.max(0, fx.koAge - 10) / (CBT.koFrames - 10);
-    P.dy = -Math.abs(Math.sin(P.rot)) * (Math.min(e.w, e.h) / 2);
-    P.centre = false;
+    // Knocked clean out: launched up and back, spinning, then it pops (the poof is world-space).
+    const t = fx.koAge;
+    P.centre = true;
+    P.rot = back * t * 0.32;
+    P.dx = back * t * 5;
+    P.dy = -e.h / 2 - 16 * t + 0.9 * t * t;
+    P.sx = P.sy = 1 + Math.min(0.15, t * 0.01);
+    P.alpha = 1 - Math.max(0, t - 20) / (CBT.koFrames - 20);
     return P;
   }
-  if (e.state === 'DOWN' || e.state === 'COUNT' || e.state === 'REPOSSESSED') {
+  if (e.state === 'REPOSSESSED') {
+    // Deflates as its sound is taken: squashes flat with a wobble, spreading at the base.
+    const t = Math.min(1, Math.max(0, fx.repoAge) / JUICE.deflateFrames);
+    const ease = 1 - (1 - t) ** 3;
+    const wob = Math.sin(Math.max(0, fx.repoAge) * 0.9) * 0.08 * (1 - t);
+    const dpz = DOWN_POSE[e.type] ?? { rot: 0.3, sy: 0.8 };
+    P.rot = back * dpz.rot * (1 - ease);
+    P.sy = (1 - (1 - JUICE.deflateSy) * ease) * (1 + wob);
+    P.sx = (1 + 0.35 * ease) * (1 - wob);
+    P.centre = false;
+    P.alpha = 1 - 0.35 * ease;
+    return P;
+  }
+  if (e.state === 'DOWN' || e.state === 'COUNT') {
     const t = e.state === 'DOWN' ? Math.min(1, (e.stateFrame + 1) / 6) : 1;
     P.rot = back * dp.rot * t;
     P.sy = 1 - (1 - dp.sy) * t;
     P.dy = -Math.abs(Math.sin(P.rot)) * (e.w / 2);
     P.centre = false;
-    if (e.state === 'REPOSSESSED') P.alpha = 0.9;
     return P;
   }
   if (e.state === 'RISE') {
@@ -100,9 +118,11 @@ export function enemyPose(e: Enemy, fx: EnemyFx): Pose {
   if (e.state === 'FLINCH' || Math.abs(e.kb) > 3) {
     const dir = e.kb !== 0 ? Math.sign(e.kb) : back;
     const lean = CBT.flinchLean + Math.min(0.2, Math.abs(e.kb) * CBT.kbLeanPer);
-    P.rot = dir * lean;
-    P.sx = 1.06;
-    P.sy = 0.93;
+    // The first frames of a flinch snap hard (squash away from the blow), then settle.
+    const snap = fx.flash ? 1 : 0;
+    P.rot = dir * lean * (1 + 0.6 * snap);
+    P.sx = 1.06 + 0.1 * snap;
+    P.sy = 0.93 - 0.08 * snap;
     return P;
   }
   if (e.state === 'STAGGER') {
@@ -120,14 +140,23 @@ export function enemyPose(e: Enemy, fx: EnemyFx): Pose {
     return P;
   }
   const a = e.attackId ? d.attacks[e.attackId] : undefined;
+  // Idle breathing (walkers squash a touch on the in-breath).
+  if (!d.flying && (e.state === 'PATROL' || e.state === 'CHASE' || e.state === 'RETRIEVE')) {
+    const br = Math.sin(fx.frame * 0.1 + e.id * 1.7);
+    P.sy = 1 + 0.025 * br;
+    P.sx = 1 - 0.015 * br;
+  }
   if (e.type === 'barker') {
     if (e.state === 'TELEGRAPH') {
-      P.sy = 1 - 0.18 * k;
-      P.sx = 1 + 0.1 * k;
-      P.rot = back * 0.06 * k;
+      // Coils down and back on its haunches, shivering as the bark builds.
+      P.sy = 1 - 0.22 * k;
+      P.sx = 1 + 0.12 * k;
+      P.rot = back * 0.1 * k;
+      P.dx = back * 6 * k + Math.sin(fx.frame * 2.2) * 1.5 * k;
     } else if (e.state === 'ACTIVE' && e.attackId === 'lunge') {
-      P.sx = 1.14;
-      P.sy = 0.9;
+      P.sx = 1.22;
+      P.sy = 0.86;
+      P.rot = -back * 0.08;
     }
   } else if (e.type === 'grinder') {
     if (e.state === 'TELEGRAPH' && e.attackId === 'charge') {
@@ -135,7 +164,10 @@ export function enemyPose(e: Enemy, fx: EnemyFx): Pose {
       P.rot = back * 0.05 * k;
     }
   } else if (e.type === 'gull' && a?.dive !== undefined) {
-    if (e.state === 'ACTIVE') {
+    if (e.state === 'TELEGRAPH') {
+      // Rears back and shivers before the dive.
+      P.rot = back * 0.25 * k + Math.sin(fx.frame * 1.8) * 0.04 * k;
+    } else if (e.state === 'ACTIVE') {
       const th = Math.atan2(e.aimY, e.aimX);
       P.rot = e.facing > 0 ? th : th - Math.PI;
     } else if (e.state === 'RECOVERY' && e.timer === a.stuckRecovery) {
@@ -148,6 +180,9 @@ export function enemyPose(e: Enemy, fx: EnemyFx): Pose {
   } else if (e.type === 'auctioneer' && e.state === 'TELEGRAPH' && e.attackId === 'hop') {
     P.sy = 1 - 0.12 * k;
     P.sx = 1 + 0.05 * k;
+  } else if (e.type === 'clerk' && e.state === 'TELEGRAPH' && e.attackId === 'stamp') {
+    P.sy = 1 + 0.06 * k;
+    P.sx = 1 - 0.04 * k;
   }
   return P;
 }
@@ -171,6 +206,7 @@ export function drawEnemy(
   fx: EnemyFx,
   pose: Pose,
   light: (x: number, y: number, r: number, c: Colour, i: number) => void,
+  toWorld: (lx: number, ly: number) => [number, number] = (lx, ly) => [wx + e.w / 2 + lx, wy + e.h + ly],
 ): EnemyDraw {
   const d = enemyDef(e.type);
   const W = e.w;
@@ -181,17 +217,47 @@ export function drawEnemy(
   const face = e.facing;
   const X = (lx: number, lw = 0) => (face > 0 ? x + lx : x + W - lx - lw);
   const upright = Math.abs(pose.rot) < 0.03 && pose.alpha >= 1;
+  const base = CREATURE_BODY[e.type] ?? PALETTE.enemyBody;
 
   if (e.state === 'KO') {
-    // Tipping over and fading (no voices: it's out).
-    drawBody(g, e, x, y, X, PALETTE.enemyBody, frame, 0, true);
+    // Launched and spinning (pose), eyes crossed out: it's out.
+    drawCreature(g, e, x, y, X, {
+      frame,
+      k: 0,
+      hurt: true,
+      downed: false,
+      ko: true,
+      body: fx.koAge < 3 ? PALETTE.flash : base,
+      eye: PALETTE.enemyDark,
+      deflate: 0,
+    });
     return { status: 'ko' };
   }
   if (e.state === 'REPOSSESSED') {
-    // Desaturated to an outline: it has nothing left to say; the ledger stamp says why.
-    g.roundRect(x, y, W, H, 12).stroke({ width: 3, color: PALETTE.repossessed, alpha: 0.8 });
-    g.roundRect(x + 6, y + 6, W - 12, H - 12, 10).fill({ color: PALETTE.repossessed, alpha: 0.12 });
-    const t = fx.repoAge;
+    // Deflating as its sound is taken (pose squashes it), colour draining to the ledger grey;
+    // the ledger stamp slams on above it.
+    const t = Math.max(0, fx.repoAge);
+    const drain = Math.min(1, t / JUICE.deflateFrames);
+    drawCreature(g, e, x, y, X, {
+      frame: fx.repoAge >= 0 ? frame - t : frame,
+      k: 0,
+      hurt: false,
+      downed: true,
+      ko: false,
+      body: fx.flash ? PALETTE.flash : mix(base, PALETTE.repossessed, 0.4 + 0.6 * drain),
+      eye: PALETTE.enemyDark,
+      deflate: Math.max(0.31, drain),
+    });
+    g.roundRect(x, y, W, H, 12).stroke({ width: 3, color: PALETTE.repossessed, alpha: 0.5 * drain });
+    // The last of its air escaping: small puffs rising off it for the first beats.
+    if (t < JUICE.deflateFrames)
+      for (let i = 0; i < 3; i++) {
+        const u = (((t * 0.06 + i / 3) % 1) + 1) % 1;
+        f.circle(wx + W / 2 + (i - 1) * W * 0.3, wy + H * 0.4 - u * 50, 5 + u * 9).fill({
+          color: PALETTE.dust,
+          alpha: 0.55 * (1 - u) * (1 - drain),
+        });
+      }
     if (t >= 0) {
       const slam = CBT.stampSlamFrames;
       let k = 1;
@@ -203,8 +269,16 @@ export function drawEnemy(
             : 0.88 + 0.12 * ((u - 0.6) / 0.4);
       }
       const a = t < slam ? Math.min(1, 0.3 + t / 4) : 1;
-      const size = 22;
-      drawStamp(f, 'REPOSSESSED', wx + W / 2, wy - 30, size, -0.14, PALETTE.stampRed, a, k);
+      drawStamp(f, 'REPOSSESSED', wx + W / 2, wy - 30, 24, -0.14, PALETTE.stampRed, a, k);
+      if (t >= 5 && t < 12) {
+        // The slam lands: an ink ring bursts out from the stamp.
+        const u = (t - 5) / 7;
+        f.ellipse(wx + W / 2, wy - 30, 90 + 90 * u, 30 + 30 * u).stroke({
+          width: 6 * (1 - u) + 1,
+          color: PALETTE.stampRed,
+          alpha: 1 - u,
+        });
+      }
     }
     return { status: 'repossessed' };
   }
@@ -212,11 +286,11 @@ export function drawEnemy(
   const attack: AttackDef | undefined = e.attackId ? d.attacks[e.attackId] : undefined;
   const k = teleK(e);
   const telegraphing = e.state === 'TELEGRAPH';
-  const tint = attack ? colourHex(attack.cue.tint) : PALETTE.enemyBody;
+  const tint = attack ? colourHex(attack.cue.tint) : base;
   const pulses = telegraphing && attack ? (attack.cue.pulses ?? 0) : 0;
   const pulse = pulses > 0 ? (0.5 - 0.5 * Math.cos(2 * Math.PI * pulses * k)) ** 2 : 0;
   const downed = e.state === 'DOWN' || e.state === 'COUNT';
-  let body = mix(PALETTE.enemyBody, tint, k * SIG.teleTint * (attack?.sound === null ? 0.5 : 1));
+  let body = mix(base, tint, k * SIG.teleTint * (attack?.sound === null ? 0.5 : 1));
   if (fx.flash) body = PALETTE.flash;
   const open = isOpen(e) && !telegraphing && !downed;
   const guardK = fx.guard / CBT.guardFrames;
@@ -309,7 +383,18 @@ export function drawEnemy(
   }
 
   const eye = e.furious ? PALETTE.furious : PALETTE.enemyDark;
-  const mouth = drawBody(g, e, x, y, X, body, frame, k, false, eye, downed);
+  const hurt = fx.flash || e.state === 'FLINCH' || e.state === 'STAGGER' || Math.abs(e.kb) > 3;
+  const pts: BodyPoints = drawCreature(g, e, x, y, X, {
+    frame,
+    k,
+    hurt,
+    downed,
+    ko: false,
+    body,
+    eye,
+    deflate: 0,
+  });
+  const mouth = pts.mouth;
 
   // Guarded: white shield at the contact point. Refused (white only): static crackle over it.
   if (fx.guard > 0 && fx.guardAt) {
@@ -327,7 +412,7 @@ export function drawEnemy(
 
   // Taken voice: a small "X" at the mouth, in the voice's colour (local, moves with the body).
   const taken = voices.find((v) => v.status !== 'home' && v.colour !== 'white');
-  if (taken && mouth) {
+  if (taken) {
     const c = colourHex(taken.colour);
     const [mx, my] = mouth;
     const s = 9;
@@ -342,12 +427,51 @@ export function drawEnemy(
         .stroke({ width: w, color: col, alpha: al });
   }
   if (e.furious && !downed) {
-    const [ex, ey] = mouth ?? [0, y + 16];
-    g.circle(ex, ey - 10, 9).fill({ color: PALETTE.furious, alpha: 0.35 });
+    const [ex, ey] = pts.eye;
+    g.circle(ex, ey, 8).fill({ color: PALETTE.furious, alpha: 0.35 });
+    // Steam of rage.
+    for (let i = 0; i < 2; i++) {
+      const u = (((frame * 0.05 + i * 0.5) % 1) + 1) % 1;
+      g.circle(ex - face * 6 + i * 8, y - 4 - u * 24, 3 + u * 5).fill({
+        color: 0xffffff,
+        alpha: 0.4 * (1 - u),
+      });
+    }
+  }
+
+  // Sound made visible: the armed voice leaves its mouth as arcs; a wind-up speeds them up.
+  if (!downed && e.state !== 'STAGGER') {
+    const speaking =
+      (telegraphing && attack?.sound ? voices.find((v) => v.name === attack.sound) : undefined) ??
+      voices.find((v) => v.status === 'home' && v.colour !== 'white');
+    if (speaking && speaking.status === 'home') {
+      const [mwx, mwy] = toWorld(mouth[0], mouth[1]);
+      const boost = telegraphing && attack?.sound === speaking.name ? k : 0;
+      drawVoiceArcs(f, gl, mwx + face * 6, mwy, face, speaking.colour, frame, e.id, boost);
+    }
+  }
+  // Telegraph glint: a star flashes on its eye the moment it commits (Sekiro's perilous glint).
+  if (telegraphing && e.stateFrame < JUICE.glintFrames && attack) {
+    const [gx, gy] = toWorld(pts.eye[0], pts.eye[1]);
+    const u = e.stateFrame / JUICE.glintFrames;
+    const sz = JUICE.glintSize * (u < 0.3 ? u / 0.3 : 1 - (u - 0.3) / 0.7);
+    const c = tint;
+    drawGlint(f, gx, gy, sz, c, frame);
+    drawGlint(gl, gx, gy, sz * 1.4, c, frame);
+  }
+  // Knocked down: dizzy stars circling where its head is.
+  if (downed) {
+    const [hx, hy] = toWorld(pts.eye[0], pts.eye[1]);
+    for (let i = 0; i < JUICE.dizzyStars; i++) {
+      const a = frame * 0.12 + (i / JUICE.dizzyStars) * Math.PI * 2;
+      const sx = hx + Math.cos(a) * JUICE.dizzyR;
+      const sy = hy - 22 + Math.sin(a) * JUICE.dizzyR * 0.35;
+      drawStar5(f, sx, sy, 7 + 2 * Math.sin(a), Math.sin(a) > 0 ? PALETTE.gold : 0xffffff);
+    }
   }
 
   // World-space cues: telegraph reticle, per-attack reads, open hand, the Count.
-  drawCues(f, gl, e, d, attack, wx, wy, k, fx, voices);
+  drawCues(f, gl, e, d, attack, wx, wy, k, fx, voices, toWorld(mouth[0], mouth[1]));
 
   if (downed) drawCount(f, gl, e, wx, wy, fx);
   else if (open && voices.some((v) => v.status === 'home' && v.colour !== 'white') && d.class !== 'boss') {
@@ -362,321 +486,30 @@ export function drawEnemy(
   return { status: armedAny ? 'humming' : 'ghost' };
 }
 
-/** The body silhouette by type (local coords). Returns the mouth point (for the taken-voice X). */
-function drawBody(
-  g: Graphics,
-  e: Enemy,
-  x: number,
-  y: number,
-  X: (lx: number, lw?: number) => number,
-  body: number,
-  frame: number,
-  k: number,
-  ko: boolean,
-  eye: number = PALETTE.enemyDark,
-  downed = false,
-): [number, number] | null {
-  const W = e.w;
-  const H = e.h;
-  const dark = PALETTE.enemyDark;
-  const face = e.facing;
-  const shut = downed || ko;
-  const ba = downed ? 0.85 : 1;
-  switch (e.type) {
-    case 'grinder': {
-      g.roundRect(x + 4, y + 10, W - 8, H - 10, 16).fill({ color: body, alpha: ba });
-      // Exhaust pipe at the back.
-      g.rect(X(4, 12), y - 8, 12, 22).fill(dark);
-      const wx = X(78);
-      const wy = y + 58;
-      g.circle(wx, wy, 25).fill(dark);
-      const spin = (e.state === 'TELEGRAPH' || e.state === 'ACTIVE' ? 0.5 : 0.08) * frame * face;
-      for (let i = 0; i < 6; i++) {
-        const a = spin + (i * Math.PI) / 3;
-        g.moveTo(wx, wy).lineTo(wx + Math.cos(a) * 21, wy + Math.sin(a) * 21);
-      }
-      g.stroke({ width: 3, color: body, alpha: 0.9 });
-      g.rect(X(84, 12), y + 22, 12, 9).fill(shut ? { color: dark, alpha: 0.5 } : eye);
-      g.rect(X(58, 50), y + 90, 50, 14).fill(dark);
-      for (let i = 0; i < 5; i++) {
-        const tx = X(60 + i * 10, 8);
-        g.poly([tx, y + 90, tx + 8, y + 90, tx + 4, y + 97]).fill(body);
-      }
-      return [X(100), y + 97];
-    }
-    case 'gull': {
-      const tele = e.state === 'TELEGRAPH';
-      const diving = e.state === 'ACTIVE';
-      const flap = tele || diving || shut ? 0 : Math.sin(frame * 0.45) * 12;
-      const cy = y + 22;
-      // Ticker-tape tail streamers.
-      for (let i = 0; i < 2; i++) {
-        const wv = Math.sin(frame * 0.3 + i * 2) * 4;
-        g.moveTo(X(8), cy + 2 + i * 5)
-          .lineTo(X(-6), cy + 4 + i * 6 + wv)
-          .lineTo(X(-16), cy + 2 + i * 8 - wv)
-          .stroke({ width: 3, color: PALETTE.stampPaper, alpha: 0.8 });
-      }
-      // Wings: spread and flapping; folded back in a telegraph / dive.
-      const wingTip = tele || diving ? [X(2), cy - 6] : [X(10), cy - 22 - flap];
-      g.poly([X(18), cy - 4, wingTip[0] as number, wingTip[1] as number, X(38), cy - 2]).fill({
-        color: mix(body, 0xffffff, 0.25),
-        alpha: ba,
-      });
-      g.ellipse(X(28), cy, 22, 12).fill({ color: body, alpha: ba });
-      g.circle(X(46), cy - 6, 10).fill({ color: body, alpha: ba });
-      // Beak.
-      g.poly([X(52), cy - 9, X(66), cy - 4, X(52), cy - 1]).fill(PALETTE.beak);
-      if (shut) g.rect(X(44, 7), cy - 10, 7, 2).fill(dark);
-      else g.rect(X(46, 5), cy - 11, 5, 5).fill(eye);
-      // Far wing (over the body) when spread.
-      if (!tele && !diving)
-        g.poly([X(22), cy - 2, X(16), cy - 20 + flap * 0.6, X(34), cy]).fill({
-          color: mix(body, 0x000000, 0.15),
-          alpha: ba,
-        });
-      g.rect(X(22, 3), cy + 10, 3, 8).fill(dark);
-      g.rect(X(32, 3), cy + 10, 3, 8).fill(dark);
-      return [X(58), cy - 4];
-    }
-    case 'clerk':
-    case 'runner': {
-      const runner = e.type === 'runner';
-      const hop = e.state === 'HOP';
-      const legH = runner ? 20 : 24;
-      const legY = y + H - legH;
-      const stride =
-        e.state === 'FLEE' || (e.state === 'CHASE' && Math.abs(e.vx) > 0.5) ? Math.sin(frame * 0.6) * 7 : 0;
-      if (hop) {
-        g.rect(X(W / 2 - 13, 10), legY, 10, legH - 8).fill(dark);
-        g.rect(X(W / 2 + 3, 10), legY, 10, legH - 8).fill(dark);
-      } else {
-        g.poly([
-          X(W / 2 - 10),
-          legY,
-          X(W / 2 - 2),
-          legY,
-          X(W / 2 - 4 + stride),
-          y + H,
-          X(W / 2 - 12 + stride),
-          y + H,
-        ]).fill(dark);
-        g.poly([
-          X(W / 2 + 2),
-          legY,
-          X(W / 2 + 10),
-          legY,
-          X(W / 2 + 12 - stride),
-          y + H,
-          X(W / 2 + 4 - stride),
-          y + H,
-        ]).fill(dark);
-      }
-      const top = y + (runner ? 22 : 26);
-      g.roundRect(x + 4, top, W - 8, legY - top + 4, 8).fill({ color: body, alpha: ba });
-      // Collar and tie.
-      g.poly([X(W / 2 - 6), top, X(W / 2 + 6), top, X(W / 2), top + 12]).fill(PALETTE.stampPaper);
-      const hx = X(W / 2 + 2);
-      const hy = y + (runner ? 12 : 14);
-      g.circle(hx, hy, runner ? 10 : 12).fill({ color: body, alpha: ba });
-      // Green eyeshade.
-      g.poly([
-        X(W / 2 - 10),
-        hy - 6,
-        X(W / 2 + 12),
-        hy - 6,
-        X(W / 2 + 22),
-        hy - 1,
-        X(W / 2 - 8),
-        hy - 1,
-      ]).fill(PALETTE.eyeshade);
-      if (shut) g.rect(X(W / 2 + 6, 6), hy + 1, 6, 2).fill(dark);
-      else g.rect(X(W / 2 + 7, 4), hy - 1, 4, 5).fill(eye);
-      if (runner) {
-        // The ledger under its arm (violet: it holds your Poundage).
-        g.rect(X(W / 2 - 16, 16), top + 12, 16, 22).fill(PALETTE.violet);
-        g.rect(X(W / 2 - 16, 16), top + 12, 16, 22).stroke({ width: 2, color: dark });
-        return [X(W / 2 + 10), hy + 6];
-      }
-      const a = e.attackId;
-      const tele = e.state === 'TELEGRAPH';
-      const stampUp = (tele || e.state === 'ACTIVE') && a === 'stamp';
-      const tannoyUp = (tele || e.state === 'ACTIVE') && a === 'tannoy';
-      // Stamp arm (back hand): raised overhead in its telegraph.
-      const sx = X(W / 2 - 14);
-      const sy = top + 8;
-      const hand = stampUp ? { x: X(W / 2 - 2), y: y - 18 - 6 * k } : { x: X(W / 2 - 18), y: legY - 2 };
-      g.moveTo(sx, sy).lineTo(hand.x, hand.y).stroke({ width: 6, color: body, cap: 'round' });
-      g.rect(hand.x - 3, hand.y - (stampUp ? 14 : 12), 6, 12).fill(PALETTE.woodDark);
-      g.rect(hand.x - 12, hand.y + (stampUp ? -2 : 0), 24, 9).fill(
-        stampUp ? mix(PALETTE.brown, 0xffffff, 0.2 * k) : PALETTE.brown,
-      );
-      // Tannoy (front hand): at its mouth in the Tannoy telegraph.
-      const tx = X(W / 2 + 12);
-      const ty = top + 10;
-      const th = tannoyUp ? { x: X(W / 2 + 18), y: hy + 4 } : { x: X(W / 2 + 18), y: top + 30 };
-      g.moveTo(tx, ty).lineTo(th.x, th.y).stroke({ width: 6, color: body, cap: 'round' });
-      const bell = [
-        th.x,
-        th.y - 5,
-        X(W / 2 + 18 + 18),
-        th.y - 12,
-        X(W / 2 + 18 + 18),
-        th.y + 12,
-        th.x,
-        th.y + 5,
-      ];
-      g.poly(bell).fill(tannoyUp ? mix(PALETTE.white, 0xffffff, k) : PALETTE.white);
-      return [X(W / 2 + 10), hy + 6];
-    }
-    case 'auctioneer':
-      return drawAuctioneer(g, e, y, X, body, frame, k, shut, eye);
-    default: {
-      // Barker: a bowler-hatted guard dog.
-      g.roundRect(X(2, 54), y + 16, 54, 30, 10).fill({ color: body, alpha: ba });
-      g.roundRect(X(40, 32), y + 6, 32, 28, 9).fill({ color: body, alpha: ba });
-      g.rect(X(8, 10), y + 42, 10, 6).fill({ color: body, alpha: ba });
-      g.rect(X(40, 10), y + 42, 10, 6).fill({ color: body, alpha: ba });
-      // Tail: up while it winds up.
-      const tailUp = e.state === 'TELEGRAPH' ? -10 : 0;
-      g.moveTo(X(4), y + 22)
-        .lineTo(X(-8), y + 12 + tailUp)
-        .stroke({ width: 5, color: body, cap: 'round' });
-      g.rect(X(40, 30), y + 2, 30, 5).fill(dark);
-      g.roundRect(X(46, 18), y - 10, 18, 14, 6).fill(dark);
-      if (shut) g.rect(X(58, 9), y + 16, 9, 3).fill(dark);
-      else g.rect(X(60, 6), y + 13, 6, 6).fill(eye);
-      // Mouth: open in a lunge.
-      if (e.state === 'ACTIVE' && e.attackId === 'lunge')
-        g.poly([X(62), y + 24, X(74), y + 22, X(74), y + 32, X(62), y + 28]).fill(dark);
-      else g.rect(X(62, 10), y + 26, 10, 3).fill(dark);
-      return [X(67), y + 27];
-    }
+/** A 4-point glint star (long vertical/horizontal rays). */
+function drawGlint(g: Graphics, x: number, y: number, s: number, c: number, frame: number): void {
+  if (s <= 0.5) return;
+  const r = s * 0.16;
+  const a = frame * 0.05;
+  const pts: number[] = [];
+  for (let i = 0; i < 8; i++) {
+    const ang = a + (i / 8) * Math.PI * 2;
+    const rr = i % 2 === 0 ? (i % 4 === 0 ? s : s * 0.55) : r;
+    pts.push(x + Math.cos(ang) * rr, y + Math.sin(ang) * rr);
   }
+  g.poly(pts).fill({ color: c, alpha: 0.95 });
+  g.circle(x, y, r * 1.4).fill({ color: 0xffffff, alpha: 1 });
 }
 
-function drawAuctioneer(
-  g: Graphics,
-  e: Enemy,
-  y: number,
-  X: (lx: number, lw?: number) => number,
-  body: number,
-  frame: number,
-  k: number,
-  shut: boolean,
-  eye: number,
-): [number, number] {
-  const W = e.w;
-  const H = e.h;
-  const dark = PALETTE.enemyDark;
-  const b = e.boss;
-  const p2 = b?.phase === 2;
-  const a = e.attackId;
-  const tele = e.state === 'TELEGRAPH';
-  const active = e.state === 'ACTIVE';
-  // Legs.
-  g.rect(X(W / 2 - 26, 20), y + H - 52, 20, 52).fill(dark);
-  g.rect(X(W / 2 + 6, 20), y + H - 52, 20, 52).fill(dark);
-  // Tailcoat (phase 1) or shirt-sleeves and a red waistcoat (phase 2: the jacket is off).
-  if (!p2) {
-    g.poly([
-      X(14),
-      y + 64,
-      X(W - 14),
-      y + 64,
-      X(W - 8),
-      y + H - 36,
-      X(W / 2),
-      y + H - 60,
-      X(8),
-      y + H - 30,
-    ]).fill(body);
+function drawStar5(g: Graphics, x: number, y: number, r: number, c: number): void {
+  const pts: number[] = [];
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i / 10) * Math.PI * 2;
+    const rr = i % 2 === 0 ? r : r * 0.45;
+    pts.push(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
   }
-  g.roundRect(X(26, W - 52), y + 62, W - 52, 86, 12).fill(p2 ? mix(body, 0xffffff, 0.35) : body);
-  g.poly([X(W / 2 - 22), y + 66, X(W / 2 + 22), y + 66, X(W / 2 + 18), y + 140, X(W / 2 - 18), y + 140]).fill(
-    p2 ? PALETTE.furious : mix(body, 0x000000, 0.35),
-  );
-  for (let i = 0; i < 4; i++) g.circle(X(W / 2), y + 82 + i * 14, 3).fill(PALETTE.gold);
-  // Head, moustache, top hat (askew and steaming in phase 2).
-  const hx = X(W / 2 + 6);
-  const hy = y + 40;
-  g.circle(hx, hy, 24).fill(body);
-  g.rect(X(W / 2 + 14, 8), hy - 8, 8, 8).fill(shut ? { color: dark, alpha: 0.4 } : eye);
-  g.poly([X(W / 2 + 4), hy + 8, X(W / 2 + 34), hy + 4, X(W / 2 + 30), hy + 12, X(W / 2 + 18), hy + 11]).fill(
-    dark,
-  );
-  const tilt = p2 ? 8 : 0;
-  g.poly([
-    X(W / 2 - 16),
-    hy - 20 - tilt,
-    X(W / 2 + 26),
-    hy - 20 + tilt,
-    X(W / 2 + 22),
-    hy - 58 + tilt,
-    X(W / 2 - 12),
-    hy - 58 - tilt,
-  ]).fill(dark);
-  g.poly([
-    X(W / 2 - 28),
-    hy - 18 - tilt,
-    X(W / 2 + 38),
-    hy - 18 + tilt,
-    X(W / 2 + 38),
-    hy - 13 + tilt,
-    X(W / 2 - 28),
-    hy - 13 - tilt,
-  ]).fill(dark);
-  g.poly([
-    X(W / 2 - 15),
-    hy - 28 - tilt,
-    X(W / 2 + 25),
-    hy - 28 + tilt,
-    X(W / 2 + 25),
-    hy - 23 + tilt,
-    X(W / 2 - 15),
-    hy - 23 - tilt,
-  ]).fill(p2 ? PALETTE.furious : PALETTE.brown);
-  if (p2)
-    for (let i = 0; i < 2; i++) {
-      const u = (((frame * 0.03 + i * 0.5) % 1) + 1) % 1;
-      g.circle(X(W / 2 + 4 + i * 12), hy - 64 - u * 30, 5 + u * 6).fill({
-        color: PALETTE.white,
-        alpha: 0.4 * (1 - u),
-      });
-    }
-  // Gavel arm (front): raised high in the Gavel telegraph, slammed down in its active frames.
-  const sh = { x: X(W - 30), y: y + 74 };
-  let hand = { x: X(W - 6), y: y + 128 };
-  let head = 0;
-  if (a === 'gavel' && tele) {
-    hand = { x: X(W - 22), y: y + 6 - 18 * k };
-    head = -Math.PI / 2;
-  } else if (a === 'gavel' && active) {
-    hand = { x: X(W + 30), y: y + 110 };
-    head = Math.PI / 2;
-  } else if (tele && (a === 'cadence' || a === 'sellBag')) {
-    hand = { x: X(W + 6), y: y + 44 };
-    head = -Math.PI / 4;
-  }
-  g.moveTo(sh.x, sh.y)
-    .lineTo(hand.x, hand.y)
-    .stroke({ width: 12, color: p2 ? mix(body, 0xffffff, 0.35) : body, cap: 'round' });
-  const noGavel = b?.noGavel;
-  if (!noGavel) {
-    const ang = head + (e.facing > 0 ? 0 : Math.PI);
-    const hl = 34;
-    const gx = hand.x + Math.cos(ang - (e.facing > 0 ? 0.6 : -0.6)) * hl;
-    const gy = hand.y + Math.sin(ang - (e.facing > 0 ? 0.6 : -0.6)) * hl;
-    g.moveTo(hand.x, hand.y).lineTo(gx, gy).stroke({ width: 5, color: PALETTE.woodDark });
-    const glowing = a === 'gavel' && tele;
-    g.poly(rotRect(gx, gy, 16, 34, ang + Math.PI / 2 - 0.6)).fill(
-      glowing ? mix(PALETTE.brown, 0xffffff, 0.3 * k) : PALETTE.wood,
-    );
-  }
-  // Patter: an open mouth.
-  if ((tele || active) && a === 'patter')
-    g.circle(X(W / 2 + 24), hy + 14, 5 + 3 * Math.abs(Math.sin(frame * 0.8))).fill(dark);
-  return [X(W / 2 + 22), hy + 14];
+  g.poly(pts).fill({ color: c, alpha: 0.95 });
+  g.poly(pts).stroke({ width: 1.5, color: PALETTE.enemyDark, alpha: 0.8 });
 }
 
 /** Per-attack telegraph reads and the "catch window" reticle (world space). */
@@ -691,6 +524,7 @@ function drawCues(
   k: number,
   fx: EnemyFx,
   voices: Sound[],
+  mouthW: [number, number] = [wx + e.w / 2, wy + 20],
 ): void {
   const W = e.w;
   const H = e.h;
@@ -831,11 +665,12 @@ function drawCues(
     const c = colourHex(a.cue.tint);
     const pul = 0.5 + 0.5 * Math.sin(frame * 0.5);
     gl.roundRect(wx - 10, wy + H - 20, W + 20, 30, 10).fill({ color: c, alpha: 0.3 + 0.4 * k * pul });
-    if (aid === 'patter') {
+    if (aid === 'patter' && tele) {
+      // The patter winds up: the words pile out faster and brighter (they become the darts).
       for (let i = 0; i < 3; i++) {
         const u = (((frame * 0.06 + i / 3) % 1) + 1) % 1;
-        const mx = wx + W / 2 + face * (30 + u * 60);
-        const my = wy + 54;
+        const mx = mouthW[0] + face * (20 + u * 70);
+        const my = mouthW[1] - u * 10;
         f.poly([mx, my - 8, mx + face * 10, my, mx, my + 8], false).stroke({
           width: 3,
           color: PALETTE.violet,
@@ -843,6 +678,85 @@ function drawCues(
         });
       }
     }
+  }
+  if (e.type === 'auctioneer') drawPatter(f, gl, e, voices, frame, mouthW, wx, wy);
+}
+
+/**
+ * The Auctioneer's patter made visible: words tumble out of his mouth and float up the whole fight
+ * (take his Patter voice and he goes quiet); calling a lot, "GOING ONCE / GOING TWICE" rise huge
+ * over his head. Stateless (a function of the frame).
+ */
+function drawPatter(
+  f: Graphics,
+  gl: Graphics,
+  e: Enemy,
+  voices: Sound[],
+  frame: number,
+  mouth: [number, number],
+  wx: number,
+  wy: number,
+): void {
+  const quiet = ['DOWN', 'COUNT', 'STAGGER', 'KO', 'REPOSSESSED', 'LAUNCHED', 'RISE'].includes(e.state);
+  const patter = voices.find((v) => v.name === 'patter');
+  const face = e.facing;
+  if (!quiet && patter?.status === 'home') {
+    const every = JUICE.patterEvery;
+    const life = JUICE.patterLife;
+    const words = JUICE.patter;
+    const newest = Math.floor(frame / every);
+    for (let n = newest; n > newest - Math.ceil(life / every) - 1; n--) {
+      const age = frame - n * every;
+      if (age < 0 || age >= life) continue;
+      const u = age / life;
+      const rnd = rngFor(n, e.id + 5);
+      const text = words[((n % words.length) + words.length) % words.length] as string;
+      // Each word takes its own lane out and up from the mouth, so they don't pile up.
+      const lane = ((n % 3) + 3) % 3;
+      const x = mouth[0] + face * (40 + age * 2.2 + lane * 18);
+      const y = mouth[1] - 24 - age * 1.5 - lane * 16 - rnd() * 8;
+      const pop = age < 5 ? 0.6 + (age / 5) * 0.5 : 1.1 - 0.1 * u;
+      const a = u < 0.7 ? 1 : 1 - (u - 0.7) / 0.3;
+      const size = (15 + rnd() * 6) * pop;
+      const ang = (rnd() - 0.5) * 0.35;
+      strokeText(f, text, x + 2, y + 2, size, {
+        color: PALETTE.bg,
+        width: size / 3.5,
+        alpha: a * 0.7,
+        angle: ang,
+      });
+      strokeText(f, text, x, y, size, { color: PALETTE.violet, width: size / 5, alpha: a, angle: ang });
+      strokeText(gl, text, x, y, size, {
+        color: PALETTE.violet,
+        width: size / 4,
+        alpha: a * 0.35,
+        angle: ang,
+      });
+    }
+  }
+  const b = e.boss;
+  const a = e.attackId;
+  if (e.state === 'TELEGRAPH' && b && (a === 'cadence' || a === 'sellBag')) {
+    const text = a === 'sellBag' ? 'LOT: YOUR BAG!' : b.beat >= 2 ? 'GOING TWICE...' : 'GOING ONCE...';
+    const k = teleK(e);
+    const cx = wx + e.w / 2;
+    const cy = wy - 130;
+    const pul = 1 + 0.06 * Math.sin(frame * 0.5);
+    const size = 40 * pul;
+    strokeText(f, text, cx + 3, cy + 4, size, {
+      color: PALETTE.bg,
+      width: size / 3,
+      alpha: 0.85,
+      angle: -0.05,
+    });
+    strokeText(f, text, cx, cy, size, { color: PALETTE.pink, width: size / 4.5, alpha: 1, angle: -0.05 });
+    strokeText(f, text, cx, cy, size, { color: 0xffffff, width: size / 14, alpha: 0.8, angle: -0.05 });
+    strokeText(gl, text, cx, cy, size, {
+      color: PALETTE.pink,
+      width: size / 4,
+      alpha: 0.4 + 0.4 * k,
+      angle: -0.05,
+    });
   }
 }
 

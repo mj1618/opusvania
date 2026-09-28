@@ -35,3 +35,4 @@ Options: `--seed` (1), `--pre` settle steps before recording (10), `--scale` of 
 - `--keep-frames` PNGs are numbered from the first *recorded* frame, so file `N` = sim frame `N + pre`
   (default pre 10; `--tape` clips with `--pre 0` line up). Read the burned-in `f123` label to be sure.
 - Thumbnails at 320px are too small for marker letters; use `--sheet events` (480px) or read full frames.
+- `--slowmo` (extra interpolated frames during combat slow motion), `--audio` (offline game audio muxed in), `--setup "<js>"` (page code with `g` = `__game`): see combat-juice.md.

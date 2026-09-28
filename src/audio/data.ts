@@ -43,6 +43,8 @@ export const SoundDefSchema = z
     cooldown: nonneg.default(0.025),
     maxVoices: z.int().positive().default(4),
     duck: DuckNameSchema.optional(),
+    /** Send level (0..1) into the room reverb: the tail of big hits. */
+    reverb: nonneg.max(1).default(0),
   })
   .strict();
 export type SoundDef = z.infer<typeof SoundDefSchema>;
@@ -81,6 +83,20 @@ export const SfxFileSchema = z
           })
           .strict(),
         wallSlide: z.object({ loop: z.string(), refSpeedPxPerFrame: pos, minGain: nonneg.max(1) }).strict(),
+        /** seizeTake: the rip out of the owner, then the pop in the sack `popDelay` s later. */
+        seizeRip: z.object({ rip: z.string(), pop: z.string(), popDelay: nonneg }).strict().optional(),
+        /** poundage: `ticks` coin ticks `gap` s apart rising `stepSemis`, after `delay` s, then the till. */
+        coinShower: z
+          .object({
+            tick: z.string(),
+            till: z.string(),
+            ticks: z.int().positive(),
+            gap: nonneg,
+            delay: nonneg,
+            stepSemis: num,
+          })
+          .strict()
+          .optional(),
       })
       .strict(),
   })
@@ -101,6 +117,8 @@ export const SfxFileSchema = z
       ...Object.values(f.events.jump.byKind),
       f.events.land.soft,
       f.events.land.hard,
+      ...(e.seizeRip ? [e.seizeRip.rip, e.seizeRip.pop] : []),
+      ...(e.coinShower ? [e.coinShower.tick, e.coinShower.till] : []),
     ];
     for (const s of soundRefs) {
       if (!(s in f.sounds))

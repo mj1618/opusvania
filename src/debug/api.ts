@@ -99,6 +99,8 @@ export interface GameDebugApi {
   render: {
     /** Canvas-px rects of every source, levied object, enemy and bag HUD slot as last drawn. */
     rects(): RenderRect[];
+    /** Render time scale (< 1 during combat slow motion; the sim is unaffected). */
+    timeScale(): number;
   };
   hash(): string;
   /** Queues scripted input (spec DSL `R30 R+J12 .5` or `right*30`, see src/input/script.ts). Returns frames queued in total. */
@@ -108,7 +110,8 @@ export interface GameDebugApi {
   /** No arg: returns the current seed. With n: reseeds the RNG. */
   seed(n?: number): number;
   /** Renders now and returns a PNG data URL. `label: true` burns in the frame number. */
-  screenshot(scale?: number, opts?: { label?: string | boolean }): string;
+  /** `alpha` renders between the previous and current step (slow-motion clip frames). */
+  screenshot(scale?: number, opts?: { label?: string | boolean; alpha?: number }): string;
   pause(): void;
   resume(): void;
   mode(): 'realtime' | 'manual';
@@ -338,6 +341,7 @@ export function installDebugApi({
     },
     render: {
       rects: () => renderer.rects(),
+      timeScale: () => renderer.timeScale(),
     },
     hash: () => game.hash(),
     input(script) {
@@ -355,7 +359,7 @@ export function installDebugApi({
       return game.state.seed;
     },
     screenshot(scale = 1, opts = {}) {
-      render(1);
+      render(opts.alpha ?? 1);
       const src = app.canvas;
       const label = opts.label === true ? `f${game.state.frame}` : opts.label || '';
       if (scale === 1 && !label) return src.toDataURL('image/png');

@@ -9,18 +9,18 @@ import { FX_COLORS, fxTuning, Juice } from './fx';
 import { makeClock } from './gfx/clock';
 import { GfxPipeline, snapView } from './gfx/pipeline';
 import { BagHud } from './hud';
+import { drawImpacts } from './juice/draw';
+import { ImpactDirector } from './juice/impact';
+import { SoundViz } from './juice/soundviz';
+import { JUICE } from './juice/tuning';
 import { KidRenderer } from './kid';
+import { colourHex } from './palette';
+import { KidRig } from './rig/index';
 import { SignatureRenderer } from './signature';
 
-/** Player and screen colours (terrain colours live in src/render/gfx/terrain.ts and palette.ts). */
+/** Screen colours (Kid's look lives in src/render/rig/look.ts; terrain in src/render/gfx). */
 const COLORS = {
-  player: 0xe8e4d8,
-  playerDash: 0x8fd3ff,
-  playerEye: 0x141824,
-  dashReady: 0x3fa7ff,
-  dashUsed: 0x4a5064,
   deathFlash: 0xffffff,
-  deathBody: 0xff5a6e,
 };
 
 /** Juice particle colours that glow (emissive) rather than being lit like dust. */
@@ -49,7 +49,6 @@ export class WorldRenderer {
   private readonly tiles = new Graphics();
   private readonly labels = new Container();
   private readonly fxBack = new Graphics();
-  private readonly player = new Graphics();
   private readonly fxFront = new Graphics();
   /** Kid's gloves, Seize hand, Levy arm, Swallow ring, Count (over her body). */
   private readonly kidFront = new Graphics();
@@ -59,6 +58,17 @@ export class WorldRenderer {
   private readonly combatGlow = new Graphics({ label: 'combat-glow' });
   private readonly combatScreen = new Graphics();
   private readonly fade = new Graphics();
+  /** Combat juice (src/render/juice): over everything in the world, and its emissive copy. */
+  private readonly juiceFront = new Graphics({ label: 'juice' });
+  private readonly juiceGlow = new Graphics({ label: 'juice-glow' });
+  /** Screen-space juice: letterbox bars in slow motion, the impact-frame fallback without post. */
+  private readonly juiceScreen = new Graphics({ label: 'juice-screen' });
+  /** The impact director (hit sparks, kick, zoom, impact frames, slow motion). */
+  readonly impact = new ImpactDirector();
+  /** Sound made visible (tear ribbons, levy trails). */
+  readonly soundViz = new SoundViz();
+  /** Last drawn render zoom (rects() maps world px through it): screen = unzoomed * z + o. */
+  private lastZoom = { z: 1, ox: 0, oy: 0 };
   private readonly flash = new Graphics();
   private readonly hud: Text;
   /** Extra HUD line set by main (e.g. blind A/B slot). */
@@ -72,6 +82,8 @@ export class WorldRenderer {
   readonly sig: SignatureRenderer;
   readonly bagHud: BagHud;
   readonly kid: KidRenderer;
+  /** Kid Tallow's cutout rig (src/render/rig): body, secondary motion, smears, glow. */
+  readonly rig: KidRig;
   readonly combat: CombatLayer;
   private builtRoomVersion = -1;
   private fadeIn = 0;
@@ -84,6 +96,7 @@ export class WorldRenderer {
     this.sig = new SignatureRenderer(game);
     this.bagHud = new BagHud(game);
     this.kid = new KidRenderer(game);
+    this.rig = new KidRig(game);
     this.combat = new CombatLayer(game);
     // Terrain, labels and dust are lit; the L3 readability layer, the player and front juice are
     // unlit actors (a hum or a telegraph must never depend on a lamp), and sources glow.
@@ -91,13 +104,14 @@ export class WorldRenderer {
     this.gfx.layers.actors.addChild(
       this.sig.back,
       this.sig.enemyLayer,
-      this.player,
+      this.rig.node,
       this.kidFront,
       this.fxFront,
       this.sig.front,
       this.combatFront,
+      this.juiceFront,
     );
-    this.gfx.layers.emissive.addChild(this.sig.glow, this.kidGlow, this.combatGlow);
+    this.gfx.layers.emissive.addChild(this.sig.glow, this.kidGlow, this.combatGlow, this.juiceGlow);
     this.gfx.lights.providers.add((out) => this.sig.lights(out));
     this.gfx.layers.overlay.addChild(this.overlay);
     this.gfx.layers.ui.addChildAt(this.screen, 0);
@@ -106,7 +120,14 @@ export class WorldRenderer {
       style: { fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 22, fill: 0xaab3c8 },
     });
     this.hud.position.set(24, 18);
-    this.screen.addChild(this.bagHud.container, this.combatScreen, this.flash, this.fade, this.hud);
+    this.screen.addChild(
+      this.juiceScreen,
+      this.bagHud.container,
+      this.combatScreen,
+      this.flash,
+      this.fade,
+      this.hud,
+    );
     const room = getRoom(game.state.roomId);
     this.camera = createCamera(game.state, room);
     this.prevCam = { ...this.camera };
@@ -128,7 +149,10 @@ export class WorldRenderer {
       this.fadeIn = render.fadeInFrames;
     } else if (this.fadeIn > 0) this.fadeIn--;
     this.juice.step(s, events);
+    this.impact.step(s, events, (e) => this.colourOf(e));
+    this.soundViz.step(s, events);
     this.sig.step(events);
+    this.rig.step(events);
     this.kid.step(events);
     this.combat.step(events);
     this.bagHud.step(events);
@@ -147,8 +171,11 @@ export class WorldRenderer {
       this.prevCam = { ...this.camera };
     }
     this.juice.reset();
+    this.impact.reset();
+    this.soundViz.reset();
     this.sig.reset();
     this.kid.reset();
+    this.rig.reset();
     this.combat.reset();
     this.bagHud.reset();
   }
@@ -195,33 +222,49 @@ export class WorldRenderer {
 
     const c0 = this.prevCam;
     const c1 = this.camera;
-    // Interpolate the view centre and the zoom, then derive the top-left at that zoom.
+    // Interpolate the view centre and the zoom, then derive the top-left at that zoom. Combat
+    // juice: the sprung kick jolts the view along the hit, trauma adds a shake on top.
+    const im = this.impact;
+    const sh = im.shake();
     const zoom = lerp(c0.zoom, c1.zoom, alpha);
-    const mx = lerp(
-      c0.x + c0.shakeX + VIEW_W / (2 * c0.zoom),
-      c1.x + c1.shakeX + VIEW_W / (2 * c1.zoom),
-      alpha,
-    );
-    const my = lerp(
-      c0.y + c0.shakeY + VIEW_H / (2 * c0.zoom),
-      c1.y + c1.shakeY + VIEW_H / (2 * c1.zoom),
-      alpha,
-    );
+    const mx =
+      lerp(c0.x + c0.shakeX + VIEW_W / (2 * c0.zoom), c1.x + c1.shakeX + VIEW_W / (2 * c1.zoom), alpha) -
+      im.kx +
+      sh.x;
+    const my =
+      lerp(c0.y + c0.shakeY + VIEW_H / (2 * c0.zoom), c1.y + c1.shakeY + VIEW_H / (2 * c1.zoom), alpha) -
+      im.ky +
+      sh.y;
     const view = snapView(mx - VIEW_W / (2 * zoom), my - VIEW_H / (2 * zoom), zoom);
     // gfx.draw sets this too; set it first so the bag HUD and rects() see this frame's camera.
     this.world.position.set(-view.sx, -view.sy);
     this.world.scale.set(zoom);
 
-    this.drawPlayer(px, py);
+    this.drawPlayer(px, py, a);
     this.sig.draw(alpha, { x: px, y: py });
     this.kidFront.clear();
     this.kidGlow.clear();
-    this.kid.draw(this.kidFront, this.kidGlow, { x: px, y: py });
+    this.kid.draw(this.kidFront, this.kidGlow, { x: px, y: py }, this.rig.hands);
     this.combatFront.clear();
     this.combatGlow.clear();
     this.combat.draw(this.combatFront, this.combatGlow);
-    this.bagHud.draw({ x: -view.sx, y: -view.sy, k: zoom });
+    const renderZoom = this.composeZoom(alpha, view.sx, view.sy, zoom, px + p.w / 2, py + p.h / 2);
+    this.lastZoom = renderZoom;
+    this.bagHud.draw({ x: -view.sx, y: -view.sy, k: zoom }, renderZoom);
     this.drawFx();
+    this.juiceFront.clear();
+    this.juiceGlow.clear();
+    this.soundViz.draw(
+      this.juiceFront,
+      this.juiceGlow,
+      state,
+      { x: px, y: py },
+      state.frame,
+      this.rig.hands.sack,
+    );
+    drawImpacts(this.juiceFront, this.juiceGlow, im);
+    const impactOn = im.impactFrames > 0 ? 1 : 0;
+    this.drawJuiceScreen(impactOn && !this.gfx.postOn ? im.impactColor : -1);
     this.drawScreen(alpha);
     const dead = p.state === 'dead';
     const trauma = Math.max(c0.trauma, c1.trauma);
@@ -229,7 +272,7 @@ export class WorldRenderer {
       clock: makeClock(state.frame, alpha, this.gfx.framesInRoom),
       camX: view.x,
       camY: view.y,
-      zoom,
+      camZoom: zoom,
       player: {
         x: px + p.w / 2,
         y: py + p.h * 0.4,
@@ -239,50 +282,98 @@ export class WorldRenderer {
       hit: Math.max(
         (trauma - render.hitTraumaFloor) / (1 - render.hitTraumaFloor),
         this.juice.screenFlash / fxTuning.deathScreenFlash,
+        im.aberration,
       ),
+      impact: impactOn,
+      impactColor: im.impactColor,
+      drama: im.drama(),
+      zoom: renderZoom,
     });
   }
 
-  private drawPlayer(px: number, py: number): void {
-    const p = this.game.state.player;
-    const g = this.player.clear();
-    const glow = this.gfx.playerGlow.clear();
-    if (p.down) {
-      // Down for her Count: lying on the floor (KidRenderer draws the ring over her).
-      this.player.visible = true;
-      this.player.alpha = 1;
-      this.kid.drawDown(g, p);
-      this.player.position.set(Math.round(px + p.w / 2), Math.round(py + p.h));
-      this.player.scale.set(1, 1);
-      return;
+  /**
+   * The render zoom this frame: combat framing (about a focus that keeps Kid in frame) composed
+   * with the hit punch / slow-mo zoom (about the impact). Zooming in about a point inside the view
+   * never shows past the camera's room clamp.
+   */
+  private composeZoom(
+    alpha: number,
+    cx: number,
+    cy: number,
+    k: number,
+    kidWX: number,
+    kidWY: number,
+  ): { z: number; ox: number; oy: number } {
+    // (cx, cy) is the world layers' screen offset and k the camera zoom: world px * k - c = the
+    // unzoomed screen px this render zoom works in.
+    const kidX = kidWX * k;
+    const kidY = kidWY * k;
+    const im = this.impact;
+    const z1 = lerp(im.prevCzoom, im.czoom, alpha);
+    const z2 = lerp(im.prevZoom, im.zoom, alpha);
+    const m = JUICE.combatMargin;
+    const clampF = (f: number, k: number, W: number) => {
+      if (z1 <= 1.0005) return f;
+      const lo = (k * z1 - (W - m)) / (z1 - 1);
+      const hi = (k * z1 - m) / (z1 - 1);
+      return Math.max(0, Math.min(W, Math.max(lo, Math.min(hi, f))));
+    };
+    const ksx = kidX - cx;
+    const ksy = kidY - cy;
+    const f1x = clampF(im.cfx * k - cx, ksx, VIEW_W);
+    const f1y = clampF(im.cfy * k - cy, ksy, VIEW_H);
+    // The punch focus, as it sits after the combat zoom.
+    const f2x = Math.max(0, Math.min(VIEW_W, f1x + (im.focusX * k - cx - f1x) * z1));
+    const f2y = Math.max(0, Math.min(VIEW_H, f1y + (im.focusY * k - cy - f1y) * z1));
+    return {
+      z: z1 * z2,
+      ox: f1x * z2 * (1 - z1) + f2x * (1 - z2),
+      oy: f1y * z2 * (1 - z1) + f2y * (1 - z2),
+    };
+  }
+
+  /** Render time scale for the real-time loop: < 1 during slow motion (the sim is unchanged). */
+  timeScale(): number {
+    return this.impact.timeScale(this.game.state.hitstop);
+  }
+
+  /** The noise colour (hex) of whatever an event hit or took, for sparks and stars. */
+  private colourOf(e: SimEvent): number {
+    const L = this.game.state.local;
+    if ('colour' in e && typeof e.colour === 'string') return colourHex(e.colour);
+    const id = e.type === 'hit' ? e.target : 'enemy' in e ? e.enemy : -1;
+    const en = L.enemies.find((o) => o.id === id);
+    const src = en ? L.sources.find((o) => o.id === en.source) : undefined;
+    const snd = src ? L.sounds.find((o) => src.soundIds.includes(o.id) && o.status === 'home') : undefined;
+    return snd ? colourHex(snd.colour) : 0xfff3c4;
+  }
+
+  /** Letterbox bars while slow motion runs; a flat impact frame when the post filter is off. */
+  private drawJuiceScreen(fallbackImpact: number): void {
+    const g = this.juiceScreen.clear();
+    const d = this.impact.drama();
+    if (d > 0.01) {
+      const h = Math.round(VIEW_H * 0.085 * Math.min(1, d * 1.6));
+      g.rect(0, 0, VIEW_W, h).fill({ color: 0x000000, alpha: 0.92 });
+      g.rect(0, VIEW_H - h, VIEW_W, h).fill({ color: 0x000000, alpha: 0.92 });
     }
-    if (p.state === 'dead') {
-      this.drawDeathPop();
-      return;
-    }
-    this.player.visible = true;
-    const w = p.w;
-    const h = p.h;
-    const [kx, ky] = this.sig.kidScale();
-    const body =
-      this.kid.tint() ?? this.sig.kidTint() ?? (p.state === 'dash' ? COLORS.playerDash : COLORS.player);
-    g.roundRect(-w / 2, -h, w, h, 10).fill(body);
-    // Dash-ready band (Celeste's hair-colour trick): blue when an air dash is available. It is
-    // emissive (glows through bloom), so dash readiness reads even in dark rooms.
-    if (p.abilities.dash) {
-      const ready = p.grounded || p.airDash > 0;
-      g.rect(-w / 2, -h * 0.55, w, 10).fill(ready ? COLORS.dashReady : COLORS.dashUsed);
-      if (ready) glow.rect(-w / 2, -h * 0.55, w, 10).fill({ color: COLORS.dashReady, alpha: 0.7 });
-    }
-    if (p.state === 'dash')
-      glow.roundRect(-w / 2, -h, w, h, 10).fill({ color: COLORS.playerDash, alpha: 0.35 });
-    const eyeX = p.facing > 0 ? w / 2 - 14 : -w / 2 + 6;
-    g.rect(eyeX, -h + 18, 8, 12).fill(COLORS.playerEye);
-    for (const n of [this.player, this.gfx.playerGlow]) {
-      n.position.set(Math.round(px + w / 2), Math.round(py + h));
-      n.scale.set(this.juice.sx * kx, this.juice.sy * ky);
-    }
-    this.player.alpha = this.sig.kidAlpha() * this.kid.alpha();
+    if (fallbackImpact >= 0) g.rect(0, 0, VIEW_W, VIEW_H).fill({ color: fallbackImpact, alpha: 0.55 });
+  }
+
+  private drawPlayer(px: number, py: number, alpha: number): void {
+    const d = this.juice.death;
+    this.rig.draw(this.gfx.playerGlow.clear(), {
+      kid: { x: px, y: py },
+      alpha,
+      squash: [this.juice.sx, this.juice.sy],
+      weight: this.sig.kidScale(),
+      tint: this.kid.tint() ?? this.sig.kidTint(),
+      // No i-frame flicker while she's down for her Count: the pose must read.
+      opacity: this.game.state.player.down ? 1 : this.sig.kidAlpha() * this.kid.alpha(),
+      deathAge: d ? d.age : null,
+      deathHold: fxTuning.deathHoldFrames,
+      deathPopScale: fxTuning.deathPopScale,
+    });
   }
 
   /** Canvas-px rects of L3 things as last drawn (for the E readability checks). */
@@ -290,33 +381,19 @@ export class WorldRenderer {
     const ox = this.world.position.x;
     const oy = this.world.position.y;
     const k = this.world.scale.x;
+    // Through the render zoom (identity unless a punch or slow-mo is on).
+    const { z, ox: zx, oy: zy } = this.lastZoom.z > 1.0005 ? this.lastZoom : { z: 1, ox: 0, oy: 0 };
     const out = this.sig
       .worldRects()
       .filter((r) => r.kind !== 'plate')
       .map((r) => ({
         ...r,
-        x: Math.round(r.x * k + ox),
-        y: Math.round(r.y * k + oy),
-        w: Math.round(r.w * k),
-        h: Math.round(r.h * k),
+        x: Math.round((r.x * k + ox) * z + zx),
+        y: Math.round((r.y * k + oy) * z + zy),
+        w: Math.round(r.w * k * z),
+        h: Math.round(r.h * k * z),
       }));
     return [...out, ...this.bagHud.slotRects().map((r) => ({ ...r }))];
-  }
-
-  /** Death: the body flashes white, turns red and swells for the hold, then pops (juice burst). */
-  private drawDeathPop(): void {
-    const d = this.juice.death;
-    this.player.visible = d !== null;
-    this.player.alpha = 1;
-    if (!d) return;
-    const white = d.age < fxTuning.deathFlashFrames;
-    const k = 1 + (fxTuning.deathPopScale - 1) * (d.age / fxTuning.deathHoldFrames);
-    this.player
-      .clear()
-      .roundRect(-d.w / 2, -d.h / 2, d.w, d.h, 10)
-      .fill(white ? COLORS.deathFlash : COLORS.deathBody);
-    this.player.position.set(Math.round(d.x + d.w / 2), Math.round(d.y + d.h / 2));
-    this.player.scale.set(k, k);
   }
 
   private drawFx(): void {
@@ -325,11 +402,7 @@ export class WorldRenderer {
     // Energetic juice (dash, death, pogo, rings) also draws into the emissive layer so it glows;
     // dust stays matte and lit.
     const glow = this.gfx.fxGlow.clear();
-    for (const ai of this.juice.afterimages) {
-      const t = ai.age / fxTuning.afterimageLife;
-      back.roundRect(ai.x, ai.y, ai.w, ai.h, 10).fill({ color: COLORS.playerDash, alpha: 0.45 * (1 - t) });
-      glow.roundRect(ai.x, ai.y, ai.w, ai.h, 10).fill({ color: COLORS.playerDash, alpha: 0.25 * (1 - t) });
-    }
+    // Slip afterimages are Kid's own silhouette, drawn by the rig.
     for (const q of this.juice.particles) {
       const t = q.age / q.life;
       const alpha = 1 - t;

@@ -18,7 +18,11 @@
 - **Trauma is squared**: trauma < 0.45 is under 5 px (invisible). Hard land 0.55, death 0.8.
 - C3 (feet within [15%, 85%]) is checked only when room bounds didn't clamp y. C5: 90% of look within 32 f.
 - Headless Chromium produces a frame right after timer tasks (no vsync), so the e2e latency test reads
-  ~0 ms; it asserts the press is visible in the next rendered frame instead.
+  ~0 ms; it asserts the press is visible in the next rendered frame instead. Real displays add 1-2 vsyncs.
+- Combat hits add no camera trauma here: the impact director (combat-juice.md) adds its own
+  kick/shake and a render zoom (`zoomRoot`, zooms IN about a focus) on top of the camera's view.
+  The two compose: world px * camera zoom - snapped offset = unzoomed screen px, then the render
+  zoom (`FrameInput.camZoom` vs `FrameInput.zoom`; `composeZoom` takes the camera zoom).
 
 ## L6: seams, zoom, shots, beacons (tests: tests/unit/camera-world.test.ts)
 - **Seams (edge exits):** while `state.transition.offset` is set the camera remembers it

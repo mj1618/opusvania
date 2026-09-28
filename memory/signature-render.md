@@ -21,7 +21,7 @@ Code-drawn Pixi Graphics; render only reads sim state/events.
   contrast 1.6:1): readability-critical shapes must stay out of the LightingFilter.
 - **Determinism:** feedback state (flashes, shake target, sparks, ribbons, needle, gate-open frame) is
   stepped in onStep. Vibration, speckle and motes are functions of `state.frame` (Math.sin is fine
-  in render). Sparks freeze during hitstop; ribbons don't (they are UI).
+  in render). Hit/catch sparks moved to the impact director (combat-juice.md), which animates through the hitstop; ribbons don't freeze (they are UI).
 - **Status rules:** object `ghost` flag → dashed; `pendingSolid` → blinking dashed; white → static.
   Enemy outline per voice (solid+vibrating if home, dashed + mouth "X" if away); a disarmed enemy's
   Snatch telegraph must NOT draw a solid ring (it read as re-armed in the Pit clip). Slab `solid`
@@ -37,7 +37,7 @@ Code-drawn Pixi Graphics; render only reads sim state/events.
   Barker at (1150, 960) in the-pit and catches it (`R1 .72 S1`). Violet has no L3 source, so E1 uses
   its token. E3: the take starts a 5 f hitstop, so "next step" = first step Kid moves (6th).
 - Pit script without spawn that catches the floor Barker (good for clips): `L30 .84 L+S1 .200`.
-- L4 combat render (src/render): `kid.ts` (glove/hand/throw/swallow drawn along the move's hitbox),
+- L4 combat render (src/render): `kid.ts` (now only the Seize hand from her glove, Swallow ring, Count ring, sparks; her body/gloves/strikes are the rig, memory/rig.md),
   `enemies.ts` (posed bodies, voice rings: open = marching dashes, the attacking voice dominates a
   wind-up), `combat.ts` (Count ring, REPOSSESSED stamp, Kid's Count, CLEARED), `shots.ts`,
   `glyphs.ts` (keycap prompts from `room.prompts`), `sparks.ts`; HUD adds chinMax, Lien seals,

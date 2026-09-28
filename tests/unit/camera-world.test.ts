@@ -85,7 +85,7 @@ const zoneRows = Array.from({ length: 30 }, (_, y) =>
     x === 0 || y === 0 || x === ZW - 1 || y >= 28 ? '#' : x === 5 && y === 27 ? 'P' : '.',
   ).join(''),
 );
-function zoneRoom(id: string, extra: Partial<RoomFile['cameraZones'][number]> = {}) {
+function zoneRoom(id: string, extra: Partial<NonNullable<RoomFile['cameraZones']>[number]> = {}) {
   return registerRoom(
     buildRoom({
       id,

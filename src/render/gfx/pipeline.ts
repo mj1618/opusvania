@@ -86,14 +86,25 @@ export interface FrameInput {
   camX: number;
   camY: number;
   /** Camera zoom (world layers are scaled by it; default 1). */
-  zoom?: number;
+  camZoom?: number;
   /** Player centre (interpolated), world px, and whether it is dashing / alive. */
   player: { x: number; y: number; dashing: boolean; visible: boolean };
   /** 0..1 hit intensity (camera trauma, death flash): drives chromatic aberration. */
   hit: number;
+  /** Combat juice (optional): impact frame 0..1 and its tint, slow-mo drama 0..1, render zoom
+   * (screen = unzoomed screen px * z + (ox, oy); z = 1 is none). */
+  impact?: number;
+  impactColor?: number;
+  drama?: number;
+  zoom?: { z: number; ox: number; oy: number };
 }
 
 export class GfxPipeline {
+  /**
+   * Holds the light-map sprite, the scene and the world overlay, so a render zoom (combat punch)
+   * scales them together and the lighting/post filters stay registered. The UI is not zoomed.
+   */
+  readonly zoomRoot = new Container({ label: 'zoom-root' });
   readonly scene = new Container({ label: 'scene' });
   readonly layers = {
     bg: new Container({ label: 'bg' }),
@@ -173,7 +184,8 @@ export class GfxPipeline {
     L.ambient.addChild(this.ambientView.soot, this.ambientView.glow);
     this.scene.addChild(L.bg, L.lit, L.actors, L.emissiveRoot, this.bloom.view, L.ambient, L.fg);
     L.ui.addChild(this.perfHud.container);
-    app.stage.addChild(this.lights.screenSprite, this.scene, L.overlay, L.ui);
+    this.zoomRoot.addChild(this.lights.screenSprite, this.scene, L.overlay);
+    app.stage.addChild(this.zoomRoot, L.ui);
     const gl = (this.renderer as unknown as { gl?: WebGL2RenderingContext }).gl;
     if (gl) this.perf.instrument(gl);
     this.applyQuality();
@@ -332,7 +344,7 @@ export class GfxPipeline {
   /** Positions layers, renders the light map and sets per-frame uniforms. Call before app.render(). */
   draw(f: FrameInput): void {
     const { clock } = f;
-    const zoom = f.zoom ?? 1;
+    const zoom = f.camZoom ?? 1;
     const v = snapView(f.camX, f.camY, zoom);
     const camX = v.x;
     const camY = v.y;
@@ -381,6 +393,20 @@ export class GfxPipeline {
       const ab = this.q.aberration ? Math.min(1, Math.max(0, f.hit)) * 16 : 0;
       this.postFilter.setFrame(clock.frame, ab, d.ambient.level, this.q.grain, d.grade.grain);
     }
+    this.postFilter.setImpact(f.impact ?? 0, f.impactColor ?? 0xffffff, f.drama ?? 0);
+    const z = f.zoom && f.zoom.z > 1.0005 ? f.zoom : null;
+    if (z) {
+      this.zoomRoot.scale.set(z.z);
+      this.zoomRoot.position.set(z.ox, z.oy);
+    } else {
+      this.zoomRoot.scale.set(1);
+      this.zoomRoot.position.set(0, 0);
+    }
+  }
+
+  /** Is the post filter (impact frames, drama grade) active at this quality? */
+  get postOn(): boolean {
+    return this.q.post && this.toggles.post;
   }
 
   private solidAt(x: number, y: number): boolean {

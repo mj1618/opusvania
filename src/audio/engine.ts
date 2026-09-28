@@ -25,6 +25,8 @@ export interface PlayOpts {
   volume?: number;
   /** Playback-rate multiplier (before random variation). */
   pitch?: number;
+  /** Seconds from now (sequenced one-shots: coin showers, the sack pop after a rip). */
+  delay?: number;
   /** Explicit pan (-1..1); overrides the spatial pan. */
   pan?: number;
   /** Optional low-pass cutoff (distance/muffle colouring). */
@@ -229,7 +231,7 @@ export class AudioEngine {
       this.counters.dropped++;
       return false;
     }
-    const at = Math.max(o.at ?? this.now, this.now);
+    const at = Math.max(o.at ?? this.now, this.now) + Math.max(0, o.delay ?? 0);
     const last = this.lastPlayed.get(name);
     const active = this.activeByName.get(name) ?? 0;
     if (
@@ -271,6 +273,12 @@ export class AudioEngine {
     const p = ctx.createStereoPanner();
     p.pan.value = pan;
     g.connect(p).connect(this.buses[o.bus ?? def.bus]);
+    let send: GainNode | null = null;
+    if (def.reverb > 0) {
+      send = ctx.createGain();
+      send.gain.value = def.reverb;
+      p.connect(send).connect(this.reverbIn);
+    }
 
     src.start(at);
     this.lastPlayed.set(name, at);
@@ -279,6 +287,7 @@ export class AudioEngine {
     src.onended = () => {
       src.disconnect();
       p.disconnect();
+      send?.disconnect();
       this.activeByName.set(name, (this.activeByName.get(name) ?? 1) - 1);
       this.activeVoices--;
     };

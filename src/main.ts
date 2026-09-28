@@ -119,7 +119,9 @@ async function boot(): Promise<void> {
     last = now;
     if (game.mode === 'realtime') {
       gfx.perf.begin(performance.now());
-      const n = loop.advance(elapsed);
+      // Combat slow motion is render time dilation: the sim takes the same steps, just fed less
+      // wall time (src/render/juice/impact.ts).
+      const n = loop.advance(elapsed * renderer.timeScale());
       for (let i = 0; i < n; i++) game.stepOnce();
       render(loop.alpha);
       gfx.perf.end(performance.now());

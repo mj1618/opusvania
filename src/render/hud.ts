@@ -5,7 +5,7 @@ import type { Colour, SimEvent } from '../sim/events';
 import { tuning } from '../sim/tuning';
 import { VIEW_W } from './camera/index';
 import { drawCoin, drawWaxSeal, strokeText, strokeTextWidth } from './glyphs';
-import { dashPath } from './outline';
+import { dashPath, rngFor } from './outline';
 import { CBT, colourHex, PALETTE, SIG } from './palette';
 import type { SigRect } from './signature';
 
@@ -74,6 +74,10 @@ export class BagHud {
   private shown = 0;
   private pending = 0;
   private coinPing = 0;
+  /** Pickup juice: a ring bursts off a slot as its sound lands; gold sparks off the counter. */
+  private slotBurst: { slot: number; colour: Colour; age: number }[] = [];
+  private sparkles: { x: number; y: number; vx: number; vy: number; age: number }[] = [];
+  private stepN = 0;
   private ringAge = 0;
 
   constructor(private readonly game: Game) {
@@ -95,6 +99,8 @@ export class BagHud {
   reset(): void {
     this.ribbons = [];
     this.coins = [];
+    this.slotBurst = [];
+    this.sparkles = [];
     this.pending = 0;
     this.shown = this.game.state.run.poundage;
     const a = NEEDLE[this.game.state.player.profile] ?? -1;
@@ -104,6 +110,20 @@ export class BagHud {
   step(events: readonly SimEvent[]): void {
     const s = this.game.state;
     const prevBag = this.game.prev.local.bag;
+    this.stepN++;
+    for (const r of this.ribbons)
+      if (r.fills >= 0 && r.age === SIG.ribbonFrames - 1)
+        this.slotBurst.push({ slot: r.fills, colour: r.colour, age: 0 });
+    for (const b of this.slotBurst) b.age++;
+    this.slotBurst = this.slotBurst.filter((b) => b.age < 16);
+    for (const p of this.sparkles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.4;
+      p.vx *= 0.92;
+      p.age++;
+    }
+    this.sparkles = this.sparkles.filter((p) => p.age < 22);
     for (const r of this.ribbons) r.age++;
     this.ribbons = this.ribbons.filter((r) => r.age < SIG.ribbonFrames);
     if (this.needle.age < SIG.needleFrames) this.needle.age++;
@@ -111,7 +131,21 @@ export class BagHud {
     if (this.coinPing > 0) this.coinPing--;
     for (const c of this.coins) c.age++;
     const landed = this.coins.filter((c) => c.age >= c.delay + CBT.coinFrames).length;
-    if (landed > 0) this.coinPing = 6;
+    if (landed > 0) {
+      this.coinPing = 6;
+      const rnd = rngFor(this.stepN, 404);
+      for (let i = 0; i < 5 * landed; i++) {
+        const a = -Math.PI / 2 + (rnd() - 0.5) * 2.6;
+        const sp = 3 + rnd() * 5;
+        this.sparkles.push({
+          x: LAYOUT.coinX,
+          y: LAYOUT.coinY,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          age: 0,
+        });
+      }
+    }
     this.coins = this.coins.filter((c) => c.age < c.delay + CBT.coinFrames);
     if (this.coins.length === 0) this.pending = 0;
     const target = s.run.poundage - this.pending;
@@ -122,7 +156,8 @@ export class BagHud {
       if (e.type === 'poundage' && e.amount > 0) {
         // Coins fly from where it was paid to the counter; the number ticks up as they land.
         this.pending += e.amount;
-        for (let i = 0; i < CBT.coinsPerPayout; i++)
+        const n = Math.max(CBT.coinsPerPayout, Math.min(14, e.amount));
+        for (let i = 0; i < n; i++)
           this.coins.push({ x: e.x + (i - 2.5) * 10, y: e.y - (i % 2) * 14, age: 0, delay: i * 2 });
       }
       if (e.type === 'seizeTake') {
@@ -177,10 +212,14 @@ export class BagHud {
     return this.slots;
   }
 
-  /** `cam` = the world container's offset (world px + cam = canvas px). */
-  /** `cam`: world -> screen is `world * k + (x, y)` (k = camera zoom, default 1). */
-  draw(cam: { x: number; y: number; k?: number }): void {
-    const k = cam.k ?? 1;
+  /**
+   * `cam` = the world container's offset and scale k (world px * k + cam = unzoomed canvas px, k = camera zoom); `zoom` = the combat
+   * render zoom (canvas = unzoomed * z + o).
+   */
+  draw(
+    cam: { x: number; y: number; k?: number },
+    zoom: { z: number; ox: number; oy: number } = { z: 1, ox: 0, oy: 0 },
+  ): void {
     const s = this.game.state;
     const g = this.g.clear();
     const rg = this.ribbonsG.clear();
@@ -310,14 +349,51 @@ export class BagHud {
         width: 3,
       });
     }
+    // Counter pulse: the panel edge glows gold while coins land.
+    if (ping > 0)
+      g.roundRect(Lh.panelX, Lh.panelY, Lh.panelW, Lh.panelH, 10).stroke({
+        width: 3,
+        color: PALETTE.coin,
+        alpha: ping,
+      });
     for (const c of this.coins) {
       if (c.age < c.delay) continue;
-      const t = Math.min(1, (c.age - c.delay) / CBT.coinFrames);
-      const u = t * t;
-      const a0 = { x: c.x * k + cam.x, y: c.y * k + cam.y };
-      const x = a0.x + (Lh.coinX - a0.x) * u;
-      const y = a0.y + (Lh.coinY - a0.y) * u - Math.sin(t * Math.PI) * 120;
+      const a0 = {
+        x: (c.x * (cam.k ?? 1) + cam.x) * zoom.z + zoom.ox,
+        y: (c.y * (cam.k ?? 1) + cam.y) * zoom.z + zoom.oy,
+      };
+      const at = (age: number) => {
+        const t = Math.max(0, Math.min(1, (age - c.delay) / CBT.coinFrames));
+        const u = t * t;
+        return [
+          a0.x + (Lh.coinX - a0.x) * u,
+          a0.y + (Lh.coinY - a0.y) * u - Math.sin(t * Math.PI) * 120,
+        ] as const;
+      };
+      // A glittering tail behind each coin.
+      for (let j = 3; j >= 1; j--) {
+        const [tx, ty] = at(c.age - j * 1.5);
+        rg.circle(tx, ty, 6 - j).fill({ color: PALETTE.coin, alpha: 0.5 - j * 0.12 });
+      }
+      const [x, y] = at(c.age);
       drawCoin(rg, x, y, 13, 1, Math.abs(Math.cos(c.age * 0.5)) * 0.8 + 0.2);
+      if (c.age % 6 < 2) rg.circle(x - 4, y - 5, 3).fill({ color: 0xffffff, alpha: 0.9 });
+    }
+    for (const p of this.sparkles) {
+      const k = 1 - p.age / 22;
+      rg.rect(p.x - 2, p.y - 2, 4, 4).fill({ color: p.age % 4 < 2 ? 0xffffff : PALETTE.coin, alpha: k });
+    }
+    // A sound landing in its slot: a ring bursts off the slot in its colour.
+    for (const b of this.slotBurst) {
+      const t = b.age / 16;
+      const cx = Lh.slotX + b.slot * (Lh.slot + Lh.slotGap) + Lh.slot / 2;
+      const cy = Lh.slotY + Lh.slot / 2;
+      rg.circle(cx, cy, 26 + 30 * (1 - (1 - t) ** 2)).stroke({
+        width: 5 * (1 - t) + 1,
+        color: colourHex(b.colour),
+        alpha: 1 - t,
+      });
+      if (b.age < 3) rg.circle(cx, cy, 30).stroke({ width: 4, color: 0xffffff, alpha: 0.9 });
     }
 
     this.drawBoss(g);
@@ -326,7 +402,10 @@ export class BagHud {
     const pos = (p: Ribbon['from']): { x: number; y: number } =>
       'slot' in p
         ? { x: Lh.slotX + p.slot * (Lh.slot + Lh.slotGap) + Lh.slot / 2, y: Lh.slotY + Lh.slot / 2 }
-        : { x: p.x * k + cam.x, y: p.y * k + cam.y };
+        : {
+            x: (p.x * (cam.k ?? 1) + cam.x) * zoom.z + zoom.ox,
+            y: (p.y * (cam.k ?? 1) + cam.y) * zoom.z + zoom.oy,
+          };
     for (const r of this.ribbons) {
       const a0 = pos(r.from);
       const a1 = pos(r.to);
