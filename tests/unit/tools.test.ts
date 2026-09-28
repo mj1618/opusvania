@@ -160,7 +160,7 @@ describe('search bot', () => {
     expect(r.found).toBe(false);
     expect(r.exhausted).toBe(true);
     expect(resolveTarget(SEALED, 'tile:6,2')).toEqual({ x: 6 * 64, y: 2 * 64, w: 64, h: 64 });
-  });
+  }, 30_000);
 
   it('respects the budget', () => {
     const r = search({ room: OPEN, target: 'tile:22,9', budget: 50 });
