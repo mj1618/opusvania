@@ -36,6 +36,8 @@ const FORBIDDEN_CODE: Array<[RegExp, string]> = [
 ];
 
 const ALLOWED_IMPORT = /^(\.{1,2}\/|zod$)/;
+/** Content data (room JSON) is data, not code: the sim may bundle it. */
+const CONTENT_DIR = join(__dirname, '../../content');
 
 function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
@@ -65,7 +67,10 @@ describe('src/sim purity', () => {
         expect(ALLOWED_IMPORT.test(spec), `${rel} imports "${spec}"`).toBe(true);
         if (spec.startsWith('.')) {
           const target = join(file, '..', spec);
-          expect(target.startsWith(SIM_DIR), `${rel} imports outside src/sim: "${spec}"`).toBe(true);
+          const isContent = target.startsWith(CONTENT_DIR) && spec.endsWith('.json');
+          expect(target.startsWith(SIM_DIR) || isContent, `${rel} imports outside src/sim: "${spec}"`).toBe(
+            true,
+          );
         }
       }
     });

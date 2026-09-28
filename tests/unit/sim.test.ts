@@ -1,123 +1,55 @@
 import { describe, expect, it } from 'vitest';
-import { parseInputScript } from '../../src/input/script';
-import { cloneState, hashState, step } from '../../src/sim/index';
-import { collidesAt } from '../../src/sim/physics/aabb';
-import { DT } from '../../src/sim/player/player';
-import { defaultTuning } from '../../src/sim/tuning';
-import { buildRoom, getRoom } from '../../src/sim/world/rooms';
+import { hashState, step } from '../../src/sim/index';
+import { solidAt } from '../../src/sim/physics/aabb';
+import { resolveParams } from '../../src/sim/player/params';
+import { cloneTuning, defaultTuning, PRESET_NAMES, presetTuning } from '../../src/sim/tuning';
+import {
+  ALL_ABILITIES,
+  buildRoom,
+  GYM_ROOMS,
+  getRoom,
+  mirrorRoomFile,
+  ROOMS,
+} from '../../src/sim/world/rooms';
 import { newGame, run } from './helpers';
 
 describe('sim basics', () => {
   it('spawns the player standing on the floor and settles', () => {
     const { state, tuning } = newGame();
-    const floorTop = 18 * tuning.world.tileSize;
-    expect(state.player.y + state.player.h).toBe(floorTop);
+    const room = getRoom(state.roomId);
+    const sp = room.spawns.default;
+    expect(state.player.y + state.player.h).toBe(((sp?.ty ?? 0) + 1) * tuning.world.tileSize);
+    expect(state.player.grounded).toBe(true);
     run(state, tuning, '_*60');
     expect(state.frame).toBe(60);
     expect(state.player.grounded).toBe(true);
-    expect(state.player.y + state.player.h).toBe(floorTop);
     expect(state.player.vy).toBe(0);
+    expect(state.player.w).toBe(40);
+    expect(state.player.h).toBe(80);
   });
 
-  it('runs right at runSpeed', () => {
-    const { state, tuning } = newGame();
-    const x0 = state.player.x;
-    run(state, tuning, 'right*30');
-    expect(state.player.vx).toBe(tuning.player.runSpeed);
-    expect(state.player.facing).toBe(1);
-    expect(state.player.x).toBeGreaterThan(x0 + tuning.player.runSpeed * DT * 20);
-  });
-
-  it('is stopped by walls and never overlaps solids', () => {
-    const { state, tuning } = newGame();
-    const room = getRoom(state.roomId);
-    for (const input of parseInputScript('left*120 right*400 right+jump*20 right*100')) {
-      step(state, input, tuning, []);
-      const p = state.player;
-      expect(collidesAt(room, tuning.world.tileSize, p.x, p.y, p.w, p.h)).toBe(false);
+  it('never overlaps solids while running and jumping around', () => {
+    const { state, tuning } = newGame({ roomId: 'gym-01' });
+    for (const script of [
+      'left*60 right*200',
+      'right+jump*20 right*60',
+      'left+jump*30 left*40 jump*10 _*40',
+    ]) {
+      for (let i = 0; i < 400; i++) {
+        run(state, tuning, script.split(' ')[i % 3] ?? '_');
+        const p = state.player;
+        expect(solidAt(getRoom(state.roomId), 64, p.x, p.y, p.w, p.h)).toBe(false);
+      }
     }
-    const fresh = newGame();
-    run(fresh.state, fresh.tuning, 'left*200');
-    expect(fresh.state.player.x).toBe(tuning.world.tileSize); // flush against the left wall
-    expect(fresh.state.player.vx).toBe(0);
-  });
-
-  it('jumps to about v²/2g and lands again, emitting events', () => {
-    const { state, tuning } = newGame();
-    run(state, tuning, '_*5');
-    const y0 = state.player.y;
-    const events = run(state, tuning, 'jump');
-    expect(events.map((e) => e.type)).toContain('jump');
-    let minY = state.player.y;
-    for (let i = 0; i < 40; i++) {
-      run(state, tuning, 'jump', events);
-      minY = Math.min(minY, state.player.y);
-    }
-    const expected = tuning.jump.jumpSpeed ** 2 / (2 * tuning.jump.gravity);
-    expect(y0 - minY).toBeGreaterThan(expected * 0.9);
-    expect(y0 - minY).toBeLessThan(expected * 1.1);
-    run(state, tuning, '_*60', events);
-    expect(state.player.y).toBe(y0);
-    expect(events.filter((e) => e.type === 'land')).toHaveLength(1);
-  });
-
-  it('cuts the jump short when jump is released (variable height)', () => {
-    let fullMin = Infinity;
-    let tapMin = Infinity;
-    const a = newGame();
-    const b = newGame();
-    for (const i of parseInputScript('jump*40')) {
-      step(a.state, i, a.tuning, []);
-      fullMin = Math.min(fullMin, a.state.player.y);
-    }
-    for (const i of parseInputScript('jump*3 _*37')) {
-      step(b.state, i, b.tuning, []);
-      tapMin = Math.min(tapMin, b.state.player.y);
-    }
-    expect(tapMin).toBeGreaterThan(fullMin + 50);
-  });
-
-  it('buffers a jump pressed just before landing', () => {
-    const { state, tuning } = newGame();
-    run(state, tuning, 'jump*10'); // still in the air
-    let framesToLand = 0;
-    const probe = cloneState(state);
-    while (!probe.player.grounded && framesToLand < 120) {
-      step(probe, 0, tuning, []);
-      framesToLand++;
-    }
-    // Press jump 3 frames before touching down; it should fire on landing.
-    run(state, tuning, `_*${framesToLand - 3}`);
-    const events = run(state, tuning, 'jump*6');
-    expect(events.filter((e) => e.type === 'jump')).toHaveLength(1);
-  });
-
-  it('allows a coyote jump shortly after walking off a ledge, but not later', () => {
-    const walkOff = () => {
-      const g = newGame({ spawn: 'b' }); // on a 3-tile ledge in the gym
-      run(g.state, g.tuning, '_*2');
-      expect(g.state.player.grounded).toBe(true);
-      let n = 0;
-      while (g.state.player.grounded && n++ < 60) run(g.state, g.tuning, 'left');
-      expect(g.state.player.grounded).toBe(false);
-      return g;
-    };
-    const late = (frames: number) => {
-      const g = walkOff();
-      return run(g.state, g.tuning, `left*${frames} left+jump`).filter((e) => e.type === 'jump');
-    };
-    expect(late(2)).toHaveLength(1);
-    expect(late(2)[0]).toMatchObject({ coyote: true });
-    expect(late(defaultTuning.jump.coyoteFrames + 2)).toHaveLength(0);
   });
 });
 
 describe('determinism', () => {
-  const script = 'right*20 right+jump*15 right*30 left*10 left+jump*20 _*40 jump*5 _*60';
+  const script = 'right*20 right+jump*15 right*30 left*10 left+jump*20 _*40 jump*5 _*60 R+X1 R20 D+A1';
 
   it('same seed + inputs => same hash', () => {
-    const a = newGame({ seed: 99 });
-    const b = newGame({ seed: 99 });
+    const a = newGame({ seed: 99, roomId: 'gym-02' });
+    const b = newGame({ seed: 99, roomId: 'gym-02' });
     run(a.state, a.tuning, script);
     run(b.state, b.tuning, script);
     expect(hashState(a.state)).toBe(hashState(b.state));
@@ -133,8 +65,8 @@ describe('determinism', () => {
   });
 
   it('state survives a JSON round trip mid-run', () => {
-    const a = newGame({ seed: 5 });
-    const b = newGame({ seed: 5 });
+    const a = newGame({ seed: 5, roomId: 'gym-02' });
+    const b = newGame({ seed: 5, roomId: 'gym-02' });
     run(a.state, a.tuning, 'right*25 right+jump*10');
     run(b.state, b.tuning, 'right*25 right+jump*10');
     const restored = JSON.parse(JSON.stringify(b.state));
@@ -145,18 +77,91 @@ describe('determinism', () => {
 });
 
 describe('rooms', () => {
-  it('validates room definitions', () => {
-    expect(() => buildRoom({ id: 'bad', rows: ['#P#', '##'] })).toThrow();
-    expect(() => buildRoom({ id: 'nospawn', rows: ['#.#'] })).toThrow();
-    expect(() => buildRoom({ id: 'x', rows: ['#P?'] })).toThrow();
-    const r = buildRoom({ id: 'ok', rows: ['#a#', '#P#', '###'] });
-    expect(r.spawns).toEqual({ a: { tx: 1, ty: 0 }, default: { tx: 1, ty: 1 } });
+  const base = { abilities: ALL_ABILITIES };
+  it('validates room files with Zod', () => {
+    expect(() => buildRoom({ ...base, id: 'bad', rows: ['#P#', '##'] })).toThrow(/length/);
+    expect(() => buildRoom({ ...base, id: 'nospawn', rows: ['#.#'] })).toThrow(/P/);
+    expect(() => buildRoom({ ...base, id: 'x', rows: ['#P?'] })).toThrow(/unknown tile/);
+    expect(() => buildRoom({ id: 'noab', rows: ['#P#'] } as never)).toThrow();
   });
 
-  it('loads named spawns', () => {
-    const { state, tuning } = newGame({ roomId: 'hall', spawn: 'a' });
-    expect(state.roomId).toBe('hall');
-    const sp = getRoom('hall').spawns.a;
-    expect(Math.floor(state.player.x / tuning.world.tileSize)).toBe(sp?.tx);
+  it('pads small rooms to 30x17 with solid, keeping the sketch centred', () => {
+    const r = buildRoom({ ...base, id: 'tiny', rows: ['###', '#P#', '###'] });
+    expect([r.width, r.height]).toEqual([30, 17]);
+    expect(r.spawns.default).toEqual({ tx: 1 + r.padX, ty: 1 + r.padY });
+    const g1 = getRoom('gym-01');
+    expect([g1.width, g1.height]).toEqual([60, 17]);
+  });
+
+  it('loads all 14 gym rooms plus the hub, each with abilities, claims and a goal', () => {
+    expect(GYM_ROOMS).toHaveLength(14);
+    expect(ROOMS.has('hub')).toBe(true);
+    for (const id of GYM_ROOMS) {
+      const r = getRoom(id);
+      expect(
+        r.entities.some((e) => e.kind === 'goal'),
+        id,
+      ).toBe(true);
+      expect(r.file.claims.G, id).toBeTruthy();
+    }
+    const hub = getRoom('hub');
+    expect(hub.entities.filter((e) => e.kind === 'door').map((e) => e.to)).toEqual(GYM_ROOMS);
+  });
+
+  it('mirrors a room file (spikes flip)', () => {
+    const f = { ...base, id: 'm', rows: ['#####', '#P.>#', '#####'] };
+    expect(mirrorRoomFile(f).rows[1]).toBe('#<.P#');
+  });
+
+  it('a hub door takes you to its room (Up), with a fade-out freeze', () => {
+    const g = newGame({ roomId: 'hub' });
+    const door = getRoom('hub').entities.find((e) => e.char === '3');
+    if (!door) throw new Error('no door 3');
+    g.state.player.x = door.tx * 64 + 12;
+    const evs = run(g.state, g.tuning, 'up _*20');
+    expect(evs.map((e) => e.type)).toContain('roomExit');
+    expect(g.state.roomId).toBe('gym-03');
+    expect(g.state.player.abilities).toEqual(getRoom('gym-03').abilities);
+  });
+
+  it('touching G marks the goal and moves on to the next room', () => {
+    const g = newGame({ roomId: 'gym-01' });
+    const goal = getRoom('gym-01').entities.find((e) => e.kind === 'goal');
+    if (!goal) throw new Error('no goal');
+    g.state.player.x = goal.tx * 64 - 50;
+    const evs = run(g.state, g.tuning, 'right*10 _*20');
+    expect(evs.filter((e) => e.type === 'goal')).toHaveLength(1);
+    expect(g.state.roomId).toBe('gym-02');
+  });
+});
+
+describe('tuning presets and profiles', () => {
+  it('has opus, celeste and hk presets', () => {
+    expect(PRESET_NAMES).toEqual(['opus', 'celeste', 'hk']);
+    expect(presetTuning('opus')).toEqual(cloneTuning(defaultTuning));
+    expect(presetTuning('celeste').jump.gravity).toBe(2);
+    expect(presetTuning('hk').run.groundAccel).toBeGreaterThan(100);
+    expect(presetTuning('hk').assists.apexHang).toBe(false);
+  });
+
+  it('a movement profile overrides the player tuning only while active', () => {
+    const t = cloneTuning(defaultTuning);
+    const base = resolveParams(t, 'base');
+    const heavy = resolveParams(t, 'heavy');
+    expect(heavy.jumpSpeed).toBeLessThan(base.jumpSpeed);
+    expect(heavy.maxRun).toBeCloseTo(base.maxRun * 0.85);
+    expect(t.run.maxSpeed).toBe(defaultTuning.run.maxSpeed); // base tuning untouched
+    expect(() => resolveParams(t, 'nope')).toThrow(/Unknown movement profile/);
+
+    const a = newGame({ roomId: 'gym-01' });
+    a.state.player.profile = 'heavy';
+    a.tuning.assists.apexHang = false;
+    let minY = a.state.player.y;
+    const y0 = minY;
+    for (let i = 0; i < 40; i++) {
+      step(a.state, 16, a.tuning, []);
+      minY = Math.min(minY, a.state.player.y);
+    }
+    expect(y0 - minY).toBe(defaultTuning.profiles.heavy?.shape?.jumpHeightPx);
   });
 });

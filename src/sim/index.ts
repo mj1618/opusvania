@@ -5,6 +5,7 @@
  */
 import type { SimEvent } from './events';
 import type { InputFrame } from './input';
+import { BASE_PROFILE, resolveParams } from './player/params';
 import { createPlayer, updatePlayer } from './player/player';
 import { seedRng } from './rng';
 import type { GameState } from './state';
@@ -20,20 +21,29 @@ export interface NewGameOptions {
 }
 
 export function createState(opts: NewGameOptions, t: Tuning, events: SimEvent[] = []): GameState {
+  const roomId = opts.roomId ?? DEFAULT_ROOM;
+  const room = getRoom(roomId);
+  const sp = room.spawns.default;
+  if (!sp) throw new Error(`Room "${roomId}" has no spawn`);
   const state: GameState = {
-    version: 1,
+    version: 2,
     frame: 0,
     seed: opts.seed >>> 0,
     rng: seedRng(opts.seed),
-    roomId: opts.roomId ?? DEFAULT_ROOM,
+    roomId,
     prevInput: 0,
-    player: createPlayer({ tx: 0, ty: 0 }, t),
+    player: createPlayer(sp, t, room, { abilities: room.abilities }),
+    transition: null,
+    roomStats: { deaths: 0, goal: false, optional: false, frames: 0 },
   };
-  loadRoom(state, state.roomId, opts.spawn, t, events);
+  loadRoom(state, roomId, opts.spawn, t, events);
   return state;
 }
 
-/** Puts the player at a spawn in a room. Keeps frame count and RNG. */
+/**
+ * Puts the player at a spawn in a room. Keeps the frame count, RNG and the player's movement
+ * profile. Abilities come from the room (gym semantics: each room declares what it grants).
+ */
 export function loadRoom(
   state: GameState,
   roomId: string,
@@ -46,10 +56,18 @@ export function loadRoom(
   const sp = room.spawns[key];
   if (!sp)
     throw new Error(`Room "${roomId}" has no spawn "${key}". Known: ${Object.keys(room.spawns).join(', ')}`);
+  const profile = state.player?.profile ?? BASE_PROFILE;
   state.roomId = roomId;
-  state.player = createPlayer(sp, t);
+  state.player = createPlayer(sp, t, room, { abilities: room.abilities, profile });
   state.prevInput = 0;
-  events.push({ type: 'roomEnter', roomId, x: state.player.x, y: state.player.y });
+  state.transition = null;
+  state.roomStats = { deaths: 0, goal: false, optional: false, frames: 0 };
+  events.push({
+    type: 'roomEnter',
+    roomId,
+    x: state.player.x + state.player.w / 2,
+    y: state.player.y + state.player.h,
+  });
 }
 
 export function reseed(state: GameState, seed: number): void {
@@ -57,10 +75,17 @@ export function reseed(state: GameState, seed: number): void {
   state.rng = seedRng(seed);
 }
 
-/** Advances the sim by exactly one 1/60s step, mutating `state` and appending to `events`. */
+/** Advances the sim by exactly one 1/60 s step, mutating `state` and appending to `events`. */
 export function step(state: GameState, input: InputFrame, t: Tuning, events: SimEvent[]): void {
-  const room = getRoom(state.roomId);
-  updatePlayer(state, room, input, t, events);
+  const tr = state.transition;
+  if (tr) {
+    tr.timer--;
+    if (tr.timer <= 0) loadRoom(state, tr.to, tr.spawn, t, events);
+  } else {
+    const room = getRoom(state.roomId);
+    updatePlayer(state, room, input, resolveParams(t, state.player.profile), events);
+    state.roomStats.frames++;
+  }
   state.prevInput = input;
   state.frame++;
 }

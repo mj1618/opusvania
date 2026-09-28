@@ -5,6 +5,7 @@
     "includes": [
       "**",
       "!tools/ideation",
+      "!.claude",
       "!docs",
       "!progress",
       "!clips",

@@ -1,0 +1,30 @@
+{
+  "id": "gym-03",
+  "name": "Short hops",
+  "abilities": {
+    "wallJump": false,
+    "dash": false,
+    "doubleJump": false,
+    "pogo": false
+  },
+  "next": "gym-04",
+  "rows": [
+    "########################################",
+    "########################################",
+    "########################################",
+    "#vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv#",
+    "#......................................#",
+    "#......................................#",
+    "#......................................#",
+    "#.P.....^.....^.....^^....^.....^^....G#",
+    "########################################"
+  ],
+  "cameraZones": [],
+  "claims": {
+    "G": {
+      "with": [],
+      "without": ["variableJump"]
+    }
+  },
+  "notes": "Ceiling spike hitbox 288 px above the floor: short hops are safe, full jumps die. without: variableJump is an assist, not an ability."
+}
