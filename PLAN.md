@@ -630,4 +630,10 @@ Each biome goes through the same stages: greybox → validator → playtest → 
   - The procedural audio foundation landed early, because sound is the concept's core.
   - Naming: keep **Tallage**.
   - Next: the L3 signature-mechanic experiment, with an atmosphere/lighting foundation in parallel. Code-drawn visuals only, since art is on hold.
+- **2026-09-28, L3.**
+  - The signature mechanic passed its pre-registered experiment, an independent audit (with caveats) and a blind novice playtest. **Tallage is confirmed**, no longer provisional.
+  - New standing practice: every experiment gets a builder verdict *plus* an independent audit *plus* a blind novice playtest. Added to `STUDIO.md` §2.4.
+  - New design rule: Seize/Levy gates must hold against the full movement kit (wall jump, double jump, dash). The progression validator will enforce this.
+  - Atmosphere foundation (code-drawn parallax, lighting, post-FX) is in, so Phase 4's tech half is partly done early. Art assets are still on hold.
+  - Next, L4: the combat greybox (Phase 2) with the teaching and feedback fixes, world design for the vertical slice, and the progression validator (Phase 3 tooling, pulled early).
 

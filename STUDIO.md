@@ -59,6 +59,8 @@ Run these after each build, in parallel where possible:
 - **QA / adversarial play**: try to break it (edge inputs, frame-perfect cases, room transitions, save/load).
 - **Play-through / design critique**: a "playtester" agent plays the build via `window.__game` and screenshots or clips, then critiques against the pillars in PLAN §1. It reports what's fun, confusing, ugly or boring.
 - **Automated gates**: `npm run check`, replays, the progression validator, perf budget.
+- **Blind novice playtest** for anything a player must discover: an agent plays the live build without reading code or docs first (see `docs/reports/L3-novice-playtest.md`).
+- **Independent audit** of any builder-authored verdict or metric.
 
 ### 2.5 Decide
 Record in `progress/loops.md`: **Improve**, **Ditch** (revert or shelve on a branch, and write why in `memory/`), or **Move on**. Base it on the acceptance and kill criteria written in 2.2, not on sunk cost.

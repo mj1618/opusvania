@@ -86,4 +86,36 @@ Source of truth for loop state. Newest loop at the bottom. Format per STUDIO.md 
 - **A: Experiment** (main tree; owns `src/sim/`, rooms, sim tests, render for sources and HUD).
 - **B: Atmosphere foundation** (worktree; owns a new render post-FX and lighting layer, parallax layers, perf HUD, screenshot-diff tests). Code-drawn only, no art assets.
 
+**Status.** Done.
+
+### L3 report
+- **Verdict: PASS** (`docs/reports/L3-verdict.md`). Flow ratio 1.036, 0% stillness, no movement-only bypass, readability checks pass, deterministic. D2 (signature combat beats jab-only) failed narrowly and noisily.
+- **Audit** (`docs/reports/L3-audit.md`): mostly trustworthy, with caveats.
+  - B1/B2 barely *could* fail in a one-way room.
+  - Gates only hold with every movement ability off (wall jump or double jump alone bypasses Lot 7).
+  - The E2 check can't fail.
+  - Code gaps: no enemy, hitstop or hurt unit tests; fuzz invariants aren't in `check`; the move table's `cls` field is unused.
+- **Novice blind playtest** (`docs/reports/L3-novice-playtest.md`): the traversal verbs are discoverable within about 70 s, the tooltip test passed (seizing everything by 90 s), and both Lot 7 routes were found blind, so it's fun.
+  - The up/down aims were never discovered.
+  - Seize gives no whiff or refusal feedback.
+  - The Pit is a wall: 8 deaths in 5 minutes, spawn sits in the charge lane, no visible hit reactions or Count.
+  - Missing death and room-clear beats; door triggers need exact standing.
+- **Atmosphere merged**: parallax, light map, post-FX, particles, perf HUD, screenshot goldens. Readability held after a render fix.
+- **Decision: concept kept, move on.** The combat and teaching issues roll into L4.
+- **Lesson.** Pre-registered checks written by the builder are necessary but not sufficient. Always pair them with an independent audit and a blind novice playtest. Gate design must assume the full movement kit.
+
+---
+
+## L4: Combat greybox + world design (started 2026-09-28)
+
+**Streams.**
+- **A: Combat** (main tree). Phase 2 per `docs/design/combat-spec.md` on the L3 foundations, plus the L3 fixes: teach aims, seize whiff/refusal feedback, hit reactions, a visible Count, Pit spawn grace, death and clear beats, full-width doors, a deaths counter. Also the audit's High and Medium code items.
+- **B: World design** (docs). World structure for the vertical slice: biome 1 plus the hub, ability order, and a gate taxonomy that stays robust to the full movement kit.
+- **C: Progression validator** (worktree). A graph solver over rooms, doors and gates, with the bot as the in-room reachability oracle.
+
+**Acceptance.**
+- Combat: the spec's bot-fight metrics pass (reaction-bot avoidance ≥95%, a signature/jab-only ratio in range, jab-only always winnable), the Auctioneer greybox boss works, and a novice replay of The Pit is no longer a wall (a blind playtester reruns it).
+- B: a world doc reviewed by a critic.
+- C: the validator runs in `check` and proves the gym plus L3 rooms reachable, with no softlocks.
+
 **Status.** In progress.
