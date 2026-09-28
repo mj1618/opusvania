@@ -220,6 +220,9 @@ export function extractWorld(opts: { start?: string; rooms?: string[] } = {}): W
       const to = rooms[x.to];
       const lt = layouts.get(x.to);
       if (!to || !lt) {
+        // Draft world rooms (L6 proof) load in the game but aren't in the graph yet: a door into
+        // one is a stub, not an error (memory/level-authoring.md).
+        if (WORLD_LAYOUT[x.to]?.draft) continue;
         errors.push(`${x.id} leads to unknown room "${x.to}"`);
         continue;
       }

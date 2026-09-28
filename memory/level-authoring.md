@@ -88,3 +88,32 @@ Any char-mapped entity takes `char` to pin its RoomFile character (else allocate
 - Bake maths: tile-centre sampling, + - * / sqrt floor only (no sin/cos/pow: engines differ), seeded
   integer hashes. Never change a brush's raster without expecting every room using it to re-bake.
 - No new dependencies: schema checker (`schema-check.ts`) and PNG encoder (node:zlib) are ours.
+
+## The proof region (L6): `content/world-sections/proof.json`
+- One section sheet, two regions (`"regions": ["tally", "cellars"]`; ids `tally-*`/`cellars-*`, so
+  `content/rooms-dressing/tally.json` = pink and `cellars.json` = brown). Import:
+  `npm run world -- section import content/world-sections/proof.json`; export needs
+  `section export proof --regions tally,cellars`. Map: `npm run world:render -- --region tally,cellars`
+  (copy in docs/design/proof-section.png). Start: `?room=tally-yard` or hub door F.
+- Strata as built: street rooms are 2 cells at y -17..17 with the street floor at row 0 (one screen of
+  air, gutter-level pockets below); T09 roofs floor -20 (y -51..-17); the Cross 3x3 at -34..17;
+  cellars floor 38 (C01/C02 at 17..51). Sample/port rooms were moved to y +166..264 to make room.
+- **Route driver**: `npm run world:route -- tools/world/routes/proof.ts [--out f.txt]` plays the whole
+  route on the headless sim in WORLD tiles (walk/jump/act/until, follows edge exits) and prints one
+  input-DSL script for `npm run clip -- --room tally-yard --script "$(cat f.txt)"`. Full route = 96 s.
+- Gotchas found: no step-up, so ramp stairs need a hop per 1-row step (fix = slopes); a Seize can't
+  take a source flush with the floor under you (ground Down+Seize whiffs), so hatches/bolts are lids
+  1 row proud of the floor; a forward-thrown pink spring lands ~2.5 tiles ahead, so put the creaking
+  stall 2-3 tiles before the gutter; a 10-frame edge-transition freeze eats held Jump frames in
+  scripts; one-way ledges must sit >= 1 body height from a horizontal seam (else ping-pong);
+  `pickup` needs `grants` (collectibles are `landmark` `pickup:<id>` placeholders for now); ANY
+  pressed plate opens EVERY plate gate in a room (C02's pan opens the round door too); progression
+  treats doors into draft rooms as stubs.
+- Placeholders waiting on the sim (landmark names): `receiver-cart` (intro throw + furniture crash on
+  the cart's seize), `brass-balls` (drop on the chain source's seize; the chain is the barricade now),
+  `pickup:*` (poundage, tally-ledger, chin-piece, cellars-ledger), `pawnbroker`/`copyist` barks,
+  `ticker-board` line, `clerk-balcony` silhouette, `great-scale` pans (need gate->plate linking and a
+  rising pan), furnace lights dying (source-powered lights), Gull snatch-and-flee (T03 gull).
+- Not done: landmark rendering (nothing draws landmarks in game yet; the Board/Bell tower beacons are
+  the camera stream's), zoom shots, carry rule (bag resets at every seam), guard metrics tool,
+  non-draft promotion (progression + tapes), the ghost Row, slopes (stairs stand in).

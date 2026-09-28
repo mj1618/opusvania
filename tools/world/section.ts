@@ -39,6 +39,12 @@ export const SectionSchema = z.strictObject({
   section: z
     .string()
     .regex(/^[a-z][a-z0-9]*$/, 'a section is one kebab word: its rooms are <section>-<room>'),
+  /** Room-id prefixes this section owns (default: just the section). A region that spans districts
+   * (the proof: tally-* and cellars-*) lists each; import replaces every room under any of them. */
+  regions: z
+    .array(z.string().regex(/^[a-z][a-z0-9]*$/))
+    .min(1)
+    .optional(),
   rooms: z.array(RoomHeader).min(1),
   brushes: z.array(BrushTuple),
   entities: z.array(EntTuple).default([]),
@@ -92,15 +98,22 @@ function translate(b: Brush, dx: number, dy: number): Brush {
 }
 
 /** Cuts a section into room models (not baked). */
-export function sectionToModels(input: unknown): { section: string; models: LevelModel[] } {
+export function sectionToModels(input: unknown): {
+  section: string;
+  regions: string[];
+  models: LevelModel[];
+} {
   const s = SectionSchema.parse(input);
+  const regions = s.regions ?? [s.section];
   const brushes = s.brushes.map(brushFromTuple);
   const ents = s.entities.map(entFromTuple);
   const models: LevelModel[] = [];
   const owned = new Set<number>();
   for (const room of s.rooms) {
-    if (!room.id.startsWith(`${s.section}-`))
-      throw new Error(`room ${room.id} is not in section ${s.section} (ids are ${s.section}-<room>)`);
+    if (!regions.some((r) => room.id.startsWith(`${r}-`)))
+      throw new Error(
+        `room ${room.id} is not in section ${s.section} (ids are <${regions.join('|')}>-<room>)`,
+      );
     const [ox, oy] = room.at;
     const box: Rect = [ox, oy, room.size[0], room.size[1]];
     const roomBrushes = brushes.flatMap((b, i) => {
@@ -138,11 +151,15 @@ export function sectionToModels(input: unknown): { section: string; models: Leve
     if (!owned.has(i))
       throw new Error(`entities[${i}] ${e.kind} at ${e.rect[0]},${e.rect[1]} is in no room of the section`);
   });
-  return { section: s.section, models };
+  return { section: s.section, regions, models };
 }
 
 /** Rebuilds a section sheet (world tiles) from its rooms. Brushes not from a section come last. */
-export function modelsToSection(section: string, models: LevelModel[]): Record<string, unknown> {
+export function modelsToSection(
+  section: string,
+  models: LevelModel[],
+  regions?: string[],
+): Record<string, unknown> {
   const tagged = new Map<number, unknown[]>();
   const loose: unknown[] = [];
   const looseSeen = new Set<string>();
@@ -192,7 +209,9 @@ export function modelsToSection(section: string, models: LevelModel[]): Record<s
       }
   }
   const brushes = [...[...tagged.entries()].sort((a, b) => a[0] - b[0]).map(([, t]) => t), ...loose];
-  const out: Record<string, unknown> = { section, rooms, brushes, entities };
+  const out: Record<string, unknown> = { section };
+  if (regions && (regions.length !== 1 || regions[0] !== section)) out.regions = regions;
+  Object.assign(out, { rooms, brushes, entities });
   const pr = rectCover(paint, W, H).map(([x, y, w, h, v]) => [x + x0, y + y0, w, h, paintName(v)]);
   if (pr.length) out.paint = pr;
   return out;

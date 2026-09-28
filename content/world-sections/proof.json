@@ -1,0 +1,296 @@
+{
+  "section": "proof",
+  "regions": ["tally", "cellars"],
+  "rooms": [
+    {
+      "id": "tally-yard",
+      "at": [0, -17],
+      "size": [60, 34],
+      "name": "The Proof: Evictions Yard",
+      "abilities": ["pogo", "seize", "levy"],
+      "hazard": "pip",
+      "draft": true,
+      "notes": "T02. Street stratum (floor 0). The cart jams in the yard gate; seize it. Planks over a static gutter; seize the crates, not your plank. The chair's creak becomes a spring over the yard wall."
+    },
+    {
+      "id": "tally-market",
+      "at": [60, -17],
+      "size": [90, 34],
+      "name": "Rag Market",
+      "abilities": ["pogo", "seize", "levy"],
+      "hazard": "pip",
+      "draft": true,
+      "notes": "T03. Street stratum. Stall creaks become springs over two static gutters; the Gull thief; the foreclosed shopfront pocket; the squeeze lane before the square."
+    },
+    {
+      "id": "tally-cross",
+      "at": [150, -34],
+      "size": [90, 51],
+      "name": "Tally Cross",
+      "abilities": ["pogo", "seize", "levy"],
+      "hazard": "pip",
+      "draft": true,
+      "notes": "T04. The square: street 0 to the roof gallery -20. The Board, the Corner stool, the clerk's balcony, the stand, the hatch down to the Cellars, the arcade east to Pawn Row, the roof-bolt ledge from Chimney Walk."
+    },
+    {
+      "id": "tally-pawnrow",
+      "at": [240, -17],
+      "size": [120, 34],
+      "name": "Pawn Row",
+      "abilities": ["pogo", "seize", "levy"],
+      "hazard": "pip",
+      "draft": true,
+      "notes": "T05. Street rising east (stairs until slopes land). The pawnbroker's cellar door hums quietly (Chin piece). The brass balls hang on a humming chain over the barricaded stair up to the roofs."
+    },
+    {
+      "id": "tally-chimneys",
+      "at": [240, -51],
+      "size": [120, 34],
+      "name": "Chimney Walk",
+      "abilities": ["pogo", "seize", "levy"],
+      "hazard": "pip",
+      "draft": true,
+      "notes": "T09. Roofs stratum (-20). A run west over chimney pots and light wells, pogo off weathervanes, a Gull. Ends at the roof bolt above the Cross."
+    },
+    {
+      "id": "cellars-slide",
+      "at": [150, 17],
+      "size": [120, 34],
+      "name": "Spoil Slide",
+      "abilities": ["pogo", "seize", "levy"],
+      "hazard": "pip",
+      "draft": true,
+      "notes": "C01. From the Cross hatch down the spoil to the cellars band (38). The creaking pipe gives a spring back up the hatch shaft."
+    },
+    {
+      "id": "cellars-scale",
+      "at": [270, 17],
+      "size": [120, 34],
+      "name": "Great Scale Hall",
+      "abilities": ["pogo", "seize", "levy"],
+      "hazard": "pip",
+      "draft": true,
+      "next": "hub",
+      "notes": "C02. Cellars stratum (38). Seize the furnace's two roars: heavy, the hall goes dark. Your pan sinks, the far pan rises. Shed a weight to climb; the Copyist's loft; levy the last roar onto the weigh-plate and the round door rolls open."
+    }
+  ],
+  "brushes": [
+    ["fill"],
+
+    ["rect", "carve", [4, -16, 48, 16], { "tag": "T02 yard air" }],
+    ["rect", "add", [14, -16, 4, 11], { "tag": "T02 gatehouse over the cart" }],
+    ["rect", "carve", [23, 0, 10, 4], { "tag": "T02 static gutter" }],
+    ["spikes", "up", [23, 3, 10, 1]],
+    ["rect", "add", [22, -7, 12, 2], { "tag": "T02 scaffold beam" }],
+    ["rect", "add", [48, -6, 4, 6], { "tag": "T02 yard wall" }],
+    ["rect", "carve", [52, -16, 12, 16], { "tag": "T02 lane over the wall" }],
+    ["rect", "add", [56, -16, 8, 10], { "tag": "T02|T03 neck arch" }],
+
+    ["rect", "carve", [64, -16, 86, 16], { "tag": "T03 market air" }],
+    ["rect", "carve", [77, 0, 4, 4], { "tag": "T03 gutter 1" }],
+    ["spikes", "up", [77, 3, 4, 1]],
+    ["rect", "add", [81, -5, 19, 5], { "tag": "T03 boardwalk" }],
+    ["rect", "carve", [105, 0, 6, 4], { "tag": "T03 foreclosed cellar" }],
+    ["rect", "carve", [120, 0, 12, 4], { "tag": "T03 gutter 2" }],
+    ["spikes", "up", [120, 3, 12, 1]],
+    ["oneway", [124, -6], 4],
+    ["oneway", [65, -4], 4],
+    ["oneway", [88, -10], 5],
+    ["oneway", [111, -7], 4],
+    ["rect", "add", [135, -16, 15, 11], { "tag": "T03 squeeze lane roof" }],
+
+    ["rect", "carve", [150, -5, 8, 5], { "tag": "T03|T04 lane mouth" }],
+    ["rect", "carve", [158, -33, 82, 33], { "tag": "T04 square air" }],
+    ["rect", "add", [158, -12, 4, 1], { "tag": "T04 clerk balcony" }],
+    ["oneway", [205, -4], 4, { "tag": "T04 auction block (one-way)" }],
+    ["rect", "add", [212, -8, 28, 3], { "tag": "T04 stand tier 1 (over the arcade)" }],
+    ["rect", "add", [218, -12, 22, 4], { "tag": "T04 stand tier 2" }],
+    ["rect", "add", [224, -16, 16, 4], { "tag": "T04 stand tier 3" }],
+    ["oneway", [196, -20], 43],
+    ["rect", "add", [239, -27, 1, 22], { "tag": "T04 east wall between the seams" }],
+    ["rect", "add", [228, -28, 12, 2], { "tag": "T04 roof-bolt ledge" }],
+    ["rect", "carve", [163, 2, 6, 20], { "tag": "hatch shaft (T04 -> C01)" }],
+    ["oneway", [163, 4], 1],
+    ["oneway", [168, 8], 1],
+    ["oneway", [163, 12], 1],
+    ["oneway", [168, 16], 1],
+
+    ["rect", "carve", [240, -5, 6, 5], { "tag": "T04|T05 arcade" }],
+    ["rect", "carve", [246, -13, 100, 13], { "tag": "T05 street air" }],
+    ["ramp", "add", [246, -1], [261, -4]],
+    ["rect", "add", [262, -4, 14, 4], { "tag": "T05 flat -4" }],
+    ["rect", "carve", [263, -3, 10, 3], { "tag": "T05 pawn cellar closet" }],
+    ["rect", "add", [276, -4, 16, 4]],
+    ["ramp", "add", [276, -5], [291, -8]],
+    ["rect", "add", [292, -8, 54, 8], { "tag": "T05 flat -8" }],
+    ["rect", "carve", [342, -14, 16, 6], { "tag": "T05 stairwell" }],
+    ["rect", "add", [348, -11, 4, 3], { "tag": "T05 stair step" }],
+    ["oneway", [352, -14], 3],
+    ["rect", "carve", [352, -20, 6, 6], { "tag": "T05|T09 stair neck" }],
+    ["oneway", [355, -18], 3],
+
+    ["rect", "carve", [240, -50, 120, 30], { "tag": "T09 sky" }],
+    ["rect", "add", [240, -50, 1, 17], { "tag": "T09 west wall above the Cross" }],
+    ["rect", "add", [359, -50, 1, 30]],
+    ["rect", "add", [240, -28, 22, 8], { "tag": "T09 west block (-28)" }],
+    ["rect", "add", [262, -24, 4, 4], { "tag": "T09 step -24" }],
+    ["rect", "add", [338, -22, 2, 2], { "tag": "chimney pot" }],
+    ["rect", "add", [327, -22, 6, 2], { "tag": "gable" }],
+    ["rect", "add", [306, -23, 2, 3], { "tag": "chimney pot" }],
+    ["rect", "add", [276, -22, 2, 2], { "tag": "chimney pot" }],
+    ["rect", "carve", [317, -20, 5, 7], { "tag": "light well 1 (T09 -> T05)" }],
+    ["rect", "carve", [290, -20, 8, 7], { "tag": "light well 2 (T09 -> T05)" }],
+    ["rect", "add", [319, -22, 1, 1], { "tile": "orb", "tag": "weathervane" }],
+    ["rect", "add", [293, -22, 1, 1], { "tile": "orb", "tag": "weathervane" }],
+    ["oneway", [298, -27], 5],
+
+    ["rect", "carve", [155, 18, 21, 4], { "tag": "C01 landing" }],
+    ["rect", "add", [176, 25, 94, 26], { "tag": "C01 spoil bed (floors added below)" }],
+    ["rect", "carve", [176, 18, 12, 7]],
+    ["ramp", "add", [176, 22], [187, 24]],
+    ["rect", "carve", [188, 20, 10, 5]],
+    ["rect", "add", [193, 24, 2, 1], { "tag": "rubble" }],
+    ["rect", "carve", [198, 21, 8, 8]],
+    ["ramp", "add", [198, 25], [205, 28]],
+    ["rect", "carve", [206, 23, 10, 6]],
+    ["rect", "add", [211, 28, 2, 1], { "tag": "rubble" }],
+    ["rect", "carve", [216, 24, 16, 9]],
+    ["ramp", "add", [216, 29], [231, 32]],
+    ["rect", "carve", [232, 27, 8, 6]],
+    ["rect", "add", [236, 32, 2, 1], { "tag": "rubble" }],
+    ["rect", "carve", [240, 29, 8, 8]],
+    ["ramp", "add", [240, 33], [247, 36]],
+    ["rect", "carve", [248, 31, 12, 7]],
+    ["ramp", "add", [248, 37], [251, 37]],
+    ["rect", "add", [260, 17, 10, 17], { "tag": "C01 neck roof" }],
+    ["rect", "carve", [258, 34, 18, 4], { "tag": "C01|C02 neck" }],
+
+    ["arch", "carve", [276, 18, 112, 9], { "tag": "C02 vault" }],
+    ["rect", "carve", [276, 26, 112, 12], { "tag": "C02 hall" }],
+    ["rect", "add", [286, 24, 6, 14], { "tag": "furnace body" }],
+    ["rect", "carve", [286, 34, 6, 4], { "tag": "firebox walk-through" }],
+    ["rect", "add", [322, 35, 4, 3], { "tag": "far step 1" }],
+    ["rect", "add", [326, 32, 4, 6], { "tag": "far step 2 (under the far pan)" }],
+    ["rect", "add", [330, 30, 60, 8], { "tag": "vault terrace (30)" }],
+    ["oneway", [345, 27], 4],
+    ["oneway", [351, 24], 4],
+    ["rect", "add", [356, 22, 18, 1], { "tag": "Copyist loft" }],
+    ["rect", "carve", [378, 23, 11, 7], { "tag": "round door niche" }]
+  ],
+  "entities": [
+    ["spawn", [8, -1]],
+    [
+      "landmark",
+      [0, -9, 4, 9],
+      { "name": "row-gate", "note": "The Row gate: the first lock. Dashed ghost houses behind it." }
+    ],
+    ["source", [14, -5, 4, 5], { "sound": "cart axle", "colour": "pink" }],
+    [
+      "landmark",
+      [13, -6, 6, 6],
+      {
+        "name": "receiver-cart",
+        "note": "Jammed in the yard gate; seized, it goes ghost and its evicted furniture crashes through onto the cobbles."
+      }
+    ],
+    ["prompt", [12, -1], { "keys": ["seize"], "near": 4 }],
+    ["source", [23, 0, 5, 1], { "sound": "scaffold plank", "colour": "pink" }],
+    ["source", [28, 0, 5, 1], { "sound": "scaffold plank", "colour": "pink" }],
+    ["source", [28, -4, 2, 4], { "sound": "evicted crates", "colour": "brown" }],
+    ["source", [45, -2, 2, 2], { "sound": "rocking chair", "colour": "pink" }],
+    ["landmark", [44, -3, 4, 3], { "name": "rocking-chair" }],
+    ["prompt", [42, -1], { "keys": ["levy"], "near": 5 }],
+
+    ["spawn", [66, -1]],
+    ["source", [72, -3, 3, 3], { "sound": "creaking stall", "colour": "pink" }],
+    ["source", [112, -3, 3, 3], { "sound": "creaking stall", "colour": "pink" }],
+    ["enemy", [96, -9], { "type": "gull" }],
+    [
+      "landmark",
+      [104, -9, 8, 9],
+      {
+        "name": "foreclosed-shopfront",
+        "note": "Silent, dashed: walk straight through into its cellar. Quiet means gone."
+      }
+    ],
+    ["landmark", [109, 3, 1, 1], { "name": "pickup:poundage", "note": "Poundage in the foreclosed cellar." }],
+    ["landmark", [106, 1, 2, 2], { "name": "eviction-notice" }],
+
+    ["spawn", [160, -1]],
+    ["corner", [188, -1]],
+    [
+      "landmark",
+      [196, -1, 1, 1],
+      { "name": "pickup:tally-ledger", "note": "The clerk's desk gives the Tally ledger." }
+    ],
+    ["landmark", [194, -3, 4, 3], { "name": "clerk-desk" }],
+    [
+      "landmark",
+      [170, -31, 24, 9],
+      { "name": "ticker-board", "note": "The Board. Beacon. LOT 19 · RING SHOES · DISTRAINT STORE" }
+    ],
+    [
+      "landmark",
+      [158, -16, 4, 4],
+      {
+        "name": "clerk-balcony",
+        "note": "Lock: 12 tiles up. The Receiver's clerk stamps a paper and walks off."
+      }
+    ],
+    ["landmark", [150, -30, 8, 24], { "name": "registry-facade", "note": "Lock: organ-pipe facade." }],
+    ["landmark", [176, -9, 10, 9], { "name": "bourse-gate", "note": "Lock: sealed." }],
+    ["source", [164, -1, 4, 3], { "sound": "cellar hatch", "colour": "brown" }],
+    ["landmark", [163, -2, 6, 2], { "name": "hatch-light-column" }],
+    ["source", [230, -29, 4, 3], { "sound": "roof bolt", "colour": "brown" }],
+
+    ["spawn", [242, -1]],
+    ["source", [266, -4, 2, 1], { "sound": "pawn cellar door", "colour": "pink" }],
+    [
+      "landmark",
+      [271, -1, 1, 1],
+      { "name": "pickup:chin-piece", "note": "Chin piece in the pawnbroker's cellar closet." }
+    ],
+    ["landmark", [298, -13, 16, 5], { "name": "pawnshop-front" }],
+    ["landmark", [305, -10, 2, 2], { "name": "pawnbroker", "note": "Patter barks as you pass." }],
+    ["enemy", [320, -10], { "type": "gull" }],
+    ["source", [342, -14, 2, 6], { "sound": "brass chain", "colour": "pink" }],
+    [
+      "landmark",
+      [338, -14, 6, 4],
+      {
+        "name": "brass-balls",
+        "note": "Three balls on the humming chain: seize it and they drop, smash the barricade, leave a debris stair."
+      }
+    ],
+
+    ["spawn", [350, -21]],
+    ["enemy", [284, -24], { "type": "gull" }],
+    ["prompt", [300, -21], { "keys": ["down", "attack"], "near": 6 }],
+    ["landmark", [296, -50, 8, 22], { "name": "bell-tower", "note": "Beacon: the Exchange Bell tower." }],
+
+    ["spawn", [166, 21]],
+    ["source", [156, 19, 2, 3], { "sound": "creaking pipe", "colour": "pink" }],
+
+    ["spawn", [272, 37]],
+    ["corner", [279, 37]],
+    ["source", [286, 34, 6, 4], { "sound": "furnace roar", "colour": "brown" }],
+    ["source", [292, 34, 2, 4], { "sound": "ash-door roar", "colour": "brown" }],
+    ["plate", [298, 38, 6, 1], { "pressedBy": ["heavy"] }],
+    ["gate", [326, 28, 4, 4]],
+    ["landmark", [296, 18, 40, 20], { "name": "great-scale" }],
+    [
+      "landmark",
+      [364, 21, 1, 1],
+      { "name": "pickup:cellars-ledger", "note": "The Copyist hands over the Cellars ledger with a sniff." }
+    ],
+    [
+      "landmark",
+      [366, 19, 2, 3],
+      { "name": "copyist", "note": "The fussy old clerk with the green lamp. Quill scratch beacon." }
+    ],
+    ["plate", [372, 30, 4, 1], { "pressedBy": ["slab"] }],
+    ["gate", [380, 23, 3, 7]],
+    ["landmark", [379, 24, 5, 6], { "name": "round-door" }],
+    ["goal", [386, 29]]
+  ]
+}

@@ -75,7 +75,7 @@ describe('world graph extraction', () => {
   it('reads doors, G -> next, grants, gates, locks and palettes from the rooms', () => {
     expect(world.errors).toEqual([]);
     const hub = world.rooms.hub as RoomNode;
-    expect(hub.exits).toHaveLength(24);
+    expect(hub.exits).toHaveLength(25); // + F: the proof (tally-yard, draft)
     expect(hub.pickups[0]).toMatchObject({ id: 'grant:hub', implicit: true });
     const lot7 = world.rooms['lot-7'] as RoomNode;
     expect(lot7.exits.map((x) => `${x.target}->${x.to}`)).toEqual(['G->hub']);

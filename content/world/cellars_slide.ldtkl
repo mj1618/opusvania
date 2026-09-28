@@ -1,0 +1,1293 @@
+{
+	"__header__": {
+		"fileType": "LDtk Project JSON",
+		"app": "LDtk",
+		"doc": "https://ldtk.io/json",
+		"schema": "https://ldtk.io/files/JSON_SCHEMA.json",
+		"appAuthor": "Sebastien 'deepnight' Benard",
+		"appVersion": "1.5.3",
+		"url": "https://ldtk.io"
+	},
+	"identifier": "cellars_slide",
+	"iid": "b8b1b517-ea0a-598f-b304-f4239ad12e38",
+	"uid": 142,
+	"worldX": 9600,
+	"worldY": 1088,
+	"worldDepth": 0,
+	"pxWid": 7680,
+	"pxHei": 2176,
+	"__bgColor": "#E8F0F8",
+	"bgColor": null,
+	"useAutoIdentifier": false,
+	"bgRelPath": null,
+	"bgPos": null,
+	"bgPivotX": 0.5,
+	"bgPivotY": 0.5,
+	"__smartColor": "#F3F7FB",
+	"__bgPos": null,
+	"fieldInstances": [
+		{
+			"__identifier": "name",
+			"__type": "String",
+			"__value": "Spoil Slide",
+			"__tile": null,
+			"defUid": 122,
+			"realEditorValues": [{"id":"V_String","params":["Spoil Slide"]}]
+		},
+		{
+			"__identifier": "abilities",
+			"__type": "Array<LocalEnum.Ability>",
+			"__value": ["pogo","seize","levy"],
+			"__tile": null,
+			"defUid": 123,
+			"realEditorValues": [
+				{"id":"V_String","params":["pogo"]},
+				{"id":"V_String","params":["seize"]},
+				{"id":"V_String","params":["levy"]}
+			]
+		},
+		{
+			"__identifier": "hazard",
+			"__type": "LocalEnum.Hazard",
+			"__value": "pip",
+			"__tile": null,
+			"defUid": 124,
+			"realEditorValues": [{"id":"V_String","params":["pip"]}]
+		},
+		{
+			"__identifier": "spawnGrace",
+			"__type": "Int",
+			"__value": 0,
+			"__tile": null,
+			"defUid": 125,
+			"realEditorValues": [{"id":"V_Int","params":[0]}]
+		},
+		{
+			"__identifier": "next",
+			"__type": "String",
+			"__value": null,
+			"__tile": null,
+			"defUid": 126,
+			"realEditorValues": [null]
+		},
+		{
+			"__identifier": "draft",
+			"__type": "Bool",
+			"__value": true,
+			"__tile": null,
+			"defUid": 127,
+			"realEditorValues": [{"id":"V_Bool","params":[true]}]
+		},
+		{
+			"__identifier": "claims",
+			"__type": "Multilines",
+			"__value": null,
+			"__tile": null,
+			"defUid": 128,
+			"realEditorValues": [null]
+		},
+		{
+			"__identifier": "notes",
+			"__type": "Multilines",
+			"__value": "C01. From the Cross hatch down the spoil to the cellars band (38). The creaking pipe gives a spring back up the hatch shaft.",
+			"__tile": null,
+			"defUid": 129,
+			"realEditorValues": [
+				{
+					"id": "V_String",
+					"params": [
+						"C01. From the Cross hatch down the spoil to the cellars band (38). The creaking pipe gives a spring back up the hatch shaft."
+					]
+				}
+			]
+		}
+	],
+	"__neighbours": [
+		{"levelIid":"303a3322-1bf5-54c1-a76a-2426355135a1","dir":"nw"},
+		{"levelIid":"d98f0dfb-9685-5950-864f-d633bdb92819","dir":"n"},
+		{"levelIid":"aa2183aa-edba-5c74-b8f5-4c45dffe92a1","dir":"n"},
+		{"levelIid":"e9b319b6-0333-5b92-9b6d-3dfaeb4ce365","dir":"e"}
+	],
+	"externalRelPath": null,
+	"layerInstances": [
+		{
+			"__identifier": "Entities",
+			"__type": "Entities",
+			"__cWid": 120,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "d8c7edc5-edc5-5ab1-b081-1e80cba4e123",
+			"levelId": 142,
+			"layerDefUid": 118,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [],
+			"autoLayerTiles": [],
+			"seed": 1000,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": [
+				{
+					"__identifier": "Spawn",
+					"__grid": [16,4],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#3CE070",
+					"__worldX": 10624,
+					"__worldY": 1344,
+					"iid": "4ad49757-154e-5b43-9174-034e4d8f9dfa",
+					"width": 64,
+					"height": 64,
+					"defUid": 63,
+					"px": [1024,256],
+					"fieldInstances": []
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [6,2],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 9984,
+					"__worldY": 1216,
+					"iid": "ef4e71f8-f7fa-5c33-95cf-68c194a1200e",
+					"width": 128,
+					"height": 192,
+					"defUid": 73,
+					"px": [384,128],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "creaking pipe",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["creaking pipe"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "pink",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["pink"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [null]
+						}
+					]
+				}
+			]
+		},
+		{
+			"__identifier": "Brushes",
+			"__type": "Entities",
+			"__cWid": 120,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "2f69b5d0-233b-5f56-b528-97ce107d821a",
+			"levelId": 142,
+			"layerDefUid": 119,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [],
+			"autoLayerTiles": [],
+			"seed": 1001,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": [
+				{
+					"__identifier": "Fill",
+					"__grid": [0,0],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 9600,
+					"__worldY": 1088,
+					"iid": "5a85058e-cbad-5f06-a76e-5fbbdd3b3bfb",
+					"width": 64,
+					"height": 64,
+					"defUid": 14,
+					"px": [0,0],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 12,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 13,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s0",
+							"__tile": null,
+							"defUid": 136,
+							"realEditorValues": [{"id":"V_String","params":["s0"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [13,-15],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 10432,
+					"__worldY": 128,
+					"iid": "9fafbca5-b20a-551d-b203-31ad3e923a40",
+					"width": 384,
+					"height": 1280,
+					"defUid": 18,
+					"px": [832,-960],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s31:hatch shaft (T04 -> C01)",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s31:hatch shaft (T04 -> C01)"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [5,1],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 9920,
+					"__worldY": 1152,
+					"iid": "3963f6d4-e17f-5f82-b410-e841919a5bc7",
+					"width": 1344,
+					"height": 256,
+					"defUid": 18,
+					"px": [320,64],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s63:C01 landing",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s63:C01 landing"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [26,8],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 11264,
+					"__worldY": 1600,
+					"iid": "7db28700-5b74-5332-ae3f-6699e874462b",
+					"width": 6016,
+					"height": 1664,
+					"defUid": 18,
+					"px": [1664,512],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s64:C01 spoil bed (floors added below)",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s64:C01 spoil bed (floors added below)"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [26,1],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 11264,
+					"__worldY": 1152,
+					"iid": "2f67c158-3ae0-57e9-b0a4-d1cf1c73ded0",
+					"width": 768,
+					"height": 448,
+					"defUid": 18,
+					"px": [1664,64],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s65",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s65"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Ramp",
+					"__grid": [26,5],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 11264,
+					"__worldY": 1408,
+					"iid": "cea11a41-6d2b-55ff-84f0-d7e0370a065e",
+					"width": 64,
+					"height": 64,
+					"defUid": 58,
+					"px": [1664,320],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 54,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 55,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "pts",
+							"__type": "Array<Point>",
+							"__value": [{"cx":26,"cy":5},{"cx":37,"cy":7}],
+							"__tile": null,
+							"defUid": 56,
+							"realEditorValues": [{"id":"V_String","params":["26,5"]},{"id":"V_String","params":["37,7"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s66",
+							"__tile": null,
+							"defUid": 57,
+							"realEditorValues": [{"id":"V_String","params":["s66"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [38,3],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 12032,
+					"__worldY": 1280,
+					"iid": "51a4d767-e7f5-50c7-8ecc-efe25534efeb",
+					"width": 640,
+					"height": 320,
+					"defUid": 18,
+					"px": [2432,192],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s67",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s67"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [43,7],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 12352,
+					"__worldY": 1536,
+					"iid": "4b448af6-8012-5a83-a366-1ed9b29a35a2",
+					"width": 128,
+					"height": 64,
+					"defUid": 18,
+					"px": [2752,448],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s68:rubble",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s68:rubble"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [48,4],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 12672,
+					"__worldY": 1344,
+					"iid": "2ee785d2-8ac1-5dcc-9fc2-27a888516dad",
+					"width": 512,
+					"height": 512,
+					"defUid": 18,
+					"px": [3072,256],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s69",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s69"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Ramp",
+					"__grid": [48,8],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 12672,
+					"__worldY": 1600,
+					"iid": "b3087162-faf5-518a-af0a-db29ebb64987",
+					"width": 64,
+					"height": 64,
+					"defUid": 58,
+					"px": [3072,512],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 54,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 55,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "pts",
+							"__type": "Array<Point>",
+							"__value": [{"cx":48,"cy":8},{"cx":55,"cy":11}],
+							"__tile": null,
+							"defUid": 56,
+							"realEditorValues": [{"id":"V_String","params":["48,8"]},{"id":"V_String","params":["55,11"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s70",
+							"__tile": null,
+							"defUid": 57,
+							"realEditorValues": [{"id":"V_String","params":["s70"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [56,6],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 13184,
+					"__worldY": 1472,
+					"iid": "df77ca94-dd72-50eb-9eea-773409987bab",
+					"width": 640,
+					"height": 384,
+					"defUid": 18,
+					"px": [3584,384],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s71",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s71"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [61,11],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 13504,
+					"__worldY": 1792,
+					"iid": "3083cc8d-b025-5e20-acd8-53ed1c4cd4a1",
+					"width": 128,
+					"height": 64,
+					"defUid": 18,
+					"px": [3904,704],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s72:rubble",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s72:rubble"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [66,7],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 13824,
+					"__worldY": 1536,
+					"iid": "ce6c7a3f-f7d4-532b-b47e-5c03a65ab23f",
+					"width": 1024,
+					"height": 576,
+					"defUid": 18,
+					"px": [4224,448],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s73",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s73"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Ramp",
+					"__grid": [66,12],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 13824,
+					"__worldY": 1856,
+					"iid": "0c874af3-1af7-5878-8ca7-c6dc37b61de6",
+					"width": 64,
+					"height": 64,
+					"defUid": 58,
+					"px": [4224,768],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 54,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 55,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "pts",
+							"__type": "Array<Point>",
+							"__value": [{"cx":66,"cy":12},{"cx":81,"cy":15}],
+							"__tile": null,
+							"defUid": 56,
+							"realEditorValues": [{"id":"V_String","params":["66,12"]},{"id":"V_String","params":["81,15"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s74",
+							"__tile": null,
+							"defUid": 57,
+							"realEditorValues": [{"id":"V_String","params":["s74"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [82,10],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 14848,
+					"__worldY": 1728,
+					"iid": "e8bea7db-6986-53ee-b84c-1fd729e9a99b",
+					"width": 512,
+					"height": 384,
+					"defUid": 18,
+					"px": [5248,640],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s75",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s75"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [86,15],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 15104,
+					"__worldY": 2048,
+					"iid": "e9bdd0d3-cfa9-5877-b1f1-5494fdf76c3d",
+					"width": 128,
+					"height": 64,
+					"defUid": 18,
+					"px": [5504,960],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s76:rubble",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s76:rubble"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [90,12],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 15360,
+					"__worldY": 1856,
+					"iid": "d7265cf1-2663-50e6-a2b3-bb36e4335af5",
+					"width": 512,
+					"height": 512,
+					"defUid": 18,
+					"px": [5760,768],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s77",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s77"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Ramp",
+					"__grid": [90,16],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 15360,
+					"__worldY": 2112,
+					"iid": "853746ef-10b2-5186-bead-caecdca9d002",
+					"width": 64,
+					"height": 64,
+					"defUid": 58,
+					"px": [5760,1024],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 54,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 55,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "pts",
+							"__type": "Array<Point>",
+							"__value": [{"cx":90,"cy":16},{"cx":97,"cy":19}],
+							"__tile": null,
+							"defUid": 56,
+							"realEditorValues": [{"id":"V_String","params":["90,16"]},{"id":"V_String","params":["97,19"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s78",
+							"__tile": null,
+							"defUid": 57,
+							"realEditorValues": [{"id":"V_String","params":["s78"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [98,14],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 15872,
+					"__worldY": 1984,
+					"iid": "e1d313a2-6d69-5e91-9f7f-d21a2d3ae184",
+					"width": 768,
+					"height": 448,
+					"defUid": 18,
+					"px": [6272,896],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s79",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s79"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Ramp",
+					"__grid": [98,20],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 15872,
+					"__worldY": 2368,
+					"iid": "d7c6da5d-5644-53f5-bad4-b2e2e9f8d480",
+					"width": 64,
+					"height": 64,
+					"defUid": 58,
+					"px": [6272,1280],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 54,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 55,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "pts",
+							"__type": "Array<Point>",
+							"__value": [{"cx":98,"cy":20},{"cx":101,"cy":20}],
+							"__tile": null,
+							"defUid": 56,
+							"realEditorValues": [{"id":"V_String","params":["98,20"]},{"id":"V_String","params":["101,20"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s80",
+							"__tile": null,
+							"defUid": 57,
+							"realEditorValues": [{"id":"V_String","params":["s80"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [110,0],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 16640,
+					"__worldY": 1088,
+					"iid": "f1509056-11a1-5098-957f-8c938a64477f",
+					"width": 640,
+					"height": 1088,
+					"defUid": 18,
+					"px": [7040,0],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s81:C01 neck roof",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s81:C01 neck roof"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [108,17],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 16512,
+					"__worldY": 2176,
+					"iid": "8236df72-1cfa-5d74-a330-cdba564ed7f1",
+					"width": 1152,
+					"height": 256,
+					"defUid": 18,
+					"px": [6912,1088],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s82:C01|C02 neck",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s82:C01|C02 neck"]}]
+						}
+					]
+				}
+			]
+		},
+		{
+			"__identifier": "Paint",
+			"__type": "IntGrid",
+			"__cWid": 120,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "9056a8d6-3193-5199-9e4a-fbfbc3342be3",
+			"levelId": 142,
+			"layerDefUid": 120,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			"autoLayerTiles": [],
+			"seed": 1002,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": []
+		},
+		{
+			"__identifier": "Collision",
+			"__type": "IntGrid",
+			"__cWid": 120,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "d9c893d5-1f1e-5cc6-bb8b-7054c155d088",
+			"levelId": 142,
+			"layerDefUid": 121,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [
+				1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+			],
+			"autoLayerTiles": [],
+			"seed": 1003,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": []
+		}
+	]
+}

@@ -1,0 +1,1292 @@
+{
+	"__header__": {
+		"fileType": "LDtk Project JSON",
+		"app": "LDtk",
+		"doc": "https://ldtk.io/json",
+		"schema": "https://ldtk.io/files/JSON_SCHEMA.json",
+		"appAuthor": "Sebastien 'deepnight' Benard",
+		"appVersion": "1.5.3",
+		"url": "https://ldtk.io"
+	},
+	"identifier": "cellars_scale",
+	"iid": "e9b319b6-0333-5b92-9b6d-3dfaeb4ce365",
+	"uid": 143,
+	"worldX": 17280,
+	"worldY": 1088,
+	"worldDepth": 0,
+	"pxWid": 7680,
+	"pxHei": 2176,
+	"__bgColor": "#E8F0F8",
+	"bgColor": null,
+	"useAutoIdentifier": false,
+	"bgRelPath": null,
+	"bgPos": null,
+	"bgPivotX": 0.5,
+	"bgPivotY": 0.5,
+	"__smartColor": "#F3F7FB",
+	"__bgPos": null,
+	"fieldInstances": [
+		{
+			"__identifier": "name",
+			"__type": "String",
+			"__value": "Great Scale Hall",
+			"__tile": null,
+			"defUid": 122,
+			"realEditorValues": [{"id":"V_String","params":["Great Scale Hall"]}]
+		},
+		{
+			"__identifier": "abilities",
+			"__type": "Array<LocalEnum.Ability>",
+			"__value": ["pogo","seize","levy"],
+			"__tile": null,
+			"defUid": 123,
+			"realEditorValues": [
+				{"id":"V_String","params":["pogo"]},
+				{"id":"V_String","params":["seize"]},
+				{"id":"V_String","params":["levy"]}
+			]
+		},
+		{
+			"__identifier": "hazard",
+			"__type": "LocalEnum.Hazard",
+			"__value": "pip",
+			"__tile": null,
+			"defUid": 124,
+			"realEditorValues": [{"id":"V_String","params":["pip"]}]
+		},
+		{
+			"__identifier": "spawnGrace",
+			"__type": "Int",
+			"__value": 0,
+			"__tile": null,
+			"defUid": 125,
+			"realEditorValues": [{"id":"V_Int","params":[0]}]
+		},
+		{
+			"__identifier": "next",
+			"__type": "String",
+			"__value": "hub",
+			"__tile": null,
+			"defUid": 126,
+			"realEditorValues": [{"id":"V_String","params":["hub"]}]
+		},
+		{
+			"__identifier": "draft",
+			"__type": "Bool",
+			"__value": true,
+			"__tile": null,
+			"defUid": 127,
+			"realEditorValues": [{"id":"V_Bool","params":[true]}]
+		},
+		{
+			"__identifier": "claims",
+			"__type": "Multilines",
+			"__value": null,
+			"__tile": null,
+			"defUid": 128,
+			"realEditorValues": [null]
+		},
+		{
+			"__identifier": "notes",
+			"__type": "Multilines",
+			"__value": "C02. Cellars stratum (38). Seize the furnace's two roars: heavy, the hall goes dark. Your pan sinks, the far pan rises. Shed a weight to climb; the Copyist's loft; levy the last roar onto the weigh-plate and the round door rolls open.",
+			"__tile": null,
+			"defUid": 129,
+			"realEditorValues": [
+				{
+					"id": "V_String",
+					"params": [
+						"C02. Cellars stratum (38). Seize the furnace's two roars: heavy, the hall goes dark. Your pan sinks, the far pan rises. Shed a weight to climb; the Copyist's loft; levy the last roar onto the weigh-plate and the round door rolls open."
+					]
+				}
+			]
+		}
+	],
+	"__neighbours": [
+		{"levelIid":"aa2183aa-edba-5c74-b8f5-4c45dffe92a1","dir":"n"},
+		{"levelIid":"b8b1b517-ea0a-598f-b304-f4239ad12e38","dir":"w"}
+	],
+	"externalRelPath": null,
+	"layerInstances": [
+		{
+			"__identifier": "Entities",
+			"__type": "Entities",
+			"__cWid": 120,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "a761f08a-c1fc-5fee-8e53-44417f916bbc",
+			"levelId": 143,
+			"layerDefUid": 118,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [],
+			"autoLayerTiles": [],
+			"seed": 1000,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": [
+				{
+					"__identifier": "Spawn",
+					"__grid": [2,20],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#3CE070",
+					"__worldX": 17408,
+					"__worldY": 2368,
+					"iid": "a974c60f-2fda-5f36-8288-bfb6f3b6c639",
+					"width": 64,
+					"height": 64,
+					"defUid": 63,
+					"px": [128,1280],
+					"fieldInstances": []
+				},
+				{
+					"__identifier": "Corner",
+					"__grid": [9,20],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#E0A040",
+					"__worldX": 17856,
+					"__worldY": 2368,
+					"iid": "cc0eec87-eceb-5c92-a64b-fbf190a1b24e",
+					"width": 64,
+					"height": 64,
+					"defUid": 67,
+					"px": [576,1280],
+					"fieldInstances": []
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [16,17],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 18304,
+					"__worldY": 2176,
+					"iid": "6b6508a5-dd82-54e0-8c7b-26882e13fc22",
+					"width": 384,
+					"height": 256,
+					"defUid": 73,
+					"px": [1024,1088],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "furnace roar",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["furnace roar"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "brown",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["brown"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [22,17],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 18688,
+					"__worldY": 2176,
+					"iid": "1d070585-8f04-5cbb-aa1b-caf44a8f6287",
+					"width": 128,
+					"height": 256,
+					"defUid": 73,
+					"px": [1408,1088],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "ash-door roar",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["ash-door roar"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "brown",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["brown"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Plate",
+					"__grid": [28,21],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#A0A0B0",
+					"__worldX": 19072,
+					"__worldY": 2432,
+					"iid": "b997c704-1c56-5171-943f-0577949eba63",
+					"width": 384,
+					"height": 64,
+					"defUid": 78,
+					"px": [1792,1344],
+					"fieldInstances": [
+						{
+							"__identifier": "pressedBy",
+							"__type": "Array<LocalEnum.PressedBy>",
+							"__value": ["heavy"],
+							"__tile": null,
+							"defUid": 79,
+							"realEditorValues": [{"id":"V_String","params":["heavy"]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 80,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Gate",
+					"__grid": [56,11],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#8080FF",
+					"__worldX": 20864,
+					"__worldY": 1792,
+					"iid": "854e3ada-1b08-5e64-973e-99b2b3b9b803",
+					"width": 256,
+					"height": 256,
+					"defUid": 81,
+					"px": [3584,704],
+					"fieldInstances": [
+						{
+							"__identifier": "opensOn",
+							"__type": "LocalEnum.OpensOn",
+							"__value": "plate",
+							"__tile": null,
+							"defUid": 82,
+							"realEditorValues": [{"id":"V_String","params":["plate"]}]
+						},
+						{
+							"__identifier": "requires",
+							"__type": "Array<LocalEnum.Ability>",
+							"__value": [],
+							"__tile": null,
+							"defUid": 83,
+							"realEditorValues": []
+						},
+						{
+							"__identifier": "hold",
+							"__type": "LocalEnum.Hold",
+							"__value": null,
+							"__tile": null,
+							"defUid": 84,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "moves",
+							"__type": "Array<String>",
+							"__value": [],
+							"__tile": null,
+							"defUid": 85,
+							"realEditorValues": []
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 86,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Landmark",
+					"__grid": [26,1],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#FFD700",
+					"__worldX": 18944,
+					"__worldY": 1152,
+					"iid": "ac587882-069f-546e-b66d-58ad64b0f42a",
+					"width": 2560,
+					"height": 1280,
+					"defUid": 115,
+					"px": [1664,64],
+					"fieldInstances": [
+						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": "great-scale",
+							"__tile": null,
+							"defUid": 116,
+							"realEditorValues": [{"id":"V_String","params":["great-scale"]}]
+						},
+						{
+							"__identifier": "note",
+							"__type": "Multilines",
+							"__value": null,
+							"__tile": null,
+							"defUid": 117,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Landmark",
+					"__grid": [94,4],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#FFD700",
+					"__worldX": 23296,
+					"__worldY": 1344,
+					"iid": "14393e2d-0c6a-5e5a-abb5-5556729c7378",
+					"width": 64,
+					"height": 64,
+					"defUid": 115,
+					"px": [6016,256],
+					"fieldInstances": [
+						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": "pickup:cellars-ledger",
+							"__tile": null,
+							"defUid": 116,
+							"realEditorValues": [{"id":"V_String","params":["pickup:cellars-ledger"]}]
+						},
+						{
+							"__identifier": "note",
+							"__type": "Multilines",
+							"__value": "The Copyist hands over the Cellars ledger with a sniff.",
+							"__tile": null,
+							"defUid": 117,
+							"realEditorValues": [{"id":"V_String","params":["The Copyist hands over the Cellars ledger with a sniff."]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Landmark",
+					"__grid": [96,2],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#FFD700",
+					"__worldX": 23424,
+					"__worldY": 1216,
+					"iid": "cf2483f8-ab35-550a-a841-ee015f6f107b",
+					"width": 128,
+					"height": 192,
+					"defUid": 115,
+					"px": [6144,128],
+					"fieldInstances": [
+						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": "copyist",
+							"__tile": null,
+							"defUid": 116,
+							"realEditorValues": [{"id":"V_String","params":["copyist"]}]
+						},
+						{
+							"__identifier": "note",
+							"__type": "Multilines",
+							"__value": "The fussy old clerk with the green lamp. Quill scratch beacon.",
+							"__tile": null,
+							"defUid": 117,
+							"realEditorValues": [{"id":"V_String","params":["The fussy old clerk with the green lamp. Quill scratch beacon."]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Plate",
+					"__grid": [102,13],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#A0A0B0",
+					"__worldX": 23808,
+					"__worldY": 1920,
+					"iid": "86366877-b7a3-5f64-941c-1651836fff0c",
+					"width": 256,
+					"height": 64,
+					"defUid": 78,
+					"px": [6528,832],
+					"fieldInstances": [
+						{
+							"__identifier": "pressedBy",
+							"__type": "Array<LocalEnum.PressedBy>",
+							"__value": ["slab"],
+							"__tile": null,
+							"defUid": 79,
+							"realEditorValues": [{"id":"V_String","params":["slab"]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 80,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Gate",
+					"__grid": [110,6],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#8080FF",
+					"__worldX": 24320,
+					"__worldY": 1472,
+					"iid": "95ee2b05-3704-5a05-861f-485f004eb390",
+					"width": 192,
+					"height": 448,
+					"defUid": 81,
+					"px": [7040,384],
+					"fieldInstances": [
+						{
+							"__identifier": "opensOn",
+							"__type": "LocalEnum.OpensOn",
+							"__value": "plate",
+							"__tile": null,
+							"defUid": 82,
+							"realEditorValues": [{"id":"V_String","params":["plate"]}]
+						},
+						{
+							"__identifier": "requires",
+							"__type": "Array<LocalEnum.Ability>",
+							"__value": [],
+							"__tile": null,
+							"defUid": 83,
+							"realEditorValues": []
+						},
+						{
+							"__identifier": "hold",
+							"__type": "LocalEnum.Hold",
+							"__value": null,
+							"__tile": null,
+							"defUid": 84,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "moves",
+							"__type": "Array<String>",
+							"__value": [],
+							"__tile": null,
+							"defUid": 85,
+							"realEditorValues": []
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 86,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Landmark",
+					"__grid": [109,7],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#FFD700",
+					"__worldX": 24256,
+					"__worldY": 1536,
+					"iid": "1235d482-e12d-53e5-ab4b-d71e0b6082f5",
+					"width": 320,
+					"height": 384,
+					"defUid": 115,
+					"px": [6976,448],
+					"fieldInstances": [
+						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": "round-door",
+							"__tile": null,
+							"defUid": 116,
+							"realEditorValues": [{"id":"V_String","params":["round-door"]}]
+						},
+						{
+							"__identifier": "note",
+							"__type": "Multilines",
+							"__value": null,
+							"__tile": null,
+							"defUid": 117,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Goal",
+					"__grid": [116,12],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#FFE040",
+					"__worldX": 24704,
+					"__worldY": 1856,
+					"iid": "ccb08fb1-daa4-5e0c-abff-02b680dbe174",
+					"width": 64,
+					"height": 64,
+					"defUid": 65,
+					"px": [7424,768],
+					"fieldInstances": [
+						{
+							"__identifier": "optional",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 66,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						}
+					]
+				}
+			]
+		},
+		{
+			"__identifier": "Brushes",
+			"__type": "Entities",
+			"__cWid": 120,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "af93813d-c97c-5384-8bc1-ed168e5bdb93",
+			"levelId": 143,
+			"layerDefUid": 119,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [],
+			"autoLayerTiles": [],
+			"seed": 1001,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": [
+				{
+					"__identifier": "Fill",
+					"__grid": [0,0],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 17280,
+					"__worldY": 1088,
+					"iid": "c4fd4098-fe68-5677-92d4-7a2e0b97883a",
+					"width": 64,
+					"height": 64,
+					"defUid": 14,
+					"px": [0,0],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 12,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 13,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s0",
+							"__tile": null,
+							"defUid": 136,
+							"realEditorValues": [{"id":"V_String","params":["s0"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [-12,17],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 16512,
+					"__worldY": 2176,
+					"iid": "deaa5ba8-e3c4-5b42-a07e-2e8a75ca6933",
+					"width": 1152,
+					"height": 256,
+					"defUid": 18,
+					"px": [-768,1088],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s82:C01|C02 neck",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s82:C01|C02 neck"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Arch",
+					"__grid": [6,1],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 17664,
+					"__worldY": 1152,
+					"iid": "4aa86a9c-63aa-5676-b8f9-1449da57a74f",
+					"width": 7168,
+					"height": 576,
+					"defUid": 41,
+					"px": [384,64],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 37,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 38,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "thick",
+							"__type": "Int",
+							"__value": 0,
+							"__tile": null,
+							"defUid": 39,
+							"realEditorValues": [{"id":"V_Int","params":[0]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s83:C02 vault",
+							"__tile": null,
+							"defUid": 40,
+							"realEditorValues": [{"id":"V_String","params":["s83:C02 vault"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [6,9],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 17664,
+					"__worldY": 1664,
+					"iid": "f57d186e-ab7b-5e8d-b69c-895409b03e8d",
+					"width": 7168,
+					"height": 768,
+					"defUid": 18,
+					"px": [384,576],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s84:C02 hall",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s84:C02 hall"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [16,7],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 18304,
+					"__worldY": 1536,
+					"iid": "9fe44da3-5305-5e97-8deb-660f030e780b",
+					"width": 384,
+					"height": 896,
+					"defUid": 18,
+					"px": [1024,448],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s85:furnace body",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s85:furnace body"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [16,17],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 18304,
+					"__worldY": 2176,
+					"iid": "dbd86dda-9381-58b7-beac-a20bc6e2966c",
+					"width": 384,
+					"height": 256,
+					"defUid": 18,
+					"px": [1024,1088],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s86:firebox walk-through",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s86:firebox walk-through"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [52,18],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 20608,
+					"__worldY": 2240,
+					"iid": "874c35fb-f5fb-59d2-bddc-9d30dd0290f7",
+					"width": 256,
+					"height": 192,
+					"defUid": 18,
+					"px": [3328,1152],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s87:far step 1",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s87:far step 1"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [56,15],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 20864,
+					"__worldY": 2048,
+					"iid": "f8500721-8066-5857-ad8b-4e283c0402a3",
+					"width": 256,
+					"height": 384,
+					"defUid": 18,
+					"px": [3584,960],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s88:far step 2 (under the far pan)",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s88:far step 2 (under the far pan)"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [60,13],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 21120,
+					"__worldY": 1920,
+					"iid": "14a8caa9-169f-54e7-8915-1ece92b6fc96",
+					"width": 3840,
+					"height": 512,
+					"defUid": 18,
+					"px": [3840,832],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s89:vault terrace (30)",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s89:vault terrace (30)"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [75,10],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 22080,
+					"__worldY": 1728,
+					"iid": "38c28327-e22e-58cf-8af2-ff0f9bf48ace",
+					"width": 256,
+					"height": 64,
+					"defUid": 18,
+					"px": [4800,640],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "oneWay",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["oneWay"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s90",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s90"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [81,7],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 22464,
+					"__worldY": 1536,
+					"iid": "7e9c8109-5be2-5d33-a852-85cbb09b29f4",
+					"width": 256,
+					"height": 64,
+					"defUid": 18,
+					"px": [5184,448],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "oneWay",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["oneWay"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s91",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s91"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [86,5],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 22784,
+					"__worldY": 1408,
+					"iid": "d0c1faf2-486e-5fb4-b5c2-0bcf7f4f8747",
+					"width": 1152,
+					"height": 64,
+					"defUid": 18,
+					"px": [5504,320],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s92:Copyist loft",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s92:Copyist loft"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [108,6],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 24192,
+					"__worldY": 1472,
+					"iid": "73a8265d-4dc4-52af-bbb9-fa15b3cad1a6",
+					"width": 704,
+					"height": 448,
+					"defUid": 18,
+					"px": [6912,384],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s93:round door niche",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s93:round door niche"]}]
+						}
+					]
+				}
+			]
+		},
+		{
+			"__identifier": "Paint",
+			"__type": "IntGrid",
+			"__cWid": 120,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "b5f49816-5258-5532-a67a-47982db58fdf",
+			"levelId": 143,
+			"layerDefUid": 120,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			"autoLayerTiles": [],
+			"seed": 1002,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": []
+		},
+		{
+			"__identifier": "Collision",
+			"__type": "IntGrid",
+			"__cWid": 120,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "1c083b35-279a-593b-9352-2f81c795ad4b",
+			"levelId": 143,
+			"layerDefUid": 121,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+				1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+			],
+			"autoLayerTiles": [],
+			"seed": 1003,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": []
+		}
+	]
+}

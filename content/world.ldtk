@@ -11,10 +11,40 @@
 	"iid": "ae62d587-72de-573c-bfef-921ea95730ee",
 	"jsonVersion": "1.5.3",
 	"appBuildId": 473703,
-	"nextUid": 137,
+	"nextUid": 144,
 	"identifierStyle": "Free",
 	"toc": [
-		{"identifier":"Corner","instancesData":[]},
+		{
+			"identifier": "Corner",
+			"instancesData": [
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "d98f0dfb-9685-5950-864f-d633bdb92819",
+						"layerIid": "3ab0b6ce-6f9c-53d8-a509-fdff83586f86",
+						"entityIid": "ed11cff6-1132-5b16-b19e-bb56cdc15f4d"
+					},
+					"worldX": 12032,
+					"worldY": -64,
+					"widPx": 64,
+					"heiPx": 64,
+					"fields": {}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "e9b319b6-0333-5b92-9b6d-3dfaeb4ce365",
+						"layerIid": "a761f08a-c1fc-5fee-8e53-44417f916bbc",
+						"entityIid": "cc0eec87-eceb-5c92-a64b-fbf190a1b24e"
+					},
+					"worldX": 17856,
+					"worldY": 2368,
+					"widPx": 64,
+					"heiPx": 64,
+					"fields": {}
+				}
+			]
+		},
 		{
 			"identifier": "Door",
 			"instancesData": [
@@ -26,7 +56,7 @@
 						"entityIid": "a8052a1a-8fbb-5dae-bab1-609b94750a56"
 					},
 					"worldX": 3520,
-					"worldY": 64,
+					"worldY": 12864,
 					"widPx": 64,
 					"heiPx": 64,
 					"fields": {"name":"stair","to":"sample-stair","toDoor":"cellar","char":null}
@@ -39,7 +69,7 @@
 						"entityIid": "23912d2d-8095-5baa-bb3d-d43dedf8aeb8"
 					},
 					"worldX": 3264,
-					"worldY": -960,
+					"worldY": 11840,
 					"widPx": 64,
 					"heiPx": 64,
 					"fields": {"name":"cellar","to":"sample-cellar","toDoor":"stair","char":null}
@@ -57,7 +87,7 @@
 						"entityIid": "62c996da-0ff0-59b2-9bef-a5b6a7b99db5"
 					},
 					"worldX": 8960,
-					"worldY": 3072,
+					"worldY": 15872,
 					"widPx": 64,
 					"heiPx": 256,
 					"fields": {"opensOn":"plate","requires":["seize"],"hold":"sealed","moves":[],"char":"D"}
@@ -70,10 +100,36 @@
 						"entityIid": "6e1571ae-09da-520e-869b-002637e7edba"
 					},
 					"worldX": 10624,
-					"worldY": 3712,
+					"worldY": 16512,
 					"widPx": 64,
 					"heiPx": 256,
 					"fields": {"opensOn":"plate","requires":["seize"],"hold":"sealed","moves":[],"char":"D"}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "e9b319b6-0333-5b92-9b6d-3dfaeb4ce365",
+						"layerIid": "a761f08a-c1fc-5fee-8e53-44417f916bbc",
+						"entityIid": "854e3ada-1b08-5e64-973e-99b2b3b9b803"
+					},
+					"worldX": 20864,
+					"worldY": 1792,
+					"widPx": 256,
+					"heiPx": 256,
+					"fields": {"opensOn":"plate","requires":[],"hold":null,"moves":[],"char":null}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "e9b319b6-0333-5b92-9b6d-3dfaeb4ce365",
+						"layerIid": "a761f08a-c1fc-5fee-8e53-44417f916bbc",
+						"entityIid": "95ee2b05-3704-5a05-861f-485f004eb390"
+					},
+					"worldX": 24320,
+					"worldY": 1472,
+					"widPx": 192,
+					"heiPx": 448,
+					"fields": {"opensOn":"plate","requires":[],"hold":null,"moves":[],"char":null}
 				}
 			]
 		},
@@ -89,7 +145,7 @@
 						"entityIid": "df0b8930-939e-5a15-83d7-438c30af8bd8"
 					},
 					"worldX": 320,
-					"worldY": 1280,
+					"worldY": 14080,
 					"widPx": 64,
 					"heiPx": 64,
 					"fields": {"name":"Cellar Stool","char":null}
@@ -107,7 +163,7 @@
 						"entityIid": "c993e5cb-b2dc-56c1-9ed7-e289554b3898"
 					},
 					"worldX": 7936,
-					"worldY": 3072,
+					"worldY": 15872,
 					"widPx": 64,
 					"heiPx": 256,
 					"fields": {
@@ -131,7 +187,7 @@
 						"entityIid": "bbf67b68-7391-5738-9c60-16ccb7a18a5c"
 					},
 					"worldX": 11520,
-					"worldY": 3520,
+					"worldY": 16320,
 					"widPx": 384,
 					"heiPx": 64,
 					"fields": {
@@ -155,7 +211,7 @@
 						"entityIid": "5e4125f0-b7db-59e2-bdfa-951bf49bc4a2"
 					},
 					"worldX": 13056,
-					"worldY": 3008,
+					"worldY": 15808,
 					"widPx": 64,
 					"heiPx": 64,
 					"fields": {
@@ -184,7 +240,7 @@
 						"entityIid": "d6f72acd-e43d-5ac9-8cc7-5bd693f2f834"
 					},
 					"worldX": 960,
-					"worldY": 128,
+					"worldY": 12928,
 					"widPx": 512,
 					"heiPx": 192,
 					"fields": {
@@ -200,10 +256,305 @@
 						"entityIid": "92970126-7fd7-55d8-bc04-ff10e6f88fb7"
 					},
 					"worldX": 3136,
-					"worldY": -1984,
+					"worldY": 10816,
 					"widPx": 768,
 					"heiPx": 192,
 					"fields": {"name":"ticker-board","note":null}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "53078b37-40a3-52cb-8d6d-2219d68f499c",
+						"layerIid": "4670e7c8-5b90-5254-aec6-3abccd8141b7",
+						"entityIid": "b3345be1-921a-50b3-8129-de516402d2db"
+					},
+					"worldX": 0,
+					"worldY": -576,
+					"widPx": 256,
+					"heiPx": 576,
+					"fields": {"name":"row-gate","note":"The Row gate: the first lock. Dashed ghost houses behind it."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "53078b37-40a3-52cb-8d6d-2219d68f499c",
+						"layerIid": "4670e7c8-5b90-5254-aec6-3abccd8141b7",
+						"entityIid": "cde6d522-ef25-5f36-ac61-ac851b0d95e4"
+					},
+					"worldX": 832,
+					"worldY": -384,
+					"widPx": 384,
+					"heiPx": 384,
+					"fields": {
+						"name": "receiver-cart",
+						"note": "Jammed in the yard gate; seized, it goes ghost and its evicted furniture crashes through onto the cobbles."
+					}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "53078b37-40a3-52cb-8d6d-2219d68f499c",
+						"layerIid": "4670e7c8-5b90-5254-aec6-3abccd8141b7",
+						"entityIid": "5ebfaf91-e502-50c2-998a-782dc777dde7"
+					},
+					"worldX": 2816,
+					"worldY": -192,
+					"widPx": 256,
+					"heiPx": 192,
+					"fields": {"name":"rocking-chair","note":null}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "303a3322-1bf5-54c1-a76a-2426355135a1",
+						"layerIid": "73fc4a1f-e240-55d3-934d-2e39ddfa7074",
+						"entityIid": "b9acbdd5-5977-5b37-8bd8-b43b4ee2fc24"
+					},
+					"worldX": 6656,
+					"worldY": -576,
+					"widPx": 512,
+					"heiPx": 576,
+					"fields": {
+						"name": "foreclosed-shopfront",
+						"note": "Silent, dashed: walk straight through into its cellar. Quiet means gone."
+					}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "303a3322-1bf5-54c1-a76a-2426355135a1",
+						"layerIid": "73fc4a1f-e240-55d3-934d-2e39ddfa7074",
+						"entityIid": "6145cca1-421b-54cc-9bce-f602ca2c5f32"
+					},
+					"worldX": 6976,
+					"worldY": 192,
+					"widPx": 64,
+					"heiPx": 64,
+					"fields": {"name":"pickup:poundage","note":"Poundage in the foreclosed cellar."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "303a3322-1bf5-54c1-a76a-2426355135a1",
+						"layerIid": "73fc4a1f-e240-55d3-934d-2e39ddfa7074",
+						"entityIid": "72463171-4ae3-586e-af90-b3fb65a0f341"
+					},
+					"worldX": 6784,
+					"worldY": 64,
+					"widPx": 128,
+					"heiPx": 128,
+					"fields": {"name":"eviction-notice","note":null}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "d98f0dfb-9685-5950-864f-d633bdb92819",
+						"layerIid": "3ab0b6ce-6f9c-53d8-a509-fdff83586f86",
+						"entityIid": "ad07b507-2904-5f11-ac48-207d3229a411"
+					},
+					"worldX": 12544,
+					"worldY": -64,
+					"widPx": 64,
+					"heiPx": 64,
+					"fields": {"name":"pickup:tally-ledger","note":"The clerk's desk gives the Tally ledger."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "d98f0dfb-9685-5950-864f-d633bdb92819",
+						"layerIid": "3ab0b6ce-6f9c-53d8-a509-fdff83586f86",
+						"entityIid": "a70120f0-0c04-5522-8539-9ab7d8769cc8"
+					},
+					"worldX": 12416,
+					"worldY": -192,
+					"widPx": 256,
+					"heiPx": 192,
+					"fields": {"name":"clerk-desk","note":null}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "d98f0dfb-9685-5950-864f-d633bdb92819",
+						"layerIid": "3ab0b6ce-6f9c-53d8-a509-fdff83586f86",
+						"entityIid": "d2215f1f-a5b6-512a-977c-1b69102b7923"
+					},
+					"worldX": 10880,
+					"worldY": -1984,
+					"widPx": 1536,
+					"heiPx": 576,
+					"fields": {"name":"ticker-board","note":"The Board. Beacon. LOT 19 · RING SHOES · DISTRAINT STORE"}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "d98f0dfb-9685-5950-864f-d633bdb92819",
+						"layerIid": "3ab0b6ce-6f9c-53d8-a509-fdff83586f86",
+						"entityIid": "961ea91e-366d-5985-8700-ebc8656f1810"
+					},
+					"worldX": 10112,
+					"worldY": -1024,
+					"widPx": 256,
+					"heiPx": 256,
+					"fields": {"name":"clerk-balcony","note":"Lock: 12 tiles up. The Receiver's clerk stamps a paper and walks off."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "d98f0dfb-9685-5950-864f-d633bdb92819",
+						"layerIid": "3ab0b6ce-6f9c-53d8-a509-fdff83586f86",
+						"entityIid": "00464213-19cc-50d5-9e4b-c7eb5130273d"
+					},
+					"worldX": 9600,
+					"worldY": -1920,
+					"widPx": 512,
+					"heiPx": 1536,
+					"fields": {"name":"registry-facade","note":"Lock: organ-pipe facade."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "d98f0dfb-9685-5950-864f-d633bdb92819",
+						"layerIid": "3ab0b6ce-6f9c-53d8-a509-fdff83586f86",
+						"entityIid": "09314c59-29ea-5368-bb6a-406c7addfdfa"
+					},
+					"worldX": 11264,
+					"worldY": -576,
+					"widPx": 640,
+					"heiPx": 576,
+					"fields": {"name":"bourse-gate","note":"Lock: sealed."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "d98f0dfb-9685-5950-864f-d633bdb92819",
+						"layerIid": "3ab0b6ce-6f9c-53d8-a509-fdff83586f86",
+						"entityIid": "634a8126-09c4-5fc8-af09-5fa0a5d729eb"
+					},
+					"worldX": 10432,
+					"worldY": -128,
+					"widPx": 384,
+					"heiPx": 128,
+					"fields": {"name":"hatch-light-column","note":null}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "aa2183aa-edba-5c74-b8f5-4c45dffe92a1",
+						"layerIid": "384c8460-f145-5836-908a-df24f0781e4f",
+						"entityIid": "15cceda6-71e7-5a76-9986-9345bd2553ad"
+					},
+					"worldX": 17344,
+					"worldY": -64,
+					"widPx": 64,
+					"heiPx": 64,
+					"fields": {"name":"pickup:chin-piece","note":"Chin piece in the pawnbroker's cellar closet."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "aa2183aa-edba-5c74-b8f5-4c45dffe92a1",
+						"layerIid": "384c8460-f145-5836-908a-df24f0781e4f",
+						"entityIid": "dd5f2b3e-0e4d-5e99-aea8-aad6fa128797"
+					},
+					"worldX": 19072,
+					"worldY": -832,
+					"widPx": 1024,
+					"heiPx": 320,
+					"fields": {"name":"pawnshop-front","note":null}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "aa2183aa-edba-5c74-b8f5-4c45dffe92a1",
+						"layerIid": "384c8460-f145-5836-908a-df24f0781e4f",
+						"entityIid": "88802f22-fb02-5e95-86b8-b3352daed111"
+					},
+					"worldX": 19520,
+					"worldY": -640,
+					"widPx": 128,
+					"heiPx": 128,
+					"fields": {"name":"pawnbroker","note":"Patter barks as you pass."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "aa2183aa-edba-5c74-b8f5-4c45dffe92a1",
+						"layerIid": "384c8460-f145-5836-908a-df24f0781e4f",
+						"entityIid": "5eefce79-885f-519e-ae6d-4ae92820a959"
+					},
+					"worldX": 21632,
+					"worldY": -896,
+					"widPx": 384,
+					"heiPx": 256,
+					"fields": {
+						"name": "brass-balls",
+						"note": "Three balls on the humming chain: seize it and they drop, smash the barricade, leave a debris stair."
+					}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "fd1723da-99be-59da-b993-e48c26776f41",
+						"layerIid": "7fb9142f-dacc-5d18-8864-1db7b0b71544",
+						"entityIid": "2374cd69-cf94-56bd-88a5-cbf1bff64a6c"
+					},
+					"worldX": 18944,
+					"worldY": -3200,
+					"widPx": 512,
+					"heiPx": 1408,
+					"fields": {"name":"bell-tower","note":"Beacon: the Exchange Bell tower."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "e9b319b6-0333-5b92-9b6d-3dfaeb4ce365",
+						"layerIid": "a761f08a-c1fc-5fee-8e53-44417f916bbc",
+						"entityIid": "ac587882-069f-546e-b66d-58ad64b0f42a"
+					},
+					"worldX": 18944,
+					"worldY": 1152,
+					"widPx": 2560,
+					"heiPx": 1280,
+					"fields": {"name":"great-scale","note":null}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "e9b319b6-0333-5b92-9b6d-3dfaeb4ce365",
+						"layerIid": "a761f08a-c1fc-5fee-8e53-44417f916bbc",
+						"entityIid": "14393e2d-0c6a-5e5a-abb5-5556729c7378"
+					},
+					"worldX": 23296,
+					"worldY": 1344,
+					"widPx": 64,
+					"heiPx": 64,
+					"fields": {"name":"pickup:cellars-ledger","note":"The Copyist hands over the Cellars ledger with a sniff."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "e9b319b6-0333-5b92-9b6d-3dfaeb4ce365",
+						"layerIid": "a761f08a-c1fc-5fee-8e53-44417f916bbc",
+						"entityIid": "cf2483f8-ab35-550a-a841-ee015f6f107b"
+					},
+					"worldX": 23424,
+					"worldY": 1216,
+					"widPx": 128,
+					"heiPx": 192,
+					"fields": {"name":"copyist","note":"The fussy old clerk with the green lamp. Quill scratch beacon."}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "e9b319b6-0333-5b92-9b6d-3dfaeb4ce365",
+						"layerIid": "a761f08a-c1fc-5fee-8e53-44417f916bbc",
+						"entityIid": "1235d482-e12d-53e5-ab4b-d71e0b6082f5"
+					},
+					"worldX": 24256,
+					"worldY": 1536,
+					"widPx": 320,
+					"heiPx": 384,
+					"fields": {"name":"round-door","note":null}
 				}
 			]
 		}
@@ -4780,7 +5131,7 @@
 			"iid": "5ab73688-25fe-5f89-bebf-50e188330793",
 			"uid": 130,
 			"worldX": 0,
-			"worldY": 2560,
+			"worldY": 15360,
 			"worldDepth": 0,
 			"pxWid": 6144,
 			"pxHei": 2176,
@@ -4887,7 +5238,7 @@
 			"iid": "36410238-b76c-5684-9d0b-9a15a2d5c7fa",
 			"uid": 131,
 			"worldX": 6400,
-			"worldY": 2560,
+			"worldY": 15360,
 			"worldDepth": 0,
 			"pxWid": 3072,
 			"pxHei": 1280,
@@ -4989,7 +5340,7 @@
 			"iid": "7eb37d1f-1790-50d4-adac-282fcf834af3",
 			"uid": 132,
 			"worldX": 9728,
-			"worldY": 2560,
+			"worldY": 15360,
 			"worldDepth": 0,
 			"pxWid": 3584,
 			"pxHei": 1536,
@@ -5088,7 +5439,7 @@
 			"iid": "b806b971-4144-53bb-b271-c9657a121c8f",
 			"uid": 133,
 			"worldX": 0,
-			"worldY": 0,
+			"worldY": 12800,
 			"worldDepth": 0,
 			"pxWid": 4480,
 			"pxHei": 1920,
@@ -5186,7 +5537,7 @@
 			"iid": "b630fbc6-9848-5a5e-be73-434f739607f9",
 			"uid": 134,
 			"worldX": 2560,
-			"worldY": -2176,
+			"worldY": 10624,
 			"worldDepth": 0,
 			"pxWid": 1920,
 			"pxHei": 2176,
@@ -5277,7 +5628,7 @@
 			"iid": "944e98f8-7fa7-51d5-907c-e49ed44a3567",
 			"uid": 135,
 			"worldX": 4480,
-			"worldY": 0,
+			"worldY": 12800,
 			"worldDepth": 0,
 			"pxWid": 3840,
 			"pxHei": 1920,
@@ -5361,6 +5712,724 @@
 				{"levelIid":"b630fbc6-9848-5a5e-be73-434f739607f9","dir":"nw"}
 			],
 			"externalRelPath": "world/sample_gallery.ldtkl",
+			"layerInstances": null
+		},
+		{
+			"identifier": "tally_yard",
+			"iid": "53078b37-40a3-52cb-8d6d-2219d68f499c",
+			"uid": 137,
+			"worldX": 0,
+			"worldY": -1088,
+			"worldDepth": 0,
+			"pxWid": 3840,
+			"pxHei": 2176,
+			"__bgColor": "#E8F0F8",
+			"bgColor": null,
+			"useAutoIdentifier": false,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__smartColor": "#F3F7FB",
+			"__bgPos": null,
+			"fieldInstances": [
+				{
+					"__identifier": "name",
+					"__type": "String",
+					"__value": "The Proof: Evictions Yard",
+					"__tile": null,
+					"defUid": 122,
+					"realEditorValues": [{"id":"V_String","params":["The Proof: Evictions Yard"]}]
+				},
+				{
+					"__identifier": "abilities",
+					"__type": "Array<LocalEnum.Ability>",
+					"__value": ["pogo","seize","levy"],
+					"__tile": null,
+					"defUid": 123,
+					"realEditorValues": [
+						{"id":"V_String","params":["pogo"]},
+						{"id":"V_String","params":["seize"]},
+						{"id":"V_String","params":["levy"]}
+					]
+				},
+				{
+					"__identifier": "hazard",
+					"__type": "LocalEnum.Hazard",
+					"__value": "pip",
+					"__tile": null,
+					"defUid": 124,
+					"realEditorValues": [{"id":"V_String","params":["pip"]}]
+				},
+				{
+					"__identifier": "spawnGrace",
+					"__type": "Int",
+					"__value": 0,
+					"__tile": null,
+					"defUid": 125,
+					"realEditorValues": [{"id":"V_Int","params":[0]}]
+				},
+				{
+					"__identifier": "next",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 126,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "draft",
+					"__type": "Bool",
+					"__value": true,
+					"__tile": null,
+					"defUid": 127,
+					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "claims",
+					"__type": "Multilines",
+					"__value": null,
+					"__tile": null,
+					"defUid": 128,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "notes",
+					"__type": "Multilines",
+					"__value": "T02. Street stratum (floor 0). The cart jams in the yard gate; seize it. Planks over a static gutter; seize the crates, not your plank. The chair's creak becomes a spring over the yard wall.",
+					"__tile": null,
+					"defUid": 129,
+					"realEditorValues": [
+						{
+							"id": "V_String",
+							"params": [
+								"T02. Street stratum (floor 0). The cart jams in the yard gate; seize it. Planks over a static gutter; seize the crates, not your plank. The chair's creak becomes a spring over the yard wall."
+							]
+						}
+					]
+				}
+			],
+			"__neighbours": [{"levelIid":"303a3322-1bf5-54c1-a76a-2426355135a1","dir":"e"}],
+			"externalRelPath": "world/tally_yard.ldtkl",
+			"layerInstances": null
+		},
+		{
+			"identifier": "tally_market",
+			"iid": "303a3322-1bf5-54c1-a76a-2426355135a1",
+			"uid": 138,
+			"worldX": 3840,
+			"worldY": -1088,
+			"worldDepth": 0,
+			"pxWid": 5760,
+			"pxHei": 2176,
+			"__bgColor": "#E8F0F8",
+			"bgColor": null,
+			"useAutoIdentifier": false,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__smartColor": "#F3F7FB",
+			"__bgPos": null,
+			"fieldInstances": [
+				{
+					"__identifier": "name",
+					"__type": "String",
+					"__value": "Rag Market",
+					"__tile": null,
+					"defUid": 122,
+					"realEditorValues": [{"id":"V_String","params":["Rag Market"]}]
+				},
+				{
+					"__identifier": "abilities",
+					"__type": "Array<LocalEnum.Ability>",
+					"__value": ["pogo","seize","levy"],
+					"__tile": null,
+					"defUid": 123,
+					"realEditorValues": [
+						{"id":"V_String","params":["pogo"]},
+						{"id":"V_String","params":["seize"]},
+						{"id":"V_String","params":["levy"]}
+					]
+				},
+				{
+					"__identifier": "hazard",
+					"__type": "LocalEnum.Hazard",
+					"__value": "pip",
+					"__tile": null,
+					"defUid": 124,
+					"realEditorValues": [{"id":"V_String","params":["pip"]}]
+				},
+				{
+					"__identifier": "spawnGrace",
+					"__type": "Int",
+					"__value": 0,
+					"__tile": null,
+					"defUid": 125,
+					"realEditorValues": [{"id":"V_Int","params":[0]}]
+				},
+				{
+					"__identifier": "next",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 126,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "draft",
+					"__type": "Bool",
+					"__value": true,
+					"__tile": null,
+					"defUid": 127,
+					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "claims",
+					"__type": "Multilines",
+					"__value": null,
+					"__tile": null,
+					"defUid": 128,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "notes",
+					"__type": "Multilines",
+					"__value": "T03. Street stratum. Stall creaks become springs over two static gutters; the Gull thief; the foreclosed shopfront pocket; the squeeze lane before the square.",
+					"__tile": null,
+					"defUid": 129,
+					"realEditorValues": [
+						{
+							"id": "V_String",
+							"params": [
+								"T03. Street stratum. Stall creaks become springs over two static gutters; the Gull thief; the foreclosed shopfront pocket; the squeeze lane before the square."
+							]
+						}
+					]
+				}
+			],
+			"__neighbours": [
+				{"levelIid":"53078b37-40a3-52cb-8d6d-2219d68f499c","dir":"w"},
+				{"levelIid":"d98f0dfb-9685-5950-864f-d633bdb92819","dir":"e"},
+				{"levelIid":"b8b1b517-ea0a-598f-b304-f4239ad12e38","dir":"se"}
+			],
+			"externalRelPath": "world/tally_market.ldtkl",
+			"layerInstances": null
+		},
+		{
+			"identifier": "tally_cross",
+			"iid": "d98f0dfb-9685-5950-864f-d633bdb92819",
+			"uid": 139,
+			"worldX": 9600,
+			"worldY": -2176,
+			"worldDepth": 0,
+			"pxWid": 5760,
+			"pxHei": 3264,
+			"__bgColor": "#E8F0F8",
+			"bgColor": null,
+			"useAutoIdentifier": false,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__smartColor": "#F3F7FB",
+			"__bgPos": null,
+			"fieldInstances": [
+				{
+					"__identifier": "name",
+					"__type": "String",
+					"__value": "Tally Cross",
+					"__tile": null,
+					"defUid": 122,
+					"realEditorValues": [{"id":"V_String","params":["Tally Cross"]}]
+				},
+				{
+					"__identifier": "abilities",
+					"__type": "Array<LocalEnum.Ability>",
+					"__value": ["pogo","seize","levy"],
+					"__tile": null,
+					"defUid": 123,
+					"realEditorValues": [
+						{"id":"V_String","params":["pogo"]},
+						{"id":"V_String","params":["seize"]},
+						{"id":"V_String","params":["levy"]}
+					]
+				},
+				{
+					"__identifier": "hazard",
+					"__type": "LocalEnum.Hazard",
+					"__value": "pip",
+					"__tile": null,
+					"defUid": 124,
+					"realEditorValues": [{"id":"V_String","params":["pip"]}]
+				},
+				{
+					"__identifier": "spawnGrace",
+					"__type": "Int",
+					"__value": 0,
+					"__tile": null,
+					"defUid": 125,
+					"realEditorValues": [{"id":"V_Int","params":[0]}]
+				},
+				{
+					"__identifier": "next",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 126,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "draft",
+					"__type": "Bool",
+					"__value": true,
+					"__tile": null,
+					"defUid": 127,
+					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "claims",
+					"__type": "Multilines",
+					"__value": null,
+					"__tile": null,
+					"defUid": 128,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "notes",
+					"__type": "Multilines",
+					"__value": "T04. The square: street 0 to the roof gallery -20. The Board, the Corner stool, the clerk's balcony, the stand, the hatch down to the Cellars, the arcade east to Pawn Row, the roof-bolt ledge from Chimney Walk.",
+					"__tile": null,
+					"defUid": 129,
+					"realEditorValues": [
+						{
+							"id": "V_String",
+							"params": [
+								"T04. The square: street 0 to the roof gallery -20. The Board, the Corner stool, the clerk's balcony, the stand, the hatch down to the Cellars, the arcade east to Pawn Row, the roof-bolt ledge from Chimney Walk."
+							]
+						}
+					]
+				}
+			],
+			"__neighbours": [
+				{"levelIid":"303a3322-1bf5-54c1-a76a-2426355135a1","dir":"w"},
+				{"levelIid":"aa2183aa-edba-5c74-b8f5-4c45dffe92a1","dir":"e"},
+				{"levelIid":"fd1723da-99be-59da-b993-e48c26776f41","dir":"e"},
+				{"levelIid":"b8b1b517-ea0a-598f-b304-f4239ad12e38","dir":"s"}
+			],
+			"externalRelPath": "world/tally_cross.ldtkl",
+			"layerInstances": null
+		},
+		{
+			"identifier": "tally_pawnrow",
+			"iid": "aa2183aa-edba-5c74-b8f5-4c45dffe92a1",
+			"uid": 140,
+			"worldX": 15360,
+			"worldY": -1088,
+			"worldDepth": 0,
+			"pxWid": 7680,
+			"pxHei": 2176,
+			"__bgColor": "#E8F0F8",
+			"bgColor": null,
+			"useAutoIdentifier": false,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__smartColor": "#F3F7FB",
+			"__bgPos": null,
+			"fieldInstances": [
+				{
+					"__identifier": "name",
+					"__type": "String",
+					"__value": "Pawn Row",
+					"__tile": null,
+					"defUid": 122,
+					"realEditorValues": [{"id":"V_String","params":["Pawn Row"]}]
+				},
+				{
+					"__identifier": "abilities",
+					"__type": "Array<LocalEnum.Ability>",
+					"__value": ["pogo","seize","levy"],
+					"__tile": null,
+					"defUid": 123,
+					"realEditorValues": [
+						{"id":"V_String","params":["pogo"]},
+						{"id":"V_String","params":["seize"]},
+						{"id":"V_String","params":["levy"]}
+					]
+				},
+				{
+					"__identifier": "hazard",
+					"__type": "LocalEnum.Hazard",
+					"__value": "pip",
+					"__tile": null,
+					"defUid": 124,
+					"realEditorValues": [{"id":"V_String","params":["pip"]}]
+				},
+				{
+					"__identifier": "spawnGrace",
+					"__type": "Int",
+					"__value": 0,
+					"__tile": null,
+					"defUid": 125,
+					"realEditorValues": [{"id":"V_Int","params":[0]}]
+				},
+				{
+					"__identifier": "next",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 126,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "draft",
+					"__type": "Bool",
+					"__value": true,
+					"__tile": null,
+					"defUid": 127,
+					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "claims",
+					"__type": "Multilines",
+					"__value": null,
+					"__tile": null,
+					"defUid": 128,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "notes",
+					"__type": "Multilines",
+					"__value": "T05. Street rising east (stairs until slopes land). The pawnbroker's cellar door hums quietly (Chin piece). The brass balls hang on a humming chain over the barricaded stair up to the roofs.",
+					"__tile": null,
+					"defUid": 129,
+					"realEditorValues": [
+						{
+							"id": "V_String",
+							"params": [
+								"T05. Street rising east (stairs until slopes land). The pawnbroker's cellar door hums quietly (Chin piece). The brass balls hang on a humming chain over the barricaded stair up to the roofs."
+							]
+						}
+					]
+				}
+			],
+			"__neighbours": [
+				{"levelIid":"d98f0dfb-9685-5950-864f-d633bdb92819","dir":"w"},
+				{"levelIid":"fd1723da-99be-59da-b993-e48c26776f41","dir":"n"},
+				{"levelIid":"b8b1b517-ea0a-598f-b304-f4239ad12e38","dir":"s"},
+				{"levelIid":"e9b319b6-0333-5b92-9b6d-3dfaeb4ce365","dir":"s"}
+			],
+			"externalRelPath": "world/tally_pawnrow.ldtkl",
+			"layerInstances": null
+		},
+		{
+			"identifier": "tally_chimneys",
+			"iid": "fd1723da-99be-59da-b993-e48c26776f41",
+			"uid": 141,
+			"worldX": 15360,
+			"worldY": -3264,
+			"worldDepth": 0,
+			"pxWid": 7680,
+			"pxHei": 2176,
+			"__bgColor": "#E8F0F8",
+			"bgColor": null,
+			"useAutoIdentifier": false,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__smartColor": "#F3F7FB",
+			"__bgPos": null,
+			"fieldInstances": [
+				{
+					"__identifier": "name",
+					"__type": "String",
+					"__value": "Chimney Walk",
+					"__tile": null,
+					"defUid": 122,
+					"realEditorValues": [{"id":"V_String","params":["Chimney Walk"]}]
+				},
+				{
+					"__identifier": "abilities",
+					"__type": "Array<LocalEnum.Ability>",
+					"__value": ["pogo","seize","levy"],
+					"__tile": null,
+					"defUid": 123,
+					"realEditorValues": [
+						{"id":"V_String","params":["pogo"]},
+						{"id":"V_String","params":["seize"]},
+						{"id":"V_String","params":["levy"]}
+					]
+				},
+				{
+					"__identifier": "hazard",
+					"__type": "LocalEnum.Hazard",
+					"__value": "pip",
+					"__tile": null,
+					"defUid": 124,
+					"realEditorValues": [{"id":"V_String","params":["pip"]}]
+				},
+				{
+					"__identifier": "spawnGrace",
+					"__type": "Int",
+					"__value": 0,
+					"__tile": null,
+					"defUid": 125,
+					"realEditorValues": [{"id":"V_Int","params":[0]}]
+				},
+				{
+					"__identifier": "next",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 126,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "draft",
+					"__type": "Bool",
+					"__value": true,
+					"__tile": null,
+					"defUid": 127,
+					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "claims",
+					"__type": "Multilines",
+					"__value": null,
+					"__tile": null,
+					"defUid": 128,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "notes",
+					"__type": "Multilines",
+					"__value": "T09. Roofs stratum (-20). A run west over chimney pots and light wells, pogo off weathervanes, a Gull. Ends at the roof bolt above the Cross.",
+					"__tile": null,
+					"defUid": 129,
+					"realEditorValues": [
+						{
+							"id": "V_String",
+							"params": [
+								"T09. Roofs stratum (-20). A run west over chimney pots and light wells, pogo off weathervanes, a Gull. Ends at the roof bolt above the Cross."
+							]
+						}
+					]
+				}
+			],
+			"__neighbours": [
+				{"levelIid":"d98f0dfb-9685-5950-864f-d633bdb92819","dir":"w"},
+				{"levelIid":"aa2183aa-edba-5c74-b8f5-4c45dffe92a1","dir":"s"}
+			],
+			"externalRelPath": "world/tally_chimneys.ldtkl",
+			"layerInstances": null
+		},
+		{
+			"identifier": "cellars_slide",
+			"iid": "b8b1b517-ea0a-598f-b304-f4239ad12e38",
+			"uid": 142,
+			"worldX": 9600,
+			"worldY": 1088,
+			"worldDepth": 0,
+			"pxWid": 7680,
+			"pxHei": 2176,
+			"__bgColor": "#E8F0F8",
+			"bgColor": null,
+			"useAutoIdentifier": false,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__smartColor": "#F3F7FB",
+			"__bgPos": null,
+			"fieldInstances": [
+				{
+					"__identifier": "name",
+					"__type": "String",
+					"__value": "Spoil Slide",
+					"__tile": null,
+					"defUid": 122,
+					"realEditorValues": [{"id":"V_String","params":["Spoil Slide"]}]
+				},
+				{
+					"__identifier": "abilities",
+					"__type": "Array<LocalEnum.Ability>",
+					"__value": ["pogo","seize","levy"],
+					"__tile": null,
+					"defUid": 123,
+					"realEditorValues": [
+						{"id":"V_String","params":["pogo"]},
+						{"id":"V_String","params":["seize"]},
+						{"id":"V_String","params":["levy"]}
+					]
+				},
+				{
+					"__identifier": "hazard",
+					"__type": "LocalEnum.Hazard",
+					"__value": "pip",
+					"__tile": null,
+					"defUid": 124,
+					"realEditorValues": [{"id":"V_String","params":["pip"]}]
+				},
+				{
+					"__identifier": "spawnGrace",
+					"__type": "Int",
+					"__value": 0,
+					"__tile": null,
+					"defUid": 125,
+					"realEditorValues": [{"id":"V_Int","params":[0]}]
+				},
+				{
+					"__identifier": "next",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 126,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "draft",
+					"__type": "Bool",
+					"__value": true,
+					"__tile": null,
+					"defUid": 127,
+					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "claims",
+					"__type": "Multilines",
+					"__value": null,
+					"__tile": null,
+					"defUid": 128,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "notes",
+					"__type": "Multilines",
+					"__value": "C01. From the Cross hatch down the spoil to the cellars band (38). The creaking pipe gives a spring back up the hatch shaft.",
+					"__tile": null,
+					"defUid": 129,
+					"realEditorValues": [
+						{
+							"id": "V_String",
+							"params": [
+								"C01. From the Cross hatch down the spoil to the cellars band (38). The creaking pipe gives a spring back up the hatch shaft."
+							]
+						}
+					]
+				}
+			],
+			"__neighbours": [
+				{"levelIid":"303a3322-1bf5-54c1-a76a-2426355135a1","dir":"nw"},
+				{"levelIid":"d98f0dfb-9685-5950-864f-d633bdb92819","dir":"n"},
+				{"levelIid":"aa2183aa-edba-5c74-b8f5-4c45dffe92a1","dir":"n"},
+				{"levelIid":"e9b319b6-0333-5b92-9b6d-3dfaeb4ce365","dir":"e"}
+			],
+			"externalRelPath": "world/cellars_slide.ldtkl",
+			"layerInstances": null
+		},
+		{
+			"identifier": "cellars_scale",
+			"iid": "e9b319b6-0333-5b92-9b6d-3dfaeb4ce365",
+			"uid": 143,
+			"worldX": 17280,
+			"worldY": 1088,
+			"worldDepth": 0,
+			"pxWid": 7680,
+			"pxHei": 2176,
+			"__bgColor": "#E8F0F8",
+			"bgColor": null,
+			"useAutoIdentifier": false,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__smartColor": "#F3F7FB",
+			"__bgPos": null,
+			"fieldInstances": [
+				{
+					"__identifier": "name",
+					"__type": "String",
+					"__value": "Great Scale Hall",
+					"__tile": null,
+					"defUid": 122,
+					"realEditorValues": [{"id":"V_String","params":["Great Scale Hall"]}]
+				},
+				{
+					"__identifier": "abilities",
+					"__type": "Array<LocalEnum.Ability>",
+					"__value": ["pogo","seize","levy"],
+					"__tile": null,
+					"defUid": 123,
+					"realEditorValues": [
+						{"id":"V_String","params":["pogo"]},
+						{"id":"V_String","params":["seize"]},
+						{"id":"V_String","params":["levy"]}
+					]
+				},
+				{
+					"__identifier": "hazard",
+					"__type": "LocalEnum.Hazard",
+					"__value": "pip",
+					"__tile": null,
+					"defUid": 124,
+					"realEditorValues": [{"id":"V_String","params":["pip"]}]
+				},
+				{
+					"__identifier": "spawnGrace",
+					"__type": "Int",
+					"__value": 0,
+					"__tile": null,
+					"defUid": 125,
+					"realEditorValues": [{"id":"V_Int","params":[0]}]
+				},
+				{
+					"__identifier": "next",
+					"__type": "String",
+					"__value": "hub",
+					"__tile": null,
+					"defUid": 126,
+					"realEditorValues": [{"id":"V_String","params":["hub"]}]
+				},
+				{
+					"__identifier": "draft",
+					"__type": "Bool",
+					"__value": true,
+					"__tile": null,
+					"defUid": 127,
+					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "claims",
+					"__type": "Multilines",
+					"__value": null,
+					"__tile": null,
+					"defUid": 128,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "notes",
+					"__type": "Multilines",
+					"__value": "C02. Cellars stratum (38). Seize the furnace's two roars: heavy, the hall goes dark. Your pan sinks, the far pan rises. Shed a weight to climb; the Copyist's loft; levy the last roar onto the weigh-plate and the round door rolls open.",
+					"__tile": null,
+					"defUid": 129,
+					"realEditorValues": [
+						{
+							"id": "V_String",
+							"params": [
+								"C02. Cellars stratum (38). Seize the furnace's two roars: heavy, the hall goes dark. Your pan sinks, the far pan rises. Shed a weight to climb; the Copyist's loft; levy the last roar onto the weigh-plate and the round door rolls open."
+							]
+						}
+					]
+				}
+			],
+			"__neighbours": [
+				{"levelIid":"aa2183aa-edba-5c74-b8f5-4c45dffe92a1","dir":"n"},
+				{"levelIid":"b8b1b517-ea0a-598f-b304-f4239ad12e38","dir":"w"}
+			],
+			"externalRelPath": "world/cellars_scale.ldtkl",
 			"layerInstances": null
 		}
 	]

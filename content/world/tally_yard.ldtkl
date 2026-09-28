@@ -1,0 +1,1099 @@
+{
+	"__header__": {
+		"fileType": "LDtk Project JSON",
+		"app": "LDtk",
+		"doc": "https://ldtk.io/json",
+		"schema": "https://ldtk.io/files/JSON_SCHEMA.json",
+		"appAuthor": "Sebastien 'deepnight' Benard",
+		"appVersion": "1.5.3",
+		"url": "https://ldtk.io"
+	},
+	"identifier": "tally_yard",
+	"iid": "53078b37-40a3-52cb-8d6d-2219d68f499c",
+	"uid": 137,
+	"worldX": 0,
+	"worldY": -1088,
+	"worldDepth": 0,
+	"pxWid": 3840,
+	"pxHei": 2176,
+	"__bgColor": "#E8F0F8",
+	"bgColor": null,
+	"useAutoIdentifier": false,
+	"bgRelPath": null,
+	"bgPos": null,
+	"bgPivotX": 0.5,
+	"bgPivotY": 0.5,
+	"__smartColor": "#F3F7FB",
+	"__bgPos": null,
+	"fieldInstances": [
+		{
+			"__identifier": "name",
+			"__type": "String",
+			"__value": "The Proof: Evictions Yard",
+			"__tile": null,
+			"defUid": 122,
+			"realEditorValues": [{"id":"V_String","params":["The Proof: Evictions Yard"]}]
+		},
+		{
+			"__identifier": "abilities",
+			"__type": "Array<LocalEnum.Ability>",
+			"__value": ["pogo","seize","levy"],
+			"__tile": null,
+			"defUid": 123,
+			"realEditorValues": [
+				{"id":"V_String","params":["pogo"]},
+				{"id":"V_String","params":["seize"]},
+				{"id":"V_String","params":["levy"]}
+			]
+		},
+		{
+			"__identifier": "hazard",
+			"__type": "LocalEnum.Hazard",
+			"__value": "pip",
+			"__tile": null,
+			"defUid": 124,
+			"realEditorValues": [{"id":"V_String","params":["pip"]}]
+		},
+		{
+			"__identifier": "spawnGrace",
+			"__type": "Int",
+			"__value": 0,
+			"__tile": null,
+			"defUid": 125,
+			"realEditorValues": [{"id":"V_Int","params":[0]}]
+		},
+		{
+			"__identifier": "next",
+			"__type": "String",
+			"__value": null,
+			"__tile": null,
+			"defUid": 126,
+			"realEditorValues": [null]
+		},
+		{
+			"__identifier": "draft",
+			"__type": "Bool",
+			"__value": true,
+			"__tile": null,
+			"defUid": 127,
+			"realEditorValues": [{"id":"V_Bool","params":[true]}]
+		},
+		{
+			"__identifier": "claims",
+			"__type": "Multilines",
+			"__value": null,
+			"__tile": null,
+			"defUid": 128,
+			"realEditorValues": [null]
+		},
+		{
+			"__identifier": "notes",
+			"__type": "Multilines",
+			"__value": "T02. Street stratum (floor 0). The cart jams in the yard gate; seize it. Planks over a static gutter; seize the crates, not your plank. The chair's creak becomes a spring over the yard wall.",
+			"__tile": null,
+			"defUid": 129,
+			"realEditorValues": [
+				{
+					"id": "V_String",
+					"params": [
+						"T02. Street stratum (floor 0). The cart jams in the yard gate; seize it. Planks over a static gutter; seize the crates, not your plank. The chair's creak becomes a spring over the yard wall."
+					]
+				}
+			]
+		}
+	],
+	"__neighbours": [{"levelIid":"303a3322-1bf5-54c1-a76a-2426355135a1","dir":"e"}],
+	"externalRelPath": null,
+	"layerInstances": [
+		{
+			"__identifier": "Entities",
+			"__type": "Entities",
+			"__cWid": 60,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "4670e7c8-5b90-5254-aec6-3abccd8141b7",
+			"levelId": 137,
+			"layerDefUid": 118,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [],
+			"autoLayerTiles": [],
+			"seed": 1000,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": [
+				{
+					"__identifier": "Spawn",
+					"__grid": [8,16],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#3CE070",
+					"__worldX": 512,
+					"__worldY": -64,
+					"iid": "f220b8a1-d549-5cbf-b642-9158089ab2d8",
+					"width": 64,
+					"height": 64,
+					"defUid": 63,
+					"px": [512,1024],
+					"fieldInstances": []
+				},
+				{
+					"__identifier": "Landmark",
+					"__grid": [0,8],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#FFD700",
+					"__worldX": 0,
+					"__worldY": -576,
+					"iid": "b3345be1-921a-50b3-8129-de516402d2db",
+					"width": 256,
+					"height": 576,
+					"defUid": 115,
+					"px": [0,512],
+					"fieldInstances": [
+						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": "row-gate",
+							"__tile": null,
+							"defUid": 116,
+							"realEditorValues": [{"id":"V_String","params":["row-gate"]}]
+						},
+						{
+							"__identifier": "note",
+							"__type": "Multilines",
+							"__value": "The Row gate: the first lock. Dashed ghost houses behind it.",
+							"__tile": null,
+							"defUid": 117,
+							"realEditorValues": [{"id":"V_String","params":["The Row gate: the first lock. Dashed ghost houses behind it."]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [14,12],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 896,
+					"__worldY": -320,
+					"iid": "62c3b42b-f814-5e4d-a408-3b1c89a08e13",
+					"width": 256,
+					"height": 320,
+					"defUid": 73,
+					"px": [896,768],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "cart axle",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["cart axle"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "pink",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["pink"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Landmark",
+					"__grid": [13,11],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#FFD700",
+					"__worldX": 832,
+					"__worldY": -384,
+					"iid": "cde6d522-ef25-5f36-ac61-ac851b0d95e4",
+					"width": 384,
+					"height": 384,
+					"defUid": 115,
+					"px": [832,704],
+					"fieldInstances": [
+						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": "receiver-cart",
+							"__tile": null,
+							"defUid": 116,
+							"realEditorValues": [{"id":"V_String","params":["receiver-cart"]}]
+						},
+						{
+							"__identifier": "note",
+							"__type": "Multilines",
+							"__value": "Jammed in the yard gate; seized, it goes ghost and its evicted furniture crashes through onto the cobbles.",
+							"__tile": null,
+							"defUid": 117,
+							"realEditorValues": [
+								{
+									"id": "V_String",
+									"params": [
+										"Jammed in the yard gate; seized, it goes ghost and its evicted furniture crashes through onto the cobbles."
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"__identifier": "Prompt",
+					"__grid": [12,16],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C0C0C0",
+					"__worldX": 768,
+					"__worldY": -64,
+					"iid": "bbdd2c26-0b7c-5ca8-a4c8-a57ac8cc43a0",
+					"width": 64,
+					"height": 64,
+					"defUid": 97,
+					"px": [768,1024],
+					"fieldInstances": [
+						{
+							"__identifier": "keys",
+							"__type": "Array<LocalEnum.PromptKey>",
+							"__value": ["seize"],
+							"__tile": null,
+							"defUid": 98,
+							"realEditorValues": [{"id":"V_String","params":["seize"]}]
+						},
+						{
+							"__identifier": "until",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 99,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "near",
+							"__type": "Float",
+							"__value": 4,
+							"__tile": null,
+							"defUid": 100,
+							"realEditorValues": [{"id":"V_Float","params":[4]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [23,17],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 1472,
+					"__worldY": 0,
+					"iid": "96584423-1f76-59d1-ad26-7a00c2541a6c",
+					"width": 320,
+					"height": 64,
+					"defUid": 73,
+					"px": [1472,1088],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "scaffold plank",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["scaffold plank"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "pink",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["pink"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [28,17],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 1792,
+					"__worldY": 0,
+					"iid": "e0e7ab6a-c0ae-5104-bf5c-a7db07770ffa",
+					"width": 320,
+					"height": 64,
+					"defUid": 73,
+					"px": [1792,1088],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "scaffold plank",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["scaffold plank"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "pink",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["pink"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [28,13],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 1792,
+					"__worldY": -256,
+					"iid": "af7fd57b-273b-543a-985c-25099d02994c",
+					"width": 128,
+					"height": 256,
+					"defUid": 73,
+					"px": [1792,832],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "evicted crates",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["evicted crates"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "brown",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["brown"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Source",
+					"__grid": [45,15],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C07418",
+					"__worldX": 2880,
+					"__worldY": -128,
+					"iid": "7c68df9d-1722-564b-b282-830ef2dcde9a",
+					"width": 128,
+					"height": 128,
+					"defUid": 73,
+					"px": [2880,960],
+					"fieldInstances": [
+						{
+							"__identifier": "sound",
+							"__type": "String",
+							"__value": "rocking chair",
+							"__tile": null,
+							"defUid": 74,
+							"realEditorValues": [{"id":"V_String","params":["rocking chair"]}]
+						},
+						{
+							"__identifier": "colour",
+							"__type": "LocalEnum.Colour",
+							"__value": "pink",
+							"__tile": null,
+							"defUid": 75,
+							"realEditorValues": [{"id":"V_String","params":["pink"]}]
+						},
+						{
+							"__identifier": "locked",
+							"__type": "Bool",
+							"__value": false,
+							"__tile": null,
+							"defUid": 76,
+							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "char",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 77,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Landmark",
+					"__grid": [44,14],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#FFD700",
+					"__worldX": 2816,
+					"__worldY": -192,
+					"iid": "5ebfaf91-e502-50c2-998a-782dc777dde7",
+					"width": 256,
+					"height": 192,
+					"defUid": 115,
+					"px": [2816,896],
+					"fieldInstances": [
+						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": "rocking-chair",
+							"__tile": null,
+							"defUid": 116,
+							"realEditorValues": [{"id":"V_String","params":["rocking-chair"]}]
+						},
+						{
+							"__identifier": "note",
+							"__type": "Multilines",
+							"__value": null,
+							"__tile": null,
+							"defUid": 117,
+							"realEditorValues": [null]
+						}
+					]
+				},
+				{
+					"__identifier": "Prompt",
+					"__grid": [42,16],
+					"__pivot": [0,0],
+					"__tags": ["game"],
+					"__tile": null,
+					"__smartColor": "#C0C0C0",
+					"__worldX": 2688,
+					"__worldY": -64,
+					"iid": "ae89b1c9-f61b-523a-a1b3-60608fe34fc6",
+					"width": 64,
+					"height": 64,
+					"defUid": 97,
+					"px": [2688,1024],
+					"fieldInstances": [
+						{
+							"__identifier": "keys",
+							"__type": "Array<LocalEnum.PromptKey>",
+							"__value": ["levy"],
+							"__tile": null,
+							"defUid": 98,
+							"realEditorValues": [{"id":"V_String","params":["levy"]}]
+						},
+						{
+							"__identifier": "until",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 99,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "near",
+							"__type": "Float",
+							"__value": 5,
+							"__tile": null,
+							"defUid": 100,
+							"realEditorValues": [{"id":"V_Float","params":[5]}]
+						}
+					]
+				}
+			]
+		},
+		{
+			"__identifier": "Brushes",
+			"__type": "Entities",
+			"__cWid": 60,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "655d8dce-9442-5261-a841-89b7c95e2dc1",
+			"levelId": 137,
+			"layerDefUid": 119,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [],
+			"autoLayerTiles": [],
+			"seed": 1001,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": [
+				{
+					"__identifier": "Fill",
+					"__grid": [0,0],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 0,
+					"__worldY": -1088,
+					"iid": "eb5c6a7e-abea-541c-865e-24192db9a460",
+					"width": 64,
+					"height": 64,
+					"defUid": 14,
+					"px": [0,0],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 12,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 13,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s0",
+							"__tile": null,
+							"defUid": 136,
+							"realEditorValues": [{"id":"V_String","params":["s0"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [4,1],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 256,
+					"__worldY": -1024,
+					"iid": "82041ea7-3c38-5ff4-b645-688079c1ad0d",
+					"width": 3072,
+					"height": 1024,
+					"defUid": 18,
+					"px": [256,64],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s1:T02 yard air",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s1:T02 yard air"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [14,1],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 896,
+					"__worldY": -1024,
+					"iid": "da1c0ff0-acac-580b-9bf0-3f7ae1a34be5",
+					"width": 256,
+					"height": 704,
+					"defUid": 18,
+					"px": [896,64],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s2:T02 gatehouse over the cart",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s2:T02 gatehouse over the cart"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [23,17],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 1472,
+					"__worldY": 0,
+					"iid": "581cdf1a-073a-57b1-b141-8fbd16abcb1b",
+					"width": 640,
+					"height": 256,
+					"defUid": 18,
+					"px": [1472,1088],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s3:T02 static gutter",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s3:T02 static gutter"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [23,20],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 1472,
+					"__worldY": 192,
+					"iid": "1eadeae7-0958-5b8b-b1c5-49c6d40d3d6b",
+					"width": 640,
+					"height": 64,
+					"defUid": 18,
+					"px": [1472,1280],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "spikeUp",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["spikeUp"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s4",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s4"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [22,10],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 1408,
+					"__worldY": -448,
+					"iid": "1b7b2da4-1db5-5ec4-a573-4fa89c2f1432",
+					"width": 768,
+					"height": 128,
+					"defUid": 18,
+					"px": [1408,640],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s5:T02 scaffold beam",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s5:T02 scaffold beam"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [48,11],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 3072,
+					"__worldY": -384,
+					"iid": "94153328-0293-58c0-8539-165963116c30",
+					"width": 256,
+					"height": 384,
+					"defUid": 18,
+					"px": [3072,704],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s6:T02 yard wall",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s6:T02 yard wall"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [52,1],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 3328,
+					"__worldY": -1024,
+					"iid": "f8a11350-5285-55b0-b5c2-73b163d4c7a9",
+					"width": 768,
+					"height": 1024,
+					"defUid": 18,
+					"px": [3328,64],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s7:T02 lane over the wall",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s7:T02 lane over the wall"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [56,1],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 3584,
+					"__worldY": -1024,
+					"iid": "23214b34-47a7-534c-872e-48e4a3e13123",
+					"width": 512,
+					"height": 640,
+					"defUid": 18,
+					"px": [3584,64],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s8:T02|T03 neck arch",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s8:T02|T03 neck arch"]}]
+						}
+					]
+				}
+			]
+		},
+		{
+			"__identifier": "Paint",
+			"__type": "IntGrid",
+			"__cWid": 60,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "eff9cc1f-b63e-5dee-8d63-e4fbe2efa438",
+			"levelId": 137,
+			"layerDefUid": 120,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			"autoLayerTiles": [],
+			"seed": 1002,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": []
+		},
+		{
+			"__identifier": "Collision",
+			"__type": "IntGrid",
+			"__cWid": 60,
+			"__cHei": 34,
+			"__gridSize": 64,
+			"__opacity": 1,
+			"__pxTotalOffsetX": 0,
+			"__pxTotalOffsetY": 0,
+			"__tilesetDefUid": null,
+			"__tilesetRelPath": null,
+			"iid": "b34236f6-eddf-50af-be43-cc0fdf0a1caa",
+			"levelId": 137,
+			"layerDefUid": 121,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"visible": true,
+			"optionalRules": [],
+			"intGridCsv": [
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+			],
+			"autoLayerTiles": [],
+			"seed": 1003,
+			"overrideTilesetUid": null,
+			"gridTiles": [],
+			"entityInstances": []
+		}
+	]
+}
