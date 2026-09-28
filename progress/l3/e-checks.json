@@ -1,12 +1,12 @@
 {
   "E1": {
-    "ghostRatio": 0.34,
+    "ghostRatio": 0.362,
     "hueGapMin": 69.3,
     "contrastMin": 5.63,
     "pass": true,
     "detail": {
       "ratios": {
-        "H": 0.34,
+        "H": 0.362,
         "F": 0.213
       },
       "hummingMean": {
@@ -14,7 +14,7 @@
         "F2": 98
       },
       "ghostMean": {
-        "H": 36.4,
+        "H": 38.7,
         "F1": 20.9
       },
       "measuredRgb": {
@@ -42,7 +42,7 @@
       "note": "violet is the palette token: no L3 room has a violet source. bg = #12141A token. Kid box masked.",
       "pitBarkerBand": {
         "telegraph": 51.4,
-        "disarmed": 35.4
+        "disarmed": 35.1
       }
     }
   },
