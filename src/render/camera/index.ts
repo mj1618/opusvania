@@ -5,7 +5,7 @@
  * camera and the player with the same alpha, then rounds to device pixels.
  *
  * Pipeline per frame: follow (x look-ahead, y platform snapping / fall follow) -> look up/down ->
- * camera zones (blended) -> clamp to room bounds -> [pre-shake view, used by tests] -> shake + kick.
+ * camera zones (blended on the clamped target, capped speed) -> clamp to room bounds -> [pre-shake view, used by tests] -> shake + kick.
  */
 import type { SimEvent } from '../../sim/events';
 import type { GameState } from '../../sim/index';
@@ -130,13 +130,21 @@ function clampView(room: Room, vx: number, vy: number) {
   return { x: clampAxis(vx, 0, room.width * TS, VIEW_W), y: clampAxis(vy, 0, room.height * TS, VIEW_H) };
 }
 
-function place(cam: CameraState, room: Room, ct: CameraTuning): void {
+/** Target view clamped to the room: the basis the zone blend offset is measured and applied on. */
+function clampedTarget(cam: CameraState, room: Room, ct: CameraTuning) {
   const t = targetView(cam, room, ct);
-  const vx = t.x + cam.offX;
-  const vy = t.y + cam.offY;
-  const c = clampView(room, vx, vy);
-  cam.clampedX = Math.abs(c.x - vx) > 1e-6;
-  cam.clampedY = Math.abs(c.y - vy) > 1e-6;
+  const c = clampView(room, t.x, t.y);
+  return { x: c.x, y: c.y, clampedX: Math.abs(c.x - t.x) > 1e-6, clampedY: Math.abs(c.y - t.y) > 1e-6 };
+}
+
+function place(cam: CameraState, room: Room, ct: CameraTuning): void {
+  // The blend offset is added to the *clamped* target (the same basis it was measured on at the
+  // zone change), then clamped again. Adding it to the unclamped target turned blends into cuts
+  // whenever the free-follow target was past a room bound (L2 playtest P1).
+  const t = clampedTarget(cam, room, ct);
+  const c = clampView(room, t.x + cam.offX, t.y + cam.offY);
+  cam.clampedX = t.clampedX || Math.abs(c.x - (t.x + cam.offX)) > 1e-6;
+  cam.clampedY = t.clampedY || Math.abs(c.y - (t.y + cam.offY)) > 1e-6;
   cam.x = c.x;
   cam.y = c.y;
 }
@@ -186,7 +194,9 @@ export function stepCamera(
     }
   } else if (moveDir === cam.focusDir) cam.revDir = 0;
   const targetX = f.cx + cam.focusDir * ct.lookaheadX;
-  cam.fx += (targetX - cam.fx) * (dashing ? ct.lerpXDash : ct.lerpX);
+  const panMax = Math.max(ct.panMaxX, Math.abs(p.vx) * ct.panMaxVxMult);
+  const stepX = (targetX - cam.fx) * (dashing ? ct.lerpXDash : ct.lerpX);
+  cam.fx += Math.max(-panMax, Math.min(panMax, stepX));
 
   // Vertical: platform snapping, window, fast-fall follow.
   let lerpY = ct.lerpY;
@@ -212,14 +222,22 @@ export function stepCamera(
   // Zones (last entered wins). A zone change leaves an offset that decays by zoneLerp per frame.
   const zi = zoneIndexAt(room, f.cx, f.cy, cam.zone);
   if (zi !== cam.zone) {
-    const before = clampView(room, cam.x, cam.y);
+    // Offset from the current view to the new zone's target, both clamped (see place()).
     cam.zone = zi;
-    const after = clampView(room, targetView(cam, room, ct).x, targetView(cam, room, ct).y);
-    cam.offX = before.x - after.x;
-    cam.offY = before.y - after.y;
+    const after = clampedTarget(cam, room, ct);
+    cam.offX = cam.x - after.x;
+    cam.offY = cam.y - after.y;
   }
-  cam.offX *= 1 - ct.zoneLerp;
-  cam.offY *= 1 - ct.zoneLerp;
+  // Exponential ease, capped so a long blend starts as a pan instead of a lurch.
+  let dx = cam.offX * ct.zoneLerp;
+  let dy = cam.offY * ct.zoneLerp;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  if (d > ct.zoneBlendMaxPx) {
+    dx *= ct.zoneBlendMaxPx / d;
+    dy *= ct.zoneBlendMaxPx / d;
+  }
+  cam.offX -= dx;
+  cam.offY -= dy;
   place(cam, room, ct);
 
   // Trauma and kick (added after clamping; rooms draw a solid apron so this never shows void).

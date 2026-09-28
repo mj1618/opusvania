@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { HeadlessSim } from '../../src/debug/headless';
+import { type TapeFile, tapeSetup } from '../../src/debug/tape';
 import { parseInputScript } from '../../src/input/script';
 import {
   type CameraState,
@@ -114,9 +117,11 @@ describe('camera (movement-spec §7.7)', () => {
     }
   });
 
-  it('C5: holding Down looks down (>= 90% within 60 f after the delay) and releasing returns', () => {
+  it('C5: holding Down looks down (>= 90% within 32 f of the press) and releasing returns', () => {
     const r = rig('gym-14');
     r.run('.60');
+    r.run('D32');
+    expect(r.cam.look).toBeGreaterThanOrEqual(0.9 * ct.lookDown);
     r.run(`D${ct.lookDelay + 60}`);
     expect(r.cam.look).toBeGreaterThanOrEqual(0.9 * ct.lookDown);
     r.run('.90');
@@ -180,6 +185,72 @@ describe('camera (movement-spec §7.7)', () => {
     const c = viewCentre(r.cam);
     expect(Math.abs(c.x - lock.cx)).toBeLessThan(1);
     expect(Math.abs(c.y - lock.cy)).toBeLessThan(1);
+  });
+
+  it('C9: zone enter/exit blends: the view moves <= 40 px/frame for 12 frames after every zone change (gym-14 tape)', () => {
+    const tape = JSON.parse(
+      readFileSync(new URL('../replays/gym-14.all.json', import.meta.url), 'utf8'),
+    ) as TapeFile;
+    const sim = new HeadlessSim(tapeSetup(tape));
+    const cam = createCamera(sim.state, getRoom(sim.state.roomId));
+    const changes: string[] = [];
+    const steps: string[] = [];
+    let since = 99;
+    for (const m of parseInputScript(tape.inputs)) {
+      const x0 = cam.x;
+      const y0 = cam.y;
+      const z0 = cam.zone;
+      const evs = sim.step(m);
+      stepCamera(cam, sim.state, getRoom(sim.state.roomId), evs);
+      if (cam.zone !== z0) {
+        changes.push(`${z0}->${cam.zone}`);
+        since = 0;
+      }
+      if (since++ < 12) {
+        const d = Math.max(Math.abs(cam.x - x0), Math.abs(cam.y - y0));
+        if (d > 40) steps.push(`f${sim.frame} ${changes.at(-1)}: ${d.toFixed(1)} px`);
+      }
+    }
+    // The route enters the clampY zone, the lock zone, leaves it and enters the bounds zone.
+    expect(changes).toEqual(['-1->0', '0->1', '1->-1', '-1->2']);
+    expect(steps).toEqual([]);
+  });
+
+  it('C9b: dashing out of a lock zone next to a room bound pans instead of cutting', () => {
+    const room = getRoom('gym-14');
+    const lock = room.cameraZones.find((z) => z.mode === 'lock');
+    if (!lock) throw new Error('gym-14 has no lock zone');
+    const r = rig('gym-14');
+    const p = r.state.player;
+    p.x = lock.x + lock.w - 6 * 64;
+    p.y = (12 + room.padY) * 64 + 64 - 80;
+    r.run('.120');
+    let maxStep = 0;
+    let x0 = r.cam.x;
+    r.run('R+X1 R40', () => {
+      maxStep = Math.max(maxStep, Math.abs(r.cam.x - x0));
+      x0 = r.cam.x;
+    });
+    expect(r.cam.zone).not.toBe(room.cameraZones.indexOf(lock));
+    expect(maxStep).toBeLessThanOrEqual(40);
+  });
+
+  it('C10: running leads by >= 120 px, stopping drifts <= 80 px, reversals pan <= 25 px/frame (L2 playtest P2)', () => {
+    const r = rig(makeRoom(120, 17, undefined, { spawn: [10, 15] }).id);
+    const lead = () => viewCentre(r.cam).x - (r.state.player.x + r.state.player.w / 2);
+    r.run('R150');
+    expect(lead()).toBeGreaterThanOrEqual(120);
+    const x1 = r.cam.x;
+    r.run('.60');
+    expect(r.cam.x - x1).toBeLessThanOrEqual(80);
+    let maxStep = 0;
+    let x0 = r.cam.x;
+    r.run('L90', () => {
+      maxStep = Math.max(maxStep, Math.abs(r.cam.x - x0));
+      x0 = r.cam.x;
+    });
+    expect(r.cam.focusDir).toBe(-1);
+    expect(maxStep).toBeLessThanOrEqual(25);
   });
 
   it('shake is deterministic and only comes from events (hard land, death, dash kick)', () => {

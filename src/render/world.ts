@@ -4,7 +4,7 @@ import type { SimEvent } from '../sim/events';
 import { tuning } from '../sim/tuning';
 import { getRoom, type Room, Tile, tileAt } from '../sim/world/rooms';
 import { type CameraState, createCamera, stepCamera, VIEW_H, VIEW_W } from './camera/index';
-import { Juice } from './fx';
+import { fxTuning, Juice } from './fx';
 
 /** Greybox palette (movement-spec §5). */
 const COLORS = {
@@ -12,6 +12,8 @@ const COLORS = {
   grid: 0x1c2233,
   tile: 0x2b3142,
   tileEdge: 0x55607a,
+  /** Exposed side/bottom faces (L2 playtest: vertical faces read weakly against the sky). */
+  tileSide: 0x444d64,
   apron: 0x232838,
   oneWay: 0x8a93a8,
   spike: 0xe0475b,
@@ -26,6 +28,8 @@ const COLORS = {
   playerEye: 0x141824,
   dashReady: 0x3fa7ff,
   dashUsed: 0x4a5064,
+  deathFlash: 0xffffff,
+  deathBody: 0xff5a6e,
 };
 
 const render = {
@@ -33,6 +37,9 @@ const render = {
   fadeInFrames: 12,
   /** Spikes are drawn a little taller than their lenient 32 px hitbox. */
   spikeDrawH: 40,
+  /** Lit edge thickness on exposed tops, and on exposed sides/bottoms. */
+  edgeTop: 6,
+  edgeSide: 4,
 };
 
 /**
@@ -52,6 +59,7 @@ export class WorldRenderer {
   private readonly player = new Graphics();
   private readonly fxFront = new Graphics();
   private readonly fade = new Graphics();
+  private readonly flash = new Graphics();
   private readonly hud: Text;
   /** Extra HUD line set by main (e.g. blind A/B slot). */
   hudExtra = '';
@@ -82,7 +90,7 @@ export class WorldRenderer {
       style: { fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 22, fill: 0xaab3c8 },
     });
     this.hud.position.set(24, 18);
-    this.screen.addChild(this.fade, this.hud);
+    this.screen.addChild(this.flash, this.fade, this.hud);
     const room = getRoom(game.state.roomId);
     this.camera = createCamera(game.state, room);
     this.prevCam = { ...this.camera };
@@ -137,11 +145,18 @@ export class WorldRenderer {
         const y = ty * ts;
         if (t === Tile.solid) {
           g.rect(x, y, ts, ts).fill(COLORS.tile);
-          if (!solid(tx, ty - 1)) g.rect(x, y, ts, 6).fill(COLORS.tileEdge);
+          const e = render.edgeSide;
+          if (!solid(tx - 1, ty)) g.rect(x, y, e, ts).fill(COLORS.tileSide);
+          if (!solid(tx + 1, ty)) g.rect(x + ts - e, y, e, ts).fill(COLORS.tileSide);
+          if (!solid(tx, ty + 1)) g.rect(x, y + ts - e, ts, e).fill(COLORS.tileSide);
+          if (!solid(tx, ty - 1)) g.rect(x, y, ts, render.edgeTop).fill(COLORS.tileEdge);
         } else if (t === Tile.oneWay) {
           g.rect(x, y, ts, 10).fill(COLORS.oneWay);
           g.rect(x + 8, y + 10, 4, 14).fill({ color: COLORS.oneWay, alpha: 0.5 });
           g.rect(x + ts - 12, y + 10, 4, 14).fill({ color: COLORS.oneWay, alpha: 0.5 });
+          // Downward chevron: "you can drop through this" (Down+Jump).
+          const cx = x + ts / 2;
+          g.poly([cx - 10, y + 14, cx + 10, y + 14, cx, y + 24]).fill({ color: COLORS.oneWay, alpha: 0.6 });
         } else if (t >= Tile.spikeUp && t <= Tile.spikeRight) {
           this.drawSpikes(g, t, x, y, ts);
         } else if (t === Tile.orb) {
@@ -227,8 +242,11 @@ export class WorldRenderer {
   private drawPlayer(px: number, py: number): void {
     const p = this.game.state.player;
     const g = this.player.clear();
-    this.player.visible = p.state !== 'dead';
-    if (!this.player.visible) return;
+    if (p.state === 'dead') {
+      this.drawDeathPop();
+      return;
+    }
+    this.player.visible = true;
     const w = p.w;
     const h = p.h;
     const body = p.state === 'dash' ? COLORS.playerDash : COLORS.player;
@@ -244,11 +262,26 @@ export class WorldRenderer {
     this.player.scale.set(this.juice.sx, this.juice.sy);
   }
 
+  /** Death: the body flashes white, turns red and swells for the hold, then pops (juice burst). */
+  private drawDeathPop(): void {
+    const d = this.juice.death;
+    this.player.visible = d !== null;
+    if (!d) return;
+    const white = d.age < fxTuning.deathFlashFrames;
+    const k = 1 + (fxTuning.deathPopScale - 1) * (d.age / fxTuning.deathHoldFrames);
+    this.player
+      .clear()
+      .roundRect(-d.w / 2, -d.h / 2, d.w, d.h, 10)
+      .fill(white ? COLORS.deathFlash : COLORS.deathBody);
+    this.player.position.set(Math.round(d.x + d.w / 2), Math.round(d.y + d.h / 2));
+    this.player.scale.set(k, k);
+  }
+
   private drawFx(): void {
     const back = this.fxBack.clear();
     const front = this.fxFront.clear();
     for (const ai of this.juice.afterimages) {
-      const t = ai.age / 12;
+      const t = ai.age / fxTuning.afterimageLife;
       back.roundRect(ai.x, ai.y, ai.w, ai.h, 10).fill({ color: COLORS.playerDash, alpha: 0.45 * (1 - t) });
     }
     for (const q of this.juice.particles) {
@@ -267,6 +300,9 @@ export class WorldRenderer {
     if (s.transition) fade = 1 - (s.transition.timer - alpha) / tuning.world.transitionFrames;
     else if (this.fadeIn > 0) fade = (this.fadeIn - alpha) / render.fadeInFrames;
     fade = Math.min(1, Math.max(0, fade));
+    this.flash.clear();
+    if (this.juice.screenFlash > 0)
+      this.flash.rect(0, 0, VIEW_W, VIEW_H).fill({ color: COLORS.deathFlash, alpha: this.juice.screenFlash });
     this.fade.clear();
     if (fade > 0) this.fade.rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0x000000, alpha: fade });
     const ab = Object.entries(s.player.abilities)
