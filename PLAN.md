@@ -413,6 +413,8 @@ If the cutout rigs hit a quality ceiling, we evaluate Spine 4.3 (licensed) toget
 
 ### 6.2 The working loop, one feature per session
 
+This is the inner loop for a single sub-agent. The outer studio loop (orchestrator, review, plan revision) is in `STUDIO.md`.
+
 The loop follows Anthropic's harness for long-running agents.
 
 1. Read `progress/`, pick the next feature, and read its spec.

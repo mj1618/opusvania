@@ -1,6 +1,6 @@
 # Opusvania
 
-A browser metroidvania built by AI agents, aiming for Hollow Knight and Ori quality. Vision, research and roadmap are in `PLAN.md`.
+A browser metroidvania built by AI agents, aiming for Hollow Knight and Ori quality. Vision, research and roadmap are in `PLAN.md`. The lead/orchestrator agent works by the loop in `STUDIO.md`; read it first if you are orchestrating.
 
 ## Stack
 TypeScript (strict), Node 24 and npm, Vite, and PixiJS v8 with WebGL2 as the default renderer (shaders in GLSL). Physics is our own deterministic integer-AABB code, with no physics engine. Levels are built in LDtk, and content data is validated with Zod. Audio uses the Web Audio API directly. Other tools: Vitest, Playwright Test, Biome, Tweakpane and AssetPack. `PLAN.md` §4.0 explains why each was chosen. Don't add a dependency without a reason; record the reason in `memory/`.
