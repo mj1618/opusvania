@@ -39,7 +39,7 @@ This document covers the vision, the research behind our decisions, the technica
 |---|---|---|
 | **Movement feel** | Celeste-style assists (coyote time, jump buffer, apex hang, corner correction). Hollow Knight uses no-acceleration Mega Man X-style control. Ori tuned in greybox for months. | Every Celeste assist is implemented and tunable. Input-to-response time is under 100ms. The human says it "feels great" in blind comparison. |
 | **Combat feel** | Hitstop, knockback on both sides, white flash, directional shake, sparks, a heavy sound effect, readable wind-up telegraphs, 1.3s of invincibility after a hit. | Every hit triggers the full feedback stack. Every enemy attack has a telegraph of at least 250ms and a clear counter. |
-| **World design** | A world designed first, then progression layered on top. Ability gates, shortcuts, optional sequence breaks, map and bench systems, areas that change on revisit. | Every lock and key is checked automatically by a graph solver. The world has no softlocks and every area is reachable. At least one intended sequence break exists. |
+| **World design** | A world designed first, then progression layered on top. Ability gates, shortcuts, optional sequence breaks, map and bench systems, areas that change on revisit. | Every lock and key is checked automatically by a graph solver. The world has no softlocks and every area is reachable. At least one intended sequence break exists. **Sense of place:** room scale, verticality, landmark spacing and traversal-chain length fall within the ranges from our Hollow Knight/Ori teardowns (`docs/research/`). A continuous-run playtest reports a desire to explore and a sense of place (`docs/design/north-star.md`). |
 | **Atmosphere** | A distinct palette per area, 3 to 5 parallax layers, foreground occluders, blurred and desaturated distant layers, a glowing readable hero, dense particles. | Every room has at least a background, a mid layer, the playfield and a foreground layer. Area palettes are locked in the art bible. Lighting is active in every room. |
 | **Audio** | Each area has its own lead instrument. Music has full and sparse layers. Leitmotifs. Music changes are triggered by place or story, not by combat. | Every area has two layers of adaptive music, full spatial sound effects and a looping ambience bed. |
 | **Polish** | No jank: seamless room transitions, stable 60fps, readable UI, forgiving checkpoints. | 60fps on a mid-range 2020 laptop. Room transitions under 300ms. No visible pop-in. |
@@ -286,7 +286,7 @@ docs/             # design bible, art bible, audio bible, decisions log
   - Follow Maddy Thorson's Actors and Solids model: integer positions, sub-pixel remainders, and movement resolved one pixel at a time.
   - Solids carry or push actors.
   - Supports one-way platforms and hazards.
-  - Slopes are optional and come later, because Hollow Knight has almost none.
+  - Slopes and organic (non-rectilinear) terrain were deferred at first, because Hollow Knight has almost none. **Revised after L4:** Ori's sense of flow depends on curved, organic terrain. The teardowns decide how much of it we need, and it moves into Phase W.
 - **Player controller.**
   - Hierarchical state machine: ground, air, wall, dash, attack, hurt, heal, cutscene.
   - Every Celeste assist is implemented, each behind a toggle for A/B feel comparison, in the spirit of Deepnight's game-feel demo.
@@ -485,6 +485,14 @@ The original bullets:
   - The bot-fight metrics fall within target ranges.
   - Every telegraph is at least 250ms.
 
+### Phase W: World-first reset (inserted after L4, before Phase 3)
+After the user's L4 review (small, disjointed, not like Hollow Knight or Ori; see `STUDIO.md` §1c), we get the world right before building more mechanics.
+1. **Reference teardowns** in `docs/research/teardown-*.md`: Hollow Knight's Forgotten Crossroads and Greenpath, Ori and the Blind Forest's Sunken Glades, and Ori and the Will of the Wisps' Inkwater Marsh. They share a template of quantitative metrics: room size in screens, area size, verticality, landmark spacing, spacing of rest points, traversal-chain length, enemy and secret density, how transitions and the camera work, and how each area's identity is built.
+2. **North star** in `docs/design/north-star.md`: a beat-by-beat description of the first 10–20 minutes of *Tallage*, with target numbers taken from the teardowns. Loop acceptance criteria are measured against it.
+3. **Level toolchain decision and build:** LDtk (or an alternative, justified), large multi-screen rooms, slopes and organic terrain if the teardowns call for them, set-dressing and landmark tools, and camera framing zones.
+4. **Region blockout:** one large connected region (the Tally hub plus the Cellars, per `docs/design/world-design.md`) at teardown scale. It replaces the gym and the hub of doors as the place where feel and combat are tuned. The gym stays as a test tool.
+5. **Exit:** a continuous-run playtest and a cohesion review pass against the north star, and the user gets a taste checkpoint.
+
 ### Phase 3: World structure and tooling
 - LDtk integration: multi-room world, doors, transitions, and room streaming with neighbour prefetch.
 - Save and load, Rests, the progression-flags system, ability pickups.
@@ -545,6 +553,8 @@ Each biome goes through the same stages: greybox → validator → playtest → 
 | AI art looks inconsistent or generic | High | High | Art bible, LoRA, multi-reference prompting, automated palette and value validation, and a human approval gate |
 | Movement feel is "fine" but not great | Medium | Very high | Phase 1 has no deadline, A/B toggles, reference numbers, human sign-off, and side-by-side comparison with Celeste |
 | Scope creep | High | High | Vertical slice first. Every new feature must serve a pillar. Cut rather than go wide. |
+| Levels feel like test rooms: small, disjointed, no sense of place (**happened by L4**) | High | Very high | North star plus teardown targets, a single world owner, every loop advancing the real world, continuous-run playtests, level tooling on the critical path, and regular taste checkpoints (`STUDIO.md` §1c) |
+| Metrics get optimised instead of the experience (Goodhart) | High | High | Every brief names what its metrics can't see. Experience-level criteria are required. Independent audits and blind playtests. |
 | Agents degrade the codebase over time | Medium | High | Strict architectural rules in `CLAUDE.md`, the full check in CI, a reviewer agent, and periodic refactor phases |
 | Browser performance or memory, especially iOS Safari | Medium | Medium | Budgets enforced in CI, KTX2, room streaming, and the WebGL2 default path |
 | Third-party dependencies are thin (Pixi v8 plugins, LDtk's slow updates) | Medium | Low–Medium | Vendor and fork small plugins. LDtk JSON is simple enough to maintain ourselves. |
@@ -636,4 +646,18 @@ Each biome goes through the same stages: greybox → validator → playtest → 
   - New design rule: Seize/Levy gates must hold against the full movement kit (wall jump, double jump, dash). The progression validator will enforce this.
   - Atmosphere foundation (code-drawn parallax, lighting, post-FX) is in, so Phase 4's tech half is partly done early. Art assets are still on hold.
   - Next, L4: the combat greybox (Phase 2) with the teaching and feedback fixes, world design for the vertical slice, and the progression validator (Phase 3 tooling, pulled early).
+- **2026-09-28, L4 and the user review.**
+  - L4 built:
+    - the combat greybox (13/16 checks; misses are honest)
+    - the world design, revised after a critique (spring decay, humming-facing cling, a 16-room slice)
+    - the progression validator, merged and covering 25 rooms
+    - the expert combat critique, which recommends a short combat rules pass
+  - **User review: the levels are small, not fun, disjointed, and don't feel like Hollow Knight or Ori.** The cause was process, not mechanics. Every loop proved a mechanic, and no loop built a place (see `STUDIO.md` §1c).
+  - **Response:**
+    - Insert **Phase W (world-first reset)** before Phase 3: teardowns, north star, level toolchain, then a region blockout.
+    - Slopes and organic terrain move into Phase W if the teardowns call for them.
+    - Add a sense-of-place bar to the World design pillar.
+    - `STUDIO.md` gains world ownership, continuous-run playtests, taste checkpoints, and a rule that every loop advances the real world.
+  - The combat rules pass from the L4 critique is **deferred into the region blockout**, so combat is tuned in real spaces.
+  - Movement, combat, audio, rendering and the validator all carry over unchanged.
 

@@ -118,4 +118,33 @@ Source of truth for loop state. Newest loop at the bottom. Format per STUDIO.md 
 - B: a world doc reviewed by a critic.
 - C: the validator runs in `check` and proves the gym plus L3 rooms reachable, with no softlocks.
 
+**Status.** Stopped by the user for a review.
+
+### L4 report
+- **A: Combat** (`docs/reports/L4-combat.md`). 13/16 checks pass.
+  - Misses: Gull time-to-kill, signature not paying off against fodder, a Pit gap.
+  - Expert critique (`docs/reports/L4-combat-critique.md`): the boss can be stun-locked; knockdowns throw enemies out of Seize reach; the bag gives a free heal; bodies should shove, not damage. It recommends a short combat rules pass.
+- **B: World design** (`docs/design/world-design.md`), revised after a critique (`world-design-critique.md`).
+- **C: Progression validator.** Merged; covers 25 rooms; Stairwell tape added.
+- **Novice combat playtest:** stopped before it finished. No report.
+- **User review:** the levels are small, not fun, disjointed, and don't feel like Hollow Knight or Ori. See `STUDIO.md` §1c for the diagnosis.
+- **Decision.** Course correction. `STUDIO.md` and `PLAN.md` are revised, and Phase W (world-first reset) is inserted. The combat rules pass is deferred into the region blockout.
+
+---
+
+## L5: Phase W, part 1: reference teardowns (started 2026-09-28)
+
+**Goal.** Quantitative, comparable teardowns of the reference areas, as the foundation for `docs/design/north-star.md` and the level toolchain decision.
+
+**Streams** (parallel, research only, each writing its own file in `docs/research/`):
+- **A:** Hollow Knight, Forgotten Crossroads.
+- **B:** Hollow Knight, Greenpath.
+- **C:** Ori and the Blind Forest, Sunken Glades (plus the Ori opening flow).
+- **D:** Ori and the Will of the Wisps, Inkwater Marsh (plus the Wellspring as a set-piece area).
+- **E:** Level toolchain research: LDtk features, slopes and organic terrain in integer-AABB engines, how Ori builds its terrain, and set-dressing approaches. It also measures our current rooms against the same template.
+
+**Then.** A synthesis agent writes the north star from the teardowns. A critic reviews it, and the user gets a taste checkpoint.
+
+**What metrics can't see.** Whether our numbers capture *why* those spaces feel good (composition, sightlines, reveals). The teardowns must include qualitative "why it works" analysis, not only numbers.
+
 **Status.** In progress.
