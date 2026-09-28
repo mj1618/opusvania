@@ -36,7 +36,7 @@ All 45 scenes, from tilemap sizes (**M**). Screens and PH are **D**.
 
 | | Width | Height | Area |
 |---|---|---|---|
-| Min | 30 u = 1.00 screen = 23 PH | 17 u → 18 u in this area = 1.07 screens = 14 PH | 1.48 screens² |
+| Min | 30 u = 1.00 screen = 23 PH | 18 u (C15) = 1.07 screens = 14 PH | 1.48 screens² |
 | **Median** | **70 u = 2.33 screens = 55 PH** | **30 u = 1.78 screens = 23 PH** | **4.41 screens²** |
 | Mean | 2.35 screens | 2.53 screens | 5.51 screens² |
 | Max | 160 u = 5.33 screens = 125 PH | 176 u = 10.4 screens = 138 PH | 21.0 screens² |
@@ -44,7 +44,7 @@ All 45 scenes, from tilemap sizes (**M**). Screens and PH are **D**.
 
 - **Shape mix** (**D**; aspect in screens of 1.5 or more is horizontal, 1/1.5 or less is vertical): **18 horizontal (40%), 13 vertical (29%), 14 squarish (31%)**.
 - **Large rooms** of 8 screens² or more: **8 of 45 (18%)**.
-- **Only 3 scenes are exactly one screen wide**, and all of them are vertical shafts (`C03`, `C27`, `C49`). **No exterior room is a single 1 × 1 screen.**
+- **Only 3 exterior scenes are exactly one screen wide**, and all of them are vertical shafts (`C03`, `C27`, `C49`); the fourth is Sly's hut, an interior. **No exterior room is a single 1 × 1 screen.**
 - The Crossroads rooms are **smaller than the game average.** The median area across all 497 tilemaps is 9.4 screens² (3.0 × 3.0 screens) (**D**). The hub is made of corridors and junctions. The big set pieces live in the areas it leads to.
 - **Rooms are built from a few reused sizes** (**M**). The corridors `C39`, `C40` and `C43` are all exactly 88 × 25. The shafts `C03` and `C27` are both 30 × 72. `C38` and `C12` are 70 × 25 and 70 × 24. This is template reuse, and the art hides it.
 
@@ -214,7 +214,7 @@ The exits fan out across about 160° of the lower half-plane from the well: W 20
 
 **How the player stays oriented**
 
-- **The well is a fixed origin at the top.** It drops into the middle of C01 (x = 52.5 of 100 u). C01 is a **T-junction**, with Grubhome 1 room west (through C07) and the Temple 1 room east. The first decision comes within 3 s of landing.
+- **The well is a fixed origin at the top.** It drops into the middle of C01 (x = 52.5 of 100 u). C01 is a **T-junction**: the Temple is 1 room east, and Grubhome is 2 rooms west through C07. You choose a direction the moment you land, and each exit is about 50 u (6 s) away.
 - **Five horizontal strata connected by shafts** (**D**, derived y-bands). The roads run at a few consistent depths:
   - surface road, y ≈ 0 to +45: C38, C01, C02, C39, C14, C45
   - upper-middle, y ≈ −45 to −10: C11_alt, C05, C40, C16
@@ -267,7 +267,7 @@ Enemy objects with a `HealthManager` component were counted per scene (**M**, En
   - Enemies cluster in "lanes." The **C37 hall has 14 husks**, the densest room, and it guards the Vessel Fragment.
   - Junction and rest rooms are kept empty: C02, C06, C30, C33, C38, C46, C47 and C49 have 0.
 - **Arenas versus roaming** (**M**, wiki):
-  - Locked wave arenas: the Aspid trio in C08 (2 waves), the Aspid Nest in C22 (4 waves; needs claw/wings), and the Mound's Elder Baldur, which seals you in after you get the spell.
+  - Locked wave arenas: the Aspid trio in C08 (2 waves), the Aspid Nest in C22 (4 waves; logic needs claw or wings, and the wiki lists Crystal Heart), and the Mound's Elder Baldur, which seals you in after you get the spell.
   - Unlocked "gauntlets": the Husk Guard in C48 and the Greenpath Elder Baldur.
   - Everything else roams. That is 3 bosses plus 5 arenas, so **8 set-piece fights across 45 rooms**, about 1 per 5–6 rooms.
 
@@ -360,7 +360,7 @@ Order along the critical path (**M**/**D**, from the room enemy lists and the pa
 8. **Systems.**
    - The map comes in 2 rooms (buy it) and is completed at rests.
    - The first bench is 5 rooms in.
-   - The Hot Spring teaches that this rest also heals.
+   - The Hot Spring restores health and soul next to a bench.
    - The Stag toll is the first "spend Geo to shorten the world" choice.
    - Seven visibly locked exits teach the lock vocabulary long before any of their keys exist.
 9. **The revisit twist.** Infection re-tests familiar geometry with upgraded enemy variants. Sealed passages force new routes through a place the player thought they knew.
@@ -421,7 +421,7 @@ All numbers are in *Tallage* units. Because 1 HK unit ≈ 1 tile and the screens
 | Shortcuts | 3 or more, opened from the far side (after a boss, from a neighbouring district) | 1–2, including the B5 → T2 latch |
 | Exits | 7 spokes to distinct districts plus 2 fast-travel links. **Every non-home exit locked on the first visit by a distinct, visible key.** | 3 or more visible locked exits plus the Cellars route |
 | Critical path | about 30% of rooms, about 40% of area, about 900–950 tiles, about 100–110 s of running at 9 tiles/s | 5–7 rooms, 400–500 tiles |
-| Entrance | T-junction; 2 landmarks within 1 room; map seller within 2 rooms (about 200 tiles); first rest within 5 rooms | same |
+| Entrance | The entrance room is itself a landmark and a T-junction, with a second landmark 1 room away and a third 2 rooms away. Map seller within 2 rooms (about 200 tiles); first rest within 5 rooms | same |
 | Rests | 1 per about 10 rooms or 60 screens². Worst death run 400 tiles or less (about 45 s); median 200 tiles or less (about 22 s). | 1 Corner in the hub plus the town rest |
 | Landmarks | 1 per about 2.4 rooms; **every room within 2 rooms of a landmark**; a signpost system pointing to fast travel and exits | 5–7 landmarks |
 | Enemies | 0.5 per screen² overall; **about 50% of rooms empty**; enemy rooms 0.7 per screen² (3 in a 4.4-screen² room); 1 set-piece fight per 5–6 rooms | same ratios |
