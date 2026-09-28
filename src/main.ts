@@ -7,15 +7,16 @@ import { InputSampler } from './input/index';
 import { FixedStepLoop } from './loop';
 import { createApp } from './render/app';
 import { VIEW_H, VIEW_W } from './render/camera/index';
+import { isQualityName, QUALITY_NAMES } from './render/gfx/quality';
 import { WorldRenderer } from './render/world';
 import { PRESET_NAMES, type PresetName, tuning } from './sim/tuning';
 import { GYM_ROOMS } from './sim/world/rooms';
 
 /**
  * Boot. URL params: ?seed=<n> &room=<id> &spawn=<name> &preset=<opus|celeste|hk>
- * &manual (start paused; drive via __game.step).
+ * &manual (start paused; drive via __game.step) &quality=<low|med|high>.
  * Keys: 1-9 / 0 load gym-01..10, Shift+1-4 gym-11..14, H hub, F1/F2 hitboxes, F3 blind A/B swap
- * (debug-only; B is reserved for gameplay), ` tuning panel.
+ * (debug-only; B is reserved for gameplay), F4 perf HUD (Shift+F4 cycles quality), ` tuning panel.
  */
 async function boot(): Promise<void> {
   const params = new URLSearchParams(location.search);
@@ -32,6 +33,9 @@ async function boot(): Promise<void> {
   if (!root) throw new Error('#app missing');
   const app = await createApp(root);
   const renderer = new WorldRenderer(app, game);
+  const gfx = renderer.gfx;
+  const quality = params.get('quality');
+  if (isQualityName(quality)) gfx.setQuality(quality);
   const overlay = new HitboxOverlay(game);
   renderer.overlay.addChild(overlay.g);
   const panel = new TuningPanel(tuning, {
@@ -75,6 +79,14 @@ async function boot(): Promise<void> {
     } else if (e.code === 'F3') {
       e.preventDefault();
       if (!e.repeat) renderer.hudExtra = `A/B slot ${panel.swapAB()}`;
+    } else if (e.code === 'F4') {
+      e.preventDefault();
+      if (e.repeat) return;
+      if (e.shiftKey) {
+        const i = QUALITY_NAMES.indexOf(gfx.quality);
+        gfx.setQuality(QUALITY_NAMES[(i + 1) % QUALITY_NAMES.length] ?? 'high');
+        gfx.perfHud.visible = true;
+      } else gfx.perfHud.visible = !gfx.perfHud.visible;
     } else if (e.code === 'KeyH' && !e.repeat) game.load('hub');
     else if (/^Digit\d$/.test(e.code) && !e.repeat) {
       const d = Number(e.code.slice(5));
@@ -91,9 +103,12 @@ async function boot(): Promise<void> {
     const elapsed = now - last;
     last = now;
     if (game.mode === 'realtime') {
+      gfx.perf.begin(performance.now());
       const n = loop.advance(elapsed);
       for (let i = 0; i < n; i++) game.stepOnce();
       render(loop.alpha);
+      gfx.perf.end(performance.now());
+      gfx.perfHud.update(gfx.perf.snapshot(), gfx.hudExtra());
     } else {
       loop.reset();
       input.flush();

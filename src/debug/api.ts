@@ -4,6 +4,9 @@ import type { Game } from '../game';
 import { padReport } from '../input/gamepad';
 import { formatInputScript, type InputScript, maskLabel, parseInputScript } from '../input/script';
 import type { CameraState } from '../render/camera/index';
+import type { Light } from '../render/gfx/lighting';
+import type { GfxToggles } from '../render/gfx/pipeline';
+import { isQualityName, QUALITY_NAMES } from '../render/gfx/quality';
 import type { WorldRenderer } from '../render/world';
 import type { GameState } from '../sim/index';
 import { BASE_PROFILE } from '../sim/player/params';
@@ -146,6 +149,26 @@ export interface GameDebugApi {
   };
   /** Audio helpers: play, mute, stats, hums, music, offline render (see memory/audio.md). */
   audio: AudioDebugApi;
+  /** Render pipeline: quality tiers, perf HUD, toggles, lights, dressing (memory/render-pipeline.md). */
+  gfx: {
+    /** No arg: current tier. With a name (low|med|high): switches and rebuilds. */
+    quality(name?: string): string;
+    /** Perf HUD (F4). */
+    hud(on?: boolean): boolean;
+    /** Counters: lights, particles, draw calls, perf snapshot, dressing sources, toggles. */
+    stats(): Record<string, unknown>;
+    /** Render-side toggles (lighting, post, bloom, backdrop, foreground, particles, ui); returns all. */
+    set(t: Partial<GfxToggles>): GfxToggles;
+    /** Resolved dressing for the current room. */
+    dressing(): unknown;
+    /** Lights drawn last frame (world px). */
+    lights(): Light[];
+    /**
+     * Renders the current frame n times, each forced to finish on the GPU (1-px readPixels), and
+     * returns full frame cost in ms (CPU + GPU). Does not step the sim. For the perf benchmark.
+     */
+    bench(n?: number): { median: number; p95: number; max: number; drawCalls: number; renderer: string };
+  };
 }
 
 declare global {
@@ -165,6 +188,11 @@ export interface DebugDeps {
   /** Latest drawn player position (main updates it every render). */
   drawn: { x: number; y: number; frame: number };
   audio: AudioDebugApi;
+}
+
+function rendererName(gl: WebGL2RenderingContext): string {
+  const ext = gl.getExtension('WEBGL_debug_renderer_info');
+  return String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
 }
 
 export function installDebugApi({
@@ -415,6 +443,48 @@ export function installDebugApi({
       trail: (on, opts) => trail.toggle(on, opts),
     },
     audio,
+    gfx: {
+      quality(name) {
+        if (name !== undefined) {
+          if (!isQualityName(name)) throw new Error(`quality: expected one of ${QUALITY_NAMES.join(', ')}`);
+          renderer.gfx.setQuality(name);
+          render(1);
+        }
+        return renderer.gfx.quality;
+      },
+      hud(on) {
+        if (on !== undefined) renderer.gfx.perfHud.visible = on;
+        return renderer.gfx.perfHud.visible;
+      },
+      stats: () => JSON.parse(JSON.stringify(renderer.gfx.stats())) as Record<string, unknown>,
+      set(t) {
+        const out = renderer.gfx.setToggles(t);
+        render(1);
+        return out;
+      },
+      dressing: () => JSON.parse(JSON.stringify(renderer.gfx.dressing)) as unknown,
+      lights: () => JSON.parse(JSON.stringify(renderer.gfx.lights.frameLights)) as Light[],
+      bench(n = 120) {
+        const gl = (app.renderer as unknown as { gl: WebGL2RenderingContext }).gl;
+        const px = new Uint8Array(4);
+        const perf = renderer.gfx.perf;
+        const ms: number[] = [];
+        let calls = 0;
+        for (let i = 0; i < n + 5; i++) {
+          const t0 = performance.now();
+          perf.begin(t0);
+          render(1);
+          gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+          const t1 = performance.now();
+          perf.end(t1);
+          calls = perf.drawCalls;
+          if (i >= 5) ms.push(t1 - t0);
+        }
+        ms.sort((a, b) => a - b);
+        const at = (q: number) => ms[Math.min(ms.length - 1, Math.floor(ms.length * q))] ?? 0;
+        return { median: at(0.5), p95: at(0.95), max: at(1), drawCalls: calls, renderer: rendererName(gl) };
+      },
+    },
   };
   window.__game = api;
   return api;

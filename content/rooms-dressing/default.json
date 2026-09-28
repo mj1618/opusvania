@@ -1,0 +1,8 @@
+{
+  "id": "default",
+  "notes": "Fallback render dressing for every room. Families (gym.json) and rooms (<id>.json) override it section by section. Render-only: the sim never reads these files.",
+  "district": "brown",
+  "autoLights": { "lamps": true, "lampSpacing": 11, "entities": true, "intensity": 1 },
+  "particles": { "motes": 70, "embers": 14, "soot": 40, "wind": 0.25 },
+  "grade": { "saturation": 1, "contrast": 1, "exposure": 1, "vignette": 0.5, "grain": 0.045, "haze": 0.2 }
+}

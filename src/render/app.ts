@@ -12,7 +12,7 @@ export async function createApp(parent: HTMLElement): Promise<Application> {
     height: VIEW_H,
     resolution: 1,
     autoDensity: false,
-    antialias: true,
+    antialias: false,
     background: '#0b0d12',
     preference: 'webgl',
     autoStart: false,

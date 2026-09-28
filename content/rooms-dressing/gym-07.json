@@ -1,0 +1,7 @@
+{
+  "id": "gym-07",
+  "notes": "Chimney: an ash-white flue with embers rising through it.",
+  "district": "white",
+  "particles": { "motes": 40, "embers": 70, "soot": 70, "wind": 0.08 },
+  "lights": [{ "at": [8, 27], "color": "#ff8a3a", "radius": 900, "intensity": 1.4, "flicker": 0.5 }]
+}
