@@ -79,6 +79,14 @@
 			"realEditorValues": [{"id":"V_Bool","params":[true]}]
 		},
 		{
+			"__identifier": "district",
+			"__type": "String",
+			"__value": null,
+			"__tile": null,
+			"defUid": 175,
+			"realEditorValues": [null]
+		},
+		{
 			"__identifier": "claims",
 			"__type": "Multilines",
 			"__value": null,
@@ -190,6 +198,22 @@
 							"realEditorValues": [{"id":"V_Bool","params":[false]}]
 						},
 						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 152,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "solid",
+							"__type": "Bool",
+							"__value": true,
+							"__tile": null,
+							"defUid": 153,
+							"realEditorValues": [{"id":"V_Bool","params":[true]}]
+						},
+						{
 							"__identifier": "char",
 							"__type": "String",
 							"__value": null,
@@ -229,6 +253,22 @@
 							"__tile": null,
 							"defUid": 117,
 							"realEditorValues": [{"id":"V_String","params":["Chin piece in the pawnbroker's cellar closet."]}]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": null,
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
+							"realEditorValues": [null]
 						}
 					]
 				},
@@ -261,6 +301,22 @@
 							"__value": null,
 							"__tile": null,
 							"defUid": 117,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": null,
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
 							"realEditorValues": [null]
 						}
 					]
@@ -295,6 +351,22 @@
 							"__tile": null,
 							"defUid": 117,
 							"realEditorValues": [{"id":"V_String","params":["Patter barks as you pass."]}]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": null,
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
+							"realEditorValues": [null]
 						}
 					]
 				},
@@ -320,6 +392,14 @@
 							"__tile": null,
 							"defUid": 88,
 							"realEditorValues": [{"id":"V_String","params":["gull"]}]
+						},
+						{
+							"__identifier": "route",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 154,
+							"realEditorValues": [null]
 						},
 						{
 							"__identifier": "char",
@@ -371,6 +451,22 @@
 							"realEditorValues": [{"id":"V_Bool","params":[false]}]
 						},
 						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 152,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "solid",
+							"__type": "Bool",
+							"__value": true,
+							"__tile": null,
+							"defUid": 153,
+							"realEditorValues": [{"id":"V_Bool","params":[true]}]
+						},
+						{
 							"__identifier": "char",
 							"__type": "String",
 							"__value": null,
@@ -417,6 +513,22 @@
 									]
 								}
 							]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": null,
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
+							"realEditorValues": [null]
 						}
 					]
 				}
@@ -609,6 +721,14 @@
 							"realEditorValues": [{"id":"V_String","params":["6,16"]},{"id":"V_String","params":["21,13"]}]
 						},
 						{
+							"__identifier": "grade",
+							"__type": "LocalEnum.Grade",
+							"__value": "none",
+							"__tile": null,
+							"defUid": 146,
+							"realEditorValues": [{"id":"V_String","params":["none"]}]
+						},
+						{
 							"__identifier": "tag",
 							"__type": "String",
 							"__value": "s38",
@@ -779,6 +899,14 @@
 							"__tile": null,
 							"defUid": 56,
 							"realEditorValues": [{"id":"V_String","params":["36,12"]},{"id":"V_String","params":["51,9"]}]
+						},
+						{
+							"__identifier": "grade",
+							"__type": "LocalEnum.Grade",
+							"__value": "none",
+							"__tile": null,
+							"defUid": 146,
+							"realEditorValues": [{"id":"V_String","params":["none"]}]
 						},
 						{
 							"__identifier": "tag",

@@ -58,8 +58,13 @@ spawn (exactly one) · respawn · goal `{optional}` · corner · door `{name, to
 `toDoor` = a door NAME in an LDtk room, or a door CHAR in an ASCII room like the hub) · source rect
 `{sound, colour, locked}` · plate rect `{pressedBy}` · gate rect `{opensOn, requires, hold, moves}` ·
 enemy `{type}` · pickup `{grants, id}` · rest `{name}` · prompt `{keys, until, near}` · camera rect
-`{mode, value}` · lock rect `{name, requires, target, from, prelude, moves, hold, teachGate, region,
-note}` (target defaults to the rect) · landmark rect `{name, note}` (map + toc only for now).
+`{mode, value, zoom, weight, shot, shotZoom, hold, repeat}` (modes lock clampX clampY bounds + L6 `open`
+0.9, `vista` 0.8, `frame` (pull toward `value` by `weight`); `shot` = two corner points of the rect to
+frame on entry, see camera.md) · lock rect `{name, requires, target, from, prelude, moves, hold,
+teachGate, region, note}` (target defaults to the rect) · landmark rect `{name, note, beacon, depth}`
+(`beacon` bell|board|scale|glow draws its silhouette in every nearby room's backdrop at parallax
+`depth`, default 0.42; compiled into RoomFile `landmarks`). Point fields (`value`, `shot`) are
+translated by section import/export like rects.
 Any char-mapped entity takes `char` to pin its RoomFile character (else allocated; ~80 per room).
 
 ## L6 proof kit (sim stream B): slopes, carry, set pieces (sheet syntax; names are the contract)
@@ -70,8 +75,8 @@ entity below is in the model, LDtk defs and the RoomFile (`district`, `weights`,
 the SIM IGNORES THEM YET: carry rule, weights/breakables/reveals, `power`/`bark`/`boardLine`/
 `nightStep`/`carryReset`/`steal` events (declared in events.ts, never emitted), `thiefgull`
 (= a plain gull clone), grounded Down+Seize, bot/progression waypoints. Next stream: build those
-against these names; the render must also draw slope tiles (they render as air today: use
-`slopeTop()` from src/sim/physics/slopes.ts).
+against these names. The terrain renderer draws slope tiles from `slopeTop()` (fill + lit rim along
+the surface) and shins as rock (`isRockTile` in src/render/gfx/terrain.ts).
 - **Level field `district`** (string). Rooms with the same district share the carry state (north
   star §3.4: bag, levied objects and ghosted sources persist across seams and doors). Unset = the
   old per-room reset. Proof: T rooms `"district": "tally"`, C rooms `"district": "cellars"`.
@@ -119,8 +124,9 @@ against these names; the render must also draw slope tiles (they render as air t
   would shift the world). Tests: tests/unit/edge-exits.test.ts, tape `sample-cellar-edge`.
 - Tools: an `edge` entity per exit (`char` = `e17` = side + first tile), bot/progression target
   `exit:e17`, arrival spawn `edge-e17` in the room it belongs to. Progression links them like doors.
-- Not done: camera bleed / neighbour peek (the view clamps to the room, so you arrive at the screen
-  edge), arrival input grace, the merged-region option. Up-doors stay for real doors and lifts.
+- Render (L6, camera.md): neighbour peek, seam bleed and a world-anchored backdrop, so a seam shows
+  continuous space and the camera never re-snaps; edge transitions do not fade.
+- Not done: arrival input grace, the merged-region option. Up-doors stay for real doors and lifts.
 
 ## Rules and gotchas
 - `draft: true` rooms load in the game but are NOT in the progression graph (no hub link needed).
@@ -161,6 +167,7 @@ against these names; the render must also draw slope tiles (they render as air t
   `pickup:*` (poundage, tally-ledger, chin-piece, cellars-ledger), `pawnbroker`/`copyist` barks,
   `ticker-board` line, `clerk-balcony` silhouette, `great-scale` pans (need gate->plate linking and a
   rising pan), furnace lights dying (source-powered lights), Gull snatch-and-flee (T03 gull).
-- Not done: landmark rendering (nothing draws landmarks in game yet; the Board/Bell tower beacons are
-  the camera stream's), zoom shots, carry rule (bag resets at every seam), guard metrics tool,
-  non-draft promotion (progression + tapes), the ghost Row, slopes (stairs stand in).
+- Beacons flagged in proof.json: `ticker-board` (board), `bell-tower` (bell, depth 0.12),
+  `great-scale` (scale). Other landmarks are still map/toc only.
+- Not done: zoom shots in the proof rooms, carry rule (bag resets at every seam), guard metrics tool,
+  non-draft promotion (progression + tapes), the ghost Row, re-authoring ramp stairs as slopes.

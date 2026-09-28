@@ -26,8 +26,9 @@ export const cameraTuning = {
   /** Look up/down: grounded, no x input, holding Up/Down this long. */
   /** L2 playtest: 24 f + lerp 0.06 took ~57 f to be useful; now 90% of the offset at ~30 f. */
   lookDelay: 12,
-  lookUp: 224,
-  lookDown: 256,
+  /** north-star §3.1: look range about 6 tiles (35% of the view), as in HK (was 224 / 256). */
+  lookUp: 376,
+  lookDown: 376,
   lookLerp: 0.12,
   /** Trauma shake (Eiserloh): offset = shakeMaxPx * trauma² * noise. */
   shakeMaxPx: 24,
@@ -45,5 +46,38 @@ export const cameraTuning = {
   zoneBlendMaxPx: 32,
   /** Seed of the render-side shake noise (never the sim RNG). */
   shakeSeed: 7,
+
+  // --- Zoom (north-star §3.1): render-only; the view is VIEW_W / zoom world px wide. ---
+  /** Default zoom (HK scale, 13.5 player heights), and the hard limits. */
+  zoomDefault: 1,
+  zoomMin: 0.75,
+  zoomMax: 1.1,
+  /** Default zoom of `open` zones (big chambers, flow runs) and `vista` zones (set pieces). */
+  zoomOpen: 0.9,
+  zoomVista: 0.8,
+  /** Rooms with a live enemy never zoom out further than this (the boxing kit needs the scale). */
+  zoomEnemyMin: 0.9,
+  /** Critically damped spring: omega 0.1 settles a change in ~50 frames (spec: 45-60 f). */
+  zoomOmega: 0.1,
+  /** Zoom speed cap per frame. */
+  zoomMaxRate: 0.012,
+  /** Snap to the target when this close (so a settled view renders at an exact scale). */
+  zoomSnap: 0.0005,
+
+  // --- Seams (edge exits, level-toolchain §5.5) ---
+  /** Near an edge exit the room bound on that side relaxes by (half view + bleedPadPx) minus the
+   * player's distance to the exit span, so the view runs on into the neighbour and never re-snaps.
+   * Must exceed lookaheadX (and lookUp) or the bound still bites at the seam. */
+  bleedPadPx: 420,
+
+  // --- Declared shots ---
+  /** A shot counts as framed (its hold starts) when the blend is within this many px and the
+   * zoom within shotZoomEps of its target. */
+  shotArrivePx: 12,
+  shotZoomEps: 0.01,
+  /** A shot releases after this many frames even if it never settled (the player walked on). */
+  shotMaxFrames: 420,
+  /** A shot keeps the player at least this fraction of the view inside its edges. */
+  shotPlayerMargin: 0.12,
 };
 export type CameraTuning = typeof cameraTuning;

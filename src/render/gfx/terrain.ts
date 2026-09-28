@@ -5,7 +5,9 @@
  * Also derives the room's automatic lights (entities, hanging lamps).
  */
 import type { Graphics } from 'pixi.js';
+import { slopeTop } from '../../sim/physics/slopes';
 import { tuning } from '../../sim/tuning';
+import { isSlopeTile } from '../../sim/world/room-schema';
 import { type Room, Tile, tileAt } from '../../sim/world/rooms';
 import { PALETTE } from '../palette';
 import { mix, RenderRng } from './color';
@@ -25,6 +27,11 @@ export const PLAYFIELD_COLORS = {
 };
 
 const SPIKE_DRAW_H = 40;
+
+/** Drawn as rock: plain solid and the shin under a slope's high end (its top is a floor band). */
+export function isRockTile(t: number): boolean {
+  return t === Tile.solid || t === Tile.shin;
+}
 const EDGE_TOP = 6;
 const EDGE_SIDE = 5;
 
@@ -36,7 +43,7 @@ export function solidDepth(room: Room, cap = 5): Uint8Array {
   for (let ty = 0; ty < h; ty++)
     for (let tx = 0; tx < w; tx++) {
       const i = ty * w + tx;
-      if (tileAt(room, tx, ty) !== Tile.solid) continue;
+      if (!isRockTile(tileAt(room, tx, ty))) continue;
       const exposed = [
         [1, 0],
         [-1, 0],
@@ -45,7 +52,7 @@ export function solidDepth(room: Room, cap = 5): Uint8Array {
       ].some(([dx = 0, dy = 0]) => {
         const nx = tx + dx;
         const ny = ty + dy;
-        return nx >= 0 && ny >= 0 && nx < w && ny < h && tileAt(room, nx, ny) !== Tile.solid;
+        return nx >= 0 && ny >= 0 && nx < w && ny < h && !isRockTile(tileAt(room, nx, ny));
       });
       if (exposed) {
         d[i] = 1;
@@ -68,12 +75,12 @@ export function solidDepth(room: Room, cap = 5): Uint8Array {
       const ny = ty + dy;
       if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
       const j = ny * w + nx;
-      if (d[j] !== 0 || tileAt(room, nx, ny) !== Tile.solid) continue;
+      if (d[j] !== 0 || !isRockTile(tileAt(room, nx, ny))) continue;
       d[j] = di + 1;
       queue.push(j);
     }
   }
-  for (let i = 0; i < d.length; i++) if (d[i] === 0 && room.tiles[i] === Tile.solid) d[i] = cap;
+  for (let i = 0; i < d.length; i++) if (d[i] === 0 && isRockTile(room.tiles[i] ?? 0)) d[i] = cap;
   return d;
 }
 
@@ -94,7 +101,12 @@ export function drawTerrain(g: Graphics, glow: Graphics, room: Room, d: Dressing
     mix(p.terrain, p.terrainDeep, 0.75),
   ];
   const colorAt = (dd: number) => depthColor[dd] ?? p.terrainDeep;
-  const solid = (tx: number, ty: number) => tileAt(room, tx, ty) === Tile.solid;
+  const solid = (tx: number, ty: number) => isRockTile(tileAt(room, tx, ty));
+  // Rims: a face under or beside a slope tile is covered by the slope's fill, not exposed.
+  const covered = (tx: number, ty: number) => {
+    const t = tileAt(room, tx, ty);
+    return isRockTile(t) || isSlopeTile(t);
+  };
   const mortar = mix(p.terrain, p.terrainDeep, 0.55);
 
   // Solid fill, run-length merged per row by depth colour.
@@ -149,11 +161,11 @@ export function drawTerrain(g: Graphics, glow: Graphics, room: Room, d: Dressing
       if (!solid(tx, ty)) continue;
       const x = tx * ts;
       const y = ty * ts;
-      if (!solid(tx - 1, ty)) g.rect(x, y, EDGE_SIDE, ts).fill(side);
-      if (!solid(tx + 1, ty)) g.rect(x + ts - EDGE_SIDE, y, EDGE_SIDE, ts).fill(side);
+      if (!covered(tx - 1, ty)) g.rect(x, y, EDGE_SIDE, ts).fill(side);
+      if (!covered(tx + 1, ty)) g.rect(x + ts - EDGE_SIDE, y, EDGE_SIDE, ts).fill(side);
       if (!solid(tx, ty + 1))
         g.rect(x, y + ts - EDGE_SIDE, ts, EDGE_SIDE).fill(mix(p.rimSide, p.terrainDeep, 0.35));
-      if (!solid(tx, ty - 1)) {
+      if (!covered(tx, ty - 1)) {
         g.rect(x, y + EDGE_TOP, ts, 8).fill({ color: p.rim, alpha: 0.22 });
         g.rect(x, y + EDGE_TOP + 8, ts, 10).fill({ color: p.rim, alpha: 0.08 });
         g.rect(x, y, ts, EDGE_TOP).fill(p.rim);
@@ -161,6 +173,7 @@ export function drawTerrain(g: Graphics, glow: Graphics, room: Room, d: Dressing
       }
     }
   }
+  drawSlopes(g, room, ts, colorAt(1), p.rim, rimHi);
 
   const lights: Light[] = [];
   const auto = d.autoLights;
@@ -355,4 +368,38 @@ function spikePolys(t: number, x: number, y: number, ts: number): number[][] {
     else out.push([x + ts, y + o, x + ts - h, y + o + half / 2, x + ts, y + o + half]);
   }
   return out;
+}
+
+/**
+ * Slope tiles (sim/physics/slopes.ts): rock under the heightfield surface `slopeTop`, with the same
+ * lit rim as a flat top, laid along the slope so a run of slope tiles reads as one ramp.
+ */
+function drawSlopes(g: Graphics, room: Room, ts: number, fill: number, rim: number, rimHi: number): void {
+  if (!room.slopes) return;
+  for (let ty = 0; ty < room.height; ty++) {
+    for (let tx = 0; tx < room.width; tx++) {
+      const t = tileAt(room, tx, ty);
+      if (!isSlopeTile(t)) continue;
+      const x = tx * ts;
+      const y = ty * ts;
+      // Surface at the tile's left and right edges (column 0 and the last column's far edge).
+      const yl = y + slopeTop(t, 0);
+      const yr = y + slopeTop(t, ts - 1);
+      g.poly([x, yl, x + ts, yr, x + ts, y + ts, x, y + ts]).fill(fill);
+      const band = (off: number, h: number) => [
+        x,
+        yl + off,
+        x + ts,
+        yr + off,
+        x + ts,
+        yr + off + h,
+        x,
+        yl + off + h,
+      ];
+      g.poly(band(EDGE_TOP, 8)).fill({ color: rim, alpha: 0.22 });
+      g.poly(band(EDGE_TOP + 8, 10)).fill({ color: rim, alpha: 0.08 });
+      g.poly(band(0, EDGE_TOP)).fill(rim);
+      g.poly(band(0, 2)).fill(rimHi);
+    }
+  }
 }

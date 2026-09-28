@@ -147,6 +147,7 @@ function compileRoom(
   const rests: Record<string, unknown> = {};
   const prompts: unknown[] = [];
   const cameraZones: unknown[] = [];
+  const landmarks: unknown[] = [];
   const locks: Record<string, unknown> = {};
   const weights: unknown[] = [];
   const breakables: unknown[] = [];
@@ -262,9 +263,31 @@ function compileRoom(
       case 'prompt':
         prompts.push(clean({ at: [x, y], keys: p.keys, until: p.until, near: p.near }));
         break;
-      case 'camera':
-        cameraZones.push(clean({ rect: [x, y, w, h], mode: p.mode, value: p.value }));
+      case 'camera': {
+        const pts = (p.shot as [number, number][] | undefined) ?? [];
+        let shot: unknown;
+        if (pts.length === 2) {
+          const [a = [0, 0], b = [0, 0]] = pts;
+          const sx = Math.min(a[0], b[0]);
+          const sy = Math.min(a[1], b[1]);
+          shot = clean({
+            rect: [sx, sy, Math.abs(a[0] - b[0]) + 1, Math.abs(a[1] - b[1]) + 1],
+            zoom: p.shotZoom,
+            hold: p.hold,
+            repeat: p.repeat ? true : undefined,
+          });
+        } else if (pts.length) err(`${m.id}: entities[${i}] camera shot needs exactly 2 corner points`);
+        for (const [k, v] of [
+          ['zoom', p.zoom],
+          ['shotZoom', p.shotZoom],
+        ] as const)
+          if (typeof v === 'number' && (v < 0.75 || v > 1.1))
+            err(`${m.id}: entities[${i}] camera ${k} ${v} is outside 0.75-1.1 (north-star §3.1)`);
+        cameraZones.push(
+          clean({ rect: [x, y, w, h], mode: p.mode, value: p.value, zoom: p.zoom, weight: p.weight, shot }),
+        );
         break;
+      }
       case 'lock': {
         const name = String(p.name);
         if (name in locks) err(`${m.id}: two locks named "${name}"`);
@@ -285,6 +308,7 @@ function compileRoom(
         break;
       }
       case 'landmark':
+        landmarks.push(clean({ name: String(p.name), rect: [x, y, w, h], beacon: p.beacon, depth: p.depth }));
         break;
     }
   });
@@ -317,6 +341,7 @@ function compileRoom(
     locks: Object.keys(locks).length ? locks : undefined,
     prompts: prompts.length ? prompts : undefined,
     cameraZones: cameraZones.length ? cameraZones : undefined,
+    landmarks: landmarks.length ? landmarks : undefined,
     claims,
     notes: f.notes || undefined,
     district: f.district || undefined,

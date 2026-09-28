@@ -279,6 +279,8 @@ export function levelToModel(lv: Level): LevelModel {
     }
     if (b.name === undefined) delete b.name;
     if (b.tag === undefined) delete b.tag;
+    // 'none' is the stored default (stairs / default curve grade); sheets omit it, so models do too.
+    if (b.grade === 'none') delete b.grade;
     const r = rectOf(e);
     if (RECT_SHAPES.includes(shape)) b.rect = r;
     if (shape === 'stamp') b.rect = [r[0], r[1], 1, 1];

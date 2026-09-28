@@ -11,7 +11,7 @@
 	"iid": "ae62d587-72de-573c-bfef-921ea95730ee",
 	"jsonVersion": "1.5.3",
 	"appBuildId": 473703,
-	"nextUid": 176,
+	"nextUid": 188,
 	"identifierStyle": "Free",
 	"toc": [
 		{
@@ -272,7 +272,12 @@
 					"worldY": -576,
 					"widPx": 256,
 					"heiPx": 576,
-					"fields": {"name":"row-gate","note":"The Row gate: the first lock. Dashed ghost houses behind it."}
+					"fields": {
+						"name": "row-gate",
+						"note": "The Row gate: the first lock. Dashed ghost houses behind it.",
+						"beacon": null,
+						"depth": null
+					}
 				},
 				{
 					"iids": {
@@ -287,7 +292,9 @@
 					"heiPx": 384,
 					"fields": {
 						"name": "receiver-cart",
-						"note": "Jammed in the yard gate; seized, it goes ghost and its evicted furniture crashes through onto the cobbles."
+						"note": "Jammed in the yard gate; seized, it goes ghost and its evicted furniture crashes through onto the cobbles.",
+						"beacon": null,
+						"depth": null
 					}
 				},
 				{
@@ -301,7 +308,7 @@
 					"worldY": -192,
 					"widPx": 256,
 					"heiPx": 192,
-					"fields": {"name":"rocking-chair","note":null}
+					"fields": {"name":"rocking-chair","note":null,"beacon":null,"depth":null}
 				},
 				{
 					"iids": {
@@ -316,7 +323,9 @@
 					"heiPx": 576,
 					"fields": {
 						"name": "foreclosed-shopfront",
-						"note": "Silent, dashed: walk straight through into its cellar. Quiet means gone."
+						"note": "Silent, dashed: walk straight through into its cellar. Quiet means gone.",
+						"beacon": null,
+						"depth": null
 					}
 				},
 				{
@@ -330,7 +339,7 @@
 					"worldY": 192,
 					"widPx": 64,
 					"heiPx": 64,
-					"fields": {"name":"pickup:poundage","note":"Poundage in the foreclosed cellar."}
+					"fields": {"name":"pickup:poundage","note":"Poundage in the foreclosed cellar.","beacon":null,"depth":null}
 				},
 				{
 					"iids": {
@@ -343,7 +352,7 @@
 					"worldY": 64,
 					"widPx": 128,
 					"heiPx": 128,
-					"fields": {"name":"eviction-notice","note":null}
+					"fields": {"name":"eviction-notice","note":null,"beacon":null,"depth":null}
 				},
 				{
 					"iids": {
@@ -356,7 +365,12 @@
 					"worldY": -64,
 					"widPx": 64,
 					"heiPx": 64,
-					"fields": {"name":"pickup:tally-ledger","note":"The clerk's desk gives the Tally ledger."}
+					"fields": {
+						"name": "pickup:tally-ledger",
+						"note": "The clerk's desk gives the Tally ledger.",
+						"beacon": null,
+						"depth": null
+					}
 				},
 				{
 					"iids": {
@@ -369,7 +383,7 @@
 					"worldY": -192,
 					"widPx": 256,
 					"heiPx": 192,
-					"fields": {"name":"clerk-desk","note":null}
+					"fields": {"name":"clerk-desk","note":null,"beacon":null,"depth":null}
 				},
 				{
 					"iids": {
@@ -382,7 +396,12 @@
 					"worldY": -1984,
 					"widPx": 1536,
 					"heiPx": 576,
-					"fields": {"name":"ticker-board","note":"The Board. Beacon. LOT 19 · RING SHOES · DISTRAINT STORE"}
+					"fields": {
+						"name": "ticker-board",
+						"note": "The Board. Beacon. LOT 19 · RING SHOES · DISTRAINT STORE",
+						"beacon": "board",
+						"depth": null
+					}
 				},
 				{
 					"iids": {
@@ -395,7 +414,12 @@
 					"worldY": -1024,
 					"widPx": 256,
 					"heiPx": 256,
-					"fields": {"name":"clerk-balcony","note":"Lock: 12 tiles up. The Receiver's clerk stamps a paper and walks off."}
+					"fields": {
+						"name": "clerk-balcony",
+						"note": "Lock: 12 tiles up. The Receiver's clerk stamps a paper and walks off.",
+						"beacon": null,
+						"depth": null
+					}
 				},
 				{
 					"iids": {
@@ -408,7 +432,7 @@
 					"worldY": -1920,
 					"widPx": 512,
 					"heiPx": 1536,
-					"fields": {"name":"registry-facade","note":"Lock: organ-pipe facade."}
+					"fields": {"name":"registry-facade","note":"Lock: organ-pipe facade.","beacon":null,"depth":null}
 				},
 				{
 					"iids": {
@@ -421,7 +445,7 @@
 					"worldY": -576,
 					"widPx": 640,
 					"heiPx": 576,
-					"fields": {"name":"bourse-gate","note":"Lock: sealed."}
+					"fields": {"name":"bourse-gate","note":"Lock: sealed.","beacon":null,"depth":null}
 				},
 				{
 					"iids": {
@@ -434,7 +458,7 @@
 					"worldY": -128,
 					"widPx": 384,
 					"heiPx": 128,
-					"fields": {"name":"hatch-light-column","note":null}
+					"fields": {"name":"hatch-light-column","note":null,"beacon":null,"depth":null}
 				},
 				{
 					"iids": {
@@ -447,7 +471,12 @@
 					"worldY": -64,
 					"widPx": 64,
 					"heiPx": 64,
-					"fields": {"name":"pickup:chin-piece","note":"Chin piece in the pawnbroker's cellar closet."}
+					"fields": {
+						"name": "pickup:chin-piece",
+						"note": "Chin piece in the pawnbroker's cellar closet.",
+						"beacon": null,
+						"depth": null
+					}
 				},
 				{
 					"iids": {
@@ -460,7 +489,7 @@
 					"worldY": -832,
 					"widPx": 1024,
 					"heiPx": 320,
-					"fields": {"name":"pawnshop-front","note":null}
+					"fields": {"name":"pawnshop-front","note":null,"beacon":null,"depth":null}
 				},
 				{
 					"iids": {
@@ -473,7 +502,7 @@
 					"worldY": -640,
 					"widPx": 128,
 					"heiPx": 128,
-					"fields": {"name":"pawnbroker","note":"Patter barks as you pass."}
+					"fields": {"name":"pawnbroker","note":"Patter barks as you pass.","beacon":null,"depth":null}
 				},
 				{
 					"iids": {
@@ -488,7 +517,9 @@
 					"heiPx": 256,
 					"fields": {
 						"name": "brass-balls",
-						"note": "Three balls on the humming chain: seize it and they drop, smash the barricade, leave a debris stair."
+						"note": "Three balls on the humming chain: seize it and they drop, smash the barricade, leave a debris stair.",
+						"beacon": null,
+						"depth": null
 					}
 				},
 				{
@@ -502,7 +533,7 @@
 					"worldY": -3200,
 					"widPx": 512,
 					"heiPx": 1408,
-					"fields": {"name":"bell-tower","note":"Beacon: the Exchange Bell tower."}
+					"fields": {"name":"bell-tower","note":"Beacon: the Exchange Bell tower.","beacon":"bell","depth":0.12}
 				},
 				{
 					"iids": {
@@ -515,7 +546,7 @@
 					"worldY": 1152,
 					"widPx": 2560,
 					"heiPx": 1280,
-					"fields": {"name":"great-scale","note":null}
+					"fields": {"name":"great-scale","note":null,"beacon":"scale","depth":null}
 				},
 				{
 					"iids": {
@@ -528,7 +559,12 @@
 					"worldY": 1344,
 					"widPx": 64,
 					"heiPx": 64,
-					"fields": {"name":"pickup:cellars-ledger","note":"The Copyist hands over the Cellars ledger with a sniff."}
+					"fields": {
+						"name": "pickup:cellars-ledger",
+						"note": "The Copyist hands over the Cellars ledger with a sniff.",
+						"beacon": null,
+						"depth": null
+					}
 				},
 				{
 					"iids": {
@@ -541,7 +577,12 @@
 					"worldY": 1216,
 					"widPx": 128,
 					"heiPx": 192,
-					"fields": {"name":"copyist","note":"The fussy old clerk with the green lamp. Quill scratch beacon."}
+					"fields": {
+						"name": "copyist",
+						"note": "The fussy old clerk with the green lamp. Quill scratch beacon.",
+						"beacon": null,
+						"depth": null
+					}
 				},
 				{
 					"iids": {
@@ -554,7 +595,33 @@
 					"worldY": 1536,
 					"widPx": 320,
 					"heiPx": 384,
-					"fields": {"name":"round-door","note":null}
+					"fields": {"name":"round-door","note":null,"beacon":null,"depth":null}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "ddf333f6-1cb5-54d5-8234-9b128c5912ef",
+						"layerIid": "3027235a-935f-50d5-aaad-33d07dca01e3",
+						"entityIid": "31932869-6225-5244-a378-d8980e09b72e"
+					},
+					"worldX": 37248,
+					"worldY": -576,
+					"widPx": 1024,
+					"heiPx": 768,
+					"fields": {"name":"the-board","note":null,"beacon":"board","depth":0.42}
+				},
+				{
+					"iids": {
+						"worldIid": "29dc38fe-bff0-56cf-b20d-4bfc189fc21a",
+						"levelIid": "ddf333f6-1cb5-54d5-8234-9b128c5912ef",
+						"layerIid": "3027235a-935f-50d5-aaad-33d07dca01e3",
+						"entityIid": "db72b029-623f-5809-a31b-625afd945698"
+					},
+					"worldX": 40960,
+					"worldY": -1152,
+					"widPx": 512,
+					"heiPx": 1408,
+					"fields": {"name":"bell-tower","note":null,"beacon":"bell","depth":0.12}
 				}
 			]
 		},
@@ -2284,7 +2351,7 @@
 				"tags": ["game"],
 				"exportToToc": false,
 				"allowOutOfBounds": false,
-				"doc": "Camera zone. `value` = view centre (tiles) for lock/clampX/clampY; default = rect centre.",
+				"doc": "Camera zone (memory/camera.md). `value` = view centre (tiles) for lock/clampX/clampY, bias point for frame; default = rect centre. `open` (zoom 0.9) and `vista` (0.8) hold a zoom while inside; `shot` (two corner points) declares a framed shot played on entry.",
 				"width": 64,
 				"height": 64,
 				"resizableX": true,
@@ -2377,6 +2444,228 @@
 						"regex": null,
 						"acceptFileTypes": null,
 						"defaultOverride": null,
+						"textLanguageMode": null,
+						"symmetricalRef": false,
+						"autoChainRef": false,
+						"allowOutOfLevelRef": true,
+						"allowedRefs": "OnlySame",
+						"allowedRefsEntityUid": null,
+						"allowedRefTags": [],
+						"tilesetUid": null
+					},
+					{
+						"identifier": "zoom",
+						"doc": "Zoom held inside (0.75-1.1). Default: open 0.9, vista 0.8, else 1.0.",
+						"__type": "Float",
+						"uid": 177,
+						"type": "F_Float",
+						"isArray": false,
+						"canBeNull": true,
+						"arrayMinLength": null,
+						"arrayMaxLength": null,
+						"editorDisplayMode": "NameAndValue",
+						"editorDisplayScale": 1,
+						"editorDisplayPos": "Beneath",
+						"editorLinkStyle": "StraightArrow",
+						"editorDisplayColor": null,
+						"editorAlwaysShow": false,
+						"editorShowInWorld": true,
+						"editorCutLongValues": true,
+						"editorTextSuffix": null,
+						"editorTextPrefix": null,
+						"useForSmartColor": false,
+						"exportToToc": false,
+						"searchable": false,
+						"min": null,
+						"max": null,
+						"regex": null,
+						"acceptFileTypes": null,
+						"defaultOverride": null,
+						"textLanguageMode": null,
+						"symmetricalRef": false,
+						"autoChainRef": false,
+						"allowOutOfLevelRef": true,
+						"allowedRefs": "OnlySame",
+						"allowedRefsEntityUid": null,
+						"allowedRefTags": [],
+						"tilesetUid": null
+					},
+					{
+						"identifier": "weight",
+						"doc": "frame: pull toward `value`, 0-1 (default 0.5).",
+						"__type": "Float",
+						"uid": 178,
+						"type": "F_Float",
+						"isArray": false,
+						"canBeNull": true,
+						"arrayMinLength": null,
+						"arrayMaxLength": null,
+						"editorDisplayMode": "NameAndValue",
+						"editorDisplayScale": 1,
+						"editorDisplayPos": "Beneath",
+						"editorLinkStyle": "StraightArrow",
+						"editorDisplayColor": null,
+						"editorAlwaysShow": false,
+						"editorShowInWorld": true,
+						"editorCutLongValues": true,
+						"editorTextSuffix": null,
+						"editorTextPrefix": null,
+						"useForSmartColor": false,
+						"exportToToc": false,
+						"searchable": false,
+						"min": null,
+						"max": null,
+						"regex": null,
+						"acceptFileTypes": null,
+						"defaultOverride": null,
+						"textLanguageMode": null,
+						"symmetricalRef": false,
+						"autoChainRef": false,
+						"allowOutOfLevelRef": true,
+						"allowedRefs": "OnlySame",
+						"allowedRefsEntityUid": null,
+						"allowedRefTags": [],
+						"tilesetUid": null
+					},
+					{
+						"identifier": "shot",
+						"doc": "Declared shot: two opposite corner tiles of the rect to frame on entry.",
+						"__type": "Array<Point>",
+						"uid": 179,
+						"type": "F_Point",
+						"isArray": true,
+						"canBeNull": false,
+						"arrayMinLength": null,
+						"arrayMaxLength": null,
+						"editorDisplayMode": "PointStar",
+						"editorDisplayScale": 1,
+						"editorDisplayPos": "Beneath",
+						"editorLinkStyle": "StraightArrow",
+						"editorDisplayColor": null,
+						"editorAlwaysShow": false,
+						"editorShowInWorld": true,
+						"editorCutLongValues": true,
+						"editorTextSuffix": null,
+						"editorTextPrefix": null,
+						"useForSmartColor": false,
+						"exportToToc": false,
+						"searchable": false,
+						"min": null,
+						"max": null,
+						"regex": null,
+						"acceptFileTypes": null,
+						"defaultOverride": null,
+						"textLanguageMode": null,
+						"symmetricalRef": false,
+						"autoChainRef": false,
+						"allowOutOfLevelRef": true,
+						"allowedRefs": "OnlySame",
+						"allowedRefsEntityUid": null,
+						"allowedRefTags": [],
+						"tilesetUid": null
+					},
+					{
+						"identifier": "shotZoom",
+						"doc": "Shot zoom (default: fit the shot rect, 0.75-1.1).",
+						"__type": "Float",
+						"uid": 180,
+						"type": "F_Float",
+						"isArray": false,
+						"canBeNull": true,
+						"arrayMinLength": null,
+						"arrayMaxLength": null,
+						"editorDisplayMode": "NameAndValue",
+						"editorDisplayScale": 1,
+						"editorDisplayPos": "Beneath",
+						"editorLinkStyle": "StraightArrow",
+						"editorDisplayColor": null,
+						"editorAlwaysShow": false,
+						"editorShowInWorld": true,
+						"editorCutLongValues": true,
+						"editorTextSuffix": null,
+						"editorTextPrefix": null,
+						"useForSmartColor": false,
+						"exportToToc": false,
+						"searchable": false,
+						"min": null,
+						"max": null,
+						"regex": null,
+						"acceptFileTypes": null,
+						"defaultOverride": null,
+						"textLanguageMode": null,
+						"symmetricalRef": false,
+						"autoChainRef": false,
+						"allowOutOfLevelRef": true,
+						"allowedRefs": "OnlySame",
+						"allowedRefsEntityUid": null,
+						"allowedRefTags": [],
+						"tilesetUid": null
+					},
+					{
+						"identifier": "hold",
+						"doc": "Shot hold, frames (default 90).",
+						"__type": "Int",
+						"uid": 181,
+						"type": "F_Int",
+						"isArray": false,
+						"canBeNull": true,
+						"arrayMinLength": null,
+						"arrayMaxLength": null,
+						"editorDisplayMode": "NameAndValue",
+						"editorDisplayScale": 1,
+						"editorDisplayPos": "Beneath",
+						"editorLinkStyle": "StraightArrow",
+						"editorDisplayColor": null,
+						"editorAlwaysShow": false,
+						"editorShowInWorld": true,
+						"editorCutLongValues": true,
+						"editorTextSuffix": null,
+						"editorTextPrefix": null,
+						"useForSmartColor": false,
+						"exportToToc": false,
+						"searchable": false,
+						"min": null,
+						"max": null,
+						"regex": null,
+						"acceptFileTypes": null,
+						"defaultOverride": null,
+						"textLanguageMode": null,
+						"symmetricalRef": false,
+						"autoChainRef": false,
+						"allowOutOfLevelRef": true,
+						"allowedRefs": "OnlySame",
+						"allowedRefsEntityUid": null,
+						"allowedRefTags": [],
+						"tilesetUid": null
+					},
+					{
+						"identifier": "repeat",
+						"doc": "Replay the shot on every entry (default: once).",
+						"__type": "Bool",
+						"uid": 182,
+						"type": "F_Bool",
+						"isArray": false,
+						"canBeNull": false,
+						"arrayMinLength": null,
+						"arrayMaxLength": null,
+						"editorDisplayMode": "NameAndValue",
+						"editorDisplayScale": 1,
+						"editorDisplayPos": "Beneath",
+						"editorLinkStyle": "StraightArrow",
+						"editorDisplayColor": null,
+						"editorAlwaysShow": false,
+						"editorShowInWorld": true,
+						"editorCutLongValues": true,
+						"editorTextSuffix": null,
+						"editorTextPrefix": null,
+						"useForSmartColor": false,
+						"exportToToc": false,
+						"searchable": false,
+						"min": null,
+						"max": null,
+						"regex": null,
+						"acceptFileTypes": null,
+						"defaultOverride": {"id":"V_Bool","params":[false]},
 						"textLanguageMode": null,
 						"symmetricalRef": false,
 						"autoChainRef": false,
@@ -2800,7 +3089,7 @@
 				"tags": ["game"],
 				"exportToToc": true,
 				"allowOutOfBounds": false,
-				"doc": "A named landmark (level-toolchain §4.3). Not compiled yet: drawn on the world map and listed in the toc.",
+				"doc": "A named landmark (level-toolchain §4.3): world map, toc, and with `beacon` a silhouette drawn in every nearby room's backdrop at its true world position (parallax `depth`, default 0.42).",
 				"width": 64,
 				"height": 64,
 				"resizableX": true,
@@ -2871,6 +3160,80 @@
 						"__type": "Multilines",
 						"uid": 117,
 						"type": "F_Text",
+						"isArray": false,
+						"canBeNull": true,
+						"arrayMinLength": null,
+						"arrayMaxLength": null,
+						"editorDisplayMode": "NameAndValue",
+						"editorDisplayScale": 1,
+						"editorDisplayPos": "Beneath",
+						"editorLinkStyle": "StraightArrow",
+						"editorDisplayColor": null,
+						"editorAlwaysShow": false,
+						"editorShowInWorld": true,
+						"editorCutLongValues": true,
+						"editorTextSuffix": null,
+						"editorTextPrefix": null,
+						"useForSmartColor": false,
+						"exportToToc": false,
+						"searchable": false,
+						"min": null,
+						"max": null,
+						"regex": null,
+						"acceptFileTypes": null,
+						"defaultOverride": null,
+						"textLanguageMode": null,
+						"symmetricalRef": false,
+						"autoChainRef": false,
+						"allowOutOfLevelRef": true,
+						"allowedRefs": "OnlySame",
+						"allowedRefsEntityUid": null,
+						"allowedRefTags": [],
+						"tilesetUid": null
+					},
+					{
+						"identifier": "beacon",
+						"doc": "Draw a beacon silhouette of this kind in nearby rooms.",
+						"__type": "LocalEnum.Beacon",
+						"uid": 183,
+						"type": "F_Enum(176)",
+						"isArray": false,
+						"canBeNull": true,
+						"arrayMinLength": null,
+						"arrayMaxLength": null,
+						"editorDisplayMode": "NameAndValue",
+						"editorDisplayScale": 1,
+						"editorDisplayPos": "Beneath",
+						"editorLinkStyle": "StraightArrow",
+						"editorDisplayColor": null,
+						"editorAlwaysShow": false,
+						"editorShowInWorld": true,
+						"editorCutLongValues": true,
+						"editorTextSuffix": null,
+						"editorTextPrefix": null,
+						"useForSmartColor": false,
+						"exportToToc": false,
+						"searchable": false,
+						"min": null,
+						"max": null,
+						"regex": null,
+						"acceptFileTypes": null,
+						"defaultOverride": null,
+						"textLanguageMode": null,
+						"symmetricalRef": false,
+						"autoChainRef": false,
+						"allowOutOfLevelRef": true,
+						"allowedRefs": "OnlySame",
+						"allowedRefsEntityUid": null,
+						"allowedRefTags": [],
+						"tilesetUid": null
+					},
+					{
+						"identifier": "depth",
+						"doc": "Beacon parallax factor, 0.05-0.95 (default 0.42).",
+						"__type": "Float",
+						"uid": 184,
+						"type": "F_Float",
 						"isArray": false,
 						"canBeNull": true,
 						"arrayMinLength": null,
@@ -5869,7 +6232,24 @@
 					{"id":"lock","tileRect":null,"color":8421504},
 					{"id":"clampX","tileRect":null,"color":8421504},
 					{"id":"clampY","tileRect":null,"color":8421504},
-					{"id":"bounds","tileRect":null,"color":8421504}
+					{"id":"bounds","tileRect":null,"color":8421504},
+					{"id":"open","tileRect":null,"color":8421504},
+					{"id":"vista","tileRect":null,"color":8421504},
+					{"id":"frame","tileRect":null,"color":8421504}
+				],
+				"iconTilesetUid": null,
+				"externalRelPath": null,
+				"externalFileChecksum": null,
+				"tags": []
+			},
+			{
+				"identifier": "Beacon",
+				"uid": 176,
+				"values": [
+					{"id":"bell","tileRect":null,"color":8421504},
+					{"id":"board","tileRect":null,"color":8421504},
+					{"id":"scale","tileRect":null,"color":8421504},
+					{"id":"glow","tileRect":null,"color":8421504}
 				],
 				"iconTilesetUid": null,
 				"externalRelPath": null,
@@ -6960,6 +7340,14 @@
 					"realEditorValues": [{"id":"V_Bool","params":[true]}]
 				},
 				{
+					"__identifier": "district",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 175,
+					"realEditorValues": [null]
+				},
+				{
 					"__identifier": "claims",
 					"__type": "Multilines",
 					"__value": null,
@@ -7057,6 +7445,14 @@
 					"__tile": null,
 					"defUid": 127,
 					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "district",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 175,
+					"realEditorValues": [null]
 				},
 				{
 					"__identifier": "claims",
@@ -7160,6 +7556,14 @@
 					"__tile": null,
 					"defUid": 127,
 					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "district",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 175,
+					"realEditorValues": [null]
 				},
 				{
 					"__identifier": "claims",
@@ -7266,6 +7670,14 @@
 					"realEditorValues": [{"id":"V_Bool","params":[true]}]
 				},
 				{
+					"__identifier": "district",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 175,
+					"realEditorValues": [null]
+				},
+				{
 					"__identifier": "claims",
 					"__type": "Multilines",
 					"__value": null,
@@ -7370,6 +7782,14 @@
 					"realEditorValues": [{"id":"V_Bool","params":[true]}]
 				},
 				{
+					"__identifier": "district",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 175,
+					"realEditorValues": [null]
+				},
+				{
 					"__identifier": "claims",
 					"__type": "Multilines",
 					"__value": null,
@@ -7470,6 +7890,14 @@
 					"__tile": null,
 					"defUid": 127,
 					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "district",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 175,
+					"realEditorValues": [null]
 				},
 				{
 					"__identifier": "claims",
@@ -7576,6 +8004,14 @@
 					"realEditorValues": [{"id":"V_Bool","params":[true]}]
 				},
 				{
+					"__identifier": "district",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 175,
+					"realEditorValues": [null]
+				},
+				{
 					"__identifier": "claims",
 					"__type": "Multilines",
 					"__value": null,
@@ -7604,6 +8040,328 @@
 				{"levelIid":"b8b1b517-ea0a-598f-b304-f4239ad12e38","dir":"w"}
 			],
 			"externalRelPath": "world/cellars_scale.ldtkl",
+			"layerInstances": null
+		},
+		{
+			"identifier": "camlab_lane",
+			"iid": "3dab3624-cd91-53bd-87e9-53ffad8b9af4",
+			"uid": 185,
+			"worldX": 32000,
+			"worldY": 0,
+			"worldDepth": 0,
+			"pxWid": 3840,
+			"pxHei": 1280,
+			"__bgColor": "#E8F0F8",
+			"bgColor": null,
+			"useAutoIdentifier": false,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__smartColor": "#F3F7FB",
+			"__bgPos": null,
+			"fieldInstances": [
+				{
+					"__identifier": "name",
+					"__type": "String",
+					"__value": "Camera lab: the Lane",
+					"__tile": null,
+					"defUid": 122,
+					"realEditorValues": [{"id":"V_String","params":["Camera lab: the Lane"]}]
+				},
+				{
+					"__identifier": "abilities",
+					"__type": "Array<LocalEnum.Ability>",
+					"__value": ["wallJump","dash","doubleJump"],
+					"__tile": null,
+					"defUid": 123,
+					"realEditorValues": [
+						{"id":"V_String","params":["wallJump"]},
+						{"id":"V_String","params":["dash"]},
+						{"id":"V_String","params":["doubleJump"]}
+					]
+				},
+				{
+					"__identifier": "hazard",
+					"__type": "LocalEnum.Hazard",
+					"__value": "death",
+					"__tile": null,
+					"defUid": 124,
+					"realEditorValues": [{"id":"V_String","params":["death"]}]
+				},
+				{
+					"__identifier": "spawnGrace",
+					"__type": "Int",
+					"__value": 0,
+					"__tile": null,
+					"defUid": 125,
+					"realEditorValues": [{"id":"V_Int","params":[0]}]
+				},
+				{
+					"__identifier": "next",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 126,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "draft",
+					"__type": "Bool",
+					"__value": true,
+					"__tile": null,
+					"defUid": 127,
+					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "district",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 175,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "claims",
+					"__type": "Multilines",
+					"__value": null,
+					"__tile": null,
+					"defUid": 128,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "notes",
+					"__type": "Multilines",
+					"__value": "Camera test bed (memory/camera.md): a zoom-1.0 lane whose east edge exit runs into the Square; the Bell beacon shows over its far end.",
+					"__tile": null,
+					"defUid": 129,
+					"realEditorValues": [
+						{
+							"id": "V_String",
+							"params": [
+								"Camera test bed (memory/camera.md): a zoom-1.0 lane whose east edge exit runs into the Square; the Bell beacon shows over its far end."
+							]
+						}
+					]
+				}
+			],
+			"__neighbours": [{"levelIid":"ddf333f6-1cb5-54d5-8234-9b128c5912ef","dir":"e"}],
+			"externalRelPath": "world/camlab_lane.ldtkl",
+			"layerInstances": null
+		},
+		{
+			"identifier": "camlab_square",
+			"iid": "ddf333f6-1cb5-54d5-8234-9b128c5912ef",
+			"uid": 186,
+			"worldX": 35840,
+			"worldY": -1280,
+			"worldDepth": 0,
+			"pxWid": 5760,
+			"pxHei": 2560,
+			"__bgColor": "#E8F0F8",
+			"bgColor": null,
+			"useAutoIdentifier": false,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__smartColor": "#F3F7FB",
+			"__bgPos": null,
+			"fieldInstances": [
+				{
+					"__identifier": "name",
+					"__type": "String",
+					"__value": "Camera lab: the Square",
+					"__tile": null,
+					"defUid": 122,
+					"realEditorValues": [{"id":"V_String","params":["Camera lab: the Square"]}]
+				},
+				{
+					"__identifier": "abilities",
+					"__type": "Array<LocalEnum.Ability>",
+					"__value": ["wallJump","dash","doubleJump"],
+					"__tile": null,
+					"defUid": 123,
+					"realEditorValues": [
+						{"id":"V_String","params":["wallJump"]},
+						{"id":"V_String","params":["dash"]},
+						{"id":"V_String","params":["doubleJump"]}
+					]
+				},
+				{
+					"__identifier": "hazard",
+					"__type": "LocalEnum.Hazard",
+					"__value": "death",
+					"__tile": null,
+					"defUid": 124,
+					"realEditorValues": [{"id":"V_String","params":["death"]}]
+				},
+				{
+					"__identifier": "spawnGrace",
+					"__type": "Int",
+					"__value": 0,
+					"__tile": null,
+					"defUid": 125,
+					"realEditorValues": [{"id":"V_Int","params":[0]}]
+				},
+				{
+					"__identifier": "next",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 126,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "draft",
+					"__type": "Bool",
+					"__value": true,
+					"__tile": null,
+					"defUid": 127,
+					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "district",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 175,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "claims",
+					"__type": "Multilines",
+					"__value": null,
+					"__tile": null,
+					"defUid": 128,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "notes",
+					"__type": "Multilines",
+					"__value": "Vista zone (zoom 0.8) with a declared shot of the Board on first entry from the Lane; the Board and the Bell are beacons.",
+					"__tile": null,
+					"defUid": 129,
+					"realEditorValues": [
+						{
+							"id": "V_String",
+							"params": [
+								"Vista zone (zoom 0.8) with a declared shot of the Board on first entry from the Lane; the Board and the Bell are beacons."
+							]
+						}
+					]
+				}
+			],
+			"__neighbours": [
+				{"levelIid":"3dab3624-cd91-53bd-87e9-53ffad8b9af4","dir":"w"},
+				{"levelIid":"b4fdfdea-fdda-562a-8951-28502be9a4fb","dir":"s"}
+			],
+			"externalRelPath": "world/camlab_square.ldtkl",
+			"layerInstances": null
+		},
+		{
+			"identifier": "camlab_pit",
+			"iid": "b4fdfdea-fdda-562a-8951-28502be9a4fb",
+			"uid": 187,
+			"worldX": 39040,
+			"worldY": 1280,
+			"worldDepth": 0,
+			"pxWid": 2560,
+			"pxHei": 1920,
+			"__bgColor": "#E8F0F8",
+			"bgColor": null,
+			"useAutoIdentifier": false,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__smartColor": "#F3F7FB",
+			"__bgPos": null,
+			"fieldInstances": [
+				{
+					"__identifier": "name",
+					"__type": "String",
+					"__value": "Camera lab: the Pit",
+					"__tile": null,
+					"defUid": 122,
+					"realEditorValues": [{"id":"V_String","params":["Camera lab: the Pit"]}]
+				},
+				{
+					"__identifier": "abilities",
+					"__type": "Array<LocalEnum.Ability>",
+					"__value": ["wallJump","dash","doubleJump"],
+					"__tile": null,
+					"defUid": 123,
+					"realEditorValues": [
+						{"id":"V_String","params":["wallJump"]},
+						{"id":"V_String","params":["dash"]},
+						{"id":"V_String","params":["doubleJump"]}
+					]
+				},
+				{
+					"__identifier": "hazard",
+					"__type": "LocalEnum.Hazard",
+					"__value": "death",
+					"__tile": null,
+					"defUid": 124,
+					"realEditorValues": [{"id":"V_String","params":["death"]}]
+				},
+				{
+					"__identifier": "spawnGrace",
+					"__type": "Int",
+					"__value": 0,
+					"__tile": null,
+					"defUid": 125,
+					"realEditorValues": [{"id":"V_Int","params":[0]}]
+				},
+				{
+					"__identifier": "next",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 126,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "draft",
+					"__type": "Bool",
+					"__value": true,
+					"__tile": null,
+					"defUid": 127,
+					"realEditorValues": [{"id":"V_Bool","params":[true]}]
+				},
+				{
+					"__identifier": "district",
+					"__type": "String",
+					"__value": null,
+					"__tile": null,
+					"defUid": 175,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "claims",
+					"__type": "Multilines",
+					"__value": null,
+					"__tile": null,
+					"defUid": 128,
+					"realEditorValues": [null]
+				},
+				{
+					"__identifier": "notes",
+					"__type": "Multilines",
+					"__value": "Vertical seam under the Square (fall through, wall-jump back up); a frame zone biases the view.",
+					"__tile": null,
+					"defUid": 129,
+					"realEditorValues": [
+						{
+							"id": "V_String",
+							"params": ["Vertical seam under the Square (fall through, wall-jump back up); a frame zone biases the view."]
+						}
+					]
+				}
+			],
+			"__neighbours": [{"levelIid":"ddf333f6-1cb5-54d5-8234-9b128c5912ef","dir":"n"}],
+			"externalRelPath": "world/camlab_pit.ldtkl",
 			"layerInstances": null
 		}
 	]

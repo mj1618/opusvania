@@ -79,6 +79,14 @@
 			"realEditorValues": [{"id":"V_Bool","params":[true]}]
 		},
 		{
+			"__identifier": "district",
+			"__type": "String",
+			"__value": null,
+			"__tile": null,
+			"defUid": 175,
+			"realEditorValues": [null]
+		},
+		{
 			"__identifier": "claims",
 			"__type": "Multilines",
 			"__value": null,
@@ -172,6 +180,14 @@
 							"realEditorValues": [{"id":"V_String","params":["gull"]}]
 						},
 						{
+							"__identifier": "route",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 154,
+							"realEditorValues": [null]
+						},
+						{
 							"__identifier": "char",
 							"__type": "String",
 							"__value": null,
@@ -252,6 +268,22 @@
 							"__tile": null,
 							"defUid": 117,
 							"realEditorValues": [{"id":"V_String","params":["Beacon: the Exchange Bell tower."]}]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": "bell",
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [{"id":"V_String","params":["bell"]}]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": 0.12,
+							"__tile": null,
+							"defUid": 184,
+							"realEditorValues": [{"id":"V_Float","params":[0.12]}]
 						}
 					]
 				}

@@ -227,7 +227,11 @@
     [
       "landmark",
       [170, -31, 24, 9],
-      { "name": "ticker-board", "note": "The Board. Beacon. LOT 19 · RING SHOES · DISTRAINT STORE" }
+      {
+        "name": "ticker-board",
+        "beacon": "board",
+        "note": "The Board. Beacon. LOT 19 · RING SHOES · DISTRAINT STORE"
+      }
     ],
     [
       "landmark",
@@ -266,7 +270,11 @@
     ["spawn", [350, -21]],
     ["enemy", [284, -24], { "type": "gull" }],
     ["prompt", [300, -21], { "keys": ["down", "attack"], "near": 6 }],
-    ["landmark", [296, -50, 8, 22], { "name": "bell-tower", "note": "Beacon: the Exchange Bell tower." }],
+    [
+      "landmark",
+      [296, -50, 8, 22],
+      { "name": "bell-tower", "beacon": "bell", "depth": 0.12, "note": "Beacon: the Exchange Bell tower." }
+    ],
 
     ["spawn", [166, 21]],
     ["source", [156, 19, 2, 3], { "sound": "creaking pipe", "colour": "pink" }],
@@ -277,7 +285,7 @@
     ["source", [292, 34, 2, 4], { "sound": "ash-door roar", "colour": "brown" }],
     ["plate", [298, 38, 6, 1], { "pressedBy": ["heavy"] }],
     ["gate", [326, 28, 4, 4]],
-    ["landmark", [296, 18, 40, 20], { "name": "great-scale" }],
+    ["landmark", [296, 18, 40, 20], { "name": "great-scale", "beacon": "scale" }],
     [
       "landmark",
       [364, 21, 1, 1],

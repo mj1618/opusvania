@@ -272,6 +272,9 @@ const LockDef = z.object({
 });
 export type LockDef = z.infer<typeof LockDef>;
 
+export const CAMERA_MODES = ['lock', 'clampX', 'clampY', 'bounds', 'open', 'vista', 'frame'] as const;
+export type CameraMode = (typeof CAMERA_MODES)[number];
+
 const CameraZone = z.object({
   /** [tx, ty, tw, th] in tiles (sketch coordinates, before padding). */
   rect: z.tuple([
@@ -280,11 +283,50 @@ const CameraZone = z.object({
     z.number().int().positive(),
     z.number().int().positive(),
   ]),
-  mode: z.enum(['lock', 'clampX', 'clampY', 'bounds']),
-  /** lock/clampX/clampY: view centre in tiles (defaults to the rect centre). */
+  /**
+   * lock/clampX/clampY/bounds: framing rules (movement-spec §4). north-star §3.1 adds `open` (free
+   * follow, zoom 0.9: big chambers and runs), `vista` (free follow, zoom 0.8: set-piece spaces) and
+   * `frame` (bias the view toward `value` by `weight`). Render-only: the sim never reads zones.
+   */
+  mode: z.enum(CAMERA_MODES),
+  /** lock/clampX/clampY: view centre in tiles (defaults to the rect centre); frame: the bias point. */
   value: z.tuple([z.number(), z.number()]).optional(),
+  /** Zoom held while inside (0.75-1.1; default: open 0.9, vista 0.8, others 1.0). */
+  zoom: z.number().min(0.75).max(1.1).optional(),
+  /** frame: 0 = free follow, 1 = centred on `value` (default 0.5). */
+  weight: z.number().min(0).max(1).optional(),
+  /**
+   * Declared shot (north-star §3.1): on entering the zone the camera frames this rect (tiles,
+   * [x, y, w, h]) at `zoom` (default: fit the rect), holds `hold` frames with input live, then
+   * releases to the zone's own framing. Once per session unless `repeat`.
+   */
+  shot: z
+    .object({
+      rect: z.tuple([z.number(), z.number(), z.number().positive(), z.number().positive()]),
+      zoom: z.number().min(0.75).max(1.1).optional(),
+      hold: z.number().int().positive().default(90),
+      repeat: z.boolean().default(false),
+    })
+    .optional(),
 });
 export type CameraZoneDef = z.infer<typeof CameraZone>;
+
+/** Beacon silhouettes (render-only): drawn in every nearby room's backdrop at true world position. */
+export const BEACON_KINDS = ['bell', 'board', 'scale', 'glow'] as const;
+const Landmark = z.object({
+  name: z.string(),
+  /** [tx, ty, tw, th], sketch tiles (the landmark's footprint; a beacon's silhouette fills it). */
+  rect: z.tuple([
+    z.number().int(),
+    z.number().int(),
+    z.number().int().positive(),
+    z.number().int().positive(),
+  ]),
+  beacon: z.enum(BEACON_KINDS).optional(),
+  /** Parallax factor of the beacon's backdrop copy (0 = sky, 1 = playfield; default 0.42). */
+  depth: z.number().min(0.05).max(0.95).optional(),
+});
+export type LandmarkDef = z.infer<typeof Landmark>;
 
 export const EDGE_SIDES = ['n', 's', 'e', 'w'] as const;
 export type EdgeSide = (typeof EDGE_SIDES)[number];
@@ -371,6 +413,8 @@ export const RoomFileSchema = z
     waypoints: z.array(WaypointDef).default([]),
     /** Enemy char -> waypoint route it uses (thief gulls). */
     enemyRoutes: z.record(Char, z.string()).default({}),
+    /** Named landmarks (render-only; beacons are drawn in neighbouring rooms' backdrops). */
+    landmarks: z.array(Landmark).default([]),
   })
   .superRefine((r, ctx) => {
     const sourceNames = new Set<string>();

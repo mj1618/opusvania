@@ -79,6 +79,14 @@
 			"realEditorValues": [{"id":"V_Bool","params":[true]}]
 		},
 		{
+			"__identifier": "district",
+			"__type": "String",
+			"__value": null,
+			"__tile": null,
+			"defUid": 175,
+			"realEditorValues": [null]
+		},
+		{
 			"__identifier": "claims",
 			"__type": "Multilines",
 			"__value": null,
@@ -188,6 +196,22 @@
 							"__tile": null,
 							"defUid": 76,
 							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 152,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "solid",
+							"__type": "Bool",
+							"__value": true,
+							"__tile": null,
+							"defUid": 153,
+							"realEditorValues": [{"id":"V_Bool","params":[true]}]
 						},
 						{
 							"__identifier": "char",
@@ -470,6 +494,14 @@
 							"realEditorValues": [{"id":"V_String","params":["26,5"]},{"id":"V_String","params":["37,7"]}]
 						},
 						{
+							"__identifier": "grade",
+							"__type": "LocalEnum.Grade",
+							"__value": "none",
+							"__tile": null,
+							"defUid": 146,
+							"realEditorValues": [{"id":"V_String","params":["none"]}]
+						},
+						{
 							"__identifier": "tag",
 							"__type": "String",
 							"__value": "s66",
@@ -640,6 +672,14 @@
 							"__tile": null,
 							"defUid": 56,
 							"realEditorValues": [{"id":"V_String","params":["48,8"]},{"id":"V_String","params":["55,11"]}]
+						},
+						{
+							"__identifier": "grade",
+							"__type": "LocalEnum.Grade",
+							"__value": "none",
+							"__tile": null,
+							"defUid": 146,
+							"realEditorValues": [{"id":"V_String","params":["none"]}]
 						},
 						{
 							"__identifier": "tag",
@@ -814,6 +854,14 @@
 							"realEditorValues": [{"id":"V_String","params":["66,12"]},{"id":"V_String","params":["81,15"]}]
 						},
 						{
+							"__identifier": "grade",
+							"__type": "LocalEnum.Grade",
+							"__value": "none",
+							"__tile": null,
+							"defUid": 146,
+							"realEditorValues": [{"id":"V_String","params":["none"]}]
+						},
+						{
 							"__identifier": "tag",
 							"__type": "String",
 							"__value": "s74",
@@ -986,6 +1034,14 @@
 							"realEditorValues": [{"id":"V_String","params":["90,16"]},{"id":"V_String","params":["97,19"]}]
 						},
 						{
+							"__identifier": "grade",
+							"__type": "LocalEnum.Grade",
+							"__value": "none",
+							"__tile": null,
+							"defUid": 146,
+							"realEditorValues": [{"id":"V_String","params":["none"]}]
+						},
+						{
 							"__identifier": "tag",
 							"__type": "String",
 							"__value": "s78",
@@ -1074,6 +1130,14 @@
 							"__tile": null,
 							"defUid": 56,
 							"realEditorValues": [{"id":"V_String","params":["98,20"]},{"id":"V_String","params":["101,20"]}]
+						},
+						{
+							"__identifier": "grade",
+							"__type": "LocalEnum.Grade",
+							"__value": "none",
+							"__tile": null,
+							"defUid": 146,
+							"realEditorValues": [{"id":"V_String","params":["none"]}]
 						},
 						{
 							"__identifier": "tag",

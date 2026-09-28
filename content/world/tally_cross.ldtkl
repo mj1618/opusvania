@@ -79,6 +79,14 @@
 			"realEditorValues": [{"id":"V_Bool","params":[true]}]
 		},
 		{
+			"__identifier": "district",
+			"__type": "String",
+			"__value": null,
+			"__tile": null,
+			"defUid": 175,
+			"realEditorValues": [null]
+		},
+		{
 			"__identifier": "claims",
 			"__type": "Multilines",
 			"__value": null,
@@ -196,6 +204,22 @@
 							"__tile": null,
 							"defUid": 117,
 							"realEditorValues": [{"id":"V_String","params":["The clerk's desk gives the Tally ledger."]}]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": null,
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
+							"realEditorValues": [null]
 						}
 					]
 				},
@@ -228,6 +252,22 @@
 							"__value": null,
 							"__tile": null,
 							"defUid": 117,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": null,
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
 							"realEditorValues": [null]
 						}
 					]
@@ -262,6 +302,22 @@
 							"__tile": null,
 							"defUid": 117,
 							"realEditorValues": [{"id":"V_String","params":["The Board. Beacon. LOT 19 · RING SHOES · DISTRAINT STORE"]}]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": "board",
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [{"id":"V_String","params":["board"]}]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
+							"realEditorValues": [null]
 						}
 					]
 				},
@@ -295,6 +351,22 @@
 							"__tile": null,
 							"defUid": 117,
 							"realEditorValues": [{"id":"V_String","params":["Lock: 12 tiles up. The Receiver's clerk stamps a paper and walks off."]}]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": null,
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
+							"realEditorValues": [null]
 						}
 					]
 				},
@@ -328,6 +400,22 @@
 							"__tile": null,
 							"defUid": 117,
 							"realEditorValues": [{"id":"V_String","params":["Lock: organ-pipe facade."]}]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": null,
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
+							"realEditorValues": [null]
 						}
 					]
 				},
@@ -361,6 +449,22 @@
 							"__tile": null,
 							"defUid": 117,
 							"realEditorValues": [{"id":"V_String","params":["Lock: sealed."]}]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": null,
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
+							"realEditorValues": [null]
 						}
 					]
 				},
@@ -404,6 +508,22 @@
 							"realEditorValues": [{"id":"V_Bool","params":[false]}]
 						},
 						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 152,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "solid",
+							"__type": "Bool",
+							"__value": true,
+							"__tile": null,
+							"defUid": 153,
+							"realEditorValues": [{"id":"V_Bool","params":[true]}]
+						},
+						{
 							"__identifier": "char",
 							"__type": "String",
 							"__value": null,
@@ -442,6 +562,22 @@
 							"__value": null,
 							"__tile": null,
 							"defUid": 117,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "beacon",
+							"__type": "LocalEnum.Beacon",
+							"__value": null,
+							"__tile": null,
+							"defUid": 183,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "depth",
+							"__type": "Float",
+							"__value": null,
+							"__tile": null,
+							"defUid": 184,
 							"realEditorValues": [null]
 						}
 					]
@@ -484,6 +620,22 @@
 							"__tile": null,
 							"defUid": 76,
 							"realEditorValues": [{"id":"V_Bool","params":[false]}]
+						},
+						{
+							"__identifier": "name",
+							"__type": "String",
+							"__value": null,
+							"__tile": null,
+							"defUid": 152,
+							"realEditorValues": [null]
+						},
+						{
+							"__identifier": "solid",
+							"__type": "Bool",
+							"__value": true,
+							"__tile": null,
+							"defUid": 153,
+							"realEditorValues": [{"id":"V_Bool","params":[true]}]
 						},
 						{
 							"__identifier": "char",

@@ -213,11 +213,11 @@ export class BagHud {
   }
 
   /**
-   * `cam` = the world container's offset (world px + cam = unzoomed canvas px); `zoom` = the combat
+   * `cam` = the world container's offset and scale k (world px * k + cam = unzoomed canvas px, k = camera zoom); `zoom` = the combat
    * render zoom (canvas = unzoomed * z + o).
    */
   draw(
-    cam: { x: number; y: number },
+    cam: { x: number; y: number; k?: number },
     zoom: { z: number; ox: number; oy: number } = { z: 1, ox: 0, oy: 0 },
   ): void {
     const s = this.game.state;
@@ -358,7 +358,10 @@ export class BagHud {
       });
     for (const c of this.coins) {
       if (c.age < c.delay) continue;
-      const a0 = { x: (c.x + cam.x) * zoom.z + zoom.ox, y: (c.y + cam.y) * zoom.z + zoom.oy };
+      const a0 = {
+        x: (c.x * (cam.k ?? 1) + cam.x) * zoom.z + zoom.ox,
+        y: (c.y * (cam.k ?? 1) + cam.y) * zoom.z + zoom.oy,
+      };
       const at = (age: number) => {
         const t = Math.max(0, Math.min(1, (age - c.delay) / CBT.coinFrames));
         const u = t * t;
@@ -399,7 +402,10 @@ export class BagHud {
     const pos = (p: Ribbon['from']): { x: number; y: number } =>
       'slot' in p
         ? { x: Lh.slotX + p.slot * (Lh.slot + Lh.slotGap) + Lh.slot / 2, y: Lh.slotY + Lh.slot / 2 }
-        : { x: (p.x + cam.x) * zoom.z + zoom.ox, y: (p.y + cam.y) * zoom.z + zoom.oy };
+        : {
+            x: (p.x * (cam.k ?? 1) + cam.x) * zoom.z + zoom.ox,
+            y: (p.y * (cam.k ?? 1) + cam.y) * zoom.z + zoom.oy,
+          };
     for (const r of this.ribbons) {
       const a0 = pos(r.from);
       const a1 = pos(r.to);

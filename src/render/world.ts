@@ -3,11 +3,11 @@ import type { Game } from '../game';
 import type { SimEvent } from '../sim/events';
 import { tuning } from '../sim/tuning';
 import { getRoom, type Room } from '../sim/world/rooms';
-import { type CameraState, createCamera, stepCamera, VIEW_H, VIEW_W } from './camera/index';
+import { type CameraState, createCamera, stepCamera, translateCamera, VIEW_H, VIEW_W } from './camera/index';
 import { CombatLayer } from './combat';
 import { FX_COLORS, fxTuning, Juice } from './fx';
 import { makeClock } from './gfx/clock';
-import { GfxPipeline } from './gfx/pipeline';
+import { GfxPipeline, snapView } from './gfx/pipeline';
 import { BagHud } from './hud';
 import { drawImpacts } from './juice/draw';
 import { ImpactDirector } from './juice/impact';
@@ -138,11 +138,14 @@ export class WorldRenderer {
   private onStep(events: readonly SimEvent[]): void {
     const s = this.game.state;
     const room = getRoom(s.roomId);
-    this.syncRoom(room);
+    // Arrival through an edge exit: the camera carries on in world space (no rebuild, no fade).
+    const seam = this.camera.edgePending && this.camera.roomId !== s.roomId;
+    this.syncRoom(room, seam);
     this.prevCam = { ...this.camera };
+    if (seam) translateCamera(this.prevCam, -this.camera.edgeDX, -this.camera.edgeDY);
     stepCamera(this.camera, s, room, events);
     const enter = events.find((e) => e.type === 'roomEnter');
-    if (enter) {
+    if (enter && !seam) {
       this.prevCam = { ...this.camera };
       // Edge exits never fade to black (north star §3.3); doors and warps do.
       this.fadeIn = enter.edge ? 0 : render.fadeInFrames;
@@ -158,12 +161,17 @@ export class WorldRenderer {
     this.gfx.step();
   }
 
-  private syncRoom(room: Room): void {
+  private syncRoom(room: Room, seam = false): void {
     if (this.builtRoomVersion === this.game.roomVersion) return;
-    this.buildRoom(room);
+    this.buildRoom(room, seam);
     this.builtRoomVersion = this.game.roomVersion;
-    this.camera = createCamera(this.game.state, room);
-    this.prevCam = { ...this.camera };
+    if (!seam) {
+      const seen = this.camera.shotsSeen;
+      this.camera = createCamera(this.game.state, room);
+      // A door or a load is not a new session: shots already played stay played.
+      this.camera.shotsSeen = seen;
+      this.prevCam = { ...this.camera };
+    }
     this.juice.reset();
     this.impact.reset();
     this.soundViz.reset();
@@ -174,10 +182,10 @@ export class WorldRenderer {
     this.bagHud.reset();
   }
 
-  private buildRoom(room: Room): void {
+  private buildRoom(room: Room, seam: boolean): void {
     const ts = tuning.world.tileSize;
-    // Terrain, lights, backdrop, particles: the gfx pipeline (src/render/gfx).
-    this.gfx.buildRoom(room, this.tiles.clear());
+    // Terrain, neighbour peek, lights, backdrop, particles: the gfx pipeline (src/render/gfx).
+    this.gfx.buildRoom(room, this.tiles, seam);
     for (const c of this.labels.removeChildren()) c.destroy();
     for (const e of room.entities) {
       if (e.kind !== 'door') continue;
@@ -216,15 +224,23 @@ export class WorldRenderer {
 
     const c0 = this.prevCam;
     const c1 = this.camera;
-    // Combat juice: the sprung kick jolts the view along the hit, trauma adds a shake on top.
+    // Interpolate the view centre and the zoom, then derive the top-left at that zoom. Combat
+    // juice: the sprung kick jolts the view along the hit, trauma adds a shake on top.
     const im = this.impact;
     const sh = im.shake();
-    const camX = lerp(c0.x + c0.shakeX, c1.x + c1.shakeX, alpha) - im.kx + sh.x;
-    const camY = lerp(c0.y + c0.shakeY, c1.y + c1.shakeY, alpha) - im.ky + sh.y;
-    const cx = Math.round(camX);
-    const cy = Math.round(camY);
+    const zoom = lerp(c0.zoom, c1.zoom, alpha);
+    const mx =
+      lerp(c0.x + c0.shakeX + VIEW_W / (2 * c0.zoom), c1.x + c1.shakeX + VIEW_W / (2 * c1.zoom), alpha) -
+      im.kx +
+      sh.x;
+    const my =
+      lerp(c0.y + c0.shakeY + VIEW_H / (2 * c0.zoom), c1.y + c1.shakeY + VIEW_H / (2 * c1.zoom), alpha) -
+      im.ky +
+      sh.y;
+    const view = snapView(mx - VIEW_W / (2 * zoom), my - VIEW_H / (2 * zoom), zoom);
     // gfx.draw sets this too; set it first so the bag HUD and rects() see this frame's camera.
-    this.world.position.set(-cx, -cy);
+    this.world.position.set(-view.sx, -view.sy);
+    this.world.scale.set(zoom);
 
     this.drawPlayer(px, py, a);
     this.sig.draw(alpha, { x: px, y: py });
@@ -234,9 +250,9 @@ export class WorldRenderer {
     this.combatFront.clear();
     this.combatGlow.clear();
     this.combat.draw(this.combatFront, this.combatGlow);
-    const zoom = this.composeZoom(alpha, cx, cy, px + p.w / 2, py + p.h / 2);
-    this.lastZoom = zoom;
-    this.bagHud.draw(this.world.position, zoom);
+    const renderZoom = this.composeZoom(alpha, view.sx, view.sy, zoom, px + p.w / 2, py + p.h / 2);
+    this.lastZoom = renderZoom;
+    this.bagHud.draw({ x: -view.sx, y: -view.sy, k: zoom }, renderZoom);
     this.drawFx();
     this.juiceFront.clear();
     this.juiceGlow.clear();
@@ -256,8 +272,9 @@ export class WorldRenderer {
     const trauma = Math.max(c0.trauma, c1.trauma);
     this.gfx.draw({
       clock: makeClock(state.frame, alpha, this.gfx.framesInRoom),
-      camX: cx,
-      camY: cy,
+      camX: view.x,
+      camY: view.y,
+      camZoom: zoom,
       player: {
         x: px + p.w / 2,
         y: py + p.h * 0.4,
@@ -272,7 +289,7 @@ export class WorldRenderer {
       impact: impactOn,
       impactColor: im.impactColor,
       drama: im.drama(),
-      zoom,
+      zoom: renderZoom,
     });
   }
 
@@ -285,9 +302,14 @@ export class WorldRenderer {
     alpha: number,
     cx: number,
     cy: number,
-    kidX: number,
-    kidY: number,
+    k: number,
+    kidWX: number,
+    kidWY: number,
   ): { z: number; ox: number; oy: number } {
+    // (cx, cy) is the world layers' screen offset and k the camera zoom: world px * k - c = the
+    // unzoomed screen px this render zoom works in.
+    const kidX = kidWX * k;
+    const kidY = kidWY * k;
     const im = this.impact;
     const z1 = lerp(im.prevCzoom, im.czoom, alpha);
     const z2 = lerp(im.prevZoom, im.zoom, alpha);
@@ -300,11 +322,11 @@ export class WorldRenderer {
     };
     const ksx = kidX - cx;
     const ksy = kidY - cy;
-    const f1x = clampF(im.cfx - cx, ksx, VIEW_W);
-    const f1y = clampF(im.cfy - cy, ksy, VIEW_H);
+    const f1x = clampF(im.cfx * k - cx, ksx, VIEW_W);
+    const f1y = clampF(im.cfy * k - cy, ksy, VIEW_H);
     // The punch focus, as it sits after the combat zoom.
-    const f2x = Math.max(0, Math.min(VIEW_W, f1x + (im.focusX - cx - f1x) * z1));
-    const f2y = Math.max(0, Math.min(VIEW_H, f1y + (im.focusY - cy - f1y) * z1));
+    const f2x = Math.max(0, Math.min(VIEW_W, f1x + (im.focusX * k - cx - f1x) * z1));
+    const f2y = Math.max(0, Math.min(VIEW_H, f1y + (im.focusY * k - cy - f1y) * z1));
     return {
       z: z1 * z2,
       ox: f1x * z2 * (1 - z1) + f2x * (1 - z2),
@@ -360,6 +382,7 @@ export class WorldRenderer {
   rects(): import('../debug/api').RenderRect[] {
     const ox = this.world.position.x;
     const oy = this.world.position.y;
+    const k = this.world.scale.x;
     // Through the render zoom (identity unless a punch or slow-mo is on).
     const { z, ox: zx, oy: zy } = this.lastZoom.z > 1.0005 ? this.lastZoom : { z: 1, ox: 0, oy: 0 };
     const out = this.sig
@@ -367,10 +390,10 @@ export class WorldRenderer {
       .filter((r) => r.kind !== 'plate')
       .map((r) => ({
         ...r,
-        x: Math.round((r.x + ox) * z + zx),
-        y: Math.round((r.y + oy) * z + zy),
-        w: Math.round(r.w * z),
-        h: Math.round(r.h * z),
+        x: Math.round((r.x * k + ox) * z + zx),
+        y: Math.round((r.y * k + oy) * z + zy),
+        w: Math.round(r.w * k * z),
+        h: Math.round(r.h * k * z),
       }));
     return [...out, ...this.bagHud.slotRects().map((r) => ({ ...r }))];
   }
@@ -401,6 +424,7 @@ export class WorldRenderer {
     const s = this.game.state;
     const room = getRoom(s.roomId);
     let fade = 0;
+    // Edge exits never fade (north-star §3.3: <= 8 f, no black); doors and deaths do.
     if (s.transition && !s.transition.offset)
       fade = 1 - (s.transition.timer - alpha) / tuning.world.transitionFrames;
     else if (this.fadeIn > 0) fade = (this.fadeIn - alpha) / render.fadeInFrames;
