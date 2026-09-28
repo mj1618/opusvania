@@ -34,6 +34,7 @@ export class EventRouter {
   readonly log: RoutedEvent[] = [];
   private wallSliding = false;
   private frame = 0;
+  private roomId: string | null = null;
 
   constructor(
     private readonly out: AudioOut,
@@ -45,6 +46,7 @@ export class EventRouter {
     const ev = this.sfx.events;
     switch (e.type) {
       case 'roomEnter':
+        this.roomId = e.roomId;
         this.out.setRoom(e.roomId);
         this.wallSliding = false;
         this.out.loopGain(ev.wallSlide.loop, 0);
@@ -73,9 +75,17 @@ export class EventRouter {
     }
   }
 
-  /** Per render frame: the wall-slide loop follows slide speed while a slide is open. */
+  /**
+   * Per render frame: the wall-slide loop follows slide speed while a slide is open. Also follows
+   * room changes that bypass events (restore(), replay/tape playback replace the whole state).
+   */
   update(s: RouterState): void {
     this.frame = s.frame;
+    if (s.roomId !== this.roomId) {
+      this.roomId = s.roomId;
+      this.wallSliding = false;
+      this.out.setRoom(s.roomId);
+    }
     const w = this.sfx.events.wallSlide;
     const vy = s.player.vy;
     if (this.wallSliding && vy > 0) {

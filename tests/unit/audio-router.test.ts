@@ -79,6 +79,15 @@ describe('EventRouter: events', () => {
     r.update(state(3, 5));
     expect(f.loops.map((l) => l.gain)).toEqual([0, 1, w.minGain, 0, 0]);
   });
+
+  it('follows room changes made without events (restore, tape playback)', () => {
+    const f = fakeOut();
+    const r = new EventRouter(f.out, sfx);
+    r.update(state(0, 0));
+    r.update(state(1, 0));
+    r.update({ ...state(2, 0), roomId: 'hub' });
+    expect(f.rooms).toEqual(['gym-01', 'hub']);
+  });
 });
 
 describe('EventRouter with the real sim', () => {

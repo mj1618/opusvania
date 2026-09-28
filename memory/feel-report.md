@@ -4,7 +4,7 @@ Measures movement feel in the headless sim and compares it with the Celeste–Ho
 movement-spec §3.4. Writes `progress/feel/<date>-<preset>.{md,json}` (`--no-write` to only print).
 
 ```
-npm run feel:report                                  # default tuning
+npm run feel:report                                  # opus preset
 npm run feel:report -- --all-presets                 # every preset in the controller's PRESETS
 npm run feel:report -- --tuning '{"jump":{"fallMult":1.4}}' --no-write
 npm run feel:report -- --compare progress/feel/<older>.json     # adds a Previous column
@@ -24,8 +24,8 @@ npm run feel:report -- --compare progress/feel/<older>.json     # adds a Previou
     presses that succeed. `gap-N`: pit of floor(max flat jump) − 1 tiles; `ledge-N`: 2-tile pit then a
     floor(max jump height)-tile ledge. Falling below the start floor = fail. Assists off = every assist
     in `ASSISTS` set false via the adapter.
-- Results on the L2 spec controller (pre-merge copy): `opus` matches the spec table on every metric
+- Results on the merged L2 tree (docs/reports/L2-feel.md): `opus` matches the spec table on every metric
   (jump 4.31 tiles / 0.43 s, air 0.85 s, dwell 18 f, fall/rise 1.73, run 9 tiles/s in 3 f, dash 4.5 tiles);
-  only buffer 100 ms is OUT (by design). `celeste` matches Celeste (fall/rise 3.0, jump 3.56 vs 3.35).
-  `hk` jumps too high (6.39 tiles vs HK's 5.6) and its 2-frame coyote/buffer read 33 ms vs HK's 40 ms.
-  Assists widen the gap window 10 → 19 f and the ledge window 21 → 32 f on `opus`.
+  only buffer 100 ms is OUT (by design). `celeste`: only frames-to-full-run (6 vs 5) is OUT. `hk` (after
+  its sustain/coyote fix) has nothing OUT: jump 5.56 tiles / 0.50 s. Assists widen the gap window
+  10 → 19 f and the ledge window 21 → 32 f on `opus`.
