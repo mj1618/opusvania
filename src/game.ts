@@ -25,6 +25,11 @@ export class Game {
   private pendingEvents: SimEvent[] = [];
   /** Bumps whenever the room changes, so render can rebuild and skip interpolation. */
   roomVersion = 0;
+  /**
+   * Called after every sim step with that step's events (render steps the camera and juice here,
+   * once per sim frame, so they stay deterministic). Listeners must not touch the sim.
+   */
+  readonly afterStep = new Set<(events: readonly SimEvent[]) => void>();
 
   constructor(
     readonly tuning: Tuning,
@@ -52,7 +57,9 @@ export class Game {
       this.playback.cursor++;
       this.applyPlaybackOps();
     }
+    const stepEvents = this.pendingEvents;
     this.flushEvents();
+    for (const fn of this.afterStep) fn(stepEvents);
   }
 
   steps(n: number): void {
