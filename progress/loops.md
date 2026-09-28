@@ -147,4 +147,37 @@ Source of truth for loop state. Newest loop at the bottom. Format per STUDIO.md 
 
 **What metrics can't see.** Whether our numbers capture *why* those spaces feel good (composition, sightlines, reveals). The teardowns must include qualitative "why it works" analysis, not only numbers.
 
+**Status.** Done.
+
+### L5 report
+- **Teardowns** (`docs/research/`) of HK Crossroads (45 rooms, 248 screens², median room 2.3×1.8 screens, camera scale the same as ours), Greenpath, Ori Sunken Glades (21 player heights per screen, a quarter of the floor flat, 14–39 s flow chains) and Ori WotW Marsh and Wellspring. Plus a toolchain baseline: all our rooms together are about one HK area, with no geography.
+- **North star** (`docs/design/north-star.md`), revised after a critique.
+  - HK camera scale with zoom zones.
+  - Square collision with an organic skin and 3 floor slopes.
+  - Regions authored section-first.
+  - Bag carries across rooms within a district.
+  - A fun-first 7-room proof.
+- **Level toolchain step 1.** LDtk, brushes, section import, compiler, world renderer, edge exits, draft rooms.
+- **User feedback: "super boring and basic".** Fun is now the top criterion (`STUDIO.md` §1d). Started the Kid Tallow rig and the impact/enemy-personality juice pass, both in worktrees.
+- **Decision: move on** to building the proof.
+
+---
+
+## L6: The 7-room fun proof (started 2026-09-28)
+
+**Goal.** The most fun 8 minutes we can make: T02, T03, T04, T05, T09, C01 and C02 per `docs/design/north-star.md`, played as one continuous route. It includes Kid Tallow's new rig and the new juice.
+
+**Streams.**
+- **A: World owner** (main tree; `content/world*`, rooms). Section drawing, then the 7 rooms, then entity placement and fun beats.
+- **B: Sim features** (worktree). Floor slopes plus ramp brushes, the carry rule, Gull snatch-and-flee, brass-ball drop, source-powered lights, text barks and Board events, edge transitions of 8 frames or less with no fade, and waypoints.
+- **C: Camera** (worktree). Neighbour peek and bleed, no re-snap at seams, zoom zones, declared shots, beacons drawn in neighbouring rooms.
+- **Also finishing** in worktrees: the Fun rig and Fun juice streams.
+
+**Acceptance (fun first).**
+- A blind runner and a critic answer the fun-review questions, and nothing is called "boring".
+- The user gets a 1–2 minute video.
+- The north star §2.3 guards pass: strata, beacons, seams, orientation.
+
+**What metrics can't see.** Whether it's actually fun. That's judged by the blind runner, the critic, and the user.
+
 **Status.** In progress.
