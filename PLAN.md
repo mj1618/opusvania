@@ -49,44 +49,21 @@ This document covers the vision, the research behind our decisions, the technica
 
 ---
 
-## 2. Game concept brainstorm
+## 2. Game concept
 
-The repo is called *Opus*vania, so the recommendation leans into music. A single strong theme also gives AI generation a coherent style anchor. The name and the concept are both open until the user approves.
+**Current direction (L1, provisional): *Tallage*.** Pitched as DISTRAINT, but that name belongs to a 2015 game. "Opusvania" stays as the project codename.
 
-### Recommended: *The Unfinished Opus*
+It was chosen from 12 concepts generated with randomised seeds (random Wikipedia articles, dictionary words, forced lenses, trope bans; see `tools/ideation/seeds.mjs`, `docs/concepts/`). Two independent critics on different models both ranked it first.
 
-A vast underground concert-city has gone silent. Its great symphony was never finished, and without it the world is crumbling into discord.
-
-You play a small, lantern-eyed **Tuner**: a moth-like silhouette whose body glows with the note it carries. You descend through the city to recover the lost **Movements** of the Opus.
-
-- **Biomes are movements of the symphony.** Each has its own lead instrument, palette and tempo, following Christopher Larkin's per-area-instrument approach.
-  - *Overture Halls*: a strings hub in warm amber.
-  - *Drowned Nave*: an organ biome with a cold blue-green palette and flooded pipes.
-  - *Glass Choir*: bell-like crystal caverns in violet.
-  - *Percussion Foundry*: drums and furnaces in orange-black.
-  - *Hollow Rest*: silence, in white and grey ash.
-  - And more later.
-- **Abilities are musical.** Each works as a movement tool, a combat tool, and a key for world gates.
-  - *Echo*: a sonar pulse that reveals hidden walls, lights the local map, and stuns small enemies.
-  - *Tempo Dash*: a dash that works like Hollow Knight's Mothwing Cloak.
-  - *Resonance*: shatters crystal gates and can be charged into an attack.
-  - *Harmony*: a double jump, drawn as two notes.
-  - *Sustain*: wall cling and glide.
-  - *Fermata*: a short time-stop used for puzzle platforming.
-- **Benches become "Rests".** They refill health, save the game, and update the map, like Hollow Knight benches. The map is inked by a wandering **Copyist** NPC, our version of Cornifer.
-- **The resource is Resonance.** Hitting enemies builds it, and you spend it on healing or on spells, the same trade-off as Hollow Knight's Soul.
-- **Why this suits AI production:**
-  - Silhouette characters with emissive accents hide small inconsistencies from generated art and cutout rigs.
-  - Glow, light and particles are exactly what shaders and code do well.
-  - Musical abilities connect sound design directly to the mechanics.
-
-### Alternatives considered
-
-- **Mycelial underworld.** A fungal network where you spread spores to create platforms. Very atmospheric, but too close to Hollow Knight's Fungal Wastes and Greenpath.
-- **Clockwork reliquary.** A stopped clock-world where you rewind machinery. Strong puzzle hooks, but mechanical art is harder to make feel organic with AI.
-- **Drowned lighthouse archipelago.** Light versus dark, with tides raising and lowering water. Beautiful, but it overlaps heavily with Ori's light and forest identity.
-
----
+- **Premise.** In the feverish boomtown of Tallage, a thing's sound is its title deed. Kid Tallow, a disgraced featherweight turned bailiff, works her way up the chain of creditors to redistrain her own championship belt.
+- **Signature verbs.**
+  - **Seize**: a jab-grab that strips a sound from an object or enemy and un-makes what it held up.
+  - **Levy**: throw a carried sound. Its noise colour decides what it becomes: brown is heavy, pink is springy, violet is light and fast. White static can't be seized.
+  - **Weigh-in**: bag weight sets your weight class, and your weight class changes your moveset.
+- **Why it fits our pillars.** The signature verb *is* a hit, so it gets the full combat-feel stack. Noise colours are procedural Web Audio, and ghosted and humming outlines are code-drawn, so it suits our no-art constraint.
+- **Main risk.** It could slow into pick-up-and-place puzzling. The L3 greybox experiment has kill criteria for this (`docs/concepts/critique-L1-A.md` §2).
+- **Fallbacks, in order:** THE DISSOLUTION ROLLS, ONSETTER, UREDO. The ideas bank is `docs/ideas.md`.
+- **Superseded:** *The Unfinished Opus*, a music-themed default idea. Dropped for being too close to what models produce by default.
 
 ## 3. Research summary
 
@@ -478,13 +455,14 @@ Each phase has exit criteria. We do not move on until they are met. The phases a
 - **Exit criteria:** `npm run check` is green in CI. A Playwright test boots the game, steps 60 frames and reads the state back.
 
 ### Phase 1: Movement greybox (the most important phase)
-- Integer AABB physics, tile collision from a hardcoded test map, then from LDtk.
+- Integer AABB physics and tile collision. Gym rooms use an ASCII-in-JSON room schema; LDtk moves to Phase 3 (the schema is designed to convert cheaply). Full spec: `docs/design/movement-spec.md`.
 - Run, variable jump, all Celeste assists, fast-fall, and wall slide and wall jump. Every constant goes in `tuning.ts` with an A/B toggle.
 - Camera: room bounds, look-ahead, platform snapping, look up and down, shake.
 - Dash, double jump and pogo, built as ability modules behind flags.
 - A greybox "gym" of 10 to 15 rooms that tests every movement tech. Rooms are simple coloured rectangles, but with placeholder squash and stretch, dust particles and jsfxr sounds.
 - **Exit criteria:**
-  - The human plays the gym with a gamepad and keyboard and signs off that it feels as good as or better than Hollow Knight or Celeste.
+  - Objective gates pass: exact frame and pixel tests, the bot proves every gym room completable, and feel metrics fall inside the Celeste–Hollow Knight range. This lets the project move on *provisionally*.
+  - The human plays the gym with a gamepad and keyboard and signs off that it feels as good as or better than Hollow Knight or Celeste. This sign-off is queued in the inbox, not waited on.
   - Replays cover every movement tech.
   - Input-to-response time is under 100ms.
 
@@ -567,16 +545,14 @@ Each biome goes through the same stages: greybox → validator → playtest → 
 
 ---
 
-## 9. Open questions for the user
+## 9. Questions answered by the user (2026-09-28)
 
-1. **Concept.** Should we go with *The Unfinished Opus*, or explore a different premise?
-2. **API budget.** Which paid services can we use? Candidates are Scenario, fal or Replicate, Gemini, OpenAI images, ElevenLabs, and Kling or Veo. What is the monthly budget?
-3. **Platforms.** Desktop browser only at first, or do we need mobile and touch support from the slice onward?
-4. **Spine.** Are we willing to buy a license if the cutout rigs hit a ceiling?
-5. **Distribution goal.** Personal or portfolio, itch.io, or eventually Steam? This affects the legal and polish bar.
-6. **Human playtest cadence.** How often can the user play builds? Feel work depends on it.
-
----
+1. **Concept:** the orchestrator decides, but it must be unique. See §2.
+2. **API budget:** no real artwork or paid generation APIs for now. Everything else proceeds with code-drawn visuals and procedural audio. Phases 4 and 5 art work is on hold.
+3. **Platforms:** desktop browser first (orchestrator default).
+4. **Spine:** not needed while there's no artwork.
+5. **Distribution:** the repo is public, with builds on GitHub Pages at https://mj1618.github.io/opusvania/.
+6. **Playtest cadence:** as often as the user can. Never block on it. See `STUDIO.md` §1b.
 
 ## Appendix: sources
 
@@ -626,3 +602,17 @@ Each biome goes through the same stages: greybox → validator → playtest → 
 - ElevenLabs sound effects: https://elevenlabs.io/docs/api-reference/text-to-sound-effects/convert
 - US Copyright Office AI report, Part 2: https://www.copyright.gov/ai/Copyright-and-Artificial-Intelligence-Part-2-Copyrightability-Report.pdf
 - Steam's AI disclosure update: https://www.pcgamer.com/software/ai/steam-updates-ai-disclosure-form-to-specify-that-its-focused-on-ai-generated-content-that-is-consumed-by-players-not-efficiency-tools-used-behind-the-scenes/
+
+---
+
+## Plan revisions
+
+- **2026-09-28, L1.**
+  - Phase 0 is done: harness, `window.__game`, replays, clip tool, CI, and the Pages deploy.
+  - The concept is replaced by *Tallage* (§2), chosen through randomised ideation.
+  - Movement spec written. Changes it made:
+    - LDtk is deferred to Phase 3.
+    - Jump values are derived from a target jump shape, not Celeste ×8. Celeste ×8 and Hollow Knight survive as presets.
+    - Phase 1 gets objective exit gates, and the human sign-off is queued.
+  - Art is on hold per the user. The build order is now: movement greybox (L2), then the Tallage signature-mechanic greybox experiment (L3), then combat.
+  - Research note: Hollow Knight's coyote and buffer windows are only about 40 ms, with no corner correction. We default to Celeste's more generous ~100 ms.
