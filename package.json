@@ -15,7 +15,7 @@
     "format": "biome check --write .",
     "test": "vitest run",
     "e2e": "playwright test",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run e2e",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run progression -- --check --quiet && npm run e2e",
     "clip": "tsx tools/clip.ts",
     "sim": "tsx tools/sim.ts",
     "bot": "tsx tools/bot/cli.ts",
@@ -26,7 +26,8 @@
     "audio:render": "tsx tools/audio-render.ts",
     "fuzz": "tsx tools/fuzz.ts",
     "l3:verdict": "tsx tools/l3-verdict/cli.ts",
-    "policy": "tsx tools/bot/policies/cli.ts"
+    "policy": "tsx tools/bot/policies/cli.ts",
+    "progression": "tsx tools/progression/cli.ts"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",

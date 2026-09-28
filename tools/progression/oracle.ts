@@ -16,9 +16,17 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import type { SearchPool } from './pool';
 import { type Job, replayReaches } from './job';
-import { type Ability, abil, abilKey, isSubset, layout, staticallyUnreachable, type WorldGraph } from './world';
+import type { SearchPool } from './pool';
+import {
+  type Ability,
+  abil,
+  abilKey,
+  isSubset,
+  layout,
+  staticallyUnreachable,
+  type WorldGraph,
+} from './world';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 
@@ -136,13 +144,12 @@ function loadTapes(graph: WorldGraph): TapeEvidence[] {
       continue;
     }
     if (t.kind !== 'tape' || typeof t.room !== 'string' || typeof t.inputs !== 'string') continue;
-    if (t.tuning || t.assists || t.start || (t.preset && t.preset !== 'opus' && t.preset !== 'default')) continue;
+    if (t.tuning || t.assists || t.start || (t.preset && t.preset !== 'opus' && t.preset !== 'default'))
+      continue;
     const room = graph.rooms[t.room];
     if (!room) continue;
     const ab = t.abilities as Record<string, boolean> | undefined;
-    const abilities = ab
-      ? abil((Object.keys(ab) as Ability[]).filter((k) => ab[k]))
-      : [...room.grant];
+    const abilities = ab ? abil((Object.keys(ab) as Ability[]).filter((k) => ab[k])) : [...room.grant];
     out.push({
       file: `tests/replays/${n}`,
       room: t.room,
@@ -360,7 +367,9 @@ export class Oracle {
     const entries: Record<string, Rec[]> = {};
     for (const k of Object.keys(this.cache.entries).sort()) {
       if (!live.has(k.split('|')[0] as string)) continue;
-      const recs = (this.cache.entries[k] ?? []).slice().sort((a, b) => a.abilities.localeCompare(b.abilities));
+      const recs = (this.cache.entries[k] ?? [])
+        .slice()
+        .sort((a, b) => a.abilities.localeCompare(b.abilities));
       if (recs.length) entries[k] = recs;
     }
     const file: CacheFile = {

@@ -17,7 +17,8 @@ export function abil(list: Iterable<Ability>): Ability[] {
   return ALL.filter((a) => s.has(a));
 }
 export const abilKey = (a: readonly Ability[]): string => (a.length ? a.join('+') : 'none');
-export const isSubset = (a: readonly Ability[], b: readonly Ability[]): boolean => a.every((x) => b.includes(x));
+export const isSubset = (a: readonly Ability[], b: readonly Ability[]): boolean =>
+  a.every((x) => b.includes(x));
 
 export interface ExitNode {
   /** `room/exit:<char>` or `room/G`. */
@@ -63,6 +64,10 @@ export interface GateNode {
   target: string;
   from: string;
   opensOn?: string;
+  /** world-design §3: sealed barrier or reach (height/gap/timing) gate. */
+  hold: 'sealed' | 'reach';
+  /** G8: holds only against the kit at the room's earliest visit. */
+  teachGate: boolean;
   note?: string;
   /** Why the target is what it is, or why the gate could not be audited. */
   derived?: string;
@@ -87,6 +92,8 @@ export interface RoomNode {
   goalOnly?: { tx: number; ty: number };
   optionalGoal?: string;
   hazards: { spikes: number; orbs: number; enemies: string[]; sources: number };
+  /** Seizable colours (object sources + enemy voices): part of the kit inside this room (W1/W2). */
+  palette: string[];
 }
 
 export interface Link {
@@ -164,9 +171,11 @@ export function extractWorld(opts: { start?: string; rooms?: string[] } = {}): W
           tx: e.tx,
           ty: e.ty,
         });
-      } else if (e.kind === 'rest') rests.push({ id: `${id}/rest:${e.id ?? e.char}`, room: id, target: tileTarget(e.tx, e.ty) });
+      } else if (e.kind === 'rest')
+        rests.push({ id: `${id}/rest:${e.id ?? e.char}`, room: id, target: tileTarget(e.tx, e.ty) });
     }
-    if (l.abilities.length > 0) pickups.unshift({ id: `grant:${id}`, room: id, grants: [...l.abilities], implicit: true });
+    if (l.abilities.length > 0)
+      pickups.unshift({ id: `grant:${id}`, room: id, grants: [...l.abilities], implicit: true });
     let spikes = 0;
     let orbs = 0;
     for (let ty = 0; ty < l.height; ty++)
@@ -190,6 +199,7 @@ export function extractWorld(opts: { start?: string; rooms?: string[] } = {}): W
       ...(goalOnly ? { goalOnly } : {}),
       ...(optionalGoal ? { optionalGoal } : {}),
       hazards: { spikes, orbs, enemies: l.enemies, sources: l.sources.length },
+      palette: [...l.palette],
     };
   }
 
@@ -212,7 +222,8 @@ export function extractWorld(opts: { start?: string; rooms?: string[] } = {}): W
   }
   if (!rooms[start]) errors.push(`start room "${start}" does not exist`);
   for (const r of Object.values(rooms)) {
-    if (r.id !== start && !links.some((k) => k.to === r.id)) warnings.push(`${r.id}: no link leads here (orphan)`);
+    if (r.id !== start && !links.some((k) => k.to === r.id))
+      warnings.push(`${r.id}: no link leads here (orphan)`);
     if (r.exits.length === 0) warnings.push(`${r.id}: no exits (dead end)`);
     for (const g of r.gates) if (g.problem) warnings.push(`${g.id}: ${g.problem}`);
   }
@@ -240,7 +251,8 @@ export function blockers(l: RoomLayout, abilities: readonly Ability[], openGates
   for (const g of l.gates) {
     const open = openGates || (g.opensOn === 'plate' ? plateOpenable : true);
     if (open) continue;
-    for (let i = 0; i < g.tiles.length; i += 2) out[(g.tiles[i + 1] as number) * w + (g.tiles[i] as number)] = 1;
+    for (let i = 0; i < g.tiles.length; i += 2)
+      out[(g.tiles[i + 1] as number) * w + (g.tiles[i] as number)] = 1;
   }
   for (const s of l.sources) {
     if (has('seize') && s.colour !== 'white') continue;
@@ -278,7 +290,10 @@ export function flood(l: RoomLayout, block: Uint8Array, tx: number, ty: number):
 }
 
 /** Tile rect (inclusive tile coords) a bot target covers, or undefined for unknown names. */
-export function targetTiles(l: RoomLayout, target: string): { x0: number; y0: number; x1: number; y1: number } | undefined {
+export function targetTiles(
+  l: RoomLayout,
+  target: string,
+): { x0: number; y0: number; x1: number; y1: number } | undefined {
   const ts = l.tileSize;
   const tm = /^tile:(-?\d+),(-?\d+)$/.exec(target);
   if (tm) return { x0: Number(tm[1]), y0: Number(tm[2]), x1: Number(tm[1]), y1: Number(tm[2]) };
@@ -346,6 +361,8 @@ function extractGates(l: RoomLayout): GateNode[] {
       target: '',
       from: 'default',
       opensOn: g.opensOn,
+      hold: g.hold,
+      teachGate: false,
     };
     if (!sp) {
       node.problem = 'room has no default spawn';
@@ -356,7 +373,8 @@ function extractGates(l: RoomLayout): GateNode[] {
     const block = blockers(l, ALL, true);
     const w = l.width;
     const gateSet = new Set<number>();
-    for (let i = 0; i < g.tiles.length; i += 2) gateSet.add((g.tiles[i + 1] as number) * w + (g.tiles[i] as number));
+    for (let i = 0; i < g.tiles.length; i += 2)
+      gateSet.add((g.tiles[i + 1] as number) * w + (g.tiles[i] as number));
     for (const i of gateSet) block[i] = 1;
     const near = flood(l, block, sp.tx, sp.ty);
     const far: number[] = [];
@@ -375,7 +393,8 @@ function extractGates(l: RoomLayout): GateNode[] {
       }
     }
     if (far.length === 0) {
-      node.problem = 'the gate does not cut anything off from the spawn (nothing behind it, or a way around it)';
+      node.problem =
+        'the gate does not cut anything off from the spawn (nothing behind it, or a way around it)';
       out.push(node);
       continue;
     }
@@ -403,6 +422,8 @@ function extractGates(l: RoomLayout): GateNode[] {
       requires: [...k.requires],
       target: k.target,
       from: k.from ?? 'default',
+      hold: k.hold,
+      teachGate: k.teachGate,
       ...(k.note ? { note: k.note } : {}),
     };
     if (!targetTiles(l, k.target)) node.problem = `unknown target "${k.target}"`;

@@ -6,8 +6,9 @@
  *   - `gym` semantics (what the sim does today): entering a room SETS the abilities to the room's.
  * Because abilities only grow along a path, the reachable state space is small (one ability set per
  * pickup order). From the explored states it derives: reachable rooms/exits/pickups (and the
- * smallest kits that reach each room), softlocks (reachable states with no way back to the start
- * room or a Rest) and, given an intended pickup order, sequence breaks.
+ * smallest kits that reach each room) and softlocks (reachable states with no way back to the start
+ * room or a Rest). Sequence breaks come from comparing those kits with the design graph
+ * (intended.ts#diffDesign).
  */
 import type { Answer, Query, Verdict } from './oracle';
 import { type Ability, abil, abilKey, isSubset, type RoomNode, type WorldGraph } from './world';
@@ -80,6 +81,8 @@ export interface SolveOptions {
   semantics: Semantics;
   /** Pickup ids that don't exist for this run (sequence-break analysis). */
   disabled?: ReadonlySet<string>;
+  /** Abilities removed from the game (every grant), for G7 "kit without key" (world-design §3.2). */
+  strip?: readonly Ability[];
   budget?: number;
 }
 
@@ -113,12 +116,14 @@ export async function solve(graph: WorldGraph, ask: Ask, opts: SolveOptions): Pr
     for (const p of r.pickups) if (!disabled.has(p.id)) pickups[p.id] = blank();
   }
 
+  const strip = opts.strip ?? [];
+  const grantsOf = (p: { grants: Ability[] }) => p.grants.filter((a) => !strip.includes(a));
   const implicit = (r: RoomNode) => r.pickups.find((p) => p.implicit && !disabled.has(p.id));
   /** Abilities on arriving in a room. */
   const arrive = (a: Ability[], r: RoomNode): Ability[] => {
     const g = implicit(r);
-    if (sem === 'gym') return abil(g?.grants ?? []);
-    return g ? abil([...a, ...g.grants]) : a;
+    if (sem === 'gym') return abil(g ? grantsOf(g) : []);
+    return g ? abil([...a, ...grantsOf(g)]) : a;
   };
   const addState = (room: string, at: string, a: Ability[], parent?: StateNode['parent']): number => {
     const key = `${room}|${at}|${abilKey(a)}`;
@@ -204,8 +209,8 @@ export async function solve(graph: WorldGraph, ask: Ask, opts: SolveOptions): Pr
         to = addStateNew(tr.id, `spawn:${x.toSpawn}`, arrive(s.abilities, tr), m.node, m.state);
       } else if (m.kind === 'pickup') {
         const p = graph.rooms[s.room]?.pickups.find((q) => q.id === m.node);
-        if (!p || isSubset(p.grants, s.abilities)) return;
-        to = addStateNew(s.room, `pickup:${p.id}`, abil([...s.abilities, ...p.grants]), m.node, m.state);
+        if (!p || isSubset(grantsOf(p), s.abilities)) return;
+        to = addStateNew(s.room, `pickup:${p.id}`, abil([...s.abilities, ...grantsOf(p)]), m.node, m.state);
       }
       if (to !== undefined) edges.push({ from: m.state, to, via: m.node });
     });
@@ -247,7 +252,14 @@ export async function solve(graph: WorldGraph, ask: Ask, opts: SolveOptions): Pr
           st.push(n);
         }
     }
-    softlocks.push({ state: s.id, room: s.room, at: s.at, abilities: s.abilities, path: pathTo(states, s.id), proven });
+    softlocks.push({
+      state: s.id,
+      room: s.room,
+      at: s.at,
+      abilities: s.abilities,
+      path: pathTo(states, s.id),
+      proven,
+    });
   }
   return {
     semantics: sem,
@@ -279,44 +291,4 @@ export function pathTo(states: readonly StateNode[], id: number): string[] {
   const out: string[] = [];
   for (let s = states[id]; s?.parent; s = states[s.parent.state]) out.push(s.parent.via);
   return out.reverse();
-}
-
-export interface SequenceBreak {
-  pickup: string;
-  /** An intended-earlier pickup it can be reached without. */
-  without: string;
-  /** Listed in the intended graph's `allowedBreaks`. */
-  allowed: boolean;
-  evidence?: string[];
-}
-
-/**
- * Sequence breaks against an intended pickup order: pickup P (position i) is a break when it is still
- * reachable with an earlier pickup Q (position j < i) removed from the world.
- */
-export async function sequenceBreaks(
-  graph: WorldGraph,
-  ask: Ask,
-  order: readonly string[],
-  allowed: readonly { pickup: string; before: string }[],
-  opts: SolveOptions,
-): Promise<SequenceBreak[]> {
-  const out: SequenceBreak[] = [];
-  for (let j = 0; j < order.length - 1; j++) {
-    const q = order[j] as string;
-    const sol = await solve(graph, ask, { ...opts, disabled: new Set([...(opts.disabled ?? []), q]) });
-    for (let i = j + 1; i < order.length; i++) {
-      const p = order[i] as string;
-      const pr = sol.pickups[p];
-      if (!pr?.reached) continue;
-      const ev = pr.evidence ? pathTo(sol.states, pr.evidence.state) : undefined;
-      out.push({
-        pickup: p,
-        without: q,
-        allowed: allowed.some((a) => a.pickup === p && a.before === q),
-        ...(ev ? { evidence: [...ev, p] } : {}),
-      });
-    }
-  }
-  return out;
 }

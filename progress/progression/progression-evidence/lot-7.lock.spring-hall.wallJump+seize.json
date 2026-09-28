@@ -1,0 +1,41 @@
+{
+  "kind": "tape",
+  "name": "lot-7.lock.spring-hall.wallJump+seize",
+  "inputs": "R+J8 R4 R+J4 R12 R+J8 R4 R+J4 R+S4 .4 R8 R+J20 R4 .4 R+J20 R8 R+J4 J4 R+J20 R4 J4 R+J4 R10",
+  "expect": {
+    "target": "rect:1536,512,64,256",
+    "maxDeaths": 0
+  },
+  "source": "progression",
+  "room": "lot-7",
+  "spawn": "default",
+  "seed": 1,
+  "abilities": {
+    "wallJump": true,
+    "dash": false,
+    "doubleJump": false,
+    "pogo": false,
+    "seize": true,
+    "levy": false
+  },
+  "golden": {
+    "tuningHash": "0b78049094206f",
+    "build": {
+      "sha": "4647c8a1ec-dirty",
+      "sim": "81bec3d86a",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 1500,
+      "y": 688,
+      "frame": 166,
+      "room": "lot-7"
+    },
+    "hash": "0dc9e39211a0ed",
+    "hashes": [
+      "00a07560e93b6d",
+      "1aa631284f504f"
+    ]
+  },
+  "notes": "Gate audit evidence: lot-7/lock:spring-hall (requires levy) reached with wallJump+seize."
+}

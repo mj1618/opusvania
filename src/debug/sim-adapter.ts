@@ -6,6 +6,7 @@
  *
  * Pure: no DOM, no Node APIs (runs in the browser and in Node).
  */
+import { enemyDef } from '../sim/ai/schema';
 import type { SimEvent } from '../sim/events';
 import { cloneState, createState, type GameState, hashState, step } from '../sim/index';
 import { ActionBit, type InputFrame } from '../sim/input';
@@ -595,9 +596,25 @@ export interface RoomLayout {
   /** Sources as tile rects (a source is solid while home; white static can't be seized). */
   sources: { char: string; colour: string; tx: number; ty: number; tw: number; th: number }[];
   plates: { char: string; tiles: number[]; pressedBy: string[] }[];
-  gates: { char: string; tiles: number[]; opensOn: string; requires: Ability[] }[];
-  locks: Record<string, { target: string; from?: string; requires: Ability[]; note?: string }>;
+  gates: { char: string; tiles: number[]; opensOn: string; requires: Ability[]; hold: 'sealed' | 'reach' }[];
+  locks: Record<
+    string,
+    {
+      target: string;
+      from?: string;
+      requires: Ability[];
+      hold: 'sealed' | 'reach';
+      teachGate: boolean;
+      note?: string;
+    }
+  >;
   enemies: string[];
+  /**
+   * Colours of every seizable sound in the room (object sources and enemy voices; white static is
+   * not seizable, so not included). The bag empties on room exit, so this plus the abilities is the
+   * whole kit a gate in this room must hold against (world-design W1/W2).
+   */
+  palette: string[];
   /** The parsed room file (canonical JSON; hash it to key caches). */
   file: unknown;
 }
@@ -635,11 +652,22 @@ export function roomLayout(id: string): RoomLayout {
       tiles: [...g.tiles],
       opensOn: g.opensOn,
       requires: [...(f.gates[g.char]?.requires ?? [])],
+      hold: f.gates[g.char]?.hold ?? 'sealed',
     })),
     locks: Object.fromEntries(
       Object.entries(f.locks).map(([k, l]) => [k, { ...l, requires: [...l.requires] }]),
     ),
     enemies: room.enemySpawns.map((e) => e.type),
+    palette: [
+      ...new Set([
+        ...room.sources.filter((s) => s.colour !== 'white').map((s) => s.colour as string),
+        ...room.enemySpawns.flatMap((e) =>
+          enemyDef(e.type)
+            .sounds.filter((x) => x.seizable && x.colour !== 'white')
+            .map((x) => x.colour as string),
+        ),
+      ]),
+    ].sort(),
     file: f,
   };
 }

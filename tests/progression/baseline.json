@@ -1,0 +1,29 @@
+{
+  "note": "Accepted progression findings: `npm run progression -- --check` (part of `npm run check`) fails only on errors not listed here. Each entry needs a reason; delete it when the finding is fixed (the tool prints 'fixed?' for entries it no longer finds).",
+  "accepted": [
+    {
+      "id": "gate-fail:lot-7/lock:spring-hall",
+      "why": "Known since the L3 audit (item 3): with Wall Jump or Double Jump (plus Seize) the upper corridor is reached without the pink spring. Harmless today because Lot 7 SETS abilities on entry (gym semantics: the gate holds against {seize}); it becomes real once abilities persist (Phase 3). world-design.md rebuilds this as B2 (teachGate) + B3 (sealed plate door)."
+    },
+    {
+      "id": "unreached-exit:world:stairwell/G",
+      "why": "Stairwell is the L3 stretch expression room: no tape exists, the bot can't chain up-seize / down-levy / re-seize within budget, and the L3 novice got stuck after the first bar. Needs a hand-made tape (or an exit door) to prove it."
+    },
+    {
+      "id": "unreached-exit:gym:stairwell/G",
+      "why": "Same as unreached-exit:world:stairwell/G."
+    },
+    {
+      "id": "softlock:world:stairwell@spawn:default{wallJump, dash, doubleJump, pogo, seize, levy}",
+      "why": "Follows from stairwell/G being unproven: G is the room's only exit. In-game the debug keys (H) get you out."
+    },
+    {
+      "id": "softlock:gym:stairwell@spawn:default{seize, levy}",
+      "why": "Same as the world-semantics stairwell softlock."
+    },
+    {
+      "id": "diff:tests/progression/gym-world.json:blocked:stairwell-G stairwell -> hub (stairwell/G)",
+      "why": "Same as unreached-exit:world:stairwell/G."
+    }
+  ]
+}

@@ -81,6 +81,8 @@ const GateDef = z.object({
    * the far side must be unreachable with the full kit minus that ability (gate audit).
    */
   requires: z.array(AbilityEnum).optional(),
+  /** world-design §3: `sealed` (a barrier; default for tile gates) or `reach` (height/gap/timing). */
+  hold: z.enum(['sealed', 'reach']).optional(),
 });
 /** Progression validator: an ability pickup (tile char). Sim support comes with Phase 3 saves. */
 const PickupDef = z.object({
@@ -99,6 +101,10 @@ const LockDef = z.object({
   target: z.string(),
   from: z.string().optional(),
   requires: z.array(AbilityEnum).min(1),
+  /** world-design §3: `reach` (default for locks) or `sealed`. Reach gates may not share a room with pink (G3). */
+  hold: z.enum(['sealed', 'reach']).default('reach'),
+  /** world-design G8: only has to hold against the kit at the room's earliest visit. */
+  teachGate: z.boolean().default(false),
   note: z.string().optional(),
 });
 export type LockDef = z.infer<typeof LockDef>;

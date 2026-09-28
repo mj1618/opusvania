@@ -1,0 +1,2715 @@
+{
+ "meta": {
+  "date": "2026-09-28 09:25",
+  "sha": "4647c8a1ec-dirty",
+  "engine": "d3f836ab18",
+  "mode": "full",
+  "workers": 8,
+  "budget": 300000
+ },
+ "timings": {
+  "extract": 1,
+  "solve": 8305,
+  "audit": 44375,
+  "probes": 30960,
+  "design": 12,
+  "total": 83665
+ },
+ "oracle": {
+  "queries": 511,
+  "static": 22,
+  "cache": 191,
+  "inferred": 164,
+  "tapes": 79,
+  "searches": 55,
+  "searchMs": 83551,
+  "reverified": 123,
+  "stale": 0
+ },
+ "findings": [
+  {
+   "id": "unreached-exit:world:stairwell/G",
+   "level": "error",
+   "text": "[world] exit stairwell/G never reached: not found in 300000 nodes"
+  },
+  {
+   "id": "softlock:world:stairwell@spawn:default{wallJump, dash, doubleJump, pogo, seize, levy}",
+   "level": "error",
+   "text": "[world] suspected softlock: stairwell at spawn:default with {wallJump, dash, doubleJump, pogo, seize, levy} can't get back to the start or a Rest (path: hub/exit:S)"
+  },
+  {
+   "id": "unreached-exit:gym:stairwell/G",
+   "level": "error",
+   "text": "[gym] exit stairwell/G never reached: not found in 300000 nodes"
+  },
+  {
+   "id": "softlock:gym:stairwell@spawn:default{seize, levy}",
+   "level": "error",
+   "text": "[gym] suspected softlock: stairwell at spawn:default with {seize, levy} can't get back to the start or a Rest (path: hub/exit:S)"
+  },
+  {
+   "id": "gate-fail:lot-7/lock:spring-hall",
+   "level": "error",
+   "text": "gate lot-7/lock:spring-hall: G7 minus levy {wallJump, dash, doubleJump, pogo, seize} bypasses it; minimal: {wallJump, seize} or {doubleJump, seize}"
+  },
+  {
+   "id": "diff:tests/progression/gym-world.json:blocked:stairwell-G stairwell -> hub (stairwell/G)",
+   "level": "error",
+   "text": "diff tests/progression/gym-world.json: blocked: stairwell-G stairwell -> hub (stairwell/G): the solver never reached stairwell/G (unknown)"
+  },
+  {
+   "id": "design:docs/design/world-design.md:every non-stub room reachable from start:X3",
+   "level": "warning",
+   "text": "design docs/design/world-design.md: every non-stub room reachable from start: X3: unreachable"
+  }
+ ],
+ "rooms": {
+  "hub": {
+   "grant": [
+    "wallJump",
+    "dash",
+    "doubleJump",
+    "pogo"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 0,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "hub/exit:1",
+     "to": "gym-01",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:2",
+     "to": "gym-02",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:3",
+     "to": "gym-03",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:4",
+     "to": "gym-04",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:5",
+     "to": "gym-05",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:6",
+     "to": "gym-06",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:7",
+     "to": "gym-07",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:8",
+     "to": "gym-08",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:9",
+     "to": "gym-09",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:A",
+     "to": "gym-10",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:B",
+     "to": "gym-11",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:C",
+     "to": "gym-12",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:D",
+     "to": "gym-13",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:E",
+     "to": "gym-14",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:L",
+     "to": "lot-7",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:K",
+     "to": "lot-7-control",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:T",
+     "to": "the-pit",
+     "spawn": "default"
+    },
+    {
+     "id": "hub/exit:S",
+     "to": "stairwell",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:hub",
+     "grants": [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      []
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      []
+     ]
+    }
+   }
+  },
+  "gym-01": {
+   "grant": [],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 0,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-01/G",
+     "to": "gym-02",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    }
+   }
+  },
+  "gym-02": {
+   "grant": [],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 0,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-02/G",
+     "to": "gym-03",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      []
+     ]
+    }
+   }
+  },
+  "gym-03": {
+   "grant": [],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 45,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-03/G",
+     "to": "gym-04",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      []
+     ]
+    }
+   }
+  },
+  "gym-04": {
+   "grant": [],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 24,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-04/G",
+     "to": "gym-05",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      []
+     ]
+    }
+   }
+  },
+  "gym-05": {
+   "grant": [],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 0,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-05/G",
+     "to": "gym-06",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      []
+     ]
+    }
+   }
+  },
+  "gym-06": {
+   "grant": [],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 0,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-06/G",
+     "to": "gym-07",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      []
+     ]
+    }
+   }
+  },
+  "gym-07": {
+   "grant": [
+    "wallJump"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 0,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-07/G",
+     "to": "gym-08",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:gym-07",
+     "grants": [
+      "wallJump"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      []
+     ]
+    }
+   }
+  },
+  "gym-08": {
+   "grant": [
+    "wallJump"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 10,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-08/G",
+     "to": "gym-09",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:gym-08",
+     "grants": [
+      "wallJump"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump"
+      ]
+     ]
+    }
+   }
+  },
+  "gym-09": {
+   "grant": [],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 8,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-09/G",
+     "to": "gym-10",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump"
+      ]
+     ]
+    }
+   }
+  },
+  "gym-10": {
+   "grant": [
+    "dash"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 15,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-10/G",
+     "to": "gym-11",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:gym-10",
+     "grants": [
+      "dash"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      []
+     ]
+    }
+   }
+  },
+  "gym-11": {
+   "grant": [
+    "doubleJump"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 10,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-11/G",
+     "to": "gym-12",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:gym-11",
+     "grants": [
+      "doubleJump"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "dash"
+      ]
+     ]
+    }
+   }
+  },
+  "gym-12": {
+   "grant": [
+    "pogo"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 28,
+    "orbs": 5,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-12/G",
+     "to": "gym-13",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:gym-12",
+     "grants": [
+      "pogo"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "doubleJump"
+      ]
+     ]
+    }
+   }
+  },
+  "gym-13": {
+   "grant": [
+    "wallJump",
+    "dash",
+    "doubleJump",
+    "pogo"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 23,
+    "orbs": 2,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-13/G",
+     "to": "gym-14",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:gym-13",
+     "grants": [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "pogo"
+      ]
+     ]
+    }
+   }
+  },
+  "gym-14": {
+   "grant": [
+    "wallJump",
+    "dash",
+    "doubleJump",
+    "pogo"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 12,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "gym-14/G",
+     "to": "hub",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:gym-14",
+     "grants": [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    }
+   }
+  },
+  "lot-7": {
+   "grant": [
+    "seize",
+    "levy"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [
+    "brown",
+    "pink"
+   ],
+   "hazards": {
+    "spikes": 0,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 4
+   },
+   "exits": [
+    {
+     "id": "lot-7/G",
+     "to": "hub",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:lot-7",
+     "grants": [
+      "seize",
+      "levy"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [
+    {
+     "id": "lot-7/gate:D",
+     "room": "lot-7",
+     "kind": "gate",
+     "name": "D",
+     "requires": [
+      "seize"
+     ],
+     "target": "rect:2560,448,128,320",
+     "from": "default",
+     "opensOn": "plate",
+     "hold": "sealed",
+     "teachGate": false,
+     "derived": "far side of gate D: tiles x 40-41, y 7-11"
+    },
+    {
+     "id": "lot-7/lock:spring-hall",
+     "room": "lot-7",
+     "kind": "lock",
+     "name": "spring-hall",
+     "requires": [
+      "levy"
+     ],
+     "target": "rect:1536,512,64,256",
+     "from": "default",
+     "hold": "reach",
+     "teachGate": true,
+     "note": "The 6-tile hall is climbed on a pink levy spring (L3 brief §4.2); the upper corridor must need Levy (L3 audit item 3)."
+    }
+   ],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    }
+   }
+  },
+  "lot-7-control": {
+   "grant": [],
+   "entries": [
+    "default"
+   ],
+   "palette": [],
+   "hazards": {
+    "spikes": 0,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "lot-7-control/G",
+     "to": "hub",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    }
+   }
+  },
+  "the-pit": {
+   "grant": [
+    "dash",
+    "seize",
+    "levy"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [
+    "brown",
+    "pink"
+   ],
+   "hazards": {
+    "spikes": 0,
+    "orbs": 0,
+    "enemies": [
+     "barker",
+     "barker",
+     "grinder"
+    ],
+    "sources": 0
+   },
+   "exits": [
+    {
+     "id": "the-pit/G",
+     "to": "hub",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:the-pit",
+     "grants": [
+      "dash",
+      "seize",
+      "levy"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    }
+   }
+  },
+  "stairwell": {
+   "grant": [
+    "seize",
+    "levy"
+   ],
+   "entries": [
+    "default"
+   ],
+   "palette": [
+    "pink"
+   ],
+   "hazards": {
+    "spikes": 0,
+    "orbs": 0,
+    "enemies": [],
+    "sources": 3
+   },
+   "exits": [
+    {
+     "id": "stairwell/G",
+     "to": "hub",
+     "spawn": "default"
+    }
+   ],
+   "pickups": [
+    {
+     "id": "grant:stairwell",
+     "grants": [
+      "seize",
+      "levy"
+     ],
+     "implicit": true
+    }
+   ],
+   "gates": [
+    {
+     "id": "stairwell/lock:top",
+     "room": "stairwell",
+     "kind": "lock",
+     "name": "top",
+     "requires": [
+      "seize",
+      "levy"
+     ],
+     "target": "G",
+     "from": "default",
+     "hold": "reach",
+     "teachGate": true,
+     "note": "Expression room: the climb is the up-seize / down-levy spring chain."
+    }
+   ],
+   "reach": {
+    "world": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    },
+    "gym": {
+     "reached": true,
+     "kits": [
+      [
+       "wallJump",
+       "dash",
+       "doubleJump",
+       "pogo"
+      ]
+     ]
+    }
+   }
+  }
+ },
+ "exits": {
+  "world": {
+   "hub/exit:1": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 8,
+    "tape": "X4 .4"
+   },
+   "hub/exit:2": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 20,
+    "tape": "X4 .12 R4"
+   },
+   "hub/exit:3": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 33,
+    "tape": "X4 .12 R8 X4 .5"
+   },
+   "hub/exit:4": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 44,
+    "tape": "X4 .12 R8 X4 .8 R8"
+   },
+   "hub/exit:5": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 57,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .5"
+   },
+   "hub/exit:6": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 68,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R8"
+   },
+   "hub/exit:7": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 81,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .5"
+   },
+   "hub/exit:8": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 92,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R8"
+   },
+   "hub/exit:9": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 105,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5"
+   },
+   "hub/exit:A": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 116,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8"
+   },
+   "hub/exit:B": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 129,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5"
+   },
+   "hub/exit:C": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 140,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8"
+   },
+   "hub/exit:D": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 153,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5"
+   },
+   "hub/exit:E": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 164,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8"
+   },
+   "hub/exit:L": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 182,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .10"
+   },
+   "hub/exit:K": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 198,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .2"
+   },
+   "hub/exit:T": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 206,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .10"
+   },
+   "hub/exit:S": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 222,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .2"
+   },
+   "gym-01/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-01.none.json",
+    "frames": 374,
+    "tape": "R140 R+J4 R64 R+J4 R64 R+J4 R94"
+   },
+   "gym-02/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-02.none.json",
+    "frames": 94,
+    "tape": "R+J16 R12 R+J8 R12 R+J4 R8 R+J4 L4 R+J4 R4 R+J4 R14"
+   },
+   "gym-03/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-03.none.json",
+    "frames": 236,
+    "tape": "R32 R+J4 R36 R+J4 R36 R+J4 R4 R+J4 R28 R+J4 R36 R+J4 R4 R+J4 R32"
+   },
+   "gym-04/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-04.none.json",
+    "frames": 292,
+    "tape": "R+J4 R28 R+J20 .4 R16 R+J4 R4 R+J4 R20 R+J16 J4 R+J4 .4 R16 R+J4 R4 J4 R12 R+J12 R4 R+J8 R28 R+J4 .4 R20 R+J4 R12 R+J4 R4 .4 R12"
+   },
+   "gym-05/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-05.none.json",
+    "frames": 435,
+    "tape": "R140 .4 J24 L+J8 .10 L122 .4 J24 R+J8 .10 R42 .4 J24 R+J8 R3"
+   },
+   "gym-06/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-06.none.json",
+    "frames": 429,
+    "tape": "J30 .20 R+J20 R6 .20 L+J20 L6 .20 R+J30 R4 .10 R112 .30 D+J1 .30 D+J1 .30 D+J1 .30 R8"
+   },
+   "gym-07/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-07.wallJump.json",
+    "frames": 229,
+    "tape": "J8 R+J16 R4 J8 R+J8 R4 J4 R+J8 R4 J8 R+J8 R4 J4 R+J4 R12 J4 R+J20 R8 J4 R+J12 R16 R+J4 R4 .4 R48 .1"
+   },
+   "gym-08/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-08.wallJump.json",
+    "frames": 170,
+    "tape": "J4 .4 J4 R+J24 R4 J4 R+J4 R4 R+J4 L+J4 J4 L+J16 L4 L+J4 J4 R+J16 R4 J4 R+J4 R50"
+   },
+   "gym-09/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-09.none.json",
+    "frames": 184,
+    "tape": "R52 .4 R4 .4 R4 .4 R4 .4 R4 .4 R4 .76 R16"
+   },
+   "gym-10/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-10.dash.json",
+    "frames": 182,
+    "tape": "X4 .8 R12 X4 .8 R12 X4 .8 R16 R+J8 R+D+A4 R4 R+D+A4 X4 .8 R+J8 R8 X4 .8 R12 X4 .8 R12 X4 .6"
+   },
+   "gym-11/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-11.doubleJump.json",
+    "frames": 159,
+    "tape": "R+J36 R4 R+J20 R24 R+J28 R4 J8 R35"
+   },
+   "gym-12/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-12.pogo.json",
+    "frames": 230,
+    "tape": "R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R48 .2"
+   },
+   "gym-13/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-13.all.json",
+    "frames": 306,
+    "tape": "J4 X4 .8 J4 R+J16 R4 J4 R+J4 J4 R4 J8 .4 J4 .4 R+J8 .4 X4 .12 R8 X4 .8 R12 X4 .8 R4 .4 R4 .4 R4 R+D+A8 R+J4 R12 .4 R+J4 X4 .12 R+J4 R8 .4 R4 D+A4 X4 .12 R+J12 J4 R+J4 R16 X4 .10"
+   },
+   "gym-14/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-14.all.json",
+    "frames": 411,
+    "tape": "X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 R+J8 R12 X4 .8 R4 R+J8 X4 .8 R16 X4 R+J8 R16 X4 .12 R+J8 X4 .8 R16 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R16 R+D+A4 L+D+A4 D+A24 .3"
+   },
+   "lot-7/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo",
+      "seize",
+      "levy"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/lot-7.heavy.json",
+    "frames": 307,
+    "tape": "R36 R+S1 R48 R+J10 D+V1 R59 R+S1 R40 R+S1 R63 R+J8 R+D+V1 R38"
+   },
+   "lot-7-control/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/lot-7-control.json",
+    "frames": 280,
+    "tape": "R41 R+J9 R37 R+J9 R9 R+J9 R27 R+J15 R25 R+J18 R41 R+J24 R16"
+   },
+   "the-pit/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo",
+      "seize",
+      "levy"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/the-pit.jabOnly.s1.json",
+    "frames": 2371,
+    "tape": "R35 R+A1 .2 J1 L+J1 L+X1 L+J4 J19 R+X1 J1 L+J1 R+J3 J15 L+J4 J7 L+J3 J6 L+J3 J5 L+J2 J2 R+A1 .2 L6 R+X1 J4 L+J7 J1 L+J7 R+J4 R+X1 R+J4 J31 L9 L+A1 .3 R2 J8 L+J+X1 J2 R+J2 L+J1 R+J3 L+J2 J13 R+J5 J2 L+A1 .4 R1 L1 R2 J8 L+J+X1 J2 R+J2 L+J2 J24 R18 R+A1 J1 L+J11 J7 L+J11 J5 L+J7 J9 R14 R+A1 .2 L1 R+X1 R+J1 R1 R+J5 L1 R+J4 R3 .4 L13 L+A1 .16 L3 L+A1 .8 R+X1 R+J1 R2 .2 L10 R5 L4 R3 .3 L6 .5 J1 L+J+X1 R+J2 L+J1 R+J1 L+J2 J14 R27 R+A1 L1 R+X1 R+J1 R1 R+J5 R1 R+J3 R3 .4 L23 R5 L+A1 .16 L3 L+A1 .7 R+X1 R1 R+J1 R1 R+J1 .2 L10 .3 R2 J1 R+J2 L+J+X1 R+J2 L+J2 J20 R24 R+A1 .2 L4 R+X1 R1 R+X1 R+J1 R1 R+J1 L4 R31 J11 R+J+X1 J1 L+J2 R+J2 J27 L68 L+A1 .14 R1 J19 L+J+X1 J2 R+J2 L+J3 J28 R88 R+A1 R1 .5 L2 J19 R+J+X1 J2 L+J3 R+J2 J28 L94 L+A1 .2 J21 L+J+X1 J2 R+J3 L+J2 J27 R88 R+A1 .7 J20 R+J+X1 J2 L+J2 R+J3 J28 L93 L+A1 .2 J21 L+J+X1 J2 R+J3 L+J2 J27 R88 R+A1 .7 J20 R+J+X1 J2 L+J2 R+J3 J28 L93 L+A1 .2 J21 L+J+X1 J2 R+J3 L+J2 J27 R88 R+A1 .7 J20 R+J+X1 J2 L+J2 R+J3 J28 L93 L+A1 .2 L1 .5 L1 .1 L2 .3 L1 R10 .126 R18 R+J1 R39 R+J1 R39 R+J1 R39 R+J1 R10"
+   },
+   "stairwell/G": {
+    "reached": false,
+    "verdict": "unknown",
+    "kits": [],
+    "why": {
+     "verdict": "unknown",
+     "how": "bot",
+     "budget": 300000
+    }
+   }
+  },
+  "gym": {
+   "hub/exit:1": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 8,
+    "tape": "X4 .4"
+   },
+   "hub/exit:2": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 20,
+    "tape": "X4 .12 R4"
+   },
+   "hub/exit:3": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 33,
+    "tape": "X4 .12 R8 X4 .5"
+   },
+   "hub/exit:4": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 44,
+    "tape": "X4 .12 R8 X4 .8 R8"
+   },
+   "hub/exit:5": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 57,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .5"
+   },
+   "hub/exit:6": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 68,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R8"
+   },
+   "hub/exit:7": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 81,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .5"
+   },
+   "hub/exit:8": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 92,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R8"
+   },
+   "hub/exit:9": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 105,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5"
+   },
+   "hub/exit:A": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 116,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8"
+   },
+   "hub/exit:B": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 129,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5"
+   },
+   "hub/exit:C": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 140,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8"
+   },
+   "hub/exit:D": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 153,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .5"
+   },
+   "hub/exit:E": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 164,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R8"
+   },
+   "hub/exit:L": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 182,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .10"
+   },
+   "hub/exit:K": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 198,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .2"
+   },
+   "hub/exit:T": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 206,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .10"
+   },
+   "hub/exit:S": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "cache",
+    "frames": 222,
+    "tape": "X4 .12 R8 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .2"
+   },
+   "gym-01/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     []
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-01.none.json",
+    "frames": 374,
+    "tape": "R140 R+J4 R64 R+J4 R64 R+J4 R94"
+   },
+   "gym-02/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     []
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-02.none.json",
+    "frames": 94,
+    "tape": "R+J16 R12 R+J8 R12 R+J4 R8 R+J4 L4 R+J4 R4 R+J4 R14"
+   },
+   "gym-03/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     []
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-03.none.json",
+    "frames": 236,
+    "tape": "R32 R+J4 R36 R+J4 R36 R+J4 R4 R+J4 R28 R+J4 R36 R+J4 R4 R+J4 R32"
+   },
+   "gym-04/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     []
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-04.none.json",
+    "frames": 292,
+    "tape": "R+J4 R28 R+J20 .4 R16 R+J4 R4 R+J4 R20 R+J16 J4 R+J4 .4 R16 R+J4 R4 J4 R12 R+J12 R4 R+J8 R28 R+J4 .4 R20 R+J4 R12 R+J4 R4 .4 R12"
+   },
+   "gym-05/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     []
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-05.none.json",
+    "frames": 435,
+    "tape": "R140 .4 J24 L+J8 .10 L122 .4 J24 R+J8 .10 R42 .4 J24 R+J8 R3"
+   },
+   "gym-06/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     []
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-06.none.json",
+    "frames": 429,
+    "tape": "J30 .20 R+J20 R6 .20 L+J20 L6 .20 R+J30 R4 .10 R112 .30 D+J1 .30 D+J1 .30 D+J1 .30 R8"
+   },
+   "gym-07/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-07.wallJump.json",
+    "frames": 229,
+    "tape": "J8 R+J16 R4 J8 R+J8 R4 J4 R+J8 R4 J8 R+J8 R4 J4 R+J4 R12 J4 R+J20 R8 J4 R+J12 R16 R+J4 R4 .4 R48 .1"
+   },
+   "gym-08/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-08.wallJump.json",
+    "frames": 170,
+    "tape": "J4 .4 J4 R+J24 R4 J4 R+J4 R4 R+J4 L+J4 J4 L+J16 L4 L+J4 J4 R+J16 R4 J4 R+J4 R50"
+   },
+   "gym-09/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     []
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-09.none.json",
+    "frames": 184,
+    "tape": "R52 .4 R4 .4 R4 .4 R4 .4 R4 .4 R4 .76 R16"
+   },
+   "gym-10/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "dash"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-10.dash.json",
+    "frames": 182,
+    "tape": "X4 .8 R12 X4 .8 R12 X4 .8 R16 R+J8 R+D+A4 R4 R+D+A4 X4 .8 R+J8 R8 X4 .8 R12 X4 .8 R12 X4 .6"
+   },
+   "gym-11/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "doubleJump"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-11.doubleJump.json",
+    "frames": 159,
+    "tape": "R+J36 R4 R+J20 R24 R+J28 R4 J8 R35"
+   },
+   "gym-12/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-12.pogo.json",
+    "frames": 230,
+    "tape": "R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R48 .2"
+   },
+   "gym-13/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-13.all.json",
+    "frames": 306,
+    "tape": "J4 X4 .8 J4 R+J16 R4 J4 R+J4 J4 R4 J8 .4 J4 .4 R+J8 .4 X4 .12 R8 X4 .8 R12 X4 .8 R4 .4 R4 .4 R4 R+D+A8 R+J4 R12 .4 R+J4 X4 .12 R+J4 R8 .4 R4 D+A4 X4 .12 R+J12 J4 R+J4 R16 X4 .10"
+   },
+   "gym-14/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/gym-14.all.json",
+    "frames": 411,
+    "tape": "X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 R+J8 R12 X4 .8 R4 R+J8 X4 .8 R16 X4 R+J8 R16 X4 .12 R+J8 X4 .8 R16 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R12 X4 .8 R16 R+D+A4 L+D+A4 D+A24 .3"
+   },
+   "lot-7/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "seize",
+      "levy"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/lot-7.heavy.json",
+    "frames": 307,
+    "tape": "R36 R+S1 R48 R+J10 D+V1 R59 R+S1 R40 R+S1 R63 R+J8 R+D+V1 R38"
+   },
+   "lot-7-control/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     []
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/lot-7-control.json",
+    "frames": 280,
+    "tape": "R41 R+J9 R37 R+J9 R9 R+J9 R27 R+J15 R25 R+J18 R41 R+J24 R16"
+   },
+   "the-pit/G": {
+    "reached": true,
+    "verdict": "yes",
+    "kits": [
+     [
+      "dash",
+      "seize",
+      "levy"
+     ]
+    ],
+    "how": "tape",
+    "evidence": "tests/replays/the-pit.jabOnly.s1.json",
+    "frames": 2371,
+    "tape": "R35 R+A1 .2 J1 L+J1 L+X1 L+J4 J19 R+X1 J1 L+J1 R+J3 J15 L+J4 J7 L+J3 J6 L+J3 J5 L+J2 J2 R+A1 .2 L6 R+X1 J4 L+J7 J1 L+J7 R+J4 R+X1 R+J4 J31 L9 L+A1 .3 R2 J8 L+J+X1 J2 R+J2 L+J1 R+J3 L+J2 J13 R+J5 J2 L+A1 .4 R1 L1 R2 J8 L+J+X1 J2 R+J2 L+J2 J24 R18 R+A1 J1 L+J11 J7 L+J11 J5 L+J7 J9 R14 R+A1 .2 L1 R+X1 R+J1 R1 R+J5 L1 R+J4 R3 .4 L13 L+A1 .16 L3 L+A1 .8 R+X1 R+J1 R2 .2 L10 R5 L4 R3 .3 L6 .5 J1 L+J+X1 R+J2 L+J1 R+J1 L+J2 J14 R27 R+A1 L1 R+X1 R+J1 R1 R+J5 R1 R+J3 R3 .4 L23 R5 L+A1 .16 L3 L+A1 .7 R+X1 R1 R+J1 R1 R+J1 .2 L10 .3 R2 J1 R+J2 L+J+X1 R+J2 L+J2 J20 R24 R+A1 .2 L4 R+X1 R1 R+X1 R+J1 R1 R+J1 L4 R31 J11 R+J+X1 J1 L+J2 R+J2 J27 L68 L+A1 .14 R1 J19 L+J+X1 J2 R+J2 L+J3 J28 R88 R+A1 R1 .5 L2 J19 R+J+X1 J2 L+J3 R+J2 J28 L94 L+A1 .2 J21 L+J+X1 J2 R+J3 L+J2 J27 R88 R+A1 .7 J20 R+J+X1 J2 L+J2 R+J3 J28 L93 L+A1 .2 J21 L+J+X1 J2 R+J3 L+J2 J27 R88 R+A1 .7 J20 R+J+X1 J2 L+J2 R+J3 J28 L93 L+A1 .2 J21 L+J+X1 J2 R+J3 L+J2 J27 R88 R+A1 .7 J20 R+J+X1 J2 L+J2 R+J3 J28 L93 L+A1 .2 L1 .5 L1 .1 L2 .3 L1 R10 .126 R18 R+J1 R39 R+J1 R39 R+J1 R39 R+J1 R10"
+   },
+   "stairwell/G": {
+    "reached": false,
+    "verdict": "unknown",
+    "kits": [],
+    "why": {
+     "verdict": "unknown",
+     "how": "bot",
+     "budget": 300000
+    }
+   }
+  }
+ },
+ "softlocks": [
+  {
+   "semantics": "world",
+   "state": 18,
+   "room": "stairwell",
+   "at": "spawn:default",
+   "abilities": [
+    "wallJump",
+    "dash",
+    "doubleJump",
+    "pogo",
+    "seize",
+    "levy"
+   ],
+   "path": [
+    "hub/exit:S"
+   ],
+   "proven": false
+  },
+  {
+   "semantics": "gym",
+   "state": 18,
+   "room": "stairwell",
+   "at": "spawn:default",
+   "abilities": [
+    "seize",
+    "levy"
+   ],
+   "path": [
+    "hub/exit:S"
+   ],
+   "proven": false
+  }
+ ],
+ "gates": [
+  {
+   "id": "lot-7/gate:D",
+   "status": "pass",
+   "hold": "sealed",
+   "teachGate": false,
+   "requires": [
+    "seize"
+   ],
+   "target": "rect:2560,448,128,320",
+   "palette": [
+    "brown",
+    "pink"
+   ],
+   "rules": [],
+   "notes": [],
+   "checks": [
+    {
+     "verb": "seize",
+     "basis": "g7",
+     "kit": [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo",
+      "levy"
+     ],
+     "status": "holds",
+     "verdict": "no",
+     "how": "static",
+     "bypasses": []
+    }
+   ]
+  },
+  {
+   "id": "lot-7/lock:spring-hall",
+   "status": "fail",
+   "hold": "reach",
+   "teachGate": true,
+   "requires": [
+    "levy"
+   ],
+   "target": "rect:1536,512,64,256",
+   "palette": [
+    "brown",
+    "pink"
+   ],
+   "rules": [],
+   "notes": [],
+   "checks": [
+    {
+     "verb": "levy",
+     "basis": "g7",
+     "kit": [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo",
+      "seize"
+     ],
+     "status": "bypassed",
+     "verdict": "yes",
+     "how": "subset",
+     "bypasses": [
+      {
+       "abilities": [
+        "wallJump",
+        "seize"
+       ],
+       "frames": 166,
+       "tape": "R+J8 R4 R+J4 R12 R+J8 R4 R+J4 R+S4 .4 R8 R+J20 R4 .4 R+J20 R8 R+J4 J4 R+J20 R4 J4 R+J4 R10",
+       "tapeAbilities": [
+        "wallJump",
+        "seize"
+       ],
+       "file": "progression-evidence/lot-7.lock.spring-hall.wallJump+seize.json"
+      },
+      {
+       "abilities": [
+        "doubleJump",
+        "seize"
+       ],
+       "frames": 156,
+       "tape": "R+J8 R12 R+J12 .4 R4 R+J4 R+J+S4 J8 R+J8 R4 R+J12 R8 R+J4 R4 R+J4 R4 R+J4 R8 R+J4 J4 R+J4 J4 R4 J4 R+J4 J4 R+J4 R4",
+       "tapeAbilities": [
+        "doubleJump",
+        "seize"
+       ],
+       "file": "progression-evidence/lot-7.lock.spring-hall.doubleJump+seize.json"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "stairwell/lock:top",
+   "status": "pass",
+   "hold": "reach",
+   "teachGate": true,
+   "requires": [
+    "seize",
+    "levy"
+   ],
+   "target": "G",
+   "palette": [
+    "pink"
+   ],
+   "rules": [],
+   "notes": [],
+   "checks": [
+    {
+     "verb": "seize",
+     "basis": "g7",
+     "kit": [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo",
+      "levy"
+     ],
+     "status": "holds",
+     "verdict": "no",
+     "how": "static",
+     "bypasses": []
+    },
+    {
+     "verb": "levy",
+     "basis": "g7",
+     "kit": [
+      "wallJump",
+      "dash",
+      "doubleJump",
+      "pogo",
+      "seize"
+     ],
+     "status": "holds",
+     "verdict": "unknown",
+     "how": "cache",
+     "budget": 300000,
+     "bypasses": []
+    }
+   ]
+  }
+ ],
+ "traps": {
+  "probed": 271,
+  "escaped": 270,
+  "unreachable": 1,
+  "traps": [],
+  "ms": 30959
+ },
+ "designs": [
+  {
+   "file": "tests/progression/gym-world.json",
+   "strict": true,
+   "report": {
+    "rooms": 19,
+    "edges": 36,
+    "reachable": [
+     "hub",
+     "gym-01",
+     "gym-02",
+     "gym-03",
+     "gym-04",
+     "gym-05",
+     "gym-06",
+     "gym-07",
+     "gym-08",
+     "gym-09",
+     "gym-10",
+     "gym-11",
+     "gym-12",
+     "gym-13",
+     "gym-14",
+     "lot-7",
+     "lot-7-control",
+     "the-pit",
+     "stairwell"
+    ],
+    "unreachable": [],
+    "onlyWithBreaks": [],
+    "findings": [],
+    "g7": [
+     {
+      "edge": "stairwell-G",
+      "from": "stairwell",
+      "to": "hub",
+      "key": "seize",
+      "teachGate": true,
+      "kits": [
+       {
+        "kit": "{dash, doubleJump, levy, pogo, wallJump}",
+        "abilities": [
+         "dash",
+         "doubleJump",
+         "levy",
+         "pogo",
+         "wallJump"
+        ],
+        "palette": [
+         "pink"
+        ]
+       }
+      ],
+      "simKits": [
+       [
+        "wallJump",
+        "dash",
+        "doubleJump",
+        "pogo",
+        "levy"
+       ]
+      ]
+     },
+     {
+      "edge": "stairwell-G",
+      "from": "stairwell",
+      "to": "hub",
+      "key": "levy",
+      "teachGate": true,
+      "kits": [
+       {
+        "kit": "{dash, doubleJump, pogo, seize, wallJump}",
+        "abilities": [
+         "dash",
+         "doubleJump",
+         "pogo",
+         "seize",
+         "wallJump"
+        ],
+        "palette": [
+         "pink"
+        ]
+       }
+      ],
+      "simKits": [
+       [
+        "wallJump",
+        "dash",
+        "doubleJump",
+        "pogo",
+        "seize"
+       ]
+      ]
+     }
+    ],
+    "breaks": [],
+    "ms": 1
+   },
+   "diff": [
+    {
+     "level": "error",
+     "kind": "blocked",
+     "subject": "stairwell-G stairwell -> hub (stairwell/G)",
+     "detail": "the solver never reached stairwell/G (unknown)"
+    }
+   ]
+  },
+  {
+   "file": "docs/design/world-design.md",
+   "strict": false,
+   "report": {
+    "rooms": 29,
+    "edges": 38,
+    "reachable": [
+     "T1",
+     "T2",
+     "T3",
+     "T4",
+     "B1",
+     "B2",
+     "B3",
+     "B4",
+     "B5",
+     "B6",
+     "B7",
+     "B8",
+     "B8a",
+     "B9",
+     "B10",
+     "B11",
+     "B12",
+     "B13",
+     "B14",
+     "B15",
+     "X1",
+     "X2",
+     "X4"
+    ],
+    "unreachable": [
+     "X3"
+    ],
+    "onlyWithBreaks": [],
+    "findings": [
+     {
+      "level": "error",
+      "check": "every non-stub room reachable from start",
+      "subject": "X3",
+      "detail": "unreachable"
+     },
+     {
+      "level": "info",
+      "check": "G7",
+      "subject": "e15",
+      "detail": "reach edge with no ability key (flag/fever/weight only): the bot proof needs the built room"
+     },
+     {
+      "level": "info",
+      "check": "G7",
+      "subject": "e17",
+      "detail": "reach edge with no ability key (flag/fever/weight only): the bot proof needs the built room"
+     }
+    ],
+    "g7": [
+     {
+      "edge": "e06",
+      "from": "B2",
+      "to": "B3",
+      "key": "levy",
+      "teachGate": true,
+      "kits": [
+       {
+        "kit": "{seize}",
+        "abilities": [
+         "seize"
+        ],
+        "palette": [
+         "pink",
+         "white"
+        ]
+       }
+      ],
+      "simKits": [
+       [
+        "pogo",
+        "seize"
+       ]
+      ]
+     },
+     {
+      "edge": "e12",
+      "from": "B6",
+      "to": "B7",
+      "key": "slip",
+      "teachGate": false,
+      "kits": [
+       {
+        "kit": "{levy, seize, flag:shortcut:storeLatch}",
+        "abilities": [
+         "levy",
+         "seize"
+        ],
+        "palette": [
+         "brown",
+         "violet"
+        ]
+       }
+      ],
+      "simKits": [
+       [
+        "pogo",
+        "seize",
+        "levy"
+       ]
+      ]
+     },
+     {
+      "edge": "e20",
+      "from": "B11",
+      "to": "B12",
+      "key": "ropeSkip",
+      "teachGate": false,
+      "kits": [
+       {
+        "kit": "{levy, seize, slip, flag:boss, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
+        "abilities": [
+         "levy",
+         "seize",
+         "slip"
+        ],
+        "palette": []
+       }
+      ],
+      "simKits": [
+       [
+        "dash",
+        "pogo",
+        "seize",
+        "levy"
+       ]
+      ]
+     },
+     {
+      "edge": "e28",
+      "from": "T1",
+      "to": "EX_ROW",
+      "key": "ropes",
+      "teachGate": false,
+      "kits": [
+       {
+        "kit": "{levy, ropeSkip, seize, slip, flag:boss, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
+        "abilities": [
+         "levy",
+         "ropeSkip",
+         "seize",
+         "slip"
+        ],
+        "palette": []
+       }
+      ],
+      "simKits": [
+       [
+        "dash",
+        "doubleJump",
+        "pogo",
+        "seize",
+        "levy"
+       ]
+      ]
+     },
+     {
+      "edge": "e32",
+      "from": "B15",
+      "to": "EX_RECEIVERSHIP",
+      "key": "hueAndCry",
+      "teachGate": false,
+      "kits": [
+       {
+        "kit": "{levy, ropeSkip, seize, slip, flag:boss, flag:shortcut:dumbwaiter, flag:shortcut:storeLatch, fever 1}",
+        "abilities": [
+         "levy",
+         "ropeSkip",
+         "seize",
+         "slip"
+        ],
+        "palette": []
+       }
+      ]
+     }
+    ],
+    "breaks": [
+     {
+      "edge": "e16",
+      "detail": "adds: B11 with {levy, seize, slip}; B12 with {levy, seize, slip}; B13 with {levy, seize, slip}; B14 with {levy, seize, slip, flag:boss, fever 1}; B15 with {levy, seize, slip, flag:boss, fever 1}; X2 with {levy, seize, slip, flag:boss, fever 1}; EX_FOUNDRY with {levy, seize, slip, flag:boss, fever 1}"
+     }
+    ],
+    "ms": 7
+   },
+   "diff": [
+    {
+     "level": "info",
+     "kind": "not-built",
+     "subject": "24 rooms",
+     "detail": "T1, T2, T3, T4, B1, B2, B3, B4, B5, B6, B7, B8, B8a, B9, B10, B11, B12, B13, B14, B15, X1, X2, X3, X4"
+    },
+    {
+     "level": "info",
+     "kind": "not-designed",
+     "subject": "19 rooms",
+     "detail": "built but not in the design: hub, gym-01, gym-02, gym-03, gym-04, gym-05, gym-06, gym-07, gym-08, gym-09, gym-10, gym-11, gym-12, gym-13, gym-14, lot-7, lot-7-control, the-pit, stairwell"
+    }
+   ]
+  }
+ ]
+}

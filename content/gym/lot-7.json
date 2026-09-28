@@ -52,7 +52,18 @@
   },
   "gates": {
     "D": {
-      "opensOn": "plate"
+      "opensOn": "plate",
+      "requires": ["seize"],
+      "hold": "sealed"
+    }
+  },
+  "locks": {
+    "spring-hall": {
+      "target": "rect:1536,512,64,256",
+      "requires": ["levy"],
+      "hold": "reach",
+      "teachGate": true,
+      "note": "The 6-tile hall is climbed on a pink levy spring (L3 brief \u00a74.2); the upper corridor must need Levy (L3 audit item 3)."
     }
   },
   "next": "hub",

@@ -1,0 +1,422 @@
+{
+  "version": 1,
+  "slice": "gym: the L2 movement gyms, the hub and the L3 rooms, as built (world-design.md section 4.8 format)",
+  "sim": {
+    "abilities": {},
+    "base": []
+  },
+  "start": {
+    "room": "hub",
+    "abilities": [],
+    "fever": 0
+  },
+  "goals": ["ability:seize", "ability:levy"],
+  "rooms": [
+    {
+      "id": "hub",
+      "name": "Gym hub",
+      "purpose": ["hub", "rest"],
+      "corner": true,
+      "grants": ["ability:wallJump", "ability:dash", "ability:doubleJump", "ability:pogo"]
+    },
+    {
+      "id": "gym-01",
+      "name": "Run & stop",
+      "purpose": ["teach"],
+      "grants": [],
+      "palette": []
+    },
+    {
+      "id": "gym-02",
+      "name": "Jump heights",
+      "purpose": ["teach"],
+      "grants": [],
+      "palette": []
+    },
+    {
+      "id": "gym-03",
+      "name": "Short hops",
+      "purpose": ["teach"],
+      "grants": [],
+      "palette": []
+    },
+    {
+      "id": "gym-04",
+      "name": "Coyote & buffer",
+      "purpose": ["teach"],
+      "grants": [],
+      "palette": []
+    },
+    {
+      "id": "gym-05",
+      "name": "Corner lab",
+      "purpose": ["teach"],
+      "grants": [],
+      "palette": []
+    },
+    {
+      "id": "gym-06",
+      "name": "One-ways",
+      "purpose": ["teach"],
+      "grants": [],
+      "palette": []
+    },
+    {
+      "id": "gym-07",
+      "name": "Chimney",
+      "purpose": ["teach"],
+      "grants": ["ability:wallJump"],
+      "palette": []
+    },
+    {
+      "id": "gym-08",
+      "name": "Spiked zigzag",
+      "purpose": ["teach"],
+      "grants": ["ability:wallJump"],
+      "palette": []
+    },
+    {
+      "id": "gym-09",
+      "name": "Long fall",
+      "purpose": ["teach"],
+      "grants": [],
+      "palette": []
+    },
+    {
+      "id": "gym-10",
+      "name": "Dash",
+      "purpose": ["teach"],
+      "grants": ["ability:dash"],
+      "palette": []
+    },
+    {
+      "id": "gym-11",
+      "name": "Double jump",
+      "purpose": ["teach"],
+      "grants": ["ability:doubleJump"],
+      "palette": []
+    },
+    {
+      "id": "gym-12",
+      "name": "Pogo",
+      "purpose": ["teach"],
+      "grants": ["ability:pogo"],
+      "palette": []
+    },
+    {
+      "id": "gym-13",
+      "name": "Gauntlet",
+      "purpose": ["teach"],
+      "grants": ["ability:wallJump", "ability:dash", "ability:doubleJump", "ability:pogo"],
+      "palette": []
+    },
+    {
+      "id": "gym-14",
+      "name": "Camera lab",
+      "purpose": ["teach"],
+      "grants": ["ability:wallJump", "ability:dash", "ability:doubleJump", "ability:pogo"],
+      "palette": []
+    },
+    {
+      "id": "lot-7",
+      "name": "Lot 7 (seize / levy)",
+      "purpose": ["test"],
+      "grants": ["ability:seize", "ability:levy"],
+      "palette": ["brown", "pink"]
+    },
+    {
+      "id": "lot-7-control",
+      "name": "Lot 7 control (jumps only)",
+      "purpose": ["test"],
+      "grants": [],
+      "palette": []
+    },
+    {
+      "id": "the-pit",
+      "name": "The Pit (2 Barkers, 1 Grinder)",
+      "purpose": ["test"],
+      "grants": ["ability:dash", "ability:seize", "ability:levy"],
+      "palette": ["brown", "pink"],
+      "enemies": ["barker", "barker", "grinder"]
+    },
+    {
+      "id": "stairwell",
+      "name": "Stairwell (never land)",
+      "purpose": ["test"],
+      "grants": ["ability:seize", "ability:levy"],
+      "palette": ["pink"]
+    }
+  ],
+  "edges": [
+    {
+      "id": "door-1",
+      "from": "hub",
+      "to": "gym-01",
+      "dir": "oneway",
+      "via": "door:1"
+    },
+    {
+      "id": "door-2",
+      "from": "hub",
+      "to": "gym-02",
+      "dir": "oneway",
+      "via": "door:2"
+    },
+    {
+      "id": "door-3",
+      "from": "hub",
+      "to": "gym-03",
+      "dir": "oneway",
+      "via": "door:3"
+    },
+    {
+      "id": "door-4",
+      "from": "hub",
+      "to": "gym-04",
+      "dir": "oneway",
+      "via": "door:4"
+    },
+    {
+      "id": "door-5",
+      "from": "hub",
+      "to": "gym-05",
+      "dir": "oneway",
+      "via": "door:5"
+    },
+    {
+      "id": "door-6",
+      "from": "hub",
+      "to": "gym-06",
+      "dir": "oneway",
+      "via": "door:6"
+    },
+    {
+      "id": "door-7",
+      "from": "hub",
+      "to": "gym-07",
+      "dir": "oneway",
+      "via": "door:7"
+    },
+    {
+      "id": "door-8",
+      "from": "hub",
+      "to": "gym-08",
+      "dir": "oneway",
+      "via": "door:8"
+    },
+    {
+      "id": "door-9",
+      "from": "hub",
+      "to": "gym-09",
+      "dir": "oneway",
+      "via": "door:9"
+    },
+    {
+      "id": "door-A",
+      "from": "hub",
+      "to": "gym-10",
+      "dir": "oneway",
+      "via": "door:A"
+    },
+    {
+      "id": "door-B",
+      "from": "hub",
+      "to": "gym-11",
+      "dir": "oneway",
+      "via": "door:B"
+    },
+    {
+      "id": "door-C",
+      "from": "hub",
+      "to": "gym-12",
+      "dir": "oneway",
+      "via": "door:C"
+    },
+    {
+      "id": "door-D",
+      "from": "hub",
+      "to": "gym-13",
+      "dir": "oneway",
+      "via": "door:D"
+    },
+    {
+      "id": "door-E",
+      "from": "hub",
+      "to": "gym-14",
+      "dir": "oneway",
+      "via": "door:E"
+    },
+    {
+      "id": "door-L",
+      "from": "hub",
+      "to": "lot-7",
+      "dir": "oneway",
+      "via": "door:L"
+    },
+    {
+      "id": "door-K",
+      "from": "hub",
+      "to": "lot-7-control",
+      "dir": "oneway",
+      "via": "door:K"
+    },
+    {
+      "id": "door-T",
+      "from": "hub",
+      "to": "the-pit",
+      "dir": "oneway",
+      "via": "door:T"
+    },
+    {
+      "id": "door-S",
+      "from": "hub",
+      "to": "stairwell",
+      "dir": "oneway",
+      "via": "door:S"
+    },
+    {
+      "id": "gym-01-G",
+      "from": "gym-01",
+      "to": "gym-02",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-02-G",
+      "from": "gym-02",
+      "to": "gym-03",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-03-G",
+      "from": "gym-03",
+      "to": "gym-04",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-04-G",
+      "from": "gym-04",
+      "to": "gym-05",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-05-G",
+      "from": "gym-05",
+      "to": "gym-06",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-06-G",
+      "from": "gym-06",
+      "to": "gym-07",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-07-G",
+      "from": "gym-07",
+      "to": "gym-08",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-08-G",
+      "from": "gym-08",
+      "to": "gym-09",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-09-G",
+      "from": "gym-09",
+      "to": "gym-10",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-10-G",
+      "from": "gym-10",
+      "to": "gym-11",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-11-G",
+      "from": "gym-11",
+      "to": "gym-12",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-12-G",
+      "from": "gym-12",
+      "to": "gym-13",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-13-G",
+      "from": "gym-13",
+      "to": "gym-14",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "gym-14-G",
+      "from": "gym-14",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "lot-7-G",
+      "from": "lot-7",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G",
+      "requires": ["ability:seize", "local:brown"],
+      "hold": "sealed",
+      "gate": {
+        "type": "plateDoor",
+        "pressedBy": ["slab", "heavy"],
+        "exitStepTiles": 3
+      }
+    },
+    {
+      "id": "lot-7-control-G",
+      "from": "lot-7-control",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G"
+    },
+    {
+      "id": "the-pit-G",
+      "from": "the-pit",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G",
+      "soft": "combat",
+      "gate": {
+        "type": "clearGate"
+      }
+    },
+    {
+      "id": "stairwell-G",
+      "from": "stairwell",
+      "to": "hub",
+      "dir": "oneway",
+      "via": "G",
+      "requires": ["ability:seize", "ability:levy", "local:pink"],
+      "hold": "reach",
+      "teachGate": true,
+      "gate": {
+        "type": "springLadder",
+        "note": "expression room: up-seize, down-levy, re-seize"
+      }
+    }
+  ]
+}

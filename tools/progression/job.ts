@@ -3,7 +3,7 @@
  * worker thread (pool.ts). Starts at a spawn, or at a tile (a pickup, a ledge) via placePlayer.
  */
 import { HeadlessSim, runScenario, type SimSetup } from '../../src/debug/headless';
-import { type Ability, type AbilitySet, ABILITIES, placePlayer } from '../../src/debug/sim-adapter';
+import { ABILITIES, type Ability, type AbilitySet, placePlayer } from '../../src/debug/sim-adapter';
 import { search } from '../bot/search';
 
 export interface Job {
