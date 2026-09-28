@@ -9,6 +9,7 @@ export interface BodyExtras {
   tail: V2[];
   tailFar: V2[];
   feather: V2[];
+  hair: V2[];
   /** Sack root and belly (world). */
   sack: [V2, V2];
   /** Colours of the carried sounds, oldest first (hex). */
@@ -170,6 +171,13 @@ export function buildKid(pr: Prims, j: Joints, pose: Pose, x: BodyExtras, glow: 
     glow.circles.push({ x: belly.x, y: belly.y, r: R * 1.15, c: c0, a: pulse });
   }
 
+  // --- ponytail (behind the head, on its own spring) ---
+  if (x.hair.length > 1) {
+    pr.polyW(ribbon(x.hair, [5, 6, 5, 3.5, 1.5]), KID.hair);
+    pr.lineW(x.hair.slice(0, 3), 1.2, KID.hairHi, false, 0.8);
+    pr.circleW(x.hair[0] as V2, 2.2, KID.hairTie, false);
+  }
+
   // --- far coat tail, far arm (lead), far leg (back) ---
   if (x.tailFar.length > 1) pr.polyW(ribbon(x.tailFar, [7, 6, 5, 3.5, 2]), KID.coatFar);
   arm(pr, j.shF, j.elF, j.haF, true);
@@ -283,10 +291,11 @@ export function buildKid(pr: Prims, j: Joints, pose: Pose, x: BodyExtras, glow: 
 }
 
 /** Rig-space anchors the chains hang from. */
-export function anchors(j: Joints): { tail: V2; tailFar: V2; feather: V2; sack: V2 } {
+export function anchors(j: Joints): { tail: V2; tailFar: V2; feather: V2; sack: V2; hair: V2 } {
   return {
     tail: onTorso(j, -6, -8),
     tailFar: onTorso(j, -4, -6),
+    hair: onHead(j, v(-8.5, -1)),
     feather: onHead(j, v(-9, -6 - 0)),
     sack: lerpV(onTorso(j, 20, -9), onTorso(j, 16, -11), 0.5),
   };

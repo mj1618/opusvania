@@ -37,6 +37,9 @@ export const KID = {
   sackDark: 0x3e2d1d,
   sackStitch: 0xb08a58,
   strap: 0x2a1c14,
+  hair: 0x3a2029,
+  hairHi: 0x6a3a44,
+  hairTie: 0xe0463b,
   eye: 0xfff4cc,
   eyeGlow: 0xffc86a,
   smear: 0xfff6e2,
@@ -68,10 +71,11 @@ export const BODY = {
 } as const;
 
 /** Secondary motion chains (verlet). */
-export const CHAINS: Record<'tail' | 'tailFar' | 'feather' | 'sack', ChainSpec> = {
+export const CHAINS: Record<'tail' | 'tailFar' | 'feather' | 'sack' | 'hair', ChainSpec> = {
   tail: { n: 5, seg: 6, gravity: 0.55, damping: 0.86, stiffness: 0.12, iterations: 2 },
   tailFar: { n: 5, seg: 5.5, gravity: 0.5, damping: 0.88, stiffness: 0.1, iterations: 2 },
   feather: { n: 4, seg: 5, gravity: 0.12, damping: 0.8, stiffness: 0.32, iterations: 2 },
+  hair: { n: 5, seg: 4.5, gravity: 0.4, damping: 0.84, stiffness: 0.14, iterations: 2 },
   sack: { n: 2, seg: 11, gravity: 0.7, damping: 0.84, stiffness: 0.16, iterations: 2 },
 };
 

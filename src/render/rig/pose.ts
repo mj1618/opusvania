@@ -209,8 +209,8 @@ function idle(ctx: PoseCtx): Pose {
   const pose = base();
   pose.hip = v(1, BODY.hipY + 2 - 2.5 * b);
   pose.lean = 0.12 + 0.02 * Math.sin(ph - 0.5);
-  pose.footF = v(9, 0);
-  pose.footB = v(-9, -1.5 * b);
+  pose.footF = v(11, 0);
+  pose.footB = v(-11, -1.5 * b);
   pose.handF = v(17, -51 - 2 * bLag);
   pose.handB = v(10, -47 - 2 * bLag2);
   pose.head = 0.06 * Math.sin(ph - 1.2);

@@ -92,6 +92,7 @@ export class KidRig {
     tail: new Chain(CHAINS.tail),
     tailFar: new Chain(CHAINS.tailFar),
     feather: new Chain(CHAINS.feather),
+    hair: new Chain(CHAINS.hair),
     sack: new Chain(CHAINS.sack),
   };
   private trailF: V2[] = [];
@@ -338,6 +339,8 @@ export class KidRig {
     this.chains.tailFar.step(toWorld(xf, a.tailFar), back(-0.5, 0.86), floor, wind, snap);
     const fd = dirToWorld(xf, rotLean(v(-0.72, -0.7), pose.lean + pose.head));
     this.chains.feather.step(toWorld(xf, a.feather), fd, null, v(wind.x * 0.5, 0), snap);
+    const hd = dirToWorld(xf, rotLean(v(-0.6, 0.8), pose.lean + pose.head));
+    this.chains.hair.step(toWorld(xf, a.hair), hd, floor, v(wind.x * 0.8, wind.y), snap);
     this.chains.sack.step(toWorld(xf, a.sack), back(-0.3, 0.95), floor, v(wind.x * 0.5, 0), snap);
   }
 
@@ -369,6 +372,7 @@ export class KidRig {
       tail: ch.tail,
       tailFar: ch.tailFar,
       feather: ch.feather,
+      hair: ch.hair,
       sack: [ch.sack[0] as V2, ch.sack[1] as V2],
       bag,
       bagSlots: tuning.bag.slots,
