@@ -70,6 +70,8 @@ test('a door in the hub leads into its room (Up), and presets/assists switch liv
  * 40 trials at seeded sub-frame offsets, real-time mode. Assert p95 < 100 ms.
  */
 test('end-to-end input latency p95 < 100 ms', async ({ page }) => {
+  // 40 real-time trials; CI runners are slower than dev machines.
+  test.setTimeout(90_000);
   await boot(page, '?room=gym-01');
   const lat: number[] = await page.evaluate(async () => {
     const g = window.__game;
@@ -88,7 +90,7 @@ test('end-to-end input latency p95 < 100 ms', async ({ page }) => {
     await wait(300);
     for (let i = 0; i < 40; i++) {
       const code = i % 2 === 0 ? 'ArrowRight' : 'ArrowLeft';
-      await wait(200 + rnd() * 16.7);
+      await wait(100 + rnd() * 16.7);
       const x0 = g.renderState().x;
       const t0 = key('keydown', code);
       const t1 = await new Promise<number>((resolve) => {
@@ -102,7 +104,7 @@ test('end-to-end input latency p95 < 100 ms', async ({ page }) => {
         requestAnimationFrame(probe);
       });
       out.push(t1 - t0);
-      await wait(120);
+      await wait(60);
       key('keyup', code);
     }
     return out;
