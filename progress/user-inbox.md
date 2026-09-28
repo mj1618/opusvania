@@ -11,6 +11,8 @@ Things that need the user. Each item is marked **blocking** or **non-blocking**,
 
 ## Resolved
 
+- 2026-09-28: **User: the game is super boring and basic. Fun is the top criterion.** Recorded in STUDIO.md §1d.
+
 - 2026-09-28: builds. Repo made public; GitHub Pages at https://mj1618.github.io/opusvania/.
 - 2026-09-28: no real artwork or paid APIs for now; no Sentry; keep looping until stopped; concept is the orchestrator's call but must be unique.
 

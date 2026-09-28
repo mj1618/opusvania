@@ -28,6 +28,23 @@ Read this at the start of every orchestrator session and after every context com
 - **Clips:** build video/GIF capture of gameplay so agents and the user can judge motion and feel.
 - **No Sentry** or third-party crash reporting.
 
+## 1d. FUN IS THE TOP CRITERION (user, 2026-09-28)
+
+The user: "the game should be fun, and it's super super super boring and basic right now."
+
+- **Fun beats everything else, including metrics, docs, specs and process.** A loop that doesn't make the game more fun to play is a failed loop, however many checks pass.
+- **Bias to playable over documents.** Research and specs only when a build needs them, kept short. Most agent time goes into things the player sees, hears and feels.
+- **Every loop must ship a visible, playable improvement in fun**, and say what it is in one sentence.
+  - Examples: the hero is a character, not a rectangle; hits land hard; an enemy has personality; a set piece; a surprise; a reward worth finding.
+- **Fun review every loop.** Playtesters answer:
+  - What was the most fun moment?
+  - What was the most boring moment?
+  - When did you want to stop?
+  - Would you keep playing?
+
+  "Boring" anywhere is a bug with top priority.
+- **Show the user a short gameplay video every loop** (put it in the inbox and send it). Their reaction outranks every agent's opinion.
+
 ## 1c. Course correction (2026-09-28, after L4)
 
 The user's review: the levels are small, not fun, disjointed, and don't feel like Hollow Knight or Ori. Diagnosis:
