@@ -13,8 +13,9 @@ export const DEFAULT_KEYS: KeyBindings = {
   up: ['ArrowUp', 'KeyW'],
   down: ['ArrowDown', 'KeyS'],
   jump: ['Space', 'KeyZ', 'KeyK'],
-  attack: ['KeyX', 'KeyJ'],
-  dash: ['KeyC', 'KeyL', 'ShiftLeft'],
+  // movement-spec §2.8: X/Shift dash, C attack (Down+C in the air = pogo).
+  attack: ['KeyC', 'KeyJ'],
+  dash: ['KeyX', 'KeyL', 'ShiftLeft', 'ShiftRight'],
   special: ['KeyV', 'KeyI'],
   map: ['Tab', 'KeyM'],
   pause: ['Escape', 'KeyP'],
@@ -33,7 +34,9 @@ export const DEFAULT_PAD: PadBindings = {
   pause: [9], // Start
 };
 
-export const PAD_STICK_DEADZONE = 0.35;
+/** Stick: a 0.25 radial deadzone, then an axis counts as a direction past 0.5 (spec §2.8). */
+export const PAD_STICK_RADIAL_DEADZONE = 0.25;
+export const PAD_STICK_AXIS_THRESHOLD = 0.5;
 
 export interface Bindings {
   keys: KeyBindings;

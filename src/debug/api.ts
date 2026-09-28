@@ -1,10 +1,20 @@
 import type { Application } from 'pixi.js';
 import type { Game } from '../game';
 import { type InputScript, parseInputScript } from '../input/script';
+import type { CameraState } from '../render/camera/index';
+import type { WorldRenderer } from '../render/world';
 import type { GameState } from '../sim/index';
+import { BASE_PROFILE } from '../sim/player/params';
 import { type Replay, runReplay } from '../sim/replay';
-import type { Tuning } from '../sim/tuning';
-import { ROOMS } from '../sim/world/rooms';
+import {
+  ASSIST_NAMES,
+  type AssistName,
+  applyPreset,
+  PRESET_NAMES,
+  type PresetName,
+  type Tuning,
+} from '../sim/tuning';
+import { type Abilities, ROOMS } from '../sim/world/rooms';
 import type { HitboxOverlay } from './overlay';
 import type { TuningPanel } from './tuning-panel';
 
@@ -48,6 +58,20 @@ export interface GameDebugApi {
     hitboxes(on?: boolean): boolean;
     tuningPanel(on?: boolean): boolean;
   };
+  /** Applies a tuning preset ('opus' | 'celeste' | 'hk') to the live tuning. No arg: list names. */
+  preset(name?: PresetName): string[];
+  assists: {
+    get(): Record<AssistName, boolean>;
+    set(name: AssistName, on: boolean): Record<AssistName, boolean>;
+  };
+  /** Player ability flags; with an argument, overrides them (recorded as a state op in replays). */
+  abilities(set?: Partial<Abilities>): Abilities;
+  /** Player movement profile ('base' or a tuning.profiles key); with an argument, switches it. */
+  profile(name?: string): string;
+  /** Camera state (render-side, pre-shake view top-left in x/y). */
+  camera(): CameraState;
+  /** The player position as last drawn (interpolated), for end-to-end latency probes. */
+  renderState(): { x: number; y: number; frame: number };
 }
 
 declare global {
@@ -63,9 +87,20 @@ export interface DebugDeps {
   render(alpha: number): void;
   overlay: HitboxOverlay;
   panel: TuningPanel;
+  renderer: WorldRenderer;
+  /** Latest drawn player position (main updates it every render). */
+  drawn: { x: number; y: number; frame: number };
 }
 
-export function installDebugApi({ game, app, render, overlay, panel }: DebugDeps): GameDebugApi {
+export function installDebugApi({
+  game,
+  app,
+  render,
+  overlay,
+  panel,
+  renderer,
+  drawn,
+}: DebugDeps): GameDebugApi {
   const snapshot = () => JSON.parse(JSON.stringify(game.state)) as GameState;
   const api: GameDebugApi = {
     step(n = 1) {
@@ -138,6 +173,43 @@ export function installDebugApi({ game, app, render, overlay, panel }: DebugDeps
       hitboxes: (on) => overlay.toggle(on),
       tuningPanel: (on) => panel.toggle(on),
     },
+    preset(name) {
+      if (name !== undefined) {
+        if (!PRESET_NAMES.includes(name)) throw new Error(`Unknown preset "${name}". Known: ${PRESET_NAMES}`);
+        applyPreset(game.tuning, name);
+        panel.refresh();
+      }
+      return [...PRESET_NAMES];
+    },
+    assists: {
+      get: () => ({ ...game.tuning.assists }),
+      set(name, on) {
+        if (!ASSIST_NAMES.includes(name)) throw new Error(`Unknown assist "${name}". Known: ${ASSIST_NAMES}`);
+        game.tuning.assists[name] = on;
+        panel.refresh();
+        return { ...game.tuning.assists };
+      },
+    },
+    abilities(set) {
+      if (set) {
+        const s = snapshot();
+        Object.assign(s.player.abilities, set);
+        game.setState(s);
+      }
+      return { ...game.state.player.abilities };
+    },
+    profile(name) {
+      if (name !== undefined) {
+        if (name !== BASE_PROFILE && !(name in game.tuning.profiles))
+          throw new Error(`Unknown profile "${name}". Known: base, ${Object.keys(game.tuning.profiles)}`);
+        const s = snapshot();
+        s.player.profile = name;
+        game.setState(s);
+      }
+      return game.state.player.profile;
+    },
+    camera: () => JSON.parse(JSON.stringify(renderer.camera)) as CameraState,
+    renderState: () => ({ ...drawn }),
   };
   window.__game = api;
   return api;

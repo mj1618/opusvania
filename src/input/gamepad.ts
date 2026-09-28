@@ -1,5 +1,5 @@
 import { ACTIONS, ActionBit, type InputFrame } from '../sim/input';
-import { type Bindings, PAD_STICK_DEADZONE } from './bindings';
+import { type Bindings, PAD_STICK_AXIS_THRESHOLD, PAD_STICK_RADIAL_DEADZONE } from './bindings';
 
 /** Polls every connected standard-mapping gamepad and ORs them together. */
 export class GamepadSource {
@@ -20,10 +20,12 @@ export class GamepadSource {
       }
       const x = pad.axes[0] ?? 0;
       const y = pad.axes[1] ?? 0;
-      if (x < -PAD_STICK_DEADZONE) mask |= ActionBit.left;
-      if (x > PAD_STICK_DEADZONE) mask |= ActionBit.right;
-      if (y < -PAD_STICK_DEADZONE) mask |= ActionBit.up;
-      if (y > PAD_STICK_DEADZONE) mask |= ActionBit.down;
+      if (Math.hypot(x, y) < PAD_STICK_RADIAL_DEADZONE) continue;
+      const th = PAD_STICK_AXIS_THRESHOLD;
+      if (x < -th) mask |= ActionBit.left;
+      if (x > th) mask |= ActionBit.right;
+      if (y < -th) mask |= ActionBit.up;
+      if (y > th) mask |= ActionBit.down;
     }
     return mask;
   }
