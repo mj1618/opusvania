@@ -39,7 +39,9 @@ memory/combat-bots.md). Render/audio side: memory/signature-render.md, memory/au
   "cleared" beat before the warp (world.goalBeatFrames).
 - **Spawn grace** is per room (`spawnGrace`, the Pit 120 f): enemies neither aggro nor attack before it ends.
 - Numbers changed from the spec after the report (levers the spec names): HP Barker 10, Grinder 14,
-  Clerk 14, Auctioneer 28/32; Grinder backs up 48 px (24 was invisible); violet drift −0.05 px/f².
+  Clerk 14 (the Auctioneer keeps 36/44); Grinder backs up 48 px (24 was invisible); violet drift
+  −0.05 px/f². Boss rules added: a Return-to-sender stagger can't be extended and guards his voices
+  (else grab → throw → grab stagger-locks him), and a hit while he rises at 0 HP can't re-down him.
 - Gotchas found by tests/fuzz: a slab landing on the safe spot put Kid inside a solid on respawn;
   the boss's hop used to snap x to its target (inside a slab); a fork of the fuzzer looped forever
   once Kid left the room (Counted Out) because the frame counter only advanced inside the room.
