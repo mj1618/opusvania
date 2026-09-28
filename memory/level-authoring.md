@@ -12,6 +12,16 @@ Code: `tools/world/` (one file per job; `model.ts` is the one table of brushes, 
 - `content/stamps/<name>.json` = small ASCII chunks for the `stamp` brush (space = keep).
 - `clips/world/*.png` = rendered maps (gitignored). Commit a copy into a report if it matters.
 
+## Section-first (preferred for a region; north star §3.3)
+Author the whole region as ONE section sheet in world tiles, then cut it into rooms:
+`npm run world -- section export sample` shows the format: `{"section": "sample", "rooms": [{id, at,
+size, abilities, ...}], "brushes": [...], "entities": [...], "paint": [...]}` (all world tiles).
+`npm run world -- section import region.json` gives every room a translated copy of each brush that
+touches it (tagged `s<index>`), so a tunnel or shaft drawn across a seam bakes the same on both sides
+and the openings always match (edge exits for free). Entities must sit inside one room. Import
+replaces all `<section>-*` rooms and DELETES ones missing from the sheet. Per-room sheets still work
+for local tweaks; their untagged brushes come back at the end of a section export.
+
 ## The loop (agents)
 1. Write a room sheet (JSON; copy one: `npm run world -- export sample-cellar`). Keys: `id`
    (`<region>-<room>`, one hyphen, so `content/rooms-dressing/<region>.json` dresses the region),
@@ -19,7 +29,8 @@ Code: `tools/world/` (one file per job; `model.ts` is the one table of brushes, 
    next draft claims notes`, then `brushes`, `entities`, `paint`.
 2. `npm run world -- import my-room.json [more.json]` = create/replace, bake, compile, lint. Read the
    errors: spawn/door inside a wall, overlapping entities, unknown door targets, unreachable doors/goals
-   (gravity-free flood), sealed air, edge openings that meet solid.
+   (gravity-free flood), sealed air, edge openings that meet solid; north-star warnings: seams wider
+   than 8, floor not flat 3 tiles either side of an e/w seam, non-draft rooms off the 30x17 cell grid.
 3. `npm run world:render [-- --region <prefix> --scale 8]` and READ the PNG: rooms at world positions,
    30x17 screen grid with world-tile coordinates, door links (dashed), edge openings (green = joined,
    red = blocked), sealed air (orange), labels. Judge geography here, not per room.

@@ -85,14 +85,14 @@
 		{
 			"__identifier": "notes",
 			"__type": "Multilines",
-			"__value": "Worked example of every brush (memory/level-authoring.md). Hall -> cave tunnel east to the Gallery (edge exit, momentum kept); shaft north to the Stair (edge exit, plus an Up-door pair).",
+			"__value": "Section-first worked example (npm run world -- section export sample). Hall -> cave tunnel east to the Gallery (edge exit, momentum kept); shaft north to the Stair (edge exit, plus an Up-door pair).",
 			"__tile": null,
 			"defUid": 129,
 			"realEditorValues": [
 				{
 					"id": "V_String",
 					"params": [
-						"Worked example of every brush (memory/level-authoring.md). Hall -> cave tunnel east to the Gallery (edge exit, momentum kept); shaft north to the Stair (edge exit, plus an Up-door pair)."
+						"Section-first worked example (npm run world -- section export sample). Hall -> cave tunnel east to the Gallery (edge exit, momentum kept); shaft north to the Stair (edge exit, plus an Up-door pair)."
 					]
 				}
 			]
@@ -353,6 +353,14 @@
 							"__tile": null,
 							"defUid": 13,
 							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s0",
+							"__tile": null,
+							"defUid": 136,
+							"realEditorValues": [{"id":"V_String","params":["s0"]}]
 						}
 					]
 				},
@@ -406,10 +414,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s1:hall",
 							"__tile": null,
 							"defUid": 23,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s1:hall"]}]
 						}
 					]
 				},
@@ -447,10 +455,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s2",
 							"__tile": null,
 							"defUid": 17,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s2"]}]
 						}
 					]
 				},
@@ -488,10 +496,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s3",
 							"__tile": null,
 							"defUid": 17,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s3"]}]
 						}
 					]
 				},
@@ -537,10 +545,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s4",
 							"__tile": null,
 							"defUid": 40,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s4"]}]
 						}
 					]
 				},
@@ -578,14 +586,27 @@
 						{
 							"__identifier": "pts",
 							"__type": "Array<Point>",
-							"__value": [{"cx":34,"cy":19},{"cx":44,"cy":17},{"cx":54,"cy":20},{"cx":69,"cy":18}],
+							"__value": [
+								{"cx":34,"cy":19},
+								{"cx":44,"cy":17},
+								{"cx":54,"cy":20},
+								{"cx":69,"cy":18},
+								{"cx":82,"cy":18},
+								{"cx":94,"cy":15},
+								{"cx":108,"cy":16},
+								{"cx":122,"cy":13}
+							],
 							"__tile": null,
 							"defUid": 27,
 							"realEditorValues": [
 								{"id":"V_String","params":["34,19"]},
 								{"id":"V_String","params":["44,17"]},
 								{"id":"V_String","params":["54,20"]},
-								{"id":"V_String","params":["69,18"]}
+								{"id":"V_String","params":["69,18"]},
+								{"id":"V_String","params":["82,18"]},
+								{"id":"V_String","params":["94,15"]},
+								{"id":"V_String","params":["108,16"]},
+								{"id":"V_String","params":["122,13"]}
 							]
 						},
 						{
@@ -615,27 +636,109 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s7:cave across the seam",
 							"__tile": null,
 							"defUid": 31,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s7:cave across the seam"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [64,16],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 4096,
+					"__worldY": 1024,
+					"iid": "0d0bf806-b94a-52ac-a6df-d87056ec2800",
+					"width": 768,
+					"height": 256,
+					"defUid": 18,
+					"px": [4096,1024],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "carve",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["carve"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s8:flat seam neck",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s8:flat seam neck"]}]
+						}
+					]
+				},
+				{
+					"__identifier": "Rect",
+					"__grid": [64,20],
+					"__pivot": [0,0],
+					"__tags": ["brush"],
+					"__tile": null,
+					"__smartColor": "#8A5A2B",
+					"__worldX": 4096,
+					"__worldY": 1280,
+					"iid": "841953bf-4fd4-531a-801d-489ec9859218",
+					"width": 768,
+					"height": 192,
+					"defUid": 18,
+					"px": [4096,1280],
+					"fieldInstances": [
+						{
+							"__identifier": "op",
+							"__type": "LocalEnum.Op",
+							"__value": "add",
+							"__tile": null,
+							"defUid": 15,
+							"realEditorValues": [{"id":"V_String","params":["add"]}]
+						},
+						{
+							"__identifier": "tile",
+							"__type": "LocalEnum.Tile",
+							"__value": "solid",
+							"__tile": null,
+							"defUid": 16,
+							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s9",
+							"__tile": null,
+							"defUid": 17,
+							"realEditorValues": [{"id":"V_String","params":["s9"]}]
 						}
 					]
 				},
 				{
 					"__identifier": "Shaft",
-					"__grid": [54,0],
+					"__grid": [54,-14],
 					"__pivot": [0,0],
 					"__tags": ["brush"],
 					"__tile": null,
 					"__smartColor": "#8A5A2B",
 					"__worldX": 3456,
-					"__worldY": 0,
-					"iid": "0d0bf806-b94a-52ac-a6df-d87056ec2800",
+					"__worldY": -896,
+					"iid": "d79d4d0e-fda9-5893-99d2-8588933d1876",
 					"width": 384,
-					"height": 1280,
+					"height": 2176,
 					"defUid": 36,
-					"px": [3456,0],
+					"px": [3456,-896],
 					"fieldInstances": [
 						{
 							"__identifier": "op",
@@ -656,10 +759,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s10:shaft across the seam",
 							"__tile": null,
 							"defUid": 35,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s10:shaft across the seam"]}]
 						}
 					]
 				},
@@ -672,7 +775,7 @@
 					"__smartColor": "#8A5A2B",
 					"__worldX": 3456,
 					"__worldY": 1280,
-					"iid": "841953bf-4fd4-531a-801d-489ec9859218",
+					"iid": "18b8d28d-23f4-53b9-a324-c6e6f13edb15",
 					"width": 64,
 					"height": 64,
 					"defUid": 48,
@@ -704,7 +807,12 @@
 								{"cx":57,"cy":11},
 								{"cx":54,"cy":8},
 								{"cx":57,"cy":5},
-								{"cx":54,"cy":2}
+								{"cx":54,"cy":2},
+								{"cx":57,"cy":-1},
+								{"cx":54,"cy":-4},
+								{"cx":57,"cy":-7},
+								{"cx":54,"cy":-10},
+								{"cx":57,"cy":-13}
 							],
 							"__tile": null,
 							"defUid": 44,
@@ -715,7 +823,12 @@
 								{"id":"V_String","params":["57,11"]},
 								{"id":"V_String","params":["54,8"]},
 								{"id":"V_String","params":["57,5"]},
-								{"id":"V_String","params":["54,2"]}
+								{"id":"V_String","params":["54,2"]},
+								{"id":"V_String","params":["57,-1"]},
+								{"id":"V_String","params":["54,-4"]},
+								{"id":"V_String","params":["57,-7"]},
+								{"id":"V_String","params":["54,-10"]},
+								{"id":"V_String","params":["57,-13"]}
 							]
 						},
 						{
@@ -737,10 +850,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s11",
 							"__tile": null,
 							"defUid": 47,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s11"]}]
 						}
 					]
 				},
@@ -753,7 +866,7 @@
 					"__smartColor": "#8A5A2B",
 					"__worldX": 896,
 					"__worldY": 1408,
-					"iid": "d79d4d0e-fda9-5893-99d2-8588933d1876",
+					"iid": "ff17229c-bca0-5e02-aba8-10b3ccef6c09",
 					"width": 64,
 					"height": 64,
 					"defUid": 53,
@@ -791,10 +904,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s13",
 							"__tile": null,
 							"defUid": 52,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s13"]}]
 						}
 					]
 				},
@@ -807,7 +920,7 @@
 					"__smartColor": "#8A5A2B",
 					"__worldX": 1536,
 					"__worldY": 832,
-					"iid": "18b8d28d-23f4-53b9-a324-c6e6f13edb15",
+					"iid": "8caaf57e-3bbc-51af-b69a-7f170d335a2e",
 					"width": 384,
 					"height": 64,
 					"defUid": 18,
@@ -832,10 +945,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s14",
 							"__tile": null,
 							"defUid": 17,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s14"]}]
 						}
 					]
 				},
@@ -848,7 +961,7 @@
 					"__smartColor": "#8A5A2B",
 					"__worldX": 1920,
 					"__worldY": 1344,
-					"iid": "ff17229c-bca0-5e02-aba8-10b3ccef6c09",
+					"iid": "c901173a-f5c6-579c-b7d7-22683596cfa1",
 					"width": 64,
 					"height": 64,
 					"defUid": 58,
@@ -881,10 +994,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s15",
 							"__tile": null,
 							"defUid": 57,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s15"]}]
 						}
 					]
 				},
@@ -897,7 +1010,7 @@
 					"__smartColor": "#8A5A2B",
 					"__worldX": 1664,
 					"__worldY": 1344,
-					"iid": "8caaf57e-3bbc-51af-b69a-7f170d335a2e",
+					"iid": "64d36abf-c0c5-501b-8405-2c368e6c95cc",
 					"width": 192,
 					"height": 64,
 					"defUid": 18,
@@ -922,10 +1035,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s16",
 							"__tile": null,
 							"defUid": 17,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s16"]}]
 						}
 					]
 				},
@@ -938,7 +1051,7 @@
 					"__smartColor": "#8A5A2B",
 					"__worldX": 192,
 					"__worldY": 1152,
-					"iid": "c901173a-f5c6-579c-b7d7-22683596cfa1",
+					"iid": "fae878ee-79af-5751-b3c9-b01e1364fc76",
 					"width": 64,
 					"height": 64,
 					"defUid": 62,
@@ -963,10 +1076,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s17",
 							"__tile": null,
 							"defUid": 61,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s17"]}]
 						}
 					]
 				}
@@ -1063,11 +1176,11 @@
 				1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,2,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
 				1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,0,0,0,1,1,1,1,1,1,1,1,1,1,
 				1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
-				1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,
 				1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,0,0,0,0,0,0,0,0,0,0,
 				1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 				1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-				1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,1,
+				1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,2,2,2,0,0,0,0,0,0,0,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,3,3,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,

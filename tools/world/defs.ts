@@ -35,7 +35,7 @@ export const defIdent = (name: string): string => name[0]?.toUpperCase() + name.
 
 /** Which brush fields each shape shows in the editor. */
 export const SHAPE_FIELDS: Record<Shape, string[]> = {
-  fill: ['op', 'tile'],
+  fill: ['op', 'tile', 'tag'],
   rect: ['op', 'tile', 'tag'],
   shaft: ['op', 'tile', 'tag'],
   blob: ['op', 'tile', 'rough', 'seed', 'tag'],
@@ -159,7 +159,8 @@ function entityDef(
     uid,
     tags: o.tags,
     exportToToc: o.toc,
-    allowOutOfBounds: false,
+    // Brushes may hang over the room edge (a section brush cut by a seam keeps its true geometry).
+    allowOutOfBounds: o.tags.includes('brush'),
     doc: o.doc,
     width: GRID,
     height: GRID,

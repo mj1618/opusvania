@@ -182,13 +182,15 @@ export function modelToLevel(p: Project, m: LevelModel, uid: number): Level {
         if (RECT_SHAPES.includes(b.shape) && b.rect) rect = b.rect;
         else if (b.shape === 'stamp' && b.rect) rect = [b.rect[0], b.rect[1], 1, 1];
         else if (PATH_SHAPES.includes(b.shape) && b.pts[0]) rect = [b.pts[0][0], b.pts[0][1], 1, 1];
-        // Handles must sit inside the level for LDtk (allowOutOfBounds is off).
-        rect = [
-          Math.min(Math.max(rect[0], 0), w - 1),
-          Math.min(Math.max(rect[1], 0), h - 1),
-          rect[2],
-          rect[3],
-        ];
+        // Rect shapes and stamps keep their true rect (brushes may hang over the edge); a path
+        // brush's position is only a handle, kept inside the level so it stays easy to grab.
+        if (!RECT_SHAPES.includes(b.shape) && b.shape !== 'stamp')
+          rect = [
+            Math.min(Math.max(rect[0], 0), w - 1),
+            Math.min(Math.max(rect[1], 0), h - 1),
+            rect[2],
+            rect[3],
+          ];
         const fis = fieldsOut(BRUSH_FIELDS, values, (n) => def.fields.get(n)?.uid);
         return entityInstance(lvInfo, ld.identifier, idx, ident, def, rect, fis);
       });

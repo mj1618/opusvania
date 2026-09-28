@@ -21,7 +21,7 @@ import {
 import { bake } from '../../tools/world/bake';
 import { compileWorld } from '../../tools/world/compile';
 import { levelsDir, loadProject } from '../../tools/world/ldtk';
-import { ENUMS, modelToSheet, sheetToModel } from '../../tools/world/model';
+import { ENUMS, type LevelModel, modelToSheet, sheetToModel } from '../../tools/world/model';
 import { renderWorld } from '../../tools/world/png';
 import {
   asciiRooms,
@@ -33,6 +33,7 @@ import {
   staleness,
 } from '../../tools/world/project';
 import { checkSchema } from '../../tools/world/schema-check';
+import { modelsToSection, sectionToModels } from '../../tools/world/section';
 
 const PORTS: [string, string][] = [
   ['port-gym14', 'gym-14'],
@@ -133,6 +134,77 @@ describe('room sheets', () => {
     );
     expect(() => sheetToModel({ ...base, entities: [['spawn', [3, 3, 2, 2]]] })).toThrow(/point entity/);
     expect(() => sheetToModel({ ...base, id: 'Bad_Id' })).toThrow(/kebab/);
+  });
+});
+
+describe('section sheets (a region in world tiles, cut into rooms)', () => {
+  it('the sample region round-trips: export -> cut -> bake gives the stored rooms and the same section', () => {
+    const stored = models(openProject()).filter((m) => m.id.startsWith('sample-'));
+    const sec = modelsToSection('sample', stored);
+    const cut = sectionToModels(JSON.parse(JSON.stringify(sec)));
+    expect(cut.models.map((m) => m.id)).toEqual(stored.map((m) => m.id));
+    for (const m of cut.models) {
+      const s = stored.find((x) => x.id === m.id) as (typeof stored)[number];
+      expect([...bake(m).collision], m.id).toEqual([...s.collision]);
+      expect(m.entities, m.id).toEqual(s.entities);
+    }
+    expect(
+      modelsToSection(
+        'sample',
+        cut.models.map((m) => ({ ...m, collision: bake(m).collision })),
+      ),
+    ).toEqual(sec);
+  });
+
+  it('a brush across a seam bakes the same tiles on both sides', () => {
+    const sec = {
+      section: 'seam',
+      rooms: [
+        { id: 'seam-a', at: [0, 0], size: [30, 17] },
+        { id: 'seam-b', at: [30, 0], size: [30, 17] },
+      ],
+      brushes: [
+        ['fill'],
+        [
+          'tunnel',
+          'carve',
+          [
+            [2, 8],
+            [30, 6],
+            [57, 9],
+          ],
+          5,
+          { rough: 2, seed: 3 },
+        ],
+      ],
+      entities: [
+        ['spawn', [3, 8]],
+        ['spawn', [50, 8]],
+      ],
+    };
+    const [a, b] = sectionToModels(sec).models.map((m) => ({ ...m, collision: bake(m).collision }));
+    const one = sectionToModels({
+      ...sec,
+      rooms: [{ id: 'seam-all', at: [0, 0], size: [60, 17] }],
+      entities: [['spawn', [3, 8]]],
+    }).models[0] as LevelModel;
+    const whole = bake(one).collision;
+    for (let y = 0; y < 17; y++)
+      for (let x = 0; x < 60; x++) {
+        const part =
+          x < 30 ? (a as LevelModel).collision[y * 30 + x] : (b as LevelModel).collision[y * 30 + x - 30];
+        // Speck cleanup sees the room edge as solid, so allow a difference only on the seam columns.
+        if (x !== 29 && x !== 30) expect(part, `${x},${y}`).toBe(whole[y * 60 + x]);
+      }
+    expect(() =>
+      sectionToModels({
+        ...sec,
+        entities: [
+          ['spawn', [3, 8]],
+          ['camera', [25, 0, 10, 5]],
+        ],
+      }),
+    ).toThrow(/crosses the edge/);
   });
 });
 

@@ -23,6 +23,8 @@ export interface Opening {
 
 const SCREEN = { w: 30, h: 17 };
 const MAX = { w: 240, h: 68 };
+const SEAM_MAX = 8;
+const SEAM_FLAT = 3;
 
 function tileAtWorld(models: LevelModel[], wx: number, wy: number): { m: LevelModel; v: number } | undefined {
   for (const m of models) {
@@ -126,6 +128,10 @@ export function lintWorld(
     }
   for (const m of models) {
     const [w, h] = m.size;
+    if (!m.fields.draft && (m.at[0] % SCREEN.w || m.at[1] % SCREEN.h || w % SCREEN.w || h % SCREEN.h))
+      warnings.push(
+        `${m.id}: position ${m.at} / size ${w}x${h} are not whole ${SCREEN.w}x${SCREEN.h} cells (north star §3.3)`,
+      );
     if (w < SCREEN.w || h < SCREEN.h)
       warnings.push(
         `${m.id}: ${w}x${h} is under one screen (${SCREEN.w}x${SCREEN.h}); the sim pads it with solid`,
@@ -133,8 +139,31 @@ export function lintWorld(
     if (w > MAX.w || h > MAX.h) warnings.push(`${m.id}: ${w}x${h} is over ${MAX.w}x${MAX.h} (8 x 4 screens)`);
   }
   const ops = openings(models);
+  const byId = new Map(models.map((m) => [m.id, m]));
   for (const o of ops) {
-    if (o.matched) continue;
+    if (o.matched) {
+      // North star §3.3 (X2, X4): seams sit at necks (<= 8 tiles) and the floor is flat for 3
+      // tiles either side of an east/west seam.
+      const n = o.to - o.from + 1;
+      if (n > SEAM_MAX)
+        warnings.push(`${o.room}: ${o.side} seam is ${n} tiles wide (seams sit at necks <= ${SEAM_MAX})`);
+      const m = byId.get(o.room) as LevelModel;
+      if (o.side === 'e' || o.side === 'w') {
+        const [W, H] = m.size;
+        const floor = o.to + 1;
+        for (let k = 0; k < SEAM_FLAT; k++) {
+          const x = o.side === 'e' ? W - 1 - k : k;
+          const flat = floor < H && m.collision[floor * W + x] === 1 && m.collision[o.to * W + x] !== 1;
+          if (!flat) {
+            warnings.push(
+              `${o.room}: floor is not flat for ${SEAM_FLAT} tiles at the ${o.side} seam (y ${o.from}-${o.to}; column ${x})`,
+            );
+            break;
+          }
+        }
+      }
+      continue;
+    }
     const span = `${o.side === 'n' || o.side === 's' ? 'x' : 'y'} ${o.from}-${o.to}`;
     warnings.push(
       `${o.room}: ${{ n: 'north', s: 'south', e: 'east', w: 'west' }[o.side]} edge opening (${span}) ${o.into ? `meets solid in ${o.into}` : 'leads out of the world'}`,

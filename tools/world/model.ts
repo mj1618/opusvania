@@ -372,7 +372,7 @@ const BrushOpts = z.strictObject({
 type BrushOptsT = z.infer<typeof BrushOpts>;
 const SPIKE_DIRS = { up: 'spikeUp', down: 'spikeDown', left: 'spikeLeft', right: 'spikeRight' } as const;
 
-const BrushTuple = z.union([
+export const BrushTuple = z.union([
   z.tuple([z.literal('fill')], z.unknown()),
   z.tuple([z.enum(['rect', 'blob', 'shaft', 'arch']), Op, RectT], BrushOpts),
   z.tuple([z.enum(['tunnel', 'ledges']), Op, z.array(Pt).min(1), Int.positive()], BrushOpts),
@@ -383,7 +383,7 @@ const BrushTuple = z.union([
   z.tuple([z.literal('spikes'), z.enum(['up', 'down', 'left', 'right']), RectT], BrushOpts),
 ]);
 
-const EntTuple = z.union([
+export const EntTuple = z.union([
   z.tuple([z.enum(ENTITY_KINDS), Pt]),
   z.tuple([z.enum(ENTITY_KINDS), Pt, z.record(z.string(), z.unknown())]),
   z.tuple([z.enum(ENTITY_KINDS), RectT]),
@@ -431,7 +431,7 @@ const PROP_SCHEMAS = Object.fromEntries(
   ENTITY_KINDS.map((k) => [k, propSchema(ENTITY_SPECS[k])]),
 ) as unknown as Record<EntityKind, z.ZodType<Record<string, unknown>>>;
 
-function brushFromTuple(t: z.infer<typeof BrushTuple>): Brush {
+export function brushFromTuple(t: z.infer<typeof BrushTuple>): Brush {
   const b: Brush = {
     shape: 'fill',
     op: 'add',
@@ -454,8 +454,9 @@ function brushFromTuple(t: z.infer<typeof BrushTuple>): Brush {
   };
   const [head] = t;
   if (head === 'fill') {
-    const tile = t[1];
-    if (typeof tile === 'string') b.tile = z.enum(TILE_NAMES).parse(tile);
+    const [, a, o] = t as unknown[];
+    if (typeof a === 'string') b.tile = z.enum(TILE_NAMES).parse(a);
+    opts(typeof a === 'object' ? BrushOpts.parse(a) : o === undefined ? undefined : BrushOpts.parse(o));
   } else if (head === 'rect' || head === 'blob' || head === 'shaft' || head === 'arch') {
     const [shape, op, rect, o] = t as [Shape, 'add' | 'carve', Brush['rect'], unknown];
     Object.assign(b, { shape, op, rect });
@@ -490,7 +491,7 @@ function brushFromTuple(t: z.infer<typeof BrushTuple>): Brush {
   return b;
 }
 
-function brushToTuple(b: Brush): unknown[] {
+export function brushToTuple(b: Brush): unknown[] {
   const o: Record<string, unknown> = {};
   if (b.rough) o.rough = b.rough;
   if (b.seed) o.seed = b.seed;
@@ -501,7 +502,7 @@ function brushToTuple(b: Brush): unknown[] {
   const tail = (x: Record<string, unknown>) => (Object.keys(x).length ? [x] : []);
   switch (b.shape) {
     case 'fill':
-      return b.tile === 'solid' ? ['fill'] : ['fill', b.tile];
+      return ['fill', ...(b.tile === 'solid' ? [] : [b.tile]), ...tail(o)];
     case 'rect': {
       const r = b.rect as [number, number, number, number];
       if (b.op === 'add' && b.tile === 'oneWay' && r[3] === 1)
@@ -529,7 +530,7 @@ function brushToTuple(b: Brush): unknown[] {
 }
 
 /** Sheet props -> full props (defaults filled). Throws with the entity index on bad props. */
-function entFromTuple(t: z.infer<typeof EntTuple>, i: number): Ent {
+export function entFromTuple(t: z.infer<typeof EntTuple>, i: number): Ent {
   const [kind, pos, props] = t as [EntityKind, number[], Record<string, unknown> | undefined];
   const spec = ENTITY_SPECS[kind];
   const rect: Ent['rect'] =
@@ -550,7 +551,7 @@ function entFromTuple(t: z.infer<typeof EntTuple>, i: number): Ent {
   return { kind, rect, props: full };
 }
 
-function entToTuple(e: Ent): unknown[] {
+export function entToTuple(e: Ent): unknown[] {
   const spec = ENTITY_SPECS[e.kind];
   const props: Record<string, unknown> = {};
   for (const fs of spec.fields) {

@@ -41,6 +41,7 @@ export function models(p: Project): LevelModel[] {
 
 /** Adds or replaces the level for `m` (baked first). Keeps the level's uid and position in the list. */
 export function upsertLevel(p: Project, m: LevelModel): { warnings: string[] } {
+  syncDefs(p.json);
   const { collision, warnings } = bake(m);
   m.collision = collision;
   const ident = levelIdent(m.id);

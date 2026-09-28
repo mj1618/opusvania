@@ -275,6 +275,14 @@
 							"__tile": null,
 							"defUid": 13,
 							"realEditorValues": [{"id":"V_String","params":["solid"]}]
+						},
+						{
+							"__identifier": "tag",
+							"__type": "String",
+							"__value": "s0",
+							"__tile": null,
+							"defUid": 136,
+							"realEditorValues": [{"id":"V_String","params":["s0"]}]
 						}
 					]
 				},
@@ -328,10 +336,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s5:stair chamber",
 							"__tile": null,
 							"defUid": 23,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s5:stair chamber"]}]
 						}
 					]
 				},
@@ -369,10 +377,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s6",
 							"__tile": null,
 							"defUid": 17,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s6"]}]
 						}
 					]
 				},
@@ -387,7 +395,7 @@
 					"__worldY": -896,
 					"iid": "e885f443-c2e1-5588-bac3-4c31b2bc97c6",
 					"width": 384,
-					"height": 896,
+					"height": 2176,
 					"defUid": 36,
 					"px": [896,1280],
 					"fieldInstances": [
@@ -410,27 +418,27 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s10:shaft across the seam",
 							"__tile": null,
 							"defUid": 35,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s10:shaft across the seam"]}]
 						}
 					]
 				},
 				{
 					"__identifier": "Ledges",
-					"__grid": [14,31],
+					"__grid": [14,33],
 					"__pivot": [0,0],
 					"__tags": ["brush"],
 					"__tile": null,
 					"__smartColor": "#8A5A2B",
 					"__worldX": 3456,
-					"__worldY": -192,
+					"__worldY": -64,
 					"iid": "7a97ec17-53ff-5e0b-8f87-1f9efd3e3722",
 					"width": 64,
 					"height": 64,
 					"defUid": 48,
-					"px": [896,1984],
+					"px": [896,2112],
 					"fieldInstances": [
 						{
 							"__identifier": "op",
@@ -451,14 +459,35 @@
 						{
 							"__identifier": "pts",
 							"__type": "Array<Point>",
-							"__value": [{"cx":14,"cy":31},{"cx":17,"cy":28},{"cx":14,"cy":25},{"cx":17,"cy":22}],
+							"__value": [
+								{"cx":14,"cy":54},
+								{"cx":17,"cy":51},
+								{"cx":14,"cy":48},
+								{"cx":17,"cy":45},
+								{"cx":14,"cy":42},
+								{"cx":17,"cy":39},
+								{"cx":14,"cy":36},
+								{"cx":17,"cy":33},
+								{"cx":14,"cy":30},
+								{"cx":17,"cy":27},
+								{"cx":14,"cy":24},
+								{"cx":17,"cy":21}
+							],
 							"__tile": null,
 							"defUid": 44,
 							"realEditorValues": [
-								{"id":"V_String","params":["14,31"]},
-								{"id":"V_String","params":["17,28"]},
-								{"id":"V_String","params":["14,25"]},
-								{"id":"V_String","params":["17,22"]}
+								{"id":"V_String","params":["14,54"]},
+								{"id":"V_String","params":["17,51"]},
+								{"id":"V_String","params":["14,48"]},
+								{"id":"V_String","params":["17,45"]},
+								{"id":"V_String","params":["14,42"]},
+								{"id":"V_String","params":["17,39"]},
+								{"id":"V_String","params":["14,36"]},
+								{"id":"V_String","params":["17,33"]},
+								{"id":"V_String","params":["14,30"]},
+								{"id":"V_String","params":["17,27"]},
+								{"id":"V_String","params":["14,24"]},
+								{"id":"V_String","params":["17,21"]}
 							]
 						},
 						{
@@ -480,10 +509,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s11",
 							"__tile": null,
 							"defUid": 47,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s11"]}]
 						}
 					]
 				},
@@ -549,10 +578,10 @@
 						{
 							"__identifier": "tag",
 							"__type": "String",
-							"__value": null,
+							"__value": "s12",
 							"__tile": null,
 							"defUid": 47,
-							"realEditorValues": [null]
+							"realEditorValues": [{"id":"V_String","params":["s12"]}]
 						}
 					]
 				}
@@ -658,7 +687,6 @@
 				1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,
 				1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
-				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,2,2,2,1,1,1,1,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
@@ -670,7 +698,8 @@
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,0,0,0,1,1,1,1,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
-				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,2,2,2,1,1,1,1,1,1,1,1,1,1
 			],
 			"autoLayerTiles": [],
 			"seed": 1003,

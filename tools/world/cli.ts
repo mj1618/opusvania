@@ -3,6 +3,8 @@
  *
  *   npm run world -- import <sheet.json>...   create/replace rooms from room sheets, then build
  *   npm run world -- export <room> [--out f]  print a room's sheet (edit it, import it back)
+ *   npm run world -- section import <f.json>  a whole region in world tiles, cut into its rooms
+ *   npm run world -- section export <name> [--out f]   rebuild the section sheet from its rooms
  *   npm run world -- build [--check]          defs + bake + compile + lint (after LDtk edits);
  *                                             --check: exit 1 if anything stored is stale
  *   npm run world -- render [--region p | --rooms a,b] [--out f.png] [--scale n]
@@ -30,6 +32,7 @@ import {
   staleness,
   upsertLevel,
 } from './project';
+import { formatSection, modelsToSection, sectionToModels } from './section';
 
 const { values: args, positionals } = parseArgs({
   allowPositionals: true,
@@ -87,6 +90,39 @@ function main(): number {
         );
       }
       return report(build(p));
+    }
+    case 'section': {
+      const [sub, arg] = rest;
+      if (sub === 'import' && arg) {
+        const p = openProject();
+        const { section, models: ms } = sectionToModels(JSON.parse(readFileSync(arg, 'utf8')));
+        const keep = new Set(ms.map((m) => m.id));
+        for (const old of models(p))
+          if (old.id.startsWith(`${section}-`) && !keep.has(old.id)) {
+            removeLevel(p, old.id);
+            console.log(`removed ${old.id} (not in the section)`);
+          }
+        for (const m of ms) {
+          const { warnings } = upsertLevel(p, m);
+          for (const w of warnings) console.log(`warning: ${m.id}: ${w}`);
+          console.log(
+            `imported ${m.id} (${m.size[0]}x${m.size[1]} at ${m.at[0]},${m.at[1]}, ${m.brushes.length} brushes, ${m.entities.length} entities)`,
+          );
+        }
+        return report(build(p));
+      }
+      if (sub === 'export' && arg) {
+        const ms = models(openProject()).filter((m) => m.id.startsWith(`${arg}-`));
+        if (!ms.length) throw new Error(`no rooms ${arg}-*`);
+        const text = formatSection(modelsToSection(arg, ms));
+        if (args.out) {
+          mkdirSync(dirname(resolve(args.out)), { recursive: true });
+          writeFileSync(args.out, text);
+          console.log(`wrote ${args.out}`);
+        } else process.stdout.write(text);
+        return 0;
+      }
+      return usage();
     }
     case 'export': {
       const id = rest[0] ?? usage();
