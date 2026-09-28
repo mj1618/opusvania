@@ -129,6 +129,8 @@ uniform float uAberration;   // px at the screen edge
 uniform float uHaze;
 uniform float uAmbient;      // ambient level (decoded), subtracted before haze
 uniform float uLightScale;
+uniform vec4 uImpact;        // impact frame amount, drama (slow-mo) desaturation, unused, unused
+uniform vec3 uImpactColor;
 
 float hash12(vec2 p)
 {
@@ -158,6 +160,21 @@ void main(void)
     col *= uExposure;
     col = uGrade * col + uLift;
     col = (col - 0.5) * uContrast + 0.5;
+
+    // Anime impact frame: the lit scene flips to a two-tone negative (bright shapes go ink-black on
+    // a field of the hit's colour) for a frame or two on the biggest hits.
+    if (uImpact.x > 0.0) {
+        float l0 = dot(clamp(col, 0.0, 1.0), vec3(0.2126, 0.7152, 0.0722));
+        float bw = smoothstep(0.16, 0.3, l0);
+        vec3 neg = mix(uImpactColor, vec3(0.03, 0.02, 0.05), bw);
+        col = mix(col, neg, uImpact.x);
+    }
+    // Slow-motion drama: drain the colour a little and crush the blacks.
+    if (uImpact.y > 0.0) {
+        float l1 = dot(col, vec3(0.2126, 0.7152, 0.0722));
+        col = mix(col, vec3(l1), uImpact.y * 0.55);
+        col = (col - 0.5) * (1.0 + uImpact.y * 0.25) + 0.5;
+    }
 
     vec2 v = (vScreen - 0.5) * vec2(uVignette.w, 1.0);
     float vig = smoothstep(uVignette.y, uVignette.z, length(v));
@@ -205,6 +222,8 @@ export class PostFilter extends Filter {
           uHaze: { value: 0.3, type: 'f32' },
           uAmbient: { value: 0.6, type: 'f32' },
           uLightScale: { value: LIGHT_SCALE, type: 'f32' },
+          uImpact: { value: new Float32Array(4), type: 'vec4<f32>' },
+          uImpactColor: { value: new Float32Array([1, 1, 1]), type: 'vec3<f32>' },
         }),
         uLightTexture: lights.texture.source,
       },
@@ -220,6 +239,8 @@ export class PostFilter extends Filter {
     uVignette: Float32Array;
     uVignetteColor: Float32Array;
     uLightMatrix: Matrix;
+    uImpact: Float32Array;
+    uImpactColor: Float32Array;
   } {
     return this.resources.postUniforms.uniforms;
   }
@@ -255,6 +276,14 @@ export class PostFilter extends Filter {
     u.uAberration = aberrationPx;
     u.uAmbient = ambientLevel;
     u.uGrain = grainOn ? grain : 0;
+  }
+
+  /** Impact frame (0..1) in `color`, and slow-motion drama (0..1). */
+  setImpact(amount: number, color: number, drama: number): void {
+    const u = this.u;
+    u.uImpact[0] = amount;
+    u.uImpact[1] = drama;
+    u.uImpactColor.set(hexToRgb(color));
   }
 
   override apply(fm: FilterSystem, input: Texture, output: RenderSurface, clear: boolean): void {

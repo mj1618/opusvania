@@ -50,6 +50,11 @@ export interface AudioDebugApi {
   /** Renders offline scenarios (see src/audio/scenarios.ts) and returns level stats (+ WAV). */
   render(names?: string[], opts?: { wav?: boolean }): Promise<OfflineResult[]>;
   scenarios(): Promise<string[]>;
+  /** Renders a recorded run's audio offline (clip --audio): WAV base64 + levels. */
+  renderTrack(
+    cues: import('./offline').TrackCue[],
+    seconds: number,
+  ): Promise<{ wavBase64: string; stats: import('./wav').LevelStats }>;
 }
 
 export interface AudioSystemDeps {
@@ -231,6 +236,7 @@ export class AudioSystem {
       },
       render: async (names, opts) => (await import('./offline')).renderScenarios(names, opts),
       scenarios: async () => (await import('./scenarios')).scenarioNames(),
+      renderTrack: async (cues, seconds) => (await import('./offline')).renderTrack(cues, seconds),
     };
   }
 }

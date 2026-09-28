@@ -7,6 +7,7 @@ import { getRoom } from '../sim/world/rooms';
 import { drawEnemy, type EnemyFx, enemyPose } from './enemies';
 import type { Light } from './gfx/lighting';
 import { NOISE_COLOURS } from './gfx/palette';
+import { drawHumRings, drawStaticCrackle } from './juice/soundviz';
 import {
   dashedRect,
   drawGhost,
@@ -159,50 +160,19 @@ export class SignatureRenderer {
         case 'hit': {
           const f = SIG.hitFlash[e.cls] ?? 3;
           if (f > 0) this.flash.set(e.target, f);
+          // Sparks, stars and rings: the impact director (src/render/juice).
           this.shakeId = e.target;
-          const n = e.cls === 'heavy' ? 14 : e.cls === 'medium' ? 8 : 4;
-          const col = e.cls === 'heavy' ? PALETTE.brown : 0xfff3c4;
-          for (let i = 0; i < n; i++) {
-            const a = (rnd() - 0.5) * (e.cls === 'heavy' ? Math.PI * 2 : 1.2);
-            const sp = 5 + rnd() * 7;
-            this.sparks.push({
-              x: e.x,
-              y: e.y,
-              vx: Math.cos(a) * sp * (e.dir || 1),
-              vy: Math.sin(a) * sp - 1,
-              age: 0,
-              life: 14 + Math.floor(rnd() * 8),
-              size: e.cls === 'heavy' ? 9 : 6,
-              color: col,
-            });
-          }
-          if (e.cls !== 'light') this.sparks.push(ringAt(e.x, e.y, 0xffffff));
           break;
         }
         case 'catch':
           this.kidGold = SIG.catchGoldFrames;
           this.flash.set(e.enemy, SIG.hitFlash.catch ?? 6);
           this.shakeId = e.enemy;
-          this.sparks.push(ringAt(e.x, e.y, PALETTE.gold));
-          for (let i = 0; i < 10; i++) {
-            const a = (i / 10) * Math.PI * 2;
-            this.sparks.push({
-              x: e.x,
-              y: e.y,
-              vx: Math.cos(a) * 9,
-              vy: Math.sin(a) * 9,
-              age: 0,
-              life: 16,
-              size: 7,
-              color: PALETTE.gold,
-            });
-          }
           break;
         case 'repossess':
           this.repoAge.set(e.enemy, 0);
           this.flash.set(e.enemy, SIG.hitFlash.repossess ?? 6);
           this.shakeId = e.enemy;
-          this.sparks.push(ringAt(e.x, e.y, PALETTE.furious));
           break;
         case 'seizeTake':
           this.shakeId = e.owner;
@@ -366,6 +336,7 @@ export class SignatureRenderer {
       if (colour === 'white') {
         status = 'white';
         drawStatic(g, r, frame, src.id, this.refused.has(src.id));
+        drawStaticCrackle(f, gl, r, frame, src.id);
       } else if (src.pendingSolid) {
         status = 'pending';
         drawPending(g, r, colour, frame);
@@ -374,6 +345,7 @@ export class SignatureRenderer {
         drawGhost(g, r, colour);
       } else {
         status = 'humming';
+        drawHumRings(g, gl, r, colour, frame, src.id);
         drawHumming(g, r, colour, frame, this.flash.has(src.id));
         this.glowHum(gl, r, colour, frame);
         // Refused (a locked lot: "under the hammer"): white flash and static crackle over it.
@@ -389,7 +361,10 @@ export class SignatureRenderer {
       const y = q ? lerp(q.y, l.y, alpha) : l.y;
       const src = L.sources.find((o) => o.kind === 'levied' && o.ent === l.id);
       const status = drawLevied(g, l, x, y, frame);
-      if (status === 'humming') this.glowHum(gl, { x, y, w: l.w, h: l.h }, l.colour, frame);
+      if (status === 'humming') {
+        drawHumRings(g, gl, { x, y, w: l.w, h: l.h }, l.colour, frame, l.id + 1000);
+        this.glowHum(gl, { x, y, w: l.w, h: l.h }, l.colour, frame);
+      }
       this.drawn.push({
         id: src?.id ?? l.id,
         kind: 'levied',
@@ -431,12 +406,32 @@ export class SignatureRenderer {
       };
       const body = this.enemyGraphics(used++);
       const pose = enemyPose(e, fx);
-      const { status } = drawEnemy(body, f, gl, e, x, y, voices, fx, pose, (lx, ly, r, c, i) =>
-        this.light(lx, ly, r, c, i),
-      );
       const piv = pose.centre ? e.h / 2 : 0;
+      const bx = Math.round(x + e.w / 2 + pose.dx);
+      const by = Math.round(y + e.h - piv + pose.dy);
+      const cr = Math.cos(pose.rot);
+      const sr = Math.sin(pose.rot);
+      // Local body point -> world (the same transform the posed Graphics gets below).
+      const toWorld = (lx: number, ly: number): [number, number] => {
+        const u = lx * pose.sx;
+        const v = (ly + piv) * pose.sy;
+        return [bx + u * cr - v * sr, by + u * sr + v * cr];
+      };
+      const { status } = drawEnemy(
+        body,
+        f,
+        gl,
+        e,
+        x,
+        y,
+        voices,
+        fx,
+        pose,
+        (lx, ly, r, c, i) => this.light(lx, ly, r, c, i),
+        toWorld,
+      );
       body.pivot.set(0, -piv);
-      body.position.set(Math.round(x + e.w / 2 + pose.dx), Math.round(y + e.h - piv + pose.dy));
+      body.position.set(bx, by);
       body.rotation = pose.rot;
       body.scale.set(pose.sx, pose.sy);
       body.alpha = pose.alpha;

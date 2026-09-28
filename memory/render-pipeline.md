@@ -18,7 +18,7 @@ while switching tiers and verifies it headless.
   (before padding), like cameraZones. Districts: brown, pink, violet, white. New rooms fall back to
   `default` (brown); give them a file to pick a district.
 - **Hooks for other render code:** world-space `gfx.layers.actors` (unlit, above the lit playfield,
-  still post-graded: L3 sources/enemies, the player, front juice); `gfx.layers.emissive` (unlit, additive, blooms);
+  still post-graded: L3 sources/enemies, Kid's rig node (memory/rig.md), front juice); `gfx.layers.emissive` (unlit, additive, blooms);
   `gfx.lights.providers.add((out, clock) => out.push({x, y, radius, color, intensity, flicker}))`;
   `gfx.layers.playfield` (= `renderer.world`, lit); `NOISE_COLOURS` for hum colours.
 - **Value structure (the look):** sky/fog mid-dark, far layers close to fog, mid a bit darker, terrain
