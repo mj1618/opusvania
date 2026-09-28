@@ -9,7 +9,12 @@ import { FX_COLORS, fxTuning, Juice } from './fx';
 import { makeClock } from './gfx/clock';
 import { GfxPipeline } from './gfx/pipeline';
 import { BagHud } from './hud';
+import { drawImpacts } from './juice/draw';
+import { ImpactDirector } from './juice/impact';
+import { SoundViz } from './juice/soundviz';
+import { JUICE } from './juice/tuning';
 import { KidRenderer } from './kid';
+import { colourHex } from './palette';
 import { SignatureRenderer } from './signature';
 
 /** Player and screen colours (terrain colours live in src/render/gfx/terrain.ts and palette.ts). */
@@ -59,6 +64,17 @@ export class WorldRenderer {
   private readonly combatGlow = new Graphics({ label: 'combat-glow' });
   private readonly combatScreen = new Graphics();
   private readonly fade = new Graphics();
+  /** Combat juice (src/render/juice): over everything in the world, and its emissive copy. */
+  private readonly juiceFront = new Graphics({ label: 'juice' });
+  private readonly juiceGlow = new Graphics({ label: 'juice-glow' });
+  /** Screen-space juice: letterbox bars in slow motion, the impact-frame fallback without post. */
+  private readonly juiceScreen = new Graphics({ label: 'juice-screen' });
+  /** The impact director (hit sparks, kick, zoom, impact frames, slow motion). */
+  readonly impact = new ImpactDirector();
+  /** Sound made visible (tear ribbons, levy trails). */
+  readonly soundViz = new SoundViz();
+  /** Last drawn render zoom (rects() maps world px through it): screen = unzoomed * z + o. */
+  private lastZoom = { z: 1, ox: 0, oy: 0 };
   private readonly flash = new Graphics();
   private readonly hud: Text;
   /** Extra HUD line set by main (e.g. blind A/B slot). */
@@ -96,8 +112,9 @@ export class WorldRenderer {
       this.fxFront,
       this.sig.front,
       this.combatFront,
+      this.juiceFront,
     );
-    this.gfx.layers.emissive.addChild(this.sig.glow, this.kidGlow, this.combatGlow);
+    this.gfx.layers.emissive.addChild(this.sig.glow, this.kidGlow, this.combatGlow, this.juiceGlow);
     this.gfx.lights.providers.add((out) => this.sig.lights(out));
     this.gfx.layers.overlay.addChild(this.overlay);
     this.gfx.layers.ui.addChildAt(this.screen, 0);
@@ -106,7 +123,14 @@ export class WorldRenderer {
       style: { fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 22, fill: 0xaab3c8 },
     });
     this.hud.position.set(24, 18);
-    this.screen.addChild(this.bagHud.container, this.combatScreen, this.flash, this.fade, this.hud);
+    this.screen.addChild(
+      this.juiceScreen,
+      this.bagHud.container,
+      this.combatScreen,
+      this.flash,
+      this.fade,
+      this.hud,
+    );
     const room = getRoom(game.state.roomId);
     this.camera = createCamera(game.state, room);
     this.prevCam = { ...this.camera };
@@ -125,6 +149,8 @@ export class WorldRenderer {
       this.fadeIn = render.fadeInFrames;
     } else if (this.fadeIn > 0) this.fadeIn--;
     this.juice.step(s, events);
+    this.impact.step(s, events, (e) => this.colourOf(e));
+    this.soundViz.step(s, events);
     this.sig.step(events);
     this.kid.step(events);
     this.combat.step(events);
@@ -139,6 +165,8 @@ export class WorldRenderer {
     this.camera = createCamera(this.game.state, room);
     this.prevCam = { ...this.camera };
     this.juice.reset();
+    this.impact.reset();
+    this.soundViz.reset();
     this.sig.reset();
     this.kid.reset();
     this.combat.reset();
@@ -187,8 +215,11 @@ export class WorldRenderer {
 
     const c0 = this.prevCam;
     const c1 = this.camera;
-    const camX = lerp(c0.x + c0.shakeX, c1.x + c1.shakeX, alpha);
-    const camY = lerp(c0.y + c0.shakeY, c1.y + c1.shakeY, alpha);
+    // Combat juice: the sprung kick jolts the view along the hit, trauma adds a shake on top.
+    const im = this.impact;
+    const sh = im.shake();
+    const camX = lerp(c0.x + c0.shakeX, c1.x + c1.shakeX, alpha) - im.kx + sh.x;
+    const camY = lerp(c0.y + c0.shakeY, c1.y + c1.shakeY, alpha) - im.ky + sh.y;
     const cx = Math.round(camX);
     const cy = Math.round(camY);
     // gfx.draw sets this too; set it first so the bag HUD and rects() see this frame's camera.
@@ -202,8 +233,16 @@ export class WorldRenderer {
     this.combatFront.clear();
     this.combatGlow.clear();
     this.combat.draw(this.combatFront, this.combatGlow);
-    this.bagHud.draw(this.world.position);
+    const zoom = this.composeZoom(alpha, cx, cy, px + p.w / 2, py + p.h / 2);
+    this.lastZoom = zoom;
+    this.bagHud.draw(this.world.position, zoom);
     this.drawFx();
+    this.juiceFront.clear();
+    this.juiceGlow.clear();
+    this.soundViz.draw(this.juiceFront, this.juiceGlow, state, { x: px, y: py }, state.frame);
+    drawImpacts(this.juiceFront, this.juiceGlow, im);
+    const impactOn = im.impactFrames > 0 ? 1 : 0;
+    this.drawJuiceScreen(impactOn && !this.gfx.postOn ? im.impactColor : -1);
     this.drawScreen(alpha);
     const dead = p.state === 'dead';
     const trauma = Math.max(c0.trauma, c1.trauma);
@@ -220,8 +259,77 @@ export class WorldRenderer {
       hit: Math.max(
         (trauma - render.hitTraumaFloor) / (1 - render.hitTraumaFloor),
         this.juice.screenFlash / fxTuning.deathScreenFlash,
+        im.aberration,
       ),
+      impact: impactOn,
+      impactColor: im.impactColor,
+      drama: im.drama(),
+      zoom,
     });
+  }
+
+  /**
+   * The render zoom this frame: combat framing (about a focus that keeps Kid in frame) composed
+   * with the hit punch / slow-mo zoom (about the impact). Zooming in about a point inside the view
+   * never shows past the camera's room clamp.
+   */
+  private composeZoom(
+    alpha: number,
+    cx: number,
+    cy: number,
+    kidX: number,
+    kidY: number,
+  ): { z: number; ox: number; oy: number } {
+    const im = this.impact;
+    const z1 = lerp(im.prevCzoom, im.czoom, alpha);
+    const z2 = lerp(im.prevZoom, im.zoom, alpha);
+    const m = JUICE.combatMargin;
+    const clampF = (f: number, k: number, W: number) => {
+      if (z1 <= 1.0005) return f;
+      const lo = (k * z1 - (W - m)) / (z1 - 1);
+      const hi = (k * z1 - m) / (z1 - 1);
+      return Math.max(0, Math.min(W, Math.max(lo, Math.min(hi, f))));
+    };
+    const ksx = kidX - cx;
+    const ksy = kidY - cy;
+    const f1x = clampF(im.cfx - cx, ksx, VIEW_W);
+    const f1y = clampF(im.cfy - cy, ksy, VIEW_H);
+    // The punch focus, as it sits after the combat zoom.
+    const f2x = Math.max(0, Math.min(VIEW_W, f1x + (im.focusX - cx - f1x) * z1));
+    const f2y = Math.max(0, Math.min(VIEW_H, f1y + (im.focusY - cy - f1y) * z1));
+    return {
+      z: z1 * z2,
+      ox: f1x * z2 * (1 - z1) + f2x * (1 - z2),
+      oy: f1y * z2 * (1 - z1) + f2y * (1 - z2),
+    };
+  }
+
+  /** Render time scale for the real-time loop: < 1 during slow motion (the sim is unchanged). */
+  timeScale(): number {
+    return this.impact.timeScale(this.game.state.hitstop);
+  }
+
+  /** The noise colour (hex) of whatever an event hit or took, for sparks and stars. */
+  private colourOf(e: SimEvent): number {
+    const L = this.game.state.local;
+    if ('colour' in e && typeof e.colour === 'string') return colourHex(e.colour);
+    const id = e.type === 'hit' ? e.target : 'enemy' in e ? e.enemy : -1;
+    const en = L.enemies.find((o) => o.id === id);
+    const src = en ? L.sources.find((o) => o.id === en.source) : undefined;
+    const snd = src ? L.sounds.find((o) => src.soundIds.includes(o.id) && o.status === 'home') : undefined;
+    return snd ? colourHex(snd.colour) : 0xfff3c4;
+  }
+
+  /** Letterbox bars while slow motion runs; a flat impact frame when the post filter is off. */
+  private drawJuiceScreen(fallbackImpact: number): void {
+    const g = this.juiceScreen.clear();
+    const d = this.impact.drama();
+    if (d > 0.01) {
+      const h = Math.round(VIEW_H * 0.085 * Math.min(1, d * 1.6));
+      g.rect(0, 0, VIEW_W, h).fill({ color: 0x000000, alpha: 0.92 });
+      g.rect(0, VIEW_H - h, VIEW_W, h).fill({ color: 0x000000, alpha: 0.92 });
+    }
+    if (fallbackImpact >= 0) g.rect(0, 0, VIEW_W, VIEW_H).fill({ color: fallbackImpact, alpha: 0.55 });
   }
 
   private drawPlayer(px: number, py: number): void {
@@ -270,10 +378,18 @@ export class WorldRenderer {
   rects(): import('../debug/api').RenderRect[] {
     const ox = this.world.position.x;
     const oy = this.world.position.y;
+    // Through the render zoom (identity unless a punch or slow-mo is on).
+    const { z, ox: zx, oy: zy } = this.lastZoom.z > 1.0005 ? this.lastZoom : { z: 1, ox: 0, oy: 0 };
     const out = this.sig
       .worldRects()
       .filter((r) => r.kind !== 'plate')
-      .map((r) => ({ ...r, x: Math.round(r.x + ox), y: Math.round(r.y + oy) }));
+      .map((r) => ({
+        ...r,
+        x: Math.round((r.x + ox) * z + zx),
+        y: Math.round((r.y + oy) * z + zy),
+        w: Math.round(r.w * z),
+        h: Math.round(r.h * z),
+      }));
     return [...out, ...this.bagHud.slotRects().map((r) => ({ ...r }))];
   }
 
