@@ -65,7 +65,8 @@ export function parseInputScript(script: InputScript): InputFrame[] {
   return out;
 }
 
-function maskToken(mask: InputFrame): string {
+/** One mask as short text for traces, e.g. "R+J" or ".". */
+export function maskLabel(mask: InputFrame): string {
   if (mask === 0) return '.';
   const letters = LETTER_ORDER.filter((l) => (mask & ActionBit[DSL_LETTERS[l] as Action]) !== 0);
   const rest = ACTIONS.filter((a) => (mask & ActionBit[a]) !== 0 && !Object.values(DSL_LETTERS).includes(a));
@@ -80,7 +81,7 @@ export function formatInputScript(masks: readonly InputFrame[]): string {
     const m = masks[i] ?? 0;
     let n = 1;
     while (masks[i + n] === m) n++;
-    const tok = maskToken(m);
+    const tok = maskLabel(m);
     const isDsl = tok === '.' || /^[LRUDJXA](\+[LRUDJXA])*$/.test(tok);
     out.push(isDsl ? `${tok}${n}` : `${tok}*${n}`);
     i += n;

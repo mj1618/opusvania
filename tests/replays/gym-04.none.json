@@ -1,4 +1,13 @@
 {
+  "kind": "tape",
+  "name": "gym-04.none",
+  "inputs": "R4 R+J4 R16 R+J24 R12 R+D+A4 R4 R+J4 R16 R+J4 R4 D+A4 L+J4 R4 R+J24 R12 R+D+A4 R4 R+J4 R16 R+J16 R32 R+J4 R8 .4 J4 R24 R+J4 R12 L4 .4 R4 R+J4 R8 .4",
+  "expect": {
+    "target": "G",
+    "maxFrames": 462,
+    "maxDeaths": 0
+  },
+  "source": "bot",
   "room": "gym-04",
   "seed": 1,
   "preset": "opus",
@@ -8,17 +17,20 @@
     "doubleJump": false,
     "pogo": false
   },
-  "tuningHash": "15e4374ad928c9",
-  "inputs": "R4 R+J4 R16 R+J24 R12 R+D+A4 R4 R+J4 R16 R+J4 R4 D+A4 L+J4 R4 R+J24 R12 R+D+A4 R4 R+J4 R16 R+J16 R32 R+J4 R8 .4 J4 R24 R+J4 R12 L4 .4 R4 R+J4 R8 .4",
-  "expect": {
-    "maxFrames": 462,
-    "goalFrame": 308,
-    "deaths": 0,
+  "golden": {
+    "tuningHash": "15e4374ad928c9",
+    "build": {
+      "sha": "127788a71b-dirty",
+      "sim": "9020d2324b",
+      "stateVersion": 1
+    },
     "end": {
       "x": 2854,
       "y": 502,
-      "frame": 308
+      "frame": 308,
+      "room": "gym-04"
     },
+    "hash": "03bbaaccaecf4b",
     "hashes": ["141b9e9d56d7a3", "0c6c9f17f50d14", "1bf8ed6b765ef4", "159d534a311688", "13cb2a84abf524"]
   }
 }

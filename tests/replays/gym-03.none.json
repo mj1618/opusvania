@@ -1,4 +1,13 @@
 {
+  "kind": "tape",
+  "name": "gym-03.none",
+  "inputs": "R32 R+J4 R36 R+J4 R36 R+J4 R4 R+J4 R28 R+J4 R36 R+J4 R4 R+J4 R32",
+  "expect": {
+    "target": "G",
+    "maxFrames": 354,
+    "maxDeaths": 0
+  },
+  "source": "bot",
   "room": "gym-03",
   "seed": 1,
   "preset": "opus",
@@ -8,17 +17,20 @@
     "doubleJump": false,
     "pogo": false
   },
-  "tuningHash": "15e4374ad928c9",
-  "inputs": "R32 R+J4 R36 R+J4 R36 R+J4 R4 R+J4 R28 R+J4 R36 R+J4 R4 R+J4 R32",
-  "expect": {
-    "maxFrames": 354,
-    "goalFrame": 236,
-    "deaths": 0,
+  "golden": {
+    "tuningHash": "15e4374ad928c9",
+    "build": {
+      "sha": "127788a71b-dirty",
+      "sim": "9020d2324b",
+      "stateVersion": 1
+    },
     "end": {
       "x": 2396,
       "y": 688,
-      "frame": 236
+      "frame": 236,
+      "room": "gym-03"
     },
+    "hash": "04a3b390919f2e",
     "hashes": ["10baf597e0e997", "060d95bcb5bc07", "0f49faf472e904"]
   }
 }

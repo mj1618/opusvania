@@ -6,7 +6,7 @@ import { InputSampler } from './input/index';
 import { FixedStepLoop } from './loop';
 import { createApp } from './render/app';
 import { WorldRenderer } from './render/world';
-import { applyPreset, PRESET_NAMES, type PresetName, tuning } from './sim/tuning';
+import { PRESET_NAMES, type PresetName, tuning } from './sim/tuning';
 import { GYM_ROOMS } from './sim/world/rooms';
 
 /**
@@ -18,8 +18,6 @@ import { GYM_ROOMS } from './sim/world/rooms';
 async function boot(): Promise<void> {
   const params = new URLSearchParams(location.search);
   const seed = Number(params.get('seed') ?? 1) >>> 0;
-  const preset = params.get('preset');
-  if (preset && (PRESET_NAMES as string[]).includes(preset)) applyPreset(tuning, preset as PresetName);
   const input = new InputSampler();
   const game = new Game(
     tuning,
@@ -44,6 +42,9 @@ async function boot(): Promise<void> {
     profiles: () => Object.keys(tuning.profiles),
     currentProfile: () => game.state.player.profile,
   });
+  // Through the panel so it (and __game.preset()/info()) know the current preset.
+  const preset = params.get('preset');
+  if (preset && (PRESET_NAMES as string[]).includes(preset)) panel.applyPreset(preset as PresetName);
 
   const drawn = { x: 0, y: 0, frame: 0 };
   const render = (alpha: number) => {

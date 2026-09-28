@@ -1,4 +1,13 @@
 {
+  "kind": "tape",
+  "name": "gym-13.all",
+  "inputs": "R+J20 R2 R+J4 X2 .12 J2 R+J12 .2 J2 R+J10 R2 L+J2 .2 J2 R+J2 R28 .1 R58 R+J2 R18 X2 .12 R+J6 R2 R+D+A2 R2 R+J6 R+D+A2 L+J2 .6 R34 R+D+A2 R2 R+J2 R22 R+D+A2 R2 R+D+A2 R+J2 R+D+A2 R+J2 R+D+A2 R+J8 R4 R+J2 R2 X2 .12 R20 .1",
+  "expect": {
+    "target": "G",
+    "maxFrames": 531,
+    "maxDeaths": 0
+  },
+  "source": "bot",
   "room": "gym-13",
   "seed": 1,
   "preset": "opus",
@@ -8,17 +17,20 @@
     "doubleJump": true,
     "pogo": true
   },
-  "tuningHash": "15e4374ad928c9",
-  "inputs": "R+J20 R2 R+J4 X2 .12 J2 R+J12 .2 J2 R+J10 R2 L+J2 .2 J2 R+J2 R28 .1 R58 R+J2 R18 X2 .12 R+J6 R2 R+D+A2 R2 R+J6 R+D+A2 L+J2 .6 R34 R+D+A2 R2 R+J2 R22 R+D+A2 R2 R+D+A2 R+J2 R+D+A2 R+J2 R+D+A2 R+J8 R4 R+J2 R2 X2 .12 R20 .1",
-  "expect": {
-    "maxFrames": 531,
-    "goalFrame": 354,
-    "deaths": 0,
+  "golden": {
+    "tuningHash": "15e4374ad928c9",
+    "build": {
+      "sha": "127788a71b-dirty",
+      "sim": "9020d2324b",
+      "stateVersion": 1
+    },
     "end": {
       "x": 3550,
       "y": 688,
-      "frame": 354
+      "frame": 354,
+      "room": "gym-13"
     },
+    "hash": "0169b2c4069694",
     "hashes": ["0dda1adb38a9a8", "14887226d83fa9", "06a596eb63cbc0", "03b57afae21c37", "0e9c71a937ab1d"]
   }
 }

@@ -1,20 +1,19 @@
 {
   "kind": "tape",
-  "name": "gym-02.none",
-  "inputs": "R+J16 R12 R+J8 R12 R+J4 R8 R+J4 L4 R+J4 R4 R+J4 R14",
+  "name": "gym-02-g",
+  "inputs": "R+J4 R4 R+J8 R12 R+J4 J4 R+J8 R16 R+J4 R16 R+J20 R20 .4 R+J4 .4 R+J20 R20 R+J4 .4 R+J20 R8 .1",
   "expect": {
-    "target": "G",
-    "maxFrames": 141,
+    "target": "g",
+    "maxFrames": 314,
     "maxDeaths": 0
   },
   "source": "bot",
   "room": "gym-02",
   "seed": 1,
-  "preset": "opus",
   "abilities": {
     "wallJump": false,
     "dash": false,
-    "doubleJump": false,
+    "doubleJump": true,
     "pogo": false
   },
   "golden": {
@@ -25,12 +24,12 @@
       "stateVersion": 1
     },
     "end": {
-      "x": 994,
-      "y": 624,
-      "frame": 94,
+      "x": 2074,
+      "y": 560,
+      "frame": 209,
       "room": "gym-02"
     },
-    "hash": "127ec032faf05a",
-    "hashes": ["12a71479d2541c"]
+    "hash": "0581a92d10c2ab",
+    "hashes": ["03b45d06a08118", "0e5098299bd4da", "17606c99b2e49b"]
   }
 }

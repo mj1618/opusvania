@@ -1,4 +1,13 @@
 {
+  "kind": "tape",
+  "name": "gym-10.dash",
+  "inputs": "X4 .8 R12 X4 .8 R12 X4 .8 R16 R+J8 R+D+A4 R4 R+D+A4 X4 .8 R+J8 R8 X4 .8 R12 X4 .8 R12 X4 .6",
+  "expect": {
+    "target": "G",
+    "maxFrames": 273,
+    "maxDeaths": 0
+  },
+  "source": "bot",
   "room": "gym-10",
   "seed": 1,
   "preset": "opus",
@@ -8,17 +17,20 @@
     "doubleJump": false,
     "pogo": false
   },
-  "tuningHash": "15e4374ad928c9",
-  "inputs": "X4 .8 R12 X4 .8 R12 X4 .8 R16 R+J8 R+D+A4 R4 R+D+A4 X4 .8 R+J8 R8 X4 .8 R12 X4 .8 R12 X4 .6",
-  "expect": {
-    "maxFrames": 273,
-    "goalFrame": 182,
-    "deaths": 0,
+  "golden": {
+    "tuningHash": "15e4374ad928c9",
+    "build": {
+      "sha": "127788a71b-dirty",
+      "sim": "9020d2324b",
+      "stateVersion": 1
+    },
     "end": {
       "x": 2905,
       "y": 752,
-      "frame": 182
+      "frame": 182,
+      "room": "gym-10"
     },
+    "hash": "0a5df587f60ec1",
     "hashes": ["1958834cf70e1b", "023505c4aa75b3", "1d9251aac4f24c"]
   }
 }

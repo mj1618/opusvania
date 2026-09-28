@@ -1,16 +1,15 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
-import { parseInputScript } from '../../src/input/script';
-import { createState } from '../../src/sim/index';
-import { type Replay, runReplay } from '../../src/sim/replay';
-import { presetTuning } from '../../src/sim/tuning';
-import type { GoldenReplay } from '../replays/golden';
+import { runTape, type TapeFile } from '../../src/debug/tape';
+import { installBuildInfo } from '../../tools/lib/build-info';
+
+installBuildInfo();
 
 const DIR = join(import.meta.dirname, '../replays');
-const REPLAYS = readdirSync(DIR)
+const TAPES = readdirSync(DIR)
   .filter((f) => f.endsWith('.json'))
-  .map((f) => JSON.parse(readFileSync(join(DIR, f), 'utf8')) as GoldenReplay);
+  .map((f) => JSON.parse(readFileSync(join(DIR, f), 'utf8')) as TapeFile);
 
 async function boot(page: Page, query: string) {
   const errors: string[] = [];
@@ -21,34 +20,26 @@ async function boot(page: Page, query: string) {
 }
 
 /**
- * movement-spec §7.3 (3): the same replay in Node and in Chrome gives identical hash sequences.
- * Runs the sim in the page's JS engine via replay.verify (no rendering: CI's software GL renders
- * at ~1 fps), at every 60-frame cut and at the goal frame, and compares with Node.
+ * movement-spec §7.3 (3): the same tape in Node and in Chrome gives identical hash sequences.
+ * Runs every golden tape in the page's JS engine via tape.check (headless, no rendering: CI's
+ * software GL renders at ~1 fps) and compares the 60-frame hashes and end hash with Node.
  */
-test('golden gym replays reproduce their Node hashes in the browser', async ({ page }) => {
+test('golden gym tapes reproduce their Node hashes in the browser', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = await boot(page, '?manual');
-  const cases = REPLAYS.map((r) => {
-    const tuning = presetTuning(r.preset);
-    const start = createState({ seed: r.seed, roomId: r.room }, tuning);
-    Object.assign(start.player.abilities, r.abilities);
-    const replay: Replay = { version: 1, start, tuning, inputs: parseInputScript(r.inputs) };
-    const cuts = [...r.expect.hashes.map((_, i) => 60 * (i + 1)), r.expect.goalFrame];
-    return { r, replay, cuts };
-  });
-  const browser: string[][] = await page.evaluate(
-    (cs) =>
-      cs.map(({ replay, cuts }) =>
-        cuts.map((n) => window.__game.replay.verify({ ...replay, inputs: replay.inputs.slice(0, n) }).hash),
-      ),
-    cases.map(({ replay, cuts }) => ({ replay, cuts })),
+  const browser = await page.evaluate(
+    (ts) =>
+      ts.map((t) => {
+        const c = window.__game.tape.check(t);
+        return { hashes: c.hashes, hash: c.hash, failures: c.failures };
+      }),
+    TAPES,
   );
-  for (const [i, { r, replay, cuts }] of cases.entries()) {
-    const node = cuts.map((n) => runReplay({ ...replay, inputs: replay.inputs.slice(0, n) }).hash);
-    expect(browser[i], r.room).toEqual(node);
-    expect(browser[i]?.slice(0, -1), r.room).toEqual(r.expect.hashes);
-    const end = runReplay({ ...replay, inputs: replay.inputs.slice(0, r.expect.goalFrame) }).state;
-    expect(end.roomStats.goal, r.room).toBe(true);
+  for (const [i, t] of TAPES.entries()) {
+    const node = runTape(t);
+    expect(browser[i]?.failures, t.name).toEqual([]);
+    expect(browser[i]?.hashes, t.name).toEqual(node.hashes);
+    expect(browser[i]?.hash, t.name).toBe(node.hash);
   }
   expect(errors).toEqual([]);
 });
@@ -62,8 +53,8 @@ test('a door in the hub leads into its room (Up), and presets/assists switch liv
     g.preset('hk');
     const hk = g.tuning.run.groundAccel;
     g.preset('opus');
-    const a = g.assists.set('coyote', false).coyote;
-    g.assists.set('coyote', true);
+    const a = g.assists({ coyote: false }).coyote;
+    g.assists({ coyote: true });
     return { room: s.roomId, hk, a, cam: g.camera().x >= 0, abilities: g.abilities() };
   });
   expect(res.room).toBe('gym-01');

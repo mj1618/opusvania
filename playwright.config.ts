@@ -1,8 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4173;
+// E2E runs against a fresh production build (vite preview) so it also checks the /opusvania/ base
+// path. It never reuses a running server: a stale preview left on a fixed port (another worktree,
+// an earlier run) would silently test an old build. Each run picks its own port from the pid;
+// the main process sets E2E_PORT before workers start, and they inherit it, so all agree.
+// If the port is somehow taken, Playwright fails loudly instead of reusing it.
+process.env.E2E_PORT ??= String(20000 + (process.pid % 20000));
+const PORT = Number(process.env.E2E_PORT);
 
-// E2E runs against the production build (vite preview) so it also checks the /opusvania/ base path.
 export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
@@ -18,9 +23,9 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 720 } } },
   ],
   webServer: {
-    command: `npm run build && npm run preview -- --port ${PORT}`,
+    command: `npm run build && npx vite preview --strictPort --port ${PORT}`,
     url: `http://localhost:${PORT}/opusvania/`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

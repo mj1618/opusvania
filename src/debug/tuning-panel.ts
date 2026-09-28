@@ -71,9 +71,10 @@ export class TuningPanel {
         else if (typeof v === 'string')
           folder.addBinding(values, key, { options: OPTIONS[path] ?? { [v]: v } });
         else if (typeof v === 'number')
-          // No min/max: Tweakpane clamps bound values to its range on refresh, which would
-          // silently rewrite presets (hk sets accelerations to 999).
-          folder.addBinding(values, key, { readonly, step: Number.isInteger(v) ? 1 : 0.01 });
+          // No min/max and no step: Tweakpane snaps bound values to its range and step grid on
+          // refresh, silently rewriting presets (hk's 999 accelerations) and values set from
+          // code (__game.setTuning('jump.gravity', 1234) read back as 1233.9967).
+          folder.addBinding(values, key, { readonly });
       }
       if (group === 'shape')
         folder.on('change', () => {

@@ -1,42 +1,39 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
+import type { TapeFile } from '../../src/debug/tape';
 import { formatInputScript, parseInputScript } from '../../src/input/script';
+import type { SimEvent } from '../../src/sim/events';
+import { createState, type GameState, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
 import { presetTuning } from '../../src/sim/tuning';
-import { buildRoom, GYM_ROOMS, getRoom, mirrorRoomFile, registerRoom } from '../../src/sim/world/rooms';
-import { type GoldenReplay, runGolden, tuningHash } from '../replays/golden';
+import {
+  type Abilities,
+  buildRoom,
+  GYM_ROOMS,
+  getRoom,
+  mirrorRoomFile,
+  registerRoom,
+} from '../../src/sim/world/rooms';
 
 const DIR = join(__dirname, '../replays');
-const FILES = readdirSync(DIR).filter((f) => f.endsWith('.json'));
-const REPLAYS = FILES.map((f) => ({ f, r: JSON.parse(readFileSync(join(DIR, f), 'utf8')) as GoldenReplay }));
+const TAPES = readdirSync(DIR)
+  .filter((f) => f.endsWith('.json'))
+  .map((f) => JSON.parse(readFileSync(join(DIR, f), 'utf8')) as TapeFile);
 
-describe('golden gym replays (tests/replays)', () => {
-  it('every gym room has a replay', () => {
-    expect(new Set(REPLAYS.map((x) => x.r.room))).toEqual(new Set(GYM_ROOMS));
-  });
-
-  for (const { f, r } of REPLAYS) {
-    describe(f, () => {
-      const res = runGolden(r);
-
-      it('behavioural: reaches G within maxFrames with zero deaths', () => {
-        expect(res.goalFrame, 'never reached G').toBeGreaterThan(0);
-        expect(res.goalFrame).toBeLessThanOrEqual(r.expect.maxFrames);
-        expect(res.deaths).toBe(0);
-        expect(res.states.every((s) => ['normal', 'wallSlide', 'dash'].includes(s))).toBe(true);
-      });
-
-      const stale = tuningHash(presetTuning(r.preset)) !== r.tuningHash;
-      it.skipIf(stale)('golden: exact goal frame, end position and hash every 60 frames', () => {
-        expect(res.goalFrame).toBe(r.expect.goalFrame);
-        expect(res.end).toEqual(r.expect.end);
-        expect(res.hashes).toEqual(r.expect.hashes);
-      });
-      if (stale) console.warn(`${f}: golden is stale (tuning changed); run npm run replays:update`);
-    });
+/** Per-frame player snapshots of a tape run under the opus preset. */
+function playerTrace(room: string, abilities: Abilities, inputs: string): GameState['player'][] {
+  const t = presetTuning('opus');
+  const s = createState({ seed: 1, roomId: room }, t);
+  Object.assign(s.player.abilities, abilities);
+  const out: GameState['player'][] = [];
+  for (const m of parseInputScript(inputs)) {
+    const evs: SimEvent[] = [];
+    step(s, m, t, evs);
+    out.push(JSON.parse(JSON.stringify(s.player)));
   }
-});
+  return out;
+}
 
 /** V22: mirrored inputs in the mirrored room give an exactly mirrored trajectory, every frame. */
 describe('V22 mirror symmetry', () => {
@@ -60,22 +57,21 @@ describe('V22 mirror symmetry', () => {
   for (const id of GYM_ROOMS) {
     it(id, () => {
       const room = getRoom(id);
-      expect(room.padX).toBe(0);
+      if (room.padX !== 0) throw new Error(`${id} is padded`);
       // Copies without `next`, so reaching G doesn't transition into an unmirrored room.
       const o = registerRoom(buildRoom({ ...room.file, id: `${id}~o`, next: undefined }));
       const m = registerRoom(buildRoom(mirrorRoomFile({ ...room.file, next: undefined })));
       const W = room.width * 64;
-      const golden = REPLAYS.find((x) => x.r.room === id)?.r;
-      const tapes = [golden?.inputs ?? '', randomTape()];
+      const tapes = [...TAPES.filter((t) => t.room === id).map((t) => t.inputs), randomTape()];
       for (const tape of tapes) {
         const masks = parseInputScript(tape);
         const mirrored = formatInputScript(masks.map(mirrorMask));
         const abilities = { ...room.abilities, dash: true, doubleJump: true, pogo: true, wallJump: true };
-        const a = runGolden({ room: o.id, seed: 1, preset: 'opus', abilities, inputs: tape });
-        const b = runGolden({ room: m.id, seed: 1, preset: 'opus', abilities, inputs: mirrored });
-        for (let i = 0; i < a.trace.length; i++) {
-          const p = a.trace[i];
-          const q = b.trace[i];
+        const a = playerTrace(o.id, abilities, tape);
+        const b = playerTrace(m.id, abilities, mirrored);
+        for (let i = 0; i < a.length; i++) {
+          const p = a[i];
+          const q = b[i];
           if (!p || !q) throw new Error('trace length mismatch');
           const ok =
             q.x === W - p.x - p.w &&

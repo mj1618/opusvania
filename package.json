@@ -17,7 +17,12 @@
     "e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm run test && npm run e2e",
     "clip": "tsx tools/clip.ts",
-    "replays:update": "tsx tests/replays/update.ts"
+    "sim": "tsx tools/sim.ts",
+    "bot": "tsx tools/bot/cli.ts",
+    "bot:all": "tsx tools/bot/cli.ts --all",
+    "feel:report": "tsx tools/feel-report/cli.ts",
+    "tape": "tsx tools/tape.ts",
+    "replays:update": "tsx tools/tape.ts update"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",

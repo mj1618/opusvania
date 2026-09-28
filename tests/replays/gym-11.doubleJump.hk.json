@@ -1,16 +1,16 @@
 {
   "kind": "tape",
-  "name": "gym-11.doubleJump",
-  "inputs": "R+J36 R4 R+J20 R24 R+J28 R4 J8 R35",
+  "name": "gym-11-G",
+  "inputs": "R+J32 R8 R+J12 R36 R+J24 R4 R+J4 R41",
   "expect": {
     "target": "G",
-    "maxFrames": 239,
+    "maxFrames": 242,
     "maxDeaths": 0
   },
   "source": "bot",
   "room": "gym-11",
   "seed": 1,
-  "preset": "opus",
+  "preset": "hk",
   "abilities": {
     "wallJump": false,
     "dash": false,
@@ -18,19 +18,19 @@
     "pogo": false
   },
   "golden": {
-    "tuningHash": "15e4374ad928c9",
+    "tuningHash": "1bde12017e46b2",
     "build": {
       "sha": "127788a71b-dirty",
       "sim": "9020d2324b",
       "stateVersion": 1
     },
     "end": {
-      "x": 1562,
+      "x": 1565,
       "y": 432,
-      "frame": 159,
+      "frame": 161,
       "room": "gym-11"
     },
-    "hash": "0abf9b17e286df",
-    "hashes": ["18c3d149559836", "1922300fbbc75a"]
+    "hash": "0d18b5f2355fac",
+    "hashes": ["16d6ee6369d695", "1e46fc1f53cd2c"]
   }
 }

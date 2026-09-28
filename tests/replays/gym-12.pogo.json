@@ -1,4 +1,13 @@
 {
+  "kind": "tape",
+  "name": "gym-12.pogo",
+  "inputs": "R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R48 .2",
+  "expect": {
+    "target": "G",
+    "maxFrames": 345,
+    "maxDeaths": 0
+  },
+  "source": "bot",
   "room": "gym-12",
   "seed": 1,
   "preset": "opus",
@@ -8,17 +17,20 @@
     "doubleJump": false,
     "pogo": true
   },
-  "tuningHash": "15e4374ad928c9",
-  "inputs": "R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R32 R+D+A4 R48 .2",
-  "expect": {
-    "maxFrames": 345,
-    "goalFrame": 230,
-    "deaths": 0,
+  "golden": {
+    "tuningHash": "15e4374ad928c9",
+    "build": {
+      "sha": "127788a71b-dirty",
+      "sim": "9020d2324b",
+      "stateVersion": 1
+    },
     "end": {
       "x": 2329,
       "y": 688,
-      "frame": 230
+      "frame": 230,
+      "room": "gym-12"
     },
+    "hash": "01253ce8afbb26",
     "hashes": ["0515014c89da85", "0885f4d72aa456", "16c8e593d7625b"]
   }
 }

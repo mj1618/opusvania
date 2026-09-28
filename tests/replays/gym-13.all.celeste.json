@@ -1,0 +1,36 @@
+{
+  "kind": "tape",
+  "name": "gym-13-G",
+  "inputs": "J4 X4 .8 J4 .4 R8 J12 .4 J4 R+J4 R4 X4 .8 R20 X4 .12 R4 .4 R8 D+A4 X4 .8 R12 R+J4 .4 X4 .12 R4 R+J4 R12 R+J8 R16 J8 R+X4 .12 R4 .3",
+  "expect": {
+    "target": "G",
+    "maxFrames": 377,
+    "maxDeaths": 0
+  },
+  "source": "bot",
+  "room": "gym-13",
+  "seed": 1,
+  "preset": "celeste",
+  "abilities": {
+    "wallJump": true,
+    "dash": true,
+    "doubleJump": true,
+    "pogo": true
+  },
+  "golden": {
+    "tuningHash": "01a31d6b3deb06",
+    "build": {
+      "sha": "127788a71b-dirty",
+      "sim": "9020d2324b",
+      "stateVersion": 1
+    },
+    "end": {
+      "x": 3546,
+      "y": 688,
+      "frame": 251,
+      "room": "gym-13"
+    },
+    "hash": "0d9b59909e647a",
+    "hashes": ["14f8ccf4180560", "161f7f36c7c1ca", "1de46da3675bc6", "1ddcfd4fd9268e"]
+  }
+}

@@ -1,4 +1,13 @@
 {
+  "kind": "tape",
+  "name": "gym-08.wallJump",
+  "inputs": "R+J32 R2 J2 R+J10 R+X2 .2 J2 R+D+A2 R2 R+J4 R2 J2 R+J8 J10 R+J4 R2 L+J2 X2 L+J2 .2 L+J2 .2 L+J2 .2 L+J2 J4 .2 R38",
+  "expect": {
+    "target": "G",
+    "maxFrames": 225,
+    "maxDeaths": 0
+  },
+  "source": "bot",
   "room": "gym-08",
   "seed": 1,
   "preset": "opus",
@@ -8,17 +17,20 @@
     "doubleJump": false,
     "pogo": false
   },
-  "tuningHash": "15e4374ad928c9",
-  "inputs": "R+J32 R2 J2 R+J10 R+X2 .2 J2 R+D+A2 R2 R+J4 R2 J2 R+J8 J10 R+J4 R2 L+J2 X2 L+J2 .2 L+J2 .2 L+J2 .2 L+J2 J4 .2 R38",
-  "expect": {
-    "maxFrames": 225,
-    "goalFrame": 150,
-    "deaths": 0,
+  "golden": {
+    "tuningHash": "15e4374ad928c9",
+    "build": {
+      "sha": "127788a71b-dirty",
+      "sim": "9020d2324b",
+      "stateVersion": 1
+    },
     "end": {
       "x": 1506,
       "y": 112,
-      "frame": 150
+      "frame": 150,
+      "room": "gym-08"
     },
+    "hash": "09db0f73e008a4",
     "hashes": ["007539a6ab2121", "172d33987cdfcf"]
   }
 }
