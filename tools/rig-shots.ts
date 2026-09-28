@@ -10,7 +10,8 @@
  * by `--zoom`. Writes clips/rig/<name>/NNNNN.png (file N = N frames after the start), a contact
  * sheet (`--every` N frames, `--cols`) and, with --mp4, an H.264 mp4. `--setup` is JS run in the
  * page first with `g` = window.__game (abilities, spawns, tuning); `--pre` settle steps before it.
- * `--hook "N:js"` (repeatable) runs js just before file N is stepped.
+ * `--hook "N:js"` (repeatable) runs js just before file N is stepped; `--skip N` steps N frames
+ * of the script before capturing.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -26,6 +27,7 @@ const { values: args } = parseArgs({
     script: { type: 'string', default: '' },
     tape: { type: 'string' },
     hook: { type: 'string', multiple: true },
+    skip: { type: 'string', default: '0' },
     setup: { type: 'string', default: '' },
     name: { type: 'string', default: 'shot' },
     pre: { type: 'string', default: '10' },
@@ -76,14 +78,19 @@ async function main(): Promise<void> {
     const [cw, ch] = (args.crop ?? '360x270').split('x').map(Number) as [number, number];
     const [ox, oy] = (args.offset ?? '0,0').split(',').map(Number) as [number, number];
     const total: number = await page.evaluate(
-      ({ script, setup, pre, ui, tape }) => {
+      ({ script, setup, pre, ui, tape, skip }) => {
         const g = window.__game;
         if (ui) g.gfx.set({ ui: false });
-        if (tape) return g.tape.play(tape);
-        g.step(pre);
-        if (setup) new Function('g', setup)(g);
-        g.clearInput();
-        return g.input(script);
+        let n: number;
+        if (tape) n = g.tape.play(tape);
+        else {
+          g.step(pre);
+          if (setup) new Function('g', setup)(g);
+          g.clearInput();
+          n = g.input(script);
+        }
+        if (skip > 0) g.step(skip);
+        return n - skip;
       },
       {
         script: args.script ?? '',
@@ -91,6 +98,7 @@ async function main(): Promise<void> {
         pre: Number(args.pre),
         ui: args['no-ui'],
         tape: args.tape ? JSON.parse(readFileSync(resolve(args.tape), 'utf8')) : null,
+        skip: Number(args.skip),
       },
     );
     const n = args.frames ? Number(args.frames) : total;
