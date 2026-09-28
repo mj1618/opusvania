@@ -33,3 +33,7 @@ Options: `--budget` child nodes (300k), `--k` frames per macro (4), `--weight` (
 - `k=4` means jump holds come in multiples of 4 frames; precise short hops may need `--k 2`.
 - Solutions are not human-like (hopping, jitter): use them for reachability and golden tapes, not feel.
   Clip them with `npm run clip -- --tape <file> --trail` to see the route.
+- L3: macros `S US DS LS RS V UV DV LV RV RJS RJV` (need seize/levy). `botKey` adds bag colours,
+  source ghost bits, levied (colour, phase, x>>3, y>>3), plate/gate bits, move+frame>>1, hitstop and
+  enemy (state, x>>3, y>>3). The bot can't solve Lot 7 with the verbs in 1M nodes (flow field thinks
+  the gate is open; the plate needs a timed levy), so those claims are `info`. `bot:all` is ~140 s now.

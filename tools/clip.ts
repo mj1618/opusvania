@@ -42,6 +42,10 @@ const { values: args } = parseArgs({
     seed: { type: 'string', default: '1' },
     /** Steps to run before recording starts (lets the player settle). */
     pre: { type: 'string', default: '10' },
+    /** Tape/replay clips: step this many frames before capturing (fast, not recorded). */
+    skip: { type: 'string', default: '0' },
+    /** Capture at most this many frames. */
+    frames: { type: 'string' },
     /** Capture scale of the 1920x1080 canvas. */
     scale: { type: 'string', default: '0.5' },
     'gif-width': { type: 'string', default: '640' },
@@ -87,6 +91,20 @@ function run(cmd: string, argv: string[]): void {
 }
 
 const KEY_EVENTS = new Set([
+  // L3 signature verbs and combat beats.
+  'seizeTake',
+  'seizeRefused',
+  'catch',
+  'levyThrow',
+  'levyLand',
+  'springBounce',
+  'recoilHop',
+  'plate',
+  'gateOpen',
+  'telegraph',
+  'down',
+  'repossess',
+  'hurt',
   'jump',
   'land',
   'dashStart',
@@ -159,26 +177,33 @@ async function main(): Promise<void> {
     const tape: TapeFile | undefined = args.tape
       ? JSON.parse(readFileSync(resolve(args.tape), 'utf8'))
       : undefined;
-    const total: number = await page.evaluate(
-      ({ script, replay, tape, pre, hitboxes, trail }) => {
+    const queued: number = await page.evaluate(
+      ({ script, replay, tape, pre, skip, hitboxes, trail }) => {
         const g = window.__game;
         g.debug.hitboxes(hitboxes);
         g.debug.trail(trail);
-        if (replay) return g.replay.play(replay);
-        if (tape) return g.tape.play(tape);
-        g.step(pre);
-        g.clearInput();
-        return g.input(script ?? '');
+        let n: number;
+        if (replay) n = g.replay.play(replay);
+        else if (tape) n = g.tape.play(tape);
+        else {
+          g.step(pre);
+          g.clearInput();
+          n = g.input(script ?? '');
+        }
+        if (skip > 0) g.step(skip);
+        return n - skip;
       },
       {
         script: args.script,
         replay,
         tape,
         pre: Number(args.pre),
+        skip: Number(args.skip),
         hitboxes: args.hitboxes,
         trail: args.trail,
       },
     );
+    const total = args.frames ? Math.min(queued, Number(args.frames)) : queued;
     if (total === 0) throw new Error('script produced no frames');
 
     rmSync(framesDir, { recursive: true, force: true });

@@ -24,3 +24,8 @@
 - gym-07: the spawn shaft is cols 1–5 and closed by the col-6 pillar; scripted probes jump left first.
 - gym-14 (camera lab) is laid out by us (spec gave a schematic): g sits 11 tiles above the start ledge
   so it is only in view with Look-Up; the spikes under the one-way ledge only with Look-Down.
+- L3 schema: `sources` {char: {sound, colour}} (each 4-connected component = one source), `plates`
+  {char: {pressedBy}}, `gates` {char: {opensOn: plate|clear}}, `enemies` {char: type}; abilities gain
+  optional `seize`/`levy`; claims may set `info: true` (the `with` search is informational) and
+  `budget`, and claim keys may be targets like `rect:x,y,w,h`. L3 rooms (lot-7, lot-7-control,
+  the-pit, stairwell) hang off the hub's right-hand doors L K T S (hub widened to 62 tiles).

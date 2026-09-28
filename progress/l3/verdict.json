@@ -1,6 +1,6 @@
 {
   "decision": "PASS",
-  "quick": true,
+  "quick": false,
   "reason": "every A, C, E and F check passes and B1 passes",
   "rows": [
     {
@@ -27,7 +27,7 @@
     {
       "id": "A4",
       "name": "Feedback (same-step hitstop >= class, colour + position)",
-      "value": "644/644 (100.0%)",
+      "value": "6068/6068 (100.0%)",
       "threshold": "100%",
       "status": "PASS"
     },
@@ -64,7 +64,7 @@
     {
       "id": "C1",
       "name": "Gate integrity (no bypass without the verbs)",
-      "value": "G without seize: not found in 200k; G without levy: not found in 200k; upper corridor mouth without levy: not found in 200k; fuzz no verbs 50x3600: reached G 0",
+      "value": "G without seize: not found in 1000k; G without levy: not found in 1000k; upper corridor mouth without levy: not found in 1000k; fuzz no verbs 500x3600: reached G 0",
       "threshold": "never reached",
       "status": "PASS",
       "kill": false
@@ -79,28 +79,28 @@
     {
       "id": "C3",
       "name": "Robustness (fuzz invariants, regeneration, expert re-reach)",
-      "value": "lot-7 0 + the-pit 0 violations over 100 runs x 3600 f; expert re-reach 1/1",
+      "value": "lot-7 0 + the-pit 0 violations over 1000 runs x 3600 f; expert re-reach 10/10",
       "threshold": "0 violations",
       "status": "PASS"
     },
     {
       "id": "D2",
       "name": "Signature dominance (median frames to roomClear)",
-      "value": "signature 1612 / jabOnly 2210 = 0.729; clean clears signature 4/5, jabOnly 5/5; deaths 1 / 0",
+      "value": "signature 1612 / jabOnly 2210 = 0.729; clean clears signature 19/20, jabOnly 20/20; deaths 1 / 0",
       "threshold": "<= 0.75; both 20/20 clear, 0 deaths (< 0.50 warns)",
       "status": "FAIL"
     },
     {
       "id": "D1",
       "name": "Disarm (taken voice disables its attack; retrieve <= 10 f)",
-      "value": "3 takes in the Pit tapes; 0 attacks while disarmed; max take->retrieve 0 f",
+      "value": "60 voice takes (Pit tapes + policy runs); 0 attacks while disarmed; max take->retrieve 0 f",
       "threshold": "100%; <= 10 f",
       "status": "PASS"
     },
     {
       "id": "D3",
       "name": "Telegraphs (data >= 15; T4 over tapes + Pit fuzz)",
-      "value": "data min 16 (barker.lunge=18, barker.snatch=16, grinder.charge=28, grinder.snatch=16); T4 3228/3228 attacks >= 15 non-hitstop steps (tape min 18)",
+      "value": "data min 16 (barker.lunge=18, barker.snatch=16, grinder.charge=28, grinder.snatch=16); T4 31956/31956 attacks >= 15 non-hitstop steps (tapes + policy runs + Pit fuzz; min gap 16)",
       "threshold": "100%",
       "status": "PASS"
     },
@@ -201,25 +201,55 @@
     }
   ],
   "build": {
-    "sha": "72505a8679-dirty",
-    "sim": "6dee6c42c8",
+    "sha": "d596d2d81a-dirty",
+    "sim": "d34b726253",
     "stateVersion": 4
   },
-  "generated": "2026-09-28T08:04:45.126Z",
+  "generated": "2026-09-28T08:13:29.008Z",
   "policyRuns": {
     "signature": [
       3600,
       1612,
       1612,
       1666,
-      1156
+      1156,
+      1612,
+      1612,
+      1612,
+      1666,
+      1337,
+      1179,
+      1666,
+      1612,
+      1612,
+      1612,
+      1612,
+      1612,
+      1612,
+      1612,
+      1612
     ],
     "jabOnly": [
       2210,
       2210,
       2210,
       2074,
-      2209
+      2209,
+      2160,
+      2210,
+      2210,
+      2211,
+      2210,
+      2210,
+      2211,
+      2210,
+      2210,
+      2210,
+      2210,
+      2210,
+      2210,
+      2210,
+      2210
     ]
   }
 }

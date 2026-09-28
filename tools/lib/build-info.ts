@@ -35,10 +35,20 @@ function listFiles(dir: string): string[] {
   return out;
 }
 
-/** sha1 over every src/sim source file (path + contents), first 10 hex chars. */
+/**
+ * sha1 over every src/sim source file plus the gameplay content the sim bundles (rooms, move
+ * table, enemy data; L3 brief §2.7), path + contents, first 10 hex chars. Without the content a
+ * frame-data edit would read as "SAME sim build" on a golden mismatch.
+ */
 export function simFingerprint(): string {
   const h = createHash('sha1');
-  for (const f of listFiles(join(ROOT, 'src/sim'))) {
+  const files = [
+    ...listFiles(join(ROOT, 'src/sim')),
+    ...listFiles(join(ROOT, 'content/gym')),
+    ...listFiles(join(ROOT, 'content/enemies')),
+    join(ROOT, 'content/moves.json'),
+  ];
+  for (const f of files) {
     h.update(relative(ROOT, f).replaceAll('\\', '/'));
     h.update('\0');
     h.update(readFileSync(f));

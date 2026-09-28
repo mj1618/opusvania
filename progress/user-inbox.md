@@ -13,3 +13,15 @@ Things that need the user. Each item is marked **blocking** or **non-blocking**,
 
 - 2026-09-28: builds. Repo made public; GitHub Pages at https://mj1618.github.io/opusvania/.
 - 2026-09-28: no real artwork or paid APIs for now; no Sentry; keep looping until stopped; concept is the orchestrator's call but must be unique.
+
+## L3 Seize/Levy experiment — human checks (non-blocking; brief §7)
+Verdict PASS (docs/reports/L3-verdict.md). Clips: clips/l3-seize-wall, l3-pink-spring, l3-heavy-plate, l3-pit-seize-levy-count (.mp4/.gif/-sheet.png). Live: hub right-hand doors L (Lot 7), K (control), T (The Pit), S (Stairwell). Keys: V/I seize, B/O levy, C jab, X slip.
+1. Tooltip test: in Lot 7 cold, do you try to seize everything within 2 minutes?
+2. Punch: does a wall going silent land like a hit? (seizeTake hitstop 5 vs 8)
+3. Weight: heavy = power or encumbrance? feather->middle felt in one jump?
+4. Bag: do you always know what Levy will throw (NEXT caret)?
+5. Put-back: do you levy for fun, or only when forced?
+6. Disarm: can you see a Barker can't lunge and is chasing its sound?
+7. Sound: brown/pink hums pleasant over 10 minutes? does the seize cut sell sound = existence?
+8. Is the control room fun on its own?
+9. Palette readable (incl. a CVD filter)?

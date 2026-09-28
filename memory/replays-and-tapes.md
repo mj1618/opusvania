@@ -18,8 +18,7 @@ overrides, assists, abilities, or an exact `start` state) + input DSL string + `
 - **Raw replay** (a `__game.replay.stop()` dump): self-contained start state + tuning + masks + ops.
   Fails on any hash change, with the same build explanation (from its `meta`).
 
-Build stamp (`src/debug/build-info.ts`): `sha` = git short SHA (+`-dirty`), `sim` = sha1 of every
-`src/sim/**` file (path + contents), `stateVersion` = `GameState.version`. Injected by Vite `define`
+Build stamp (`src/debug/build-info.ts`): `sha` = git short SHA (+`-dirty`), `sim` = sha1 of every `src/sim/**` file plus content/gym, content/enemies and content/moves.json (path + contents), `stateVersion` = `GameState.version`. Injected by Vite `define`
 (`tools/lib/build-info.ts` → `vite.config.ts`, so browser + Vitest) and by `installBuildInfo()` in tsx tools.
 The dev server computes it once at start, so after editing sim code under `npm run dev` restart it
 before recording goldens.

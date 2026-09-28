@@ -9,6 +9,12 @@ of the player/tuning/rooms go through `src/debug/sim-adapter.ts` (see sim-adapte
   moved off B, which L3 binds to Levy),
   F1/F2 hitboxes, backquote tuning panel.
 
+## L3
+- `state()` also returns `combat {chin, bag, weight, hitstop, iframes}`, `enemies`, `sounds` (restore()
+  strips them). `spawn(type, x, feetY)` (Game method, recorded as a replay `spawn` op).
+  `render.rects()` = canvas-px rects of sources/levied/enemies/HUD slots (memory/signature-render.md).
+- DSL letters: `S` seize, `V` levy (`A` = jab). Keys: V/I seize, B/O levy, Q special; pad North/East.
+
 ## Stepping and input
 - `step(n)` switches to **manual mode** (real-time loop stops advancing), renders, returns the state.
   `pause()` / `resume()` switch modes; `mode()`. `step(n)` / `trace(n)` throw unless n is a non-negative integer.

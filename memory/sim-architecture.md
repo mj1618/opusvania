@@ -41,3 +41,10 @@ Positions are the player's feet centre unless noted. `dir` is -1/1.
   `respawn`, `checkpoint` (touched an R marker).
 - `goal {kind: main|optional, roomId}`, `roomExit {roomId, to}` (fade-out starts), `roomEnter {roomId}`,
   `profileChange {from, to}`.
+- L3 (src/sim/events.ts; positions = the target's centre): `moveStart{move,dir}`, `whiff{move,reason?}`,
+  `hit{cls,move,target,dmg,dir}`, `hitstop{frames,cls}` (one per step, the max request), `seizeTake
+  {soundId,colour,kind,owner}`, `seizeGuarded`, `seizeRefused`, `catch{enemy,attackId}`, `ghost{source,on}`,
+  `levyThrow{soundId,colour,dir,levied}`, `levyLand`, `levyDry`, `recoilHop`, `springBounce{levied,target}`,
+  `bagPush`, `snatch`, `absorb`, `revoice`, `retrieve`, `hurt{dmg,src}`, `telegraph{enemy,attackId,colour,frames}`,
+  `attackActive`, `down`, `countTick{beat}`, `repossess`, `rise`, `ko`, `plate{char,by}`, `gateOpen`, `roomClear`.
+  Audio hums follow seizeTake/levyThrow/levyLand/bagPush/snatch/absorb/revoice (src/audio/router.ts).
