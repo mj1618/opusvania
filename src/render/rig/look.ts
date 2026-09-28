@@ -109,6 +109,7 @@ export const ANIM = {
   trailMinSpeed: 5,
   afterimageEvery: 3,
   afterimageLife: 14,
+  /** Seize: steps until the take lands in the sack and it pulses (the juice tear arrives at 12). */
   seizeOrbFrames: 12,
   sackPulseFrames: 18,
 } as const;

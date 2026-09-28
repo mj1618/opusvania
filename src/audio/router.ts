@@ -89,6 +89,29 @@ export class EventRouter {
         const p = s?.player;
         hums?.seize(humId(e.soundId), p ? { x: p.x + p.w / 2, y: p.y + p.h / 2 } : { x: e.x, y: e.y });
         this.record(e.type, 'seize', !!hums);
+        // The rip (the sound torn out of its owner), then the pop as the ribbon lands in the sack.
+        const rip = this.sfx.events.seizeRip;
+        if (rip) {
+          this.emit(e.type, rip.rip, { x: e.x, y: e.y });
+          const at = p ? { x: p.x + p.w / 2, y: p.y + p.h / 2 } : { x: e.x, y: e.y };
+          this.emit(e.type, rip.pop, { ...at, delay: rip.popDelay });
+        }
+        return;
+      }
+      case 'poundage': {
+        // A shower of rising coin ticks as the coins fly to the counter, then the till.
+        const c = this.sfx.events.coinShower;
+        if (!c || e.amount <= 0) {
+          this.emit(e.type, ev.simple.poundage ?? 'coin', e);
+          return;
+        }
+        for (let i = 0; i < c.ticks; i++)
+          this.emit(e.type, c.tick, {
+            delay: c.delay + i * c.gap,
+            pitch: 2 ** ((i * c.stepSemis) / 12),
+            volume: 0.8,
+          });
+        this.emit(e.type, c.till, { delay: c.delay + c.ticks * c.gap });
         return;
       }
       case 'seizeRefused':
@@ -222,10 +245,12 @@ export class EventRouter {
   }
 
   private emit(type: string, sound: string, opts: PlayOpts): void {
-    const { x, y, volume } = opts;
+    const { x, y, volume, delay, pitch } = opts;
     const o: PlayOpts = {};
     if (x !== undefined && y !== undefined) Object.assign(o, { x, y });
     if (volume !== undefined) o.volume = volume;
+    if (delay !== undefined) o.delay = delay;
+    if (pitch !== undefined) o.pitch = pitch;
     this.record(type, sound, this.out.play(sound, o));
   }
 

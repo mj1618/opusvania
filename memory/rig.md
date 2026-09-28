@@ -33,3 +33,8 @@ reset with the room (so clips and restored snapshots redraw identically).
   `--tape`, `--setup js`, `--hook "N:js"` (edit state mid-clip, e.g. put a voice in the bag while
   down), `--skip`, `--crop WxH --zoom`, `--follow`. Rise-from-the-Count recipe in ring-barker:
   setup `chin=1`, hook a home sound into the bag + `down.canRise=true`, press J on beat 4.
+- **With the juice pass (combat-juice.md):** on a landed strike the impact director draws the contact
+  star/sparks, so the rig skips its own first-active-frame star once a `hit` arrives (whiffs keep it).
+  A Seize take is drawn by the juice tear ribbon into `rig.hands.sack` (the rig's sack chain); the rig
+  no longer draws its own orb, it only pulses the sack at `ANIM.seizeOrbFrames` (= the tear's arrival).
+  Kid's hurt reaction is the rig's (white `hurtFlash` + recoil pose) under the juice's hurt star/kick.

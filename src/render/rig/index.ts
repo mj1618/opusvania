@@ -37,9 +37,8 @@ interface Ghost {
   age: number;
 }
 
+/** A seized sound on its way to the sack. Timing only: the juice tear ribbon draws it. */
 interface Orb {
-  colour: number;
-  from: V2;
   age: number;
 }
 
@@ -103,13 +102,15 @@ export class KidRig {
   private sackPulse = 0;
   /** Steps of white hit flash left (counts through hitstop, unlike the pose clocks). */
   private hurtFlash = 0;
+  /** The current strike connected: the impact director (src/render/juice) owns the contact star. */
+  private landed = false;
   private lastFacing = 0;
   private dashFrames = 0;
   private hazardFlash: { list: Prim[]; age: number } | null = null;
   private lastList: Prim[] = [];
   private frozen = false;
   /** World joints as last drawn (for overlays: the Seize hand starts at her glove). */
-  hands = { F: v(0, 0), B: v(0, 0), head: v(0, 0), mouth: v(0, 0) };
+  hands = { F: v(0, 0), B: v(0, 0), head: v(0, 0), mouth: v(0, 0), sack: v(0, 0) };
 
   constructor(private readonly game: Game) {
     this.node.addChild(this.ghostLayer, this.back, this.body, this.flash, this.front);
@@ -129,6 +130,7 @@ export class KidRig {
     this.cap = null;
     this.sackPulse = 0;
     this.hurtFlash = 0;
+    this.landed = false;
     this.lastFacing = 0;
     this.dashFrames = 0;
     this.hazardFlash = null;
@@ -197,7 +199,11 @@ export class KidRig {
         case 'beatCountTick':
           m.tickT = 0;
           break;
+        case 'hit':
+          this.landed = true;
+          break;
         case 'moveStart': {
+          this.landed = false;
           m.took = false;
           m.levyColour = null;
           if (e.move === 'levy') {
@@ -209,7 +215,7 @@ export class KidRig {
         }
         case 'seizeTake':
           m.took = true;
-          this.orb = { colour: colourHex(e.colour), from: { ...this.hands.F }, age: -3 };
+          this.orb = { age: 0 };
           break;
         case 'levyThrow':
           m.levyColour = null;
@@ -511,13 +517,13 @@ export class KidRig {
       }
     }
     this.drawSmear(front, glowG, p, o.kid, xf, j);
-    this.drawOrb(front, glowG);
     if (p.down) this.drawStars(front, glowG, xf, j);
     this.hands = {
       F: toWorld(xf, j.haF),
       B: toWorld(xf, j.haB),
       head: toWorld(xf, j.head),
       mouth: toWorld(xf, add(j.head, rot(v(8, 4), j.headAng))),
+      sack: v(this.chains.sack.x[1] as number, this.chains.sack.y[1] as number),
     };
     this.node.alpha = o.opacity;
   }
@@ -647,7 +653,7 @@ export class KidRig {
           .lineTo(hw.x - f * (10 + l), y)
           .stroke({ width: 1.6, color: col, alpha: a * 0.7 });
       }
-      if (ph.stage === 'active' && ph.n === 1) {
+      if (ph.stage === 'active' && ph.n === 1 && !this.landed) {
         g.star(far - f * 4, cy, 5, 12, 5).fill({ color: m.counter ? KID.gold : PALETTE.flash, alpha: 0.95 });
         glow.star(far - f * 4, cy, 5, 12, 5).fill({ color: col, alpha: 0.45 });
       }
@@ -697,29 +703,10 @@ export class KidRig {
     }
     g.poly(fr, true).fill({ color: col, alpha: a * 0.8 });
     glow.poly(fr, true).fill({ color: col, alpha: a * 0.25 });
-    if (ph.stage === 'active' && ph.n === 1) {
+    if (ph.stage === 'active' && ph.n === 1 && !this.landed) {
       g.star(tgt.x, tgt.y, 5, 12, 5).fill({ color: m.counter ? KID.gold : PALETTE.flash, alpha: 0.95 });
       glow.star(tgt.x, tgt.y, 5, 12, 5).fill({ color: col, alpha: 0.45 });
     }
-  }
-
-  /** A seized sound flying from her hand into the sack. */
-  private drawOrb(g: Graphics, glow: Graphics): void {
-    const o = this.orb;
-    const sack = this.chains.sack;
-    if (!o || o.age < 0) return;
-    const t = o.age / ANIM.seizeOrbFrames;
-    const to = { x: sack.x[1] as number, y: sack.y[1] as number };
-    const mid = v((o.from.x + to.x) / 2, Math.min(o.from.y, to.y) - 40);
-    const u = t * t;
-    const q = v(
-      (1 - u) * (1 - u) * o.from.x + 2 * (1 - u) * u * mid.x + u * u * to.x,
-      (1 - u) * (1 - u) * o.from.y + 2 * (1 - u) * u * mid.y + u * u * to.y,
-    );
-    const r = 6 * (1 - 0.5 * t);
-    g.circle(q.x, q.y, r).fill({ color: o.colour, alpha: 1 });
-    g.circle(q.x, q.y, r * 0.45).fill({ color: 0xffffff, alpha: 0.9 });
-    glow.circle(q.x, q.y, r * 2.4).fill({ color: o.colour, alpha: 0.8 });
   }
 
   private drawCap(g: Graphics, glow: Graphics): void {

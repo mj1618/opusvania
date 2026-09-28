@@ -1,48 +1,48 @@
 {
   "E1": {
-    "ghostRatio": 0.362,
-    "hueGapMin": 69.3,
-    "contrastMin": 5.63,
+    "ghostRatio": 0.365,
+    "hueGapMin": 70.9,
+    "contrastMin": 5.73,
     "pass": true,
     "detail": {
       "ratios": {
-        "H": 0.362,
-        "F": 0.213
+        "H": 0.365,
+        "F": 0.206
       },
       "hummingMean": {
-        "H": 107,
-        "F2": 98
+        "H": 108.6,
+        "F2": 102.1
       },
       "ghostMean": {
-        "H": 38.7,
-        "F1": 20.9
+        "H": 39.6,
+        "F1": 21
       },
       "measuredRgb": {
         "brown": [
           188,
-          131,
+          133,
           58
         ],
         "pink": [
           255,
           95,
-          190
+          192
         ]
       },
       "hues": {
-        "brown": 33.7,
-        "pink": 324.4,
+        "brown": 34.4,
+        "pink": 323.6,
         "violet": 252.2
       },
       "contrasts": {
-        "brown": 5.63,
-        "pink": 6.67,
+        "brown": 5.73,
+        "pink": 6.71,
         "violet": 6.29
       },
       "note": "violet is the palette token: no L3 room has a violet source. bg = #12141A token. Kid box masked.",
       "pitBarkerBand": {
-        "telegraph": 51.4,
-        "disarmed": 35.1
+        "telegraph": 81.4,
+        "disarmed": 38
       }
     }
   },

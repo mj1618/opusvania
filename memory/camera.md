@@ -21,3 +21,4 @@
   after the press (the playtest found the old 24 f + 0.06 took ~57 f); C5 asserts <= 32 f.
 - Headless Chromium produces a frame right after timer tasks (no vsync), so the e2e latency test reads
   ~0 ms; it asserts the press is visible in the next rendered frame instead. Real displays add 1-2 vsyncs.
+- Combat hits add no camera trauma here: the impact director (combat-juice.md) adds its own kick/shake and a render zoom on top of the camera's view.
