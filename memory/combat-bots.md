@@ -8,8 +8,10 @@ progress/combat/L4-combat.json (~4 min at 50 seeds). `npm run fight -- --room X 
   `delay` steps late, own body current. Evasion forks the delayed snapshot, **then steps the fork
   `delay` frames with Kid held in place so its clock matches hers** (without that the fork thought
   she had 15 extra frames and F1 read 62–94% on the gavel/dive; with it 100%), forbids new attack
-  starts in the fork (no precognition), and tries 9 macros for 45 f. Her *intended* input (3 f of
-  it) is the baseline: checking "idle" instead made her walk into Barker bodies. She also knows her
+  starts in the fork (no precognition), and tries 9 macros for 45 f. Her *intended* input is the
+  baseline: a move for 3 f (checking "idle" instead made her walk into bodies and off ledges into
+  the boss's waves), an action press for 1 f then idle (holding the press's facing direction for
+  3 f walked her into the rising boss, so she never dared Seize his Count). She also knows her
   own effects at once (a Catch/stagger/knockdown she caused replaces the stale enemy).
 - Offense is geometry (strike boxes vs extrapolated hurtboxes), not search. jabOnly may Seize the
   boss on his final Count (the only win condition).
@@ -21,3 +23,5 @@ progress/combat/L4-combat.json (~4 min at 50 seeds). `npm run fight -- --room X 
 - The boss F1 runs alternate phase 2 with a sound in the bag (Selling Your Bag only happens then).
 - Contact damage (bodies) was the main source of damage for every bot in the Pit, not attacks.
 - Old L3 Pit policies (tools/bot/policies) and `npm run l3:verdict` are historical: the Pit changed.
+- Final 50-seed numbers (docs/reports/L4-combat.md): 13/16; misses F3 Gull 217 f, F4 fodder
+  ratios 0.88-1.00 (Grinder 0.53 is the only one in band), F8 158 f. jabOnly wins 50/50 everywhere.

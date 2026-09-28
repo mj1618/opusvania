@@ -5,7 +5,7 @@ of the player/tuning/rooms go through `src/debug/sim-adapter.ts` (see sim-adapte
 
 - URL params: `?manual` (start paused, only `step()` advances), `seed=<n>`, `room=<id>` (default `hub`),
   `spawn=<name>`, `preset=opus|celeste|hk`, `quality=low|med|high`.
-- Keys: 1-9/0 load gym-01..10, Shift+1-4 gym-11..14, H hub, F3 blind A/B swap (slots in the panel;
+- Keys: 1-9/0 load gym-01..10, Shift+1-4 gym-11..14, Shift+5..9 lot-7/yard/the-pit/auction/ring-barker, H hub, F3 blind A/B swap (slots in the panel;
   moved off B, which L3 binds to Levy),
   F1/F2 hitboxes, F4 perf HUD (Shift+F4 cycles quality), backquote tuning panel.
 
