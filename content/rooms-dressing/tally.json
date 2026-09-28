@@ -1,0 +1,6 @@
+{
+  "id": "tally",
+  "notes": "The Tally (north star §6): pink district, loud and top-heavy. Rooms tally-*.",
+  "district": "pink",
+  "backdrop": { "skyline": 1.4, "chimneys": 1.3, "signs": 1.3, "cables": 1.2, "windows": 1.3 }
+}

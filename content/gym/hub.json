@@ -21,7 +21,7 @@
     "#.....................................................................................#",
     "#.....................................................................................#",
     "#.....................................................................................#",
-    "#.P..1..2..3..4..5..6..7..8..9..A..B..C..D..E....L..K..S....+..Y..T..W..X..Z..Q..U....#",
+    "#.P..1..2..3..4..5..6..7..8..9..A..B..C..D..E....L..K..S....+..Y..T..W..X..Z..Q..U..F.#",
     "#######################################################################################",
     "#######################################################################################",
     "#######################################################################################"
@@ -98,9 +98,12 @@
     },
     "U": {
       "to": "auction"
+    },
+    "F": {
+      "to": "tally-yard"
     }
   },
   "cameraZones": [],
   "claims": {},
-  "notes": "Press Up at a door to enter a room. Each gym room's G leads to the next; gym-14 returns here. L3 doors: L Lot 7, K its jumps-only control, S Stairwell. L4 (combat): + is the Corner (stool: full Chin, Beat the Count refreshed; you wake here when Counted Out), Y the Yard (aims tutorial), T The Pit, W/X/Z/Q the sparring rings (Barker, Gull, Grinder, Clerk), U the Auction (boss)."
+  "notes": "Press Up at a door to enter a room. Each gym room's G leads to the next; gym-14 returns here. L3 doors: L Lot 7, K its jumps-only control, S Stairwell. L4 (combat): + is the Corner (stool: full Chin, Beat the Count refreshed; you wake here when Counted Out), Y the Yard (aims tutorial), T The Pit, W/X/Z/Q the sparring rings (Barker, Gull, Grinder, Clerk), U the Auction (boss). F: The Proof (L6 world rooms: Evictions Yard -> Rag Market -> Tally Cross -> Pawn Row -> Chimney Walk -> Spoil Slide -> Great Scale Hall)."
 }

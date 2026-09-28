@@ -1,0 +1,6 @@
+{
+  "id": "cellars",
+  "notes": "The Cellars (north star §6): brown district, warm, dark and heavy. Rooms cellars-*.",
+  "district": "brown",
+  "grade": { "exposure": 0.9, "vignette": 0.6 }
+}

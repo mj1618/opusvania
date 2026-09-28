@@ -4,7 +4,7 @@
  *   npm run world -- import <sheet.json>...   create/replace rooms from room sheets, then build
  *   npm run world -- export <room> [--out f]  print a room's sheet (edit it, import it back)
  *   npm run world -- section import <f.json>  a whole region in world tiles, cut into its rooms
- *   npm run world -- section export <name> [--out f]   rebuild the section sheet from its rooms
+ *   npm run world -- section export <name> [--regions a,b] [--out f]   rebuild the section sheet from its rooms
  *   npm run world -- build [--check]          defs + bake + compile + lint (after LDtk edits);
  *                                             --check: exit 1 if anything stored is stale
  *   npm run world -- render [--region p | --rooms a,b] [--out f.png] [--scale n]
@@ -39,6 +39,7 @@ const { values: args, positionals } = parseArgs({
   options: {
     out: { type: 'string' },
     region: { type: 'string' },
+    regions: { type: 'string' },
     rooms: { type: 'string' },
     scale: { type: 'string' },
     id: { type: 'string' },
@@ -95,10 +96,10 @@ function main(): number {
       const [sub, arg] = rest;
       if (sub === 'import' && arg) {
         const p = openProject();
-        const { section, models: ms } = sectionToModels(JSON.parse(readFileSync(arg, 'utf8')));
+        const { regions, models: ms } = sectionToModels(JSON.parse(readFileSync(arg, 'utf8')));
         const keep = new Set(ms.map((m) => m.id));
         for (const old of models(p))
-          if (old.id.startsWith(`${section}-`) && !keep.has(old.id)) {
+          if (regions.some((r) => old.id.startsWith(`${r}-`)) && !keep.has(old.id)) {
             removeLevel(p, old.id);
             console.log(`removed ${old.id} (not in the section)`);
           }
@@ -112,9 +113,10 @@ function main(): number {
         return report(build(p));
       }
       if (sub === 'export' && arg) {
-        const ms = models(openProject()).filter((m) => m.id.startsWith(`${arg}-`));
-        if (!ms.length) throw new Error(`no rooms ${arg}-*`);
-        const text = formatSection(modelsToSection(arg, ms));
+        const regions = typeof args.regions === 'string' ? args.regions.split(',') : [arg];
+        const ms = models(openProject()).filter((m) => regions.some((r) => m.id.startsWith(`${r}-`)));
+        if (!ms.length) throw new Error(`no rooms ${regions.map((r) => `${r}-*`).join(', ')}`);
+        const text = formatSection(modelsToSection(arg, ms, regions));
         if (args.out) {
           mkdirSync(dirname(resolve(args.out)), { recursive: true });
           writeFileSync(args.out, text);
@@ -154,13 +156,18 @@ function main(): number {
       let ms = models(p);
       const region = args.region;
       const pick = args.rooms?.split(',');
-      if (region) ms = ms.filter((m) => m.id.startsWith(region));
+      if (region) ms = ms.filter((m) => region.split(',').some((r) => m.id.startsWith(r)));
       if (pick) ms = ms.filter((m) => pick.includes(m.id));
       if (!ms.length) throw new Error('no rooms match');
       const r = build(p, { dryRun: true });
       const rooms = new Map(r.bundle.rooms.map((x) => [x.id, x]));
       const out = resolve(
-        args.out ?? join(ROOT, 'clips/world', `${region ?? (pick ? pick.join('+') : 'world')}.png`),
+        args.out ??
+          join(
+            ROOT,
+            'clips/world',
+            `${region?.replaceAll(',', '+') ?? (pick ? pick.join('+') : 'world')}.png`,
+          ),
       );
       const img = renderWorld(ms, rooms, {
         scale: args.scale ? Number(args.scale) : undefined,

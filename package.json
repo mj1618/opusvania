@@ -32,7 +32,8 @@
     "progression": "tsx tools/progression/cli.ts",
     "world": "tsx tools/world/cli.ts",
     "world:render": "tsx tools/world/cli.ts render",
-    "rig:shots": "tsx tools/rig-shots.ts"
+    "rig:shots": "tsx tools/rig-shots.ts",
+    "world:route": "tsx tools/world/route.ts"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",

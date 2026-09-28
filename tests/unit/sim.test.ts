@@ -119,6 +119,8 @@ describe('rooms', () => {
       'ring-grinder',
       'ring-clerk',
       'auction',
+      // L6: the proof's first world room.
+      'tally-yard',
     ]);
     // The Corner (stool) is in the hub.
     expect(hub.entities.some((e) => e.kind === 'corner')).toBe(true);
