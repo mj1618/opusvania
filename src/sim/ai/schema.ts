@@ -5,6 +5,7 @@ import clerk from '../../../content/enemies/clerk.json' with { type: 'json' };
 import grinder from '../../../content/enemies/grinder.json' with { type: 'json' };
 import gull from '../../../content/enemies/gull.json' with { type: 'json' };
 import runner from '../../../content/enemies/runner.json' with { type: 'json' };
+import thiefgull from '../../../content/enemies/thiefgull.json' with { type: 'json' };
 import { COLOURS } from '../world/rooms';
 
 /**
@@ -202,7 +203,7 @@ export const EnemySchema = z
 export type EnemyDef = z.infer<typeof EnemySchema>;
 
 const DEFS: Record<string, EnemyDef> = {};
-for (const raw of [barker, gull, grinder, clerk, runner, auctioneer]) {
+for (const raw of [barker, gull, grinder, clerk, runner, auctioneer, thiefgull]) {
   const d = EnemySchema.parse(raw);
   DEFS[d.id] = d;
 }

@@ -198,7 +198,7 @@ export function buildLocal(room: Room, t: Tuning): LocalState {
       w: rs.w,
       h: rs.h,
       soundIds: [sid],
-      solidWhenArmed: true,
+      solidWhenArmed: rs.solid,
       ghost: false,
       pendingSolid: false,
       ...(rs.locked ? { locked: true, soldT: 0 } : {}),

@@ -20,7 +20,9 @@ import {
   RECT_SHAPES,
   SHAPES,
   type Shape,
+  SLOPE_TILE_NAMES,
   TILE_NAMES,
+  tileValue,
 } from './model';
 
 export const LAYERS = {
@@ -43,11 +45,21 @@ export const SHAPE_FIELDS: Record<Shape, string[]> = {
   tunnel: ['op', 'tile', 'pts', 'width', 'rough', 'seed', 'tag'],
   ledges: ['op', 'tile', 'pts', 'width', 'thick', 'tag'],
   poly: ['op', 'tile', 'pts', 'tag'],
-  ramp: ['op', 'tile', 'pts', 'tag'],
+  ramp: ['op', 'tile', 'pts', 'grade', 'tag'],
+  curve: ['op', 'pts', 'grade', 'tag'],
   stamp: ['name', 'flipX', 'tag'],
 };
 
-const TILE_COLOURS = ['#2A2230', '#C8A060', '#FF3030', '#FF3070', '#FF6030', '#FF6060', '#60FFFF'];
+const TILE_COLOURS = [
+  '#2A2230',
+  '#C8A060',
+  '#FF3030',
+  '#FF3070',
+  '#FF6030',
+  '#FF6060',
+  '#60FFFF',
+  ...SLOPE_TILE_NAMES.map(() => '#4A3A50'),
+];
 const hexInt = (c: string) => Number.parseInt(c.slice(1), 16);
 
 class Uids {
@@ -292,7 +304,7 @@ export function syncDefs(json: ProjectJson): void {
   });
   const intValues = (withAir: boolean) => [
     ...TILE_NAMES.map((n, i) => ({
-      value: i + 1,
+      value: tileValue(n),
       identifier: n,
       color: TILE_COLOURS[i],
       tile: null,

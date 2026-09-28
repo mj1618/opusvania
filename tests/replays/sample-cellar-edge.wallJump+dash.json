@@ -18,20 +18,20 @@
   "room": "sample-cellar",
   "seed": 1,
   "golden": {
-    "tuningHash": "031c4b0f93afc4",
+    "tuningHash": "0ddcf0f6467f49",
     "build": {
-      "sha": "e11dbbc4a1-dirty",
-      "sim": "021006a5f3",
+      "sha": "236ab9af2d-dirty",
+      "sim": "723d716abd",
       "stateVersion": 1
     },
     "end": {
-      "x": 384,
-      "y": 1201,
+      "x": 442,
+      "y": 1241,
       "frame": 344,
       "room": "sample-gallery"
     },
-    "hash": "1b75237c7cb8de",
-    "hashes": ["0fd7f7b0c3889b", "0e94a0b40f23b1", "13b9da45b34e9b", "03e9a0394017e4", "10791cbacbfbe2"]
+    "hash": "1af8725ff421c4",
+    "hashes": ["0fd7f7b0c3889b", "0e94a0b40f23b1", "13b9da45b34e9b", "03e9a0394017e4", "0eecddd4d8a433"]
   },
   "notes": "Crosses the Cellar -> Gallery edge exit at run speed (momentum kept). Tools demo room (draft)."
 }

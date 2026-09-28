@@ -10,10 +10,10 @@
   "room": "auction",
   "seed": 1,
   "golden": {
-    "tuningHash": "031c4b0f93afc4",
+    "tuningHash": "0ddcf0f6467f49",
     "build": {
-      "sha": "17757b6413-dirty",
-      "sim": "b26aaf0b61",
+      "sha": "236ab9af2d-dirty",
+      "sim": "723d716abd",
       "stateVersion": 1
     },
     "end": {

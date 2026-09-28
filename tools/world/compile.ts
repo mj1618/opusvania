@@ -145,6 +145,20 @@ function compileRoom(
   const prompts: unknown[] = [];
   const cameraZones: unknown[] = [];
   const locks: Record<string, unknown> = {};
+  const weights: unknown[] = [];
+  const breakables: unknown[] = [];
+  const reveals: unknown[] = [];
+  const lights: unknown[] = [];
+  const barks: unknown[] = [];
+  const lines: unknown[] = [];
+  const waypoints: unknown[] = [];
+  const enemyRoutes: Record<string, string> = {};
+  /** Dynamic solids (weights, breakables, reveals) own their tiles: the rows under them are air. */
+  const forceAir = (e: Ent) => {
+    const [x, y, w, h] = e.rect;
+    for (let ty = Math.max(0, y); ty < Math.min(H, y + h); ty++)
+      for (let tx = Math.max(0, x); tx < Math.min(W, x + w); tx++) (rows[ty] as string[])[tx] = '.';
+  };
   const doorNames = new Set<string>();
   let spawns = 0;
   m.entities.forEach((e, i) => {
@@ -176,7 +190,44 @@ function compileRoom(
       }
       case 'source':
         place(i, e, ch, false);
-        sources[ch] = clean({ sound: p.sound, colour: p.colour, locked: p.locked ? true : undefined });
+        sources[ch] = clean({
+          sound: p.sound,
+          colour: p.colour,
+          locked: p.locked ? true : undefined,
+          name: p.name,
+          solid: p.solid === false ? false : undefined,
+        });
+        break;
+      case 'weight':
+        forceAir(e);
+        weights.push({ rect: [x, y, w, h], on: String(p.on) });
+        break;
+      case 'breakable':
+        forceAir(e);
+        breakables.push(clean({ rect: [x, y, w, h], name: p.name, by: nonEmpty(p.by as string[]) }));
+        break;
+      case 'reveal':
+        forceAir(e);
+        reveals.push({ rect: [x, y, w, h], after: String(p.after) });
+        break;
+      case 'light':
+        lights.push(clean({ rect: [x, y, w, h], source: p.source, radius: p.radius, colour: p.colour }));
+        break;
+      case 'bark':
+        barks.push(
+          clean({
+            rect: [x, y, w, h],
+            text: p.text,
+            speaker: p.speaker || undefined,
+            once: p.once === false ? false : undefined,
+          }),
+        );
+        break;
+      case 'line':
+        lines.push(clean({ rect: [x, y, w, h], name: p.name }));
+        break;
+      case 'waypoint':
+        waypoints.push({ at: [x, y], route: String(p.route), order: Number(p.order ?? 0) });
         break;
       case 'plate':
         place(i, e, ch, false);
@@ -194,6 +245,7 @@ function compileRoom(
       case 'enemy':
         place(i, e, ch, true);
         enemies[ch] = String(p.type);
+        if (typeof p.route === 'string' && p.route) enemyRoutes[ch] = p.route;
         break;
       case 'pickup':
         place(i, e, ch, true);
@@ -264,6 +316,15 @@ function compileRoom(
     cameraZones: cameraZones.length ? cameraZones : undefined,
     claims,
     notes: f.notes || undefined,
+    district: f.district || undefined,
+    weights: weights.length ? weights : undefined,
+    breakables: breakables.length ? breakables : undefined,
+    reveals: reveals.length ? reveals : undefined,
+    lights: lights.length ? lights : undefined,
+    barks: barks.length ? barks : undefined,
+    lines: lines.length ? lines : undefined,
+    waypoints: waypoints.length ? waypoints : undefined,
+    enemyRoutes: Object.keys(enemyRoutes).length ? enemyRoutes : undefined,
   });
   return { ...(room as unknown as RoomFile), doorRefs };
 }

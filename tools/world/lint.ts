@@ -5,7 +5,7 @@
  */
 import type { RoomFile } from '../../src/sim/world/room-schema';
 import type { CompileResult } from './compile';
-import type { LevelModel } from './model';
+import { isSlopeValue, type LevelModel, slopeOfValue } from './model';
 
 export type Side = 'n' | 's' | 'e' | 'w';
 
@@ -108,6 +108,35 @@ export function flood(room: RoomFile): { seen: Uint8Array; w: number; h: number 
   return { seen, w, h };
 }
 
+/**
+ * Slope rules (north star §3.2; physics/slopes.ts): only the feet collide with a slope, so the tile
+ * under it must be solid (or a slope); no spikes sit on a slope; and the solid "shin" tile at a
+ * slope's high end must not face open air on its far side (a body falling past that corner could
+ * sink into the shin's feet-only band). One-way slopes don't exist.
+ */
+function lintSlopes(m: LevelModel, errors: string[], warnings: string[]): void {
+  const [W, H] = m.size;
+  const at = (x: number, y: number) =>
+    x < 0 || y < 0 || x >= W || y >= H ? 1 : (m.collision[y * W + x] as number);
+  const solidish = (v: number) => v === 1 || isSlopeValue(v);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const s = slopeOfValue(at(x, y));
+      if (!s) continue;
+      if (!solidish(at(x, y + 1)))
+        errors.push(`${m.id}: slope at ${x},${y} has no solid under it (only the feet collide with slopes)`);
+      const above = at(x, y - 1);
+      if (above >= 3 && above <= 6) errors.push(`${m.id}: spikes on a slope at ${x},${y - 1}`);
+      if (s.k === s.run - 1) {
+        const hx = x + s.dir;
+        if (at(hx, y) === 1 && at(hx + s.dir, y) === 0 && at(hx, y - 1) === 0)
+          warnings.push(
+            `${m.id}: the slope's high end at ${hx},${y} is a 1-tile plateau with air beyond (make it 2+ tiles)`,
+          );
+      }
+    }
+}
+
 export function lintWorld(
   models: LevelModel[],
   res: CompileResult,
@@ -137,6 +166,7 @@ export function lintWorld(
         `${m.id}: ${w}x${h} is under one screen (${SCREEN.w}x${SCREEN.h}); the sim pads it with solid`,
       );
     if (w > MAX.w || h > MAX.h) warnings.push(`${m.id}: ${w}x${h} is over ${MAX.w}x${MAX.h} (8 x 4 screens)`);
+    lintSlopes(m, errors, warnings);
   }
   const ops = openings(models);
   const byId = new Map(models.map((m) => [m.id, m]));

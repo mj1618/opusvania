@@ -18,10 +18,10 @@
     "pogo": true
   },
   "golden": {
-    "tuningHash": "05410eaf96b214",
+    "tuningHash": "0b7080d72cb66b",
     "build": {
-      "sha": "17757b6413-dirty",
-      "sim": "b26aaf0b61",
+      "sha": "236ab9af2d-dirty",
+      "sim": "723d716abd",
       "stateVersion": 1
     },
     "end": {

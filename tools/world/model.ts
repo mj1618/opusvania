@@ -8,13 +8,14 @@
  * tiles. Entities are `[x, y]` (a point = one tile) or `[x, y, w, h]` (a rect).
  */
 import { z } from 'zod';
+import { SLOPE_SHAPES } from '../../src/sim/world/room-schema';
 import type { FieldKind } from './ldtk';
 
 // ---------------------------------------------------------------------------------------------
 // Collision values (IntGrid). Same numbers as the sim's `Tile` (src/sim/world/rooms.ts).
 // 8..15 are reserved for slope tiles (level-toolchain §3.3). Paint uses 16 for "force air".
 
-export const TILE_NAMES = [
+export const BASE_TILE_NAMES = [
   'solid',
   'oneWay',
   'spikeUp',
@@ -23,9 +24,41 @@ export const TILE_NAMES = [
   'spikeRight',
   'orb',
 ] as const;
+/**
+ * Floor slopes (the sim's SLOPE_SHAPES, same order): IntGrid values SLOPE_VALUE0 + i. They skip
+ * PAINT_AIR (16) so an old Paint layer never reads as a slope.
+ */
+export const SLOPE_TILE_NAMES = [
+  'slopeR4a',
+  'slopeR4b',
+  'slopeR4c',
+  'slopeR4d',
+  'slopeR2a',
+  'slopeR2b',
+  'slopeR1',
+  'slopeL4a',
+  'slopeL4b',
+  'slopeL4c',
+  'slopeL4d',
+  'slopeL2a',
+  'slopeL2b',
+  'slopeL1',
+] as const;
+if (SLOPE_TILE_NAMES.some((n, i) => SLOPE_SHAPES[i]?.name !== n))
+  throw new Error('SLOPE_TILE_NAMES must match the sim SLOPE_SHAPES order');
+export const SLOPE_VALUE0 = 17;
+export const TILE_NAMES = [...BASE_TILE_NAMES, ...SLOPE_TILE_NAMES] as const;
 export type TileName = (typeof TILE_NAMES)[number];
-export const tileValue = (t: TileName): number => TILE_NAMES.indexOf(t) + 1;
-export const tileName = (v: number): TileName | undefined => TILE_NAMES[v - 1];
+export const tileValue = (t: TileName): number => {
+  const b = (BASE_TILE_NAMES as readonly string[]).indexOf(t);
+  return b >= 0 ? b + 1 : SLOPE_VALUE0 + (SLOPE_TILE_NAMES as readonly string[]).indexOf(t);
+};
+export const tileName = (v: number): TileName | undefined =>
+  v >= SLOPE_VALUE0 ? SLOPE_TILE_NAMES[v - SLOPE_VALUE0] : BASE_TILE_NAMES[v - 1];
+export const isSlopeValue = (v: number): boolean =>
+  v >= SLOPE_VALUE0 && v < SLOPE_VALUE0 + SLOPE_TILE_NAMES.length;
+/** The sim slope shape of an IntGrid value (undefined for non-slopes). */
+export const slopeOfValue = (v: number) => (isSlopeValue(v) ? SLOPE_SHAPES[v - SLOPE_VALUE0] : undefined);
 export const TILE_CHAR: Record<number, string> = {
   0: '.',
   1: '#',
@@ -35,8 +68,17 @@ export const TILE_CHAR: Record<number, string> = {
   5: '<',
   6: '>',
   7: 'o',
+  ...Object.fromEntries(SLOPE_SHAPES.map((s, i) => [SLOPE_VALUE0 + i, s.char])),
 };
 export const PAINT_AIR = 16;
+/** Slope grades a ramp/curve brush may use (sheet form). */
+export const GRADES = ['1:4', '1:2', '1:1'] as const;
+export type Grade = (typeof GRADES)[number];
+/** LDtk enum ids for the grades (identifiers can't contain ':'); '' = stairs (ramp) / default (curve). */
+const GRADE_IDS = { '': 'none', '1:4': 'g1_4', '1:2': 'g1_2', '1:1': 'g1_1' } as const;
+export const gradeToId = (g: Grade | ''): string => GRADE_IDS[g];
+export const gradeFromId = (id: unknown): Grade | '' =>
+  (Object.entries(GRADE_IDS).find(([, v]) => v === id)?.[0] as Grade | '' | undefined) ?? '';
 export const PAINT_NAMES = [...TILE_NAMES, 'air'] as const;
 export type PaintName = (typeof PAINT_NAMES)[number];
 export const paintValue = (p: PaintName): number => (p === 'air' ? PAINT_AIR : tileValue(p));
@@ -50,13 +92,15 @@ export const ENUMS = {
   Op: ['add', 'carve'],
   Ability: ['wallJump', 'dash', 'doubleJump', 'pogo', 'seize', 'levy'],
   Colour: ['brown', 'pink', 'violet', 'white'],
-  Enemy: ['auctioneer', 'barker', 'clerk', 'grinder', 'gull', 'runner'],
+  Enemy: ['auctioneer', 'barker', 'clerk', 'grinder', 'gull', 'runner', 'thiefgull'],
   CameraMode: ['lock', 'clampX', 'clampY', 'bounds'],
   PromptKey: ['left', 'right', 'up', 'down', 'jump', 'dash', 'attack', 'seize', 'levy', 'special'],
   Hold: ['sealed', 'reach'],
   OpensOn: ['plate', 'clear'],
   PressedBy: ['slab', 'heavy'],
   Hazard: ['death', 'pip'],
+  Grade: ['none', 'g1_4', 'g1_2', 'g1_1'],
+  BreakBy: ['weight', 'strike', 'slab'],
 } as const satisfies Record<string, readonly string[]>;
 export type EnumName = keyof typeof ENUMS;
 
@@ -104,12 +148,13 @@ export const SHAPES = [
   'poly',
   'ramp',
   'stamp',
+  'curve',
 ] as const;
 export type Shape = (typeof SHAPES)[number];
 /** Shapes whose geometry is the entity's own rectangle (resizable in LDtk). */
 export const RECT_SHAPES: readonly Shape[] = ['rect', 'blob', 'shaft', 'arch'];
 /** Shapes whose geometry is the `pts` field (drawn as a path in LDtk). */
-export const PATH_SHAPES: readonly Shape[] = ['tunnel', 'ledges', 'poly', 'ramp'];
+export const PATH_SHAPES: readonly Shape[] = ['tunnel', 'ledges', 'poly', 'ramp', 'curve'];
 
 export const BRUSH_DOCS: Record<Shape, string> = {
   fill: 'Whole room. Usually the first brush (start from solid, then carve).',
@@ -120,7 +165,9 @@ export const BRUSH_DOCS: Record<Shape, string> = {
   arch: 'Upper half-ellipse of the rect (a vault or doorway top); `thick` > 0 = only a band that thick.',
   ledges: 'A platform `width` tiles long starting at each point (its top row), `thick` rows deep.',
   poly: 'Filled polygon through `pts` (tile-centre sampling).',
-  ramp: 'Staircase under the line pts[0] -> pts[1], down to the lower end (slopes later).',
+  ramp: 'Staircase under the line pts[0] -> pts[1], down to the lower end; with `grade` (1:4, 1:2, 1:1) a floor slope whose surface runs corner pts[0] -> corner pts[1].',
+  curve:
+    'Floor surface through the corner points `pts`, quantised to flat/1:4/1:2/1:1 slope tiles (`grade` = steepest allowed, default 1:2), solid under it.',
   stamp: 'Pastes content/stamps/<name>.json (ASCII; space = keep) at the entity; `flipX` mirrors.',
 };
 
@@ -132,6 +179,7 @@ export const BRUSH_FIELDS: FieldSpec[] = [
   f('thick', 'Int', { def: 0, doc: 'Arch band / ledge depth, tiles (0 = default).' }),
   f('rough', 'Int', { def: 0, doc: 'Boundary noise amplitude, tiles.' }),
   f('seed', 'Int', { def: 0 }),
+  f('grade', 'Enum:Grade', { def: 'none', doc: 'ramp: slope grade (none = stairs); curve: steepest grade.' }),
   opt('name', 'String', 'Stamp name.'),
   f('flipX', 'Bool', { def: false }),
   opt('tag', 'String', 'Free label (critical path, keep...).'),
@@ -151,6 +199,8 @@ export interface Brush {
   name?: string;
   flipX: boolean;
   tag?: string;
+  /** LDtk grade id: none | g1_4 | g1_2 | g1_1 (sheet: omitted | "1:4" | "1:2" | "1:1"). */
+  grade?: string;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -172,6 +222,13 @@ export const ENTITY_KINDS = [
   'camera',
   'lock',
   'landmark',
+  'weight',
+  'breakable',
+  'reveal',
+  'light',
+  'bark',
+  'line',
+  'waypoint',
 ] as const;
 export type EntityKind = (typeof ENTITY_KINDS)[number];
 
@@ -226,7 +283,14 @@ export const ENTITY_SPECS: Record<EntityKind, EntitySpec> = {
     rect: true,
     color: '#C07418',
     doc: 'Humming object (rect = the source).',
-    fields: [f('sound', 'String'), f('colour', 'Enum:Colour'), f('locked', 'Bool', { def: false }), CHAR],
+    fields: [
+      f('sound', 'String'),
+      f('colour', 'Enum:Colour'),
+      f('locked', 'Bool', { def: false }),
+      opt('name', 'String', 'Link name: weights hang on it, lights run off it, reveals wait on it.'),
+      f('solid', 'Bool', { def: true, doc: 'Solid while armed; false = hums but is not a platform.' }),
+      CHAR,
+    ],
   },
   plate: {
     kind: 'plate',
@@ -254,7 +318,7 @@ export const ENTITY_SPECS: Record<EntityKind, EntitySpec> = {
     rect: false,
     color: '#FF4040',
     doc: 'Enemy spawn (feet on this tile floor).',
-    fields: [f('type', 'Enum:Enemy'), CHAR],
+    fields: [f('type', 'Enum:Enemy'), opt('route', 'String', 'Waypoint route it flies (thief gulls).'), CHAR],
   },
   pickup: {
     kind: 'pickup',
@@ -313,6 +377,57 @@ export const ENTITY_SPECS: Record<EntityKind, EntitySpec> = {
     doc: 'A named landmark (level-toolchain §4.3). Not compiled yet: drawn on the world map and listed in the toc.',
     fields: [f('name', 'String'), opt('note', 'Multilines')],
   },
+  weight: {
+    kind: 'weight',
+    rect: true,
+    color: '#B08840',
+    doc: 'Hanging weight (the brass balls): solid; falls when source `on` is seized, smashes breakables, rests as solid.',
+    fields: [f('on', 'String', { doc: 'Name of the source it hangs from.' })],
+  },
+  breakable: {
+    kind: 'breakable',
+    rect: true,
+    color: '#A06040',
+    toc: true,
+    doc: 'Solid until broken by `by` (weight = a falling weight, strike = Kid hits it, slab = a brown slab lands on it). Its tiles compile to air.',
+    fields: [opt('name', 'String'), list('by', 'Enum:BreakBy', 'Default: weight + strike.')],
+  },
+  reveal: {
+    kind: 'reveal',
+    rect: true,
+    color: '#806050',
+    doc: 'Solid only after the named breakable broke (or named source was seized): debris stairs.',
+    fields: [f('after', 'String')],
+  },
+  light: {
+    kind: 'light',
+    rect: true,
+    color: '#FFE070',
+    doc: 'A light the render draws; dark while its `source` is seized (sim event `power`).',
+    fields: [opt('source', 'String'), opt('radius', 'Float'), opt('colour', 'String')],
+  },
+  bark: {
+    kind: 'bark',
+    rect: true,
+    color: '#F0F0A0',
+    doc: 'Kid entering the rect emits `bark {text, speaker}` (speaker "board" emits `boardLine`). `text` = a short text id.',
+    fields: [f('text', 'String'), f('speaker', 'String', { def: '' }), f('once', 'Bool', { def: true })],
+  },
+  line: {
+    kind: 'line',
+    rect: true,
+    color: '#E0C0FF',
+    toc: true,
+    doc: 'A district line (Registry threshold): touching it resets the carry (sounds ribbon home).',
+    fields: [opt('name', 'String')],
+  },
+  waypoint: {
+    kind: 'waypoint',
+    rect: false,
+    color: '#80FF80',
+    doc: 'A point on an ordered route: thief gull flights, staged bot searches in big rooms.',
+    fields: [f('route', 'String'), f('order', 'Int', { def: 0 })],
+  },
 };
 
 export interface Ent {
@@ -335,6 +450,11 @@ export const LEVEL_FIELDS: FieldSpec[] = [
     def: false,
     doc: 'Draft rooms load in the game but are not in the progression graph.',
   }),
+  opt(
+    'district',
+    'String',
+    'Carry district (north star §3.4): rooms of one district share the bag, levied objects and ghosts.',
+  ),
   opt('claims', 'Multilines', 'RoomFile `claims` as JSON.'),
   opt('notes', 'Multilines'),
 ];
@@ -368,6 +488,7 @@ const BrushOpts = z.strictObject({
   thick: Int.nonnegative().optional(),
   flipX: z.boolean().optional(),
   tag: z.string().optional(),
+  grade: z.enum(GRADES).optional(),
 });
 type BrushOptsT = z.infer<typeof BrushOpts>;
 const SPIKE_DIRS = { up: 'spikeUp', down: 'spikeDown', left: 'spikeLeft', right: 'spikeRight' } as const;
@@ -378,6 +499,7 @@ export const BrushTuple = z.union([
   z.tuple([z.enum(['tunnel', 'ledges']), Op, z.array(Pt).min(1), Int.positive()], BrushOpts),
   z.tuple([z.literal('poly'), Op, z.array(Pt).min(3)], BrushOpts),
   z.tuple([z.literal('ramp'), Op, Pt, Pt], BrushOpts),
+  z.tuple([z.literal('curve'), Op, z.array(Pt).min(2)], BrushOpts),
   z.tuple([z.literal('stamp'), z.string().min(1), Pt], BrushOpts),
   z.tuple([z.literal('oneway'), Pt, Int.positive()], BrushOpts),
   z.tuple([z.literal('spikes'), z.enum(['up', 'down', 'left', 'right']), RectT], BrushOpts),
@@ -400,6 +522,7 @@ export const SheetSchema = z.strictObject({
   spawnGrace: Int.nonnegative().optional(),
   next: z.string().optional(),
   draft: z.boolean().optional(),
+  district: z.string().optional(),
   claims: z.record(z.string(), z.unknown()).optional(),
   notes: z.string().optional(),
   brushes: z.array(BrushTuple),
@@ -451,6 +574,7 @@ export function brushFromTuple(t: z.infer<typeof BrushTuple>): Brush {
     if (x.thick !== undefined) b.thick = x.thick;
     if (x.flipX !== undefined) b.flipX = x.flipX;
     if (x.tag !== undefined) b.tag = x.tag;
+    if (x.grade !== undefined) b.grade = gradeToId(x.grade);
   };
   const [head] = t;
   if (head === 'fill') {
@@ -472,6 +596,10 @@ export function brushFromTuple(t: z.infer<typeof BrushTuple>): Brush {
   } else if (head === 'ramp') {
     const [, op, a, c, o] = t as [Shape, 'add' | 'carve', [number, number], [number, number], unknown];
     Object.assign(b, { shape: 'ramp', op, pts: [a, c] });
+    opts(o);
+  } else if (head === 'curve') {
+    const [, op, pts, o] = t as [Shape, 'add' | 'carve', [number, number][], unknown];
+    Object.assign(b, { shape: 'curve', op, pts });
     opts(o);
   } else if (head === 'stamp') {
     const [, name, at, o] = t as [Shape, string, [number, number], unknown];
@@ -498,6 +626,7 @@ export function brushToTuple(b: Brush): unknown[] {
   if (b.thick) o.thick = b.thick;
   if (b.flipX) o.flipX = true;
   if (b.tag) o.tag = b.tag;
+  if (b.grade && b.grade !== 'none') o.grade = gradeFromId(b.grade);
   const withTile = () => (b.tile !== 'solid' ? { tile: b.tile, ...o } : o);
   const tail = (x: Record<string, unknown>) => (Object.keys(x).length ? [x] : []);
   switch (b.shape) {
@@ -522,6 +651,8 @@ export function brushToTuple(b: Brush): unknown[] {
       return ['poly', b.op, b.pts, ...tail(b.op === 'add' ? withTile() : o)];
     case 'ramp':
       return ['ramp', b.op, b.pts[0], b.pts[1], ...tail(b.op === 'add' ? withTile() : o)];
+    case 'curve':
+      return ['curve', b.op, b.pts, ...tail(o)];
     case 'stamp': {
       const r = b.rect as [number, number, number, number];
       return ['stamp', b.name, [r[0], r[1]], ...tail(o)];
