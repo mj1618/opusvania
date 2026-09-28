@@ -19,6 +19,7 @@ import {
   type Rect,
   resolveTarget,
   roomAbilities,
+  roomInfo,
 } from '../../src/debug/sim-adapter';
 import { ActionBit } from '../../src/sim/input';
 
@@ -29,7 +30,7 @@ export interface Macro {
   needs?: 'dash' | 'pogo';
 }
 
-/** The spec's 12 macros: `. L R J LJ RJ X LX RX DA LDA RDA`. */
+/** The spec's 12 macros (`. L R J LJ RJ X LX RX DA LDA RDA`) plus `DJ` for drop-through. */
 export const ALL_MACROS: Macro[] = [
   { name: '.', mask: 0 },
   { name: 'L', mask: ActionBit.left },
@@ -37,6 +38,8 @@ export const ALL_MACROS: Macro[] = [
   { name: 'J', mask: ActionBit.jump },
   { name: 'LJ', mask: ActionBit.left | ActionBit.jump },
   { name: 'RJ', mask: ActionBit.right | ActionBit.jump },
+  // Not in the spec's list, but one-way drop-through (gym-06, gym-13) needs Down+Jump.
+  { name: 'DJ', mask: ActionBit.down | ActionBit.jump },
   { name: 'X', mask: ActionBit.dash, needs: 'dash' },
   { name: 'LX', mask: ActionBit.left | ActionBit.dash, needs: 'dash' },
   { name: 'RX', mask: ActionBit.right | ActionBit.dash, needs: 'dash' },
@@ -62,6 +65,11 @@ export interface SearchOptions extends SimSetup {
   weight?: number;
   /** Speed estimate in px/frame used to turn distance into frames for the heuristic. */
   speedEstimate?: number;
+  /**
+   * 'flow' (default): distance to the target through non-solid tiles (BFS from the target), so
+   * walls and mazes don't trap the search. 'euclid': straight-line distance (spec §8 original).
+   */
+  heuristic?: 'flow' | 'euclid';
 }
 
 export interface SearchResult {
@@ -163,6 +171,49 @@ export function rectDistance(p: PlayerView, r: Rect): number {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+/**
+ * Flow field: px distance from every tile to the target through non-solid tiles (8-connected,
+ * ignoring gravity and body size, so it never overestimates). Infinity = walled off.
+ */
+export function flowField(roomId: string, target: Rect): { dist: Float64Array; width: number; ts: number } {
+  const room = roomInfo(roomId);
+  const { width, height, tileSize: ts } = room;
+  const dist = new Float64Array(width * height).fill(Number.POSITIVE_INFINITY);
+  const queue: number[] = [];
+  const tx0 = Math.floor(target.x / ts);
+  const ty0 = Math.floor(target.y / ts);
+  const tx1 = Math.floor((target.x + target.w - 1) / ts);
+  const ty1 = Math.floor((target.y + target.h - 1) / ts);
+  for (let ty = ty0; ty <= ty1; ty++)
+    for (let tx = tx0; tx <= tx1; tx++) {
+      if (tx < 0 || ty < 0 || tx >= width || ty >= height) continue;
+      dist[ty * width + tx] = 0;
+      queue.push(ty * width + tx);
+    }
+  // Dijkstra-lite: 8-connected with diagonal cost sqrt(2); a simple queue with re-relaxation.
+  const DIAG = Math.SQRT2 * ts;
+  for (let qi = 0; qi < queue.length; qi++) {
+    const i = queue[qi] as number;
+    const x = i % width;
+    const y = (i - x) / width;
+    const d = dist[i] as number;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height || room.solidAt(nx, ny)) continue;
+        const nd = d + (dx !== 0 && dy !== 0 ? DIAG : ts);
+        const j = ny * width + nx;
+        if (nd < (dist[j] as number)) {
+          dist[j] = nd;
+          queue.push(j);
+        }
+      }
+  }
+  return { dist, width, ts };
+}
+
 export function search(opts: SearchOptions): SearchResult {
   const t0 = performance.now();
   const k = opts.macroFrames ?? 4;
@@ -174,6 +225,17 @@ export function search(opts: SearchOptions): SearchResult {
   const macros = macrosFor(abilities);
   const rootSim = new HeadlessSim({ ...opts, abilities });
   const target = resolveTarget(rootSim.state.roomId, opts.target);
+  const flow = (opts.heuristic ?? 'flow') === 'flow' ? flowField(rootSim.state.roomId, target) : null;
+  /** Heuristic distance (px) from the player to the target. */
+  const hDist = (v: PlayerView): number => {
+    const d = rectDistance(v, target);
+    if (!flow || d === 0) return d;
+    const tx = Math.floor((v.x + v.w / 2) / flow.ts);
+    const ty = Math.floor((v.y + v.h / 2) / flow.ts);
+    const f = flow.dist[ty * flow.width + tx];
+    // Inside a solid tile (body overlapping a wall edge) or walled off: fall back to straight line.
+    return f === undefined || !Number.isFinite(f) ? d : Math.max(d, f);
+  };
 
   const nodes: Node[] = [{ parent: -1, macro: -1, frames: 0, g: 0, sim: rootSim }];
   const best = new Map<string, number>([[botKey(rootSim.state), 0]]);
@@ -217,6 +279,7 @@ export function search(opts: SearchOptions): SearchResult {
       const g = node.g + (hit || k);
       const v = child.view;
       const d = rectDistance(v, target);
+      const h = hDist(v);
       if (d < closest.distance) Object.assign(closest, { distance: d, x: v.x, y: v.y, frame: g });
       if (hit) {
         nodes.push({ parent: id, macro: mi, frames: hit, g });
@@ -229,7 +292,7 @@ export function search(opts: SearchOptions): SearchResult {
       if (prev !== undefined && prev <= g) continue;
       best.set(key, g);
       nodes.push({ parent: id, macro: mi, frames: k, g, sim: child });
-      heap.push(g + (weight * d) / speed, seq++, nodes.length - 1);
+      heap.push(g + (weight * h) / speed, seq++, nodes.length - 1);
     }
   }
 
