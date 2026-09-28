@@ -27,3 +27,7 @@
   bare JSON imports (Vite and tsx don't care). Anything the sim imports from `content/` must carry it.
 - **Tweakpane clamps bound values** to a binding's min/max when it refreshes, silently rewriting them
   (the hk preset's 999 accelerations became 12.8). Number bindings in the tuning panel have no min/max.
+- **CI renders at ~1 fps** (software GL on the ubuntu runner; local headless ~30 fps). E2E tests must not
+  step-and-render hundreds of frames or reload pages per case: verify sim hashes with
+  `__game.replay.verify` (no rendering), and manual mode only redraws when the state changed.
+  Timing tests (latency) skip themselves below 20 fps.

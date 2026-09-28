@@ -12,5 +12,5 @@
   bottom of gym-09 the floor is 2 tiles above the room edge, so clamping must win.
 - C5: 90% of look-down is reached 37 frames after the 24-frame delay (lerp 0.06), so "within 60 f"
   is read as 60 f after the delay.
-- Headless Chromium fires rAF right after timer tasks (no vsync), so the e2e latency test measures
-  ~0 ms. It still guards sampling/interpolation order; real displays add 1-2 vsyncs.
+- Headless Chromium produces a frame right after timer tasks (no vsync), so the e2e latency test reads
+  ~0 ms; it asserts the press is visible in the next rendered frame instead. Real displays add 1-2 vsyncs.
