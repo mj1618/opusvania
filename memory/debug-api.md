@@ -10,7 +10,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   returns the state → manual. `tick(n)` advances render time only → manual. `freeze()` / `freeze(false)`,
   `pause()` (manual), `resume()` (realtime).
 - URL: `?manual` boots paused (tools and tests do this), `?seed=n`, `?hitboxes`, `?nopickups` (the scene
-  without glints, pods, enemies or counter; the capture tools use it unless given `--pickups`).
+  without glints, pods, enemies, lanterns, heart or counter; the capture tools use it unless given `--pickups`).
 
 ## Calls
 - `state()` the sim state (`src/sim/state.ts`); `hash()`; `info()` (mode, frame, clock, canvas size, GPU);
@@ -43,7 +43,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - In manual mode the page only redraws on API calls; change something by hand, then call `render()`.
 - `step()` with a big n renders every step's update but presents once: fine on a real GPU.
 - Keys in the page: arrows/WASD, Z/Space/K jump, X/L/Shift dash, C/J attack, R restart.
-- Lanterns and the heart are not drawn yet: the hitbox overlay is the only way to see them. After `gather` no
+- After `gather` no
   input reaches her (`goal().ending.held`): `load()` to play on.
 - A scripted `input()` longer than the `step(n)` after it leaves frames in the queue: later one-frame inputs then
   lag a frame behind (a walk-to loop oscillates). Count the script's frames.

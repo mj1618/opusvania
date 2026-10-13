@@ -57,8 +57,10 @@ x:  0        1000       2000       3000       4000       5000     5760
 | `sky` | screen space | sky glow; 0..1920 x 0..1080, never moves |
 | `far[0..2]` | 0.12, 0.25, 0.42 | far forest silhouettes, `far[0]` farthest |
 | `mid` | 0.68 | big trunks, roots, vines, fog sheets |
+| `goalLight` | 1 | additive warm light behind the terrain: heart waking, ending (`src/render/goal/`) |
 | `playfield` | 1 | terrain, moss, plants, pool: the skin of the collision rects |
 | `pickupsBack` | 1 | the buds of great glints, behind the character |
+| `goal` | 1 | moth-lanterns and the heart, behind the character (`src/render/goal/`) |
 | `enemies` | 1 | the creatures' bodies (`src/render/enemies/`), just behind the character |
 | `character` | 1 | the character |
 | `pickups` | 1 | glints and the sepals cupping a great one (`src/render/pickups/`), over the character |

@@ -34,9 +34,13 @@ export const LAYERS = [
   { name: 'mid', parallax: 0.68, screen: false },
   // Light shafts that pass behind the terrain and the character (owned by layers/air.ts).
   { name: 'airBack', parallax: 1, screen: false },
+  // Warm light that passes behind the terrain: the heart waking, the ending (src/render/goal).
+  { name: 'goalLight', parallax: 1, screen: false },
   { name: 'playfield', parallax: 1, screen: false },
   // The buds that hold great glints: behind the character (src/render/pickups).
   { name: 'pickupsBack', parallax: 1, screen: false },
+  // The moth-lanterns and the heart of the grove (src/render/goal): behind the character.
+  { name: 'goal', parallax: 1, screen: false },
   // Enemies' bodies (src/render/enemies): just behind the character.
   { name: 'enemies', parallax: 1, screen: false },
   { name: 'character', parallax: 1, screen: false },

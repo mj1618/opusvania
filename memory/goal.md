@@ -6,7 +6,7 @@ lanterns with them, the hollow tree wakes, she walks into it. No text anywhere i
 Sim: `src/sim/goal.ts` (`updateGoal`, last thing in `step`), numbers in `tuning.goal`, scene data
 `lanterns: [{id, x, y, cost?}]` and `heart: {x, y}` (both a feet-centre point on solid ground, like
 the spawn). Tests: `tests/unit/goal.test.ts` (rules), `tests/unit/goal-pilot.test.ts` (one whole run
-with real inputs + the economy audit). Not drawn yet: the hitbox overlay is the only way to see any of it.
+with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.md).
 
 ## Rules
 - **At a lantern** = grounded, mode `normal`, feet on its base line, her box overlapping its trigger
@@ -95,8 +95,7 @@ heart wakes -> down to the rise -> the heart. `gather` at frame 1107 (18.5 s), `
 `GOAL_TRACE=1 npx vitest run tests/unit/goal-pilot.test.ts --disable-console-intercept` prints the legs.
 
 ## What render gets
-State: `state.goal` (`GoalState`, exported from `src/sim/index.ts`; **not in `SimView` yet**: add
-`goal: this.game.state.goal` in `stage.ts` / `contract.ts`). Boxes: `lanternBox(l, tuning.goal)`,
+State: `state.goal` (`GoalState`, exported from `src/sim/index.ts`; `SimView.goal`). Boxes: `lanternBox(l, tuning.goal)`,
 `heartBox(heart, tuning.goal)`, `lanternCost(l, tuning.goal)`.
 - **Lanterns** `goal.lanterns[i]` for `scene.lanterns[i]` `{id, x, y}` (foot): `lit`, `litFrame` (sim
   frame it caught, -1 dormant: glow-up from `sim.frame - litFrame`; a state jump just shows it lit),
@@ -120,4 +119,4 @@ State: `state.goal` (`GoalState`, exported from `src/sim/index.ts`; **not in `Si
   idle); `endHold {x, y}` and `goal.ended` at 240. Enemy events during it: `enemyGiveUp` cause `calm`.
 - Render-only idea from the design: a lit lantern slowly wakes the dormant glints near it (the sim
   does nothing for it: glints are dormant / awake only in the pickup renderer).
-- `?nopickups` keeps the lanterns and the heart (they cannot be lit there: no glints).
+- `?nopickups` removes the lanterns and the heart too (clean plates; main.ts).

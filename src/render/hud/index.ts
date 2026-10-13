@@ -10,9 +10,15 @@
  * they read over any of the three zones without a box behind them.
  */
 import { CanvasSource, Container, Rectangle, Sprite, Texture } from 'pixi.js';
+import { lanternCost } from '../../sim/goal';
+import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
+import { GOAL } from '../goal/config';
+import { streamCount } from '../goal/logic';
 import { GlintBatch, K_FLARE, K_GLINT, K_SPARK } from '../pickups/batch';
 import { HealthLights } from './lights';
+import { LanternPips } from './progress';
+import { EndSummary } from './summary';
 
 export const HUD = {
   /** Centre of the glint icon, logical px from the top left. */
@@ -34,7 +40,24 @@ export const HUD = {
   iconQuad: 40,
   /** The icon is the world glint drawn this many times larger. */
   iconScale: 1.25,
+  /** The lantern pips stand this far under the count's row (or in its place when it is away). */
+  pipsDrop: 50,
+  /** A refusal shakes the count: px, and how fast it dies (per second). */
+  refuse: 5,
+  refuseDecay: 7,
+  /** Seconds the whole cluster takes to leave when the run ends. */
+  endFade: 1.1,
 };
+
+/** A glint leaving the counter as it is spent (HUD px). */
+interface Drop {
+  life: number;
+  max: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+}
 
 const DIGITS = 4;
 /** Canvas pixels per logical px in the digit atlas. */
@@ -43,7 +66,15 @@ const RES = 3;
 export class Hud {
   readonly layer = new Container({ label: 'hud' });
   private readonly group = new Container();
-  private readonly icon = new GlintBatch(32);
+  private readonly icon = new GlintBatch(72);
+  private readonly pips = new LanternPips();
+  private readonly summary = new EndSummary();
+  private readonly drops: Drop[] = [];
+  private dropAt = 0;
+  private refuseT = -1;
+  private frame = -1;
+  /** 1 = showing, 0 = the run has ended and the cluster has gone. */
+  private live = 1;
   private readonly health = new HealthLights();
   private readonly shake = new Container();
   private readonly sprites: Sprite[] = [];
@@ -74,8 +105,9 @@ export class Hud {
       this.shown.push(-1);
       this.group.addChild(s);
     }
-    this.shake.addChild(this.health.root, this.group, this.icon.mesh);
-    this.layer.addChild(this.shake);
+    this.shake.addChild(this.health.root, this.group, this.pips.root, this.icon.mesh);
+    this.layer.addChild(this.shake, this.summary.root);
+    for (let i = 0; i < 16; i++) this.drops.push({ life: 0, max: 1, x: 0, y: 0, vx: 0, vy: 0 });
   }
 
   /** Paints 0-9 once: dark soft shadow, warm glow, a pale-gold face. */
@@ -158,13 +190,49 @@ export class Hud {
   }
 
   update(dt: number, clock: number, sim: SimView): void {
-    const count = sim.pickups.count;
-    if (count < this.value) {
-      // Restart.
+    // The wallet as she sees it: while she kindles a lantern the glints streaming out of her have
+    // left the count already (the sim takes the whole cost at the moment it catches).
+    let count = sim.pickups.count;
+    const kindling = sim.player.kindling;
+    const lamp = kindling >= 0 ? sim.scene.lanterns?.[kindling] : undefined;
+    const channel = sim.goal.lanterns[kindling]?.channel ?? 0;
+    if (lamp && channel > 0) {
+      const cost = lanternCost(lamp, tuning.goal);
+      count -= streamCount(channel, Math.max(1, Math.round(tuning.goal.channelFrames)), cost, GOAL.kindle.by);
+      this.hold = Math.max(this.hold, 1.2);
+    }
+    const restart = sim.frame < this.frame;
+    this.frame = sim.frame;
+    for (const e of sim.events) {
+      if (e.type === 'lanternRefuse') {
+        // "Not enough": the count shows itself and shakes its head.
+        this.hold = Math.max(this.hold, 2.6);
+        this.refuseT = 0;
+      } else if (e.type === 'lanternKindle') this.hold = Math.max(this.hold, 2.4);
+    }
+    if (restart) {
       this.value = count;
       this.alpha = 0;
       this.hold = 0;
+      this.live = 1;
       this.layout(true);
+    }
+    if (count < this.value) {
+      // Spent: the number runs down with the stream, a mote leaving the counter for each.
+      this.hold = Math.max(this.hold, 1.6);
+      while (this.value > count) {
+        this.value--;
+        const d = this.drops[this.dropAt] as Drop;
+        this.dropAt = (this.dropAt + 1) % this.drops.length;
+        const k = (this.value * 0.618) % 1;
+        d.max = d.life = 0.34 + 0.12 * k;
+        d.x = 0;
+        d.y = 0;
+        d.vx = 70 + 60 * k;
+        d.vy = 30 + 70 * ((k * 7.3) % 1);
+      }
+      this.pulse = 0.5;
+      this.layout(false, -0.5);
     }
     if (count > this.value) {
       this.hold = HUD.hold;
@@ -192,13 +260,26 @@ export class Hud {
     H.update(dt, clock, sim, quiet);
     this.shake.position.set(H.shakeX, H.shakeY);
 
-    const a = this.alpha * this.alpha * (3 - 2 * this.alpha);
+    // The run is over: the cluster leaves the picture to the ending, and the summary comes.
+    this.live = Math.min(1, Math.max(0, this.live + (sim.goal.gathered ? -dt : dt * 3) / HUD.endFade));
+    this.shake.alpha = this.live * this.live * (3 - 2 * this.live);
+    this.shake.visible = this.live > 0.003;
+    this.summary.update(dt, clock, sim);
+
+    const a = this.alpha * this.alpha * (3 - 2 * this.alpha) * this.shake.alpha;
     this.group.visible = a > 0.003;
     this.group.alpha = a;
+    let shakeX = 0;
+    if (this.refuseT >= 0) {
+      this.refuseT += dt;
+      shakeX = HUD.refuse * Math.sin(this.refuseT * 38) * Math.exp(-this.refuseT * HUD.refuseDecay);
+      if (this.refuseT > 0.8) this.refuseT = -1;
+    }
     // The count sits under the lights, and slides up into their place when they are away.
     const hv = H.alpha * H.alpha * (3 - 2 * H.alpha);
     const rise = (HUD.yTop - HUD.y) * (1 - hv);
-    this.group.position.set(-10 * (1 - a), rise);
+    this.group.position.set(-10 * (1 - a) + shakeX, rise);
+    this.pips.update(dt, clock, sim, HUD.yTop + (HUD.y - HUD.yTop) * hv + HUD.pipsDrop * a + 12);
     const b = this.icon;
     b.begin();
     b.uniform[1] = HUD.iconQuad;
@@ -211,11 +292,21 @@ export class Hud {
         s.scale.set(1 + HUD.pop * p);
         s.y = HUD.y + 1 - 4 * p;
       }
-      const x = HUD.x - 10 * (1 - a);
+      const x = HUD.x - 10 * (1 - a) + shakeX;
       const y = HUD.y + rise;
       b.quad(K_FLARE, x, y, 40, 40, 0.4 * this.pulse * a, 0, 0.6);
       const q = HUD.iconQuad * HUD.iconScale * (1 + 0.16 * this.pulse);
       b.quad(K_GLINT, x, y, q, q, (1.05 + 0.8 * this.pulse) * a, 0.2, 0);
+    }
+    // Glints leaving the counter as they are spent.
+    for (const d of this.drops) {
+      if (d.life <= 0) continue;
+      d.life -= dt;
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      const k = Math.max(0, d.life / d.max);
+      const size = 3.4 * (0.5 + 0.5 * k);
+      b.quad(K_SPARK, HUD.x + 4 + d.x, HUD.y + rise + d.y, size, size, k * 0.95 * a, 0, 0.5 + 0.4 * k);
     }
     // Flecks of a light that went out, motes of one that caught.
     for (const s of H.sparks) {
@@ -228,7 +319,7 @@ export class Hud {
         s.y,
         size,
         size,
-        Math.min(1, k * 2.4) * Math.min(1, (1 - k) * 6) * 0.9 * H.alpha,
+        Math.min(1, k * 2.4) * Math.min(1, (1 - k) * 6) * 0.9 * H.alpha * this.shake.alpha,
         0,
         k * k * s.heat,
       );
@@ -236,8 +327,8 @@ export class Hud {
     b.end(clock);
   }
 
-  /** Puts the digits of `value` on the sprites; a digit that changed pops. */
-  private layout(quiet: boolean): void {
+  /** Puts the digits of `value` on the sprites; a digit that changed pops (`pop` < 0: it dips instead). */
+  private layout(quiet: boolean, pop = 1): void {
     const text = String(Math.max(0, Math.min(10 ** DIGITS - 1, this.value)));
     for (let i = 0; i < DIGITS; i++) {
       const s = this.sprites[i] as Sprite;
@@ -251,7 +342,7 @@ export class Hud {
       const place = text.length - i;
       if (this.shown[i] !== d * 100 + place) {
         this.shown[i] = d * 100 + place;
-        if (!quiet) this.pops[i] = 1;
+        if (!quiet) this.pops[i] = pop;
         s.texture = this.glyphs[d] as Texture;
       }
       s.x = HUD.x + HUD.gap + this.advance * (i + 0.5);

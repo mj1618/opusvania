@@ -23,6 +23,8 @@ import { CameraKick } from './camera/kick';
 import { CharacterRenderer } from './character/index';
 import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
 import { EnemyRenderer } from './enemies/index';
+import { GoalCamera } from './goal/camera';
+import { GoalRenderer } from './goal/index';
 import { Hud } from './hud/index';
 import { LightRegistry } from './lights';
 import { PickupRenderer } from './pickups/index';
@@ -54,6 +56,7 @@ export class RenderStage {
   readonly character: CharacterRenderer;
   readonly enemies: EnemyRenderer;
   readonly pickups: PickupRenderer;
+  readonly goal: GoalRenderer;
   readonly hud: Hud;
   readonly post: PostStage;
   readonly overlay: HitboxOverlay;
@@ -68,6 +71,8 @@ export class RenderStage {
   private pending: SimEvent[] = [];
   /** A blow landing shoves the view a few px (added at view time; the follow camera never sees it). */
   private readonly kick = new CameraKick();
+  /** The heart waking leans the view toward it; the ending eases it in (render-side, like the kick). */
+  private readonly goalCam = new GoalCamera();
 
   constructor(
     private readonly ga: GameApp,
@@ -80,6 +85,12 @@ export class RenderStage {
     this.character = new CharacterRenderer(this.ctx, this.scene.layers.character);
     this.enemies = new EnemyRenderer(this.ctx, this.scene.layers.enemies, this.scene.layers.enemiesFront);
     this.pickups = new PickupRenderer(this.ctx, this.scene.layers.pickups, this.scene.layers.pickupsBack);
+    const L = this.scene.layers;
+    this.goal = new GoalRenderer(this.ctx, {
+      light: L.get('goalLight'),
+      back: L.get('goal'),
+      front: L.pickups,
+    });
     this.post = new PostStage(this.ctx, this.scene.layers.root);
     this.hud = new Hud();
     this.overlay = new HitboxOverlay(scene);
@@ -126,7 +137,12 @@ export class RenderStage {
           zoom: o.zoom ?? 1,
         }
       : follow;
-    const view: CameraView = { x: base.x + this.kick.x, y: base.y + this.kick.y, zoom: base.zoom };
+    // The goal's camera moves belong to the follow camera only: a debug override stays where it was put.
+    const gc = this.goalCam;
+    gc.update(dt, events, this.game.state.goal, alpha, this.game.scene, follow);
+    const view: CameraView = o
+      ? { x: base.x + this.kick.x, y: base.y + this.kick.y, zoom: base.zoom }
+      : { x: base.x + this.kick.x + gc.x, y: base.y + this.kick.y + gc.y, zoom: base.zoom * gc.zoom };
     const sim: SimView = {
       frame: this.game.state.frame,
       alpha,
@@ -143,6 +159,7 @@ export class RenderStage {
     this.character.update(dt, this.clock, player, events);
     this.enemies.update(dt, this.clock, view, sim);
     this.pickups.update(dt, this.clock, view, sim);
+    this.goal.update(dt, this.clock, view, sim);
     this.post.update(dt, this.clock, view);
     this.hud.update(dt, this.clock, sim);
     this.overlay.draw(view, player);

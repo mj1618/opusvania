@@ -91,7 +91,7 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   twelve at boot cost seconds on the e2e's software GL, which has ~5 s to spare.
 - `__game.teleport` makes a new player, so `attackSeq` restarts and a second slash after a teleport
   is ignored by a pod already hit by "slash 1": capture multi-hit sequences without teleporting between.
-- `?nopickups` removes pods too.
+- `?nopickups` removes pods too (and enemies, lanterns, the heart).
 
 ## Glints of a dead enemy
 - Fan by the killing cut (from `enemyDie.slash`): forward = leaning along the blow; down (a pogo, she
@@ -128,6 +128,11 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   Appears on a pickup, ticks one by one, fades 3.6 s after the last. When the lights are hidden it
   sits in THEIR place (`HUD.yTop`) and slides down / up with their fade, so nothing floats under an
   empty row. Kept the auto-hide rather than dim always-on lights: the calm picture has no HUD at all.
+- Since the lanterns: the count is a wallet and runs DOWN while she kindles (a mote leaves the icon per
+  glint, digits dip instead of pop), shakes on `lanternRefuse`; restart is detected by `sim.frame` going
+  back, not by the count falling. Under the count stands the goal's row (`progress.ts`: three crooks + a
+  bud); the whole cluster fades out at `gather` and `summary.ts` shows the run's numbers after `endHold`
+  (goal-render.md).
 - Size: `LIGHTS.scale` 1.3 = a 31 px seed (43 px with the filament) at 1920x1080; Hollow Knight's
   masks are ~45 px.
 - Knobs: `LIGHTS` (lights.ts), `HUD` (index.ts). No dev handle; edit and reload.
