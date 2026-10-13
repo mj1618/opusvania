@@ -945,13 +945,13 @@ function ruff(p: Painter, f: Frame, v: View): void {
 
 /** Mane locks off the back of the head: root (f, u), tip (f, u), bow, width. Forward-frame px. */
 const LOCKS = [
-  // Three clear shapes sweeping back, so the head's outline is a round face with a swept crest
-  // (five locks and two top tufts read as a spiky ball): the crest off the top of the skull, long
-  // and a little raised; a broad lock straight back; a short one at the nape. Dark, slow.
-  -1.5, 9.4, -19.5, 13.4, -2.6, 6.2, 0, -6.4, 3.6, -17, 2.4, -1.5, 6.0, 0, -6.0, -3.2, -12.5, -6.4, -1.2, 4.4,
-  0,
-  // One lighter, quicker lock laid over the join of the upper two.
-  -5.4, 7.0, -14.5, 8.2, -0.8, 3.0, 1,
+  // ONE swept crest off the top of the skull, long and a little raised: the only lock that leaves
+  // the head's outline. The other two stay inside the crown's round edge (they only shape its
+  // shading), so the silhouette is a round head, a crest and the two plumes. Dark, slow.
+  // (A lighter lock laid on the crest, and a crest that points up and back, read as a cat's ear:
+  // it sweeps level, arched, and is all dark.)
+  -0.5, 9.6, -20.5, 8.6, -3.4, 5.4, 0, -6.4, 3.6, -12.6, 1.6, -1.2, 5.6, 0, -6.0, -3.0, -10.4, -5.4, -1.0,
+  4.2, 0,
 ];
 
 /** Forehead tufts: root x (fraction of the face half-width, + = front), tip dx, tip dy, width. */
@@ -1176,9 +1176,10 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
 }
 /** Cheek fluff: side (+1 = back of the head, -1 = front), root x (fraction of the half width), root y, length, angle below the outward axis. */
 const CHEEK = [
-  // ... and width. A few fine tapered tufts, small and uneven: a soft cheek tuft each side.
-  1, 0.8, 2.6, 5.6, 0.45, 2.0, 1, 0.66, 5.4, 4.2, 0.95, 1.6, 1, 0.86, -0.4, 3.4, 0.1, 1.4, -1, 0.78, 3.6, 3.4,
-  0.6, 1.5,
+  // ... and width. A few fine tapered tufts, small and uneven. Each ends INSIDE the crown's outline:
+  // pale fluff over the dark fur softens the cheek without putting points on the head's silhouette.
+  1, 0.8, 1.6, 4.4, 0.25, 2.0, 1, 0.7, 4.2, 2.6, 0.7, 1.6, 1, 0.86, -0.4, 3.2, 0.1, 1.4, -1, 0.8, 3.8, 1.8,
+  0.9, 1.4,
 ];
 
 /** The whole character, back to front. */

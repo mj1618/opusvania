@@ -942,6 +942,8 @@ export class Rig {
   private lastVy = 0;
   private lastStep = 0;
   private stopK = 0;
+  /** 0 = the trot .. 1 = the full bound (eased: see `update`). */
+  private boundK = 0;
   /** Delight from a pickup: decays in ~0.4 s. Lifts the head and chest; the wings read it too. */
   joy = 0;
   /** A great glint: the wings open wide once, hold a breath, and fold (0..1 envelope). */
@@ -1165,6 +1167,7 @@ export class Rig {
       startSpin = false;
       this.speedK = 0;
       this.stopK = 0;
+      this.boundK = 0;
       this.lastCx = p.cx;
       this.lastVx = p.vx;
       this.phase = 0.3;
@@ -1221,15 +1224,19 @@ export class Rig {
     this.wWall += ((wall ? 1 : 0) - this.wWall) * approach(wall ? 14 : 20, dt);
     this.wAir += ((air ? 1 : 0) - this.wAir) * approach(air ? 24 : 26, dt);
     this.wSkid += ((skid ? 1 : 0) - this.wSkid) * approach(skid ? 26 : 13, dt);
-    this.wRun += (runT - this.wRun) * approach(runT > this.wRun ? 18 : 17, dt);
+    this.wRun += (runT - this.wRun) * approach(runT > this.wRun ? 18 : 12, dt);
     this.wIdle += ((ground ? 1 - runT : 0) - this.wIdle) * approach(17, dt);
     // Coming to rest out of a run: a small braking step (render only; the sim stops in three frames).
     if (ground && this.speedNow > 0.5 && speed / 9.6 < this.speedNow - 0.2 && p.inputX === 0)
       this.stopK = Math.max(this.stopK, this.speedK);
     if (!ground || runT > 0.9) this.stopK *= Math.exp(-30 * dt);
     this.stopK *= Math.exp(-STOP.decay * dt);
-    this.speedK += (sat(speed / 9.6) - this.speedK) * approach(9, dt);
+    // The sim reaches top speed in three frames and stops in three; the POSE takes its time: the
+    // lean follows `speedK`, the stride opens from trot to bound (and closes again) through `boundK`.
+    this.speedK += (sat(speed / 9.6) - this.speedK) * approach(sat(speed / 9.6) > this.speedK ? 6.5 : 8, dt);
     this.speedNow = sat(speed / 9.6);
+    const boundT = ground || skid ? smoothstep(0.3, 0.92, this.speedK) : this.boundK;
+    this.boundK += (boundT - this.boundK) * approach(boundT > this.boundK ? 9 : 12, dt);
 
     // --- Run phase: by distance, signed by the facing so moving backwards runs it backwards.
     if (p.grounded && !dash) {
@@ -1816,8 +1823,10 @@ export class Rig {
     const hipY = oy - out[PU]!;
     const chestX = hipX + sl * d * BODY.spine;
     const chestY = hipY - cl * BODY.spine;
-    const neckX = chestX + su * d * BODY.neck;
-    const neckY = chestY - cu * BODY.neck;
+    // In the somersault's ball the neck draws in (to the length the ball was shaped with).
+    const neckL = BODY.neck - 2 * this.spinW;
+    const neckX = chestX + su * d * neckL;
+    const neckY = chestY - cu * neckL;
     const headX = neckX + su * d * 1.5 + sh * dh * BODY.headUp;
     const headY = neckY - cu * 1.5 - ch * BODY.headUp;
     set(j, J_HIP, hipX, hipY);
@@ -2187,7 +2196,7 @@ export class Rig {
   private runPose(ph: number): Pose {
     const o = this.tmp2;
     const k = this.speedK;
-    const b = smoothstep(0.35, 0.95, Math.min(k, this.speedNow));
+    const b = this.boundK;
     this.leg(ph, b);
     o[AF] = this.legOut.f;
     o[AU] = this.legOut.u;
@@ -2212,10 +2221,17 @@ export class Rig {
     // Arms: trailing low behind the hips, open; a small lazy swing against the legs, never a pump.
     const a = Math.sin(TAU * (ph - 0.07));
     const a2 = Math.sin(TAU * (ph - 0.16));
-    o[HAF] = lerp(-6.5, -11, b) + 3.6 * a;
-    o[HAU] = lerp(-13.4, -9.4, b) + 1.4 * a * a + 1.6 * rise * b;
-    o[HBF] = lerp(-7, -11.5, b) - 3.2 * a2;
-    o[HBU] = lerp(-13, -8.8, b) + 1.2 * a2 * a2 + 1.6 * rise * b;
+    // The near arm hangs lower than the far one, so its open hand trails BELOW the streaming cape
+    // and reads; the far arm lies along the cape.
+    const nearA = sat(0.5 + 1.6 * this.yaw.x);
+    const lowF = lerp(-6.5, -12.4, b);
+    const lowU = lerp(-13.4, -12, b);
+    const highF = lerp(-7, -11.5, b);
+    const highU = lerp(-13, -8.8, b);
+    o[HAF] = lerp(highF, lowF, nearA) + 2.6 * a;
+    o[HAU] = lerp(highU, lowU, nearA) + 1.4 * a * a + 1.2 * rise * b;
+    o[HBF] = lerp(lowF, highF, nearA) - 2.6 * a2;
+    o[HBU] = lerp(lowU, highU, nearA) + 1.2 * a2 * a2 + 1.2 * rise * b;
     o[TW] = 0.2 * Math.sin(TAU * (ph + 0.2));
     o[EYE] = 1;
     o[LOOKY] = 0;

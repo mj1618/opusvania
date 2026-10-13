@@ -22,9 +22,11 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   read as a hand at her throat. Rows of same-sized round puffs (cheeks, mane, ruff) read as warts.
 - Antennae: shaft half-width 1.7 -> 0.85 px, a narrow vane (comb barbs = fishbones, wide vanes =
   rabbit ears). They must survive at 64 px.
-- **Mane = three clear locks sweeping back** (crest off the top of the skull, a broad one straight
-  back, a short one at the nape) plus one lighter lock over the join; no tufts between the antennae.
-  Five locks + two top tufts read as a spiky ball in silhouette; pointed tufts as gear teeth.
+- **Head silhouette = a round head, ONE swept crest, two plumes.** `LOCKS`: the crest (off the top
+  of the skull, level and arched, all dark) is the only lock that leaves the crown's outline; the
+  other two end inside it. `CHEEK` tufts also end inside the crown's outline (pale fluff over the
+  dark fur: soft cheeks, no points on the edge). Failed: five locks + two top tufts (a spiky ball);
+  pointed tufts (gear teeth); a crest pointing up-and-back with a lighter lock on it (a cat's ear).
 - Pale tones are scaled per zone because post grades the zones differently: `view.pale = 0.72 / 0.94
   / 0.68` (left / centre / right), applied through the `PALE` list and `paleNow` in draw.ts. If
   post's exposure changes, re-measure the face (zoom 6 crop, post on) and retune those three numbers.
@@ -37,7 +39,8 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   head has its own. Generators (idle, run, air, WALL, DASH, SKID) are cross-faded by smoothed
   weights; lean, curl, head pitch and hip twist each chase the blend through their own spring; hands
   go through `Drag2` (world-space spring, soft-clamped) so they trail and overshoot.
-- `BODY.neck` is 6.5 (was 4.5): the head is clearly off the shoulders in every pose.
+- `BODY.neck` is 6.5 (was 4.5): the head is clearly off the shoulders in every pose. It draws back
+  to 4.5 with `spinW`, so the somersault's ball is the shape it was tuned at.
 - `limb()` blends straight segments with a Catmull-Rom bow by `ROUND` 0.35 (a full bow = banana legs).
 - Ground turn = a planted pivot: foot lift is cut by `1 - |d|` while she swivels through the camera.
 - If a leg cannot reach its target (air poses), the toe joint is moved with the reached ankle: the
@@ -54,16 +57,19 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   passing pose), reaches ahead, comes down and back onto the toes. Legs may stretch 24%. Measured:
   toe-to-toe split 78 px, front toe 27 px ahead of the head, rear toe 40 px behind her centre.
 - Body: lean 0.09 + 0.55 x speed (plus curl), head gives it back and stays level (tilt < 0.1 rad),
-  pelvis 27.8 + 9.4 px arc, head bob ~9 px, hips sit back 2.6 px, arms trail low behind with a small
-  counter-swing. Each footfall kicks the crouch spring by 9 (the soft give).
-- Low speed = `SWING_TROT` (small, close to the ground) and an upright body; `b` (smoothstep of the
-  smoothed speed) blends trot -> bound. The sim reaches top speed in 3 frames and stops in 3, so
-  what is seen of the trot is the first strides and the last.
+  pelvis 27.8 + 9.4 px arc, head bob ~9 px, hips sit back 2.6 px. Each footfall kicks the crouch
+  spring by 9 (the soft give). Arms trail behind with a small counter-swing; the NEAR arm is held
+  lower (hand ~12 px back and 12 below the shoulder) so forearm and open hand show under the cape;
+  the far arm lies along it.
+- Low speed = `SWING_TROT` (small, close to the ground) and an upright body. The sim reaches top
+  speed in 3 frames and stops in 3; the POSE takes its time: `speedK` (lean; rate 6.5 up, 8 down)
+  and `boundK` (trot -> bound; 9 up, 12 down, driven by `speedK`), `wRun` lets go at 12. So the
+  lean-in takes ~15 frames, a 4-6 frame tap stays an upright trot step, and a stop settles over ~12.
 - Stop: `stopK` (render only, `STOP`): the lead foot is set out toes-up, hips sink 4 px and sit back,
   arms swing through; gone in ~0.3 s.
 - **The cape while running** (`wings.ts`): `STREAM` lifts are WORLD angles (the spine's lean is taken
   out of the wing frame by `1 - run`), upper edge ~19 degrees below the horizontal and the lower edge
-  flatter so they converge; roots spread 1.1 px per strand down the spine; strands 24% longer;
+  flatter so they converge; roots spread 0.2 px per strand down the spine (more hides the arm); strands 24% longer;
   stiffness -0.45; ripple amp 0.3; a +-7 degree lift per stride; the far wing rides 11 degrees lower
   (a second tail). Hem while streaming = `HEM_STREAM` (one long upper tail, a short step under it)
   and the eye-spot is folded away.
@@ -75,8 +81,7 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
 - Honest gap to Ori: Ori's whole body is one horizontal stroke 3-4x as long as it is tall (head low,
   spine level, ears and tail in line). Vesper is a big-headed biped with a 13 px torso: her float is
   ~1.4x as wide as tall and the long line is carried by the cape and the split legs, with the head
-  still on top. The arms are hidden behind the cape. Going further needs proportions (longer torso),
-  not tuning.
+  still on top. Going further needs proportions (longer torso), which the owner's design rules out.
 
 ## Standing (round 17)
 - Tall and easy: pelvis 33 (legs nearly straight), weight on leg B under the hips, foot A set 9 px
@@ -165,6 +170,12 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
 - Open flat ground: x 450-1400 at feet y 1280 (pool after 1536), 3200-4608 right; walls for slides at
   x 3328 / 3584 (teleport to 3350,600 and hold L). The canvas is 1280 wide for a 1920 view: zoom 1.5
   gives her 84 px, zoom 3 scaled 0.5 the 84 px silhouette, x0.381 the 64 px one.
-- Sheets of this round: `shots/vesper/run17/` (before / after: every-frame run cycle at zoom 4,
-  eight-phase silhouettes at 84 and 64 px, start-run-stop, turn, idle over 5 s, jump / fall, game-size
-  strips per zone).
+- Sheets: `shots/vesper/run17/` (before / after of the run rebuild) and `shots/vesper/run17b/` (the
+  follow-up: glide entry / steady + turn / land-run, somersault standing and running, slash chain
+  standing and running, hurt, wall slide + jump, taps, head close-up, the ground route at game size).
+- Glide capture that lands cleanly on open ground: teleport (1500,1280), `L4 L+J14 L2 L+J50 L80`
+  (glide frames 29-70, lands ~x 670 at frame 81).
+- Where she is still hard to find at game size (ground route, running): against the big dark fallen
+  log and trunk bases of the left zone (x ~900-1400) and the dark rock shelf of the right zone
+  (x ~3300-3600): only face, eyes and lanterns carry her there. Fine in the centre zone and wherever
+  the mist band is behind her.

@@ -53,9 +53,9 @@ const WING: readonly StrandSpec[] = [
 // The run: the cape streams out behind her as one long pennant. These are angles in the WORLD (the
 // spine's lean is taken out of the wing frame while she runs): the upper edge a little below the
 // horizontal, the lower edge flatter still, so the two converge on the swallow-tail.
-const STREAM = [-71, -75, -79, -83, -87];
+const STREAM = [-70, -73, -76, -79, -82];
 /** Running, the roots spread down the spine (px toward the hips per strand): a broad root, a fine tip. */
-const STREAM_ROOT = 1.1;
+const STREAM_ROOT = 0.2;
 // Rising, the cape trails the jump: down and back in one narrow line.
 const RISE = [-36, -33, -30, -27, -24];
 const APEX = [-72, -58, -44, -29, -14];
