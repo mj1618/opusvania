@@ -97,7 +97,30 @@ export const GLIDE = {
   catch0: 4.6,
   catchVy: 0.36,
   catchDecel: 4.2,
+  /** The slow wing beat of a steady glide: one every `beatEvery` seconds, lasting `beatLen`. */
+  beatEvery: 3.4,
+  beatLen: 0.8,
+  /** Landing reach starts with this much clear air under the feet, px. */
+  reachPx: 78,
 } as const;
+
+/** The thorn slash (render side; the sim will own the timing). Seconds, forward-frame degrees. */
+export const SLASH = {
+  swing: 0.1,
+  total: 0.34,
+  hold: 0.19,
+  /** Hand distance from the shoulder through the cut, px. */
+  hand: 14.5,
+  /** Start and end of the blade's sweep (0 = forward, 90 = up) for the first stroke; the next one runs back. */
+  fwd: [128, -58],
+  up: [-8, 172],
+  down: [14, -168],
+  /** The crescent of light drawn by each cut: its own, tidier sweep. */
+  arc: { fwd: [50, -44], up: [58, 122], down: [-58, -122] },
+  /** ... and how far it reaches from her chest, px (the sim's hit area: tuning.attack). */
+  reach: { fwd: 110, up: 118, down: 112 },
+} as const;
+export type SlashDir = 'fwd' | 'up' | 'down';
 
 // --- Pose channels.
 const PF = 0; // pelvis forward
@@ -246,6 +269,12 @@ export interface RigSignals {
   /** A glint was absorbed this frame: strength 0..1; `great` for the big ones. */
   pickup: number;
   great: boolean;
+  /** Combo index of the glint taken this frame (0 = first of a run), -1 if none. */
+  combo: number;
+  /** The glide's wing beat reaches its down-stroke. */
+  beat: boolean;
+  /** A slash connected this frame. */
+  slashHit: boolean;
 }
 
 /** A point dragged behind its target: lags, swings past, settles. */
@@ -293,6 +322,9 @@ export class Rig {
     opened: false,
     pickup: 0,
     great: false,
+    combo: -1,
+    beat: false,
+    slashHit: false,
   };
   /** Forward-frame spine lean and head angle actually used (pose + springs), for the chains. */
   lean = 0;
@@ -352,6 +384,32 @@ export class Rig {
   /** Stooping: wings swept up tight (after Down ended a glide, or any fast fall). */
   dive = 0;
   private diving = false;
+  /** Set by the owner before `update`: px of clear air under the feet (Infinity if unknown). */
+  groundDist = Number.POSITIVE_INFINITY;
+  /** The glide's slow wing beat: < 0 the wings lift (anticipation), > 0 the down-stroke (0..1). */
+  beat = 0;
+  /** 0..1: reaching for the ground at the end of a glide. */
+  reach = 0;
+  /** Slash: weight 0..1, blade angle (forward frame, rad), wing-flare envelope, and what the arc needs. */
+  slashW = 0;
+  slashAng = 0;
+  slashK = 0;
+  slashT = 9;
+  slashA0 = 0;
+  slashA1 = 0;
+  arcA0 = 0;
+  arcA1 = 0;
+  slashDir: SlashDir = 'fwd';
+  /** Seconds since the last hit (hitstop, flash, recoil). */
+  hitT = 9;
+  /** Where the last hit landed (the target's centre), world px. */
+  hitX = 0;
+  hitY = 0;
+  /** The side the slash goes to (it keeps it whatever she does). */
+  slashFacing = 1;
+  private slashFlip = false;
+  private pogo = 0;
+  private lastBeatU = 0;
   private soarOut = 8;
   private readonly catchS = new Spring(0, 13, 0.5);
   private readonly swingS = new Spring(0, 7.6, 0.3);
@@ -402,6 +460,9 @@ export class Rig {
     sig.opened = false;
     sig.pickup = 0;
     sig.great = false;
+    sig.combo = -1;
+    sig.beat = false;
+    sig.slashHit = false;
     let startSpin = false;
     let glideKick = 0;
 
@@ -438,7 +499,7 @@ export class Rig {
         case 'glideEnd':
           // How the wings leave the glide: a slow fold on release, a snap into the dart...
           this.soarOut =
-            e.reason === 'dash' ? 34 : e.reason === 'wall' ? 15 : e.reason === 'fastfall' ? 17 : 6.5;
+            e.reason === 'dash' ? 34 : e.reason === 'wall' ? 7 : e.reason === 'fastfall' ? 17 : 6.5;
           if (e.reason === 'land') this.flare = 1;
           if (e.reason === 'fastfall') this.diving = true;
           break;
@@ -449,6 +510,17 @@ export class Rig {
         case 'skid':
           sig.skid = true;
           break;
+        case 'slash':
+          this.slash(e.dir, e.seq, e.facing);
+          break;
+        case 'slashHit':
+          this.hitT = 0;
+          this.hitX = e.x;
+          this.hitY = e.y;
+          sig.slashHit = true;
+          if (e.pogo) this.pogo = 1;
+          this.squash.v += e.pogo ? 2.4 : -1.2;
+          break;
         case 'headBump':
           this.squash.v -= 3;
           break;
@@ -456,6 +528,9 @@ export class Rig {
           // A small delighted lift; calmer when she is gathering many in a row.
           const k = e.kind === 'great' ? 1 : 0.7 / (1 + e.combo * 0.5);
           this.joy = Math.max(this.joy, k);
+          sig.combo = Math.max(sig.combo, e.combo);
+          // The first of a run puts a tiny skip in her stride.
+          if (e.combo === 0 && e.kind !== 'great' && p.grounded) this.crouch.v -= 34;
           this.wide.v += 2.2 * k;
           if (e.kind === 'great') {
             sig.great = true;
@@ -497,6 +572,11 @@ export class Rig {
       this.flare = 0;
       this.flourishT = 9;
       this.flourish = 0;
+      this.slashT = 9;
+      this.slashW = 0;
+      this.hitT = 9;
+      this.reach = 0;
+      this.beat = 0;
       this.dive = 0;
       this.diving = false;
       this.catchS.snap(0);
@@ -550,6 +630,8 @@ export class Rig {
       this.phase += (dx * sgn) / RUN_CYCLE;
       this.phase -= Math.floor(this.phase);
     }
+
+    const g0 = this.frame.s[S_GROUND]!;
 
     // --- Blend the poses.
     const out = this.out;
@@ -690,9 +772,37 @@ export class Rig {
     if (this.diving && (p.grounded || glide || dash || wall || p.vy < 6)) this.diving = false;
     const diveT = air && !glide ? Math.max(this.diving ? 1 : 0, smoothstep(22.5, 28, p.vy)) : 0;
     this.dive += (diveT - this.dive) * approach(diveT > this.dive ? 16 : 9, dt);
+    // Every few seconds of steady glide: one slow, deliberate beat. The wings lift a little, then
+    // press down; she rises a hair on the stroke.
+    const bu = pulse(clock, GLIDE.beatEvery, GLIDE.beatLen, 121, 1);
+    const steady = glide
+      ? sat(this.soar * 2 - 1) * sat(1 - 2.5 * Math.abs(this.catchK)) * (1 - this.reach)
+      : 0;
+    const bx1 = (bu - 0.17) / 0.11;
+    const bx2 = (bu - 0.47) / 0.15;
+    this.beat = bu > 0 ? (Math.exp(-bx2 * bx2) - 0.38 * Math.exp(-bx1 * bx1)) * steady : 0;
+    if (bu >= 0.33 && this.lastBeatU < 0.33 && this.lastBeatU > 0 && steady > 0.6) sig.beat = true;
+    this.lastBeatU = bu;
+    // The ground is coming: the legs reach down for it and the wings brake.
+    const reachT = glide && p.vy > 0 ? smoothstep(GLIDE.reachPx, 16, this.groundDist) : 0;
+    this.reach += (reachT - this.reach) * approach(reachT > this.reach ? 14 : 22, dt);
     if (this.wGlide > 1e-3) {
       const w = this.wGlide;
       for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, GLIDEP[i]!, w);
+      const bl = Math.max(0, this.beat);
+      const rc = this.reach;
+      out[PU]! += (2.6 * bl + 1.2 * rc) * w;
+      out[CURL]! += (-0.05 * bl - 0.06 * rc) * w;
+      out[HAU]! += (-1.5 * bl + 2.5 * rc) * w;
+      out[HBU]! += (-1.2 * bl + 2 * rc) * w;
+      // Reaching: legs come under her, long, toes down, one a little ahead.
+      out[AF]! += 11.5 * rc * w;
+      out[BF]! += 10.5 * rc * w;
+      out[AU]! += -5.6 * rc * w;
+      out[BU]! += -6.6 * rc * w;
+      out[AP]! += -0.75 * rc * w;
+      out[BP]! += -0.7 * rc * w;
+      out[LEAN]! += -0.1 * rc * w;
       const vf = clamp((p.vx * sgn) / GLIDE.topVx, -1.2, 1.2);
       const ck = this.catchK;
       // Never frozen: three slow drifts that do not line up.
@@ -727,6 +837,71 @@ export class Rig {
       out[HBU]! += 3 * w;
       out[AU]! += 2.5 * w;
       out[BU]! += 1.5 * w;
+    }
+
+    // --- The thorn slash.
+    this.hitT += dt;
+    // The sim holds her for the hitstop: the cut holds with her.
+    if (p.hitstop <= 0) this.slashT += dt;
+    let slashRot = 0;
+    if (this.slashT < SLASH.total) {
+      const t = this.slashT;
+      const u = sat(t / SLASH.swing);
+      const sw = 1 - (1 - u) ** 3;
+      // Past the cut the blade carries on a little and eases off.
+      const over = t > SLASH.swing ? 0.07 * (1 - Math.exp(-(t - SLASH.swing) * 16)) : 0;
+      this.slashAng = lerp(this.slashA0, this.slashA1, sw + over);
+      const w = sat(t / 0.03) * (1 - quintic((t - SLASH.hold) / (SLASH.total - SLASH.hold)));
+      this.slashW = w;
+      this.slashK = bell(sat(t / 0.3) ** 0.6);
+      const c = 2 * sw - 1;
+      const f = this.slashA1 > this.slashA0 ? -1 : 1;
+      const aw = w * (1 - g0);
+      if (this.slashDir === 'fwd') {
+        out[TW]! += 0.5 * c * f * w;
+        out[LEAN]! += (0.07 + 0.09 * sw) * w;
+        out[CURL]! += 0.07 * c * f * w;
+        out[PF]! += 2.2 * sw * w * (p.grounded ? 1 : 0.4);
+        out[HBF] = lerp(out[HBF]!, -9.5 - 2 * c * f, w);
+        out[HBU] = lerp(out[HBU]!, -8 + 3 * c * f, w);
+        out[HT]! -= 0.06 * w;
+        slashRot = 0.14 * c * f * aw;
+      } else if (this.slashDir === 'up') {
+        out[LEAN]! -= (0.06 + 0.1 * sw) * w;
+        out[CURL]! -= 0.16 * w;
+        out[HT]! -= 0.3 * w;
+        out[PU]! += 1.6 * Math.sin(Math.PI * sw) * w;
+        out[HBF] = lerp(out[HBF]!, -6, w);
+        out[HBU] = lerp(out[HBU]!, -14, w);
+        out[TW]! += 0.3 * c * f * w;
+        slashRot = -0.1 * sw * aw;
+      } else {
+        out[LEAN]! += 0.3 * w;
+        out[CURL]! += 0.24 * w;
+        out[HT]! += 0.32 * w;
+        out[AU]! += 8 * w;
+        out[BU]! += 10 * w;
+        out[AF]! += 4 * w;
+        out[BF]! += 6 * w;
+        out[HBF] = lerp(out[HBF]!, -8, w);
+        out[HBU] = lerp(out[HBU]!, -3, w);
+        slashRot = 0.2 * sw * aw;
+      }
+    } else {
+      this.slashW = 0;
+      this.slashK = 0;
+    }
+    // A down-slash that lands: the legs snap long under her, then spring up into a tuck.
+    if (this.pogo > 0) {
+      this.pogo = Math.max(0, this.pogo - dt / 0.3);
+      const q = 1 - this.pogo;
+      const ext = bell(q / 0.45);
+      const tk = bell((q - 0.3) / 0.7);
+      out[AU]! += -9 * ext + 7 * tk;
+      out[BU]! += -11 * ext + 8 * tk;
+      out[AF]! += -4 * ext;
+      out[BF]! += -3 * ext;
+      out[LEAN]! -= 0.2 * ext;
     }
 
     // --- Springs layered on top.
@@ -850,8 +1025,17 @@ export class Rig {
       const ty = sy - hu;
       if (spawned) drag.snap(tx, ty);
       drag.step(tx, ty, dt);
-      const free = (1 - this.wWall) * (1 - this.spinW);
-      ik2(sx, sy, tx + drag.ox * free, ty + drag.oy * free, BODY.upperArm, BODY.foreArm, bendArm, 0.12);
+      let free = (1 - this.wWall) * (1 - this.spinW);
+      let hx2 = tx;
+      let hy2 = ty;
+      if (side === 0 && this.slashW > 0) {
+        // The sword hand rides the cut exactly: no lag.
+        const sw = this.slashW;
+        hx2 = lerp(tx, sx + Math.cos(this.slashAng) * SLASH.hand * this.slashFacing, sw);
+        hy2 = lerp(ty, sy - Math.sin(this.slashAng) * SLASH.hand, sw);
+        free *= 1 - sw;
+      }
+      ik2(sx, sy, hx2 + drag.ox * free, hy2 + drag.oy * free, BODY.upperArm, BODY.foreArm, bendArm, 0.12);
       set(j, J_EL_A + side, ikOut.x, ikOut.y);
       set(j, J_HAND_A + side, ikOut.ex, ikOut.ey);
     }
@@ -892,7 +1076,7 @@ export class Rig {
 
     // Under the wings she is a pendulum hung from the collar; the head stays nearly level. The
     // bank rolls her a little with the wing plane.
-    const sw = this.swing + this.bank * 0.35 * this.wGlide;
+    const sw = this.swing + this.bank * 0.35 * this.wGlide + slashRot * this.slashFacing;
     if (Math.abs(sw) > 1e-4) {
       const px = j[J_COLLAR * 2]!;
       const py = j[J_COLLAR * 2 + 1]!;
@@ -946,6 +1130,25 @@ export class Rig {
     s[S_WIDE] = clamp(wideK, 0.85, 1.25);
     s[S_LEAN] = lean * d + phi + sw;
     s[S_UPPER] = upper * d + phi + sw;
+  }
+
+  /**
+   * A slash begins (the sim's `slash` event). Strokes alternate with `seq`: a down-stroke, then
+   * back up along it, so mashing (one every 20 frames) draws a figure of eight.
+   */
+  private slash(dir: SlashDir, seq: number, facing: number): void {
+    this.slashFlip = seq % 2 === 0;
+    const r = SLASH[dir];
+    const DEG = Math.PI / 180;
+    this.slashA0 = (this.slashFlip ? r[1] : r[0]) * DEG;
+    this.slashA1 = (this.slashFlip ? r[0] : r[1]) * DEG;
+    this.slashDir = dir;
+    this.slashFacing = facing >= 0 ? 1 : -1;
+    this.slashT = 0;
+    this.slashAng = this.slashA0;
+    const ar = SLASH.arc[dir];
+    this.arcA0 = (this.slashFlip ? ar[1] : ar[0]) * DEG;
+    this.arcA1 = (this.slashFlip ? ar[0] : ar[1]) * DEG;
   }
 
   /** At ease: weight on the back hip, slow uneven breath, small drifts that never line up. */

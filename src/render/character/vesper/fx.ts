@@ -11,7 +11,7 @@ const MOTE = 0;
 const DUST = 1;
 /** Wing dust left hanging in the air behind a glide: tiny, slow, sinking a little. */
 const SPARK = 2;
-const MAX = 170;
+const MAX = 260;
 const GOLD = rgb(0xffd98a);
 const GOLD_HOT = rgb(0xfff6dc);
 const GOLD_DEEP = rgb(0xe9a04a);
@@ -42,6 +42,8 @@ export class Trail {
     private readonly cap: number,
     private readonly life: number,
     private readonly width: number,
+    /** > 0: a silk ribbon. The laid path drifts into a slow wave of this many px as it ages. */
+    private readonly silk = 0,
   ) {
     this.x = new Float32Array(cap);
     this.y = new Float32Array(cap);
@@ -67,7 +69,7 @@ export class Trail {
     this.a[0] = 0;
     this.n = n + 1;
   }
-  draw(p: Painter, c: RGB, hot: RGB, gain: number): void {
+  draw(p: Painter, c: RGB, hot: RGB, gain: number, clock = 0): void {
     const n = this.n;
     if (n < 3 || this.k < 0.02) return;
     for (let i = 0; i < n; i++) {
@@ -76,8 +78,18 @@ export class Trail {
       const b = i < n - 1 ? i + 1 : i;
       p.px[i] = (this.x[a]! + 2 * this.x[i]! + this.x[b]!) * 0.25;
       p.py[i] = (this.y[a]! + 2 * this.y[i]! + this.y[b]!) * 0.25;
-      p.pw[i] = this.width * (1 - t) + 0.4;
-      p.pc[i * 3] = (1 - t) * (1 - t) * gain * this.k * Math.min(1, i / 2);
+      if (this.silk > 0) {
+        // Silk: it billows as it is left behind, sinks a little, and thins to a thread.
+        const age = this.a[i]!;
+        const wv = Math.sin(age * 8.5 - clock * 2.2 + this.x[i]! * 0.011) * this.silk * t;
+        p.px[i]! += wv * 0.35;
+        p.py[i]! += wv + 14 * t * t;
+        p.pw[i] = this.width * Math.sin(Math.PI * Math.min(1, 0.12 + t * 0.95)) ** 0.7 * (1 - 0.6 * t) + 0.3;
+        p.pc[i * 3] = (1 - t) ** 1.5 * gain * this.k * Math.min(1, i / 3);
+      } else {
+        p.pw[i] = this.width * (1 - t) + 0.4;
+        p.pc[i * 3] = (1 - t) * (1 - t) * gain * this.k * Math.min(1, i / 2);
+      }
     }
     p.streak(n, c);
     for (let i = 0; i < n; i++) {
@@ -189,7 +201,7 @@ export class Fx {
     while (this.acc2 >= 1) {
       this.acc2 -= 1;
       const i = Math.min(n - 1, Math.floor(this.rand() * n));
-      const life = 0.9 + this.rand() * 1.1;
+      const life = 1.2 + this.rand() * 1.5;
       this.add(
         SPARK,
         pts[i * 2]! + (this.rand() - 0.5) * 5,
@@ -197,7 +209,42 @@ export class Fx {
         vx * 0.12 + (this.rand() - 0.5) * 14,
         vy * 0.12 + (this.rand() - 0.5) * 10,
         life,
-        1.0 + this.rand() * 1.2,
+        1.15 + this.rand() * 1.5,
+      );
+    }
+  }
+
+  /** A soft puff of the same sparks from the points in `pts` (a wing beat, the catch). */
+  puff(pts: Float32Array, n: number, count: number, vx: number, vy: number): void {
+    for (let c = 0; c < count; c++) {
+      const i = Math.min(n - 1, Math.floor(this.rand() * n));
+      const a = this.rand() * 6.283;
+      const sp = 14 + this.rand() * 46;
+      this.add(
+        SPARK,
+        pts[i * 2]! + (this.rand() - 0.5) * 8,
+        pts[i * 2 + 1]! + (this.rand() - 0.5) * 8,
+        vx * 0.15 + Math.cos(a) * sp,
+        vy * 0.15 + Math.abs(Math.sin(a)) * sp + 22,
+        1.1 + this.rand() * 1.3,
+        1.1 + this.rand() * 1.5,
+      );
+    }
+  }
+
+  /** Sparks struck where a cut lands: a tight fan along (dx, dy) and its mirror. */
+  sparks(x: number, y: number, dx: number, dy: number, count: number): void {
+    for (let c = 0; c < count; c++) {
+      const a = Math.atan2(dy, dx) + (this.rand() - 0.5) * 2.4;
+      const sp = 90 + this.rand() * 260;
+      this.add(
+        SPARK,
+        x,
+        y,
+        Math.cos(a) * sp,
+        Math.sin(a) * sp - 30,
+        0.25 + this.rand() * 0.35,
+        0.9 + this.rand() * 1.1,
       );
     }
   }
@@ -216,9 +263,10 @@ export class Fx {
         // Buoyant: whatever threw it, it ends up drifting upward.
         q.vy = q.vy * k - 62 * dt;
       } else if (q.kind === SPARK) {
+        // They hang where they were shed and drift: a slow sway, the faintest sinking.
         const k = Math.exp(-2.6 * dt);
-        q.vx = q.vx * k + Math.sin(clock * 1.7 + q.seed) * 9 * dt;
-        q.vy = q.vy * k + 7 * dt;
+        q.vx = q.vx * k + Math.sin(clock * 1.7 + q.seed) * 13 * dt;
+        q.vy = q.vy * k + (6 + 5 * Math.sin(clock * 1.1 + q.seed * 3)) * dt;
       } else {
         q.vx *= Math.exp(-5 * dt);
         q.vy = q.vy * Math.exp(-4 * dt) - 10 * dt;
@@ -241,8 +289,8 @@ export class Fx {
         // Each twinkles on its own time and dies out as a point.
         const tw = 0.55 + 0.45 * Math.sin(clock * 11 + q.seed * 7);
         const k = Math.min(1, t * 14) * (1 - t) ** 1.2 * tw;
-        p.glow(q.x, q.y, q.size * 3.6, GOLD_DEEP, 0.34 * k, q.size * 3.6, 0, 10);
-        p.glow(q.x, q.y, q.size * 1.15, GOLD_HOT, 1.0 * k, q.size * 1.15, 0, 8);
+        p.glow(q.x, q.y, q.size * 3.8, GOLD_DEEP, 0.4 * k, q.size * 3.8, 0, 10);
+        p.glow(q.x, q.y, q.size * 1.2, GOLD_HOT, 1.1 * k, q.size * 1.2, 0, 8);
       } else {
         const r = q.size * (0.6 + 1.6 * t);
         p.soft(q.x, q.y, r * 1.3, r, DUST_C, 0.26 * (1 - t) * Math.min(1, t * 8));
@@ -254,3 +302,77 @@ export class Fx {
 export const FX_GOLD = GOLD;
 export const FX_GOLD_HOT = GOLD_HOT;
 export const FX_GOLD_DEEP = GOLD_DEEP;
+
+const SLASH_WHITE = rgb(0xfffdf4);
+const SLASH_PALE = rgb(0xffeec2);
+
+/**
+ * The slash: a crescent of pale light about (cx, cy), swept from angle a0 to a1 (forward-frame
+ * radians; `sgn` mirrors it for the facing). The crescent is a fixed shape in her frame: the cut
+ * reveals it from its start to the blade (`head` 0..1), then it thins away from the start (`tail`)
+ * and fades. A crisp bright leading edge on the outside, a soft body inside it.
+ */
+export function drawSlash(
+  p: Painter,
+  cx: number,
+  cy: number,
+  sgn: number,
+  a0: number,
+  a1: number,
+  t: number,
+  reach: number,
+  swing: number,
+  ySquash: number,
+): void {
+  const life = swing + 0.05;
+  if (t < 0 || t > life) return;
+  const u = Math.min(1, t / swing);
+  const head = 1 - (1 - u) ** 3;
+  const tail = sat((t - swing * 0.55) / (life - swing * 0.55)) ** 1.3;
+  const fade = 1 - sat((t - swing) / (life - swing)) ** 2;
+  const N = 26;
+  const { px, py, pw, pc } = p;
+  for (let pass = 0; pass < 3; pass++) {
+    let n = 0;
+    for (let i = 0; i < N; i++) {
+      const q = i / (N - 1);
+      if (q > head + 0.02) break;
+      const a = a0 + (a1 - a0) * q;
+      // Thickest two thirds of the way along; a point at either end.
+      const th = 46 * Math.sin(Math.PI * q ** 0.8) ** 0.85 * (0.55 + 0.45 * q);
+      // The reach swells a little through the middle of the cut: a blade's path, not a compass arc.
+      const r = reach * (0.86 + 0.14 * Math.sin(Math.PI * q));
+      const off = pass === 0 ? th * 0.5 : pass === 1 ? th * 0.2 : 1.2;
+      const hw = pass === 0 ? th * 0.5 : pass === 1 ? th * 0.22 : 1.3 + th * 0.05;
+      const rr = r - off;
+      px[n] = cx + Math.cos(a) * rr * sgn;
+      py[n] = cy - Math.sin(a) * rr * ySquash;
+      pw[n] = hw + 0.2;
+      const lead = sat((q - tail) / 0.22) * sat((head + 0.02 - q) / 0.06 + 0.35);
+      const gain = pass === 0 ? 0.4 : pass === 1 ? 0.85 : 2.1;
+      pc[n * 3] = gain * fade * lead * (0.6 + 0.4 * (q / Math.max(0.2, head)) ** 2);
+      n++;
+    }
+    p.streak(n, pass === 0 ? GOLD : pass === 1 ? SLASH_PALE : SLASH_WHITE);
+  }
+}
+
+/** The flash where a cut lands: a hot core and a thin four-point star, gone in a few frames. */
+export function drawImpact(p: Painter, x: number, y: number, t: number): void {
+  if (t < 0 || t > 0.13) return;
+  const k = 1 - t / 0.13;
+  p.glow(x, y, 14 + 12 * (1 - k), GOLD, 0.35 * k * k);
+  p.glow(x, y, 5, SLASH_WHITE, 1.0 * k);
+  for (let i = 0; i < 2; i++) {
+    const a = 0.5 + i * (Math.PI / 2);
+    const l = (13 + 12 * (1 - k)) * (i === 0 ? 1 : 0.6);
+    for (let q = 0; q < 5; q++) {
+      const f = q / 4 - 0.5;
+      p.px[q] = x + Math.cos(a) * l * 2 * f;
+      p.py[q] = y + Math.sin(a) * l * 2 * f;
+      p.pw[q] = 1.4 * (1 - Math.abs(f) * 2) + 0.2;
+      p.pc[q * 3] = k * (1 - Math.abs(f) * 2);
+    }
+    p.streak(5, SLASH_WHITE);
+  }
+}

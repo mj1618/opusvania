@@ -110,6 +110,15 @@ export class Secondary {
   open = 0;
   /** 0..1: spread to both sides in the glide. */
   soar = 0;
+  /** ... per wing (a wing beside a wall or trunk folds in). */
+  readonly soarW: [number, number] = [0, 0];
+  /**
+   * Set by the owner each frame: how much each wing should fold for a solid beside her (0..1; index
+   * 0 = wing A, screen-left) and the world x of that solid's face (the wing is kept on her side of it).
+   */
+  readonly foldT: [number, number] = [0, 0];
+  readonly faceX: [number, number] = [Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY];
+  private readonly fold: [number, number] = [0, 0];
   private ripple = 0;
 
   constructor() {
@@ -121,6 +130,7 @@ export class Secondary {
   reset(): void {
     for (const c of this.all) c.reset();
     this.ripple = 0;
+    this.fold[0] = this.fold[1] = 0;
   }
 
   update(dt: number, clock: number, rig: Rig, frame: Frame, p: PlayerView): void {
@@ -183,7 +193,7 @@ export class Secondary {
         0.07 * wall +
         0.05 * apex * (1 - soar) +
         0.03 * dash +
-        0.075 * soar) *
+        0.1 * soar) *
       (1 - tuck);
     const airspeed = sat(Math.hypot(p.vx, p.vy) / 11);
     // In the glide the wings breathe together, slowly...
@@ -207,10 +217,20 @@ export class Secondary {
     // How far each wing has swung out to its own side of her (glide): early in the opening.
     const side = smoothstep(0.03, 0.4, soar);
     // The span grows late and shrinks early, so a folding wing is already short when it swings in.
-    const span = soar * soar;
+    const soarAll = soar;
+    const beat = rig.beat;
+    const reach = rig.reach;
 
     for (let w = 0; w < 2; w++) {
       const sd = w === 0 ? 1 : -1;
+      // A wall or trunk beside her: that wing folds in and lies against it.
+      this.fold[w]! +=
+        (this.foldT[w]! - this.fold[w]!) * (1 - Math.exp(-(this.foldT[w]! > this.fold[w]! ? 16 : 7) * dt));
+      const fold = this.fold[w]!;
+      const soar = soarAll * (1 - 0.7 * fold);
+      const span = soar * soar;
+      this.soarW[w] = soar;
+      const pressed = soarAll > 0.15 && fold > 0.02;
       // The wing on the far side sits a little higher and further back; pressed flat on a wall.
       const far = sat(0.5 - 0.5 * sd * d);
       const wing = this.wings[w]!;
@@ -254,9 +274,11 @@ export class Secondary {
         lift = lerp(
           lift,
           SOAR[k]! -
-            (27 * ck + 20 * flare + 14 * rig.flourish + breath + fix) * lead -
+            (27 * ck + 20 * flare + 14 * rig.flourish + breath + fix - 34 * beat + 15 * reach + 14 * wall) *
+              lead -
             4 * far -
-            3.5 * airspeed * (1 - lead),
+            3.5 * airspeed * (1 - lead) +
+            22 * fold * (1 - lead),
           soar,
         );
         // In the ball both wings wrap back over her spine and under: one shell.
@@ -268,6 +290,8 @@ export class Secondary {
         lift -= settle * (13 - k * 1.5) * (far > 0.5 ? 0.7 : 1);
         // A glint: a tiny flick; a great one opens them.
         lift -= rig.joy * 20 * (1 - k * 0.12) * (1 - 0.6 * soar);
+        // A cut: they flare with the turn of the shoulders and settle.
+        lift -= rig.slashK * (22 + 8 * far) * (1 - k * 0.12) * (1 - soar);
         // A landing or a skid throws the hem out for a moment.
         lift -= clamp(rig.crouchPx, 0, 8) * 1.6 * (1 - k / STRANDS) * (1 - soar);
         c.lift = lift * DEG;
@@ -275,12 +299,16 @@ export class Secondary {
           (0.05 * run - 0.07 * glide - 0.03 * up + 0.02 * dash) * (1 - k * 0.12) * (1 - tuck) +
           (0.52 + 0.07 * k) * tuck;
         // The billow cups the membrane: roots up, tips held down by the air.
-        c.curl = lerp(curl, SOAR_CURL[k]! + (0.1 * ck + 0.05 * flare) * lead + tipFix, soar * (1 - tuck));
+        c.curl = lerp(
+          curl,
+          SOAR_CURL[k]! + (0.1 * ck + 0.05 * flare + 0.06 * reach - 0.05 * beat) * lead + tipFix,
+          soar * (1 - tuck),
+        );
         c.stiff = stiff;
         c.dragK = dragT;
         c.floorY = floorY;
-        c.wallSide = wallSide;
-        c.wallX = wallX;
+        c.wallSide = wallSide !== 0 ? wallSide : pressed ? -sd : 0;
+        c.wallX = wallSide !== 0 ? wallX : this.faceX[w]! + sd * 1.5;
         for (let i = 1; i < c.n; i++) {
           const t = (i / (c.n - 1)) ** 1.3;
           c.extra[i] =

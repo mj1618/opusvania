@@ -25,6 +25,7 @@ function view(over: Partial<PlayerView>): PlayerView {
     dashDir: 1,
     dashTimer: 0,
     freeze: 0,
+    hitstop: 0,
     cx: 1000,
     cy: 1240,
     feetY: 1280,
@@ -201,7 +202,9 @@ describe('vesper rig', () => {
     // The catch from a long fall, with the sim's own speed trace.
     const trace = [16.4, 12.9, 10.5, 8.8, 7.6, 6.8, 6.2, 5.8, 5.4, 5.0, 4.8];
     let peak = 0;
-    for (let i = 0; i < 90; i++) {
+    let beatPeak = 0;
+    let beats = 0;
+    for (let i = 0; i < 420; i++) {
       const vy = trace[i] ?? 4.8;
       cx += 10.56;
       y += vy;
@@ -210,7 +213,12 @@ describe('vesper rig', () => {
         i === 0 ? [{ type: 'glideStart', x: cx, y, vy: 21.3 }] : [],
       );
       peak = Math.max(peak, rig.catchK);
+      beatPeak = Math.max(beatPeak, rig.beat);
+      if (rig.sig.beat) beats++;
     }
+    // A steady glide is never frozen: a slow wing beat every few seconds.
+    expect(beatPeak).toBeGreaterThan(0.8);
+    expect(beats).toBeGreaterThanOrEqual(1);
     expect(peak).toBeGreaterThan(0.5);
     expect(Math.abs(rig.catchK)).toBeLessThan(0.05);
     expect(rig.soar).toBeGreaterThan(0.98);
@@ -244,5 +252,46 @@ describe('vesper rig', () => {
       expect(c.scale).toBeLessThan(1.01);
       for (let i = 0; i < c.n; i++) expect(Math.abs((c.rx[i] ?? 0) - cx)).toBeLessThan(70);
     }
+  });
+
+  it('slash: strokes alternate with seq, the cut holds through hitstop, and it all returns to rest', () => {
+    const rig = new Rig();
+    let clock = 0;
+    const tick = (over: Partial<PlayerView> = {}, ev: SimEvent[] = []): void => {
+      rig.update(DT, clock, view(over), ev);
+      clock += DT;
+    };
+    const slash = (seq: number): SimEvent => ({
+      type: 'slash',
+      x: 1000,
+      y: 1280,
+      dir: 'fwd',
+      facing: 1,
+      seq,
+      startup: 1,
+      active: 6,
+      duration: 14,
+    });
+    tick({}, [{ type: 'spawn', x: 1000, y: 1280 }]);
+    for (let i = 0; i < 20; i++) tick();
+    tick({}, [slash(1)]);
+    const first = [rig.slashA0, rig.slashA1];
+    tick();
+    tick();
+    expect(rig.slashW).toBeGreaterThan(0.9);
+    for (let i = 0; i < 17; i++) tick();
+    tick({}, [slash(2)]);
+    // The second cut runs back along the first.
+    expect(rig.slashA0).toBeCloseTo(first[1] ?? 0);
+    expect(rig.slashA1).toBeCloseTo(first[0] ?? 0);
+    tick();
+    const t0 = rig.slashT;
+    tick({ hitstop: 2 });
+    tick({ hitstop: 1 });
+    expect(rig.slashT).toBe(t0);
+    for (let i = 0; i < 40; i++) tick();
+    expect(rig.slashW).toBe(0);
+    expect(rig.slashK).toBe(0);
+    for (let i = 0; i < J_COUNT * 2; i++) expect(Number.isFinite(rig.frame.j[i])).toBe(true);
   });
 });

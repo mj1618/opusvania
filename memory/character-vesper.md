@@ -119,11 +119,45 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - Capture scripts: a held J only glides after a double jump or below the launch height; to catch a
   long fall use `R+J8 R10 .2 R+J6 R46 R+J200` from trunk B top (3660,192). Scripts passed to
   `g.input` queue AFTER what is already queued.
-- Not done: no ground-distance look-ahead (feet do not reach for the ground before touchdown); wings
-  ignore solids (they overlap trunks); the dust trail is faint at 1080p.
-- Light well (look:stats): stops 5 and 7 (the two high ledges) show her face ~30% dimmer (p90 168 /
-  135 vs 217-245) with the follow camera; it is post/foreground darkening the top of the frame over
-  the hero, not the skin (same skin colours measure 228+ lower in the frame).
+- Round 9 additions: a slow wing beat (`rig.beat`, `pulse()` every 3.4 s, 0.8 s long: lift, press
+  down 34 deg, body rises 2.6 px, `sig.beat` puffs dust); landing reach (`rig.groundDist` from the
+  scene rects, `rig.reach` from 78 px of clear air: legs come under her, wings brake); per-wing fold
+  (`Secondary.foldT/faceX`, set from solids beside her at wing height: that wing shrinks to 30% and
+  its strands are clamped to the solid's face, which is also the wall exit); backlit membranes
+  (`View.back` per wing: the centre zone, plus `shaft<i>` lights whose beam, along KEY_LIGHT, passes
+  the wing); silk wing-tip ribbons (`Trail` with `silk`); denser, longer-lived sparks.
+- Not done: wing beat is hard to pick out on every-4th-frame sheets (tested by number, not by eye);
+  landing reach not checked at zoom.
+
+## Value plan (owner, round 9: "too bright in the face", "it looked better when it wasn't so bright")
+- She is a dark plum figure with a SOFT pale lilac-ash face; the eyes, lantern tips and eye-spots are
+  the only bright things. Face on screen: lit side luma ~160-185, shadow ~110-130. Never near-white,
+  no head halo to speak of (0.03), rims subtle (dark shades rim 0.8 / cool 0.5, crown less).
+  Do NOT brighten her to win the look:stats hero ratio; the owner's eye wins.
+- Post grades the three zones differently and that lifts pale surfaces by different amounts, so the
+  pale tones are scaled per zone: `view.pale = 0.72 / 0.94 / 0.68` (left / centre / right, by
+  `zoneWeights(player.cx)`), applied to the face, cheek fur, ruff, hands, wraps, feet and hem band
+  (`PALE` list and `paleNow` in draw.ts). If post's exposure changes, re-measure the face (crop at
+  zoom 6, post on) and retune these three numbers, not the base colours.
+- The face is a smooth disc with a feathered edge (a 8% larger, darker, 60% alpha copy underneath),
+  a brow shadow, three fine pointed cheek tufts. The mane is three broad dark locks plus two lighter
+  ones. Rows of same-sized round puffs (cheeks, mane, ruff) read as a bumpy, warty face at 84 px.
+- Small-glint reaction: the light RUNS: lantern flare, a bead down the antenna (0.16 s), eye bloom,
+  then the wing eye-spots (`View.glintT/glintK`, strength 0.7 + 0.1 per combo step, cap 1.1); the
+  first glint of a run puts a small skip in her stride (`crouch.v -= 34`).
+
+## Thorn slash (sim: memory/combat.md; render numbers in `SLASH` in rig.ts)
+- Driven by the `slash` / `slashHit` events and `player.hitstop`; strokes alternate with `seq`
+  parity. Timeline is render time (0.1 s swing, 0.34 s total), frozen while `hitstop > 0`.
+- The sword hand (side A) rides the arc exactly (hand drag bypassed); the blade is drawn in the hand
+  while `slashW > 0.5`, the empty sheath stays at the hip. Body: hip twist, lean, off-hand counter,
+  small whole-body roll in the air, wings flare by `slashK` (not while spread in a glide).
+- The crescent (`drawSlash` in fx.ts) is three additive streaks about the chest: sweep and reach per
+  direction in `SLASH.arc` / `SLASH.reach`, sized to the sim's hit box (fwd is squashed to 0.6 in y:
+  the box is only 88 tall). 9 frames of life. Contact spark at the target's near side, small.
+- A down-slash hit runs `pogo` (legs long, then tuck). Known gaps: on a wall slide the rig faces the
+  wall while the slash goes away from it, so the arm reaches behind her (no dedicated pose); up and
+  down poses are additive tweaks, not authored poses.
 
 ## Gotchas
 - Wing strands have no body collision: a stiff, fast flare throws them over the head and they

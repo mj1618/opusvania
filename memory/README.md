@@ -16,7 +16,7 @@ Keep entries current; delete stale ones.
 - [Post, air and foreground](post-and-air.md) — post pipeline and its knobs, light mask, shafts/motes/mist, foreground bake, GLSL and filter gotchas, how to time the GPU
 - [Character](character.md) — Ember's design and rejected looks, 2.5D rig, pose blending, foot planting, chains, the one-mesh painter, gotchas
 - [Character: Yako](character-yako.md) — the dark fox skin: forward-frame rig + base matrix, cel painter, squash-through turn, 240 px lope, chain stiffness gotcha
-- [Character skin: Vesper](character-vesper.md) — moth skin: owl-disc face and no-scarf decisions, lope run (256 px cycle), wing strand states and beat, wing/drag gotchas, shots URL workaround
+- [Character skin: Vesper](character-vesper.md) — moth skin: value plan (dark figure, soft pale face, per-zone pale scale), face/mane shape rules, lope run, wing states, glide, slash, gotchas
 - [Character skin: Nova](character-nova.md) — star-runner acrobat skin: somersault as whole-rig rotation on a spring, hand/foot follow-through springs, relative-speed light trails, shots/clip URL workaround
 - [Character skin: Wick](character-wick.md) — lantern-bearer skin: mirrored 2.5D rig, glaive on a screen-space angular spring, lantern pendulum, somersault double jump, cloth tricks, gotchas
 - [Reference study](reference-study.md) — measured table of our stops vs Ori/HK Steam frames (key, near-black, hero size and contrast, hue commitment) and the principles to hold the look to; resize gotcha

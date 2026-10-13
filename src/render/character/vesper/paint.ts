@@ -48,8 +48,8 @@ export interface Shade {
 }
 
 const FLOATS = 13;
-const MAX_VERTS = 12000;
-const MAX_INDICES = 60000;
+const MAX_VERTS = 20000;
+const MAX_INDICES = 100000;
 
 const VERT = `#version 300 es
 in vec2 aPosition;
