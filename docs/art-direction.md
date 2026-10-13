@@ -51,6 +51,13 @@ like Ori or the Knight: a lone wanderer in a vast old place. Nothing may read as
 or mascot: no floppy two-point "hat" ears, no ruff/collar of leaf points, no bell-like bobble on a
 string, no bouncy or cheeky acting. Simple, elegant, restrained: few shapes, long calm lines, a muted
 palette with one light. Where the list below conflicts with this, the tone wins.
+
+**More from the owner (2026-10-13):** serious does not mean sad or old. The hero must be **cool**, have
+**an aura like Ori** (it carries or is partly made of light: glowing eyes, light spilling onto the
+world, light left behind in motion), look **agile** (light build, free legs, springy athletic poses:
+it sprints, leaps, dashes, wall-jumps), and have **real arms with gripping hands** to grab ledges and
+hold weapons. The final design is being chosen from the concept gallery (`/concepts.html`); the
+feature list below is the superseded first design.
 - Dark indigo-plum body, slim, slightly oversized head, short limbs, readable hands and feet.
 - A pale, soft mask-like face with two large warm amber glowing eyes. No mouth.
 - Two long leaf-shaped ears that trail and react to motion.

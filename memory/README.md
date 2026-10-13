@@ -14,3 +14,4 @@ Keep entries current; delete stale ones.
 - [Background layers](background-layers.md) — sky/far/mid pipeline (compose → bake → atmosphere shader → LayerView with fog + rustle), composition map, config knobs, gotchas
 - [Playfield](playfield.md) — baked lit terrain (albedo + relief), plant meshes and bend field, pool; config knobs, the front-of-character container, bake gotchas
 - [Post, air and foreground](post-and-air.md) — post pipeline and its knobs, light mask, shafts/motes/mist, foreground bake, GLSL and filter gotchas, how to time the GPU
+- [Character](character.md) — Ember's design and rejected looks, 2.5D rig, pose blending, foot planting, chains, the one-mesh painter, gotchas
