@@ -5,7 +5,7 @@
  * Deterministic (own LCG, no Math.random); fixed pools, no allocation per frame.
  */
 import { sat } from '../hooded/math';
-import { type Painter, type RGB, rgb } from './paint';
+import { type Painter, type RGB, rgb, type Shade } from './paint';
 
 const MOTE = 0;
 const DUST = 1;
@@ -305,6 +305,16 @@ export const FX_GOLD_DEEP = GOLD_DEEP;
 
 const SLASH_WHITE = rgb(0xfffdf4);
 const SLASH_PALE = rgb(0xffeec2);
+const SLASH_SHADE: Shade = {
+  c0: rgb(0x1a1230),
+  c1: rgb(0x1a1230),
+  rim: 0,
+  cool: 0,
+  form: 0,
+  band: 0.95,
+  ember: 0,
+  alpha: 0.3,
+};
 
 /**
  * The slash: a crescent of pale light about (cx, cy), swept from angle a0 to a1 (forward-frame
@@ -332,7 +342,7 @@ export function drawSlash(
   const fade = 1 - sat((t - swing) / (life - swing)) ** 2;
   const N = 26;
   const { px, py, pw, pc } = p;
-  for (let pass = 0; pass < 3; pass++) {
+  for (let pass = -1; pass < 3; pass++) {
     let n = 0;
     for (let i = 0; i < N; i++) {
       const q = i / (N - 1);
@@ -342,8 +352,9 @@ export function drawSlash(
       const th = 46 * Math.sin(Math.PI * q ** 0.8) ** 0.85 * (0.55 + 0.45 * q);
       // The reach swells a little through the middle of the cut: a blade's path, not a compass arc.
       const r = reach * (0.86 + 0.14 * Math.sin(Math.PI * q));
-      const off = pass === 0 ? th * 0.5 : pass === 1 ? th * 0.2 : 1.2;
-      const hw = pass === 0 ? th * 0.5 : pass === 1 ? th * 0.22 : 1.3 + th * 0.05;
+      const off = pass < 0 ? th * 0.2 + 3 : pass === 0 ? th * 0.5 : pass === 1 ? th * 0.2 : 1.2;
+      const hw =
+        pass < 0 ? th * 0.12 + 1.2 : pass === 0 ? th * 0.5 : pass === 1 ? th * 0.22 : 1.3 + th * 0.05;
       const rr = r - off;
       px[n] = cx + Math.cos(a) * rr * sgn;
       py[n] = cy - Math.sin(a) * rr * ySquash;
@@ -353,7 +364,12 @@ export function drawSlash(
       pc[n * 3] = gain * fade * lead * (0.6 + 0.4 * (q / Math.max(0.2, head)) ** 2);
       n++;
     }
-    p.streak(n, pass === 0 ? GOLD : pass === 1 ? SLASH_PALE : SLASH_WHITE);
+    if (pass < 0) {
+      // A soft dusk under-edge: against a bright backdrop the pale crescent still has a shape.
+      for (let i = 0; i < n; i++) pw[i]! *= Math.min(1, pc[i * 3]! * 3);
+      SLASH_SHADE.alpha = 0.3 * fade;
+      if (n > 2) p.ribbon(n, SLASH_SHADE, false, false);
+    } else p.streak(n, pass === 0 ? GOLD : pass === 1 ? SLASH_PALE : SLASH_WHITE);
   }
 }
 

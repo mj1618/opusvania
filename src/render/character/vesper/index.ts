@@ -92,6 +92,7 @@ export class VesperCharacter implements CharacterSkin {
       glintK: 0,
       slashW: 0,
       bladeAng: 0,
+      bladeFront: false,
     };
   }
 
@@ -174,7 +175,7 @@ export class VesperCharacter implements CharacterSkin {
       const c = sec.wings[w]!.strands[2]!;
       const wx = c.rx[3]!;
       const wy = c.ry[3]!;
-      let b = 0.42 * zw[1];
+      let b = 0.3 * zw[1];
       for (let i = 0; i < 8; i++) {
         const l = this.ctx.lights.get(`shaft${i}`);
         if (!l || l.intensity <= 0) continue;
@@ -212,6 +213,7 @@ export class VesperCharacter implements CharacterSkin {
     // The slash: the blade in her hand, and a small spark where it lands (the target's side
     // nearest her; the pod draws its own burst).
     view.slashW = rig.slashW;
+    view.bladeFront = rig.slashW > 0.3 && rig.wWall > 0.5;
     const sg = rig.slashFacing;
     view.bladeAng = Math.atan2(-Math.sin(rig.slashAng), Math.cos(rig.slashAng) * sg);
     if (sig.slashHit) {

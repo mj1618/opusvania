@@ -76,6 +76,8 @@ export interface View {
   /** The thorn is out: weight 0..1 and the blade's direction on screen (rad, y down). */
   slashW: number;
   bladeAng: number;
+  /** The cut goes behind her back (off a wall): the sword arm and blade are drawn in front. */
+  bladeFront: boolean;
   /** Scales the face's pale tones (the dark zones' grade lifts them: this takes it back out). */
   pale: number;
 }
@@ -722,8 +724,8 @@ function wing(
           soar *
           k *
           glow *
-          (0.12 * (1 - t) ** 2 +
-            0.1 * bump(t, 0.56, 0.2) * (bump(u, 0.42, 0.16) + 0.8 * bump(u, 0.76, 0.12)));
+          (0.07 * (1 - t) ** 2 +
+            0.06 * bump(t, 0.56, 0.2) * (bump(u, 0.42, 0.16) + 0.8 * bump(u, 0.76, 0.12)));
         cr += WARM[0] * w;
         cg += WARM[1] * w * 0.72;
         cb += WARM[2] * w;
@@ -734,10 +736,10 @@ function wing(
         const vein = Math.abs(Math.sin(u * Math.PI * 4));
         const thin =
           Math.sin(Math.PI * sat((t - 0.08) / 0.84)) ** 0.8 * (0.55 + 0.45 * Math.sin(Math.PI * u));
-        const w = back * soar * (0.4 + 0.6 * k) * thin * (0.35 + 0.65 * vein) * 0.32;
-        cr += 1.0 * w;
-        cg += 0.46 * w;
-        cb += 0.5 * w;
+        const w = back * soar * (0.4 + 0.6 * k) * thin * (0.15 + 0.85 * vein) * 0.34;
+        cr += 0.95 * w;
+        cg += 0.6 * w;
+        cb += 0.26 * w;
       }
       if (band > 0.004) {
         const b = band * (0.82 + 0.18 * glow) * (0.55 + 0.45 * k);
@@ -1193,14 +1195,15 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   leg(p, j, far, true);
   thorn(p, f, 21 * (1 - 0.65 * v.tuck), v.slashW);
   // The sword arm is side A: behind the body when she faces left.
-  if (d < 0 && v.slashW > 0.5) blade(p, j, v.bladeAng, sat(v.slashW * 2 - 1));
+  if (d < 0 && !v.bladeFront && v.slashW > 0.5) blade(p, j, v.bladeAng, sat(v.slashW * 2 - 1));
   torso(p, j);
   leg(p, j, near, false);
   if (!behind)
     wing(p, v.wings[near]!.strands, v.open, kNear, v.glow, clock, v.soarW[near]!, v.back[near]!, spot);
   ruff(p, f, v);
   arm(p, j, near, false, true, v.wall);
-  if (d >= 0 && v.slashW > 0.5) blade(p, j, v.bladeAng, sat(v.slashW * 2 - 1));
+  if (v.bladeFront && near !== 0) arm(p, j, 0, false, true, 0);
+  if ((d >= 0 || v.bladeFront) && v.slashW > 0.5) blade(p, j, v.bladeAng, sat(v.slashW * 2 - 1));
   head(p, f, v, far);
   antenna(p, v.antennae[near]!, false, v.glow, sat(v.glintT / GLINT_RUN), v.glintT < 0.6 ? v.glintK : 0);
 }

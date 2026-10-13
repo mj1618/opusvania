@@ -99,7 +99,7 @@ export const GLIDE = {
   catchDecel: 4.2,
   /** The slow wing beat of a steady glide: one every `beatEvery` seconds, lasting `beatLen`. */
   beatEvery: 3.4,
-  beatLen: 0.8,
+  beatLen: 1.0,
   /** Landing reach starts with this much clear air under the feet, px. */
   reachPx: 78,
 } as const;
@@ -107,14 +107,16 @@ export const GLIDE = {
 /** The thorn slash (render side; the sim will own the timing). Seconds, forward-frame degrees. */
 export const SLASH = {
   swing: 0.1,
-  total: 0.34,
-  hold: 0.19,
+  total: 0.42,
+  hold: 0.16,
+  /** Where the blade points when it goes home: back and down along the sheath. */
+  sheath: -152,
   /** Hand distance from the shoulder through the cut, px. */
   hand: 14.5,
   /** Start and end of the blade's sweep (0 = forward, 90 = up) for the first stroke; the next one runs back. */
   fwd: [128, -58],
-  up: [-8, 172],
-  down: [14, -168],
+  up: [-15, 112],
+  down: [-25, -115],
   /** The crescent of light drawn by each cut: its own, tidier sweep. */
   arc: { fwd: [50, -44], up: [58, 122], down: [-58, -122] },
   /** ... and how far it reaches from her chest, px (the sim's hit area: tuning.attack). */
@@ -239,6 +241,10 @@ function tuckCurve(u: number): number {
 const GLIDEP = pose([
   0, 31.5, 0.16, -0.14, -0.1, -7.5, 3.2, 1.25, -11.5, 5.4, 1.4, -8.5, -8.5, -10.5, -6.5, 0.06, 1, 0.1, 1,
 ]);
+/** The up-slash: long through the body, chest open, chin up, off-hand low and back for balance. */
+const UPCUT = pose([0, 34, -0.1, -0.2, -0.32, 4, 3, 0.5, -5, 5, 0.9, 0, 0, -7, -15, 0, 1, -0.5, 1]);
+/** The down-slash (air): knees up out of the way, curled over the blade, off-hand thrown back and up. */
+const DOWNCUT = pose([-2, 34, 0.34, 0.3, 0.42, 7, 15, 0.9, -3, 18, 1.2, 0, 0, -10.5, -2, 0, 1, 0.7, 1]);
 const WALL = pose([
   3.5, 27, 0.14, 0.08, 0.12, 18.6, 15.5, -1.15, 18.6, 4, -1.2, 11.5, 9.5, 9, -3.5, 0.2, 1, 0.3, 0.5,
 ]);
@@ -393,6 +399,8 @@ export class Rig {
   /** Slash: weight 0..1, blade angle (forward frame, rad), wing-flare envelope, and what the arc needs. */
   slashW = 0;
   slashAng = 0;
+  /** 0..1: the blade is on its way back into the sheath. */
+  slashHome = 0;
   slashK = 0;
   slashT = 9;
   slashA0 = 0;
@@ -780,7 +788,7 @@ export class Rig {
       : 0;
     const bx1 = (bu - 0.17) / 0.11;
     const bx2 = (bu - 0.47) / 0.15;
-    this.beat = bu > 0 ? (Math.exp(-bx2 * bx2) - 0.38 * Math.exp(-bx1 * bx1)) * steady : 0;
+    this.beat = bu > 0 ? (Math.exp(-bx2 * bx2) - 0.5 * Math.exp(-bx1 * bx1)) * steady : 0;
     if (bu >= 0.33 && this.lastBeatU < 0.33 && this.lastBeatU > 0 && steady > 0.6) sig.beat = true;
     this.lastBeatU = bu;
     // The ground is coming: the legs reach down for it and the wings brake.
@@ -791,7 +799,7 @@ export class Rig {
       for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, GLIDEP[i]!, w);
       const bl = Math.max(0, this.beat);
       const rc = this.reach;
-      out[PU]! += (2.6 * bl + 1.2 * rc) * w;
+      out[PU]! += (4 * bl + 1.2 * rc) * w;
       out[CURL]! += (-0.05 * bl - 0.06 * rc) * w;
       out[HAU]! += (-1.5 * bl + 2.5 * rc) * w;
       out[HBU]! += (-1.2 * bl + 2 * rc) * w;
@@ -851,44 +859,64 @@ export class Rig {
       // Past the cut the blade carries on a little and eases off.
       const over = t > SLASH.swing ? 0.07 * (1 - Math.exp(-(t - SLASH.swing) * 16)) : 0;
       this.slashAng = lerp(this.slashA0, this.slashA1, sw + over);
-      const w = sat(t / 0.03) * (1 - quintic((t - SLASH.hold) / (SLASH.total - SLASH.hold)));
+      const w = sat(t / 0.03) * (1 - quintic((t - SLASH.hold - 0.08) / (SLASH.total - SLASH.hold - 0.08)));
       this.slashW = w;
       this.slashK = bell(sat(t / 0.3) ** 0.6);
       const c = 2 * sw - 1;
       const f = this.slashA1 > this.slashA0 ? -1 : 1;
       const aw = w * (1 - g0);
+      // On a wall she clings with the other hand and both feet and twists out to cut away from it.
+      const onWall = this.wWall * w;
       if (this.slashDir === 'fwd') {
-        out[TW]! += 0.5 * c * f * w;
-        out[LEAN]! += (0.07 + 0.09 * sw) * w;
-        out[CURL]! += 0.07 * c * f * w;
-        out[PF]! += 2.2 * sw * w * (p.grounded ? 1 : 0.4);
-        out[HBF] = lerp(out[HBF]!, -9.5 - 2 * c * f, w);
-        out[HBU] = lerp(out[HBU]!, -8 + 3 * c * f, w);
-        out[HT]! -= 0.06 * w;
-        slashRot = 0.14 * c * f * aw;
-      } else if (this.slashDir === 'up') {
-        out[LEAN]! -= (0.06 + 0.1 * sw) * w;
-        out[CURL]! -= 0.16 * w;
-        out[HT]! -= 0.3 * w;
-        out[PU]! += 1.6 * Math.sin(Math.PI * sw) * w;
-        out[HBF] = lerp(out[HBF]!, -6, w);
-        out[HBU] = lerp(out[HBU]!, -14, w);
-        out[TW]! += 0.3 * c * f * w;
-        slashRot = -0.1 * sw * aw;
+        const fw = w * (1 - this.wWall);
+        out[TW]! += 0.5 * c * f * fw;
+        out[LEAN]! += (0.07 + 0.09 * sw) * fw;
+        out[CURL]! += 0.07 * c * f * fw;
+        out[PF]! += 2.2 * sw * fw * (p.grounded ? 1 : 0.4);
+        out[HBF] = lerp(out[HBF]!, -9.5 - 2 * c * f, fw);
+        out[HBU] = lerp(out[HBU]!, -8 + 3 * c * f, fw);
+        out[HT]! -= 0.06 * fw;
+        slashRot = 0.14 * c * f * aw * (1 - this.wWall);
+        out[LEAN]! -= (0.26 + 0.1 * sw) * onWall;
+        out[CURL]! -= 0.22 * onWall;
+        out[PF]! -= 3.5 * onWall;
+        out[TW]! -= 0.5 * onWall;
+        out[HT]! -= 0.12 * onWall;
+        out[HYAW] = lerp(out[HYAW]!, -0.8, onWall);
       } else {
-        out[LEAN]! += 0.3 * w;
-        out[CURL]! += 0.24 * w;
-        out[HT]! += 0.32 * w;
-        out[AU]! += 8 * w;
-        out[BU]! += 10 * w;
-        out[AF]! += 4 * w;
-        out[BF]! += 6 * w;
-        out[HBF] = lerp(out[HBF]!, -8, w);
-        out[HBU] = lerp(out[HBU]!, -3, w);
-        slashRot = 0.2 * sw * aw;
+        // Up and down are whole poses. On the ground the feet stay where they are.
+        const src = this.slashDir === 'up' ? UPCUT : DOWNCUT;
+        const feet = p.grounded ? 0 : 1;
+        for (let i = 0; i < NP; i++) {
+          if (i === EYE || i === HYAW || i === PF) continue;
+          const isFoot = i >= AF && i <= BP;
+          const k = w * (isFoot ? feet : i === PU ? feet : 1) * 0.92;
+          out[i] = lerp(out[i]!, src[i]!, k);
+        }
+        if (this.slashDir === 'up') {
+          // A rising cut: she lengthens through it and her head follows the blade over.
+          out[PU]! += 2.2 * Math.sin(Math.PI * sw) * w;
+          out[HT]! -= 0.2 * (f < 0 ? sw : 1 - sw) * w;
+          out[TW]! += 0.3 * c * f * w;
+          out[LEAN]! -= 0.08 * c * f * w;
+          slashRot = -0.12 * c * f * aw;
+        } else {
+          out[TW]! += 0.3 * c * f * w;
+          out[CURL]! += 0.06 * sw * w;
+          slashRot = 0.16 * sw * aw;
+        }
       }
+      // The cut is done: the blade turns home to the sheath as the arm comes down.
+      const home = quintic((t - SLASH.hold) / (SLASH.total - SLASH.hold - 0.06));
+      if (home > 0) {
+        const target = SLASH.sheath * (Math.PI / 180);
+        const da = Math.atan2(Math.sin(target - this.slashAng), Math.cos(target - this.slashAng));
+        this.slashAng += da * home;
+        this.slashHome = home;
+      } else this.slashHome = 0;
     } else {
       this.slashW = 0;
+      this.slashHome = 0;
       this.slashK = 0;
     }
     // A down-slash that lands: the legs snap long under her, then spring up into a tuck.
@@ -949,7 +977,10 @@ export class Rig {
     const s = this.frame.s;
     const cz = Math.sqrt(Math.max(0, 1 - (d * BODY.sinYaw) ** 2));
     const look = this.lookS.step(out[HYAW]!, dt);
-    const dh = clamp(this.headYaw.step(dirT, dt) * look, -1, 1);
+    // Cutting away from a wall she looks over her shoulder at the blade.
+    const headDir = this.wWall > 0.5 && this.slashW > 0.2 ? this.slashFacing * 0.7 : dirT;
+    const dh = clamp(this.headYaw.step(headDir, dt) * look, -1, 1);
+    const armBend = lerp(clamp(d * 1.7, -1, 1), this.slashFacing, this.slashW);
     const czh = Math.sqrt(Math.max(0, 1 - (dh * BODY.sinHeadYaw) ** 2));
     const ox = p.cx;
     const oy = p.feetY;
@@ -1033,9 +1064,22 @@ export class Rig {
         const sw = this.slashW;
         hx2 = lerp(tx, sx + Math.cos(this.slashAng) * SLASH.hand * this.slashFacing, sw);
         hy2 = lerp(ty, sy - Math.sin(this.slashAng) * SLASH.hand, sw);
+        // Going home, the hand drops to the hilt at her hip.
+        const hm = this.slashHome * sw;
+        hx2 = lerp(hx2, hipX + 3 * d, hm);
+        hy2 = lerp(hy2, hipY - 3, hm);
         free *= 1 - sw;
       }
-      ik2(sx, sy, hx2 + drag.ox * free, hy2 + drag.oy * free, BODY.upperArm, BODY.foreArm, bendArm, 0.12);
+      ik2(
+        sx,
+        sy,
+        hx2 + drag.ox * free,
+        hy2 + drag.oy * free,
+        BODY.upperArm,
+        BODY.foreArm,
+        side === 0 ? armBend : bendArm,
+        0.12,
+      );
       set(j, J_EL_A + side, ikOut.x, ikOut.y);
       set(j, J_HAND_A + side, ikOut.ex, ikOut.ey);
     }

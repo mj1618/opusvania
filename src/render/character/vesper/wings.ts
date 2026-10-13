@@ -274,7 +274,7 @@ export class Secondary {
         lift = lerp(
           lift,
           SOAR[k]! -
-            (27 * ck + 20 * flare + 14 * rig.flourish + breath + fix - 34 * beat + 15 * reach + 14 * wall) *
+            (27 * ck + 20 * flare + 14 * rig.flourish + breath + fix - 58 * beat + 15 * reach + 14 * wall) *
               lead -
             4 * far -
             3.5 * airspeed * (1 - lead) +

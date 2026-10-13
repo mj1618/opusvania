@@ -155,9 +155,19 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - The crescent (`drawSlash` in fx.ts) is three additive streaks about the chest: sweep and reach per
   direction in `SLASH.arc` / `SLASH.reach`, sized to the sim's hit box (fwd is squashed to 0.6 in y:
   the box is only 88 tall). 9 frames of life. Contact spark at the target's near side, small.
-- A down-slash hit runs `pogo` (legs long, then tuck). Known gaps: on a wall slide the rig faces the
-  wall while the slash goes away from it, so the arm reaches behind her (no dedicated pose); up and
-  down poses are additive tweaks, not authored poses.
+- Up / down are whole poses (`UPCUT`, `DOWNCUT`), lerped in by `slashW` (feet and pelvis height only
+  in the air). Sweeps end overhead / beneath her (`SLASH.up`, `SLASH.down`): ending behind her left
+  the blade parked horizontally behind the head for the whole hold.
+- Wall slide: the rig faces the wall, the slash goes away. `View.bladeFront` draws the sword arm and
+  blade over the wing (arm A is the far arm when she faces left and was hidden); the head yaw target
+  becomes the slash side; the spine leans out.
+- After the cut (`hold` 0.16 s) the blade turns to `SLASH.sheath` and the hand drops to the hip
+  (`slashHome`), ~10 frames; a chained slash just restarts.
+- The crescent has a thin dusk under-edge (alpha ribbon) so it keeps a shape on the light well. A wide
+  one read as a grey slab.
+- A down-slash hit runs `pogo` (legs long, then tuck).
+- Backlit membranes are amber (0.95, 0.6, 0.26), not pink; the wing beat is 58 deg / 1.0 s and still
+  only just readable on sheets.
 
 ## Gotchas
 - Wing strands have no body collision: a stiff, fast flare throws them over the head and they
