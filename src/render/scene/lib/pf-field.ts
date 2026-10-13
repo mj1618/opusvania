@@ -22,9 +22,12 @@ export const FIELD = {
   reachDown: 22,
   /** Sideways lean from running speed (px/frame at which it saturates). */
   dragSpeed: 7,
-  /** Landing shiver: impulse, and how far it travels (px). */
+  /** Landing shiver: strength of the travelling ring, and how far it travels (px). */
   landKick: 9,
-  landReach: 230,
+  landReach: 260,
+  /** Seconds the ring takes to cross that reach, and its width in px. */
+  landTime: 0.42,
+  landWidth: 34,
   /** Glow: reach of the character in px, rise and fall time constants (s). */
   glowReach: 210,
   glowRise: 0.18,
@@ -41,6 +44,7 @@ export class BendField {
   private readonly data: Uint8Array;
   private readonly source: BufferImageSource;
   private live = true;
+  private readonly waves: Array<{ x: number; row: number; age: number; power: number }> = [];
 
   constructor(
     readonly width: number,
@@ -91,20 +95,36 @@ export class BendField {
         d.fill(0);
         v.fill(0);
       } else if (ev.type === 'land') {
-        const kick = FIELD.landKick * Math.min(1.6, 0.5 + ev.vy / 16);
-        const row = Math.floor((ev.y - 4) / ch);
-        const c0 = Math.max(0, Math.floor((ev.x - FIELD.landReach) / cw));
-        const c1 = Math.min(cols - 1, Math.ceil((ev.x + FIELD.landReach) / cw));
-        for (let ry = Math.max(0, row - 2); ry <= Math.min(rows - 1, row + 1); ry++) {
-          for (let cx = c0; cx <= c1; cx++) {
-            const dx = (cx + 0.5) * cw - ev.x;
-            const f = Math.exp(-Math.abs(dx) / (FIELD.landReach * 0.36));
-            const i = ry * cols + cx;
-            v[i] = (v[i] as number) + (dx < 0 ? -1 : 1) * kick * f;
-          }
-        }
-        this.live = true;
+        // A ring that travels outward through the plants; soft landings barely stir them.
+        const power = Math.max(0.12, Math.min(1.5, (ev.vy - 3) / 13));
+        this.waves.push({ x: ev.x, row: Math.floor((ev.y - 4) / ch), age: 0, power });
+        if (this.waves.length > 4) this.waves.shift();
       }
+    }
+    for (let w = this.waves.length - 1; w >= 0; w--) {
+      const wave = this.waves[w] as { x: number; row: number; age: number; power: number };
+      wave.age += h;
+      if (wave.age > FIELD.landTime) {
+        this.waves.splice(w, 1);
+        continue;
+      }
+      const radius = (wave.age / FIELD.landTime) * FIELD.landReach;
+      const fade = 1 - wave.age / FIELD.landTime;
+      const width = FIELD.landWidth;
+      const a0 = Math.max(0, Math.floor((wave.x - radius - width * 2) / cw));
+      const a1 = Math.min(cols - 1, Math.ceil((wave.x + radius + width * 2) / cw));
+      for (let ry = Math.max(0, wave.row - 3); ry <= Math.min(rows - 1, wave.row + 1); ry++) {
+        for (let cx = a0; cx <= a1; cx++) {
+          const dx = (cx + 0.5) * cw - wave.x;
+          const q = (Math.abs(dx) - radius) / width;
+          if (q > 2.5 || q < -2.5) continue;
+          const i = ry * cols + cx;
+          v[i] =
+            (v[i] as number) +
+            (dx < 0 ? -1 : 1) * FIELD.landKick * wave.power * Math.exp(-q * q) * fade * h * 22;
+        }
+      }
+      this.live = true;
     }
 
     // The character pushes cells its body overlaps.

@@ -108,6 +108,8 @@ export interface TerrainInfo {
   faces: Face[];
   /** Ends of painted limbs: leaf sprays grow here. Dark unless `lit` (limbs in the walk plane). */
   twigs: Array<{ x: number; y: number; angle: number; lit?: boolean }>;
+  /** Sheltered spots beside big terrain where a fern grows. */
+  lee: Array<{ x: number; y: number; size: number }>;
   /** x ranges where big plants should stay away so the terrain itself is seen. */
   keepClear: Array<[number, number]>;
   /** Painted vines crossing a trunk face: leaves grow along `line`. */
@@ -156,6 +158,7 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
     twigs: [],
     ivy: [],
     keepClear: [],
+    lee: [],
     pockets: [],
     pool: poolSeg
       ? {
@@ -2490,6 +2493,24 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
   const y1 = s.y + s.h;
   const r = rngFor(s.x, 13);
   const E = TERRAIN.earth;
+  const wood = mix(TERRAIN.bark, TERRAIN.rootWood, 0.45);
+  const strand = (line: number[], w: (t: number) => number, h: number, light: number): void => {
+    p.tint(
+      ribbon(line, (t) => w(t) + 8),
+      E[4],
+      0.5,
+    );
+    p.solid(ribbon(line, w), mix(wood, TERRAIN.barkDark, 1 - light), h, { bark: 0.12 });
+    p.solid(
+      ribbon(
+        line.map((v, i) => (i % 2 ? v - 2 : v)),
+        (t) => w(t) * 0.34,
+      ),
+      mix(wood, TERRAIN.barkLit, 0.35 + light * 0.4),
+      h + 0.08,
+      { bark: 0.12 },
+    );
+  };
   // Behind it, in the back plane: the same root running on into the ground both ways, so the
   // silhouette is a root heaving out of the earth and not a block set on it.
   for (const [fromX, d] of [
@@ -2497,7 +2518,7 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
     [x1 - 30, 1],
   ] as const) {
     for (let i = 0; i < 2; i++) {
-      const reach = range(r, 110, 170) - i * 50;
+      const reach = range(r, 120, 180) - i * 50;
       const line = wander(
         cubic(
           fromX,
@@ -2529,186 +2550,187 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
       );
     }
   }
-  // The packed earth and old wood under the arch (it is solid: no daylight through it).
-  const body = boxOutline(s.x + 10, s.y + 14, x1 - 10, y1 + 12, s.x, { top: 2, side: 3, bottom: 0 });
-  p.solid(body, E[3], 0.4);
-  for (let i = 0; i < 5; i++) {
+  // Under the arch: packed earth on the right, a dark gap on the left where the root lifts clear.
+  const gapX0 = s.x + 34;
+  const gapX1 = s.x + s.w * 0.56;
+  const fill = boxOutline(s.x + 14, s.y + 30, x1 - 12, y1 + 12, s.x, { top: 3, side: 4, bottom: 0 });
+  p.solid(fill, E[3], 0.4);
+  const gap: number[] = [];
+  for (let i = 0; i <= 12; i++) {
+    const u = i / 12;
+    gap.push(lerp(gapX0, gapX1, u), y1 + 6 - Math.sin(Math.PI * u) ** 0.6 * (s.h - 44));
+  }
+  p.solid(chaikin(gap, 1), 0x07131f, 0.16);
+  // Rootlets hanging in the gap, and stones wedged at the packed end.
+  for (let i = 0; i < 4; i++) {
+    const gx = lerp(gapX0 + 10, gapX1 - 10, (i + r()) / 4);
     p.solid(
-      blob(
-        lerp(s.x + 34, x1 - 34, r()),
-        lerp(s.y + 50, y1 - 4, r()),
-        range(r, 9, 18),
-        range(r, 8, 14),
-        s.x + i,
-        0.3,
-        10,
+      ribbon(
+        wander(
+          [gx, s.y + 40, gx + range(r, -5, 5), s.y + 58, gx + range(r, -8, 8), s.y + range(r, 66, 84)],
+          2,
+          gx,
+          12,
+        ),
+        (t) => 3 * (1 - t) + 0.6,
       ),
-      E[4],
+      mix(wood, TERRAIN.backDeep, 0.5),
       0.3,
     );
   }
-  const wood = mix(TERRAIN.bark, TERRAIN.rootWood, 0.45);
-  const strand = (line: number[], w: (t: number) => number, h: number, light: number): void => {
-    p.tint(
-      ribbon(line, (t) => w(t) + 8),
-      E[4],
-      0.5,
-    );
-    p.solid(ribbon(line, w), mix(wood, TERRAIN.barkDark, 1 - light), h, { bark: 0.12 });
-    p.solid(
-      ribbon(line, (t) => w(t) * 0.36),
-      mix(wood, TERRAIN.barkLit, 0.35 + light * 0.4),
-      h + 0.08,
-      { bark: 0.12 },
-    );
-  };
-  // Lesser roots woven through underneath.
   for (let i = 0; i < 4; i++) {
-    const xa = lerp(s.x + 26, x1 - 26, r());
-    const xb = lerp(s.x + 10, x1 - 10, r());
-    const line = wander(
-      quad(xa, s.y + 30, lerp(xa, xb, 0.5) + range(r, -20, 20), s.y + 62, xb, y1 + 8, 12),
-      5,
-      s.x + i,
-      40,
-    );
-    const w0 = range(r, 9, 16);
-    strand(line, (t) => w0 * (1 - 0.3 * t), 0.52, 0.3);
-  }
-  // The great root: out of the ground, over, and back in. Its upper edge is the walk line.
-  const W0 = 44;
-  const cy = s.y + 2 + W0 / 2;
-  const up = cubic(s.x - 20, y1 + 16, s.x - 2, y1 - 30, s.x - 4, cy + 4, s.x + 34, cy, 12);
-  const down = cubic(x1 - 34, cy, x1 + 4, cy + 4, x1 + 2, y1 - 30, x1 + 22, y1 + 16, 12);
-  const across: number[] = [];
-  for (let x = s.x + 46; x < x1 - 40; x += 12) across.push(x, cy + wobble(x, s.x + 8, 50) * 1.2);
-  const arch = [...up, ...across, ...down];
-  const girth = (t: number): number =>
-    W0 * (1 + 0.3 * Math.abs(t - 0.5) ** 1.5 * 2) +
-    wobble(t * 300, s.x + 4, 60) * 3 +
-    Math.max(0, wobble(t * 300, s.x + 5, 26)) * 5;
-  // Keep the crest flat where it is walked on: only the underside varies.
-  strand(arch, girth, 0.68, 1);
-  // Knuckled underside: burls and swellings hang off the lower edge so it is no even band.
-  for (let i = 0; i < 7; i++) {
-    const k = Math.floor(range(r, 0.1, 0.9) * (arch.length / 2 - 1)) * 2;
-    const bx = arch[k] as number;
-    const by = (arch[k + 1] as number) + W0 * 0.42 + range(r, -4, 6);
-    const rad = range(r, 9, 19);
-    p.tint(blob(bx, by + 4, rad * 1.25 + 3, rad + 3, bx, 0.25, 10), E[4], 0.5);
+    const cx = lerp(gapX1 + 12, x1 - 22, r());
+    const cy = lerp(s.y + 60, y1 - 2, r());
+    const size = range(r, 7, 13);
     p.solid(
-      blob(bx, by, rad * 1.25, rad, bx, 0.3, 11),
-      mix(wood, TERRAIN.barkDark, range(r, 0, 0.5)),
-      range(r, 0.64, 0.72),
-      { bark: 0.12 },
-    );
-    p.solid(
-      blob(bx + 2, by - rad * 0.3, rad * 0.6, rad * 0.4, bx + 1, 0.3, 8),
-      mix(wood, TERRAIN.barkLit, 0.5),
-      0.76,
-      { bark: 0.12 },
+      chaikin(blob(cx, cy, size * 1.3, size * 0.85, cx, 0.3, 8), 1),
+      mix(TERRAIN.stone[i % 4] as number, E[2], 0.4),
+      0.6,
     );
   }
-  // Twist: the grain winds round the root like rope, with knots where limbs once left it.
-  const nA = arch.length / 2;
-  for (let i = 3; i < nA - 4; i += 5) {
-    const ax = arch[i * 2] as number;
-    const ay = arch[i * 2 + 1] as number;
-    const bx = arch[i * 2 + 4] as number;
-    const by = arch[i * 2 + 5] as number;
-    const tx = bx - ax;
-    const ty = by - ay;
-    const tl = Math.hypot(tx, ty) || 1;
-    const nx = -ty / tl;
-    const ny = tx / tl;
-    const g = girth(i / (nA - 1)) / 2 - 3;
-    const light = i % 4 === 0;
-    const line = quad(
-      ax + nx * g * 0.2,
-      ay + ny * g * 0.2 - g,
-      (ax + bx) / 2,
-      (ay + by) / 2 - g * 0.1,
-      bx - nx * g * 0.2,
-      by + g,
-      6,
-    ).map((v, k) => (k % 2 ? Math.max(v, s.y + 9) : v));
+  // The great root. Its upper edge is the walk line; everything else about it is uneven: girth
+  // swells at two knuckles, the underside rises over the gap and sags at the packed end.
+  const girth = (u: number): number =>
+    40 +
+    16 * Math.exp(-(((u - 0.14) / 0.12) ** 2)) +
+    20 * Math.exp(-(((u - 0.82) / 0.15) ** 2)) -
+    9 * Math.exp(-(((u - 0.42) / 0.16) ** 2)) +
+    wobble(u * 300, s.x + 4, 34) * 3;
+  const top: number[] = [];
+  const bot: number[] = [];
+  const N = 40;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    // Outside the box it dives into the ground on a tight curve; over the box the crest is level.
+    const x = lerp(s.x - 34, x1 + 38, t);
+    const u = (x - s.x) / s.w;
+    const fall =
+      u < 0.05 ? smoothstep(0.05, -0.17, u) ** 1.6 : u > 0.96 ? smoothstep(0.96, 1.2, u) ** 1.6 : 0;
+    const ridge = Math.max(0, wobble(x, s.x + 8, 13) - 0.45) * 4.5;
+    const yt = s.y + 2 + wobble(x, s.x + 9, 50) * 1.1 - (fall > 0 ? 0 : ridge) + fall * (s.h + 14);
+    top.push(x, yt);
+    bot.push(x + (u < 0.5 ? 10 : -10) * fall, yt + girth(clamp(u, 0, 1)) * (1 - fall * 0.35));
+  }
+  const body = top.slice();
+  for (let i = bot.length - 2; i >= 0; i -= 2) body.push(bot[i] as number, bot[i + 1] as number);
+  p.tint(
+    body.map((v, i) => (i % 2 ? v + 7 : v)),
+    E[4],
+    0.55,
+  );
+  p.solid(chaikin(body, 1), wood, 0.68, { bark: 0.12 });
+  const at = (t: number, f: number): [number, number] => {
+    const i = clamp(Math.round(t * N), 0, N) * 2;
+    return [top[i] as number, lerp(top[i + 1] as number, bot[i + 1] as number, f)];
+  };
+  // Twist: long seams that spiral round the root, each drifting from crest to belly along its run.
+  for (let k = 0; k < 6; k++) {
+    const t0 = -0.1 + k * 0.19 + range(r, -0.03, 0.03);
+    const line: number[] = [];
+    for (let j = 0; j <= 10; j++) {
+      const q = j / 10;
+      const [px, py] = at(clamp(t0 + q * 0.42, 0.02, 0.98), 0.12 + q * 0.8);
+      line.push(px, py + wobble(px, s.x + k, 22) * 1.6);
+    }
+    const light = k % 2 === 0;
     p.solid(
-      ribbon(line, (t) => (light ? 5 : 3.2) * Math.sin(Math.PI * clamp(t, 0.06, 0.94)) + 0.6),
-      light ? mix(wood, TERRAIN.barkLit, 0.6) : TERRAIN.barkDark,
-      light ? 0.76 : 0.52,
+      ribbon(line, (t) => (light ? 6.5 : 3.4) * Math.sin(Math.PI * clamp(t, 0.05, 0.95)) ** 0.7 + 0.6),
+      light ? mix(wood, TERRAIN.barkLit, range(r, 0.4, 0.7)) : TERRAIN.barkDark,
+      light ? 0.76 : 0.5,
       { bark: 0.12 },
     );
   }
-  for (let i = 0; i < 3; i++) {
-    const k = Math.floor(range(r, 0.12, 0.88) * (nA - 1)) * 2;
-    const kx = arch[k] as number;
-    const ky = (arch[k + 1] as number) + range(r, 2, 10);
-    const rad = range(r, 7, 11);
-    p.solid(blob(kx, ky, rad * 1.3, rad, kx, 0.2, 12), mix(wood, TERRAIN.barkLit, 0.55), 0.8, { bark: 0.12 });
-    p.solid(blob(kx, ky, rad * 0.75, rad * 0.55, kx, 0.2, 10), wood, 0.66, { bark: 0.12 });
-    p.solid(blob(kx, ky + 0.5, rad * 0.34, rad * 0.26, kx, 0.2, 8), TERRAIN.backDeep, 0.36);
-  }
-  // A second root thrown across the first, and feeders running out along the ground.
-  {
-    const cross = wander(quad(s.x - 34, y1 + 12, s.x + 70, s.y + 34, x1 - 30, s.y + 40, 16), 4, s.x + 12, 40);
-    strand(cross, (t) => 24 * (1 - t * 0.5) + 3, 0.72, 0.8);
-    for (const [fx, d] of [
-      [s.x - 30, -1],
-      [x1 + 34, 1],
-    ] as const) {
-      const feeder = wander(
-        quad(fx, y1 - 2, fx + d * 40, y1 - 9, fx + d * range(r, 80, 110), y1 + 8, 10),
-        3,
-        fx,
-        30,
-      );
-      strand(
-        feeder.map((v, i) => (i % 2 ? Math.max(v, y1 - 7) : v)),
-        (t) => 13 * (1 - t) + 2,
-        0.62,
-        0.5,
-      );
+  // Knuckles and burls: at the two swellings and under the belly.
+  for (const [t, f, rad] of [
+    [0.2, 0.55, 17],
+    [0.78, 0.6, 21],
+    [0.88, 0.25, 12],
+    [0.5, 0.92, 11],
+    [0.33, 0.85, 9],
+    [0.66, 0.95, 13],
+  ] as const) {
+    const [bx, by] = at(t, f);
+    p.tint(blob(bx, by + 4, rad * 1.2 + 3, rad + 3, bx, 0.25, 10), E[4], 0.45);
+    p.solid(
+      blob(bx, by, rad * 1.2, rad, bx, 0.3, 11, range(r, -0.4, 0.4)),
+      mix(wood, TERRAIN.barkDark, range(r, 0, 0.4)),
+      0.74,
+      { bark: 0.12 },
+    );
+    p.solid(
+      blob(bx + rad * 0.2, by - rad * 0.3, rad * 0.55, rad * 0.4, bx + 1, 0.3, 8),
+      mix(wood, TERRAIN.barkLit, 0.6),
+      0.82,
+      { bark: 0.12 },
+    );
+    if (rad > 15) {
+      p.solid(blob(bx - 1, by + 2, rad * 0.34, rad * 0.28, bx, 0.2, 8), TERRAIN.backDeep, 0.36);
     }
   }
-  // Knuckles where it meets the ground.
-  for (const [kx, dir] of [
-    [s.x - 14, -1],
-    [x1 + 16, 1],
-  ] as const) {
-    const toe = quad(kx, y1 - 6, kx + dir * 16, y1 + 2, kx + dir * 34, y1 + 10, 6);
-    strand(toe, (t) => 16 * (1 - t) + 3, 0.6, 0.6);
-  }
-  mossCap(p, s.x + 14, x1 - 14, s.y, {
-    seed: s.x + 6,
-    thick: 7,
-    drip: 12,
-  });
-  // Moss creeping down the two shoulders.
-  for (const [mx, dir] of [
-    [s.x + 8, -1],
-    [x1 - 8, 1],
-  ] as const) {
+  // Lesser roots braided over it: each climbs the face, crosses the crest line just below the
+  // walk surface, and dives into the earth on the far side.
+  const braid = (xa: number, xb: number, hump: number, w0: number, sd: number, light: number): void => {
     const line = wander(
-      quad(mx + dir * -8, s.y + 4, mx + dir * 4, s.y + 12, mx + dir * 10, s.y + range(r, 34, 56), 8),
-      2,
-      mx,
-      20,
+      cubic(xa, y1 + 14, lerp(xa, xb, 0.2), s.y + hump, lerp(xa, xb, 0.75), s.y + hump + 8, xb, y1 + 14, 20),
+      4,
+      sd,
+      36,
+    ).map((v, i) => (i % 2 ? Math.max(v, s.y + 9) : v));
+    strand(line, (t) => w0 * (0.7 + 0.5 * Math.sin(Math.PI * t)) * (1 - 0.25 * t), 0.78, light);
+  };
+  braid(s.x - 58, s.x + s.w * 0.62, -18, 15, s.x + 31, 0.9);
+  braid(s.x + s.w * 0.3, x1 + 66, -6, 18, s.x + 32, 0.7);
+  braid(s.x + s.w * 0.5, x1 + 26, 24, 10, s.x + 33, 0.5);
+  // Feeders running out along the ground.
+  for (const [fx, d] of [
+    [s.x - 40, -1],
+    [x1 + 44, 1],
+  ] as const) {
+    const feeder = wander(
+      quad(fx, y1 - 2, fx + d * 40, y1 - 9, fx + d * range(r, 70, 100), y1 + 8, 10),
+      3,
+      fx,
+      30,
     );
+    strand(
+      feeder.map((v, i) => (i % 2 ? Math.max(v, y1 - 7) : v)),
+      (t) => 12 * (1 - t) + 2,
+      0.62,
+      0.5,
+    );
+  }
+  mossCap(p, s.x + 10, x1 - 10, s.y, { seed: s.x + 6, thick: 7, drip: 10, bare: 0.45 });
+  // Moss saddles slumped over the front of the root in two places.
+  for (const t of [0.3, 0.68]) {
+    const [mx, my] = at(t + range(r, -0.04, 0.04), 0);
+    const len = range(r, 26, 40);
+    const line = wander(
+      quad(mx, my + 3, mx + range(r, -6, 6), my + len * 0.5, mx + range(r, -8, 8), my + len, 8),
+      3,
+      mx,
+      16,
+    );
+    const tone = mossTone(mx, s.y, s.x, 0);
     p.solid(
-      ribbon(line, (t) => 8 * (1 - t) ** 0.6 + 1.5),
-      mix(TERRAIN.mossDark, TERRAIN.bark, 0.4),
-      0.78,
+      ribbon(line, (q) => 26 * (1 - q) ** 0.7 + 3),
+      mix(tone.dark, TERRAIN.bark, 0.2),
+      0.8,
       { moss: 1 },
     );
     p.solid(
-      ribbon(line, (t) => 4 * (1 - t) ** 0.8 + 0.8),
-      TERRAIN.mossDark,
-      0.8,
+      ribbon(line, (q) => 14 * (1 - q) ** 0.9 + 1.5),
+      tone.dark,
+      0.86,
       { moss: 1 },
     );
   }
   info.tops.push({ x0: s.x, x1, y: s.y, kind: 'root', freeL: true, freeR: true });
-  info.keepClear.push([s.x - 70, x1 + 70]);
+  info.keepClear.push([s.x - 80, x1 + 80]);
+  info.lee.push(
+    { x: s.x - 44, y: y1, size: 52 },
+    { x: x1 + 52, y: y1, size: 64 },
+    { x: x1 + 96, y: y1, size: 40 },
+  );
 }
 
 // ---------------------------------------------------------------------------------------------

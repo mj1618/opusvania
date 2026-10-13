@@ -1097,6 +1097,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
     const n = 2 + Math.floor(tr() * 2);
     for (let i = 0; i < n; i++) spray(tc, tw.x, tw.y, tw.angle + range(tr, -0.9, 0.9), range(tr, 30, 56), t);
   }
+  for (const l of info.lee) fern(tc, l.x, l.y + 1, l.size, toneAt(BACK, l.x, tr, l.y));
   // Leaves along the thick vines that wind round the trunks.
   const ir = rngFor(31, 7);
   for (const v of info.ivy) {

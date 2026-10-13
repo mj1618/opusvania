@@ -53,7 +53,7 @@
 ## Knobs (config object at the top of each file)
 `TERRAIN` palette, moss lift/thickness/drip, `mossBare`, `faceUndercut`, `waterDepth`; `BAKE` blur sigmas, bump, key, shadow, interior, `beamWidth`, brushwork (`planes`, `strokes`, `crevice`, `chips`);
 `PLANTS` feature gap, `rearGap`, `backdropGap`, `heroGap`, `glowShare` (per zone), `autumnEvery`, `fineShare`, grass cover and heights, fringe, wind/bend per px, halo alpha, `glowEvery`;
-`FIELD` spring stiffness/damping, reach, land kick, glow rise/fall; `WATER` colours, alphas, ripples;
+`FIELD` spring stiffness/damping, reach, land kick/reach/time/width, glow rise/fall; `WATER` colours, alphas, ripples;
 `PLAYFIELD` bake scale range, glow gains.
 
 ## Gotchas
@@ -79,6 +79,10 @@
   clusters (never stacked). Shrub lobes are lumpy `cloud()` fans with rim leaves, never plain `fan()` discs with a
   strip under them (that combination read as snowmen and balls on blocks).
 - `npm run clip` centres on the character: to film the pool, stand in or beside it, or use `__game.cam` stills.
+- Landing shiver is a ring (`BendField.waves`) that travels `landReach` px in `landTime` s, scaled by impact speed;
+  it adds velocity, so plants overshoot and wobble back on the cell springs.
+- Other agents' saves full-reload the page between `playwright-cli` calls: capture a motion sequence inside ONE
+  `eval` (step, `g.render()`, `drawImage` the game canvas into a 2D canvas, return a JPEG data URL).
 - GLSL: `cast` is a reserved word. Destroy shaders before the textures bound to them or Pixi warns.
 - Bake scale is fixed at boot (`viewScale` clamped to 1.5..2); a later resize does not rebake.
 - Tops are honest to within ~6 px (`__game.debug.hitboxes(true)` to check). Island tapers, ledge sag and the
