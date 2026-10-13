@@ -120,6 +120,8 @@ export interface TerrainInfo {
   faces: Face[];
   /** Ends of painted limbs: leaf sprays grow here. Dark unless `lit` (limbs in the walk plane). */
   twigs: Array<{ x: number; y: number; angle: number; lit?: boolean }>;
+  /** What each floating island hangs from: grip points at its two ends and how it is held. */
+  hangers: Array<{ xl: number; xr: number; y: number; mode: 'pair' | 'root' | 'yoke'; side: -1 | 1 }>;
   /** Authored props that hold a small light: a dim halo goes here. */
   lanterns: Array<{ x: number; y: number; violet?: boolean }>;
   /** Sheltered spots beside big terrain where a fern grows. */
@@ -174,6 +176,7 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
     keepClear: [],
     lee: [],
     lanterns: [],
+    hangers: [],
     pockets: [],
     pool: poolSeg
       ? {
@@ -237,7 +240,7 @@ function mossTone(x: number, y: number, seed: number, dull: number): { dark: num
   let body = mix(TERRAIN.moss, TERRAIN.mossOlive, olive * 0.8);
   body = mix(body, sun > 0.5 ? TERRAIN.mossSun : TERRAIN.mossShade, Math.abs(sun - 0.5) * 1.1);
   const z = zoneAt(x);
-  body = mix(mix(mix(body, 0x1f6456, z.cool * 0.4), 0x6c8438, z.warm * 0.22), 0x165040, z.deep * 0.45);
+  body = mix(mix(mix(body, 0x1f6456, z.cool * 0.4), 0x7c7a2a, z.warm * 0.5), 0x1c2c52, z.deep * 0.5);
   let dark = mix(TERRAIN.mossDark, mix(TERRAIN.mossOlive, TERRAIN.mossDark, 0.6), olive * 0.7);
   if (dull > 0) {
     body = mix(body, 0x10424a, dull);
@@ -995,7 +998,7 @@ function paintBackdrop(p: Paint, scene: Scene, info: TerrainInfo): void {
       // Smallest first so the big one overlaps its neighbours.
       for (const rock of rocks.slice().reverse()) {
         const { w, h, tilt } = rock;
-        const stoneBase = haze(mix(TERRAIN.back, TERRAIN.stone[r() < 0.5 ? 2 : 6] as number, 0.45), 0.28);
+        const stoneBase = haze(mix(TERRAIN.backDeep, TERRAIN.stone[r() < 0.5 ? 2 : 6] as number, 0.3), 0.06);
         // Outline: a lopsided run of corners over the top, wide straight base below ground.
         const nTop = 5 + Math.floor(r() * 2);
         const crown: Array<[number, number]> = [];
@@ -1804,8 +1807,8 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivi
     );
     p.tint(
       ribbon(line, () => wd),
-      TERRAIN.barkDark,
-      0.22,
+      TERRAIN.abyss,
+      0.34,
     );
   }
   // Moss patches, mostly up the shaded side.
@@ -2653,44 +2656,15 @@ function paintFloating(p: Paint, s: SolidRect, index: number, info: TerrainInfo)
     bare = 0.3;
   }
 
-  // What holds it up: a bundle of old vines coming down out of the canopy, lashed round each end.
-  // Dark and thin (the back plane), so they read as rigging, not as something to climb.
+  // What holds it up: living growth from the canopy (pf-plants.ts grows it from info.hangers,
+  // so it sways and carries leaves). Here only the lashings where it grips the rim are painted.
   {
     const vr = rngFor(s.x, 61);
-    for (const [ex, lean] of [
-      [s.x + range(vr, 14, 34), range(vr, -60, 20)],
-      [x1 - range(vr, 14, 34), range(vr, -20, 60)],
-    ] as const) {
-      const n = 2 + Math.floor(vr() * 2);
-      for (let i = 0; i < n; i++) {
-        const ox = (i - (n - 1) / 2) * range(vr, 5, 9);
-        // Each strand takes its own slack curve up into the canopy and they cross each other.
-        const bow = range(vr, -70, 70);
-        const line = wander(
-          cubic(
-            ex + ox,
-            s.y + 26,
-            ex + ox + bow,
-            s.y - 220,
-            ex + lean * 0.6 - bow * 0.6,
-            s.y - 520,
-            ex + lean * 1.8 + ox * 6,
-            -OUT,
-            26,
-          ),
-          16,
-          s.x + ex + i,
-          120,
-        );
-        const w0 = range(vr, 3, 6.5);
-        p.solid(
-          ribbon(line, () => w0),
-          i % 2 ? TERRAIN.backDeep : TERRAIN.back,
-          0.27,
-          { bark: 0.4 },
-        );
-      }
-      // The lashing: a few turns round the rim.
+    const mode = (['pair', 'root', 'yoke'] as const)[index % 3] ?? 'pair';
+    const xl = s.x + range(vr, 16, 34);
+    const xr = x1 - range(vr, 16, 34);
+    const grips = mode === 'root' ? [flip ? xl : xr] : [xl, xr];
+    for (const ex of grips) {
       for (let k = 0; k < 3; k++) {
         const ly = s.y + 12 + k * 7;
         p.solid(
@@ -2701,13 +2675,19 @@ function paintFloating(p: Paint, s: SolidRect, index: number, info: TerrainInfo)
         );
       }
     }
+    info.hangers.push({ xl, xr, y: s.y + 18, mode, side: flip ? -1 : 1 });
   }
   // Belly shadow: the underside falls away from the light.
   if (kind !== 'fungus') {
     const belly: number[] = [];
     for (let x = s.x - 6; x <= x1 + 6; x += 8) belly.push(x, s.y + s.h * 0.72 + sag((x - s.x) / s.w) * 0.35);
     for (let x = x1 + 6; x >= s.x - 6; x -= 8) belly.push(x, y1 + 140);
-    p.tint(belly, TERRAIN.backDeep, 0.32);
+    p.tint(belly, TERRAIN.abyss, 0.6);
+    p.tint(
+      belly.map((v, i) => (i % 2 ? v + 22 : v)),
+      TERRAIN.abyss,
+      0.5,
+    );
   }
   mossCap(p, s.x, x1, s.y, {
     seed: s.x + 2,

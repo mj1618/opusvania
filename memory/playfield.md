@@ -55,7 +55,10 @@
   meant to be barely visible. Ground tops carry a rounded moss crown (`crownLift` + `crownMound`). The sun map
   is discrete pools (most ground gets none); plant tone bases are near-black and only tips in a pool are bright.
   Glow plants are rare (`glowShare`), small and dim. One hollow per screen.
-- **Islands hang** from slack vine bundles lashed to each end (back plane, baked). **Props** (`paintProps`):
+- **Islands hang** from living growth in the plant mesh (`hangVine`, from `info.hangers`): three modes by island
+  index (pair of bundles, one great aerial root, a yoke to a single stem). Vines sway in the middle only (their
+  vertices weight by sin so both ends stay put); only the lashings are baked. **The lip is in front**: a low moss
+  skin with drips and rootlets in `playfieldFront`, plus ankle-high root humps and stones every ~500 px. **Props** (`paintProps`):
   a carved standing stone by the pool, a cocoon lantern under the great bough, a moth shrine at the right;
   `info.lanterns` gives them a dim halo. Plants call `contact()` for a ground shadow under anything big.
 

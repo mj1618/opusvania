@@ -77,22 +77,22 @@ function toneAt(base: Tone, x: number, r: Rng, y = 1200): Tone {
   const zone = (c: number, coolC: number, warmC: number, deepC: number, k: number): number =>
     mix(mix(mix(c, coolC, z.cool * k), warmC, z.warm * k), deepC, z.deep * k);
   return {
-    dark: zone(mix(base.dark, 0x061c2c, cool * 0.6), 0x05182c, 0x1c1a0c, 0x0e0c26, 0.6),
+    dark: zone(mix(base.dark, 0x061c2c, cool * 0.6), 0x05182c, 0x221a08, 0x160a2a, 0.75),
     mid: zone(
       mix(mix(mix(base.mid, 0x17666a, cool), base.lit, sun * 0.3), base.dark, dim),
-      0x0e4a58,
-      0x4a4a1c,
-      0x1a1c4a,
-      0.5,
+      0x0c4c5a,
+      0x5c4e16,
+      0x2c1a56,
+      0.7,
     ),
     lit: zone(
       mix(mix(mix(base.lit, 0x3fa78a, cool), base.sun, sun * 0.6), base.mid, dim * 1.6),
-      0x4aa4a8,
-      0xb0a848,
-      0x2f8a5a,
-      0.4,
+      0x1fae96,
+      0xc8a430,
+      0x2f9a5a,
+      0.55,
     ),
-    sun: zone(mix(base.sun, base.lit, 1 - sun), 0x98d8d0, 0xf0d070, 0x7fbf8a, 0.4),
+    sun: zone(mix(base.sun, base.lit, 1 - sun), 0x58dcb4, 0xf4c850, 0x6fcf7a, 0.55),
   };
 }
 
@@ -156,6 +156,107 @@ function grassTuft(
       t,
     );
   }
+}
+
+/**
+ * Hanging growth holding something up: from (x0, y0) at the bottom up to (x1, y1), bowing sideways
+ * by `bow`. Thick at the top, thinner where it grips. It sways in its middle only (both ends are
+ * held), carries leaves, moss beards and now and then a blossom; `stout` adds knuckles and a lit rim.
+ */
+function hangVine(
+  c: Ctx,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  bow: number,
+  w0: number,
+  t: Tone,
+  stout = false,
+  dress = 1,
+): void {
+  const { b, r } = c;
+  const len = Math.hypot(x1 - x0, y1 - y0);
+  const n = Math.max(8, Math.round(len / 26));
+  const phase = r();
+  const kink = r() * 6;
+  const pts: number[] = [];
+  for (let i = 0; i <= n; i++) {
+    const u = i / n;
+    const q = 1 - u;
+    const mxp = (x0 + x1) / 2 + bow;
+    const px =
+      q * q * x0 +
+      2 * q * u * mxp +
+      u * u * x1 +
+      (Math.sin(u * 5 + kink) * 22 + Math.sin(u * 13 + kink * 2) * 7) *
+        Math.sin(Math.PI * u) *
+        Math.min(1, len / 500);
+    pts.push(px, y0 + (y1 - y0) * u);
+  }
+  // Everything on this vine shares one base (its foot) and weights by sin, so the ends stay put.
+  b.plant(x0, y0, 100000, phase, 9 + len * 0.012, 5, 0);
+  const sway = (u: number): number => Math.sin(Math.PI * Math.min(1, u * 1.15)) ** 1.2 * 0.75;
+  let pl = -1;
+  let pr = -1;
+  const wood = mix(t.dark, 0x2a2420, 0.5);
+  for (let i = 0; i <= n; i++) {
+    const u = i / n;
+    const hw = (w0 * (0.45 + 0.55 * u) + (stout ? Math.max(0, Math.sin(u * 23 + kink)) * w0 * 0.14 : 0)) / 2;
+    const x = pts[i * 2] as number;
+    const y = pts[i * 2 + 1] as number;
+    b.fixedH = sway(u);
+    const l = b.v(x - hw, y, wood);
+    const rr = b.v(x + hw, y, mix(wood, t.lit, stout ? 0.42 : 0.3));
+    if (pl >= 0) {
+      b.tri(pl, pr, l);
+      b.tri(pr, rr, l);
+    }
+    pl = l;
+    pr = rr;
+  }
+  // Dressing: leaves in pairs, beards of moss, a rare pale blossom. Thinner near the canopy.
+  for (let i = 1; i < n; i++) {
+    const u = i / n;
+    if (r() > 0.62 * dress * (1 - u * 0.45)) continue;
+    const x = pts[i * 2] as number;
+    const y = pts[i * 2 + 1] as number;
+    b.fixedH = sway(u);
+    const roll = r();
+    if (roll < 0.62) {
+      const side = r() < 0.5 ? -1 : 1;
+      for (let k = 0; k < 2; k++) {
+        const a = Math.PI / 2 - side * range(r, 0.5, 1.3) * (k ? -1 : 1);
+        const ll = range(r, 9, 16);
+        const lit = Math.cos(a) > 0 ? mix(t.mid, t.lit, 0.7) : t.mid;
+        b.leaf(x, y, a, ll, ll * 0.5, t.dark, lit, mix(lit, t.dark, 0.5), 0, 1, 3);
+      }
+    } else if (roll < 0.93) {
+      const bl = range(r, 14, 34) * (stout ? 1.3 : 1);
+      for (let k = 0; k < 3; k++) {
+        const ox = (k - 1) * range(r, 2, 4);
+        const line = [
+          x + ox,
+          y,
+          x + ox + range(r, -3, 3),
+          y + bl * 0.5,
+          x + ox + range(r, -4, 4),
+          y + bl * range(r, 0.6, 1),
+        ];
+        b.strip(
+          line,
+          (q) => 3.4 * (1 - q) ** 0.8,
+          (q) => mix(t.dark, 0x051018, q * 0.5),
+          (q) => mix(t.mid, t.dark, q),
+        );
+      }
+    } else {
+      const pr2 = range(r, 2.6, 3.8);
+      for (let k = 0; k < 5; k++)
+        b.leaf(x, y + 4, (k / 5) * 6.283 + x, pr2, pr2 * 0.8, 0x8a84a8, 0xd8d0f0, 0xf4f0ff, 0, 1, 2);
+    }
+  }
+  b.fixedH = null;
 }
 
 /** A soft dark pool on the ground under something: what makes it sit instead of float. */
@@ -1054,6 +1155,83 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
       }
     }
 
+    // The lip, in front of the hero: a low rounded skin of moss that feet settle into (never above
+    // the ankle), overhanging the dark face in soft uneven drips, with rootlets trailing from it.
+    if (top.kind !== 'branch') {
+      const fc: Ctx = { b: g.front, halo: g.halo, r };
+      const fb = g.front;
+      const ls = top.x0 * 0.71 + top.y;
+      let pl = -1;
+      let pr = -1;
+      for (let x = a - 4; x <= b + 4; x += 7) {
+        const cover = smoothstep(-0.55, -0.1, noise1(x / 90, ls) * 0.7 + noise1(x / 23, ls + 3) * 0.3);
+        const rise =
+          (0.5 +
+            6.5 * ((noise1(x / 120, ls + 5) + 1) * 0.5) ** 1.6 +
+            Math.max(0, noise1(x / 19, ls + 6)) * 2) *
+          cover;
+        const drip =
+          6 + 9 * ((noise1(x / 31, ls + 7) + 1) * 0.5) ** 2 + 16 * Math.max(0, noise1(x / 11, ls + 9) - 0.55);
+        const t = toneAt(FRONT, x, r, top.y);
+        const sun = sunAt(x, top.y);
+        fb.plant(x, top.y, 4000, 0, 0, 0, 0);
+        fb.fixedH = 0;
+        const l = fb.v(x, top.y - rise, mix(t.dark, t.mid, 0.35 + 0.5 * sun), cover);
+        const rr = fb.v(x, top.y + (isGround ? drip : drip * 0.5) * cover, t.dark, cover * 0.95);
+        fb.fixedH = null;
+        if (pl >= 0) {
+          fb.tri(pl, pr, l);
+          fb.tri(pr, rr, l);
+        }
+        pl = l;
+        pr = rr;
+        if (isGround && cover > 0.8 && r() < 0.07) dangleRoot(fc, x, top.y + drip * 0.7, range(r, 10, 26));
+        if (cover > 0.8 && r() < 0.09) mossTuft(fc, x, top.y + drip * 0.6, range(r, 8, 20), t);
+      }
+    }
+    // Low things in front that interrupt the line: a root hump breaking the surface, a half-buried
+    // stone. Dark, rounded, ankle-high.
+    if (isGround) {
+      const fb = g.front;
+      for (let x = a + range(r, 200, 520); x < b - 80; x += range(r, 380, 640)) {
+        if (blocked(x)) continue;
+        const t = toneAt(FRONT, x, r, top.y);
+        fb.plant(x, top.y, 4000, 0, 0, 0, 0);
+        fb.fixedH = 0;
+        if (r() < 0.5) {
+          const w = range(r, 50, 90);
+          const line: number[] = [];
+          for (let i = 0; i <= 10; i++) {
+            const u = i / 10;
+            line.push(x + (u - 0.5) * w, top.y + 9 - Math.sin(Math.PI * u) ** 0.8 * range(r, 15, 17));
+          }
+          fb.strip(
+            line,
+            (u) => 9 * Math.sin(Math.PI * clamp(u, 0.04, 0.96)) ** 0.5 + 2,
+            () => mix(0x0a1418, t.mid, 0.25),
+            () => 0x05090c,
+          );
+        } else {
+          const rw = range(r, 22, 38);
+          const rh = range(r, 11, 17);
+          const c0 = fb.v(x, top.y + 2, 0x070d12);
+          let prev = -1;
+          for (let i = 0; i <= 9; i++) {
+            const ang = Math.PI + (Math.PI * i) / 9;
+            const lump = 1 + 0.16 * Math.sin(i * 2.1 + x);
+            const v = fb.v(
+              x + Math.cos(ang) * rw * lump,
+              top.y + 5 + Math.sin(ang) * rh * lump,
+              mix(0x0a1218, t.mid, 0.3 + 0.3 * Math.max(0, Math.cos(ang - 5.3))),
+            );
+            if (prev >= 0) fb.tri(c0, prev, v);
+            prev = v;
+          }
+          mossTuft({ b: fb, halo: g.halo, r }, x - rw * 0.3, top.y - rh * 0.6, 7, t);
+        }
+        fb.fixedH = null;
+      }
+    }
     // Break the horizon: every few hundred px a tall dark clump stands in front of the walk line.
     if (isGround) {
       const fc: Ctx = { b: g.front, halo: g.halo, r };
@@ -1119,6 +1297,66 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
     const t = toneAt(tw.lit ? BACK : FRONT, tw.x, tr, tw.y);
     const n = 2 + Math.floor(tr() * 2);
     for (let i = 0; i < n; i++) spray(tc, tw.x, tw.y, tw.angle + range(tr, -0.9, 0.9), range(tr, 30, 56), t);
+  }
+  // What the islands hang from.
+  const hr = rngFor(41, 3);
+  const hc: Ctx = { b: g.back, halo: g.halo, r: hr };
+  for (const h of info.hangers) {
+    const t = toneAt(REAR, (h.xl + h.xr) / 2, hr, h.y - 200);
+    const topY = -420;
+    if (h.mode === 'pair') {
+      for (const [ex, lean] of [
+        [h.xl, range(hr, -90, 10)],
+        [h.xr, range(hr, -10, 90)],
+      ] as const) {
+        const n = 2 + Math.floor(hr() * 2);
+        for (let i = 0; i < n; i++)
+          hangVine(
+            hc,
+            ex + (i - (n - 1) / 2) * 5,
+            h.y,
+            ex + lean + range(hr, -40, 40),
+            topY,
+            range(hr, -90, 90),
+            range(hr, 7, 12) - i * 1.5,
+            t,
+          );
+      }
+    } else if (h.mode === 'root') {
+      // One great aerial root holds it from one side; a thin vine steadies the other.
+      const ex = h.side > 0 ? h.xr : h.xl;
+      hangVine(
+        hc,
+        ex,
+        h.y,
+        ex + h.side * range(hr, 160, 260),
+        topY,
+        h.side * range(hr, 60, 120),
+        range(hr, 22, 28),
+        t,
+        true,
+      );
+      hangVine(
+        hc,
+        ex - h.side * 8,
+        h.y,
+        ex + h.side * range(hr, 90, 150),
+        topY,
+        h.side * range(hr, 20, 70),
+        9,
+        t,
+      );
+      const ox = h.side > 0 ? h.xl : h.xr;
+      hangVine(hc, ox, h.y, ox - h.side * range(hr, 20, 80), topY, range(hr, -70, 70), 6, t);
+    } else {
+      // A yoke: both ends rise to one knot above the middle, and a single thick stem goes on up.
+      const mx = (h.xl + h.xr) / 2 + range(hr, -30, 30);
+      const ky = h.y - range(hr, 150, 210);
+      hangVine(hc, h.xl, h.y, mx, ky, -30, 8, t, false, 0.5);
+      hangVine(hc, h.xr, h.y, mx, ky, 30, 8, t, false, 0.5);
+      hangVine(hc, mx, ky, mx + range(hr, -90, 90), topY, range(hr, -60, 60), 15, t, true);
+      hangVine(hc, mx + 4, ky, mx + range(hr, -60, 60), topY, range(hr, -80, 80), 7, t);
+    }
   }
   for (const l of info.lanterns) {
     g.halo.plant(l.x, l.y, 10, tr(), 0, 0, 0);
