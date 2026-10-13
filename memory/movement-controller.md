@@ -41,10 +41,12 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
   - While gliding `airTopY` follows her, so `land.fallPx` counts from where the wings let go and a glided
     landing is never `hard`.
 - `land.vy` falls back to `vy` when the move ended exactly on the ground (it used to report 0 then).
-- **Slash** (combat.md): never changes movement by itself. On a hit: `hitstop` (the whole controller
-  holds, presses still latch), `kickX` (a fading shove added to `vx` in the move), and the pogo (`vy =
-  -15.5`, dash + double jump refilled). Order: freeze → latch → `updateSlash` → mode update → move →
-  post → `resolveSlash` (hits are tested at the new position).
+- **Slash** (combat.md): never locks movement. It adds a lunge (`lungeX`, ground forward slashes, never
+  off a ledge unless forward is held) and a short air hang (fall above 1.5 px/f halved per frame for
+  4-6 frames, once per combo step per airtime); on a hit: `hitstop` (the whole controller holds,
+  presses still latch), `kickX` (a fading shove back) and the pogo (`vy = -15.5`, dash + double jump
+  refilled). `kickX` and `lungeX` are added to `vx` in the move only. Order: freeze → latch →
+  `updateSlash` → mode update → `guardLunge` → move → post → `resolveSlash` (hits at the new position).
 - **Corner corrections**: head bump (slide ≤ 20 px sideways around a ceiling corner), ledge pop-up (≤ 16 px
   up onto a lip), dash (≤ 24 px up/down). Each emits `cornerCorrect`.
 - **Performance**: no closures in the per-step path; keep `solidAt` allocation-free.

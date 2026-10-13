@@ -45,6 +45,9 @@ void main() {
   float k = h * sqrt(h);
   float dx = (wind(aBase.x, uTime.x, aBase.w) * aSway.x + bend * aSway.y) * k;
   vec2 pos = aPosition + vec2(dx, abs(dx) * aSway.z * h);
+  // Cut grass: blades (droop 0.35-0.4 marks them) in a freshly slashed cell stand shorter.
+  float grass = step(0.33, aSway.z) * step(aSway.z, 0.42);
+  pos = mix(pos, mix(aBase.xy, pos, 1.0 - 0.55 * f.b), grass);
   mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
   gl_Position = vec4((mvp * vec3(pos, 1.0)).xy, 0.0, 1.0);
   float breath = 0.5 + 0.5 * sin(uTime.x * 1.25 + aBase.w * 6.283 + aBase.x * 0.01);

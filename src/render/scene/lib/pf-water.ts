@@ -60,7 +60,7 @@ uniform mat4 uRipples;  // per column: x, start time, amplitude, -
 uniform mat4 uLights;   // columns 0/2: x, y, radius, intensity; 1/3: rgb
 uniform vec4 uPlayer;   // x, half width, in water 0..1, speed
 uniform float uFish;    // opacity of the fish
-uniform vec4 uSplash;   // x, start time, strength, -
+uniform vec4 uSplash;   // x, start time, strength, spread (px: droplets start along a line this wide)
 uniform vec4 uAlpha;    // back top, back bottom, front top, front bottom
 uniform vec3 uShallow;
 uniform vec3 uDeep;
@@ -104,7 +104,7 @@ void main() {
       float fi = float(i);
       float vx = (hash(fi + 1.3) - 0.5) * 210.0;
       float vy = 90.0 + hash(fi + 7.1) * 150.0;
-      vec2 dp = vec2(uSplash.x + vx * sAge, s - (vy * sAge - 330.0 * sAge * sAge) * uSplash.z);
+      vec2 dp = vec2(uSplash.x + (hash(fi + 11.9) - 0.5) * uSplash.w + vx * sAge, s - (vy * sAge - 330.0 * sAge * sAge) * uSplash.z);
       float rad = (2.6 + 2.4 * hash(fi + 3.7)) * (1.0 - sAge * 0.7);
       acc += 1.0 - smoothstep(rad - 1.4, rad, length(vWorld - dp));
     }
@@ -285,6 +285,21 @@ export class Water {
     this.front = make(this.timeFront);
   }
 
+  /** A slash across the surface: a line of droplets and a ripple. `box` in world px. */
+  slash(box: { x: number; y: number; w: number; h: number }, clock: number, power: number): void {
+    const p = this.pool;
+    if (box.x + box.w < p.x0 || box.x > p.x1 || box.y > p.surface + 6 || box.y + box.h < p.surface - 6)
+      return;
+    const x0 = Math.max(p.x0 + 8, box.x);
+    const x1 = Math.min(p.x1 - 8, box.x + box.w);
+    if (x1 <= x0) return;
+    this.ripple((x0 + x1) / 2, clock, 1.6 * power);
+    this.splash[0] = (x0 + x1) / 2;
+    this.splash[1] = clock + 0.03;
+    this.splash[2] = 0.55 * power;
+    this.splash[3] = x1 - x0;
+  }
+
   private ripple(x: number, clock: number, amp: number): void {
     const i = this.next * 4;
     this.ripples[i] = x;
@@ -319,6 +334,7 @@ export class Water {
         this.splash[0] = e.x;
         this.splash[1] = clock;
         this.splash[2] = Math.min(1.5, 0.6 + e.vy / 18);
+        this.splash[3] = 0;
       }
     }
     // Now and then something rises: a small ring somewhere on the surface.

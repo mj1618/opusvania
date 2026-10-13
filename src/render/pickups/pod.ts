@@ -38,6 +38,12 @@ export const POD = {
   kickSquash: 5,
   /** Sway in the wind, radians per unit of wind(). */
   sway: 0.09,
+  /** Size of a pod that takes 1, 2, 3 hits. */
+  scale: [1, 1.2, 1.4],
+  /** How far the crescents stand ajar once a tough pod has taken all but its last hit. */
+  ajar: 0.24,
+  /** A finisher (power 2) throws this much more into the springs. */
+  finisher: 1.6,
 };
 
 /**
@@ -80,6 +86,13 @@ export class PodView {
   glow = 1;
   spent = false;
   private readonly bracts: Bract[] = [];
+  /** Armour: an outer ring of sepals per extra hit it takes, outermost first; each peels on a hit. */
+  private readonly armour: Bract[][] = [];
+  private readonly peel: number[] = [];
+  private readonly peelV: number[] = [];
+  /** Hits taken so far (0 .. tier - 1 while it is still shut). */
+  damage = 0;
+  private readonly size: number;
   private readonly light = new Graphics();
   private readonly husk = new Container();
   private readonly dir: 1 | -1;
@@ -95,12 +108,15 @@ export class PodView {
   /** Bracts and ember have settled: nothing but the sway needs touching. */
   private settled = false;
 
+  /** `tier` = hits it takes to open: 1, 2 or 3. Tougher pods are larger and armoured. */
   constructor(
     readonly pod: Pod,
     scene: Scene,
     seed: number,
+    readonly tier = 1,
   ) {
     this.seed = seed;
+    this.size = POD.scale[Math.min(3, Math.max(1, tier)) - 1] ?? 1;
     const S = POD.size;
     const hang = pod.mount === 'hang';
     this.dir = hang ? -1 : 1;
@@ -119,7 +135,7 @@ export class PodView {
     // away from it, so a hanging pod is the same drawing turned over. `stemLen` = pivot to husk base.
     const pivot = hang ? attachAbove(scene, pod.x, pod.y - S) : pod.y + S;
     const stemLen = hang ? Math.max(0, pod.y - S - pivot) : POD.stalk;
-    this.arm = S + stemLen;
+    this.arm = S * this.size + stemLen;
     this.root.position.set(pod.x, pivot);
     this.root.scale.y = this.dir;
     this.cx = pod.x;
@@ -128,7 +144,7 @@ export class PodView {
     const base = new Graphics();
     // The stalk: sturdy and a little bowed.
     const bow = lean * Math.min(6, stemLen * 0.3);
-    const sw = hang ? 1.5 : 2.6;
+    const sw = (hang ? 1.5 : 2.6) * (0.7 + 0.3 * this.size * this.size);
     base
       .moveTo(-sw, 3)
       .quadraticCurveTo(bow - sw * 0.8, -stemLen * 0.5, -sw * 0.7, -stemLen - 2)
@@ -213,8 +229,8 @@ export class PodView {
       this.husk.addChild(g);
       this.bracts.push({ g, closed, open, side });
     };
-    bract(-1, false, 0, 0.36);
-    bract(1, false, 0, -0.36);
+    bract(-1, false, 0, -0.36);
+    bract(1, false, 0, 0.36);
     // The light inside: soft, three nested lenses down the seam of the panel.
     for (const [wd, a, col] of [
       [8.5, 0.16, 0xff9a3a],
@@ -227,8 +243,35 @@ export class PodView {
         .bezierCurveTo(-wd * 0.8, -H * 0.72, -wd, -H * 0.34, 0, -H * 0.1)
         .fill({ color: col, alpha: a });
     this.husk.addChild(this.light);
-    bract(-1, true, 0, 0.98);
-    bract(1, true, 0, -0.98);
+    bract(-1, true, 0, -0.98);
+    bract(1, true, 0, 0.98);
+    // Armour: for each extra hit it takes, a ring of two thick dark sepals over the lower husk,
+    // the outer ring shorter and wider. A hit peels the outermost ring that is left.
+    const ARMOUR = tone(HUSK.panel, w);
+    for (let ring = tier - 2; ring >= 0; ring--) {
+      // ring 0 is the outermost.
+      const reach = H * (ring === 0 && tier === 3 ? 0.5 : 0.68);
+      const wide = 23 + (ring === 0 && tier === 3 ? 2.5 : 0);
+      const layer: Bract[] = [];
+      for (const side of [-1, 1]) {
+        const g = new Graphics();
+        g.moveTo(0, 2)
+          .bezierCurveTo(side * wide * 1.1, 0, side * wide * 1.05, -reach * 0.7, side * wide * 0.45, -reach)
+          .bezierCurveTo(side * wide * 0.5, -reach * 0.55, side * wide * 0.28, -reach * 0.2, 0, 2)
+          .fill({ color: ring === 0 ? ARMOUR : FRONT });
+        g.moveTo(side * wide * 0.98, -reach * 0.3)
+          .quadraticCurveTo(side * wide * 0.9, -reach * 0.75, side * wide * 0.47, -reach)
+          .stroke({ color: RIM, width: 1.1, alpha: side > 0 ? 0.6 : 0.22 });
+        g.moveTo(side * 4, 0)
+          .quadraticCurveTo(side * wide * 0.7, -reach * 0.2, side * wide * 0.7, -reach * 0.7)
+          .stroke({ color: DARK, width: 1, alpha: 0.5 });
+        this.husk.addChild(g);
+        layer.push({ g, closed: 0, open: side * (1.25 + 0.2 * ring), side });
+      }
+      this.armour.unshift(layer);
+      this.peel.push(0);
+      this.peelV.push(0);
+    }
     // The calyx: three short pointed sepals clasping the base.
     const calyx = new Graphics();
     for (const [a, len] of [
@@ -251,17 +294,30 @@ export class PodView {
     this.place();
   }
 
+  /** A slash hit it without opening it: a layer of armour peels, the seam widens, it jolts. */
+  hit(sx: number, sy: number, power: number, damage = this.damage + 1): void {
+    this.damage = Math.min(this.tier - 1, Math.max(this.damage, damage));
+    this.jolt(sx, sy, power * 1.25);
+    this.openV += 3;
+  }
+
   /** A slash opened it: `sx`, `sy` = the direction of the blow (unit-ish). */
-  strike(sx: number, sy: number): void {
+  strike(sx: number, sy: number, power = 1): void {
     this.spent = true;
-    this.settled = false;
+    this.damage = this.tier - 1;
     this.openV += 9;
+    this.jolt(sx, sy, power);
+  }
+
+  private jolt(sx: number, sy: number, power: number): void {
+    const k = power >= 2 ? POD.finisher : power;
+    this.settled = false;
     const hang = this.dir < 0;
     // Sideways blows swing it; vertical ones squash it and tip it a little to its own side.
     const side = Math.abs(sx) > 0.3 ? Math.sign(sx) : (this.seed > 0.5 ? 1 : -1) * 0.35;
     // Positive swing carries the husk toward +x, hanging or sitting.
-    this.swingV += side * (hang ? POD.kickHang : POD.kickSit);
-    this.squashV -= POD.kickSquash * (Math.abs(sy) > 0.3 ? 1.4 : 1);
+    this.swingV += side * (hang ? POD.kickHang : POD.kickSit) * k;
+    this.squashV -= POD.kickSquash * (Math.abs(sy) > 0.3 ? 1.4 : 1) * k;
     this.lean = side;
   }
 
@@ -270,9 +326,14 @@ export class PodView {
     this.swingV += v;
   }
 
-  /** Snap to closed (restart) or spent (already burst). */
-  set(spent: boolean): void {
+  /** Snap to closed with `damage` hits taken (restart: 0) or spent (already burst). */
+  set(spent: boolean, damage = 0): void {
     this.spent = spent;
+    this.damage = spent ? this.tier - 1 : Math.min(this.tier - 1, damage);
+    for (let j = 0; j < this.peel.length; j++) {
+      this.peel[j] = spent || j < this.damage ? 1 : 0;
+      this.peelV[j] = 0;
+    }
     this.openness = spent ? 1 : 0;
     this.glow = spent ? 0 : 1;
     this.openV = 0;
@@ -291,7 +352,17 @@ export class PodView {
     this.swingV += ((rest - this.swing) * (ks as number) - this.swingV * (cs as number)) * dt;
     this.swing += this.swingV * dt;
     if (!this.settled) {
-      const target = this.spent ? 1 : 0;
+      const target = this.spent ? 1 : this.tier > 1 ? (this.damage / (this.tier - 1)) * POD.ajar : 0;
+      let peeling = false;
+      for (let j = 0; j < this.peel.length; j++) {
+        const want = this.spent || j < this.damage ? 1 : 0;
+        const pv =
+          (this.peelV[j] as number) +
+          ((want - (this.peel[j] as number)) * 90 - (this.peelV[j] as number) * 7) * dt;
+        this.peelV[j] = pv;
+        this.peel[j] = (this.peel[j] as number) + pv * dt;
+        if (Math.abs(want - (this.peel[j] as number)) > 0.002 || Math.abs(pv) > 0.01) peeling = true;
+      }
       this.openV +=
         ((target - this.openness) * (POD.open[0] as number) - this.openV * (POD.open[1] as number)) * dt;
       this.openness += this.openV * dt;
@@ -301,6 +372,7 @@ export class PodView {
       this.glow = this.spent ? Math.max(0, this.glow - dt / POD.ember) : Math.min(1, this.glow + dt * 2);
       this.pose(clock);
       this.settled =
+        !peeling &&
         Math.abs(this.openness - target) < 0.002 &&
         Math.abs(this.openV) < 0.01 &&
         Math.abs(this.squash) < 0.002 &&
@@ -308,15 +380,31 @@ export class PodView {
         this.glow === (this.spent ? 0 : 1);
     } else if (!this.spent) {
       // Shut and at rest: only the seam breathes.
-      this.light.alpha = POD.seam * (1 + POD.breathe * Math.sin(clock * POD.breatheRate + this.seed * 6.283));
+      this.light.alpha = this.seamAlpha(clock);
     }
     this.root.rotation = this.swing * this.dir;
     this.place();
   }
 
+  /** The seam's opacity: tougher pods hold more light, and a damaged one leaks more. */
+  private seamAlpha(clock: number): number {
+    const more = 1 + 0.12 * (this.tier - 1) + 0.22 * this.damage;
+    const breathe = 1 + POD.breathe * Math.sin(clock * POD.breatheRate + this.seed * 6.283);
+    return Math.min(0.92, POD.seam * more * breathe);
+  }
+
   /** Bracts, tints, the light and the squash from the current spring values. */
   private pose(clock: number): void {
     const o = this.openness;
+    for (let j = 0; j < this.armour.length; j++) {
+      const k = this.peel[j] as number;
+      // A peeled sepal hangs limp and dull.
+      const d = Math.round(255 - 110 * Math.min(1, Math.max(0, k)));
+      for (const b of this.armour[j] as Bract[]) {
+        b.g.rotation = b.open * k;
+        b.g.tint = (d << 16) | (d << 8) | d;
+      }
+    }
     const dull = Math.round(255 - 120 * Math.min(1, Math.max(0, o)) * (1 - this.glow * 0.6));
     const tint = (dull << 16) | (dull << 8) | dull;
     for (const b of this.bracts) {
@@ -331,10 +419,11 @@ export class PodView {
       this.light.alpha = ember * 0.75;
       this.light.scale.set(0.7 + 0.9 * ember, 0.22 + 0.25 * ember);
     } else {
-      this.light.alpha = POD.seam * (1 + POD.breathe * Math.sin(clock * POD.breatheRate + this.seed * 6.283));
-      this.light.scale.set(1, 1);
+      this.light.alpha = this.seamAlpha(clock);
+      // The seam widens as the crescents come ajar.
+      this.light.scale.set(1 + 1.1 * Math.max(0, this.openness), 1);
     }
-    this.husk.scale.set(1 - this.squash * 0.1, 1 + this.squash * 0.14);
+    this.husk.scale.set(this.size * (1 - this.squash * 0.1), this.size * (1 + this.squash * 0.14));
   }
 
   /** Where the husk's centre and tip are in the world, from the swing. */
@@ -344,7 +433,7 @@ export class PodView {
     const cs = Math.cos(r) * this.dir;
     this.cx = this.root.x + this.arm * sn;
     this.cy = this.root.y - this.arm * cs;
-    const tip = this.arm + POD.size + 5;
+    const tip = this.arm + (POD.size + 5) * this.size;
     this.tipX = this.root.x + tip * sn;
     this.tipY = this.root.y - tip * cs;
   }

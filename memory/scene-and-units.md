@@ -15,7 +15,7 @@
 
 ## The scene: `content/scene/grove.json`
 `{id, width: 5760, height: 1600, spawn: {x, y}, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}],
-pickups: [{id, kind: glint|great, x, y}], pods: [{id, x, y, mount: sit|hang}]}` (pickups.md, combat.md),
+pickups: [{id, kind: glint|great, x, y}], pods: [{id, x, y, mount: sit|hang, hp?: 1-3}]}` (pickups.md, combat.md),
 validated by Zod in `src/scene/index.ts` (exports `GROVE`), typed in `src/sim/scene.ts`. Tags are for
 artists (`ground | pool | ledge | trunk | floating | root | branch`); the sim ignores them. The left,
 right and bottom scene edges are solid, the top is open. One-ways block only a falling body; Down+Jump

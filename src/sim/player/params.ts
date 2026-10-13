@@ -75,22 +75,52 @@ export interface MoveParams {
   glideTurn: number;
   glideCarriedDropPx: number;
 
-  /** The slash's geometry (read by `slashBox`). */
-  attack: Tuning['attack'];
-  attackStartup: number;
-  attackActive: number;
-  attackDuration: number;
-  attackCooldown: number;
+  /** The live tuning (the slash's geometry is read from it by `slashBox`). */
+  tuning: Tuning;
+  /** Combo steps 1-3 (index 0-2). */
+  steps: readonly SlashStep[];
   attackBuffer: number;
-  recoilFwd: number;
+  comboWindow: number;
   recoilDecay: number;
   recoilUp: number;
+  lungeFrames: number;
+  hangVy: number;
+  hangKeep: number;
   pogoSpeed: number;
   pogo: boolean;
 
   dropThroughFrames: number;
   footstepPx: number;
   hardLandFallPx: number;
+}
+
+/** One combo step's numbers, frames rounded. */
+export interface SlashStep {
+  startup: number;
+  active: number;
+  duration: number;
+  cooldown: number;
+  power: number;
+  hitstopBonus: number;
+  knockback: number;
+  recoil: number;
+  lunge: number;
+  hangFrames: number;
+}
+
+function slashStep(s: Tuning['slash1']): SlashStep {
+  return {
+    startup: Math.max(0, Math.round(s.startupFrames)),
+    active: Math.max(1, Math.round(s.activeFrames)),
+    duration: Math.max(1, Math.round(s.durationFrames)),
+    cooldown: Math.max(1, Math.round(s.cooldownFrames)),
+    power: s.power,
+    hitstopBonus: Math.max(0, Math.round(s.hitstopBonus)),
+    knockback: s.knockback,
+    recoil: s.recoil,
+    lunge: s.lunge,
+    hangFrames: Math.max(0, Math.round(s.hangFrames)),
+  };
 }
 
 export function resolveParams(t: Tuning): MoveParams {
@@ -173,15 +203,15 @@ export function resolveParams(t: Tuning): MoveParams {
     glideTurn: gl.turn,
     glideCarriedDropPx: gl.carriedDropPx,
 
-    attack: t.attack,
-    attackStartup: Math.max(0, Math.round(t.attack.startupFrames)),
-    attackActive: Math.max(1, Math.round(t.attack.activeFrames)),
-    attackDuration: Math.max(1, Math.round(t.attack.durationFrames)),
-    attackCooldown: Math.max(1, Math.round(t.attack.cooldownFrames)),
+    tuning: t,
+    steps: [slashStep(t.slash1), slashStep(t.slash2), slashStep(t.slash3)],
     attackBuffer: Math.max(1, Math.round(t.attack.bufferFrames)),
-    recoilFwd: t.attack.recoilFwd,
+    comboWindow: Math.max(0, Math.round(t.attack.comboWindowFrames)),
     recoilDecay: t.attack.recoilDecay,
     recoilUp: t.attack.recoilUp,
+    lungeFrames: Math.max(1, Math.round(t.attack.lungeFrames)),
+    hangVy: t.attack.hangVy,
+    hangKeep: t.attack.hangKeep,
     pogoSpeed: t.attack.pogoSpeed,
     pogo: a.pogo,
 

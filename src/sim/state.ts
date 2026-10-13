@@ -77,6 +77,19 @@ export interface PlayerState {
   attackSeq: number;
   attackHits: number;
   /**
+   * Combo step of the current (or last) slash: 1 the cut, 2 the return cut, 3 the finisher
+   * (`attackFinisher`). A down slash is always step 1 and leaves the chain where it was.
+   */
+  attackStep: number;
+  attackFinisher: boolean;
+  /**
+   * Lunge: extra horizontal px/f on top of `vx` from a forward slash on the ground, fading over a
+   * few frames (signed: the slash's side). `hang`: frames left of the air hang of a forward / up
+   * slash, while her fall is being held back.
+   */
+  lungeX: number;
+  hang: number;
+  /**
    * Hitstop frames left: a slash connected and the sim holds her for a beat (no movement, no
    * timers, `attackFrames` / `motionFrames` stand still; presses are still buffered). The rest of
    * the sim (pickups, pod glints, the frame count) and render time keep running.
@@ -111,6 +124,10 @@ export interface PlayerState {
   /** Slash: buffered press, and frames until the next one may start. */
   attackBuf: number;
   attackCd: number;
+  /** Combo: the step the chain is on (0 = none), frames left to continue it, hangs used this airtime (bits). */
+  comboStep: number;
+  comboTimer: number;
+  hangUsed: number;
 }
 
 /** Collectibles (src/sim/pickups.ts). */
@@ -133,19 +150,27 @@ export interface PickupsState {
 
 /** Lumen pods (src/sim/pods.ts). Every array has one entry per `scene.pods`, same order. */
 export interface PodsState {
-  /** Hits left before it bursts; 0 = burst and open (until the scene restarts). */
+  /**
+   * Hit points left; 0 = burst and open (until the scene restarts). It starts at the pod's `hp`
+   * in the scene (default 1), which is its `hpMax`.
+   */
   hp: number[];
   /** `attackSeq` of the last slash that hit it (one hit per slash). */
   hitBy: number[];
-  /** Glints of a burst pod still on their way to her, and frames until the next one arrives. */
+  /**
+   * Glints set loose and still on their way to her, frames until the next one arrives, the gap
+   * between them, and how many of the pod's worth have been set loose so far.
+   */
   left: number[];
   timer: number[];
+  gap: number[];
+  paid: number[];
   /** How many pods have burst. */
   burst: number;
 }
 
 export interface GameState {
-  version: 9;
+  version: 10;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;
@@ -167,6 +192,8 @@ export function cloneState(s: GameState): GameState {
       hitBy: s.pods.hitBy.slice(),
       left: s.pods.left.slice(),
       timer: s.pods.timer.slice(),
+      gap: s.pods.gap.slice(),
+      paid: s.pods.paid.slice(),
       burst: s.pods.burst,
     },
   };

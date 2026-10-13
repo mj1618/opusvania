@@ -214,7 +214,7 @@ function hangVine(
   const sway = (u: number): number => Math.sin(Math.PI * Math.min(1, u * 1.15)) ** 1.2 * 0.75;
   let pl = -1;
   let pr = -1;
-  const wood = mix(t.dark, 0x2a2420, 0.5);
+  const wood = mix(t.dark, 0x16120e, 0.5);
   for (let i = 0; i <= n; i++) {
     const u = i / n;
     const hw = (w0 * (0.45 + 0.55 * u) + (stout ? Math.max(0, Math.sin(u * 23 + kink)) * w0 * 0.14 : 0)) / 2;
@@ -222,7 +222,7 @@ function hangVine(
     const y = pts[i * 2 + 1] as number;
     b.fixedH = sway(u);
     const l = b.v(x - hw, y, wood);
-    const rr = b.v(x + hw, y, mix(wood, t.lit, stout ? 0.42 : 0.3));
+    const rr = b.v(x + hw, y, mix(wood, t.lit, (stout ? 0.3 : 0.2) * (1 - u * 0.85)));
     if (pl >= 0) {
       b.tri(pl, pr, l);
       b.tri(pr, rr, l);
@@ -274,59 +274,114 @@ function hangVine(
   b.fixedH = null;
 }
 
+/** How far a foliage lobe's outline bulges at angle `a` (1 = its nominal radius). One formula for
+ * the mass and for the leaves on it, so leaves always sit on the mass. */
+function lobeLump(a: number, seed: number): number {
+  return (
+    1 + 0.14 * Math.sin(a * 3 + seed) + 0.09 * Math.sin(a * 5 + seed * 2.3) + 0.05 * Math.sin(a * 9 + seed)
+  );
+}
+
 /** A dark mass of leaves round the stub of a bough: where hanging growth comes from. */
 function leafKnot(c: Ctx, x: number, y: number, rad: number, t: Tone): void {
   const { b, r } = c;
   const phase = r();
   b.plant(x, y, 4000, phase, 0, 0, 0);
   b.fixedH = 0;
-  // The bough stub, running up and away out of the scene.
+  // The bough it grows on: a dark tapering branch curving in from above, off the top of the scene.
   const d = r() < 0.5 ? -1 : 1;
+  const bough = quad(x + d * rad * 3.2, y - 330, x + d * rad * 1.3, y - 40, x - d * rad * 0.3, y + 4, 10);
   b.strip(
-    [x - d * 20, y + 10, x + d * rad, y - 60, x + d * rad * 3, y - 260],
-    (u) => 30 + 26 * u,
-    () => 0x05090c,
-    () => mix(0x0a1216, t.mid, 0.2),
+    bough,
+    (u) => 44 * (1 - u) + 12,
+    () => 0x04080b,
+    () => mix(0x070d11, t.mid, 0.22),
   );
-  for (let k = 0; k < 4; k++) {
-    const cx = x + range(r, -rad * 0.7, rad * 0.7);
-    const cy = y + range(r, -rad * 0.5, rad * 0.3);
-    const cr = rad * range(r, 0.45, 0.75);
-    const c0 = b.v(cx, cy, mix(t.dark, t.mid, 0.3));
+  // The clump: overlapping lumpy lobes, dark at the rim and core, a little lighter in the body.
+  const lobes: Array<[number, number, number, number]> = [];
+  const nl = 5 + Math.floor(r() * 2);
+  for (let k = 0; k < nl; k++) {
+    const a = (k / nl) * Math.PI * 2 + range(r, -0.3, 0.3);
+    const off = k === 0 ? 0 : rad * range(r, 0.45, 0.8);
+    lobes.push([
+      x + Math.cos(a) * off * 2.1,
+      y + Math.sin(a) * off * 0.5,
+      rad * range(r, 0.42, 0.62),
+      x * 0.01 + k * 1.9,
+    ]);
+  }
+  for (const [cx, cy, cr, seed] of lobes) {
+    const c0 = b.v(cx + cr * 0.15, cy - cr * 0.15, mix(t.dark, t.mid, 0.6));
     let prev = -1;
     let first = -1;
-    for (let i = 0; i <= 14; i++) {
-      const a = (i / 14) * Math.PI * 2;
-      const lump = 1 + 0.16 * Math.sin(a * 3 + cx) + 0.1 * Math.sin(a * 5 + cy);
+    const N = 22;
+    for (let i = 0; i <= N; i++) {
+      const a = (i / N) * Math.PI * 2;
+      const lump = lobeLump(a, seed);
       const v =
-        i === 14 ? first : b.v(cx + Math.cos(a) * cr * 1.2 * lump, cy + Math.sin(a) * cr * lump, t.dark);
+        i === N
+          ? first
+          : b.v(
+              cx + Math.cos(a) * cr * 1.2 * lump,
+              cy + Math.sin(a) * cr * lump,
+              mix(mix(t.dark, t.mid, 0.3), 0x03080c, 0.3),
+            );
       if (i === 0) first = v;
       if (prev >= 0) b.tri(c0, prev, v);
       prev = v;
     }
   }
   b.fixedH = null;
-  for (let i = 0; i < Math.round(rad * 0.5); i++) {
-    const a = r() * Math.PI * 2;
-    const dd = r() ** 0.4 * rad;
-    const lx = x + Math.cos(a) * dd * 1.2;
-    const ly = y + Math.sin(a) * dd * 0.8;
-    const ll = ([8, 12, 16][Math.floor(r() * 3)] as number) * range(r, 0.9, 1.1);
-    const lit = Math.sin(a) < -0.2 ? mix(t.mid, t.lit, 0.6) : t.mid;
-    b.plant(lx, ly, ll * 2, phase + r() * 0.2, 2.4, 0, 0.3);
-    b.leaf(
-      lx,
-      ly,
-      a * 0.6 + range(r, -0.6, 0.6) + 0.4,
-      ll,
-      ll * 0.5,
-      t.dark,
-      lit,
-      mix(lit, t.dark, 0.5),
-      0,
-      1,
-      3,
+  // Leaves, each rooted ON a lobe: a ring just inside the rim so its tip laps over the edge and
+  // points out and down along the surface, and a few on the body. Colour belongs to the clump:
+  // a step lighter than the mass, lighter again only on the key side (upper right).
+  for (const [cx, cy, cr, seed] of lobes) {
+    const n = Math.round(cr * 0.42) + 5;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + range(r, -0.15, 0.15);
+      const lump = lobeLump(a, seed);
+      const inset = i % 3 === 2 ? range(r, 0.35, 0.65) : range(r, 0.78, 0.9);
+      const lx = cx + Math.cos(a) * cr * 1.2 * lump * inset;
+      const ly = cy + Math.sin(a) * cr * lump * inset;
+      const ll = ([8, 11, 15][i % 3] as number) * range(r, 0.9, 1.1);
+      const key = clamp(0.5 + (Math.cos(a) * 0.42 - Math.sin(a) * 0.91) * 0.6, 0, 1);
+      const body = mix(t.dark, t.mid, 0.45 + 0.3 * key);
+      const lit = mix(body, t.lit, key > 0.75 ? 0.45 : 0.08);
+      // Outward along the surface, drooping.
+      const dir = Math.atan2(Math.sin(a) * 0.8 + 0.45, Math.cos(a) * 1.2) + range(r, -0.3, 0.3);
+      b.plant(lx, ly, ll * 2.2, phase + r() * 0.15, 1.8, 0, 0.25);
+      b.leaf(lx, ly, dir, ll, ll * 0.52, mix(t.dark, 0x03080c, 0.2), lit, mix(body, t.dark, 0.5), 0, 1, 3);
+    }
+  }
+  // Where the vines leave: tendrils and a few leaves hanging from the underside.
+  for (let i = 0; i < 5; i++) {
+    const tx = x + range(r, -rad * 0.5, rad * 0.5);
+    const ty = y + rad * range(r, 0.2, 0.42);
+    const len = range(r, 22, 54);
+    b.plant(tx, ty, len, phase + r() * 0.2, 4, 0, -0.15);
+    const line = quad(tx, ty, tx + range(r, -8, 8), ty + len * 0.5, tx + range(r, -12, 12), ty + len, 4);
+    b.strip(
+      line,
+      (u) => 2.2 * (1 - u) + 0.5,
+      () => t.dark,
     );
+    for (const k of [2, 4]) {
+      const side = r() < 0.5 ? -1 : 1;
+      const ll = range(r, 7, 11);
+      b.leaf(
+        line[k * 2] as number,
+        line[k * 2 + 1] as number,
+        Math.PI / 2 - side * range(r, 0.5, 1.1),
+        ll,
+        ll * 0.5,
+        t.dark,
+        mix(t.dark, t.mid, 0.6),
+        t.dark,
+        0,
+        1,
+        3,
+      );
+    }
   }
 }
 
@@ -448,11 +503,7 @@ function bush(
     let first = -1;
     for (let i = 0; i <= N; i++) {
       const a = (i / N) * Math.PI * 2;
-      const lump =
-        1 +
-        0.14 * Math.sin(a * 3 + seed) +
-        0.09 * Math.sin(a * 5 + seed * 2.3) +
-        0.05 * Math.sin(a * 9 + seed);
+      const lump = lobeLump(a, seed);
       const v =
         i === N
           ? first
@@ -466,8 +517,8 @@ function bush(
       prev = v;
     }
   };
-  centres.forEach(([cx, cy, rad], i) => {
-    cloud(cx, cy, rad * 1.15, rad, cx + i * 1.7);
+  centres.forEach(([cx, cy, rad]) => {
+    cloud(cx, cy, rad * 1.15, rad, cx * 0.37);
     cloud(
       cx + range(r, -rad * 0.3, rad * 0.3),
       (cy + y) / 2 + rad * 0.2,
@@ -481,8 +532,10 @@ function bush(
     const n = Math.round(rad * 0.3) + 4;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + range(r, -0.2, 0.2);
-      const lx = cx + Math.cos(a) * rad * 1.1;
-      const ly = cy + Math.sin(a) * rad * 0.95;
+      // Rooted just inside the lobe's own outline, so the tip laps the edge and nothing floats.
+      const lump = lobeLump(a, cx * 0.37) * range(r, 0.8, 0.92);
+      const lx = cx + Math.cos(a) * rad * 1.15 * lump;
+      const ly = cy + Math.sin(a) * rad * lump;
       if (ly > y - 4) continue;
       const ll = range(r, 9, 15);
       b.plant(lx, ly, ll * 2, phase + r() * 0.2, 1.6 + h * 0.02, 5 + h * 0.08, 0.3);
@@ -505,7 +558,7 @@ function bush(
     const leaves = Math.round(rad * 1.1 * density);
     for (let i = 0; i < leaves; i++) {
       const a = r() * Math.PI * 2;
-      const d = r() ** 0.35 * rad * 1.05;
+      const d = r() ** 0.35 * rad * 0.86 * lobeLump(a, cx * 0.37);
       const lx = cx + Math.cos(a) * d * 1.15;
       const ly = cy + Math.sin(a) * d;
       if (ly > y - 2) continue;

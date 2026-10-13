@@ -62,6 +62,13 @@
   a carved standing stone by the pool, a cocoon lantern under the great bough, a moth shrine at the right;
   `info.lanterns` gives them a dim halo. Plants call `contact()` for a ground shadow under anything big.
 
+- **Slash reaction** (`PlayfieldLayer.onSlash`, on the sim's `slash` event; see combat.md): the bend field takes a
+  blast across `slashBox(...)` for the live frames and a gust that runs ~210 px on ahead (`BendField.slash`); the
+  field's B channel is a per-cell cut amount that shortens grass blades in the shader and regrows over
+  `FIELD.regrow` s (blades are recognised by droop 0.35-0.42); `pf-clippings.ts` throws 8-16 bits of grass, leaf
+  and petal from a fixed pool (flight computed in the vertex shader, buffer written only on spawn); the pool gets a
+  line of droplets and a ripple (`Water.slash`). Power: 1, +0.12 per combo step, 1.6 for the finisher.
+
 ## Knobs (config object at the top of each file)
 `TERRAIN` palette, moss lift/thickness/drip, `mossBare`, `faceUndercut`, `waterDepth`; `BAKE` blur sigmas, bump, key, shadow, interior, `beamWidth`, brushwork (`planes`, `strokes`, `crevice`, `chips`);
 `PLANTS` feature gap, `rearGap`, `backdropGap`, `heroGap`, `glowShare` (per zone), `autumnEvery`, `fineShare`, grass cover and heights, fringe, wind/bend per px, halo alpha, `glowEvery`;
@@ -98,7 +105,10 @@
 - **FloraBuilder vertex indices are per chunk.** Anything that keeps indices across `plant()` calls (a strip
   running along x, like the front moss lip) must restart when `chunkIndex(x)` changes, or the draw indexes past
   the chunk's vertex buffer (`glDrawElements: Vertex buffer is not big enough`).
-- Hanging vines end in a `leafKnot` on a bough stub near the scene top (y 30-90), not at the frame edge.
+- Hanging vines end in a `leafKnot` near the scene top (y 30-90): a clump of lumpy lobes on a dark bough.
+  **Leaves are rooted on their host**: `lobeLump(a, seed)` is the one outline formula for a foliage lobe and for
+  the leaves on it (rim leaves at 0.8-0.9 of the outline so tips lap the edge). Never scatter leaves by a plain
+  radius round a shape: they float off it. Leaf colour is a step lighter than its mass, same hue.
 - The owner prefers the darker picture (post-and-air.md, round 10): do not brighten plant or moss tones to chase
   mean luma. Lit foliage is saturated at moderate value. Judge with a walk strip of the hero among plants in each
   zone, not only the seven stops.

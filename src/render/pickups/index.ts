@@ -24,7 +24,18 @@ const TRAIL_MAX = 20;
 const MAX_FLIGHTS = 24;
 const MAX_SPARKS = 260;
 const MAX_FLARES = 24;
-const MAX_CHIPS = 40;
+const MAX_CHIPS = 48;
+/** Stand-in items per pod for spilled glints (more than any pod has in the air at once). */
+const SPILL = 12;
+
+/**
+ * How many hits a pod takes. The scene says (`hp`, or `hpMax`); failing that, what the sim state
+ * holds for it the first time we look.
+ */
+function podTier(p: object, hpNow: number): number {
+  const q = p as { hp?: number; hpMax?: number };
+  return Math.min(3, Math.max(1, Math.round(q.hpMax ?? q.hp ?? hpNow ?? 1)));
+}
 
 /** Mote behaviours. */
 const M_BURST = 0;
@@ -155,11 +166,15 @@ export class PickupRenderer {
   private readonly flares: Flare[] = [];
   private readonly lights: PointLight[] = [];
   private readonly lightOn: boolean[] = [];
-  private readonly pods: PodView[] = [];
+  /** One per `scene.pods`, drawn the first time it comes near the view (null until then). */
+  private readonly pods: Array<PodView | null> = [];
   private readonly podIndex = new Map<string, number>();
   private readonly podBack = new Container({ label: 'lumen-pods' });
   /** Per pod: 0 cool .. 1 warm, for the colour of its husk flecks. */
   private readonly podTone: number[] = [];
+  /** Per pod: frames between its spilled glints (from its last burst), and how many it has spilled. */
+  private readonly requeue: boolean[] = [];
+  private readonly spillN: number[] = [];
   /** Stand-in items for spilled glints, four per pod. */
   private readonly spill: Item[] = [];
   private readonly chips: Chip[] = [];
@@ -260,16 +275,15 @@ export class PickupRenderer {
       });
       this.lightOn.push(false);
     }
-    // Lumen pods: behind the hero (she walks through them).
+    // Lumen pods are built on the first update: how tough each is comes with the sim state.
     (scene.pods ?? []).forEach((p, i) => {
-      const view = new PodView(p, scene, hash01(p.id));
-      this.pods.push(view);
       this.podIndex.set(p.id, i);
-      this.podBack.addChild(view.root);
-      const w = zoneWeights(p.x);
-      this.podTone.push(w[1]);
-      // Three stand-in items per pod for the glints it spills (they are not scene pickups).
-      for (let k = 0; k < 4; k++)
+      this.podTone.push(zoneWeights(p.x)[1]);
+      this.requeue.push(false);
+      this.pods.push(null);
+      this.spillN.push(0);
+      // Stand-in items for the glints it spills (they are not scene pickups).
+      for (let k = 0; k < SPILL; k++)
         this.spill.push({
           p: { id: p.id, kind: 'glint', x: p.x, y: p.y },
           great: false,
@@ -321,7 +335,12 @@ export class PickupRenderer {
           if (it) this.absorb(it, e.combo, pvx, pvy);
         }
       } else if (e.type === 'podBurst') {
-        this.burst(e.id, e.dir, e.facing, e.value, e.frames, e.stagger, sim.frame);
+        this.burst(e.id, e.dir, e.facing, e.power);
+      } else if (e.type === 'slashHit' && e.target.kind === 'pod') {
+        // A hit that did not open it (a tough pod): the sim state already shows what is left.
+        const i = this.podIndex.get(e.target.id);
+        if (i !== undefined && (sim.pods.hp[i] ?? 0) > 0)
+          this.podHit(i, e.dir, e.facing, e.power, sim.pods.hp[i] ?? 1);
       }
     }
     // --- And what it says is true now (restart, or a state that jumped without events).
@@ -799,12 +818,33 @@ export class PickupRenderer {
     const halfW = VIEW_W / 2 / cam.zoom + 120;
     const halfH = VIEW_H / 2 / cam.zoom + 120;
     const player = sim.player;
+    const list = sim.scene.pods ?? [];
     for (let i = 0; i < this.pods.length; i++) {
-      const v = this.pods[i] as PodView;
-      const closed = (hp[i] ?? 0) > 0;
-      if (closed && v.spent) {
-        // Restart: shut again, and its spilled glints are forgotten.
-        v.set(false);
+      const left = hp[i] ?? 0;
+      let v = this.pods[i] ?? null;
+      if (!v) {
+        // Drawn only once it comes near the view: a dozen pods' worth of shapes is not free at boot.
+        const q = list[i];
+        if (!q || Math.abs(q.x - cam.x) > halfW || Math.abs(q.y - cam.y) > halfH) continue;
+        v = new PodView(q, sim.scene, hash01(q.id), podTier(q, left));
+        v.set(left <= 0, Math.max(0, v.tier - left));
+        this.pods[i] = v;
+        this.podBack.addChild(v.root);
+      }
+      if (left > v.tier) {
+        // It is tougher than we drew it (the tuning changed and the scene restarted): redraw it.
+        const again = new PodView(v.pod, sim.scene, hash01(v.pod.id), Math.min(3, left));
+        this.podBack.addChildAt(again.root, this.podBack.getChildIndex(v.root));
+        v.root.destroy({ children: true });
+        this.pods[i] = again;
+        continue;
+      }
+      const closed = left > 0;
+      const damage = Math.max(0, v.tier - left);
+      if (closed && (v.spent || damage < v.damage)) {
+        // Restart: shut again, whole, and its spilled glints are forgotten.
+        v.set(false, damage);
+        this.spillN[i] = 0;
         for (const f of this.flights) {
           if (f.pod === i) {
             f.on = false;
@@ -814,7 +854,31 @@ export class PickupRenderer {
         }
       } else if (!closed && !v.spent) {
         v.set(true);
+      } else if (closed && damage > v.damage) {
+        // Damaged without our seeing the blow (a state jump): just show it.
+        v.set(false, damage);
       }
+      // Glints the sim has let go of that are not in the air yet: after a burst, or knocked loose.
+      const owed = sim.pods.left[i] ?? 0;
+      if (owed > 0) {
+        const first = sim.pods.timer[i] ?? 1;
+        const gap = sim.pods.gap[i] ?? 5;
+        let flying = 0;
+        for (const f of this.flights) {
+          if (!f.on || f.done || f.pod !== i) continue;
+          // A new hit restarts the sim's queue: glints still waiting by the pod take their new
+          // times (in the order they were going to leave); ones already flying carry on.
+          if (this.requeue[i] && !f.left) {
+            let ahead = 0;
+            for (const o of this.flights)
+              if (o.on && !o.done && o.pod === i && o !== f && o.dur - o.t < f.dur - f.t) ahead++;
+            f.dur = f.t + (first + ahead * gap) / 60;
+          }
+          flying++;
+        }
+        for (let j = flying; j < owed; j++) this.spillOne(i, v, (first + j * gap) / 60, sim.frame);
+      }
+      this.requeue[i] = false;
       const p = v.pod;
       const seen = Math.abs(p.x - cam.x) < halfW && Math.abs(p.y - cam.y) < halfH;
       v.root.visible = seen;
@@ -844,89 +908,129 @@ export class PickupRenderer {
   }
 
   /** A slash opened a pod: it splits, throws flecks and motes the way the blow went, spills its light. */
-  private burst(
-    id: string,
-    dir: 'fwd' | 'up' | 'down',
-    facing: number,
-    value: number,
-    frames: number,
-    stagger: number,
-    frame: number,
-  ): void {
+  private burst(id: string, dir: 'fwd' | 'up' | 'down', facing: number, power: number): void {
     const i = this.podIndex.get(id);
     if (i === undefined) return;
-    const v = this.pods[i] as PodView;
-    const fast = this.heroSpeed > 260 || Math.abs(this.chestX - v.cx) + Math.abs(this.chestY - v.cy) > 170;
+    const v = this.pods[i];
+    if (!v) return;
     const sx = dir === 'fwd' ? facing : 0;
     const sy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
+    this.requeue[i] = true;
+    v.strike(sx, sy, power);
+    // Bigger pods throw more, a finisher throws it further; the flash stays a few pixels.
+    this.debris(i, v, sx, sy, 7 + 4 * (v.tier - 1), 6 + 3 * (v.tier - 1), power, 1 + 0.12 * (v.tier - 1));
+  }
+
+  /** A slash hit a tough pod without opening it: a ring of armour peels, a little flies off. */
+  private podHit(i: number, dir: 'fwd' | 'up' | 'down', facing: number, power: number, hpLeft: number): void {
+    const v = this.pods[i];
+    if (!v) return;
+    const sx = dir === 'fwd' ? facing : 0;
+    const sy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
+    this.requeue[i] = true;
+    v.hit(sx, sy, power, v.tier - hpLeft);
+    this.debris(i, v, sx, sy, 4, 3, power, 0.75);
+  }
+
+  /** The contact flash, husk flecks and gold motes of a blow, thrown along it. */
+  private debris(
+    i: number,
+    v: PodView,
+    sx: number,
+    sy: number,
+    flecks: number,
+    motes: number,
+    power: number,
+    size: number,
+  ): void {
     const x = v.cx;
     const y = v.cy;
-    v.strike(sx, sy);
+    const far = power >= 2 ? 1.4 : 1;
     // The contact: a few bright pixels, gone in a tenth of a second.
-    this.flare(x, y, 4, 15, 0.1, 0.36, 0.8, false, 0, 1);
-    // Husk flecks and gold motes, thrown along the blow (a down blow scatters sideways off the ground).
+    this.flare(x, y, 4, 15 * size * (power >= 2 ? 1.2 : 1), 0.1, 0.36, 0.8, false, 0, 1);
     const tone = this.podTone[i] ?? 0;
-    for (let k = 0; k < 7; k++) {
+    const n = Math.round(flecks * (power >= 2 ? 1.4 : 1));
+    for (let k = 0; k < n; k++) {
       const c = this.chips[this.chipAt] as Chip;
       this.chipAt = (this.chipAt + 1) % this.chips.length;
       const spread = (this.rand() - 0.5) * 1.5;
-      const sp = 150 + 230 * this.rand();
+      const sp = (150 + 230 * this.rand()) * far;
+      // A down blow scatters sideways off the ground.
       const ax = sy > 0 ? (k % 2 === 0 ? 1 : -1) * 0.9 : sx + spread * (sx === 0 ? 1 : 0.5);
       const ay = sy > 0 ? -0.5 : sy * 0.9 - 0.45 + spread * (sx === 0 ? 0.2 : 0.5);
-      c.x = x + (this.rand() - 0.5) * 14;
-      c.y = y + (this.rand() - 0.5) * 18;
+      c.x = x + (this.rand() - 0.5) * 14 * size;
+      c.y = y + (this.rand() - 0.5) * 18 * size;
       c.vx = ax * sp;
       c.vy = ay * sp;
       c.rot = this.rand() * 6.283;
       c.spin = (this.rand() - 0.5) * 26;
-      c.size = 2.6 + 3 * this.rand();
+      c.size = (2.6 + 3 * this.rand()) * (0.85 + 0.15 * v.tier);
       c.max = 0.45 + 0.35 * this.rand();
       c.life = c.max;
       c.tone = tone;
     }
-    for (let k = 0; k < 6; k++)
-      this.spark(x, y, sx * 150 + (this.rand() - 0.5) * 60, sy * 120 - 60, 5, 110, 0.22, 0.5, 2.1, M_BURST);
-    // Its glints: out of the husk on small arcs, away from the blow's side, then to her one by one.
-    for (let k = 0; k < Math.min(value, 4); k++) {
-      const it = this.spill[i * 4 + k];
-      let f: Flight | undefined;
-      for (const c of this.flights) {
-        if (!c.on) {
-          f = c;
-          break;
-        }
+    for (let k = 0; k < motes; k++)
+      this.spark(
+        x,
+        y,
+        sx * 150 * far + (this.rand() - 0.5) * 60,
+        sy * 120 * far - 60,
+        5,
+        110,
+        0.22,
+        0.5,
+        2.1,
+        M_BURST,
+      );
+  }
+
+  /**
+   * One spilled glint: out of the husk on a small arc to its own spot in a loose scatter above it,
+   * then to her, landing `seconds` from now (the sim's time for it).
+   */
+  private spillOne(i: number, v: PodView, seconds: number, frame: number): void {
+    const n = this.spillN[i] ?? 0;
+    this.spillN[i] = n + 1;
+    const it = this.spill[i * SPILL + (n % SPILL)];
+    let f: Flight | undefined;
+    for (const c of this.flights) {
+      if (!c.on) {
+        f = c;
+        break;
       }
-      if (!it || !f) break;
-      const seconds = (frames + k * stagger) / 60;
-      const fan = value > 1 ? k / (value - 1) - 0.5 : 0;
-      const a = fan * 1.9 + sx * 0.5 + (this.rand() - 0.5) * 0.25;
-      const reach = 40 + 12 * this.rand() + (k % 2) * 8;
-      it.stage = 1;
-      f.on = true;
-      f.item = it;
-      f.t = 0;
-      f.frame0 = frame;
-      f.dur = seconds;
-      // If she is already leaving (a pogo, a jump past it) the glints set off almost at once and
-      // curve in steadily; standing by it, they hang for a beat first.
-      f.fly = fast ? seconds * 0.78 : Math.min(GLINTS.flight.seconds, seconds * 0.7);
-      f.lag = fast ? 1.55 : GLINTS.flight.lag;
-      f.sx = x;
-      f.sy = y;
-      f.px = x + Math.sin(a) * reach;
-      f.py = y - Math.cos(a) * reach * 0.8 - (sy > 0 ? 6 : 14);
-      f.ax = 0;
-      f.ay = -1;
-      f.side = 1;
-      f.left = false;
-      f.waved = false;
-      f.done = false;
-      f.x = x;
-      f.y = y;
-      f.hn = 0;
-      f.shed = 0;
-      f.pod = i;
     }
+    if (!it || !f) return;
+    const x = v.cx;
+    const y = v.cy;
+    // If she is already leaving (a pogo, a jump past it), or this one has a long wait (a big pod's
+    // later glints), it sets off sooner and curves in steadily; otherwise it hangs for a beat first.
+    const fast = this.heroSpeed > 260 || Math.abs(this.chestX - x) + Math.abs(this.chestY - y) > 170;
+    // A scatter, not a row: golden-ratio steps round a fan, near and far by turns.
+    const a = (((n * 0.618) % 1) - 0.5) * 2.5 + (this.rand() - 0.5) * 0.2;
+    const reach = (34 + 30 * ((n * 0.37) % 1)) * (0.9 + 0.1 * v.tier);
+    it.stage = 1;
+    f.on = true;
+    f.item = it;
+    f.t = 0;
+    f.frame0 = frame;
+    f.dur = seconds;
+    f.fly = fast ? seconds * 0.78 : Math.min(GLINTS.flight.seconds, seconds * 0.7);
+    f.lag = fast ? 1.55 : GLINTS.flight.lag;
+    f.sx = x;
+    f.sy = y;
+    f.px = x + Math.sin(a) * reach;
+    f.py = y - Math.cos(a) * reach * 0.8 - 12;
+    f.ax = 0;
+    f.ay = -1;
+    f.side = 1;
+    f.left = false;
+    f.waved = false;
+    f.done = false;
+    f.x = x;
+    f.y = y;
+    f.hn = 0;
+    f.shed = 0;
+    f.pod = i;
   }
 
   /** One of a pod's glints reached her: the oldest still in the air. */
@@ -935,7 +1039,7 @@ export class PickupRenderer {
     if (i === undefined) return;
     let best: Flight | null = null;
     for (const f of this.flights) {
-      if (f.on && !f.done && f.pod === i && (!best || f.dur < best.dur)) best = f;
+      if (f.on && !f.done && f.pod === i && (!best || f.dur - f.t < best.dur - best.t)) best = f;
     }
     if (best?.item) this.absorb(best.item, combo, pvx, pvy);
   }

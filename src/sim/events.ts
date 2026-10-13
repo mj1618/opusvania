@@ -51,7 +51,10 @@ export type SimEvent =
   /**
    * A thorn slash began. `dir` and `facing` (the side she faced: a fwd slash goes that way) hold for
    * the whole slash. The hit area is live from `startup` frames later for `active` frames; the slash
-   * is over (`slashEnd`) `duration` frames after this event. `seq` numbers the slashes.
+   * is over (`slashEnd`) `duration` frames after this event and the next may start `cooldown` frames
+   * after it: all four are this step's own numbers. `seq` numbers the slashes. `step` is the combo
+   * step (1 cut, 2 return cut, 3 finisher = `finisher`); `lunge` = the forward shove she starts with
+   * (px/f, 0 in the air), `hang` = frames her fall is held back (0 on the ground).
    */
   | {
       type: 'slash';
@@ -60,14 +63,20 @@ export type SimEvent =
       dir: SlashDir;
       facing: number;
       seq: number;
+      step: number;
+      finisher: boolean;
       startup: number;
       active: number;
       duration: number;
+      cooldown: number;
+      lunge: number;
+      hang: number;
     }
   /**
    * The slash hit a target (once per target per slash). `x`, `y` = the target's centre; `px`, `py` =
    * the centre of the player's box. `pogo`: a down slash, she bounces off it. `hitstop` = frames the
-   * sim now holds her (`player.hitstop`).
+   * sim now holds her (`player.hitstop`). `step` / `power` (1, 1, 2 for the finisher) = how heavy;
+   * `knockback` = what the blow gives the target, px/f along the slash (pods ignore it).
    */
   | {
       type: 'slashHit';
@@ -80,12 +89,52 @@ export type SimEvent =
       py: number;
       pogo: boolean;
       hitstop: number;
+      step: number;
+      power: number;
+      knockback: number;
+    }
+  /**
+   * A blow landed: one per step that hits anything, on the frame of its first hit, for the camera
+   * and screen effects (the sim shakes nothing itself). `x`, `y` = the first target hit; `dir` /
+   * `facing` = the slash; `power` 1 or 2 (finisher); `hits` = targets hit that frame.
+   */
+  | {
+      type: 'impact';
+      x: number;
+      y: number;
+      dir: SlashDir;
+      facing: number;
+      step: number;
+      power: number;
+      hits: number;
     }
   | { type: 'slashEnd'; x: number; y: number; dir: SlashDir; hits: number; reason: SlashEndReason }
   /**
-   * A lumen pod burst (`x`, `y` = its centre) under a slash going `dir` / `facing`. It spills `value`
-   * glints: the first reaches her `frames` steps from now, the rest `stagger` apart, each as a
-   * `pickup` event with this pod's id and `pod: true`.
+   * A slash hit a lumen pod (`x`, `y` = its centre) and it held: `hpLeft` of `hpMax` hit points
+   * remain (`power` were taken). `value` glints are now on their way from it (those just knocked
+   * loose plus any still in flight): the first reaches her `frames` steps from now, the rest
+   * `stagger` apart, each as a `pickup` event with this pod's id and `pod: true`.
+   */
+  | {
+      type: 'podHit';
+      id: string;
+      mount: PodMount;
+      x: number;
+      y: number;
+      dir: SlashDir;
+      facing: number;
+      power: number;
+      hpLeft: number;
+      hpMax: number;
+      value: number;
+      frames: number;
+      stagger: number;
+    }
+  /**
+   * A lumen pod burst (`x`, `y` = its centre) under a slash going `dir` / `facing`. `value` glints
+   * are now on their way (the rest of its `total` worth, plus any still in flight): the first
+   * reaches her `frames` steps from now, the rest `stagger` apart, each as a `pickup` event with
+   * this pod's id and `pod: true`.
    */
   | {
       type: 'podBurst';
@@ -95,6 +144,9 @@ export type SimEvent =
       y: number;
       dir: SlashDir;
       facing: number;
+      power: number;
+      hpMax: number;
+      total: number;
       value: number;
       frames: number;
       stagger: number;

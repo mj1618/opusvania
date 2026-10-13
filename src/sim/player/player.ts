@@ -6,7 +6,7 @@ import type { Scene } from '../scene';
 import type { GameState, Motion, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
 import { slashBox } from './attack';
-import type { MoveParams } from './params';
+import type { MoveParams, SlashStep } from './params';
 
 /**
  * The player movement controller: run with accel/decel/turn, variable-height jump, coyote time,
@@ -58,6 +58,10 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     attackActive: false,
     attackSeq: 0,
     attackHits: 0,
+    attackStep: 1,
+    attackFinisher: false,
+    lungeX: 0,
+    hang: 0,
     hitstop: 0,
     kickX: 0,
     coyote: 0,
@@ -83,6 +87,9 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     launchY: y,
     attackBuf: 0,
     attackCd: 0,
+    comboStep: 0,
+    comboTimer: 0,
+    hangUsed: 0,
   };
 }
 
@@ -232,18 +239,27 @@ function endSlash(c: Ctx, reason: SlashEndReason): void {
   p.attackActive = false;
 }
 
+/** The numbers of the slash in progress (or of the last one). */
+function stepOf(c: Ctx): SlashStep {
+  return c.P.steps[c.p.attackStep - 1] ?? (c.P.steps[0] as SlashStep);
+}
+
 /**
  * The slash's own clock, then a buffered press: a slash starts as soon as the cooldown allows, in
  * any mode but the dash (the press waits for the dash to end). It never locks movement.
+ *
+ * Combo: a forward or up slash that starts while the chain is alive (`comboTimer`) is the next
+ * step, 1 -> 2 -> 3 (the finisher), then 1 again; a pause starts over at 1. A down slash is always
+ * the step-1 blow (so pogo timing never changes) and leaves the chain where it was.
  */
 function updateSlash(c: Ctx): void {
   const p = c.p;
   const P = c.P;
   if (p.attack !== 'none') {
+    const cur = stepOf(c);
     p.attackFrames++;
-    if (p.attackFrames >= P.attackDuration) endSlash(c, 'done');
-    else
-      p.attackActive = p.attackFrames >= P.attackStartup && p.attackFrames < P.attackStartup + P.attackActive;
+    if (p.attackFrames >= cur.duration) endSlash(c, 'done');
+    else p.attackActive = p.attackFrames >= cur.startup && p.attackFrames < cur.startup + cur.active;
   }
   if (p.attackBuf === 0 || p.attackCd > 0 || p.mode === 'dash') return;
   // Pressed together with a dash that is about to start: the dash goes first, the slash after it.
@@ -253,14 +269,31 @@ function updateSlash(c: Ctx): void {
   const dir: SlashDir = c.held(ActionBit.up) ? 'up' : c.held(ActionBit.down) && !p.grounded ? 'down' : 'fwd';
   // A direction pressed with the slash counts at once; on a wall she already faces away from it.
   const turn = p.mode === 'normal' && p.forceTimer === 0 && c.inX !== 0;
+  let step = 1;
+  if (dir !== 'down') {
+    step = p.comboTimer > 0 && p.comboStep > 0 && p.comboStep < P.steps.length ? p.comboStep + 1 : 1;
+    p.comboStep = step;
+  }
+  const st = P.steps[step - 1] as SlashStep;
+  p.comboTimer = st.cooldown + P.comboWindow;
   p.attack = dir;
   p.attackFacing = turn ? (c.inX > 0 ? 1 : -1) : p.facing;
+  p.attackStep = step;
+  p.attackFinisher = step === P.steps.length;
   p.attackFrames = 0;
-  p.attackActive = P.attackStartup === 0;
+  p.attackActive = st.startup === 0;
   p.attackSeq++;
   p.attackHits = 0;
   p.attackBuf = 0;
-  p.attackCd = P.attackCooldown;
+  p.attackCd = st.cooldown;
+  // Commitment through motion: a lunge on the ground, a brief hang in the air (once per step per airtime).
+  p.lungeX = dir === 'fwd' && p.grounded && p.mode === 'normal' ? p.attackFacing * st.lunge : 0;
+  p.hang = 0;
+  const bit = 1 << step;
+  if (dir !== 'down' && !p.grounded && p.mode === 'normal' && !p.gliding && (p.hangUsed & bit) === 0) {
+    p.hang = st.hangFrames;
+    p.hangUsed |= bit;
+  }
   c.events.push({
     type: 'slash',
     x: c.fx,
@@ -268,10 +301,37 @@ function updateSlash(c: Ctx): void {
     dir,
     facing: p.attackFacing,
     seq: p.attackSeq,
-    startup: P.attackStartup,
-    active: P.attackActive,
-    duration: P.attackDuration,
+    step,
+    finisher: p.attackFinisher,
+    startup: st.startup,
+    active: st.active,
+    duration: st.duration,
+    cooldown: st.cooldown,
+    lunge: p.lungeX,
+    hang: p.hang,
   });
+}
+
+/**
+ * The lunge must never be what takes her off a ledge: unless forward is held, it stops where the
+ * ground does. Holding back cancels it. Runs just before the move.
+ */
+function guardLunge(c: Ctx): void {
+  const p = c.p;
+  if (p.lungeX === 0) return;
+  const d = p.lungeX > 0 ? 1 : -1;
+  if (c.inX === -d) {
+    p.lungeX = 0;
+    return;
+  }
+  if (!p.grounded || c.inX === d) return;
+  const reach = Math.ceil(Math.abs(p.vx + p.kickX + p.lungeX));
+  for (let k = 1; k <= reach; k++) {
+    if (!c.groundAt(p.x + d * k, p.y)) {
+      p.lungeX = 0;
+      return;
+    }
+  }
 }
 
 /**
@@ -283,14 +343,45 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
   const P = c.P;
   if (p.attack === 'none' || !p.attackActive) return;
   const dir = p.attack;
+  const st = stepOf(c);
   const pogo = dir === 'down' && P.pogo && !p.grounded;
-  const box = slashBox(p, dir, p.attackFacing, P.attack);
-  const hits = slashPods(state, c.scene, box, p.attackSeq, dir, p.attackFacing, pogo, podsT, c.events);
+  const box = slashBox(p, dir, p.attackFacing, P.tuning, p.attackStep);
+  const hitstop = Math.max(0, Math.round(podsT.hitstopFrames)) + st.hitstopBonus;
+  const first = c.events.length;
+  const hits = slashPods(
+    state,
+    c.scene,
+    box,
+    p.attackSeq,
+    dir,
+    p.attackFacing,
+    pogo,
+    p.attackStep,
+    st.power,
+    st.knockback,
+    hitstop,
+    podsT,
+    c.events,
+  );
   if (hits === 0) return;
+  if (p.attackHits === 0) {
+    const e = c.events[first];
+    if (e?.type === 'slashHit')
+      c.events.push({
+        type: 'impact',
+        x: e.x,
+        y: e.y,
+        dir,
+        facing: p.attackFacing,
+        step: p.attackStep,
+        power: st.power,
+        hits,
+      });
+  }
   p.attackHits += hits;
-  p.hitstop = Math.max(p.hitstop, Math.max(0, Math.round(podsT.hitstopFrames)));
+  p.hitstop = Math.max(p.hitstop, hitstop);
   if (dir === 'fwd') {
-    if (p.mode === 'normal') p.kickX = -p.attackFacing * P.recoilFwd;
+    if (p.mode === 'normal') p.kickX = -p.attackFacing * st.recoil;
   } else if (dir === 'up') {
     if (!p.grounded && p.mode === 'normal') p.vy += P.recoilUp;
   } else if (pogo) {
@@ -306,6 +397,7 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
     p.sustain = 0;
     p.airDash = P.airDashes;
     p.dj = P.doubleJumps;
+    p.hangUsed = 0;
   }
 }
 
@@ -428,6 +520,8 @@ function startDash(c: Ctx, dir: number): void {
   endGlide(c, 'dash');
   endSlash(c, 'dash');
   p.kickX = 0;
+  p.lungeX = 0;
+  p.hang = 0;
   p.mode = 'dash';
   p.dashDir = dir;
   p.facing = dir > 0 ? 1 : -1;
@@ -541,6 +635,8 @@ function gravity(c: Ctx): void {
     } else p.sustain = 0;
   }
   if (p.cut && P.releaseZero && p.framesSinceJump >= P.minJumpFrames && p.vy < 0) p.vy = 0;
+  // Air hang of a slash: the fall is held back for a few frames. It never lifts her.
+  if (p.hang > 0 && p.vy > P.hangVy) p.vy = P.hangVy + (p.vy - P.hangVy) * P.hangKeep;
 }
 
 function normal(c: Ctx): void {
@@ -648,6 +744,7 @@ function controller(c: Ctx): void {
     latch(c);
     if (p.dashCd > 0) p.dashCd--;
     if (p.attackCd > 0) p.attackCd--;
+    if (p.comboTimer > 0) p.comboTimer--;
     return;
   }
 
@@ -675,8 +772,10 @@ function controller(c: Ctx): void {
   // 4. Move X then Y, with corner corrections.
   let impactVy = 0;
   if (!c.skipMove) {
-    if (moveX(p, p.vx + p.kickX, c)) {
+    guardLunge(c);
+    if (moveX(p, p.vx + p.kickX + p.lungeX, c)) {
       p.kickX = 0;
+      p.lungeX = 0;
       if (P.wallRetainFrames > 0 && p.retainTimer === 0 && p.vx !== 0 && p.mode !== 'dash') {
         p.retainVx = p.vx;
         p.retainTimer = P.wallRetainFrames;
@@ -709,7 +808,10 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
   // A slash pressed during a dash waits for it: it fires on the first frame after.
   if (p.attackBuf > 0 && p.mode !== 'dash') p.attackBuf--;
   if (p.attackCd > 0) p.attackCd--;
+  if (p.comboTimer > 0) p.comboTimer--;
   if (p.kickX !== 0) p.kickX = approach(p.kickX, 0, P.recoilDecay);
+  if (p.lungeX !== 0) p.lungeX = approach(p.lungeX, 0, stepOf(c).lunge / P.lungeFrames);
+  if (p.hang > 0) p.hang--;
   if (p.forceTimer > 0) p.forceTimer--;
   if (p.dashCd > 0) p.dashCd--;
   if (p.dropTimer > 0) p.dropTimer = p.y > p.dropY ? 0 : p.dropTimer - 1;
@@ -732,6 +834,8 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
     p.airDash = P.airDashes;
     p.dj = P.doubleJumps;
     endGlide(c, 'land');
+    p.hang = 0;
+    p.hangUsed = 0;
     p.carried = false; // still held after landing: walking off an edge glides straight away
     if (!wasGrounded) {
       const fallPx = p.y - p.airTopY;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GROVE } from '../../src/scene/index';
 import { step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
+import { podsWorth } from '../../src/sim/pods';
 import type { Pod } from '../../src/sim/scene';
 import { defaultTuning } from '../../src/sim/tuning';
 import { feet, hopOnto, newSim, type Sim } from './helpers';
@@ -37,7 +38,7 @@ function burst(s: Sim, i: number, maxFrames = 300): number {
       else if (fresh) m = bit(dx) | A;
     } else {
       if (Math.abs(dx) > 8) m = bit(dx);
-      const inReach = cy - T.attack.upReach < p.y + R && Math.abs(dx) < T.attack.vertWidth / 2;
+      const inReach = cy - T.slash1.upReach < p.y + R && Math.abs(dx) < T.slash1.upWidth / 2;
       if (inReach && fresh) m |= U | A;
       else if (b.grounded) m |= Math.abs(dx) <= 8 && (prev & J) === 0 ? J : 0;
       else if (b.vy < 0) m |= J;
@@ -78,7 +79,7 @@ describe('every pod in the grove can be burst', () => {
     }
     expect(s.state.pods.burst).toBe(pods.length);
     s.run('.60');
-    expect(s.state.pickups.count).toBeGreaterThanOrEqual(pods.length * T.pods.value);
+    expect(s.state.pickups.count).toBeGreaterThanOrEqual(podsWorth(GROVE, T.pods));
   });
 
   it('the stations on platforms are reached by the route pilot', () => {

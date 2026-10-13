@@ -15,7 +15,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   // CI renders with software GL at ~1 fps: the old suite needed more than the default 30 s
   // (memory/toolchain.md). Local runs keep the default.
-  timeout: process.env.CI ? 90_000 : 30_000,
+  // Software GL boots slowly now (terrain, background blur and matte bakes): ~28 s before the first frame.
+  timeout: 90_000,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
     baseURL: `http://localhost:${PORT}/opusvania/`,

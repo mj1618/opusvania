@@ -45,6 +45,8 @@ export interface Pod {
   x: number;
   y: number;
   mount: PodMount;
+  /** Toughness: hit points, 1 (default) to 3. A hit takes its `power` (1, or 2 for the finisher). */
+  hp?: number;
 }
 
 export interface Scene {

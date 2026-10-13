@@ -28,6 +28,13 @@ export const FIELD = {
   /** Seconds the ring takes to cross that reach, and its width in px. */
   landTime: 0.42,
   landWidth: 34,
+  /** Slash: total kick across the hit box; the gust beyond it (kick, px it runs, seconds it takes). */
+  slashKick: 13,
+  gustKick: 4.5,
+  gustReach: 210,
+  gustTime: 0.28,
+  /** Seconds for cut grass to grow back. */
+  regrow: 5,
   /** Glow: reach of the character in px, rise and fall time constants (s). */
   glowReach: 210,
   glowRise: 0.18,
@@ -44,6 +51,26 @@ export class BendField {
   private readonly data: Uint8Array;
   private readonly source: BufferImageSource;
   private live = true;
+  private readonly cut: Float32Array;
+  private readonly blasts: Array<{
+    c0: number;
+    c1: number;
+    r0: number;
+    r1: number;
+    cx: number;
+    mode: number;
+    age: number;
+    dur: number;
+    power: number;
+  }> = [];
+  private readonly gusts: Array<{
+    x: number;
+    dir: number;
+    r0: number;
+    r1: number;
+    age: number;
+    power: number;
+  }> = [];
   private readonly waves: Array<{ x: number; row: number; age: number; power: number }> = [];
 
   constructor(
@@ -56,6 +83,7 @@ export class BendField {
     this.d = new Float32Array(n);
     this.v = new Float32Array(n);
     this.e = new Float32Array(n);
+    this.cut = new Float32Array(n);
     this.data = new Uint8Array(n * 4);
     for (let i = 0; i < n; i++) this.data[i * 4] = 128;
     this.source = new BufferImageSource({
@@ -73,6 +101,50 @@ export class BendField {
   /** x0, y0, 1/w, 1/h of the area the texture covers, for the shader. */
   get rect(): [number, number, number, number] {
     return [0, 0, 1 / (this.cols * FIELD.cellW), 1 / (this.rows * FIELD.cellH)];
+  }
+
+  /**
+   * A slash through the plants: `box` in world px, `mode` +1 / -1 for a forward cut to the right /
+   * left, 0 for an up or down cut. Starts `startup` seconds from now and lasts `active` seconds.
+   */
+  slash(
+    box: { x: number; y: number; w: number; h: number },
+    mode: number,
+    power: number,
+    startup: number,
+    active: number,
+  ): void {
+    const cw = FIELD.cellW;
+    const ch = FIELD.cellH;
+    const c0 = Math.max(0, Math.floor(box.x / cw));
+    const c1 = Math.min(this.cols - 1, Math.floor((box.x + box.w) / cw));
+    const r0 = Math.max(0, Math.floor(box.y / ch));
+    const r1 = Math.min(this.rows - 1, Math.floor((box.y + box.h + 10) / ch));
+    if (c1 < c0 || r1 < r0) return;
+    if (this.blasts.length > 5) this.blasts.shift();
+    this.blasts.push({
+      c0,
+      c1,
+      r0,
+      r1,
+      cx: mode > 0 ? box.x : mode < 0 ? box.x + box.w : box.x + box.w / 2,
+      mode,
+      age: -startup,
+      dur: Math.max(0.03, active),
+      power,
+    });
+    if (mode !== 0) {
+      if (this.gusts.length > 5) this.gusts.shift();
+      this.gusts.push({
+        x: mode > 0 ? box.x + box.w : box.x,
+        dir: mode,
+        r0,
+        r1,
+        age: -startup - active * 0.4,
+        power,
+      });
+    }
+    this.live = true;
   }
 
   /** Bend (-1..1) and glow excitement (0..1) at a world point (nearest cell). */
@@ -94,6 +166,10 @@ export class BendField {
       if (ev.type === 'spawn') {
         d.fill(0);
         v.fill(0);
+        this.cut.fill(0);
+        this.blasts.length = 0;
+        this.gusts.length = 0;
+        for (let i = 2; i < this.data.length; i += 4) this.data[i] = 0;
       } else if (ev.type === 'land') {
         // A ring that travels outward through the plants; soft landings barely stir them.
         const power = Math.max(0.12, Math.min(1.5, (ev.vy - 3) / 13));
@@ -122,6 +198,64 @@ export class BendField {
           v[i] =
             (v[i] as number) +
             (dx < 0 ? -1 : 1) * FIELD.landKick * wave.power * Math.exp(-q * q) * fade * h * 22;
+        }
+      }
+      this.live = true;
+    }
+
+    // Slashes: a blast across the hit box for its live frames, then a gust running on ahead.
+    for (let k = this.blasts.length - 1; k >= 0; k--) {
+      const bl = this.blasts[k] as (typeof this.blasts)[number];
+      const before = bl.age;
+      bl.age += h;
+      if (bl.age < 0) continue;
+      if (before < 0) {
+        // The cut lands: grass in the box is clipped.
+        for (let ry = bl.r0; ry <= bl.r1; ry++) {
+          for (let cx = bl.c0; cx <= bl.c1; cx++) {
+            const i = ry * cols + cx;
+            this.cut[i] = Math.max(this.cut[i] as number, Math.min(1, 0.75 * bl.power));
+          }
+        }
+      }
+      if (bl.age > bl.dur) {
+        this.blasts.splice(k, 1);
+        continue;
+      }
+      const per = (FIELD.slashKick * bl.power * h) / bl.dur;
+      for (let ry = bl.r0; ry <= bl.r1; ry++) {
+        for (let cx = bl.c0; cx <= bl.c1; cx++) {
+          const x = (cx + 0.5) * cw;
+          const u = (x - bl.cx) / ((bl.c1 - bl.c0 + 1) * cw);
+          // mode +-1: a forward cut, everything goes with the blade, hardest out at the arc.
+          // mode 0: an up or down cut, things part to either side.
+          const push =
+            bl.mode !== 0
+              ? bl.mode * (0.45 + 0.75 * Math.min(1, Math.abs(u) * 1.4))
+              : (u < 0 ? -1 : 1) * (0.4 + Math.min(0.6, Math.abs(u) * 2));
+          const i = ry * cols + cx;
+          v[i] = (v[i] as number) + push * per;
+        }
+      }
+      this.live = true;
+    }
+    for (let k = this.gusts.length - 1; k >= 0; k--) {
+      const gu = this.gusts[k] as (typeof this.gusts)[number];
+      gu.age += h;
+      if (gu.age < 0) continue;
+      if (gu.age > FIELD.gustTime) {
+        this.gusts.splice(k, 1);
+        continue;
+      }
+      const front = gu.x + gu.dir * (gu.age / FIELD.gustTime) * FIELD.gustReach;
+      const fade = 1 - gu.age / FIELD.gustTime;
+      const a0 = Math.max(0, Math.floor((front - 60) / cw));
+      const a1 = Math.min(cols - 1, Math.ceil((front + 60) / cw));
+      for (let ry = gu.r0; ry <= gu.r1; ry++) {
+        for (let cx = a0; cx <= a1; cx++) {
+          const q = ((cx + 0.5) * cw - front) / 26;
+          const i = ry * cols + cx;
+          v[i] = (v[i] as number) + gu.dir * FIELD.gustKick * gu.power * Math.exp(-q * q) * fade * h * 14;
         }
       }
       this.live = true;
@@ -201,6 +335,14 @@ export class BendField {
         d[i] = di;
         v[i] = vi;
         data[i * 4] = Math.max(0, Math.min(255, Math.round(128 + di * 105)));
+      }
+      const ci = this.cut[i] as number;
+      if (ci !== 0) {
+        const nc = ci - h / FIELD.regrow;
+        this.cut[i] = nc > 0 ? nc : 0;
+        // Hold full for the first stretch, then grow back.
+        data[i * 4 + 2] = Math.round(Math.min(1, Math.max(0, nc) * 2.2) * 255);
+        any = true;
       }
       if (ei !== 0) {
         ei *= fall;

@@ -7,7 +7,7 @@ import type { CameraOverride, RenderStage } from '../render/stage';
 import type { SimEvent } from '../sim/events';
 import type { GameState } from '../sim/index';
 import { pickupsWorth } from '../sim/pickups';
-import { podsWorth } from '../sim/pods';
+import { podHpMax, podsWorth, podValue } from '../sim/pods';
 import type { Scene } from '../sim/scene';
 import type { Tuning } from '../sim/tuning';
 import type { TuningPanel } from './tuning-panel';
@@ -85,13 +85,25 @@ export interface GameDebugApi {
   };
   /**
    * Lumen pods: how many have burst, what they are all worth (their glints go into the pickups
-   * count), and every pod with its state (`closed`, `open`) and the glints still flying to her.
+   * count), and every pod with its state (`closed`, `open`), hit points (`hp` left of `hpMax`), what
+   * it is `worth` in all, how much of that has been set loose (`paid`) and the glints still flying.
    */
   pods(): {
     burst: number;
     total: number;
     worth: number;
-    list: Array<{ id: string; x: number; y: number; mount: string; state: 'closed' | 'open'; left: number }>;
+    list: Array<{
+      id: string;
+      x: number;
+      y: number;
+      mount: string;
+      state: 'closed' | 'open';
+      hp: number;
+      hpMax: number;
+      worth: number;
+      paid: number;
+      left: number;
+    }>;
   };
   /** Dynamic lights registered this frame (world px). */
   lights(): PointLight[];
@@ -253,6 +265,10 @@ export function installDebugApi(deps: {
         list: list.map((p, i) => ({
           ...p,
           state: (s.hp[i] ?? 0) > 0 ? 'closed' : 'open',
+          hp: s.hp[i] ?? 0,
+          hpMax: podHpMax(p),
+          worth: podValue(podHpMax(p), game.tuning.pods),
+          paid: s.paid[i] ?? 0,
           left: s.left[i] ?? 0,
         })),
       };

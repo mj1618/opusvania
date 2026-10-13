@@ -144,50 +144,109 @@ export const defaultTuning = {
     carriedDropPx: 16,
   },
   /**
-   * Thorn slash (rules: memory/combat.md). Frames count from the press; the hit area is
-   * `slashBox` in src/sim/player/attack.ts.
+   * Thorn slash (rules: memory/combat.md): what all three steps of the combo share. The steps'
+   * own numbers are in `slash1` / `slash2` / `slash3` below; the hit area is `slashBox` in
+   * src/sim/player/attack.ts.
    */
   attack: {
-    /** Frames from the press before the hit area is live, and how long it stays live. */
-    startupFrames: 1,
-    activeFrames: 6,
-    /** Length of the whole slash (`slashEnd`), and the soonest a new one can start (press to press). */
-    durationFrames: 14,
-    cooldownFrames: 20,
     /** An early press waits this long for the cooldown (it never expires during a dash). */
     bufferFrames: 8,
-    /** Forward: reach ahead of / behind the body centre, height, and how far above centre it sits. */
-    fwdReach: 110,
+    /** A slash that starts within this many frames of the last one's cooldown ending is the next step. */
+    comboWindowFrames: 14,
+    /** Forward: how far behind the body centre the area starts, and how far above centre it sits. */
     fwdBack: 14,
-    fwdHeight: 88,
     fwdRaise: 8,
-    /** Up / down: width, and reach from the body centre (the body is 80 tall: 40 of it is her). */
-    vertWidth: 100,
-    upReach: 124,
+    /** Down slash (always the same, whatever the step): width, and reach from the body centre. */
+    downWidth: 100,
     downReach: 120,
-    /**
-     * Recoil on a hit. Forward: a shove back of recoilFwd px/f that fades by recoilDecay each frame
-     * (3 + 2 + 1 = 6 px), added on top of her own velocity so a run is not interrupted. Up, in the
-     * air: vy pushed down by recoilUp.
-     */
-    recoilFwd: 3,
+    /** Recoil on a hit: the shove back (`slashN.recoil`) fades by this each frame. Up, in the air: vy += recoilUp. */
     recoilDecay: 1,
     recoilUp: 2,
     /** Pogo: a down slash that hits sets vy to minus this (a hop of about 125 px, 17 frames up). */
     pogoSpeed: 15.5,
+    /** Lunge (ground, forward): `slashN.lunge` px/f at the start, fading to nothing over this many frames. */
+    lungeFrames: 5,
+    /** Air hang (forward / up): for `slashN.hangFrames` her fall speed above hangVy is cut to this fraction each frame. */
+    hangVy: 1.5,
+    hangKeep: 0.5,
   },
-  /** Lumen pods (src/sim/pods.ts): breakables that spill glints. */
+  /** Combo step 1: the quick cut. Frames count from the press. */
+  slash1: {
+    /** Frames before the hit area is live, and how long it stays live. */
+    startupFrames: 1,
+    activeFrames: 6,
+    /** Length of the whole slash (`slashEnd`), and the soonest the next one can start (press to press). */
+    durationFrames: 14,
+    cooldownFrames: 17,
+    /** Forward: reach ahead of the body centre and height. Up: reach from the body centre and width. */
+    fwdReach: 110,
+    fwdHeight: 88,
+    upReach: 124,
+    upWidth: 100,
+    /** Weight of a hit (events), extra hitstop frames on top of the target's, knockback for targets (px/f). */
+    power: 1,
+    hitstopBonus: 0,
+    knockback: 6,
+    /** Her own shove back on a forward hit, px/f. */
+    recoil: 3,
+    /** Forward lunge on the ground, px/f at the start. Air hang, frames. */
+    lunge: 3,
+    hangFrames: 4,
+  },
+  /** Combo step 2: the return cut. The same blow; the finisher can follow a little later. */
+  slash2: {
+    startupFrames: 1,
+    activeFrames: 6,
+    durationFrames: 14,
+    cooldownFrames: 19,
+    fwdReach: 110,
+    fwdHeight: 88,
+    upReach: 124,
+    upWidth: 100,
+    power: 1,
+    hitstopBonus: 0,
+    knockback: 6,
+    recoil: 3,
+    lunge: 3,
+    hangFrames: 4,
+  },
+  /** Combo step 3: the finisher. A longer wind, a bigger and longer blow, a longer recovery. */
+  slash3: {
+    startupFrames: 3,
+    activeFrames: 8,
+    durationFrames: 20,
+    cooldownFrames: 27,
+    fwdReach: 135,
+    fwdHeight: 108,
+    upReach: 144,
+    upWidth: 120,
+    power: 2,
+    hitstopBonus: 1,
+    knockback: 11,
+    recoil: 4,
+    lunge: 5.5,
+    hangFrames: 6,
+  },
+  /** Lumen pods (src/sim/pods.ts): breakables that spill glints. A pod's toughness (`hp` 1-3) is scene data. */
   pods: {
     /** Half the size of the pod's box. */
     radius: 22,
-    /** Slashes to burst one, and the glints it spills. */
-    hp: 1,
-    value: 3,
-    /** Hitstop when a slash hits one, frames. */
+    /** Glints a pod is worth in all, by its toughness (1, 2, 3 hp). */
+    value1: 3,
+    value2: 6,
+    value3: 10,
+    /** Glints knocked loose by each hit that does not burst it (part of its worth, not extra). */
+    hitGlints: 1,
+    /** Hitstop when a slash hits one, frames (the combo step may add to it). */
     hitstopFrames: 2,
-    /** The first glint reaches her this long after the burst; the rest follow this far apart. */
+    /**
+     * Glints set loose reach her one at a time: the first this long after the hit, the rest
+     * releaseStagger apart, or releaseStaggerBig apart when bigRelease or more go at once.
+     */
     releaseFrames: 16,
     releaseStagger: 5,
+    releaseStaggerBig: 3,
+    bigRelease: 6,
   },
   /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
   pickups: {

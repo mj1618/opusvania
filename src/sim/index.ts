@@ -18,14 +18,14 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 9,
+    version: 10,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
     prevInput: 0,
     player: createPlayer(scene.spawn.x, scene.spawn.y, t, scene),
     pickups: createPickups(scene),
-    pods: createPods(scene, t.pods),
+    pods: createPods(scene),
   };
   events.push({ type: 'spawn', x: scene.spawn.x, y: scene.spawn.y });
   return state;
@@ -51,7 +51,7 @@ export function placePlayer(
 /** Advances the sim by exactly one 1/60 s step, mutating `state` and appending to `events`. */
 export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scene, events: SimEvent[]): void {
   updatePlayer(state, scene, input, resolveParams(t), t.pods, events);
-  updatePods(state, scene, t.pods, t.pickups.comboFrames, events);
+  updatePods(state, scene, t.pickups.comboFrames, events);
   updatePickups(state, scene, t.pickups, events);
   state.prevInput = input;
   state.frame++;
@@ -59,7 +59,7 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
 
 export type { SimEvent } from './events';
 export { hashState } from './hash';
-export { slashBox } from './player/attack';
+export { slashBox, slashTuning } from './player/attack';
 export type { Pickup, PickupKind, Pod, PodMount, Scene } from './scene';
 export type {
   AttackDir,

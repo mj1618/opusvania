@@ -27,7 +27,17 @@ const SceneSchema = z
       .array(z.object({ id: z.string().min(1), kind: z.enum(['glint', 'great']), x: int, y: int }).strict())
       .default([]),
     pods: z
-      .array(z.object({ id: z.string().min(1), x: int, y: int, mount: z.enum(['sit', 'hang']) }).strict())
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            x: int,
+            y: int,
+            mount: z.enum(['sit', 'hang']),
+            hp: int.min(1).max(3).optional(),
+          })
+          .strict(),
+      )
       .default([]),
   })
   .strict();

@@ -20,8 +20,8 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   number = frames; a re-press needs a gap (`J1 .1 J1`). Long form `right+jump*12` also works. `clearInput()`.
 - `pickups()` → `{count, taken, worth, list: [{id, kind, x, y, state: waiting|flying|taken}]}`; the count is
   also `state().pickups.count`. Dev handle `window.__pickups` (renderer, `cfg`, `cpuMs`): pickups.md.
-- `pods()` → `{burst, total, worth, list: [{id, x, y, mount, state: closed|open, left}]}` (`left` = glints
-  still flying to her): combat.md.
+- `pods()` → `{burst, total, worth, list: [{id, x, y, mount, state: closed|open, hp, hpMax, worth, paid,
+  left}]}` (`paid` = glints set loose so far, `left` = still flying to her): combat.md.
 - `load()` restarts the scene (glints come back, pods close). `teleport(x, y)` puts the feet centre there at rest and snaps the camera.
 - `cam()` → `{x, y, zoom, follow, override}` (view centre, world px). `cam({x, y, zoom})` overrides (any
   subset; missing x/y follow the game camera), `cam({on: 'player', zoom: 4})` tracks the player,
