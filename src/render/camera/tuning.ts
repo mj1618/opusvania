@@ -3,7 +3,7 @@
  */
 export const cameraTuning = {
   /** Feet sit at this fraction of the view height (when the scene bounds allow). */
-  anchorY: 0.6,
+  anchorY: 0.72,
   /**
    * Look-ahead: the view leads the player by up to lookaheadX in the direction of SUSTAINED
    * travel. The lead follows a slow average of vx / leadFullSpeed (leadFrames time constant), so
