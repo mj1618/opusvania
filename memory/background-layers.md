@@ -96,3 +96,14 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   change (far.ts update) instead of `.resize()`.
 - `leafPts(..., kind)`: 4 leaf shapes; `clump()` picks one per lobe, three sizes, bunched on the lit
   side of the rim only.
+
+## Round 6
+- Mid takes its zone hue at BAKE time (`ATM.zoneTintL/R`, `zoneSpare`): the light map is known there,
+  so lit foliage is spared and stays emerald/olive while shadows go azure/violet. Its LayerView tints
+  are forced to 1; `ZONE.tintL/R` in mid.ts now only feed the sway strips. Far layers still tint live.
+- `edgeOnly: 1` (mid, far2): sun colour and brightening only on edges open toward the light, in every
+  zone. Clumps must be dark shapes against the light, never paler than what is behind them.
+- `atmTone()` (colours of sway items: fronds, moss caps, vines) now applies the layer's tint, lid and a
+  shadow value. Without it the fronds were the "pale paper cut-outs" over the dark canopy.
+- `MID.moonHole`: the canopy route's focal opening (a canopy `drop` plus soft sprites in `back`).
+- Violet needs red: the right-zone tints are about [1.15, 0.45, 2.4]; with red under ~0.9 it measures blue.

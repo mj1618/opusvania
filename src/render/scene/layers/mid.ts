@@ -59,6 +59,8 @@ const MID = {
   bedPlants: 4,
   /** Light seen through the openings of the canopy (sprites behind the bake). */
   skyHole: { size: 2.6, alpha: 0.5, color: 0xe0b060, left: 0x8fb4d8, right: 0xd08a6a },
+  /** The canopy route's focal light: a hole in this layer's canopy with moonlight behind it. */
+  moonHole: { x: 2330, y: 470, half: 250, lift: 420, size: 640, alpha: 0.6, color: 0xa8c8e6 },
   /** Drifting leaves in the air of this layer. */
   fallingLeaves: 10,
   glowCaps: [4, 9],
@@ -86,20 +88,26 @@ const ATM: Atmosphere = {
   rimStrength: 0.16,
   mottle: 0.2,
   gain: 0.58,
-  litGain: 1.5,
+  litGain: 1.15,
   sunMix: 0.7,
-  sunColor: 0xd9c24a,
+  sunColor: 0xe0b040,
   sunColorL: 0xbfdcff,
   sunColorR: 0x7fd89a,
   zoneParallax: 0.68,
-  sideBody: 0.12,
-  sideLit: 0.55,
-  sideRim: 2,
+  sideBody: 0.1,
+  sideLit: 0.5,
+  sideRim: 2.6,
   // Warm olive-brown shadows in the centre; the ZONE tints turn them azure / violet at the sides.
-  tint: [1.22, 1.0, 0.7],
+  tint: [1.42, 1.0, 0.52],
+  // Everywhere: clumps are dark shapes against the light, lit only on edges toward an opening.
+  edgeOnly: 1,
+  // Zone hue at bake time, sparing lit foliage (emerald on the right, not blue-violet).
+  zoneTintL: [0.43, 0.92, 2.45],
+  zoneTintR: [1.18, 0.46, 2.4],
+  zoneSpare: 0.85,
   shadeTint: [0.3, 0.25, 0.2],
   saturation: 0.9,
-  lid: 0.3,
+  lid: 0.22,
   lidY0: 400,
   lidY1: 760,
   blur: 2.2,
@@ -124,10 +132,11 @@ const FOG: FogSpec = {
 /** Zone moods for this layer (see ZONES in bg-bake). */
 const ZONE: Omit<ZoneSpec, 'anchorX'> = {
   parallax: 0.68,
-  tintL: [0.5, 0.92, 1.85],
-  tintR: [0.82, 0.6, 1.85],
+  // Tints for the sway strips only: the baked layer takes its zone hue at bake time (ATM.zoneTint*).
+  tintL: [0.43, 0.92, 2.45],
+  tintR: [1.18, 0.46, 2.4],
   mistL: 0x0e2a40,
-  mistR: 0x1c173a,
+  mistR: 0x2a1040,
 };
 
 /**
@@ -176,7 +185,11 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
     wellHalf: 300,
     wellLift: 260,
     openLift: 330,
-    drop: (x) => 60 * Math.exp(-(((x - 4700) / 500) ** 2)) + 50 * Math.exp(-(((x - 1900) / 450) ** 2)),
+    drop: (x) =>
+      60 * Math.exp(-(((x - 4700) / 500) ** 2)) +
+      50 * Math.exp(-(((x - 1900) / 450) ** 2)) -
+      // The canopy route's focal opening: a hole the moonlight falls through.
+      MID.moonHole.lift * Math.exp(-(((x - MID.moonHole.x) / MID.moonHole.half) ** 2)),
     trunks: [
       // The left glade's giant: 720 px wide, cropped by the frame top and bottom.
       { x: 1090, w: 720, lean: 40, branches: 3, roots: 4, boughs: 3 },
@@ -478,6 +491,21 @@ export class MidLayer implements EnvModule {
       s.alpha = MID.skyHole.alpha;
       sky.addChild(s);
     }
+    {
+      const h = MID.moonHole;
+      for (const [k, a] of [
+        [1, h.alpha],
+        [0.5, h.alpha * 0.8],
+      ] as const) {
+        const s = new Sprite(skyTex);
+        s.anchor.set(0.5);
+        s.position.set(h.x, h.y);
+        s.setSize(h.size * k, h.size * k * 1.2);
+        s.tint = h.color;
+        s.alpha = a;
+        sky.addChild(s);
+      }
+    }
     const back = { texture: bakeSoft(ctx.renderer, sky, rect, 0.2), rect };
     this.view = new LayerView(
       bakeLayer(ctx.renderer, b.content, rect, MID.bakeScale, ATM, TO_LIGHT, b.lights),
@@ -487,7 +515,7 @@ export class MidLayer implements EnvModule {
         y0: MID.canopyY + 80,
         y1: MID.canopyY + 380,
       },
-      { ...ZONE, anchorX: ctx.layers.anchor.x },
+      { ...ZONE, tintL: [1, 1, 1], tintR: [1, 1, 1], anchorX: ctx.layers.anchor.x },
       back,
     );
     layer.addChild(this.view.container);

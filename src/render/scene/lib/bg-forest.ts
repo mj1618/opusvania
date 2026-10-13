@@ -388,9 +388,9 @@ export function buildForest(plan: ForestPlan): ForestBuild {
   if (plan.floor) plan.floor(content, rg, build);
 
   // Leaves around every opening are backlit by the sky behind it.
-  for (const o of openings) L.lit(o.x, o.y, o.r * 2.3, o.r * 2.0, 0.42);
+  for (const o of openings) L.lit(o.x, o.y, o.r * 2.0, o.r * 1.7, 0.5);
   // The key light floods the canopy around the well.
-  L.lit(plan.wellX + R, plan.canopyY - R * 0.5, plan.wellHalf * 2.2, R * 3.2, 0.3);
+  L.lit(plan.wellX + R, plan.canopyY - R * 0.5, plan.wellHalf * 1.6, R * 2.4, 0.2);
   if (plan.lights) plan.lights(L);
   return build;
 }
@@ -541,7 +541,8 @@ export function forestLook(o: {
     size: o.leaf,
     light: o.light,
   };
-  const back = (hex: number): number => mix(hex, PALETTE.fogMid, 0.3);
+  // The far tier of a canopy sinks into dark haze (never paler than the light behind it).
+  const back = (hex: number): number => mix(hex, 0x0c1612, 0.4);
   return {
     bark: {
       base: c(0x14303a),

@@ -42,12 +42,12 @@ export const SKY = {
   /** The sky is shaded at this fraction of the logical view and stretched. */
   renderScale: 0.25,
   /** Left glade: a deep azure night with a small pale moon glow. */
-  left: { top: 0x040a18, mid: 0x1a405e, low: 0x081c2e, moon: 0x9fc4e6, moonX: 470, moonY: 150, moonR: 80 },
+  left: { top: 0x040a18, mid: 0x1a405e, low: 0x081c2e, moon: 0x9fc4e6, moonX: 470, moonY: 150, moonR: 60 },
   /** Right stand: indigo-violet dusk, with a small rose-gold opening far behind. */
-  right: { top: 0x080614, mid: 0x30245a, low: 0x120c2a, dusk: 0xe09a70, duskX: 1380, duskY: 300, duskR: 80 },
+  right: { top: 0x090514, mid: 0x3c1c5a, low: 0x18092c, dusk: 0xe09a70, duskX: 1380, duskY: 300, duskR: 80 },
   /** How much the key bloom dims in the side zones. */
   keyDimL: 0.45,
-  keyDimR: 0.55,
+  keyDimR: 0.88,
 } as const;
 
 /**

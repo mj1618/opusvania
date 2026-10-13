@@ -174,6 +174,16 @@ export interface Atmosphere {
   /** Gaussian blur baked into the layer, sigma in layer px (depth of field). */
   blur?: number;
   sideLit?: number;
+  /** 1 = treat the whole layer like a side zone: sun colour and light on open edges only. */
+  edgeOnly?: number;
+  /**
+   * Zone tints applied at bake time instead of in the LayerView (then leave the ZoneSpec tints at
+   * 1): here the light map is known, so lit foliage can be spared (`zoneSpare` 0..1) and keeps its
+   * own colour while shadows take the zone's hue.
+   */
+  zoneTintL?: readonly [number, number, number];
+  zoneTintR?: readonly [number, number, number];
+  zoneSpare?: number;
   sideRim?: number;
   /** Multiplier applied in full light-map shadow (cool and dark). */
   shadeTint?: readonly [number, number, number];
@@ -208,6 +218,8 @@ uniform vec3 uSunR;
 uniform vec3 uZoneMap;
 uniform vec3 uSide;
 uniform vec3 uTint;
+uniform vec4 uZTintL;
+uniform vec4 uZTintR;
 uniform vec3 uLid;
 float A(vec2 uv) { return texture(uRaw, uv).a; }
 void main() {
@@ -239,7 +251,7 @@ void main() {
   float pxe = uZoneMap.x + (p.x - uZoneMap.x) * uZoneMap.y;
   float zl = (1.0 - smoothstep(${ZONES.l0}.0, ${ZONES.l1}.0, pxe)) * uZoneMap.z;
   float zr = smoothstep(${ZONES.r0}.0, ${ZONES.r1}.0, pxe) * uZoneMap.z;
-  float zs = max(zl, zr);
+  float zs = max(max(zl, zr), uZTintL.w);
   col *= 1.0 + uShade.a * lit * mix(1.0, uSide.y, zs);
   // Lit foliage turns toward the sun colour at its own brightness (translucent, yellow-green).
   float lum = dot(col, vec3(0.3, 0.55, 0.15));
@@ -249,6 +261,8 @@ void main() {
   float body = mix(1.0, uSide.x + (1.0 - uSide.x) * edge, zs);
   col = mix(col, sun * (0.35 + 1.6 * lum), lit * uSun.a * body);
   col = mix(vec3(dot(col, vec3(0.3, 0.55, 0.15))), col, uGrade.y) * uGrade.x * uTint;
+  vec3 zt = mix(vec3(1.0), uZTintL.rgb, zl) * mix(vec3(1.0), uZTintR.rgb, zr);
+  col *= mix(zt, vec3(1.0), clamp(lit * 1.6, 0.0, 1.0) * uZTintR.w);
   col *= mix(uLid.z, 1.0, smoothstep(uLid.x, uLid.y, p.y));
   vec2 dw = (p - uWell.xy) / uWell.z;
   float w = exp(-dot(dw, dw));
@@ -278,7 +292,19 @@ function grade(color: number, gain: number, sat: number): number {
 
 /** CPU twin of the shader's fog + well tint, for things drawn outside the bake (sway sprites). */
 export function atmTone(atm: Atmosphere, color: number, x: number, y: number): number {
-  const c = mix(grade(color, atm.gain ?? 1, atm.saturation ?? 1), atm.fogColor, fogAt(atm, y));
+  // Things drawn outside the bake hang in the canopy's shade: local colour through the layer's
+  // tint and lid, at the light map's shadow value (they were pale paper cut-outs without this).
+  const g0 = grade(color, atm.gain ?? 1, atm.saturation ?? 1);
+  const t = atm.tint ?? [1, 1, 1];
+  const st = atm.shadeTint ?? [0.34, 0.46, 0.6];
+  const ly0 = atm.lidY0 ?? -1e5;
+  const ly1 = atm.lidY1 ?? -1e5 + 1;
+  const lt = Math.max(0, Math.min(1, (y - ly0) / (ly1 - ly0)));
+  const lid = (atm.lid ?? 1) + (1 - (atm.lid ?? 1)) * lt * lt * (3 - 2 * lt);
+  const ch = (v: number, i: number): number =>
+    Math.max(0, Math.min(255, Math.round(v * (t[i] ?? 1) * (0.45 + 0.55 * (st[i] ?? 1)) * lid)));
+  const shaded = (ch((g0 >> 16) & 255, 0) << 16) | (ch((g0 >> 8) & 255, 1) << 8) | ch(g0 & 255, 2);
+  const c = mix(shaded, atm.fogColor, fogAt(atm, y));
   const dx = (x - atm.wellX) / atm.wellR;
   const dy = (y - atm.wellY) / atm.wellR;
   return mix(c, atm.wellColor, Math.exp(-(dx * dx + dy * dy)) * atm.wellStrength);
@@ -506,6 +532,14 @@ export function bakeLayer(
             uShade: { value: new Float32Array([st[0], st[1], st[2], atm.litGain ?? 1.2]), type: 'vec4<f32>' },
             uSunL: { value: rgb(atm.sunColorL ?? atm.sunColor ?? 0xc9d977), type: 'vec3<f32>' },
             uSunR: { value: rgb(atm.sunColorR ?? atm.sunColor ?? 0xc9d977), type: 'vec3<f32>' },
+            uZTintL: {
+              value: new Float32Array([...(atm.zoneTintL ?? [1, 1, 1]), atm.edgeOnly ?? 0]),
+              type: 'vec4<f32>',
+            },
+            uZTintR: {
+              value: new Float32Array([...(atm.zoneTintR ?? [1, 1, 1]), atm.zoneSpare ?? 0]),
+              type: 'vec4<f32>',
+            },
             uTint: { value: new Float32Array(atm.tint ?? [1, 1, 1]), type: 'vec3<f32>' },
             uLid: {
               value: new Float32Array([atm.lidY0 ?? -1e5, atm.lidY1 ?? -1e5 + 1, atm.lid ?? 1]),
