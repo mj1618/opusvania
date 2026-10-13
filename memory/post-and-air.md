@@ -225,6 +225,17 @@
   the bluff they covered the terrace, burr-rise and the hollow. Cost: at ground rest the near masses are
   about 300 px tall at most and mostly lie on dark earth, so the bottom corners frame less than before.
   The knob is `walkClear` (negative lets tips cross the line).
+- **Framing from under the walk line** (round 15). After post (toe + vignette) the bottom third measures luma
+  3-7 with or without the foreground: black plants on black earth frame nothing, and they may not rise. What
+  reads down there is light on dark, so: `bottomRim` (near 3, far 2.3) multiplies the lit-edge opacity of
+  bottom plants only (`withPlane(far, draw, rim)`), and `haze` is a veil in the zone's colour behind both
+  planes in the two bottom corners (bottom-anchored gradient, top 20 px under the lowest walk line in its
+  820 px span, at most 300 tall). The veil alone does almost nothing (alpha 0.9 lifted the corner to 8-17);
+  the rims are what draw the fronds. Result: dim foliage forms in the dark, peak ~17.
+- The walk line for sinking is now the lowest under the plant's WHOLE width (near plants are up to 900 px
+  wide; from their middle + `walkReach` 250 their flanks stood in the pool at the frame edge), `walkReach`
+  150, and it is built from the ground rects with the pool's FLOOR (`GroundProfile` gives the water surface:
+  blades covered a wading hero).
 - `GroundProfile`: a pool's surface line comes from its own banks. It was the lowest ground top of the scene,
   which the hollow (1376) pulled 96 px down: mist, motes and leaves over the pool sat under the water.
 - Beam pools are found by marching the centre line down from the entry (`POOL_MARCH`): the first ground it

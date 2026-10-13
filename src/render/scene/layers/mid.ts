@@ -88,6 +88,13 @@ const MID = {
    */
   shaftPendant: { x: 3275, half: 125, drop: 390 },
   /**
+   * A narrow tongue of leaves hanging on from the pendant's tip (layer x, half width, extra drop):
+   * the backdrop of glint shaft-3 (3455, 850) for cameras inside the shaft (layer x 3240-3300,
+   * y 856-1000 as she climbs). Narrow on purpose: the gold light stays open on both sides of it,
+   * and from the terrace (stop 4) it stands behind trunk A.
+   */
+  shaftTongue: { x: 3268, half: 62, drop: 150 },
+  /**
    * Quiet backdrops for dormant glints (dim gold motes): no amber leaves, blossoms or lit clumps
    * there. `sky` is the summit glide's line over the right stand (playfield x 3900-5200, y -300..130
    * is layer x ~3350-4700, y < ~470 for the cameras of the glide); `shaft` is the pendant above.
@@ -307,7 +314,8 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
       330 * Math.exp(-(((x - 2940) / 300) ** 2)) +
       // And a pendant of it behind the wall-jump shaft, so the glints that zigzag up it hang
       // against dark leaves, not against the well's glow.
-      MID.shaftPendant.drop * Math.exp(-(((x - MID.shaftPendant.x) / MID.shaftPendant.half) ** 2)) -
+      MID.shaftPendant.drop * Math.exp(-(((x - MID.shaftPendant.x) / MID.shaftPendant.half) ** 2)) +
+      MID.shaftTongue.drop * Math.exp(-(((x - MID.shaftTongue.x) / MID.shaftTongue.half) ** 4)) -
       // The canopy route's focal opening: a hole the moonlight falls through.
       MID.moonHole.lift * Math.exp(-(((x - MID.moonHole.x) / MID.moonHole.half) ** 2)),
     trunks: [

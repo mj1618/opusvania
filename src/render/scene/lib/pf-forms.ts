@@ -32,6 +32,7 @@ import {
   ribbon,
   rngFor,
   smoothstep,
+  sunAt,
   wander,
   wobble,
 } from './pf-shape';
@@ -65,7 +66,16 @@ export const FORMS = {
    * shorter, and the great buttress stands as a column instead of leaning out as far as it is high.
    */
   tallStep: 170,
+  /** Foot stones sink this much further into the earth tone under full sun (0 = as in shade). */
+  footStoneSun: 0.4,
   tallRun: 0.5,
+  /**
+   * A step down with a trunk standing within this many px of its foot (the well before trunk A,
+   * 128 px) is treated like a tall one, and more: see `wellStep`.
+   */
+  narrowRun: 200,
+  /** ...and its back bank is this much of the usual run (at 0.5 it was still a lit ramp behind the lamp). */
+  narrowBank: 0.26,
   /** Water surface above the pool floor (TERRAIN.waterDepth). */
   waterDepth: 50,
 } as const;
@@ -208,6 +218,11 @@ interface Step {
   index: number;
 }
 
+/** A step whose lower ground is a narrow well between its face and a trunk (trunkXs: their west edges). */
+function wellStep(fx: number, d: -1 | 1, trunkXs: number[]): boolean {
+  return trunkXs.some((tx) => (tx - fx) * d > 40 && (tx - fx) * d < FORMS.narrowRun);
+}
+
 function steps(segs: GroundSeg[]): Step[] {
   const out: Step[] = [];
   segs.forEach((s, i) => {
@@ -265,8 +280,13 @@ export function paintBanks(
     const underTrunk = trunkXs.some((tx) => Math.abs(tx - fx) < 40);
     // A tall face (the bluff) gets a steep shoulder of earth: at the usual run it was a 45 degree
     // slope from the lower ground to the lip, which is a ramp however dark it is painted.
-    const tall = H >= FORMS.tallStep;
-    const L = H * FORMS.bankRun * range(r, 0.9, 1.15) * (underTrunk ? 0.6 : tall ? FORMS.tallRun : 1);
+    const narrow = wellStep(fx, d, trunkXs);
+    const tall = H >= FORMS.tallStep || narrow;
+    const L =
+      H *
+      FORMS.bankRun *
+      range(r, 0.9, 1.15) *
+      (underTrunk ? 0.6 : narrow ? FORMS.narrowBank : tall ? FORMS.tallRun : 1);
     const xs = fx - d * 54;
     const xe = fx + d * L;
     spans.push([Math.min(xs, xe) - 40, Math.max(xs, xe) + 40]);
@@ -538,12 +558,15 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
     // the dark behind it), near-vertical down the face, its toe sweeping out along the lower ground.
     const H = lo - hi;
     const underTrunk = trunkXs.some((tx) => Math.abs(tx - fx) < 40);
-    const tall = H >= FORMS.tallStep;
+    // A step into a narrow well: even the column's toe (50-74 px on a 128 px face) was a lit ramp
+    // across the whole well, behind the lamp. There the root clings to the face, slim and unlit.
+    const narrow = wellStep(fx, d, trunkXs);
+    const tall = H >= FORMS.tallStep || narrow;
     {
       // On a tall face it stands as a column with a short toe: leaning out as far as the face is
       // high it was a lit 45 degree ramp from the lower ground to the lip (the bluff's east side).
-      const off = tall ? range(r, 14, 22) : range(r, 26, 36);
-      const toe = tall ? range(r, 50, 74) : H * range(r, 0.85, 1.1);
+      const off = narrow ? range(r, 7, 11) : tall ? range(r, 14, 22) : range(r, 26, 36);
+      const toe = narrow ? range(r, 18, 26) : tall ? range(r, 50, 74) : H * range(r, 0.85, 1.1);
       const line = wander(
         cubic(
           fx - d * range(r, 60, 90),
@@ -578,25 +601,37 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
         p,
         line,
         (t) =>
-          w0 * (1 - t * 0.62) +
-          3 +
-          Math.max(0, Math.sin(t * 11 + st.index)) * 3 +
-          smoothstep(0.5, 0.75, t) * 5,
+          (w0 * (1 - t * 0.62) +
+            3 +
+            Math.max(0, Math.sin(t * 11 + st.index)) * 3 +
+            smoothstep(0.5, 0.75, t) * 5) *
+          (narrow ? 0.6 : 1),
         wood,
-        tall ? 0.6 : 0.68,
+        narrow ? 0.5 : tall ? 0.6 : 0.68,
         tall ? 0.07 : 0.1,
         fx + 9,
-        { bark: tall ? 0.5 : 0.3, grain: 4, lit: tall ? 0.14 : 0.3 },
+        { bark: tall ? 0.5 : 0.3, grain: 4, lit: narrow ? 0.06 : tall ? 0.14 : 0.3 },
       );
       // A lesser root forking off it half way down.
       const [bx, by] = [line[20] as number, line[21] as number];
       const fork = wander(
-        quad(bx, by, bx + d * 26, lerp(by, lo, 0.6), bx + d * range(r, 50, 80), lo + 6, 9),
+        quad(
+          bx,
+          by,
+          bx + d * (narrow ? 8 : 26),
+          lerp(by, lo, 0.6),
+          bx + d * range(r, 50, 80) * (narrow ? 0.4 : 1),
+          lo + 6,
+          9,
+        ),
         2,
         867,
         20,
       );
-      limb(p, fork, (t) => 12 * (1 - t * 0.6) + 2, wood, 0.66, 0.06, fx + 10, { bark: 0.3, lit: 0.3 });
+      limb(p, fork, (t) => 12 * (1 - t * 0.6) + 2, wood, narrow ? 0.5 : 0.66, 0.06, fx + 10, {
+        bark: 0.3,
+        lit: narrow ? 0.06 : 0.3,
+      });
     }
     if (tall) {
       // A cliff of root-bound earth, not a cut block: stones bedded in the face at uneven heights
@@ -686,7 +721,7 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
       }
     }
     // Stones slumped at the foot, low (ankle to shin), half in the moss.
-    for (let k = 0; k < (underTrunk ? 1 : 3); k++) {
+    for (let k = 0; k < (underTrunk || narrow ? 1 : 3); k++) {
       const w = range(r, 16, 30) * (k === 0 ? 1.2 : 0.8);
       const cx = fx + d * (range(r, 22, 46) + k * range(r, 40, 62));
       const c = kit.stone[(st.index + k * 3) % kit.stone.length] as number;
@@ -696,7 +731,9 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
         rx: w,
         ry: w * range(r, 0.55, 0.7),
         seed: 868 + st.index * 5 + k,
-        color: mix(c, E[2] as number, 0.45),
+        // (Deeper into the earth tone where a sun pool lands: a pale flat stone there was the
+        // brightest thing on the terrace.)
+        color: mix(c, E[2] as number, 0.45 + FORMS.footStoneSun * sunAt(cx, lo)),
         dark: E[4] as number,
         h: 0.6,
         rise: 0.1,

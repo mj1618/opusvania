@@ -22,12 +22,16 @@ export interface Tones {
 
 /** Which depth plane is being drawn: the far one is lighter, greener and keeps more colour. */
 let farPlane = false;
-export function withPlane<T>(far: boolean, draw: () => T): T {
+/** Multiplies the rim's opacity for the plant being drawn (bottom plants: see FOREGROUND.bottomRim). */
+let rimGain = 1;
+export function withPlane<T>(far: boolean, draw: () => T, rim = 1): T {
   farPlane = far;
+  rimGain = rim;
   try {
     return draw();
   } finally {
     farPlane = false;
+    rimGain = 1;
   }
 }
 
@@ -41,7 +45,7 @@ export function foregroundTones(rnd: Rnd, _warmth = 0.5, _rimAlpha = 0.5): Tones
     body: [base, mix(base, lift, 0.3), mix(base, lift, 0.6), mix(base, lift, 0.45), mix(base, lift, 0.8)],
     rim: cool,
     cool,
-    rimAlpha: farPlane ? 0.3 : 0.22,
+    rimAlpha: Math.min(1, (farPlane ? 0.3 : 0.22) * rimGain),
     rimShift: farPlane ? 4 : 6,
   };
 }

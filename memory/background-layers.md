@@ -191,7 +191,16 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   and the wall-jump shaft. At 85% less light the whole crown went to a flat black wall: keep some.
 - `MID.shaftPendant`: a pendant of canopy (a `drop` + `cover` gaussian at layer x 3275) behind the upper
   two thirds of the wall-jump shaft. Median luma behind shaft glints 4-6: 88 / 44 / 33 -> 50 / 44-60 / 34-40;
-  shaft-3 (3455, 850) still hangs on the well's glow (~100) under the pendant's edge, on purpose: lower
-  and it closes the gold light between the trunks (stop 4). It is placed for cameras inside the shaft
-  (layer x = playfield x - 0.32 * (camX - 2880)); from the terrace the shaft shows layer x ~3400 instead.
+  It is placed for cameras inside the shaft (layer x = playfield x - 0.32 * (camX - 2880)); from the
+  terrace the shaft shows layer x ~3400 instead.
+- `MID.shaftTongue` (x 3268, half 62, +150 px, a flat-topped `exp(-u^4)`): a narrow tongue on the pendant's
+  tip, behind shaft-3 (3455, 850) for cameras in the shaft (layer x 3240-3300, y 856-1000 as she climbs).
+  Median luma behind it 107 -> 16 from inside the shaft, 19 -> 23 from the floor. From the terrace (stop 4)
+  it stands behind trunk A and the gold light between the trunks is as it was; the glint there still hangs on
+  ~135 (was 155): only something at parallax 1 could fix that view, and a liana with a leaf knot across the
+  shaft (tried in the playfield) read as a rope bridge / something to land on.
+- Sky glints from the summit (sky-1..4, great-sky): backdrop median 5-15 at the summit, bough and glide
+  cameras, and identical with the foreground hidden: nothing of the scene layers is in front of or bright
+  behind them. sky-1's foliage was the bough's old sapling (playfield), gone now. What dims sky-3 / sky-4
+  there is the post vignette at the frame's top right, not these layers.
 - Layer coordinates of a playfield point: x = px - (1 - f) * (camX - 2880), y = py + (1 - f) * (1060 - camY).

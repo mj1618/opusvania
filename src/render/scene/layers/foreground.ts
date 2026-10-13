@@ -35,7 +35,7 @@ import {
   trunk,
   withPlane,
 } from '../lib/fx-foliage';
-import { GroundProfile } from '../lib/fx-ground';
+import { zoneWeights } from '../lib/fx-zones';
 import { PALETTE, prng, wind } from '../lib/look';
 
 export const FOREGROUND = {
@@ -82,13 +82,36 @@ export const FOREGROUND = {
   bottomFree: 330,
   /**
    * Bottom plants frame; they never stand on the walk line. Each one sinks until its top is this
-   * many px under the lowest ground within `walkReach` px of the playfield x it is in front of
-   * (smoothed over `walkEase` px so it sinks and rises as the camera travels, never pops). Pinned to
-   * the frame edge with the camera up on the bluff, they covered the terrace and its creature.
+   * many px under the lowest ground within `walkReach` px of the playfield span it is in front of
+   * (its whole width; smoothed over `walkEase` px so it sinks and rises as the camera travels, never
+   * pops). Pinned to the frame edge with the camera up on the bluff, they covered the terrace and
+   * its creature. (`walkReach` was 250 from the plant's middle, which the wide ones outgrew.)
    */
   walkClear: 12,
-  walkReach: 250,
+  walkReach: 150,
   walkEase: 180,
+  /**
+   * Sunk under the walk line the bottom plants are near-black on near-black earth: they frame
+   * nothing. A breath of the zone's haze lies behind them in the two bottom corners (in front of the
+   * playfield's earth, behind both planes), so their silhouettes read again. It is a veil, not a
+   * light: `alpha` in the very corner, nothing by `reach` px along the bottom edge, and its top
+   * stays `clear` px under the lowest walk line it spans (at most `rise` px tall), fading out over
+   * its upper `soft` share, so it never touches the walk line, a creature, a landing or a pickup.
+   * `colors`: left, centre, right zone.
+   */
+  /**
+   * ...and their lit edges are this much stronger than the top plants' (near, far): under the walk
+   * line there is no bright backdrop to be a silhouette against, so the edge light is what draws them.
+   */
+  bottomRim: { near: 3, far: 2.3 },
+  haze: {
+    alpha: 0.6,
+    reach: 820,
+    rise: 300,
+    clear: 20,
+    soft: 0.5,
+    colors: [0x1d5068, 0x33492c, 0x3b2c68] as const,
+  },
   /**
    * On the high route the frame is canopy already: the near top plants pull back by this much of
    * their height and thin to this opacity when the camera is at its highest.
@@ -113,6 +136,43 @@ export const FOREGROUND = {
 };
 
 const WALK_STEP = 16;
+const HAZE_W = 128;
+const HAZE_H = 64;
+
+let hazeTex: Texture | null = null;
+
+/**
+ * The corner veil: white, densest in the bottom-left corner, easing to nothing toward the right
+ * edge and over the upper `haze.soft` of its height. Mirrored for the right corner.
+ */
+function hazeTexture(): Texture {
+  if (hazeTex) return hazeTex;
+  const canvas = document.createElement('canvas');
+  canvas.width = HAZE_W;
+  canvas.height = HAZE_H;
+  const c2 = canvas.getContext('2d');
+  if (c2) {
+    const img = c2.createImageData(HAZE_W, HAZE_H);
+    for (let y = 0; y < HAZE_H; y++) {
+      const v = Math.min(1, y / (HAZE_H - 1) / FOREGROUND.haze.soft);
+      const up = v * v * (3 - 2 * v);
+      for (let x = 0; x < HAZE_W; x++) {
+        const u = x / (HAZE_W - 1);
+        const along = (Math.cos(u * Math.PI) * 0.5 + 0.5) ** 1.3;
+        const k = (y * HAZE_W + x) * 4;
+        // Premultiplied white.
+        const a = Math.round(255 * along * up);
+        img.data[k] = 255;
+        img.data[k + 1] = 255;
+        img.data[k + 2] = 255;
+        img.data[k + 3] = a;
+      }
+    }
+    c2.putImageData(img, 0, 0);
+  }
+  hazeTex = Texture.from(canvas);
+  return hazeTex;
+}
 
 type Plane = 'near' | 'far';
 type Edge = 'top' | 'bottom' | 'trunk';
@@ -145,6 +205,8 @@ export class ForegroundLayer implements EnvModule {
   private groundTop = 0;
   /** The lowest walk line near each `WALK_STEP` px of world x (see `walkClear`). */
   private walkLow = new Float32Array(0);
+  /** The corner veils behind the bottom plants (`FOREGROUND.haze`): left, right. */
+  private haze: Sprite[] = [];
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
@@ -160,7 +222,7 @@ export class ForegroundLayer implements EnvModule {
       draw: (g: Graphics) => void,
     ): Piece => {
       const g = new Graphics();
-      withPlane(plane === 'far', () => draw(g));
+      withPlane(plane === 'far', () => draw(g), edge === 'bottom' ? FOREGROUND.bottomRim[plane] : 1);
       const lb = g.getLocalBounds();
       const piece: Piece = {
         g,
@@ -250,9 +312,16 @@ export class ForegroundLayer implements EnvModule {
     // over reach + ease, then a triangle blur over the ease, which can only leave it at or below the
     // true lowest line within `walkReach`.
     {
-      const ground = new GroundProfile(ctx.scene);
+      // The line she walks: the ground rects, and in the pool its FLOOR (she wades there; the mist's
+      // `GroundProfile` gives the water surface, and plants stood in the pool up to it).
+      const floors = ctx.scene.solids.filter((s) => s.tag === 'ground' || s.tag === 'pool');
       const n = Math.ceil(ctx.scene.width / WALK_STEP) + 1;
-      const raw = Float32Array.from({ length: n }, (_, i) => ground.top(i * WALK_STEP));
+      const raw = Float32Array.from({ length: n }, (_, i) => {
+        const x = i * WALK_STEP;
+        let y = 0;
+        for (const s of floors) if (x >= s.x - WALK_STEP && x <= s.x + s.w + WALK_STEP) y = Math.max(y, s.y);
+        return y || ctx.scene.height;
+      });
       const at = (a: Float32Array, i: number): number => a[Math.min(n - 1, Math.max(0, i))] as number;
       const eb = Math.max(1, Math.round(FOREGROUND.walkEase / WALK_STEP));
       const rb = Math.round(FOREGROUND.walkReach / WALK_STEP) + eb;
@@ -284,7 +353,13 @@ export class ForegroundLayer implements EnvModule {
       );
       this.planes[plane].alpha = FOREGROUND[plane].alpha;
     }
-    ctx.layers.foreground.addChild(this.planes.far, this.planes.near);
+    this.haze = [0, 1].map(() => {
+      const h = new Sprite(hazeTexture());
+      h.anchor.set(0, 1);
+      h.label = 'fg-haze';
+      return h;
+    });
+    ctx.layers.foreground.addChild(...this.haze, this.planes.far, this.planes.near);
     fxDebug('foreground', FOREGROUND);
     fxDebug('layers', ctx.layers);
   }
@@ -393,6 +468,38 @@ export class ForegroundLayer implements EnvModule {
     // 0 on the ground, 1 with the camera at the top of the scene.
     const high = Math.min(1, Math.max(0, (anchor.y - cam.y) / Math.max(1, anchor.y - VIEW_H / 2)));
 
+    // The corner veils: from each bottom corner along the bottom edge, as tall as the room under
+    // the lowest walk line they lie in front of.
+    {
+      const hz = cfg.haze;
+      const w = zoneWeights(cam.x);
+      let tint = 0;
+      for (let c = 0; c < 3; c++) {
+        const sh = 16 - c * 8;
+        let v = 0;
+        for (let z = 0; z < 3; z++) v += (((hz.colors[z] as number) >> sh) & 255) * (w[z] as number);
+        tint |= Math.round(v) << sh;
+      }
+      const bottomY = vis.y + vis.h;
+      for (let i = 0; i < 2; i++) {
+        const h = this.haze[i] as Sprite;
+        const dir = i ? -1 : 1;
+        // The lowest line (largest y) under its span, at parallax 1 (screen x = world x - cam.x).
+        let line = 0;
+        for (let q = 0; q <= 8; q++) {
+          const wx = cam.x - dir * (vis.w / 2) + dir * (q / 8) * hz.reach;
+          line = Math.max(line, this.walkLowAt(wx));
+        }
+        const room = Math.min(hz.rise, bottomY - (vis.y + vis.h / 2 + (line - cam.y)) - hz.clear);
+        h.visible = room > 24;
+        if (!h.visible) continue;
+        h.position.set(i ? vis.x + vis.w : vis.x, bottomY);
+        h.scale.set((dir * hz.reach) / HAZE_W, room / HAZE_H);
+        h.tint = tint;
+        h.alpha = hz.alpha * Math.min(1, (room - 24) / 120);
+      }
+    }
+
     const rise = anchor.y - cam.y;
     for (const piece of this.pieces) {
       const s = piece.sprite;
@@ -445,7 +552,14 @@ export class ForegroundLayer implements EnvModule {
           : piece.y + sy + lock + away;
       if (piece.edge === 'bottom') {
         // The walk line of the playfield behind this plant, in this layer's coordinates.
-        const line = vis.y + vis.h / 2 + (this.walkLowAt(cam.x + mid - (vis.x + vis.w / 2)) - cam.y);
+        // The lowest one under the plant's whole width, not just its middle: the big near plants are
+        // wider than twice `walkReach`, and their flanks stood in the pool at the frame's edge.
+        let low = 0;
+        for (let q = 0; q <= 6; q++) {
+          const lx = piece.x + sx + piece.b.x + (piece.b.width * q) / 6;
+          low = Math.max(low, this.walkLowAt(cam.x + lx - (vis.x + vis.w / 2)));
+        }
+        const line = vis.y + vis.h / 2 + (low - cam.y);
         // (A line far under the frame's bottom edge has nothing on it to hide: let go of it.)
         const under = Math.min(1, Math.max(0, (line - (vis.y + vis.h) - 80) / 140));
         y += Math.max(0, line + cfg.walkClear - (y + piece.b.y)) * (1 - under * under * (3 - 2 * under));

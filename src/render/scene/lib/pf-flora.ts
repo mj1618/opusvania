@@ -104,6 +104,11 @@ export class FloraBuilder {
   glow = 0;
   /** If set, every vertex gets this bend weight instead of one from its distance to the base. */
   fixedH: number | null = null;
+  /**
+   * While set, triangles are dropped: a plant can be "grown" for its random draws alone, so leaving
+   * one out does not reshuffle every plant after it on the same top.
+   */
+  mute = false;
 
   constructor(
     private readonly chunkW: number,
@@ -163,6 +168,7 @@ export class FloraBuilder {
   }
 
   tri(a: number, b: number, c: number): void {
+    if (this.mute) return;
     this.cur.index.push(a, b, c);
   }
 

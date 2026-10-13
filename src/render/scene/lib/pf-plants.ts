@@ -1127,7 +1127,22 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
 
     const sunHere = (x: number): number => sunAt(x, top.y);
     // Keep big plants off whatever the terrain wants seen (the root mound).
-    const blocked = (x: number): boolean => info.keepClear.some(([k0, k1]) => x > k0 && x < k1);
+    const blocked = (x: number): boolean =>
+      info.keepClear.some(
+        ([k0, k1, ky]) => x > k0 && x < k1 && (ky === undefined || Math.abs(ky - top.y) < 60),
+      );
+    // The goal's props and sitting pods stand clear: `spot(x, pad)` is true within their radius
+    // (+ pad for plants that spread). Plants there are grown muted (drawn into nothing), so the
+    // random sequence, and with it every other plant on this top, stays as it was.
+    const spot = (x: number, pad = 0): boolean =>
+      info.clearSpots.some((q) => Math.abs(q.x - x) < q.r + pad && Math.abs(q.y - top.y) < 40);
+    const buried = (x: number): boolean =>
+      info.covered.some(([c0, c1, cy]) => x > c0 && x < c1 && Math.abs(cy - top.y) < 8);
+    const muted = (off: boolean, grow: () => void): void => {
+      g.back.mute = g.front.mute = g.halo.mute = off;
+      grow();
+      g.back.mute = g.front.mute = g.halo.mute = false;
+    };
 
     const isGround = top.kind === 'ground';
     // Fight spots: creatures and the hero must read there, so nothing tall or warm behind them.
@@ -1147,7 +1162,9 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
       ) {
         if (blocked(x) || calm(x)) continue;
         const t = toneAt(HAZE, x, r, top.y);
-        for (let i = 0; i < 3; i++) reedStand(c, x + i * range(r, 16, 30), y + 4, range(r, 110, 190), t);
+        muted(spot(x + 25, 30), () => {
+          for (let i = 0; i < 3; i++) reedStand(c, x + i * range(r, 16, 30), y + 4, range(r, 110, 190), t);
+        });
       }
     }
 
@@ -1161,6 +1178,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
         if (blocked(x) || calm(x)) continue;
         const t = toneAt(REAR, x, r, top.y);
         const roll = r();
+        g.back.mute = g.halo.mute = spot(x, 50) || spot(x + 60, 50);
         if (roll < 0.6) {
           const n = isGround ? 1 + Math.floor(r() * 2.2) : 1;
           for (let i = 0; i < n; i++) {
@@ -1180,6 +1198,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
           for (let i = 0; i < n; i++)
             tallGrass(c, x + i * range(r, 12, 24), y + 1, t, range(r, 1, 1.35) * scale);
         }
+        g.back.mute = g.halo.mute = false;
       }
     }
 
@@ -1190,6 +1209,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
         const z = zoneAt(x);
         const t = toneAt(BACK, x, r, top.y);
         heroes++;
+        g.back.mute = g.halo.mute = spot(x, 70) || spot(x + 50, 50);
         if (z.warm > 0.5) {
           if (heroes % 2)
             bush(
@@ -1218,6 +1238,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
           fern(c, x, y, range(r, 120, 150), t);
           fern(c, x + range(r, 36, 60), y, range(r, 60, 84), t);
         }
+        g.back.mute = g.halo.mute = false;
       }
     }
 
@@ -1240,7 +1261,10 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
       const glowChance =
         z.cool * PLANTS.glowShare[0] + z.warm * PLANTS.glowShare[1] + z.deep * PLANTS.glowShare[2];
       const roll = r();
-      if (r() < glowChance && !narrow && !noGlow(x)) {
+      // (Reset at the top of the next pass and after the loop: the glow branch leaves by `continue`.)
+      g.back.mute = g.halo.mute = spot(x, 14) || spot(x + 22, 8) || buried(x);
+      const glowRoll = r();
+      if (glowRoll < glowChance && !narrow && !noGlow(x)) {
         // Cyan in the glade, violet and magenta in the deep stand.
         const violet = r() < z.deep * 0.88 + z.warm * 0.2;
         if (roll < 0.5) {
@@ -1296,6 +1320,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
         clover(c, x + 16, y, 9, t);
       }
     }
+    g.back.mute = g.halo.mute = false;
 
     // Grass in drifts between and around them: low skirts, knee-high swells, bare gaps.
     const seed = top.x0 * 0.37 + top.y;
@@ -1319,6 +1344,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
       const h0 = lerp(PLANTS.grassHeight[0] * 0.7, PLANTS.grassHeight[0] * 1.8, k) * scale * ends;
       const h1 =
         lerp(PLANTS.grassHeight[0] + 5, PLANTS.grassHeight[1], tall) * scale * range(r, 0.75, 1.25) * ends;
+      g.back.mute = buried(x);
       grassTuft(
         c,
         x,
@@ -1341,12 +1367,13 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
           toneAt(BACK, x, r, top.y),
         );
       }
+      g.back.mute = false;
     }
     // A snapped trunk's crown: ferns in the rot, moss over the rim.
     if (top.kind === 'trunk') {
       for (const u of [0.28, 0.7]) {
         const fx = lerp(top.x0, top.x1, u + range(r, -0.06, 0.06));
-        fern(c, fx, y, range(r, 30, 46), toneAt(BACK, fx, r, top.y));
+        muted(spot(fx, -30), () => fern(c, fx, y, range(r, 30, 46), toneAt(BACK, fx, r, top.y)));
       }
     }
 
@@ -1376,6 +1403,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
         const sun = sunAt(x, top.y);
         fb.plant(x, top.y, 4000, 0, 0, 0, 0);
         fb.fixedH = 0;
+        fb.mute = buried(x);
         // Vertex indices belong to one chunk: on crossing into the next, restart the strip there
         // from a copy of the previous column so there is no gap.
         const ci = fb.chunkIndex(x);
@@ -1401,6 +1429,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
         if (isGround && cover > 0.8 && r() < 0.07) dangleRoot(fc, x, top.y + drip * 0.7, range(r, 10, 26));
         if (cover > 0.8 && r() < 0.09) mossTuft(fc, x, top.y + drip * 0.6, range(r, 8, 20), t);
       }
+      fb.mute = false;
     }
     // Low things in front that interrupt the line: a root hump breaking the surface, a half-buried
     // stone. Dark, rounded, ankle-high.
@@ -1411,6 +1440,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
         const t = toneAt(FRONT, x, r, top.y);
         fb.plant(x, top.y, 4000, 0, 0, 0, 0);
         fb.fixedH = 0;
+        fb.mute = buried(x);
         if (r() < 0.5) {
           const w = range(r, 50, 90);
           const line: number[] = [];
@@ -1442,6 +1472,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
           }
           mossTuft({ b: fb, halo: g.halo, r }, x - rw * 0.3, top.y - rh * 0.6, 7, t);
         }
+        fb.mute = false;
         fb.fixedH = null;
       }
     }
@@ -1455,9 +1486,11 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
       ) {
         if (blocked(x) || calm(x)) continue;
         const t = toneAt(FRONT, x, r, top.y);
-        for (let i = 0; i < 2 + Math.floor(r() * 2); i++)
-          tallGrass(fc, x + i * range(r, 10, 20), top.y + 6, t, range(r, 0.6, 0.85));
-        if (r() < 0.5) fern(fc, x + range(r, 24, 44), top.y + 6, range(r, 34, 48), t);
+        muted(spot(x + 20, 50) || buried(x), () => {
+          for (let i = 0; i < 2 + Math.floor(r() * 2); i++)
+            tallGrass(fc, x + i * range(r, 10, 20), top.y + 6, t, range(r, 0.6, 0.85));
+          if (r() < 0.5) fern(fc, x + range(r, 24, 44), top.y + 6, range(r, 34, 48), t);
+        });
       }
     }
     // Front fringe: low, dark, in clumps, never on thin boughs.
@@ -1471,6 +1504,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
         if (patch < 1 - PLANTS.fringeCover * 2) continue;
         const k = smoothstep(1 - PLANTS.fringeCover * 2, 0.6, patch);
         const t = toneAt(FRONT, x, r, top.y);
+        g.front.mute = buried(x);
         grassTuft(
           fc,
           x,
@@ -1484,6 +1518,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
         if (r() < 0.12) clover(fc, x, top.y + 5, 6, t);
         if (r() < PLANTS.fineShare * 0.6) fineTuft(fc, x, top.y + 4, 3 + Math.floor(r() * 3), 8, 22, t);
       }
+      g.front.mute = false;
     }
 
     // Things trailing off free edges.
@@ -1645,6 +1680,7 @@ function growUnder(g: Garden, u: Under): void {
   const c: Ctx = { b: g.back, halo: g.halo, r };
   const trail = u.trail ?? 'mixed';
   const long = u.kind === 'floating' ? 1 : u.kind === 'branch' ? 0.7 : 1.25;
+  const cap = (len: number): number => (u.reach ? Math.min(len, u.reach * (0.5 + 0.5 * r())) : len);
   for (let x = u.x0 + range(r, 0, 14); x < u.x1; x += range(r, 9, 30)) {
     mossTuft(c, x, u.y(x), range(r, 8, 24), toneAt(BACK, x, r, u.y(x)));
   }
@@ -1659,7 +1695,7 @@ function growUnder(g: Garden, u: Under): void {
       else vine(c, x, y, range(r, 40, 120), t);
     } else if (trail === 'longVines') vine(c, x, y, range(r, 90, 240), t);
     else if (u.kind === 'floating' && r() < 0.5) dangleRoot(c, x, y, range(r, 30, 96));
-    else vine(c, x, y, range(r, 30, 120) * long, t, u.kind !== 'trunk' || r() < 0.7);
+    else vine(c, x, y, cap(range(r, 30, 120) * long), t, u.kind !== 'trunk' || r() < 0.7);
   }
   if (u.kind === 'branch') {
     for (let x = u.x0 + 20; x < u.x1; x += range(r, 40, 80)) {
@@ -1686,6 +1722,7 @@ function growFace(g: Garden, f: Face, info: TerrainInfo): void {
     }
     return;
   }
+  if (f.clean) return;
   const count = Math.max(1, Math.round(h / (f.kind === 'trunk' ? 260 : 150)));
   for (let i = 0; i < count; i++) {
     const y0 = lerp(f.y0 + 16, f.y1 - 40, r());

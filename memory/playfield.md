@@ -75,13 +75,43 @@
 - The root mound (3968-4160) stands on the hollow's east lip: whatever leaves it westward (back roots, the
   first braid, the feeder, the lee plant) now comes down to `footAt(x)` = the hollow's floor; they ended in
   the air at the old ground level 1280.
-- `FIGHT_SPOTS` terrace entry is `[2624, 3200]`: stale since 2026-10-14 (burr-rise is gone, the terrace ends at 3072,
-  burr-path keeps to 2004-2316; the fights on the floor are burr-path and burr-root 4160-4608).
+- `FIGHT_SPOTS` = burr-path 2004-2316 and burr-root 4160-4608 (the terrace entry is gone with burr-rise).
 - The vines' leaf knots (`leafKnot`) hang from limbs that start above `viewTop(scene)` (passed to
   `growGarden` as `skyTop`); they began 330 px up, and with the camera's headroom two of them showed as a
   sawn-off X over F7 (5260, -150). All knots of one island lean the same way.
-- Not done: the 1280 ground's grass still runs across the front of the root mound (the ground top is not
-  split under a `root` solid).
+
+## After the second layout pass, 2026-10-14 (trunks to 1168, the well, boughs off trunk B)
+- **Shaft trunks** (`shaftSide`: flanks within `TERRAIN.shaftGap` of another trunk). The inner flank is a
+  wall: silhouette wobble 2 px instead of 7 + flare, no burls, plates, moss, fungi or ivy on it (`Face.clean`),
+  vines dive under the bark 20 px short of it, the cap's drape is 16 px. `paintKickWall`: runs of bark rubbed a
+  shade paler down the edge and, every 118-164 px, a scuff with 3-4 claw strokes (`TERRAIN.scuff`) and torn
+  moss under it. The scuff patch must stay in bark tones: at `barkLit` + pale wood, 13 x 30 px, it read as a
+  row of seed pods stuck on the trunk.
+- **Doorways** (`TERRAIN.lowDoor`: gap under a hanging trunk < 180): `stiltRoots` gives squat feet instead
+  of the arch. Each main root leaves from UNDER its corner (inset 20-27% of the width, at the bottom edge), so
+  the flank above is plain wall down to the collision bottom; the shaft-side foot is short (46-60 px, the
+  outer 84-112). Underside sag halved, and nothing hangs more than ~34 px into the doorway (`Under.reach`).
+- **The well** (`wellStep`: a trunk within `FORMS.narrowRun` of a step's foot; the ground rect is one, so its
+  width says nothing). The generic step filled it: the buttress toe (even the tall-step column, 50-74 px on a
+  128 px face) and the back bank were a lit ramp from the lip to the lamp's foot. There the root clings to the
+  face (toe 18-26, 0.6 girth, relief 0.5, `lit` 0.06), the bank is `narrowBank` 0.26 of the run, one foot stone.
+- **Boughs of a trunk** (`boughHost`: a one-way starting within `boughReach` 140 px east of a trunk's flank,
+  below its top): no sapling; the limb grows from the flank in the host's wood (zone of the trunk, not of the
+  tip). Flush (the summit bough): it starts 22 px inside the flank under a bark `collar`, the cap has no drape
+  on that side (`joinedR`). With a gap (the catch branch, 96 px): arm and bough are ONE `limb` outline, the arm
+  leaving the flank `gap * 1.7` px lower, climbing steeply and levelling 14 px before the walk line starts,
+  with shade over the arm. Two pieces joined at the elbow showed a sawn pale end.
+- **Clear spots** (`info.clearSpots`: lanterns 76 px, lamps 84, sitting pods 40): rear shrubs, hero plants,
+  features, reeds and front clumps there are grown **muted** (`FloraBuilder.mute` drops the triangles), so the
+  random sequence and every other plant on that top stay put. Use `mute` for any new exclusion; a `continue`
+  reshuffles the top. `keepClear` takes an optional y (only tops near it); the trunk pair's entry now runs from
+  trunk A's west face to 30 px past trunk B (the doorways too: a grass clump under B hid her at the hollow's lip).
+- **`?nopickups` strips lanterns, lamps and pods from the scene**, so the clean-plate shots show plants where
+  the game has clear spots (the bush in the well). Judge those with `--pickups`.
+- `info.covered` (ground under a `root` solid): no grass, lip, fringe or humps across the mound's front; its
+  foot is a ragged shadow and six root toes going down through the ground's lit band (which ruled a pale block).
+- Foot stones sink into the earth tone with the sun on them (`FORMS.footStoneSun`): the pale flat stone on the
+  terrace (2783, 1150) was the bluff's third foot stone in a sun pool.
 
 ## Rules learned
 - Nothing manufactured: no ruled edges, flat facets, even spacing or even heights. Stone = `paintRock`,

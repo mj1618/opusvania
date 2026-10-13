@@ -100,6 +100,15 @@ export const TERRAIN = {
   backdropGap: [260, 560] as const,
   /** 0..1: strength of the lit crest and contact shadow on elevated tops (islands, ledges, boughs, trunks). */
   highRead: 1,
+  /** Two trunks this close (px between their faces) are a wall-jump shaft: the facing flanks are clean walls. */
+  shaftGap: 420,
+  /** A one-way bough starting within this many px east of a trunk's flank is that trunk's limb. */
+  boughReach: 140,
+  /** A gap under a hanging trunk lower than this is a doorway, not an arch: the roots are squat feet. */
+  lowDoor: 180,
+  /** Worn bark and claw scuffs up a shaft wall: pale wood tone, and the px between kick marks. */
+  scuff: 0x8f8c68,
+  scuffEvery: [118, 164] as const,
   /** How far bank faces cut back under their lip, px. */
   faceUndercut: 9,
 } as const;
@@ -124,6 +133,8 @@ export interface Under {
   kind: SceneTag | 'edge';
   /** What trails from it (floating islands choose; default a mix of vines and short roots). */
   trail?: 'mixed' | 'few' | 'roots' | 'longRoots' | 'longVines';
+  /** Nothing hangs lower than this many px (default: no limit). */
+  reach?: number;
 }
 /** A vertical face: ivy creeps on it. `dir` is the outward normal. */
 export interface Face {
@@ -132,6 +143,8 @@ export interface Face {
   y1: number;
   dir: -1 | 1;
   kind: SceneTag | 'edge';
+  /** A wall she kicks off (the shaft's inner faces): nothing grows on it. */
+  clean?: boolean;
 }
 export interface TerrainInfo {
   tops: Top[];
@@ -161,8 +174,15 @@ export interface TerrainInfo {
   lanterns: Array<{ x: number; y: number; violet?: boolean; cyan?: boolean; size?: number }>;
   /** Sheltered spots beside big terrain where a fern grows. */
   lee: Array<{ x: number; y: number; size: number }>;
-  /** x ranges where big plants should stay away so the terrain itself is seen. */
-  keepClear: Array<[number, number]>;
+  /** x ranges where big plants stay away so the terrain is seen (third number: only on tops near that y). */
+  keepClear: Array<[number, number, number?]>;
+  /**
+   * The goal's props (lanterns, wayside lamps) and sitting pods, at their foot: nothing taller than
+   * moss within `r` px, so they are seen whole.
+   */
+  clearSpots: Array<{ x: number; y: number; r: number }>;
+  /** Stretches [x0, x1, y] of a ground top buried under another solid (the root mound): no grass there. */
+  covered: Array<[number, number, number]>;
   /** Painted vines crossing a trunk face: leaves grow along `line`. */
   ivy: Array<{ line: number[]; dir: number }>;
   /** Hollows in the earth: `y` is the floor, `roof` the ceiling, `w` the usable width. */
@@ -182,10 +202,11 @@ interface Seg {
 const OUT = 420;
 /** Ground stretches where fights happen (world x): kept plain behind the walk line. */
 const FIGHT_SPOTS: ReadonlyArray<readonly [number, number]> = [
-  [1880, 2300],
-  [2624, 3200],
-  [4160, 4600],
+  [2004, 2316],
+  [4160, 4608],
 ];
+/** Clear radius round a lantern / lamp foot and round a sitting pod, px. */
+const SPOT = { lantern: 76, lamp: 84, pod: 40 } as const;
 
 /** Collision top of the ground at x, taking the lower side near a step (so things stay buried). */
 function safeTopAt(info: TerrainInfo, x: number, W: number): number {
@@ -215,6 +236,16 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
     twigs: [],
     ivy: [],
     keepClear: [],
+    clearSpots: [
+      ...(scene.lanterns ?? []).map((l) => ({ x: l.x, y: l.y, r: SPOT.lantern })),
+      ...(scene.lamps ?? []).map((l) => ({ x: l.x, y: l.y, r: SPOT.lamp })),
+      ...(scene.pods ?? [])
+        .filter((q) => q.mount === 'sit')
+        .map((q) => ({ x: q.x, y: q.y + 22, r: SPOT.pod })),
+    ],
+    covered: scene.solids
+      .filter((s) => s.tag === 'root')
+      .map((s) => [s.x + 6, s.x + s.w - 6, s.y + s.h] as [number, number, number]),
     lee: [],
     lanterns: [],
     noGlow: [
@@ -253,7 +284,8 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
     abyss: TERRAIN.abyss,
     highRead: TERRAIN.highRead,
   };
-  for (const b of scene.oneWays) paintSapling(p, b.x, b.y, b.w, groundY, scene, info);
+  for (const b of scene.oneWays)
+    if (!boughHost(b, scene)) paintSapling(p, b.x, b.y, b.w, groundY, scene, info);
   paintIslandBacks(p, floats, info, kit);
   const fkit: FormKit = {
     mossTone,
@@ -267,14 +299,17 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
   };
   const trunkXs = trunks.map((t) => t.x);
   paintBackRidge(p, segs, fkit, scene.width, info.calm);
-  // Between the two trunks she must stand against open mist: no tall plants there.
+  // Between the two trunks, and in the doorways under them, she must stand against open mist: no
+  // tall plants there (a grass clump under trunk B hid her at the hollow's lip).
   if (trunks.length >= 2)
     info.keepClear.push([
-      (trunks[0] as SolidRect).x + (trunks[0] as SolidRect).w + 30,
-      (trunks[1] as SolidRect).x - 20,
+      (trunks[0] as SolidRect).x - 8,
+      (trunks[1] as SolidRect).x + (trunks[1] as SolidRect).w + 30,
+      groundY((trunks[0] as SolidRect).x + (trunks[0] as SolidRect).w + 60),
     ]);
   const taken = [...paintBanks(p, segs, info, fkit, trunkXs), ...paintGreatForms(p, info, fkit)];
-  for (const t of trunks) if (t.y + t.h < groundY(t.x + t.w / 2) - 40) paintStiltRoots(p, t, groundY);
+  for (const t of trunks)
+    if (t.y + t.h < groundY(t.x + t.w / 2) - 40) paintStiltRoots(p, t, groundY, shaftSide(t, trunks));
   paintLandmarks(p, scene, info, fkit);
   paintBackdrop(p, scene, info, taken);
   paintEdgeWalls(p, scene, info);
@@ -282,7 +317,7 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
   paintBankFronts(p, segs, fkit, trunkXs);
 
   for (const s of scene.solids) {
-    if (s.tag === 'trunk') paintTrunk(p, s, scene, info, trunks.indexOf(s) % 2 === 1);
+    if (s.tag === 'trunk') paintTrunk(p, s, scene, info, trunks.indexOf(s) % 2 === 1, shaftSide(s, trunks));
   }
   for (const s of scene.solids) {
     if (s.tag === 'ledge') paintLedge(p, s, scene, info);
@@ -1212,7 +1247,7 @@ function paintBackdrop(p: Paint, scene: Scene, info: TerrainInfo, taken: Array<[
   const haze = (c: number, k = 0.3): number => mix(c, PALETTE.fogMid, k);
   const avoid: Array<[number, number]> = [
     ...taken,
-    ...info.keepClear,
+    ...info.keepClear.map(([a, b]) => [a, b] as [number, number]),
     ...info.calm.map(([c0, c1]) => [c0 - 60, c1 + 60] as [number, number]),
   ];
   for (const s of scene.solids) {
@@ -1580,8 +1615,26 @@ interface StiltRoot {
   deep: boolean;
 }
 
-/** The arch of roots a hanging trunk stands on. Deterministic, so two passes can share it. */
-function stiltRoots(t: SolidRect, groundY: (x: number) => number): StiltRoot[] {
+/**
+ * Which flank of a trunk faces a neighbour close enough to wall-jump between (the shaft): 1 = its
+ * east face, -1 = its west face, 0 = none. That face is kept a clean wall.
+ */
+function shaftSide(t: SolidRect, trunks: SolidRect[]): -1 | 0 | 1 {
+  for (const o of trunks) {
+    if (o === t) continue;
+    const gap = o.x > t.x ? o.x - (t.x + t.w) : t.x - (o.x + o.w);
+    if (gap > 0 && gap <= TERRAIN.shaftGap) return o.x > t.x ? 1 : -1;
+  }
+  return 0;
+}
+
+/**
+ * The roots a hanging trunk stands on. Deterministic, so two passes can share it. With a tall gap
+ * under the trunk they are an arch she walks under; with a low one (a doorway, under
+ * `TERRAIN.lowDoor` px) they are squat feet: the body comes all the way down and each foot leaves
+ * from under its corner, so the flank above stays a wall, and on the shaft side the foot is short.
+ */
+function stiltRoots(t: SolidRect, groundY: (x: number) => number, shaft: -1 | 0 | 1 = 0): StiltRoot[] {
   const yb = t.y + t.h;
   const r = rngFor(t.x, 77);
   const out: StiltRoot[] = [];
@@ -1628,6 +1681,23 @@ function stiltRoots(t: SolidRect, groundY: (x: number) => number): StiltRoot[] {
       }
     }
   };
+  if (groundY(t.x + t.w / 2) - yb < TERRAIN.lowDoor) {
+    for (const sgn of [-1, 1] as const) {
+      const inner = sgn === shaft;
+      const inset = t.w * (inner ? 0.27 : 0.2);
+      add(
+        sgn < 0 ? t.x + inset : t.x + t.w - inset,
+        yb + (inner ? 2 : -10),
+        (sgn < 0 ? t.x : t.x + t.w) + sgn * (inner ? range(r, 46, 60) : range(r, 84, 112)),
+        inner ? range(r, 38, 44) : range(r, 48, 56),
+        false,
+        0,
+      );
+    }
+    add(t.x + t.w * 0.42, yb - 12, t.x + t.w * 0.42 - range(r, 10, 26), range(r, 26, 32), true, 0);
+    add(t.x + t.w * 0.62, yb - 12, t.x + t.w * 0.62 + range(r, 10, 26), range(r, 24, 30), true, 0);
+    return out;
+  }
   add(t.x + t.w * 0.2, yb - 46, t.x - range(r, 96, 136), range(r, 58, 68), false, 0);
   add(t.x + t.w * 0.8, yb - 46, t.x + t.w + range(r, 96, 136), range(r, 58, 68), false, 0);
   add(t.x + t.w * 0.42, yb - 30, t.x + t.w * 0.42 - range(r, 16, 44), range(r, 34, 42), true, 0);
@@ -1636,8 +1706,8 @@ function stiltRoots(t: SolidRect, groundY: (x: number) => number): StiltRoot[] {
 }
 
 /** Back-plane pass: the whole arch, dark, before the ground is painted. */
-function paintStiltRoots(p: Paint, t: SolidRect, groundY: (x: number) => number): void {
-  const roots = stiltRoots(t, groundY).sort((a, b) => Number(b.deep) - Number(a.deep));
+function paintStiltRoots(p: Paint, t: SolidRect, groundY: (x: number) => number, shaft: -1 | 0 | 1): void {
+  const roots = stiltRoots(t, groundY, shaft).sort((a, b) => Number(b.deep) - Number(a.deep));
   for (const root of roots) {
     const tone = root.deep ? TERRAIN.backDeep : TERRAIN.back;
     const h = root.deep ? 0.2 : 0.28;
@@ -1655,8 +1725,8 @@ function paintStiltRoots(p: Paint, t: SolidRect, groundY: (x: number) => number)
  * Front pass: where each root leaves the trunk it is still trunk (same bark, same plane), and it
  * sinks into the back plane over its first stretch, so there is no cut line under the trunk.
  */
-function paintRootShoulders(p: Paint, t: SolidRect, groundY: (x: number) => number): void {
-  const roots = stiltRoots(t, groundY).sort((a, b) => Number(b.deep) - Number(a.deep));
+function paintRootShoulders(p: Paint, t: SolidRect, groundY: (x: number) => number, shaft: -1 | 0 | 1): void {
+  const roots = stiltRoots(t, groundY, shaft).sort((a, b) => Number(b.deep) - Number(a.deep));
   const n = 21;
   for (const root of roots) {
     const reachT = root.deep ? 0.3 : 0.46;
@@ -1685,20 +1755,37 @@ function paintRootShoulders(p: Paint, t: SolidRect, groundY: (x: number) => numb
  * `ivied` picks the trunk's character: false = a hollow old snag studded with bracket fungi, true =
  * vine-wrapped with a fern garden and a nest in its crown. Neighbours alternate.
  */
-function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivied: boolean): void {
+function paintTrunk(
+  p: Paint,
+  t: SolidRect,
+  scene: Scene,
+  info: TerrainInfo,
+  ivied: boolean,
+  shaft: -1 | 0 | 1,
+): void {
   const x1 = t.x + t.w;
   const joinedL = scene.solids.some((o) => o.tag === 'ledge' && o.y === t.y && o.x + o.w === t.x);
+  // A bough leaving the crown eastward: the rim runs on into it.
+  const joinedR = scene.oneWays.some((o) => o.y === t.y && o.x === x1);
   const y1 = t.y + t.h;
-  const hanging = y1 < info.groundY(t.x + t.w / 2) - 40;
+  const gapUnder = info.groundY(t.x + t.w / 2) - y1;
+  const hanging = gapUnder > 40;
+  const low = hanging && gapUnder < TERRAIN.lowDoor;
   const r = rngFor(t.x, 31);
   // Underside: arches between the knees where the roots leave, never a straight cut.
   const sag = (u: number): number =>
-    hanging ? 12 - 26 * Math.abs(Math.sin(Math.PI * u * 1.5 + 0.4)) ** 0.8 : 0;
-  // A living silhouette: slow swells, burls, a flare toward the base, a ragged broken crown.
-  const side = (y: number, sd: number): number =>
-    wobble(y, t.x + sd, 190) * 7 +
-    wobble(y, t.x + sd + 1, 46) * 3 +
-    (hanging ? smoothstep(y1 - 130, y1, y) * 9 : 0);
+    hanging ? (12 - 26 * Math.abs(Math.sin(Math.PI * u * 1.5 + 0.4)) ** 0.8) * (low ? 0.5 : 1) : 0;
+  // A living silhouette: slow swells, burls, a flare toward the base, a ragged broken crown. The
+  // shaft side (sd 11 = east flank, 23 = west) stays close to the collision face: a wall to kick off.
+  const side = (y: number, sd: number): number => {
+    const inner = shaft !== 0 && (sd === 11) === shaft > 0;
+    if (inner) return wobble(y, t.x + sd, 190) * 2 + wobble(y, t.x + sd + 1, 46) * 1 + 1;
+    return (
+      wobble(y, t.x + sd, 190) * 7 +
+      wobble(y, t.x + sd + 1, 46) * 3 +
+      (hanging ? smoothstep(y1 - 130, y1, y) * 9 : 0)
+    );
+  };
   const pts: number[] = [];
   for (let x = t.x + 4; x <= x1 - 4; x += 6) {
     pts.push(x, t.y + 2 + wobble(x, t.x, 40) * 1.3 + Math.max(0, wobble(x, t.x + 5, 9) - 0.55) * 7);
@@ -1710,7 +1797,8 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivi
   p.solid(chaikin(pts, 2), TERRAIN.bark, 0.55, { bark: 1 });
   // Burls on the flanks.
   for (let i = 0; i < 3; i++) {
-    const left = r() < 0.5;
+    const leftRoll = r() < 0.5;
+    const left = shaft ? shaft > 0 : leftRoll;
     const by = lerp(t.y + 60, y1 - 90, r());
     const bx = left ? t.x - side(by, 23) + 4 : x1 + side(by, 11) - 4;
     const rad = range(r, 12, 20);
@@ -1725,9 +1813,9 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivi
     const py = lerp(t.y + 40, y1 - (hanging ? 80 : 30), (i + r()) / Math.round(t.h / 62));
     const edge = r();
     const px =
-      edge < 0.3
+      edge < 0.3 && shaft >= 0
         ? t.x - side(py, 23) + range(r, -2, 8)
-        : edge > 0.7
+        : edge > 0.7 && shaft <= 0
           ? x1 + side(py, 11) - range(r, -2, 8)
           : lerp(t.x + 24, x1 - 24, r());
     const pw = range(r, 15, 26);
@@ -1750,8 +1838,11 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivi
   let vdir = r() < 0.5 ? -1 : 1;
   while (ivied && vy < y1 - (hanging ? 150 : 60)) {
     const rise = range(r, 70, 130);
-    const xa = vdir > 0 ? t.x - side(vy + rise, 23) - 3 : x1 + side(vy + rise, 11) + 3;
-    const xb = vdir > 0 ? x1 + side(vy, 11) + 3 : t.x - side(vy, 23) - 3;
+    // (On the shaft side a pass ends well inside the flank: the vine dives under the bark there.)
+    const wL = (y: number): number => t.x - (shaft < 0 ? -20 : side(y, 23) + 3);
+    const wR = (y: number): number => x1 + (shaft > 0 ? -20 : side(y, 11) + 3);
+    const xa = vdir > 0 ? wL(vy + rise) : wR(vy + rise);
+    const xb = vdir > 0 ? wR(vy) : wL(vy);
     const line = wander(
       cubic(
         xa,
@@ -1840,7 +1931,7 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivi
     [t.x + 3, -1],
     [x1 - 3, 1],
   ] as const) {
-    if (d < 0 && joinedL) continue;
+    if ((d < 0 && joinedL) || (d > 0 && joinedR)) continue;
     const n = 2 + Math.floor(r() * 2);
     for (let i = 0; i < n; i++) {
       const bx = sx - d * i * range(r, 5, 9);
@@ -1853,7 +1944,7 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivi
       );
     }
   }
-  if (hanging) paintRootShoulders(p, t, info.groundY);
+  if (hanging) paintRootShoulders(p, t, info.groundY, shaft);
   // Shade the side away from the key, in two soft passes.
   for (const [off, wd] of [
     [10, 22],
@@ -1873,7 +1964,8 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivi
   }
   // Moss patches, mostly up the shaded side.
   for (let y = t.y + 40; y < y1 - 40; y += range(r, 50, 190)) {
-    const left = r() < 0.7;
+    const leftRoll = r() < 0.7;
+    const left = shaft ? shaft > 0 : leftRoll;
     const cx = left ? t.x + range(r, 6, 22) : x1 - range(r, 6, 18);
     const h = range(r, 22, 70);
     p.solid(
@@ -1888,7 +1980,8 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivi
   }
   // Bracket fungi: small shelves, far too small to stand on.
   for (let y = t.y + range(r, 90, 200); y < y1 - 80; y += ivied ? range(r, 260, 420) : range(r, 70, 170)) {
-    const right = r() < 0.6;
+    const rightRoll = r() < 0.6;
+    const right = shaft ? shaft < 0 : rightRoll;
     const k = 1 + Math.floor(r() * 2.6);
     for (let j = 0; j < k; j++) {
       const w = range(r, 12, 22);
@@ -1916,20 +2009,101 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivi
       );
     }
   }
+  if (shaft) paintKickWall(p, shaft > 0 ? x1 : t.x, t.y, y1, shaft, r);
+  const drapeL = range(r, 30, 80);
+  const drapeR = range(r, 30, 80);
   mossCap(p, t.x, x1, t.y, {
     seed: t.x + 9,
     read: TERRAIN.highRead,
-    drapeL: joinedL ? 0 : range(r, 30, 80),
-    drapeR: range(r, 30, 80),
+    // Short on the shaft side: the wall's top corner is where she pulls herself over.
+    drapeL: joinedL ? 0 : shaft < 0 ? 16 : drapeL,
+    drapeR: joinedR ? 0 : shaft > 0 ? 16 : drapeR,
     thick: 10,
     drip: 20,
   });
-  info.tops.push({ x0: t.x, x1, y: t.y, kind: 'trunk', freeL: !joinedL, freeR: true });
-  info.unders.push({ x0: t.x + 6, x1: x1 - 6, y: (x) => y1 + sag((x - t.x) / t.w) - 2, kind: 'trunk' });
+  info.tops.push({ x0: t.x, x1, y: t.y, kind: 'trunk', freeL: !joinedL, freeR: !joinedR });
+  info.unders.push({
+    x0: t.x + 6,
+    x1: x1 - 6,
+    y: (x) => y1 + sag((x - t.x) / t.w) - 2,
+    kind: 'trunk',
+    // In a doorway she walks under it: nothing hangs into her face.
+    ...(low ? { reach: 34 } : {}),
+  });
   info.faces.push(
-    { x: t.x, y0: t.y, y1, dir: -1, kind: 'trunk' },
-    { x: x1, y0: t.y, y1, dir: 1, kind: 'trunk' },
+    { x: t.x, y0: t.y, y1, dir: -1, kind: 'trunk', clean: shaft < 0 },
+    { x: x1, y0: t.y, y1, dir: 1, kind: 'trunk', clean: shaft > 0 },
   );
+}
+
+/**
+ * A shaft wall: the face she kicks up. Long runs of bark rubbed smooth and a shade paler down the
+ * edge, and every jump's height or so a scuffed patch worn through to the wood, with claw
+ * scratches slanting down into the trunk and the torn moss below it. Small and dull: it is wear,
+ * not paint, but it is what says "this face is used".
+ */
+function paintKickWall(p: Paint, fx: number, y0: number, y1: number, shaft: -1 | 1, r: () => number): void {
+  const inw = -shaft;
+  const worn = mix(TERRAIN.bark, TERRAIN.barkLit, 0.8);
+  for (let y = y0 + range(r, 50, 110); y < y1 - 50; ) {
+    const len = Math.min(y1 - 8 - y, range(r, 90, 230));
+    const wd = range(r, 7, 12);
+    const cx = fx + inw * (wd * 0.5 + 1.5);
+    const line = wander([cx, y, cx + inw, y + len * 0.5, cx, y + len], 1.4, y, 70);
+    p.tint(
+      ribbon(line, (u) => (wd + 7) * Math.sin(Math.PI * clamp(u, 0.03, 0.97)) ** 0.5 + 1),
+      TERRAIN.barkDark,
+      0.35,
+    );
+    p.solid(
+      ribbon(line, (u) => wd * Math.sin(Math.PI * clamp(u, 0.03, 0.97)) ** 0.5 + 1),
+      worn,
+      0.69,
+      { bark: 0.6 },
+    );
+    y += len + range(r, 14, 70);
+  }
+  const pale = mix(TERRAIN.barkLit, TERRAIN.scuff, 0.42);
+  for (
+    let ky = y1 - range(r, 34, 52);
+    ky > y0 + 90;
+    ky -= range(r, TERRAIN.scuffEvery[0], TERRAIN.scuffEvery[1])
+  ) {
+    const cx = fx + inw * range(r, 11, 15);
+    const rx = range(r, 7, 10);
+    const ry = range(r, 17, 25);
+    // (In bark tones: a patch any paler than this, or with the pale wood colour, read as a seed pod
+    // stuck on the trunk.)
+    p.solid(chaikin(blob(cx, ky, rx + 3, ry + 4, ky, 0.3, 12), 1), TERRAIN.barkDark, 0.5, { bark: 0.8 });
+    p.solid(
+      chaikin(blob(cx, ky, rx, ry, ky + 1, 0.3, 12), 1),
+      mix(TERRAIN.bark, TERRAIN.barkLit, 0.7),
+      0.6,
+      { bark: 1 },
+      0.9,
+    );
+    const n = 3 + Math.floor(r() * 2);
+    for (let i = 0; i < n; i++) {
+      const sx = fx + inw * (4 + i * range(r, 4.5, 7));
+      const sy = ky - ry * 0.7 + i * range(r, 2, 6) + range(r, -4, 4);
+      const sl = range(r, 20, 34);
+      p.solid(
+        ribbon(
+          [sx, sy, sx + inw * sl * 0.16, sy + sl * 0.5, sx + inw * sl * 0.3, sy + sl],
+          (u) => 1.9 * Math.sin(Math.PI * clamp(u, 0.05, 0.95)) ** 0.7 + 0.4,
+        ),
+        pale,
+        0.68,
+      );
+    }
+    // Moss scraped off and hanging under the patch.
+    p.solid(
+      blob(cx - inw * 3, ky + ry + range(r, 4, 9), range(r, 6, 9), range(r, 4, 6), ky + 3, 0.4, 9),
+      TERRAIN.mossDark,
+      0.66,
+      { moss: 0.8 },
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2389,6 +2563,43 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
   const gapX1 = s.x + s.w * 0.56;
   const fill = boxOutline(s.x + 14, s.y + 30, x1 - 12, y1 + 12, s.x, { top: 3, side: 4, bottom: 0 });
   p.solid(fill, E[3], 0.4);
+  // Its foot: the ground's lit band ran on under it as a pale ruled block (the ground top is one
+  // rect, the mound stands on its end). Shadow under the root, ragged, and toes of root going down
+  // through it into the earth at uneven angles and depths.
+  const skirt: number[] = [];
+  for (let x = s.x - 26; x <= x1 + 30; x += 12) skirt.push(x, y1 - 10 + wobble(x, s.x + 51, 40) * 4);
+  for (let x = x1 + 30; x >= s.x - 26; x -= 12) {
+    const u = (x - s.x) / s.w;
+    skirt.push(x, y1 + 26 + 44 * Math.sin(Math.PI * clamp(u, 0, 1)) ** 0.6 + wobble(x, s.x + 52, 46) * 12);
+  }
+  p.tint(chaikin(skirt, 2), TERRAIN.abyss, 0.62);
+  for (let i = 0; i < 6; i++) {
+    const tx = lerp(s.x + 8, x1 - 14, (i + range(r, 0.15, 0.85)) / 6);
+    const lean = range(r, -26, 26);
+    const len = range(r, 34, 78);
+    const toe = wander(
+      quad(tx, y1 - 22, tx + lean * 0.3, y1 + len * 0.45, tx + lean, y1 + len, 9),
+      3,
+      tx,
+      24,
+    );
+    const w0 = range(r, 9, 17);
+    p.solid(
+      ribbon(toe, (t) => w0 * (1 - t) ** 0.8 + 1.5),
+      mix(wood, TERRAIN.barkDark, range(r, 0.5, 0.9)),
+      0.56,
+      { bark: 0.3 },
+    );
+    p.solid(
+      ribbon(
+        toe.map((v, k) => (k % 2 ? v : v - 1.5)),
+        (t) => w0 * 0.3 * (1 - t) ** 0.8 + 0.5,
+      ),
+      mix(wood, TERRAIN.barkLit, 0.25),
+      0.62,
+      { bark: 0.3 },
+    );
+  }
   const gap: number[] = [];
   for (let i = 0; i <= 12; i++) {
     const u = i / 12;
@@ -2593,6 +2804,19 @@ function saplingSide(_x: number, _w: number, _scene: Scene): -1 | 1 {
   return 1;
 }
 
+/**
+ * The trunk a one-way bough grows out of, if one stands just west of it and reaches at least as
+ * high: such a bough is a limb of that tree (no sapling), leaving its east flank.
+ */
+function boughHost(b: { x: number; y: number }, scene: Scene): SolidRect | null {
+  for (const t of scene.solids) {
+    if (t.tag !== 'trunk') continue;
+    const gap = b.x - (t.x + t.w);
+    if (gap >= 0 && gap <= TERRAIN.boughReach && t.y <= b.y && t.y + t.h > b.y + 120) return t;
+  }
+  return null;
+}
+
 function paintSapling(
   p: Paint,
   x: number,
@@ -2698,12 +2922,31 @@ function paintSapling(
   }
 }
 
+/** Rolls of healed bark where a limb leaves a trunk's east flank at (fx, cy): it grew there. */
+function collar(p: Paint, fx: number, cy: number, rad: number, seed: number): void {
+  for (const [dx, k, col, h] of [
+    [-2, 1.25, TERRAIN.barkDark, 0.52],
+    [1, 1, TERRAIN.bark, 0.6],
+    [4, 0.7, mix(TERRAIN.bark, TERRAIN.barkLit, 0.55), 0.66],
+  ] as const) {
+    p.solid(chaikin(blob(fx + dx, cy, rad * 0.42 * k + 5, rad * k, seed + k * 10, 0.22, 14), 2), col, h, {
+      bark: 1,
+    });
+  }
+}
+
 function paintBough(p: Paint, x: number, y: number, w: number, scene: Scene, info: TerrainInfo): void {
-  const side = saplingSide(x, w, scene);
+  const host = boughHost({ x, y }, scene);
+  const side = host ? -1 : saplingSide(x, w, scene);
   const r = rngFor(x, 92);
-  const rootX = side > 0 ? x + w + 34 : x - 34;
+  // A trunk's limb starts inside the flank it leaves (or, with a gap to cross, where its rising
+  // arm levels out: see below); a sapling's bough at the sapling.
+  const hostX = host ? host.x + host.w : 0;
+  const gap = host ? x - hostX : 0;
+  const rootX = host ? (gap > 24 ? x - 14 : hostX - 22) : side > 0 ? x + w + 34 : x - 34;
   const tipX = side > 0 ? x : x + w;
-  const z = zoneAt(x + w / 2);
+  // (A trunk's limbs are that trunk's wood, whatever zone their tips reach into.)
+  const z = zoneAt(host ? hostX : x + w / 2);
   const C = z.deep > 0.5 ? ISLES.deep : z.warm > 0.5 ? ISLES.warm : ISLES.cool;
   const wood: Wood = { col: mix(C.wood, TERRAIN.rootWood, 0.35), lit: C.woodLit, dark: C.woodDark };
   // The upper edge is the walk line; all the character is underneath: a swollen base, two
@@ -2729,36 +2972,80 @@ function paintBough(p: Paint, x: number, y: number, w: number, scene: Scene, inf
     const t = (u * N) / n;
     return t > 1 ? lerp(girth(1), 2, (t - 1) * n * 0.5) : girth(t);
   };
-  // The node on the sapling where it leaves.
-  const node: Wood = {
-    col: mix(TERRAIN.backDeep, wood.col, 0.2),
-    lit: mix(TERRAIN.back, wood.lit, 0.2),
-    dark: TERRAIN.backDeep,
-  };
-  limb(
-    p,
-    wander(
-      [rootX + 2, y - 40, rootX - 2, y - 8, rootX - 3, y + 22, rootX + 1, y + 52, rootX + 3, y + 84],
-      2,
-      x,
-      30,
-    ),
-    (t) => 5 + 50 * Math.sin(Math.PI * t) ** 1.3,
-    node,
-    0.28,
-    0.07,
-    x + 1,
-    { bark: 0.7, grain: 3 },
-  );
-  limb(p, centre, wd, wood, 0.58, 0.1, x, { bark: 0.5, grain: 4, lit: 0.4 });
-  // The first stretch lies in the node's shade.
-  const shade: number[] = [];
-  for (let i = 0; i <= 5; i++) shade.push(centre[i * 2] as number, centre[i * 2 + 1] as number);
-  p.tint(
-    ribbon(shade, (t) => wd((t * 5) / N) * (1 - t * 0.2) + 2),
-    TERRAIN.backDeep,
-    0.5,
-  );
+  if (host) {
+    if (gap > 24) {
+      // The bough starts away from the trunk: its arm leaves the flank lower down, climbs steeply
+      // and elbows level just where the walk line begins. Arm and bough are ONE limb (one outline:
+      // a join between two pieces showed as a sawn end); the arm lies in the trunk's shade, too
+      // steep and too dark to be taken for footing.
+      const drop = clamp(gap * 1.7, 120, 190);
+      const jy = y + 2 + girth(0) / 2;
+      const NA = 16;
+      const arm = wander(
+        cubic(hostX - 20, y + drop, hostX + gap * 0.34, y + drop - 8, x - gap * 0.42, jy + 30, rootX, jy, NA),
+        2.5,
+        x + 11,
+        40,
+      );
+      const full = [...arm.slice(0, NA * 2), ...centre];
+      const M = full.length / 2 - 1;
+      const armW = (a: number): number =>
+        lerp(60, girth(0), smoothstep(0, 0.9, a)) + Math.max(0, Math.sin(a * 9 + x)) * 3;
+      const fullW = (u: number): number => {
+        const i = u * M;
+        return i < NA ? armW(i / NA) : wd((i - NA) / N);
+      };
+      limb(p, full, fullW, wood, 0.58, 0.1, x, { bark: 0.5, grain: 4, lit: 0.4 });
+      // Shade over the arm, deepest at the trunk, gone by the elbow.
+      for (const [upTo, al] of [
+        [NA + 2, 0.34],
+        [NA - 3, 0.3],
+        [NA - 8, 0.3],
+      ] as const) {
+        const part = full.slice(0, upTo * 2);
+        p.tint(
+          ribbon(part, (t) => fullW((t * (upTo - 1)) / M) * (1 - 0.3 * t ** 3) + 3),
+          TERRAIN.backDeep,
+          al,
+        );
+      }
+      collar(p, hostX, y + drop, 40, x + 14);
+    } else {
+      limb(p, centre, wd, wood, 0.58, 0.1, x, { bark: 0.5, grain: 4, lit: 0.4 });
+      collar(p, hostX, y + 2 + girth(0) * 0.55, girth(0) * 0.62, x + 14);
+    }
+  } else {
+    // The node on the sapling where it leaves.
+    const node: Wood = {
+      col: mix(TERRAIN.backDeep, wood.col, 0.2),
+      lit: mix(TERRAIN.back, wood.lit, 0.2),
+      dark: TERRAIN.backDeep,
+    };
+    limb(
+      p,
+      wander(
+        [rootX + 2, y - 40, rootX - 2, y - 8, rootX - 3, y + 22, rootX + 1, y + 52, rootX + 3, y + 84],
+        2,
+        x,
+        30,
+      ),
+      (t) => 5 + 50 * Math.sin(Math.PI * t) ** 1.3,
+      node,
+      0.28,
+      0.07,
+      x + 1,
+      { bark: 0.7, grain: 3 },
+    );
+    limb(p, centre, wd, wood, 0.58, 0.1, x, { bark: 0.5, grain: 4, lit: 0.4 });
+    // The first stretch lies in the node's shade.
+    const shade: number[] = [];
+    for (let i = 0; i <= 5; i++) shade.push(centre[i * 2] as number, centre[i * 2 + 1] as number);
+    p.tint(
+      ribbon(shade, (t) => wd((t * 5) / N) * (1 - t * 0.2) + 2),
+      TERRAIN.backDeep,
+      0.5,
+    );
+  }
   // Lesser branches from the knuckles: one long, forking, with leaves; one a short broken stub.
   const at = (t: number): [number, number] => {
     const i = clamp(Math.round(t * n), 0, N) * 2;
@@ -2813,7 +3100,7 @@ function paintBough(p: Paint, x: number, y: number, w: number, scene: Scene, inf
     drip: 16,
     lift: 1.5,
   });
-  info.tops.push({ x0: x, x1: x + w, y, kind: 'branch', freeL: side > 0, freeR: side < 0 });
+  info.tops.push({ x0: x, x1: x + w, y, kind: 'branch', freeL: side > 0 || gap > 24, freeR: side < 0 });
   info.unders.push({
     x0: x + 8,
     x1: x + w - 8,
