@@ -93,7 +93,7 @@ export class Secondary {
     this.smear += ((p.motion === 'dash' && p.freeze === 0 ? 1 : 0) - this.smear) * (1 - Math.exp(-dt * 20));
     // In the somersault the chains turn with the body but looser, so the tail wraps round it.
     const flip = rig.spinPhi * (rig.yawRaw >= 0 ? 1 : -1);
-    const stiff = (1 + dash * 2.2) * (1 + 0.5 * rig.spinW);
+    const stiff = (1 + dash * 2.2) * (1 + 2.2 * rig.spinW);
     for (const c of this.all) {
       c.floorY = floorY;
       c.wallSide = wallSide;
@@ -129,8 +129,8 @@ export class Secondary {
       c.ax = rig.X;
       c.ay = rig.Y;
       c.lift = rig.sashLift + 0.06 * gust + airLift * 0.03;
-      c.curl = rig.wRun * 0.02;
-      c.stiff = stiff * (1 - 0.6 * rig.spinW);
+      c.curl = rig.wRun * 0.02 + rig.spinW * 0.32;
+      c.stiff = stiff;
       c.lenScale = 1 + this.smear * 0.45;
     }
     this.sashA.lift += 0.08;
@@ -145,7 +145,8 @@ export class Secondary {
     for (const c of this.all) c.advance(dt, clock);
 
     // --- Ears: laid back by speed, perked at rest, each on its own spring; now and then one swivels.
-    const lay = rig.ears + sat(Math.abs(rig.vf) / 12) * 0.12 - clamp(rig.dragX * 0.05, -0.3, 0.3);
+    const lay =
+      rig.ears * (1 + 0 * still) + sat(Math.abs(rig.vf) / 12) * 0.12 - clamp(rig.dragX * 0.05, -0.3, 0.3);
     const droop = clamp(rig.dragY * 0.035, -0.12, 0.3);
     const sw1 = pulse(clock, 3.1, 0.8, 41, 0.75);
     const sw2 = pulse(clock, 4.3, 0.24, 43, 0.8);

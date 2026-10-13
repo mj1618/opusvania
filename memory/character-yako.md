@@ -23,11 +23,13 @@ ember-lit tip), drawn as flat cel shapes. Ported from `src/concepts/designs/yako
 - **Chains** (`chain.ts`, a copy of hooded's with `lenScale` and `push`): tail, two sash tails, charm.
   The pose only sets lift / curl / stiffness. Dash: stiff + `lenScale` > 1 = the smear.
 
-- **Double jump = somersault**: `spinPhi` (a spring following an eased 0 -> 2pi ramp over `SPIN_T`,
-  snapped to 0 at the end) is folded into the base matrix as a rotation about the body's middle, while
-  the pose blends to `SPIN_TUCK` then `EXTEND`. Chains get the flip as extra `rot`; the tail's lift and
-  curl wrap it round the ball, the sash is loosened so it spirals. Authored body shadows fade while he
-  is upside down (`shadeA`); ribbons re-light by themselves. Cut short by ground / dash / wall.
+- **Double jump = somersault** (spec: three beats, snap in / rigid spin / snap out). `spinPhi` is an
+  eased curve of time (`spinCurve`: ease in, linear, ease out; no spring), folded into the base matrix
+  as a rotation about the body's middle. The tuck weight `spinW` is its own curve; while it is up, hand
+  springs and all drags are bypassed so no limb lags out of the ball. Pose `SPIN_TUCK` then `EXTEND`
+  (a small overshoot past the fall pose). Chains get the flip as extra `rot` and are stiffened toward a
+  rest shape that wraps the ball. Authored body shadows fade while upside down (`shadeA`). Cut short by
+  ground / dash / wall: rolls to the nearest upright in a few frames.
 - **Run bob** (`bob()`): a dip while the knee gives in the stance, a ballistic arc in the float.
 - Wrists (`wristN/F`) are springs driven by the hand's own motion; the hand shape rotates by them.
 
