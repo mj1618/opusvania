@@ -157,3 +157,25 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   visible: it is not ours (it moves at parallax 1).
 - Darks: far2 `gain` 0.6, shade tints lowered (mid [0.24, 0.2, 0.16], far2 [0.26, 0.23, 0.18]). The
   walk frames now measure 48% near-black / 27% dark grey (the dark references: 48 / 27).
+
+## Round 10 (after the first playtest)
+- **These layers register no point lights** (`ctx.lights`): every glow here is a plain additive sprite.
+  The light the playtest saw at (1552, 1268) r 144 is `shaft1` from `layers/air.ts`.
+- Glow-cap clusters (`MID.glowClusters`): a cluster at layer x L sits behind playfield x
+  L + 0.32 * (camX - 2880), so its distance to a lantern changes as the camera moves. Layer x
+  1110..2550 (stone lantern, 1448) and 4110..5250 (heart 5212, far lantern 5524) stay empty; knots
+  spread at most 140 px; caps are 8-17 px embers sunk 45% toward shadow, haze alpha 0.12. The lantern
+  fungi on the hollow tree stop at 30% of the trunk (higher ones sat behind the far ledge's lantern).
+- **The hollow tree answers the goal** (`HOLLOW.levels / awake / ended`, mid.ts `update`): its baked
+  inside is a dark ember, all of its light is live sprites (`GlowSpot.hollow`). Level x `glowAlpha`:
+  0.15 / 0.3 / 0.45 with 0 / 1 / 2 lanterns (tint `ember` -> `glow`), 1.25 over 2 s once
+  `goal.heart.awake` (plus the `spill` glows up the trunk and on the canopy), 1.6 through the ending
+  hold, when `LayerView.setWarm` also warms the light behind every opening and the sky's key bloom
+  shows more in the side zones (`SKY.wake`). Preview without playing:
+  `__bg.goal = {lit, heart: {awake, frames}, gathered, ending: {frames}}` then tick ~300 (it eases).
+- **Headroom**: `coverRect()` (bg-bake) = the layer tree's coverage, padded, extended up to a view
+  `HEADROOM` (560 px) above the scene top; far.ts and mid.ts bake that. `buildForest` adds canopy rows
+  until the rect top is reached (cap 9) and `crownOpen` (mid) opens the upper rows a little more;
+  openings above layer y 80..420 keep 28% of their light (`MID.skyHole.dim`) or they are pale tabs on
+  the frame edge. Mid is now 1935 px tall x 1.5 = 2903 texels (limit 4096). Check with
+  `cam({x, y: -20})`.

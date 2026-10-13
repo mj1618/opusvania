@@ -32,6 +32,7 @@ import {
   type BakedTile,
   BG_VERT,
   bakeLayer,
+  coverRect,
   FarPairView,
   type FogSpec,
   LayerView,
@@ -796,10 +797,7 @@ export class FarLayers implements EnvModule {
   private output!: Sprite;
 
   init(ctx: SceneContext): void {
-    const rects = NAMES.map((n) => {
-      const c = ctx.layers.coverage(n);
-      return { x: c.x - PAD, y: c.y - PAD, w: c.w + PAD * 2, h: c.h + PAD * 2 };
-    });
+    const rects = NAMES.map((n) => coverRect(ctx.layers, n, PAD));
     this.ctx = ctx;
     this.scene.addChild(...this.groups);
     this.target = RenderTexture.create({ width: VIEW_W + 16, height: VIEW_H + 16, resolution: 1 });

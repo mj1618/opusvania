@@ -25,7 +25,8 @@ import {
   Texture,
   UniformGroup,
 } from 'pixi.js';
-import type { LayerRect } from '../layer-tree';
+import { VIEW_H } from '../../contract';
+import type { LayerName, LayerRect } from '../layer-tree';
 import { mix, prng } from './look';
 
 export const BG_VERT = `
@@ -464,6 +465,28 @@ function blurPass(
   shader.destroy();
 }
 
+/** The view may rise this far above the scene top (the raised canopy ceiling plus the camera's lead). */
+export const HEADROOM = 560;
+
+/**
+ * What a background layer has to cover: everything the follow camera can show of it, padded, and
+ * reaching up to a view lifted HEADROOM px above the scene top (whichever is higher: once the layer
+ * tree's own coverage includes the headroom this adds nothing).
+ */
+export function coverRect(
+  layers: {
+    coverage(name: LayerName): LayerRect;
+    visible(name: LayerName, cam: { x: number; y: number; zoom: number }): LayerRect;
+  },
+  name: LayerName,
+  pad: number,
+): LayerRect {
+  const c = layers.coverage(name);
+  const up = layers.visible(name, { x: 0, y: VIEW_H / 2 - HEADROOM, zoom: 1 });
+  const y = Math.min(c.y, up.y);
+  return { x: c.x - pad, y: y - pad, w: c.w + pad * 2, h: c.y + c.h - y + pad * 2 };
+}
+
 export interface BakedTile {
   texture: Texture;
   x: number;
@@ -777,7 +800,8 @@ uniform vec4 uWellR;
 uniform vec3 uWellRCol;
 uniform sampler2D uBack;
 uniform vec4 uBackRect;
-uniform vec3 uLife;${stageDecl(stage)}
+uniform vec3 uLife;
+uniform vec3 uWarm2;${stageDecl(stage)}
 void main() {
   vec2 p = uRect.xy + vUV * uRect.zw;
   vec2 uv = vUV;
@@ -805,7 +829,8 @@ void main() {
   c.rgb *= mix(vec3(1.0), uTintL, zl) * mix(vec3(1.0), uTintR, zr);
   // Light painted behind the layer (sky seen through the canopy's openings): it swells and fades.
   float breathe = 1.0 + uLife.z * (sin(uTime * 1.2 - p.x * 0.0031) + 0.4 * sin(uTime * 0.53 + p.x * 0.0017));
-  c += texture(uBack, (p - uBackRect.xy) / uBackRect.zw) * (1.0 - c.a) * breathe;
+  vec4 back = texture(uBack, (p - uBackRect.xy) / uBackRect.zw) * (1.0 - c.a) * breathe;
+  c += vec4(back.rgb * uWarm2, back.a);
   vec3 mist = mix(mix(uMist, uMistL, zl), uMistR, zr);
   float s = uNoiseP.x;
   float n = texture(uNoise, vec2(p.x * s + uTime * uNoiseP.y, p.y * s * 2.6)).r;
@@ -873,6 +898,7 @@ export class LayerView {
         value: new Float32Array([life?.breath ?? 0, life?.shimmer ?? 0, life?.openings ?? 0]),
         type: 'vec3<f32>',
       },
+      uWarm2: { value: new Float32Array([1, 1, 1]), type: 'vec3<f32>' },
       ...(stage
         ? {
             uStageK: { value: new Float32Array(stage.strength), type: 'vec3<f32>' },
@@ -907,6 +933,12 @@ export class LayerView {
     const z = zoneWeights(camX);
     const k = 1 - this.zone.parallax;
     (u.uZone as Float32Array).set([(camX - this.zone.anchorX) * k, z.l, z.r, (camY - anchorY) * k]);
+  }
+
+  /** Colour multiplier on the light behind the layer: `amount` 0..1 of `tint` (the grove waking). */
+  setWarm(amount: number, tint: readonly [number, number, number]): void {
+    const w = this.uniforms.uniforms.uWarm2 as Float32Array;
+    for (let i = 0; i < 3; i++) w[i] = 1 + ((tint[i] ?? 1) - 1) * amount;
   }
 
   /** Live knob: the mist stage's strength per zone (left, centre, right). */

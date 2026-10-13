@@ -92,6 +92,8 @@ export interface ForestPlan {
   lights?: (L: LightMap) => void;
   /** How much of the near canopy is present at x, 0..1 (default 0.72). */
   cover?: (x: number) => number;
+  /** Extra openness of the canopy's upper rows (row 3 and up), 0..~0.2. */
+  crownOpen?: number;
   /** No branch-tip foliage inside the light well. */
   clearWell?: boolean;
   /** Canopy boughs per trunk (default 2). */
@@ -147,7 +149,8 @@ export function buildForest(plan: ForestPlan): ForestBuild {
   const layer = (): Graphics => content.addChild(new Graphics());
   const opening = fbm1(plan.seed + 5);
   const openings: Array<{ x: number; y: number; r: number }> = [];
-  const rows = Math.max(1, Math.min(4, Math.ceil((plan.canopyY + plan.canopyAmp - top) / (R * 0.9))));
+  // Enough rows to reach the top of the rect (the view can rise well above the scene top).
+  const rows = Math.max(1, Math.min(9, Math.ceil((plan.canopyY + plan.canopyAmp - top) / (R * 0.88))));
 
   /**
    * One depth tier of canopy: rows of big clumps (top rows first, the hanging edge last), each
@@ -185,7 +188,8 @@ export function buildForest(plan: ForestPlan): ForestBuild {
         // Openings shared by every tier (real sky holes), then this tier's own gaps.
         const open = opening(x / (R * 3.6) + row * 1.9) * 0.5 + 0.5;
         const c = cover(x);
-        const isOpen = open > c - 0.15;
+        // High in the crown the canopy opens a little more often (the view can rise up there).
+        const isOpen = open > c - 0.15 - (row >= 3 ? (plan.crownOpen ?? 0) : 0);
         if (isOpen && o.accents && y > top) openings.push({ x, y, r: rad });
         if (y < top - R || isOpen || keep > c * o.cover + 0.12) continue;
         const accent = o.accents && pick < rate ? (pick < rate * 0.55 ? 'amber' : 'blossom') : null;

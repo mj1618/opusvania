@@ -50,6 +50,9 @@ export const SKY = {
   /** How much the key bloom dims in the side zones. */
   keyDimL: 0.45,
   keyDimR: 0.88,
+  /** At the ending the side zones' dimming of the key bloom eases by this share, over this many sim frames. */
+  wake: 0.4,
+  wakeFrames: 240,
 } as const;
 
 /**
@@ -239,7 +242,12 @@ export class SkyLayer implements EnvModule {
       const sy = y + (this.anchorY - cam.y) * SKY.glowParallaxY;
       return [VIEW_W / 2 + (sx - VIEW_W / 2) * cam.zoom, VIEW_H / 2 + (sy - VIEW_H / 2) * cam.zoom];
     };
-    (u.uZoneCam as Float32Array).set([z.l, z.r, 1 - SKY.keyDimL * z.l - SKY.keyDimR * z.r, 0]);
+    // The ending (memory/goal.md): the grove wakes, so the key bloom shows a little in the side zones too.
+    const goal = frame.sim.goal;
+    const e = goal.gathered ? Math.min(1, goal.ending.frames / SKY.wakeFrames) : 0;
+    const wake = e * e * (3 - 2 * e) * SKY.wake;
+    const dim = 1 - (SKY.keyDimL * z.l + SKY.keyDimR * z.r) * (1 - wake);
+    (u.uZoneCam as Float32Array).set([z.l, z.r, dim * (1 + 0.3 * wake), 0]);
     (u.uMoon as Float32Array).set(at(SKY.left.moonX, SKY.left.moonY, 960));
     (u.uDusk as Float32Array).set(at(SKY.right.duskX, SKY.right.duskY, 4800));
     this.renderer.render({

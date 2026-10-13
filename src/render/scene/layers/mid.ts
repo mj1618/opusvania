@@ -15,6 +15,7 @@ import {
   type Atmosphere,
   bakeLayer,
   bakeSoft,
+  coverRect,
   type FogSpec,
   glowTexture,
   LayerView,
@@ -57,17 +58,37 @@ const MID = {
   /** Moss patches per trunk. */
   mossPerTrunk: 4,
   /** Bioluminescent clusters: layer x of each, caps per cluster. */
-  glowClusters: [760, 1180, 1560, 1930, 2330, 3050, 3620, 4150, 5020],
+  /**
+   * Kept clear of the moth-lanterns and the heart, which must be the lights where they stand: with
+   * this layer's parallax a cluster at layer x L sits behind playfield x L + 0.32 * (camX - 2880), so
+   * no cluster (spread included) may come within ~350 px of the stone (1448) for any camera that shows
+   * it, nor of the heart (5212) / far lantern (5524): layer x 1110..2550 and 4110..5250 stay empty.
+   */
+  glowClusters: [760, 960, 2700, 3050, 3620, 3960],
+  /** How far a cluster's knots spread from its centre (layer px). */
+  glowSpread: [40, 140],
   /** Dark plants poking out of the mist bed below the fern line, per 1000 px. */
   bedPlants: 4,
   /** Light seen through the openings of the canopy (sprites behind the bake). */
-  skyHole: { size: 2.6, alpha: 0.5, color: 0xe0b060, left: 0x8fb4d8, right: 0xd08a6a },
+  skyHole: {
+    size: 2.6,
+    alpha: 0.5,
+    color: 0xe0b060,
+    left: 0x8fb4d8,
+    right: 0xd08a6a,
+    /** Openings above layer y `dimY[0]` keep only `dim` of their light (full again below `dimY[1]`). */
+    dim: 0.28,
+    dimY: [80, 420],
+  },
   /** The canopy route's focal light: a hole in this layer's canopy with moonlight behind it. */
   moonHole: { x: 2330, y: 470, half: 250, lift: 420, size: 640, alpha: 0.6, color: 0xa8c8e6 },
   /** Drifting leaves in the air of this layer. */
   fallingLeaves: 10,
   glowCaps: [4, 9],
-  glowAlpha: 0.2,
+  /** Cap size range in layer px, and how far the cap colour sinks toward shadow (they are embers, not lamps). */
+  glowCapSize: [8, 17],
+  glowCapDim: 0.45,
+  glowAlpha: 0.12,
   fireflies: 16,
   hang: { seed: 604, vines: 40, moss: 26, fronds: 24, vineLen: [140, 560], amp: 0.06 },
   /**
@@ -185,10 +206,27 @@ const HOLLOW = {
   w: 640,
   rise: 700,
   half: 0.23,
-  glow: 0xffb070,
+  /** The woken glow (warm gold), and the dull cold ember it is while the grove sleeps. */
+  glow: 0xffb468,
+  ember: 0x9a5a78,
   glowAlpha: 0.4,
-  lanterns: 9,
+  lanterns: 7,
   lantern: 0xffb866,
+  /**
+   * The glow answers the goal (memory/goal.md): its level (x glowAlpha) with 0, 1, 2 lanterns lit,
+   * once the heart is awake (it swells there over `wakeSeconds`), and at the end of the ending hold.
+   */
+  levels: [0.15, 0.3, 0.45] as readonly number[],
+  awake: 1.25,
+  ended: 1.6,
+  wakeSeconds: 2,
+  endSeconds: 4,
+  /** How fast the level eases between lantern steps (1/s). */
+  ease: 1.6,
+  /** Woken light spilling up the trunk and onto the canopy above it: peak alpha of those glows. */
+  spill: 0.2,
+  /** At the ending the openings of every zone warm: colour multiplier on the light behind the canopy. */
+  endWarm: [1.3, 1.1, 0.8] as readonly [number, number, number],
 };
 
 const LOOK = forestLook({ leaf: 23, light: 0.42, streaks: 4.5, bands: 1.5, cool: 0, grooves: 2.6 });
@@ -204,7 +242,11 @@ interface GlowSpot {
   x: number;
   y: number;
   r: number;
+  /** Vertical radius when not round. */
+  ry?: number;
   color: number;
+  /** Part of the hollow tree: `glow` follows the goal's level, `spill` shows only once the heart is awake. */
+  hollow?: 'glow' | 'spill';
 }
 
 function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
@@ -253,6 +295,7 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
     blossom: 0xd9c2ff,
     boughs: 3,
     clearWell: true,
+    crownOpen: 0.16,
     cover: (x) => 0.8 + 0.08 * Math.sin(x / 700) + 0.5 * Math.exp(-(((x - 2940) / 320) ** 2)),
     floor: (c, r, b) => undergrowth(c, r, b, spots),
   };
@@ -284,11 +327,11 @@ function hollow(c: Container, r: Rng, tr: Trunk, L: LightMap, spots: GlowSpot[])
   g.poly(arch(1.16, 0)).fill({ color: LOOK.bark.dark, alpha: 0.55 });
   g.poly(arch(1.0, 0)).fill(0x04090f);
   g.poly(arch(0.86, 0)).fill(0x1c0f1c);
-  g.poly(arch(0.68, 0)).fill(0x4a2226);
-  g.poly(arch(0.48, 0)).fill(0x82402a);
-  g.poly(arch(0.28, 0)).fill(0xb87038);
+  // Baked dark: a dull ember deep inside. All of its light is live (it answers the goal).
+  g.poly(arch(0.68, 0)).fill(0x24121c);
+  g.poly(arch(0.48, 0)).fill(0x331a22);
+  g.poly(arch(0.28, 0)).fill(0x4a2828);
   L.reset(base.x, base.y - h * 0.45, hw * 1.5, h * 0.75, 0.97);
-  L.lit(base.x, base.y - h * 0.3, hw * 0.9, h * 0.5, 0.5);
   // Aerial roots and moss hanging across the mouth.
   for (let i = 0; i < 9; i++) {
     const u = rr(r, -0.85, 0.85);
@@ -303,7 +346,8 @@ function hollow(c: Container, r: Rng, tr: Trunk, L: LightMap, spots: GlowSpot[])
   // Lantern fungi climbing both edges and up the trunk: small warm bulbs (their glow is live).
   const lg = c.addChild(new Graphics());
   for (let i = 0; i < HOLLOW.lanterns; i++) {
-    const t = 0.03 + (i / HOLLOW.lanterns) * 0.5 + rr(r, -0.015, 0.015);
+    // Low on the trunk only: higher up they sat right behind the far ledge's moth-lantern.
+    const t = 0.03 + (i / HOLLOW.lanterns) * 0.27 + rr(r, -0.015, 0.015);
     const side = i % 2 === 0 ? 1 : -1;
     const p = tr.at(t, side * rr(r, 0.42, 0.86));
     const size = rr(r, 5, 9);
@@ -315,17 +359,19 @@ function hollow(c: Container, r: Rng, tr: Trunk, L: LightMap, spots: GlowSpot[])
         4,
       ),
     ).fill(LOOK.bark.dark);
-    lg.poly(blob(p.x, p.y, size * 0.8, size, r, 0.2, 12)).fill(HOLLOW.lantern);
-    spots.push({ x: p.x, y: p.y, r: size * 4.5, color: HOLLOW.lantern });
+    lg.poly(blob(p.x, p.y, size * 0.8, size, r, 0.2, 12)).fill(mix(HOLLOW.lantern, LOOK.bark.dark, 0.7));
+    spots.push({ x: p.x, y: p.y, r: size * 4.5, color: HOLLOW.lantern, alpha: 0.5, hollow: 'glow' });
   }
-  // The heart of the hollow: two soft warm glows, the big one spilling onto the lip.
-  spots.push({ x: base.x, y: base.y - h * 0.3, r: hw * 1.5, color: HOLLOW.glow, alpha: HOLLOW.glowAlpha });
+  // The heart of the hollow: two soft glows, the big one spilling onto the lip.
+  const a = HOLLOW.glowAlpha;
+  spots.push({ x: base.x, y: base.y - h * 0.3, r: hw * 1.5, color: HOLLOW.glow, alpha: a, hollow: 'glow' });
   spots.push({
     x: base.x,
     y: base.y - h * 0.42,
     r: h * 0.62,
     color: HOLLOW.glow,
-    alpha: HOLLOW.glowAlpha * 0.5,
+    alpha: a * 0.5,
+    hollow: 'glow',
   });
   // High in the mouth too: the playfield's raised ground hides the foot of the tree from below.
   spots.push({
@@ -333,7 +379,29 @@ function hollow(c: Container, r: Rng, tr: Trunk, L: LightMap, spots: GlowSpot[])
     y: base.y - h * 0.62,
     r: hw * 1.2,
     color: HOLLOW.glow,
-    alpha: HOLLOW.glowAlpha * 0.8,
+    alpha: a * 0.8,
+    hollow: 'glow',
+  });
+  // Woken only: the light climbs the trunk above the mouth and reaches the canopy over the tree.
+  const top = tr.at(Math.min(0.9, (h * 1.25) / tr.h), 0);
+  const s = HOLLOW.spill;
+  spots.push({
+    x: top.x,
+    y: top.y,
+    r: hw * 1.7,
+    ry: h * 0.55,
+    color: HOLLOW.glow,
+    alpha: s,
+    hollow: 'spill',
+  });
+  spots.push({
+    x: top.x - 40,
+    y: MID.canopyY + 40,
+    r: w * 1.5,
+    ry: 260,
+    color: HOLLOW.glow,
+    alpha: s * 0.45,
+    hollow: 'spill',
   });
 }
 
@@ -441,10 +509,10 @@ function undergrowth(c: Container, r: Rng, b: ForestBuild, spots: GlowSpot[]): v
     // knots at different heights and depths, never a row.
     const z = zoneWeights(playfieldX(cx));
     const violet = r() < 0.08 + 0.8 * z.r;
-    const cap = violet ? mix(PALETTE.glowViolet, 0xffffff, 0.15) : PALETTE.glowCyan;
+    const cap = mix(violet ? PALETTE.glowViolet : PALETTE.glowCyan, PALETTE.shadow, MID.glowCapDim);
     const knots = 1 + Math.floor(r() * 3);
     for (let k = 0; k < knots; k++) {
-      const kx = cx + rr(r, -1, 1) * rr(r, 40, 230);
+      const kx = cx + rr(r, -1, 1) * rr(r, MID.glowSpread[0], MID.glowSpread[1]);
       // 0 = on the ground line, 1 = up on a mound or root, 2 = sunk back into the mist bed.
       const tier = Math.floor(r() * 3);
       const ky =
@@ -454,7 +522,7 @@ function undergrowth(c: Container, r: Rng, b: ForestBuild, spots: GlowSpot[]): v
       for (let i = 0; i < n; i++) {
         const x = kx + rr(r, -1, 1) ** 3 * 70;
         const y = ky + rr(r, -14, 14);
-        const size = rr(r, 10, 26) * scale;
+        const size = rr(r, MID.glowCapSize[0], MID.glowCapSize[1]) * scale;
         mushroom(g, x, y, size, r, cap, mix(cap, PALETTE.shadow, 0.6));
         spots.push({
           x,
@@ -464,7 +532,7 @@ function undergrowth(c: Container, r: Rng, b: ForestBuild, spots: GlowSpot[]): v
           alpha: MID.glowAlpha * (tier === 2 ? 0.5 : 0.9),
         });
       }
-      spots.push({ x: kx, y: ky - 30, r: 110 * scale, color: cap, alpha: MID.glowAlpha * 0.4 });
+      spots.push({ x: kx, y: ky - 30, r: 80 * scale, color: cap, alpha: MID.glowAlpha * 0.35 });
     }
   }
   // The mist bed below the fern line: dark fronds and saplings poking through, in receding rows.
@@ -503,14 +571,15 @@ export class MidLayer implements EnvModule {
   private ctx!: SceneContext;
   private sway!: SwaySet;
   private view!: LayerView;
-  private readonly glows: Array<{ s: Sprite; phase: number; base: number }> = [];
+  private readonly glows: Array<{ s: Sprite; phase: number; base: number; hollow?: 'glow' | 'spill' }> = [];
+  /** The hollow's glow level (1 = the full pre-goal glow), eased; -1 = not set yet. */
+  private hollowLevel = -1;
   private readonly flies: Fly[] = [];
   private readonly leaves: Array<{ g: Graphics; x: number; y: number; phase: number; fall: number }> = [];
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
-    const cov = ctx.layers.coverage('mid');
-    const rect = { x: cov.x - MID.pad, y: cov.y - MID.pad, w: cov.w + MID.pad * 2, h: cov.h + MID.pad * 2 };
+    const rect = coverRect(ctx.layers, 'mid', MID.pad);
     const spots: GlowSpot[] = [];
     const p = plan(rect, spots);
     const b = buildForest(p);
@@ -525,7 +594,12 @@ export class MidLayer implements EnvModule {
       s.position.set(o.x, o.y);
       s.setSize(o.r * MID.skyHole.size, o.r * MID.skyHole.size);
       s.tint = mix(mix(MID.skyHole.color, MID.skyHole.left, z.l), MID.skyHole.right, z.r);
-      s.alpha = MID.skyHole.alpha;
+      // Under the dark lid high in the crown an opening is a dim glimmer, not a pale tab on the frame edge.
+      const up = Math.max(
+        0,
+        Math.min(1, (o.y - MID.skyHole.dimY[0]) / (MID.skyHole.dimY[1] - MID.skyHole.dimY[0])),
+      );
+      s.alpha = MID.skyHole.alpha * (MID.skyHole.dim + (1 - MID.skyHole.dim) * up * up * (3 - 2 * up));
       sky.addChild(s);
     }
     {
@@ -585,11 +659,11 @@ export class MidLayer implements EnvModule {
       const s = new Sprite(glowTex);
       s.anchor.set(0.5);
       s.position.set(sp.x, sp.y);
-      s.setSize(sp.r * 2, sp.r * 2);
+      s.setSize(sp.r * 2, (sp.ry ?? sp.r) * 2);
       s.tint = sp.color;
       s.blendMode = 'add';
       glowLayer.addChild(s);
-      this.glows.push({ s, phase: r() * 6.283, base: sp.alpha ?? MID.glowAlpha });
+      this.glows.push({ s, phase: r() * 6.283, base: sp.alpha ?? MID.glowAlpha, hollow: sp.hollow });
     }
     for (let i = 0; i < MID.fallingLeaves; i++) {
       const size = rr(r, 9, 16);
@@ -622,9 +696,42 @@ export class MidLayer implements EnvModule {
     const t = frame.clock;
     this.sway.update(t, frame.camera.x);
     this.view.update(t, frame.camera.x, frame.camera.y, this.ctx.layers.anchor.y);
+    // The hollow tree answers the goal: a dull cold ember while the grove sleeps, a step warmer with
+    // each lantern, swelling to full gold when the heart wakes and further through the ending.
+    // Dev: `__bg.goal = {lit, heart: {awake, frames}, gathered, ending: {frames}}` previews a goal state.
+    const preview = import.meta.env.DEV
+      ? (globalThis as { __bg?: { goal?: typeof frame.sim.goal } }).__bg?.goal
+      : undefined;
+    const goal = preview ?? frame.sim.goal;
+    const ease = (v: number): number => {
+      const k = Math.max(0, Math.min(1, v));
+      return k * k * (3 - 2 * k);
+    };
+    const H = HOLLOW;
+    const wake = goal.heart.awake ? ease(goal.heart.frames / (H.wakeSeconds * 60)) : 0;
+    const end = goal.gathered ? ease(goal.ending.frames / (H.endSeconds * 60)) : 0;
+    const step = H.levels[Math.min(goal.lit, H.levels.length - 1)] ?? 0;
+    const target = step + (H.awake - step) * wake + (H.ended - H.awake) * end;
+    this.hollowLevel =
+      this.hollowLevel < 0
+        ? target
+        : this.hollowLevel +
+          (target - this.hollowLevel) * (1 - Math.exp(-frame.dt * H.ease * (wake > 0 ? 6 : 1)));
+    const level = this.hollowLevel;
+    // Cold ember -> gold as it rises through the lantern steps.
+    const low = H.levels[0] ?? 0;
+    const warmth = ease((level - low) / (H.awake - low));
+    const hollowTint = mix(H.ember, H.glow, warmth);
+    this.view.setWarm(end, H.endWarm);
     for (const g of this.glows) {
-      g.s.alpha =
-        g.base * (0.72 + 0.28 * Math.sin(t * 0.9 + g.phase) + 0.08 * Math.sin(t * 2.3 + g.phase * 2));
+      const pulse = 0.72 + 0.28 * Math.sin(t * 0.9 + g.phase) + 0.08 * Math.sin(t * 2.3 + g.phase * 2);
+      if (g.hollow === 'glow') {
+        g.s.tint = hollowTint;
+        // The ember barely stirs; the woken glow breathes.
+        g.s.alpha = g.base * level * (1 - (1 - pulse) * (0.3 + 0.7 * wake));
+      } else if (g.hollow === 'spill') {
+        g.s.alpha = g.base * (wake + 0.5 * end) * (0.85 + 0.15 * Math.sin(t * 0.7 + g.phase));
+      } else g.s.alpha = g.base * pulse;
     }
     // Leaves drift down through whatever part of the layer is in view, and wrap.
     const vis = this.ctx.layers.visible('mid', frame.camera);
