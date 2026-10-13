@@ -361,6 +361,8 @@ export class Secondary {
           (Math.max(0, sw) * (24 + 9 * far) + rig.slashTwist * 32 * (2 * far - 1) + rig.hangK * 15) *
           (1 - k * 0.12) *
           (1 - soar);
+        // A rising cut whips the cape down and forward under her; a falling one throws it up behind.
+        lift += rig.slashSweep * (30 - 8 * far) * (1 - k * 0.1) * (1 - soar);
         // Acting: they relax open like a cloak settling (kindling), or fold round her (resting); a contented shiver.
         const ck2 = rig.cloak;
         if (ck2 > 0) lift -= ck2 * (11 - 1.3 * k) * (1 - soar);
@@ -431,6 +433,7 @@ export class Secondary {
           18 * rig.dive +
           38 * rig.hurtK +
           15 * rig.slashWing +
+          rig.slashWhip +
           rig.antLift * (a === 0 ? 1 : 0.72)) *
         DEG;
       // Acting: tipped toward a light they bow forward over her brow; drooping they curl down.

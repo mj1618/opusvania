@@ -20,7 +20,7 @@ import { zoneWeights } from '../../scene/lib/fx-zones';
 import { KEY_LIGHT } from '../../scene/lib/look';
 import { clamp, noise1, Spring, sat, smoothstep } from '../hooded/math';
 import type { CharacterSkin, SkinDef } from '../skin';
-import { drawVesper, type View } from './draw';
+import { BLADE_LEN, drawVesper, type View } from './draw';
 import { drawSpinRings, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
 import { vesperLink } from './link';
 import { Painter, rgb } from './paint';
@@ -36,8 +36,17 @@ const LAMP_REACH = 62;
 const TURNS_KEY = 'vesper.turns.v3';
 /** Turns per double jump when nothing is stored or asked for (owner's choice, 2026-10-13). */
 const DEFAULT_TURNS = 3;
-/** The crescent: px its origin stands ahead of and (a forward cut) below her chest, at the target's height; how far an up / down one is let out sideways, and its reach as a fraction of the sim's (which is measured from her centre, below the chest). */
-const SLASH_LOOK = { ahead: 4, drop: 10, wide: 1.75, vert: 0.88, hidden: false };
+/** The crescent: px its origin stands ahead of and (a forward cut) below her chest, at the target's height (`clear`: never lower than this over her feet on the ground); how far an up / down one is let out sideways, and its reach as a fraction of the sim's (which is measured from her centre, below the chest). */
+const SLASH_LOOK = {
+  ahead: 4,
+  drop: 10,
+  wideDown: 1.75,
+  vert: 0.88,
+  stretch: 1.5,
+  held: 1.12,
+  clear: 42,
+  hidden: false,
+};
 
 export class VesperCharacter implements CharacterSkin {
   private readonly painter = new Painter();
@@ -73,14 +82,16 @@ export class VesperCharacter implements CharacterSkin {
   private glintK = 0;
   /** The slash's crescent and contact flash. */
   private readonly mark = new SlashMark();
-  private readonly sf: SlashFrame = { dt: 0, held: false, ox: 0, oy: 0, cutQ: -1, pale: 1 };
+  private readonly sf: SlashFrame = { dt: 0, held: false, ox: 0, oy: 0, cutQ: -1, pale: 1, groundY: 1e9 };
+  /** The blade drawn long through the cut (one clean elongated blade that reaches its crescent), 1 = its own length. */
+  private bladeSmear = 1;
   /** The blade frame's turn when the cut began: the crescent is laid in that frame (see `Rig.strokeAtRoll`). */
   private markRoll = 0;
   /** Where the crescent hangs from, as an offset from her body centre: fixed when the cut begins. */
   private markOx = 0;
   private markOy = 0;
   private readonly markAt = (q: number, out: { x: number; y: number }): void => {
-    this.rig.strokeAtRoll(q, this.markRoll, out);
+    this.rig.markAtRoll(q, this.markRoll, out);
   };
   private readonly tan = { x: 0, y: 0 };
   private readonly tan2 = { x: 0, y: 0 };
@@ -285,17 +296,39 @@ export class VesperCharacter implements CharacterSkin {
     view.bladeAng = Math.atan2(rig.bladeY, rig.bladeX);
     // The blade shortens seen end on, and smears a little longer at the height of the cut.
     const cq = rig.cutQ;
-    view.bladeLen = (0.5 + 0.5 * rig.slashLen) * (1 + (cq > 0 && cq < 1 ? 0.3 * Math.sin(Math.PI * cq) : 0));
+    // Through the cut it is drawn long enough to end on the crescent's inner edge (the path its
+    // point is on): one clean elongated blade, never a second one. It is its own length again
+    // two frames after the cut is through (it holds in hitstop with everything else).
+    const seen = 0.5 + 0.5 * rig.slashLen;
+    if (cq > 0 && cq < 1 && rig.clangK <= 0) {
+      const vert = rig.slashDir !== 'fwd';
+      const tipR = rig.stroke.reach * (vert ? SLASH_LOOK.vert : 1) * (1 - rig.stroke.thick) * rig.slashLen;
+      this.bladeSmear = clamp((tipR - rig.handNow) / (BLADE_LEN * seen), 1, SLASH_LOOK.stretch);
+    } else if (player.hitstop <= 0) this.bladeSmear += (1 - this.bladeSmear) * (1 - Math.exp(-dt * 60 * 0.9));
+    // Frozen in hitstop a smear is just a longer sword: it draws back to a hint within two frames.
+    if (player.hitstop > 0 && !sig.slashHit)
+      this.bladeSmear +=
+        (Math.min(this.bladeSmear, SLASH_LOOK.held) - this.bladeSmear) * (1 - Math.exp(-dt * 60 * 0.8));
+    view.bladeLen = seen * this.bladeSmear;
     const chestX = rig.frame.j[J_CHEST * 2]!;
     const chestY = rig.frame.j[J_CHEST * 2 + 1]!;
     const heavy = rig.slashStep === 3 && rig.slashDir !== 'down';
     const mark = this.mark;
-    if (rig.cutStart) {
-      this.markRoll = rig.bladeRoll;
-      // It hangs from her chest (a touch ahead: the gather leans back from where the cut lands),
-      // fixed to her body from here on.
+    // It hangs from her chest (a touch ahead: the gather leans back from where the cut lands). The
+    // offset follows her chest while the blade is still crossing the arc (a rising cut lifts her a
+    // dozen px in those frames) and is fixed to her body from there on.
+    if (rig.cutStart || (cq >= 0 && cq < 1 && player.hitstop <= 0)) {
       this.markOx = chestX - player.cx + sg * SLASH_LOOK.ahead;
       this.markOy = chestY - player.cy + (rig.slashDir === 'fwd' ? SLASH_LOOK.drop : 0);
+      // On the ground a forward cut never hangs lower than this over her feet (running, her chest
+      // is low and most of a falling cut's crescent would be under the floor).
+      if (player.grounded && rig.slashDir === 'fwd')
+        this.markOy = Math.min(this.markOy, player.feetY - player.cy - SLASH_LOOK.clear);
+    }
+    if (rig.cutStart) {
+      // Laid in her upright frame plus the cut's own roll: out of a somersault what is left of the
+      // turn is gone in two frames, and a crescent laid in it hangs over her head, off the blade.
+      this.markRoll = rig.slashRoll;
       mark.begin(
         {
           dir: rig.slashDir,
@@ -305,8 +338,8 @@ export class VesperCharacter implements CharacterSkin {
           reach: rig.stroke.reach * (rig.slashDir === 'fwd' ? 1 : SLASH_LOOK.vert),
           show: rig.stroke.show,
           thick: rig.stroke.thick,
-          // The hit area of an up or down cut is narrow (100 px): the crescent is let out across it.
-          wide: rig.slashDir === 'fwd' ? 1 : SLASH_LOOK.wide,
+          // A down cut's hit area is narrow (100 px): the crescent is let out across it, a bowl under her.
+          wide: rig.slashDir === 'down' ? SLASH_LOOK.wideDown : 1,
         },
         this.markAt,
       );
@@ -318,6 +351,8 @@ export class VesperCharacter implements CharacterSkin {
     sf.oy = player.cy + this.markOy;
     sf.cutQ = cq;
     sf.pale = view.pale;
+    // The ground under her cuts the crescent off: it is never drawn over the floor.
+    sf.groundY = player.feetY + (player.grounded ? 0 : rig.groundDist) + 2;
     mark.frame(sf);
     if (sig.slashHit) {
       // Where it lands: the target's side nearest her (the target draws its own burst).

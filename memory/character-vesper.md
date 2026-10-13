@@ -165,55 +165,69 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   frames, then the wings stay lifted while the span draws in (`36 x 4 soar (1 - soar)` on the
   ground) and come down behind her. Without that they drooped flat along the grass (a bow tie).
 
-## Thorn slash (sim: memory/combat.md; `STROKES`, `CUT`, `SNAP` in rig.ts; look in `slashfx/crescent.ts`)
-Round 19 (owner twice: "the sword slash still doesn't look very good"; playtest 4 must-fix 1): the three
-switchable styles (brush / ribbon / scale-dust), the Y key, `?slash=`, `__vesper.slash`, the smear wedge
-and the pirouette finisher are GONE. There is one slash, built on Hollow Knight's nail-slash principles.
+## Thorn slash (sim: memory/combat.md; `STROKES`, `CUT`, `SNAP`, `BRACE`, `CLANG` in rig.ts; look in `slashfx/crescent.ts`)
+Round 19 threw out the three switchable styles and built ONE crescent on Hollow Knight's nail-slash
+principles. Round 20 (third round on it; orchestrator's sheet review) made it a line, not a lid.
 - **One crescent** (`SlashMark`): opaque, hard-edged, flat cool cream, a thin lilac line inside the inner
   edge, a 1 px dusk hair round it. No glow, no gradient, no particles of its own. Its INNER edge is the
-  blade point's path (`1 - thick` of the reach, so the blade in her hand ends on its leading needle); the
-  outer edge swells from that path to the sim's reach at the middle. Every cut is this shape on a
-  different arc of the stroke's ellipse (`show`..1 of the cut, `thick` 0.24-0.28).
-- **Life**: whole on the first active frame (the blade crosses its arc in 1.7 frames, `CUT`, and is ~83%
-  round on that frame), whole for 2 frames (finisher 3), then 3 frames thinning toward its outer edge
-  while the tail end draws up to the leading end; gone on the 6th (7th). Its clock stands still in
-  hitstop (it holds with her). It hangs from a fixed offset on her BODY CENTRE taken when the cut
-  begins (`markOx/Oy`: chest + 4 px ahead, forward cuts 10 px lower = the target's height), so it
-  moves with her and never drifts, pins or stays behind. A hit does not touch it.
-- **Strokes alternate**: cut 1 comes DOWN in front (122 -> -56 degrees) and ends in a low reaching lunge,
-  blade low ahead; cut 2 is the mirror, UP through the same place (-66 -> 72), ends tall, blade high
-  ahead; the finisher is cut 1 larger (reach 135, 3 frames of gather with the blade swung up behind,
-  a hop, held to frame 22). Up = the crescent overhead (back to front, front to back, larger); down
-  (pogo) = beneath her, drawn straight from the sheath, back to front. Up / down crescents are let
-  out x1.75 sideways and drawn at 0.88 of the sim's reach (`SLASH_LOOK`): to the true hit area
-  (100 px wide, 124 from her centre) they are a tall arch far over her head.
-- The press frame is the anticipation (`wind` = the sim's startup, 1 frame; `gripIn` is instant so
-  the blade is already raised behind her on it); the finisher has 3.
-- **Contact flash** (`SlashMark.hit`): a hard cream cross at the target's near side, long arm along the
-  cut, 4 frames on render time (it runs through the hitstop), 3 specks (5 on the finisher) thrown on
-  between the cut's direction and away from her. `enemyBlock` (a burrback's braced shell) is a
-  **clang**: `sig.blocked`, the cut still advances on that frame, a smaller cross turned ACROSS the
-  cut at `hitX/hitY`, specks back toward her. There is no terrain / wall clang: the sim emits nothing.
-- Tone per zone: `toneFor(pale)` = 0.84 on the blue and violet sides, 1 in the amber centre (at 0.7 it
-  was concrete grey; at 1 it glares on the dark side).
-- A `Stroke` still = an ellipse about the chest sized to the sim's reach, blade angles, frames `wind /
-  cut / hold / home`, two body keys (`K_*`) ADDED to the blended pose (running, the stride continues
-  under the cut). Up / down also lerp to `UPCUT` / `DOWNCUT`. `Stroke.turn` (the pirouette) is still
-  read by the rig but no stroke sets it.
-- Rejected on the way here: the crescent with both needles on the OUTER path (a moon hanging a blade's
-  length in front of her, the blade nowhere near it); belly 0.3-0.33 (covers the burrback for the
-  whole hitstop); the origin at chest height (the belly sat at her head, over the creature); specks
-  along the cut only (a down cut throws them into the ground); up / down at the true hit width (an
-  umbrella); a leading end cut short at the blade on the first frame (a blunt D through the hitstop).
-  Older: a wide translucent band (soap bubble), deep notches (shark teeth), a second smear frame (a
-  second blade), a mark pinned to what it hit (it hung in the air after the blade had left).
-- Honest gaps: the up crescent still floats ~45 px above her head (that is where the hit area's far end
-  is; the blade is 46 px); cut 2's body is close to her standing pose (tall, weight not far forward);
-  the down crescent is drawn over the ground when she pogos something on the floor; a hit late in the
-  active window (a4-a6) finds the crescent already thin or gone, so only the cross marks it.
-- Capture: `__vesper.markHidden = true` hides crescent and flash (the swing must read alone). Burrbacks
-  brace and block from the front now: cut from behind for a real hit. Sheets: `shots/vesper/slash5/`
-  (`*-3x.png`, `*-1x.png` = play zoom; left = blue zone, C = amber centre).
+  blade point's path, the outer edge swells from it to the sim's reach. **Belly 0.16-0.19 of the reach**
+  (`Stroke.thick`; 17-19 px on a cut, 26 on the finisher), needle ends (`CRESCENT.needle`).
+- **Life**: whole on the first active frame, whole 2 frames (finisher 3), 3 frames thinning toward the
+  outer edge while the tail draws up to the lead; gone on the 6th (7th). Its clock stands still in
+  hitstop, but **in the freeze it thins to 0.42 of its belly over 2 frames** (`holdThin / holdIn`): a
+  line round the target, so the creature's reaction shows through all 4 / 7 frames.
+- **A hit always has a crescent**: `SlashMark.hit` calls it back whole if it was thin or gone (a pogo
+  from height lands on active frame 4-6), it holds the freeze and thins away after. A clang
+  (`power 0`) cuts it to the near 0.62 of its arc at half belly and it is gone a frame after the freeze.
+- **Never under the floor**: `SlashFrame.groundY` (her feet when grounded, else `rig.groundDist` under
+  her) clamps every point. On the ground a forward cut's origin is never lower than 42 px over her feet
+  (`SLASH_LOOK.clear`): running, her chest is low and most of cut 1 was underground.
+- **Origin**: chest + 4 px ahead (forward cuts 10 px lower), an offset from her body centre. It follows
+  the chest while the blade is still crossing (cut 2 lifts her ~12 px in those frames; taken once at the
+  start the crescent hung under the blade), fixed after. Laid in her UPRIGHT frame + the cut's own air
+  roll (`rig.slashRoll`), not the somersault's leftover turn (that put it over her head, off the blade).
+- **Strokes**: cut 1 DOWN in front (122 -> -56), ends in a low reaching lunge. Cut 2 the return, UP
+  (-66 -> 70): a wide driving step (hips 16 px forward, front foot 19 out, back heel peeled, chest open,
+  off-hand low behind, blade ~50 degrees up ahead), cape whipped DOWN along the back leg
+  (`Stroke.sweep` -> `rig.slashSweep`, wings.ts) where cut 1 throws it up behind. Finisher = cut 1
+  larger: three gather frames that show (ease-out: 0.56, 0.89, 1 of a deep coil: pelvis -11, blade
+  behind), a hop, held to 22. Antennae get a per-stroke whip (`Stroke.whip`, degrees, gone in ~4 frames;
+  their chain does the overshoot).
+- **Up**: the crescent has its own arc (`Stroke.mark`, tail .. lead in blade degrees): the tail starts at
+  her SHOULDER line behind her, goes over the top (apex = the sim's reach, 0.88 x 124 over her chest) and
+  ends high in front where the blade stops (58 degrees: arm up, on her toes, `upG`). An asymmetric hook
+  with the blade inside it touching near the top. Width is the ellipse's own (`sq` 0.5 = the 100 px hit
+  area); only DOWN is still let out x1.75 (a bowl under her).
+- **Blade smear**: through the cut the one blade is drawn long enough to reach the crescent's inner edge
+  (`bladeSmear`, max 1.5); in hitstop it draws back to 1.12 within two frames (frozen, a smear is just a
+  longer sword), and to 1 after the cut.
+- **Landed on a creature** (`braceK`, from `slashHit.hitstop` >= 4; pods 0.4): hips back 5.5 and down 3.4,
+  shoulders kept over the blow, front foot left out, back foot skids; lets go over ~6 frames after the freeze.
+- **Blocked** (`enemyBlock` -> `clangT / clangK`): the blade is thrown up and back over her shoulder (142
+  degrees, ringing), she is rocked back onto her heels (lean -0.46, chest open), front foot off the
+  ground, off-hand flung ahead, wings blown open, antennae thrown forward; held ~9 frames, out over 9.
+  The stroke's own body key is faded out by it. Reads apart from a hit at play zoom.
+- **Contact flash**: hard cream cross at the target's near side, 4 frames on render time, 3 / 5 specks;
+  a clang's cross lies ACROSS the cut at `hitX/hitY`, specks back at her. No terrain clang (no sim event).
+- Tone per zone: `toneFor(pale)` = 0.84 blue / violet, 1 amber.
+- A unit test pins a lone tap sheathed 21 frames after the press: `hold + home` = 21 (14 + 7); a longer
+  hold needs that test changed.
+- Rejected: belly 0.24-0.33 (a lid on the burrback for the whole freeze); up crescent at the hit area's
+  far end only (a cap floating 45 px over her head); up arc symmetric down to both shoulders (a hoop);
+  cut 2 ending tall (her standing pose); needles on the OUTER path; a mark pinned to what it hit; a
+  second smear blade; a wide translucent band; specks along the cut only.
+- Honest gaps: the up crescent's apex is still ~40 px past the blade tip (the hit area is that tall; the
+  blade touches the arc's inner edge lower down); a landed brace is subtle next to the block; frozen
+  first-active frame = the cut is 83% round, so in hitstop the blade stands a little short of the
+  crescent's lead; tall foreground grass (left zone) hides the low half of a running cut 1.
+- Capture: `__vesper.markHidden = true` hides crescent and flash. Staging that worked: wrap
+  `__enemies.update` to grab the live `sim`; park every other enemy far away; set a burrback's
+  `strikeCd = 9999` each frame for a landed three-cut combo from behind, or let it brace and press on
+  `braced` for a block; move a lampwing to 68 px over her head each frame for the up cut; teleport 84 /
+  136 px over a burrback + `D+A` for an early / late pogo (pre-steps 0). Pods at 2176 and 2570 eat
+  slashes: stage at x 2230 (ground), 2340 (pogo), 900-1000 (left zone). Sheets: `shots/vesper/slash6/`
+  (`*-3x`, `*-1x` = play zoom, `L` blue / `C` amber, `*-pose-*` = crescent hidden, `cmp-*` = round 19 on
+  top, round 20 under it); `shots/vesper/slash5/` = round 19.
 
 ## Health (sim: memory/enemies.md; `HURT` in rig.ts)
 - `hurt`: recoil pose pops 40% past itself, tones flip for two frames (`Painter.invertK`), wings

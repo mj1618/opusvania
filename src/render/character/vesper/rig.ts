@@ -168,6 +168,15 @@ export interface Stroke {
   show: number;
   /** The crescent's thickness at its belly, as a fraction of the reach. */
   thick: number;
+  /**
+   * The crescent's own arc, blade degrees from its tail end to its leading end, when it is not
+   * simply `show`..1 of the cut (the up cuts: the tail comes down to her shoulder line).
+   */
+  mark?: readonly [number, number];
+  /** The cape through the cut: + = whipped down and forward under her (a rising cut), - = thrown up behind. */
+  sweep?: number;
+  /** The antennae's whip as the cut starts, degrees (+ = laid back). */
+  whip?: number;
   /** Body at the end of the gather and at the end of the cut: see the K_ channels. */
   w: readonly number[];
   f: readonly number[];
@@ -200,15 +209,15 @@ const NK = 15;
 const CUT1_W = [0.75, -0.16, -0.2, -3, 2.6, -0.06, 7, 1, 0, 0, -0.14, -0.7, 0, 0, 0];
 const CUT1_F = [-0.85, 0.56, 0.12, 9, -8, -0.34, -10, 9, 14, -5, 0.24, 1.25, 0, 7, 0];
 const CUT2_W = [-0.6, 0.5, 0.2, 7, -8.5, -0.2, -6, 5, 12, -4, 0.16, -0.2, 0, 5, 0];
-const CUT2_F = [0.7, 0.14, -0.24, 9, 1.5, -0.3, -11, -6, 14, -4, -0.2, 1.3, 2.5, 4, 0];
-const FIN_W = [0.9, -0.24, -0.16, -6, -6, -0.1, 9, 6, 3, -2, -0.28, -1, 0, -3, 0];
+const CUT2_F = [0.95, -0.12, -0.34, 16, -2.5, -0.12, -14, -10, 19, -14, -0.26, 0.35, 6, 4, 0];
+const FIN_W = [1.1, -0.34, 0.14, -9, -11, 0.12, 10, 3, -3, -5, -0.34, -1.2, 0, -3, 0];
 const FIN_F = [-0.95, 0.56, 0.2, 11, -8, -0.24, -11, 7, 15, -4, 0.36, 1.5, 0, 9, 13];
 const UP1_W = [0.4, -0.08, -0.06, 0, -2.5, -0.2, 3, -3, 0, 0, -0.1, -0.4, 0, 0, 0];
-const UP1_F = [-0.4, 0.06, -0.1, 0, 2.6, -0.26, -4, -5, 0, 0, 0.1, 0.8, 4, 3, 0];
+const UP1_F = [-0.4, 0.04, -0.14, 0, 4.2, -0.26, -4, -7, 0, 0, 0.1, 0.5, 4, 3, 0];
 const UP2_W = [-0.4, 0.08, 0, 0, -1.5, -0.2, -4, -4, 0, 0, 0.1, 0.2, 0, 3, 0];
-const UP2_F = [0.4, -0.12, -0.14, 0, 2.4, -0.32, 3, -5, 0, 0, -0.12, 0.8, 3.5, 4, 0];
-const UP3_W = [0.7, -0.16, 0.1, 0, -6, -0.1, 5, -2, 0, 0, -0.2, -1, 0, -3, 0];
-const UP3_F = [-0.7, 0.1, -0.16, 0, 2, -0.3, -6, -8, 0, 0, 0.2, 1.5, 3, 8, 11];
+const UP2_F = [0.4, -0.12, -0.16, 0, 4, -0.32, 3, -7, 0, 0, -0.12, 0.5, 3.5, 4, 0];
+const UP3_W = [0.8, -0.2, 0.14, 0, -10, 0.06, 5, -2, 0, 0, -0.2, -1.2, 0, -3, 0];
+const UP3_F = [-0.7, 0.06, -0.18, 0, 4, -0.3, -6, -9, 0, 0, 0.2, 1.1, 3, 8, 11];
 const DOWN_W = [0.3, 0.06, 0.1, 0, 1, 0.1, -4, 4, 0, 0, 0, -0.4, 0, 0, 0];
 const DOWN_F = [-0.4, 0.2, 0.16, 0, 0, 0.2, -6, 8, 0, 0, 0.18, 1, 0, 0, 0];
 
@@ -231,29 +240,33 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       reach: 110,
       wind: 1,
       ...CUT,
-      hold: 12,
-      home: 9,
+      hold: 14,
+      home: 7,
       relax: 7,
       show: 0.27,
-      thick: 0.25,
+      thick: 0.17,
+      sweep: -0.25,
+      whip: 30,
       w: CUT1_W,
       f: CUT1_F,
     },
     // 2: the return. The mirror of the first: from low ahead up through the target; ends high ahead.
     {
       a0: -66,
-      a1: 72,
-      over: 9,
+      a1: 70,
+      over: 10,
       tilt: -3,
       sq: 0.47,
       reach: 110,
       wind: 1,
       ...CUT,
-      hold: 13,
-      home: 9,
-      relax: 9,
+      hold: 15,
+      home: 7,
+      relax: 5,
       show: 0.04,
-      thick: 0.25,
+      thick: 0.17,
+      sweep: 1,
+      whip: -30,
       w: CUT2_W,
       f: CUT2_F,
     },
@@ -271,7 +284,9 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       home: 12,
       relax: 6,
       show: 0.4,
-      thick: 0.28,
+      thick: 0.19,
+      sweep: -0.4,
+      whip: 44,
       w: FIN_W,
       f: FIN_F,
     },
@@ -280,44 +295,48 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
   up: [
     {
       a0: 158,
-      a1: 28,
+      a1: 58,
       over: 8,
       tilt: 90,
-      sq: 0.42,
+      sq: 0.5,
       reach: 124,
       wind: 1,
       ...CUT,
-      hold: 12,
-      home: 9,
+      hold: 14,
+      home: 7,
       relax: 8,
       show: 0.14,
-      thick: 0.24,
+      thick: 0.16,
+      mark: [174, 42],
+      whip: 22,
       w: UP1_W,
       f: UP1_F,
     },
     {
-      a0: 24,
-      a1: 146,
+      a0: 20,
+      a1: 124,
       over: 6,
       tilt: 90,
-      sq: 0.42,
+      sq: 0.5,
       reach: 124,
       wind: 1,
       ...CUT,
-      hold: 13,
-      home: 9,
+      hold: 15,
+      home: 7,
       relax: 14,
       show: 0.13,
-      thick: 0.24,
+      thick: 0.16,
+      mark: [6, 140],
+      whip: -18,
       w: UP2_W,
       f: UP2_F,
     },
     {
       a0: 176,
-      a1: 26,
+      a1: 58,
       over: 10,
       tilt: 90,
-      sq: 0.43,
+      sq: 0.5,
       reach: 144,
       wind: 3,
       ...CUT,
@@ -325,7 +344,9 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       home: 12,
       relax: 8,
       show: 0.24,
-      thick: 0.26,
+      thick: 0.17,
+      mark: [178, 42],
+      whip: 30,
       w: UP3_W,
       f: UP3_F,
     },
@@ -346,7 +367,8 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       home: 9,
       relax: 8,
       show: 0.12,
-      thick: 0.24,
+      thick: 0.16,
+      whip: -20,
       w: DOWN_W,
       f: DOWN_F,
     },
@@ -380,6 +402,16 @@ export const HURT = {
  * smear frames the sword arm is drawn `arm` longer.
  */
 export const SNAP = { settle: 3.2, ring: 0.55, back: 0.55, body: 0.28, arm: 0.42 } as const;
+
+/**
+ * A cut that lands on a creature: she digs in against the recoil (hips back and low, shoulders kept
+ * over the blow, the front foot left out ahead) for `brace` frames after the hitstop lets go.
+ * A cut that glances off a braced shell (`enemyBlock`): the blade is thrown up and back over her
+ * shoulder (`ang` degrees, reached in `rise` frames, ringing), she is rocked back onto her heels with
+ * the front foot off the ground, held to `hold` frames and let go over `out`.
+ */
+export const BRACE = { frames: 6 } as const;
+export const CLANG = { ang: 142, ring: 16, rise: 2.2, hold: 9, out: 9 } as const;
 
 /** Where the blade points when it is home: back and down along the sheath. Hand reach from the shoulder, px. */
 export const SHEATH_ANG = -152;
@@ -1032,6 +1064,14 @@ export class Rig {
    * slash starts (the near arm reads; the far one is hidden behind her), and the lead foot with it.
    */
   swordSide = 0;
+  /** What the cape and the antennae read through a cut (see `Stroke.sweep`, `Stroke.whip`). */
+  slashSweep = 0;
+  slashWhip = 0;
+  /** 0..1.4: braced against the recoil of a blow that landed. */
+  braceK = 0;
+  /** Frames since a cut glanced off (stands still in hitstop); 0..1 how far she is thrown back by it. */
+  private clangT = 99;
+  clangK = 0;
   private slashOn = false;
   private gripIn = 0;
   private fromAng = SHEATH_ANG * DEG;
@@ -1242,6 +1282,8 @@ export class Rig {
           sig.slashHit = true;
           if (e.pogo) this.pogo = 1;
           this.squash.v += e.pogo ? 2.4 : -1.2;
+          // A creature pushes back (hitstop 4 or 7; a pod's 2-3 is a nudge).
+          if (!e.pogo && e.dir === 'fwd') this.braceK = e.hitstop >= 7 ? 1.4 : e.hitstop >= 4 ? 1 : 0.4;
           break;
         case 'enemyBlock':
           // The cut glanced off a braced shell: the blade is caught in the cut all the same.
@@ -1252,6 +1294,8 @@ export class Rig {
           sig.slashHit = true;
           sig.blocked = true;
           this.squash.v -= 1.6;
+          this.clangT = 0;
+          this.braceK = 0;
           break;
         case 'headBump':
           this.squash.v -= 3;
@@ -1942,7 +1986,8 @@ export class Rig {
     this.cutStart = false;
     const cut0 = this.cutQ;
     if (this.slashOn && sf < sk.hold + sk.home) {
-      const ew = smoothstep(0, 1, sf / sk.wind);
+      // The gather is quick in and then held: a three-frame gather shows 0.56, 0.89, 1.
+      const ew = 1 - (1 - sat(sf / sk.wind)) ** 2;
       const u = sat((sf - sk.wind) / sk.cut);
       // The cut is fastest as it starts and eases out into the follow-through.
       const sw = 1 - (1 - u) ** sk.ease;
@@ -1974,8 +2019,22 @@ export class Rig {
         this.smear0 = fast ? Math.max(0, cut0) : 0;
         this.smear1 = fast ? this.cutQ : 0;
       }
+      // A cut that glanced off: the blade is thrown up and back over her shoulder and rings there.
+      if (slashAdv && this.clangT < 90) this.clangT += dt * 60;
+      const ct = this.clangT;
+      const ck = ct < 90 ? smoothstep(0, CLANG.rise, ct) : 0;
+      if (ck > 0) {
+        const to = (CLANG.ang + CLANG.ring * Math.exp(-ct / 3.5) * Math.cos(ct * 0.8)) * DEG;
+        let da = wrapPi(to - ang);
+        // Always up and over, never down through the ground.
+        if (da < 0) da += TAU;
+        ang += da * ck;
+        len = lerp(len, 0.92, ck);
+      }
+      this.clangK = ck * (1 - quintic((ct - CLANG.hold) / CLANG.out));
       if (this.cutQ >= 0 && cut0 < 0) {
         this.cutStart = true;
+        this.slashWhip = sk.whip ?? 0;
         // Running, the stride gives under the cut (the feet keep their plants: no sliding).
         if (p.grounded && this.wRun > 0.5 && sk.f[K_HOP] === 0) this.crouch.v += 30;
       }
@@ -2004,8 +2063,9 @@ export class Rig {
           sf < sk.wind
             ? lerp(this.kFrom[i]!, sk.w[i]!, ew)
             : lerp(sk.w[i]!, sk.f[i]! * rel * (1 + SNAP.body * over), sw);
-        kn[i] = v * bw;
+        kn[i] = v * bw * (1 - ck);
       }
+      this.slashSweep = (sk.sweep ?? 0) * sw * rel * (1 + 0.4 * over) * bw * (1 - ck);
       kn[K_LIFT] =
         sk.f[K_LIFT]! * Math.sin(Math.PI * sat((sf - sk.wind * 0.5) / (sk.cut + sk.wind * 0.5 + 1.5)));
       // The hop: off the ground as the cut starts, down again a few frames after it (the sim never
@@ -2035,6 +2095,9 @@ export class Rig {
       this.handR = HAND_WIND;
       for (let i = 0; i < NK; i++) kn[i]! *= Math.exp(-20 * dt);
       this.slashBody = 0;
+      this.slashSweep *= Math.exp(-20 * dt);
+      this.clangT = 99;
+      this.clangK = 0;
     }
     {
       // On a wall she clings with the other hand and both feet and twists out to cut away from it.
@@ -2106,10 +2169,57 @@ export class Rig {
       out[TW]! -= 0.5 * onWall * mir;
       out[HT]! -= 0.12 * onWall;
       out[HYAW] = lerp(out[HYAW]!, -0.8, onWall);
+      // An up cut on the ground: up on her toes, long through the whole body under the blade.
+      const upG = this.slashDir === 'up' ? this.slashBody * g0 * fw * (1 - this.wRun) : 0;
+      out[AP]! += 0.5 * upG;
+      out[BP]! += 0.62 * upG;
+      // A blow that landed on a creature: she digs in against the recoil. Hips back and low, the
+      // shoulders kept over the blow, the front foot left out ahead, the back foot skidding.
+      if (slashAdv) this.braceK *= Math.exp((-dt * 60) / BRACE.frames);
+      const bk = this.braceK * fw * (this.slashOn ? 1 : 0);
+      if (bk > 1e-3) {
+        out[PF]! -= 5.5 * bk * gk;
+        out[PU]! -= 3.4 * bk * g0;
+        out[LEAN]! += 0.1 * bk;
+        out[CURL]! += 0.14 * bk;
+        out[HT]! += 0.1 * bk;
+        out[LF]! += 6 * bk * stand;
+        out[TF]! -= 7 * bk * stand;
+        out[TP]! += 0.45 * bk * stand;
+        out[OHF]! -= 5 * bk;
+        out[OHU]! -= 2 * bk;
+      }
+      // A cut that glanced off: rocked back onto her heels, chest thrown open, the front foot
+      // jolted off the ground (the half step back), the off-hand flung out ahead for balance.
+      const cl = this.clangK * fw;
+      if (cl > 1e-3) {
+        const pop = 1 + 0.35 * Math.exp(-this.clangT / 2.5);
+        out[LEAN]! -= 0.46 * cl * pop * gl;
+        out[CURL]! -= 0.24 * cl * gl;
+        out[HT]! -= 0.24 * cl;
+        out[PF]! -= 6 * cl * gk;
+        out[PU]! += 1.5 * cl * g0;
+        out[TW]! += 0.55 * cl * mir;
+        out[OHF]! += 10 * cl;
+        out[OHU]! += 6 * cl;
+        const step = bell(sat(this.clangT / (CLANG.hold + 3)));
+        out[LF]! -= 5 * cl * stand;
+        out[LU]! += 7 * step * cl * stand;
+        out[sB ? BP : AP]! -= 0.5 * step * cl * stand;
+        out[TF]! -= 9 * cl * stand;
+        out[TP]! += 0.3 * cl * stand;
+        out[AF]! -= 5 * cl * airK;
+        out[BF]! -= 7 * cl * airK;
+        out[EYE]! *= 1 - 0.45 * cl * Math.exp(-this.clangT / 3);
+      }
       // An up cut in the air is one long vertical line: wings swept down and back, legs together.
       const upAir = this.slashDir === 'up' ? airK * this.slashBody : 0;
-      this.slashWing = lerp(kn[K_WING]!, -1.1, upAir);
+      this.slashWing = lerp(lerp(kn[K_WING]!, -1.1, upAir), 1.5, cl);
       this.slashTwist = kn[K_TW]! * mir;
+      // The antennae's whip: thrown the other way as the cut starts, gone in a few frames (their
+      // own chain does the overshoot). A clang throws them forward over her brow.
+      if (slashAdv) this.slashWhip *= Math.exp((-dt * 60) / 3.5);
+      if (sig.blocked) this.slashWhip = -40;
       // The air hang: the wings lift to hold her for those frames.
       this.hangK += ((p.hang > 0 ? 1 : 0) - this.hangK) * approach(p.hang > 0 ? 40 : 9, dt);
     }
@@ -2507,6 +2617,7 @@ export class Rig {
     this.slashT = 0;
     this.slashOn = true;
     this.cutQ = -1;
+    this.clangT = 99;
     // Under spread wings a forward cut goes lower: beneath and ahead of her.
     this.slashTilt = dir === 'fwd' ? -16 * this.soar : 0;
   }
@@ -2533,6 +2644,23 @@ export class Rig {
   strokeAtRoll(q: number, roll: number, out: { x: number; y: number }): void {
     const st = this.stroke;
     strokeMap(st, st.a0 + (st.a1 - st.a0) * q, this.slashTilt);
+    const bx = mapOut.f * this.slashFacing;
+    const by = -mapOut.u;
+    const cr = Math.cos(roll);
+    const sr = Math.sin(roll);
+    out.x = bx * cr - by * sr;
+    out.y = bx * sr + by * cr;
+  }
+
+  /**
+   * A point of the current stroke's crescent, `u` 0 (tail) .. 1 (leading end), in the frame turned
+   * `roll`: its own arc if the stroke has one (`Stroke.mark`), else `show`..1 of the cut.
+   */
+  markAtRoll(u: number, roll: number, out: { x: number; y: number }): void {
+    const st = this.stroke;
+    const m0 = st.mark ? st.mark[0] : st.a0 + (st.a1 - st.a0) * st.show;
+    const m1 = st.mark ? st.mark[1] : st.a1;
+    strokeMap(st, m0 + (m1 - m0) * u, this.slashTilt);
     const bx = mapOut.f * this.slashFacing;
     const by = -mapOut.u;
     const cr = Math.cos(roll);

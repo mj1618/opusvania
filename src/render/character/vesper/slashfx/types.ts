@@ -5,7 +5,7 @@
  */
 export type SlashDir = 'fwd' | 'up' | 'down';
 
-/** The blade point's unit offset from the mark's origin at fraction `q` (0..1) of the current cut. */
+/** A point of the crescent's arc, unit offset from the mark's origin: `u` 0 = its tail end, 1 = its leading end. */
 export type StrokeAt = (q: number, out: { x: number; y: number }) => void;
 
 /** A cut begins. */
@@ -39,4 +39,6 @@ export interface SlashFrame {
   cutQ: number;
   /** Tone scale for the zone she is in (see `View.pale`). */
   pale: number;
+  /** World y of the ground under the cut: nothing of the crescent is drawn below it (none if left out). */
+  groundY?: number;
 }

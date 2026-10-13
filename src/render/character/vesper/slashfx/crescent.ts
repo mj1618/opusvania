@@ -28,6 +28,8 @@ export const CRESCENT = {
   fade: 3,
   /** How the belly is shaped along it: > 1 moves the thickest part toward the leading end. */
   skew: 1.12,
+  /** > 1 draws the two ends out into longer needles. */
+  needle: 1.15,
   /** While it thins the tail end is drawn up toward the leading end by this fraction. */
   retreat: 0.42,
   /** It stands whole once the cut has got this far (the first active frame shows about 0.83). */
@@ -37,6 +39,15 @@ export const CRESCENT = {
   lineMax: 0.22,
   /** The dusk hair round it, px. */
   dusk: 1.1,
+  /**
+   * In hitstop it does not stand there whole over what it hit: over `holdIn` frames of the freeze it
+   * thins to `holdThin` of its belly (toward the outer edge: a line round the target, not a lid on it).
+   */
+  holdThin: 0.42,
+  holdIn: 2,
+  /** A cut that glanced off: what is left of the crescent, as a fraction of its arc and of its belly. */
+  clangArc: 0.62,
+  clangThin: 0.5,
   /** Contact flash: frames; half-lengths along / across the cut, px; half-width px. */
   flash: 4,
   long: 44,
@@ -75,8 +86,13 @@ export class SlashMark {
     wide: 1,
   };
   private on = false;
+  /** A cut's arc is laid (so a late hit can call the crescent back). */
+  private laid = false;
   /** Frames since the crescent appeared (stands still in hitstop). */
   private age = 0;
+  /** Frames it has been held in hitstop, and how much of its arc is left after a clang. */
+  private heldFor = 0;
+  private arc = 1;
   /** How much of the arc the leading end has reached, 0..1. */
   private head = 0;
   // The contact flash: where, along what, how old (frames; render time, it runs through the hitstop).
@@ -101,6 +117,7 @@ export class SlashMark {
 
   clear(): void {
     this.on = false;
+    this.laid = false;
     this.hAge = 99;
     this.sn = 0;
   }
@@ -111,13 +128,16 @@ export class SlashMark {
     const N = CRESCENT.n;
     const vert = cut.dir !== 'fwd';
     for (let i = 0; i < N; i++) {
-      at(cut.show + (1 - cut.show) * (i / (N - 1)), tv);
+      at(i / (N - 1), tv);
       this.ux[i] = tv.x * (vert ? cut.wide : 1);
       this.uy[i] = tv.y * (vert ? 1 : cut.wide);
     }
     this.on = true;
+    this.laid = true;
     this.age = 0;
     this.head = 0;
+    this.heldFor = 0;
+    this.arc = 1;
   }
 
   /** Once per frame, before `draw`. */
@@ -134,7 +154,8 @@ export class SlashMark {
       // The cut was dropped (a dash, a blow): what is there thins away.
       this.head = Math.max(this.head, 0.5);
     }
-    if (!f.held) this.age += frames;
+    if (f.held) this.heldFor += frames;
+    else this.age += frames;
     if (this.age > CRESCENT.full[c.heavy ? 1 : 0]! + CRESCENT.fade + 0.5) this.on = false;
   }
 
@@ -152,6 +173,22 @@ export class SlashMark {
     this.hAge = 0;
     this.hPower = power;
     this.hits++;
+    if (this.laid) {
+      const full = CRESCENT.full[this.cut.heavy ? 1 : 0]!;
+      if (power > 0) {
+        // The blow is always marked: a hit late in the active window (a pogo from height) finds the
+        // crescent thin or gone, so it is called back whole for the freeze and thins away after it.
+        if (!this.on || this.age > full) {
+          this.on = true;
+          this.head = 1;
+          this.age = full;
+        }
+      } else {
+        // Glanced off: it never got through. What is left is the near part, thin, and it goes fast.
+        this.arc = CRESCENT.clangArc;
+        this.age = Math.max(this.age, full + 1);
+      }
+    }
     // A few sharp specks thrown on along the cut, fanned a little: fixed angles turned by a
     // count, so two blows in a row do not throw the same fan (no randomness needed).
     const clang = power <= 0;
@@ -189,9 +226,11 @@ export class SlashMark {
     // `age` is 1 on the frame it appears: whole for `full` frames, then it thins over `fade`.
     const d = sat((this.age - full) / (CRESCENT.fade + 1));
     if (d >= 1) return;
-    const thin = (1 - d) ** 1.35;
-    const v0 = CRESCENT.retreat * d;
-    const v1 = this.head;
+    const hold = 1 - (1 - CRESCENT.holdThin) * sat(this.heldFor / CRESCENT.holdIn);
+    const thin = Math.min((1 - d) ** 1.35, hold) * (this.arc < 1 ? CRESCENT.clangThin : 1);
+    const v0 = CRESCENT.retreat * d * this.arc;
+    const v1 = this.head * this.arc;
+    const gy0 = f.groundY ?? Number.POSITIVE_INFINITY;
     if (v1 - v0 < 0.08) return;
     const tone = toneFor(f.pale);
     const { px, py, gx, gy, gc } = p;
@@ -207,7 +246,7 @@ export class SlashMark {
         const fr = v - i0;
         const x = ux[i0]! + (ux[i0 + 1]! - ux[i0]!) * fr;
         const y = uy[i0]! + (uy[i0 + 1]! - uy[i0]!) * fr;
-        const belly = Math.sin(Math.PI * w ** CRESCENT.skew) ** 0.85;
+        const belly = Math.sin(Math.PI * w ** CRESCENT.skew) ** CRESCENT.needle;
         // The two needle ends lie on the blade point's own path (`1 - thick` of the reach); the
         // belly swells out from it to the full reach. Thinning, the outer edge stays.
         let ro = 1 - c.thick * (1 - belly);
@@ -227,9 +266,9 @@ export class SlashMark {
           col = LINE;
         }
         px[i] = f.ox + x * R * ro;
-        py[i] = f.oy + y * R * ro;
+        py[i] = Math.min(gy0, f.oy + y * R * ro);
         gx[i] = f.ox + x * R * ri;
-        gy[i] = f.oy + y * R * ri;
+        gy[i] = Math.min(gy0, f.oy + y * R * ri);
         gc[i * 3] = col[0]! * k;
         gc[i * 3 + 1] = col[1]! * k;
         gc[i * 3 + 2] = col[2]! * k;
