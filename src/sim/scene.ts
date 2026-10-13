@@ -24,6 +24,17 @@ export interface OneWay {
   tag: SceneTag;
 }
 
+/** `glint`: a drop of light worth 1. `great`: a rare one cradled in a bud, worth more. */
+export type PickupKind = 'glint' | 'great';
+
+/** Something to gather: a point in sim px (the centre of the light). */
+export interface Pickup {
+  id: string;
+  kind: PickupKind;
+  x: number;
+  y: number;
+}
+
 export interface Scene {
   id: string;
   /** Scene size in sim px. The edges and the bottom are solid; the top is open. */
@@ -33,4 +44,6 @@ export interface Scene {
   spawn: { x: number; y: number };
   solids: SolidRect[];
   oneWays: OneWay[];
+  /** Collectibles, in a fixed order: `GameState.pickups.timers` is indexed like this array. */
+  pickups?: Pickup[];
 }

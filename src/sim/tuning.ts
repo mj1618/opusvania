@@ -120,6 +120,21 @@ export const defaultTuning = {
     bufferFrames: 6,
     airDashes: 1,
   },
+  /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
+  pickups: {
+    /** A glint within this many px of the body wakes and is hers. */
+    wakePx: 84,
+    /** Frames from waking to being absorbed (render: a beat of notice, then the flight). */
+    flightFrames: 14,
+    /** Great glints want a closer approach and take a longer, ceremonial pickup. */
+    greatWakePx: 56,
+    greatFrames: 46,
+    greatValue: 5,
+    /** Pickups woken together are absorbed at least this many frames apart, nearest first. */
+    staggerFrames: 3,
+    /** A pickup this soon after the last one continues the combo. */
+    comboFrames: 50,
+  },
   misc: {
     dropThroughFrames: 10,
     /** Grounded distance between `step` (footstep) events. */

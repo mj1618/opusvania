@@ -5,12 +5,13 @@
  *   app.stage
  *   └ root                 scaled to device pixels; below it everything is in logical view units
  *     ├ layers.root        the PostStage's target (filters go here)
- *     │   sky, far0..2, mid, playfield, character, foreground, air      (scene/layer-tree.ts)
+ *     │   sky, far0..2, mid, playfield, character, pickups, foreground, air   (scene/layer-tree.ts)
+ *     ├ hud                the glint count, not post-processed (render/hud)
  *     └ debug overlay      collision boxes, not post-processed
  *
  * Per render frame: interpolate camera and player (alpha between the last two sim frames) ->
  * apply the camera to the layers -> SceneRenderer.update -> CharacterRenderer.update ->
- * PostStage.update -> overlay. `present()` then draws the frame.
+ * PickupRenderer.update -> PostStage.update -> hud -> overlay. `present()` then draws the frame.
  */
 import { HitboxOverlay } from '../debug/overlay';
 import type { Game } from '../game';
@@ -20,7 +21,9 @@ import type { GameApp } from './app';
 import { type CameraState, createCamera, lerpCamera, stepCamera } from './camera/index';
 import { CharacterRenderer } from './character/index';
 import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
+import { Hud } from './hud/index';
 import { LightRegistry } from './lights';
+import { PickupRenderer } from './pickups/index';
 import { PostStage } from './post/index';
 import { SceneRenderer } from './scene/index';
 
@@ -47,6 +50,8 @@ export class RenderStage {
   readonly ctx: RenderContext;
   readonly scene: SceneRenderer;
   readonly character: CharacterRenderer;
+  readonly pickups: PickupRenderer;
+  readonly hud: Hud;
   readonly post: PostStage;
   readonly overlay: HitboxOverlay;
   /** Seconds of render time since boot. */
@@ -68,9 +73,11 @@ export class RenderStage {
     this.scene = new SceneRenderer(this.ctx);
     this.scene.init(scene);
     this.character = new CharacterRenderer(this.ctx, this.scene.layers.character);
+    this.pickups = new PickupRenderer(this.ctx, this.scene.layers.pickups);
     this.post = new PostStage(this.ctx, this.scene.layers.root);
+    this.hud = new Hud();
     this.overlay = new HitboxOverlay(scene);
-    ga.root.addChild(this.scene.layers.root, this.overlay.layer);
+    ga.root.addChild(this.scene.layers.root, this.hud.layer, this.overlay.layer);
 
     this.cam = createCamera(game.state, scene);
     this.prevCam = { ...this.cam };
@@ -112,11 +119,19 @@ export class RenderStage {
       : follow;
     const events = this.pending;
     this.pending = [];
-    const sim: SimView = { frame: this.game.state.frame, player, events, scene: this.game.scene };
+    const sim: SimView = {
+      frame: this.game.state.frame,
+      player,
+      events,
+      scene: this.game.scene,
+      pickups: this.game.state.pickups,
+    };
     this.scene.layers.applyCamera(view);
     this.scene.update(dt, this.clock, view, sim);
     this.character.update(dt, this.clock, player, events);
+    this.pickups.update(dt, this.clock, view, sim);
     this.post.update(dt, this.clock, view);
+    this.hud.update(dt, this.clock, sim);
     this.overlay.draw(view, player);
     this.view = view;
     this.drawn = player;

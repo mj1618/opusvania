@@ -77,8 +77,26 @@ export interface PlayerState {
   stepDist: number;
 }
 
+/** Collectibles (src/sim/pickups.ts). */
+export interface PickupsState {
+  /**
+   * One entry per `scene.pickups`, same order: 0 = waiting, n > 0 = woken and on its way (it is
+   * collected in n more steps), -1 = collected.
+   */
+  timers: number[];
+  /** Value gathered so far (a great glint counts for more than one). */
+  count: number;
+  /** How many pickups have been collected. */
+  taken: number;
+  /** Index of the last pickup in the current chain (0 = first), and frames left to extend it. */
+  combo: number;
+  comboTimer: number;
+  /** Frames until the collect queue is free: keeps pickups woken together from landing together. */
+  gate: number;
+}
+
 export interface GameState {
-  version: 6;
+  version: 7;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;
@@ -86,8 +104,9 @@ export interface GameState {
   rng: number;
   prevInput: InputFrame;
   player: PlayerState;
+  pickups: PickupsState;
 }
 
 export function cloneState(s: GameState): GameState {
-  return { ...s, player: { ...s.player } };
+  return { ...s, player: { ...s.player }, pickups: { ...s.pickups, timers: s.pickups.timers.slice() } };
 }

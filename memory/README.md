@@ -20,3 +20,4 @@ Keep entries current; delete stale ones.
 - [Character skin: Nova](character-nova.md) — star-runner acrobat skin: somersault as whole-rig rotation on a spring, hand/foot follow-through springs, relative-speed light trails, shots/clip URL workaround
 - [Character skin: Wick](character-wick.md) — lantern-bearer skin: mirrored 2.5D rig, glaive on a screen-space angular spring, lantern pendulum, somersault double jump, cloth tricks, gotchas
 - [Reference study](reference-study.md) — measured table of our stops vs Ori/HK Steam frames (key, near-black, hero size and contrast, hue commitment) and the principles to hold the look to; resize gotcha
+- [Pickups: glints](pickups.md) — collectible rule and timing (wake/flight/stagger/combo), events, one-mesh renderer, bud holder, HUD counter, placement list, look decisions and gotchas

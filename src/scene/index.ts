@@ -22,6 +22,9 @@ const SceneSchema = z
     spawn: z.object({ x: int, y: int }),
     solids: z.array(z.object({ tag: TAG, x: int, y: int, w: int.positive(), h: int.positive() })),
     oneWays: z.array(z.object({ tag: TAG, x: int, y: int, w: int.positive() })),
+    pickups: z
+      .array(z.object({ id: z.string().min(1), kind: z.enum(['glint', 'great']), x: int, y: int }).strict())
+      .default([]),
   })
   .strict();
 
@@ -30,6 +33,15 @@ export function parseScene(json: unknown): Scene {
   for (const r of s.solids) {
     if (r.x < 0 || r.y < 0 || r.x + r.w > s.width || r.y + r.h > s.height)
       throw new Error(`Scene "${s.id}": solid at (${r.x}, ${r.y}) leaves the scene bounds`);
+  }
+  const seen = new Set<string>();
+  for (const p of s.pickups) {
+    if (seen.has(p.id)) throw new Error(`Scene "${s.id}": two pickups are called "${p.id}"`);
+    seen.add(p.id);
+    if (p.x <= 0 || p.y <= 0 || p.x >= s.width || p.y >= s.height)
+      throw new Error(`Scene "${s.id}": pickup "${p.id}" is outside the scene`);
+    if (s.solids.some((r) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h))
+      throw new Error(`Scene "${s.id}": pickup "${p.id}" is inside a solid`);
   }
   return s;
 }

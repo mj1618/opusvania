@@ -6,6 +6,7 @@ import type { PointLight } from '../render/lights';
 import type { CameraOverride, RenderStage } from '../render/stage';
 import type { SimEvent } from '../sim/events';
 import type { GameState } from '../sim/index';
+import { pickupsWorth } from '../sim/pickups';
 import type { Scene } from '../sim/scene';
 import type { Tuning } from '../sim/tuning';
 import type { TuningPanel } from './tuning-panel';
@@ -71,6 +72,16 @@ export interface GameDebugApi {
   tuning(): Tuning;
   /** Sets one dotted path (`'run.maxSpeed', 12`) or merges a partial. Returns the tuning. */
   setTuning(pathOrPartial: string | Record<string, Record<string, unknown>>, value?: unknown): Tuning;
+  /**
+   * Collectibles: the count so far, what the whole scene is worth, and every pickup with its
+   * state (`waiting`, `flying` = woken and on its way, `taken`).
+   */
+  pickups(): {
+    count: number;
+    taken: number;
+    worth: number;
+    list: Array<{ id: string; kind: string; x: number; y: number; state: 'waiting' | 'flying' | 'taken' }>;
+  };
   /** Dynamic lights registered this frame (world px). */
   lights(): PointLight[];
   /** Redraws now (after changing something by hand in manual mode). */
@@ -208,6 +219,18 @@ export function installDebugApi(deps: {
       }
       panel.refresh();
       return api.tuning();
+    },
+    pickups() {
+      const s = game.state.pickups;
+      return {
+        count: s.count,
+        taken: s.taken,
+        worth: pickupsWorth(game.scene, game.tuning.pickups),
+        list: (game.scene.pickups ?? []).map((p, i) => {
+          const t = s.timers[i] ?? 0;
+          return { ...p, state: t < 0 ? 'taken' : t > 0 ? 'flying' : 'waiting' };
+        }),
+      };
     },
     lights: () => stage.lights.list.map((l) => ({ ...l })),
     render: redraw,

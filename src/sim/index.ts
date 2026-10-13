@@ -5,6 +5,7 @@
  */
 import type { SimEvent } from './events';
 import type { InputFrame } from './input';
+import { createPickups, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
 import { createPlayer, updatePlayer } from './player/player';
 import { seedRng } from './rng';
@@ -16,12 +17,13 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 6,
+    version: 7,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
     prevInput: 0,
     player: createPlayer(scene.spawn.x, scene.spawn.y, t, scene),
+    pickups: createPickups(scene),
   };
   events.push({ type: 'spawn', x: scene.spawn.x, y: scene.spawn.y });
   return state;
@@ -29,7 +31,7 @@ export function createState(seed: number, t: Tuning, scene: Scene, events: SimEv
 
 /**
  * Puts a fresh player with its feet centre at (x, y): at rest, facing right, every timer cleared.
- * The frame count and RNG are kept.
+ * The frame count, the RNG and what has been collected are kept.
  */
 export function placePlayer(
   state: GameState,
@@ -47,12 +49,13 @@ export function placePlayer(
 /** Advances the sim by exactly one 1/60 s step, mutating `state` and appending to `events`. */
 export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scene, events: SimEvent[]): void {
   updatePlayer(state, scene, input, resolveParams(t), events);
+  updatePickups(state, scene, t.pickups, events);
   state.prevInput = input;
   state.frame++;
 }
 
 export type { SimEvent } from './events';
 export { hashState } from './hash';
-export type { Scene } from './scene';
-export type { GameState, Motion, PlayerMode, PlayerState } from './state';
+export type { Pickup, PickupKind, Scene } from './scene';
+export type { GameState, Motion, PickupsState, PlayerMode, PlayerState } from './state';
 export { cloneState } from './state';

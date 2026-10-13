@@ -39,7 +39,10 @@ test('the character runs right and jumps off the ground', async ({ page }) => {
     const air = g.step(12).player;
     const events = g.events().map((e) => e.type);
     const landed = g.step(60).player;
-    return { start, ran, air, landed, events };
+    // The run passes through the first line of glints.
+    const glints = g.pickups();
+    const glintEvents = g.events(102).map((e) => e.type);
+    return { start, ran, air, landed, events, glints, glintEvents, reset: g.load().pickups.count };
   });
   expect(r.start.grounded).toBe(true);
   expect(r.ran.x).toBeGreaterThan(r.start.x + 150);
@@ -48,6 +51,12 @@ test('the character runs right and jumps off the ground', async ({ page }) => {
   expect(r.air.y).toBeLessThan(r.start.y - 100);
   expect(r.events).toContain('jump');
   expect(r.landed.grounded).toBe(true);
+  expect(r.glints.count).toBeGreaterThanOrEqual(3);
+  expect(r.glints.worth).toBeGreaterThan(r.glints.count);
+  expect(r.glints.list.filter((p) => p.state === 'taken')).toHaveLength(r.glints.taken);
+  expect(r.glintEvents).toContain('pickupWake');
+  expect(r.glintEvents).toContain('pickup');
+  expect(r.reset).toBe(0);
   expect(errors).toEqual([]);
 });
 

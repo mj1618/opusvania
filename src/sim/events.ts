@@ -1,3 +1,5 @@
+import type { PickupKind } from './scene';
+
 /**
  * Typed sim events. `step()` appends the events of that step to the array it is given; the Game
  * harness hands them to render (`game.afterStep`). Consumers must never mutate the sim.
@@ -35,6 +37,28 @@ export type SimEvent =
   /** An assist nudged the body by (dx, dy) px around a corner. */
   | { type: 'cornerCorrect'; kind: CornerKind; x: number; y: number; dx: number; dy: number }
   /** Down+Jump on a one-way platform. */
-  | { type: 'dropThrough'; x: number; y: number };
+  | { type: 'dropThrough'; x: number; y: number }
+  /**
+   * A pickup noticed the player and is now hers: it will be collected in exactly `frames` steps
+   * wherever she goes (render flies it to her in that time). `x`, `y` = where the pickup hangs.
+   */
+  | { type: 'pickupWake'; id: string; kind: PickupKind; x: number; y: number; frames: number }
+  /**
+   * A pickup was absorbed. `x`, `y` = where it used to hang; `px`, `py` = the centre of the
+   * player's box now (where it goes in). `combo` counts up from 0 through a quick run of pickups
+   * (for pitch / brightness steps); `total` is the value gathered so far, this one included.
+   */
+  | {
+      type: 'pickup';
+      id: string;
+      kind: PickupKind;
+      value: number;
+      x: number;
+      y: number;
+      px: number;
+      py: number;
+      combo: number;
+      total: number;
+    };
 
 export type SimEventType = SimEvent['type'];

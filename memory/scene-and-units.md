@@ -14,7 +14,8 @@
   that need device pixels use `ctx.viewScale()`. Camera and player are interpolated between sim frames.
 
 ## The scene: `content/scene/grove.json`
-`{id, width: 5760, height: 1600, spawn: {x, y}, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}]}`,
+`{id, width: 5760, height: 1600, spawn: {x, y}, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}],
+pickups: [{id, kind: glint|great, x, y}]}` (pickups: pickups.md),
 validated by Zod in `src/scene/index.ts` (exports `GROVE`), typed in `src/sim/scene.ts`. Tags are for
 artists (`ground | pool | ledge | trunk | floating | root | branch`); the sim ignores them. The left,
 right and bottom scene edges are solid, the top is open. One-ways block only a falling body; Down+Jump
@@ -50,11 +51,13 @@ x:  0        1000       2000       3000       4000       5000     5760
 | `mid` | 0.68 | big trunks, roots, vines, fog sheets |
 | `playfield` | 1 | terrain, moss, plants, pool: the skin of the collision rects |
 | `character` | 1 | the character |
+| `pickups` | 1 | glints and their buds (`src/render/pickups/`), over the character |
 | `playfieldFront` | 1 | grass fringe and the pool's surface, over the character (owned by `layers/playfield.ts`) |
 | `foreground` | 1.35 | dark blurred leaves and branches |
 | `air` | 1 | god rays, motes, fireflies, mist |
 
-Then the post stage wraps the whole tree; the debug overlay is outside it. World layers are authored
+Then the post stage wraps the whole tree; the HUD (`src/render/hud/`, the glint count) and the debug
+overlay are outside it. World layers are authored
 in world px and line up with the playfield when the camera centre is at `layers.anchor` (scene centre
 x, the camera's lowest resting y); elsewhere they scroll at `parallax` x camera speed. `layers.visible(name,
 cam)` = the on-screen part in layer coordinates; `layers.coverage(name)` = the most the follow camera can

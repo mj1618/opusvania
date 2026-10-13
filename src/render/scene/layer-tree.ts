@@ -10,6 +10,7 @@ import { type CameraView, VIEW_H, VIEW_W } from '../contract';
  *   mid         0.68          big trunks, roots, vines, fog sheets
  *   playfield   1             terrain, moss, plants, the pool (what the collision rects become)
  *   character   1             the character (owned by src/render/character)
+ *   pickups     1             glints and their buds, over the character (owned by src/render/pickups)
  *   playfieldFront 1          what covers the character at its own depth: grass fringe, pool surface
  *   foreground  1.35          dark out-of-focus leaves and branches in front of everything
  *   air         1             god rays, motes, fireflies, ground mist
@@ -33,6 +34,8 @@ export const LAYERS = [
   { name: 'airBack', parallax: 1, screen: false },
   { name: 'playfield', parallax: 1, screen: false },
   { name: 'character', parallax: 1, screen: false },
+  // Collectibles: over the character (a glint flies into her), under the grass fringe.
+  { name: 'pickups', parallax: 1, screen: false },
   // What must cover the character at its own depth: grass fringe, the pool's surface (layers/playfield.ts).
   { name: 'playfieldFront', parallax: 1, screen: false },
   { name: 'foreground', parallax: 1.35, screen: false },
@@ -57,6 +60,8 @@ export class LayerTree {
   readonly mid: Container;
   readonly playfield: Container;
   readonly character: Container;
+  /** Glints (owned by src/render/pickups). */
+  readonly pickups: Container;
   /** In front of the character at parallax 1 (owned by layers/playfield.ts). */
   readonly playfieldFront: Container;
   readonly foreground: Container;
@@ -76,6 +81,7 @@ export class LayerTree {
     this.mid = this.get('mid');
     this.playfield = this.get('playfield');
     this.character = this.get('character');
+    this.pickups = this.get('pickups');
     this.playfieldFront = this.get('playfieldFront');
     this.foreground = this.get('foreground');
     this.air = this.get('air');
