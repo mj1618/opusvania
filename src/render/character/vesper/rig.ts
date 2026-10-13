@@ -708,7 +708,7 @@ export class Rig {
   openHold = 0;
   spinning = false;
   /** Turns per somersault: 1 or 2 (the owner flips it live with T). */
-  static turns = 4;
+  static turns = 3;
   /** The finisher as a pirouette. Off: tried and judged worse than the cleave with a hop at game size (memory/character-vesper.md). */
   static finisherTurn = false;
   /** The model's moment of inertia (ball = 1) and angular speed (rad/s) this frame, and the ball's measured radius. */

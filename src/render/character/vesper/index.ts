@@ -27,7 +27,7 @@ import { Secondary } from './wings';
 
 const LIGHT = 0xffe0a0;
 /** v2: the default became four turns; the old key's stored choice is ignored so everyone sees it. */
-const TURNS_KEY = 'vesper.turns.v2';
+const TURNS_KEY = 'vesper.turns.v3';
 
 export class VesperCharacter implements CharacterSkin {
   private readonly painter = new Painter();
@@ -396,7 +396,7 @@ export class VesperCharacter implements CharacterSkin {
 
   /**
    * Somersault turns per double jump, 1 to 4: `?turns=1..4`, else what was chosen last
-   * (localStorage), else four. T cycles it while playing; `window.__vesper.turns` reads and sets it for tools.
+   * (localStorage), else three. T cycles it while playing; `window.__vesper.turns` reads and sets it for tools.
    */
   private initTurns(): void {
     if (typeof window === 'undefined') return;
