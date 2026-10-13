@@ -3,7 +3,8 @@
 THE hero. Slender moth-person, ~84 px tall; wings worn as a cape. Imports `../hooded/math`; `chain.ts`
 (hooded chain + per-segment `extra` angle, `dragK`, `scale`) and `paint.ts` are our own copies.
 Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae; `draw.ts` shapes;
-`fx.ts` dust, trails, scales; `slashfx/` the slash's look; `index.ts` wiring, lights, `window.__vesper`.
+`fx.ts` dust, trails, scales; `slashfx/` the slash's look; `link.ts` hand-off with the goal renderer;
+`index.ts` wiring, lights, `window.__vesper`.
 
 ## Look: owner decisions, do not undo
 - **Value plan**: a dark plum figure with a SOFT pale lilac-ash face; eyes, lantern tips and wing
@@ -160,8 +161,47 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   (`View.glintT/glintK`); a 'great' runs `rig.flourish` (wings open once). The first glint of a run
   puts a small skip in the stride.
 
+## Acting at the lanterns and the heart (sim: memory/goal.md; `ACT`, `Cue`, `actPose` in rig.ts)
+- A skin only gets the player and the events, so `link.ts` (`vesperLink`) is the hand-off with the goal
+  renderer (updated after her): it leaves `goal` (the state) and `beads` (each glass's x, y) there, she
+  leaves `offerX/Y` (her open palm while kindling, else the chest joint) and `live`. `index.ts readGoal`
+  turns that into `rig.cue` (the rig stays testable without Pixi). She reads the goal one render frame late.
+- Everything is an OVERLAY on the stand: acting poses (`KINDLE`, `REST`, `WARM`, `EMPTY`, `LISTEN`,
+  `UPLIFT`; hands are near / far and trade with the turn through `mix`) are lerped onto the blended
+  pose by weights x `wIdle` x (1 - grip) x (1 - hurt), so a step, a slash or a blow takes her out at
+  once and the spine / hand springs do the easing. She turns to the lantern's FOOT (the light runs
+  to the foot and up the stem), render only; the player's facing is untouched.
+- What the wings / antennae / lights read: `cloak` (+ = relaxed open: kindle; - = wrapped round her,
+  `WRAP`: rest), `shiver`, `antLift` (deg) + `antCurl` (rad per segment), `eyeLit` (scales `view.glow`
+  and the eye core's size), `raise` (deg the spread wings lift above the glide shape), `gazeAX/AY/W`.
+- Kindle: half-kneel (pelvis 23.5), near hand out LOW at chest height (a hand lifted to the glass sat
+  in front of her face and read as a hand on her chin), chin up, eyes dim and lids lower as the
+  glints leave; `lanternKindle` = look up, eyes wide, the glint light-run, a breath of the cloak,
+  held `catchHold` then she rises. Refuse: a short reach, then `EMPTY` (head down into the hand,
+  antennae hooked down) ~1.2 s. Rest: `seated` from the first rest frame until the player moves;
+  sat on her heels, wings wrapped; the heal lifts her face, shivers the wings, then a calmer seat.
+  Company: idle 2.6 s by a lit lantern = hands up to the glass (6.5 s of every 15), looking into it.
+  Sleeping heart: armed by `heartSleep`, played when she next stands still within 64 px of the bud.
+  Waking heart: head / gaze / antennae only (over the shoulder if it is behind her), so it shows on a run.
+- Ending (`cue.gathered` and standing still): she turns to `endTurn` 0.6 (0.34 hid the lifted chin:
+  the head's pitch is drawn x the head's turn; the head itself is turned further, HYAW 1.4), wings
+  unfurl through the glide's own `soar` over 2.4 s (they come out low and rise: liked), raised 13
+  degrees into a V (flat they read as a bow tie and hid the flower), ONE beat at 2.55 s (amplitude
+  0.5: at 0.8 the down-stroke flattened the wings on the ground), lanterns + 32%, then breath, the
+  glide's wing drift and the ordinary blinks for as long as it lasts. A state already ended skips
+  the ceremony. Works from either side.
+- Antennae gotcha: their rest shape bends back ~22 degrees per segment, so `antCurl` -0.4 exactly
+  straightens them (two rods: rabbit ears). Keep it under ~-0.2 for an arc. The head's pitch also
+  turns them (chin up = antennae back), so a "forward" lift has to beat that first.
+- Not solved: the lantern's stem stands in front of her wherever the player stops inside the 48 px
+  trigger, so the offering hand is often half behind it; the hand is a 4 px oval (no palm to turn
+  up); a blow while kindling / resting is unit-tested, not looked at. Sheets: `shots/vesper/goal/`.
+
 ## Capture and review
-- `window.__vesper`: `turns`, `slash`, `slashName`, `finisherTurn`, `hidden`, `mesh` (her Pixi mesh).
+- `window.__vesper`: `turns`, `slash`, `slashName`, `finisherTurn`, `hidden`, `mesh` (her Pixi mesh),
+  `act` (acting weights, `endT`, `cloak`, `antLift`, `eyeLit`, `soar`, the offer point).
+- Goal moments: plain URL (not `?nopickups`); wallet by teleporting onto waiting pickups; the ending:
+  kindle all three (teleport to each foot - 20, step 34), teleport (5132, 1088), `R6`, step 300.
 - One `playwright-cli eval` that steps and draws each frame's canvas crop into a 2D canvas grid and
   returns a data URL survives other agents' HMR reloads. Clean plates: hide `mesh.parent.parent`'s
   children `playfieldFront`, `foreground`, `air`. **Silhouettes**: hide every layer except

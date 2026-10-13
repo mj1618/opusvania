@@ -13,6 +13,7 @@
  */
 import type { Container } from 'pixi.js';
 import type { SimEvent } from '../../../sim/events';
+import { tuning } from '../../../sim/tuning';
 import type { PlayerView, RenderContext } from '../../contract';
 import type { PointLight } from '../../lights';
 import { zoneWeights } from '../../scene/lib/fx-zones';
@@ -21,13 +22,16 @@ import { clamp, noise1, Spring, sat, smoothstep } from '../hooded/math';
 import type { CharacterSkin, SkinDef } from '../skin';
 import { BLADE_EDGE, BLADE_LEN, BLADE_STEEL, drawVesper, type View } from './draw';
 import { drawSpinRings, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
+import { vesperLink } from './link';
 import { Painter, rgb } from './paint';
-import { HURT, J_CHEST, J_HEAD, J_HIP, J_SH_A, MAX_TURNS, Rig } from './rig';
+import { HURT, J_CHEST, J_HAND_A, J_HEAD, J_HIP, J_SH_A, MAX_TURNS, Rig } from './rig';
 import { drawSmear, makeSlashStyles, SLASH_STYLES, type SlashFrame } from './slashfx';
 
 import { Secondary } from './wings';
 
 const LIGHT = 0xffe0a0;
+/** She is "at" a lantern for her acting within this many px of its foot, sideways (its trigger is 24 either side). */
+const LAMP_REACH = 62;
 /** v3: the default became three turns; older keys' stored choices are ignored so everyone sees it. */
 const TURNS_KEY = 'vesper.turns.v3';
 /** Turns per double jump when nothing is stored or asked for (owner's choice, 2026-10-13). */
@@ -150,6 +154,7 @@ export class VesperCharacter implements CharacterSkin {
       hop: 0,
       spot: 0,
       stream: 0,
+      eyeLit: 1,
     };
   }
 
@@ -158,7 +163,17 @@ export class VesperCharacter implements CharacterSkin {
     const { rig, sec, fx, painter: p, view } = this;
     rig.groundDist = player.grounded ? 0 : this.clearBelow(player);
     this.sideGaps(player);
+    this.readGoal(player);
     rig.update(dt, clock, player, events);
+    // Where the light leaves her (and comes to her): the open palm while she kindles, else her chest.
+    {
+      const j = rig.frame.j;
+      const hand = (J_HAND_A + rig.offerSide) * 2;
+      const k = rig.offerK;
+      vesperLink.live = true;
+      vesperLink.offerX = j[J_CHEST * 2]! + (j[hand]! - j[J_CHEST * 2]!) * k;
+      vesperLink.offerY = j[J_CHEST * 2 + 1]! + (j[hand + 1]! - 2.5 - j[J_CHEST * 2 + 1]!) * k;
+    }
     const sig = rig.sig;
     const fresh = sig.spawned || !this.started;
     if (fresh) {
@@ -256,6 +271,11 @@ export class VesperCharacter implements CharacterSkin {
     if (sig.dashStart && player.grounded) fx.dust(feetX, feetY, -player.dashDir, 0.45, 3);
     if (sig.wallJump) fx.dust(feetX - player.facing * 18, feetY - 12, 0, 0.3, 2);
     if (sig.doubleJump) this.flash = 0.6;
+    // The lantern catches: its light runs through her, lantern tip to eyes to wing spots.
+    if (sig.kindled) {
+      this.glintT = 0;
+      this.glintK = 1;
+    }
     // A glint goes in: a warm pulse through the lanterns and eyes.
     if (sig.pickup > 0) {
       this.flash = Math.max(this.flash, sig.great ? 1 : 0.35 + 0.5 * sig.pickup);
@@ -408,8 +428,9 @@ export class VesperCharacter implements CharacterSkin {
     const hpK = player.hpMax > 1 ? sat((player.hp - 1) / (player.hpMax - 1)) : 1;
     const low = player.hp <= 1 && player.hpMax > 1 ? 0.86 + 0.14 * Math.sin(clock * 5.2) : 1;
     const whole = (1 - rig.fadeK) * (1 - rig.reformK);
-    const lit = (0.5 + 0.5 * hpK) * low * whole;
+    const lit = (0.5 + 0.5 * hpK) * low * whole * rig.eyeLit;
     view.glow = glow * lit;
+    view.eyeLit = rig.eyeLit;
     // While nothing can hurt her she pulses softly (alpha, never a white flash); gone when she has faded.
     const safe = player.invuln > 0 && player.stagger <= 0 && player.faded <= 0 ? sat(player.invuln / 12) : 0;
     const pulse = 0.5 - 0.5 * Math.cos(clock * 6.283 * HURT.flickerHz);
@@ -517,6 +538,24 @@ export class VesperCharacter implements CharacterSkin {
       get slashName(): string {
         return SLASH_STYLES[self.slashIdx]!;
       },
+      /** Her acting at the lanterns and the heart, for tools: pose weights and what the wings, antennae and lights read. */
+      get act(): Record<string, number> {
+        const r = self.rig;
+        return {
+          kindle: r.kindleW,
+          rest: r.restW,
+          warm: r.warmW,
+          touch: r.touchW,
+          end: r.endW,
+          endT: r.endT,
+          cloak: r.cloak,
+          antLift: r.antLift,
+          eyeLit: r.eyeLit,
+          soar: r.soar,
+          offerX: vesperLink.offerX,
+          offerY: vesperLink.offerY,
+        };
+      },
       /** For capture tools: her mesh (walk up from it to hide what stands in front of her). */
       get mesh(): unknown {
         return self.painter.mesh;
@@ -571,6 +610,55 @@ export class VesperCharacter implements CharacterSkin {
     }, 1100);
   }
 
+  /** The goal's cues for the rig, from the state the goal renderer left in the link (memory/goal.md). */
+  private readGoal(p: PlayerView): void {
+    const cue = this.rig.cue;
+    const goal = vesperLink.goal;
+    const sc = this.ctx.scene;
+    cue.lamp = false;
+    cue.kindle = -1;
+    cue.rest = -1;
+    cue.heart = false;
+    cue.gathered = false;
+    cue.ended = false;
+    if (!goal) return;
+    const lamps = sc.lanterns ?? [];
+    const g = tuning.goal;
+    // The lantern she stands at: the one being kindled, else the nearest on her ground within reach.
+    let best = -1;
+    let bestD = LAMP_REACH;
+    for (let i = 0; i < lamps.length; i++) {
+      const l = lamps[i]!;
+      if (Math.abs(l.y - p.feetY) > 6) continue;
+      const dd = Math.abs(l.x - p.cx);
+      if (dd < bestD) {
+        bestD = dd;
+        best = i;
+      }
+    }
+    if (p.kindling >= 0 && p.kindling < lamps.length) best = p.kindling;
+    const ls = best >= 0 ? goal.lanterns[best] : undefined;
+    if (best >= 0 && ls) {
+      const l = lamps[best]!;
+      const bx = vesperLink.beads[best * 2] ?? l.x;
+      const by = vesperLink.beads[best * 2 + 1] ?? l.y - 66;
+      cue.lamp = true;
+      cue.lampFootDx = l.x - p.cx;
+      cue.lampDx = bx - p.cx;
+      cue.lampUp = p.feetY - by;
+      cue.lampLit = ls.lit;
+      if (p.kindling === best && ls.channel > 0) cue.kindle = sat(ls.channel / Math.max(1, g.channelFrames));
+      if (ls.lit && ls.rest > 0) cue.rest = sat(ls.rest / Math.max(1, g.restFrames));
+    }
+    if (sc.heart) {
+      cue.heart = Math.abs(sc.heart.y - p.feetY) < 6;
+      cue.heartDx = sc.heart.x - p.cx;
+      cue.heartDy = sc.heart.y - p.feetY;
+    }
+    cue.gathered = goal.gathered;
+    cue.ended = goal.ended;
+  }
+
   /** Px of clear air under the feet (to the nearest solid or one-way top below them). */
   private clearBelow(p: PlayerView): number {
     const x0 = p.cx - p.w / 2 + 2;
@@ -610,6 +698,7 @@ export class VesperCharacter implements CharacterSkin {
       window.clearTimeout(this.toastTimer);
       this.toast?.remove();
     }
+    vesperLink.live = false;
     this.layer.removeChild(this.painter.mesh);
     this.painter.mesh.destroy();
     if (this.ctx.lights.get('ember') === this.light) this.ctx.lights.remove('ember');

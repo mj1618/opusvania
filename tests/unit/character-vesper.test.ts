@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { CameraKick } from '../../src/render/camera/kick';
 import { cameraTuning } from '../../src/render/camera/tuning';
 import {
+  ACT,
   J_COUNT,
   J_HEAD,
   J_HIP,
   J_TOE_A,
   J_TOE_B,
   Rig,
+  S_D,
   STROKES,
   spinPeak,
   spinTime,
@@ -738,5 +740,192 @@ describe('vesper rig', () => {
     expect(kick.y).toBeLessThan(0);
     expect(kick.x).toBe(0);
     expect(peak).toBeLessThan(cameraTuning.kick.power1);
+  });
+});
+
+describe('vesper acting at the lanterns and the heart', () => {
+  const base = { hp: 3, hpMax: 3, kindling: -1, stagger: 0, faded: 0, invuln: 0, hang: 0, lungeX: 0 };
+  /** A rig and its cloth standing at rest, a stepper that checks nothing pops, and the largest joint move it saw. */
+  function stage() {
+    const rig = new Rig();
+    const sec = new Secondary();
+    const last = new Float32Array(J_COUNT * 2);
+    const st = { rig, sec, clock: 0, jump: 0, beats: 0 };
+    const run = (n: number, over: Partial<PlayerView> = {}, ev: SimEvent[] = []): void => {
+      for (let k = 0; k < n; k++) {
+        const p = view({ ...base, ...over } as Partial<PlayerView>);
+        rig.update(DT, st.clock, p, k === 0 ? ev : []);
+        if (rig.sig.spawned) sec.reset();
+        sec.update(DT, st.clock, rig, rig.frame, p);
+        st.clock += DT;
+        if (rig.sig.beat) st.beats++;
+        for (let i = 0; i < J_COUNT * 2; i++) {
+          const v = rig.frame.j[i] ?? Number.NaN;
+          expect(Number.isFinite(v)).toBe(true);
+          if (!rig.sig.spawned) st.jump = Math.max(st.jump, Math.abs(v - (last[i] ?? 0)));
+          last[i] = v;
+        }
+        for (const c of sec.all)
+          for (let i = 0; i < c.n; i++) expect(Math.abs((c.rx[i] ?? 0) - p.cx)).toBeLessThan(170);
+      }
+    };
+    run(1, {}, [{ type: 'spawn', x: 1000, y: 1280 }]);
+    run(40);
+    st.jump = 0;
+    return { st, rig, run };
+  }
+  const hipY = (rig: Rig): number => rig.frame.j[J_HIP * 2 + 1] ?? 0;
+
+  it('kindling: she kneels and offers her near hand, her light dims as it leaves, she looks up as it catches, then rises; no pops', () => {
+    const { st, rig, run } = stage();
+    const stand = hipY(rig);
+    Object.assign(rig.cue, { lamp: true, lampFootDx: 30, lampDx: 42, lampUp: 66, lampLit: false });
+    for (let f = 1; f < 30; f++) {
+      rig.cue.kindle = f / 30;
+      run(1, { kindling: 0 });
+    }
+    expect(rig.kindleW).toBeGreaterThan(0.95);
+    expect(hipY(rig) - stand).toBeGreaterThan(6);
+    expect(rig.offerK).toBeGreaterThan(0.9);
+    expect(rig.eyeLit).toBeLessThan(0.75);
+    expect(rig.cloak).toBeGreaterThan(0.5);
+    expect(rig.antLift).toBeLessThan(-25);
+    // The hand is out in front of her chest, toward the lantern.
+    const hand = rig.frame.j[(8 + rig.offerSide) * 2] ?? 0;
+    expect(hand - 1000).toBeGreaterThan(9);
+    rig.cue.kindle = -1;
+    rig.cue.lampLit = true;
+    run(1, {}, [
+      { type: 'lanternKindle', id: 'a', x: 1030, y: 1280, cost: 12, wallet: 2, lit: 1, total: 3 } as SimEvent,
+    ]);
+    expect(rig.sig.kindled).toBe(true);
+    run(8);
+    expect(rig.eyeLit).toBeGreaterThan(1.1);
+    expect(rig.kindleW).toBeGreaterThan(0.9);
+    run(100);
+    expect(rig.kindleW).toBeLessThan(0.02);
+    expect(Math.abs(hipY(rig) - stand)).toBeLessThan(1.5);
+    expect(st.jump).toBeLessThan(4.5);
+  });
+
+  it('a slash or a blow takes her out of the kneel at once; walking away blends it off', () => {
+    const { rig, run } = stage();
+    const stand = hipY(rig);
+    Object.assign(rig.cue, {
+      lamp: true,
+      lampFootDx: 30,
+      lampDx: 42,
+      lampUp: 66,
+      lampLit: false,
+      kindle: 0.5,
+    });
+    run(25, { kindling: 0 });
+    expect(hipY(rig) - stand).toBeGreaterThan(6);
+    rig.cue.kindle = -1;
+    run(6, { vx: -9.6, inputX: -1, facing: -1, motion: 'run' });
+    run(14, { vx: -9.6, inputX: -1, facing: -1, motion: 'run' });
+    expect(rig.kindleW).toBeLessThan(0.3);
+    expect(rig.wIdle).toBeLessThan(0.05);
+    const b = stage();
+    Object.assign(b.rig.cue, rig.cue, { kindle: 0.5 });
+    b.run(25, { kindling: 0 });
+    b.rig.cue.kindle = -1;
+    b.run(4, {}, [{ type: 'hurt', dir: -1 } as SimEvent]);
+    expect(b.rig.hurtK).toBeGreaterThan(0.5);
+    b.run(60);
+    expect(b.rig.kindleW).toBeLessThan(0.05);
+  });
+
+  it('refused: antennae droop for a beat and come back; resting: she sits wrapped in her wings until the player moves', () => {
+    const { st, rig, run } = stage();
+    Object.assign(rig.cue, { lamp: true, lampFootDx: -30, lampDx: -42, lampUp: 66, lampLit: false });
+    run(1, {}, [{ type: 'lanternRefuse', id: 'a', x: 970, y: 1280, have: 3, need: 12 } as SimEvent]);
+    run(55);
+    expect(rig.antLift).toBeGreaterThan(20);
+    // She has turned to the lantern (it is on her left).
+    expect(rig.frame.s[S_D] ?? 0).toBeLessThan(0);
+    run(100);
+    expect(Math.abs(rig.antLift)).toBeLessThan(2);
+    const stand = hipY(rig);
+    // (The turn to the lantern is an ordinary turn-around: not counted as a pop. From here she faces it.)
+    run(40, { facing: -1 });
+    st.jump = 0;
+    rig.cue.lampLit = true;
+    for (let f = 1; f < 45; f++) {
+      rig.cue.rest = f / 45;
+      run(1, { hp: 2, facing: -1 });
+    }
+    expect(rig.restW).toBeGreaterThan(0.85);
+    expect(hipY(rig) - stand).toBeGreaterThan(12);
+    expect(rig.cloak).toBeLessThan(-0.6);
+    rig.cue.rest = -1;
+    run(1, { facing: -1 }, [
+      { type: 'lanternRest', id: 'a', x: 970, y: 1280, hp: 3, hpMax: 3, healed: 1 } as SimEvent,
+    ]);
+    run(20, { facing: -1 });
+    expect(rig.shiver).toBeGreaterThan(0.2);
+    run(200, { facing: -1 });
+    expect(rig.restW).toBeGreaterThan(0.95);
+    expect(st.jump).toBeLessThan(4.5);
+    run(30, { inputX: 1, vx: 9.6, motion: 'run' });
+    expect(rig.restW).toBeLessThan(0.1);
+  });
+
+  it('by a lit lantern she turns to it after a few seconds and lifts her hands; the sleeping heart gets a hand, the waking one a look', () => {
+    const { rig, run } = stage();
+    Object.assign(rig.cue, { lamp: true, lampFootDx: -30, lampDx: -42, lampUp: 66, lampLit: true });
+    run(60);
+    expect(rig.warmW).toBeLessThan(0.01);
+    run(Math.round(ACT.warmAfter * 60) + 60);
+    expect(rig.warmW).toBeGreaterThan(0.8);
+    expect(rig.frame.s[S_D] ?? 0).toBeLessThan(0);
+    run(20, { inputX: 1, vx: 9.6, motion: 'run' });
+    expect(rig.warmW).toBeLessThan(0.15);
+    rig.cue.lamp = false;
+    Object.assign(rig.cue, { heart: true, heartDx: 300, heartDy: 0 });
+    run(4, { vx: 9.6, motion: 'run' }, [
+      { type: 'heartSleep', x: 1300, y: 1280, lit: 0, total: 3 } as SimEvent,
+    ]);
+    expect(rig.touchW).toBeLessThan(0.01);
+    rig.cue.heartDx = 40;
+    run(40);
+    expect(rig.touchW).toBeGreaterThan(0.8);
+    run(Math.round(ACT.touch * 60) + 30);
+    expect(rig.touchW).toBeLessThan(0.02);
+    run(1, {}, [{ type: 'heartWake', x: 400, y: 1900 } as SimEvent]);
+    run(Math.round((ACT.wakeDelay + 0.6) * 60));
+    expect(rig.antLift).toBeLessThan(-15);
+    run(Math.round(ACT.wake * 60) + 40);
+    expect(Math.abs(rig.antLift)).toBeLessThan(2);
+  });
+
+  it('the ending: wings unfurl slowly to the full spread, she turns toward us, one wing beat, and holds; an ended state has no ceremony', () => {
+    const { st, rig, run } = stage();
+    Object.assign(rig.cue, { heart: true, heartDx: 0, heartDy: 0, gathered: true });
+    run(30);
+    expect(rig.soar).toBeLessThan(0.02);
+    run(Math.round((ACT.unfurlAt + ACT.unfurl) * 60));
+    expect(rig.soar).toBeGreaterThan(0.97);
+    expect(Math.abs(rig.frame.s[S_D] ?? 1)).toBeLessThan(0.75);
+    run(240);
+    expect(st.beats).toBe(1);
+    rig.cue.ended = true;
+    run(600);
+    expect(st.beats).toBe(1);
+    expect(rig.soar).toBeGreaterThan(0.97);
+    expect(rig.endW).toBeGreaterThan(0.99);
+    expect(rig.eyeLit).toBeGreaterThan(1.2);
+    expect(st.jump).toBeLessThan(2.5);
+    // Restarted: she folds again.
+    rig.cue.gathered = rig.cue.ended = false;
+    run(120);
+    expect(rig.soar).toBeLessThan(0.05);
+    expect(rig.endW).toBeLessThan(0.01);
+    // Loaded straight into the ended state: already open, no beat.
+    const b = stage();
+    Object.assign(b.rig.cue, { gathered: true, ended: true });
+    b.run(90);
+    expect(b.rig.soar).toBeGreaterThan(0.9);
+    expect(b.st.beats).toBe(0);
   });
 });

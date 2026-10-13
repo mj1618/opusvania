@@ -91,6 +91,8 @@ export interface View {
   stream: number;
   /** Scales the face's pale tones (the dark zones' grade lifts them: this takes it back out). */
   pale: number;
+  /** The light in her eyes: 1 as usual, lower = the bright core shrinks (her light going into a lantern). */
+  eyeLit: number;
 }
 
 function dim(c: RGB, k: number): RGB {
@@ -1150,8 +1152,9 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
     p.soft(ex, ey, w * 1.7, R * 1.5, EYE_PATCH, 0.2);
     p.shape(ESEG, mx, my, SH_EYE, ex + st * R, ey - ct * R, ex - st * R, ey + ct * R);
     // Core: the light inside, lower in the eye, following the gaze.
-    const cry = Math.min(R * 0.58, vis * 0.4);
-    const crx = w * 0.6;
+    const eyeK = clamp(0.25 + 0.75 * v.eyeLit, 0.6, 1.12);
+    const cry = Math.min(R * 0.58, vis * 0.4) * eyeK;
+    const crx = w * 0.6 * eyeK;
     const cqx = lookX * w * 0.26;
     const cqy = Math.max(R * 0.16 + lookY * R * 0.24, yTop + cry + 0.15);
     const cx = ex + cqx * ct - cqy * st;

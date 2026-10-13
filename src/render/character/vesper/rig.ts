@@ -665,6 +665,83 @@ const WALL = pose([
 const DASH = pose([-12, 31, 1.2, 0.06, -0.1, -36, 27, 1.45, -34, 33, 1.5, -14, -1, -13, 2.5, 0, 0.72, 0, 1]);
 const SKID = pose([5, 24.5, 0.42, 0.1, -0.12, 10, 0, 0, -16, 0, 0.5, 5, -11, -9, -8, 0.2, 0.95, 0, 1]);
 
+// --- Acting at the lanterns and the heart (memory/goal.md). Hands here are NEAR hand, then FAR hand.
+// Channel order: PF PU LEAN CURL HT | AF AU AP | BF BU BP | near F U, far F U | TW EYE LOOKY HYAW
+/** Kindling: a soft half-kneel, the near hand lifted toward the glass, the other on her chest, chin up to it. */
+const KINDLE = pose([
+  2.4, 23.5, 0.14, 0.1, -0.34, 9.5, 0, 0, -10.5, 0.4, 1.25, 14.5, -4.2, 3.4, -6.4, 0.1, 0.92, -0.4, 1,
+]);
+/** Resting: sat back on her heels under the lantern, hands in her lap, head bowed. */
+const REST = pose([
+  -2, 16, 0.08, 0.2, 0.16, -8.5, 1.2, 1.5, -12.5, 1.2, 1.5, 4.6, -10.6, 3.4, -9.8, 0, 0.3, 0.35, 0.85,
+]);
+/** Standing by a lit lantern: both hands held up to the glass. */
+const WARM = pose([
+  1.5, 32.3, 0.06, 0.05, -0.1, 7.4, 0.1, 0.2, -1.6, 0, 0, 9.4, 0.6, 8.2, -1.6, 0.04, 0.8, -0.3, 1,
+]);
+/** Refused: the hand comes back empty and she looks down into it. */
+const EMPTY = pose([
+  0.6, 32.2, 0.03, 0.22, 0.42, 7.4, 0.1, 0.2, -1.6, 0, 0, 6.2, -5.4, -1.6, -14.6, 0.04, 0.7, 0.7, 0.9,
+]);
+/** The sleeping heart: a hand laid on the bud, head inclined toward it, eyes nearly shut: listening. */
+const LISTEN = pose([
+  2.4, 29.5, 0.2, 0.12, 0.2, 7.4, 0.1, 0.2, -3, 0, 0.1, 10.6, -6.6, -2, -14.4, 0.1, 0.32, 0.4, 0.45,
+]);
+/** The ending: standing tall in the open flower, chest open, face lifted to the carving above. */
+const UPLIFT = pose([
+  0, 33.8, -0.03, -0.16, -0.46, 3.2, 0, 0, -3.2, 0, 0, 4.2, -16.2, -3.6, -16.4, 0, 1, -0.7, 1.4,
+]);
+/** Acting timings (seconds unless said) and amounts. */
+export const ACT = {
+  /** After the lantern catches she stays down, looking up at it, this long before she rises. */
+  catchHold: 0.45,
+  /** Refuse: the reach, then the look into the empty hand, then gone. */
+  refuse: 1.9,
+  /** Idle by a lit lantern: seconds before she turns to it, and how long her hands stay up each time. */
+  warmAfter: 2.6,
+  warmHands: 6.5,
+  warmEvery: 15,
+  /** The sleeping heart: how long the hand stays on the bud; it only happens within `touchPx` of its centre. */
+  touch: 2.3,
+  touchPx: 64,
+  /** The waking heart: the look toward it is held this long (it starts `wakeDelay` after the catch). */
+  wake: 1.9,
+  wakeDelay: 0.55,
+  /** The ending: how far she turns toward us (1 = side on, 0 = facing us), when the wings start to unfurl and how long they take, when the one slow wing beat comes and how long it is. */
+  endTurn: 0.6,
+  /** ... and how far the spread wings are raised above the glide's shape, degrees at the leading edge. */
+  endRaise: 13,
+  unfurlAt: 0.5,
+  unfurl: 2.4,
+  beatAt: 2.55,
+  beatLen: 1.15,
+} as const;
+
+/**
+ * What the scene's goal asks of her this frame (set by the owner before `update`, from the goal
+ * state and the scene: the rig itself only sees the player and the events).
+ */
+export interface Cue {
+  /** She stands at a lantern (on its ground, within its reach): the glass's x relative to her centre and its height above her feet, px. */
+  lamp: boolean;
+  /** ... and its foot's x relative to her centre (the light runs to the foot and up the stem: she faces that). */
+  lampFootDx: number;
+  lampDx: number;
+  lampUp: number;
+  lampLit: boolean;
+  /** Channel progress 0..1 while she kindles, -1 otherwise. */
+  kindle: number;
+  /** Rest progress 0..1 while she rests hurt at a lit lantern, -1 otherwise. */
+  rest: number;
+  /** The heart: its centre relative to her feet centre, px (dy + = below her). */
+  heart: boolean;
+  heartDx: number;
+  heartDy: number;
+  /** The ending: control is taken; the hold is over. */
+  gathered: boolean;
+  ended: boolean;
+}
+
 /** Point masses for the centre of mass: joint, weight. */
 const MASS = [
   J_HIP,
@@ -725,6 +802,8 @@ export interface RigSignals {
   hurt: boolean;
   fade: boolean;
   reform: boolean;
+  /** The lantern she was kindling caught this frame. */
+  kindled: boolean;
 }
 
 /** A point dragged behind its target: lags, swings past, settles. */
@@ -778,7 +857,61 @@ export class Rig {
     hurt: false,
     fade: false,
     reform: false,
+    kindled: false,
   };
+  /** Set by the owner before `update`: the goal's cues (lanterns, heart, ending). */
+  readonly cue: Cue = {
+    lamp: false,
+    lampFootDx: 0,
+    lampDx: 0,
+    lampUp: 66,
+    lampLit: false,
+    kindle: -1,
+    rest: -1,
+    heart: false,
+    heartDx: 0,
+    heartDy: 0,
+    gathered: false,
+    ended: false,
+  };
+  /** Acting weights 0..1: kindling, sat resting, hands to a lit lantern, the hand on the sleeping heart, the ending. */
+  kindleW = 0;
+  restW = 0;
+  warmW = 0;
+  touchW = 0;
+  endW = 0;
+  /** What the wings read: + = they relax open like a cloak settling, - = they fold round her like a blanket; a shiver 0..1. */
+  cloak = 0;
+  shiver = 0;
+  /** Degrees the spread wings are raised above the glide's shape (the ending). */
+  raise = 0;
+  /** Degrees added to the antennae's lift: - = they tip forward and up (toward a light), + = they droop. */
+  antLift = 0;
+  /** ... and radians of bend per segment: - = the tips bow forward over her brow, + = they curl down behind. */
+  antCurl = 0;
+  /** Her eyes' and lanterns' light: 1 = as usual; dimmer as glints leave her, brighter as a lantern catches and at the ending. */
+  eyeLit = 1;
+  /** 0..1: the light leaves from her open near hand (else her chest); which hand that is (0 = A, 1 = B). */
+  offerK = 0;
+  offerSide = 0;
+  /** Seconds into the ending's pose (0 until she stands at the heart's centre). */
+  endT = 0;
+  private catchT = 9;
+  private refuseT = 9;
+  private healT = 9;
+  private touchT = 9;
+  private touchArmed = false;
+  private wakeT = 9;
+  private warmT = 0;
+  private seated = false;
+  private endOn = false;
+  private wakeDir = 0;
+  private wakePitch = 0;
+  private rested = false;
+  /** Where her eyes are held while she acts (forward +, down +) and how firmly 0..1. */
+  private gazeAX = 0;
+  private gazeAY = 0;
+  private gazeW = 0;
   /** Forward-frame spine lean and head angle actually used (pose + springs), for the chains. */
   lean = 0;
   upper = 0;
@@ -1005,6 +1138,7 @@ export class Rig {
     sig.hurt = false;
     sig.fade = false;
     sig.reform = false;
+    sig.kindled = false;
     let startSpin = false;
     let glideKick = 0;
 
@@ -1109,15 +1243,47 @@ export class Rig {
         case 'wallSlideStart':
           this.crouch.v += 36;
           break;
+        case 'lanternKindle':
+          // It catches: she looks up into it, eyes wide.
+          this.catchT = 0;
+          this.wide.v += 2.4;
+          sig.kindled = true;
+          break;
+        case 'lanternRefuse':
+          this.refuseT = 0;
+          break;
+        case 'lanternRest':
+          this.healT = 0;
+          this.rested = true;
+          this.wide.v += 1.2;
+          break;
+        case 'heartSleep':
+          this.touchArmed = true;
+          break;
+        case 'heartWake':
+          this.wakeT = -ACT.wakeDelay;
+          this.wakeDir = e.x >= p.cx ? 1 : -1;
+          this.wakePitch = clamp(Math.atan2(e.y - p.feetY, Math.abs(e.x - p.cx)) * 0.5, -0.3, 0.3);
+          break;
         default:
           break;
       }
     }
     if (Math.abs(p.cx - this.lastCx) > 160 || Math.abs(p.feetY - this.lastCy) > 160) sig.spawned = true;
 
-    const dirT = p.motion === 'wallSlide' && p.wallDir !== 0 ? p.wallDir : p.facing;
+    let dirT = p.motion === 'wallSlide' && p.wallDir !== 0 ? p.wallDir : p.facing;
     const spawned = sig.spawned;
     if (spawned) {
+      this.kindleW = this.restW = this.warmW = this.touchW = this.endW = 0;
+      this.catchT = this.refuseT = this.healT = this.touchT = this.wakeT = 9;
+      this.warmT = 0;
+      this.endT = 0;
+      this.seated = false;
+      this.endOn = false;
+      this.touchArmed = false;
+      this.rested = false;
+      this.cloak = this.shiver = this.antLift = this.antCurl = 0;
+      this.eyeLit = 1;
       this.yaw.snap(dirT);
       this.headYaw.snap(dirT);
       this.lookS.snap(1);
@@ -1177,11 +1343,71 @@ export class Rig {
     this.lastCx = p.cx;
     this.lastCy = p.feetY;
 
+    // --- Acting: what the lanterns and the heart ask of her. Everything here is an overlay on the
+    // stand (it scales with `wIdle` and lets go for a slash, a blow or a step), never a taken control.
+    const cue = this.cue;
+    this.catchT += dt;
+    this.refuseT += dt;
+    this.healT += dt;
+    this.touchT += dt;
+    this.wakeT += dt;
+    const calm =
+      p.grounded &&
+      !this.slashOn &&
+      !this.fading &&
+      this.reformK <= 0 &&
+      this.hurtT > HURT.hold &&
+      p.motion !== 'dash' &&
+      p.motion !== 'skid';
+    const quiet = calm && Math.abs(p.vx) < 0.4;
+    const kindleT = calm && (cue.kindle >= 0 || this.catchT < ACT.catchHold) ? 1 : 0;
+    this.kindleW += (kindleT - this.kindleW) * approach(kindleT > this.kindleW ? 11 : 5, dt);
+    // Resting: she sits while the light fills her, and stays sat until the player moves her.
+    if (cue.rest >= 0 && quiet) this.seated = true;
+    if (!quiet || !cue.lamp || !cue.lampLit || p.inputX !== 0) this.seated = false;
+    this.restW += ((this.seated ? 1 : 0) - this.restW) * approach(this.seated ? 5.5 : 6.5, dt);
+    // Standing a while by a lit lantern she turns to it and holds her hands up to the glass.
+    const company =
+      quiet && cue.lamp && cue.lampLit && !this.seated && p.inputX === 0 && kindleT === 0 && this.wIdle > 0.9;
+    this.warmT = company ? this.warmT + dt : 0;
+    const warmOn = this.warmT > ACT.warmAfter;
+    this.warmW += ((warmOn ? 1 : 0) - this.warmW) * approach(warmOn ? 3.2 : 7, dt);
+    // The sleeping heart: once she stands by the bud she lays a hand on it.
+    if (this.touchArmed && quiet && cue.heart && Math.abs(cue.heartDx) < ACT.touchPx && this.wIdle > 0.7) {
+      this.touchArmed = false;
+      this.touchT = 0;
+    }
+    if (!cue.heart || Math.abs(cue.heartDx) > 320) this.touchArmed = false;
+    const touchT =
+      quiet && this.touchT < ACT.touch
+        ? smoothstep(0, 0.4, this.touchT) * (1 - smoothstep(ACT.touch - 0.55, ACT.touch, this.touchT))
+        : 0;
+    this.touchW += (touchT - this.touchW) * approach(9, dt);
+    // The ending: once the sim has walked her to the centre.
+    if (cue.gathered && quiet) this.endOn = true;
+    if (!cue.gathered) this.endOn = false;
+    if (this.endOn) {
+      this.endT += dt;
+      // A state that is already ended (a jump, a reload into it): no ceremony.
+      if (cue.ended && this.endT < ACT.beatAt + ACT.beatLen) this.endT = ACT.beatAt + ACT.beatLen;
+    } else this.endT = 0;
+    this.endW += ((this.endOn ? 1 : 0) - this.endW) * approach(this.endOn ? 2.2 : 6, dt);
+    {
+      const lampAt = Math.abs(cue.lampFootDx) > 7 ? cue.lampFootDx : cue.lampDx;
+      const lampDir = lampAt > 4 ? 1 : lampAt < -4 ? -1 : 0;
+      const toLamp =
+        kindleT > 0 || this.seated || warmOn || (this.refuseT < ACT.refuse - 0.5 && quiet && cue.lamp);
+      if (toLamp && lampDir !== 0) dirT = lampDir;
+      if (touchT > 0 && cue.heartDx !== 0) dirT = cue.heartDx > 0 ? 1 : -1;
+      // At the ending she turns most of the way to face us, under wings that open to either side.
+      if (this.endOn) dirT *= lerp(1, ACT.endTurn, smoothstep(0.1, 1.5, this.endT));
+    }
+
     // --- Turn. Under the wings she comes round slowly: the head first, then the body, in about
     // the time her drift takes to reverse.
-    this.yaw.omega = lerp(26, 8.2, this.wGlide);
-    this.yaw.zeta = lerp(0.78, 0.95, this.wGlide);
-    this.headYaw.omega = lerp(40, 15, this.wGlide);
+    this.yaw.omega = lerp(lerp(26, 8.2, this.wGlide), 7, this.endW);
+    this.yaw.zeta = lerp(lerp(0.78, 0.95, this.wGlide), 1, this.endW);
+    this.headYaw.omega = lerp(lerp(40, 15, this.wGlide), 9, this.endW);
     const d0 = clamp(this.yaw.step(dirT, dt), -1, 1);
     const sgn = d0 >= 0 ? 1 : -1;
     // The pirouette: her whole body turns about its upright axis through the finisher. The body
@@ -1294,6 +1520,8 @@ export class Rig {
       if (st !== this.lastStep && this.wRun > 0.6) this.crouch.v += 9;
       this.lastStep = st;
     }
+
+    this.actPose(out, clock, dt, quiet);
 
     // --- Double jump: snap into a ball, one clean turn, snap out.
     if (startSpin) {
@@ -1425,6 +1653,9 @@ export class Rig {
     const fu = this.flourishT / 0.85;
     this.flourish = fu < 1 && !dash && !wall ? quintic(fu / 0.22) * (1 - quintic((fu - 0.5) / 0.5)) : 0;
     this.soar = Math.max(this.soar, 0.86 * this.flourish * (1 - this.spinW));
+    // The ending: they unfurl slowly to the full glide spread, standing.
+    const unfurl = this.endOn ? quintic((this.endT - ACT.unfurlAt) / ACT.unfurl) : 0;
+    this.soar = Math.max(this.soar, unfurl * this.endW);
     this.catchK = this.catchS.step(sat(decel / GLIDE.catchDecel), dt);
     // Banking: the wing plane tips toward where she is going and leans into a turn.
     const gax = this.gAxS.step(glide ? clamp(ax, -1.2, 1.2) : 0, dt);
@@ -1447,6 +1678,15 @@ export class Rig {
     this.beat = bu > 0 ? (Math.exp(-bx2 * bx2) - 0.5 * Math.exp(-bx1 * bx1)) * steady : 0;
     if (bu >= 0.33 && this.lastBeatU < 0.33 && this.lastBeatU > 0 && steady > 0.6) sig.beat = true;
     this.lastBeatU = bu;
+    // ... and the ending has one of its own: a single slow beat as the light settles above her.
+    if (this.endOn && !glide) {
+      const eu = (this.endT - ACT.beatAt) / ACT.beatLen;
+      const e0 = (this.endT - dt - ACT.beatAt) / ACT.beatLen;
+      const ex1 = (eu - 0.2) / 0.13;
+      const ex2 = (eu - 0.52) / 0.17;
+      this.beat = eu > 0 && eu < 1.4 ? 0.5 * (Math.exp(-ex2 * ex2) - 0.5 * Math.exp(-ex1 * ex1)) : 0;
+      if (eu >= 0.4 && e0 < 0.4) sig.beat = true;
+    }
     // The ground is coming: the legs reach down for it and the wings brake.
     const reachT = glide && p.vy > 0 ? smoothstep(GLIDE.reachPx, 16, this.groundDist) : 0;
     this.reach += (reachT - this.reach) * approach(reachT > this.reach ? 14 : 22, dt);
@@ -2031,8 +2271,13 @@ export class Rig {
     const slot = Math.floor(clock / 2.3);
     const dart = this.wIdle * (noise1(slot * 1.7, 61) * 0.7);
     const dartY = this.wIdle * (noise1(slot * 1.3, 67) * 0.35);
-    const gx = this.gazeX.step(clamp((p.vx * sgn) / 9.6, -1, 1) * 0.55 + dart, dt);
-    const gy = this.gazeY.step(p.grounded ? dartY : clamp(p.vy / 14, -1, 1) * 0.85, dt);
+    // Acting: her eyes go to what she is attending to (the glass, her empty hand, the light above).
+    const gw = this.gazeW;
+    const gx = this.gazeX.step(lerp(clamp((p.vx * sgn) / 9.6, -1, 1) * 0.55 + dart, this.gazeAX, gw), dt);
+    const gy = this.gazeY.step(
+      lerp(p.grounded ? dartY : clamp(p.vy / 14, -1, 1) * 0.85, this.gazeAY, gw),
+      dt,
+    );
     const wideK = this.wide.step(1, dt);
 
     s[S_D] = d;
@@ -2107,6 +2352,199 @@ export class Rig {
     const sr = Math.sin(roll);
     out.x = bx * cr - by * sr;
     out.y = bx * sr + by * cr;
+  }
+
+  /** Lerps the pose toward an acting pose (whose hands are near, far: they trade with the turn). */
+  private mix(out: Pose, src: Pose, w: number, nearA: number, hands = 1): void {
+    if (w <= 1e-4) return;
+    for (let i = 0; i < NP; i++) {
+      if (i >= HAF && i <= HBU) continue;
+      out[i] = lerp(out[i]!, src[i]!, w);
+    }
+    const hw = w * hands;
+    out[HAF] = lerp(out[HAF]!, lerp(src[HBF]!, src[HAF]!, nearA), hw);
+    out[HAU] = lerp(out[HAU]!, lerp(src[HBU]!, src[HAU]!, nearA), hw);
+    out[HBF] = lerp(out[HBF]!, lerp(src[HAF]!, src[HBF]!, nearA), hw);
+    out[HBU] = lerp(out[HBU]!, lerp(src[HAU]!, src[HBU]!, nearA), hw);
+  }
+
+  /**
+   * Her acting at the lanterns and the heart, laid over the blended pose: kindling, the empty hand,
+   * resting, warming her hands, the hand on the sleeping heart, the look toward the waking one, the
+   * ending. Sets what the wings, antennae and lights read (`cloak`, `shiver`, `antLift`, `eyeLit`).
+   */
+  private actPose(out: Pose, clock: number, dt: number, quiet: boolean): void {
+    const cue = this.cue;
+    const nearA = sat(0.5 + 1.6 * this.yaw.x);
+    const NF = nearA >= 0.5 ? HAF : HBF;
+    const NU = nearA >= 0.5 ? HAU : HBU;
+    // Only the stand carries these; a cut or a blow takes her out of them at once.
+    const aw = this.wIdle * (1 - this.gripIn) * (1 - sat(this.hurtK));
+    let cloak = 0;
+    let ant = 0;
+    let antC = 0;
+    let lit = 1;
+    let shiver = 0;
+    let gzx = 0;
+    let gzy = 0;
+    let gzw = 0;
+
+    // --- Kindling: down on one knee, the near hand lifted to the glass; as it catches she looks up.
+    const kw = this.kindleW * aw;
+    if (kw > 1e-3) {
+      const q = cue.kindle >= 0 ? cue.kindle : 1;
+      const ct = this.catchT;
+      const up = ct < 1.4 ? smoothstep(0, 0.14, ct) * (1 - smoothstep(0.55, 1.3, ct)) : 0;
+      const breath = ct < 1 ? Math.sin(Math.PI * sat(ct / 1)) ** 2 : 0;
+      this.mix(out, KINDLE, kw, nearA);
+      // The hand rises a little as the light leaves it, toward a glass that hangs high.
+      const aim = clamp((cue.lampUp - 50) / 30, -0.6, 1);
+      out[NU]! += (1.6 * q + 2.2 * aim + 1.5 * up) * kw;
+      out[HT]! -= (0.1 * aim + 0.17 * up) * kw;
+      out[CURL]! -= 0.11 * up * kw;
+      out[PU]! += 1.8 * up * kw;
+      out[LOOKY]! -= 0.35 * up * kw;
+      out[EYE] = lerp(out[EYE]!, 1, up * kw);
+      cloak += (0.85 + 1.0 * breath) * kw;
+      ant -= (44 + 6 * up) * kw;
+      antC -= (0.13 + 0.07 * up) * kw;
+      // Her own light goes into it: eyes and lanterns dim as the glints leave, and take the flame's light as it catches.
+      gzx += 0.75 * kw;
+      gzy += (-0.55 - 0.3 * up) * kw;
+      gzw += kw;
+      if (cue.kindle >= 0) {
+        const given = smoothstep(0.08, 0.75, q) * kw;
+        lit -= 0.45 * given;
+        out[EYE]! -= 0.14 * given;
+      }
+      lit += 0.4 * Math.exp(-ct / 0.55) * (ct < 3 ? 1 : 0);
+    }
+
+    // --- Refused: she reaches, nothing comes; a look into the empty hand, antennae down for a beat.
+    const rt = this.refuseT;
+    if (rt < ACT.refuse && quiet && aw > 1e-3) {
+      const reach = smoothstep(0, 0.2, rt) * (1 - smoothstep(0.42, 0.78, rt));
+      const look = smoothstep(0.48, 0.85, rt) * (1 - smoothstep(ACT.refuse - 0.6, ACT.refuse, rt));
+      out[NF] = lerp(out[NF]!, 9.8, reach * aw);
+      out[NU] = lerp(out[NU]!, -0.6, reach * aw);
+      out[LEAN]! += 0.06 * reach * aw;
+      out[HT]! -= 0.1 * reach * aw;
+      out[LOOKY]! -= 0.3 * reach * aw;
+      this.mix(out, EMPTY, look * aw, nearA);
+      ant += (46 * look - 20 * reach) * aw;
+      antC += (0.12 * look - 0.25 * reach) * aw;
+      out[PU]! -= 1.2 * look * aw;
+      gzx += (0.7 * reach + 0.5 * look) * aw;
+      gzy += (-0.5 * reach + 0.9 * look) * aw;
+      gzw += Math.max(reach, look) * aw;
+      cloak -= 0.35 * look * aw;
+      lit -= 0.12 * look * aw;
+    }
+
+    // --- Resting: sat on her heels under the lantern, wings round her; the light fills her and she lifts her face to it.
+    const rw = this.restW * aw;
+    if (this.restW < 0.02) this.rested = false;
+    if (rw > 1e-3) {
+      const ht = this.rested ? this.healT : 9;
+      const h = ht < 1.7 ? smoothstep(0, 0.3, ht) * (1 - smoothstep(1.0, 1.7, ht)) : 0;
+      const content = this.rested ? smoothstep(1.0, 2.0, ht) : 0;
+      const b = Math.sin(clock * 1.25);
+      this.mix(out, REST, rw, nearA);
+      out[PU]! += (0.55 * b + 1.6 * h + 0.8 * content) * rw;
+      out[CURL]! -= (0.035 * b + 0.2 * h + 0.12 * content) * rw;
+      out[HT]! -= (0.5 * h + 0.2 * content) * rw;
+      out[LOOKY]! -= (0.85 * h + 0.3 * content) * rw;
+      out[EYE] = lerp(out[EYE]!, lerp(0.8, 1, h), Math.max(h, content) * rw);
+      cloak -= (1 - 0.6 * h) * rw;
+      shiver = ht < 1 ? Math.sin(Math.PI * sat((ht - 0.12) / 0.75)) ** 2 * rw : 0;
+      ant += (16 - 44 * h - 14 * content) * rw;
+      antC += (0.06 - 0.22 * h - 0.12 * content) * rw;
+      gzx += 0.6 * Math.max(h, content) * rw;
+      gzy += (0.5 - 1.2 * h - 0.7 * content) * rw;
+      gzw += rw;
+      lit += 0.3 * h * rw;
+    }
+
+    // --- Company: by a lit lantern she turns to it and holds her hands up to its warmth for a while.
+    const ww = this.warmW * aw;
+    if (ww > 1e-3) {
+      const tt = (this.warmT - ACT.warmAfter) % ACT.warmEvery;
+      const hands = smoothstep(0, 0.9, tt) * (1 - smoothstep(ACT.warmHands, ACT.warmHands + 1.4, tt));
+      this.mix(out, WARM, ww, nearA, hands);
+      const aim = clamp((cue.lampUp - 50) / 30, -0.6, 1);
+      const rub = Math.sin(clock * 1.9);
+      out[HAU]! += (2.2 * aim + 0.5 * rub) * ww * hands;
+      out[HBU]! += (2.2 * aim - 0.5 * rub) * ww * hands;
+      out[HT]! -= 0.1 * aim * ww;
+      ant -= 24 * ww;
+      antC -= 0.2 * ww;
+      cloak += 0.35 * ww;
+      gzx += 0.7 * ww;
+      gzy -= 0.5 * ww;
+      gzw += ww;
+    }
+
+    // --- The sleeping heart: a hand on the bud, her head inclined to it.
+    const tw = this.touchW * aw;
+    if (tw > 1e-3) {
+      this.mix(out, LISTEN, tw, nearA);
+      out[NF]! += clamp((Math.abs(cue.heartDx) - 30) * 0.12, -2.5, 2) * tw;
+      ant -= 10 * tw;
+      antC -= 0.18 * tw;
+      cloak += 0.3 * tw;
+      gzx += 0.4 * tw;
+      gzy += 0.6 * tw;
+      gzw += tw;
+    }
+
+    // --- The heart wakes somewhere else: her head turns to it and holds (the body is left to the player).
+    if (this.wakeT >= 0 && this.wakeT < ACT.wake) {
+      const t = this.wakeT;
+      const k = smoothstep(0, 0.3, t) * (1 - smoothstep(ACT.wake - 0.65, ACT.wake, t));
+      const behind = this.wakeDir * this.yaw.x < 0;
+      if (behind) out[HYAW] = lerp(out[HYAW]!, -0.5, k);
+      else out[HYAW] = lerp(out[HYAW]!, 1, k);
+      out[HT]! += this.wakePitch * k;
+      out[LOOKY]! += 2.2 * this.wakePitch * k;
+      out[EYE] = lerp(out[EYE]!, 1, k);
+      ant -= 30 * k;
+      antC -= 0.1 * k;
+      gzx += (behind ? -0.6 : 0.8) * k;
+      gzy += 2 * this.wakePitch * k;
+      gzw += k;
+    }
+
+    // --- The ending: tall in the open flower, face lifted to the light above, breathing.
+    const ew = this.endW * aw;
+    if (ew > 1e-3) {
+      const b = Math.sin(clock * 1.05);
+      const bl = Math.max(0, this.beat);
+      this.mix(out, UPLIFT, ew, nearA);
+      out[PU]! += (0.5 * b + 2 * bl) * ew;
+      out[CURL]! -= (0.03 * b + 0.05 * bl) * ew;
+      out[HT]! -= (0.02 * b + 0.04 * bl) * ew;
+      out[HAU]! += (0.4 * b + 2.5 * bl) * ew;
+      out[HBU]! += (0.4 * b + 2.2 * bl) * ew;
+      ant -= 26 * smoothstep(0.4, 2.4, this.endT) * ew;
+      antC -= 0.14 * smoothstep(0.4, 2.4, this.endT) * ew;
+      gzy -= 0.85 * ew;
+      gzw += ew;
+      lit += 0.32 * smoothstep(0.8, 3.2, this.endT) * ew;
+    }
+    this.raise = ACT.endRaise * this.endW;
+
+    this.cloak += (cloak - this.cloak) * approach(7, dt);
+    this.antLift += (ant - this.antLift) * approach(8, dt);
+    this.antCurl += (antC - this.antCurl) * approach(6, dt);
+    this.eyeLit += (lit - this.eyeLit) * approach(10, dt);
+    this.shiver = shiver;
+    this.gazeW = sat(gzw);
+    if (gzw > 1e-3) {
+      this.gazeAX = gzx / gzw;
+      this.gazeAY = gzy / gzw;
+    }
+    this.offerK = kw;
+    this.offerSide = nearA >= 0.5 ? 0 : 1;
   }
 
   /** At ease: weight on the back hip, slow uneven breath, small drifts that never line up. */

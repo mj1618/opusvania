@@ -65,6 +65,8 @@ const WALL_FREE = [-118, -98, -78, -60, -42];
 const BEAT_UP = [-112, -90, -68, -46, -24];
 /** Wrapped close while she somersaults. */
 const TUCKED = [-58, -68, -80, -90, -100];
+/** Sat resting: the wings come forward round her like a blanket (the front edge wraps furthest). */
+const WRAP = [3, 5, 8, 12, 17];
 /** Standing: the cape hangs swept back off the shoulders, its front edge behind the legs, so they read. */
 const STAND = [-5, -8, -12, -17, -23];
 /**
@@ -301,7 +303,15 @@ export class Secondary {
         lift = lerp(
           lift,
           SOAR[k]! -
-            (27 * ck + 20 * flare + 14 * rig.flourish + breath + fix - 58 * beat + 15 * reach + 14 * wall) *
+            (27 * ck +
+              20 * flare +
+              14 * rig.flourish +
+              breath +
+              fix -
+              58 * beat +
+              15 * reach +
+              14 * wall +
+              rig.raise) *
               lead -
             4 * far -
             3.5 * airspeed * (1 - lead) +
@@ -325,6 +335,11 @@ export class Secondary {
           (Math.max(0, sw) * (24 + 9 * far) + rig.slashTwist * 32 * (2 * far - 1) + rig.hangK * 15) *
           (1 - k * 0.12) *
           (1 - soar);
+        // Acting: they relax open like a cloak settling (kindling), or fold round her (resting); a contented shiver.
+        const ck2 = rig.cloak;
+        if (ck2 > 0) lift -= ck2 * (11 - 1.3 * k) * (1 - soar);
+        else lift = lerp(lift, WRAP[k]! + 3 * far, sat(-ck2) * (1 - soar));
+        lift += rig.shiver * 4.5 * Math.sin(clock * 34 + k * 1.3 + w * 2.1) * (1 - soar);
         // A landing or a skid throws the hem out for a moment.
         lift -= clamp(rig.crouchPx, 0, 8) * 1.6 * (1 - k / STRANDS) * (1 - soar);
         // Hurt: they are thrown open by the blow.
@@ -379,9 +394,11 @@ export class Secondary {
           16 * rig.joy -
           18 * rig.dive +
           38 * rig.hurtK +
-          15 * rig.slashWing) *
+          15 * rig.slashWing +
+          rig.antLift * (a === 0 ? 1 : 0.72)) *
         DEG;
-      c.curl = 0.04 * run - 0.05 * glide + 0.07 * fl + 0.46 * tuck;
+      // Acting: tipped toward a light they bow forward over her brow; drooping they curl down.
+      c.curl = 0.04 * run - 0.05 * glide + 0.07 * fl + 0.46 * tuck + rig.antCurl * (a === 0 ? 1 : 0.78);
       c.scale = 1 - 0.04 * tuck;
       c.stiff = 1 + 1.2 * dash + 7 * tuck;
       c.dragK = (1 - 0.3 * dash) * (1 - 0.7 * tuck);

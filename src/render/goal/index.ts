@@ -17,6 +17,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { lanternCost } from '../../sim/goal';
 import { tuning } from '../../sim/tuning';
+import { vesperLink } from '../character/vesper/link';
 import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } from '../contract';
 import type { PointLight } from '../lights';
 import { GlintBatch, K_FLARE, K_SPARK } from '../pickups/batch';
@@ -440,8 +441,10 @@ export class GoalRenderer {
     const K = GOAL.kindle;
     const goal = sim.goal;
     const p = sim.player;
-    this.chestX = p.cx;
-    this.chestY = p.cy - 8;
+    // Vesper says where the light leaves her (her open palm while she kindles); other skins: the chest.
+    this.chestX = vesperLink.live ? vesperLink.offerX : p.cx;
+    this.chestY = vesperLink.live ? vesperLink.offerY : p.cy - 8;
+    vesperLink.goal = goal;
     const wallet = sim.pickups.count;
 
     // --- What happened.
@@ -555,6 +558,8 @@ export class GoalRenderer {
       } else lamp.restIn = 0;
       lamp.resting = resting;
 
+      vesperLink.beads[i * 2] = v.beadX;
+      vesperLink.beads[i * 2 + 1] = v.beadY;
       // She is near: a dormant ember answers.
       const dx = this.chestX - v.x;
       const dy = this.chestY - (v.y - 50);
