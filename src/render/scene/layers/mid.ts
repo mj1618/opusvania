@@ -58,7 +58,7 @@ const MID = {
   /** Dark plants poking out of the mist bed below the fern line, per 1000 px. */
   bedPlants: 4,
   /** Light seen through the openings of the canopy (sprites behind the bake). */
-  skyHole: { size: 3.4, alpha: 0.6, color: 0xfff0c4, left: 0xd4ecff, right: 0xffc9c0 },
+  skyHole: { size: 2.6, alpha: 0.5, color: 0xe0b060, left: 0x8fb4d8, right: 0xd08a6a },
   /** Drifting leaves in the air of this layer. */
   fallingLeaves: 10,
   glowCaps: [4, 9],
@@ -68,48 +68,54 @@ const MID = {
 } as const;
 
 const ATM: Atmosphere = {
-  fogColor: 0x2f7078,
+  fogColor: 0x1b190e,
   fogTop: 0.1,
   fogGround: 0.3,
   fogY0: 760,
   fogY1: 1400,
   wellX: MID.wellX,
   wellY: 640,
-  wellR: 420,
-  wellColor: 0xe9cf9c,
-  wellStrength: 0.13,
+  wellR: 300,
+  wellColor: 0xb08a48,
+  wellStrength: 0.1,
   formDist: 46,
-  formLit: 0.7,
-  formShade: 0.32,
+  formLit: 0.55,
+  formShade: 0.5,
   rimDist: 4,
-  rimColor: PALETTE.keyWarm,
-  rimStrength: 0.34,
+  rimColor: PALETTE.keyGold,
+  rimStrength: 0.16,
   mottle: 0.2,
-  gain: 0.9,
-  litGain: 1.7,
+  gain: 0.58,
+  litGain: 1.5,
   sunMix: 0.7,
-  sunColor: 0xd2e052,
+  sunColor: 0xd9c24a,
   sunColorL: 0xbfdcff,
-  sunColorR: 0xffb98a,
+  sunColorR: 0x7fd89a,
   zoneParallax: 0.68,
   sideBody: 0.12,
   sideLit: 0.55,
-  sideRim: 3.4,
-  shadeTint: [0.26, 0.4, 0.54],
-  saturation: 0.85,
+  sideRim: 2,
+  // Warm olive-brown shadows in the centre; the ZONE tints turn them azure / violet at the sides.
+  tint: [1.22, 1.0, 0.7],
+  shadeTint: [0.3, 0.25, 0.2],
+  saturation: 0.9,
+  lid: 0.3,
+  lidY0: 400,
+  lidY1: 760,
+  blur: 2.2,
 };
 
 const FOG: FogSpec = {
-  color: 0x4f9499,
-  warm: 0xd9c79a,
+  color: 0x26221a,
+  warm: 0x9a7a40,
   yTop: 1020,
   yFull: 1410,
   alphaTop: 0,
-  alpha: 0.52,
+  alpha: 0.45,
   wellX: MID.wellX,
   wellY: 760,
-  wellR: 460,
-  wellAlpha: 0.07,
+  wellR: 320,
+  wellAlpha: 0.05,
   scale: 1 / 900,
   speed: 0.016,
   wisp: 0.65,
@@ -118,10 +124,10 @@ const FOG: FogSpec = {
 /** Zone moods for this layer (see ZONES in bg-bake). */
 const ZONE: Omit<ZoneSpec, 'anchorX'> = {
   parallax: 0.68,
-  tintL: [0.82, 0.97, 1.16],
-  tintR: [0.98, 0.88, 1.08],
-  mistL: 0x4a86b8,
-  mistR: 0x6c6aa2,
+  tintL: [0.5, 0.92, 1.85],
+  tintR: [0.82, 0.6, 1.85],
+  mistL: 0x0e2a40,
+  mistR: 0x1c173a,
 };
 
 /**
@@ -167,15 +173,14 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
     canopyAmp: 90,
     canopyR: 200,
     wellX: MID.wellX,
-    wellHalf: 420,
-    wellLift: 420,
+    wellHalf: 300,
+    wellLift: 260,
     openLift: 330,
     drop: (x) => 60 * Math.exp(-(((x - 4700) / 500) ** 2)) + 50 * Math.exp(-(((x - 1900) / 450) ** 2)),
     trunks: [
-      { x: 770, w: 330, lean: 50, branches: 2, roots: 2 },
-      { x: 1390, w: 180, lean: -40, branches: 2 },
-      { x: 2090, w: 420, lean: 70, branches: 3, roots: 3 },
-      { x: 2650, w: 150, lean: -30, branches: 1 },
+      // The left glade's giant: 720 px wide, cropped by the frame top and bottom.
+      { x: 1090, w: 720, lean: 40, branches: 3, roots: 4, boughs: 3 },
+      { x: 2160, w: 300, lean: 60, branches: 2, roots: 2 },
       { x: 3800, w: 370, lean: -80, branches: 3, roots: 3 },
       { x: HOLLOW.x, w: HOLLOW.w, lean: -24, branches: 2, roots: 4, boughs: 3 },
       { x: 5150, w: 230, lean: 30, branches: 2 },
@@ -198,7 +203,7 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
     blossom: 0xd9c2ff,
     boughs: 3,
     clearWell: true,
-    cover: (x) => 0.66 + 0.1 * Math.sin(x / 700),
+    cover: (x) => 0.8 + 0.08 * Math.sin(x / 700),
     floor: (c, r, b) => undergrowth(c, r, b, spots),
   };
 }
@@ -495,7 +500,7 @@ export class MidLayer implements EnvModule {
         // Hanging gardens: the right stand drips with vines and moss.
         weight: (x) => 0.45 + 0.55 * zoneWeights(playfieldX(x)).r,
       }),
-      MID.bakeScale,
+      MID.bakeScale * 0.5,
       { ...ZONE, anchorX: ctx.layers.anchor.x },
     );
     layer.addChild(this.sway.container);

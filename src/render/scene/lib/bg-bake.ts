@@ -165,6 +165,14 @@ export interface Atmosphere {
    * share of the lit brightening kept, and extra rim strength there.
    */
   sideBody?: number;
+  /** Colour multiplier on the local colours before fog (hue commitment of the layer). */
+  tint?: readonly [number, number, number];
+  /** A dark lid: the layer is multiplied by `lid` above lidY0 (layer y), fading out by lidY1. */
+  lid?: number;
+  lidY0?: number;
+  lidY1?: number;
+  /** Gaussian blur baked into the layer, sigma in layer px (depth of field). */
+  blur?: number;
   sideLit?: number;
   sideRim?: number;
   /** Multiplier applied in full light-map shadow (cool and dark). */
@@ -199,6 +207,8 @@ uniform vec3 uSunL;
 uniform vec3 uSunR;
 uniform vec3 uZoneMap;
 uniform vec3 uSide;
+uniform vec3 uTint;
+uniform vec3 uLid;
 float A(vec2 uv) { return texture(uRaw, uv).a; }
 void main() {
   vec4 c = texture(uRaw, vUV);
@@ -238,7 +248,8 @@ void main() {
   float edge = smoothstep(0.08, 0.55, open);
   float body = mix(1.0, uSide.x + (1.0 - uSide.x) * edge, zs);
   col = mix(col, sun * (0.35 + 1.6 * lum), lit * uSun.a * body);
-  col = mix(vec3(dot(col, vec3(0.3, 0.55, 0.15))), col, uGrade.y) * uGrade.x;
+  col = mix(vec3(dot(col, vec3(0.3, 0.55, 0.15))), col, uGrade.y) * uGrade.x * uTint;
+  col *= mix(uLid.z, 1.0, smoothstep(uLid.x, uLid.y, p.y));
   vec2 dw = (p - uWell.xy) / uWell.z;
   float w = exp(-dot(dw, dw));
   float rim = (1.0 - A(vUV + L * uRim.x)) * 0.6 + (1.0 - A(vUV + L * uRim.x * 0.45)) * 0.4;
@@ -388,6 +399,45 @@ export class LightMap {
   }
 }
 
+const BLUR_FRAG = `#version 300 es
+precision highp float;
+in vec2 vUV;
+out vec4 fragColor;
+uniform sampler2D uSrc;
+uniform vec2 uStep;
+void main() {
+  vec4 acc = vec4(0.0);
+  float wsum = 0.0;
+  for (int i = -6; i <= 6; i++) {
+    float x = float(i) * 0.5;
+    float w = exp(-0.5 * x * x);
+    acc += texture(uSrc, vUV + uStep * x) * w;
+    wsum += w;
+  }
+  fragColor = acc / wsum;
+}`;
+
+/** One direction of a 13-tap gaussian; `step` is one sigma in uv. */
+function blurPass(
+  renderer: Renderer,
+  src: Texture,
+  dst: RenderTexture,
+  geometry: MeshGeometry,
+  step: number[],
+): void {
+  const shader = Shader.from({
+    gl: { vertex: BG_VERT, fragment: BLUR_FRAG },
+    resources: {
+      uSrc: src.source,
+      blur: new UniformGroup({ uStep: { value: new Float32Array(step), type: 'vec2<f32>' } }),
+    },
+  });
+  const mesh = new Mesh({ geometry, shader });
+  renderer.render({ container: mesh, target: dst, clear: true, clearColor: [0, 0, 0, 0] });
+  mesh.destroy();
+  shader.destroy();
+}
+
 export interface BakedTile {
   texture: Texture;
   x: number;
@@ -413,7 +463,8 @@ export function bakeLayer(
   lightMap?: LightMap,
 ): BakedTile[] {
   const out: BakedTile[] = [];
-  const pad = Math.ceil(Math.max(atm.formDist, atm.rimDist) + 4);
+  const blur = atm.blur ?? 0;
+  const pad = Math.ceil(Math.max(atm.formDist, atm.rimDist) + 4 + blur * 3);
   const cols = Math.ceil((rect.w * scale) / MAX_TILE_W);
   const rows = Math.ceil((rect.h * scale) / MAX_TILE_H);
   const tw = rect.w / cols;
@@ -455,6 +506,11 @@ export function bakeLayer(
             uShade: { value: new Float32Array([st[0], st[1], st[2], atm.litGain ?? 1.2]), type: 'vec4<f32>' },
             uSunL: { value: rgb(atm.sunColorL ?? atm.sunColor ?? 0xc9d977), type: 'vec3<f32>' },
             uSunR: { value: rgb(atm.sunColorR ?? atm.sunColor ?? 0xc9d977), type: 'vec3<f32>' },
+            uTint: { value: new Float32Array(atm.tint ?? [1, 1, 1]), type: 'vec3<f32>' },
+            uLid: {
+              value: new Float32Array([atm.lidY0 ?? -1e5, atm.lidY1 ?? -1e5 + 1, atm.lid ?? 1]),
+              type: 'vec3<f32>',
+            },
             uSide: {
               value: new Float32Array([atm.sideBody ?? 1, atm.sideLit ?? 1, atm.sideRim ?? 0]),
               type: 'vec3<f32>',
@@ -493,7 +549,21 @@ export function bakeLayer(
         geometry: quadGeometry(0, 0, W, H, [u0, v0, u0 + W / rawW, v0 + H / rawH]),
         shader,
       });
-      renderer.render({ container: mesh, target: final, clear: true, clearColor: [0, 0, 0, 0] });
+      if (blur > 0) {
+        // Atmosphere over the whole padded tile, then blur across (padded) and down (cropping).
+        const a = RenderTexture.create({ width: rawW, height: rawH, resolution: 1 });
+        const b = RenderTexture.create({ width: rawW, height: rawH, resolution: 1 });
+        const full = new Mesh({ geometry: quadGeometry(0, 0, rawW, rawH), shader });
+        renderer.render({ container: full, target: a, clear: true, clearColor: [0, 0, 0, 0] });
+        full.destroy();
+        const sigma = blur * scale;
+        blurPass(renderer, a, b, quadGeometry(0, 0, rawW, rawH), [sigma / rawW, 0]);
+        blurPass(renderer, b, final, mesh.geometry, [0, sigma / rawH]);
+        a.destroy(true);
+        b.destroy(true);
+      } else {
+        renderer.render({ container: mesh, target: final, clear: true, clearColor: [0, 0, 0, 0] });
+      }
       mesh.destroy();
       shader.destroy();
       raw.destroy(true);

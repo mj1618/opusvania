@@ -17,32 +17,34 @@ import {
 import { VIEW_H, VIEW_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { BG_VERT, noiseTexture, quadGeometry, rgb, ZONES, zoneWeights } from '../lib/bg-bake';
-import { KEY_LIGHT, PALETTE } from '../lib/look';
+import { KEY_LIGHT } from '../lib/look';
 
 export const SKY = {
-  top: 0x13284a,
-  mid: 0x86d2c2,
-  low: 0x1d5f6b,
-  corner: 0x0a1a36,
-  /** Wide green-gold halo, the warm bloom, and its core. */
-  halo: 0xbfe6b4,
-  warm: PALETTE.keyWarm,
-  core: 0xfff4d8,
+  // Low key: the sky is a dark amber-brown dusk, and its one bright thing is a small bloom that
+  // peaks around luma 180 (230+ is reserved for the hero and bioluminescence).
+  top: 0x0b0c0c,
+  mid: 0x3d3219,
+  low: 0x17140c,
+  corner: 0x040506,
+  /** Wide amber halo, the warm bloom, and its core. */
+  halo: 0x7a5c26,
+  warm: 0xcf9c4c,
+  core: 0xe6b866,
   /** Where the bloom sits on screen when the camera is at the anchor height, and how much it parallaxes. */
   glowRestY: 170,
   glowParallaxX: 0.1,
   glowParallaxY: 0.08,
-  coreRadius: 200,
-  warmFalloff: 520,
-  haloFalloff: 1350,
+  coreRadius: 95,
+  warmFalloff: 190,
+  haloFalloff: 520,
   mist: 0.3,
-  rays: 0.3,
+  rays: 0.25,
   /** The sky is shaded at this fraction of the logical view and stretched. */
   renderScale: 0.25,
-  /** Left glade: a bluer moonlit sky with a pale moon glow. */
-  left: { top: 0x0e1f52, mid: 0x7fb4e0, low: 0x1b4f7c, moon: 0xdcefff, moonX: 470, moonY: 150, moonR: 150 },
-  /** Right stand: dusk violet, with a small rose-gold opening far behind. */
-  right: { top: 0x1c1a48, mid: 0x9a8cc4, low: 0x2b3a6a, dusk: 0xffbfa0, duskX: 1380, duskY: 300, duskR: 130 },
+  /** Left glade: a deep azure night with a small pale moon glow. */
+  left: { top: 0x040a18, mid: 0x1a405e, low: 0x081c2e, moon: 0x9fc4e6, moonX: 470, moonY: 150, moonR: 80 },
+  /** Right stand: indigo-violet dusk, with a small rose-gold opening far behind. */
+  right: { top: 0x080614, mid: 0x30245a, low: 0x120c2a, dusk: 0xe09a70, duskX: 1380, duskY: 300, duskR: 80 },
   /** How much the key bloom dims in the side zones. */
   keyDimL: 0.45,
   keyDimR: 0.55,

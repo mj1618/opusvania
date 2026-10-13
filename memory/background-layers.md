@@ -79,3 +79,20 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   right canopy look frosted.
 - Bridging roots (`drawRoots`, `gnarl` / `cut`): kinked, burled, always forked, with rootlets and moss;
   ~45% are snapped stubs. Trunk stubs in mid point steeply up (flat ones read as steps).
+
+## Round 5: low key (see reference-study.md)
+- The backdrop alone now measures mean luma 24-43, top quarter 12-42, border 27-34 (it was 80-110).
+  Keep it there: sky/fog/haze colours are dark (peak ~180 only in the small sky bloom, the wells and
+  the sky holes); `gain` 0.58 and warm dark `shadeTint` give mid its near-black cores.
+- Hue: the BASE colours (centre zone) are amber-brown: `ATM.tint` warms the local colours before fog,
+  fog/mist/sky are amber. The `ZONE` tints are strong per-channel multipliers that turn that amber
+  azure (left) or violet (right); mistL/R and SKY.left/right are set directly.
+- `Atmosphere.lid` / `lidY0` / `lidY1`: a dark lid over the top of each layer. `Atmosphere.blur`: gaussian
+  sigma in layer px baked into the layer (far0 9, far1 8, far2 4.5, mid 2.2); the bake pads tiles by
+  3 sigma so seams agree. Sway atlases are rendered at under half scale to stay as soft as their layer.
+- Far rims are off (`rimStrength` 0, `sideRim` 0): hard rim lines on blurred far trunks read as neon.
+- Giants: mid 1090 (720 px, left), far2 2440 (640 px, centre, left of the well), mid 4600 (hollow, right).
+- Resize: a resized RenderTexture kept drawing into its old area; the far target is recreated on a size
+  change (far.ts update) instead of `.resize()`.
+- `leafPts(..., kind)`: 4 leaf shapes; `clump()` picks one per lobe, three sizes, bunched on the lit
+  side of the rim only.

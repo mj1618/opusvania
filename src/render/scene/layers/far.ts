@@ -70,128 +70,149 @@ const FAR_TARGET_SCALE = 1;
 /** Canopy rustle amplitude per layer, in layer px. */
 const RUSTLE = [1.6, 2.4, 3.2] as const;
 
+/**
+ * Low key (memory/reference-study.md): haze colours are dark, the centre family is amber-brown, and
+ * the side zones are turned azure / violet by the ZONE tints. Nothing here may exceed luma ~180.
+ */
 const ATM: readonly Atmosphere[] = [
   {
-    fogColor: 0xa2dbd0,
+    fogColor: 0x5e4f28,
     fogTop: 0.6,
-    fogGround: 0.82,
+    fogGround: 0.8,
     fogY0: 650,
     fogY1: 1230,
     wellX: 2942,
     wellY: WELL_Y,
-    wellR: 520,
-    wellColor: 0xffe9bd,
-    wellStrength: 0.42,
+    wellR: 330,
+    wellColor: 0xd9a858,
+    wellStrength: 0.4,
     formDist: 26,
-    formLit: 0.3,
+    formLit: 0.25,
     formShade: 0.2,
     rimDist: 7,
     rimColor: PALETTE.keyWarm,
-    rimStrength: 0.14,
+    rimStrength: 0,
     mottle: 0.1,
-    litGain: 1.3,
-    sunMix: 0.4,
+    litGain: 0.9,
+    sunMix: 0.3,
+    tint: [1.2, 1.0, 0.7],
+    lid: 0.45,
+    lidY0: 520,
+    lidY1: 760,
+    blur: 9,
   },
   {
-    fogColor: 0x7cc0ba,
+    fogColor: 0x43381d,
     fogTop: 0.44,
-    fogGround: 0.68,
+    fogGround: 0.66,
     fogY0: 680,
     fogY1: 1290,
     wellX: 3010,
     wellY: WELL_Y,
-    wellR: 470,
-    wellColor: 0xffe2ae,
-    wellStrength: 0.32,
+    wellR: 300,
+    wellColor: 0xcf9c50,
+    wellStrength: 0.26,
     formDist: 34,
-    formLit: 0.4,
-    formShade: 0.26,
+    formLit: 0.3,
+    formShade: 0.3,
     rimDist: 6,
     rimColor: PALETTE.keyWarm,
-    rimStrength: 0.22,
+    rimStrength: 0,
     mottle: 0.14,
-    litGain: 1.5,
-    sunMix: 0.45,
+    litGain: 1.0,
+    sunMix: 0.4,
     sunColorL: 0xcde6ff,
     sunColorR: 0xffcfae,
     zoneParallax: 0.25,
     sideBody: 0.3,
     sideLit: 0.7,
-    sideRim: 1.2,
+    sideRim: 0,
+    tint: [1.2, 1.0, 0.7],
+    lid: 0.4,
+    lidY0: 500,
+    lidY1: 770,
+    blur: 8,
   },
   {
-    fogColor: 0x66b0ac,
-    fogTop: 0.36,
-    fogGround: 0.6,
+    fogColor: 0x2b2514,
+    fogTop: 0.34,
+    fogGround: 0.58,
     fogY0: 700,
     fogY1: 1340,
     wellX: 3098,
     wellY: WELL_Y,
-    wellR: 430,
-    wellColor: 0xffdca6,
-    wellStrength: 0.22,
+    wellR: 280,
+    wellColor: 0xc08f48,
+    wellStrength: 0.16,
     formDist: 42,
-    formLit: 0.5,
-    formShade: 0.3,
+    formLit: 0.4,
+    formShade: 0.4,
     rimDist: 5,
     rimColor: PALETTE.keyWarm,
-    rimStrength: 0.3,
+    rimStrength: 0,
     mottle: 0.18,
-    litGain: 1.6,
+    gain: 0.75,
+    litGain: 1.2,
     sunMix: 0.5,
-    sunColor: 0xc6de5c,
+    sunColor: 0xd0c050,
     sunColorL: 0xbfdcff,
-    sunColorR: 0xffb98a,
+    sunColorR: 0x8fd6a0,
     zoneParallax: 0.42,
     sideBody: 0.15,
     sideLit: 0.6,
-    sideRim: 2,
+    sideRim: 0,
+    tint: [1.2, 1.0, 0.72],
+    shadeTint: [0.34, 0.3, 0.24],
+    lid: 0.35,
+    lidY0: 460,
+    lidY1: 780,
+    blur: 4.5,
   },
 ];
 
 /** The mist in front of each layer (between it and the next one). */
 const FOG: readonly FogSpec[] = [
   {
-    color: 0xb4e6da,
-    warm: 0xffe6b8,
+    color: 0x6a5a30,
+    warm: 0xe0b060,
     yTop: 760,
     yFull: 1210,
-    alphaTop: 0.14,
-    alpha: 0.5,
+    alphaTop: 0.1,
+    alpha: 0.42,
     wellX: 2942,
     wellY: WELL_Y + 60,
-    wellR: 560,
-    wellAlpha: 0.3,
+    wellR: 330,
+    wellAlpha: 0.34,
     scale: 1 / 1500,
     speed: 0.006,
     wisp: 0.5,
   },
   {
-    color: 0x93d0c8,
-    warm: 0xffdfae,
+    color: 0x4c4022,
+    warm: 0xd0a052,
     yTop: 800,
     yFull: 1270,
-    alphaTop: 0.08,
-    alpha: 0.5,
+    alphaTop: 0.06,
+    alpha: 0.42,
     wellX: 3010,
     wellY: WELL_Y + 80,
-    wellR: 520,
+    wellR: 320,
     wellAlpha: 0.22,
     scale: 1 / 1300,
     speed: 0.009,
     wisp: 0.55,
   },
   {
-    color: 0x73b8b6,
-    warm: 0xf5d7a4,
+    color: 0x322b17,
+    warm: 0xb88a46,
     yTop: 860,
     yFull: 1340,
-    alphaTop: 0.12,
-    alpha: 0.5,
+    alphaTop: 0.06,
+    alpha: 0.42,
     wellX: 3098,
     wellY: WELL_Y + 100,
-    wellR: 480,
-    wellAlpha: 0.14,
+    wellR: 300,
+    wellAlpha: 0.12,
     scale: 1 / 1100,
     speed: 0.012,
     wisp: 0.6,
@@ -219,12 +240,12 @@ const WATERFALL = {
     { part: 0.32, dx: 44, w: 30 },
     { part: 0.28, dx: -34, w: 40 },
   ],
-  color: 0xeaf4ff,
-  alpha: 0.42,
+  color: 0xb8d4ee,
+  alpha: 0.34,
   speed: 0.5,
   /** Mist at each landing and the plume over the pool. */
-  mist: 0xcfe2f5,
-  mistAlpha: 0.38,
+  mist: 0x8fb0cc,
+  mistAlpha: 0.3,
 };
 
 /** Top-left x, top y, bottom y and width of each stage of the fall. */
@@ -244,29 +265,29 @@ function fallStages(): Array<{ x: number; y0: number; y1: number; w: number }> {
 const ZONE: ReadonlyArray<Omit<ZoneSpec, 'anchorX'>> = [
   {
     parallax: 0.12,
-    tintL: [0.74, 0.94, 1.22],
-    tintR: [1.04, 0.84, 1.1],
-    mistL: 0xa9cdea,
-    mistR: 0xbba6d2,
-    wellL: { x: 2190, y: 650, r: 380, alpha: 0.5, color: 0xdcefff },
-    wellR: { x: 3560, y: 730, r: 340, alpha: 0.55, color: 0xffc4a4 },
+    tintL: [0.3, 0.8, 2.3],
+    tintR: [0.66, 0.5, 2.1],
+    mistL: 0x24506f,
+    mistR: 0x44356f,
+    wellL: { x: 2190, y: 650, r: 280, alpha: 0.4, color: 0x9fc4e6 },
+    wellR: { x: 3560, y: 730, r: 250, alpha: 0.42, color: 0xe09a70 },
   },
   {
     parallax: 0.25,
-    tintL: [0.76, 0.95, 1.2],
-    tintR: [1.02, 0.85, 1.1],
-    mistL: 0x86b8de,
-    mistR: 0xa290c4,
-    wellL: { x: 1960, y: 520, r: 380, alpha: 0.26, color: 0xcfe6ff },
-    wellR: { x: 3900, y: 780, r: 340, alpha: 0.42, color: 0xf7b3ae },
+    tintL: [0.35, 0.85, 2.2],
+    tintR: [0.72, 0.52, 2.0],
+    mistL: 0x1a3f5a,
+    mistR: 0x34285c,
+    wellL: { x: 1960, y: 520, r: 300, alpha: 0.2, color: 0x8fb4d8 },
+    wellR: { x: 3900, y: 780, r: 260, alpha: 0.3, color: 0xd08a6a },
   },
   {
     parallax: 0.42,
-    tintL: [0.8, 0.96, 1.16],
-    tintR: [0.98, 0.87, 1.08],
-    mistL: 0x5f9ccb,
-    mistR: 0x8078b0,
-    wellR: { x: 4060, y: 820, r: 360, alpha: 0.26, color: 0xe9a8c0 },
+    tintL: [0.42, 0.88, 2.0],
+    tintR: [0.78, 0.55, 1.9],
+    mistL: 0x122f45,
+    mistR: 0x261e48,
+    wellR: { x: 4060, y: 820, r: 280, alpha: 0.18, color: 0xc07a70 },
   },
 ];
 const ARCH = { x0: 2770, x1: 3250, baseY: 1255, rise: 440, thick: 56 };
@@ -291,8 +312,8 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       canopyAmp: 46,
       canopyR: 105,
       wellX: 2942,
-      wellHalf: 250,
-      wellLift: 300,
+      wellHalf: 190,
+      wellLift: 240,
       openLift: 150,
       trunks: [
         { x: 1745, w: 180, lean: 30 },
@@ -323,8 +344,8 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       canopyAmp: 64,
       canopyR: 135,
       wellX: 3010,
-      wellHalf: 300,
-      wellLift: 330,
+      wellHalf: 210,
+      wellLift: 260,
       openLift: 210,
       drop: (x) => -300 * Math.exp(-(((x - 1960) / 200) ** 2)) - 280 * Math.exp(-(((x - 3880) / 170) ** 2)),
       groundRows: 1,
@@ -362,8 +383,8 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       canopyAmp: 80,
       canopyR: 165,
       wellX: 3098,
-      wellHalf: 340,
-      wellLift: 380,
+      wellHalf: 230,
+      wellLift: 280,
       openLift: 270,
       drop: (x) => 60 * Math.exp(-(((x - 4350) / 400) ** 2)) - 300 * Math.exp(-(((x - 4060) / 150) ** 2)),
       groundRows: 1,
@@ -372,8 +393,8 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       blossom: 0xd9c2ff,
       trunks: [
         { x: 1230, w: 500, lean: 20, branches: 3, roots: 3 },
-        { x: 2040, w: 120, lean: -30, branches: 1 },
-        { x: 2480, w: 160, lean: -56, branches: 2 },
+        // The centre zone's giant, left of the light well.
+        { x: 2440, w: 640, lean: -30, branches: 3, roots: 3, boughs: 3 },
         { x: 2860, w: 76, lean: 130, branches: 1, roots: 1 },
         { x: 3700, w: 400, lean: -44, branches: 3, roots: 3, boughs: 3 },
         { x: 4350, w: 330, lean: 30, branches: 2, roots: 3 },
@@ -444,7 +465,7 @@ function waterfallCliff(c: Container, r: Rng, look: (typeof LOOKS)[number]): voi
       (t) => (st.w / 2) * (0.7 + 0.3 * t) * (1 + n(t * 9 + st.y0) * 0.14),
       16,
     );
-    g.poly(fall).fill({ color: w.color, alpha: 0.72 });
+    g.poly(fall).fill({ color: w.color, alpha: 0.5 });
   }
   // Mist: a puff at every landing, a plume over the pool (soft sprites, baked with the layer).
   const puff = (x: number, y: number, rx: number, ry: number, a: number): void => {
@@ -815,7 +836,8 @@ export class FarLayers implements EnvModule {
         }
       }
       const items = [...hangers(plan, b, atm, hang), ...landmarkHangers(i, atm)];
-      const sway = new SwaySet(ctx.renderer, items, Math.max(1, scale * 1.2), zone);
+      // A soft atlas: far vines must not be crisper than the blurred layer they hang from.
+      const sway = new SwaySet(ctx.renderer, items, scale * 0.45, zone);
       layer.addChild(sway.container);
       this.built.push({ name, view, sway, falls });
     });
@@ -844,7 +866,13 @@ export class FarLayers implements EnvModule {
     const k = Math.min(FAR_TARGET_SCALE, this.ctx.viewScale());
     const w = Math.ceil((VIEW_W + 16) * k);
     const h = Math.ceil((VIEW_H + 16) * k);
-    if (this.target.width !== w || this.target.height !== h) this.target.resize(w, h);
+    if (this.target.width !== w || this.target.height !== h) {
+      // A resized render texture kept drawing into its old area (black beyond it): replace it.
+      const old = this.target;
+      this.target = RenderTexture.create({ width: w, height: h, resolution: 1 });
+      this.output.texture = this.target;
+      old.destroy(true);
+    }
     this.toTarget.set(k, 0, 0, k, 8 * k, 8 * k);
     this.ctx.renderer.render({
       container: this.scene,

@@ -114,7 +114,11 @@ export function blob(cx: number, cy: number, rx: number, ry: number, r: Rng, wob
 }
 
 /** A pointed leaf from its stem end, `len` long toward `ang`. */
-export function leafPts(x: number, y: number, ang: number, len: number, wid: number): number[] {
+/**
+ * `kind`: 0 pointed (the default), 1 a rounded oval, 2 long and narrow with a curl, 3 heart-like
+ * (widest near the stem). Mixing them stops foliage reading as identical diamond chips.
+ */
+export function leafPts(x: number, y: number, ang: number, len: number, wid: number, kind = 0): number[] {
   const c = Math.cos(ang);
   const s = Math.sin(ang);
   const h = wid / 2;
@@ -123,6 +127,23 @@ export function leafPts(x: number, y: number, ang: number, len: number, wid: num
     out.push(x + (c * u - s * v) * len, y + (s * u + c * v) * len);
   };
   const k = h / len;
+  if (kind > 0) {
+    const n = 7;
+    const side = (sign: number, i: number): void => {
+      const t = i / n;
+      const prof =
+        kind === 1
+          ? Math.sin(Math.PI * t) ** 0.6 * 1.15
+          : kind === 2
+            ? Math.sin(Math.PI * t) ** 0.9 * 0.6
+            : Math.sin(Math.PI * t ** 0.6) ** 0.8 * 1.25;
+      const curl = kind === 2 ? Math.sin(t * 2.4) * 0.22 : 0;
+      add(t * (kind === 2 ? 1.35 : 0.95), sign * k * prof + curl * t);
+    };
+    for (let i = 1; i <= n; i++) side(1, i);
+    for (let i = n - 1; i >= 1; i--) side(-1, i);
+    return out;
+  }
   add(0.3, k);
   add(0.66, k * 0.8);
   add(1, 0);
@@ -771,7 +792,7 @@ export function clump(
       f,
     });
   }
-  for (const l of lobes) g.poly(blob(l.x, l.y, l.r * 1.06, l.r * 0.92, rnd, 0.22, 20));
+  for (const l of lobes) g.poly(blob(l.x, l.y, l.r * 1.06, l.r * 0.92, rnd, 0.16, 44));
   g.fill(look.core);
   L.reset(cx, cy, r * 1.3, r * 1.15);
   L.shade(cx - TO_LIGHT.x * r * 0.35, cy - TO_LIGHT.y * r * 0.5, r * 1.2, r * 0.8, 0.7);
@@ -780,7 +801,11 @@ export function clump(
   for (const l of lobes) {
     const sx = l.x + TO_LIGHT.x * l.r * 0.2;
     const sy = l.y + TO_LIGHT.y * l.r * 0.2;
-    g.poly(blob(sx, sy, l.r * 0.86, l.r * 0.76, rnd, 0.2, 18)).fill(leafRamp(look, 0.12 + 0.3 * l.f));
+    // A faint lighter body only: the form comes from the soft light map, not from a hard plane.
+    g.poly(blob(sx, sy, l.r * 0.86, l.r * 0.76, rnd, 0.14, 40)).fill({
+      color: leafRamp(look, 0.12 + 0.3 * l.f),
+      alpha: 0.4,
+    });
     L.shade(l.x - TO_LIGHT.x * l.r * 0.55, l.y - TO_LIGHT.y * l.r * 0.6, l.r * 0.8, l.r * 0.65, 0.4);
     const k = (0.04 + 0.34 * l.f) * light;
     L.lit(l.x + TO_LIGHT.x * l.r * 0.45, l.y + TO_LIGHT.y * l.r * 0.5, l.r * 0.8, l.r * 0.6, k);
@@ -796,7 +821,10 @@ export function clump(
     (buckets[Math.max(0, Math.min(RAMP - 1, Math.floor(v * RAMP)))] as number[][]).push(pts);
   };
   for (const l of lobes) {
-    const fringe = Math.round(((TAU * l.r) / ls) * 1.25 * (0.4 + 0.6 * detail));
+    // Leaves sit in bunches on the lit side of the rim; the shadow side is a lost, plain edge.
+    const fringe = Math.round(((TAU * l.r) / ls) * 1.5 * (0.4 + 0.6 * detail));
+    const bunch = rnd() * TAU;
+    const kind = Math.floor(rnd() * 4);
     for (let i = 0; i < fringe; i++) {
       const a = rnd() * TAU;
       const ca = Math.cos(a);
@@ -806,21 +834,24 @@ export function clump(
       const py = l.y + sa * l.r * 0.9 * rad;
       let ang = a + rr(rnd, -0.7, 0.7);
       ang += Math.sin(Math.PI / 2 - ang) * 0.4;
-      const len = ls * rr(rnd, 0.55, 1.7);
+      // Three sizes rather than a continuum.
+      const len = ls * 0.6 * 1.63 ** Math.floor(rnd() * 3) * rr(rnd, 0.9, 1.1);
       const f = 0.5 + 0.5 * (ca * TO_LIGHT.x + sa * TO_LIGHT.y);
       const wid = len * rr(rnd, 0.36, 0.56);
       const sunny = f > 0.7 && l.f > 0.5 && rnd() < 0.3 * light * detail;
-      if (sunny) sunLeaves.push(leafPts(px, py, ang, len * 0.7, wid * 0.7));
+      const bunched = 0.5 + 0.5 * Math.cos((a - bunch) * 3);
+      if (rnd() > (0.25 + 0.75 * f) * (0.35 + 0.65 * bunched)) continue;
+      if (sunny) sunLeaves.push(leafPts(px, py, ang, len * 0.7, wid * 0.7, kind));
       else
         put(
           (0.14 + 0.5 * f * l.f + rr(rnd, -0.07, 0.07)) * (0.6 + 0.5 * light),
-          leafPts(px, py, ang, len, wid),
+          leafPts(px, py, ang, len, wid, kind),
         );
       if (o.accent === 'blossom' && f > 0.45 && rnd() < 0.3)
         dots.push(px + ca * len * 0.3, py + sa * len * 0.3);
     }
     // A sparse scatter inside, thinning out toward the shadow side.
-    const inner = Math.round((l.r / ls) ** 2 * 1.1 * detail);
+    const inner = Math.round((l.r / ls) ** 2 * 0.3 * detail);
     for (let i = 0; i < inner; i++) {
       const a = rnd() * TAU;
       const rad = Math.sqrt(rnd()) * 0.8;
