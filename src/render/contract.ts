@@ -9,7 +9,7 @@
 import type { Renderer } from 'pixi.js';
 import type { SimEvent } from '../sim/events';
 import type { Scene } from '../sim/scene';
-import type { PickupsState, PlayerState, PodsState } from '../sim/state';
+import type { EnemyState, PickupsState, PlayerState, PodsState } from '../sim/state';
 import type { LightRegistry } from './lights';
 
 /** Logical view size in world px at zoom 1 (16:9). */
@@ -42,6 +42,8 @@ export interface PlayerView extends Readonly<PlayerState> {
 export interface SimView {
   /** Latest sim frame number (60 per second while the sim runs; stands still when frozen). */
   readonly frame: number;
+  /** How far this render frame is from the previous sim frame (0) to the latest (1): what `player` is interpolated by. */
+  readonly alpha: number;
   readonly player: PlayerView;
   /** Sim events since the previous render update (usually 0-1 sim steps' worth). */
   readonly events: readonly SimEvent[];
@@ -50,6 +52,8 @@ export interface SimView {
   readonly pickups: Readonly<PickupsState>;
   /** Lumen pods at the latest sim frame: `hp[i] > 0` = `scene.pods[i]` is still closed. Read only. */
   readonly pods: Readonly<PodsState>;
+  /** Enemies at the latest sim frame: `enemies[i]` belongs to `scene.enemies[i]`. Read only. */
+  readonly enemies: readonly Readonly<EnemyState>[];
 }
 
 /** Services every renderer gets at construction. */

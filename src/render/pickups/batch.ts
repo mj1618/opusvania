@@ -179,6 +179,7 @@ export class GlintBatch {
   private readonly vbuf: Buffer;
   private n = 0;
   private last = 0;
+  private high = 1;
 
   constructor(readonly maxQuads: number) {
     this.verts = new Float32Array(maxQuads * 4 * FLOATS);
@@ -286,9 +287,12 @@ export class GlintBatch {
     const per = 4 * FLOATS;
     // Quads left over from a fuller frame collapse to nothing.
     if (this.last > this.n) this.verts.fill(0, this.n * per, this.last * per);
-    const used = Math.max(this.n, this.last, 1);
     this.last = this.n;
-    this.vbuf.update(used * per * 4);
+    // Always the fullest frame so far: the upload happens when the mesh is next drawn, and several
+    // updates can pass before that (`__game.step(n)`), so a shrinking size would leave stale quads
+    // on the GPU beyond it.
+    this.high = Math.max(this.high, this.n, 1);
+    this.vbuf.update(this.high * per * 4);
     this.uniform[0] = clock;
   }
 

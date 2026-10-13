@@ -6,7 +6,7 @@
  *   └ root                 scaled to device pixels; below it everything is in logical view units
  *     ├ layers.root        the PostStage's target (filters go here)
  *     │   sky, far0..2, mid, playfield, character, pickups, foreground, air   (scene/layer-tree.ts)
- *     ├ hud                the glint count, not post-processed (render/hud)
+ *     ├ hud                health lights and the glint count, not post-processed (render/hud)
  *     └ debug overlay      collision boxes, not post-processed
  *
  * Per render frame: interpolate camera and player (alpha between the last two sim frames) ->
@@ -22,6 +22,7 @@ import { type CameraState, createCamera, lerpCamera, stepCamera } from './camera
 import { CameraKick } from './camera/kick';
 import { CharacterRenderer } from './character/index';
 import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
+import { EnemyRenderer } from './enemies/index';
 import { Hud } from './hud/index';
 import { LightRegistry } from './lights';
 import { PickupRenderer } from './pickups/index';
@@ -51,6 +52,7 @@ export class RenderStage {
   readonly ctx: RenderContext;
   readonly scene: SceneRenderer;
   readonly character: CharacterRenderer;
+  readonly enemies: EnemyRenderer;
   readonly pickups: PickupRenderer;
   readonly hud: Hud;
   readonly post: PostStage;
@@ -76,6 +78,7 @@ export class RenderStage {
     this.scene = new SceneRenderer(this.ctx);
     this.scene.init(scene);
     this.character = new CharacterRenderer(this.ctx, this.scene.layers.character);
+    this.enemies = new EnemyRenderer(this.ctx, this.scene.layers.enemies);
     this.pickups = new PickupRenderer(this.ctx, this.scene.layers.pickups, this.scene.layers.pickupsBack);
     this.post = new PostStage(this.ctx, this.scene.layers.root);
     this.hud = new Hud();
@@ -126,15 +129,18 @@ export class RenderStage {
     const view: CameraView = { x: base.x + this.kick.x, y: base.y + this.kick.y, zoom: base.zoom };
     const sim: SimView = {
       frame: this.game.state.frame,
+      alpha,
       player,
       events,
       scene: this.game.scene,
       pickups: this.game.state.pickups,
       pods: this.game.state.pods,
+      enemies: this.game.state.enemies,
     };
     this.scene.layers.applyCamera(view);
     this.scene.update(dt, this.clock, view, sim);
     this.character.update(dt, this.clock, player, events);
+    this.enemies.update(dt, this.clock, view, sim);
     this.pickups.update(dt, this.clock, view, sim);
     this.post.update(dt, this.clock, view);
     this.hud.update(dt, this.clock, sim);

@@ -43,9 +43,7 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   bleaches the plants round the bud).
 - Knobs: `config.ts` (`GLINTS`), live through `window.__pickups.cfg`; `__pickups.cpuMs`, `.debug()`.
   Shapes and brightness of the lights are in the shader.
-- HUD (`src/render/hud/`): outside the post stage, top left. The icon is a second `GlintBatch`
-  (the world glint drawn 1.7x), digits are painted once into a canvas atlas (system serif stack, own
-  shadow and glow). Appears on a pickup, ticks one by one, fades 3.6 s after the last.
+- HUD: see "HUD" below.
 - `?nopickups` (src/main.ts) boots the scene with no pickups, so no glints, no counter and no skin
   reaction; shots / clip / look:stats use it by default (`--pickups` to show them).
 
@@ -90,6 +88,43 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 - `__game.teleport` makes a new player, so `attackSeq` restarts and a second slash after a teleport
   is ignored by a pod already hit by "slash 1": capture multi-hit sequences without teleporting between.
 - `?nopickups` removes pods too.
+
+## Glints of a dead enemy
+- Same path as a pod's spill, driven from `sim.enemies[j].spill / spillTimer / spillGap`: a spill
+  "source" is a pod index or `foeBase + j` (`Flight.pod`, `spillN`, `requeue`, `SPILL` stand-in items
+  each). They pop from the body centre, leaning `FOE_LEAN` px the way the blow went (`hitDir`), and
+  each lands on its `pickup {enemy: true}` event. No burst of our own: the creature and its crumble
+  belong to `src/render/enemies/`. If the state has fewer owed than are in the air (restart), they
+  are dropped.
+- `GlintBatch.end` always uploads the fullest frame so far. The upload happens at the next draw, and
+  `__game.step(n)` runs many updates per draw: with a shrinking size, quads past it stayed on the GPU
+  (a ghost counter star after a restart).
+
+## HUD (`src/render/hud/`): one cluster, top left, outside the post stage
+- `lights.ts` health: one lantern per `hpMax`, a seed of dark glass on a crooked filament (the curl
+  of her antenna tips) with a calyx; lit = amber glass + gold rim (`lit`, normal blend) and a small
+  hot bead low in the belly + halo (both additive); lost = the cool husk and a faint ember. All
+  painted once into canvases at 4x with their own dark seat; nothing is a box or a bar.
+- First try filled the whole seed with light: four orange blobs, glare, no holder. The bead must
+  stay ~1/3 of the width so the dark glass reads. Dimming by sprite alpha turned the glass grey-beige:
+  a steady light keeps `lit` at 1 and only the bead / halo move.
+- Motion (render time only): lost light = hot crack, stutter (two or three catches), 4 flecks; the
+  cluster shakes on a spring and every lantern swings from its filament top; the others dip
+  (`flinch`); last light = slow pulse of the bead (`lastPeriod`, `lastDip`) with a tremor; `fade` =
+  all out, embers too; `reform` = they catch left to right `kindleStep` apart, each with a rising
+  mote and a small lift. State jumps (`__game.health(n)`, restart) reconcile from `player.hp`.
+- Shown while hp < max, during any change, for `hold` s after, and while a living enemy is within
+  `nearX / nearY` of her; otherwise it fades out (full health, calm). In a `?nopickups` scene (clean
+  plates) the enemy-near rule is off, so it shows only when she is hurt.
+- Count: beneath the lights, icon under the first lantern (a second `GlintBatch`, the world glint at
+  1.25x, which also draws the lights' sparks), 30 px serif digits painted once into a canvas atlas.
+  Appears on a pickup, ticks one by one, fades 3.6 s after the last. Positions are fixed: alone, the
+  count sits where it does under the lights.
+- Knobs: `LIGHTS` (lights.ts), `HUD` (index.ts). No dev handle; edit and reload.
+- Capturing: the HUD is on the game canvas, so in ONE `playwright-cli eval` step with `__game.step`
+  and `drawImage` the canvas into a 2D sheet canvas right after each step, return `toDataURL`.
+  Device pixel ratio 2: `run-code` with CDP `Emulation.setDeviceMetricsOverride`.
+- burr-path (1856-2560) and burr-rise wander into "empty" capture spots: use 900 / 3456 / 4900.
 
 ## Look decisions (learned by looking)
 - A round glowing dot is a firefly (the scene has orange ones). The four-point star with a

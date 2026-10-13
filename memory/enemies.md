@@ -34,7 +34,7 @@ wins (the creature is staggered and harmless before contact is tested).
 - Death: `mode: 'dead'`, still shoved, body removed (`gone`) 30 frames after the hitstop. It spills 4
   glints (6 if the finisher killed it) into `state.pickups.count`, the first 16 frames after the
   blow, then 5 apart (3 apart for 6): `pickup` events with the enemy's id and `enemy: true` (NOT
-  `pod`; the pickup renderer ignores them until someone draws them). Dead until restart.
+  `pod`; the pickup renderer flies them from `spill / spillTimer / spillGap`: pickups.md). Dead until restart.
 - **No hitting through ground**: the line from her body centre to the centre of the part of the
   creature inside the hit area must not cross a solid's inside. Under a 48 px platform an up slash
   does nothing; a one-way branch does not block. It also means a creature at the lip of a step above
