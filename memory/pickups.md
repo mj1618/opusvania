@@ -72,6 +72,23 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   jump past) they skip the hang and curve in steadily (`lag` 1.55 over 78% of the time). Four
   stand-in `Item`s per pod, not scene pickups.
 - Ribbons are capped at `flight.trailMax` px however fast she or the glint is going.
+- **Toughness** (`hp` 1-3 in the scene = `PodView.tier`): 1.0 / 1.2 / 1.4 size, and a ring of two
+  thick dark armour sepals per extra hit (outermost shorter and wider). Each hit that does not open it
+  (`slashHit` on a pod whose `sim.pods.hp` is still > 0) peels the outermost ring left, sets the
+  crescents ajar (`POD.ajar`) so the seam widens and more light shows, and throws a little debris;
+  `damage` = `tier - hp` is reconciled from the state every frame. A finisher (`power` 2) jolts
+  harder and throws debris further; burst debris scales with tier.
+- All bracts open OUTWARD (rotation sign = side). With the signs crossed, a pod set ajar showed
+  crossed tips like scissors.
+- Spilled glints are spawned from the STATE, not the events: whenever `sim.pods.left[i]` exceeds the
+  flights in the air for that pod, the missing ones are added with `timer[i] + j * gap[i]` frames.
+  That covers a burst, a glint knocked loose by a hit, and any count. A new hit restarts the sim's
+  queue, so glints still waiting by the pod are re-timed (`requeue`). They take spots in a
+  golden-ratio scatter above the husk, so ten glints are a cloud that drains into her, not a row.
+- Pod views are built the first time a pod comes near the view (null until then): building all
+  twelve at boot cost seconds on the e2e's software GL, which has ~5 s to spare.
+- `__game.teleport` makes a new player, so `attackSeq` restarts and a second slash after a teleport
+  is ignored by a pod already hit by "slash 1": capture multi-hit sequences without teleporting between.
 - `?nopickups` removes pods too.
 
 ## Look decisions (learned by looking)
