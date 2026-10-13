@@ -74,6 +74,21 @@ export const POST = {
     heroBloomSource: 0.8,
     /** Every light's radius is scaled by this (the skins register a modest reach). */
     reach: 1.15,
+    /**
+     * The lights of the goal (registry ids below): the things she lights are THE lights of their
+     * place. They are never dropped when more than MAX_LIGHTS are in range (the hero's ember and
+     * these go first, the rest by distance from the view centre), their strength is multiplied by
+     * `goalBoost`, under them the lit-surface caps rise by `goalCap` (x at the heart of the light)
+     * and surfaces take more of the light's own colour (`goalTint`),
+     * the hero pocket lets go (`goalPocket`: 1 = no darkening beside a lit lantern), and sparks are
+     * allowed at their core even beside the hero (the flame is a true highlight).
+     */
+    goalIds: ['lantern0', 'lantern1', 'lantern2', 'lanternSwell', 'heart'] as readonly string[],
+    goalBoost: 1.8,
+    goalCap: 0.22,
+    goalPocket: 0.9,
+    /** Extra tint toward the light's colour under them (pale rock goes amber, not chalk: 2.4 / 0.45 / 0 blew the boulder by the first lantern to cream). */
+    goalTint: 0.4,
   },
 
   /**
@@ -195,5 +210,8 @@ export const BLOOM_LEVELS: ReadonlyArray<readonly [number, number]> = [
 /** The light accumulation target (lights are smooth: a small target is plenty). */
 export const LIGHT_TARGET: readonly [number, number] = [480, 270];
 
-/** Most lights drawn at once (the nearest to the view win). */
+/** Most lights drawn at once (the ember and the goal's lights first, then the nearest to the view centre). */
 export const MAX_LIGHTS = 12;
+
+/** How many of the goal's lights the composite knows by position (three lanterns can never share a screen with the swell and the heart). */
+export const GOAL_LIGHTS = 4;

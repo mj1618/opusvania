@@ -1,5 +1,6 @@
 import { Container } from 'pixi.js';
 import type { Scene } from '../../sim/scene';
+import { viewTop } from '../camera/index';
 import { type CameraView, VIEW_H, VIEW_W } from '../contract';
 
 /**
@@ -135,10 +136,13 @@ export class LayerTree {
     return { x: cx - w / 2, y: cy - h / 2, w, h };
   }
 
-  /** The most of a world layer the follow camera (zoom 1, clamped to the scene) can ever show. */
+  /**
+   * The most of a world layer the follow camera (zoom 1, clamped to the scene, plus its headroom
+   * above the scene top: camera/index.ts `viewTop`) can ever show.
+   */
   coverage(name: LayerName): LayerRect {
     const s = this.scene;
-    const lo = this.visible(name, { x: VIEW_W / 2, y: VIEW_H / 2, zoom: 1 });
+    const lo = this.visible(name, { x: VIEW_W / 2, y: viewTop(s) + VIEW_H / 2, zoom: 1 });
     const hi = this.visible(name, { x: s.width - VIEW_W / 2, y: s.height - VIEW_H / 2, zoom: 1 });
     const x0 = Math.min(lo.x, hi.x);
     const y0 = Math.min(lo.y, hi.y);

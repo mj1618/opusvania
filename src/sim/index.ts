@@ -7,7 +7,7 @@ import { contactDamage, createEnemies, enemyTouched, resetEnemies, updateEnemies
 import type { SimEvent } from './events';
 import { createGoal, goalHolds, heldInput, restPoint, updateGoal } from './goal';
 import type { InputFrame } from './input';
-import { createPickups, updatePickups } from './pickups';
+import { createPickups, dropGlints, updateDrops, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
 import { createPlayer, hurtPlayer, reformPlayer, trackSafeGround, updatePlayer } from './player/player';
 import { createPods, updatePods } from './pods';
@@ -20,7 +20,7 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 12,
+    version: 13,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
@@ -67,6 +67,7 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
   const first = events.length;
   // The end of a fade: she re-forms at the last safe ground and the living enemies go home.
   if (state.player.faded > 0 && --state.player.faded === 0) {
+    dropGlints(state, scene, t.health.fadeDrop, events);
     reformPlayer(state, scene, P, events, restPoint(state, scene));
     resetEnemies(state, scene, t);
   }
@@ -81,14 +82,28 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
     const pc = p.x + p.w / 2;
     const ec = e.x + e.w / 2;
     const dir = pc < ec ? -1 : pc > ec ? 1 : -p.facing;
-    const hitX = (Math.max(p.x, e.x) + Math.min(p.x + p.w, e.x + e.w)) / 2;
-    const hitY = (Math.max(p.y, e.y) + Math.min(p.y + p.h, e.y + e.h)) / 2;
-    hurtPlayer(state, P, dir, contactDamage(state, touch, t), { kind: e.kind, id: e.id }, hitX, hitY, events);
+    // Kindling a lantern (`kindling` is last step's: she was in the channel) nothing can hurt her:
+    // what touches her is turned away as if it had, and she is not.
+    if (p.kindling < 0) {
+      const hitX = (Math.max(p.x, e.x) + Math.min(p.x + p.w, e.x + e.w)) / 2;
+      const hitY = (Math.max(p.y, e.y) + Math.min(p.y + p.h, e.y + e.h)) / 2;
+      hurtPlayer(
+        state,
+        P,
+        dir,
+        contactDamage(state, touch, t),
+        { kind: e.kind, id: e.id },
+        hitX,
+        hitY,
+        events,
+      );
+    }
     enemyTouched(state, scene, touch, dir, t, events);
   }
   if (ran) trackSafeGround(state, scene, P);
   updatePods(state, scene, t.pickups.comboFrames, events);
   updatePickups(state, scene, t.pickups, events);
+  updateDrops(state, t.pickups, events);
   updateGoal(state, scene, t, input, events, first);
   state.prevInput = input;
   state.frame++;
@@ -104,6 +119,7 @@ export type {
   EnemyMode,
   EnemyState,
   GameState,
+  GlintDrop,
   GoalState,
   LanternState,
   Motion,

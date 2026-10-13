@@ -88,6 +88,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning): EnemyState {
     side: 0,
     pushX: 0,
     pushY: 0,
+    calm: 0,
     spill: 0,
     spillTimer: 0,
     spillGap: 0,
@@ -199,6 +200,7 @@ export function updateEnemies(
     if (!e) continue;
     spill(e, state, t.pickups.comboFrames, events);
     if (e.gone) continue;
+    if (e.calm > 0) e.calm--;
     if (e.hitstop > 0) {
       e.hitstop--;
       e.vx = 0;
@@ -208,8 +210,14 @@ export function updateEnemies(
     e.modeFrames++;
     const K = KINDS[e.kind];
     if (!K.update(e, i, I)) continue;
-    // Contact: its touch hurts, except for the first beat after it was hit.
-    if (touch < 0 && !(e.mode === 'hurt' && e.modeFrames < frames(K.hurtSafeFrames(t)))) {
+    // Contact: its touch hurts, except for the first beat after it was hit, while it is calmed,
+    // and inside a lit lantern's sanctuary.
+    if (
+      touch < 0 &&
+      e.calm === 0 &&
+      !(e.mode === 'hurt' && e.modeFrames < frames(K.hurtSafeFrames(t))) &&
+      !K.harmless?.(e, I)
+    ) {
       if (p.x < e.x + e.w && e.x < p.x + p.w && p.y < e.y + e.h && e.y < p.y + p.h) touch = i;
     }
   }
@@ -366,7 +374,8 @@ export function slashEnemies(
 /**
  * Settles every living enemy within `px` of the point (centre of its box, or its home; `px` < 0 =
  * every one in the scene) for `n` frames, each by its kind's own quiet path (`KindRules.calm`).
- * One that is staggered or held by a hit is left alone.
+ * While it lasts their touch does nothing (`calm`). One that is staggered or held by a hit keeps
+ * its tumble (but is calmed too).
  */
 export function calmEnemies(
   state: GameState,
@@ -383,7 +392,7 @@ export function calmEnemies(
   const I = info(state, scene, t, events);
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
-    if (!e || e.gone || e.mode === 'dead' || e.mode === 'hurt' || e.hitstop > 0) continue;
+    if (!e || e.gone || e.mode === 'dead') continue;
     if (px >= 0) {
       const dx = e.x + e.w / 2 - x;
       const dy = e.y + e.h / 2 - y;
@@ -391,6 +400,9 @@ export function calmEnemies(
       const hy = e.homeY - y;
       if (dx * dx + dy * dy > px * px && hx * hx + hy * hy > px * px) continue;
     }
+    // Calmed, its touch does nothing; one that is staggered or held keeps its tumble.
+    e.calm = Math.max(e.calm, n);
+    if (e.mode === 'hurt' || e.hitstop > 0) continue;
     KINDS[e.kind].calm?.(e, I, n);
   }
 }

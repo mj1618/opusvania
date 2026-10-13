@@ -510,7 +510,8 @@ describe('lampwing: contact', () => {
     let s = duel(blind(), 2100);
     s.state.player.invuln = 40;
     let met = 0;
-    frames(s, 'R12', (ev) => {
+    // (R15: three frames more than before, for the eased start of the run.)
+    frames(s, 'R15', (ev) => {
       if (overlap(s, foe(s))) met++;
       expect(of(ev, 'hurt')).toEqual([]);
     });
@@ -882,7 +883,8 @@ describe('lampwing: fade and re-form, restart', () => {
       expect(Math.hypot(mid(e).x - e.homeX, mid(e).y - e.homeY)).toBeLessThan(16);
     }
     expect([foe(s, 1).mode, foe(s, 1).gone]).toEqual(['dead', true]);
-    expect(s.state.player.hp).toBe(4);
+    // A fade costs: she is back with 2 of 4.
+    expect(s.state.player.hp).toBe(2);
   });
 
   it('safe ground keeps outside a living lampwing’s territory and sight (radius + 260 px from its home)', () => {
@@ -1014,7 +1016,8 @@ describe('lampwings in the grove', () => {
     const one = list[0] as EnemySpawn;
     expect(bad({ ...one, id: 'pod-f2' })).toThrow(/called/);
     expect(bad({ ...one, y: 970 })).toThrow(/open air/);
-    expect(bad({ ...one, y: 10 })).toThrow(/outside/);
+    // (Above the canopy, which is now 420 px over the scene's top.)
+    expect(bad({ ...one, y: -410 })).toThrow(/outside/);
     expect(bad({ ...one, x: 1120, y: 1000 })).toThrow(/spawn/);
     expect(bad({ ...one, x: 1136, y: 760 })).toThrow(/too close to "pod-f2"/);
     expect(bad({ ...one, x: 1984, y: 900 })).toThrow(/too close to "great-hang"/);

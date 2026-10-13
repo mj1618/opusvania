@@ -9,6 +9,11 @@ type Rect = { x: number; y: number; w: number; h: number };
 export interface GoalBoxes {
   lanterns: Array<{ box: Rect; lit: boolean; channel: number; rest: number; restPoint: boolean }>;
   heart: { box: Rect; awake: boolean; gathered: boolean } | null;
+  /** A lit lantern's sanctuary: how far burrbacks keep (sideways), and lampwings (from its centre). */
+  sanctuary: number;
+  lampSanctuary: number;
+  /** Clusters of dropped glints (their centres). */
+  drops: ReadonlyArray<{ x: number; y: number; left: number }>;
 }
 
 /**
@@ -18,7 +23,8 @@ export interface GoalBoxes {
  * shows its territory (a faint circle round its home), a line to what it is drawn to (yellow while
  * it has noticed or pursues her, dim otherwise) and its velocity. Lanterns: their trigger box (cyan
  * dormant, gold lit; a bar that fills while she kindles it or rests at it; a tick under the one she
- * re-forms at). The heart: its box (dim violet asleep, bright orange awake, white once reached). Drawn above the post stage in
+ * re-forms at; once lit, a gold line along the ground burrbacks keep off and the circle lampwings
+ * give up at). Dropped glint clusters: a yellow diamond. The heart: its box (dim violet asleep, bright orange awake, white once reached). Drawn above the post stage in
  * playfield space, so it shows the truth regardless of the art.
  */
 export class HitboxOverlay {
@@ -29,7 +35,7 @@ export class HitboxOverlay {
   /** The live enemies (set by the debug API; the overlay only reads them). */
   enemies: () => readonly EnemyState[] = () => [];
   /** The lanterns' and the heart's trigger boxes and what they are doing (set by the debug API). */
-  goal: () => GoalBoxes = () => ({ lanterns: [], heart: null });
+  goal: () => GoalBoxes = () => ({ lanterns: [], heart: null, sanctuary: 0, lampSanctuary: 0, drops: [] });
 
   constructor(scene: Scene) {
     for (const s of scene.solids) this.solids.rect(s.x, s.y, s.w, s.h);
@@ -69,6 +75,24 @@ export class HitboxOverlay {
         g.moveTo(b.x, b.y + b.h + 5)
           .lineTo(b.x + b.w, b.y + b.h + 5)
           .stroke({ color: 0xffc94a, width: 3 });
+    }
+    for (const l of goal.lanterns) {
+      if (!l.lit) continue;
+      // The sanctuary: the stretch of ground burrbacks keep off, and the lampwings' circle.
+      const b = l.box;
+      const cx = b.x + b.w / 2;
+      g.moveTo(cx - goal.sanctuary, b.y + b.h + 2)
+        .lineTo(cx + goal.sanctuary, b.y + b.h + 2)
+        .stroke({ color: 0xffc94a, width: 2, alpha: 0.6 });
+      g.circle(cx, b.y + b.h / 2, goal.lampSanctuary).stroke({ color: 0xffc94a, width: 1, alpha: 0.35 });
+    }
+    for (const d of goal.drops) {
+      g.moveTo(d.x, d.y - 12)
+        .lineTo(d.x + 12, d.y)
+        .lineTo(d.x, d.y + 12)
+        .lineTo(d.x - 12, d.y)
+        .closePath()
+        .stroke({ color: 0xffe14c, width: 2 });
     }
     if (goal.heart) {
       const b = goal.heart.box;

@@ -237,7 +237,8 @@ describe('wing glide', () => {
   it('coyote jumps are untouched by a held jump', () => {
     const s = newSim(cliff(1200));
     s.place(2080, 200);
-    const ev = s.run('R6 R+J20');
+    // (R9: from a standstill the run takes 6 frames to reach full speed, 24 px later than at once.)
+    const ev = s.run('R9 R+J20');
     expect(names(ev)).toEqual(['fall', 'jump:coyote']);
   });
 
@@ -301,16 +302,21 @@ describe('wing glide', () => {
     expect(glides(s.run('R+J2 R4 R+J2 .60 J60'))).toEqual([]);
   });
 
-  it('in the grove: trunk top to F7 in one flight under the canopy, and into the pool safely', () => {
-    // The canopy (scene `ceilingY`) caps the climb from the summit, so the flight that used to
-    // reach the far ledge now comes down on F7, one hop short of it.
+  it('in the grove: the summit to the far ledge in one flight, and into the pool safely', () => {
+    // The canopy (scene `ceilingY`, 420 px over the scene's top) leaves room for the whole jump and
+    // double jump on the summit, so the flight from trunk B reaches the far ledge again (with the
+    // ceiling at y 0 it came down on F7, one hop short): the designed way to the third lantern.
     const s = newSim();
-    s.place(3648, 192);
+    s.place(3684, 192);
     const flight = untilLanding(s, 'R+J28 R1 R+J900');
-    expect(feet(s).y).toBe(592);
-    expect(feet(s).x).toBeGreaterThan(5120);
-    expect(feet(s).x).toBeLessThan(5344);
+    expect(feet(s).y).toBe(448);
+    expect(feet(s).x).toBeGreaterThan(5472);
+    expect(feet(s).x).toBeLessThan(5760);
+    // (Held to the end she sails over the ledge, 160 px up at its lip, to the scene's wall and
+    // slides down it onto the ledge's far end; closing the wings over the lip lands her there.)
     expect(glides(flight.events).at(-1)).toMatch(/glideEnd:(land|wall)/);
+    // Well over the two lampwings on the way: neither notices her.
+    expect(flight.events.filter((e) => e.type === 'enemyNotice' || e.type === 'hurt')).toEqual([]);
 
     const pool = GROVE.solids.find((r) => r.tag === 'pool');
     if (!pool) throw new Error('no pool');

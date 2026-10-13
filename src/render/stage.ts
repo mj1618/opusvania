@@ -6,6 +6,7 @@
  *   └ root                 scaled to device pixels; below it everything is in logical view units
  *     ├ layers.root        the PostStage's target (filters go here)
  *     │   sky, far0..2, mid, playfield, character, pickups, foreground, air   (scene/layer-tree.ts)
+ *     ├ dip                  the dark dip over a re-form / restart (camera/dip.ts), under the HUD
  *     ├ hud                health lights and the glint count, not post-processed (render/hud)
  *     └ debug overlay      collision boxes, not post-processed
  *
@@ -18,8 +19,10 @@ import type { Game } from '../game';
 import type { SimEvent } from '../sim/events';
 import type { PlayerState } from '../sim/state';
 import type { GameApp } from './app';
+import { DipOverlay } from './camera/dip';
 import { type CameraState, createCamera, lerpCamera, stepCamera } from './camera/index';
 import { CameraKick } from './camera/kick';
+import { ReformShot } from './camera/reform';
 import { CharacterRenderer } from './character/index';
 import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
 import { EnemyRenderer } from './enemies/index';
@@ -73,6 +76,9 @@ export class RenderStage {
   private readonly kick = new CameraKick();
   /** The heart waking leans the view toward it; the ending eases it in (render-side, like the kick). */
   private readonly goalCam = new GoalCamera();
+  /** Fade / re-form / restart: the pan that replaces the cut and the dark dip over it (camera/reform.ts). */
+  private readonly reformShot = new ReformShot();
+  private readonly dip = new DipOverlay();
 
   constructor(
     private readonly ga: GameApp,
@@ -94,17 +100,29 @@ export class RenderStage {
     this.post = new PostStage(this.ctx, this.scene.layers.root);
     this.hud = new Hud();
     this.overlay = new HitboxOverlay(scene);
-    ga.root.addChild(this.scene.layers.root, this.hud.layer, this.overlay.layer);
+    ga.root.addChild(this.scene.layers.root, this.dip.layer, this.hud.layer, this.overlay.layer);
 
     this.cam = createCamera(game.state, scene);
     this.prevCam = { ...this.cam };
     this.view = lerpCamera(this.prevCam, this.cam, 1);
     this.drawn = playerView(game.prev.player, game.state.player, 1);
     // The camera steps once per sim frame so it is as deterministic as the sim.
+    let state = game.state;
     game.afterStep.add((events) => {
+      const fade = events.find((e) => e.type === 'fade');
+      if (fade?.type === 'fade') {
+        const p = game.state.player;
+        this.reformShot.fade(fade.frames, Math.hypot(p.safeX - fade.x, p.safeY - fade.y));
+      }
       if (events.some((e) => e.type === 'spawn')) {
+        const from = this.followView;
         this.cam = createCamera(game.state, scene);
         this.prevCam = { ...this.cam };
+        // A re-form glides there under a dip; a restart (a new state) dips; a teleport just cuts.
+        if (events.some((e) => e.type === 'reform')) this.reformShot.reform(from, this.followView);
+        else if (game.state !== state) this.reformShot.restart();
+        else this.reformShot.clear();
+        state = game.state;
       } else {
         this.prevCam = { ...this.cam };
         stepCamera(this.cam, game.state, scene);
@@ -130,6 +148,9 @@ export class RenderStage {
     const events = this.pending;
     this.pending = [];
     this.kick.update(dt, events);
+    const rs = this.reformShot;
+    rs.update(dt);
+    this.dip.set(rs.dip);
     const base: CameraView = o
       ? {
           x: o.x ?? (o.on === 'player' ? player.cx : follow.x),
@@ -139,10 +160,22 @@ export class RenderStage {
       : follow;
     // The goal's camera moves belong to the follow camera only: a debug override stays where it was put.
     const gc = this.goalCam;
-    gc.update(dt, events, this.game.state.goal, alpha, this.game.scene, follow);
+    gc.update(
+      dt,
+      events,
+      this.game.state.goal,
+      alpha,
+      this.game.state.player.grounded,
+      this.game.scene,
+      follow,
+    );
     const view: CameraView = o
       ? { x: base.x + this.kick.x, y: base.y + this.kick.y, zoom: base.zoom }
-      : { x: base.x + this.kick.x + gc.x, y: base.y + this.kick.y + gc.y, zoom: base.zoom * gc.zoom };
+      : {
+          x: base.x + this.kick.x + gc.x + rs.x,
+          y: base.y + this.kick.y + gc.y + rs.y,
+          zoom: base.zoom * gc.zoom,
+        };
     const sim: SimView = {
       frame: this.game.state.frame,
       alpha,

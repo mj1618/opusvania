@@ -16,6 +16,7 @@
  * No gravity, no ground: it is a point of steering in free air, moved 1 px at a time per axis.
  */
 import { roundHalfAway, solidAt } from '../physics/aabb';
+import { nearLitLantern } from '../sanctuary';
 import type { Scene, SolidRect } from '../scene';
 import type { EnemyState, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
@@ -302,6 +303,12 @@ export const lampwing: KindRules = {
     }
   },
 
+  /** Inside a lit lantern's sanctuary its touch does nothing. */
+  harmless(e, info) {
+    const G = info.t.goal;
+    return nearLitLantern(info.state, info.scene, G, e.x + e.w / 2, e.y + e.h / 2, G.lampSanctuaryPx);
+  },
+
   /** One that has noticed her gives up (`calm`): it rests, flies home and notices nothing on the way. */
   calm(e, info) {
     if (e.mode === 'curious' || e.mode === 'pursue') giveUp(e, info, 'calm');
@@ -436,13 +443,15 @@ export const lampwing: KindRules = {
       e.chase++;
       const cause: GiveUpCause | '' = !lit(p)
         ? 'dark'
-        : !inLeash(e, p, t)
-          ? 'far'
-          : e.lost >= frames(t.lostFrames, 1)
-            ? 'lost'
-            : e.chase >= frames(t.pursueFrames, 1)
-              ? 'tired'
-              : '';
+        : nearLitLantern(state, scene, info.t.goal, e.x + e.w / 2, e.y + e.h / 2, info.t.goal.lampSanctuaryPx)
+          ? 'calm'
+          : !inLeash(e, p, t)
+            ? 'far'
+            : e.lost >= frames(t.lostFrames, 1)
+              ? 'lost'
+              : e.chase >= frames(t.pursueFrames, 1)
+                ? 'tired'
+                : '';
       // Out of sight it goes to where it last saw her, and waits there.
       aim(e, t.pursueSpeed, e.lost > 0 ? t.arrivePx : 0);
       face(e, e.targetX - (e.x + e.w / 2), 2);

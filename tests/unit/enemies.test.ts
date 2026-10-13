@@ -69,8 +69,8 @@ describe('burrback: patrol', () => {
         expect([e.mode, e.turning, e.timer, e.facing, e.vx]).toEqual(['pause', true, 24, t.dir, 0]);
       }
     });
-    // Its whole box stays on the platform, and it reaches both ends.
-    expect([minX, maxX]).toEqual([1000, 1400]);
+    // Its whole box stays on the platform, and it turns `lipClear` (96) short of both drops.
+    expect([minX, maxX]).toEqual([1000 + B.lipClear, 1400 - B.lipClear]);
     expect(turns.length).toBeGreaterThan(8);
     expect(turns.map((t) => t[1])).toEqual(turns.map((_, i) => (i % 2 === 0 ? -1 : 1)));
     expect(new Set(turns.map((t) => t[2]))).toEqual(new Set(['ledge']));
@@ -297,6 +297,7 @@ describe('contact: Vesper can be hurt', () => {
 
   it('exclusions: while invulnerable, in the first beat of its stagger, and once it is dead', () => {
     // Invulnerable: she stands inside it for 69 more frames untouched; the 70th hurts again.
+    // (Its touch shoved it back from her: she is put back on top of it.)
     const s = newSim(scene([burr(2200)]), still());
     s.place(2200, FLOOR - 40);
     let firstHurtFrame = -1;
@@ -304,7 +305,7 @@ describe('contact: Vesper can be hurt', () => {
       if (of(ev, 'hurt').length) firstHurtFrame = s.state.frame - 1;
     });
     expect(firstHurtFrame).toBeGreaterThan(0);
-    s.state.player.x = 2180;
+    s.state.player.x = foe(s).x + 6;
     s.state.player.y = FLOOR - 80;
     s.state.player.vx = 0;
     const left = s.state.player.invuln;
@@ -329,8 +330,8 @@ describe('contact: Vesper can be hurt', () => {
       if (of(ev, 'enemyHit').length) hitAt = f;
       if (of(ev, 'hurt').length && hurtAt < 0) {
         hurtAt = f;
-        expect(foe(q).mode).toBe('hurt');
-        expect(foe(q).modeFrames).toBeGreaterThanOrEqual(B.hurtSafeFrames);
+        // (Its touch ends its stagger: it recoils from her, `alert`. The timing is checked below.)
+        expect(foe(q).mode).toBe('alert');
       }
       const p = q.state.player;
       const e = foe(q);
@@ -466,6 +467,8 @@ describe('burrback: taking hits', () => {
     expect(of(s.events, 'enemyHit')).toHaveLength(3);
     // Walking again: its leading edge is over nothing, so it turns round and comes back.
     s.tuning.burrback.speed = B.speed;
+    // (She is moved out of its way: walking into her would shove it back again.)
+    s.place(1000, FLOOR);
     const back = s.run('.80');
     expect(of(back, 'enemyTurn').map((x) => [x.dir, x.cause])).toEqual([[-1, 'ledge']]);
     expect([foe(s).teeter, foe(s).y + foe(s).h]).toEqual([0, 600]);
@@ -517,7 +520,7 @@ describe('burrback: taking hits', () => {
 describe('fade and re-form', () => {
   const POOL = { tag: 'pool' as const, x: 2600, y: 760, w: 300, h: 40 };
 
-  it('the fourth hit: she fades for 50 frames out of control, then re-forms whole on the last safe ground', () => {
+  it('the fourth hit: she fades for 50 frames out of control, then re-forms on the last safe ground with 2 lights, a third of her glints left where she lay', () => {
     const s = newSim(scene([burr(2600)], {}, [{ id: 'pod', x: 1700, y: FLOOR - 22, mount: 'sit' }]));
     // Safe ground is made here: 30 frames standing, far from it. Then a pod, for something to keep.
     s.place(1790, FLOOR);
@@ -556,7 +559,7 @@ describe('fade and re-form', () => {
     expect(types).toEqual(['hurt', 'fade', 'reform', 'spawn']);
     expect(of(ev, 'hurt')[0]).toMatchObject({ hp: 0, stagger: 12, invuln: 0 });
     const r = of(ev, 'reform')[0];
-    expect(r).toMatchObject({ x: safe.x, y: safe.y, hp: 4, hpMax: 4, invuln: H.reformInvulnFrames });
+    expect(r).toMatchObject({ x: safe.x, y: safe.y, hp: H.reformHp, hpMax: 4, invuln: H.reformInvulnFrames });
     // The safe spot stopped following her 200 px short of the creature (and of where it starts).
     expect(safe.y).toBe(FLOOR);
     expect(safe.x).toBeGreaterThan(1900);
@@ -568,10 +571,15 @@ describe('fade and re-form', () => {
       ev.findIndex((e) => e.type === 'reform'),
     );
     expect(after.filter((e) => ['jump', 'slash', 'dashStart', 'glideStart'].includes(e.type))).toEqual([]);
-    // Kept: glints and the open pod. Reset: the living enemy, back at its start and whole.
-    expect(s.state.pickups.count).toBe(count);
+    // Kept: the open pod and two thirds of her glints; one of the three lies where she fell.
+    // Reset: the living enemy, back at its start and whole.
+    // (She held right through it all: re-formed 50-odd px short of where she lay, she ran back over
+    // the cluster and has it again.)
+    expect(of(ev, 'pickup').filter((e) => e.drop)).toHaveLength(1);
+    expect([s.state.pickups.count, s.state.pickups.lost, s.state.pickups.drops]).toEqual([count, 0, []]);
+    expect(of(ev, 'glintsDrop')[0]).toMatchObject({ id: 1, value: 1, wallet: 2, x: r?.fromX, y: FLOOR - 40 });
     expect(s.state.pods.hp[0]).toBe(0);
-    expect(s.state.player.hp).toBe(4);
+    expect(s.state.player.hp).toBe(H.reformHp);
     expect(s.state.player.facing).toBe(1);
   });
 
@@ -662,13 +670,13 @@ describe('fade and re-form', () => {
     expect(of(s.events, 'reform')).toHaveLength(1);
     // The slash counter is not reset (a target remembers the last slash that hit it by number).
     expect(s.state.player.attackSeq).toBe(7);
-    expect([s.state.player.hp, s.state.player.invuln]).toEqual([4, H.reformInvulnFrames - 2]);
+    expect([s.state.player.hp, s.state.player.invuln]).toEqual([H.reformHp, H.reformInvulnFrames - 2]);
     // Straight through it while the safety lasts.
     s.place(2100, FLOOR);
     s.state.player.invuln = 60;
     s.run('R30');
     expect(feet(s).x).toBeGreaterThan(2300);
-    expect(s.state.player.hp).toBe(4);
+    expect(s.state.player.hp).toBe(H.reformHp);
     // And she can fight.
     s.place(2290, FLOOR);
     s.run('L+A1 .16 L+A1 .18 L+A1 .40');
@@ -690,7 +698,7 @@ describe('enemies: determinism, symmetry, restart', () => {
     expect(hashState(cloneState(a.state))).toBe(hashState(a.state));
     expect(cloneState(a.state).enemies[0]).not.toBe(a.state.enemies[0]);
     expect(of(a.events, 'hurt').length + of(a.events, 'enemyHit').length).toBeGreaterThan(2);
-    expect(a.state.version).toBe(12);
+    expect(a.state.version).toBe(13);
   });
 
   it('mirror symmetry: a mirrored scene and mirrored inputs give exactly the mirrored fight', () => {
@@ -798,12 +806,14 @@ describe('enemies in the grove', () => {
       });
     }
     expect(lo.map((a, i) => [list[i]?.id, a, hi[i]])).toEqual([
-      ['burr-bank', 0, 384],
-      ['burr-path', 1856, 2560],
-      ['burr-rise', 2560, 3200],
-      ['burr-ledge', 2816, 3328],
+      // 96 px short of every drop (the bank's lip, the pool's edge, both ends of the rise and of
+      // the high ledge, the far ledge's open end); right up to walls and the scene's edges.
+      ['burr-bank', 0, 288],
+      ['burr-path', 1952, 2560],
+      ['burr-rise', 2656, 3104],
+      ['burr-ledge', 2912, 3232],
       ['burr-root', 4160, 4608],
-      ['burr-far', 5472, 5760],
+      ['burr-far', 5568, 5760],
     ]);
   });
 });

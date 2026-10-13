@@ -41,9 +41,9 @@ const STRAP_RIM = [0x5a9aa0, 0x9c9a58, 0x9a8ce0] as const;
 const INNER = 0x8a4a1c;
 
 /** Scale of a wick's glass against a lantern's. */
-const WICK = 0.6;
+const WICK = 0.85;
 /** Size of the bud against its first drawing (a 92 px bud stood as tall as she does). */
-const BUD = 0.8;
+const BUD = 1.08;
 
 export class HeartView {
   readonly back = new Container();
@@ -72,8 +72,8 @@ export class HeartView {
     const flank = tone(STRAP_FLANK, w);
     const edge = tone(STRAP_RIM, w);
     this.coreX = x;
-    this.coreY = y - 30;
-    this.seatY = y - 30;
+    this.coreY = y - 40;
+    this.seatY = y - 40;
 
     // --- The mound: roots running out along the ground both ways.
     const g = new Graphics();
@@ -99,9 +99,9 @@ export class HeartView {
 
     // --- Three wicks: small crooks, each with a seed of glass.
     for (const [bx, height, side, lean] of [
-      [-46, 64, -1, 9],
-      [17, 128, 1, 3],
-      [48, 50, 1, 12],
+      [-62, 92, -1, 10],
+      [24, 166, 1, 4],
+      [66, 74, 1, 13],
     ] as const) {
       const p = new Path();
       const H = height;
@@ -124,7 +124,7 @@ export class HeartView {
         ],
         8,
       );
-      ribbon(g, p.xs, p.ys, 2.1, 0.7).fill({ color: wood });
+      ribbon(g, p.xs, p.ys, 2.9, 0.9).fill({ color: wood });
       line(g, p.xs.slice(2, -1), p.ys.slice(2, -1), -0.9, -0.3).stroke({
         width: 0.8,
         color: rim,

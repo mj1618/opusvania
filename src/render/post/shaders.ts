@@ -3,7 +3,7 @@
  * and never redeclare Pixi's own filter uniforms (their precision would have to match the vertex
  * shader's): everything they need from them arrives as a varying.
  */
-import { MAX_LIGHTS } from './config';
+import { GOAL_LIGHTS, MAX_LIGHTS } from './config';
 
 /** For passes into our own targets: the quad fills the whole target whatever its size. */
 export const PASS_VERT = /* glsl */ `
@@ -225,6 +225,8 @@ uniform vec4 uHero;       // x, y (view heights), pocket radius, darkening
 uniform vec4 uHero2;      // inner radius left untouched, desaturation, luminance ceiling, pull toward it
 uniform vec4 uDeep;       // toe: luminance it ends at, extra exponent; spark: amount, whiteness of the core
 uniform vec4 uRich;       // rgb: tint multiplied into darks and mid-tones, a: their saturation
+uniform vec4 uGoal[${GOAL_LIGHTS}];  // the goal's lights (lit lanterns, heart): x, y, radius (view heights), strength 0..1
+uniform vec4 uGoalLook;   // how much the lit-surface caps rise under them, how much the pocket lets go, extra light-colour tint, unused
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -268,7 +270,20 @@ void main(void) {
   vec2 hd = cv - (uHero.xy - vec2(0.5 * uGrain.z, 0.5));
   float h2 = dot(hd, hd);
   float nearHero = exp(-h2 / (uHero.z * uHero.z));
-  float pocket = nearHero * (1.0 - exp(-h2 / (uHero2.x * uHero2.x)));
+  // The lights she has lit: how strongly one of them reaches this pixel, and whether this is its
+  // very core (the flame). Beside a lit lantern the pocket lets go and the flame may spark.
+  float goalHere = 0.0;
+  float goalCore = 0.0;
+  for (int i = 0; i < ${GOAL_LIGHTS}; i++) {
+    vec4 gl = uGoal[i];
+    if (gl.w <= 0.0) continue;
+    vec2 gd = (cv - (gl.xy - vec2(0.5 * uGrain.z, 0.5))) / gl.z;
+    float gq = clamp(1.0 - dot(gd, gd), 0.0, 1.0);
+    goalHere += gq * gq * gl.w;
+    goalCore = max(goalCore, smoothstep(0.9, 0.97, gq) * gl.w);
+  }
+  goalHere = min(goalHere, 1.0);
+  float pocket = nearHero * (1.0 - exp(-h2 / (uHero2.x * uHero2.x))) * (1.0 - uGoalLook.y * goalHere);
   // Bright surroundings are pulled down hardest (toward the ceiling in uHero2.z); dark ones are
   // left nearly alone, so the pocket never reads as a grey disc.
   float pl = dot(col, LUMA);
@@ -298,7 +313,7 @@ void main(void) {
   if (lm > 0.002) {
     // The tint fades in with the light: at full strength right from the light's rim it drew the
     // rim as a hard-edged disc against anything bright behind (the sky opening).
-    vec3 tint = mix(vec3(1.0), lit.rgb / lm, uLit.x * smoothstep(0.0, 0.25, lm));
+    vec3 tint = mix(vec3(1.0), lit.rgb / lm, min(uLit.x + uGoalLook.z * goalHere, 1.0) * smoothstep(0.0, 0.25, lm));
     float g = lm * uMix.y * (1.0 - smoothstep(0.55, 1.0, ll));
     // A floor under the gain so near-black soil still shows a little of the pool.
     vec3 lc = (col + vec3(uLightBack.z) * min(g, 1.0)) * (1.0 + g) * tint;
@@ -307,11 +322,14 @@ void main(void) {
     lc = max(lc, 0.0);
     // Knee on luminance, applied to the whole colour.
     sl = dot(lc, LUMA);
-    float knee = uProtect.y * 0.6;
-    if (sl > knee) lc *= (knee + (uProtect.y - knee) * (1.0 - exp(-(sl - knee) / (uProtect.y - knee)))) / sl;
+    // (under a lit lantern or the heart the caps sit higher: their pool is the light of the place)
+    float capUp = 1.0 + uGoalLook.x * goalHere;
+    float cap = uProtect.y * capUp;
+    float knee = cap * 0.6;
+    if (sl > knee) lc *= (knee + (cap - knee) * (1.0 - exp(-(sl - knee) / (cap - knee)))) / sl;
     // No channel may clip: scale back instead, which keeps the hue.
     float top = max(lc.r, max(lc.g, lc.b));
-    if (top > uLit.z) lc *= uLit.z / top;
+    if (top > uLit.z * capUp) lc *= uLit.z * capUp / top;
     lc += lit.rgb * (ll * ll * uLightBack.y);
     col = mix(col, lc, 1.0 - hero);
   }
@@ -373,7 +391,7 @@ void main(void) {
   float ownGlow = max(smx - 0.55, 0.02) * (1.0 + 1.3 * ssat) * (0.4 + 0.6 * (1.0 - ssat));
   float point = smoothstep(0.78, 0.95, smx) * (1.0 - smoothstep(0.3, 0.6, glowHere / ownGlow));
   // Never beside the hero: nothing around her may go pale.
-  col = mix(col, mix(srcHue, vec3(1.0), uDeep.w), point * uDeep.z * (1.0 - hero) * (1.0 - nearHero));
+  col = mix(col, mix(srcHue, vec3(1.0), uDeep.w), point * uDeep.z * (1.0 - hero) * (1.0 - nearHero * (1.0 - min(goalCore, 1.0))));
 
   // Vignette: darker, cooler corners.
   float v = smoothstep(uVignette.x, uVignette.y, sqrt(r2)) * (1.0 - 0.85 * hero);

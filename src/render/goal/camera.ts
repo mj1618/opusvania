@@ -34,6 +34,7 @@ export class GoalCamera {
     events: readonly SimEvent[],
     goal: GoalState,
     frameAlpha: number,
+    grounded: boolean,
     scene: Scene,
     base: CameraView,
   ): void {
@@ -45,7 +46,8 @@ export class GoalCamera {
       const dy = e.y - base.y;
       const d = Math.hypot(dx, dy);
       // Nothing when the heart is in plain view near the middle already.
-      this.amp = Math.min(C.nudge, Math.max(0, (d - 260) * 0.14));
+      // Not while she is in the air: a lean under a jump throws the landing.
+      this.amp = grounded ? Math.min(C.nudge, Math.max(0, (d - 260) * 0.3)) : 0;
       this.dirX = d > 0 ? dx / d : 0;
       this.dirY = d > 0 ? dy / d : 0;
       this.nudgeT = 0;
@@ -57,7 +59,7 @@ export class GoalCamera {
       const t = this.nudgeT / C.seconds;
       if (t >= 1) this.nudgeT = -1;
       else {
-        const k = smooth(0, 0.3, t) * (1 - smooth(0.52, 1, t));
+        const k = smooth(0, 0.34, t) * (1 - smooth(0.55, 1, t));
         nx = this.dirX * this.amp * k;
         ny = this.dirY * this.amp * k;
       }

@@ -1123,6 +1123,8 @@ export function reformPlayer(
   p.attackSeq = old.attackSeq;
   p.hurtSeq = old.hurtSeq;
   p.invuln = P.reformInvulnFrames;
+  // A fade costs: she comes back with part of her health (a lit lantern is where she is made whole).
+  p.hp = Math.max(1, Math.min(p.hpMax, Math.round(P.tuning.health.reformHp)));
   state.player = p;
   const fx = p.x + p.w / 2;
   const fy = p.y + p.h;

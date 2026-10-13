@@ -25,8 +25,8 @@ function climb(s: Sim, script: string) {
 }
 
 describe('the canopy ceiling', () => {
-  it('the grove has one at the top of the scene; scenes without `ceilingY` are open', () => {
-    expect(GROVE.ceilingY).toBe(0);
+  it('the grove has one 420 px over the top of the scene; scenes without `ceilingY` are open', () => {
+    expect(GROVE.ceilingY).toBe(-420);
     const open = newSim(flatScene());
     open.place(2000, 800);
     expect(climb(open, 'J28 .1 J40').top).toBeLessThan(CEIL - 100);
@@ -107,18 +107,35 @@ describe('the canopy ceiling', () => {
     expect(cg.ev.some((e) => e.type === 'glideStart')).toBe(true);
   });
 
-  it('in the grove: from the summit (trunk B) nothing takes the top of her box above the scene', () => {
+  it('in the grove: from the summit (trunk B) a full jump and double jump fit under it, and nothing passes it', () => {
+    const top = GROVE.ceilingY ?? 0;
     for (const script of ['J28 .1 J60', 'R+J28 R1 R+J200', 'L+J20 L1 L+J10 L+X1 L+J200', 'J10 .1 J60']) {
       const s = newSim();
       s.place(3648, 192);
       const r = climb(s, script);
-      expect(r.top, script).toBeGreaterThanOrEqual(0);
+      expect(r.top, script).toBeGreaterThanOrEqual(top);
       expect(r.ev.filter((e) => e.type === 'headBump')).toEqual([]);
     }
-    // A full jump from the highest standing point still has 112 px of rise before the stop.
+    // The summit is the highest standing point: feet 192, box top 112. A jump rises its full 272
+    // there, a double jump its full 192 more: box top at 112 - 464 = -352, still 68 px short of
+    // the canopy, so the ceiling is never felt in the grove (it was at y 0: 112 px of rise).
     const s = newSim();
     s.place(3648, 192);
     expect(feet(s).y - 80).toBe(112);
-    expect(climb(s, 'J40').top).toBe(0);
+    // (A held jump rises a few px over its nominal height: the apex hang.)
+    const one = climb(s, 'J40').top;
+    expect(one).toBeLessThanOrEqual(112 - defaultTuning.shape.jumpHeightPx);
+    expect(one).toBeGreaterThan(112 - defaultTuning.shape.jumpHeightPx - 8);
+    const d = newSim();
+    d.place(3648, 192);
+    const both = climb(d, 'J28 .1 J60').top;
+    expect(both).toBeGreaterThan(
+      112 - defaultTuning.shape.jumpHeightPx - defaultTuning.shape.doubleJumpHeightPx - 16,
+    );
+    expect(both).toBeLessThan(-300);
+    // Twin run in the grove with no ceiling at all: identical (the canopy cuts nothing).
+    const open = newSim({ ...GROVE, ceilingY: -100000 });
+    open.place(3648, 192);
+    expect(climb(open, 'J28 .1 J60').top).toBe(both);
   });
 });

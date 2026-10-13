@@ -151,6 +151,16 @@ export interface PlayerState {
   hangUsed: number;
 }
 
+/** A cluster of dropped glints (see `PickupsState.drops`). */
+export interface GlintDrop {
+  id: number;
+  x: number;
+  y: number;
+  value: number;
+  left: number;
+  timer: number;
+}
+
 /** Collectibles (src/sim/pickups.ts). */
 export interface PickupsState {
   /**
@@ -163,8 +173,19 @@ export interface PickupsState {
    * gathered goes in; kindling a lantern takes its cost out (`spent`).
    */
   count: number;
-  /** Value spent on lanterns so far. `count + spent` = everything gathered this run. */
+  /** Value spent on lanterns so far. `count + spent + lost` = everything gathered this run. */
   spent: number;
+  /** Value lying in dropped clusters (`drops`), still to be picked up again. */
+  lost: number;
+  /**
+   * Clusters of glints she dropped when she faded, oldest first: `id` (1, 2, ...), where it lies
+   * (`x`, `y` = its centre), `value` = what it held, `left` = glints not yet back with her, `timer`
+   * = 0 while it lies there, else frames until the next of them reaches her. Removed when `left`
+   * is 0; kept through fades (a second fade adds another); gone on a restart.
+   */
+  drops: GlintDrop[];
+  /** Clusters dropped so far (the next one's id - 1). */
+  dropSeq: number;
   /** How many pickups have been collected. */
   taken: number;
   /** Index of the last pickup in the current chain (0 = first), and frames left to extend it. */
@@ -300,6 +321,8 @@ export interface EnemyState {
   /** Lampwing: the push away from other lampwings this step, px/f². */
   pushX: number;
   pushY: number;
+  /** Frames left of a calm (a lantern was kindled near it, or the run ended): its touch does nothing meanwhile. */
+  calm: number;
   /** Glints spilled on death still on their way to her, frames to the next, and the gap between them. */
   spill: number;
   spillTimer: number;
@@ -316,6 +339,8 @@ export interface LanternState {
   channel: number;
   /** Lit: frames she has stood at it hurt, toward being made whole (of `tuning.goal.restFrames`). */
   rest: number;
+  /** Frames she has stood still at it carrying too little (it tells her at `tuning.goal.refuseFrames`). */
+  short: number;
   /** It has told her she carries too little; it will not again until she has gone away and come back. */
   refused: boolean;
 }
@@ -338,15 +363,29 @@ export interface GoalState {
    * The ending hold: `frames` since `gather` (it stops at `tuning.goal.holdFrames`), and the run's
    * summary as the `gather` event gave it (all 0 until then).
    */
-  ending: { frames: number; glints: number; time: number; kills: number; hits: number };
+  ending: {
+    frames: number;
+    glints: number;
+    time: number;
+    kills: number;
+    hits: number;
+    /** The tally: what there was to find (`...Total`) against what she found, and how often she faded. */
+    glintsTotal: number;
+    pods: number;
+    podsTotal: number;
+    greats: number;
+    greatsTotal: number;
+    enemiesTotal: number;
+    deaths: number;
+  };
   /** The hold is over (`endHold`): the scene stays calm until the restart. */
   ended: boolean;
-  /** The run so far: the frame of her first input (-1 = none yet) and the hits she has taken. */
-  run: { start: number; hits: number };
+  /** The run so far: the frame of her first input (-1 = none yet), the hits she has taken, the times she faded. */
+  run: { start: number; hits: number; deaths: number };
 }
 
 export interface GameState {
-  version: 12;
+  version: 13;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;
@@ -364,7 +403,11 @@ export function cloneState(s: GameState): GameState {
   return {
     ...s,
     player: { ...s.player },
-    pickups: { ...s.pickups, timers: s.pickups.timers.slice() },
+    pickups: {
+      ...s.pickups,
+      timers: s.pickups.timers.slice(),
+      drops: s.pickups.drops.map((d) => ({ ...d })),
+    },
     pods: {
       hp: s.pods.hp.slice(),
       hitBy: s.pods.hitBy.slice(),

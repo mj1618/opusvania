@@ -239,7 +239,8 @@ describe('thorn slash', () => {
 
   it('running through a pod barely slows her', () => {
     const s = newSim(scene([sit(2500)]));
-    s.run('R38 R+A1 R1');
+    // (R41: the eased start costs 24 px, two and a half frames of running.)
+    s.run('R41 R+A1 R1');
     expect(s.state.pods.burst).toBe(1);
     const x0 = s.state.player.x;
     s.run(`R${PODS.hitstopFrames + 10}`);

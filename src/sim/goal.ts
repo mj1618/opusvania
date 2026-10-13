@@ -14,10 +14,12 @@
  *
  * Runs at the end of every step, after the pickups (so a glint that lands this frame counts).
  */
-import { calmEnemies } from './enemies';
+import { calmEnemies, enemyRules } from './enemies';
 import type { SimEvent } from './events';
 import { ActionBit } from './input';
+import { pickupsWorth } from './pickups';
 import type { Box } from './player/attack';
+import { podsWorth } from './pods';
 import type { Lantern, Scene } from './scene';
 import type { GameState, GoalState, PlayerState } from './state';
 import type { Tuning } from './tuning';
@@ -29,15 +31,29 @@ export function createGoal(scene: Scene): GoalState {
       litFrame: -1,
       channel: 0,
       rest: 0,
+      short: 0,
       refused: false,
     })),
     lit: 0,
     restAt: -1,
     heart: { awake: false, frames: 0, hinted: false },
     gathered: false,
-    ending: { frames: 0, glints: 0, time: 0, kills: 0, hits: 0 },
+    ending: {
+      frames: 0,
+      glints: 0,
+      time: 0,
+      kills: 0,
+      hits: 0,
+      glintsTotal: 0,
+      pods: 0,
+      podsTotal: 0,
+      greats: 0,
+      greatsTotal: 0,
+      enemiesTotal: 0,
+      deaths: 0,
+    },
     ended: false,
-    run: { start: -1, hits: 0 },
+    run: { start: -1, hits: 0, deaths: 0 },
   };
 }
 
@@ -123,6 +139,7 @@ export function updateGoal(
       hurt = true;
       g.run.hits++;
     } else if (type === 'slash') slashed = true;
+    else if (type === 'fade') g.run.deaths++;
   }
   p.kindling = -1;
   const heart = scene.heart;
@@ -152,10 +169,29 @@ export function updateGoal(
     } else if (control && standsIn(p, b)) {
       g.gathered = true;
       g.ending.frames = 0;
-      g.ending.glints = wallet.count + wallet.spent;
+      g.ending.glints = wallet.count + wallet.spent + wallet.lost;
       g.ending.time = g.run.start < 0 ? 0 : state.frame - g.run.start;
       g.ending.kills = enemiesKilled(state);
       g.ending.hits = g.run.hits;
+      // The tally: what there was to find. Glints: every pickup, every pod, and every creature at
+      // its best (felled by the finisher).
+      let foes = 0;
+      for (const f of scene.enemies ?? []) foes += Math.max(0, Math.round(enemyRules(f.kind).value(t, true)));
+      let greats = 0;
+      let greatsTotal = 0;
+      const picks = scene.pickups ?? [];
+      for (let i = 0; i < picks.length; i++) {
+        if (picks[i]?.kind !== 'great') continue;
+        greatsTotal++;
+        if ((wallet.timers[i] ?? 0) < 0) greats++;
+      }
+      g.ending.glintsTotal = pickupsWorth(scene, t.pickups) + podsWorth(scene, t.pods) + foes;
+      g.ending.pods = state.pods.burst;
+      g.ending.podsTotal = scene.pods?.length ?? 0;
+      g.ending.greats = greats;
+      g.ending.greatsTotal = greatsTotal;
+      g.ending.enemiesTotal = state.enemies.length;
+      g.ending.deaths = g.run.deaths;
       // Nothing of hers is left waiting to fire while she is held.
       p.jumpBuf = 0;
       p.djBuf = 0;
@@ -175,6 +211,13 @@ export function updateGoal(
         kills: g.ending.kills,
         hits: g.ending.hits,
         frames: hold,
+        glintsTotal: g.ending.glintsTotal,
+        pods: g.ending.pods,
+        podsTotal: g.ending.podsTotal,
+        greats: g.ending.greats,
+        greatsTotal: g.ending.greatsTotal,
+        enemiesTotal: g.ending.enemiesTotal,
+        deaths: g.ending.deaths,
       });
     }
   }
@@ -213,6 +256,7 @@ export function updateGoal(
     }
     const calm = at && p.attack === 'none' && !slashed && !g.gathered;
     if (calm && wallet.count >= need) {
+      s.short = 0;
       const of = whole(G.channelFrames, 1);
       s.channel++;
       p.kindling = i;
@@ -226,6 +270,7 @@ export function updateGoal(
       s.lit = true;
       s.litFrame = state.frame;
       s.channel = 0;
+      s.short = 0;
       s.refused = false;
       p.kindling = -1;
       g.lit++;
@@ -258,9 +303,20 @@ export function updateGoal(
       events.push({ type: 'lanternCancel', id: l.id, x: l.x, y: l.y, frames: s.channel, reason });
       s.channel = 0;
     }
-    if (at && !g.gathered && wallet.count < need && !s.refused) {
+    // Too little: it says so once she has stood still at it a moment (a run through says nothing).
+    const waiting = at && !g.gathered && wallet.count < need && Math.abs(p.vx) < G.refuseStillVx;
+    s.short = waiting ? s.short + 1 : 0;
+    if (waiting && !s.refused && s.short >= whole(G.refuseFrames, 1)) {
       s.refused = true;
-      events.push({ type: 'lanternRefuse', id: l.id, x: l.x, y: l.y, have: wallet.count, need });
+      events.push({
+        type: 'lanternRefuse',
+        id: l.id,
+        x: l.x,
+        y: l.y,
+        have: wallet.count,
+        need,
+        show: whole(G.refuseShowFrames, 0),
+      });
     }
   }
 }

@@ -14,7 +14,7 @@
  * All light is quads in three `GlintBatch` meshes (the glints' shader: spark, flare), plus one more
  * between the heart's rear and front straps, so a shut bud leaks light only through its seams.
  */
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { lanternCost } from '../../sim/goal';
 import { tuning } from '../../sim/tuning';
 import { vesperLink } from '../character/vesper/link';
@@ -25,7 +25,9 @@ import { wind } from '../scene/lib/look';
 import { GOAL, MAX_QUADS } from './config';
 import { HeartView } from './heart';
 import { LanternView, Moth } from './lantern';
+import { LanternLife } from './life';
 import { priceArc, smooth, streamCount } from './logic';
+import { SurfaceLight } from './surface';
 
 export interface GoalLayers {
   /** Additive light behind the playfield. */
@@ -39,6 +41,12 @@ export interface GoalLayers {
 interface Lamp {
   view: LanternView;
   moth: Moth;
+  /** What it wakes once lit: flowers at its foot, moths round the glass, a warm lift of the mist behind. */
+  life: LanternLife;
+  circlers: Moth[];
+  mist: Sprite;
+  /** 0..1: how alive the place is (eased after it catches). */
+  alive: number;
   cost: number;
   seed: number;
   lit: boolean;
@@ -113,6 +121,33 @@ interface Wave {
 }
 
 const TAU = Math.PI * 2;
+
+let glowTex: Texture | null = null;
+/** A soft round glow (white, alpha falling off like a Gaussian): tinted, stretched and added. */
+function glow(tint: number): Sprite {
+  if (!glowTex) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    if (g) {
+      const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      for (let i = 0; i <= 16; i++) {
+        const r = i / 16;
+        grad.addColorStop(r, `rgba(255,255,255,${(Math.exp(-r * r * 3.4) * (1 - r) ** 0.6).toFixed(4)})`);
+      }
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 128, 128);
+    }
+    glowTex = Texture.from(c);
+  }
+  const s = new Sprite(glowTex);
+  s.anchor.set(0.5);
+  s.blendMode = 'add';
+  s.tint = tint;
+  s.alpha = 0;
+  s.visible = false;
+  return s;
+}
 const LONG_AGO = 1e6;
 
 export class GoalRenderer {
@@ -122,6 +157,8 @@ export class GoalRenderer {
   private readonly lamps: Lamp[] = [];
   private readonly heart: HeartView | null = null;
   private readonly lightBatch = new GlintBatch(48);
+  /** Warm light on ground, plants and trunks (masked to the playfield). */
+  private readonly surface = new SurfaceLight(16);
   private readonly back = new GlintBatch(MAX_QUADS);
   private readonly core = new GlintBatch(8);
   private readonly front = new GlintBatch(MAX_QUADS);
@@ -150,6 +187,9 @@ export class GoalRenderer {
   private readonly price = new Container();
   private readonly stars: Array<{ root: Container; fill: Graphics }> = [];
   private priceT = -1;
+  private priceLamp = -1;
+  private priceHold = 0;
+  private readonly starPop: number[] = [];
   private priceHave = 0;
   private priceNeed = 0;
   private priceSpots: Array<[number, number]> = [];
@@ -160,8 +200,22 @@ export class GoalRenderer {
   private level = 0;
   private readonly wickT: number[] = [];
   private heartMote = 0;
+  private groveMote = 0;
+  /** Glints on their way back to her from a cluster she dropped: seconds until each lands, where from. */
+  private readonly returns: Array<{ t: number; x: number; y: number; seed: number }> = [];
+  /** 0..1: how much of the bud's seams glow while it sleeps (a third per lantern), eased. */
+  private seam = 0;
+  /** The heart's own glows: its cold breath asleep, its golden light awake, the pillar up the hollow
+   * tree, the warmth in the mist round it, the glow on the horizon from far away, and (the ending)
+   * the light under the canopy and along the mist band. */
+  private readonly glows: Record<
+    'cold' | 'gold' | 'pillar' | 'shaft' | 'mist' | 'horizon' | 'canopy' | 'band',
+    Sprite
+  > | null = null;
   /** The ending: seconds since `gather` (-1 = not yet), fireflies still to lift out of her. */
   private endT = -1;
+  /** 0..1: the ending has changed the whole grove (pools widen, the mist warms); stays. */
+  private grove = 0;
   private answered = false;
   private rnd = 0x9e3779b9;
   private readonly tmp = [0, 0, 0, 0];
@@ -174,12 +228,12 @@ export class GoalRenderer {
   ) {
     const scene = ctx.scene;
     const list = scene.lanterns ?? [];
+    if (list.length > 0) layers.back.addChild(this.surface.mesh);
     for (let i = 0; i < list.length; i++) {
       const l = list[i];
       if (!l) continue;
       const view = new LanternView(l.x, l.y, i);
       const moth = new Moth(((i * 0.618) % 1) + 0.1);
-      layers.back.addChild(view.root, moth.root);
       // The top it stands on: the swell of light along the ground stops at its edges.
       let edgeL = l.x - 400;
       let edgeR = l.x + 400;
@@ -188,9 +242,20 @@ export class GoalRenderer {
         edgeL = Math.max(edgeL, r.x);
         edgeR = Math.min(edgeR, r.x + r.w);
       }
+      const life = new LanternLife(l.x, l.y, edgeL, edgeR, (i * 0.618 + 0.27) % 1);
+      const circlers = [new Moth(0.31 + i * 0.2), new Moth(0.77 + i * 0.13)];
+      const mist = glow(GOAL.lantern.mist.color);
+      mist.position.set(view.ox, l.y - GOAL.lantern.mist.lift);
+      layers.light.addChild(mist);
+      layers.back.addChild(life.root, view.root, moth.root);
+      for (const c of circlers) layers.back.addChild(c.root);
       this.lamps.push({
         view,
         moth,
+        life,
+        circlers,
+        mist,
+        alive: 0,
         cost: lanternCost(l, tuning.goal),
         seed: (i * 0.618 + 0.27) % 1,
         lit: false,
@@ -221,7 +286,20 @@ export class GoalRenderer {
     if (scene.heart && list.length > 0) {
       const h = new HeartView(scene.heart.x, scene.heart.y);
       this.heart = h;
-      layers.back.addChild(h.back, this.core.mesh, h.front);
+      const G = GOAL.heart.glow;
+      const g = {
+        cold: glow(G.cold),
+        gold: glow(G.gold),
+        pillar: glow(G.pillar),
+        shaft: glow(G.gold),
+        mist: glow(G.mist),
+        horizon: glow(G.pillar),
+        canopy: glow(G.mist),
+        band: glow(G.band),
+      };
+      this.glows = g;
+      layers.light.addChild(g.mist, g.band, g.canopy, g.pillar, g.shaft, g.horizon);
+      layers.back.addChild(h.back, g.cold, this.core.mesh, h.front, g.gold);
       for (let i = 0; i < h.wicks.length; i++) this.wickT.push(LONG_AGO);
     }
     for (let i = 0; i < 40; i++) this.flows.push({ on: false, lamp: 0, age: 0, dur: 1, seed: 0, out: false });
@@ -479,7 +557,7 @@ export class GoalRenderer {
           s.heat = 0.05;
           s.wait = 0.08 + k * 0.07;
         }
-        this.showPrice(lamp, e.have, e.need);
+        this.openPrice(i, e.need, Math.max(GOAL.refuse.hold, (e.show ?? 0) / 60));
       } else if (e.type === 'lanternRest') {
         const lamp = this.lamps[this.lampOf(e.x, e.y)];
         if (lamp) lamp.beat = 1;
@@ -499,6 +577,10 @@ export class GoalRenderer {
           s.e = 0.6;
           s.heat = 0.5;
         }
+      } else if (e.type === 'dropWake') {
+        // She touched what she dropped: its glints come back one by one, each landing on its `pickup`.
+        for (let k = 0; k < Math.min(60, e.value); k++)
+          this.returns.push({ t: (e.frames + k * e.stagger) / 60, x: e.x, y: e.y, seed: this.rand() });
       } else if (e.type === 'heartSleep') {
         this.sleepT = 0;
       } else if (e.type === 'heartWake') {
@@ -560,6 +642,9 @@ export class GoalRenderer {
 
       vesperLink.beads[i * 2] = v.beadX;
       vesperLink.beads[i * 2 + 1] = v.beadY;
+      // Standing at it with too little, the price shows again, softly, for as long as she stays.
+      if (!s.lit && s.short > 0 && s.refused && wallet < lamp.cost) this.openPrice(i, lamp.cost, 0.5);
+
       // She is near: a dormant ember answers.
       const dx = this.chestX - v.x;
       const dy = this.chestY - (v.y - 50);
@@ -576,6 +661,25 @@ export class GoalRenderer {
       // Her moth comes to the lantern she re-forms at.
       lamp.moth.want(s.lit && goal.restAt === i && lamp.catchT > 1.1);
       lamp.moth.update(dt, clock, v.topX, v.topY);
+
+      // The place comes alive round a lit one: flowers open, the creeper leafs out, moths come to
+      // the glass, the mist behind takes a little warmth. A dormant one only glints, coldly.
+      const aliveT = s.lit ? lamp.catchT : -1;
+      lamp.alive += ((s.lit ? 1 : 0) - lamp.alive) * Math.min(1, dt * (lamp.catchT > 1e5 ? 60 : 0.9));
+      lamp.life.update(dt, clock, aliveT);
+      v.life = smooth(0.15, 0.9, lamp.alive);
+      const tw = (clock * 0.23 + lamp.seed) % 1;
+      v.glint = s.lit ? 0 : (0.16 + 0.84 * Math.sin(Math.PI * smooth(0, 0.22, tw)) ** 2) * (1 - lamp.charge);
+      for (let k = 0; k < lamp.circlers.length; k++) {
+        const m = lamp.circlers[k] as Moth;
+        m.orbit(clock, v.beadX, v.beadY - 6, 30 + k * 16, smooth(0.5 + k * 0.25, 0.9 + k * 0.1, lamp.alive));
+      }
+      const M = L.mist;
+      const ma = M.alpha * lamp.alive * (1 + 0.5 * lamp.pulse + 0.6 * this.grove);
+      lamp.mist.visible = ma > 0.003;
+      lamp.mist.alpha = ma;
+      lamp.mist.width = M.width * (1 + 0.35 * this.grove);
+      lamp.mist.height = M.height * (1 + 0.2 * this.grove);
 
       // Motes rise from a lit one.
       if (s.lit && this.inView(cam, v.x, v.y, 300)) {
@@ -643,7 +747,11 @@ export class GoalRenderer {
         if (this.sleepT > 2.6 || this.awake) this.sleepT = -1;
       }
       bloom = this.endT >= 0 ? smooth(0.1, 2.6, this.endT) : 0;
-      const open = this.awake ? H.awake + (H.bloom - H.awake) * bloom : 0;
+      this.grove = this.endT >= 0 ? smooth(0.5, 3.4, this.endT) : 0;
+      // Asleep, every lantern kindled anywhere parts the bud a little and lights a third of its seams.
+      const share = goal.lanterns.length > 0 ? goal.lit / goal.lanterns.length : 0;
+      this.seam += ((this.awake ? 0 : share) - this.seam) * Math.min(1, dt * (jump ? 60 : 1.2));
+      const open = this.awake ? H.awake + (H.bloom - H.awake) * bloom : H.ajar * share;
       h.update(dt, clock, open, jump, H.lift * smooth(0.5, 3.2, this.endT));
       if (jump) this.level = this.awake ? 1 : 0;
       // One wick per lantern.
@@ -684,6 +792,83 @@ export class GoalRenderer {
           s.sway = 13;
           s.e = 0.6;
           s.heat = 0.5;
+        }
+      }
+      // Its glows.
+      const g = this.glows;
+      if (g) {
+        const lvl = this.level;
+        const E = GOAL.ending;
+        const gr = this.grove;
+        const slow = 0.92 + 0.08 * Math.sin(clock * 0.7);
+        const put = (sp: Sprite, x: number, y: number, w: number, hgt: number, a: number): void => {
+          sp.visible = a > 0.003;
+          if (!sp.visible) return;
+          sp.position.set(x, y);
+          sp.width = w;
+          sp.height = hgt;
+          sp.alpha = a;
+        };
+        // Asleep: a slow cold breath in the bud.
+        const cold = (1 - lvl) * (0.5 + 0.5 * Math.sin(clock * 0.8)) ** 1.5;
+        put(g.cold, h.coreX, h.y - 44, 150, 190, H.glow.coldAlpha * cold * (1 - 0.6 * share));
+        // Awake: a flower of golden light, a pillar up the hollow tree, warmth in the mist.
+        put(
+          g.gold,
+          h.coreX,
+          h.coreY,
+          230 * (1 + 0.3 * bloom),
+          230 * (1 + 0.3 * bloom),
+          H.glow.goldAlpha * lvl * slow,
+        );
+        const rise = smooth(0.2, 2.4, this.wakeT);
+        const ph = H.glow.pillarHeight * rise;
+        put(
+          g.pillar,
+          h.x,
+          h.y - ph * 0.4,
+          H.glow.pillarWidth * (1 + 0.5 * gr),
+          ph,
+          H.glow.pillarAlpha * lvl * slow * (1 + E.pillar * gr),
+        );
+        put(
+          g.shaft,
+          h.x,
+          h.y - ph * 0.4,
+          H.glow.pillarWidth * 0.3,
+          ph,
+          H.glow.pillarAlpha * 1.3 * lvl * slow * (1 + E.pillar * gr),
+        );
+        put(g.mist, h.x, h.y - 140, 1500 * (1 + 0.5 * gr), 760, H.glow.mistAlpha * lvl * (1 + gr));
+        // From far away: a glow low at the edge of the view nearest the heart.
+        const hw = VIEW_W / 2 / cam.zoom;
+        const hh = VIEW_H / 2 / cam.zoom;
+        const ex = Math.min(cam.x + hw - 150, Math.max(cam.x - hw + 150, h.x));
+        const ey = Math.min(cam.y + hh - 220, Math.max(cam.y - hh + 260, h.y - 160));
+        const far = smooth(260, 900, Math.hypot(h.x - ex, h.y - 160 - ey));
+        put(g.horizon, ex, ey, 1150, 820, H.glow.horizonAlpha * lvl * far * slow);
+        // The ending: light under the canopy and all along the mist band.
+        put(g.canopy, h.x - 260, h.y - 730, 3400, 420, E.canopy * gr * slow);
+        put(g.band, cam.x, h.y - 40, 3000 / cam.zoom, 460, E.band * gr);
+      }
+      // The ending: fireflies rise all over the view, and go on rising.
+      if (this.endT >= 0.8) {
+        this.groveMote -= dt * GOAL.ending.motes * this.grove;
+        if (this.groveMote <= 0) {
+          this.groveMote += 0.6 + 0.8 * this.rand();
+          const sp = this.spark(
+            0,
+            cam.x + (this.rand() - 0.5) * VIEW_W,
+            cam.y + 60 + this.rand() * 330,
+            (this.rand() - 0.5) * 16,
+            -22 - 34 * this.rand(),
+            4 + 3 * this.rand(),
+            1.7 + 1.1 * this.rand(),
+          );
+          sp.g = -4;
+          sp.sway = 16;
+          sp.e = 0.6;
+          sp.heat = 0.5;
         }
       }
       // The ending: every lit lantern answers.
@@ -777,7 +962,8 @@ export class GoalRenderer {
     }
   }
 
-  private showPrice(lamp: Lamp, have: number, need: number): void {
+  /** Shows what lantern `i` asks: `need` stars round its glass (how many are filled follows her wallet). */
+  private openPrice(i: number, need: number, seconds: number): void {
     const R = GOAL.refuse;
     const n = Math.max(0, Math.min(24, need));
     while (this.stars.length < n) {
@@ -787,24 +973,29 @@ export class GoalRenderer {
       const q = h * 0.2;
       const pts = [0, -h, q, -q, w, 0, q, q, 0, h, -q, q, -w, 0, -q, -q];
       const outline = new Graphics();
-      outline.poly(pts, true).stroke({ width: 0.9, color: 0xe8c890, alpha: 0.62, join: 'round' });
+      outline
+        .poly(pts, true)
+        .fill({ color: 0x0a1218, alpha: 0.45 })
+        .stroke({ width: 1.1, color: 0xf0d4a0, alpha: 0.8, join: 'round' });
       const fill = new Graphics();
-      fill.poly(pts, true).fill({ color: 0xffd98c }).stroke({ width: 0.8, color: 0xfff2d0, alpha: 0.8 });
+      fill.poly(pts, true).fill({ color: 0xffd98c }).stroke({ width: 0.9, color: 0xfff2d0, alpha: 0.85 });
       root.addChild(outline, fill);
       this.price.addChild(root);
       this.stars.push({ root, fill });
+      this.starPop.push(0);
     }
+    this.priceHold = Math.max(this.priceHold, seconds);
+    if (this.priceLamp === i && this.priceT >= 0 && this.priceNeed === n) return;
     this.priceSpots = priceArc(n, R.radius, R.pitch, R.span);
-    this.priceHave = Math.max(0, Math.min(n, have));
     this.priceNeed = n;
+    this.priceLamp = i;
     this.priceT = 0;
-    this.price.position.set(lamp.view.x + lamp.view.style.side * 6, lamp.view.y - R.lift);
-    for (let i = 0; i < this.stars.length; i++) {
-      const st = this.stars[i] as { root: Container; fill: Graphics };
-      const spot = this.priceSpots[i];
+    this.priceHave = -1;
+    for (let k = 0; k < this.stars.length; k++) {
+      const st = this.stars[k] as { root: Container; fill: Graphics };
+      const spot = this.priceSpots[k];
       st.root.visible = spot !== undefined;
       if (spot) st.root.position.set(spot[0], spot[1]);
-      st.fill.visible = i < this.priceHave;
     }
   }
 
@@ -818,6 +1009,78 @@ export class GoalRenderer {
     f.begin();
     b.uniform[3] = 1;
     f.uniform[3] = 1;
+
+    // --- What a lit lantern does to its place: a pool of warm light on the surfaces round it,
+    // flowers with a light in each, fireflies, and the dormant glints near it stirring.
+    const sf = this.surface;
+    sf.begin();
+    const P = L.pool;
+    const picks = sim.scene.pickups ?? [];
+    for (let i = 0; i < this.lamps.length; i++) {
+      const lamp = this.lamps[i] as Lamp;
+      const v = lamp.view;
+      const lit = lamp.lit ? smooth(0, 0.7, lamp.catchT) : lamp.charge * 0.25;
+      if (lit <= 0.003) continue;
+      const breath = 1 + 0.04 * Math.sin((clock * TAU) / L.breath + lamp.seed * TAU);
+      const wide = 1 + 0.35 * this.grove + 0.12 * lamp.pulse;
+      sf.light(
+        cam,
+        v.beadX,
+        v.y - 70,
+        P.rx * wide,
+        P.ry * wide,
+        P.gain * lit * breath * (1 + 0.5 * lamp.pulse),
+        0,
+      );
+      // A tighter, stronger heart to the pool under the glass.
+      sf.light(cam, v.beadX, v.y - 40, P.rx * 0.42, P.ry * 0.5, P.gain * 0.35 * lit * breath, 0.3);
+      if (!this.inView(cam, v.x, v.y - 60, 420)) continue;
+      const al = lamp.alive;
+      const fl = lamp.life.lights;
+      for (let k = 0; k < fl.length; k += 3) {
+        const o = fl[k + 2] as number;
+        if (o <= 0.02) continue;
+        const tw = 0.85 + 0.15 * Math.sin(clock * 2.1 + k);
+        b.quad(K_SPARK, fl[k] as number, fl[k + 1] as number, 3.4, 3.4, 0.7 * o * tw, 0, 0.7);
+        b.quad(K_FLARE, fl[k] as number, fl[k + 1] as number, 12, 12, 0.22 * o * tw, 0, 0);
+      }
+      // Fireflies: slow loops round the lantern, each on its own clock.
+      for (let k = 0; k < L.flies; k++) {
+        const ph = (k * 0.618 + lamp.seed) % 1;
+        const t = clock * (0.16 + 0.1 * ph) + ph * 40;
+        const fx = v.beadX + Math.sin(t * 1.3 + ph * 9) * (70 + 90 * ph) + Math.sin(t * 3.1) * 14;
+        const fy = v.y - 50 - 44 * ph + Math.sin(t * 1.9 + ph * 5) * 34 + Math.cos(t * 2.7) * 9;
+        const blink = Math.max(0, Math.sin(t * 5.3 + ph * 20)) ** 0.6;
+        const a = smooth(0.3 + 0.1 * k, 1, al) * (0.35 + 0.65 * blink);
+        b.quad(K_SPARK, fx, fy, 2.8, 2.8, 0.75 * a, 0, 0.55);
+        b.quad(K_FLARE, fx, fy, 9, 9, 0.16 * a, 0, 0);
+      }
+      // The glints that wait near it stir (theirs to draw; this is only its light on them).
+      for (let k = 0; k < picks.length; k++) {
+        const pk = picks[k];
+        if (!pk || sim.pickups.timers[k] !== 0) continue;
+        const d = Math.hypot(pk.x - v.beadX, pk.y - v.beadY);
+        if (d > L.wakePx) continue;
+        const a =
+          al * (1 - smooth(L.wakePx * 0.6, L.wakePx, d)) * (0.6 + 0.4 * Math.sin(clock * 1.7 + k * 2.3));
+        b.quad(K_FLARE, pk.x, pk.y, 15, 15, 0.3 * a, 0, 0.35);
+        b.quad(K_SPARK, pk.x, pk.y, 3.2, 3.2, 0.4 * a, 0, 0.9);
+      }
+    }
+    // The swell as a lamp catches runs over the surfaces too.
+    if (this.swellT >= 0) {
+      const k = Math.min(1, this.swellT / L.swell.seconds);
+      const r = L.swell.from + (L.swell.to - L.swell.from) * (1 - (1 - k) ** 2.2);
+      sf.light(
+        cam,
+        this.swell.x,
+        this.swell.y - 30,
+        r,
+        r * 0.8,
+        1.5 * smooth(0, 0.1, k) * (1 - k) ** 1.6,
+        0.4,
+      );
+    }
 
     // --- The lanterns' own light.
     for (let i = 0; i < this.lamps.length; i++) {
@@ -923,40 +1186,85 @@ export class GoalRenderer {
       }
     }
 
-    // --- The price a lantern asks.
-    if (this.priceT >= 0) {
+    // --- The price a lantern asks: a crown of stars round its glass, filled as far as her wallet
+    // goes. It stays while she stands there short, and for a few seconds after.
+    const priceLamp = this.lamps[this.priceLamp];
+    if (this.priceT >= 0 && priceLamp) {
       const R = GOAL.refuse;
       this.priceT += dt;
-      const t = this.priceT;
-      const gone = smooth(R.hold, R.hold + R.fadeOut, t);
-      if (gone >= 1) {
+      this.priceHold -= dt;
+      if (priceLamp.lit || this.priceHold <= -R.fadeOut) {
         this.priceT = -1;
+        this.priceHold = 0;
         this.price.visible = false;
       } else {
+        const t = this.priceT;
+        const gone = smooth(0, R.fadeOut, -this.priceHold);
+        const have = Math.max(0, Math.min(this.priceNeed, sim.pickups.count));
+        // A glint gathered while it shows fills the next star.
+        if (this.priceHave >= 0) for (let i = this.priceHave; i < have; i++) this.starPop[i] = 1;
+        this.priceHave = have;
         this.price.visible = true;
+        this.price.position.set(priceLamp.view.beadX, priceLamp.view.beadY - 5);
         for (let i = 0; i < this.priceNeed; i++) {
           const st = this.stars[i];
           const spot = this.priceSpots[i];
           if (!st || !spot) continue;
-          const inn = smooth(0, 0.2, t - 0.12 - i * R.step);
+          const inn = smooth(0, 0.22, t - 0.1 - i * R.step);
           const a = inn * (1 - gone);
+          const pop = (this.starPop[i] as number) * Math.exp(-dt * 6);
+          this.starPop[i] = pop;
+          const filled = i < have;
+          st.fill.visible = filled;
           st.root.alpha = a;
-          const have = i < this.priceHave;
-          st.root.scale.set(have ? 1 + 0.5 * (1 - inn) : 0.8 + 0.2 * inn);
-          st.root.y = spot[1] - 5 * gone;
-          if (have)
+          st.root.scale.set((filled ? 1 + 0.45 * (1 - inn) : 0.82 + 0.18 * inn) * (1 + 0.6 * pop));
+          if (filled)
             f.quad(
               K_SPARK,
               this.price.x + spot[0],
-              this.price.y + spot[1] - 5 * gone,
-              5.5,
-              5.5,
-              0.42 * a,
+              this.price.y + spot[1],
+              7,
+              7,
+              (0.4 + 0.8 * pop) * a,
               0,
-              0.3,
+              0.3 + 0.5 * pop,
             );
         }
       }
+    }
+
+    // --- What she dropped when she faded: a knot of glints hovering where she fell, under a thin
+    // thread of light that can be seen from across the screen.
+    const drops = sim.pickups.drops ?? [];
+    for (const d of drops) {
+      if (d.left <= 0 || !this.inView(cam, d.x, d.y, 300)) continue;
+      const bob = Math.sin(clock * 1.4 + d.id) * 3;
+      const n = Math.min(7, d.left);
+      b.quad(K_FLARE, d.x, d.y - 170, 8, 190, 0.75 + 0.15 * Math.sin(clock * 2 + d.id), 0, 0.3);
+      b.quad(K_FLARE, d.x, d.y + bob, 36, 36, 0.5, 0, 0.3);
+      for (let k = 0; k < n; k++) {
+        const a = clock * (0.9 + 0.13 * k) + k * 2.4 + d.id;
+        const r = 5 + 3.2 * k;
+        const tw = 0.7 + 0.3 * Math.sin(clock * 3.3 + k * 1.9);
+        b.quad(K_SPARK, d.x + Math.cos(a) * r, d.y + bob + Math.sin(a) * r * 0.6, 4.6, 4.6, tw, 0, 0.85);
+      }
+    }
+    for (let i = this.returns.length - 1; i >= 0; i--) {
+      const r = this.returns[i] as { t: number; x: number; y: number; seed: number };
+      r.t -= dt;
+      if (r.t <= 0) {
+        this.returns.splice(i, 1);
+        continue;
+      }
+      const fly = 0.32;
+      if (r.t > fly) continue;
+      const u = 1 - r.t / fly;
+      const k = u * u;
+      const side = (r.seed - 0.5) * 60 * Math.sin(Math.PI * u);
+      const x = r.x + (this.chestX - r.x) * k + side;
+      const y = r.y + (this.chestY - r.y) * k - 24 * Math.sin(Math.PI * u);
+      f.quad(K_SPARK, x, y, 3.8, 3.8, 0.95, 0, 0.85);
+      f.quad(K_FLARE, x, y, 11, 11, 0.25, 0, 0);
     }
 
     // --- Sparks and motes.
@@ -1011,7 +1319,21 @@ export class GoalRenderer {
         const dull = this.sleepT >= 0 ? Math.sin(Math.PI * Math.min(1, this.sleepT / 2.2)) ** 1.5 : 0;
         const breath = 1 + 0.07 * Math.sin(clock * 1.5);
         const gain = H.coreGain + (H.coreBloom - H.coreGain) * bloom;
-        const e = lvl * gain * breath + 0.7 * dull;
+        const seam = this.seam * (0.85 + 0.15 * Math.sin(clock * 1.1));
+        const e = lvl * gain * breath + 0.7 * dull + 0.55 * seam;
+        if (seam > 0.01) c.quad(K_FLARE, h.coreX, h.coreY - 6, 40, 52, 0.75 * seam, 0, 0.1);
+        if (seam > 0.01) b.quad(K_FLARE, h.coreX, h.coreY - 12, 30, 46, 0.42 * seam, 0, 0.2);
+        // Its light on the shrine and the ground: a little per lantern while it sleeps, a pool awake.
+        sf.light(cam, h.x, h.y - 90, 190, 170, 0.5 * seam, 0.6);
+        sf.light(
+          cam,
+          h.x,
+          h.y - 130,
+          620 * (1 + 0.5 * this.grove),
+          500 * (1 + 0.3 * this.grove),
+          H.pool * lvl * breath,
+          0.7,
+        );
         // Through the seams of the shut bud.
         if (dull > 0.01) b.quad(K_FLARE, h.coreX, h.coreY - 4, 34, 40, 0.3 * dull, 0, 0);
         const size = H.core * (0.8 + 0.2 * lvl + 0.25 * bloom);
@@ -1072,10 +1394,12 @@ export class GoalRenderer {
       const W = H.wave;
       const R = this.wakeT * W.speed;
       if (this.awake && R < W.reach + W.width * 2) {
-        const fade = (1 - smooth(W.reach * 0.55, W.reach, R)) * smooth(0, 300, R);
+        const fade = (1 - smooth(W.reach * 0.9, W.reach, R)) * smooth(0, 300, R);
         for (const dir of [-1, 1]) {
           const x = h.x + dir * R;
           if (Math.abs(x - cam.x) > VIEW_W / 2 / cam.zoom + W.width) continue;
+          // Over every surface in its way, so it cannot be missed.
+          sf.light(cam, x, cam.y, W.width, 900, W.surface * fade, 0.6);
           lb.quad(K_FLARE, x, h.y - 330, W.width, W.height, W.gain * fade, 0, 0);
           lb.quad(
             K_FLARE,
@@ -1099,27 +1423,16 @@ export class GoalRenderer {
       // in the forest wake.
       if (this.endT >= 0) {
         const E = this.endT;
-        const N = GOAL.ending;
-        const slow = 0.88 + 0.12 * Math.sin(clock * 0.6);
-        for (let j = 0; j < 6; j++) {
-          const a = smooth(0.4 + j * 0.34, 1.5 + j * 0.34, E);
-          if (a <= 0) continue;
-          lb.quad(
-            K_FLARE,
-            h.x + Math.sin(j * 1.9) * 26,
-            h.y - 120 - j * 140,
-            190 + j * 16,
-            200,
-            N.column * a * slow * (1 - j * 0.08),
-            0,
-            0,
-          );
-        }
-        for (const m of [-3, -2, -1, 1, 2, 3]) {
-          const a = smooth(1.7 + Math.abs(m) * 0.42, 3.1 + Math.abs(m) * 0.42, E);
-          if (a <= 0) continue;
-          lb.quad(K_FLARE, h.x + m * 320, h.y - 700 + Math.abs(m) * 14, 380, 130, N.canopy * a * slow, 0, 0);
-        }
+        // Warmth on every surface in view, widest at the heart.
+        sf.light(
+          cam,
+          cam.x,
+          h.y - 120,
+          1700 / cam.zoom,
+          900 / cam.zoom,
+          GOAL.ending.surface * this.grove,
+          0.5,
+        );
         const list = sim.scene.pickups ?? [];
         const reach = 620 * (E - 0.7);
         for (let i = 0; i < list.length; i++) {
@@ -1129,10 +1442,13 @@ export class GoalRenderer {
           const a = smooth(0, 380, reach - d);
           if (a <= 0) continue;
           const tw = 0.7 + 0.3 * Math.sin(clock * 2.2 + i * 1.7);
-          b.quad(K_FLARE, pk.x, pk.y, 17, 17, 0.26 * a * tw, 0, 0.3);
+          b.quad(K_FLARE, pk.x, pk.y, 19, 19, 0.36 * a * tw, 0, 0.4);
+          // They wake and give off motes that drift up.
+          if (this.rand() < dt * 0.9 * a) this.rise(pk.x, pk.y - 4, 0.7, 4);
         }
       }
     }
+    sf.end();
     b.end(clock);
     f.end(clock);
     c.end(clock);

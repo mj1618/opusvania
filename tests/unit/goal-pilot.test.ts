@@ -20,9 +20,10 @@ import { feet, hopOnto, newSim, type Sim, wallClimb } from './helpers';
  * The route: pod on the spawn ground -> the spawn line -> the moth-stone lantern (refused: 9 of 12)
  * -> the pool -> back to kindle it -> over the pool -> the burrback and the big pod beyond it ->
  * the mid rise (burrback, pod) -> under the trunks (great glint) -> the wall-jump shaft -> trunk A's
- * top -> trunk B's top, the summit: second lantern -> jump, double jump, glide right to F7 -> the
- * far ledge when its burrback has its back turned: third lantern, the heart wakes -> down to the
- * shrine on the right rise: the heart.
+ * top -> trunk B's top, the summit: second lantern -> jump, double jump, glide right over the whole
+ * right zone and down onto the far ledge at its lantern (the designed approach: the burrback there
+ * keeps to the far end): third lantern, the heart wakes -> down to the shrine on the right rise:
+ * the heart. If the glide fails, the right route on foot (root, branch, F6, F7) is the fallback.
  */
 const { jump: J, attack: A, left: LEFT, right: RIGHT } = ActionBit;
 const bit = (d: number) => (d > 0 ? RIGHT : d < 0 ? LEFT : 0);
@@ -123,13 +124,17 @@ function lampwingAhead(s: Sim): boolean {
 }
 
 /**
- * From a height: jump, double jump at the top (under the canopy it buys no height, but it is what
- * lets the wings open at the top of the arc), then glide toward `r`, cutting any lampwing that
- * comes at her on the way (she flies on through it as it tumbles). Over `r` the wings close. If
- * she arrives against its side, below its top: a wall jump off it and up onto it. True if she
- * ends standing on it.
+ * From a height: jump, double jump at the top, then glide toward `aimX` on `r`, cutting any
+ * lampwing that comes at her on the way (she flies on through it as it tumbles). Over the spot the
+ * wings close and she drops onto it. If she arrives against `r`'s side, below its top: a wall jump
+ * off it and up onto it. True if she ends standing on it.
  */
-function glideOnto(s: Sim, r: { x: number; y: number; w: number }, maxFrames = 600): boolean {
+function glideOnto(
+  s: Sim,
+  r: { x: number; y: number; w: number },
+  aimX = r.x + r.w / 2,
+  maxFrames = 600,
+): boolean {
   let prev = 0;
   let doubled = false;
   let air = false;
@@ -147,8 +152,9 @@ function glideOnto(s: Sim, r: { x: number; y: number; w: number }, maxFrames = 6
       }
       return hopOnto(s, r, 300) >= 0;
     }
-    const over = at.x > r.x + 30 && at.x < r.x + r.w - 30 && at.y <= r.y;
-    let m = over ? 0 : bit(r.x + r.w / 2 - at.x);
+    // Wings closed in time to come down on the spot: she drifts on a little as she drops.
+    const over = Math.abs(at.x - aimX) < 40 && at.y <= r.y;
+    let m = Math.abs(at.x - aimX) < 12 ? 0 : bit(aimX - at.x);
     if (!air) m |= (prev & J) === 0 ? J : 0;
     else if (!doubled) {
       // Hold through the rise; at the top let go for a frame, then press again.
@@ -245,26 +251,26 @@ function playthrough(t: Tuning = cloneTuning(defaultTuning)) {
   // --- The right: the glide, the far ledge, the heart.
   const f7 = rect('floating', 6);
   const far = rect('ledge', 1);
-  const glided = glideOnto(s, f7);
+  const glided = glideOnto(s, far, (lanterns[2] as { x: number }).x);
   if (!glided) {
-    // Knocked out of the air, or short: the right route on foot.
+    // Knocked out of the air, or short: the right route on foot, and onto the ledge when its
+    // burrback is at the far end.
     for (const r of [rect('root', 0), GROVE.oneWays[1], rect('floating', 5), f7])
       mark('the right route on foot', r !== undefined && hopOnto(s, r, 900) >= 0);
+    mark(
+      'wait for the far ledge to be clear',
+      waitFor(
+        s,
+        () => {
+          const g = foe(s, 'burr-far');
+          return g.mode === 'dead' || (g.facing > 0 && g.x > far.x + 150);
+        },
+        900,
+      ),
+    );
+    mark('onto the far ledge', hopOnto(s, far) >= 0);
   }
-  mark('on F7', feet(s).y === f7.y && s.state.player.grounded);
-  // The far ledge is a burrback's whole patrol: go when it is walking away at the far end.
-  mark(
-    'wait for the far ledge to be clear',
-    waitFor(
-      s,
-      () => {
-        const g = foe(s, 'burr-far');
-        return g.mode === 'dead' || (g.facing > 0 && g.x > far.x + 150);
-      },
-      900,
-    ),
-  );
-  mark('onto the far ledge', hopOnto(s, far) >= 0);
+  mark('on the far ledge', feet(s).y === far.y && s.state.player.grounded);
   kindle(2, 'far');
 
   const heart = GROVE.heart as { x: number; y: number };

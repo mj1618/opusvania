@@ -123,6 +123,11 @@ export interface KindRules {
    * through its own quiet path. Only called while it is alive and not held or staggered.
    */
   calm?(e: EnemyState, info: StepInfo, frames: number): void;
-  /** Her body met it and she was hurt (`dir` = the way she is thrown, -1 / 1). */
+  /** Its touch can do nothing this step, whatever else holds (it is inside a lit lantern's sanctuary). */
+  harmless?(e: EnemyState, info: StepInfo): boolean;
+  /**
+   * Her body met it and she was hurt (`dir` = the way she is thrown, -1 / 1). Also called, without
+   * any hurt, when it meets her while she kindles a lantern: it is turned away.
+   */
   touched?(e: EnemyState, info: StepInfo, dir: number): void;
 }

@@ -116,11 +116,17 @@ describe('burrbacks in the grove, piloted', () => {
           step(s.state, 0, s.tuning, s.scene, s.events);
           const e = s.state.enemies[i];
           if (!e) throw new Error('no enemy');
-          const from = e.x + e.w / 2 - dir * 170;
+          // A run-up of 170 px where there is room, 120 where its patrol hugs a wall (burr-far).
           const y = e.y + e.h;
-          const q = newSim();
-          q.place(from, y);
-          const standable = feet(q).x === from && feet(q).y === y && q.state.player.grounded;
+          let from = 0;
+          let standable = false;
+          for (const run of [170, 120]) {
+            from = e.x + e.w / 2 - dir * run;
+            const q = newSim();
+            q.place(from, y);
+            standable = feet(q).x === from && feet(q).y === y && q.state.player.grounded;
+            if (standable) break;
+          }
           if (e.mode !== 'walk' || e.facing !== -dir || !standable) continue;
           s.place(from, y);
           let prev = 0;
@@ -142,7 +148,7 @@ describe('burrbacks in the grove, piloted', () => {
     }
   });
 
-  it('four hits: she fades, re-forms on safe ground with full health, and play continues', () => {
+  it('four hits: she fades, re-forms on safe ground with 2 lights, and play continues', () => {
     const s = newSim();
     // Safe ground first: the far side of the pool from burr-path, then over the pool to meet it.
     s.place(1400, 1280);
@@ -175,7 +181,7 @@ describe('burrbacks in the grove, piloted', () => {
     if (!reform) throw new Error('never re-formed');
     const at = { x: reform.x, y: reform.y };
     const p = s.state.player;
-    expect([p.hp, p.grounded, p.faded, p.stagger]).toEqual([H.max, true, 0, 0]);
+    expect([p.hp, p.grounded, p.faded, p.stagger]).toEqual([H.reformHp, true, 0, 0]);
     // (She has taken one step since: the held direction counts again at once.)
     expect(Math.abs(feet(s).x - reform.x)).toBeLessThanOrEqual(10);
     expect(feet(s).y).toBe(reform.y);

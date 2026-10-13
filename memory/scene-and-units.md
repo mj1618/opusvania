@@ -14,7 +14,7 @@
   that need device pixels use `ctx.viewScale()`. Camera and player are interpolated between sim frames.
 
 ## The scene: `content/scene/grove.json`
-`{id, width: 5760, height: 1600, spawn: {x, y}, ceilingY?: 0, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}],
+`{id, width: 5760, height: 1600, spawn: {x, y}, ceilingY?: -420, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}],
 pickups: [{id, kind: glint|great, x, y}], pods: [{id, x, y, mount: sit|hang, hp?: 1-3}],
 enemies: [{id, kind: burrback, x, y (feet centre), facing: -1|1} | {id, kind: lampwing, x, y (home: box centre, in open
 air), facing, radius?}], lanterns: [{id, x, y (foot, on solid ground), cost?}], heart: {x, y (on solid ground)}}`
@@ -22,7 +22,7 @@ air), facing, radius?}], lanterns: [{id, x, y (foot, on solid ground), cost?}], 
 validated by Zod in `src/scene/index.ts` (exports `GROVE`), typed in `src/sim/scene.ts`. Tags are for
 artists (`ground | pool | ledge | trunk | floating | root | branch`); the sim ignores them, except that
 `pool` is never safe ground to re-form on. The left, right and bottom scene edges are solid; the top
-has a soft ceiling at `ceilingY` (the canopy: the top of her box never rises above y = 0). One-ways block only a falling body; Down+Jump
+has a soft ceiling at `ceilingY` (the canopy: the top of her box never rises above it; it may be above the scene top). One-ways block only a falling body; Down+Jump
 drops through. Nothing is lethal; burrbacks and lampwings hurt (enemies.md).
 
 ```
@@ -74,7 +74,36 @@ overlay are outside it. World layers are authored
 in world px and line up with the playfield when the camera centre is at `layers.anchor` (scene centre
 x, the camera's lowest resting y); elsewhere they scroll at `parallax` x camera speed. `layers.visible(name,
 cam)` = the on-screen part in layer coordinates; `layers.coverage(name)` = the most the follow camera can
-show (draw at least that). Zoom scales every world layer about the view centre.
+show (draw at least that), which includes the camera's headroom ABOVE the scene top (below). far.ts and mid.ts
+build from it and fill it; foreground.ts and air.ts size themselves from the scene and happen to cover it.
+Zoom scales every world layer about the view centre.
+
+## Camera (`src/render/camera/`, knobs in `tuning.ts`, tests in `tests/unit/camera.test.ts`)
+- `index.ts` is the deterministic follow camera, stepped once per sim frame. Render-side offsets are added on
+  top in `stage.ts` and never touch its state: `kick.ts` (a blow), `goal/camera.ts` (heart wake lean, ending
+  zoom), `reform.ts` (the re-form pan). `__game.cam().follow` is the follow view without them.
+- **Headroom**: the view's top may go to `viewTop(scene)` = `ceilingY - headroom` (120), i.e. y -540 for the
+  grove's ceiling of -420 (view centre y 0). On the summit (feet 192) she stands at 68% of the view height;
+  at the very top of a double jump her box is 120 px under the top edge. The same function feeds
+  `layers.coverage`, so moving `ceilingY` moves both. Nothing but background, foreground and air is up there.
+- The vertical spring rests at the clamp (`place`), so the view answers at once when she drops from the top.
+- **Vertical rules**, in order: a real fall (`vy > fallFollowVy` AND feet `fallBelow` under the resting line:
+  coming down from a jump is not one, it used to dip the view at every landing) leads below; wall slide or
+  feet outside the window retarget; a landing retargets only outside the landing band (`landUp` 136 above /
+  `landDown` 64 below the line) or after `settleFrames` on the ground, so hops between islands of about the
+  same height do not bob the view (before the headroom the top clamp hid all of this on the high routes).
+- **Glide**: look-ahead grows by `glide.extraX` (she ends ~200 px behind the view centre in travel direction)
+  and the target leads `lookDown` below her feet, downward only. Measured: the spring's lag eats ~90 px of
+  it at her sink rate, so 240 gives ~150 on screen. The look-down runs out with the glide share after
+  landing, which keeps a chain of glides on one line.
+- **Standing at a lantern / the heart** (`rest`): after 24 still frames within 260 x 150 px the view goes half
+  way toward it (max 130) and 56 up. A wider reach (420) pulled the view off the spawn toward the moth-stone.
+- **Fade / re-form** (`reform.ts`, `dip.ts`): the follow camera holds while `faded > 0`; on `reform` the
+  follow state snaps as before and `ReformShot` adds (old view - new view) as an offset eased to zero in
+  0.6-0.9 s (smootherstep), at most `panCap` 2400 px (further = the rest is cut under a full dip). The dark
+  dip (a soft vignette sprite over the post-processed picture, under the HUD) comes on in the last 0.3 s of
+  the fade and lifts by the end of the pan. Under 200 px: a 0.45 s ease, no dip. `load()` / R (a new state
+  object) = cut + dip lifting over 0.5 s; a teleport clears pan and dip so captures are never darkened.
 
 ## Who owns what
 | path | owner |

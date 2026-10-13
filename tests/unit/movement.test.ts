@@ -87,7 +87,8 @@ describe('movement controller', () => {
     const s = newSim(scene);
     s.place(2080, 500);
     // The edge is at 2100: the body (40 wide) leaves it when its left side passes.
-    const ev = s.run('R6 R+J20');
+    // (R9: the run eases up to speed over 6 frames, so she is 24 px later than an instant start.)
+    const ev = s.run('R9 R+J20');
     expect(types(ev)).toEqual(expect.arrayContaining(['fall', 'jump:coyote']));
   });
 

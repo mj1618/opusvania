@@ -22,7 +22,7 @@ import {
   Texture,
 } from 'pixi.js';
 import { heroMatteTexture, MASK_H, MASK_W, playfieldMaskTexture } from '../scene/lib/fx-mask';
-import { BLOOM_LEVELS, LIGHT_TARGET, MAX_LIGHTS } from './config';
+import { BLOOM_LEVELS, GOAL_LIGHTS, LIGHT_TARGET, MAX_LIGHTS } from './config';
 import {
   COMPOSITE_FRAG,
   DOWN_FRAG,
@@ -75,6 +75,8 @@ export class PostFilter extends Filter {
     uHero2: Vec;
     uDeep: Vec;
     uRich: Vec;
+    uGoal: Vec;
+    uGoalLook: Vec;
   };
   readonly prefilterU: { uTap: Vec; uCurve: Vec; uSaturation: number; uBoost: number; uHeroSource: number };
   readonly lightsU: {
@@ -131,6 +133,8 @@ export class PostFilter extends Filter {
           uHero2: { value: new Float32Array([0.06, 0.3, 0, 0]), type: 'vec4<f32>' },
           uDeep: { value: new Float32Array([0.2, 0, 0, 0.6]), type: 'vec4<f32>' },
           uRich: { value: new Float32Array([1, 1, 1, 1]), type: 'vec4<f32>' },
+          uGoal: { value: new Float32Array(GOAL_LIGHTS * 4), type: 'vec4<f32>', size: GOAL_LIGHTS },
+          uGoalLook: { value: new Float32Array([0, 0, 0, 0]), type: 'vec4<f32>' },
         },
       },
       // Render the tree at the canvas's own resolution and multisampling: nothing goes soft.

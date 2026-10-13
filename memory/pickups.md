@@ -6,7 +6,7 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 `src/scene/index.ts` (unique ids, inside the scene, not inside a solid).
 
 ## Sim (`src/sim/pickups.ts`, numbers in `tuning.pickups`)
-- State: `state.pickups = {timers[], count, spent, taken, combo, comboTimer, gate}`; `timers[i]` belongs to
+- State: `state.pickups = {timers[], count, spent, lost, drops[], dropSeq, taken, combo, comboTimer, gate}`; `timers[i]` belongs to
   `scene.pickups[i]`: 0 waiting, n > 0 collected in n steps, -1 taken.
 - A waiting pickup wakes when it is within `wakePx` (84; great 56) of the nearest point of the body
   box. From then on it is hers: collected exactly `flightFrames` (18; great 54) steps later wherever
@@ -16,11 +16,26 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   moment it goes in, `combo` = 0, 1, 2... through a run less than `comboFrames` (50) apart.
 - **`count` is a wallet** since the lanterns (goal.md): kindling one takes its cost out (`count -= cost`, `spent +=
   cost`), so `count` can go down and `pickup.total` is the wallet at that moment, not a running total. Everything
-  gathered = `count + spent`. `taken` = how many scene pickups were collected (unchanged).
+  gathered = `count + spent + lost`. `taken` = how many scene pickups were collected (unchanged).
 - Restart (`R`, `__game.load()`) makes a new state, so everything is back; `teleport` keeps the count.
 - The sim only decides when; the flight is render. Timing history: 60 px / 20 frames = every pickup
   a long chase from behind; 84 px / 14 = absorbed where it hung, but the flight (9 frames) could not
   be seen; 84 px / 18 (5 notice + 13 flight) = she passes it, it swings in behind and catches up.
+
+## Dropped clusters (the cost of a fade; `dropGlints`, `updateDrops` in `src/sim/pickups.ts`)
+- When she re-forms after a fade, `floor(count x health.fadeDrop)` (a third) leaves her wallet and
+  lies as one cluster where her body lay, settled onto what is under it: `drops.push({id, x, y
+  (centre), value, left, timer: 0})`, `lost += value`, event `glintsDrop {id, x, y, value, wallet}`
+  just before `reform`. Under 3 glints nothing is dropped.
+- It waits (no timeout; kept through later fades, each adds its own; gone on a restart). Her body
+  within `wakePx` (84) of it while she is whole: `dropWake {id, x, y, value, frames: 18, stagger: 3}`,
+  then one `pickup {id: 'drop-<id>', kind: 'glint', value: 1, x, y (the cluster), px, py, combo,
+  total, drop: true}` per glint, the first 18 frames after the touch, the rest 3 apart
+  (`pickups.dropFrames / dropStagger`); `count++`, `lost--` each; the cluster is removed at `left` 0.
+  Once woken it comes wherever she goes (like every pickup).
+- NOT drawn yet. For the renderer: lying clusters from `sim.pickups.drops` (state, so load / jumps
+  just show), the scatter from `glintsDrop` (she is already re-forming elsewhere in that step), the
+  flights like a pod's spill from `left` / `timer` (or the `pickup {drop}` events).
 
 ## Render (`src/render/pickups/`)
 - Layers: `pickupsBack` (under `character`: the buds) and `pickups` (over it, under

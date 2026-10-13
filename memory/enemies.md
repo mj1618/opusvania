@@ -20,7 +20,7 @@ Tests: `tests/unit/enemies.test.ts`, `enemies-pilot.test.ts` (burrback), `lampwi
   the glint spill queue (`spill / spillTimer / spillGap`), contact and its exclusions, the pogo.
 - `EnemyState` is ONE flat record for all kinds (plain JSON; a field a kind does not use keeps its
   start value). `homeX, homeY` = the centre of its box at the start, for every kind. The state
-  version is 12 since the goal (enemies.test pins it).
+  version is 13 (enemies.test pins it).
 - Scene data: `enemies` is a Zod union on `kind`; burrbacks first, lampwings after (the burrback
   grove tests index the first six). `EnemySpawn.y` means feet for a burrback, home centre for a lampwing.
 - No `Math.sin` in the sim: the lampwing's bob is a two-parabola wave (`wave()`), its wander a hash
@@ -36,15 +36,34 @@ wins (the creature is staggered and harmless before contact is tested).
 - Scene data `enemies: [{id, kind: 'burrback', x, y, facing}]`, `x, y` = feet centre. Validated: unique
   id (also against pickups and pods), whole box on one surface, clear of solids, at least 300 px from
   the spawn. Box 52 x 34, 3 hp. `state.enemies[i]` belongs to `scene.enemies[i]`.
-- Walks 1.6 px/f. A step is refused when a solid is in the way (`wall`) or its leading edge would be
-  over nothing (`ledge`): it flips `facing` at once, stands 24 frames (`mode: 'pause'`, `turning`),
-  walks back. Its whole box stays on its surface. No gravity: it cannot fall. One-way branches are
-  floor to it. Enemies do not collide with each other (one per surface in the grove).
+- Walks 1.6 px/f. A step is refused when a solid is in the way (`wall`), its ground ends ahead
+  (`ledge`), a lit lantern's sanctuary is ahead (`lantern`, goal.md) or she is under the edge ahead
+  (`wary`): it flips `facing` at once, stands 24 frames (`mode: 'pause'`, `turning`), walks back. Its
+  whole box stays on its surface. No gravity: it cannot fall. One-way branches are floor to it.
+  Enemies do not collide with each other (one per surface in the grove).
+- **Lips** (`span()` measures its ground every step: walls / scene edges vs drops). Where its ground
+  ends in a drop it turns `lipClear` (96) short of the edge; walls and the scene's edges it walks
+  right up to. A platform too short for that keeps `minPatrol` (48) px of walk, the clearance shared
+  between its lips. Shoved past the turning point (to the brink, `teeter`), it walks back in. Reason:
+  it used to walk to the lip and pause exactly there, so a jump up onto any ledge landed in it (the
+  first hit of every naive run). A careful hop lands 40-75 px in: traced at all six lips, 0 hits
+  in 60 start times each.
+- **Wary**: while she is below it (feet more than 24 px lower) and within 200 px sideways of one of
+  its lips, it will not walk toward that lip inside 320 px of it: facing it, it turns its back
+  (`enemyTurn` cause `wary`); stopped at the other end, it stands (30-frame pauses, no turn) rather
+  than come back; under both lips it stands. So standing in the pool or on F7 clears the landing.
 - Rests mid-walk every 150-330 frames of walking for 20-34 frames (`pause`, `turning` false): an
   integer hash of its id and how many rests it has taken. No RNG, so `state.rng` is untouched.
+  Never within `restLipClear` (120) of a lip: a rest due there is taken once it has walked clear.
 - Flinch: a `land` or `slash` event of hers within 160 px (box to box) while it walks or rests:
   `mode: 'alert'` for 18 frames, then it walks on. At most one per 45 frames after the last ended, so
   mashing next to it does not freeze it. It never turns to her or chases.
+- **Its touch is one hit**: when its touch hurts her (or meets her kindling) it is shoved back from
+  her at 8.5 px/f fading 1 a frame (41 px; stops at walls and the brink), flinches 30 frames (`alert`,
+  `enemyAlert` cause `touch`) and **turns away from her**. With her own 55 px throw they end ~95 px
+  apart with its back to her. Standing still in its patrol she is hit once per round of the patrol
+  (traced in the grove: frames 21, 409, 865; live 128, 753) instead of every 70 frames (the moment
+  her safety ran out, it was still on her). Her knockback (7 / 7) did not need raising.
 - Hit by a slash (once per slash, `hitBy`): loses the step's `power` (1, 1, 2). Held for the same
   hitstop as her (2 / 2 / 3: `enemies.hitstopFrames` + the step's bonus), then `hurt` for 14 frames
   while the shove plays: `knockVx` = the slash's `knockback` (6 / 11 px/f) fading 1 per frame = 21 px
@@ -148,10 +167,18 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
 ## Fade and re-form
 - At 0: `hurt` (hp 0) then `fade`. `faded` 50 frames: no control, the body takes the throw, falls and
   lies there; enemies cannot touch her. Then, at the start of the step after, a fresh player at the
-  last safe ground with full health and 90 frames of `invuln`, same facing, `attackSeq` kept: `reform
-  {x, y, fromX, fromY, hp, hpMax, invuln}` and, right after it, `spawn` (so cameras and springs snap
-  today; a renderer that wants a pan can look for `reform` in the same step).
-- Kept: glints, open pods, dead enemies, lit lanterns. Reset: every living enemy, to its start with full hp.
+  last safe ground with **2 of 4 lights** (`health.reformHp`) and 90 frames of `invuln`, same facing,
+  `attackSeq` kept: `reform {x, y, fromX, fromY, hp, hpMax, invuln}` and, right after it, `spawn`.
+- **A fade costs** (it used to be a better heal than resting: full health, nothing lost). Besides
+  the 2 lights, a third of her wallet (`health.fadeDrop`, rounded down; nothing under 3 glints) is
+  left as a cluster where her body lay (settled onto the ground under it): `glintsDrop` in the
+  re-form step, `pickups.drops` / `lost` (pickups.md). It waits there until she touches it; a second
+  fade adds a second cluster. Chosen: a third, not all (Hollow Knight's shade takes everything: too
+  hard for a gentle scene, and with 12-glint lanterns losing 4 of 12 already means another trip);
+  2 lights, not 1 (one touch from fading again on the walk back would make a death spiral) and not
+  3 (then a fade next to a lit lantern is still the quickest heal). At a lit lantern the 45-frame
+  rest makes her whole: resting is the heal now.
+- Kept: two thirds of her glints (the rest lies in the cluster), open pods, dead enemies, lit lanterns. Reset: every living enemy, to its start with full hp.
 - With a lantern lit she re-forms at the lit lantern she last stood at instead (goal.md), whatever is near it.
 - **Last safe ground** (`player.safeX/safeY`, feet centre): updated every frame once she has been, for
   30 frames in a row, grounded in mode `normal`, in control, with her centre over a solid that is not
@@ -207,14 +234,20 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
   y, frames}`, `reform` (above).
 
 ## Where the burrbacks are (6)
-| id | feet x, y | surface (patrol range) | why |
+| id | feet x, y | surface (its box's range over a minute) | why |
 |---|---|---|---|
-| burr-bank | 200, 1088 | left bank (0-384) | guards the great glint on the bank |
-| burr-path | 2330, 1280 | ground right of the pool (1856-2560) | walks over pod-path-2 (3 hits): deal with it first |
-| burr-rise | 3000, 1152 | mid rise (2560-3200) | by pod-rise |
-| burr-ledge | 3000, 448 | high ledge + trunk A top (2816-3328) | by pod-ledge, the big one |
-| burr-root | 4400, 1280 | between the root and the right rise (4160-4608) | under the right branch and its pod |
-| burr-far | 5620, 448 | far ledge (5472-5760) | guards the great glint at the end of the right route |
+| burr-bank | 200, 1088 | left bank 0-384: **0-288** (wall, lip) | guards the great glint on the bank |
+| burr-path | 2330, 1280 | ground right of the pool 1856-2560: **1952-2560** (lip at the pool, wall) | walks over pod-path-2 (3 hits): deal with it first |
+| burr-rise | 3000, 1152 | mid rise 2560-3200: **2656-3104** (two lips) | by pod-rise |
+| burr-ledge | 3000, 448 | high ledge + trunk A top 2816-3328: **2912-3232** (two lips) | by pod-ledge, the big one |
+| burr-root | 4400, 1280 | between the root and the right rise: **4160-4608** (two walls) | under the right branch and its pod |
+| burr-far | 5620, 448 | far ledge 5472-5760: **5568-5760** (lip, the scene's edge; 5634- once lantern-far is lit) | guards the great glint at the end of the right route |
+
+Landing audit (`tests/unit/burrback-lips.test.ts`: five minutes, with her standing under each lip in
+turn): no burrback box ever enters 1856-1952 (out of the pool), 2560-2656 and 3104-3200 (onto the mid
+rise from either side), 288-384 (onto the bank), 2816-2912 (F5 -> high ledge), 5472-5568 (onto the far
+ledge). The pool's left side has no burrback at all. Not cleared: a full held running jump F7 -> far
+ledge comes down at 5670-5740, where burr-far lives (goal.md).
 
 None on the spawn ground (384-1536: the whole run would be its patrol, the spawn included, and the
 close-up shots start there), none under the trunks (the wall-slide close-ups start at 3456, 1280),

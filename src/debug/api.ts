@@ -203,7 +203,11 @@ export interface GameDebugApi {
       kills: number;
       hits: number;
     };
-    run: { time: number; hits: number; kills: number };
+    run: { time: number; hits: number; kills: number; deaths: number };
+    /** Glints lying in clusters she dropped when she faded (`lost` = their sum), and the sanctuary radii. */
+    lost: number;
+    drops: Array<{ id: number; x: number; y: number; value: number; left: number; timer: number }>;
+    sanctuary: { burrback: number; lampwing: number };
   };
   /** Dynamic lights registered this frame (world px). */
   lights(): PointLight[];
@@ -451,7 +455,7 @@ export function installDebugApi(deps: {
         total: game.scene.lanterns?.length ?? 0,
         wallet: w.count,
         spent: w.spent,
-        gathered: w.count + w.spent,
+        gathered: w.count + w.spent + w.lost,
         restAt: game.scene.lanterns?.[g.restAt]?.id ?? null,
         heart: h ? { x: h.x, y: h.y, box: heartBox(h, G), ...g.heart } : null,
         ending: {
@@ -465,7 +469,11 @@ export function installDebugApi(deps: {
           time: g.run.start < 0 ? 0 : game.state.frame - g.run.start,
           hits: g.run.hits,
           kills,
+          deaths: g.run.deaths,
         },
+        lost: w.lost,
+        drops: w.drops.map((d) => ({ ...d })),
+        sanctuary: { burrback: G.sanctuaryPx, lampwing: G.lampSanctuaryPx },
       };
     },
     lights: () => stage.lights.list.map((l) => ({ ...l })),
@@ -502,6 +510,9 @@ export function installDebugApi(deps: {
         restPoint: g.restAt === i,
       })),
       heart: h ? { box: heartBox(h, G), awake: g.heart.awake, gathered: g.gathered } : null,
+      sanctuary: G.sanctuaryPx,
+      lampSanctuary: G.lampSanctuaryPx,
+      drops: game.state.pickups.drops,
     };
   };
   window.__game = api;

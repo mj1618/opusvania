@@ -28,6 +28,14 @@ export const GOAL = {
     swingK: 46,
     swingC: 3.2,
     sway: 0.1,
+    /** Warm light on the surfaces round a lit one (surface.ts): radii px, strength. */
+    pool: { rx: 400, ry: 300, gain: 1 },
+    /** The lift of the mist behind it (additive, behind the playfield): size px, height above the foot, alpha. */
+    mist: { color: 0xffa050, width: 1000, height: 560, lift: 120, alpha: 0.2 },
+    /** Fireflies that gather round it. */
+    flies: 6,
+    /** A lit lantern wakes the dormant glints within this, px. */
+    wakePx: 380,
     /** Motes that rise from a lit glass: per second. */
     motes: 0.55,
   },
@@ -48,22 +56,40 @@ export const GOAL = {
     rise: 7,
   },
   refuse: {
-    /** Seconds the price stays; stars fade in one after another this far apart. */
-    hold: 1.9,
-    fadeOut: 0.55,
-    step: 0.035,
-    /** The arc of stars over the lantern: radius px, degrees between two stars, widest span. */
-    radius: 64,
-    pitch: 12.5,
-    span: 150,
-    /** Height of the arc's centre above the foot. */
-    lift: 72,
-    star: 5.2,
+    /** Seconds the price stays after a refusal (it also stays while she stands there short), and its fade. */
+    hold: 4,
+    fadeOut: 0.7,
+    /** Stars fade in one after another this far apart, s. */
+    step: 0.03,
+    /** The crown of stars round the glass: radius px, degrees between two stars, widest span; star half-height px. */
+    radius: 52,
+    pitch: 23,
+    span: 262,
+    star: 7.5,
   },
   heart: {
     light: { radius: 380, color: 0xffa858, intensity: 0.62 },
     /** How far the bud stands open: awake, and in full bloom at the ending. */
-    awake: 0.5,
+    awake: 0.78,
+    /** Asleep, the straps part this far once every lantern but the last burns. */
+    ajar: 0.2,
+    /** Its warm light on the shrine and the ground once awake (surface.ts). */
+    pool: 0.85,
+    /** Its glows (tints, alphas; px): cold breath asleep; awake a golden-white flower, a pillar up the hollow tree, warm mist, a glow on the horizon from afar. Golden-white on purpose: the hollow tree's own glow behind it is orange-red. */
+    glow: {
+      cold: 0x6fb0ff,
+      coldAlpha: 0.2,
+      gold: 0xffeac4,
+      goldAlpha: 0.42,
+      pillar: 0xffcc80,
+      pillarAlpha: 0.17,
+      pillarWidth: 460,
+      pillarHeight: 1700,
+      mist: 0xffb262,
+      mistAlpha: 0.16,
+      band: 0xff9c50,
+      horizonAlpha: 0.6,
+    },
     bloom: 1,
     open: [26, 5.2],
     /** The core: quad half-size px, energy awake / in bloom. */
@@ -77,22 +103,27 @@ export const GOAL = {
     /** Motes rising from the open heart: per second. */
     motes: 2.2,
     /** The wave through the forest when it wakes: px/s, half-width and half-height px, brightness. */
-    wave: { speed: 2300, width: 340, height: 640, gain: 0.24, reach: 5200 },
+    wave: { speed: 2300, width: 340, height: 640, gain: 0.28, surface: 1.1, reach: 6200 },
     /** Motes that drift toward it across the view when it wakes: how many, seconds. */
     drift: 34,
     driftSeconds: 3.4,
   },
   ending: {
-    /** Light climbing the hollow tree and spreading under the canopy: brightness of each. */
-    column: 0.3,
-    canopy: 0.13,
+    /** How much brighter the pillar gets; alpha of the light under the canopy and along the mist band. */
+    pillar: 0.45,
+    canopy: 0.16,
+    band: 0.11,
+    /** Warmth on every surface in view (surface.ts). */
+    surface: 0.38,
+    /** Fireflies rising across the view: per second. */
+    motes: 4,
     /** How many of the glints she still carries lift out of her (at most). */
     fireflies: 40,
   },
   camera: {
     /** Wake: the view leans this far (px, at most) toward the heart, for `seconds`. */
-    nudge: 54,
-    seconds: 1.9,
+    nudge: 150,
+    seconds: 2.5,
     /** Ending: zoom gained, drift up px, share of the way toward the heart, over `frames` sim frames. */
     zoom: 0.045,
     rise: 30,

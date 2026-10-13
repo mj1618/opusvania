@@ -30,14 +30,15 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - `lanterns()` → `{lit, total, wallet, spent, list: [{id, x, y (foot), box, cost, state: dormant|channel|lit,
   channel, of, rest, refused, litFrame, restPoint}]}`; `goal()` → `{lit, total, wallet, spent, gathered (= both),
   restAt (lantern id | null), heart: {x, y, box, awake, frames, hinted}, ending: {gathered, held, frames, of,
-  ended, glints, time, kills, hits}, run: {time, hits, kills}}` (goal.md). There is no call to set the wallet:
+  ended, glints, time, kills, hits + the tally}, run: {time, hits, kills, deaths}, lost, drops: [{id, x, y, value,
+  left, timer}], sanctuary: {burrback, lampwing}}` (goal.md). There is no call to set the wallet:
   gather for real (teleport onto great glints: `teleport(3640, 192)`, `(3648, 1280)`, each + `step(70)`).
 - `load()` restarts the scene (glints come back, pods close, enemies return, full health, lanterns dark, the heart asleep, the ending undone). `teleport(x, y)` puts the feet centre there at rest and snaps the camera (health, enemies, the last safe ground and the slash count `attackSeq` are kept).
 - `cam()` → `{x, y, zoom, follow, override}` (view centre, world px). `cam({x, y, zoom})` overrides (any
   subset; missing x/y follow the game camera), `cam({on: 'player', zoom: 4})` tracks the player,
   `cam(null)` releases. Overrides are not clamped to the scene.
 - `tuning()`, `setTuning('run.maxSpeed', 12)` or `setTuning({run: {maxSpeed: 12}})`. `lights()`.
-  `render()` redraws. `debug.hitboxes(on)` (also F2; shows enemy boxes too: magenta, orange while hurt, grey dead, with a tick on the facing side; a lampwing also gets its territory circle, a line to what it is drawn to (yellow while curious / pursuing) and its velocity in white; her box is white while invulnerable; lantern trigger boxes are cyan, gold once lit, with a white bar over them that fills while she kindles or rests and a gold line under the one she re-forms at; the heart's box is dim violet asleep, orange awake, white once reached), `debug.panel(on)` (also backquote).
+  `render()` redraws. `debug.hitboxes(on)` (also F2; shows enemy boxes too: magenta, orange while hurt, grey dead, with a tick on the facing side; a lampwing also gets its territory circle, a line to what it is drawn to (yellow while curious / pursuing) and its velocity in white; her box is white while invulnerable; lantern trigger boxes are cyan, gold once lit, with a white bar over them that fills while she kindles or rests and a gold line under the one she re-forms at, and once lit a gold line along the ground burrbacks keep off and the circle lampwings give up at; a dropped cluster is a yellow diamond; the heart's box is dim violet asleep, orange awake, white once reached), `debug.panel(on)` (also backquote).
 
 ## Gotchas
 - In manual mode the page only redraws on API calls; change something by hand, then call `render()`.

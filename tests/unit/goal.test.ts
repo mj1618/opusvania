@@ -3,6 +3,8 @@ import { parseInputScript } from '../../src/input/script';
 import { GROVE, LANTERN_SPAWN_CLEAR, parseScene } from '../../src/scene/index';
 import type { SimEvent } from '../../src/sim/events';
 import { cloneState, createState, hashState, heartBox, lanternBox, step } from '../../src/sim/index';
+import { resolveParams } from '../../src/sim/player/params';
+import { hurtPlayer } from '../../src/sim/player/player';
 import type { EnemySpawn, Lantern, Pickup, Scene } from '../../src/sim/scene';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { feet, flatScene, newSim, type Sim } from './helpers';
@@ -98,6 +100,7 @@ describe('lanterns: kindling', () => {
       litFrame: s.state.frame - 1,
       channel: 0,
       rest: 0,
+      short: 0,
       refused: false,
     });
     expect(s.state.player.kindling).toBe(-1);
@@ -171,20 +174,59 @@ describe('lanterns: kindling', () => {
     expect(lantern(m).lit).toBe(false);
   });
 
-  it('being hurt breaks it', () => {
-    // A burrback walks into her 20-odd frames in.
-    const s = sim(scene({ enemies: [burr(A_X + 80)] }), 12, A_X);
-    const ev = s.run('.40');
-    expect(of(ev, 'hurt')).toHaveLength(1);
+  it('being hurt breaks it (the reason is `hurt`), in the same step', () => {
+    // Nothing in the grove can hurt her mid-channel any more (see below), so the blow is dealt by hand.
+    const s = sim(scene(), 12, A_X);
+    s.run('.10');
+    hurtPlayer(
+      s.state,
+      resolveParams(s.tuning),
+      1,
+      1,
+      { kind: 'burrback', id: 'x' },
+      A_X,
+      FLOOR - 20,
+      s.events,
+    );
+    const ev = s.run('.1');
     const c = of(ev, 'lanternCancel');
     expect(c).toHaveLength(1);
-    expect(c[0]?.reason).toBe('hurt');
-    expect(c[0]?.frames).toBeGreaterThan(5);
-    expect([lantern(s).lit, s.state.pickups.count]).toEqual([false, 12]);
-    // The cancel is in the same step as the hit.
-    const at = ev.findIndex((e) => e.type === 'hurt');
-    expect(ev.slice(at).some((e) => e.type === 'lanternCancel')).toBe(true);
-    expect(of(ev.slice(ev.findIndex((e) => e.type === 'lanternCancel')), 'lanternChannel')).toHaveLength(0);
+    expect(c[0]).toMatchObject({ reason: 'hurt', frames: 10 });
+    expect([lantern(s).lit, lantern(s).channel, s.state.pickups.count]).toEqual([false, 0, 12]);
+    expect(of(ev, 'lanternChannel')).toHaveLength(0);
+  });
+
+  it('a creature cannot break the channel: its touch is turned away and she is not hurt', () => {
+    // A burrback walks into her 20-odd frames in: it recoils from her and turns round; she kindles.
+    const s = sim(scene({ enemies: [burr(A_X + 80)] }), 12, A_X);
+    const ev = s.run('.40');
+    expect(of(ev, 'hurt')).toHaveLength(0);
+    expect(of(ev, 'lanternCancel')).toHaveLength(0);
+    const flinch = of(ev, 'enemyAlert');
+    expect(flinch).toHaveLength(1);
+    expect(flinch[0]).toMatchObject({ cause: 'touch', facing: 1, dir: -1 });
+    expect(ev.indexOf(flinch[0] as SimEvent)).toBeLessThan(ev.findIndex((e) => e.type === 'lanternKindle'));
+    expect([lantern(s).lit, s.state.player.hp, s.state.pickups.count]).toEqual([true, 4, 0]);
+    // The same for a lampwing that comes down on her: it bounces off and gives up.
+    const wing: EnemySpawn = {
+      id: 'w',
+      kind: 'lampwing',
+      x: A_X + 40,
+      y: FLOOR - 120,
+      facing: -1,
+      radius: 40,
+    };
+    const t = cloneTuning(defaultTuning);
+    t.goal.channelFrames = 400;
+    const w = newSim(scene({ enemies: [wing] }), t);
+    w.state.pickups.count = 12;
+    w.place(A_X, FLOOR);
+    const wev = w.run('.380');
+    expect(of(wev, 'enemyNotice').length).toBeGreaterThan(0);
+    expect(of(wev, 'enemyGiveUp').some((g) => g.cause === 'touch')).toBe(true);
+    expect(of(wev, 'hurt')).toHaveLength(0);
+    expect(of(wev, 'lanternCancel')).toHaveLength(0);
+    expect(w.state.player.hp).toBe(4);
   });
 });
 
@@ -220,6 +262,7 @@ describe('lanterns: the wallet', () => {
       y: FLOOR,
       have: 11,
       need: 12,
+      show: G.refuseShowFrames,
     });
     expect([short.state.pickups.count, short.state.pickups.spent, lantern(short).channel]).toEqual([
       11, 0, 0,
@@ -346,7 +389,9 @@ describe('lanterns: a lit one is a rest point', () => {
     expect(feet(s)).toEqual({ x: A_X, y: FLOOR });
     expect(lantern(s).lit).toBe(true);
     expect([s.state.pickups.count, s.state.pickups.spent, s.state.goal.lit]).toEqual([0, 12, 1]);
-    expect(s.state.player.hp).toBe(4);
+    // A fade costs: 2 of 4 lights (the lantern she stands at will make her whole in 45 frames).
+    expect(s.state.player.hp).toBe(H.reformHp);
+    expect(of(s.run(`.${G.restFrames}`), 'lanternRest')[0]).toMatchObject({ healed: 2, hp: 4 });
   });
 
   it('the lit lantern she last stood at is the one; an unlit one is not; without any, safe ground as before', () => {
@@ -386,6 +431,8 @@ describe('lanterns: a lit one is a rest point', () => {
     const s = sim(scene({ enemies: [burr(A_X + 150, 1)] }), 12, A_X);
     s.run('.30');
     expect(lantern(s).lit).toBe(true);
+    // (Calmed by the kindling it is harmless for 120 frames: wait that out.)
+    s.run(`.${G.calmFrames + 5}`);
     s.state.player.hp = 1;
     const e = s.state.enemies[0];
     if (!e) throw new Error('no enemy');
@@ -700,16 +747,36 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
     s.run(`.${G.holdFrames + 5}`);
     expect([s.state.goal.lit, s.state.goal.ended, s.state.pickups.spent]).toEqual([3, true, 36]);
     const fresh = createState(1, s.tuning, s.scene);
-    expect(fresh.version).toBe(12);
+    expect(fresh.version).toBe(13);
     expect(fresh.goal).toEqual({
-      lanterns: [0, 1, 2].map(() => ({ lit: false, litFrame: -1, channel: 0, rest: 0, refused: false })),
+      lanterns: [0, 1, 2].map(() => ({
+        lit: false,
+        litFrame: -1,
+        channel: 0,
+        rest: 0,
+        short: 0,
+        refused: false,
+      })),
       lit: 0,
       restAt: -1,
       heart: { awake: false, frames: 0, hinted: false },
       gathered: false,
-      ending: { frames: 0, glints: 0, time: 0, kills: 0, hits: 0 },
+      ending: {
+        frames: 0,
+        glints: 0,
+        time: 0,
+        kills: 0,
+        hits: 0,
+        glintsTotal: 0,
+        pods: 0,
+        podsTotal: 0,
+        greats: 0,
+        greatsTotal: 0,
+        enemiesTotal: 0,
+        deaths: 0,
+      },
       ended: false,
-      run: { start: -1, hits: 0 },
+      run: { start: -1, hits: 0, deaths: 0 },
     });
     expect([fresh.pickups.count, fresh.pickups.spent, fresh.player.kindling]).toEqual([0, 0, -1]);
     // A teleport keeps it all.

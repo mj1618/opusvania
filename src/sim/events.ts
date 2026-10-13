@@ -184,10 +184,24 @@ export type SimEvent =
       pod?: boolean;
       /** Set when a dead enemy spilled it: `id` is then the enemy's id, `x`, `y` its body centre. */
       enemy?: boolean;
+      /** Set when it came back from a cluster she dropped: `id` is `drop-<n>`, `x`, `y` where it lay. */
+      drop?: boolean;
     }
+  /**
+   * She faded and left `value` glints behind (a share of her wallet, which now holds `wallet`):
+   * cluster number `id`, lying at `x`, `y` (where her body lay) until she comes back for it. Fires
+   * in the step she re-forms, just before `reform`.
+   */
+  | { type: 'glintsDrop'; id: number; x: number; y: number; value: number; wallet: number }
+  /**
+   * She touched a dropped cluster: its `value` glints are on their way back, the first in `frames`
+   * steps, the rest `stagger` apart, each a `pickup` event with `drop: true` and id `drop-<id>`.
+   */
+  | { type: 'dropWake'; id: number; x: number; y: number; value: number; frames: number; stagger: number }
   /**
    * Enemy events: `x`, `y` = the centre of the enemy's box, `facing` = the way it faces.
    * `enemyAlert`: she landed or slashed close by and it flinches for `frames`; `dir` = the side she is on.
+   * Cause `touch`: its touch just hurt her (or met her while she kindled): it recoils from her, turns away.
    */
   | {
       type: 'enemyAlert';
@@ -197,7 +211,7 @@ export type SimEvent =
       y: number;
       facing: number;
       dir: number;
-      cause: 'land' | 'slash';
+      cause: 'land' | 'slash' | 'touch';
       frames: number;
     }
   /**
@@ -220,7 +234,11 @@ export type SimEvent =
       cause: 'far' | 'lost' | 'tired' | 'dark' | 'touch' | 'calm';
       frames: number;
     }
-  /** It reached a ledge or a wall and turns round: `dir` = its new facing; it stands for `frames` first. */
+  /**
+   * It turns round: `dir` = its new facing; it stands for `frames` first. `ledge`: its ground ends
+   * ahead (it turns well short of a drop); `wall`; `lantern`: a lit lantern's sanctuary is ahead;
+   * `wary`: she is below the edge ahead of it.
+   */
   | {
       type: 'enemyTurn';
       id: string;
@@ -228,7 +246,7 @@ export type SimEvent =
       x: number;
       y: number;
       dir: number;
-      cause: 'ledge' | 'wall';
+      cause: 'ledge' | 'wall' | 'lantern' | 'wary';
       frames: number;
     }
   /**
@@ -318,7 +336,7 @@ export type SimEvent =
    * `lanternRefuse`: she stands at a dormant lantern carrying `have` of the `need` glints it takes.
    * Once per approach (again only after she has gone away and come back).
    */
-  | { type: 'lanternRefuse'; id: string; x: number; y: number; have: number; need: number }
+  | { type: 'lanternRefuse'; id: string; x: number; y: number; have: number; need: number; show: number }
   /**
    * She is kindling it: every frame of the channel but the last, `frames` (1, 2, ...) of `of`. The
    * frame that would be `of` is `lanternKindle` instead.
@@ -377,6 +395,14 @@ export type SimEvent =
       kills: number;
       hits: number;
       frames: number;
+      /** The tally: of all the glints there were (`glintsTotal`), pods, great glints, creatures; and her fades. */
+      glintsTotal: number;
+      pods: number;
+      podsTotal: number;
+      greats: number;
+      greatsTotal: number;
+      enemiesTotal: number;
+      deaths: number;
     }
   /** The ending hold is over (`state.goal.ended`): the scene rests until the restart. `x`, `y` = the heart. */
   | { type: 'endHold'; x: number; y: number };

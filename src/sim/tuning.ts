@@ -72,8 +72,8 @@ export const defaultTuning = {
   },
   run: {
     maxSpeed: 9.6,
-    groundAccel: 3.2,
-    groundDecel: 3.2,
+    groundAccel: 1.6,
+    groundDecel: 2,
     groundTurn: 4.8,
     airAccel: 2.4,
     airDecel: 1.2,
@@ -268,6 +268,9 @@ export const defaultTuning = {
     /** At no health: frames she lies faded before she re-forms, and her invulnerability after. */
     fadeFrames: 50,
     reformInvulnFrames: 90,
+    /** What a fade costs: she re-forms with this much health, and leaves this share of her wallet where she fell. */
+    reformHp: 2,
+    fadeDrop: 1 / 3,
     /** Safe ground: this many frames in a row on solid ground, at least this far from any living enemy. */
     safeFrames: 30,
     safeEnemyPx: 200,
@@ -311,6 +314,23 @@ export const defaultTuning = {
     knockVertical: 0.5,
     /** A shove may leave this much of it hanging over a ledge, never more: it does not fall. */
     teeterPx: 10,
+    /**
+     * Lips. Where its ground ends in a drop it turns `lipClear` short of the edge (walls it walks
+     * right up to), and it never takes a rest within `restLipClear` of one. While she is below it
+     * (her feet more than `waryBelowPx` lower) and within `waryPx` sideways of such an edge, it keeps
+     * away from that edge: it will not walk toward it inside `waryReachPx` of it. A platform too
+     * short for all that keeps at least `minPatrol` px of walk.
+     */
+    lipClear: 96,
+    restLipClear: 120,
+    waryPx: 200,
+    waryBelowPx: 24,
+    waryReachPx: 320,
+    waryStandFrames: 30,
+    minPatrol: 48,
+    /** Its touch hurt her: it is shoved back at this speed (fading by `knockDecay`), flinches this long, and turns away. */
+    touchRecoil: 8.5,
+    touchFlinchFrames: 30,
     /** What its touch costs her. */
     contactDamage: 1,
     /** Glints it spills when it dies, and when the finisher killed it. */
@@ -405,6 +425,9 @@ export const defaultTuning = {
     staggerFrames: 4,
     /** A pickup this soon after the last one continues the combo. */
     comboFrames: 50,
+    /** Glints she dropped when she faded lie in a cluster: touched (within `wakePx`), the first is back after `dropFrames`, the rest `dropStagger` apart. */
+    dropFrames: 18,
+    dropStagger: 3,
   },
   /**
    * The goal (src/sim/goal.ts, memory/goal.md): three moth-lanterns to kindle with gathered light,
@@ -420,7 +443,22 @@ export const defaultTuning = {
     channelFrames: 30,
     /** Standing at a lit one this long makes her whole again. */
     restFrames: 45,
-    /** A lantern she could not afford says so once; again only after she has been this far from it (sideways). */
+    /**
+     * Too little light: a lantern says so once she has stood still at it (|vx| under `refuseStillVx`)
+     * for `refuseFrames` (a run through it says nothing). `refuseShowFrames` rides on the event: how
+     * long the price is worth showing.
+     */
+    refuseFrames: 12,
+    refuseStillVx: 0.5,
+    refuseShowFrames: 150,
+    /**
+     * A lit lantern is a sanctuary. Burrbacks on its ground turn round `sanctuaryPx` short of it
+     * (box edge to its foot) and one caught inside is harmless until it has walked out; lampwings
+     * give up a pursuit `lampSanctuaryPx` from its centre and are harmless inside that.
+     */
+    sanctuaryPx: 110,
+    lampSanctuaryPx: 160,
+    /** It tells her again only after she has been this far from it (sideways). */
     refuseLeavePx: 160,
     /** Kindling calms the creatures within this of the lantern for `calmFrames` (burrbacks stand, lampwings give up). */
     calmPx: 900,

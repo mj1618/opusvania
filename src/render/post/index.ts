@@ -18,10 +18,11 @@
  */
 import { type Container, type Filter, Rectangle } from 'pixi.js';
 import { type CameraView, type RenderContext, VIEW_H, VIEW_W, worldToView } from '../contract';
+import type { PointLight } from '../lights';
 import { fxDebug } from '../scene/lib/fx-debug';
 import { renderHeroMatte, renderPlayfieldMask } from '../scene/lib/fx-mask';
 import { zoneColor, zoneMix, zoneWeights } from '../scene/lib/fx-zones';
-import { MAX_LIGHTS, POST, ZONE_GRADE } from './config';
+import { GOAL_LIGHTS, MAX_LIGHTS, POST, ZONE_GRADE } from './config';
 import { PostFilter } from './pipeline';
 
 export { POST } from './config';
@@ -154,6 +155,9 @@ export class PostStage {
     u.uProtect[0] = lights.heroProtect;
     u.uProtect[1] = lights.cap;
     u.uProtect[2] = lights.heroBloomCut;
+    u.uGoalLook[0] = lights.goalCap;
+    u.uGoalLook[1] = lights.goalPocket;
+    u.uGoalLook[2] = lights.goalTint;
 
     // Lights: world px -> view heights. Only those whose reach touches the view are sent.
     const lu = f.lightsU;
@@ -162,13 +166,41 @@ export class PostStage {
     let hg = 0;
     let hb = 0;
     let hw = 0;
-    for (const l of this.ctx.lights.list) {
-      if (n >= MAX_LIGHTS) break;
+    // Who gets a slot: the ember and the goal's lights always, the others nearest the view first.
+    const reg = this.ctx.lights;
+    const goal = this.goalSet;
+    goal.clear();
+    for (const id of lights.goalIds) {
+      const l = reg.get(id);
+      if (l) goal.add(l);
+    }
+    const ember0 = reg.get('ember');
+    const picked = this.picked;
+    picked.length = 0;
+    for (const l of reg.list) {
       if (l.intensity <= 0 || l.radius <= 0) continue;
       const v = worldToView(camera, l.x, l.y);
-      const r = l.radius * lights.reach * camera.zoom;
-      const far = r * lights.hazeReach;
+      const far = l.radius * lights.reach * camera.zoom * lights.hazeReach;
       if (v.x < -far || v.x > VIEW_W + far || v.y < -far || v.y > VIEW_H + far) continue;
+      const first = l === ember0 || goal.has(l);
+      picked.push({ l, key: first ? -1 : Math.hypot(v.x - VIEW_W / 2, v.y - VIEW_H / 2) });
+    }
+    if (picked.length > MAX_LIGHTS) picked.sort((a, b) => a.key - b.key);
+    u.uGoal.fill(0);
+    let gn = 0;
+    for (const { l: src } of picked) {
+      if (n >= MAX_LIGHTS) break;
+      const isGoal = goal.has(src);
+      const v = worldToView(camera, src.x, src.y);
+      const r = src.radius * lights.reach * camera.zoom;
+      const l = { color: src.color, intensity: src.intensity * (isGoal ? lights.goalBoost : 1) };
+      if (isGoal && gn < GOAL_LIGHTS) {
+        u.uGoal[gn * 4] = v.x / VIEW_H;
+        u.uGoal[gn * 4 + 1] = v.y / VIEW_H;
+        u.uGoal[gn * 4 + 2] = r / VIEW_H;
+        u.uGoal[gn * 4 + 3] = Math.min(1, src.intensity);
+        gn++;
+      }
       const cr = ((l.color >> 16) & 255) / 255;
       const cg = ((l.color >> 8) & 255) / 255;
       const cb = (l.color & 255) / 255;
@@ -224,6 +256,8 @@ export class PostStage {
     }
   }
 
+  private readonly goalSet = new Set<PointLight>();
+  private readonly picked: Array<{ l: PointLight; key: number }> = [];
   private masked: Container[] | null = null;
   private frames = 0;
   private maskAt = { x: Number.NaN, y: 0, zoom: 1 };

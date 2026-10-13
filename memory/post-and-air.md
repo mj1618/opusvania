@@ -199,6 +199,24 @@
 - Right zone richSaturation is 1.38 with a bluer tint: with the mid layer's mist stage it read magenta-pink.
 - Cost at 3840x2160 (M5 Pro): post ~0.8 ms, air ~0.3 ms, foreground ~0.1 ms.
 
+## Round 13: the goal's lights (lanterns, heart)
+- Shaft pools keep ~350 px clear of the lanterns (feet 1448,1280 / 3684,192 / 5524,448) and the heart
+  (5212,1088): beams 2290 -> 2580 (pool 1552 -> 1851) and 5560 -> 5380 (pool 4919 -> 4739). A beam lands
+  ~0.46 px left per px of fall. The pool at 1552 was the "blue blob" behind the moth-stone; the glare walk's
+  worst frame (x 1500) fell from 1.86% to 0.76%. Not moved: the big centre beam (3720) passes ~190 px left
+  of the summit lantern in the air; moving it puts it behind the high ledge again (round 7).
+- `POST.lights.goalIds` (`lantern0..2`, `lanternSwell`, `heart`): looked up by id in the registry, they and the
+  ember always get a slot (the rest by distance from the view centre when more than 12 are in range); their
+  intensity x `goalBoost` 1.8; under them (positions go to the composite as `uGoal`, 4 max) the lit-surface caps
+  rise by `goalCap` 0.22, surfaces take `goalTint` 0.4 more of the light's colour, the hero pocket lets go
+  (`goalPocket` 0.9), and sparks are allowed at the light's core even beside the hero. 2.4 / 0.45 / no tint
+  turned the pale boulder by the first lantern cream-white: pale rock needs tint, not gain.
+- Measured (full-frame mean luma): the heart's wake adds +2..6 as it passes and is not crushed by the toe; in
+  the centre zone near-white touches 1.2% for a few frames; the settled state after the wake is +7 in the
+  left zone (26.8 -> 33.9), +5 right, +3 centre: that lift is the goal layer's, not post.
+- Camera above the scene top (y -20): shafts, motes and the pinned top boughs fill it without edges. The
+  "crossed dark beams" are still there with the foreground hidden: not air or foreground.
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").

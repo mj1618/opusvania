@@ -78,17 +78,20 @@ export const AIR = {
      * The beams, two or three to a screen: where each passes through y = KEY_LIGHT.entryY, its
      * half width across, strength, and reach (1 = touches the ground). A beam that reaches the
      * ground ends in a pool of light there (`pool`: its strength as a point light for the post
-     * stage, which lands it on ground and plants only).
+     * stage, which lands it on ground and plants only). No pool may land within ~350 px of a
+     * moth-lantern (feet 1448,1280 / 3684,192 / 5524,448) or the heart (5212,1088): those spots
+     * are dark until she lights them. A beam lands ~0.46 px left per px it falls (x - 730 on the
+     * 1280 ground, x - 640 on the 1088 ground).
      */
     beams: [
       { x: 1180, halfWidth: 55, strength: 0.45, reach: 0.7, pool: 0 },
       { x: 1560, halfWidth: 75, strength: 0.7, reach: 1, pool: 0.4 },
-      { x: 2290, halfWidth: 90, strength: 0.75, reach: 1, pool: 0.45 },
+      { x: 2580, halfWidth: 90, strength: 0.75, reach: 1, pool: 0.45 },
       { x: 3080, halfWidth: 150, strength: 0.8, reach: 1, pool: 0.4 },
       { x: 3720, halfWidth: 230, strength: 1, reach: 1, pool: 0.5 },
       { x: 4060, halfWidth: 120, strength: 0.6, reach: 0.6, pool: 0 },
       { x: 4800, halfWidth: 110, strength: 0.6, reach: 1, pool: 0.35 },
-      { x: 5560, halfWidth: 130, strength: 0.45, reach: 1, pool: 0.35 },
+      { x: 5380, halfWidth: 130, strength: 0.45, reach: 1, pool: 0.35 },
     ],
     /** The pool of light where a beam lands: radius as a multiple of the beam's half width. */
     poolRadius: 1.6,

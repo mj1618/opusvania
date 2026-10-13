@@ -24,15 +24,17 @@ export interface LanternStyle {
   /** How far the top leans the way it curls, and how far the curl reaches out, px. */
   lean: number;
   over: number;
+  /** The stem stands this far to the glass's side of the sim's point, so she never stands on it, px. */
+  shift: number;
   /** What has grown on it. */
   extra: 'web' | 'fern' | 'moss';
 }
 
 /** By index in `scene.lanterns`: by the moth-stone, on the trunk's crown, on the far ledge. */
 export const STYLES: readonly LanternStyle[] = [
-  { side: 1, height: 104, lean: 2, over: 0, extra: 'web' },
-  { side: 1, height: 92, lean: 7, over: 3, extra: 'fern' },
-  { side: -1, height: 112, lean: 4, over: 1, extra: 'moss' },
+  { side: 1, height: 138, lean: 6, over: 20, shift: 10, extra: 'web' },
+  { side: 1, height: 118, lean: 10, over: 24, shift: 12, extra: 'fern' },
+  { side: -1, height: 146, lean: 8, over: 22, shift: 10, extra: 'moss' },
 ];
 
 const WOOD = [0x0b2026, 0x0b1107, 0x121a36] as const;
@@ -43,7 +45,7 @@ const WEB = 0xc4dade;
 
 /** The seed of glass, relative to the point it hangs from (y down). */
 const THREAD = 5;
-const S = 1.42;
+const S = 1.62;
 const TOP = THREAD;
 const R = 7.6 * S;
 const BELLY = TOP + 15.5 * S;
@@ -168,6 +170,13 @@ export class LanternView {
   private readonly hangY: number;
   private angle = 0;
   private spin = 0;
+  /** Where the stem stands (world x). */
+  readonly ox: number;
+  /** 0..1: a cold glint on the dormant glass, and how far the creeper has leafed out. */
+  glint = 0;
+  life = 0;
+  private readonly glintG = new Graphics();
+  private readonly lifeG = new Graphics();
 
   constructor(
     readonly x: number,
@@ -181,6 +190,8 @@ export class LanternView {
     const rim = tone(WOOD_RIM, w);
     const H = st.height;
     const sx = st.side;
+    const ox = x + st.shift * sx;
+    this.ox = ox;
     const L = st.lean;
     const O = st.lean + st.over;
 
@@ -199,7 +210,7 @@ export class LanternView {
     this.hangY = (ys[hang] as number) + 1;
     let top = 0;
     for (let i = 0; i < ys.length; i++) if ((ys[i] as number) < (ys[top] as number)) top = i;
-    this.topX = x + (xs[top] as number);
+    this.topX = ox + (xs[top] as number);
     this.topY = y + (ys[top] as number) - 2;
 
     const g = new Graphics();
@@ -221,7 +232,7 @@ export class LanternView {
     root(-15, 5, 1, 2);
     g.ellipse(-6 * sx, 1, 8, 4.5).fill({ color: wood });
     // The stem itself.
-    ribbon(g, xs, ys, 4.1, 1.25).fill({ color: wood });
+    ribbon(g, xs, ys, 4.9, 1.4).fill({ color: wood });
     const tip = xs.length - 1;
     g.circle(xs[tip] as number, ys[tip] as number, 2.2).fill({ color: wood });
     // Two knuckles where old shoots were.
@@ -331,15 +342,43 @@ export class LanternView {
     const glass = makeGlass(w, wood, rim);
     this.litG = glass.lit;
     this.glass = glass.root;
+    // A cold glint on the shoulder of the dormant glass: what finds it from a screen away.
+    const gg = this.glintG;
+    const gh = 6.5;
+    gg.poly(
+      [0, -gh, 0.9, -0.9, gh * 0.55, 0, 0.9, 0.9, 0, gh, -0.9, 0.9, -gh * 0.55, 0, -0.9, -0.9],
+      true,
+    ).fill({
+      color: 0xd8f0f6,
+    });
+    gg.position.set(-R * 0.45, BELLY - 7);
+    this.glass.addChild(gg);
     this.glass.position.set(this.hangX, this.hangY);
+    // Lit, the creeper leafs out and flowers.
+    const lf = this.lifeG;
+    for (const [k, dir, len] of [
+      [0.12, 1, 9],
+      [0.38, -1, 10],
+      [0.66, 1, 9],
+      [0.9, -1, 8],
+      [0.99, -1, 7],
+    ] as const) {
+      vine.sample(k, out);
+      const a = -Math.PI / 2 + dir * sx * 0.9;
+      leaf(lf, out[0] as number, out[1] as number, a, len, 3).fill({ color: leafLit, alpha: 0.9 });
+      const bx = (out[0] as number) + Math.cos(a) * (len + 1.5);
+      const by = (out[1] as number) + Math.sin(a) * (len + 1.5);
+      lf.circle(bx, by, 1.7).fill({ color: 0xffd9a0 });
+    }
+    this.root.addChild(lf);
     this.root.addChild(this.glass);
-    this.root.position.set(x, y);
+    this.root.position.set(ox, y);
 
     // --- The way light climbs: stem to the bottom of the curl, down the thread into the belly.
-    for (let i = 1; i <= hang; i++) this.path.add(x + (xs[i] as number), y + (ys[i] as number));
-    this.path.add(x + this.hangX, y + this.hangY + TOP + 3);
-    this.path.add(x + this.hangX, y + this.hangY + CORE);
-    this.beadX = x + this.hangX;
+    for (let i = 1; i <= hang; i++) this.path.add(ox + (xs[i] as number), y + (ys[i] as number));
+    this.path.add(ox + this.hangX, y + this.hangY + TOP + 3);
+    this.path.add(ox + this.hangX, y + this.hangY + CORE);
+    this.beadX = ox + this.hangX;
     this.beadY = y + this.hangY + CORE;
   }
 
@@ -355,10 +394,15 @@ export class LanternView {
     this.spin += (-L.swingK * (this.angle - rest) - L.swingC * this.spin) * step;
     this.angle += this.spin * step;
     this.glass.rotation = this.angle;
-    this.beadX = this.x + this.hangX - Math.sin(this.angle) * CORE;
+    this.beadX = this.ox + this.hangX - Math.sin(this.angle) * CORE;
     this.beadY = this.y + this.hangY + Math.cos(this.angle) * CORE;
     this.litG.alpha = this.warmth;
     this.litG.visible = this.warmth > 0.004;
+    this.glintG.alpha = this.glint;
+    this.glintG.visible = this.glint > 0.01;
+    this.lifeG.alpha = this.life;
+    this.lifeG.visible = this.life > 0.01;
+    this.lifeG.scale.set(1, 0.6 + 0.4 * this.life);
     this.webG.alpha = this.web;
     this.webG.visible = this.web > 0.004;
   }
@@ -407,6 +451,22 @@ export class Moth {
       this.state = now ? 0 : 3;
       this.t = 0;
     }
+  }
+
+  /** One of the moths that circle a lit glass: no state, a tilted loop round (cx, cy). `a` = how present. */
+  orbit(clock: number, cx: number, cy: number, r: number, a: number): void {
+    this.root.visible = a > 0.01;
+    if (a <= 0.01) return;
+    const sp = 1.1 + this.seed * 0.9;
+    const ang = clock * sp + this.seed * 20;
+    const wob = Math.sin(clock * 0.7 + this.seed * 9);
+    this.root.position.set(cx + Math.cos(ang) * r * (1 + 0.25 * wob), cy + Math.sin(ang) * r * 0.5 + wob * 7);
+    this.root.rotation = -Math.sin(ang) * 0.5;
+    this.root.alpha = a * (0.55 + 0.45 * (0.5 + 0.5 * Math.sin(ang)));
+    this.root.scale.set(0.8);
+    const flap = Math.abs(Math.sin(clock * 27 + this.seed * 5));
+    this.left.scale.x = flap;
+    this.right.scale.x = flap;
   }
 
   update(dt: number, clock: number, px: number, py: number): void {

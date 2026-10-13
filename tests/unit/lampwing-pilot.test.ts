@@ -124,6 +124,8 @@ function pogoRun(s: Sim) {
  * a forward cut as she reaches it, on through it as it tumbles, then an up cut from under it.
  * She only ever cuts with her wings open.
  */
+/** The mid-glide kill: she stops rising once her centre is this far above the lampwing's. */
+const LEVEL = 20;
 function glideKill(s: Sim) {
   const id = 'lamp-ledge';
   s.place(3264, 448);
@@ -141,7 +143,11 @@ function glideKill(s: Sim) {
     else if (f < 26) m = LEFT;
     else {
       // Toward it, wings open; closed while she is far off and well above it, to come down to its height.
-      m = (Math.abs(dx) > 6 ? bit(dx) : 0) | (dy > 60 && Math.abs(dx) > 150 && p.vy >= 0 ? 0 : J);
+      // (Under the higher canopy the double jump would carry her far over it: once she is rising
+      // above its height she lets go, which cuts the rise short, then holds again for the wings.)
+      const tooHigh = p.vy < 0 && dy > LEVEL;
+      m =
+        (Math.abs(dx) > 6 ? bit(dx) : 0) | (tooHigh || (dy > 60 && Math.abs(dx) > 150 && p.vy >= 0) ? 0 : J);
       if (p.attackCd === 0 && (prev & A) === 0 && p.gliding) {
         if (dy < -30 && inReach(s, e, 'up', p.facing)) m |= UP | A;
         else if (inReach(s, e, 'fwd', dx < 0 ? -1 : 1, 12)) m |= A;
@@ -337,7 +343,9 @@ describe('lampwings in the grove: audit', () => {
       ['lamp-glade', 660, 960, ''],
       ['lamp-f3', 1370, 704, ''],
       ['lamp-ledge', 2840, 448, ''],
-      ['lamp-glide-1', 3690, 192, 'R+J24 R2 R+J400'],
+      // (The full summit glide now passes far over them. A lazy one, a short hop off the edge
+      // and the wings late, flies through their air.)
+      ['lamp-glide-1', 3690, 192, 'R+J8 R30 R+J400'],
     ] as const) {
       const s = newSim();
       Object.assign(foe(s, 'burr-ledge'), { mode: 'dead', gone: true });
@@ -357,7 +365,7 @@ describe('lampwings in the grove: audit', () => {
         const p = s.state.player;
         expect(p.x).toBeGreaterThanOrEqual(0);
         expect(p.x + p.w).toBeLessThanOrEqual(GROVE.width);
-        expect(p.y).toBeGreaterThanOrEqual(0);
+        expect(p.y).toBeGreaterThanOrEqual(GROVE.ceilingY ?? 0);
         expect(p.y + p.h).toBeLessThanOrEqual(GROVE.height);
       }
       expect(s.state.player.grounded, id).toBe(true);

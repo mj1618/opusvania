@@ -1,7 +1,7 @@
 # Sim / runtime architecture
 
 - `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
-  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 12)) and appends `SimEvent`s. The scene is static and
+  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 13)) and appends `SimEvent`s. The scene is static and
   not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
   (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
 - No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
@@ -63,14 +63,17 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `pickupWake {id, kind, x, y, frames}`, `pickup {id, kind, value, x, y, px, py, combo, total}`: here
   `x, y` = where the pickup hung (not the feet), `px, py` = body-box centre when it goes in. `state.pickups`
   (`timers[]` per `scene.pickups[i]`, `count`, `taken`, `combo`...) and the rule are in pickups.md.
+- `glintsDrop`, `dropWake` and `pickup {drop: true}` (a fade's dropped glints): pickups.md.
+  `enemyTurn` causes `lantern` / `wary`, `enemyAlert` cause `touch`: enemies.md.
 - `lanternRefuse`, `lanternChannel`, `lanternCancel`, `lanternKindle`, `lanternRest`, `heartSleep`,
   `heartWake`, `gather`, `endHold`: goal.md (`x, y` = the lantern's foot / the heart, not her feet).
 
 ## Step order
-`step()`: re-form if a fade just ended (at the lit lantern she last stood at, else the last safe
-ground) → player (slash hits resolved inside, pods and enemies; from `gather` on her input is replaced:
-goal.md) → enemies → contact damage (off from `gather` on) → safe-ground tracking → pod glints →
-pickups → the goal (`updateGoal`: lanterns, heart, ending; last, so a glint landing this frame counts). The scene's `ceilingY` (the
+`step()`: re-form if a fade just ended (a third of the wallet is dropped where she lay; she is back
+at the lit lantern she last stood at, else the last safe ground, with 2 lights) → player (slash hits resolved inside, pods and enemies; from `gather` on her input is replaced:
+goal.md) → enemies → contact damage (none from a calmed creature or one inside a lit lantern's sanctuary; while she
+kindles the touch only turns the creature away; off from `gather` on) → safe-ground tracking → pod glints →
+pickups → dropped clusters → the goal (`updateGoal`: lanterns, heart, ending; last, so a glint landing this frame counts). The scene's `ceilingY` (the
 canopy, movement-controller.md) and the tag `pool` (safe ground, enemies.md) are the only scene
 fields besides the rects that the player code reads; the lampwing reads both too (it stays under the
 canopy and off the water). Enemies are a framework with a module per kind: `src/sim/enemies.ts` +

@@ -15,32 +15,55 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
 - **Kindling**: at a dormant lantern with `count >= cost` and no slash out, `channel` counts up;
   the 30th frame in a row (`channelFrames`) kindles it. No button: the glints have no other use, so
   nothing is lost by it being automatic, and 0.5 s of standing still is deliberate enough (it cannot
-  happen by accident). Broken by leaving / jumping (`leave`), a hit (`hurt`), a slash (`attack`): the
-  count starts over, nothing was spent. A slash blocks it until `slashEnd` (14-20 frames).
+  happen by accident). Broken by leaving / jumping (`leave`) or a slash (`attack`): the count starts
+  over, nothing was spent. A slash blocks it until `slashEnd` (14-20 frames). **Nothing can hurt her
+  while she kindles** (`player.kindling >= 0`): a creature that touches her is turned away as if it
+  had hit (burrback: recoil and turn; lampwing: bounce and give up), she is not hurt, the channel
+  goes on. (`lanternCancel` reason `hurt` still exists for a blow that comes some other way.)
 - **Cost** 12 each (`goal.cost`, or `cost` on the lantern), 36 in all. It comes out of the wallet:
-  `pickups.count -= cost`, `pickups.spent += cost`. `count + spent` = everything gathered;
+  `pickups.count -= cost`, `pickups.spent += cost`. `count + spent + lost` = everything gathered
+  (`lost` = glints lying in clusters she dropped when she faded: pickups.md);
   `pickups.taken` is still the number of scene pickups collected.
-- **Refuse**: at a dormant lantern with too little: `lanternRefuse {have, need}` once, and not again
-  until she has been more than 160 px away sideways (`refuseLeavePx`): a hop on the spot is the same
-  visit. If glints land while she stands there the channel just starts.
+- **Refuse**: at a dormant lantern with too little, once she has **stood still** there (at it, |vx|
+  < 0.5) for 12 frames (`refuseFrames`; `lanterns[i].short` counts them): `lanternRefuse {have, need,
+  show}` once, and not again until she has been more than 160 px away sideways (`refuseLeavePx`): a
+  hop on the spot is the same visit. A run through the box says nothing (the playtest's hold-right
+  run spent the beat at frame 60, already past it). `show` (150, `refuseShowFrames`) = how long the
+  price is worth showing. If glints land while she stands there the channel just starts.
 - **Lit** until the restart (`R`, `__game.load()`); a fade / re-form and a teleport keep it.
 - **Rest point**: standing at a lit lantern while hurt for 45 frames (`restFrames`) makes her whole
   (`lanternRest`), free. 45 > 30 so resting is a longer breath than kindling, and kindling hurt gives
   the rest 45 frames later without moving. Not instant, so it is no shield in a fight.
 - **Re-form point**: `goal.restAt` = the lit lantern she last stood at (kindling sets it). A fade then
-  re-forms her at its foot instead of the last safe ground, **whatever lives next to it** (safe ground
+  re-forms her at its foot (with 2 of 4 lights, a third of her wallet left where she fell: enemies.md;
+  the rest above is then the real heal) instead of the last safe ground, **whatever lives next to it** (safe ground
   falls back to the spawn near a creature's home; a lantern never does: she has 90 frames of safety
   and it is the promise the lantern makes). No lantern lit: safe ground as before.
 - **Calm**: kindling settles every living creature within 900 px (`calmPx`: about half a screen, so
   everything in the picture; its body or its home) for 120 frames: a burrback stands (`pause`), a
   lampwing that has noticed her gives up (`enemyGiveUp` cause `calm`: rests 60, flies home, notices
-  nothing on the way). Staggered and dead ones are left alone. Enough to rest there undisturbed.
-  In the grove: the stone reaches burr-path, lamp-glade, lamp-f3; the crown burr-ledge and
-  lamp-glide-1; the far one burr-far and lamp-glide-2. (At 600 px only burr-far was ever touched.)
+  nothing on the way). **A calmed creature's touch does nothing** (`enemy.calm` = frames left; a
+  staggered one keeps its tumble but is calmed too). In the grove: the stone reaches burr-path,
+  lamp-glade, lamp-f3; the crown burr-ledge and lamp-glide-1; the far one burr-far and lamp-glide-2.
+- **Sanctuary**: a LIT lantern keeps creatures out for good (`src/sim/sanctuary.ts`). A burrback on
+  the lantern's own ground turns round when its box would come within 110 px of the lantern's foot
+  (`sanctuaryPx`; `enemyTurn` cause `lantern`); one caught inside (it was there when the lantern
+  caught, or was shoved in) is harmless until it has walked out. A lampwing gives up a pursuit 160 px
+  from the lantern's centre (`lampSanctuaryPx`; `enemyGiveUp` cause `calm`) and is harmless inside
+  that; it comes, hangs at the edge, goes home, and may come again. Dormant lanterns stay dangerous
+  except during the channel. Why two numbers: her box at the lantern reaches 43 px from the foot, a
+  burrback's keeps 110 away, so standing anywhere "at" it she is 67 px clear; the lampwing's is
+  bigger because it overshoots ~15 px as it brakes. The playtest case (kindle with burr-far on her:
+  kindled 827, hurt 852 and 932, faded) now: no hit at all in 500 frames, burr-far never nearer than
+  5634 (traced live).
 - **The heart** (`scene.heart`, trigger 96 x 96 standing on its point). Asleep: her box touching it
   fires `heartSleep` once per run, nothing else. It wakes in the step the last lantern is kindled
   (`heartWake`, right after that `lanternKindle`). Awake: **standing** in it (grounded, in control)
-  ends the run: `gather` with the summary; gliding through does not.
+  ends the run: `gather` with the summary; gliding through does not. The summary also carries a
+  tally for the ending to reward thoroughness: `glintsTotal` (every pickup + every pod + every
+  creature at its finisher value: 200 in the grove; `glints` can only reach it by killing all 11 with
+  the finisher), `pods` / `podsTotal` (12), `greats` / `greatsTotal` (5), `kills` / `enemiesTotal`
+  (11), `deaths`. The sim does nothing else with leftover glints.
 - **The ending**: from `gather` no input reaches her and nothing can hurt her (contact is off).
   She walks on to within 12 px of the heart's centre and stops (`heartWalkPx`; so the ending always
   finds her in the same place), every creature in the scene is calmed for the hold, lampwings take
@@ -50,7 +73,7 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
 - `run.start` = frame of her first input; `run.hits` counts `hurt` events. Summary: `glints` =
   `count + spent`, `time` = frames since the first input, `kills` = dead enemies, `hits`.
 - A scene without `lanterns` / `heart` has no goal: nothing fires. Lanterns without a heart can be lit.
-- State version 12. Existing play is untouched when the lanterns are ignored (tested: the grove with
+- State version 13. Existing play is untouched when the lanterns are ignored (tested: the grove with
   and without them plays identically).
 
 ## Where they are, and why
@@ -58,7 +81,7 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
 |---|---|---|
 | `lantern-stone` | 1448, 1280 | at the foot of the carved moth-stone, 328 px right of the spawn, on the spawn ground: plain walking. She meets it in the first seconds carrying 3 glints and is refused: that is the tutorial. The spawn line, pool arc and shallows hold 11: one short on purpose, so she has to look a little further (a pod, the bank). |
 | `lantern-crown` | 3684, 192 | on trunk B's top, the highest point: the wall-jump shaft (or the left route), then jump + double jump from trunk A. No enemy near: a pure movement test. The shaft, crown and the two great glints on the way pay for it (19). It is also where the summit glide starts, so a failed glide re-forms her at the take-off. |
-| `lantern-far` | 5524, 448 | on the far ledge, which is the whole patrol of `burr-far`: the guarded one. Reached by the right route (root, branch, F6, F7) or from the summit (glide + a cut or pogo on the two lampwings; the glide alone arrives 52 px under F7's top: a wall kick off its side gets up). Kill the burrback, or go while its back is turned (it is away ~180 frames per round; she needs 30). |
+| `lantern-far` | 5524, 448 | on the far ledge, at the end the **summit glide** arrives over: the designed approach. From the crown lantern: jump, double jump (the canopy is 420 px over the scene's top now, so both fit: feet reach y -277), hold: the glide passes 470 px over the two lampwings (unnoticed) and crosses the ledge's lip 160 px up; close the wings and she drops by the lantern. Held to the end she sails on to the scene's wall and slides down onto the ledge's far end. `burr-far` keeps to that far end (box never left of 5568; 5634 once the lantern is lit). Fallback on foot: root, branch, F6, F7, a short hop (lands at ~5530, clear). **A full held running jump from F7 lands at 5670-5740, the far end, on the burrback (55 of 60 start times): no patrol rule can clear a 288 px ledge of a 350 px jump; it is in view from F7 but it is the one landing the audit does not clear.** |
 | heart | 5212, 1088 | at the shrine on the right rise. With the camera at its right stop the mid layer's hollow tree (layer x 4600, parallax 0.68) stands at playfield x ~5214, so the glowing hollow is straight behind it. From the far ledge: off the left end, off F7, a short walk. |
 
 - One per third of the scene (cool / warm / deep), none within 300 px of the spawn (validated).
@@ -86,12 +109,13 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
 
 ## The full-run pilot (`goal-pilot.test.ts`)
 Closed-loop legs (walk until there, cut until open, wait until clear), real inputs from the spawn:
-pod-path-1 -> spawn line -> lantern-stone (refused, 8-9 of 12) -> the pool -> back, kindle -> leap
-the pool -> burr-path, pod-path-2 -> mid rise, burr-rise, pod-rise -> great glint under trunk B ->
-wall-jump shaft -> trunk A -> summit, kindle -> jump, double jump, glide right, a cut through
-lamp-glide-1, wall kick off F7's side onto F7 -> wait for burr-far to walk off -> far ledge, kindle,
-heart wakes -> down to the rise -> the heart. `gather` at frame 1107 (18.5 s), `endHold` at 1347;
-0 hits. It also finishes with a slower run, a 75-frame channel, lanterns at 16, faster burrbacks.
+pod-path-1 -> spawn line -> lantern-stone (stands 12 frames: refused, 9-10 of 12) -> the pool ->
+back, kindle -> leap the pool -> burr-path, pod-path-2 -> mid rise, burr-rise, pod-rise -> great
+glint under trunk B -> wall-jump shaft -> trunk A -> summit, kindle -> jump, double jump, glide right
+over the whole right zone, wings closed over lantern-far: lands 2 frames' walk from it -> kindle,
+heart wakes -> down to the rise -> the heart. `gather` at frame 1187 (19.8 s), `endHold` at 1427;
+0 hits, 2 kills, 76 gathered (40 left), tally 3 of 12 pods, 3 of 5 great glints. If the glide fails
+it takes the right route on foot and waits for burr-far to be at the far end. It also finishes with a slower run, a 75-frame channel, lanterns at 16, faster burrbacks.
 `GOAL_TRACE=1 npx vitest run tests/unit/goal-pilot.test.ts --disable-console-intercept` prints the legs.
 
 ## What render gets
@@ -100,9 +124,11 @@ State: `state.goal` (`GoalState`, exported from `src/sim/index.ts`; `SimView.goa
 - **Lanterns** `goal.lanterns[i]` for `scene.lanterns[i]` `{id, x, y}` (foot): `lit`, `litFrame` (sim
   frame it caught, -1 dormant: glow-up from `sim.frame - litFrame`; a state jump just shows it lit),
   `channel` (0 = idle, 1..29 of `goal.channelFrames` while she kindles it), `rest` (0..44 of
-  `restFrames` while she stands at it hurt), `refused`. `goal.lit` = how many; `goal.restAt` = index
+  `restFrames` while she stands at it hurt), `short` (0..11: frames she has stood at it without the
+  light for it; the refusal fires at 12), `refused`. `goal.lit` = how many; `goal.restAt` = index
   of her re-form point (-1). `player.kindling` = index she is kindling this frame (-1): her pose.
-  Events (`x, y` = the lantern's foot): `lanternRefuse {id, have, need}`; `lanternChannel {id, frames,
+  Events (`x, y` = the lantern's foot): `lanternRefuse {id, have, need, show}` (only after 12 frames
+  of standing there; `show` = 150 frames the price is worth showing); `lanternChannel {id, frames,
   of}` every channel frame but the last; `lanternCancel {id, frames, reason: leave|hurt|attack}`;
   `lanternKindle {id, cost, wallet, lit, total}`; `lanternRest {id, hp, hpMax, healed}`.
 - **Wallet HUD**: `pickups.count` now goes DOWN on a kindle (the HUD reads it: `hud/index.ts`).
@@ -113,8 +139,17 @@ State: `state.goal` (`GoalState`, exported from `src/sim/index.ts`; `SimView.goa
   `heartSleep {x, y, lit, total}` (once, first touch while asleep), `heartWake {x, y}` (same step as
   the third `lanternKindle`, wherever she is: usually far away, so the camera / a light on the
   horizon has to carry it).
+- **Sanctuary** (for a lasting change round a lit lantern): `tuning.goal.sanctuaryPx` (110, along
+  its ground: burrbacks) and `lampSanctuaryPx` (160, a circle round the centre of its box:
+  lampwings); `enemyTurn` cause `lantern`, `enemyGiveUp` cause `calm` at its edge; `enemy.calm` > 0
+  = calmed (harmless) for that many frames.
+- **Dropped glints** (a fade's cost): `pickups.drops [{id, x, y (centre), value, left, timer}]`,
+  `pickups.lost`; events `glintsDrop {id, x, y, value, wallet}` (same step as `reform`, just before
+  it), `dropWake {id, x, y, value, frames, stagger}`, then `pickup {id: 'drop-<id>', drop: true,
+  value: 1, x, y (the cluster), px, py}` one per glint: pickups.md.
 - **Ending**: `gather {x, y (heart), px, py (her feet), glints, time, lanterns, kills, hits, frames:
-  240}`; then `goal.gathered`, `goal.ending {frames 0..240, glints, time, kills, hits}` (the summary
+  240, glintsTotal, pods, podsTotal, greats, greatsTotal, enemiesTotal, deaths}` (all of it also in
+  `goal.ending`); then `goal.gathered`, `goal.ending {frames 0..240, glints, time, kills, hits}` (the summary
   stays in the state); she walks to the heart's centre in the first ~10 frames (`motion` run, then
   idle); `endHold {x, y}` and `goal.ended` at 240. Enemy events during it: `enemyGiveUp` cause `calm`.
 - Render-only idea from the design: a lit lantern slowly wakes the dormant glints near it (the sim
