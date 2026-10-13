@@ -483,6 +483,8 @@ export class Rig {
         if (!this.wasFree) {
           this.spinS.x = this.spinA;
           this.spinS.v = this.spinVel;
+          // A dash must be level almost at once; a landing can take a moment longer.
+          this.spinS.omega = dash ? 46 : 26;
           this.spinTarget = this.spinA + this.spinVel * 0.06 > Math.PI ? TAU : 0;
         }
         const a0 = this.spinA;
@@ -743,15 +745,15 @@ export class Rig {
     const nod = noise1(clock * 0.19, 29);
     const glance = pulse(clock, 8.3, 3.4, 11, 0.8);
     const gl = glance > 0 ? smoothstep(0, 0.22, glance) * (1 - smoothstep(0.72, 1, glance)) : 0;
-    o[PF] = -1.4 + shift * 1.5;
-    o[PU] = 30.1 + breath * 0.55 - Math.abs(shift) * 0.5;
-    o[LEAN] = -0.03 + breath * 0.012 + sway * 0.025 - shift * 0.02;
-    o[CURL] = 0.05 - breath * 0.035;
+    o[PF] = 0.6 + shift * 0.9;
+    o[PU] = 32.1 + breath * 0.4 - Math.abs(shift) * 0.35;
+    o[LEAN] = 0.015 + breath * 0.012 + sway * 0.02 - shift * 0.015;
+    o[CURL] = -0.03 - breath * 0.035;
     o[HT] = -0.04 + nod * 0.07 + gl * 0.05 - breath * 0.012;
-    o[AF] = 6.2;
-    o[AU] = 0;
-    o[AP] = 0;
-    o[BF] = -3.4;
+    o[AF] = 6.8;
+    o[AU] = 0.3;
+    o[AP] = 0.22;
+    o[BF] = 3.2;
     o[BU] = 0;
     o[BP] = 0;
     o[HAF] = 2.2 + sway * 1.1;

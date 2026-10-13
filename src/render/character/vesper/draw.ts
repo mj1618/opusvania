@@ -71,24 +71,24 @@ function dim(c: RGB, k: number): RGB {
 }
 
 // --- Colours. Plum-charcoal family, pale ash fur, one light: pale gold.
-const WING_TOP = rgb(0x6b5377);
-const WING_MID = rgb(0x3d2f50);
-const WING_LOW = rgb(0x1d1832);
-const BAND = rgb(0xa8958f);
-const TUNIC_TOP = rgb(0x3d3152);
-const TUNIC_LOW = rgb(0x1c1730);
-const SLEEVE = rgb(0x4e4064);
-const SLEEVE_LOW = rgb(0x2b2340);
-const LEG_TOP = rgb(0x30263e);
-const LEG_LOW = rgb(0x191422);
-const FUR = rgb(0x6f6978);
-const FUR_SHADE = rgb(0x423e54);
-const FACE_LIT = rgb(0x7e7684);
-const FACE_SHADE = rgb(0x4a4560);
-const CROWN_TOP = rgb(0x3d314b);
-const CROWN_LOW = rgb(0x17131f);
-const HAND = rgb(0x767078);
-const WRAP = rgb(0x5c5666);
+const WING_TOP = rgb(0x9472a6);
+const WING_MID = rgb(0x624a80);
+const WING_LOW = rgb(0x2e2548);
+const BAND = rgb(0xdccbc0);
+const TUNIC_TOP = rgb(0x574670);
+const TUNIC_LOW = rgb(0x2c2444);
+const SLEEVE = rgb(0x6a5884);
+const SLEEVE_LOW = rgb(0x3e3258);
+const LEG_TOP = rgb(0x463a5c);
+const LEG_LOW = rgb(0x2a2238);
+const FUR = rgb(0xc2bac2);
+const FUR_SHADE = rgb(0x77708e);
+const FACE_LIT = rgb(0xe4dad4);
+const FACE_SHADE = rgb(0xa49cb8);
+const CROWN_TOP = rgb(0x4c3d60);
+const CROWN_LOW = rgb(0x221b30);
+const HAND = rgb(0xd0c6c6);
+const WRAP = rgb(0xaaa2b0);
 const METAL = rgb(0xcdb98a);
 const EYE_RIM = rgb(0xd9820f);
 const GOLD = rgb(0xffdf9c);
@@ -154,10 +154,10 @@ const SH_FUR_LOW: Shade = {
   form: 0.1,
   band: 0.6,
 };
-const SH_RUFF: Shade = { c0: rgb(0x6e6676), c1: rgb(0x4a4460), rim: 0.6, cool: 0.25, form: 0.15, band: 0.6 };
+const SH_RUFF: Shade = { c0: rgb(0xb8b0bc), c1: rgb(0x7c7494), rim: 0.6, cool: 0.25, form: 0.15, band: 0.6 };
 const SH_RUFF_LOW: Shade = {
-  c0: rgb(0x5a5468),
-  c1: rgb(0x3a3550),
+  c0: rgb(0x968ea4),
+  c1: rgb(0x625a7a),
   rim: 0.4,
   cool: 0.3,
   form: 0.1,
@@ -263,6 +263,9 @@ function curve(p: Painter, c: ChainPts, sub: number): number {
   return k + 1;
 }
 
+/** How far a limb's two segments are rounded into one curve (1 = a full bow: reads as a banana). */
+const ROUND = 0.35;
+
 /** A limb through three joints, rounded at the middle one, with a width at each joint. */
 function limb(
   p: Painter,
@@ -285,16 +288,16 @@ function limb(
   let k = 0;
   for (let q = 0; q <= SUB; q++) {
     const t = q / SUB;
-    p.px[k] = catmull(ax, ax, bx, cx, t);
-    p.py[k] = catmull(ay, ay, by, cy, t);
+    p.px[k] = lerp(lerp(ax, bx, t), catmull(ax, ax, bx, cx, t), ROUND);
+    p.py[k] = lerp(lerp(ay, by, t), catmull(ay, ay, by, cy, t), ROUND);
     // A little muscle above the joint, slim into it.
     p.pw[k] = lerp(w0, w1, t ** 1.4) + Math.sin(Math.PI * t) * w0 * 0.08;
     k++;
   }
   for (let q = 1; q <= SUB; q++) {
     const t = q / SUB;
-    p.px[k] = catmull(ax, bx, cx, cx, t);
-    p.py[k] = catmull(ay, by, cy, cy, t);
+    p.px[k] = lerp(lerp(bx, cx, t), catmull(ax, bx, cx, cx, t), ROUND);
+    p.py[k] = lerp(lerp(by, cy, t), catmull(ay, by, cy, cy, t), ROUND);
     p.pw[k] = lerp(w1, w2, t) + Math.sin(Math.PI * t) * w1 * 0.12;
     k++;
   }
@@ -949,7 +952,7 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
     p.glow(mx, my, 7.5, EYE_RIM, 0.05 * open * v.glow);
     // A soft warm blush on the cheek below.
     const bx = lx - sd * czh * 1.3;
-    p.soft(X(bx, ly + R + 1.5), Y(bx, ly + R + 1.5), 3.1 * (near ? 1 : 0.75), 1.9, BLUSH, 0.5);
+    p.soft(X(bx, ly + R + 1.5), Y(bx, ly + R + 1.5), 3.1 * (near ? 1 : 0.75), 1.9, BLUSH, 0.34);
   }
 }
 /** Cheek fluff: side (+1 = back of the head, -1 = front), root x (fraction of the half width), root y, length, angle below the outward axis. */

@@ -13,8 +13,10 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
   slightly *raised* (relaxed, sure); lowered corners read mournful, which the owner rejected.
 - **No scarf.** Anything pale hanging by the torso reads as an arm. A short fur ruff at the neck only.
 - Antennae are thin shafts with a narrow vane; comb barbs read as fishbones, wide vanes as rabbit ears.
-- Pale colours must be authored dark (face 0x8c8490, fur 0x6f6978): bloom + the light mask near
-  her own `ember` light push anything paler to white. Judge in `shots`, never by hex.
+- Palette (round 5): post now protects the hero (`POST.lights.heroProtect` 1, `heroBloomCut`), so
+  colours are authored near their intended look again: face 0xe4dad4, fur 0xc2bac2, wings 0x9472a6
+  -> 0x2e2548, band 0xdccbc0. Before that matte they had to be ~half as bright. If `heroProtect`
+  drops, darken the pale values again. Judge in `shots`, never by hex.
 
 ## How it works
 - `rig.ts`: hooded-style 2.5D rig, retuned. Run = lope: `RUN_CYCLE` 256 px (a footfall per 128 px,
@@ -60,6 +62,12 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
   spring, outer on a slower one plus speed ruffle. Pointed tufts read as gear teeth. Keep the ruff
   short and only half-rounded: long round ruff puffs read as a hand at her throat.
 - Light / halo / glow numbers belong to the atmosphere agent for now: do not retune them here.
+
+## Stance (round 5, owner: "legs curved to the front too much")
+- Idle: pelvis height 32.1 (legs nearly straight; thigh+shin = 31.5 plus the ankle), pelvis over the
+  weight foot (B at +3.2), relaxed foot A ahead with the heel just lifted, spine upright, chest open.
+- `limb()` blends the two straight segments with the Catmull-Rom bow by `ROUND` 0.35: a full bow
+  drew every bent leg as one C-curve.
 
 ## Gotchas
 - Wing strands have no body collision: a stiff, fast flare throws them over the head and they
