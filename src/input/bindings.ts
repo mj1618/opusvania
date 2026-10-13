@@ -14,6 +14,7 @@ export const DEFAULT_KEYS: KeyBindings = {
   down: ['ArrowDown', 'KeyS'],
   jump: ['Space', 'KeyZ', 'KeyK'],
   dash: ['KeyX', 'KeyL', 'ShiftLeft', 'ShiftRight'],
+  attack: ['KeyC', 'KeyJ'],
 };
 
 export const DEFAULT_PAD: PadBindings = {
@@ -22,7 +23,8 @@ export const DEFAULT_PAD: PadBindings = {
   up: [12],
   down: [13],
   jump: [0], // A / Cross
-  dash: [5, 7, 2], // RB, RT, X / Square
+  dash: [5, 7], // RB, RT
+  attack: [2], // X / Square
 };
 
 /** Stick: a 0.25 radial deadzone, then an axis counts as a direction past 0.5. */

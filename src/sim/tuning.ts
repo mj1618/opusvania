@@ -143,6 +143,52 @@ export const defaultTuning = {
     /** A hold carried over from a ground jump only glides once she is this far below the launch height. */
     carriedDropPx: 16,
   },
+  /**
+   * Thorn slash (rules: memory/combat.md). Frames count from the press; the hit area is
+   * `slashBox` in src/sim/player/attack.ts.
+   */
+  attack: {
+    /** Frames from the press before the hit area is live, and how long it stays live. */
+    startupFrames: 1,
+    activeFrames: 6,
+    /** Length of the whole slash (`slashEnd`), and the soonest a new one can start (press to press). */
+    durationFrames: 14,
+    cooldownFrames: 20,
+    /** An early press waits this long for the cooldown (it never expires during a dash). */
+    bufferFrames: 8,
+    /** Forward: reach ahead of / behind the body centre, height, and how far above centre it sits. */
+    fwdReach: 110,
+    fwdBack: 14,
+    fwdHeight: 88,
+    fwdRaise: 8,
+    /** Up / down: width, and reach from the body centre (the body is 80 tall: 40 of it is her). */
+    vertWidth: 100,
+    upReach: 124,
+    downReach: 120,
+    /**
+     * Recoil on a hit. Forward: a shove back of recoilFwd px/f that fades by recoilDecay each frame
+     * (3 + 2 + 1 = 6 px), added on top of her own velocity so a run is not interrupted. Up, in the
+     * air: vy pushed down by recoilUp.
+     */
+    recoilFwd: 3,
+    recoilDecay: 1,
+    recoilUp: 2,
+    /** Pogo: a down slash that hits sets vy to minus this (a hop of about 125 px, 17 frames up). */
+    pogoSpeed: 15.5,
+  },
+  /** Lumen pods (src/sim/pods.ts): breakables that spill glints. */
+  pods: {
+    /** Half the size of the pod's box. */
+    radius: 22,
+    /** Slashes to burst one, and the glints it spills. */
+    hp: 1,
+    value: 3,
+    /** Hitstop when a slash hits one, frames. */
+    hitstopFrames: 2,
+    /** The first glint reaches her this long after the burst; the rest follow this far apart. */
+    releaseFrames: 16,
+    releaseStagger: 5,
+  },
   /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
   pickups: {
     /** A glint within this many px of the body wakes and is hers. */
@@ -182,6 +228,8 @@ export const defaultTuning = {
     dashJumpCancel: true,
     wallJumpRefill: true,
     glide: true,
+    /** A down slash that hits bounces her up and refills the air dash and double jump. */
+    pogo: true,
   },
 };
 

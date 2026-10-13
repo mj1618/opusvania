@@ -8,6 +8,7 @@ import type { InputFrame } from './input';
 import { createPickups, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
 import { createPlayer, updatePlayer } from './player/player';
+import { createPods, updatePods } from './pods';
 import { seedRng } from './rng';
 import type { Scene } from './scene';
 import type { GameState } from './state';
@@ -17,13 +18,14 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 8,
+    version: 9,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
     prevInput: 0,
     player: createPlayer(scene.spawn.x, scene.spawn.y, t, scene),
     pickups: createPickups(scene),
+    pods: createPods(scene, t.pods),
   };
   events.push({ type: 'spawn', x: scene.spawn.x, y: scene.spawn.y });
   return state;
@@ -48,7 +50,8 @@ export function placePlayer(
 
 /** Advances the sim by exactly one 1/60 s step, mutating `state` and appending to `events`. */
 export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scene, events: SimEvent[]): void {
-  updatePlayer(state, scene, input, resolveParams(t), events);
+  updatePlayer(state, scene, input, resolveParams(t), t.pods, events);
+  updatePods(state, scene, t.pods, t.pickups.comboFrames, events);
   updatePickups(state, scene, t.pickups, events);
   state.prevInput = input;
   state.frame++;
@@ -56,6 +59,15 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
 
 export type { SimEvent } from './events';
 export { hashState } from './hash';
-export type { Pickup, PickupKind, Scene } from './scene';
-export type { GameState, Motion, PickupsState, PlayerMode, PlayerState } from './state';
+export { slashBox } from './player/attack';
+export type { Pickup, PickupKind, Pod, PodMount, Scene } from './scene';
+export type {
+  AttackDir,
+  GameState,
+  Motion,
+  PickupsState,
+  PlayerMode,
+  PlayerState,
+  PodsState,
+} from './state';
 export { cloneState } from './state';

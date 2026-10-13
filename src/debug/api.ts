@@ -7,6 +7,7 @@ import type { CameraOverride, RenderStage } from '../render/stage';
 import type { SimEvent } from '../sim/events';
 import type { GameState } from '../sim/index';
 import { pickupsWorth } from '../sim/pickups';
+import { podsWorth } from '../sim/pods';
 import type { Scene } from '../sim/scene';
 import type { Tuning } from '../sim/tuning';
 import type { TuningPanel } from './tuning-panel';
@@ -26,7 +27,7 @@ export interface GameDebugApi {
   tick(n?: number): number;
   /** Plain-JSON copy of the sim state (src/sim/state.ts). */
   state(): GameState;
-  /** Queues scripted input (`R30 R+J12 .5` or `right*30 right+jump*12`, src/input/script.ts). Returns frames queued in total. */
+  /** Queues scripted input (`R30 R+J12 A1 .5`, A = attack, or `right*30 right+jump*12`, src/input/script.ts). Returns frames queued in total. */
   input(script: InputScript): number;
   /** Drops queued input. */
   clearInput(): void;
@@ -81,6 +82,16 @@ export interface GameDebugApi {
     taken: number;
     worth: number;
     list: Array<{ id: string; kind: string; x: number; y: number; state: 'waiting' | 'flying' | 'taken' }>;
+  };
+  /**
+   * Lumen pods: how many have burst, what they are all worth (their glints go into the pickups
+   * count), and every pod with its state (`closed`, `open`) and the glints still flying to her.
+   */
+  pods(): {
+    burst: number;
+    total: number;
+    worth: number;
+    list: Array<{ id: string; x: number; y: number; mount: string; state: 'closed' | 'open'; left: number }>;
   };
   /** Dynamic lights registered this frame (world px). */
   lights(): PointLight[];
@@ -230,6 +241,20 @@ export function installDebugApi(deps: {
           const t = s.timers[i] ?? 0;
           return { ...p, state: t < 0 ? 'taken' : t > 0 ? 'flying' : 'waiting' };
         }),
+      };
+    },
+    pods() {
+      const s = game.state.pods;
+      const list = game.scene.pods ?? [];
+      return {
+        burst: s.burst,
+        total: list.length,
+        worth: podsWorth(game.scene, game.tuning.pods),
+        list: list.map((p, i) => ({
+          ...p,
+          state: (s.hp[i] ?? 0) > 0 ? 'closed' : 'open',
+          left: s.left[i] ?? 0,
+        })),
       };
     },
     lights: () => stage.lights.list.map((l) => ({ ...l })),

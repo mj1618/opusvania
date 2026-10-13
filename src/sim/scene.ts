@@ -35,6 +35,18 @@ export interface Pickup {
   y: number;
 }
 
+/**
+ * A lumen pod: a seed-pod of light the slash can burst (src/sim/pods.ts). `x`, `y` is its centre.
+ * `sit`: it rests on a surface just below it. `hang`: it hangs from an underside or a branch above.
+ */
+export type PodMount = 'sit' | 'hang';
+export interface Pod {
+  id: string;
+  x: number;
+  y: number;
+  mount: PodMount;
+}
+
 export interface Scene {
   id: string;
   /** Scene size in sim px. The edges and the bottom are solid; the top is open. */
@@ -46,4 +58,6 @@ export interface Scene {
   oneWays: OneWay[];
   /** Collectibles, in a fixed order: `GameState.pickups.timers` is indexed like this array. */
   pickups?: Pickup[];
+  /** Breakables, in a fixed order: the arrays of `GameState.pods` are indexed like this one. */
+  pods?: Pod[];
 }

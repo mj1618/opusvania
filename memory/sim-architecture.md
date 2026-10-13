@@ -1,7 +1,7 @@
 # Sim / runtime architecture
 
 - `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
-  (`{version, frame, seed, rng, prevInput, player, pickups}`) and appends `SimEvent`s. The scene is static and
+  (`{version, frame, seed, rng, prevInput, player, pickups, pods}` (version 9)) and appends `SimEvent`s. The scene is static and
   not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
   (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
 - No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
@@ -13,7 +13,7 @@
   `reset()` / `teleport()`, and `afterStep` listeners that receive each step's events. Modes: realtime,
   frozen, manual. No DOM, so it runs in Vitest.
 - Input edges and buffering live in the sim (`prevInput` in state); `src/input/` only turns devices into a
-  bitmask (`left right up down jump dash`). Live keys are sampled every step even when scripted input wins,
+  bitmask (`left right up down jump dash attack`). Live keys are sampled every step even when scripted input wins,
   and flushed while not realtime, so stray taps never fire later.
 - `src/loop.ts`: fixed-step accumulator (max 5 steps per frame; snaps near-60Hz deltas, loop-timing.md).
 - `src/render/stage.ts` is the render driver: it steps the camera once per sim step (in `afterStep`, so
@@ -35,6 +35,9 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   direction at once while `vx` takes ~22 frames to reverse, so a turn has `sign(vx) != facing` for a while.
 - `dashDir`, `dashTimer`, `freeze` (dash wind-up frames left: the body hangs for 2 frames before it moves),
   `airDash`, `dj` (left this airtime), `airTopY`, `skid`.
+- Slash: `attack` (`none | fwd | up | down`), `attackFacing`, `attackFrames`, `attackActive`,
+  `attackSeq`, `attackHits`; `hitstop` (frames the sim is holding her after a hit: x, y and every
+  player timer stand still, so hold the pose) and `kickX` (recoil shove). Details: combat.md.
 - While wall sliding `facing` points **away** from the wall (a `turn` event fires on contact).
 - `motion` is `run` whenever a direction is held or vx != 0 on the ground, including pushing into a wall
   (vx = 0): check `vx` if that should look different.
@@ -47,6 +50,7 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   (`vy` = impact speed px/f; `hard` = fallPx >= 320 or at max fall speed).
 - `step` (every 96 px of grounded travel), `turn {dir, grounded}`, `skid {dir}`.
 - `wallSlideStart/End {dir = wall side}`, `dashStart {dir, air}`, `dashEnd {dir}`.
+- `slash`, `slashHit`, `slashEnd`, `podBurst`, and pod glints as `pickup {pod: true}`: combat.md.
 - `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a
   long fall, up to 32 out of a fast fall) and `glideEnd {reason: release|land|wall|dash|fastfall}`; one
   pair per glide. Same-step order: `glideEnd:land` then `land`; `glideEnd:wall` then `wallSlideStart`;

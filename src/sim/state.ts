@@ -15,6 +15,9 @@ export type PlayerMode = 'normal' | 'wallSlide' | 'dash';
  */
 export type Motion = 'idle' | 'run' | 'skid' | 'rise' | 'fall' | 'glide' | 'wallSlide' | 'dash';
 
+/** The thorn slash's direction; 'none' when she is not slashing. */
+export type AttackDir = 'none' | 'fwd' | 'up' | 'down';
+
 export interface PlayerState {
   // --- Body. (x, y) is the top-left of the collision box, integers. Feet centre = (x + w/2, y + h).
   x: number;
@@ -60,6 +63,27 @@ export interface PlayerState {
   airTopY: number;
   /** Wing glide: wings open, sinking slowly (jump held while falling). `motion` is 'glide'. */
   gliding: boolean;
+  /**
+   * Thorn slash. `attack` is its direction from the `slash` event until `slashEnd` ('none'
+   * otherwise); it and `attackFacing` (the side she faced when it started; a fwd slash goes that
+   * way) never change mid-slash, whatever she does. `attackFrames` counts steps since it started
+   * (0 on the `slash` frame; it holds during hitstop). `attackActive`: the hit area is live this
+   * frame. `attackSeq` numbers the slashes (0 = none yet); `attackHits` = targets this one has hit.
+   */
+  attack: AttackDir;
+  attackFacing: -1 | 1;
+  attackFrames: number;
+  attackActive: boolean;
+  attackSeq: number;
+  attackHits: number;
+  /**
+   * Hitstop frames left: a slash connected and the sim holds her for a beat (no movement, no
+   * timers, `attackFrames` / `motionFrames` stand still; presses are still buffered). The rest of
+   * the sim (pickups, pod glints, the frame count) and render time keep running.
+   */
+  hitstop: number;
+  /** Recoil: extra horizontal px/f on top of `vx` (a shove from a slash that hit), fading fast. */
+  kickX: number;
 
   // --- Controller internals (timers, buffers). Renderers should not need these.
   coyote: number;
@@ -84,6 +108,9 @@ export interface PlayerState {
   /** The current jump hold launched a ground-type jump, from this y (glide: see `carriedDropPx`). */
   carried: boolean;
   launchY: number;
+  /** Slash: buffered press, and frames until the next one may start. */
+  attackBuf: number;
+  attackCd: number;
 }
 
 /** Collectibles (src/sim/pickups.ts). */
@@ -104,8 +131,21 @@ export interface PickupsState {
   gate: number;
 }
 
+/** Lumen pods (src/sim/pods.ts). Every array has one entry per `scene.pods`, same order. */
+export interface PodsState {
+  /** Hits left before it bursts; 0 = burst and open (until the scene restarts). */
+  hp: number[];
+  /** `attackSeq` of the last slash that hit it (one hit per slash). */
+  hitBy: number[];
+  /** Glints of a burst pod still on their way to her, and frames until the next one arrives. */
+  left: number[];
+  timer: number[];
+  /** How many pods have burst. */
+  burst: number;
+}
+
 export interface GameState {
-  version: 8;
+  version: 9;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;
@@ -114,8 +154,20 @@ export interface GameState {
   prevInput: InputFrame;
   player: PlayerState;
   pickups: PickupsState;
+  pods: PodsState;
 }
 
 export function cloneState(s: GameState): GameState {
-  return { ...s, player: { ...s.player }, pickups: { ...s.pickups, timers: s.pickups.timers.slice() } };
+  return {
+    ...s,
+    player: { ...s.player },
+    pickups: { ...s.pickups, timers: s.pickups.timers.slice() },
+    pods: {
+      hp: s.pods.hp.slice(),
+      hitBy: s.pods.hitBy.slice(),
+      left: s.pods.left.slice(),
+      timer: s.pods.timer.slice(),
+      burst: s.pods.burst,
+    },
+  };
 }

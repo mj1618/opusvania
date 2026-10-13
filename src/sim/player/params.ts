@@ -75,6 +75,19 @@ export interface MoveParams {
   glideTurn: number;
   glideCarriedDropPx: number;
 
+  /** The slash's geometry (read by `slashBox`). */
+  attack: Tuning['attack'];
+  attackStartup: number;
+  attackActive: number;
+  attackDuration: number;
+  attackCooldown: number;
+  attackBuffer: number;
+  recoilFwd: number;
+  recoilDecay: number;
+  recoilUp: number;
+  pogoSpeed: number;
+  pogo: boolean;
+
   dropThroughFrames: number;
   footstepPx: number;
   hardLandFallPx: number;
@@ -159,6 +172,18 @@ export function resolveParams(t: Tuning): MoveParams {
     glideDecel: gl.decel,
     glideTurn: gl.turn,
     glideCarriedDropPx: gl.carriedDropPx,
+
+    attack: t.attack,
+    attackStartup: Math.max(0, Math.round(t.attack.startupFrames)),
+    attackActive: Math.max(1, Math.round(t.attack.activeFrames)),
+    attackDuration: Math.max(1, Math.round(t.attack.durationFrames)),
+    attackCooldown: Math.max(1, Math.round(t.attack.cooldownFrames)),
+    attackBuffer: Math.max(1, Math.round(t.attack.bufferFrames)),
+    recoilFwd: t.attack.recoilFwd,
+    recoilDecay: t.attack.recoilDecay,
+    recoilUp: t.attack.recoilUp,
+    pogoSpeed: t.attack.pogoSpeed,
+    pogo: a.pogo,
 
     dropThroughFrames: t.misc.dropThroughFrames,
     footstepPx: t.misc.footstepPx,

@@ -1,9 +1,11 @@
-import type { GlideEndReason, JumpKind, SimEvent } from '../events';
+import type { GlideEndReason, JumpKind, SimEvent, SlashDir, SlashEndReason } from '../events';
 import { ActionBit, axisX, type InputFrame } from '../input';
 import { type Body, type Collider, moveX, moveY, oneWayUnder, solidAt } from '../physics/aabb';
+import { slashPods } from '../pods';
 import type { Scene } from '../scene';
 import type { GameState, Motion, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
+import { slashBox } from './attack';
 import type { MoveParams } from './params';
 
 /**
@@ -50,6 +52,14 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     dj: t.jump.doubleJumps,
     airTopY: y,
     gliding: false,
+    attack: 'none',
+    attackFacing: 1,
+    attackFrames: 0,
+    attackActive: false,
+    attackSeq: 0,
+    attackHits: 0,
+    hitstop: 0,
+    kickX: 0,
     coyote: 0,
     jumpBuf: 0,
     djBuf: 0,
@@ -71,6 +81,8 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     stepDist: 0,
     carried: false,
     launchY: y,
+    attackBuf: 0,
+    attackCd: 0,
   };
 }
 
@@ -209,6 +221,92 @@ function latch(c: Ctx): void {
     p.carried = false; // a new hold; a ground jump it launches marks it carried again
   }
   if (c.pressed(ActionBit.dash)) p.dashBuf = P.dashBufferFrames;
+  if (c.pressed(ActionBit.attack)) p.attackBuf = P.attackBuffer;
+}
+
+function endSlash(c: Ctx, reason: SlashEndReason): void {
+  const p = c.p;
+  if (p.attack === 'none') return;
+  c.events.push({ type: 'slashEnd', x: c.fx, y: c.fy, dir: p.attack, hits: p.attackHits, reason });
+  p.attack = 'none';
+  p.attackActive = false;
+}
+
+/**
+ * The slash's own clock, then a buffered press: a slash starts as soon as the cooldown allows, in
+ * any mode but the dash (the press waits for the dash to end). It never locks movement.
+ */
+function updateSlash(c: Ctx): void {
+  const p = c.p;
+  const P = c.P;
+  if (p.attack !== 'none') {
+    p.attackFrames++;
+    if (p.attackFrames >= P.attackDuration) endSlash(c, 'done');
+    else
+      p.attackActive = p.attackFrames >= P.attackStartup && p.attackFrames < P.attackStartup + P.attackActive;
+  }
+  if (p.attackBuf === 0 || p.attackCd > 0 || p.mode === 'dash') return;
+  // Pressed together with a dash that is about to start: the dash goes first, the slash after it.
+  if (p.dashBuf > 0 && p.mode === 'normal' && canDash(c)) return;
+  endSlash(c, 'chain');
+  // Up wins; Down only in the air (on the ground it is a forward slash, as in Hollow Knight).
+  const dir: SlashDir = c.held(ActionBit.up) ? 'up' : c.held(ActionBit.down) && !p.grounded ? 'down' : 'fwd';
+  // A direction pressed with the slash counts at once; on a wall she already faces away from it.
+  const turn = p.mode === 'normal' && p.forceTimer === 0 && c.inX !== 0;
+  p.attack = dir;
+  p.attackFacing = turn ? (c.inX > 0 ? 1 : -1) : p.facing;
+  p.attackFrames = 0;
+  p.attackActive = P.attackStartup === 0;
+  p.attackSeq++;
+  p.attackHits = 0;
+  p.attackBuf = 0;
+  p.attackCd = P.attackCooldown;
+  c.events.push({
+    type: 'slash',
+    x: c.fx,
+    y: c.fy,
+    dir,
+    facing: p.attackFacing,
+    seq: p.attackSeq,
+    startup: P.attackStartup,
+    active: P.attackActive,
+    duration: P.attackDuration,
+  });
+}
+
+/**
+ * After the move: the live hit area against everything hittable. A hit gives hitstop and a little
+ * recoil; a down slash that hits is a pogo (a fixed hop that refills the air dash and double jump).
+ */
+function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
+  const p = c.p;
+  const P = c.P;
+  if (p.attack === 'none' || !p.attackActive) return;
+  const dir = p.attack;
+  const pogo = dir === 'down' && P.pogo && !p.grounded;
+  const box = slashBox(p, dir, p.attackFacing, P.attack);
+  const hits = slashPods(state, c.scene, box, p.attackSeq, dir, p.attackFacing, pogo, podsT, c.events);
+  if (hits === 0) return;
+  p.attackHits += hits;
+  p.hitstop = Math.max(p.hitstop, Math.max(0, Math.round(podsT.hitstopFrames)));
+  if (dir === 'fwd') {
+    if (p.mode === 'normal') p.kickX = -p.attackFacing * P.recoilFwd;
+  } else if (dir === 'up') {
+    if (!p.grounded && p.mode === 'normal') p.vy += P.recoilUp;
+  } else if (pogo) {
+    if (p.mode === 'wallSlide') {
+      c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: p.wallDir });
+      p.mode = 'normal';
+      p.stick = 0;
+    }
+    endGlide(c, 'fastfall');
+    p.vy = -P.pogoSpeed;
+    p.fromJump = false;
+    p.cut = false;
+    p.sustain = 0;
+    p.airDash = P.airDashes;
+    p.dj = P.doubleJumps;
+  }
 }
 
 function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {
@@ -328,6 +426,8 @@ function startDash(c: Ctx, dir: number): void {
   const air = !p.grounded;
   if (p.mode === 'wallSlide') c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: p.wallDir });
   endGlide(c, 'dash');
+  endSlash(c, 'dash');
+  p.kickX = 0;
   p.mode = 'dash';
   p.dashDir = dir;
   p.facing = dir > 0 ? 1 : -1;
@@ -501,6 +601,7 @@ export function updatePlayer(
   scene: Scene,
   input: InputFrame,
   P: MoveParams,
+  podsT: Tuning['pods'],
   events: SimEvent[],
 ): void {
   const p = state.player;
@@ -511,7 +612,14 @@ export function updatePlayer(
   const c = new Ctx(p, scene, input, state.prevInput, P, events);
   c.inX = axisX(input);
   p.inputX = c.inX;
+  // Hitstop: a slash connected. She holds for a beat; presses are still buffered.
+  if (p.hitstop > 0) {
+    p.hitstop--;
+    latch(c);
+    return;
+  }
   controller(c);
+  resolveSlash(c, state, podsT);
 
   // Animation bookkeeping: what the body is doing and for how long.
   p.modeFrames = p.mode === mode0 ? p.modeFrames + 1 : 0;
@@ -539,12 +647,14 @@ function controller(c: Ctx): void {
     p.freeze--;
     latch(c);
     if (p.dashCd > 0) p.dashCd--;
+    if (p.attackCd > 0) p.attackCd--;
     return;
   }
 
   // 2. Latch presses into buffers.
   latch(c);
   c.jumpPressedNow = c.pressed(ActionBit.jump);
+  updateSlash(c);
   const wasGrounded = p.grounded;
   const x0 = p.x;
   const vy0 = p.vy;
@@ -565,7 +675,8 @@ function controller(c: Ctx): void {
   // 4. Move X then Y, with corner corrections.
   let impactVy = 0;
   if (!c.skipMove) {
-    if (moveX(p, p.vx, c)) {
+    if (moveX(p, p.vx + p.kickX, c)) {
+      p.kickX = 0;
       if (P.wallRetainFrames > 0 && p.retainTimer === 0 && p.vx !== 0 && p.mode !== 'dash') {
         p.retainVx = p.vx;
         p.retainTimer = P.wallRetainFrames;
@@ -595,6 +706,10 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
   if (p.jumpBuf > 0) p.jumpBuf--;
   if (p.djBuf > 0) p.djBuf--;
   if (p.dashBuf > 0) p.dashBuf--;
+  // A slash pressed during a dash waits for it: it fires on the first frame after.
+  if (p.attackBuf > 0 && p.mode !== 'dash') p.attackBuf--;
+  if (p.attackCd > 0) p.attackCd--;
+  if (p.kickX !== 0) p.kickX = approach(p.kickX, 0, P.recoilDecay);
   if (p.forceTimer > 0) p.forceTimer--;
   if (p.dashCd > 0) p.dashCd--;
   if (p.dropTimer > 0) p.dropTimer = p.y > p.dropY ? 0 : p.dropTimer - 1;
