@@ -69,7 +69,19 @@ interface Ctx {
  * Tone at a spot: yellow-green where the key light lands (sunAt), cool teal in the dark stands,
  * and shifted by the scene's zone (blue-green glade, golden well, deep emerald stand).
  */
+/**
+ * 0..1: how far plant bases are lifted from near-black toward their mid tone. On the ground the
+ * black bases sink into the dark earth; on an elevated top they stack into a ruled dark bar along
+ * the rim, so `growGarden` raises this while it plants islands, ledges and the root.
+ */
+let baseLift = 0;
+
 function toneAt(base: Tone, x: number, r: Rng, y = 1200): Tone {
+  const t = toneRaw(base, x, r, y);
+  return baseLift > 0 ? { ...t, dark: mix(t.dark, t.mid, baseLift) } : t;
+}
+
+function toneRaw(base: Tone, x: number, r: Rng, y = 1200): Tone {
   const sun = sunAt(x, y);
   const z = zoneAt(x);
   const cool = r() * 0.3 + (1 - sun) * 0.3;
@@ -1103,6 +1115,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
     const blocked = (x: number): boolean => info.keepClear.some(([k0, k1]) => x > k0 && x < k1);
 
     const isGround = top.kind === 'ground';
+    baseLift = isGround ? 0 : 0.55;
 
     // Backdrop (drawn first, so behind everything): tall reed stands in haze tones, between
     // the baked boulders and stumps. (Hazy shrubs here read as pale paper cut-outs in the fog: removed.)
@@ -1260,12 +1273,25 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
     // Grass in drifts between and around them: low skirts, knee-high swells, bare gaps.
     const seed = top.x0 * 0.37 + top.y;
     for (let x = a; x < b; x += range(r, 3, 8)) {
-      const patch = noise1(x / 80, seed) * 0.65 + noise1(x / 17, seed + 9) * 0.35;
+      // On elevated tops the drifts are smaller with real gaps, and the grass shortens toward
+      // the free ends: an even stand from end to end reads as a clipped hedge on a tray.
+      const patch = isGround
+        ? noise1(x / 80, seed) * 0.65 + noise1(x / 17, seed + 9) * 0.35
+        : noise1(x / 38, seed) * 0.7 + noise1(x / 13, seed + 9) * 0.3 - 0.08;
       if (patch < 1 - PLANTS.grassCover * 2) continue;
+      const ends = isGround
+        ? 1
+        : 0.4 +
+          0.6 *
+            Math.min(
+              top.freeL ? smoothstep(top.x0, top.x0 + 44, x) : 1,
+              top.freeR ? smoothstep(top.x1, top.x1 - 44, x) : 1,
+            );
       const k = smoothstep(1 - PLANTS.grassCover * 2, 0.7, patch);
-      const tall = smoothstep(-0.1, 0.75, noise1(x / 110, seed + 31)) * k;
-      const h0 = lerp(PLANTS.grassHeight[0] * 0.7, PLANTS.grassHeight[0] * 1.8, k) * scale;
-      const h1 = lerp(PLANTS.grassHeight[0] + 5, PLANTS.grassHeight[1], tall) * scale * range(r, 0.75, 1.25);
+      const tall = smoothstep(-0.1, 0.75, noise1(x / (isGround ? 110 : 60), seed + 31)) * k;
+      const h0 = lerp(PLANTS.grassHeight[0] * 0.7, PLANTS.grassHeight[0] * 1.8, k) * scale * ends;
+      const h1 =
+        lerp(PLANTS.grassHeight[0] + 5, PLANTS.grassHeight[1], tall) * scale * range(r, 0.75, 1.25) * ends;
       grassTuft(
         c,
         x,
@@ -1308,7 +1334,10 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
       let lipChunk = -1;
       let lipPrev: [number, number, number, number, number, number] | null = null;
       for (let x = a - 4; x <= b + 4; x += 7) {
-        const cover = smoothstep(-0.55, -0.1, noise1(x / 90, ls) * 0.7 + noise1(x / 23, ls + 3) * 0.3);
+        // On the ground it runs nearly unbroken; on elevated tops it is separate pads, or it rules a
+        // dark bar along the rim (the baked crest must show between them).
+        const coverN = noise1(x / (isGround ? 90 : 46), ls) * 0.7 + noise1(x / 23, ls + 3) * 0.3;
+        const cover = isGround ? smoothstep(-0.55, -0.1, coverN) : smoothstep(-0.05, 0.3, coverN);
         const rise =
           (0.5 +
             6.5 * ((noise1(x / 120, ls + 5) + 1) * 0.5) ** 1.6 +
@@ -1316,7 +1345,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
           cover;
         const drip =
           6 + 9 * ((noise1(x / 31, ls + 7) + 1) * 0.5) ** 2 + 16 * Math.max(0, noise1(x / 11, ls + 9) - 0.55);
-        const t = toneAt(FRONT, x, r, top.y);
+        const t = toneAt(isGround ? FRONT : BACK, x, r, top.y);
         const sun = sunAt(x, top.y);
         fb.plant(x, top.y, 4000, 0, 0, 0, 0);
         fb.fixedH = 0;
@@ -1330,8 +1359,8 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
             pr = fb.v(lipPrev[0], lipPrev[4], lipPrev[5], lipPrev[3] * 0.95);
           } else pl = -1;
         }
-        const topCol = mix(t.dark, t.mid, 0.35 + 0.5 * sun);
-        const botY = top.y + (isGround ? drip : drip * 0.5) * cover;
+        const topCol = mix(t.dark, t.mid, isGround ? 0.35 + 0.5 * sun : 0.6 + 0.4 * sun);
+        const botY = top.y + (isGround ? drip : 2 + drip * 0.8) * cover;
         const l = fb.v(x, top.y - rise, topCol, cover);
         const rr = fb.v(x, botY, t.dark, cover * 0.95);
         lipPrev = [x, top.y - rise, topCol, cover, botY, t.dark];
@@ -1408,7 +1437,10 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
     if (top.kind !== 'branch') {
       const fc: Ctx = { b: g.front, halo: g.halo, r };
       for (let x = a + 2; x < b - 2; x += range(r, 4, 10)) {
-        const patch = noise1(x / 60, seed + 77) * 0.65 + noise1(x / 19, seed + 78) * 0.35;
+        const patch =
+          noise1(x / (isGround ? 60 : 30), seed + 77) * 0.65 +
+          noise1(x / 19, seed + 78) * 0.35 -
+          (isGround ? 0 : 0.2);
         if (patch < 1 - PLANTS.fringeCover * 2) continue;
         const k = smoothstep(1 - PLANTS.fringeCover * 2, 0.6, patch);
         const t = toneAt(FRONT, x, r, top.y);
@@ -1446,6 +1478,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
       mossTuft(c, ex + dir * 2, top.y + 8, range(r, 12, 26), t);
     }
   }
+  baseLift = 0;
 
   // Leaves on the back-plane saplings: dark, so they stay behind the walk plane.
   const tr = rngFor(17, 4);
@@ -1459,7 +1492,9 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
   const hr = rngFor(41, 3);
   const hc: Ctx = { b: g.back, halo: g.halo, r: hr };
   for (const h of info.hangers) {
-    const t = toneAt(REAR, (h.xl + h.xr) / 2, hr, h.y - 200);
+    const first = h.ropes[0];
+    if (!first) continue;
+    const t = toneAt(REAR, first.x, hr, first.y - 200);
     // Every vine ends in a leafy knot on a bough stub near the top of the scene, not at the frame edge.
     const topY = range(hr, 30, 90);
     const knots: number[] = [];
@@ -1467,43 +1502,44 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
       knots.push(x);
       return x;
     };
-    if (h.mode === 'pair') {
-      for (const [ex, lean] of [
-        [h.xl, range(hr, -90, 10)],
-        [h.xr, range(hr, -10, 90)],
-      ] as const) {
-        const n = 2 + Math.floor(hr() * 2);
-        const kx = end(ex + lean);
-        for (let i = 0; i < n; i++) {
-          hangVine(
-            hc,
-            ex + (i - (n - 1) / 2) * 5,
-            h.y,
-            kx + range(hr, -24, 24),
-            topY,
-            range(hr, -90, 90),
-            range(hr, 7, 12) - i * 1.5,
-            t,
-          );
-        }
+    // Ropes that start close together share a knot.
+    const knotFor = (x: number): number => {
+      for (const kx of knots) if (Math.abs(kx - x) < 90) return kx;
+      return end(x);
+    };
+    for (const rope of h.ropes) {
+      if (rope.to) {
+        hangVine(
+          hc,
+          rope.x,
+          rope.y,
+          rope.to.x,
+          rope.to.y,
+          rope.x < rope.to.x ? -30 : 30,
+          rope.w,
+          t,
+          false,
+          0.5,
+        );
+        continue;
       }
-    } else if (h.mode === 'root') {
-      // One great aerial root holds it from one side; a thin vine steadies the other.
-      const ex = h.side > 0 ? h.xr : h.xl;
-      const rx = end(ex + h.side * range(hr, 160, 240));
-      hangVine(hc, ex, h.y, rx, topY, h.side * range(hr, 60, 120), range(hr, 22, 28), t, true);
-      hangVine(hc, ex - h.side * 8, h.y, rx - h.side * 30, topY, h.side * range(hr, 20, 70), 9, t);
-      const ox = h.side > 0 ? h.xl : h.xr;
-      hangVine(hc, ox, h.y, end(ox - h.side * range(hr, 20, 80)), topY, range(hr, -70, 70), 6, t);
-    } else {
-      // A yoke: both ends rise to one knot above the middle, and a single thick stem goes on up.
-      const mx = (h.xl + h.xr) / 2 + range(hr, -30, 30);
-      const ky = h.y - range(hr, 150, 210);
-      hangVine(hc, h.xl, h.y, mx, ky, -30, 8, t, false, 0.5);
-      hangVine(hc, h.xr, h.y, mx, ky, 30, 8, t, false, 0.5);
-      const sx = end(mx + range(hr, -90, 90));
-      hangVine(hc, mx, ky, sx, topY, range(hr, -60, 60), 15, t, true);
-      hangVine(hc, mx + 4, ky, sx + 20, topY, range(hr, -80, 80), 7, t);
+      const kx = knotFor(rope.x + (rope.lean ?? 0));
+      hangVine(
+        hc,
+        rope.x,
+        rope.y,
+        kx + range(hr, -24, 24),
+        topY,
+        range(hr, -80, 80),
+        rope.w,
+        t,
+        rope.stout ?? false,
+      );
+    }
+    if (h.yoke) {
+      const sx = end(h.yoke.x + range(hr, -90, 90));
+      hangVine(hc, h.yoke.x, h.yoke.y, sx, topY, range(hr, -60, 60), 15, t, true);
+      hangVine(hc, h.yoke.x + 4, h.yoke.y, sx + 20, topY, range(hr, -80, 80), 7, t);
     }
     for (const kx of knots) leafKnot(hc, kx, topY, range(hr, 70, 110), t);
   }

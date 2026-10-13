@@ -12,7 +12,7 @@ Keep entries current; delete stale ones.
 - [Loop timing](loop-timing.md) — why the fixed-step loop snaps near-60Hz frame times
 - [Toolchain](toolchain.md) — ports, vite preview base gotcha, TS7/Biome quirks, why each dev dep exists
 - [Background layers](background-layers.md) — sky/far/mid pipeline (compose → bake → atmosphere shader → LayerView with fog + rustle), composition map, config knobs, gotchas
-- [Playfield](playfield.md) — baked lit terrain (albedo + relief), plant meshes and bend field, pool; config knobs, the front-of-character container, bake gotchas
+- [Playfield](playfield.md) — baked lit terrain (albedo + relief), the island family per zone, `paintRock` / `limb()` painters, plant meshes and bend field, pool; knobs, bake gotchas, shapes that failed
 - [Post, air and foreground](post-and-air.md) — post pipeline and its knobs, light mask, shafts/motes/mist, foreground bake, GLSL and filter gotchas, how to time the GPU
 - [Character](character.md) — Ember's design and rejected looks, 2.5D rig, pose blending, foot planting, chains, the one-mesh painter, gotchas
 - [Character: Yako](character-yako.md) — the dark fox skin: forward-frame rig + base matrix, cel painter, squash-through turn, 240 px lope, chain stiffness gotcha

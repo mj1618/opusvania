@@ -46,7 +46,7 @@ export const BAKE = {
   /** Height of the light above the picture plane: lower = harder side light. */
   lightZ: 0.62,
   /** Brushwork: how hard light breaks into planes (0..1), stroke contrast, crevice depth, chip strength. */
-  planes: 0.82,
+  planes: 0.6,
   strokes: 0.42,
   crevice: 7,
   chips: 0.85,
@@ -145,7 +145,7 @@ float surface(vec2 p, float moss, float bark) {
 
 // A step with a slightly soft riser: hard-edged planes that still survive the bake resolution.
 float plane3(float x) {
-  return floor(x) + smoothstep(0.38, 0.62, fract(x));
+  return floor(x) + smoothstep(0.2, 0.8, fract(x));
 }
 
 void main() {

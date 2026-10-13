@@ -1,7 +1,9 @@
 # Playfield (terrain, plants, pool)
 
 `src/render/scene/layers/playfield.ts` + `src/render/scene/lib/pf-*.ts`. Everything is generated from
-`scene.solids` / `oneWays` by tag; no decoration data is authored in `grove.json`.
+`scene.solids` / `oneWays` by tag; no decoration data is authored in `grove.json`. Terrain painters:
+`pf-terrain.ts` (ground, trunks, ledges, root mound, boughs, backdrop, props), `pf-islands.ts` (the
+floating islands and the `limb()` wood helper), `pf-rock.ts` (every stone).
 
 ## Structure
 - **Terrain is baked once at init.** `pf-terrain.ts` paints every body twice onto a `Paint` (`pf-paint.ts`):
@@ -31,10 +33,31 @@
   row shrubs (`REAR`), hero plants every screen or so (`heroGap`), features, grass; then the front fringe.
   `info.keepClear` ranges (the root mound) keep big plants off terrain that should be seen.
 - **Moss is cushions with bare stretches** (`mossCap`): stones, surface roots and leaf litter fill the gaps.
-  Floating islands are five kinds in a fixed left-to-right order (`FLOAT_ORDER`), each with its own `trail`;
-  no kind appears more than twice and the second instance (`second`) is mirrored, re-proportioned and, for the
-  shelf fungus, re-coloured. Trunks alternate `ivied` (vines, nest, ferns) and hollow (rot hollow, bracket fungi).
-  Hanging trunks share `stiltRoots()` between a back-plane pass and `paintRootShoulders` (front, fading back).
+  Trunks alternate `ivied` (vines, nest, ferns) and hollow (rot hollow, bracket fungi). Hanging trunks share
+  `stiltRoots()` between a back-plane pass and `paintRootShoulders` (front, fading back).
+- **Floating islands are one family per zone** (`pf-islands.ts`, by index left to right; palette `ISLES`), each
+  explained by what holds it, with a 3x spread in depth (thin ~46-64 px, deep ~150 px):
+  cool: 0 two wet boulders lodged in the crotch of a dead snag that stands on the ground; 1 a flake of slate in a
+  vine sling (thin; pod-f2 hangs under its middle, so the sling loops are at the ends); 2 a lopsided mass of
+  aerial roots round peat and stones. Warm: 3 a great bracket fungus (the walkway) with smaller brackets down a
+  dead limb that hangs in the vines; 4 a woven nest. Deep: 5 the bent crown limb of an old snag (thin; pod-f6
+  hangs under it); 6 two violet stones clutched by roots from above.
+  `paintIslandBacks` runs before the ground and paints the two snags in the back plane (relief 0.25, so they
+  stand behind the walk line like the saplings); `paintFloating` paints the body. Each kind sets `under(u)`
+  (px below the collision bottom, used for `info.unders` and the belly shade), its `trail`, and its `ropes`.
+- **What islands hang from** is `info.hangers[].ropes` (`{x, y, w, stout?, lean?, to?}`, optional `yoke`):
+  pf-plants.ts grows one `hangVine` per rope up to a `leafKnot` near the scene top (ropes within 90 px share a
+  knot; ropes with `to` meet at the yoke and one stout stem goes on up). Islands on a snag have no ropes.
+- **Stone is `paintRock`** (`pf-rock.ts`): a lumpy superellipse outline, a real dome of height shells (`dome()`),
+  shoulders (smaller swells that change plane and tone), weather streaks, lichen, hairline cracks cut below the
+  surface, moss on the crown and in hollows, a dark heavy base. `baseY` sinks it in the ground, `topY` cuts it
+  flush under a walkable top, `fitUnderTop()` sizes it so that cut spans the collision width, `spanX` pulls the
+  shoulders back in (a boulder may bulge ~10 px past the collision ends below the walk line, no more). Used by
+  the backdrop boulders, set stones, cliff-foot slabs, the standing stone, the cairn and the island rocks. In the
+  back plane keep `h + rise` near 0.32.
+- **Wood is `limb()`** (exported from `pf-islands.ts`): a ribbon with three height shells (a round section), a
+  lit strip toward the key, a dark one opposite, optional winding grain. The one-way boughs are built from it:
+  the top edge is the walk line, underneath are a swollen base, two knuckles with a forked branch and a stub.
 - **Ledges are two different things**: beside a trunk, `paintLivingBough` (collar, belly, knuckled tip, side
   limbs); at the scene edge, `paintCrookShelf` (earth held by two limbs). Painted limbs and trunk vines
   report `info.twigs` / `info.ivy` so `pf-plants.ts` puts leaves on them.
@@ -55,9 +78,7 @@
   meant to be barely visible. Ground tops carry a rounded moss crown (`crownLift` + `crownMound`). The sun map
   is discrete pools (most ground gets none); plant tone bases are near-black and only tips in a pool are bright.
   Glow plants are rare (`glowShare`), small and dim. One hollow per screen.
-- **Islands hang** from living growth in the plant mesh (`hangVine`, from `info.hangers`): three modes by island
-  index (pair of bundles, one great aerial root, a yoke to a single stem). Vines sway in the middle only (their
-  vertices weight by sin so both ends stay put); only the lashings are baked. **The lip is in front**: a low moss
+- **The lip is in front**: a low moss
   skin with drips and rootlets in `playfieldFront`, plus ankle-high root humps and stones every ~500 px. **Props** (`paintProps`):
   a carved standing stone by the pool, a cocoon lantern under the great bough, a moth shrine at the right;
   `info.lanterns` gives them a dim halo. Plants call `contact()` for a ground shadow under anything big.
@@ -91,8 +112,8 @@
   and shows as faint boxes around tiles.
 - Hard `step()` / `floor()` edges in the bake shader alias at the bake resolution: use `plane3()` or a narrow
   `smoothstep`.
-- The bake shader erodes silhouettes by up to ~1 px with noise (brushed edges) and posterises the lighting
-  into a few planes; both are in `main()` of `LIT_FRAG`.
+- The bake shader erodes silhouettes by up to ~1 px with noise (brushed edges) and breaks the lighting into
+  a few soft planes; both are in `main()` of `LIT_FRAG`.
 - Hollows (`info.pockets`, kind `glow` or `crystal`) are kept 80 px clear of bank faces, or they open into the air.
 - Form-following stroke noise draws contour rings round roots when posterised: keep its weight low (0.22) and
   the fine stroke layer on the plain grain. GLSL `smoothstep(a, b, x)` with a > b is undefined: flip it.
@@ -100,8 +121,9 @@
 - Cost: at 4K most of the playfield's time is the terrain sprites, and the atmosphere agent's hero-light mask
   draws `playfield` + `playfieldFront` a second time each frame. Big alpha-blended plants are the next cost:
   put large background shapes in the bake, not in the plant mesh.
-- Rocks are never `blob()` ellipses: backdrop boulders are faceted corner runs with a sunk base, in side-by-side
-  clusters (never stacked). Shrub lobes are lumpy `cloud()` fans with rim leaves, never plain `fan()` discs with a
+- Rocks are neither `blob()` ellipses nor facets (triangles between corners read low-poly): use `paintRock`.
+  Backdrop boulders stand in side-by-side clusters (never stacked). Low-count `blob(..., n < 9)` is a polygon:
+  avoid it for anything bigger than a pebble. Shrub lobes are lumpy `cloud()` fans with rim leaves, never plain `fan()` discs with a
   strip under them (that combination read as snowmen and balls on blocks).
 - `npm run clip` centres on the character: to film the pool, stand in or beside it, or use `__game.cam` stills.
 - Landing shiver is a ring (`BendField.waves`) that travels `landReach` px in `landTime` s, scaled by impact speed;
@@ -122,6 +144,21 @@
   in a pool) and ~8% are a cool blue-green accent. A single warm tint for everything read as uniform mustard.
 - GLSL: `cast` is a reserved word. Destroy shaders before the textures bound to them or Pixi warns.
 - Bake scale is fixed at boot (`viewScale` clamped to 1.5..2); a later resize does not rebake.
-- Tops are honest to within ~6 px (`__game.debug.hitboxes(true)` to check). Island tapers, ledge sag and the
-  trunk root crowns hang below the collision bottom; nothing rises above a top.
+- **Elevated tops must not rule a line.** Three things used to stack into a dark tray rim along every island:
+  the front moss lip (now separate pads in BACK tones on non-ground tops), the near-black bases of grass
+  (`baseLift` in pf-plants.ts lifts `tone.dark` toward mid while planting non-ground tops) and the contact shadow
+  under the crest (`MossOpts.lipShade`). Grass on elevated tops grows in small drifts with gaps and shortens to
+  the free ends (an even stand read as a clipped hedge on a tray).
+- The bake's posterised planes are softer than they were (`BAKE.planes` 0.6, `plane3` riser 0.2-0.8): at 0.82
+  with a narrow riser every round root and trunk was tiled with crisp angular plates.
+- A `ribbon()` ends in a flat cut: anything short and wide (a node, a collar) needs a width that goes to ~0 at
+  both ends or it bakes as a box. Four even shards on a stump read as a hand: use one tall splinter and a lip.
+- Island shapes that failed: a symmetric fork (a goblet), one boxy boulder (a drum / a log end), one stone with
+  roots hooped round it (a cauldron), a wedge-shaped bracket (an axe head of wood), roots with bright even
+  highlights (straps). What worked: asymmetry, two stones instead of one, supports that come from one side.
+- Cost measured 2026-10-13 at 3840x2160 (M5 Pro, playfield + front toggled, `gl.readPixels` after each tick):
+  0.23-0.48 ms per frame at four stops, CPU 0.15-0.2 ms.
+- Tops are honest to within ~6 px (`__game.debug.hitboxes(true)` to check; re-checked for all seven islands and
+  both boughs after the rebuild). Island bodies, ledge sag and the trunk root crowns hang below the collision
+  bottom; nothing lit rises above a top (the snags' spars do, but in the dark back plane).
 - Dev only: `window.__pf` = `{layer, back, front}` (toggle `.visible` to profile; `layer.cpuMs`).
