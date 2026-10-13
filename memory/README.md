@@ -22,3 +22,4 @@ Keep entries current; delete stale ones.
 - [Reference study](reference-study.md) — measured table of our stops vs Ori/HK Steam frames (key, near-black, hero size and contrast, hue commitment) and the principles to hold the look to; resize gotcha
 - [Combat](combat.md) — thorn slash (three-step combo table, lunge, air hang, hitstop, recoil, pogo), lumen pods (toughness, payout, placement list), what render reads
 - [Pickups: glints](pickups.md) — collectible rule and timing (wake/flight/stagger/combo), events, one-mesh renderer, bud holder, HUD counter, placement list, look decisions and gotchas
+- [Enemies and health](enemies.md) — the burrback (patrol, flinch, hits, death, placement), contact damage, knockback and i-frames, fade / re-form and last safe ground, what render reads

@@ -248,6 +248,75 @@ export const defaultTuning = {
     releaseStaggerBig: 3,
     bigRelease: 6,
   },
+  /**
+   * Vesper's health (rules: memory/enemies.md). She has `max` lights; contact with an enemy costs
+   * one, knocks her back and makes her untouchable for a while. At none she fades and re-forms at
+   * the last safe ground.
+   */
+  health: {
+    max: 4,
+    /** Knockback on a hit: px/f away from what hurt her, and up. */
+    hurtVx: 7,
+    hurtVy: 7,
+    /** Frames she is out of control after a hit; held directions count again for the last `steerFrames` of them. */
+    staggerFrames: 12,
+    steerFrames: 3,
+    /** How fast the knockback's vx fades while she is out of control, px/f². */
+    hurtDecel: 0.3,
+    /** Frames she cannot be hurt again, counted from the hit (the stagger is inside them). */
+    invulnFrames: 70,
+    /** At no health: frames she lies faded before she re-forms, and her invulnerability after. */
+    fadeFrames: 50,
+    reformInvulnFrames: 90,
+    /** Safe ground: this many frames in a row on solid ground, at least this far from any living enemy. */
+    safeFrames: 30,
+    safeEnemyPx: 200,
+  },
+  /** What every enemy shares (src/sim/enemies.ts). */
+  enemies: {
+    /** Hitstop when a slash hits one, frames (the combo step may add to it). The creature holds for as long. */
+    hitstopFrames: 2,
+    /** How long a dead body stays (for its death animation) before it is removed. */
+    deadFrames: 30,
+    /** Glints spilled on death reach her like a pod's: the first after this long, then a stagger apart. */
+    releaseFrames: 16,
+    releaseStagger: 5,
+    releaseStaggerBig: 3,
+    bigRelease: 6,
+  },
+  /** The burrback: a small armoured beetle that trundles along its platform. */
+  burrback: {
+    /** Collision box. */
+    width: 52,
+    height: 34,
+    hp: 3,
+    /** Walking speed, px/f. */
+    speed: 1.6,
+    /** Frames it stands still when it turns round at a ledge or a wall. */
+    turnPauseFrames: 24,
+    /** Now and then it rests mid-walk: every restEveryMin..Max frames of walking, for restMin..Max frames. */
+    restEveryMin: 150,
+    restEveryMax: 330,
+    restMin: 20,
+    restMax: 34,
+    /** She lands or slashes within alertPx of it: it flinches for alertFrames, at most once per alertCooldown. */
+    alertPx: 160,
+    alertFrames: 18,
+    alertCooldown: 45,
+    /** Stagger after a hit, and how much of it (from the hit) its touch is harmless. */
+    hurtFrames: 14,
+    hurtSafeFrames: 8,
+    /** Knockback (the slash's `knockback`, px/f) fades by this each frame; an up / down cut gives this share sideways. */
+    knockDecay: 1,
+    knockVertical: 0.5,
+    /** A shove may leave this much of it hanging over a ledge, never more: it does not fall. */
+    teeterPx: 10,
+    /** What its touch costs her. */
+    contactDamage: 1,
+    /** Glints it spills when it dies, and when the finisher killed it. */
+    value: 4,
+    valueFinisher: 6,
+  },
   /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
   pickups: {
     /** A glint within this many px of the body wakes and is hers. */
@@ -262,6 +331,15 @@ export const defaultTuning = {
     staggerFrames: 4,
     /** A pickup this soon after the last one continues the combo. */
     comboFrames: 50,
+  },
+  /**
+   * The canopy: a soft ceiling at the scene's `ceilingY` (scene data; none if absent), so she never
+   * leaves the top of the picture (the camera stops at the scene's top). The top of her box can
+   * rise no faster than `rate` x its distance below it, so a jump eases to a stop there: no bump,
+   * no event, sideways speed untouched.
+   */
+  ceiling: {
+    rate: 0.5,
   },
   misc: {
     dropThroughFrames: 10,

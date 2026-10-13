@@ -3,6 +3,7 @@
   "width": 5760,
   "height": 1600,
   "spawn": { "x": 1120, "y": 1280 },
+  "ceilingY": 0,
   "solids": [
     { "tag": "ground", "x": 0, "y": 1088, "w": 384, "h": 512 },
     { "tag": "ground", "x": 384, "y": 1280, "w": 1152, "h": 320 },
@@ -103,5 +104,13 @@
     { "id": "pod-row-1", "x": 5060, "y": 1066, "mount": "sit" },
     { "id": "pod-row-2", "x": 5350, "y": 1066, "mount": "sit" },
     { "id": "pod-row-3", "x": 5640, "y": 1066, "mount": "sit" }
+  ],
+  "enemies": [
+    { "id": "burr-bank", "kind": "burrback", "x": 200, "y": 1088, "facing": 1 },
+    { "id": "burr-path", "kind": "burrback", "x": 2330, "y": 1280, "facing": -1 },
+    { "id": "burr-rise", "kind": "burrback", "x": 3000, "y": 1152, "facing": -1 },
+    { "id": "burr-ledge", "kind": "burrback", "x": 3000, "y": 448, "facing": 1 },
+    { "id": "burr-root", "kind": "burrback", "x": 4400, "y": 1280, "facing": 1 },
+    { "id": "burr-far", "kind": "burrback", "x": 5620, "y": 448, "facing": -1 }
   ]
 }

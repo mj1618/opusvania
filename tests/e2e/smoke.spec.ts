@@ -93,6 +93,8 @@ test('__game API: step, state, input, load, teleport, cam, freeze', async ({ pag
       hashA,
       loaded,
       lights: g.lights(),
+      enemies: g.enemies(),
+      health: g.health(),
     };
   });
   expect(r.f5).toBe(r.f0 + 5);
@@ -111,5 +113,9 @@ test('__game API: step, state, input, load, teleport, cam, freeze', async ({ pag
   expect(r.hashA).toMatch(/^[0-9a-f]{14}$/);
   expect(r.loaded.frame).toBe(0);
   expect(r.lights.length).toBeGreaterThan(0);
+  // Enemies and health are in the state and listed by the API.
+  expect([r.enemies.alive, r.enemies.total, r.loaded.enemies.length]).toEqual([6, 6, 6]);
+  expect(r.enemies.list[0]).toMatchObject({ id: 'burr-bank', kind: 'burrback', hp: 3, mode: 'walk' });
+  expect(r.health).toMatchObject({ hp: 4, hpMax: 4, invuln: 0, faded: 0 });
   expect(errors).toEqual([]);
 });

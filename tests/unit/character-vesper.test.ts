@@ -357,9 +357,12 @@ describe('vesper rig', () => {
     expect(rig.slashW).toBeGreaterThan(0.9);
     expect(rig.cutQ).toBeGreaterThan(0.4);
     for (let i = 0; i < 15; i++) tick();
-    // Still held out when the next press can come (17 frames): the chain starts from here, not the sheath.
+    // When the next press can come (17 frames) the blade is in her hand, part-way down in front of
+    // her, and her body is still in the follow-through: the chain grows out of this, not from rest.
     expect(rig.slashW).toBe(1);
-    expect(rig.slashHome).toBe(0);
+    expect(rig.slashHome).toBeGreaterThan(0);
+    expect(rig.slashHome).toBeLessThan(0.75);
+    expect(rig.slashBody).toBeGreaterThan(0.3);
     tick({}, [slash(2)]);
     expect(rig.stroke).toBe(STROKES.fwd[1]);
     // The press frame shows the gathered blade: the cut has not travelled yet.
@@ -414,6 +417,115 @@ describe('vesper rig', () => {
       { type: 'slashEnd', x: 0, y: 0, dir: 'down', hits: 0, reason: 'dash' },
     ]);
     expect(rig.slashW).toBe(0);
+  });
+
+  it('a lone tap is back in the sheath well before the old 29 frames; the near arm holds the thorn', () => {
+    const rig = new Rig();
+    let clock = 0;
+    const tick = (over: Partial<PlayerView> = {}, ev: SimEvent[] = []): void => {
+      rig.update(DT, clock, view(over), ev);
+      clock += DT;
+    };
+    const slash = (facing: number): SimEvent => ({
+      type: 'slash',
+      x: 1000,
+      y: 1280,
+      dir: 'fwd',
+      facing,
+      seq: 1,
+      step: 1,
+      finisher: false,
+      startup: 1,
+      active: 6,
+      duration: 14,
+      cooldown: 17,
+      lunge: 0,
+      hang: 0,
+    });
+    tick({}, [{ type: 'spawn', x: 1000, y: 1280 }]);
+    tick({}, [slash(1)]);
+    expect(rig.swordSide).toBe(0);
+    for (let i = 0; i < 21; i++) tick();
+    expect(rig.slashW).toBe(0);
+    for (let i = 0; i < 30; i++) tick({ facing: -1 });
+    tick({ facing: -1 }, [slash(-1)]);
+    expect(rig.swordSide).toBe(1);
+    tick({ facing: -1 });
+    // Mirrored: the blade goes left.
+    expect(rig.bladeX).toBeLessThan(0);
+  });
+
+  it('the finisher hops and is back on the ground before the stroke ends; hurt, fade and reform envelopes', () => {
+    const rig = new Rig();
+    let clock = 0;
+    const tick = (over: Partial<PlayerView> = {}, ev: SimEvent[] = []): void => {
+      rig.update(DT, clock, view(over), ev);
+      clock += DT;
+    };
+    tick({}, [{ type: 'spawn', x: 1000, y: 1280 }]);
+    for (let i = 0; i < 10; i++) tick();
+    tick({}, [
+      {
+        type: 'slash',
+        x: 1000,
+        y: 1280,
+        dir: 'fwd',
+        facing: 1,
+        seq: 3,
+        step: 3,
+        finisher: true,
+        startup: 3,
+        active: 8,
+        duration: 20,
+        cooldown: 27,
+        lunge: 0,
+        hang: 0,
+      },
+    ]);
+    let peak = 0;
+    for (let i = 0; i < 9; i++) {
+      tick();
+      peak = Math.max(peak, rig.slashHop);
+    }
+    expect(peak).toBeGreaterThan(8);
+    tick();
+    expect(rig.slashHop).toBeLessThan(0.5);
+    for (let i = 0; i < 60; i++) tick();
+    // Hurt: thrown left; the recoil holds through the stagger and is gone soon after.
+    tick({}, [
+      {
+        type: 'hurt',
+        x: 1000,
+        y: 1280,
+        dir: -1,
+        hp: 3,
+        hpMax: 4,
+        damage: 1,
+        source: { kind: 'burrback', id: 'b' },
+        hitX: 1030,
+        hitY: 1260,
+        stagger: 12,
+        invuln: 70,
+      },
+    ]);
+    expect(rig.sig.hurt).toBe(true);
+    for (let i = 0; i < 6; i++) tick();
+    expect(rig.hurtK).toBeGreaterThan(0.95);
+    for (let i = 0; i < 30; i++) tick();
+    expect(rig.hurtK).toBe(0);
+    // Her last light: she dissolves, stays gone, and re-forms.
+    tick({}, [{ type: 'fade', x: 1000, y: 1280, frames: 50 }]);
+    for (let i = 0; i < 45; i++) tick();
+    expect(rig.fadeK).toBe(1);
+    tick({ cx: 400 }, [
+      { type: 'reform', x: 400, y: 1280, fromX: 1000, fromY: 1280, hp: 4, hpMax: 4, invuln: 90 },
+      { type: 'spawn', x: 400, y: 1280 },
+    ]);
+    expect(rig.fadeK).toBe(0);
+    expect(rig.reformK).toBeGreaterThan(0.9);
+    for (let i = 0; i < 40; i++) tick({ cx: 400 });
+    expect(rig.reformK).toBe(0);
+    for (let i = 0; i < J_COUNT * 2; i++) expect(Number.isFinite(rig.frame.j[i])).toBe(true);
   });
 
   it('strokes cover the sim hit area: the blade point reaches the edge of slashBox for every step', () => {
@@ -476,6 +588,29 @@ describe('vesper rig', () => {
     expect(kick.x).toBe(0);
     kick.update(0, [impact(2, 'fwd', -1)]);
     expect(kick.x).toBeCloseTo(cameraTuning.kick.power2);
+    // The blow that kills kicks harder.
+    kick.update(0, [
+      impact(2, 'fwd', 1),
+      {
+        type: 'enemyDie',
+        id: 'b',
+        kind: 'burrback',
+        x: 0,
+        y: 0,
+        facing: 1,
+        slash: 'fwd',
+        dir: 1,
+        power: 2,
+        hpMax: 3,
+        knockback: 11,
+        hitstop: 3,
+        frames: 30,
+        value: 3,
+        glintFrames: 16,
+        stagger: 5,
+      },
+    ]);
+    expect(kick.x).toBeCloseTo(-cameraTuning.kick.power2 * cameraTuning.kick.kill);
     kick.update(0, [impact(1, 'down', 1)]);
     expect(kick.y).toBeLessThan(0);
     expect(kick.x).toBe(0);

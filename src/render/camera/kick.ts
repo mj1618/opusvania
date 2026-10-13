@@ -21,7 +21,10 @@ export class CameraKick {
   /** Feed the frame's sim events, then advance `dt` seconds of render time. */
   update(dt: number, events: readonly SimEvent[], ct: CameraTuning = cameraTuning): void {
     const k = ct.kick;
+    let struck = false;
+    let kill = false;
     for (const e of events) {
+      if (e.type === 'enemyDie') kill = true;
       if (e.type === 'spawn') this.reset();
       if (e.type !== 'impact') continue;
       const px = e.power >= 2 ? k.power2 : k.power1;
@@ -31,6 +34,12 @@ export class CameraKick {
       this.x = dx * px;
       this.y = dy * px * k.vertical;
       this.vx = this.vy = 0;
+      struck = true;
+    }
+    // The blow that kills lands a little harder.
+    if (struck && kill) {
+      this.x *= k.kill;
+      this.y *= k.kill;
     }
     if (dt <= 0) return;
     // Critically damped: x(t) = (x0 + (v0 + w x0) t) e^(-w t), exact for any dt.

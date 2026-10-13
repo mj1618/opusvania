@@ -81,6 +81,10 @@ export interface View {
   bladeOver: boolean;
   /** The cut goes behind her back (off a wall): the sword arm and blade are drawn in front. */
   bladeFront: boolean;
+  /** Which arm holds it: 0 = side A, 1 = side B. */
+  swordSide: number;
+  /** Px she is off the ground in a hop the sim knows nothing about (the finisher). */
+  hop: number;
   /** Scales the face's pale tones (the dark zones' grade lifts them: this takes it back out). */
   pale: number;
 }
@@ -568,9 +572,9 @@ const SH_BLADE: Shade = {
 };
 
 /** The thorn in her hand: a slender pale blade along `ang` (screen radians) from the hand joint. */
-function blade(p: Painter, j: Float32Array, ang: number, k: number, len: number): void {
-  const hx = j[J_HAND_A * 2]!;
-  const hy = j[J_HAND_A * 2 + 1]!;
+function blade(p: Painter, j: Float32Array, side: number, ang: number, k: number, len: number): void {
+  const hx = j[(J_HAND_A + side) * 2]!;
+  const hy = j[(J_HAND_A + side) * 2 + 1]!;
   const cx = Math.cos(ang);
   const cy = Math.sin(ang);
   const L = 26 * k * len;
@@ -1178,7 +1182,9 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   }
   const ox = j[J_ORIGIN * 2]!;
   const oy = j[J_ORIGIN * 2 + 1]!;
-  p.soft(ox, oy + 1, 24, 4.5, SHADOW, 0.5 * s[S_GROUND]!);
+  // Her contact shadow shrinks and fades as she leaves the ground in the finisher's hop.
+  const hk = 1 / (1 + v.hop / 14);
+  p.soft(ox, oy + 1, 24 * hk, 4.5 * hk, SHADOW, 0.5 * s[S_GROUND]! * hk);
 
   // Spread for the glide, both wings lie behind her and she hangs in front of them; the far one
   // is only a little dimmer, and the two trade places smoothly as she turns under them.
@@ -1197,19 +1203,22 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   thorn(p, f, 21 * (1 - 0.65 * v.tuck), v.slashW);
   // The sword arm is side A: behind the body when she faces left.
   const bk = sat(v.slashW * 2 - 1);
-  if (d < 0 && !v.bladeFront && !v.bladeOver && v.slashW > 0.5) blade(p, j, v.bladeAng, bk, v.bladeLen);
+  // The sword arm is the near arm when the slash starts; if she turns under it, it goes behind her.
+  const sw = v.swordSide;
+  const swFar = sw !== near;
+  if (swFar && !v.bladeFront && !v.bladeOver && v.slashW > 0.5) blade(p, j, sw, v.bladeAng, bk, v.bladeLen);
   torso(p, j);
   leg(p, j, near, false);
   if (!behind)
     wing(p, v.wings[near]!.strands, v.open, kNear, v.glow, clock, v.soarW[near]!, v.back[near]!, spot);
   ruff(p, f, v);
   arm(p, j, near, false, true, v.wall);
-  if (v.bladeFront && near !== 0) arm(p, j, 0, false, true, 0);
-  if ((d >= 0 || v.bladeFront) && !v.bladeOver && v.slashW > 0.5) blade(p, j, v.bladeAng, bk, v.bladeLen);
+  if (v.bladeFront && swFar) arm(p, j, sw, false, true, 0);
+  if ((!swFar || v.bladeFront) && !v.bladeOver && v.slashW > 0.5) blade(p, j, sw, v.bladeAng, bk, v.bladeLen);
   head(p, f, v, far);
   if (v.bladeOver && v.slashW > 0.5) {
-    if (near !== 0) arm(p, j, 0, false, true, 0);
-    blade(p, j, v.bladeAng, bk, v.bladeLen);
+    if (swFar) arm(p, j, sw, false, true, 0);
+    blade(p, j, sw, v.bladeAng, bk, v.bladeLen);
   }
   antenna(p, v.antennae[near]!, false, v.glow, sat(v.glintT / GLINT_RUN), v.glintT < 0.6 ? v.glintK : 0);
 }

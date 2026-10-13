@@ -126,7 +126,9 @@ export interface Stroke {
   reach: number;
   /**
    * Frames: the gather before the cut, the cut itself, when the blade starts home, how long home
-   * takes. The press frame is drawn at frame 1 and the sim's first possible hit at `startup + 1`:
+   * takes. `hold` is short so a lone tap sheathes promptly; the sim allows the next cut from frame
+   * 17 / 19 / 27, by when the blade is on its way down in front and the body (which lets go over
+   * `home`) is still partly in the follow-through, so a chained cut flows out of it. The press frame is drawn at frame 1 and the sim's first possible hit at `startup + 1`:
    * `wind` = the sim's startup, so the press frame shows the gathered pose and a hit (and its
    * hitstop) catches the blade one frame into the cut, about two thirds of the way round.
    */
@@ -162,37 +164,41 @@ const K_ROT = 10; // whole-body roll in the air, rad (+ = forward)
 const K_WING = 11; // wings: -1 folded close .. 1 flared .. more = thrown wide
 const K_LIFT = 12; // rise through the middle of the cut, px
 const K_LEGS = 13; // air: legs trail back, px
-const NK = 14;
+const K_HOP = 14; // a hop through the cut: pelvis and both feet leave the ground, px (render only)
+const NK = 15;
 
-//                TW    LEAN   CURL   PF    PU    HT     OF   OU   FA   FB  ROT    WING  LIFT LEGS
-const CUT1_W = [0.5, 0.02, 0.12, -1.5, -2.4, 0.06, 3, -1, 0, 0, 0.06, -0.35, 0, 0];
-const CUT1_F = [-0.6, 0.2, -0.16, 6, -0.6, -0.16, -9, 2.5, 10, 0, -0.16, 0.75, 1.5, 4];
-const CUT2_W = [-0.6, 0.1, -0.1, 3.5, 0.6, -0.1, -7, 2, 8, 0, -0.1, 0.3, 0, 4];
-const CUT2_F = [0.62, 0.26, 0.14, 4, -3.2, 0.06, 6.5, 3.5, 8.5, -2, 0.14, 0.7, 0, 6];
-const FIN_W = [0.85, -0.2, -0.12, -5, -5.5, -0.12, 9, 6, 3, -1, -0.26, -1, 0, -3];
-const FIN_F = [-0.9, 0.46, 0.2, 9, -6.5, 0.12, -11, 5, 13, -4, 0.34, 1.5, 6.5, 9];
-const UP1_W = [0.4, -0.08, -0.06, 0, -1.5, -0.2, 3, -3, 0, 0, -0.1, -0.3, 0, 0];
-const UP1_F = [-0.4, 0.06, -0.1, 0, 2.6, -0.26, -4, -5, 0, 0, 0.1, 0.7, 4, 3];
-const UP2_W = [-0.4, 0.08, 0, 0, 1.5, -0.2, -4, -4, 0, 0, 0.1, 0.3, 0, 3];
-const UP2_F = [0.4, -0.12, -0.14, 0, 2.4, -0.32, 3, -5, 0, 0, -0.12, 0.7, 3.5, 4];
-const UP3_W = [0.7, -0.16, 0.1, 0, -6, -0.1, 5, -2, 0, 0, -0.2, -1, 0, -3];
-const UP3_F = [-0.7, 0.1, -0.16, 0, 4, -0.3, -6, -8, 0, 0, 0.2, 1.5, 9, 8];
-const DOWN_W = [0.2, 0.1, 0.1, 0, 1, 0.1, -4, 4, 0, 0, 0, -0.3, 0, 0];
-const DOWN_F = [-0.3, 0.18, 0.16, 0, 0, 0.2, -6, 7, 0, 0, 0.18, 0.9, 0, 0];
+// Three silhouettes: cut 1 ends HIGH (tall on the toes, chest open, head back after the blade, the
+// off-arm thrown down behind); cut 2 ends LOW and LONG (a deep reaching lunge, spine laid forward,
+// the off-arm thrown up behind); the finisher gathers small and low, hops, and lands wide.
+//              TW    LEAN   CURL   PF   PU    HT    OF   OU  FA  FB  ROT   WING LIFT LEGS HOP
+const CUT1_W = [0.6, 0.32, 0.22, -2, -4.5, 0.18, 4, -1, 0, 0, 0.1, -0.5, 0, 0, 0];
+const CUT1_F = [-0.7, -0.12, -0.26, 5, 2.4, -0.36, -10, -5, 9, -3, -0.22, 1.05, 2, 4, 0];
+const CUT2_W = [-0.7, -0.06, -0.2, 4, 2.6, -0.3, -8, -2, 9, -3, -0.14, 0.4, 0, 4, 0];
+const CUT2_F = [0.78, 0.58, 0.1, 9, -8, -0.34, -9, 10, 14, -5, 0.22, 0.95, 0, 7, 0];
+const FIN_W = [0.9, -0.22, -0.14, -6, -7, -0.1, 9, 6, 3, -2, -0.28, -1, 0, -3, 0];
+const FIN_F = [-0.95, 0.5, 0.2, 10, -7.5, -0.2, -11, 6, 14, -4, 0.36, 1.5, 0, 9, 13];
+const UP1_W = [0.4, -0.08, -0.06, 0, -1.5, -0.2, 3, -3, 0, 0, -0.1, -0.3, 0, 0, 0];
+const UP1_F = [-0.4, 0.06, -0.1, 0, 2.6, -0.26, -4, -5, 0, 0, 0.1, 0.7, 4, 3, 0];
+const UP2_W = [-0.4, 0.08, 0, 0, 1.5, -0.2, -4, -4, 0, 0, 0.1, 0.3, 0, 3, 0];
+const UP2_F = [0.4, -0.12, -0.14, 0, 2.4, -0.32, 3, -5, 0, 0, -0.12, 0.7, 3.5, 4, 0];
+const UP3_W = [0.7, -0.16, 0.1, 0, -6, -0.1, 5, -2, 0, 0, -0.2, -1, 0, -3, 0];
+const UP3_F = [-0.7, 0.1, -0.16, 0, 2, -0.3, -6, -8, 0, 0, 0.2, 1.5, 3, 8, 11];
+const DOWN_W = [0.2, 0.1, 0.1, 0, 1, 0.1, -4, 4, 0, 0, 0, -0.3, 0, 0, 0];
+const DOWN_F = [-0.3, 0.18, 0.16, 0, 0, 0.2, -6, 7, 0, 0, 0.18, 0.9, 0, 0, 0];
 
 export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: readonly Stroke[] } = {
   fwd: [
     // 1: the draw cut. Straight out of the sheath, rising from low to high in front of her.
     {
       a0: -104,
-      a1: 62,
+      a1: 70,
       over: 14,
       tilt: 16,
       sq: 0.52,
       reach: 110,
       wind: 1,
       cut: 3.6,
-      hold: 20,
+      hold: 12,
       home: 9,
       ease: 3,
       relax: 16,
@@ -211,7 +217,7 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       reach: 110,
       wind: 1,
       cut: 3.6,
-      hold: 22,
+      hold: 13,
       home: 9,
       ease: 3,
       relax: 10,
@@ -230,8 +236,8 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       reach: 135,
       wind: 3,
       cut: 3.4,
-      hold: 31,
-      home: 14,
+      hold: 22,
+      home: 12,
       ease: 3,
       relax: 6,
       show: 0.4,
@@ -252,7 +258,7 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       reach: 124,
       wind: 1,
       cut: 3.6,
-      hold: 20,
+      hold: 12,
       home: 9,
       ease: 3,
       relax: 8,
@@ -270,7 +276,7 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       reach: 124,
       wind: 1,
       cut: 3.6,
-      hold: 22,
+      hold: 13,
       home: 9,
       ease: 3,
       relax: 16,
@@ -288,8 +294,8 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       reach: 144,
       wind: 3,
       cut: 3.4,
-      hold: 31,
-      home: 14,
+      hold: 22,
+      home: 12,
       ease: 3,
       relax: 8,
       show: 0.1,
@@ -309,7 +315,7 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       reach: 120,
       wind: 1,
       cut: 3.6,
-      hold: 16,
+      hold: 12,
       home: 9,
       ease: 3,
       relax: 10,
@@ -320,6 +326,21 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
     },
   ],
 };
+/** Being hurt, fading and re-forming (render side; the sim's numbers are in tuning.health). Seconds. */
+export const HURT = {
+  /** The recoil pose is held this long (the sim's stagger is 12 frames), then let go over `out`. */
+  hold: 0.2,
+  out: 0.28,
+  /** Her last light: the dissolve starts this long after the blow and takes `fadeLen`. */
+  fadeAt: 0.12,
+  fadeLen: 0.45,
+  /** Re-forming: dust gathers, then she is whole again by the end of this. */
+  reform: 0.6,
+  /** While she cannot be hurt she pulses: depth of the alpha dip, pulses per second. */
+  flickerDepth: 0.4,
+  flickerHz: 7,
+} as const;
+
 /** Where the blade points when it is home: back and down along the sheath. Hand reach from the shoulder, px. */
 export const SHEATH_ANG = -152;
 const HAND_WIND = 10.5;
@@ -495,7 +516,7 @@ const GLIDEP = pose([
   0, 31.5, 0.16, -0.14, -0.1, -7.5, 3.2, 1.25, -11.5, 5.4, 1.4, -8.5, -8.5, -10.5, -6.5, 0.06, 1, 0.1, 1,
 ]);
 /** The up-slash: long through the body, chest open, chin up, off-hand low and back for balance. */
-const UPCUT = pose([0, 34, -0.1, -0.2, -0.32, 4, 3, 0.5, -5, 5, 0.9, 0, 0, -7, -15, 0, 1, -0.5, 1]);
+const UPCUT = pose([0, 34, -0.1, -0.2, -0.32, 2.5, 0.5, 1.1, -2.5, 2, 1.3, 0, 0, -7, -15, 0, 1, -0.5, 1]);
 /** The down-slash (air): knees up out of the way, curled over the blade, off-hand thrown back and up. */
 const DOWNCUT = pose([-2, 34, 0.34, 0.3, 0.42, 7, 15, 0.9, -3, 18, 1.2, 0, 0, -10.5, -2, 0, 1, 0.7, 1]);
 const WALL = pose([
@@ -560,6 +581,10 @@ export interface RigSignals {
   beat: boolean;
   /** A slash connected this frame. */
   slashHit: boolean;
+  /** She was hurt this frame; her last light went out; she re-formed. */
+  hurt: boolean;
+  fade: boolean;
+  reform: boolean;
 }
 
 /** A point dragged behind its target: lags, swings past, settles. */
@@ -610,6 +635,9 @@ export class Rig {
     combo: -1,
     beat: false,
     slashHit: false,
+    hurt: false,
+    fade: false,
+    reform: false,
   };
   /** Forward-frame spine lean and head angle actually used (pose + springs), for the chains. */
   lean = 0;
@@ -716,6 +744,11 @@ export class Rig {
   hitPower = 1;
   /** The side the slash goes to (it keeps it whatever she does). */
   slashFacing = 1;
+  /**
+   * Which arm holds the thorn: 0 = side A, 1 = side B. Always the arm toward the camera when the
+   * slash starts (the near arm reads; the far one is hidden behind her), and the lead foot with it.
+   */
+  swordSide = 0;
   private slashOn = false;
   private gripIn = 0;
   private fromAng = SHEATH_ANG * DEG;
@@ -726,6 +759,22 @@ export class Rig {
   private readonly kNow = new Float32Array(NK);
   /** How far the lunge has carried her past her back foot, px (it drags, then comes up). */
   private lungeBack = 0;
+  /**
+   * Hurt: 0..1 the recoil (flung along the knockback, wings flared; held through the stagger).
+   * `fadeK` 0..1: dissolved to dust (her last light went out). `reformK` 1..0: gathering again.
+   */
+  hurtK = 0;
+  hurtDir = 1;
+  fadeK = 0;
+  reformK = 0;
+  private hurtT = 9;
+  private fading = false;
+  private fadeT = 0;
+  private reformT = 9;
+  private hurtRoll = 0;
+  /** 0..1: how much of the stroke's body key is in play; px she is off the ground in the finisher's hop. */
+  slashBody = 0;
+  slashHop = 0;
   private pogo = 0;
   private lastBeatU = 0;
   private soarOut = 8;
@@ -781,6 +830,9 @@ export class Rig {
     sig.combo = -1;
     sig.beat = false;
     sig.slashHit = false;
+    sig.hurt = false;
+    sig.fade = false;
+    sig.reform = false;
     let startSpin = false;
     let glideKick = 0;
 
@@ -829,11 +881,11 @@ export class Rig {
           sig.skid = true;
           break;
         case 'slash':
-          this.slash(e.dir, e.step, e.facing);
+          this.slash(e.dir, e.step, e.facing, p);
           break;
         case 'slashEnd':
           // A dash cuts it dead: the blade is simply home (the dash pose takes the arms).
-          if (e.reason === 'dash') this.slashOn = false;
+          if (e.reason === 'dash' || e.reason === 'hurt') this.slashOn = false;
           break;
         case 'slashHit':
           this.hitT = 0;
@@ -862,6 +914,26 @@ export class Rig {
           sig.pickup = Math.max(sig.pickup, k);
           break;
         }
+        case 'hurt':
+          // Thrown back: `dir` is the way she flies.
+          this.hurtT = 0;
+          this.hurtDir = e.dir >= 0 ? 1 : -1;
+          this.slashOn = false;
+          this.squash.v -= 2.2;
+          this.wide.v -= 2;
+          sig.hurt = true;
+          break;
+        case 'fade':
+          this.fading = true;
+          this.fadeT = 0;
+          sig.fade = true;
+          break;
+        case 'reform':
+          this.fading = false;
+          this.reformT = 0;
+          this.hurtT = 9;
+          sig.reform = true;
+          break;
         case 'wallSlideStart':
           this.crouch.v += 36;
           break;
@@ -902,6 +974,11 @@ export class Rig {
       this.lungeBack = 0;
       this.kNow.fill(0);
       this.hitT = 9;
+      this.hurtT = 9;
+      if (!sig.reform) {
+        this.fading = false;
+        this.reformT = 9;
+      }
       this.reach = 0;
       this.beat = 0;
       this.dive = 0;
@@ -1210,7 +1287,11 @@ export class Rig {
         hand = lerp(this.fromHand, hand, ew);
       }
       this.cutQ = sf >= sk.wind ? sw : -1;
-      if (this.cutQ >= 0 && cut0 < 0) this.cutStart = true;
+      if (this.cutQ >= 0 && cut0 < 0) {
+        this.cutStart = true;
+        // Running, the stride gives under the cut (the feet keep their plants: no sliding).
+        if (p.grounded && this.wRun > 0.5 && sk.f[K_HOP] === 0) this.crouch.v += 30;
+      }
       // The cut is done and no other followed: the blade turns home to the sheath, the hand to the hilt.
       const home = quintic((sf - sk.hold) / sk.home);
       if (home > 0) {
@@ -1228,14 +1309,19 @@ export class Rig {
       this.gripIn = Math.min(1, this.gripIn + (dt * 60) / 1.5);
       this.slashW = Math.min(this.gripIn, 1 - quintic((sf - sk.hold - sk.home * 0.72) / (sk.home * 0.28)));
       // The body: gather key -> end-of-cut key, easing off through the hold and gone as the blade goes home.
-      const rel = 1 - 0.62 * smoothstep(0.15, 1, after / rest);
-      const bw = 1 - quintic((sf - sk.hold + 2) / (sk.home * 0.8));
+      // The body lets go more slowly than the blade: a chained cut still finds her in the follow-through.
+      const rel = 1 - 0.35 * smoothstep(0.15, 1, after / rest);
+      const bw = 1 - quintic((sf - sk.hold) / sk.home);
       for (let i = 0; i < NK; i++) {
         const v = sf < sk.wind ? lerp(this.kFrom[i]!, sk.w[i]!, ew) : lerp(sk.w[i]!, sk.f[i]! * rel, sw);
         kn[i] = v * bw;
       }
       kn[K_LIFT] =
         sk.f[K_LIFT]! * Math.sin(Math.PI * sat((sf - sk.wind * 0.5) / (sk.cut + sk.wind * 0.5 + 1.5)));
+      // The hop: off the ground as the cut starts, down again a few frames after it (the sim never
+      // left the ground: she must be standing again well before the stroke is over).
+      kn[K_HOP] = sk.f[K_HOP]! * Math.sin(Math.PI * sat((sf - sk.wind * 0.75) / (sk.cut + 3))) ** 0.8;
+      this.slashBody = Math.min(this.gripIn, bw);
       // Up and down are whole poses under the stroke. On the ground the feet stay where they are.
       if (this.slashDir !== 'fwd') {
         const src = this.slashDir === 'up' ? UPCUT : DOWNCUT;
@@ -1257,6 +1343,7 @@ export class Rig {
       this.slashLen = 1;
       this.handR = HAND_WIND;
       for (let i = 0; i < NK; i++) kn[i]! *= Math.exp(-20 * dt);
+      this.slashBody = 0;
     }
     {
       // On a wall she clings with the other hand and both feet and twists out to cut away from it.
@@ -1266,29 +1353,43 @@ export class Rig {
       const gl = 1 - 0.5 * this.soar;
       const gk = p.grounded ? 1 : 0.45;
       const airK = 1 - g0;
-      out[TW]! += kn[K_TW]! * fw;
+      const sB = this.swordSide === 1;
+      const mir = sB ? -1 : 1;
+      const OHF = sB ? HAF : HBF;
+      const OHU = sB ? HAU : HBU;
+      const LF = sB ? BF : AF;
+      const LU = sB ? BU : AU;
+      const TF = sB ? AF : BF;
+      const TP = sB ? AP : BP;
+      out[TW]! += kn[K_TW]! * fw * mir;
       out[LEAN]! += kn[K_LEAN]! * fw * gl;
       out[CURL]! += kn[K_CURL]! * fw * gl;
       out[PF]! += kn[K_PF]! * fw * gk;
-      out[PU]! += (kn[K_PU]! + kn[K_LIFT]!) * fw * gk;
+      const hop = kn[K_HOP]! * g0 * fw;
+      out[PU]! += (kn[K_PU]! + kn[K_LIFT]!) * fw * gk + hop;
       out[HT]! += kn[K_HT]! * fw;
-      out[HBF]! += kn[K_OF]! * fw;
-      out[HBU]! += kn[K_OU]! * fw;
+      out[OHF]! += kn[K_OF]! * fw;
+      out[OHU]! += kn[K_OU]! * fw;
       // Feet: standing, the front foot steps in with the lunge and the back foot is left behind for
       // a moment before it is drawn up. Running, the stride carries on under the cut.
       const stand = g0 * (1 - this.wRun) * (1 - this.wSkid) * fw;
       if (p.grounded && p.lungeX !== 0) this.lungeBack += dx * sgn;
       this.lungeBack *= Math.exp(-(this.slashOn && sf < 9 ? 5 : 16) * dt);
       const back = clamp(this.lungeBack, -4, 14);
-      out[AF]! += kn[K_FA]! * stand;
-      out[AU]! +=
+      out[LF]! += kn[K_FA]! * stand;
+      out[LU]! +=
         Math.abs(sk.f[K_FA]! - sk.w[K_FA]!) *
         0.42 *
         bell(sat(sf / (sk.wind + sk.cut))) *
         stand *
         (this.slashOn ? 1 : 0);
-      out[BF]! += (kn[K_FB]! - back) * stand;
-      out[BP]! += sat(back / 10) * 0.7 * stand;
+      out[TF]! += (kn[K_FB]! - back) * stand;
+      out[TP]! += sat(back / 10) * 0.7 * stand;
+      // The hop takes both feet up (the lead knee higher), whatever the legs were doing.
+      out[LU]! += hop * 1.25;
+      out[sB ? AU : BU]! += hop * 0.85;
+      out[TF]! -= hop * 0.35 * stand;
+      this.slashHop = hop;
       // In the air the legs trail behind the cut.
       out[AF]! -= kn[K_LEGS]! * airK * gl;
       out[BF]! -= kn[K_LEGS]! * 1.3 * airK * gl;
@@ -1297,11 +1398,13 @@ export class Rig {
       out[LEAN]! -= 0.34 * onWall;
       out[CURL]! -= 0.22 * onWall;
       out[PF]! -= 3.5 * onWall;
-      out[TW]! -= 0.5 * onWall;
+      out[TW]! -= 0.5 * onWall * mir;
       out[HT]! -= 0.12 * onWall;
       out[HYAW] = lerp(out[HYAW]!, -0.8, onWall);
-      this.slashWing = kn[K_WING]!;
-      this.slashTwist = kn[K_TW]!;
+      // An up cut in the air is one long vertical line: wings swept down and back, legs together.
+      const upAir = this.slashDir === 'up' ? airK * this.slashBody : 0;
+      this.slashWing = lerp(kn[K_WING]!, -1.1, upAir);
+      this.slashTwist = kn[K_TW]! * mir;
       // The air hang: the wings lift to hold her for those frames.
       this.hangK += ((p.hang > 0 ? 1 : 0) - this.hangK) * approach(p.hang > 0 ? 40 : 9, dt);
     }
@@ -1329,6 +1432,47 @@ export class Rig {
     out[LEAN]! += accLean + crouch * 0.012;
     out[HT]! += crouch * 0.02 - accLean * 0.45;
 
+    // --- Hurt: a sharp recoil. Her hips are thrown along the knockback; head, arms and legs trail it.
+    this.hurtT += dt;
+    if (this.fading) this.fadeT += dt;
+    this.reformT += dt;
+    const hk = this.fading
+      ? 1
+      : this.hurtT < HURT.hold + HURT.out
+        ? sat(this.hurtT / 0.025) * (1 - quintic((this.hurtT - HURT.hold) / HURT.out))
+        : 0;
+    this.hurtK = hk;
+    this.fadeK = this.fading ? smoothstep(HURT.fadeAt, HURT.fadeAt + HURT.fadeLen, this.fadeT) : 0;
+    this.reformK = this.reformT < HURT.reform ? 1 - smoothstep(0.12, 1, this.reformT / HURT.reform) : 0;
+    this.hurtRoll = 0;
+    if (hk > 1e-3) {
+      const kf = this.hurtDir * sgn;
+      const up = 1 - g0;
+      out[LEAN]! -= 0.44 * kf * hk;
+      out[CURL]! += 0.26 * hk;
+      out[HT]! += 0.3 * hk;
+      out[PF]! += 3 * kf * hk;
+      out[HAF]! -= 9 * kf * hk;
+      out[HBF]! -= 7.5 * kf * hk;
+      out[HAU]! += 6 * hk;
+      out[HBU]! += 4.5 * hk;
+      out[AF]! -= 7 * kf * hk * up;
+      out[BF]! -= 4 * kf * hk * up;
+      out[AU]! += 5 * hk * up;
+      out[BU]! += 8 * hk * up;
+      out[EYE]! *= 1 - 0.7 * hk;
+      // On screen, clockwise +: the feet lead the way she is thrown.
+      this.hurtRoll = -0.3 * this.hurtDir * hk * (0.4 + 0.6 * up);
+    }
+    // Re-forming she is curled small and unfolds as the dust comes together.
+    if (this.reformK > 1e-3) {
+      const w = this.reformK * 0.75;
+      for (let i = 0; i < NP; i++) {
+        if (i === AF || i === AU || i === BF || i === BU || i === PF || i === HYAW) continue;
+        out[i] = lerp(out[i]!, i === PU ? 22 : TUCK[i]!, w);
+      }
+      this.slashWing = Math.min(this.slashWing, -1.1 * this.reformK);
+    }
     this.joy *= Math.exp(-5.5 * dt);
     out[HT]! -= 0.22 * this.joy;
     out[CURL]! -= 0.1 * this.joy;
@@ -1346,7 +1490,8 @@ export class Rig {
       this.twS.snap(out[TW]!);
     }
     // In the ball (and snapping out of it) the pose is taken straight: no part may lag out of it.
-    const direct = Math.max(this.spinW, this.openK * 0.7);
+    // A cut is quicker than the spine's springs: half of it goes straight through.
+    const direct = Math.max(this.spinW, this.openK * 0.7, 0.5 * this.slashBody);
     const lean = lerp(this.leanS.step(out[LEAN]!, dt), out[LEAN]!, direct);
     const curl = lerp(this.curlS.step(out[CURL]!, dt), out[CURL]!, direct);
     const ht = lerp(this.headS.step(out[HT]!, dt), out[HT]!, direct);
@@ -1445,7 +1590,7 @@ export class Rig {
       let free = (1 - this.wWall) * (1 - this.spinW);
       let hx2 = tx;
       let hy2 = ty;
-      if (side === 0 && this.slashW > 0) {
+      if (side === this.swordSide && this.slashW > 0) {
         // The sword hand rides the cut exactly: no lag.
         const sw = this.slashW;
         const hr = this.handR * (0.5 + 0.5 * this.slashLen);
@@ -1464,7 +1609,7 @@ export class Rig {
         hy2 + drag.oy * free,
         BODY.upperArm,
         BODY.foreArm,
-        side === 0 ? armBend : bendArm,
+        side === this.swordSide ? armBend : bendArm,
         0.12,
       );
       set(j, J_EL_A + side, ikOut.x, ikOut.y);
@@ -1508,7 +1653,7 @@ export class Rig {
     // Under the wings she is a pendulum hung from the collar; the head stays nearly level. The
     // bank rolls her a little with the wing plane.
     this.slashRoll = slashRot * this.slashFacing;
-    const sw = this.swing + this.bank * 0.35 * this.wGlide + this.slashRoll;
+    const sw = this.swing + this.bank * 0.35 * this.wGlide + this.slashRoll + this.hurtRoll;
     {
       const bx = Math.cos(this.slashAng) * this.slashFacing;
       const by = -Math.sin(this.slashAng);
@@ -1603,9 +1748,12 @@ export class Rig {
    * wherever the blade and the body are now, so a chained cut grows out of the last one's
    * follow-through and a first cut comes straight from the sheath.
    */
-  private slash(dir: SlashDir, step: number, facing: number): void {
+  private slash(dir: SlashDir, step: number, facing: number, p: PlayerView): void {
     const f = facing >= 0 ? 1 : -1;
-    const held = this.slashOn && this.slashW > 0.5 && f === this.slashFacing;
+    // The near arm: the body faces the wall on a wall slide, the slash's side otherwise.
+    const side = (p.motion === 'wallSlide' && p.wallDir !== 0 ? p.wallDir : f) >= 0 ? 0 : 1;
+    const held = this.slashOn && this.slashW > 0.5 && f === this.slashFacing && side === this.swordSide;
+    this.swordSide = side;
     this.fromAng = held ? this.slashAng : SHEATH_ANG * DEG;
     this.fromLen = held ? this.slashLen : 1;
     this.fromHand = held ? this.handR : HAND_WIND;

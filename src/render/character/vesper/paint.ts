@@ -135,6 +135,9 @@ export class Painter {
   l2k = 0;
   l2c: RGB = [1, 0.7, 0.4];
   /** When set, solid shapes are drawn as additive ghosts of this colour and alpha. */
+  /** Multiplies the alpha of everything solid drawn from now on, and the strength of every glow. */
+  alphaK = 1;
+  glowK = 1;
   ghost: RGB | null = null;
   ghostAlpha = 0;
 
@@ -229,6 +232,8 @@ export class Painter {
     mode: number,
   ): number {
     const v = this.verts;
+    // Global dissolve: solid and soft shapes by `alphaK`, lights by `glowK`.
+    a *= mode === GLOW ? this.glowK : mode === GHOST ? 1 : this.alphaK;
     let o = this.nv * FLOATS;
     v[o++] = x;
     v[o++] = y;

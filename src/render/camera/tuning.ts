@@ -27,8 +27,9 @@ export const cameraTuning = {
   /**
    * The kick when a slash lands (render-side, `kick.ts`): the view jumps this many world px against
    * the cut (a cut, the finisher), `vertical` x that for up / down cuts, and returns on a critically
-   * damped spring of `omega` rad/s (35 = home, to within 5%, in about 8 frames).
+   * damped spring of `omega` rad/s (35 = home, to within 5%, in about 8 frames). The blow that kills
+   * an enemy kicks `kill` x as far.
    */
-  kick: { power1: 3.5, power2: 7, vertical: 0.8, omega: 35 },
+  kick: { power1: 3.5, power2: 7, vertical: 0.8, omega: 35, kill: 1.4 },
 };
 export type CameraTuning = typeof cameraTuning;

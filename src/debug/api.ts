@@ -4,6 +4,7 @@ import type { GameApp } from '../render/app';
 import { type CameraView, VIEW_H, VIEW_W } from '../render/contract';
 import type { PointLight } from '../render/lights';
 import type { CameraOverride, RenderStage } from '../render/stage';
+import { enemiesAlive } from '../sim/enemies';
 import type { SimEvent } from '../sim/events';
 import type { GameState } from '../sim/index';
 import { pickupsWorth } from '../sim/pickups';
@@ -104,6 +105,41 @@ export interface GameDebugApi {
       paid: number;
       left: number;
     }>;
+  };
+  /**
+   * Enemies: how many are alive, and each with where it is (`x`, `y` = feet centre; `box` = its
+   * collision box), where it started (`home`), its health and what it is doing (`mode`: walk, pause,
+   * alert, hurt, dead; `gone` once the dead body has been removed). `state().enemies` has the rest.
+   */
+  enemies(): {
+    alive: number;
+    total: number;
+    list: Array<{
+      id: string;
+      kind: string;
+      x: number;
+      y: number;
+      box: { x: number; y: number; w: number; h: number };
+      home: { x: number; y: number };
+      facing: number;
+      hp: number;
+      hpMax: number;
+      mode: string;
+      modeFrames: number;
+      gone: boolean;
+    }>;
+  };
+  /**
+   * Her health: `{hp, hpMax, invuln, stagger, faded, safe}` (`safe` = where she would re-form).
+   * With a number: sets `hp` to it first (1..hpMax), for tests. 0 is not allowed: take a hit instead.
+   */
+  health(hp?: number): {
+    hp: number;
+    hpMax: number;
+    invuln: number;
+    stagger: number;
+    faded: number;
+    safe: { x: number; y: number };
   };
   /** Dynamic lights registered this frame (world px). */
   lights(): PointLight[];
@@ -273,6 +309,42 @@ export function installDebugApi(deps: {
         })),
       };
     },
+    enemies() {
+      const homes = game.scene.enemies ?? [];
+      return {
+        alive: enemiesAlive(game.state),
+        total: game.state.enemies.length,
+        list: game.state.enemies.map((e, i) => ({
+          id: e.id,
+          kind: e.kind,
+          x: e.x + e.w / 2,
+          y: e.y + e.h,
+          box: { x: e.x, y: e.y, w: e.w, h: e.h },
+          home: { x: homes[i]?.x ?? 0, y: homes[i]?.y ?? 0 },
+          facing: e.facing,
+          hp: e.hp,
+          hpMax: e.hpMax,
+          mode: e.mode,
+          modeFrames: e.modeFrames,
+          gone: e.gone,
+        })),
+      };
+    },
+    health(hp) {
+      const p = game.state.player;
+      if (hp !== undefined) {
+        if (!(hp >= 1 && hp <= p.hpMax)) throw new Error(`health must be 1..${p.hpMax}`);
+        p.hp = Math.round(hp);
+      }
+      return {
+        hp: p.hp,
+        hpMax: p.hpMax,
+        invuln: p.invuln,
+        stagger: p.stagger,
+        faded: p.faded,
+        safe: { x: p.safeX, y: p.safeY },
+      };
+    },
     lights: () => stage.lights.list.map((l) => ({ ...l })),
     render: redraw,
     character(id) {
@@ -291,6 +363,8 @@ export function installDebugApi(deps: {
       panel: (on) => panel.toggle(on),
     },
   };
+  // The collision overlay draws the enemies' true boxes from the live state.
+  stage.overlay.enemies = () => game.state.enemies;
   window.__game = api;
   return api;
 }

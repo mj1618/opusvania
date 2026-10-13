@@ -2,7 +2,7 @@
 
 Sim: `src/sim/player/player.ts` (`updateSlash`, `guardLunge`, `resolveSlash`), `src/sim/player/attack.ts`
 (`slashBox`), `src/sim/pods.ts`; numbers in `tuning.attack` (shared), `tuning.slash1/2/3` (per combo
-step) and `tuning.pods`. No health, no damage, nothing fights back yet. No charged slash (ruled out).
+step) and `tuning.pods`. Enemies, contact damage and health: enemies.md. No charged slash (ruled out).
 Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
 
 ## The slash
@@ -64,13 +64,15 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
 - **Recoil** on a hit: `kickX` = the step's `recoil` px/f against a fwd slash, fading 1 per frame (6 px,
   10 on the finisher), on top of `vx`. Up, airborne: `vy += 2`. The lunge and the recoil meet: standing
   at a pod, a cut nets about zero, so she does not creep into it.
-- **Hitstop**: `player.hitstop` frames = the target's (`pods.hitstopFrames` 2) + the step's bonus: 2 / 2
-  / 3 on pods. For those steps `updatePlayer` returns early: no movement, no player timers,
+- **Hitstop**: `player.hitstop` frames = the target's (`pods.hitstopFrames` 2, `enemies.hitstopFrames`
+  2) + the step's bonus: 2 / 2 / 3 on pods and on enemies (an enemy is held for the same frames). For those steps `updatePlayer` returns early: no movement, no player timers,
   `attackFrames` / `motionFrames` / `contactFrames` stand still, presses still latch. Everything else
   (frame count, pickups, pod glints) and render time keep running. Plain state: replays hash the same.
 - **Pogo** (`assists.pogo`): a `down` slash that hits sets `vy = -15.5` (125 px up in 17 frames),
   refills the air dash, the double jump and the hangs, ends a wall slide. Bounce to bounce is 32 frames
   = 288 px at run speed: space pogo rows 290 px apart.
+- Enemies are hit by the same areas (`slashEnemies`, before the pods; `slashHit.target.kind` is then
+  the enemy's kind) and a down slash pogos off them; unlike pods they need a clear line (enemies.md).
 - `impact {x, y, dir, facing, step, power, hits}`: once per blow that hits anything, on its first hit
   frame, for camera and screen effects. The sim shakes nothing.
 
@@ -113,7 +115,7 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
   `attackFinisher`, `lungeX` (signed px/f, fading), `hang` (frames left), `hitstop`, `kickX`.
 - `slash {x, y, dir, facing, seq, step, finisher, startup, active, duration, cooldown, lunge, hang}`:
   all step-accurate. `slashHit {x, y (target), dir, facing, target {kind, id}, px, py, pogo, hitstop,
-  step, power, knockback}`. `impact` (above). `slashEnd {dir, hits, reason: done|dash|chain}`.
+  step, power, knockback}`. `impact` (above). `slashEnd {dir, hits, reason: done|dash|chain|hurt}`.
 - Pods: `scene.pods[i].hp` = hpMax; `state.pods.hp[i]` = left (0 = open). Damage stages for the artist:
   `podHit {id, mount, x, y, dir, facing, power, hpLeft, hpMax, value, frames, stagger}` on each hit it
   survives; `podBurst {id, mount, x, y, dir, facing, power, hpMax, total, value, frames, stagger}` on

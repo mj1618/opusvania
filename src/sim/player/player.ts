@@ -1,9 +1,10 @@
-import type { GlideEndReason, JumpKind, SimEvent, SlashDir, SlashEndReason } from '../events';
+import { slashEnemies } from '../enemies';
+import type { GlideEndReason, HurtSource, JumpKind, SimEvent, SlashDir, SlashEndReason } from '../events';
 import { ActionBit, axisX, type InputFrame } from '../input';
 import { type Body, type Collider, moveX, moveY, oneWayUnder, solidAt } from '../physics/aabb';
 import { slashPods } from '../pods';
 import type { Scene } from '../scene';
-import type { GameState, Motion, PlayerState } from '../state';
+import type { EnemyState, GameState, Motion, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
 import { slashBox } from './attack';
 import type { MoveParams, SlashStep } from './params';
@@ -64,6 +65,16 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     hang: 0,
     hitstop: 0,
     kickX: 0,
+    hp: Math.max(1, Math.round(t.health.max)),
+    hpMax: Math.max(1, Math.round(t.health.max)),
+    invuln: 0,
+    stagger: 0,
+    faded: 0,
+    hurtDir: 0,
+    hurtSeq: 0,
+    safeX: Math.round(feetX),
+    safeY: y + h,
+    safeFrames: 0,
     coyote: 0,
     jumpBuf: 0,
     djBuf: 0,
@@ -346,9 +357,10 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
   const st = stepOf(c);
   const pogo = dir === 'down' && P.pogo && !p.grounded;
   const box = slashBox(p, dir, p.attackFacing, P.tuning, p.attackStep);
-  const hitstop = Math.max(0, Math.round(podsT.hitstopFrames)) + st.hitstopBonus;
+  const podStop = Math.max(0, Math.round(podsT.hitstopFrames)) + st.hitstopBonus;
+  const foeStop = Math.max(0, Math.round(P.tuning.enemies.hitstopFrames)) + st.hitstopBonus;
   const first = c.events.length;
-  const hits = slashPods(
+  const foes = slashEnemies(
     state,
     c.scene,
     box,
@@ -359,11 +371,28 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
     p.attackStep,
     st.power,
     st.knockback,
-    hitstop,
+    foeStop,
+    P.tuning,
+    c.events,
+  );
+  const pods = slashPods(
+    state,
+    c.scene,
+    box,
+    p.attackSeq,
+    dir,
+    p.attackFacing,
+    pogo,
+    p.attackStep,
+    st.power,
+    st.knockback,
+    podStop,
     podsT,
     c.events,
   );
+  const hits = foes + pods;
   if (hits === 0) return;
+  const hitstop = Math.max(foes > 0 ? foeStop : 0, pods > 0 ? podStop : 0);
   if (p.attackHits === 0) {
     const e = c.events[first];
     if (e?.type === 'slashHit')
@@ -552,6 +581,12 @@ function horizontal(c: Ctx): void {
   const p = c.p;
   const P = c.P;
   if (p.forceTimer > 0) return; // wall-jump force: vx held unchanged
+  // Thrown by a hit: the knockback fades on its own until the last few frames, when she can steer again.
+  if (p.stagger > P.steerFrames || p.faded > 0) {
+    p.vx = approach(p.vx, 0, p.grounded && p.stagger === 0 ? P.groundDecel : P.hurtDecel);
+    p.skid = false;
+    return;
+  }
   const inX = c.inX;
   const max = p.gliding ? P.glideMaxRun : P.maxRun;
   const target = inX * max;
@@ -690,7 +725,7 @@ function dash(c: Ctx): void {
 
 /**
  * One sim frame for the player. `state.prevInput` is the previous frame's mask (for edges); the
- * caller sets it to `input` afterwards.
+ * caller sets it to `input` afterwards. Returns false when hitstop held her (nothing of hers ran).
  */
 export function updatePlayer(
   state: GameState,
@@ -699,23 +734,28 @@ export function updatePlayer(
   P: MoveParams,
   podsT: Tuning['pods'],
   events: SimEvent[],
-): void {
+): boolean {
   const p = state.player;
   const mode0 = p.mode;
   const motion0 = p.motion;
   const grounded0 = p.grounded;
   const facing0 = p.facing;
-  const c = new Ctx(p, scene, input, state.prevInput, P, events);
-  c.inX = axisX(input);
+  if (p.invuln > 0) p.invuln--;
+  // Out of control: thrown by a hit (directions come back for the tail of it), or faded.
+  const sides = ActionBit.left | ActionBit.right;
+  const eff = p.faded > 0 || p.stagger > P.steerFrames ? 0 : p.stagger > 0 ? input & sides : input;
+  const c = new Ctx(p, scene, eff, state.prevInput, P, events);
+  c.inX = axisX(eff);
   p.inputX = c.inX;
   // Hitstop: a slash connected. She holds for a beat; presses are still buffered.
   if (p.hitstop > 0) {
     p.hitstop--;
     latch(c);
-    return;
+    return false;
   }
   controller(c);
   resolveSlash(c, state, podsT);
+  if (p.stagger > 0) p.stagger--;
 
   // Animation bookkeeping: what the body is doing and for how long.
   p.modeFrames = p.mode === mode0 ? p.modeFrames + 1 : 0;
@@ -725,6 +765,7 @@ export function updatePlayer(
   p.motion = motion;
   if (p.facing !== facing0)
     events.push({ type: 'turn', x: c.fx, y: c.fy, dir: p.facing, grounded: p.grounded });
+  return true;
 }
 
 function motionOf(p: PlayerState): Motion {
@@ -781,6 +822,14 @@ function controller(c: Ctx): void {
         p.retainTimer = P.wallRetainFrames;
       }
       if (p.mode !== 'dash') p.vx = 0;
+    }
+    // The canopy: the closer her head is to it, the slower she can rise. A soft stop, not a bump.
+    if (p.vy < 0 && c.scene.ceilingY !== undefined) {
+      const cap = Math.max(0, p.y - c.scene.ceilingY) * P.ceilingRate;
+      if (-p.vy > cap) {
+        p.vy = -cap;
+        p.sustain = 0;
+      }
     }
     const vyBefore = p.vy;
     if (moveY(p, p.vy, c)) {
@@ -906,4 +955,179 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
       events.push({ type: 'step', x: c.fx, y: c.fy });
     }
   }
+}
+
+/**
+ * She is hurt: loses `damage`, is thrown toward `dir` and is out of control for a moment, then
+ * cannot be hurt for a while. Whatever she was doing ends (slash, glide, dash, wall slide). At no
+ * health she fades instead (`faded` counts down to the re-form, which `step` performs).
+ */
+export function hurtPlayer(
+  state: GameState,
+  P: MoveParams,
+  dir: number,
+  damage: number,
+  source: HurtSource,
+  hitX: number,
+  hitY: number,
+  events: SimEvent[],
+): void {
+  const p = state.player;
+  const x = p.x + p.w / 2;
+  const y = p.y + p.h;
+  p.hp = Math.max(0, p.hp - damage);
+  const out = p.hp === 0;
+  p.hurtDir = dir;
+  p.hurtSeq++;
+  p.stagger = P.staggerFrames;
+  p.invuln = out ? 0 : P.invulnFrames;
+  events.push({
+    type: 'hurt',
+    x,
+    y,
+    dir,
+    hp: p.hp,
+    hpMax: p.hpMax,
+    damage,
+    source,
+    hitX,
+    hitY,
+    stagger: p.stagger,
+    invuln: p.invuln,
+  });
+  if (p.attack !== 'none') {
+    events.push({ type: 'slashEnd', x, y, dir: p.attack, hits: p.attackHits, reason: 'hurt' });
+    p.attack = 'none';
+    p.attackActive = false;
+  }
+  if (p.gliding) {
+    p.gliding = false;
+    events.push({ type: 'glideEnd', x, y, reason: 'hurt' });
+  }
+  if (p.mode === 'dash') events.push({ type: 'dashEnd', x, y, dir: p.dashDir });
+  else if (p.mode === 'wallSlide') events.push({ type: 'wallSlideEnd', x, y, dir: p.wallDir });
+  if (p.mode !== 'normal') p.modeFrames = 0;
+  p.mode = 'normal';
+  p.vx = dir * P.hurtVx;
+  p.vy = -P.hurtVy;
+  if (p.grounded) p.contactFrames = 0;
+  p.grounded = false;
+  p.airTopY = p.y;
+  p.motion = 'rise';
+  p.motionFrames = 0;
+  p.skid = false;
+  p.freeze = 0;
+  p.hitstop = 0;
+  p.kickX = 0;
+  p.lungeX = 0;
+  p.hang = 0;
+  p.dashTimer = 0;
+  p.coyote = 0;
+  p.jumpBuf = 0;
+  p.djBuf = 0;
+  p.dashBuf = 0;
+  p.attackBuf = 0;
+  p.forceTimer = 0;
+  p.retainTimer = 0;
+  p.stick = 0;
+  p.fromJump = false;
+  p.cut = false;
+  p.sustain = 0;
+  p.carried = false;
+  p.comboStep = 0;
+  p.comboTimer = 0;
+  if (out) {
+    p.faded = P.fadeFrames;
+    events.push({ type: 'fade', x, y, frames: p.faded });
+  }
+}
+
+/** Is a living enemy (where it is, or where it starts) within `px` of the point? */
+function enemyNear(enemies: EnemyState[], scene: Scene, x: number, y: number, px: number): boolean {
+  const homes = scene.enemies ?? [];
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i];
+    if (!e || e.mode === 'dead') continue;
+    const dx = e.x + e.w / 2 - x;
+    const dy = e.y + e.h / 2 - y;
+    if (dx * dx + dy * dy < px * px) return true;
+    const s = homes[i];
+    if (!s) continue;
+    const hx = s.x - x;
+    const hy = s.y - e.h / 2 - y;
+    if (hx * hx + hy * hy < px * px) return true;
+  }
+  return false;
+}
+
+/**
+ * Safe ground: she has stood (or run) for `safeFrames` in a row on a solid that is not the pool
+ * (not a one-way branch), in control, with no living enemy near. While that holds, where she is
+ * is where she will re-form. Runs at the end of every step.
+ */
+export function trackSafeGround(state: GameState, scene: Scene, P: MoveParams): void {
+  const p = state.player;
+  const cx = p.x + p.w / 2;
+  const bottom = p.y + p.h;
+  let ok = p.grounded && p.mode === 'normal' && p.hp > 0 && p.stagger === 0 && p.faded === 0;
+  if (ok) {
+    ok = false;
+    const solids = scene.solids;
+    for (let i = 0; i < solids.length; i++) {
+      const s = solids[i];
+      if (s !== undefined && s.y === bottom && cx >= s.x && cx < s.x + s.w) ok = s.tag !== 'pool';
+    }
+  }
+  if (ok) ok = !enemyNear(state.enemies, scene, cx, p.y + p.h / 2, P.safeEnemyPx);
+  p.safeFrames = ok ? p.safeFrames + 1 : 0;
+  if (p.safeFrames >= P.safeFrames) {
+    p.safeX = cx;
+    p.safeY = bottom;
+  }
+}
+
+/**
+ * The end of a fade: a fresh player at the last safe ground (the scene's spawn if an enemy that
+ * is about to return to its start would be near it), whole, facing as she did, safe for a while.
+ * The caller puts the living enemies back.
+ */
+export function reformPlayer(state: GameState, scene: Scene, P: MoveParams, events: SimEvent[]): void {
+  const old = state.player;
+  let x = old.safeX;
+  let y = old.safeY;
+  const homes = scene.enemies ?? [];
+  for (let i = 0; i < homes.length; i++) {
+    const s = homes[i];
+    const e = state.enemies[i];
+    if (!s || !e || e.mode === 'dead') continue;
+    const dx = s.x - x;
+    const dy = s.y - e.h / 2 - (y - old.h / 2);
+    if (dx * dx + dy * dy < P.safeEnemyPx * P.safeEnemyPx) {
+      x = scene.spawn.x;
+      y = scene.spawn.y;
+      break;
+    }
+  }
+  const p = createPlayer(x, y, P.tuning, scene);
+  p.facing = old.facing;
+  p.attackFacing = old.facing;
+  p.attackSeq = old.attackSeq;
+  p.hurtSeq = old.hurtSeq;
+  p.invuln = P.reformInvulnFrames;
+  state.player = p;
+  const fx = p.x + p.w / 2;
+  const fy = p.y + p.h;
+  p.safeX = fx;
+  p.safeY = fy;
+  events.push({
+    type: 'reform',
+    x: fx,
+    y: fy,
+    fromX: old.x + old.w / 2,
+    fromY: old.y + old.h,
+    hp: p.hp,
+    hpMax: p.hpMax,
+    invuln: p.invuln,
+  });
+  events.push({ type: 'spawn', x: fx, y: fy });
 }

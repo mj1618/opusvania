@@ -21,6 +21,7 @@ const SceneSchema = z
     width: int.positive(),
     height: int.positive(),
     spawn: z.object({ x: int, y: int }),
+    ceilingY: int.optional(),
     solids: z.array(z.object({ tag: TAG, x: int, y: int, w: int.positive(), h: int.positive() })),
     oneWays: z.array(z.object({ tag: TAG, x: int, y: int, w: int.positive() })),
     pickups: z
@@ -39,8 +40,24 @@ const SceneSchema = z
           .strict(),
       )
       .default([]),
+    enemies: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            kind: z.enum(['burrback']),
+            x: int,
+            y: int,
+            facing: z.union([z.literal(-1), z.literal(1)]),
+          })
+          .strict(),
+      )
+      .default([]),
   })
   .strict();
+
+/** No enemy starts closer to the spawn point than this (feet to feet). */
+export const ENEMY_SPAWN_CLEAR = 300;
 
 /** A hanging pod's stem: the underside or branch it hangs from is at most this far above its top. */
 export const POD_HANG_MAX = 160;
@@ -80,6 +97,27 @@ export function parseScene(json: unknown): Scene {
       throw new Error(
         `Scene "${s.id}": pod "${p.id}" has nothing to ${p.mount === 'sit' ? 'sit on' : 'hang from'}`,
       );
+  }
+  // Enemies: feet centre on a surface, the whole box supported and clear, away from the spawn.
+  const bw = defaultTuning.burrback.width;
+  const bh = defaultTuning.burrback.height;
+  for (const e of s.enemies) {
+    if (seen.has(e.id)) throw new Error(`Scene "${s.id}": two things are called "${e.id}"`);
+    seen.add(e.id);
+    const x0 = e.x - bw / 2;
+    const x1 = e.x + bw / 2;
+    if (x0 < 0 || x1 > s.width || e.y - bh < 0 || e.y > s.height)
+      throw new Error(`Scene "${s.id}": enemy "${e.id}" is outside the scene`);
+    if (s.solids.some((q) => x1 > q.x && x0 < q.x + q.w && e.y > q.y && e.y - bh < q.y + q.h))
+      throw new Error(`Scene "${s.id}": enemy "${e.id}" is inside a solid`);
+    const under = (x: number) =>
+      [...s.solids, ...s.oneWays].some((q) => q.y === e.y && x >= q.x && x < q.x + q.w);
+    if (!under(x0) || !under(x1 - 1))
+      throw new Error(`Scene "${s.id}": enemy "${e.id}" does not stand on a surface`);
+    const dx = e.x - s.spawn.x;
+    const dy = e.y - s.spawn.y;
+    if (dx * dx + dy * dy < ENEMY_SPAWN_CLEAR * ENEMY_SPAWN_CLEAR)
+      throw new Error(`Scene "${s.id}": enemy "${e.id}" is too close to the spawn point`);
   }
   return s;
 }

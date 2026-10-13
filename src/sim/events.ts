@@ -1,4 +1,4 @@
-import type { PickupKind, PodMount } from './scene';
+import type { EnemyKind, PickupKind, PodMount } from './scene';
 import type { AttackDir } from './state';
 
 /**
@@ -13,11 +13,13 @@ export type CornerKind = 'head' | 'ledge' | 'dash';
 /** Why a glide ended: jump released, touched down, a wall slide began, a dash, or Down (fast fall). */
 /** A slash direction (never 'none' in an event). */
 export type SlashDir = Exclude<AttackDir, 'none'>;
-/** What a slash hit. Pods for now; enemies will join this. */
-export type SlashTarget = { kind: 'pod'; id: string };
-/** Why a slash ended: it played out, a dash cut it, or a new slash replaced it. */
-export type SlashEndReason = 'done' | 'dash' | 'chain';
-export type GlideEndReason = 'release' | 'land' | 'wall' | 'dash' | 'fastfall';
+/** What a slash hit: a lumen pod or an enemy (`kind` = the enemy's kind). */
+export type SlashTarget = { kind: 'pod' | EnemyKind; id: string };
+/** Why a slash ended: it played out, a dash cut it, a new slash replaced it, or she was hurt. */
+export type SlashEndReason = 'done' | 'dash' | 'chain' | 'hurt';
+export type GlideEndReason = 'release' | 'land' | 'wall' | 'dash' | 'fastfall' | 'hurt';
+/** What hurt her. */
+export type HurtSource = { kind: EnemyKind; id: string };
 
 export type SimEvent =
   /** The player was placed (boot, load, teleport): snap cameras and springs, don't interpolate. */
@@ -180,6 +182,114 @@ export type SimEvent =
       total: number;
       /** Set when it came out of a burst lumen pod: `id` is then the pod's id. */
       pod?: boolean;
+      /** Set when a dead enemy spilled it: `id` is then the enemy's id, `x`, `y` its body centre. */
+      enemy?: boolean;
+    }
+  /**
+   * Enemy events: `x`, `y` = the centre of the enemy's box, `facing` = the way it faces.
+   * `enemyAlert`: she landed or slashed close by and it flinches for `frames`; `dir` = the side she is on.
+   */
+  | {
+      type: 'enemyAlert';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      facing: number;
+      dir: number;
+      cause: 'land' | 'slash';
+      frames: number;
+    }
+  /** It reached a ledge or a wall and turns round: `dir` = its new facing; it stands for `frames` first. */
+  | {
+      type: 'enemyTurn';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      dir: number;
+      cause: 'ledge' | 'wall';
+      frames: number;
+    }
+  /**
+   * A slash hurt it and it lives: `power` taken, `hpLeft` of `hpMax`. `slash` = the cut's direction,
+   * `dir` = the side it is shoved to (-1 / 1) at `knockback` px/f (fading). It is held for `hitstop`
+   * frames, then staggers for `frames`.
+   */
+  | {
+      type: 'enemyHit';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      facing: number;
+      slash: SlashDir;
+      dir: number;
+      power: number;
+      hpLeft: number;
+      hpMax: number;
+      knockback: number;
+      hitstop: number;
+      frames: number;
+    }
+  /**
+   * A slash killed it. Fields as `enemyHit`; the body stays for `frames` (after the `hitstop`), sliding
+   * with the shove, then is removed (`enemies[i].gone`). `value` glints are on their way to her: the
+   * first in `glintFrames` steps, the rest `stagger` apart, each a `pickup` event with `enemy: true`.
+   */
+  | {
+      type: 'enemyDie';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      facing: number;
+      slash: SlashDir;
+      dir: number;
+      power: number;
+      hpMax: number;
+      knockback: number;
+      hitstop: number;
+      frames: number;
+      value: number;
+      glintFrames: number;
+      stagger: number;
+    }
+  /**
+   * She was hurt: thrown toward `dir` (-1 / 1), `hp` of `hpMax` left after losing `damage`. `x`, `y` =
+   * her feet centre; `hitX`, `hitY` = where the two bodies met. She is out of control for `stagger`
+   * frames and cannot be hurt for `invuln` frames (both 0 when `hp` is 0: a `fade` follows).
+   */
+  | {
+      type: 'hurt';
+      x: number;
+      y: number;
+      dir: number;
+      hp: number;
+      hpMax: number;
+      damage: number;
+      source: HurtSource;
+      hitX: number;
+      hitY: number;
+      stagger: number;
+      invuln: number;
+    }
+  /** Her last light went out: she fades for `frames` (no control), then re-forms. */
+  | { type: 'fade'; x: number; y: number; frames: number }
+  /**
+   * She re-formed at the last safe ground (`x`, `y`, feet centre) from where she lay (`fromX`,
+   * `fromY`), with full health and `invuln` frames of safety. Living enemies are back at their starts.
+   * A `spawn` event follows in the same step (she was placed: nothing should interpolate).
+   */
+  | {
+      type: 'reform';
+      x: number;
+      y: number;
+      fromX: number;
+      fromY: number;
+      hp: number;
+      hpMax: number;
+      invuln: number;
     };
 
 export type SimEventType = SimEvent['type'];

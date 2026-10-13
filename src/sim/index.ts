@@ -3,11 +3,12 @@
  * No Pixi, DOM, audio, Math.random or Date.now anywhere under src/sim (enforced by
  * tsconfig.sim.json, biome overrides and tests/unit/sim-purity.test.ts).
  */
+import { createEnemies, resetEnemies, updateEnemies } from './enemies';
 import type { SimEvent } from './events';
 import type { InputFrame } from './input';
 import { createPickups, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
-import { createPlayer, updatePlayer } from './player/player';
+import { createPlayer, hurtPlayer, reformPlayer, trackSafeGround, updatePlayer } from './player/player';
 import { createPods, updatePods } from './pods';
 import { seedRng } from './rng';
 import type { Scene } from './scene';
@@ -18,7 +19,7 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 10,
+    version: 11,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
@@ -26,6 +27,7 @@ export function createState(seed: number, t: Tuning, scene: Scene, events: SimEv
     player: createPlayer(scene.spawn.x, scene.spawn.y, t, scene),
     pickups: createPickups(scene),
     pods: createPods(scene),
+    enemies: createEnemies(scene, t),
   };
   events.push({ type: 'spawn', x: scene.spawn.x, y: scene.spawn.y });
   return state;
@@ -33,7 +35,8 @@ export function createState(seed: number, t: Tuning, scene: Scene, events: SimEv
 
 /**
  * Puts a fresh player with its feet centre at (x, y): at rest, facing right, every timer cleared.
- * The frame count, the RNG and what has been collected are kept.
+ * The frame count, the RNG, what has been collected, the enemies, her health and her last safe
+ * ground are kept (a player placed while faded is whole again).
  */
 export function placePlayer(
   state: GameState,
@@ -43,14 +46,38 @@ export function placePlayer(
   scene: Scene,
   events: SimEvent[],
 ): void {
+  const old = state.player;
   state.player = createPlayer(x, y, t, scene);
+  if (old.hp > 0) state.player.hp = Math.min(old.hp, state.player.hpMax);
+  // Being placed somewhere does not make it safe ground: the last safe spot stands until she earns a new one.
+  state.player.safeX = old.safeX;
+  state.player.safeY = old.safeY;
   state.prevInput = 0;
   events.push({ type: 'spawn', x, y });
 }
 
 /** Advances the sim by exactly one 1/60 s step, mutating `state` and appending to `events`. */
 export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scene, events: SimEvent[]): void {
-  updatePlayer(state, scene, input, resolveParams(t), t.pods, events);
+  const P = resolveParams(t);
+  const first = events.length;
+  // The end of a fade: she re-forms at the last safe ground and the living enemies go home.
+  if (state.player.faded > 0 && --state.player.faded === 0) {
+    reformPlayer(state, scene, P, events);
+    resetEnemies(state, scene, t);
+  }
+  const ran = updatePlayer(state, scene, input, P, t.pods, events);
+  const touch = updateEnemies(state, scene, t, events, first);
+  const p = state.player;
+  const e = touch >= 0 ? state.enemies[touch] : undefined;
+  if (e && p.invuln === 0 && p.hp > 0) {
+    const pc = p.x + p.w / 2;
+    const ec = e.x + e.w / 2;
+    const dir = pc < ec ? -1 : pc > ec ? 1 : -p.facing;
+    const hitX = (Math.max(p.x, e.x) + Math.min(p.x + p.w, e.x + e.w)) / 2;
+    const hitY = (Math.max(p.y, e.y) + Math.min(p.y + p.h, e.y + e.h)) / 2;
+    hurtPlayer(state, P, dir, t.burrback.contactDamage, { kind: e.kind, id: e.id }, hitX, hitY, events);
+  }
+  if (ran) trackSafeGround(state, scene, P);
   updatePods(state, scene, t.pickups.comboFrames, events);
   updatePickups(state, scene, t.pickups, events);
   state.prevInput = input;
@@ -60,9 +87,11 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
 export type { SimEvent } from './events';
 export { hashState } from './hash';
 export { slashBox, slashTuning } from './player/attack';
-export type { Pickup, PickupKind, Pod, PodMount, Scene } from './scene';
+export type { EnemyKind, EnemySpawn, Pickup, PickupKind, Pod, PodMount, Scene } from './scene';
 export type {
   AttackDir,
+  EnemyMode,
+  EnemyState,
   GameState,
   Motion,
   PickupsState,

@@ -92,6 +92,20 @@ export interface MoveParams {
   dropThroughFrames: number;
   footstepPx: number;
   hardLandFallPx: number;
+
+  ceilingRate: number;
+
+  hpMax: number;
+  hurtVx: number;
+  hurtVy: number;
+  staggerFrames: number;
+  steerFrames: number;
+  hurtDecel: number;
+  invulnFrames: number;
+  fadeFrames: number;
+  reformInvulnFrames: number;
+  safeFrames: number;
+  safeEnemyPx: number;
 }
 
 /** One combo step's numbers, frames rounded. */
@@ -218,5 +232,19 @@ export function resolveParams(t: Tuning): MoveParams {
     dropThroughFrames: t.misc.dropThroughFrames,
     footstepPx: t.misc.footstepPx,
     hardLandFallPx: t.misc.hardLandFallPx,
+
+    ceilingRate: Math.max(0, Math.min(1, t.ceiling.rate)),
+
+    hpMax: Math.max(1, Math.round(t.health.max)),
+    hurtVx: t.health.hurtVx,
+    hurtVy: t.health.hurtVy,
+    staggerFrames: Math.max(0, Math.round(t.health.staggerFrames)),
+    steerFrames: Math.max(0, Math.round(t.health.steerFrames)),
+    hurtDecel: t.health.hurtDecel,
+    invulnFrames: Math.max(0, Math.round(t.health.invulnFrames)),
+    fadeFrames: Math.max(1, Math.round(t.health.fadeFrames)),
+    reformInvulnFrames: Math.max(0, Math.round(t.health.reformInvulnFrames)),
+    safeFrames: Math.max(1, Math.round(t.health.safeFrames)),
+    safeEnemyPx: t.health.safeEnemyPx,
   };
 }

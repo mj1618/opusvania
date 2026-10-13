@@ -298,11 +298,13 @@ export class Secondary {
         const sw = rig.slashWing;
         lift *= 1 - 0.75 * Math.max(0, -sw) * (1 - soar);
         lift -=
-          (Math.max(0, sw) * (24 + 9 * far) + rig.slashTwist * 13 * (2 * far - 1) + rig.hangK * 15) *
+          (Math.max(0, sw) * (24 + 9 * far) + rig.slashTwist * 24 * (2 * far - 1) + rig.hangK * 15) *
           (1 - k * 0.12) *
           (1 - soar);
         // A landing or a skid throws the hem out for a moment.
         lift -= clamp(rig.crouchPx, 0, 8) * 1.6 * (1 - k / STRANDS) * (1 - soar);
+        // Hurt: they are thrown open by the blow.
+        lift -= rig.hurtK * (34 + 12 * far) * (1 - k * 0.1) * (1 - soar);
         c.lift = lift * DEG;
         const curl =
           (0.05 * run - 0.07 * glide - 0.03 * up + 0.02 * dash) * (1 - k * 0.12) * (1 - tuck) +
@@ -353,6 +355,7 @@ export class Secondary {
           rig.soar * (9 + 30 * rig.catchK + 5 * noise1(clock * 0.9, 83 + a)) -
           16 * rig.joy -
           18 * rig.dive +
+          38 * rig.hurtK +
           15 * rig.slashWing) *
         DEG;
       c.curl = 0.04 * run - 0.05 * glide + 0.07 * fl + 0.46 * tuck;

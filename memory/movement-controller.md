@@ -47,6 +47,17 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
   presses still latch), `kickX` (a fading shove back) and the pogo (`vy = -15.5`, dash + double jump
   refilled). `kickX` and `lungeX` are added to `vx` in the move only. Order: freeze → latch →
   `updateSlash` → mode update → `guardLunge` → move → post → `resolveSlash` (hits at the new position).
+- **Canopy ceiling** (scene `ceilingY`, 0 in the grove; `tuning.ceiling.rate` 0.5): just before the
+  vertical move, a rising `vy` is capped at `rate x (box top - ceilingY)`, so she eases to a stop with
+  the top of her box exactly on the line: no `headBump`, no event, `vx` untouched, the jump's sustain
+  ends, gravity takes over (the glide opens as usual if jump is held). The cap only bites in the last
+  ~40 px at full jump speed. Added because the follow camera stops at the scene top and a double
+  jump + glide from trunk B went to y -350, out of the picture. A scene without `ceilingY` is open
+  (every flat test scene). In the grove a jump + double jump needs 544 px of headroom above her feet,
+  so it is cut short from anything higher than y 544: from trunk B's top (192) a jump rises 112 px.
+  Tests: `tests/unit/ceiling.test.ts`.
+- **Being hurt** (enemies.md): a hit sets `vx = +-7, vy = -7` and `stagger` 12; while `stagger` is above
+  `steerFrames` (3) the controller sees no input and `horizontal()` only fades `vx` by `hurtDecel`.
 - **Corner corrections**: head bump (slide ≤ 20 px sideways around a ceiling corner), ledge pop-up (≤ 16 px
   up onto a lip), dash (≤ 24 px up/down). Each emits `cornerCorrect`.
 - **Performance**: no closures in the per-step path; keep `solidAt` allocation-free.
@@ -68,9 +79,11 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
 
   Rule of thumb: every 64 px of height is 141 px of glide. Without the double jump (held jump off a
   ledge, wings open as she passes it): 763 / 1185 / 1745 / 2167 px for drops of 192 / 384 / 640 / 832.
-- What the glide opens in the grove (all land on ground; nothing leaves the scene or traps her): trunk B
-  top → far ledge in one flight (the two summits are linked) or → the left bank (3500 px); high ledge →
-  left bank; far ledge / F7 / F6 → the shaft floor under trunk B; F4 → high ledge direct (skips F5);
+- What the glide opens in the grove (all land on ground; nothing leaves the scene or traps her). Under
+  the canopy trunk B's top no longer reaches the far ledge or the left bank in one flight: jump +
+  double + glide from it lands on F7 going right (one hop short of the far ledge; with the air dash,
+  the right rise) and on F4 going left (F3 with the air dash). High ledge →
+  left bank still works; far ledge / F7 / F6 → the shaft floor under trunk B; F4 → high ledge direct (skips F5);
   right branch → F7 direct (skips F6); F3 → high ledge with glide + air dash; spawn ground → over the
   pool onto the mid rise. Gaps meant to need the glide must be wider than ~1150 px at the same height
   (jump + double + dash is ~1050); gaps meant to stop it need > 1950 px or a ceiling.

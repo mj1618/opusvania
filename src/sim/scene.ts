@@ -49,6 +49,18 @@ export interface Pod {
   hp?: number;
 }
 
+/** The kinds of enemy. `burrback`: a small armoured beetle that walks its platform (src/sim/enemies.ts). */
+export type EnemyKind = 'burrback';
+
+/** Where an enemy starts: `x`, `y` = its feet centre, on a surface; `facing` = the way it sets off. */
+export interface EnemySpawn {
+  id: string;
+  kind: EnemyKind;
+  x: number;
+  y: number;
+  facing: -1 | 1;
+}
+
 export interface Scene {
   id: string;
   /** Scene size in sim px. The edges and the bottom are solid; the top is open. */
@@ -56,10 +68,17 @@ export interface Scene {
   height: number;
   /** Where the player's feet (bottom-centre of the collision box) start. */
   spawn: { x: number; y: number };
+  /**
+   * The canopy: a soft ceiling for the player (the top of her box cannot rise above this y; she
+   * eases to a stop under it: `tuning.ceiling`). Absent = the top is open all the way.
+   */
+  ceilingY?: number;
   solids: SolidRect[];
   oneWays: OneWay[];
   /** Collectibles, in a fixed order: `GameState.pickups.timers` is indexed like this array. */
   pickups?: Pickup[];
   /** Breakables, in a fixed order: the arrays of `GameState.pods` are indexed like this one. */
   pods?: Pod[];
+  /** Enemies, in a fixed order: `GameState.enemies` is indexed like this array. */
+  enemies?: EnemySpawn[];
 }

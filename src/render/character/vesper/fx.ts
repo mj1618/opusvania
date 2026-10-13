@@ -13,6 +13,8 @@ const DUST = 1;
 const SPARK = 2;
 /** Struck from a hit: a short, fast line that is gone in a few frames. */
 const STREAK = 3;
+/** Dust drawn back to a point (vx, vy hold the point): she is re-forming. */
+const GATHER = 4;
 const MAX = 260;
 const GOLD = rgb(0xffd98a);
 const GOLD_HOT = rgb(0xfff6dc);
@@ -257,6 +259,44 @@ export class Fx {
     }
   }
 
+  /** Dust comes together at (x, y) from all round it: `count` motes from `r0`..`r1` px away. */
+  gather(x: number, y: number, count: number, r0: number, r1: number): void {
+    for (let c = 0; c < count; c++) {
+      const a = this.rand() * 6.283;
+      const r = r0 + this.rand() * (r1 - r0);
+      const q = this.ps[this.next]!;
+      this.add(
+        GATHER,
+        x + Math.cos(a) * r,
+        y + Math.sin(a) * r * 0.8 - 8,
+        0,
+        0,
+        0.3 + this.rand() * 0.3,
+        1 + this.rand() * 1.3,
+      );
+      q.vx = x + (this.rand() - 0.5) * 10;
+      q.vy = y + (this.rand() - 0.5) * 34;
+    }
+  }
+
+  /** She comes apart: `count` motes from the points in `pts`, drifting up and out. */
+  scatter(pts: Float32Array, n: number, count: number): void {
+    for (let c = 0; c < count; c++) {
+      const i = Math.min(n - 1, Math.floor(this.rand() * n));
+      const a = this.rand() * 6.283;
+      const sp = 8 + this.rand() * 30;
+      this.add(
+        SPARK,
+        pts[i * 2]! + (this.rand() - 0.5) * 9,
+        pts[i * 2 + 1]! + (this.rand() - 0.5) * 9,
+        Math.cos(a) * sp,
+        Math.sin(a) * sp * 0.6 - 26 - this.rand() * 30,
+        0.9 + this.rand() * 1.4,
+        1 + this.rand() * 1.4,
+      );
+    }
+  }
+
   update(dt: number, clock: number): void {
     for (const q of this.ps) {
       if (!q.live) continue;
@@ -275,6 +315,12 @@ export class Fx {
         const k = Math.exp(-2.6 * dt);
         q.vx = q.vx * k + Math.sin(clock * 1.7 + q.seed) * 13 * dt;
         q.vy = q.vy * k + (6 + 5 * Math.sin(clock * 1.1 + q.seed * 3)) * dt;
+      } else if (q.kind === GATHER) {
+        // Faster the nearer it gets: it is being drawn in.
+        const k = 1 - Math.exp(-(4 + 16 * (q.age / q.life)) * dt);
+        q.x += (q.vx - q.x) * k;
+        q.y += (q.vy - q.y) * k;
+        continue;
       } else if (q.kind === STREAK) {
         const k = Math.exp(-11 * dt);
         q.vx *= k;
@@ -297,6 +343,10 @@ export class Fx {
         const k = Math.min(1, t * 10) * (1 - t) ** 1.4 * tw;
         p.glow(q.x, q.y, q.size * 3.0, GOLD_DEEP, 0.24 * k);
         p.glow(q.x, q.y, q.size * 1.0, GOLD_HOT, 0.6 * k);
+      } else if (q.kind === GATHER) {
+        const k = Math.min(1, t * 6) * (1 - t * t);
+        p.glow(q.x, q.y, q.size * 3.4, GOLD_DEEP, 0.4 * k, q.size * 3.4, 0, 10);
+        p.glow(q.x, q.y, q.size * 1.1, GOLD_HOT, 1.0 * k, q.size * 1.1, 0, 8);
       } else if (q.kind === SPARK) {
         // Each twinkles on its own time and dies out as a point.
         const tw = 0.55 + 0.45 * Math.sin(clock * 11 + q.seed * 7);
@@ -329,8 +379,8 @@ export const FX_GOLD_DEEP = GOLD_DEEP;
 
 const SLASH_WHITE = rgb(0xfff8e6);
 /** The trail runs cool at its tail to warm at the blade. */
-const TRAIL_COOL: RGB = [0.8, 0.86, 0.96];
-const TRAIL_WARM: RGB = [1, 0.9, 0.68];
+const TRAIL_COOL: RGB = [0.76, 0.83, 0.96];
+const TRAIL_WARM: RGB = [1, 0.88, 0.62];
 const SLASH_SHADE: Shade = {
   c0: rgb(0x1a1230),
   c1: rgb(0x1a1230),
@@ -359,17 +409,17 @@ export const TRAIL = {
   /** Samples per whole cut (the cut takes ~4 frames: several are laid per frame). */
   perCut: 30,
   /** The solid crescent: its widest as a fraction of the reach (a cut, the finisher), its alpha and tone. */
-  width: [0.11, 0.15],
+  width: [0.085, 0.115],
   solid: 0.92,
-  tone: 0.84,
+  tone: 0.76,
   /** The soft haze trailing inside it (additive; its depth is the stroke's `thick`). Keep it faint. */
-  haze: 0.16,
+  haze: 0.1,
   /** The dusk rim: px it stands proud of the crescent, and its alpha. */
   duskW: 1.3,
   dusk: 0.42,
   /** The cut line: a hair-thin flash along the whole arc at peak speed. Seconds, strength, where in the cut. */
   flash: 0.055,
-  flashK: 1.5,
+  flashK: 1.1,
   flashAt: 0.2,
   /** The finisher's echo: a second, fainter arc inside the first. Radius, strength, delay (s). */
   echoR: 0.76,
@@ -413,6 +463,8 @@ export class BladeTrail {
   private readonly wy = new Float32Array(TRAIL_CAP);
   private flashX = 0;
   private pinned = false;
+  /** Tone scale for the zone she is in (the dark zones' grade lifts pale things: see `View.pale`). */
+  private pale = 1;
   private flashY = 0;
   private n = 0;
   private st: TrailStroke = { reach: 110, thick: 0.4, show: 0.2 };
@@ -507,8 +559,9 @@ export class BladeTrail {
   }
 
   /** (cx, cy) = her chest now: the laid arc is carried along with her (`TRAIL.follow`). */
-  draw(p: Painter, cx: number, cy: number): void {
+  draw(p: Painter, cx: number, cy: number, pale = 1): void {
     if (!this.live) return;
+    this.pale = pale;
     const fk = this.pinned ? 0 : TRAIL.follow;
     const sx = (cx - this.lastX) * fk;
     const sy = (cy - this.lastY) * fk;
@@ -529,7 +582,7 @@ export class BladeTrail {
         p.px[i] = this.fx[i]! + (cx - this.flashX) * fk;
         p.py[i] = this.fy[i]! + (cy - this.flashY) * fk;
         p.pw[i] = 0.5 + 0.55 * e;
-        p.pc[i * 3] = TRAIL.flashK * k * k * e * (this.heavy ? 1.15 : 1);
+        p.pc[i * 3] = TRAIL.flashK * this.pale * k * k * e * (this.heavy ? 1.15 : 1);
       }
       p.streak(n, SLASH_WHITE);
     }
@@ -584,7 +637,7 @@ export class BladeTrail {
     while (i1 > i0 && wide * R * this.th[i1]! < 0.5) i1--;
     const m = i1 - i0 + 1;
     if (m < 3) return;
-    const tone = TRAIL.tone * (echo ? 0.86 : 1);
+    const tone = TRAIL.tone * this.pale * (echo ? 0.86 : 1);
     for (let pass = 0; pass < 2; pass++) {
       for (let k = 0; k < m; k++) {
         const i = i0 + k;

@@ -1,7 +1,7 @@
 # Sim / runtime architecture
 
 - `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
-  (`{version, frame, seed, rng, prevInput, player, pickups, pods}` (version 10)) and appends `SimEvent`s. The scene is static and
+  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies}` (version 11)) and appends `SimEvent`s. The scene is static and
   not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
   (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
 - No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
@@ -38,6 +38,7 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - Slash: `attack` (`none | fwd | up | down`), `attackFacing`, `attackFrames`, `attackActive`,
   `attackSeq`, `attackHits`, `attackStep` (1-3), `attackFinisher`, `lungeX`, `hang`; `hitstop` (frames the sim is holding her after a hit: x, y and every
   player timer stand still, so hold the pose) and `kickX` (recoil shove). Details: combat.md.
+- Health: `hp`, `hpMax`, `invuln`, `stagger`, `faded`, `hurtDir`, `hurtSeq` (enemies.md).
 - While wall sliding `facing` points **away** from the wall (a `turn` event fires on contact).
 - `motion` is `run` whenever a direction is held or vx != 0 on the ground, including pushing into a wall
   (vx = 0): check `vx` if that should look different.
@@ -51,6 +52,8 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `step` (every 96 px of grounded travel), `turn {dir, grounded}`, `skid {dir}`.
 - `wallSlideStart/End {dir = wall side}`, `dashStart {dir, air}`, `dashEnd {dir}`.
 - `slash`, `slashHit`, `impact`, `slashEnd`, `podHit`, `podBurst`, and pod glints as `pickup {pod: true}`: combat.md.
+- `enemyTurn`, `enemyAlert`, `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`), and
+  enemy glints as `pickup {enemy: true}`: enemies.md. `slashEnd` / `glideEnd` have a reason `hurt`.
 - `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a
   long fall, up to 32 out of a fast fall) and `glideEnd {reason: release|land|wall|dash|fastfall}`; one
   pair per glide. Same-step order: `glideEnd:land` then `land`; `glideEnd:wall` then `wallSlideStart`;
@@ -59,3 +62,9 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `pickupWake {id, kind, x, y, frames}`, `pickup {id, kind, value, x, y, px, py, combo, total}`: here
   `x, y` = where the pickup hung (not the feet), `px, py` = body-box centre when it goes in. `state.pickups`
   (`timers[]` per `scene.pickups[i]`, `count`, `taken`, `combo`...) and the rule are in pickups.md.
+
+## Step order
+`step()`: re-form if a fade just ended → player (slash hits resolved inside, pods and enemies) →
+enemies → contact damage → safe-ground tracking → pod glints → pickups. The scene's `ceilingY` (the
+canopy, movement-controller.md) and the tag `pool` (safe ground, enemies.md) are the only scene
+fields besides the rects that the player code reads.

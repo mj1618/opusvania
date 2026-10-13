@@ -301,18 +301,23 @@ describe('wing glide', () => {
     expect(glides(s.run('R+J2 R4 R+J2 .60 J60'))).toEqual([]);
   });
 
-  it('in the grove: trunk top to the far ledge in one flight, and into the pool safely', () => {
+  it('in the grove: trunk top to F7 in one flight under the canopy, and into the pool safely', () => {
+    // The canopy (scene `ceilingY`) caps the climb from the summit, so the flight that used to
+    // reach the far ledge now comes down on F7, one hop short of it.
     const s = newSim();
     s.place(3648, 192);
     const flight = untilLanding(s, 'R+J28 R1 R+J900');
-    expect(feet(s).y).toBe(448);
-    expect(feet(s).x).toBeGreaterThan(5472);
+    expect(feet(s).y).toBe(592);
+    expect(feet(s).x).toBeGreaterThan(5120);
+    expect(feet(s).x).toBeLessThan(5344);
     expect(glides(flight.events).at(-1)).toMatch(/glideEnd:(land|wall)/);
 
     const pool = GROVE.solids.find((r) => r.tag === 'pool');
     if (!pool) throw new Error('no pool');
     s.place(pool.x + pool.w / 2, 900);
-    const dive = names(untilLanding(s, 'J900').events).filter((n) => !n.startsWith('pickup'));
+    const dive = names(untilLanding(s, 'J900').events).filter(
+      (n) => !n.startsWith('pickup') && !n.startsWith('enemy'),
+    );
     expect(dive).toEqual(['jump:double', 'apex', 'glideStart', 'glideEnd:land', 'land']);
     expect(feet(s)).toEqual({ x: feet(s).x, y: pool.y });
     expect(feet(s).x).toBeGreaterThan(pool.x);

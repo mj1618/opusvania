@@ -192,10 +192,21 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
   the cut. The frame a `slashHit` arrives still advances (the sim's hitstop is already > 0 on it):
   otherwise the hold freezes the gather and the pod bursts before the blade moves. `ease` 3 puts
   ~2/3 of the arc into that first frame. Timeline is render time, frozen while `hitstop > 0`.
-- **Chaining**: `hold` (20 / 22 / 31) is later than the sim's cooldown (17 / 19 / 27), so a mashed
-  chain always starts from the held follow-through (blade angle, hand reach and body key are blended
-  from where they are). Alone, the blade then goes home down and round in front (never back over her
-  head) in 9 frames, 14 after the finisher. `slashEnd` reason `dash` drops it at once.
+- **Chaining**: `hold` is SHORT (12 / 13 / 22 frames; home 9 / 9 / 12) so a lone tap is sheathed by
+  ~frame 20 (was 29). The sim allows the next cut from 17 / 19 / 27: by then the blade is part-way
+  down in front and the body key (which lets go over `home`, `rig.slashBody`) is still partly in the
+  follow-through; a new `slash` blends blade, hand and body from wherever they are. `slashEnd`
+  reasons `dash` and `hurt` drop it at once.
+- **The near arm holds the thorn** (`rig.swordSide`, chosen at each `slash` from the facing, or the
+  wall side on a wall slide); twist, off-hand and lead foot mirror with it. Facing left reads like
+  facing right. The sheath is drawn at the hip centre, so it needs no mirroring.
+- **Silhouettes** (check with `window.__vesper.hidden = true` + a frame difference; scratch
+  `sil.sh`): cut 1 ends HIGH (tall, chest open, head back), cut 2 ends LOW and LONG (deep lunge,
+  spine forward, off-arm up behind), the finisher gathers small, HOPS (`K_HOP` 13 px, render only,
+  down again 3 frames after the cut; the ground shadow shrinks under it) and lands wide. Half of
+  the stroke's lean / curl / head bypasses the spine springs (`direct`), or the pose arrives late.
+- Running: the stride continues (no foot sliding); each cut kicks the crouch spring (a dip).
+  Air up cut: `UPCUT` legs together and long, wings forced closed (`slashWing` -1.1): one vertical line.
 - Ends matter: a stroke must not end with the blade parked behind her head (it is held ~15 frames).
 - Body: the stroke's key is ADDED to the blended pose (run legs keep striding; feet channels only
   when standing; `K_ROT` rolls her in the air; `K_LEGS` trails the legs). Up / down also lerp to the
@@ -207,7 +218,9 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
   point's path at `reach` (cool at the tail to warm at the blade, a thin dusk rim under it, a faint
   additive haze inside, a hair-thin additive cut line along the whole arc for 3 frames). It dies by
   thinning from the tail, not by fading. The finisher's is wider, lasts longer and has a slim echo
-  crescent at 0.76 of the reach. It follows her (`TRAIL.follow` 0.9: left in the world, a fall or a
+  crescent at 0.76 of the reach. Owner brightness: `TRAIL.tone` 0.76 (was 0.84), widths 0.085 /
+  0.115 of the reach (were 0.11 / 0.15), and the tone is scaled per zone like her pale fur
+  (`0.25 + 0.75 x view.pale`). Judge with `shots/vesper/slash13/trail-zones-game-size.png`. It follows her (`TRAIL.follow` 0.9: left in the world, a fall or a
   glide flies through it) until the blow lands, then it is pinned where it struck.
 - **Tried and rejected**: a wide translucent swept band (soft veil + additive body + bright edge
   line) read as a glass dome / soap bubble, and anything with partial alpha goes into post's hero
@@ -225,9 +238,22 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - A down-slash hit runs `pogo` (legs long, then tuck).
 - Capture: `?nopickups` also removes the pods; a great glint mid-capture opens the wings (flourish)
   and ruins an air sheet: stand clear of glints or use `?nopickups` for misses.
-- Not done: the up slash in the air has no strong vertical body line (the fall pose's bunched wings
-  dominate); strokes are not mirrored-aware of which arm is near (facing left the sword arm is the
-  far arm, mostly hidden behind the body); no per-stroke run-leg accent.
+- Not done: the finisher is a hop, not a turn (a pirouette needs the 2.5D rig's turn factor driven
+  through a full revolution with the wings swapping depth: untried); run-leg accent is only a dip.
+
+## Health: hurt, fade, re-form (sim: memory/enemies.md; render numbers in `HURT` in rig.ts)
+- `hurt` event: `rig.hurtK` (recoil pose flung along `dir`, feet leading, eyes squeezed, wings thrown
+  open, antennae whipped; held 0.2 s, out over 0.28 s), 7 dust motes, slash dropped.
+- While `player.invuln > 0` after the stagger: a soft alpha pulse (`Painter.alphaK`, depth 0.4 at
+  7 Hz), never a white flash. `Painter.alphaK / glowK` scale everything drawn between set and reset.
+- Low health: lanterns, eyes and her point light scale `0.5 + 0.5 x (hp - 1) / (hpMax - 1)`, with a
+  slow unease on the last light.
+- `fade`: `rig.fadeK` dissolves her (alpha and glows) over 0.45 s from 0.12 s after the blow while
+  `Fx.scatter` sheds ~150 motes/s from wing hems, head, chest, hips; her light goes out.
+  `reform` (+ `spawn` the same step): `Fx.gather` draws 46 motes in to the new place, she fades in
+  curled (TUCK blend, wings closed) and unfolds over 0.6 s, lights swell once.
+- Kill: `CameraKick` multiplies the kick by `cameraTuning.kick.kill` (1.4) when an `enemyDie`
+  arrives with the `impact`. Sparks on creatures are the same as on pods.
 - Backlit membranes are amber (0.95, 0.6, 0.26), not pink; the wing beat is 58 deg / 1.0 s and still
   only just readable on sheets.
 

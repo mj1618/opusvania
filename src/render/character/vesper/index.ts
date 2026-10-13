@@ -21,7 +21,7 @@ import type { CharacterSkin, SkinDef } from '../skin';
 import { drawVesper, type View } from './draw';
 import { BladeTrail, drawImpact, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
 import { Painter, rgb } from './paint';
-import { J_CHEST, J_HEAD, Rig } from './rig';
+import { HURT, J_CHEST, J_HEAD, J_HIP, Rig } from './rig';
 
 import { Secondary } from './wings';
 
@@ -51,6 +51,9 @@ export class VesperCharacter implements CharacterSkin {
   private readonly lastY = new Float32Array(4);
   /** Where the glide's dust is shed: every strand tip of both wings. */
   private readonly hemPts = new Float32Array(20);
+  /** ... and where she comes apart from: those, plus head, chest and hips. */
+  private readonly bodyPts = new Float32Array(26);
+  private fadeAcc = 0;
   private started = false;
   private flash = 0;
   private readonly back: [number, number] = [0, 0];
@@ -114,6 +117,8 @@ export class VesperCharacter implements CharacterSkin {
       bladeLen: 1,
       bladeOver: false,
       bladeFront: false,
+      swordSide: 0,
+      hop: 0,
     };
   }
 
@@ -236,6 +241,8 @@ export class VesperCharacter implements CharacterSkin {
     // nearest her; the pod draws its own burst).
     view.slashW = rig.slashW;
     view.bladeFront = rig.slashW > 0.3 && rig.wWall > 0.5;
+    view.swordSide = rig.swordSide;
+    view.hop = rig.slashHop;
     view.bladeOver = rig.slashDir === 'up' && rig.slashHome < 0.5 && !view.bladeFront;
     const sg = rig.slashFacing;
     view.bladeAng = Math.atan2(rig.bladeY, rig.bladeX);
@@ -271,6 +278,28 @@ export class VesperCharacter implements CharacterSkin {
       fx.sparks(this.hitX, this.hitY, this.hitDx, this.hitDy, rig.hitPower);
       this.flash = Math.max(this.flash, 0.2);
     }
+    // --- Hurt, fading, re-forming.
+    const bp = this.bodyPts;
+    bp.set(this.hemPts);
+    for (let i = 0; i < 3; i++) {
+      const jj = i === 0 ? J_HEAD : i === 1 ? J_CHEST : J_HIP;
+      bp[20 + i * 2] = rig.frame.j[jj * 2]!;
+      bp[21 + i * 2] = rig.frame.j[jj * 2 + 1]!;
+    }
+    if (sig.hurt) fx.scatter(bp, 13, 7);
+    // Her last light: she comes apart into dust as she goes.
+    if (rig.fadeK > 0 && rig.fadeK < 1) {
+      this.fadeAcc += dt * 150;
+      const nn = Math.floor(this.fadeAcc);
+      this.fadeAcc -= nn;
+      if (nn > 0) fx.scatter(bp, 13, nn);
+    }
+    if (sig.reform) {
+      fx.gather(player.cx, player.cy, 46, 38, 110);
+      this.flash = 0;
+    }
+    // The lights rekindle as she comes together: one soft swell.
+    if (rig.reformK > 0 && rig.reformK < 0.5) this.flash = Math.max(this.flash, 0.45 * rig.reformK * 2);
     this.flash = Math.max(0, this.flash - dt * 1.9);
 
     // --- Dust rises off the wings; more of it when she moves.
@@ -315,7 +344,16 @@ export class VesperCharacter implements CharacterSkin {
     const flicker = 0.95 + 0.045 * noise1(clock * 4.3, 21) + 0.03 * Math.sin(clock * 1.3);
     const glow =
       flicker * (1 + 0.3 * rig.wDash + 0.55 * this.flash + 0.2 * soar + 0.25 * Math.max(0, rig.catchK));
-    view.glow = glow;
+    // Health shows in her lanterns: dimmer with each light lost, uneasy on the last one; out when she fades.
+    const hpK = player.hpMax > 1 ? sat((player.hp - 1) / (player.hpMax - 1)) : 1;
+    const low = player.hp <= 1 && player.hpMax > 1 ? 0.86 + 0.14 * Math.sin(clock * 5.2) : 1;
+    const whole = (1 - rig.fadeK) * (1 - rig.reformK);
+    const lit = (0.5 + 0.5 * hpK) * low * whole;
+    view.glow = glow * lit;
+    // While nothing can hurt her she pulses softly (alpha, never a white flash); gone when she has faded.
+    const safe = player.invuln > 0 && player.stagger <= 0 && player.faded <= 0 ? sat(player.invuln / 12) : 0;
+    const pulse = 0.5 - 0.5 * Math.cos(clock * 6.283 * HURT.flickerHz);
+    const bodyA = whole * (1 - HURT.flickerDepth * safe * pulse);
     p.l2x = ex;
     p.l2y = ey;
     p.l2r = 60;
@@ -323,11 +361,15 @@ export class VesperCharacter implements CharacterSkin {
     p.begin();
     this.trails[2]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.2, clock);
     this.trails[3]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.2, clock);
+    p.alphaK = bodyA;
+    p.glowK = whole;
     drawVesper(p, rig.frame, view, clock);
+    p.alphaK = 1;
+    p.glowK = 1;
     this.trails[0]!.draw(p, FX_GOLD, FX_GOLD_HOT, 0.4);
     this.trails[1]!.draw(p, FX_GOLD, FX_GOLD_HOT, 0.32);
     fx.draw(p, clock);
-    this.blade.draw(p, chestX, chestY);
+    this.blade.draw(p, chestX, chestY, 0.25 + 0.75 * view.pale);
     drawImpact(p, this.hitX, this.hitY, rig.hitT, rig.hitPower, this.hitDx, this.hitDy);
     p.end(player.cx, player.cy);
 
@@ -335,7 +377,7 @@ export class VesperCharacter implements CharacterSkin {
     e.x = ex;
     e.y = ey;
     e.radius = 300 + 70 * rig.wDash + 90 * this.flash + 50 * soar;
-    e.intensity = glow * 1.15;
+    e.intensity = glow * 1.15 * lit;
   }
 
   /**
@@ -361,6 +403,13 @@ export class VesperCharacter implements CharacterSkin {
       },
       set turns(v: number) {
         self.setTurns(v === 2 ? 2 : 1, false);
+      },
+      /** For capture tools: hide her (a frame with and one without gives her silhouette by difference). */
+      get hidden(): boolean {
+        return !self.painter.mesh.visible;
+      },
+      set hidden(v: boolean) {
+        self.painter.mesh.visible = !v;
       },
     };
   }

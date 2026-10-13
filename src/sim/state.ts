@@ -1,4 +1,5 @@
 import type { InputFrame } from './input';
+import type { EnemyKind } from './scene';
 
 /**
  * The whole sim state: plain JSON (finite numbers, strings, booleans, null), so it can be cloned,
@@ -97,6 +98,24 @@ export interface PlayerState {
   hitstop: number;
   /** Recoil: extra horizontal px/f on top of `vx` (a shove from a slash that hit), fading fast. */
   kickX: number;
+  /**
+   * Health (memory/enemies.md). `hp` of `hpMax` lights. `invuln`: frames left in which nothing can
+   * hurt her (she passes through enemies). `stagger`: frames left of the knockback after a hit,
+   * while she is out of control (`hurtDir` = the way she was thrown, -1 / 1; `hurtSeq` counts the
+   * hits taken). `faded`: at no health, frames left until she re-forms at the last safe ground
+   * (no control; she falls and lies where the blow left her). All three are 0 in ordinary play.
+   */
+  hp: number;
+  hpMax: number;
+  invuln: number;
+  stagger: number;
+  faded: number;
+  hurtDir: number;
+  hurtSeq: number;
+  /** Last safe ground (feet centre): where she re-forms. `safeFrames` = frames in a row on safe ground. */
+  safeX: number;
+  safeY: number;
+  safeFrames: number;
 
   // --- Controller internals (timers, buffers). Renderers should not need these.
   coyote: number;
@@ -169,8 +188,61 @@ export interface PodsState {
   burst: number;
 }
 
+/** What an enemy is doing. `pause`: standing (a turn-around if `turning`, else a rest). `alert`: a flinch. */
+export type EnemyMode = 'walk' | 'pause' | 'alert' | 'hurt' | 'dead';
+
+/** One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. */
+export interface EnemyState {
+  id: string;
+  kind: EnemyKind;
+  // --- Body. (x, y) is the top-left of its box, integers; feet centre = (x + w/2, y + h).
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Sub-pixel remainder of its horizontal movement. */
+  rx: number;
+  /** Velocity this step, px/f: the walk (facing x speed), or the knockback; 0 when it stands. */
+  vx: number;
+  facing: -1 | 1;
+  hp: number;
+  hpMax: number;
+  mode: EnemyMode;
+  /** Frames since `mode` last changed (0 on the frame it changes; it holds during `hitstop`). */
+  modeFrames: number;
+  /** Frames left of the pause / alert / hurt / dead mode (0 while walking). */
+  timer: number;
+  /** The current pause is a turn-around (`facing` flipped when it began). */
+  turning: boolean;
+  /** Distance walked so far, px (walking only, never knockback): drive the legs with it. */
+  stride: number;
+  /** Knockback left, px/f (signed), fading; it moves the body while hurt or dead. */
+  knockVx: number;
+  /** Frames it is held still by a hit (the same beat the player holds). */
+  hitstop: number;
+  /** The last hit: slash number, direction of the shove (-1 / 0 / 1), power, and the sim frame (-1 = never). */
+  hitBy: number;
+  hitDir: number;
+  hitPower: number;
+  hitFrame: number;
+  /** Side of the ledge a shove pushed it to the brink of (-1 / 1), until it walks again; else 0. */
+  teeter: number;
+  /** Dead and its body has been removed: draw nothing. */
+  gone: boolean;
+  // --- Internals.
+  /** Frames until it may flinch again; frames of walking until its next rest; rests taken; schedule salt. */
+  alertCd: number;
+  walkLeft: number;
+  rests: number;
+  salt: number;
+  /** Glints spilled on death still on their way to her, frames to the next, and the gap between them. */
+  spill: number;
+  spillTimer: number;
+  spillGap: number;
+}
+
 export interface GameState {
-  version: 10;
+  version: 11;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;
@@ -180,6 +252,7 @@ export interface GameState {
   player: PlayerState;
   pickups: PickupsState;
   pods: PodsState;
+  enemies: EnemyState[];
 }
 
 export function cloneState(s: GameState): GameState {
@@ -196,5 +269,6 @@ export function cloneState(s: GameState): GameState {
       paid: s.pods.paid.slice(),
       burst: s.pods.burst,
     },
+    enemies: s.enemies.map((e) => ({ ...e })),
   };
 }
