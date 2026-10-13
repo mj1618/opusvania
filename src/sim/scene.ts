@@ -70,6 +70,18 @@ export interface EnemySpawn {
   radius?: number;
 }
 
+/**
+ * A moth-lantern (src/sim/goal.ts): dormant until she kindles it with the light she carries.
+ * `x`, `y` = its foot, on a surface (like the spawn: a feet-centre point); she kindles it standing
+ * there. `cost` = the glints it takes (default `tuning.goal.cost`).
+ */
+export interface Lantern {
+  id: string;
+  x: number;
+  y: number;
+  cost?: number;
+}
+
 export interface Scene {
   id: string;
   /** Scene size in sim px. The edges and the bottom are solid; the top is open. */
@@ -90,4 +102,11 @@ export interface Scene {
   pods?: Pod[];
   /** Enemies, in a fixed order: `GameState.enemies` is indexed like this array. */
   enemies?: EnemySpawn[];
+  /** Moth-lanterns, in a fixed order: `GameState.goal.lanterns` is indexed like this array. */
+  lanterns?: Lantern[];
+  /**
+   * The heart of the grove: a point on the ground (feet centre). It wakes when every lantern is
+   * lit; walking into it then ends the run (src/sim/goal.ts).
+   */
+  heart?: { x: number; y: number };
 }

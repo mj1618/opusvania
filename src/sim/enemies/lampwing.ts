@@ -24,7 +24,7 @@ import { frames, type KindRules, mix, type StepInfo, segmentBlocked, setMode } f
 type L = Tuning['lampwing'];
 
 /** Why a pursuit ended. */
-export type GiveUpCause = 'far' | 'lost' | 'tired' | 'dark' | 'touch';
+export type GiveUpCause = 'far' | 'lost' | 'tired' | 'dark' | 'touch' | 'calm';
 
 /** May its box be at (x, y)? Solids and the scene's edges, the canopy, the water of a pool. */
 export function lampwingBlocked(scene: Scene, x: number, y: number, w: number, h: number, t: L): boolean {
@@ -302,9 +302,16 @@ export const lampwing: KindRules = {
     }
   },
 
+  /** One that has noticed her gives up (`calm`): it rests, flies home and notices nothing on the way. */
+  calm(e, info) {
+    if (e.mode === 'curious' || e.mode === 'pursue') giveUp(e, info, 'calm');
+  },
+
   update(e, _index, info) {
     const { scene, state } = info;
     const t = info.t.lampwing;
+    // The run is over (src/sim/goal.ts): nothing is drawn to her any more.
+    const over = state.goal.gathered;
     const p = state.player;
     const px = p.x + p.w / 2;
     const py = p.y + p.h / 2;
@@ -359,7 +366,7 @@ export const lampwing: KindRules = {
         e.vx = 0;
         e.vy = 0;
         // Struck, it goes for her at once if it can see her; else home.
-        if (inLeash(e, p, t) && sees(e, p, scene, 0)) {
+        if (!over && inLeash(e, p, t) && sees(e, p, scene, 0)) {
           setMode(e, 'pursue', 0);
           e.lost = 0;
           e.targetX = px;
@@ -385,7 +392,7 @@ export const lampwing: KindRules = {
       e.vy += e.pushY;
       drift(e, scene, t);
       face(e, e.vx, 0.2);
-      if (t.noticePx > 0 && inLeash(e, p, t) && sees(e, p, scene, t.noticePx)) {
+      if (t.noticePx > 0 && !over && inLeash(e, p, t) && sees(e, p, scene, t.noticePx)) {
         const n = frames(t.curiousFrames, 1);
         setMode(e, 'curious', n);
         e.targetX = px;

@@ -136,6 +136,7 @@ export class RenderStage {
       pickups: this.game.state.pickups,
       pods: this.game.state.pods,
       enemies: this.game.state.enemies,
+      goal: this.game.state.goal,
     };
     this.scene.layers.applyCamera(view);
     this.scene.update(dt, this.clock, view, sim);

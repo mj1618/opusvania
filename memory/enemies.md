@@ -20,7 +20,7 @@ Tests: `tests/unit/enemies.test.ts`, `enemies-pilot.test.ts` (burrback), `lampwi
   the glint spill queue (`spill / spillTimer / spillGap`), contact and its exclusions, the pogo.
 - `EnemyState` is ONE flat record for all kinds (plain JSON; a field a kind does not use keeps its
   start value). `homeX, homeY` = the centre of its box at the start, for every kind. The state
-  version is still 11 (the burrback tests pin it).
+  version is 12 since the goal (enemies.test pins it).
 - Scene data: `enemies` is a Zod union on `kind`; burrbacks first, lampwings after (the burrback
   grove tests index the first six). `EnemySpawn.y` means feet for a burrback, home centre for a lampwing.
 - No `Math.sin` in the sim: the lampwing's bob is a two-parabola wave (`wave()`), its wander a hash
@@ -88,7 +88,7 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
   where it last saw her and waits there.
 - **Gives up** (`enemyGiveUp {cause}`): `far` = she is more than 520 px from its HOME; `lost` = not
   seen for 90 frames; `tired` = 360 frames of pursuit; `dark` = she faded; `touch` = its touch
-  hurt her. Then `rest` 60 frames (it brakes and hangs), then `return` home at 1.8 px/f, and **it
+  hurt her; `calm` = a lantern was kindled near it or the run ended. Then `rest` 60 frames (it brakes and hangs), then `return` home at 1.8 px/f, and **it
   notices nothing until it is back** (within 24 px of home), then `hover`. That last rule is what
   stops camping: a hero who never fights is touched at most every ~240 frames (traced on F1: hits at
   138, 388, 652; within 90 px of her 1.8% of the time).
@@ -117,6 +117,10 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
   something first: `landed`, it lies 6 frames. Then `gone`. Spills 3 glints (5 from the finisher)
   through the burrback's queue: the first 16 frames after the blow, then 5 apart, from wherever the
   body is; `pickup {enemy: true}`.
+- **Calm** (`KindRules.calm`, `calmEnemies` in `enemies.ts`; goal.md): a lantern kindled within 900 px, or the
+  end of the run (every creature), settles them: a burrback stands (`pause`, not a turn) for the given frames; a
+  lampwing that is `curious` / `pursue` gives up with cause `calm`. From `gather` on no lampwing notices her and
+  contact does nothing.
 - Two lampwings closer than 72 px (centres) push apart (up to 0.3 px/f²): on top of the same hero
   they stay more than 20 px apart, not stacked. Burrbacks and lampwings ignore each other.
 - Re-form: living ones are back at home, 2 hp, hovering; dead ones stay dead. Restart brings all back.
@@ -147,7 +151,8 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
   last safe ground with full health and 90 frames of `invuln`, same facing, `attackSeq` kept: `reform
   {x, y, fromX, fromY, hp, hpMax, invuln}` and, right after it, `spawn` (so cameras and springs snap
   today; a renderer that wants a pan can look for `reform` in the same step).
-- Kept: glints, open pods, dead enemies. Reset: every living enemy, to its start with full hp.
+- Kept: glints, open pods, dead enemies, lit lanterns. Reset: every living enemy, to its start with full hp.
+- With a lantern lit she re-forms at the lit lantern she last stood at instead (goal.md), whatever is near it.
 - **Last safe ground** (`player.safeX/safeY`, feet centre): updated every frame once she has been, for
   30 frames in a row, grounded in mode `normal`, in control, with her centre over a solid that is not
   tagged `pool` (so not on a one-way branch, not in the pool), and no living enemy within 200 px of

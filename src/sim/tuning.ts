@@ -407,6 +407,35 @@ export const defaultTuning = {
     comboFrames: 50,
   },
   /**
+   * The goal (src/sim/goal.ts, memory/goal.md): three moth-lanterns to kindle with gathered light,
+   * then the heart of the grove wakes.
+   */
+  goal: {
+    /** Glints a lantern takes unless the scene gives it its own `cost`. */
+    cost: 12,
+    /** A lantern's trigger box: centred on its foot, standing up from the surface. */
+    lanternWidth: 48,
+    lanternHeight: 64,
+    /** She kindles one by standing at it this many frames in a row (leaving, a hit or a slash starts over). */
+    channelFrames: 30,
+    /** Standing at a lit one this long makes her whole again. */
+    restFrames: 45,
+    /** A lantern she could not afford says so once; again only after she has been this far from it (sideways). */
+    refuseLeavePx: 160,
+    /** Kindling calms the creatures within this of the lantern for `calmFrames` (burrbacks stand, lampwings give up). */
+    calmPx: 900,
+    calmFrames: 120,
+    /** The heart's trigger box: centred on its point, standing up from the ground. */
+    heartWidth: 96,
+    heartHeight: 96,
+    /** Held at the end, she walks on to within this of the heart's centre and stops there (0 = she stops where she is). */
+    heartWalkPx: 12,
+    /** Reaching the woken heart takes control for this many frames (`gather` ... `endHold`). */
+    holdFrames: 240,
+    /** After `endHold`: false = she stays held until the restart; true = she may walk on (nothing can hurt her). */
+    endedControl: false,
+  },
+  /**
    * The canopy: a soft ceiling at the scene's `ceilingY` (scene data; none if absent), so she never
    * leaves the top of the picture (the camera stops at the scene's top). The top of her box can
    * rise no faster than `rate` x its distance below it, so a jump eases to a stop there: no bump,

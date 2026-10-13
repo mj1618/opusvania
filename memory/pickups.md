@@ -6,7 +6,7 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 `src/scene/index.ts` (unique ids, inside the scene, not inside a solid).
 
 ## Sim (`src/sim/pickups.ts`, numbers in `tuning.pickups`)
-- State: `state.pickups = {timers[], count, taken, combo, comboTimer, gate}`; `timers[i]` belongs to
+- State: `state.pickups = {timers[], count, spent, taken, combo, comboTimer, gate}`; `timers[i]` belongs to
   `scene.pickups[i]`: 0 waiting, n > 0 collected in n steps, -1 taken.
 - A waiting pickup wakes when it is within `wakePx` (84; great 56) of the nearest point of the body
   box. From then on it is hers: collected exactly `flightFrames` (18; great 54) steps later wherever
@@ -14,6 +14,9 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 - Events: `pickupWake {id, kind, x, y, frames}`; `pickup {id, kind, value, x, y, px, py, combo,
   total}`. Here `x, y` = where the pickup hung (NOT the feet), `px, py` = body-box centre at the
   moment it goes in, `combo` = 0, 1, 2... through a run less than `comboFrames` (50) apart.
+- **`count` is a wallet** since the lanterns (goal.md): kindling one takes its cost out (`count -= cost`, `spent +=
+  cost`), so `count` can go down and `pickup.total` is the wallet at that moment, not a running total. Everything
+  gathered = `count + spent`. `taken` = how many scene pickups were collected (unchanged).
 - Restart (`R`, `__game.load()`) makes a new state, so everything is back; `teleport` keeps the count.
 - The sim only decides when; the flight is render. Timing history: 60 px / 20 frames = every pickup
   a long chase from behind; 84 px / 14 = absorbed where it hung, but the flight (9 frames) could not

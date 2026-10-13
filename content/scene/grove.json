@@ -118,5 +118,11 @@
     { "id": "lamp-ledge", "kind": "lampwing", "x": 2700, "y": 150, "facing": 1, "radius": 90 },
     { "id": "lamp-glide-1", "kind": "lampwing", "x": 4400, "y": 270, "facing": -1, "radius": 60 },
     { "id": "lamp-glide-2", "kind": "lampwing", "x": 4700, "y": 270, "facing": -1, "radius": 60 }
-  ]
+  ],
+  "lanterns": [
+    { "id": "lantern-stone", "x": 1448, "y": 1280 },
+    { "id": "lantern-crown", "x": 3684, "y": 192 },
+    { "id": "lantern-far", "x": 5524, "y": 448 }
+  ],
+  "heart": { "x": 5212, "y": 1088 }
 }

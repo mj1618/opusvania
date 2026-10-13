@@ -6,7 +6,7 @@ import type { PointLight } from '../render/lights';
 import type { CameraOverride, RenderStage } from '../render/stage';
 import { enemiesAlive } from '../sim/enemies';
 import type { SimEvent } from '../sim/events';
-import type { GameState } from '../sim/index';
+import { type GameState, goalHolds, heartBox, lanternBox, lanternCost } from '../sim/index';
 import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
 import type { Scene } from '../sim/scene';
@@ -145,6 +145,65 @@ export interface GameDebugApi {
     stagger: number;
     faded: number;
     safe: { x: number; y: number };
+  };
+  /**
+   * The moth-lanterns (memory/goal.md): how many are lit, the wallet, and each with its foot
+   * (`x`, `y`), trigger `box`, `cost`, `state` (`dormant`, `channel` = she is kindling it, `lit`),
+   * the frames of `channel` (of `of`) and of `rest`, and whether it is where she re-forms.
+   */
+  lanterns(): {
+    lit: number;
+    total: number;
+    wallet: number;
+    spent: number;
+    list: Array<{
+      id: string;
+      x: number;
+      y: number;
+      box: { x: number; y: number; w: number; h: number };
+      cost: number;
+      state: 'dormant' | 'channel' | 'lit';
+      channel: number;
+      of: number;
+      rest: number;
+      refused: boolean;
+      litFrame: number;
+      restPoint: boolean;
+    }>;
+  };
+  /**
+   * The goal at a glance: lanterns lit, the wallet (`wallet` carried, `spent`, `gathered` = both),
+   * the heart (`x`, `y`, `box`, `awake`, `frames` since it woke, `hinted`), the ending (`gathered`,
+   * `held` = no input reaches her, `frames` of `of`, `ended`, the summary) and the run so far
+   * (`time` in frames since her first input, `hits`, `kills`).
+   */
+  goal(): {
+    lit: number;
+    total: number;
+    wallet: number;
+    spent: number;
+    gathered: number;
+    restAt: string | null;
+    heart: {
+      x: number;
+      y: number;
+      box: { x: number; y: number; w: number; h: number };
+      awake: boolean;
+      frames: number;
+      hinted: boolean;
+    } | null;
+    ending: {
+      gathered: boolean;
+      held: boolean;
+      frames: number;
+      of: number;
+      ended: boolean;
+      glints: number;
+      time: number;
+      kills: number;
+      hits: number;
+    };
+    run: { time: number; hits: number; kills: number };
   };
   /** Dynamic lights registered this frame (world px). */
   lights(): PointLight[];
@@ -353,6 +412,62 @@ export function installDebugApi(deps: {
         safe: { x: p.safeX, y: p.safeY },
       };
     },
+    lanterns() {
+      const g = game.state.goal;
+      const G = game.tuning.goal;
+      const list = game.scene.lanterns ?? [];
+      return {
+        lit: g.lit,
+        total: list.length,
+        wallet: game.state.pickups.count,
+        spent: game.state.pickups.spent,
+        list: list.map((l, i) => {
+          const s = g.lanterns[i];
+          return {
+            id: l.id,
+            x: l.x,
+            y: l.y,
+            box: lanternBox(l, G),
+            cost: lanternCost(l, G),
+            state: s?.lit ? 'lit' : (s?.channel ?? 0) > 0 ? 'channel' : 'dormant',
+            channel: s?.channel ?? 0,
+            of: Math.max(1, Math.round(G.channelFrames)),
+            rest: s?.rest ?? 0,
+            refused: s?.refused ?? false,
+            litFrame: s?.litFrame ?? -1,
+            restPoint: g.restAt === i,
+          };
+        }),
+      };
+    },
+    goal() {
+      const g = game.state.goal;
+      const G = game.tuning.goal;
+      const w = game.state.pickups;
+      const h = game.scene.heart;
+      const kills = game.state.enemies.length - enemiesAlive(game.state);
+      return {
+        lit: g.lit,
+        total: game.scene.lanterns?.length ?? 0,
+        wallet: w.count,
+        spent: w.spent,
+        gathered: w.count + w.spent,
+        restAt: game.scene.lanterns?.[g.restAt]?.id ?? null,
+        heart: h ? { x: h.x, y: h.y, box: heartBox(h, G), ...g.heart } : null,
+        ending: {
+          gathered: g.gathered,
+          held: goalHolds(g, G),
+          of: Math.max(1, Math.round(G.holdFrames)),
+          ended: g.ended,
+          ...g.ending,
+        },
+        run: {
+          time: g.run.start < 0 ? 0 : game.state.frame - g.run.start,
+          hits: g.run.hits,
+          kills,
+        },
+      };
+    },
     lights: () => stage.lights.list.map((l) => ({ ...l })),
     render: redraw,
     character(id) {
@@ -373,6 +488,22 @@ export function installDebugApi(deps: {
   };
   // The collision overlay draws the enemies' true boxes from the live state.
   stage.overlay.enemies = () => game.state.enemies;
+  // ... and the lanterns' and the heart's trigger boxes.
+  stage.overlay.goal = () => {
+    const g = game.state.goal;
+    const G = game.tuning.goal;
+    const h = game.scene.heart;
+    return {
+      lanterns: (game.scene.lanterns ?? []).map((l, i) => ({
+        box: lanternBox(l, G),
+        lit: g.lanterns[i]?.lit ?? false,
+        channel: (g.lanterns[i]?.channel ?? 0) / Math.max(1, G.channelFrames),
+        rest: (g.lanterns[i]?.rest ?? 0) / Math.max(1, G.restFrames),
+        restPoint: g.restAt === i,
+      })),
+      heart: h ? { box: heartBox(h, G), awake: g.heart.awake, gathered: g.gathered } : null,
+    };
+  };
   window.__game = api;
   return api;
 }

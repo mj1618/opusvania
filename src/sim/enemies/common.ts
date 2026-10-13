@@ -118,6 +118,11 @@ export interface KindRules {
   homeClear?(e: EnemyState, t: Tuning): number;
   /** Once per step, before any enemy of the scene moves (only if the scene has one of this kind). */
   prepare?(info: StepInfo): void;
+  /**
+   * A lantern was kindled near it, or the run ended (src/sim/goal.ts): it settles for `frames`
+   * through its own quiet path. Only called while it is alive and not held or staggered.
+   */
+  calm?(e: EnemyState, info: StepInfo, frames: number): void;
   /** Her body met it and she was hurt (`dir` = the way she is thrown, -1 / 1). */
   touched?(e: EnemyState, info: StepInfo, dir: number): void;
 }

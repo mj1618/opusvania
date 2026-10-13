@@ -116,6 +116,7 @@ describe('pickups (sim rule)', () => {
     expect(fresh.state.pickups).toEqual({
       timers: (GROVE.pickups ?? []).map(() => 0),
       count: 0,
+      spent: 0,
       taken: 0,
       combo: 0,
       comboTimer: 0,

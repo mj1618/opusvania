@@ -207,8 +207,8 @@ export type SimEvent =
   | { type: 'enemyNotice'; id: string; kind: EnemyKind; x: number; y: number; dir: number; frames: number }
   /**
    * A lampwing's pursuit is over: she is too `far` from its home, `lost` from sight too long, it is
-   * `tired` (it chased its full time), her light went `dark` (she faded), or it `touch`ed her and
-   * bounced off. It rests `frames`, then flies home.
+   * `tired` (it chased its full time), her light went `dark` (she faded), it `touch`ed her and
+   * bounced off, or a lantern was kindled near it (`calm`; also at the ending). It rests `frames`, then flies home.
    */
   | {
       type: 'enemyGiveUp';
@@ -217,7 +217,7 @@ export type SimEvent =
       x: number;
       y: number;
       facing: number;
-      cause: 'far' | 'lost' | 'tired' | 'dark' | 'touch';
+      cause: 'far' | 'lost' | 'tired' | 'dark' | 'touch' | 'calm';
       frames: number;
     }
   /** It reached a ledge or a wall and turns round: `dir` = its new facing; it stands for `frames` first. */
@@ -310,6 +310,75 @@ export type SimEvent =
       hp: number;
       hpMax: number;
       invuln: number;
-    };
+    }
+  /**
+   * Lantern events (src/sim/goal.ts, memory/goal.md): `x`, `y` = the lantern's foot (its point in
+   * the scene), `id` = its id.
+   *
+   * `lanternRefuse`: she stands at a dormant lantern carrying `have` of the `need` glints it takes.
+   * Once per approach (again only after she has gone away and come back).
+   */
+  | { type: 'lanternRefuse'; id: string; x: number; y: number; have: number; need: number }
+  /**
+   * She is kindling it: every frame of the channel but the last, `frames` (1, 2, ...) of `of`. The
+   * frame that would be `of` is `lanternKindle` instead.
+   */
+  | { type: 'lanternChannel'; id: string; x: number; y: number; frames: number; of: number }
+  /**
+   * The channel broke after `frames`: she stepped away or left the ground (`leave`), was `hurt`, or
+   * drew her blade (`attack`). Nothing was spent.
+   */
+  | {
+      type: 'lanternCancel';
+      id: string;
+      x: number;
+      y: number;
+      frames: number;
+      reason: 'leave' | 'hurt' | 'attack';
+    }
+  /**
+   * It is lit, until the restart. `cost` glints left her wallet, which now holds `wallet`
+   * (`state.pickups.count`); `lit` of `total` lanterns burn. It is her rest point from now on.
+   */
+  | {
+      type: 'lanternKindle';
+      id: string;
+      x: number;
+      y: number;
+      cost: number;
+      wallet: number;
+      lit: number;
+      total: number;
+    }
+  /** Standing at a lit lantern made her whole: `healed` lights came back, `hp` of `hpMax` now. */
+  | { type: 'lanternRest'; id: string; x: number; y: number; hp: number; hpMax: number; healed: number }
+  /**
+   * She walked up to the heart of the grove (`x`, `y` = its point on the ground) while it sleeps:
+   * `lit` of `total` lanterns burn. Once per run.
+   */
+  | { type: 'heartSleep'; x: number; y: number; lit: number; total: number }
+  /** The last lantern was kindled (this same step): the heart wakes. `x`, `y` = the heart. */
+  | { type: 'heartWake'; x: number; y: number }
+  /**
+   * She walked into the woken heart: the run is over. `x`, `y` = the heart; `px`, `py` = her feet
+   * centre. The summary: `glints` gathered in all (spent ones included), `time` = frames since her
+   * first input, `lanterns` lit, `kills` = enemies killed, `hits` taken. Control is taken for
+   * `frames`; `endHold` follows then.
+   */
+  | {
+      type: 'gather';
+      x: number;
+      y: number;
+      px: number;
+      py: number;
+      glints: number;
+      time: number;
+      lanterns: number;
+      kills: number;
+      hits: number;
+      frames: number;
+    }
+  /** The ending hold is over (`state.goal.ended`): the scene rests until the restart. `x`, `y` = the heart. */
+  | { type: 'endHold'; x: number; y: number };
 
 export type SimEventType = SimEvent['type'];

@@ -72,6 +72,7 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     faded: 0,
     hurtDir: 0,
     hurtSeq: 0,
+    kindling: -1,
     safeX: Math.round(feetX),
     safeY: y + h,
     safeFrames: 0,
@@ -1089,14 +1090,22 @@ export function trackSafeGround(state: GameState, scene: Scene, P: MoveParams): 
 
 /**
  * The end of a fade: a fresh player at the last safe ground (the scene's spawn if an enemy that
- * is about to return to its start would be near it), whole, facing as she did, safe for a while.
+ * is about to return to its start would be near it), or at `at` if given (the lit lantern she last
+ * stood at: src/sim/goal.ts), whole, facing as she did, safe for a while.
  * The caller puts the living enemies back.
  */
-export function reformPlayer(state: GameState, scene: Scene, P: MoveParams, events: SimEvent[]): void {
+export function reformPlayer(
+  state: GameState,
+  scene: Scene,
+  P: MoveParams,
+  events: SimEvent[],
+  at?: { x: number; y: number },
+): void {
   const old = state.player;
-  let x = old.safeX;
-  let y = old.safeY;
-  for (let i = 0; i < state.enemies.length; i++) {
+  let x = at ? at.x : old.safeX;
+  let y = at ? at.y : old.safeY;
+  // A lit lantern (`at`) is her rest point whatever lives near it; safe ground is checked.
+  for (let i = 0; at === undefined && i < state.enemies.length; i++) {
     const e = state.enemies[i];
     if (!e || e.mode === 'dead') continue;
     const dx = e.homeX - x;

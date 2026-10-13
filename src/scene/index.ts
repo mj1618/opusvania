@@ -65,8 +65,17 @@ const SceneSchema = z
         ]),
       )
       .default([]),
+    lanterns: z
+      .array(
+        z.object({ id: z.string().min(1), x: int, y: int, cost: int.min(0).max(99).optional() }).strict(),
+      )
+      .default([]),
+    heart: z.object({ x: int, y: int }).strict().optional(),
   })
   .strict();
+
+/** No lantern stands closer to the spawn point than this (foot to feet). */
+export const LANTERN_SPAWN_CLEAR = 300;
 
 /** No enemy starts closer to the spawn point than this (feet to feet). */
 export const ENEMY_SPAWN_CLEAR = 300;
@@ -173,6 +182,39 @@ export function parseScene(json: unknown): Scene {
     const dy = e.y - s.spawn.y;
     if (dx * dx + dy * dy < ENEMY_SPAWN_CLEAR * ENEMY_SPAWN_CLEAR)
       throw new Error(`Scene "${s.id}": enemy "${e.id}" is too close to the spawn point`);
+  }
+  // Lanterns and the heart: a point on solid ground that is not the pool, the whole trigger box
+  // supported and clear of solids. Lanterns keep away from the spawn; the heart needs lanterns.
+  const G = defaultTuning.goal;
+  const stands = (what: string, p: { x: number; y: number }, w: number, h: number): void => {
+    const x0 = p.x - w / 2;
+    const x1 = p.x + w / 2;
+    if (x0 < 0 || x1 > s.width || p.y - h < (s.ceilingY ?? 0) || p.y > s.height)
+      throw new Error(`Scene "${s.id}": ${what} is outside the scene`);
+    if (s.solids.some((q) => x1 > q.x && x0 < q.x + q.w && p.y > q.y && p.y - h < q.y + q.h))
+      throw new Error(`Scene "${s.id}": ${what} is inside a solid`);
+    const under = (x: number) =>
+      s.solids.some((q) => q.tag !== 'pool' && q.y === p.y && x >= q.x && x < q.x + q.w);
+    if (!under(x0) || !under(x1 - 1))
+      throw new Error(`Scene "${s.id}": ${what} does not stand on solid ground`);
+  };
+  for (const l of s.lanterns) {
+    if (seen.has(l.id)) throw new Error(`Scene "${s.id}": two things are called "${l.id}"`);
+    seen.add(l.id);
+    stands(`lantern "${l.id}"`, l, G.lanternWidth, G.lanternHeight);
+    const dx = l.x - s.spawn.x;
+    const dy = l.y - s.spawn.y;
+    if (dx * dx + dy * dy < LANTERN_SPAWN_CLEAR * LANTERN_SPAWN_CLEAR)
+      throw new Error(`Scene "${s.id}": lantern "${l.id}" is too close to the spawn point`);
+  }
+  if (s.heart) {
+    stands('the heart', s.heart, G.heartWidth, G.heartHeight);
+    if (s.lanterns.length === 0) throw new Error(`Scene "${s.id}": a heart needs lanterns to wake it`);
+    const hb = { x0: s.heart.x - G.heartWidth / 2, x1: s.heart.x + G.heartWidth / 2 };
+    for (const l of s.lanterns) {
+      if (l.y === s.heart.y && l.x + G.lanternWidth / 2 > hb.x0 && l.x - G.lanternWidth / 2 < hb.x1)
+        throw new Error(`Scene "${s.id}": lantern "${l.id}" stands in the heart`);
+    }
   }
   return s;
 }

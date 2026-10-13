@@ -5,6 +5,7 @@
  */
 import { contactDamage, createEnemies, enemyTouched, resetEnemies, updateEnemies } from './enemies';
 import type { SimEvent } from './events';
+import { createGoal, goalHolds, heldInput, restPoint, updateGoal } from './goal';
 import type { InputFrame } from './input';
 import { createPickups, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
@@ -19,7 +20,7 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 11,
+    version: 12,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
@@ -28,6 +29,7 @@ export function createState(seed: number, t: Tuning, scene: Scene, events: SimEv
     pickups: createPickups(scene),
     pods: createPods(scene),
     enemies: createEnemies(scene, t),
+    goal: createGoal(scene),
   };
   events.push({ type: 'spawn', x: scene.spawn.x, y: scene.spawn.y });
   return state;
@@ -35,8 +37,8 @@ export function createState(seed: number, t: Tuning, scene: Scene, events: SimEv
 
 /**
  * Puts a fresh player with its feet centre at (x, y): at rest, facing right, every timer cleared.
- * The frame count, the RNG, what has been collected, the enemies, her health, her last safe
- * ground and the slash count are kept (a player placed while faded is whole again).
+ * The frame count, the RNG, what has been collected, the enemies, the lanterns, her health, her
+ * last safe ground and the slash count are kept (a player placed while faded is whole again).
  */
 export function placePlayer(
   state: GameState,
@@ -65,14 +67,17 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
   const first = events.length;
   // The end of a fade: she re-forms at the last safe ground and the living enemies go home.
   if (state.player.faded > 0 && --state.player.faded === 0) {
-    reformPlayer(state, scene, P, events);
+    reformPlayer(state, scene, P, events, restPoint(state, scene));
     resetEnemies(state, scene, t);
   }
-  const ran = updatePlayer(state, scene, input, P, t.pods, events);
+  // From the end of the run on she is held (no input reaches her; she walks into the heart and
+  // stops) and nothing can hurt her.
+  const held = goalHolds(state.goal, t.goal);
+  const ran = updatePlayer(state, scene, held ? heldInput(state, scene, t.goal) : input, P, t.pods, events);
   const touch = updateEnemies(state, scene, t, events, first);
   const p = state.player;
   const e = touch >= 0 ? state.enemies[touch] : undefined;
-  if (e && p.invuln === 0 && p.hp > 0) {
+  if (e && p.invuln === 0 && p.hp > 0 && !state.goal.gathered) {
     const pc = p.x + p.w / 2;
     const ec = e.x + e.w / 2;
     const dir = pc < ec ? -1 : pc > ec ? 1 : -p.facing;
@@ -84,19 +89,23 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
   if (ran) trackSafeGround(state, scene, P);
   updatePods(state, scene, t.pickups.comboFrames, events);
   updatePickups(state, scene, t.pickups, events);
+  updateGoal(state, scene, t, input, events, first);
   state.prevInput = input;
   state.frame++;
 }
 
 export type { SimEvent } from './events';
+export { goalHolds, heartBox, lanternBox, lanternCost } from './goal';
 export { hashState } from './hash';
 export { slashBox, slashTuning } from './player/attack';
-export type { EnemyKind, EnemySpawn, Pickup, PickupKind, Pod, PodMount, Scene } from './scene';
+export type { EnemyKind, EnemySpawn, Lantern, Pickup, PickupKind, Pod, PodMount, Scene } from './scene';
 export type {
   AttackDir,
   EnemyMode,
   EnemyState,
   GameState,
+  GoalState,
+  LanternState,
   Motion,
   PickupsState,
   PlayerMode,

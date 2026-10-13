@@ -183,6 +183,15 @@ export const burrback: KindRules = {
     return true;
   },
 
+  /** It stands where it is (a rest, not a turn), then walks on. */
+  calm(e, _info, n) {
+    if (e.mode === 'pause' && e.timer >= n) return;
+    const turning = e.mode === 'pause' && e.turning;
+    setMode(e, 'pause', n);
+    e.turning = turning;
+    e.vx = 0;
+  },
+
   /** Along a forward cut; an up / down cut pushes it aside, away from her, less hard. */
   shove(e, dir, side, knockback, t) {
     const kb = dir === 'fwd' ? knockback : knockback * t.burrback.knockVertical;

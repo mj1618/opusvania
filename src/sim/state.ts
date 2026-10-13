@@ -112,6 +112,8 @@ export interface PlayerState {
   faded: number;
   hurtDir: number;
   hurtSeq: number;
+  /** Index of the lantern she is kindling this frame (`scene.lanterns`), -1 = none (memory/goal.md). */
+  kindling: number;
   /** Last safe ground (feet centre): where she re-forms. `safeFrames` = frames in a row on safe ground. */
   safeX: number;
   safeY: number;
@@ -156,8 +158,13 @@ export interface PickupsState {
    * collected in n more steps), -1 = collected.
    */
   timers: number[];
-  /** Value gathered so far (a great glint counts for more than one). */
+  /**
+   * The wallet: the value she carries now (a great glint counts for more than one). Everything
+   * gathered goes in; kindling a lantern takes its cost out (`spent`).
+   */
   count: number;
+  /** Value spent on lanterns so far. `count + spent` = everything gathered this run. */
+  spent: number;
   /** How many pickups have been collected. */
   taken: number;
   /** Index of the last pickup in the current chain (0 = first), and frames left to extend it. */
@@ -299,8 +306,47 @@ export interface EnemyState {
   spillGap: number;
 }
 
+/** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */
+export interface LanternState {
+  /** Kindled: it burns until the scene restarts (a fade / re-form does not put it out). */
+  lit: boolean;
+  /** The sim frame it was kindled on, -1 while dormant (glow-up from `sim.frame - litFrame`). */
+  litFrame: number;
+  /** Frames she has stood at it kindling, 0 = not being kindled (of `tuning.goal.channelFrames`). */
+  channel: number;
+  /** Lit: frames she has stood at it hurt, toward being made whole (of `tuning.goal.restFrames`). */
+  rest: number;
+  /** It has told her she carries too little; it will not again until she has gone away and come back. */
+  refused: boolean;
+}
+
+/** The goal of the scene (src/sim/goal.ts, memory/goal.md): the lanterns, the heart, the ending. */
+export interface GoalState {
+  lanterns: LanternState[];
+  /** How many are lit. */
+  lit: number;
+  /** The lit lantern she last stood at: where she re-forms (index into `scene.lanterns`), -1 = none yet. */
+  restAt: number;
+  /**
+   * The heart of the grove. `awake` once every lantern is lit; `frames` counts up from the frame
+   * it woke (0 while asleep); `hinted`: she has walked up to it asleep (`heartSleep` fired).
+   */
+  heart: { awake: boolean; frames: number; hinted: boolean };
+  /** She has reached the woken heart (`gather`): control is taken and nothing can hurt her. */
+  gathered: boolean;
+  /**
+   * The ending hold: `frames` since `gather` (it stops at `tuning.goal.holdFrames`), and the run's
+   * summary as the `gather` event gave it (all 0 until then).
+   */
+  ending: { frames: number; glints: number; time: number; kills: number; hits: number };
+  /** The hold is over (`endHold`): the scene stays calm until the restart. */
+  ended: boolean;
+  /** The run so far: the frame of her first input (-1 = none yet) and the hits she has taken. */
+  run: { start: number; hits: number };
+}
+
 export interface GameState {
-  version: 11;
+  version: 12;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;
@@ -311,6 +357,7 @@ export interface GameState {
   pickups: PickupsState;
   pods: PodsState;
   enemies: EnemyState[];
+  goal: GoalState;
 }
 
 export function cloneState(s: GameState): GameState {
@@ -328,5 +375,12 @@ export function cloneState(s: GameState): GameState {
       burst: s.pods.burst,
     },
     enemies: s.enemies.map((e) => ({ ...e })),
+    goal: {
+      ...s.goal,
+      lanterns: s.goal.lanterns.map((l) => ({ ...l })),
+      heart: { ...s.goal.heart },
+      ending: { ...s.goal.ending },
+      run: { ...s.goal.run },
+    },
   };
 }

@@ -4,12 +4,21 @@ import { placeLayer } from '../render/scene/layer-tree';
 import type { Scene } from '../sim/scene';
 import type { EnemyState } from '../sim/state';
 
+type Rect = { x: number; y: number; w: number; h: number };
+/** What the overlay draws of the goal: `channel` and `rest` are 0..1 (how far along). */
+export interface GoalBoxes {
+  lanterns: Array<{ box: Rect; lit: boolean; channel: number; rest: number; restPoint: boolean }>;
+  heart: { box: Rect; awake: boolean; gathered: boolean } | null;
+}
+
 /**
  * Collision overlay (F2, ?hitboxes, __game.debug.hitboxes): the scene's solid rects and one-ways,
  * the player's true collision box (green grounded, red airborne; white while invulnerable) and
  * velocity, and every enemy's box (magenta; orange while hurt, grey when dead). A lampwing also
  * shows its territory (a faint circle round its home), a line to what it is drawn to (yellow while
- * it has noticed or pursues her, dim otherwise) and its velocity. Drawn above the post stage in
+ * it has noticed or pursues her, dim otherwise) and its velocity. Lanterns: their trigger box (cyan
+ * dormant, gold lit; a bar that fills while she kindles it or rests at it; a tick under the one she
+ * re-forms at). The heart: its box (dim violet asleep, bright orange awake, white once reached). Drawn above the post stage in
  * playfield space, so it shows the truth regardless of the art.
  */
 export class HitboxOverlay {
@@ -19,6 +28,8 @@ export class HitboxOverlay {
   visible = false;
   /** The live enemies (set by the debug API; the overlay only reads them). */
   enemies: () => readonly EnemyState[] = () => [];
+  /** The lanterns' and the heart's trigger boxes and what they are doing (set by the debug API). */
+  goal: () => GoalBoxes = () => ({ lanterns: [], heart: null });
 
   constructor(scene: Scene) {
     for (const s of scene.solids) this.solids.rect(s.x, s.y, s.w, s.h);
@@ -47,6 +58,27 @@ export class HitboxOverlay {
     g.moveTo(p.cx, p.cy)
       .lineTo(p.cx + p.vx * 6, p.cy + p.vy * 6)
       .stroke({ color: 0xffd23f, width: 2 });
+    const goal = this.goal();
+    for (const l of goal.lanterns) {
+      const b = l.box;
+      const color = l.lit ? 0xffc94a : 0x4ce0ff;
+      g.rect(b.x, b.y, b.w, b.h).stroke({ color, width: 2, alpha: l.lit ? 1 : 0.7 });
+      const fill = l.lit ? l.rest : l.channel;
+      if (fill > 0) g.rect(b.x, b.y - 8, b.w * Math.min(1, fill), 4).fill({ color: 0xffffff });
+      if (l.restPoint)
+        g.moveTo(b.x, b.y + b.h + 5)
+          .lineTo(b.x + b.w, b.y + b.h + 5)
+          .stroke({ color: 0xffc94a, width: 3 });
+    }
+    if (goal.heart) {
+      const b = goal.heart.box;
+      const color = goal.heart.gathered ? 0xffffff : goal.heart.awake ? 0xff9a3c : 0x9a70d8;
+      g.rect(b.x, b.y, b.w, b.h).stroke({
+        color,
+        width: goal.heart.awake ? 3 : 2,
+        alpha: goal.heart.awake ? 1 : 0.6,
+      });
+    }
     for (const e of this.enemies()) {
       if (e.gone) continue;
       const color = e.mode === 'dead' ? 0x8a8a8a : e.mode === 'hurt' ? 0xff9a3c : 0xff4cf0;

@@ -23,7 +23,7 @@ export function createPickups(scene: Scene): PickupsState {
   const n = scene.pickups?.length ?? 0;
   const timers: number[] = [];
   for (let i = 0; i < n; i++) timers.push(PICKUP_WAITING);
-  return { timers, count: 0, taken: 0, combo: 0, comboTimer: 0, gate: 0 };
+  return { timers, count: 0, spent: 0, taken: 0, combo: 0, comboTimer: 0, gate: 0 };
 }
 
 /** Total value of every pickup in the scene. */

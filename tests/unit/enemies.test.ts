@@ -690,7 +690,7 @@ describe('enemies: determinism, symmetry, restart', () => {
     expect(hashState(cloneState(a.state))).toBe(hashState(a.state));
     expect(cloneState(a.state).enemies[0]).not.toBe(a.state.enemies[0]);
     expect(of(a.events, 'hurt').length + of(a.events, 'enemyHit').length).toBeGreaterThan(2);
-    expect(a.state.version).toBe(11);
+    expect(a.state.version).toBe(12);
   });
 
   it('mirror symmetry: a mirrored scene and mirrored inputs give exactly the mirrored fight', () => {

@@ -363,6 +363,38 @@ export function slashEnemies(
   return hits;
 }
 
+/**
+ * Settles every living enemy within `px` of the point (centre of its box, or its home; `px` < 0 =
+ * every one in the scene) for `n` frames, each by its kind's own quiet path (`KindRules.calm`).
+ * One that is staggered or held by a hit is left alone.
+ */
+export function calmEnemies(
+  state: GameState,
+  scene: Scene,
+  t: Tuning,
+  events: SimEvent[],
+  x: number,
+  y: number,
+  px: number,
+  n: number,
+): void {
+  const list = state.enemies;
+  if (list.length === 0 || n <= 0) return;
+  const I = info(state, scene, t, events);
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i];
+    if (!e || e.gone || e.mode === 'dead' || e.mode === 'hurt' || e.hitstop > 0) continue;
+    if (px >= 0) {
+      const dx = e.x + e.w / 2 - x;
+      const dy = e.y + e.h / 2 - y;
+      const hx = e.homeX - x;
+      const hy = e.homeY - y;
+      if (dx * dx + dy * dy > px * px && hx * hx + hy * hy > px * px) continue;
+    }
+    KINDS[e.kind].calm?.(e, I, n);
+  }
+}
+
 /** How many enemies are still alive. */
 export function enemiesAlive(state: GameState): number {
   let n = 0;

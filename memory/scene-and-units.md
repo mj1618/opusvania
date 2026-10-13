@@ -17,7 +17,8 @@
 `{id, width: 5760, height: 1600, spawn: {x, y}, ceilingY?: 0, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}],
 pickups: [{id, kind: glint|great, x, y}], pods: [{id, x, y, mount: sit|hang, hp?: 1-3}],
 enemies: [{id, kind: burrback, x, y (feet centre), facing: -1|1} | {id, kind: lampwing, x, y (home: box centre, in open
-air), facing, radius?}]}` (burrbacks first; pickups.md, combat.md, enemies.md),
+air), facing, radius?}], lanterns: [{id, x, y (foot, on solid ground), cost?}], heart: {x, y (on solid ground)}}`
+(burrbacks first; pickups.md, combat.md, enemies.md, goal.md),
 validated by Zod in `src/scene/index.ts` (exports `GROVE`), typed in `src/sim/scene.ts`. Tags are for
 artists (`ground | pool | ledge | trunk | floating | root | branch`); the sim ignores them, except that
 `pool` is never safe ground to re-form on. The left, right and bottom scene edges are solid; the top
@@ -45,6 +46,10 @@ x:  0        1000       2000       3000       4000       5000     5760
 - Right route up: root → branch → F6 → F7 → far ledge (448).
 - `tests/unit/scene.test.ts` pilots every route; if you move a rect, it tells you what became unreachable.
   Reach numbers are in movement-controller.md.
+- Lanterns: 1448, 1280 (moth-stone) / 3684, 192 (trunk B's top) / 5524, 448 (far ledge); the heart: 5212, 1088
+  (the shrine). Validated: on a solid top that is not the pool, the whole trigger box supported and clear,
+  lanterns 300 px from the spawn, a heart needs lanterns. `tests/unit/goal-pilot.test.ts` plays the whole scene
+  from the spawn to the heart: move a rect and it names the leg that broke.
 
 ## Layer tree (`src/render/scene/layer-tree.ts`), back to front
 | layer | parallax | what |
