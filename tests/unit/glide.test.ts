@@ -306,24 +306,40 @@ describe('wing glide', () => {
     // The canopy (scene `ceilingY`, 420 px over the scene's top) leaves room for the whole jump and
     // double jump on the summit, so the flight from trunk B reaches the far ledge again (with the
     // ceiling at y 0 it came down on F7, one hop short): the designed way to the third lantern.
+    // (The far bluff's top is at y 768 since playtest 4: 320 px lower, so the far lantern and the
+    // heart are one picture. The flight clears its lip by 480 px.)
     const s = newSim();
     s.place(3684, 192);
     const flight = untilLanding(s, 'R+J28 R1 R+J900');
-    expect(feet(s).y).toBe(448);
+    expect(feet(s).y).toBe(768);
     expect(feet(s).x).toBeGreaterThan(5472);
     expect(feet(s).x).toBeLessThan(5760);
-    // (Held to the end she sails over the ledge, 160 px up at its lip, to the scene's wall and
-    // slides down it onto the ledge's far end; closing the wings over the lip lands her there.)
-    expect(glides(flight.events).at(-1)).toMatch(/glideEnd:(land|wall)/);
-    // Well over the two lampwings on the way: the first never notices her; the second (its home is
-    // in reach of the far lantern, so its giving up at a lit lantern can be seen) looks up as she
-    // passes 200 px over it and sets off after her, far too slow to touch her in the air.
-    expect(flight.events.filter((e) => e.type === 'hurt')).toEqual([]);
+    // (Held to the end she sails over the bluff to the scene's wall and sinks along it, wings open,
+    // onto the bluff's far end: the scene's edge gives no wall slide any more. Closing the wings
+    // over the lip lands her by the lantern.)
+    expect(glides(flight.events).at(-1)).toBe('glideEnd:land');
+    expect(flight.events.some((e) => e.type === 'wallSlideStart')).toBe(false);
+    // Well over the two lampwings of the pogo chain: the first never notices her; the second looks
+    // up as she passes 200 px over it, far too slow to touch her in the air. The third hangs ON her
+    // line (`lamp-sky`, playtest 4: the crossing's encounter): she sees it coming, and a flight that
+    // only holds the button flies into it.
+    expect(
+      flight.events.filter((e) => e.type === 'hurt').map((e) => (e.type === 'hurt' ? e.source.id : '')),
+    ).toEqual(['lamp-sky']);
     expect(
       flight.events
         .filter((e) => e.type === 'enemyNotice')
         .map((e) => (e.type === 'enemyNotice' ? e.id : '')),
-    ).toEqual(['lamp-glide-2']);
+    ).toEqual(['lamp-glide-2', 'lamp-sky']);
+    // One forward cut on the way in (wings open) and she flies on through its tumble, untouched.
+    const c = newSim();
+    c.place(3684, 192);
+    const cut = untilLanding(c, 'R+J28 R1 R+J108 R+J+A1 R+J900');
+    expect(cut.events.filter((e) => e.type === 'hurt')).toEqual([]);
+    expect(
+      cut.events.filter((e) => e.type === 'enemyHit').map((e) => (e.type === 'enemyHit' ? e.id : '')),
+    ).toEqual(['lamp-sky']);
+    expect(feet(c)).toMatchObject({ y: 768 });
 
     const pool = GROVE.solids.find((r) => r.tag === 'pool');
     if (!pool) throw new Error('no pool');
@@ -338,7 +354,7 @@ describe('wing glide', () => {
     // Nothing she can reach by gliding is outside the scene.
     for (const [x, y, d] of [
       [3648, 192, 'L'],
-      [5500, 448, 'L'],
+      [5500, 768, 'L'],
       [2840, 448, 'L'],
       [3648, 192, 'R'],
     ] as const) {

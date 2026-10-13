@@ -109,6 +109,7 @@ describe('lanterns: kindling', () => {
       refused: false,
       noticed: true,
       pledged: false,
+      still: 0,
     });
     expect(s.state.player.kindling).toBe(-1);
     expect([s.state.goal.lit, s.state.goal.restAt]).toEqual([1, 0]);
@@ -129,24 +130,52 @@ describe('lanterns: kindling', () => {
       s.run('.40');
       expect(lantern(s).lit, `dx ${dx}`).toBe(lit);
     }
-    // Hanging in the air inside the box does not count: a jump through it never kindles it.
-    const s = sim(scene(), 12, A_X);
-    const ev = s.run('J20 .30');
-    expect(of(ev, 'lanternChannel').length).toBeLessThan(G.channelFrames - 1);
-    expect(of(ev, 'lanternKindle')).toHaveLength(0);
-    // Running straight through never kindles it either.
-    const r = sim(scene(), 12, A_X - 300);
-    r.run('R80');
-    expect(lantern(r).lit).toBe(false);
-    expect(of(r.events, 'lanternChannel').length).toBeLessThan(15);
+    // Hanging in the air inside the box does not START it: a jump through it kindles nothing.
+    const s = sim(scene(), 12, A_X - 200);
+    s.run('R6 R+J24 R30');
+    expect(of(s.events, 'jump')).toHaveLength(1);
+    expect(of(s.events, 'lanternChannel')).toHaveLength(0);
+    expect(lantern(s).lit).toBe(false);
   });
 
-  it('leaving breaks the channel: walking off, or jumping', () => {
-    for (const [script, n] of [
-      ['.10 R12', 10],
-      ['.10 J1', 10],
+  it('once started it runs on while she stays on its leash, whatever she does: a player who never stands still lights it', () => {
+    // (Playtest 4: a tapper who never stopped lit nothing in two minutes; every channel broke 9-10 frames in.)
+    // Running straight through, with the price: it starts as she crosses the box and catches behind her.
+    const r = sim(scene(), 12, A_X - 300);
+    const ev = r.run('R80');
+    const k = of(ev, 'lanternKindle');
+    expect(k).toHaveLength(1);
+    expect(k[0]).toMatchObject({ id: 'a', away: true, pledged: false, wallet: 0 });
+    expect(of(ev, 'lanternChannel')).toHaveLength(G.channelFrames - 1);
+    expect(of(ev, 'lanternCancel')).toHaveLength(0);
+    // She was past its box (not kindling it: no pose, no protection) when it caught.
+    expect(feet(r).x).toBeGreaterThan(A_X + 44);
+    // Pacing about it, hopping, cutting: it still catches on the 30th frame.
+    for (const script of ['.3 R8 L16 R8', '.3 J12 .20', '.3 A1 .16 A1 .14', '.2 L5 R+J6 L+A10 R12']) {
+      const q = sim(scene(), 12, A_X);
+      const e = q.run(script);
+      expect(of(e, 'lanternKindle'), script).toHaveLength(1);
+      expect(of(e, 'lanternCancel'), script).toHaveLength(0);
+      expect(q.state.frame, script).toBeGreaterThanOrEqual(G.channelFrames);
+    }
+    // The leash: 260 px to either side of its foot, 330 up or down from the middle of its box.
+    expect([G.kindleLeashPx, G.kindleLeashUpPx]).toEqual([260, 330]);
+    // Only while she is AT it is she kindling (the pose, and nothing can hurt her).
+    const p = sim(scene(), 12, A_X);
+    p.run('.5');
+    expect(p.state.player.kindling).toBe(0);
+    p.run('R12');
+    expect(p.state.player.kindling).toBe(-1);
+    expect(lantern(p).channel).toBe(17);
+  });
+
+  it('leaving its leash breaks the channel: a dash away, or a slower hand that walks on', () => {
+    for (const [script, n, channel] of [
+      ['.10 R2 R+X1 R14', 10, G.channelFrames],
+      ['.10 R60', 10, 60],
     ] as const) {
       const s = sim(scene(), 12, A_X);
+      s.tuning.goal.channelFrames = channel;
       const ev = s.run(script);
       const c = of(ev, 'lanternCancel');
       expect(c, script).toHaveLength(1);
@@ -162,23 +191,23 @@ describe('lanterns: kindling', () => {
     }
   });
 
-  it('a slash breaks it, and it starts over only once the blade is away', () => {
+  it('a slash does not break a channel that has started; it only cannot start while the blade is out', () => {
     const s = sim(scene(), 12, A_X);
-    const ev = s.run('.10 A1');
-    expect(of(ev, 'lanternCancel')[0]).toMatchObject({ reason: 'attack', frames: 10 });
-    expect(lantern(s).channel).toBe(0);
-    // Nothing while the slash plays (14 frames from the press), then the full channel again.
-    const rest = s.run('.60');
-    expect(of(rest, 'lanternChannel')[0]?.frames).toBe(1);
-    const k = of(rest, 'lanternKindle');
-    expect(k).toHaveLength(1);
-    const first = rest.findIndex((e) => e.type === 'lanternChannel');
-    expect(first).toBeGreaterThan(0);
-    expect(s.state.pickups.count).toBe(0);
-    // Mashing never lets it through.
+    const ev = s.run('.10 A1 .19');
+    expect(of(ev, 'lanternCancel')).toHaveLength(0);
+    expect(of(ev, 'lanternKindle')).toHaveLength(1);
+    expect(s.state.frame).toBe(G.channelFrames);
+    // Blade out as she arrives: nothing for the 14 frames of the slash, then the full channel.
+    const b = sim(scene(), 12, A_X);
+    const e = b.run('A1 .60');
+    expect(e.findIndex((x) => x.type === 'lanternChannel')).toBeGreaterThan(0);
+    expect(of(e, 'lanternChannel')[0]?.frames).toBe(1);
+    expect(of(e, 'lanternKindle')).toHaveLength(1);
+    expect(b.state.goal.lanterns[0]?.litFrame).toBe(13 + G.channelFrames);
+    // Mashing lets it through now: it starts in the gap between two cuts and runs on.
     const m = sim(scene(), 12, A_X);
     m.run('A1 .16 A1 .18 A1 .26 A1 .16 A1 .18 A1 .10');
-    expect(lantern(m).lit).toBe(false);
+    expect(lantern(m).lit).toBe(true);
   });
 
   it('being hurt breaks it (the reason is `hurt`), in the same step', () => {
@@ -209,10 +238,24 @@ describe('lanterns: kindling', () => {
     const ev = s.run('.40');
     expect(of(ev, 'hurt')).toHaveLength(0);
     expect(of(ev, 'lanternCancel')).toHaveLength(0);
-    const flinch = of(ev, 'enemyAlert');
+    // (It braced at her as she arrived, the step before the channel began; the lantern caught
+    // as its ram set off, and it stands calmed. With the ram off: the flinch of a touch, as before.)
+    expect(of(ev, 'enemyWindup')).toHaveLength(1);
+    expect(s.state.enemies[0]).toMatchObject({ mode: 'pause', braced: false });
+    // A longer channel: the ram reaches her mid-channel, bounces off her and stands spent.
+    const long = sim(scene({ enemies: [burr(A_X + 80)] }), 12, A_X);
+    long.tuning.goal.channelFrames = 60;
+    const le = long.run('.70');
+    expect(of(le, 'hurt')).toHaveLength(0);
+    expect(of(le, 'lanternCancel')).toHaveLength(0);
+    expect(of(le, 'enemyRecover')[0]).toMatchObject({ cause: 'touch', dir: 1 });
+    expect(lantern(long).lit).toBe(true);
+    const walk = sim(scene({ enemies: [burr(A_X + 80)] }), 12, A_X);
+    walk.tuning.burrback.strikePx = 0;
+    const flinch = of(walk.run('.40'), 'enemyAlert');
     expect(flinch).toHaveLength(1);
     expect(flinch[0]).toMatchObject({ cause: 'touch', facing: 1, dir: -1 });
-    expect(ev.indexOf(flinch[0] as SimEvent)).toBeLessThan(ev.findIndex((e) => e.type === 'lanternKindle'));
+    expect(of(walk.events, 'hurt')).toHaveLength(0);
     expect([lantern(s).lit, s.state.player.hp, s.state.pickups.count]).toEqual([true, 4, 0]);
     // The same for a lampwing that comes down on her: it bounces off and gives up.
     const wing: EnemySpawn = {
@@ -665,7 +708,8 @@ describe('the heart', () => {
   it('kills in the summary are the enemies she killed', () => {
     const s = sim(scene({ enemies: [burr(2290), burr(900, 1)] }), 36);
     s.place(2200, FLOOR);
-    s.run('R+A1 .16 R+A1 .18 R+A1 .60');
+    s.tuning.burrback.strikePx = 0;
+    s.run('R+A1 .20 R+A1 .22 R+A1 .60');
     expect(s.state.enemies[0]?.mode).toBe('dead');
     lightAll(s);
     s.place(HEART_X, FLOOR);
@@ -727,6 +771,97 @@ describe('the ending', () => {
     expect(feet(s).x).toBe(x);
     expect(s.state.goal.ending.frames).toBe(G.holdFrames);
     expect(s.state.goal.heart.frames).toBeGreaterThan(G.holdFrames);
+  });
+
+  it('the offering: what she still carries goes into the heart during the hold, and counts in tiers (25 / 50 / 100)', () => {
+    // (Playtest 4: an explorer ended with 96 idle glints and nothing to do with them.)
+    expect([G.offerTier1, G.offerTier2, G.offerTier3]).toEqual([25, 50, 100]);
+    for (const [carry, tier] of [
+      [0, 0],
+      [1, 0],
+      [24, 0],
+      [25, 1],
+      [60, 2],
+      [96, 2],
+      [100, 3],
+      [300, 3],
+    ] as const) {
+      const s = newSim(scene());
+      lightAll(s);
+      s.state.pickups.count = carry;
+      s.place(HEART_X + 150, FLOOR);
+      const ev = s.run(`L20 .${G.holdFrames}`);
+      const g = of(ev, 'gather')[0];
+      expect(g, `${carry}`).toMatchObject({ offered: carry, offerTier: tier, offerTiers: [25, 50, 100] });
+      // The summary is fixed at the gather; the wallet drains during the hold.
+      expect(s.state.goal.ending, `${carry}`).toMatchObject({
+        offered: carry,
+        offerTier: tier,
+        glints: 36 + carry,
+      });
+      const offers = of(ev, 'heartOffer');
+      expect(
+        offers.reduce((n, e) => n + e.value, 0),
+        `${carry}`,
+      ).toBe(carry);
+      expect([s.state.pickups.count, s.state.pickups.offered], `${carry}`).toEqual([0, carry]);
+      expect(s.state.goal.offer, `${carry}`).toEqual({ total: carry, given: carry, tier });
+      // Nothing before the delay; all of it in by the end of the span, well inside the hold.
+      const at = offers.map((e) => ev.indexOf(e));
+      const gi = ev.indexOf(g as SimEvent);
+      for (const i of at) expect(i).toBeGreaterThan(gi);
+      if (carry > 0) {
+        const first = offers[0];
+        const last = offers.at(-1);
+        expect(first).toMatchObject({ x: HEART_X, y: FLOOR, of: carry });
+        expect(last).toMatchObject({ given: carry, wallet: 0, tier });
+        expect(of(ev, 'endHold')).toHaveLength(1);
+        expect(ev.indexOf(last as SimEvent)).toBeLessThan(ev.findIndex((e) => e.type === 'endHold'));
+      }
+      // A tier is told once, as the count passes it, in order.
+      expect(
+        of(ev, 'heartTier').map((e) => [e.tier, e.need]),
+        `${carry}`,
+      ).toEqual(
+        [
+          [1, 25],
+          [2, 50],
+          [3, 100],
+        ].slice(0, tier),
+      );
+      for (const t of of(ev, 'heartTier')) expect(t.given).toBeGreaterThanOrEqual(t.need);
+    }
+    // The pace: one at a time for a small purse (the last lands 140 frames after the first could),
+    // several a step for a big one; the first leaves her 45 frames after the gather.
+    const s = newSim(scene());
+    lightAll(s);
+    s.state.pickups.count = 10;
+    s.place(HEART_X, FLOOR);
+    const frames: number[] = [];
+    for (let f = 0; f < G.holdFrames + 2; f++) {
+      const from = s.events.length;
+      step(s.state, 0, s.tuning, s.scene, s.events);
+      if (s.events.slice(from).some((e) => e.type === 'heartOffer')) frames.push(f);
+    }
+    expect(frames).toHaveLength(10);
+    expect(frames[0]).toBe(G.offerDelayFrames);
+    expect((frames[1] as number) - (frames[0] as number)).toBe(14);
+    expect(frames.at(-1) as number).toBeLessThanOrEqual(G.offerDelayFrames + G.offerSpanFrames);
+    // A hold too short for it: the rest goes in with the end.
+    const short = newSim(scene());
+    short.tuning.goal.holdFrames = 50;
+    lightAll(short);
+    short.state.pickups.count = 40;
+    short.place(HEART_X, FLOOR);
+    short.run('.60');
+    expect([short.state.goal.ended, short.state.pickups.count, short.state.pickups.offered]).toEqual([
+      true,
+      0,
+      40,
+    ]);
+    // Everything gathered is accounted for: carried + spent + dropped + offered.
+    const w = short.state.pickups;
+    expect(w.count + w.spent + w.lost + w.offered).toBe(36 + 40);
   });
 
   it('endHold comes exactly holdFrames steps after gather', () => {
@@ -840,7 +975,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
     s.run(`.${G.holdFrames + 5}`);
     expect([s.state.goal.lit, s.state.goal.ended, s.state.pickups.spent]).toEqual([3, true, 36]);
     const fresh = createState(1, s.tuning, s.scene);
-    expect(fresh.version).toBe(16);
+    expect(fresh.version).toBe(17);
     expect(fresh.goal).toEqual({
       lanterns: [0, 1, 2].map(() => ({
         lit: false,
@@ -851,6 +986,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
         refused: false,
         noticed: false,
         pledged: false,
+        still: 0,
       })),
       lit: 0,
       restAt: -1,
@@ -876,7 +1012,10 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
         deaths: 0,
         lamps: 0,
         lampsTotal: 0,
+        offered: 0,
+        offerTier: 0,
       },
+      offer: { total: 0, given: 0, tier: 0 },
       ended: false,
       run: { start: -1, hits: 0, deaths: 0 },
     });
@@ -1008,9 +1147,11 @@ describe('the grove: lanterns and heart in the scene data', () => {
     expect(heart).toEqual({ x: 5212, y: 1088 });
     const b = heartBox(heart, G);
     for (const p of GROVE.pods ?? []) expect(p.x < b.x - 22 || p.x > b.x + b.w + 22, p.id).toBe(true);
-    // No burrback patrols the heart's ground (the right rise).
+    // The one burrback on the heart's ground (burr-rise, the walker's last fight) keeps west of it:
+    // its range ends 58 px short of the heart's box.
     for (const e of GROVE.enemies ?? [])
-      if (e.kind === 'burrback') expect(e.y === heart.y && e.x > 4608, e.id).toBe(false);
+      if (e.kind === 'burrback' && e.y === heart.y && e.x > 4608)
+        expect(e.x + (e.radius ?? 9999) + 26, e.id).toBeLessThan(b.x - 50);
     const s = newSim();
     s.place(heart.x, heart.y);
     expect(feet(s)).toEqual(heart);

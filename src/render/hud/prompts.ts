@@ -2,12 +2,15 @@
  * The two things the grove cannot teach by itself, said once, quietly (playtest 3: her wings
  * flutter on a long fall, which says "wings", not "hold"; a tapper never found the glide):
  *
- *  - the glide: the first time she falls `fallFrames` without gliding, the jump key's cap stands
- *    beside her, pressed and HELD (it sinks and stays down, a fine line draws out under it, two
- *    small wing strokes open either side). It stays while she falls and comes back on later falls
- *    until she has glided once; then never again.
- *  - the wall kick: the first wall slide that lasts `slideFrames`, the same cap, TAPPED, with a
- *    small stroke up and away from the bark. Gone for good after her first wall jump.
+ *  - the glide: only over a REAL fall (playtest 4: it came up after landings, in fights and on
+ *    island hops): she has fallen `fallFrames` without gliding, or has just run off a ledge, AND the
+ *    ground is more than `dropPx` under her feet both where she is and where she is heading, AND no
+ *    creature is within `creaturePx`. The jump key's cap stands beside her HELD from its first
+ *    frame: pressed down, a bar under it filling for as long as it is held, two wing strokes open
+ *    either side. It goes the instant she lands, and for good once she has glided.
+ *  - the wall kick: on a wall slide that has lasted `slideFrames` (a few frames: every hand kicked
+ *    before the old 24), the same cap, TAPPED, with a small stroke up and away from the bark. Gone
+ *    for good after her first wall jump. (Walls that take no kick give no slide: the sim's `kick: false`.)
  *
  * "For good" is kept in localStorage (try / catch: private windows have none). In `?manual` (the
  * capture tools, the tests) nothing shows and the storage is not touched, so shots stay clean;
@@ -25,22 +28,28 @@ export const PROMPTS = {
   /** Frames of plain falling (not gliding, not hurt) before the glide's key shows; the wings' own flutter starts at 14. */
   fallFrames: 12,
   /** ...and she must be this far under the top of her arc, px (a hop on the flat never asks). */
-  fallPx: 70,
-  /** Frames of one wall slide before the kick's key shows (0.8 s). */
-  slideFrames: 24,
-  /** Seconds: fade in, how long it stays after the fall / slide ends, fade out; and once she has done it. */
-  fadeIn: 0.18,
-  linger: 1.3,
-  fadeOut: 0.5,
+  fallPx: 40,
+  /** ...with the ground more than this far under her feet, px, here and `aheadFrames` of travel ahead. */
+  dropPx: 260,
+  aheadFrames: 16,
+  /** ...and no living creature within this, px. */
+  creaturePx: 300,
+  /** Frames of one wall slide before the kick's key shows. */
+  slideFrames: 6,
+  /** Seconds: fade in, how long it stays after the fall / slide ends (glide, kick), fade out; and once she has done it. */
+  fadeIn: 0.1,
+  linger: 0.2,
+  lingerKick: 0.7,
+  fadeOut: 0.3,
   learned: 0.35,
   /** Where it stands from her body centre, world px (x to the side away from the wall for the kick). */
   dx: 62,
   dy: -66,
   /** Cap half-size, logical px. */
-  cap: 12,
+  cap: 13.5,
   /** The hold: seconds per loop, pressed from..to (of the loop), how far the cap sinks px. */
-  holdLoop: 2.6,
-  holdDown: [0.08, 0.84],
+  holdLoop: 2.2,
+  holdDown: [0.0, 0.9],
   /** The tap: seconds per loop, pressed for this share of it. */
   tapLoop: 0.95,
   tapDown: 0.24,
@@ -111,6 +120,38 @@ function smooth(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/**
+ * How far the ground is under her feet, px: the nearest top (solid, pool or branch) under her box,
+ * here and `ahead` frames of her sideways travel on (the smaller of the two: a hop that will land
+ * on an island is not a fall). The scene's floor if there is nothing.
+ */
+function dropUnder(sim: SimView, ahead: number, only = false): number {
+  const p = sim.player;
+  const scene = sim.scene;
+  const feet = p.feetY;
+  const under = (x0: number, x1: number): number => {
+    let top = scene.height;
+    for (const r of scene.solids) if (r.x < x1 && r.x + r.w > x0 && r.y >= feet - 4) top = Math.min(top, r.y);
+    for (const r of scene.oneWays)
+      if (r.x < x1 && r.x + r.w > x0 && r.y >= feet - 4) top = Math.min(top, r.y);
+    return top - feet;
+  };
+  const x = p.cx - p.w / 2;
+  const dx = p.vx * ahead;
+  // `only`: just where she is heading (as she steps off a ledge her box is still over it).
+  const a = under(x + dx, x + dx + p.w);
+  return only ? a : Math.min(under(x, x + p.w), a);
+}
+
+function creatureNear(sim: SimView, px: number): boolean {
+  const p = sim.player;
+  for (const e of sim.enemies ?? []) {
+    if (e.mode === 'dead' || e.gone) continue;
+    if (Math.hypot(e.x + e.w / 2 - p.cx, e.y + e.h / 2 - p.cy) < px) return true;
+  }
+  return false;
+}
+
 export class Prompts {
   readonly root = new Container({ label: 'hud-prompts' });
   /** Off in `?manual` (captures, tests). */
@@ -130,6 +171,8 @@ export class Prompts {
   private frame = -1;
   private fall = 0;
   private slide = 0;
+  /** She left the ground without a jump, over a real drop (cleared when she lands). */
+  private ranOff = false;
   private lesson: Lesson | null = null;
   private alpha = 0;
   private linger = 0;
@@ -212,10 +255,14 @@ export class Prompts {
     const P = PROMPTS;
     const p = sim.player;
     // What she has done counts whether or not anything is shown.
+    const drop = dropUnder(sim, P.aheadFrames);
     for (const e of sim.events) {
       if (e.type === 'glideStart') this.learn('glide');
       else if (e.type === 'jump' && e.kind === 'wall') this.learn('kick');
+      else if (e.type === 'fall') this.ranOff = dropUnder(sim, P.aheadFrames, true) > P.dropPx;
+      else if (e.type === 'jump') this.ranOff = false;
     }
+    if (p.grounded) this.ranOff = false;
     const df = this.frame < 0 || sim.frame < this.frame ? 0 : Math.min(4, sim.frame - this.frame);
     this.frame = sim.frame;
     const free = p.faded <= 0 && p.stagger <= 0 && !sim.goal.gathered;
@@ -226,17 +273,31 @@ export class Prompts {
     let want: Lesson | null = null;
     if (this.enabled && hudLink.on) {
       if (!this.taught.kick && this.slide >= P.slideFrames) want = 'kick';
-      else if (!this.taught.glide && this.fall >= P.fallFrames && p.y - p.airTopY >= P.fallPx) want = 'glide';
+      else if (
+        !this.taught.glide &&
+        falling &&
+        (drop > P.dropPx || (this.ranOff && this.fall < P.fallFrames)) &&
+        (this.ranOff || (this.fall >= P.fallFrames && p.y - p.airTopY >= P.fallPx)) &&
+        !creatureNear(sim, P.creaturePx)
+      )
+        want = 'glide';
+    }
+    // The glide's key goes the instant she lands (it used to linger 1.3 s over nothing).
+    if (this.lesson === 'glide' && (p.grounded || p.mode === 'wallSlide')) {
+      this.linger = 0;
+      this.alpha = 0;
     }
     if (want) {
       if (this.lesson !== want || this.alpha <= 0.003) {
         // New: it stands where she is at once.
         if (this.lesson !== want) this.t = 0;
+        // A hold is seen held from its first frame: it starts pressed, the bar a third full.
+        if (want === 'glide') this.t = P.holdLoop * 0.3;
         this.lesson = want;
         this.side = want === 'kick' ? (p.wallDir > 0 ? -1 : 1) : 1;
         if (this.alpha <= 0.003) this.place(1);
       }
-      this.linger = P.linger;
+      this.linger = want === 'kick' ? P.lingerKick : P.linger;
     } else this.linger -= dt;
     const done = this.lesson !== null && this.taught[this.lesson];
     const on = this.lesson !== null && !done && this.linger > 0 && this.enabled;
@@ -289,22 +350,29 @@ export class Prompts {
       held = ph;
     }
     this.cap.y = P.sink * down;
-    // Held: a fine line draws out under the key and stays as long as it is down; the wings open.
-    const len = hold ? smooth(0.02, 0.5, held) * down : 0;
-    this.bar.visible = len > 0.01;
-    if (this.bar.visible)
+    // Held: a bar under the key, there from the first frame, filling for as long as it is down.
+    this.bar.visible = hold;
+    if (hold) {
+      const bw = wide + 7;
+      const by = P.cap + 7.5;
       this.bar
         .clear()
-        .moveTo(-(wide + 5) * len, P.cap + 8.5)
-        .lineTo((wide + 5) * len, P.cap + 8.5)
-        .stroke({ width: 1.3, color: PALE_N, alpha: 0.85, cap: 'round' });
-    const open = hold ? smooth(0.1, 0.45, held) * down : 0;
+        .roundRect(-bw, by, bw * 2, 5.4, 2.7)
+        .fill({ color: 0x04101a, alpha: 0.6 })
+        .stroke({ width: 1, color: PALE_N, alpha: 0.7 });
+      const fillW = (bw * 2 - 2.4) * Math.min(1, held * 1.08);
+      if (fillW > 1.2)
+        this.bar
+          .roundRect(-bw + 1.2, by + 1.2, fillW, 3, 1.5)
+          .fill({ color: 0xffd9a0, alpha: 0.92 * down + 0.1 });
+    }
+    const open = hold ? (0.55 + 0.45 * smooth(0, 0.3, held)) * down : 0;
     for (const side of [-1, 1]) {
       const w = this.wings[side < 0 ? 0 : 1];
       w.visible = open > 0.01;
       w.alpha = open * 0.9;
-      w.position.set(side * (wide + 5), P.sink * down - 2);
-      w.scale.set(0.45 + 0.55 * open, 0.6 + 0.4 * open);
+      w.position.set(side * (wide + 6), P.sink * down - 3);
+      w.scale.set(0.6 + 0.6 * open, 0.7 + 0.5 * open);
       w.rotation = side * (1 - open) * 0.7;
     }
     // Tapped at a wall: a stroke up and away from the bark, flicked on each press.

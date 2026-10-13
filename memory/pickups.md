@@ -16,7 +16,7 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   moment it goes in, `combo` = 0, 1, 2... through a run less than `comboFrames` (50) apart.
 - **`count` is a wallet** since the lanterns (goal.md): kindling one takes its cost out (`count -= cost`, `spent +=
   cost`), so `count` can go down and `pickup.total` is the wallet at that moment, not a running total. Everything
-  gathered = `count + spent + lost`. `taken` = how many scene pickups were collected (unchanged).
+  gathered = `count + spent + lost + offered` (`offered`: what went into the heart at the end, goal.md). `taken` = how many scene pickups were collected (unchanged).
 - Restart (`R`, `__game.load()`) makes a new state, so everything is back; `teleport` keeps the count.
 - The sim only decides when; the flight is render. Timing history: 60 px / 20 frames = every pickup
   a long chase from behind; 84 px / 14 = absorbed where it hung, but the flight (9 frames) could not
@@ -249,3 +249,8 @@ Taken out of the crowded spawn / left-route frame ("20 stars brighter and more n
   walker stopped by the bark stands on it.
 A glint 40-50 px off a wall face at two heights is taken by any one-wall climb (her box is 40 wide, wake 84).
 `pickups-pilot.test.ts` takes the well and back pairs with a one-wall climb each.
+
+## HUD cluster after playtest 4
+One layout, three fixed rows (health lights, count, lantern pips): the count never moves into the lights'
+slot any more and the lights show whenever the count or the pips do. The whole cluster thins to 0.16 when
+she is under it (`HUD.under`). Details: goal-render.md, round 6.

@@ -5,6 +5,10 @@
  *    walls, standing a beat as it turns. Now and then it rests mid-walk, on a fixed schedule from
  *    its id. It has no gravity, does not chase and has no attack: touching it is what hurts.
  *  - It notices her in one way: when she lands or starts a slash close by, it flinches (`alert`).
+ *  - Its ram: she stands in front of it at close range, or cuts it from the front: it braces, shell
+ *    forward (`windup`: the tell), then rams a fixed length (`charge`) and stands spent (`recover`).
+ *    Braced, a forward cut from its front glances off; from behind or from above it lands in full.
+ *    Standing and mashing loses; reading the tell (hop over it, step back) and cutting it spent wins.
  *  - A hit shoves it along the cut (a fading velocity that stops at walls and at the brink of a
  *    ledge) while it staggers (`hurt`); dead, the body slides on for `enemies.deadFrames`.
  */
@@ -14,7 +18,7 @@ import { groundSanctuaryGap } from '../sanctuary';
 import type { Scene } from '../scene';
 import type { EnemyState } from '../state';
 import type { Tuning } from '../tuning';
-import { frames, gap2, type KindRules, mix, type StepInfo, setMode } from './common';
+import { frames, gap2, type KindRules, mix, type StepInfo, segmentBlocked, setMode } from './common';
 
 /** An integer in [min, max] for the creature's n-th draw of stream k. */
 function pick(e: EnemyState, k: number, min: number, max: number): number {
@@ -209,6 +213,127 @@ function walk(e: EnemyState, info: StepInfo): void {
   }
 }
 
+/** She is on its ground, in front of it, within `px` (box to box) with nothing solid between. */
+function inFront(e: EnemyState, info: StepInfo, px: number): boolean {
+  const p = info.state.player;
+  const B = info.t.burrback;
+  const pc = p.x + p.w / 2;
+  const ec = e.x + e.w / 2;
+  if ((pc - ec) * e.facing <= 0) return false;
+  const feet = p.y + p.h;
+  const bottom = e.y + e.h;
+  if (feet > bottom + B.strikeBelowPx || feet < bottom - B.strikeAbovePx) return false;
+  const gap = e.facing > 0 ? p.x - (e.x + e.w) : e.x - (p.x + p.w);
+  if (gap > px) return false;
+  return !segmentBlocked(info.scene, ec, e.y + e.h / 2, pc, e.y + e.h / 2);
+}
+
+/** Is there a solid low over her head (within `px` of the ground she stands on)? Then she cannot jump a ram. */
+function lowCeiling(scene: Scene, p: { x: number; y: number; w: number; h: number }, px: number): boolean {
+  const feet = p.y + p.h;
+  const solids = scene.solids;
+  for (let i = 0; i < solids.length; i++) {
+    const s = solids[i];
+    if (s === undefined || s.x >= p.x + p.w || s.x + s.w <= p.x) continue;
+    const under = s.y + s.h;
+    if (under <= p.y && under > feet - px) return true;
+  }
+  return false;
+}
+
+/**
+ * Braces for its ram if she is where it can reach her and it is ready. Returns true if it did
+ * (`windup`, `enemyWindup`). `provoked`: she has just cut it. Unprovoked it braces only at one who
+ * has come into its own range (`radius`): one who lands beside its patch and stands there is left
+ * alone, as its walk leaves her alone. Provoked it answers wherever she stands, from a little
+ * further (cutting it from just outside its range is not free). Once braced the ram runs its
+ * length, range or no range. Never at one who has no room to jump (a low ceiling over her).
+ */
+function brace(e: EnemyState, info: StepInfo, provoked = false): boolean {
+  const B = info.t.burrback;
+  const p = info.state.player;
+  if (B.strikePx <= 0 || e.strikeCd > 0 || e.calm > 0) return false;
+  if (p.hp <= 0 || p.faded > 0 || p.kindling >= 0 || p.kindlingLamp >= 0 || info.state.goal.gathered)
+    return false;
+  if (!inFront(e, info, provoked ? B.provokedPx : B.strikePx)) return false;
+  if (burrback.harmless?.(e, info)) return false;
+  if (lowCeiling(info.scene, p, B.strikeHeadroomPx)) return false;
+  span(e, info.scene, B);
+  const inside = p.x + p.w > RANGE_L && p.x < RANGE_R;
+  if (!inside && !provoked) return false;
+  e.chargeLeft = frames(B.chargePx, 1);
+  const n = frames(B.windupFrames, 1);
+  setMode(e, 'windup', n);
+  e.vx = 0;
+  e.knockVx = 0;
+  e.rx = 0;
+  e.teeter = 0;
+  info.events.push({
+    type: 'enemyWindup',
+    id: e.id,
+    kind: e.kind,
+    x: e.x + e.w / 2,
+    y: e.y + e.h / 2,
+    dir: e.facing,
+    frames: n,
+    px: e.chargeLeft,
+    speed: B.chargeSpeed,
+  });
+  return true;
+}
+
+/** The ram is over: it stands spent, open, and will not brace again for a while. */
+function spend(e: EnemyState, info: StepInfo, cause: 'spent' | 'wall' | 'ledge' | 'lantern' | 'touch'): void {
+  const B = info.t.burrback;
+  const n = frames(B.recoverFrames, 1);
+  const cooldown = frames(B.strikeCooldown);
+  setMode(e, 'recover', n);
+  e.vx = 0;
+  e.rx = 0;
+  e.chargeLeft = 0;
+  e.strikeCd = n + cooldown;
+  info.events.push({
+    type: 'enemyRecover',
+    id: e.id,
+    kind: e.kind,
+    x: e.x + e.w / 2,
+    y: e.y + e.h / 2,
+    dir: e.facing,
+    cause,
+    frames: n,
+    cooldown,
+  });
+}
+
+/** One step of the ram: straight on at `chargeSpeed` until its length is run or something stops it. */
+function charge(e: EnemyState, info: StepInfo): void {
+  const { scene, state } = info;
+  const B = info.t.burrback;
+  const G = info.t.goal;
+  e.vx = e.facing * B.chargeSpeed;
+  e.rx += e.vx;
+  let n = roundHalfAway(e.rx);
+  e.rx -= n;
+  while (n !== 0) {
+    const nx = e.x + e.facing;
+    const gap = groundSanctuaryGap(state, scene, e.x, e.x + e.w, e.y + e.h);
+    const next = gap < 0 ? -1 : groundSanctuaryGap(state, scene, nx, nx + e.w, e.y + e.h);
+    const holy = next >= 0 && next < G.sanctuaryPx && next < gap;
+    const stop = holy ? 3 : nudge(e, scene, e.facing, 0);
+    if (stop !== 0) {
+      spend(e, info, stop === 1 ? 'wall' : stop === 3 ? 'lantern' : 'ledge');
+      return;
+    }
+    e.stride += 1;
+    e.chargeLeft -= 1;
+    n -= e.facing;
+    if (e.chargeLeft <= 0) {
+      spend(e, info, 'spent');
+      return;
+    }
+  }
+}
+
 /** Turns round where it stands: `facing` flips at once, it stands a beat, then walks back. */
 function turn(
   e: EnemyState,
@@ -280,6 +405,46 @@ export const burrback: KindRules = {
     const B = info.t.burrback;
     const p = info.state.player;
     if (e.alertCd > 0) e.alertCd--;
+    if (e.strikeCd > 0) e.strikeCd--;
+    // She is in front of it, close: it braces (out of a walk, a rest, a turn or a flinch).
+    if ((e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert') && e.knockVx === 0 && brace(e, info))
+      return true;
+    if (e.mode === 'windup') {
+      e.vx = 0;
+      if (--e.timer <= 0) {
+        const left = e.chargeLeft;
+        setMode(e, 'charge', 0);
+        e.chargeLeft = left;
+        e.rx = 0;
+        events.push({
+          type: 'enemyCharge',
+          id: e.id,
+          kind: e.kind,
+          x: e.x + e.w / 2,
+          y: e.y + e.h / 2,
+          dir: e.facing,
+          px: e.chargeLeft,
+          frames: Math.ceil(e.chargeLeft / Math.max(0.1, B.chargeSpeed)),
+        });
+      }
+      return true;
+    }
+    if (e.mode === 'charge') {
+      charge(e, info);
+      return true;
+    }
+    if (e.mode === 'recover') {
+      // (A bounce off her plays out inside it.)
+      if (e.knockVx !== 0) knock(e, scene, B);
+      else e.vx = 0;
+      if (--e.timer <= 0) {
+        e.knockVx = 0;
+        setMode(e, 'walk', 0);
+        return true;
+      }
+      // Spent, its touch does nothing: this is her opening.
+      return false;
+    }
     if (e.mode === 'walk') walk(e, info);
     else if (e.mode === 'pause' || e.mode === 'alert') {
       // A recoil from her touch plays out inside the flinch.
@@ -294,6 +459,25 @@ export const burrback: KindRules = {
       if (--e.timer <= 0) {
         e.knockVx = 0;
         setMode(e, 'walk', 0);
+        // Cut from behind: it comes round to her (at once, no beat), and braces if she is still there.
+        const pc = p.x + p.w / 2;
+        const ec = e.x + e.w / 2;
+        const side = pc < ec ? -1 : 1;
+        const near = Math.abs(pc - ec) <= B.turnOnHitPx && Math.abs(p.y + p.h - (e.y + e.h)) <= B.turnOnHitPx;
+        if (B.strikePx > 0 && near && pc !== ec && side !== e.facing && p.hp > 0 && p.faded === 0) {
+          e.facing = side;
+          events.push({
+            type: 'enemyTurn',
+            id: e.id,
+            kind: e.kind,
+            x: ec,
+            y: e.y + e.h / 2,
+            dir: e.facing,
+            cause: 'hit',
+            frames: 0,
+          });
+        }
+        brace(e, info, true);
       }
     } else {
       knock(e, scene, B);
@@ -334,6 +518,7 @@ export const burrback: KindRules = {
   /** It stands where it is (a rest, not a turn), then walks on. */
   calm(e, _info, n) {
     if (e.mode === 'pause' && e.timer >= n) return;
+    e.chargeLeft = 0;
     const turning = e.mode === 'pause' && e.turning;
     setMode(e, 'pause', n);
     e.turning = turning;
@@ -351,8 +536,18 @@ export const burrback: KindRules = {
     if (e.mode === 'dead') return;
     const B = info.t.burrback;
     const away = dir > 0 ? -1 : 1;
+    // Its ram hit her: it bounces back off her, turns away and stands spent.
+    if (e.mode === 'windup' || e.mode === 'charge') {
+      e.facing = away;
+      spend(e, info, 'touch');
+      e.knockVx = away * Math.max(0, B.touchRecoil);
+      e.teeter = 0;
+      e.alertCd = e.timer + frames(B.alertCooldown);
+      return;
+    }
     const n = frames(B.touchFlinchFrames, 1);
     setMode(e, 'alert', n);
+    e.strikeCd = Math.max(e.strikeCd, n + frames(B.strikeCooldown));
     e.knockVx = away * Math.max(0, B.touchRecoil);
     e.rx = 0;
     e.vx = 0;
@@ -372,9 +567,15 @@ export const burrback: KindRules = {
     });
   },
 
+  /** Braced, a forward cut from the side it faces glances off its shell. */
+  blocks(e, dir, px) {
+    return e.braced && dir === 'fwd' && (px - (e.x + e.w / 2)) * e.facing > 0;
+  },
+
   /** Along a forward cut; an up / down cut pushes it aside, away from her, less hard. */
   shove(e, dir, side, knockback, t) {
-    const kb = dir === 'fwd' ? knockback : knockback * t.burrback.knockVertical;
+    const k = knockback * t.burrback.knockScale;
+    const kb = dir === 'fwd' ? k : k * t.burrback.knockVertical;
     e.knockVx = side * kb;
     e.knockVy = 0;
     e.rx = 0;

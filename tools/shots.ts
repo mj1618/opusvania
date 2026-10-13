@@ -58,10 +58,12 @@ const WIDE: Array<{ name: string; x: number; y: number }> = [
   { name: 'trunks', x: 3050, y: 1152 },
   { name: 'high-ledge', x: 3110, y: 448 },
   { name: 'right-rise', x: 4500, y: 1280 },
-  { name: 'far-ledge', x: 5560, y: 448 },
+  // (The far bluff's top: lowered to 768 after playtest 4, so the far lantern and the heart are one picture.)
+  { name: 'far-ledge', x: 5524, y: 768 },
   { name: 'bluff', x: 2528, y: 960 },
   { name: 'hollow', x: 3856, y: 1376 },
-  { name: 'shaft-pit', x: 3456, y: 1280 },
+  // (At trunk B's foot: the middle of the shaft floor is burr-shaft's patch, and with `--pickups` it would ram her.)
+  { name: 'shaft-pit', x: 3556, y: 1280 },
   { name: 'summit-bough', x: 3800, y: 192 },
   { name: 'catch-branch', x: 3960, y: 448 },
   // The foot of the far bluff (the old far ledge, a wall down to the rise now), past the heart.

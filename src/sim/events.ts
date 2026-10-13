@@ -246,8 +246,92 @@ export type SimEvent =
       x: number;
       y: number;
       dir: number;
-      cause: 'ledge' | 'wall' | 'lantern' | 'wary';
+      cause: 'ledge' | 'wall' | 'lantern' | 'wary' | 'hit';
       frames: number;
+    }
+  /**
+   * The burrback's ram (memory/enemies.md). `enemyWindup`: she is in front of it at close range (or
+   * has just cut it from the front): it braces, shell forward, for `frames`, then rams `px` px toward
+   * `dir` (its facing) at `speed` px/f. While braced (`enemies[i].braced`: the windup and the ram) a
+   * forward cut from its front glances off (`enemyBlock`); a cut from behind or a down slash from
+   * above lands in full and breaks it.
+   */
+  | {
+      type: 'enemyWindup';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      dir: number;
+      frames: number;
+      px: number;
+      speed: number;
+    }
+  /** The ram starts: `px` px toward `dir` over about `frames`, unless a wall, a drop or she stops it. */
+  | {
+      type: 'enemyCharge';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      dir: number;
+      px: number;
+      frames: number;
+    }
+  /**
+   * The ram is over: it stands spent for `frames`, open to every cut, and will not brace again for
+   * `cooldown` frames. `cause`: it ran its length (`spent`), met a `wall`, the brink of a `ledge`, a
+   * lit `lantern`'s ground, or it hit her (`touch`: it bounces back off her and turns away).
+   */
+  | {
+      type: 'enemyRecover';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      dir: number;
+      cause: 'spent' | 'wall' | 'ledge' | 'lantern' | 'touch';
+      frames: number;
+      cooldown: number;
+    }
+  /**
+   * Her cut glanced off its braced shell: no damage, it does not stagger. `hitX`, `hitY` = where
+   * the blade met it; `dir` = the way the cut was going; she holds for `hitstop` frames and is
+   * thrown back at `recoil` px/f (fading). `mode` / `frames`: what it was doing (`windup` /
+   * `charge`) and the frames left of it.
+   */
+  | {
+      type: 'enemyBlock';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      hitX: number;
+      hitY: number;
+      facing: number;
+      slash: SlashDir;
+      dir: number;
+      step: number;
+      hitstop: number;
+      recoil: number;
+      mode: string;
+      frames: number;
+    }
+  /**
+   * She re-formed and this living creature is back at its start (`x`, `y`) from `fromX`, `fromY`,
+   * whole again: `healed` hit points came back (0 if it was only away from home). Same step as `reform`.
+   */
+  | {
+      type: 'enemyReset';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      fromX: number;
+      fromY: number;
+      hp: number;
+      hpMax: number;
+      healed: number;
     }
   /**
    * A slash hurt it and it lives: `power` taken, `hpLeft` of `hpMax`. `slash` = the cut's direction,
@@ -350,8 +434,9 @@ export type SimEvent =
    */
   | { type: 'lanternChannel'; id: string; x: number; y: number; frames: number; of: number }
   /**
-   * The channel broke after `frames`: she stepped away or left the ground (`leave`), was `hurt`, or
-   * drew her blade (`attack`). Nothing was spent.
+   * The channel broke after `frames`: she went beyond its leash (`leave`: `tuning.goal.kindleLeashPx`)
+   * or was `hurt`. Nothing was spent. (`attack` is no longer sent: a cut does not break a channel
+   * that has started.)
    */
   | {
       type: 'lanternCancel';
@@ -449,7 +534,33 @@ export type SimEvent =
       /** Wayside lamps lit, of how many there are. */
       lamps: number;
       lampsTotal: number;
+      /**
+       * The offering: `offered` glints (everything she still carries) will go into the heart during
+       * the hold (`heartOffer`), reaching tier `offerTier` (0-3) of `offerTiers` (the thresholds).
+       */
+      offered: number;
+      offerTier: number;
+      offerTiers: number[];
     }
+  /**
+   * The offering goes in (during the ending hold): `value` glints left her (`px`, `py` = her body
+   * centre) for the heart (`x`, `y`) this step; `given` of `of` so far, her wallet now holds
+   * `wallet`; `tier` = thresholds passed so far (0-3).
+   */
+  | {
+      type: 'heartOffer';
+      x: number;
+      y: number;
+      px: number;
+      py: number;
+      value: number;
+      given: number;
+      of: number;
+      wallet: number;
+      tier: number;
+    }
+  /** The offering passed threshold number `tier` (1-3: `need` glints): more of the grove wakes. `x`, `y` = the heart. */
+  | { type: 'heartTier'; x: number; y: number; tier: number; given: number; need: number }
   /** The ending hold is over (`state.goal.ended`): the scene rests until the restart. `x`, `y` = the heart. */
   | { type: 'endHold'; x: number; y: number };
 

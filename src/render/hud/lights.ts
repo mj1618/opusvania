@@ -453,8 +453,8 @@ export class HealthLights {
     l.delay = delay;
   }
 
-  /** `quiet`: a clean plate (the scene was opened without pickups): show only when it matters. */
-  update(dt: number, clock: number, sim: SimView, quiet: boolean): void {
+  /** `quiet`: a clean plate (the scene was opened without pickups): show only when it matters. `keep`: show regardless. */
+  update(dt: number, clock: number, sim: SimView, quiet: boolean, keep = false): void {
     const L = LIGHTS;
     const p = sim.player;
     const max = Math.max(1, Math.min(12, p.hpMax | 0));
@@ -517,7 +517,8 @@ export class HealthLights {
       }
     }
     this.hold -= dt;
-    const show = hp < max || p.faded > 0 || busy || this.hold > 0;
+    // `keep`: the rest of the cluster is up, and the corner has one layout.
+    const show = hp < max || p.faded > 0 || busy || this.hold > 0 || keep;
     const rate = show ? dt / L.fadeIn : -dt / L.fadeOut;
     this.alpha = Math.min(1, Math.max(0, this.alpha + rate));
     const a = this.alpha * this.alpha * (3 - 2 * this.alpha);

@@ -42,6 +42,8 @@ export class HitboxOverlay {
   visible = false;
   /** The live enemies (set by the debug API; the overlay only reads them). */
   enemies: () => readonly EnemyState[] = () => [];
+  /** How far a burrback's ram carries it (`tuning.burrback.chargePx`; set by the debug API). */
+  ramPx: () => number = () => 0;
   /** The lanterns' and the heart's trigger boxes and what they are doing (set by the debug API). */
   goal: () => GoalBoxes = () => ({ lanterns: [], heart: null, sanctuary: 0, lampSanctuary: 0, drops: [] });
 
@@ -50,6 +52,14 @@ export class HitboxOverlay {
     this.solids.stroke({ color: 0x3fa7ff, width: 2, alpha: 0.8 });
     for (const o of scene.oneWays) this.solids.moveTo(o.x, o.y).lineTo(o.x + o.w, o.y);
     this.solids.stroke({ color: 0xffd23f, width: 2, alpha: 0.9 });
+    // Faces that take no wall slide and no kick: grey (solids marked `kick: false`, dead scene edges).
+    for (const s of scene.solids) if (s.kick === false) this.solids.rect(s.x + 3, s.y + 3, s.w - 6, s.h - 6);
+    if (scene.edgeKick === false) {
+      const top = scene.ceilingY ?? 0;
+      this.solids.moveTo(2, top).lineTo(2, scene.height);
+      this.solids.moveTo(scene.width - 2, top).lineTo(scene.width - 2, scene.height);
+    }
+    this.solids.stroke({ color: 0x9a9a9a, width: 4, alpha: 0.9 });
     this.layer.addChild(this.solids, this.g);
     this.layer.visible = false;
   }
@@ -113,8 +123,28 @@ export class HitboxOverlay {
     }
     for (const e of this.enemies()) {
       if (e.gone) continue;
-      const color = e.mode === 'dead' ? 0x8a8a8a : e.mode === 'hurt' ? 0xff9a3c : 0xff4cf0;
-      g.rect(e.x, e.y, e.w, e.h).stroke({ color, width: 2 });
+      const color =
+        e.mode === 'dead'
+          ? 0x8a8a8a
+          : e.mode === 'hurt'
+            ? 0xff9a3c
+            : e.braced
+              ? 0xff3030
+              : e.mode === 'recover'
+                ? 0x7dff9a
+                : 0xff4cf0;
+      g.rect(e.x, e.y, e.w, e.h).stroke({ color, width: e.braced ? 4 : 2 });
+      // Braced: its armoured front, and (during the windup) how far the ram will carry it.
+      if (e.braced) {
+        const front = e.facing > 0 ? e.x + e.w : e.x;
+        g.moveTo(front, e.y - 6)
+          .lineTo(front, e.y + e.h)
+          .stroke({ color: 0xffffff, width: 4 });
+        const reach = e.mode === 'windup' ? this.ramPx() : e.chargeLeft;
+        g.moveTo(front, e.y + e.h - 3)
+          .lineTo(front + e.facing * reach, e.y + e.h - 3)
+          .stroke({ color: 0xff3030, width: 2, alpha: 0.7 });
+      }
       // A tick on the side it faces.
       const fx = e.facing > 0 ? e.x + e.w : e.x;
       g.moveTo(fx, e.y + e.h / 2)

@@ -194,6 +194,10 @@ export const defaultTuning = {
     knockback: 6,
     /** Her own shove back on a forward hit, px/f. */
     recoil: 3,
+    /** The same against a creature (a pod keeps `recoil`): the push she feels on a hit that counts. */
+    recoilFoe: 4,
+    /** Extra hitstop on a creature, on top of `enemies.hitstopFrames` (pods use `hitstopBonus`). */
+    hitstopFoe: 0,
     /** Forward lunge on the ground, px/f at the start. Air hang, frames. */
     lunge: 3,
     hangFrames: 4,
@@ -212,6 +216,10 @@ export const defaultTuning = {
     hitstopBonus: 0,
     knockback: 6,
     recoil: 3,
+    /** The same against a creature (a pod keeps `recoil`): the push she feels on a hit that counts. */
+    recoilFoe: 4,
+    /** Extra hitstop on a creature, on top of `enemies.hitstopFrames` (pods use `hitstopBonus`). */
+    hitstopFoe: 0,
     lunge: 3,
     hangFrames: 4,
   },
@@ -229,6 +237,10 @@ export const defaultTuning = {
     hitstopBonus: 1,
     knockback: 11,
     recoil: 4,
+    /** The same against a creature (a pod keeps `recoil`): the push she feels on a hit that counts. */
+    recoilFoe: 6,
+    /** Extra hitstop on a creature, on top of `enemies.hitstopFrames` (pods use `hitstopBonus`). */
+    hitstopFoe: 3,
     lunge: 5.5,
     hangFrames: 6,
   },
@@ -283,7 +295,12 @@ export const defaultTuning = {
   /** What every enemy shares (src/sim/enemies.ts). */
   enemies: {
     /** Hitstop when a slash hits one, frames (the combo step may add to it). The creature holds for as long. */
-    hitstopFrames: 2,
+    hitstopFrames: 4,
+    /** The same for a down slash (the pogo): short, so the bounce rhythm stays what it was. */
+    pogoHitstopFrames: 2,
+    /** A cut that glances off a braced shell: she holds this long and is thrown back at this, px/f (fading by `attack.recoilDecay`). */
+    blockHitstopFrames: 3,
+    blockRecoil: 8,
     /** How long a dead body stays (for its death animation) before it is removed. */
     deadFrames: 30,
     /** Glints spilled on death reach her like a pod's: the first after this long, then a stagger apart. */
@@ -338,6 +355,34 @@ export const defaultTuning = {
     /** Its touch hurt her: it is shoved back at this speed (fading by `knockDecay`), flinches this long, and turns away. */
     touchRecoil: 8.5,
     touchFlinchFrames: 30,
+    /** A blow shoves it at the slash's `knockback` x this (px/f, fading by `knockDecay`): 32 px for a cut, 102 for the finisher. */
+    knockScale: 1.25,
+    /**
+     * Its ram (memory/enemies.md). She is in front of it on its ground within `strikePx` (box to
+     * box; 0 = it never rams), her feet no more than `strikeAbovePx` above / `strikeBelowPx` below
+     * its own: it braces for `windupFrames` (the tell; a forward cut from its front glances off from
+     * here to the end of the ram), rams `chargePx` at `chargeSpeed`, then stands spent for
+     * `recoverFrames` and will not brace again for `strikeCooldown` after that. Cut from behind, it
+     * comes round to her if she is within `turnOnHitPx`.
+     */
+    strikePx: 130,
+    strikeAbovePx: 56,
+    strikeBelowPx: 8,
+    /**
+     * Unprovoked it braces only at one inside its own range (the scene's `radius`): beside its patch
+     * she is left alone. Cut (the blow lands), it braces as the stagger ends if she is within
+     * `provokedPx`, wherever she stands. The ram itself runs its length, range or no range. Never at
+     * one with a solid lower than `strikeHeadroomPx` over the ground she stands on (she could not
+     * jump it).
+     */
+    provokedPx: 150,
+    strikeHeadroomPx: 136,
+    windupFrames: 26,
+    chargeSpeed: 10,
+    chargePx: 180,
+    recoverFrames: 45,
+    strikeCooldown: 150,
+    turnOnHitPx: 320,
     /** What its touch costs her. */
     contactDamage: 1,
     /** Glints it spills when it dies, and when the finisher killed it. */
@@ -367,7 +412,9 @@ export const defaultTuning = {
     bobFrames: 84,
     /** It notices her within this (centre to centre) with a clear line; then the tell, `curiousFrames`. */
     noticePx: 260,
-    curiousFrames: 30,
+    curiousFrames: 36,
+    /** Its touch does nothing for this long after it notices her (the start of the tell). */
+    noticeSafeFrames: 20,
     /** While curious it brakes and rises at this, px/f. */
     curiousRise: 0.5,
     curiousAccel: 0.06,
@@ -389,10 +436,13 @@ export const defaultTuning = {
     bounceSpeed: 5,
     /**
      * Stagger after a hit, and how much of it (from the hit) its touch is harmless: all of it. A
-     * gliding hero cannot stop, so a mid-glide cut has to let her fly on through the tumbling thing.
+     * gliding hero cannot stop, so a mid-glide cut has to let her fly on through the tumbling thing:
+     * 24 frames + the hitstop is 290 px of glide, more than her reach and its shove together, so a
+     * cut that connects always clears the way (at 16 a cut from the end of her reach met it again as
+     * it righted itself: playtest 4's `lamp-sky`).
      */
-    hurtFrames: 16,
-    hurtSafeFrames: 16,
+    hurtFrames: 24,
+    hurtSafeFrames: 24,
     /** Knockback = the slash's `knockback` x `knockScale`, along the cut, fading `knockDecay` a frame. */
     knockScale: 1.1,
     knockDecay: 0.75,
@@ -459,8 +509,20 @@ export const defaultTuning = {
     /** A lantern's trigger box: centred on its foot, standing up from the surface. */
     lanternWidth: 48,
     lanternHeight: 64,
-    /** She kindles one by standing at it this many frames in a row (leaving, a hit or a slash starts over). */
+    /**
+     * She kindles one by being at it this many frames. It starts when she stands in its box; once
+     * started it runs on while she stays within `kindleLeashPx` sideways and `kindleLeashUpPx` up or
+     * down of the middle of that box, moving or not, jumping, cutting (a player who never stands
+     * still lights it too). Leaving that leash or being hurt starts it over.
+     */
     channelFrames: 30,
+    kindleLeashPx: 260,
+    kindleLeashUpPx: 330,
+    /**
+     * A wayside lamp is optional spending, so it wants intent: its channel only starts once she has
+     * stood still at it (no direction held, not cutting) this long. A lantern starts at once.
+     */
+    lampStillFrames: 20,
     /** Standing at a lit one this long makes her whole again. */
     restFrames: 45,
     /**
@@ -490,6 +552,16 @@ export const defaultTuning = {
     heartWalkPx: 12,
     /** Reaching the woken heart takes control for this many frames (`gather` ... `endHold`). */
     holdFrames: 240,
+    /**
+     * The offering: what she still carries goes into the heart during the hold, from
+     * `offerDelayFrames` after `gather`, spread over `offerSpanFrames`. What she gives counts in
+     * tiers (`offerTier1..3`) for the grove to answer.
+     */
+    offerDelayFrames: 45,
+    offerSpanFrames: 140,
+    offerTier1: 25,
+    offerTier2: 50,
+    offerTier3: 100,
     /** After `endHold`: false = she stays held until the restart; true = she may walk on (nothing can hurt her). */
     endedControl: false,
   },

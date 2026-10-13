@@ -128,6 +128,9 @@ export interface GameDebugApi {
       hpMax: number;
       mode: string;
       modeFrames: number;
+      /** Burrback: shell forward (windup / ram: a front cut glances off), frames until it may brace again. */
+      braced: boolean;
+      strikeCd: number;
       gone: boolean;
       vx: number;
       vy: number;
@@ -209,7 +212,12 @@ export interface GameDebugApi {
       time: number;
       kills: number;
       hits: number;
+      /** The offering (memory/goal.md): what she carried into the heart, and the tier (0-3) it reaches. */
+      offered: number;
+      offerTier: number;
     };
+    /** The offering as it goes in during the hold: `given` of `total` so far, tiers passed; and the thresholds. */
+    offer: { total: number; given: number; tier: number; tiers: number[] };
     run: { time: number; hits: number; kills: number; deaths: number };
     /** Glints lying in clusters she dropped when she faded (`lost` = their sum), and the sanctuary radii. */
     lost: number;
@@ -432,6 +440,8 @@ export function installDebugApi(deps: {
           hpMax: e.hpMax,
           mode: e.mode,
           modeFrames: e.modeFrames,
+          braced: e.braced,
+          strikeCd: e.strikeCd,
           gone: e.gone,
           vx: e.vx,
           vy: e.vy,
@@ -467,7 +477,7 @@ export function installDebugApi(deps: {
         total: game.scene.lanterns?.length ?? 0,
         wallet: w.count,
         spent: w.spent,
-        gathered: w.count + w.spent + w.lost,
+        gathered: w.count + w.spent + w.lost + w.offered,
         restAt: game.scene.lamps?.[g.restLamp]?.id ?? game.scene.lanterns?.[g.restAt]?.id ?? null,
         restHold: g.restHold,
         lamps: { lit: g.lampsLit, total: game.scene.lamps?.length ?? 0 },
@@ -479,6 +489,7 @@ export function installDebugApi(deps: {
           ended: g.ended,
           ...g.ending,
         },
+        offer: { ...g.offer, tiers: [G.offerTier1, G.offerTier2, G.offerTier3] },
         run: {
           time: g.run.start < 0 ? 0 : game.state.frame - g.run.start,
           hits: g.run.hits,
@@ -510,6 +521,7 @@ export function installDebugApi(deps: {
   };
   // The collision overlay draws the enemies' true boxes from the live state.
   stage.overlay.enemies = () => game.state.enemies;
+  stage.overlay.ramPx = () => game.tuning.burrback.chargePx;
   // ... and the lanterns' and the heart's trigger boxes.
   stage.overlay.goal = () => {
     const g = game.state.goal;

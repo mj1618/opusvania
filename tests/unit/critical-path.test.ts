@@ -206,7 +206,10 @@ describe('from the summit eastward without wings: a stair down to the right rise
         const p = s.state.player;
         if (p.grounded && seen[seen.length - 1] !== feet(s).y) seen.push(feet(s).y);
       }
-      s.run('R30');
+      // She is down on the rise at ~4770: 90 px before the wayside lamp, 140 before burr-rise's
+      // patch (4914-5106, playtest 4: the walker's last fight). Standing there nothing reaches her.
+      expect(feet(s).x, `start ${k * 31}`).toBeLessThan(4860);
+      wait(s, 45);
       const ev = s.events.slice(from);
       // Summit and bough (192), the catch branch (448), the right branch (912), the rise (1088).
       expect(seen, `start ${k * 31}`).toEqual([192, 448, 912, 1088]);
@@ -253,15 +256,20 @@ describe('the far bluff: a wall in the way past the heart, the third lantern on 
   const f7 = S.filter((r) => r.tag === 'floating')[6] as (typeof S)[number];
 
   it('the geometry: the old far ledge is solid down to the rise, its west face 260 px past the heart', () => {
+    // (Its top came down from 448 to 768 after playtest 4: the heart's wake was off the bottom of the
+    // picture from the far lantern, 640 px below. Now the heart is 320 px below and 312 px west of it.)
     expect([farBluff.x, farBluff.y, farBluff.w, farBluff.y + farBluff.h]).toEqual([
       5472,
-      448,
+      768,
       288,
       GROVE.height,
     ]);
     expect(rise.x + rise.w).toBe(farBluff.x);
-    expect(rise.y - farBluff.y).toBe(640);
-    expect([lantern.x, lantern.y]).toEqual([5524, 448]);
+    // Still a climb: 320 px of face, as the first bluff's, more than a jump (272).
+    expect(rise.y - farBluff.y).toBe(320);
+    expect(rise.y - farBluff.y).toBeGreaterThan(defaultTuning.shape.jumpHeightPx);
+    expect([lantern.x, lantern.y]).toEqual([5524, 768]);
+    expect([heart.y - lantern.y, lantern.x - heart.x]).toEqual([320, 312]);
     expect(farBluff.x - heart.x).toBe(260);
     // F7 ends clear of a kick's swing off the face (145 px) and of the fall off the bluff's lip.
     expect([f7.x, f7.y, f7.w]).toEqual([5056, 592, 176]);

@@ -14,14 +14,15 @@
   that need device pixels use `ctx.viewScale()`. Camera and player are interpolated between sim frames.
 
 ## The scene: `content/scene/grove.json`
-`{id, width: 5760, height: 1600, spawn: {x, y}, ceilingY?: -420, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}],
+`{id, width: 5760, height: 1600, spawn: {x, y}, ceilingY?: -420, edgeKick?: false (the scene's side edges take no wall slide / kick), solids: [{tag, x, y, w, h, kick?: false (the same for one solid)}], oneWays: [{tag, x, y, w}],
 pickups: [{id, kind: glint|great, x, y}], pods: [{id, x, y, mount: sit|hang, hp?: 1-3}],
 enemies: [{id, kind: burrback, x, y (feet centre), facing: -1|1, radius? (its own range, box centre from its start)} | {id, kind: lampwing, x, y (home: box centre, in open
 air), facing, radius?}], lanterns: [{id, x, y (foot, on solid ground), cost?}], lamps: [the same: wayside lamps, goal.md], heart: {x, y (on solid ground)}}`
 (burrbacks first; pickups.md, combat.md, enemies.md, goal.md),
 validated by Zod in `src/scene/index.ts` (exports `GROVE`), typed in `src/sim/scene.ts`. Tags are for
 artists (`ground | pool | ledge | trunk | floating | root | branch`); the sim ignores them, except that
-`pool` is never safe ground to re-form on. The left, right and bottom scene edges are solid; the top
+`pool` is never safe ground to re-form on. The left, right and bottom scene edges are solid (**and, in the grove, not
+climbable: `edgeKick: false`, playtest 4**; every real climb face is a plain solid); the top
 has a soft ceiling at `ceilingY` (the canopy: the top of her box never rises above it; it may be above the scene top). One-ways block only a falling body; Down+Jump
 drops through. Nothing is lethal; burrbacks and lampwings hurt (enemies.md).
 
@@ -29,12 +30,12 @@ drops through. Nothing is lethal; burrbacks and lampwings hurt (enemies.md).
 x:  0        1000       2000       3000       4000       5000     5760
  0 ┌──────────────────────────────────────────────────────────────────┐
                                                  ┌┐╌bough (192, to 3904)
-448                               ┌ledge┬╌╌╌┬┐   ││ ╌catch (448)     ┌far─┤
-                           ▬F5    └─────┘   ││   ││          ▬F7     │bluff
-608                 ▬F4            (branch) ││   ││                  │    │
-704            ▬F3                 trunk A →││   ││← trunk B   ▬F6   │    │
-832         ▬F2                             ││   ││  ╌──branch (912) │    │
-960     ▬F1          ╌branch (1024) ┌bluff┐ ││   ││                  │    │
+448                               ┌ledge┬╌╌╌┬┐   ││ ╌catch (448)          │
+                           ▬F5    └─────┘   ││   ││          ▬F7          │
+608                 ▬F4            (branch) ││   ││                       │
+704            ▬F3                 trunk A →││   ││← trunk B   ▬F6   ┌far─┤
+832         ▬F2                             ││   ││  ╌──branch (912) │bluff
+960     ▬F1          ╌branch (1024) ┌bluff┐ ││   ││                  │768 │
 1088┌bank┐                          │ 960 └terr.┐└┘ ││         ┌──rise┴────┤
 1280│    └────ground───┐    ┌───────┘     1152  └well─shaft┴┘┐ ▄root─ground┘│
 1408│                  └pool┘                                └hollow 1376   │
@@ -45,7 +46,10 @@ x:  0        1000       2000       3000       4000       5000     5760
   (1856-2432) | **bluff 960 (2432-2624)** | terrace 1152 (2624-3072) | 1280 (3072-3744: the well 3072-3200, under
   trunk A, the shaft floor 3328-3584, **trunk B on it 3584-3712**, a 32 px strip) | **hollow 1376
   (3744-3968)** | 1280 (3968-4608, the root 3968-4160 at 1184 on its west end) | right rise 1088 (4608-5472) |
-  **far bluff 448 (5472-5760)**: the old far ledge, solid down to the rise.
+  **far bluff 768 (5472-5760)**: the old far ledge, solid down to the rise; **its top was at 448 until playtest 4** (the
+  heart's wake was off the bottom of the picture from the far lantern: goal.md). Collision changed there: the solid is
+  `{5472, 768, 288, 832}`; on it `lantern-far` 5524, `great-far` 5600 (y 710), `pod-far` 5690; `far-1..3` now step down
+  from F7 to its lip (5290, 540 / 5360, 580 / 5430, 660), `cliff-1/2` at 5432, 980 / 860.
 - **The lanterns are the critical path** (playtest 3, 2026-10-14: both naive players ran the floor under the
   shaft to a sleeping heart with 1 of 3). Every wall on it is climbed the same way by anyone: jump at it,
   press again while sliding (a wall kick rises its full 272 px however short the press: movement-controller.md).
@@ -59,9 +63,9 @@ x:  0        1000       2000       3000       4000       5000     5760
     times. A tap or a held jump off any of those edges lands on the next one or on the rise, never on
     burr-root's ground (4160-4608). `lamp-glide-1` moved to (4620, 200): at (4470, 270) a held jump off the
     bough's or the catch branch's end fell straight through it (55 of 60).
-  - **The far bluff** (5472-5760, top 448, solid to the rise: 640 px of face, 260 px past the heart) carries
-    `lantern-far`. From the heart, hold right and press when blocked: 2-3 kicks, about 2.5 s. Its top is the old far ledge
-    (same lantern, glide landing, F7 jump). **F7 is 5056-5232** (was 5120-5344): a kick's swing off the face is
+  - **The far bluff** (5472-5760, top 768, solid to the rise: 320 px of face like the first bluff's, 260 px past the
+    heart) carries `lantern-far`. From the heart, hold right and press when blocked: 1-2 kicks, under 2 s. Its top is the
+    old far ledge, 320 px lower (same lantern, glide landing; F7 is 176 px over it now, a drop onto it). **F7 is 5056-5232** (was 5120-5344): a kick's swing off the face is
     145 px, and a 224 px F7 at 5120 bumped her head from below for ever, and caught a walk off the bluff's lip.
   - **The way back west**: trunk B's east face from the hollow (`back-1/2` on it), up through the bough to the
     summit (4-5 kicks, 3-4 s), then down the shaft (out under trunk A) or along trunk A's top and the high ledge.
@@ -96,11 +100,16 @@ x:  0        1000       2000       3000       4000       5000     5760
   (110 did): ~460 land on the top or the bough, ~9 on the catch branch (one held jump back up through the
   bough), the rest came up short into the shaft, which is three kicks. The summit glide takes off from the
   lantern or the bough alike.
-- Right route up: root → branch → F6 → F7 → the far bluff's top (448).
+- Right route up: root → branch → F6 → F7 → down onto the far bluff's top (768).
 - Pickups may hang above the scene top, up to 40 px under `ceilingY` (the sky line over the right zone).
 - `tests/unit/scene.test.ts` pilots every route; if you move a rect, it tells you what became unreachable.
   Reach numbers are in movement-controller.md.
-- Lanterns: 1448, 1280 (moth-stone) / 3684, 192 (trunk B's top) / 5524, 448 (the far bluff's top); the heart: 5212, 1088
+- **Encounters on the critical path (playtest 4), each with a light before it**: `burr-path` on the floor before the
+  bluff (2004-2316; lantern-stone behind her) | `burr-shaft` on the shaft floor (3378-3522; `lamp-trunk` in the well
+  before the doorway) | `lamp-sky` on the summit glide's line (5180, 105; the crown lantern at the take-off) |
+  `burr-rise` before the heart (4914-5106; `lamp-rise` 54 px before its patch). The walker meets path and rise, the
+  shaft-floor player all three, the glider path (or flies it) and the sky. Rules and fairness: enemies.md.
+- Lanterns: 1448, 1280 (moth-stone) / 3684, 192 (trunk B's top) / 5524, 768 (the far bluff's top); the heart: 5212, 1088
   (the shrine). Wayside lamps: 3160, 1280 (the well) / 4566, 1280 (foot of the right rise) / 3264, 448 (trunk
   A's top) / 4860, 1088 (the rise, before the heart). Validated: on a solid top that is not the pool, the whole trigger box supported and clear,
   lanterns 300 px from the spawn, a heart needs lanterns. Pilots that play the whole scene from the spawn:
@@ -155,6 +164,10 @@ Zoom scales every world layer about the view centre.
   landing, which keeps a chain of glides on one line.
 - **Standing at a lantern / the heart** (`rest`): after 24 still frames within 260 x 150 px the view goes half
   way toward it (max 130) and 56 up. A wider reach (420) pulled the view off the spawn toward the moth-stone.
+- **The last kindle** (`goal/camera.ts`): when the third lantern catches and it and the heart fit one view
+  (zoom >= 0.9; no zoom-out has been needed or tested) the view eases to hold both for the wake (1.1 s in,
+  2.5 s held, 1.4 s back), then a soft pull keeps the awake heart 150 px inside the frame while she is near.
+  Render-side offsets like the kick; her position comes through `camLink`. goal-render.md, round 6.
 - **Fade / re-form** (`reform.ts`, `dip.ts`): the follow camera holds while `faded > 0`; on `reform` the
   follow state snaps as before and `ReformShot` adds (old view - new view) as an offset eased to zero in
   0.6-0.9 s (smootherstep), at most `panCap` 2400 px (further = the rest is cut under a full dip). The dark

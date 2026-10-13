@@ -30,6 +30,7 @@ export function setMode(e: EnemyState, mode: EnemyState['mode'], timer: number):
   e.modeFrames = 0;
   e.timer = timer;
   e.turning = false;
+  e.braced = mode === 'windup' || mode === 'charge';
 }
 
 /** Squared gap between two boxes (0 when they touch or overlap). */
@@ -111,6 +112,11 @@ export interface KindRules {
    * blow sends it to (-1 / 1).
    */
   shove(e: EnemyState, dir: 'fwd' | 'up' | 'down', side: number, knockback: number, t: Tuning): number;
+  /**
+   * A slash going `dir` would hit it, from her body centre at `px`: true = it glances off (no
+   * damage, no stagger; the framework fires `enemyBlock` and she is thrown back off it).
+   */
+  blocks?(e: EnemyState, dir: 'fwd' | 'up' | 'down', px: number, t: Tuning): boolean;
   /**
    * Safe ground (where she re-forms) keeps at least this far from its home, if that is more than
    * `health.safeEnemyPx`: far enough that it does not notice her the moment she is back.

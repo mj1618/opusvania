@@ -20,7 +20,7 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 16,
+    version: 17,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
@@ -71,7 +71,7 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
     const light = restPoint(state, scene);
     reformPlayer(state, scene, P, events, light);
     goalReformed(state.goal, light !== undefined);
-    resetEnemies(state, scene, t);
+    resetEnemies(state, scene, t, events);
   }
   // From the end of the run on she is held (no input reaches her; she walks into the heart and
   // stops) and nothing can hurt her.

@@ -88,6 +88,9 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning): EnemyState {
     side: 0,
     pushX: 0,
     pushY: 0,
+    braced: false,
+    strikeCd: 0,
+    chargeLeft: 0,
     calm: 0,
     spill: 0,
     spillTimer: 0,
@@ -103,14 +106,32 @@ export function createEnemies(scene: Scene, t: Tuning): EnemyState[] {
   return (scene.enemies ?? []).map((s) => createEnemy(s, t));
 }
 
-/** Living enemies go back to where they started, whole; dead ones stay dead (their glints still arrive). */
-export function resetEnemies(state: GameState, scene: Scene, t: Tuning): void {
+/**
+ * Living enemies go back to where they started, whole; dead ones stay dead (their glints still
+ * arrive). `enemyReset` for each one that was hurt or away from its start, so it can be shown.
+ */
+export function resetEnemies(state: GameState, scene: Scene, t: Tuning, events?: SimEvent[]): void {
   const list = scene.enemies ?? [];
   for (let i = 0; i < list.length; i++) {
     const e = state.enemies[i];
     const s = list[i];
     if (!e || !s || e.mode === 'dead') continue;
-    state.enemies[i] = createEnemy(s, t);
+    const fresh = createEnemy(s, t);
+    state.enemies[i] = fresh;
+    const healed = fresh.hp - e.hp;
+    if (events && (healed > 0 || e.x !== fresh.x || e.y !== fresh.y))
+      events.push({
+        type: 'enemyReset',
+        id: fresh.id,
+        kind: fresh.kind,
+        x: fresh.x + fresh.w / 2,
+        y: fresh.y + fresh.h / 2,
+        fromX: e.x + e.w / 2,
+        fromY: e.y + e.h / 2,
+        hp: fresh.hp,
+        hpMax: fresh.hpMax,
+        healed,
+      });
   }
 }
 
@@ -253,6 +274,14 @@ export function enemyTouched(
   KINDS[e.kind].touched?.(e, info(state, scene, t, events), dir);
 }
 
+// How many enemies the last `slashEnemies` call glanced off (their shells were forward).
+let BLOCKS = 0;
+
+/** Blows of the last `slashEnemies` call that glanced off a braced shell (no damage done). */
+export function slashBlocks(): number {
+  return BLOCKS;
+}
+
 /**
  * Applies slash number `seq` (hit area `box`) to every living enemy it overlaps, has not hit yet
  * and can reach. Pushes `slashHit` and `enemyHit` / `enemyDie`; returns how many it hit this step.
@@ -273,6 +302,7 @@ export function slashEnemies(
   events: SimEvent[],
 ): number {
   const list = state.enemies;
+  BLOCKS = 0;
   if (list.length === 0) return 0;
   const E = t.enemies;
   const b: PlayerState = state.player;
@@ -291,9 +321,35 @@ export function slashEnemies(
     const K = KINDS[e.kind];
     const cx = e.x + e.w / 2;
     const cy = e.y + e.h / 2;
+    // Its shell is forward and the cut meets it: it glances off. Nothing is taken, it does not
+    // stagger, and this slash is spent on it.
+    if (K.blocks?.(e, dir, px, t)) {
+      e.hitBy = seq;
+      BLOCKS++;
+      events.push({
+        type: 'enemyBlock',
+        id: e.id,
+        kind: e.kind,
+        x: cx,
+        y: cy,
+        hitX: (l + r) / 2,
+        hitY: (top + bot) / 2,
+        facing: e.facing,
+        slash: dir,
+        dir: facing < 0 ? -1 : 1,
+        step,
+        hitstop: frames(E.blockHitstopFrames),
+        recoil: E.blockRecoil,
+        mode: e.mode,
+        frames: e.timer,
+      });
+      continue;
+    }
     // The side the blow sends it to: along a forward cut; for an up / down cut, away from her.
     const side = dir === 'fwd' ? (facing < 0 ? -1 : 1) : cx < px ? -1 : cx > px ? 1 : facing < 0 ? -1 : 1;
     const kb = K.shove(e, dir, side, knockback, t);
+    // A blow ends its calm: what she cuts is awake again (it can brace, and its touch counts).
+    e.calm = 0;
     e.hitBy = seq;
     e.hitDir = side;
     e.hitPower = power;

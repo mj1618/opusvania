@@ -25,14 +25,19 @@ const STATIONS: Record<string, [x: number, y: number]> = {
   'burr-path': [1900, 1280],
   'burr-ledge': [2850, 448],
   'burr-root': [4200, 1280],
+  'burr-shaft': [3360, 1280],
+  'burr-rise': [4780, 1088],
 };
 
 /**
  * Fights enemy `i` from wherever she stands: keeps a blade's length away, faces it and cuts when
- * it is in reach. Returns the frames it took, or -1.
+ * it is in reach; when it braces she waits out the tell and hops over it as it rams (it passes
+ * under her), then cuts it while it stands spent. Returns the frames it took, or -1.
  */
 function fight(s: Sim, i: number, maxFrames = 900): number {
   let prev = 0;
+  let over = 0;
+  let hop = 0;
   for (let f = 0; f < maxFrames; f++) {
     const e = s.state.enemies[i];
     if (!e || e.mode === 'dead') return f;
@@ -40,8 +45,20 @@ function fight(s: Sim, i: number, maxFrames = 900): number {
     const dx = e.x + e.w / 2 - (p.x + p.w / 2);
     const gap = Math.abs(dx) - e.w / 2 - p.w / 2;
     let m = 0;
-    if (gap > 78) m = bit(dx);
-    else if (gap < 34 && e.mode !== 'hurt') m = bit(-dx);
+    const ram = e.mode === 'charge' || (e.mode === 'windup' && e.timer <= 6);
+    if (!ram) over = 0;
+    else if (over === 0) {
+      over = Math.sign(dx) || 1;
+      // (A short press: under the branch a full jump would land her on it.)
+      hop = 10;
+    }
+    if (ram && hop > 0 && (p.grounded ? (prev & J) === 0 : true)) {
+      m = J | bit(over);
+      hop--;
+    } else if (ram) m = bit(over);
+    else if (e.mode === 'windup') m = 0;
+    else if (gap > 78) m = bit(dx);
+    else if (gap < 34 && e.mode !== 'hurt' && e.mode !== 'recover') m = bit(-dx);
     else if ((prev & A) === 0) m = (p.facing === Math.sign(dx) ? 0 : bit(dx)) | A;
     step(s.state, m, s.tuning, s.scene, s.events);
     prev = m;
@@ -61,6 +78,8 @@ describe('burrbacks in the grove, piloted', () => {
       expect(feet(s), `station of ${id}`).toEqual({ x: st[0], y: st[1] });
       const from = s.events.length;
       expect(fight(s, i), id).toBeGreaterThan(0);
+      // (She may be in the air from the cut that killed it.)
+      for (let f = 0; f < 60 && !s.state.player.grounded; f++) step(s.state, 0, s.tuning, s.scene, s.events);
       const die = s.events.slice(from).find((e) => e.type === 'enemyDie');
       expect(die, id).toBeDefined();
       if (die?.type === 'enemyDie') glints += die.value;

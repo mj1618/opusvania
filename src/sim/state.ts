@@ -177,8 +177,10 @@ export interface PickupsState {
    * gathered goes in; kindling a lantern takes its cost out (`spent`).
    */
   count: number;
-  /** Value spent on lanterns so far. `count + spent + lost` = everything gathered this run. */
+  /** Value spent on lanterns so far. `count + spent + lost + offered` = everything gathered this run. */
   spent: number;
+  /** Value given to the woken heart at the end of the run (memory/goal.md: the offering). */
+  offered: number;
   /** Value lying in dropped clusters (`drops`), still to be picked up again. */
   lost: number;
   /**
@@ -227,7 +229,9 @@ export interface PodsState {
 
 /**
  * What an enemy is doing. Every kind: `hurt` (staggered by a hit), `dead`.
- * Burrback: `walk`, `pause` (standing: a turn-around if `turning`, else a rest), `alert` (a flinch).
+ * Burrback: `walk`, `pause` (standing: a turn-around if `turning`, else a rest), `alert` (a flinch),
+ * `windup` (braced, shell forward: the tell of its ram), `charge` (the ram), `recover` (spent: it
+ * stands open after a ram).
  * Lampwing: `hover` (wandering round its home), `curious` (it has noticed her: the tell), `pursue`
  * (drifting after her), `rest` (it has given up, or just touched her: it hangs where it is),
  * `return` (flying home; it notices nothing until it is there).
@@ -241,6 +245,9 @@ export type EnemyMode =
   | 'pursue'
   | 'rest'
   | 'return'
+  | 'windup'
+  | 'charge'
+  | 'recover'
   | 'hurt'
   | 'dead';
 
@@ -273,7 +280,7 @@ export interface EnemyState {
   mode: EnemyMode;
   /** Frames since `mode` last changed (0 on the frame it changes; it holds during `hitstop`). */
   modeFrames: number;
-  /** Frames left of a timed mode (pause, alert, curious, rest, hurt, dead); 0 otherwise. */
+  /** Frames left of a timed mode (pause, alert, windup, recover, curious, rest, hurt, dead); 0 otherwise. */
   timer: number;
   /** Where it started: the centre of its box then (a lampwing's home, the middle of its territory). */
   homeX: number;
@@ -330,6 +337,14 @@ export interface EnemyState {
   /** Lampwing: the push away from other lampwings this step, px/f². */
   pushX: number;
   pushY: number;
+  /**
+   * Burrback: its shell is forward (`windup`, `charge`): a forward cut from the side it faces
+   * glances off. `strikeCd`: frames until it may brace again; `chargeLeft`: px left of its ram (set
+   * when it braces: the length it will go).
+   */
+  braced: boolean;
+  strikeCd: number;
+  chargeLeft: number;
   /** Frames left of a calm (a lantern was kindled near it, or the run ended): its touch does nothing meanwhile. */
   calm: number;
   /** Glints spilled on death still on their way to her, frames to the next, and the gap between them. */
@@ -359,6 +374,11 @@ export interface LanternState {
    * she had just cut). It catches the step they have landed, wherever she is by then.
    */
   pledged: boolean;
+  /**
+   * Frames she has stood still at it (no direction held, not cutting). A wayside lamp starts to
+   * catch only after `tuning.goal.lampStillFrames` of that: spending there is a choice.
+   */
+  still: number;
 }
 
 /** The goal of the scene (src/sim/goal.ts, memory/goal.md): the lanterns, the heart, the ending. */
@@ -417,7 +437,16 @@ export interface GoalState {
     /** Wayside lamps lit, of how many there are. */
     lamps: number;
     lampsTotal: number;
+    /** The offering: what she carried into the heart (all of it is given during the hold), and the tier that reaches (0-3). */
+    offered: number;
+    offerTier: number;
   };
+  /**
+   * The offering to the woken heart, as it goes in during the ending hold: `total` = what she
+   * carried at `gather`, `given` = how much of it has reached the heart so far, `tier` = the
+   * thresholds (`tuning.goal.offerTier1..3`) `given` has passed (0-3).
+   */
+  offer: { total: number; given: number; tier: number };
   /** The hold is over (`endHold`): the scene stays calm until the restart. */
   ended: boolean;
   /** The run so far: the frame of her first input (-1 = none yet), the hits she has taken, the times she faded. */
@@ -425,7 +454,7 @@ export interface GoalState {
 }
 
 export interface GameState {
-  version: 16;
+  version: 17;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;
@@ -464,6 +493,7 @@ export function cloneState(s: GameState): GameState {
       lamps: s.goal.lamps.map((l) => ({ ...l })),
       heart: { ...s.goal.heart },
       ending: { ...s.goal.ending },
+      offer: { ...s.goal.offer },
       run: { ...s.goal.run },
     },
   };

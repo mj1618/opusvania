@@ -17,6 +17,7 @@ import { GOAL } from '../goal/config';
 import { streamCount } from '../goal/logic';
 import { GlintBatch, K_FLARE, K_GLINT, K_SPARK } from '../pickups/batch';
 import { HealthLights } from './lights';
+import { hudLink } from './link';
 import { LanternPips } from './progress';
 import { Prompts } from './prompts';
 import { EndSummary } from './summary';
@@ -68,9 +69,19 @@ export const HUD = {
   lossHold: 6.5,
   lossShow: 4.2,
   lossScale: 0.74,
+  /**
+   * She is under the cluster when her body centre is left of `x` and above `y` (logical px, soft
+   * over `soft`): it thins to `alpha` (eased, `rate` per s).
+   */
+  under: { x: 300, y: 250, soft: 90, alpha: 0.16, rate: 7 },
   /** A dormant lantern this near keeps the count on screen (so its price can be read against it), px. */
   lanternPx: 330,
 };
+
+function sm(a: number, b: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
 
 /** A glint leaving the counter as it is spent (HUD px). */
 interface Drop {
@@ -116,7 +127,9 @@ export class Hud {
   private hold = 0;
   private pulse = 0;
   /** 0 = the count sits in the lights' place, 1 = under them. */
-  private slot = 0;
+  private slot = 1;
+  /** 0..1: she is under the cluster (eased). */
+  private clear = 0;
   /** Seconds between two glints leaving the count after a fade (0 = a loss shows at once). */
   private spillStep = 0;
   private spillIn = 0;
@@ -356,12 +369,22 @@ export class Hud {
     // A scene opened without pickups is a clean plate: the lights show only when they matter.
     const quiet = (sim.scene.pickups ?? []).length === 0 && (sim.scene.pods ?? []).length === 0;
     const H = this.health;
-    H.update(dt, clock, sim, quiet);
+    // One layout (playtest 4: with the lights away while she rested the corner had two): whenever
+    // the count or the pips are up, the lights are up too, each in its own fixed place.
+    const pipsUp = this.pips.root.visible && this.pips.root.alpha > 0.003;
+    H.update(dt, clock, sim, quiet, this.hold > 0 || pipsUp);
     this.shake.position.set(H.shakeX, H.shakeY);
 
     // The run is over: the cluster leaves the picture to the ending, and the summary comes.
     this.live = Math.min(1, Math.max(0, this.live + (sim.goal.gathered ? -dt : dt * 3) / HUD.endFade));
-    this.shake.alpha = this.live * this.live * (3 - 2 * this.live);
+    // She is under the cluster (a climb into the top corner): it thins so she is never behind it.
+    const U = HUD.under;
+    const under =
+      hudLink.on && !sim.goal.gathered
+        ? (1 - sm(U.x, U.x + U.soft, hudLink.x)) * (1 - sm(U.y, U.y + U.soft, hudLink.y))
+        : 0;
+    this.clear += (under - this.clear) * Math.min(1, dt * U.rate);
+    this.shake.alpha = this.live * this.live * (3 - 2 * this.live) * (1 - (1 - U.alpha) * this.clear);
     this.shake.visible = this.live > 0.003;
     this.summary.update(dt, clock, sim);
     this.prompts.update(dt, clock, sim);
@@ -377,11 +400,8 @@ export class Hud {
     }
     // The count sits under the lights, and takes their place when they are away. The two never
     // overlap: it moves down before they show, and moves back up only when they are quite gone.
-    const lights = H.alpha > 0.003 ? 1 : 0;
-    if (this.alpha <= 0.003 && this.pips.root.alpha * (this.pips.root.visible ? 1 : 0) <= 0.003)
-      this.slot = lights;
-    else if (lights > this.slot) this.slot = Math.min(1, this.slot + dt / HUD.slideDown);
-    else if (lights < this.slot) this.slot = Math.max(0, this.slot - dt / HUD.slideUp);
+    // (Since playtest 4 the count never takes the lights' place: `slot` stays 1.)
+    this.slot = 1;
     const hv = this.slot * this.slot * (3 - 2 * this.slot);
     const gk = Math.min(1, Math.max(0, (this.slot - HUD.clear) / (1 - HUD.clear)));
     const gate = gk * gk * (3 - 2 * gk);
@@ -389,7 +409,7 @@ export class Hud {
     H.root.visible = H.root.visible && gate > 0.003;
     const rise = (HUD.yTop - HUD.y) * (1 - hv);
     this.group.position.set(-10 * (1 - a) + shakeX, rise);
-    this.pips.update(dt, clock, sim, HUD.yTop + (HUD.y - HUD.yTop) * hv + HUD.pipsDrop * a + 12);
+    this.pips.update(dt, clock, sim, HUD.yTop + (HUD.y - HUD.yTop) * hv + HUD.pipsDrop + 12);
     const b = this.icon;
     b.begin();
     b.uniform[1] = HUD.iconQuad;

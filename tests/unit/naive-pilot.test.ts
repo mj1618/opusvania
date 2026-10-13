@@ -27,6 +27,11 @@ import { feet, newSim } from './helpers';
  * to the right rise without a jump; past the heart the far bluff stands in the way with the third
  * lantern on its top. Every wall on the way is climbed the same way: jump at it, and again.
  *
+ * Since playtest 4 the creatures push back (the burrback's ram: memory/enemies.md) and these two
+ * still fight the only way they know, standing and cutting: they are the MASHERS of the ram's
+ * design, so they are hit, and must still finish without fading (the reader, who takes no hit, is
+ * piloted in burrback-ram.test.ts).
+ *
  * `NAIVE_TRACE=1 npx vitest run tests/unit/naive-pilot.test.ts --disable-console-intercept` prints
  * the timelines.
  */
@@ -56,7 +61,7 @@ interface Run {
 function naive(
   press: number,
   beat: number,
-  o: { pods?: 'all' | 'first'; lamps?: boolean } = {},
+  o: { pods?: 'all' | 'first'; lamps?: boolean; stand?: boolean } = {},
   t: Tuning = cloneTuning(defaultTuning),
   maxFrames = 60 * 150,
 ): Run {
@@ -99,6 +104,11 @@ function naive(
       else if (e.type === 'gather')
         say(`the heart: ${e.glints} glints, ${e.lanterns} lanterns, ${e.hits} hits`);
       else if (e.type === 'glideStart') say('wings open');
+      else if (e.type === 'enemyWindup') say(`${e.id} braces`);
+      else if (e.type === 'enemyBlock') say(`her cut glances off ${e.id}`);
+      else if (e.type === 'enemyRecover') say(`${e.id} spent (${e.cause})`);
+      else if (e.type === 'enemyHit') say(`${e.id} cut: ${e.hpLeft} left`);
+      else if (e.type === 'enemyNotice') say(`${e.id} has seen her`);
     }
     let m = 0;
     let dir = home ? Math.sign(heart.x - at.x) : 1;
@@ -107,7 +117,7 @@ function naive(
     for (let k = 0; k < lights.length; k++) {
       const l = lights[k] as (typeof lights)[number];
       const st = l.lamp ? g.lamps[l.i] : g.lanterns[l.i];
-      if (l.lamp && o.lamps === false) continue;
+      if ((l.lamp && o.lamps === false) || o.stand === false) continue;
       if (!stirred[k] || !st || st.lit || !p.grounded || at.y !== l.y || Math.abs(at.x - l.x) > 320) continue;
       // She gives it two seconds; if it shows its price instead (and nothing is on its way), she goes on.
       if ((st.refused && !st.pledged) || (given[k] as number) > 120) continue;
@@ -174,7 +184,7 @@ const trace = (name: string, r: Run) => {
 };
 
 describe('naive players finish the grove: the lanterns are the critical path', () => {
-  it('the tapper (90 ms presses, holds right): three lanterns in order, then the heart; no wings; at most 2 hits', () => {
+  it('the tapper (90 ms presses, holds right): three lanterns in order, then the heart; no wings; at most 3 hits, no fade', () => {
     const r = naive(5, 9);
     trace('tapper', r);
     expect(r.ended).toBe(true);
@@ -182,7 +192,10 @@ describe('naive players finish the grove: the lanterns are the critical path', (
       .filter((e) => e.type === 'lanternKindle')
       .map((e) => (e.type === 'lanternKindle' ? e.id : ''));
     expect(lit).toEqual(['lantern-stone', 'lantern-crown', 'lantern-far']);
-    expect(r.hits).toBeLessThanOrEqual(2);
+    expect(r.hits).toBeLessThanOrEqual(3);
+    // She met the creatures on her road and cut them down: the floor's before the bluff, the rise's before the heart.
+    const cut = r.events.filter((e) => e.type === 'enemyDie').map((e) => (e.type === 'enemyDie' ? e.id : ''));
+    expect(cut).toEqual(['burr-path', 'burr-rise']);
     expect(r.glides).toBe(0);
     expect(r.frames).toBeLessThan(60 * 90);
     expect(r.events.some((e) => e.type === 'fade')).toBe(false);
@@ -196,10 +209,30 @@ describe('naive players finish the grove: the lanterns are the critical path', (
       .filter((e) => e.type === 'lanternKindle')
       .map((e) => (e.type === 'lanternKindle' ? e.id : ''));
     expect(lit).toEqual(['lantern-stone', 'lantern-crown', 'lantern-far']);
-    expect(r.hits).toBeLessThanOrEqual(2);
+    expect(r.hits).toBeLessThanOrEqual(3);
     expect(r.glides).toBeGreaterThan(0);
     expect(r.frames).toBeLessThan(60 * 90);
     expect(r.events.some((e) => e.type === 'fade')).toBe(false);
+  });
+
+  it('a tapper who never stops for a light still lights all three (playtest 4: 0 lanterns in two minutes) and no lamp by accident', () => {
+    for (const [press, beat] of [
+      [5, 9],
+      [4, 6],
+      [8, 4],
+    ] as const) {
+      const r = naive(press, beat, { stand: false });
+      trace(`never stands, press ${press}, beat ${beat}`, r);
+      const hand = `press ${press}, beat ${beat}`;
+      expect(r.ended, hand).toBe(true);
+      expect(r.lit, hand).toBe(3);
+      // Lamps want her to stand still at them: she never does, so none is bought.
+      expect(r.lamps, hand).toBe(0);
+      expect(
+        r.events.some((e) => e.type === 'fade'),
+        hand,
+      ).toBe(false);
+    }
   });
 
   it('other hands finish too: slower and quicker beats, a 4-frame tap, a full hold', () => {
@@ -216,6 +249,11 @@ describe('naive players finish the grove: the lanterns are the critical path', (
       trace(`press ${press}, beat ${beat}`, r);
       expect(r.ended, `press ${press}, beat ${beat}`).toBe(true);
       expect(r.lit, `press ${press}, beat ${beat}`).toBe(3);
+      expect(r.hits, `press ${press}, beat ${beat}`).toBeLessThanOrEqual(3);
+      expect(
+        r.events.some((e) => e.type === 'fade'),
+        `press ${press}, beat ${beat}`,
+      ).toBe(false);
     }
   });
 

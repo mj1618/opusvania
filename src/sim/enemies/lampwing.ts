@@ -303,9 +303,13 @@ export const lampwing: KindRules = {
     }
   },
 
-  /** Inside a lit lantern's sanctuary its touch does nothing. */
+  /**
+   * Inside a lit lantern's sanctuary its touch does nothing; nor in the first beat of its tell
+   * (`noticeSafeFrames`): a hit never lands sooner after the tell than she could have answered it.
+   */
   harmless(e, info) {
     const G = info.t.goal;
+    if (e.mode === 'curious' && e.modeFrames <= info.t.lampwing.noticeSafeFrames) return true;
     return nearLitLantern(info.state, info.scene, G, e.x + e.w / 2, e.y + e.h / 2, G.lampSanctuaryPx);
   },
 

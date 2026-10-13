@@ -1,7 +1,7 @@
 # Sim / runtime architecture
 
 - `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
-  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 16)) and appends `SimEvent`s. The scene is static and
+  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 17)) and appends `SimEvent`s. The scene is static and
   not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
   (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
 - No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
@@ -54,7 +54,7 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `step` (every 96 px of grounded travel), `turn {dir, grounded}`, `skid {dir}`.
 - `wallSlideStart/End {dir = wall side}`, `dashStart {dir, air}`, `dashEnd {dir}`.
 - `slash`, `slashHit`, `impact`, `slashEnd`, `podHit`, `podBurst`, and pod glints as `pickup {pod: true}`: combat.md.
-- `enemyTurn`, `enemyAlert` (burrback), `enemyNotice`, `enemyGiveUp` (lampwing), `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`), and
+- `enemyTurn`, `enemyAlert`, **`enemyWindup`, `enemyCharge`, `enemyRecover`, `enemyBlock`** (burrback: its ram), `enemyNotice`, `enemyGiveUp` (lampwing), `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`, then **`enemyReset`** for each living creature that went home hurt or from elsewhere), and
   enemy glints as `pickup {enemy: true}`: enemies.md. `slashEnd` / `glideEnd` have a reason `hurt`.
 - `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a
   long fall, up to 32 out of a fast fall) and `glideEnd {reason: release|land|wall|dash|fastfall}`; one
@@ -68,7 +68,9 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   `enemyTurn` causes `lantern` / `wary`, `enemyAlert` cause `touch`: enemies.md.
 - `lanternNotice` (she came within 260 px of a dormant one: once per approach), `lanternRefuse`, `lanternChannel`,
   `lanternCancel`, `lanternKindle {..., pledged, away}` (it can fire with her elsewhere: goal.md "pledge"), `lanternRest`; the same six for wayside lamps as `lamp...`; `heartSleep`,
-  `heartWake`, `gather`, `endHold`: goal.md (`x, y` = the lantern's foot / the heart, not her feet).
+  `heartWake`, `gather`, **`heartOffer`, `heartTier`** (the offering during the hold), `endHold`: goal.md (`x, y` = the lantern's foot / the heart, not her feet).
+- Scene fields the player code reads besides the rects: `ceilingY`, the tag `pool`, and **`edgeKick: false`
+  / a solid's `kick: false`** (no wall slide, no wall kick on that face: movement-controller.md).
 
 ## Step order
 `step()`: re-form if a fade just ended (a third of the wallet is dropped where she lay; she is back

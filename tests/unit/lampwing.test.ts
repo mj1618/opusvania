@@ -156,7 +156,7 @@ describe('lampwing: hovering', () => {
 });
 
 describe('lampwing: noticing her', () => {
-  it('needs her within 260 px AND in plain view; then a 30-frame tell (it turns to her and rises), then pursuit', () => {
+  it('needs her within 260 px AND in plain view; then a 36-frame tell (it turns to her and rises), then pursuit', () => {
     // Too far (340 px), for as long as she likes.
     let s = newSim(scene([lamp(2000, 600)]), calm());
     s.place(1700, FLOOR);
@@ -190,9 +190,9 @@ describe('lampwing: noticing her', () => {
           x: 2000,
           y: 600,
           dir: -1,
-          frames: 30,
+          frames: L.curiousFrames,
         });
-        expect([e.mode, e.timer, e.modeFrames, e.facing]).toEqual(['curious', 30, 0, -1]);
+        expect([e.mode, e.timer, e.modeFrames, e.facing]).toEqual(['curious', L.curiousFrames, 0, -1]);
       }
       if (e.mode === 'curious') {
         // What it is drawn to: her body centre; `look` is the unit vector to it.
@@ -204,10 +204,40 @@ describe('lampwing: noticing her', () => {
     });
     expect(modes.indexOf('curious')).toBe(0);
     expect(modes.indexOf('pursue')).toBe(L.curiousFrames);
-    expect([L.noticePx, L.curiousFrames]).toEqual([260, 30]);
+    expect([L.noticePx, L.curiousFrames, L.noticeSafeFrames]).toEqual([260, 36, 20]);
     // The tell: it lifts about 13 px before it comes.
     expect((ys[0] as number) - (ys[29] as number)).toBeGreaterThanOrEqual(10);
     expect((ys[0] as number) - (ys[29] as number)).toBeLessThanOrEqual(16);
+  });
+
+  it('its touch does nothing in the first 20 frames of the tell: a hit never lands sooner after it than she could answer (playtest 4: 0.2 s)', () => {
+    // She jumps up into one that has only just seen her.
+    const s = newSim(scene([lamp(2000, 600)]), calm());
+    s.place(2000, FLOOR);
+    let noticed = -1;
+    let hurt = -1;
+    let met = -1;
+    frames(s, 'J24 .40', (ev, f) => {
+      if (noticed < 0 && of(ev, 'enemyNotice').length) noticed = f;
+      if (met < 0 && overlap(s, foe(s))) met = f;
+      if (hurt < 0 && of(ev, 'hurt').length) hurt = f;
+    });
+    expect(noticed).toBe(0);
+    // Her body is in it within a dozen frames; nothing until the 21st frame of the tell.
+    expect(met).toBeGreaterThan(0);
+    expect(met).toBeLessThan(L.noticeSafeFrames);
+    expect(hurt < 0 || hurt - noticed > L.noticeSafeFrames).toBe(true);
+    // With the rule off the same jump is the playtest's hit.
+    const t = calm();
+    t.lampwing.noticeSafeFrames = 0;
+    const q = newSim(scene([lamp(2000, 600)]), t);
+    q.place(2000, FLOOR);
+    let early = -1;
+    frames(q, 'J24 .40', (ev, f) => {
+      if (early < 0 && of(ev, 'hurt').length) early = f;
+    });
+    expect(early).toBeGreaterThan(0);
+    expect(early).toBeLessThan(L.noticeSafeFrames);
   });
 
   it('does not notice her when she is faded, or beyond its leash from home', () => {
@@ -385,8 +415,8 @@ describe('lampwing: giving up', () => {
   it('tired: six seconds of pursuit and it has had enough, even on top of her', () => {
     const s = start();
     s.state.player.invuln = 1e6;
-    // (`start` ran 40 frames: the 30 of the tell and the first 10 of the chase.)
-    expect(gaveUp(s, '.400')).toEqual({ at: L.pursueFrames - 10, cause: 'tired' });
+    // (`start` ran 40 frames: the 36 of the tell and the first 4 of the chase.)
+    expect(gaveUp(s, '.400')).toEqual({ at: L.pursueFrames - (40 - L.curiousFrames), cause: 'tired' });
     expect(L.pursueFrames).toBe(360);
     expect(s.state.player.hp).toBe(4);
   });
@@ -518,19 +548,21 @@ describe('lampwing: contact', () => {
     expect(met).toBeGreaterThanOrEqual(4);
     expect([foe(s).mode, mid(foe(s)).x]).toEqual(['hover', 2200]);
 
-    // She cuts it and walks on into it: harmless for the hitstop and all 16 frames of its tumble
+    // She cuts it and walks on into it: harmless for the hitstop and all 24 frames of its tumble
     // (a burrback: only the first 8). The moment it rights itself, its touch counts again.
     s = duel();
     let touched = 0;
     let hurtAt = -1;
-    frames(s, 'A1 R30', (ev, f) => {
+    // (She is kept inside it, wherever the shove takes it.)
+    frames(s, 'A1 .40', (ev, f) => {
       const e = foe(s);
+      if (f > 0 && e.hitstop === 0) s.state.player.x = e.x - 2;
       if (e.mode === 'hurt' && overlap(s, e)) touched++;
       if (hurtAt < 0 && of(ev, 'hurt').length) hurtAt = f;
     });
-    expect(touched).toBeGreaterThanOrEqual(6);
+    expect(touched).toBeGreaterThanOrEqual(4);
     expect(hurtAt).toBe(1 + EN.hitstopFrames + L.hurtFrames);
-    expect([L.hurtFrames, L.hurtSafeFrames]).toEqual([16, 16]);
+    expect([L.hurtFrames, L.hurtSafeFrames]).toEqual([24, 24]);
 
     // Dead: the falling body is nothing to her.
     s = duel();
@@ -542,12 +574,12 @@ describe('lampwing: contact', () => {
 });
 
 describe('lampwing: taking hits', () => {
-  it('two hit points: cut, cut kills it; hitstop 2 / 2; held, batted 32 px along the cut, tumbling 16 frames', () => {
+  it('two hit points: cut, cut kills it; hitstop 4 / 4; held, batted 32 px along the cut, tumbling 24 frames', () => {
     const s = duel();
     const log: string[] = [];
     const xs: number[] = [];
     const modes: string[] = [];
-    frames(s, 'A1 .16 A1 .60', (ev, f) => {
+    frames(s, 'A1 .34 A1 .60', (ev, f) => {
       const e = foe(s);
       xs.push(mid(e).x);
       modes.push(e.mode);
@@ -567,29 +599,31 @@ describe('lampwing: taking hits', () => {
       }
     });
     expect(log).toEqual([
-      '1 stop2',
-      '1 hit p1 hp1/2 kb6.60 d1 f16',
+      '1 stop4',
+      '1 hit p1 hp1/2 kb6.60 d1 f24',
       '1 impact p1',
-      '20 stop2',
-      '20 die p1 v3 st5 f40',
-      '20 impact p1',
+      '36 stop4',
+      '36 die p1 v3 st5 f40',
+      '36 impact p1',
     ]);
-    // Hit on frame 1, held on 1-3, then the shove: 6.6 px/f fading 0.75 a frame = 32 px in 9 frames
-    // (a burrback goes 21). Its stagger ends 16 frames after the hold; struck, it then goes for her.
-    expect(xs.slice(1, 14).map((x) => x - 2200)).toEqual([0, 0, 0, 7, 12, 18, 22, 26, 28, 30, 32, 32, 32]);
+    // Hit on frame 1, held on 1-5, then the shove: 6.6 px/f fading 0.75 a frame = 32 px in 9 frames
+    // (a burrback goes 32 too). Its stagger ends 24 frames after the hold; struck, it then goes for her.
+    expect(xs.slice(1, 16).map((x) => x - 2200)).toEqual([
+      0, 0, 0, 0, 0, 7, 12, 18, 22, 26, 28, 30, 32, 32, 32,
+    ]);
     expect(modes.indexOf('hurt')).toBe(1);
     expect(modes.indexOf('pursue')).toBe(1 + EN.hitstopFrames + L.hurtFrames);
     const e = foe(s);
-    expect([e.mode, e.hp, e.gone, e.hitDir, e.hitPower, e.hitFrame]).toEqual(['dead', 0, true, 1, 1, 20]);
+    expect([e.mode, e.hp, e.gone, e.hitDir, e.hitPower, e.hitFrame]).toEqual(['dead', 0, true, 1, 1, 36]);
     expect(s.state.player.hp).toBe(4);
   });
 
-  it('the finisher kills it outright (hitstop 3) and it spills 5 instead of 3', () => {
+  it('the finisher kills it outright (hitstop 7) and it spills 5 instead of 3', () => {
     const s = duel();
     // Two cuts into the air behind her, the finisher into it.
     const ev = s.run('L+A1 .16 L+A1 .18 R+A1 .90');
     expect(of(ev, 'enemyHit')).toEqual([]);
-    expect(of(ev, 'slashHit').map((h) => [h.step, h.power, h.hitstop])).toEqual([[3, 2, 3]]);
+    expect(of(ev, 'slashHit').map((h) => [h.step, h.power, h.hitstop])).toEqual([[3, 2, 7]]);
     const die = of(ev, 'enemyDie')[0];
     expect(die).toMatchObject({
       kind: 'lampwing',
@@ -712,8 +746,9 @@ describe('lampwing: death', () => {
       if (e.mode === 'dead' && !e.gone) ys.push(mid(e).y);
       if (goneAt < 0 && e.gone) goneAt = f;
     });
-    // Killed on frame 1, held 2 more, then 40 frames of falling: 0.45 px/f², capped at 9 px/f.
-    expect(goneAt).toBe(1 + EN.hitstopFrames + L.deadFrames);
+    // Killed on frame 1 (a down slash: the pogo's short hold, 2 frames), then 40 frames of falling:
+    // 0.45 px/f², capped at 9 px/f.
+    expect(goneAt).toBe(1 + EN.pogoHitstopFrames + L.deadFrames);
     const drop = (ys.at(-1) as number) - 300;
     expect(drop).toBeGreaterThan(280);
     expect(drop).toBeLessThan(L.maxFall * L.deadFrames);
@@ -985,14 +1020,20 @@ describe('lampwings in the grove', () => {
   const list = (GROVE.enemies ?? []).filter((e) => e.kind === 'lampwing');
   const first = (GROVE.enemies ?? []).length - list.length;
 
-  it('five, after the burrbacks; validated: open air, under the canopy, away from the spawn and from every pod and great glint', () => {
+  it('six, after the burrbacks; validated: open air, under the canopy, away from the spawn and from every pod and great glint', () => {
     expect(list.map((e) => [e.id, e.x, e.y, e.radius])).toEqual([
       ['lamp-glade', 800, 690, 100],
-      ['lamp-f3', 1290, 480, 80],
+      // (Playtest 4: at 1290, 480 it sat in the arc of the jump from F2 to F3 and hit 0.2 s after its
+      // tell. Now high over F3's middle: a jump up from F2 is noticed, and it comes down to her on F3.)
+      ['lamp-f3', 1470, 420, 60],
       ['lamp-ledge', 2700, 150, 90],
       // (Out of the arcs of a held jump off the bough or the catch branch: both fell through 4470, 300.)
       ['lamp-glide-1', 4620, 200, 60],
       ['lamp-glide-2', 4900, 250, 60],
+      // On the summit glide's line (her body passes 5180 at y ~107): the glider's encounter. She sees
+      // it 1.8 s ahead, and cuts it on the way in or closes her wings under it. East of the pogo
+      // chain's second bounce by more than its sight, so the chain does not wake it.
+      ['lamp-sky', 5180, 105, 50],
     ]);
     expect((GROVE.enemies ?? []).slice(0, first).every((e) => e.kind === 'burrback')).toBe(true);
     const prizes = [...(GROVE.pods ?? []), ...(GROVE.pickups ?? []).filter((p) => p.kind === 'great')];
@@ -1039,7 +1080,7 @@ describe('lampwings in the grove', () => {
         const e = foe(s, first + i);
         far[i] = Math.max(far[i] as number, Math.hypot(mid(e).x - h.x, mid(e).y - h.y));
         expect(inSolid(GROVE, e), h.id).toBe(false);
-        expect(e.y, h.id).toBeGreaterThanOrEqual(0);
+        expect(e.y, h.id).toBeGreaterThanOrEqual(GROVE.ceilingY ?? 0);
         expect(e.mode).toBe('hover');
       });
     });

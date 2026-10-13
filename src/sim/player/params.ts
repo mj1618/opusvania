@@ -119,6 +119,8 @@ export interface SlashStep {
   hitstopBonus: number;
   knockback: number;
   recoil: number;
+  recoilFoe: number;
+  hitstopFoe: number;
   lunge: number;
   hangFrames: number;
 }
@@ -133,6 +135,8 @@ function slashStep(s: Tuning['slash1']): SlashStep {
     hitstopBonus: Math.max(0, Math.round(s.hitstopBonus)),
     knockback: s.knockback,
     recoil: s.recoil,
+    recoilFoe: s.recoilFoe,
+    hitstopFoe: Math.max(0, Math.round(s.hitstopFoe)),
     lunge: s.lunge,
     hangFrames: Math.max(0, Math.round(s.hangFrames)),
   };

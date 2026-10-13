@@ -60,7 +60,8 @@ function standAndCut(s: Sim, id: string, maxFrames = 1500): number {
 
 /**
  * The summit route: from trunk B's top, jump, double jump, glide right over the two lampwings and
- * pogo off each in turn (wings closed just long enough to come down on it), then glide on.
+ * pogo off each in turn (wings closed just long enough to come down on it), then glide on, cutting
+ * the one that hangs on the glide line if it is in her way.
  * Returns what happened until she lands.
  */
 function pogoRun(s: Sim) {
@@ -86,6 +87,13 @@ function pogoRun(s: Sim) {
         if (hits.length > 0 && p.vy < 0) m = bit(dx);
         if (inReach(s, e, 'down', p.facing, 0) && (prev & A) === 0 && p.attackCd === 0)
           m = bit(dx) | DOWN | A;
+      }
+      // `lamp-sky` hangs on the glide line to the far bluff (playtest 4) and comes down to her while
+      // she works the chain: a cut whenever it drifts into reach (forward, or up), and on through its tumble.
+      const sky = foe(s, 'lamp-sky');
+      if (sky.mode !== 'dead' && (m & A) === 0 && (prev & A) === 0 && p.attackCd === 0) {
+        if (inReach(s, sky, 'fwd', p.facing, 0)) m |= A;
+        else if (inReach(s, sky, 'up', p.facing, 0)) m |= UP | A;
       }
     }
     const ev = tick(s, m);
@@ -206,11 +214,11 @@ describe('lampwings in the grove, piloted', () => {
   it('the pogo chain: summit to far ledge off the two over the right zone; a second run kills both', () => {
     const s = newSim();
     const first = pogoRun(s);
-    // One flight, two bounces, each a lampwing; she comes down on the far ledge (y 448), which the
-    // glide alone cannot reach from the summit (glide.test: it lands on F7).
+    // One flight, two bounces, each a lampwing; she comes down on the far bluff's top (y 768 since
+    // playtest 4: it was lowered to put the far lantern and the heart in one picture).
     expect(first.hits).toEqual(['lamp-glide-1', 'lamp-glide-2']);
     expect(of(first.log, 'land').length).toBe(1);
-    expect(feet(s).y).toBe(448);
+    expect(feet(s).y).toBe(768);
     expect(feet(s).x).toBeGreaterThan(5472);
     expect(of(first.log, 'hurt')).toEqual([]);
     expect([foe(s, 'lamp-glide-1').hp, foe(s, 'lamp-glide-2').hp]).toEqual([1, 1]);
@@ -221,7 +229,11 @@ describe('lampwings in the grove, piloted', () => {
     expect([foe(s, 'lamp-glide-1').mode, foe(s, 'lamp-glide-2').mode]).toEqual(['hover', 'hover']);
     const second = pogoRun(s);
     expect(second.hits).toEqual(['lamp-glide-1', 'lamp-glide-2']);
-    expect(of(second.log, 'enemyDie').map((d) => [d.id, d.slash, d.value])).toEqual([
+    expect(
+      of(second.log, 'enemyDie')
+        .filter((d) => d.id.startsWith('lamp-glide'))
+        .map((d) => [d.id, d.slash, d.value]),
+    ).toEqual([
       ['lamp-glide-1', 'down', L.value],
       ['lamp-glide-2', 'down', L.value],
     ]);
@@ -241,7 +253,7 @@ describe('lampwings in the grove, piloted', () => {
       for (let f = 0; f < wait; f++) tick(s, 0);
       const run = pogoRun(s);
       expect(run.hits, `wait ${wait}`).toEqual(['lamp-glide-1', 'lamp-glide-2']);
-      expect([feet(s).y, feet(s).x > 5472], `wait ${wait}`).toEqual([448, true]);
+      expect([feet(s).y, feet(s).x > 5472], `wait ${wait}`).toEqual([768, true]);
       expect(of(run.log, 'hurt'), `wait ${wait}`).toEqual([]);
     }
   });

@@ -202,3 +202,36 @@ Frames: `shots/play4/01..13`, `fade-sheet`, `slash-{1-brush,2-ribbon,3-scale-dus
 - A real-key bot must stop for a channel (30 frames) and steer to what noticed her, or it lights nothing.
 - `state().player.kindling` is an index (-1 = none), not a flag.
 - `npm run clip` and `npm run shots` take `--url` (the built app's is `.../opusvania/`).
+
+## After playtest 4: what changed in the sim, and what to replay (2026-10-14)
+Each line: the finding, what was done, where to look. Not yet seen by a person.
+- **Nothing pushes back** -> the burrback's ram (brace 26 frames, ram 180 px, spent 45 frames; a braced
+  front turns a cut; enemies.md). Three on the critical path with a light before each (scene-and-units.md).
+  *Replay*: stand at reach of burr-path and mash: is the hit earned, is the tell (0.43 s) readable at play
+  speed BEFORE the render acts it (today it is only a standstill; hitboxes: thick red box, white front)?
+  Hop it and cut it spent. Fight burr-shaft in the 256 px shaft (wall kick over it). Try to cheese: cuts
+  from the doorway, from just outside a patch, baiting rams into walls.
+- **Hit weight** -> 4 frames of hitstop on a creature (7 on the finisher), 32 px shove (102), she is pushed
+  back 10 px (21); the pogo unchanged. *Replay*: does a standing cut, cut, finisher still connect (it
+  does from within 65 px), does the push back feel like weight or like slipping?
+- **lamp-f3 in the jump arc** -> moved to (1470, 420), and no lampwing hurts in the first 20 frames of its
+  tell. *Replay* F2 -> F3 with a full jump, and standing on F3 under it.
+- **A lampwing on the crossing** -> `lamp-sky` on the summit glide's line. *Replay*: the plain held glide
+  (it should hit, 21 frames after its tell: too soon? she sees it 1.8 s ahead only if the camera shows
+  it), a forward cut on the way in, closing the wings under it; the pogo chain past it.
+- **A tapper lights nothing** -> a channel that has started runs on within 260 px. *Replay*: run past each
+  lantern with its price without stopping (it catches behind her: does that read, or does it feel like
+  it happened to her?). Lamps want 20 still frames first: run over lamp-high out of the well and against
+  the rise at lamp-root (nothing), then stand (0.83 s in all: too long?).
+- **Scene-edge climbs** -> no slide, no kick on either edge. *Replay* both corners, and the summit glide
+  held into the east wall (she sinks along it, wings open, onto the bluff).
+- **The wake off-screen** -> the far bluff's top is 320 px lower (768): heart 320 below, 312 west.
+  *Replay*: kindle the far lantern on foot and from the glide: is the shrine in the picture as it wakes
+  (it is at the frame's bottom edge in the wide stop; the wake's lean and the moths are render work)?
+  The held jump off the west lip still carries her ~1500 px west over the heart.
+- **Economy** -> the offering (everything left goes into the heart during the hold; tiers 25 / 50 / 100),
+  hanging pods within a standing up cut, pod-branch-r on its branch. *Replay*: does the count running
+  down at the end read as a gift (HUD and heart need to act it)? Open pod-branch-l, pod-f6.
+- **Run length**: robots still finish in 19-24 s (they mash perfectly and react in a frame). Whether a
+  person now takes minutes is the thing to measure: time each encounter, count hits and fades.
+

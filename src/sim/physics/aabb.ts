@@ -37,6 +37,22 @@ export function solidAt(scene: Scene, x: number, y: number, w: number, h: number
   return false;
 }
 
+/**
+ * A wall she can slide down and kick off: the box overlaps a solid that is not marked `kick: false`,
+ * or leaves the scene through its left or right edge and the scene's edges take kicks (`edgeKick`
+ * not false). The scene's outer walls lead nowhere, so the grove turns them off.
+ */
+export function kickableAt(scene: Scene, x: number, y: number, w: number, h: number): boolean {
+  if ((x < 0 || x + w > scene.width) && scene.edgeKick !== false) return true;
+  const solids = scene.solids;
+  for (let i = 0; i < solids.length; i++) {
+    const s = solids[i];
+    if (s !== undefined && s.kick !== false && x < s.x + s.w && s.x < x + w && y < s.y + s.h && s.y < y + h)
+      return true;
+  }
+  return false;
+}
+
 /** One-way rule: true if the box's bottom edge (y + h) is exactly on a one-way it overlaps in x. */
 export function oneWayUnder(scene: Scene, x: number, y: number, w: number, h: number): boolean {
   const bottom = y + h;

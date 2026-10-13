@@ -1,7 +1,7 @@
-import { homeClear, slashEnemies } from '../enemies';
+import { homeClear, slashBlocks, slashEnemies } from '../enemies';
 import type { GlideEndReason, HurtSource, JumpKind, SimEvent, SlashDir, SlashEndReason } from '../events';
 import { ActionBit, axisX, type InputFrame } from '../input';
-import { type Body, type Collider, moveX, moveY, oneWayUnder, solidAt } from '../physics/aabb';
+import { type Body, type Collider, kickableAt, moveX, moveY, oneWayUnder, solidAt } from '../physics/aabb';
 import { slashPods } from '../pods';
 import type { Scene } from '../scene';
 import type { EnemyState, GameState, Motion, PlayerState } from '../state';
@@ -150,6 +150,11 @@ class Ctx implements Collider {
 
   solid(x: number, y: number): boolean {
     return solidAt(this.scene, x, y, this.p.w, this.p.h);
+  }
+
+  /** A wall there that takes a slide and a kick (not a `kick: false` solid, not a dead scene edge). */
+  kickable(x: number, y: number): boolean {
+    return kickableAt(this.scene, x, y, this.p.w, this.p.h);
   }
 
   dropping(y: number): boolean {
@@ -332,6 +337,19 @@ function updateSlash(c: Ctx): void {
  */
 function guardLunge(c: Ctx): void {
   const p = c.p;
+  // The recoil of a hit likewise: it never shoves her off her footing (holding that way, it may).
+  if (p.kickX !== 0 && p.grounded) {
+    const k = p.kickX > 0 ? 1 : -1;
+    if (c.inX !== k) {
+      const far = Math.ceil(Math.abs(p.vx + p.kickX));
+      for (let i = 1; i <= far; i++) {
+        if (!c.groundAt(p.x + k * i, p.y)) {
+          p.kickX = 0;
+          break;
+        }
+      }
+    }
+  }
   if (p.lungeX === 0) return;
   const d = p.lungeX > 0 ? 1 : -1;
   if (c.inX === -d) {
@@ -361,7 +379,11 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
   const pogo = dir === 'down' && P.pogo && !p.grounded;
   const box = slashBox(p, dir, p.attackFacing, P.tuning, p.attackStep);
   const podStop = Math.max(0, Math.round(podsT.hitstopFrames)) + st.hitstopBonus;
-  const foeStop = Math.max(0, Math.round(P.tuning.enemies.hitstopFrames)) + st.hitstopBonus;
+  const E = P.tuning.enemies;
+  // (The pogo keeps its short beat: its rhythm is the bounce.)
+  const foeStop = pogo
+    ? Math.max(0, Math.round(E.pogoHitstopFrames))
+    : Math.max(0, Math.round(E.hitstopFrames)) + st.hitstopFoe;
   const first = c.events.length;
   const foes = slashEnemies(
     state,
@@ -394,6 +416,11 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
     c.events,
   );
   const hits = foes + pods;
+  // Glanced off a braced shell: no hit, but she feels it (a beat, and a throw back off it).
+  if (slashBlocks() > 0 && foes === 0) {
+    p.hitstop = Math.max(p.hitstop, Math.max(0, Math.round(E.blockHitstopFrames)));
+    if (dir === 'fwd' && p.mode === 'normal') p.kickX = -p.attackFacing * E.blockRecoil;
+  }
   if (hits === 0) return;
   const hitstop = Math.max(foes > 0 ? foeStop : 0, pods > 0 ? podStop : 0);
   if (p.attackHits === 0) {
@@ -413,7 +440,8 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
   p.attackHits += hits;
   p.hitstop = Math.max(p.hitstop, hitstop);
   if (dir === 'fwd') {
-    if (p.mode === 'normal') p.kickX = -p.attackFacing * st.recoil;
+    if (p.mode === 'normal' && Math.abs(p.kickX) < (foes > 0 ? st.recoilFoe : st.recoil))
+      p.kickX = -p.attackFacing * (foes > 0 ? st.recoilFoe : st.recoil);
   } else if (dir === 'up') {
     if (!p.grounded && p.mode === 'normal') p.vy += P.recoilUp;
   } else if (pogo) {
@@ -463,8 +491,8 @@ function groundJump(c: Ctx, kind: JumpKind): void {
 function wallInRange(c: Ctx): number {
   const p = c.p;
   for (let k = 1; k <= c.P.wallCheckPx; k++) {
-    const r = c.solid(p.x + k, p.y);
-    const l = c.solid(p.x - k, p.y);
+    const r = c.kickable(p.x + k, p.y);
+    const l = c.kickable(p.x - k, p.y);
     if (r && l) return -p.facing;
     if (r) return 1;
     if (l) return -1;
@@ -919,7 +947,7 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
   const touchL = c.solid(p.x - 1, p.y);
   if (p.mode === 'wallSlide') {
     const d = p.wallDir;
-    if (p.grounded || !(d > 0 ? touchR : touchL)) {
+    if (p.grounded || !(d > 0 ? touchR : touchL) || !c.kickable(p.x + d, p.y)) {
       events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: d });
       p.mode = 'normal';
       p.stick = 0;
@@ -933,7 +961,8 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
       p.vy >= 0 &&
       P.wallSlide &&
       inX !== 0 &&
-      (inX > 0 ? touchR : touchL)
+      (inX > 0 ? touchR : touchL) &&
+      c.kickable(p.x + inX, p.y)
     ) {
       endGlide(c, 'wall');
       p.mode = 'wallSlide';

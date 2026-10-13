@@ -524,7 +524,7 @@ describe('naive players', () => {
     expect(late).toEqual([]);
   });
 
-  it('"walks into the step she cannot walk up": at the right rise that is the wayside lamp, and it starts to catch', () => {
+  it('"walks into the step she cannot walk up": at the right rise that is the wayside lamp; it catches only once she stands still there', () => {
     const lamp = (GROVE.lamps ?? [])[1] as { id: string; x: number; y: number };
     expect([lamp.id, lamp.x, lamp.y]).toEqual(['lamp-root', 4566, 1280]);
     const s = newSim({ ...GROVE, enemies: [] });
@@ -532,10 +532,17 @@ describe('naive players', () => {
     s.place(4300, 1280);
     const from = s.events.length;
     s.run('R45');
-    // Pressed against the rise, not moving: she is at the lamp and the channel is running.
+    // Pressed against the rise, still holding right: she is at the lamp, and nothing starts
+    // (playtest 4: it caught under her while she chased burr-root, 8 glints without a choice).
     expect(feet(s).x).toBe(4588);
+    expect(s.state.player.kindlingLamp).toBe(-1);
+    s.run('R60');
+    expect(typesOf(s.events.slice(from))).not.toContain('lampChannel');
+    expect(s.state.pickups.count).toBe(9);
+    // She lets go and stands: 20 frames, then the channel, and it is lit.
+    s.run('.25');
     expect(s.state.player.kindlingLamp).toBe(1);
-    s.run('R30');
+    s.run('.30');
     expect(typesOf(s.events.slice(from))).toEqual(
       expect.arrayContaining(['lampNotice', 'lampChannel', 'lampKindle']),
     );

@@ -84,9 +84,15 @@ function openPod(s: Sim, id: string, maxFrames = 400): number {
   return -1;
 }
 
-/** Keeps a blade's length from a ground enemy and cuts it down (as the burrback pilot does). */
+/**
+ * Keeps a blade's length from a ground enemy and cuts it down (as the burrback pilot does). When
+ * it braces she waits out the tell and hops over its ram, then cuts it while it stands spent: she
+ * reads it (memory/enemies.md; a hero who only stands and cuts is hit, burrback-ram.test.ts).
+ */
 function fightBurr(s: Sim, id: string, maxFrames = 900): number {
   let prev = 0;
+  let over = 0;
+  let hop = 0;
   for (let f = 0; f < maxFrames; f++) {
     const e = foe(s, id);
     if (e.mode === 'dead') return f;
@@ -94,8 +100,19 @@ function fightBurr(s: Sim, id: string, maxFrames = 900): number {
     const dx = e.x + e.w / 2 - (p.x + p.w / 2);
     const gap = Math.abs(dx) - e.w / 2 - p.w / 2;
     let m = 0;
-    if (gap > 78) m = bit(dx);
-    else if (gap < 34 && e.mode !== 'hurt') m = bit(-dx);
+    const ram = e.mode === 'charge' || (e.mode === 'windup' && e.timer <= 6);
+    if (!ram) over = 0;
+    else if (over === 0) {
+      over = Math.sign(dx) || 1;
+      hop = 10;
+    }
+    if (ram && hop > 0 && (p.grounded ? (prev & J) === 0 : true)) {
+      m = J | bit(over);
+      hop--;
+    } else if (ram) m = bit(over);
+    else if (e.mode === 'windup') m = 0;
+    else if (gap > 78) m = bit(dx);
+    else if (gap < 34 && e.mode !== 'hurt' && e.mode !== 'recover') m = bit(-dx);
     else if ((prev & A) === 0) m = (p.facing === Math.sign(dx) ? 0 : bit(dx)) | A;
     tick(s, m);
     prev = m;
@@ -345,10 +362,24 @@ describe('the grove can be finished', () => {
       ev.indexOf(kindled[2] as SimEvent) + 1 + calmed(ev, kindled[2]),
     );
     expect(g.lanterns.every((l) => l.lit)).toBe(true);
-    // The wallet: everything gathered = what she holds + the 36 spent.
+    // The wallet: everything gathered = the 36 spent on lanterns, the 16 on lamps, and what she
+    // carried into the heart: the offering, all of which went in during the hold.
     const gathered = of(ev, 'pickup').reduce((n, e) => n + e.value, 0);
     expect(s.state.pickups.spent).toBe(36 + 16);
-    expect(s.state.pickups.count + s.state.pickups.spent).toBe(gathered);
+    expect(s.state.pickups.count).toBe(0);
+    expect(s.state.pickups.offered + s.state.pickups.spent).toBe(gathered);
+    const offers = of(ev, 'heartOffer');
+    expect(offers.reduce((n, e) => n + e.value, 0)).toBe(s.state.pickups.offered);
+    expect(offers.at(-1)).toMatchObject({
+      given: s.state.pickups.offered,
+      of: s.state.pickups.offered,
+      wallet: 0,
+    });
+    expect(g.offer).toEqual({
+      total: s.state.pickups.offered,
+      given: s.state.pickups.offered,
+      tier: g.ending.offerTier,
+    });
     // The summary is the run: its glints (to the gather), time, kills and hits.
     const gather = of(ev, 'gather')[0];
     if (!gather) throw new Error('no gather');
@@ -447,7 +478,8 @@ describe('the grove can be finished', () => {
 describe('economy: what the lanterns ask against what the grove holds', () => {
   it('36 in all: under half of the world glints alone, a fifth of everything', () => {
     expect(cost).toBe(36);
-    expect([world, podsAll, kills]).toEqual([96, 62, 31]);
+    // (Six burrbacks at 4 and six lampwings at 3 since playtest 4: two more of the one, one of the other.)
+    expect([world, podsAll, kills]).toEqual([96, 62, 42]);
     // A player who never cuts a pod or a creature can still pay for all three.
     expect(world).toBeGreaterThanOrEqual(cost * 2);
     expect(cost / (world + podsAll + kills)).toBeLessThan(0.25);

@@ -28,6 +28,12 @@ const scene = (enemies: EnemySpawn[], solids: Scene['solids'] = []): Scene => ({
   enemies,
 });
 const foe = (s: Sim, i = 0) => s.state.enemies[i] as EnemyState;
+/** The default tuning with the ram off, where a test is about its walk alone (the ram: burrback-ram.test.ts). */
+function noRam() {
+  const t = cloneTuning(defaultTuning);
+  t.burrback.strikePx = 0;
+  return t;
+}
 /** Steps n frames with no input; calls `each` after every one. */
 function watch(s: Sim, n: number, each: (ev: SimEvent[], f: number) => void): void {
   for (let f = 0; f < n; f++) {
@@ -92,10 +98,10 @@ describe('burrback: lips', () => {
   });
 
   it('shoved past its turning point (to the brink), it comes back in', () => {
-    const s = newSim(scene([burr(1470, 1, 600)], [plat, wall]));
+    const s = newSim(scene([burr(1470, 1, 600)], [plat, wall]), noRam());
     s.place(1380, 600);
     foe(s).hp = 9;
-    s.run('R+A1 .16 A1 .18 A1 .20');
+    s.run('R+A1 .20 A1 .22 A1 .24');
     expect(foe(s).x + foe(s).w).toBeGreaterThan(1600 - B.lipClear);
     s.place(3000, FLOOR);
     s.run('.200');
@@ -123,7 +129,7 @@ describe('burrback: wary of an edge she is under', () => {
       [1650 + B.waryPx + 60, FLOOR],
       [1400, 600],
     ] as const) {
-      const n = newSim(scene([burr(1300, 1, 600)], [plat, wall]));
+      const n = newSim(scene([burr(1300, 1, 600)], [plat, wall]), noRam());
       n.place(x, y);
       n.state.player.invuln = 1e6;
       let far = -9e9;
@@ -160,7 +166,8 @@ describe('burrback: wary of an edge she is under', () => {
 
 describe('burrback: its touch is one hit', () => {
   it('it is shoved back ~40 px, flinches 30 frames and turns away from her', () => {
-    const t = cloneTuning(defaultTuning);
+    // (Walking into her, not ramming: with the ram on it braces first and the touch ends in `recover`.)
+    const t = noRam();
     const s = newSim(scene([burr(2200, -1)]), t);
     s.place(2120, FLOOR);
     const ev: SimEvent[] = [];
@@ -228,14 +235,19 @@ describe('the grove: no burrback waits where she lands', () => {
     ['out of the pool to the right (x 1856)', 1856, 1952, 1280],
     ['the foot of the bluff, where a walk off its east lip comes down (x 2624)', 2624, 2880, 1152],
     ['the terrace, all of it: every way off the bluff comes down somewhere on it', 2624, 3072, 1152],
-    ["the well at trunk A's foot and the shaft floor", 3072, 3744, 1280],
+    // (The shaft floor beyond the doorway is burr-shaft's own ground since playtest 4: she walks in
+    // to it through the doorway with it in view, she does not land on it.)
+    ["the well at trunk A's foot and the doorway under trunk A", 3072, 3340, 1280],
+    ["trunk B's foot, where she stands to start the climb", 3540, 3744, 1280],
+    ['the right rise where the stair from the summit sets her down, and the wayside lamp', 4608, 4910, 1088],
+    ['the heart and the ground east of it, where a walk off the far bluff comes down', 5164, 5472, 1088],
     ['onto the left bank (x 384)', 288, 384, 1088],
     ['onto the high ledge from F5 (x 2816)', 2816, 2912, 448],
     [
       'the far ledge, all of it: the jump from F7 and the summit glide come down anywhere on it',
       5472,
       5760,
-      448,
+      768,
     ],
   ];
 

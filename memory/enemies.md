@@ -4,8 +4,8 @@ Sim: `src/sim/enemies.ts` (the framework: hits, hurt / die, glint spill, contact
 kind in `src/sim/enemies/` (`burrback.ts`, `lampwing.ts`, shared helpers in `common.ts`),
 `src/sim/player/player.ts` (`hurtPlayer`, `trackSafeGround`, `reformPlayer`), step order in
 `src/sim/index.ts`. Numbers: `tuning.burrback`, `tuning.lampwing`, `tuning.enemies`, `tuning.health`.
-Tests: `tests/unit/enemies.test.ts`, `enemies-pilot.test.ts` (burrback), `lampwing.test.ts`,
-`lampwing-pilot.test.ts`. Both are drawn by
+Tests: `tests/unit/enemies.test.ts`, `enemies-pilot.test.ts` (burrback), **`burrback-ram.test.ts` (the ram,
+the masher and the reader)**, `lampwing.test.ts`, `lampwing-pilot.test.ts`. Both are drawn by
 `src/render/enemies/` (enemies-render.md).
 
 ## The framework (adding a kind)
@@ -20,7 +20,8 @@ Tests: `tests/unit/enemies.test.ts`, `enemies-pilot.test.ts` (burrback), `lampwi
   the glint spill queue (`spill / spillTimer / spillGap`), contact and its exclusions, the pogo.
 - `EnemyState` is ONE flat record for all kinds (plain JSON; a field a kind does not use keeps its
   start value). `homeX, homeY` = the centre of its box at the start, for every kind. The state
-  version is 16 (enemies.test pins it).
+  version is 17 (enemies.test pins it). `KindRules.blocks` (optional): a blow glances off (the burrback's
+  braced shell): the framework fires `enemyBlock`, takes nothing, and the slash is spent on it.
 - Scene data: `enemies` is a Zod union on `kind`; burrbacks first, lampwings after (the burrback
   grove tests index the first six). `EnemySpawn.y` means feet for a burrback, home centre for a lampwing.
 - No `Math.sin` in the sim: the lampwing's bob is a two-parabola wave (`wave()`), its wander a hash
@@ -31,6 +32,47 @@ re-form if a fade just ended → `updatePlayer` (her slash is resolved inside it
 enemies stood) → `updateEnemies` (move, modes, flinch; returns who touches her) → contact →
 `hurtPlayer` → `trackSafeGround` → pods → pickups. So a slash and a touch on the same frame: the slash
 wins (the creature is staggered and harmless before contact is tested).
+
+## The burrback's ram (playtest 4: "nothing pushes back; stand at reach and cut kills any of them in 3 cuts")
+The rule in one line: **stand and mash loses, read the tell and punish wins.**
+- **Brace** (`mode: 'windup'`, `enemyWindup {dir, frames 26, px 180, speed 10}`): she is in front of it (on the
+  side it faces), on its ground (feet from 56 over to 8 under its own), within 130 px box to box
+  (`strikePx`), nothing solid between. It stands, shell forward, for 26 frames (`windupFrames`, 0.43 s:
+  the tell), out of a walk, a rest, a turn or a flinch.
+- **Ram** (`charge`, `enemyCharge`): 180 px (`chargePx`) straight on at 10 px/f (18 frames; her run is 9.6).
+  Walls, the brink of a ledge (it never falls) and a lit lantern's ground stop it. Its own range does not.
+- **Spent** (`recover`, `enemyRecover {cause: spent|wall|ledge|lantern|touch, frames 45, cooldown 150}`):
+  it stands 45 frames, open to every cut, **and its touch does nothing** (her opening: she may land on
+  it). It will not brace again for 150 frames after that (`strikeCooldown`; `strikeCd` counts both).
+- **Braced** (`enemies[i].braced`: the windup and the ram), **a forward cut from its front glances off**
+  (`enemyBlock`: no damage, no stagger; she holds 3 frames and is thrown back ~27 px; the slash is spent).
+  From behind, or a down slash from above (the pogo), the blow lands in full and breaks the ram.
+- **Cut, it answers**: a blow that lands staggers it as ever; as the stagger ends it comes round to her if
+  she is behind it (`enemyTurn` cause `hit`, no pause; within 320 px) and braces at once if she is in front
+  within 150 px (`provokedPx`). So cut 1 lands, cut 2 and the finisher glance off, and the ram arrives:
+  the masher is hit on frame ~55-70 of her mashing, whichever side she started from.
+- **Its ram hits her**: it bounces back off her (the old 41 px recoil), turns away and stands spent
+  (`enemyRecover` cause `touch`). Her 70 frames of safety cover its 45: she can cut it down then and
+  there (a masher does: hit once, then kills it; 1 hit per burrback in every trace, the test allows 2).
+- **What it never does**: brace at one who stands outside its own range (`radius`) unless she has just
+  cut it (a landing beside its patch stays safe: the arrival audits hold); brace at one with a solid
+  lower than 136 px over her ground (`strikeHeadroomPx`: she could not jump it. The doorway under trunk
+  A is 112); brace while calmed, in a lit lantern's sanctuary, while she kindles, after `gather`.
+- **A cut ends a calm** (`e.calm = 0` on any blow that lands): what she cuts is awake again. Without it
+  every burrback within 900 px of a lantern she had just lit was a free kill for two seconds, which is
+  exactly when a naive player reaches burr-path and burr-rise.
+- **The answers**: hop it (any jump clears it: 34 px tall, it passes under in 9 frames) and cut it from
+  behind or spent; step back out of its 180 px and come in again; pogo it (a down slash lands on a braced
+  one); or bait the ram and cut it during the 195 frames it cannot brace.
+- Numbers tried: knockback x1.5 (45 px a cut) broke a standing chain (the finisher whiffed); x1.25 (32 px,
+  102 for the finisher) keeps cut, cut, finisher connected from a start within 65 px. A ram leashed to its
+  range let her mash it from the range's edge (her own block recoil carried her out of it); a spent
+  creature whose touch hurt punished the hop that the tell asks for.
+- Pilots (`burrback-ram.test.ts`; live in the built app with real key events, the same numbers): the
+  **masher** (walks up, stands, mashes) takes exactly 1 hit at burr-path, burr-shaft and burr-rise and kills
+  each in ~100-115 frames; the **reader** (15 frames after the tell, a 12-frame hop over it, then cuts)
+  takes none, in the same time. `RAM_TRACE=1` prints the timelines.
+- `burrback.strikePx = 0` switches the ram off (the older rule tests do: `noRam()`).
 
 ## The burrback
 - Scene data `enemies: [{id, kind: 'burrback', x, y, facing}]`, `x, y` = feet centre. Validated: unique
@@ -65,10 +107,11 @@ wins (the creature is staggered and harmless before contact is tested).
   (traced in the grove: frames 21, 409, 865; live 128, 753) instead of every 70 frames (the moment
   her safety ran out, it was still on her). Her knockback (7 / 7) did not need raising.
 - Hit by a slash (once per slash, `hitBy`): loses the step's `power` (1, 1, 2). Held for the same
-  hitstop as her (2 / 2 / 3: `enemies.hitstopFrames` + the step's bonus), then `hurt` for 14 frames
-  while the shove plays: `knockVx` = the slash's `knockback` (6 / 11 px/f) fading 1 per frame = 21 px
-  for a cut, 66 for the finisher, along a forward cut; an up or down cut shoves it sideways away from
-  her at half strength. The shove stops at walls and at the brink of a ledge (at most `teeterPx` 10 of
+  hitstop as her (**4 / 4 / 7**: `enemies.hitstopFrames` + the step's `hitstopFoe`; 2 on a pogo), then
+  `hurt` for 14 frames while the shove plays: `knockVx` = the slash's `knockback` x `knockScale` 1.25
+  (**7.5 / 13.75 px/f**) fading 1 per frame = **32 px for a cut, 102 for the finisher** (it was 21 / 66:
+  "nothing is felt"), along a forward cut; an up or down cut shoves it sideways away from her at half
+  strength. The shove stops at walls and at the brink of a ledge (at most `teeterPx` 10 of
   it hangs over; `teeter` = that side until it walks again; it then turns round and comes back).
 - A full chain kills on the finisher; finisher + one cut kills; three pogo bounces kill.
 - Death: `mode: 'dead'`, still shoved, body removed (`gone`) 30 frames after the hitstop. It spills 4
@@ -99,7 +142,9 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
   0.16 px/f on an 84-frame cycle. It stays inside its radius (tested for a minute, every grove one).
 - **Notice**: her body centre within 260 px of its centre AND a clear segment between the two
   (solids block, one-ways do not) AND she is lit (not faded) AND inside its leash. Then `curious`
-  30 frames: it turns to her, brakes, rises 0.5 px/f (13 px): the tell (`enemyNotice`). Then `pursue`.
+  **36 frames** (it was 30): it turns to her, brakes, rises 0.5 px/f: the tell (`enemyNotice`). Then `pursue`.
+  **Its touch does nothing in the first 20 frames of the tell** (`noticeSafeFrames`; playtest 4: lamp-f3
+  hit 0.2 s after its tell, as she jumped up into it). A hit never lands sooner than 0.35 s after the tell.
 - `pursue`: toward her body centre at up to 2.2 px/f with acceleration 0.075 px/f²: 30 frames to
   top speed, 60 to reverse, so it arcs and overshoots ~30 px and she can step round it. Her run is
   9.6, her glide 10.56 along and 4.8 down: **it never catches a hero who moves away**; it reaches
@@ -117,12 +162,14 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
   her: 5 px/f away from her centre, braking at 0.14 (30-60 px), and gives up (`touch`). So hit to hit
   is ~240 frames, not the burrback's 70. Chosen: the i-frames end long before it is back, so a second
   hit is never "it was still inside me".
-- **Harmless through its whole tumble** (16 frames + hitstop; the burrback: 8 of 14). Reason: the
+- **Harmless through its whole tumble** (**24 frames** + hitstop; the burrback: 8 of 14; it was 16:
+  a glider who cut `lamp-sky` from the end of her reach met it again exactly as it righted itself, 9 of
+  24 flights; 24 + 4 frames is 290 px of glide, more than her reach and its shove). Reason: the
   glide. A gliding hero cannot stop; with 8 safe frames a mid-glide cut was always followed by
   flying into the thing she had just cut (traced: hurt on the first unsafe frame). Now one cut on the
   way in lets her fly on through it, which is the answer the design asks for.
-- **Hits**: 2 hp. cut + cut, the finisher alone (power 2), or pogo + pogo kill. Hitstop as ever (2 / 2
-  / 3). Knockback = the slash's `knockback` x 1.1 **along the cut** (forward: sideways; up cut: up;
+- **Hits**: 2 hp. cut + cut, the finisher alone (power 2), or pogo + pogo kill. Hitstop as the burrback's
+  (4 / 4 / 7; 2 on a pogo). Knockback = the slash's `knockback` x 1.1 **along the cut** (forward: sideways; up cut: up;
   down cut: down), fading 0.75 a frame: 32 px in 9 frames for a cut (the burrback: 21), 104 for the
   finisher (it is dead then: the body flies). Stops at solids, the canopy, the water. `hitDir` is
   still the side (-1 / 1), as for the burrback.
@@ -180,6 +227,9 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
   rest makes her whole: resting is the heal now.
 - Kept: two thirds of her glints (the rest lies in the cluster), open pods, dead enemies, lit lanterns. Reset: every living enemy, to its start with full hp.
 - With a lantern lit she re-forms at the lit lantern she last stood at instead (goal.md), whatever is near it.
+- **`enemyReset {id, kind, x, y, fromX, fromY, hp, hpMax, healed}`** right after `reform` / `spawn`, one for
+  each LIVING creature that was hurt or away from its start (none for one that stood whole at home):
+  playtest 4 "burrbacks heal to full when she fades; not shown".
 - **Last safe ground** (`player.safeX/safeY`, feet centre): updated every frame once she has been, for
   30 frames in a row, grounded in mode `normal`, in control, with her centre over a solid that is not
   tagged `pool` (so not on a one-way branch, not in the pool), and no living enemy within 200 px of
@@ -217,10 +267,17 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
     `landed`: the dead body lies on something. `radius`: its territory.
   - A hit is `hitFrame`; the tumble is `mode: 'hurt'` with `knockVx / knockVy` fading; a kill is
     `mode: 'dead'` (the body then moves by `vx, vy` each step until `gone`).
-- Events (enemy events: `x, y` = centre of its box): `enemyTurn {id, kind, dir, cause: ledge|wall,
+- **Burrback's ram** (above): `mode` `windup | charge | recover` as well; `timer` = frames left of
+  `windup` (26) and `recover` (45); `braced` (shell forward: windup + charge); `chargeLeft` (px left of the
+  ram, 180 from the brace); `strikeCd` (frames until it may brace again). `vx` = +-10 in the ram, the
+  bounce off her inside `recover`. `stride` counts the ram's px too (legs).
+- Events (enemy events: `x, y` = centre of its box): `enemyWindup {id, kind, dir, frames, px, speed}`,
+  `enemyCharge {dir, px, frames}`, `enemyRecover {dir, cause, frames, cooldown}`, `enemyBlock {hitX, hitY,
+  facing, slash, dir (the cut's way), step, hitstop, recoil, mode, frames}`, `enemyReset` (after a
+  re-form), `enemyTurn` cause `hit` (frames 0); `enemyTurn {id, kind, dir, cause: ledge|wall,
   frames}`, `enemyAlert {id, kind, facing, dir (her side), cause: land|slash, frames}` (burrback);
   `enemyNotice {id, kind, x, y, dir (its new facing = her side), frames (30)}`, `enemyGiveUp {id,
-  kind, x, y, facing, cause: far|lost|tired|dark|touch, frames (60, the rest)}` (lampwing);
+  kind, x, y, facing, cause: far|lost|tired|dark|touch, frames (60, the rest)}` (lampwing; `enemyNotice.frames` is 36 now);
   `enemyHit {id, kind, facing, slash, dir, power, hpLeft, hpMax, knockback, hitstop, frames}`,
   `enemyDie {..., value, glintFrames, stagger, frames}` (lampwing: `knockback` = 6.6 / 12.1, the
   shove goes along `slash`; `frames` 16 / 40); `slashHit` / `impact` fire for enemies too, `target:
@@ -233,7 +290,7 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
 - `hurt {x, y, dir, hp, hpMax, damage, source: {kind, id}, hitX, hitY, stagger, invuln}`, `fade {x,
   y, frames}`, `reform` (above).
 
-## Where the burrbacks are (4)
+## Where the burrbacks are (6: three on the critical path)
 | id | feet x, y | surface (its box's range over a minute) | why |
 |---|---|---|---|
 | burr-bank | 200, 1088 | left bank 0-384: **0-288** (wall, lip) | guards the great glint on the bank |
@@ -241,10 +298,13 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
 | burr-ledge | 2936, 448 | the high ledge 2816-...: **2912-3010** (`radius` 48: a pacing guard) | by pod-ledge (3050), the big one. East of 2976 the ledge is a branch she comes up through from the well (the bark of trunk A, her swing reaches 3015-3200): with its old range (to 3232) it stood on her as she rose through it |
 | burr-root | 4476, 1280 | between the root and the right rise: **4340-4608** (`radius` 110; the rise's wall); **4340-4456** once `lamp-root` (4566) is lit | under the right branch and its pod; the creature that shows a lit lamp's safe ground (goal.md). Playtest 3: it hit all three runs coming off the root (its patrol started at 4160, under the landing at 4283). Now 180 px off the root's foot |
 
+| **burr-shaft** | 3450, 1280 | the shaft floor: **3378-3522** (`radius` 46) | playtest 4: guards `pod-shaft` and the way to trunk B's foot (`great-arch`). 50 px inside the shaft from the doorway (in the doorway she cannot jump: it does not brace at her there), 62 px short of trunk B's bark where she stands to start the climb. A 256 px arena with a wall each side: its ram always ends at a wall, a wall kick clears it |
+| **burr-rise** | 5010, 1088 | the right rise between `lamp-rise` and the heart: **4914-5106** (`radius` 70; from 4970 once the lamp is lit) | playtest 4: the walker's last fight, on 550 px of flat ground. 140 px past where the stair from the summit sets her down (4770), 58 px short of the heart's box. `pod-row-1` (5060) is in its patch. A glider who lands on the far bluff comes to the heart from the east and never meets it: her encounter is `lamp-sky` |
+
 - **`radius` on a burrback** (scene data, optional, 40-2000): its box centre stays within that of where it
   started, where its ground would let it go further; the end of the range turns it like a wall (`enemyTurn`
   cause `wall`, 24 frames). burr-path has one (above).
-- **No burrback on the terrace** (burr-rise is gone, 2026-10-14): every way off the bluff's east lip comes
+- **No burrback on the terrace** (the old burr-rise there is gone, 2026-10-14; the name is the rise's now): every way off the bluff's east lip comes
   down somewhere on it (a walk off 170 px out, a tap jump 300, a jump held from the branch 200-230, a held
   run-off glides its whole length), so no patrol there was fair, like the far ledge. A sixth ground with
   the same problem is the spawn ground: a patrol that reaches the first lantern walks through the spawn
@@ -267,21 +327,26 @@ jump from the root's lip INTO its patrol (lands 4336-4473: 27 of 60; she sees it
 while `lamp-root` is dark (its walk has to reach the lamp, which stands at that wall).
 
 Landing audit (`tests/unit/burrback-lips.test.ts`: five minutes, with her standing under each lip in
-turn): no burrback box ever enters 1856-1952 (out of the pool), 3104-3200 (onto the terrace from the
-east), 288-384 (onto the bank), 2816-2912 (F5 -> high ledge). The pool's left side has no burrback at all.
+turn): no burrback box ever enters 1856-1952 (out of the pool), the whole terrace, 288-384 (onto the
+bank), 2816-2912 (F5 -> high ledge), the well and the doorway (3072-3340), trunk B's foot (3540-3744), the
+rise where the stair sets her down and its lamp (4608-4910), the heart and the ground east of it
+(5164-5472), the far bluff's top. The pool's left side has no burrback at all. (A ram can carry one out
+of its patch, but it only braces at one who is inside the patch or has cut it.)
 
 None on the spawn ground (384-1536: the whole run would be its patrol, the spawn included, and the
-close-up shots start there), none under the trunks (the wall-slide close-ups start at 3456, 1280),
-none on the right rise (the pogo row), none on the far ledge. `?nopickups` removes the enemies too (clean plates).
+close-up shots start there), none on the terrace, none on the far bluff's top. `?nopickups` removes the
+enemies too (clean plates; the close-ups at 3456, 1280 are in burr-shaft's patch otherwise).
 
-## Where the lampwings are (5)
+## Where the lampwings are (6)
 | id | home x, y | radius | where | why |
 |---|---|---|---|---|
 | lamp-glade | 800, 690 | 100 | over F1, in the glade | the first one met: it sees her as she jumps from the bank and comes down to her on F1, where she has footing |
-| lamp-f3 | 1290, 480 | 80 | over the F2 -> F3 gap | above the jump's arc (a plain jump passes 20-75 px under it); follows her onto F3 and its pod |
+| lamp-f3 | **1470, 420** | 60 | high over F3's middle | playtest 4: at (1290, 480) it sat IN the arc of the F2 -> F3 jump (hit 0.2 s after its tell, twice). Now 90 px east of that arc: the jump is noticed, and it comes down to her on F3's 256 px of footing. A hero standing under it on F3 is noticed too (244 px) |
 | lamp-ledge | 2700, 150 | 90 | over the F5 -> high ledge gap | a plain jump passes just under it (a double jump meets it); comes down to the ledge with burr-ledge and the big pod; the mid-glide kill off trunk A |
 | lamp-glide-1 | 4620, 200 | 60 | under the summit glide line. **Not at (4470, 270)**: a held jump off the bough's end or the catch branch's end (the walker's road east since playtest 3) falls through (4460-4500, 250-350) before the wings open, and it sat there (hit 55 of 60, both). At 4620, 200 both arcs pass 140+ px under it (0 of 60), nothing on the bough, the catch branch, the right branch or F6 is noticed, the full summit glide passes 300 px over it | the first bounce of the pogo chain |
 | lamp-glide-2 | 4900, 250 | 60 | 280 px on (the pogo chain still holds: lampwing-pilot) | the second bounce; and the far lantern's guard: 646 px from it, inside its leash (520) + the sanctuary edge, so it follows the summit glide (which passes 200 px over it) to the lantern and gives up at the light. Not nearer: at (4960, 330) it noticed her on F7 |
+
+| **lamp-sky** | 5180, 105 | 50 | ON the summit glide's line (her body passes x 5180 at y ~107) | playtest 4: the crossing's encounter. She sees it 1.8 s ahead; it notices her 230 px out and a flight that only holds the button flies into it 21 frames after its tell (22 of 24 start times). **One forward cut on the way in, wings open, and she flies on through its tumble** (24 of 24 untouched), or she closes her wings under it. More than its sight east of the pogo chain's second bounce, so the chain does not wake it; a jump on F7 does |
 
 - None over the pool: `glide.test.ts` dives into it from (1696, 900) and anything within ~300 px of
   that column meets her. None near the spawn ground or under the trunks (the close-up shots).

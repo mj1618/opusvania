@@ -22,7 +22,17 @@ const SceneSchema = z
     height: int.positive(),
     spawn: z.object({ x: int, y: int }),
     ceilingY: int.optional(),
-    solids: z.array(z.object({ tag: TAG, x: int, y: int, w: int.positive(), h: int.positive() })),
+    edgeKick: z.boolean().optional(),
+    solids: z.array(
+      z.object({
+        tag: TAG,
+        x: int,
+        y: int,
+        w: int.positive(),
+        h: int.positive(),
+        kick: z.boolean().optional(),
+      }),
+    ),
     oneWays: z.array(z.object({ tag: TAG, x: int, y: int, w: int.positive() })),
     pickups: z
       .array(z.object({ id: z.string().min(1), kind: z.enum(['glint', 'great']), x: int, y: int }).strict())

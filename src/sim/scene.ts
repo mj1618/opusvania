@@ -14,6 +14,11 @@ export interface SolidRect {
   w: number;
   h: number;
   tag: SceneTag;
+  /**
+   * `false`: its faces give no wall slide and take no wall kick (she falls past them as past open
+   * air, and is still stopped by them). Default: every face is a climb.
+   */
+  kick?: boolean;
 }
 
 /** A one-way platform: a line at `y` that only blocks a body falling onto it. Down+Jump drops through. */
@@ -95,6 +100,11 @@ export interface Scene {
    * eases to a stop under it: `tuning.ceiling`). Absent = the top is open all the way.
    */
   ceilingY?: number;
+  /**
+   * `false`: the scene's left and right edges give no wall slide and take no wall kick (they lead
+   * nowhere). Default: they are walls like any other.
+   */
+  edgeKick?: boolean;
   solids: SolidRect[];
   oneWays: OneWay[];
   /** Collectibles, in a fixed order: `GameState.pickups.timers` is indexed like this array. */

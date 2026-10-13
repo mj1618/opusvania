@@ -26,8 +26,8 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
 | next slash from (`cooldownFrames`) | 17 | 19 | 27 |
 | fwd area: reach x height | 110 x 88 | 110 x 88 | 135 x 108 |
 | up area: reach from centre x width | 124 x 100 | 124 x 100 | 144 x 120 |
-| `power` / extra hitstop | 1 / 0 | 1 / 0 | 2 / +1 |
-| knockback for targets, her own recoil | 6, 3 | 6, 3 | 11, 4 |
+| `power` / hitstop on a pod, on a creature | 1 / 2, 4 | 1 / 2, 4 | 2 / 3, 7 |
+| knockback for targets, her own recoil (pod, creature) | 6, 3, 4 | 6, 3, 4 | 11, 4, 6 |
 | lunge (px/f at the start -> px in all) | 3 -> 9 | 3 -> 9 | 5.5 -> 16 |
 | air hang frames | 4 | 4 | 6 |
 
@@ -35,9 +35,11 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
   again. The chain is alive for `comboWindowFrames` (14) after the previous slash's cooldown ends
   (so the next slash must start at most `cooldown + 13` frames after the last one started); a pause
   starts over at 1. Hitstop frames do not count (her clocks stand still).
-- Mashing: slashes start at 0, 17, 36, 63, 80, 99, ... (steps 1 2 3 1 2 3). Blows land at 1, 18, 39:
+- Mashing into the air: slashes start at 0, 17, 36, 63, 80, 99, ... (steps 1 2 3 1 2 3). Blows land at 1, 18, 39:
   da, da, DUM. The whole chain is 63 frames (1.05 s) press to next chain; the finisher's hit is 0.65 s
-  after the first press.
+  after the first press. On a creature every hit adds its hitstop: blows at 1, 22, 47 (0.78 s), and a
+  scripted press has to come a hitstop later too (`A1 .20 A1 .22 A1`, not `.16 / .18`: a press is
+  good for 8 of HER frames and the cooldown now ends 4 later).
 - **A down slash is always the step-1 blow** (same area and timing whatever the chain), never a
   finisher, and leaves the chain where it was (it only refreshes the window). Pogo timing must never
   change: the finisher's 3-frame wind and 27-frame recovery would break the 32-frame pogo rhythm.
@@ -63,11 +65,19 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
   jump. None on the down slash.
 - **Recoil** on a hit: `kickX` = the step's `recoil` px/f against a fwd slash, fading 1 per frame (6 px,
   10 on the finisher), on top of `vx`. Up, airborne: `vy += 2`. The lunge and the recoil meet: standing
-  at a pod, a cut nets about zero, so she does not creep into it.
-- **Hitstop**: `player.hitstop` frames = the target's (`pods.hitstopFrames` 2, `enemies.hitstopFrames`
-  2) + the step's bonus: 2 / 2 / 3 on pods and on enemies (an enemy is held for the same frames). For those steps `updatePlayer` returns early: no movement, no player timers,
-  `attackFrames` / `motionFrames` / `contactFrames` stand still, presses still latch. Everything else
-  (frame count, pickups, pod glints) and render time keep running. Plain state: replays hash the same.
+  at a pod, a cut nets about zero, so she does not creep into it. **On a creature it is `recoilFoe`**
+  (4 / 4 / 6 px/f: 10 px, 21 on the finisher), so a cut that counts pushes her back a step (net -1, -5).
+  Like the lunge it never takes her off her footing unless she holds that way (`guardLunge`).
+- **Hitstop**: `player.hitstop` frames. Pods: `pods.hitstopFrames` 2 + `hitstopBonus` = 2 / 2 / 3.
+  **Creatures (playtest 4: "2 frames, a 21 px shove: nothing is felt")**: `enemies.hitstopFrames` 4 +
+  `slashN.hitstopFoe` = **4 / 4 / 7**, the creature held as long. **The pogo keeps 2**
+  (`enemies.pogoHitstopFrames`): its rhythm is the bounce and must not change. For those steps
+  `updatePlayer` returns early: no movement, no player timers, `attackFrames` / `motionFrames` /
+  `contactFrames` stand still, presses still latch. Everything else (frame count, pickups, pod glints)
+  and render time keep running. Plain state: replays hash the same.
+- **A cut that glances off a braced burrback** (`enemyBlock`, enemies.md): no hit (`attackHits`, `slashHit`
+  and `impact` do not fire), but she holds 3 frames (`enemies.blockHitstopFrames`) and is thrown back at
+  8 px/f (`blockRecoil`: 36 px less the lunge, about 27). The slash is spent on it.
 - **Pogo** (`assists.pogo`): a `down` slash that hits sets `vy = -15.5` (125 px up in 17 frames),
   refills the air dash, the double jump and the hangs, ends a wall slide. Bounce to bounce is 32 frames
   = 288 px at run speed: space pogo rows 290 px apart.
@@ -102,13 +112,17 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
 | pod-bough | 3850, 170 | sit | 1 | on the summit bough, past the second lantern (was pod-f2) |
 | pod-catch | 4010, 426 | sit | 2 | on the catch branch, where a walker off the bough lands (was pod-f3) |
 | pod-stone | 1500, 1258 | sit | 3 | at the moth-stone's foot, by the pool's lip: cutting it she stands at the first lantern and its ten glints kindle it (goal.md). It was pod-path-2 at 2000 |
-| pod-branch-l | 2176, 1058 | hang | 1 | under the left branch: hop + up slash |
+| pod-branch-l | 2176, 1130 | hang | 1 | under the left branch, on a long stem: **a standing up cut from the path reaches it** (playtest 4: at 1058 it needed a hop + up cut and nobody opened it) |
 | pod-rise | 2570, 938 | sit | 2 | on the bluff's top |
 | pod-ledge | 3050, 426 | sit | 3 | on the branch that joins the high ledge to trunk A, by burr-ledge: the big one at the top of the left route |
-| pod-branch-r | 4470, 946 | hang | 1 | under the right branch: jump + up slash |
-| pod-f6 | 4830, 818 | hang | 2 | under F6, from the right rise: two up slashes in one jump (the hang helps) |
+| pod-branch-r | 4470, 890 | **sit** | 1 | ON the right branch now, in the walker's road east from the summit (it hung under it, 250 px over the ground: out of reach) |
+| pod-f6 | 4830, 930 | hang | 2 | under F6 on a long stem, 30 px west of `lamp-rise`: two standing up cuts from the rise |
 | pod-row-1, 2 | 5060 / 5350, 1066 | sit | 1 | the pogo row on the right rise, 290 px apart, either side of the heart (two since the far bluff stands where the third was) |
-| pod-far | 5690, 426 | sit | 1 | on the far bluff's top, past the third lantern and `great-far` (was pod-row-3) |
+| pod-far | 5690, 746 | sit | 1 | on the far bluff's top (768 now), past the third lantern and `great-far` (was pod-row-3) |
+
+**Hanging pods rule (playtest 4)**: a `hang` pod's bottom is low enough for a standing up cut from the ground
+under it (the up area reaches 164 px over her feet) and 40 px or more over her head (`pods-pilot.test.ts`).
+Nothing in the grove asks for a jump + up cut any more.
 
 ## What render gets
 - Player (`PlayerView`): `attack` (`none|fwd|up|down`), `attackFacing`, `attackFrames` (0 on the slash
@@ -116,8 +130,22 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
   `attackFinisher`, `lungeX` (signed px/f, fading), `hang` (frames left), `hitstop`, `kickX`.
 - `slash {x, y, dir, facing, seq, step, finisher, startup, active, duration, cooldown, lunge, hang}`:
   all step-accurate. `slashHit {x, y (target), dir, facing, target {kind, id}, px, py, pogo, hitstop,
-  step, power, knockback}`. `impact` (above). `slashEnd {dir, hits, reason: done|dash|chain|hurt}`.
+  step, power, knockback}` (`hitstop` = what she is held for: 4 / 4 / 7 on a creature, 2 on a pogo, 2 / 2 /
+  3 on a pod; a burrback's own shove is `enemyHit.knockback`, 7.5 / 13.75 px/f). A blocked cut is
+  `enemyBlock {hitX, hitY, dir, step, hitstop, recoil}` instead of `slashHit`. `impact` (above). `slashEnd {dir, hits, reason: done|dash|chain|hurt}`.
 - Pods: `scene.pods[i].hp` = hpMax; `state.pods.hp[i]` = left (0 = open). Damage stages for the artist:
   `podHit {id, mount, x, y, dir, facing, power, hpLeft, hpMax, value, frames, stagger}` on each hit it
   survives; `podBurst {id, mount, x, y, dir, facing, power, hpMax, total, value, frames, stagger}` on
   the last. In both, `value` glints are now flying: the first lands in `frames`, then every `stagger`.
+
+## Render side (Vesper; detail in character-vesper.md, "Thorn slash")
+- One slash look: a flat cream crescent per cut, locked to her body, whole on the first active frame,
+  gone 5 frames later (6 on the finisher; it holds through hitstop). Cut 1 goes down, cut 2 up, the
+  finisher is cut 1 larger; up arcs overhead, down beneath. The crescent's outer edge is the step's reach
+  for forward cuts; up / down are drawn at 0.88 of the reach and 1.75x the width.
+- Render reads `slash` (to start the stroke), `slashHit` (contact cross + specks at the target's near
+  side, `power` 2 = larger), `enemyBlock` (a clang at `hitX, hitY`), `player.hitstop` (the cut and the
+  crescent hold) and `slashEnd` reason `dash | hurt` (blade home at once). Changing `startupFrames`
+  moves the anticipation (`wind` is authored per stroke in rig.ts `STROKES`: keep them equal); changing
+  hitstop or knockback needs nothing from render.
+- Wanted from the sim, not there: an event when a cut meets terrain (a wall clang).

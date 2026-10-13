@@ -62,7 +62,7 @@ const STOPS: Array<[string, number, number]> = [
   ['trunks', 3050, 1152],
   ['high-ledge', 3000, 448],
   ['right-rise', 4500, 1280],
-  ['far-ledge', 5560, 448],
+  ['far-ledge', 5524, 768],
 ];
 
 const HUES = [

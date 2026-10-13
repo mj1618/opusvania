@@ -172,6 +172,54 @@ describe('movement controller', () => {
     expect(s.state.player.x).toBe(4000 - s.state.player.w);
   });
 
+  it('a scene edge or a solid marked `kick: false` gives no wall slide and takes no kick; every other face does', () => {
+    // (Playtest 4: both of the grove's outer walls took kicks up to the canopy, to nothing.)
+    const kicks = (ev: SimEvent[]) => types(ev).filter((t) => t === 'jump:wall').length;
+    const slides = (ev: SimEvent[]) => types(ev).filter((t) => t === 'wallSlideStart').length;
+    const climb = 'R+J30 R6 .1 R+J30 R6 .1 R+J30 R6 .1 R+J30 R40';
+    // The scene's edge, as ever (no flag): she slides down it and kicks up it.
+    const open = newSim(flatScene());
+    open.place(3960, FLOOR);
+    const a = open.run(climb);
+    expect(slides(a)).toBeGreaterThan(0);
+    expect(kicks(a)).toBeGreaterThanOrEqual(2);
+    // `edgeKick: false`: the same presses are a jump and one double jump; she never slides, and
+    // comes straight back down. It still stops her.
+    const dead = newSim({ ...flatScene(), edgeKick: false });
+    dead.place(3960, FLOOR);
+    let top = FLOOR;
+    let ev: SimEvent[] = [];
+    for (const part of climb.split(' ')) {
+      ev = ev.concat(dead.run(part));
+      top = Math.min(top, feet(dead).y);
+    }
+    expect([slides(ev), kicks(ev)]).toEqual([0, 0]);
+    expect(types(ev).filter((t) => t === 'jump:double')).toHaveLength(1);
+    expect(FLOOR - top).toBeLessThanOrEqual(SHAPE.jumpHeightPx + SHAPE.doubleJumpHeightPx);
+    expect(dead.state.player.x).toBe(4000 - dead.state.player.w);
+    expect(dead.state.player.grounded).toBe(true);
+    // The grace distance does not reach it either: a press beside it in the air is a double jump.
+    const near = newSim({ ...flatScene(), edgeKick: false });
+    near.place(3964, FLOOR);
+    expect(types(near.run('J20 .1 J1'))).toContain('jump:double');
+    // A solid with `kick: false` next to one without: only the plain one is a climb.
+    const walls = flatScene({
+      solids: [
+        { tag: 'trunk', x: 2300, y: 0, w: 100, h: 800, kick: false },
+        { tag: 'trunk', x: 1600, y: 0, w: 100, h: 800 },
+      ],
+    });
+    const r = newSim(walls);
+    r.place(2260, FLOOR);
+    const right = r.run(climb);
+    expect([slides(right), kicks(right)]).toEqual([0, 0]);
+    expect(r.state.player.x).toBe(2300 - r.state.player.w);
+    const l = newSim(walls);
+    l.place(1740, FLOOR);
+    const left = l.run(climb.replace(/R/g, 'L'));
+    expect(kicks(left)).toBeGreaterThanOrEqual(2);
+  });
+
   it('is deterministic and mirror-symmetric', () => {
     const script = 'R20 R+J18 R6 X1 R20 L+J9 .1 L+J14 L30 .20';
     const a = newSim(flatScene());

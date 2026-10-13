@@ -83,8 +83,9 @@ const STATIONS: Array<[prefix: string, x: number, y: number]> = [
   ['shaft-', 3300, 448],
   ['great-bank', 330, 1088],
   ['great-crown', 3260, 448],
-  ['great-arch', 3456, 1280],
-  ['great-far', 5540, 448],
+  // (At trunk B's foot, east of burr-shaft's patch: the middle of the shaft floor is its ground now.)
+  ['great-arch', 3562, 1280],
+  ['great-far', 5540, 768],
   ['great-hang', 1984, 1280],
   ['hollow-', 3780, 1376],
   // (The leap's line is flown in layout-pilot.test.ts; from the terrace under it each is a hop.)
@@ -135,10 +136,10 @@ describe('gathering every glint in the grove', () => {
       });
     }
     // The line in the sky over the right zone: the summit glide (jump, double jump at the top, hold)
-    // gathers all of it in one flight and comes down on the far ledge.
+    // gathers all of it in one flight and comes down on the far bluff's top.
     s.place(3684, 192);
     hold(s, 'R+J28 R1 R+J400');
-    expect(feet(s).y).toBe(448);
+    expect(feet(s).y).toBe(768);
     // Let the last ones arrive.
     s.run(`.${T.greatFrames + 30}`);
     list.forEach((p, i) => {
@@ -147,7 +148,11 @@ describe('gathering every glint in the grove', () => {
     expect(missed).toEqual([]);
     expect(list).toHaveLength(72);
     expect(s.state.pickups.taken).toBe(72);
-    expect(s.state.pickups.count).toBe(96);
+    // (The stations are teleports into creatures' patches and this pilot never fights: if their rams
+    // fade her on the way, a third of the wallet lies where she fell. Gathered is what counts.
+    // (And a lantern she runs past with its price catches behind her now: that is spent, not missing.)
+    const w = s.state.pickups;
+    expect(w.count + w.lost + w.spent).toBe(96);
     expect(pickupsWorth(GROVE, T)).toBe(96);
   });
 

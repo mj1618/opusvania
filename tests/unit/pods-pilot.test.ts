@@ -60,11 +60,12 @@ const STATIONS: Record<string, [x: number, y: number]> = {
   'pod-branch-l': [2400, 1280],
   'pod-rise': [2470, 960],
   'pod-ledge': [3150, 448],
-  'pod-branch-r': [4300, 1280],
+  // (Playtest 4: on the right branch now, in the walker's road east; it hung under it out of reach.)
+  'pod-branch-r': [4300, 912],
   'pod-f6': [4700, 1088],
   'pod-row-1': [4900, 1088],
   'pod-row-2': [5200, 1088],
-  'pod-far': [5560, 448],
+  'pod-far': [5560, 768],
 };
 
 describe('every pod in the grove can be burst', () => {
@@ -82,6 +83,29 @@ describe('every pod in the grove can be burst', () => {
     expect(s.state.pods.burst).toBe(pods.length);
     s.run('.60');
     expect(s.state.pickups.count).toBeGreaterThanOrEqual(podsWorth(GROVE, T.pods));
+  });
+
+  it('a hanging pod hangs low enough for a standing up cut from the ground under it: no jump (playtest 4: none was opened)', () => {
+    const hanging = pods.map((p, i) => [p, i] as const).filter(([p]) => p.mount === 'hang');
+    expect(hanging.map(([p]) => p.id)).toEqual(['pod-branch-l', 'pod-f6']);
+    for (const [p, i] of hanging) {
+      const s = newSim({ ...GROVE, enemies: [] });
+      // The ground straight under it.
+      const ground = GROVE.solids
+        .filter((r) => p.x >= r.x && p.x < r.x + r.w && r.y > p.y)
+        .sort((a, b) => a.y - b.y)[0];
+      if (!ground) throw new Error(`nothing under ${p.id}`);
+      s.place(p.x - 20, ground.y);
+      expect(s.state.player.grounded, p.id).toBe(true);
+      for (let k = 0; k < (p.hp ?? 1); k++) s.run('U+A1 .24');
+      expect(s.state.pods.hp[i], p.id).toBe(0);
+      expect(
+        s.events.some((e) => e.type === 'jump'),
+        p.id,
+      ).toBe(false);
+      // It clears her head by a hand (she walks under it, it is not in her way).
+      expect(ground.y - 80 - (p.y + R), p.id).toBeGreaterThanOrEqual(40);
+    }
   });
 
   it('the stations on high surfaces are reached by the route pilots', () => {

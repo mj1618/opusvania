@@ -371,6 +371,8 @@ describe('the tally in the summary', () => {
     // One kill (not by the finisher: 4 glints), one pod, one glint, one great glint.
     s.place(2200, FLOOR);
     foe(s, 0).hp = 1;
+    // (It has braced at her by the time the cut lands: the test's kill is from behind its shell.)
+    s.tuning.burrback.strikePx = 0;
     s.run('R+A1 .60');
     expect(foe(s, 0).mode).toBe('dead');
     s.place(3010, FLOOR);
@@ -401,6 +403,8 @@ describe('the tally in the summary', () => {
       deaths: 0,
     });
     expect(g?.glints).toBe(s.state.pickups.count + s.state.pickups.spent);
+    // What she still carries is the offering (it goes into the heart during the hold).
+    expect([g?.offered, g?.offerTier]).toEqual([s.state.pickups.count, 0]);
     expect(s.state.goal.ending).toMatchObject({
       pods: 1,
       podsTotal: 2,

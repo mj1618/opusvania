@@ -41,6 +41,13 @@ function still() {
   const t = cloneTuning(defaultTuning);
   t.burrback.speed = 0;
   t.burrback.alertPx = 0;
+  t.burrback.strikePx = 0;
+  return t;
+}
+/** The default tuning with the ram off: the tests here are about how it walks, flinches and takes a blow (the ram: burrback-ram.test.ts). */
+function noRam() {
+  const t = cloneTuning(defaultTuning);
+  t.burrback.strikePx = 0;
   return t;
 }
 /** Stands her next to a motionless burrback at 2200 (box 2174-2226), facing it, in reach of a cut. */
@@ -54,7 +61,7 @@ describe('burrback: patrol', () => {
   const plat = { tag: 'floating' as const, x: 1000, y: 600, w: 400, h: 48 };
 
   it('a range of its own (`radius`): on open ground it keeps within it of where it started, turning as at a wall', () => {
-    const s = newSim(scene([{ ...burr(2000, 1), radius: 120 }]));
+    const s = newSim(scene([{ ...burr(2000, 1), radius: 120 }]), noRam());
     let minX = 9e9;
     let maxX = -9e9;
     const causes = new Set<string>();
@@ -76,13 +83,13 @@ describe('burrback: patrol', () => {
     frames(s, '.600', () => {});
     expect(foe(s).x + foe(s).w).toBeLessThanOrEqual(2146);
     // Without one it has the whole floor.
-    const free = newSim(scene([burr(2000, 1)]));
+    const free = newSim(scene([burr(2000, 1)]), noRam());
     frames(free, '.2400', () => {});
     expect(foe(free).x).toBeGreaterThan(2400);
   });
 
   it('walks its platform, turns at both ledges with a pause, and never leaves it', () => {
-    const s = newSim(scene([burr(1200, 1, 600)], { solids: [plat] }));
+    const s = newSim(scene([burr(1200, 1, 600)], { solids: [plat] }), noRam());
     const turns: Array<[number, number, string]> = [];
     let minX = 9e9;
     let maxX = -9e9;
@@ -137,7 +144,7 @@ describe('burrback: patrol', () => {
 
   it('rests now and then on a fixed schedule of its own (no RNG): same every run, different per id', () => {
     const rests = (id: string) => {
-      const s = newSim(scene([burr(2000, 1, FLOOR, id)]));
+      const s = newSim(scene([burr(2000, 1, FLOOR, id)]), noRam());
       const rng0 = s.state.rng;
       const out: Array<[number, number]> = [];
       let walked = 0;
@@ -167,7 +174,7 @@ describe('burrback: patrol', () => {
 
 describe('burrback: the flinch', () => {
   it('she lands or slashes within reach of its senses: it stops for a beat, then carries on', () => {
-    const s = newSim(scene([burr(2200)]));
+    const s = newSim(scene([burr(2200)]), noRam());
     s.place(2060, FLOOR);
     const ev = s.run('J1 .50');
     const a = of(ev, 'enemyAlert');
@@ -183,7 +190,7 @@ describe('burrback: the flinch', () => {
     // It fired on the landing frame; 18 frames of standing, then walking again.
     const landed = ev.findIndex((e) => e.type === 'land');
     expect(ev.findIndex((e) => e.type === 'enemyAlert')).toBe(landed + 1);
-    const t = cloneTuning(defaultTuning);
+    const t = noRam();
     const q = newSim(scene([burr(2200)]), t);
     q.place(2050, FLOOR);
     q.run('L+A1');
@@ -194,14 +201,14 @@ describe('burrback: the flinch', () => {
     q.run('.1');
     expect(foe(q).mode).toBe('walk');
     // Mashing does not hold it there: one flinch per cooldown.
-    const m = newSim(scene([burr(2600, 1)]));
+    const m = newSim(scene([burr(2600, 1)]), noRam());
     m.place(2500, FLOOR);
     const mash = of(m.run(Array.from({ length: 30 }, () => 'L+A1 L1').join(' ')), 'enemyAlert');
     expect(mash.length).toBeLessThanOrEqual(2);
   });
 
   it('too far away, nothing', () => {
-    const s = newSim(scene([burr(2200, 1)]));
+    const s = newSim(scene([burr(2200, 1)]), noRam());
     s.place(1900, FLOOR);
     expect(of(s.run('J1 .50 L+A1 .20'), 'enemyAlert')).toEqual([]);
   });
@@ -209,7 +216,7 @@ describe('burrback: the flinch', () => {
 
 describe('contact: Vesper can be hurt', () => {
   it('touching a burrback costs one light, throws her back and up, and makes her safe for 70 frames', () => {
-    const s = newSim(scene([burr(2200)]));
+    const s = newSim(scene([burr(2200)]), noRam());
     s.place(2100, FLOOR);
     expect([s.state.player.hp, s.state.player.hpMax, H.max]).toEqual([4, 4, 4]);
     let hurtAt = -1;
@@ -380,12 +387,13 @@ describe('contact: Vesper can be hurt', () => {
 });
 
 describe('burrback: taking hits', () => {
-  it('three hit points: cut, cut, finisher kills it; hitstop 2 / 2 / 3; it is held, shoved, staggered', () => {
+  it('three hit points: cut, cut, finisher kills it; hitstop 4 / 4 / 7; it is held, shoved, staggered', () => {
     const s = duel();
     const log: string[] = [];
     const stops: number[] = [];
     const xs: number[] = [];
-    frames(s, 'A1 .16 A1 .18 A1 .60', (ev, f) => {
+    // (Presses as a masher's fall: each a hitstop later than the cooldown alone.)
+    frames(s, 'A1 .20 A1 .22 A1 .70', (ev, f) => {
       for (const e of ev) {
         if (e.type === 'slashHit') {
           expect(e.target).toEqual({ kind: 'burrback', id: 'b2200' });
@@ -402,33 +410,40 @@ describe('burrback: taking hits', () => {
       }
     });
     expect(log).toEqual([
-      '1 hit p1 hp2/3 kb6 d1',
+      '1 hit p1 hp2/3 kb7.5 d1',
       '1 impact p1',
-      '20 hit p1 hp1/3 kb6 d1',
-      '20 impact p1',
-      '43 die p2 v6 kb11 d1',
-      '43 impact p2',
+      '22 hit p1 hp1/3 kb7.5 d1',
+      '22 impact p1',
+      '47 die p2 v6 kb13.75 d1',
+      '47 impact p2',
     ]);
-    expect(stops).toEqual([2, 2, 3]);
-    // The shove: 6 px/f fading by 1 = 21 px for a cut, 66 for the finisher.
-    expect((xs[1] as number) - (xs[0] as number)).toBe(21);
-    expect(foe(s).x - (xs[2] as number)).toBe(66);
+    expect(stops).toEqual([4, 4, 7]);
+    expect(stops).toEqual([
+      EN.hitstopFrames,
+      EN.hitstopFrames,
+      EN.hitstopFrames + defaultTuning.slash3.hitstopFoe,
+    ]);
+    // The shove: the slash's 6 px/f x 1.25 fading by 1 = 32 px for a cut, 102 for the finisher (11 x 1.25).
+    expect((xs[1] as number) - (xs[0] as number)).toBe(32);
+    expect(foe(s).x - (xs[2] as number)).toBe(102);
     const e = foe(s);
     expect([e.mode, e.hp, e.gone, e.hitDir, e.hitPower]).toEqual(['dead', 0, true, 1, 2]);
   });
 
   it('a hit: held for the hitstop, then 14 frames of stagger sliding to a stop, then it walks on', () => {
-    const s = duel(cloneTuning(defaultTuning), 2110);
+    const s = duel(noRam(), 2110);
     const modes: string[] = [];
     const xs: number[] = [];
     frames(s, 'A1 .22', () => {
       modes.push(foe(s).mode);
       xs.push(foe(s).x);
     });
-    // Hit on frame 1. Held on frames 1-3 (as long as she is), sliding from 4, walking again at 17.
+    // Hit on frame 1. Held on frames 1-5 (as long as she is), sliding from 6, walking again at 19.
     expect(modes.indexOf('hurt')).toBe(1);
     expect(modes.indexOf('walk', 1)).toBe(1 + EN.hitstopFrames + B.hurtFrames);
-    expect(xs.slice(1, 11)).toEqual([0, 0, 0, 6, 11, 15, 18, 20, 21, 21].map((d) => (xs[1] as number) + d));
+    expect(xs.slice(1, 15)).toEqual(
+      [0, 0, 0, 0, 0, 8, 14, 20, 24, 28, 30, 32, 32, 32].map((d) => (xs[1] as number) + d),
+    );
     expect(foe(s).facing).toBe(-1);
     expect(foe(s).hitFrame).toBe(1);
   });
@@ -436,7 +451,7 @@ describe('burrback: taking hits', () => {
   it('finisher first, then one cut: dead on the cut, and it spills 4 instead of 6', () => {
     const s = duel();
     // Two cuts into the air behind her, the finisher into it, then a fresh chain's first cut.
-    const ev = s.run('L+A1 .16 L+A1 .18 R+A1 .26 R8 A1 .80');
+    const ev = s.run('L+A1 .16 L+A1 .18 R+A1 .32 R8 A1 .80');
     expect(of(ev, 'enemyHit').map((e) => [e.power, e.hpLeft])).toEqual([[2, 1]]);
     expect(of(ev, 'enemyDie').map((e) => [e.power, e.value, e.stagger])).toEqual([[1, 4, 5]]);
     expect(s.state.pickups.count).toBe(4);
@@ -457,7 +472,9 @@ describe('burrback: taking hits', () => {
     expect(bounces).toBe(3);
     expect([foe(s).mode, s.state.player.hp]).toEqual(['dead', 4]);
     // From straight above the shove is sideways and half as hard.
-    expect(of(s.events, 'enemyHit')[0]?.knockback).toBe(3);
+    expect(of(s.events, 'enemyHit')[0]?.knockback).toBe(3 * B.knockScale);
+    // The pogo keeps its short beat (the bounce rhythm is what it was).
+    expect(of(s.events, 'slashHit').map((h) => h.hitstop)).toEqual([2, 2, 2]);
   });
 
   it('the glints of a kill are counted exactly once, like a pod: first after 16 frames, then a stagger apart', () => {
@@ -484,7 +501,7 @@ describe('burrback: taking hits', () => {
     s.place(2180, 600);
     foe(s).hp = 9;
     let teetered = false;
-    frames(s, 'A1 .16 A1 .18 A1 .40', () => {
+    frames(s, 'A1 .20 A1 .22 A1 .40', () => {
       if (foe(s).teeter === 1 && foe(s).mode === 'hurt') teetered = true;
     });
     expect(teetered).toBe(true);
@@ -536,7 +553,7 @@ describe('burrback: taking hits', () => {
 
   it('she can simply jump over one: it never blocks the way', () => {
     for (const dir of ['R', 'L'] as const) {
-      const s = newSim(scene([burr(2200, dir === 'R' ? -1 : 1)]));
+      const s = newSim(scene([burr(2200, dir === 'R' ? -1 : 1)]), noRam());
       s.place(dir === 'R' ? 1900 : 2500, FLOOR);
       s.run(`${dir}16 ${dir}+J24 ${dir}40`);
       expect(s.state.player.hp).toBe(4);
@@ -549,7 +566,7 @@ describe('fade and re-form', () => {
   const POOL = { tag: 'pool' as const, x: 2600, y: 760, w: 300, h: 40 };
 
   it('the fourth hit: she fades for 50 frames out of control, then re-forms on the last safe ground with 2 lights, a third of her glints left where she lay', () => {
-    const s = newSim(scene([burr(2600)], {}, [{ id: 'pod', x: 1700, y: FLOOR - 22, mount: 'sit' }]));
+    const s = newSim(scene([burr(2600)], {}, [{ id: 'pod', x: 1700, y: FLOOR - 22, mount: 'sit' }]), noRam());
     // Safe ground is made here: 30 frames standing, far from it. Then a pod, for something to keep.
     s.place(1790, FLOOR);
     s.run('L+A1 .60');
@@ -689,6 +706,34 @@ describe('fade and re-form', () => {
     expect(feet(s)).toEqual({ x: 2000, y: FLOOR });
   });
 
+  it('`enemyReset` says which living creatures went home and what came back to them (for the picture)', () => {
+    const s = newSim(scene([burr(2200), burr(3200, 1, FLOOR, 'far'), burr(600, 1, FLOOR, 'dead')]), still());
+    // One hurt and shoved, one untouched at home, one dead.
+    foe(s, 0).hp = 1;
+    foe(s, 0).x += 40;
+    Object.assign(foe(s, 2), { mode: 'dead', hp: 0, gone: true });
+    s.state.player.hp = 0;
+    s.state.player.faded = 2;
+    const ev = s.run('.3');
+    const reform = ev.findIndex((e) => e.type === 'reform');
+    const resets = of(ev, 'enemyReset');
+    expect(resets).toHaveLength(1);
+    expect(resets[0]).toEqual({
+      type: 'enemyReset',
+      id: 'b2200',
+      kind: 'burrback',
+      x: 2200,
+      y: FLOOR - 17,
+      fromX: 2240,
+      fromY: FLOOR - 17,
+      hp: 3,
+      hpMax: 3,
+      healed: 2,
+    });
+    expect(ev.indexOf(resets[0] as SimEvent)).toBeGreaterThan(reform);
+    expect([foe(s, 0).hp, foe(s, 2).mode]).toEqual([3, 'dead']);
+  });
+
   it('after re-forming she is safe for 90 frames, passes through enemies, and play goes on', () => {
     const s = newSim(scene([burr(2200)]), still());
     s.state.player.hp = 1;
@@ -707,7 +752,7 @@ describe('fade and re-form', () => {
     expect(s.state.player.hp).toBe(H.reformHp);
     // And she can fight.
     s.place(2290, FLOOR);
-    s.run('L+A1 .16 L+A1 .18 L+A1 .40');
+    s.run('L+A1 .20 L+A1 .22 L+A1 .40');
     expect(foe(s).mode).toBe('dead');
   });
 });
@@ -726,13 +771,13 @@ describe('enemies: determinism, symmetry, restart', () => {
     expect(hashState(cloneState(a.state))).toBe(hashState(a.state));
     expect(cloneState(a.state).enemies[0]).not.toBe(a.state.enemies[0]);
     expect(of(a.events, 'hurt').length + of(a.events, 'enemyHit').length).toBeGreaterThan(2);
-    expect(a.state.version).toBe(16);
+    expect(a.state.version).toBe(17);
   });
 
   it('mirror symmetry: a mirrored scene and mirrored inputs give exactly the mirrored fight', () => {
     const W = 4000;
-    const a = newSim(scene([burr(2300, -1, FLOOR, 'x'), burr(1500, 1, FLOOR, 'y')]));
-    const b = newSim(scene([burr(W - 2300, 1, FLOOR, 'x'), burr(W - 1500, -1, FLOOR, 'y')]));
+    const a = newSim(scene([burr(2300, -1, FLOOR, 'x'), burr(1500, 1, FLOOR, 'y')]), noRam());
+    const b = newSim(scene([burr(W - 2300, 1, FLOOR, 'x'), burr(W - 1500, -1, FLOOR, 'y')]), noRam());
     const flip = script.replace(/[LR]/g, (c) => (c === 'L' ? 'R' : 'L'));
     const ma = parseInputScript(script);
     const mb = parseInputScript(flip);
@@ -788,8 +833,15 @@ describe('enemies in the grove', () => {
   // The burrbacks (they come first in the scene's list; the lampwings have lampwing.test.ts).
   const list = (GROVE.enemies ?? []).filter((e) => e.kind === 'burrback');
 
-  it('four burrbacks, validated: on a surface, clear of solids, unique, away from the spawn', () => {
-    expect(list.map((e) => e.id)).toEqual(['burr-bank', 'burr-path', 'burr-ledge', 'burr-root']);
+  it('six burrbacks, validated: on a surface, clear of solids, unique, away from the spawn', () => {
+    expect(list.map((e) => e.id)).toEqual([
+      'burr-bank',
+      'burr-path',
+      'burr-ledge',
+      'burr-root',
+      'burr-shaft',
+      'burr-rise',
+    ]);
     for (const e of list) {
       const d = Math.hypot(e.x - GROVE.spawn.x, e.y - GROVE.spawn.y);
       expect(d, e.id).toBeGreaterThan(300);
@@ -802,9 +854,11 @@ describe('enemies in the grove', () => {
     ])
       expect(list.some((e) => e.x >= (a as number) && e.x < (b as number))).toBe(true);
     expect(list.some((e) => e.y === 1280 && e.x > 384 && e.x < 1536)).toBe(false);
-    expect(list.some((e) => e.y === 1088 && e.x > 4608)).toBe(false);
-    // Nor on the far bluff's top: no patrol can clear its 288 px of the jump from F7.
-    expect(list.some((e) => e.y === 448 && e.x > 5472)).toBe(false);
+    // One on the right rise since playtest 4 (burr-rise, between the lamp and the heart: the walker's
+    // last fight), clear of where the stair sets her down (4770) and of the heart's own ground.
+    expect(list.filter((e) => e.y === 1088 && e.x > 4608).map((e) => e.id)).toEqual(['burr-rise']);
+    // None on the far bluff's top: no patrol can clear its 288 px of the jump from F7.
+    expect(list.some((e) => e.x > 5472)).toBe(false);
     const bad = (enemies: unknown[]) => () => parseScene({ ...GROVE, enemies });
     expect(bad([{ ...list[0], id: 'pod-rise' }])).toThrow(/called/);
     expect(bad([{ ...list[0], y: 1000 }])).toThrow(/surface/);
@@ -815,7 +869,7 @@ describe('enemies in the grove', () => {
     expect(bad([{ ...list[0], facing: 0 }])).toThrow();
   });
 
-  it('each stays on its own surface for a minute, and none ever comes near the spawn or the pogo row', () => {
+  it('each stays on its own surface for a minute, and none ever comes near the spawn', () => {
     const s = newSim();
     s.state.player.invuln = 1e6;
     const lo = list.map(() => 9e9);
@@ -843,6 +897,11 @@ describe('enemies in the grove', () => {
       // burr-root keeps 180 px off the root's foot (`radius` 110; playtest 3: it hit everyone
       // coming off the root) and still walks through the lamp at the rise's foot.
       ['burr-root', 4340, 4608],
+      // burr-shaft paces the shaft floor by pod-shaft (`radius` 46): 50 px clear of the doorway she
+      // comes in by and 62 px short of trunk B's bark, where she stands to start the climb.
+      ['burr-shaft', 3378, 3522],
+      // burr-rise: between lamp-rise (4860) and the heart (its box starts at 5164), `radius` 70.
+      ['burr-rise', 4914, 5106],
     ]);
   });
 });

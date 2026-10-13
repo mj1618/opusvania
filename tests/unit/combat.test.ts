@@ -532,7 +532,8 @@ describe('lumen pods', () => {
     // The pogo row stays one-hit, and the three-hit ones are where she can stand and combo.
     for (const p of pods) if (p.id.startsWith('pod-row-')) expect(p.hp ?? 1).toBe(1);
     for (const p of tough(3)) expect(p.mount).toBe('sit');
-    expect(pods.filter((p) => p.mount === 'hang').length).toBeGreaterThanOrEqual(3);
+    // Two hang (low enough for a standing up cut: pods-pilot); the third came up onto its branch.
+    expect(pods.filter((p) => p.mount === 'hang').length).toBeGreaterThanOrEqual(2);
     for (const p of pods)
       for (const g of GROVE.pickups ?? []) {
         const d = Math.sqrt((p.x - g.x) * (p.x - g.x) + (p.y - g.y) * (p.y - g.y));

@@ -23,14 +23,14 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - `pods()` → `{burst, total, worth, list: [{id, x, y, mount, state: closed|open, hp, hpMax, worth, paid,
   left}]}` (`paid` = glints set loose so far, `left` = still flying to her): combat.md.
 - `enemies()` → `{alive, total, list: [{id, kind, x, y (feet centre), box, home (the scene's x, y: a burrback's
-  feet, a lampwing's home centre), facing, hp, hpMax, mode, modeFrames, gone, vx, vy, target}]}`; the full
+  feet, a lampwing's home centre), facing, hp, hpMax, mode, modeFrames, braced, strikeCd, gone, vx, vy, target}]}`; the full
   records are `state().enemies` (enemies.md).
 - `health()` → `{hp, hpMax, invuln, stagger, faded, safe: {x, y}}`; `health(n)` sets hp to n (1..hpMax)
   first, e.g. `health(1)` then walk into a burrback to see a fade.
 - `lanterns()` → `{lit, total, wallet, spent, list: [{id, x, y (foot), box, cost, state: dormant|channel|lit,
   channel, of, rest, refused, pledged, litFrame, restPoint}]}`; `goal()` → `{lit, total, wallet, spent, gathered (= both),
   restAt (lantern or lamp id | null), restHold (she re-formed there and has not stepped out yet: no rest), lamps: {lit, total}, heart: {x, y, box, awake, frames, hinted}, ending: {gathered, held, frames, of,
-  ended, glints, time, kills, hits + the tally}, run: {time, hits, kills, deaths}, lost, drops: [{id, x, y, value,
+  ended, glints, time, kills, hits + the tally, offered, offerTier}, offer: {total, given, tier, tiers}, run: {time, hits, kills, deaths}, lost, drops: [{id, x, y, value,
   left, timer}], sanctuary: {burrback, lampwing}}` (goal.md). There is no call to set the wallet:
   gather for real (teleport onto great glints: `teleport(3640, 192)`, `(3648, 1280)`, each + `step(70)`).
 - `lamps()` → the same record as `lanterns()` for the wayside lamps (`scene.lamps`; the hitbox
@@ -40,7 +40,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   subset; missing x/y follow the game camera), `cam({on: 'player', zoom: 4})` tracks the player,
   `cam(null)` releases. Overrides are not clamped to the scene.
 - `tuning()`, `setTuning('run.maxSpeed', 12)` or `setTuning({run: {maxSpeed: 12}})`. `lights()`.
-  `render()` redraws. `debug.hitboxes(on)` (also F2; shows enemy boxes too: magenta, orange while hurt, grey dead, with a tick on the facing side; a lampwing also gets its territory circle, a line to what it is drawn to (yellow while curious / pursuing) and its velocity in white; her box is white while invulnerable; lantern trigger boxes are cyan, gold once lit, with a white bar over them that fills while she kindles or rests and a gold line under the one she re-forms at, and once lit a gold line along the ground burrbacks keep off and the circle lampwings give up at; a dropped cluster is a yellow diamond; the heart's box is dim violet asleep, orange awake, white once reached), `debug.panel(on)` (also backquote).
+  `render()` redraws. `debug.hitboxes(on)` (also F2; scene edges and solids that take no kick are grey; shows enemy boxes too: magenta, orange while hurt, grey dead, **thick red while a burrback is braced (a white bar on its armoured front, a red line along the ground as far as its ram will go), green while it stands spent**, with a tick on the facing side; a lampwing also gets its territory circle, a line to what it is drawn to (yellow while curious / pursuing) and its velocity in white; her box is white while invulnerable; lantern trigger boxes are cyan, gold once lit, with a white bar over them that fills while she kindles or rests and a gold line under the one she re-forms at, and once lit a gold line along the ground burrbacks keep off and the circle lampwings give up at; a dropped cluster is a yellow diamond; the heart's box is dim violet asleep, orange awake, white once reached), `debug.panel(on)` (also backquote).
 
 ## Gotchas
 - In manual mode the page only redraws on API calls; change something by hand, then call `render()`.
@@ -54,5 +54,10 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   (in plain view) starts its tell on the next step.
 - Enemies keep walking through every `step()`: a teleport next to one a few hundred frames later finds it
   somewhere else. Read `enemies()` first, or `load()` for the start positions.
-- `?nopickups` removes the enemies too (src/main.ts). None patrols the spawn ground, the terrace or the trunk shaft, where the
-  close-up shots run.
+- `?nopickups` removes the enemies too (src/main.ts). None patrols the spawn ground or the terrace. **burr-shaft paces
+  the shaft floor (3378-3522)**: the close-ups at 3456, 1280 run without enemies (`?nopickups`); with `--pickups` a
+  hero placed there is rammed (the wide stop `shaft-pit` stands at 3556 for that reason).
+- `events(n)` is not cleared by `load()` and frame numbers start again at 0: reload the page between runs.
+- `playwright-cli` takes about a second a call: nothing can react to a 26-frame tell through it. For a live
+  fight, one `eval` of an async function that watches `state()` per animation frame and dispatches real
+  `KeyboardEvent`s (`code: 'ArrowRight' | 'KeyZ' | 'KeyC'`) on `window`.

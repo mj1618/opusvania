@@ -24,8 +24,10 @@ describe('camera', () => {
   it('follows a run softly with look-ahead and never leaves the scene', () => {
     // (The bluff is taller than a jump and trunk B closes the floor: here the bluff is cut down to a hop
     // and the trunk gets a doorway, so plain running and jumping crosses.)
+    // (No creatures: a burrback's ram on the way would throw her about, which is not this test.)
     const flat = {
       ...GROVE,
+      enemies: [],
       solids: GROVE.solids.map((r) =>
         r.tag === 'ground' && r.y === 960
           ? { ...r, y: 1152, h: 448 }
@@ -146,7 +148,8 @@ describe('camera headroom', () => {
   });
 
   it('does not bob from hop to hop between islands, and settles once she stays', () => {
-    const s = newSim();
+    // (No creatures: lamp-f3 hovers over F3 since playtest 4 and would come down to her.)
+    const s = newSim({ ...GROVE, enemies: [] });
     const islands = GROVE.solids.filter((r) => r.tag === 'floating');
     const [f3, f4] = [islands[2], islands[3]];
     if (!f3 || !f4) throw new Error('islands moved');

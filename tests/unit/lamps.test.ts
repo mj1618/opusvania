@@ -47,6 +47,9 @@ function sim(sc: Scene, glints: number, at?: number): Sim {
   return s;
 }
 
+/** Frames of standing at a lamp until it is lit: the beat of intent, then the channel. */
+const LAMP_FRAMES = G.lampStillFrames + G.channelFrames;
+
 describe('a dormant lantern notices her', () => {
   it('once, as her body comes within 260 px, however fast she passes: with what she carries and what it takes', () => {
     const s = sim(scene(), 5, LANTERN_X - 600);
@@ -130,7 +133,11 @@ describe('wayside lamps', () => {
     expect(lampCost({ ...lamp, cost: 5 }, G)).toBe(5);
     expect(lanternCost(lantern, G)).toBe(12);
     const s = sim(scene(), 10, LAMP_X);
-    const ev = s.run(`.${G.channelFrames}`);
+    // A lamp wants intent: 20 frames of standing still at it before its channel starts.
+    const wait = s.run(`.${G.lampStillFrames - 1}`);
+    expect(of(wait, 'lampChannel')).toHaveLength(0);
+    expect(s.state.goal.lamps[0]).toMatchObject({ still: G.lampStillFrames - 1, channel: 0 });
+    const ev = [...wait, ...s.run(`.${G.channelFrames + 1}`)];
     expect(of(ev, 'lampChannel')).toHaveLength(G.channelFrames - 1);
     expect(names(ev, 'lamp')).toEqual(['lampNotice', 'lampKindle']);
     expect(names(ev, 'lantern')).toEqual([]);
@@ -151,13 +158,40 @@ describe('wayside lamps', () => {
     expect([s.state.goal.lampsLit, s.state.goal.restLamp, s.state.goal.restAt]).toEqual([1, 0, -1]);
     // Her pose flag for a lamp is its own; the lantern's never moved.
     const mid = sim(scene(), 10, LAMP_X);
-    mid.run('.5');
+    mid.run(`.${G.lampStillFrames + 5}`);
     expect([mid.state.player.kindling, mid.state.player.kindlingLamp]).toEqual([-1, 0]);
+  });
+
+  it('a lamp wants intent: only standing still at it starts it (playtest 4: two kindled by accident, 8 glints each)', () => {
+    // Running through it, landing on it and running on, standing pressed against something with a
+    // direction held, cutting on it: nothing starts, however long.
+    for (const script of [
+      'L10 R60',
+      '.10 R1 .10 L1 .10 R1 .10',
+      '.10 A1 .10 A1 .10 A1 .10',
+      'R1 L1 R1 L1 R1 L1 R1 L1 R1 L1 R1 L1',
+    ]) {
+      const s = sim(scene(), 10, LAMP_X);
+      const ev = s.run(script);
+      expect(of(ev, 'lampChannel'), script).toHaveLength(0);
+      expect(s.state.goal.lamps[0]?.lit, script).toBe(false);
+      expect(s.state.pickups.count, script).toBe(10);
+    }
+    // The wait starts over each time; then 20 still frames and the channel runs.
+    const s = sim(scene(), 10, LAMP_X);
+    s.run('.15 R1 L1');
+    const ev = s.run(`.${LAMP_FRAMES + 4}`);
+    expect(of(ev, 'lampKindle')).toHaveLength(1);
+    // A lantern has no such wait: the same visit lights it on the 30th frame.
+    const q = sim(scene(), 12, LANTERN_X);
+    expect(of(q.run(`.${G.channelFrames}`), 'lanternKindle')).toHaveLength(1);
+    // Nor does a pledge take a lamp she only ran through while a pod's glints were in the air.
+    expect(G.lampStillFrames).toBe(20);
   });
 
   it('do not count toward the heart: a lit lamp wakes nothing, the lantern alone does', () => {
     const s = sim(scene(), 30, LAMP_X);
-    const ev = s.run(`.${G.channelFrames}`);
+    const ev = s.run(`.${LAMP_FRAMES}`);
     expect(of(ev, 'heartWake')).toHaveLength(0);
     expect([s.state.goal.lit, s.state.goal.heart.awake]).toEqual([0, false]);
     s.place(LANTERN_X, FLOOR);
@@ -175,21 +209,25 @@ describe('wayside lamps', () => {
     const ev = s.run('.40');
     expect(names(ev, 'lamp')).toEqual(['lampNotice', 'lampRefuse']);
     expect(of(ev, 'lampRefuse')[0]).toMatchObject({ id: 'w', have: 7, need: 8, show: G.refuseShowFrames });
+    // Once started it runs on along its leash like a lantern's; beyond it, it breaks.
     const c = sim(scene(), 8, LAMP_X);
-    c.run('.10');
-    const left = c.run('R20');
+    c.run(`.${G.lampStillFrames + 4}`);
+    const left = c.run('R2 R+X1 R14');
     expect(of(left, 'lampCancel')[0]).toMatchObject({ id: 'w', reason: 'leave' });
     expect(of(left, 'lampCancel')[0]?.frames).toBeGreaterThanOrEqual(10);
     expect(c.state.pickups.count).toBe(8);
+    // A cut does not break it (it only puts off the start).
     const a = sim(scene(), 8, LAMP_X);
-    a.run('.10');
-    expect(of(a.run('A1 .3'), 'lampCancel')[0]).toMatchObject({ reason: 'attack' });
+    a.run(`.${G.lampStillFrames + 4}`);
+    const cut = a.run('A1 .30');
+    expect(of(cut, 'lampCancel')).toHaveLength(0);
+    expect(of(cut, 'lampKindle')).toHaveLength(1);
   });
 
   it('a lit lamp is a rest point and the re-form point, until she stands at another light', () => {
     const s = sim(scene(), 60, LAMP_X);
     s.state.player.hp = 2;
-    const ev = s.run(`.${G.channelFrames + G.restFrames}`);
+    const ev = s.run(`.${LAMP_FRAMES + G.restFrames}`);
     expect(names(ev, 'lamp')).toEqual(['lampNotice', 'lampKindle', 'lampRest']);
     expect(of(ev, 'lampRest')[0]).toMatchObject({ id: 'w', healed: 2, hp: 4 });
     // A fade far away: she re-forms at the lamp.
@@ -209,7 +247,11 @@ describe('wayside lamps', () => {
 
   it('nothing can hurt her while she kindles one, and it calms the creatures round it', () => {
     const s = sim(scene({ enemies: [burr(LAMP_X - 70, 1)] }), 8, LAMP_X);
-    const ev = s.run(`.${G.channelFrames}`);
+    // (The walking creature: with the ram on it would hit her in the 20 frames before the channel.)
+    s.tuning.burrback.strikePx = 0;
+    const walker = s.state.enemies[0];
+    if (walker) walker.x -= 40;
+    const ev = s.run(`.${LAMP_FRAMES}`);
     expect(of(ev, 'hurt')).toHaveLength(0);
     expect(of(ev, 'lampKindle')).toHaveLength(1);
     expect(s.state.enemies[0]?.calm).toBeGreaterThan(0);
@@ -218,7 +260,7 @@ describe('wayside lamps', () => {
 
   it('a lit lamp is a sanctuary: a burrback on its ground turns 110 px short of it, for good', () => {
     const lit = sim(scene({ enemies: [burr(LAMP_X - 500, 1)] }), 8, LAMP_X);
-    lit.run(`.${G.channelFrames}`);
+    lit.run(`.${LAMP_FRAMES}`);
     lit.place(3400, FLOOR);
     const from = lit.events.length;
     let nearest = 9e9;
@@ -243,7 +285,7 @@ describe('wayside lamps', () => {
 
   it('the ending tallies them; a clone copies them; a scene without lamps has none', () => {
     const s = sim(scene(), 40, LAMP_X);
-    s.run(`.${G.channelFrames}`);
+    s.run(`.${LAMP_FRAMES}`);
     const c = cloneState(s.state);
     expect(c.goal.lamps).toEqual(s.state.goal.lamps);
     expect(c.goal.lamps).not.toBe(s.state.goal.lamps);

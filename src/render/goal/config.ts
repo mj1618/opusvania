@@ -43,6 +43,31 @@ export const GOAL = {
       reach: 0.62,
       tugSeconds: 1.6,
       marksPx: 330,
+      /** A lantern's (not a lamp's) crown is up from this far, so the destination reads across a screen. */
+      crownPx: 1000,
+    },
+    /**
+     * Asleep it keeps a cold light, like the wayside lamps but larger (playtest 4: the far lantern
+     * was a dark wire on near-black): a breath of cold light behind the crook, which it stands
+     * against as a silhouette (`coldSize` px, `coldAlpha`), and a cold point in the glass.
+     */
+    cold: { coldSize: 300, coldAlpha: 0.3, coreSize: 26, coreAlpha: 0.8 },
+    /**
+     * The next dark lantern lets cold motes go over the long drop beside it (deeper than `minDrop`
+     * px: the shaft under the crown, the far bluff's face), so it is found from below: one every
+     * `every` s, `out` s to drift to the lip, then down at `speed` px/s (+ `gravity`), `life` s,
+     * `size` px across at `alpha`. At most `n` in the air.
+     */
+    fall: {
+      n: 7,
+      every: 0.95,
+      out: 1.3,
+      speed: 70,
+      gravity: 26,
+      life: 5.6,
+      size: 15,
+      alpha: 0.8,
+      minDrop: 300,
     },
     /** The rest point's bead is this much brighter. */
     restGain: 1.18,
@@ -218,92 +243,152 @@ export const GOAL = {
     fireflies: 40,
   },
   /**
-   * Ember-moths that show the way to the nearest dark lantern (guide.ts). They leave a lit lantern
-   * (`moths`; a wayside lamp sends `lampMoths`) `first` s after it catches and again every `again` s
-   * while she is within `nearPx` of it, and the sleeping heart's dark wick (`heartMoths`, a longer
-   * thread: x `heartFar`) when she touches it and while she stays within `heartPx`. Flight:
-   * `speed` px/s along the way, weaving `wander` px, stopping every `stopEvery` px to circle
-   * (`stopR` px, `stopTurn` rad/s) for `stopSeconds`, or until she is within `waitPx` of it, at
-   * most `stopWait` s; the first goes `range[1]` px, the last `range[0]`, then they turn and fade.
-   * Small and dim: an ember of `ember` px half-size at `emberGain`, a halo of `halo` px at `haloGain`.
+   * The offering (the sim's `heartOffer`, during the ending hold): at most `perStep` glints leave
+   * her hand per sim step and wind into the heart's light (`flight` s, `turns` turns of `wind` px,
+   * lifting `rise` px on the way). Each tier it reaches (`heartTier`) wakes `lights[tier]` small
+   * lights round the shrine, `step` s apart: `bands[tier]` = [nearest, farthest px to either side
+   * of the heart, lowest, highest px above its foot]; a bead of `bead` px at `beadGain` with a halo
+   * of `halo` px at `haloGain`. Small and precious: nothing here is wider than a glint.
+   */
+  offer: {
+    perStep: 3,
+    flight: 0.55,
+    turns: 1.2,
+    wind: 16,
+    rise: 46,
+    lights: [5, 6, 8],
+    bands: [
+      [90, 300, 16, 70],
+      [150, 430, 110, 300],
+      [200, 620, 240, 520],
+    ],
+    step: 0.16,
+    bead: 5,
+    beadGain: 1,
+    halo: 20,
+    haloGain: 0.24,
+  },
+  /**
+   * Ember-moths that LEAD to the next dark lantern, or to the heart once all burn (guide.ts). One
+   * flight of `moths` (the sleeping heart sends `heartMoths`), each an ember (`ember` px half-size at
+   * `emberGain`, halo `halo` at `haloGain`) with a comet tail of where it has been (`tailStep` s
+   * apart, `tailGain`), wings dimmed to `wing` so the ember is what is seen.
    *
-   * `routes`: the ways INTO each lantern, keyed by its id in the scene: polylines of world points
-   * [x, y] at about her head height along the walk / climb / glide, ending near the lantern. A moth
-   * joins the route passing nearest to where it starts, at that nearest point. FOR THE SIM / LAYOUT
-   * OWNER: if a lantern, the shaft, the bluff or the sky line moves, move these points with it (a
-   * lantern with no route just gets a straight line).
+   * When: `first` s after a lantern catches (from its glass), and whenever the next lantern is dark,
+   * at least one burns, and she has not come `progress` px nearer to it for `idle` s (from the
+   * nearest lit light within `fromPx`, else in from the frame edge). A flight nobody follows for
+   * `ignore` s leaves; the next waits `again` s more. At the sleeping heart, as before, while she is
+   * within `heartPx` of it.
+   *
+   * How: the leader keeps `lead[0]`..`lead[1]` px ahead of her along the way (the second at `full`
+   * px/s), never less than `leadMin`, never outside the picture (`inset`, `insetTop` under the HUD),
+   * running at up to `fast` px/s (`chase` = how hard it closes the gap). Each moth trails `spacing`
+   * px behind the one before, weaving `weave` px, on a spring (`spring`, `damp`, at most `top` px/s).
+   * She stops: they ring (`ringR` px, `ringTurn` rad/s). She goes back along the way faster than
+   * `wrongSpeed` or strays `offPx` from it for `wrong` s: they come and loop round her (`fetchR`,
+   * `fetchTurn`) for `fetch` s, then lead again (from a new way if she had left the old one).
+   * At the end they sit `perch` px apart on the hook, which glows (`perchHalo`, `perchGain`).
+   *
+   * `pour`: when the last lantern catches, `n` of them run from its glass down to the heart
+   * (`speed` px/s, `stagger` s apart from `first` s, weaving `weave` px).
+   *
+   * `routes`: the ways INTO each lantern, keyed by its id in the scene (`heart` = into the heart):
+   * polylines of world points [x, y] at about her head height along the WALK / CLIMB (never the
+   * glide line: playtest 4), ending near the lantern, clear of solids. A flight joins the route
+   * passing nearest to her, at that nearest point. FOR THE SIM / LAYOUT OWNER: if a lantern, the
+   * shaft, the boughs or the far bluff moves, move these points with it (no route = a straight line).
    */
   guide: {
-    moths: 3,
-    lampMoths: 2,
+    moths: 4,
     heartMoths: 4,
-    heartFar: 1.25,
     first: 1.3,
-    again: 6.5,
-    nearPx: 300,
+    idle: 6,
+    progress: 140,
+    ignore: 14,
+    again: 4,
+    fromPx: 760,
     heartPx: 260,
-    speed: 150,
-    wander: 13,
-    stagger: 0.6,
-    stopEvery: 230,
-    stopSeconds: 1.15,
-    stopWait: 2.6,
-    stopR: 20,
-    stopTurn: 4.2,
-    waitPx: 400,
-    range: [600, 900],
-    fadeIn: 0.5,
-    size: 0.86,
-    tint: 0xffb878,
-    ember: 3.8,
-    emberGain: 1.05,
-    halo: 15,
-    haloGain: 0.24,
+    lead: [250, 450],
+    full: 380,
+    leadMin: 110,
+    inset: 110,
+    insetTop: 170,
+    fast: 820,
+    chase: 3.4,
+    spacing: 17,
+    weave: 6,
+    spring: 70,
+    damp: 13,
+    top: 980,
+    stagger: 0.14,
+    ringR: 19,
+    ringTurn: 4.6,
+    wrongSpeed: 70,
+    offPx: 560,
+    wrong: 1.6,
+    fetch: 1.5,
+    fetchR: 58,
+    fetchTurn: 5.2,
+    perch: 9,
+    perchHalo: 54,
+    perchGain: 0.3,
+    fadeIn: 0.45,
+    fadeOut: 0.8,
+    size: 1,
+    wing: 0.9,
+    tint: 0x7a3c22,
+    ember: 7,
+    emberGain: 1.7,
+    halo: 21,
+    haloGain: 0.3,
+    tailStep: 0.02,
+    tailGain: 0.8,
+    pour: { n: 10, first: 0.55, stagger: 0.13, speed: 560, weave: 26 },
+    /** Seconds after the wake before the flight to the heart leaves the last lantern. */
+    pourLead: 2.6,
     routes: {
-      // From the first lantern: over the pool, the branch, the bluff, the leap to the well at trunk
+      // From the first lantern: over the pool, the branch, the bluff, down to the well at trunk
       // A's foot, in at the doorway, up the wall-jump shaft, over trunk A's top to the summit.
       'lantern-crown': [
         [
           [1700, 1130],
           [2176, 940],
           [2528, 890],
-          [2880, 990],
+          [2880, 1070],
           [3160, 1210],
           [3456, 1220],
           [3456, 470],
-          [3300, 380],
-          [3560, 150],
+          [3470, 300],
+          [3540, 130],
+          [3640, 120],
         ],
       ],
       'lantern-far': [
-        // The summit glide: off trunk B's top along the sky line.
+        // On foot from the summit: along trunk B's bough, down to the catch branch, down to the
+        // floor east of the root, up onto the rise, past the shrine to the foot of the far cliff
+        // and up its face (the `cliff-n` glints), over the lip.
         [
-          [3740, 110],
-          [3900, -115],
-          [4150, -300],
-          [4400, -235],
-          [4610, -140],
-          [5000, 35],
-          [5200, 125],
-          [5420, 330],
+          [3740, 120],
+          [3890, 130],
+          [3990, 370],
+          [4140, 390],
+          [4250, 820],
+          [4560, 840],
+          [4720, 1010],
+          [5212, 1000],
+          [5400, 1010],
+          [5436, 900],
+          [5436, 790],
+          [5450, 668],
         ],
-        // From the shrine: east along the rise to the foot of the far cliff and up its face
-        // (the `cliff-n` glints), over the lip.
+      ],
+      // From the far lantern down to the awake heart: off the west lip and down the face.
+      heart: [
         [
-          [5212, 1010],
-          [5400, 1020],
-          [5440, 900],
-          [5440, 500],
-          [5500, 390],
-        ],
-        // On foot from the west: the root, the branch, F6, F7, a hop onto the far ground.
-        [
-          [4180, 1150],
-          [4275, 905],
-          [4700, 603],
-          [4864, 660],
-          [5232, 520],
-          [5440, 400],
+          [5500, 668],
+          [5420, 700],
+          [5400, 930],
+          [5300, 1010],
         ],
       ],
     } as Record<string, number[][][]>,
@@ -312,6 +397,18 @@ export const GOAL = {
     /** Wake: the view leans this far (px, at most) toward the heart, for `seconds`. */
     nudge: 150,
     seconds: 2.5,
+    /**
+     * The last kindle's picture (lantern + heart in one frame): margins round the two px (`side`,
+     * `above` the feet of each, `below`), the most it may pull back (`minZoom`; under that it is
+     * only the lean above), seconds in / held / out.
+     */
+    frame: { side: 230, above: 250, below: 120, minZoom: 0.9, in: 1.1, hold: 2.5, out: 1.4 },
+    /**
+     * The soft pull after it: while she is within `px` x `py` of the awake heart and it is out of
+     * the picture, the view leans (eased, `rate` per s) until the heart is `margin` px inside,
+     * keeping her `keep` px from the edges (`keepTop` from the top: her head and the lantern).
+     */
+    pull: { px: 1000, py: 900, margin: 150, keep: 260, keepTop: 300, rate: 1.3 },
     /** Ending: zoom gained, drift up px, share of the way toward the heart, over `frames` sim frames. */
     zoom: 0.045,
     rise: 30,
@@ -320,4 +417,4 @@ export const GOAL = {
   },
 };
 
-export const MAX_QUADS = 420;
+export const MAX_QUADS = 640;

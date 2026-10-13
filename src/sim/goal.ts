@@ -37,6 +37,7 @@ const dormant = (): LanternState => ({
   refused: false,
   noticed: false,
   pledged: false,
+  still: 0,
 });
 
 export function createGoal(scene: Scene): GoalState {
@@ -66,7 +67,10 @@ export function createGoal(scene: Scene): GoalState {
       deaths: 0,
       lamps: 0,
       lampsTotal: 0,
+      offered: 0,
+      offerTier: 0,
     },
+    offer: { total: 0, given: 0, tier: 0 },
     ended: false,
     run: { start: -1, hits: 0, deaths: 0 },
   };
@@ -126,6 +130,49 @@ function inbound(state: GameState): number {
   for (let i = 0; i < left.length; i++) n += left[i] ?? 0;
   for (let i = 0; i < state.enemies.length; i++) n += state.enemies[i]?.spill ?? 0;
   return n;
+}
+
+/** The tier (0-3) an offering of `n` glints reaches. */
+export function offerTier(n: number, t: Tuning['goal']): number {
+  return n >= t.offerTier3 ? 3 : n >= t.offerTier2 ? 2 : n >= t.offerTier1 ? 1 : 0;
+}
+
+/** `n` more of what she carries goes into the heart (the ending hold). */
+function offer(state: GameState, scene: Scene, t: Tuning['goal'], n: number, events: SimEvent[]): void {
+  const g = state.goal;
+  const w = state.pickups;
+  const heart = scene.heart;
+  const p = state.player;
+  const give = Math.min(n, w.count, g.offer.total - g.offer.given);
+  if (give <= 0 || !heart) return;
+  w.count -= give;
+  w.offered += give;
+  g.offer.given += give;
+  const tier = offerTier(g.offer.given, t);
+  events.push({
+    type: 'heartOffer',
+    x: heart.x,
+    y: heart.y,
+    px: p.x + p.w / 2,
+    py: p.y + p.h / 2,
+    value: give,
+    given: g.offer.given,
+    of: g.offer.total,
+    wallet: w.count,
+    tier,
+  });
+  while (g.offer.tier < tier) {
+    g.offer.tier++;
+    const need = g.offer.tier === 1 ? t.offerTier1 : g.offer.tier === 2 ? t.offerTier2 : t.offerTier3;
+    events.push({
+      type: 'heartTier',
+      x: heart.x,
+      y: heart.y,
+      tier: g.offer.tier,
+      given: g.offer.given,
+      need,
+    });
+  }
 }
 
 /** Control is taken: from `gather` on, for good unless `endedControl` gives it back after the hold. */
@@ -191,7 +238,17 @@ export function updateGoal(
 
   // The ending hold.
   if (g.gathered) {
+    // The offering: what she carries goes into the heart, a little each step.
+    if (!g.ended && g.offer.given < g.offer.total) {
+      const since = g.ending.frames + 1 - whole(G.offerDelayFrames, 0);
+      const span = whole(G.offerSpanFrames, 1);
+      const gap = Math.max(1, Math.floor(span / g.offer.total));
+      if (since >= 0 && since % gap === 0)
+        offer(state, scene, G, Math.ceil((g.offer.total * gap) / span), events);
+    }
     if (!g.ended && ++g.ending.frames >= whole(G.holdFrames, 1)) {
+      // (A hold too short for it: the rest goes in at once.)
+      offer(state, scene, G, g.offer.total, events);
       g.ended = true;
       events.push({ type: 'endHold', x: heart?.x ?? 0, y: heart?.y ?? 0 });
     }
@@ -231,7 +288,7 @@ export function updateGoal(
         if ((wallet.timers[i] ?? 0) < 0) greats++;
       }
       g.ending.glintsTotal = pickupsWorth(scene, t.pickups) + podsWorth(scene, t.pods) + foes;
-      const all = wallet.count + wallet.spent + wallet.lost;
+      const all = wallet.count + wallet.spent + wallet.lost + wallet.offered;
       // (Every glint that reaches her comes from a pickup, a pod or a creature, so found <= total
       // by construction; nothing is clamped here.)
       g.ending.bonus = Math.max(0, Math.min(wallet.bonus, all));
@@ -244,6 +301,11 @@ export function updateGoal(
       g.ending.deaths = g.run.deaths;
       g.ending.lamps = g.lampsLit;
       g.ending.lampsTotal = scene.lamps?.length ?? 0;
+      g.ending.offered = wallet.count;
+      g.ending.offerTier = offerTier(wallet.count, G);
+      g.offer.total = wallet.count;
+      g.offer.given = 0;
+      g.offer.tier = 0;
       // Nothing of hers is left waiting to fire while she is held.
       p.jumpBuf = 0;
       p.djBuf = 0;
@@ -273,6 +335,9 @@ export function updateGoal(
         deaths: g.ending.deaths,
         lamps: g.ending.lamps,
         lampsTotal: g.ending.lampsTotal,
+        offered: g.ending.offered,
+        offerTier: g.ending.offerTier,
+        offerTiers: [G.offerTier1, G.offerTier2, G.offerTier3],
       });
     }
   }
@@ -353,15 +418,29 @@ function updateLights(
       // Sideways only: a hop on the spot is still the same visit.
       if (Math.abs(pcx - l.x) > G.refuseLeavePx) s.refused = false;
     }
-    const calm = at && p.attack === 'none' && !slashed && !g.gathered;
+    // A lamp wants intent: she has stood still at it a moment (a lantern is the goal: it starts at once).
+    const idle = at && p.inputX === 0 && Math.abs(p.vx) < G.refuseStillVx && p.attack === 'none' && !slashed;
+    s.still = idle ? s.still + 1 : 0;
+    const meant = !lamp || s.channel > 0 || s.still >= whole(G.lampStillFrames, 0);
+    const calm = at && p.attack === 'none' && !slashed && !g.gathered && meant;
+    // Once started it runs on while she stays on its leash, whatever she does there.
+    const lx = pcx - l.x;
+    const held =
+      s.channel > 0 &&
+      control &&
+      !g.gathered &&
+      lx <= G.kindleLeashPx &&
+      lx >= -G.kindleLeashPx &&
+      ny <= G.kindleLeashUpPx &&
+      ny >= -G.kindleLeashUpPx;
     // Pledged: she stands at it short, and what she lacks is already in the air on its way to her
     // (the pod she cut at its foot). From here it catches the step those have landed, wherever she
     // is by then; while she stays, the channel shows (a slash does not break it any more).
-    if (!s.pledged && at && !g.gathered && wallet.count < need && wallet.count + coming >= need)
+    if (!s.pledged && at && meant && !g.gathered && wallet.count < need && wallet.count + coming >= need)
       s.pledged = true;
     if (s.pledged && wallet.count + coming < need) s.pledged = false;
     const paid = s.pledged && wallet.count >= need && !g.gathered;
-    if (paid || (calm && wallet.count >= need) || (s.pledged && at)) {
+    if (paid || ((calm || held) && wallet.count >= need) || (s.pledged && at)) {
       s.short = 0;
       const of = whole(G.channelFrames, 1);
       if (at) {
@@ -383,6 +462,7 @@ function updateLights(
       s.litFrame = state.frame;
       s.channel = 0;
       s.short = 0;
+      s.still = 0;
       s.refused = false;
       p.kindling = -1;
       p.kindlingLamp = -1;
@@ -413,12 +493,7 @@ function updateLights(
       continue;
     }
     if (s.channel > 0) {
-      const reason =
-        hurt || p.stagger > 0 || p.faded > 0 || p.hp <= 0
-          ? 'hurt'
-          : slashed || p.attack !== 'none'
-            ? 'attack'
-            : 'leave';
+      const reason = hurt || p.stagger > 0 || p.faded > 0 || p.hp <= 0 ? 'hurt' : 'leave';
       events.push({ type: lamp ? 'lampCancel' : 'lanternCancel', id, x, y, frames: s.channel, reason });
       s.channel = 0;
     }

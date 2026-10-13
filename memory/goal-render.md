@@ -151,6 +151,61 @@ Dev handle `__goal` (`.cfg`, `.cpuMs`). Sheets of every moment: `shots/goal/`.
 - "HUD shows 4 lit after a re-form at 2" (playtest 3) was not a lag: the old sim's rest healed her 45
   frames after re-forming at a lantern. Traced: lights `on` = `hp` at every 12th frame for 108 frames.
 
+## Round 6 (after playtest 4: moths decorated, glyph timing, the wake off screen, the far lantern a dark wire)
+- **Ember-moths LEAD** (`guide.ts` rewritten; knobs, timing and routes in `GOAL.guide`, all documented there).
+  One flight of 4, each a dark-winged moth with a hot ember (7 px half-size) and a comet tail of its last 9
+  positions (two beads a step). Round 5's text above about 150 px/s threads, `issue`, `range`, `stopEvery`
+  is history. The leader holds 250 px (she stands) to 450 px (she runs at 380 px/s) ahead of the point of the
+  way nearest her, at up to 820 px/s, never under 110 px ahead, pulled back inside the frame (110 px inset,
+  170 under the HUD); she stops = they ring (19 px); she goes back along the way or strays 560 px for 1.6 s =
+  they come and loop round her for 1.5 s (`mode: 'fetch'`), then lead again (the renderer hands over a new
+  way if `guide.stale`). At the end of the way they sit on the hook (`perchX/Y` = the crook's top, set every
+  frame) and the hook glows. Measured (staged, lantern 1 then a run east with two jumps): leader 250-280 px
+  ahead of her the whole way at 400-500 px/s, also down the boughs from the summit (s - sp = 282 at x 5101).
+- **When** (`GoalRenderer.guideTick`): 1.3 s after a lantern catches, from its glass; whenever a lantern burns,
+  the next is dark and she has come no nearer (140 px, straight line) for 6 s, from the nearest lit light in
+  view within 760 px, else in from the frame edge behind her; at the sleeping heart once `hinted` (from the
+  dark wick). Unfollowed for 14 s they leave and stay away 10 s. Never before the first lantern (except at
+  the heart). Wayside lamps no longer send any. Once all burn the target is `heart` (route key `heart`).
+- **Routes are walks** (`GOAL.guide.routes`): the sky line is gone; `lantern-far` is bough -> catch branch ->
+  floor -> rise -> shrine -> cliff face -> lip. **They are hand-placed world points: the sim agent lowered
+  the far bluff to y 736 mid-round and the last three points of `lantern-far` and all of `heart` had to move.**
+  Dev: `__goal.guide.{active, key, mode, s, sp, settled, lx, ly}`.
+- **The third kindle's picture** (`goal/camera.ts`, `GOAL.camera.frame / pull`): on `heartWake` in the same
+  step as a `lanternKindle`, if lantern + heart fit one view at zoom >= 0.9 (margins 230 side, 250 above,
+  120 below) the view eases there in 1.1 s, holds 2.5 s, eases back in 1.4 s (smootherstep; `GoalCamera.shot`
+  0..1). Otherwise the old lean. No zoom-out was needed in either layout (bluff at 448: the view went ~350 px
+  down; at 736: ~190 px), so **zoom < 1 is untested against the layers' coverage**. After it a soft pull keeps
+  the awake heart 150 px inside the frame while she is within 1000 x 900 px of it, never pushing her nearer
+  than 260 px (300 from the top) to an edge. The camera gets her position from `camLink` (the goal renderer
+  fills it; stage.ts was not touched).
+- **The pour**: on that wake 10 moths run from the last lantern's glass down the `heart` route into the heart
+  (560 px/s, 0.13 s apart); 2.6 s later a flight leads her down. Only when the lantern is within 1500 px.
+- **Dormant lanterns are cold too** (`GOAL.lantern.cold`): the lamps' cold point and breath, larger (300 px at
+  0.3), behind the crook. The crown of flames is up from `notice.crownPx` 1000 px for a lantern (330 for a
+  lamp, and a nearer lamp's price wins). `GOAL.lantern.fall`: the next dark lantern lets a cold mote go every
+  ~1 s over the long drop beside it (`dropBy`: > 300 px deep: the shaft under the crown, the far bluff's
+  face); they fall ~500 px, so from below something up there is seen letting light go.
+- **The offering** (`heartOffer`, `heartTier`, `goal.offer`; `GOAL.offer`): up to 3 glints a step wind from her
+  hand into the lifted light (0.55 s), the light beats as they land; each tier wakes 5 / 6 / 8 small lights
+  at fixed places round the shrine (bands widen and rise with the tier), kept from `goal.offer.tier`. With an
+  offering the old "wallet lifts out of her as fireflies" is skipped. Seen staged with 60 offered (tier 2).
+- **Prompts** (`hud/prompts.ts`): glide only when the ground is > 260 px under her feet here AND 16 frames of
+  travel ahead (`dropUnder`: solids, pool, branches), after 12 falling frames or at once when she ran off a
+  ledge over such a drop (`fall` event), no living creature within 300 px; gone the instant she lands. The
+  hold is drawn held from frame 1: cap down, a bar under it filling (it starts a third full), wings open.
+  Kick after 6 frames of wall slide (`slideFrames`), lingers 0.7 s. Staged: summit run-off shows at fall
+  frame 36 of the script (the bough's end), summit jump at 41, shaft kick at slide frame 6; a hop on the
+  flat and the 320 px bluff never.
+- **HUD** (`hud/index.ts`): one layout. Lights, count, pips each keep a fixed row; the lights are up whenever
+  count or pips are (`HealthLights.update(..., keep)`), `slot` is pinned at 1, the pips no longer ride on the
+  count's alpha. The cluster thins to 0.16 when her body centre is left of 300 / above 250 logical px
+  (`HUD.under`, from `hudLink`).
+- Capture under other agents' edits: the Vite reload kills a `run-code` mid-script; go offline after
+  the page is ready (`setOffline(true)`, back to false in a `finally`).
+- Not done: moths still fly their polyline (a join leg from her to the route can cross a solid); tier
+  lights float (no stalk); zoom-out; the kick glyph is small (27 px cap at 1920).
+
 ## Look decisions (learned by looking)
 - Lantern = shepherd's crook + hanging seed of glass (the HUD health light's shape, 1.42x). Lit, the
   nested amber fills read as a flame inside dark glass; filling the whole seed made an orange blob.

@@ -4,6 +4,7 @@
   "height": 1600,
   "spawn": { "x": 1120, "y": 1280 },
   "ceilingY": -420,
+  "edgeKick": false,
   "solids": [
     { "tag": "ground", "x": 0, "y": 1088, "w": 384, "h": 512 },
     { "tag": "ground", "x": 384, "y": 1280, "w": 1152, "h": 320 },
@@ -15,7 +16,7 @@
     { "tag": "ground", "x": 3744, "y": 1376, "w": 224, "h": 224 },
     { "tag": "ground", "x": 3968, "y": 1280, "w": 640, "h": 320 },
     { "tag": "ground", "x": 4608, "y": 1088, "w": 864, "h": 512 },
-    { "tag": "ground", "x": 5472, "y": 448, "w": 288, "h": 1152 },
+    { "tag": "ground", "x": 5472, "y": 768, "w": 288, "h": 832 },
 
     { "tag": "floating", "x": 640, "y": 960, "w": 256, "h": 48 },
     { "tag": "floating", "x": 1024, "y": 832, "w": 224, "h": 48 },
@@ -82,9 +83,9 @@
     { "id": "f6-1", "kind": "glint", "x": 4560, "y": 735 },
     { "id": "f6-2", "kind": "glint", "x": 4625, "y": 650 },
     { "id": "f6-3", "kind": "glint", "x": 4700, "y": 603 },
-    { "id": "far-1", "kind": "glint", "x": 5350, "y": 470 },
-    { "id": "far-2", "kind": "glint", "x": 5400, "y": 385 },
-    { "id": "far-3", "kind": "glint", "x": 5455, "y": 320 },
+    { "id": "far-1", "kind": "glint", "x": 5290, "y": 540 },
+    { "id": "far-2", "kind": "glint", "x": 5360, "y": 580 },
+    { "id": "far-3", "kind": "glint", "x": 5430, "y": 660 },
     { "id": "hollow-1", "kind": "glint", "x": 3800, "y": 1330 },
     { "id": "hollow-2", "kind": "glint", "x": 3856, "y": 1345 },
     { "id": "hollow-3", "kind": "glint", "x": 3912, "y": 1330 },
@@ -103,12 +104,12 @@
     { "id": "well-2", "kind": "glint", "x": 3150, "y": 620 },
     { "id": "back-1", "kind": "glint", "x": 3752, "y": 900 },
     { "id": "back-2", "kind": "glint", "x": 3752, "y": 600 },
-    { "id": "cliff-1", "kind": "glint", "x": 5432, "y": 920 },
-    { "id": "cliff-2", "kind": "glint", "x": 5432, "y": 720 },
+    { "id": "cliff-1", "kind": "glint", "x": 5432, "y": 980 },
+    { "id": "cliff-2", "kind": "glint", "x": 5432, "y": 860 },
     { "id": "great-bank", "kind": "great", "x": 120, "y": 1030 },
     { "id": "great-crown", "kind": "great", "x": 3648, "y": 134 },
     { "id": "great-arch", "kind": "great", "x": 3536, "y": 1222 },
-    { "id": "great-far", "kind": "great", "x": 5600, "y": 390 },
+    { "id": "great-far", "kind": "great", "x": 5600, "y": 710 },
     { "id": "great-hang", "kind": "great", "x": 1984, "y": 760 },
     { "id": "great-sky", "kind": "great", "x": 4800, "y": -57 }
   ],
@@ -117,31 +118,34 @@
     { "id": "pod-bough", "x": 3850, "y": 170, "mount": "sit" },
     { "id": "pod-catch", "x": 4010, "y": 426, "mount": "sit", "hp": 2 },
     { "id": "pod-stone", "x": 1500, "y": 1258, "mount": "sit", "hp": 3 },
-    { "id": "pod-branch-l", "x": 2176, "y": 1058, "mount": "hang" },
+    { "id": "pod-branch-l", "x": 2176, "y": 1130, "mount": "hang" },
     { "id": "pod-rise", "x": 2570, "y": 938, "mount": "sit", "hp": 2 },
     { "id": "pod-ledge", "x": 3050, "y": 426, "mount": "sit", "hp": 3 },
-    { "id": "pod-branch-r", "x": 4470, "y": 946, "mount": "hang" },
-    { "id": "pod-f6", "x": 4830, "y": 818, "mount": "hang", "hp": 2 },
+    { "id": "pod-branch-r", "x": 4470, "y": 890, "mount": "sit" },
+    { "id": "pod-f6", "x": 4830, "y": 930, "mount": "hang", "hp": 2 },
     { "id": "pod-row-1", "x": 5060, "y": 1066, "mount": "sit" },
     { "id": "pod-row-2", "x": 5350, "y": 1066, "mount": "sit" },
-    { "id": "pod-far", "x": 5690, "y": 426, "mount": "sit" }
+    { "id": "pod-far", "x": 5690, "y": 746, "mount": "sit" }
   ],
   "enemies": [
     { "id": "burr-bank", "kind": "burrback", "x": 200, "y": 1088, "facing": 1 },
     { "id": "burr-path", "kind": "burrback", "x": 2160, "y": 1280, "facing": -1, "radius": 130 },
     { "id": "burr-ledge", "kind": "burrback", "x": 2936, "y": 448, "facing": 1, "radius": 48 },
     { "id": "burr-root", "kind": "burrback", "x": 4476, "y": 1280, "facing": 1, "radius": 110 },
+    { "id": "burr-shaft", "kind": "burrback", "x": 3450, "y": 1280, "facing": 1, "radius": 46 },
+    { "id": "burr-rise", "kind": "burrback", "x": 5010, "y": 1088, "facing": 1, "radius": 70 },
 
     { "id": "lamp-glade", "kind": "lampwing", "x": 800, "y": 690, "facing": -1, "radius": 100 },
-    { "id": "lamp-f3", "kind": "lampwing", "x": 1290, "y": 480, "facing": 1, "radius": 80 },
+    { "id": "lamp-f3", "kind": "lampwing", "x": 1470, "y": 420, "facing": 1, "radius": 60 },
     { "id": "lamp-ledge", "kind": "lampwing", "x": 2700, "y": 150, "facing": 1, "radius": 90 },
     { "id": "lamp-glide-1", "kind": "lampwing", "x": 4620, "y": 200, "facing": -1, "radius": 60 },
-    { "id": "lamp-glide-2", "kind": "lampwing", "x": 4900, "y": 250, "facing": -1, "radius": 60 }
+    { "id": "lamp-glide-2", "kind": "lampwing", "x": 4900, "y": 250, "facing": -1, "radius": 60 },
+    { "id": "lamp-sky", "kind": "lampwing", "x": 5180, "y": 105, "facing": -1, "radius": 50 }
   ],
   "lanterns": [
     { "id": "lantern-stone", "x": 1448, "y": 1280 },
     { "id": "lantern-crown", "x": 3684, "y": 192 },
-    { "id": "lantern-far", "x": 5524, "y": 448 }
+    { "id": "lantern-far", "x": 5524, "y": 768 }
   ],
   "lamps": [
     { "id": "lamp-trunk", "x": 3160, "y": 1280 },

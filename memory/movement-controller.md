@@ -14,6 +14,11 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
   to the ground stays buffered for a ground jump instead of spending the double jump.
 - **Wall speed retention** stores vx only on the first blocked frame, is cancelled by opposite-sign vx and
   cleared by jumps and dashes; otherwise wall jumps get undone and the player glues to walls.
+- **A face can refuse the climb** (playtest 4: both scene edges took kicks up to the canopy, to nothing):
+  the scene's `edgeKick: false` (the grove's) and a solid's `kick: false` give no wall slide and take no
+  wall kick, grace distance included (`kickableAt`, `src/sim/physics/aabb.ts`). She is still stopped by
+  them (`wallDir` is set, a glide goes on along them), a press beside one in the air is a double jump,
+  and she comes back down. Every real climb face is unmarked. The hitbox overlay draws them grey.
 - **Wall slide** needs a held direction into the wall while falling; the cap ramps
   `min(slideMax, slideStartMax + slideRamp·slideT)` (2.5 → 6.5 px/f). Holding away for `stickFrames` lets go.
   Wall jump has a 20 px grace (no need to be sliding), forces vx for 8 frames, refills dash + double jump.
