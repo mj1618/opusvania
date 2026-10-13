@@ -9,10 +9,10 @@ import { type CameraView, VIEW_H, VIEW_W } from '../contract';
  *   far[0..2]   0.12 0.25 0.42 far forest silhouettes, far[0] is the farthest
  *   mid         0.68          big trunks, roots, vines, fog sheets
  *   playfield   1             terrain, moss, plants, the pool (what the collision rects become)
- *   enemies     1             the creatures (owned by src/render/enemies), just behind the character
  *   character   1             the character (owned by src/render/character)
  *   pickups     1             glints and their buds, over the character (owned by src/render/pickups)
  *   playfieldFront 1          what covers the character at its own depth: grass fringe, pool surface
+ *   enemies     1             the creatures (owned by src/render/enemies), over the grass fringe
  *   foreground  1.35          dark out-of-focus leaves and branches in front of everything
  *   air         1             god rays, motes, fireflies, ground mist
  *
@@ -36,13 +36,13 @@ export const LAYERS = [
   { name: 'playfield', parallax: 1, screen: false },
   // The buds that hold great glints: behind the character (src/render/pickups).
   { name: 'pickupsBack', parallax: 1, screen: false },
-  // Enemies (src/render/enemies): just behind the character, in front of the playfield.
-  { name: 'enemies', parallax: 1, screen: false },
   { name: 'character', parallax: 1, screen: false },
   // Collectibles: over the character (a glint flies into her), under the grass fringe.
   { name: 'pickups', parallax: 1, screen: false },
   // What must cover the character at its own depth: grass fringe, the pool's surface (layers/playfield.ts).
   { name: 'playfieldFront', parallax: 1, screen: false },
+  // Enemies (src/render/enemies): in front of the grass fringe, so their legs and feet read.
+  { name: 'enemies', parallax: 1, screen: false },
   { name: 'foreground', parallax: 1.35, screen: false },
   { name: 'air', parallax: 1, screen: false },
 ] as const;
@@ -64,7 +64,7 @@ export class LayerTree {
   readonly far: readonly Container[];
   readonly mid: Container;
   readonly playfield: Container;
-  /** Enemies (owned by src/render/enemies), under the character. */
+  /** Enemies (owned by src/render/enemies), over `playfieldFront`. */
   readonly enemies: Container;
   readonly character: Container;
   /** Glints (owned by src/render/pickups); `pickupsBack` is under the character. */

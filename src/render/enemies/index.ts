@@ -23,6 +23,7 @@ const MAX_P = 160;
 const K_FRAG = 1;
 const K_MOTE = 2;
 const K_DUST = 3;
+const K_PLATE = 4;
 
 const smooth = (a: number, b: number, x: number): number => {
   const t = sat((x - a) / (b - a));
@@ -30,6 +31,17 @@ const smooth = (a: number, b: number, x: number): number => {
 };
 
 const FRAG_C: [number, number, number] = [0, 0, 0];
+const IN_C: [number, number, number] = [0, 0, 0];
+const SH_IN: Shade & { alpha: number } = {
+  c0: IN_C as unknown as RGB,
+  c1: IN_C as unknown as RGB,
+  rim: 0,
+  cool: 0,
+  form: 0,
+  band: 0.4,
+  ember: 0,
+  alpha: 1,
+};
 const SH_FRAG: Shade & { alpha: number } = {
   c0: FRAG_C as unknown as RGB,
   c1: FRAG_C as unknown as RGB,
@@ -108,7 +120,7 @@ export class EnemyRenderer {
     this.pvx[i] = vx;
     this.pvy[i] = vy;
     this.pr[i] = this.rand() * 6.28;
-    this.ps[i] = (this.rand() - 0.5) * 22;
+    this.ps[i] = (this.rand() - 0.5) * (kind === K_PLATE ? 30 : 22);
     this.pz[i] = size;
     this.pf[i] = floor;
     this.pt[i] = this.rand();
@@ -131,31 +143,53 @@ export class EnemyRenderer {
     }
   }
 
-  /** The shell coming apart: fragments that drop and a few soft gold motes that lift away. */
-  private crumble(rig: BurrRig, e: EnemyState, frags: number, motes: number): void {
+  /**
+   * The burst: shell plates thrown along the cut (spinning, one bounce), a soft puff of spore dust
+   * and a few small motes that lift away. A finisher throws everything further.
+   */
+  private burst(rig: BurrRig, e: EnemyState): void {
+    const D = BURR.death;
     const dir = e.hitDir || 1;
-    for (let k = 0; k < frags; k++) {
-      const u = this.rand() - 0.5;
+    const fin = e.hitPower >= 2;
+    const far = fin ? D.finisher : 1;
+    const n = fin ? D.platesFinisher : D.plates;
+    const cy = rig.y - 12;
+    for (let k = 0; k < n; k++) {
+      const u = (k + 0.5) / n - 0.5;
+      const sp = D.speed[0] + this.rand() * (D.speed[1] - D.speed[0]);
       this.emit(
-        K_FRAG,
-        rig.x + u * 40,
-        rig.y - 5 - this.rand() * 15,
-        u * 170 + dir * 30,
-        -50 - this.rand() * 150,
-        0.5 + this.rand() * 0.4,
-        1.8 + this.rand() * 2.6,
+        K_PLATE,
+        rig.x + u * 34,
+        cy - this.rand() * 10,
+        (dir * sp + u * 190) * far,
+        -(D.up[0] + this.rand() * (D.up[1] - D.up[0])) * (0.8 + 0.2 * far),
+        0.85 + this.rand() * 0.35,
+        5 + this.rand() * 3.5,
         rig.y,
       );
     }
-    for (let k = 0; k < motes; k++) {
+    for (let k = 0; k < 7; k++) {
+      const u = k / 6 - 0.5;
+      this.emit(
+        K_DUST,
+        rig.x + u * 40,
+        rig.y - 4 - this.rand() * 14,
+        u * 90 + dir * 40 * far,
+        -18 - this.rand() * 30,
+        0.42 + this.rand() * 0.2,
+        BURR.dust.size * (1.3 + 0.8 * this.rand()),
+        rig.y,
+      );
+    }
+    for (let k = 0; k < D.motes; k++) {
       this.emit(
         K_MOTE,
         rig.x + (this.rand() - 0.5) * 36,
-        rig.y - 6 - this.rand() * 14,
-        (this.rand() - 0.5) * 26,
-        -26 - this.rand() * 44,
-        0.55 + this.rand() * 0.5,
-        1.3 + this.rand() * 1.1,
+        rig.y - 6 - this.rand() * 16,
+        (this.rand() - 0.5) * 30 + dir * 14,
+        -30 - this.rand() * 46,
+        0.55 + this.rand() * 0.45,
+        1.3 + this.rand() * 1,
         rig.y,
       );
     }
@@ -196,7 +230,7 @@ export class EnemyRenderer {
         rig.deadStage = 3;
         continue;
       }
-      rig.update(e, sim.frame, sim.alpha, dt);
+      rig.update(e, sim.frame, sim.alpha, dt, sim.player.cx, sim.player.cy - 20, clock);
       stepFeelers(rig, e, clock, dt);
 
       // --- Debris, from the state alone.
@@ -211,17 +245,13 @@ export class EnemyRenderer {
         }
       }
       if (e.mode === 'dead') {
-        if ((rig.deadStage & 1) === 0 && rig.mf >= D.split[0]) {
-          rig.deadStage |= 1;
-          this.crumble(rig, e, D.fragments >> 1, D.motes >> 1);
-        }
-        if ((rig.deadStage & 2) === 0 && rig.mf >= D.split[0] + 7) {
-          rig.deadStage |= 2;
-          this.crumble(rig, e, D.fragments - (D.fragments >> 1), D.motes - (D.motes >> 1));
-        }
         if ((rig.deadStage & 4) === 0 && rig.mf >= D.roll) {
           rig.deadStage |= 4;
           for (let k = 0; k < 3; k++) this.dust(rig.x + (k - 1) * 14, rig.y, (k - 1) * 26 + dir * 12);
+        }
+        if ((rig.deadStage & 1) === 0 && rig.mf >= D.burst) {
+          rig.deadStage |= 1;
+          this.burst(rig, e);
         }
       }
 
@@ -232,7 +262,10 @@ export class EnemyRenderer {
       zw[0] = l;
       zw[1] = 1 - l - r;
       zw[2] = r;
-      if (drawBurrback(p, rig, e, clock, zw) > 0) drawn++;
+      // Her light lifts whatever is near her (the creature is not in her matte): a step darker there.
+      const hd = Math.hypot(sim.player.cx - rig.x, sim.player.cy - (rig.y - 17));
+      const nearK = sim.player.faded > 0 ? 0 : sat(1 - hd / BURR.nearHero.reach);
+      if (drawBurrback(p, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
     }
 
     // --- Debris.
@@ -280,6 +313,57 @@ export class EnemyRenderer {
         for (let k = 0; k < 3; k++) FRAG_C[k] = C.shellTop[k]! + (C.sheen[k]! - C.shellTop[k]!) * mixK;
         SH_FRAG.alpha = sat((1 - u) / 0.35);
         p.shape(4, x, y, SH_FRAG);
+      } else if (kind === K_PLATE) {
+        this.pvy[i] = this.pvy[i]! + 980 * dt;
+        x += this.pvx[i]! * dt;
+        y += this.pvy[i]! * dt;
+        const floor = this.pf[i]! - 2;
+        if (y > floor && this.pvy[i]! > 0) {
+          y = floor;
+          // One bounce, then it lies where it fell.
+          if (this.pvy[i]! > 150) {
+            this.pvy[i] = -this.pvy[i]! * 0.36;
+            this.pvx[i] = this.pvx[i]! * 0.55;
+            this.ps[i] = this.ps[i]! * 0.5;
+          } else {
+            this.pvy[i] = 0;
+            this.pvx[i] = 0;
+            this.ps[i] = 0;
+          }
+        }
+        this.pr[i] = this.pr[i]! + this.ps[i]! * dt;
+        const s = this.pz[i]!;
+        const rot = this.pr[i]!;
+        const tn = this.pt[i]!;
+        const c = Math.cos(rot);
+        const sn = Math.sin(rot);
+        // A curved shard of shell: dark outer face, a paler inner face along one side.
+        const a = sat((1 - u) / 0.25);
+        const w = s * (0.55 + 0.25 * tn);
+        p.px[0] = x + c * s * 1.25;
+        p.py[0] = y + sn * s * 1.25;
+        p.px[1] = x + c * s * 0.2 - sn * w;
+        p.py[1] = y + sn * s * 0.2 + c * w;
+        p.px[2] = x - c * s * 1.1 - sn * w * 0.5;
+        p.py[2] = y - sn * s * 1.1 + c * w * 0.5;
+        p.px[3] = x - c * s * 0.9 + sn * w * 0.7;
+        p.py[3] = y - sn * s * 0.9 - c * w * 0.7;
+        p.px[4] = x + c * s * 0.4 + sn * w;
+        p.py[4] = y + sn * s * 0.4 - c * w;
+        for (let k = 0; k < 3; k++) FRAG_C[k] = C.shellTop[k]! + (C.sheen[k]! - C.shellTop[k]!) * 0.7;
+        SH_FRAG.alpha = a;
+        p.shape(5, x, y, SH_FRAG);
+        for (let k = 0; k < 3; k++) IN_C[k] = C.plateIn[k]!;
+        SH_IN.alpha = a;
+        p.px[0] = x + c * s * 1.25;
+        p.py[0] = y + sn * s * 1.25;
+        p.px[1] = x + c * s * 0.2 - sn * w;
+        p.py[1] = y + sn * s * 0.2 + c * w;
+        p.px[2] = x - c * s * 1.1 - sn * w * 0.5;
+        p.py[2] = y - sn * s * 1.1 + c * w * 0.5;
+        p.px[3] = x - c * s * 0.3 - sn * w * 0.1;
+        p.py[3] = y - sn * s * 0.3 + c * w * 0.1;
+        p.shape(4, x + c * s * 0.1 - sn * w * 0.45, y + sn * s * 0.1 + c * w * 0.45, SH_IN);
       } else if (kind === K_MOTE) {
         this.pvy[i] = this.pvy[i]! * (1 - 0.9 * dt);
         x += (this.pvx[i]! + Math.sin(clock * 5 + this.pr[i]!) * 10) * dt;

@@ -21,6 +21,7 @@ import {
   ikOut,
   lerp,
   noise1,
+  pulse,
   Spring,
   sat,
   smoothstep,
@@ -43,7 +44,10 @@ const C = {
   seam: v3(0),
   legNear: v3(0),
   legFar: v3(0),
+  plateIn: v3(0),
+  edge: [v3(0), v3(0), v3(0)],
   head: v3(0),
+  headLow: v3(0),
   eye: v3(0),
   feeler: v3(0),
   fringeTop: v3(0),
@@ -71,7 +75,10 @@ export function loadColors(): void {
   set(C.seam, k.seam);
   set(C.legNear, k.legNear);
   set(C.legFar, k.legFar);
+  set(C.plateIn, k.plateIn);
+  for (let i = 0; i < 3; i++) set(C.edge[i]!, BURR.edgeColor[i]!);
   set(C.head, k.head);
+  set(C.headLow, k.headLow);
   set(C.eye, k.eye);
   set(C.feeler, k.feeler);
   set(C.fringeTop, k.fringeTop);
@@ -126,6 +133,11 @@ export class BurrRig {
   readonly lag = new Spring(0, 17, 0.32);
   readonly feel0 = new Spring(0.5, 30, 0.45);
   readonly feel1 = new Spring(0.5, 30, 0.45);
+  /** Where the eyes look, screen space (-1..1 each), how wary it is (0..1) and the blink (0..1 shut). */
+  lookX = 1;
+  lookY = 0.2;
+  wary = 0;
+  blink = 0;
   /** Blend weights that are eased, 0..1. */
   hurtK = 0;
   teeterK = 0;
@@ -148,7 +160,16 @@ export class BurrRig {
     this.seed = hash1(index * 131 + 17);
   }
 
-  update(e: EnemyState, simFrame: number, alpha: number, dt: number): void {
+  /** `hx, hy` = where the hero is (her head), world px; `clock` = render seconds. */
+  update(
+    e: EnemyState,
+    simFrame: number,
+    alpha: number,
+    dt: number,
+    hx: number,
+    hy: number,
+    clock: number,
+  ): void {
     const B = BURR;
     const f = e.facing;
     const nx = e.x + e.w / 2 + e.rx;
@@ -231,7 +252,7 @@ export class BurrRig {
     } else if (turning) crouchT = 0.2;
     else if (mode === 'alert') {
       crouchT = 1 + B.hunker / B.settle;
-      tuckT = 1;
+      tuckT = 0.4;
     } else if (mode === 'hurt') {
       crouchT = 0.15;
       tuckT = 0.75;
@@ -248,6 +269,27 @@ export class BurrRig {
     this.hurtK += ((skid ? 1 : 0) - this.hurtK) * approach(skid ? 40 : 9, dt);
     const tee = mode === 'hurt' && e.teeter !== 0;
     this.teeterK += ((tee ? 1 : 0) - this.teeterK) * approach(tee ? 26 : 10, dt);
+    // Eyes: ahead and a little down on the walk, wandering at rest, on her when it is wary.
+    const watch = mode === 'alert' || mode === 'hurt';
+    this.wary += ((watch ? 1 : 0) - this.wary) * approach(watch ? 30 : 2.2, dt);
+    let lx = f * 0.75;
+    let ly = 0.3;
+    if (resting) {
+      lx = f * (0.2 + 0.7 * noise1(clock * 0.5 + this.seed * 31, 11));
+      ly = 0.25 * noise1(clock * 0.4 + this.seed * 17, 12);
+    }
+    if (this.wary > 0.02) {
+      const dx = hx - this.x;
+      const dy = hy - (this.y - 12);
+      const dl = Math.hypot(dx, dy) || 1;
+      lx += ((dx / dl) * 0.95 - lx) * sat(this.wary * 1.5);
+      ly += ((dy / dl) * 0.95 - ly) * sat(this.wary * 1.5);
+    }
+    const lk = approach(mode === 'alert' ? 40 : 9, dt);
+    this.lookX += (lx - this.lookX) * lk;
+    this.lookY += (ly - this.lookY) * lk;
+    const bp = pulse(clock + this.seed * 9, 3.4, 0.14, 3 + Math.floor(this.seed * 50));
+    this.blink = watch ? 0 : bp > 0 ? Math.sin(Math.PI * bp) : 0;
     const walking = mode === 'walk' || turning;
     this.walkK += ((walking ? 1 : 0) - this.walkK) * approach(14, dt);
   }
@@ -289,38 +331,6 @@ function by(x: number, y: number): number {
   return mC * x + mD * y + mF;
 }
 
-/** A half of the split shell: moved apart and tipped, in local space (set by `setHalf`). */
-let hShift = 0;
-let hCos = 1;
-let hSin = 0;
-let hPx = 0;
-let hPy = 0;
-
-function setHalf(shift: number, ang: number, pxv: number, pyv: number): void {
-  hShift = shift;
-  hCos = Math.cos(ang);
-  hSin = Math.sin(ang);
-  hPx = pxv;
-  hPy = pyv;
-}
-
-function hx(x: number, y: number): number {
-  return hPx + (x - hPx) * hCos - (y - hPy) * hSin + hShift;
-}
-
-function hy(x: number, y: number): number {
-  return hPy + (x - hPx) * hSin + (y - hPy) * hCos;
-}
-
-/** Appends a local point of the current half to the painter's scratch outline. */
-function halfPoint(p: Painter, n: number, x: number, y: number): number {
-  const lx = hx(x, y);
-  const ly = hy(x, y);
-  p.px[n] = bx(lx, ly);
-  p.py[n] = by(lx, ly);
-  return n + 1;
-}
-
 /** A point on the flank: u -1..1 along the length (+ = toward the head), v 0..1 up the dome. */
 let sX = 0;
 let sY = 0;
@@ -358,6 +368,7 @@ const W = {
   leg0: v3(0),
   leg1: v3(0),
   head: v3(0),
+  headLow: v3(0),
   eye: v3(0),
   feeler: v3(0),
   fringe0: v3(0),
@@ -365,11 +376,24 @@ const W = {
   crack: v3(0),
   spot: v3(0),
 };
-const SH_SHELL = sh(W.shellTop, W.shellLow, 0.3, 0.28, 0.1, 0.16);
+const SH_SHELL = sh(W.shellTop, W.shellLow, 0.3, 0.28, 0.1, 0.1);
 const SH_SHEEN = sh(W.sheen, W.sheen, 0, 0, 0, 0.5);
+const SH_HORN = sh(W.shellTop, W.shellTop, 0.3, 0.28, 0.1, 0.3);
+const KEY: V3 = [1, 0.85, 0.63];
+/**
+ * Horn, ridge burrs and tail lip: [angle over the dome from the front (x pi), length, lean toward the head,
+ * lean up, bow, half-width at the base].
+ */
+const SPIKES: readonly (readonly number[])[] = [
+  [0.13, 9, 0.5, 0.55, 0.16, 3.4],
+  [0.4, 3.6, -0.2, 0.15, 0, 3.3],
+  [0.54, 4.6, -0.25, 0.15, 0, 3.6],
+  [0.68, 4.4, -0.3, 0.1, 0, 3.5],
+  [0.94, 5.5, -0.45, 0.55, -0.1, 3.2],
+];
 const SH_SEAM = sh(W.seam, W.seam, 0, 0, 0, 0.5);
 const SH_LEG = sh(W.leg0, W.leg1, 0.12, 0.2, 0.06, 0.4);
-const SH_HEAD = sh(W.head, W.head, 0.2, 0.3, 0.1, 0.3);
+const SH_HEAD = sh(W.head, W.headLow, 0.3, 0.3, 0.1, 0.3);
 const SH_EYE = sh(W.eye, W.eye, 0, 0, 0, 0.5);
 const SH_FEEL = sh(W.feeler, W.feeler, 0.1, 0.25, 0, 0.5);
 const SH_FRINGE = sh(W.fringe0, W.fringe1, 0.25, 0.1, 0.1, 0.5);
@@ -397,6 +421,91 @@ const CRACKS: readonly (readonly number[])[] = [
 /** Where the six feet and knees ended up this frame (world px), for dust and debug. */
 export const feet = { x: new Float32Array(6), y: new Float32Array(6), down: new Uint8Array(6) };
 
+/**
+ * Head, feelers and face. Drawn twice: under the shell (with the feelers), so a turn carries it
+ * behind the dome, and again over the shell's brow as the face plate once it has come round.
+ */
+function drawHead(
+  p: Painter,
+  rig: BurrRig,
+  rimH: number,
+  rot: number,
+  dead: boolean,
+  curl: number,
+  front: boolean,
+): void {
+  const B = BURR;
+  const dH = rig.dHead;
+  const H = B.head;
+  const tuck = sat(rig.tuck.x);
+  const aH = Math.abs(dH);
+  const headLx = dH * (H.x - H.tuck * tuck);
+  const headLy = -(H.y - (B.rim - rimH) * 0.55) - tuck * 1.2;
+  const hcx = bx(headLx, headLy);
+  const hcy = by(headLx, headLy);
+  if (aH > 0.12) {
+    if (!front) {
+      // Feelers: tap the ground ahead in turn as it walks; idle slowly at rest; back in a flinch.
+      const F = B.feeler;
+      const rootLx = headLx + dH * H.len * 0.62;
+      const rootLy = headLy - H.high * 0.55;
+      const rootH = -rootLy;
+      const ground = Math.asin(sat(rootH / F.len));
+      for (let i = 0; i < 2; i++) {
+        const spring = i === 0 ? rig.feel0 : rig.feel1;
+        const ang = spring.x;
+        const len = F.len * (i === 0 ? 1 : 0.92) * (0.35 + 0.65 * aH);
+        const tipLx = rootLx + dH * Math.cos(ang) * len - rig.lag.x * 0.6;
+        const tipLy = Math.min(-0.3, rootLy + Math.sin(ang) * len);
+        // A bowed stalk: the control point sits above the chord.
+        const mxl = (rootLx + tipLx) / 2 + dH * 1.5;
+        const myl = (rootLy + tipLy) / 2 - 3.6 - (ground - ang) * 2;
+        for (let k = 0; k < 6; k++) {
+          const u = k / 5;
+          const a0 = (1 - u) * (1 - u);
+          const a1 = 2 * u * (1 - u);
+          const a2 = u * u;
+          const lx = a0 * rootLx + a1 * mxl + a2 * tipLx;
+          const ly = a0 * rootLy + a1 * myl + a2 * tipLy;
+          p.px[k] = bx(lx, ly);
+          p.py[k] = by(lx, ly);
+          p.pw[k] = F.w * (1 - 0.55 * u) * (i === 0 ? 1 : 0.85);
+        }
+        p.ribbon(6, SH_FEEL, false, true);
+      }
+    }
+    SH_HEAD.alpha = 1;
+    p.ellipse(
+      hcx,
+      hcy,
+      H.len * (0.45 + 0.55 * aH),
+      H.high,
+      rot + dH * (0.3 + 0.35 * rig.lookY * rig.wary),
+      SH_HEAD,
+      14,
+    );
+    // The face: two pale forward-set eyes on the plate, with dark pupils that look at things
+    // (ahead as it walks, at her when it is wary). Wide in a flinch, shut when it dies.
+    const open = (dead ? 1 - curl : 1) * (1 - 0.92 * rig.blink);
+    if (open > 0.05) {
+      const wide = 1 + 0.22 * sat(rig.wary);
+      const show = sat(aH * 1.6 - 0.3);
+      for (let i = 0; i < 2; i++) {
+        const k = i === 0 ? 1 : 0.78;
+        const elx = headLx + dH * H.len * (i === 0 ? 0.3 : 0.74);
+        const ely = headLy - H.high * (i === 0 ? 0.12 : 0.2);
+        // Blank pale eyes: the look is the eyes sliding on the plate, never a pupil (that read as a toy).
+        const ex = bx(elx, ely) + rig.lookX * 1.1 - Math.sign(dH) * 0.5;
+        const ey = by(elx, ely) + rig.lookY * 1.2;
+        const rx = H.eye * k * (0.55 + 0.45 * aH);
+        const ry = H.eye * 1.25 * k * wide * open;
+        SH_EYE.alpha = show;
+        p.ellipse(ex, ey, rx, ry, rot, SH_EYE, 12);
+      }
+    }
+  }
+}
+
 /** Draws one burrback. Returns the alpha it was drawn with (0 = nothing). */
 export function drawBurrback(
   p: Painter,
@@ -404,6 +513,8 @@ export function drawBurrback(
   e: EnemyState,
   clock: number,
   zw: readonly number[],
+  /** 0..1: how close the hero's light is. */
+  nearK: number,
 ): number {
   const B = BURR;
   const d = rig.d;
@@ -415,37 +526,37 @@ export function drawBurrback(
   const seed = rig.seed;
   const ph = seed * 40;
 
-  // --- Death timeline.
+  // --- Death timeline: flipped onto its back along the blow, legs curl, then it bursts (the renderer throws the plates).
   let roll = 0;
   let hop = 0;
   let curl = 0;
-  let split = 0;
-  let fade = 1;
+  let swell = 0;
   let deadK = 0;
   const dir = e.hitDir !== 0 ? e.hitDir : -e.facing;
   if (dead) {
     const D = B.death;
+    if (t >= D.burst) return 0;
     const r = sat(t / D.roll);
     roll = dir * Math.PI * (1 - (1 - r) * (1 - r));
-    if (t > D.roll) roll += dir * 0.16 * Math.sin((t - D.roll) * 0.75) * Math.exp(-(t - D.roll) * 0.2);
     hop = D.hop * Math.sin(Math.PI * r);
     curl = smoothstep(D.curl[0], D.curl[1], t);
-    split = smoothstep(D.split[0], D.split[1], t);
-    fade = 1 - smoothstep(D.fade[0], D.fade[1], t);
-    deadK = sat(t / 2.5);
+    swell = smoothstep(D.burst - 3, D.burst, t);
+    deadK = sat(t / 2);
   }
-  if (fade <= 0.003) return 0;
 
   // --- Tone of a hit: darker through the hold, then a lighter pop that fades. Never white.
   const age = rig.hitAge;
+  // The killing blow snaps harder; right beside the hero everything is a step darker (her light lifts it).
   toneDark = B.hit.dark * (1 - smoothstep(1.2, 2.8, age));
-  toneLight = B.hit.pop * smoothstep(1.4, 3, age) * (1 - smoothstep(3.2, 8.5, age));
-  if (dead) toneDark = Math.max(toneDark, 0.25 * curl);
+  toneLight = B.hit.pop * (dead ? 1.5 : 1) * smoothstep(1.4, 3, age) * (1 - smoothstep(3.2, 5.4, age));
+  toneLight = Math.max(toneLight, 0.5 * swell);
+  toneDark = Math.max(toneDark, nearK * B.nearHero.dark * (1 - toneLight));
   tone(W.shellTop, C.shellTop);
   tone(W.shellLow, C.shellLow);
   tone(W.sheen, C.sheen);
   tone(W.seam, C.seam, 0.6);
   tone(W.head, C.head);
+  tone(W.headLow, C.headLow);
   tone(W.eye, C.eye, 0.3);
   tone(W.feeler, C.feeler);
   tone(W.fringe0, C.fringeTop);
@@ -458,8 +569,8 @@ export function drawBurrback(
   const breath = Math.sin(clock * 2.1 + ph) * 0.022 * sat(crouch) * (1 - deadK);
   const rimH = Math.max(2.2, B.rim - B.settle * crouch + bobAt(rig.dist, g) * g.bob * walkK);
   const sq = rig.squash.x;
-  const sx = 1 + sq - breath * 0.4;
-  const sy = 1 - sq * 0.85 + breath;
+  const sx = 1 + sq - breath * 0.4 + 0.12 * swell;
+  const sy = 1 - sq * 0.85 + breath + 0.1 * swell;
   const rot =
     rig.rock.x +
     rockAt(rig.dist, g) * g.rock * walkK * d +
@@ -471,7 +582,7 @@ export function drawBurrback(
   const ox = rig.x + shunt;
   const oy = rig.y - hop;
   setBody(ox, oy, sx, sy, rot, pivot);
-  const alpha = fade;
+  const alpha = 1;
   p.alphaK = alpha;
   p.glowK = alpha;
 
@@ -509,8 +620,8 @@ export function drawBurrback(
       // Skidding: legs splayed wide, scrabbling for grip.
       if (rig.hurtK > 0.001) {
         const w = scr + i * 2.3 + ph;
-        const sxp = ox + stand * 1.28 + (row === 1 ? side * 3 : 0) + 3 * Math.sin(w);
-        const syp = rig.y - Math.max(0, Math.sin(w + 1.2)) * 3.4;
+        const sxp = ox + stand * 1.4 + (row === 1 ? side * 4 : 0) + 4 * Math.sin(w);
+        const syp = rig.y - Math.max(0, Math.sin(w + 1.2)) * 5.5;
         fx += (sxp - fx) * rig.hurtK;
         fy += (syp - fy) * rig.hurtK;
         down = false;
@@ -518,8 +629,8 @@ export function drawBurrback(
       // At the brink: the legs over the edge find nothing and paw the air.
       if (rig.teeterK > 0.001 && row !== 1 && home * d * e.teeter > 0) {
         const w = clock * 21 + i * 1.9;
-        const txp = hipX + e.teeter * (8 + 2.5 * Math.sin(w));
-        const typ = hipY + 12 + 3.5 * Math.sin(w * 0.83 + 1);
+        const txp = hipX + e.teeter * (11 + 5 * Math.sin(w));
+        const typ = hipY + 13 + 6 * Math.sin(w * 0.83 + 1);
         fx += (txp - fx) * rig.teeterK;
         fy += (typ - fy) * rig.teeterK;
         down = false;
@@ -554,7 +665,7 @@ export function drawBurrback(
         const dk = base * (1 - toneDark);
         const v = dk + (C.pop[k]! - dk) * toneLight;
         c0[k] = v;
-        c1[k] = v * 0.82;
+        c1[k] = v * 0.86;
       }
       p.px[0] = hipX;
       p.py[0] = hipY;
@@ -571,61 +682,14 @@ export function drawBurrback(
       p.pw[2] = L.w[1] * 1.08;
       p.pw[3] = (L.w[1] + L.w[2]) / 2;
       p.pw[4] = L.w[2];
+      // The near legs carry a thin pale edge so they read against dark ground.
+      SH_LEG.rim = 0.15 + 0.25 * near;
+      SH_LEG.cool = 0.15 + 0.2 * near;
       p.ribbon(5, SH_LEG, true, true);
     }
     if (pass === 1) break;
 
-    // --- Head, feelers and eyes: behind the shell, so pulling in hides them.
-    const H = B.head;
-    const tuck = sat(rig.tuck.x);
-    const aH = Math.abs(dH);
-    const headLx = dH * (H.x - H.tuck * tuck);
-    const headLy = -(H.y - (B.rim - rimH) * 0.55) - tuck * 1.2;
-    const hcx = bx(headLx, headLy);
-    const hcy = by(headLx, headLy);
-    if (aH > 0.12) {
-      // Feelers: tap the ground ahead in turn as it walks; idle slowly at rest; back in a flinch.
-      const F = B.feeler;
-      const rootLx = headLx + dH * H.len * 0.62;
-      const rootLy = headLy - H.high * 0.55;
-      const rootH = -rootLy;
-      const ground = Math.asin(sat(rootH / F.len));
-      for (let i = 0; i < 2; i++) {
-        const spring = i === 0 ? rig.feel0 : rig.feel1;
-        const ang = spring.x;
-        const len = F.len * (i === 0 ? 1 : 0.92) * (0.35 + 0.65 * aH);
-        const tipLx = rootLx + dH * Math.cos(ang) * len - rig.lag.x * 0.6;
-        const tipLy = Math.min(-0.3, rootLy + Math.sin(ang) * len);
-        // A bowed stalk: the control point sits above the chord.
-        const mxl = (rootLx + tipLx) / 2 + dH * 1.5;
-        const myl = (rootLy + tipLy) / 2 - 3.6 - (ground - ang) * 2;
-        for (let k = 0; k < 6; k++) {
-          const u = k / 5;
-          const a0 = (1 - u) * (1 - u);
-          const a1 = 2 * u * (1 - u);
-          const a2 = u * u;
-          const lx = a0 * rootLx + a1 * mxl + a2 * tipLx;
-          const ly = a0 * rootLy + a1 * myl + a2 * tipLy;
-          p.px[k] = bx(lx, ly);
-          p.py[k] = by(lx, ly);
-          p.pw[k] = F.w * (1 - 0.55 * u) * (i === 0 ? 1 : 0.85);
-        }
-        p.ribbon(6, SH_FEEL, false, true);
-      }
-      SH_HEAD.alpha = 1;
-      p.ellipse(hcx, hcy, H.len * (0.45 + 0.55 * aH), H.high, rot + dH * 0.32, SH_HEAD, 14);
-      // Two small pale eyes: the near one, and the far one peeking past the brow.
-      const blink = dead ? 1 - curl : 1;
-      if (blink > 0.05) {
-        SH_EYE.alpha = sat(aH * 1.6 - 0.3) * blink;
-        const e0x = headLx + dH * H.len * 0.42;
-        const e0y = headLy - H.high * 0.08;
-        p.ellipse(bx(e0x, e0y), by(e0x, e0y), H.eye, H.eye * blink, 0, SH_EYE, 10);
-        const e1x = headLx + dH * H.len * 0.78;
-        const e1y = headLy - H.high * 0.3;
-        p.ellipse(bx(e1x, e1y), by(e1x, e1y), H.eye * 0.72, H.eye * 0.72 * blink, 0, SH_EYE, 8);
-      }
-    }
+    drawHead(p, rig, rimH, rot, dead, curl, false);
   }
 
   // --- Shell outline in local space: the dome over the top (from screen right to left), then the belly.
@@ -654,72 +718,65 @@ export function drawBurrback(
   }
   const ccx = -d * B.shear * 0.4;
   const ccy = -rimH - B.dome * 0.42;
+  // The zone's light on the top edge: a thin tinted rim that lifts the dome off the dark ground.
+  for (let k = 0; k < 3; k++)
+    KEY[k] = C.edge[0]![k]! * zw[0]! + C.edge[1]![k]! * zw[1]! + C.edge[2]![k]! * zw[2]!;
+  p.keyColor = KEY as unknown as RGB;
   SH_SHELL.rim = B.rimKey * (1 - toneDark);
   SH_SHELL.cool = B.rimCool;
-  if (split <= 0.001) {
-    for (let k = 0; k < N_OUT; k++) {
-      p.px[k] = bx(LX[k]!, LY[k]!);
-      p.py[k] = by(LX[k]!, LY[k]!);
-    }
-    const top = -rimH - B.dome;
-    p.shape(
-      N_OUT,
-      bx(ccx, ccy),
-      by(ccx, ccy),
-      SH_SHELL,
-      bx(ccx, top + 5),
-      by(ccx, top + 5),
-      bx(ccx, -rimH + 1),
-      by(ccx, -rimH + 1),
-    );
-  } else {
-    // Two halves along a jagged break through the crown: they part, tip outward and sink.
-    const gap = B.death.gap * split;
-    const cutX = -d * B.shear * 0.7;
-    const top = -rimH - B.dome;
-    for (let half = 0; half < 2; half++) {
-      const sgn = half === 0 ? 1 : -1;
-      setHalf(sgn * gap, sgn * 0.42 * split, sgn * aEff * 0.6, -rimH);
-      // The break: three points down the middle, zig-zag (the same for both halves, so they fit).
-      const j0x = cutX + 2.2;
-      const j0y = top + B.dome * 0.3;
-      const j1x = cutX - 2.4;
-      const j1y = top + B.dome * 0.62;
-      const j2x = cutX + 0.8;
-      const j2y = -rimH + sag;
-      let n = 0;
-      if (half === 0) {
-        // Screen-right half: rim -> crown, down the break, back along the belly.
-        for (let k = 0; k < NT / 2; k++) n = halfPoint(p, n, LX[k]!, LY[k]!);
-        n = halfPoint(p, n, j0x, j0y);
-        n = halfPoint(p, n, j1x, j1y);
-        n = halfPoint(p, n, j2x, j2y);
-        for (let j = NB / 2; j < NB; j++) n = halfPoint(p, n, LX[NT + j]!, LY[NT + j]!);
-      } else {
-        for (let j = NB / 2 - 1; j >= 0; j--) n = halfPoint(p, n, LX[NT + j]!, LY[NT + j]!);
-        for (let k = NT - 1; k >= NT / 2; k--) n = halfPoint(p, n, LX[k]!, LY[k]!);
-        n = halfPoint(p, n, j0x, j0y);
-        n = halfPoint(p, n, j1x, j1y);
-        n = halfPoint(p, n, j2x, j2y);
-      }
-      const mx = cutX + sgn * aEff * 0.45;
-      const my = -rimH - B.dome * 0.36;
-      const gx = cutX + sgn * aEff * 0.3;
-      p.shape(
-        n,
-        bx(hx(mx, my), hy(mx, my)),
-        by(hx(mx, my), hy(mx, my)),
-        SH_SHELL,
-        bx(hx(gx, top + 5), hy(gx, top + 5)),
-        by(hx(gx, top + 5), hy(gx, top + 5)),
-        bx(hx(gx, -rimH + 1), hy(gx, -rimH + 1)),
-        by(hx(gx, -rimH + 1), hy(gx, -rimH + 1)),
-      );
-    }
-    setHalf(0, 0, 0, 0);
-  }
+  SH_HORN.rim = SH_SHELL.rim;
 
-  const whole = 1 - sat(split * 2.5);
+  // --- Signature outline, drawn under the shell so the bases are hidden: a short upturned horn on
+  // the brow, a row of blunt burrs along the ridge, a raised lip at the tail.
+  const dd = clamp(d * 2.5, -1, 1);
+  for (let i = 0; i < SPIKES.length; i++) {
+    const sp = SPIKES[i]!;
+    const a = Math.PI * sp[0]!;
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    const rx0 = dd * aEff * Math.sign(c) * Math.abs(c) ** B.ex - d * B.shear * sn;
+    const ry0 = -rimH - B.dome * sn ** B.ey;
+    let nx = rx0 - ccx;
+    let ny = ry0 - ccy;
+    const nl = Math.hypot(nx, ny) || 1;
+    nx /= nl;
+    ny /= nl;
+    const len = sp[1]!;
+    // Lean: along the body (+ = toward the head) and up.
+    const tx = rx0 + nx * len * 0.55 + dd * sp[2]! * len;
+    const ty = ry0 + ny * len * 0.55 - sp[3]! * len;
+    const b0x = rx0 - nx * 2.2;
+    const b0y = ry0 - ny * 2.2;
+    p.px[0] = bx(b0x, b0y);
+    p.py[0] = by(b0x, b0y);
+    const mx = (b0x + tx) / 2 + dd * sp[4]! * len;
+    const my = (b0y + ty) / 2 + Math.abs(sp[4]!) * len * 0.5;
+    p.px[1] = bx(mx, my);
+    p.py[1] = by(mx, my);
+    p.px[2] = bx(tx, ty);
+    p.py[2] = by(tx, ty);
+    p.pw[0] = sp[5]!;
+    p.pw[1] = sp[5]! * 0.8;
+    p.pw[2] = sp[5]! * 0.5;
+    p.ribbon(3, SH_HORN, false, true);
+  }
+  for (let k = 0; k < N_OUT; k++) {
+    p.px[k] = bx(LX[k]!, LY[k]!);
+    p.py[k] = by(LX[k]!, LY[k]!);
+  }
+  const top = -rimH - B.dome;
+  p.shape(
+    N_OUT,
+    bx(ccx, ccy),
+    by(ccx, ccy),
+    SH_SHELL,
+    bx(ccx, top + 5),
+    by(ccx, top + 5),
+    bx(ccx, -rimH + 1),
+    by(ccx, -rimH + 1),
+  );
+
+  const whole = 1;
   if (whole > 0.01) {
     // --- Plate seams: two dark lines over the dome, bulging with it.
     SH_SEAM.alpha = 0.85 * whole * smoothstep(0.15, 0.6, ad);
@@ -758,7 +815,8 @@ export function drawBurrback(
 
     // --- Cracks: pale broken edges, one at 2 hp, the rest at 1.
     const flank = smoothstep(0.3, 0.75, ad);
-    const nCr = e.hp >= e.hpMax ? 0 : e.hp === e.hpMax - 1 ? 2 : CRACKS.length;
+    const nCr = e.hp >= e.hpMax ? 0 : e.hp > 1 ? 2 : CRACKS.length;
+    const wide = dead ? 2.4 + 2 * swell : 1;
     if (nCr > 0 && flank > 0.01) {
       W.crack[0] = C.crackEdge[0];
       W.crack[1] = C.crackEdge[1];
@@ -771,7 +829,7 @@ export function drawBurrback(
           surface(cr[k * 2]!, cr[k * 2 + 1]!, d, rimH);
           p.px[k] = bx(sX, sY);
           p.py[k] = by(sX, sY);
-          p.pw[k] = 0.55 * (1 - 0.6 * (k / (n - 1)));
+          p.pw[k] = 0.55 * wide * (1 - 0.6 * (k / (n - 1)));
         }
         p.ribbon(n, SH_CRACK, false, false);
       }
@@ -790,7 +848,7 @@ export function drawBurrback(
         br *= 1 + (S.alert - 1) * alert;
         // Hurt badly: they flicker. Dying: they gutter out one after another.
         if (e.hp <= 1 && !dead) br *= 0.55 + 0.45 * (noise1(clock * 13 + i * 7.3, 3 + i) > -0.15 ? 1 : 0.25);
-        if (dead) br *= sat(1 - (t - i * 2.2) / 7) * (0.6 + 0.4 * noise1(clock * 17 + i * 3.1, 9));
+        if (dead) br *= t > 1 + i * 1.8 ? 0 : 1;
         if (toneDark > 0) br *= 1 - toneDark * 0.6;
         if (br <= 0.01) continue;
         surface(sp[0]!, sp[1]!, d, rimH);
@@ -806,7 +864,7 @@ export function drawBurrback(
 
   // --- Fringe: short soft burr tufts along the rim, trailing what the shell does.
   const Fr = B.fringe;
-  const fAlpha = 1 - sat(split * 1.6);
+  const fAlpha = 1;
   if (fAlpha > 0.01) {
     SH_FRINGE.alpha = fAlpha;
     const n = Fr.count;
@@ -832,6 +890,12 @@ export function drawBurrback(
       p.pw[2] = 0.12;
       p.ribbon(3, SH_FRINGE, true, false);
     }
+  }
+  // --- The face plate over the brow (fades in as the head comes round; not on a body on its back).
+  const faceK = smoothstep(0.4, 0.75, Math.abs(dH)) * (1 - deadK);
+  if (faceK > 0.01) {
+    p.alphaK = alpha * faceK;
+    drawHead(p, rig, rimH, rot, dead, curl, true);
   }
   p.alphaK = 1;
   p.glowK = 1;
