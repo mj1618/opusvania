@@ -178,26 +178,56 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - Capture gotcha: x 600-900 is under F1 and 1900 running right reaches the mid rise: both cut the
   airtime. For a full double jump use flat open ground and check the log for `headBump`.
 
-## Thorn slash (sim: memory/combat.md; render numbers in `SLASH` in rig.ts)
-- Driven by the `slash` / `slashHit` events and `player.hitstop`; strokes alternate with `seq`
-  parity. Timeline is render time (0.1 s swing, 0.34 s total), frozen while `hitstop > 0`.
-- The sword hand (side A) rides the arc exactly (hand drag bypassed); the blade is drawn in the hand
-  while `slashW > 0.5`, the empty sheath stays at the hip. Body: hip twist, lean, off-hand counter,
-  small whole-body roll in the air, wings flare by `slashK` (not while spread in a glide).
-- The crescent (`drawSlash` in fx.ts) is three additive streaks about the chest: sweep and reach per
-  direction in `SLASH.arc` / `SLASH.reach`, sized to the sim's hit box (fwd is squashed to 0.6 in y:
-  the box is only 88 tall). 9 frames of life. Contact spark at the target's near side, small.
-- Up / down are whole poses (`UPCUT`, `DOWNCUT`), lerped in by `slashW` (feet and pelvis height only
-  in the air). Sweeps end overhead / beneath her (`SLASH.up`, `SLASH.down`): ending behind her left
-  the blade parked horizontally behind the head for the whole hold.
+## Thorn slash (sim: memory/combat.md; strokes in `STROKES` in rig.ts, trail look in `TRAIL` in fx.ts)
+- **Three strokes per direction, picked by the event's `step`** (`strokeFor`): fwd 1 = rising draw cut
+  out of the sheath, 2 = flat falling backhand, 3 = gather behind + cleave over the top into a deep
+  lunge with the wings thrown wide. Up: 1 back-over-to-front, 2 front-to-high, 3 gathered cleave.
+  Down: one dive cut (the pogo's rhythm never changes). A `Stroke` = an ellipse about the chest
+  (`reach` = the sim's hit reach for that step, tested against `slashBox`; `tilt`, `sq`), blade
+  angles `a0 -> a1 (+over, -relax)`, frames `wind / cut / hold / home`, and two body keys (`w` end
+  of gather, `f` end of cut; channels `K_*`). The same ellipse places the hand, turns the blade and
+  lays the trail.
+- **Timing is tied to the sim**: the press frame is drawn at stroke frame 1 and `wind` = the sim's
+  startup, so the press frame shows the gathered pose and the first possible hit lands one frame into
+  the cut. The frame a `slashHit` arrives still advances (the sim's hitstop is already > 0 on it):
+  otherwise the hold freezes the gather and the pod bursts before the blade moves. `ease` 3 puts
+  ~2/3 of the arc into that first frame. Timeline is render time, frozen while `hitstop > 0`.
+- **Chaining**: `hold` (20 / 22 / 31) is later than the sim's cooldown (17 / 19 / 27), so a mashed
+  chain always starts from the held follow-through (blade angle, hand reach and body key are blended
+  from where they are). Alone, the blade then goes home down and round in front (never back over her
+  head) in 9 frames, 14 after the finisher. `slashEnd` reason `dash` drops it at once.
+- Ends matter: a stroke must not end with the blade parked behind her head (it is held ~15 frames).
+- Body: the stroke's key is ADDED to the blended pose (run legs keep striding; feet channels only
+  when standing; `K_ROT` rolls her in the air; `K_LEGS` trails the legs). Up / down also lerp to the
+  whole poses `UPCUT` / `DOWNCUT`. The lunge leaves the back foot behind for a moment (`lungeBack`).
+  Wings read `rig.slashWing` (-1 folded .. 1.5 thrown wide), `slashTwist` (counterweight: far / near
+  wing differ) and `hangK` (lift during the air hang); antennae get the same flare.
+- **The trail** (`BladeTrail` in fx.ts): sampled from `rig.strokeAt(q)` several times per frame, so
+  it has the stroke's true shape; drawn as a SOLID pale crescent whose outer edge is the blade
+  point's path at `reach` (cool at the tail to warm at the blade, a thin dusk rim under it, a faint
+  additive haze inside, a hair-thin additive cut line along the whole arc for 3 frames). It dies by
+  thinning from the tail, not by fading. The finisher's is wider, lasts longer and has a slim echo
+  crescent at 0.76 of the reach. It follows her (`TRAIL.follow` 0.9: left in the world, a fall or a
+  glide flies through it) until the blow lands, then it is pinned where it struck.
+- **Tried and rejected**: a wide translucent swept band (soft veil + additive body + bright edge
+  line) read as a glass dome / soap bubble, and anything with partial alpha goes into post's hero
+  matte, which takes the scene's exposure off those pixels: a faint veil shows as DARK glass on a
+  lit backdrop. Solid + thin + short-lived reads as a blade and matches her flat shading. A taper
+  in thickness on a wide band draws a straight chord, not a point.
+- Hits: `Fx.sparks` = 6-8 short streaks along the blade point's travel (`STREAK` particles, 4-6
+  frames) + `drawImpact` (small star, long axis along the cut, 5 frames), both scaled by `power`.
+  Finisher only: 9 dust sparks off the wing hems at the start of the cut.
+- Camera kick: `src/render/camera/kick.ts`, numbers in `cameraTuning.kick`, on the `impact` event.
 - Wall slide: the rig faces the wall, the slash goes away. `View.bladeFront` draws the sword arm and
   blade over the wing (arm A is the far arm when she faces left and was hidden); the head yaw target
-  becomes the slash side; the spine leans out.
-- After the cut (`hold` 0.16 s) the blade turns to `SLASH.sheath` and the hand drops to the hip
-  (`slashHome`), ~10 frames; a chained slash just restarts.
-- The crescent has a thin dusk under-edge (alpha ribbon) so it keeps a shape on the light well. A wide
-  one read as a grey slab.
+  becomes the slash side; the spine leans out. `View.bladeOver` draws the blade (and arm) over the
+  head on up slashes.
 - A down-slash hit runs `pogo` (legs long, then tuck).
+- Capture: `?nopickups` also removes the pods; a great glint mid-capture opens the wings (flourish)
+  and ruins an air sheet: stand clear of glints or use `?nopickups` for misses.
+- Not done: the up slash in the air has no strong vertical body line (the fall pose's bunched wings
+  dominate); strokes are not mirrored-aware of which arm is near (facing left the sword arm is the
+  far arm, mostly hidden behind the body); no per-stroke run-leg accent.
 - Backlit membranes are amber (0.95, 0.6, 0.26), not pink; the wing beat is 58 deg / 1.0 s and still
   only just readable on sheets.
 

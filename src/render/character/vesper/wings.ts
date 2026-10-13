@@ -171,7 +171,8 @@ export class Secondary {
       0.4 * rig.wAir +
       0.8 * hold +
       soar * (1.5 + 1.6 * Math.max(0, ck)) +
-      1.2 * dive;
+      1.2 * dive +
+      0.5 * Math.min(1, Math.abs(rig.slashWing));
     const dragK =
       (1 - rig.wAir * (0.45 + 0.3 * rig.airRise) - 0.55 * dash - 0.3 * wall) *
       (1 - 0.5 * hold) *
@@ -292,8 +293,14 @@ export class Secondary {
         lift -= settle * (13 - k * 1.5) * (far > 0.5 ? 0.7 : 1);
         // A glint: a tiny flick; a great one opens them.
         lift -= rig.joy * 20 * (1 - k * 0.12) * (1 - 0.6 * soar);
-        // A cut: they flare with the turn of the shoulders and settle.
-        lift -= rig.slashK * (22 + 8 * far) * (1 - k * 0.12) * (1 - soar);
+        // A cut: the wings are her cloak. They close in as she gathers, flare with the stroke (the
+        // wing opposite the leading shoulder first: a counterweight), and lift to hold an air hang.
+        const sw = rig.slashWing;
+        lift *= 1 - 0.75 * Math.max(0, -sw) * (1 - soar);
+        lift -=
+          (Math.max(0, sw) * (24 + 9 * far) + rig.slashTwist * 13 * (2 * far - 1) + rig.hangK * 15) *
+          (1 - k * 0.12) *
+          (1 - soar);
         // A landing or a skid throws the hem out for a moment.
         lift -= clamp(rig.crouchPx, 0, 8) * 1.6 * (1 - k / STRANDS) * (1 - soar);
         c.lift = lift * DEG;
@@ -345,7 +352,8 @@ export class Secondary {
           20 * fl +
           rig.soar * (9 + 30 * rig.catchK + 5 * noise1(clock * 0.9, 83 + a)) -
           16 * rig.joy -
-          18 * rig.dive) *
+          18 * rig.dive +
+          15 * rig.slashWing) *
         DEG;
       c.curl = 0.04 * run - 0.05 * glide + 0.07 * fl + 0.46 * tuck;
       c.scale = 1 - 0.04 * tuck;

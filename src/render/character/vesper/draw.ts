@@ -75,6 +75,10 @@ export interface View {
   /** The thorn is out: weight 0..1 and the blade's direction on screen (rad, y down). */
   slashW: number;
   bladeAng: number;
+  /** Blade length factor (it shortens seen end on, stretches a touch at full speed). */
+  bladeLen: number;
+  /** The blade passes in front of her head (the rising cut). */
+  bladeOver: boolean;
   /** The cut goes behind her back (off a wall): the sword arm and blade are drawn in front. */
   bladeFront: boolean;
   /** Scales the face's pale tones (the dark zones' grade lifts them: this takes it back out). */
@@ -564,13 +568,12 @@ const SH_BLADE: Shade = {
 };
 
 /** The thorn in her hand: a slender pale blade along `ang` (screen radians) from the hand joint. */
-function blade(p: Painter, j: Float32Array, ang: number, k: number): void {
+function blade(p: Painter, j: Float32Array, ang: number, k: number, len: number): void {
   const hx = j[J_HAND_A * 2]!;
   const hy = j[J_HAND_A * 2 + 1]!;
   const cx = Math.cos(ang);
   const cy = Math.sin(ang);
-  const L = 25 * k;
-  p.glow(hx + cx * L * 0.6, hy + cy * L * 0.6, 9, GOLD, 0.14 * k, 3, ang);
+  const L = 26 * k * len;
   for (let i = 0; i < 5; i++) {
     const t = i / 4;
     p.px[i] = hx + cx * (1.5 + L * t);
@@ -1193,7 +1196,8 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   leg(p, j, far, true);
   thorn(p, f, 21 * (1 - 0.65 * v.tuck), v.slashW);
   // The sword arm is side A: behind the body when she faces left.
-  if (d < 0 && !v.bladeFront && v.slashW > 0.5) blade(p, j, v.bladeAng, sat(v.slashW * 2 - 1));
+  const bk = sat(v.slashW * 2 - 1);
+  if (d < 0 && !v.bladeFront && !v.bladeOver && v.slashW > 0.5) blade(p, j, v.bladeAng, bk, v.bladeLen);
   torso(p, j);
   leg(p, j, near, false);
   if (!behind)
@@ -1201,7 +1205,11 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   ruff(p, f, v);
   arm(p, j, near, false, true, v.wall);
   if (v.bladeFront && near !== 0) arm(p, j, 0, false, true, 0);
-  if ((d >= 0 || v.bladeFront) && v.slashW > 0.5) blade(p, j, v.bladeAng, sat(v.slashW * 2 - 1));
+  if ((d >= 0 || v.bladeFront) && !v.bladeOver && v.slashW > 0.5) blade(p, j, v.bladeAng, bk, v.bladeLen);
   head(p, f, v, far);
+  if (v.bladeOver && v.slashW > 0.5) {
+    if (near !== 0) arm(p, j, 0, false, true, 0);
+    blade(p, j, v.bladeAng, bk, v.bladeLen);
+  }
   antenna(p, v.antennae[near]!, false, v.glow, sat(v.glintT / GLINT_RUN), v.glintT < 0.6 ? v.glintK : 0);
 }

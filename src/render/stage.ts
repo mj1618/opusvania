@@ -19,6 +19,7 @@ import type { SimEvent } from '../sim/events';
 import type { PlayerState } from '../sim/state';
 import type { GameApp } from './app';
 import { type CameraState, createCamera, lerpCamera, stepCamera } from './camera/index';
+import { CameraKick } from './camera/kick';
 import { CharacterRenderer } from './character/index';
 import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
 import { Hud } from './hud/index';
@@ -63,6 +64,8 @@ export class RenderStage {
   private cam: CameraState;
   private prevCam: CameraState;
   private pending: SimEvent[] = [];
+  /** A blow landing shoves the view a few px (added at view time; the follow camera never sees it). */
+  private readonly kick = new CameraKick();
 
   constructor(
     private readonly ga: GameApp,
@@ -110,15 +113,17 @@ export class RenderStage {
     const player = playerView(this.game.prev.player, this.game.state.player, alpha);
     const follow = lerpCamera(this.prevCam, this.cam, alpha);
     const o = this.override;
-    const view: CameraView = o
+    const events = this.pending;
+    this.pending = [];
+    this.kick.update(dt, events);
+    const base: CameraView = o
       ? {
           x: o.x ?? (o.on === 'player' ? player.cx : follow.x),
           y: o.y ?? (o.on === 'player' ? player.cy : follow.y),
           zoom: o.zoom ?? 1,
         }
       : follow;
-    const events = this.pending;
-    this.pending = [];
+    const view: CameraView = { x: base.x + this.kick.x, y: base.y + this.kick.y, zoom: base.zoom };
     const sim: SimView = {
       frame: this.game.state.frame,
       player,

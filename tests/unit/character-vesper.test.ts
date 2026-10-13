@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { J_COUNT, J_TOE_A, J_TOE_B, Rig } from '../../src/render/character/vesper/rig';
+import { CameraKick } from '../../src/render/camera/kick';
+import { cameraTuning } from '../../src/render/camera/tuning';
+import { BladeTrail } from '../../src/render/character/vesper/fx';
+import { J_COUNT, J_TOE_A, J_TOE_B, Rig, STROKES, strokeFor } from '../../src/render/character/vesper/rig';
 import { Secondary } from '../../src/render/character/vesper/wings';
 import type { PlayerView } from '../../src/render/contract';
 import type { SimEvent } from '../../src/sim/events';
+import { slashBox } from '../../src/sim/index';
+import { tuning } from '../../src/sim/tuning';
 
 function view(over: Partial<PlayerView>): PlayerView {
   const base = {
@@ -319,23 +324,23 @@ describe('vesper rig', () => {
     }
   });
 
-  it('slash: strokes alternate with seq, the cut holds through hitstop, and it all returns to rest', () => {
+  it("slash: three different strokes, each from the last one's follow-through; the cut holds through hitstop; back to rest", () => {
     const rig = new Rig();
     let clock = 0;
     const tick = (over: Partial<PlayerView> = {}, ev: SimEvent[] = []): void => {
       rig.update(DT, clock, view(over), ev);
       clock += DT;
     };
-    const slash = (seq: number): SimEvent => ({
+    const slash = (step: number, dir: 'fwd' | 'up' | 'down' = 'fwd'): SimEvent => ({
       type: 'slash',
       x: 1000,
       y: 1280,
-      dir: 'fwd',
+      dir,
       facing: 1,
-      seq,
-      step: 1,
-      finisher: false,
-      startup: 1,
+      seq: step,
+      step,
+      finisher: step === 3,
+      startup: step === 3 ? 3 : 1,
       active: 6,
       duration: 14,
       cooldown: 17,
@@ -344,24 +349,136 @@ describe('vesper rig', () => {
     });
     tick({}, [{ type: 'spawn', x: 1000, y: 1280 }]);
     for (let i = 0; i < 20; i++) tick();
+    // Step 1: on the press frame she has the blade; the cut is under way a frame later.
     tick({}, [slash(1)]);
-    const first = [rig.slashA0, rig.slashA1];
-    tick();
+    expect(rig.stroke).toBe(STROKES.fwd[0]);
+    expect(rig.cutQ).toBeGreaterThanOrEqual(0);
     tick();
     expect(rig.slashW).toBeGreaterThan(0.9);
-    for (let i = 0; i < 17; i++) tick();
+    expect(rig.cutQ).toBeGreaterThan(0.4);
+    for (let i = 0; i < 15; i++) tick();
+    // Still held out when the next press can come (17 frames): the chain starts from here, not the sheath.
+    expect(rig.slashW).toBe(1);
+    expect(rig.slashHome).toBe(0);
     tick({}, [slash(2)]);
-    // The second cut runs back along the first.
-    expect(rig.slashA0).toBeCloseTo(first[1] ?? 0);
-    expect(rig.slashA1).toBeCloseTo(first[0] ?? 0);
-    tick();
+    expect(rig.stroke).toBe(STROKES.fwd[1]);
+    // The press frame shows the gathered blade: the cut has not travelled yet.
+    expect(rig.cutQ).toBeLessThan(0.05);
+    // The blow lands: that frame still moves (the blade is caught in the cut), then it holds.
+    tick({ hitstop: 2 }, [
+      {
+        type: 'slashHit',
+        x: 1080,
+        y: 1240,
+        dir: 'fwd',
+        facing: 1,
+        target: { kind: 'pod', id: 'p' },
+        px: 1000,
+        py: 1240,
+        pogo: false,
+        hitstop: 2,
+        step: 2,
+        power: 1,
+        knockback: 6,
+      },
+    ]);
     const t0 = rig.slashT;
-    tick({ hitstop: 2 });
+    const q0 = rig.cutQ;
+    expect(q0).toBeGreaterThan(0.4);
     tick({ hitstop: 1 });
     expect(rig.slashT).toBe(t0);
-    for (let i = 0; i < 40; i++) tick();
+    expect(rig.cutQ).toBe(q0);
+    for (let i = 0; i < 18; i++) tick();
+    // The finisher gathers for its three frames before the cut starts.
+    tick({}, [slash(3)]);
+    expect(rig.stroke).toBe(STROKES.fwd[2]);
+    expect(rig.cutQ).toBe(-1);
+    tick();
+    expect(rig.cutQ).toBe(-1);
+    expect(rig.slashWing).toBeLessThan(0);
+    tick();
+    tick();
+    expect(rig.cutQ).toBeGreaterThan(0.4);
+    for (let i = 0; i < 6; i++) tick();
+    expect(rig.slashWing).toBeGreaterThan(0.8);
+    for (let i = 0; i < 60; i++) tick();
     expect(rig.slashW).toBe(0);
-    expect(rig.slashK).toBe(0);
+    expect(Math.abs(rig.slashWing)).toBeLessThan(0.01);
     for (let i = 0; i < J_COUNT * 2; i++) expect(Number.isFinite(rig.frame.j[i])).toBe(true);
+    // A down slash is always the one blow; a dash ends a slash at once.
+    tick({ grounded: false, motion: 'fall' }, [slash(3, 'down')]);
+    expect(rig.stroke).toBe(STROKES.down[0]);
+    tick({ grounded: false, motion: 'fall' });
+    expect(rig.slashW).toBeGreaterThan(0.5);
+    tick({ motion: 'dash', mode: 'dash' }, [
+      { type: 'slashEnd', x: 0, y: 0, dir: 'down', hits: 0, reason: 'dash' },
+    ]);
+    expect(rig.slashW).toBe(0);
+  });
+
+  it('strokes cover the sim hit area: the blade point reaches the edge of slashBox for every step', () => {
+    const body = { x: 980, y: 1200, w: 40, h: 80 };
+    for (const dir of ['fwd', 'up', 'down'] as const) {
+      for (let step = 1; step <= 3; step++) {
+        const st = strokeFor(dir, step);
+        const box = slashBox(body, dir, 1, tuning, dir === 'down' ? 1 : step);
+        const want = dir === 'fwd' ? box.x + box.w - 1000 : box.h;
+        expect(st.reach).toBeCloseTo(want, 0);
+      }
+    }
+  });
+
+  it('blade trail: laid from the stroke, lives a few frames, holds in hitstop', () => {
+    const trail = new BladeTrail();
+    const at = (q: number, out: { x: number; y: number }): void => {
+      out.x = Math.cos(q * 2);
+      out.y = -Math.sin(q * 2);
+    };
+    trail.begin({ reach: 110, thick: 0.4, show: 0.2 }, false);
+    expect(trail.live).toBe(false);
+    for (const q of [0, 0.5, 0.85, 1]) {
+      trail.lay(1000, 1240, q, at);
+      trail.update(DT, false);
+    }
+    expect(trail.live).toBe(true);
+    for (let i = 0; i < 30; i++) trail.update(DT, true);
+    expect(trail.live).toBe(true);
+    for (let i = 0; i < 12; i++) trail.update(DT, false);
+    expect(trail.live).toBe(false);
+  });
+
+  it('camera kick: a few px against the cut, home in about 8 frames, nothing on a miss', () => {
+    const kick = new CameraKick();
+    const impact = (power: number, dir: 'fwd' | 'up' | 'down', facing: number): SimEvent => ({
+      type: 'impact',
+      x: 0,
+      y: 0,
+      dir,
+      facing,
+      step: power === 2 ? 3 : 1,
+      power,
+      hits: 1,
+    });
+    kick.update(DT, []);
+    expect(kick.x).toBe(0);
+    kick.update(0, [impact(1, 'fwd', 1)]);
+    expect(kick.x).toBeCloseTo(-cameraTuning.kick.power1);
+    expect(kick.y).toBe(0);
+    let peak = 0;
+    for (let i = 0; i < 8; i++) {
+      kick.update(DT, []);
+      // Critically damped: it never crosses to the other side.
+      expect(kick.x).toBeLessThanOrEqual(0);
+      peak = Math.max(peak, Math.abs(kick.x));
+    }
+    expect(Math.abs(kick.x)).toBeLessThan(0.06 * cameraTuning.kick.power1);
+    for (let i = 0; i < 12; i++) kick.update(DT, []);
+    expect(kick.x).toBe(0);
+    kick.update(0, [impact(2, 'fwd', -1)]);
+    expect(kick.x).toBeCloseTo(cameraTuning.kick.power2);
+    kick.update(0, [impact(1, 'down', 1)]);
+    expect(kick.y).toBeLessThan(0);
+    expect(kick.x).toBe(0);
+    expect(peak).toBeLessThan(cameraTuning.kick.power1);
   });
 });

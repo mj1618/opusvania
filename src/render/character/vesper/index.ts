@@ -19,9 +19,9 @@ import { KEY_LIGHT } from '../../scene/lib/look';
 import { clamp, noise1, Spring, sat, smoothstep } from '../hooded/math';
 import type { CharacterSkin, SkinDef } from '../skin';
 import { drawVesper, type View } from './draw';
-import { drawImpact, drawSlash, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
+import { BladeTrail, drawImpact, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
 import { Painter, rgb } from './paint';
-import { J_CHEST, J_HEAD, Rig, SLASH } from './rig';
+import { J_CHEST, J_HEAD, Rig } from './rig';
 
 import { Secondary } from './wings';
 
@@ -58,6 +58,12 @@ export class VesperCharacter implements CharacterSkin {
   private glintK = 0;
   private hitX = 0;
   private hitY = 0;
+  private hitDx = 1;
+  private hitDy = 0;
+  private readonly blade = new BladeTrail();
+  private readonly cutAt = (q: number, out: { x: number; y: number }): void => this.rig.strokeAt(q, out);
+  private readonly tan = { x: 0, y: 0 };
+  private readonly tan2 = { x: 0, y: 0 };
 
   private toast: HTMLElement | null = null;
   private toastTimer = 0;
@@ -105,6 +111,8 @@ export class VesperCharacter implements CharacterSkin {
       glintK: 0,
       slashW: 0,
       bladeAng: 0,
+      bladeLen: 1,
+      bladeOver: false,
       bladeFront: false,
     };
   }
@@ -120,6 +128,7 @@ export class VesperCharacter implements CharacterSkin {
     if (fresh) {
       sec.reset();
       fx.clear();
+      this.blade.clear();
       for (const t of this.trails) t.clear();
     }
     sec.update(dt, clock, rig, rig.frame, player);
@@ -223,20 +232,44 @@ export class VesperCharacter implements CharacterSkin {
     view.glintK = this.glintK;
     // A beat of the wings puffs dust from the hems; so does the catch.
     if (sig.beat) fx.puff(this.hemPts, 10, 16, player.vx * 60, player.vy * 60);
-    // The slash: the blade in her hand, and a small spark where it lands (the target's side
+    // The slash: the blade in her hand, its trail, and sparks where it lands (the target's side
     // nearest her; the pod draws its own burst).
     view.slashW = rig.slashW;
     view.bladeFront = rig.slashW > 0.3 && rig.wWall > 0.5;
+    view.bladeOver = rig.slashDir === 'up' && rig.slashHome < 0.5 && !view.bladeFront;
     const sg = rig.slashFacing;
-    view.bladeAng = Math.atan2(-Math.sin(rig.slashAng), Math.cos(rig.slashAng) * sg);
+    view.bladeAng = Math.atan2(rig.bladeY, rig.bladeX);
+    // The blade shortens seen end on, and smears a little longer at the height of the cut.
+    const cq = rig.cutQ;
+    view.bladeLen = (0.5 + 0.5 * rig.slashLen) * (1 + (cq > 0 && cq < 1 ? 0.3 * Math.sin(Math.PI * cq) : 0));
+    const chestX = rig.frame.j[J_CHEST * 2]!;
+    const chestY = rig.frame.j[J_CHEST * 2 + 1]!;
+    const heavy = rig.slashStep === 3 && rig.slashDir !== 'down';
+    if (rig.cutStart) {
+      this.blade.begin(rig.stroke, heavy);
+      // The finisher throws the wings wide: a little of their dust comes loose. Only then.
+      if (heavy) fx.puff(this.hemPts, 10, 9, player.vx * 60 + sg * 60, player.vy * 60 - 30);
+    }
+    if (cq >= 0) this.blade.lay(chestX, chestY, cq, this.cutAt);
+    this.blade.update(dt, player.hitstop > 0 && !sig.slashHit);
     if (sig.slashHit) {
+      this.blade.pin();
       const dx = player.cx - rig.hitX;
       const dy = player.cy - rig.hitY;
       const dl = Math.hypot(dx, dy) || 1;
       this.hitX = rig.hitX + (dx / dl) * 14;
       this.hitY = rig.hitY + (dy / dl) * 14;
-      fx.sparks(this.hitX, this.hitY, -dx / dl, -dy / dl, 7);
-      this.flash = Math.max(this.flash, 0.3);
+      // Along the cut: the way the blade's point is travelling right now.
+      const q = sat(Math.max(0.05, cq));
+      rig.strokeAt(Math.min(1, q + 0.04), this.tan);
+      rig.strokeAt(Math.max(0, q - 0.04), this.tan2);
+      const tx = this.tan.x - this.tan2.x;
+      const ty = this.tan.y - this.tan2.y;
+      const tl = Math.hypot(tx, ty) || 1;
+      this.hitDx = tx / tl;
+      this.hitDy = ty / tl;
+      fx.sparks(this.hitX, this.hitY, this.hitDx, this.hitDy, rig.hitPower);
+      this.flash = Math.max(this.flash, 0.2);
     }
     this.flash = Math.max(0, this.flash - dt * 1.9);
 
@@ -269,7 +302,8 @@ export class VesperCharacter implements CharacterSkin {
       if (i < 2) k = fast * (1 - 0.75 * soar) + 0.3 * rig.spinW;
       else
         k =
-          (i - 2 === nearIdx ? fast * 0.75 * (1 - rig.slashK) + 0.3 * rig.spinW : 0) * (1 - soar) +
+          (i - 2 === nearIdx ? fast * 0.75 * (1 - sat(Math.abs(rig.slashWing))) + 0.3 * rig.spinW : 0) *
+            (1 - soar) +
           soar * (0.3 + 0.3 * fast);
       this.trails[i]!.push(dt, x, y, k);
     }
@@ -293,19 +327,8 @@ export class VesperCharacter implements CharacterSkin {
     this.trails[0]!.draw(p, FX_GOLD, FX_GOLD_HOT, 0.4);
     this.trails[1]!.draw(p, FX_GOLD, FX_GOLD_HOT, 0.32);
     fx.draw(p, clock);
-    drawSlash(
-      p,
-      rig.frame.j[J_CHEST * 2]!,
-      rig.frame.j[J_CHEST * 2 + 1]!,
-      sg,
-      rig.arcA0,
-      rig.arcA1,
-      rig.slashT,
-      SLASH.reach[rig.slashDir],
-      SLASH.swing,
-      rig.slashDir === 'fwd' ? 0.6 : 1,
-    );
-    drawImpact(p, this.hitX, this.hitY, rig.hitT);
+    this.blade.draw(p, chestX, chestY);
+    drawImpact(p, this.hitX, this.hitY, rig.hitT, rig.hitPower, this.hitDx, this.hitDy);
     p.end(player.cx, player.cy);
 
     const e = this.light;

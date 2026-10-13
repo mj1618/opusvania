@@ -802,6 +802,38 @@ export class Painter {
   }
 
   /**
+   * A swept band between an outer polyline (px/py) and an inner one (gx/gy), n samples each:
+   * brightest on the outer edge, fading to nothing at the inner one. Colour per sample from gc
+   * (r,g,b triples), strength from pw. `additive` = light; otherwise a soft alpha veil (it keeps a
+   * shape on a bright backdrop). A one-feather skirt outside the outer edge keeps that edge clean.
+   */
+  sweep(n: number, additive: boolean): void {
+    if (n < 2 || this.ghost || this.full()) return;
+    const { px, py, gx, gy, gc, pw, fw } = this;
+    const mode = additive ? GLOW : SOFT;
+    let base = -1;
+    for (let i = 0; i < n; i++) {
+      const r = gc[i * 3]!;
+      const g = gc[i * 3 + 1]!;
+      const b = gc[i * 3 + 2]!;
+      const a = pw[i]!;
+      let ox = px[i]! - gx[i]!;
+      let oy = py[i]! - gy[i]!;
+      const ol = Math.hypot(ox, oy) || 1;
+      ox = (ox / ol) * fw;
+      oy = (oy / ol) * fw;
+      const v0 = this.vert(px[i]! + ox, py[i]! + oy, r, g, b, a, 0, 0, 0, 0, 1, 1, mode);
+      this.vert(px[i]!, py[i]!, r, g, b, a, 0, 0, 0, 0, 0, 1, mode);
+      this.vert(gx[i]!, gy[i]!, r, g, b, a, 0, 0, 0, 0, 1, 1, mode);
+      if (base >= 0) {
+        this.quad(base, base + 1, v0 + 1, v0);
+        this.quad(base + 1, base + 2, v0 + 2, v0 + 1);
+      }
+      base = v0;
+    }
+  }
+
+  /**
    * Additive streak along the polyline in px/py with half-widths pw; brightness per sample from
    * pc[i*3] (only the first of each triple is read), brightest on the centre line.
    */
