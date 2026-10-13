@@ -77,19 +77,53 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
   edges facing upper-left: a truly continuous rim needs a copy of the painter.
 - Head halo: radius 72 warm, 0.1. `ember` light: radius 300 (+70 dash, +90 flash), intensity 1.15 x glow.
 - Run float (foot lift and pelvis arc) scales with `speedK`, so starts/stops/turns step low.
-- Pickups: `pickup` events set `rig.joy` (head/chest lift, wing flick; a 'great' opens the wings) and a
-  flash through lanterns/eyes; scaled down by `combo`.
+- Pickups: `pickup` events set `rig.joy` (head/chest lift, antennae perk, small wing flick, 0.7 / (1 +
+  combo/2)) and a flash through lanterns/eyes. A 'great' runs `rig.flourish` (0.85 s envelope) which
+  drives `rig.soar` to 0.86: the wings open to both sides once and fold. While running the small
+  reaction is nearly invisible next to the pickup renderer's own burst; that is deliberate (no jitter).
 
 ## Round 7
 - `paint.ts` is now our own copy of the hooded painter: `coolWrap` (0.5) puts the cool rim on every
   edge the key light leaves dark, not only upper-left ones.
-- Glide (prepared before the sim has it): `rig.wGlide`, pose `GLIDEP`, wing table `SOAR`, a catch
-  spring (`catchK`) kicked by entry fall speed that billows the wings and swings the body. Driven by
-  `motion === 'glide'`, or by any fall when `window.__vesperGlide = true` (test switch; remove once
-  the sim lands). Landing out of a glide sets `openHold` for a wing flare.
 - Ground turn = pivot: foot lift is cut by `1 - |d|` so both feet stay down through the swivel.
 - Footfall give: each half-cycle of the run kicks the crouch spring by 9.
 - Sheets: scratch `seq.mts`-style capture (one browser, step N + screenshot) survives HMR better than clips.
+
+## Round 8: the wing glide (`motion === 'glide'`; numbers in `GLIDE` in rig.ts and the `SOAR*` tables)
+- **Silhouette**: the wings unfurl (`Chain.scale`, strand lengths x1.56-2.3, ~97 px fore wing) and lie
+  to EITHER side of her on screen, wing A always screen-left and wing B screen-right (`c.d` goes to
+  +1 / -1 instead of the body's turn `d`), like HK's Monarch Wings. Because the sides are absolute, a
+  mid-air turn only swivels the body under wings that stay spread; near/far brightness cross-fades
+  with `|d|`. Both wings are drawn BEHIND the body while `soar > 0.5`.
+- `rig.soar` (wing spread, in 25/s; out 6.5 release, 34 dash, 15 wall, 17 fastfall, 11 after the
+  landing flare) is separate from `rig.wGlide` (body pose; drops at 30/s on the ground or it would
+  hold the feet up). Span follows `soar^2`: a folding wing is already short when it swings in.
+  The far wing's flip to its own side happens early (`side`, soar 0.03-0.4), while it is small;
+  flipping at full span showed a dark edge-on slab beside her face for two frames.
+- **Catch**: `catchK` = spring (13, 0.5) kicked by `glideStart.vy` and held up by the sim's real
+  deceleration (`lastVy - vy`), so the billow lasts exactly as long as the 11-frame catch and ends in
+  one overshoot. It raises the leading edges (27 deg), cups the strands, stretches the span 5%, throws
+  the legs down and arms up. The body is a pendulum about the collar (`swing`, screen-space rotation
+  of the solved joints, head at 30%), kicked forward by the catch and driven by horizontal acceleration.
+- **Bank**: `bank` = 0.009 x vx + 0.2 x smoothed ax, added to the wings' frame (and 35% to the body).
+- Steady life: common breath (2.3 and 0.83 rad/s), per-wing noise corrections (0.47, 1.13 Hz-ish),
+  slow ripple, a 15 Hz hem flutter on the last segment scaled by airspeed.
+- Exits: land = `flare` (wings stay up ~0.1 s, +20 deg, then fold); fastfall = `dive` (table `DIVE`,
+  also any fall above 22.5 px/f); dash/wall just use fast `soarOut`. Out of the somersault `openK`'s
+  BEAT_UP is cut by `soar` so the unfurl runs straight into the opening.
+- Draw: wing grid is 17x17 now; hem and band are functions of u/t (`tab`, `bump`), `HEM_SOAR` is the
+  spread outline (waist + short hind tail), second eye-spot and warm membrane light fade in with soar.
+- Fx: `Fx.trail` sheds SPARK particles from all ten strand tips (they keep 12% of her velocity, so
+  her path draws the trail); two wing-tip `Trail`s follow wing A / wing B (fixed, not near/far, or a
+  turn draws a streak across her). Lantern trails are cut 75% in the glide (they read as speed lines).
+- Capture scripts: a held J only glides after a double jump or below the launch height; to catch a
+  long fall use `R+J8 R10 .2 R+J6 R46 R+J200` from trunk B top (3660,192). Scripts passed to
+  `g.input` queue AFTER what is already queued.
+- Not done: no ground-distance look-ahead (feet do not reach for the ground before touchdown); wings
+  ignore solids (they overlap trunks); the dust trail is faint at 1080p.
+- Light well (look:stats): stops 5 and 7 (the two high ledges) show her face ~30% dimmer (p90 168 /
+  135 vs 217-245) with the follow camera; it is post/foreground darkening the top of the frame over
+  the hero, not the skin (same skin colours measure 228+ lower in the frame).
 
 ## Gotchas
 - Wing strands have no body collision: a stiff, fast flare throws them over the head and they

@@ -30,16 +30,24 @@ export class VesperCharacter implements CharacterSkin {
   private readonly rig = new Rig();
   private readonly sec = new Secondary();
   private readonly fx = new Fx();
-  private readonly trails = [new Trail(20, 0.13, 3.4), new Trail(20, 0.11, 3), new Trail(24, 0.17, 5)];
+  /** Light trails: the two lantern tips, then the fore tip of wing A and of wing B. */
+  private readonly trails = [
+    new Trail(20, 0.13, 3.4),
+    new Trail(20, 0.11, 3),
+    new Trail(30, 0.3, 5),
+    new Trail(30, 0.3, 5),
+  ];
   private readonly light: PointLight = { x: 0, y: 0, radius: 300, color: LIGHT, intensity: 1 };
   private readonly hairX = new Spring(0, 17, 0.42);
   private readonly hairY = new Spring(0, 15, 0.4);
   private readonly hair2X = new Spring(0, 10.5, 0.34);
   private readonly hair2Y = new Spring(0, 9.5, 0.32);
   private readonly view: View;
-  private readonly pts = new Float32Array(6);
-  private readonly lastX = new Float32Array(3);
-  private readonly lastY = new Float32Array(3);
+  private readonly pts = new Float32Array(8);
+  private readonly lastX = new Float32Array(4);
+  private readonly lastY = new Float32Array(4);
+  /** Where the glide's dust is shed: every strand tip of both wings. */
+  private readonly hemPts = new Float32Array(20);
   private started = false;
   private flash = 0;
 
@@ -69,13 +77,13 @@ export class VesperCharacter implements CharacterSkin {
       tuck: 0,
       wall: 0,
       wallDir: 1,
+      soar: 0,
     };
   }
 
   update(dtIn: number, clock: number, player: PlayerView, events: readonly SimEvent[]): void {
     const dt = clamp(dtIn, 0, 0.05);
     const { rig, sec, fx, painter: p, view } = this;
-    Rig.glideTest = !!(globalThis as { __vesperGlide?: boolean }).__vesperGlide;
     rig.update(dt, clock, player, events);
     const sig = rig.sig;
     const fresh = sig.spawned || !this.started;
@@ -114,23 +122,33 @@ export class VesperCharacter implements CharacterSkin {
     view.open = sec.open;
     view.tuck = rig.spinW;
     view.wall = rig.wWall;
+    view.soar = sec.soar;
     view.wallDir = rig.frame.s[0]! >= 0 ? 1 : -1;
 
     // --- Her light: the two lantern tips.
     const a0 = sec.antennae[0];
     const a1 = sec.antennae[1];
-    const nearWing = sec.wings[rig.frame.s[0]! >= 0 ? 0 : 1].strands;
-    const hem = nearWing[0]!;
-    const mid = nearWing[2]!;
+    const nearIdx = rig.frame.s[0]! >= 0 ? 0 : 1;
+    const mid = sec.wings[nearIdx].strands[2]!;
     const pts = this.pts;
     pts[0] = a0.rx[a0.n - 1]!;
     pts[1] = a0.ry[a0.n - 1]!;
     pts[2] = a1.rx[a1.n - 1]!;
     pts[3] = a1.ry[a1.n - 1]!;
-    pts[4] = hem.rx[hem.n - 1]!;
-    pts[5] = hem.ry[hem.n - 1]!;
+    for (let w = 0; w < 2; w++) {
+      const st = sec.wings[w]!.strands;
+      const tip = st[0]!;
+      pts[4 + w * 2] = tip.rx[tip.n - 1]!;
+      pts[5 + w * 2] = tip.ry[tip.n - 1]!;
+      for (let k = 0; k < st.length; k++) {
+        const c = st[k]!;
+        this.hemPts[(w * 5 + k) * 2] = c.rx[c.n - 1]!;
+        this.hemPts[(w * 5 + k) * 2 + 1] = c.ry[c.n - 1]!;
+      }
+    }
     const ex = (pts[0]! + pts[2]!) * 0.5;
     const ey = (pts[1]! + pts[3]!) * 0.5;
+    const soar = sec.soar;
 
     // --- Events.
     const feetX = player.cx;
@@ -154,18 +172,26 @@ export class VesperCharacter implements CharacterSkin {
 
     // --- Dust rises off the wings; more of it when she moves.
     const moving = sat(Math.hypot(player.vx, player.vy) / 10);
-    const rate = fresh ? 0 : 2.2 + 9 * moving + 22 * rig.wDash + 8 * this.flash + 16 * rig.wGlide;
+    const rate = fresh ? 0 : (2.2 + 9 * moving) * (1 - 0.7 * soar) + 22 * rig.wDash + 8 * this.flash;
     fx.shed(dt, rate, mid.rx[2]!, mid.ry[2]!, 13, player.vx * 9, player.vy * 9);
+    // Gliding, it comes off the wing tips and the hem instead and hangs behind her as a fine trail.
+    if (!fresh) fx.trail(dt, soar * (16 + 30 * moving), this.hemPts, 10, player.vx * 60, player.vy * 60);
     fx.update(dt, clock);
 
-    // --- Trails: lit by how fast each point is really moving.
-    for (let i = 0; i < 3; i++) {
+    // --- Trails: lit by how fast each point is really moving. The wing tips draw long soft ones
+    // while she glides.
+    for (let i = 0; i < 4; i++) {
       const x = pts[i * 2]!;
       const y = pts[i * 2 + 1]!;
       const v = fresh || dt <= 0 ? 0 : Math.hypot(x - this.lastX[i]!, y - this.lastY[i]!) / dt;
       this.lastX[i] = x;
       this.lastY[i] = y;
-      const k = sat((v - 330) / 600) * (i === 2 ? 0.75 : 1) + 0.3 * rig.spinW;
+      const fast = sat((v - 330) / 600);
+      let k: number;
+      if (i < 2) k = fast * (1 - 0.75 * soar) + 0.3 * rig.spinW;
+      else
+        k =
+          (i - 2 === nearIdx ? fast * 0.75 + 0.3 * rig.spinW : 0) * (1 - soar) + soar * (0.25 + 0.45 * fast);
       this.trails[i]!.push(dt, x, y, k);
     }
     this.started = true;
@@ -174,7 +200,8 @@ export class VesperCharacter implements CharacterSkin {
     const scale = Math.max(1e-3, Math.abs(this.layer.scale.x) * this.ctx.viewScale());
     p.fw = clamp(1 / scale, 0.06, 1.5);
     const flicker = 0.95 + 0.045 * noise1(clock * 4.3, 21) + 0.03 * Math.sin(clock * 1.3);
-    const glow = flicker * (1 + 0.3 * rig.wDash + 0.55 * this.flash + 0.22 * rig.wGlide);
+    const glow =
+      flicker * (1 + 0.3 * rig.wDash + 0.55 * this.flash + 0.2 * soar + 0.25 * Math.max(0, rig.catchK));
     view.glow = glow;
     p.l2x = ex;
     p.l2y = ey;
@@ -182,6 +209,7 @@ export class VesperCharacter implements CharacterSkin {
     p.l2k = 0.7 * glow;
     p.begin();
     this.trails[2]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.22);
+    this.trails[3]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.22);
     drawVesper(p, rig.frame, view, clock);
     this.trails[0]!.draw(p, FX_GOLD, FX_GOLD_HOT, 0.4);
     this.trails[1]!.draw(p, FX_GOLD, FX_GOLD_HOT, 0.32);
@@ -191,7 +219,7 @@ export class VesperCharacter implements CharacterSkin {
     const e = this.light;
     e.x = ex;
     e.y = ey;
-    e.radius = 300 + 70 * rig.wDash + 90 * this.flash;
+    e.radius = 300 + 70 * rig.wDash + 90 * this.flash + 50 * soar;
     e.intensity = glow * 1.15;
   }
 

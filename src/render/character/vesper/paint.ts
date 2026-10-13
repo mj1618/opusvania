@@ -760,9 +760,9 @@ export class Painter {
   }
 
   /** Additive radial glow. Skipped while drawing ghosts. */
-  glow(x: number, y: number, r: number, c: RGB, intensity: number, ry = r, rot = 0): void {
+  glow(x: number, y: number, r: number, c: RGB, intensity: number, ry = r, rot = 0, seg = 24): void {
     if (this.ghost) return;
-    this.fan(x, y, r, ry, rot, c, intensity, GLOW, 24);
+    this.fan(x, y, r, ry, rot, c, intensity, GLOW, seg);
   }
 
   /** Soft alpha blob (dark contact shadow, pale dust). */

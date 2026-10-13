@@ -177,4 +177,72 @@ describe('vesper rig', () => {
     expect(rig.spinPhi).toBe(0);
     expect(rig.spinW).toBe(0);
   });
+
+  it('glide: wings spread to both sides, stay spread through a turn, and fold on release', () => {
+    const rig = new Rig();
+    const sec = new Secondary();
+    let clock = 0;
+    let cx = 1000;
+    let y = 600;
+    const run = (over: Partial<PlayerView>, ev: SimEvent[] = []): void => {
+      const p = view({ cx, cy: y - 40, feetY: y, grounded: false, ...over });
+      rig.update(DT, clock, p, ev);
+      if (rig.sig.spawned) sec.reset();
+      sec.update(DT, clock, rig, rig.frame, p);
+      clock += DT;
+    };
+    const tips = (): [number, number] => {
+      const a = sec.wings[0].strands[0];
+      const b = sec.wings[1].strands[0];
+      return [(a?.rx[a.n - 1] ?? 0) - cx, (b?.rx[b.n - 1] ?? 0) - cx];
+    };
+    run({ motion: 'fall', vy: 21 }, [{ type: 'spawn', x: cx, y }]);
+    for (let i = 0; i < 20; i++) run({ motion: 'fall', vy: 21 });
+    // The catch from a long fall, with the sim's own speed trace.
+    const trace = [16.4, 12.9, 10.5, 8.8, 7.6, 6.8, 6.2, 5.8, 5.4, 5.0, 4.8];
+    let peak = 0;
+    for (let i = 0; i < 90; i++) {
+      const vy = trace[i] ?? 4.8;
+      cx += 10.56;
+      y += vy;
+      run(
+        { motion: 'glide', gliding: true, vx: 10.56, vy, inputX: 1 },
+        i === 0 ? [{ type: 'glideStart', x: cx, y, vy: 21.3 }] : [],
+      );
+      peak = Math.max(peak, rig.catchK);
+    }
+    expect(peak).toBeGreaterThan(0.5);
+    expect(Math.abs(rig.catchK)).toBeLessThan(0.05);
+    expect(rig.soar).toBeGreaterThan(0.98);
+    let [a, b] = tips();
+    // Wing A to screen-left, wing B to screen-right, each further out than she is tall.
+    expect(a).toBeLessThan(-60);
+    expect(b).toBeGreaterThan(60);
+    expect(b - a).toBeGreaterThan(150);
+    // A turn in the air: the facing flips at once, the speed reverses over ~22 frames.
+    let vx = 10.56;
+    for (let i = 0; i < 50; i++) {
+      vx = Math.max(-10.56, vx - 0.9);
+      cx += vx;
+      y += 4.8;
+      run({ motion: 'glide', gliding: true, vx, vy: 4.8, facing: -1, inputX: -1 });
+      [a, b] = tips();
+      expect(a).toBeLessThan(-45);
+      expect(b).toBeGreaterThan(45);
+    }
+    // Release: back to the cape, nothing left spread.
+    for (let i = 0; i < 60; i++) {
+      cx += vx;
+      y += 12;
+      run(
+        { motion: 'fall', vx, vy: 12, facing: -1 },
+        i === 0 ? [{ type: 'glideEnd', x: cx, y, reason: 'release' }] : [],
+      );
+    }
+    expect(rig.soar).toBeLessThan(0.01);
+    for (const c of sec.all) {
+      expect(c.scale).toBeLessThan(1.01);
+      for (let i = 0; i < c.n; i++) expect(Math.abs((c.rx[i] ?? 0) - cx)).toBeLessThan(70);
+    }
+  });
 });

@@ -9,7 +9,9 @@ import { type Painter, type RGB, rgb } from './paint';
 
 const MOTE = 0;
 const DUST = 1;
-const MAX = 120;
+/** Wing dust left hanging in the air behind a glide: tiny, slow, sinking a little. */
+const SPARK = 2;
+const MAX = 170;
 const GOLD = rgb(0xffd98a);
 const GOLD_HOT = rgb(0xfff6dc);
 const GOLD_DEEP = rgb(0xe9a04a);
@@ -90,6 +92,7 @@ export class Fx {
   private readonly ps: Particle[] = [];
   private seed = 0x2f6e2b1;
   private acc = 0;
+  private acc2 = 0;
   private next = 0;
 
   constructor() {
@@ -105,6 +108,7 @@ export class Fx {
   clear(): void {
     for (const q of this.ps) q.live = false;
     this.acc = 0;
+    this.acc2 = 0;
   }
 
   private add(kind: number, x: number, y: number, vx: number, vy: number, life: number, size: number): void {
@@ -175,6 +179,29 @@ export class Fx {
     }
   }
 
+  /**
+   * The glide's dust trail: `rate` sparks per second, each from one of the `n` points in `pts`
+   * (x, y pairs: wing tips and hem). They keep a little of her velocity (`vx`, `vy` px/s) and
+   * then hang where they were shed, so the trail is drawn by her path.
+   */
+  trail(dt: number, rate: number, pts: Float32Array, n: number, vx: number, vy: number): void {
+    this.acc2 += rate * dt;
+    while (this.acc2 >= 1) {
+      this.acc2 -= 1;
+      const i = Math.min(n - 1, Math.floor(this.rand() * n));
+      const life = 0.9 + this.rand() * 1.1;
+      this.add(
+        SPARK,
+        pts[i * 2]! + (this.rand() - 0.5) * 5,
+        pts[i * 2 + 1]! + (this.rand() - 0.5) * 5,
+        vx * 0.12 + (this.rand() - 0.5) * 14,
+        vy * 0.12 + (this.rand() - 0.5) * 10,
+        life,
+        1.0 + this.rand() * 1.2,
+      );
+    }
+  }
+
   update(dt: number, clock: number): void {
     for (const q of this.ps) {
       if (!q.live) continue;
@@ -188,6 +215,10 @@ export class Fx {
         q.vx = q.vx * k + Math.sin(clock * 2.3 + q.seed) * 26 * dt;
         // Buoyant: whatever threw it, it ends up drifting upward.
         q.vy = q.vy * k - 62 * dt;
+      } else if (q.kind === SPARK) {
+        const k = Math.exp(-2.6 * dt);
+        q.vx = q.vx * k + Math.sin(clock * 1.7 + q.seed) * 9 * dt;
+        q.vy = q.vy * k + 7 * dt;
       } else {
         q.vx *= Math.exp(-5 * dt);
         q.vy = q.vy * Math.exp(-4 * dt) - 10 * dt;
@@ -206,6 +237,12 @@ export class Fx {
         const k = Math.min(1, t * 10) * (1 - t) ** 1.4 * tw;
         p.glow(q.x, q.y, q.size * 3.0, GOLD_DEEP, 0.24 * k);
         p.glow(q.x, q.y, q.size * 1.0, GOLD_HOT, 0.6 * k);
+      } else if (q.kind === SPARK) {
+        // Each twinkles on its own time and dies out as a point.
+        const tw = 0.55 + 0.45 * Math.sin(clock * 11 + q.seed * 7);
+        const k = Math.min(1, t * 14) * (1 - t) ** 1.2 * tw;
+        p.glow(q.x, q.y, q.size * 3.6, GOLD_DEEP, 0.34 * k, q.size * 3.6, 0, 10);
+        p.glow(q.x, q.y, q.size * 1.15, GOLD_HOT, 1.0 * k, q.size * 1.15, 0, 8);
       } else {
         const r = q.size * (0.6 + 1.6 * t);
         p.soft(q.x, q.y, r * 1.3, r, DUST_C, 0.26 * (1 - t) * Math.min(1, t * 8));

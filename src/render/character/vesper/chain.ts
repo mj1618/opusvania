@@ -85,6 +85,8 @@ export class Chain {
   readonly extra: Float32Array;
   /** Scales the spec's drag (air resistance). */
   dragK = 1;
+  /** Scales every segment length (a wing unfurling to its full span). */
+  scale = 1;
 
   private pax = 0;
   private pay = 0;
@@ -138,8 +140,8 @@ export class Chain {
     y[0] = this.ay;
     for (let i = 1; i < n; i++) {
       this.restDir(i);
-      x[i] = x[i - 1]! + this.dirX * this.len[i]!;
-      y[i] = Math.min(this.floorY, y[i - 1]! + this.dirY * this.len[i]!);
+      x[i] = x[i - 1]! + this.dirX * this.len[i]! * this.scale;
+      y[i] = Math.min(this.floorY, y[i - 1]! + this.dirY * this.len[i]! * this.scale);
     }
     for (let i = 0; i < n; i++) {
       ox[i] = x[i]!;
@@ -204,26 +206,28 @@ export class Chain {
     let pdx = 0;
     let pdy = -1;
     const turn = this.d < -1 ? -1 : this.d > 1 ? 1 : this.d;
+    const sc = this.scale;
     for (let i = 1; i < n; i++) {
+      const li = len[i]! * sc;
       const t = (i - 1) / Math.max(1, last - 1);
       const kG = Math.min(0.6, (spec.kG[0]! + (spec.kG[1]! - spec.kG[0]!) * t) * this.stiff);
       const kL = Math.min(0.35, (spec.kL[0]! + (spec.kL[1]! - spec.kL[0]!) * t) * this.stiff);
       this.restDir(i);
-      gx += this.dirX * len[i]!;
-      gy += this.dirY * len[i]!;
+      gx += this.dirX * li;
+      gy += this.dirY * li;
       let lx: number;
       let ly: number;
       if (i === 1) {
-        lx = ax + this.dirX * len[i]!;
-        ly = ay + this.dirY * len[i]!;
+        lx = ax + this.dirX * li;
+        ly = ay + this.dirY * li;
       } else {
         // Rest bend relative to the previous segment as it really is.
         const bend =
           -(this.rest[i]! - this.rest[i - 1]! + this.curl + this.extra[i]! - this.extra[i - 1]!) * turn;
         const c = Math.cos(bend);
         const s = Math.sin(bend);
-        lx = x[i - 1]! + (pdx * c - pdy * s) * len[i]!;
-        ly = y[i - 1]! + (pdx * s + pdy * c) * len[i]!;
+        lx = x[i - 1]! + (pdx * c - pdy * s) * li;
+        ly = y[i - 1]! + (pdx * s + pdy * c) * li;
       }
       x[i]! += (gx - x[i]!) * kG + (lx - x[i]!) * kL;
       y[i]! += (gy - y[i]!) * kG + (ly - y[i]!) * kL;
@@ -233,8 +237,8 @@ export class Chain {
       const l = Math.hypot(dx, dy) || 1e-4;
       dx /= l;
       dy /= l;
-      x[i] = x[i - 1]! + dx * len[i]!;
-      y[i] = y[i - 1]! + dy * len[i]!;
+      x[i] = x[i - 1]! + dx * li;
+      y[i] = y[i - 1]! + dy * li;
       if (y[i]! > this.floorY) y[i] = this.floorY;
       if (this.wallSide !== 0 && (x[i]! - this.wallX) * this.wallSide > 0) x[i] = this.wallX;
       pdx = dx;

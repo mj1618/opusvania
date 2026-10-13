@@ -64,6 +64,8 @@ export interface View {
   /** Wall-slide weight 0..1 and the wall's side on screen (-1 / 1). */
   wall: number;
   wallDir: number;
+  /** 0..1: wings spread to both sides (the glide). */
+  soar: number;
 }
 
 function dim(c: RGB, k: number): RGB {
@@ -515,10 +517,15 @@ function thorn(p: Painter, f: Frame, len: number): void {
   p.ellipse(ox, oy, 0.75, 1.9, Math.atan2(ay, ax), SH_METAL, 8);
 }
 
-const COLS = 13;
-const ROWS = 13;
+const COLS = 17;
+const ROWS = 17;
 /** Scalloped, slightly tattered hem: how far each column reaches (1 = the strand's end). */
 const HEM = [1, 0.965, 1.0, 0.96, 0.92, 0.965, 1.0, 0.96, 0.995, 0.965, 1.0, 0.96, 0.985];
+/**
+ * The outline spread for the glide, leading edge to trailing edge: a long fore wing with a full
+ * outer margin, a waist, then a rounded hind wing that runs out into a short tail.
+ */
+const HEM_SOAR = [1.03, 1.0, 0.975, 0.955, 0.935, 0.905, 0.845, 0.83, 0.94, 1.02, 1.36, 1.0, 0.88];
 /** Vein / fold pattern across the membrane, -1..1 per column. */
 const FOLD = [0.3, -0.35, 0.2, 0.55, -0.6, 0.15, 0.5, -0.45, -0.1, 0.45, -0.5, 0.2, -0.2];
 
@@ -532,7 +539,19 @@ function bump(u: number, c: number, w: number): number {
   return Math.exp(-x * x);
 }
 
-/** One wing: a sheet through its five strands. `k` 1 = the near wing, lower = dimmer (far). */
+/** A 13-entry profile sampled at u in 0..1. */
+function tab(a: readonly number[], u: number): number {
+  const x = u * (a.length - 1);
+  const i = Math.min(a.length - 2, Math.floor(x));
+  return a[i]! + (a[i + 1]! - a[i]!) * (x - i);
+}
+
+const WARM: RGB = [1, 0.8, 0.52];
+
+/**
+ * One wing: a sheet through its five strands. `k` 1 = the near wing, lower = dimmer (far).
+ * `soar` 0..1 = spread for the glide: its own outline, a second eye-spot, light in the membrane.
+ */
 function wing(
   p: Painter,
   strands: readonly ChainPts[],
@@ -540,10 +559,11 @@ function wing(
   k: number,
   glow: number,
   clock: number,
+  soar: number,
 ): void {
   const ns = strands.length;
   for (let q = 0; q < ns; q++) {
-    const n = curve(p, strands[q]!, 3);
+    const n = curve(p, strands[q]!, 4);
     for (let r = 0; r < ROWS; r++) {
       const i = Math.min(n - 1, r);
       sx[q * ROWS + r] = p.px[i]!;
@@ -564,11 +584,13 @@ function wing(
     }
   }
   // Each column is re-sampled along its length: scallops always, fore/hind lobes as it opens.
+  const lobes = open * (1 - soar);
   for (let c = 0; c < COLS; c++) {
     const u = c / (COLS - 1);
-    const scale =
-      HEM[c]! *
-      (1 + open * (0.1 * bump(u, 0.2, 0.2) + 0.07 * bump(u, 0.84, 0.13) - 0.3 * bump(u, 0.57, 0.1)));
+    const folded =
+      tab(HEM, u) *
+      (1 + lobes * (0.1 * bump(u, 0.2, 0.2) + 0.07 * bump(u, 0.84, 0.13) - 0.3 * bump(u, 0.57, 0.1)));
+    const scale = lerp(folded, tab(HEM_SOAR, u), soar);
     for (let r = 0; r < ROWS; r++) {
       colX[r] = gx[r * COLS + c]!;
       colY[r] = gy[r * COLS + c]!;
@@ -584,13 +606,19 @@ function wing(
   // Colour: plum to charcoal down the wing, veins, then the pale band just inside a dark margin.
   for (let r = 0; r < ROWS; r++) {
     const t = r / (ROWS - 1);
-    const band = r === ROWS - 2 ? 1 : r === ROWS - 3 ? 0.3 : r === ROWS - 5 ? 0.14 : 0;
+    // Spread, the band is a finer line (the wing is more than twice as long).
+    const band = Math.min(
+      1,
+      bump(t, 0.917 + 0.012 * soar, 0.045 - 0.017 * soar) +
+        0.3 * (1 - 0.4 * soar) * bump(t, 0.833, 0.04 - 0.012 * soar) +
+        0.14 * bump(t, 0.667, 0.04),
+    );
     for (let c = 0; c < COLS; c++) {
       const i = r * COLS + c;
       const u = c / (COLS - 1);
-      const fold = FOLD[c]! * (0.2 + 0.8 * t) * 0.3;
+      const fold = tab(FOLD, u) * (0.2 + 0.8 * t) * 0.3;
       // The leading edge catches the light; the inner (trailing) part sits in the body's shadow.
-      const lit = (1 - u) * 0.22 * (1 - 0.5 * t) - u * 0.12;
+      const lit = (1 - u) * 0.22 * (1 - 0.5 * t) - u * 0.12 * (1 - soar);
       const sh = (1 + fold + lit) * k;
       let cr: number;
       let cg: number;
@@ -609,7 +637,19 @@ function wing(
       cr *= sh;
       cg *= sh;
       cb *= sh;
-      if (band > 0) {
+      if (soar > 0.01) {
+        // Spread, the membrane takes her light: warm near the body, a breath of it round each spot.
+        const w =
+          soar *
+          k *
+          glow *
+          (0.2 * (1 - t) ** 2 +
+            0.16 * bump(t, 0.56, 0.2) * (bump(u, 0.42, 0.16) + 0.8 * bump(u, 0.76, 0.12)));
+        cr += WARM[0] * w;
+        cg += WARM[1] * w * 0.72;
+        cb += WARM[2] * w;
+      }
+      if (band > 0.004) {
         const b = band * (0.82 + 0.18 * glow) * (0.55 + 0.45 * k);
         cr = lerp(cr, BAND[0] * (0.6 + 0.4 * k), b);
         cg = lerp(cg, BAND[1] * (0.6 + 0.4 * k), b);
@@ -620,46 +660,55 @@ function wing(
       gc[i * 3 + 2] = cb;
     }
   }
-  p.grid(COLS, ROWS, k > 0.9 ? SH_WING : SH_WING_FAR, 2.4);
+  const bright = k > 0.9 || soar > 0.5;
+  p.grid(COLS, ROWS, bright ? SH_WING : SH_WING_FAR, 2.4);
 
-  // --- The eye-spot, painted on the membrane: it foreshortens and travels with the cloth.
-  const R = 7;
-  const C = 5;
-  const i = R * COLS + C;
-  const ex = gx[i]!;
-  const ey = gy[i]!;
-  const acx = gx[i + 1]! - gx[i - 1]!;
-  const acy = gy[i + 1]! - gy[i - 1]!;
-  const alx = gx[i + COLS]! - gx[i - COLS]!;
-  const aly = gy[i + COLS]! - gy[i - COLS]!;
-  const across = Math.hypot(acx, acy);
-  const along = Math.hypot(alx, aly);
-  const ry = clamp(along * 0.62, 1.5, 3.9);
-  const rx = clamp(across * 0.6, 0.5, ry);
-  const rot = Math.atan2(aly, alx) - Math.PI / 2;
-  if (k > 0.9) {
-    const pulse = 0.85 + 0.15 * Math.sin(clock * 1.9);
-    p.glow(ex, ey, 11, GOLD_DEEP, 0.16 * glow * pulse);
-    p.ellipse(ex, ey, rx, ry, rot, SH_SPOT, 14);
-    p.ellipse(ex, ey, rx * 0.66, ry * 0.66, rot, SH_SPOT_DARK, 12);
-    p.ellipse(ex, ey, rx * 0.3, ry * 0.3, rot, SH_SPOT_HOT, 8);
-    p.glow(ex, ey, 4.2, GOLD, 0.5 * glow * pulse);
+  // --- The eye-spots, painted on the membrane: they foreshorten and travel with the cloth. One
+  // on the fore wing always; a smaller one on the hind wing shows as the wings spread.
+  const lum = bright ? sat((k - 0.4) / 0.6) : 0;
+  const pulse = 0.85 + 0.15 * Math.sin(clock * 1.9);
+  for (let n = 0; n < 2; n++) {
+    const size = n === 0 ? 1 : 0.78 * soar;
+    if (size < 0.2) continue;
+    const i = (n === 0 ? 9 * COLS + 7 : 10 * COLS + 12) | 0;
+    const ex = gx[i]!;
+    const ey = gy[i]!;
+    const acx = gx[i + 1]! - gx[i - 1]!;
+    const acy = gy[i + 1]! - gy[i - 1]!;
+    const alx = gx[i + COLS]! - gx[i - COLS]!;
+    const aly = gy[i + COLS]! - gy[i - COLS]!;
+    const across = Math.hypot(acx, acy);
+    const along = Math.hypot(alx, aly);
+    const ry = clamp(along * 0.83, 1.5, 3.9 + 2.3 * soar) * size;
+    const rx = clamp(across * 0.8, 0.5, ry);
+    const rot = Math.atan2(aly, alx) - Math.PI / 2;
+    if (bright) {
+      const g = glow * pulse * lum * (1 + 0.5 * soar);
+      p.glow(ex, ey, 11 + 7 * soar, GOLD_DEEP, 0.16 * g);
+      p.ellipse(ex, ey, rx, ry, rot, SH_SPOT, 14);
+      p.ellipse(ex, ey, rx * 0.66, ry * 0.66, rot, SH_SPOT_DARK, 12);
+      p.ellipse(ex, ey, rx * 0.3, ry * 0.3, rot, SH_SPOT_HOT, 8);
+      p.glow(ex, ey, 4.2 + 2 * soar, GOLD, 0.5 * g);
+    } else {
+      p.ellipse(ex, ey, rx * 0.9, ry * 0.9, rot, SH_SPOT_FAR, 12);
+      p.ellipse(ex, ey, rx * 0.58, ry * 0.58, rot, SH_SPOT_DARK, 10);
+    }
+  }
+  if (bright) {
     // Gold dust caught in the scales: a few fixed points that twinkle on their own time.
     for (let q = 0; q < DUST.length; q += 2) {
       const di = DUST[q]! * COLS + DUST[q + 1]!;
       const tw = Math.sin(clock * (2.1 + q * 0.37) + q * 1.9);
-      if (tw > 0.2) p.glow(gx[di]!, gy[di]!, 1.9, GOLD_HOT, (tw - 0.2) * 0.75 * glow);
+      if (tw > 0.2) p.glow(gx[di]!, gy[di]!, 1.9, GOLD_HOT, (tw - 0.2) * 0.75 * glow * lum);
     }
     // The band is faintly luminous.
     const br = (ROWS - 2) * COLS;
-    for (let c = 1; c < COLS; c += 3) p.glow(gx[br + c]!, gy[br + c]!, 6, GOLD_DEEP, 0.1 * glow);
-  } else {
-    p.ellipse(ex, ey, rx * 0.9, ry * 0.9, rot, SH_SPOT_FAR, 12);
-    p.ellipse(ex, ey, rx * 0.58, ry * 0.58, rot, SH_SPOT_DARK, 10);
+    for (let c = 1; c < COLS; c += 4)
+      p.glow(gx[br + c]!, gy[br + c]!, 6 + 5 * soar, GOLD_DEEP, (0.1 + 0.07 * soar) * glow * lum);
   }
 }
 /** (row, column) pairs of the twinkles. */
-const DUST = [3, 3, 5, 9, 9, 3, 8, 10, 4, 7, 10, 7];
+const DUST = [4, 4, 7, 12, 12, 4, 11, 13, 5, 9, 13, 9, 8, 2, 14, 15];
 
 /** A feathered antenna with its lantern tip. */
 function antenna(p: Painter, c: ChainPts, far: boolean, glow: number): void {
@@ -978,13 +1027,21 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   // The halo: tight and soft round the head and lantern tips, ~1.7x her height across.
   p.glow(j[J_HEAD * 2]!, j[J_HEAD * 2 + 1]! - 10, 72, HALO_WARM, 0.1 * v.glow);
 
-  wing(p, v.wings[far]!.strands, v.open, 0.52, v.glow, clock);
+  // Spread for the glide, both wings lie behind her and she hangs in front of them; the far one
+  // is only a little dimmer, and the two trade places smoothly as she turns under them.
+  const soar = v.soar;
+  const behind = soar > 0.5;
+  const t = sat(0.5 + 1.6 * Math.abs(d));
+  const kFar = lerp(0.52, lerp(1, 0.74, t), soar);
+  const kNear = lerp(1, lerp(0.74, 1, t), soar);
+  wing(p, v.wings[far]!.strands, v.open, kFar, v.glow, clock, soar);
+  if (behind) wing(p, v.wings[near]!.strands, v.open, kNear, v.glow, clock, soar);
   arm(p, j, far, true, false, v.wall);
   leg(p, j, far, true);
   thorn(p, f, 21 * (1 - 0.65 * v.tuck));
   torso(p, j);
   leg(p, j, near, false);
-  wing(p, v.wings[near]!.strands, v.open, 1, v.glow, clock);
+  if (!behind) wing(p, v.wings[near]!.strands, v.open, kNear, v.glow, clock, soar);
   ruff(p, f, v);
   arm(p, j, near, false, true, v.wall);
   head(p, f, v, far);
