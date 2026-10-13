@@ -991,7 +991,7 @@ describe('lampwings in the grove', () => {
       ['lamp-f3', 1290, 480, 80],
       ['lamp-ledge', 2700, 150, 90],
       ['lamp-glide-1', 4400, 270, 60],
-      ['lamp-glide-2', 4700, 270, 60],
+      ['lamp-glide-2', 4900, 250, 60],
     ]);
     expect((GROVE.enemies ?? []).slice(0, first).every((e) => e.kind === 'burrback')).toBe(true);
     const prizes = [...(GROVE.pods ?? []), ...(GROVE.pickups ?? []).filter((p) => p.kind === 'great')];
@@ -1023,7 +1023,9 @@ describe('lampwings in the grove', () => {
     expect(bad({ ...one, x: 1984, y: 900 })).toThrow(/too close to "great-hang"/);
     expect(bad({ ...one, radius: -1 })).toThrow();
     expect(bad({ ...one, facing: 0 })).toThrow();
-    expect(bad({ ...(GROVE.enemies ?? [])[0], radius: 50 })).toThrow();
+    // (A burrback may have a range of its own, but not one shorter than its body.)
+    expect(bad({ ...(GROVE.enemies ?? [])[0], radius: 5 })).toThrow();
+    expect(bad({ ...(GROVE.enemies ?? [])[0], radius: 90 })).not.toThrow();
     expect(bad(one)).not.toThrow();
   });
 

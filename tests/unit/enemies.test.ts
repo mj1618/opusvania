@@ -53,6 +53,34 @@ function duel(t = still(), at = 2110): Sim {
 describe('burrback: patrol', () => {
   const plat = { tag: 'floating' as const, x: 1000, y: 600, w: 400, h: 48 };
 
+  it('a range of its own (`radius`): on open ground it keeps within it of where it started, turning as at a wall', () => {
+    const s = newSim(scene([{ ...burr(2000, 1), radius: 120 }]));
+    let minX = 9e9;
+    let maxX = -9e9;
+    const causes = new Set<string>();
+    frames(s, '.2400', (ev) => {
+      const e = foe(s);
+      minX = Math.min(minX, e.x);
+      maxX = Math.max(maxX, e.x + e.w);
+      for (const t of of(ev, 'enemyTurn')) {
+        causes.add(t.cause);
+        expect(t.frames).toBe(B.turnPauseFrames);
+      }
+    });
+    // Box centre within 120 px of its start: the box between 2000 - 120 - 26 and 2000 + 120 + 26.
+    expect([minX, maxX]).toEqual([1854, 2146]);
+    expect([...causes]).toEqual(['wall']);
+    // Shoved out of its range it walks back in and stays.
+    foe(s).x = 2300;
+    foe(s).facing = 1;
+    frames(s, '.600', () => {});
+    expect(foe(s).x + foe(s).w).toBeLessThanOrEqual(2146);
+    // Without one it has the whole floor.
+    const free = newSim(scene([burr(2000, 1)]));
+    frames(free, '.2400', () => {});
+    expect(foe(free).x).toBeGreaterThan(2400);
+  });
+
   it('walks its platform, turns at both ledges with a pause, and never leaves it', () => {
     const s = newSim(scene([burr(1200, 1, 600)], { solids: [plat] }));
     const turns: Array<[number, number, string]> = [];
@@ -698,7 +726,7 @@ describe('enemies: determinism, symmetry, restart', () => {
     expect(hashState(cloneState(a.state))).toBe(hashState(a.state));
     expect(cloneState(a.state).enemies[0]).not.toBe(a.state.enemies[0]);
     expect(of(a.events, 'hurt').length + of(a.events, 'enemyHit').length).toBeGreaterThan(2);
-    expect(a.state.version).toBe(13);
+    expect(a.state.version).toBe(14);
   });
 
   it('mirror symmetry: a mirrored scene and mirrored inputs give exactly the mirrored fight', () => {
@@ -760,15 +788,8 @@ describe('enemies in the grove', () => {
   // The burrbacks (they come first in the scene's list; the lampwings have lampwing.test.ts).
   const list = (GROVE.enemies ?? []).filter((e) => e.kind === 'burrback');
 
-  it('six burrbacks, validated: on a surface, clear of solids, unique, away from the spawn', () => {
-    expect(list.map((e) => e.id)).toEqual([
-      'burr-bank',
-      'burr-path',
-      'burr-rise',
-      'burr-ledge',
-      'burr-root',
-      'burr-far',
-    ]);
+  it('five burrbacks, validated: on a surface, clear of solids, unique, away from the spawn', () => {
+    expect(list.map((e) => e.id)).toEqual(['burr-bank', 'burr-path', 'burr-rise', 'burr-ledge', 'burr-root']);
     for (const e of list) {
       const d = Math.hypot(e.x - GROVE.spawn.x, e.y - GROVE.spawn.y);
       expect(d, e.id).toBeGreaterThan(300);
@@ -782,6 +803,8 @@ describe('enemies in the grove', () => {
       expect(list.some((e) => e.x >= (a as number) && e.x < (b as number))).toBe(true);
     expect(list.some((e) => e.y === 1280 && e.x > 384 && e.x < 1536)).toBe(false);
     expect(list.some((e) => e.y === 1088 && e.x > 4608)).toBe(false);
+    // Nor on the far ledge: no patrol can clear a 288 px ledge of the 350 px jump from F7.
+    expect(list.some((e) => e.y === 448 && e.x > 5472)).toBe(false);
     const bad = (enemies: unknown[]) => () => parseScene({ ...GROVE, enemies });
     expect(bad([{ ...list[0], id: 'pod-f2' }])).toThrow(/called/);
     expect(bad([{ ...list[0], y: 1000 }])).toThrow(/surface/);
@@ -809,11 +832,12 @@ describe('enemies in the grove', () => {
       // 96 px short of every drop (the bank's lip, the pool's edge, both ends of the rise and of
       // the high ledge, the far ledge's open end); right up to walls and the scene's edges.
       ['burr-bank', 0, 288],
-      ['burr-path', 1952, 2560],
-      ['burr-rise', 2656, 3104],
+      ['burr-path', 1952, 2432],
+      // burr-rise has a range of its own (`radius`): it keeps 270 px from the foot of the bluff she
+      // drops from (a walk off the lip comes down 220 px out).
+      ['burr-rise', 2900, 3104],
       ['burr-ledge', 2912, 3232],
       ['burr-root', 4160, 4608],
-      ['burr-far', 5568, 5760],
     ]);
   });
 });

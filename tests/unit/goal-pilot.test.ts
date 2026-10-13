@@ -21,8 +21,7 @@ import { feet, hopOnto, newSim, type Sim, wallClimb } from './helpers';
  * -> the pool -> back to kindle it -> over the pool -> the burrback and the big pod beyond it ->
  * the mid rise (burrback, pod) -> under the trunks (great glint) -> the wall-jump shaft -> trunk A's
  * top -> trunk B's top, the summit: second lantern -> jump, double jump, glide right over the whole
- * right zone and down onto the far ledge at its lantern (the designed approach: the burrback there
- * keeps to the far end): third lantern, the heart wakes -> down to the shrine on the right rise:
+ * right zone and down onto the far ledge at its lantern (the designed approach): third lantern, the heart wakes -> down to the shrine on the right rise:
  * the heart. If the glide fails, the right route on foot (root, branch, F6, F7) is the fallback.
  */
 const { jump: J, attack: A, left: LEFT, right: RIGHT } = ActionBit;
@@ -238,9 +237,12 @@ function playthrough(t: Tuning = cloneTuning(defaultTuning)) {
   mark('out of the pool if she fell short', hopOnto(s, rect('ground', 2)) >= 0);
   mark('cut down burr-path', fightBurr(s, 'burr-path'));
   mark('open pod-path-2', openPod(s, 'pod-path-2'));
-  mark('onto the mid rise', hopOnto(s, rect('ground', 3)) >= 0);
-  mark('cut down burr-rise', fightBurr(s, 'burr-rise'));
+  // The bluff is taller than a jump: the branch is the step up to it.
+  mark('onto the branch', GROVE.oneWays[0] !== undefined && hopOnto(s, GROVE.oneWays[0]) >= 0);
+  mark('from the branch onto the bluff', hopOnto(s, rect('ground', 3)) >= 0);
   mark('open pod-rise', openPod(s, 'pod-rise'));
+  mark('down onto the terrace', hopOnto(s, rect('ground', 4)) >= 0);
+  mark('cut down burr-rise', fightBurr(s, 'burr-rise'));
   mark('down to the trunks', walkTo(s, 3456, 8));
   mark('under trunk B for the great glint', walkTo(s, 3648, 8));
   mark('back into the shaft', walkTo(s, 3456, 8));
@@ -253,21 +255,9 @@ function playthrough(t: Tuning = cloneTuning(defaultTuning)) {
   const far = rect('ledge', 1);
   const glided = glideOnto(s, far, (lanterns[2] as { x: number }).x);
   if (!glided) {
-    // Knocked out of the air, or short: the right route on foot, and onto the ledge when its
-    // burrback is at the far end.
+    // Knocked out of the air, or short: the right route on foot.
     for (const r of [rect('root', 0), GROVE.oneWays[1], rect('floating', 5), f7])
       mark('the right route on foot', r !== undefined && hopOnto(s, r, 900) >= 0);
-    mark(
-      'wait for the far ledge to be clear',
-      waitFor(
-        s,
-        () => {
-          const g = foe(s, 'burr-far');
-          return g.mode === 'dead' || (g.facing > 0 && g.x > far.x + 150);
-        },
-        900,
-      ),
-    );
     mark('onto the far ledge', hopOnto(s, far) >= 0);
   }
   mark('on the far ledge', feet(s).y === far.y && s.state.player.grounded);
@@ -286,6 +276,13 @@ function playthrough(t: Tuning = cloneTuning(defaultTuning)) {
   );
   return { s, legs, glided, ended: s.state.frame };
 }
+
+const T = defaultTuning;
+const cost = lanterns.reduce((n, l) => n + lanternCost(l, T.goal), 0);
+const world = pickupsWorth(GROVE, T.pickups);
+const podsAll = podsWorth(GROVE, T.pods);
+/** Creatures at their base worth: what the tally's total counts (a finisher's extra is a bonus). */
+const kills = foes.reduce((n, e) => n + (e.kind === 'burrback' ? T.burrback.value : T.lampwing.value), 0);
 
 describe('the grove can be finished', () => {
   it('one run from the spawn: three lanterns, the heart, the end', () => {
@@ -312,7 +309,10 @@ describe('the grove can be finished', () => {
     const gather = of(ev, 'gather')[0];
     if (!gather) throw new Error('no gather');
     const before = ev.slice(0, ev.indexOf(gather));
-    expect(gather.glints).toBe(of(before, 'pickup').reduce((n, e) => n + e.value, 0));
+    // Found + the finisher bonus = everything that reached her; found never passes the total.
+    expect(gather.glints + gather.bonus).toBe(of(before, 'pickup').reduce((n, e) => n + e.value, 0));
+    expect(gather.glints).toBeLessThanOrEqual(gather.glintsTotal);
+    expect(gather.glintsTotal).toBe(world + podsAll + kills);
     expect(gather.lanterns).toBe(3);
     expect(gather.kills).toBe(of(before, 'enemyDie').length);
     expect(gather.hits).toBe(of(before, 'hurt').length);
@@ -401,15 +401,9 @@ describe('the grove can be finished', () => {
 });
 
 describe('economy: what the lanterns ask against what the grove holds', () => {
-  const T = defaultTuning;
-  const cost = lanterns.reduce((n, l) => n + lanternCost(l, T.goal), 0);
-  const world = pickupsWorth(GROVE, T.pickups);
-  const podsAll = podsWorth(GROVE, T.pods);
-  const kills = foes.reduce((n, e) => n + (e.kind === 'burrback' ? T.burrback.value : T.lampwing.value), 0);
-
   it('36 in all: under half of the world glints alone, a fifth of everything', () => {
     expect(cost).toBe(36);
-    expect([world, podsAll, kills]).toEqual([77, 62, 39]);
+    expect([world, podsAll, kills]).toEqual([92, 62, 35]);
     // A player who never cuts a pod or a creature can still pay for all three.
     expect(world).toBeGreaterThanOrEqual(cost * 2);
     expect(cost / (world + podsAll + kills)).toBeLessThan(0.25);

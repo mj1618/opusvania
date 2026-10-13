@@ -16,7 +16,7 @@
 ## The scene: `content/scene/grove.json`
 `{id, width: 5760, height: 1600, spawn: {x, y}, ceilingY?: -420, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}],
 pickups: [{id, kind: glint|great, x, y}], pods: [{id, x, y, mount: sit|hang, hp?: 1-3}],
-enemies: [{id, kind: burrback, x, y (feet centre), facing: -1|1} | {id, kind: lampwing, x, y (home: box centre, in open
+enemies: [{id, kind: burrback, x, y (feet centre), facing: -1|1, radius? (its own range, box centre from its start)} | {id, kind: lampwing, x, y (home: box centre, in open
 air), facing, radius?}], lanterns: [{id, x, y (foot, on solid ground), cost?}], heart: {x, y (on solid ground)}}`
 (burrbacks first; pickups.md, combat.md, enemies.md, goal.md),
 validated by Zod in `src/scene/index.ts` (exports `GROVE`), typed in `src/sim/scene.ts`. Tags are for
@@ -34,16 +34,30 @@ x:  0        1000       2000       3000       4000       5000     5760
 608                  ▬F4                     ││  ││
 704            ▬F3                 trunk A → ││  ││     ▬F6
 832         ▬F2                              ││  ││  ╌branch
-960     ▬F1          ╌branch (1024)          └┘  └┘ (both end at 1024: walk under)
-1088┌bank┐                       ┌─raised──┐               ┌──raised ground──┤
-1280│    └────ground───┐    ┌────┘  1152   └──ground──▄root┘                 │
-1408│                  └pool┘                                                │
-1600└────────────────────────────────────────────────────────────────────────┘
+960     ▬F1          ╌branch (1024) ┌bluff┐  └┘  └┘ (both end at 1024: walk under)
+1088┌bank┐                          │ 960 └terrace┐            ┌──raised ground──┤
+1280│    └────ground───┐    ┌───────┘     1152    └─ground┐ ▄root──ground──┘     │
+1408│                  └pool┘                             └hollow 1376           │
+1600└────────────────────────────────────────────────────────────────────────────┘
 ```
-- Ground top is 1280; left bank and right rise 1088; mid rise 1152; the pool floor is 1408 (x 1536-1856).
+- Ground tops, west to east: bank 1088 (0-384) | 1280 (384-1536) | pool floor 1408 (1536-1856) | 1280
+  (1856-2432) | **bluff 960 (2432-2624)** | terrace 1152 (2624-3200) | 1280 (3200-3744) | **hollow 1376
+  (3744-3968)** | 1280 (3968-4608, the root 3968-4160 at 1184 on its west end) | right rise 1088 (4608-5760).
+- **The floor is not a corridor** (2026-10-14, after the playtest's 8 s hold-right run): the bluff's west
+  face is 320 px, more than a jump (272). Up it: the branch (a jump from the path, then 64 px up and a 128 px
+  gap), or a double jump. Its east side is a 192 px step down to the terrace. The hollow is 96 deep (deeper
+  than she is tall), 192 up to the root on its east side. Holding right and jumping when blocked now stops
+  at the bluff (`scene.test.ts`).
+- From the bluff's top: F5 is a jump + double jump straight up-left (432 px, 32 to spare: a short cut to the
+  high ledge for a sure hand); a held jump off the **west** lip is "the way home" (glide over burr-path and
+  the whole pool to the first lantern: movement-controller.md, `layout-pilot.test.ts`); a held jump off the
+  east lip floats over the terrace into trunk A's bark and slides under it.
 - Left route up: bank → F1..F5 → high ledge (y 448) → trunk A top → trunk B top (192, the highest point).
 - The trunk pair (gap 256 px, x 3328-3584) is the wall-jump shaft: three wall jumps from the ground to 448.
+  Six glints zigzag wall to wall up it (at the three kick points and between them), the first at head
+  height on the floor.
 - Right route up: root → branch → F6 → F7 → far ledge (448).
+- Pickups may hang above the scene top, up to 40 px under `ceilingY` (the sky line over the right zone).
 - `tests/unit/scene.test.ts` pilots every route; if you move a rect, it tells you what became unreachable.
   Reach numbers are in movement-controller.md.
 - Lanterns: 1448, 1280 (moth-stone) / 3684, 192 (trunk B's top) / 5524, 448 (far ledge); the heart: 5212, 1088
@@ -118,7 +132,7 @@ Interfaces are documented at the top of `scene/index.ts`, `character/index.ts`, 
 `lights.ts` and `contract.ts`. The driver order per render frame is in `stage.ts`.
 
 ## Shots and clips
-- `npm run shots` (dev server on 5180, or `--url`): `shots/wide-*.png` (1920x1080 at 7 camera stops),
+- `npm run shots` (dev server on 5180, or `--url`): `shots/wide-*.png` (1920x1080 at 9 camera stops; 8 = the bluff, 9 = the hollow),
   `shots/closeup-*.png` (character at 4x in 12 situations) and `shots/closeup-strip.png`. `--only=wide|closeup`,
   `--out=dir`, `--ambient=N` (render frames to run before shooting), `--hitboxes`, `--no-gpu`. ~1.5 s.
   Deterministic: same code, same pictures. Parallel agents: use different `--out` dirs.

@@ -315,8 +315,15 @@ describe('wing glide', () => {
     // (Held to the end she sails over the ledge, 160 px up at its lip, to the scene's wall and
     // slides down it onto the ledge's far end; closing the wings over the lip lands her there.)
     expect(glides(flight.events).at(-1)).toMatch(/glideEnd:(land|wall)/);
-    // Well over the two lampwings on the way: neither notices her.
-    expect(flight.events.filter((e) => e.type === 'enemyNotice' || e.type === 'hurt')).toEqual([]);
+    // Well over the two lampwings on the way: the first never notices her; the second (its home is
+    // in reach of the far lantern, so its giving up at a lit lantern can be seen) looks up as she
+    // passes 200 px over it and sets off after her, far too slow to touch her in the air.
+    expect(flight.events.filter((e) => e.type === 'hurt')).toEqual([]);
+    expect(
+      flight.events
+        .filter((e) => e.type === 'enemyNotice')
+        .map((e) => (e.type === 'enemyNotice' ? e.id : '')),
+    ).toEqual(['lamp-glide-2']);
 
     const pool = GROVE.solids.find((r) => r.tag === 'pool');
     if (!pool) throw new Error('no pool');

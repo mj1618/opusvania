@@ -58,25 +58,6 @@ function standAndCut(s: Sim, id: string, maxFrames = 1500): number {
   return -1;
 }
 
-/** As the burrback pilot's: keeps a blade's length from a ground enemy and cuts it down. */
-function fightBurr(s: Sim, id: string, maxFrames = 900): number {
-  let prev = 0;
-  for (let f = 0; f < maxFrames; f++) {
-    const e = foe(s, id);
-    if (e.mode === 'dead') return f;
-    const p = s.state.player;
-    const dx = e.x + e.w / 2 - (p.x + p.w / 2);
-    const gap = Math.abs(dx) - e.w / 2 - p.w / 2;
-    let m = 0;
-    if (gap > 78) m = bit(dx);
-    else if (gap < 34 && e.mode !== 'hurt') m = bit(-dx);
-    else if ((prev & A) === 0) m = (p.facing === Math.sign(dx) ? 0 : bit(dx)) | A;
-    tick(s, m);
-    prev = m;
-  }
-  return -1;
-}
-
 /**
  * The summit route: from trunk B's top, jump, double jump, glide right over the two lampwings and
  * pogo off each in turn (wings closed just long enough to come down on it), then glide on.
@@ -224,10 +205,6 @@ describe('lampwings in the grove, piloted', () => {
 
   it('the pogo chain: summit to far ledge off the two over the right zone; a second run kills both', () => {
     const s = newSim();
-    // The far ledge's own guard first, from its ledge (as in the burrback pilot).
-    s.place(5500, 448);
-    expect(fightBurr(s, 'burr-far')).toBeGreaterThan(0);
-
     const first = pogoRun(s);
     // One flight, two bounces, each a lampwing; she comes down on the far ledge (y 448), which the
     // glide alone cannot reach from the summit (glide.test: it lands on F7).
@@ -261,7 +238,6 @@ describe('lampwings in the grove, piloted', () => {
   it('the summit run is robust to when she sets off (the lampwings wander)', () => {
     for (const wait of [0, 97, 333, 1000, 2222]) {
       const s = newSim();
-      Object.assign(foe(s, 'burr-far'), { mode: 'dead', gone: true });
       for (let f = 0; f < wait; f++) tick(s, 0);
       const run = pogoRun(s);
       expect(run.hits, `wait ${wait}`).toEqual(['lamp-glide-1', 'lamp-glide-2']);

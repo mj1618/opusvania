@@ -86,6 +86,9 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
 
   Rule of thumb: every 64 px of height is 141 px of glide. Without the double jump (held jump off a
   ledge, wings open as she passes it): 763 / 1185 / 1745 / 2167 px for drops of 192 / 384 / 640 / 832.
+- **A held ground jump only glides below its launch height** (the `carried` rule), so a glide needs a drop:
+  nothing glides on the flat or going up a staircase. That is why the early glide is taught off the bluff
+  (320 px over the path) and not off the F platforms, whose next step always catches the jump.
 - What the glide opens in the grove (all land on ground; nothing leaves the scene or traps her). From
   trunk B's top, jump + double jump + glide: going right it passes x 4400 at feet y -202 and 4700 at
   -63 (the two lampwings at y 270 never notice), crosses the far ledge's lip (5472) at y 288, 160 px

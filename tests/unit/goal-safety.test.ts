@@ -127,6 +127,9 @@ describe('sanctuary: a lit lantern keeps creatures out', () => {
     expect(near).toBe(G.sanctuaryPx);
     const turns = of(ev, 'enemyTurn').filter((e) => e.cause === 'lantern');
     expect(turns.length).toBeGreaterThanOrEqual(2);
+    // Shying from the light is a longer beat than turning at a wall (36 against 24 frames).
+    for (const t of turns) expect(t.frames).toBe(defaultTuning.burrback.turnPauseShyFrames);
+    expect(defaultTuning.burrback.turnPauseShyFrames).toBeGreaterThan(defaultTuning.burrback.turnPauseFrames);
     expect(new Set(turns.map((e) => e.id))).toEqual(new Set([`b${X + 400}`, 'left']));
   });
 
@@ -382,8 +385,10 @@ describe('the tally in the summary', () => {
         2 * T.pickups.greatValue +
         T.pods.value1 +
         T.pods.value3 +
-        2 * T.burrback.valueFinisher +
-        T.lampwing.valueFinisher,
+        // Creatures at their base worth: a finisher's extra is the bonus, outside the total.
+        2 * T.burrback.value +
+        T.lampwing.value,
+      bonus: 0,
       pods: 1,
       podsTotal: 2,
       greats: 1,

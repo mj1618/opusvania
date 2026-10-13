@@ -64,6 +64,16 @@
   regrows in `FIELD.regrow` s). **Slash** (`onSlash`): blast + gust, clippings from a fixed pool, pool
   droplets. **Pool**: two quads, one shader (surface, caustics, fish, ripples, splash).
 
+## Layout pass, 2026-10-14 (the bluff, the hollow)
+- Both are plain `ground` rects and needed **no painter changes**: the generic step code gives the bluff
+  (2432-2624, top 960) a stone lip, a boulder cap, the buttress root down its west face and a banked east
+  side, and the hollow (3744-3968, floor 1376) reads as a mossy dip with a broad-leaf plant. Checked with
+  `shots/wide-8-bluff.png`, `wide-9-hollow.png` and `--hitboxes` (tops honest).
+- `FIGHT_SPOTS` still names `[2560, 3200]`: the terrace is 2624-3200 now, so the bluff's east 64 px are
+  "calm" too; harmless. burr-rise starts at 3002 (calm ±230 = 2772-3232).
+- Weak spot: the root leaning down the bluff's east side is lit like a ramp (the "lit slope" failure above,
+  mild here because the terrace is right under it).
+
 ## Rules learned
 - Nothing manufactured: no ruled edges, flat facets, even spacing or even heights. Stone = `paintRock`,
   wood = `limb()`. `blob(..., n < 9)` is a polygon. A `ribbon()` ends in a flat cut: taper short wide ones.

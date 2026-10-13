@@ -178,6 +178,11 @@ export interface PickupsState {
   /** Value lying in dropped clusters (`drops`), still to be picked up again. */
   lost: number;
   /**
+   * Extra glints creatures have paid over their base worth (a kill by the finisher pays more):
+   * counted at the kill. The ending's tally leaves them out of "found of all there were".
+   */
+  bonus: number;
+  /**
    * Clusters of glints she dropped when she faded, oldest first: `id` (1, 2, ...), where it lies
    * (`x`, `y` = its centre), `value` = what it held, `left` = glints not yet back with her, `timer`
    * = 0 while it lies there, else frames until the next of them reaches her. Removed when `left`
@@ -365,11 +370,16 @@ export interface GoalState {
    */
   ending: {
     frames: number;
+    /** Glints found of `glintsTotal` (never more than it); `bonus` = what finisher kills paid on top. */
     glints: number;
+    bonus: number;
     time: number;
     kills: number;
     hits: number;
-    /** The tally: what there was to find (`...Total`) against what she found, and how often she faded. */
+    /**
+     * The tally: what there was to find (`...Total`) against what she found, and how often she faded.
+     * `glintsTotal` = every pickup, every pod and every creature at its base worth.
+     */
     glintsTotal: number;
     pods: number;
     podsTotal: number;
@@ -385,7 +395,7 @@ export interface GoalState {
 }
 
 export interface GameState {
-  version: 13;
+  version: 14;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;

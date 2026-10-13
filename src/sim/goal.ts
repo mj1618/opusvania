@@ -41,6 +41,7 @@ export function createGoal(scene: Scene): GoalState {
     ending: {
       frames: 0,
       glints: 0,
+      bonus: 0,
       time: 0,
       kills: 0,
       hits: 0,
@@ -169,14 +170,15 @@ export function updateGoal(
     } else if (control && standsIn(p, b)) {
       g.gathered = true;
       g.ending.frames = 0;
-      g.ending.glints = wallet.count + wallet.spent + wallet.lost;
       g.ending.time = g.run.start < 0 ? 0 : state.frame - g.run.start;
       g.ending.kills = enemiesKilled(state);
       g.ending.hits = g.run.hits;
       // The tally: what there was to find. Glints: every pickup, every pod, and every creature at
-      // its best (felled by the finisher).
+      // its base worth. What finisher kills paid on top is the bonus, counted apart, so "found"
+      // can never pass "all there were" and 100% does not ask for every kill by the finisher.
       let foes = 0;
-      for (const f of scene.enemies ?? []) foes += Math.max(0, Math.round(enemyRules(f.kind).value(t, true)));
+      for (const f of scene.enemies ?? [])
+        foes += Math.max(0, Math.round(enemyRules(f.kind).value(t, false)));
       let greats = 0;
       let greatsTotal = 0;
       const picks = scene.pickups ?? [];
@@ -186,6 +188,11 @@ export function updateGoal(
         if ((wallet.timers[i] ?? 0) < 0) greats++;
       }
       g.ending.glintsTotal = pickupsWorth(scene, t.pickups) + podsWorth(scene, t.pods) + foes;
+      const all = wallet.count + wallet.spent + wallet.lost;
+      // (Every glint that reaches her comes from a pickup, a pod or a creature, so found <= total
+      // by construction; nothing is clamped here.)
+      g.ending.bonus = Math.max(0, Math.min(wallet.bonus, all));
+      g.ending.glints = all - g.ending.bonus;
       g.ending.pods = state.pods.burst;
       g.ending.podsTotal = scene.pods?.length ?? 0;
       g.ending.greats = greats;
@@ -206,6 +213,7 @@ export function updateGoal(
         px: p.x + p.w / 2,
         py: p.y + p.h,
         glints: g.ending.glints,
+        bonus: g.ending.bonus,
         time: g.ending.time,
         lanterns: g.lit,
         kills: g.ending.kills,

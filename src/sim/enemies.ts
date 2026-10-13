@@ -343,6 +343,8 @@ export function slashEnemies(
     const n = frames(K.deadFrames(t), 1);
     setMode(e, 'dead', n);
     const value = frames(K.value(t, power >= 2));
+    // What a finisher pays over the creature's base worth is a bonus: the tally counts it apart.
+    state.pickups.bonus += Math.max(0, value - frames(K.value(t, false)));
     const glintFrames = frames(E.releaseFrames, 1);
     const stagger = frames(value >= E.bigRelease ? E.releaseStaggerBig : E.releaseStagger, 1);
     e.spill = value;

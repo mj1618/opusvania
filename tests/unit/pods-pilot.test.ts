@@ -56,7 +56,7 @@ const STATIONS: Record<string, [x: number, y: number]> = {
   'pod-f3': [1400, 704],
   'pod-path-2': [1880, 1280],
   'pod-branch-l': [2400, 1280],
-  'pod-rise': [2620, 1152],
+  'pod-rise': [2470, 960],
   'pod-ledge': [2900, 448],
   'pod-branch-r': [4300, 1280],
   'pod-f6': [4700, 1088],

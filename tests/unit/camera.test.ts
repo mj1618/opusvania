@@ -22,7 +22,12 @@ describe('camera', () => {
   });
 
   it('follows a run softly with look-ahead and never leaves the scene', () => {
-    const s = newSim();
+    // (The bluff is taller than a jump: here it is cut down to a hop, so plain running and jumping crosses.)
+    const flat = {
+      ...GROVE,
+      solids: GROVE.solids.map((r) => (r.tag === 'ground' && r.y === 960 ? { ...r, y: 1152, h: 448 } : r)),
+    };
+    const s = newSim(flat);
     const cam = createCamera(s.state, GROVE);
     let maxStep = 0;
     for (let i = 0; i < 900; i++) {

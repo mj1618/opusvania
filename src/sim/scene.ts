@@ -57,7 +57,8 @@ export type EnemyKind = 'burrback' | 'lampwing';
 
 /**
  * Where an enemy starts. Burrback: `x`, `y` = its feet centre, on a surface; `facing` = the way it
- * sets off. Lampwing: `x`, `y` = its home, the centre of its box and of its territory, in open
+ * sets off; `radius` = how far from its start (box centre) it walks, where its ground would let it
+ * go further (default: the whole of its ground). Lampwing: `x`, `y` = its home, the centre of its box and of its territory, in open
  * air; `radius` = how far from home it wanders (default `tuning.lampwing.radius`); `facing` = the
  * way it looks at first (its wander path is mirrored with it).
  */

@@ -50,6 +50,7 @@ const SceneSchema = z
               x: int,
               y: int,
               facing: z.union([z.literal(-1), z.literal(1)]),
+              radius: int.min(40).max(2000).optional(),
             })
             .strict(),
           z
@@ -131,7 +132,8 @@ export function parseScene(json: unknown): Scene {
   for (const p of s.pickups) {
     if (seen.has(p.id)) throw new Error(`Scene "${s.id}": two pickups are called "${p.id}"`);
     seen.add(p.id);
-    if (p.x <= 0 || p.y <= 0 || p.x >= s.width || p.y >= s.height)
+    // Under the canopy counts as inside: the air above the scene's top is hers up to `ceilingY`.
+    if (p.x <= 0 || p.y <= Math.min(0, (s.ceilingY ?? 0) + 40) || p.x >= s.width || p.y >= s.height)
       throw new Error(`Scene "${s.id}": pickup "${p.id}" is outside the scene`);
     if (s.solids.some((r) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h))
       throw new Error(`Scene "${s.id}": pickup "${p.id}" is inside a solid`);

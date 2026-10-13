@@ -23,10 +23,9 @@ const count = (ev: SimEvent[], type: string) => ev.filter((e) => e.type === type
 const STATIONS: Record<string, [x: number, y: number]> = {
   'burr-bank': [40, 1088],
   'burr-path': [1900, 1280],
-  'burr-rise': [2600, 1152],
+  'burr-rise': [2700, 1152],
   'burr-ledge': [2850, 448],
   'burr-root': [4200, 1280],
-  'burr-far': [5500, 448],
 };
 
 /**
@@ -94,14 +93,9 @@ describe('burrbacks in the grove, piloted', () => {
     ).toBeGreaterThan(0);
     s.place(3800, 1280);
     const root = GROVE.solids.find((r) => r.tag === 'root');
+    // (No creature walks the far ledge any more: no patrol could clear a 288 px ledge of the jump from F7.)
     for (const r of [root, GROVE.oneWays[1], ...f.slice(5), ledges[1]])
       expect(hopOnto(s, r as never), `onto ${r?.x},${r?.y}`).toBeGreaterThan(0);
-    expect(
-      fight(
-        s,
-        list.findIndex((e) => e.id === 'burr-far'),
-      ),
-    ).toBeGreaterThan(0);
     // Nothing on the way cost her everything: no fade was needed to get there.
     expect(count(s.events, 'fade')).toBe(0);
   });
@@ -116,7 +110,7 @@ describe('burrbacks in the grove, piloted', () => {
           step(s.state, 0, s.tuning, s.scene, s.events);
           const e = s.state.enemies[i];
           if (!e) throw new Error('no enemy');
-          // A run-up of 170 px where there is room, 120 where its patrol hugs a wall (burr-far).
+          // A run-up of 170 px where there is room, 120 where its patrol hugs a wall.
           const y = e.y + e.h;
           let from = 0;
           let standable = false;
@@ -133,7 +127,9 @@ describe('burrbacks in the grove, piloted', () => {
           for (let k = 0; k < 70; k++) {
             const p = s.state.player;
             const gap = Math.abs(e.x + e.w / 2 - feet(s).x);
-            let m = bit(dir);
+            // Once she is down on the far side she stops (what lives further on is another one's test).
+            const past = p.grounded && Math.sign(feet(s).x - (e.x + e.w / 2)) === dir && gap > 80;
+            let m = past ? 0 : bit(dir);
             if (p.grounded && k < 30 && gap < 110 && (prev & J) === 0) m |= J;
             else if (!p.grounded && p.vy < 0) m |= J;
             step(s.state, m, s.tuning, s.scene, s.events);
@@ -210,9 +206,8 @@ describe('burrbacks in the grove, piloted', () => {
   });
 
   it('a hit at a ledge or by the pool can drop her, never trap her or take her out of the scene', () => {
-    // Thrown off the far ledge by burr-far, off the high ledge by burr-ledge, into the pool by burr-path.
+    // Thrown off the high ledge by burr-ledge, into the pool by burr-path.
     for (const [id, x, y, dir] of [
-      ['burr-far', 5500, 448, 1],
       ['burr-ledge', 2850, 448, 1],
       ['burr-path', 1900, 1280, 1],
     ] as const) {

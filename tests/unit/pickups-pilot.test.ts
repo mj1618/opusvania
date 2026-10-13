@@ -4,7 +4,7 @@ import { step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
 import { pickupsWorth } from '../../src/sim/pickups';
 import type { Pickup } from '../../src/sim/scene';
-import { defaultTuning } from '../../src/sim/tuning';
+import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { feet, hopOnto, newSim, type Sim, wallClimb } from './helpers';
 
 /**
@@ -22,6 +22,20 @@ const bit = (d: number) => (d > 0 ? ActionBit.right : d < 0 ? ActionBit.left : 0
 const list = GROVE.pickups ?? [];
 const T = defaultTuning.pickups;
 const tallTrunk = GROVE.solids.filter((r) => r.tag === 'trunk')[1] ?? { x: 0, y: 0, w: 0 };
+
+/** Runs an input script until she lands (or it ends). */
+function hold(s: Sim, script: string): void {
+  let air = false;
+  for (const part of script.split(' ')) {
+    const m = /^(.+?)(\d+)$/.exec(part);
+    if (!m) throw new Error(`bad script ${part}`);
+    for (let i = 0; i < Number(m[2]); i++) {
+      s.run(`${m[1]}1`);
+      if (!s.state.player.grounded) air = true;
+      else if (air) return;
+    }
+  }
+}
 
 /** Goes for pickup `i` from wherever the player stands. Returns frames taken, or -1. */
 function seek(s: Sim, i: number, maxFrames = 300): number {
@@ -61,7 +75,7 @@ const STATIONS: Array<[prefix: string, x: number, y: number]> = [
   ['ledge-', 2480, 528],
   ['crown-', 3260, 448],
   ['branch-', 2176, 1280],
-  ['rise-', 2400, 1280],
+  ['rise-', 2250, 1024],
   ['root-', 4080, 1184],
   ['f6-', 4460, 912],
   ['far-', 5260, 592],
@@ -70,6 +84,7 @@ const STATIONS: Array<[prefix: string, x: number, y: number]> = [
   ['great-arch', 3456, 1280],
   ['great-far', 5300, 592],
   ['great-hang', 1984, 1280],
+  ['hollow-', 3780, 1376],
 ];
 
 describe('gathering every glint in the grove', () => {
@@ -83,7 +98,7 @@ describe('gathering every glint in the grove', () => {
     }
   });
 
-  it('all 57 can be collected: 52 glints and 5 great ones, worth 77', () => {
+  it('all 68 can be collected: 62 glints and 6 great ones, worth 92', () => {
     const s = newSim();
     const missed: string[] = [];
     // The wall-jump shaft first: the climb itself passes through its glints.
@@ -98,15 +113,43 @@ describe('gathering every glint in the grove', () => {
         if (seek(s, i) < 0) missed.push(p.id);
       });
     }
+    // The line in the sky over the right zone: the summit glide (jump, double jump at the top, hold)
+    // gathers all of it in one flight and comes down on the far ledge.
+    s.place(3684, 192);
+    hold(s, 'R+J28 R1 R+J400');
+    expect(feet(s).y).toBe(448);
     // Let the last ones arrive.
     s.run(`.${T.greatFrames + 30}`);
     list.forEach((p, i) => {
       if (s.state.pickups.timers[i] !== -1 && !missed.includes(p.id)) missed.push(p.id);
     });
     expect(missed).toEqual([]);
-    expect(list).toHaveLength(57);
-    expect(s.state.pickups.taken).toBe(57);
-    expect(s.state.pickups.count).toBe(77);
-    expect(pickupsWorth(GROVE, T)).toBe(77);
+    expect(list).toHaveLength(68);
+    expect(s.state.pickups.taken).toBe(68);
+    expect(s.state.pickups.count).toBe(92);
+    expect(pickupsWorth(GROVE, T)).toBe(92);
+  });
+
+  it('the sky line needs the wings: the same flight without them gathers none of its far half', () => {
+    const sky = (s: Sim) =>
+      list.filter(
+        (p, i) => (p.id.startsWith('sky-') || p.id === 'great-sky') && s.state.pickups.timers[i] !== 0,
+      );
+    const glide = newSim({ ...GROVE, enemies: [] });
+    glide.place(3684, 192);
+    hold(glide, 'R+J28 R1 R+J400');
+    expect(sky(glide).map((p) => p.id)).toHaveLength(7);
+    const t = cloneTuning(defaultTuning);
+    t.assists.glide = false;
+    const fall = newSim({ ...GROVE, enemies: [] }, t);
+    fall.place(3684, 192);
+    hold(fall, 'R+J28 R1 R+J400');
+    // (The first three hang on the jump and the double jump themselves.)
+    expect(sky(fall).map((p) => p.id)).toEqual(['sky-1', 'sky-2', 'sky-3']);
+    // Nor does a dash at the top of the double jump reach the great one (it is 160 px short).
+    const dash = newSim({ ...GROVE, enemies: [] }, t);
+    dash.place(3684, 192);
+    hold(dash, 'R+J28 R1 R+J20 R+X1 R200');
+    expect(sky(dash).some((p) => p.id === 'great-sky')).toBe(false);
   });
 });

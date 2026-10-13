@@ -379,7 +379,8 @@ export type SimEvent =
   | { type: 'heartWake'; x: number; y: number }
   /**
    * She walked into the woken heart: the run is over. `x`, `y` = the heart; `px`, `py` = her feet
-   * centre. The summary: `glints` gathered in all (spent ones included), `time` = frames since her
+   * centre. The summary: `glints` found of `glintsTotal` (spent, dropped and unspent alike; never
+   * more than it), `bonus` = what finisher kills paid on top (not part of either), `time` = frames since her
    * first input, `lanterns` lit, `kills` = enemies killed, `hits` taken. Control is taken for
    * `frames`; `endHold` follows then.
    */
@@ -390,12 +391,13 @@ export type SimEvent =
       px: number;
       py: number;
       glints: number;
+      bonus: number;
       time: number;
       lanterns: number;
       kills: number;
       hits: number;
       frames: number;
-      /** The tally: of all the glints there were (`glintsTotal`), pods, great glints, creatures; and her fades. */
+      /** The tally: of all the glints there were (`glintsTotal`: pickups, pods, creatures at base worth), pods, great glints, creatures; and her fades. */
       glintsTotal: number;
       pods: number;
       podsTotal: number;

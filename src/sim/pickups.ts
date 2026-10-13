@@ -28,6 +28,7 @@ export function createPickups(scene: Scene): PickupsState {
     count: 0,
     spent: 0,
     lost: 0,
+    bonus: 0,
     drops: [],
     dropSeq: 0,
     taken: 0,

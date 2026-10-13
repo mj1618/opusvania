@@ -20,7 +20,7 @@ Tests: `tests/unit/enemies.test.ts`, `enemies-pilot.test.ts` (burrback), `lampwi
   the glint spill queue (`spill / spillTimer / spillGap`), contact and its exclusions, the pogo.
 - `EnemyState` is ONE flat record for all kinds (plain JSON; a field a kind does not use keeps its
   start value). `homeX, homeY` = the centre of its box at the start, for every kind. The state
-  version is 13 (enemies.test pins it).
+  version is 14 (enemies.test pins it).
 - Scene data: `enemies` is a Zod union on `kind`; burrbacks first, lampwings after (the burrback
   grove tests index the first six). `EnemySpawn.y` means feet for a burrback, home centre for a lampwing.
 - No `Math.sin` in the sim: the lampwing's bob is a two-parabola wave (`wave()`), its wander a hash
@@ -233,25 +233,35 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
 - `hurt {x, y, dir, hp, hpMax, damage, source: {kind, id}, hitX, hitY, stagger, invuln}`, `fade {x,
   y, frames}`, `reform` (above).
 
-## Where the burrbacks are (6)
+## Where the burrbacks are (5)
 | id | feet x, y | surface (its box's range over a minute) | why |
 |---|---|---|---|
 | burr-bank | 200, 1088 | left bank 0-384: **0-288** (wall, lip) | guards the great glint on the bank |
-| burr-path | 2330, 1280 | ground right of the pool 1856-2560: **1952-2560** (lip at the pool, wall) | walks over pod-path-2 (3 hits): deal with it first |
-| burr-rise | 3000, 1152 | mid rise 2560-3200: **2656-3104** (two lips) | by pod-rise |
+| burr-path | 2330, 1280 | ground right of the pool 1856-2432: **1952-2432** (lip at the pool, the bluff's wall) | walks over pod-path-2 (3 hits): deal with it first |
+| burr-rise | 3002, 1152 | terrace 2624-3200: **2900-3104** (`radius` 76, lip) | the fight between the bluff and the shaft |
 | burr-ledge | 3000, 448 | high ledge + trunk A top 2816-3328: **2912-3232** (two lips) | by pod-ledge, the big one |
 | burr-root | 4400, 1280 | between the root and the right rise: **4160-4608** (two walls) | under the right branch and its pod |
-| burr-far | 5620, 448 | far ledge 5472-5760: **5568-5760** (lip, the scene's edge; 5634- once lantern-far is lit) | guards the great glint at the end of the right route |
+
+- **`radius` on a burrback** (scene data, optional, 40-2000): its box centre stays within that of where it
+  started, where its ground would let it go further; the end of the range turns it like a wall (`enemyTurn`
+  cause `wall`, 24 frames). burr-rise has one so the foot of the bluff stays clear: a walk off the bluff's
+  east lip comes down up to 220 px out, its box never comes nearer than 276 (`layout-pilot.test.ts`: 60
+  start times, walking off and jumping off).
+- **Turn pauses**: `turnPauseFrames` 24 at a wall, a lip or the end of its range; `turnPauseShyFrames` 36
+  when it shies from a lit lantern (`lantern`) or from an edge she is under (`wary`): room for the acting.
+- **burr-far is gone** (was 5620, 448 on the far ledge). No home for it was fair: on the 288 px far ledge
+  every spot is under F7's full jump (55 of 60) or the glide's landing; on the right rise a jump up from
+  the root's flat lands 220 px in, on anything short of the pogo row, and the row is kept clear on
+  purpose; in the hollow (224 px) running in hit it 48 times in 60. The far lantern's guard is
+  lamp-glide-2 now (goal.md). A sixth burrback needs a new stretch of ground, not a new spot.
 
 Landing audit (`tests/unit/burrback-lips.test.ts`: five minutes, with her standing under each lip in
-turn): no burrback box ever enters 1856-1952 (out of the pool), 2560-2656 and 3104-3200 (onto the mid
-rise from either side), 288-384 (onto the bank), 2816-2912 (F5 -> high ledge), 5472-5568 (onto the far
-ledge). The pool's left side has no burrback at all. Not cleared: a full held running jump F7 -> far
-ledge comes down at 5670-5740, where burr-far lives (goal.md).
+turn): no burrback box ever enters 1856-1952 (out of the pool), 3104-3200 (onto the terrace from the
+east), 288-384 (onto the bank), 2816-2912 (F5 -> high ledge). The pool's left side has no burrback at all.
 
 None on the spawn ground (384-1536: the whole run would be its patrol, the spawn included, and the
 close-up shots start there), none under the trunks (the wall-slide close-ups start at 3456, 1280),
-none on the right rise (the pogo row). `?nopickups` removes the enemies too (clean plates).
+none on the right rise (the pogo row), none on the far ledge. `?nopickups` removes the enemies too (clean plates).
 
 ## Where the lampwings are (5)
 | id | home x, y | radius | where | why |
@@ -260,7 +270,7 @@ none on the right rise (the pogo row). `?nopickups` removes the enemies too (cle
 | lamp-f3 | 1290, 480 | 80 | over the F2 -> F3 gap | above the jump's arc (a plain jump passes 20-75 px under it); follows her onto F3 and its pod |
 | lamp-ledge | 2700, 150 | 90 | over the F5 -> high ledge gap | a plain jump passes just under it (a double jump meets it); comes down to the ledge with burr-ledge and the big pod; the mid-glide kill off trunk A |
 | lamp-glide-1 | 4400, 270 | 60 | under the summit glide line | the first bounce of the pogo chain |
-| lamp-glide-2 | 4700, 270 | 60 | 300 px on, same height | the second: summit -> far ledge, which the glide alone cannot reach (it lands on F7) |
+| lamp-glide-2 | 4900, 250 | 60 | 500 px on (the pogo chain still holds: lampwing-pilot) | the second bounce; and the far lantern's guard: 646 px from it, inside its leash (520) + the sanctuary edge, so it follows the summit glide (which passes 200 px over it) to the lantern and gives up at the light. Not nearer: at (4960, 330) it noticed her on F7 |
 
 - None over the pool: `glide.test.ts` dives into it from (1696, 900) and anything within ~300 px of
   that column meets her. None near the spawn ground or under the trunks (the close-up shots).

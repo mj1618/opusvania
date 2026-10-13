@@ -33,9 +33,23 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   total, drop: true}` per glint, the first 18 frames after the touch, the rest 3 apart
   (`pickups.dropFrames / dropStagger`); `count++`, `lost--` each; the cluster is removed at `left` 0.
   Once woken it comes wherever she goes (like every pickup).
-- NOT drawn yet. For the renderer: lying clusters from `sim.pickups.drops` (state, so load / jumps
-  just show), the scatter from `glintsDrop` (she is already re-forming elsewhere in that step), the
-  flights like a pod's spill from `left` / `timer` (or the `pickup {drop}` events).
+
+### Dropped clusters, render (`src/render/goal/drops.ts`, knobs `DROPS`; drawn by the goal renderer's batches)
+- Waiting: up to 7 world glints (`K_GLINT`, 0.54 size, dormancy 0.55) in a low mound that hangs 22 px
+  over the ground. Lower and they are behind the grass fringe (`playfieldFront` covers every layer of
+  ours): the first try at 9 px could not be seen at all. They breathe together (3.6 s), one lifts its
+  head every 2.6 s, a mote drifts up from them, a small `SurfaceLight` pool warms the ground under them.
+  They stir when she is within 300 px.
+- A thin thread of light over them (the first version, 190 px, 0.75) read as an interface line at zoom 2;
+  the rising motes replaced it.
+- `glintsDrop`: they fall from where her body lay and go quiet over ~2 s (the camera has usually cut to
+  the re-form point by then). `dropWake`: a soft swell at the huddle and along the ground, the waiting
+  ones lift and wake, and flight j leaves spot `j % shown` so that it lands at `frames + j * stagger`
+  (0.36 s of flight, a three-spark tail, a beat of light at her chest). Timed from the event, not from
+  `pickup {drop}`; the state's `drops` only says the cluster still exists.
+- A scene without lanterns or a heart has no goal renderer and so draws no drops.
+- HUD: `glintsDrop` makes the count run down one by one (0.9 s for the lot, at most 0.07 s each, after
+  a 0.35 s beat) instead of jumping; the re-form relights `reform.hp` lights (2).
 
 ## Render (`src/render/pickups/`)
 - Layers: `pickupsBack` (under `character`: the buds) and `pickups` (over it, under
@@ -141,8 +155,11 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 - Count: beneath the lights, icon under the first lantern (a second `GlintBatch`, the world glint at
   1.25x, which also draws the lights' sparks), 30 px serif digits painted once into a canvas atlas.
   Appears on a pickup, ticks one by one, fades 3.6 s after the last. When the lights are hidden it
-  sits in THEIR place (`HUD.yTop`) and slides down / up with their fade, so nothing floats under an
-  empty row. Kept the auto-hide rather than dim always-on lights: the calm picture has no HUD at all.
+  sits in THEIR place (`HUD.yTop`). The two never share the place (`Hud.slot`): it moves down in 0.2 s
+  BEFORE the lights may show (they are gated until the slide is 72% done) and moves back up only when
+  they have quite gone. It used to slide with the lights' alpha, so for the 1.3 s of their fade-out the
+  count sat on top of half-faded lights (shots `--pickups`, wide-3). With nothing else on screen the
+  slot snaps, so a hit shows the lights at once. Kept the auto-hide rather than dim always-on lights: the calm picture has no HUD at all.
 - Since the lanterns: the count is a wallet and runs DOWN while she kindles (a mote leaves the icon per
   glint, digits dip instead of pop), shakes on `lanternRefuse`; restart is detected by `sim.frame` going
   back, not by the count falling. Under the count stands the goal's row (`progress.ts`: three crooks + a
@@ -191,3 +208,12 @@ pilots reach; move a rect or a pickup and it names what became unreachable.
   pass the code as a string.
 - ffmpeg's `tile` to PNG picks a palette format: add `-pix_fmt rgb24` or contact sheets come out
   posterised and yellow.
+
+## Layout pass 2026-10-14: what moved (62 glints + 6 great = 92)
+- `pool-arc-2..4` lowered 40-48 px (1050 / 1020 / 1015): the same five now hang on both the jump east from
+  the lip and the glide west off the bluff (layout-pilot). Still 11 low glints by the first lantern.
+- `rise-1..3` (2345,880 / 2400,800 / 2460,770): the arc from the branch up onto the bluff.
+- `shaft-1..6`: a zigzag between the wall-jump kick points (3540 right, 3372 left), first one on the floor.
+- `hollow-1..3` in the hollow (y 1330-1345: 31-46 px over its floor, above what the grass fringe hides).
+- `sky-1..6` + `great-sky` (4800, -57): the summit glide's line, above the scene top. Only the wings (or
+  the lampwing pogo chain) reach the far half; `pickups.test` exempts them from "within jump reach".

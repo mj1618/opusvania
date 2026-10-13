@@ -297,6 +297,8 @@ export const defaultTuning = {
     speed: 1.6,
     /** Frames it stands still when it turns round at a ledge or a wall. */
     turnPauseFrames: 24,
+    /** The same when it shies from a lit lantern's light or from an edge she is under: a longer beat, room for the flinch. */
+    turnPauseShyFrames: 36,
     /** Now and then it rests mid-walk: every restEveryMin..Max frames of walking, for restMin..Max frames. */
     restEveryMin: 150,
     restEveryMax: 330,

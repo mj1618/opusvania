@@ -61,6 +61,9 @@ let LIP_L = false;
 let LIP_R = false;
 let EDGE_L = 0;
 let EDGE_R = 0;
+// Its range (`radius` in the scene, 0 = none): the box stays between these.
+let RANGE_L = 0;
+let RANGE_R = 0;
 
 /**
  * Measures the ground it stands on: how far it runs each way before a wall or a drop, and from
@@ -119,6 +122,15 @@ function span(e: EnemyState, scene: Scene, t: Tuning['burrback']): void {
   const clear = lips === 0 ? 0 : Math.max(0, Math.min(frames(t.lipClear), Math.floor(room / lips)));
   MIN_X = EDGE_L + (LIP_L ? clear : 0);
   MAX_X = EDGE_R - (LIP_R ? clear : 0);
+  // A range of its own: it keeps within `radius` of where it started (box centre), wherever the
+  // ground would let it go.
+  if (e.radius > 0) {
+    RANGE_L = Math.floor(e.homeX - e.radius - e.w / 2);
+    RANGE_R = Math.ceil(e.homeX + e.radius + e.w / 2);
+  } else {
+    RANGE_L = 0;
+    RANGE_R = scene.width;
+  }
 }
 
 /**
@@ -168,7 +180,9 @@ function walk(e: EnemyState, info: StepInfo): void {
     const gap = groundSanctuaryGap(state, scene, e.x, e.x + e.w, e.y + e.h);
     const next = gap < 0 ? -1 : groundSanctuaryGap(state, scene, nx, nx + e.w, e.y + e.h);
     const holy = next >= 0 && next < G.sanctuaryPx && next < gap;
-    const stop = holy ? 3 : lip ? 2 : nudge(e, scene, e.facing, 0);
+    // The end of its own range: as good as a wall (back in from beyond it is never refused).
+    const leash = e.facing < 0 ? nx < RANGE_L : nx + e.w > RANGE_R;
+    const stop = holy ? 3 : lip ? 2 : leash ? 1 : nudge(e, scene, e.facing, 0);
     if (stop !== 0) {
       e.rx = 0;
       e.vx = 0;
@@ -203,7 +217,8 @@ function turn(
   cause: 'ledge' | 'wall' | 'lantern' | 'wary',
 ): void {
   e.facing = e.facing > 0 ? -1 : 1;
-  const pause = frames(t.turnPauseFrames);
+  // Shying from a lantern's light or from an edge she is under is a longer beat than meeting a wall.
+  const pause = frames(cause === 'lantern' || cause === 'wary' ? t.turnPauseShyFrames : t.turnPauseFrames);
   setMode(e, 'pause', pause);
   e.turning = true;
   events.push({
@@ -256,6 +271,7 @@ export const burrback: KindRules = {
     e.x = Math.round(spawn.x - e.w / 2);
     e.y = Math.round(spawn.y) - e.h;
     e.mode = 'walk';
+    e.radius = Math.max(0, spawn.radius ?? 0);
     e.walkLeft = nextWalk(e, t.burrback);
   },
 

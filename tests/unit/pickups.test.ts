@@ -118,6 +118,7 @@ describe('pickups (sim rule)', () => {
       count: 0,
       spent: 0,
       lost: 0,
+      bonus: 0,
       drops: [],
       dropSeq: 0,
       taken: 0,
@@ -142,12 +143,12 @@ describe('the grove pickups', () => {
   const body = defaultTuning.body;
   const J = defaultTuning.shape;
 
-  it('about fifty glints and a handful of great ones, ids unique', () => {
+  it('about sixty glints and a handful of great ones, ids unique', () => {
     const greats = list.filter((p) => p.kind === 'great');
     expect(list.length - greats.length).toBeGreaterThanOrEqual(40);
-    expect(list.length - greats.length).toBeLessThanOrEqual(56);
+    expect(list.length - greats.length).toBeLessThanOrEqual(64);
     expect(greats.length).toBeGreaterThanOrEqual(4);
-    expect(greats.length).toBeLessThanOrEqual(5);
+    expect(greats.length).toBeLessThanOrEqual(6);
     expect(new Set(list.map((p) => p.id)).size).toBe(list.length);
   });
 
@@ -166,6 +167,9 @@ describe('the grove pickups', () => {
     // The most a jump plus a double jump lifts the top of the box above a floor, plus the reach.
     const rise = J.jumpHeightPx + J.doubleJumpHeightPx + body.height;
     for (const p of list) {
+      // The line over the right zone hangs on the summit glide, out of any jump's reach on purpose
+      // (pickups-pilot.test.ts flies it).
+      if (p.id.startsWith('sky-') || p.id === 'great-sky') continue;
       const reach = p.kind === 'great' ? T.greatWakePx : T.wakePx;
       const ok = tops.some((r) => {
         const dx = p.x < r.x ? r.x - p.x : p.x > r.x + r.w ? p.x - (r.x + r.w) : 0;

@@ -21,8 +21,8 @@ What should guide the next rounds; delete entries as they are fixed.
 1. (Fixed in the sim, not replayed by a person yet: burrbacks keep 96 px off every lip and back
    away from an edge she is under; calmed creatures and lit lanterns are safe; a touch is one hit; a
    fade costs 2 lights and a third of the wallet: enemies.md, goal.md.) Left over: **the dropped
-   glint clusters are not drawn**, and a full held running jump F7 -> far ledge still lands on
-   burr-far at the ledge's far end (goal.md, "Where they are").
+   glint clusters are not drawn** (drawn since: goal-render.md). The F7 jump onto burr-far is solved by
+   taking the creature off the far ledge (below).
 4. **The heart waking is almost invisible.** Asleep vs awake from the far ledge differ by a few small
    orange drops and an opened bud; the big red glow behind the shrine is the background tree and is
    there before any lantern is lit. Only the fourth HUD pip says it.
@@ -44,7 +44,24 @@ What should guide the next rounds; delete entries as they are fixed.
   one to three cuts and are the best source; kills pay 4-6. After the third lantern glints are dead weight.
 - Health was never a constraint: 4 hp, free rest at any lit lantern, free full heal on death. (Since: a
   fade re-forms her with 2 lights and drops a third of the wallet; the `gather` summary carries a tally
-  (glints of 200, pods of 12, great glints of 5, creatures of 11, deaths) for leftover glints to count toward.)
+  (glints of 189 at base worth, pods of 12, great glints of 6, creatures of 10, deaths) for leftover glints to count toward.)
+
+## Layout pass after this playtest (2026-10-14, not replayed by a person yet)
+Sim-piloted and played through the debug API; what a person should now check by hand:
+- **The floor**: hold-right-and-jump stops at the bluff (2432-2624, 320 px). Is the branch read as the
+  step up, or do people double jump? Is the hollow (3744-3968) a beat or a nuisance?
+- **The glide before the summit**: nothing gates it. It is taught by the bluff: every way off it is a
+  drop, and a held jump off the west lip sails over burr-path and the whole pool (all five arc glints) to
+  the first lantern. Does anyone find it without being told? If not, the next step is a real gate, and
+  that needs a drop the staircase does not catch (movement-controller.md, the `carried` rule).
+- **The summit glide** now has a line of six glints and a great one that only a glide (or the lampwing pogo
+  chain) reaches (4800, -57). From the summit the dormant glints are faint against the canopy: check that
+  the first two (3900, -115 and 4150, -300) are seen at all.
+- **The shaft**: six glints zigzag between the kick points. Same question: are they seen from the floor?
+- Creatures: burr-far is gone (5 burrbacks), burr-rise keeps to the east 200 px of the terrace, lamp-glide-2
+  follows the glide to the far lantern and turns back at its light. A run is still ~20 s for the pilot;
+  the scene has more to look for (92 world glints against 77), not more to wait through.
+- Leftover glints: 55 after a brisk run, still nothing to spend them on (proposal in goal.md).
 
 ## Method notes
 - `playwright-cli run-code --filename f.js` runs a Playwright function with `page`: loop

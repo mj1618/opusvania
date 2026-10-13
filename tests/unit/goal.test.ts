@@ -581,8 +581,11 @@ describe('the heart', () => {
     s.place(HEART_X, FLOOR);
     const g = of(s.run('.2'), 'gather')[0];
     expect(g?.kills).toBe(1);
-    // 36 poked + 36 for lightAll + the burrback's spill.
-    expect(g?.glints).toBe(72 + of(s.events, 'pickup').length);
+    // 36 poked + 36 for lightAll + the burrback's spill. The third cut of the combo is the
+    // finisher: what it paid over the base worth is the bonus, apart from the glints found.
+    expect((g?.glints ?? 0) + (g?.bonus ?? 0)).toBe(72 + of(s.events, 'pickup').length);
+    expect(g?.bonus).toBe(defaultTuning.burrback.valueFinisher - defaultTuning.burrback.value);
+    expect(g?.glintsTotal).toBe(2 * defaultTuning.burrback.value);
   });
 
   it('she has to be standing in it: flying through does not end the run', () => {
@@ -747,7 +750,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
     s.run(`.${G.holdFrames + 5}`);
     expect([s.state.goal.lit, s.state.goal.ended, s.state.pickups.spent]).toEqual([3, true, 36]);
     const fresh = createState(1, s.tuning, s.scene);
-    expect(fresh.version).toBe(13);
+    expect(fresh.version).toBe(14);
     expect(fresh.goal).toEqual({
       lanterns: [0, 1, 2].map(() => ({
         lit: false,
@@ -764,6 +767,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
       ending: {
         frames: 0,
         glints: 0,
+        bonus: 0,
         time: 0,
         kills: 0,
         hits: 0,

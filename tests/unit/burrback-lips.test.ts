@@ -201,13 +201,15 @@ describe('burrback: its touch is one hit', () => {
     // (Before: a hit every 70 frames, the moment her safety ran out, until she faded.)
     // In the grove, in the middle of burr-path's patrol: one hit a round, hundreds of frames apart.
     const g = newSim();
-    g.place(2250, 1280);
+    g.place(2190, 1280);
     const at: number[] = [];
     watch(g, 800, (e, f) => {
       if (of(e, 'hurt').length) at.push(f);
     });
-    expect(at.length).toBeLessThanOrEqual(2);
-    if (at.length === 2) expect((at[1] as number) - (at[0] as number)).toBeGreaterThan(300);
+    // (Its ground is 576 px since the bluff took the east end of it: a round is a little shorter.)
+    expect(at.length).toBeLessThanOrEqual(3);
+    for (let i = 1; i < at.length; i++)
+      expect((at[i] as number) - (at[i - 1] as number)).toBeGreaterThan(240);
   });
 
   it('the recoil stops at walls and at the brink of a ledge', () => {
@@ -224,11 +226,16 @@ describe('the grove: no burrback waits where she lands', () => {
   // Where a required jump comes down, by surface: x range and the top it is on.
   const LANDINGS: Array<[string, number, number, number]> = [
     ['out of the pool to the right (x 1856)', 1856, 1952, 1280],
-    ['the step up onto the mid rise (x 2560)', 2560, 2656, 1152],
-    ['down off the mid rise is ground; up onto it from the right (x 3200)', 3104, 3200, 1152],
+    ['the foot of the bluff, where a walk off its east lip comes down (x 2624)', 2624, 2880, 1152],
+    ['up onto the terrace from the right (x 3200)', 3104, 3200, 1152],
     ['onto the left bank (x 384)', 288, 384, 1088],
     ['onto the high ledge from F5 (x 2816)', 2816, 2912, 448],
-    ['onto the far ledge from F7 or the summit glide (x 5472)', 5472, 5568, 448],
+    [
+      'the far ledge, all of it: the jump from F7 and the summit glide come down anywhere on it',
+      5472,
+      5760,
+      448,
+    ],
   ];
 
   it('over five minutes, with her standing under each lip in turn, no burrback box enters a landing spot', () => {

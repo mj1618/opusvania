@@ -59,6 +59,8 @@ const WIDE: Array<{ name: string; x: number; y: number }> = [
   { name: 'high-ledge', x: 3000, y: 448 },
   { name: 'right-rise', x: 4500, y: 1280 },
   { name: 'far-ledge', x: 5560, y: 448 },
+  { name: 'bluff', x: 2528, y: 960 },
+  { name: 'hollow', x: 3856, y: 1376 },
 ];
 
 /**
