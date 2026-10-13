@@ -4,7 +4,7 @@
  * landing / skid / dash start, a thin ring on the double jump, and a few motes and a faint trail
  * from the ember while dashing. All deterministic (own LCG, no Math.random).
  */
-import { PALETTE } from '../scene/lib/look';
+import { PALETTE } from '../../scene/lib/look';
 import { sat } from './math';
 import { type Painter, type RGB, rgb } from './paint';
 

@@ -5,7 +5,7 @@
  * (draw.ts). Each strand is a chain with its own rest shape, so the cloth holds a bell silhouette
  * at rest, streams behind in a run, and opens like a wing when the pose asks for flare.
  */
-import type { PlayerView } from '../contract';
+import type { PlayerView } from '../../contract';
 import { Chain, type ChainSpec } from './chain';
 import { type Frame, J_CHEST, J_COLLAR, J_CREST, type Rig, S_D, S_DH, S_FLARE } from './rig';
 

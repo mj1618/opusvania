@@ -161,13 +161,14 @@ export class FloraBuilder {
   /**
    * A tapered strip along a centre line (flat xy list). `w(t)` full width; `colL`/`colR` colours
    * at t for the left and right edge (looking along the line), so one side can catch the light.
+   * `alphaAt` may be a function of t (feathered tips).
    */
   strip(
     line: number[],
     w: (t: number) => number,
     colL: (t: number) => number,
     colR: (t: number) => number = colL,
-    alpha = 1,
+    alphaAt: number | ((t: number) => number) = 1,
   ): void {
     const n = line.length / 2;
     let pl = -1;
@@ -181,6 +182,7 @@ export class FloraBuilder {
       dx /= len;
       dy /= len;
       const t = i / (n - 1);
+      const alpha = typeof alphaAt === 'number' ? alphaAt : alphaAt(t);
       const hw = w(t) / 2;
       const x = line[i * 2] as number;
       const y = line[i * 2 + 1] as number;

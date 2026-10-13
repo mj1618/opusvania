@@ -18,7 +18,7 @@
  * Simulated at a fixed 120 Hz with an accumulator; rendered positions are extrapolated by the
  * leftover time so the chain neither lags nor jitters at any refresh rate.
  */
-import { wind } from '../scene/lib/look';
+import { wind } from '../../scene/lib/look';
 
 export interface ChainSpec {
   /** Segment lengths (world px); node count = lengths + 1. */

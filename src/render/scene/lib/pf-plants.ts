@@ -16,10 +16,12 @@ export const PLANTS = {
   featureGap: [38, 140] as const,
   /** Gap between groups in the rear row (shrubs, tall dark stands), px. */
   rearGap: [150, 420] as const,
-  /** Share of shrubs that carry autumn-yellow leaves. */
-  autumnShare: 0.3,
+  /** One shrub in this many carries autumn-yellow leaves (counted across the scene, so they spread). */
+  autumnEvery: 4,
   /** Grass: 0..1 share of a top that carries any, and blade heights in px. */
   grassCover: 0.68,
+  /** Share of grass tufts that also carry a wisp of fine, feather-tipped blades. */
+  fineShare: 0.55,
   grassHeight: [10, 50] as const,
   tallGrass: [40, 74] as const,
   /** Front fringe (drawn over the character's feet): cover and height. Keep it low. */
@@ -130,6 +132,29 @@ function grassTuft(
   }
 }
 
+/** A wisp of fine grass: hair-thin blades that fade out toward their tips. */
+function fineTuft(c: Ctx, x: number, y: number, n: number, h0: number, h1: number, t: Tone): void {
+  const { b, r } = c;
+  for (let i = 0; i < n; i++) {
+    const u = (i + r()) / n - 0.5;
+    const h = range(r, h0, h1) * (1 - Math.abs(u) * 0.3);
+    const lean = (u * 1.5 + range(r, -0.25, 0.25)) * h;
+    const bx = x + u * 9 + range(r, -2, 2);
+    b.plant(bx, y, h, r(), h * PLANTS.windPerPx * 1.3 + 0.8, h * PLANTS.bendPerPx, 0.4);
+    const sag = Math.min(0.4, Math.abs(lean) / h) * 0.5;
+    const line = quad(bx, y + 2, bx + lean * 0.1, y - h * (1.1 + sag), bx + lean, y - h * (1 - sag), 5);
+    const w0 = range(r, 1.1, 1.9);
+    const tip = mix(t.lit, t.sun, 0.3 + r() * 0.6);
+    b.strip(
+      line,
+      (k) => w0 * (1 - k * 0.55),
+      (k) => mix(mix(t.dark, t.mid, 0.5), t.lit, k),
+      (k) => mix(t.mid, tip, k ** 0.7),
+      (k) => 0.95 - 0.85 * k ** 1.6,
+    );
+  }
+}
+
 /** A fountain of long arching blades from one crown, some carrying seed heads. */
 function tallGrass(c: Ctx, x: number, y: number, t: Tone, size = 1): void {
   const { r } = c;
@@ -154,15 +179,36 @@ function tallGrass(c: Ctx, x: number, y: number, t: Tone, size = 1): void {
  * A shrub: dark lobes carrying a crowd of small leaves, lighter up and toward the key light.
  * `autumn` 0..1 turns that share of the leaves yellow and amber.
  */
-function bush(c: Ctx, x: number, y: number, w: number, h: number, t: Tone, autumn: number): void {
+function bush(
+  c: Ctx,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  t: Tone,
+  autumn: number,
+  form: 'round' | 'tall' | 'low' = 'round',
+): void {
   const { b, r } = c;
-  const lobes = 3 + Math.floor(r() * 3);
+  const lobes = form === 'low' ? 4 + Math.floor(r() * 3) : 3 + Math.floor(r() * 3);
   const phase = r();
+  const lean = form === 'tall' ? range(r, -0.45, 0.45) : 0;
   const centres: Array<[number, number, number]> = [];
   for (let i = 0; i < lobes; i++) {
     const u = lobes > 1 ? i / (lobes - 1) - 0.5 : 0;
-    const rad = h * range(r, 0.34, 0.5) * (1 - Math.abs(u) * 0.35);
-    centres.push([x + u * w * 0.8, y - rad * range(r, 0.75, 1.5) - (0.5 - Math.abs(u)) * h * 0.5, rad]);
+    if (form === 'tall') {
+      // Stacked and leaning: a young tree more than a bush.
+      const k = i / (lobes - 1);
+      const rad = h * range(r, 0.2, 0.3) * (1.1 - k * 0.4);
+      centres.push([x + lean * h * k + range(r, -w * 0.14, w * 0.14), y - rad * 0.8 - k * h * 0.72, rad]);
+    } else if (form === 'low') {
+      // Spreading: wide, uneven, hugging the ground.
+      const rad = h * range(r, 0.26, 0.42);
+      centres.push([x + u * w * 1.15, y - rad * range(r, 0.6, 1.0), rad]);
+    } else {
+      const rad = h * range(r, 0.34, 0.5) * (1 - Math.abs(u) * 0.35);
+      centres.push([x + u * w * 0.8, y - rad * range(r, 0.75, 1.5) - (0.5 - Math.abs(u)) * h * 0.5, rad]);
+    }
   }
   b.plant(x, y, h * 1.1, phase, h * 0.035 + 1, h * 0.22, 0.2);
   for (const [cx, cy, rad] of centres) {
@@ -659,6 +705,7 @@ export interface Garden {
 
 export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
   let features = 0;
+  let shrubs = 0;
   for (const top of info.tops) {
     if (top.kind === 'poolFloor') {
       growPool(g, top, info);
@@ -687,9 +734,16 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         if (roll < 0.6) {
           const n = top.kind === 'ground' ? 1 + Math.floor(r() * 2.2) : 1;
           for (let i = 0; i < n; i++) {
-            const h = range(r, 50, 96) * scale * (i ? 0.75 : 1);
-            const autumn = r() < PLANTS.autumnShare ? range(r, 0.35, 0.7) : 0;
-            bush(c, x + i * range(r, 50, 80), y + 2, h * range(r, 1.2, 1.7), h, t, autumn);
+            // Every few shrubs across the whole scene turns, so autumn is spread, not bunched.
+            shrubs++;
+            const autumn = shrubs % PLANTS.autumnEvery === 1 ? range(r, 0.35, 0.7) : 0;
+            const form =
+              (['round', 'tall', 'low', 'round', 'low'] as const)[(shrubs + Math.floor(r() * 2)) % 5] ??
+              'round';
+            const h =
+              range(r, 50, 96) * scale * (i ? 0.75 : 1) * (form === 'tall' ? 1.5 : form === 'low' ? 0.7 : 1);
+            const wd = h * range(r, 1.2, 1.7) * (form === 'tall' ? 0.5 : form === 'low' ? 1.6 : 1);
+            bush(c, x + i * range(r, 50, 80), y + 2, wd, h, t, autumn, form);
           }
         } else {
           const n = 2 + Math.floor(r() * 3);
@@ -772,6 +826,25 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         range(r, 2, 7),
         toneAt(BACK, x, r, top.y),
       );
+      // Fine wisps through and above the broad blades soften the whole stand.
+      if (r() < PLANTS.fineShare) {
+        fineTuft(
+          c,
+          x + range(r, -4, 4),
+          y,
+          4 + Math.floor(r() * 5),
+          h0 * 1.1,
+          Math.max(h0 + 6, h1 * 1.25),
+          toneAt(BACK, x, r, top.y),
+        );
+      }
+    }
+    // A snapped trunk's crown: ferns in the rot, moss over the rim.
+    if (top.kind === 'trunk') {
+      for (const u of [0.28, 0.7]) {
+        const fx = lerp(top.x0, top.x1, u + range(r, -0.06, 0.06));
+        fern(c, fx, y, range(r, 30, 46), toneAt(BACK, fx, r, top.y));
+      }
     }
 
     // Front fringe: low, dark, in clumps, never on thin boughs.
@@ -793,6 +866,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
           t,
         );
         if (r() < 0.12) clover(fc, x, top.y + 5, 6, t);
+        if (r() < PLANTS.fineShare * 0.6) fineTuft(fc, x, top.y + 4, 3 + Math.floor(r() * 3), 8, 22, t);
       }
     }
 
@@ -820,9 +894,24 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
   const tr = rngFor(17, 4);
   const tc: Ctx = { b: g.back, halo: g.halo, r: tr };
   for (const tw of info.twigs) {
-    const t = toneAt(FRONT, tw.x, tr);
+    const t = toneAt(tw.lit ? BACK : FRONT, tw.x, tr, tw.y);
     const n = 2 + Math.floor(tr() * 2);
     for (let i = 0; i < n; i++) spray(tc, tw.x, tw.y, tw.angle + range(tr, -0.9, 0.9), range(tr, 30, 56), t);
+  }
+  // Leaves along the thick vines that wind round the trunks.
+  const ir = rngFor(31, 7);
+  for (const v of info.ivy) {
+    for (let i = 0; i < v.line.length / 2; i++) {
+      if (ir() < 0.25) continue;
+      const px = v.line[i * 2] as number;
+      const py = v.line[i * 2 + 1] as number;
+      const t = toneAt(BACK, px, ir, py);
+      const a = ir() < 0.5 ? range(ir, -2.4, -0.7) : range(ir, 0.6, 2.4);
+      const ll = range(ir, 8, 14);
+      g.back.plant(px, py, ll, ir(), 1.4, 4, 0.3);
+      const lit = Math.sin(a) < 0 ? t.lit : t.mid;
+      g.back.leaf(px, py, a, ll, ll * 0.75, t.dark, lit, mix(lit, t.dark, 0.4), 0, 1, 3);
+    }
   }
   // Hollows in the earth: a dim violet or cyan cluster and rootlets from the roof.
   const pr = rngFor(23, 9);

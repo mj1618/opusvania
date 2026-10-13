@@ -33,7 +33,7 @@ export const TERRAIN = {
   /** Earth, from topsoil down through the strata (albedo before lighting). */
   earth: [0x1f4b56, 0x1a3f52, 0x17344f, 0x142a49, 0x112141] as const,
   strataDepth: [40, 104, 186, 290] as const,
-  stone: [0x4a7884, 0x3a6474, 0x2f5468, 0x55808a] as const,
+  stone: [0x4a7884, 0x3a6474, 0x2f5468, 0x55808a, 0x6c7466, 0x486a50, 0x5a5f7a, 0x76705e] as const,
   rootWood: 0x3a5a56,
   /** Bracket fungus: pale rim, flesh, dark band, pore surface. */
   fungus: [0xc9a070, 0x7f5a3e, 0x5a3a30, 0xb0a58c] as const,
@@ -99,8 +99,10 @@ export interface TerrainInfo {
   tops: Top[];
   unders: Under[];
   faces: Face[];
-  /** Ends of back-plane limbs: leaf sprays grow here (dark, behind the walk plane). */
-  twigs: Array<{ x: number; y: number; angle: number }>;
+  /** Ends of painted limbs: leaf sprays grow here. Dark unless `lit` (limbs in the walk plane). */
+  twigs: Array<{ x: number; y: number; angle: number; lit?: boolean }>;
+  /** Painted vines crossing a trunk face: leaves grow along `line`. */
+  ivy: Array<{ line: number[]; dir: number }>;
   /** Hollows in the earth: `y` is the floor, `roof` the ceiling, `w` the usable width. */
   pockets: Array<{ x: number; y: number; w: number; roof: number }>;
   pool: { x0: number; x1: number; floor: number; surface: number; bank: number } | null;
@@ -143,6 +145,7 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
     unders: [],
     faces: [],
     twigs: [],
+    ivy: [],
     pockets: [],
     pool: poolSeg
       ? {
@@ -1028,6 +1031,140 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo): vo
     });
   }
   barkDetail(p, t.x, t.y + 8, x1, y1 - (hanging ? 20 : 0), t.x + 5);
+  // Big bark plates, some lapping a few px past the flanks so the sides are never ruled lines.
+  for (let i = 0; i < Math.round(t.h / 62); i++) {
+    const py = lerp(t.y + 40, y1 - (hanging ? 80 : 30), (i + r()) / Math.round(t.h / 62));
+    const edge = r();
+    const px =
+      edge < 0.3
+        ? t.x - side(py, 23) + range(r, -2, 8)
+        : edge > 0.7
+          ? x1 + side(py, 11) - range(r, -2, 8)
+          : lerp(t.x + 24, x1 - 24, r());
+    const pw = range(r, 15, 26);
+    const ph = range(r, 34, 70);
+    const plate = chaikin(blob(px, py, pw, ph, py, 0.35, 9, range(r, -0.12, 0.12)), 1);
+    p.tint(
+      plate.map((v, k) => (k % 2 ? v + 3 : v - 2)),
+      TERRAIN.backDeep,
+      0.5,
+    );
+    p.solid(
+      plate,
+      mix(TERRAIN.bark, r() < 0.5 ? TERRAIN.barkLit : 0x2f4a3e, range(r, 0.15, 0.55)),
+      range(r, 0.6, 0.68),
+      { bark: 1 },
+    );
+  }
+  // Thick old vines winding round the trunk: each visible pass crosses the face on a slant.
+  let vy = t.y + range(r, 60, 130);
+  let vdir = r() < 0.5 ? -1 : 1;
+  while (vy < y1 - (hanging ? 150 : 60)) {
+    const rise = range(r, 70, 130);
+    const xa = vdir > 0 ? t.x - side(vy + rise, 23) - 3 : x1 + side(vy + rise, 11) + 3;
+    const xb = vdir > 0 ? x1 + side(vy, 11) + 3 : t.x - side(vy, 23) - 3;
+    const line = wander(
+      cubic(
+        xa,
+        vy + rise,
+        lerp(xa, xb, 0.3),
+        vy + rise * 0.95,
+        lerp(xa, xb, 0.7),
+        vy + rise * 0.1,
+        xb,
+        vy,
+        14,
+      ),
+      4,
+      vy,
+      40,
+    );
+    const vw = range(r, 7, 11);
+    p.tint(
+      ribbon(
+        line.map((v, k) => (k % 2 ? v + 5 : v)),
+        () => vw + 5,
+      ),
+      TERRAIN.backDeep,
+      0.45,
+    );
+    p.solid(
+      ribbon(line, (u) => vw * (0.8 + 0.2 * Math.sin(u * 9))),
+      mix(TERRAIN.rootWood, TERRAIN.mossDark, 0.45),
+      0.72,
+      { bark: 0.2 },
+    );
+    p.solid(
+      ribbon(line, () => vw * 0.3),
+      mix(TERRAIN.rootWood, TERRAIN.moss, 0.5),
+      0.8,
+      { moss: 0.4 },
+    );
+    info.ivy.push({ line, dir: vdir });
+    vy += rise + range(r, 30, 150);
+    vdir = -vdir;
+  }
+  // The crown: a snapped trunk. A rotted hollow opens just under the rim, and a few shards stand
+  // at the very edges (a hand's width, well short of anything to stand on).
+  const hw = t.w * range(r, 0.22, 0.3);
+  const hcx = t.x + t.w * range(r, 0.4, 0.6);
+  p.solid(
+    chaikin(
+      [
+        hcx - hw,
+        t.y + 12,
+        hcx - hw * 0.5,
+        t.y + 9,
+        hcx + hw * 0.6,
+        t.y + 10,
+        hcx + hw,
+        t.y + 14,
+        hcx + hw * 0.7,
+        t.y + 44,
+        hcx + hw * 0.1,
+        t.y + range(r, 66, 96),
+        hcx - hw * 0.6,
+        t.y + 50,
+      ],
+      2,
+    ),
+    0x0a1a2a,
+    0.26,
+  );
+  p.solid(
+    chaikin(
+      [
+        hcx - hw * 0.5,
+        t.y + 20,
+        hcx + hw * 0.5,
+        t.y + 20,
+        hcx + hw * 0.2,
+        t.y + 54,
+        hcx - hw * 0.3,
+        t.y + 44,
+      ],
+      2,
+    ),
+    0x06121e,
+    0.2,
+  );
+  for (const [sx, d] of [
+    [t.x + 3, -1],
+    [x1 - 3, 1],
+  ] as const) {
+    if (d < 0 && joinedL) continue;
+    const n = 2 + Math.floor(r() * 2);
+    for (let i = 0; i < n; i++) {
+      const bx = sx - d * i * range(r, 5, 9);
+      const hgt = range(r, 5, 11) * (1 - i * 0.25);
+      p.solid(
+        [bx - 4, t.y + 14, bx - d * 1.5, t.y - hgt, bx + 4, t.y + 14],
+        mix(TERRAIN.bark, TERRAIN.barkLit, 0.4),
+        0.6,
+        { bark: 1 },
+      );
+    }
+  }
   if (hanging) paintRootShoulders(p, t, info.groundY);
   // Shade the side away from the key, in two soft passes.
   for (const [off, wd] of [
@@ -1111,64 +1248,355 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo): vo
 
 function paintLedge(p: Paint, s: SolidRect, scene: Scene, info: TerrainInfo): void {
   const x1 = s.x + s.w;
-  const y1 = s.y + s.h;
-  const anchoredRight =
-    x1 >= scene.width - 1 || scene.solids.some((o) => o.tag === 'trunk' && o.x === x1 && o.y <= s.y);
-  const anchoredLeft = !anchoredRight;
-  const r = rngFor(s.x, 51);
-  // Thicker where it joins, thinner and rounder at the tip.
-  const sag = (u: number): number => {
-    const a = anchoredRight ? u : 1 - u;
-    return -9 + 26 * a ** 2.2 + 5 * Math.sin(u * 9 + s.x);
-  };
-  const xa = anchoredLeft ? s.x - 30 : s.x;
-  const xb = anchoredRight ? x1 + 30 : x1;
-  const body = boxOutline(xa, s.y, xb, y1, s.x, { top: 1.4, side: 3, bottom: 3 }, (u) => {
-    const uu = (xa + u * (xb - xa) - s.x) / s.w;
-    return sag(clamp(uu, 0, 1));
-  });
-  p.solid(body, TERRAIN.bark, 0.56, { bark: 0.25 });
-  // Long grain following the shelf, and growth rings at the tip.
-  const lines = 7;
-  for (let i = 0; i < lines; i++) {
-    const yy = s.y + 12 + (i / lines) * (s.h - 10);
-    const line = wander(
-      quad(xa + 10, yy, (xa + xb) / 2, yy + range(r, -4, 6), xb - 10, yy + range(r, -3, 8), 16),
-      3,
-      s.x + i,
-      60,
-    );
-    const light = r() < 0.5;
-    p.solid(
-      ribbon(line, (t) => range(r, 3, 4) * Math.sin(Math.PI * clamp(t, 0.03, 0.97)) + 0.8),
-      light ? mix(TERRAIN.bark, TERRAIN.barkLit, 0.6) : TERRAIN.barkDark,
-      light ? 0.66 : 0.4,
-    );
-  }
-  const tipX = anchoredRight ? s.x + 16 : x1 - 16;
-  for (let k = 0; k < 3; k++) {
-    p.solid(
-      blob(tipX, s.y + s.h * 0.52, 13 - k * 4, 20 - k * 6, s.x + k, 0.12, 12),
-      k % 2 ? TERRAIN.bark : mix(TERRAIN.bark, TERRAIN.barkLit, 0.5),
-      0.62 - k * 0.04,
-    );
-  }
-  // Shadow where it joins.
-  const jx = anchoredRight ? x1 - 14 : s.x + 14;
-  p.tint(
-    ribbon([jx, s.y + 12, jx, y1 + 22], () => 34),
-    TERRAIN.backDeep,
-    0.35,
+  const onTrunk = scene.solids.some(
+    (o) => o.tag === 'trunk' && (o.x === x1 || o.x + o.w === s.x) && o.y <= s.y,
   );
+  const anchoredRight = x1 >= scene.width - 1 || scene.solids.some((o) => o.tag === 'trunk' && o.x === x1);
+  if (onTrunk) paintLivingBough(p, s, anchoredRight, info);
+  else paintCrookShelf(p, s, anchoredRight, info);
+}
+
+/**
+ * A ledge beside a trunk: one enormous living bough. It swells out of the trunk through a fat
+ * collar, bellies down, tapers, and ends in a knuckled, forking tip that carries leaves.
+ */
+function paintLivingBough(p: Paint, s: SolidRect, anchoredRight: boolean, info: TerrainInfo): void {
+  const x1 = s.x + s.w;
+  const y1 = s.y + s.h;
+  const r = rngFor(s.x, 51);
+  const rootX = anchoredRight ? x1 : s.x;
+  const tipX = anchoredRight ? s.x : x1;
+  const dir = anchoredRight ? -1 : 1;
+  // a: 0 at the trunk, 1 at the tip. Depth of the underside below the collision bottom.
+  const sag = (u: number): number => {
+    const a = anchoredRight ? 1 - u : u;
+    const collar = 92 * (1 - smoothstep(0, 0.34, a)) ** 1.6;
+    const belly = 26 * Math.sin(Math.PI * clamp((a - 0.12) / 0.7, 0, 1)) ** 1.3;
+    const taper = -30 * smoothstep(0.6, 1, a) ** 1.2;
+    return (
+      collar +
+      belly +
+      taper +
+      wobble(u * s.w, s.x + 3, 46) * 4 +
+      Math.max(0, wobble(u * s.w, s.x + 4, 21)) * 5
+    );
+  };
+  // Outline: flat top, knuckled tip that droops, bellying underside, and it runs on into the trunk.
+  const top: number[] = [];
+  const bot: number[] = [];
+  const n = 44;
+  const over = 34;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const x = lerp(rootX - dir * over, tipX + dir * 10, t);
+    const u = clamp((x - s.x) / s.w, 0, 1);
+    const a = anchoredRight ? 1 - u : u;
+    const tipDrop = smoothstep(0.93, 1.03, a + (t > 0.97 ? 0.04 : 0)) * 9;
+    top.push(x, s.y + 2 + wobble(x, s.x, 60) * 1.2 + tipDrop);
+    bot.push(x, y1 + sag(u) - tipDrop * 0.5);
+  }
+  const outline = top.slice();
+  // A rounded knuckle closes the tip.
+  const ty0 = top[top.length - 1] as number;
+  const by0 = bot[bot.length - 1] as number;
+  for (let k = 1; k < 6; k++) {
+    const ang = (Math.PI * k) / 6;
+    outline.push(
+      tipX + dir * (10 + Math.sin(ang) * 16),
+      lerp(ty0, by0, k / 6) + wobble(k * 9, s.x + 8, 3) * 2,
+    );
+  }
+  for (let i = bot.length - 2; i >= 0; i -= 2) outline.push(bot[i] as number, bot[i + 1] as number);
+  const wood = mix(TERRAIN.bark, TERRAIN.rootWood, 0.3);
+  p.solid(chaikin(outline, 2), wood, 0.57, { bark: 0.2 });
+  // Grain that flows with the limb: it follows the underside near the bottom, the top near the top.
+  for (let i = 0; i < 12; i++) {
+    const f = (i + 0.5) / 12;
+    const line: number[] = [];
+    const t0 = range(r, 0, 0.35);
+    const t1 = range(r, 0.6, 1);
+    for (let k = 0; k <= 16; k++) {
+      const t = lerp(t0, t1, k / 16);
+      const j = Math.round(t * n) * 2;
+      line.push(
+        top[j] as number,
+        lerp((top[j + 1] as number) + 8, (bot[j + 1] as number) - 5, f) + wobble(k * 20, s.x + i, 30) * 2.5,
+      );
+    }
+    const light = i % 3 !== 1;
+    const wd = range(r, 3, 6);
+    p.solid(
+      ribbon(line, (t) => wd * Math.sin(Math.PI * clamp(t, 0.03, 0.97)) ** 0.7 + 0.6),
+      light ? mix(wood, TERRAIN.barkLit, range(r, 0.35, 0.8)) : TERRAIN.barkDark,
+      light ? range(r, 0.62, 0.7) : 0.42,
+      { bark: 0.2 },
+    );
+  }
+  // The collar: rolls of bark where the limb leaves the trunk, wrapping well below the join.
+  for (let k = 0; k < 4; k++) {
+    const cx = rootX + dir * (16 + k * 15);
+    const cyTop = s.y + 16;
+    const cyBot = y1 + sag(clamp((cx - s.x) / s.w, 0, 1)) - 6;
+    const line = wander(
+      quad(cx, cyTop, cx + dir * (12 - k * 2), (cyTop + cyBot) / 2, cx - dir * 8, cyBot, 10),
+      3,
+      s.x + k,
+      30,
+    );
+    p.solid(
+      ribbon(line, (t) => (11 - k * 1.5) * Math.sin(Math.PI * clamp(t, 0.05, 0.95)) ** 0.6 + 1),
+      k % 2 ? TERRAIN.barkDark : mix(wood, TERRAIN.barkLit, 0.55),
+      k % 2 ? 0.44 : 0.68,
+      { bark: 0.4 },
+    );
+  }
+  // Burls and old limb scars along the belly.
+  for (let i = 0; i < 4; i++) {
+    const u = range(r, 0.12, 0.85);
+    const bx = s.x + s.w * u;
+    const by = y1 + sag(u) - range(r, 6, 22);
+    const rad = range(r, 9, 16);
+    p.solid(blob(bx, by, rad * 1.2, rad, bx, 0.25, 12), mix(wood, TERRAIN.barkLit, 0.45), 0.7, { bark: 0.2 });
+    if (r() < 0.6) {
+      p.solid(blob(bx, by, rad * 0.6, rad * 0.5, bx, 0.2, 10), wood, 0.58, { bark: 0.2 });
+      p.solid(blob(bx, by + 0.5, rad * 0.28, rad * 0.22, bx, 0.2, 8), TERRAIN.backDeep, 0.34);
+    }
+  }
+  // Side limbs: from the tip and from under the belly, thin, each ending in leaves.
+  const limb = (x: number, y: number, ang: number, len: number, w0: number): void => {
+    const ex = x + Math.cos(ang) * len;
+    const ey = y + Math.sin(ang) * len;
+    const line = wander(
+      quad(x, y, x + Math.cos(ang) * len * 0.5, y + Math.sin(ang) * len * 0.5 + len * 0.12, ex, ey, 10),
+      4,
+      x + len,
+      40,
+    );
+    p.solid(
+      ribbon(line, (t) => w0 * (1 - t) ** 0.8 + 1.4),
+      wood,
+      0.56,
+      { bark: 0.2 },
+    );
+    info.twigs.push({ x: ex, y: ey, angle: ang, lit: true });
+    info.twigs.push({
+      x: lerp(x, ex, 0.55),
+      y: lerp(y, ey, 0.55) + len * 0.05,
+      angle: ang + (r() < 0.5 ? -0.9 : 0.9),
+      lit: true,
+    });
+  };
+  const tipMidY = (ty0 + by0) / 2;
+  limb(tipX + dir * 14, tipMidY, dir < 0 ? Math.PI + 0.35 : -0.35, range(r, 60, 90), 11);
+  limb(tipX + dir * 10, tipMidY + 8, dir < 0 ? Math.PI - 0.7 : 0.7, range(r, 44, 70), 9);
+  for (const u of [0.3, 0.62]) {
+    const lx = s.x + s.w * (anchoredRight ? 1 - u : u);
+    limb(
+      lx,
+      y1 + sag(clamp((lx - s.x) / s.w, 0, 1)) - 6,
+      Math.PI / 2 + dir * range(r, 0.3, 0.9),
+      range(r, 40, 70),
+      8,
+    );
+  }
   mossCap(p, s.x, x1, s.y, {
     seed: s.x + 4,
-    drapeL: anchoredLeft ? 0 : range(r, 30, 60),
+    drapeL: anchoredRight ? range(r, 24, 44) : 0,
+    drapeR: anchoredRight ? 0 : range(r, 24, 44),
+    thick: 13,
+    drip: 34,
+    bare: 0.22,
+  });
+  // Moss saddles slumping over the shoulder of the limb.
+  for (let i = 0; i < 4; i++) {
+    const mx = lerp(s.x + 30, x1 - 30, (i + r()) / 4);
+    const len = range(r, 24, 50);
+    const line = wander(
+      quad(mx, s.y + 6, mx + range(r, -8, 8), s.y + len * 0.5, mx + range(r, -10, 10), s.y + len, 8),
+      3,
+      mx,
+      20,
+    );
+    const tone = mossTone(mx, s.y, s.x, 0);
+    p.solid(
+      ribbon(line, (t) => 20 * (1 - t) ** 0.6 + 2),
+      tone.dark,
+      0.76,
+      { moss: 1 },
+    );
+    p.solid(
+      ribbon(line, (t) => 11 * (1 - t) ** 0.8 + 1),
+      tone.body,
+      0.84,
+      { moss: 1 },
+    );
+  }
+  info.tops.push({ x0: s.x, x1, y: s.y, kind: 'ledge', freeL: anchoredRight, freeR: !anchoredRight });
+  info.unders.push({
+    x0: s.x + 8,
+    x1: x1 - 8,
+    y: (x) => y1 + sag((x - s.x) / s.w) - 3,
+    kind: 'ledge',
+    trail: 'longVines',
+  });
+}
+
+/**
+ * A ledge at the scene edge: a shelf of root-bound earth and stones cradled in the crook of two
+ * limbs that reach in from the edge wall.
+ */
+function paintCrookShelf(p: Paint, s: SolidRect, anchoredRight: boolean, info: TerrainInfo): void {
+  const x1 = s.x + s.w;
+  const y1 = s.y + s.h;
+  const r = rngFor(s.x, 52);
+  const E = TERRAIN.earth;
+  const wallX = anchoredRight ? x1 : s.x;
+  const freeX = anchoredRight ? s.x : x1;
+  const dir = anchoredRight ? -1 : 1;
+  const sag = (u: number): number => {
+    const a = anchoredRight ? 1 - u : u;
+    return (
+      14 +
+      30 * Math.sin(Math.PI * clamp(a * 0.9 + 0.08, 0, 1)) ** 0.7 +
+      wobble(u * s.w, s.x + 2, 38) * 9 -
+      smoothstep(0.8, 1, a) * 26
+    );
+  };
+  const wood = mix(TERRAIN.bark, TERRAIN.rootWood, 0.25);
+  const limb = (line: number[], w: (t: number) => number, h: number): void => {
+    p.tint(
+      ribbon(line, (t) => w(t) + 8),
+      TERRAIN.backDeep,
+      0.4,
+    );
+    p.solid(ribbon(line, w), wood, h, { bark: 0.3 });
+    p.solid(
+      ribbon(line, (t) => w(t) * 0.34),
+      mix(wood, TERRAIN.barkLit, 0.6),
+      h + 0.08,
+      { bark: 0.3 },
+    );
+  };
+  // The far limb (behind the shelf) first.
+  const backLimb = wander(
+    cubic(
+      wallX - dir * 60,
+      y1 + 150,
+      wallX + dir * 40,
+      y1 + 120,
+      wallX + dir * s.w * 0.5,
+      y1 + 96,
+      wallX + dir * s.w * 0.72,
+      y1 + 28,
+      18,
+    ),
+    6,
+    s.x + 1,
+    60,
+  );
+  limb(backLimb, (t) => 40 * (1 - t * 0.6) + 4, 0.46);
+  // The earth it holds.
+  const body = boxOutline(
+    Math.min(wallX, freeX) - (anchoredRight ? 0 : 30),
+    s.y,
+    Math.max(wallX, freeX) + (anchoredRight ? 30 : 0),
+    y1,
+    s.x,
+    { top: 1.5, side: 5, bottom: 4 },
+    (u) => {
+      const xx = Math.min(wallX, freeX) - (anchoredRight ? 0 : 30) + u * (s.w + 30);
+      return sag(clamp((xx - s.x) / s.w, 0, 1));
+    },
+    7,
+  );
+  p.solid(body, E[0], 0.52);
+  const lower: number[] = [];
+  for (let x = s.x - 6; x <= x1 + 36; x += 8) lower.push(x, s.y + 30 + wobble(x, s.x, 50) * 7);
+  for (let x = x1 + 36; x >= s.x - 6; x -= 8) lower.push(x, y1 + 120);
+  p.tint(lower, E[2], 0.8);
+  for (let i = 0; i < 9; i++) {
+    const cx = lerp(s.x + 14, x1 - 10, (i + r()) / 9);
+    const u = (cx - s.x) / s.w;
+    const cy = s.y + 20 + r() * Math.max(8, s.h - 22 + sag(u) * 0.7);
+    const size = range(r, 8, 20);
+    const c = TERRAIN.stone[Math.floor(r() * TERRAIN.stone.length)] as number;
+    p.tint(blob(cx - 1.5, cy + 2.5, size * 1.3 + 2, size * 0.8 + 2, cx, 0.3, 10), E[4], 0.5);
+    p.solid(
+      chaikin(blob(cx, cy, size * 1.3, size * 0.8, cx, 0.3, 8, range(r, -0.4, 0.4)), 1),
+      mix(c, E[1], range(r, 0.1, 0.45)),
+      range(r, 0.62, 0.72),
+    );
+  }
+  for (let i = 0; i < 8; i++) {
+    const cx = lerp(s.x + 12, x1 - 6, (i + r()) / 8);
+    const u = (cx - s.x) / s.w;
+    const len = (s.h - 8 + sag(u)) * range(r, 0.6, 1.05);
+    const line = wander(
+      quad(cx, s.y + 8, cx + range(r, -14, 14), s.y + len * 0.5, cx + range(r, -22, 22), s.y + 8 + len, 10),
+      6,
+      s.x + i,
+      26,
+    );
+    const w0 = range(r, 4, 8);
+    p.tint(
+      ribbon(line, (t) => (w0 + 5) * (1 - t * 0.5) + 1),
+      E[4],
+      0.4,
+    );
+    p.solid(
+      ribbon(line, (t) => w0 * (1 - t * 0.6) + 1),
+      mix(TERRAIN.rootWood, E[0], r() * 0.4),
+      0.65,
+      { bark: 0.1 },
+    );
+  }
+  // The near limb: up from the wall, under the belly, and curling round the free end.
+  const endU = anchoredRight ? 0 : 1;
+  const nearLimb = wander(
+    cubic(
+      wallX - dir * 50,
+      y1 + 96,
+      wallX + dir * s.w * 0.3,
+      y1 + 108,
+      freeX - dir * 30,
+      y1 + sag(endU) + 54,
+      freeX + dir * 8,
+      y1 + sag(endU) - 4,
+      22,
+    ),
+    5,
+    s.x + 2,
+    70,
+  );
+  limb(nearLimb, (t) => 46 * (1 - t * 0.72) + 5 + Math.max(0, Math.sin(t * 13)) * 3, 0.62);
+  const tipX = nearLimb[nearLimb.length - 2] as number;
+  const tipY = nearLimb[nearLimb.length - 1] as number;
+  // It forks at the end: one finger hooks up beside the shelf (below the walk line), one reaches out.
+  limb(
+    quad(tipX, tipY, tipX + dir * 14, tipY - 20, tipX + dir * 9, Math.max(s.y + 14, tipY - 44), 8),
+    (t) => 13 * (1 - t) + 3,
+    0.6,
+  );
+  const out = quad(tipX, tipY, tipX + dir * 40, tipY + 4, tipX + dir * 76, tipY - 22, 8);
+  limb(out, (t) => 12 * (1 - t) + 2, 0.58);
+  info.twigs.push({ x: tipX + dir * 76, y: tipY - 22, angle: dir < 0 ? Math.PI + 0.4 : -0.4, lit: true });
+  info.twigs.push({ x: tipX + dir * 44, y: tipY, angle: -Math.PI / 2 + dir * 0.6, lit: true });
+  mossCap(p, s.x, x1, s.y, {
+    seed: s.x + 4,
+    drapeL: anchoredRight ? range(r, 30, 60) : 0,
     drapeR: anchoredRight ? 0 : range(r, 30, 60),
     thick: 12,
     drip: 30,
+    bare: 0.35,
   });
-  info.tops.push({ x0: s.x, x1, y: s.y, kind: 'ledge', freeL: !anchoredLeft, freeR: !anchoredRight });
-  info.unders.push({ x0: s.x + 8, x1: x1 - 8, y: (x) => y1 + sag((x - s.x) / s.w) - 3, kind: 'ledge' });
+  info.tops.push({ x0: s.x, x1, y: s.y, kind: 'ledge', freeL: anchoredRight, freeR: !anchoredRight });
+  info.unders.push({
+    x0: s.x + 8,
+    x1: x1 - 8,
+    y: (x) => y1 + sag((x - s.x) / s.w) - 3,
+    kind: 'ledge',
+    trail: 'roots',
+  });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1193,7 +1621,6 @@ function paintFloating(p: Paint, s: SolidRect, index: number, info: TerrainInfo)
   const kind = FLOAT_ORDER[index % FLOAT_ORDER.length] as FloatKind;
   const E = TERRAIN.earth;
   const flip = index % 2 === 1;
-  const across = (u: number): number => (flip ? 1 - u : u);
   let sag: (u: number) => number = () => 0;
   let trail: Under['trail'] = 'mixed';
   let bare = 0.2;
@@ -1253,91 +1680,185 @@ function paintFloating(p: Paint, s: SolidRect, index: number, info: TerrainInfo)
     trail = 'roots';
     bare = 0.35;
   } else if (kind === 'stump') {
-    // The top of a snapped trunk: bark sides, a torn underside of long splinters.
-    const teeth = Array.from({ length: 7 }, () => range(r, 0.25, 1));
-    const depth = range(r, 70, 96);
+    // The top of a snapped trunk: bark sides, and underneath a torn mess of shards of every size.
+    const shards: Array<{ c: number; w: number; len: number; lean: number }> = [];
+    for (let c = range(r, 0.02, 0.1); c < 0.98; ) {
+      const w = range(r, 0.04, 0.2);
+      shards.push({ c: c + w / 2, w, len: range(r, 0.08, 1) ** 1.5 * 112 + 8, lean: range(r, -0.5, 0.5) });
+      c += w * range(r, 0.55, 1.05);
+    }
     sag = (u) => {
-      const f = u * teeth.length;
-      const i = clamp(Math.floor(f), 0, teeth.length - 1);
-      const tri = 1 - Math.abs((f - i) * 2 - 1);
-      return -6 + depth * (teeth[i] as number) * tri ** 0.8 * Math.sin(Math.PI * clamp(u, 0.04, 0.96)) ** 0.4;
+      let d = -4;
+      for (const sh of shards) {
+        const t = 1 - Math.abs((u - sh.c) / (sh.w / 2));
+        if (t > 0) d = Math.max(d, sh.len * t ** 0.75);
+      }
+      return d * Math.sin(Math.PI * clamp(u, 0.03, 0.97)) ** 0.25;
     };
-    const body = boxOutline(s.x - 3, s.y, x1 + 3, y1, s.x, { top: 1.5, side: 5, bottom: 1.5 }, sag, 4);
-    p.solid(body, TERRAIN.bark, 0.54, { bark: 1 });
-    barkDetail(p, s.x, s.y + 8, x1, y1 + 24, s.x + 5);
-    // Pale torn heartwood in the splinters.
-    for (let i = 0; i < teeth.length; i++) {
-      const u = (i + 0.5) / teeth.length;
-      const cx = s.x + s.w * u;
-      const tip = y1 + sag(u) - 4;
-      if (tip - y1 < 14) continue;
-      p.solid(
-        ribbon([cx + range(r, -3, 3), y1 - 6, cx + range(r, -2, 2), tip], (t) => 9 * (1 - t) + 1),
-        mix(TERRAIN.barkLit, 0xb9a074, 0.45),
-        0.62,
-        { bark: 0.6 },
-      );
+    const body = boxOutline(s.x - 3, s.y, x1 + 3, y1, s.x, { top: 1.5, side: 6, bottom: 1.5 }, sag, 3);
+    p.solid(chaikin(body, 0), TERRAIN.bark, 0.54, { bark: 1 });
+    barkDetail(p, s.x, s.y + 8, x1, y1 + 30, s.x + 5);
+    // Torn heartwood showing on some shards, in strips.
+    for (const sh of shards) {
+      if (sh.len < 26 || r() < 0.35) continue;
+      const cx = s.x + s.w * sh.c;
+      const tip = y1 + sag(sh.c) - 5;
+      const strips = 1 + Math.floor(r() * 2);
+      for (let k = 0; k < strips; k++) {
+        const ox = range(r, -0.25, 0.25) * sh.w * s.w;
+        const sw = range(r, 3, 6);
+        p.solid(
+          ribbon(
+            wander(
+              [cx + ox, y1 - range(r, 4, 20), cx + ox * 0.6, (y1 + tip) / 2, cx + ox * 0.2, tip],
+              2,
+              cx + k,
+              12,
+            ),
+            (t) => sw * (1 - t) + 0.8,
+          ),
+          mix(TERRAIN.barkLit, 0x8f8266, range(r, 0.2, 0.5)),
+          0.62,
+          { bark: 0.6 },
+        );
+      }
+    }
+    // Bark peeling away at the flanks.
+    for (const [px, d] of [
+      [s.x - 2, -1],
+      [x1 + 2, 1],
+    ] as const) {
+      for (let k = 0; k < 2; k++) {
+        const sy = s.y + range(r, 20, 40);
+        const len = range(r, 30, 64);
+        const line = quad(
+          px,
+          sy,
+          px + d * range(r, 6, 14),
+          sy + len * 0.6,
+          px + d * range(r, -2, 10),
+          sy + len,
+          8,
+        );
+        p.solid(
+          ribbon(line, (t) => 7 * (1 - t) ** 0.7 + 1),
+          TERRAIN.barkDark,
+          0.5,
+          { bark: 0.8 },
+        );
+      }
     }
     trail = 'few';
     bare = 0.25;
   } else if (kind === 'fungus') {
-    // A giant bracket fungus: thick where it grew from its dead host, thinning to a lip.
-    const thickEnd = range(r, 56, 74);
-    sag = (u) => {
-      const a = across(u);
-      return lerp(thickEnd, -14, a ** 0.65) + Math.sin(a * 14 + s.x) * 2.5;
+    // Bracket fungi in tiers on a broken, mossy chunk of trunk. The top tier is the walkway.
+    const hostW = s.w * range(r, 0.3, 0.38);
+    const hostDepth = range(r, 84, 110);
+    const fx = (a: number): number =>
+      flip ? x1 - hostW * 0.7 - a * (s.w - hostW * 0.7) : s.x + hostW * 0.7 + a * (s.w - hostW * 0.7);
+    const tiers = [
+      { reach: 1, top: 0, thick: 40 },
+      { reach: 0.72, top: 34, thick: 30 },
+      { reach: 0.46, top: 62, thick: 24 },
+    ];
+    const under = (k: number, a: number): number => {
+      const t = tiers[k] as (typeof tiers)[number];
+      const q = clamp(a / t.reach, 0, 1);
+      // Thick at the host, thinning to a rounded lip; scalloped along the rim.
+      return (
+        s.y +
+        2 +
+        t.top +
+        t.thick * (1 - q ** 1.6) * (1 - 0.72 * q) +
+        7 +
+        Math.abs(Math.sin(q * Math.PI * (3.5 - k * 0.5) + s.x + k)) * 4 * (1 - q * 0.6)
+      );
     };
-    const body = boxOutline(s.x, s.y, x1, y1, s.x, { top: 1.3, side: 3, bottom: 2 }, sag, 6);
-    p.solid(body, TERRAIN.fungus[1], 0.54);
-    // Growth bands on the upper flesh, pale pore surface underneath, gill lines fanning out.
-    for (let k = 0; k < 4; k++) {
-      const band: number[] = [];
-      for (let x = s.x + 6; x <= x1 - 6; x += 10)
-        band.push(x, s.y + 12 + k * 7 + wobble(x, s.x + k, 60) * 2.5);
-      p.solid(
-        ribbon(band, (t) => (k % 2 ? 4.5 : 6) * Math.sin(Math.PI * clamp(t, 0.03, 0.97)) ** 0.5),
-        k % 2 ? TERRAIN.fungus[0] : TERRAIN.fungus[2],
-        k % 2 ? 0.6 : 0.5,
-      );
-    }
-    const under: number[] = [];
-    for (let x = s.x - 4; x <= x1 + 4; x += 8) under.push(x, s.y + 36 + wobble(x, s.x + 9, 50) * 3);
-    for (let x = x1 + 4; x >= s.x - 4; x -= 8) under.push(x, y1 + thickEnd + 20);
-    p.tint(under, TERRAIN.fungus[3], 0.8);
-    const hostX = flip ? x1 - 30 : s.x + 30;
-    for (let i = 0; i < 12; i++) {
-      const u = (i + 0.5) / 12;
-      const gx = lerp(s.x + 10, x1 - 10, u);
-      const line = quad(
-        gx,
-        s.y + 40,
-        lerp(gx, hostX, 0.3),
-        y1 + sag(u) * 0.5,
-        lerp(gx, hostX, 0.55),
-        y1 + sag(clamp((lerp(gx, hostX, 0.55) - s.x) / s.w, 0, 1)) - 3,
-        8,
-      );
-      p.solid(
-        ribbon(line, (t) => 1.8 * (1 - t * 0.5) + 0.4),
-        mix(TERRAIN.fungus[3], TERRAIN.fungus[2], 0.7),
-        0.44,
-      );
-    }
-    // The knot of dead wood it grew on.
+    sag = (u) => {
+      const a = flip
+        ? (x1 - hostW * 0.7 - (s.x + u * s.w)) / (s.w - hostW * 0.7)
+        : (s.x + u * s.w - (s.x + hostW * 0.7)) / (s.w - hostW * 0.7);
+      if (a <= 0.04) return hostDepth * (0.55 + 0.45 * Math.abs(Math.sin(u * 31 + s.x)));
+      let y = under(0, a);
+      for (let k = 1; k < tiers.length; k++)
+        if (a < (tiers[k] as (typeof tiers)[number]).reach) y = Math.max(y, under(k, a));
+      return y - y1;
+    };
+    // Host: a chunk of trunk, torn below.
+    const hx0 = flip ? x1 - hostW : s.x;
+    const hx1 = flip ? x1 : s.x + hostW;
+    const hostSag = (u: number): number =>
+      hostDepth *
+      (0.35 + 0.65 * Math.abs(wobble(u * 90, s.x + 7, 16))) *
+      Math.sin(Math.PI * clamp(u, 0.05, 0.95)) ** 0.3;
     p.solid(
-      chaikin(blob(hostX, y1 + thickEnd * 0.2, 40, thickEnd * 0.42, s.x, 0.4, 11), 1),
+      boxOutline(hx0 - 2, s.y, hx1 + 2, y1, s.x, { top: 1.3, side: 5, bottom: 2 }, hostSag, 4),
       TERRAIN.bark,
-      0.5,
-      { bark: 0.8 },
+      0.55,
+      { bark: 1 },
     );
-    p.solid(
-      chaikin(blob(hostX + (flip ? -8 : 8), y1 + thickEnd * 0.12, 18, thickEnd * 0.22, s.x + 1, 0.35, 8), 1),
-      TERRAIN.barkLit,
-      0.58,
-      { bark: 0.8 },
-    );
+    barkDetail(p, hx0, s.y + 8, hx1, y1 + hostDepth * 0.6, s.x + 5);
+    for (let i = 0; i < 3; i++) {
+      const mx = lerp(hx0 + 8, hx1 - 8, r());
+      const my = s.y + range(r, 30, 90);
+      p.solid(blob(mx, my, range(r, 10, 18), range(r, 12, 24), mx, 0.5, 12), TERRAIN.mossDark, 0.68, {
+        moss: 1,
+      });
+    }
+    // Tiers, lowest first so each overlaps the one beneath.
+    for (let k = tiers.length - 1; k >= 0; k--) {
+      const t = tiers[k] as (typeof tiers)[number];
+      const N = 28;
+      const top: number[] = [];
+      const bot: number[] = [];
+      for (let i = 0; i <= N; i++) {
+        const a = (i / N) * t.reach;
+        const q = i / N;
+        // The upper face: flat for the walkway, gently domed on the lower tiers.
+        const yt = s.y + 2 + t.top - (k ? Math.sin(Math.PI * q) * 5 : 0) + smoothstep(0.9, 1, q) * 5;
+        top.push(fx(a), yt);
+        bot.push(fx(a), Math.max(yt + 3, under(k, a)));
+      }
+      const pts = top.slice();
+      for (let i = bot.length - 2; i >= 0; i -= 2) pts.push(bot[i] as number, bot[i + 1] as number);
+      p.tint(
+        pts.map((v, i) => (i % 2 ? v + 7 : v)),
+        TERRAIN.backDeep,
+        0.4,
+      );
+      p.solid(chaikin(pts, 1), mix(TERRAIN.fungus[1], TERRAIN.fungus[2], k * 0.25), 0.56 - k * 0.03);
+      // Bands that follow the curve of the shelf, then the pale growing edge.
+      for (const [f, tone, h] of [
+        [0.3, TERRAIN.fungus[2], 0.5],
+        [0.55, TERRAIN.fungus[0], 0.62],
+        [0.78, TERRAIN.fungus[2], 0.52],
+      ] as const) {
+        const band: number[] = [];
+        for (let i = 1; i < N; i++)
+          band.push(top[i * 2] as number, lerp(top[i * 2 + 1] as number, bot[i * 2 + 1] as number, f));
+        p.solid(
+          ribbon(
+            band,
+            (u) =>
+              (2.2 + t.thick * 0.07) * Math.sin(Math.PI * clamp(u, 0.02, 0.98)) ** 0.4 * (1 - u * 0.6) + 0.5,
+          ),
+          mix(tone, TERRAIN.fungus[1], 0.3),
+          h - k * 0.03,
+          {},
+          0.85,
+        );
+      }
+      const rim: number[] = [];
+      for (let i = 2; i <= N; i++) rim.push(bot[i * 2] as number, (bot[i * 2 + 1] as number) - 2);
+      rim.push(top[N * 2] as number, (top[N * 2 + 1] as number) + 1);
+      p.solid(
+        ribbon(rim, (u) => 4.5 * (0.5 + 0.5 * u)),
+        TERRAIN.fungus[3],
+        0.68,
+      );
+    }
     trail = 'few';
-    bare = 0.62;
+    bare = 0.5;
   } else if (kind === 'rootball') {
     // A ball of earth torn out with its roots, which trail far below.
     const depth = range(r, 84, 110);
@@ -1656,45 +2177,96 @@ function paintSapling(
   const r = rngFor(x, 91);
   const bx = side > 0 ? x + w + 34 : x - 34;
   const gy = groundY(bx) + 12;
-  const topY = y - range(r, 440, 560);
-  const lean = range(r, -50, 50);
+  const topY = y - range(r, 420, 520);
+  // A young tree that has grown toward the light: it bows one way, then back, and forks.
+  const bow = range(r, 50, 90) * (r() < 0.5 ? -1 : 1);
   const line = wander(
-    cubic(bx + 10, gy, bx - 8, lerp(gy, y, 0.6), bx + 8, y - 60, bx + lean, topY, 28),
-    12,
+    cubic(bx + 14, gy, bx - bow * 0.5, lerp(gy, y, 0.7), bx + bow * 0.25, y - 20, bx + bow, topY, 30),
+    14,
     x,
-    170,
+    150,
   );
-  const shape = (t: number): number => 50 * (1 - t) ** 0.75 + 6 + smoothstep(0.1, 0, t) * 30;
-  p.solid(ribbon(line, shape), TERRAIN.backDeep, 0.26, { bark: 0.7 });
-  p.solid(
-    ribbon(line, (t) => shape(t) * 0.3),
-    mix(TERRAIN.backDeep, TERRAIN.bark, 0.45),
-    0.31,
-    { bark: 0.7 },
-  );
-  // Side limbs higher up, each ending in leaves (pf-plants.ts grows them from info.twigs).
-  for (let i = 0; i < 5; i++) {
-    const t = 0.42 + i * 0.12 + range(r, -0.03, 0.03);
-    const k = Math.min(line.length / 2 - 1, Math.floor(t * (line.length / 2 - 1))) * 2;
-    const sx = line[k] as number;
-    const sy = line[k + 1] as number;
-    const d = i % 2 ? -1 : 1;
-    const len = range(r, 70, 150) * (1.15 - t * 0.5);
-    const ex = sx + d * len;
-    const ey = sy - len * range(r, 0.25, 0.55);
-    const tw = wander(quad(sx, sy, sx + d * len * 0.55, sy - len * 0.02, ex, ey, 10), 4, x + i, 50);
+  // Pin it to the bough so the collar still meets it.
+  const nL = line.length / 2;
+  let at = 0;
+  for (let i = 0; i < nL; i++)
+    if (Math.abs((line[i * 2 + 1] as number) - (y + 12)) < Math.abs((line[at * 2 + 1] as number) - (y + 12)))
+      at = i;
+  const shift = bx - (line[at * 2] as number);
+  for (let i = 0; i < nL; i++)
+    line[i * 2] = (line[i * 2] as number) + shift * Math.exp(-(((i - at) / 7) ** 2));
+  const shape = (t: number): number =>
+    52 * (1 - t) ** 0.9 + 5 + smoothstep(0.12, 0, t) * 34 + Math.max(0, Math.sin(t * 23 + x)) * 2.5;
+  const trunkLine = line.slice(0, Math.floor(nL * 0.78) * 2);
+  const stem = (pts: number[], wd: (t: number) => number, h: number): void => {
+    p.solid(ribbon(pts, wd), TERRAIN.backDeep, h, { bark: 0.7 });
     p.solid(
-      ribbon(tw, (u) => shape(t) * 0.5 * (1 - u) ** 0.8 + 1.5),
-      TERRAIN.backDeep,
-      0.25,
+      ribbon(pts, (t) => wd(t) * 0.3),
+      mix(TERRAIN.backDeep, TERRAIN.bark, 0.45),
+      h + 0.05,
       { bark: 0.7 },
     );
-    info.twigs.push({ x: ex, y: ey, angle: Math.atan2(ey - sy, ex - sx) });
-    const mx = lerp(sx, ex, 0.6);
-    const my = lerp(sy, ey, 0.5) - len * 0.06;
-    info.twigs.push({ x: mx, y: my, angle: -Math.PI / 2 + d * 0.5 });
+  };
+  stem(trunkLine, (t) => shape(t * 0.78), 0.26);
+  // Root flare: two toes gripping the ground.
+  for (const d of [-1, 1]) {
+    stem(
+      quad(bx + 14, gy - 40, bx + 14 + d * 22, gy - 12, bx + 14 + d * range(r, 44, 70), gy + 6, 8),
+      (t) => 22 * (1 - t) + 4,
+      0.25,
+    );
   }
-  info.twigs.push({ x: bx + lean, y: topY, angle: -Math.PI / 2 });
+  // The fork, and limbs at uneven heights: long low ones that sag, short high ones that reach.
+  const limb = (sx: number, sy: number, ang: number, len: number, w0: number, lvl: number): void => {
+    const ex = sx + Math.cos(ang) * len;
+    const ey = sy + Math.sin(ang) * len;
+    const droop = len * range(r, -0.12, 0.22);
+    const pts = wander(
+      quad(sx, sy, lerp(sx, ex, 0.5), lerp(sy, ey, 0.5) + droop, ex, ey, 12),
+      len * 0.04,
+      sx + len,
+      50,
+    );
+    stem(pts, (u) => w0 * (1 - u) ** 0.85 + 1.4, 0.25);
+    info.twigs.push({ x: ex, y: ey, angle: ang });
+    info.twigs.push({ x: pts[12] as number, y: pts[13] as number, angle: ang + (r() < 0.5 ? -0.8 : 0.8) });
+    if (lvl < 1 && len > 70) {
+      limb(
+        pts[14] as number,
+        pts[15] as number,
+        ang + (r() < 0.5 ? -1 : 1) * range(r, 0.5, 0.9),
+        len * range(r, 0.4, 0.6),
+        w0 * 0.5,
+        lvl + 1,
+      );
+    }
+  };
+  const fk = trunkLine.length - 2;
+  const fx = trunkLine[fk] as number;
+  const fy = trunkLine[fk + 1] as number;
+  const fw = shape(0.78);
+  limb(fx, fy, -Math.PI / 2 - range(r, 0.25, 0.5), range(r, 110, 170), fw * 0.85, 0);
+  limb(fx, fy, -Math.PI / 2 + range(r, 0.3, 0.6), range(r, 90, 150), fw * 0.7, 0);
+  let t = range(r, 0.34, 0.42);
+  let d = r() < 0.5 ? -1 : 1;
+  while (t < 0.74) {
+    const k = Math.floor(t * (nL - 1)) * 2;
+    const sx = line[k] as number;
+    const sy = line[k + 1] as number;
+    // Keep limbs off the walk line of the bough itself.
+    if (Math.abs(sy - y) > 50 || d === side) {
+      limb(
+        sx,
+        sy,
+        d < 0 ? Math.PI + range(r, 0.15, 0.6) : -range(r, 0.15, 0.6),
+        range(r, 60, 150) * (1.1 - t * 0.5),
+        shape(t) * range(r, 0.3, 0.5),
+        0,
+      );
+    }
+    t += range(r, 0.05, 0.17);
+    if (r() < 0.7) d = -d;
+  }
 }
 
 function paintBough(p: Paint, x: number, y: number, w: number, scene: Scene, info: TerrainInfo): void {

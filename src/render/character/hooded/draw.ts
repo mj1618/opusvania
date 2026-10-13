@@ -8,7 +8,7 @@
  * into one long crest; a pale bone mask in the hood's shadow with two calm amber eyes; one warm
  * light, the ember clasp at the throat.
  */
-import { PALETTE } from '../scene/lib/look';
+import { PALETTE } from '../../scene/lib/look';
 import { catmull, clamp, lerp, sat } from './math';
 import { type Painter, type RGB, rgb, type Shade } from './paint';
 import {

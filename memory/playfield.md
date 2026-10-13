@@ -15,11 +15,16 @@
   Draw order inside the back mesh is placement order: rear row (shrubs, tall dark stands) first, then
   features, then grass.
 - **Light comes from one sun map**, not from the paint: `sunAt(x, y)` in `pf-shape.ts` (a broad beam along
-  `KEY_LIGHT` plus dapples) tints plants and moss albedo, and the bake shader has its own copy (`sun`) that
-  scales the key light. Warm flowers go where it is high, violet glow plants where it is low.
+  `KEY_LIGHT` plus sine dapples) tints plants and moss albedo, and the bake shader has an identical copy
+  (`sun`) that scales the key light: change both together. Warm flowers go where it is high, violet glow plants where it is low.
 - **Moss is cushions with bare stretches** (`mossCap`): stones, surface roots and leaf litter fill the gaps.
   Floating islands are five kinds in a fixed left-to-right order (`FLOAT_ORDER`), each with its own `trail`.
   Hanging trunks share `stiltRoots()` between a back-plane pass and `paintRootShoulders` (front, fading back).
+- **Ledges are two different things**: beside a trunk, `paintLivingBough` (collar, belly, knuckled tip, side
+  limbs); at the scene edge, `paintCrookShelf` (earth held by two limbs). Painted limbs and trunk vines
+  report `info.twigs` / `info.ivy` so `pf-plants.ts` puts leaves on them.
+- **Nothing manufactured**: no ruled edges, square ends or constant thickness. New shapes get a wobbling
+  outline, a taper and something growing on them.
 - **Bend field** (`pf-field.ts`): a 480x67 RGBA8 texture, cell 12x24 px. R = sideways push (one damped
   spring per cell, driven by the character's box and `land` events), G = glow excitement (character and
   `ctx.lights.list`). Plants sample it at their base.
@@ -29,8 +34,8 @@
   from that, so a new solid gets plants for free.
 
 ## Knobs (config object at the top of each file)
-`TERRAIN` palette, moss lift/thickness/drip, `mossBare`, `faceUndercut`, `waterDepth`; `BAKE` blur sigmas, bump, key, shadow, interior, `beamWidth`;
-`PLANTS` feature gap, `rearGap`, `autumnShare`, grass cover and heights, fringe, wind/bend per px, halo alpha, `glowEvery`;
+`TERRAIN` palette, moss lift/thickness/drip, `mossBare`, `faceUndercut`, `waterDepth`; `BAKE` blur sigmas, bump, key, shadow, interior, `beamWidth`, brushwork (`planes`, `strokes`, `crevice`, `chips`);
+`PLANTS` feature gap, `rearGap`, `autumnEvery`, `fineShare`, grass cover and heights, fringe, wind/bend per px, halo alpha, `glowEvery`;
 `FIELD` spring stiffness/damping, reach, land kick, glow rise/fall; `WATER` colours, alphas, ripples;
 `PLAYFIELD` bake scale range, glow gains.
 
@@ -42,6 +47,8 @@
   light, so it stays behind the walk plane. Keep things the character passes in front of down there.
 - Pass `clearColor: [0,0,0,0]` when rendering to a RenderTexture: the default clears to the app background
   and shows as faint boxes around tiles.
+- Hard `step()` / `floor()` edges in the bake shader alias at the bake resolution: use `plane3()` or a narrow
+  `smoothstep`.
 - The bake shader erodes silhouettes by up to ~1 px with noise (brushed edges) and posterises the lighting
   into a few planes; both are in `main()` of `LIT_FRAG`.
 - Hollows (`info.pockets`) are kept 70 px clear of bank faces, or they open into the air.

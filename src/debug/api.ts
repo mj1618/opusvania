@@ -75,6 +75,8 @@ export interface GameDebugApi {
   lights(): PointLight[];
   /** Redraws now (after changing something by hand in manual mode). */
   render(): void;
+  /** Hero design: no argument lists `{id, skins}`; an id switches to that skin. */
+  character(id?: string): { id: string; skins: string[] };
   debug: {
     /** Collision overlay on/off (no argument toggles). */
     hitboxes(on?: boolean): boolean;
@@ -209,6 +211,13 @@ export function installDebugApi(deps: {
     },
     lights: () => stage.lights.list.map((l) => ({ ...l })),
     render: redraw,
+    character(id) {
+      if (id !== undefined) {
+        stage.character.select(id);
+        redraw();
+      }
+      return { id: stage.character.id, skins: stage.character.skins.map((k) => k.id) };
+    },
     debug: {
       hitboxes(on) {
         const v = stage.overlay.toggle(on);

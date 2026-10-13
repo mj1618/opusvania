@@ -14,8 +14,8 @@
  * against targets given relative to the ground point under the body; the run cycle's phase
  * advances with distance travelled and its stance is linear in phase, so planted feet do not slide.
  */
-import type { SimEvent } from '../../sim/events';
-import type { PlayerView } from '../contract';
+import type { SimEvent } from '../../../sim/events';
+import type { PlayerView } from '../../contract';
 import {
   approach,
   bell,

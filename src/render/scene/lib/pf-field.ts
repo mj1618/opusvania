@@ -23,7 +23,7 @@ export const FIELD = {
   /** Sideways lean from running speed (px/frame at which it saturates). */
   dragSpeed: 7,
   /** Landing shiver: impulse, and how far it travels (px). */
-  landKick: 5.5,
+  landKick: 9,
   landReach: 230,
   /** Glow: reach of the character in px, rise and fall time constants (s). */
   glowReach: 210,

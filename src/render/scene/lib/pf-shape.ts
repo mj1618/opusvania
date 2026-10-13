@@ -216,11 +216,15 @@ export function bounds(pts: number[]): { x0: number; y0: number; x1: number; y1:
 
 /**
  * How much of the key light lands at a world point, 0..1: a broad beam along the light's path plus
- * dapples. The bake shader has its own copy (pf-bake.ts, `sun`): same beam, different dapples.
+ * dapples. The bake shader has an identical copy (pf-bake.ts, `sun`): change both together.
  */
 export function sunAt(x: number, y: number, beamWidth = 760): number {
   const beamX = KEY_LIGHT.entryX + ((y - KEY_LIGHT.entryY) * KEY_LIGHT.dirX) / KEY_LIGHT.dirY;
   const beam = Math.exp(-(((x - beamX) / beamWidth) ** 2));
-  const dapple = smoothstep(0.0, 0.7, noise1(x / 240, 71) * 0.7 + noise1(y / 300, 72) * 0.3);
+  const dp =
+    0.5 +
+    0.25 * Math.sin(x * 0.0131 + 1.7 * Math.sin(y * 0.004)) +
+    0.25 * Math.sin(x * 0.0057 - y * 0.0031 + 2.1);
+  const dapple = smoothstep(0.45, 0.8, dp);
   return clamp(beam * 0.65 + dapple * 0.55, 0, 1);
 }

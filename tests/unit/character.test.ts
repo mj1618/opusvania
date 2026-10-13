@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { Chain } from '../../src/render/character/chain';
-import { ik2, ikOut, Spring } from '../../src/render/character/math';
-import { J_COUNT, J_TOE_A, J_TOE_B, Rig } from '../../src/render/character/rig';
-import { Secondary } from '../../src/render/character/secondary';
+import { Chain } from '../../src/render/character/hooded/chain';
+import { ik2, ikOut, Spring } from '../../src/render/character/hooded/math';
+import { J_COUNT, J_TOE_A, J_TOE_B, Rig } from '../../src/render/character/hooded/rig';
+import { Secondary } from '../../src/render/character/hooded/secondary';
 import type { PlayerView } from '../../src/render/contract';
 import type { SimEvent } from '../../src/sim/events';
 

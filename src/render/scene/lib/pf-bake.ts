@@ -44,6 +44,11 @@ export const BAKE = {
   cast: 0.55,
   /** Height of the light above the picture plane: lower = harder side light. */
   lightZ: 0.62,
+  /** Brushwork: how hard light breaks into planes (0..1), stroke contrast, crevice depth, chip strength. */
+  planes: 0.82,
+  strokes: 0.42,
+  crevice: 7,
+  chips: 0.55,
   /** Half width (world px) of the broad beam where the key light lands; see sunAt in pf-shape.ts. */
   beamWidth: 760,
 } as const;
@@ -100,6 +105,7 @@ uniform vec3 uLight;
 uniform vec4 uBump;   // fine, mid, noise, -
 uniform vec4 uShade;  // key, spec, shadow, interior
 uniform vec2 uCast;   // reach (world px), strength
+uniform vec4 uBrush;  // plane hardness, stroke contrast, crevice depth, chip strength
 uniform vec4 uSun;    // key entry x, y, dx per dy, beam half width
 out vec4 o;
 
@@ -135,6 +141,11 @@ float surface(vec2 p, float moss, float bark) {
   return mix(mix(e, b, bark), m, moss);
 }
 
+// A step with a slightly soft riser: hard-edged planes that still survive the bake resolution.
+float plane3(float x) {
+  return floor(x) + smoothstep(0.38, 0.62, fract(x));
+}
+
 void main() {
   vec4 alb = texture(uAlb, vUV);
   vec4 hs = texture(uHgt, vUV);
@@ -153,7 +164,10 @@ void main() {
   // lit by this, so brightness comes from light, not from the paint.
   float beamX = uSun.x + (vWorld.y - uSun.y) * uSun.z;
   float beam = exp(-pow((vWorld.x - beamX) / uSun.w, 2.0));
-  float dapple = smoothstep(0.36, 0.7, fbm(vec2(vWorld.x * 0.0046, vWorld.y * 0.002) + 3.0));
+  // Same dapples as sunAt() in pf-shape.ts: keep the two in step.
+  float dp = 0.5 + 0.25 * sin(vWorld.x * 0.0131 + 1.7 * sin(vWorld.y * 0.004))
+           + 0.25 * sin(vWorld.x * 0.0057 - vWorld.y * 0.0031 + 2.1);
+  float dapple = smoothstep(0.45, 0.8, dp);
   float sun = clamp(beam * 0.65 + dapple * 0.55, 0.0, 1.0);
 
   // Brush strokes that follow the form: along the silhouette near edges, along the grain inside.
@@ -187,13 +201,17 @@ void main() {
   float key = clamp((lit - flatLit) / (1.0 - flatLit), 0.0, 1.0);
   float shd = clamp((flatLit - lit) / (flatLit + 0.35), 0.0, 1.0);
   // Break the smooth falloff into a few painted planes, the stroke noise deciding the borders.
-  key = mix(key, floor(key * 3.0 + 0.5 + (stroke - 0.5) * 0.9) / 3.0, 0.5);
-  shd = mix(shd, floor(shd * 3.0 + 0.5 + (dab - 0.5) * 0.9) / 3.0, 0.45);
+  float fineStroke = fbm(vec2(sp.x * 0.05, sp.y * 0.4) + 23.0);
+  key = mix(key, plane3(key * 3.0 + 0.5 + (stroke - 0.5) * 1.3 + (fineStroke - 0.5) * 0.5) / 3.0, uBrush.x);
+  shd = mix(shd, plane3(shd * 2.0 + 0.5 + (dab - 0.5) * 1.2 + (fineStroke - 0.5) * 0.4) / 2.0, uBrush.x * 0.9);
 
   float inside = smoothstep(0.5, 0.97, wide.a);
 
   // Local colour: strokes in value, dabs in temperature.
-  vec3 c = base * (0.74 + 0.3 * n0 + 0.26 * stroke);
+  vec3 c = base * (0.7 + 0.22 * n0 + uBrush.y * (stroke - 0.5) + 0.5 * uBrush.y * (fineStroke - 0.5) + 0.2);
+  // Crevices: where the fine relief dips below its surroundings, an accent of deep cool dark.
+  float crev = clamp((mid.r - fine.r) * uBrush.z, 0.0, 1.0) * (1.0 - moss * 0.6);
+  c = mix(c, c * vec3(0.28, 0.36, 0.55), crev);
   float temp = (dab - 0.5) * 2.0;
   c *= mix(vec3(0.86, 1.0, 1.16), vec3(1.14, 1.02, 0.84), clamp(0.5 + temp * 0.6 + (sun - 0.5) * 0.5, 0.0, 1.0));
   float drift = fbm(vWorld * 0.008 + 5.0) - 0.5;
@@ -224,6 +242,9 @@ void main() {
   float edge = 1.0 - smoothstep(0.5, 0.82, fine.a);
   float rim = edge * smoothstep(0.12, 0.45, key) * reach;
   c += (base * 1.3 + 0.07) * keyCol * rim * uShade.y * 4.0;
+  // Chipped highlights: hard little planes of light on stone and wood where it turns to the key.
+  float chip = smoothstep(0.59, 0.66, key + (fineStroke - 0.5) * 0.7 + (dab - 0.5) * 0.3) * (1.0 - moss) * reach;
+  c += (base * 0.9 + 0.03) * warm * chip * uBrush.w * (0.4 + 0.6 * edge + 0.5 * crev);
   // Sky bounce on anything facing up, cool.
   float up = clamp(-n.y, 0.0, 1.0);
   c += base * vec3(0.5, 0.8, 1.0) * up * 0.3 * (1.0 - moss * 0.75) * mix(0.4, 1.0, plane);
@@ -313,6 +334,10 @@ export function bakeTerrain(renderer: Renderer, src: BakeSource, scale: number):
       type: 'vec4<f32>',
     },
     uCast: { value: new Float32Array([BAKE.castReach, BAKE.cast]), type: 'vec2<f32>' },
+    uBrush: {
+      value: new Float32Array([BAKE.planes, BAKE.strokes, BAKE.crevice, BAKE.chips]),
+      type: 'vec4<f32>',
+    },
     uSun: {
       value: new Float32Array([
         KEY_LIGHT.entryX,
