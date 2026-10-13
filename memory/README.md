@@ -11,3 +11,4 @@ Keep entries current; delete stale ones.
 - [Pixi gotchas](pixi-gotchas.md) — Pixi v8 filter, resolution, GLSL and headless-GPU traps
 - [Loop timing](loop-timing.md) — why the fixed-step loop snaps near-60Hz frame times
 - [Toolchain](toolchain.md) — ports, vite preview base gotcha, TS7/Biome quirks, why each dev dep exists
+- [Background layers](background-layers.md) — sky/far/mid pipeline (compose → bake → atmosphere shader → LayerView with fog + rustle), composition map, config knobs, gotchas

@@ -44,7 +44,13 @@ reflects. Camera is soft: look-ahead, gentle vertical dead zone, no snapping.
 
 ## The character: Ember
 Original design, not Ori (white spirit) and not the Knight (horned mask). A small forest spirit about
-1.3 tiles tall:
+1.3 tiles tall.
+
+**Tone (owner, 2026-10-13): serious, not a jester.** Quiet, solemn, a little melancholy and noble,
+like Ori or the Knight: a lone wanderer in a vast old place. Nothing may read as a jester, clown, elf
+or mascot: no floppy two-point "hat" ears, no ruff/collar of leaf points, no bell-like bobble on a
+string, no bouncy or cheeky acting. Simple, elegant, restrained: few shapes, long calm lines, a muted
+palette with one light. Where the list below conflicts with this, the tone wins.
 - Dark indigo-plum body, slim, slightly oversized head, short limbs, readable hands and feet.
 - A pale, soft mask-like face with two large warm amber glowing eyes. No mouth.
 - Two long leaf-shaped ears that trail and react to motion.
