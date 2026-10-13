@@ -5,9 +5,8 @@ kind in `src/sim/enemies/` (`burrback.ts`, `lampwing.ts`, shared helpers in `com
 `src/sim/player/player.ts` (`hurtPlayer`, `trackSafeGround`, `reformPlayer`), step order in
 `src/sim/index.ts`. Numbers: `tuning.burrback`, `tuning.lampwing`, `tuning.enemies`, `tuning.health`.
 Tests: `tests/unit/enemies.test.ts`, `enemies-pilot.test.ts` (burrback), `lampwing.test.ts`,
-`lampwing-pilot.test.ts`. The burrback is drawn by `src/render/enemies/` (enemies-render.md); **the
-lampwing is not drawn yet** (the renderer skips every kind but `burrback`; see it with
-`__game.debug.hitboxes(true)`).
+`lampwing-pilot.test.ts`. Both are drawn by
+`src/render/enemies/` (enemies-render.md).
 
 ## The framework (adding a kind)
 - A kind is a `KindRules` record (`enemies/common.ts`) in `KINDS` of `enemies.ts`: its box and

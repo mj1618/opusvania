@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/noNonNullAssertion: typed-array maths; indices are in range by construction
 /**
- * Draws the scene's enemies (`sim.enemies`, one kind so far: the burrback, burrback.ts). One mesh
+ * Draws the scene's enemies (`sim.enemies`): the burrback (burrback.ts) and the lampwing (lampwing.ts). One mesh
  * for all of them and their debris (`paint.ts`), refilled on the CPU each frame; creatures off
  * screen are stepped (their springs stay settled) but not drawn. Lives in the `enemies` layer:
  * behind the hero, in front of the playfield, under the grass fringe. It goes through the normal
@@ -16,7 +16,8 @@ import { clamp, sat } from '../character/hooded/math';
 import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } from '../contract';
 import { ZONE_EDGES } from '../scene/lib/fx-zones';
 import { BurrRig, COLORS, drawBurrback, loadColors, stepFeelers } from './burrback';
-import { BURR } from './config';
+import { BURR, LAMP } from './config';
+import { drawLampwing, LampRig } from './lampwing';
 import { Painter, type RGB, type Shade } from './paint';
 
 const MAX_P = 160;
@@ -24,6 +25,7 @@ const K_FRAG = 1;
 const K_MOTE = 2;
 const K_DUST = 3;
 const K_PLATE = 4;
+const K_SCALE = 5;
 
 const smooth = (a: number, b: number, x: number): number => {
   const t = sat((x - a) / (b - a));
@@ -65,6 +67,8 @@ export class EnemyRenderer {
   drawn = 0;
   verts = 0;
   private readonly rigs: BurrRig[] = [];
+  private readonly lamps: (LampRig | undefined)[] = [];
+  private readonly scaleC: [number, number, number] = [0, 0, 0];
   private readonly zw: [number, number, number] = [0, 1, 0];
   private rnd = 0x51f15e;
   // Debris: shell fragments (opaque, fall), motes (tiny lights, rise), dust (soft, spreads).
@@ -89,6 +93,10 @@ export class EnemyRenderer {
   ) {
     const n = ctx.scene.enemies?.length ?? 0;
     for (let i = 0; i < n; i++) this.rigs.push(new BurrRig(i));
+    const sc = LAMP.color.scale;
+    this.scaleC[0] = ((sc >> 16) & 255) / 255;
+    this.scaleC[1] = ((sc >> 8) & 255) / 255;
+    this.scaleC[2] = (sc & 255) / 255;
     layer.addChild(this.painter.mesh);
     frontLayer.addChild(this.front.mesh);
     // Dev handle, like __pickups: `__enemies.cfg.spots.glow = 0.5; __game.render()`.
@@ -199,6 +207,88 @@ export class EnemyRenderer {
     }
   }
 
+  /** Wing scales: small crisp pale flecks that drift and flutter down. */
+  private scales(
+    x: number,
+    y: number,
+    n: number,
+    dirX: number,
+    spread: number,
+    speed: number,
+    size = 1,
+  ): void {
+    for (let k = 0; k < n; k++) {
+      const a = this.rand() * 6.283;
+      const r = this.rand() * spread;
+      this.emit(
+        K_SCALE,
+        x + Math.cos(a) * r,
+        y + Math.sin(a) * r * 0.7,
+        dirX * speed * (0.3 + this.rand()) + Math.cos(a) * 22 * size * size,
+        Math.sin(a) * 30 * size - 18,
+        0.55 + this.rand() * 0.55,
+        (1.5 + this.rand() * 1.5) * size,
+        1e9,
+      );
+    }
+  }
+
+  /** One lampwing: rig, scales, drawing. Returns true if it was drawn. */
+  private lampwing(
+    i: number,
+    e: Readonly<EnemyState>,
+    dt: number,
+    clock: number,
+    cam: CameraView,
+    sim: SimView,
+    halfW: number,
+    halfH: number,
+  ): boolean {
+    let rig = this.lamps[i];
+    if (!rig) {
+      rig = new LampRig(i);
+      this.lamps[i] = rig;
+    }
+    if (e.gone) {
+      // The body dissolves into drifting scales where it last was (once).
+      if (rig.live && rig.wasDead) {
+        const fin = rig.lastPower >= 2;
+        this.scales(
+          rig.x,
+          rig.y + 4,
+          fin ? LAMP.death.scalesFinisher : LAMP.death.scales,
+          rig.lastDir,
+          9,
+          fin ? 46 : 26,
+          1.6,
+        );
+      }
+      rig.live = false;
+      return false;
+    }
+    rig.update(e, sim.frame, sim.alpha, dt);
+    if (rig.struck) {
+      const fin = e.hitPower >= 2;
+      this.scales(
+        rig.x,
+        rig.y,
+        fin ? LAMP.hit.scalesFinisher : LAMP.hit.scales,
+        e.hitDir || 1,
+        7,
+        fin ? 120 : 80,
+      );
+    }
+    if (Math.abs(rig.x - cam.x) > halfW || Math.abs(rig.y - cam.y) > halfH) return false;
+    const zw = this.zw;
+    const l = 1 - smooth(ZONE_EDGES.left[0], ZONE_EDGES.left[1], rig.x);
+    const r = smooth(ZONE_EDGES.right[0], ZONE_EDGES.right[1], rig.x);
+    zw[0] = l;
+    zw[1] = 1 - l - r;
+    zw[2] = r;
+    drawLampwing(this.painter, rig, e, clock, zw);
+    return true;
+  }
+
   private dust(x: number, y: number, vx: number): void {
     this.emit(
       K_DUST,
@@ -227,7 +317,12 @@ export class EnemyRenderer {
     let drawn = 0;
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
-      if (e?.kind !== 'burrback') continue;
+      if (!e) continue;
+      if (e.kind === 'lampwing') {
+        if (this.lampwing(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
+        continue;
+      }
+      if (e.kind !== 'burrback') continue;
       let rig = this.rigs[i];
       if (!rig) {
         rig = new BurrRig(i);
@@ -374,6 +469,27 @@ export class EnemyRenderer {
         p.px[3] = x - c * s * 0.3 - sn * w * 0.1;
         p.py[3] = y - sn * s * 0.3 + c * w * 0.1;
         p.shape(4, x + c * s * 0.1 - sn * w * 0.45, y + sn * s * 0.1 + c * w * 0.45, SH_IN);
+      } else if (kind === K_SCALE) {
+        // A fleck of wing: it sinks slowly, slipping from side to side, and turns edge-on as it goes.
+        this.pvx[i] = this.pvx[i]! * (1 - 2.6 * dt);
+        this.pvy[i] = this.pvy[i]! + (34 - this.pvy[i]!) * Math.min(1, 2.4 * dt);
+        const w = clock * 7 + this.pr[i]!;
+        x += (this.pvx[i]! + Math.sin(w) * 16) * dt;
+        y += this.pvy[i]! * dt;
+        const s = this.pz[i]!;
+        const flip = 0.35 + 0.65 * Math.abs(Math.cos(w * 0.8));
+        p.px[0] = x - s * 1.3;
+        p.py[0] = y;
+        p.px[1] = x;
+        p.py[1] = y - s * 0.8 * flip;
+        p.px[2] = x + s * 1.3;
+        p.py[2] = y;
+        p.px[3] = x;
+        p.py[3] = y + s * 0.8 * flip;
+        const tn = 0.75 + 0.25 * this.pt[i]!;
+        for (let k = 0; k < 3; k++) IN_C[k] = this.scaleC[k]! * tn;
+        SH_IN.alpha = sat((1 - u) / 0.4) * 0.9;
+        p.shape(4, x, y, SH_IN);
       } else if (kind === K_MOTE) {
         this.pvy[i] = this.pvy[i]! * (1 - 0.9 * dt);
         x += (this.pvx[i]! + Math.sin(clock * 5 + this.pr[i]!) * 10) * dt;

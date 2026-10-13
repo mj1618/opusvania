@@ -52,3 +52,25 @@ per sheet: step, `drawImage` the WebGL canvas into a 2D grid, return one data UR
 - Fringe as 11 wide tufts read as teeth; 17 narrow dark ones read as a mossy skirt.
 - Cracks are thin lines a step lighter than the shell; more than four made a tortoise pattern.
 - Rim height 12 / dome 22: taller legs (rim 14) turned it into a spider.
+
+## The lampwing (`lampwing.ts`, `LAMP` in config.ts)
+- Drawn in the back painter (`enemies` layer, behind her); its scales are debris in the front one.
+  `index.ts` dispatches on `e.kind`; rigs are per kind, by enemy index (`rigs`, `lamps`).
+- Front view: body in the middle, a fore and a hind wing to either side. Centre = `x + w/2 + rx`,
+  `y + h/2 + ry`, interpolated by `sim.alpha`; `flap` is interpolated the short way round its wrap.
+- Beat: wing angle = mid + amp x sin(2 pi flap) between `down` (-0.5 rad) and `up` (1.05); the hind
+  pair lags 0.13 of a beat and hangs 0.62 rad lower; the chord narrows on the upstroke (`twist`);
+  the body bobs with the sine. `turn` (eased `facing`) shortens the wing pair on the side it faces.
+- Dusky wing margins without extra geometry: for the wings the painter's key and cool colours are
+  set to the dusk tone with `coolWrap` 1 and rim 1, so the rim band IS the margin (restored after).
+- Wing outlines are rounded once at load (Catmull-Rom, 3 points per corner): raw 8-point polygons
+  looked low-poly at zoom.
+- Modes: `keen` (curious / pursue: lamp x1.45, antennae and head toward `lookX/Y`, a 2.4 px noise
+  wobble on top of the sim's path), `slack` (rest / return: smaller stroke, drooping antennae),
+  `hurt` = one full turn end over end along `hitDir` through the 16 frames with wings 70% folded and
+  a few scales shed, `dead` = folded, greying, rocking like a leaf as it falls (render-only sideways
+  slip), flat on its side when `landed`; when `gone` first shows it dissolves into 14 scales (20 for
+  a finisher) where it was last drawn.
+- Look decisions: source tints must be mid-values (wing 0x76899c / 0xa39678 / 0x847b96): the first
+  pass at ~0xb0 came out near-white. A round dark face with 0.85 px eyes read as a cartoon bee: the
+  face is a narrow tall mask with two 0.5 px pinpricks set low and close. Lamp radius 1.5, halo 0.18.

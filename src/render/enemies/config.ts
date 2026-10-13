@@ -131,3 +131,60 @@ export const BURR = {
 } as const;
 
 export type BurrConfig = typeof BURR;
+
+/**
+ * The lampwing: a small pale moth-wisp, seen from the front with its wings to either side. Lengths
+ * are world px from the centre of its 36 x 30 box, y down. Gameplay numbers are `tuning.lampwing`.
+ */
+export const LAMP = {
+  /** Fore and hind wing length, and how far the far-side pair shortens when it looks to one side. */
+  fore: 20,
+  hind: 13.5,
+  farShrink: 0.24,
+  /** Beat: wing angle (rad above the horizontal) at the top and bottom of the stroke; the hind pair lags (beats). */
+  up: 1.05,
+  down: -0.5,
+  hindLag: 0.13,
+  hindDrop: 0.62,
+  /** Body bob against the stroke, px; chord change through the stroke (the figure of eight). */
+  bob: 1.5,
+  twist: 0.24,
+  /** Slack (rest / return): the stroke shrinks by this share. */
+  slack: 0.3,
+  /** Render-only flutter on top of the sim's path while it pursues, px. */
+  wobble: 2.4,
+  /** Lean per px/f of sideways speed, rad, and its cap. */
+  lean: 0.11,
+  leanMax: 0.5,
+  body: { thoraxW: 4.2, thoraxH: 5, abdomenW: 3.1, abdomenH: 6.8, head: 3.2 },
+  antenna: { len: 9, w: 1.05 },
+  eye: 0.5,
+  lamp: {
+    r: 1.5,
+    core: 0.85,
+    halo: 3.2,
+    glow: 0.18,
+    pulse: 0.3,
+    rate: 1.7,
+    /** Brighter by this factor while curious / pursuing. */
+    keen: 1.45,
+  },
+  /** [left, centre, right] zone tints. */
+  wingColor: [0x76899c, 0xa39678, 0x847b96] as const,
+  wingTip: [0x44546a, 0x665a40, 0x4f4764] as const,
+  bodyColor: [0x8d9aa8, 0xb0a488, 0x968ea6] as const,
+  lampColor: [0x1fb4d8, 0xf0a030, 0x8a4cf0] as const,
+  color: {
+    /** The dusky margin of the wings and the veins. */
+    dusk: 0x2c2a3c,
+    face: 0x17121d,
+    eye: 0xe6dcc4,
+    /** A hit: dark for the hold, then toward this for two frames. */
+    pop: 0xcfc9be,
+    scale: 0xc4bcae,
+  },
+  wingAlpha: 0.92,
+  farAlpha: 0.78,
+  hit: { dark: 0.6, pop: 0.6, scales: 4, scalesFinisher: 7 },
+  death: { scales: 14, scalesFinisher: 20 },
+} as const;
