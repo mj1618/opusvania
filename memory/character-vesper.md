@@ -3,7 +3,7 @@
 THE hero. Slender moth-person, ~84 px tall; wings worn as a cape. Imports `../hooded/math`; `chain.ts`
 (hooded chain + per-segment `extra` angle, `dragK`, `scale`) and `paint.ts` are our own copies.
 Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae; `draw.ts` shapes;
-`fx.ts` dust, trails, scales; `slashfx/` the slash's look; `link.ts` hand-off with the goal renderer;
+`fx.ts` dust, trails, scales; `slashfx/` the slash's crescent and contact flash; `link.ts` hand-off with the goal renderer;
 `index.ts` wiring, lights, `window.__vesper`.
 
 ## Look: owner decisions, do not undo
@@ -165,23 +165,55 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   frames, then the wings stay lifted while the span draws in (`36 x 4 soar (1 - soar)` on the
   ground) and come down behind her. Without that they drooped flat along the grass (a bow tie).
 
-## Thorn slash (sim: memory/combat.md; `STROKES`, `SNAP` in rig.ts; look in `slashfx/`)
-- Three strokes per direction picked by the event's `step`; a `Stroke` = an ellipse about the chest
-  sized to the sim's reach, blade angles, frames `wind / cut / hold / home`, two body keys (`K_*`).
-  `wind` = the sim's startup; timeline is render time, frozen in hitstop (the hit frame still moves).
-  The near arm holds the thorn (`swordSide`). Body key is ADDED to the blended pose: running, the
-  stride continues under the cut. Up / down also lerp to `UPCUT` / `DOWNCUT`. Finisher = cleave with
-  a hop (`K_HOP`); the pirouette (`Rig.finisherTurn`) was built and judged worse, off.
-- Shared look: leaf blade (`BLADE_LEN` 46), ONE smear frame (first cut frame), the snap (overshoot at
-  speed, ring out; `back` 0.55). Mark laid in the blade frame as it was when the cut STARTED
-  (`markRoll`); up / down marks 55% wider on the trailing side (`markWide`).
-- Three styles (`SlashStyle`; Y cycles, `?slash=1|2|3`, `__vesper.slash`): **brush** (default: flat
-  opaque cream mark, barbs, dry-brush slits, gone by frame 6-8), ribbon (close to the look the owner
-  rejected; option only), scale-dust (tumbling scales; hers). Everything near her is opaque or
-  additive, never partial alpha (the hero matte turns a faint veil into dark glass).
-- Rejected: a wide translucent band (soap bubble); belly > 0.34 of the reach (a moon / umbrella); deep
-  V notches (shark teeth); three parallel bristles (ribcage); a second smear frame (a second blade).
-- Still open: the up cuts' mark is an arch over her head (the hit area is tall and narrow).
+## Thorn slash (sim: memory/combat.md; `STROKES`, `CUT`, `SNAP` in rig.ts; look in `slashfx/crescent.ts`)
+Round 19 (owner twice: "the sword slash still doesn't look very good"; playtest 4 must-fix 1): the three
+switchable styles (brush / ribbon / scale-dust), the Y key, `?slash=`, `__vesper.slash`, the smear wedge
+and the pirouette finisher are GONE. There is one slash, built on Hollow Knight's nail-slash principles.
+- **One crescent** (`SlashMark`): opaque, hard-edged, flat cool cream, a thin lilac line inside the inner
+  edge, a 1 px dusk hair round it. No glow, no gradient, no particles of its own. Its INNER edge is the
+  blade point's path (`1 - thick` of the reach, so the blade in her hand ends on its leading needle); the
+  outer edge swells from that path to the sim's reach at the middle. Every cut is this shape on a
+  different arc of the stroke's ellipse (`show`..1 of the cut, `thick` 0.24-0.28).
+- **Life**: whole on the first active frame (the blade crosses its arc in 1.7 frames, `CUT`, and is ~83%
+  round on that frame), whole for 2 frames (finisher 3), then 3 frames thinning toward its outer edge
+  while the tail end draws up to the leading end; gone on the 6th (7th). Its clock stands still in
+  hitstop (it holds with her). It hangs from a fixed offset on her BODY CENTRE taken when the cut
+  begins (`markOx/Oy`: chest + 4 px ahead, forward cuts 10 px lower = the target's height), so it
+  moves with her and never drifts, pins or stays behind. A hit does not touch it.
+- **Strokes alternate**: cut 1 comes DOWN in front (122 -> -56 degrees) and ends in a low reaching lunge,
+  blade low ahead; cut 2 is the mirror, UP through the same place (-66 -> 72), ends tall, blade high
+  ahead; the finisher is cut 1 larger (reach 135, 3 frames of gather with the blade swung up behind,
+  a hop, held to frame 22). Up = the crescent overhead (back to front, front to back, larger); down
+  (pogo) = beneath her, drawn straight from the sheath, back to front. Up / down crescents are let
+  out x1.75 sideways and drawn at 0.88 of the sim's reach (`SLASH_LOOK`): to the true hit area
+  (100 px wide, 124 from her centre) they are a tall arch far over her head.
+- The press frame is the anticipation (`wind` = the sim's startup, 1 frame; `gripIn` is instant so
+  the blade is already raised behind her on it); the finisher has 3.
+- **Contact flash** (`SlashMark.hit`): a hard cream cross at the target's near side, long arm along the
+  cut, 4 frames on render time (it runs through the hitstop), 3 specks (5 on the finisher) thrown on
+  between the cut's direction and away from her. `enemyBlock` (a burrback's braced shell) is a
+  **clang**: `sig.blocked`, the cut still advances on that frame, a smaller cross turned ACROSS the
+  cut at `hitX/hitY`, specks back toward her. There is no terrain / wall clang: the sim emits nothing.
+- Tone per zone: `toneFor(pale)` = 0.84 on the blue and violet sides, 1 in the amber centre (at 0.7 it
+  was concrete grey; at 1 it glares on the dark side).
+- A `Stroke` still = an ellipse about the chest sized to the sim's reach, blade angles, frames `wind /
+  cut / hold / home`, two body keys (`K_*`) ADDED to the blended pose (running, the stride continues
+  under the cut). Up / down also lerp to `UPCUT` / `DOWNCUT`. `Stroke.turn` (the pirouette) is still
+  read by the rig but no stroke sets it.
+- Rejected on the way here: the crescent with both needles on the OUTER path (a moon hanging a blade's
+  length in front of her, the blade nowhere near it); belly 0.3-0.33 (covers the burrback for the
+  whole hitstop); the origin at chest height (the belly sat at her head, over the creature); specks
+  along the cut only (a down cut throws them into the ground); up / down at the true hit width (an
+  umbrella); a leading end cut short at the blade on the first frame (a blunt D through the hitstop).
+  Older: a wide translucent band (soap bubble), deep notches (shark teeth), a second smear frame (a
+  second blade), a mark pinned to what it hit (it hung in the air after the blade had left).
+- Honest gaps: the up crescent still floats ~45 px above her head (that is where the hit area's far end
+  is; the blade is 46 px); cut 2's body is close to her standing pose (tall, weight not far forward);
+  the down crescent is drawn over the ground when she pogos something on the floor; a hit late in the
+  active window (a4-a6) finds the crescent already thin or gone, so only the cross marks it.
+- Capture: `__vesper.markHidden = true` hides crescent and flash (the swing must read alone). Burrbacks
+  brace and block from the front now: cut from behind for a real hit. Sheets: `shots/vesper/slash5/`
+  (`*-3x.png`, `*-1x.png` = play zoom; left = blue zone, C = amber centre).
 
 ## Health (sim: memory/enemies.md; `HURT` in rig.ts)
 - `hurt`: recoil pose pops 40% past itself, tones flip for two frames (`Painter.invertK`), wings
@@ -241,7 +273,7 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   up); a blow while kindling / resting is unit-tested, not looked at. Sheets: `shots/vesper/goal/`.
 
 ## Capture and review
-- `window.__vesper`: `turns`, `slash`, `slashName`, `finisherTurn`, `hidden`, `mesh` (her Pixi mesh),
+- `window.__vesper`: `turns`, `markHidden`, `hidden`, `mesh` (her Pixi mesh),
   `act` (acting weights, `endT`, `cloak`, `antLift`, `eyeLit`, `soar`, the offer point).
 - Goal moments: plain URL (not `?nopickups`); wallet by teleporting onto waiting pickups; the ending:
   kindle all three (teleport to each foot - 20, step 34), teleport (5132, 1088), `R6`, step 300.

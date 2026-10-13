@@ -15,7 +15,7 @@ import {
   spinTime,
   strokeFor,
 } from '../../src/render/character/vesper/rig';
-import { makeSlashStyles, SLASH_STYLES, type SlashFrame } from '../../src/render/character/vesper/slashfx';
+import { CRESCENT, type SlashFrame, SlashMark } from '../../src/render/character/vesper/slashfx';
 import { Secondary } from '../../src/render/character/vesper/wings';
 import type { PlayerView } from '../../src/render/contract';
 import type { SimEvent } from '../../src/sim/events';
@@ -487,7 +487,7 @@ describe('vesper rig', () => {
     for (let i = 0; i < 18; i++) tick();
     // The finisher gathers for its three frames before the cut starts.
     tick({}, [slash(3)]);
-    expect(rig.stroke).toBe(strokeFor('fwd', 3, Rig.finisherTurn));
+    expect(rig.stroke).toBe(strokeFor('fwd', 3));
     expect(rig.cutQ).toBe(-1);
     tick();
     expect(rig.cutQ).toBe(-1);
@@ -633,54 +633,51 @@ describe('vesper rig', () => {
     }
   });
 
-  it('slash styles: each is laid by the cut, holds through hitstop, answers a hit and is gone soon after', () => {
+  it('slash mark: whole on the first active frame, holds through hitstop, gone in about five frames; the contact flash is as brief', () => {
     const at = (q: number, out: { x: number; y: number }): void => {
       out.x = Math.cos(q * 2 - 1);
       out.y = -Math.sin(q * 2 - 1) * 0.5;
     };
-    const styles = makeSlashStyles();
-    expect(styles.map((st) => st.id)).toEqual([...SLASH_STYLES]);
     for (const heavy of [false, true]) {
-      for (const st of styles) {
-        const f: SlashFrame = {
-          dt: DT,
-          clock: 0,
-          held: false,
-          chestX: 1000,
-          chestY: 1240,
-          cutQ: -1,
-          pale: 0.9,
-          vx: 0,
-          vy: 0,
-          hem: new Float32Array(20).fill(1000),
-          near: 0,
-        };
-        st.clear();
-        expect(st.live).toBe(false);
-        st.begin(
-          { dir: 'fwd', step: heavy ? 3 : 1, heavy, facing: 1, reach: heavy ? 135 : 110, show: 0.3 },
-          at,
-        );
-        for (const q of [0.62, 0.91]) {
-          f.cutQ = q;
-          st.frame(f);
-        }
-        expect(st.live).toBe(true);
-        st.hit(1090, 1240, 0, -1, heavy ? 2 : 1);
-        // Hitstop: the mark hangs in the air for as long as she is held.
-        f.held = true;
-        for (let i = 0; i < 40; i++) st.frame(f);
-        expect(st.live).toBe(true);
-        f.held = false;
-        f.cutQ = 1;
-        st.frame(f);
-        f.cutQ = -1;
-        // A flash, not an object: the brush mark is gone in a few frames; the ribbon's last motes
-        // and the last scale of dust inside 40.
-        for (let i = 0; i < (st.id === 'brush' ? 14 : 40); i++) st.frame(f);
-        expect(st.live).toBe(false);
-        expect(st.spot).toBe(0);
-      }
+      const mark = new SlashMark();
+      const f: SlashFrame = { dt: DT, held: false, ox: 1000, oy: 1240, cutQ: -1, pale: 0.9 };
+      expect(mark.live).toBe(false);
+      mark.begin(
+        {
+          dir: 'fwd',
+          step: heavy ? 3 : 1,
+          heavy,
+          facing: 1,
+          reach: heavy ? 135 : 110,
+          show: 0.3,
+          thick: 0.25,
+          wide: 1,
+        },
+        at,
+      );
+      f.cutQ = 0.83;
+      mark.frame(f);
+      expect(mark.live).toBe(true);
+      mark.hit(1090, 1240, 0, -1, 1, 0, heavy ? 2 : 1);
+      // Hitstop: the crescent holds for as long as she is held (the flash runs out on its own).
+      f.held = true;
+      for (let i = 0; i < 40; i++) mark.frame(f);
+      expect(mark.live).toBe(true);
+      f.held = false;
+      f.cutQ = 1;
+      const life = (heavy ? CRESCENT.full[1] : CRESCENT.full[0]) + CRESCENT.fade;
+      expect(life).toBeLessThanOrEqual(6);
+      for (let i = 0; i < life - 1; i++) mark.frame(f);
+      expect(mark.live).toBe(true);
+      f.cutQ = -1;
+      mark.frame(f);
+      mark.frame(f);
+      expect(mark.live).toBe(false);
+      // A clang (a blocked cut) is a flash too, and is over as soon.
+      mark.hit(1090, 1240, 0, -1, 1, 0, 0);
+      expect(mark.live).toBe(true);
+      for (let i = 0; i < CRESCENT.flash + 1; i++) mark.frame(f);
+      expect(mark.live).toBe(false);
     }
   });
 

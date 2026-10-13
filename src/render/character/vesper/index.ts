@@ -7,7 +7,7 @@
  *   wings.ts  the two wing membranes (five strands each) and the two antennae
  *   draw.ts   skeleton + chains -> shaded shapes (through hooded/paint.ts, one mesh)
  *   fx.ts     rising gold dust, light trails, landing dust
- *   slashfx/  the slash's look: three switchable styles (brush, ribbon, scale-dust) and the shared smear
+ *   slashfx/  the slash's look: one crescent per cut and the contact flash
  *
  * Her light is the pair of lantern tips on her antennae: their midpoint is the point light 'ember'.
  */
@@ -20,12 +20,12 @@ import { zoneWeights } from '../../scene/lib/fx-zones';
 import { KEY_LIGHT } from '../../scene/lib/look';
 import { clamp, noise1, Spring, sat, smoothstep } from '../hooded/math';
 import type { CharacterSkin, SkinDef } from '../skin';
-import { BLADE_EDGE, BLADE_LEN, BLADE_STEEL, drawVesper, type View } from './draw';
+import { drawVesper, type View } from './draw';
 import { drawSpinRings, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
 import { vesperLink } from './link';
 import { Painter, rgb } from './paint';
-import { HURT, J_CHEST, J_HAND_A, J_HEAD, J_HIP, J_SH_A, MAX_TURNS, Rig } from './rig';
-import { drawSmear, makeSlashStyles, SLASH_STYLES, type SlashFrame } from './slashfx';
+import { HURT, J_CHEST, J_HAND_A, J_HEAD, J_HIP, MAX_TURNS, Rig } from './rig';
+import { type SlashFrame, SlashMark } from './slashfx';
 
 import { Secondary } from './wings';
 
@@ -36,9 +36,8 @@ const LAMP_REACH = 62;
 const TURNS_KEY = 'vesper.turns.v3';
 /** Turns per double jump when nothing is stored or asked for (owner's choice, 2026-10-13). */
 const DEFAULT_TURNS = 3;
-const SLASH_KEY = 'vesper.slash.v1';
-/** The slash style when nothing is stored or asked for: index into `SLASH_STYLES`. */
-const DEFAULT_SLASH = 0;
+/** The crescent: px its origin stands ahead of and (a forward cut) below her chest, at the target's height; how far an up / down one is let out sideways, and its reach as a fraction of the sim's (which is measured from her centre, below the chest). */
+const SLASH_LOOK = { ahead: 4, drop: 10, wide: 1.75, vert: 0.88, hidden: false };
 
 export class VesperCharacter implements CharacterSkin {
   private readonly painter = new Painter();
@@ -72,30 +71,16 @@ export class VesperCharacter implements CharacterSkin {
   private readonly back: [number, number] = [0, 0];
   private glintT = 9;
   private glintK = 0;
-  /** The slash styles (the owner switches between them live) and which one is on. */
-  private readonly slashes = makeSlashStyles();
-  private slashIdx = DEFAULT_SLASH;
-  private readonly sf: SlashFrame = {
-    dt: 0,
-    clock: 0,
-    held: false,
-    chestX: 0,
-    chestY: 0,
-    cutQ: -1,
-    pale: 1,
-    vx: 0,
-    vy: 0,
-    hem: this.hemPts,
-    near: 0,
-  };
-  private readonly cutAt = (q: number, out: { x: number; y: number }): void => this.rig.strokeAt(q, out);
-  /** The blade frame's turn when the cut began: the mark is laid in that frame (see `Rig.strokeAtRoll`). */
+  /** The slash's crescent and contact flash. */
+  private readonly mark = new SlashMark();
+  private readonly sf: SlashFrame = { dt: 0, held: false, ox: 0, oy: 0, cutQ: -1, pale: 1 };
+  /** The blade frame's turn when the cut began: the crescent is laid in that frame (see `Rig.strokeAtRoll`). */
   private markRoll = 0;
-  /** Up and down cuts: the mark's trailing side sweeps this much wider than the blade's own path. */
-  private markWide = 0;
+  /** Where the crescent hangs from, as an offset from her body centre: fixed when the cut begins. */
+  private markOx = 0;
+  private markOy = 0;
   private readonly markAt = (q: number, out: { x: number; y: number }): void => {
     this.rig.strokeAtRoll(q, this.markRoll, out);
-    out.x *= 1 + this.markWide * (1 - q) ** 1.5;
   };
   private readonly tan = { x: 0, y: 0 };
   private readonly tan2 = { x: 0, y: 0 };
@@ -105,7 +90,6 @@ export class VesperCharacter implements CharacterSkin {
   private readonly onKey = (e: KeyboardEvent): void => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.code === 'KeyT') this.setTurns((Rig.turns % MAX_TURNS) + 1, true);
-    else if (e.code === 'KeyY') this.setSlash(((this.slashIdx + 1) % SLASH_STYLES.length) + 1, true);
   };
 
   constructor(
@@ -179,7 +163,7 @@ export class VesperCharacter implements CharacterSkin {
     if (fresh) {
       sec.reset();
       fx.clear();
-      for (const st of this.slashes) st.clear();
+      this.mark.clear();
       for (const t of this.trails) t.clear();
     }
     sec.update(dt, clock, rig, rig.frame, player);
@@ -305,36 +289,36 @@ export class VesperCharacter implements CharacterSkin {
     const chestX = rig.frame.j[J_CHEST * 2]!;
     const chestY = rig.frame.j[J_CHEST * 2 + 1]!;
     const heavy = rig.slashStep === 3 && rig.slashDir !== 'down';
-    const style = this.slashes[this.slashIdx]!;
+    const mark = this.mark;
     if (rig.cutStart) {
       this.markRoll = rig.bladeRoll;
-      // The hit area of an up or down cut is narrow (100 px): drawn to it the mark is a tall thin
-      // arch. Its trailing side is let out wider; the reach, and the side that strikes, stay true.
-      this.markWide = rig.slashDir === 'fwd' ? 0 : 0.55;
-      style.begin(
+      // It hangs from her chest (a touch ahead: the gather leans back from where the cut lands),
+      // fixed to her body from here on.
+      this.markOx = chestX - player.cx + sg * SLASH_LOOK.ahead;
+      this.markOy = chestY - player.cy + (rig.slashDir === 'fwd' ? SLASH_LOOK.drop : 0);
+      mark.begin(
         {
           dir: rig.slashDir,
           step: rig.slashStep,
           heavy,
           facing: sg,
-          reach: rig.stroke.reach,
+          reach: rig.stroke.reach * (rig.slashDir === 'fwd' ? 1 : SLASH_LOOK.vert),
           show: rig.stroke.show,
+          thick: rig.stroke.thick,
+          // The hit area of an up or down cut is narrow (100 px): the crescent is let out across it.
+          wide: rig.slashDir === 'fwd' ? 1 : SLASH_LOOK.wide,
         },
         this.markAt,
       );
     }
     const sf = this.sf;
     sf.dt = dt;
-    sf.clock = clock;
     sf.held = player.hitstop > 0 && !sig.slashHit;
-    sf.chestX = chestX;
-    sf.chestY = chestY;
+    sf.ox = player.cx + this.markOx;
+    sf.oy = player.cy + this.markOy;
     sf.cutQ = cq;
     sf.pale = view.pale;
-    sf.vx = player.vx * 60;
-    sf.vy = player.vy * 60;
-    sf.near = nearIdx;
-    style.frame(sf);
+    mark.frame(sf);
     if (sig.slashHit) {
       // Where it lands: the target's side nearest her (the target draws its own burst).
       const dx = player.cx - rig.hitX;
@@ -347,10 +331,19 @@ export class VesperCharacter implements CharacterSkin {
       const tx = this.tan.x - this.tan2.x;
       const ty = this.tan.y - this.tan2.y;
       const tl = Math.hypot(tx, ty) || 1;
-      style.hit(rig.hitX + (dx / dl) * 14, rig.hitY + (dy / dl) * 14, tx / tl, ty / tl, rig.hitPower);
-      this.flash = Math.max(this.flash, 0.2);
+      // A blocked cut reports the very point where the blade met the shell.
+      const near = sig.blocked ? 0 : 14;
+      mark.hit(
+        rig.hitX + (dx / dl) * near,
+        rig.hitY + (dy / dl) * near,
+        tx / tl,
+        ty / tl,
+        -dx / dl,
+        -dy / dl,
+        rig.hitPower,
+      );
+      if (!sig.blocked) this.flash = Math.max(this.flash, 0.2);
     }
-    view.spot = style.spot;
     // --- Hurt, fading, re-forming.
     const bp = this.bodyPts;
     bp.set(this.hemPts);
@@ -461,25 +454,7 @@ export class VesperCharacter implements CharacterSkin {
     this.ringPts[5] = mid.ry[3]!;
     drawSpinRings(p, this.ringPts, 3, rig.spinCx, rig.spinCy, rig.spinRate, rig.spinW * whole);
     fx.draw(p, clock);
-    // The smear frame (the blade stretched along the part of the arc it crossed), then the style's mark.
-    if (rig.smear1 > rig.smear0 && view.slashW > 0.5) {
-      const sh = (J_SH_A + rig.swordSide) * 2;
-      drawSmear(
-        p,
-        style.smear,
-        this.cutAt,
-        rig.frame.j[sh]!,
-        rig.frame.j[sh + 1]!,
-        rig.handNow + 2.2,
-        BLADE_LEN,
-        rig.smear0,
-        rig.smear1,
-        rig.stroke.show * 0.45,
-        BLADE_STEEL,
-        BLADE_EDGE,
-      );
-    }
-    style.draw(p, sf);
+    if (!SLASH_LOOK.hidden) mark.draw(p, sf);
     p.end(player.cx, player.cy);
 
     const e = this.light;
@@ -505,13 +480,6 @@ export class VesperCharacter implements CharacterSkin {
       // Storage can be blocked: the default.
     }
     Rig.turns = n;
-    try {
-      const q = new URLSearchParams(window.location.search).get('slash');
-      const pick = Number(q ?? window.localStorage.getItem(SLASH_KEY));
-      if (pick >= 1 && pick <= SLASH_STYLES.length) this.slashIdx = Math.round(pick) - 1;
-    } catch {
-      // The default.
-    }
     window.addEventListener('keydown', this.onKey);
     const self = this;
     (window as unknown as { __vesper?: unknown }).__vesper = {
@@ -522,22 +490,12 @@ export class VesperCharacter implements CharacterSkin {
         self.setTurns(v, false);
       },
       /** For capture tools: hide her (a frame with and one without gives her silhouette by difference). */
-      /** The finisher as a pirouette (default) or the earlier cleave with a hop. */
-      get finisherTurn(): boolean {
-        return Rig.finisherTurn;
+      /** For capture tools: hide the slash's crescent and contact flash (the swing must read without them). */
+      get markHidden(): boolean {
+        return SLASH_LOOK.hidden;
       },
-      set finisherTurn(v: boolean) {
-        Rig.finisherTurn = !!v;
-      },
-      /** Slash style, 1-based: 1 brush, 2 ribbon, 3 scale-dust. */
-      get slash(): number {
-        return self.slashIdx + 1;
-      },
-      set slash(v: number) {
-        self.setSlash(v, false);
-      },
-      get slashName(): string {
-        return SLASH_STYLES[self.slashIdx]!;
+      set markHidden(v: boolean) {
+        SLASH_LOOK.hidden = !!v;
       },
       /** Her acting at the lanterns and the heart, for tools: pose weights and what the wings, antennae and lights read. */
       get act(): Record<string, number> {
@@ -578,19 +536,6 @@ export class VesperCharacter implements CharacterSkin {
       // Not remembered, then.
     }
     if (show) this.say(`somersault: ${Rig.turns === 1 ? '1 turn' : `${Rig.turns} turns`}`);
-  }
-
-  /** Picks the slash style (1-based), remembers it, and drops whatever the last one left in the air. */
-  private setSlash(n: number, show: boolean): void {
-    const i = Math.min(SLASH_STYLES.length, Math.max(1, Math.round(n) || 1)) - 1;
-    if (i !== this.slashIdx) for (const st of this.slashes) st.clear();
-    this.slashIdx = i;
-    try {
-      window.localStorage.setItem(SLASH_KEY, String(i + 1));
-    } catch {
-      // Not remembered, then.
-    }
-    if (show) this.say(`slash: ${SLASH_STYLES[i]}`);
   }
 
   private say(text: string): void {

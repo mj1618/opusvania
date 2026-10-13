@@ -85,7 +85,7 @@ export interface View {
   swordSide: number;
   /** Px she is off the ground in a hop the sim knows nothing about (the finisher). */
   hop: number;
-  /** 0..1: the wings' eye-spots flash (the scale-dust slash). */
+  /** 0..1: the wings' eye-spots flash (nothing drives it now: the scale-dust slash is gone). */
   spot: number;
   /** 0..1: the cape streams behind her (the run): its hem is drawn out into a forked tail. */
   stream: number;

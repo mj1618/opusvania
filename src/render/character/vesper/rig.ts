@@ -160,13 +160,13 @@ export interface Stroke {
   home: number;
   /** How hard the cut front-loads its speed (1 = even, 2.2 = most of the arc in the first frames). */
   ease: number;
-  /** Whole turns of her body about its own upright axis through the stroke (the finisher's pirouette). */
+  /** Whole turns of her body about its own upright axis through the stroke (a pirouette; no stroke uses it now). */
   turn?: number;
   /** Degrees the blade eases back from the follow-through while it is held (the guard relaxing). */
   relax: number;
-  /** Fraction of the cut from which its trail shows (before that the blade is behind or beside her). */
+  /** Fraction of the cut from which its crescent shows (before that the blade is behind or beside her). */
   show: number;
-  /** Trail thickness at its widest, as a fraction of the reach. */
+  /** The crescent's thickness at its belly, as a fraction of the reach. */
   thick: number;
   /** Body at the end of the gather and at the end of the cut: see the K_ channels. */
   w: readonly number[];
@@ -191,165 +191,162 @@ const K_LEGS = 13; // air: legs trail back, px
 const K_HOP = 14; // a hop through the cut: pelvis and both feet leave the ground, px (render only)
 const NK = 15;
 
-// Three silhouettes: cut 1 ends HIGH (tall on the toes, chest open, head back after the blade, the
-// off-arm thrown down behind); cut 2 ends LOW and LONG (a deep reaching lunge, spine laid forward,
-// the off-arm thrown up behind); the finisher gathers small and low, hops, and lands wide.
+// Three silhouettes that alternate, as a nail combo does. Cut 1 comes DOWN in front of her and ends
+// LOW and LONG (a reaching lunge, spine laid forward, blade low ahead, the off-arm thrown up behind);
+// cut 2 is the return, UP through the same place, and ends TALL with the weight still forward (front
+// foot out, chest open, blade high ahead); the finisher gathers small and high behind her for three
+// frames, hops, and cleaves down wide.
 //              TW    LEAN   CURL   PF   PU    HT    OF   OU  FA  FB  ROT   WING LIFT LEGS HOP
-const CUT1_W = [0.6, 0.32, 0.22, -2, -4.5, 0.18, 4, -1, 0, 0, 0.1, -0.7, 0, 0, 0];
-const CUT1_F = [-0.8, -0.12, -0.26, 5, 2.4, -0.36, -10, -5, 9, -3, -0.22, 1.3, 2, 4, 0];
-const CUT2_W = [-0.7, -0.06, -0.2, 4, 2.6, -0.3, -8, -2, 9, -3, -0.14, 0.4, 0, 4, 0];
-const CUT2_F = [0.78, 0.58, 0.1, 9, -8, -0.34, -9, 10, 14, -5, 0.22, 0.95, 0, 7, 0];
-const FIN_W = [0.9, -0.22, -0.14, -6, -7, -0.1, 9, 6, 3, -2, -0.28, -1, 0, -3, 0];
-const FIN_F = [-0.95, 0.5, 0.2, 10, -7.5, -0.2, -11, 6, 14, -4, 0.36, 1.5, 0, 9, 13];
-// The pirouette: she coils away from the target (showing her back), whips round with the blade
-// trailing on a low wide ring that climbs in front of her, hops through it and lands wide and low.
-const SPIN_W = [0.5, -0.1, 0.18, -3, -6, 0.1, -7, 3, 2, -2, -0.12, -0.9, 0, -3, 0];
-const SPIN_F = [-0.9, 0.3, -0.12, 9, -8.5, -0.3, -12, 2, 15, -5, 0.2, 1.6, 0, 9, 14];
-const UP1_W = [0.4, -0.08, -0.06, 0, -1.5, -0.2, 3, -3, 0, 0, -0.1, -0.3, 0, 0, 0];
-const UP1_F = [-0.4, 0.06, -0.1, 0, 2.6, -0.26, -4, -5, 0, 0, 0.1, 0.7, 4, 3, 0];
-const UP2_W = [-0.4, 0.08, 0, 0, 1.5, -0.2, -4, -4, 0, 0, 0.1, 0.3, 0, 3, 0];
-const UP2_F = [0.4, -0.12, -0.14, 0, 2.4, -0.32, 3, -5, 0, 0, -0.12, 0.7, 3.5, 4, 0];
+const CUT1_W = [0.75, -0.16, -0.2, -3, 2.6, -0.06, 7, 1, 0, 0, -0.14, -0.7, 0, 0, 0];
+const CUT1_F = [-0.85, 0.56, 0.12, 9, -8, -0.34, -10, 9, 14, -5, 0.24, 1.25, 0, 7, 0];
+const CUT2_W = [-0.6, 0.5, 0.2, 7, -8.5, -0.2, -6, 5, 12, -4, 0.16, -0.2, 0, 5, 0];
+const CUT2_F = [0.7, 0.14, -0.24, 9, 1.5, -0.3, -11, -6, 14, -4, -0.2, 1.3, 2.5, 4, 0];
+const FIN_W = [0.9, -0.24, -0.16, -6, -6, -0.1, 9, 6, 3, -2, -0.28, -1, 0, -3, 0];
+const FIN_F = [-0.95, 0.56, 0.2, 11, -8, -0.24, -11, 7, 15, -4, 0.36, 1.5, 0, 9, 13];
+const UP1_W = [0.4, -0.08, -0.06, 0, -2.5, -0.2, 3, -3, 0, 0, -0.1, -0.4, 0, 0, 0];
+const UP1_F = [-0.4, 0.06, -0.1, 0, 2.6, -0.26, -4, -5, 0, 0, 0.1, 0.8, 4, 3, 0];
+const UP2_W = [-0.4, 0.08, 0, 0, -1.5, -0.2, -4, -4, 0, 0, 0.1, 0.2, 0, 3, 0];
+const UP2_F = [0.4, -0.12, -0.14, 0, 2.4, -0.32, 3, -5, 0, 0, -0.12, 0.8, 3.5, 4, 0];
 const UP3_W = [0.7, -0.16, 0.1, 0, -6, -0.1, 5, -2, 0, 0, -0.2, -1, 0, -3, 0];
 const UP3_F = [-0.7, 0.1, -0.16, 0, 2, -0.3, -6, -8, 0, 0, 0.2, 1.5, 3, 8, 11];
-const DOWN_W = [0.2, 0.1, 0.1, 0, 1, 0.1, -4, 4, 0, 0, 0, -0.3, 0, 0, 0];
-const DOWN_F = [-0.3, 0.18, 0.16, 0, 0, 0.2, -6, 7, 0, 0, 0.18, 0.9, 0, 0, 0];
+const DOWN_W = [0.3, 0.06, 0.1, 0, 1, 0.1, -4, 4, 0, 0, 0, -0.4, 0, 0, 0];
+const DOWN_F = [-0.4, 0.2, 0.16, 0, 0, 0.2, -6, 8, 0, 0, 0.18, 1, 0, 0, 0];
+
+/**
+ * Shared timing of every cut, frames. The blade crosses its arc in under two frames (the first
+ * active frame shows it most of the way round, the second at the end), so the crescent can stand
+ * whole in front of her from the first active frame with the blade at its leading end.
+ */
+const CUT = { cut: 1.7, ease: 2 } as const;
 
 export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: readonly Stroke[] } = {
   fwd: [
-    // 1: the draw cut. Straight out of the sheath, rising from low to high in front of her.
+    // 1: the cut. From high behind her shoulder down through the target; ends low ahead.
     {
-      a0: -104,
-      a1: 70,
-      over: 14,
-      tilt: 16,
-      sq: 0.52,
+      a0: 122,
+      a1: -56,
+      over: 9,
+      tilt: -11,
+      sq: 0.47,
       reach: 110,
       wind: 1,
-      cut: 3.6,
+      ...CUT,
       hold: 12,
       home: 9,
-      ease: 3,
-      relax: 16,
-      show: 0.34,
-      thick: 0.4,
+      relax: 7,
+      show: 0.27,
+      thick: 0.25,
       w: CUT1_W,
       f: CUT1_F,
     },
-    // 2: the return. A flat backhand out of the first cut's follow-through, lower and tighter.
+    // 2: the return. The mirror of the first: from low ahead up through the target; ends high ahead.
     {
-      a0: 128,
-      a1: -64,
-      over: 14,
-      tilt: -7,
-      sq: 0.3,
+      a0: -66,
+      a1: 72,
+      over: 9,
+      tilt: -3,
+      sq: 0.47,
       reach: 110,
       wind: 1,
-      cut: 3.6,
+      ...CUT,
       hold: 13,
       home: 9,
-      ease: 3,
-      relax: 10,
-      show: 0.3,
-      thick: 0.34,
+      relax: 9,
+      show: 0.04,
+      thick: 0.25,
       w: CUT2_W,
       f: CUT2_F,
     },
-    // 3: the finisher. A full turn: the blade comes round low on her near side and climbs through.
+    // 3: the finisher. Gathered behind her, a cleave over the top with a hop: the first cut, larger.
     {
-      a0: -196,
-      a1: 38,
-      over: 12,
-      tilt: 12,
-      sq: 0.44,
+      a0: 164,
+      a1: -50,
+      over: 11,
+      tilt: -9,
+      sq: 0.52,
       reach: 135,
       wind: 3,
-      cut: 3.4,
+      ...CUT,
       hold: 22,
       home: 12,
-      ease: 3,
-      turn: 1,
-      relax: 14,
-      show: 0.5,
-      thick: 0.44,
-      w: SPIN_W,
-      f: SPIN_F,
+      relax: 6,
+      show: 0.4,
+      thick: 0.28,
+      w: FIN_W,
+      f: FIN_F,
     },
   ],
-  // Up: 1 comes up behind her and over to the front; 2 goes back over (and stops high); 3 gathers
-  // low behind and cleaves over the top again, bigger. None ends with the blade parked behind her.
+  // Up: the same crescent arcing overhead. 1 goes back to front, 2 front to back, 3 is 1 larger.
   up: [
     {
-      a0: 172,
-      a1: 24,
-      over: 10,
-      tilt: 90,
-      sq: 0.42,
-      reach: 124,
-      wind: 1,
-      cut: 3.6,
-      hold: 12,
-      home: 9,
-      ease: 3,
-      relax: 8,
-      show: 0.05,
-      thick: 0.36,
-      w: UP1_W,
-      f: UP1_F,
-    },
-    {
-      a0: 14,
-      a1: 124,
+      a0: 158,
+      a1: 28,
       over: 8,
       tilt: 90,
       sq: 0.42,
       reach: 124,
       wind: 1,
-      cut: 3.6,
+      ...CUT,
+      hold: 12,
+      home: 9,
+      relax: 8,
+      show: 0.14,
+      thick: 0.24,
+      w: UP1_W,
+      f: UP1_F,
+    },
+    {
+      a0: 24,
+      a1: 146,
+      over: 6,
+      tilt: 90,
+      sq: 0.42,
+      reach: 124,
+      wind: 1,
+      ...CUT,
       hold: 13,
       home: 9,
-      ease: 3,
-      relax: 16,
-      show: 0.04,
-      thick: 0.34,
+      relax: 14,
+      show: 0.13,
+      thick: 0.24,
       w: UP2_W,
       f: UP2_F,
     },
     {
-      a0: 192,
-      a1: 22,
-      over: 12,
+      a0: 176,
+      a1: 26,
+      over: 10,
       tilt: 90,
       sq: 0.43,
       reach: 144,
       wind: 3,
-      cut: 3.4,
+      ...CUT,
       hold: 22,
       home: 12,
-      ease: 3,
       relax: 8,
-      show: 0.1,
-      thick: 0.46,
+      show: 0.24,
+      thick: 0.26,
       w: UP3_W,
       f: UP3_F,
     },
   ],
-  // The dive cut: from ahead, down under her feet and through. Always the same blow (the pogo's rhythm).
+  // Down (the pogo): the crescent arcs beneath her. Drawn straight from the sheath: from behind,
+  // under her feet, to the front. Always the same blow (the pogo's rhythm).
   down: [
     {
-      a0: -8,
-      a1: -168,
-      over: 10,
+      a0: -156,
+      a1: -26,
+      over: 8,
       tilt: -90,
       sq: 0.42,
       reach: 120,
       wind: 1,
-      cut: 3.6,
+      ...CUT,
       hold: 12,
       home: 9,
-      ease: 3,
-      relax: 10,
-      show: 0.04,
-      thick: 0.36,
+      relax: 8,
+      show: 0.12,
+      thick: 0.24,
       w: DOWN_W,
       f: DOWN_F,
     },
@@ -376,25 +373,6 @@ export const HURT = {
   flickerHz: 4.5,
 } as const;
 
-/** The finisher before the pirouette (kept for comparison: `Rig.finisherTurn = false`): gathered behind her, a cleave over the top. */
-const FIN_CLEAVE: Stroke = {
-  a0: 168,
-  a1: -34,
-  over: 13,
-  tilt: 8,
-  sq: 0.6,
-  reach: 135,
-  wind: 3,
-  cut: 3.4,
-  hold: 22,
-  home: 12,
-  ease: 3,
-  relax: 6,
-  show: 0.4,
-  thick: 0.44,
-  w: FIN_W,
-  f: FIN_F,
-};
 /**
  * The snap of a cut. The blade overshoots the end of the arc by the stroke's `over` at full speed,
  * springs back `back` x that (plus the stroke's `relax`) and rings out: `settle` frames (decay),
@@ -410,9 +388,8 @@ const HAND_CUT = 16.8;
 const DEG = Math.PI / 180;
 
 /** The stroke for a slash direction and combo step (a down slash is always the one blow). */
-export function strokeFor(dir: SlashDir, step: number, turn = false): Stroke {
+export function strokeFor(dir: SlashDir, step: number): Stroke {
   const list = STROKES[dir];
-  if (dir === 'fwd' && step === 3 && !turn) return FIN_CLEAVE;
   return list[Math.min(list.length, Math.max(1, step)) - 1]!;
 }
 
@@ -819,8 +796,9 @@ export interface RigSignals {
   combo: number;
   /** The glide's wing beat reaches its down-stroke. */
   beat: boolean;
-  /** A slash connected this frame. */
+  /** A slash connected this frame (`blocked`: it glanced off a braced shell; no damage). */
   slashHit: boolean;
+  blocked: boolean;
   /** She was hurt this frame; her last light went out; she re-formed. */
   hurt: boolean;
   fade: boolean;
@@ -877,6 +855,7 @@ export class Rig {
     combo: -1,
     beat: false,
     slashHit: false,
+    blocked: false,
     hurt: false,
     fade: false,
     reform: false,
@@ -967,8 +946,6 @@ export class Rig {
   spinning = false;
   /** Turns per somersault: 1 or 2 (the owner flips it live with T). */
   static turns = 3;
-  /** The finisher as a pirouette. Off: tried and judged worse than the cleave with a hop at game size (memory/character-vesper.md). */
-  static finisherTurn = false;
   /** The model's moment of inertia (ball = 1) and angular speed (rad/s) this frame, and the ball's measured radius. */
   spinI: number = SOMERSAULT.inertiaOpen;
   spinOmega = 0;
@@ -1186,6 +1163,7 @@ export class Rig {
     sig.combo = -1;
     sig.beat = false;
     sig.slashHit = false;
+    sig.blocked = false;
     sig.hurt = false;
     sig.fade = false;
     sig.reform = false;
@@ -1264,6 +1242,16 @@ export class Rig {
           sig.slashHit = true;
           if (e.pogo) this.pogo = 1;
           this.squash.v += e.pogo ? 2.4 : -1.2;
+          break;
+        case 'enemyBlock':
+          // The cut glanced off a braced shell: the blade is caught in the cut all the same.
+          this.hitT = 0;
+          this.hitX = e.hitX;
+          this.hitY = e.hitY;
+          this.hitPower = 0;
+          sig.slashHit = true;
+          sig.blocked = true;
+          this.squash.v -= 1.6;
           break;
         case 'headBump':
           this.squash.v -= 3;
@@ -2005,7 +1993,7 @@ export class Rig {
       this.slashAng = ang;
       this.slashLen = len;
       this.handR = hand;
-      this.gripIn = Math.min(1, this.gripIn + (dt * 60) / 1.5);
+      this.gripIn = Math.min(1, this.gripIn + dt * 60);
       this.slashW = Math.min(this.gripIn, 1 - quintic((sf - sk.hold - sk.home * 0.72) / (sk.home * 0.28)));
       // The body: gather key -> end-of-cut key, easing off through the hold and gone as the blade goes home.
       // The body lets go more slowly than the blade: a chained cut still finds her in the follow-through.
@@ -2508,7 +2496,7 @@ export class Rig {
     this.fromHand = held ? this.handR : HAND_WIND;
     if (!held) this.gripIn = 0;
     this.kFrom.set(this.kNow);
-    this.stroke = strokeFor(dir, step, Rig.finisherTurn);
+    this.stroke = strokeFor(dir, step);
     if (this.spinning && !this.spinFree) {
       this.spinFree = true;
       this.spinCut = true;
