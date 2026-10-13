@@ -34,7 +34,7 @@ export class YakoCharacter implements CharacterSkin {
   private readonly rig = new Rig();
   private readonly sec = new Secondary();
   private readonly fx = new Fx();
-  private readonly ember: PointLight = { x: 0, y: 0, radius: 250, color: 0xff9a4a, intensity: 1 };
+  private readonly ember: PointLight = { x: 0, y: 0, radius: 290, color: 0xff9a4a, intensity: 1 };
   private started = false;
   private flash = 0;
   private scrapeT = 0;
@@ -133,7 +133,7 @@ export class YakoCharacter implements CharacterSkin {
     const e = this.ember;
     e.x = where.tipX;
     e.y = where.tipY;
-    e.radius = 250 + dash * 80 + this.flash * 90;
+    e.radius = 290 + dash * 80 + this.flash * 90;
     e.intensity = glow * (0.9 + 0.1 * sat(rig.speed / 10));
   }
 

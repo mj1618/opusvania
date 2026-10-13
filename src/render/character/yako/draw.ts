@@ -355,19 +355,22 @@ function drawEar(p: Cel, far: boolean): void {
   p.cel(far ? FUR_FAR : FUR, far ? null : RIM, RIM_W);
   if (!far) {
     // Shadow down the back edge.
-    p.M(-4.6, 1)
-      .Q(-5.6, -4, -5.4, -7)
-      .L(-3.5, -8.4)
-      .L(-5.2, -10.2)
-      .Q(-5.2, -17, -2.6, -24)
-      .Q(-3.6, -12, -2.2, 0);
+    if (p.flipped) p.M(5.2, 0).Q(2.6, -13, -2.6, -24).Q(0.4, -12, 2.4, 0);
+    else
+      p.M(-4.6, 1)
+        .Q(-5.6, -4, -5.4, -7)
+        .L(-3.5, -8.4)
+        .L(-5.2, -10.2)
+        .Q(-5.2, -17, -2.6, -24)
+        .Q(-3.6, -12, -2.2, 0);
     p.fill(FUR_SH);
   }
   // Pale inner fur.
   p.M(-0.8, -1.5).Q(-2.6, -9, -1.9, -17.5).Q(2.3, -9, 3.9, -1.5);
   p.fill(far ? PALE_SH : PALE);
   if (!far) {
-    p.M(-0.8, -1.5).Q(-2.6, -9, -1.9, -17.5).Q(-0.6, -9, 0.9, -1.5);
+    if (p.flipped) p.M(3.9, -1.5).Q(2.3, -9, -1.9, -17.5).Q(-0.6, -9, 0.9, -1.5);
+    else p.M(-0.8, -1.5).Q(-2.6, -9, -1.9, -17.5).Q(-0.6, -9, 0.9, -1.5);
     p.fill(PALE_SH);
   }
   // Dark tip with a ragged lower edge.
@@ -403,12 +406,23 @@ function drawHead(p: Cel, rig: Rig, sec: Secondary): void {
     .Q(21.8, -8.6, 20.6, -8.8);
   p.cel(FUR, RIM, RIM_W);
   // Shadow shape on the back of the skull.
-  p.M(-15.8, -4.8)
-    .Q(-11.4, -8, -11.6, -11.5)
-    .C(-13.4, -19.5, -8, -26.2, -1.5, -26.2)
-    .Q(-7.2, -21, -6.4, -15)
-    .L(-3.6, -12.6)
-    .L(-7, -8.4);
+  if (p.flipped)
+    // Facing left the light is behind him: the brow and the top of the muzzle fall into shadow.
+    p.M(1, -26.2)
+      .C(5.5, -26.2, 9, -23.4, 10.6, -19.6)
+      .Q(11.6, -17.6, 13.8, -16.2)
+      .Q(18, -14.6, 21.6, -12.4)
+      .L(20.4, -12.5)
+      .Q(15.5, -13.4, 12.4, -15.2)
+      .Q(9, -17.4, 7.4, -20.4)
+      .Q(5, -23.6, 1, -26.2);
+  else
+    p.M(-15.8, -4.8)
+      .Q(-11.4, -8, -11.6, -11.5)
+      .C(-13.4, -19.5, -8, -26.2, -1.5, -26.2)
+      .Q(-7.2, -21, -6.4, -15)
+      .L(-3.6, -12.6)
+      .L(-7, -8.4);
   p.fill(FUR_SH, shadeA);
 
   // Pale mask: lower muzzle, cheek and the cheek tufts, with a sharp graphic upper edge.
@@ -507,12 +521,22 @@ function drawTorso(p: Cel, rig: Rig, h: number): void {
     .Q(10, -15, 6.2, -9)
     .Q(7.6, -4, 7, 1);
   p.cel(JACKET, RIM, RIM_W);
-  p.M(-6.5, 1)
-    .Q(-7.6, -5, -6, -9)
-    .Q(-9.8, -17, -8.6, -24.5 * sy)
-    .Q(-8, -29 * sy, -3, -29.5 * sy)
-    .Q(-5.4, -20, -1.6, -11)
-    .Q(-2.4, -4, -1.4, 1);
+  // One hard shadow down the side away from the light: the back facing right, the front facing left.
+  if (p.flipped)
+    p.M(7, 1)
+      .Q(7.6, -4, 6.2, -9)
+      .Q(10, -15, 9.6, -22 * sy)
+      .Q(9, -28 * sy, 4.5, -29 * sy)
+      .L(2.5, -29.2 * sy)
+      .Q(5.6, -20, 2, -11)
+      .Q(2.6, -4, 1.8, 1);
+  else
+    p.M(-6.5, 1)
+      .Q(-7.6, -5, -6, -9)
+      .Q(-9.8, -17, -8.6, -24.5 * sy)
+      .Q(-8, -29 * sy, -3, -29.5 * sy)
+      .Q(-5.4, -20, -1.6, -11)
+      .Q(-2.4, -4, -1.4, 1);
   p.fill(JACKET_SH, shadeA);
   // Chest blaze in the V of the crossed collar.
   p.M(0.8, -29.6 * sy)
@@ -557,6 +581,10 @@ function drawTorso(p: Cel, rig: Rig, h: number): void {
 
   // Jacket skirt below the sash: asymmetric, longer and pointed at the front, split at the hip.
   const ah = Math.abs(h);
+  // Folded up short while he is a ball.
+  const fy = 1 - 0.8 * rig.spinW;
+  p.push(0, -5.5 * (1 - fy), 0, 1 - 0.2 * rig.spinW, fy);
+  p.warp = 0;
   p.M(-7, -6.4)
     .Q(-9.6 - 1.2 * h, -1, -10.6 - 3.2 * h, 5.4 - 1.2 * ah)
     .L(-3.2 - 1.5 * h, 3.6)
@@ -582,6 +610,8 @@ function drawTorso(p: Cel, rig: Rig, h: number): void {
     .L(2 - 2.4 * h, 4.9)
     .L(8.3 - 3.8 * h, 8.2 - 1.6 * ah);
   p.fill(TEAL);
+  p.pop();
+  p.warp = rig.curl;
 
   // Wide crimson sash.
   p.M(-7.4, -12.6).Q(0, -10.6, 7.8, -13.2).L(7.5, -6).Q(0, -3.8, -7.2, -5.8);
@@ -602,9 +632,10 @@ function drawTorso(p: Cel, rig: Rig, h: number): void {
   p.fill(CRIMSON_SH);
 }
 
-function drawBlade(p: Cel): void {
-  // Short blade across the lower back, drawn in torso space: wrapped hilt up and back.
-  p.push(BLADE.x, BLADE.y, BLADE.rot);
+function drawBlade(p: Cel, tuck: number): void {
+  // Short blade across the lower back, drawn in torso space: wrapped hilt up and back. In the
+  // somersault's ball it is drawn in against the back so nothing rigid pokes out.
+  p.push(BLADE.x + 5 * tuck, BLADE.y - 3 * tuck, BLADE.rot + 0.9 * tuck, 1 - 0.55 * tuck);
   p.M(2, -1.5).L(-13, -1.3).Q(-14.6, 0, -13, 1.3).L(2, 1.5);
   p.fill(INK);
   p.M(-7.4, -2.3).L(-6, -2.3).L(-6, 2.3).L(-7.4, 2.3);
@@ -639,7 +670,7 @@ export function drawYako(p: Cel, rig: Rig, sec: Secondary): void {
 
   body(p, rig);
   torsoFrame(p, rig);
-  drawBlade(p);
+  drawBlade(p, rig.spinW);
   p.pop();
   p.pop();
 

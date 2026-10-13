@@ -33,6 +33,15 @@ ember-lit tip), drawn as flat cel shapes. Ported from `src/concepts/designs/yako
 - **Run bob** (`bob()`): a dip while the knee gives in the stance, a ballistic arc in the float.
 - Wrists (`wristN/F`) are springs driven by the hand's own motion; the hand shape rotates by them.
 
+- In the ball the blade is drawn in against the back, the jacket skirt is folded short and the neck
+  anchor sinks toward the knees (`spinW` in draw.ts / rig.ts), so nothing rigid pokes out.
+- Authored body shadows (torso, skull, ears) have a second version for facing left (`p.flipped`), so
+  the light stays upper right in both facings.
+- Wall jump: `KICK` pose for ~0.3 s (legs long toward the wall). Wall slide: hand slips, look-down
+  pulses, tail sway. Idle beats: sniff, hand to the hilt (the hand hangs otherwise). Landing: tail drop
+  spring (`landS`). Fall: `FALL` -> `REACH` by fall speed.
+- To land mid-somersault for a test: `R6 R+J1 R3 R+J1 R50` on flat ground (tap jumps).
+
 ## Gotchas
 - A stiffened chain flips if kG + kL per sub-step exceeds 1 (the tail hung straight down in the dash).
   The copy clamps the sum to 0.85; hooded's chain clamps each to 0.9 only.

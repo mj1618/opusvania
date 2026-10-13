@@ -20,6 +20,7 @@ import {
   approach,
   bell,
   clamp,
+  easeInOut,
   hermite,
   ik2,
   ikOut,
@@ -109,7 +110,7 @@ export const CYCLE = 240;
 export const SPIN_T = 0.42;
 /** Its beats as fractions of that: the snap in ends, the snap out begins. */
 const SPIN_IN = 0.2;
-const SPIN_OUT = 0.74;
+const SPIN_OUT = 0.66;
 const CYCLE_D = CYCLE / K;
 /** Fraction of the cycle a foot is planted. */
 export const STANCE = 0.17;
@@ -127,13 +128,13 @@ const TUCK = pose([
   -0.1, -0.5, 0.18,
 ]);
 const FALL = pose([
-  -1, -36.5, -0.07, 0.03, 0.1, 6, -2, 0.45, -8, -9, 0.95, -11, 13, 5, 16, 1, 1, 0, 0, 0.05, 0, -0.5, -0.04,
+  -1, -36.5, -0.07, 0.03, 0.1, 6, -2, 0.45, -8, -9, 0.95, -11, 13, 5, 16, 1, 1, 0, 0, 0.05, 0, -0.3, -0.04,
   -0.3, -0.9, -0.08,
 ]);
 /** The somersault's tuck: knees to the chest, arms wrapped round the shins, chin down. */
 const SPIN_TUCK = pose([
-  -13, -31, 0.45, 0.6, 1.45, 0, -21, 1.0, -2.5, -20, 1.1, -1, 15, -3, 14, -0.6, -0.6, 0, 0, 0.8, 0, 1.3, 0.44,
-  0.9, 0.6, 1.3,
+  -13, -31, 0.45, 0.6, 1.5, 0, -21, 1.0, -2.5, -20, 1.1, -1, 15, -3, 14, -0.6, -0.6, 0, 0, 0.8, 0, 0.95, 0.21,
+  0.9, 0.6, 1.5,
 ]);
 /** Coming out of it: legs let out long, chest up, arms opening. */
 const EXTEND = pose([
@@ -142,8 +143,13 @@ const EXTEND = pose([
 ]);
 /** The last of a fall: reaching for the ground with pointed toes, arms lifted behind. */
 const REACH = pose([
-  -1, -37.5, -0.03, 0.02, 0.12, 5, 0, 0.75, -6, -4, 1.0, -14, 4, 8, 9, 1, 1, 0, 0, 0.05, 0, -0.7, -0.04, -0.4,
-  -1, -0.05,
+  -1, -39, -0.05, -0.02, 0.14, 4, 0, 0.85, -5, -2.5, 1.05, -19, 5, 15, 7, 1, 1, 0, 0, 0, 0, -0.45, -0.02,
+  -0.6, -1, 0.1,
+]);
+/** Pushing off a wall: legs driven out long behind, chest and arms leading. */
+const KICK = pose([
+  2, -37, 0.3, -0.06, -0.06, -15, -3, 1.25, -21, -10, 1.45, 11, 3, -12, 9, 1, 1, 0, 0, 0, 0, -0.9, 0.05, -0.6,
+  0.6, 0.6,
 ]);
 const WALL = pose([
   1.5, -30, -0.04, 0.1, 0.1, 20.4, -9, -1.05, 20.6, -22, -1.15, 19, -14, -6, 13, -0.6, 1, -1, 0.6, 0.6, 0,
@@ -286,6 +292,7 @@ export class Rig {
   private readonly wrN = new Spring(0, 17, 0.38);
   private readonly wrF = new Spring(0, 15, 0.4);
   private spinX = 0;
+  private kickT = 1;
   private spinT = 0;
   private spinDir = 1;
   private spinFree = false;
@@ -360,8 +367,7 @@ export class Rig {
           } else if (e.kind === 'wall') {
             sig.wallJump = true;
             this.squash.v += 0.8;
-            // The legs give as he kicks off the wall.
-            this.crouch.v += 75;
+            this.kickT = 0;
           }
           break;
         case 'land':
@@ -488,6 +494,18 @@ export class Rig {
       this.spinX = 0;
       this.spinDir = Math.abs(p.vx) > 1.5 ? (p.vx > 0 ? 1 : -1) : sgn;
     }
+    // --- Wall jump: a beat of full extension off the wall before the air pose takes over.
+    if (this.kickT < 1) {
+      this.kickT = Math.min(1, this.kickT + (dt / 0.3) * (p.grounded || dash || wall ? 4 : 1));
+      const w = (1 - (1 - sat(this.kickT / 0.16)) ** 3) * (1 - smoothstep(0.4, 1, this.kickT));
+      for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, KICK[i]!, w * 0.9);
+    }
+    // On the wall: now and then a look down at the drop.
+    if (this.wWall > 0.01) {
+      const lk = pulse(clock, 2.1, 1.1, 67, 0.75);
+      const down = lk > 0 ? smoothstep(0, 0.25, lk) * (1 - smoothstep(0.7, 1, lk)) : 0;
+      out[HR]! += 0.6 * down * this.wWall;
+    }
     let extend = 0;
     if (this.spinning) {
       if (p.grounded || dash || wall) this.spinFree = true;
@@ -503,10 +521,10 @@ export class Rig {
         this.spinX = TAU * spinCurve(u);
         // In fast, hold, out fast.
         const tin = sat(u / SPIN_IN);
-        const tout = sat((u - SPIN_OUT) / (0.97 - SPIN_OUT));
+        const tout = sat((u - SPIN_OUT) / (0.93 - SPIN_OUT));
         this.spinW = (1 - (1 - tin) ** 3) * (1 - tout * tout * (3 - 2 * tout));
         // The legs let out a little past the fall pose and settle back.
-        extend = smoothstep(SPIN_OUT, 0.98, u) * (1 - smoothstep(1.05, 1.7, u));
+        extend = smoothstep(SPIN_OUT, 0.95, u) * (1 - smoothstep(1.05, 1.7, u));
         if (u >= 1.7) this.spinning = false;
       }
       this.spinPhi = this.spinX * this.spinDir;
@@ -568,7 +586,8 @@ export class Rig {
     const hipY = Math.min(out[HY]!, -19);
     set(j, J_HIP, out[HX]!, hipY);
     const sy = 1 + 0.012 * this.breath;
-    this.torso(1.6, -30.2 * sy);
+    // In the ball the head sinks between the shoulders, toward the knees.
+    this.torso(lerp(1.6, 4.5, this.spinW), lerp(-30.2 * sy, -23.5, this.spinW));
     // The head rides the neck with a little vertical lag, and stays level.
     this.headDy = this.headS.step(clamp(dragY * 0.22, -1.6, 1.6) * (1 - this.spinW), dt);
     set(j, J_NECK, this.tX, this.tY + this.headDy);
@@ -633,9 +652,11 @@ export class Rig {
     ftx += dragX * 0.75 * loose;
     fty += dragY * 0.6 * loose;
     // On the wall the hand slips a little now and then and catches again.
-    const sl = this.wWall > 0.5 ? pulse(clock, 0.82, 0.3, 61, 0.8) : 0;
-    this.slip = sl > 0 ? Math.sin(Math.PI * sl) ** 2 : 0;
-    nty += this.slip * 4.5 * this.wWall;
+    const sl = this.wWall > 0.5 ? pulse(clock, 1.05, 0.5, 61, 0.85) : 0;
+    // A quick slide down, a slower reach back up.
+    this.slip = sl > 0 ? (sl < 0.3 ? smoothstep(0, 0.3, sl) : 1 - smoothstep(0.3, 1, sl)) : 0;
+    nty += this.slip * 13 * this.wWall;
+    ntx -= this.slip * 1.5 * this.wWall;
     if (this.handsFresh) {
       this.handsFresh = false;
       this.hnx.snap(ntx);
@@ -731,24 +752,29 @@ export class Rig {
     o[HY] = -35.3 + 0.3 * breath + 0.25 * Math.abs(shift);
     o[LEAN] = 0.015 + 0.016 * shiftLate;
     o[CURL] = 0.03 - 0.014 * breath;
-    o[HR] = 0.035 + 0.03 * nod + 0.008 * late - 0.11 * gl;
+    // Quiet beats: a sniff of the air (the muzzle lifts, the nose works), a hand going to the hilt.
+    const sn = pulse(clock, 7.9, 1.7, 73, 0.8);
+    const sniff = sn > 0 ? smoothstep(0, 0.22, sn) * (1 - smoothstep(0.7, 1, sn)) : 0;
+    const hl = pulse(clock, 10.3, 5.2, 79, 0.85);
+    const hilt = hl > 0 ? easeInOut(sat(hl / 0.14)) * (1 - easeInOut(sat((hl - 0.84) / 0.16))) : 0;
+    o[HR] = 0.035 + 0.03 * nod + 0.008 * late - 0.11 * gl - sniff * (0.2 + 0.035 * Math.sin(clock * 21));
     o[AX] = 1;
     o[AY] = 0;
     o[AP] = 0;
     o[BX] = 15;
     o[BY] = 0;
     o[BP] = 0.1;
-    o[NHX] = -6;
-    o[NHY] = 14;
+    o[NHX] = -3.5 + 0.6 * shift;
+    o[NHY] = 21.5 - 0.3 * late;
     o[FHX] = 2.6 + 0.5 * shiftLate;
     o[FHY] = 20.6 - 0.3 * late;
-    o[NB] = -1;
+    o[NB] = lerp(0.6, -1, hilt);
     o[FB] = 0.7;
     o[TW] = -1.4 + 0.3 * shift;
     o[SHY] = 0.9 - 0.25 * breath;
-    o[GRIP] = 0.35;
-    o[HILT] = 1;
-    o[TLIFT] = -0.42 + 0.07 * noise1(clock * 0.3, 13);
+    o[GRIP] = 0.2 + 0.3 * hilt;
+    o[HILT] = hilt;
+    o[TLIFT] = -0.55 + 0.07 * noise1(clock * 0.3, 13);
     o[TCURL] = 0;
     o[SLIFT] = 0;
     o[HEM] = 0.08 * late;
@@ -822,7 +848,7 @@ export class Rig {
     const fl = smoothstep(2, 11, p.vy);
     const tk = Math.max(0, 1 - r - fl);
     // The fall has two beats: loose at first, then a reach for the ground as it speeds up.
-    const rc = smoothstep(9.5, 16.5, p.vy);
+    const rc = smoothstep(7, 13.5, p.vy);
     for (let i = 0; i < NP; i++)
       o[i] = RISE[i]! * r + TUCK[i]! * tk + (FALL[i]! + (REACH[i]! - FALL[i]!) * rc) * fl;
     // Air control leans the body.

@@ -69,6 +69,7 @@ export class Secondary {
   private readonly earNS = new Spring(0, 31, 0.42);
   private readonly earFS = new Spring(0, 26, 0.46);
   private readonly hemS = new Spring(0, 15, 0.5);
+  private readonly landS = new Spring(0, 13, 0.32);
 
   constructor() {
     this.all = [this.tail, this.sashA, this.sashB, this.charm];
@@ -82,6 +83,7 @@ export class Secondary {
     this.earNS.snap(0);
     this.earFS.snap(0);
     this.hemS.snap(0);
+    this.landS.snap(0);
     this.smear = 0;
   }
 
@@ -93,7 +95,7 @@ export class Secondary {
     this.smear += ((p.motion === 'dash' && p.freeze === 0 ? 1 : 0) - this.smear) * (1 - Math.exp(-dt * 20));
     // In the somersault the chains turn with the body but looser, so the tail wraps round it.
     const flip = rig.spinPhi * (rig.yawRaw >= 0 ? 1 : -1);
-    const stiff = (1 + dash * 2.2) * (1 + 2.2 * rig.spinW);
+    const stiff = (1 + dash * 2.2) * (1 + 1.1 * rig.spinW);
     for (const c of this.all) {
       c.floorY = floorY;
       c.wallSide = wallSide;
@@ -117,7 +119,12 @@ export class Secondary {
     tail.ay = rig.Y;
     // Air lifts loose things when he falls and presses them down when he rises.
     const airLift = -clamp(p.vy, -12, 22) * rig.wAir;
-    tail.lift = rig.tailLift + sway + fl + clamp(rig.dragY * 0.03, -0.25, 0.25) + airLift * 0.034;
+    // On the wall it sways free; on a landing it drops and springs back up.
+    const wallSway = rig.wWall * (0.2 * Math.sin(clock * 2.3) + 0.12 * Math.sin(clock * 3.7 + 1));
+    if (rig.sig.landed > 0) this.landS.v += clamp(rig.sig.landed * 0.4, 1.5, 7);
+    const drop = this.landS.step(0, dt);
+    tail.lift =
+      rig.tailLift + sway + fl + wallSway + drop + clamp(rig.dragY * 0.03, -0.25, 0.25) + airLift * 0.034;
     tail.curl = rig.tailCurl + still * 0.03 * Math.sin(clock * 0.71 + 2) + rig.wWall * -0.03;
     tail.stiff = stiff;
     tail.lenScale = 1 + this.smear * 0.3;
