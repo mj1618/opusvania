@@ -1,59 +1,89 @@
-# Reference study: the Grove vs Ori / Hollow Knight (2026-10-13)
+# Reference study: the Grove vs Ori / Hollow Knight (second teardown, 2026-10-13)
 
-Side-by-side of our seven wide stops (`npm run shots`, Vesper) against 20 official Steam store
-screenshots (Ori BF:DE 387290, Ori WotW 1057090, Hollow Knight 367520, Silksong 1030300), all at
-1920x1080. Captures live in `shots/reference/` (gitignored, with `sources.txt`); never commit them.
-Luma = Rec.709 on sRGB bytes, 0-255. Re-measure after a look change with the same definitions.
+Ours (Vesper, with pickups, enemies and HUD) against 71 official Steam store screenshots (Ori BF:DE
+387290, Ori WotW 1057090, Hollow Knight 367520, Silksong 1030300), all 1920x1080. Captures live in
+`shots/reference/` (gitignored, with `sources.txt`); never commit them. Luma = Rec.709 on sRGB bytes,
+0-255. Re-measure with `npm run look:stats` (same definitions).
 
-## Measured (group averages)
-| | ours | Ori BF | Ori WotW | HK | Silksong |
-|---|---|---|---|---|---|
-| mean luma | **95** (62-135) | 51 | 48 | 59 | 58 |
-| median luma | 78 | 45 | 35 | 40 | 48 |
-| near-black area (luma < 15) | **7%** (0-19) | 28% | 30% | 29% | 19% |
-| dark area (luma < 38) | 26% | 55% | 54% | 51% | 41% |
-| near-white area (luma > 217) | **6%** (up to 17) | 0.7% | 1.2% | 2.9% | 0.4% |
-| corners / centre luma | 0.42 | 0.37 | 0.21 | 0.21 | 0.20 |
-| outer 10% border luma | 72 | 36 | 28 | 29 | 33 |
-| top quarter luma | 96 | 51 | 41 | 31 | 49 |
-| hero height, % of frame | 8% | 4-6.5% | 4.5-6.5% | 11-12% | 12-16% |
-| hero brightest part (p90 luma) | 215-237 | 244-254 | 254 | 244-255 | 233-251 |
-| hero darkest part (p10 luma) | 74-174 | - | - | 17-61 | 18-22 |
-| hero peak / surround mean | 1.2-2.0 | 2.3-4.3 | 1.7-3.0 | 1.4-2.8 | 2.0-4.1 |
-| feet line, % down the frame | 71% (ground stops) | 55-71% | 48-67% | 54-72% | 54-81% |
-| gradient energy (detail everywhere) | 14.8 | 6.1 | 10.2 | 15.6 | 13.9 |
-| warm-hue share, warmest frame | 22% (centre zone) | 33% | 92-99% | - | - |
+## The owner's taste (outranks every number here)
+Darker and subtler than the references on purpose: "it's just too bright in general, it looked better
+when it wasn't so bright"; "the highlights on the character are a bit annoying and make it look washed
+out and blurry". Never chase mean luma, hero glow, hero rim or bloom upward. Improve the picture through
+value structure, silhouette, local contrast, colour separation and where light is placed.
 
-Dominant hue bins (30 degree bins, weighted by chroma): ours is azure/cyan in the left zone AND the
-right zone (azure 58%, violet < 3%), and cyan/teal with 11-19% yellow in the "golden" centre. Ori
-frames commit: one hue family holds 70-95% of the chroma and the accent is its complement.
+## How to capture (fixed stops hide problems)
+The seven `npm run shots` stops stand on bare ground; a glare bubble was missed that way. Also walk the
+ground route (a frame every 250 px, idle and running), stand on every island and ledge, pan the camera
+along the top band (`cam({x, y: 540})`), and shoot zoom-2 sequences of run, somersault, glide, slash
+chain, pod and glint line, with pickups on. One Playwright script on `tools/lib/browser.ts` does it in
+20 s; the page can reload under you when other agents save files.
+
+## Measured
+"Dark refs" = the 21 reference frames with mean luma under 40 (the comparable ones).
+| | ours, 46 ground-walk frames | ours, 7 stops | dark refs | all 71 refs |
+|---|---|---|---|---|
+| mean luma | 29 (26-34) | 31 | 29 | 57 |
+| near-black area (luma < 15) | 37% | 33% | 48% | 27% |
+| dark grey area (15-38) | 37% | 39% | 27% | 23% |
+| low-mid area (38-80) | 21% | 22% | 17% | 24% |
+| area above 150 | 0.5% | 1.0% | 2.0% | 9% |
+| near-white area (> 217) | 0.04% | 0.1% | 0.5% | 1.8% |
+| brightest 0.1% of pixels (p99.9) | 189 | 187 | 237 | 245 |
+| mean chroma (max - min channel) | 21 | 22 (left 30, centre 18, right 21) | 34 | 49 (Ori 53-59) |
+| outer border luma | - | 20 | - | 36 |
+| top quarter / bottom quarter luma | 28 / 14 | 25 / 23 | - | 45 / 49 |
+| corners / centre | - | 0.35 | - | 0.34 |
+| dominant hue share | - | left 72-81%, centre 35-42%, right 40% | - | 63% (Ori 70-95%) |
+| hero p10 / p90 | 21 / 116 (run frames) | 27 / 108 | - | Ori p90 254, HK 17-61 / 244+ |
+| hero p90 / surround | 4.0 (2.8-6.0) | 3.9 | - | 1.4-4.3 |
+| hero height, feet line | 8-9%, 72% | same | - | 4-16%, 48-81% |
+| pixels changing by > 6 luma within 1 s, hero idle | 7% (top third 5%) | - | - | - |
 
 ## Principles (ours to keep)
-- **Low key, small lights.** The references are half as bright as us and a quarter of every frame is
-  near-black. Light is scarce, so it means something. We are a high-key picture: sky and fog are the
-  brightest and largest things, so nothing can glow against them.
-- **The hero owns the top of the value range.** Ori and the Knight's mask are the only pure white on
-  screen. Either the hero is the brightest thing (Ori) or carries the full range inside itself, black
-  next to white (HK). Vesper is mid-value on mid-value with no black and no white.
-- **One hue family per place, one complement accent.** Zone identity comes from committing the whole
-  frame (shadows included) to the family, not from tinting a cyan picture.
-- **Frame closes at the edges.** Top is canopy or ceiling, bottom is silhouette, corners are a fifth
-  of the centre. The bright area is one shape in the middle third, behind the walk line.
-- **Ground is a form, not a section.** Ori's ground is a lit top plane rolling into a shadowed side
-  that is lost in darkness within ~150 px; HK's is flat but black below. Neither shows a textured
-  cutaway. A ruler-straight grass line across the screen is the strongest "tile platformer" tell.
-- **Focus is a depth cue.** Ori blurs both far background and foreground heavily; only the playfield
-  band is crisp. HK inks the playfield and blurs everything else. Equal sharpness everywhere reads flat.
-- **Big simple shapes, tiny rich details.** One or two huge forms per screen, then detail clustered
-  where light falls and absent in shadow. Detail spread evenly reads as noise.
-- **Set dressing tells something.** Reference screens each hold one object with a story (a well, a
-  shrine, a cage, a lamp, a bench). Plants alone are not a place.
-- **Motes are small.** 2-5 px sharp points clustered in shafts and near water, plus a few big soft
-  bokeh ones in front; not dozens of 12-16 px bloomed blobs spread evenly.
-- HUD: HK top-left (x 6-28%, y 6-19%); Ori a thin strip bottom-centre (y ~95%). Both leave the
-  centre and the walk line clear.
+- **Dark is a range, not a level.** We match the dark references' mean exactly but sit in the middle
+  of their range: 10 points less true black, 10 points more dark grey, and our brightest pixels stop
+  at ~188 where theirs reach ~237 on half a percent of the frame. Deepen the big masses and let a few
+  tiny lights be really light; never lift the whole.
+- **A dark figure needs a paler stage behind it.** Every dark reference puts a pool of mist or glow
+  directly behind the walk line (luma 50-90), so hero, enemies and plants read as silhouettes. This
+  is how to make Vesper findable without lighting her.
+- **One hue family per place, one complement accent.** The left glade commits; the centre is olive
+  and thin (chroma 18); the right is violet with emerald foliage and reads best.
+- **Frame closes at the edges.** Done; do not open it again.
+- **Ground is a form, not a section.** It falls to black now, but the walk line is ruler-straight and
+  the steps are boxes; the bottom quarter of every ground frame is an empty slab.
+- **Focus is a depth cue.** Done: only the playfield band is crisp.
+- **Big simple shapes, tiny rich details.** One authored form per screen at 300-500 px; our props are
+  90-130 px and the lumen pods (80-90 px, twelve of them) are louder than they are.
+- **Everything breathes.** In the references background foliage, fog, shafts and foreground all move.
+  Ours moves only in the playfield strip.
+- **Small lights have a hierarchy.** Brightest: the thing the player should look at next. Today the
+  white moth flock and 20-30 idle glints per screen (luma 190-215) outrank the hero's face (~110).
+- **Effects are the one place for white.** HK's nail slash is a fat pure-white wedge for 3-4 frames
+  with a flash on the target; ours is a thin grey crescent (peak ~170) and the target does not flash.
+- HUD: top-left, small, leaves the centre and walk line clear. Ours does.
 
-## Gotcha found on the way
-Resizing the window after boot (playwright `resize` on an open page) leaves the far/sky composite at
-the old size: a hard black rectangle right of x~1283 and below y~720 behind the mid layer. Reload
-after resizing; worth a real fix in the far target's resize path.
+## Scorecard of the first study's gaps (2026-10-13, second pass)
+1. Key too high (mean 95): closed (31).
+2. Hero mid-value on mid-value: closed by a different road (dark figure, pale face, ratio 3.9); she is
+   not the brightest thing, by the owner's choice.
+3. Too little near-black (7%): closed (33-37%), still short of the dark references' 48%.
+4. Too much near-white (6%): closed and past it (0.04%); no real highlights left anywhere.
+5. Zone hue commitment: left closed, centre and right improved (35-42%, 40%).
+6. Frame edges open: closed (border 20, top quarter 25, corners/centre 0.35).
+7. Ground as a textured section: improved (falls to black); the line and the steps are still boxes.
+8. Equal sharpness everywhere: closed.
+9. Detail spread evenly: improved (huge trunks), still even along the walk line.
+10. No story props: improved (stone, cocoon lantern, shrine), all too small to be landmarks.
+11. Motes too big and too many: closed; idle glints have taken over the "sparkle everywhere" role.
+12. HUD placement: closed.
+13. Hero size (8%): unchanged, acceptable.
+14. Feet line (71%): unchanged (72%), acceptable; what is under it is the problem.
+15. Islands as slabs: closed (the island family).
+
+## Defects found on the way (still open when this was written)
+- Pale stair-stepped rectangles in the far layer of the left zone, world x ~1700-2100, seen from the
+  upper route and the top of a glide.
+- A huge hard-edged disc and straight-edged facets in the centre zone's warm sky opening, seen from the
+  high ledge and trunk B.
+- Resizing the window after boot leaves the far/sky composite at the old size; reload after resizing.
