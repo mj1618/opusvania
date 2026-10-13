@@ -11,12 +11,19 @@ import type { PlayerView } from '../../contract';
 import type { PointLight } from '../../lights';
 
 export const WATER = {
-  shallow: 0x35b4c2,
+  shallow: 0x257f92,
   deep: 0x0a2746,
   /** Sky as the water mirrors it: at the surface (horizon) and deeper (overhead). */
-  skyNear: 0x6fc0bc,
+  skyNear: 0x41808a,
   skyFar: 0x16345a,
-  line: 0xd4fbff,
+  line: 0x9ccad6,
+  /**
+   * Strength of the surface line, of its travelling glints and of the foam at the banks. At
+   * 1.05 / 1.9 / 0.75 with a near-white line the band peaked at 255 before post: the brightest
+   * thing in the left zone, brighter than the lantern beside it. A soft glow now, a few sparks
+   * (and `shallow` / `skyNear` a third darker: the body under the line was as bright as the line).
+   */
+  lineGain: [0.24, 0.5, 0.2] as const,
   /** Alpha of the body behind the character, top and bottom. */
   backAlpha: [0.72, 0.94] as const,
   /** Alpha of the tint over the character, top and bottom. */
@@ -51,6 +58,9 @@ void main() {
 }`;
 
 const FRAG = `#version 300 es
+#define LINE_GAIN ${WATER.lineGain[0].toFixed(3)}
+#define LINE_GLINT ${WATER.lineGain[1].toFixed(3)}
+#define LINE_FOAM ${WATER.lineGain[2].toFixed(3)}
 precision highp float;
 in vec2 vWorld;
 uniform vec4 uPool;     // x0, x1, surface y, floor y
@@ -123,7 +133,7 @@ void main() {
     float bands = 0.5 + 0.5 * sin((x + wob) * 0.052 + sin((x + wob) * 0.017) * 2.0);
     bands = smoothstep(0.25, 0.85, bands);
     vec3 sky = mix(uSkyNear, uSkyFar, smoothstep(0.0, 0.75, dn)) * (0.45 + 0.55 * bands);
-    float refl = exp(-depth / (total * 0.6)) * 0.8;
+    float refl = exp(-depth / (total * 0.6)) * 0.55;
     vec3 c = mix(body, sky, refl);
     float a = mix(uAlpha.x, uAlpha.y, pow(dn, 0.6)) * under;
     o = vec4(c * a, a);
@@ -141,10 +151,10 @@ void main() {
   float cx1 = sin(x * 0.09 + sin(depth * 0.3 + t * 0.9) * 1.5 + t * 0.8);
   float cx2 = sin(x * 0.05 - depth * 0.25 - t * 0.6 + sin(x * 0.021 + t * 0.3) * 2.0);
   float caustic = pow(1.0 - abs(cx1), 4.0) * pow(1.0 - abs(cx2), 2.0);
-  add += uLine * caustic * 0.42 * smoothstep(total - 34.0, total - 4.0, depth) * under;
+  add += uLine * caustic * 0.24 * smoothstep(total - 34.0, total - 4.0, depth) * under;
   // The same light wandering up the two banks.
   float bankGlow = exp(-min(x - uPool.x, uPool.y - x) / 14.0);
-  add += uLine * bankGlow * (0.12 + 0.3 * pow(1.0 - abs(sin(depth * 0.2 + t * 1.1)), 4.0)) * under;
+  add += uLine * bankGlow * (0.06 + 0.15 * pow(1.0 - abs(sin(depth * 0.2 + t * 1.1)), 4.0)) * under;
   // Small fish: slim dark shapes that hang still, then dart to a new spot. A pale glint on the flank.
   for (int i = 0; i < 3; i++) {
     float fi = float(i);
@@ -169,7 +179,7 @@ void main() {
   // Foam where the water meets the banks.
   float bankD = min(x - uPool.x, uPool.y - x);
   float foam = exp(-bankD / 9.0) * exp(-pow((depth - 1.0) / 2.6, 2.0)) * (0.6 + 0.4 * sin(t * 2.1 + x * 0.7));
-  add += uLine * foam * 0.75;
+  add += uLine * foam * LINE_FOAM;
   // Surface line: bright where the swell tilts toward the light, with travelling glints.
   float line = exp(-pow((depth - 0.6) / 1.5, 2.0));
   float glow = exp(-max(depth, 0.0) / 7.0) * under;
@@ -177,7 +187,7 @@ void main() {
   float cell = floor(x / 7.0);
   float tw = hash(cell) * 6.283;
   float glint = pow(max(0.0, sin(t * (1.1 + hash(cell + 3.0)) + tw)), 14.0) * step(0.62, hash(cell + 9.0)) * pow(sin(3.14159 * fract(x / 7.0)), 2.0);
-  add += uLine * (line * tilt * 1.05 + glow * 0.16 + line * glint * 1.9);
+  add += uLine * (line * tilt * LINE_GAIN + glow * 0.12 + line * glint * LINE_GLINT);
   // The crown of a landing splash: a bright ring racing outward along the surface.
   float spAge = t - uSplash.y;
   if (uSplash.z > 0.0 && spAge > 0.0 && spAge < 0.9) {

@@ -72,7 +72,7 @@ export class PlayfieldLayer implements EnvModule {
     const { paint, info } = paintTerrain(scene);
     this.info = info;
     const scale = Math.min(PLAYFIELD.bakeScaleMax, Math.max(PLAYFIELD.bakeScaleMin, ctx.viewScale()));
-    const baked = bakeTerrain(ctx.renderer, paint, scale);
+    const baked = bakeTerrain(ctx.renderer, paint, scale, info.mist);
     paint.albedo.destroy();
     paint.relief.destroy();
 

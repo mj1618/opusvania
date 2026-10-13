@@ -198,13 +198,18 @@ function hull(
 /** Dark washes under the widest part of a body: the belly falls away from the light. */
 function bellyShade(p: Paint, s: SolidRect, under: (u: number) => number, kit: IslandKit, k = 1): void {
   const x1 = s.x + s.w;
+  // (It ends just under the body. It ran 260 px down as a ruled box, and a tint lands on ANY body
+  // behind it: F7 cut the shrine's wing-stone in two along a straight line at y 900.)
+  let deep = 0;
+  for (let u = 0; u <= 1; u += 0.1) deep = Math.max(deep, under(u));
+  const bottom = s.y + s.h + deep + 16;
   for (let j = 0; j < 3; j++) {
     const band: number[] = [];
     for (let x = s.x - 40; x <= x1 + 40; x += 8) {
       const u = clamp((x - s.x) / s.w, 0, 1);
       band.push(x, s.y + 20 + (s.h - 20 + under(u)) * (0.3 + j * 0.22) + wobble(x, s.x + j * 9, 44) * 5);
     }
-    band.push(x1 + 40, s.y + s.h + 260, s.x - 40, s.y + s.h + 260);
+    band.push(x1 + 40, bottom, s.x - 40, bottom);
     p.tint(band, kit.abyss, (0.3 + j * 0.06) * k);
   }
 }

@@ -700,6 +700,12 @@ export interface StageSpec {
   ease: number;
   /** Raised walkable surfaces that get their own thinner sheet: x range, y, relative strength. */
   ledges: ReadonlyArray<{ x0: number; x1: number; y: number; k: number }>;
+  /**
+   * Kick walls: mist banked up against a face she climbs, from `y0` down to `y1`, thickest at the
+   * face and gone `reach` px out on the open side (`dir`: -1 = the air is west of x). She hangs
+   * and swings there with nothing of the playfield behind her.
+   */
+  walls?: ReadonlyArray<{ x: number; y0: number; y1: number; dir: -1 | 1; k: number; reach: number }>;
   /** How much of the sheet is wisps rather than an even band, 0..1 (it drifts with the layer's mist). */
   wisp: number;
 }
@@ -716,6 +722,13 @@ function stageGLSL(st: StageSpec | undefined): string {
         `  sb = max(sb, stageBand(${f(l.y)} - sp.y, hk) * ${f(l.k)} * smoothstep(${f(l.x0 - 120)}, ${f(l.x0 + 60)}, sp.x) * (1.0 - smoothstep(${f(l.x1 - 60)}, ${f(l.x1 + 120)}, sp.x)));`,
     )
     .join('\n');
+  const walls = (st.walls ?? [])
+    .map(
+      (w) =>
+        `  { float d = (sp.x - ${f(w.x)}) * ${f(w.dir)}; float o = 1.0 - clamp(d / (${f(w.reach)} * hk), 0.0, 1.0);
+    sb = max(sb, smoothstep(-90.0, 10.0, d) * o * o * (3.0 - 2.0 * o) * ${f(w.k)} * smoothstep(${f(w.y0 - 240)}, ${f(w.y0 - 40)}, sp.y) * (1.0 - smoothstep(${f(w.y1 - 60)}, ${f(w.y1 + 40)}, sp.y))); }`,
+    )
+    .join('\n');
   return `
   // The mist stage: paler fog pooled just above the walk line of the playfield behind this pixel.
   vec2 sp = vec2(px, p.y + uZone.w);
@@ -725,6 +738,7 @@ function stageGLSL(st: StageSpec | undefined): string {
 ${steps}
   float sb = stageBand(gy - sp.y, hk);
 ${ledges}
+${walls}
   float dens = mix(1.0, 0.45 + 1.1 * (n * 0.55 + m * 0.45), ${f(st.wisp)}) * (1.0 + 0.12 * sin(uTime * 0.21 + sp.x * 0.0021));
   float sa = sb * dens * mix(mix(uStageK.y, uStageK.x, zl), uStageK.z, zr);
   acc += mix(mix(uStageC, uStageL, zl), uStageR, zr) * sa;

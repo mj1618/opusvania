@@ -70,6 +70,12 @@ export const FORMS = {
   footStoneSun: 0.4,
   tallRun: 0.5,
   /**
+   * A face taller than this is more than a jump (272): she goes up it by wall kicks, so it is a
+   * plain wall. No bank slope behind it, no buttress, stones or rootlets standing off it, nothing
+   * at its foot: `paintClimbFace` (pf-terrain.ts) paints it instead.
+   */
+  climbStep: 280,
+  /**
    * A step down with a trunk standing within this many px of its foot (the well before trunk A,
    * 128 px) is treated like a tall one, and more: see `wellStep`.
    */
@@ -216,6 +222,8 @@ interface Step {
   d: -1 | 1;
   pool: boolean;
   index: number;
+  /** A kick wall (FORMS.climbStep). */
+  climb: boolean;
 }
 
 /** A step whose lower ground is a narrow well between its face and a trunk (trunkXs: their west edges). */
@@ -235,6 +243,7 @@ function steps(segs: GroundSeg[]): Step[] {
       d: next.y > s.y ? 1 : -1,
       pool: s.pool || next.pool,
       index: i,
+      climb: Math.abs(next.y - s.y) >= FORMS.climbStep,
     });
   });
   return out;
@@ -277,6 +286,11 @@ export function paintBanks(
       }
       continue;
     }
+    // A kick wall stands free: any slope behind it is as dark as she is and exactly where she
+    // stands to start the climb and hangs while she kicks (the far bluff's bank was a black wedge
+    // 350 px wide that swallowed her, the shrine and the last of the rise).
+    // (And the step into the well: at any run its bank was a slope painted over a wall.)
+    if (st.climb || wellStep(fx, d, trunkXs)) continue;
     const underTrunk = trunkXs.some((tx) => Math.abs(tx - fx) < 40);
     // A tall face (the bluff) gets a steep shoulder of earth: at the usual run it was a 45 degree
     // slope from the lower ground to the lip, which is a ramp however dark it is painted.
@@ -411,9 +425,11 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
   for (const st of steps(segs)) {
     const r = rngFor(860, st.fx);
     const { fx, hi, lo, d } = st;
+    if (st.climb) continue;
     const E = kit.earth;
     const stony = st.index % 2 === 0;
-    if (stony || st.pool) {
+    const well = !st.pool && wellStep(fx, d, trunkXs);
+    if ((stony && !well) || st.pool) {
       // A stone outcrop set in the corner: its worn top is flush with the walk line, its nose
       // bulges out past the face.
       const c = kit.stone[(st.index * 3) % kit.stone.length] as number;
@@ -508,7 +524,7 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
       lit: mix(kit.rootWood, 0x6a8a80, 0.4),
       dark: E[4] as number,
     };
-    const count = stony ? 1 : 3;
+    const count = well ? 0 : stony ? 1 : 3;
     for (let k = 0; k < count; k++) {
       const sx = fx - d * range(r, 16, 58);
       const off = range(r, 10, 24);
@@ -566,7 +582,7 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
       // On a tall face it stands as a column with a short toe: leaning out as far as the face is
       // high it was a lit 45 degree ramp from the lower ground to the lip (the bluff's east side).
       const off = narrow ? range(r, 7, 11) : tall ? range(r, 14, 22) : range(r, 26, 36);
-      const toe = narrow ? range(r, 18, 26) : tall ? range(r, 50, 74) : H * range(r, 0.85, 1.1);
+      const toe = narrow ? range(r, 6, 10) : tall ? range(r, 50, 74) : H * range(r, 0.85, 1.1);
       const line = wander(
         cubic(
           fx - d * range(r, 60, 90),
@@ -620,7 +636,7 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
           by,
           bx + d * (narrow ? 8 : 26),
           lerp(by, lo, 0.6),
-          bx + d * range(r, 50, 80) * (narrow ? 0.4 : 1),
+          bx + d * range(r, 50, 80) * (narrow ? 0.12 : 1),
           lo + 6,
           9,
         ),
@@ -679,22 +695,23 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
       p.tint(
         ribbon(cling, (t) => 20 * (1 - t * 0.5) + 2),
         E[4] as number,
-        0.5,
+        narrow ? 0 : 0.5,
       );
-      limb(
-        p,
-        cling,
-        (t) => 15 * (1 - t * 0.45) + 2 + Math.max(0, Math.sin(t * 9 + 1)) * 3,
-        wood,
-        0.6,
-        0.06,
-        fx + 12,
-        {
-          bark: 0.5,
-          grain: 2,
-          lit: 0.14,
-        },
-      );
+      if (!narrow)
+        limb(
+          p,
+          cling,
+          (t) => 15 * (1 - t * 0.45) + 2 + Math.max(0, Math.sin(t * 9 + 1)) * 3,
+          wood,
+          0.6,
+          0.06,
+          fx + 12,
+          {
+            bark: 0.5,
+            grain: 2,
+            lit: 0.14,
+          },
+        );
       for (let k = 0; k < 5; k++) {
         const gx = fx + d * range(r, -8, 6);
         const len = range(r, 26, 78);
@@ -721,7 +738,7 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
       }
     }
     // Stones slumped at the foot, low (ankle to shin), half in the moss.
-    for (let k = 0; k < (underTrunk || narrow ? 1 : 3); k++) {
+    for (let k = 0; k < (narrow ? 0 : underTrunk ? 1 : 3); k++) {
       const w = range(r, 16, 30) * (k === 0 ? 1.2 : 0.8);
       const cx = fx + d * (range(r, 22, 46) + k * range(r, 40, 62));
       const c = kit.stone[(st.index + k * 3) % kit.stone.length] as number;
@@ -778,11 +795,11 @@ type Form = { kind: 'log' | 'boulder' | 'arch'; x: number; size: number; flip?: 
 const GREAT: readonly Form[] = [
   { kind: 'boulder', x: 610, size: 0.8 },
   { kind: 'log', x: 1150, size: 1 },
-  // (None in the fight spots: x 1880-2300, the centre block, 4160-4600. Creatures read against mist there.)
-  { kind: 'boulder', x: 2440, size: 0.7, flip: true },
-  { kind: 'arch', x: 5290, size: 0.75 },
-  { kind: 'boulder', x: 4790, size: 0.72 },
-  { kind: 'log', x: 5580, size: 0.9 },
+  // (None in the fight spots: x 1880-2300, the centre block, 4160-4600. Creatures read against mist there.
+  // None at the foot of a kick wall either, nor by the heart: the bluff's boulder (2440) ended up ON the
+  // bluff when its face moved, the arch (5290) stood dark behind the shrine and the last of the rise, the
+  // log (5580) lay on the far bluff's top with its butt out over the face.)
+  { kind: 'boulder', x: 4712, size: 0.6 },
 ];
 
 /** Back plane: fallen logs, half-buried boulders, a root arch. Returns the x spans they occupy. */
@@ -1226,9 +1243,7 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
 
   // ---- Centre: cocoons hung under the great bough on silk, one great one faintly warm, the
   // lesser ones dark, one long empty and torn.
-  const bough = scene.solids.find(
-    (s) => s.tag === 'ledge' && scene.solids.some((o) => o.tag === 'trunk' && o.x === s.x + s.w),
-  );
+  const bough = scene.solids.find((s) => s.tag === 'ledge');
   if (bough) {
     const x = bough.x + bough.w * 0.36;
     const y0 = bough.y + bough.h + 14;

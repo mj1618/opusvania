@@ -204,3 +204,22 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   behind them. sky-1's foliage was the bough's old sapling (playfield), gone now. What dims sky-3 / sky-4
   there is the post vignette at the frame's top right, not these layers.
 - Layer coordinates of a playfield point: x = px - (1 - f) * (camX - 2880), y = py + (1 - f) * (1060 - camY).
+
+## Round 12 (after the critical-path layout: far bluff, kick walls)
+- **`StageSpec.walls`** (bg-bake.ts, `STAGE.walls` in mid.ts): mist banked against a face she kicks up, thickest
+  at the face and gone `reach` px out on the open side, from 240 px above `y0` down to `y1`. Two: the far bluff
+  (5472, 448-1088, k 0.85, reach 330) and trunk A's bark above the well (3200, 448-1168, k 0.4). Luma behind her
+  on the far bluff 5 / 4 / 6 -> 55 / 54 / 43 (foot, middle, top). At k 1.7 it was a milky violet fog (88-90).
+  NOT in the shaft: its glints need the dark of `MID.shaftPendant`. The far ledge's `ledges` entry is the far
+  bluff's top now; its face is a wall, not a ground step.
+- **Sway items are drawn over the mist stage.** A moss curtain / frond mass hung black (luma 9) behind the top
+  third of that climb whatever the mist did. `HangerSpec.skip(x, y, w)` filters items after placement (nothing
+  else moves); `MID.bluffClear` (layer x 4500-4900, y 380-1060, wider than 70 px) keeps the wall's air clear.
+  Layer x of a playfield point there is px - 614 (the camera clamps at 4800).
+- `MID.moonHole` alpha 0.6 -> 0.2, colour 0xa8c8e6 -> 0x7fa2c4: seen from F4 / the high platform (camera
+  ~1984, 370; playfield x 2064-2224, y 230-400) it was a pale wedge cut straight by the trunk at layer x 2160 and
+  notched by a clump: mean luma 90, max 150 -> mean 50, max 75. It is a glow in the leaves now.
+- The pale blue wedge right of the moth-stone (playfield 1440-1520, 1050-1200) is the mist between the stone's
+  flank and the leaning mid trunk; what made it hard-edged was the playfield (an island's belly shade ruling
+  the stone's top half black: playfield.md). Nothing changed in these layers for it.
+

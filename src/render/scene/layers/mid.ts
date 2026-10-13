@@ -81,7 +81,9 @@ const MID = {
     dimY: [80, 420],
   },
   /** The canopy route's focal light: a hole in this layer's canopy with moonlight behind it. */
-  moonHole: { x: 2330, y: 470, half: 250, lift: 420, size: 640, alpha: 0.6, color: 0xa8c8e6 },
+  // (Dim: at alpha 0.6 / 0xa8c8e6 it was a pale wedge, luma 150-190, cut straight by the trunk at 2160 and
+  // notched by a clump, behind F4 and the high platform. It is a glow in the leaves now, not a window.)
+  moonHole: { x: 2330, y: 470, half: 250, lift: 420, size: 640, alpha: 0.2, color: 0x7fa2c4 },
   /**
    * The pendant of canopy behind the wall-jump shaft (playfield x 3328-3584 is layer x ~3230-3320
    * for the cameras that show it): layer x, half width, how far it hangs below the canopy's edge.
@@ -111,6 +113,12 @@ const MID = {
   glowCapDim: 0.45,
   glowAlpha: 0.12,
   fireflies: 16,
+  /**
+   * Layer rect kept free of wide hangers (moss curtains, fronds; vines stay): what shows beside the
+   * far bluff's west face (playfield x 5140-5472, y 300-1088) for the clamped camera (x 4800) as its
+   * y runs from 850 at the foot to 290 at the top.
+   */
+  bluffClear: { x: [4500, 4900], y: [380, 1060], w: 70 },
   hang: { seed: 604, vines: 40, moss: 26, fronds: 24, vineLen: [140, 560], amp: 0.06 },
   /**
    * THE MIST STAGE: paler fog pooled just above the walk line, behind the playfield, so the hero,
@@ -129,7 +137,8 @@ const STAGE: Omit<StageSpec, 'strength'> = {
   height: 260,
   below: 110,
   // Left bank, ground, the terrace (its step hides behind the bluff), ground, the hollow (96 down
-  // and up again: narrow, so a short ease or the sheet never dips into it), the right rise.
+  // and up again: narrow, so a short ease or the sheet never dips into it), the right rise. (The far
+  // bluff, 640 px up at 5472, is not a step: its top is a ledge and its face a wall, below.)
   baseY: 1088,
   steps: [
     [384, 192],
@@ -141,12 +150,19 @@ const STAGE: Omit<StageSpec, 'strength'> = {
   ],
   ease: 150,
   // Raised tops with their own thinner sheet: the bluff (a column of mist as wide as the ground's
-  // sheet would stand in the air beside it), then the two high ledges (the first runs on over
-  // trunk A's top).
+  // sheet would stand in the air beside it), then the high ledge with its branch and trunk A's top,
+  // trunk B's top with the summit bough, and the far bluff's top.
   ledges: [
     { x0: 2432, x1: 2624, y: 960, k: 0.7 },
     { x0: 2816, x1: 3328, y: 448, k: 1 },
     { x0: 5472, x1: 5900, y: 448, k: 1 },
+  ],
+  // The faces she kicks up with open air behind her: the far bluff (the last climb, in the darkest
+  // corner of the scene: luma 5 behind her without this) and trunk A's bark above the well. Not the
+  // shaft: its glints need the dark that MID.shaftPendant puts behind them.
+  walls: [
+    { x: 5472, y0: 448, y1: 1088, dir: -1, k: 0.85, reach: 330 },
+    { x: 3200, y0: 448, y1: 1168, dir: -1, k: 0.4, reach: 240 },
   ],
   wisp: 0.5,
 };
@@ -700,6 +716,14 @@ export class MidLayer implements EnvModule {
         ...MID.hang,
         // Hanging gardens: the right stand drips with vines and moss.
         weight: (x) => 0.45 + 0.55 * zoneWeights(playfieldX(x)).r,
+        // No moss curtain or frond mass beside the far bluff's face: sway items are drawn over the
+        // mist stage, and one hung black (luma 9) behind the top third of the scene's last climb.
+        skip: (x, y, w) =>
+          w > MID.bluffClear.w &&
+          x > MID.bluffClear.x[0] &&
+          x < MID.bluffClear.x[1] &&
+          y > MID.bluffClear.y[0] &&
+          y < MID.bluffClear.y[1],
       }),
       MID.bakeScale * 0.5,
       { ...ZONE, anchorX: ctx.layers.anchor.x },

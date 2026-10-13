@@ -56,6 +56,54 @@ export const BAKE = {
 
 const CLEAR: number[] = [0, 0, 0, 0];
 
+/**
+ * A pool of mist lying against the stage: inside the soft ellipse the baked terrain is taken toward
+ * `color` (paler, calmer, lower contrast), the way distance does it. This is how a surface right
+ * behind the walk line is made lighter than the hero where she has to read against it, without
+ * painting it pale: the surroundings keep their dark. The falloff is `exp(-d^(2 * power))`, so
+ * there is never an edge (power 1 = a gaussian, 2 = a flatter top).
+ */
+export interface MistFill {
+  x: number;
+  y: number;
+  rx: number;
+  ry: number;
+  /** 0..1 at the centre. */
+  amount: number;
+  /** 0xRRGGBB, as it should end up on the picture before post. */
+  color: number;
+  power?: number;
+  /** 0..1: how much of it is kept off the walk plane (1 = only things painted in the back plane take it). */
+  backOnly?: number;
+  /** It thins out over the 40 px above this y and is gone below it (her feet: the walk line keeps its dark). */
+  floor?: number;
+}
+
+const f = (v: number): string => (Number.isInteger(v) ? `${v}.0` : v.toFixed(4));
+
+/** GLSL for `vec4 mistAt(vec2 w, float plane)`: rgb = colour, a = amount. */
+function mistGlsl(fills: readonly MistFill[]): string {
+  const body = fills
+    .map((m) => {
+      const c = [(m.color >> 16) & 255, (m.color >> 8) & 255, m.color & 255]
+        .map((v) => f(v / 255))
+        .join(', ');
+      const back = m.backOnly ?? 0;
+      return `  { vec2 q = (w - vec2(${f(m.x)}, ${f(m.y)})) / vec2(${f(m.rx)}, ${f(m.ry)});
+    float a = ${f(m.amount)} * exp(-pow(dot(q, q), ${f(m.power ?? 1)})) * (1.0 - ${f(back)} * plane)${
+      m.floor === undefined ? '' : ` * (1.0 - smoothstep(${f(m.floor - 40)}, ${f(m.floor + 6)}, w.y))`
+    };
+    acc += vec4(vec3(${c}) * a, a); top = max(top, a); }`;
+    })
+    .join('\n');
+  return `vec4 mistAt(vec2 w, float plane) {
+  vec4 acc = vec4(0.0);
+  float top = 0.0;
+${body}
+  return acc.a > 0.0001 ? vec4(acc.rgb / acc.a, top) : vec4(0.0);
+}`;
+}
+
 const QUAD_VERT = `#version 300 es
 precision highp float;
 in vec2 aPosition;
@@ -92,7 +140,7 @@ void main() {
   o = s;
 }`;
 
-const LIT_FRAG = `#version 300 es
+const litFrag = (fills: readonly MistFill[]): string => `#version 300 es
 precision highp float;
 in vec2 vUV;
 in vec2 vWorld;
@@ -143,6 +191,7 @@ float surface(vec2 p, float moss, float bark) {
   return mix(mix(e, b, bark), m, moss);
 }
 
+${mistGlsl(fills)}
 // A step with a slightly soft riser: hard-edged planes that still survive the bake resolution.
 float plane3(float x) {
   return floor(x) + smoothstep(0.2, 0.8, fract(x));
@@ -257,6 +306,14 @@ void main() {
   float up = clamp(-n.y, 0.0, 1.0);
   c += base * vec3(0.5, 0.8, 1.0) * up * 0.3 * (1.0 - moss * 0.75) * mix(0.4, 1.0, plane);
 
+  // Mist pooled against the stage (MistFill): toward its colour, keeping a little of the brushwork.
+  // Lit moss on the walk plane (the path's rim) shows through it.
+  vec4 mist = mistAt(vWorld, plane);
+  float mistA = mist.a * (1.0 - 0.7 * moss * plane);
+  // (It keeps the form under it: planes that were in shadow stay a step darker, or the prop goes
+  // to frosted glass.)
+  float mistForm = clamp(dot(c, vec3(0.3, 0.6, 0.1)) / 0.09, 0.0, 1.0);
+  c = mix(c, mist.rgb * (0.6 + 0.5 * mistForm) * (0.9 + 0.2 * stroke), mistA);
   // Ragged, brushed edges instead of a clean vector cut.
   float br = fbm(vWorld * 0.21 + 2.0);
   alpha *= smoothstep(0.4 + br * 0.2, 0.48 + br * 0.2, fine.a + 0.02);
@@ -293,7 +350,12 @@ export interface BakeResult {
 }
 
 /** Bakes the painted terrain into lit tiles at `scale` texture px per world px. */
-export function bakeTerrain(renderer: Renderer, src: BakeSource, scale: number): BakeResult {
+export function bakeTerrain(
+  renderer: Renderer,
+  src: BakeSource,
+  scale: number,
+  fills: readonly MistFill[] = [],
+): BakeResult {
   const t0 = performance.now();
   const T = BAKE.tile;
   const P = BAKE.pad;
@@ -361,7 +423,7 @@ export function bakeTerrain(renderer: Renderer, src: BakeSource, scale: number):
     },
   };
   const litShader = Shader.from({
-    gl: { vertex: QUAD_VERT, fragment: LIT_FRAG },
+    gl: { vertex: QUAD_VERT, fragment: litFrag(fills) },
     resources: {
       uAlb: rtAlb.source,
       uHgt: rtHgt.source,

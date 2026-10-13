@@ -431,6 +431,11 @@ export interface HangerSpec {
   amp: number;
   /** Relative density by x, 0..1 (default 1 everywhere). */
   weight?: (x: number) => number;
+  /**
+   * Items to leave out, by anchor and width (layer px). Applied after everything is placed, so the
+   * rest of the layer's hangers stay exactly where they were.
+   */
+  skip?: (x: number, y: number, w: number) => boolean;
 }
 
 /** Vines, moss curtains and canopy fronds that hang from the canopy edge and branch tips and sway. */
@@ -529,6 +534,7 @@ export function hangers(plan: ForestPlan, b: ForestBuild, atm: Atmosphere, spec:
       draw: (g) => foliageMass(g, 0, ry * 0.55, rx, ry, prng(seed), lk, 1.1),
     });
   }
+  if (spec.skip) return items.filter((it) => !spec.skip?.(it.x, it.y, it.w));
   return items;
 }
 
