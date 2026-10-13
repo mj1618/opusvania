@@ -207,7 +207,15 @@ void main() {
   }
   // Fade out at the banks so the overlay never tints them.
   float bank = smoothstep(uPool.x - 2.0, uPool.x + 5.0, x) * smoothstep(uPool.y + 2.0, uPool.y - 5.0, x);
-  o = vec4(tint * a + add, a) * bank;
+  // The basin is not a rectangle: the walls lean in as they go down and wobble, the floor
+  // corners are round (stones and roots painted by pf-forms.ts fill them).
+  float k = clamp(depth / total, 0.0, 1.0);
+  float wob = 5.0 * sin(vWorld.y * 0.11 + x * 0.031) + 3.0 * sin(vWorld.y * 0.27 + 1.3);
+  float dw = min(x - uPool.x, uPool.y - x) - (wob + 3.0) * k - 18.0 * k * k;
+  float df = uPool.w - vWorld.y - 2.0 - 3.0 * sin(x * 0.08);
+  float cr = 48.0;
+  float basin = smoothstep(0.0, 6.0, cr - length(max(vec2(cr - dw, cr - df), 0.0)));
+  o = vec4(tint * a + add, a) * bank * basin;
 }`;
 
 function rgb(c: number): Float32Array {

@@ -1117,6 +1117,11 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
     const blocked = (x: number): boolean => info.keepClear.some(([k0, k1]) => x > k0 && x < k1);
 
     const isGround = top.kind === 'ground';
+    // Fight spots: creatures and the hero must read there, so nothing tall or warm behind them.
+    const calm = (x: number): boolean =>
+      info.calm.some(([c0, c1, cy]) => x > c0 && x < c1 && Math.abs(cy - top.y) < 40);
+    const noGlow = (x: number): boolean =>
+      info.noGlow.some((g) => Math.abs(g.x - x) < 260 && Math.abs(g.y - top.y) < 320);
     baseLift = isGround ? 0 : 0.55;
 
     // Backdrop (drawn first, so behind everything): tall reed stands in haze tones, between
@@ -1127,7 +1132,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         x < b - 60;
         x += range(r, PLANTS.backdropGap[0], PLANTS.backdropGap[1])
       ) {
-        if (blocked(x)) continue;
+        if (blocked(x) || calm(x)) continue;
         const t = toneAt(HAZE, x, r, top.y);
         for (let i = 0; i < 3; i++) reedStand(c, x + i * range(r, 16, 30), y + 4, range(r, 110, 190), t);
       }
@@ -1140,7 +1145,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         x < b - 30;
         x += range(r, PLANTS.rearGap[0], PLANTS.rearGap[1]) / scale
       ) {
-        if (blocked(x)) continue;
+        if (blocked(x) || calm(x)) continue;
         const t = toneAt(REAR, x, r, top.y);
         const roll = r();
         if (roll < 0.6) {
@@ -1168,7 +1173,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
     // Heroes: one landmark plant every screen or so, chosen by the zone it stands in.
     if (isGround) {
       for (let x = a + range(r, 260, 620); x < b - 120; x += range(r, PLANTS.heroGap[0], PLANTS.heroGap[1])) {
-        if (blocked(x)) continue;
+        if (blocked(x) || calm(x) || noGlow(x)) continue;
         const z = zoneAt(x);
         const t = toneAt(BACK, x, r, top.y);
         heroes++;
@@ -1215,14 +1220,14 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
       x += (range(r, PLANTS.featureGap[0], PLANTS.featureGap[1]) / scale) * lerp(2.9, 0.55, thicket(x))
     ) {
       if (top.kind === 'root' || blocked(x)) continue;
-      const sc = scale * (isGround ? lerp(0.62, 1.22, thicket(x)) : 1);
+      const sc = scale * (calm(x) ? 0.55 : isGround ? lerp(0.62, 1.22, thicket(x)) : 1);
       const t = toneAt(BACK, x, r, top.y);
       const sun = sunHere(x);
       const z = zoneAt(x);
       const glowChance =
         z.cool * PLANTS.glowShare[0] + z.warm * PLANTS.glowShare[1] + z.deep * PLANTS.glowShare[2];
       const roll = r();
-      if (r() < glowChance && !narrow) {
+      if (r() < glowChance && !narrow && !noGlow(x)) {
         // Cyan in the glade, violet and magenta in the deep stand.
         const violet = r() < z.deep * 0.88 + z.warm * 0.2;
         if (roll < 0.5) {
@@ -1254,8 +1259,9 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         broadleaf(c, x, y, range(r, 32, 70) * sc * big, t);
         if (r() < 0.5) broadleaf(c, x + range(r, 18, 30), y, range(r, 16, 28) * sc * big, t);
       } else if (roll < wTall) {
-        tallGrass(c, x, y, t, sc);
-        if (r() < 0.6) tallGrass(c, x + range(r, 14, 26), y, t, scale * 0.8);
+        if (calm(x)) clover(c, x, y, 12, t);
+        else tallGrass(c, x, y, t, sc);
+        if (r() < 0.6 && !calm(x)) tallGrass(c, x + range(r, 14, 26), y, t, scale * 0.8);
       } else if (roll < wFlower) {
         // A drift of one kind of flower: warm where the light lands, pale and cool in shade.
         const set = sun > 0.45 || z.warm > 0.5 ? WARM_PETALS : COOL_PETALS;
@@ -1434,7 +1440,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         x < b - 60;
         x += range(r, PLANTS.breakGap[0], PLANTS.breakGap[1])
       ) {
-        if (blocked(x)) continue;
+        if (blocked(x) || calm(x)) continue;
         const t = toneAt(FRONT, x, r, top.y);
         for (let i = 0; i < 2 + Math.floor(r() * 2); i++)
           tallGrass(fc, x + i * range(r, 10, 20), top.y + 6, t, range(r, 0.6, 0.85));

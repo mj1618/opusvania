@@ -60,6 +60,8 @@ export const FORMS = {
   ridge: [4, 26, 10] as const,
   /** Bank slope length as a multiple of the step height. */
   bankRun: 1.1,
+  /** Water surface above the pool floor (TERRAIN.waterDepth). */
+  waterDepth: 50,
 } as const;
 
 const haze = (c: number, k: number): number => mix(c, PALETTE.fogMid, k);
@@ -69,7 +71,7 @@ export function ridgeHeight(x: number): number {
   const a = (noise1(x / 310, 801) + 1) * 0.5;
   const b = (noise1(x / 120, 802) + 1) * 0.5;
   // The raised centre block swells under the high ledge (its top must not be a ruled line).
-  const block = 34 * Math.exp(-(((x - 2900) / 190) ** 2)) + 16 * Math.exp(-(((x - 2660) / 70) ** 2));
+  const block = 12 * Math.exp(-(((x - 2900) / 190) ** 2)) + 8 * Math.exp(-(((x - 2660) / 70) ** 2));
   return (
     block +
     FORMS.ridge[0] +
@@ -131,7 +133,13 @@ function crest(p: Paint, line: number[], kit: FormKit, seed: number, k = 1, lift
 // ---------------------------------------------------------------------------------------------
 
 /** Mounded earth and moss standing behind the walk line of every ground segment. */
-export function paintBackRidge(p: Paint, segs: GroundSeg[], kit: FormKit, W: number): void {
+export function paintBackRidge(
+  p: Paint,
+  segs: GroundSeg[],
+  kit: FormKit,
+  W: number,
+  calm: Array<[number, number, number]> = [],
+): void {
   segs.forEach((s, i) => {
     if (s.pool) return;
     const prev = segs[i - 1];
@@ -141,6 +149,7 @@ export function paintBackRidge(p: Paint, segs: GroundSeg[], kit: FormKit, W: num
     // Fade toward a pool (the water's edge stays clean) and toward the low side of a step (the
     // bank slope takes over there).
     const fade = (x: number): number =>
+      (calm.some(([c0, c1, cy]) => x > c0 - 60 && x < c1 + 60 && Math.abs(cy - s.y) < 40) ? 0.35 : 1) *
       Math.min(
         prev && (prev.pool || prev.y < s.y) ? smoothstep(xa, xa + 90, x) : 1,
         next && (next.pool || next.y < s.y) ? smoothstep(xb, xb - 90, x) : 1,
@@ -403,7 +412,67 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
         });
       }
     }
-    if (st.pool) continue;
+    if (st.pool) {
+      // The basin must not be a rectangle: stones bulge into the water at the waterline, half way
+      // down and in the floor corner, and a root comes over the lip and dips in.
+      const surface = lo - FORMS.waterDepth;
+      const c = kit.stone[(st.index * 5 + 1) % kit.stone.length] as number;
+      const stones: Array<[number, number, number, number]> = [
+        [fx + d * range(r, 8, 16), surface + 4, 30, 22],
+        [fx + d * range(r, 44, 58), surface + 10, 15, 11],
+        [fx + d * range(r, 4, 10), lerp(surface, lo, 0.6), 22, 17],
+        [fx + d * range(r, 20, 30), lo - 10, 50, 26],
+        [fx + d * range(r, 74, 92), lo - 2, 24, 13],
+      ];
+      for (const [k, [cx, cy, rx, ry]] of stones.entries()) {
+        paintRock(p, {
+          cx,
+          cy,
+          rx,
+          ry,
+          seed: 874 + st.index * 7 + k,
+          color: mix(c, E[2] as number, 0.4 + (k % 2) * 0.15),
+          dark: E[4] as number,
+          h: 0.6,
+          rise: 0.12,
+          ...(k >= 3 ? { baseY: lo + 8 } : {}),
+          tilt: d * range(r, -0.2, 0.3),
+          rough: 1.15,
+          moss: { ...kit.mossTone(cx, cy, 875 + k, 0.4), amount: k < 2 ? 0.9 : 0.4 },
+          ground: 0.7,
+        });
+      }
+      const poolWood: Wood = {
+        col: mix(kit.rootWood, E[0] as number, 0.3),
+        lit: mix(kit.rootWood, 0x6a8a80, 0.4),
+        dark: E[4] as number,
+      };
+      for (let k = 0; k < 2; k++) {
+        const sx = fx - d * range(r, 20, 60);
+        const ex = fx + d * range(r, 34, 70);
+        const line = wander(
+          cubic(
+            sx,
+            hi + 9,
+            fx + d * 10,
+            hi + 8,
+            fx + d * 26,
+            lerp(hi, surface, 0.7),
+            ex,
+            surface + range(r, 16, 60),
+            14,
+          ),
+          3,
+          876 + st.index * 3 + k,
+          30,
+        ).map((v, j) => (j % 2 ? Math.max(v, hi + 6) : v));
+        limb(p, line, (t) => (13 - k * 4) * (1 - t * 0.7) + 2, poolWood, 0.66, 0.07, fx + 30 + k, {
+          bark: 0.3,
+          lit: 0.3,
+        });
+      }
+      continue;
+    }
     // Roots that come over the lip, stand off the face and go to ground with a toe.
     const wood: Wood = {
       col: mix(kit.rootWood, E[0] as number, 0.3),
@@ -573,11 +642,11 @@ type Form = { kind: 'log' | 'boulder' | 'arch'; x: number; size: number; flip?: 
 const GREAT: readonly Form[] = [
   { kind: 'boulder', x: 610, size: 0.8 },
   { kind: 'log', x: 1150, size: 1 },
-  { kind: 'boulder', x: 2150, size: 0.85, flip: true },
-  { kind: 'log', x: 2870, size: 0.85, flip: true },
-  { kind: 'arch', x: 4400, size: 1 },
+  // (None in the fight spots: x 1880-2300, the centre block, 4160-4600. Creatures read against mist there.)
+  { kind: 'boulder', x: 2440, size: 0.7, flip: true },
+  { kind: 'arch', x: 5290, size: 0.75 },
   { kind: 'boulder', x: 4790, size: 0.72 },
-  { kind: 'log', x: 5520, size: 1.1 },
+  { kind: 'log', x: 5580, size: 0.9 },
 ];
 
 /** Back plane: fallen logs, half-buried boulders, a root arch. Returns the x spans they occupy. */
@@ -896,10 +965,10 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
     const r = rngFor(890, 1);
     // The fallen piece first (behind the roots).
     paintRock(p, {
-      cx: x + 150,
-      cy: gy - 26,
-      rx: 66,
-      ry: 38,
+      cx: x + 156,
+      cy: gy - 34,
+      rx: 74,
+      ry: 50,
       seed: 891,
       color: mix(stoneCol, dark, 0.15),
       dark,
@@ -913,7 +982,7 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
       cracks: 2,
       ground: 0.9,
     });
-    carve(chaikinOpen([x + 112, gy - 30, x + 140, gy - 50, x + 176, gy - 36, x + 150, gy - 20]), 3.2);
+    carve(chaikinOpen([x + 116, gy - 40, x + 146, gy - 64, x + 186, gy - 46, x + 158, gy - 26]), 3.2);
     paintRock(p, {
       cx,
       cy: gy - h * 0.5 + 10,
@@ -942,8 +1011,8 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
     const [mx, my] = at(0.6);
     mothMotif(mx, my, 40, lean, lichen);
     for (let k = 0; k < 3; k++) {
-      const [ax, ay] = at(0.36 - k * 0.055, -30 + k * 4);
-      const [bx, by] = at(0.36 - k * 0.055, 30 - k * 4);
+      const [ax, ay] = at(0.43 - k * 0.04, -30 + k * 4);
+      const [bx, by] = at(0.43 - k * 0.04, 30 - k * 4);
       carve([ax, ay, (ax + bx) / 2, (ay + by) / 2 + 2, bx, by], 3 - k * 0.4, k === 0 ? lichen : undefined);
     }
     const ring: number[] = [];
@@ -958,7 +1027,6 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
     for (const [f, off, len, wd] of [
       [0.93, -30, 120, 34],
       [0.7, 46, 80, 22],
-      [0.3, -44, 70, 26],
     ] as const) {
       const [sx, sy] = at(f, off);
       const line = wander(
@@ -985,10 +1053,8 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
     // Roots climbing it from both sides.
     for (const [k, [side, f1, w0]] of (
       [
-        [-1, 0.3, 36],
-        [1, 0.2, 30],
-        [-1, 0.13, 20],
-        [1, 0.42, 15],
+        [-1, 0.2, 30],
+        [1, 0.12, 24],
       ] as const
     ).entries()) {
       const sx = x + side * range(r, 120, 180);
@@ -1007,6 +1073,16 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
         { bark: 0.8, grain: 3, lit: 0.35 },
       );
     }
+    // Its lower 110 px is kept calm, dark and mist-touched (a figure and the goal's lantern stand
+    // in front of it): three soft washes of mist tone that fade upward, no carving, no moss.
+    for (let k = 0; k < 3; k++) {
+      const top = gy - 110 + k * 34;
+      const wash: number[] = [];
+      for (let xx = x - 70; xx <= x + 100; xx += 14) wash.push(xx, top + wobble(xx, 897 + k, 40) * 8);
+      wash.push(x + 100, gy + 10, x - 70, gy + 10);
+      p.tint(wash, mix(kit.backDeep, PALETTE.fogMid, 0.3), 0.3);
+    }
+    // The fallen piece stands tall enough to hide whatever glows behind it in the mid layer.
     info.lanterns.push({ x: mx, y: my, cyan: true, size: 70 });
     info.keepClear.push([x - 110, x + 230]);
     info.lee.push({ x: x - 86, y: gy - 12, size: 52 });

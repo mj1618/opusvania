@@ -38,8 +38,10 @@ export const PLAYFIELD = {
   /** How much glow plants and their halos brighten when the character or a light is near. */
   /** Clippings a slash throws from a full box of grass (fewer with less foliage in reach). */
   clippings: 20,
-  glowGain: 0.7,
-  haloGain: 0.7,
+  // Glow plants warm a little near the hero or a light; they never bloom (the owner's standing
+  // complaint is brightness near her, and the lanterns must be the lights where they stand).
+  glowGain: 0.28,
+  haloGain: 0.22,
 } as const;
 
 /** Clipping colours per zone (blade bodies and lit tips), and a petal. */

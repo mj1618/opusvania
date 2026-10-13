@@ -153,6 +153,10 @@ export interface TerrainInfo {
     /** Where ropes with `to` meet; one stout stem goes on up from here. */
     yoke?: { x: number; y: number };
   }>;
+  /** No glow plants within ~250 px of these (the goal's lanterns and the heart are the lights there). */
+  noGlow: Array<{ x: number; y: number }>;
+  /** Fight spots [x0, x1, top y]: nothing tall, busy or warm-coloured behind the walk line. */
+  calm: Array<[number, number, number]>;
   /** Authored props that hold a small light: a dim halo goes here. */
   lanterns: Array<{ x: number; y: number; violet?: boolean; cyan?: boolean; size?: number }>;
   /** Sheltered spots beside big terrain where a fern grows. */
@@ -176,6 +180,12 @@ interface Seg {
 }
 
 const OUT = 420;
+/** Ground stretches where fights happen (world x): kept plain behind the walk line. */
+const FIGHT_SPOTS: ReadonlyArray<readonly [number, number]> = [
+  [1880, 2300],
+  [2560, 3200],
+  [4160, 4600],
+];
 
 /** Collision top of the ground at x, taking the lower side near a step (so things stay buried). */
 function safeTopAt(info: TerrainInfo, x: number, W: number): number {
@@ -207,6 +217,17 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
     keepClear: [],
     lee: [],
     lanterns: [],
+    noGlow: [
+      ...(scene.lanterns ?? []).map((l) => ({ x: l.x, y: l.y })),
+      ...(scene.heart ? [scene.heart] : []),
+    ],
+    // The playtest's fight spots on the ground, plus wherever a ground enemy starts.
+    calm: [
+      ...FIGHT_SPOTS.map((f) => [f[0], f[1], groundY((f[0] + f[1]) / 2)] as [number, number, number]),
+      ...(scene.enemies ?? [])
+        .filter((e) => e.kind === 'burrback')
+        .map((e) => [e.x - 230, e.x + 230, e.y] as [number, number, number]),
+    ],
     hangers: [],
     pockets: [],
     pool: poolSeg
@@ -245,7 +266,7 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
     stone: TERRAIN.stone,
   };
   const trunkXs = trunks.map((t) => t.x);
-  paintBackRidge(p, segs, fkit, scene.width);
+  paintBackRidge(p, segs, fkit, scene.width, info.calm);
   // Between the two trunks she must stand against open mist: no tall plants there.
   if (trunks.length >= 2)
     info.keepClear.push([
@@ -1189,7 +1210,11 @@ function paintBackdrop(p: Paint, scene: Scene, info: TerrainInfo, taken: Array<[
   const W = scene.width;
   const r = rngFor(404, 7);
   const haze = (c: number, k = 0.3): number => mix(c, PALETTE.fogMid, k);
-  const avoid: Array<[number, number]> = [...taken, ...info.keepClear];
+  const avoid: Array<[number, number]> = [
+    ...taken,
+    ...info.keepClear,
+    ...info.calm.map(([c0, c1]) => [c0 - 60, c1 + 60] as [number, number]),
+  ];
   for (const s of scene.solids) {
     if (s.tag === 'root') avoid.push([s.x - 110, s.x + s.w + 110]);
     if (s.tag === 'trunk') avoid.push([s.x - 170, s.x + s.w + 170]);

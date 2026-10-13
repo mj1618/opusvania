@@ -41,6 +41,18 @@
 - **She must always stand against mist.** Nothing tall and dark directly behind the walk line for long:
   logs lie low (girth 44, below her waist), boulder clusters are few and under ~110 px, snag trunks are
   slim, the stretch between the two trunks is `keepClear`. Landmarks are the exception.
+- **Fight spots are plain** (`info.calm`: `FIGHT_SPOTS` in pf-terrain.ts plus ±230 px round every burrback's
+  start): no rear shrubs, reeds, tall grass, front clumps, backdrop boulders or great forms there, features at
+  0.55 size, ridge at a third, so creatures and the hero read against the mist at shell height.
+- **Glow never blooms**: `PLAYFIELD.glowGain` 0.28 / `haloGain` 0.22 (was 0.7 / 0.7), and no glow plants within
+  ~260 px of `info.noGlow` (the goal's lanterns and the heart: they are the lights there). The cyan blob by the
+  moth-stone was NOT ours: a mid-layer mushroom cluster with its own light at (1552, 1268); the stone's fallen
+  piece is sized to hide it.
+- **Pool basin**: stones at the waterline, half way down and in the floor corners plus roots dipping in
+  (`paintBankFronts`, pool case), and the water shader masks its tint to a basin with leaning, wobbling walls
+  and round floor corners (`basin` in pf-water.ts).
+- The moth-stone's lower 110 px is calm (mist washes, no carving or moss): the goal's lantern and the hero
+  stand in front of it; carving starts above head height.
 - **Islands** (by index, palette `ISLES`): 0 two wet boulders in the crotch of a snag; 1 slate flake in a
   vine sling (thin; pod-f2 hangs under its middle); 2 aerial-root mass; 3 bracket fungus on a hanging limb;
   4 woven nest; 5 bent crown limb of an old snag (thin; pod-f6 under it); 6 two violet stones clutched by
