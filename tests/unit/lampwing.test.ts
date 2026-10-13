@@ -990,7 +990,8 @@ describe('lampwings in the grove', () => {
       ['lamp-glade', 800, 690, 100],
       ['lamp-f3', 1290, 480, 80],
       ['lamp-ledge', 2700, 150, 90],
-      ['lamp-glide-1', 4470, 270, 60],
+      // (Out of the arcs of a held jump off the bough or the catch branch: both fell through 4470, 300.)
+      ['lamp-glide-1', 4620, 200, 60],
       ['lamp-glide-2', 4900, 250, 60],
     ]);
     expect((GROVE.enemies ?? []).slice(0, first).every((e) => e.kind === 'burrback')).toBe(true);
@@ -1014,12 +1015,12 @@ describe('lampwings in the grove', () => {
       expect(list.some((e) => e.x >= (a as number) && e.x < (b as number))).toBe(true);
     const bad = (e: unknown) => () => parseScene({ ...GROVE, enemies: [e] });
     const one = list[0] as EnemySpawn;
-    expect(bad({ ...one, id: 'pod-f2' })).toThrow(/called/);
+    expect(bad({ ...one, id: 'pod-rise' })).toThrow(/called/);
     expect(bad({ ...one, y: 970 })).toThrow(/open air/);
     // (Above the canopy, which is now 420 px over the scene's top.)
     expect(bad({ ...one, y: -410 })).toThrow(/outside/);
     expect(bad({ ...one, x: 1120, y: 1000 })).toThrow(/spawn/);
-    expect(bad({ ...one, x: 1136, y: 760 })).toThrow(/too close to "pod-f2"/);
+    expect(bad({ ...one, x: 2570, y: 800 })).toThrow(/too close to "pod-rise"/);
     expect(bad({ ...one, x: 1984, y: 900 })).toThrow(/too close to "great-hang"/);
     expect(bad({ ...one, radius: -1 })).toThrow();
     expect(bad({ ...one, facing: 0 })).toThrow();

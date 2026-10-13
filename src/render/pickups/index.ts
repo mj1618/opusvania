@@ -70,6 +70,10 @@ interface Item {
   /** Its trail's twinkle: seconds per round, and when in the round its turn comes. */
   round: number;
   turn: number;
+  /** The other glints of its trail (itself included), and how much of a star it is now: `seedLevel` .. 1 (eased). */
+  trail: Item[];
+  lead: boolean;
+  level: number;
 }
 
 interface Flight {
@@ -167,6 +171,8 @@ export class PickupRenderer {
   private readonly back = new Container({ label: 'glint-buds-back' });
   private readonly front = new Container({ label: 'glint-buds-front' });
   private readonly items: Item[] = [];
+  /** Glints grouped by trail (ids that differ only in their last number), in that order. */
+  private readonly trails: Item[][] = [];
   private readonly byId = new Map<string, Item>();
   private readonly flights: Flight[] = [];
   private readonly sparks: Spark[] = [];
@@ -234,6 +240,9 @@ export class PickupRenderer {
         wake: 0,
         round: 4,
         turn: seed * 4,
+        trail: [],
+        lead: true,
+        level: -1,
       };
       this.items.push(item);
       this.byId.set(p.id, item);
@@ -258,7 +267,9 @@ export class PickupRenderer {
       list.forEach((it, k) => {
         it.round = round;
         it.turn = off + k * g.twinkleStep;
+        it.trail = list;
       });
+      this.trails.push(list);
     }
     for (let i = 0; i < MAX_FLIGHTS; i++)
       this.flights.push({
@@ -337,6 +348,9 @@ export class PickupRenderer {
           wake: 1,
           round: 4,
           turn: 0,
+          trail: [],
+          lead: true,
+          level: 1,
         });
     });
     // Enemies spill glints when they die: more sources, after the pods.
@@ -360,6 +374,9 @@ export class PickupRenderer {
           wake: 1,
           round: 4,
           turn: 0,
+          trail: [],
+          lead: true,
+          level: 1,
         });
     }
     for (let i = 0; i < MAX_CHIPS; i++)
@@ -443,6 +460,25 @@ export class PickupRenderer {
     const halfW = VIEW_W / 2 / cam.zoom + 160;
     const halfH = VIEW_H / 2 / cam.zoom + 160;
 
+    // --- Which stars lead: of each trail, the few untaken ones nearest to her. The rest are seeds.
+    for (const list of this.trails) {
+      for (const it of list) it.lead = false;
+      for (let n = 0; n < G.glint.lead; n++) {
+        let best: Item | null = null;
+        let bd = Number.POSITIVE_INFINITY;
+        for (const it of list) {
+          if (it.stage !== 0 || it.lead) continue;
+          const d = (it.p.x - this.chestX) ** 2 + (it.p.y - this.chestY) ** 2;
+          if (d < bd) {
+            bd = d;
+            best = it;
+          }
+        }
+        if (!best) break;
+        best.lead = true;
+      }
+    }
+
     // --- The glints that hang.
     for (const it of this.items) {
       const p = it.p;
@@ -494,8 +530,26 @@ export class PickupRenderer {
       it.x -= (dx / d) * lean;
       it.y -= (dy / d) * lean;
       const asleep = 1 - smooth(0.15, 0.75, wake);
-      if (asleep > 0.004)
-        b.quad(K_STAR, it.x, it.y, g.star, g.star, g.starGain * asleep * it.appear, tw, smooth(0, 0.6, wake));
+      // A leading star near her is the whole star; a far one is fainter; the rest of the trail are seeds.
+      const want = it.lead
+        ? g.leadFarLevel + (1 - g.leadFarLevel) * (1 - smooth(g.leadNear, g.leadFar, d))
+        : g.seedLevel;
+      it.level = it.level < 0 ? want : it.level + (want - it.level) * Math.min(1, dt * g.levelRate);
+      const big = smooth(g.seedLevel, 1, it.level);
+      if (asleep > 0.004) {
+        const size = g.star * (g.seedScale + (1 - g.seedScale) * big);
+        const presence = it.level + g.seedSwell * tw * (1 - big);
+        b.quad(
+          K_STAR,
+          it.x,
+          it.y,
+          size,
+          size,
+          g.starGain * presence * asleep * it.appear,
+          tw * (0.25 + 0.75 * big),
+          smooth(0, 0.6, wake),
+        );
+      }
       if (wake > 0.004) {
         const size = 0.5 + 0.5 * wake;
         b.quad(
@@ -1368,8 +1422,15 @@ export class PickupRenderer {
   }
 
   /** For tools: where each pickup is drawn and what the renderer thinks of it. */
-  debug(): Array<{ id: string; stage: number; x: number; y: number }> {
-    return this.items.map((it) => ({ id: it.p.id, stage: it.stage, x: it.x, y: it.y }));
+  debug(): Array<{ id: string; stage: number; x: number; y: number; level: number; wake: number }> {
+    return this.items.map((it) => ({
+      id: it.p.id,
+      stage: it.stage,
+      x: it.x,
+      y: it.y,
+      level: it.great ? 1 : Math.max(0, it.level),
+      wake: it.wake,
+    }));
   }
 }
 

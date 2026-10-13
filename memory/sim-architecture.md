@@ -1,7 +1,7 @@
 # Sim / runtime architecture
 
 - `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
-  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 15)) and appends `SimEvent`s. The scene is static and
+  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 16)) and appends `SimEvent`s. The scene is static and
   not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
   (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
 - No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
@@ -50,7 +50,7 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `spawn`: placed (boot, load, teleport): snap, don't interpolate.
 - `jump {kind: ground|coyote|buffered|wall|double|dashJump, dir}` (wall: `dir` = away from the wall).
 - `fall` (left the ground without jumping), `apex` (stopped rising), `land {vy, fallPx, hard}`
-  (`vy` = impact speed px/f; `hard` = fallPx >= 320 or at max fall speed).
+  (`vy` = impact speed px/f; `hard` = fallPx >= 420: a real fall, not a ledge drop).
 - `step` (every 96 px of grounded travel), `turn {dir, grounded}`, `skid {dir}`.
 - `wallSlideStart/End {dir = wall side}`, `dashStart {dir, air}`, `dashEnd {dir}`.
 - `slash`, `slashHit`, `impact`, `slashEnd`, `podHit`, `podBurst`, and pod glints as `pickup {pod: true}`: combat.md.
@@ -67,7 +67,7 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `glintsDrop`, `dropWake` and `pickup {drop: true}` (a fade's dropped glints): pickups.md.
   `enemyTurn` causes `lantern` / `wary`, `enemyAlert` cause `touch`: enemies.md.
 - `lanternNotice` (she came within 260 px of a dormant one: once per approach), `lanternRefuse`, `lanternChannel`,
-  `lanternCancel`, `lanternKindle`, `lanternRest`; the same six for wayside lamps as `lamp...`; `heartSleep`,
+  `lanternCancel`, `lanternKindle {..., pledged, away}` (it can fire with her elsewhere: goal.md "pledge"), `lanternRest`; the same six for wayside lamps as `lamp...`; `heartSleep`,
   `heartWake`, `gather`, `endHold`: goal.md (`x, y` = the lantern's foot / the heart, not her feet).
 
 ## Step order

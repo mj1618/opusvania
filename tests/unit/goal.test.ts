@@ -97,6 +97,8 @@ describe('lanterns: kindling', () => {
       wallet: 0,
       lit: 1,
       total: 3,
+      pledged: false,
+      away: false,
     });
     expect(lantern(s)).toEqual({
       lit: true,
@@ -106,6 +108,7 @@ describe('lanterns: kindling', () => {
       short: 0,
       refused: false,
       noticed: true,
+      pledged: false,
     });
     expect(s.state.player.kindling).toBe(-1);
     expect([s.state.goal.lit, s.state.goal.restAt]).toEqual([1, 0]);
@@ -231,6 +234,77 @@ describe('lanterns: kindling', () => {
     expect(of(wev, 'hurt')).toHaveLength(0);
     expect(of(wev, 'lanternCancel')).toHaveLength(0);
     expect(w.state.player.hp).toBe(4);
+  });
+});
+
+/**
+ * Playtest 3: "the first kindle can be missed by a second". She cuts the pod at the lantern's foot
+ * and runs on; its glints catch her up 400 px later and the lantern stayed dark. Now a lantern she
+ * stands at short, with the rest already on its way to her, is pledged: it catches the step those
+ * have landed, wherever she is.
+ */
+describe('lanterns: a pledge (enough light already on its way to her)', () => {
+  const pod = { id: 'p', x: A_X + 52, y: FLOOR - 22, mount: 'sit' as const, hp: 3 };
+  const withPod = (): Scene => ({ ...scene(), pods: [pod] });
+  /** Cuts until the pod opens, standing at the lantern. */
+  const open = (s: Sim) => {
+    for (let f = 0; f < 200 && s.state.pods.hp[0] !== 0; f++) s.run(f % 3 === 0 ? 'A1' : '.1');
+    expect(s.state.pods.hp[0]).toBe(0);
+  };
+
+  it('she cuts the pod and runs on at once: the lantern catches when its glints have landed, wherever she is', () => {
+    const s = sim(withPod(), 3, A_X);
+    open(s);
+    // The pod's last eight are in the air; what she holds is short; what is coming covers it.
+    expect(s.state.pickups.count).toBeLessThan(12);
+    expect(lantern(s).pledged).toBe(true);
+    const ev = s.run('R60');
+    const k = of(ev, 'lanternKindle')[0];
+    expect(k).toMatchObject({ id: 'a', cost: 12, wallet: 0, pledged: true, away: true, lit: 1 });
+    expect(feet(s).x).toBeGreaterThan(A_X + 300);
+    expect(lantern(s)).toMatchObject({ lit: true, pledged: false, channel: 0 });
+    expect([s.state.pickups.count, s.state.pickups.spent]).toEqual([1, 12]);
+    // It is her rest point all the same, and it calmed what was near as any kindling does.
+    expect(s.state.goal.restAt).toBe(0);
+    // The wallet never went under.
+    expect(of(ev, 'pickup').every((e) => e.total >= 0)).toBe(true);
+  });
+
+  it('if she stays, the channel shows from the burst on (a slash no longer breaks it) and it catches as the price lands: sooner than the full channel', () => {
+    const s = sim(withPod(), 3, A_X);
+    open(s);
+    const burst = s.state.frame;
+    const ev = s.run('.60');
+    const k = of(ev, 'lanternKindle')[0];
+    expect(k).toMatchObject({ pledged: true, away: false });
+    expect(of(ev, 'lanternChannel').length).toBeGreaterThan(10);
+    expect(of(ev, 'lanternCancel')).toEqual([]);
+    expect(of(ev, 'lanternRefuse')).toEqual([]);
+    // 12 = the 3 she had + 2 knocked loose + 7 of the burst's 8: 16 + 6 x 3 frames after it.
+    expect(lantern(s).litFrame - burst).toBeLessThanOrEqual(36);
+  });
+
+  it('no pledge without standing at it, none when what is coming is not enough; a hit does not undo one', () => {
+    // Cut from beside the lantern, not at it: nothing is pledged, it stays dark.
+    const far = sim(withPod(), 3, A_X + 120);
+    far.run('L1');
+    open(far);
+    far.run('L1 .80');
+    expect(lantern(far)).toMatchObject({ lit: false, pledged: false });
+    // Too little even with the pod: refused as ever.
+    const poor = sim(withPod(), 0, A_X);
+    open(poor);
+    expect(lantern(poor).pledged).toBe(false);
+    poor.run('.80');
+    expect(lantern(poor).lit).toBe(false);
+    expect(of(poor.events, 'lanternRefuse')).toHaveLength(1);
+    // Pledged, then knocked off it before they land: the pledge stands, it catches all the same.
+    const s = sim(withPod(), 3, A_X);
+    open(s);
+    expect(lantern(s).pledged).toBe(true);
+    hurtPlayer(s.state, resolveParams(s.tuning), -1, 1, { kind: 'burrback', id: 'x' }, 0, 0, s.events);
+    s.run('.60');
+    expect(lantern(s)).toMatchObject({ lit: true, pledged: false });
   });
 });
 
@@ -393,9 +467,21 @@ describe('lanterns: a lit one is a rest point', () => {
     expect(feet(s)).toEqual({ x: A_X, y: FLOOR });
     expect(lantern(s).lit).toBe(true);
     expect([s.state.pickups.count, s.state.pickups.spent, s.state.goal.lit]).toEqual([0, 12, 1]);
-    // A fade costs: 2 of 4 lights (the lantern she stands at will make her whole in 45 frames).
+    // A fade costs: 2 of 4 lights, and the lantern she re-formed in does not make her whole where
+    // she stands (playtest 3: "a fade has no sting"): only once she has stepped out of it and come back.
     expect(s.state.player.hp).toBe(H.reformHp);
-    expect(of(s.run(`.${G.restFrames}`), 'lanternRest')[0]).toMatchObject({ healed: 2, hp: 4 });
+    expect(s.state.goal.restHold).toBe(true);
+    expect(of(s.run(`.${G.restFrames * 4}`), 'lanternRest')).toEqual([]);
+    expect([s.state.player.hp, lantern(s).rest]).toEqual([H.reformHp, 0]);
+    // A hop on the spot is not leaving.
+    expect(of(s.run(`J20 .40 .${G.restFrames}`), 'lanternRest')).toEqual([]);
+    // Out of its box and back: now it is a rest.
+    s.run('R12 .8');
+    expect(s.state.goal.restHold).toBe(false);
+    s.run('L12 .8');
+    expect(feet(s).x).toBe(A_X);
+    const rest = s.run(`.${G.restFrames}`);
+    expect(of(rest, 'lanternRest')[0]).toMatchObject({ healed: 2, hp: 4 });
   });
 
   it('the lit lantern she last stood at is the one; an unlit one is not; without any, safe ground as before', () => {
@@ -754,7 +840,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
     s.run(`.${G.holdFrames + 5}`);
     expect([s.state.goal.lit, s.state.goal.ended, s.state.pickups.spent]).toEqual([3, true, 36]);
     const fresh = createState(1, s.tuning, s.scene);
-    expect(fresh.version).toBe(15);
+    expect(fresh.version).toBe(16);
     expect(fresh.goal).toEqual({
       lanterns: [0, 1, 2].map(() => ({
         lit: false,
@@ -764,12 +850,14 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
         short: 0,
         refused: false,
         noticed: false,
+        pledged: false,
       })),
       lit: 0,
       restAt: -1,
       lamps: [],
       lampsLit: 0,
       restLamp: -1,
+      restHold: false,
       heart: { awake: false, frames: 0, hinted: false },
       gathered: false,
       ending: {

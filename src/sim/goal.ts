@@ -36,6 +36,7 @@ const dormant = (): LanternState => ({
   short: 0,
   refused: false,
   noticed: false,
+  pledged: false,
 });
 
 export function createGoal(scene: Scene): GoalState {
@@ -46,6 +47,7 @@ export function createGoal(scene: Scene): GoalState {
     lamps: (scene.lamps ?? []).map(dormant),
     lampsLit: 0,
     restLamp: -1,
+    restHold: false,
     heart: { awake: false, frames: 0, hinted: false },
     gathered: false,
     ending: {
@@ -104,6 +106,26 @@ export function restPoint(state: GameState, scene: Scene): { x: number; y: numbe
   const i = state.goal.restAt;
   const l = i >= 0 ? scene.lanterns?.[i] : undefined;
   return l && state.goal.lanterns[i]?.lit ? l : undefined;
+}
+
+/**
+ * She has just re-formed (`reformPlayer`). At a light, that light does not make her whole until
+ * she has stepped out of it and come back: a fade is not a rest. Whatever was pledged is off (a
+ * third of her wallet is gone).
+ */
+export function goalReformed(g: GoalState, atLight: boolean): void {
+  g.restHold = atLight;
+  for (const l of g.lanterns) l.pledged = false;
+  for (const l of g.lamps) l.pledged = false;
+}
+
+/** Glints already set loose and on their way to her: a cut pod's, a dead creature's. */
+function inbound(state: GameState): number {
+  let n = 0;
+  const left = state.pods.left;
+  for (let i = 0; i < left.length; i++) n += left[i] ?? 0;
+  for (let i = 0; i < state.enemies.length; i++) n += state.enemies[i]?.spill ?? 0;
+  return n;
 }
 
 /** Control is taken: from `gather` on, for good unless `endedControl` gives it back after the hold. */
@@ -281,6 +303,7 @@ function updateLights(
   const lights = lamp ? g.lamps : g.lanterns;
   const pcx = p.x + p.w / 2;
   const pcy = p.y + p.h / 2;
+  const coming = inbound(state);
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
     const s = lights[i];
@@ -293,13 +316,17 @@ function updateLights(
 
     if (s.lit) {
       // A rest point: where she re-forms, and where she is made whole.
+      const here = lamp ? g.restLamp === i : g.restAt === i;
       if (!at) {
         s.rest = 0;
+        // Out of the light she re-formed in (on her own feet): coming back to it is a rest again.
+        if (here && g.restHold && control && p.grounded) g.restHold = false;
         continue;
       }
+      if (!here) g.restHold = false;
       g.restAt = lamp ? -1 : i;
       g.restLamp = lamp ? i : -1;
-      if (p.hp >= p.hpMax) {
+      if (p.hp >= p.hpMax || g.restHold) {
         s.rest = 0;
         continue;
       }
@@ -327,19 +354,31 @@ function updateLights(
       if (Math.abs(pcx - l.x) > G.refuseLeavePx) s.refused = false;
     }
     const calm = at && p.attack === 'none' && !slashed && !g.gathered;
-    if (calm && wallet.count >= need) {
+    // Pledged: she stands at it short, and what she lacks is already in the air on its way to her
+    // (the pod she cut at its foot). From here it catches the step those have landed, wherever she
+    // is by then; while she stays, the channel shows (a slash does not break it any more).
+    if (!s.pledged && at && !g.gathered && wallet.count < need && wallet.count + coming >= need)
+      s.pledged = true;
+    if (s.pledged && wallet.count + coming < need) s.pledged = false;
+    const paid = s.pledged && wallet.count >= need && !g.gathered;
+    if (paid || (calm && wallet.count >= need) || (s.pledged && at)) {
       s.short = 0;
       const of = whole(G.channelFrames, 1);
-      s.channel++;
-      if (lamp) p.kindlingLamp = i;
-      else p.kindling = i;
-      if (s.channel < of) {
+      if (at) {
+        if (lamp) p.kindlingLamp = i;
+        else p.kindling = i;
+      }
+      // (Waiting on the pledged glints, the count holds one short of the end.)
+      if (!paid) s.channel = wallet.count >= need ? s.channel + 1 : Math.min(s.channel + 1, of - 1);
+      if (!paid && s.channel < of) {
         events.push({ type: lamp ? 'lampChannel' : 'lanternChannel', id, x, y, frames: s.channel, of });
         continue;
       }
       // Kindled.
+      const pledged = s.pledged;
       wallet.count -= need;
       wallet.spent += need;
+      s.pledged = false;
       s.lit = true;
       s.litFrame = state.frame;
       s.channel = 0;
@@ -349,6 +388,7 @@ function updateLights(
       p.kindlingLamp = -1;
       g.restAt = lamp ? -1 : i;
       g.restLamp = lamp ? i : -1;
+      g.restHold = false;
       if (lamp) g.lampsLit++;
       else g.lit++;
       events.push({
@@ -360,6 +400,8 @@ function updateLights(
         wallet: wallet.count,
         lit: lamp ? g.lampsLit : g.lit,
         total: list.length,
+        pledged,
+        away: !at,
       });
       calmEnemies(state, scene, t, events, l.x, b.y + b.h / 2, G.calmPx, whole(G.calmFrames, 0));
       const heart = scene.heart;

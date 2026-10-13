@@ -37,6 +37,23 @@ export const GLINTS = {
     twinkleStep: 0.26,
     twinkleSeconds: 0.7,
     twinkleRest: 1.7,
+    /**
+     * Hierarchy (playtest 3: the spawn frame held 18-20 full stars, more and brighter than the one
+     * lantern and its crown). Only the `lead` untaken stars of a trail nearest to her stand at full
+     * size and presence, and only within `leadNear` px of her chest; out to `leadFar` they sink to
+     * `leadFarLevel`. Every other star of the trail is a seed: `seedScale` of the size at
+     * `seedLevel` presence, no rays, a faint swell when the trail's twinkle passes (`seedSwell`),
+     * so the line still reads as a line that leads off. Taking one promotes the next (eased at
+     * `levelRate` per second).
+     */
+    lead: 2,
+    leadNear: 460,
+    leadFar: 820,
+    leadFarLevel: 0.44,
+    seedLevel: 0.3,
+    seedScale: 0.58,
+    seedSwell: 0.22,
+    levelRate: 2.6,
   },
   great: {
     quad: 96,

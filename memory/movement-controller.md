@@ -17,6 +17,19 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
 - **Wall slide** needs a held direction into the wall while falling; the cap ramps
   `min(slideMax, slideStartMax + slideRamp·slideT)` (2.5 → 6.5 px/f). Holding away for `stickFrames` lets go.
   Wall jump has a 20 px grace (no need to be sliding), forces vx for 8 frames, refills dash + double jump.
+- **A wall kick does not ask for a hold** (`wall.kickFrames` 24 = the whole rise; `player.kick` counts it
+  down; playtest 3: a 90 ms tapper could not climb anything). Letting go of jump cannot cut a wall kick's rise,
+  so a one-frame tap kicks the full 272 px (a tap used to give 136: with the 8 forced frames away and the
+  flight back, a tapper lost height on every kick and never left the ground). A held kick is bit for bit what
+  it was. Ground and double jumps keep their variable height (a 5-frame tap: 136 px, + a tapped double: 240).
+  Consequence, on purpose: **one wall is enough**. Holding into a wall and pressing each time she slides, the
+  kick throws her 145 px out (8 forced frames + the turn) and she is back on the same wall ~230 px higher,
+  one kick per ~30 frames. So every wall face in the grove is a way up for every hand (the bluff, trunk B's
+  two faces, the bark of trunk A, the far bluff, the scene's walls), and **anything solid within 150 px of a
+  face, overhead, is a head-bump loop**: check a new overhang with `critical-path.test.ts`'s `push`.
+  Measured (taps of 4-6 frames at four beats, one wall): `kickFrames` 8 and 12: a tapper never tops trunk B
+  (12 gets up the far bluff in 11 s, 21 kicks); 16: 8-9 kicks, 5-6 s; **24: 4-5 kicks, 3.2-4.2 s**, the same
+  count as a hold. Not tried: longer forced frames (she would reach the shaft's other wall whatever she holds).
 - **Dash**: 2 freeze frames (the press frame counts), then 12 frames at 24 px/f with vy = 0, exits at run
   speed; 24-frame cooldown; one per airtime; jump during a grounded dash = dash jump (vx 12).
 - **Wing glide** (`tuning.glide`, toggle `assists.glide`): a flag inside mode `normal` (`gliding`), so
@@ -41,6 +54,10 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
   - While gliding `airTopY` follows her, so `land.fallPx` counts from where the wings let go and a glided
     landing is never `hard`.
 - `land.vy` falls back to `vy` when the move ended exactly on the ground (it used to report 0 then).
+- **`land.hard`** = `fallPx >= misc.hardLandFallPx` (420) and nothing else. It used to be 320 "or at max fall
+  speed", and max fall is reached after ~160 px, so every drop off a ledge was hard. Now: the terrace (192),
+  the catch branch from the bough (256), the rise from the right branch (176) are soft; the well from the
+  bark's top (832), the floor from the catch branch (832), the rise from the far bluff (640) are hard.
 - **Slash** (combat.md): never locks movement. It adds a lunge (`lungeX`, ground forward slashes, never
   off a ledge unless forward is held) and a short air hang (fall above 1.5 px/f halved per frame for
   4-6 frames, once per combo step per airtime); on a hit: `hitstop` (the whole controller holds,

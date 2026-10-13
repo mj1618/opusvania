@@ -104,6 +104,53 @@ Dev handle `__goal` (`.cfg`, `.cpuMs`). Sheets of every moment: `shots/goal/`.
   has lifted), the lost ones fall away cold, and "-n" stands beside it in cold numerals for 4 s.
   The waiting cluster and the marker at the view edge: pickups.md.
 
+## Round 5 (after playtest 3: nothing led on, the glide was not taught, lamps unreadable, she covered the light)
+- **Ember-moths lead to the nearest dark lantern** (`guide.ts`, knobs and waypoints `GOAL.guide`). Three
+  leave a lit lantern 1.3 s after it catches (two from a wayside lamp), again every 6.5 s while she is
+  within 300 px of it and on `lanternRest`; four leave the sleeping heart's dark wick for that lantern
+  from `heartSleep` on, while she stays within 260 px. 150 px/s, a stop to circle every ~230 px (until
+  she is within 400 px, at most 2.6 s), gone after 600-900 px or at the lantern; all released when a
+  lantern is kindled. A moth = the `Moth` graphic tinted amber at 0.86 + a 3.8 px ember and a 15 px halo
+  (at 0.72 / 3.1 / 11 they were specks nobody would follow).
+- **The way is data**: `GOAL.guide.routes[lanternId]` = polylines that END at that lantern; a moth joins
+  the nearest one at its nearest point (`wayTo`), no route = a straight line. Today: the crown's runs
+  pool -> branch -> bluff -> well -> shaft floor -> up the shaft -> trunk A's top; the far one has the
+  sky line (from the summit), the cliff face from the shrine (`cliff-n` glints) and the old foot route.
+  **If the layout moves, move these points** (they are head-height world points, nothing else reads them).
+- **Dark = cold, lit = warm, everywhere.** A sleeping wayside lamp has a pale blue point in its glass
+  and a breath of cold light behind (`GOAL.lamp`, two glow sprites); the heart's dark wicks carry the
+  same point, so "which of three" is read by temperature from across the shrine. Lanterns keep their
+  dull warm ember (they have the crown).
+- **The price crown is hollow flames, not stars** (`refuse.mark / fill`): a small warm teardrop per
+  glint asked, filled amber as far as the wallet goes. As four-point stars it was twelve more glints.
+- **The crook turns its glass away from her** (`LanternView.turn / turnTo`, `lantern.turnPx / turnSlack /
+  turnRate`): within 300 px, once she is 12 px to the glass's side of the foot, the root's x scale runs
+  through zero (a crook turning on its stem) and the glass hangs on the far side, also mid-channel
+  (`samplePath` mirrors the way light climbs it). Bead to her body is then 45+ px at a lantern, 30+ at a
+  lamp, whichever side she comes from or stops on (lamp-root: she ends pressed to the step, glass west).
+- **A broken channel is seen**: the glints in the air stop and fall back into her as small stars
+  (`kindle.backSize`), the ones that had reached the glass leave it, the glass flickers dry and swings.
+- **A fade's sting** (`GOAL.reform`, `LIGHTS.reform*` / `chill*`): the light she re-forms at gutters to an
+  ember for 1.3 s and is back by 3.6 s (bead -80%, its pool and post light -60%), seven dull embers fall
+  off her; in the HUD the two lights she gets back catch late and burn at half until ~4 s, the two she
+  lost show a cold point for ~4 s. Nothing brightens. (The sim's `restHold` now keeps the lost two dark
+  until she has stepped out of the light and back.)
+- **The sim's pledge** (`lanternKindle {pledged, away}`): a channel never streams more than she holds
+  (HUD and world), and a catch while she is away sends the owed glints across from wherever she is.
+- **HUD prompts** (`hud/prompts.ts`, `PROMPTS`; position from `hud/link.ts`, which the goal renderer
+  fills, since the HUD has no camera): the jump key's cap beside her, HELD (it sinks and stays, a line
+  draws out under it, two wing strokes open) after 20 frames of plain falling at least 70 px under the
+  top of her arc, until the first `glideStart` ever; TAPPED with a stroke up and away from the wall
+  after a 48-frame wall slide, until the first wall jump ever. Kept in localStorage `opusvania.taught`
+  (try / catch). **Off in `?manual`** (no storage read or written): `__prompts.enabled = true`,
+  `__prompts.reset()`, `__prompts.taught`. The cap shows the jump key she last pressed (Z / K / space).
+  A full jump on the flat falls 18 frames, so 20 never fires on a hop; the bluff's 192 px drop is 14-16
+  frames, so it does not fire there either (raise nothing: lower `fallFrames` to 12 if it should).
+- The ending's R key stands at the right end of the tally rows (it sat on the page's hint line).
+- Dev handles: `__goal.guide` (`.moths`, `.count`), `__hud`, `__prompts`.
+- "HUD shows 4 lit after a re-form at 2" (playtest 3) was not a lag: the old sim's rest healed her 45
+  frames after re-forming at a lantern. Traced: lights `on` = `hp` at every 12th frame for 108 frames.
+
 ## Look decisions (learned by looking)
 - Lantern = shepherd's crook + hanging seed of glass (the HUD health light's shape, 1.42x). Lit, the
   nested amber fills read as a flame inside dark glass; filling the whole seed made an orange blob.
@@ -126,6 +173,10 @@ Dev handle `__goal` (`.cfg`, `.cpuMs`). Sheets of every moment: `shots/goal/`.
 - "+n" in the tally and the tug of her glints at running speed have only been seen staged / standing.
 - The tug glints are small (26 px stars); the crown is what reads from a screen away.
 - A lit wayside lamp is quiet (bead 0.8 of a lantern's); nobody has played to one yet.
+- The wall-kick prompt needs a 48-frame slide, which is a whole slide down from one jump: it mostly
+  appears as she lands and lingers 1.3 s. The glide prompt has not been seen in real-key play.
+- Guide moths pass through solids (they fly the polyline); the catch swell on the terrace wall by
+  lamp-trunk is a strong orange flash for ~0.4 s.
 - The ward answer at the edge of safe ground has only been seen once (burr-far at the far ledge).
 - Dormant glints are not woken by a lit lantern (they belong to the pickup renderer); at the ending a
   soft flare is laid over the waiting ones in view.

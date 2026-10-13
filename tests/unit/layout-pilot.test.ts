@@ -200,8 +200,9 @@ describe('the hollow: a real dip in the floor', () => {
   it('running in is harmless and one jump gets her out either way; a jump from the rim clears it', () => {
     expect([hollow.x, hollow.y, hollow.w]).toEqual([3744, 1376, 224]);
     const s = newSim({ ...GROVE, enemies: [] });
-    s.place(3600, 1280);
-    s.run('R40');
+    // (From the strip of floor at trunk B's east foot: the trunk closes the floor west of it.)
+    s.place(3734, 1280);
+    s.run('R30');
     expect(feet(s).y).toBe(hollow.y);
     wait(s, 40);
     expect(taken(s, 'hollow-')).toBe(3);
@@ -210,22 +211,22 @@ describe('the hollow: a real dip in the floor', () => {
     expect(hopOnto(s, root)).toBeGreaterThan(0);
     s.place(hollow.x + 100, hollow.y);
     expect(hopOnto(s, ground[5] as (typeof S)[number])).toBeGreaterThan(0);
-    // From the west rim one held jump lands on the root beyond.
-    s.place(3690, 1280);
-    s.run('R4');
+    // From the west rim one held jump clears it: onto the root, or over it.
+    s.place(3734, 1280);
     until(s, 'R+J');
-    expect(feet(s).y).toBe(root.y);
+    expect(feet(s).x).toBeGreaterThan(root.x);
+    expect(feet(s).y).toBeLessThanOrEqual(1280);
   });
 });
 
-describe('the far ledge has no guard', () => {
+describe('the far bluff (the old far ledge) has no guard', () => {
   it('a full held running jump from F7 lands safe, whenever she sets off (it used to land on a burrback 55 times in 60)', () => {
-    const far = S.filter((r) => r.tag === 'ledge')[1];
-    if (!far) throw new Error('no far ledge');
+    const far = ground[9];
+    if (!far) throw new Error('no far bluff');
     for (let k = 0; k < 60; k++) {
       const s = newSim();
       wait(s, k * 31);
-      s.place(5140, 592);
+      s.place(5080, 592);
       const from = s.events.length;
       s.run('R16 R+J60 R30 .60');
       expect(feet(s).y, `start ${k * 31}`).toBe(far.y);
@@ -263,9 +264,10 @@ describe('the shaft entry: a jump at either trunk from the floor catches a wall'
     };
   }
 
-  it('the geometry: two doorways 112 px high, walls from there up, a 256 px shaft, a well before trunk A', () => {
+  it('the geometry: a doorway 112 px high under trunk A, trunk B to the floor, a 256 px shaft, a well before trunk A', () => {
     expect([a.x, a.y, a.w, a.y + a.h]).toEqual([3200, 448, 128, 1168]);
-    expect([b.x, b.y, b.w, b.y + b.h]).toEqual([3584, 192, 128, 1168]);
+    // (Playtest 3: trunk B stands on the floor now. One doorway, under trunk A: the way in and back out.)
+    expect([b.x, b.y, b.w, b.y + b.h]).toEqual([3584, 192, 128, FLOOR]);
     expect(FLOOR - (a.y + a.h)).toBe(112);
     expect(FLOOR - (a.y + a.h)).toBeGreaterThan(defaultTuning.body.height + 24);
     // Nothing overhead at jump height anywhere on the approach: the only undersides are the two
@@ -311,7 +313,7 @@ describe('the shaft entry: a jump at either trunk from the floor catches a wall'
     }
   });
 
-  it('then the kick: slide, jump, and three kicks later she is on trunk A; the doorways are walked through', () => {
+  it('then the kick: slide, jump, and three kicks later she is on trunk A; the doorway is walked through both ways', () => {
     const s = newSim({ ...GROVE, enemies: [] });
     // In from the terrace on foot: down into the well, under trunk A, into the shaft.
     s.place(3000, terrace.y);
@@ -323,10 +325,14 @@ describe('the shaft entry: a jump at either trunk from the floor catches a wall'
     s.place(3456, FLOOR);
     expect(wallClimb(s, a.y, -1)).toBe(3);
     expect(feet(s).y).toBe(a.y);
-    // And out the other side on foot, to the hollow.
+    // There is no way out the other side: trunk B's bark stops her, with the great glint at its foot.
     s.place(3456, FLOOR);
-    s.run('R40');
-    expect(feet(s).x).toBeGreaterThan(b.x + b.w);
+    s.run('R40 .70');
+    expect(feet(s).x).toBe(b.x - 20);
+    expect(taken(s, 'great-arch')).toBe(1);
+    // Back out west on foot.
+    s.run('L60');
+    expect(feet(s).x).toBeLessThan(a.x);
     // Out of the well westward is one jump.
     s.place(3120, FLOOR);
     expect(hopOnto(s, terrace)).toBeGreaterThan(0);
@@ -417,7 +423,7 @@ describe('the summit: arriving is forgiving', () => {
   });
 
   it('the summit glide still sets off from the lantern, and the take-off from the bough reaches the far ledge too', () => {
-    const far = S.filter((r) => r.tag === 'ledge')[1] as (typeof S)[number];
+    const far = ground[9] as (typeof S)[number];
     for (const x of [3684, 3860]) {
       const s = newSim({ ...GROVE, enemies: [] });
       s.place(x, b.y);
@@ -462,6 +468,27 @@ describe('naive players', () => {
     expect(s.state.frame).toBeLessThan(300);
     expect(s.state.pickups.count).toBe(1);
     expect(hurts(ev)).toBe(0);
+  });
+
+  it('"cuts the pod and runs on at once" (playtest 3: the lantern stayed dark): it catches behind her as the pod\'s glints land', () => {
+    const pods = GROVE.pods ?? [];
+    const i = pods.findIndex((p) => p.id === 'pod-stone');
+    const pod = pods[i] as { x: number };
+    const s = newSim();
+    let prev = 0;
+    for (let f = 0; f < 400 && s.state.pods.hp[i] !== 0; f++) {
+      const m =
+        pod.x - feet(s).x > 90 ? ActionBit.right : (prev & ActionBit.attack) === 0 ? ActionBit.attack : 0;
+      step(s.state, m, s.tuning, s.scene, s.events);
+      prev = m;
+    }
+    const burst = s.state.frame;
+    // Not a frame of waiting: right held from the burst on, into the pool.
+    const ev = s.run('R60');
+    const k = ev.find((e) => e.type === 'lanternKindle');
+    expect(k).toMatchObject({ id: 'lantern-stone', pledged: true, away: true });
+    expect(s.state.goal.lanterns[0]?.litFrame).toBeLessThanOrEqual(burst + 40);
+    expect(feet(s).x).toBeGreaterThan(1600);
   });
 
   it('she is at the lantern whether she starts cutting 54 px from the pod or at the end of her reach (132)', () => {

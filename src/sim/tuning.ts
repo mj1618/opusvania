@@ -107,6 +107,11 @@ export const defaultTuning = {
     forceFrames: 8,
     /** Wall-jump grace: a wall within this many px counts. */
     checkPx: 20,
+    /**
+     * A wall kick rises for at least this many frames however short the press (letting go cannot
+     * cut it before then), so a player who taps climbs a shaft, or one wall, as surely as one who holds.
+     */
+    kickFrames: 24,
   },
   dash: {
     speed: 24,
@@ -501,8 +506,8 @@ export const defaultTuning = {
     dropThroughFrames: 10,
     /** Grounded distance between `step` (footstep) events. */
     footstepPx: 96,
-    /** A landing is "hard" past this fall height or at max fall speed. */
-    hardLandFallPx: 320,
+    /** A landing is "hard" past this fall height (a drop off a ledge is not; max fall speed is reached after 160 px). */
+    hardLandFallPx: 420,
   },
   assists: {
     coyote: true,

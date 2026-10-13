@@ -1,0 +1,327 @@
+/**
+ * The two things the grove cannot teach by itself, said once, quietly (playtest 3: her wings
+ * flutter on a long fall, which says "wings", not "hold"; a tapper never found the glide):
+ *
+ *  - the glide: the first time she falls `fallFrames` without gliding, the jump key's cap stands
+ *    beside her, pressed and HELD (it sinks and stays down, a fine line draws out under it, two
+ *    small wing strokes open either side). It stays while she falls and comes back on later falls
+ *    until she has glided once; then never again.
+ *  - the wall kick: the first wall slide that lasts `slideFrames`, the same cap, TAPPED, with a
+ *    small stroke up and away from the bark. Gone for good after her first wall jump.
+ *
+ * "For good" is kept in localStorage (try / catch: private windows have none). In `?manual` (the
+ * capture tools, the tests) nothing shows and the storage is not touched, so shots stay clean;
+ * `__prompts.enabled = true` turns them on there, `__prompts.reset()` forgets what she has learned.
+ *
+ * Drawn in the HUD's own way: pale line work on a soft dark seat, painted once, no box of text.
+ * The HUD has no camera; where she is on screen comes from `hudLink` (the goal renderer).
+ */
+import { CanvasSource, Container, Graphics, Sprite, Texture } from 'pixi.js';
+import type { SimView } from '../contract';
+import { VIEW_H, VIEW_W } from '../contract';
+import { hudLink } from './link';
+
+export const PROMPTS = {
+  /** Frames of plain falling (not gliding, not hurt) before the glide's key shows; the wings' own flutter starts at 14. */
+  fallFrames: 12,
+  /** ...and she must be this far under the top of her arc, px (a hop on the flat never asks). */
+  fallPx: 70,
+  /** Frames of one wall slide before the kick's key shows (0.8 s). */
+  slideFrames: 24,
+  /** Seconds: fade in, how long it stays after the fall / slide ends, fade out; and once she has done it. */
+  fadeIn: 0.18,
+  linger: 1.3,
+  fadeOut: 0.5,
+  learned: 0.35,
+  /** Where it stands from her body centre, world px (x to the side away from the wall for the kick). */
+  dx: 62,
+  dy: -66,
+  /** Cap half-size, logical px. */
+  cap: 12,
+  /** The hold: seconds per loop, pressed from..to (of the loop), how far the cap sinks px. */
+  holdLoop: 2.6,
+  holdDown: [0.08, 0.84],
+  /** The tap: seconds per loop, pressed for this share of it. */
+  tapLoop: 0.95,
+  tapDown: 0.24,
+  sink: 2.6,
+  alpha: 0.92,
+  family: '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif',
+  storage: 'opusvania.taught',
+};
+
+const RES = 4;
+const CELL = 72;
+const PALE = 'rgba(226, 236, 240, 0.94)';
+const PALE_N = 0xe2ecf0;
+
+type Lesson = 'glide' | 'kick';
+
+/** A key cap with its letter (or the space bar's mark), pale on a soft dark seat. `wide` = half-width px. */
+function paintCap(label: string, wide: number): Texture {
+  const P = PROMPTS;
+  const canvas = document.createElement('canvas');
+  canvas.width = CELL * RES;
+  canvas.height = CELL * RES;
+  const g = canvas.getContext('2d');
+  if (g) {
+    g.scale(RES, RES);
+    g.translate(CELL / 2, CELL / 2);
+    const r = P.cap;
+    const box = (): void => {
+      g.beginPath();
+      g.roundRect(-wide, -r, wide * 2, r * 2, 4.5);
+    };
+    g.save();
+    g.shadowColor = 'rgba(2, 10, 16, 0.9)';
+    g.shadowBlur = 8 * RES;
+    g.fillStyle = 'rgba(4, 14, 22, 0.66)';
+    box();
+    g.fill();
+    g.restore();
+    g.strokeStyle = PALE;
+    g.lineWidth = 1.15;
+    box();
+    g.stroke();
+    if (label === ' ') {
+      // The space bar: a shallow bracket.
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      g.beginPath();
+      g.moveTo(-wide + 7, 0.5);
+      g.lineTo(-wide + 7, 4);
+      g.lineTo(wide - 7, 4);
+      g.lineTo(wide - 7, 0.5);
+      g.stroke();
+    } else {
+      g.font = `500 15.5px ${P.family}`;
+      g.textAlign = 'center';
+      g.textBaseline = 'alphabetic';
+      g.fillStyle = PALE;
+      g.fillText(label, 0, 5.4);
+    }
+  }
+  const source = new CanvasSource({ resource: canvas, resolution: RES, autoGenerateMipmaps: true });
+  source.scaleMode = 'linear';
+  return new Texture({ source });
+}
+
+function smooth(a: number, b: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+
+export class Prompts {
+  readonly root = new Container({ label: 'hud-prompts' });
+  /** Off in `?manual` (captures, tests). */
+  enabled = true;
+  readonly taught: Record<Lesson, boolean> = { glide: false, kick: false };
+  private readonly store: boolean;
+  private readonly caps = new Map<string, Texture>();
+  private readonly cap = new Sprite();
+  /** The cap's lower lip (it stays while the cap sinks onto it), the line of a hold, the wings, the kick's stroke. */
+  private readonly lip = new Graphics();
+  private readonly bar = new Graphics();
+  private readonly wings: [Graphics, Graphics] = [new Graphics(), new Graphics()];
+  private readonly away = new Graphics();
+  /** The jump key she last pressed (a `KeyboardEvent.code`); Z until she has pressed one. */
+  private key = 'KeyZ';
+  private shownKey = '';
+  private frame = -1;
+  private fall = 0;
+  private slide = 0;
+  private lesson: Lesson | null = null;
+  private alpha = 0;
+  private linger = 0;
+  private t = 0;
+  private x = 0;
+  private y = 0;
+  private side = 1;
+
+  constructor() {
+    let manual = false;
+    try {
+      manual = new URLSearchParams(window.location.search).has('manual');
+    } catch {
+      manual = true;
+    }
+    this.enabled = !manual;
+    this.store = !manual;
+    if (this.store) {
+      try {
+        const raw = window.localStorage.getItem(PROMPTS.storage);
+        const got = raw ? (JSON.parse(raw) as Partial<Record<Lesson, boolean>>) : {};
+        this.taught.glide = got.glide === true;
+        this.taught.kick = got.kick === true;
+      } catch {
+        // No storage: she is taught once per visit.
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' || e.code === 'KeyZ' || e.code === 'KeyK') this.key = e.code;
+      });
+      (window as unknown as { __prompts?: Prompts }).__prompts = this;
+    }
+    this.cap.anchor.set(0.5);
+    for (const side of [-1, 1] as const) {
+      // A small wing: two strokes fanning up and out from beside the cap.
+      const w = this.wings[side < 0 ? 0 : 1];
+      w.moveTo(0, 2)
+        .bezierCurveTo(side * 5, -6, side * 13, -9, side * 17, -5)
+        .stroke({ width: 1.15, color: PALE_N, alpha: 0.9, cap: 'round' });
+      w.moveTo(0, 2)
+        .bezierCurveTo(side * 6, 0, side * 11, 1, side * 13, 4)
+        .stroke({ width: 1, color: PALE_N, alpha: 0.6, cap: 'round' });
+    }
+    // Up and away: a short stroke with a barb.
+    this.away
+      .moveTo(0, 0)
+      .lineTo(9, -11)
+      .moveTo(3.4, -10.4)
+      .lineTo(9, -11)
+      .lineTo(8.8, -5.4)
+      .stroke({ width: 1.2, color: PALE_N, alpha: 0.92, cap: 'round', join: 'round' });
+    this.root.addChild(this.lip, this.bar, this.wings[0], this.wings[1], this.away, this.cap);
+    this.root.visible = false;
+  }
+
+  /** Forgets what she has learned (dev). */
+  reset(): void {
+    this.taught.glide = false;
+    this.taught.kick = false;
+    this.save();
+  }
+
+  private save(): void {
+    if (!this.store) return;
+    try {
+      window.localStorage.setItem(PROMPTS.storage, JSON.stringify(this.taught));
+    } catch {
+      // Not kept: it will be said again next visit.
+    }
+  }
+
+  private learn(l: Lesson): void {
+    if (this.taught[l]) return;
+    this.taught[l] = true;
+    this.save();
+  }
+
+  update(dt: number, _clock: number, sim: SimView): void {
+    const P = PROMPTS;
+    const p = sim.player;
+    // What she has done counts whether or not anything is shown.
+    for (const e of sim.events) {
+      if (e.type === 'glideStart') this.learn('glide');
+      else if (e.type === 'jump' && e.kind === 'wall') this.learn('kick');
+    }
+    const df = this.frame < 0 || sim.frame < this.frame ? 0 : Math.min(4, sim.frame - this.frame);
+    this.frame = sim.frame;
+    const free = p.faded <= 0 && p.stagger <= 0 && !sim.goal.gathered;
+    const falling = free && !p.grounded && p.mode === 'normal' && !p.gliding && p.vy > 1.5;
+    this.fall = falling ? this.fall + df : 0;
+    this.slide = free && p.mode === 'wallSlide' ? this.slide + df : 0;
+
+    let want: Lesson | null = null;
+    if (this.enabled && hudLink.on) {
+      if (!this.taught.kick && this.slide >= P.slideFrames) want = 'kick';
+      else if (!this.taught.glide && this.fall >= P.fallFrames && p.y - p.airTopY >= P.fallPx) want = 'glide';
+    }
+    if (want) {
+      if (this.lesson !== want || this.alpha <= 0.003) {
+        // New: it stands where she is at once.
+        if (this.lesson !== want) this.t = 0;
+        this.lesson = want;
+        this.side = want === 'kick' ? (p.wallDir > 0 ? -1 : 1) : 1;
+        if (this.alpha <= 0.003) this.place(1);
+      }
+      this.linger = P.linger;
+    } else this.linger -= dt;
+    const done = this.lesson !== null && this.taught[this.lesson];
+    const on = this.lesson !== null && !done && this.linger > 0 && this.enabled;
+    this.alpha = Math.min(
+      1,
+      Math.max(0, this.alpha + (on ? dt / P.fadeIn : -dt / (done ? P.learned : P.fadeOut))),
+    );
+    if (this.alpha <= 0.003) {
+      this.root.visible = false;
+      if (!on) this.lesson = null;
+      return;
+    }
+    this.t += dt;
+    this.place(Math.min(1, dt * 12));
+    const a = this.alpha * this.alpha * (3 - 2 * this.alpha) * P.alpha;
+    this.root.visible = true;
+    this.root.alpha = a;
+    this.root.position.set(Math.round(this.x * 2) / 2, Math.round(this.y * 2) / 2);
+
+    // The cap for the key she uses.
+    if (this.shownKey !== this.key) {
+      this.shownKey = this.key;
+      const wide = this.key === 'Space' ? P.cap * 2.3 : P.cap;
+      let tex = this.caps.get(this.key);
+      if (!tex) {
+        tex = paintCap(this.key === 'Space' ? ' ' : this.key === 'KeyK' ? 'K' : 'Z', wide);
+        this.caps.set(this.key, tex);
+      }
+      this.cap.texture = tex;
+      this.lip
+        .clear()
+        .moveTo(-wide + 4, P.cap + 3.4)
+        .lineTo(wide - 4, P.cap + 3.4)
+        .stroke({ width: 1.1, color: PALE_N, alpha: 0.42, cap: 'round' });
+    }
+    const wide = this.key === 'Space' ? P.cap * 2.3 : P.cap;
+    const hold = this.lesson === 'glide';
+    let down = 0;
+    let held = 0;
+    if (hold) {
+      const ph = (this.t / P.holdLoop) % 1;
+      const d0 = P.holdDown[0] as number;
+      const d1 = P.holdDown[1] as number;
+      down = smooth(d0, d0 + 0.05, ph) * (1 - smooth(d1, d1 + 0.05, ph));
+      // How long it has been held, 0..1 of the press.
+      held = down > 0 ? Math.min(1, Math.max(0, (ph - d0) / (d1 - d0))) : 0;
+    } else {
+      const ph = (this.t / P.tapLoop) % 1;
+      down = smooth(0, 0.07, ph) * (1 - smooth(P.tapDown, P.tapDown + 0.1, ph));
+      held = ph;
+    }
+    this.cap.y = P.sink * down;
+    // Held: a fine line draws out under the key and stays as long as it is down; the wings open.
+    const len = hold ? smooth(0.02, 0.5, held) * down : 0;
+    this.bar.visible = len > 0.01;
+    if (this.bar.visible)
+      this.bar
+        .clear()
+        .moveTo(-(wide + 5) * len, P.cap + 8.5)
+        .lineTo((wide + 5) * len, P.cap + 8.5)
+        .stroke({ width: 1.3, color: PALE_N, alpha: 0.85, cap: 'round' });
+    const open = hold ? smooth(0.1, 0.45, held) * down : 0;
+    for (const side of [-1, 1]) {
+      const w = this.wings[side < 0 ? 0 : 1];
+      w.visible = open > 0.01;
+      w.alpha = open * 0.9;
+      w.position.set(side * (wide + 5), P.sink * down - 2);
+      w.scale.set(0.45 + 0.55 * open, 0.6 + 0.4 * open);
+      w.rotation = side * (1 - open) * 0.7;
+    }
+    // Tapped at a wall: a stroke up and away from the bark, flicked on each press.
+    const flick = hold ? 0 : smooth(0.02, 0.2, held) * (1 - smooth(0.45, 0.85, held));
+    this.away.visible = flick > 0.01;
+    this.away.alpha = flick;
+    this.away.scale.set(this.side, 1);
+    this.away.position.set(this.side * (wide + 6 + 5 * flick), -P.cap + 4 - 6 * flick);
+  }
+
+  /** Follows her (eased by `k`), kept inside the picture and clear of the bottom line. */
+  private place(k: number): void {
+    const P = PROMPTS;
+    const z = hudLink.zoom;
+    const tx = Math.min(VIEW_W - 60, Math.max(60, hudLink.x + this.side * P.dx * z));
+    const ty = Math.min(VIEW_H - 80, Math.max(50, hudLink.y + P.dy * z));
+    this.x += (tx - this.x) * k;
+    this.y += (ty - this.y) * k;
+  }
+}

@@ -19,12 +19,14 @@ import { lampCost, lanternCost } from '../../sim/goal';
 import { tuning } from '../../sim/tuning';
 import { vesperLink } from '../character/vesper/link';
 import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } from '../contract';
+import { hudLink } from '../hud/link';
 import type { PointLight } from '../lights';
 import { GlintBatch, K_FLARE, K_GLINT, K_SPARK } from '../pickups/batch';
 import { zoneMix, zoneWeights } from '../scene/lib/fx-zones';
 import { wind } from '../scene/lib/look';
 import { GOAL, MAX_QUADS } from './config';
 import { DropsView } from './drops';
+import { GuideMoths, wayTo } from './guide';
 import { HeartView } from './heart';
 import { LanternView, Moth, WAY_SCALE, WAY_STYLES } from './lantern';
 import { LanternLife } from './life';
@@ -87,6 +89,16 @@ interface Lamp {
   /** A creature was turned away at the edge of its safe ground: 0..1, dying, and which side (-1, 1). */
   ward: number;
   wardSide: number;
+  /** Its id in the scene (the guide's routes are keyed by it). */
+  id: string;
+  /** Seconds until it next sends ember-moths toward the nearest dark lantern. */
+  guideIn: number;
+  /** A wayside lamp's cold light while it sleeps: a breath behind it and a point in the glass. */
+  cold: Sprite | null;
+  coldCore: Sprite | null;
+  /** Seconds since she re-formed at it (it pays for that with its flame for a moment), and how low that holds it now (0..1). */
+  gutterT: number;
+  gutter: number;
 }
 
 /** A glint on its way from her chest into a lantern's glass (or, resting, light from the glass to her). */
@@ -97,6 +109,10 @@ interface Flow {
   dur: number;
   seed: number;
   out: boolean;
+  /** A broken channel: the glint falls back to her from (bx, by). */
+  back: boolean;
+  bx: number;
+  by: number;
 }
 
 interface Spark {
@@ -160,6 +176,8 @@ function glow(tint: number): Sprite {
   return s;
 }
 const LONG_AGO = 1e6;
+/** The guide's key for moths sent by the heart (lamps use their index). */
+const HEART_SOURCE = 1000;
 
 export class GoalRenderer {
   readonly cfg = GOAL;
@@ -219,6 +237,12 @@ export class GoalRenderer {
   private groveMote = 0;
   /** The glints a fade cost her, waiting where she fell. */
   private readonly drops = new DropsView();
+  /** Ember-moths that show the way to the nearest dark lantern (guide.ts). */
+  readonly guide = new GuideMoths();
+  private heartGuideIn = 0;
+  /** Cold points on the heart's dark wicks. */
+  private readonly wickCold: Sprite[] = [];
+  private frame = -1;
   /** 0..1: how much of the bud's seams glow while it sleeps (a third per lantern), eased. */
   private seam = 0;
   /** The heart's own glows: its cold breath asleep, its golden light awake, the pillar up the hollow
@@ -269,7 +293,12 @@ export class GoalRenderer {
       const mist = glow(GOAL.lantern.mist.color);
       mist.position.set(view.ox, l.y - GOAL.lantern.mist.lift);
       layers.light.addChild(mist);
+      // A wayside lamp asleep keeps a cold light, so it can be found from across the screen.
+      const cold = way ? glow(GOAL.lamp.cold) : null;
+      const coldCore = way ? glow(GOAL.lamp.coldCore) : null;
+      if (cold) layers.back.addChild(cold);
       layers.back.addChild(life.root, view.root, moth.root);
+      if (coldCore) layers.back.addChild(coldCore);
       for (const c of circlers) layers.back.addChild(c.root);
       this.lamps.push({
         view,
@@ -309,6 +338,12 @@ export class GoalRenderer {
         waved: false,
         ward: 0,
         wardSide: 1,
+        id: l.id,
+        guideIn: GOAL.guide.first,
+        cold,
+        coldCore,
+        gutterT: LONG_AGO,
+        gutter: 0,
       });
     }
     if (scene.heart && list.length > 0) {
@@ -328,9 +363,15 @@ export class GoalRenderer {
       this.glows = g;
       layers.light.addChild(g.mist, g.band, g.canopy, g.pillar, g.shaft, g.horizon);
       layers.back.addChild(h.back, g.cold, this.core.mesh, h.front, g.gold);
-      for (let i = 0; i < h.wicks.length; i++) this.wickT.push(LONG_AGO);
+      for (let i = 0; i < h.wicks.length; i++) {
+        this.wickT.push(LONG_AGO);
+        const c = glow(GOAL.lamp.coldCore);
+        this.wickCold.push(c);
+        layers.back.addChild(c);
+      }
     }
-    for (let i = 0; i < 40; i++) this.flows.push({ on: false, lamp: 0, age: 0, dur: 1, seed: 0, out: false });
+    for (let i = 0; i < 48; i++)
+      this.flows.push({ on: false, lamp: 0, age: 0, dur: 1, seed: 0, out: false, back: false, bx: 0, by: 0 });
     for (let i = 0; i < 200; i++)
       this.sparks.push({
         life: 0,
@@ -354,6 +395,7 @@ export class GoalRenderer {
       layers.light.addChild(this.lightBatch.mesh);
       layers.back.addChild(this.back.mesh);
       layers.front.addChild(this.front.mesh, this.price);
+      for (const m of this.guide.moths) layers.front.addChild(m.view.root);
     }
     this.price.visible = false;
     // Dev handle, like __pickups: `__goal.cfg.lantern.light.intensity = 0; __game.render()`.
@@ -417,6 +459,18 @@ export class GoalRenderer {
     const K = GOAL.kindle;
     const out = this.tmp;
     const v = lamp.view;
+    if (f.back) {
+      // A broken channel: it hangs a moment where it was, drops, and falls back into her.
+      const k = Math.max(0, u) ** 1.7;
+      const mx = (f.bx + this.chestX) / 2 + (f.seed - 0.5) * 30;
+      const my = Math.max(f.by, this.chestY) + 22 + f.seed * 16;
+      const a = (1 - k) * (1 - k);
+      const b = 2 * (1 - k) * k;
+      out[0] = a * f.bx + b * mx + k * k * this.chestX;
+      out[1] = a * f.by + b * my + k * k * this.chestY;
+      out[2] = 1;
+      return;
+    }
     if (f.out) {
       // Resting: light leaves the glass and drifts across to her, a shallow arc.
       const k = u * u * (3 - 2 * u);
@@ -435,7 +489,7 @@ export class GoalRenderer {
       // Out of her chest, dipping toward the lantern's foot.
       const k = u / split;
       const e = k * k * (3 - 2 * k);
-      v.path.sample(foot, out);
+      v.samplePath(foot, out);
       const fx = out[0] as number;
       const fy = out[1] as number;
       const mx = (this.chestX + fx) / 2 + (f.seed - 0.5) * 18;
@@ -449,7 +503,7 @@ export class GoalRenderer {
     }
     // Up the stem, winding round it, into the glass.
     const k = (u - split) / (1 - split);
-    v.path.sample(foot + (1 - foot) * k ** 1.2, out);
+    v.samplePath(foot + (1 - foot) * k ** 1.2, out);
     const ang = k * K.turns * TAU + f.seed * TAU;
     const r = K.wind * (1 - k) ** 0.7 * Math.min(1, k * 6);
     const nx = -(out[3] as number);
@@ -469,43 +523,47 @@ export class GoalRenderer {
       f.dur = dur;
       f.seed = this.rand();
       f.out = out;
+      f.back = false;
       return;
     }
   }
 
-  /** The channel broke: what was on its way falls and fades, the glass gives its light back. */
+  /**
+   * The channel broke: what was on its way stops and falls back into her, the glass gives back what
+   * had reached it, and it flickers dry. (As a few 2 px sparks dropping it could not be seen at a
+   * run: playtest 3 crossed a lamp, started and broke the channel, and saw nothing.)
+   */
   private spill(i: number, lamp: Lamp): void {
+    let n = 0;
     for (const f of this.flows) {
-      if (!f.on || f.lamp !== i || f.out) continue;
-      f.on = false;
-      this.flowAt(f, lamp, Math.min(1, f.age / f.dur));
-      const s = this.spark(
-        1,
-        this.tmp[0] as number,
-        this.tmp[1] as number,
-        (this.rand() - 0.5) * 30,
-        -20,
-        0.55,
-        2.4,
-      );
-      s.g = 240;
-      s.e = 0.7;
-      s.heat = 0.4;
+      if (!f.on || f.lamp !== i || f.out || f.back) continue;
+      this.flowAt(f, lamp, Math.min(1, Math.max(0, f.age / f.dur)));
+      f.back = true;
+      f.bx = this.tmp[0] as number;
+      f.by = this.tmp[1] as number;
+      f.age = -0.04 * n;
+      f.dur = 0.62 + 0.2 * this.rand();
+      n++;
     }
-    const n = Math.min(7, lamp.arrived);
-    for (let k = 0; k < n; k++) {
-      const s = this.spark(
-        0,
-        lamp.view.beadX + (this.rand() - 0.5) * 6,
-        lamp.view.beadY + 3,
-        (this.rand() - 0.5) * 46,
-        -30 - 30 * this.rand(),
-        0.6 + 0.35 * this.rand(),
-        2.3,
-      );
-      s.g = 300;
-      s.e = 0.7;
-      s.heat = 0.3;
+    const m = Math.min(6, lamp.arrived);
+    for (let k = 0; k < m; k++) {
+      for (const f of this.flows) {
+        if (f.on) continue;
+        f.on = true;
+        f.lamp = i;
+        f.out = false;
+        f.back = true;
+        f.seed = this.rand();
+        f.bx = lamp.view.beadX + (this.rand() - 0.5) * 8;
+        f.by = lamp.view.beadY + 2;
+        f.age = -0.05 * (n + k) - 0.06;
+        f.dur = 0.7 + 0.2 * this.rand();
+        break;
+      }
+    }
+    if (n + m > 0) {
+      lamp.flicker = 0;
+      lamp.view.kick((lamp.seed - 0.5) * 1.6 + 1.2 * (this.chestX < lamp.view.x ? 1 : -1));
     }
     lamp.emitted = 0;
     lamp.arrived = 0;
@@ -552,6 +610,17 @@ export class GoalRenderer {
     this.chestY = vesperLink.live ? vesperLink.offerY : p.cy - 8;
     vesperLink.goal = goal;
     const wallet = sim.pickups.count;
+    // The HUD has no camera: tell it where she is on screen.
+    hudLink.on = true;
+    hudLink.x = VIEW_W / 2 + (p.cx - cam.x) * cam.zoom;
+    hudLink.y = VIEW_H / 2 + (p.cy - cam.y) * cam.zoom;
+    hudLink.zoom = cam.zoom;
+    // A restart: the moths that were out are gone.
+    if (sim.frame < this.frame) {
+      this.guide.clear();
+      for (const lamp of this.lamps) lamp.gutterT = LONG_AGO;
+    }
+    this.frame = sim.frame;
 
     // --- What happened.
     let kindled = -1;
@@ -559,7 +628,18 @@ export class GoalRenderer {
       if (e.type === 'lanternKindle' || e.type === 'lampKindle') {
         kindled = this.lampOf(e.x, e.y);
         const lamp = this.lamps[kindled];
-        if (lamp) this.catch(lamp);
+        if (lamp) {
+          // Caught while she was already on her way (the sim's pledge: the pod's glints landed
+          // after she had run on): what was still owed crosses to it from wherever she is.
+          if (e.away) {
+            const owed = Math.min(8, Math.max(0, e.cost - lamp.arrived));
+            for (let k = 0; k < owed; k++) this.startFlow(kindled, false, 0.3 + 0.05 * k);
+          }
+          this.catch(lamp);
+          lamp.guideIn = GOAL.guide.first;
+          // The moths that were on their way to a dark lantern have a new nearest one now.
+          if (e.type === 'lanternKindle') this.guide.release();
+        }
       } else if (e.type === 'lanternCancel' || e.type === 'lampCancel') {
         const i = this.lampOf(e.x, e.y);
         const lamp = this.lamps[i];
@@ -589,7 +669,10 @@ export class GoalRenderer {
         this.openPrice(i, e.need, e.show > 0 ? e.show / 60 : GOAL.refuse.hold);
       } else if (e.type === 'lanternRest' || e.type === 'lampRest') {
         const lamp = this.lamps[this.lampOf(e.x, e.y)];
-        if (lamp) lamp.beat = 1;
+        if (lamp) {
+          lamp.beat = 1;
+          lamp.guideIn = Math.min(lamp.guideIn, 0.5);
+        }
         // The light lands in her: a few motes lift off her shoulders.
         for (let k = 0; k < 5; k++) {
           const s = this.spark(
@@ -619,6 +702,33 @@ export class GoalRenderer {
         }
       } else if (e.type === 'heartSleep') {
         this.sleepT = 0;
+        this.heartGuideIn = 0.9;
+      } else if (e.type === 'reform') {
+        // She re-forms at a light and it pays for her: its flame gutters low and comes back slowly.
+        for (let i = 0; i < this.lamps.length; i++) {
+          const lamp = this.lamps[i] as Lamp;
+          if (lamp.lit && this.restsAt(goal, i) && Math.abs(lamp.view.x - e.x) < 80) {
+            lamp.gutterT = 0;
+            lamp.view.kick(1.6);
+          }
+        }
+        // And what light she had left falls off her, dull.
+        for (let k = 0; k < GOAL.reform.embers; k++) {
+          const s = this.spark(
+            1,
+            p.cx + (this.rand() - 0.5) * 26,
+            p.cy - 18 + (this.rand() - 0.5) * 34,
+            (this.rand() - 0.5) * 40,
+            -24 - 20 * this.rand(),
+            0.9 + 0.7 * this.rand(),
+            2.1,
+          );
+          s.g = 150;
+          s.drag = 1.2;
+          s.e = 0.55;
+          s.heat = 0;
+          s.wait = 0.35 + k * 0.07;
+        }
       } else if (e.type === 'heartWake') {
         this.awake = true;
         this.wakeT = 0;
@@ -656,7 +766,8 @@ export class GoalRenderer {
       // Kindling: glints leave her as the channel runs.
       if (!s.lit) {
         if (s.channel > 0) {
-          const want = streamCount(s.channel, of, lamp.cost, K.by);
+          // (Never more than she has: a pledged channel runs while her glints are still landing.)
+          const want = Math.min(streamCount(s.channel, of, lamp.cost, K.by), wallet);
           while (lamp.emitted < want) {
             lamp.emitted++;
             this.startFlow(i, false, K.flight * (0.9 + 0.2 * this.rand()));
@@ -705,8 +816,56 @@ export class GoalRenderer {
       } else if (want <= 0 && lamp.notice < 0.05) lamp.stirred = false;
       if (!s.lit && dist < N.marksPx && this.inView(cam, v.x, v.y - 60, 0)) this.openPrice(i, lamp.cost, 0.5);
 
+      // It turns its light away from where she stands, so she never covers it (the way light climbs
+      // it turns with it: `samplePath`).
+      if (dist < L.turnPx && p.faded <= 0) {
+        const off = p.cx - v.x;
+        if (Math.abs(off) > L.turnSlack) v.turnTo = ((off > 0 ? -1 : 1) * v.style.side) as 1 | -1;
+      }
+
+      // Lit, it sends ember-moths toward the nearest lantern that is still dark: a beat after it
+      // catches, and again every so often while she stays by it.
+      const GD = GOAL.guide;
+      if (s.lit && goal.lit < this.nLanterns && !goal.gathered) {
+        if (dist < GD.nearPx && p.faded <= 0) lamp.guideIn -= dt;
+        else lamp.guideIn = Math.min(lamp.guideIn, 0.6);
+        if (lamp.guideIn <= 0 && this.guide.out(i) === 0) {
+          lamp.guideIn = GD.again;
+          const to = this.nextDark(goal, v.beadX, v.beadY);
+          const tl = this.lamps[to];
+          if (tl)
+            this.guide.issue(
+              i,
+              wayTo(GD.routes, tl.id, v.beadX, v.beadY - 6, tl.view.beadX, tl.view.beadY - 4),
+              lamp.way ? GD.lampMoths : GD.moths,
+            );
+        }
+      }
+      // She re-formed here: the flame pays for it, guttering low before it finds itself again.
+      lamp.gutterT += dt;
+      const RF = GOAL.reform;
+      const gut = s.lit
+        ? (1 - smooth(RF.low, RF.back, lamp.gutterT)) *
+          (0.75 + 0.25 * Math.sin(lamp.gutterT * 31) * Math.sin(lamp.gutterT * 7.3))
+        : 0;
+      lamp.gutter = gut;
+      // Asleep, a wayside lamp keeps a cold point of light and a breath of it behind.
+      if (lamp.cold && lamp.coldCore) {
+        const LP = GOAL.lamp;
+        const c0 = s.lit ? 0 : (1 - lamp.charge) * (0.82 + 0.18 * Math.sin(clock * 0.9 + lamp.seed * 9));
+        const tw2 = Math.max(0, Math.sin(clock * 0.55 + lamp.seed * 5)) ** 6;
+        lamp.cold.visible = c0 > 0.01;
+        lamp.coldCore.visible = c0 > 0.01;
+        lamp.cold.position.set(v.beadX, v.beadY - 6);
+        lamp.cold.width = lamp.cold.height = LP.coldSize * (1 + 0.12 * tw2);
+        lamp.cold.alpha = LP.coldAlpha * c0 * (1 - 0.5 * lamp.notice);
+        lamp.coldCore.position.set(v.beadX, v.beadY);
+        lamp.coldCore.width = lamp.coldCore.height = LP.coreSize * (1 + 0.35 * tw2);
+        lamp.coldCore.alpha = LP.coreAlpha * c0 * (0.8 + 0.2 * tw2) * (1 - 0.7 * lamp.notice);
+      }
+
       // The glass on its thread.
-      v.warmth = s.lit ? Math.min(1, 0.75 + lamp.catchT * 2) : lamp.charge * 0.75;
+      v.warmth = (s.lit ? Math.min(1, 0.75 + lamp.catchT * 2) : lamp.charge * 0.75) * (1 - 0.55 * gut);
       if (s.lit) v.web = Math.max(0, v.web - dt * 2.2);
       v.update(
         dt,
@@ -755,7 +914,12 @@ export class GoalRenderer {
       // Its light on the place.
       const breath = 1 + L.breathe * Math.sin((clock * TAU) / L.breath + lamp.seed * TAU);
       const lit = s.lit ? smooth(0, 0.5, lamp.catchT) : lamp.charge * 0.3;
-      const li = L.light.intensity * lit * (0.94 + 0.06 * breath) * (1 + 0.5 * lamp.pulse + 0.12 * lamp.beat);
+      const li =
+        L.light.intensity *
+        lit *
+        (0.94 + 0.06 * breath) *
+        (1 + 0.5 * lamp.pulse + 0.12 * lamp.beat) *
+        (1 - RF.light * gut);
       lamp.light.x = v.beadX;
       lamp.light.y = v.beadY + 18;
       lamp.light.radius = L.light.radius * lamp.k * (1 + 0.2 * lamp.pulse);
@@ -778,7 +942,7 @@ export class GoalRenderer {
       f.on = false;
       const lamp = this.lamps[f.lamp];
       if (!lamp) continue;
-      if (f.out) continue;
+      if (f.out || f.back) continue;
       lamp.arrived++;
       lamp.beat = 1;
     }
@@ -851,6 +1015,35 @@ export class GoalRenderer {
         else if ((this.wickT[i] as number) < 0) this.wickT[i] = i === kindled ? 0 : LONG_AGO;
         else this.wickT[i] = (this.wickT[i] as number) + dt;
         wk.warmth = s.lit ? smooth(0.5, 0.9, this.wickT[i] as number) : 0;
+      }
+      // Asleep with lanterns still dark: a thread of ember-moths leaves the dark wick of the nearest
+      // one and goes its way, when she touches the heart and while she stays by it.
+      if (!this.awake && goal.lit < this.nLanterns && this.nLanterns > 0) {
+        const GD = GOAL.guide;
+        const by = Math.hypot(p.cx - h.x, p.cy - (h.y - 40)) < GD.heartPx && p.faded <= 0;
+        if (by && goal.heart.hinted) this.heartGuideIn -= dt;
+        else this.heartGuideIn = Math.min(this.heartGuideIn, 0.9);
+        if (by && goal.heart.hinted && this.heartGuideIn <= 0 && this.guide.out(HEART_SOURCE) === 0) {
+          this.heartGuideIn = GD.again;
+          const to = this.nextDark(goal, h.x, h.y - 60);
+          const tl = this.lamps[to];
+          const wk = h.wicks[to];
+          if (tl)
+            this.guide.issue(
+              HEART_SOURCE,
+              wayTo(
+                GD.routes,
+                tl.id,
+                wk?.x ?? h.x,
+                (wk?.y ?? h.y - 60) - 4,
+                tl.view.beadX,
+                tl.view.beadY - 4,
+              ),
+              GD.heartMoths,
+              0,
+              GD.heartFar,
+            );
+        }
       }
       const wake = this.awake ? smooth(0.15, 1.8, this.wakeT) : 0;
       this.level += (wake - this.level) * Math.min(1, dt * 6);
@@ -1005,6 +1198,22 @@ export class GoalRenderer {
     return i < this.nLanterns ? goal.lanterns[i] : goal.lamps?.[i - this.nLanterns];
   }
 
+  /** The dark lantern nearest to (x, y): its index, -1 if all burn. */
+  private nextDark(goal: SimView['goal'], x: number, y: number): number {
+    let best = -1;
+    let bd = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < this.nLanterns; i++) {
+      const l = this.lamps[i];
+      if (!l || goal.lanterns[i]?.lit !== false) continue;
+      const d = Math.hypot(l.view.x - x, l.view.y - y);
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    }
+    return best;
+  }
+
   /** Lamp `i` is where she re-forms. */
   private restsAt(goal: SimView['goal'], i: number): boolean {
     return i < this.nLanterns ? goal.restAt === i : goal.restLamp === i - this.nLanterns;
@@ -1076,17 +1285,27 @@ export class GoalRenderer {
     const n = Math.max(0, Math.min(24, need));
     while (this.stars.length < n) {
       const root = new Container();
+      // A small hollow flame, warm: it fills when she has the light for it. (They were four-point
+      // stars, the same shape as the glints all round the first lantern: playtest 3.)
       const h = R.star;
-      const w = h * 0.62;
-      const q = h * 0.2;
-      const pts = [0, -h, q, -q, w, 0, q, q, 0, h, -q, q, -w, 0, -q, -q];
+      const w = h * 0.56;
+      const flame = (g: Graphics, k: number): Graphics =>
+        g
+          .moveTo(0, -h * k)
+          .bezierCurveTo(w * 0.3 * k, -h * 0.4 * k, w * k, h * 0.02 * k, w * k, h * 0.42 * k)
+          .bezierCurveTo(w * k, h * 0.82 * k, w * 0.5 * k, h * k, 0, h * k)
+          .bezierCurveTo(-w * 0.5 * k, h * k, -w * k, h * 0.82 * k, -w * k, h * 0.42 * k)
+          .bezierCurveTo(-w * k, h * 0.02 * k, -w * 0.3 * k, -h * 0.4 * k, 0, -h * k)
+          .closePath();
       const outline = new Graphics();
-      outline
-        .poly(pts, true)
-        .fill({ color: 0x0a1218, alpha: 0.45 })
-        .stroke({ width: 1.1, color: 0xf0d4a0, alpha: 0.8, join: 'round' });
+      flame(outline, 1)
+        .fill({ color: 0x100a06, alpha: 0.5 })
+        .stroke({ width: 1.15, color: R.mark, alpha: 0.78, join: 'round' });
       const fill = new Graphics();
-      fill.poly(pts, true).fill({ color: 0xffd98c }).stroke({ width: 0.9, color: 0xfff2d0, alpha: 0.85 });
+      flame(fill, 0.94)
+        .fill({ color: R.fill, alpha: 0.9 })
+        .stroke({ width: 0.9, color: 0xffd9a0, alpha: 0.8 });
+      fill.ellipse(0, h * 0.45, w * 0.36, h * 0.3).fill({ color: 0xffe2b0, alpha: 0.7 });
       root.addChild(outline, fill);
       this.price.addChild(root);
       this.stars.push({ root, fill });
@@ -1128,7 +1347,8 @@ export class GoalRenderer {
     for (let i = 0; i < this.lamps.length; i++) {
       const lamp = this.lamps[i] as Lamp;
       const v = lamp.view;
-      const lit = lamp.lit ? smooth(0, 0.7, lamp.catchT) : lamp.charge * 0.25;
+      const lit =
+        (lamp.lit ? smooth(0, 0.7, lamp.catchT) : lamp.charge * 0.25) * (1 - GOAL.reform.light * lamp.gutter);
       if (lit <= 0.003) continue;
       const breath = 1 + 0.04 * Math.sin((clock * TAU) / L.breath + lamp.seed * TAU);
       const wide = 1 + GOAL.ending.wide * this.grove + 0.12 * lamp.pulse;
@@ -1231,7 +1451,8 @@ export class GoalRenderer {
         // A dead ember, so it can be found; warmer as her glints gather in it.
         const c = lamp.charge;
         const canPay = sim.pickups.count >= lamp.cost;
-        let ember = L.ember * (0.72 + 0.28 * Math.sin(clock * 1.2 + lamp.seed * 9));
+        // (A wayside lamp's sleeping light is its cold point, a sprite: no warm ember until it notices her.)
+        let ember = lamp.way ? 0 : L.ember * (0.72 + 0.28 * Math.sin(clock * 1.2 + lamp.seed * 9));
         if (canPay) ember += L.emberNear * lamp.near * (0.85 + 0.15 * Math.sin(clock * 3.1));
         // It has noticed her: an ember wakes in the bulb, stronger the nearer her wallet is to its
         // price, and three of the glints she carries strain toward it and fall back.
@@ -1287,7 +1508,10 @@ export class GoalRenderer {
       const rest = this.restsAt(goal, i) ? L.restGain : 1;
       const up = smooth(0, 0.12, t);
       const e =
-        L.beadGain * breath * rest * up + (K.flarePeak - 1) * flare + 0.7 * lamp.pulse + 0.25 * lamp.beat;
+        L.beadGain * breath * rest * up * (1 - GOAL.reform.bead * lamp.gutter) +
+        (K.flarePeak - 1) * flare +
+        0.7 * lamp.pulse +
+        0.25 * lamp.beat;
       const size =
         L.bead *
         (0.4 + 0.6 * lamp.k) *
@@ -1302,7 +1526,10 @@ export class GoalRenderer {
         y,
         hs,
         hs,
-        (L.haloGain * breath * rest + 0.55 * flare + 0.3 * lamp.pulse) * up,
+        (L.haloGain * breath * rest * (1 - GOAL.reform.bead * lamp.gutter) +
+          0.55 * flare +
+          0.3 * lamp.pulse) *
+          up,
         0,
         0.12 * flare,
       );
@@ -1338,6 +1565,29 @@ export class GoalRenderer {
       const lamp = this.lamps[fl.lamp];
       if (!lamp) continue;
       const u = fl.age / fl.dur;
+      if (fl.back) {
+        // Falling back to her: a glint again (the star she gathered), with a thread of sparks.
+        this.flowAt(fl, lamp, u);
+        const gone = 1 - smooth(0.8, 1, u);
+        const gs = 46 * GOAL.kindle.backSize * (0.75 + 0.25 * gone);
+        f.quad(K_GLINT, this.tmp[0] as number, this.tmp[1] as number, gs, gs, 0.95 * gone, fl.seed, 0);
+        for (let j = 1; j <= 2; j++) {
+          const uu = u - j * 0.06;
+          if (uu <= 0) break;
+          this.flowAt(fl, lamp, uu);
+          f.quad(
+            K_SPARK,
+            this.tmp[0] as number,
+            this.tmp[1] as number,
+            2.4 - 0.5 * j,
+            2.4 - 0.5 * j,
+            0.55 * gone,
+            0,
+            0.3,
+          );
+        }
+        continue;
+      }
       // A short tail: the same path, a little earlier.
       for (let j = 0; j < 4; j++) {
         const uu = u - j * 0.035;
@@ -1398,7 +1648,7 @@ export class GoalRenderer {
               this.price.y + spot[1],
               7,
               7,
-              (0.4 + 0.8 * pop) * a,
+              (0.2 + 0.8 * pop) * a,
               0,
               0.3 + 0.5 * pop,
             );
@@ -1408,6 +1658,9 @@ export class GoalRenderer {
 
     // --- What she dropped when she faded: a huddle of quiet glints waiting where she fell (drops.ts).
     this.drops.update(dt, clock, cam, sim, b, f, sf, this.chestX, this.chestY);
+
+    // --- Ember-moths on their way to the nearest dark lantern.
+    this.guide.update(dt, clock, cam, sim.player.cx, sim.player.cy, f);
 
     // --- Sparks and motes.
     for (const s of this.sparks) {
@@ -1501,6 +1754,16 @@ export class GoalRenderer {
           // Touched asleep, they show one after another which burn.
           const show =
             this.sleepT >= 0 ? Math.sin(Math.PI * smooth(0, 1, (this.sleepT - 0.25 - i * 0.28) / 1.2)) : 0;
+          // A dark wick is cold: which of the three still wait is read by temperature, at a glance.
+          const cs = this.wickCold[i];
+          if (cs) {
+            const ca =
+              lit || this.awake ? 0 : GOAL.lamp.coreAlpha * (0.78 + 0.22 * Math.sin(clock * 1.3 + i * 2.1));
+            cs.visible = ca > 0.01;
+            cs.position.set(wk.x, wk.y);
+            cs.width = cs.height = GOAL.lamp.coreSize * (1 + 0.5 * show);
+            cs.alpha = Math.min(1, ca * (1 + 0.5 * show));
+          }
           if (lit) {
             const up = smooth(0.5, 0.62, t);
             const flare = t < 3 ? up * Math.exp(-Math.max(0, t - 0.62) / 0.22) : 0;

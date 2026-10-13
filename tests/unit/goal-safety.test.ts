@@ -313,11 +313,14 @@ describe('a fade costs', () => {
     expect(of(ev, 'glintsDrop')[0]).toMatchObject({ x: 2000, y: FLOOR - 40, value: 3 });
   });
 
-  it('at a lit lantern she re-forms at 2 and the rest makes her whole: resting is the heal now', () => {
+  it('at a lit lantern she re-forms at 2; the rest makes her whole once she has left it and come back', () => {
     const s = sim(scene([burr(3300)]), 9);
     light(s);
     const ev = fadeOn(s);
     expect(of(ev, 'reform')[0]).toMatchObject({ x: X, y: FLOOR, hp: 2 });
+    // Not where she re-formed (it would be a free heal without a step): out of it and back.
+    expect(of(s.run(`.${G.restFrames * 3}`), 'lanternRest')).toEqual([]);
+    s.run('R14 .8 L14 .8');
     const rest = s.run(`.${G.restFrames}`);
     expect(of(rest, 'lanternRest')[0]).toMatchObject({ healed: 2, hp: 4 });
     // The lantern, what she spent and the cluster are all kept through it.

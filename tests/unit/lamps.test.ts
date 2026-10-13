@@ -143,6 +143,8 @@ describe('wayside lamps', () => {
       wallet: 2,
       lit: 1,
       total: 1,
+      pledged: false,
+      away: false,
     });
     expect([s.state.pickups.count, s.state.pickups.spent]).toEqual([2, 8]);
     expect(s.state.goal.lamps[0]).toMatchObject({ lit: true, channel: 0 });

@@ -364,6 +364,9 @@ export type SimEvent =
   /**
    * It is lit, until the restart. `cost` glints left her wallet, which now holds `wallet`
    * (`state.pickups.count`); `lit` of `total` lanterns burn. It is her rest point from now on.
+   * `pledged`: she had stood at it short with the rest already on its way to her (a pod cut at its
+   * foot), and it caught the step those landed, without the full channel; `away`: she was no longer
+   * standing at it then (the light has to cross from wherever she is).
    */
   | {
       type: 'lanternKindle';
@@ -374,6 +377,8 @@ export type SimEvent =
       wallet: number;
       lit: number;
       total: number;
+      pledged: boolean;
+      away: boolean;
     }
   /** Standing at a lit lantern made her whole: `healed` lights came back, `hp` of `hpMax` now. */
   | { type: 'lanternRest'; id: string; x: number; y: number; hp: number; hpMax: number; healed: number }
@@ -402,6 +407,8 @@ export type SimEvent =
       wallet: number;
       lit: number;
       total: number;
+      pledged: boolean;
+      away: boolean;
     }
   | { type: 'lampRest'; id: string; x: number; y: number; hp: number; hpMax: number; healed: number }
   /**

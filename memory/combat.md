@@ -98,16 +98,17 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
 ## Where the pods are (12, worth 62)
 | id | x, y | mount | hp | how |
 |---|---|---|---|---|
-| pod-path-1 | 560, 1258 | sit | 2 | ground left of F1 |
-| pod-f2 | 1136, 914 | hang | 1 | under F2: jump from the ground, up slash |
-| pod-f3 | 1500, 682 | sit | 2 | on F3, on the left route up |
+| pod-shaft | 3400, 1258 | sit | 2 | on the shaft floor, between the doorway and trunk B (was pod-path-1 at 560: playtest 3 moved four pods onto the critical path, goal.md) |
+| pod-bough | 3850, 170 | sit | 1 | on the summit bough, past the second lantern (was pod-f2) |
+| pod-catch | 4010, 426 | sit | 2 | on the catch branch, where a walker off the bough lands (was pod-f3) |
 | pod-stone | 1500, 1258 | sit | 3 | at the moth-stone's foot, by the pool's lip: cutting it she stands at the first lantern and its ten glints kindle it (goal.md). It was pod-path-2 at 2000 |
 | pod-branch-l | 2176, 1058 | hang | 1 | under the left branch: hop + up slash |
-| pod-rise | 2800, 1130 | sit | 2 | on the mid rise |
-| pod-ledge | 3100, 426 | sit | 3 | on the high ledge: the big one at the top of the left route |
+| pod-rise | 2570, 938 | sit | 2 | on the bluff's top |
+| pod-ledge | 3050, 426 | sit | 3 | on the branch that joins the high ledge to trunk A, by burr-ledge: the big one at the top of the left route |
 | pod-branch-r | 4470, 946 | hang | 1 | under the right branch: jump + up slash |
 | pod-f6 | 4830, 818 | hang | 2 | under F6, from the right rise: two up slashes in one jump (the hang helps) |
-| pod-row-1..3 | 5060 / 5350 / 5640, 1066 | sit | 1 | the pogo row on the right rise, 290 px apart, open sky |
+| pod-row-1, 2 | 5060 / 5350, 1066 | sit | 1 | the pogo row on the right rise, 290 px apart, either side of the heart (two since the far bluff stands where the third was) |
+| pod-far | 5690, 426 | sit | 1 | on the far bluff's top, past the third lantern and `great-far` (was pod-row-3) |
 
 ## What render gets
 - Player (`PlayerView`): `attack` (`none|fwd|up|down`), `attackFacing`, `attackFrames` (0 on the slash

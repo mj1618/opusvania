@@ -78,34 +78,58 @@ describe('the grove scene', () => {
     expect(hollow.y - root.y).toBeLessThanOrEqual(192);
   });
 
-  it('can be crossed end to end on the floor, in both directions: over the bluff by the branch or a double jump', () => {
-    const floor = [...byTag('ground'), ...byTag('pool')].sort((a, b) => a.x - b.x);
-    // (The root stands on the lip of the hollow: it is the step between the two.)
-    const root = byTag('root')[0];
-    const at = floor.findIndex((r) => r.x === root?.x);
-    if (!root || at < 0) throw new Error('no root on the floor');
-    const under = floor[at];
-    if (!under) throw new Error('no ground under the root');
-    // The ground the root stands on, less the part the root covers.
-    const open = { x: root.x + root.w, y: under.y, w: under.x + under.w - root.x - root.w };
-    const east = [...floor.slice(0, at), root, open, ...floor.slice(at + 1)];
-    const west = [...floor.slice(0, at), root, open, ...floor.slice(at + 1)].reverse();
-    for (const order of [east, west]) {
-      const s = newSim({ ...GROVE, enemies: [] });
+  it('the floor ends inside the shaft: trunk B stands on it, and the way on is up and over', () => {
+    const [a, b] = byTag('trunk');
+    const floor = byTag('ground').find((r) => r.x === 3072);
+    if (!a || !b || !floor) throw new Error('no trunk pair on the floor');
+    // Trunk A keeps its doorway (the way in, and the way back out west); trunk B has none.
+    expect(floor.y - (a.y + a.h)).toBe(112);
+    expect(b.y + b.h).toBe(floor.y);
+    // Walking east along the floor from the well stops at trunk B's bark.
+    const s = newSim({ ...GROVE, enemies: [] });
+    s.place(3120, floor.y);
+    s.run('R120');
+    expect(feet(s)).toEqual({ x: b.x - 20, y: floor.y });
+    // And west again, out under trunk A and up onto the terrace: the shaft is not a trap.
+    s.run('L60');
+    expect(feet(s).x).toBeLessThan(a.x);
+    const terrace = byTag('ground')[4];
+    if (!terrace) throw new Error('no terrace');
+    expect(hopOnto(s, terrace)).toBeGreaterThan(0);
+    // West of the shaft the floor is crossed on foot in both directions (the bluff by the branch or a double jump).
+    const west = [...byTag('ground'), ...byTag('pool')].filter((r) => r.x < b.x).sort((p, q) => p.x - q.x);
+    for (const order of [west, [...west].reverse()]) {
+      const q = newSim({ ...GROVE, enemies: [] });
       const first = order[0];
       if (!first) throw new Error('no floor');
-      s.place(first.x + first.w / 2, first.y);
-      for (const r of order) expect(hopOnto(s, r, 600), `onto the floor at ${r.x}`).toBeGreaterThan(-1);
+      q.place(first.x + first.w / 2, first.y);
+      for (const r of order) expect(hopOnto(q, r, 600), `onto the floor at ${r.x}`).toBeGreaterThan(-1);
     }
-    // And by the branch alone, with single jumps.
-    const s = newSim({ ...GROVE, enemies: [] });
-    s.place(2100, 1280);
-    s.run('J40 .20');
-    expect(feet(s)).toEqual({ x: 2100, y: 1024 });
-    s.run('R10 R+J40 .30');
-    expect(feet(s).y).toBe(960);
-    expect(s.state.player.grounded).toBe(true);
-    expect(s.events.some((e) => e.type === 'jump' && e.kind === 'double')).toBe(false);
+    // East of it too: hollow, root, the ground beyond, the right rise.
+    const root = byTag('root')[0];
+    const east = byTag('ground').filter((r) => r.x > b.x && r.y > 1000);
+    const [hollow, beyond, rise] = east;
+    if (!root || !hollow || !beyond || !rise) throw new Error('no floor east of the shaft');
+    const open = { x: root.x + root.w, y: beyond.y, w: beyond.x + beyond.w - root.x - root.w };
+    for (const order of [
+      [hollow, root, open, rise],
+      [rise, open, root, hollow],
+    ]) {
+      const q = newSim({ ...GROVE, enemies: [] });
+      const first = order[0];
+      if (!first) throw new Error('no floor');
+      q.place(first.x + first.w / 2, first.y);
+      for (const r of order) expect(hopOnto(q, r, 600), `onto the floor at ${r.x}`).toBeGreaterThan(-1);
+    }
+    // The branch is the step up the bluff, with single jumps.
+    const k = newSim({ ...GROVE, enemies: [] });
+    k.place(2100, 1280);
+    k.run('J40 .20');
+    expect(feet(k)).toEqual({ x: 2100, y: 1024 });
+    k.run('R10 R+J40 .30');
+    expect(feet(k).y).toBe(960);
+    expect(k.state.player.grounded).toBe(true);
+    expect(k.events.some((e) => e.type === 'jump' && e.kind === 'double')).toBe(false);
   });
 
   it('falling in the pool is harmless: you can jump out either side', () => {
@@ -143,10 +167,11 @@ describe('the grove scene', () => {
     expect(feet(s).y).toBe(a.y);
   });
 
-  it('route up the right: root, branch, two floating platforms, the far ledge', () => {
+  it('route up the right: root, branch, two floating platforms, the far bluff (the old far ledge, standing on the rise now)', () => {
     const s = newSim();
     s.place(3800, 1280);
-    const route = [byTag('root')[0], GROVE.oneWays[1], ...byTag('floating').slice(5), byTag('ledge')[1]];
+    const far = byTag('ground').find((r) => r.x === 5472);
+    const route = [byTag('root')[0], GROVE.oneWays[1], ...byTag('floating').slice(5), far];
     for (const r of route) {
       if (!r) throw new Error('route rect missing');
       expect(hopOnto(s, r), `onto ${r.tag} at ${r.x},${r.y}`).toBeGreaterThan(0);

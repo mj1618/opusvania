@@ -92,8 +92,9 @@ describe('burrbacks in the grove, piloted', () => {
     ).toBeGreaterThan(0);
     s.place(3800, 1280);
     const root = GROVE.solids.find((r) => r.tag === 'root');
-    // (No creature walks the far ledge any more: no patrol could clear a 288 px ledge of the jump from F7.)
-    for (const r of [root, GROVE.oneWays[1], ...f.slice(5), ledges[1]])
+    // (No creature walks the far bluff's top: no patrol could clear its 288 px of the jump from F7.)
+    const far = GROVE.solids.find((r) => r.tag === 'ground' && r.x === 5472);
+    for (const r of [root, GROVE.oneWays[1], ...f.slice(5), far])
       expect(hopOnto(s, r as never), `onto ${r?.x},${r?.y}`).toBeGreaterThan(0);
     // Nothing on the way cost her everything: no fade was needed to get there.
     expect(count(s.events, 'fade')).toBe(0);
@@ -102,7 +103,9 @@ describe('burrbacks in the grove, piloted', () => {
   it('none blocks a route: each is cleared by one plain jump, both ways, without a scratch', () => {
     for (let i = 0; i < list.length; i++) {
       for (const dir of [-1, 1]) {
-        const s = newSim();
+        // (Burrbacks only: the jump over burr-ledge westward carries on off the ledge's end into
+        // lamp-ledge's air, which is that one's test.)
+        const s = newSim({ ...GROVE, enemies: list });
         // Wait until it walks toward a spot she can stand on, then run at it from there and jump.
         let ok = false;
         for (let f = 0; f < 2400 && !ok; f++) {

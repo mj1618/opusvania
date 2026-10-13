@@ -20,7 +20,7 @@ Tests: `tests/unit/enemies.test.ts`, `enemies-pilot.test.ts` (burrback), `lampwi
   the glint spill queue (`spill / spillTimer / spillGap`), contact and its exclusions, the pogo.
 - `EnemyState` is ONE flat record for all kinds (plain JSON; a field a kind does not use keeps its
   start value). `homeX, homeY` = the centre of its box at the start, for every kind. The state
-  version is 15 (enemies.test pins it).
+  version is 16 (enemies.test pins it).
 - Scene data: `enemies` is a Zod union on `kind`; burrbacks first, lampwings after (the burrback
   grove tests index the first six). `EnemySpawn.y` means feet for a burrback, home centre for a lampwing.
 - No `Math.sin` in the sim: the lampwing's bob is a two-parabola wave (`wave()`), its wander a hash
@@ -238,8 +238,8 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
 |---|---|---|---|
 | burr-bank | 200, 1088 | left bank 0-384: **0-288** (wall, lip) | guards the great glint on the bank |
 | burr-path | 2160, 1280 | ground right of the pool 1856-2432: **2004-2316** (`radius` 130) | the first fight, under the branch. Clear of the pool's landing (it starts 52 px further out) and of the bluff's foot: it used to walk right up to that wall and hit a first-timer three times while she worked out the climb |
-| burr-ledge | 3000, 448 | high ledge + trunk A top 2816-3328: **2912-3232** (two lips) | by pod-ledge, the big one |
-| burr-root | 4400, 1280 | between the root and the right rise: **4160-4608** (two walls); **4160-4456** once `lamp-root` (4566) is lit | under the right branch and its pod; the creature that shows a lit lamp's safe ground (goal.md) |
+| burr-ledge | 2936, 448 | the high ledge 2816-...: **2912-3010** (`radius` 48: a pacing guard) | by pod-ledge (3050), the big one. East of 2976 the ledge is a branch she comes up through from the well (the bark of trunk A, her swing reaches 3015-3200): with its old range (to 3232) it stood on her as she rose through it |
+| burr-root | 4476, 1280 | between the root and the right rise: **4340-4608** (`radius` 110; the rise's wall); **4340-4456** once `lamp-root` (4566) is lit | under the right branch and its pod; the creature that shows a lit lamp's safe ground (goal.md). Playtest 3: it hit all three runs coming off the root (its patrol started at 4160, under the landing at 4283). Now 180 px off the root's foot |
 
 - **`radius` on a burrback** (scene data, optional, 40-2000): its box centre stays within that of where it
   started, where its ground would let it go further; the end of the range turns it like a wall (`enemyTurn`
@@ -257,6 +257,15 @@ projectile: its touch is the danger. Slow and readable on purpose (the first thi
   purpose; in the hollow (224 px) running in hit it 48 times in 60. The far lantern's guard is
   lamp-glide-2 now (goal.md). A sixth burrback needs a new stretch of ground, not a new spot.
 
+**burr-root's arrivals** (`critical-path.test.ts`, 60 start times each, then 45 frames standing): running off
+the root (lands 4283), out of the hollow with a held jump (4280) or with taps and off the root, walking off
+the catch branch (she lands on the right branch at 4420, not on its ground), stepping off it and letting go
+(4185), a tap jump (4516 on the branch) or a held jump off the catch branch or the bough (over everything),
+walking off the right branch westward (onto the root): **0 hits in every one**. Not fair, and left so: a tap
+jump from the root's lip INTO its patrol (lands 4336-4473: 27 of 60; she sees it from the root), running on
+20 frames after landing (52 of 60: that is walking into it), and walking off the rise's west lip onto it
+while `lamp-root` is dark (its walk has to reach the lamp, which stands at that wall).
+
 Landing audit (`tests/unit/burrback-lips.test.ts`: five minutes, with her standing under each lip in
 turn): no burrback box ever enters 1856-1952 (out of the pool), 3104-3200 (onto the terrace from the
 east), 288-384 (onto the bank), 2816-2912 (F5 -> high ledge). The pool's left side has no burrback at all.
@@ -271,8 +280,8 @@ none on the right rise (the pogo row), none on the far ledge. `?nopickups` remov
 | lamp-glade | 800, 690 | 100 | over F1, in the glade | the first one met: it sees her as she jumps from the bank and comes down to her on F1, where she has footing |
 | lamp-f3 | 1290, 480 | 80 | over the F2 -> F3 gap | above the jump's arc (a plain jump passes 20-75 px under it); follows her onto F3 and its pod |
 | lamp-ledge | 2700, 150 | 90 | over the F5 -> high ledge gap | a plain jump passes just under it (a double jump meets it); comes down to the ledge with burr-ledge and the big pod; the mid-glide kill off trunk A |
-| lamp-glide-1 | 4470, 270 | 60 | under the summit glide line (70 px east since the catch branch under the summit: its east end, 4128, is 340 px from it, outside `noticePx`) | the first bounce of the pogo chain |
-| lamp-glide-2 | 4900, 250 | 60 | 500 px on (the pogo chain still holds: lampwing-pilot) | the second bounce; and the far lantern's guard: 646 px from it, inside its leash (520) + the sanctuary edge, so it follows the summit glide (which passes 200 px over it) to the lantern and gives up at the light. Not nearer: at (4960, 330) it noticed her on F7 |
+| lamp-glide-1 | 4620, 200 | 60 | under the summit glide line. **Not at (4470, 270)**: a held jump off the bough's end or the catch branch's end (the walker's road east since playtest 3) falls through (4460-4500, 250-350) before the wings open, and it sat there (hit 55 of 60, both). At 4620, 200 both arcs pass 140+ px under it (0 of 60), nothing on the bough, the catch branch, the right branch or F6 is noticed, the full summit glide passes 300 px over it | the first bounce of the pogo chain |
+| lamp-glide-2 | 4900, 250 | 60 | 280 px on (the pogo chain still holds: lampwing-pilot) | the second bounce; and the far lantern's guard: 646 px from it, inside its leash (520) + the sanctuary edge, so it follows the summit glide (which passes 200 px over it) to the lantern and gives up at the light. Not nearer: at (4960, 330) it noticed her on F7 |
 
 - None over the pool: `glide.test.ts` dives into it from (1696, 900) and anything within ~300 px of
   that column meets her. None near the spawn ground or under the trunks (the close-up shots).

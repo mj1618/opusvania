@@ -82,6 +82,7 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     djBuf: 0,
     dashBuf: 0,
     forceTimer: 0,
+    kick: 0,
     forceDir: 0,
     dashCd: 0,
     stick: 0,
@@ -443,6 +444,7 @@ function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {
   p.sustain = c.P.sustainFrames;
   p.sustainV = p.vy;
   p.framesSinceJump = 0;
+  p.kick = kind === 'wall' ? c.P.wallKickFrames : 0;
   c.jumped = true;
   endGlide(c, 'release'); // (a press needs a release first, so this is only a safeguard)
   p.retainTimer = 0; // a jump (incl. wall jump) ends wall speed retention
@@ -658,7 +660,8 @@ function gravity(c: Ctx): void {
   const heldEff = c.held(ActionBit.jump);
   // variableJump off: releasing never cuts or ends the sustain (every jump is full height).
   const holdsRise = heldEff || !P.variableJump;
-  if (p.vy < 0 && !holdsRise && p.fromJump) p.cut = true;
+  // (A wall kick keeps its rise for a moment whatever the button does: a tap climbs too.)
+  if (p.vy < 0 && !holdsRise && p.fromJump && p.kick === 0) p.cut = true;
   let g = P.gravity;
   if (p.vy >= 0) g *= P.fallMult;
   else if (p.cut && !P.releaseZero) g *= P.releaseMult;
@@ -864,6 +867,7 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
   if (p.lungeX !== 0) p.lungeX = approach(p.lungeX, 0, stepOf(c).lunge / P.lungeFrames);
   if (p.hang > 0) p.hang--;
   if (p.forceTimer > 0) p.forceTimer--;
+  if (p.kick > 0) p.kick--;
   if (p.dashCd > 0) p.dashCd--;
   if (p.dropTimer > 0) p.dropTimer = p.y > p.dropY ? 0 : p.dropTimer - 1;
   if (p.retainTimer > 0) p.retainTimer--;
@@ -892,7 +896,7 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
       const fallPx = p.y - p.airTopY;
       // A move that ends exactly on the ground is not "blocked": the speed is still in vy.
       const impact = impactVy > 0 ? impactVy : p.vy;
-      const hard = fallPx >= P.hardLandFallPx || impact >= P.maxFall;
+      const hard = fallPx >= P.hardLandFallPx;
       events.push({ type: 'land', x: c.fx, y: c.fy, vy: impact, fallPx, hard });
       p.stepDist = 0;
     }
@@ -1030,6 +1034,7 @@ export function hurtPlayer(
   p.dashBuf = 0;
   p.attackBuf = 0;
   p.forceTimer = 0;
+  p.kick = 0;
   p.retainTimer = 0;
   p.stick = 0;
   p.fromJump = false;

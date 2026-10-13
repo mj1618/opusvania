@@ -167,6 +167,8 @@ export interface GameDebugApi {
       of: number;
       rest: number;
       refused: boolean;
+      /** Dormant: enough glints are on their way to her; it catches when they land (goal.md). */
+      pledged: boolean;
       litFrame: number;
       restPoint: boolean;
     }>;
@@ -186,6 +188,8 @@ export interface GameDebugApi {
     spent: number;
     gathered: number;
     restAt: string | null;
+    /** She re-formed at `restAt` and has not stepped out of it yet: it will not heal her until she does. */
+    restHold: boolean;
     lamps: { lit: number; total: number };
     heart: {
       x: number;
@@ -276,6 +280,7 @@ export function installDebugApi(deps: {
           of: Math.max(1, Math.round(G.channelFrames)),
           rest: s?.rest ?? 0,
           refused: s?.refused ?? false,
+          pledged: s?.pledged ?? false,
           litFrame: s?.litFrame ?? -1,
           restPoint: (lamp ? g.restLamp : g.restAt) === i,
         };
@@ -464,6 +469,7 @@ export function installDebugApi(deps: {
         spent: w.spent,
         gathered: w.count + w.spent + w.lost,
         restAt: game.scene.lamps?.[g.restLamp]?.id ?? game.scene.lanterns?.[g.restAt]?.id ?? null,
+        restHold: g.restHold,
         lamps: { lit: g.lampsLit, total: game.scene.lamps?.length ?? 0 },
         heart: h ? { x: h.x, y: h.y, box: heartBox(h, G), ...g.heart } : null,
         ending: {

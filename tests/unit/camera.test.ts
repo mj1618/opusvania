@@ -22,10 +22,17 @@ describe('camera', () => {
   });
 
   it('follows a run softly with look-ahead and never leaves the scene', () => {
-    // (The bluff is taller than a jump: here it is cut down to a hop, so plain running and jumping crosses.)
+    // (The bluff is taller than a jump and trunk B closes the floor: here the bluff is cut down to a hop
+    // and the trunk gets a doorway, so plain running and jumping crosses.)
     const flat = {
       ...GROVE,
-      solids: GROVE.solids.map((r) => (r.tag === 'ground' && r.y === 960 ? { ...r, y: 1152, h: 448 } : r)),
+      solids: GROVE.solids.map((r) =>
+        r.tag === 'ground' && r.y === 960
+          ? { ...r, y: 1152, h: 448 }
+          : r.tag === 'trunk' && r.x === 3584
+            ? { ...r, h: r.h - 112 }
+            : r,
+      ),
     };
     const s = newSim(flat);
     const cam = createCamera(s.state, GROVE);

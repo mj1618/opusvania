@@ -27,7 +27,8 @@ export const SUMMARY = {
   /** Seconds after `endHold`: the row fades in from..to, the key from..to. */
   rowIn: [0.5, 2.1],
   keyIn: [2.6, 3.8],
-  keyY: 128,
+  /** The R key stands this far past the right end of the rows' texture (which has 34 px of margin), px. */
+  keyGap: 6,
   /** Under each entry its name in small caps (the pod and the shell could not be told without): px, tracking px, drop under the baseline. */
   label: 11.5,
   track: 1.6,
@@ -484,10 +485,15 @@ export class EndSummary {
         this.row.position.set(VIEW_W / 2, SUMMARY.y + SUMMARY.rowGap / 2);
         this.key = new Sprite(paintKey());
         this.key.anchor.set(0.5);
-        this.key.position.set(VIEW_W / 2, SUMMARY.y + SUMMARY.keyY);
         this.root.addChild(this.row, this.key);
       }
       this.row.texture = paintRows(rows);
+      // The key stands at the end of the rows, level with their middle: under them it sat on the
+      // page's hint line (the bottom 28 px are not ours).
+      this.key?.position.set(
+        VIEW_W / 2 + this.row.width / 2 + SUMMARY.keyGap,
+        SUMMARY.y + SUMMARY.rowGap / 2 + 2,
+      );
       old?.destroy(true);
     }
     this.t += dt;

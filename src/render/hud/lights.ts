@@ -47,6 +47,19 @@ export const LIGHTS = {
   /** A living enemy this close (px, x / y) keeps the lights on screen. */
   nearX: 500,
   nearY: 320,
+  /**
+   * A fade's sting (playtest 3: the re-form did not read as a cost). She comes back dimmer: the
+   * lights that return catch late (`reformDelay` s, then `reformStep` apart) and burn at
+   * `reformDim` of their light until `reformBack` s after the re-form; the ones she did not get
+   * back show cold in their husks (`chill`, a pale point, for `chillHold` s, gone by `chillOut`).
+   */
+  reformDelay: 0.45,
+  reformStep: 0.3,
+  reformDim: 0.5,
+  reformBack: [2.2, 4.4],
+  chill: 0.8,
+  chillHold: 3.2,
+  chillOut: 5,
 };
 
 /** Canvas pixels per logical px. */
@@ -68,6 +81,8 @@ interface Light {
   root: Container;
   husk: Sprite;
   ember: Sprite;
+  /** A cold point in a husk she did not get back when she re-formed. */
+  chill: Sprite;
   lit: Sprite;
   core: Sprite;
   halo: Sprite;
@@ -270,6 +285,18 @@ function emberTexture(): Texture {
   });
 }
 
+/** The cold a lost light leaves: a pale blue point where the bead was. */
+function chillTexture(): Texture {
+  return paint((g) => {
+    const glow = g.createRadialGradient(0, CORE, 0, 0, CORE, 6);
+    glow.addColorStop(0, 'rgba(206, 232, 255, 0.95)');
+    glow.addColorStop(0.3, 'rgba(120, 178, 240, 0.5)');
+    glow.addColorStop(1, 'rgba(60, 110, 200, 0)');
+    g.fillStyle = glow;
+    g.fillRect(-PX, -PY, CW, CH);
+  });
+}
+
 function smooth(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
@@ -285,7 +312,17 @@ export class HealthLights {
   shakeY = 0;
   readonly sparks: HudSpark[] = [];
   private readonly lights: Light[] = [];
-  private tex: { husk: Texture; lit: Texture; core: Texture; halo: Texture; ember: Texture } | null = null;
+  private tex: {
+    husk: Texture;
+    lit: Texture;
+    core: Texture;
+    halo: Texture;
+    ember: Texture;
+    chill: Texture;
+  } | null = null;
+  /** Seconds since she last re-formed (large = long ago), and how many lights she came back with. */
+  private stingT = 1e6;
+  private stingHp = 0;
   private hp = -1;
   private hold = 0;
   private shakeVx = 0;
@@ -313,6 +350,7 @@ export class HealthLights {
         core: coreTexture(),
         halo: haloTexture(),
         ember: emberTexture(),
+        chill: chillTexture(),
       };
     const T = this.tex;
     while (this.lights.length < n) {
@@ -327,6 +365,8 @@ export class HealthLights {
       };
       const husk = mk(T.husk, false);
       const ember = mk(T.ember, true);
+      const chill = mk(T.chill, true);
+      chill.visible = false;
       const lit = mk(T.lit, false);
       const core = mk(T.core, true);
       const halo = mk(T.halo, true);
@@ -336,6 +376,7 @@ export class HealthLights {
         root,
         husk,
         ember,
+        chill,
         lit,
         core,
         halo,
@@ -444,10 +485,12 @@ export class HealthLights {
       } else if (e.type === 'fade') {
         for (let i = 0; i < max; i++) this.gutter(this.lights[i] as Light, 0);
       } else if (e.type === 'reform') {
-        this.hold = L.hold;
+        this.hold = Math.max(L.hold, L.chillOut + 0.5);
+        this.stingT = 0;
+        this.stingHp = e.hp;
         for (let i = 0; i < max; i++) {
           const l = this.lights[i] as Light;
-          if (i < e.hp) this.kindle(l, 0.12 + i * L.kindleStep);
+          if (i < e.hp) this.kindle(l, L.reformDelay + i * L.reformStep);
         }
       }
     }
@@ -490,6 +533,18 @@ export class HealthLights {
     // While she lies faded even the embers are out.
     const dark = p.faded > 0 ? 1 : 0;
     this.dark += (dark - this.dark) * Math.min(1, dt * 5);
+
+    // A fade's sting: for a few seconds after the re-form the lights she has burn low and the ones
+    // she lost show cold. A restart, or being made whole, ends it.
+    this.stingT += dt;
+    if (first || hp >= max || p.faded > 0) this.stingT = 1e6;
+    const dim =
+      1 - (1 - L.reformDim) * (1 - smooth(L.reformBack[0] as number, L.reformBack[1] as number, this.stingT));
+    const chill =
+      this.stingT < L.chillOut
+        ? smooth(L.reformDelay, L.reformDelay + 0.5, this.stingT) *
+          (1 - smooth(L.chillHold, L.chillOut, this.stingT))
+        : 0;
 
     const last = hp === 1 && p.faded <= 0;
     for (let i = 0; i < max; i++) {
@@ -549,7 +604,11 @@ export class HealthLights {
         }
         level *= 1 - 0.5 * l.flinch;
       }
+      level *= dim;
       l.level = level;
+      const cold = !l.on && l.anim === 0 && i >= this.stingHp ? chill : 0;
+      l.chill.visible = cold > 0.004;
+      l.chill.alpha = L.chill * cold * (0.8 + 0.2 * Math.sin(clock * 2.3 + i * 1.7));
       // A steady light keeps its warm glass and rim; only the bead and its glow rise and fall.
       const body = l.on && l.anim === 0 ? 1 : Math.min(1, level);
       l.lit.alpha = body;

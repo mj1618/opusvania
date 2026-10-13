@@ -50,6 +50,7 @@ export interface MoveParams {
   stickFrames: number;
   wallJumpVx: number;
   wallForceFrames: number;
+  wallKickFrames: number;
   wallCheckPx: number;
   wallJumpRefill: boolean;
 
@@ -191,6 +192,7 @@ export function resolveParams(t: Tuning): MoveParams {
     stickFrames: w.stickFrames,
     wallJumpVx: w.jumpVx,
     wallForceFrames: a.wallJumpForce ? w.forceFrames : 0,
+    wallKickFrames: Math.max(0, Math.round(w.kickFrames)),
     // Without grace the wall must be touching (1 px probe).
     wallCheckPx: a.wallJumpGrace ? Math.max(1, w.checkPx) : 1,
     wallJumpRefill: a.wallJumpRefill,

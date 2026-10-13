@@ -46,6 +46,17 @@ export const GOAL = {
     },
     /** The rest point's bead is this much brighter. */
     restGain: 1.18,
+    /**
+     * It turns its light away from where she stands (playtest 3: kneeling at a ground lantern she
+     * covered the bulb she was kindling). Within `turnPx` of it, once she is `turnSlack` px to the
+     * glass's side of the foot, the crook swings round its stem (`turnRate` per second: 2 = a full
+     * turn in 1 s; the glass is flung by `turnFling` rad/s² as it goes) and the glass hangs on the far side, also
+     * mid-channel (she runs into lamp-root's step with the channel already going).
+     */
+    turnPx: 300,
+    turnSlack: 12,
+    turnRate: 4.4,
+    turnFling: 26,
     /** Glass swing: stiffness, damping, wind sway (rad per unit of wind()). */
     swingK: 46,
     swingC: 3.2,
@@ -86,6 +97,8 @@ export const GOAL = {
     wave: { reach: 320, seconds: 1.05, height: 13, length: 84, gain: 0.6 },
     /** Motes that rise as it catches. */
     rise: 7,
+    /** A broken channel: the glints fall back to her as stars this size (1 = a world glint). */
+    backSize: 0.62,
   },
   refuse: {
     /** Seconds the price stays after a refusal when the event gives no `show` (it does: 150 frames; it also
@@ -94,12 +107,27 @@ export const GOAL = {
     fadeOut: 0.7,
     /** Stars fade in one after another this far apart, s. */
     step: 0.03,
-    /** The crown of stars round the glass: radius px, degrees between two stars, widest span; star half-height px. */
+    /** The crown of marks round the glass: radius px, degrees between two marks, widest span; mark half-height px. */
     radius: 58,
     pitch: 23,
     span: 262,
-    star: 9,
+    star: 7.6,
+    /** A mark is a small hollow flame: its rim, and what fills it. Warm, never the glints' pale blue. */
+    mark: 0xd99a55,
+    fill: 0xf09a3a,
   },
+  /**
+   * A wayside lamp asleep (playtest 3: from the terrace it was a dark hook in the roots): a cold
+   * point in the glass (`coreSize` px across at `coreAlpha`) and a breath of cold light behind it
+   * (`coldSize`, `coldAlpha`) that the dark crook stands against. Both go as her glints warm it.
+   */
+  lamp: { cold: 0x5f9fe0, coldCore: 0xbfe2ff, coldSize: 150, coldAlpha: 0.2, coreSize: 20, coreAlpha: 0.7 },
+  /**
+   * A fade's sting (playtest 3: "a fade without a sting"): the light she re-forms at pays for it.
+   * Its bead sinks by `bead` and its light on the place by `light`, stuttering, holds low for `low`
+   * s and is back by `back` s; `embers` dull motes fall off her as she stands up. Nothing bright.
+   */
+  reform: { bead: 0.8, light: 0.6, low: 1.3, back: 3.6, embers: 7 },
   heart: {
     /** Post's point light (it lifts a surface's own hue, so on pale stone it is glare: keep it low). `bloom` = how much more at the ending. */
     light: { radius: 300, color: 0xff9440, intensity: 0.26, bloom: 0.12 },
@@ -188,6 +216,97 @@ export const GOAL = {
     motes: 4,
     /** How many of the glints she still carries lift out of her (at most). */
     fireflies: 40,
+  },
+  /**
+   * Ember-moths that show the way to the nearest dark lantern (guide.ts). They leave a lit lantern
+   * (`moths`; a wayside lamp sends `lampMoths`) `first` s after it catches and again every `again` s
+   * while she is within `nearPx` of it, and the sleeping heart's dark wick (`heartMoths`, a longer
+   * thread: x `heartFar`) when she touches it and while she stays within `heartPx`. Flight:
+   * `speed` px/s along the way, weaving `wander` px, stopping every `stopEvery` px to circle
+   * (`stopR` px, `stopTurn` rad/s) for `stopSeconds`, or until she is within `waitPx` of it, at
+   * most `stopWait` s; the first goes `range[1]` px, the last `range[0]`, then they turn and fade.
+   * Small and dim: an ember of `ember` px half-size at `emberGain`, a halo of `halo` px at `haloGain`.
+   *
+   * `routes`: the ways INTO each lantern, keyed by its id in the scene: polylines of world points
+   * [x, y] at about her head height along the walk / climb / glide, ending near the lantern. A moth
+   * joins the route passing nearest to where it starts, at that nearest point. FOR THE SIM / LAYOUT
+   * OWNER: if a lantern, the shaft, the bluff or the sky line moves, move these points with it (a
+   * lantern with no route just gets a straight line).
+   */
+  guide: {
+    moths: 3,
+    lampMoths: 2,
+    heartMoths: 4,
+    heartFar: 1.25,
+    first: 1.3,
+    again: 6.5,
+    nearPx: 300,
+    heartPx: 260,
+    speed: 150,
+    wander: 13,
+    stagger: 0.6,
+    stopEvery: 230,
+    stopSeconds: 1.15,
+    stopWait: 2.6,
+    stopR: 20,
+    stopTurn: 4.2,
+    waitPx: 400,
+    range: [600, 900],
+    fadeIn: 0.5,
+    size: 0.86,
+    tint: 0xffb878,
+    ember: 3.8,
+    emberGain: 1.05,
+    halo: 15,
+    haloGain: 0.24,
+    routes: {
+      // From the first lantern: over the pool, the branch, the bluff, the leap to the well at trunk
+      // A's foot, in at the doorway, up the wall-jump shaft, over trunk A's top to the summit.
+      'lantern-crown': [
+        [
+          [1700, 1130],
+          [2176, 940],
+          [2528, 890],
+          [2880, 990],
+          [3160, 1210],
+          [3456, 1220],
+          [3456, 470],
+          [3300, 380],
+          [3560, 150],
+        ],
+      ],
+      'lantern-far': [
+        // The summit glide: off trunk B's top along the sky line.
+        [
+          [3740, 110],
+          [3900, -115],
+          [4150, -300],
+          [4400, -235],
+          [4610, -140],
+          [5000, 35],
+          [5200, 125],
+          [5420, 330],
+        ],
+        // From the shrine: east along the rise to the foot of the far cliff and up its face
+        // (the `cliff-n` glints), over the lip.
+        [
+          [5212, 1010],
+          [5400, 1020],
+          [5440, 900],
+          [5440, 500],
+          [5500, 390],
+        ],
+        // On foot from the west: the root, the branch, F6, F7, a hop onto the far ground.
+        [
+          [4180, 1150],
+          [4275, 905],
+          [4700, 603],
+          [4864, 660],
+          [5232, 520],
+          [5440, 400],
+        ],
+      ],
+    } as Record<string, number[][][]>,
   },
   camera: {
     /** Wake: the view leans this far (px, at most) toward the heart, for `seconds`. */

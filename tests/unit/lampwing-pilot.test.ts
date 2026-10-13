@@ -321,7 +321,7 @@ describe('lampwings in the grove: audit', () => {
       ['lamp-ledge', 2840, 448, ''],
       // (The full summit glide now passes far over them. A lazy one, a short hop off the edge
       // and the wings late, flies through their air.)
-      ['lamp-glide-1', 3690, 192, 'R+J8 R30 R+J400'],
+      ['lamp-glide-1', 3690, 192, 'R+J8 R20 R+J400'],
     ] as const) {
       const s = newSim();
       Object.assign(foe(s, 'burr-ledge'), { mode: 'dead', gone: true });

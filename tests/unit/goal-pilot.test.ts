@@ -21,11 +21,13 @@ import { feet, hopOnto, newSim, type Sim, wallClimb } from './helpers';
  * moth-stone's foot (the lantern notices her at 3 of 12; cutting the pod she stands at it, and its ten
  * glints kindle it under her) -> over the pool -> the burrback beyond it -> the branch, the bluff, its
  * pod -> the leap: off the bluff's east lip with jump held, the wings carry her down the glint line to
- * the bark of trunk A; she slides down it into the well at its foot, where the wayside lamp stands (8) -> the tunnel under
- * trunk A, the shaft floor, under trunk B (great glint)
- * -> the wall-jump shaft -> trunk A's top -> trunk B's top, the summit: second lantern -> jump, double jump, glide right over the whole
+ * the bark of trunk A; she slides down it into the well at its foot, where the wayside lamp stands (8) -> the doorway under
+ * trunk A, the shaft floor (its pod, the great glint at the foot of trunk B, which closes the floor)
+ * -> the wall-jump shaft -> trunk A's top (a second lamp) -> trunk B's top, the summit: second lantern -> jump, double jump, glide right over the whole
  * right zone and down onto the far ledge at its lantern (the designed approach): third lantern, the heart wakes -> down to the shrine on the right rise:
  * the heart. If the glide fails, the right route on foot (root, branch, F6, F7) is the fallback.
+ * (The road of a player who never glides, down the stair from the summit and up the far bluff's
+ * face, is naive-pilot.test.ts.)
  */
 const { jump: J, attack: A, left: LEFT, right: RIGHT } = ActionBit;
 const bit = (d: number) => (d > 0 ? RIGHT : d < 0 ? LEFT : 0);
@@ -273,16 +275,20 @@ function playthrough(t: Tuning = cloneTuning(defaultTuning)) {
   // The leap: a hop on the spot with jump held, then off the east lip still holding it.
   mark('the leap off the bluff: wings open at the lip', leap(s));
   light(0, 'trunk');
-  mark('through the tunnel under trunk A into the shaft', walkTo(s, 3456, 8));
-  mark('under trunk B for the great glint', walkTo(s, 3648, 8));
-  mark('back into the shaft', walkTo(s, 3456, 8));
+  // Trunk B stands on the floor: the floor ends in the shaft. Its pod, the great glint at trunk B's
+  // foot, and then the only way on: up.
+  mark('through the doorway under trunk A into the shaft: its pod', openPod(s, 'pod-shaft'));
+  mark("to trunk B's foot for the great glint", walkTo(s, 3548, 8));
+  mark('back to the middle of the shaft', walkTo(s, 3456, 8));
   mark('wall jumps up the shaft', wallClimb(s, rect('trunk', 0).y, -1) >= 2);
+  light(2, 'high');
   mark('onto the summit', hopOnto(s, rect('trunk', 1)) >= 0);
   kindle(1, 'summit');
 
   // --- The right: the glide, the far ledge, the heart.
   const f7 = rect('floating', 6);
-  const far = rect('ledge', 1);
+  // (The far bluff: the old far ledge, solid down to the rise now.)
+  const far = S.find((q) => q.tag === 'ground' && q.x === 5472) as (typeof S)[number];
   const glided = glideOnto(s, far, (lanterns[2] as { x: number }).x);
   if (!glided) {
     // Knocked out of the air, or short: the right route on foot.
@@ -327,9 +333,10 @@ describe('the grove can be finished', () => {
     expect(notice?.have).toBeLessThanOrEqual(3);
     expect(of(ev, 'lanternRefuse')).toHaveLength(0);
     expect(of(ev, 'lanternKindle')[0]?.wallet).toBeLessThanOrEqual(1);
-    // The leap landed her by the lamp at trunk A's foot with the line's glints; she lit it (8 more spent).
-    expect(of(ev, 'lampKindle').map((e) => e.id)).toEqual(['lamp-trunk']);
-    expect(g.lampsLit).toBe(1);
+    // The leap landed her by the lamp at trunk A's foot with the line's glints; she lit it, and the
+    // one on trunk A's top where the shaft climb sets her down (8 each).
+    expect(of(ev, 'lampKindle').map((e) => e.id)).toEqual(['lamp-trunk', 'lamp-high']);
+    expect(g.lampsLit).toBe(2);
     // All three, in the order of the route; the heart woke in the step the last one caught.
     const kindled = of(ev, 'lanternKindle');
     expect(kindled.map((e) => e.id)).toEqual(['lantern-stone', 'lantern-crown', 'lantern-far']);
@@ -340,7 +347,7 @@ describe('the grove can be finished', () => {
     expect(g.lanterns.every((l) => l.lit)).toBe(true);
     // The wallet: everything gathered = what she holds + the 36 spent.
     const gathered = of(ev, 'pickup').reduce((n, e) => n + e.value, 0);
-    expect(s.state.pickups.spent).toBe(36 + 8);
+    expect(s.state.pickups.spent).toBe(36 + 16);
     expect(s.state.pickups.count + s.state.pickups.spent).toBe(gathered);
     // The summary is the run: its glints (to the gather), time, kills and hits.
     const gather = of(ev, 'gather')[0];

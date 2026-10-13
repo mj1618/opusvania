@@ -56,7 +56,7 @@ const WIDE: Array<{ name: string; x: number; y: number }> = [
   { name: 'pool', x: 1440, y: 1280 },
   { name: 'canopy-route', x: 1980, y: 608 },
   { name: 'trunks', x: 3050, y: 1152 },
-  { name: 'high-ledge', x: 3000, y: 448 },
+  { name: 'high-ledge', x: 3110, y: 448 },
   { name: 'right-rise', x: 4500, y: 1280 },
   { name: 'far-ledge', x: 5560, y: 448 },
   { name: 'bluff', x: 2528, y: 960 },
@@ -64,6 +64,8 @@ const WIDE: Array<{ name: string; x: number; y: number }> = [
   { name: 'shaft-pit', x: 3456, y: 1280 },
   { name: 'summit-bough', x: 3800, y: 192 },
   { name: 'catch-branch', x: 3960, y: 448 },
+  // The foot of the far bluff (the old far ledge, a wall down to the rise now), past the heart.
+  { name: 'far-bluff', x: 5390, y: 1088 },
 ];
 
 /**

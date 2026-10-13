@@ -187,3 +187,26 @@ clips `clips/play3-{wallkick,longfall,leap,kindle}.mp4` (both gitignored). 60 fp
 - `__game.load()` does not clear the event log and the frame counter starts over, so `events(n)` hands
   back the last run's events again: reload the page between runs.
 - `npm run clip` and `npm run shots` take `--url` (the built app's is `.../opusvania/`).
+
+# After playtest 3: the sim / layout round (2026-10-14, not replayed by a person yet)
+What changed, by its "must / should / nice" number. Details where noted. Delete as a replay confirms.
+- **Must 1 (nothing leads to lanterns 2 and 3)**: trunk B stands on the floor, the far ledge became the far
+  bluff (a wall down to the rise), a wall kick rises in full on a tap. Hold right + press when blocked now
+  lights all three in order and ends: scene-and-units.md "The lanterns are the critical path",
+  movement-controller.md "A wall kick does not ask for a hold", goal.md "The naive pilots" (tapper 19 s,
+  holder 24 s to the heart, 0 hits; live with real keys 19.2 s / 22.1 s). **Replay**: does a person try the
+  second press at trunk B's bark? Is the heart at 2 of 3 with the bluff 260 px on read as "up there"?
+- **Must 2 (burr-root)**: 180 px off the root's foot, audited at 60 start times per arrival (enemies.md).
+  The floor road no longer comes over the root at all.
+- **Must 3 (the glide for a tapper)**: not touched (not in this round's brief). The tapper finishes
+  without ever opening the wings; the summit glide is for the player who holds.
+- **Should 4 (first kindle)**: the pledge (goal.md). Run on at the burst and it catches behind her 34 frames later.
+- **Should 8 (tapper at the bluff)**: a tap, then a second tap out of the slide is a full kick: over the top
+  in 1.0-1.9 s for every hand tried. A slow rhythm that waits to land between taps still fails.
+- **Should 10 (spending)**: four lamps (two new, on the path), four pods moved onto the path (goal.md).
+- **Should 11 (a fade)**: the light she re-forms at does not rest her until she has left it (goal.md).
+- **Nice**: F4 moved 96 px west (no snag on the way home); the well's bark leads up through a branch to
+  trunk A's top; a hard landing is 420 px or more.
+- **New, to look at**: the run is short (19-24 s for a pilot that reacts in a frame); a wall-kick player
+  can climb the scene's own east and west walls to the canopy (nothing there); burr-ledge is a pacing guard
+  with 46 px of walk; lamp-high stands where a wall-to-wall climber lands (she may kindle it by standing).

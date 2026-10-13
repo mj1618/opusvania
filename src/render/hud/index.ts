@@ -18,6 +18,7 @@ import { streamCount } from '../goal/logic';
 import { GlintBatch, K_FLARE, K_GLINT, K_SPARK } from '../pickups/batch';
 import { HealthLights } from './lights';
 import { LanternPips } from './progress';
+import { Prompts } from './prompts';
 import { EndSummary } from './summary';
 
 export const HUD = {
@@ -93,6 +94,8 @@ export class Hud {
   private readonly icon = new GlintBatch(72);
   private readonly pips = new LanternPips();
   private readonly summary = new EndSummary();
+  /** The glide and the wall kick, said once beside her (prompts.ts). */
+  private readonly prompts = new Prompts();
   private readonly drops: Drop[] = [];
   private dropAt = 0;
   private refuseT = -1;
@@ -150,8 +153,10 @@ export class Hud {
       this.group.addChild(s);
     }
     this.shake.addChild(this.health.root, this.group, this.pips.root, this.icon.mesh);
-    this.layer.addChild(this.shake, this.summary.root);
+    this.layer.addChild(this.prompts.root, this.shake, this.summary.root);
     for (let i = 0; i < 16; i++) this.drops.push({ life: 0, max: 1, x: 0, y: 0, vx: 0, vy: 0, lost: false });
+    // Dev handle, like __goal / __pickups.
+    if (typeof window !== 'undefined') (window as unknown as { __hud?: Hud }).__hud = this;
   }
 
   /** Paints 0-9 and a minus once: dark soft shadow, a glow, a pale face (top, middle, foot colours). */
@@ -250,7 +255,10 @@ export class Hud {
     const kindled = lamp ?? wayLamp;
     if (kindled && channel > 0) {
       const cost = lamp ? lanternCost(kindled, tuning.goal) : lampCost(kindled, tuning.goal);
-      count -= streamCount(channel, Math.max(1, Math.round(tuning.goal.channelFrames)), cost, GOAL.kindle.by);
+      count -= Math.min(
+        count,
+        streamCount(channel, Math.max(1, Math.round(tuning.goal.channelFrames)), cost, GOAL.kindle.by),
+      );
       this.hold = Math.max(this.hold, 1.2);
     }
     const restart = sim.frame < this.frame;
@@ -356,6 +364,7 @@ export class Hud {
     this.shake.alpha = this.live * this.live * (3 - 2 * this.live);
     this.shake.visible = this.live > 0.003;
     this.summary.update(dt, clock, sim);
+    this.prompts.update(dt, clock, sim);
 
     const a = this.alpha * this.alpha * (3 - 2 * this.alpha) * this.shake.alpha;
     this.group.visible = a > 0.003;

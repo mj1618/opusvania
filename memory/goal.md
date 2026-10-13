@@ -20,6 +20,20 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
   while she kindles** (`player.kindling >= 0`): a creature that touches her is turned away as if it
   had hit (burrback: recoil and turn; lampwing: bounce and give up), she is not hurt, the channel
   goes on. (`lanternCancel` reason `hurt` still exists for a blow that comes some other way.)
+- **Pledge** (playtest 3: "the first kindle can be missed by a second": she cut the pod at the first lantern,
+  ran on, its glints caught her up 400 px later and the lantern stayed dark). Standing at a dormant light
+  short, with the rest **already on its way to her** (`pods.left` + enemies' `spill` >= what she lacks), sets
+  `LanternState.pledged`. From then on it catches the step her wallet reaches the cost, **wherever she is**:
+  `lanternKindle {pledged: true, away: true|false}`, no full channel. While she stays, the channel shows
+  from that step on (`lanternChannel`, `player.kindling`, capped one short of the end; a slash does not
+  break a pledge) and it catches as the price lands: at pod-stone 34 frames after the burst (it was ~63:
+  the slash's recovery, then 30 frames). If she walks off first: `lanternCancel` (leave), then the kindle
+  from afar. A pledge ends unpaid only if what is coming stops covering it (she spent it elsewhere, or
+  faded). The wallet never goes negative: nothing is spent before it has landed. Why not just faster pod
+  glints: the wait was the slash recovery + the channel, not the flight. Why not "any time near it": she
+  has to have stood AT it, which a run through the box (9 frames) with glints in the air also is; that
+  kindles a lantern she ran through while a pod she had just cut paid out, which costs her nothing she
+  could use elsewhere.
 - **Cost** 12 each (`goal.cost`, or `cost` on the lantern), 36 in all. It comes out of the wallet:
   `pickups.count -= cost`, `pickups.spent += cost`. `count + spent + lost` = everything gathered
   (`lost` = glints lying in clusters she dropped when she faded: pickups.md);
@@ -34,6 +48,12 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
 - **Rest point**: standing at a lit lantern while hurt for 45 frames (`restFrames`) makes her whole
   (`lanternRest`), free. 45 > 30 so resting is a longer breath than kindling, and kindling hurt gives
   the rest 45 frames later without moving. Not instant, so it is no shield in a fight.
+- **A re-form is not a rest** (`goal.restHold`, playtest 3: "a fade has no sting": she re-formed on the light
+  and its rest healed her 1.8 s later without a step). The light she re-forms at does not count her rest
+  until she has stood, in control and on the ground, outside its trigger box; then coming back is a rest as
+  ever. A hop on the spot is not leaving. Another light, or kindling one, clears it. So after a fade she
+  walks at 2 lights at least out of the box and back (45 px and 45 frames), or on to the next light.
+  `__game.goal().restHold`. Render: the lantern should not show its "resting" breath while it holds.
 - **Re-form point**: `goal.restAt` = the lit lantern she last stood at (kindling sets it). A fade then
   re-forms her at its foot (with 2 of 4 lights, a third of her wallet left where she fell: enemies.md;
   the rest above is then the real heal) instead of the last safe ground, **whatever lives next to it** (safe ground
@@ -61,7 +81,7 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
   (`heartWake`, right after that `lanternKindle`). Awake: **standing** in it (grounded, in control)
   ends the run: `gather` with the summary; gliding through does not. The summary also carries a
   tally for the ending to reward thoroughness: `glints` of `glintsTotal`, `bonus`, `pods` / `podsTotal`
-  (12), `greats` / `greatsTotal` (6), `kills` / `enemiesTotal` (9), `deaths`, `lamps` / `lampsTotal` (2). Leftover
+  (12), `greats` / `greatsTotal` (6), `kills` / `enemiesTotal` (9), `deaths`, `lamps` / `lampsTotal` (4). Leftover
   glints have the wayside lamps to go to (below).
 - **The tally rule** (state version 14, 15 since the lamps): `glintsTotal` = every pickup + every pod + every creature at its
   **base** worth (189 in the grove: 96 + 62 + 31). What a finisher kill pays over the base (2 each) is
@@ -79,16 +99,16 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
 - `run.start` = frame of her first input; `run.hits` counts `hurt` events. Summary: `glints` =
   `count + spent + lost - bonus` (the tally rule above), `time` = frames since the first input, `kills` = dead enemies, `hits`.
 - A scene without `lanterns` / `heart` has no goal: nothing fires. Lanterns without a heart can be lit.
-- State version 15. Existing play is untouched when the lanterns are ignored (tested: the grove with
+- State version 16 (the pledge, `restHold`, `player.kick`). Existing play is untouched when the lanterns are ignored (tested: the grove with
   and without them plays identically).
 
 ## Where they are, and why
 | id | foot x, y | how she gets there |
 |---|---|---|
 | `lantern-stone` | 1448, 1280 | at the foot of the carved moth-stone, 328 px right of the spawn, on the spawn ground: plain walking. It notices her in her first steps (3 of 12); `pod-stone` at its foot stops her there and pays the rest (below: "The lantern notices her"). Without the pod the spawn line, pool arc and shallows hold 11: one short. |
-| `lantern-crown` | 3684, 192 | on trunk B's top, the highest point: the wall-jump shaft (or the left route), then jump + double jump from trunk A (the top runs on east as a 192 px bough with a catch branch under it: scene-and-units.md). No enemy near: a pure movement test. The shaft, crown and the two great glints on the way pay for it (19). It is also where the summit glide starts, so a failed glide re-forms her at the take-off. |
-| `lantern-far` | 5524, 448 | on the far ledge, at the end the **summit glide** arrives over: the designed approach. From the crown lantern: jump, double jump (the canopy is 420 px over the scene's top now, so both fit: feet reach y -277), hold: the glide passes 470 px over the first lampwing (unnoticed), 200 px over the second, and crosses the ledge's lip 160 px up; close the wings and she drops by the lantern. Held to the end she sails on to the scene's wall and slides down onto the ledge's far end. Fallback on foot: root, branch, F6, F7, a hop. **No creature walks the far ledge any more** (burr-far is gone: a full held running jump from F7 lands at 5670-5740 and the glide held to the end comes down at the wall, so no patrol on a 288 px ledge was fair; `layout-pilot.test.ts` runs the jump at 60 start times). Its guard is `lamp-glide-2`, whose home (4900, 250) is 646 px from the lantern: it looks up as the summit glide passes 200 px over it, follows, and gives up at the lit lantern's edge, which is the one place the lampwing sanctuary is seen in play. It does not notice her on F6 or F7. |
-| heart | 5212, 1088 | at the shrine on the right rise. With the camera at its right stop the mid layer's hollow tree (layer x 4600, parallax 0.68) stands at playfield x ~5214, so the glowing hollow is straight behind it. From the far ledge: off the left end, off F7, a short walk. |
+| `lantern-crown` | 3684, 192 | on trunk B's top, the highest point. **Since playtest 3 trunk B stands on the floor and closes it: the floor path ends at its bark and the only way on is up it** (hold right, press when blocked: 4-5 kicks to the top, any hand), so this lantern is the next thing a naive player meets. Also: the wall-jump shaft (or the left route), then jump + double jump from trunk A (the top runs on east as a 192 px bough with a catch branch under it: scene-and-units.md). No enemy near: a pure movement test. The shaft, crown and the two great glints on the way pay for it (19). It is also where the summit glide starts, so a failed glide re-forms her at the take-off. |
+| `lantern-far` | 5524, 448 | on the top of the **far bluff** (the old far ledge, solid down to the rise since playtest 3: both naive runs saw it from below "with no way up that reads" and kicked the east wall for 20 s). Its west face stands 260 px past the heart: hold right, press when blocked, 2-3 kicks. From the top the woken heart is a walk off the west lip. Also at the end the **summit glide** arrives over: the elegant approach. From the crown lantern: jump, double jump (the canopy is 420 px over the scene's top now, so both fit: feet reach y -277), hold: the glide passes 470 px over the first lampwing (unnoticed), 200 px over the second, and crosses the ledge's lip 160 px up; close the wings and she drops by the lantern. Held to the end she sails on to the scene's wall and slides down onto the ledge's far end. Fallback on foot: root, branch, F6, F7, a hop. **No creature walks the far ledge any more** (burr-far is gone: a full held running jump from F7 lands at 5670-5740 and the glide held to the end comes down at the wall, so no patrol on a 288 px ledge was fair; `layout-pilot.test.ts` runs the jump at 60 start times). Its guard is `lamp-glide-2`, whose home (4900, 250) is 646 px from the lantern: it looks up as the summit glide passes 200 px over it, follows, and gives up at the lit lantern's edge, which is the one place the lampwing sanctuary is seen in play. It does not notice her on F6 or F7. |
+| heart | 5212, 1088 | at the shrine on the right rise: a walker from the summit (bough, catch branch, right branch, the rise) passes it asleep with 2 of 3, 260 px before the far bluff. With the camera at its right stop the mid layer's hollow tree (layer x 4600, parallax 0.68) stands at playfield x ~5214, so the glowing hollow is straight behind it. From the far ledge: off the left end, off F7, a short walk. |
 
 - One per third of the scene (cool / warm / deep), none within 300 px of the spawn (validated).
 - The cocoons under the great bough have no lantern (nothing to stand on under them; the ledge above
@@ -105,15 +125,21 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
 | all (`glintsTotal`) | 189 |
 
 - 36 is 19% of everything and 38% of the world glints: a player who never opens a pod or kills
-  anything can pay for all three with 60 to spare. With both lamps: 52 (28%).
-- The pilot, which goes straight for the goal (2 of 12 pods, 1 kill, 4 of 6 great glints, one lamp), finds 77
-  (+2 bonus), spends 44 and ends with 35. 12 each stands. At 16 the first lantern needs a second trip (the pilot
+  anything can pay for all three with 60 to spare. With all four lamps: 68 (36%).
+- The pilot, which goes straight for the goal (3 of 12 pods, 1 kill, 4 of 6 great glints, two lamps), finds 85
+  (+2 bonus), spends 52 and ends with 35.
+- **The naive players** (`naive-pilot.test.ts`, the critical path only): cutting what is in the way and buying
+  the two lamps they walk into (`lamp-high` or `lamp-trunk`, `lamp-rise`), the tapper finds 66, spends 52,
+  ends with 16; the holder 58-61 found, 9-13 left. Cutting only the first pod and buying both lamps: 51 found
+  (+2 bonus), 52 spent: the far lantern refuses her at 8 of 12 and `great-far` beside it pays (ends with 1).
+  No lamps, one pod: 49-51 found, 13-17 left. So the path now spends 70-100% of what it yields; a thorough player
+  (playtest 3: 92 found, 42 idle with two lamps) has 16 more to spend, 24 left over. 12 each stands. At 16 the first lantern needs a second trip (the pilot
   still finishes); at 11 or less the glints in sight of the first lantern pay for it.
 - Each light is roughly paid for by what hangs on its own approach: the spawn line and pod-stone (13) for
   the first, the leap's line and pod-rise (10) for lamp-trunk, 20 up the shaft to the crown, the sky line
   (6 + the great one) on the glide to the far one.
 
-## Wayside lamps: the sink for leftover glints (sim built 2026-10-14, NOT DRAWN YET)
+## Wayside lamps: the sink for leftover glints (four since playtest 3)
 `scene.lamps: [{id, x, y, cost?}]`, `state.goal.lamps` (the same `LanternState` records), `goal.lampsLit`,
 `goal.restLamp`. A lamp is a lesser lantern: the same `updateLights` loop in `goal.ts` with a flag. Same
 rules (stand 30 frames, lit for good, rest point, re-form point, sanctuary for burrbacks and lampwings,
@@ -131,7 +157,9 @@ same sanctuary line and circle). Tests: `tests/unit/lamps.test.ts`.
 | id | foot x, y | why there |
 |---|---|---|
 | `lamp-trunk` | 3160, 1280 | in the well at trunk A's foot, by the doorway into the shaft. Every glide off the bluff ends sliding down trunk A's bark onto it (below); a walker drops into the well beside it. The leap's four glints and pod-rise (6) pay for it. A rest and re-form point before the climb. |
-| `lamp-root` | 4566, 1280 | at the foot of the right rise's 192 px step, on burr-root's ground. A first-timer who runs into the step stands pressed against it, which is standing AT the lamp: with 8 it starts to catch under her (kindled after 0.5 s if she does not jump first), with less it tells her. **The one place safe ground is seen working with a burrback**: dormant, burr-root walks right through it (4160-4608); lit, it turns 110 px short for good (4160-4456). |
+| `lamp-high` | 3264, 448 | on trunk A's top: where the wall-to-wall shaft climb, the bark of trunk A (out of the well) and the left route all arrive, one jump before the summit. burr-ledge keeps west of 3010 (lit or not) |
+| `lamp-rise` | 4860, 1088 | on the right rise, 90 px past where the walker's stair from the summit sets her down (4770), 350 px before the heart: the rest before the last climb. No creature on the rise |
+| `lamp-root` | 4566, 1280 | at the foot of the right rise's 192 px step, on burr-root's ground (off the critical path now: the floor road no longer comes this way). A first-timer who runs into the step stands pressed against it, which is standing AT the lamp: with 8 it starts to catch under her (kindled after 0.5 s if she does not jump first), with less it tells her. **The one place safe ground is seen working with a burrback**: dormant, burr-root walks right through it (4340-4608); lit, it turns 110 px short for good (4340-4456). |
 
 Why not at the first lantern, as asked: the lantern's ground is the spawn ground. A burrback that reaches
 the stone's light has to walk through the spawn point (tried: home 760; it knocked an idle player off
@@ -161,20 +189,40 @@ Decision on "one short": kept for the player who does NOT cut (spawn line + pool
 with the notice to tell her what the 12 is for); gone for the one who does. Being short only teaches if
 the lantern is noticed, and paying on the spot teaches the same price in one beat instead of a return trip.
 
+## Pods on the critical path (playtest 3: 10 of 12 unopened; "pods beside the path are opened")
+Four moved onto it: `pod-shaft` (3400, on the shaft floor before trunk B; was pod-path-1 west of the
+spawn), `pod-bough` (3850, on the summit bough; was pod-f2), `pod-catch` (4010, on the catch branch, hp 2;
+was pod-f3), `pod-far` (5690, on the far bluff's top by `great-far`; was pod-row-3: the pogo row on the
+rise is two now). The naive pilots open 5 of 12 (stone, rise, shaft / bough, row-1, row-2). Off the path
+stay pod-branch-l, pod-ledge (3050 now, by its guard), pod-branch-r, pod-f6.
+
+## The naive pilots (`naive-pilot.test.ts`)
+Playtest 3's two players as closed-loop pilots that only react: hold right; press jump when blocked or
+sliding (the tapper 5 frames, the holder 45); cut a pod or a burrback in the way; walk up to a light that
+stirred on the ground she is on and give it 2 s; go to the heart when it wakes. **Tapper**: lantern-stone
+1.9 s, lamp-high 9.5, lantern-crown 12.2, lamp-rise 14.7, heart asleep (2 of 3) 15.3, lantern-far 18.3,
+`gather` 19.0 s, 66 glints, 0 hits, no wings. **Holder**: 1.9 / crown 15.4 / lamp-rise 17.9 / far 23.2 /
+`gather` 24.0 s, 58 glints, 0 hits, wings twice. Seven other hands (4-45 frame presses, 4-20 frame beats)
+and the "skips pods / skips lamps" variants finish too. Live with real keys in real time (90 ms and 700 ms
+presses through `page.keyboard`, state only read): 19.2 s and 22.1 s to `gather`, 0 hits, the same order.
+A robot that reacts in a frame; a person is 3-5 times that.
+
 ## The full-run pilot (`goal-pilot.test.ts`)
 Closed-loop legs (walk until there, cut until open, wait until clear), real inputs from the spawn, as a
 first-timer who cuts what is in the way: the spawn line -> pod-stone at the moth-stone (noticed, then
 kindled where she stands, frame 149) -> leap the pool -> burr-path -> the branch -> the bluff, pod-rise ->
 the leap (a hop with jump held, off the east lip still holding: glide, trunk A's bark, the well) ->
-lamp-trunk kindled -> under trunk A, the shaft floor, under trunk B (great glint) -> wall-jump shaft ->
-trunk A -> summit, kindle -> jump, double jump, glide right along the sky line, wings closed over
-lantern-far -> kindle, heart wakes -> down to the rise -> the heart. `gather` at frame 1061 (17.7 s),
-`endHold` at 1301; 0 hits, 1 kill, 77 found + 2 bonus (35 left), tally 2 of 12 pods, 4 of 6 great glints,
-1 of 2 lamps. If the glide fails it takes the right route on foot. It also finishes with a slower run, a
+lamp-trunk kindled -> under trunk A, the shaft floor: pod-shaft, the great glint at trunk B's foot -> wall-jump shaft ->
+trunk A, lamp-high kindled -> summit, kindle -> jump, double jump, glide right along the sky line, wings closed over
+lantern-far -> kindle, heart wakes -> down to the rise -> the heart. `gather` at frame 1131 (18.9 s),
+`endHold` at 1371; 0 hits, 1 kill, 85 found + 2 bonus (35 left), tally 3 of 12 pods, 4 of 6 great glints,
+2 of 4 lamps. The first lantern catches at frame 110 (it was 149: the pledge). If the glide fails it takes the right route on foot. It also finishes with a slower run, a
 75-frame channel, lanterns at 16 (then it goes for the pool's glints first), faster burrbacks.
 `GOAL_TRACE=1 npx vitest run tests/unit/goal-pilot.test.ts --disable-console-intercept` prints the legs.
 `layout-pilot.test.ts` flies the set pieces on their own (the bluff, the way home, the leap, the hollow,
-F7's jump, the shaft entry, the summit landing, the naive players, burr-root at lamp-root).
+F7's jump, the shaft entry, the summit landing, the naive players, burr-root at lamp-root);
+`critical-path.test.ts` the playtest-3 ones (tap climbs, the stair down from the summit, the far bluff, the
+way back west, burr-root's arrivals, the bark of trunk A).
 
 ## What render gets
 State: `state.goal` (`GoalState`, exported from `src/sim/index.ts`; `SimView.goal`). Boxes: `lanternBox(l, tuning.goal)`,
@@ -189,12 +237,16 @@ State: `state.goal` (`GoalState`, exported from `src/sim/index.ts`; `SimView.goa
   above), `lanternRefuse {id, have, need, show}` (only after 12 frames
   of standing there; `show` = 150 frames the price is worth showing); `lanternChannel {id, frames,
   of}` every channel frame but the last; `lanternCancel {id, frames, reason: leave|hurt|attack}`;
-  `lanternKindle {id, cost, wallet, lit, total}`; `lanternRest {id, hp, hpMax, healed}`.
+  `lanternKindle {id, cost, wallet, lit, total, pledged, away}`; `lanternRest {id, hp, hpMax, healed}`.
+  **`away: true` = she is not at the lantern** (a pledge paid as the pod's glints landed, up to ~400 px on):
+  the drain has to cross from wherever she is (`state.player`), and there was a `lanternCancel` (leave)
+  before it. `LanternState.pledged` while it waits. `goal.restHold`: the light she re-formed at is not
+  resting her yet (no rest breath; `rest` stays 0).
 - **Wallet HUD**: `pickups.count` now goes DOWN on a kindle (the HUD reads it: `hud/index.ts`).
   `lanternKindle.cost` glints leave at once in the sim, `wallet` is the count after; draw the drain
   (her chest to the lantern's foot) from the event. `pickup.total` is the wallet at that moment.
   `pickups.spent` for a "lanterns paid" read; `lanternRefuse.have / need` for a shake of the count.
-- **Wayside lamps** (not drawn yet): `scene.lamps[i] {id, x, y}` with `goal.lamps[i]` (the lantern record),
+- **Wayside lamps** (four: `lamp-trunk`, `lamp-root`, `lamp-high` 3264, 448 on trunk A's top, `lamp-rise` 4860, 1088): `scene.lamps[i] {id, x, y}` with `goal.lamps[i]` (the lantern record),
   `goal.lampsLit`, `goal.restLamp`, `player.kindlingLamp`, `lampCost(l, tuning.goal)`, and the `lamp...`
   events (same fields as the lantern ones). They need their own smaller look (five identical lanterns
   would read as "five to light"), no HUD pip, the same safe-ground breath once lit.

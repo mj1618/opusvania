@@ -51,18 +51,20 @@ function burst(s: Sim, i: number, maxFrames = 300): number {
 
 /** Stations: feet positions on reachable surfaces, by pod id. */
 const STATIONS: Record<string, [x: number, y: number]> = {
-  'pod-path-1': [700, 1280],
-  'pod-f2': [1300, 1280],
-  'pod-f3': [1400, 704],
+  // (Playtest 3: four pods moved onto the critical path. The shaft floor, the summit bough, the
+  // catch branch under it, the far bluff's top.)
+  'pod-shaft': [3480, 1280],
+  'pod-bough': [3760, 192],
+  'pod-catch': [3900, 448],
   'pod-stone': [1300, 1280],
   'pod-branch-l': [2400, 1280],
   'pod-rise': [2470, 960],
-  'pod-ledge': [2900, 448],
+  'pod-ledge': [3150, 448],
   'pod-branch-r': [4300, 1280],
   'pod-f6': [4700, 1088],
   'pod-row-1': [4900, 1088],
   'pod-row-2': [5200, 1088],
-  'pod-row-3': [5500, 1088],
+  'pod-far': [5560, 448],
 };
 
 describe('every pod in the grove can be burst', () => {
@@ -82,36 +84,35 @@ describe('every pod in the grove can be burst', () => {
     expect(s.state.pickups.count).toBeGreaterThanOrEqual(podsWorth(GROVE, T.pods));
   });
 
-  it('the stations on platforms are reached by the route pilot', () => {
-    const s = newSim();
+  it('the stations on high surfaces are reached by the route pilots', () => {
+    const s = newSim({ ...GROVE, enemies: [] });
     const f = GROVE.solids.filter((r) => r.tag === 'floating');
     const ledge = GROVE.solids.find((r) => r.tag === 'ledge');
-    for (const r of [GROVE.solids[0], f[0], f[1], f[2]]) expect(hopOnto(s, r as never)).toBeGreaterThan(0);
-    expect(
-      burst(
-        s,
-        pods.findIndex((p) => p.id === 'pod-f3'),
-      ),
-    ).toBeGreaterThan(0);
-    for (const r of [f[3], f[4], ledge]) expect(hopOnto(s, r as never)).toBeGreaterThan(0);
-    expect(
-      burst(
-        s,
-        pods.findIndex((p) => p.id === 'pod-ledge'),
-      ),
-    ).toBeGreaterThan(0);
+    const [a, b] = GROVE.solids.filter((r) => r.tag === 'trunk');
+    const at = (id: string) => pods.findIndex((p) => p.id === id);
+    // The left route to the high ledge and its big pod (on the branch that joins it to trunk A).
+    for (const r of [GROVE.solids[0], ...f.slice(0, 5), ledge])
+      expect(hopOnto(s, r as never)).toBeGreaterThan(0);
+    expect(burst(s, at('pod-ledge'))).toBeGreaterThan(0);
+    // Trunk A, the summit, the bough and its pod; off the bough's end onto the catch branch and its pod.
+    for (const r of [a, b]) expect(hopOnto(s, r as never)).toBeGreaterThan(0);
+    expect(burst(s, at('pod-bough'))).toBeGreaterThan(0);
+    expect(feet(s).y).toBe(192);
+    for (let k = 0; k < 200 && feet(s).y !== 448; k++) s.run('R1');
+    expect(feet(s).y).toBe(448);
+    expect(burst(s, at('pod-catch'))).toBeGreaterThan(0);
   });
 
-  it('the row on the right rise is one pogo chain: three bounces, never touching the ground', () => {
+  it('the row on the right rise is a pogo chain: two bounces, never touching the ground (the third pod stands on the far bluff now)', () => {
     const row = pods.map((p, i) => [p, i] as const).filter(([p]) => p.id.startsWith('pod-row-'));
-    expect(row).toHaveLength(3);
+    expect(row).toHaveLength(2);
     const s = newSim();
     s.place(4700, 1088);
     let prev = 0;
     let k = 0;
     let touched = false;
     let air = false;
-    for (let f = 0; f < 400 && k < 3; f++) {
+    for (let f = 0; f < 400 && k < row.length; f++) {
       const b = s.state.player;
       const [p, i] = row[k] as (typeof row)[number];
       const dx = p.x - (b.x + b.w / 2);
@@ -127,7 +128,7 @@ describe('every pod in the grove can be burst', () => {
       if (s.state.pods.hp[i] === 0) k++;
       prev = m;
     }
-    expect(k).toBe(3);
+    expect(k).toBe(2);
     expect(touched).toBe(false);
     expect(s.state.player.dj).toBe(1);
   });

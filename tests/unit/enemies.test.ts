@@ -726,7 +726,7 @@ describe('enemies: determinism, symmetry, restart', () => {
     expect(hashState(cloneState(a.state))).toBe(hashState(a.state));
     expect(cloneState(a.state).enemies[0]).not.toBe(a.state.enemies[0]);
     expect(of(a.events, 'hurt').length + of(a.events, 'enemyHit').length).toBeGreaterThan(2);
-    expect(a.state.version).toBe(15);
+    expect(a.state.version).toBe(16);
   });
 
   it('mirror symmetry: a mirrored scene and mirrored inputs give exactly the mirrored fight', () => {
@@ -803,10 +803,10 @@ describe('enemies in the grove', () => {
       expect(list.some((e) => e.x >= (a as number) && e.x < (b as number))).toBe(true);
     expect(list.some((e) => e.y === 1280 && e.x > 384 && e.x < 1536)).toBe(false);
     expect(list.some((e) => e.y === 1088 && e.x > 4608)).toBe(false);
-    // Nor on the far ledge: no patrol can clear a 288 px ledge of the 350 px jump from F7.
+    // Nor on the far bluff's top: no patrol can clear its 288 px of the jump from F7.
     expect(list.some((e) => e.y === 448 && e.x > 5472)).toBe(false);
     const bad = (enemies: unknown[]) => () => parseScene({ ...GROVE, enemies });
-    expect(bad([{ ...list[0], id: 'pod-f2' }])).toThrow(/called/);
+    expect(bad([{ ...list[0], id: 'pod-rise' }])).toThrow(/called/);
     expect(bad([{ ...list[0], y: 1000 }])).toThrow(/surface/);
     expect(bad([{ ...list[0], x: 370 }])).toThrow(/surface/);
     expect(bad([{ ...list[1], y: 1300 }])).toThrow(/inside a solid/);
@@ -837,8 +837,12 @@ describe('enemies in the grove', () => {
       ['burr-path', 2004, 2316],
       // (None on the terrace any more: every way off the bluff's east lip comes down somewhere on it,
       // from 170 px out for a walk off to the trunk for a held jump; no patrol fits between them.)
-      ['burr-ledge', 2912, 3232],
-      ['burr-root', 4160, 4608],
+      // burr-ledge paces by the big pod (`radius` 48): east of it the high ledge is a branch she
+      // comes up through from the well (the bark of trunk A), and nothing may stand on that.
+      ['burr-ledge', 2912, 3010],
+      // burr-root keeps 180 px off the root's foot (`radius` 110; playtest 3: it hit everyone
+      // coming off the root) and still walks through the lamp at the rise's foot.
+      ['burr-root', 4340, 4608],
     ]);
   });
 });

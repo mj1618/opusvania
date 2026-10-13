@@ -192,6 +192,14 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   (`sky-1..6`, `shaft-1..6`, `pool-arc-1..5`) pulse one after another, 0.26 s apart, in that order,
   then rest 1.7 s: a line of them reads as a path that leads somewhere. Number new trails from the
   end the player starts at. Great glints are unchanged (0.72 size / half brightness until she is near).
+- **Lead stars and seeds** (playtest 3: 18-20 full stars at the spawn outshone the one lantern). Per
+  trail only the `lead` (2) untaken stars nearest to her are whole stars, at full presence within
+  `leadNear` (460 px) of her chest, sinking to `leadFarLevel` (0.44) by `leadFar` (820); the rest are
+  seeds (0.58 size, 0.3 presence, no rays, a faint swell as the trail's twinkle passes). Taking one
+  promotes the next (eased). Counted in view, dormant, by level (`__pickups.debug()` now carries
+  `level` and `wake`), before -> after as full / faint lead / seed: spawn 18 -> 7 / 6 / 5, bluff
+  26 -> 8 / 11 / 7, shaft floor 18 -> 7 / 5 / 6, summit 10 -> 5 / 1 / 4 (of the "full" ones 2-3 are the
+  gold awake ones beside her). The lantern's price crown is no longer stars (goal-render.md, round 5).
 - (History, the old dim-gold dormant mote.) Lowering the energy alone does not dim it: the heart of the star stays white down to e ~0.1 (core +
   arms + bloom). The shader takes a "dormancy" (aData.w for K_GLINT) and divides by `1 + 5 * d * peak`:
   a soft knee that removes the white heat and keeps the arms. At 0.42 size / 0.3 energy without the
@@ -202,7 +210,7 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 - Placement: arcs were taken from real jump paths (run the sim with an input script and print the
   box centre every few frames), then thinned to 3-5 per jump.
 
-## Where they are (52 glints + 5 great = 57 pickups, worth 77)
+## Where they were at first (52 glints + 5 great = 57, worth 77; the passes below changed it to 66 + 6 = 96)
 spawn line 3, pool arc 5, pool shallows 3, onto the left bank 3, bank→F1 3, F2→F3 3, F3→F4 5,
 F5→high ledge 3, trunk A top→trunk B top 4, wall-jump shaft 5, left branch 3, step onto the mid rise
 3, root→right branch 3, branch→F6 3, F7→far ledge 3. Great: left bank corner, top of trunk B, under
@@ -229,3 +237,15 @@ pilots reach; move a rect or a pickup and it names what became unreachable.
 - `hollow-1..3` in the hollow (y 1330-1345: 31-46 px over its floor, above what the grass fringe hides).
 - `sky-1..6` + `great-sky` (4800, -57): the summit glide's line, above the scene top. Only the wings (or
   the lampwing pogo chain) reach the far half; `pickups.test` exempts them from "within jump reach".
+
+## Playtest 3 pass, 2026-10-14: seven moved onto the new walls (still 66 + 6 = 96)
+Taken out of the crowded spawn / left-route frame ("20 stars brighter and more numerous than the one lantern"):
+`f4-4`, `f4-5`, `f3-3`, `f1-3`, `bank-3`, `ledge-3`, `branch-2`. Put where a wall is the way:
+- `shaft-7` (3545, 300): on trunk B's side above trunk A's height, the last stretch of the one-wall climb to the summit.
+- `well-1`, `well-2` (3150, 900 / 620): up the bark of trunk A out of the well, to the branch under the high ledge.
+- `back-1`, `back-2` (3752, 900 / 600): up trunk B's east face from the hollow, the way back west.
+- `cliff-1`, `cliff-2` (5432, 920 / 720): up the far bluff's face; `far-1..3` (5350-5455, 470-320) carry on to its lip.
+- `great-arch` moved to (3536, 1222), the foot of trunk B inside the shaft (trunk B has no arch any more): a
+  walker stopped by the bark stands on it.
+A glint 40-50 px off a wall face at two heights is taken by any one-wall climb (her box is 40 wide, wake 84).
+`pickups-pilot.test.ts` takes the well and back pairs with a one-wall climb each.

@@ -78,11 +78,13 @@ const STATIONS: Array<[prefix: string, x: number, y: number]> = [
   ['rise-', 2250, 1024],
   ['root-', 4080, 1184],
   ['f6-', 4460, 912],
-  ['far-', 5260, 592],
+  ['far-', 5180, 592],
+  ['cliff-', 5380, 1088],
+  ['shaft-', 3300, 448],
   ['great-bank', 330, 1088],
   ['great-crown', 3260, 448],
   ['great-arch', 3456, 1280],
-  ['great-far', 5300, 592],
+  ['great-far', 5540, 448],
   ['great-hang', 1984, 1280],
   ['hollow-', 3780, 1376],
   // (The leap's line is flown in layout-pilot.test.ts; from the terrace under it each is a hop.)
@@ -106,6 +108,23 @@ describe('gathering every glint in the grove', () => {
     // The wall-jump shaft first: the climb itself passes through its glints.
     s.place(3456, 1280);
     expect(wallClimb(s, 448, -1)).toBeGreaterThanOrEqual(2);
+    // The two up the bark of trunk A out of the well, and the two up trunk B's east face (the way
+    // back west): each is a climb of one wall, a kick at a time.
+    for (const [x, y, dir, top] of [
+      [3130, 1280, 1, 448],
+      [3780, 1376, -1, 192],
+    ] as const) {
+      s.place(x, y);
+      let prev = 0;
+      for (let f = 0; f < 600 && !(s.state.player.grounded && feet(s).y === top); f++) {
+        const b = s.state.player;
+        const press = (b.grounded || b.mode === 'wallSlide') && (prev & J) === 0;
+        const m = bit(dir) | (press || (!b.grounded && b.vy < 0 && (prev & J) !== 0) ? J : 0);
+        step(s.state, m, s.tuning, s.scene, s.events);
+        prev = m;
+      }
+      expect(feet(s).y, `climb from ${x},${y}`).toBe(top);
+    }
     for (const [prefix, x, y] of STATIONS) {
       list.forEach((p, i) => {
         if (!p.id.startsWith(prefix) || s.state.pickups.timers[i] !== 0) return;

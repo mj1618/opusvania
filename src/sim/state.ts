@@ -127,6 +127,8 @@ export interface PlayerState {
   djBuf: number;
   dashBuf: number;
   forceTimer: number;
+  /** Frames left of a wall kick's rise that letting go of jump cannot cut (`tuning.wall.kickFrames`). */
+  kick: number;
   forceDir: number;
   dashCd: number;
   stick: number;
@@ -352,6 +354,11 @@ export interface LanternState {
   refused: boolean;
   /** She has come near it while it was dormant (`lanternNotice` fired); cleared once she is well away. */
   noticed: boolean;
+  /**
+   * Dormant: she stood at it short while enough glints were already on their way to her (a pod
+   * she had just cut). It catches the step they have landed, wherever she is by then.
+   */
+  pledged: boolean;
 }
 
 /** The goal of the scene (src/sim/goal.ts, memory/goal.md): the lanterns, the heart, the ending. */
@@ -372,6 +379,11 @@ export interface GoalState {
   lamps: LanternState[];
   lampsLit: number;
   restLamp: number;
+  /**
+   * She has just re-formed at her rest point (`restAt` / `restLamp`): it does not make her whole
+   * until she has stepped out of it and come back.
+   */
+  restHold: boolean;
   /**
    * The heart of the grove. `awake` once every lantern is lit; `frames` counts up from the frame
    * it woke (0 while asleep); `hinted`: she has walked up to it asleep (`heartSleep` fired).
@@ -413,7 +425,7 @@ export interface GoalState {
 }
 
 export interface GameState {
-  version: 15;
+  version: 16;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;

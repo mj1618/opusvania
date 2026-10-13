@@ -45,6 +45,8 @@ export const WAY_SCALE = 0.68;
 export const WAY_STYLES: readonly LanternStyle[] = [
   { side: -1, height: 112, lean: 12, over: 20, shift: 12, extra: 'moss' },
   { side: 1, height: 104, lean: 14, over: 22, shift: 12, extra: 'fern' },
+  { side: 1, height: 118, lean: 9, over: 18, shift: 12, extra: 'web' },
+  { side: -1, height: 100, lean: 15, over: 24, shift: 12, extra: 'fern' },
 ];
 
 const WOOD = [0x0b2026, 0x0b1107, 0x121a36] as const;
@@ -161,13 +163,22 @@ export { leaf, line, ribbon };
 
 export class LanternView {
   readonly root = new Container();
-  /** The way light climbs it: from the foot up the stem, over the crook and down into the glass (world px). */
+  /** The way light climbs it: from the foot up the stem, over the crook and down into the glass (world
+   * px), as built. Read it through `samplePath`, which follows the crook as it turns about. */
   readonly path = new Path();
+  /** `turn`, eased: the crook's width this frame, -1..1. */
+  private tk = 1;
   /** Where the light sits this frame, and the top of the crook (world px). */
   beadX: number;
   beadY: number;
-  readonly topX: number;
+  private readonly topDx: number;
   readonly topY: number;
+  /**
+   * 1 = as built, -1 = turned about its foot so the glass hangs on the other side (it turns its
+   * light away from where she stands, so she never covers it: playtest 3). Eased toward `turnTo`.
+   */
+  turn = 1;
+  turnTo: 1 | -1 = 1;
   /** 0 cold .. 1 lit: the glass's warmth. */
   warmth = 0;
   /** 1 = overgrown with web, 0 = burnt away. */
@@ -181,8 +192,9 @@ export class LanternView {
   private angle = 0;
   private spin = 0;
   private bow = 0;
-  /** Where the stem stands (world x). */
-  readonly ox: number;
+  /** Where the stem stands (world x; it moves across the foot as the crook turns about). */
+  ox: number;
+  private readonly shiftX: number;
   /** 0..1: a cold glint on the dormant glass, and how far the creeper has leafed out. */
   glint = 0;
   life = 0;
@@ -207,6 +219,7 @@ export class LanternView {
     const sx = st.side;
     const ox = x + st.shift * sx * K;
     this.ox = ox;
+    this.shiftX = st.shift * sx * K;
     const L = st.lean;
     const O = st.lean + st.over;
 
@@ -225,7 +238,7 @@ export class LanternView {
     this.hangY = (ys[hang] as number) + 1;
     let top = 0;
     for (let i = 0; i < ys.length; i++) if ((ys[i] as number) < (ys[top] as number)) top = i;
-    this.topX = ox + (xs[top] as number) * K;
+    this.topDx = this.shiftX + (xs[top] as number) * K;
     this.topY = y + ((ys[top] as number) - 2) * K;
 
     const g = new Graphics();
@@ -398,6 +411,23 @@ export class LanternView {
     this.beadY = y + (this.hangY + CORE) * K;
   }
 
+  /** `path.sample`, on the crook as it stands this frame (mirrored about its foot as it turns). */
+  samplePath(t: number, out: number[]): void {
+    this.path.sample(t, out);
+    out[0] = this.x + ((out[0] as number) - this.x) * this.tk;
+    out[2] = (out[2] as number) * this.tk;
+  }
+
+  /** The top of the crook (world x). */
+  get topX(): number {
+    return this.x + this.topDx * this.turn;
+  }
+
+  /** Which side of the foot the glass hangs on now: -1 left, 1 right. */
+  get glassSide(): number {
+    return (this.turn >= 0 ? 1 : -1) * this.style.side;
+  }
+
   /** A push on the glass (rad/s). */
   kick(v: number): void {
     this.spin += v;
@@ -414,14 +444,32 @@ export class LanternView {
     this.spin += (-L.swingK * (this.angle - rest) - L.swingC * this.spin) * step;
     this.angle += this.spin * step;
     this.bow += (bow - this.bow) * Math.min(1, dt * 5);
+    // Turning about: the crook swings round its own stem (seen from the side it thins to a line
+    // and opens out again the other way), and the glass is thrown outward as it goes.
+    if (this.turn !== this.turnTo) {
+      const d = this.turnTo - this.turn;
+      const stepT = dt * GOAL.lantern.turnRate;
+      if (Math.abs(d) <= stepT) this.turn = this.turnTo;
+      else {
+        this.turn += Math.sign(d) * stepT;
+        this.spin += Math.sign(d) * this.style.side * GOAL.lantern.turnFling * dt;
+      }
+    }
+    // Eased, so it starts and settles softly.
+    const tk = this.turn * (1.5 - 0.5 * this.turn * this.turn);
+    this.tk = tk;
+    const K = this.scale;
+    this.ox = this.x + this.shiftX * tk;
+    this.root.position.x = this.ox;
+    this.root.scale.set(K * (Math.abs(tk) < 0.04 ? (tk < 0 ? -0.04 : 0.04) : tk), K);
     this.root.rotation = this.bow;
-    // The glass hangs plumb whatever the crook does.
-    this.glass.rotation = this.angle - this.bow;
+    // The glass hangs plumb whatever the crook does (mirrored, its own turn runs the other way).
+    this.glass.rotation = (tk < 0 ? -1 : 1) * (this.angle - this.bow);
     const c = Math.cos(this.bow);
     const sn = Math.sin(this.bow);
-    const hx = this.hangX * c - this.hangY * sn;
-    const hy = this.hangX * sn + this.hangY * c;
-    const K = this.scale;
+    const lx = this.hangX * tk;
+    const hx = lx * c - this.hangY * sn;
+    const hy = lx * sn + this.hangY * c;
     this.beadX = this.ox + (hx - Math.sin(this.angle) * CORE) * K;
     this.beadY = this.y + (hy + Math.cos(this.angle) * CORE) * K;
     this.litG.alpha = this.warmth;
@@ -495,6 +543,19 @@ export class Moth {
     const flap = Math.abs(Math.sin(clock * 27 + this.seed * 5));
     this.left.scale.x = flap;
     this.right.scale.x = flap;
+  }
+
+  /** An ember-moth on the wing (guide.ts): at (x, y), banked by `tilt` rad, `a` = how present. */
+  fly(clock: number, x: number, y: number, tilt: number, a: number, scale: number): void {
+    this.root.visible = a > 0.01;
+    if (a <= 0.01) return;
+    this.root.position.set(x, y);
+    this.root.rotation = tilt;
+    this.root.alpha = a;
+    this.root.scale.set(scale);
+    const flap = Math.abs(Math.sin(clock * 24 + this.seed * 5));
+    this.left.scale.x = 0.15 + 0.85 * flap;
+    this.right.scale.x = 0.15 + 0.85 * flap;
   }
 
   update(dt: number, clock: number, px: number, py: number): void {
