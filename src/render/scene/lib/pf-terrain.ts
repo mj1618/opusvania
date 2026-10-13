@@ -55,7 +55,7 @@ export const TERRAIN = {
   litter: [0xb9873a, 0x9a6a34, 0xc9a24a, 0x6f7a34] as const,
   /** 0..1: share of each top where the moss gives way to earth, stones, roots, litter. */
   mossBare: 0.3,
-  mossSun: 0xa4b040,
+  mossSun: 0x8a9638,
   /** Moss cap: how far it rises above the collision line and how thick it hangs. */
   mossLift: 2,
   mossMound: 4,
@@ -240,7 +240,7 @@ function mossTone(x: number, y: number, seed: number, dull: number): { dark: num
   let body = mix(TERRAIN.moss, TERRAIN.mossOlive, olive * 0.8);
   body = mix(body, sun > 0.5 ? TERRAIN.mossSun : TERRAIN.mossShade, Math.abs(sun - 0.5) * 1.1);
   const z = zoneAt(x);
-  body = mix(mix(mix(body, 0x1f6456, z.cool * 0.4), 0x7c7a2a, z.warm * 0.5), 0x2c1c5a, z.deep * 0.55);
+  body = mix(mix(mix(body, 0x1f6456, z.cool * 0.4), 0x4c6a2a, z.warm * 0.35), 0x3a1a5c, z.deep * 0.55);
   let dark = mix(TERRAIN.mossDark, mix(TERRAIN.mossOlive, TERRAIN.mossDark, 0.6), olive * 0.7);
   if (dull > 0) {
     body = mix(body, 0x10424a, dull);

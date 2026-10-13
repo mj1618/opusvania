@@ -222,10 +222,10 @@ void main() {
   // The scene's three moods: moonlit blue-green, golden, deep emerald and violet.
   float zA = smoothstep(uZone.x, uZone.y, vWorld.x);
   float zB = smoothstep(uZone.z, uZone.w, vWorld.x);
-  vec3 zoneTint = mix(mix(vec3(0.7, 0.95, 1.2) * 0.85, vec3(1.24, 0.98, 0.58) * 0.9, zA), vec3(1.02, 0.66, 1.26) * 0.72, zB);
+  vec3 zoneTint = mix(mix(vec3(0.7, 0.95, 1.2) * 0.85, vec3(1.12, 1.0, 0.68) * 0.9, zA), vec3(1.08, 0.62, 1.2) * 0.72, zB);
   c *= zoneTint;
   // Moss dims and cools where the light does not reach.
-  c *= mix(mix(0.72, 1.0, sun), mix(0.3, 1.55, sun), moss);
+  c *= mix(mix(0.72, 1.0, sun), mix(0.3, 1.2, sun), moss);
   c = mix(c, c * vec3(0.72, 0.96, 1.2), moss * (1.0 - sun) * 0.55);
   // Interiors sink into shadow; edges keep their colour.
   c *= mix(1.0, uShade.w, inside * (1.0 - moss * 0.7));
@@ -242,7 +242,7 @@ void main() {
   // Key light, warm. Things painted low (the back plane) barely catch it.
   vec3 warm = vec3(1.0, 0.84, 0.58);
   float plane = smoothstep(0.24, 0.44, hs.r / ha);
-  float reach = mix(0.14, 1.75, sun) * mix(0.3, 1.0, plane);
+  float reach = mix(0.14, 1.4, sun) * mix(0.3, 1.0, plane);
   float k = key * uShade.x * reach;
   vec3 keyCol = mix(warm, vec3(1.0, 0.93, 0.5), moss);
   c += base * keyCol * k * 1.35 + keyCol * (k * k) * uShade.y * 0.3;

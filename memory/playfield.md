@@ -99,6 +99,11 @@
   running along x, like the front moss lip) must restart when `chunkIndex(x)` changes, or the draw indexes past
   the chunk's vertex buffer (`glDrawElements: Vertex buffer is not big enough`).
 - Hanging vines end in a `leafKnot` on a bough stub near the scene top (y 30-90), not at the frame edge.
+- The owner prefers the darker picture (post-and-air.md, round 10): do not brighten plant or moss tones to chase
+  mean luma. Lit foliage is saturated at moderate value. Judge with a walk strip of the hero among plants in each
+  zone, not only the seven stops.
+- Warm zone variety lives in `toneAt`: each plant draws `vary` (moss green to olive bodies, gold only on lit tips
+  in a pool) and ~8% are a cool blue-green accent. A single warm tint for everything read as uniform mustard.
 - GLSL: `cast` is a reserved word. Destroy shaders before the textures bound to them or Pixi warns.
 - Bake scale is fixed at boot (`viewScale` clamped to 1.5..2); a later resize does not rebake.
 - Tops are honest to within ~6 px (`__game.debug.hitboxes(true)` to check). Island tapers, ledge sag and the

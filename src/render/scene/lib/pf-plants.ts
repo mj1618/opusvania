@@ -47,12 +47,12 @@ interface Tone {
   lit: number;
   sun: number;
 }
-const BACK: Tone = { dark: 0x051a1c, mid: 0x0f4234, lit: 0x52a85a, sun: 0xd0ec7c };
+const BACK: Tone = { dark: 0x051a1c, mid: 0x0f4234, lit: 0x46944e, sun: 0xb8d86c };
 /** The row furthest back: bushes and tall stands, darker and cooler so the walk line sits in front. */
 const REAR: Tone = { dark: 0x04161c, mid: 0x0a302e, lit: 0x1f5c46, sun: 0x6fa45e };
 /** Far behind the walk line: hazy, cool, low contrast. */
 const HAZE: Tone = { dark: 0x0a2430, mid: 0x103440, lit: 0x18484e, sun: 0x24585a };
-const AUTUMN = [0xd9a441, 0xc9b24e, 0xe08a3c, 0xb9c45a];
+const AUTUMN = [0xc98a34, 0xb9783a, 0xd0702c, 0xa85a2c];
 const WARM_PETALS = [0xffc56b, 0xffb59a, 0xfff1dc, 0xffd98a];
 const COOL_PETALS = [0xd9c8ff, 0xbfe6ff, 0xe8f4ff, 0xc9a8f0];
 const FRONT: Tone = { dark: 0x030e12, mid: 0x08241f, lit: 0x12402e, sun: 0x2f6a40 };
@@ -74,31 +74,40 @@ function toneAt(base: Tone, x: number, r: Rng, y = 1200): Tone {
   const z = zoneAt(x);
   const cool = r() * 0.3 + (1 - sun) * 0.3;
   const dim = 0.4 * (1 - sun) + z.deep * 0.1;
+  // Variety inside the warm zone: each plant sits somewhere between deep moss green and olive,
+  // and a few are a cool blue-green so the gold light has something to play against.
+  const vary = r();
+  const accent = z.warm > 0.5 && vary < 0.08;
+  const olive = accent ? 0 : vary;
+  const warmDark = accent ? 0x06202a : mix(0x0c1a0c, 0x1c1a08, olive);
+  const warmMid = accent ? 0x0e4a4e : mix(mix(0x153a1c, 0x3a4216, olive), 0x5c5218, sun * 0.6);
+  const warmLit = accent ? 0x2fa08c : mix(mix(0x2f7030, 0x6a7c26, olive), 0xc0a030, sun * 0.85);
+  const warmSun = accent ? 0x6fd8c0 : mix(0xa8b83c, 0xf0c84a, sun);
   const zone = (c: number, coolC: number, warmC: number, deepC: number, k: number): number =>
     mix(mix(mix(c, coolC, z.cool * k), warmC, z.warm * k), deepC, z.deep * k);
   return {
-    dark: zone(mix(base.dark, 0x061c2c, cool * 0.6), 0x05182c, 0x221a08, 0x1e0a36, 0.8),
+    dark: zone(mix(base.dark, 0x061c2c, cool * 0.6), 0x05182c, warmDark, 0x1e0a36, 0.8),
     mid: zone(
       mix(mix(mix(base.mid, 0x17666a, cool), base.lit, sun * 0.3), base.dark, dim),
       0x0c4c5a,
-      0x5c4e16,
+      warmMid,
       0x0c3c36,
       0.8,
     ),
     lit: zone(
       // Lit tones keep their own colour in shade (darker, not greyer or violet); in a pool they
-      // go fully to the sun tone.
+      // go to the sun tone.
       mix(
-        mix(mix(base.lit, 0x2f9a78, cool * 0.6), base.sun, sun * 0.9),
+        mix(mix(base.lit, 0x2f9a78, cool * 0.6), base.sun, sun * 0.75),
         mix(base.lit, base.dark, 0.6),
         dim * 1.2,
       ),
-      0x1fae96,
-      0xd0a428,
+      0x1a9c88,
+      warmLit,
       0x0f8a4c,
-      0.6,
+      0.65,
     ),
-    sun: zone(mix(base.sun, base.lit, (1 - sun) * 0.8), 0x62f0c0, 0xffd24a, 0x2ec06a, 0.75),
+    sun: zone(mix(base.sun, base.lit, (1 - sun) * 0.8), 0x52d8ac, warmSun, 0x2ec06a, 0.75),
   };
 }
 
