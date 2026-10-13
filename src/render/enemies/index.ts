@@ -27,6 +27,10 @@ const K_MOTE = 2;
 const K_DUST = 3;
 const K_PLATE = 4;
 const K_SCALE = 5;
+/** A crisp little puff (a solid disc that swells, then shrinks to nothing), grit, a calm creature's slow mote. */
+const K_PUFF = 6;
+const K_GRIT = 7;
+const K_SLEEP = 8;
 
 const smooth = (a: number, b: number, x: number): number => {
   const t = sat((x - a) / (b - a));
@@ -42,6 +46,18 @@ const SH_IN: Shade & { alpha: number } = {
   cool: 0,
   form: 0,
   band: 0.4,
+  ember: 0,
+  alpha: 1,
+};
+const PUFF_C: [number, number, number] = [0, 0, 0];
+const PUFF_C1: [number, number, number] = [0, 0, 0];
+const SH_PUFF: Shade & { alpha: number } = {
+  c0: PUFF_C as unknown as RGB,
+  c1: PUFF_C1 as unknown as RGB,
+  rim: 0.35,
+  cool: 0.1,
+  form: 0.12,
+  band: 0.5,
   ember: 0,
   alpha: 1,
 };
@@ -457,6 +473,37 @@ export class EnemyRenderer {
             T.dustSize,
           );
         }
+        // The read at play zoom: a small crisp puff kicked up where the two met, a low fan to both
+        // sides (more of it the way it is shoved), and a few specks of grit thrown higher.
+        const px = rig.x - away * (BURR.halfLen - 4);
+        for (let k = 0; k < T.crisp; k++) {
+          const u = k / (T.crisp - 1);
+          // Fan: from flat one way, up over the top, to flat the other.
+          const a = Math.PI * (0.06 + 0.88 * u) + (this.rand() - 0.5) * 0.25;
+          const sp = T.crispSpeed[0] + this.rand() * (T.crispSpeed[1] - T.crispSpeed[0]);
+          this.emit(
+            K_PUFF,
+            px + Math.cos(a) * 5,
+            rig.y - 3 - Math.sin(a) * 3,
+            Math.cos(a) * sp * 1.25 + away * 40,
+            -Math.sin(a) * sp * 0.75,
+            T.crispLife[0] + this.rand() * (T.crispLife[1] - T.crispLife[0]),
+            T.crispSize[0] + this.rand() * (T.crispSize[1] - T.crispSize[0]),
+            rig.y,
+          );
+        }
+        for (let k = 0; k < T.grit; k++) {
+          this.emit(
+            K_GRIT,
+            px + (this.rand() - 0.5) * 12,
+            rig.y - 3,
+            (this.rand() - 0.5) * 220 + away * 50,
+            -120 - this.rand() * 150,
+            0.34 + this.rand() * 0.2,
+            0.8 + this.rand() * 0.7,
+            rig.y,
+          );
+        }
       }
       if (rig.touching && Math.abs(e.knockVx) > 1.5) {
         rig.dustT += dt;
@@ -477,14 +524,16 @@ export class EnemyRenderer {
         rig.moteT += dt;
         if (rig.moteT > BURR.calm.mote) {
           rig.moteT = 0;
+          // Breathed out over its head end, it drifts up clear of the shell before it fades.
+          const K = BURR.calm;
           this.emit(
-            K_MOTE,
-            rig.x + (this.rand() - 0.5) * 30,
-            rig.y - 20 - this.rand() * 10,
-            (this.rand() - 0.5) * 8,
-            -12 - this.rand() * 10,
-            1.1 + this.rand() * 0.5,
-            0.8 + this.rand() * 0.4,
+            K_SLEEP,
+            rig.x + rig.d * (8 + this.rand() * 10),
+            rig.y - 24 - this.rand() * 4,
+            rig.d * (3 + this.rand() * 5),
+            -K.moteRise * (0.85 + 0.3 * this.rand()),
+            K.moteLife * (0.85 + 0.3 * this.rand()),
+            K.moteSize * (0.85 + 0.3 * this.rand()),
             rig.y,
           );
         }
@@ -540,7 +589,34 @@ export class EnemyRenderer {
       const u = life / max;
       let x = this.pxx[i]!;
       let y = this.pyy[i]!;
-      if (kind === K_FRAG) {
+      if (kind === K_PUFF) {
+        // Thrown low, it brakes hard and hangs; the disc swells in its first frames, then shrinks away.
+        const drag = Math.min(1, 8 * dt);
+        this.pvx[i] = this.pvx[i]! * (1 - drag);
+        this.pvy[i] = this.pvy[i]! * (1 - drag) - 14 * dt;
+        x += this.pvx[i]! * dt;
+        y = Math.min(this.pf[i]! - 1, y + this.pvy[i]! * dt);
+        const r = this.pz[i]! * (0.55 + 0.45 * sat(u / 0.18)) * (1 - smooth(0.4, 1, u));
+        if (r > 0.25) {
+          for (let k = 0; k < 3; k++) {
+            PUFF_C[k] = C.puff[k]! + (C.puffLow[k]! - C.puff[k]!) * u;
+            PUFF_C1[k] = PUFF_C[k]! * 0.78;
+          }
+          SH_PUFF.alpha = 0.92;
+          p.ellipse(x, y, r * 1.08, r * 0.92, this.pr[i]!, SH_PUFF, 12);
+        }
+      } else if (kind === K_SLEEP) {
+        // A slow breath out: it rises on a lazy S, swelling a little, and thins away at the top.
+        this.pvy[i] = this.pvy[i]! * (1 - 0.35 * dt);
+        x += (this.pvx[i]! * (1 - u) + Math.sin(life * 2.1 + this.pr[i]!) * 9) * dt;
+        y += this.pvy[i]! * dt;
+        const k = sat(u / 0.12) * (1 - u) ** 0.8;
+        const s = this.pz[i]! * (0.7 + 0.5 * u);
+        for (let c = 0; c < 3; c++) IN_C[c] = C.sleep[c]!;
+        SH_IN.alpha = 0.85 * k;
+        p.ellipse(x, y, s * 0.7, s * 0.7, 0, SH_IN, 10);
+        p.glow(x, y, s * 3, C.sleep as unknown as RGB, 0.4 * k, s * 3, 0, 12);
+      } else if (kind === K_FRAG || kind === K_GRIT) {
         this.pvy[i] = this.pvy[i]! + 640 * dt;
         x += this.pvx[i]! * dt;
         y += this.pvy[i]! * dt;
@@ -567,7 +643,8 @@ export class EnemyRenderer {
         p.px[3] = x + sn * s * 0.55;
         p.py[3] = y - c * s * 0.55;
         const mixK = 0.35 + tn * 0.65;
-        for (let k = 0; k < 3; k++) FRAG_C[k] = C.shellTop[k]! + (C.sheen[k]! - C.shellTop[k]!) * mixK;
+        if (kind === K_GRIT) for (let k = 0; k < 3; k++) FRAG_C[k] = C.puff[k]! * (0.75 + 0.25 * tn);
+        else for (let k = 0; k < 3; k++) FRAG_C[k] = C.shellTop[k]! + (C.sheen[k]! - C.shellTop[k]!) * mixK;
         SH_FRAG.alpha = sat((1 - u) / 0.35);
         p.shape(4, x, y, SH_FRAG);
       } else if (kind === K_PLATE) {

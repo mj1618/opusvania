@@ -61,6 +61,10 @@ const C = {
   dust: v3(0),
   dustPale: v3(0),
   mote: v3(0),
+  sleep: v3(0),
+  puff: v3(0),
+  puffLow: v3(0),
+  crest: [v3(0), v3(0), v3(0)],
   spot: [v3(0), v3(0), v3(0)],
 };
 
@@ -95,6 +99,10 @@ export function loadColors(): void {
   set(C.dust, k.dust);
   set(C.dustPale, k.dustPale);
   set(C.mote, k.mote);
+  set(C.sleep, k.sleep);
+  set(C.puff, k.puff);
+  set(C.puffLow, k.puffLow);
+  for (let i = 0; i < 3; i++) set(C.crest[i]!, BURR.crestColor[i]!);
   for (let i = 0; i < 3; i++) set(C.spot[i]!, BURR.spotColor[i]!);
 }
 loadColors();
@@ -188,6 +196,13 @@ export class BurrRig {
   bumped = false;
   /** The side a squash is taken along: the blow's, or the bump's. */
   sqDir = 0;
+  /**
+   * It has noticed her (render only): the state, its eased weight, and the flash of the moment
+   * it did (1, fading).
+   */
+  noticed = false;
+  noticeK = 0;
+  flash = 0;
   /** Standing, last update (a wary stand is 30-frame pauses with one frame of `walk` between them). */
   private stood = false;
   /** Death effects already thrown (bit 1: first break, bit 2: second). */
@@ -248,6 +263,8 @@ export class BurrRig {
       this.touchStart = simFrame - e.modeFrames;
       this.touching = false;
       this.stood = false;
+      this.noticed = false;
+      this.noticeK = this.flash = 0;
     } else if (simFrame !== this.frame) {
       this.px = this.cx;
       this.ps = this.cs;
@@ -295,6 +312,27 @@ export class BurrRig {
     const below = seen && feetY > e.y + e.h + B.peer.belowPx && Math.abs(hx - this.x) < B.peer.reachX;
     let peer = standing && below && calmT === 0;
     if (peer) this.peerDir = hx < this.x ? -1 : 1;
+
+    // --- Noticing her: near, lit, on about its level. One start (burrs kicked up, it perks), then
+    // it keeps its burrs raised and its eyes on her for as long as she is close.
+    const N = B.notice;
+    const awake = seen && calmT === 0 && this.calmK < 0.5 && e.mode !== 'dead';
+    const near =
+      Math.abs(hx - this.x) < N.reach + (this.noticed ? N.slack : 0) &&
+      Math.abs(feetY - (e.y + e.h)) < N.level;
+    const noticedNow = awake && near;
+    if (noticedNow && !this.noticed && !fresh) {
+      this.flash = 1;
+      this.bristle.v += N.kick;
+      if (e.mode === 'walk' || e.mode === 'pause') {
+        this.squash.x = -0.08;
+        this.squash.v = 0;
+        this.sqDir = 0;
+      }
+    }
+    this.noticed = noticedNow;
+    this.noticeK += ((noticedNow ? 1 : 0) - this.noticeK) * approach(noticedNow ? N.in : N.out, dt);
+    this.flash += (0 - this.flash) * approach(N.fade, dt);
 
     // --- Turning: the head swings round first, the body pivots after it.
     const lastD = this.d;
@@ -396,6 +434,7 @@ export class BurrRig {
       backT = -this.actDir * B.shy.back * react;
     }
     tuckT = Math.max(tuckT, 0.55 * this.shyK);
+    bristleT = Math.max(bristleT, N.bristle * this.noticeK);
     // Peering: low on its legs, weight back from the edge, the head craned out toward it.
     const pk = this.peerK;
     if (pk > 0.001) {
@@ -439,7 +478,7 @@ export class BurrRig {
       ly = 0.25 * noise1(clock * 0.4 + this.seed * 17, 12);
     }
     // (Peering, they are on her too; shying, they turn from the light and narrow; calm, they sink.)
-    const onHer = Math.max(this.wary, 0.9 * pk);
+    const onHer = Math.max(this.wary, 0.9 * pk, this.noticeK);
     if (onHer > 0.02) {
       const dx = hx - this.x;
       const dy = hy - (this.y - 12);
@@ -456,7 +495,7 @@ export class BurrRig {
     this.lookX += (lx - this.lookX) * lk;
     this.lookY += (ly - this.lookY) * lk;
     const bp = pulse(clock + this.seed * 9, 3.4, 0.14, 3 + Math.floor(this.seed * 50));
-    this.blink = watch ? 0 : bp > 0 ? Math.sin(Math.PI * bp) : 0;
+    this.blink = watch || this.noticeK > 0.5 ? 0 : bp > 0 ? Math.sin(Math.PI * bp) : 0;
     this.blink = Math.max(this.blink, B.shy.squint * (shying ? react : 0), 0.3 * this.shyK);
     const walking = (mode === 'walk' && !standing) || turning;
     this.walkK += ((walking ? 1 : 0) - this.walkK) * approach(14, dt);
@@ -543,21 +582,24 @@ const W = {
   fringe1: v3(0),
   crack: v3(0),
   spot: v3(0),
+  crest: v3(0),
+  hornTip: v3(0),
 };
 const SH_SHELL = sh(W.shellTop, W.shellLow, 0.3, 0.28, 0.1, 0.1);
 const SH_SHEEN = sh(W.sheen, W.sheen, 0, 0, 0, 0.5);
-const SH_HORN = sh(W.shellTop, W.shellTop, 0.3, 0.28, 0.1, 0.3);
+const SH_HORN = sh(W.shellTop, W.hornTip, 0.3, 0.28, 0.1, 0.3);
+const SH_CREST = sh(W.crest, W.crest, 0, 0, 0, 0.5);
 const KEY: V3 = [1, 0.85, 0.63];
 /**
  * Horn, ridge burrs and tail lip: [angle over the dome from the front (x pi), length, lean toward the head,
  * lean up, bow, half-width at the base].
  */
 const SPIKES: readonly (readonly number[])[] = [
-  [0.13, 9, 0.5, 0.55, 0.16, 3.4],
-  [0.4, 3.6, -0.2, 0.15, 0, 3.3],
-  [0.54, 4.6, -0.25, 0.15, 0, 3.6],
-  [0.68, 4.4, -0.3, 0.1, 0, 3.5],
-  [0.94, 5.5, -0.45, 0.55, -0.1, 3.2],
+  [0.13, 11, 0.5, 0.55, 0.16, 3.6],
+  [0.38, 5, -0.2, 0.15, 0, 3.5],
+  [0.53, 6.2, -0.25, 0.15, 0, 3.8],
+  [0.68, 5.8, -0.3, 0.1, 0, 3.7],
+  [0.94, 6.6, -0.45, 0.55, -0.1, 3.4],
 ];
 const SH_SEAM = sh(W.seam, W.seam, 0, 0, 0, 0.5);
 const SH_LEG = sh(W.leg0, W.leg1, 0.12, 0.2, 0.06, 0.4);
@@ -662,7 +704,7 @@ function drawHead(
     const open =
       (dead ? 1 - curl : 1) * (1 - 0.92 * rig.blink) * (1 - B.calm.lids * calm * (1 - 0.5 * rig.walkK));
     if (open > 0.05) {
-      const wide = 1 + 0.22 * sat(Math.max(rig.wary, 0.6 * rig.peerK));
+      const wide = 1 + 0.22 * sat(Math.max(rig.wary, 0.6 * rig.peerK, rig.noticeK));
       const show = sat(aH * 1.6 - 0.3);
       for (let i = 0; i < 2; i++) {
         const k = i === 0 ? 1 : 0.8;
@@ -764,8 +806,10 @@ export function drawBurrback(
   const breath = breathS * (0.022 + (B.calm.breath - 0.022) * calm) * sat(crouch) * (1 - deadK);
   const rimH = Math.max(2.2, B.rim - B.settle * crouch + bobAt(rig.dist, g) * g.bob * walkK);
   const sq = rig.squash.x;
-  const sx = 1 + sq - breath * 0.4 + 0.12 * swell;
-  const sy = 1 - sq * 0.85 + breath + 0.1 * swell;
+  // Calmed where it lies, the dome itself sags and spreads: a flatter shape, not only a lower one.
+  const flat = calm * sat(crouch) * (1 - deadK);
+  const sx = (1 + sq - breath * 0.4 + 0.12 * swell) * (1 + B.calm.spread * flat);
+  const sy = (1 - sq * 0.85 + breath + 0.1 * swell) * (1 - B.calm.flat * flat);
   const rot =
     rig.rock.x +
     rockAt(rig.dist, g) * g.rock * walkK * d +
@@ -785,7 +829,7 @@ export function drawBurrback(
   p.soft(
     rig.x,
     rig.y + 1.5,
-    31 * (0.72 + 0.28 * ad),
+    (B.halfLen + 4) * (0.72 + 0.28 * ad),
     5.5,
     C.shadow as unknown as RGB,
     B.shadowAlpha * (1 - 0.5 * sat(hop / 12)),
@@ -963,6 +1007,15 @@ export function drawBurrback(
   SH_SHELL.rim = B.rimKey * (1 - toneDark) * (1 + B.calm.rimUp * calm);
   SH_SHELL.cool = B.rimCool;
   SH_HORN.rim = SH_SHELL.rim;
+  // Bone: the crown line and the tips of horn and burrs. A little of the lantern's warmth when
+  // calmed; it takes the tone of a hit like the shell.
+  const Cr = B.crest;
+  for (let k = 0; k < 3; k++) {
+    const c = C.crest[0]![k]! * zw[0]! + C.crest[1]![k]! * zw[1]! + C.crest[2]![k]! * zw[2]!;
+    W.crest[k] = c + (C.calmLight[k]! - c) * 0.3 * calm;
+  }
+  tone(W.crest, W.crest, 0.8);
+  for (let k = 0; k < 3; k++) W.hornTip[k] = W.shellTop[k]! + (W.crest[k]! - W.shellTop[k]!) * Cr.tip;
 
   // --- Signature outline, drawn under the shell so the bases are hidden: a short upturned horn on
   // the brow, a row of blunt burrs along the ridge, a raised lip at the tail.
@@ -981,9 +1034,9 @@ export function drawBurrback(
     nx /= nl;
     ny /= nl;
     // Bristling they stand longer and straighter; calmed they lie a little flatter.
-    const len = sp[1]! * (1 + B.touch.bristle * bristle * (i === 0 ? 0.45 : 1) - 0.18 * calm);
+    const len = sp[1]! * (1 + B.touch.bristle * bristle * (i === 0 ? 0.45 : 1) - B.calm.burrs * calm);
     // Lean: along the body (+ = toward the head) and up.
-    const tx = rx0 + nx * len * 0.55 + dd * sp[2]! * len;
+    const tx = rx0 + nx * len * 0.55 + dd * (sp[2]! - (i === 0 ? 0 : 0.5 * calm)) * len;
     const ty = ry0 + ny * len * 0.55 - sp[3]! * len;
     const b0x = rx0 - nx * 2.2;
     const b0y = ry0 - ny * 2.2;
@@ -1015,6 +1068,24 @@ export function drawBurrback(
     bx(ccx, -rimH + 1),
     by(ccx, -rimH + 1),
   );
+
+  // --- The crown line: one pale stroke just inside the top of the outline, brow to tail.
+  SH_CREST.alpha = Cr.alpha * (1 - 0.5 * toneDark);
+  for (let k = 0; k < 16; k++) {
+    const u = k / 15;
+    const a = Math.PI * (0.07 + 0.87 * u);
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    const lx = aEff * Math.sign(c) * Math.abs(c) ** B.ex - d * B.shear * sn;
+    const ly = -rimH - B.dome * sn ** B.ey;
+    const ix = ccx - lx;
+    const iy = ccy - ly;
+    const il = Math.hypot(ix, iy) || 1;
+    p.px[k] = bx(lx + (ix / il) * Cr.inset, ly + (iy / il) * Cr.inset);
+    p.py[k] = by(lx + (ix / il) * Cr.inset, ly + (iy / il) * Cr.inset);
+    p.pw[k] = Cr.w * (1 + (Cr.wLeft - 1) * zw[0]!) * Math.sin(Math.PI * u) ** 0.45;
+  }
+  p.ribbon(16, SH_CREST, false, false);
 
   const whole = 1;
   if (whole > 0.01) {
@@ -1087,11 +1158,19 @@ export function drawBurrback(
       // Its touch: they jump at once, then fall back through the flinch.
       const flash = rig.touching ? (B.touch.flash - 1) * (1 - smoothstep(1, 12, t)) : 0;
       const together = B.calm.dim * (1 - B.calm.pulse * (0.5 - 0.5 * breathS));
+      // Walking: a pass runs down the row, front to back, in step with the ground it covers.
+      const chaseK = rig.walkK * (1 - rig.hurtK);
+      const wave = (rig.dist / S.walk) * Math.PI * 2;
+      const seenK = rig.noticeK * (1 - calm);
       for (let i = 0; i < S.at.length; i++) {
         const sp = S.at[i]!;
         let br = 1 - S.pulse * (0.5 + 0.5 * Math.sin(clock * S.rate + ph - i * 0.9));
+        const cw = 0.5 + 0.5 * Math.cos(wave - i * 1.35);
+        br += (S.low + (S.high - S.low) * cw * cw * cw - br) * chaseK;
         br += (together - br) * calm;
         br *= 1 + (S.alert - 1) * alert * (1 - calm) + flash;
+        // It has seen her: the whole row up, and a flash at the moment it did.
+        br *= 1 + (B.notice.light - 1) * seenK + B.notice.flash * rig.flash * (1 - calm);
         br *= 1 - B.shy.dim * rig.shyK;
         // Hurt badly: they flicker. Dying: they gutter out one after another.
         if (e.hp <= 1 && !dead) br *= 0.55 + 0.45 * (noise1(clock * 13 + i * 7.3, 3 + i) > -0.15 ? 1 : 0.25);
@@ -1103,7 +1182,9 @@ export function drawBurrback(
         const wy = by(sX, sY);
         const r = sp[2]!;
         SH_SPOT.alpha = S.core * flank * sat(br) * whole;
-        p.ellipse(wx, wy, r * (0.5 + 0.5 * ad), r, rot, SH_SPOT, 10);
+        // (A brighter light is a slightly larger one: the pass shows as size as well as value.)
+        const rr = r * (0.82 + 0.18 * sat(br));
+        p.ellipse(wx, wy, rr * (0.5 + 0.5 * ad), rr, rot, SH_SPOT, 10);
         p.glow(wx, wy, r * S.halo, sc as unknown as RGB, S.glow * br * flank * whole, r * S.halo, 0, 12);
       }
     }
@@ -1172,6 +1253,13 @@ export function stepFeelers(rig: BurrRig, e: EnemyState, clock: number, dt: numb
       // Thrown back from the light.
       spring.omega = 34;
       spring.step(-1.7 + i * 0.25, dt);
+      continue;
+    }
+    if (rig.noticeK > 0.5 && rig.peerK <= 0.5 && (e.mode === 'walk' || e.mode === 'pause')) {
+      // It has seen her: both up and forward, testing the air with a quick quiver.
+      target = -0.75 + i * 0.3 + 0.12 * Math.sin(clock * 11 + i * 2.4 + ph);
+      spring.omega = 22;
+      spring.step(target, dt);
       continue;
     }
     if (rig.peerK > 0.5 && e.mode !== 'alert' && e.mode !== 'hurt' && e.mode !== 'dead') {

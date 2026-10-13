@@ -1,6 +1,7 @@
 # Enemies, render side: the burrback and the lampwing (`src/render/enemies/`)
 
-Rules and state fields: enemies.md. Current sheets: `shots/lamp2/*.png`, `shots/burr2/*.png`.
+Rules and state fields: enemies.md. Current sheets: `shots/enemr2/*.png` (play-zoom frames and 1:1 sheets
+per zone: before / after, notice, calm, touch, lampwing tell); older: `shots/lamp2`, `shots/burr2`.
 
 ## Wiring
 - Two layers, two meshes (`painter`, `front`; `paint.ts` is a copy of Vesper's painter with
@@ -103,7 +104,7 @@ Knobs: `BURR.calm / shy / peer / touch`, `LAMP.calm / shy` (config.ts).
 - **Wary**: the turn starts with a 10-frame peer at the edge (head craned out and down, weight back).
   The stand: whenever it stands with her feet 24+ px lower and within 640 px, it turns (render only) to
   her side and peers; `standing` also covers the one frame of `walk` with `vx 0` between the sim's
-  30-frame pauses. In the grove only burr-far ever stands (the others' far end is > 320 px from the lip).
+  30-frame pauses. No burrback in the grove stands that way now (every far end is > 320 px from a lip).
 - **Touch**: seen once per mode start. Squash along the shove (`rig.sqDir`, not `hitDir`, which is stale),
   rock back, burrs and fringe bristle on a spring, legs skid while `knockVx` > 0.5, pale dust (a blow's
   dark dust is invisible on dark ground without the flash: `dustPale`, 2.1x denser), lights jump. The
@@ -113,3 +114,41 @@ Knobs: `BURR.calm / shy / peer / touch`, `LAMP.calm / shy` (config.ts).
   halos (0.2) read as headlights.
 - **Lampwing, left zone**: membrane 0x3b4763 / tip 0x1a2236 (was 0x5c6c80: paler than the blue fog behind
   it, so it washed out), wing alpha 0.9. Right next to a lit lantern the light mask still lifts it pale.
+
+## Reading at play zoom (playtest 2, 2026-10-14; `shots/enemr2/`)
+Measured with the enemy meshes on / off in one eval (`painter.mesh.visible`, `front.mesh.visible`):
+the changed pixels are the creature, the same pixels without it are its background (linear luminance).
+The sizes and tones in the sections above are the earlier ones where this section differs.
+- **Burrback was dark on dark**: its mean was 0.03-0.07 on a 0.05-0.15 ground and little on it was pale
+  (brightest 5% of its pixels +0.04..0.17 over their background). Now: shell 30 x 27 on a 13 rim (drawn
+  ~50 px tall with the burrs for a 34 px box; the head sits at 16 so it clears the grass), a **bone
+  crown line** just inside the top of the outline (`BURR.crest`, `crestColor` per zone) and bone tips on
+  horn and burrs (`SH_HORN` runs shell -> `hornTip`). Brightest 5% now +0.14..0.23 left, +0.28..0.39
+  centre, +0.15..0.26 right.
+- `crestColor` is one SOURCE per zone because the grades differ: the same bone came out near-white in
+  the centre and right and dull in the left (mist in front, crushed mid-tones). Left is 0xf2ecdc and
+  1.35x wider and is still the weakest zone; there the fog-lit plum dome against dark blue carries it.
+- Eyes r 2 with halo 0.11; halo 0.14 fused the two into one blob.
+- Flank lights: larger (r 1.7-2.35), and walking they run front to back as a chaser, one pass per 66 px
+  walked (`spots.walk / low / high`, on `rig.dist`, so it stops when the creature does). Centre zone
+  lights are ember red-orange (0xff6a24), not amber: amber could not be told from the calm tone.
+- **Notice** (`BURR.notice`, render only, the sim never chases): she is lit, within 420 px and 150 px
+  of its level. One start (burrs kicked up on the spring, a perk, lights flash), then burrs stay raised
+  0.95, eyes on her and wide, no blink, feelers up and quivering, lights x1.6. At play zoom the raised
+  pale burrs and the feelers are what shows; the flash is small.
+- **Calm**: the dome itself sags (`calm.flat` 20%, `spread`), burrs lie back and halve, so the silhouette
+  goes from ~50 px tall to ~35 and flat; lights one pale gold (0xffc070) breathing together at depth 0.8.
+  `K_SLEEP` motes (pale disc r ~2 + halo, one per 0.75 s, 2.3 s, a lazy S) lift from its head end: clear
+  in 1:1 crops in all zones, faint in a full frame 700 px away. Posture and the light colour are the read.
+- **Touch**: `K_PUFF` = solid pale discs (not `soft`) thrown in a low fan where the two met, braking hard,
+  swelling 3 frames then shrinking to nothing in 0.26-0.42 s, plus pale grit (`K_GRIT`, the chip physics).
+  The old haze stays under it at 1.3x (was 2.1x).
+- **Lampwing hunt** (`LAMP.hunt`): in `curious` the beat STOPS: all four wings thrown wide and high in an X
+  and held on a fine shiver (`rig.hold`, in 20 /s, released at 11 /s into the first stroke), the ringed
+  wing spots open as two lit eyes, lamp, eyes and spots go to one hunt colour in every zone (coral
+  0xff4630; it grades pinker in the right zone). In pursuit: spots stay lit dimmer, lamp x1.7 and larger,
+  stroke x1.15, the tail curls toward her. Seen in the centre and right zones; the left one would not
+  notice her where it was staged (not seen there).
+- Staging calm on any burrback: on the live record set `calm = 120, mode = 'pause', timer = 120,
+  turning = false, vx = 0` every 18 frames (what `calmEnemies` does). A real kindle at lantern-stone
+  calms burr-path ~850 px away, at the frame edge.

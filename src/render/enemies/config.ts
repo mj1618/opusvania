@@ -5,10 +5,10 @@
  */
 export const BURR = {
   /** Shell: half-length seen from the side and from behind (mid-turn), dome height, rim height off the ground. */
-  halfLen: 27,
-  halfWide: 19,
-  dome: 22,
-  rim: 12,
+  halfLen: 30,
+  halfWide: 21,
+  dome: 27,
+  rim: 13,
   /** How far the top of the dome sits behind the middle (the hunched back). */
   shear: 4.5,
   /** Superellipse exponents of the dome outline (x, y): lower = boxier. */
@@ -36,7 +36,7 @@ export const BURR = {
     lower: 12,
     w: [2.5, 2.1, 0.95] as const,
     /** Hip homes along the body (front, middle, rear) and how far the feet stand out from the hips. */
-    home: [19, 1.5, -17.5] as const,
+    home: [21, 1.5, -19.5] as const,
     hipIn: 0.82,
     /** Sideways (toward / away from the camera) spread of hips and feet, seen mid-turn. */
     hipZ: 9,
@@ -44,8 +44,8 @@ export const BURR = {
   },
   head: {
     /** Centre ahead of the shell's middle and above the ground; pulled back by this much when tucked. */
-    x: 23.5,
-    y: 12.4,
+    x: 26.5,
+    y: 16,
     /** A flat plate set under the brow horn: big enough to carry the eyes at play zoom, still dark. */
     len: 9.6,
     high: 6.9,
@@ -53,7 +53,7 @@ export const BURR = {
     /** How far it cranes out (and down) when it peers at something, px. */
     reach: 5.5,
     /** Eye radius (the near one): two small warm lights, each with a faint halo (x the radius, strength). */
-    eye: 1.6,
+    eye: 2,
     eyeHalo: 3.2,
     eyeGlow: 0.11,
   },
@@ -62,10 +62,10 @@ export const BURR = {
   spots: {
     /** Along the flank (u in -1..1 along the length, v 0..1 up the dome) and each one's radius. */
     at: [
-      [0.52, 0.22, 1.25],
-      [0.2, 0.27, 1.65],
-      [-0.14, 0.27, 1.8],
-      [-0.47, 0.22, 1.35],
+      [0.53, 0.27, 1.7],
+      [0.2, 0.32, 2.2],
+      [-0.15, 0.32, 2.35],
+      [-0.48, 0.27, 1.85],
     ] as const,
     /** Core alpha, halo radius (x the spot radius) and halo strength at rest. */
     core: 0.9,
@@ -76,9 +76,31 @@ export const BURR = {
     rate: 1.25,
     /** Brighter by this factor in a flinch. */
     alert: 1.6,
+    /**
+     * Walking, the four run front to back like a slow chaser: one pass per `walk` px walked, each
+     * light down to `low` between passes and up to `high` as the pass crosses it.
+     */
+    walk: 66,
+    low: 0.22,
+    high: 1.25,
   },
   /** Zone colours [left, centre, right] of its lights. */
-  spotColor: [0x1fb4d8, 0xf0a030, 0x8a4cf0] as const,
+  spotColor: [0x1fb4d8, 0xff6a24, 0x8a4cf0] as const,
+  /**
+   * The pale line along the crown and the pale tips of horn and burrs (bone): the thing that
+   * separates it from the ground in value. One source colour per zone [left, centre, right],
+   * chosen so it comes out of the zone grades at about the same value (the left grade crushes
+   * mid-tones, the other two lift pale things toward white). Half-width in px, how far inside the
+   * outline it runs, alpha, how pale the burr tips go.
+   */
+  crestColor: [0xf2ecdc, 0xb4a88e, 0xb2a6b6] as const,
+  crest: {
+    w: 1.25,
+    inset: 1.1,
+    alpha: 0.92,
+    tip: 0.85,
+    /** Wider by this in the left zone (its mist thins a fine line). */ wLeft: 1.35,
+  },
   /** What the zone's light puts on the shell's top edge: [left, centre, right]. */
   edgeColor: [0x8fc6da, 0xdcc49c, 0xb9a6e2] as const,
   color: {
@@ -106,6 +128,10 @@ export const BURR = {
     /** The dust of a bump (its touch): paler, so it shows on dark ground without a blow's flash beside it. */
     dustPale: 0x9aa89a,
     mote: 0xffc86a,
+    /** The motes a calmed one breathes out, and the crisp puff of a bump. */
+    sleep: 0xffe6b8,
+    puff: 0xb9c6b4,
+    puffLow: 0x7f9088,
   },
   rimKey: 0.8,
   rimCool: 0.28,
@@ -146,16 +172,23 @@ export const BURR = {
     out: 2.6,
     fade: 26,
     settle: 1.14,
+    /** Settled, the dome itself sags flat (share of its height) and spreads, and the burrs lie back. */
+    flat: 0.2,
+    spread: 0.06,
+    burrs: 0.5,
     /** Breath: depth (share of its size) and rad/s; awake it is 0.022 at 2.1. */
-    breath: 0.05,
+    breath: 0.06,
     rate: 1.35,
     /** The lights: tone, brightness (x), pulse depth with the breath; the lids close by `lids`. */
-    light: 0xffb260,
-    dim: 0.85,
-    pulse: 0.55,
+    light: 0xffc070,
+    dim: 1,
+    pulse: 0.8,
     lids: 0.7,
-    /** A tiny warm mote lifts off the shell this often, s. */
-    mote: 0.7,
+    /** A pale mote drifts up off it this often (s), like a slow breath out: lives `moteLife` s, rises `moteRise` px/s. */
+    mote: 0.75,
+    moteLife: 2.3,
+    moteRise: 30,
+    moteSize: 2.6,
     /** The rim on the shell's top edge goes this far to the warm tone, and this much stronger. */
     rim: 0.65,
     rimUp: 0.3,
@@ -178,6 +211,12 @@ export const BURR = {
    * the head comes round over `head` frames and the body over `body`.
    */
   touch: {
+    /** Crisp puffs thrown low along the ground at the bump (and grit specks), their speed px/s, size px, life s. */
+    crisp: 7,
+    grit: 5,
+    crispSpeed: [70, 190] as const,
+    crispSize: [2.6, 5] as const,
+    crispLife: [0.26, 0.42] as const,
     squash: 0.3,
     rock: 3.4,
     bristle: 0.7,
@@ -188,8 +227,25 @@ export const BURR = {
     puffs: 6,
     flash: 1.9,
     /** Its dust is this much denser and larger than a blow's (it has to carry the bump on its own). */
-    dust: 2.1,
-    dustSize: 1.5,
+    dust: 1.3,
+    dustSize: 1.2,
+  },
+  /**
+   * It has noticed her (render only: the sim's creature never chases): she is within `reach` px on
+   * about its level (`level` px) and lit. Burrs up (`bristle`, with a kick), eyes on her and wide,
+   * lights up by `light` and a flash of `flash` that fades at `fade` /s. Lets go `slack` px further out.
+   */
+  notice: {
+    reach: 420,
+    slack: 70,
+    level: 150,
+    bristle: 0.95,
+    kick: 26,
+    light: 1.6,
+    flash: 1.1,
+    fade: 3,
+    in: 12,
+    out: 3,
   },
 } as const;
 
@@ -236,8 +292,34 @@ export const LAMP = {
     pulse: 0.55,
     rate: 1.1,
     /** Brighter by this factor while pursuing, and by this at the height of the tell. */
-    keen: 1.25,
-    flare: 2.4,
+    keen: 1.7,
+    flare: 2.6,
+    /** Larger (x radius) while it hunts. */
+    keenR: 1.35,
+  },
+  /**
+   * Hunting (the `curious` tell, then `pursue`): the lamp and the eyes go from the zone's colour to
+   * `color`, the ringed spots on the fore wings light up in it (`spot` = halo strength in the tell,
+   * `spotKeen` in pursuit, radius x `spotR`). The tell itself is a held beat: all four wings thrown
+   * wide and high (`fore`, `hind` rad, chord x `chord`) and held there on a fine shiver (`shiver`
+   * rad at `shiverRate` rad/s), released into the first stroke of the swoop at `release` /s. In
+   * pursuit the tail curls toward her (`tail` px) and the stroke deepens (x `stroke`).
+   */
+  hunt: {
+    color: 0xff4630,
+    spot: 0.5,
+    spotKeen: 0.22,
+    spotR: 1.5,
+    fore: 1.22,
+    hind: 0.08,
+    chord: 1.08,
+    shiver: 0.045,
+    shiverRate: 46,
+    hold: 20,
+    release: 11,
+    tail: 5,
+    stroke: 1.15,
+    eye: 1.5,
   },
   /** [left, centre, right] zone tints: membrane at the root and the tip, the pale edge and veins, the body. */
   wingColor: [0x3b4763, 0x968a6e, 0x73698a] as const,

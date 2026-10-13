@@ -53,6 +53,8 @@ export class LampRig {
   keen = 0;
   /** The tell: 1 while curious, easing off after. */
   flare = 0;
+  /** The held beat of the tell: wings thrown wide and held, 0..1 (in fast, released into the swoop). */
+  hold = 0;
   slack = 0;
   fold = 0;
   tumble = 0;
@@ -110,7 +112,7 @@ export class LampRig {
       this.lean.snap(0);
       this.lagX.snap(0);
       this.lagY.snap(0);
-      this.keen = this.flare = this.slack = this.fold = this.tumble = 0;
+      this.keen = this.flare = this.hold = this.slack = this.fold = this.tumble = 0;
       this.hitSeen = e.hitFrame;
       this.calmK = safe || e.calm > 0 ? 1 : 0;
       this.flinch = 0;
@@ -177,6 +179,7 @@ export class LampRig {
     this.keen += ((keen ? 1 : 0) - this.keen) * approach(keen ? 16 : 4, dt);
     const curious = mode === 'curious';
     this.flare += ((curious ? 1 : 0) - this.flare) * approach(curious ? 14 : 3.5, dt);
+    this.hold += ((curious ? 1 : 0) - this.hold) * approach(curious ? LAMP.hunt.hold : LAMP.hunt.release, dt);
     const slack = mode === 'rest' || mode === 'return';
     this.slack += ((slack ? 1 : 0) - this.slack) * approach(5, dt);
     const fold = mode === 'dead' ? 1 : mode === 'hurt' ? 0.7 : LAMP.shy.fold * this.flinch;
@@ -213,6 +216,7 @@ const W = {
   lampCore: [0, 0, 0] as V3,
   calmLight: [0, 0, 0] as V3,
   pop: [0, 0, 0] as V3,
+  hunt: [0, 0, 0] as V3,
 };
 // The wings' rim is their pale edge: the painter's rim colours are set to `edge` for them.
 const SH_WING = sh(W.wing0, W.wing1, 1, 1, 0.3);
@@ -225,6 +229,9 @@ const SH_FACE = sh(W.face, W.face, 0, 0, 0.5);
 const SH_EYE = sh(W.eye, W.eye, 0, 0, 0.5);
 const SH_ANT = sh(W.body1, W.body1, 0, 0, 0.5);
 const SH_LAMP = sh(W.lampCore, W.lampCore, 0, 0, 0.5);
+/** Set per creature by `drawLampwing`: how lit the wing spots are (halo strength) and how much larger. */
+let spotGlow = 0;
+let spotR = 1;
 
 /**
  * Wing outlines in wing space: u along the span (0 root .. 1 tip), v across (- = leading edge).
@@ -357,12 +364,18 @@ function wing(
     // One ringed mark on the fore wing: the family likeness with the hero's eye-spots.
     const lx = rootX + ux * 0.66 + vx * 0.05;
     const ly = rootY + uy * 0.66 + vy * 0.05;
-    const r = len * 0.062;
-    const ry = r * (0.55 + 0.45 * chord);
+    const r = len * 0.068 * spotR;
+    const ry = r * (0.55 + 0.45 * Math.min(1, chord));
     SH_SPOT.alpha = alpha * 0.75;
     p.ellipse(bx(lx, ly), by(lx, ly), r, ry, 0, SH_SPOT, 10);
     SH_PUPIL.alpha = alpha;
     p.ellipse(bx(lx, ly), by(lx, ly), r * 0.58, ry * 0.58, 0, SH_PUPIL, 8);
+    // Hunting, the two spots open like eyes: a lit pupil and a halo in the hunt colour.
+    if (spotGlow > 0.01) {
+      SH_LAMP.alpha = sat(spotGlow * 2.4) * alpha;
+      p.ellipse(bx(lx, ly), by(lx, ly), r * 0.5, ry * 0.5, 0, SH_LAMP, 8);
+      p.glow(bx(lx, ly), by(lx, ly), r * 3.2, W.hunt as unknown as RGB, spotGlow, r * 3.2, 0, 12);
+    }
   }
 }
 
@@ -391,11 +404,17 @@ export function drawLampwing(
   const calm = rig.calmK;
   hex(W.calmLight, L.calm.light);
   for (let k = 0; k < 3; k++) W.lamp[k] = W.lamp[k]! + (W.calmLight[k]! - W.lamp[k]!) * calm;
+  // Hunting, lamp, eyes and wing spots go to the one hunt colour, whatever the zone.
+  const H = L.hunt;
+  const hunt = Math.max(rig.keen, rig.flare) * (1 - calm) * (dead ? 0 : 1);
+  hex(W.hunt, H.color);
+  for (let k = 0; k < 3; k++) W.lamp[k] = W.lamp[k]! + (W.hunt[k]! - W.lamp[k]!) * hunt;
   // Pale at the core: a quarter of the way to the body's tone.
   for (let k = 0; k < 3; k++) W.lampCore[k] = W.lamp[k]! + (W.body0[k]! - W.lamp[k]!) * 0.3;
   hex(W.dusk, L.color.dusk);
   hex(W.face, L.color.face);
   hex(W.eye, L.color.eye);
+  for (let k = 0; k < 3; k++) W.eye[k] = W.eye[k]! + (W.hunt[k]! * 0.5 + 0.5 - W.eye[k]!) * 0.7 * hunt;
   hex(W.pop, L.color.pop);
   for (let k = 0; k < 3; k++) W.body1[k] = W.body0[k]! * 0.6 + W.dusk[k]! * 0.2;
   const age = rig.hitAge;
@@ -455,12 +474,26 @@ export function drawLampwing(
   // upstroke and opens on the downstroke (the figure of eight, seen from the front).
   const slack = (1 - L.slack * rig.slack) * (1 - L.calm.stroke * calm);
   const mid = (L.up + L.down) / 2 + L.calm.lift * calm;
-  const amp = ((L.up - L.down) / 2) * slack * flying;
-  const fa = mid + amp * beat + rig.fold * (1.25 - mid) - rig.slack * 0.12;
+  const amp =
+    ((L.up - L.down) / 2) * slack * flying * (1 + (H.stroke - 1) * rig.keen * (1 - rig.hold) * (1 - calm));
+  let fa = mid + amp * beat + rig.fold * (1.25 - mid) - rig.slack * 0.12;
   const hb = Math.sin((rig.flap - L.hindLag) * TAU);
-  const ha = mid - L.hindDrop + amp * 0.85 * hb + rig.fold * (1.0 - mid + L.hindDrop);
-  const chordF = 1 - L.twist * Math.cos(rig.flap * TAU) * flying - 0.35 * rig.fold;
-  const chordH = 1 - L.twist * Math.cos((rig.flap - L.hindLag) * TAU) * flying - 0.35 * rig.fold;
+  let ha = mid - L.hindDrop + amp * 0.85 * hb + rig.fold * (1.0 - mid + L.hindDrop);
+  let chordF = 1 - L.twist * Math.cos(rig.flap * TAU) * flying - 0.35 * rig.fold;
+  let chordH = 1 - L.twist * Math.cos((rig.flap - L.hindLag) * TAU) * flying - 0.35 * rig.fold;
+  // The tell: the beat stops. All four wings are thrown wide and high and held there, shivering,
+  // their faces to her; the release into the first stroke is the start of the swoop.
+  const hold = rig.hold * flying;
+  if (hold > 0.001) {
+    const shiver = Math.sin(clock * H.shiverRate + ph) * H.shiver;
+    fa += (H.fore + shiver - fa) * hold;
+    ha += (H.hind - shiver * 0.7 - ha) * hold;
+    chordF += (H.chord - chordF) * hold;
+    chordH += (H.chord - chordH) * hold;
+  }
+  spotGlow = (H.spot * rig.flare + H.spotKeen * rig.keen * (1 - rig.flare)) * (1 - calm) * (dead ? 0 : 1);
+  spotGlow *= 1 - toneDark;
+  spotR = 1 + (H.spotR - 1) * Math.max(rig.hold, 0.4 * rig.keen);
   const crumple = 1 - 0.3 * rig.fold;
   // The killing blow tears the hind pair away (they go to scales).
   const torn = dead ? sat(t / 3) : 0;
@@ -524,8 +557,11 @@ export function drawLampwing(
 
   // --- Body: a long tapering abdomen that trails behind the flight, a narrow thorax, a small head.
   const droop = 0.25 + 0.3 * rig.slack + 0.4 * rig.fold + 0.3 * calm;
-  const tailX = -d * (1.4 + droop * 2.5) - rig.lagX.x * 1.5;
-  const tailY = 2 + B.abdomen - Math.abs(rig.lagX.x) * 0.4 - Math.max(0, rig.lagY.x) * 0.6;
+  // (Hunting, the tail with its lamp curls toward her.)
+  const aim = rig.keen * (1 - calm) * (dead ? 0 : 1);
+  const tailX = -d * (1.4 + droop * 2.5) - rig.lagX.x * 1.5 + e.lookX * H.tail * aim;
+  const tailY =
+    2 + B.abdomen - Math.abs(rig.lagX.x) * 0.4 - Math.max(0, rig.lagY.x) * 0.6 - Math.abs(e.lookX) * 2 * aim;
   const midX = tailX * 0.3 - d * 0.6;
   const midY = 2 + B.abdomen * 0.5;
   let lampX = 0;
@@ -592,7 +628,7 @@ export function drawLampwing(
       const side = i === 0 ? -1 : 1;
       const ex = hxl + d * 0.5 + side * 0.82 + lx;
       const ey = hyl + 0.25 + ly;
-      const r = L.eye;
+      const r = L.eye * (1 + (H.eye - 1) * hunt);
       p.ellipse(bx(ex, ey), by(ex, ey), r, r * (1 - shut), 0, SH_EYE, 8);
     }
   }
@@ -609,7 +645,7 @@ export function drawLampwing(
   if (dead) br *= sat(1 - t / 12) * (0.5 + 0.5 * noise1(clock * 16 + ph, 8));
   br *= 1 - toneDark * 0.7;
   if (br > 0.02) {
-    const r = Lm.r * (1 + 0.25 * rig.flare);
+    const r = Lm.r * (1 + 0.25 * rig.flare) * (1 + (Lm.keenR - 1) * hunt);
     SH_LAMP.alpha = Lm.core * sat(br);
     p.ellipse(bx(lampX, lampY), by(lampX, lampY), r * 0.8, r, rot, SH_LAMP, 10);
     const hr = r * Lm.halo * (1 + 0.6 * rig.flare) * (1 + (L.calm.halo - 1) * calm);
