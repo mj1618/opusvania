@@ -39,6 +39,7 @@ export class PostStage {
     // exactly the view instead of letting it measure everything every frame.
     target.filterArea = new Rectangle(0, 0, VIEW_W, VIEW_H);
     fxDebug('post', POST);
+    fxDebug('zoneGrade', ZONE_GRADE);
   }
 
   setFilters(filters: Filter[] | null): void {
@@ -95,6 +96,7 @@ export class PostStage {
     f.prefilterU.uCurve[2] = 0.25 / knee;
     f.prefilterU.uSaturation = bloom.saturation;
     f.prefilterU.uBoost = bloom.colorBoost;
+    f.prefilterU.uHeroSource = lights.heroBloomSource;
 
     const u = f.u;
     u.uMix[0] = bloom.intensity;

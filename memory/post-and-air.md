@@ -154,6 +154,17 @@
   1.4; mist litByLights 0; backGlow off. Do not raise these to chase mean luma or hero ratio.
 - Resolution: nothing scales with window size (same numbers at 1920, 1280 and 960 wide).
 
+## Round 11: what post does to the hero (measured)
+- Post does not blur her: edge gradient on her box is the same or higher with post on, MSAA on/off
+  makes no difference, the scene texture is composited 1:1 at device resolution.
+- What washed her: the split-tone shadow lift (her darks +9 luma), ground mist and the front shaft
+  veil drawn over her (+3-7), the highlight shoulder (greyed her near-white face), and bloom fed by
+  her own pale face and rims (a soft halo round her outline, strongest at the antenna tips).
+- Now, through the hero matte (full logical resolution 1920x1080, threshold 0.25-0.5): no exposure or
+  shoulder on her, no shadow lift, no bloom added on her (`heroBloomCut` 1), and she feeds the bloom
+  only 20% (`heroBloomSource` 0.8, applied in the prefilter). Mist and the front veil open 96% round her.
+- Still applied to her: S-curve contrast, highlight tint, saturation, grain, 15% of the vignette.
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").

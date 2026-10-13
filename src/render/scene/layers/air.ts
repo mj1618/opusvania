@@ -106,8 +106,8 @@ export const AIR = {
     poolWidth: 300,
     poolBoost: 1.6,
     /** The character parts the mist: radius and amount. */
-    partRadius: 230,
-    partAmount: 0.7,
+    partRadius: 190,
+    partAmount: 0.96,
     /**
      * Sheets of mist hanging between the canopy tiers, behind the playfield: they give the high
      * platforms something pale to stand against and catch the shafts.

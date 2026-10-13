@@ -69,7 +69,9 @@ export const POST = {
      * pixels (1 = all), and how much of the bloom.
      */
     heroProtect: 1,
-    heroBloomCut: 0.65,
+    heroBloomCut: 1,
+    /** How much of the hero's own brightness is kept OUT of the bloom (1 = she never glows). */
+    heroBloomSource: 0.8,
     /** Every light's radius is scaled by this (the skins register a modest reach). */
     reach: 1.15,
   },

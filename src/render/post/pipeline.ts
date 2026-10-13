@@ -74,7 +74,7 @@ export class PostFilter extends Filter {
     uHero: Vec;
     uHero2: Vec;
   };
-  readonly prefilterU: { uTap: Vec; uCurve: Vec; uSaturation: number; uBoost: number };
+  readonly prefilterU: { uTap: Vec; uCurve: Vec; uSaturation: number; uBoost: number; uHeroSource: number };
   readonly lightsU: {
     uLights: Vec;
     uLightColors: Vec;
@@ -138,11 +138,13 @@ export class PostFilter extends Filter {
     this.u = (this.resources.postUniforms as { uniforms: PostFilter['u'] }).uniforms;
 
     this.prefilter = passFilter('post-prefilter', PREFILTER_FRAG, {
+      uMatte: heroMatteTexture().source,
       prefilterUniforms: {
         uTap: { value: new Float32Array(2), type: 'vec2<f32>' },
         uCurve: { value: new Float32Array(3), type: 'vec3<f32>' },
         uSaturation: { value: 1, type: 'f32' },
         uBoost: { value: 0, type: 'f32' },
+        uHeroSource: { value: 0.8, type: 'f32' },
       },
     });
     this.prefilterU = (

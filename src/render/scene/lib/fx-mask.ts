@@ -48,12 +48,13 @@ export function renderPlayfieldMask(renderer: Renderer, layers: readonly Contain
 }
 
 /**
- * The hero matte: the character layer's alpha over the view, redrawn every frame. Post uses it to
+ * The hero matte: the character layer's alpha over the view at full logical resolution
+ * (anything coarser bleeds post terms across her outline and softens it), redrawn every frame. Post uses it to
  * keep its own light off the hero: the hero's light is a gain on dark pixels, and without the matte
  * the darkest thing nearest the light, the hero's own body, was lifted most and washed out.
  */
-export const MATTE_W = 960;
-export const MATTE_H = 540;
+export const MATTE_W = 1920;
+export const MATTE_H = 1080;
 let matte: RenderTexture | null = null;
 
 export function heroMatteTexture(): RenderTexture {

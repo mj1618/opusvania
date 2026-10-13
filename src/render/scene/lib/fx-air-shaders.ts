@@ -117,7 +117,11 @@ void main(void) {
   vec4 shaftColor = uShaftColors[0] * zone.x + uShaftColors[1] * zone.y + uShaftColors[2] * zone.z;
   float strength = uVolume.x * shaftColor.a;
   float s = strength > 0.0 ? shaftAt(p) : 0.0;
+  // Nothing hazy is drawn over the hero: the front veil opens around her like the mist does.
+  vec2 hd = (p - uPlayer.xy - vec2(0.0, -30.0)) / uPlayer.z;
+  float clear = 1.0 - uPlayer.w * exp(-dot(hd, hd));
   if (uVolume.z > 0.0 && s > 0.0) {
+    s *= clear;
     // Beams in front of the character still pass behind solid things at its depth.
     s *= 1.0 - uVolume.z * texture(uMask, (p - uView.xy) / uView.zw).a;
   }

@@ -57,6 +57,9 @@ uniform vec2 uTap;
 uniform vec3 uCurve;
 uniform float uSaturation;
 uniform float uBoost;
+uniform sampler2D uMatte;
+uniform float uHeroSource;
+in vec2 vPos;
 
 vec3 bright(vec2 uv) {
   vec3 c = texture(uTexture, clamp(uv, vClamp.xy, vClamp.zw)).rgb;
@@ -79,6 +82,9 @@ void main(void) {
   vec3 col = (a * w.x + b * w.y + c * w.z + d * w.w) / (w.x + w.y + w.z + w.w);
   float l = dot(col, vec3(0.3, 0.5, 0.2));
   col = max(mix(vec3(l), col, uSaturation), 0.0);
+  // The hero feeds the bloom only a little (her eyes and lantern tips may glow; her pale face and
+  // rims must not put a soft halo round her outline).
+  col *= 1.0 - uHeroSource * smoothstep(0.25, 0.5, texture(uMatte, vPos).a);
   finalColor = vec4(col, 1.0);
 }
 `;
@@ -245,7 +251,7 @@ void main(void) {
 
   // The hero matte: the hero's own pixels are exempt from everything that darkens the frame
   // around them (pocket, vignette) and from their own light.
-  float hero = smoothstep(0.08, 0.6, texture(uMatte, vPos).a) * uProtect.x;
+  float hero = smoothstep(0.25, 0.5, texture(uMatte, vPos).a) * uProtect.x;
 
   // A pocket of calm around the hero: what lies around them (not on them) goes a little darker
   // and greyer, so a small figure separates from a busy, glowing forest without an outline.
@@ -307,7 +313,8 @@ void main(void) {
   col += bloom * (uMix.x * (1.0 - uLightBack.x * pale) * (1.0 - hero * uProtect.z));
 
   // Tone: exposure, a soft shoulder instead of clipping, an S-curve around the pivot.
-  col = shoulder(col * uTone.x, uTone.y);
+  // The hero keeps her authored values: no exposure, no highlight roll-off (it greyed her face).
+  col = mix(shoulder(col * uTone.x, uTone.y), col, hero);
   float l = dot(col, LUMA);
   float lc = clamp(l, 1e-4, 1.0);
   float curved = lc < uTone.w
@@ -322,7 +329,8 @@ void main(void) {
   // Split tone: shadows lift toward teal-indigo, highlights lean warm.
   l = dot(col, LUMA);
   float sh = 1.0 - smoothstep(0.0, 0.45, l);
-  col += uShadow.rgb * (sh * sh * uShadow.a);
+  // (not on the hero: the lift turned her deep plum darks grey-violet)
+  col += uShadow.rgb * (sh * sh * uShadow.a * (1.0 - hero));
   float hi = smoothstep(0.35, 0.95, l);
   col *= mix(vec3(1.0), uHighlight.rgb, hi * uHighlight.a);
 
