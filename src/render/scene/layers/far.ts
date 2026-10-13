@@ -12,17 +12,29 @@
  *   far1  a backlit stone arch standing in the light well, denser trunks to the right
  *   far2  a 700 px giant on the left, the well, then a dark stand with a huge fallen log leaning in
  */
-import { Container, Graphics, Mesh, type MeshGeometry, Shader, Sprite, UniformGroup } from 'pixi.js';
+import {
+  Container,
+  Graphics,
+  Matrix,
+  Mesh,
+  type MeshGeometry,
+  RenderTexture,
+  Shader,
+  Sprite,
+  UniformGroup,
+} from 'pixi.js';
+import { VIEW_H, VIEW_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import type { LayerName, LayerRect } from '../layer-tree';
 import {
   type Atmosphere,
   atmTone,
+  type BakedTile,
   BG_VERT,
   bakeLayer,
+  FarPairView,
   type FogSpec,
   LayerView,
-  type LightMap,
   noiseTexture,
   quadGeometry,
   type SwayItem,
@@ -32,6 +44,7 @@ import {
 } from '../lib/bg-bake';
 import { buildForest, type ForestBuild, type ForestPlan, forestLook, hangers } from '../lib/bg-forest';
 import {
+  blob,
   fbm1,
   foliageMass,
   leafPts,
@@ -41,10 +54,9 @@ import {
   ribbon,
   rr,
   TO_LIGHT,
-  type Trunk,
-  taper,
 } from '../lib/bg-shapes';
 import { mix, PALETTE, prng } from '../lib/look';
+import { SKY_OUTPUT } from './sky';
 
 const NAMES = ['far0', 'far1', 'far2'] as const;
 
@@ -53,6 +65,8 @@ const BAKE_SCALE = [0.62, 0.9, 1.15] as const;
 /** Layer y of the sky bloom when the camera rests on the ground. */
 const WELL_Y = 690;
 const PAD = 60;
+/** Texture px per logical view px of the target all far layers are drawn into (capped by the display). */
+const FAR_TARGET_SCALE = 1;
 /** Canopy rustle amplitude per layer, in layer px. */
 const RUSTLE = [1.6, 2.4, 3.2] as const;
 
@@ -98,6 +112,9 @@ const ATM: readonly Atmosphere[] = [
     mottle: 0.14,
     litGain: 1.5,
     sunMix: 0.45,
+    sunColorL: 0xcde6ff,
+    sunColorR: 0xffcfae,
+    zoneParallax: 0.25,
   },
   {
     fogColor: 0x66b0ac,
@@ -119,7 +136,10 @@ const ATM: readonly Atmosphere[] = [
     mottle: 0.18,
     litGain: 1.6,
     sunMix: 0.5,
-    sunColor: 0xb9dc62,
+    sunColor: 0xc6de5c,
+    sunColorL: 0xb6e0dc,
+    sunColorR: 0xecc978,
+    zoneParallax: 0.42,
   },
 ];
 
@@ -173,7 +193,8 @@ const FOG: readonly FogSpec[] = [
 ];
 
 const HANG = [
-  { seed: 501, vines: 10, moss: 4, fronds: 10, vineLen: [70, 190], amp: 0.03 },
+  // far0 has no sway: it is composited inside the far-pair pass, nothing can be drawn over it alone.
+  { seed: 501, vines: 0, moss: 0, fronds: 0, vineLen: [70, 190], amp: 0.03 },
   { seed: 502, vines: 18, moss: 12, fronds: 14, vineLen: [90, 280], amp: 0.04 },
   { seed: 503, vines: 26, moss: 16, fronds: 18, vineLen: [110, 380], amp: 0.05 },
 ] as const;
@@ -181,10 +202,38 @@ const HANG = [
 /** Birds far away, between far0 and far1. Speed in layer px/s. */
 const BIRDS = { seed: 31, count: 5, size: 9, spacing: 34, speed: 26, startX: 1150, y: 800, flap: 7.5 };
 /** The moonlit waterfall of the left glade (far1 coordinates). */
-const WATERFALL = { x: 1960, top: 600, bottom: 1262, width: 120, color: 0xf2faff, alpha: 0.62, speed: 0.5 };
-/** The colossal hollow tree of the right stand: which far2 trunk it is, and the glow inside. */
-const HOLLOW = { x: 3700, w: 560, glow: 0xffb48a, glowAlpha: 0.5 };
+const WATERFALL = {
+  x: 1960,
+  /** The cliff lip the water leaves from, and the pool it ends in (layer y). */
+  lip: 600,
+  pool: 1258,
+  /** The stages: fraction of the drop each covers, sideways step at its top, ribbon width. */
+  stages: [
+    { part: 0.4, dx: 0, w: 22 },
+    { part: 0.32, dx: 44, w: 30 },
+    { part: 0.28, dx: -34, w: 40 },
+  ],
+  color: 0xeaf4ff,
+  alpha: 0.42,
+  speed: 0.5,
+  /** Mist at each landing and the plume over the pool. */
+  mist: 0xcfe2f5,
+  mistAlpha: 0.38,
+};
 
+/** Top-left x, top y, bottom y and width of each stage of the fall. */
+function fallStages(): Array<{ x: number; y0: number; y1: number; w: number }> {
+  const w = WATERFALL;
+  let x = w.x;
+  let y = w.lip;
+  return w.stages.map((st) => {
+    x += st.dx;
+    const y1 = y + (w.pool - w.lip) * st.part;
+    const out = { x, y0: y, y1, w: st.w };
+    y = y1;
+    return out;
+  });
+}
 /** How each layer takes on the zone moods (see ZONES in bg-bake). */
 const ZONE: ReadonlyArray<Omit<ZoneSpec, 'anchorX'>> = [
   {
@@ -315,15 +364,12 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       accentRate: 0.1,
       amber: 0xd9a04a,
       blossom: 0xd9c2ff,
-      onTrunk: (c, r, tr, L) => {
-        if (tr.spec.x === HOLLOW.x) hollow(c, r, tr, l2, L);
-      },
       trunks: [
         { x: 1230, w: 500, lean: 20, branches: 3, roots: 3 },
         { x: 2040, w: 120, lean: -30, branches: 1 },
         { x: 2480, w: 160, lean: -56, branches: 2 },
         { x: 2860, w: 76, lean: 130, branches: 1, roots: 1 },
-        { x: HOLLOW.x, w: HOLLOW.w, lean: -44, branches: 3, roots: 3, boughs: 3 },
+        { x: 3700, w: 400, lean: -44, branches: 3, roots: 3, boughs: 3 },
         { x: 4350, w: 330, lean: 30, branches: 2, roots: 3 },
         { x: 4640, w: 150, lean: -20 },
       ],
@@ -339,88 +385,83 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
   ];
 }
 
-/** far1: the left glade's landmark, a mossy bluff with a tall moonlit waterfall (live shimmer on top). */
+/**
+ * far1: the left glade's landmark. A dark bluff stepping down in shelves, and a thin moonlit
+ * ribbon of water that leaves the lip, lands on each shelf in a puff of mist and ends in a soft
+ * plume over the pool. The live shimmer is added on top (LiveFall).
+ */
 function waterfallCliff(c: Container, r: Rng, look: (typeof LOOKS)[number]): void {
   const g = c.addChild(new Graphics());
   const n = fbm1(77);
   const w = WATERFALL;
+  const stages = fallStages();
   const stone = mix(0x040d18, PALETTE.shadowIndigo, 0.3);
+  // The bluff: narrow at the lip, a wider step under every landing.
   const face = (t: number): { x: number; y: number } => ({
-    x: w.x + 26 * Math.sin(t * 5),
-    y: 1300 - (1300 - w.top + 90) * t,
+    x: w.x + 18 * Math.sin(t * 5),
+    y: 1310 - (1310 - w.lip + 40) * t,
   });
+  const step = (y: number): number => stages.reduce((acc, st) => acc + (y > st.y1 ? 46 : 0), 0);
   g.poly(
-    ribbon(face, (t, side) => (270 - 120 * t) * (1 + n(t * 7 + side * 3) * 0.28) + (side === 1 ? 30 : 0), 30),
+    ribbon(
+      face,
+      (t, side) =>
+        (130 + step(face(t).y) + 60 * (1 - t)) * (1 + n(t * 9 + side * 3) * 0.2) + (side === 1 ? 26 : 0),
+      40,
+    ),
   ).fill(stone);
-  // A dark cleft the water falls through, and lighter ledges stepping down the face.
-  g.poly(ribbon(face, (t) => w.width * (0.55 + 0.2 * t) * (1 + n(t * 9) * 0.2), 20, 0.02, 0.9)).fill({
-    color: look.bark.dark,
-    alpha: 0.55,
-  });
+  // Overhanging lip and the shelves the water lands on.
+  g.poly(blob(w.x - 20, w.lip + 6, 150, 34, r, 0.25, 18)).fill(stone);
+  for (const st of stages.slice(0, -1)) {
+    g.poly(blob(st.x + rr(r, -20, 20), st.y1 + 16, rr(r, 90, 130), rr(r, 20, 30), r, 0.3, 16)).fill(stone);
+    g.poly(blob(st.x + rr(r, -30, 30), st.y1 + 6, rr(r, 60, 90), 8, r, 0.3, 12)).fill({
+      color: look.bark.lit,
+      alpha: 0.35,
+    });
+  }
+  // Cracks and lighter ledges on the face.
   for (let i = 0; i < 12; i++) {
-    const y = w.top + 30 + i * rr(r, 40, 62);
+    const y = w.lip + 40 + i * rr(r, 40, 58);
     const side = i % 2 === 0 ? 1 : -1;
-    const x = w.x + side * rr(r, 90, 210);
-    g.poly(
-      ribbon(
-        quad(
-          { x: x - rr(r, 40, 90), y: y + rr(r, -8, 8) },
-          { x, y: y - 12 },
-          { x: x + rr(r, 40, 90), y: y + rr(r, -6, 14) },
-        ),
-        (t) => 3 + 8 * Math.sin(Math.PI * t),
-        8,
-      ),
-    ).fill({ color: look.bark.lit, alpha: 0.4 });
-  }
-  const fall = ribbon(
-    (t) => ({ x: w.x + 6 * Math.sin(t * 9), y: w.top + (w.bottom - w.top) * t }),
-    (t) => (w.width / 2) * (0.34 + 0.34 * t) * (1 + n(t * 11) * 0.16),
-    24,
-  );
-  g.poly(fall).fill({ color: w.color, alpha: 0.8 });
-  for (let i = 0; i < 6; i++) {
-    const x = w.x + rr(r, -230, 230);
-    const y = w.top - 70 + Math.abs(x - w.x) * 0.25;
-    foliageMass(c.addChild(new Graphics()), x, y, rr(r, 70, 130), rr(r, 40, 70), r, look.leaf);
-  }
-}
-
-/** far2: the right stand's landmark, a colossal tree hollowed out at the base, lit from inside. */
-function hollow(c: Container, r: Rng, tr: Trunk, look: (typeof LOOKS)[number], L: LightMap): void {
-  const g = c.addChild(new Graphics());
-  const w = tr.spec.w;
-  const base = tr.at(0.02, -0.05);
-  const h = w * 1.05;
-  const hw = w * 0.3;
-  const n = fbm1(42);
-  // A pointed, lopsided arch.
-  const pts: number[] = [];
-  for (let i = 0; i <= 26; i++) {
-    const t = i / 26;
-    const a = Math.PI * t;
-    const k = 1 + n(t * 6) * 0.12;
-    pts.push(
-      base.x - Math.cos(a) * hw * k * (1 - 0.25 * Math.sin(a) ** 3),
-      base.y + 10 - Math.sin(a) ** 0.8 * h * k,
+    const x = w.x + side * rr(r, 70, 190);
+    const path = quad(
+      { x: x - rr(r, 30, 70), y: y + rr(r, -8, 8) },
+      { x, y: y - 10 },
+      { x: x + rr(r, 30, 70), y: y + rr(r, -6, 14) },
     );
+    g.poly(ribbon(path, (t) => 2 + 6 * Math.sin(Math.PI * t), 8)).fill({ color: look.bark.lit, alpha: 0.3 });
   }
-  g.poly(pts).fill(mix(look.bark.dark, 0x000000, 0.35));
-  // The warm inside, set back from the lip.
-  const inner = pts.map((v, i) =>
-    i % 2 === 0 ? base.x + (v - base.x) * 0.8 + hw * 0.1 : base.y + 10 + (v - base.y - 10) * 0.88,
-  );
-  g.poly(inner).fill({ color: 0x3a1f2c, alpha: 0.9 });
-  // Aerial roots hanging across the opening.
-  for (let i = 0; i < 7; i++) {
-    const x = base.x + rr(r, -0.8, 0.8) * hw;
-    const top = base.y - h * (0.55 + 0.35 * (1 - ((x - base.x) / hw) ** 2));
-    const mid = { x: x + rr(r, -14, 14), y: top + 60 };
-    const end = { x: x + rr(r, -22, 22), y: top + rr(r, 80, 190) };
-    g.poly(taper(quad({ x, y: top }, mid, end), 9, 1.5, 7)).fill(look.bark.base);
+  // The water: a thin ribbon per stage, a little wider as it falls.
+  for (const st of stages) {
+    const fall = ribbon(
+      (t) => ({ x: st.x + 3 * Math.sin(t * 7 + st.y0), y: st.y0 - 6 + (st.y1 - st.y0 + 12) * t }),
+      (t) => (st.w / 2) * (0.7 + 0.3 * t) * (1 + n(t * 9 + st.y0) * 0.14),
+      16,
+    );
+    g.poly(fall).fill({ color: w.color, alpha: 0.72 });
   }
-  L.reset(base.x, base.y - h * 0.4, hw * 1.3, h * 0.7, 0.95);
-  L.lit(base.x, base.y - h * 0.15, hw * 1.0, h * 0.45, 0.75);
+  // Mist: a puff at every landing, a plume over the pool (soft sprites, baked with the layer).
+  const puff = (x: number, y: number, rx: number, ry: number, a: number): void => {
+    const s = new Sprite(softTexture());
+    s.anchor.set(0.5);
+    s.position.set(x, y);
+    s.setSize(rx * 2, ry * 2);
+    s.tint = w.mist;
+    s.alpha = a;
+    c.addChild(s);
+  };
+  for (const st of stages.slice(0, -1)) puff(st.x, st.y1 + 4, 90, 44, w.mistAlpha);
+  const last = stages[stages.length - 1];
+  if (last) {
+    puff(last.x, last.y1, 190, 90, w.mistAlpha * 1.2);
+    puff(last.x + 30, last.y1 - 70, 120, 110, w.mistAlpha * 0.7);
+  }
+  // Growth along the top of the bluff.
+  for (let i = 0; i < 6; i++) {
+    const x = w.x + rr(r, -200, 200);
+    const y = w.lip - 50 + Math.abs(x - w.x) * 0.3;
+    foliageMass(c.addChild(new Graphics()), x, y, rr(r, 60, 110), rr(r, 36, 60), r, look.leaf);
+  }
 }
 
 /** far1: a natural stone arch standing in the light well, mossed on top. */
@@ -540,7 +581,7 @@ void main() {
   float across = abs(vUV.x - 0.5) * 2.0;
   float width = mix(0.36, 0.7, vUV.y);
   float body = 1.0 - smoothstep(width * 0.35, width, across);
-  float n = texture(uNoise, vec2(vUV.x * 0.9, vUV.y * 0.55 - t * uFall.z)).r;
+  float n = texture(uNoise, vec2(vUV.x * 0.9 + uFall.w, vUV.y * 0.55 - t * uFall.z)).r;
   float m = texture(uNoise, vec2(vUV.x * 2.3 + 0.37, vUV.y * 1.3 - t * uFall.z * 1.7)).g;
   float streak = smoothstep(0.35, 0.8, n * 0.6 + m * 0.55);
   float ends = smoothstep(0.0, 0.12, vUV.y) * (1.0 - smoothstep(0.9, 1.0, vUV.y));
@@ -551,13 +592,15 @@ void main() {
   fragColor = vec4(uWater * a, a);
 }`;
 
+/** The moving water over one stage of the fall: streaks sliding down a narrow quad. */
 class LiveFall {
   readonly mesh: Mesh<MeshGeometry, Shader>;
   private readonly u: UniformGroup;
-  constructor(color: number) {
+  constructor(st: { x: number; y0: number; y1: number; w: number }) {
     const w = WATERFALL;
+    const color = w.color;
     this.u = new UniformGroup({
-      uFall: { value: new Float32Array([0, w.alpha, w.speed, 0]), type: 'vec4<f32>' },
+      uFall: { value: new Float32Array([0, w.alpha, w.speed, st.y0 * 0.01]), type: 'vec4<f32>' },
       uWater: {
         value: new Float32Array([
           ((color >> 16) & 255) / 255,
@@ -571,8 +614,9 @@ class LiveFall {
       gl: { vertex: BG_VERT, fragment: FALL_FRAG },
       resources: { uNoise: noiseTexture().source, fall: this.u },
     });
+    const half = st.w * 1.6;
     this.mesh = new Mesh({
-      geometry: quadGeometry(w.x - w.width, w.top - 10, w.width * 2, w.bottom - w.top + 40),
+      geometry: quadGeometry(st.x - half, st.y0 - 8, half * 2, st.y1 - st.y0 + 30),
       shader,
     });
     this.mesh.label = 'waterfall';
@@ -681,83 +725,132 @@ class Flock {
 
 interface FarLayer {
   name: LayerName;
-  view: LayerView;
+  view: LayerView | FarPairView | null;
   sway: SwaySet;
-  fall: LiveFall | null;
+  falls: LiveFall[];
 }
 
 export class FarLayers implements EnvModule {
-  private ctx!: SceneContext;
   private readonly built: FarLayer[] = [];
   private flock: Flock | null = null;
-  private readonly hollowGlow: Array<{ s: Sprite; base: number }> = [];
+  private ctx!: SceneContext;
+  /** Off-tree copies of the three far layers (same transforms), rendered to `target` each frame. */
+  private readonly scene = new Container({ label: 'far-scene' });
+  private readonly groups = [new Container(), new Container(), new Container()];
+  private target!: RenderTexture;
+  private readonly toTarget = new Matrix();
+  private output!: Sprite;
 
   init(ctx: SceneContext): void {
-    this.ctx = ctx;
     const rects = NAMES.map((n) => {
       const c = ctx.layers.coverage(n);
       return { x: c.x - PAD, y: c.y - PAD, w: c.w + PAD * 2, h: c.h + PAD * 2 };
     });
+    this.ctx = ctx;
+    this.scene.addChild(...this.groups);
+    this.target = RenderTexture.create({ width: VIEW_W + 16, height: VIEW_H + 16, resolution: 1 });
+    this.output = new Sprite(this.target);
+    this.output.label = 'far-composite';
+    this.output.blendMode = 'none';
+    ctx.layers.far[2]?.addChild(this.output);
+    let far0: { tiles: BakedTile[]; plan: ForestPlan } | null = null;
     plans(rects).forEach((plan, i) => {
       const name = NAMES[i] ?? 'far0';
-      const layer = ctx.layers.far[i];
+      const layer = this.groups[i];
       const atm = ATM[i];
       const fogSpec = FOG[i];
       const hang = HANG[i];
       if (!layer || !atm || !fogSpec || !hang) return;
       const scale = BAKE_SCALE[i] ?? 1;
-      if (i === 1) {
-        // Behind far1's trunks, in front of far0 and its mist.
-        this.flock = new Flock(plan.rect, atmTone(atm, 0x1b3b47, plan.wellX - 600, BIRDS.y));
+      const zone = { ...(ZONE[i] ?? ZONE[0]), anchorX: ctx.layers.anchor.x } as ZoneSpec;
+      if (i === 2) {
+        // Birds: in front of far1 (which is drawn in the far-pair pass), behind far2's trunks.
+        const a1 = ATM[1] ?? atm;
+        this.flock = new Flock(rects[1] ?? plan.rect, atmTone(a1, 0x1b3b47, plan.wellX - 600, BIRDS.y));
         layer.addChild(this.flock.container);
       }
       const b: ForestBuild = buildForest(plan);
-      const view = new LayerView(
-        bakeLayer(ctx.renderer, b.content, plan.rect, scale, atm, TO_LIGHT, b.lights),
-        fogSpec,
-        { amp: RUSTLE[i] ?? 0, y0: plan.canopyY + 60, y1: plan.canopyY + 320 },
-        { ...(ZONE[i] ?? ZONE[0]), anchorX: ctx.layers.anchor.x } as ZoneSpec,
-      );
-      layer.addChild(view.container);
+      const tiles = bakeLayer(ctx.renderer, b.content, plan.rect, scale, atm, TO_LIGHT, b.lights);
       b.content.destroy({ children: true });
-
-      let fall: LiveFall | null = null;
-      if (i === 1) {
-        fall = new LiveFall(WATERFALL.color);
-        layer.addChild(fall.mesh);
+      const rustle = { amp: RUSTLE[i] ?? 0, y0: plan.canopyY + 60, y1: plan.canopyY + 320 };
+      let view: LayerView | FarPairView | null = null;
+      const sky = SKY_OUTPUT.texture;
+      const t0 = far0?.tiles[0];
+      if (i === 0) {
+        far0 = { tiles, plan };
+        // Shown alone only if the pair pass cannot be built (see below).
+        if (tiles.length !== 1 || !sky) {
+          view = new LayerView(tiles, fogSpec, rustle, zone);
+          far0 = null;
+        }
+      } else if (i === 1 && far0 && t0 && sky) {
+        const z0 = { ...(ZONE[0] as Omit<ZoneSpec, 'anchorX'>), anchorX: ctx.layers.anchor.x };
+        view = new FarPairView(
+          t0,
+          tiles,
+          { fog: FOG[0] as FogSpec, zone: z0 },
+          { fog: fogSpec, zone },
+          rustle,
+          { texture: sky, x: -8, y: -8, w: VIEW_W + 16, h: VIEW_H + 16 },
+          ctx.layers.anchor,
+        );
+        if (SKY_OUTPUT.sprite) SKY_OUTPUT.sprite.visible = false;
+      } else {
+        view = new LayerView(tiles, fogSpec, rustle, zone);
       }
-      if (i === 2) {
-        // The warm glow inside the hollow tree (plain additive sprites, breathing slowly).
-        const gy = plan.groundY - HOLLOW.w * 0.3;
-        for (const [k, size] of [
-          [1, HOLLOW.w * 0.9],
-          [0.6, HOLLOW.w * 1.9],
-        ] as const) {
-          const s = new Sprite(softTexture());
-          s.anchor.set(0.5);
-          s.position.set(HOLLOW.x - 14, gy);
-          s.setSize(size * 0.8, size);
-          s.tint = HOLLOW.glow;
-          s.blendMode = 'add';
-          s.alpha = HOLLOW.glowAlpha * k;
-          layer.addChild(s);
-          this.hollowGlow.push({ s, base: HOLLOW.glowAlpha * k });
+      if (view) layer.addChild(view.container);
+
+      const falls: LiveFall[] = [];
+      if (i === 1) {
+        for (const st of fallStages()) {
+          const f = new LiveFall(st);
+          falls.push(f);
+          layer.addChild(f.mesh);
         }
       }
       const items = [...hangers(plan, b, atm, hang), ...landmarkHangers(i, atm)];
-      const sway = new SwaySet(ctx.renderer, items, Math.max(1, scale * 1.2));
+      const sway = new SwaySet(ctx.renderer, items, Math.max(1, scale * 1.2), zone);
       layer.addChild(sway.container);
-      this.built.push({ name, view, sway, fall });
+      this.built.push({ name, view, sway, falls });
     });
   }
 
   update(frame: SceneFrame): void {
     for (const l of this.built) {
-      l.view.update(frame.clock, frame.camera.x);
-      l.sway.update(frame.clock, this.ctx.layers.visible(l.name, frame.camera));
-      l.fall?.update(frame.clock);
+      if (l.view instanceof FarPairView) l.view.update(frame.clock, frame.camera);
+      else l.view?.update(frame.clock, frame.camera.x);
+      l.sway.update(frame.clock, frame.camera.x);
+      for (const f of l.falls) f.update(frame.clock);
     }
     this.flock?.update(frame.clock);
-    for (const g of this.hollowGlow) g.s.alpha = g.base * (0.82 + 0.18 * Math.sin(frame.clock * 0.6));
+    // Everything far is drawn into a target at logical-view resolution (the bakes hold no more
+    // detail than that) and shown by one opaque sprite: a quarter of the pixels on a 2x display.
+    const far = this.ctx.layers.far;
+    // Hidden for debugging (far2 hosts the composite): skip the work too.
+    if (far[2] && !far[2].visible) return;
+    this.groups.forEach((g, i) => {
+      g.visible = far[i]?.visible ?? true;
+      const L = far[i];
+      if (!L) return;
+      g.position.copyFrom(L.position);
+      g.scale.copyFrom(L.scale);
+    });
+    const k = Math.min(FAR_TARGET_SCALE, this.ctx.viewScale());
+    const w = Math.ceil((VIEW_W + 16) * k);
+    const h = Math.ceil((VIEW_H + 16) * k);
+    if (this.target.width !== w || this.target.height !== h) this.target.resize(w, h);
+    this.toTarget.set(k, 0, 0, k, 8 * k, 8 * k);
+    this.ctx.renderer.render({
+      container: this.scene,
+      target: this.target,
+      clear: true,
+      transform: this.toTarget,
+    });
+    const host = far[2];
+    if (host) {
+      const sx = host.scale.x || 1;
+      this.output.position.set((-8 - host.position.x) / sx, (-8 - host.position.y) / sx);
+      this.output.setSize((VIEW_W + 16) / sx, (VIEW_H + 16) / sx);
+    }
   }
 }

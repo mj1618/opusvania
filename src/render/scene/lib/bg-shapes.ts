@@ -546,9 +546,10 @@ export function vine(
   leafCols: readonly number[],
   leafSize: number,
   thick = 3,
+  wander = 1,
 ): void {
-  const o1 = rr(r, -0.1, 0.1) * len;
-  const o2 = o1 + rr(r, -0.08, 0.08) * len;
+  const o1 = rr(r, -0.1, 0.1) * len * wander;
+  const o2 = o1 + rr(r, -0.08, 0.08) * len * wander;
   const c = quad({ x, y }, { x: x + o1, y: y + len * 0.5 }, { x: x + o2, y: y + len });
   g.poly(taper(c, thick, 0.6, 10)).fill(stem);
   const step = leafSize * 0.8;
@@ -592,7 +593,7 @@ export function mossCurtain(
     const sx = x + (u * width) / 2;
     const l = len * (1 - u * u * 0.7) * rr(r, 0.25, 1) * (loose ? 1.15 : 1);
     const y0 = y - rr(r, 0, len * 0.12);
-    const o = rr(r, -0.1, 0.1) * l;
+    const o = rr(r, -0.04, 0.04) * l;
     const c = quad(
       { x: sx, y: y0 },
       { x: sx + o, y: y0 + l * 0.5 },

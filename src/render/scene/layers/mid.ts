@@ -54,7 +54,9 @@ const MID = {
   /** Moss patches per trunk. */
   mossPerTrunk: 4,
   /** Bioluminescent clusters: layer x of each, caps per cluster. */
-  glowClusters: [700, 980, 1240, 1520, 1830, 2150, 2480, 3050, 3620, 4260, 4640, 4980],
+  glowClusters: [760, 1180, 1560, 1930, 2330, 3050, 3620, 4150, 5020],
+  /** Dark plants poking out of the mist bed below the fern line, per 1000 px. */
+  bedPlants: 4,
   /** Light seen through the openings of the canopy (sprites behind the bake). */
   skyHole: { size: 3.4, alpha: 0.6, color: 0xfff0c4, left: 0xd4ecff, right: 0xffc9c0 },
   /** Drifting leaves in the air of this layer. */
@@ -86,7 +88,10 @@ const ATM: Atmosphere = {
   gain: 0.9,
   litGain: 1.7,
   sunMix: 0.7,
-  sunColor: 0xc8e25e,
+  sunColor: 0xd2e052,
+  sunColorL: 0xb6e0dc,
+  sunColorR: 0xecc978,
+  zoneParallax: 0.68,
   shadeTint: [0.26, 0.4, 0.54],
   saturation: 0.85,
 };
@@ -116,6 +121,23 @@ const ZONE: Omit<ZoneSpec, 'anchorX'> = {
   mistR: 0x6c6aa2,
 };
 
+/**
+ * The right stand's landmark: a colossal trunk with a tall arched hollow glowing warm inside,
+ * buttress roots, and lantern fungi climbing it. It lives in this layer so nothing nearer but
+ * the playfield can stand in front of it. `rise` is the hollow's height (it has to clear the
+ * playfield's raised ground, which hides everything below layer y ~1090 on the right).
+ */
+const HOLLOW = {
+  x: 4600,
+  w: 640,
+  rise: 700,
+  half: 0.23,
+  glow: 0xffb070,
+  glowAlpha: 0.4,
+  lanterns: 9,
+  lantern: 0xffb866,
+};
+
 const LOOK = forestLook({ leaf: 23, light: 0.42, streaks: 4.5, bands: 1.5, cool: 0, grooves: 2.6 });
 
 const FERN = { ...LOOK.groundLeaf, light: 0.42 };
@@ -124,6 +146,8 @@ const FERN = { ...LOOK.groundLeaf, light: 0.42 };
 const playfieldX = (x: number): number => 2880 + (x - 2880) / ZONE.parallax;
 
 interface GlowSpot {
+  /** Peak alpha (default: MID.glowAlpha, dimmer for the big cluster haze). */
+  alpha?: number;
   x: number;
   y: number;
   r: number;
@@ -150,20 +174,23 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
       { x: 2090, w: 420, lean: 70, branches: 3, roots: 3 },
       { x: 2650, w: 150, lean: -30, branches: 1 },
       { x: 3800, w: 370, lean: -80, branches: 3, roots: 3 },
-      { x: 4390, w: 190, lean: 36, branches: 2 },
-      { x: 4950, w: 460, lean: -30, branches: 3, roots: 3 },
+      { x: HOLLOW.x, w: HOLLOW.w, lean: -24, branches: 2, roots: 4, boughs: 3 },
+      { x: 5150, w: 230, lean: 30, branches: 2 },
     ],
     rootsPerSide: 2,
-    rootArch: 0.3,
+    rootArch: 0.15,
     holes: 0,
     mounds: 6,
     moundR: 130,
     moss: 4,
     look: LOOK,
     front: (c, r, b) => trunkMoss(c, r, b),
-    onTrunk: (c, r, tr, L) => barkDetail(c, r, tr, L),
+    onTrunk: (c, r, tr, L) => {
+      barkDetail(c, r, tr, L);
+      if (tr.spec.x === HOLLOW.x) hollow(c, r, tr, L, spots);
+    },
     groundRows: 2,
-    accentRate: 0.12,
+    accentRate: 0.17,
     amber: 0xd9a04a,
     blossom: 0xd9c2ff,
     boughs: 3,
@@ -171,6 +198,85 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
     cover: (x) => 0.66 + 0.1 * Math.sin(x / 700),
     floor: (c, r, b) => undergrowth(c, r, b, spots),
   };
+}
+
+/** The hollow: nested arches from dark lip to warm heart, aerial roots across it, lantern fungi around it. */
+function hollow(c: Container, r: Rng, tr: Trunk, L: LightMap, spots: GlowSpot[]): void {
+  const g = c.addChild(new Graphics());
+  const w = tr.spec.w;
+  const base = tr.at(0.01, -0.04);
+  const h = HOLLOW.rise;
+  const hw = w * HOLLOW.half;
+  const wob = [r() * 6.28, r() * 6.28];
+  const arch = (k: number, lift: number): number[] => {
+    const pts: number[] = [];
+    for (let i = 0; i <= 30; i++) {
+      const a = (Math.PI * i) / 30;
+      const n = 1 + 0.07 * Math.sin(a * 5 + (wob[0] ?? 0)) + 0.04 * Math.sin(a * 11 + (wob[1] ?? 0));
+      // Pointed and a little lopsided, wider at the foot.
+      const sx = Math.cos(a) * hw * k * n * (1 - 0.3 * Math.sin(a) ** 3) * (1 + 0.25 * (1 - Math.sin(a)));
+      pts.push(
+        base.x - sx + Math.sin(a) ** 2 * hw * 0.12,
+        base.y + 20 - Math.sin(a) ** 0.75 * h * k * n - lift,
+      );
+    }
+    return pts;
+  };
+  // A swollen lip of bark around the opening, lit on the side facing the key.
+  g.poly(arch(1.16, 0)).fill({ color: LOOK.bark.dark, alpha: 0.55 });
+  g.poly(arch(1.0, 0)).fill(0x04090f);
+  g.poly(arch(0.86, 0)).fill(0x1c0f1c);
+  g.poly(arch(0.68, 0)).fill(0x4a2226);
+  g.poly(arch(0.48, 0)).fill(0x82402a);
+  g.poly(arch(0.28, 0)).fill(0xb87038);
+  L.reset(base.x, base.y - h * 0.45, hw * 1.5, h * 0.75, 0.97);
+  L.lit(base.x, base.y - h * 0.3, hw * 0.9, h * 0.5, 0.5);
+  // Aerial roots and moss hanging across the mouth.
+  for (let i = 0; i < 9; i++) {
+    const u = rr(r, -0.85, 0.85);
+    const x = base.x + u * hw;
+    const top = base.y - h * (0.5 + 0.42 * (1 - u * u)) * rr(r, 0.9, 1);
+    const len = rr(r, 90, 300);
+    const mid = { x: x + rr(r, -16, 16), y: top + len * 0.5 };
+    g.poly(
+      taper(quad({ x, y: top }, mid, { x: x + rr(r, -26, 26), y: top + len }), rr(r, 6, 12), 1.5, 8),
+    ).fill(i % 3 === 0 ? LOOK.bark.dark : 0x0a141a);
+  }
+  // Lantern fungi climbing both edges and up the trunk: small warm bulbs (their glow is live).
+  const lg = c.addChild(new Graphics());
+  for (let i = 0; i < HOLLOW.lanterns; i++) {
+    const t = 0.03 + (i / HOLLOW.lanterns) * 0.5 + rr(r, -0.015, 0.015);
+    const side = i % 2 === 0 ? 1 : -1;
+    const p = tr.at(t, side * rr(r, 0.42, 0.86));
+    const size = rr(r, 5, 9);
+    lg.poly(
+      taper(
+        quad(p, { x: p.x + side * 4, y: p.y + size }, { x: p.x + side * 6, y: p.y + size * 2.2 }),
+        3,
+        2,
+        4,
+      ),
+    ).fill(LOOK.bark.dark);
+    lg.poly(blob(p.x, p.y, size * 0.8, size, r, 0.2, 12)).fill(HOLLOW.lantern);
+    spots.push({ x: p.x, y: p.y, r: size * 4.5, color: HOLLOW.lantern });
+  }
+  // The heart of the hollow: two soft warm glows, the big one spilling onto the lip.
+  spots.push({ x: base.x, y: base.y - h * 0.3, r: hw * 1.5, color: HOLLOW.glow, alpha: HOLLOW.glowAlpha });
+  spots.push({
+    x: base.x,
+    y: base.y - h * 0.42,
+    r: h * 0.62,
+    color: HOLLOW.glow,
+    alpha: HOLLOW.glowAlpha * 0.5,
+  });
+  // High in the mouth too: the playfield's raised ground hides the foot of the tree from below.
+  spots.push({
+    x: base.x + hw * 0.1,
+    y: base.y - h * 0.62,
+    r: hw * 1.2,
+    color: HOLLOW.glow,
+    alpha: HOLLOW.glowAlpha * 0.8,
+  });
 }
 
 /** What makes a trunk old: knots and hollows, broken stubs, shelf fungi, lichen. */
@@ -272,19 +378,57 @@ function undergrowth(c: Container, r: Rng, b: ForestBuild, spots: GlowSpot[]): v
   }
   const g = c.addChild(new Graphics());
   for (const cx of MID.glowClusters) {
-    // Cyan and plentiful in the left glade, violet in the old stand on the right.
+    // Cyan in the left glade, violet in the old stand on the right. Each cluster is a few uneven
+    // knots at different heights and depths, never a row.
     const z = zoneWeights(playfieldX(cx));
-    const n = Math.round((MID.glowCaps[0] + r() * (MID.glowCaps[1] - MID.glowCaps[0])) * (0.6 + 0.5 * z.l));
     const violet = r() < 0.08 + 0.8 * z.r;
     const cap = violet ? mix(PALETTE.glowViolet, 0xffffff, 0.15) : PALETTE.glowCyan;
-    for (let i = 0; i < n; i++) {
-      const x = cx + rr(r, -110, 110);
-      const y = b.groundAt(x) - rr(r, 10, 50);
-      const size = rr(r, 12, 30);
-      mushroom(g, x, y, size, r, cap, mix(cap, PALETTE.shadow, 0.6));
-      spots.push({ x, y: y - size * 1.2, r: size * 2.6, color: cap });
+    const knots = 1 + Math.floor(r() * 3);
+    for (let k = 0; k < knots; k++) {
+      const kx = cx + rr(r, -1, 1) * rr(r, 40, 230);
+      // 0 = on the ground line, 1 = up on a mound or root, 2 = sunk back into the mist bed.
+      const tier = Math.floor(r() * 3);
+      const ky =
+        b.groundAt(kx) + (tier === 0 ? -rr(r, 10, 40) : tier === 1 ? -rr(r, 70, 170) : rr(r, 40, 130));
+      const scale = tier === 2 ? 0.6 : 1;
+      const n = Math.round(rr(r, MID.glowCaps[0], MID.glowCaps[1]) * 0.45);
+      for (let i = 0; i < n; i++) {
+        const x = kx + rr(r, -1, 1) ** 3 * 70;
+        const y = ky + rr(r, -14, 14);
+        const size = rr(r, 10, 26) * scale;
+        mushroom(g, x, y, size, r, cap, mix(cap, PALETTE.shadow, 0.6));
+        spots.push({
+          x,
+          y: y - size * 1.2,
+          r: size * 2.4,
+          color: cap,
+          alpha: MID.glowAlpha * (tier === 2 ? 0.5 : 0.9),
+        });
+      }
+      spots.push({ x: kx, y: ky - 30, r: 110 * scale, color: cap, alpha: MID.glowAlpha * 0.4 });
     }
-    spots.push({ x: cx, y: b.groundAt(cx) - 50, r: 170, color: cap });
+  }
+  // The mist bed below the fern line: dark fronds and saplings poking through, in receding rows.
+  const dark = { ...FERN, light: 0.1 };
+  const bed = 1000 / MID.bedPlants;
+  for (let row = 2; row >= 1; row--) {
+    for (let x = x0; x < x1; x += bed * rr(r, 0.5, 1.6)) {
+      const y = b.groundAt(x) + row * rr(r, 90, 150);
+      const gg = c.addChild(new Graphics());
+      if (r() < 0.6) {
+        fern(gg, x, y, rr(r, 150, 260), r, dark, 7 + Math.floor(r() * 5));
+      } else {
+        // A tuft of tall blades fanning out of the mist.
+        const blades = 3 + Math.floor(r() * 4);
+        for (let k = 0; k < blades; k++) {
+          const hgt = rr(r, 110, 250);
+          const lean = rr(r, -0.5, 0.5) * hgt;
+          const tip = { x: x + lean, y: y - hgt };
+          gg.poly(taper(quad({ x, y }, { x: x + lean * 0.25, y: y - hgt * 0.6 }, tip), rr(r, 7, 12), 1, 8));
+        }
+        gg.fill(mix(LOOK.bark.dark, dark.dark, 0.5));
+      }
+    }
   }
 }
 
@@ -348,6 +492,7 @@ export class MidLayer implements EnvModule {
         weight: (x) => 0.45 + 0.55 * zoneWeights(playfieldX(x)).r,
       }),
       MID.bakeScale,
+      { ...ZONE, anchorX: ctx.layers.anchor.x },
     );
     layer.addChild(this.sway.container);
 
@@ -362,7 +507,7 @@ export class MidLayer implements EnvModule {
       s.tint = sp.color;
       s.blendMode = 'add';
       glowLayer.addChild(s);
-      this.glows.push({ s, phase: r() * 6.283, base: MID.glowAlpha * (sp.r > 100 ? 0.55 : 1) });
+      this.glows.push({ s, phase: r() * 6.283, base: sp.alpha ?? MID.glowAlpha });
     }
     for (let i = 0; i < MID.fallingLeaves; i++) {
       const size = rr(r, 9, 16);
@@ -393,7 +538,7 @@ export class MidLayer implements EnvModule {
 
   update(frame: SceneFrame): void {
     const t = frame.clock;
-    this.sway.update(t, this.ctx.layers.visible('mid', frame.camera));
+    this.sway.update(t, frame.camera.x);
     this.view.update(t, frame.camera.x);
     for (const g of this.glows) {
       g.s.alpha =

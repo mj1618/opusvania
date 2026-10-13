@@ -269,7 +269,10 @@ export function buildForest(plan: ForestPlan): ForestBuild {
     const boughs = p.boughs ?? plan.boughs ?? 2;
     for (let k = 0; k < nb + boughs; k++) {
       const bough = k >= nb;
-      const dir = rt() < 0.5 ? -1 : 1;
+      let dir = rt() < 0.5 ? -1 : 1;
+      // Next to the light well, boughs reach away from it (a bare bough across the well is a beam).
+      if (plan.clearWell && bough && Math.abs(p.x - plan.wellX) < plan.wellHalf * 2.6)
+        dir = p.x < plan.wellX ? -1 : 1;
       const cb = canopyBottom(p.x);
       const yb = bough
         ? Math.max(top + 40, cb - R * rr(rt, 0.1, 1.5))
@@ -384,6 +387,8 @@ export function buildForest(plan: ForestPlan): ForestBuild {
   }
   if (plan.floor) plan.floor(content, rg, build);
 
+  // Leaves around every opening are backlit by the sky behind it.
+  for (const o of openings) L.lit(o.x, o.y, o.r * 2.3, o.r * 2.0, 0.42);
   // The key light floods the canopy around the well.
   L.lit(plan.wellX + R, plan.canopyY - R * 0.5, plan.wellHalf * 2.2, R * 3.2, 0.3);
   if (plan.lights) plan.lights(L);
@@ -446,12 +451,24 @@ export function hangers(plan: ForestPlan, b: ForestBuild, atm: Atmosphere, spec:
     items.push({
       x: a.x,
       y: a.y,
-      w: len * 0.4 + ls * 3,
+      // Narrow strips: transparent texels still cost fill, and the bend comes from the mesh.
+      w: len * 0.16 + ls * 3,
       h: len + ls,
       amp: spec.amp * rr(r, 0.7, 1.3),
       phase: r(),
       draw: (g) =>
-        vine(g, 0, 0, len, prng(seed), stem, [lk.dark, lk.mid, lk.mid, lk.lit], ls, Math.max(1.6, R / 60)),
+        vine(
+          g,
+          0,
+          0,
+          len,
+          prng(seed),
+          stem,
+          [lk.dark, lk.mid, lk.mid, lk.lit],
+          ls,
+          Math.max(1.6, R / 60),
+          0.4,
+        ),
     });
   }
   for (let i = 0; i < spec.moss; i++) {
@@ -466,7 +483,7 @@ export function hangers(plan: ForestPlan, b: ForestBuild, atm: Atmosphere, spec:
     items.push({
       x: a.x,
       y: a.y,
-      w: w * 1.6 + len * 0.3 + look.leaf.size * 3,
+      w: w * 1.5 + len * 0.18 + look.leaf.size * 3,
       h: len + 4,
       up,
       amp: spec.amp * rr(r, 0.5, 1),
@@ -493,8 +510,8 @@ export function hangers(plan: ForestPlan, b: ForestBuild, atm: Atmosphere, spec:
       w: rx * 2 + pad * 2,
       h: ry * 1.9 + pad,
       up: ry * 0.5 + pad,
-      amp: spec.amp * 0.45 * rr(r, 0.6, 1.2),
-      flutter: 1,
+      amp: spec.amp * 0.75 * rr(r, 0.6, 1.2),
+      flutter: 2.2,
       phase: r(),
       draw: (g) => foliageMass(g, 0, ry * 0.55, rx, ry, prng(seed), lk, 1.1),
     });

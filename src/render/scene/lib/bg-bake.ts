@@ -6,8 +6,8 @@
  *                 alpha (lit toward the key light), painterly mottle, height fog and the light
  *                 well. The result is a handful of static sprites.
  *   FogSheet      a live quad of drifting mist (two scrolling taps of a small noise texture).
- *   SwaySet       hanging vines / moss / canopy fronds as sprites from one baked atlas, rotated by
- *                 wind() each frame.
+ *   SwaySet       hanging vines / moss / canopy fronds from one baked atlas, bent in a vertex shader.
+ *   FarPairView   sky + the two farthest layers in one opaque pass.
  *
  * All colours are premultiplied in shaders (Pixi's convention).
  */
@@ -18,7 +18,6 @@ import {
   Matrix,
   Mesh,
   MeshGeometry,
-  MeshSimple,
   type Renderer,
   RenderTexture,
   Shader,
@@ -27,7 +26,7 @@ import {
   UniformGroup,
 } from 'pixi.js';
 import type { LayerRect } from '../layer-tree';
-import { mix, prng, wind } from './look';
+import { mix, prng } from './look';
 
 export const BG_VERT = `
 in vec2 aPosition;
@@ -41,6 +40,12 @@ void main() {
   gl_Position = vec4((mvp * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
   vUV = aUV;
 }`;
+
+/**
+ * The scene's three moods, by playfield x: the cool moonlit glade on the left, the golden light
+ * well in the middle, the old dusk-lit stand on the right. Weights blend smoothly between them.
+ */
+export const ZONES = { l0: 1400, l1: 2500, r0: 3500, r1: 4500 } as const;
 
 export function rgb(hex: number): Float32Array {
   return new Float32Array([((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255]);
@@ -147,6 +152,13 @@ export interface Atmosphere {
   litGain?: number;
   sunMix?: number;
   sunColor?: number;
+  /**
+   * Sun colour in the left / right zone (moonlit silver-blue, dusk rose-gold). Baked by position, so
+   * it needs the layer's parallax to know which playfield x a point sits behind.
+   */
+  sunColorL?: number;
+  sunColorR?: number;
+  zoneParallax?: number;
   /** Multiplier applied in full light-map shadow (cool and dark). */
   shadeTint?: readonly [number, number, number];
   /** Final value gain and saturation of the local colours before fog (1 = unchanged). */
@@ -175,6 +187,9 @@ uniform sampler2D uLightMap;
 uniform vec4 uLmRect;
 uniform vec4 uSun;
 uniform vec4 uShade;
+uniform vec3 uSunL;
+uniform vec3 uSunR;
+uniform vec3 uZoneMap;
 float A(vec2 uv) { return texture(uRaw, uv).a; }
 void main() {
   vec4 c = texture(uRaw, vUV);
@@ -205,7 +220,11 @@ void main() {
   col *= 1.0 + uShade.a * lit;
   // Lit foliage turns toward the sun colour at its own brightness (translucent, yellow-green).
   float lum = dot(col, vec3(0.3, 0.55, 0.15));
-  col = mix(col, uSun.rgb * (0.35 + 1.6 * lum), lit * uSun.a);
+  float pxe = uZoneMap.x + (p.x - uZoneMap.x) * uZoneMap.y;
+  float zl = (1.0 - smoothstep(${ZONES.l0}.0, ${ZONES.l1}.0, pxe)) * uZoneMap.z;
+  float zr = smoothstep(${ZONES.r0}.0, ${ZONES.r1}.0, pxe) * uZoneMap.z;
+  vec3 sun = mix(mix(uSun.rgb, uSunL, zl), uSunR, zr);
+  col = mix(col, sun * (0.35 + 1.6 * lum), lit * uSun.a);
   col = mix(vec3(dot(col, vec3(0.3, 0.55, 0.15))), col, uGrade.y) * uGrade.x;
   vec2 dw = (p - uWell.xy) / uWell.z;
   float w = exp(-dot(dw, dw));
@@ -421,6 +440,12 @@ export function bakeLayer(
               type: 'vec4<f32>',
             },
             uShade: { value: new Float32Array([st[0], st[1], st[2], atm.litGain ?? 1.2]), type: 'vec4<f32>' },
+            uSunL: { value: rgb(atm.sunColorL ?? atm.sunColor ?? 0xc9d977), type: 'vec3<f32>' },
+            uSunR: { value: rgb(atm.sunColorR ?? atm.sunColor ?? 0xc9d977), type: 'vec3<f32>' },
+            uZoneMap: {
+              value: new Float32Array([2880, 1 / (atm.zoneParallax ?? 1), atm.zoneParallax ? 1 : 0]),
+              type: 'vec3<f32>',
+            },
             uRawRect: {
               value: new Float32Array([tx - pad, ty - pad, rawW / scale, rawH / scale]),
               type: 'vec4<f32>',
@@ -495,12 +520,6 @@ export interface RustleSpec {
   y0: number;
   y1: number;
 }
-
-/**
- * The scene's three moods, by playfield x: the cool moonlit glade on the left, the golden light
- * well in the middle, the old dusk-lit stand on the right. Weights blend smoothly between them.
- */
-export const ZONES = { l0: 1400, l1: 2500, r0: 3500, r1: 4500 } as const;
 
 export function zoneWeights(x: number): { l: number; r: number } {
   const st = (a: number, b: number, v: number): number => {
@@ -688,15 +707,70 @@ export interface SwayItem {
 
 const SWAY_SEGMENTS = 6;
 
+const SWAY_VERT = `
+in vec2 aPosition;
+in vec2 aUV;
+in vec4 aSway;
+in float aFlutter;
+out vec2 vUV;
+out float vX;
+uniform mat3 uProjectionMatrix;
+uniform mat3 uWorldTransformMatrix;
+uniform mat3 uTransformMatrix;
+uniform vec4 uSwayT;
+// The same travelling wave as wind() in look.ts.
+float windAt(float x, float clock, float phase) {
+  float t = clock * 0.9 - x * 0.0016 + phase * 6.283;
+  float gust = 0.5 + 0.5 * sin(clock * 0.23 - x * 0.0005);
+  return sin(t) * (0.35 + 0.45 * gust) + sin(t * 2.7 + 1.3) * 0.14 + sin(t * 5.1) * 0.05;
+}
+void main() {
+  float tt = aSway.w;
+  // The tip lags the root: it feels the wind a little later.
+  float w = windAt(aSway.x, uSwayT.x - tt * 0.55, aSway.y);
+  float quick = aFlutter * sin(uSwayT.x * 3.3 + aSway.y * 40.0 + tt * 3.0) * 0.35;
+  vec2 pos = aPosition;
+  pos.x += (w + quick) * aSway.z * pow(tt, 1.6);
+  mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+  gl_Position = vec4((mvp * vec3(pos, 1.0)).xy, 0.0, 1.0);
+  vUV = aUV;
+  vX = pos.x;
+}`;
+
+const SWAY_FRAG = `#version 300 es
+precision highp float;
+in vec2 vUV;
+in float vX;
+out vec4 fragColor;
+uniform sampler2D uTex;
+uniform vec4 uSwayT;
+uniform vec3 uTintL;
+uniform vec3 uTintR;
+void main() {
+  vec4 c = texture(uTex, vUV);
+  float px = vX + uSwayT.y;
+  float zl = 1.0 - smoothstep(${ZONES.l0}.0, ${ZONES.l1}.0, px);
+  float zr = smoothstep(${ZONES.r0}.0, ${ZONES.r1}.0, px);
+  c.rgb *= mix(vec3(1.0), uTintL, zl) * mix(vec3(1.0), uTintR, zr);
+  fragColor = c;
+}`;
+
 /**
- * Vines, moss and fronds drawn into one atlas, each shown as a narrow strip mesh that bends along
- * its length: the top stays put, the tip swings furthest, with a lagging ripple running down it.
+ * Vines, moss and fronds drawn into one atlas and shown as ONE mesh of narrow strips. The vertex
+ * shader bends each strip along its length (top fixed, tip swings furthest and lags) with the same
+ * wave as wind(); the fragment shader grades it by zone like the baked layer. No per-frame CPU
+ * work beyond two uniforms.
  */
 export class SwaySet {
   readonly container = new Container({ label: 'sway' });
-  private readonly strips: Array<{ m: MeshSimple; item: SwayItem; base: Float32Array }> = [];
+  private uniforms: UniformGroup | null = null;
 
-  constructor(renderer: Renderer, items: readonly SwayItem[], scale: number) {
+  constructor(
+    renderer: Renderer,
+    items: readonly SwayItem[],
+    scale: number,
+    private readonly zone?: ZoneSpec,
+  ) {
     if (items.length === 0) return;
     const pad = 3;
     const maxW = 2048 / scale;
@@ -740,46 +814,239 @@ export class SwaySet {
     });
     sheet.destroy({ children: true });
     const n = SWAY_SEGMENTS;
-    for (const sl of slots) {
-      const up = pad + (sl.item.up ?? 0);
-      const verts = new Float32Array((n + 1) * 4);
-      const uvs = new Float32Array((n + 1) * 4);
-      const idx = new Uint32Array(n * 6);
+    const per = (n + 1) * 2;
+    const pos = new Float32Array(slots.length * per * 2);
+    const uvs = new Float32Array(slots.length * per * 2);
+    const sway = new Float32Array(slots.length * per * 4);
+    const flut = new Float32Array(slots.length * per);
+    const idx = new Uint32Array(slots.length * n * 6);
+    slots.forEach((sl, k) => {
+      const it = sl.item;
+      const up = pad + (it.up ?? 0);
       for (let i = 0; i <= n; i++) {
         const v = i / n;
         const ly = -up + sl.h * v;
-        verts.set([-sl.w / 2, ly, sl.w / 2, ly], i * 4);
+        const tt = Math.max(0, ly / it.h);
         const ty = (sl.y + sl.h * v) / sheetH;
-        uvs.set([sl.x / sheetW, ty, (sl.x + sl.w) / sheetW, ty], i * 4);
-        if (i < n) idx.set([i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2], i * 6);
+        for (let side = 0; side < 2; side++) {
+          const vi = k * per + i * 2 + side;
+          pos.set([it.x + (side === 0 ? -sl.w / 2 : sl.w / 2), it.y + ly], vi * 2);
+          uvs.set([(sl.x + side * sl.w) / sheetW, ty], vi * 2);
+          sway.set([it.x, it.phase, it.amp * it.h, tt], vi * 4);
+          flut[vi] = it.flutter ?? 0;
+        }
+        if (i < n) {
+          const b = k * per + i * 2;
+          idx.set([b, b + 1, b + 2, b + 1, b + 3, b + 2], (k * n + i) * 6);
+        }
       }
-      const m = new MeshSimple({ texture: rt, vertices: verts.slice(), uvs, indices: idx });
-      m.autoUpdate = false;
-      m.position.set(sl.item.x, sl.item.y);
-      this.container.addChild(m);
-      this.strips.push({ m, item: sl.item, base: verts });
+    });
+    const geometry = new MeshGeometry({ positions: pos, uvs, indices: idx });
+    geometry.addAttribute('aSway', { buffer: sway, format: 'float32x4' });
+    geometry.addAttribute('aFlutter', { buffer: flut, format: 'float32' });
+    this.uniforms = new UniformGroup({
+      uSwayT: { value: new Float32Array([0, 0, 0, 0]), type: 'vec4<f32>' },
+      uTintL: { value: new Float32Array(zone?.tintL ?? [1, 1, 1]), type: 'vec3<f32>' },
+      uTintR: { value: new Float32Array(zone?.tintR ?? [1, 1, 1]), type: 'vec3<f32>' },
+    });
+    const shader = Shader.from({
+      gl: { vertex: SWAY_VERT, fragment: SWAY_FRAG },
+      resources: { uTex: rt.source, sway: this.uniforms },
+    });
+    this.container.addChild(new Mesh({ geometry, shader }));
+  }
+
+  update(clock: number, camX: number): void {
+    if (!this.uniforms) return;
+    const shift = this.zone ? (camX - this.zone.anchorX) * (1 - this.zone.parallax) : 0;
+    (this.uniforms.uniforms.uSwayT as Float32Array).set([clock, shift, 0, 0]);
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The two farthest layers and the sky in one pass
+// ---------------------------------------------------------------------------------------------
+
+/** GLSL for one layer's mist + wells, with every uniform suffixed (0 = farther layer, 1 = nearer). */
+function mistGLSL(k: 0 | 1): string {
+  return `
+vec4 mist${k}(vec2 p, float zl, float zr, float wisp) {
+  vec3 base = mix(mix(uMist${k}, uMistL${k}, zl), uMistR${k}, zr);
+  float low = smoothstep(uBand${k}.x, uBand${k}.y, p.y);
+  float band = mix(uBand${k}.z, 1.0, low);
+  vec2 dw = (p - uWell${k}.xy) / uWell${k}.z;
+  float w = exp(-dot(dw, dw));
+  float breathe = 1.0 + 0.07 * sin(uTime * 0.37);
+  float veil = mix(1.0, wisp * 1.7, uNoiseP${k}.z * (1.0 - 0.75 * low));
+  float a0 = uBand${k}.w * band * veil + w * uWell${k}.w * breathe * (0.7 + 0.3 * wisp);
+  vec3 acc = mix(base, uWarm${k}, clamp(w * 1.15, 0.0, 1.0)) * a0;
+  vec2 dl = (p - uWellL${k}.xy) / uWellL${k}.z;
+  float al = exp(-dot(dl, dl)) * uWellL${k}.w * uZone.y * (0.75 + 0.25 * wisp);
+  vec2 dr = (p - uWellR${k}.xy) / uWellR${k}.z;
+  float ar = exp(-dot(dr, dr)) * uWellR${k}.w * uZone.z * breathe * (0.75 + 0.25 * wisp);
+  acc += uWellLCol${k} * al + uWellRCol${k} * ar;
+  float a = a0 + al + ar;
+  float s = min(a, 0.97) / max(a, 0.0001);
+  return vec4(acc * s, a * s);
+}`;
+}
+
+function mistDecl(k: 0 | 1): string {
+  return [
+    'vec3 uMist',
+    'vec3 uWarm',
+    'vec4 uBand',
+    'vec4 uWell',
+    'vec3 uNoiseP',
+    'vec3 uTintL',
+    'vec3 uTintR',
+  ]
+    .concat(['vec3 uMistL', 'vec3 uMistR', 'vec4 uWellL', 'vec3 uWellLCol', 'vec4 uWellR', 'vec3 uWellRCol'])
+    .map((d) => `uniform ${d}${k};`)
+    .join('\n');
+}
+
+const PAIR_FRAG = `#version 300 es
+precision highp float;
+in vec2 vUV;
+out vec4 fragColor;
+uniform sampler2D uTex0;
+uniform sampler2D uTex1;
+uniform sampler2D uSky;
+uniform sampler2D uNoise;
+uniform vec4 uRect;
+uniform vec4 uRect0;
+uniform float uTime;
+uniform vec4 uCam;
+uniform vec4 uPair;
+uniform vec4 uSkyRect;
+uniform vec3 uRustle;
+uniform vec4 uZone;
+${mistDecl(0)}
+${mistDecl(1)}
+${mistGLSL(0)}
+${mistGLSL(1)}
+void main() {
+  vec2 p1 = uRect.xy + vUV * uRect.zw;
+  // The same pixel in the farther layer's coordinates, and in logical view coordinates.
+  vec2 p0 = p1 + uCam.xy * (uPair.z - uPair.w);
+  vec2 view = (p1 - (uPair.xy + uCam.xy * uPair.w)) * uCam.z + uSkyRect.zw * 0.5 + uSkyRect.xy;
+  vec3 sky = texture(uSky, (view - uSkyRect.xy) / uSkyRect.zw).rgb;
+  float px = p1.x + uZone.x;
+  float zl = 1.0 - smoothstep(${ZONES.l0}.0, ${ZONES.l1}.0, px);
+  float zr = smoothstep(${ZONES.r0}.0, ${ZONES.r1}.0, px);
+  vec2 uv = vUV;
+  float sw = uRustle.x * (1.0 - smoothstep(uRustle.y, uRustle.z, p1.y));
+  vec2 rn = vec2(0.0);
+  if (sw > 0.0) {
+    sw *= smoothstep(0.0, 0.02, vUV.x) * (1.0 - smoothstep(0.98, 1.0, vUV.x));
+    vec2 q = p1 * 0.0019 + vec2(uTime * 0.045, uTime * 0.012);
+    rn = (texture(uNoise, q).rb - 0.5) * 1.5 * sw;
+    uv += rn / uRect.zw;
+  }
+  vec4 c0 = texture(uTex0, (p0 + rn * 0.6 - uRect0.xy) / uRect0.zw);
+  c0.rgb *= mix(vec3(1.0), uTintL0, zl) * mix(vec3(1.0), uTintR0, zr);
+  float s0 = uNoiseP0.x;
+  vec4 n0 = texture(uNoise, vec2(p0.x * s0 + uTime * uNoiseP0.y, p0.y * s0 * 2.6));
+  vec4 m0 = mist0(p0, zl, zr, smoothstep(0.3, 0.85, n0.r * 0.65 + n0.g * 0.5));
+  vec4 acc = c0 * (1.0 - m0.a) + m0;
+  vec4 c1 = texture(uTex1, uv);
+  c1.rgb *= mix(vec3(1.0), uTintL1, zl) * mix(vec3(1.0), uTintR1, zr);
+  acc = c1 + acc * (1.0 - c1.a);
+  float s1 = uNoiseP1.x;
+  float n = texture(uNoise, vec2(p1.x * s1 + uTime * uNoiseP1.y, p1.y * s1 * 2.6)).r;
+  float m = texture(uNoise, vec2(p1.x * s1 * 2.3 - uTime * uNoiseP1.y * 1.7, p1.y * s1 * 4.1 + uTime * uNoiseP1.y * 0.4)).g;
+  vec4 m1 = mist1(p1, zl, zr, smoothstep(0.3, 0.85, n * 0.65 + m * 0.5));
+  acc = acc * (1.0 - m1.a) + m1;
+  fragColor = vec4(acc.rgb + sky * (1.0 - acc.a), 1.0);
+}`;
+
+export interface PairLayer {
+  fog: FogSpec;
+  zone: ZoneSpec;
+}
+
+/**
+ * Sky + the two farthest layers + both their mists in ONE opaque pass (they were three blended
+ * full-screen passes). Drawn on the nearer layer's tiles; the farther layer (a single tile) and
+ * the quarter-size sky texture are looked up at the matching place for the current camera.
+ * Anything that used to sit between those layers has to be drawn after this view.
+ */
+export class FarPairView {
+  readonly container = new Container({ label: 'baked+fog' });
+  private readonly uniforms: UniformGroup;
+
+  constructor(
+    far0: BakedTile,
+    tiles1: readonly BakedTile[],
+    l0: PairLayer,
+    private readonly l1: PairLayer,
+    rustle: RustleSpec,
+    sky: { texture: Texture; x: number; y: number; w: number; h: number },
+    private readonly anchor: { x: number; y: number },
+  ) {
+    const well = (z: ZoneWell | undefined): Float32Array =>
+      new Float32Array(z ? [z.x, z.y, z.r, z.alpha] : [0, 0, 1, 0]);
+    const u: Record<string, { value: unknown; type: string }> = {
+      uTime: { value: 0, type: 'f32' },
+      uCam: { value: new Float32Array([0, 0, 1, 0]), type: 'vec4<f32>' },
+      uPair: {
+        value: new Float32Array([anchor.x, anchor.y, l0.zone.parallax, l1.zone.parallax]),
+        type: 'vec4<f32>',
+      },
+      uSkyRect: { value: new Float32Array([sky.x, sky.y, sky.w, sky.h]), type: 'vec4<f32>' },
+      uRect0: { value: new Float32Array([far0.x, far0.y, far0.w, far0.h]), type: 'vec4<f32>' },
+      uRustle: { value: new Float32Array([rustle.amp, rustle.y0, rustle.y1]), type: 'vec3<f32>' },
+      uZone: { value: new Float32Array([0, 0, 0, 0]), type: 'vec4<f32>' },
+    };
+    [l0, l1].forEach(({ fog, zone }, k) => {
+      u[`uMist${k}`] = { value: rgb(fog.color), type: 'vec3<f32>' };
+      u[`uWarm${k}`] = { value: rgb(fog.warm), type: 'vec3<f32>' };
+      u[`uBand${k}`] = {
+        value: new Float32Array([fog.yTop, fog.yFull, fog.alphaTop, fog.alpha]),
+        type: 'vec4<f32>',
+      };
+      u[`uWell${k}`] = {
+        value: new Float32Array([fog.wellX, fog.wellY, fog.wellR, fog.wellAlpha]),
+        type: 'vec4<f32>',
+      };
+      u[`uNoiseP${k}`] = { value: new Float32Array([fog.scale, fog.speed, fog.wisp]), type: 'vec3<f32>' };
+      u[`uTintL${k}`] = { value: new Float32Array(zone.tintL), type: 'vec3<f32>' };
+      u[`uTintR${k}`] = { value: new Float32Array(zone.tintR), type: 'vec3<f32>' };
+      u[`uMistL${k}`] = { value: rgb(zone.mistL), type: 'vec3<f32>' };
+      u[`uMistR${k}`] = { value: rgb(zone.mistR), type: 'vec3<f32>' };
+      u[`uWellL${k}`] = { value: well(zone.wellL), type: 'vec4<f32>' };
+      u[`uWellLCol${k}`] = { value: rgb(zone.wellL?.color ?? 0), type: 'vec3<f32>' };
+      u[`uWellR${k}`] = { value: well(zone.wellR), type: 'vec4<f32>' };
+      u[`uWellRCol${k}`] = { value: rgb(zone.wellR?.color ?? 0), type: 'vec3<f32>' };
+    });
+    this.uniforms = new UniformGroup(u as ConstructorParameters<typeof UniformGroup>[0]);
+    for (const t of tiles1) {
+      const shader = Shader.from({
+        gl: { vertex: BG_VERT, fragment: PAIR_FRAG },
+        resources: {
+          uTex0: far0.texture.source,
+          uTex1: t.texture.source,
+          uSky: sky.texture.source,
+          uNoise: noiseTexture().source,
+          view: this.uniforms,
+          tile: new UniformGroup({
+            uRect: { value: new Float32Array([t.x, t.y, t.w, t.h]), type: 'vec4<f32>' },
+          }),
+        },
+      });
+      const mesh = new Mesh({ geometry: quadGeometry(t.x, t.y, t.w, t.h), shader });
+      mesh.blendMode = 'none';
+      this.container.addChild(mesh);
     }
   }
 
-  update(clock: number, vis: LayerRect): void {
-    const x0 = vis.x - 300;
-    const x1 = vis.x + vis.w + 300;
-    for (const { m, item, base } of this.strips) {
-      const on = item.x > x0 && item.x < x1;
-      m.visible = on;
-      if (!on) continue;
-      const v = m.vertices;
-      const fl = item.flutter ?? 0;
-      for (let i = 0; i < v.length; i += 2) {
-        const by = base[i + 1] ?? 0;
-        const t = by <= 0 ? 0 : by / item.h;
-        // The tip lags the root: sample the wind a little in the past further down.
-        const wv = wind(item.x, clock - t * 0.55, item.phase);
-        const quick = fl * Math.sin(clock * 3.3 + item.phase * 40 + t * 3) * 0.35;
-        v[i] = (base[i] ?? 0) + (wv + quick) * item.amp * t ** 1.6 * item.h;
-      }
-      m.geometry.getBuffer('aPosition').update();
-    }
+  update(clock: number, cam: { x: number; y: number; zoom: number }): void {
+    const u = this.uniforms.uniforms;
+    u.uTime = clock;
+    const z = zoneWeights(cam.x);
+    (u.uCam as Float32Array).set([cam.x - this.anchor.x, cam.y - this.anchor.y, cam.zoom, 0]);
+    (u.uZone as Float32Array).set([(cam.x - this.anchor.x) * (1 - this.l1.zone.parallax), z.l, z.r, 0]);
   }
 }
 

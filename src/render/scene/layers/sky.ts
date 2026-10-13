@@ -48,6 +48,16 @@ export const SKY = {
   keyDimR: 0.55,
 } as const;
 
+/**
+ * The shaded sky: a small texture covering x -8..VIEW_W+8, y -8..VIEW_H+8 of the logical view, and
+ * the sprite that shows it. far.ts composites the texture itself in its far-pair pass and hides
+ * the sprite (one full-screen pass less).
+ */
+export const SKY_OUTPUT: { texture: RenderTexture | null; sprite: Sprite | null } = {
+  texture: null,
+  sprite: null,
+};
+
 /** Bloom centre in logical view coordinates for a camera (shared with far.ts for its light well). */
 export function skyGlowAt(
   cam: { x: number; y: number; zoom: number },
@@ -199,6 +209,8 @@ export class SkyLayer implements EnvModule {
     });
     this.toTarget = new Matrix(k, 0, 0, k, 8 * k, 8 * k);
     const sprite = new Sprite(this.target);
+    SKY_OUTPUT.texture = this.target;
+    SKY_OUTPUT.sprite = sprite;
     sprite.label = 'sky-glow';
     sprite.position.set(-8, -8);
     sprite.setSize(VIEW_W + 16, VIEW_H + 16);
