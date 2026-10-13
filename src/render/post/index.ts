@@ -128,6 +128,8 @@ export class PostStage {
     u.uVignette[1] = vignette.outer;
     u.uVignette[2] = vignette.strength;
     u.uVignette[3] = vignette.tintAmount;
+    u.uSepLook[2] = vignette.lightKeep;
+    u.uSepLook[3] = vignette.lightFrom;
     zc(ZONE_GRADE.vignetteTint, vignette.tint, u.uVignetteTint);
     u.uVignetteTint[3] = zn(ZONE_GRADE.saturation, grade.saturation);
     u.uDeep[0] = Math.max(grade.toe, 1e-3);
@@ -155,6 +157,23 @@ export class PostStage {
     u.uProtect[0] = lights.heroProtect;
     u.uProtect[1] = lights.cap;
     u.uProtect[2] = lights.heroBloomCut;
+    u.uProtect[3] = Number(POST.debugMatte);
+    const sep = POST.separation;
+    f.softSpread = sep.spread;
+    u.uLit[3] = sep.gain;
+    u.uSep[0] = sep.pivot;
+    u.uSep[1] = Math.max(sep.width, 1e-3);
+    u.uSep[2] = sep.lift;
+    u.uSepLook[0] = sep.liftEnd[0];
+    u.uSepLook[1] = sep.liftEnd[1];
+    u.uSep[3] = sep.darken;
+    zoneColor(sep.tint, zw, u.uSepTint);
+    const sepLuma =
+      0.2126 * (u.uSepTint[0] as number) +
+      0.7152 * (u.uSepTint[1] as number) +
+      0.0722 * (u.uSepTint[2] as number);
+    for (let i = 0; i < 3; i++) u.uSepTint[i] = (u.uSepTint[i] as number) / Math.max(sepLuma, 1e-3);
+    u.uSepTint[3] = sep.desaturate;
     u.uGoalLook[0] = lights.goalCap;
     u.uGoalLook[1] = lights.goalPocket;
     u.uGoalLook[2] = lights.goalTint;

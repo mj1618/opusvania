@@ -246,6 +246,41 @@
   peak, against a glint of 110-130). At 40% with the mid canopy quieted the band was an empty black lid.
 - The "crossed dark beams" above the scene top were the playfield's leaf-knot limbs (playfield.md).
 
+## Round 15: separation behind the hero, lights at the frame edge, flame cores
+- **Measure the hero against what is behind her** with `POST.debugMatte = true` (the frame becomes the hero
+  matte; `2` shows the blurred matte): screenshot, set it, `render()`, screenshot, mask out the HUD corner
+  (top-left 300x140, it is in the matte). Body = 35th percentile luma inside the matte (~29 everywhere);
+  edge contrast = median over 12 px cells of |mean of the 7 px outside - mean of the 5 px inside|.
+  Baseline: floor walk every 80 px (`?nopickups`, 69 idle + 27 running frames) |edge| median 34, min 9;
+  the "lost" places are not worse at the edge (boulder 26, bluff 18, shrine 20-26, trunk feet 36-43), they
+  are places where the 14 px ring's mean is within ~10 of her body (typical is +30) AND the prop is busy.
+- **`POST.separation`**: the matte is boxed to 480x270, blurred two levels down and back (five tiny
+  passes, `soft[]` in pipeline.ts) and the composite pushes the BACKGROUND within ~20 px of her outline
+  away from her value: luma 28-43 and up gains up to +20 with a cool grey tint and loses half its
+  saturation, below 28 it loses up to 65%. Nothing is lifted above luma ~51-84 (`liftEnd`).
+  After: idle median 34 -> 38, p10 19 -> 24; running 34 -> 39; bluff 18 -> 23, shrine 20 -> 25 / 26 -> 28,
+  boulder 26 -> 29, lost-outline share at the trunk feet 17% -> 8-10%. That is all this lever gives while
+  staying invisible: the lift window without `liftEnd` (up to luma 76-122) measured median 42 but drew a
+  faint pale aura on plain mist at 2x. Do not widen it. The first shape (a bump that peaks one width
+  from the pivot and dies by three) did nothing: the problem props are 20-35 luma away from her.
+  The real fix is a paler, calmer stage behind the walk line at those props (scene / goal owners).
+- **Small lights keep their value at the frame edge** (`vignette.lightKeep` 0.85, `lightFrom` 0.25): the
+  vignette took 53% off a glint 34 px from the right edge (it reaches 55% at mid-height of the side
+  edges, 6% at the top middle). Sparing by brightness alone opened the frame (left-zone border 16 -> 21);
+  the pixel must also stand 1.6-3.2x above the plain brightness of the ~30 px around it. That local
+  brightness rides in the ALPHA of the bloom chain (prefilter writes the unthresholded max channel,
+  `DOWN_FRAG` carries all four channels; read from `uWide`). Border 14.3 -> 14.4 over 12 places;
+  sky-4 102 -> 211 of 216-233 unvignetted, sky-3 77 -> 94-99 of 111-115 (it is dim at source: its dormant
+  twinkle peaks at 111-134 where sky-1 peaks at 216).
+- **Lit lantern flames** (all three zones, 180 px box at the lantern, six frames each): peak luma 245-251,
+  55-130 px above 220 (a ~9-12 px core), 120-225 px above 180, the same with her 110 px or 420 px away.
+  Before this round her nearness halved it (crown: peak 222, 3 px): `goalCore` now opens from 85% of
+  the light's window and saturates at half strength.
+- Not post: the pale wedge with straight edges and a notched top behind the trunk seen from F3 is `mid`
+  layer paint (gone with `mid` hidden; post makes it darker, not lighter). The pool surface is bright at
+  source (playfield; no post: p90 120, max 255; after the grade p90 145, p99 204, max 224: the left
+  zone's exposure 1.3 lifts its body, the shoulder lowers its peaks).
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").

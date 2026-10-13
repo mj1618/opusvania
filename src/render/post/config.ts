@@ -7,6 +7,8 @@ export const POST = {
   enabled: true,
   /** Multisample the scene texture: 'auto' = only below ~2 device px per logical px. */
   msaa: 'auto' as 'auto' | 'on' | 'off',
+  /** Debug: the frame shows the hero matte (white = her) instead of the picture. Capture tools use it to find her pixels. 2 = the soft matte the separation uses. */
+  debugMatte: false as boolean | 2,
 
   bloom: {
     /** Brightness (max channel, 0..1) where things start to glow, and the soft knee around it. */
@@ -110,6 +112,31 @@ export const POST = {
     pull: 0.88,
   },
 
+  /**
+   * Separation by value BEHIND the hero, not light on her (the owner rejects halos, rims and any
+   * brightening of her). Within ~20 px of her outline (the hero matte, blurred), on the background
+   * side only, values are pushed away from her own dark value (`pivot`, 0..1 luminance of the
+   * finished picture, her body is ~0.115): from `pivot` to `pivot + width` the background gains up
+   * to `lift` and takes the cool grey `tint` (a breath of mist), from `pivot` down to
+   * `pivot - width` it loses up to `darken` of its value. Above `liftEnd` nothing is lifted: mist
+   * and sky behind her need no help, and lifting them is what showed as a halo. 0 / 0 = off.
+   */
+  separation: {
+    pivot: 0.11,
+    width: 0.06,
+    lift: 0.08,
+    darken: 0.65,
+    /** The lift fades out between these luminances: a background this light needs no help. */
+    liftEnd: [0.2, 0.33] as const,
+    /** Colour of the lift per zone [left, centre, right] and how grey the background goes under it. */
+    tint: [0x9fc4e8, 0xb9d6c0, 0x9db4ee] as const,
+    desaturate: 0.5,
+    /** 0..1: how much of the widest blur level the feather carries (1 = ~25 px, 0 = ~8 px). */
+    spread: 0.6,
+    /** Gain on the blurred matte before it is clamped to 1: higher = the full push holds farther out from her edge. */
+    gain: 4,
+  },
+
   grade: {
     exposure: 1.04,
     /** Lift of the mid-tones only (0 = none): blacks and highlights are left where they are. */
@@ -149,6 +176,14 @@ export const POST = {
     /** The corners also go cooler. */
     tint: 0x6f9bd0,
     tintAmount: 0.3,
+    /**
+     * Small lights are spared: a pixel of the scene whose brightest channel is above `lightFrom`
+     * (fully by + 0.25) AND well above the brightness of the ~30 px around it takes this much less
+     * of the vignette. Areas (mist, sky) still close the frame; a glint 30 px from the edge keeps
+     * its value (it lost half).
+     */
+    lightKeep: 0.85,
+    lightFrom: 0.25,
   },
 
   /** Grain amplitude (0..1 of full scale). Also dithers away banding in the dark gradients. */

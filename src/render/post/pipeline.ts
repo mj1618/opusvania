@@ -28,6 +28,7 @@ import {
   DOWN_FRAG,
   FINAL_VERT,
   LIGHTS_FRAG,
+  MATTE_FRAG,
   PASS_VERT,
   PREFILTER_FRAG,
   UP_FRAG,
@@ -77,6 +78,9 @@ export class PostFilter extends Filter {
     uRich: Vec;
     uGoal: Vec;
     uGoalLook: Vec;
+    uSep: Vec;
+    uSepTint: Vec;
+    uSepLook: Vec;
   };
   readonly prefilterU: { uTap: Vec; uCurve: Vec; uSaturation: number; uBoost: number; uHeroSource: number };
   readonly lightsU: {
@@ -98,6 +102,11 @@ export class PostFilter extends Filter {
   private readonly downF: Filter[] = [];
   private readonly upF: Filter[] = [];
   private readonly lightsF: Filter;
+  /** The soft hero matte: 480x270 box of the matte, two levels down, and back up (soft[4] is the result). */
+  private readonly soft: RenderTexture[];
+  private readonly softF: Filter[] = [];
+  /** 0..1: how much of the wider blur level the soft matte carries (set by PostStage). */
+  softSpread = 0.6;
 
   constructor(renderer: Renderer) {
     // Half-float targets keep the wide, faint gradients of the glow free of banding.
@@ -108,6 +117,14 @@ export class PostFilter extends Filter {
     const down = BLOOM_LEVELS.map((s) => target(s, format));
     const up = BLOOM_LEVELS.slice(0, -1).map((s) => target(s, format));
     const light = target(LIGHT_TARGET, format);
+    const softSizes: ReadonlyArray<readonly [number, number]> = [
+      [480, 270],
+      [240, 135],
+      [120, 68],
+      [240, 135],
+      [480, 270],
+    ];
+    const soft = softSizes.map((s) => target(s, 'rgba8unorm'));
 
     super({
       glProgram: GlProgram.from({ vertex: FINAL_VERT, fragment: COMPOSITE_FRAG, name: 'post-composite' }),
@@ -117,6 +134,7 @@ export class PostFilter extends Filter {
         uMatte: heroMatteTexture().source,
         // A wide level of the bloom chain: tells a point of light from an area of light.
         uWide: (down[2] ?? down[0] ?? light).source,
+        uSoft: (soft[4] as RenderTexture).source,
         postUniforms: {
           uMix: { value: new Float32Array(4), type: 'vec4<f32>' },
           uTone: { value: new Float32Array([1, 0.8, 0, 0.3]), type: 'vec4<f32>' },
@@ -135,6 +153,9 @@ export class PostFilter extends Filter {
           uRich: { value: new Float32Array([1, 1, 1, 1]), type: 'vec4<f32>' },
           uGoal: { value: new Float32Array(GOAL_LIGHTS * 4), type: 'vec4<f32>', size: GOAL_LIGHTS },
           uGoalLook: { value: new Float32Array([0, 0, 0, 0]), type: 'vec4<f32>' },
+          uSep: { value: new Float32Array([0.09, 0.04, 0, 0]), type: 'vec4<f32>' },
+          uSepTint: { value: new Float32Array([1, 1, 1, 0]), type: 'vec4<f32>' },
+          uSepLook: { value: new Float32Array([0.3, 0.5, 0, 0]), type: 'vec4<f32>' },
         },
       },
       // Render the tree at the canvas's own resolution and multisampling: nothing goes soft.
@@ -145,6 +166,7 @@ export class PostFilter extends Filter {
     this.down = down;
     this.up = up;
     this.light = light;
+    this.soft = soft;
     this.u = (this.resources.postUniforms as { uniforms: PostFilter['u'] }).uniforms;
 
     this.prefilter = passFilter('post-prefilter', PREFILTER_FRAG, {
@@ -181,6 +203,31 @@ export class PostFilter extends Filter {
         }),
       );
     }
+
+    const texel = (t: RenderTexture, k = 1) => new Float32Array([k / t.width, k / t.height]);
+    const [s0, s1, s2, s3] = soft as [RenderTexture, RenderTexture, RenderTexture, RenderTexture];
+    const softUp = (wider: RenderTexture, base: RenderTexture) =>
+      passFilter('post-soft-up', UP_FRAG, {
+        uBase: base.source,
+        upUniforms: {
+          uTexel: { value: texel(wider), type: 'vec2<f32>' },
+          uSpread: { value: 0.6, type: 'f32' },
+        },
+      });
+    this.softF.push(
+      passFilter('post-matte', MATTE_FRAG, {
+        uMatte: heroMatteTexture().source,
+        matteUniforms: { uTap: { value: texel(heroMatteTexture()), type: 'vec2<f32>' } },
+      }),
+      passFilter('post-down', DOWN_FRAG, {
+        downUniforms: { uTexel: { value: texel(s0), type: 'vec2<f32>' } },
+      }),
+      passFilter('post-down', DOWN_FRAG, {
+        downUniforms: { uTexel: { value: texel(s1), type: 'vec2<f32>' } },
+      }),
+      softUp(s2, s1),
+      softUp(s3, s0),
+    );
 
     this.lightsF = passFilter('post-lights', LIGHTS_FRAG, {
       uMask: playfieldMaskTexture().source,
@@ -228,6 +275,18 @@ export class PostFilter extends Filter {
     }
 
     fm.applyFilter(this.lightsF, first, this.light, true);
+
+    // The soft hero matte (five tiny passes: 480x270 and below).
+    const soft = this.soft as [RenderTexture, RenderTexture, RenderTexture, RenderTexture, RenderTexture];
+    const sf = this.softF as [Filter, Filter, Filter, Filter, Filter];
+    for (const f of [sf[3], sf[4]]) {
+      (f.resources.upUniforms as { uniforms: { uSpread: number } }).uniforms.uSpread = this.softSpread;
+    }
+    fm.applyFilter(sf[0], heroMatteTexture(), soft[0], true);
+    fm.applyFilter(sf[1], soft[0], soft[1], true);
+    fm.applyFilter(sf[2], soft[1], soft[2], true);
+    fm.applyFilter(sf[3], soft[2], soft[3], true);
+    fm.applyFilter(sf[4], soft[3], soft[4], true);
     fm.applyFilter(this, input, output, clear);
 
     // `input` is a pooled texture that Pixi destroys when the canvas is resized, and the filter
@@ -239,8 +298,8 @@ export class PostFilter extends Filter {
   }
 
   override destroy(): void {
-    for (const t of [...this.down, ...this.up, this.light]) t.destroy(true);
-    for (const f of [this.prefilter, ...this.downF, ...this.upF, this.lightsF]) f.destroy();
+    for (const t of [...this.down, ...this.up, this.light, ...this.soft]) t.destroy(true);
+    for (const f of [this.prefilter, ...this.downF, ...this.upF, this.lightsF, ...this.softF]) f.destroy();
     super.destroy();
   }
 }
