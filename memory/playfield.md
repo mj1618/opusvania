@@ -11,14 +11,22 @@
   is cropped to what was painted in it. ~45 textures, ~20 MP at bake scale 1.5, ~30 ms.
 - **Plants are a few static meshes** (`pf-flora.ts` builder + shader, `pf-plants.ts` species and placement),
   chunked every 480 px for culling. The vertex shader does wind (a GLSL copy of `wind()` in `look.ts`: keep
-  them identical), bending and glow. ~170k vertices. Three meshes: back, additive halos, front fringe.
+  them identical), bending and glow. ~230k vertices. Three meshes: back, additive halos, front fringe.
   Draw order inside the back mesh is placement order: rear row (shrubs, tall dark stands) first, then
   features, then grass.
 - **Light comes from one sun map**, not from the paint: `sunAt(x, y)` in `pf-shape.ts` (a broad beam along
   `KEY_LIGHT` plus sine dapples) tints plants and moss albedo, and the bake shader has an identical copy
   (`sun`) that scales the key light: change both together. Warm flowers go where it is high, violet glow plants where it is low.
+- **Three zones** (`zoneAt(x)` / `ZONES` in `pf-shape.ts`, mirrored as `uZone` in the bake shader): cool pool
+  glade (x < ~1900), warm light well, deep stand (x > ~3900). They tint terrain and moss, shift plant tones,
+  choose the species mix (`share(cool, warm, deep)` in `growGarden`) and the glow colour (cyan left, violet right).
+- **Depth around the walk line**, back to front in the back mesh: hazy oversized backdrop plants (`HAZE`), rear
+  row shrubs (`REAR`), hero plants every screen or so (`heroGap`), features, grass; then the front fringe.
+  `info.keepClear` ranges (the root mound) keep big plants off terrain that should be seen.
 - **Moss is cushions with bare stretches** (`mossCap`): stones, surface roots and leaf litter fill the gaps.
-  Floating islands are five kinds in a fixed left-to-right order (`FLOAT_ORDER`), each with its own `trail`.
+  Floating islands are five kinds in a fixed left-to-right order (`FLOAT_ORDER`), each with its own `trail`;
+  no kind appears more than twice and the second instance (`second`) is mirrored, re-proportioned and, for the
+  shelf fungus, re-coloured. Trunks alternate `ivied` (vines, nest, ferns) and hollow (rot hollow, bracket fungi).
   Hanging trunks share `stiltRoots()` between a back-plane pass and `paintRootShoulders` (front, fading back).
 - **Ledges are two different things**: beside a trunk, `paintLivingBough` (collar, belly, knuckled tip, side
   limbs); at the scene edge, `paintCrookShelf` (earth held by two limbs). Painted limbs and trunk vines
@@ -29,13 +37,15 @@
   spring per cell, driven by the character's box and `land` events), G = glow excitement (character and
   `ctx.lights.list`). Plants sample it at their base.
 - **Pool** (`pf-water.ts`): two quads, one shader. `back` is the body and mirrored sky; `front` is the tint
-  over whatever wades in, the surface line, glints, light reflections and up to four ripples.
+  over whatever wades in, the surface line, glints, bank foam, floor caustics, three fish glints, light
+  reflections, up to four ripples (entry, wading, landing, and one on its own every `idleRipple` s) and the
+  droplets of a landing splash (`uSplash`; the quad reaches `splashRoom` px above the surface for them).
 - `pf-terrain.ts` returns `TerrainInfo` (tops, undersides, faces, twigs, pool) and `pf-plants.ts` plants
   from that, so a new solid gets plants for free.
 
 ## Knobs (config object at the top of each file)
 `TERRAIN` palette, moss lift/thickness/drip, `mossBare`, `faceUndercut`, `waterDepth`; `BAKE` blur sigmas, bump, key, shadow, interior, `beamWidth`, brushwork (`planes`, `strokes`, `crevice`, `chips`);
-`PLANTS` feature gap, `rearGap`, `autumnEvery`, `fineShare`, grass cover and heights, fringe, wind/bend per px, halo alpha, `glowEvery`;
+`PLANTS` feature gap, `rearGap`, `backdropGap`, `heroGap`, `glowShare` (per zone), `autumnEvery`, `fineShare`, grass cover and heights, fringe, wind/bend per px, halo alpha, `glowEvery`;
 `FIELD` spring stiffness/damping, reach, land kick, glow rise/fall; `WATER` colours, alphas, ripples;
 `PLAYFIELD` bake scale range, glow gains.
 
@@ -51,7 +61,10 @@
   `smoothstep`.
 - The bake shader erodes silhouettes by up to ~1 px with noise (brushed edges) and posterises the lighting
   into a few planes; both are in `main()` of `LIT_FRAG`.
-- Hollows (`info.pockets`) are kept 70 px clear of bank faces, or they open into the air.
+- Hollows (`info.pockets`, kind `glow` or `crystal`) are kept 80 px clear of bank faces, or they open into the air.
+- Form-following stroke noise draws contour rings round roots when posterised: keep its weight low (0.22) and
+  the fine stroke layer on the plain grain. GLSL `smoothstep(a, b, x)` with a > b is undefined: flip it.
+- A wide `tint()` ribbon that follows the smoothed ground profile swoops across banks: break it at steps.
 - GLSL: `cast` is a reserved word. Destroy shaders before the textures bound to them or Pixi warns.
 - Bake scale is fixed at boot (`viewScale` clamped to 1.5..2); a later resize does not rebake.
 - Tops are honest to within ~6 px (`__game.debug.hitboxes(true)` to check). Island tapers, ledge sag and the

@@ -228,3 +228,17 @@ export function sunAt(x: number, y: number, beamWidth = 760): number {
   const dapple = smoothstep(0.45, 0.8, dp);
   return clamp(beam * 0.65 + dapple * 0.55, 0, 1);
 }
+
+/** Where each third of the scene's mood begins and ends (world x): pool glade | light well | deep stand. */
+export const ZONES = { coolEnd: 1650, warmStart: 2150, warmEnd: 3650, deepStart: 4150 } as const;
+
+/**
+ * The scene's three moods as weights that sum to 1: `cool` (the moonlit pool glade on the left),
+ * `warm` (the golden light well in the middle), `deep` (the old dark stand on the right). The bake
+ * shader tints by the same edges (pf-bake.ts, uZone).
+ */
+export function zoneAt(x: number): { cool: number; warm: number; deep: number } {
+  const a = smoothstep(ZONES.coolEnd, ZONES.warmStart, x);
+  const b = smoothstep(ZONES.warmEnd, ZONES.deepStart, x);
+  return { cool: 1 - a, warm: a * (1 - b), deep: b };
+}

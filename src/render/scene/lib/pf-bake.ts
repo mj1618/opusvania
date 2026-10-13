@@ -20,6 +20,7 @@ import {
   type Texture,
 } from 'pixi.js';
 import { KEY_LIGHT } from './look';
+import { ZONES } from './pf-shape';
 
 export const BAKE = {
   /** World px per tile side. With bake scale 2 a tile is 1024 px + padding while baking. */
@@ -106,6 +107,7 @@ uniform vec4 uBump;   // fine, mid, noise, -
 uniform vec4 uShade;  // key, spec, shadow, interior
 uniform vec2 uCast;   // reach (world px), strength
 uniform vec4 uBrush;  // plane hardness, stroke contrast, crevice depth, chip strength
+uniform vec4 uZone;   // x edges of the cool|warm and warm|deep transitions
 uniform vec4 uSun;    // key entry x, y, dx per dy, beam half width
 out vec4 o;
 
@@ -181,7 +183,7 @@ void main() {
   float form = smoothstep(0.006, 0.05, gl);
   vec2 sp = vec2(dot(vWorld, tng), dot(vWorld, nrm));
   vec2 grain = mix(vec2(vWorld.x * 0.018, vWorld.y * 0.15), vec2(vWorld.y * 0.018, vWorld.x * 0.15), bark);
-  float stroke = mix(fbm(grain + 7.0), fbm(vec2(sp.x * 0.02, sp.y * 0.17) + 7.0), form * (1.0 - bark));
+  float stroke = mix(fbm(grain + 7.0), fbm(vec2(sp.x * 0.02, sp.y * 0.17) + 7.0), form * 0.22 * (1.0 - bark));
   float dab = fbm(vWorld * 0.045 + 19.0);
 
   vec2 dx = vec2(d.x, 0.0);
@@ -201,7 +203,8 @@ void main() {
   float key = clamp((lit - flatLit) / (1.0 - flatLit), 0.0, 1.0);
   float shd = clamp((flatLit - lit) / (flatLit + 0.35), 0.0, 1.0);
   // Break the smooth falloff into a few painted planes, the stroke noise deciding the borders.
-  float fineStroke = fbm(vec2(sp.x * 0.05, sp.y * 0.4) + 23.0);
+  // The fine layer keeps to the grain: following the form at this scale draws contour rings.
+  float fineStroke = fbm(grain * 2.6 + 23.0);
   key = mix(key, plane3(key * 3.0 + 0.5 + (stroke - 0.5) * 1.3 + (fineStroke - 0.5) * 0.5) / 3.0, uBrush.x);
   shd = mix(shd, plane3(shd * 2.0 + 0.5 + (dab - 0.5) * 1.2 + (fineStroke - 0.5) * 0.4) / 2.0, uBrush.x * 0.9);
 
@@ -216,6 +219,11 @@ void main() {
   c *= mix(vec3(0.86, 1.0, 1.16), vec3(1.14, 1.02, 0.84), clamp(0.5 + temp * 0.6 + (sun - 0.5) * 0.5, 0.0, 1.0));
   float drift = fbm(vWorld * 0.008 + 5.0) - 0.5;
   c *= vec3(1.0 - drift * 0.22, 1.0 + drift * 0.08, 1.0 + drift * 0.3);
+  // The scene's three moods: moonlit blue-green, golden, deep emerald and violet.
+  float zA = smoothstep(uZone.x, uZone.y, vWorld.x);
+  float zB = smoothstep(uZone.z, uZone.w, vWorld.x);
+  vec3 zoneTint = mix(mix(vec3(0.84, 1.0, 1.14), vec3(1.13, 1.05, 0.84), zA), vec3(0.9, 0.9, 1.08) * 0.9, zB);
+  c *= zoneTint;
   // Moss dims and cools where the light does not reach.
   c *= mix(1.0, mix(0.5, 1.05, sun), moss);
   c = mix(c, c * vec3(0.72, 0.96, 1.2), moss * (1.0 - sun) * 0.55);
@@ -336,6 +344,10 @@ export function bakeTerrain(renderer: Renderer, src: BakeSource, scale: number):
     uCast: { value: new Float32Array([BAKE.castReach, BAKE.cast]), type: 'vec2<f32>' },
     uBrush: {
       value: new Float32Array([BAKE.planes, BAKE.strokes, BAKE.crevice, BAKE.chips]),
+      type: 'vec4<f32>',
+    },
+    uZone: {
+      value: new Float32Array([ZONES.coolEnd, ZONES.warmStart, ZONES.warmEnd, ZONES.deepStart]),
       type: 'vec4<f32>',
     },
     uSun: {

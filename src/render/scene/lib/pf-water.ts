@@ -29,6 +29,10 @@ export const WATER = {
   rippleWidth: 20,
   /** How far the body extends under the banks (hidden by them). */
   tuck: 12,
+  /** Height above the surface the front quad covers, for splash droplets. */
+  splashRoom: 64,
+  /** Seconds between the small rings that appear on their own. */
+  idleRipple: 4.7,
 } as const;
 
 const VERT = `#version 300 es
@@ -53,6 +57,7 @@ uniform vec4 uRipple;   // speed, life, width, -
 uniform mat4 uRipples;  // per column: x, start time, amplitude, -
 uniform mat4 uLights;   // columns 0/2: x, y, radius, intensity; 1/3: rgb
 uniform vec4 uPlayer;   // x, half width, in water 0..1, speed
+uniform vec4 uSplash;   // x, start time, strength, -
 uniform vec4 uAlpha;    // back top, back bottom, front top, front bottom
 uniform vec3 uShallow;
 uniform vec3 uDeep;
@@ -73,7 +78,7 @@ float surfaceAt(float x) {
       float d = abs(x - r.x);
       float front = age * uRipple.x;
       float env = exp(-pow((d - front) / uRipple.z, 2.0)) * (1.0 - age / uRipple.y);
-      y += r.z * env * sin((d - front) * 0.34);
+      y += r.z * env * sin((d - front) * 0.2);
     }
   }
   // Still at the banks.
@@ -87,7 +92,23 @@ void main() {
   float s = uPool.z + surfaceAt(x);
   float depth = vWorld.y - s;
   float total = uPool.w - uPool.z;
-  if (depth < -3.0) { o = vec4(0.0); return; }
+  if (depth < -3.0) {
+    // Above the water: only the droplets a splash throws up (front quad).
+    float sAge = t - uSplash.y;
+    if (uTime.y < 0.5 || uSplash.z <= 0.0 || sAge < 0.0 || sAge > 0.75) { o = vec4(0.0); return; }
+    float acc = 0.0;
+    for (int i = 0; i < 7; i++) {
+      float fi = float(i);
+      float vx = (hash(fi + 1.3) - 0.5) * 150.0;
+      float vy = 95.0 + hash(fi + 7.1) * 110.0;
+      vec2 dp = vec2(uSplash.x + vx * sAge, s - (vy * sAge - 330.0 * sAge * sAge) * uSplash.z);
+      float rad = 3.4 - 1.8 * sAge;
+      acc += 1.0 - smoothstep(rad - 1.4, rad, length(vWorld - dp));
+    }
+    float da = clamp(acc, 0.0, 1.0) * (1.0 - sAge / 0.75);
+    o = vec4(uLine * da * 0.85, da * 0.7);
+    return;
+  }
   float under = smoothstep(-0.8, 0.8, depth);
   float dn = clamp(depth / total, 0.0, 1.0);
   float slope = surfaceAt(x + 1.5) - surfaceAt(x - 1.5);
@@ -113,6 +134,25 @@ void main() {
   // Soft light bands drifting through the body.
   float ca = sin(x * 0.07 + depth * 0.05 + t * 0.7) * sin(x * 0.031 - depth * 0.09 - t * 0.5);
   add += uShallow * smoothstep(0.55, 1.0, ca) * 0.16 * (1.0 - dn) * under;
+  // Caustics: a net of light crawling over the pool floor.
+  float cx1 = sin(x * 0.09 + sin(depth * 0.3 + t * 0.9) * 1.5 + t * 0.8);
+  float cx2 = sin(x * 0.05 - depth * 0.25 - t * 0.6 + sin(x * 0.021 + t * 0.3) * 2.0);
+  float caustic = pow(1.0 - abs(cx1), 4.0) * pow(1.0 - abs(cx2), 2.0);
+  add += uLine * caustic * 0.3 * smoothstep(total - 30.0, total - 4.0, depth) * under;
+  // Small fish: three pale glints cruising at mid depth, turning at the banks.
+  for (int i = 0; i < 3; i++) {
+    float fi = float(i);
+    float ph = t * (0.035 + fi * 0.011) + fi * 0.37;
+    float tri = abs(fract(ph) * 2.0 - 1.0);
+    float fx = mix(uPool.x + 26.0, uPool.y - 26.0, smoothstep(0.0, 1.0, tri));
+    float fy = total * (0.52 + 0.16 * sin(t * 0.6 + fi * 2.1)) + sin(t * 3.0 + fi) * 1.2;
+    float body = exp(-pow((x - fx) / 5.5, 2.0) - pow((depth - fy) / 1.5, 2.0));
+    add += uLine * body * (0.35 + 0.3 * sin(t * 5.0 + fi * 1.7)) * 0.7;
+  }
+  // Foam where the water meets the banks.
+  float bankD = min(x - uPool.x, uPool.y - x);
+  float foam = exp(-bankD / 9.0) * exp(-pow((depth - 1.0) / 2.6, 2.0)) * (0.6 + 0.4 * sin(t * 2.1 + x * 0.7));
+  add += uLine * foam * 0.75;
   // Surface line: bright where the swell tilts toward the light, with travelling glints.
   float line = exp(-pow((depth - 0.6) / 1.5, 2.0));
   float glow = exp(-max(depth, 0.0) / 7.0) * under;
@@ -165,6 +205,8 @@ export class Water {
   private readonly ripples = new Float32Array(16);
   private readonly lights = new Float32Array(16);
   private readonly player = new Float32Array(4);
+  private readonly splash = new Float32Array(4);
+  private idleBeat = -1;
   private next = 0;
   private wasIn = false;
   private wade = 0;
@@ -173,7 +215,7 @@ export class Water {
   constructor(private readonly pool: PoolShape) {
     const x0 = pool.x0 - WATER.tuck;
     const x1 = pool.x1 + WATER.tuck;
-    const y0 = pool.surface - 10;
+    const y0 = pool.surface - WATER.splashRoom;
     const y1 = pool.floor + 10;
     const geometry = new Geometry({
       attributes: {
@@ -200,6 +242,7 @@ export class Water {
               uRipples: { value: this.ripples, type: 'mat4x4<f32>' },
               uLights: { value: this.lights, type: 'mat4x4<f32>' },
               uPlayer: { value: this.player, type: 'vec4<f32>' },
+              uSplash: { value: this.splash, type: 'vec4<f32>' },
               uAlpha: {
                 value: new Float32Array([...WATER.backAlpha, ...WATER.frontAlpha]),
                 type: 'vec4<f32>',
@@ -239,13 +282,28 @@ export class Water {
     const over = player.cx > p.x0 && player.cx < p.x1;
     const isIn = over && player.feetY > p.surface + 3 && player.y < p.surface + 6;
     if (isIn !== this.wasIn) {
-      this.ripple(player.cx, clock, Math.min(4.5, 1.6 + Math.abs(player.vy) * 0.25));
+      this.ripple(player.cx, clock, Math.min(2.4, 1 + Math.abs(player.vy) * 0.1));
       this.wasIn = isIn;
       this.wade = 0;
     }
     for (const e of events) {
       if (e.type === 'spawn') this.ripples.fill(0);
-      else if (e.type === 'land' && e.x > p.x0 && e.x < p.x1 && e.y > p.surface) this.ripple(e.x, clock, 3.6);
+      else if (e.type === 'land' && e.x > p.x0 && e.x < p.x1 && e.y > p.surface) {
+        // Landing in the pool: a ring and a burst of droplets, bigger for a harder fall.
+        this.ripple(e.x, clock, 1.8);
+        this.splash[0] = e.x;
+        this.splash[1] = clock;
+        this.splash[2] = Math.min(1.5, 0.6 + e.vy / 18);
+      }
+    }
+    // Now and then something rises: a small ring somewhere on the surface.
+    const beat = Math.floor(clock / WATER.idleRipple);
+    if (beat !== this.idleBeat) {
+      if (this.idleBeat >= 0 && !isIn) {
+        const h = Math.sin(beat * 91.7) * 43758.5453;
+        this.ripple(p.x0 + 30 + (h - Math.floor(h)) * (p.x1 - p.x0 - 60), clock, 1.1);
+      }
+      this.idleBeat = beat;
     }
     if (isIn) {
       this.wade += Math.abs(player.vx) * dt * 60;

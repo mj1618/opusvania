@@ -8,7 +8,7 @@
  */
 import { mix, PALETTE } from './look';
 import type { FloraBuilder } from './pf-flora';
-import { clamp, lerp, noise1, quad, type Rng, range, rngFor, smoothstep, sunAt } from './pf-shape';
+import { clamp, lerp, noise1, quad, type Rng, range, rngFor, smoothstep, sunAt, zoneAt } from './pf-shape';
 import type { Face, TerrainInfo, Top, Under } from './pf-terrain';
 
 export const PLANTS = {
@@ -16,6 +16,9 @@ export const PLANTS = {
   featureGap: [38, 140] as const,
   /** Gap between groups in the rear row (shrubs, tall dark stands), px. */
   rearGap: [150, 420] as const,
+  /** Gap between the oversized hazy backdrop plants, and between hero plants, px. */
+  backdropGap: [180, 420] as const,
+  heroGap: [800, 1300] as const,
   /** One shrub in this many carries autumn-yellow leaves (counted across the scene, so they spread). */
   autumnEvery: 4,
   /** Grass: 0..1 share of a top that carries any, and blade heights in px. */
@@ -32,8 +35,8 @@ export const PLANTS = {
   bendPerPx: 0.6,
   /** Glow things: halo radius factor and alpha. */
   haloAlpha: 0.24,
-  /** One feature in this many is a glow plant. */
-  glowEvery: 5,
+  /** Share of features that are glow plants, per zone: cool glade, light well, deep stand. */
+  glowShare: [0.3, 0.07, 0.3] as const,
 } as const;
 
 interface Tone {
@@ -45,6 +48,8 @@ interface Tone {
 const BACK: Tone = { dark: 0x0b3836, mid: 0x1b6d50, lit: 0x58b060, sun: 0xbcd874 };
 /** The row furthest back: bushes and tall stands, darker and cooler so the walk line sits in front. */
 const REAR: Tone = { dark: 0x082c34, mid: 0x12524a, lit: 0x2f8460, sun: 0x7fb46a };
+/** Far behind the walk line: hazy, cool, low contrast. */
+const HAZE: Tone = { dark: 0x143c48, mid: 0x1c5560, lit: 0x2c7072, sun: 0x3f8580 };
 const AUTUMN = [0xd9a441, 0xc9b24e, 0xe08a3c, 0xb9c45a];
 const WARM_PETALS = [0xffc56b, 0xffb59a, 0xfff1dc, 0xffd98a];
 const COOL_PETALS = [0xd9c8ff, 0xbfe6ff, 0xe8f4ff, 0xc9a8f0];
@@ -58,16 +63,34 @@ interface Ctx {
   r: Rng;
 }
 
-/** Tone at a spot: yellow-green where the key light lands (sunAt), cool teal in the dark stands. */
+/**
+ * Tone at a spot: yellow-green where the key light lands (sunAt), cool teal in the dark stands,
+ * and shifted by the scene's zone (blue-green glade, golden well, deep emerald stand).
+ */
 function toneAt(base: Tone, x: number, r: Rng, y = 1200): Tone {
   const sun = sunAt(x, y);
+  const z = zoneAt(x);
   const cool = r() * 0.3 + (1 - sun) * 0.3;
-  const dim = 0.25 * (1 - sun);
+  const dim = 0.25 * (1 - sun) + z.deep * 0.12;
+  const zone = (c: number, coolC: number, warmC: number, deepC: number, k: number): number =>
+    mix(mix(mix(c, coolC, z.cool * k), warmC, z.warm * k), deepC, z.deep * k);
   return {
-    dark: mix(base.dark, 0x0a2f44, cool * 0.6),
-    mid: mix(mix(mix(base.mid, 0x17666a, cool), base.lit, sun * 0.3), base.dark, dim),
-    lit: mix(mix(mix(base.lit, 0x3fa78a, cool), base.sun, sun * 0.6), base.mid, dim * 1.6),
-    sun: mix(base.sun, base.lit, 1 - sun),
+    dark: zone(mix(base.dark, 0x0a2f44, cool * 0.6), 0x0a3040, 0x143a2c, 0x121e3c, 0.5),
+    mid: zone(
+      mix(mix(mix(base.mid, 0x17666a, cool), base.lit, sun * 0.3), base.dark, dim),
+      0x1a7272,
+      0x3f7f3a,
+      0x0f5a48,
+      0.4,
+    ),
+    lit: zone(
+      mix(mix(mix(base.lit, 0x3fa78a, cool), base.sun, sun * 0.6), base.mid, dim * 1.6),
+      0x62c4ae,
+      0x9cc45a,
+      0x3f9a6a,
+      0.4,
+    ),
+    sun: zone(mix(base.sun, base.lit, 1 - sun), 0xa8e0c8, 0xe0dc7a, 0x8fbf8a, 0.35),
   };
 }
 
@@ -188,6 +211,7 @@ function bush(
   t: Tone,
   autumn: number,
   form: 'round' | 'tall' | 'low' = 'round',
+  bloom: readonly number[] | null = null,
 ): void {
   const { b, r } = c;
   const lobes = form === 'low' ? 4 + Math.floor(r() * 3) : 3 + Math.floor(r() * 3);
@@ -248,6 +272,23 @@ function bush(
       const ll = range(r, 7, 12.5);
       b.plant(lx, ly, ll * 2, phase + r() * 0.2, 1.6 + h * 0.02, 5 + h * 0.08, 0.3);
       b.leaf(lx, ly, la, ll, ll * 0.55, mix(t.dark, lit, 0.3), lit, mix(lit, t.dark, 0.45), 0, 1, 3);
+    }
+  }
+  if (!bloom) return;
+  // Blossom, thickest on the lit shoulder.
+  for (const [cx, cy, rad] of centres) {
+    for (let i = 0; i < Math.round(rad * 0.45); i++) {
+      const a = range(r, -2.6, 0.4);
+      const d = Math.sqrt(r()) * rad;
+      const fx = cx + Math.cos(a) * d * 1.15;
+      const fy = cy + Math.sin(a) * d;
+      const col = bloom[Math.floor(r() * bloom.length)] as number;
+      const pr = range(r, 3, 5);
+      b.plant(fx, fy, 12, phase + r() * 0.2, 1.6 + h * 0.02, 5 + h * 0.08, 0.3);
+      b.fixedH = 1;
+      b.fan(fx, fy, pr, pr * 0.85, 0, Math.PI * 2, mix(col, 0xffffff, 0.45), () => col, 1, 6);
+      b.fan(fx, fy, pr * 0.3, pr * 0.3, 0, Math.PI * 2, 0xffe08a, () => 0xf0b860, 1, 5);
+      b.fixedH = null;
     }
   }
 }
@@ -364,9 +405,9 @@ function flower(c: Ctx, x: number, y: number, h: number, t: Tone, col: number): 
   b.fixedH = null;
 }
 
-function mushroom(c: Ctx, x: number, y: number, size: number, glow: 0 | 1 | 2): void {
+function mushroom(c: Ctx, x: number, y: number, size: number, glow: 0 | 1 | 2, tall = 1): void {
   const { b, halo, r } = c;
-  const h = size * range(r, 0.9, 1.7);
+  const h = size * range(r, 0.9, 1.7) * tall;
   const lean = range(r, -0.25, 0.25) * h;
   b.plant(x, y, h + size, r(), 0.5 + size * 0.03, 2.5 + size * 0.12, 0.2);
   const cx = x + lean;
@@ -704,8 +745,8 @@ export interface Garden {
 }
 
 export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
-  let features = 0;
   let shrubs = 0;
+  let heroes = 0;
   for (const top of info.tops) {
     if (top.kind === 'poolFloor') {
       growPool(g, top, info);
@@ -721,18 +762,45 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
     const b = Math.min(sceneW - 4, top.x1 - (top.freeR ? inset : 2));
 
     const sunHere = (x: number): number => sunAt(x, top.y);
+    // Keep big plants off whatever the terrain wants seen (the root mound).
+    const blocked = (x: number): boolean => info.keepClear.some(([k0, k1]) => x > k0 && x < k1);
 
-    // Rear row first (everything later overlaps it): shrubs and tall dark stands, in groups.
+    const isGround = top.kind === 'ground';
+
+    // Backdrop (drawn first, so behind everything): oversized ferns and leaves in haze tones,
+    // standing well behind the walk line. They give the strip depth without drawing the eye.
+    if (isGround) {
+      for (
+        let x = a + range(r, 40, 200);
+        x < b - 40;
+        x += range(r, PLANTS.backdropGap[0], PLANTS.backdropGap[1])
+      ) {
+        if (blocked(x)) continue;
+        const z = zoneAt(x);
+        const t = toneAt(HAZE, x, r, top.y);
+        const roll = r();
+        if (roll < 0.35 + z.cool * 0.3) fern(c, x, y + 4, range(r, 110, 170), t);
+        else if (roll < 0.75 + z.deep * 0.2) {
+          broadleaf(c, x, y + 4, range(r, 90, 140), t);
+          broadleaf(c, x + range(r, 40, 70), y + 4, range(r, 70, 100), t);
+        } else {
+          for (let i = 0; i < 3; i++) tallGrass(c, x + i * 22, y + 3, t, range(r, 1.6, 2.1));
+        }
+      }
+    }
+
+    // Rear row: shrubs and tall dark stands, in groups.
     if (!narrow) {
       for (
         let x = a + range(r, 30, 160);
         x < b - 30;
         x += range(r, PLANTS.rearGap[0], PLANTS.rearGap[1]) / scale
       ) {
+        if (blocked(x)) continue;
         const t = toneAt(REAR, x, r, top.y);
         const roll = r();
         if (roll < 0.6) {
-          const n = top.kind === 'ground' ? 1 + Math.floor(r() * 2.2) : 1;
+          const n = isGround ? 1 + Math.floor(r() * 2.2) : 1;
           for (let i = 0; i < n; i++) {
             // Every few shrubs across the whole scene turns, so autumn is spread, not bunched.
             shrubs++;
@@ -753,20 +821,60 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
       }
     }
 
-    // Features, spaced.
+    // Heroes: one landmark plant every screen or so, chosen by the zone it stands in.
+    if (isGround) {
+      for (let x = a + range(r, 260, 620); x < b - 120; x += range(r, PLANTS.heroGap[0], PLANTS.heroGap[1])) {
+        if (blocked(x)) continue;
+        const z = zoneAt(x);
+        const t = toneAt(BACK, x, r, top.y);
+        heroes++;
+        if (z.warm > 0.5) {
+          if (heroes % 2)
+            bush(
+              c,
+              x,
+              y + 2,
+              range(r, 120, 150),
+              range(r, 92, 112),
+              toneAt(REAR, x, r, top.y),
+              0,
+              'round',
+              WARM_PETALS,
+            );
+          else for (let i = 0; i < 3; i++) tallGrass(c, x + i * 26, y + 1, t, range(r, 1.5, 1.9));
+        } else if (heroes % 2) {
+          // Glow mushrooms as tall as the character, in a family of sizes.
+          const kind = z.deep > 0.5 ? 2 : 1;
+          const sizes = [range(r, 26, 32), range(r, 17, 22), range(r, 11, 15), range(r, 7, 10)];
+          let mx = x - 40;
+          for (const sz of sizes) {
+            mushroom(c, mx, y, sz, kind, 1.25);
+            mx += sz * range(r, 1.5, 2.1);
+          }
+          clover(c, x, y, 14, t);
+        } else {
+          fern(c, x, y, range(r, 120, 150), t);
+          fern(c, x + range(r, 36, 60), y, range(r, 60, 84), t);
+        }
+      }
+    }
+
+    // Features, spaced. What grows depends on the zone.
     for (
       let x = a + range(r, 8, 50);
       x < b - 8;
       x += range(r, PLANTS.featureGap[0], PLANTS.featureGap[1]) / scale
     ) {
+      if (top.kind === 'root' || blocked(x)) continue;
       const t = toneAt(BACK, x, r, top.y);
       const sun = sunHere(x);
-      features++;
-      const glowTurn = features % PLANTS.glowEvery === 0;
+      const z = zoneAt(x);
+      const glowChance =
+        z.cool * PLANTS.glowShare[0] + z.warm * PLANTS.glowShare[1] + z.deep * PLANTS.glowShare[2];
       const roll = r();
-      if (glowTurn && !narrow) {
-        // Violet in the dark stands, cyan elsewhere.
-        const violet = sun < 0.4 ? r() < 0.7 : r() < 0.12;
+      if (r() < glowChance && !narrow) {
+        // Cyan in the glade, violet and magenta in the deep stand.
+        const violet = r() < z.deep * 0.88 + z.warm * 0.2;
         if (roll < 0.5) {
           lantern(c, x, y, range(r, 40, 68) * scale, t, violet);
           if (r() < 0.6) lantern(c, x + range(r, 14, 26), y, range(r, 26, 40) * scale, t, violet);
@@ -776,28 +884,39 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
             mushroom(c, x + (i - n / 2) * range(r, 7, 12), y, range(r, 4, 10.5), violet ? 2 : 1);
         }
         clover(c, x, y, 8, t);
-      } else if (roll < 0.26) {
+        continue;
+      }
+      // Cumulative shares: fern, broadleaf, tall grass, flowers, mushrooms, (rest) clover.
+      const share = (cool: number, warm: number, deep: number): number =>
+        z.cool * cool + z.warm * warm + z.deep * deep;
+      const wFern = share(0.36, 0.12, 0.2);
+      const wLeaf = wFern + share(0.12, 0.1, 0.36);
+      const wTall = wLeaf + share(0.14, 0.3, 0.07);
+      const wFlower = wTall + share(0.1, 0.38, 0.07);
+      const wShroom = wFlower + share(0.2, 0.05, 0.25);
+      if (roll < wFern) {
         const n = narrow ? 1 : 1 + Math.floor(r() * 2.5);
         for (let i = 0; i < n; i++)
           fern(c, x + i * range(r, 18, 34), y, range(r, 40, 92) * scale, toneAt(BACK, x + i * 40, r, top.y));
-      } else if (roll < 0.44) {
-        broadleaf(c, x, y, range(r, 32, 70) * scale, t);
-        if (r() < 0.5) broadleaf(c, x + range(r, 18, 30), y, range(r, 16, 28) * scale, t);
-      } else if (roll < 0.6) {
+      } else if (roll < wLeaf) {
+        const big = 1 + z.deep * 0.35;
+        broadleaf(c, x, y, range(r, 32, 70) * scale * big, t);
+        if (r() < 0.5) broadleaf(c, x + range(r, 18, 30), y, range(r, 16, 28) * scale * big, t);
+      } else if (roll < wTall) {
         tallGrass(c, x, y, t, scale);
         if (r() < 0.6) tallGrass(c, x + range(r, 14, 26), y, t, scale * 0.8);
-      } else if (roll < 0.82) {
+      } else if (roll < wFlower) {
         // A drift of one kind of flower: warm where the light lands, pale and cool in shade.
-        const set = sun > 0.45 ? WARM_PETALS : COOL_PETALS;
+        const set = sun > 0.45 || z.warm > 0.5 ? WARM_PETALS : COOL_PETALS;
         const col = set[Math.floor(r() * set.length)] as number;
-        const n = 5 + Math.floor(r() * 8);
-        const wide = range(r, 24, 54);
+        const n = 5 + Math.floor(r() * 8) + Math.round(z.warm * 6);
+        const wide = range(r, 24, 54) * (1 + z.warm * 0.6);
         for (let i = 0; i < n; i++) {
           const fx = x + (r() + r() - 1) * wide;
           flower(c, fx, y, range(r, 12, 34) * scale, t, col);
         }
         clover(c, x, y, 10, t);
-      } else if (roll < 0.93) {
+      } else if (roll < wShroom) {
         const n = 2 + Math.floor(r() * 3);
         for (let i = 0; i < n; i++)
           mushroom(c, x + (i - n / 2) * range(r, 8, 14), y, range(r, 4.5, 11) * scale, 0);
@@ -917,6 +1036,33 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
   const pr = rngFor(23, 9);
   const pc: Ctx = { b: g.back, halo: g.halo, r: pr };
   for (const k of info.pockets) {
+    if (k.kind === 'crystal') {
+      // A spray of crystal shards, cool and faint.
+      const g = pr() < 0.5 ? PALETTE.glowViolet : PALETTE.glowCyan;
+      for (let i = 0; i < 5; i++) {
+        const cx = k.x + (i - 2) * range(pr, 6, 10);
+        const len = range(pr, 9, 22) * (1 - Math.abs(i - 2) * 0.18);
+        pc.b.plant(cx, k.y, 400, pr(), 0, 0, 0);
+        pc.b.glow = 0.7;
+        pc.b.leaf(
+          cx,
+          k.y + 2,
+          -Math.PI / 2 + (i - 2) * 0.28 + range(pr, -0.1, 0.1),
+          len,
+          len * 0.34,
+          mix(g, 0x1a2a4a, 0.7),
+          mix(g, 0x1a2a4a, 0.35),
+          mix(g, 0xffffff, 0.35),
+          0,
+          1,
+          2,
+        );
+        pc.b.glow = 0;
+      }
+      pc.b.sync(pc.halo);
+      pc.halo.halo(k.x, k.y - 8, 40, g, PLANTS.haloAlpha * 0.7);
+      continue;
+    }
     const violet = pr() < 0.6;
     const n = 2 + Math.floor(pr() * 3);
     for (let i = 0; i < n; i++)
@@ -1022,6 +1168,27 @@ function growPool(g: Garden, floor: Top, info: TerrainInfo): void {
       ...t,
       lit: mix(t.lit, 0x2f8f9a, 0.5),
     });
+  }
+  // A few fallen leaves adrift on the surface.
+  for (let i = 0; i < 5; i++) {
+    const lx = pool.x0 + 40 + r() * (pool.x1 - pool.x0 - 80);
+    const col = AUTUMN[Math.floor(r() * AUTUMN.length)] as number;
+    fc.b.plant(lx, pool.surface, 10, r(), 2.2, 3, 0);
+    fc.b.fixedH = 1;
+    fc.b.leaf(
+      lx,
+      pool.surface + 0.5,
+      range(r, -0.3, 0.3) + (r() < 0.5 ? Math.PI : 0),
+      range(r, 8, 12),
+      3.4,
+      mix(col, 0x5a4a2a, 0.4),
+      col,
+      mix(col, 0xffffff, 0.25),
+      0,
+      1,
+      3,
+    );
+    fc.b.fixedH = null;
   }
   // Lily pads floating in loose groups, clear of the very middle.
   const w = pool.x1 - pool.x0;
