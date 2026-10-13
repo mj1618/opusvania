@@ -15,3 +15,5 @@ Keep entries current; delete stale ones.
 - [Playfield](playfield.md) — baked lit terrain (albedo + relief), plant meshes and bend field, pool; config knobs, the front-of-character container, bake gotchas
 - [Post, air and foreground](post-and-air.md) — post pipeline and its knobs, light mask, shafts/motes/mist, foreground bake, GLSL and filter gotchas, how to time the GPU
 - [Character](character.md) — Ember's design and rejected looks, 2.5D rig, pose blending, foot planting, chains, the one-mesh painter, gotchas
+- [Character: Yako](character-yako.md) — the dark fox skin: forward-frame rig + base matrix, cel painter, squash-through turn, 240 px lope, chain stiffness gotcha
+- [Character skin: Vesper](character-vesper.md) — moth skin: owl-disc face and no-scarf decisions, lope run (256 px cycle), wing strand states and beat, wing/drag gotchas, shots URL workaround
