@@ -1,40 +1,30 @@
-# Movement controller (L2)
+# Movement controller
 
-Spec: `docs/design/movement-spec.md`. Code: `src/sim/player/player.ts` (controller),
-`params.ts` (profiles + assists -> flat params), `src/sim/physics/aabb.ts`, `src/sim/tuning.ts`.
+Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists → flat params),
+`src/sim/physics/aabb.ts`, `src/sim/tuning.ts`. Everything is always enabled (no ability gating).
 
-- **Order of operations matters**: freeze -> latch presses -> state update (accel, gravity, dash,
-  jump, pogo) -> moveX then moveY (per-pixel hazards, corner corrections) -> post (timers, ground
-  probe, walls, facing, triggers). With it, V03/V04/V05 match the spec tables exactly (272/24/45,
-  276/26/51, hold table 76..264). Change the order and the exact tests break.
-- **Rounding**: sub-pixel moves use round-half-away-from-zero (`roundHalfAway`). Math.round is
-  asymmetric (-2.5 -> -2) and would break V22 mirror symmetry, which is tested exactly in all 14 rooms.
-- **Coyote semantics (deviates from spec wording)**: N usable *airborne* frames after the frame whose
-  movement left the ground (that frame doesn't decrement). The spec's "g+1..g+N with g = last frame
-  that ended grounded" contradicts its own "assist off: g+1 -> none"; ours satisfies the intent.
-- **V06 (apex hang)**: measured 11 vs 6 frames with |vy| < 3 (1.83x). The spec says >= 2x, but its
-  V04 numbers (which we match exactly) imply 1.83x; the test asserts >= 1.8x.
-- **variableJump off** only disables the release cut/sustain end; apex hang still uses the real button.
-- **Landing preference** uses the jump-buffer window, so jumpBuffer off also disables it (V19 is owned
-  by both assists in the isolation matrix).
-- **Wall speed retention** stores vx only on the first block (Celeste); re-storing every blocked frame
-  would retain the tiny re-accelerated vx instead. It **must** be cancelled by opposite-sign vx and
-  cleared by jumps/wall jumps/dashes (`jumpCommon`, `startDash`): the L2 build did neither, so a wall
-  jump within 4 f of contact was undone next frame and the player glued to walls (playtest P0). Old
-  bot tapes had learned routes around the glitch and had to be re-solved.
-- **Wall slide cap ramps** (L2 fix): `min(slideMax, slideStartMax + slideRamp·slideT)`, `slideT` =
-  frames in the current slide (reset on slide start). opus 2.5 → 6.5 (+0.25/f); celeste is real
-  Celeste (20 → 160 px/s over 72 f); hk constant 8.53. The `celeste` preset stops with `RunReduce`
-  (groundDecel 8/9), accelerates/turns with `RunAccel` (20/9).
-- **Profiles** (weight classes next loop): `tuning.profiles[name] = {shape?, set?, scale?}` with
-  `group.key` paths; `state.player.profile` selects one; `setProfile(p, name, events)` switches it from
-  sim code (emits `profileChange`); debug: `__game.profile(name)`. Profiles live in tuning, so replays
-  capture their definitions. Resolved every frame (cheap: shallow group copies).
-- **Ability flags**: `state.player.abilities {wallJump, dash, doubleJump, pogo}`; rooms set them on load
-  (gym semantics; Phase 3 will persist them instead). Wall slide is gated by `wallJump`.
-- **Presets**: `hk` was corrected after the L2 feel report: sustain 9 f (5.56 tiles, apex 0.50 s vs HK
-  5.6 u / 0.52 s; the spec's 12 gave 6.39) and coyote/buffer 3 f (HK's 40 ms = 2.4 f).
-- **Performance**: no closures in the per-step path. Under tsx/esbuild every closure is wrapped in a
-  `__name` helper call; ~20 closures per step cut the sim from 1.5M to 270k frames/s (bot killer).
-  Keep hot loops (solidAt, hazardAt) allocation-free.
-- **Pogo** is `bounce(p, v, P, {refill, cutDisabled})`; Phase 2's nail hitbox should call the same.
+- **Order of operations matters**: freeze → latch presses → mode update (accel, gravity, dash, jump) →
+  moveX then moveY (1 px steps, corner corrections) → post (timers, ground probe, walls, facing, events).
+- **Rounding**: sub-pixel moves use round-half-away-from-zero (`roundHalfAway`). `Math.round` is
+  asymmetric (-2.5 → -2) and would break mirror symmetry (tested in `tests/unit/movement.test.ts`).
+- **Collision** is a linear scan over the scene's rects (`solidAt`), fine for tens of rects. Scene left /
+  right / bottom edges are solid. One-ways block only when the box bottom is exactly on their line.
+- **Coyote**: N usable *airborne* frames after the frame whose movement left the ground.
+- **Jump buffer** also covers double jumps (`djBuf`); **landing preference**: a press while falling close
+  to the ground stays buffered for a ground jump instead of spending the double jump.
+- **Wall speed retention** stores vx only on the first blocked frame, is cancelled by opposite-sign vx and
+  cleared by jumps and dashes; otherwise wall jumps get undone and the player glues to walls.
+- **Wall slide** needs a held direction into the wall while falling; the cap ramps
+  `min(slideMax, slideStartMax + slideRamp·slideT)` (2.5 → 6.5 px/f). Holding away for `stickFrames` lets go.
+  Wall jump has a 20 px grace (no need to be sliding), forces vx for 8 frames, refills dash + double jump.
+- **Dash**: 2 freeze frames (the press frame counts), then 12 frames at 24 px/f with vy = 0, exits at run
+  speed; 24-frame cooldown; one per airtime; jump during a grounded dash = dash jump (vx 12).
+- **Corner corrections**: head bump (slide ≤ 20 px sideways around a ceiling corner), ledge pop-up (≤ 16 px
+  up onto a lip), dash (≤ 24 px up/down). Each emits `cornerCorrect`.
+- **Performance**: no closures in the per-step path; keep `solidAt` allocation-free.
+
+## Reach (default tuning, for laying out the scene)
+- Jump: 272 px high (4.25 tiles), apex after 24 frames (28 with apex hang), ~43 frames of airtime on the
+  flat = ~410 px (6.4 tiles) of horizontal travel at run speed (9.6 px/f). Double jump adds 192 px (3 tiles).
+- Comfortable: steps up to 3 tiles (192 px) and gaps up to 5 tiles (320 px) on a single jump.
+- Dash: 288 px + exit speed. Max fall 21.3 px/f (32 with Down held).

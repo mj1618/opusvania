@@ -1,0 +1,83 @@
+# Scene, units, layers, ownership
+
+## Units
+- **Sim px** (= "world px") everywhere. The logical view is **1920x1080** (16:9) at zoom 1
+  (`VIEW_W/VIEW_H`, `src/render/contract.ts`). One "tile" is **64 px** (`TILE`, `src/scene/index.ts`):
+  a layout grid only, the sim has no tiles.
+- The player's collision box is **40x80** (`tuning.body`); `(x, y)` is its top-left, integers. The
+  drawn character is ~1.3 tiles (ears overhang the box). "Feet" = bottom-centre `(x + w/2, y + h)`:
+  events, `teleport` and the scene's `spawn` all use it.
+- Velocities are px per sim frame (x60 = px/s); the sim runs at 60Hz. y grows downward.
+- **Rendering is at full device resolution**: the canvas fills the window letterboxed to 16:9, backed
+  at CSS size x devicePixelRatio, and the stage root is scaled (`src/render/app.ts`). Everything under
+  it works in logical units, so draw vectors/meshes and they stay crisp; nothing is upscaled. Shaders
+  that need device pixels use `ctx.viewScale()`. Camera and player are interpolated between sim frames.
+
+## The scene: `content/scene/grove.json`
+`{id, width: 5760, height: 1600, spawn: {x, y}, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}]}`,
+validated by Zod in `src/scene/index.ts` (exports `GROVE`), typed in `src/sim/scene.ts`. Tags are for
+artists (`ground | pool | ledge | trunk | floating | root | branch`); the sim ignores them. The left,
+right and bottom scene edges are solid, the top is open. One-ways block only a falling body; Down+Jump
+drops through. Nothing is lethal.
+
+```
+x:  0        1000       2000       3000       4000       5000     5760
+ 0 ┌──────────────────────────────────────────────────────────────────┐
+                                                 ┌┐ trunk B (top 192)
+448                               ┌ledge─────┬┐  ││             ┌ledge┤
+                           ▬F5    └──────────┤│  ││        ▬F7  └─────┤
+608                  ▬F4                     ││  ││
+704            ▬F3                 trunk A → ││  ││     ▬F6
+832         ▬F2                              ││  ││  ╌branch
+960     ▬F1          ╌branch (1024)          └┘  └┘ (both end at 1024: walk under)
+1088┌bank┐                       ┌─raised──┐               ┌──raised ground──┤
+1280│    └────ground───┐    ┌────┘  1152   └──ground──▄root┘                 │
+1408│                  └pool┘                                                │
+1600└────────────────────────────────────────────────────────────────────────┘
+```
+- Ground top is 1280; left bank and right rise 1088; mid rise 1152; the pool floor is 1408 (x 1536-1856).
+- Left route up: bank → F1..F5 → high ledge (y 448) → trunk A top → trunk B top (192, the highest point).
+- The trunk pair (gap 256 px, x 3328-3584) is the wall-jump shaft: three wall jumps from the ground to 448.
+- Right route up: root → branch → F6 → F7 → far ledge (448).
+- `tests/unit/scene.test.ts` pilots every route; if you move a rect, it tells you what became unreachable.
+  Reach numbers are in movement-controller.md.
+
+## Layer tree (`src/render/scene/layer-tree.ts`), back to front
+| layer | parallax | what |
+|---|---|---|
+| `sky` | screen space | sky glow; 0..1920 x 0..1080, never moves |
+| `far[0..2]` | 0.12, 0.25, 0.42 | far forest silhouettes, `far[0]` farthest |
+| `mid` | 0.68 | big trunks, roots, vines, fog sheets |
+| `playfield` | 1 | terrain, moss, plants, pool: the skin of the collision rects |
+| `character` | 1 | the character |
+| `foreground` | 1.35 | dark blurred leaves and branches |
+| `air` | 1 | god rays, motes, fireflies, mist |
+
+Then the post stage wraps the whole tree; the debug overlay is outside it. World layers are authored
+in world px and line up with the playfield when the camera centre is at `layers.anchor` (scene centre
+x, the camera's lowest resting y); elsewhere they scroll at `parallax` x camera speed. `layers.visible(name,
+cam)` = the on-screen part in layer coordinates; `layers.coverage(name)` = the most the follow camera can
+show (draw at least that). Zoom scales every world layer about the view centre.
+
+## Who owns what
+| path | owner |
+|---|---|
+| `src/render/scene/layers/<layer>.ts` (+ `scene/lib/` for shared helpers) | environment, one agent per file |
+| `src/render/character/` | character (replace the placeholder wholesale; keep the class name, constructor and `update`) |
+| `src/render/post/` | post (keep `PostStage`'s constructor, `update`, `resize`) |
+| `src/render/contract.ts`, `stage.ts`, `lights.ts`, `app.ts`, `camera/`, `scene/index.ts`, `scene/layer-tree.ts` | orchestrator: ask before changing |
+| `src/sim/`, `content/scene/` | orchestrator |
+
+Interfaces are documented at the top of `scene/index.ts`, `character/index.ts`, `post/index.ts`,
+`lights.ts` and `contract.ts`. The driver order per render frame is in `stage.ts`.
+
+## Shots and clips
+- `npm run shots` (dev server on 5180, or `--url`): `shots/wide-*.png` (1920x1080 at 7 camera stops),
+  `shots/closeup-*.png` (character at 4x in 12 situations) and `shots/closeup-strip.png`. `--only=wide|closeup`,
+  `--out=dir`, `--ambient=N` (render frames to run before shooting), `--hitboxes`, `--no-gpu`. ~1.5 s.
+  Deterministic: same code, same pictures. Parallel agents: use different `--out` dirs.
+- `npm run clip -- --script "R40 R+J22 R30 .30" --name x` → `clips/x.mp4` + `.gif`, one picture per sim
+  step. `--zoom 2` (centred on the character) or `--wide`; `--at x,y`; `--ambient N` for the scene
+  animating with the sim frozen. Needs ffmpeg.
+- Both launch headless Chromium on the real GPU (`--use-angle=metal` on macOS); both read the stops and
+  situations from the top of `tools/shots.ts`, so add a stop there when the scene gains a landmark.
