@@ -34,3 +34,9 @@
 - **`npm run check` takes ~6 s**: typecheck, Biome, Vitest (~0.2 s), then 3 e2e smoke tests against a fresh
   production build. Looks are never asserted in check; they are judged from `npm run shots`.
 - **CI renders with software GL** (very slow per frame): e2e must not step-and-render hundreds of frames.
+- **`npm run look:stats -- <dir|files>`** (`tools/look-stats.ts`) prints the numbers of memory/reference-study.md
+  for PNGs with the same definitions (Rec.709 luma on sRGB bytes): mean, median, near-black/dark/near-white %,
+  border, top and bottom quarter, corners/centre, dominant hue share; `--hero=x,y,w,h` (or a `<png>.hero.json`
+  sidecar) adds hero p10/p90 and p90 / mean of the 300 px around. `--stops[=dir]` shoots the seven wide stops
+  with hero boxes and measures them in one go (stop list duplicated from tools/shots.ts: keep in step).
+  `--only=wide`, `--json`. Decodes with ffmpeg/ffprobe, no extra dependency.
