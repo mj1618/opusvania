@@ -9,7 +9,7 @@
  * lantern tips; a ruff of pale fluff at the neck; slim dark limbs with pale cuffs and feet.
  */
 import { catmull, clamp, lerp, sat } from '../hooded/math';
-import { mixRGB, type Painter, type RGB, rgb, type Shade } from '../hooded/paint';
+import { mixRGB, type Painter, type RGB, rgb, type Shade } from './paint';
 import {
   BODY,
   type Frame,

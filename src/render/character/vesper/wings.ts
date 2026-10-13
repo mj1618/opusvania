@@ -58,6 +58,8 @@ const DART = [-73, -75, -78, -83, -88];
 const WALL_FREE = [-118, -98, -78, -60, -42];
 const BEAT_UP = [-112, -90, -68, -46, -24];
 /** Wrapped close while she somersaults. */
+/** The glide: spread wide, a shallow V seen from the side. */
+const SOAR = [-128, -108, -86, -63, -40];
 const TUCKED = [-58, -68, -80, -90, -100];
 
 const ANTENNA_A: ChainSpec = {
@@ -128,13 +130,18 @@ export class Secondary {
     const wall = rig.wWall;
     // The somersault: folded tight round her while she turns, thrown wide as she opens out.
     const tuck = rig.spinW;
+    const soar = rig.wGlide * (1 - tuck);
     const up = rig.openK;
     const hold = rig.openHold * (1 - up) * (1 - tuck);
-    const spread = sat(run * 1.2 + rig.wAir + dash + wall + up) * (1 - tuck);
+    const spread = sat(run * 1.2 + rig.wAir + dash + wall + up + soar) * (1 - tuck);
     this.spread += (spread - this.spread) * (1 - Math.exp(-14 * dt));
-    this.open = sat((glide + apex * 0.6 + wall * 0.5) * (1 - tuck) + up + 0.5 * hold);
-    const stiff = 0.9 + 0.4 * this.spread + 1.7 * dash + 0.5 * up + 8 * tuck + 0.4 * rig.wAir + 0.8 * hold;
-    const dragK = (1 - rig.wAir * (0.45 + 0.3 * rig.airRise) - 0.55 * dash - 0.3 * wall) * (1 - 0.5 * hold);
+    this.open = Math.max(soar, sat((glide + apex * 0.6 + wall * 0.5) * (1 - tuck) + up + 0.5 * hold));
+    const stiff =
+      0.9 + 0.4 * this.spread + 1.7 * dash + 0.5 * up + 8 * tuck + 0.4 * rig.wAir + 0.8 * hold + 0.7 * soar;
+    const dragK =
+      (1 - rig.wAir * (0.45 + 0.3 * rig.airRise) - 0.55 * dash - 0.3 * wall) *
+      (1 - 0.5 * hold) *
+      (1 - 0.45 * soar);
     // The lope: a soft half-beat of the wings each stride, up through the float, down at the push.
     const stride = Math.sin(4 * Math.PI * (rig.phase - 0.2)) * run * 1.6;
     const dragT = dragK * (1 - 0.85 * tuck);
@@ -143,10 +150,17 @@ export class Secondary {
     // --- Ripple: runs faster and deeper with speed.
     const sp = pulse(clock, 7.3, 1.1, 77, 0.85);
     const settle = sp > 0 ? Math.sin(Math.PI * sp) ** 2 * rig.wIdle : 0;
-    const rate = 2.6 + 9 * settle + 15 * run + 5 * glide + 3 * wall + 8 * dash;
+    const rate = 2.6 + 9 * settle + 15 * run + 5 * glide + 3 * wall + 8 * dash + 4 * soar;
     this.ripple += rate * dt;
     const amp =
-      (0.045 + 0.1 * settle + 0.26 * run + 0.15 * glide + 0.07 * wall + 0.05 * apex + 0.03 * dash) *
+      (0.045 +
+        0.1 * settle +
+        0.26 * run +
+        0.15 * glide +
+        0.07 * wall +
+        0.05 * apex +
+        0.03 * dash +
+        0.07 * soar) *
       (1 - tuck);
 
     // The collar's own axes on screen: up along the spine, forward a quarter turn toward the facing.
@@ -186,6 +200,8 @@ export class Secondary {
           DART[k]! * dash +
           lerp(WALL_FREE[k]!, 3, far) * wall;
         lift -= stride * (15 - 2 * k);
+        // Gliding: wide open, billowing past the shape as they catch the air, the far wing higher.
+        lift = lerp(lift, SOAR[k]! - 20 * rig.catchK * (1 - k * 0.1) - 24 * far, soar);
         // After the somersault the wings stay half spread while she is still rising.
         lift = lerp(lift, APEX[k]! * 0.85, hold);
         // In the ball both wings wrap back over her spine and under: one shell.

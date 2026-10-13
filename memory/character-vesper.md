@@ -80,6 +80,17 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - Pickups: `pickup` events set `rig.joy` (head/chest lift, wing flick; a 'great' opens the wings) and a
   flash through lanterns/eyes; scaled down by `combo`.
 
+## Round 7
+- `paint.ts` is now our own copy of the hooded painter: `coolWrap` (0.5) puts the cool rim on every
+  edge the key light leaves dark, not only upper-left ones.
+- Glide (prepared before the sim has it): `rig.wGlide`, pose `GLIDEP`, wing table `SOAR`, a catch
+  spring (`catchK`) kicked by entry fall speed that billows the wings and swings the body. Driven by
+  `motion === 'glide'`, or by any fall when `window.__vesperGlide = true` (test switch; remove once
+  the sim lands). Landing out of a glide sets `openHold` for a wing flare.
+- Ground turn = pivot: foot lift is cut by `1 - |d|` so both feet stay down through the swivel.
+- Footfall give: each half-cycle of the run kicks the crouch spring by 9.
+- Sheets: scratch `seq.mts`-style capture (one browser, step N + screenshot) survives HMR better than clips.
+
 ## Gotchas
 - Wing strands have no body collision: a stiff, fast flare throws them over the head and they
   come down in FRONT of the body. Keep the flare's stiffness boost low (0.5) and BEAT_UP <= ~-112 deg.

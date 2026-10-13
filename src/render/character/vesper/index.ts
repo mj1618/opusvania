@@ -16,10 +16,10 @@ import type { PlayerView, RenderContext } from '../../contract';
 import type { PointLight } from '../../lights';
 import { KEY_LIGHT } from '../../scene/lib/look';
 import { clamp, noise1, Spring, sat } from '../hooded/math';
-import { Painter, rgb } from '../hooded/paint';
 import type { CharacterSkin, SkinDef } from '../skin';
 import { drawVesper, type View } from './draw';
 import { FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
+import { Painter, rgb } from './paint';
 import { J_HEAD, Rig } from './rig';
 import { Secondary } from './wings';
 
@@ -75,6 +75,7 @@ export class VesperCharacter implements CharacterSkin {
   update(dtIn: number, clock: number, player: PlayerView, events: readonly SimEvent[]): void {
     const dt = clamp(dtIn, 0, 0.05);
     const { rig, sec, fx, painter: p, view } = this;
+    Rig.glideTest = !!(globalThis as { __vesperGlide?: boolean }).__vesperGlide;
     rig.update(dt, clock, player, events);
     const sig = rig.sig;
     const fresh = sig.spawned || !this.started;
@@ -153,7 +154,7 @@ export class VesperCharacter implements CharacterSkin {
 
     // --- Dust rises off the wings; more of it when she moves.
     const moving = sat(Math.hypot(player.vx, player.vy) / 10);
-    const rate = fresh ? 0 : 2.2 + 9 * moving + 22 * rig.wDash + 8 * this.flash;
+    const rate = fresh ? 0 : 2.2 + 9 * moving + 22 * rig.wDash + 8 * this.flash + 16 * rig.wGlide;
     fx.shed(dt, rate, mid.rx[2]!, mid.ry[2]!, 13, player.vx * 9, player.vy * 9);
     fx.update(dt, clock);
 
@@ -173,7 +174,7 @@ export class VesperCharacter implements CharacterSkin {
     const scale = Math.max(1e-3, Math.abs(this.layer.scale.x) * this.ctx.viewScale());
     p.fw = clamp(1 / scale, 0.06, 1.5);
     const flicker = 0.95 + 0.045 * noise1(clock * 4.3, 21) + 0.03 * Math.sin(clock * 1.3);
-    const glow = flicker * (1 + 0.3 * rig.wDash + 0.55 * this.flash);
+    const glow = flicker * (1 + 0.3 * rig.wDash + 0.55 * this.flash + 0.22 * rig.wGlide);
     view.glow = glow;
     p.l2x = ex;
     p.l2y = ey;

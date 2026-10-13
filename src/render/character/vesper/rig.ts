@@ -193,6 +193,8 @@ function spinCurve(u: number): number {
 function tuckCurve(u: number): number {
   return quintic(u / 0.34) * (1 - quintic((u - 0.52) / 0.46));
 }
+/** The glide: hanging relaxed under the wings, a slight forward lean, legs trailing, arms loose and low. */
+const GLIDEP = pose([-1, 32, 0.22, -0.1, -0.22, -6, 2, 1.1, -11, 4.5, 1.3, -8, -7, -10, -5, 0, 1, 0.15, 1]);
 const WALL = pose([
   3.5, 27, 0.14, 0.08, 0.12, 18.6, 15.5, -1.15, 18.6, 4, -1.2, 11.5, 9.5, 9, -3.5, 0.2, 1, 0.3, 0.5,
 ]);
@@ -314,6 +316,14 @@ export class Rig {
   private readonly handA = new Drag2(19, 0.5, 0.3, 5.5);
   private readonly handB = new Drag2(16, 0.46, 0.3, 5.5);
   private spinA = 0;
+  /** Glide weight 0..1, and the wings' catch (a damped swing, + = billowed past the glide shape). */
+  wGlide = 0;
+  catchK = 0;
+  /** Test switch until the sim has a glide: any fall counts as one. */
+  static glideTest = false;
+  private gliding = false;
+  private readonly catchS = new Spring(0, 10.5, 0.36);
+  private lastStep = 0;
   /** Delight from a pickup: decays in ~0.4 s. Lifts the head and chest; the wings read it too. */
   joy = 0;
   private spinVel = 0;
@@ -328,6 +338,7 @@ export class Rig {
   private readonly gazeX = new Spring(0, 26, 0.85);
   private readonly gazeY = new Spring(0, 14, 0.9);
   private readonly wide = new Spring(1, 22, 0.5);
+  private speedNow = 0;
   private lastCx = 0;
   private lastCy = 0;
   private lastVx = 0;
@@ -376,6 +387,8 @@ export class Rig {
           sig.landHard = e.hard;
           this.squash.v -= clamp(e.vy * 0.16, 0.5, 3.6);
           this.crouch.v += clamp(e.vy * 11, 26, 230);
+          // Touching down out of a glide: the wings flare once.
+          if (this.wGlide > 0.3) this.openHold = 0.9;
           break;
         case 'dashStart':
           sig.dashStart = true;
@@ -458,6 +471,7 @@ export class Rig {
     this.wRun += (runT - this.wRun) * approach(runT > this.wRun ? 18 : 17, dt);
     this.wIdle += ((ground ? 1 - runT : 0) - this.wIdle) * approach(17, dt);
     this.speedK += (sat(speed / 9.6) - this.speedK) * approach(9, dt);
+    this.speedNow = sat(speed / 9.6);
 
     // --- Run phase: by distance, signed by the facing so moving backwards runs it backwards.
     if (p.grounded && !dash) {
@@ -482,6 +496,20 @@ export class Rig {
     add(SKID, this.wSkid);
     if (wSum < 1e-3) add(this.idlePose(clock), 1);
     for (let i = 0; i < NP; i++) out[i]! /= wSum;
+
+    // A ground turn-around is a pivot: both feet stay down while she swivels through the camera.
+    if (p.grounded) {
+      const pivot = sat(1.25 * (1 - Math.abs(d))) * (1 - this.wDash);
+      out[AU]! *= 1 - 0.92 * pivot;
+      out[BU]! *= 1 - 0.92 * pivot;
+      out[AP]! *= 1 - 0.7 * pivot;
+      out[BP]! *= 1 - 0.7 * pivot;
+      out[PU]! -= 1.6 * pivot;
+      // Each footfall of the lope gives a little at the knee.
+      const st = Math.floor(this.phase * 2);
+      if (st !== this.lastStep && this.wRun > 0.6) this.crouch.v += 9;
+      this.lastStep = st;
+    }
 
     // --- Double jump: snap into a ball, one clean turn, snap out.
     if (startSpin) {
@@ -562,6 +590,26 @@ export class Rig {
     } else this.openK = 0;
     if (sig.opened) this.openHold = 1;
     this.openHold *= Math.exp(-(p.grounded || dash || wall ? 14 : 2.2) * dt);
+
+    // --- Glide: the wings catch the air, the body swings under them, then it is all serene.
+    const glide = (p.motion as string) === 'glide' || (Rig.glideTest && air && p.vy > 1.5 && !this.spinning);
+    if (glide && !this.gliding) this.catchS.v += 7 + clamp(p.vy, 0, 22) * 0.55;
+    this.gliding = glide;
+    this.wGlide += ((glide ? 1 : 0) - this.wGlide) * approach(glide ? 15 : 9, dt);
+    this.catchK = this.catchS.step(0, dt);
+    if (this.wGlide > 1e-3) {
+      const w = this.wGlide;
+      for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, GLIDEP[i]!, w);
+      const vf = clamp((p.vx * sgn) / 9.6, -1.3, 1.3);
+      const sw = noise1(clock * 0.6, 71);
+      // Lean follows her speed and banks into the stick; the catch swings her back under the wings.
+      out[LEAN]! += (0.13 * vf + 0.07 * clamp(p.inputX * sgn, -1, 1) - 0.3 * this.catchK + 0.03 * sw) * w;
+      out[PU]! += 1.6 * this.catchK * w;
+      out[AF]! += (-3 * this.catchK + 1.2 * sw) * w;
+      out[BF]! += (-4 * this.catchK - 1.0 * sw) * w;
+      out[HAU]! += (2.5 * this.catchK + 0.8 * sw) * w;
+      out[HBU]! += 2 * this.catchK * w;
+    }
 
     // --- Springs layered on top.
     const ax = (p.vx - this.lastVx) / Math.max(dt * 60, 0.25);
@@ -835,7 +883,7 @@ export class Rig {
     const rise = 0.5 - 0.5 * c1 + 0.14 * (0.5 - 0.5 * c2);
     o[PF] = 1.2 + 0.9 * Math.sin(TAU * (x - 0.12));
     // The bound belongs to speed: starting, stopping and turning she steps low instead of hopping.
-    const fl = 0.3 + 0.7 * smoothstep(0.35, 0.95, k);
+    const fl = 0.3 + 0.7 * smoothstep(0.35, 0.95, Math.min(k, this.speedNow));
     o[AU]! *= 0.45 + 0.55 * fl;
     o[BU]! *= 0.45 + 0.55 * fl;
     o[PU] = 28.6 + 9.2 * rise ** 0.72 * fl;

@@ -5,7 +5,7 @@
  * Deterministic (own LCG, no Math.random); fixed pools, no allocation per frame.
  */
 import { sat } from '../hooded/math';
-import { type Painter, type RGB, rgb } from '../hooded/paint';
+import { type Painter, type RGB, rgb } from './paint';
 
 const MOTE = 0;
 const DUST = 1;
