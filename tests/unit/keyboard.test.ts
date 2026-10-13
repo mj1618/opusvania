@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Game } from '../../src/game';
 import { defaultBindings } from '../../src/input/bindings';
 import { KeyboardSource } from '../../src/input/keyboard';
+import { GROVE } from '../../src/scene/index';
 import { ActionBit } from '../../src/sim/input';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 
@@ -52,7 +53,7 @@ describe('Game live input', () => {
       pending = 0;
       return m;
     };
-    const game = new Game(cloneTuning(defaultTuning), { seed: 1 }, live);
+    const game = new Game(cloneTuning(defaultTuning), GROVE, 1, live);
     game.queueInput([0]);
     game.stepOnce(); // scripted step: the tap is sampled and discarded
     expect(game.state.prevInput).toBe(0);

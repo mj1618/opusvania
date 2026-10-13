@@ -1,53 +1,30 @@
 import type { JumpKind, SimEvent } from '../events';
 import { ActionBit, axisX, type InputFrame } from '../input';
-import {
-  type Body,
-  type Collider,
-  hazardAt,
-  Move,
-  moveX,
-  moveY,
-  oneWayUnder,
-  overlaps,
-  pogoTargetAt,
-  solidAt,
-} from '../physics/aabb';
-import type { GameState, PlayerState } from '../state';
+import { type Body, type Collider, moveX, moveY, oneWayUnder, solidAt } from '../physics/aabb';
+import type { Scene } from '../scene';
+import type { GameState, Motion, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
-import { dynSolidAt, solidAny } from '../world/dynamic';
-import { type Abilities, ALL_ABILITIES, type Room, type Spawn } from '../world/rooms';
-import { BASE_PROFILE, type MoveParams } from './params';
+import type { MoveParams } from './params';
 
 /**
- * The player controller (movement-spec §2). A small state machine (normal / wallSlide / dash /
- * dead) run in a fixed per-frame order (§2.2) that the exact tests in tests/unit/movement depend
- * on. All numbers come from MoveParams (tuning + profile + assists).
+ * The player movement controller: run with accel/decel/turn, variable-height jump, coyote time,
+ * jump buffer, apex hang, double jump, dash (with dash-jump cancel), wall slide + wall jump, fast
+ * fall, one-way drop-through and three corner corrections. Everything is always enabled.
  *
- * Performance note: the step allocates one context + collider and no closures (the search bot
- * runs millions of frames; per-step closures cost more than the physics under tsx/esbuild).
+ * A small state machine (normal / wallSlide / dash) run in a fixed per-frame order: freeze ->
+ * latch presses -> mode update (velocity) -> move X then Y -> post (timers, ground and wall probes,
+ * transitions, facing, events). All numbers come from MoveParams (tuning + assists).
  */
 
-export interface CreatePlayerOptions {
-  abilities?: Abilities;
-  profile?: string;
-  /** Chin carried in from the last room (defaults to full). */
-  chin?: number;
-  chinMax?: number;
-}
-
-/** A player standing on the floor of the spawn tile, horizontally centred, facing into the room. */
-export function createPlayer(
-  spawn: Spawn,
-  t: Tuning,
-  room: Room,
-  opts: CreatePlayerOptions = {},
-): PlayerState {
-  const ts = t.world.tileSize;
+/** A player at rest with its feet centre at (feetX, feetY), facing right. Lifted out of any solid. */
+export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Scene): PlayerState {
   const w = t.body.width;
   const h = t.body.height;
-  const x = Math.floor(spawn.tx * ts + ts / 2 - w / 2);
-  const y = (spawn.ty + 1) * ts - h;
-  const p: PlayerState = {
+  const x = Math.max(0, Math.min(scene.width - w, Math.round(feetX - w / 2)));
+  let y = Math.round(feetY) - h;
+  for (let i = 0; i < scene.height && solidAt(scene, x, y, w, h); i++) y--;
+  const grounded = solidAt(scene, x, y + 1, w, h) || oneWayUnder(scene, x, y, w, h);
+  return {
     x,
     y,
     rx: 0,
@@ -56,12 +33,22 @@ export function createPlayer(
     h,
     vx: 0,
     vy: 0,
-    facing: 2 * spawn.tx + 1 <= room.width ? 1 : -1,
-    state: 'normal',
-    grounded: false,
+    facing: 1,
+    mode: 'normal',
+    modeFrames: 0,
+    motion: grounded ? 'idle' : 'fall',
+    motionFrames: 0,
+    grounded,
+    contactFrames: 0,
     wallDir: 0,
-    abilities: { ...(opts.abilities ?? ALL_ABILITIES) },
-    profile: opts.profile ?? BASE_PROFILE,
+    inputX: 0,
+    skid: false,
+    dashDir: 0,
+    dashTimer: 0,
+    freeze: 0,
+    airDash: t.dash.airDashes,
+    dj: t.jump.doubleJumps,
+    airTopY: y,
     coyote: 0,
     jumpBuf: 0,
     djBuf: 0,
@@ -69,47 +56,19 @@ export function createPlayer(
     forceTimer: 0,
     forceDir: 0,
     dashCd: 0,
-    dashTimer: 0,
-    dashDir: 0,
-    freeze: 0,
     stick: 0,
     slideT: 0,
     retainVx: 0,
     retainTimer: 0,
     dropTimer: 0,
     dropY: 0,
-    pogoTimer: 0,
-    deathTimer: 0,
     fromJump: false,
     cut: false,
-    cutDisabled: false,
     sustain: 0,
     sustainV: 0,
     framesSinceJump: 0,
-    airDash: t.dash.airDashes,
-    dj: t.jump.doubleJumps,
-    airTopY: y,
     stepDist: 0,
-    skid: false,
-    respawn: null,
-    move: null,
-    actBuf: null,
-    chin: opts.chin ?? opts.chinMax ?? t.kid.chin,
-    chinMax: opts.chinMax ?? t.kid.chin,
-    iframes: 0,
-    hurtLock: 0,
-    ring: 0,
-    counter: 0,
-    slipClean: false,
-    safeX: x + w / 2,
-    safeY: y + h,
-    hazardRespawn: false,
-    down: null,
-    recoilVx: 0,
-    recoilT: 0,
   };
-  p.grounded = solidAny(room, ts, x, y + 1, w, h) || oneWayUnder(room, ts, x, y, w, h);
-  return p;
 }
 
 function approach(v: number, target: number, delta: number): number {
@@ -120,46 +79,17 @@ function sign(v: number): number {
   return v > 0 ? 1 : v < 0 ? -1 : 0;
 }
 
-/**
- * Bounce the player upward (pogo now; Phase 2's nail hitbox calls the same function).
- * `cutDisabled` makes it a fixed-height bounce; `refill` restores the air dash and double jump.
- */
-export function bounce(
-  p: PlayerState,
-  v: number,
-  P: MoveParams,
-  opts: { refill: boolean; cutDisabled: boolean },
-) {
-  p.vy = -v;
-  p.cutDisabled = opts.cutDisabled;
-  p.cut = false;
-  p.fromJump = false;
-  p.sustain = 0;
-  if (opts.refill) {
-    p.airDash = P.airDashes;
-    p.dj = P.doubleJumps;
-  }
-}
-
-/** Switches the player's movement profile (weight class etc.). Emits profileChange. */
-export function setProfile(p: PlayerState, profile: string, events: SimEvent[]): void {
-  if (p.profile === profile) return;
-  events.push({ type: 'profileChange', from: p.profile, to: profile });
-  p.profile = profile;
-}
-
 /** Per-step context: everything the controller functions below share. */
 class Ctx implements Collider {
   inX = 0;
   jumpPressedNow = false;
   skipMove = false;
   dashMoving = false;
+  jumped = false;
 
   constructor(
-    readonly state: GameState,
     readonly p: PlayerState,
-    readonly room: Room,
-    readonly ts: number,
+    readonly scene: Scene,
     readonly input: InputFrame,
     readonly prev: InputFrame,
     readonly P: MoveParams,
@@ -183,7 +113,7 @@ class Ctx implements Collider {
   }
 
   solid(x: number, y: number): boolean {
-    return solidAt(this.room, this.ts, x, y, this.p.w, this.p.h) || dynSolidAt(x, y, this.p.w, this.p.h);
+    return solidAt(this.scene, x, y, this.p.w, this.p.h);
   }
 
   dropping(y: number): boolean {
@@ -192,30 +122,25 @@ class Ctx implements Collider {
 
   // Collider.
   blockedX(b: Body, dir: number): boolean {
-    return solidAt(this.room, this.ts, b.x + dir, b.y, b.w, b.h) || dynSolidAt(b.x + dir, b.y, b.w, b.h);
+    return solidAt(this.scene, b.x + dir, b.y, b.w, b.h);
   }
 
   blockedY(b: Body, dir: number): boolean {
-    if (solidAt(this.room, this.ts, b.x, b.y + dir, b.w, b.h) || dynSolidAt(b.x, b.y + dir, b.w, b.h))
-      return true;
-    return dir > 0 && !this.dropping(b.y) && oneWayUnder(this.room, this.ts, b.x, b.y, b.w, b.h);
-  }
-
-  hazard(b: Body): boolean {
-    return hazardAt(this.room, this.ts, b, this.P);
+    if (solidAt(this.scene, b.x, b.y + dir, b.w, b.h)) return true;
+    return dir > 0 && !this.dropping(b.y) && oneWayUnder(this.scene, b.x, b.y, b.w, b.h);
   }
 
   /** Standing on something if the body were at (x, y). */
   groundAt(x: number, y: number): boolean {
     if (this.solid(x, y + 1)) return true;
-    return !this.dropping(y) && oneWayUnder(this.room, this.ts, x, y, this.p.w, this.p.h);
+    return !this.dropping(y) && oneWayUnder(this.scene, x, y, this.p.w, this.p.h);
   }
 
-  /** X blocked: dash corner correction, or ledge pop-up when airborne (spec §2.4). */
+  /** X blocked: dash corner correction, or ledge pop-up when airborne. */
   onBlockX(b: Body, dir: number): boolean {
     const p = this.p;
     const P = this.P;
-    if (p.state === 'dash') {
+    if (p.mode === 'dash') {
       for (let k = 1; k <= P.dashCorrectPx; k++) {
         for (let s = -1; s <= 1; s += 2) {
           const ny = b.y + s * k;
@@ -235,7 +160,7 @@ class Ctx implements Collider {
       }
       return false;
     }
-    if (p.grounded || p.state !== 'normal') return false;
+    if (p.grounded || p.mode !== 'normal') return false;
     for (let k = 1; k <= P.ledgePopPx; k++) {
       const ny = b.y - k;
       if (this.solid(b.x, ny)) return false;
@@ -250,10 +175,10 @@ class Ctx implements Collider {
     return false;
   }
 
-  /** Y blocked while rising: head-bump corner correction (spec §2.4). */
+  /** Y blocked while rising: head-bump corner correction. */
   onBlockY(b: Body, dir: number): boolean {
     const p = this.p;
-    if (dir > 0 || p.vy >= 0 || p.state !== 'normal') return false;
+    if (dir > 0 || p.vy >= 0 || p.mode !== 'normal') return false;
     // Only in the vx direction when moving; both (facing first) when not.
     const d0 = p.vx > 0 ? 1 : p.vx < 0 ? -1 : p.facing;
     const both = p.vx === 0;
@@ -272,15 +197,6 @@ class Ctx implements Collider {
   }
 }
 
-/**
- * Global hitstop (combat-spec §2): nothing moves and no timers run, but presses are latched into
- * the movement buffers so a jump mashed during the freeze comes out on the first free frame.
- */
-export function latchOnly(state: GameState, room: Room, input: InputFrame, P: MoveParams): void {
-  const c = new Ctx(state, state.player, room, P.tileSize, input, state.prevInput, P, []);
-  latch(c);
-}
-
 function latch(c: Ctx): void {
   const p = c.p;
   const P = c.P;
@@ -289,8 +205,6 @@ function latch(c: Ctx): void {
     p.djBuf = P.doubleJumpBufferFrames;
   }
   if (c.pressed(ActionBit.dash)) p.dashBuf = P.dashBufferFrames;
-  if (c.pressed(ActionBit.attack) && c.held(ActionBit.down) && p.abilities.pogo)
-    p.pogoTimer = P.pogoActiveFrames;
 }
 
 function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {
@@ -301,10 +215,10 @@ function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {
   p.grounded = false;
   p.fromJump = true;
   p.cut = false;
-  p.cutDisabled = false;
   p.sustain = c.P.sustainFrames;
   p.sustainV = p.vy;
   p.framesSinceJump = 0;
+  c.jumped = true;
   p.retainTimer = 0; // a jump (incl. wall jump) ends wall speed retention
   c.events.push({ type: 'jump', kind, x: c.fx, y: c.fy, dir });
 }
@@ -341,14 +255,14 @@ function wallJump(c: Ctx, d: number): void {
     p.airDash = P.airDashes;
     p.dj = P.doubleJumps;
   }
-  if (p.state === 'wallSlide') c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: d });
-  p.state = 'normal';
+  if (p.mode === 'wallSlide') c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: d });
+  p.mode = 'normal';
   p.stick = 0;
   p.facing = d > 0 ? -1 : 1;
   jumpCommon(c, 'wall', -d);
 }
 
-/** Landing preference (§2.5): falling with ground within vy x buffer frames -> keep it buffered. */
+/** Landing preference: falling with ground within vy x buffer frames -> keep it buffered. */
 function landingPreferred(c: Ctx): boolean {
   const p = c.p;
   if (!c.P.landingPreference || p.vy <= 0) return false;
@@ -363,8 +277,7 @@ function landingPreferred(c: Ctx): boolean {
 function tryJump(c: Ctx): void {
   const p = c.p;
   if (p.jumpBuf > 0 && (p.grounded || p.coyote > 0)) {
-    const onOneWayOnly =
-      p.grounded && !c.solid(p.x, p.y + 1) && oneWayUnder(c.room, c.ts, p.x, p.y, p.w, p.h);
+    const onOneWayOnly = p.grounded && !c.solid(p.x, p.y + 1) && oneWayUnder(c.scene, p.x, p.y, p.w, p.h);
     if (c.held(ActionBit.down) && onOneWayOnly) {
       p.dropTimer = c.P.dropThroughFrames;
       p.dropY = p.y + p.h;
@@ -378,14 +291,14 @@ function tryJump(c: Ctx): void {
     groundJump(c, !p.grounded ? 'coyote' : c.jumpPressedNow ? 'ground' : 'buffered');
     return;
   }
-  if (p.jumpBuf > 0 && p.abilities.wallJump) {
+  if (p.jumpBuf > 0) {
     const d = wallInRange(c);
     if (d !== 0) {
       wallJump(c, d);
       return;
     }
   }
-  if (p.djBuf > 0 && p.abilities.doubleJump && p.dj > 0 && !landingPreferred(c)) {
+  if (p.djBuf > 0 && p.dj > 0 && !landingPreferred(c)) {
     p.vy = -c.P.doubleJumpSpeed;
     p.dj--;
     jumpCommon(c, 'double', c.inX);
@@ -394,15 +307,15 @@ function tryJump(c: Ctx): void {
 
 function canDash(c: Ctx): boolean {
   const p = c.p;
-  return p.abilities.dash && p.dashCd === 0 && (p.grounded || p.airDash > 0);
+  return p.dashCd === 0 && (p.grounded || p.airDash > 0);
 }
 
 function startDash(c: Ctx, dir: number): void {
   const p = c.p;
   const P = c.P;
   const air = !p.grounded;
-  if (p.state === 'wallSlide') c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: p.wallDir });
-  p.state = 'dash';
+  if (p.mode === 'wallSlide') c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: p.wallDir });
+  p.mode = 'dash';
   p.dashDir = dir;
   p.facing = dir > 0 ? 1 : -1;
   p.dashTimer = P.dashFrames;
@@ -413,7 +326,6 @@ function startDash(c: Ctx, dir: number): void {
   p.retainTimer = 0;
   p.fromJump = false;
   p.cut = false;
-  p.cutDisabled = false;
   p.sustain = 0;
   p.stick = 0;
   p.vy = 0;
@@ -450,7 +362,7 @@ function horizontal(c: Ctx): void {
 function gravity(c: Ctx): void {
   const p = c.p;
   const P = c.P;
-  const heldEff = c.held(ActionBit.jump) && !p.cutDisabled;
+  const heldEff = c.held(ActionBit.jump);
   // variableJump off: releasing never cuts or ends the sustain (every jump is full height).
   const holdsRise = heldEff || !P.variableJump;
   if (p.vy < 0 && !holdsRise && p.fromJump) p.cut = true;
@@ -469,18 +381,6 @@ function gravity(c: Ctx): void {
   if (p.cut && P.releaseZero && p.framesSinceJump >= P.minJumpFrames && p.vy < 0) p.vy = 0;
 }
 
-function pogoCheck(c: Ctx): void {
-  const p = c.p;
-  const P = c.P;
-  if (p.pogoTimer <= 0 || p.grounded || !p.abilities.pogo) return;
-  const probe = { x: p.x + (p.w - P.pogoProbeW) / 2, y: p.y + p.h, w: P.pogoProbeW, h: P.pogoProbeH };
-  const target = pogoTargetAt(c.room, c.ts, probe, P);
-  if (!target) return;
-  bounce(p, P.pogoSpeed, P, { refill: true, cutDisabled: true });
-  p.pogoTimer = 0;
-  c.events.push({ type: 'pogo', x: c.fx, y: c.fy, target });
-}
-
 function normal(c: Ctx): void {
   horizontal(c); // a
   gravity(c); // b (a jump below overwrites vy, which is the same as skipping gravity)
@@ -489,20 +389,19 @@ function normal(c: Ctx): void {
     return;
   }
   tryJump(c); // d
-  pogoCheck(c); // e
 }
 
 function wallSlide(c: Ctx): void {
   const p = c.p;
   const P = c.P;
   const d = p.wallDir;
-  if (p.jumpBuf > 0 && p.abilities.wallJump) wallJump(c, d);
+  if (p.jumpBuf > 0) wallJump(c, d);
   else if (p.dashBuf > 0 && canDash(c)) startDash(c, -d);
   else {
     p.stick = c.inX === -d ? p.stick + 1 : 0;
     if (p.stick > P.stickFrames) {
       c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: d });
-      p.state = 'normal';
+      p.mode = 'normal';
       p.stick = 0;
       normal(c);
     } else {
@@ -519,7 +418,7 @@ function dash(c: Ctx): void {
   const P = c.P;
   if (P.dashJumpCancel && p.jumpBuf > 0 && (p.grounded || p.coyote > 0)) {
     c.events.push({ type: 'dashEnd', x: c.fx, y: c.fy, dir: p.dashDir });
-    p.state = 'normal';
+    p.mode = 'normal';
     p.dashTimer = 0;
     groundJump(c, 'dashJump');
     p.vx = p.dashDir * P.dashJumpVx;
@@ -531,23 +430,46 @@ function dash(c: Ctx): void {
 }
 
 /**
- * One sim frame for the player (movement-spec §2.2). `state.prevInput` is the previous frame's
- * mask (for edges); the caller sets it to `input` afterwards.
+ * One sim frame for the player. `state.prevInput` is the previous frame's mask (for edges); the
+ * caller sets it to `input` afterwards.
  */
 export function updatePlayer(
   state: GameState,
-  room: Room,
+  scene: Scene,
   input: InputFrame,
   P: MoveParams,
   events: SimEvent[],
 ): void {
   const p = state.player;
-  if (p.state === 'dead') {
-    p.deathTimer--;
-    if (p.deathTimer <= 0) respawn(state, room, P, events);
-    return;
-  }
-  const c = new Ctx(state, p, room, P.tileSize, input, state.prevInput, P, events);
+  const mode0 = p.mode;
+  const motion0 = p.motion;
+  const grounded0 = p.grounded;
+  const facing0 = p.facing;
+  const c = new Ctx(p, scene, input, state.prevInput, P, events);
+  c.inX = axisX(input);
+  p.inputX = c.inX;
+  controller(c);
+
+  // Animation bookkeeping: what the body is doing and for how long.
+  p.modeFrames = p.mode === mode0 ? p.modeFrames + 1 : 0;
+  p.contactFrames = p.grounded === grounded0 ? p.contactFrames + 1 : 0;
+  const motion = motionOf(p);
+  p.motionFrames = motion === motion0 ? p.motionFrames + 1 : 0;
+  p.motion = motion;
+  if (p.facing !== facing0)
+    events.push({ type: 'turn', x: c.fx, y: c.fy, dir: p.facing, grounded: p.grounded });
+}
+
+function motionOf(p: PlayerState): Motion {
+  if (p.mode === 'dash') return 'dash';
+  if (p.mode === 'wallSlide') return 'wallSlide';
+  if (!p.grounded) return p.vy < 0 ? 'rise' : 'fall';
+  if (p.skid) return 'skid';
+  return p.inputX !== 0 || p.vx !== 0 ? 'run' : 'idle';
+}
+
+function controller(c: Ctx): void {
+  const { p, P, events } = c;
 
   // 1. Freeze (dash start): nothing moves, but presses are latched and the dash cooldown runs.
   if (p.freeze > 0) {
@@ -560,95 +482,74 @@ export function updatePlayer(
   // 2. Latch presses into buffers.
   latch(c);
   c.jumpPressedNow = c.pressed(ActionBit.jump);
-  c.inX = axisX(input);
   const wasGrounded = p.grounded;
   const x0 = p.x;
+  const vy0 = p.vy;
 
-  // Wall speed retention (§2.4): a wall zeroed vx recently and has gone -> restore it. Moving the
-  // other way cancels it (Celeste does the same); otherwise it undoes wall jumps and turn-arounds.
+  // Wall speed retention: a wall zeroed vx recently and has gone -> restore it. Moving the other
+  // way cancels it (Celeste does the same); otherwise it undoes wall jumps and turn-arounds.
   if (p.retainTimer > 0 && p.vx !== 0 && sign(p.vx) !== sign(p.retainVx)) p.retainTimer = 0;
-  if (p.retainTimer > 0 && p.state !== 'dash' && !c.blockedX(p, sign(p.retainVx))) {
+  if (p.retainTimer > 0 && p.mode !== 'dash' && !c.blockedX(p, sign(p.retainVx))) {
     p.vx = p.retainVx;
     p.retainTimer = 0;
   }
 
-  // 3. State update.
-  if (p.state === 'normal') normal(c);
-  else if (p.state === 'wallSlide') wallSlide(c);
-  else if (p.state === 'dash') dash(c);
+  // 3. Mode update.
+  if (p.mode === 'normal') normal(c);
+  else if (p.mode === 'wallSlide') wallSlide(c);
+  else if (p.mode === 'dash') dash(c);
 
-  // 4. Move X then Y, with corner corrections and a hazard check per pixel step.
+  // 4. Move X then Y, with corner corrections.
   let impactVy = 0;
-  let killed = false;
   if (!c.skipMove) {
-    const mx = moveX(p, p.vx, c);
-    if (mx === Move.killed) killed = true;
-    else if (mx === Move.blocked) {
-      if (P.wallRetainFrames > 0 && p.retainTimer === 0 && p.vx !== 0 && p.state !== 'dash') {
+    if (moveX(p, p.vx, c)) {
+      if (P.wallRetainFrames > 0 && p.retainTimer === 0 && p.vx !== 0 && p.mode !== 'dash') {
         p.retainVx = p.vx;
         p.retainTimer = P.wallRetainFrames;
       }
-      if (p.state !== 'dash') p.vx = 0;
+      if (p.mode !== 'dash') p.vx = 0;
     }
-    if (!killed) {
-      const vyBefore = p.vy;
-      const my = moveY(p, p.vy, c);
-      if (my === Move.killed) killed = true;
-      else if (my === Move.blocked) {
-        if (p.vy < 0) {
-          events.push({ type: 'headBump', x: c.fx, y: p.y });
-          p.cut = false;
-          p.sustain = 0;
-        } else impactVy = vyBefore;
-        p.vy = 0;
-      }
+    const vyBefore = p.vy;
+    if (moveY(p, p.vy, c)) {
+      if (p.vy < 0) {
+        events.push({ type: 'headBump', x: c.fx, y: p.y });
+        p.cut = false;
+        p.sustain = 0;
+      } else impactVy = vyBefore;
+      p.vy = 0;
     }
-  }
-  if (killed || c.hazard(p)) {
-    if (room.hazard === 'pip') hazardHit(state, P, events);
-    else die(state, P, events);
-    return;
   }
   post(c, wasGrounded, x0, impactVy);
+  if (!p.grounded && !wasGrounded && vy0 < 0 && p.vy >= 0 && !c.jumped)
+    events.push({ type: 'apex', x: c.fx, y: c.fy });
 }
 
-/** 5. Post: timers, ground probe, walls, transitions, facing, events, triggers. */
+/** 5. Post: timers, ground probe, walls, transitions, facing, events. */
 function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void {
   const p = c.p;
   const P = c.P;
-  const { state, room, ts, events } = c;
+  const { events } = c;
   if (p.jumpBuf > 0) p.jumpBuf--;
   if (p.djBuf > 0) p.djBuf--;
   if (p.dashBuf > 0) p.dashBuf--;
   if (p.forceTimer > 0) p.forceTimer--;
   if (p.dashCd > 0) p.dashCd--;
   if (p.dropTimer > 0) p.dropTimer = p.y > p.dropY ? 0 : p.dropTimer - 1;
-  if (p.pogoTimer > 0) p.pogoTimer--;
   if (p.retainTimer > 0) p.retainTimer--;
   p.framesSinceJump++;
 
   if (c.dashMoving) {
     p.dashTimer--;
     if (p.dashTimer <= 0) {
-      p.state = 'normal';
+      p.mode = 'normal';
       p.vx = p.dashDir * P.dashEndVx;
       events.push({ type: 'dashEnd', x: c.fx, y: c.fy, dir: p.dashDir });
     }
   }
 
   p.grounded = p.vy >= 0 && c.groundAt(p.x, p.y);
-  // Last safe ground (combat-spec §3.1): standing on the room's own tiles, never on a dynamic
-  // solid (a lot can be sold from under you; a slab can be taken back).
-  if (
-    p.grounded &&
-    (solidAt(room, ts, p.x, p.y + 1, p.w, p.h) || oneWayUnder(room, ts, p.x, p.y, p.w, p.h)) &&
-    !dynSolidAt(p.x, p.y + 1, p.w, p.h)
-  ) {
-    p.safeX = p.x + p.w / 2;
-    p.safeY = p.y + p.h;
-  }
   if (p.grounded) {
-    // Coyote: N usable airborne frames after the frame that left the ground (§2.2).
+    // Coyote: N usable airborne frames after the frame that left the ground.
     p.coyote = P.coyoteFrames;
     p.airDash = P.airDashes;
     p.dj = P.doubleJumps;
@@ -660,13 +561,13 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
     }
     p.airTopY = p.y;
   } else {
+    if (wasGrounded && !c.jumped && p.mode === 'normal') events.push({ type: 'fall', x: c.fx, y: c.fy });
     if (!wasGrounded && p.coyote > 0) p.coyote--;
     if (p.y < p.airTopY) p.airTopY = p.y;
     p.skid = false;
   }
   if (p.vy >= 0) {
     p.cut = false;
-    p.cutDisabled = false;
     p.fromJump = false;
   }
 
@@ -674,26 +575,25 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
   const inX = c.inX;
   const touchR = c.solid(p.x + 1, p.y);
   const touchL = c.solid(p.x - 1, p.y);
-  if (p.state === 'wallSlide') {
+  if (p.mode === 'wallSlide') {
     const d = p.wallDir;
     if (p.grounded || !(d > 0 ? touchR : touchL)) {
       events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: d });
-      p.state = 'normal';
+      p.mode = 'normal';
       p.stick = 0;
       p.wallDir = touchR ? 1 : touchL ? -1 : 0;
     }
   } else {
     p.wallDir = touchR && touchL ? (inX !== 0 ? inX : p.facing) : touchR ? 1 : touchL ? -1 : 0;
     if (
-      p.state === 'normal' &&
+      p.mode === 'normal' &&
       !p.grounded &&
       p.vy >= 0 &&
       P.wallSlide &&
-      p.abilities.wallJump &&
       inX !== 0 &&
       (inX > 0 ? touchR : touchL)
     ) {
-      p.state = 'wallSlide';
+      p.mode = 'wallSlide';
       p.wallDir = inX;
       p.stick = 0;
       p.slideT = 0;
@@ -704,192 +604,18 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
   }
 
   // Facing.
-  if (p.state === 'wallSlide') p.facing = p.wallDir > 0 ? -1 : 1;
-  else if (p.state === 'normal') {
+  if (p.mode === 'wallSlide') p.facing = p.wallDir > 0 ? -1 : 1;
+  else if (p.mode === 'normal') {
     if (p.forceTimer > 0) p.facing = p.forceDir > 0 ? 1 : -1;
     else if (inX !== 0) p.facing = inX > 0 ? 1 : -1;
   }
 
   // Footsteps.
-  if (p.grounded && p.state === 'normal') {
+  if (p.grounded && p.mode === 'normal') {
     p.stepDist += Math.abs(p.x - x0);
     if (p.stepDist >= P.footstepPx) {
       p.stepDist -= P.footstepPx;
       events.push({ type: 'step', x: c.fx, y: c.fy });
     }
   }
-
-  // Triggers. Doors are as wide as they are drawn (doorTriggerTiles, centred): the nearest wins.
-  const doorW = P.doorTriggerTiles * ts;
-  let door: (typeof room.entities)[number] | null = null;
-  let doorD = Infinity;
-  for (const e of room.entities) {
-    if (e.kind === 'door') {
-      const dx = e.tx * ts + ts / 2 - doorW / 2;
-      if (!overlaps(p, dx, e.ty * ts, doorW, ts)) continue;
-      const d = Math.abs(e.tx * ts + ts / 2 - (p.x + p.w / 2));
-      if (d < doorD) {
-        door = e;
-        doorD = d;
-      }
-      continue;
-    }
-    if (!overlaps(p, e.tx * ts, e.ty * ts, ts, ts)) continue;
-    if (e.kind === 'respawn') {
-      if (p.respawn?.tx !== e.tx || p.respawn?.ty !== e.ty) {
-        p.respawn = { tx: e.tx, ty: e.ty };
-        events.push({ type: 'checkpoint', x: c.fx, y: c.fy });
-      }
-    } else if (e.kind === 'goal') {
-      if (!state.roomStats.goal) {
-        state.roomStats.goal = true;
-        events.push({ type: 'goal', kind: 'main', roomId: room.id, x: c.fx, y: c.fy });
-        if (room.next) startTransition(state, room.next, undefined, P, events, P.goalBeatFrames);
-      }
-    } else if (e.kind === 'optionalGoal') {
-      if (!state.roomStats.optional) {
-        state.roomStats.optional = true;
-        events.push({ type: 'goal', kind: 'optional', roomId: room.id, x: c.fx, y: c.fy });
-      }
-    } else if (e.kind === 'corner') {
-      // A Corner (the stool): full Chin, and Beat the Count is available again.
-      const r = state.run;
-      if (r.corner.roomId !== room.id || p.chin < p.chinMax || r.beatUsed) {
-        r.corner = { roomId: room.id, spawn: 'corner' };
-        r.beatUsed = false;
-        p.chin = p.chinMax;
-        p.ring = 0;
-        events.push({ type: 'corner', x: c.fx, y: c.fy });
-      }
-    }
-  }
-  if (door?.to && c.pressed(ActionBit.up) && p.grounded && !state.transition)
-    startTransition(state, door.to, door.spawn, P, events);
-  // Edge exits: the body's centre crossed the border along an open span (momentum is kept).
-  if (room.edge && !state.transition) {
-    const cx = p.x + p.w / 2;
-    const cy = p.y + p.h / 2;
-    const side =
-      cx < 0 ? 'w' : cx >= room.width * ts ? 'e' : cy < 0 ? 'n' : cy >= room.height * ts ? 's' : null;
-    if (side) {
-      const along = Math.floor((side === 'w' || side === 'e' ? cy : cx) / ts);
-      for (const x of room.exits) {
-        if (x.side !== side || along < x.from || along > x.to) continue;
-        startTransition(state, x.room, undefined, P, events, P.transitionFrames, [
-          x.offset[0] * ts,
-          x.offset[1] * ts,
-        ]);
-        break;
-      }
-    }
-  }
-}
-
-export function startTransition(
-  state: GameState,
-  to: string,
-  spawn: string | undefined,
-  P: MoveParams,
-  events: SimEvent[],
-  frames = P.transitionFrames,
-  offset?: [number, number],
-): void {
-  if (state.transition) return;
-  const p = state.player;
-  state.transition = spawn === undefined ? { to, timer: frames } : { to, spawn, timer: frames };
-  if (offset) state.transition.offset = offset;
-  events.push({ type: 'roomExit', roomId: state.roomId, to, x: p.x + p.w / 2, y: p.y + p.h });
-}
-
-/** Kills the player (hazards, and Chin reaching 0). */
-export function die(state: GameState, P: MoveParams, events: SimEvent[]): void {
-  const p = state.player;
-  if (p.state === 'wallSlide')
-    events.push({ type: 'wallSlideEnd', x: p.x + p.w / 2, y: p.y + p.h, dir: p.wallDir });
-  p.state = 'dead';
-  p.deathTimer = P.deathFreezeFrames;
-  p.vx = 0;
-  p.vy = 0;
-  p.freeze = 0;
-  state.roomStats.deaths++;
-  state.run.deaths++;
-  events.push({ type: 'death', x: p.x + p.w / 2, y: p.y + p.h / 2 });
-}
-
-/**
- * A hazard in a combat room (combat-spec §3.1): it costs Chin (never rings), then after a short
- * freeze Kid respawns at her last safe ground with i-frames. Chin 0 is handled by combat/kid.ts
- * (she goes down for her Count).
- */
-export function hazardHit(state: GameState, P: MoveParams, events: SimEvent[]): void {
-  const p = state.player;
-  if (p.state === 'wallSlide')
-    events.push({ type: 'wallSlideEnd', x: p.x + p.w / 2, y: p.y + p.h, dir: p.wallDir });
-  p.chin = Math.max(0, p.chin - P.hazardDmg);
-  p.state = 'dead';
-  p.deathTimer = P.hazardRespawnFrames;
-  p.hazardRespawn = true;
-  p.vx = 0;
-  p.vy = 0;
-  p.freeze = 0;
-  p.move = null;
-  events.push({ type: 'hazard', dmg: P.hazardDmg, x: p.x + p.w / 2, y: p.y + p.h / 2 });
-}
-
-function respawn(state: GameState, room: Room, P: MoveParams, events: SimEvent[]): void {
-  const old = state.player;
-  const sp = old.respawn ?? room.spawns.default;
-  if (!sp) throw new Error(`Room ${room.id} has no spawn`);
-  const ts = P.tileSize;
-  const hz = old.hazardRespawn;
-  const x = hz ? Math.round(old.safeX - old.w / 2) : Math.floor(sp.tx * ts + ts / 2 - old.w / 2);
-  let y = hz ? old.safeY - old.h : (sp.ty + 1) * ts - old.h;
-  // Something landed on the safe spot since (a slab): stand on top of it instead.
-  if (hz) for (let dy = 0; dy <= 3 * ts && solidAny(room, ts, x, y, old.w, old.h); dy += 8) y -= 8;
-  const p: PlayerState = {
-    ...old,
-    x,
-    y,
-    rx: 0,
-    ry: 0,
-    vx: 0,
-    vy: 0,
-    state: 'normal',
-    grounded: solidAny(room, ts, x, y + 1, old.w, old.h) || oneWayUnder(room, ts, x, y, old.w, old.h),
-    wallDir: 0,
-    coyote: 0,
-    jumpBuf: 0,
-    djBuf: 0,
-    dashBuf: 0,
-    forceTimer: 0,
-    dashCd: 0,
-    dashTimer: 0,
-    freeze: 0,
-    stick: 0,
-    slideT: 0,
-    retainTimer: 0,
-    dropTimer: 0,
-    pogoTimer: 0,
-    deathTimer: 0,
-    fromJump: false,
-    cut: false,
-    cutDisabled: false,
-    sustain: 0,
-    airDash: P.airDashes,
-    dj: P.doubleJumps,
-    airTopY: y,
-    stepDist: 0,
-    skid: false,
-    move: null,
-    actBuf: null,
-    iframes: hz ? P.hazardIframes : 0,
-    hurtLock: 0,
-    recoilVx: 0,
-    recoilT: 0,
-    hazardRespawn: false,
-    counter: 0,
-    slipClean: false,
-  };
-  state.player = p;
-  events.push({ type: 'respawn', x: x + p.w / 2, y: y + p.h });
 }

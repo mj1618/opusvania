@@ -13,15 +13,7 @@ export const DEFAULT_KEYS: KeyBindings = {
   up: ['ArrowUp', 'KeyW'],
   down: ['ArrowDown', 'KeyS'],
   jump: ['Space', 'KeyZ', 'KeyK'],
-  // movement-spec §2.8: X/Shift dash, C attack (Down+C in the air = pogo).
-  attack: ['KeyC', 'KeyJ'],
   dash: ['KeyX', 'KeyL', 'ShiftLeft', 'ShiftRight'],
-  // L3 brief §3: Seize V / I, Levy B / O (arrows / WASD layouts); Swallow (deferred) on Q.
-  seize: ['KeyV', 'KeyI'],
-  levy: ['KeyB', 'KeyO'],
-  special: ['KeyQ'],
-  map: ['Tab', 'KeyM'],
-  pause: ['Escape', 'KeyP'],
 };
 
 export const DEFAULT_PAD: PadBindings = {
@@ -30,16 +22,10 @@ export const DEFAULT_PAD: PadBindings = {
   up: [12],
   down: [13],
   jump: [0], // A / Cross
-  attack: [2], // X / Square (Jab)
-  seize: [3], // Y / Triangle (North)
-  levy: [1], // B / Circle (East)
-  special: [4, 6], // LB, LT (Swallow, deferred)
-  dash: [5, 7], // RB, RT
-  map: [8], // Back / Select
-  pause: [9], // Start
+  dash: [5, 7, 2], // RB, RT, X / Square
 };
 
-/** Stick: a 0.25 radial deadzone, then an axis counts as a direction past 0.5 (spec §2.8). */
+/** Stick: a 0.25 radial deadzone, then an axis counts as a direction past 0.5. */
 export const PAD_STICK_RADIAL_DEADZONE = 0.25;
 export const PAD_STICK_AXIS_THRESHOLD = 0.5;
 

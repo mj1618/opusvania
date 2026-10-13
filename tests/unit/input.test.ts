@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseInputScript } from '../../src/input/script';
-import { ActionBit, axisX, maskOf, tickBuffer, wasPressed, wasReleased } from '../../src/sim/input';
+import { ActionBit, axisX, maskOf, wasPressed, wasReleased } from '../../src/sim/input';
 
 describe('input frames', () => {
   it('parses string scripts', () => {
@@ -26,15 +26,5 @@ describe('input frames', () => {
     expect(wasReleased(0, j, 'jump')).toBe(true);
     expect(axisX(maskOf(['left']))).toBe(-1);
     expect(axisX(maskOf(['left', 'right']))).toBe(0);
-  });
-
-  it('buffers for N frames', () => {
-    let b = tickBuffer(0, true, 3);
-    const seen = [b];
-    for (let i = 0; i < 4; i++) {
-      b = tickBuffer(b, false, 3);
-      seen.push(b);
-    }
-    expect(seen).toEqual([3, 2, 1, 0, 0]);
   });
 });

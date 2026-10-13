@@ -1,25 +1,22 @@
 /**
- * Every gameplay number lives here (movement-spec §3). The Tweakpane panel (backquote key) edits
- * the live `tuning` object; write values you like back into this file ("Copy JSON" in the panel).
+ * Every gameplay number lives here. The Tweakpane panel (backquote key) edits the live `tuning`
+ * object; write values you like back into this file ("Copy JSON" in the panel).
  *
- * Units: the sim works per frame at the fixed 60 Hz step. Distances are px at the 1920x1080
- * reference (64 px tiles), velocities px/f (x60 = px/s), accelerations px/f², durations frames.
+ * Units: the sim works per frame at the fixed 60 Hz step. Distances are sim px (the logical view
+ * is 1920x1080 sim px, 64 px = one "tile"), velocities px/f (x60 = px/s), accelerations px/f²,
+ * durations frames.
  *
  * Layout:
- *  - `shape` is the jump shape; `jump.gravity/jumpSpeed/doubleJumpSpeed/pogoSpeed` are derived
- *    from it with `derive()` (Pittman, discrete form, spec §3.1). Change the shape, then call
- *    `applyShape(t)` (the panel does this).
- *  - `assists` are the A/B toggles. When one is off, its parameter is treated as 0/false by
+ *  - `shape` is the jump shape; `jump.gravity/jumpSpeed/doubleJumpSpeed` are derived from it with
+ *    `derive()` (Pittman, discrete form). Change the shape, then call `applyShape(t)`.
+ *  - `assists` are on/off toggles. When one is off, its parameter is treated as 0/false by
  *    `resolveParams` (src/sim/player/params.ts), so the controller code path is identical.
- *  - `PRESETS` (`opus`, `celeste`, `hk`) are override sets on top of the defaults (§3.3).
- *  - `profiles` are named movement profiles (weight classes, water...) applied per player at
- *    runtime on top of the live tuning; see src/sim/player/params.ts.
  */
 
-export const SHAPE = { jumpHeightPx: 272, apexFrames: 24, doubleJumpHeightPx: 192, pogoHeightPx: 176 };
+export const SHAPE = { jumpHeightPx: 272, apexFrames: 24, doubleJumpHeightPx: 192 };
 export type JumpShape = typeof SHAPE;
 
-/** Launch speed that reaches height h under gravity g with our integrator (spec §3.1). */
+/** Launch speed that reaches height h under gravity g with our integrator. */
 export function speedForHeight(g: number, h: number): number {
   return (g * (-1 + Math.sqrt(1 + (8 * h) / g))) / 2;
 }
@@ -31,38 +28,13 @@ export function derive(s: JumpShape = SHAPE) {
     gravity: g,
     jumpSpeed: g * s.apexFrames,
     doubleJumpSpeed: speedForHeight(g, s.doubleJumpHeightPx),
-    pogoSpeed: speedForHeight(g, s.pogoHeightPx),
   };
 }
 
 const D = derive(SHAPE);
 
-/**
- * A movement profile: a named override set applied to the live tuning for one player
- * (weight classes next loop: feather / middle / heavy; later water). `shape` re-derives the jump
- * constants from the base shape merged with it; then `set` replaces values; then `scale`
- * multiplies them. Keys are `group.key` tuning paths (e.g. `"jump.fallMult"`).
- */
-export interface MovementProfile {
-  shape?: Partial<JumpShape>;
-  set?: Record<string, number | boolean | string>;
-  scale?: Record<string, number>;
-}
-
 export const defaultTuning = {
-  world: {
-    /** Tile edge in px (64 px tiles at 1080p, spec §1.1). */
-    tileSize: 64,
-    /** Frames the player is frozen while a room transition fades out. */
-    transitionFrames: 10,
-    /** Touching G: the freeze before the warp is this long (the "cleared" beat). */
-    goalBeatFrames: 45,
-    /** Door triggers are this many tiles wide, centred on the door tile (the drawn door). */
-    doorTriggerTiles: 3,
-    /** Minimum room size in tiles; smaller rooms are padded with solid (spec §6.1). */
-    minRoomW: 30,
-    minRoomH: 17,
-  },
+  /** The player's collision box in sim px (the drawn character is a little taller: ears). */
   body: {
     width: 40,
     height: 80,
@@ -75,8 +47,6 @@ export const defaultTuning = {
     jumpSpeed: D.jumpSpeed,
     /** DJ_V (derived from shape.doubleJumpHeightPx). */
     doubleJumpSpeed: D.doubleJumpSpeed,
-    /** POGO_V (derived from shape.pogoHeightPx). */
-    pogoSpeed: D.pogoSpeed,
     /** Gravity multiplier while falling (vy >= 0). */
     fallMult: 1.6,
     /** Gravity multiplier after releasing jump while rising (releaseMode 'gravity'). */
@@ -90,7 +60,7 @@ export const defaultTuning = {
     /** Apex hang: gravity x apexHangMult while |vy| < apexHangVy and jump is held. */
     apexHangVy: 3,
     apexHangMult: 0.5,
-    /** Double jumps per airtime (refilled on ground, wall jump and pogo). */
+    /** Double jumps per airtime (refilled on ground and wall jump). */
     doubleJumps: 1,
     /** Horizontal boost added in the input direction on a ground jump. */
     hBoost: 0,
@@ -115,8 +85,9 @@ export const defaultTuning = {
   assist: {
     coyoteFrames: 6,
     jumpBufferFrames: 6,
-    /** How long a buffered press can still become a double jump (HK queues these for longer). */
+    /** How long a buffered press can still become a double jump. */
     doubleJumpBufferFrames: 6,
+    /** Corner corrections, px: head bump, ledge pop-up, dash. */
     headCorrectPx: 20,
     ledgePopPx: 16,
     dashCorrectPx: 24,
@@ -124,8 +95,7 @@ export const defaultTuning = {
   },
   wall: {
     /** Slide speed cap: starts at slideStartMax and rises by slideRamp per frame of sliding up to
-     * slideMax (Celeste's WallSlideStartMax/WallSlideTime), so a quick touch-and-jump is calm but a
-     * long slide gets out of the way. L2 playtest: a flat 4 px/f felt glued. */
+     * slideMax, so a quick touch-and-jump is calm but a long slide gets out of the way. */
     slideMax: 6.5,
     slideStartMax: 2.5,
     slideRamp: 0.25,
@@ -150,22 +120,11 @@ export const defaultTuning = {
     bufferFrames: 6,
     airDashes: 1,
   },
-  pogo: {
-    activeFrames: 8,
-    probeW: 48,
-    probeH: 64,
-    orbSize: 48,
-  },
-  hazard: {
-    spikeDepthPx: 32,
-    spikeInsetPx: 8,
-    deathFreezeFrames: 20,
-  },
   misc: {
     dropThroughFrames: 10,
     /** Grounded distance between `step` (footstep) events. */
     footstepPx: 96,
-    /** A landing is "hard" (big dust, shake, heavy SFX) past this fall height or at max fall speed. */
+    /** A landing is "hard" past this fall height or at max fall speed. */
     hardLandFallPx: 320,
   },
   assists: {
@@ -185,394 +144,25 @@ export const defaultTuning = {
     dashJumpCancel: true,
     wallJumpRefill: true,
   },
-  /**
-   * Combat foundations (combat-spec §2, L3 brief §2.3). Hitstop per class in frames; knockback in
-   * px/f; everything else in frames unless stated.
-   */
-  combat: {
-    hitstopLight: 4,
-    hitstopMedium: 6,
-    hitstopHeavy: 10,
-    hitstopSeizeTake: 5,
-    hitstopCatch: 10,
-    hitstopCounter: 12,
-    hitstopRepossess: 16,
-    hitstopHurt: 8,
-    hitstopCap: 16,
-    actionBufferFrames: 8,
-    /** Frames an enemy's voices stay open after it takes a punch. */
-    rattledFrames: 30,
-    staggerFrames: 36,
-    enemyKbLight: 6,
-    enemyKbMedium: 10,
-    enemyKbHeavy: 14,
-    enemyKbSeizeTug: 4,
-    /** Enemy knockback decays by this much per frame. */
-    enemyKbDecay: 1,
-    kidRecoilGroundLight: -4,
-    kidRecoilAirLight: -6,
-    kidRecoilMedium: -5,
-    kidRecoilFrames: 4,
-    maxAttackTokens: 2,
-    retrieveSpeedMult: 1.25,
-    absorbFrames: 8,
-    revoiceFrames: 480,
-    downFrames: 12,
-    countBeats: 10,
-    countBeatFrames: 12,
-    /** Return to sender damage multiplier (rounded up); it always knocks the owner down. */
-    returnMult: 1.5,
-    launchVy: -14,
-    launchFrames: 30,
-    /** Snatch pushes Kid back at this speed (px/f). */
-    snatchPushVx: 8,
-    /** Enemy physics: gravity (px/f²) and max fall (px/f). */
-    enemyGravity: 0.9,
-    enemyMaxFall: 20,
-    /** Furious rise: telegraphs never drop below this. */
-    minTelegraph: 15,
-    /** Frames an enemy takes to get up after the Count runs out with HP left. */
-    riseFrames: 12,
-    /** Chasers stop closing in when the gap between their body and Kid's is this small (px). */
-    chaseGapPx: 24,
-    /** Enemy knockback of a Counter hit (px/f; it also knocks down). */
-    enemyKbCounter: 16,
-    /** Uppercut / launch: vy given to a light enemy (kbScale >= launchMinKbScale). */
-    uppercutVy: -12,
-    launchMinKbScale: 0.5,
-    /** A brown levy knocks down enemies with kbScale above this (heavy enemies only stagger). */
-    knockdownKbScale: 0.5,
-    /** Count beat length by fever 0..4 (combat-spec §4.5). */
-    countBeatByFever: [12, 11, 10, 9, 8],
-    /** An attack may only start with the enemy's hurtbox inside Kid's view, inset by this (px). */
-    viewInsetPx: 32,
-    /** The sim's stand-in for the camera view (combat-spec T5): px, centred on Kid, clamped to the room. */
-    viewW: 1920,
-    viewH: 1080,
-    /** Snatch: Kid is pushed at this speed; Snatch grants no i-frames. */
-    snatchPushFrames: 4,
-    /** Enemies' own seize priority groups (see combat/priority.ts). Boss sounds revoice faster. */
-    bossRevoiceFrames: 240,
-    /** Return to sender on a boss: stagger instead of knockdown. */
-    bossReturnStagger: 90,
-    /** White-static zones leak the bag's oldest sound this often (combat-spec §3.3). */
-    staticLeakFrames: 180,
-    /** Poundage: KO pays x1, repossession x2 (combat-spec §3.4 point 6). */
-    repossessPayMult: 2,
-    /** Beat the Count / the Kid's count uses the same beat as enemies at the room's fever. */
-    kidCountBeats: 10,
-  },
-  /** Kid Tallow's health and hurt reaction (combat-spec §3.1). */
-  kid: {
-    chin: 5,
-    contactDmg: 1,
-    iframes: 78,
-    hurtLock: 12,
-    hurtVx: 10,
-    hurtVy: -8,
-    /** The Slip (dash) is invulnerable on frames 1..slipIframesTo. */
-    slipIframesTo: 10,
-    /** A clean Slip (i-frames over a live hitbox) opens a Counter window this long and refunds the cooldown. */
-    counterFrames: 30,
-    counterDmgMult: 2,
-    /** Counter hitboxes grow by this factor (about their centre). */
-    counterBoxScale: 1.25,
-    /** Slip may cancel the hurt control lock from this lock frame ("roll with it"). */
-    standSlipFrom: 8,
-    /** Ringing (the rally): the last lost pip can be won back for this long (combat-spec §3.2). */
-    ringFrames: 120,
-    /** Hazards (spikes, static) cost this much Chin, then respawn at the last safe ground. */
-    hazardDmg: 1,
-    /** Frames between the hazard hit and the respawn at safe ground. */
-    hazardRespawnFrames: 30,
-    /** Beat the Count: press Jump within +-this many frames of beats riseBeatMin..riseBeatMax. */
-    riseWindow: 5,
-    riseBeatMin: 3,
-    riseBeatMax: 8,
-    riseChin: 1,
-    riseIframes: 90,
-    /** Frames of the fade after being Counted Out, before waking at the Corner. */
-    countedOutFrames: 40,
-    /** Assist: Beat the Count automatically when allowed (combat-spec §3.5, ships in Phase 2). */
-    autoBeatCount: false,
-    /** Recoil on Kid when a medium hit lands (px/f; light ones are in combat). */
-    recoilMedium: -5,
-  },
-  /** Swallow (combat-spec §3.4): channel frames and heal per voice colour. */
-  swallow: {
-    channelViolet: 16,
-    channelPink: 24,
-    channelBrown: 40,
-    healViolet: 1,
-    healPink: 1,
-    healBrown: 2,
-    /** Refusal (a deed, or not on the ground for pink/brown) freezes nothing but costs this many frames. */
-    refusalFrames: 6,
-    /** A Hoarse owner turns aggressive: speed x this. */
-    hoarseSpeedMult: 1.2,
-  },
-  /** Death loop (combat-spec §3.5): 'runner' (default) or 'garnish' (debt from future earnings). */
-  death: {
-    mode: 'runner' as 'runner' | 'garnish',
-    lienPips: 1,
-    /** Garnish: this share of every future payout goes to the debt. */
-    garnishShare: 0.5,
-  },
-  /** The Auctioneer's room fever effects (combat-spec §5). */
-  boss: {
-    feverMax: 3,
-  },
-  bag: {
-    slots: 3,
-  },
-  /**
-   * Levy by colour (combat-spec §1.5; traversal behaviour from the L3 brief). Flight speeds px/f,
-   * gravity as a multiple of the base (feather) jump gravity. `dropVy` = straight-down speed of a
-   * downward levy; `upVy` = speed of an upward levy; recoil/spring heights in px.
-   */
-  levy: {
-    brownVx: 8,
-    brownVy: -10,
-    brownUpVy: -16,
-    brownDropVy: 24,
-    brownGravityMult: 1.2,
-    brownDmg: 6,
-    brownW: 64,
-    brownH: 48,
-    brownRecoilPx: 176,
-    pinkVx: 6,
-    pinkVy: -12,
-    pinkUpVy: -18,
-    pinkDropVy: 0,
-    pinkGravityMult: 1,
-    pinkDmg: 2,
-    pinkW: 64,
-    pinkH: 16,
-    /** Kid's spring bounce height (brief §8 #4: 448, not the spec's 240). */
-    pinkSpringPx: 448,
-    pinkRecoilPx: 128,
-    pinkEnemyLaunchVy: -14,
-    /** Frames a spring shows compressed after a bounce (render reads it). */
-    pinkSquashFrames: 4,
-    violetVx: 20,
-    violetVy: 0,
-    violetUpVy: -20,
-    violetDropVy: 20,
-    violetGravityMult: 0,
-    violetDmg: 3,
-    violetW: 32,
-    violetH: 16,
-    violetRecoilPx: 96,
-    /** Violet darts: upward drift (px/f² , negative = up), frames in the air before flying home, pierce and ricochets. */
-    violetDrift: -0.05,
-    violetLife: 60,
-    violetPierce: 2,
-    violetBounces: 1,
-    /** Levy placement: how far (px) either side a blocked spawn looks for free space. */
-    placeSearchPx: 32,
-    /** Fraction of Kid's vx added to a forward levy (0 = the spec: fixed throw speed). */
-    inheritVx: 0,
-  },
-  /** Weight class from brown sounds in the bag (critique A graft). */
-  weight: {
-    middleAt: 1,
-    heavyAt: 2,
-    /** Knockback taken per class (heavy ignores it; i-frames still apply). */
-    kbFeather: 1.25,
-    kbMiddle: 1,
-    kbHeavy: 0,
-    /** Extra punch damage while heavy; jab recovery change while feather (frames). */
-    heavyPunchBonus: 1,
-    featherJabRecovery: -2,
-  },
-  plate: {
-    /** A slab presses a plate when it overlaps the plate tiles by at least this much. */
-    minOverlapPx: 16,
-  },
-  /**
-   * Movement profiles (see MovementProfile). The L3 weight classes: `feather` is exactly the
-   * L2-tuned base (brief §8 #3); `middle` and `heavy` are heavier variants (3.5 and 2.5 tiles).
-   */
-  profiles: {
-    feather: {},
-    middle: {
-      shape: { jumpHeightPx: 224, apexFrames: 22 },
-      scale: { 'jump.fallMult': 1.1, 'run.maxSpeed': 0.95 },
-    },
-    heavy: {
-      shape: { jumpHeightPx: 160, apexFrames: 20 },
-      scale: { 'jump.fallMult': 1.3, 'run.maxSpeed': 0.85, 'wall.slideMax': 1.5 },
-    },
-  } as Record<string, MovementProfile>,
 };
 
 export type Tuning = typeof defaultTuning;
-export type AssistName = keyof Tuning['assists'];
-export const ASSIST_NAMES = Object.keys(defaultTuning.assists) as AssistName[];
-
-/** Groups the tuning panel edits as plain values (profiles are edited as JSON). */
-export const VALUE_GROUPS = [
-  'world',
-  'body',
-  'shape',
-  'jump',
-  'run',
-  'assist',
-  'wall',
-  'dash',
-  'pogo',
-  'hazard',
-  'misc',
-  'assists',
-  'combat',
-  'kid',
-  'bag',
-  'levy',
-  'weight',
-  'plate',
-  'swallow',
-  'death',
-  'boss',
-] as const;
-
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
-export type TuningOverrides = DeepPartial<Omit<Tuning, 'profiles'>>;
-
-const RUN_INSTANT = 999;
-
-/**
- * Presets for blind A/B (spec §3.3). Celeste and Hollow Knight values are converted to our scale
- * (1 Celeste px = 8 px, 1 HK unit = 64 px, HK 50 Hz -> 60 Hz). Jump speeds for double jump and
- * pogo are re-derived from the preset's gravity by `applyPreset` so the gym heights still hold.
- */
-export const PRESETS: Record<'opus' | 'celeste' | 'hk', TuningOverrides> = {
-  opus: {},
-  celeste: {
-    jump: {
-      gravity: 2,
-      jumpSpeed: 14,
-      fallMult: 1,
-      releaseMult: 1,
-      releaseMode: 'gravity',
-      sustainFrames: 12,
-      minJumpFrames: 0,
-      apexHangVy: 16 / 3,
-      apexHangMult: 0.5,
-    },
-    run: {
-      maxSpeed: 12,
-      groundAccel: 20 / 9,
-      // RunReduce 400 px/s² (stopping with no input); RunAccel 1000 only when accelerating/turning.
-      groundDecel: 8 / 9,
-      groundTurn: 20 / 9,
-      airAccel: (20 / 9) * 0.65,
-      airDecel: (8 / 9) * 0.65,
-      airTurn: (20 / 9) * 0.65,
-      overspeedDecelGround: 8 / 9,
-      overspeedDecelAir: (8 / 9) * 0.65,
-    },
-    assist: {
-      coyoteFrames: 6,
-      jumpBufferFrames: 5,
-      doubleJumpBufferFrames: 5,
-      headCorrectPx: 32,
-      ledgePopPx: 0,
-    },
-    // Celeste's slide cap lerps from WallSlideStartMax 20 px/s to MaxFall 160 px/s over
-    // WallSlideTime 1.2 s (72 f).
-    wall: {
-      slideMax: 64 / 3,
-      slideStartMax: 8 / 3,
-      slideRamp: 56 / 3 / 72,
-      jumpVx: 52 / 3,
-      forceFrames: 10,
-    },
-    dash: { speed: 32, frames: 9, freezeFrames: 3, cooldownFrames: 12, endVx: 64 / 3, jumpVx: 104 / 3 },
-  },
-  hk: {
-    // Sustain 9 f gives a 5.56-tile jump with apex at 0.50 s (HK reference: ~5.6 u, 0.52 s); the
-    // spec's 12 overshoots to 6.39 tiles (checked by the L2 feel report).
-    jump: {
-      gravity: 0.8427,
-      jumpSpeed: 17.76,
-      fallMult: 1,
-      releaseMode: 'zero',
-      sustainFrames: 9,
-      minJumpFrames: 5,
-    },
-    run: {
-      maxSpeed: 8.853,
-      groundAccel: RUN_INSTANT,
-      groundDecel: RUN_INSTANT,
-      groundTurn: RUN_INSTANT,
-      airAccel: RUN_INSTANT,
-      airDecel: RUN_INSTANT,
-      airTurn: RUN_INSTANT,
-      overspeedDecelGround: RUN_INSTANT,
-      overspeedDecelAir: RUN_INSTANT,
-    },
-    // HK's LEDGE_BUFFER_STEPS / JUMP_QUEUE_STEPS are 2 steps at 50 Hz = 40 ms = 2.4 frames at
-    // 60 Hz; 3 frames keeps the whole 40 ms window (2 frames would be 33 ms).
-    assist: {
-      coyoteFrames: 3,
-      jumpBufferFrames: 3,
-      doubleJumpBufferFrames: 12,
-      headCorrectPx: 0,
-      ledgePopPx: 16,
-    },
-    // HK slides at a constant WALLSLIDE_SPEED (8 u/s): no ramp.
-    wall: { slideMax: 8.53, slideStartMax: 8.53, slideRamp: 0, jumpVx: 17.07, forceFrames: 6 },
-    dash: { speed: 21.33, frames: 15, freezeFrames: 0, cooldownFrames: 36, bufferFrames: 12 },
-    assists: { apexHang: false },
-  },
-};
-export type PresetName = keyof typeof PRESETS;
-export const PRESET_NAMES = Object.keys(PRESETS) as PresetName[];
-
-/** The live tuning object. The debug panel mutates it; the sim only reads it. */
-export const tuning: Tuning = cloneTuning(defaultTuning);
 
 export function cloneTuning(t: Tuning): Tuning {
   return JSON.parse(JSON.stringify(t)) as Tuning;
 }
 
+/** The live tuning object. The debug panel mutates it; the sim only reads it. */
+export const tuning: Tuning = cloneTuning(defaultTuning);
+
 /** Copies every value of `src` into `target` in place (keeps object identity for live references). */
 export function assignTuning(target: Tuning, src: Tuning): void {
   const t = target as unknown as Record<string, Record<string, unknown>>;
   const s = src as unknown as Record<string, Record<string, unknown>>;
-  for (const group of Object.keys(s)) {
-    const from = s[group];
-    if (!from) continue;
-    const to = t[group] ?? {};
-    if (group === 'profiles') for (const k of Object.keys(to)) if (!(k in from)) delete to[k];
-    t[group] = Object.assign(to, JSON.parse(JSON.stringify(from)));
-  }
+  for (const group of Object.keys(s)) Object.assign(t[group] ?? {}, JSON.parse(JSON.stringify(s[group])));
 }
 
 /** Re-derives the jump constants from `t.shape` (after a shape edit). */
 export function applyShape(t: Tuning): void {
   Object.assign(t.jump, derive(t.shape));
-}
-
-/** Full tuning for a preset: defaults with the preset's overrides on top. */
-export function presetTuning(name: PresetName): Tuning {
-  const preset = PRESETS[name];
-  if (!preset) throw new Error(`Unknown preset "${name}". Known: ${PRESET_NAMES.join(', ')}`);
-  const t = cloneTuning(defaultTuning);
-  const tt = t as unknown as Record<string, Record<string, unknown>>;
-  for (const [group, values] of Object.entries(preset)) Object.assign(tt[group] ?? {}, values);
-  const pj = preset.jump;
-  if (pj?.gravity !== undefined) {
-    // Keep the gym's double-jump and pogo heights under the preset's gravity.
-    t.jump.doubleJumpSpeed = speedForHeight(t.jump.gravity, t.shape.doubleJumpHeightPx);
-    t.jump.pogoSpeed = speedForHeight(t.jump.gravity, t.shape.pogoHeightPx);
-  }
-  return t;
-}
-
-/** Writes a preset into the live tuning object in place (keeps profiles). */
-export function applyPreset(t: Tuning, name: PresetName): void {
-  const p = presetTuning(name);
-  p.profiles = JSON.parse(JSON.stringify(t.profiles)) as Tuning['profiles'];
-  assignTuning(t, p);
 }

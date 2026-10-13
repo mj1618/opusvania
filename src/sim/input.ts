@@ -1,23 +1,9 @@
 /**
  * The sim's input contract. One InputFrame (a bitmask of held actions) is consumed per sim step.
- * Devices (src/input) produce it; replays store it. Edge detection ("pressed this frame") and
- * input buffering are derived inside the sim from the previous frame's mask, so they replay exactly.
+ * Devices (src/input) produce it. Edge detection ("pressed this frame") and input buffering are
+ * derived inside the sim from the previous frame's mask, so a scripted run replays exactly.
  */
-export const ACTIONS = [
-  'left',
-  'right',
-  'up',
-  'down',
-  'jump',
-  'dash',
-  'attack',
-  'special',
-  'map',
-  'pause',
-  // L3 (appended so every existing tape mask keeps its meaning): bits 10 and 11.
-  'seize',
-  'levy',
-] as const;
+export const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'dash'] as const;
 
 export type Action = (typeof ACTIONS)[number];
 export type InputFrame = number;
@@ -53,13 +39,4 @@ export function wasReleased(mask: InputFrame, prev: InputFrame, a: Action): bool
 /** Horizontal axis from left/right: -1, 0 or 1 (both held = 0). */
 export function axisX(mask: InputFrame): number {
   return (isHeld(mask, 'right') ? 1 : 0) - (isHeld(mask, 'left') ? 1 : 0);
-}
-
-/**
- * Input buffer counter: set to `frames` when triggered, otherwise counts down to 0.
- * `buffer > 0` means the action is still "live" (e.g. jump pressed just before landing).
- */
-export function tickBuffer(buffer: number, triggered: boolean, frames: number): number {
-  if (triggered) return frames;
-  return buffer > 0 ? buffer - 1 : 0;
 }
