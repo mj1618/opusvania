@@ -195,6 +195,8 @@ export class Secondary {
         lift += far * (-6 - 30 * (glide + apex * 0.6) + 9 * run);
         // At rest she resettles her wings now and then: a small lift and shiver.
         lift -= settle * (13 - k * 1.5) * (far > 0.5 ? 0.7 : 1);
+        // A glint: a tiny flick; a great one opens them.
+        lift -= rig.joy * (rig.joy > 0.7 ? 46 : 16) * (1 - k * 0.12);
         // A landing or a skid throws the hem out for a moment.
         lift -= clamp(rig.crouchPx, 0, 8) * 1.6 * (1 - k / STRANDS);
         c.lift = lift * DEG;

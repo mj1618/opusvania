@@ -69,6 +69,17 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - `limb()` blends the two straight segments with the Catmull-Rom bow by `ROUND` 0.35: a full bow
   drew every bent leg as one C-curve.
 
+## Round 6: value design (see memory/reference-study.md, gap 2)
+- Knight-style: darks are deep plum-indigo (wings 0x553a6e -> 0x150f28, tunic 0x34274e, legs 0x2b2044,
+  crown 0x2e2246), the face disc is the brightest surface (0xf6f0ea lit / 0xbab2cc shade), eye core
+  to 0xffe9a6, pale accents (band, cuffs, feet, ruff) second. Dark shades carry rim 1 / cool 0.95 and
+  the painter's `coolColor` is a brighter moon blue. The cool fill in hooded/paint.ts only reaches
+  edges facing upper-left: a truly continuous rim needs a copy of the painter.
+- Head halo: radius 72 warm, 0.1. `ember` light: radius 300 (+70 dash, +90 flash), intensity 1.15 x glow.
+- Run float (foot lift and pelvis arc) scales with `speedK`, so starts/stops/turns step low.
+- Pickups: `pickup` events set `rig.joy` (head/chest lift, wing flick; a 'great' opens the wings) and a
+  flash through lanterns/eyes; scaled down by `combo`.
+
 ## Gotchas
 - Wing strands have no body collision: a stiff, fast flare throws them over the head and they
   come down in FRONT of the body. Keep the flare's stiffness boost low (0.5) and BEAT_UP <= ~-112 deg.

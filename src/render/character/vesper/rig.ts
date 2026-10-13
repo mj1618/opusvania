@@ -220,6 +220,9 @@ export interface RigSignals {
   wallJump: boolean;
   /** The somersault opens out (the moment for the wings' burst). */
   opened: boolean;
+  /** A glint was absorbed this frame: strength 0..1; `great` for the big ones. */
+  pickup: number;
+  great: boolean;
 }
 
 /** A point dragged behind its target: lags, swings past, settles. */
@@ -265,6 +268,8 @@ export class Rig {
     dashStart: false,
     wallJump: false,
     opened: false,
+    pickup: 0,
+    great: false,
   };
   /** Forward-frame spine lean and head angle actually used (pose + springs), for the chains. */
   lean = 0;
@@ -309,6 +314,8 @@ export class Rig {
   private readonly handA = new Drag2(19, 0.5, 0.3, 5.5);
   private readonly handB = new Drag2(16, 0.46, 0.3, 5.5);
   private spinA = 0;
+  /** Delight from a pickup: decays in ~0.4 s. Lifts the head and chest; the wings read it too. */
+  joy = 0;
   private spinVel = 0;
   private spinTarget = 0;
   private wasFree = false;
@@ -344,6 +351,8 @@ export class Rig {
     sig.dashStart = false;
     sig.wallJump = false;
     sig.opened = false;
+    sig.pickup = 0;
+    sig.great = false;
     let startSpin = false;
 
     for (const e of events) {
@@ -378,6 +387,15 @@ export class Rig {
         case 'headBump':
           this.squash.v -= 3;
           break;
+        case 'pickup': {
+          // A small delighted lift; calmer when she is gathering many in a row.
+          const k = e.kind === 'great' ? 1 : 0.5 / (1 + e.combo * 0.5);
+          this.joy = Math.max(this.joy, k);
+          this.wide.v += 2.2 * k;
+          if (e.kind === 'great') sig.great = true;
+          sig.pickup = Math.max(sig.pickup, k);
+          break;
+        }
         case 'wallSlideStart':
           this.crouch.v += 36;
           break;
@@ -437,8 +455,8 @@ export class Rig {
     this.wWall += ((wall ? 1 : 0) - this.wWall) * approach(wall ? 14 : 20, dt);
     this.wAir += ((air ? 1 : 0) - this.wAir) * approach(air ? 24 : 26, dt);
     this.wSkid += ((skid ? 1 : 0) - this.wSkid) * approach(skid ? 26 : 13, dt);
-    this.wRun += (runT - this.wRun) * approach(runT > this.wRun ? 18 : 10, dt);
-    this.wIdle += ((ground ? 1 - runT : 0) - this.wIdle) * approach(11, dt);
+    this.wRun += (runT - this.wRun) * approach(runT > this.wRun ? 18 : 17, dt);
+    this.wIdle += ((ground ? 1 - runT : 0) - this.wIdle) * approach(17, dt);
     this.speedK += (sat(speed / 9.6) - this.speedK) * approach(9, dt);
 
     // --- Run phase: by distance, signed by the facing so moving backwards runs it backwards.
@@ -556,6 +574,11 @@ export class Rig {
     out[PU]! -= crouch;
     out[LEAN]! += accLean + crouch * 0.012;
     out[HT]! += crouch * 0.02 - accLean * 0.45;
+
+    this.joy *= Math.exp(-5.5 * dt);
+    out[HT]! -= 0.16 * this.joy;
+    out[CURL]! -= 0.08 * this.joy;
+    out[PU]! += 0.8 * this.joy;
 
     // Follow-through down the spine: each part chases the pose through its own spring.
     if (spawned) {
@@ -750,9 +773,9 @@ export class Rig {
     o[LEAN] = 0.015 + breath * 0.012 + sway * 0.02 - shift * 0.015;
     o[CURL] = -0.03 - breath * 0.035;
     o[HT] = -0.04 + nod * 0.07 + gl * 0.05 - breath * 0.012;
-    o[AF] = 6.8;
-    o[AU] = 0.3;
-    o[AP] = 0.22;
+    o[AF] = 6.2;
+    o[AU] = 0.1;
+    o[AP] = 0.08;
     o[BF] = 3.2;
     o[BU] = 0;
     o[BP] = 0;
@@ -811,7 +834,11 @@ export class Rig {
     const c2 = Math.cos(2 * TAU * x);
     const rise = 0.5 - 0.5 * c1 + 0.14 * (0.5 - 0.5 * c2);
     o[PF] = 1.2 + 0.9 * Math.sin(TAU * (x - 0.12));
-    o[PU] = 28.6 + 9.2 * rise ** 0.72;
+    // The bound belongs to speed: starting, stopping and turning she steps low instead of hopping.
+    const fl = 0.3 + 0.7 * smoothstep(0.35, 0.95, k);
+    o[AU]! *= 0.45 + 0.55 * fl;
+    o[BU]! *= 0.45 + 0.55 * fl;
+    o[PU] = 28.6 + 9.2 * rise ** 0.72 * fl;
     o[LEAN] = 0.05 + 0.09 * k - 0.03 * c1;
     o[CURL] = 0.05 + 0.02 * Math.cos(TAU * (x - 0.2));
     // The head stays level: it gives back what the spine leans.

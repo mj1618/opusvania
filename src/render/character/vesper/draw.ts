@@ -71,37 +71,38 @@ function dim(c: RGB, k: number): RGB {
 }
 
 // --- Colours. Plum-charcoal family, pale ash fur, one light: pale gold.
-const WING_TOP = rgb(0x9472a6);
-const WING_MID = rgb(0x624a80);
-const WING_LOW = rgb(0x2e2548);
-const BAND = rgb(0xdccbc0);
-const TUNIC_TOP = rgb(0x574670);
-const TUNIC_LOW = rgb(0x2c2444);
-const SLEEVE = rgb(0x6a5884);
-const SLEEVE_LOW = rgb(0x3e3258);
-const LEG_TOP = rgb(0x463a5c);
-const LEG_LOW = rgb(0x2a2238);
-const FUR = rgb(0xc2bac2);
-const FUR_SHADE = rgb(0x77708e);
-const FACE_LIT = rgb(0xe4dad4);
-const FACE_SHADE = rgb(0xa49cb8);
-const CROWN_TOP = rgb(0x4c3d60);
-const CROWN_LOW = rgb(0x221b30);
-const HAND = rgb(0xd0c6c6);
-const WRAP = rgb(0xaaa2b0);
+const WING_TOP = rgb(0x553a6e);
+const WING_MID = rgb(0x30204a);
+const WING_LOW = rgb(0x150f28);
+const BAND = rgb(0xeadccc);
+const TUNIC_TOP = rgb(0x34274e);
+const TUNIC_LOW = rgb(0x171128);
+const SLEEVE = rgb(0x3f3060);
+const SLEEVE_LOW = rgb(0x211838);
+const LEG_TOP = rgb(0x2b2044);
+const LEG_LOW = rgb(0x130e22);
+const FUR = rgb(0xd6ced4);
+const FUR_SHADE = rgb(0x847c9c);
+const FACE_LIT = rgb(0xf6f0ea);
+const FACE_SHADE = rgb(0xbab2cc);
+const CROWN_TOP = rgb(0x2e2246);
+const CROWN_LOW = rgb(0x100b1c);
+const HAND = rgb(0xdcd2d0);
+const WRAP = rgb(0xbcb4c0);
 const METAL = rgb(0xcdb98a);
 const EYE_RIM = rgb(0xd9820f);
 const GOLD = rgb(0xffdf9c);
 const GOLD_HOT = rgb(0xfffaea);
 const GOLD_DEEP = rgb(0xe9a04a);
 const HALO: RGB = [0.78, 0.72, 0.95];
+const HALO_WARM: RGB = [1, 0.9, 0.72];
 const SHADOW: RGB = [0.01, 0.03, 0.06];
 const SPOT_DARK = rgb(0x120e1e);
 const EYE_PATCH: RGB = [0.1, 0.07, 0.15];
 const BLUSH: RGB = [0.86, 0.36, 0.46];
 
-const SH_TORSO: Shade = { c0: TUNIC_LOW, c1: TUNIC_TOP, rim: 0.7, cool: 0.4, form: 0.25, band: 0.5 };
-const SH_ARM: Shade = { c0: SLEEVE, c1: SLEEVE_LOW, rim: 0.9, cool: 0.45, form: 0.3, band: 0.55 };
+const SH_TORSO: Shade = { c0: TUNIC_LOW, c1: TUNIC_TOP, rim: 1, cool: 0.95, form: 0.25, band: 0.5 };
+const SH_ARM: Shade = { c0: SLEEVE, c1: SLEEVE_LOW, rim: 1, cool: 0.95, form: 0.3, band: 0.55 };
 const SH_ARM_FAR: Shade = {
   c0: dim(SLEEVE, 0.6),
   c1: dim(SLEEVE_LOW, 0.6),
@@ -110,7 +111,7 @@ const SH_ARM_FAR: Shade = {
   form: 0.2,
   band: 0.55,
 };
-const SH_LEG: Shade = { c0: LEG_TOP, c1: LEG_LOW, rim: 1, cool: 0.7, form: 0.3, band: 0.6 };
+const SH_LEG: Shade = { c0: LEG_TOP, c1: LEG_LOW, rim: 1, cool: 0.95, form: 0.3, band: 0.6 };
 const SH_LEG_FAR: Shade = {
   c0: dim(LEG_TOP, 0.62),
   c1: dim(LEG_LOW, 0.7),
@@ -172,8 +173,8 @@ const SH_FACE: Shade = {
   band: 0.4,
   ember: 0.8,
 };
-const SH_CROWN: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 0.9, cool: 0.5, form: 0.3, band: 0.36 };
-const SH_LOCK: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 0.9, cool: 0.5, form: 0.3, band: 0.6 };
+const SH_CROWN: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 1, cool: 0.95, form: 0.3, band: 0.36 };
+const SH_LOCK: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 1, cool: 0.95, form: 0.3, band: 0.6 };
 const SH_LOCK_SOFT: Shade = {
   c0: mixRGB(CROWN_TOP, FUR_SHADE, 0.75),
   c1: mixRGB(CROWN_LOW, FUR_SHADE, 0.4),
@@ -184,8 +185,8 @@ const SH_LOCK_SOFT: Shade = {
 };
 const SH_EYE: Shade = { c0: rgb(0x5e2c04), c1: rgb(0xb8660c), rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
 const SH_EYE_CORE: Shade = {
-  c0: rgb(0xe89a1e),
-  c1: rgb(0xffd670),
+  c0: rgb(0xf2a622),
+  c1: rgb(0xffe9a6),
   rim: 0,
   cool: 0,
   form: 0,
@@ -201,7 +202,7 @@ const SH_CATCH: Shade = {
   band: 0.5,
   ember: 0,
 };
-const SH_WING: Shade = { c0: WING_TOP, c1: WING_LOW, rim: 1, cool: 0.5, form: 0, band: 0.5, ember: 1.2 };
+const SH_WING: Shade = { c0: WING_TOP, c1: WING_LOW, rim: 1, cool: 0.95, form: 0, band: 0.5, ember: 1.2 };
 const SH_WING_FAR: Shade = {
   c0: WING_TOP,
   c1: WING_LOW,
@@ -228,7 +229,7 @@ const SH_BARB: Shade = {
   band: 0.6,
   alpha: 0.85,
 };
-const SH_SHEATH: Shade = { c0: rgb(0x2a2440), c1: rgb(0x0f0d1c), rim: 0.8, cool: 0.5, form: 0.2, band: 0.6 };
+const SH_SHEATH: Shade = { c0: rgb(0x2a2440), c1: rgb(0x0f0d1c), rim: 1, cool: 0.95, form: 0.2, band: 0.6 };
 const SH_METAL: Shade = { c0: METAL, c1: dim(METAL, 0.7), rim: 0.8, cool: 0.2, form: 0.3, band: 0.5 };
 const SH_SPOT: Shade = {
   c0: rgb(0xe3c68c),
@@ -974,7 +975,8 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   p.soft(ox, oy + 1, 24, 4.5, SHADOW, 0.5 * s[S_GROUND]!);
   // A faint moonlit halo so the dark figure never sinks into a dark background.
   p.glow(j[J_CENTRE * 2]!, j[J_CENTRE * 2 + 1]! - 6, 84, HALO, 0.075 * v.glow);
-  p.glow(j[J_HEAD * 2]!, j[J_HEAD * 2 + 1]! - 8, 50, GOLD_DEEP, 0.075 * v.glow);
+  // The halo: tight and soft round the head and lantern tips, ~1.7x her height across.
+  p.glow(j[J_HEAD * 2]!, j[J_HEAD * 2 + 1]! - 10, 72, HALO_WARM, 0.1 * v.glow);
 
   wing(p, v.wings[far]!.strands, v.open, 0.52, v.glow, clock);
   arm(p, j, far, true, false, v.wall);

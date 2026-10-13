@@ -31,7 +31,7 @@ export class VesperCharacter implements CharacterSkin {
   private readonly sec = new Secondary();
   private readonly fx = new Fx();
   private readonly trails = [new Trail(20, 0.13, 3.4), new Trail(20, 0.11, 3), new Trail(24, 0.17, 5)];
-  private readonly light: PointLight = { x: 0, y: 0, radius: 250, color: LIGHT, intensity: 1 };
+  private readonly light: PointLight = { x: 0, y: 0, radius: 300, color: LIGHT, intensity: 1 };
   private readonly hairX = new Spring(0, 17, 0.42);
   private readonly hairY = new Spring(0, 15, 0.4);
   private readonly hair2X = new Spring(0, 10.5, 0.34);
@@ -54,6 +54,8 @@ export class VesperCharacter implements CharacterSkin {
     p.lx = -KEY_LIGHT.dirX;
     p.ly = -KEY_LIGHT.dirY;
     p.keyColor = rgb(KEY_LIGHT.color);
+    // The moon rim: brighter and bluer than the default fill, so dark shapes keep an edge.
+    p.coolColor = [0.62, 0.8, 1];
     p.l2c = rgb(LIGHT);
     this.view = {
       wings: this.sec.wings,
@@ -137,6 +139,8 @@ export class VesperCharacter implements CharacterSkin {
     if (sig.dashStart && player.grounded) fx.dust(feetX, feetY, -player.dashDir, 0.45, 3);
     if (sig.wallJump) fx.dust(feetX - player.facing * 18, feetY - 12, 0, 0.3, 2);
     if (sig.doubleJump) this.flash = 0.6;
+    // A glint goes in: a warm pulse through the lanterns and eyes.
+    if (sig.pickup > 0) this.flash = Math.max(this.flash, sig.great ? 1 : 0.35 + 0.5 * sig.pickup);
     // The burst leaves the wings as she opens out of the somersault.
     if (sig.opened) {
       this.flash = 1;
@@ -186,8 +190,8 @@ export class VesperCharacter implements CharacterSkin {
     const e = this.light;
     e.x = ex;
     e.y = ey;
-    e.radius = 250 + 70 * rig.wDash + 90 * this.flash;
-    e.intensity = glow;
+    e.radius = 300 + 70 * rig.wDash + 90 * this.flash;
+    e.intensity = glow * 1.15;
   }
 
   destroy(): void {
