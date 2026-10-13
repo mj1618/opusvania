@@ -17,3 +17,4 @@ Keep entries current; delete stale ones.
 - [Character](character.md) — Ember's design and rejected looks, 2.5D rig, pose blending, foot planting, chains, the one-mesh painter, gotchas
 - [Character: Yako](character-yako.md) — the dark fox skin: forward-frame rig + base matrix, cel painter, squash-through turn, 240 px lope, chain stiffness gotcha
 - [Character skin: Vesper](character-vesper.md) — moth skin: owl-disc face and no-scarf decisions, lope run (256 px cycle), wing strand states and beat, wing/drag gotchas, shots URL workaround
+- [Character skin: Nova](character-nova.md) — star-runner acrobat skin: somersault as whole-rig rotation on a spring, hand/foot follow-through springs, relative-speed light trails, shots/clip URL workaround
