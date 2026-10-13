@@ -65,6 +65,7 @@ export class CharacterRenderer {
     this.current?.destroy();
     this.current = def.create(this.ctx, this.layer);
     this.currentId = def.id;
+    this.announce(def);
     if (remember && typeof window !== 'undefined') {
       try {
         window.localStorage.setItem(KEY, def.id);
@@ -73,6 +74,22 @@ export class CharacterRenderer {
       }
     }
     return this.currentId;
+  }
+
+  /** A short on-screen label: which design this is and which number key selects each. */
+  private announce(def: SkinDef): void {
+    if (typeof document === 'undefined') return;
+    let el = document.getElementById('char-label');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'char-label';
+      el.style.cssText =
+        'position:fixed;right:10px;bottom:6px;font:12px/1.4 ui-monospace,monospace;color:#8890a4;pointer-events:none';
+      document.body.appendChild(el);
+    }
+    el.textContent = this.skins
+      .map((s, i) => `${i + 1} ${s.id === def.id ? `[${s.name}]` : s.name}`)
+      .join(' · ');
   }
 
   update(dt: number, clock: number, player: PlayerView, events: readonly SimEvent[]): void {
