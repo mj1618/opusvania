@@ -117,3 +117,11 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
 - The big azure window at stops 1-2 is air.ts `shafts-back` (airBack layer), not a background light.
 - The boot warning "glDrawElements: Vertex buffer is not big enough" is not from these layers (it
   persists with every background mesh, update and render pass disabled).
+
+## Round 8 (glide audit)
+- The follow camera never goes above y 540 even when the hero flies to y -350, so the layers' top edges
+  (visible with a debug `cam({y: 200})`) cannot show in play. If the camera clamp ever changes, the
+  coverage rects in far.ts / mid.ts must grow upward first.
+- The crisp lit "clover" clumps the island vines hang from are the playfield's, not these layers.
+- Sway items (`atmTone`) sit at full light-map shadow (0.12 + 0.88 * shadeTint); mid lid 0.32.
+- Right zone measures violet with these layers alone; stop 6's blue comes from what is in front.

@@ -98,7 +98,7 @@ const ATM: Atmosphere = {
   zoneParallax: 0.68,
   sideBody: 0.3,
   sideLit: 0.8,
-  sideRim: 2.6,
+  sideRim: 3.4,
   // Warm olive-brown shadows in the centre; the ZONE tints turn them azure / violet at the sides.
   tint: [1.42, 1.0, 0.52],
   // Everywhere: clumps are dark shapes against the light, lit only on edges toward an opening.
@@ -109,7 +109,7 @@ const ATM: Atmosphere = {
   zoneSpare: 0.85,
   shadeTint: [0.3, 0.25, 0.2],
   saturation: 0.9,
-  lid: 0.22,
+  lid: 0.32,
   lidY0: 400,
   lidY1: 760,
   blur: 2.2,

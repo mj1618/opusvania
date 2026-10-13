@@ -302,7 +302,7 @@ export function atmTone(atm: Atmosphere, color: number, x: number, y: number): n
   const lt = Math.max(0, Math.min(1, (y - ly0) / (ly1 - ly0)));
   const lid = (atm.lid ?? 1) + (1 - (atm.lid ?? 1)) * lt * lt * (3 - 2 * lt);
   const ch = (v: number, i: number): number =>
-    Math.max(0, Math.min(255, Math.round(v * (t[i] ?? 1) * (0.45 + 0.55 * (st[i] ?? 1)) * lid)));
+    Math.max(0, Math.min(255, Math.round(v * (t[i] ?? 1) * (0.12 + 0.88 * (st[i] ?? 1)) * lid)));
   const shaded = (ch((g0 >> 16) & 255, 0) << 16) | (ch((g0 >> 8) & 255, 1) << 8) | ch(g0 & 255, 2);
   const c = mix(shaded, atm.fogColor, fogAt(atm, y));
   const dx = (x - atm.wellX) / atm.wellR;
