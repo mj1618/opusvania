@@ -51,6 +51,8 @@ export const GLINTS = {
     trailWidth: 2.6,
     greatTrailWidth: 6,
     trailFade: 110,
+    /** The ribbon's greatest length, px. */
+    trailMax: 84,
   },
   absorb: {
     sparks: 5,

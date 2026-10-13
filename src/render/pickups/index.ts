@@ -86,6 +86,8 @@ interface Flight {
   pod: number;
   px: number;
   py: number;
+  /** Exponent of the catch-up for this flight. */
+  lag: number;
 }
 
 /** A fleck of husk thrown off a struck pod. */
@@ -166,6 +168,7 @@ export class PickupRenderer {
   private flareAt = 0;
   /** A tiny LCG for spark scatter (render only; never the sim's RNG). */
   private rnd = 0x9e3779b9;
+  private heroSpeed = 0;
   private chestX = 0;
   private chestY = 0;
 
@@ -229,6 +232,7 @@ export class PickupRenderer {
         pod: -1,
         px: 0,
         py: 0,
+        lag: 2.5,
       });
     for (let i = 0; i < MAX_SPARKS; i++)
       this.sparks.push({ life: 0, max: 1, x: 0, y: 0, vx: 0, vy: 0, size: 1, mode: 0, spin: 0 });
@@ -302,6 +306,7 @@ export class PickupRenderer {
     this.chestY = player.cy - 8;
     const pvx = player.vx * 60;
     const pvy = player.vy * 60;
+    this.heroSpeed = Math.sqrt(pvx * pvx + pvy * pvy);
 
     // --- What the sim says happened.
     for (const e of sim.events) {
@@ -462,7 +467,7 @@ export class PickupRenderer {
         }
         // Lag, then slingshot: it hangs back while she runs on, then catches her up in a rush.
         const s = f.fly > 0 ? (f.t - notice) / f.fly : 1;
-        const es = s ** G.flight.lag;
+        const es = s ** f.lag;
         const tx = this.chestX;
         const ty = this.chestY;
         const dx = tx - f.sx;
@@ -607,6 +612,7 @@ export class PickupRenderer {
     f.hn = 0;
     f.shed = 0;
     f.pod = -1;
+    f.lag = G.lag;
     // The ceremony begins where it hangs: light wells up in the bud.
     if (it.great) this.flare(it.x, it.y, 18, 64, 0.7, 0.3, 0.5, false, 0, 1);
   }
@@ -817,9 +823,12 @@ export class PickupRenderer {
       if (Math.abs(player.cx - p.x) < 30 && Math.abs(player.cy - p.y) < 62) v.nudge(player.vx * dt * 1.3);
       v.update(dt, clock, wind(p.x, clock, (i * 0.37) % 1) * POD.sway);
       // A breath of light over the seam, so the bloom finds it: small, and gone once it is spent.
-      const breathe = 1 + POD.breathe * Math.sin(clock * 1.6 + i * 2.1);
-      const e = v.spent ? 0.2 * v.glow * v.glow : 0.17 * breathe;
-      b.quad(K_FLARE, v.cx, v.cy, 20, 26, e, 0, 0.15);
+      const breathe = 1 + POD.breathe * Math.sin(clock * POD.breatheRate + v.pod.x * 0.01);
+      const e = v.spent ? 0.16 * v.glow * v.glow : 0.15 * breathe;
+      b.quad(K_FLARE, v.cx, v.cy, 19, 25, e, 0, 0.1);
+      // Now and then a mote lets go of the tip and drifts up: what catches the eye from across the screen.
+      if (!v.spent && this.rand() < dt * POD.motes)
+        this.spark(v.tipX, v.tipY, (this.rand() - 0.5) * 8, -10, 2, 0, 1.1, 1.9, 1.5, M_RISE);
     }
     for (const c of this.chips) {
       if (c.life <= 0) continue;
@@ -847,13 +856,14 @@ export class PickupRenderer {
     const i = this.podIndex.get(id);
     if (i === undefined) return;
     const v = this.pods[i] as PodView;
+    const fast = this.heroSpeed > 260 || Math.abs(this.chestX - v.cx) + Math.abs(this.chestY - v.cy) > 170;
     const sx = dir === 'fwd' ? facing : 0;
     const sy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
     const x = v.cx;
     const y = v.cy;
     v.strike(sx, sy);
     // The contact: a few bright pixels, gone in a tenth of a second.
-    this.flare(x, y, 5, 19, 0.11, 0.55, 1, false, 0, 1);
+    this.flare(x, y, 4, 15, 0.1, 0.36, 0.8, false, 0, 1);
     // Husk flecks and gold motes, thrown along the blow (a down blow scatters sideways off the ground).
     const tone = this.podTone[i] ?? 0;
     for (let k = 0; k < 7; k++) {
@@ -897,7 +907,10 @@ export class PickupRenderer {
       f.t = 0;
       f.frame0 = frame;
       f.dur = seconds;
-      f.fly = Math.min(GLINTS.flight.seconds, seconds * 0.7);
+      // If she is already leaving (a pogo, a jump past it) the glints set off almost at once and
+      // curve in steadily; standing by it, they hang for a beat first.
+      f.fly = fast ? seconds * 0.78 : Math.min(GLINTS.flight.seconds, seconds * 0.7);
+      f.lag = fast ? 1.55 : GLINTS.flight.lag;
       f.sx = x;
       f.sy = y;
       f.px = x + Math.sin(a) * reach;
@@ -996,10 +1009,19 @@ export class PickupRenderer {
     const n = f.hn;
     if (n < 2) return;
     const w0 = great ? GLINTS.flight.greatTrailWidth : GLINTS.flight.trailWidth;
+    // The ribbon is never longer than `trailMax`, however fast the glint or she is going.
+    let total = 0;
+    for (let j = 0; j < n - 1; j++) {
+      const dx = (f.hx[j + 1] as number) - (f.hx[j] as number);
+      const dy = (f.hy[j + 1] as number) - (f.hy[j] as number);
+      total += Math.sqrt(dx * dx + dy * dy);
+    }
+    const cap = Math.min(total, GLINTS.flight.trailMax) || 1;
+    let run = 0;
     let pnx = 0;
     let pny = 0;
     let have = false;
-    for (let j = 0; j < n - 1; j++) {
+    for (let j = 0; j < n - 1 && run < cap; j++) {
       const ax = f.hx[j] as number;
       const ay = f.hy[j] as number;
       const bx = f.hx[j + 1] as number;
@@ -1008,8 +1030,9 @@ export class PickupRenderer {
       const dy = by - ay;
       const l = Math.sqrt(dx * dx + dy * dy);
       if (l < 0.01) continue;
-      const u0 = j / (n - 1);
-      const u1 = (j + 1) / (n - 1);
+      const u0 = run / cap;
+      const u1 = Math.min(1, (run + l) / cap);
+      run += l;
       const wa = w0 * (1 - u0 * 0.85);
       const wb = w0 * (1 - u1 * 0.85);
       const nx = -dy / l;
