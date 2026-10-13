@@ -85,6 +85,8 @@ export interface View {
   swordSide: number;
   /** Px she is off the ground in a hop the sim knows nothing about (the finisher). */
   hop: number;
+  /** 0..1: the wings' eye-spots flash (the scale-dust slash). */
+  spot: number;
   /** Scales the face's pale tones (the dark zones' grade lifts them: this takes it back out). */
   pale: number;
 }
@@ -545,54 +547,87 @@ function thorn(p: Painter, f: Frame, len: number, drawn: number): void {
     const t = i / 3;
     p.px[i] = ox + ax * t * len;
     p.py[i] = oy + ay * t * len;
-    p.pw[i] = lerp(1.05, 0.12, t ** 0.8);
+    p.pw[i] = (i === 0 ? 1.5 : i === 1 ? 2.3 : i === 2 ? 1.5 : 0.12) * 0.86;
   }
   p.ribbon(4, SH_SHEATH, true, false);
   // Drawn, the hilt is in her hand: only the sheath stays at the hip.
   if (drawn > 0.5) return;
   // Hilt and guard.
-  p.px[0] = ox - ax * 5.5;
-  p.py[0] = oy - ay * 5.5;
+  p.px[0] = ox - ax * 6;
+  p.py[0] = oy - ay * 6;
   p.px[1] = ox;
   p.py[1] = oy;
-  p.pw[0] = 0.55;
-  p.pw[1] = 0.7;
+  p.pw[0] = 0.7;
+  p.pw[1] = 0.85;
   p.ribbon(2, SH_METAL, true, false);
-  p.ellipse(ox, oy, 0.75, 1.9, Math.atan2(ay, ax), SH_METAL, 8);
+  p.ellipse(ox, oy, 1.0, 3.3, Math.atan2(ay, ax), SH_METAL, 10);
 }
 
-const SH_BLADE: Shade = {
-  c0: rgb(0xd8d2c4),
-  c1: rgb(0xfff6dc),
-  rim: 0.6,
-  cool: 0.3,
-  form: 0.1,
+/** The thorn's length in her hand, px (hilt not counted). She is ~84 px tall. */
+export const BLADE_LEN = 46;
+export const BLADE_STEEL = rgb(0xb4aec6);
+export const BLADE_EDGE = rgb(0xfff4dc);
+const SH_BLADE: Shade = { c0: BLADE_STEEL, c1: BLADE_EDGE, rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
+const SH_SPINE: Shade = {
+  c0: rgb(0x3a3058),
+  c1: rgb(0x6a5e8a),
+  rim: 0,
+  cool: 0,
+  form: 0,
   band: 0.5,
   ember: 0,
 };
+const SH_BLADE_DUSK: Shade = {
+  c0: rgb(0x120d22),
+  c1: rgb(0x120d22),
+  rim: 0,
+  cool: 0,
+  form: 0,
+  band: 0.5,
+  ember: 0,
+  alpha: 0.7,
+};
+/** Half-width along the blade: a narrow neck at the guard, a leaf's belly, a long point. */
+const LEAF = [1.25, 2.1, 2.7, 2.75, 2.45, 1.95, 1.35, 0.75, 0.1];
 
-/** The thorn in her hand: a slender pale blade along `ang` (screen radians) from the hand joint. */
+/**
+ * The thorn in her hand: a slender leaf-shaped blade along `ang` (screen radians) from the hand
+ * joint, pale with a bright edge and a dark spine, a small guard and a wrapped grip.
+ */
 function blade(p: Painter, j: Float32Array, side: number, ang: number, k: number, len: number): void {
   const hx = j[(J_HAND_A + side) * 2]!;
   const hy = j[(J_HAND_A + side) * 2 + 1]!;
   const cx = Math.cos(ang);
   const cy = Math.sin(ang);
-  const L = 26 * k * len;
-  for (let i = 0; i < 5; i++) {
-    const t = i / 4;
-    p.px[i] = hx + cx * (1.5 + L * t);
-    p.py[i] = hy + cy * (1.5 + L * t);
-    p.pw[i] = lerp(1.0, 0.1, t ** 0.75);
+  const L = BLADE_LEN * k * len;
+  const N = LEAF.length;
+  // A hair of dusk under it, so the pale leaf keeps its edge over her own pale parts and bright ground.
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1);
+      p.px[i] = hx + cx * (2.2 + L * t);
+      p.py[i] = hy + cy * (2.2 + L * t);
+      p.pw[i] = LEAF[i]! * (0.55 + 0.45 * k) + (pass === 0 ? 0.9 : 0);
+    }
+    p.ribbon(N, pass === 0 ? SH_BLADE_DUSK : SH_BLADE, false, false);
   }
-  p.ribbon(5, SH_BLADE, true, false);
-  p.px[0] = hx - cx * 2.8;
-  p.py[0] = hy - cy * 2.8;
-  p.px[1] = hx + cx * 1.6;
-  p.py[1] = hy + cy * 1.6;
-  p.pw[0] = 0.55;
-  p.pw[1] = 0.7;
+  // The spine: a dark line down the middle, two thirds of the way.
+  for (let i = 0; i < 4; i++) {
+    const t = i / 3;
+    p.px[i] = hx + cx * (2.6 + L * 0.66 * t);
+    p.py[i] = hy + cy * (2.6 + L * 0.66 * t);
+    p.pw[i] = lerp(0.62, 0.12, t);
+  }
+  p.ribbon(4, SH_SPINE, false, false);
+  // Grip, pommel and a small guard across the blade's root.
+  p.px[0] = hx - cx * 3.6;
+  p.py[0] = hy - cy * 3.6;
+  p.px[1] = hx + cx * 2.2;
+  p.py[1] = hy + cy * 2.2;
+  p.pw[0] = 0.7;
+  p.pw[1] = 0.85;
   p.ribbon(2, SH_METAL, true, false);
-  p.ellipse(hx + cx * 1.6, hy + cy * 1.6, 0.75, 1.9, ang, SH_METAL, 8);
+  p.ellipse(hx + cx * 2.2, hy + cy * 2.2, 1.0, 3.5, ang, SH_METAL, 10);
 }
 
 const COLS = 17;
@@ -1194,13 +1229,13 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   const kFar = lerp(0.52, lerp(1, 0.74, t), soar);
   const kNear = lerp(1, lerp(0.74, 1, t), soar);
   // The wing eye-spots answer a glint last, after the eyes.
-  const spot = v.glintT < 0.8 ? v.glintK * bump((v.glintT - 0.3) / 0.14, 0, 1) : 0;
+  const spot = Math.max(v.spot, v.glintT < 0.8 ? v.glintK * bump((v.glintT - 0.3) / 0.14, 0, 1) : 0);
   wing(p, v.wings[far]!.strands, v.open, kFar, v.glow, clock, v.soarW[far]!, v.back[far]!, spot);
   if (behind)
     wing(p, v.wings[near]!.strands, v.open, kNear, v.glow, clock, v.soarW[near]!, v.back[near]!, spot);
   arm(p, j, far, true, false, v.wall);
   leg(p, j, far, true);
-  thorn(p, f, 21 * (1 - 0.65 * v.tuck), v.slashW);
+  thorn(p, f, 38 * (1 - 0.65 * v.tuck), v.slashW);
   // The sword arm is side A: behind the body when she faces left.
   const bk = sat(v.slashW * 2 - 1);
   // The sword arm is the near arm when the slash starts; if she turns under it, it goes behind her.

@@ -369,6 +369,14 @@ const FIN_CLEAVE: Stroke = {
   w: FIN_W,
   f: FIN_F,
 };
+/**
+ * The snap of a cut. The blade overshoots the end of the arc by the stroke's `over` at full speed,
+ * springs back `back` x that (plus the stroke's `relax`) and rings out: `settle` frames (decay),
+ * `ring` rad per frame. The body's end-of-cut key overshoots by `body` and settles with it. In the
+ * smear frames the sword arm is drawn `arm` longer.
+ */
+export const SNAP = { settle: 3.2, ring: 0.55, back: 0.55, body: 0.28, arm: 0.42 } as const;
+
 /** Where the blade points when it is home: back and down along the sheath. Hand reach from the shoulder, px. */
 export const SHEATH_ANG = -152;
 const HAND_WIND = 10.5;
@@ -803,6 +811,10 @@ export class Rig {
   private fromLen = 1;
   private fromHand = HAND_WIND;
   private handR = HAND_WIND;
+  /** Px from the sword shoulder to the hand right now (before foreshortening), arm stretch included. */
+  get handNow(): number {
+    return this.handR * (1 + SNAP.arm * sat((this.smear1 - this.smear0) * 2.2) * this.slashW);
+  }
   private readonly kFrom = new Float32Array(NK);
   private readonly kNow = new Float32Array(NK);
   /** How far the lunge has carried her past her back foot, px (it drags, then comes up). */
@@ -824,6 +836,12 @@ export class Rig {
   /** 0..1: how much of the stroke's body key is in play; px she is off the ground in the finisher's hop. */
   slashBody = 0;
   slashHop = 0;
+  /**
+   * Smear frames: the fractions of the cut the blade crossed in the frame being drawn (equal = no
+   * smear). The blade is drawn as one long tapered shape over that part of the arc.
+   */
+  smear0 = 0;
+  smear1 = 0;
   private pogo = 0;
   private lastBeatU = 0;
   private soarOut = 8;
@@ -1368,7 +1386,8 @@ export class Rig {
     this.hitT += dt;
     // The sim holds her for the hitstop: the cut holds with her.
     // (The frame the blow lands still moves: the hold catches the blade in the cut, not before it.)
-    if (p.hitstop <= 0 || sig.slashHit) this.slashT += dt;
+    const slashAdv = p.hitstop <= 0 || sig.slashHit;
+    if (slashAdv) this.slashT += dt;
     let slashRot = 0;
     const sk = this.stroke;
     const sf = this.slashT * 60;
@@ -1383,10 +1402,14 @@ export class Rig {
       const after = Math.max(0, sf - sk.wind - sk.cut);
       const dirn = sk.a1 > sk.a0 ? 1 : -1;
       const rest = Math.max(1, sk.hold - sk.wind - sk.cut);
+      // The blade carries past the end of the cut at speed (the overshoot), then springs back and
+      // settles into the held follow-through: the stop is what sells the blow.
+      const ring = after > 0 ? Math.exp(-after / SNAP.settle) * Math.cos(after * SNAP.ring) : 1;
+      const over = after > 0 ? ring : sw ** 4;
       const deg =
         sk.a0 +
         (sk.a1 - sk.a0) * sw +
-        dirn * (sk.over * (1 - Math.exp(-after / 2.6)) - sk.relax * smoothstep(0.2, 1, after / rest));
+        dirn * (sk.over * over - (after > 0 ? (sk.over * SNAP.back + sk.relax) * (1 - ring) : 0));
       strokeMap(sk, deg, this.slashTilt);
       let ang = Math.atan2(mapOut.u, mapOut.f);
       let len = Math.hypot(mapOut.u, mapOut.f);
@@ -1398,6 +1421,12 @@ export class Rig {
         hand = lerp(this.fromHand, hand, ew);
       }
       this.cutQ = sf >= sk.wind ? sw : -1;
+      // Smear frames: the part of the arc the blade crossed in the frame being drawn (held in hitstop).
+      if (slashAdv && dt > 0) {
+        const fast = this.cutQ >= 0 && sf < sk.wind + sk.cut + 0.6 && this.cutQ - Math.max(0, cut0) > 0.4;
+        this.smear0 = fast ? Math.max(0, cut0) : 0;
+        this.smear1 = fast ? this.cutQ : 0;
+      }
       if (this.cutQ >= 0 && cut0 < 0) {
         this.cutStart = true;
         // Running, the stride gives under the cut (the feet keep their plants: no sliding).
@@ -1424,7 +1453,10 @@ export class Rig {
       const rel = 1 - 0.35 * smoothstep(0.15, 1, after / rest);
       const bw = 1 - quintic((sf - sk.hold) / sk.home);
       for (let i = 0; i < NK; i++) {
-        const v = sf < sk.wind ? lerp(this.kFrom[i]!, sk.w[i]!, ew) : lerp(sk.w[i]!, sk.f[i]! * rel, sw);
+        const v =
+          sf < sk.wind
+            ? lerp(this.kFrom[i]!, sk.w[i]!, ew)
+            : lerp(sk.w[i]!, sk.f[i]! * rel * (1 + SNAP.body * over), sw);
         kn[i] = v * bw;
       }
       kn[K_LIFT] =
@@ -1450,6 +1482,7 @@ export class Rig {
       this.slashHome = 0;
       this.gripIn = 0;
       this.cutQ = -1;
+      this.smear0 = this.smear1 = 0;
       this.slashAng = SHEATH_ANG * DEG;
       this.slashLen = 1;
       this.handR = HAND_WIND;
@@ -1747,8 +1780,11 @@ export class Rig {
         side === this.swordSide ? armBend : bendArm,
         0.12,
       );
-      set(j, J_EL_A + side, ikOut.x, ikOut.y);
-      set(j, J_HAND_A + side, ikOut.ex, ikOut.ey);
+      // Smear frames: the sword arm is drawn long along the cut.
+      const stretch =
+        side === this.swordSide ? 1 + SNAP.arm * sat((this.smear1 - this.smear0) * 2.2) * this.slashW : 1;
+      set(j, J_EL_A + side, sx + (ikOut.x - sx) * stretch, sy + (ikOut.y - sy) * stretch);
+      set(j, J_HAND_A + side, sx + (ikOut.ex - sx) * stretch, sy + (ikOut.ey - sy) * stretch);
     }
 
     // --- Whole-body squash and stretch (subtle), volume-preserving.

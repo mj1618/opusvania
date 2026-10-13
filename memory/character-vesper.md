@@ -192,7 +192,7 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - Capture gotcha: x 600-900 is under F1 and 1900 running right reaches the mid rise: both cut the
   airtime. For a full double jump use flat open ground and check the log for `headBump`.
 
-## Thorn slash (sim: memory/combat.md; strokes in `STROKES` in rig.ts, trail look in `TRAIL` in fx.ts)
+## Thorn slash (sim: memory/combat.md; strokes in `STROKES` in rig.ts, the look in `slashfx/`: see the next section)
 - **Three strokes per direction, picked by the event's `step`** (`strokeFor`): fwd 1 = rising draw cut
   out of the sheath, 2 = flat falling backhand, 3 = gather behind + cleave over the top into a deep
   lunge with the wings thrown wide. Up: 1 back-over-to-front, 2 front-to-high, 3 gathered cleave.
@@ -227,23 +227,11 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
   whole poses `UPCUT` / `DOWNCUT`. The lunge leaves the back foot behind for a moment (`lungeBack`).
   Wings read `rig.slashWing` (-1 folded .. 1.5 thrown wide), `slashTwist` (counterweight: far / near
   wing differ) and `hangK` (lift during the air hang); antennae get the same flare.
-- **The trail** (`BladeTrail` in fx.ts): sampled from `rig.strokeAt(q)` several times per frame, so
-  it has the stroke's true shape; drawn as a SOLID pale crescent whose outer edge is the blade
-  point's path at `reach` (cool at the tail to warm at the blade, a thin dusk rim under it, a faint
-  additive haze inside, a hair-thin additive cut line along the whole arc for 3 frames). It dies by
-  thinning from the tail, not by fading. The finisher's is wider, lasts longer and has a slim echo
-  crescent at 0.76 of the reach. Owner brightness: `TRAIL.tone` 0.76 (was 0.84), widths 0.085 /
-  0.115 of the reach (were 0.11 / 0.15), and the tone is scaled per zone like her pale fur
-  (`0.25 + 0.75 x view.pale`). Judge with `shots/vesper/slash13/trail-zones-game-size.png`. It follows her (`TRAIL.follow` 0.9: left in the world, a fall or a
-  glide flies through it) until the blow lands, then it is pinned where it struck.
 - **Tried and rejected**: a wide translucent swept band (soft veil + additive body + bright edge
   line) read as a glass dome / soap bubble, and anything with partial alpha goes into post's hero
   matte, which takes the scene's exposure off those pixels: a faint veil shows as DARK glass on a
   lit backdrop. Solid + thin + short-lived reads as a blade and matches her flat shading. A taper
   in thickness on a wide band draws a straight chord, not a point.
-- Hits: `Fx.sparks` = 6-8 short streaks along the blade point's travel (`STREAK` particles, 4-6
-  frames) + `drawImpact` (small star, long axis along the cut, 5 frames), both scaled by `power`.
-  Finisher only: 9 dust sparks off the wing hems at the start of the cut.
 - Camera kick: `src/render/camera/kick.ts`, numbers in `cameraTuning.kick`, on the `impact` event.
 - Wall slide: the rig faces the wall, the slash goes away. `View.bladeFront` draws the sword arm and
   blade over the wing (arm A is the far arm when she faces left and was hidden); the head yaw target
@@ -259,6 +247,59 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
   silhouette: the phrase loses its up / flat / DOWN contrast. A readable turn needs a real back
   view (hide the face disc, mane and wings in front) and more frames than the sim's wind gives.
 - Running cuts: she sinks and the airborne trailing leg is thrown long (planted feet are never moved).
+
+## The slash's look (round 15, owner: "the sword slash still doesn't look very good"; `slashfx/`)
+- What was wrong (measured on every-frame sheets against HK 367520-07 / -12 and Silksong 1030300-06
+  in `shots/reference/`): the trail was a thin grey sliver at the reach, ~65 px from a 26 px needle
+  of a blade, so it read as a detached moon; nothing joined hand, blade and mark; no frame was bold.
+  The references are a fat near-white wedge that starts AT the hero, is as big as the hero, has a
+  clean outer edge and a torn inner one, and is gone in 3-5 frames.
+- **Shared by every style (fixes, not options)**:
+  - The blade (`blade()` in draw.ts, `BLADE_LEN` 46): a leaf shape (`LEAF` half-widths, 5.5 px at
+    the belly), steel to cream, a dark spine, a guard, a hair of dusk under it. Sheath 38 px; at
+    rest only the gold hilt at the hip and the dark tip behind the cape show.
+  - The smear frame (`slashfx/smear.ts`, `rig.smear0/1`): on the ONE frame where the blade crosses
+    more than 40% of the arc (the first cut frame: `ease` 3 puts 62% there) the blade is drawn as a
+    single tapered opaque shape along that part of the arc, in the blade's own tones, and the
+    sword arm is stretched (`SNAP.arm`). Held through hitstop, so it is the impact frame. A second
+    smear on the next frame (29% of the arc) read as a second blade beside her head: don't.
+  - The snap (`SNAP` in rig.ts): the blade overshoots the arc's end by the stroke's `over` AT SPEED
+    (it accrues as `sw^4` during the cut; an overshoot added after an eased stop is a drift), springs
+    back `back` x that and rings out; the body's end key overshoots 28% with it. `back` 0.85 made
+    the hold a visible second swing; 0.55 holds.
+- **Three styles, one interface** (`SlashStyle` in `slashfx/types.ts`): `begin(cut, strokeAt)`,
+  `frame(f)`, `hit(...)`, `draw(p, f)`. Y cycles them (toast), `?slash=1|2|3`, localStorage
+  `vesper.slash.v1`, `window.__vesper.slash` (1-based) / `.slashName`. `Arc` (common.ts) is the
+  shared laid path: 72 samples from `show x k` to the end, each revealed when the blade passes it,
+  carried with her chest until a blow pins it. The mark's outer edge is the sim's reach; its start
+  is tucked in toward her hand (`tuck` 0.5-0.6 of the reach, cubed) so it grows out of the hand.
+  1. **brush** (default; HK school): one flat opaque cream mark, belly 0.25 / 0.30 of the reach
+     peaking at 70% of the arc, clean outer edge, inner edge stepped by four long shallow barbs,
+     two dry bristle lines near the hand, dusk under-stroke. Full ~2 frames from the cut's start,
+     then it thins to hairline fragments, gone by frame 6 (finisher 8). The finisher adds an inner
+     echo and flecks off the point. Hit: the mark is cut at the contact, a four-point star, hard streaks.
+  2. **ribbon** (Ori school): a streamer (fine tail, full head) with an opaque core plus ADDITIVE
+     light on and inside it (gold, then violet): the additive part is what blooms, because solid
+     pixels are in the hero matte and get no bloom. Slides along its own length for 7-9 frames,
+     waves at the tail, sheds motes. Finisher: a second inner streamer two frames behind. Hit: a
+     small quick ring (a 38 px, 10-frame ring read as a bubble) and motes.
+  3. **scale-dust** (hers): a razor line for ~1 frame, and 170 / 290 tumbling gold-violet scales
+     (`Painter.flake`, opaque, crisp) thrown along the tangent, gone in ~25 frames; the wings'
+     eye-spots flash (`View.spot`); the finisher adds a ring of scales from the hems. Hit: a tight spray.
+- Painter additions: `strip` (opaque band between two polylines, per-sample colour, 1 px feather)
+  and `flake` (a crisp diamond). Everything near her is opaque or additive, never partial alpha.
+- **Tried and rejected this round**: belly 0.34-0.43 of the reach (a fat moon; the finisher an
+  umbrella over her head: its mark now starts at `show x 0.75` and peaks later); deep V notches
+  (shark teeth) and blocky break-up (teeth again: it must THIN as it breaks); three long parallel
+  bristles (a ribcage); a cut line along the whole finisher arch (a dome: it only shows in front);
+  a wing-tip `Trail` as the ribbon's second streamer (the tip barely travels: a hairline).
+- Capture: scratch scripts drive ONE `playwright-cli eval` that steps, draws each frame's crop into
+  a 2D canvas grid and returns a data URL (`--filename`); two sessions, one `?manual&nopickups`, one
+  `?manual` standing at x 1915 for the 3-hit pod. Sheets: `shots/vesper/slash15/final-s<style>-*`.
+- Still short of HK / Ori: the marks are procedural, so the edges are regular where a drawn frame
+  is expressive; the body has one anticipation frame (the sim's startup) and no drawn smear of
+  its own; the up cuts are a tall narrow arch (the hit area is); a slash out of the somersault
+  bends its mark as the residual turn changes mid-cut.
 
 ## Health: hurt, fade, re-form (sim: memory/enemies.md; render numbers in `HURT` in rig.ts)
 - `hurt` event: `rig.hurtK` (recoil pose flung along `dir`, feet leading, eyes squeezed, wings thrown

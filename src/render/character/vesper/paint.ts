@@ -839,6 +839,71 @@ export class Painter {
   }
 
   /**
+   * A flat, opaque band between two polylines (px/py and gx/gy, n samples each): colour per sample
+   * from gc (r,g,b triples), one alpha for the whole band. Both edges get a one-pixel feather and
+   * nothing else: no rim, no shading. For brush marks and blades in motion.
+   */
+  strip(n: number, alpha = 1): void {
+    if (n < 2 || this.ghost || this.full()) return;
+    const { px, py, gx, gy, gc, fw } = this;
+    let base = -1;
+    for (let i = 0; i < n; i++) {
+      const r = gc[i * 3]!;
+      const g = gc[i * 3 + 1]!;
+      const b = gc[i * 3 + 2]!;
+      let ox = px[i]! - gx[i]!;
+      let oy = py[i]! - gy[i]!;
+      const ol = Math.hypot(ox, oy);
+      // Thinner than a pixel: the band fades out instead of leaving a hairline.
+      const a = alpha * Math.min(1, ol / fw);
+      if (ol > 1e-4) {
+        ox = (ox / ol) * fw;
+        oy = (oy / ol) * fw;
+      } else ox = oy = 0;
+      const v0 = this.vert(px[i]! + ox, py[i]! + oy, r, g, b, a, 0, 0, 0, 0, 0, 0, SOLID);
+      this.vert(px[i]!, py[i]!, r, g, b, a, 0, 0, 0, 0, 0, 1, SOLID);
+      this.vert(gx[i]!, gy[i]!, r, g, b, a, 0, 0, 0, 0, 0, 1, SOLID);
+      this.vert(gx[i]! - ox, gy[i]! - oy, r, g, b, a, 0, 0, 0, 0, 0, 0, SOLID);
+      if (base >= 0) for (let c = 0; c < 3; c++) this.quad(base + c, base + c + 1, v0 + c + 1, v0 + c);
+      base = v0;
+    }
+  }
+
+  /**
+   * A small crisp diamond at (x, y): half-length vector (ux, uy), half-width w across it. Opaque
+   * (`additive` = light instead). For flecks, scales and hard sparks.
+   */
+  flake(
+    x: number,
+    y: number,
+    ux: number,
+    uy: number,
+    w: number,
+    c: RGB,
+    alpha: number,
+    additive = false,
+  ): void {
+    if (this.ghost || alpha <= 0.003 || this.full()) return;
+    const ul = Math.hypot(ux, uy) || 1;
+    const nx = (-uy / ul) * w;
+    const ny = (ux / ul) * w;
+    const mode = additive ? GLOW : SOLID;
+    // Solid: coverage runs past 1 at the centre so the edge is a pixel wide, not a soft cone.
+    const cc = additive ? 1 : 3;
+    const v0 = this.vert(x, y, c[0]!, c[1]!, c[2]!, alpha, 0, 0, 0, 0, 0, cc, mode);
+    const e1 = additive ? 1 : 0;
+    const c1 = additive ? 1 : 0;
+    this.vert(x + ux, y + uy, c[0]!, c[1]!, c[2]!, alpha, 0, 0, 0, 0, e1, c1, mode);
+    this.vert(x + nx, y + ny, c[0]!, c[1]!, c[2]!, alpha, 0, 0, 0, 0, e1, c1, mode);
+    this.vert(x - ux, y - uy, c[0]!, c[1]!, c[2]!, alpha, 0, 0, 0, 0, e1, c1, mode);
+    this.vert(x - nx, y - ny, c[0]!, c[1]!, c[2]!, alpha, 0, 0, 0, 0, e1, c1, mode);
+    this.tri(v0, v0 + 1, v0 + 2);
+    this.tri(v0, v0 + 2, v0 + 3);
+    this.tri(v0, v0 + 3, v0 + 4);
+    this.tri(v0, v0 + 4, v0 + 1);
+  }
+
+  /**
    * Additive streak along the polyline in px/py with half-widths pw; brightness per sample from
    * pc[i*3] (only the first of each triple is read), brightest on the centre line.
    */
