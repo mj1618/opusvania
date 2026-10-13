@@ -13,7 +13,7 @@
 import type { PlayerView } from '../../contract';
 import { clamp, lerp, noise1, pulse, sat, smoothstep } from '../hooded/math';
 import { Chain, type ChainSpec } from './chain';
-import { type Frame, J_BROW_A, J_CHEST, J_COLLAR, type Rig, S_CZ, S_D, S_DH } from './rig';
+import { type Frame, J_BROW_A, J_CHEST, J_COLLAR, type Rig, S_CZ, S_D, S_DH, S_GROUND, YEARN } from './rig';
 
 const DEG = Math.PI / 180;
 export const STRANDS = 5;
@@ -170,6 +170,8 @@ export class Secondary {
     const glide = rig.wAir * rig.airFall;
     const dash = rig.wDash;
     const wall = rig.wWall;
+    // The free wing comes up behind her more slowly than the body takes the wall: a catch, not a flag.
+    const wallLift = Math.min(wall, rig.wallSoft);
     // The somersault: folded tight round her while she turns, thrown wide as she opens out.
     const tuck = rig.spinW;
     const soar = rig.soar * (1 - tuck);
@@ -245,6 +247,9 @@ export class Secondary {
     const soarAll = soar;
     const beat = rig.beat;
     const reach = rig.reach;
+    const yearn = rig.yearn * (1 - rig.wGlide) * (1 - tuck);
+    const onGround = s[S_GROUND]!;
+    const first = rig.firstOpen;
 
     for (let w = 0; w < 2; w++) {
       const sd = w === 0 ? 1 : -1;
@@ -252,7 +257,17 @@ export class Secondary {
       this.fold[w]! +=
         (this.foldT[w]! - this.fold[w]!) * (1 - Math.exp(-(this.foldT[w]! > this.fold[w]! ? 16 : 7) * dt));
       const fold = this.fold[w]!;
-      const soar = soarAll * (1 - 0.7 * fold);
+      // Falling without the glide, each wing tries to open: out quickly as it catches the air, held
+      // a moment, blown shut again; the two a little apart and never quite the same size twice.
+      const yu = rig.yearnPh + w * 0.17;
+      const yf = yu - Math.floor(yu);
+      const tryK =
+        yearn *
+        smoothstep(0, 0.2, yf) *
+        (1 - smoothstep(0.34, 0.86, yf)) *
+        (0.72 + 0.28 * noise1(Math.floor(yu) * 1.37, 141 + w * 3));
+      const shut = yearn - tryK;
+      const soar = Math.min(1, soarAll + YEARN.beat * tryK * (1 - soarAll)) * (1 - 0.7 * fold);
       const span = soar * soar;
       this.soarW[w] = soar;
       const pressed = soarAll > 0.15 && fold > 0.02;
@@ -263,7 +278,8 @@ export class Secondary {
       // Folded and in every other state both wings trail behind her (direction = the body's turn);
       // gliding, wing A lies to screen-left and wing B to screen-right whichever way she faces, so
       // a turn in the air swivels her under wings that stay spread.
-      const cd = lerp(lerp(d, sd, side), -rig.hurtDir, rig.hurtBlow * (1 - soarAll));
+      const sideW = Math.max(side, smoothstep(0.03, 0.4, soar));
+      const cd = lerp(lerp(d, sd, sideW), -rig.hurtDir, rig.hurtBlow * (1 - soarAll));
       const cdS = clamp(cd * 4, -1, 1);
       // ... and each makes its own small corrections, on times that never line up.
       const fix = 4.6 * noise1(clock * 0.47, 91 + w * 5) + 2.6 * noise1(clock * 1.13, 95 + w * 5);
@@ -283,7 +299,11 @@ export class Secondary {
         c.lat = -sd * mid * 0.55 * (1 - soar);
         // In the ball the wings draw in with everything else: a close shell.
         c.scale =
-          lerp(1 + 0.24 * run, SOAR_LEN[k]! * (1 + 0.05 * Math.max(0, ck)) * (1 - 0.04 * far), span) *
+          lerp(
+            1 + 0.24 * run,
+            SOAR_LEN[k]! * (1 + 0.05 * Math.max(0, ck) + 0.06 * first) * (1 - 0.04 * far),
+            span,
+          ) *
           (1 - 0.04 * tuck);
         let lift =
           STAND[k]! * rig.wIdle +
@@ -292,7 +312,7 @@ export class Secondary {
           APEX[k]! * apex +
           GLIDE[k]! * glide +
           DART[k]! * dash +
-          lerp(WALL_FREE[k]!, 3, far) * wall;
+          lerp(WALL_FREE[k]!, 3, far) * wallLift;
         lift -= stride * (15 - 2 * k);
         // After the somersault the wings stay half spread while she is still rising.
         lift = lerp(lift, APEX[k]! * 0.85, hold);
@@ -311,6 +331,9 @@ export class Secondary {
               58 * beat +
               15 * reach +
               14 * wall +
+              14 * first +
+              16 * tryK -
+              10 * shut +
               rig.raise) *
               lead -
             4 * far -
@@ -318,6 +341,9 @@ export class Secondary {
             22 * fold * (1 - lead),
           soar,
         );
+        // Folding on the ground after a glide they stay lifted while the span draws in, then come
+        // down behind her as the cape (left to the blend alone they droop flat along the grass).
+        lift -= 36 * 4 * soar * (1 - soar) * lead * onGround * (1 - yearn);
         // In the ball both wings wrap back over her spine and under: one shell.
         lift = lerp(lift, TUCKED[k]! - 10 * far, tuck);
         lift = lerp(lift, BEAT_UP[k]!, up);
@@ -354,7 +380,7 @@ export class Secondary {
           SOAR_CURL[k]! + (0.1 * ck + 0.05 * flare + 0.06 * reach - 0.05 * beat) * lead + tipFix,
           soar * (1 - tuck),
         );
-        c.stiff = stiff;
+        c.stiff = stiff + 1.3 * tryK;
         c.dragK = dragT;
         c.floorY = floorY;
         c.wallSide = wallSide !== 0 ? wallSide : pressed ? -sd : 0;
@@ -363,6 +389,16 @@ export class Secondary {
           const t = (i / (c.n - 1)) ** 1.3;
           c.extra[i] =
             amp * t * (Math.sin(ph - 1.25 * i - 0.8 * k) + 0.5 * Math.sin(ph * 1.73 - 2.1 * i + 1.3 * k + w));
+        }
+        // Blown shut, the half-open membrane shakes in the air coming up past her.
+        if (shut > 1e-3) {
+          const fl = shut * (0.05 + 0.03 * k);
+          for (let i = 2; i < c.n; i++)
+            c.extra[i]! +=
+              fl *
+              (i - 1) *
+              0.5 *
+              Math.sin(clock * 27 + k * 1.9 + w * 2.3 - i * 0.9 + 1.3 * Math.sin(clock * 5.3 + k));
         }
         // The hem flutters in the air stream.
         c.extra[c.n - 1]! +=

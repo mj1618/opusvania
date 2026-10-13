@@ -108,6 +108,27 @@ export const GLIDE = {
 } as const;
 
 /**
+ * A fall without the glide (the player has not found it, or is not using it): after `after` s of
+ * falling her wings start to open by themselves, catch the air and are blown shut again, more
+ * insistently until `full` s. Each try opens them `base + beat` of the way to the glide's spread.
+ * Once she has glided in this run the tries are quieter (`known`).
+ */
+export const YEARN = {
+  after: 14 / 60,
+  full: 27 / 60,
+  base: 0.3,
+  beat: 0.5,
+  /** Tries per second at the start and at full insistence. */
+  hz0: 2.1,
+  hz1: 3.3,
+  known: 0.55,
+  /** The first glide of a run: the open is a beat of its own, this long (s). */
+  first: 0.75,
+} as const;
+/** The wall kick: the turn away from the bark is quick, the pushing leg is left long behind for this long (s). */
+export const KICK = { turn: 0.13, push: 0.2 } as const;
+
+/**
  * The thorn slash, render side (the sim owns the timing: memory/combat.md). Three strokes that make
  * one phrase, per direction. Times are sim frames from the press; angles are forward-frame degrees
  * (0 = ahead, 90 = up, 180 = behind).
@@ -715,6 +736,8 @@ export const ACT = {
   unfurl: 2.4,
   beatAt: 2.55,
   beatLen: 1.15,
+  /** A dormant lantern or lamp she comes near: her head, eyes and antennae go to it for this long (it works at a run). */
+  notice: 1.3,
 } as const;
 
 /**
@@ -896,6 +919,14 @@ export class Rig {
   offerSide = 0;
   /** Seconds into the ending's pose (0 until she stands at the heart's centre). */
   endT = 0;
+  /** The lantern she has just noticed: seconds since, where its glass is, and that relative to her head now. */
+  private noticeT = 9;
+  private noticeX = 0;
+  private noticeY = 0;
+  private noticeDx = 0;
+  private noticeDy = 0;
+  /** 0..1: how much of the look is in play (the head's turn quickens with it). */
+  noticeK = 0;
   private catchT = 9;
   private refuseT = 9;
   private healT = 9;
@@ -1065,6 +1096,26 @@ export class Rig {
    */
   smear0 = 0;
   smear1 = 0;
+  /**
+   * Falling without gliding: 0..1 how insistently the wings try to open, and the phase of the tries
+   * (one per unit; each wing reads it a little apart). `firstOpen` 0..1: the first glide of a run opens as a beat.
+   */
+  yearn = 0;
+  yearnPh = 0;
+  firstOpen = 0;
+  private fallT = 0;
+  private firstT = 9;
+  private glided = false;
+  /** She has glided in this airtime: letting go was the player's choice, the wings do not ask again until she lands. */
+  private glidedAir = false;
+  /** Wall kick: seconds since; the wall's wing lift follows `wallSoft` (slower in than `wWall`). */
+  private kickT = 9;
+  wallSoft = 0;
+  /** Set by the owner before `update`: px of clear air to the solid ahead of her at body height (Infinity if none). */
+  wallAhead = Number.POSITIVE_INFINITY;
+  private catchReach = 0;
+  private lastWRun = 0;
+  private stepK = 0;
   private pogo = 0;
   private lastBeatU = 0;
   private soarOut = 8;
@@ -1146,6 +1197,8 @@ export class Rig {
       switch (e.type) {
         case 'spawn':
           sig.spawned = true;
+          // A new run (not a re-form): she has not shown the glide yet.
+          if (!sig.reform) this.glided = false;
           break;
         case 'jump':
           sig.jumped = true;
@@ -1156,6 +1209,7 @@ export class Rig {
           } else if (e.kind === 'wall') {
             sig.wallJump = true;
             this.squash.v += 1;
+            this.kickT = 0;
           }
           break;
         case 'land':
@@ -1170,6 +1224,15 @@ export class Rig {
           this.catchS.v += GLIDE.catch0 + GLIDE.catchVy * vy;
           glideKick = GLIDE.swing0 + GLIDE.swingVy * vy;
           this.diving = false;
+          this.glidedAir = true;
+          // The first glide of a run is a beat: the wings snap wide and fill, she is lifted, eyes wide.
+          if (!this.glided) {
+            this.glided = true;
+            this.firstT = 0;
+            this.catchS.v += 1.6;
+            this.wide.v += 3;
+            sig.beat = true;
+          }
           break;
         }
         case 'glideEnd':
@@ -1243,15 +1306,26 @@ export class Rig {
         case 'wallSlideStart':
           this.crouch.v += 36;
           break;
+        case 'lanternNotice':
+        case 'lampNotice':
+          // A dormant light as she comes near: a look (its glass hangs about head height over the foot).
+          this.noticeT = 0;
+          this.noticeX = e.x;
+          this.noticeY = e.y - 62;
+          this.wide.v += 1.5;
+          break;
+        case 'lampKindle':
         case 'lanternKindle':
           // It catches: she looks up into it, eyes wide.
           this.catchT = 0;
           this.wide.v += 2.4;
           sig.kindled = true;
           break;
+        case 'lampRefuse':
         case 'lanternRefuse':
           this.refuseT = 0;
           break;
+        case 'lampRest':
         case 'lanternRest':
           this.healT = 0;
           this.rested = true;
@@ -1276,6 +1350,10 @@ export class Rig {
     if (spawned) {
       this.kindleW = this.restW = this.warmW = this.touchW = this.endW = 0;
       this.catchT = this.refuseT = this.healT = this.touchT = this.wakeT = 9;
+      this.yearn = this.firstOpen = this.fallT = this.catchReach = this.stepK = 0;
+      this.firstT = this.kickT = 9;
+      this.wallSoft = 0;
+      this.lastWRun = 0;
       this.warmT = 0;
       this.endT = 0;
       this.seated = false;
@@ -1351,6 +1429,14 @@ export class Rig {
     this.healT += dt;
     this.touchT += dt;
     this.wakeT += dt;
+    // A teleport does not carry a look with it.
+    if (spawned && !events.some((e) => e.type === 'lanternNotice' || e.type === 'lampNotice'))
+      this.noticeT = 9;
+    this.noticeT += dt;
+    this.kickT += dt;
+    this.firstT += dt;
+    this.noticeDx = this.noticeX - p.cx;
+    this.noticeDy = this.noticeY - (p.feetY - 62);
     const calm =
       p.grounded &&
       !this.slashOn &&
@@ -1405,9 +1491,11 @@ export class Rig {
 
     // --- Turn. Under the wings she comes round slowly: the head first, then the body, in about
     // the time her drift takes to reverse.
-    this.yaw.omega = lerp(lerp(26, 8.2, this.wGlide), 7, this.endW);
-    this.yaw.zeta = lerp(lerp(0.78, 0.95, this.wGlide), 1, this.endW);
-    this.headYaw.omega = lerp(lerp(40, 15, this.wGlide), 9, this.endW);
+    // ... and off a wall kick quickly: she is round and stretched away from the bark within three frames.
+    const kickTurn = 1 - smoothstep(0, KICK.turn, this.kickT);
+    this.yaw.omega = lerp(lerp(lerp(26, 8.2, this.wGlide), 7, this.endW), 62, kickTurn);
+    this.yaw.zeta = lerp(lerp(lerp(0.78, 0.95, this.wGlide), 1, this.endW), 0.9, kickTurn);
+    this.headYaw.omega = lerp(lerp(lerp(40, 15, this.wGlide), 9, this.endW), 80, kickTurn);
     const d0 = clamp(this.yaw.step(dirT, dt), -1, 1);
     const sgn = d0 >= 0 ? 1 : -1;
     // The pirouette: her whole body turns about its upright axis through the finisher. The body
@@ -1448,12 +1536,23 @@ export class Rig {
     if (ground && this.wRun < 0.04 && runT > 0 && this.wAir < 0.2) this.phase = 0.26;
     this.wDash += ((dash ? 1 : 0) - this.wDash) * approach(dash ? 34 : 11, dt);
     this.wWall += ((wall ? 1 : 0) - this.wWall) * approach(wall ? 14 : 20, dt);
+    this.wallSoft += ((wall ? 1 : 0) - this.wallSoft) * approach(wall ? 6.5 : 20, dt);
     this.wAir += ((air ? 1 : 0) - this.wAir) * approach(air ? 24 : 26, dt);
     this.wSkid += ((skid ? 1 : 0) - this.wSkid) * approach(skid ? 26 : 13, dt);
     this.wRun += (runT - this.wRun) * approach(runT > this.wRun ? 18 : 12, dt);
+    // The run lets go in finite time: an exponential tail left the feet creeping to the stand for 12 frames.
+    if (runT < this.wRun) this.wRun = Math.max(runT, this.wRun - 1.5 * dt);
     this.wIdle += ((ground ? 1 - runT : 0) - this.wIdle) * approach(17, dt);
+    // While stand and run trade places (the first step, the last one) the feet are carried, not slid:
+    // a low step whose height follows how fast the blend is moving.
+    {
+      const rate = dt > 0 ? Math.abs(this.wRun - this.lastWRun) / dt : 0;
+      this.lastWRun = this.wRun;
+      const stepT = ground ? sat(rate / 3.5) * sat(4 * this.wRun * (1 - this.wRun) + 0.25) : 0;
+      this.stepK += (stepT - this.stepK) * approach(stepT > this.stepK ? 40 : 30, dt);
+    }
     // Coming to rest out of a run: a small braking step (render only; the sim stops in three frames).
-    if (ground && this.speedNow > 0.5 && speed / 9.6 < this.speedNow - 0.2 && p.inputX === 0)
+    if (ground && this.speedNow > 0.5 && speed / 9.6 < this.speedNow - 0.12 && p.inputX === 0)
       this.stopK = Math.max(this.stopK, this.speedK);
     if (!ground || runT > 0.9) this.stopK *= Math.exp(-30 * dt);
     this.stopK *= Math.exp(-STOP.decay * dt);
@@ -1510,6 +1609,12 @@ export class Rig {
     // A ground turn-around is a pivot: both feet stay down while she swivels through the camera.
     if (p.grounded) {
       const pivot = sat(1.25 * (1 - Math.abs(d))) * (1 - this.wDash);
+      if (this.stepK > 1e-3) {
+        // The foot that has further to go is carried higher.
+        out[AU]! += 3.4 * this.stepK;
+        out[BU]! += 2.4 * this.stepK;
+        out[AP]! += 0.25 * this.stepK;
+      }
       out[AU]! *= 1 - 0.92 * pivot;
       out[BU]! *= 1 - 0.92 * pivot;
       out[AP]! *= 1 - 0.7 * pivot;
@@ -1647,7 +1752,30 @@ export class Rig {
     this.wGlide += ((glide ? 1 : 0) - this.wGlide) * approach(glide ? 13 : p.grounded || dash ? 30 : 8, dt);
     this.flare *= Math.exp(-(p.grounded ? 6.5 : 12) * dt);
     const spreadT = glide || this.flare > 0.5 ? 1 : 0;
-    this.soar += (spreadT - this.soar) * approach(spreadT ? 25 : this.flare > 0.05 ? 11 : this.soarOut, dt);
+    // The first glide of a run: they snap to the full spread, overshoot upward and settle (`firstOpen`).
+    const fo = this.firstT / YEARN.first;
+    this.firstOpen = fo < 1 ? quintic(fo / 0.16) * (1 - quintic((fo - 0.3) / 0.7)) : 0;
+    this.soar +=
+      (spreadT - this.soar) *
+      approach(spreadT ? (fo < 0.4 ? 42 : 25) : this.flare > 0.05 ? 11 : this.soarOut, dt);
+    // A fall she is not gliding: the wings want to open. They half unfurl, catch the air, are blown
+    // shut and try again, sooner and wider the longer she falls (the tries themselves are in wings.ts).
+    const falling =
+      air &&
+      !glide &&
+      p.vy > 1.5 &&
+      !this.spinning &&
+      !this.diving &&
+      !this.slashOn &&
+      !this.fading &&
+      this.hurtT > HURT.hold;
+    if (p.grounded || wall) this.glidedAir = false;
+    this.fallT = falling && !this.glidedAir ? this.fallT + dt : 0;
+    const yearnT =
+      smoothstep(YEARN.after, YEARN.full, this.fallT) * (this.glided ? YEARN.known : 1) * (1 - this.dive);
+    this.yearn += (yearnT - this.yearn) * approach(yearnT > this.yearn ? 9 : glide ? 30 : 16, dt);
+    this.yearnPh += dt * lerp(YEARN.hz0, YEARN.hz1, this.yearn) * (0.9 + 0.2 * noise1(clock * 0.9, 137));
+    this.soar = Math.max(this.soar, YEARN.base * this.yearn * (1 - this.spinW));
     // A great glint opens them the same way for a moment, wherever she is.
     this.flourishT += dt;
     const fu = this.flourishT / 0.85;
@@ -1729,6 +1857,76 @@ export class Rig {
       out[HAF]! += (-2 * ck + 0.8 * n2 - 1.6 * vf) * w;
       out[HBF]! += (-1.5 * ck - 1.4 * vf) * w;
       out[LOOKY]! += -0.25 * w;
+    }
+    if (this.yearn > 1e-3 && this.wGlide < 0.99) {
+      // Her body answers each try: lifted a hair under the wings as they catch, arms drifting out
+      // to feel the air, and after a while a look up over her shoulder at them.
+      const w = this.yearn * (1 - this.wGlide);
+      const u = this.yearnPh - Math.floor(this.yearnPh);
+      const tug = smoothstep(0.05, 0.3, u) * (1 - smoothstep(0.3, 0.8, u));
+      out[PU]! += 1.6 * tug * w;
+      out[LEAN]! += (0.1 - 0.05 * tug) * w;
+      out[CURL]! -= 0.07 * tug * w;
+      out[HAU]! += (3.2 + 2 * tug) * w;
+      out[HBU]! += (2.6 + 2.4 * tug) * w;
+      out[HAF]! -= 2.5 * w;
+      out[HBF]! += 1.5 * w;
+      out[AU]! += 1.5 * tug * w;
+      out[BU]! += 1.1 * tug * w;
+      const look =
+        smoothstep(0.75, 1, this.yearn) * (0.5 + 0.5 * noise1(clock * 0.45, 139)) * (1 - this.wGlide);
+      out[HYAW] = lerp(out[HYAW]!, 0.35, 0.8 * look);
+      out[HT]! -= 0.16 * look;
+      out[LOOKY]! -= 0.5 * look;
+    }
+    if (this.firstOpen > 1e-3) {
+      const e = this.firstOpen * this.wGlide;
+      out[PU]! += 2.6 * e;
+      out[CURL]! -= 0.1 * e;
+      out[HT]! -= 0.14 * e;
+      out[HAU]! += 4.5 * e;
+      out[HBU]! += 4 * e;
+      out[HAF]! -= 2 * e;
+      out[AF]! += 2.5 * e;
+      out[BF]! += 3 * e;
+      out[LOOKY]! -= 0.3 * e;
+    }
+    {
+      // The wall kick: for a few frames the leg that pushed is left long behind her, toes on the
+      // bark, the lead knee drives up and the arms are thrown back; then the rise takes over.
+      const turned = sat(d0 * p.facing * 1.6);
+      const k = (1 - smoothstep(0.03, KICK.push, this.kickT)) * turned * this.wAir * (1 - this.spinW);
+      if (k > 1e-3) {
+        out[BF]! -= 8 * k;
+        out[BU]! -= 4.5 * k;
+        out[BP]! += 0.3 * k;
+        out[AU]! += 3.5 * k;
+        out[AF]! += 2 * k;
+        out[PF]! += 2.5 * k;
+        out[LEAN]! += 0.2 * k;
+        out[HT]! -= 0.14 * k;
+        out[HAF]! -= 5 * k;
+        out[HBF]! -= 4 * k;
+        out[HAU]! -= 2 * k;
+      }
+      // A wall coming up ahead: the lead hand and foot reach for the bark before she is on it.
+      const closing =
+        air && !glide && p.vx * sgn > 2 && this.kickT > 0.12 ? smoothstep(84, 26, this.wallAhead) : 0;
+      this.catchReach += (closing - this.catchReach) * approach(closing > this.catchReach ? 16 : 24, dt);
+      const c = this.catchReach * (1 - this.spinW) * (1 - this.wWall) * (1 - this.slashW);
+      if (c > 1e-3) {
+        const nearA2 = d0 >= 0 ? 1 : 0;
+        const RF = nearA2 ? HAF : HBF;
+        const RU = nearA2 ? HAU : HBU;
+        out[RF] = lerp(out[RF]!, 12.5, c);
+        out[RU] = lerp(out[RU]!, 5, c);
+        out[nearA2 ? HBF : HAF]! += 7 * c;
+        out[nearA2 ? HBU : HAU]! += 2.5 * c;
+        out[AF] = lerp(out[AF]!, 13, 0.8 * c);
+        out[AU] = lerp(out[AU]!, 12, 0.8 * c);
+        out[AP] = lerp(out[AP]!, -0.7, 0.8 * c);
+        out[LEAN]! -= 0.08 * c;
+      }
     }
     if (this.dive > 1e-3) {
       // A stoop: body long and head-first-ish, arms pinned back.
@@ -2036,6 +2234,7 @@ export class Rig {
     const s = this.frame.s;
     const czAbs = Math.sqrt(Math.max(0, 1 - (d * BODY.sinYaw) ** 2));
     const cz = czAbs * latSign;
+    this.lookS.omega = lerp(4.5, 12, this.noticeK);
     const look = this.lookS.step(out[HYAW]!, dt);
     // Cutting away from a wall she looks over her shoulder at the blade.
     const headDir = this.wWall > 0.5 && this.slashW > 0.2 ? this.slashFacing * 0.7 : dirT;
@@ -2513,6 +2712,38 @@ export class Rig {
       gzy += 2 * this.wakePitch * k;
       gzw += k;
     }
+
+    // --- A dormant lantern or lamp as she comes near: head, eyes and antennae go to it and follow
+    // it as she passes (over her shoulder once it is behind), then let go. Works at a run.
+    if (this.noticeT < ACT.notice) {
+      const t = this.noticeT;
+      const far = 1 - smoothstep(330, 430, Math.abs(this.noticeDx));
+      const k =
+        smoothstep(0, 0.2, t) *
+        (1 - smoothstep(ACT.notice - 0.5, ACT.notice, t)) *
+        far *
+        (1 - sat(this.hurtK)) *
+        (1 - Math.max(this.kindleW, this.restW)) *
+        // On the ground only: in the air and on the bark her head belongs to the jump.
+        this.frame.s[S_GROUND]! *
+        (1 - this.wWall);
+      // How far ahead of her it is, along the way her body faces.
+      const fwd = this.noticeDx * (this.yaw.x >= 0 ? 1 : -1);
+      const side = smoothstep(-80, 40, fwd);
+      const pitch = clamp(Math.atan2(this.noticeDy, Math.abs(this.noticeDx) + 50) * 0.55, -0.32, 0.3);
+      out[HYAW] = lerp(out[HYAW]!, lerp(-0.6, 1, side), k);
+      out[HT]! += (pitch - 0.07) * k;
+      out[CURL]! -= 0.04 * k;
+      out[LOOKY]! += 2.2 * pitch * k;
+      out[EYE] = lerp(out[EYE]!, 1, k);
+      // (standing, a big lift straightens the antennae into two rods; streaming in the run they can take more)
+      ant -= (20 + 18 * this.wRun) * k;
+      antC -= (0.05 + 0.08 * this.wRun) * k;
+      gzx += lerp(-0.7, 0.85, side) * k;
+      gzy += 2 * pitch * k;
+      gzw += k;
+      this.noticeK = k;
+    } else this.noticeK = 0;
 
     // --- The ending: tall in the open flower, face lifted to the light above, breathing.
     const ew = this.endW * aw;

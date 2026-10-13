@@ -63,9 +63,15 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   lower (hand ~12 px back and 12 below the shoulder) so forearm and open hand show under the cape;
   the far arm lies along it.
 - Low speed = `SWING_TROT` (small, close to the ground) and an upright body. The sim reaches top
-  speed in 3 frames and stops in 3; the POSE takes its time: `speedK` (lean; rate 6.5 up, 8 down)
-  and `boundK` (trot -> bound; 9 up, 12 down, driven by `speedK`), `wRun` lets go at 12. So the
-  lean-in takes ~15 frames, a 4-6 frame tap stays an upright trot step, and a stop settles over ~12.
+  speed in 6 frames and stops in 5 (it was 3 / 3); the POSE takes its time: `speedK` (lean; rate 6.5
+  up, 8 down) and `boundK` (trot -> bound; 9 up, 12 down, driven by `speedK`), `wRun` lets go at 12
+  plus a constant 1.5 /s (an exponential tail alone left the feet creeping to the stand for 12
+  frames). So the lean-in takes ~15 frames, a tap stays an upright trot step, a stop settles over ~10.
+- **First and last step** (`stepK`): while stand and run trade places both feet are carried 2-3 px
+  (height follows the blend's rate), so they land where they stand instead of sliding there. Measured
+  with the sim's real accel profile: start and stop slide 0 px on the ground (was 7 px back at the
+  start, 9 px forward after a stop); the feet are down 9 frames after the sim stops. The ground turn
+  is still a swivel (feet cross under her in 2 frames): by design.
 - Stop: `stopK` (render only, `STOP`): the lead foot is set out toes-up, hips sink 4 px and sit back,
   arms swing through; gone in ~0.3 s.
 - **The cape while running** (`wings.ts`): `STREAM` lifts are WORLD angles (the spine's lean is taken
@@ -102,7 +108,16 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
 - The "long thin drips under her" on the round-16 fall silhouettes were an artefact of that
   silhouette tool (her light changes the scenery it differenced against); nothing is drawn there.
 - Wall slide: the rig faces the wall, hands on the wall face with fingers splayed, upper foot braced,
-  lower leg long down the wall, the free wing open (`WALL_FREE`).
+  lower leg long down the wall, the free wing open (`WALL_FREE`, through `wallSoft`: slower in than
+  the body's `wWall`).
+- **Wall kick** (`KICK`; the shaft climb is slide, kick, catch three times): the yaw spring runs at
+  omega 62 for 0.13 s (head 80), so she is round and facing the jump on the 2nd-3rd frame (it was a
+  face-on pencil with the wings as a bow tie for 4-5 frames); then 0.2 s of push: the leg that
+  kicked left long behind toward the bark, lead knee up, arms back, lean + 0.2. One frontal frame
+  with both wings parted remains, and the antennae whip through vertical for 2-3 frames.
+- **Re-catch** (`catchReach`): `index.ts sideGaps` gives `rig.wallAhead`; from 84 px out (moving
+  toward it) the lead hand and foot go out to the bark, so the slide pose is arrived at, not cut to.
+  The wing lifting as she starts to drop before the catch is the fall's parachute, not the wall.
 - Wing strands have no body collision: a stiff fast flare throws them over the head. Keep flare
   stiffness boosts low and `BEAT_UP` <= ~-112 degrees. Chain pulls: kG + kL < 1 per sub-step (capped
   0.6 / 0.35) or a stiffened chain locks into a rod. Chain drag is relative to still air: `dragK` is
@@ -130,6 +145,25 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   (`groundDist`), per-wing fold beside solids (`foldT / faceX`), `flare` on touch-down, backlit amber
   membranes (`View.back`), silk wing-tip trails and shed sparks.
 - A held J only glides after a double jump or below the launch height.
+- **The wings ask to be used** (`YEARN`; playtest 2: a player who taps never finds the glide): in any
+  fall with no glide, after 14 frames the wings try to open, wider and sooner until frame ~27:
+  `rig.soar` gets a floor (`base` 0.3 x `yearn`) and each wing adds its own try on `yearnPh`
+  (wings.ts `tryK`: out fast, held, blown shut, the two 0.17 of a cycle apart, never the same size
+  twice), 2.1 -> 3.3 tries / s; shut, the membrane shakes. Body: a small lift per try, arms out, and
+  late in a long fall a look up at them. A flat tapped hop (19 frames of fall) barely shows it.
+  Quieter once she has glided in this run (`known` 0.55; a re-form does not reset it), and off for
+  the rest of an airtime in which she glided (letting go was the player's choice; a unit test also
+  wants a released glide fully folded). Off in the somersault, the stoop, a slash, a blow.
+  `view.soar` is the max of the two wings (a wing swung out to the side must be drawn behind her)
+  and the far wing's tint comes in early (`tint`), or it is a dark blot in the right zone.
+  The first version (soar floor 0.2 only) changed nothing: the fall's parachute shape already looks
+  like a small half-open wing. It only reads when the second wing comes out on the other side.
+- **First glide of a run** (`firstOpen`, 0.75 s): soar rate 42, catch spring + 1.6, wings 14 degrees
+  higher and 6% longer for the beat, body lifted 2.6 px with the chest open, eyes wide, the hem puff.
+  24 degrees + a catch kick of 2.6 stood the wings up like sails for 20 frames.
+- Landing out of a glide: no squash (the sim's land is never `hard`); `flare` holds the spread ~6
+  frames, then the wings stay lifted while the span draws in (`36 x 4 soar (1 - soar)` on the
+  ground) and come down behind her. Without that they drooped flat along the grass (a bow tie).
 
 ## Thorn slash (sim: memory/combat.md; `STROKES`, `SNAP` in rig.ts; look in `slashfx/`)
 - Three strokes per direction picked by the event's `step`; a `Stroke` = an ellipse about the chest
@@ -190,6 +224,15 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   0.5: at 0.8 the down-stroke flattened the wings on the ground), lanterns + 32%, then breath, the
   glide's wing drift and the ordinary blinks for as long as it lasts. A state already ended skips
   the ceremony. Works from either side.
+- **Notice** (`lanternNotice` / `lampNotice`, `ACT.notice` 1.3 s; not scaled by the stand, so it
+  shows at a run): antennae tip forward (20 degrees standing, 38 running: more straightens them into
+  rods when she stands), chin up a little, eyes wide, gaze to it; the head follows the glass as she
+  passes (`HYAW` 1 -> -0.6 by how far ahead it is, `lookS` quickened to 12) and lets go. Ground
+  only (in the air it turned her head away from the jump for a whole wall kick), off while kindling
+  or resting.
+- **Wayside lamps** act exactly as lanterns: `readGoal` runs one list (lanterns, then
+  `scene.lamps`, the goal renderer's `beads` order), kindle flag `kindling` or `kindlingLamp`, state
+  from `goal.lamps`; `lampKindle / lampRefuse / lampRest` share the lantern handlers.
 - Antennae gotcha: their rest shape bends back ~22 degrees per segment, so `antCurl` -0.4 exactly
   straightens them (two rods: rabbit ears). Keep it under ~-0.2 for an arc. The head's pitch also
   turns them (chin up = antennae back), so a "forward" lift has to beat that first.
@@ -213,8 +256,16 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
 - Sheets: `shots/vesper/run17/` (before / after of the run rebuild) and `shots/vesper/run17b/` (the
   follow-up: glide entry / steady + turn / land-run, somersault standing and running, slash chain
   standing and running, hurt, wall slide + jump, taps, head close-up, the ground route at game size).
-- Glide capture that lands cleanly on open ground: teleport (1500,1280), `L4 L+J14 L2 L+J50 L80`
-  (glide frames 29-70, lands ~x 670 at frame 81).
+- Capture recipes after the layout pass (the old (1500,1280) glide recipe hits a wall now):
+  long clean fall: teleport (960,300) or (5050,250), no input (lands frame ~50); glide + landing:
+  teleport (1500,704), `L+J70 J40` (wings at 52, lands on the 640 platform at 89); fall, then a first
+  glide: teleport (960,150), `J2 .46 L+J80`; three kicks in the shaft: teleport (3350,1100),
+  `L12 R+J14 R9 L+J14 L9 R+J14 R9 L+J14 L9`; lamp kindle: teleport (3640,192) step 70, (3648,1280)
+  step 70, then (3138,1280) and step. A teleport within 260 px of a dormant light fires its notice.
+  A teleport into the air leaves the double jump in hand: a held J there is the somersault first.
+- Sheets of round 18 (fall / first glide / landing / notice / lamp kindle / wall kicks / start-stop,
+  1:1, zoom 3 and game size, `base/` = before): `shots/vesper/r18/`. Foot slide is measured, not
+  looked at: drive `Rig` with the sim's accel profile and difference the toe joints while y < 1.2.
 - Where she is still hard to find at game size (ground route, running): against the big dark fallen
   log and trunk bases of the left zone (x ~900-1400) and the dark rock shelf of the right zone
   (x ~3300-3600): only face, eyes and lanterns carry her there. Fine in the centre zone and wherever

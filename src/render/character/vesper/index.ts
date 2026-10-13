@@ -212,7 +212,8 @@ export class VesperCharacter implements CharacterSkin {
     view.open = sec.open;
     view.tuck = rig.spinW;
     view.wall = rig.wWall;
-    view.soar = sec.soar;
+    // (a wing trying to open in a fall counts: it must not swing out across her body)
+    view.soar = Math.max(sec.soar, sec.soarW[0], sec.soarW[1]);
     view.stream = sec.stream;
     // The left and right zones are graded up (post exposure 1.3-1.5): keep her face the same soft pale there.
     const zw = zoneWeights(player.cx);
@@ -622,32 +623,43 @@ export class VesperCharacter implements CharacterSkin {
     cue.gathered = false;
     cue.ended = false;
     if (!goal) return;
-    const lamps = sc.lanterns ?? [];
+    // Lanterns, then the wayside lamps: one list, as the goal renderer keeps them (its `beads` are in this order).
+    const nLant = sc.lanterns?.length ?? 0;
+    const way = nLant > 0 ? (sc.lamps ?? []) : [];
+    const count = nLant + way.length;
+    const at = (i: number) => (i < nLant ? sc.lanterns?.[i] : way[i - nLant]);
     const g = tuning.goal;
-    // The lantern she stands at: the one being kindled, else the nearest on her ground within reach.
+    // The light she stands at: the one being kindled, else the nearest on her ground within reach.
     let best = -1;
     let bestD = LAMP_REACH;
-    for (let i = 0; i < lamps.length; i++) {
-      const l = lamps[i]!;
-      if (Math.abs(l.y - p.feetY) > 6) continue;
+    for (let i = 0; i < count; i++) {
+      const l = at(i);
+      if (!l || Math.abs(l.y - p.feetY) > 6) continue;
       const dd = Math.abs(l.x - p.cx);
       if (dd < bestD) {
         bestD = dd;
         best = i;
       }
     }
-    if (p.kindling >= 0 && p.kindling < lamps.length) best = p.kindling;
-    const ls = best >= 0 ? goal.lanterns[best] : undefined;
-    if (best >= 0 && ls) {
-      const l = lamps[best]!;
+    // Her kindle flag: `kindling` for a lantern, `kindlingLamp` for a wayside lamp (never both).
+    const kindling =
+      p.kindling >= 0 && p.kindling < nLant
+        ? p.kindling
+        : p.kindlingLamp >= 0 && p.kindlingLamp < way.length
+          ? nLant + p.kindlingLamp
+          : -1;
+    if (kindling >= 0) best = kindling;
+    const ls = best < 0 ? undefined : best < nLant ? goal.lanterns[best] : goal.lamps?.[best - nLant];
+    const l = best >= 0 ? at(best) : undefined;
+    if (best >= 0 && ls && l) {
       const bx = vesperLink.beads[best * 2] ?? l.x;
-      const by = vesperLink.beads[best * 2 + 1] ?? l.y - 66;
+      const by = vesperLink.beads[best * 2 + 1] ?? l.y - (best < nLant ? 66 : 50);
       cue.lamp = true;
       cue.lampFootDx = l.x - p.cx;
       cue.lampDx = bx - p.cx;
       cue.lampUp = p.feetY - by;
       cue.lampLit = ls.lit;
-      if (p.kindling === best && ls.channel > 0) cue.kindle = sat(ls.channel / Math.max(1, g.channelFrames));
+      if (kindling === best && ls.channel > 0) cue.kindle = sat(ls.channel / Math.max(1, g.channelFrames));
       if (ls.lit && ls.rest > 0) cue.rest = sat(ls.rest / Math.max(1, g.restFrames));
     }
     if (sc.heart) {
@@ -690,6 +702,11 @@ export class VesperCharacter implements CharacterSkin {
     sec.faceX[1] = right;
     sec.foldT[0] = smoothstep(118, 44, p.cx - left);
     sec.foldT[1] = smoothstep(118, 44, right - p.cx);
+    // ... and the rig how far the bark ahead of her is (she reaches for it before she is on it).
+    const gap = p.facing >= 0 ? right - p.cx : p.cx - left;
+    this.rig.wallAhead = (p.facing >= 0 ? right < sc.width : left > 0)
+      ? gap - p.w / 2
+      : Number.POSITIVE_INFINITY;
   }
 
   destroy(): void {

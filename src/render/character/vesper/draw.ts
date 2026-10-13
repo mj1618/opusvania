@@ -1217,8 +1217,10 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   const soar = v.soar;
   const behind = soar > 0.5;
   const t = sat(0.5 + 1.6 * Math.abs(d));
-  const kFar = lerp(0.52, lerp(1, 0.74, t), soar);
-  const kNear = lerp(1, lerp(0.74, 1, t), soar);
+  // (the tint comes in ahead of the spread: a far wing half open in a fall must not stay a dark blot)
+  const tint = sat(soar * 1.7);
+  const kFar = lerp(0.52, lerp(1, 0.74, t), tint);
+  const kNear = lerp(1, lerp(0.74, 1, t), tint);
   // The wing eye-spots answer a glint last, after the eyes.
   const spot = Math.max(v.spot, v.glintT < 0.8 ? v.glintK * bump((v.glintT - 0.3) / 0.14, 0, 1) : 0);
   wing(p, v.wings[far]!.strands, v.open, kFar, v.glow, clock, v.soarW[far]!, v.back[far]!, spot, v.stream);
