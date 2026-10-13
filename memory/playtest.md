@@ -71,97 +71,119 @@ Sim-piloted and played through the debug API; what a person should now check by 
   (800 px wide webm, 25 fps) and measure frame times in a separate run without screenshots.
 - To attribute an event to a frame, `step(1)` and read `events()` each time; `events(k)` after `step(k)` only gives the batch.
 
-# Playtest 2, 2026-10-14 (after the safety, burrback, fade, layout, HUD commits)
+# Playtest 2, 2026-10-14: what is left of it
+Fixed since and confirmed in playtest 3: the lantern is taught (1), dormant glints signpost (2), the shaft
+entry (3), the summit landing (4), the help text overlap (5), the fade's loss shown (9), the ending glare
+and tally labels (11). Still open, carried into playtest 3's list: the glide for a tapper (6), burrbacks
+at a distance (7), foreground leaves over the far ledge in the heart view (8), hero on dark props (10),
+unspent glints (12), the white sky gap at x ~1800 and the tan glow between the shaft trunks (nice).
 
-Real keys in real time (`page.keyboard` in `run-code`, state only read), paused between legs. Frames:
-`shots/play2/01..10` (gitignored). Built from the working tree at 02:35-02:55 with other agents'
-uncommitted edits in `foreground.ts`, `mid.ts`, `pf-*.ts`, so backdrop details may differ from 83f9bb5.
-Delete entries as they are fixed.
+## Method (still true)
+- Other agents saving files makes Vite reload the page and wipe the run. Either cut the dev page off
+  with `playwright-cli -s=<name> network-state-set offline`, or play a frozen build (playtest 3).
 
-## The two runs
-- **Naive** (go right, jump when blocked, cut what is in the way): heart reached asleep at 24.5 s with
-  45 glints and 0 lanterns, having run past the first lantern without knowing it was one. First
-  lantern lit was the far one (36 s), second the stone (50 s); 1 hit (burr-path, 0.4 s after climbing
-  out of the pool), 3 kills. Lost to a Vite reload before the crown; never glided, never found the shaft.
-- **Thorough**: ending at 1:49 (6570 f), 6 hits (4 on purpose for the fade, 2 standing next to
-  burr-root), 1 fade, 2 kills, 84 of 189 glints, 5/6 great, 1/12 pods, **52 unspent**. About 35 s of
-  that was three failed summit attempts (below). 60 fps, no console errors.
+# Playtest 3, 2026-10-14 (HEAD 7edc9da, frozen build)
+`npx vite build --outDir <scratch>` + `npx vite preview --outDir <scratch> --port 5183 --strictPort`
+(served under `/opusvania/`; `window.__game` is in the built app). Real keys in real time
+(`page.keyboard` inside `playwright-cli run-code`, state only read). Frames: `shots/play3/01..12`,
+clips `clips/play3-{wallkick,longfall,leap,kindle}.mp4` (both gitignored). 60 fps, no console errors.
+
+## The three runs
+- **A, naive tapper** (holds right, 90 ms jump taps, cuts what is in the way, walks up to what reacts):
+  noticed at 0.2 s, refused 4/12 at 1.0 s, cut pod-stone, first lantern lit at **3.8 s**. Stuck 5 s at
+  the bluff (a tap + a tapped double jump do not climb 320 px; got up once the presses were 220 ms).
+  Ran through lamp-trunk (channel started and cancelled), walked under both trunks without a jump:
+  **never found the shaft**. Hit by burr-root coming off the root (x 4260). Stood at the right rise's
+  step = at lamp-root: kindled by itself (19.7 s), healed. **Heart reached asleep at 23 s with 28
+  glints, 1 of 3 lanterns.** Then wall-kicked the east wall under the far ledge for 20 s (the far
+  lantern re-noticing her above every second) and gave up. Wings never opened with 90 ms taps.
+- **A without waiting**: if she runs on the moment the pod bursts, the ten glints catch her up 400 px
+  later and the lantern stays dark (refused, never lit). The kindle needs ~1 s of standing after the burst.
+- **B, naive holder**: same route and same end (heart asleep 22.8 s, 34 glints, 1 lantern + lamp-root,
+  stuck under the far ledge). Glided by accident four times (out of the pool, over the bluff's top, off
+  the root, onto the rise): the glide IS discovered by a holder. 2 hits: glided into burr-path with no
+  way to cut, and burr-root off the root, the same spot as A. Walked off the bluff's east lip (no jump
+  held, so no leap) and through lamp-trunk.
+- **C, thorough**: ending at **1:53** (6809 f), 92 of 189 glints (+2), 5/6 great, 2/12 pods, 2/9
+  creatures, 2/2 lamps, 5 hits (4 on purpose), 1 fade, **42 unspent** after 52 spent. Shaft: 5 kicks,
+  2.3 s, first try. Summit: landed on the bough at 3846 (the old top would have been an overshoot).
+  Summit glide: 1.9 s, sky line and great glint, wings closed over the lip, lit the far lantern.
+  Lit lamp-root with burr-root alive: 12 s standing there, it turned 136 px short every pass, 0 hits.
+  Fade: 4 touches in 3.5 s, re-formed at lamp-root with 2 lights, 12 of 38 dropped 357 px away, shown
+  as "-12" by the count and a gold cluster; the rest healed her where she stood 1.8 s later.
 
 ## Must fix
-1. **Nothing teaches the lantern.** A dormant lantern is a small dark hook; the refusal needs her to stand
-   still on it. A player who keeps running reaches the sleeping heart with a full wallet and no idea
-   (the pips row under the count is tiny and dim). Make the first lantern stop her: react to the glints
-   she carries as she passes, or put it where she has to stop. (01)
-2. **Dormant glints do not signpost anything.** From the shaft floor shaft-2..6 are 2 px orange specks,
-   the same as the ambient motes; from the summit sky-1 and sky-2 cannot be found at all in the frame
-   (08, 05). They only become stars when she is close (09: lovely, but too late to invite the jump).
-3. **The shaft is hidden and its entry is a trap.** Trunks stand on stilt roots, their collision starts
-   256 px up, a single jump (272) passes under them: only jump + double jump straight up from the
-   middle catches a wall, and a running jump head-bumps the trunk's underside (every attempt). Once on
-   the walls it is 3 kicks and 2 s and feels good. A foreground leaf silhouette hangs across the
-   opening (06, at 860-990 px of the frame) where the glints are.
-4. **The summit is a 128 px target at the end of a jump + double jump at full run speed**; overshoot
-   and she falls 1100 px to the hollow and climbs the shaft again. Three misses in a row (pilot with
-   ~40 ms reaction; a person will miss too). Widen the top, or catch her on something.
-5. **The help text is two DOM lines drawn on top of each other** (`#hint` and `#char-label`, bottom
-   of every frame, also under the ending's R key). The hint is the only place the glide is told
-   ("hold while falling: glide") and it cannot be read.
+1. **A naive player still ends at a sleeping heart with a full wallet.** They now know what a lantern
+   is and the shrine shows 1 of 3 drops lit (good), but nothing leads to the other two. The shaft is
+   only stars overhead while she walks under two doorways at run speed, and the far lantern is seen
+   from below with no way up that reads (both runs spent 20 s on the east wall). Nothing blocks or
+   turns her at the shaft; the heart's refusal does not point anywhere. (12)
+2. **burr-root hits everyone coming off the root** (x 4260, both naive runs, and me once): she tops the
+   root at 4160 and the creature's patrol starts exactly there, below her landing. Keep it 150 px off
+   the root's foot, as burr-path is kept off the bluff. (08)
+3. **The glide for a tapper: not fixed.** The fall flutter is there (wings half open through a 1000 px
+   fall, `clips/play3-longfall`) and reads as "she has wings", not as "hold jump"; a tapper has almost
+   no long fall on the floor route anyway (192 px off the bluff). The leap with a jump held FROM the lip
+   shows the wings for 0.3 s before the trunk (19 frames).
 
 ## Should fix
-6. **Glide is not discovered** by a player who taps jump (holds under 0.4 s never open the wings).
-   The bluff does not teach it: jump + double jump at its wall is the obvious way up (the branch is
-   not needed), and the way on is a plain drop. Known and used, the glide home (04: bluff lip to the
-   first lantern's foot, 1.6 s, all five arc glints) and the summit glide (sky line, great glint,
-   lands at the far lantern, first try) are the two best moments in the scene.
-7. **Burrbacks are dark on dark**: about 30 px, ground-coloured, three dim spots. The naive hit was a
-   creature I had not seen (02). Contact rules are fair once seen: a hit every 70 f if she keeps
-   walking in, it does not chase. The calm at a kindle has no visible sign on the creature.
-8. **From the bluff top the terrace below is behind foreground leaves** (03; burr-rise walks there).
-   Not seen 10 minutes later after the `foreground.ts` edit: recheck. Leaves also sit over F7 / the
-   far ledge in the heart view (10, top right).
-9. **Fade**: fair (2 lights, 6 of 19 left where she fell, got back by walking there), but the loss is
-   not shown: the count is off screen after the re-form, and the cluster is six dim dots next to the
-   creature that killed her (07). Make the cluster pulse; show the count dropping.
-10. **Hero lost against dark props**: in front of the lantern boulder (01), the bluff root (02), the
-   shrine stones before the heart wakes.
-11. **Ending glare**: the shrine stone goes near-white and a peach wash covers a third of the frame
-   (10); the heart-wake column seen from the far ledge is the same. It lands as a beat (wings open,
-   quiet tally), but it is the one place that breaks dark-and-subtle. Tally icons have no labels.
-12. 52 glints unspent, 11 of 12 pods never opened: nothing asks for them.
+4. **The first kindle can be missed by a second**: run on at the pod's burst and the lantern stays dark.
+   Let the glints land faster, or let the pod's glints fly to the lantern when she is short.
+5. **Wayside lamps cannot be read before she is on them.** lamp-trunk from the terrace is a dark hook
+   in the root tangle (04); no price crown at 260 px. Running through one starts and cancels the
+   channel with nothing to see. Once lit they are good: small warm light, burrback turns away (09).
+6. **Standing at a light she covers it** (lantern-stone, lamp-trunk, lamp-root: her body is on the lamp).
+7. **Hero hard to find**: at lamp-root's foot against the rise's wall (09), on the far ledge by the
+   lantern, at the shrine stones while the heart sleeps, in front of the lantern boulder, and gliding
+   in the summit sky (dark wings on near-black; only the eye spots and trail carry her) (07).
+8. **Tapper at the bluff**: 5 s of failed taps before a longer press. The branch is not read as the way.
+9. **On the east wall the camera's right stop leaves her half out of the frame** (12).
+10. **Spending**: 52 of 92 spent, 42 left; both lamps bought and still a third of the wallet idle. The
+    lamps are a real reason to spend (rest, re-form, safe ground) but there are two. 10 of 12 pods unopened.
+11. **A fade costs little**: she re-forms on the lamp and its rest heals her without a step; the only
+    price is a 6 s walk for the cluster. Fair, readable, not felt.
+12. Burrbacks read well within ~400 px (pale crown, magenta lights); at a screen's distance, calm or
+    not, they are a dark lump (01 right edge). Lampwings never came for me in three runs.
 
 ## Nice
-- Bright things that are not lights: the white sky gap behind the trunk at x ~1800 (seen from F3),
-  the tan glow between the shaft trunks (06), the pool (brightest patch of the left zone).
-- Stilt roots show triangle facets in their shading (05).
-- The bluff's east face is painted as a ramp down to the terrace; collision is a wall at 2624. Top
-  and west wall match. The hollow is a good small beat (three glints, one hop out).
-- Lampwing reads as a pretty moth, not a threat; one touch then it gives up, fair.
-- Lit lanterns now read well (stone warms, candle flowers stay, pips fill). Kindling pose is lovely.
-- On the far ledge the camera's right stop puts her 60 px from the frame edge.
+- Held jump off the bluff's west lip (the way home) snags F4's east end for 23 frames (wall slide at
+  2132, 712) before the wings open; it still lands at 1412, on the first lantern.
+- From the branch, jump + double jump with right held overflies the whole bluff (lands at 3036).
+- The well is a 128 px chimney: wall kicks carry her up it to y ~600 under the high ledge, a dead end.
+- HUD lights lag the sim by a beat and showed 4 lit about 50 frames after a re-form at 2 (check).
+- The hint line sits under the ending's R key. The hint and the skin list are debug text over a
+  picture that otherwise has none.
+- Bright things that are not lights: the white sky gap (bluff view, top centre), the peach band right
+  of trunk B, the pink sliver between trunks in the right zone. None is glare; they are the brightest
+  patches of their frames.
+- A hard landing is flagged from 182 px (every drop off a ledge, and the end of the shaft climb).
+
+## Asked about
+- **Glint stars**: they guide now. Counted per fresh frame: spawn / pool 18-20, bluff 8-10, shaft floor
+  9-11, summit 4-5, right rise 5-8, heart 4-5. The shaft zigzag and the sky line are read at once (05,
+  06). At the spawn it is on the edge of a starfield: 20 pale stars are brighter and more numerous than
+  the one lantern and its 12-star crown, and they are the same shape as the crown's stars (01). They do
+  not touch the HUD. Thin the spawn / pool frame, or dim stars further than ~600 px from her.
+- **Dark and subtle**: holds in every frame I took. Ending and heart wake are warm columns, no white.
+  The left zone is the busiest (stars + pool + blue mushrooms), the summit and the sky glide the best.
+- **Art against collision** (hitbox overlay at stops 8-12): bluff, hollow, root, well, summit bough,
+  catch branch and both trunks sit on their rects within ~20 px (trunk B's bark bulges past its right
+  face; the terrace's east face into the well is painted as a slope, collision is a wall).
+- **Against Ori / Hollow Knight**: stills of the glide home (03), the summit (06) and the sky glide (07)
+  could sit next to them. The three biggest gaps: (a) the goal does not lead: after the first lantern
+  the scene stops telling her where to go; (b) the hero's read: small and dark on dark props at every
+  place she stands still; (c) nothing pushes back: two minutes, creatures that only matter if walked
+  into, a fade without a sting, and a third of the glints with nowhere to go.
 
 ## Not tested
-- Standing on a lit lantern's safe ground with a creature at its edge: no burrback shares the stone's
-  ground and lamp-f3 hit her on F3 before I got down; the crown and far lanterns have none in reach.
-- Feel in the hands (latency, stiffness): judged from traces and frames only. No video taken.
-- 100% completion, the left route past F3, the lampwing pogo chain.
+- Feel in the hands (latency, stiffness): frames, traces and clips only.
+- Lampwing hunt display and the lampwing sanctuary at the far lantern: none noticed her.
+- The left route (bank, F1-F5, high ledge), burr-bank, burr-ledge, pod-ledge, the catch branch as a
+  catch (never fell onto it), 100%, the dev server on 5180 (not opened).
+- The clips are scripted input through `npm run clip -- --url http://localhost:5183/opusvania/ --pickups`,
+  not the real-key runs.
 
-## Method
-- Other agents saving files makes Vite reload the page and wipe the run. After loading, cut it off
-  with `playwright-cli -s=<name> network-state-set offline`: the game needs nothing more.
-
-# After playtest 2: the sim / layout round (2026-10-14, not replayed by a person yet)
-Piloted (`layout-pilot.test.ts`, `goal-pilot.test.ts`, `lamps.test.ts`) and played with real held keys
-through `playwright-cli`. What a person should check by hand next, by playtest 2's numbers:
-- **1 (the lantern is never taught)**: `lanternNotice` fires 68 px into the first run and `pod-stone` at the
-  lantern's foot makes "cut what is in the way" stop her on it; live: noticed f 11, refused 4/12 f 54, pod
-  open f 82, lit f 145. Nothing of the notice is drawn yet. Does a person cut the pod, and stand the 0.5 s?
-- **3 (the shaft)**: trunks down to 1168 (doorways 112 px), the well before trunk A. Live: a jump at trunk B
-  from the floor slid at once, three kicks, on trunk A 1.3 s later, no head bump. Do the doorways read as
-  low (the roots now arch at head height), or does she still jump in them?
-- **4 (the summit)**: a 192 px bough east of the top and a catch branch under it. Live: both the clean
-  arrival and a deliberate overshoot landed on the bough (3830, 3868; its end is 3904).
-- **6 (the glide)**: the leap off the bluff's east lip (movement-controller.md). Honest limit: it is
-  unmissable for anyone who holds jump and does nothing for a player who only taps.
-- **12 (the sink)**: two wayside lamps, sim only (goal.md). They need drawing before anyone can judge them.
-- Also: burr-path keeps off the bluff's foot (a tapper was hit three times there); burr-rise is gone.
-- The safe-ground case is burr-root at `lamp-root`, not at the first lantern (goal.md says why).
+## Method notes
+- `__game.load()` does not clear the event log and the frame counter starts over, so `events(n)` hands
+  back the last run's events again: reload the page between runs.
+- `npm run clip` and `npm run shots` take `--url` (the built app's is `.../opusvania/`).
