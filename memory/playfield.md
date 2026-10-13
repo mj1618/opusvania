@@ -2,8 +2,9 @@
 
 `src/render/scene/layers/playfield.ts` + `src/render/scene/lib/pf-*.ts`. Everything is generated from
 `scene.solids` / `oneWays` by tag; no decoration data is authored in `grove.json`. Terrain painters:
-`pf-terrain.ts` (ground, trunks, ledges, root mound, boughs, backdrop, props), `pf-islands.ts` (the
-floating islands and the `limb()` wood helper), `pf-rock.ts` (every stone).
+`pf-terrain.ts` (ground, trunks, ledges, root mound, boughs, backdrop), `pf-islands.ts` (the floating
+islands and the `limb()` wood helper), `pf-rock.ts` (every stone), `pf-forms.ts` (what keeps the ground
+from being a ruled line on boxes: back ridge, banks, great forms, the three landmarks).
 
 ## Structure
 - **Terrain is baked once at init.** `pf-terrain.ts` paints every body twice onto a `Paint` (`pf-paint.ts`):
@@ -73,15 +74,33 @@ floating islands and the `limb()` wood helper), `pf-rock.ts` (every stone).
 - `pf-terrain.ts` returns `TerrainInfo` (tops, undersides, faces, twigs, pool) and `pf-plants.ts` plants
   from that, so a new solid gets plants for free.
 
-- **Low key at the source** (see reference-study.md): the ground is a form, not a section. `TERRAIN.depthShade`
-  lays washes of `abyss` over everything below the lip so it is near-black by ~150 px; detail painted there is
-  meant to be barely visible. Ground tops carry a rounded moss crown (`crownLift` + `crownMound`). The sun map
+- **Low key at the source** (see reference-study.md): the ground is a form, not a section. Under the lip
+  there is a **lit band** ~120 px deep (`TERRAIN.lipBand` washes of `lipLight`, colour only; stones with
+  their top planes to the light and roots running along under the lip are painted into it), then
+  `TERRAIN.depthShade` takes everything to `abyss` by ~200 px. The main ground carries the same lit crest
+  as the islands (`groundRead`). Ground tops carry a rounded moss crown (`crownLift` + `crownMound`, slow
+  swells up to ~18 px behind her feet; the collision line is still where she stands). The sun map
   is discrete pools (most ground gets none); plant tone bases are near-black and only tips in a pool are bright.
   Glow plants are rare (`glowShare`), small and dim. One hollow per screen.
 - **The lip is in front**: a low moss
-  skin with drips and rootlets in `playfieldFront`, plus ankle-high root humps and stones every ~500 px. **Props** (`paintProps`):
-  a carved standing stone by the pool, a cocoon lantern under the great bough, a moth shrine at the right;
-  `info.lanterns` gives them a dim halo. Plants call `contact()` for a ground shadow under anything big.
+  skin with drips and rootlets in `playfieldFront`, plus ankle-high root humps and stones every ~500 px. Plants call `contact()` for a ground shadow under anything big.
+- **Breaking the line and the boxes** (`pf-forms.ts`, all baked, none collision):
+  `paintBackRidge` mounds earth and moss behind the walk line (`ridgeHeight(x)`, 5-70 px, fading at pools and
+  at the low side of steps); `paintBanks` puts a slope behind every step, from the upper lip down to the lower
+  ground (`FORMS.bankRun` x the step height; steep under the lip, talus below), painted nearly as lit as the
+  cut face (relief 0.4) so wall and slope read as one bank, with buttress roots, two boulders and ferns
+  (`info.lee`); at the pool only an outcrop behind the edge. `paintBankFronts` (after the ground) sets a stone
+  lip flush in the corner or roots over it and down the face. `paintGreatForms` places the `GREAT` list: fallen
+  logs with a root plate, boulder clusters, a root arch, in the back plane; the random backdrop keeps off their
+  spans and off the bank slopes.
+- **Landmarks** (`paintLandmarks`, one per zone, back plane, each with a dim halo from `info.lanterns`
+  `{cyan|violet, size}`): a 350 px leaning carved moth-stone by the pool with a fallen piece, roots up its
+  edges and lichen in the carving; five cocoons on silk under the great bough (one lit, one torn);
+  a shrine at the right (wing-stone on a plinth, two cairns, charm cords, a bowl, violet moss).
+- **Plants grow in thickets** on the ground (`thicket(x)` in `growGarden`: gap x0.55-2.9, size x0.62-1.22);
+  an even spacing and height along the walk line read as planting. Centre-zone tones in `toneAt` are deep
+  saturated green with olive as a minor note and gold only by `sun^2`; the bake's warm zone tint is green in
+  shade and warm in a sun pool.
 
 - **Slash reaction** (`PlayfieldLayer.onSlash`, on the sim's `slash` event; see combat.md): the bend field takes a
   blast across `slashBox(...)` for the live frames and a gust that runs ~210 px on ahead (`BendField.slash`); the
@@ -157,7 +176,15 @@ floating islands and the `limb()` wood helper), `pf-rock.ts` (every stone).
   roots hooped round it (a cauldron), a wedge-shaped bracket (an axe head of wood), roots with bright even
   highlights (straps). What worked: asymmetry, two stones instead of one, supports that come from one side.
 - Cost measured 2026-10-13 at 3840x2160 (M5 Pro, playfield + front toggled, `gl.readPixels` after each tick):
-  0.23-0.48 ms per frame at four stops, CPU 0.15-0.2 ms.
+  0.22-0.53 ms per frame at four stops after the forms and landmarks (0.23-0.48 before), CPU 0.14-0.16 ms. The
+  pool stop is the dearest (most baked area on screen): big new baked forms there need a re-measure.
+- Bank lessons: a back-plane (dark) slope is invisible against a dark background and leaves the lit wall
+  as a box, so the slope must share the face's tone. The lit band makes any face it runs into more of a box:
+  the raised centre block (x 2560-3200) is still the squarest thing in the scene. A wide `tint()` over the band
+  needs stones and roots in it or it reads as a smear. To judge terrain alone, hide the plants:
+  `for (const f of __pf.layer.flora) f.container.visible = false`.
+- `paintRootShoulders` paints the stilt roots a second time, fading, over whatever stands behind them: a back
+  form placed under a trunk looks like glass. Keep great forms clear of x 3050-3750.
 - Tops are honest to within ~6 px (`__game.debug.hitboxes(true)` to check; re-checked for all seven islands and
   both boughs after the rebuild). Island bodies, ledge sag and the trunk root crowns hang below the collision
   bottom; nothing lit rises above a top (the snags' spars do, but in the dark back plane).

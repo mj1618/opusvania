@@ -222,7 +222,7 @@ void main() {
   // The scene's three moods: moonlit blue-green, golden, deep emerald and violet.
   float zA = smoothstep(uZone.x, uZone.y, vWorld.x);
   float zB = smoothstep(uZone.z, uZone.w, vWorld.x);
-  vec3 zoneTint = mix(mix(vec3(0.7, 0.95, 1.2) * 0.85, vec3(1.12, 1.0, 0.68) * 0.9, zA), vec3(1.08, 0.62, 1.2) * 0.72, zB);
+  vec3 zoneTint = mix(mix(vec3(0.7, 0.95, 1.2) * 0.85, mix(vec3(0.84, 1.06, 0.62), vec3(1.14, 1.0, 0.64), sun) * 0.9, zA), vec3(1.08, 0.62, 1.2) * 0.72, zB);
   c *= zoneTint;
   // Moss dims and cools where the light does not reach.
   c *= mix(mix(0.72, 1.0, sun), mix(0.3, 1.2, sun), moss);

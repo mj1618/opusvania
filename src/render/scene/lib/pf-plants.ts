@@ -90,10 +90,12 @@ function toneRaw(base: Tone, x: number, r: Rng, y = 1200): Tone {
   // and a few are a cool blue-green so the gold light has something to play against.
   const vary = r();
   const accent = z.warm > 0.5 && vary < 0.08;
-  const olive = accent ? 0 : vary;
-  const warmDark = accent ? 0x06202a : mix(0x0c1a0c, 0x1c1a08, olive);
-  const warmMid = accent ? 0x0e4a4e : mix(mix(0x153a1c, 0x3a4216, olive), 0x5c5218, sun * 0.6);
-  const warmLit = accent ? 0x2fa08c : mix(mix(0x2f7030, 0x6a7c26, olive), 0xc0a030, sun * 0.85);
+  // Shadows and mid-tones stay deep, saturated green (olive only as a minor note); amber and
+  // gold belong to what the light lands on.
+  const olive = accent ? 0 : vary * vary * 0.6;
+  const warmDark = accent ? 0x06202a : mix(0x061c0e, 0x101c08, olive);
+  const warmMid = accent ? 0x0e4a4e : mix(mix(0x0c4420, 0x2c4812, olive), 0x586014, sun * sun * 0.7);
+  const warmLit = accent ? 0x2fa08c : mix(mix(0x24802e, 0x5a8422, olive), 0xc8a02c, sun * sun * 0.9);
   const warmSun = accent ? 0x6fd8c0 : mix(0xa8b83c, 0xf0c84a, sun);
   const zone = (c: number, coolC: number, warmC: number, deepC: number, k: number): number =>
     mix(mix(mix(c, coolC, z.cool * k), warmC, z.warm * k), deepC, z.deep * k);
@@ -1202,12 +1204,18 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
     }
 
     // Features, spaced. What grows depends on the zone.
+    // On the ground they come in thickets with open stretches between (a slow density wave):
+    // close and large where it is high, sparse and small where it is low. An even spacing at an
+    // even height along the walk line reads as planting, not growth.
+    const thicket = (x: number): number =>
+      isGround ? smoothstep(-0.3, 0.35, noise1(x / 240, 919) * 0.75 + noise1(x / 90, 920) * 0.25) : 0.6;
     for (
       let x = a + range(r, 8, 50);
       x < b - 8;
-      x += range(r, PLANTS.featureGap[0], PLANTS.featureGap[1]) / scale
+      x += (range(r, PLANTS.featureGap[0], PLANTS.featureGap[1]) / scale) * lerp(2.9, 0.55, thicket(x))
     ) {
       if (top.kind === 'root' || blocked(x)) continue;
+      const sc = scale * (isGround ? lerp(0.62, 1.22, thicket(x)) : 1);
       const t = toneAt(BACK, x, r, top.y);
       const sun = sunHere(x);
       const z = zoneAt(x);
@@ -1218,8 +1226,8 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         // Cyan in the glade, violet and magenta in the deep stand.
         const violet = r() < z.deep * 0.88 + z.warm * 0.2;
         if (roll < 0.5) {
-          lantern(c, x, y, range(r, 40, 68) * scale, t, violet);
-          if (r() < 0.6) lantern(c, x + range(r, 14, 26), y, range(r, 26, 40) * scale, t, violet);
+          lantern(c, x, y, range(r, 40, 68) * sc, t, violet);
+          if (r() < 0.6) lantern(c, x + range(r, 14, 26), y, range(r, 26, 40) * sc, t, violet);
         } else {
           const n = 3 + Math.floor(r() * 4);
           for (let i = 0; i < n; i++)
@@ -1240,13 +1248,13 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
       if (roll < wFern) {
         const n = narrow ? 1 : 1 + Math.floor(r() * 2.5);
         for (let i = 0; i < n; i++)
-          fern(c, x + i * range(r, 18, 34), y, range(r, 40, 92) * scale, toneAt(BACK, x + i * 40, r, top.y));
+          fern(c, x + i * range(r, 18, 34), y, range(r, 40, 92) * sc, toneAt(BACK, x + i * 40, r, top.y));
       } else if (roll < wLeaf) {
         const big = 1 + z.deep * 0.35;
-        broadleaf(c, x, y, range(r, 32, 70) * scale * big, t);
-        if (r() < 0.5) broadleaf(c, x + range(r, 18, 30), y, range(r, 16, 28) * scale * big, t);
+        broadleaf(c, x, y, range(r, 32, 70) * sc * big, t);
+        if (r() < 0.5) broadleaf(c, x + range(r, 18, 30), y, range(r, 16, 28) * sc * big, t);
       } else if (roll < wTall) {
-        tallGrass(c, x, y, t, scale);
+        tallGrass(c, x, y, t, sc);
         if (r() < 0.6) tallGrass(c, x + range(r, 14, 26), y, t, scale * 0.8);
       } else if (roll < wFlower) {
         // A drift of one kind of flower: warm where the light lands, pale and cool in shade.
@@ -1256,14 +1264,14 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         const wide = range(r, 24, 54) * (1 + z.warm * 0.6);
         for (let i = 0; i < n; i++) {
           const fx = x + (r() + r() - 1) * wide;
-          flower(c, fx, y, range(r, 12, 34) * scale, t, col);
+          flower(c, fx, y, range(r, 12, 34) * sc, t, col);
         }
         clover(c, x, y, 10, t);
         if (z.warm > 0.5 && g.butterflies.length < 24) g.butterflies.push([x, y - range(r, 30, 70), r()]);
       } else if (roll < wShroom) {
         const n = 2 + Math.floor(r() * 3);
         for (let i = 0; i < n; i++)
-          mushroom(c, x + (i - n / 2) * range(r, 8, 14), y, range(r, 4.5, 11) * scale, 0);
+          mushroom(c, x + (i - n / 2) * range(r, 8, 14), y, range(r, 4.5, 11) * sc, 0);
       } else {
         clover(c, x, y, 14, t);
         clover(c, x + 16, y, 9, t);
@@ -1340,7 +1348,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         const cover = isGround ? smoothstep(-0.55, -0.1, coverN) : smoothstep(-0.05, 0.3, coverN);
         const rise =
           (0.5 +
-            6.5 * ((noise1(x / 120, ls + 5) + 1) * 0.5) ** 1.6 +
+            (isGround ? 11 : 6.5) * ((noise1(x / (isGround ? 170 : 120), ls + 5) + 1) * 0.5) ** 1.6 +
             Math.max(0, noise1(x / 19, ls + 6)) * 2) *
           cover;
         const drip =
@@ -1545,7 +1553,14 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
   }
   for (const l of info.lanterns) {
     g.halo.plant(l.x, l.y, 10, tr(), 0, 0, 0);
-    g.halo.halo(l.x, l.y, 46, l.violet ? PALETTE.glowViolet : PALETTE.ember, PLANTS.haloAlpha * 1.3, 0.5);
+    g.halo.halo(
+      l.x,
+      l.y,
+      l.size ?? 46,
+      l.violet ? PALETTE.glowViolet : l.cyan ? PALETTE.glowCyan : PALETTE.ember,
+      PLANTS.haloAlpha * (l.cyan ? 0.8 : 1.3),
+      0.5,
+    );
   }
   for (const l of info.lee) fern(tc, l.x, l.y + 1, l.size, toneAt(BACK, l.x, tr, l.y));
   // Leaves along the thick vines that wind round the trunks.
