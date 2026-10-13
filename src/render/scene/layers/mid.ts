@@ -19,6 +19,7 @@ import {
   glowTexture,
   LayerView,
   type LightMap,
+  type StageSpec,
   SwaySet,
   type ZoneSpec,
   zoneWeights,
@@ -69,7 +70,38 @@ const MID = {
   glowAlpha: 0.2,
   fireflies: 16,
   hang: { seed: 604, vines: 40, moss: 26, fronds: 24, vineLen: [140, 560], amp: 0.06 },
+  /**
+   * THE MIST STAGE: paler fog pooled just above the walk line, behind the playfield, so the hero,
+   * creatures and plants read as silhouettes (memory/reference-study.md). Peak opacity per zone:
+   * set all three to 0 to remove it. Live: `__bg.stage(left, centre, right); __game.render()`.
+   */
+  stage: { left: 0.44, centre: 0.5, right: 0.56 },
+  /** Slow life of the layer: sway of the canopy masses (px), shimmer of lit leaves, breathing light. */
+  life: { breath: 3.2, shimmer: 0.14, openings: 0.07 },
 } as const;
+
+/** Where the stage lies (playfield px) and what it is made of. Follows content/scene/grove.json. */
+const STAGE: Omit<StageSpec, 'strength'> = {
+  // Cool blue-grey, warm amber-grey, violet-grey.
+  color: [0x6a88a6, 0x9a8458, 0x8468a8],
+  height: 260,
+  below: 110,
+  // Left bank, ground, the centre rise, ground, the right rise.
+  baseY: 1088,
+  steps: [
+    [384, 192],
+    [2560, -128],
+    [3200, 128],
+    [4608, -192],
+  ],
+  ease: 150,
+  // The two high ledges (the first runs on over trunk A's top).
+  ledges: [
+    { x0: 2816, x1: 3328, y: 448, k: 1 },
+    { x0: 5472, x1: 5900, y: 448, k: 1 },
+  ],
+  wisp: 0.5,
+};
 
 const ATM: Atmosphere = {
   fogColor: 0x1b190e,
@@ -96,7 +128,7 @@ const ATM: Atmosphere = {
   sunColorL: 0xbfdcff,
   sunColorR: 0x7fd89a,
   zoneParallax: 0.68,
-  sideBody: 0.3,
+  sideBody: 0.22,
   sideLit: 0.8,
   sideRim: 3.4,
   // Warm olive-brown shadows in the centre; the ZONE tints turn them azure / violet at the sides.
@@ -107,7 +139,7 @@ const ATM: Atmosphere = {
   zoneTintL: [0.43, 0.92, 2.45],
   zoneTintR: [1.18, 0.46, 2.4],
   zoneSpare: 0.85,
-  shadeTint: [0.3, 0.25, 0.2],
+  shadeTint: [0.24, 0.2, 0.16],
   saturation: 0.9,
   lid: 0.32,
   lidY0: 400,
@@ -121,7 +153,8 @@ const FOG: FogSpec = {
   yTop: 1020,
   yFull: 1410,
   alphaTop: 0,
-  alpha: 0.45,
+  // Thin: the paler mist near the ground is the stage's job; this veil only greys the darks.
+  alpha: 0.28,
   wellX: MID.wellX,
   wellY: 760,
   wellR: 320,
@@ -521,7 +554,15 @@ export class MidLayer implements EnvModule {
       },
       { ...ZONE, tintL: [1, 1, 1], tintR: [1, 1, 1], anchorX: ctx.layers.anchor.x },
       back,
+      MID.life,
+      { ...STAGE, strength: [MID.stage.left, MID.stage.centre, MID.stage.right] },
     );
+    if (import.meta.env.DEV) {
+      const g = globalThis as { __bg?: Record<string, unknown> };
+      g.__bg = Object.assign(g.__bg ?? {}, {
+        stage: (l: number, c = l, r = l) => this.view.setStage([l, c, r]),
+      });
+    }
     layer.addChild(this.view.container);
     b.content.destroy({ children: true });
 
@@ -580,7 +621,7 @@ export class MidLayer implements EnvModule {
   update(frame: SceneFrame): void {
     const t = frame.clock;
     this.sway.update(t, frame.camera.x);
-    this.view.update(t, frame.camera.x);
+    this.view.update(t, frame.camera.x, frame.camera.y, this.ctx.layers.anchor.y);
     for (const g of this.glows) {
       g.s.alpha =
         g.base * (0.72 + 0.28 * Math.sin(t * 0.9 + g.phase) + 0.08 * Math.sin(t * 2.3 + g.phase * 2));

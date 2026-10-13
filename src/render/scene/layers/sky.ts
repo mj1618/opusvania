@@ -130,7 +130,7 @@ void main() {
 
   vec2 d = (p - uGlow) / zoom;
   float r = length(d * vec2(1.0, 1.12));
-  float breathe = (1.0 + 0.06 * sin(t * 0.31) + 0.03 * sin(t * 0.83 + 1.0)) * uZoneCam.z;
+  float breathe = (1.0 + 0.07 * sin(t * 1.15) + 0.03 * sin(t * 0.47 + 1.0)) * uZoneCam.z;
   float along = dot(d, uDir);
   float across = dot(d, vec2(-uDir.y, uDir.x));
   float ray = texture(uNoise, vec2(across / 520.0 + t * 0.002, along / 9000.0 + 0.31)).b;
@@ -221,7 +221,8 @@ export class SkyLayer implements EnvModule {
     ctx.layers.sky.addChild(sprite);
     if (import.meta.env.DEV) {
       // Lets tools toggle layers: __bg.layers.get('playfield').visible = false; __game.render().
-      (globalThis as { __bg?: unknown }).__bg = { layers: ctx.layers };
+      const g = globalThis as { __bg?: Record<string, unknown> };
+      g.__bg = Object.assign(g.__bg ?? {}, { layers: ctx.layers });
     }
   }
 

@@ -26,6 +26,7 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
    `wind()`: keep them in sync) and the fragment shader zone-grades it. far0 has no sway (nothing can be
    drawn over far0 alone any more; birds moved in front of far1). Waterfall shimmer per stage, flock
    (far.ts); glow caps, hollow glow + lantern fungi, fireflies, drifting leaves (mid.ts).
+5. **Life and the mist stage** live in the view passes (`LifeSpec`, `StageSpec` in bg-bake): see Round 9.
 
 ## Composition (layer coords; a layer shows x = 2880 + (camX - 2880) * parallax +- 960)
 - **Zones** by playfield x: left glade < 1400..2500 (moonlit blue, cyan glow caps, the waterfall), the
@@ -73,7 +74,7 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   per-strip CPU update + buffer upload cost 0.3 ms before it moved into the vertex shader.
 - Hiding `far0`/`far1` via `__bg.layers` still works (the groups copy `visible`); hiding `far2` hides
   the whole far composite.
-- Cost now: far layers ~0.6 ms together (logical-res target), mid ~0.6 ms (the one full-res pass).
+- Cost at 3840x2160 (round 9, medians of 6): far layers ~0.42 ms together, mid ~0.7-0.8 ms.
 - Side zones: the sun colour goes on edges only (`sideBody` / `sideLit` / `sideRim` in the ATM objects,
   gated by the alpha-open-toward-light term). Tinting whole clump bodies with a pale sun colour made the
   right canopy look frosted.
@@ -112,8 +113,8 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
 - The light well sits RIGHT of the high ledge: wellX far 3110 / 3220 / 3330, mid 3450, sky bloom
   `SKY.glowOffsetX` 300; mid has a heavy canopy bough behind the ledge (`drop` + `cover` bumps at layer
   x 2940). A hero on the ledge (playfield ~3000, 448) must stand against dark with the light beside her.
-- `sideBody` 0.3 / `sideLit` 0.75-0.8 (mid, far2): a little body value in clump interiors; lower and they
-  are pure silhouette.
+- `sideBody` 0.22 (mid) / 0.3 (far2), `sideLit` 0.75-0.8: a little body value in clump interiors; much
+  lower and they are pure silhouette.
 - The big azure window at stops 1-2 is air.ts `shafts-back` (airBack layer), not a background light.
 - The boot warning "glDrawElements: Vertex buffer is not big enough" is not from these layers (it
   persists with every background mesh, update and render pass disabled).
@@ -125,3 +126,34 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
 - The crisp lit "clover" clumps the island vines hang from are the playfield's, not these layers.
 - Sway items (`atmTone`) sit at full light-map shadow (0.12 + 0.88 * shadeTint); mid lid 0.32.
 - Right zone measures violet with these layers alone; stop 6's blue comes from what is in front.
+
+## Round 9 (second reference study)
+- **Mist stage** (`MID.stage` = peak opacity per zone, THE knob; `STAGE` = where it lies): a paler fog
+  sheet hugging the playfield's walk line, drawn inside mid's view pass (in front of mid, behind the
+  playfield). The pass maps each pixel to the playfield point behind it (`uZone.x/.w`, needs camera y:
+  `LayerView.update(clock, camX, camY, anchorY)`); the ground line is `baseY` + eased `steps` and the
+  two high ledges, mirroring grove.json by hand: move a ground rect and `STAGE` must follow. Its
+  billows reuse the mist's two noise taps (two extra taps cost ~0.15 ms). Live A/B:
+  `__bg.stage(l, c, r); __game.render()` (`__bg.stage(0)` = off).
+- Measured on 14 ground-walk frames: luma behind the walk line (median of a 1040x180 band above the
+  feet) 28 -> 38 on average, 44-66 on the flat runs, only 22-31 on the bank and the right rise where
+  big playfield props stand in front of it; frame mean 24.5 -> 27.7. Mid's own grey veil (`FOG.alpha`)
+  dropped to 0.28 to pay for it.
+- **Life** (`LifeSpec`: `MID.life`, `LIFE` in far.ts): `breath` = px of slow travelling sway of the
+  whole canopy zone (same mask as the rustle), `shimmer` = flicker of lit foliage only (gated on the
+  texel's green), `openings` = swell of the `back` light and the wells (~+-10%, 5 s). The sky bloom
+  breathes at the same pace. Pixels changing > 6 luma in 1 s with the hero idle: 7% -> 13-15%.
+- Waterfall: the "pale stair-stepped rectangles" were the three `LiveFall` quads (narrow quad, spray
+  clipped flat at the bottom, alpha not zero at the sides). Now a gaussian column in px space with a
+  round spray plume and an explicit fade before every quad border (`FALL_PAD`); the bluff widens by
+  smoothsteps and its shelves are lumps. Any live quad must reach alpha 0 before its border.
+- The "hard disc in the warm opening" was NOT these layers: it was the post stage's hero pocket cutting
+  against the bright sky (it moved 1:1 with the world and showed with every background layer hidden but
+  the sky sprite). To bisect the far composite, temporarily expose `FarLayers` on `globalThis` and
+  toggle `groups[i].children[j].visible`.
+- Straight dark beams across the well were far1's leaning trunk (x 3500, removed) and bare limbs:
+  `clearWell` now turns branches as well as boughs away from the well, and far1 uses it.
+- A dark soft-edged slab at the right scene edge (world x > ~5600) shows even with only these layers
+  visible: it is not ours (it moves at parallax 1).
+- Darks: far2 `gain` 0.6, shade tints lowered (mid [0.24, 0.2, 0.16], far2 [0.26, 0.23, 0.18]). The
+  walk frames now measure 48% near-black / 27% dark grey (the dark references: 48 / 27).

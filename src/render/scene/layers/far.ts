@@ -35,6 +35,7 @@ import {
   FarPairView,
   type FogSpec,
   LayerView,
+  type LifeSpec,
   noiseTexture,
   quadGeometry,
   type SwayItem,
@@ -69,6 +70,11 @@ const PAD = 60;
 const FAR_TARGET_SCALE = 1;
 /** Canopy rustle amplitude per layer, in layer px. */
 const RUSTLE = [1.6, 2.4, 3.2] as const;
+/** Slow life: the far pair (far0 + far1) and far2. Smaller and slower with distance. */
+const LIFE: readonly LifeSpec[] = [
+  { breath: 1.6, shimmer: 0, openings: 0.065 },
+  { breath: 2.4, shimmer: 0.1, openings: 0.065 },
+];
 
 /**
  * Low key (memory/reference-study.md): haze colours are dark, the centre family is amber-brown, and
@@ -151,7 +157,7 @@ const ATM: readonly Atmosphere[] = [
     rimColor: PALETTE.keyWarm,
     rimStrength: 0,
     mottle: 0.18,
-    gain: 0.7,
+    gain: 0.6,
     litGain: 1.0,
     sunMix: 0.5,
     sunColor: 0xd0c050,
@@ -163,7 +169,7 @@ const ATM: readonly Atmosphere[] = [
     sideRim: 0,
     tint: [1.4, 1.0, 0.55],
     edgeOnly: 1,
-    shadeTint: [0.34, 0.3, 0.24],
+    shadeTint: [0.26, 0.23, 0.18],
     lid: 0.28,
     lidY0: 460,
     lidY1: 780,
@@ -242,12 +248,15 @@ const WATERFALL = {
     { part: 0.28, dx: -34, w: 40 },
   ],
   color: 0xb8d4ee,
-  alpha: 0.34,
+  alpha: 0.3,
   speed: 0.5,
   /** Mist at each landing and the plume over the pool. */
   mist: 0x8fb0cc,
   mistAlpha: 0.3,
 };
+
+/** Room around a stage's live quad (layer px) for its soft ends and the spray plume. */
+const FALL_PAD = { top: 30, bottom: 100 } as const;
 
 /** Top-left x, top y, bottom y and width of each stage of the fall. */
 function fallStages(): Array<{ x: number; y0: number; y1: number; w: number }> {
@@ -357,11 +366,11 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
         { x: 1720, w: 100, lean: -40, branches: 1 },
         { x: 2300, w: 450, lean: 40, branches: 3 },
         { x: 2660, w: 80, lean: -22, branches: 1 },
-        { x: 3500, w: 160, lean: -90, branches: 2 },
         { x: 3640, w: 320, lean: -20, branches: 3 },
         { x: 4070, w: 90, lean: 34, branches: 1 },
         { x: 4280, w: 270, lean: -30 },
       ],
+      clearWell: true,
       rootsPerSide: 2,
       rootArch: 0.15,
       holes: 16,
@@ -428,23 +437,29 @@ function waterfallCliff(c: Container, r: Rng, look: (typeof LOOKS)[number]): voi
     x: w.x + 18 * Math.sin(t * 5),
     y: 1310 - (1310 - w.lip + 40) * t,
   });
-  const step = (y: number): number => stages.reduce((acc, st) => acc + (y > st.y1 ? 46 : 0), 0);
+  // It widens gradually under every landing (an abrupt step drew the bluff as stacked boxes).
+  const step = (y: number): number =>
+    stages.reduce((acc, st) => {
+      const k = Math.max(0, Math.min(1, (y - st.y1 + 70) / 160));
+      return acc + 46 * k * k * (3 - 2 * k);
+    }, 0);
   g.poly(
     ribbon(
       face,
       (t, side) =>
-        (130 + step(face(t).y) + 60 * (1 - t)) * (1 + n(t * 9 + side * 3) * 0.2) + (side === 1 ? 26 : 0),
-      40,
+        (130 + step(face(t).y) + 60 * (1 - t)) * (1 + n(t * 5 + side * 3) * 0.28 + n(t * 17 + side) * 0.07) +
+        (side === 1 ? 26 : 0),
+      64,
     ),
   ).fill(stone);
   // Overhanging lip and the shelves the water lands on.
   g.poly(blob(w.x - 20, w.lip + 6, 150, 34, r, 0.25, 18)).fill(stone);
   for (const st of stages.slice(0, -1)) {
-    g.poly(blob(st.x + rr(r, -20, 20), st.y1 + 16, rr(r, 90, 130), rr(r, 20, 30), r, 0.3, 16)).fill(stone);
-    g.poly(blob(st.x + rr(r, -30, 30), st.y1 + 6, rr(r, 60, 90), 8, r, 0.3, 12)).fill({
-      color: look.bark.lit,
-      alpha: 0.35,
-    });
+    // A lumpy boss of rock under the landing (a wide flat blob read as a slab).
+    for (let k = 0; k < 3; k++)
+      g.poly(
+        blob(st.x + rr(r, -70, 70), st.y1 + 18 + rr(r, -6, 22), rr(r, 40, 80), rr(r, 22, 40), r, 0.35, 20),
+      ).fill(stone);
   }
   // Cracks and lighter ledges on the face.
   for (let i = 0; i < 12; i++) {
@@ -465,7 +480,7 @@ function waterfallCliff(c: Container, r: Rng, look: (typeof LOOKS)[number]): voi
       (t) => (st.w / 2) * (0.7 + 0.3 * t) * (1 + n(t * 9 + st.y0) * 0.14),
       16,
     );
-    g.poly(fall).fill({ color: w.color, alpha: 0.5 });
+    g.poly(fall).fill({ color: w.color, alpha: 0.3 });
   }
   // Mist: a puff at every landing, a plume over the pool (soft sprites, baked with the layer).
   const puff = (x: number, y: number, rx: number, ry: number, a: number): void => {
@@ -602,32 +617,45 @@ in vec2 vUV;
 out vec4 fragColor;
 uniform sampler2D uNoise;
 uniform vec4 uFall;
+uniform vec4 uDim;
 uniform vec3 uWater;
 void main() {
   float t = uFall.x;
-  float across = abs(vUV.x - 0.5) * 2.0;
-  float width = mix(0.36, 0.7, vUV.y);
-  float body = 1.0 - smoothstep(width * 0.35, width, across);
-  float n = texture(uNoise, vec2(vUV.x * 0.9 + uFall.w, vUV.y * 0.55 - t * uFall.z)).r;
-  float m = texture(uNoise, vec2(vUV.x * 2.3 + 0.37, vUV.y * 1.3 - t * uFall.z * 1.7)).g;
-  float streak = smoothstep(0.35, 0.8, n * 0.6 + m * 0.55);
-  float ends = smoothstep(0.0, 0.12, vUV.y) * (1.0 - smoothstep(0.9, 1.0, vUV.y));
+  // Layer px: x from the stream's axis, y from the lip of this stage.
+  vec2 q = vec2((vUV.x - 0.5) * uDim.x, vUV.y * uDim.y - ${FALL_PAD.top}.0);
+  float len = uDim.w;
+  float tt = clamp(q.y / len, 0.0, 1.0);
+  float n = texture(uNoise, vec2(q.x / 110.0 + uFall.w, q.y / 460.0 - t * uFall.z)).r;
+  float m = texture(uNoise, vec2(q.x / 46.0 + 0.37, q.y / 190.0 - t * uFall.z * 1.7)).g;
+  // The stream wanders a little and spreads as it falls; its sides are a soft falloff, never an edge.
+  float axis = sin(q.y * 0.019 + uFall.w * 9.0) * 4.0 + (n - 0.5) * 7.0 * tt;
+  float hw = uDim.z * (0.55 + 0.75 * tt);
+  float ax = (q.x - axis) / hw;
+  float body = exp(-ax * ax * 1.3);
+  float streak = 0.3 + 0.7 * smoothstep(0.3, 0.8, n * 0.6 + m * 0.55);
+  float ends = smoothstep(-16.0, 14.0, q.y) * (1.0 - smoothstep(len - 46.0, len + 10.0, q.y));
   float a = body * streak * ends * uFall.y;
-  // Spray where it lands.
-  vec2 d = (vUV - vec2(0.5, 0.92)) * vec2(3.4, 13.0);
-  a += exp(-dot(d, d)) * uFall.y * (0.5 + 0.3 * m) * (1.0 - smoothstep(0.94, 1.0, vUV.y));
+  // Spray where it lands: a round, breathing plume wider than the stream.
+  vec2 d = vec2(q.x / (hw * 1.5 + 18.0), (q.y - len + 6.0) / 30.0);
+  a += exp(-dot(d, d)) * uFall.y * (0.4 + 0.35 * m) * (0.9 + 0.1 * sin(t * 1.3 + uFall.w * 20.0));
+  // Nothing may reach the quad's border.
+  a *= 1.0 - smoothstep(0.7, 1.0, abs(vUV.x - 0.5) * 2.0);
+  a *= smoothstep(0.0, 0.06, vUV.y) * (1.0 - smoothstep(0.9, 1.0, vUV.y));
   fragColor = vec4(uWater * a, a);
 }`;
 
-/** The moving water over one stage of the fall: streaks sliding down a narrow quad. */
+/** The moving water over one stage of the fall: streaks sliding down a soft column. */
 class LiveFall {
   readonly mesh: Mesh<MeshGeometry, Shader>;
   private readonly u: UniformGroup;
   constructor(st: { x: number; y0: number; y1: number; w: number }) {
     const w = WATERFALL;
     const color = w.color;
+    const half = 50 + st.w * 2.6;
+    const h = st.y1 - st.y0 + FALL_PAD.top + FALL_PAD.bottom;
     this.u = new UniformGroup({
       uFall: { value: new Float32Array([0, w.alpha, w.speed, st.y0 * 0.01]), type: 'vec4<f32>' },
+      uDim: { value: new Float32Array([half * 2, h, st.w / 2, st.y1 - st.y0]), type: 'vec4<f32>' },
       uWater: {
         value: new Float32Array([
           ((color >> 16) & 255) / 255,
@@ -641,9 +669,8 @@ class LiveFall {
       gl: { vertex: BG_VERT, fragment: FALL_FRAG },
       resources: { uNoise: noiseTexture().source, fall: this.u },
     });
-    const half = st.w * 1.6;
     this.mesh = new Mesh({
-      geometry: quadGeometry(st.x - half, st.y0 - 8, half * 2, st.y1 - st.y0 + 30),
+      geometry: quadGeometry(st.x - half, st.y0 - FALL_PAD.top, half * 2, h),
       shader,
     });
     this.mesh.label = 'waterfall';
@@ -820,10 +847,11 @@ export class FarLayers implements EnvModule {
           rustle,
           { texture: sky, x: -8, y: -8, w: VIEW_W + 16, h: VIEW_H + 16 },
           ctx.layers.anchor,
+          LIFE[0],
         );
         if (SKY_OUTPUT.sprite) SKY_OUTPUT.sprite.visible = false;
       } else {
-        view = new LayerView(tiles, fogSpec, rustle, zone);
+        view = new LayerView(tiles, fogSpec, rustle, zone, undefined, LIFE[1]);
       }
       if (view) layer.addChild(view.container);
 

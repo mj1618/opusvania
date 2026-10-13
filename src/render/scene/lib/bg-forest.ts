@@ -270,9 +270,9 @@ export function buildForest(plan: ForestPlan): ForestBuild {
     for (let k = 0; k < nb + boughs; k++) {
       const bough = k >= nb;
       let dir = rt() < 0.5 ? -1 : 1;
-      // Next to the light well, boughs reach away from it (a bare bough across the well is a beam).
-      if (plan.clearWell && bough && Math.abs(p.x - plan.wellX) < plan.wellHalf * 2.6)
-        dir = p.x < plan.wellX ? -1 : 1;
+      // Next to the light well, boughs and branches reach away from it (a bare limb across the well
+      // is a straight dark beam over the brightest part of the picture).
+      if (plan.clearWell && Math.abs(p.x - plan.wellX) < plan.wellHalf * 2.6) dir = p.x < plan.wellX ? -1 : 1;
       const cb = canopyBottom(p.x);
       const yb = bough
         ? Math.max(top + 40, cb - R * rr(rt, 0.1, 1.5))

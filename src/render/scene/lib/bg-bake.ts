@@ -642,6 +642,84 @@ export interface RustleSpec {
   y1: number;
 }
 
+/**
+ * Slow life in a baked layer (all in the view pass, no extra draw): the canopy masses sway as
+ * wholes, lit foliage shimmers, the light behind the openings and the wells breathe.
+ */
+export interface LifeSpec {
+  /** Sway of the big canopy masses in layer px (a travelling wave, phase by x). */
+  breath: number;
+  /** Flicker of lit foliage, 0..~0.2. */
+  shimmer: number;
+  /** How much the light behind the layer (`back`) and the wells swell and fade, 0..~0.12. */
+  openings: number;
+}
+
+/**
+ * The mist stage: a low sheet of paler fog hugging the walk line of the playfield, drawn in a
+ * layer's view pass (so it is behind the playfield and in front of this layer). Positions are in
+ * PLAYFIELD px: the pass maps each pixel to the playfield point it sits behind.
+ */
+export interface StageSpec {
+  /** Strength (peak alpha) in the left / centre / right zone. 0 everywhere = no stage. */
+  strength: readonly [number, number, number];
+  /** Mist colour per zone. */
+  color: readonly [number, number, number];
+  /** How far the sheet fades up above the walk line (px), and how far below it still shows. */
+  height: number;
+  below: number;
+  /** The ground line: its y at the left edge, then steps `[x, dy]` (each eased over `ease` px). */
+  baseY: number;
+  steps: ReadonlyArray<readonly [number, number]>;
+  ease: number;
+  /** Raised walkable surfaces that get their own thinner sheet: x range, y, relative strength. */
+  ledges: ReadonlyArray<{ x0: number; x1: number; y: number; k: number }>;
+  /** How much of the sheet is wisps rather than an even band, 0..1 (it drifts with the layer's mist). */
+  wisp: number;
+}
+
+function stageGLSL(st: StageSpec | undefined): string {
+  if (!st) return '';
+  const f = (v: number): string => (Number.isInteger(v) ? `${v}.0` : `${v}`);
+  const steps = st.steps
+    .map(([x, dy]) => `  gy += ${f(dy)} * smoothstep(${f(x - st.ease)}, ${f(x + st.ease)}, sp.x);`)
+    .join('\n');
+  const ledges = st.ledges
+    .map(
+      (l) =>
+        `  sb = max(sb, stageBand(${f(l.y)} - sp.y, hk) * ${f(l.k)} * smoothstep(${f(l.x0 - 120)}, ${f(l.x0 + 60)}, sp.x) * (1.0 - smoothstep(${f(l.x1 - 60)}, ${f(l.x1 + 120)}, sp.x)));`,
+    )
+    .join('\n');
+  return `
+  // The mist stage: paler fog pooled just above the walk line of the playfield behind this pixel.
+  vec2 sp = vec2(px, p.y + uZone.w);
+  // (Its billows reuse the mist's two noise taps: no extra texture reads.)
+  float hk = 0.6 + 0.8 * n;
+  float gy = ${f(st.baseY)};
+${steps}
+  float sb = stageBand(gy - sp.y, hk);
+${ledges}
+  float dens = mix(1.0, 0.45 + 1.1 * (n * 0.55 + m * 0.45), ${f(st.wisp)}) * (1.0 + 0.12 * sin(uTime * 0.21 + sp.x * 0.0021));
+  float sa = sb * dens * mix(mix(uStageK.y, uStageK.x, zl), uStageK.z, zr);
+  acc += mix(mix(uStageC, uStageL, zl), uStageR, zr) * sa;
+  a += sa;`;
+}
+
+function stageDecl(st: StageSpec | undefined): string {
+  if (!st) return '';
+  const f = (v: number): string => (Number.isInteger(v) ? `${v}.0` : `${v}`);
+  return `
+uniform vec3 uStageK;
+uniform vec3 uStageL;
+uniform vec3 uStageC;
+uniform vec3 uStageR;
+// d = px above the walk line (negative below it): brightest just above the line, fading up.
+float stageBand(float d, float hk) {
+  float up = 1.0 - clamp(d / (${f(st.height)} * hk), 0.0, 1.0);
+  return smoothstep(${f(-st.below)}, 16.0, d) * up * up * (3.0 - 2.0 * up);
+}`;
+}
+
 export function zoneWeights(x: number): { l: number; r: number } {
   const st = (a: number, b: number, v: number): number => {
     const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
@@ -674,7 +752,7 @@ export interface ZoneSpec {
   wellR?: ZoneWell;
 }
 
-const VIEW_FRAG = `#version 300 es
+const viewFrag = (stage?: StageSpec): string => `#version 300 es
 precision highp float;
 in vec2 vUV;
 out vec4 fragColor;
@@ -699,25 +777,35 @@ uniform vec4 uWellR;
 uniform vec3 uWellRCol;
 uniform sampler2D uBack;
 uniform vec4 uBackRect;
+uniform vec3 uLife;${stageDecl(stage)}
 void main() {
   vec2 p = uRect.xy + vUV * uRect.zw;
   vec2 uv = vUV;
-  float sw = uRustle.x * (1.0 - smoothstep(uRustle.y, uRustle.z, p.y));
-  if (sw > 0.0) {
+  float canopy = 1.0 - smoothstep(uRustle.y, uRustle.z, p.y);
+  float flick = 0.5;
+  if (canopy > 0.0) {
     // Still at the tile's side edges so neighbouring tiles agree.
-    sw *= smoothstep(0.0, 0.02, vUV.x) * (1.0 - smoothstep(0.98, 1.0, vUV.x));
+    float still = smoothstep(0.0, 0.02, vUV.x) * (1.0 - smoothstep(0.98, 1.0, vUV.x));
     vec2 q = p * 0.0019 + vec2(uTime * 0.045, uTime * 0.012);
-    vec2 n = texture(uNoise, q).rb + texture(uNoise, q * 3.1 + vec2(-uTime * 0.07, 0.3)).gr * 0.5 - 0.75;
-    uv += n * sw / uRect.zw;
+    vec4 fine = texture(uNoise, q * 3.1 + vec2(-uTime * 0.07, 0.3));
+    vec2 n = texture(uNoise, q).rb + fine.gr * 0.5 - 0.75;
+    // The big masses breathe: a slow travelling sway, a whole clump moving together.
+    float ph = uTime * 0.62 - p.x * 0.0041 + sin(p.y * 0.0052) * 0.9;
+    vec2 big = vec2(sin(ph) + 0.45 * sin(ph * 0.37 + 1.7), 0.4 * sin(ph * 0.71 + 0.9));
+    uv += (n * uRustle.x + big * uLife.x) * canopy * still / uRect.zw;
+    flick = fine.b;
   }
   vec4 c = texture(uTex, uv);
+  // Lit foliage shimmers; the dark masses stay put.
+  c.rgb *= 1.0 + uLife.y * (flick - 0.5) * 2.0 * smoothstep(0.05, 0.22, c.g);
   // Zone mood by the playfield x this pixel sits behind.
   float px = p.x + uZone.x;
   float zl = 1.0 - smoothstep(${ZONES.l0}.0, ${ZONES.l1}.0, px);
   float zr = smoothstep(${ZONES.r0}.0, ${ZONES.r1}.0, px);
   c.rgb *= mix(vec3(1.0), uTintL, zl) * mix(vec3(1.0), uTintR, zr);
-  // Light painted behind the layer (sky seen through the canopy's openings).
-  c += texture(uBack, (p - uBackRect.xy) / uBackRect.zw) * (1.0 - c.a);
+  // Light painted behind the layer (sky seen through the canopy's openings): it swells and fades.
+  float breathe = 1.0 + uLife.z * (sin(uTime * 1.2 - p.x * 0.0031) + 0.4 * sin(uTime * 0.53 + p.x * 0.0017));
+  c += texture(uBack, (p - uBackRect.xy) / uBackRect.zw) * (1.0 - c.a) * breathe;
   vec3 mist = mix(mix(uMist, uMistL, zl), uMistR, zr);
   float s = uNoiseP.x;
   float n = texture(uNoise, vec2(p.x * s + uTime * uNoiseP.y, p.y * s * 2.6)).r;
@@ -727,7 +815,6 @@ void main() {
   float band = mix(uBand.z, 1.0, low);
   vec2 dw = (p - uWell.xy) / uWell.z;
   float w = exp(-dot(dw, dw));
-  float breathe = 1.0 + 0.07 * sin(uTime * 0.37);
   float veil = mix(1.0, wisp * 1.7, uNoiseP.z * (1.0 - 0.75 * low));
   float a0 = uBand.w * band * veil + w * uWell.w * breathe * (0.7 + 0.3 * wisp);
   vec3 acc = mix(mist, uWarm, clamp(w * 1.15, 0.0, 1.0)) * a0;
@@ -736,7 +823,7 @@ void main() {
   vec2 dr = (p - uWellR.xy) / uWellR.z;
   float ar = exp(-dot(dr, dr)) * uWellR.w * uZone.z * breathe * (0.75 + 0.25 * wisp);
   acc += uWellLCol * al + uWellRCol * ar;
-  float a = a0 + al + ar;
+  float a = a0 + al + ar;${stageGLSL(stage)}
   float k = min(a, 0.97) / max(a, 0.0001);
   fragColor = c * (1.0 - a * k) + vec4(acc * k, a * k);
 }`;
@@ -756,6 +843,8 @@ export class LayerView {
     rustle: RustleSpec,
     private readonly zone: ZoneSpec,
     back?: { texture: Texture; rect: LayerRect },
+    life?: LifeSpec,
+    stage?: StageSpec,
   ) {
     const well = (z: ZoneWell | undefined): Float32Array =>
       new Float32Array(z ? [z.x, z.y, z.r, z.alpha] : [0, 0, 1, 0]);
@@ -780,10 +869,23 @@ export class LayerView {
         value: new Float32Array(back ? [back.rect.x, back.rect.y, back.rect.w, back.rect.h] : [0, 0, 1, 1]),
         type: 'vec4<f32>',
       },
+      uLife: {
+        value: new Float32Array([life?.breath ?? 0, life?.shimmer ?? 0, life?.openings ?? 0]),
+        type: 'vec3<f32>',
+      },
+      ...(stage
+        ? {
+            uStageK: { value: new Float32Array(stage.strength), type: 'vec3<f32>' },
+            uStageL: { value: rgb(stage.color[0]), type: 'vec3<f32>' },
+            uStageC: { value: rgb(stage.color[1]), type: 'vec3<f32>' },
+            uStageR: { value: rgb(stage.color[2]), type: 'vec3<f32>' },
+          }
+        : {}),
     });
+    const fragment = viewFrag(stage);
     for (const t of tiles) {
       const shader = Shader.from({
-        gl: { vertex: BG_VERT, fragment: VIEW_FRAG },
+        gl: { vertex: BG_VERT, fragment },
         resources: {
           uTex: t.texture.source,
           uNoise: noiseTexture().source,
@@ -798,11 +900,19 @@ export class LayerView {
     }
   }
 
-  update(clock: number, camX: number): void {
+  /** `camY` and `anchorY` are only needed by a layer with a mist stage. */
+  update(clock: number, camX: number, camY = 0, anchorY = 0): void {
     const u = this.uniforms.uniforms;
     u.uTime = clock;
     const z = zoneWeights(camX);
-    (u.uZone as Float32Array).set([(camX - this.zone.anchorX) * (1 - this.zone.parallax), z.l, z.r, 0]);
+    const k = 1 - this.zone.parallax;
+    (u.uZone as Float32Array).set([(camX - this.zone.anchorX) * k, z.l, z.r, (camY - anchorY) * k]);
+  }
+
+  /** Live knob: the mist stage's strength per zone (left, centre, right). */
+  setStage(strength: readonly [number, number, number]): void {
+    const k = this.uniforms.uniforms.uStageK as Float32Array | undefined;
+    k?.set(strength);
   }
 }
 
@@ -997,7 +1107,7 @@ vec4 mist${k}(vec2 p, float zl, float zr, float wisp) {
   float band = mix(uBand${k}.z, 1.0, low);
   vec2 dw = (p - uWell${k}.xy) / uWell${k}.z;
   float w = exp(-dot(dw, dw));
-  float breathe = 1.0 + 0.07 * sin(uTime * 0.37);
+  float breathe = 1.0 + uLife.z * (sin(uTime * 1.2 - p.x * 0.0031) + 0.4 * sin(uTime * 0.53));
   float veil = mix(1.0, wisp * 1.7, uNoiseP${k}.z * (1.0 - 0.75 * low));
   float a0 = uBand${k}.w * band * veil + w * uWell${k}.w * breathe * (0.7 + 0.3 * wisp);
   vec3 acc = mix(base, uWarm${k}, clamp(w * 1.15, 0.0, 1.0)) * a0;
@@ -1043,6 +1153,7 @@ uniform vec4 uPair;
 uniform vec4 uSkyRect;
 uniform vec3 uRustle;
 uniform vec4 uZone;
+uniform vec3 uLife;
 ${mistDecl(0)}
 ${mistDecl(1)}
 ${mistGLSL(0)}
@@ -1057,12 +1168,15 @@ void main() {
   float zl = 1.0 - smoothstep(${ZONES.l0}.0, ${ZONES.l1}.0, px);
   float zr = smoothstep(${ZONES.r0}.0, ${ZONES.r1}.0, px);
   vec2 uv = vUV;
-  float sw = uRustle.x * (1.0 - smoothstep(uRustle.y, uRustle.z, p1.y));
+  float sw = 1.0 - smoothstep(uRustle.y, uRustle.z, p1.y);
   vec2 rn = vec2(0.0);
   if (sw > 0.0) {
     sw *= smoothstep(0.0, 0.02, vUV.x) * (1.0 - smoothstep(0.98, 1.0, vUV.x));
     vec2 q = p1 * 0.0019 + vec2(uTime * 0.045, uTime * 0.012);
-    rn = (texture(uNoise, q).rb - 0.5) * 1.5 * sw;
+    // Far masses breathe too, slower and smaller than the mid canopy.
+    float ph = uTime * 0.41 - p1.x * 0.0033 + sin(p1.y * 0.004) * 0.8;
+    vec2 big = vec2(sin(ph) + 0.45 * sin(ph * 0.37 + 1.7), 0.4 * sin(ph * 0.71 + 0.9));
+    rn = ((texture(uNoise, q).rb - 0.5) * 1.5 * uRustle.x + big * uLife.x) * sw;
     uv += rn / uRect.zw;
   }
   vec4 c0 = texture(uTex0, (p0 + rn * 0.6 - uRect0.xy) / uRect0.zw);
@@ -1105,6 +1219,7 @@ export class FarPairView {
     rustle: RustleSpec,
     sky: { texture: Texture; x: number; y: number; w: number; h: number },
     private readonly anchor: { x: number; y: number },
+    life?: LifeSpec,
   ) {
     const well = (z: ZoneWell | undefined): Float32Array =>
       new Float32Array(z ? [z.x, z.y, z.r, z.alpha] : [0, 0, 1, 0]);
@@ -1119,6 +1234,10 @@ export class FarPairView {
       uRect0: { value: new Float32Array([far0.x, far0.y, far0.w, far0.h]), type: 'vec4<f32>' },
       uRustle: { value: new Float32Array([rustle.amp, rustle.y0, rustle.y1]), type: 'vec3<f32>' },
       uZone: { value: new Float32Array([0, 0, 0, 0]), type: 'vec4<f32>' },
+      uLife: {
+        value: new Float32Array([life?.breath ?? 0, life?.shimmer ?? 0, life?.openings ?? 0]),
+        type: 'vec3<f32>',
+      },
     };
     [l0, l1].forEach(({ fog, zone }, k) => {
       u[`uMist${k}`] = { value: rgb(fog.color), type: 'vec3<f32>' };
