@@ -13,6 +13,7 @@
  */
 
 import type { EnemyState } from '../../sim/state';
+import { tuning } from '../../sim/tuning';
 import {
   approach,
   clamp,
@@ -66,6 +67,11 @@ const C = {
   puffLow: v3(0),
   crest: [v3(0), v3(0), v3(0)],
   spot: [v3(0), v3(0), v3(0)],
+  ramLight: v3(0),
+  belly: v3(0),
+  bellyLow: v3(0),
+  seamOpen: v3(0),
+  spark: v3(0),
 };
 
 export function loadColors(): void {
@@ -104,6 +110,11 @@ export function loadColors(): void {
   set(C.puffLow, k.puffLow);
   for (let i = 0; i < 3; i++) set(C.crest[i]!, BURR.crestColor[i]!);
   for (let i = 0; i < 3; i++) set(C.spot[i]!, BURR.spotColor[i]!);
+  set(C.ramLight, BURR.ram.light);
+  set(C.belly, BURR.ram.belly);
+  set(C.bellyLow, BURR.ram.bellyLow);
+  set(C.seamOpen, BURR.ram.seam);
+  set(C.spark, BURR.ram.spark);
 }
 loadColors();
 
@@ -213,6 +224,66 @@ export class BurrRig {
   mf = 0;
   /** Frames since the last hit, fractional (large = never). */
   hitAge = 1e6;
+  /** Held in a blow's hitstop; frames since it let go (large = never); the squash it is held at. */
+  held = false;
+  rel = 1e6;
+  private hitSq = 0;
+  /** Set for the one update in which a blow's hold ended (the renderer throws the skid's dust). */
+  released = false;
+  /**
+   * The ram. Eased weights 0..1: braced (shell forward: the tell and the ram), ramming, spent.
+   * `guard`: the brow plate out and down as a shield (1), lifted open when spent (< 0). `flatK`:
+   * burrs laid back. `count`: the flash of the tell's count (1 on a beat, falling), `windU` its progress.
+   */
+  braceK = 0;
+  ramK = 0;
+  spentK = 0;
+  flatK = 0;
+  count = 0;
+  windU = 0;
+  readonly guard = new Spring(0, 30, 0.42);
+  /** Rear feet scraping through the tell: phase in strokes; set for the one update a stroke starts. */
+  scrapeP = 0;
+  scraped = false;
+  /** Set for the one update in which it braced. */
+  braceNew = false;
+  /** A cut glanced off its shell: the shudder (1, dying) and the seconds since. */
+  ring = 0;
+  ringT = 9;
+  /** How the ram ended (set by the renderer from `enemyRecover`); `stopped` holds it for one update. */
+  private spentCause: '' | 'spent' | 'wall' | 'ledge' | 'lantern' | 'touch' = '';
+  private spentNew = false;
+  stopped: '' | 'spent' | 'wall' | 'ledge' | 'lantern' | 'touch' = '';
+  /** Seconds a spent one has panted since its last puff. */
+  pantT = 0;
+  /** Made whole after she faded (`enemyReset`): armed until it is next drawn, then seconds into the shake. */
+  wakeArm = false;
+  wakeT = 9;
+  /** Share of the time it cannot brace that is left, 0..1 (its lights come back as it runs out). */
+  cdK = 0;
+
+  /** Her cut glanced off its braced shell; `dir` = the way the cut was going. */
+  block(dir: number): void {
+    this.ring = 1;
+    this.ringT = 0;
+    this.squash.x = -0.11;
+    this.squash.v = 0;
+    this.sqDir = dir;
+    this.rock.v -= this.d * 2.4;
+    this.back.v += dir * 80;
+    this.bristle.v += 18;
+  }
+
+  /** The ram is over (`enemyRecover`). */
+  spent(cause: 'spent' | 'wall' | 'ledge' | 'lantern' | 'touch'): void {
+    this.spentCause = cause;
+    this.spentNew = true;
+  }
+
+  /** It is whole and home again after she faded: it shakes it off when next seen. */
+  reset(): void {
+    this.wakeArm = true;
+  }
 
   constructor(index: number) {
     this.seed = hash1(index * 131 + 17);
@@ -265,6 +336,15 @@ export class BurrRig {
       this.stood = false;
       this.noticed = false;
       this.noticeK = this.flash = 0;
+      this.rel = 1e6;
+      this.held = false;
+      const br = e.mode === 'windup' || e.mode === 'charge';
+      this.braceK = this.flatK = br ? 1 : 0;
+      this.ramK = e.mode === 'charge' ? 1 : 0;
+      this.spentK = e.mode === 'recover' ? 1 : 0;
+      this.guard.snap(br ? 1 : 0);
+      this.ring = 0;
+      this.spentNew = false;
     } else if (simFrame !== this.frame) {
       this.px = this.cx;
       this.ps = this.cs;
@@ -285,12 +365,13 @@ export class BurrRig {
     const calmT = e.mode === 'dead' ? 0 : safe ? 1 : sat(e.calm / B.calm.fade);
     this.calmK += (calmT - this.calmK) * approach(calmT > this.calmK ? B.calm.in : B.calm.out, dt);
     const calm = this.calmK;
-    this.breath += (2.1 + (B.calm.rate - 2.1) * calm) * dt;
+    this.breath += (2.1 + (B.calm.rate - 2.1) * calm + (B.ram.pant - 2.1) * this.spentK) * dt;
 
     // --- Its touch landed: `alert` with a shove (a plain flinch has none). Seen once per mode start.
     const modeStart = simFrame - e.modeFrames;
     this.bumped = false;
-    if (e.mode === 'alert' && e.knockVx !== 0 && modeStart !== this.touchStart && !fresh) {
+    const bumpMode = e.mode === 'alert' || e.mode === 'recover';
+    if (bumpMode && e.knockVx !== 0 && modeStart !== this.touchStart && !fresh) {
       this.touchStart = modeStart;
       this.touchD = this.d;
       this.touchDH = this.dHead;
@@ -302,7 +383,7 @@ export class BurrRig {
       this.rock.v += away * B.touch.rock;
       this.bristle.v += B.touch.kick;
     }
-    this.touching = e.mode === 'alert' && modeStart === this.touchStart;
+    this.touching = bumpMode && modeStart === this.touchStart;
 
     // --- Standing with her below it and near: it peers at the edge she is under.
     const turningNow = e.mode === 'pause' && e.turning;
@@ -354,8 +435,10 @@ export class BurrRig {
     } else if (this.touching) {
       // The sim turns it away from her at once; drawn, it takes the bump first and turns after.
       const T = B.touch;
-      this.dHead = this.touchDH + (f - this.touchDH) * ease((this.mf - T.hold) / T.head);
-      this.d = this.touchD + (f - this.touchD) * ease((this.mf - T.hold - 2) / T.body);
+      // (Spent after its ram met her, it stays as it was, dazed, and comes round late.)
+      const hold = e.mode === 'recover' ? T.hold * 2 : T.hold;
+      this.dHead = this.touchDH + (f - this.touchDH) * ease((this.mf - hold) / T.head);
+      this.d = this.touchD + (f - this.touchD) * ease((this.mf - hold - 2) / T.body);
     } else {
       // Peering, it turns to the edge's side; walking on, it comes back round.
       const want = peer || (this.peerK > 0.6 && standing) ? this.peerDir : f;
@@ -378,16 +461,93 @@ export class BurrRig {
       this.hitSeen = e.hitFrame;
       if (e.hitFrame >= 0) {
         const pw = 0.75 + 0.25 * Math.max(1, e.hitPower);
-        this.squash.x = -B.hit.squash * pw;
+        this.hitSq = -B.hit.squash * pw;
+        this.squash.x = this.hitSq;
         this.squash.v = 0;
         this.sqDir = e.hitDir;
+        this.rel = 0;
+        this.held = true;
         if (e.mode !== 'dead') this.rock.v += (e.hitDir || f) * B.hit.rock * pw;
         this.struck = true;
       }
     }
 
-    // --- Pose targets per mode.
+    // The blow's hold: pinned in its squash for as long as the sim holds it, let go as the shove starts.
     const mode = e.mode;
+    this.released = false;
+    if (this.held) {
+      if (e.hitstop > 0 && (mode === 'hurt' || mode === 'dead')) {
+        this.squash.x = this.hitSq;
+        this.squash.v = 0;
+        this.rel = 0;
+      } else {
+        this.held = false;
+        this.released = true;
+      }
+    } else if (this.rel < 1e5) this.rel += dt * 60;
+
+    // --- The ram: brace (the tell), ram, spent.
+    const R = B.ram;
+    const wind = mode === 'windup';
+    const ram = mode === 'charge';
+    const spentM = mode === 'recover';
+    const modeTotal = Math.max(1, e.modeFrames + e.timer);
+    this.braceNew = false;
+    this.scraped = false;
+    if (wind && this.lastMode !== 'windup' && !fresh) {
+      // The plant: one quick flattening, the front thrown down, the plate shot forward.
+      this.braceNew = true;
+      this.squash.x = 0.13;
+      this.squash.v = 0;
+      this.sqDir = 0;
+      this.rock.v += this.d * 4;
+      this.guard.v += 12;
+      this.scrapeP = 0;
+    }
+    this.windU = wind ? sat(this.mf / modeTotal) : ram ? 1 : 0;
+    if (wind) {
+      const ph = R.beats * this.windU ** R.countPow;
+      const fr = 1 - (ph - Math.floor(ph));
+      this.count = fr * fr;
+      const before = Math.floor(this.scrapeP * 2);
+      this.scrapeP += (dt * 60 * R.scrapes) / modeTotal;
+      this.scraped = Math.floor(this.scrapeP * 2) !== before || this.braceNew;
+    } else this.count = ram ? 1 : 0;
+    const bracedNow = wind || ram;
+    this.braceK += ((bracedNow ? 1 : 0) - this.braceK) * approach(bracedNow ? 40 : 12, dt);
+    this.flatK += ((bracedNow ? 1 : 0) - this.flatK) * approach(bracedNow ? 26 : 9, dt);
+    this.ramK += ((ram ? 1 : 0) - this.ramK) * approach(ram ? 34 : 14, dt);
+    /** Spent, it gathers itself over its last frames. */
+    const gather = spentM ? sat(e.timer / R.gather) : 0;
+    this.spentK += (gather - this.spentK) * approach(gather > this.spentK ? 16 : 9, dt);
+    this.stopped = '';
+    if (this.spentNew) {
+      this.spentNew = false;
+      const cause = this.spentCause;
+      this.stopped = cause;
+      if (cause === 'spent') {
+        // Its length run out: it skids on a little way and sits back.
+        this.back.v += this.d * R.skid;
+        this.rock.v -= this.d * 3;
+      } else if (cause !== 'touch') {
+        // Stopped dead by something: crumpled against it, thrown back off it.
+        this.squash.x = -R.jolt;
+        this.squash.v = 0;
+        this.sqDir = this.d >= 0 ? 1 : -1;
+        this.rock.v += this.d * 7;
+        this.back.v -= this.d * R.joltBack;
+        this.bristle.v += 30;
+      }
+    }
+    if (this.ring > 0.01) {
+      this.ringT += dt;
+      this.ring = Math.exp(-R.ringFade * this.ringT);
+    } else this.ring = 0;
+    this.wakeT += dt;
+    const braceable = mode === 'walk' || mode === 'pause' || mode === 'alert' || mode === 'hurt';
+    this.cdK = braceable ? sat(e.strikeCd / Math.max(1, tuning.burrback.strikeCooldown)) : 0;
+
+    // --- Pose targets per mode.
     // A flinch starts with a start: one quick flattening before it hunkers.
     if (mode === 'alert' && this.lastMode !== 'alert' && !fresh && !this.touching) this.squash.x = 0.09;
     // The start at a lantern's light: the same quick flattening, and it is thrown back on its legs.
@@ -406,6 +566,7 @@ export class BurrRig {
     let backT = 0;
     let reachT = 0;
     let bristleT = 0;
+    let squashT = 0;
     if (mode === 'walk' && !standing) leanT = this.d * B.gait.lean;
     else if (resting || standing) {
       crouchT = 1;
@@ -425,7 +586,29 @@ export class BurrRig {
       crouchT = 0.15;
       tuckT = 0.75;
       leanT = e.hitDir * 0.1 * sat(Math.abs(e.knockVx) / 6);
+    } else if (wind) {
+      // Planted: front down, head under the plate, weight coiling back as the count runs.
+      crouchT = R.crouch;
+      tuckT = 0.85;
+      leanT = this.d * R.pitch;
+      backT = -this.d * (R.back + R.coil * this.windU * this.windU);
+    } else if (ram) {
+      crouchT = R.ramCrouch;
+      tuckT = 1;
+      leanT = this.d * R.ramPitch;
+      backT = this.d * 4;
+      squashT = R.stretch;
+    } else if (spentM) {
+      // Winded: sat back on its tail, front lifted, head hanging out, swaying.
+      crouchT = R.sit * gather;
+      reachT = 0.9 * gather;
+      leanT = (-this.d * R.tip + R.daze * Math.sin(clock * R.dazeRate + this.seed * 9)) * gather;
+      backT = -this.d * 2 * gather;
+      bristleT = 0.3 * gather;
     } else tuckT = 1;
+    // It cannot brace yet: it keeps its head in a little.
+    if (this.cdK > 0 && (mode === 'walk' || mode === 'pause'))
+      tuckT = Math.max(tuckT, R.wary * sat(this.cdK * 3));
     // Shying from the light: ducked, head in, rocked back off its front legs, weight away from it.
     if (shying && react > 0) {
       crouchT += (B.shy.duck - crouchT) * react;
@@ -452,24 +635,28 @@ export class BurrRig {
       leanT *= 1 - calm;
       bristleT *= 1 - calm;
     }
-    const sharp = (mode === 'alert' && !sliding) || (shying && react > 0.5);
+    const sharp = (mode === 'alert' && !sliding) || (shying && react > 0.5) || wind;
     this.crouch.omega = sharp ? 36 : mode === 'walk' ? 15 : 10;
     this.crouch.zeta = sharp ? 0.55 : 0.8;
     this.crouch.step(crouchT, dt);
     this.tuck.step(tuckT, dt);
+    this.rock.zeta = bracedNow ? 0.55 : spentM ? 0.34 : 0.26;
     this.rock.step(mode === 'dead' ? 0 : leanT, dt);
-    this.squash.step(0, dt);
+    this.squash.step(squashT, dt);
+    this.guard.step(bracedNow ? 1 : -R.lift * gather, dt);
     this.back.step(backT, dt);
     this.reach.step(reachT, dt);
     this.bristle.step(bristleT, dt);
     this.lag.step(this.vx * B.fringe.lag, dt);
     const skid =
-      sliding || (mode === 'hurt' && (e.hitstop > 0 || Math.abs(e.knockVx) > 0.5 || e.modeFrames < 9));
+      sliding ||
+      (mode === 'hurt' && (e.hitstop > 0 || Math.abs(e.knockVx) > 0.5 || e.modeFrames < 9)) ||
+      (spentM && this.spentCause === 'spent' && this.mf < 7);
     this.hurtK += ((skid ? 1 : 0) - this.hurtK) * approach(skid ? 40 : 9, dt);
     const tee = mode === 'hurt' && e.teeter !== 0;
     this.teeterK += ((tee ? 1 : 0) - this.teeterK) * approach(tee ? 26 : 10, dt);
     // Eyes: ahead and a little down on the walk, wandering at rest, on her when it is wary.
-    const watch = mode === 'alert' || mode === 'hurt';
+    const watch = mode === 'alert' || mode === 'hurt' || bracedNow;
     this.wary += ((watch ? 1 : 0) - this.wary) * approach(watch ? 30 : 2.2, dt);
     let lx = f * 0.75;
     let ly = 0.3;
@@ -478,7 +665,8 @@ export class BurrRig {
       ly = 0.25 * noise1(clock * 0.4 + this.seed * 17, 12);
     }
     // (Peering, they are on her too; shying, they turn from the light and narrow; calm, they sink.)
-    const onHer = Math.max(this.wary, 0.9 * pk, this.noticeK);
+    const onHer =
+      Math.max(this.wary, 0.9 * pk, this.noticeK, seen ? sat(this.cdK * 4) * 0.8 : 0) * (1 - this.spentK);
     if (onHer > 0.02) {
       const dx = hx - this.x;
       const dy = hy - (this.y - 12);
@@ -491,12 +679,23 @@ export class BurrRig {
       ly += (0.6 - ly) * react;
     }
     ly += (0.7 - ly) * calm * 0.8;
+    // Spent, they roll.
+    if (this.spentK > 0.01) {
+      lx += (Math.cos(clock * 6.3 + this.seed * 5) * 0.9 - lx) * this.spentK;
+      ly += (0.25 + Math.sin(clock * 6.3 + this.seed * 5) * 0.7 - ly) * this.spentK;
+    }
     const lk = approach(mode === 'alert' ? 40 : 9, dt);
     this.lookX += (lx - this.lookX) * lk;
     this.lookY += (ly - this.lookY) * lk;
     const bp = pulse(clock + this.seed * 9, 3.4, 0.14, 3 + Math.floor(this.seed * 50));
     this.blink = watch || this.noticeK > 0.5 ? 0 : bp > 0 ? Math.sin(Math.PI * bp) : 0;
-    this.blink = Math.max(this.blink, B.shy.squint * (shying ? react : 0), 0.3 * this.shyK);
+    this.blink = Math.max(
+      this.blink,
+      B.shy.squint * (shying ? react : 0),
+      0.3 * this.shyK,
+      R.eye * this.braceK,
+      0.5 * this.spentK,
+    );
     const walking = (mode === 'walk' && !standing) || turning;
     this.walkK += ((walking ? 1 : 0) - this.walkK) * approach(14, dt);
   }
@@ -584,6 +783,9 @@ const W = {
   spot: v3(0),
   crest: v3(0),
   hornTip: v3(0),
+  edge: v3(0),
+  belly: v3(0),
+  bellyLow: v3(0),
 };
 const SH_SHELL = sh(W.shellTop, W.shellLow, 0.3, 0.28, 0.1, 0.1);
 const SH_SHEEN = sh(W.sheen, W.sheen, 0, 0, 0, 0.5);
@@ -609,6 +811,27 @@ const SH_FEEL = sh(W.feeler, W.feeler, 0.1, 0.25, 0, 0.5);
 const SH_FRINGE = sh(W.fringe0, W.fringe1, 0.25, 0.1, 0.1, 0.5);
 const SH_CRACK = sh(W.crack, W.crack, 0, 0, 0, 0.5);
 const SH_SPOT = sh(W.spot, W.spot, 0, 0, 0, 0.5);
+const SH_EDGE = sh(W.edge, W.edge, 0, 0, 0, 0.5);
+const SH_BELLY = sh(W.belly, W.bellyLow, 0.2, 0.1, 0.1, 0.5);
+
+/**
+ * The brow plate, set per creature: how far the front of the outline is pushed out and down
+ * (negative = lifted), px. `rimPt` gives a point of the outline at screen angle `a` (0 = screen
+ * right, pi = left) in `sX, sY`.
+ */
+let gOut = 0;
+let gDown = 0;
+/** Where the horn's tip was drawn (world px). */
+let hornX = 0;
+let hornY = 0;
+function rimPt(a: number, d: number, aEff: number, rimH: number): void {
+  const c = Math.cos(a);
+  const sn = Math.sin(a);
+  const sd = d >= 0 ? 1 : -1;
+  const wf = smoothstep(0.3, 0.95, c * sd) * sat(Math.abs(d) * 1.6);
+  sX = aEff * Math.sign(c) * Math.abs(c) ** BURR.ex - d * BURR.shear * sn + sd * gOut * wf;
+  sY = -rimH - BURR.dome * sn ** BURR.ey + gDown * wf * (1 - 0.8 * sn);
+}
 
 let toneDark = 0;
 let toneLight = 0;
@@ -779,8 +1002,10 @@ export function drawBurrback(
   // --- Tone of a hit: darker through the hold, then a lighter pop that fades. Never white.
   const age = rig.hitAge;
   // The killing blow snaps harder; right beside the hero everything is a step darker (her light lifts it).
-  toneDark = B.hit.dark * (1 - smoothstep(1.2, 2.8, age));
-  toneLight = B.hit.pop * (dead ? 1.5 : 1) * smoothstep(1.4, 3, age) * (1 - smoothstep(3.2, 5.4, age));
+  // (Dark for as long as the blow holds it, the pop as it is let go and thrown.)
+  const rel = rig.rel;
+  toneDark = B.hit.dark * (rig.held ? 1 : 1 - smoothstep(0.2, 1.6, rel));
+  toneLight = B.hit.pop * (dead ? 1.5 : 1) * smoothstep(0.2, 1.4, rel) * (1 - smoothstep(2, 4.2, rel));
   toneLight = Math.max(toneLight, 0.5 * swell);
   toneDark = Math.max(toneDark, nearK * B.nearHero.dark * (1 - toneLight));
   tone(W.shellTop, C.shellTop);
@@ -790,6 +1015,8 @@ export function drawBurrback(
   tone(W.head, C.head);
   tone(W.headLow, C.headLow);
   tone(W.eye, C.eye, 0.3);
+  // Braced, the eyes take the colour of its lights: a glare under the plate.
+  for (let k = 0; k < 3; k++) W.eye[k] = W.eye[k]! + (C.ramLight[k]! - W.eye[k]!) * 0.7 * rig.braceK;
   // Calmed, the eyes take the lantern's warmth; right after a blow they are not lit.
   for (let k = 0; k < 3; k++) W.eye[k] = W.eye[k]! + (C.calmLight[k]! - W.eye[k]!) * 0.45 * rig.calmK;
   eyeLit = 1 - sat(toneDark * 1.2);
@@ -803,24 +1030,52 @@ export function drawBurrback(
   const crouch = rig.crouch.x;
   const calm = rig.calmK;
   const breathS = Math.sin(rig.breath + ph);
-  const breath = breathS * (0.022 + (B.calm.breath - 0.022) * calm) * sat(crouch) * (1 - deadK);
+  const R = B.ram;
+  const spentK = rig.spentK * (1 - deadK);
+  const braceK = rig.braceK * (1 - deadK);
+  const ramK = rig.ramK * (1 - deadK);
+  const breath =
+    breathS * (0.022 + (B.calm.breath - 0.022) * calm + R.pantDepth * spentK) * sat(crouch) * (1 - deadK);
   const rimH = Math.max(2.2, B.rim - B.settle * crouch + bobAt(rig.dist, g) * g.bob * walkK);
   const sq = rig.squash.x;
   // Calmed where it lies, the dome itself sags and spreads: a flatter shape, not only a lower one.
   const flat = calm * sat(crouch) * (1 - deadK);
   const sx = (1 + sq - breath * 0.4 + 0.12 * swell) * (1 + B.calm.spread * flat);
   const sy = (1 - sq * 0.85 + breath + 0.1 * swell) * (1 - B.calm.flat * flat);
+  // Made whole again: 0..1 through coming round; the shake sits in the middle of it.
+  const wakeU = rig.wakeT < R.wake ? rig.wakeT / R.wake : 1;
+  const wakeShake = smoothstep(0.25, 0.4, wakeU) * (1 - smoothstep(0.55, 0.95, wakeU));
   const rot =
     rig.rock.x +
     rockAt(rig.dist, g) * g.rock * walkK * d +
     roll +
-    e.teeter * rig.teeterK * (0.13 + 0.03 * Math.sin(clock * 14 + ph));
+    e.teeter * rig.teeterK * (0.13 + 0.03 * Math.sin(clock * 14 + ph)) +
+    // A cut rings off the shell; made whole again, it shakes itself.
+    rig.ring * R.shakeRot * Math.sin(rig.ringT * 6.283 * R.shakeHz * 0.8 + 1) +
+    wakeShake * R.wakeRock * Math.sin(rig.wakeT * 31);
   const pivot = -(rimH + B.dome) / 2;
   // The squash is taken on the side away from the blow, so it shunts along it.
   const shunt = -sq * B.halfLen * 0.55 * rig.sqDir;
-  const ox = rig.x + shunt + rig.back.x * (1 - deadK);
+  const ox =
+    rig.x +
+    shunt +
+    rig.back.x * (1 - deadK) +
+    rig.ring * R.shake * Math.sin(rig.ringT * 6.283 * R.shakeHz) +
+    // Braced: it trembles harder as the count runs out.
+    braceK * (1 - ramK) * R.tremble * rig.windU * Math.sin(clock * 74 + ph) +
+    // Held in a blow: a fine shudder.
+    (rig.held ? 1.3 * Math.sin(clock * 118 + ph) : 0);
   const oy = rig.y - hop;
   setBody(ox, oy, sx, sy, rot, pivot);
+  // The brow plate: out and down as far as the ground lets it (the pitch has dropped the front already).
+  const guard = rig.guard.x * (1 - deadK);
+  const aEff = lerp(B.halfWide, B.halfLen, ad);
+  const sgn = d >= 0 ? 1 : -1;
+  gOut = guard > 0 ? R.out * guard : 0;
+  gDown =
+    guard > 0
+      ? Math.min(R.down * guard, Math.max(0, rimH - 1 - (aEff + gOut) * Math.sin(Math.max(0, rot * sgn))))
+      : 5 * guard;
   const alpha = 1;
   p.alphaK = alpha;
   p.glowK = alpha;
@@ -856,6 +1111,28 @@ export function drawBurrback(
       let fx = rig.x + stand + d * foot.along * rig.walkK;
       let fy = rig.y - foot.lift * rig.walkK;
       let down = foot.down || rig.walkK < 0.5;
+      // Braced: front feet set wide ahead, the rear ones scrape back in turn. Spent: splayed.
+      if (braceK > 0.001) {
+        const bk = braceK * (1 - ramK);
+        if (row === 0) fx += d * 4 * bk;
+        else if (row === 2) {
+          const s = rig.scrapeP + (side > 0 ? 0.5 : 0);
+          const u = s - Math.floor(s);
+          const drag = u < 0.7 ? u / 0.7 : 1 - (u - 0.7) / 0.3;
+          fx -= d * (R.scrape * drag - 2) * bk;
+          if (u >= 0.7) fy -= 5 * Math.sin((Math.PI * (u - 0.7)) / 0.3) * bk;
+        }
+      }
+      if (spentK > 0.001) fx += stand * 0.2 * spentK;
+      // Ramming: swept back and paddling too fast to follow.
+      if (ramK > 0.001) {
+        const w = clock * 52 + i * 2.1 + ph;
+        const rxp = ox + stand * 1.15 - d * 7 + 7 * Math.sin(w);
+        const ryp = rig.y - Math.max(0, Math.sin(w + 1.3)) * 6;
+        fx += (rxp - fx) * ramK;
+        fy += (ryp - fy) * ramK;
+        down = false;
+      }
       // Skidding: legs splayed wide, scrabbling for grip.
       if (rig.hurtK > 0.001) {
         const w = scr + i * 2.3 + ph;
@@ -973,13 +1250,10 @@ export function drawBurrback(
   }
 
   // --- Shell outline in local space: the dome over the top (from screen right to left), then the belly.
-  const aEff = lerp(B.halfWide, B.halfLen, ad);
   for (let k = 0; k < NT; k++) {
-    const a = (Math.PI * k) / (NT - 1);
-    const c = Math.cos(a);
-    const sn = Math.sin(a);
-    LX[k] = aEff * Math.sign(c) * Math.abs(c) ** B.ex - d * B.shear * sn;
-    LY[k] = -rimH - B.dome * sn ** B.ey;
+    rimPt((Math.PI * k) / (NT - 1), d, aEff, rimH);
+    LX[k] = sX;
+    LY[k] = sY;
   }
   // A chip out of the front of the crown at 1 hp.
   if (e.hp <= 1 && ad > 0.5) {
@@ -993,8 +1267,9 @@ export function drawBurrback(
   const sag = 2.6;
   for (let j = 0; j < NB; j++) {
     const u = (j + 1) / (NB + 1);
-    LX[NT + j] = -aEff + 2 * aEff * u;
-    LY[NT + j] = -rimH + sag * Math.sin(Math.PI * u);
+    const wf = smoothstep(0.5, 1, sgn * (2 * u - 1)) * sat(ad * 1.6);
+    LX[NT + j] = -aEff + 2 * aEff * u + sgn * gOut * wf * 0.85;
+    LY[NT + j] = -rimH + sag * Math.sin(Math.PI * u) + gDown * wf;
   }
   const ccx = -d * B.shear * 0.4;
   const ccy = -rimH - B.dome * 0.42;
@@ -1017,6 +1292,26 @@ export function drawBurrback(
   tone(W.crest, W.crest, 0.8);
   for (let k = 0; k < 3; k++) W.hornTip[k] = W.shellTop[k]! + (W.crest[k]! - W.shellTop[k]!) * Cr.tip;
 
+  // --- Spent: the soft underside shows under the lifted front, swelling with each pant.
+  if (spentK > 0.02 && ad > 0.3) {
+    for (let k = 0; k < 3; k++) {
+      W.belly[k] = C.belly[k]! * (1 - toneDark);
+      W.bellyLow[k] = C.bellyLow[k]! * (1 - toneDark);
+    }
+    SH_BELLY.alpha = sat(spentK * 1.5);
+    const blx = d * 10;
+    const bly = -rimH + 2.6;
+    p.ellipse(
+      bx(blx, bly),
+      by(blx, bly),
+      (aEff - 12) * (0.5 + 0.5 * ad),
+      (6.2 + 1.5 * breathS) * spentK,
+      rot,
+      SH_BELLY,
+      16,
+    );
+  }
+
   // --- Signature outline, drawn under the shell so the bases are hidden: a short upturned horn on
   // the brow, a row of blunt burrs along the ridge, a raised lip at the tail.
   const dd = clamp(d * 2.5, -1, 1);
@@ -1026,18 +1321,30 @@ export function drawBurrback(
     const a = Math.PI * sp[0]!;
     const c = Math.cos(a);
     const sn = Math.sin(a);
-    const rx0 = dd * aEff * Math.sign(c) * Math.abs(c) ** B.ex - d * B.shear * sn;
-    const ry0 = -rimH - B.dome * sn ** B.ey;
+    const wfh = smoothstep(0.3, 0.95, c) * sat(ad * 1.6);
+    const rx0 = dd * aEff * Math.sign(c) * Math.abs(c) ** B.ex - d * B.shear * sn + sgn * gOut * wfh;
+    const ry0 = -rimH - B.dome * sn ** B.ey + gDown * wfh * (1 - 0.8 * sn);
     let nx = rx0 - ccx;
     let ny = ry0 - ccy;
     const nl = Math.hypot(nx, ny) || 1;
     nx /= nl;
     ny /= nl;
     // Bristling they stand longer and straighter; calmed they lie a little flatter.
-    const len = sp[1]! * (1 + B.touch.bristle * bristle * (i === 0 ? 0.45 : 1) - B.calm.burrs * calm);
+    // Braced, the horn levels at her and the burrs lie back along the shell.
+    const g1 = sat(guard);
+    const flat = i === 0 || i === 4 ? 0 : rig.flatK * R.flat * (1 - deadK);
+    const len =
+      sp[1]! *
+      (1 + B.touch.bristle * bristle * (i === 0 ? 0.45 : 1) - B.calm.burrs * calm) *
+      (i === 0 ? 1 + (R.horn - 1) * g1 : 1 - 0.3 * flat);
     // Lean: along the body (+ = toward the head) and up.
-    const tx = rx0 + nx * len * 0.55 + dd * (sp[2]! - (i === 0 ? 0 : 0.5 * calm)) * len;
-    const ty = ry0 + ny * len * 0.55 - sp[3]! * len;
+    const out = 0.55 - 0.4 * flat;
+    const tx =
+      rx0 +
+      nx * len * out +
+      dd * (sp[2]! - (i === 0 ? -0.55 * g1 : 0.5 * calm + 0.8 * flat)) * len -
+      (i === 0 ? 0 : rig.lag.x * 0.25);
+    const ty = ry0 + ny * len * out - sp[3]! * len * (i === 0 ? 1 - 1.15 * g1 : 1 - 0.7 * flat);
     const b0x = rx0 - nx * 2.2;
     const b0y = ry0 - ny * 2.2;
     p.px[0] = bx(b0x, b0y);
@@ -1052,6 +1359,10 @@ export function drawBurrback(
     p.pw[1] = sp[5]! * 0.8;
     p.pw[2] = sp[5]! * 0.5;
     p.ribbon(3, SH_HORN, false, true);
+    if (i === 0) {
+      hornX = p.px[2]!;
+      hornY = p.py[2]!;
+    }
   }
   for (let k = 0; k < N_OUT; k++) {
     p.px[k] = bx(LX[k]!, LY[k]!);
@@ -1083,14 +1394,64 @@ export function drawBurrback(
     const il = Math.hypot(ix, iy) || 1;
     p.px[k] = bx(lx + (ix / il) * Cr.inset, ly + (iy / il) * Cr.inset);
     p.py[k] = by(lx + (ix / il) * Cr.inset, ly + (iy / il) * Cr.inset);
-    p.pw[k] = Cr.w * (1 + (Cr.wLeft - 1) * zw[0]!) * Math.sin(Math.PI * u) ** 0.45;
+    // (A cut that rings off the shell runs along it as a swelling of the line, brow to tail.)
+    const wv = rig.ring > 0 ? Math.exp(-(((u - rig.ringT * 5.5) / 0.16) ** 2)) * R.ringLine : 0;
+    p.pw[k] = Cr.w * (1 + (Cr.wLeft - 1) * zw[0]!) * Math.sin(Math.PI * u) ** 0.45 * (1 + wv);
   }
   p.ribbon(16, SH_CREST, false, false);
+
+  // --- The plate's edge: a bone line down the armoured front, lit on each beat of the count.
+  const g1 = sat(guard) * smoothstep(0.45, 0.8, ad);
+  if (g1 > 0.02) {
+    const lit = sat(0.45 + 0.55 * rig.count + rig.ring);
+    for (let k = 0; k < 3; k++) {
+      const hot = W.crest[k]! + (C.ramLight[k]! - W.crest[k]!) * 0.3 * rig.count;
+      W.edge[k] = hot + (1 - hot) * 0.6 * rig.ring;
+    }
+    SH_EDGE.alpha = R.edge * g1 * lit;
+    for (let k = 0; k < 10; k++) {
+      const u = k / 9;
+      const af = Math.PI * (0.005 + 0.4 * u);
+      rimPt(d >= 0 ? af : Math.PI - af, d, aEff, rimH);
+      const ix = ccx - sX;
+      const iy = ccy - sY;
+      const il = Math.hypot(ix, iy) || 1;
+      p.px[k] = bx(sX + (ix / il) * 1.6, sY + (iy / il) * 1.6);
+      p.py[k] = by(sX + (ix / il) * 1.6, sY + (iy / il) * 1.6);
+      p.pw[k] = R.edgeW * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, u * 1.25))) * (1 + 0.5 * rig.ring);
+    }
+    p.ribbon(10, SH_EDGE, true, false);
+    // The count again as a glint at the horn's tip: the one small light that says where it is going.
+    const gl = rig.count * braceK * (1 - ramK * 0.5);
+    if (gl > 0.02) {
+      p.glow(
+        hornX,
+        hornY,
+        R.glint * (0.5 + 0.5 * gl),
+        C.ramLight as unknown as RGB,
+        R.glintK * gl,
+        R.glint * (0.5 + 0.5 * gl),
+        0,
+        10,
+      );
+      p.glow(hornX, hornY, 1.6, C.spark as unknown as RGB, 0.8 * gl, 1.6, 0, 8);
+    }
+    // A cut turned: the plate itself flashes where it took it.
+    if (rig.ring > 0.03) {
+      rimPt(d >= 0 ? 0.5 : Math.PI - 0.5, d, aEff, rimH);
+      const fx = bx(sX - sgn * 5, sY + 3);
+      const fy = by(sX - sgn * 5, sY + 3);
+      p.glow(fx, fy, 15, C.spark as unknown as RGB, 0.5 * rig.ring * rig.ring * g1, 21, rot + sgn * 0.5, 14);
+    }
+  }
 
   const whole = 1;
   if (whole > 0.01) {
     // --- Plate seams: two dark lines over the dome, bulging with it.
     SH_SEAM.alpha = 0.85 * whole * smoothstep(0.15, 0.6, ad);
+    // Spent, the plates stand open: the seams gape pale.
+    for (let k = 0; k < 3; k++)
+      W.seam[k] = W.seam[k]! + (C.seamOpen[k]! * (1 - toneDark) - W.seam[k]!) * spentK;
     for (let s = 0; s < 2; s++) {
       const u = s === 0 ? 0.36 : -0.3;
       for (let k = 0; k < 7; k++) {
@@ -1098,7 +1459,7 @@ export function drawBurrback(
         surface(u + (s === 0 ? 0.05 : -0.04) * v, v, d, rimH);
         p.px[k] = bx(sX, sY);
         p.py[k] = by(sX, sY);
-        p.pw[k] = 0.55;
+        p.pw[k] = 0.55 + 0.75 * spentK * Math.sin(Math.PI * (0.15 + 0.85 * (k / 6)));
       }
       p.ribbon(7, SH_SEAM, false, false);
     }
@@ -1154,6 +1515,8 @@ export function drawBurrback(
         sc[k] = 0.82 * C.spot[0]![k]! * zw[0]! + C.spot[1]![k]! * zw[1]! + C.spot[2]![k]! * zw[2]!;
       // Calmed: one warm tone, all four breathing together with the body.
       for (let k = 0; k < 3; k++) sc[k] = sc[k]! + (C.calmLight[k]! - sc[k]!) * calm;
+      // Braced: the colour of the ram.
+      for (let k = 0; k < 3; k++) sc[k] = sc[k]! + (C.ramLight[k]! - sc[k]!) * 0.85 * braceK;
       const alert = e.mode === 'alert' ? sat(t / 3) * sat((e.timer + 4) / 6) : 0;
       // Its touch: they jump at once, then fall back through the flinch.
       const flash = rig.touching ? (B.touch.flash - 1) * (1 - smoothstep(1, 12, t)) : 0;
@@ -1172,6 +1535,11 @@ export function drawBurrback(
         // It has seen her: the whole row up, and a flash at the moment it did.
         br *= 1 + (B.notice.light - 1) * seenK + B.notice.flash * rig.flash * (1 - calm);
         br *= 1 - B.shy.dim * rig.shyK;
+        // The count of the tell, all four as one; spent, nearly out; then back one by one, tail first.
+        if (braceK > 0.001) br += (R.low + (R.peak - R.low) * rig.count - br) * braceK;
+        if (spentK > 0.001) br += (R.dim * (0.75 + 0.25 * Math.sin(clock * 2.6 + i)) - br) * spentK;
+        if (rig.cdK > 0) br *= 0.3 + 0.7 * sat((1 - rig.cdK) * 4.6 - (3 - i));
+        if (wakeU < 1) br *= 0.12 + 0.88 * sat((wakeU - 0.4) * 8 - i);
         // Hurt badly: they flicker. Dying: they gutter out one after another.
         if (e.hp <= 1 && !dead) br *= 0.55 + 0.45 * (noise1(clock * 13 + i * 7.3, 3 + i) > -0.15 ? 1 : 0.25);
         if (dead) br *= t > 1 + i * 1.8 ? 0 : 1;
@@ -1183,7 +1551,21 @@ export function drawBurrback(
         const r = sp[2]!;
         SH_SPOT.alpha = S.core * flank * sat(br) * whole;
         // (A brighter light is a slightly larger one: the pass shows as size as well as value.)
-        const rr = r * (0.82 + 0.18 * sat(br));
+        const rr = r * (0.82 + 0.18 * sat(br) + 0.22 * sat(br - 1));
+        // Ramming, each light drags a streak.
+        if (ramK > 0.05) {
+          const len = R.streak * ramK;
+          p.glow(
+            wx - sgn * len * 0.5,
+            wy,
+            len * 0.5 + r,
+            sc as unknown as RGB,
+            0.42 * ramK * flank,
+            r * 1.1,
+            rot,
+            10,
+          );
+        }
         p.ellipse(wx, wy, rr * (0.5 + 0.5 * ad), rr, rot, SH_SPOT, 10);
         p.glow(wx, wy, r * S.halo, sc as unknown as RGB, S.glow * br * flank * whole, r * S.halo, 0, 12);
       }

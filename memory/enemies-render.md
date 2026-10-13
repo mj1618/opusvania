@@ -1,7 +1,9 @@
 # Enemies, render side: the burrback and the lampwing (`src/render/enemies/`)
 
-Rules and state fields: enemies.md. Current sheets: `shots/enemr2/*.png` (play-zoom frames and 1:1 sheets
-per zone: before / after, notice, calm, touch, lampwing tell); older: `shots/lamp2`, `shots/burr2`.
+Rules and state fields: enemies.md. Current sheets: `shots/enemr3/*.png` (the ram: brace, block, ram, spent,
+punished, dead, in the centre and right zones at 3x and play zoom; the wall jolt; the reset; the lampwing's
+tell and tumble) and `clips/enemr3-*.mp4`; `shots/enemr2/*.png` (per zone: before / after, notice, calm,
+touch); older: `shots/lamp2`, `shots/burr2`.
 
 ## Wiring
 - Two layers, two meshes (`painter`, `front`; `paint.ts` is a copy of Vesper's painter with
@@ -12,8 +14,9 @@ per zone: before / after, notice, calm, touch, lampwing tell); older: `shots/lam
 - `EnemyRenderer.update(dt, clock, cam, sim)` from stage.ts dispatches on `e.kind`; rigs are per
   kind, by enemy index. Reads `sim.enemies`, `sim.frame`, `sim.alpha`, `sim.player`, `sim.goal` (lit
   lanterns, `gathered`): a hit is a new `hitFrame`, death is `mode: 'dead'`, its touch is `alert` with
-  `knockVx != 0`, so `load()` and re-form just show. Only two things come from `sim.events`: why a
-  burrback turns (`enemyTurn` cause `lantern` / `wary`) and a lampwing's `enemyGiveUp` cause `calm`. Dev handle
+  `knockVx != 0`, so `load()` and re-form just show. From `sim.events` (`react()`): why a burrback
+  turns (`enemyTurn` cause `lantern` / `wary`), `enemyBlock` (`rig.block`, sparks), `enemyRecover` (`rig.spent(cause)`),
+  `enemyReset` (`rig.reset`), and a lampwing's `enemyGiveUp` cause `calm`. Dev handle
   `window.__enemies` (`cfg` = `BURR`; `LAMP` is in config.ts too; `cpuMs`, `drawn`, `verts`).
 - `?nopickups` empties `scene.enemies` (src/main.ts): shots / clip are clean plates; `--pickups` shows them.
 - Cost (CPU fill, M-series, one on screen): lampwing ~0.04 ms / ~1100 vertices, burrback ~0.055 ms
@@ -152,3 +155,52 @@ The sizes and tones in the sections above are the earlier ones where this sectio
 - Staging calm on any burrback: on the live record set `calm = 120, mode = 'pause', timer = 120,
   turning = false, vx = 0` every 18 frames (what `calmEnemies` does). A real kindle at lantern-stone
   calms burr-path ~850 px away, at the frame edge.
+
+## The ram, acted (2026-10-14; `BURR.ram`, sheets `shots/enemr3/`, clips `clips/enemr3-*`)
+The sim's `windup` / `charge` / `recover` (enemies.md) used to be a standstill. One language for "it is
+coming": **its lights go to one red (0xff3c26) and count down in quickening flashes** (the lampwing's tell
+now counts the same way, in its coral).
+- **Brace** (26 frames): a wedge. Front pitched down 0.32 rad so the rear stands high on its legs, head
+  under the shell (two red eyes in the slit), the brow plate pushed out 9 px (`rimPt`: the outline's front is
+  displaced; `gDown` is clamped so the pitched front stops at the ground), a bone line down the plate's edge
+  (2.5 px: what reads as "armoured" at play zoom), the horn levelled at her, burrs laid back, weight coiling
+  back 7 -> 13 px with a tremble that grows, rear feet scraping in turn (3 strokes) with a kick of dust, a
+  glint at the horn's tip on each beat. Five beats at frames 0, 8, 13.5, 18, 22 (`beats`, `countPow` 1.4).
+  The first frame already has the red lights, the tucked head and the stamp; the wedge is there by frame 3.
+- **Block**: the cross is the character's. Ours: the shell shudders (2.4 px at 15 Hz, dying at 8 /s), the
+  plate flashes pale where it took the cut (`p.glow`), the bone edge goes white and wider, a swelling runs
+  along the crown line brow to tail ("the plates ring"), burrs rattle, 9 hot chips (`K_SPARK`: a streak along
+  its flight) fly back at her. No dark tone (dark = damage).
+- **Ram**: stretched 15% long and low, legs swept back and paddling (`ramK`), each light drags a 28 px
+  streak, pale dust off the heels every 0.022 s. **Stop**: `wall | ledge | lantern` = a jolt (squashed 34%
+  against it, thrown back off it on the `back` spring, puffs both ways, grit); `spent` = a skid (it rides
+  ~10 px on over the `back` spring, legs scrabbling 7 frames, dust ploughed ahead); `touch` = the bump
+  (the old touch path, now also for `recover` with `knockVx`; it holds its facing 22 frames before the
+  sim's turn away is drawn).
+- **Spent** (45 frames): reared back off its front legs (`tip` 0.3, `sit` 0.35: sitting it flat on its
+  belly hid everything under the grass), the brow plate lifted, **the seams gape pale** (the read at play
+  zoom: pale ribs on a dark shell = open), a soft mauve belly under the lifted front (visible at 3x only),
+  head hung out, eyes half shut and rolling, lights down to 20%, panting (10.5 rad/s, a small breath puff
+  every second pant), a slow daze sway. It gathers itself over its last 10 frames (`gather`): that is the
+  "window closing" tell.
+- **Cannot brace yet** (`strikeCd`, `rig.cdK`): head kept in a little, eyes on her, and its lights come
+  back one by one, tail first; the front one relights as the 150 frames run out.
+- **Hits with the 4 / 4 / 7 hold**: the squash is pinned and the creature dark and shuddering for exactly
+  `e.hitstop`, the pale pop and a kick of pale puffs come as the shove starts (`rig.held / rel / released`);
+  the slide's dust is the pale dense kind now. The death timeline is unchanged and still pays off: 7 dark
+  frames, then the roll and burst ~90 px down the shove.
+- **`enemyReset`**: armed until it is next on screen, then 1.7 s: a beat (her re-form is still fading up),
+  burrs kicked up and a shake with dust off its back, lights back one by one. Subtle on purpose.
+- **Lampwing**: the 36-frame tell builds instead of holding (wings creep 0.14 rad higher / 0.2 wider, shiver
+  x2.6, five quickening flashes of lamp and wing spots, a 3.5 px sink and a last lift before the stroke);
+  the 24-frame tumble has eyes shut and the lamp guttering; its hit tone follows the hold like the burrback's.
+- Gotchas: the crisp pale puffs (`K_PUFF`) pile into cotton balls when more than ~4 leave one spot: use
+  `dust()` (soft) for volume and 1-4 puffs for the accent. In the right zone every bone source comes out
+  near-white: the levelled horn at 1.55x was a lance, 1.3x is right. A wake that starts when she re-forms
+  plays in the dark of the fade-up.
+- Capture: `scratchpad/enemr3/harness.js` was a `playwright-cli run-code --filename` script (no `require`
+  in there): one `page.evaluate` that loads, teleports, runs the masher / reader pilot of
+  `burrback-ram.test.ts` closed-loop, draws labelled cells into sheets, leaves data URLs on `window.__out`
+  (fetched with `eval --filename`), and returns the inputs as a DSL script: **that script replays in
+  `npm run clip -- --pickups --at x,y --script "..."`** if the harness also stepped 30 frames after the
+  teleport (`--pre`). A hot reload between the two calls loses `__out`: wait 2 s after an edit.

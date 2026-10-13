@@ -231,6 +231,80 @@ export const BURR = {
     dustSize: 1.2,
   },
   /**
+   * The ram (sim: `windup` 26 frames, `charge` 180 px, `recover` 45 frames; memory/enemies.md).
+   * **Brace**: it plants, pitches its front down (`pitch` rad, `crouch`), weight coiled back (`back`
+   * px, more by the end), the brow plate slides out and down as a shield (`out`, `down` px) with a
+   * bone edge (`edgeW` px, `edge` alpha), the horn levels at her, the burrs lie back (`flat`), the
+   * rear feet scrape (`scrape` px, `scrapes` strokes), and the lights go to `light` and count down
+   * in `beats` quickening flashes (`countPow`: higher = the first gaps longer; each flash x `peak`,
+   * between them x `low`).
+   * **Block** (`enemyBlock`): the shell shudders (`shake` px, `shakeRot` rad at `shakeHz`, dying at
+   * `ringFade` /s), the edge and the crown line flash (`ringLine`), `sparks` bright chips fly back.
+   * **Ram**: lower and longer (`stretch`), legs paddling, lights streaked back `streak` px, dust
+   * every `dustEvery` s. A stop at a wall / ledge / light is a jolt (`jolt` squash, `joltBack` px/s);
+   * its own length run out is a skid (`skid` px/s of overshoot).
+   * **Spent**: tipped back (`tip` rad), sat down (`sit`), the brow plate lifted (`lift`), the soft
+   * belly showing (`belly` colour) and the seams open pale, head hanging out, panting (`pant` rad/s,
+   * `pantDepth`), a daze wobble (`daze` rad at `dazeRate`), lights down to `dim`; it gathers itself
+   * over its last `gather` frames. Then, while it cannot brace (`strikeCd`), its lights come back
+   * one by one and it keeps its head in a little (`wary`).
+   */
+  ram: {
+    light: 0xff3c26,
+    pitch: 0.32,
+    crouch: 0.3,
+    back: 7,
+    coil: 6,
+    /** It trembles more as the count runs, px; a glint at the horn's tip on each beat (radius px, strength). */
+    tremble: 1.3,
+    glint: 5.5,
+    glintK: 0.55,
+    out: 9,
+    down: 9,
+    edgeW: 2.2,
+    edge: 0.95,
+    flat: 1,
+    horn: 1.3,
+    scrape: 10,
+    scrapes: 3,
+    beats: 5,
+    countPow: 1.4,
+    peak: 2.3,
+    low: 0.4,
+    eye: 0.5,
+    shake: 2.4,
+    shakeRot: 0.04,
+    shakeHz: 15,
+    ringFade: 8,
+    ringLine: 1.3,
+    sparks: 9,
+    spark: 0xffe6bc,
+    stretch: 0.15,
+    ramPitch: 0.17,
+    ramCrouch: 0.7,
+    streak: 28,
+    dustEvery: 0.022,
+    jolt: 0.34,
+    joltBack: 150,
+    skid: 250,
+    tip: 0.3,
+    sit: 0.35,
+    lift: 0.55,
+    belly: 0xa08a8e,
+    bellyLow: 0x5e4a55,
+    seam: 0x9a8288,
+    pant: 10.5,
+    pantDepth: 0.055,
+    daze: 0.05,
+    dazeRate: 5.2,
+    dim: 0.2,
+    gather: 10,
+    wary: 0.3,
+    /** Seconds a creature made whole again takes to come round (`enemyReset`: a beat for her re-form to fade in, a shake, its lights back one by one), and the shake's size, rad. */
+    wake: 1.7,
+    wakeRock: 0.075,
+  },
+  /**
    * It has noticed her (render only: the sim's creature never chases): she is within `reach` px on
    * about its level (`level` px) and lit. Burrs up (`bristle`, with a kick), eyes on her and wide,
    * lights up by `light` and a flash of `flash` that fades at `fade` /s. Lets go `slack` px further out.
@@ -317,6 +391,21 @@ export const LAMP = {
     shiverRate: 46,
     hold: 20,
     release: 11,
+    /**
+     * Through the tell (36 frames): the fore wings creep `rise` rad higher and the hind ones `spread` lower,
+     * the shiver grows by x(1 + `shiverUp`), lamp and spots flash in `beats` quickening beats (`countPow`,
+     * between `countLow` and `countPeak` of their strength), and over its last quarter the wings lift
+     * `coil` rad more as the body sinks `sink` px: the coil before the first stroke.
+     */
+    rise: 0.14,
+    spread: 0.2,
+    shiverUp: 1.6,
+    beats: 5,
+    countPow: 1.4,
+    countLow: 0.55,
+    countPeak: 1.25,
+    coil: 0.16,
+    sink: 3.5,
     tail: 5,
     stroke: 1.15,
     eye: 1.5,

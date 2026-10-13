@@ -232,6 +232,8 @@ const SH_LAMP = sh(W.lampCore, W.lampCore, 0, 0, 0.5);
 /** Set per creature by `drawLampwing`: how lit the wing spots are (halo strength) and how much larger. */
 let spotGlow = 0;
 let spotR = 1;
+/** The flash of the tell's count on lamp and spots (1 outside the tell). */
+let tellP = 1;
 
 /**
  * Wing outlines in wing space: u along the span (0 root .. 1 tip), v across (- = leading edge).
@@ -418,8 +420,13 @@ export function drawLampwing(
   hex(W.pop, L.color.pop);
   for (let k = 0; k < 3; k++) W.body1[k] = W.body0[k]! * 0.6 + W.dusk[k]! * 0.2;
   const age = rig.hitAge;
-  toneDark = L.hit.dark * (1 - smoothstep(1.2, 2.8, age));
-  toneLight = L.hit.pop * smoothstep(1.4, 3, age) * (1 - smoothstep(3.6, 5.6, age));
+  // (Dark for the blow's hold, 4 frames or the finisher's 7, the pale pop as it is thrown.)
+  const hitHold = e.hitstop > 0 ? age + e.hitstop : e.hitPower >= 2 ? 7 : 4;
+  toneDark = L.hit.dark * (1 - smoothstep(hitHold - 0.6, hitHold + 0.8, age));
+  toneLight =
+    L.hit.pop *
+    smoothstep(hitHold - 0.4, hitHold + 0.8, age) *
+    (1 - smoothstep(hitHold + 2, hitHold + 4.4, age));
   // A dead one greys as it falls.
   if (dead) toneDark = Math.max(toneDark, 0.4 * sat(t / 14));
   tone(W.wing0);
@@ -460,6 +467,16 @@ export function drawLampwing(
       ox += Math.cos(t * 0.36 + ph) * 3.2 * sat(t / 8);
     }
   }
+  // The tell's count: lamp and wing spots flash in quickening beats toward the swoop (the same
+  // language as the burrback's brace), and the body sinks a little at the end of it.
+  const tellU = e.mode === 'curious' ? sat(t / Math.max(1, e.modeFrames + e.timer)) : 0;
+  tellP = 1;
+  if (e.mode === 'curious') {
+    const tb = H.beats * tellU ** H.countPow;
+    const tf = 1 - (tb - Math.floor(tb));
+    tellP = H.countLow + (H.countPeak - H.countLow) * tf * tf;
+    oy += H.sink * smoothstep(0.72, 1, tellU);
+  }
   const cr = Math.cos(rot);
   const sr = Math.sin(rot);
   const sqy = dead && e.landed ? 0.7 : 1;
@@ -485,15 +502,19 @@ export function drawLampwing(
   // their faces to her; the release into the first stroke is the start of the swoop.
   const hold = rig.hold * flying;
   if (hold > 0.001) {
-    const shiver = Math.sin(clock * H.shiverRate + ph) * H.shiver;
-    fa += (H.fore + shiver - fa) * hold;
-    ha += (H.hind - shiver * 0.7 - ha) * hold;
+    // It builds through the tell (no dead hold): the wings creep higher and wider, the shiver
+    // grows, and in the last of it the body sinks under them, coiled for the first stroke.
+    const shiver = Math.sin(clock * H.shiverRate + ph) * H.shiver * (1 + H.shiverUp * tellU);
+    const coil = smoothstep(0.72, 1, tellU);
+    fa += (H.fore + H.rise * tellU + H.coil * coil + shiver - fa) * hold;
+    ha += (H.hind - H.spread * tellU - shiver * 0.7 - ha) * hold;
     chordF += (H.chord - chordF) * hold;
     chordH += (H.chord - chordH) * hold;
   }
   spotGlow = (H.spot * rig.flare + H.spotKeen * rig.keen * (1 - rig.flare)) * (1 - calm) * (dead ? 0 : 1);
+  spotGlow *= tellP;
   spotGlow *= 1 - toneDark;
-  spotR = 1 + (H.spotR - 1) * Math.max(rig.hold, 0.4 * rig.keen);
+  spotR = (1 + (H.spotR - 1) * Math.max(rig.hold, 0.4 * rig.keen)) * (0.85 + 0.15 * tellP);
   const crumple = 1 - 0.3 * rig.fold;
   // The killing blow tears the hind pair away (they go to scales).
   const torn = dead ? sat(t / 3) : 0;
@@ -619,7 +640,8 @@ export function drawLampwing(
   // --- Head: small and dark, with two dim pinpricks that fix on what draws it.
   SH_FACE.alpha = 1;
   p.ellipse(bx(hxl, hyl), by(hxl, hyl), B.head * 0.86, B.head, rot, SH_FACE, 12);
-  const shut = dead ? sat(t / 5) : Math.max(L.calm.lids * calm, 0.5 * rig.flinch);
+  // (Tumbling, the eyes are screwed shut and the lamp gutters: it is helpless until it rights itself.)
+  const shut = dead ? sat(t / 5) : Math.max(L.calm.lids * calm, 0.5 * rig.flinch, 0.85 * rig.tumble);
   if (shut < 0.9) {
     const lx = e.lookX * 0.55;
     const ly = e.lookY * 0.5;
@@ -640,6 +662,8 @@ export function drawLampwing(
   // Calmed: a little fuller, breathing with the swell; dipped for a moment when it shies.
   br += (L.calm.dim * (0.72 + 0.28 * swell) - br) * calm;
   br *= 1 + (Lm.keen - 1) * rig.keen + (Lm.flare - 1) * rig.flare;
+  br *= tellP;
+  if (rig.tumble > 0.01 && !dead) br *= 1 - rig.tumble * (0.55 + 0.35 * noise1(clock * 17 + ph, 6));
   br *= 1 - L.shy.dim * rig.flinch;
   if (e.hp <= 1 && !dead) br *= 0.6 + 0.4 * (noise1(clock * 12 + ph, 7) > -0.2 ? 1 : 0.3);
   if (dead) br *= sat(1 - t / 12) * (0.5 + 0.5 * noise1(clock * 16 + ph, 8));

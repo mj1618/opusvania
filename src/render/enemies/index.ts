@@ -31,6 +31,8 @@ const K_SCALE = 5;
 const K_PUFF = 6;
 const K_GRIT = 7;
 const K_SLEEP = 8;
+/** A bright chip struck off a braced shell: a short hot streak along its flight. */
+const K_SPARK = 9;
 
 const smooth = (a: number, b: number, x: number): number => {
   const t = sat((x - a) / (b - a));
@@ -264,6 +266,65 @@ export class EnemyRenderer {
     }
   }
 
+  /**
+   * Her cut glanced off a braced shell: bright chips struck off the plate at (x, y), thrown back
+   * the way the cut came (`back` = -1 / 1) and up, and a little grit. Small: the clang's cross is hers.
+   */
+  private sparks(x: number, y: number, back: number, floor: number): void {
+    const R = BURR.ram;
+    for (let k = 0; k < R.sparks; k++) {
+      const a = -0.15 - this.rand() * 1.25;
+      const sp = 150 + this.rand() * 260;
+      this.emit(
+        K_SPARK,
+        x + back * (2 + this.rand() * 5),
+        y + (this.rand() - 0.5) * 9,
+        back * Math.cos(a) * sp,
+        Math.sin(a) * sp,
+        0.2 + this.rand() * 0.22,
+        1.1 + this.rand() * 0.9,
+        floor,
+      );
+    }
+    for (let k = 0; k < 3; k++)
+      this.emit(
+        K_GRIT,
+        x,
+        y + (this.rand() - 0.5) * 8,
+        back * (40 + this.rand() * 120),
+        -60 - this.rand() * 120,
+        0.3 + this.rand() * 0.2,
+        0.7 + this.rand() * 0.6,
+        floor,
+      );
+  }
+
+  /** `n` crisp pale puffs kicked up low from (x, y) toward `dir` (0 = both ways), `k` x the usual speed and size. */
+  private puffs(x: number, y: number, dir: number, n: number, k = 1): void {
+    const T = BURR.touch;
+    for (let j = 0; j < n; j++) {
+      const u = n > 1 ? j / (n - 1) : 0.5;
+      const a =
+        (dir === 0
+          ? Math.PI * (0.08 + 0.84 * u)
+          : dir > 0
+            ? Math.PI * (0.04 + 0.4 * u)
+            : Math.PI * (0.96 - 0.4 * u)) +
+        (this.rand() - 0.5) * 0.25;
+      const sp = (T.crispSpeed[0] + this.rand() * (T.crispSpeed[1] - T.crispSpeed[0])) * k;
+      this.emit(
+        K_PUFF,
+        x + Math.cos(a) * 4,
+        y - 3 - Math.sin(a) * 3,
+        Math.cos(a) * sp * 1.25,
+        -Math.sin(a) * sp * 0.7,
+        T.crispLife[0] + this.rand() * (T.crispLife[1] - T.crispLife[0]),
+        (T.crispSize[0] + this.rand() * (T.crispSize[1] - T.crispSize[0])) * (0.75 + 0.25 * k),
+        y,
+      );
+    }
+  }
+
   /** What is left of a dead lampwing goes to scales where it is (once). */
   private dissolve(rig: LampRig): void {
     const fin = rig.lastPower >= 2;
@@ -322,6 +383,23 @@ export class EnemyRenderer {
         const i = this.byId.get(ev.id);
         // `dir` is its new facing: what it turns from is on the other side.
         if (i !== undefined && ev.kind === 'burrback') this.rigs[i]?.react(ev.cause, -ev.dir);
+      } else if (ev.type === 'enemyBlock' && ev.kind === 'burrback') {
+        const i = this.byId.get(ev.id);
+        const rig = i === undefined ? undefined : this.rigs[i];
+        if (!rig) continue;
+        rig.block(ev.dir);
+        this.sparks(
+          ev.x + ev.facing * (BURR.halfLen + 3),
+          clamp(ev.hitY, ev.y - 20, ev.y + 9),
+          -ev.dir,
+          ev.y + 17,
+        );
+      } else if (ev.type === 'enemyRecover' && ev.kind === 'burrback') {
+        const i = this.byId.get(ev.id);
+        if (i !== undefined) this.rigs[i]?.spent(ev.cause);
+      } else if (ev.type === 'enemyReset' && ev.kind === 'burrback') {
+        const i = this.byId.get(ev.id);
+        if (i !== undefined) this.rigs[i]?.reset();
       } else if (ev.type === 'enemyGiveUp' && ev.cause === 'calm') {
         const i = this.byId.get(ev.id);
         const rig = i === undefined ? undefined : this.lamps[i];
@@ -519,6 +597,70 @@ export class EnemyRenderer {
           );
         }
       }
+      // --- The ram. Brace: a stamp of dust under the front feet, a kick of it behind each scrape.
+      const R = BURR.ram;
+      const fd = rig.d >= 0 ? 1 : -1;
+      if (rig.braceNew) this.puffs(rig.x + fd * 20, rig.y, fd, 3, 0.7);
+      if (rig.scraped && e.mode === 'windup') {
+        this.puffs(rig.x - fd * 26, rig.y, -fd, 1, 0.55);
+        this.dust(rig.x - fd * 30, rig.y, -fd * (50 + this.rand() * 40), 1.3, 1);
+      }
+      // Ramming: dust streams off its heels.
+      if (e.mode === 'charge') {
+        rig.dustT += dt;
+        while (rig.dustT > R.dustEvery) {
+          rig.dustT -= R.dustEvery;
+          this.dust(rig.x - fd * (18 + this.rand() * 14), rig.y, -fd * (30 + this.rand() * 60), 1.9, 1.3);
+          if (this.rand() < 0.45) this.puffs(rig.x - fd * 24, rig.y, -fd, 1, 0.8);
+        }
+      }
+      // The stop: a jolt throws dust and grit off whatever stopped it; a skid ploughs it ahead.
+      if (rig.stopped !== '' && rig.stopped !== 'touch') {
+        const jolt = rig.stopped !== 'spent';
+        this.puffs(rig.x + fd * (BURR.halfLen + 4), rig.y, jolt ? 0 : fd, jolt ? 4 : 2, jolt ? 1.05 : 0.8);
+        for (let k = 0; k < 4; k++)
+          this.dust(
+            rig.x + fd * (20 + k * 9),
+            rig.y,
+            fd * (40 + this.rand() * 90) * (jolt ? -0.6 : 1),
+            1.3,
+            1.2,
+          );
+        for (let k = 0; k < (jolt ? 6 : 2); k++)
+          this.emit(
+            K_GRIT,
+            rig.x + fd * (BURR.halfLen + 2),
+            rig.y - 3 - this.rand() * (jolt ? 22 : 4),
+            -fd * (20 + this.rand() * 170) * (jolt ? 1 : -0.6),
+            -90 - this.rand() * 170,
+            0.34 + this.rand() * 0.2,
+            0.8 + this.rand() * 0.7,
+            rig.y,
+          );
+      }
+      // Spent: each pant is a small breath at its head.
+      if (e.mode === 'recover' && rig.spentK > 0.6) {
+        rig.pantT += dt;
+        if (rig.pantT > 12.566 / R.pant) {
+          rig.pantT = 0;
+          this.emit(
+            K_PUFF,
+            rig.x + fd * (BURR.halfLen + 6),
+            rig.y - 9,
+            fd * (26 + this.rand() * 16),
+            -6,
+            0.3,
+            1.5 + this.rand() * 0.4,
+            rig.y,
+          );
+        }
+      } else rig.pantT = 0;
+      // A blow lets go: the shove starts with a kick of dust under it (a finisher's is larger).
+      if (rig.released && e.mode !== 'dead' && Math.abs(e.knockVx) > 1) {
+        const kd = e.knockVx > 0 ? 1 : -1;
+        const fin = e.hitPower >= 2;
+        this.puffs(rig.x - kd * 14, rig.y, -kd, fin ? 6 : 3, fin ? 1.15 : 0.85);
+      }
       // Calmed: now and then a tiny warm mote lifts off the shell.
       if (rig.calmK > 0.7 && e.mode !== 'dead') {
         rig.moteT += dt;
@@ -544,7 +686,8 @@ export class EnemyRenderer {
         rig.dustT += dt;
         while (rig.dustT > 0.05) {
           rig.dustT -= 0.05;
-          this.dust(rig.x - dir * (10 + this.rand() * 16), rig.y, -dir * (10 + this.rand() * 30));
+          this.dust(rig.x - dir * (10 + this.rand() * 16), rig.y, -dir * (10 + this.rand() * 30), 1.3, 1.1);
+          if (Math.abs(e.knockVx) > 5) this.puffs(rig.x - dir * 20, rig.y, -dir, 1, 0.7);
         }
       }
       if (e.mode === 'dead') {
@@ -568,6 +711,18 @@ export class EnemyRenderer {
       // Her light lifts whatever is near her (the creature is not in her matte): a step darker there.
       const hd = Math.hypot(sim.player.cx - rig.x, sim.player.cy - (rig.y - 17));
       const nearK = sim.player.faded > 0 ? 0 : sat(1 - hd / BURR.nearHero.reach);
+      // Made whole after she faded: it shakes it off (dust, lights back one by one) when she next sees it.
+      if (rig.wakeArm && Math.abs(rig.x - cam.x) < halfW - 150) {
+        rig.wakeArm = false;
+        rig.wakeT = 0;
+      }
+      // (The shake itself starts a beat in, once her re-form has faded up: burrs up, dust off its back.)
+      const wakeAt = BURR.ram.wake * 0.27;
+      if (rig.wakeT >= wakeAt && rig.wakeT - dt < wakeAt) {
+        rig.bristle.v += 34;
+        for (let k = 0; k < 4; k++)
+          this.dust(rig.x + (k - 1.5) * 12, rig.y - 26 + this.rand() * 8, (k - 1.5) * 14, 1.3, 0.8);
+      }
       if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
     }
 
@@ -605,6 +760,17 @@ export class EnemyRenderer {
           SH_PUFF.alpha = 0.92;
           p.ellipse(x, y, r * 1.08, r * 0.92, this.pr[i]!, SH_PUFF, 12);
         }
+      } else if (kind === K_SPARK) {
+        this.pvx[i] = this.pvx[i]! * (1 - Math.min(1, 5 * dt));
+        this.pvy[i] = this.pvy[i]! + 520 * dt;
+        x += this.pvx[i]! * dt;
+        y = Math.min(this.pf[i]! - 1, y + this.pvy[i]! * dt);
+        const k = (1 - u) * (1 - u);
+        const s = this.pz[i]!;
+        const rot = Math.atan2(this.pvy[i]!, this.pvx[i]!);
+        const len = s * (1.2 + Math.hypot(this.pvx[i]!, this.pvy[i]!) * 0.018);
+        p.glow(x, y, len, C.spark as unknown as RGB, 0.85 * k, s * 0.7, rot, 8);
+        p.glow(x, y, s * 2.4, C.spark as unknown as RGB, 0.22 * k, s * 2.4, 0, 8);
       } else if (kind === K_SLEEP) {
         // A slow breath out: it rises on a lazy S, swelling a little, and thins away at the top.
         this.pvy[i] = this.pvy[i]! * (1 - 0.35 * dt);
