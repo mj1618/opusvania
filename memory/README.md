@@ -12,3 +12,4 @@ Keep entries current; delete stale ones.
 - [Loop timing](loop-timing.md) — why the fixed-step loop snaps near-60Hz frame times
 - [Toolchain](toolchain.md) — ports, vite preview base gotcha, TS7/Biome quirks, why each dev dep exists
 - [Background layers](background-layers.md) — sky/far/mid pipeline (compose → bake → atmosphere shader → LayerView with fog + rustle), composition map, config knobs, gotchas
+- [Playfield](playfield.md) — baked lit terrain (albedo + relief), plant meshes and bend field, pool; config knobs, the front-of-character container, bake gotchas

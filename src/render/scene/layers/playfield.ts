@@ -1,33 +1,108 @@
-import { Graphics } from 'pixi.js';
-import type { SceneTag } from '../../../sim/scene';
-import type { EnvModule, SceneContext } from '../index';
-
 /**
- * PLACEHOLDER playfield: every collision rect as a flat box coloured by its tag, with a lit strip
- * on top (the "platform tops read" rule), and one-ways as thin bars. Replace wholesale: the final
- * picture must never show the boxes.
+ * The playfield: the painted skin of the collision rects and everything growing on it.
+ *
+ *   layers.playfield
+ *     water.back        the pool body (behind the banks' edges and the character)
+ *     terrain           baked, lit tiles (lib/pf-terrain.ts painted, lib/pf-bake.ts lit)
+ *     plants            live meshes swaying in the wind (lib/pf-plants.ts, lib/pf-flora.ts)
+ *     halos             additive glow around lantern flowers and glow mushrooms
+ *   front               a container this module adds to the layer tree just above `character`:
+ *     water.front       the tint and surface line over whatever wades in the pool
+ *     fringe            low dark grass over the character's feet, lily pads
+ *
+ * Structure, knobs and gotchas: memory/playfield.md.
  */
-const BODY: Record<SceneTag, number> = {
-  ground: 0x0b2a33,
-  pool: 0x103f5c,
-  ledge: 0x0f4a3c,
-  trunk: 0x16303a,
-  floating: 0x0f4a3c,
-  root: 0x1a3a3a,
-  branch: 0x1f7a55,
-};
-const RIM = 0x6fbf6a;
+import { Container } from 'pixi.js';
+import type { EnvModule, SceneContext, SceneFrame } from '../index';
+import { placeLayer } from '../layer-tree';
+import { bakeTerrain } from '../lib/pf-bake';
+import { BendField } from '../lib/pf-field';
+import { FloraBuilder, type FloraMesh } from '../lib/pf-flora';
+import { growGarden } from '../lib/pf-plants';
+import { paintTerrain } from '../lib/pf-terrain';
+import { Water } from '../lib/pf-water';
+
+export const PLAYFIELD = {
+  /** Terrain is baked at the view scale, clamped to this range (texture px per world px). */
+  bakeScaleMin: 1.5,
+  bakeScaleMax: 2,
+  /** Plant meshes are split into chunks this wide (world px) for culling. */
+  chunk: 480,
+  /** How much glow plants and their halos brighten when the character or a light is near. */
+  glowGain: 1.5,
+  haloGain: 1.6,
+} as const;
 
 export class PlayfieldLayer implements EnvModule {
+  private ctx!: SceneContext;
+  private readonly front = new Container({ label: 'playfield-front' });
+  private field!: BendField;
+  private flora: FloraMesh[] = [];
+  private water: Water | null = null;
+  private poolX: [number, number] = [0, 0];
+  /** Rolling CPU cost of update(), ms (read by `window.__pf` in dev for profiling). */
+  cpuMs = 0;
+
   init(ctx: SceneContext): void {
-    const g = new Graphics();
-    for (const s of ctx.scene.solids) {
-      g.rect(s.x, s.y, s.w, s.h).fill(BODY[s.tag]);
-      g.rect(s.x, s.y, s.w, 10).fill(s.tag === 'pool' ? 0x9ff3ff : RIM);
+    this.ctx = ctx;
+    const scene = ctx.scene;
+    const { paint, info } = paintTerrain(scene);
+    const scale = Math.min(PLAYFIELD.bakeScaleMax, Math.max(PLAYFIELD.bakeScaleMin, ctx.viewScale()));
+    const baked = bakeTerrain(ctx.renderer, paint, scale);
+    paint.albedo.destroy();
+    paint.relief.destroy();
+
+    this.field = new BendField(scene.width, scene.height);
+    const garden = {
+      back: new FloraBuilder(PLAYFIELD.chunk, scene.width),
+      front: new FloraBuilder(PLAYFIELD.chunk, scene.width),
+      halo: new FloraBuilder(PLAYFIELD.chunk, scene.width),
+    };
+    growGarden(garden, info, scene.width);
+    const rect = this.field.rect;
+    const back = garden.back.build(this.field.texture, rect, false);
+    const halo = garden.halo.build(this.field.texture, rect, true);
+    const fringe = garden.front.build(this.field.texture, rect, false);
+    this.flora = [back, halo, fringe];
+
+    const pf = ctx.layers.playfield;
+    if (info.pool) {
+      this.water = new Water(info.pool);
+      this.poolX = [info.pool.x0, info.pool.x1];
+      pf.addChild(this.water.back);
+      this.front.addChild(this.water.front);
     }
-    for (const o of ctx.scene.oneWays) g.rect(o.x, o.y, o.w, 14).fill(BODY[o.tag]);
-    ctx.layers.playfield.addChild(g);
+    pf.addChild(baked.layer, back.container, halo.container);
+    this.front.addChild(fringe.container);
+    // The layer tree has no slot between the character and the foreground at parallax 1, so
+    // this module adds one and places it itself every frame (see update).
+    const root = ctx.layers.root;
+    root.addChildAt(this.front, root.getChildIndex(ctx.layers.character) + 1);
+
+    // Dev-only handle for profiling (toggle the containers, read cpuMs): see memory/playfield.md.
+    if (import.meta.env.DEV)
+      (globalThis as { __pf?: unknown }).__pf = { layer: this, back: pf, front: this.front };
+    console.info(
+      `[playfield] ${baked.tiles} tiles (${baked.megapixels.toFixed(1)} MP at x${scale}) baked in ${baked.ms.toFixed(0)} ms; ` +
+        `${garden.back.vertexCount + garden.front.vertexCount + garden.halo.vertexCount} plant vertices`,
+    );
   }
 
-  update(): void {}
+  update(frame: SceneFrame): void {
+    const t0 = performance.now();
+    const { ctx } = this;
+    const { player, events } = frame.sim;
+    const lights = ctx.lights.list;
+    placeLayer(this.front, frame.camera, 1, ctx.layers.anchor);
+    this.field.update(frame.dt, player, lights, events);
+    const vis = ctx.layers.visible('playfield', frame.camera);
+    for (const f of this.flora) {
+      f.update(frame.clock, vis.x, vis.x + vis.w, PLAYFIELD.glowGain, PLAYFIELD.haloGain);
+    }
+    if (this.water) {
+      const on = this.poolX[1] > vis.x - 40 && this.poolX[0] < vis.x + vis.w + 40;
+      this.water.update(frame.dt, frame.clock, player, lights, events, on);
+    }
+    this.cpuMs += (performance.now() - t0 - this.cpuMs) * 0.05;
+  }
 }
