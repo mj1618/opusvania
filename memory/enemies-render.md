@@ -4,9 +4,12 @@ Rules and state fields: enemies.md. Sheets: `shots/burr/*.png` (made with one `p
 per sheet: step, `drawImage` the WebGL canvas into a 2D grid, return one data URL).
 
 ## How it is wired
-- Layer `enemies` (layer-tree.ts): AFTER `playfieldFront`, before `foreground`: in front of the grass
-  fringe (behind it the legs could not be seen at game size) and so also in front of her and of the
-  glints. Not in the hero matte: it takes the zone grade and her light like the plants do.
+- Two layers, two meshes (`painter`, `front`). `enemies` (before `character`): the whole body, so
+  she and the glints pass in front of it and the grass fringe crosses the shell's lower edge.
+  `enemiesFront` (after `playfieldFront`): each leg again from the rim line down (same geometry,
+  clipped at `rig.y - rimH + 2`, so no join shows), dust, chips and the death plates. With the body
+  alone behind the grass the legs could not be seen at game size; with everything in front it drew
+  over her. Not in the hero matte: it takes the zone grade and her light like the plants do.
 - `EnemyRenderer.update(dt, clock, cam, sim)` from stage.ts. Reads `sim.enemies`, `sim.frame`,
   `sim.alpha`, `sim.player` (where to look, how near her light is), no events: a hit is a new
   `hitFrame`, death is `mode: 'dead'`, so `load()` and re-form just show. Dev handle

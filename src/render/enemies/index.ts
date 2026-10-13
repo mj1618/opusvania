@@ -54,7 +54,9 @@ const SH_FRAG: Shade & { alpha: number } = {
 };
 
 export class EnemyRenderer {
+  /** Behind the character: the bodies. In front of the grass fringe: lower legs, dust, shell debris. */
   readonly painter = new Painter();
+  readonly front = new Painter();
   /** Live knobs (`__enemies.cfg`); call `recolor()` after changing `cfg.color`. */
   readonly cfg = BURR;
   /** CPU time of the last update, ms. */
@@ -83,10 +85,12 @@ export class EnemyRenderer {
   constructor(
     private readonly ctx: RenderContext,
     layer: Container,
+    frontLayer: Container,
   ) {
     const n = ctx.scene.enemies?.length ?? 0;
     for (let i = 0; i < n; i++) this.rigs.push(new BurrRig(i));
     layer.addChild(this.painter.mesh);
+    frontLayer.addChild(this.front.mesh);
     // Dev handle, like __pickups: `__enemies.cfg.spots.glow = 0.5; __game.render()`.
     if (typeof window !== 'undefined') (window as unknown as { __enemies?: EnemyRenderer }).__enemies = this;
   }
@@ -210,10 +214,13 @@ export class EnemyRenderer {
 
   update(dt: number, clock: number, cam: CameraView, sim: SimView): void {
     const t0 = performance.now();
-    const p = this.painter;
+    let p = this.painter;
+    const pf = this.front;
     const list = sim.enemies;
     p.fw = clamp(1 / Math.max(1e-3, cam.zoom * this.ctx.viewScale()), 0.06, 1.5);
     p.begin();
+    pf.fw = p.fw;
+    pf.begin();
     const halfW = VIEW_W / 2 / cam.zoom + 90;
     const halfH = VIEW_H / 2 / cam.zoom + 90;
     const D = BURR.death;
@@ -265,10 +272,13 @@ export class EnemyRenderer {
       // Her light lifts whatever is near her (the creature is not in her matte): a step darker there.
       const hd = Math.hypot(sim.player.cx - rig.x, sim.player.cy - (rig.y - 17));
       const nearK = sim.player.faded > 0 ? 0 : sat(1 - hd / BURR.nearHero.reach);
-      if (drawBurrback(p, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
+      if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
     }
 
-    // --- Debris.
+    // --- Debris, all of it in front of the grass.
+    p.end(cam.x - halfW, cam.y - halfH, halfW * 2, halfH * 2);
+    this.verts = p.vertexCount;
+    p = pf;
     const C = COLORS;
     for (let i = 0; i < MAX_P; i++) {
       const kind = this.pk[i]!;
@@ -385,7 +395,7 @@ export class EnemyRenderer {
 
     p.end(cam.x - halfW, cam.y - halfH, halfW * 2, halfH * 2);
     this.drawn = drawn;
-    this.verts = p.vertexCount;
+    this.verts += p.vertexCount;
     this.cpuMs = performance.now() - t0;
   }
 }

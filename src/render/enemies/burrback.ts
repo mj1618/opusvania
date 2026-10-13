@@ -509,6 +509,8 @@ function drawHead(
 /** Draws one burrback. Returns the alpha it was drawn with (0 = nothing). */
 export function drawBurrback(
   p: Painter,
+  /** The painter in front of the grass fringe: it gets the legs below the shell's rim. */
+  pf: Painter,
   rig: BurrRig,
   e: EnemyState,
   clock: number,
@@ -686,6 +688,47 @@ export function drawBurrback(
       SH_LEG.rim = 0.15 + 0.25 * near;
       SH_LEG.cool = 0.15 + 0.2 * near;
       p.ribbon(5, SH_LEG, true, true);
+      // Again in front of the grass, from the rim line down: the same geometry, so no join shows.
+      // (Not on a body on its back: its legs are in the air, over the shell.)
+      if (deadK < 0.3) {
+        const clipY = rig.y - rimH + 2;
+        let n = 0;
+        if (ky >= clipY) {
+          if (hipY < clipY) {
+            const u = (clipY - hipY) / (ky - hipY);
+            pf.px[n] = hipX + (kx - hipX) * u;
+            pf.py[n] = clipY;
+            pf.pw[n++] = L.w[0] + (L.w[1] - L.w[0]) * u;
+          } else {
+            pf.px[n] = hipX;
+            pf.py[n] = hipY;
+            pf.pw[n++] = L.w[0];
+          }
+          pf.px[n] = kx;
+          pf.py[n] = ky;
+          pf.pw[n++] = L.w[1] * 1.08;
+        } else if (ey > clipY) {
+          const u = (clipY - ky) / (ey - ky);
+          pf.px[n] = kx + (ex - kx) * u;
+          pf.py[n] = clipY;
+          pf.pw[n++] = L.w[1] + (L.w[2] - L.w[1]) * u;
+        }
+        if (n > 0) {
+          const k0 = n - 1;
+          pf.px[n] = (pf.px[k0]! + ex) / 2;
+          pf.py[n] = (pf.py[k0]! + ey) / 2;
+          pf.pw[n] = (pf.pw[k0]! + L.w[2]) / 2;
+          n++;
+          pf.px[n] = ex;
+          pf.py[n] = ey;
+          pf.pw[n++] = L.w[2];
+          // The colour runs hip -> foot along the whole leg; this piece is the lower end of it.
+          c0[0] = c0[0]! * 0.93;
+          c0[1] = c0[1]! * 0.93;
+          c0[2] = c0[2]! * 0.93;
+          pf.ribbon(n, SH_LEG, false, true);
+        }
+      }
     }
     if (pass === 1) break;
 

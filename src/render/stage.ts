@@ -78,7 +78,7 @@ export class RenderStage {
     this.scene = new SceneRenderer(this.ctx);
     this.scene.init(scene);
     this.character = new CharacterRenderer(this.ctx, this.scene.layers.character);
-    this.enemies = new EnemyRenderer(this.ctx, this.scene.layers.enemies);
+    this.enemies = new EnemyRenderer(this.ctx, this.scene.layers.enemies, this.scene.layers.enemiesFront);
     this.pickups = new PickupRenderer(this.ctx, this.scene.layers.pickups, this.scene.layers.pickupsBack);
     this.post = new PostStage(this.ctx, this.scene.layers.root);
     this.hud = new Hud();

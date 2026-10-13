@@ -46,11 +46,11 @@ export const BURR = {
     /** Centre ahead of the shell's middle and above the ground; pulled back by this much when tucked. */
     x: 22.5,
     y: 12.5,
-    len: 8.5,
-    high: 6.6,
+    len: 9.5,
+    high: 7.6,
     tuck: 8,
     /** Eye half-width (the near one; it is a tall oval). */
-    eye: 1.9,
+    eye: 2.3,
   },
   feeler: { len: 22, w: 0.95, tap: 0.5 },
   fringe: { count: 17, len: 4, w: 1.35, lag: 0.022 },
@@ -77,7 +77,7 @@ export const BURR = {
   /** What the zone's light puts on the shell's top edge: [left, centre, right]. */
   edgeColor: [0x8fc6da, 0xdcc49c, 0xb9a6e2] as const,
   color: {
-    shellTop: 0x2c2028,
+    shellTop: 0x321f2e,
     shellLow: 0x120b11,
     sheen: 0x46384a,
     seam: 0x0d070e,
@@ -85,8 +85,8 @@ export const BURR = {
     legFar: 0x1a1019,
     plateIn: 0x8c7883,
     /** The face plate: a step paler than the shell, so the eyes have somewhere to sit. */
-    head: 0x4a3b45,
-    headLow: 0x281c25,
+    head: 0x5a4a55,
+    headLow: 0x30232c,
     eye: 0xe0d9c8,
     feeler: 0x2a1b26,
     fringeTop: 0x1b2318,
