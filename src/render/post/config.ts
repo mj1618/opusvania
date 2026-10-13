@@ -22,6 +22,12 @@ export const POST = {
     saturation: 1.35,
     /** Extra glow for saturated light: cyan plants and the ember bloom harder than pale sky and fog. */
     colorBoost: 2.6,
+    /**
+     * Light wrap: dark pixels beside a bright opening glow at the edge like backlit leaves. `wrap` on
+     * the ground route, `wrapHigh` with the camera at the top of the scene (the canopy route).
+     */
+    wrap: 1.2,
+    wrapHigh: 3.2,
     /** 0..1: how much less bloom lands on pixels that are already bright and pale (sky, lit fog). */
     paleCut: 0.8,
   },

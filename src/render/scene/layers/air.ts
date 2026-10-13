@@ -44,6 +44,7 @@ import { fxDebug } from '../lib/fx-debug';
 import { GroundProfile } from '../lib/fx-ground';
 import { playfieldMaskTexture } from '../lib/fx-mask';
 import { noiseTexture } from '../lib/fx-noise';
+import { zoneColor, zoneMix, zoneWeights } from '../lib/fx-zones';
 import { KEY_LIGHT, mix, PALETTE, prng, wind } from '../lib/look';
 
 type Three<T> = readonly [T, T, T];
@@ -159,12 +160,24 @@ export const AIR = {
       PALETTE.glowViolet,
     ] as const,
   },
+  /**
+   * A soft cool glow in the air behind the hero (behind the playfield too), so a dark figure on a
+   * dark ledge has something paler to stand against. Additive and faint: against a bright
+   * background it disappears by itself. Per zone: colour and strength.
+   */
+  backGlow: {
+    radius: 300,
+    color: [0x7fd0ee, 0xcfe8d0, 0xb7a8f0] as Three<number>,
+    alpha: [0.2, 0.1, 0.25] as Three<number>,
+    /** Extra strength with the camera high in the canopy, where everything behind is dark. */
+    high: 0.08,
+  },
   moths: {
     count: 6,
     /** The flock crosses the whole scene at this speed, then again from the start. */
     speed: 120,
     height: 800,
-    size: 7,
+    size: 10,
     color: 0xeaf6f0,
   },
 };
@@ -333,6 +346,25 @@ class Fireflies {
       f.s.alpha = Math.min(1, glow);
     }
   }
+}
+
+/** A wide, coreless falloff: light hanging in the air. */
+function softTexture(): Texture {
+  const size = 128;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  if (g) {
+    const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (let i = 0; i <= 8; i++) {
+      const r = i / 8;
+      grad.addColorStop(r, `rgba(255,255,255,${((1 - r * r) ** 2).toFixed(3)})`);
+    }
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+  }
+  return Texture.from(c);
 }
 
 /** A soft dot with a hot core, for anything small that glows. */
@@ -600,6 +632,7 @@ export class AirLayer implements EnvModule {
   private fireflies!: Fireflies;
   private leaves!: Leaves;
   private moths!: Moths;
+  private backGlow!: Sprite;
   private backTarget!: RenderTexture;
   private frontTarget!: RenderTexture;
   private backView!: Sprite;
@@ -636,7 +669,11 @@ export class AirLayer implements EnvModule {
     this.backView = new Sprite(this.backTarget);
     this.backView.label = 'shafts-back';
     this.moths = new Moths(ctx.scene.width);
-    ctx.layers.get('airBack').addChild(this.backView, this.moths.view);
+    this.backGlow = new Sprite(softTexture());
+    this.backGlow.anchor.set(0.5);
+    this.backGlow.blendMode = 'add';
+    this.backGlow.label = 'hero-back-glow';
+    ctx.layers.get('airBack').addChild(this.backView, this.backGlow, this.moths.view);
 
     this.front = volumeMesh(this.shared, groundTex);
     this.frontTarget = target();
@@ -647,6 +684,7 @@ export class AirLayer implements EnvModule {
     this.fireflies = new Fireflies(ground);
     ctx.layers.air.addChild(this.frontView, this.leaves.view, this.motes, this.fireflies.view);
     fxDebug('air', AIR);
+    fxDebug('leaves', this.leaves);
   }
 
   private buildMotes(groundTex: Texture): Mesh<Geometry, Shader> {
@@ -773,6 +811,21 @@ export class AirLayer implements EnvModule {
     (mu.uMoteMove as Float32Array).set([motes.driftX, motes.driftY, motes.swirl, motes.windSway]);
     pack3(mu.uCool as Float32Array, motes.cool, motes.density);
     pack3(mu.uWarm as Float32Array, motes.warm, motes.shade);
+
+    // The glow behind the hero.
+    const bg = AIR.backGlow;
+    const zw = zoneWeights(p.cx);
+    const tint = [0, 0, 0];
+    zoneColor(bg.color, zw, tint);
+    const sceneH = this.ctx.scene.height;
+    const high = Math.min(1, Math.max(0, (sceneH - 540 - frame.camera.y) / Math.max(1, sceneH - 1080)));
+    this.backGlow.position.set(p.cx, p.cy - 6);
+    this.backGlow.scale.set((bg.radius * 2) / this.backGlow.texture.width);
+    this.backGlow.tint =
+      (Math.round((tint[0] as number) * 255) << 16) |
+      (Math.round((tint[1] as number) * 255) << 8) |
+      Math.round((tint[2] as number) * 255);
+    this.backGlow.alpha = zoneMix(bg.alpha, zw) + bg.high * high;
 
     this.fireflies.update(frame, vis);
     this.leaves.update(frame, vis);

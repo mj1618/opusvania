@@ -209,7 +209,7 @@ uniform vec4 uHighlight;  // rgb tint, warmth
 uniform vec4 uVignette;   // inner, outer, strength, tint amount
 uniform vec4 uVignetteTint; // rgb, saturation
 uniform vec4 uGrain;      // amplitude, time, aspect, unused
-uniform vec4 uLightBack;  // bloom cut on pale brights, glint, warm add, unused
+uniform vec4 uLightBack;  // bloom cut on pale brights, glint, warm add, leaf light wrap
 uniform vec4 uHalo;       // rgb: the lights' mean colour
 uniform vec4 uHero;       // x, y (view heights), pocket radius, darkening
 uniform vec4 uHero2;      // inner radius left untouched, desaturation, unused x2
@@ -264,7 +264,12 @@ void main(void) {
   col += uHalo.rgb * (lit.a * uMix.z);
 
   // Bloom.
-  col += texture(uBloom, vPos).rgb * (uMix.x * (1.0 - uLightBack.x * pale));
+  vec3 bloom = texture(uBloom, vPos).rgb;
+  // Light wrap: dark foliage right next to a bright opening takes some of that light through its
+  // edge, in its own colour brightened toward yellow-green, like backlit leaves.
+  float wrap = dot(bloom, LUMA) * (1.0 - smoothstep(0.12, 0.5, ll)) * uLightBack.w;
+  col += (col * 3.0 + vec3(0.05, 0.085, 0.025)) * bloom * wrap;
+  col += bloom * (uMix.x * (1.0 - uLightBack.x * pale));
 
   // Tone: exposure, a soft shoulder instead of clipping, an S-curve around the pivot.
   col = shoulder(col * uTone.x, uTone.y);

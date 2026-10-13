@@ -74,6 +74,18 @@
   blur 1.5. On the high route the near top plants pull back and thin (`highRetract`, `highAlpha`).
 - Leaves land on every solid and one-way top. Moths fly at y~800, behind the playfield.
 
+## Round 4 additions
+- Bottom foreground is designed like the top: `frond` (comb of separate pinnae), `bladeArc` (few long
+  blades), `broadLeaves` with drip tips; the far plane adds gold flowers only in the light well and
+  dark `mushrooms` with glowing gills in the two dark zones. Coloured things in the foreground must
+  be mixed at least ~70% toward the body tone or they read as stickers.
+- Light wrap (`bloom.wrap` / `wrapHigh`): in the composite, dark pixels take extra bloom in their
+  own colour, so leaf masses beside bright openings get backlit edges. Stronger with the camera high.
+- `AIR.backGlow`: an additive soft sprite in `airBack` behind the hero (behind the playfield too),
+  tinted and scaled per zone. It is what separates a dark skin from a dark ledge; the post pocket
+  only helps against bright backgrounds.
+- `__fx.leaves` exposes the leaf system (used to find a platform landing for a screenshot).
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").

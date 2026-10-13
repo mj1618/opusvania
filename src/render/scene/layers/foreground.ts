@@ -26,13 +26,14 @@ import { VIEW_H, VIEW_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { fxDebug } from '../lib/fx-debug';
 import {
+  bladeArc,
   bough,
   broadLeaves,
-  fern,
   flowerCluster,
   flowers,
-  grass,
+  frond,
   leafBranch,
+  mushrooms,
   trunk,
   vine,
   withPlane,
@@ -166,14 +167,15 @@ export class ForegroundLayer implements EnvModule {
         );
       }
     }
-    // Near, bottom: big ferns and broad leaves rising a quarter of the way up.
-    for (let x = n0 + rnd() * 300; x < n1; x += 400 + rnd() * 320) {
+    // Near, bottom: one designed plant per spot, rising a quarter of the way up in the corners.
+    for (let x = n0 + rnd() * 300; x < n1; x += 520 + rnd() * 380) {
       const r = rnd();
-      const size = 200 + rnd() * 90;
-      if (r < 0.5) add('near', 'bottom', x, bottom + 24, size * 1.05, (g) => fern(g, rnd, size));
-      else if (r < 0.8)
-        add('near', 'bottom', x, bottom + 24, size * 1.05, (g) => broadLeaves(g, rnd, size * 0.9));
-      else add('near', 'bottom', x, bottom + 20, size * 1.2, (g) => grass(g, rnd, size * 1.15, 260));
+      const size = 230 + rnd() * 90;
+      const dir = rnd() < 0.5 ? -1 : 1;
+      if (r < 0.4) add('near', 'bottom', x, bottom + 26, size * 1.1, (g) => frond(g, rnd, size * 1.15, dir));
+      else if (r < 0.72)
+        add('near', 'bottom', x, bottom + 24, size * 1.05, (g) => broadLeaves(g, rnd, size * 0.95));
+      else add('near', 'bottom', x, bottom + 22, size * 1.2, (g) => bladeArc(g, rnd, size * 1.25));
     }
     for (const t of FOREGROUND.trunks) {
       const height = (VIEW_H / 2) * 2 + (ctx.scene.height - VIEW_H) * FOREGROUND.near.parallax + 400;
@@ -201,23 +203,30 @@ export class ForegroundLayer implements EnvModule {
         }
       }
     }
-    // Far, bottom: grass, small ferns, a flower here and there.
-    for (let x = f0 + rnd() * 200; x < f1; x += 230 + rnd() * 250) {
+    // Far, bottom: a sparse fringe. Grass arcs and small fronds everywhere; flowers in the light
+    // well, glowing mushrooms in the two dark zones.
+    for (let x = f0 + rnd() * 200; x < f1; x += 330 + rnd() * 330) {
       const r = rnd();
-      if (r < 0.36) {
-        const size = 120 + rnd() * 70;
-        add('far', 'bottom', x, bottom + 14, size * 0.45, (g) => grass(g, rnd, size, 150 + rnd() * 110));
-      } else if (r < 0.62) {
-        const size = 110 + rnd() * 60;
-        add('far', 'bottom', x, bottom + 16, size * 0.45, (g) => fern(g, rnd, size));
-      } else if (r < 0.78) {
+      // Far-plane x of the scene's thirds (the plane agrees with the playfield at the anchor).
+      const sceneX = anchor.x + (x - anchor.x) / FOREGROUND.far.parallax;
+      const zone = sceneX < 1900 ? 0 : sceneX < 3900 ? 1 : 2;
+      const dir = rnd() < 0.5 ? -1 : 1;
+      if (r < 0.38) {
+        const size = 150 + rnd() * 70;
+        add('far', 'bottom', x, bottom + 14, size * 0.45, (g) => bladeArc(g, rnd, size));
+      } else if (r < 0.64) {
+        const size = 130 + rnd() * 60;
+        add('far', 'bottom', x, bottom + 16, size * 0.45, (g) => frond(g, rnd, size, dir));
+      } else if (r < 0.8) {
         const size = 110 + rnd() * 50;
         add('far', 'bottom', x, bottom + 16, size * 0.4, (g) => broadLeaves(g, rnd, size));
-      } else if (r < 0.93) {
-        const size = 130 + rnd() * 70;
-        const color = FOREGROUND.flowerColors[Math.floor(rnd() * FOREGROUND.flowerColors.length)] as number;
-        add('far', 'bottom', x, bottom + 14, size * 0.4, (g) => grass(g, rnd, size * 0.7, 130));
-        add('far', 'bottom', x + 20, bottom + 14, size * 0.35, (g) => flowers(g, rnd, size, color));
+      } else if (zone === 1) {
+        const size = 130 + rnd() * 60;
+        add('far', 'bottom', x, bottom + 14, size * 0.35, (g) => flowers(g, rnd, size, PALETTE.keyGold));
+      } else {
+        const size = 70 + rnd() * 30;
+        const glow = zone === 0 ? PALETTE.glowCyan : PALETTE.glowViolet;
+        add('far', 'bottom', x, bottom + 10, size * 0.3, (g) => mushrooms(g, rnd, size, glow));
       }
     }
 

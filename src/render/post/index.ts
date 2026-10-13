@@ -191,6 +191,9 @@ export class PostStage {
     lu.uShape[3] = lights.background;
     lu.uDim = lights.inBrightPlaces;
     u.uLightBack[0] = bloom.paleCut;
+    const sceneH = this.ctx.scene.height;
+    const high = Math.min(1, Math.max(0, (sceneH - VIEW_H / 2 - camera.y) / Math.max(1, sceneH - VIEW_H)));
+    u.uLightBack[3] = bloom.wrap + (bloom.wrapHigh - bloom.wrap) * high;
     u.uLightBack[1] = lights.glint;
     u.uLightBack[2] = lights.warm;
     // The halo in the air is one scalar per pixel: it takes the lights' mean colour.

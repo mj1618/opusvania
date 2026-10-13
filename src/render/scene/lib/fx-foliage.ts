@@ -403,13 +403,16 @@ export function flowers(g: Graphics, rnd: Rnd, size: number, color: number): voi
     leaf(g, t, rnd, low[0], low[1], size * 0.26, size * 0.08, -Math.PI / 2 - 1);
     // The bell: five petals hanging from the tip, dusky outside, a glowing heart.
     const r = size * (0.11 + rnd() * 0.05);
-    const petal = mix(color, t.body[1] as number, 0.5);
+    const petal = mix(color, t.body[1] as number, 0.72);
     for (let pth = 0; pth < 5; pth++) {
       const a = Math.PI / 2 + (pth - 2) * 0.42;
       leafPath(g, tx, -h * 0.82, r * 1.9, r * 0.75, a);
-      g.fill(pth % 2 ? petal : mix(petal, color, 0.35));
+      g.fill(pth % 2 ? petal : mix(petal, color, 0.22));
     }
-    g.circle(tx, -h * 0.82 + r * 0.9, r * 0.32).fill({ color: mix(color, 0xffffff, 0.4), alpha: 0.9 });
+    g.circle(tx, -h * 0.82 + r * 0.9, r * 0.22).fill({
+      color: mix(color, t.body[1] as number, 0.3),
+      alpha: 0.8,
+    });
   }
 }
 
@@ -524,5 +527,73 @@ export function flowerCluster(g: Graphics, rnd: Rnd, length: number, color: numb
       g.fill(tone);
     }
     g.circle(p[0], p[1] + size * 0.3, size * 0.16).fill({ color: mix(color, 0xffffff, 0.35), alpha: 0.8 });
+  }
+}
+
+/**
+ * One or two big arching fern fronds (near plane): a strong spine rising from the origin and
+ * bowing over to one side, with clearly separate pinnae that shorten toward the tip.
+ */
+export function frond(g: Graphics, rnd: Rnd, size: number, dir: number): void {
+  const t = foregroundTones(rnd, 0.6, 0.8);
+  const n = 1 + (rnd() < 0.6 ? 1 : 0);
+  for (let f = 0; f < n; f++) {
+    const d = f === 0 ? dir : -dir;
+    const len = size * (f === 0 ? 1 : 0.62 + rnd() * 0.15);
+    const spine = curve(d * -12 * f, 14, d * len * 0.18, -len * 1.05, d * len * 0.95, -len * 0.42, 9, 2, 16);
+    litRibbon(g, t, spine, t.body[0] as number);
+    for (let i = 2; i < spine.length; i++) {
+      const p = spine[i] as Pt;
+      const q = spine[i - 1] as Pt;
+      const along = Math.atan2(p[1] - q[1], p[0] - q[0]);
+      const u = i / (spine.length - 1);
+      const l = len * 0.34 * Math.sin(Math.PI * (0.1 + 0.9 * u) ** 0.8) + 8;
+      // Pinnae sweep forward along the spine, gaps between them: a comb, not a mass.
+      leaf(g, t, rnd, p[0], p[1], l, l * 0.17, along + 1.05 - u * 0.25);
+      leaf(g, t, rnd, p[0], p[1], l * 0.92, l * 0.17, along - 1.05 + u * 0.25);
+    }
+  }
+}
+
+/** A few long grass blades arching out of the frame edge (near plane), each a clean curve. */
+export function bladeArc(g: Graphics, rnd: Rnd, size: number): void {
+  const t = foregroundTones(rnd, 0.7, 0.85);
+  const n = 4 + Math.floor(rnd() * 3);
+  for (let i = 0; i < n; i++) {
+    const k = (i + 0.5) / n - 0.5 + (rnd() - 0.5) * 0.15;
+    const h = size * (0.6 + rnd() * 0.5);
+    const x = k * size * 0.35;
+    const bow = k * 2.2 + (rnd() - 0.5) * 0.5;
+    // Rises nearly straight, then the top third bows over under its own weight.
+    const tipX = x + bow * h * 0.55;
+    const tipY = -h * (0.92 - Math.abs(bow) * 0.18);
+    const pts = curve(x, 14, x + bow * h * 0.06, -h * 0.85, tipX, tipY, 15 + rnd() * 7, 1.2, 12);
+    ribbon(g, pts, t.cool, t.rimAlpha * 0.4, -LX * 4, 1);
+    ribbon(g, pts, t.rim, t.rimAlpha * 0.75, LX * 5, LY * 5);
+    ribbon(g, pts, pick(rnd, t.body));
+  }
+}
+
+/** A cluster of small dark mushrooms with faintly glowing gills (far plane, where the zone suits). */
+export function mushrooms(g: Graphics, rnd: Rnd, size: number, glow: number): void {
+  const t = foregroundTones(rnd, 0.5, 0.7);
+  const n = 2 + Math.floor(rnd() * 3);
+  for (let i = 0; i < n; i++) {
+    const x = (i - (n - 1) / 2) * size * 0.42 + (rnd() - 0.5) * 10;
+    const h = size * (0.5 + rnd() * 0.5);
+    const r = size * (0.2 + rnd() * 0.12);
+    ribbon(g, curve(x, 12, x + (rnd() - 0.5) * 12, -h * 0.5, x, -h, 7, 5, 6), t.body[3] as number);
+    // Gills: a thin glowing sliver under the cap; the cap itself stays dark.
+    g.ellipse(x, -h + r * 0.12, r * 0.86, r * 0.2).fill({
+      color: mix(glow, t.body[1] as number, 0.45),
+      alpha: 0.85,
+    });
+    g.moveTo(x - r, -h)
+      .bezierCurveTo(x - r * 0.9, -h - r * 1.05, x + r * 0.9, -h - r * 1.05, x + r, -h)
+      .closePath()
+      .fill(mix(t.body[1] as number, glow, 0.12));
+    g.moveTo(x - r * 0.2, -h - r * 0.62)
+      .quadraticCurveTo(x + r * 0.5, -h - r * 0.7, x + r * 0.8, -h - r * 0.2)
+      .stroke({ color: t.rim, width: 1.6, alpha: 0.5 });
   }
 }
