@@ -10,7 +10,7 @@
       body {
         margin: 0;
         height: 100%;
-        background: #000;
+        background: #020a0e;
         overflow: hidden;
       }
       #app {
@@ -20,11 +20,8 @@
         align-items: center;
         justify-content: center;
       }
-      /* 1920x1080 canvas, letterboxed to fit the window. */
+      /* The canvas is sized by src/render/app.ts: 16:9, letterboxed, full device resolution. */
       #app canvas {
-        width: min(100vw, calc(100vh * 16 / 9));
-        height: auto;
-        aspect-ratio: 16 / 9;
         display: block;
       }
       #hint {
@@ -39,7 +36,7 @@
   </head>
   <body>
     <div id="app"></div>
-    <div id="hint">Opusvania · arrows/WASD move · Z/Space jump · X/Shift slip (dash) · C jab (Up+C uppercut, Down+C in the air overhand/pogo, C C cross) · V seize (Up/Down+V aims) · B levy (Up/Down+B aims) · Q swallow · Up enters doors · 1-0 gym 1-10 · Shift+1-4 gym 11-14 · Shift+5-9 lot-7, yard, the-pit, auction, ring-barker · H hub · F2 hitboxes · F3 blind A/B · F4 perf · ` tuning</div>
+    <div id="hint">arrows/WASD move · Z/Space jump · X/Shift dash · F2 collision · ` tuning · R restart</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
