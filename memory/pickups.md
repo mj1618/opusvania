@@ -49,6 +49,24 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 - `?nopickups` (src/main.ts) boots the scene with no pickups, so no glints, no counter and no skin
   reaction; shots / clip / look:stats use it by default (`--pickups` to show them).
 
+## Lumen pods (render side; rules in combat.md)
+- `pod.ts` `PodView`: Graphics drawn once per pod in the bud tones (`TONES`), in `pickupsBack` (she
+  walks in front of them). Four bracts (two back, two front) round a lens of light that shows down
+  the seam; `sit` = on a rosette, `hang` = on a short stem fixed to the nearest underside / branch.
+  Springs for swing, bract opening and squash; `strike()` on `podBurst`, `set()` from `sim.pods.hp`
+  every frame (restart shuts them, a state jump opens them without effects).
+- The husk must be a step LIGHTER than the leaves behind it (front = front tone mixed 30% toward the
+  lit tone, plus a rim on the key side). In the plain bud tones it vanished and the seam read as a
+  floating orange slit. The seam lens is 7 px wide; at 11 px it looked like a cat's eye.
+- Burst (in `index.ts`): one 0.11 s flare of 19 px at the pod, 7 husk flecks (`K_CHIP`, opaque, with
+  gravity) and 6 motes along the blow, bracts spring open and stay, darker, with an ember that dies in
+  `POD.ember` s. No light is registered and nothing is drawn at her end except the usual absorb.
+- Spilled glints are ordinary flights with `pod >= 0`: they pop out of the husk on a small arc to a
+  fan above it, hang, then fly with the usual lag-then-slingshot; `dur` = `frames + k * stagger` from
+  the event, so each lands on its `pickup {pod: true}` event (matched oldest first). They use four
+  stand-in `Item`s per pod, not scene pickups.
+- `?nopickups` removes pods too.
+
 ## Look decisions (learned by looking)
 - A round glowing dot is a firefly (the scene has orange ones). The four-point star with a
   whiter-gold core is the silhouette that says "collectible"; every few seconds an arm flash

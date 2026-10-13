@@ -77,5 +77,9 @@ nothing fights back yet. Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pi
   hitstop}`, `slashEnd {dir, hits, reason: done|dash|chain}`. `slashBox` gives the area to draw in.
 - Pods: `scene.pods`, `state.pods.hp[i] > 0` = closed; `podBurst {id, mount, x, y, dir, facing, value,
   frames, stagger}` then `value` `pickup` events with `pod: true` at `frames`, `frames + stagger`, ...
-- `SimView` (`src/render/contract.ts`) does not carry `pods` yet: add `pods: game.state.pods` there and
-  in `stage.ts` (orchestrator's files) before a pod renderer can show restarts.
+- `SimView.pods` = `game.state.pods` (read only).
+
+## Pods on screen
+Drawn by `src/render/pickups/` (`pod.ts` + the burst and spilled glints in `index.ts`); see the
+"Lumen pods" section of pickups.md. The pod's own impact is a 19 px flare, flecks and motes at the
+pod's centre; the slash arc and any contact spark belong to the skin. `?nopickups` hides pods.

@@ -13,15 +13,18 @@ import { Container } from 'pixi.js';
 import type { Pickup } from '../../sim/scene';
 import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } from '../contract';
 import type { PointLight } from '../lights';
+import { zoneWeights } from '../scene/lib/fx-zones';
 import { wind } from '../scene/lib/look';
-import { GlintBatch, K_FLARE, K_GLINT, K_GREAT, K_SPARK } from './batch';
+import { GlintBatch, K_CHIP, K_FLARE, K_GLINT, K_GREAT, K_SPARK } from './batch';
 import { GLINTS, MAX_QUADS } from './config';
 import { findRoot, groundBelow, Holder } from './holder';
+import { POD, PodView } from './pod';
 
 const TRAIL_MAX = 20;
 const MAX_FLIGHTS = 24;
 const MAX_SPARKS = 260;
 const MAX_FLARES = 24;
+const MAX_CHIPS = 40;
 
 /** Mote behaviours. */
 const M_BURST = 0;
@@ -76,6 +79,27 @@ interface Flight {
   hn: number;
   /** Fractional trail samples still to drop (after absorption). */
   shed: number;
+  /**
+   * Spilled from a lumen pod: instead of noticing, it pops out of the pod at (sx, sy) to hang at
+   * (px, py) before it flies. `pod` is the pod's index, -1 for an ordinary flight.
+   */
+  pod: number;
+  px: number;
+  py: number;
+}
+
+/** A fleck of husk thrown off a struck pod. */
+interface Chip {
+  life: number;
+  max: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rot: number;
+  spin: number;
+  size: number;
+  tone: number;
 }
 
 interface Spark {
@@ -129,6 +153,15 @@ export class PickupRenderer {
   private readonly flares: Flare[] = [];
   private readonly lights: PointLight[] = [];
   private readonly lightOn: boolean[] = [];
+  private readonly pods: PodView[] = [];
+  private readonly podIndex = new Map<string, number>();
+  private readonly podBack = new Container({ label: 'lumen-pods' });
+  /** Per pod: 0 cool .. 1 warm, for the colour of its husk flecks. */
+  private readonly podTone: number[] = [];
+  /** Stand-in items for spilled glints, four per pod. */
+  private readonly spill: Item[] = [];
+  private readonly chips: Chip[] = [];
+  private chipAt = 0;
   private sparkAt = 0;
   private flareAt = 0;
   /** A tiny LCG for spark scatter (render only; never the sim's RNG). */
@@ -193,6 +226,9 @@ export class PickupRenderer {
         hy: new Float32Array(TRAIL_MAX),
         hn: 0,
         shed: 0,
+        pod: -1,
+        px: 0,
+        py: 0,
       });
     for (let i = 0; i < MAX_SPARKS; i++)
       this.sparks.push({ life: 0, max: 1, x: 0, y: 0, vx: 0, vy: 0, size: 1, mode: 0, spin: 0 });
@@ -220,7 +256,33 @@ export class PickupRenderer {
       });
       this.lightOn.push(false);
     }
-    backLayer.addChild(this.back);
+    // Lumen pods: behind the hero (she walks through them).
+    (scene.pods ?? []).forEach((p, i) => {
+      const view = new PodView(p, scene, hash01(p.id));
+      this.pods.push(view);
+      this.podIndex.set(p.id, i);
+      this.podBack.addChild(view.root);
+      const w = zoneWeights(p.x);
+      this.podTone.push(w[1]);
+      // Three stand-in items per pod for the glints it spills (they are not scene pickups).
+      for (let k = 0; k < 4; k++)
+        this.spill.push({
+          p: { id: p.id, kind: 'glint', x: p.x, y: p.y },
+          great: false,
+          seed: hash01(`${p.id}/${k}`),
+          phase: (k * 0.31 + hash01(p.id)) % 1,
+          stage: 2,
+          appear: 1,
+          x: p.x,
+          y: p.y,
+          holder: null,
+          ground: null,
+          lit: 0,
+        });
+    });
+    for (let i = 0; i < MAX_CHIPS; i++)
+      this.chips.push({ life: 0, max: 1, x: 0, y: 0, vx: 0, vy: 0, rot: 0, spin: 0, size: 1, tone: 0 });
+    backLayer.addChild(this.podBack, this.back);
     layer.addChild(this.batch.mesh, this.front);
     // Dev handle, like __pf and __fx: `__pickups.cfg.lights.intensity = 0; __game.render()`.
     if (typeof window !== 'undefined') (window as unknown as { __pickups?: PickupRenderer }).__pickups = this;
@@ -247,8 +309,14 @@ export class PickupRenderer {
         const it = this.byId.get(e.id);
         if (it) this.wake(it, e.frames / 60, sim.frame);
       } else if (e.type === 'pickup') {
-        const it = this.byId.get(e.id);
-        if (it) this.absorb(it, e.combo, pvx, pvy);
+        if (e.pod) {
+          this.spillAbsorb(e.id, e.combo, pvx, pvy);
+        } else {
+          const it = this.byId.get(e.id);
+          if (it) this.absorb(it, e.combo, pvx, pvy);
+        }
+      } else if (e.type === 'podBurst') {
+        this.burst(e.id, e.dir, e.facing, e.value, e.frames, e.stagger, sim.frame);
       }
     }
     // --- And what it says is true now (restart, or a state that jumped without events).
@@ -272,6 +340,7 @@ export class PickupRenderer {
 
     const b = this.batch;
     b.begin();
+    this.updatePods(dt, clock, cam, sim);
     b.uniform[1] = G.glint.quad;
     b.uniform[2] = G.great.quad;
     b.uniform[3] = G.gain;
@@ -343,7 +412,16 @@ export class PickupRenderer {
       let e: number;
       let scale: number;
       let open = 0;
-      if (f.t < notice) {
+      if (f.pod >= 0 && f.t < notice) {
+        // Spilled from a pod: it pops out on a little arc, swells, and hangs for a beat.
+        const k = notice > 0 ? f.t / notice : 1;
+        const out = 1 - (1 - k) ** 3;
+        const arc = Math.sin(Math.min(1, k * 1.25) * Math.PI) * 14;
+        f.x = f.sx + (f.px - f.sx) * out;
+        f.y = f.sy + (f.py - f.sy) * out - arc + Math.sin(clock * 9 + it.seed * 20) * 1.2 * k;
+        e = 0.4 + 0.65 * out;
+        scale = 0.4 + 0.5 * out;
+      } else if (f.t < notice) {
         // It notices: brightens, swells, leans away from her. A great one lifts out of its bud
         // while a corolla of light unfolds round it and motes wind up and away.
         const k = notice > 0 ? f.t / notice : 1;
@@ -375,11 +453,12 @@ export class PickupRenderer {
           f.left = true;
           f.sx = f.x;
           f.sy = f.y;
+          if (f.pod >= 0) f.hn = 0;
           // Swing over the top when she is off to one side; otherwise to its own side.
           const dx0 = this.chestX - f.sx;
           const dy0 = this.chestY - f.sy;
           f.side = Math.abs(dx0) > Math.abs(dy0) * 0.5 ? (dx0 > 0 ? -1 : 1) : it.seed > 0.5 ? 1 : -1;
-          this.shimmer(it);
+          if (f.pod < 0) this.shimmer(it);
         }
         // Lag, then slingshot: it hangs back while she runs on, then catches her up in a rush.
         const s = f.fly > 0 ? (f.t - notice) / f.fly : 1;
@@ -527,6 +606,7 @@ export class PickupRenderer {
     f.y = it.y;
     f.hn = 0;
     f.shed = 0;
+    f.pod = -1;
     // The ceremony begins where it hangs: light wells up in the bud.
     if (it.great) this.flare(it.x, it.y, 18, 64, 0.7, 0.3, 0.5, false, 0, 1);
   }
@@ -684,7 +764,7 @@ export class PickupRenderer {
         s.spin = (i % 2 === 0 ? 1 : -1) * (1.6 + 2.4 * this.rand());
       }
     } else {
-      this.flare(0, 0, 12, A.flare * (1 + 0.25 * step), 0.2, 0.5 + 0.3 * step, 0.8, true, 0, 1);
+      this.flare(0, 0, 10, A.flare * (1 + 0.2 * step), 0.18, 0.3 + 0.15 * step, 0.6, true, 0, 1);
       const n = A.sparks + Math.min(combo, A.comboSparks);
       const base = this.rand() * 6.283;
       for (let i = 0; i < n; i++) {
@@ -704,6 +784,147 @@ export class PickupRenderer {
         );
       }
     }
+  }
+
+  /** Pods: springs, wind, the glow in the seam, husk flecks; and what the sim says is true now. */
+  private updatePods(dt: number, clock: number, cam: CameraView, sim: SimView): void {
+    const hp = sim.pods.hp;
+    const b = this.batch;
+    const halfW = VIEW_W / 2 / cam.zoom + 120;
+    const halfH = VIEW_H / 2 / cam.zoom + 120;
+    const player = sim.player;
+    for (let i = 0; i < this.pods.length; i++) {
+      const v = this.pods[i] as PodView;
+      const closed = (hp[i] ?? 0) > 0;
+      if (closed && v.spent) {
+        // Restart: shut again, and its spilled glints are forgotten.
+        v.set(false);
+        for (const f of this.flights) {
+          if (f.pod === i) {
+            f.on = false;
+            f.item = null;
+            f.pod = -1;
+          }
+        }
+      } else if (!closed && !v.spent) {
+        v.set(true);
+      }
+      const p = v.pod;
+      const seen = Math.abs(p.x - cam.x) < halfW && Math.abs(p.y - cam.y) < halfH;
+      v.root.visible = seen;
+      if (!seen) continue;
+      // She brushes it as she passes through.
+      if (Math.abs(player.cx - p.x) < 30 && Math.abs(player.cy - p.y) < 62) v.nudge(player.vx * dt * 1.3);
+      v.update(dt, clock, wind(p.x, clock, (i * 0.37) % 1) * POD.sway);
+      // A breath of light over the seam, so the bloom finds it: small, and gone once it is spent.
+      const breathe = 1 + POD.breathe * Math.sin(clock * 1.6 + i * 2.1);
+      const e = v.spent ? 0.2 * v.glow * v.glow : 0.17 * breathe;
+      b.quad(K_FLARE, v.cx, v.cy, 20, 26, e, 0, 0.15);
+    }
+    for (const c of this.chips) {
+      if (c.life <= 0) continue;
+      c.life -= dt;
+      c.vy += 900 * dt;
+      c.vx *= Math.exp(-1.6 * dt);
+      c.x += c.vx * dt;
+      c.y += c.vy * dt;
+      c.rot += c.spin * dt;
+      const k = Math.max(0, c.life) / c.max;
+      b.quadRot(K_CHIP, c.x, c.y, c.size, c.size * 0.62, c.rot, Math.min(1, k * 3), c.tone, k);
+    }
+  }
+
+  /** A slash opened a pod: it splits, throws flecks and motes the way the blow went, spills its light. */
+  private burst(
+    id: string,
+    dir: 'fwd' | 'up' | 'down',
+    facing: number,
+    value: number,
+    frames: number,
+    stagger: number,
+    frame: number,
+  ): void {
+    const i = this.podIndex.get(id);
+    if (i === undefined) return;
+    const v = this.pods[i] as PodView;
+    const sx = dir === 'fwd' ? facing : 0;
+    const sy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
+    const x = v.cx;
+    const y = v.cy;
+    v.strike(sx, sy);
+    // The contact: a few bright pixels, gone in a tenth of a second.
+    this.flare(x, y, 5, 19, 0.11, 0.55, 1, false, 0, 1);
+    // Husk flecks and gold motes, thrown along the blow (a down blow scatters sideways off the ground).
+    const tone = this.podTone[i] ?? 0;
+    for (let k = 0; k < 7; k++) {
+      const c = this.chips[this.chipAt] as Chip;
+      this.chipAt = (this.chipAt + 1) % this.chips.length;
+      const spread = (this.rand() - 0.5) * 1.5;
+      const sp = 150 + 230 * this.rand();
+      const ax = sy > 0 ? (k % 2 === 0 ? 1 : -1) * 0.9 : sx + spread * (sx === 0 ? 1 : 0.5);
+      const ay = sy > 0 ? -0.5 : sy * 0.9 - 0.45 + spread * (sx === 0 ? 0.2 : 0.5);
+      c.x = x + (this.rand() - 0.5) * 14;
+      c.y = y + (this.rand() - 0.5) * 18;
+      c.vx = ax * sp;
+      c.vy = ay * sp;
+      c.rot = this.rand() * 6.283;
+      c.spin = (this.rand() - 0.5) * 26;
+      c.size = 2.6 + 3 * this.rand();
+      c.max = 0.45 + 0.35 * this.rand();
+      c.life = c.max;
+      c.tone = tone;
+    }
+    for (let k = 0; k < 6; k++)
+      this.spark(x, y, sx * 150 + (this.rand() - 0.5) * 60, sy * 120 - 60, 5, 110, 0.22, 0.5, 2.1, M_BURST);
+    // Its glints: out of the husk on small arcs, away from the blow's side, then to her one by one.
+    for (let k = 0; k < Math.min(value, 4); k++) {
+      const it = this.spill[i * 4 + k];
+      let f: Flight | undefined;
+      for (const c of this.flights) {
+        if (!c.on) {
+          f = c;
+          break;
+        }
+      }
+      if (!it || !f) break;
+      const seconds = (frames + k * stagger) / 60;
+      const fan = value > 1 ? k / (value - 1) - 0.5 : 0;
+      const a = fan * 1.9 + sx * 0.5 + (this.rand() - 0.5) * 0.25;
+      const reach = 40 + 12 * this.rand() + (k % 2) * 8;
+      it.stage = 1;
+      f.on = true;
+      f.item = it;
+      f.t = 0;
+      f.frame0 = frame;
+      f.dur = seconds;
+      f.fly = Math.min(GLINTS.flight.seconds, seconds * 0.7);
+      f.sx = x;
+      f.sy = y;
+      f.px = x + Math.sin(a) * reach;
+      f.py = y - Math.cos(a) * reach * 0.8 - (sy > 0 ? 6 : 14);
+      f.ax = 0;
+      f.ay = -1;
+      f.side = 1;
+      f.left = false;
+      f.waved = false;
+      f.done = false;
+      f.x = x;
+      f.y = y;
+      f.hn = 0;
+      f.shed = 0;
+      f.pod = i;
+    }
+  }
+
+  /** One of a pod's glints reached her: the oldest still in the air. */
+  private spillAbsorb(id: string, combo: number, pvx: number, pvy: number): void {
+    const i = this.podIndex.get(id);
+    if (i === undefined) return;
+    let best: Flight | null = null;
+    for (const f of this.flights) {
+      if (f.on && !f.done && f.pod === i && (!best || f.dur < best.dur)) best = f;
+    }
+    if (best?.item) this.absorb(best.item, combo, pvx, pvy);
   }
 
   /** Forget any flight for this item (restart). */

@@ -9,7 +9,7 @@
 import type { Renderer } from 'pixi.js';
 import type { SimEvent } from '../sim/events';
 import type { Scene } from '../sim/scene';
-import type { PickupsState, PlayerState } from '../sim/state';
+import type { PickupsState, PlayerState, PodsState } from '../sim/state';
 import type { LightRegistry } from './lights';
 
 /** Logical view size in world px at zoom 1 (16:9). */
@@ -48,6 +48,8 @@ export interface SimView {
   readonly scene: Scene;
   /** Collectibles at the latest sim frame: `timers[i]` belongs to `scene.pickups[i]`. Read only. */
   readonly pickups: Readonly<PickupsState>;
+  /** Lumen pods at the latest sim frame: `hp[i] > 0` = `scene.pods[i]` is still closed. Read only. */
+  readonly pods: Readonly<PodsState>;
 }
 
 /** Services every renderer gets at construction. */

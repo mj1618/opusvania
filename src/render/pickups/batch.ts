@@ -15,6 +15,7 @@ export const K_GREAT = 1;
 export const K_SPARK = 2;
 export const K_RIBBON = 4;
 export const K_FLARE = 5;
+export const K_CHIP = 6;
 
 const FLOATS = 8;
 
@@ -154,6 +155,13 @@ void main() {
     float soft = across * sqrt(max(across, 0.0));
     float core = pow(max(across, 0.0), 7.0);
     add = (mix(GOLD, AMBER, smoothstep(0.0, 0.7, vUv.x)) * soft * 0.8 + HOT * core * 0.9 * (1.0 - vUv.x)) * e;
+  } else if (kind > 5.5) {
+    // --- Chip: a fleck of husk, opaque (laid over, not added). ph = its tone between the zones'
+    // cool and warm leaf colours, e = how much is left of it.
+    float m = max(abs(vUv.x) * 0.8 + abs(vUv.y) * 0.5, abs(vUv.y));
+    a = smoothstep(1.0, 0.72, m) * clamp(e, 0.0, 1.0);
+    body = mix(vec3(0.03, 0.11, 0.12), vec3(0.11, 0.13, 0.05), ph) * (0.8 + 0.5 * vUv.y);
+    add = vec3(1.0, 0.62, 0.22) * smoothstep(0.2, -0.9, vUv.y) * 0.12 * a * ex;
   } else {
     // --- Flare: a soft bloom of light, ex = how white its heart is.
     float win = clamp(1.0 - r, 0.0, 1.0);

@@ -18,7 +18,7 @@ const SEPAL_EDGE = 0xffc271;
  * in `npm run shots` (the post grade then treats bud and plants alike). Kept on the dark side: the
  * bud is in no light mask, so nothing dims it next to the hero's light.
  */
-const TONES = {
+export const TONES = {
   stem: [0x0b2f33, 0x2a3312, 0x10283a],
   lit: [0x3f8f86, 0x9a9a40, 0x4a7f9a],
   back: [0x08262b, 0x1e2a10, 0x0c2032],
@@ -26,7 +26,7 @@ const TONES = {
   leaf: [0x0f4044, 0x44521c, 0x163a4e],
 } as const;
 
-function tone(c: readonly [number, number, number], w: readonly [number, number, number]): number {
+export function tone(c: readonly [number, number, number], w: readonly [number, number, number]): number {
   let out = 0;
   for (let k = 0; k < 3; k++) {
     const sh = 16 - k * 8;
