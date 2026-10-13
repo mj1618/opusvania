@@ -95,6 +95,8 @@ export const POST = {
 
   grade: {
     exposure: 1.04,
+    /** Lift of the mid-tones only (0 = none): blacks and highlights are left where they are. */
+    midLift: 0.12,
     /** Highlights roll off smoothly above this instead of clipping. */
     shoulder: 0.74,
     /** S-curve strength around the pivot (0 = none). */

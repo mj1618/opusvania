@@ -131,6 +131,7 @@ export class PostStage {
     // Wrapped so the grain keeps its precision however long the game has been open.
     u.uGrain[1] = renderClock % 64;
     u.uGrain[2] = VIEW_W / VIEW_H;
+    u.uGrain[3] = grade.midLift;
 
     // The playfield mask for this frame (the air layer's front shafts read it too).
     // It is soft and low-res, so every other frame is enough, unless the camera jumped.

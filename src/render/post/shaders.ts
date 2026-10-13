@@ -210,7 +210,7 @@ uniform vec4 uShadow;     // rgb tint, lift
 uniform vec4 uHighlight;  // rgb tint, warmth
 uniform vec4 uVignette;   // inner, outer, strength, tint amount
 uniform vec4 uVignetteTint; // rgb, saturation
-uniform vec4 uGrain;      // amplitude, time, aspect, unused
+uniform vec4 uGrain;      // amplitude, time, aspect, mid-tone lift
 uniform vec4 uLightBack;  // bloom cut on pale brights, glint, warm add, leaf light wrap
 uniform vec4 uHalo;       // rgb: the lights' mean colour
 uniform vec4 uLit;        // light colour tint 0..1, chroma gain, per-channel ceiling, unused
@@ -243,6 +243,10 @@ void main(void) {
     col.b = texture(uTexture, clamp(vTextureCoord + off, vClamp.xy, vClamp.zw)).b;
   }
 
+  // The hero matte: the hero's own pixels are exempt from everything that darkens the frame
+  // around them (pocket, vignette) and from their own light.
+  float hero = smoothstep(0.08, 0.6, texture(uMatte, vPos).a) * uProtect.x;
+
   // A pocket of calm around the hero: what lies around them (not on them) goes a little darker
   // and greyer, so a small figure separates from a busy, glowing forest without an outline.
   vec2 hd = cv - (uHero.xy - vec2(0.5 * uGrain.z, 0.5));
@@ -254,7 +258,7 @@ void main(void) {
   // Small lights (glints, glow caps, fireflies) keep their full value inside the pocket.
   float pmx = max(col.r, max(col.g, col.b));
   float psat = (pmx - min(col.r, min(col.g, col.b))) / max(pmx, 1e-4);
-  pocket *= 1.0 - smoothstep(0.55, 0.85, pmx) * smoothstep(0.3, 0.6, psat);
+  pocket *= (1.0 - smoothstep(0.55, 0.85, pmx) * smoothstep(0.3, 0.6, psat)) * (1.0 - hero);
   float over = max(pl - uHero2.z, 0.0);
   float keep = 1.0 - pocket * (uHero.w + uHero2.w * over / max(pl, 1e-3));
   col = mix(col, vec3(pl), pocket * uHero2.y) * keep;
@@ -272,7 +276,6 @@ void main(void) {
   vec4 lit = texture(uLight, vPos);
   // The hero is not lit by their own light (it would lift their dark body more than anything
   // else, being nearest): the matte takes the light, the halo and most of the bloom off them.
-  float hero = smoothstep(0.08, 0.6, texture(uMatte, vPos).a) * uProtect.x;
   float ll = dot(col, LUMA);
   float lm = max(lit.r, max(lit.g, lit.b));
   if (lm > 0.002) {
@@ -312,6 +315,10 @@ void main(void) {
     : 1.0 - (1.0 - uTone.w) * pow((1.0 - lc) / (1.0 - uTone.w), 1.0 + uTone.z);
   col *= curved / lc;
 
+  // A gentle lift of the mid-tones only: blacks and highlights stay where they are.
+  l = dot(col, LUMA);
+  col *= 1.0 + uGrain.w * smoothstep(0.07, 0.3, l) * (1.0 - smoothstep(0.45, 0.85, l)) * (1.0 - hero);
+
   // Split tone: shadows lift toward teal-indigo, highlights lean warm.
   l = dot(col, LUMA);
   float sh = 1.0 - smoothstep(0.0, 0.45, l);
@@ -324,7 +331,7 @@ void main(void) {
   col = mix(vec3(l), col, uVignetteTint.a);
 
   // Vignette: darker, cooler corners.
-  float v = smoothstep(uVignette.x, uVignette.y, sqrt(r2));
+  float v = smoothstep(uVignette.x, uVignette.y, sqrt(r2)) * (1.0 - 0.85 * hero);
   col *= mix(vec3(1.0), uVignetteTint.rgb, v * uVignette.w) * (1.0 - v * uVignette.z);
 
   // Grain: triangular noise, new every frame, a touch stronger in the mid-darks.

@@ -133,6 +133,15 @@
   sheets between canopy tiers. Left beams are now three narrow ones (half width 55-90), sheets are
   0.14 / 0.08 opacity, and every beam is dimmer in mid-air than under the canopy hole and at its landing.
 
+## Round 9
+- The hero matte is computed first in the composite and also exempts the hero from the pocket (its
+  ceiling pull was greying her face: the pocket's untouched core is centred on the ember, not the
+  face), from 85% of the vignette (she was dim at frame edges, e.g. the far ledge) and from `midLift`.
+- `grade.midLift` (0.12): a lift of mid-tones only (luma ~0.07-0.85 window), blacks untouched. 0.22
+  measured mean 55 but dropped hero ratio under 2.7 at two stops and lifted fog; 0.12 is the compromise.
+- look:stats hero p90 depends on how much of the hero box is face: on the high ledges the box holds
+  more dark background, so p90 reads lower there even when the face is near-white.
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").
