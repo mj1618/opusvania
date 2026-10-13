@@ -33,7 +33,7 @@ describe('camera', () => {
         expect(sx).toBeLessThan(VIEW_W * 0.75);
       }
     }
-    expect(maxStep).toBeLessThanOrEqual(Math.max(cameraTuning.panMaxX, 24 * cameraTuning.panMaxVxMult));
+    expect(maxStep).toBeLessThanOrEqual(30);
     expect(cam.x).toBe(GROVE.width - VIEW_W);
   });
 
@@ -46,6 +46,28 @@ describe('camera', () => {
       stepCamera(cam, s.state, GROVE);
     }
     expect(cam.x + VIEW_W / 2).toBeLessThan(feet(s).x);
+  });
+
+  it('barely moves when the player jitters left and right', () => {
+    const s = newSim();
+    s.place(2400, 1280);
+    const cam = createCamera(s.state, GROVE);
+    for (let i = 0; i < 60; i++) stepCamera(cam, s.state, GROVE);
+    const x0 = cam.x;
+    let maxAccel = 0;
+    let range = 0;
+    let v0 = 0;
+    for (let i = 0; i < 240; i++) {
+      s.run(i % 24 < 12 ? 'L1' : 'R1');
+      const before = cam.x;
+      stepCamera(cam, s.state, GROVE);
+      const v = cam.x - before;
+      maxAccel = Math.max(maxAccel, Math.abs(v - v0));
+      v0 = v;
+      range = Math.max(range, Math.abs(cam.x - x0));
+    }
+    expect(range).toBeLessThan(120); // about the player's own travel: no look-ahead swing
+    expect(maxAccel).toBeLessThan(1.5);
   });
 
   it('interpolates between sim frames', () => {

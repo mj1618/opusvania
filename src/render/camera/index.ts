@@ -3,7 +3,7 @@
  * post-step sim state, so it is deterministic and unit-testable headless. The render driver keeps
  * the previous and current CameraState and interpolates them with the same alpha as the player.
  *
- * Per frame: horizontal look-ahead with dual forward focus -> vertical dead zone / fall follow ->
+ * Per frame: horizontal look-ahead from averaged travel, spring follow -> vertical dead zone / fall follow ->
  * clamp to the scene bounds. Soft everywhere: nothing snaps except on a `spawn` event.
  */
 import type { Scene } from '../../sim/scene';
@@ -15,14 +15,27 @@ export interface CameraState {
   /** Free-follow view centre x and anchor-line y (feet level), before clamping. */
   fx: number;
   fy: number;
+  /** Follow velocity (px/frame): the springs keep it continuous, so the view never jerks. */
+  fvx: number;
+  fvy: number;
   targetY: number;
-  focusDir: number;
-  /** Reversal in progress: direction and where it started. */
-  revDir: number;
-  revStartX: number;
+  /** Slow average of the travel direction, -1..1. Scales the look-ahead. */
+  lead: number;
   /** View top-left after clamping to the scene, world px. */
   x: number;
   y: number;
+}
+
+/**
+ * Critically damped spring toward `target` (Game Programming Gems 4, "smooth damp"), one frame.
+ * Returns [position, velocity]. Position and velocity are both continuous whatever the target does.
+ */
+export function smoothDamp(pos: number, vel: number, target: number, frames: number): [number, number] {
+  const omega = 2 / Math.max(frames, 0.001);
+  const k = 1 / (1 + omega + 0.48 * omega * omega + 0.235 * omega * omega * omega);
+  const d = pos - target;
+  const t = (vel + omega * d) * 1;
+  return [target + (d + t) * k, (vel - omega * t) * k];
 }
 
 /** Clamps a view edge to [lo, lo + size - view]; centres it if the span is smaller than the view. */
@@ -41,12 +54,12 @@ export function createCamera(s: GameState, scene: Scene, ct: CameraTuning = came
   const p = s.player;
   const feet = p.y + p.h;
   const cam: CameraState = {
-    fx: p.x + p.w / 2 + p.facing * ct.lookaheadX,
+    fx: p.x + p.w / 2,
     fy: feet,
+    fvx: 0,
+    fvy: 0,
     targetY: feet,
-    focusDir: p.facing,
-    revDir: 0,
-    revStartX: p.x,
+    lead: 0,
     x: 0,
     y: 0,
   };
@@ -65,33 +78,22 @@ export function stepCamera(
   const cx = p.x + p.w / 2;
   const feet = p.y + p.h;
 
-  // Horizontal: dual forward focus. Flip only after moving focusSwitchPx the other way.
-  const moveDir = p.vx > 0 ? 1 : p.vx < 0 ? -1 : 0;
-  if (moveDir !== 0 && moveDir !== cam.focusDir) {
-    if (cam.revDir !== moveDir) {
-      cam.revDir = moveDir;
-      cam.revStartX = p.x;
-    }
-    if ((p.x - cam.revStartX) * moveDir >= ct.focusSwitchPx) {
-      cam.focusDir = moveDir;
-      cam.revDir = 0;
-    }
-  } else if (moveDir === cam.focusDir) cam.revDir = 0;
-  const targetX = cx + cam.focusDir * ct.lookaheadX;
-  const panMax = Math.max(ct.panMaxX, Math.abs(p.vx) * ct.panMaxVxMult);
-  const stepX = (targetX - cam.fx) * (p.mode === 'dash' ? ct.lerpXDash : ct.lerpX);
-  cam.fx += Math.max(-panMax, Math.min(panMax, stepX));
+  // Horizontal: lead by the slow-averaged travel direction, then follow on a damped spring.
+  const want = Math.max(-1, Math.min(1, p.vx / ct.leadFullSpeed));
+  cam.lead += (want - cam.lead) / ct.leadFrames;
+  const targetX = cx + cam.lead * ct.lookaheadX;
+  [cam.fx, cam.fvx] = smoothDamp(cam.fx, cam.fvx, targetX, p.mode === 'dash' ? ct.smoothXDash : ct.smoothX);
 
   // Vertical: dead zone (the target holds while the feet stay in the window), fast-fall follow.
-  let lerpY = ct.lerpY;
+  let smoothY = ct.smoothY;
   const feetScreen = (feet - cam.y) / VIEW_H;
   if (p.vy > ct.fallFollowVy) {
     cam.targetY = feet + ct.fallLookahead;
-    lerpY = ct.lerpYFall;
+    smoothY = ct.smoothYFall;
   } else if (p.grounded || p.mode === 'wallSlide' || feetScreen < ct.winTop || feetScreen > ct.winBot) {
     cam.targetY = feet;
   }
-  cam.fy += (cam.targetY - cam.fy) * lerpY;
+  [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, cam.targetY, smoothY);
   place(cam, scene, ct);
 }
 
