@@ -14,6 +14,8 @@
  *   npm run shots -- --ambient=90       # let render time run this many frames first (default 60)
  *   npm run shots -- --hitboxes         # with the collision overlay
  *   npm run shots -- --no-gpu           # software GL
+ *   npm run shots -- --pickups          # with the glints and the counter (left out by default: the
+ *                                       # stops stand next to some, so they would be mid-pickup)
  *
  * Same code + same flags = same pictures: the sim is stepped, never timed, and render time
  * advances exactly 1/60 s per step.
@@ -32,13 +34,14 @@ const { values: args } = parseArgs({
     ambient: { type: 'string', default: '60' },
     zoom: { type: 'string', default: '4' },
     hitboxes: { type: 'boolean', default: false },
+    pickups: { type: 'boolean', default: false },
     'no-gpu': { type: 'boolean', default: false },
     help: { type: 'boolean', short: 'h' },
   },
 });
 if (args.help || (args.only && args.only !== 'wide' && args.only !== 'closeup')) {
   console.log(
-    'npm run shots -- [--only=wide|closeup] [--out=dir] [--url=http://localhost:5180] [--ambient=60] [--zoom=4] [--hitboxes] [--no-gpu]',
+    'npm run shots -- [--only=wide|closeup] [--out=dir] [--url=http://localhost:5180] [--ambient=60] [--zoom=4] [--hitboxes] [--pickups] [--no-gpu]',
   );
   process.exit(args.help ? 0 : 1);
 }
@@ -97,7 +100,7 @@ async function main(): Promise<void> {
   const browser = await launch({ gpu: !args['no-gpu'] });
   const written: string[] = [];
   try {
-    const page = await openGame(browser, args.url ?? DEFAULT_URL, VIEW);
+    const page = await openGame(browser, args.url ?? DEFAULT_URL, VIEW, 1, args.pickups);
     const info = await page.evaluate(() => window.__game.info());
     if (info.canvas.w !== VIEW.width || info.canvas.h !== VIEW.height)
       throw new Error(`Canvas is ${info.canvas.w}x${info.canvas.h}, expected ${VIEW.width}x${VIEW.height}`);

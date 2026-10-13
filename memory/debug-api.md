@@ -9,7 +9,8 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - `step(n)` runs n sim steps **and** n/60 s of render time (renderers get `dt = 1/60` per step), draws,
   returns the state → manual. `tick(n)` advances render time only → manual. `freeze()` / `freeze(false)`,
   `pause()` (manual), `resume()` (realtime).
-- URL: `?manual` boots paused (tools and tests do this), `?seed=n`, `?hitboxes`.
+- URL: `?manual` boots paused (tools and tests do this), `?seed=n`, `?hitboxes`, `?nopickups` (the scene
+  without glints or counter; the capture tools use it unless given `--pickups`).
 
 ## Calls
 - `state()` the sim state (`src/sim/state.ts`); `hash()`; `info()` (mode, frame, clock, canvas size, GPU);

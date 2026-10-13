@@ -26,7 +26,9 @@ export const HUD = {
   tick: 0.045,
   /** How far a digit swells when it changes. */
   pop: 0.3,
-  iconQuad: 46,
+  iconQuad: 40,
+  /** The icon is the world glint drawn this many times larger. */
+  iconScale: 1.7,
 };
 
 const DIGITS = 4;
@@ -193,7 +195,7 @@ export class Hud {
     b.uniform[1] = HUD.iconQuad;
     b.uniform[3] = a;
     b.quad(K_FLARE, HUD.x, HUD.y, 60, 60, 0.5 * this.pulse, 0, 0.6);
-    const q = HUD.iconQuad * (1 + 0.16 * this.pulse);
+    const q = HUD.iconQuad * HUD.iconScale * (1 + 0.16 * this.pulse);
     b.quad(K_GLINT, HUD.x, HUD.y, q, q, 1.15 + 0.9 * this.pulse, 0.2, 0.37);
     b.end(clock);
   }

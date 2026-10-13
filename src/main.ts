@@ -12,7 +12,8 @@ import { tuning } from './sim/tuning';
 const MAX_RENDER_DT = 0.1;
 
 /**
- * Boot. URL params: ?seed=<n>, ?manual (start paused; drive via __game.step), ?hitboxes.
+ * Boot. URL params: ?seed=<n>, ?manual (start paused; drive via __game.step), ?hitboxes,
+ * ?nopickups (the scene without its glints and so without the counter: clean plates for the look tools).
  * Keys: arrows/WASD move, Z/Space/K jump, X/L/Shift dash, Down+Jump drops through branches,
  * F2 collision overlay, ` tuning panel, R restart.
  */
@@ -20,7 +21,8 @@ async function boot(): Promise<void> {
   const params = new URLSearchParams(location.search);
   const seed = Number(params.get('seed') ?? 1) >>> 0;
   const input = new InputSampler();
-  const game = new Game(tuning, GROVE, seed, () => input.sample());
+  const scene = params.has('nopickups') ? { ...GROVE, pickups: [] } : GROVE;
+  const game = new Game(tuning, scene, seed, () => input.sample());
   if (params.has('manual')) game.mode = 'manual';
 
   const root = document.getElementById('app');

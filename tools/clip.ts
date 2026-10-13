@@ -14,6 +14,7 @@
  * --zoom n   camera zoom, centred on the character (default 2). --wide = the follow camera at zoom 1
  * --size WxH capture size (default 960x540). --fps (default 60; the GIF is 30)
  * --pre n    settle steps before recording (default 30). --hitboxes, --no-gpu, --url, --keep-frames
+ * --pickups  with the glints and the counter (left out by default)
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -34,6 +35,7 @@ const { values: args } = parseArgs({
     fps: { type: 'string', default: '60' },
     pre: { type: 'string', default: '30' },
     hitboxes: { type: 'boolean', default: false },
+    pickups: { type: 'boolean', default: false },
     'no-gpu': { type: 'boolean', default: false },
     'keep-frames': { type: 'boolean', default: false },
     url: { type: 'string', default: DEFAULT_URL },
@@ -68,7 +70,7 @@ async function main(): Promise<void> {
 
   const browser = await launch({ gpu: !args['no-gpu'] });
   try {
-    const page = await openGame(browser, args.url ?? DEFAULT_URL, { width: w, height: h });
+    const page = await openGame(browser, args.url ?? DEFAULT_URL, { width: w, height: h }, 1, args.pickups);
     await page.evaluate(
       ([at, zoom, wide, pre, hitboxes, script]) => {
         const g = window.__game;

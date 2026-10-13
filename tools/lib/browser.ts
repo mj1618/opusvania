@@ -23,6 +23,8 @@ export async function openGame(
   url: string,
   viewport: { width: number; height: number },
   deviceScaleFactor = 1,
+  /** false (default) opens the scene without glints (`?nopickups`): a clean plate for judging the look. */
+  pickups = false,
 ): Promise<Page> {
   const page = await browser.newPage({ viewport, deviceScaleFactor });
   page.on('pageerror', (e) => console.error('[page error]', e.message));
@@ -30,7 +32,8 @@ export async function openGame(
     if (m.type() === 'error') console.error('[console error]', m.text());
   });
   // A url that already carries a query (e.g. ?char=yako) keeps it.
-  const target = url.includes('?') ? `${url}&manual` : `${url.replace(/\/?$/, '/')}?manual`;
+  const flags = pickups ? 'manual' : 'manual&nopickups';
+  const target = url.includes('?') ? `${url}&${flags}` : `${url.replace(/\/?$/, '/')}?${flags}`;
   try {
     await page.goto(target);
   } catch (e) {

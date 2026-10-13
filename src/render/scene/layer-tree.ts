@@ -33,6 +33,8 @@ export const LAYERS = [
   // Light shafts that pass behind the terrain and the character (owned by layers/air.ts).
   { name: 'airBack', parallax: 1, screen: false },
   { name: 'playfield', parallax: 1, screen: false },
+  // The buds that hold great glints: behind the character (src/render/pickups).
+  { name: 'pickupsBack', parallax: 1, screen: false },
   { name: 'character', parallax: 1, screen: false },
   // Collectibles: over the character (a glint flies into her), under the grass fringe.
   { name: 'pickups', parallax: 1, screen: false },
@@ -60,8 +62,9 @@ export class LayerTree {
   readonly mid: Container;
   readonly playfield: Container;
   readonly character: Container;
-  /** Glints (owned by src/render/pickups). */
+  /** Glints (owned by src/render/pickups); `pickupsBack` is under the character. */
   readonly pickups: Container;
+  readonly pickupsBack: Container;
   /** In front of the character at parallax 1 (owned by layers/playfield.ts). */
   readonly playfieldFront: Container;
   readonly foreground: Container;
@@ -82,6 +85,7 @@ export class LayerTree {
     this.playfield = this.get('playfield');
     this.character = this.get('character');
     this.pickups = this.get('pickups');
+    this.pickupsBack = this.get('pickupsBack');
     this.playfieldFront = this.get('playfieldFront');
     this.foreground = this.get('foreground');
     this.air = this.get('air');

@@ -9,13 +9,32 @@
  */
 import { Container, Graphics } from 'pixi.js';
 import type { Scene } from '../../sim/scene';
+import { zoneWeights } from '../scene/lib/fx-zones';
 
-const STEM = 0x0e3a30;
-const STEM_LIT = 0x5f9a58;
-const SEPAL_BACK = 0x0a2f2a;
-const SEPAL_FRONT = 0x0f4038;
 const SEPAL_EDGE = 0xffc271;
-const LEAF = 0x10463a;
+
+/**
+ * Bud colours per zone [cool glade, light well, violet stand], picked off the neighbouring plants
+ * in `npm run shots` (the post grade then treats bud and plants alike). Kept on the dark side: the
+ * bud is in no light mask, so nothing dims it next to the hero's light.
+ */
+const TONES = {
+  stem: [0x0b2f33, 0x2a3312, 0x10283a],
+  lit: [0x3f8f86, 0x9a9a40, 0x4a7f9a],
+  back: [0x08262b, 0x1e2a10, 0x0c2032],
+  front: [0x0e3a3e, 0x3a4a18, 0x143448],
+  leaf: [0x0f4044, 0x44521c, 0x163a4e],
+} as const;
+
+function tone(c: readonly [number, number, number], w: readonly [number, number, number]): number {
+  let out = 0;
+  for (let k = 0; k < 3; k++) {
+    const sh = 16 - k * 8;
+    const v = ((c[0] >> sh) & 255) * w[0] + ((c[1] >> sh) & 255) * w[1] + ((c[2] >> sh) & 255) * w[2];
+    out |= Math.round(v) << sh;
+  }
+  return out;
+}
 
 /** Where a bud is rooted: `dir` 1 = it grows up from a top, -1 = it hangs from an underside. */
 export interface Root {
@@ -38,21 +57,37 @@ export function findRoot(scene: Scene, x: number, y: number, reach = 170): Root 
     if (r.y >= y) below = Math.min(below, r.y);
   }
   if (below - y <= reach) return { x, y: below, dir: 1 };
-  if (y - above <= reach) return { x, y: above, dir: -1 };
+  // Hanging: the island's painted underside sags below its collision box, so root a little lower.
+  if (y - above <= reach) return { x, y: above + HANG_SAG, dir: -1 };
   return null;
+}
+
+/** How far below a collision underside a hanging bud is rooted (inside the painted taper). */
+const HANG_SAG = 26;
+
+/** The first top at or below (x, y) within `reach` px, or null: where light would land. */
+export function groundBelow(scene: Scene, x: number, y: number, reach = 420): number | null {
+  let below = Number.POSITIVE_INFINITY;
+  for (const r of scene.solids) if (x >= r.x && x <= r.x + r.w && r.y >= y) below = Math.min(below, r.y);
+  for (const r of scene.oneWays) if (x >= r.x && x <= r.x + r.w && r.y >= y) below = Math.min(below, r.y);
+  return below - y <= reach ? below : null;
 }
 
 interface Sepal {
   g: Graphics;
+  /** Front sepals have a twin behind the hero that takes over once the bud has opened. */
+  twin: Graphics | null;
   closed: number;
   open: number;
 }
 
 export class Holder {
-  /** Behind the light: stem, leaves, back sepals. */
+  /** Behind the hero and the light: stem, leaves, back sepals, and the front ones once open. */
   readonly back = new Container();
-  /** In front of the light: the three sepals that cup it. */
+  /** In front of the light while it is cupped: the three front sepals. Fades out as they open. */
   readonly front = new Container();
+  /** Opened sepals behind the hero (twins of the front ones). */
+  private readonly opened = new Container();
   /** The light's seat in world px this frame (follows the sway). */
   seatX = 0;
   seatY = 0;
@@ -61,6 +96,8 @@ export class Holder {
   private readonly lean: number;
   /** Open amount: a spring from 0 (cupped) to 1 (fallen open). */
   private openness = 0;
+  /** The light's offset from the root along the stem at rest (negative = up). */
+  private readonly seat: number;
   private vel = 0;
 
   constructor(
@@ -75,6 +112,12 @@ export class Holder {
     this.lean = seed > 0.5 ? 1 : -1;
     const H = this.height;
     const lean = this.lean;
+    const w = zoneWeights(lightX);
+    const STEM = tone(TONES.stem, w);
+    const STEM_LIT = tone(TONES.lit, w);
+    const SEPAL_BACK = tone(TONES.back, w);
+    const SEPAL_FRONT = tone(TONES.front, w);
+    const LEAF = tone(TONES.leaf, w);
     for (const c of [this.back, this.front]) {
       c.position.set(lightX, root.y);
       c.scale.y = root.dir;
@@ -133,9 +176,42 @@ export class Holder {
         .quadraticCurveTo(bx + side * len * 0.5, by - len * 0.45, tx, ty)
         .stroke({ color: STEM_LIT, width: 0.8, alpha: 0.4 });
     }
-    this.back.addChild(stem);
+    // Where it is rooted: a tuft of small dark leaves, so the stem comes out of something.
+    for (const [a, len] of [
+      [-1.25, 15],
+      [-0.5, 19],
+      [0.35, 17],
+      [1.2, 14],
+    ] as const) {
+      const tx = foot + Math.sin(a) * len;
+      const ty = -Math.cos(a) * len * 0.8;
+      stem
+        .moveTo(foot - 3, 4)
+        .quadraticCurveTo(foot + Math.sin(a - 0.5) * len * 0.6, ty * 0.6, tx, ty)
+        .quadraticCurveTo(foot + Math.sin(a + 0.5) * len * 0.6, ty * 0.5, foot + 3, 4)
+        .fill({ color: a * lean > 0 ? LEAF : SEPAL_BACK });
+    }
+    this.back.addChild(stem, this.opened);
 
     // Sepals: tip up at rotation 0, pivot at the bud's base.
+    const draw = (len: number, wid: number, front: boolean, curl: number): Graphics => {
+      const g = new Graphics();
+      g.moveTo(0, 2)
+        .bezierCurveTo(-wid, -len * 0.18, -wid * 0.95 + curl, -len * 0.7, curl * 1.6, -len)
+        .bezierCurveTo(wid * 0.75 + curl, -len * 0.66, wid, -len * 0.2, 0, 2)
+        .fill({ color: front ? SEPAL_FRONT : SEPAL_BACK });
+      // The edge that faces the light catches it.
+      const sgn = Math.sign(curl) || 1;
+      g.moveTo(sgn * wid * 0.55, -len * 0.16)
+        .bezierCurveTo(sgn * wid * 0.95, -len * 0.4, sgn * wid * 0.6 + curl, -len * 0.74, curl * 1.6, -len)
+        .stroke({ color: SEPAL_EDGE, width: front ? 1.1 : 0.8, alpha: front ? 0.6 : 0.3 });
+      if (front)
+        g.moveTo(0, 0)
+          .quadraticCurveTo(curl * 0.4, -len * 0.5, curl * 1.4, -len * 0.92)
+          .stroke({ color: SEPAL_BACK, width: 0.9, alpha: 0.6 });
+      g.position.set(0, -H);
+      return g;
+    };
     const mk = (
       len: number,
       wid: number,
@@ -144,51 +220,57 @@ export class Holder {
       open: number,
       curl: number,
     ): void => {
-      const g = new Graphics();
-      g.moveTo(0, 2)
-        .bezierCurveTo(-wid, -len * 0.18, -wid * 0.95 + curl, -len * 0.7, curl * 1.6, -len)
-        .bezierCurveTo(wid * 0.75 + curl, -len * 0.66, wid, -len * 0.2, 0, 2)
-        .fill({ color: front ? SEPAL_FRONT : SEPAL_BACK });
-      // The edge that faces the light catches it.
-      const s = Math.sign(curl) || 1;
-      g.moveTo(s * wid * 0.55, -len * 0.16)
-        .bezierCurveTo(s * wid * 0.95, -len * 0.4, s * wid * 0.6 + curl, -len * 0.74, curl * 1.6, -len)
-        .stroke({ color: SEPAL_EDGE, width: front ? 1.2 : 0.9, alpha: front ? 0.75 : 0.4 });
-      if (front)
-        g.moveTo(0, 0)
-          .quadraticCurveTo(curl * 0.4, -len * 0.5, curl * 1.4, -len * 0.92)
-          .stroke({ color: 0x06211d, width: 0.9, alpha: 0.55 });
-      g.position.set(0, -H);
+      const g = draw(len, wid, front, curl);
       g.rotation = closed;
       (front ? this.front : this.back).addChild(g);
-      this.sepals.push({ g, closed, open });
+      let twin: Graphics | null = null;
+      if (front) {
+        twin = draw(len, wid, true, curl);
+        this.opened.addChild(twin);
+      }
+      this.sepals.push({ g, twin, closed, open });
     };
-    mk(34, 8.5, false, -0.3, -1.0, 5);
-    mk(33, 8.5, false, 0.34, 1.08, -5);
-    mk(29, 8, true, -0.78, -1.85, 7);
-    mk(28, 8, true, 0.8, 1.92, -7);
-    mk(17, 7.5, true, 0.04 * lean, 2.9 * lean, 0);
+    mk(31, 7.5, false, -0.3, -1.0, 4.5);
+    mk(30, 7.5, false, 0.34, 1.08, -4.5);
+    mk(26, 7, true, -0.78, -1.7, 6);
+    mk(25, 7, true, 0.8, 1.76, -6);
+    mk(15, 6.5, true, 0.04 * lean, 2.6 * lean, 0);
     // The cup the sepals spring from.
     const cup = new Graphics();
-    cup.ellipse(0, -H + 1, 6.5, 4.2).fill({ color: SEPAL_FRONT });
-    cup.ellipse(0, -H + 2.4, 5, 2.6).fill({ color: SEPAL_BACK, alpha: 0.7 });
-    this.front.addChild(cup);
-    this.update(0, 0, false, lightY - root.y);
+    cup.ellipse(0, -H + 1, 5.6, 3.6).fill({ color: SEPAL_FRONT });
+    cup.ellipse(0, -H + 2.2, 4.2, 2.2).fill({ color: SEPAL_BACK, alpha: 0.7 });
+    this.opened.addChild(cup);
+    const cupFront = new Graphics();
+    cupFront.ellipse(0, -H + 1, 5.6, 3.6).fill({ color: SEPAL_FRONT });
+    this.front.addChild(cupFront);
+    this.opened.alpha = 0;
+    this.seat = lightY - root.y;
+    this.update(0, 0, false);
   }
 
-  /**
-   * `sway` leans the bud (radians), `open` is whether the glint has left. `seat` = the light's
-   * offset from the root along the stem (negative = up) at rest.
-   */
-  update(dt: number, sway: number, open: boolean, seat: number): void {
+  /** 1 = grows up from a top, -1 = hangs from an underside. */
+  get dir(): 1 | -1 {
+    return this.root.dir;
+  }
+
+  /** `sway` leans the bud (radians), `open` is whether the glint has left. */
+  update(dt: number, sway: number, open: boolean): void {
+    const seat = this.seat;
     // A soft spring so the sepals overshoot and settle.
     const target = open ? 1 : 0;
-    const k = 70;
-    const c = 9;
+    const k = 90;
+    const c = 7.5;
     this.vel += ((target - this.openness) * k - this.vel * c) * dt;
     this.openness += this.vel * dt;
     const o = this.openness;
-    for (const s of this.sepals) s.g.rotation = s.closed + (s.open - s.closed) * o + sway * 0.6;
+    for (const s of this.sepals) {
+      s.g.rotation = s.closed + (s.open - s.closed) * o + sway * 0.6;
+      if (s.twin) s.twin.rotation = s.g.rotation;
+    }
+    // Once they have fallen open they belong behind her, not across her legs.
+    const t = Math.min(1, Math.max(0, (o - 0.2) / 0.4));
+    this.opened.alpha = t;
+    this.front.alpha = 1 - t;
     const rot = sway * this.root.dir;
     this.back.rotation = rot;
     this.front.rotation = rot;
@@ -203,5 +285,7 @@ export class Holder {
   set(open: boolean): void {
     this.openness = open ? 1 : 0;
     this.vel = 0;
+    this.opened.alpha = this.openness;
+    this.front.alpha = 1 - this.openness;
   }
 }

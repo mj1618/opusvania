@@ -52,3 +52,6 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   pair per glide. Same-step order: `glideEnd:land` then `land`; `glideEnd:wall` then `wallSlideStart`;
   `glideEnd:dash` then `dashStart`.
 - `headBump`, `cornerCorrect {kind: head|ledge|dash, dx, dy}`, `dropThrough`.
+- `pickupWake {id, kind, x, y, frames}`, `pickup {id, kind, value, x, y, px, py, combo, total}`: here
+  `x, y` = where the pickup hung (not the feet), `px, py` = body-box centre when it goes in. `state.pickups`
+  (`timers[]` per `scene.pickups[i]`, `count`, `taken`, `combo`...) and the rule are in pickups.md.

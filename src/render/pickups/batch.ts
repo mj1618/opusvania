@@ -13,7 +13,6 @@ import { Buffer, BufferUsage, Geometry, GlProgram, Mesh, Rectangle, Shader } fro
 export const K_GLINT = 0;
 export const K_GREAT = 1;
 export const K_SPARK = 2;
-export const K_RING = 3;
 export const K_RIBBON = 4;
 export const K_FLARE = 5;
 
@@ -43,7 +42,7 @@ in vec4 vData;   // kind, energy, phase, extra
 out vec4 o;
 uniform vec4 uGlint;  // clock, glint quad half-size px, great quad half-size px, gain
 
-const vec3 HOT = vec3(1.0, 0.93, 0.74);
+const vec3 HOT = vec3(1.0, 0.96, 0.84);
 const vec3 GOLD = vec3(1.0, 0.68, 0.24);
 const vec3 AMBER = vec3(1.0, 0.44, 0.09);
 const vec3 DEEP = vec3(0.42, 0.15, 0.02);
@@ -65,16 +64,16 @@ vec3 bead(vec2 p, float R, float e, float t, float ph, out vec3 body, out float 
   float k = mix(0.8, 1.0, pulse) * e;
   // The body: an amber droplet, darker toward its lower rim, with a pocket of shade round it.
   float disc = smoothstep(R + 0.9, R - 0.9, d);
-  float shade = 0.26 * gauss(d, R * 2.6) * min(e, 1.0);
-  a = max(disc * 0.62, shade) * min(e, 1.0);
+  float shade = 0.44 * gauss(d, R * 3.0) * min(e, 1.0);
+  a = max(disc * 0.55, shade) * min(e, 1.0);
   body = mix(UMBER, mix(DEEP, AMBER * 0.75, clamp(0.5 - p.y / (R * 2.0), 0.0, 1.0)), disc);
   vec3 add = vec3(0.0);
   // Refracted rim: brighter along the lower edge, where a drop gathers light.
   float rim = smoothstep(R * 0.45, R, d) * disc * (0.55 + 0.45 * clamp(p.y / R, -1.0, 1.0));
-  add += AMBER * rim * 0.55 * k;
+  add += AMBER * rim * 0.3 * k;
   // The spark held inside.
-  add += HOT * gauss(d, R * 0.36) * 1.25 * k;
-  add += GOLD * gauss(d, R * 0.95) * 0.42 * k;
+  add += HOT * gauss(d, R * 0.4) * 1.45 * k;
+  add += GOLD * gauss(d, R * 0.95) * 0.3 * k;
   // Specular on the upper left.
   add += vec3(1.0, 0.98, 0.92) * gauss(length(p - vec2(-0.34, -0.38) * R), R * 0.17) * 0.55 * min(e, 1.2);
   return add;
@@ -97,22 +96,27 @@ void main() {
     vec2 p = vUv * H;
     float d = r * H;
     float win = clamp(1.0 - r, 0.0, 1.0);
-    add = bead(p, 6.6, e, t, ph, body, a);
+    add = bead(p, 4.6, e, t, ph, body, a);
     float pulse = 0.5 + 0.5 * sin(t * 2.0 + ph * 6.283);
-    // Halo: a soft tail that the bloom takes further.
-    add += AMBER * exp(-d / 10.0) * 0.19 * e * win * win * mix(0.8, 1.0, pulse);
+    // Halo: small, so that it stays a point of light after the bloom.
+    add += AMBER * exp(-d / 7.0) * 0.13 * e * win * win * mix(0.8, 1.0, pulse);
     // The glint itself: a four-point star, tall and narrow, breathing with the pulse and
-    // stretching while it is excited. This is the silhouette that says "not a firefly".
-    float tw = (0.82 + 0.18 * sin(t * 3.1 + ph * 17.0)) * (0.75 + 0.3 * e) * mix(0.9, 1.06, pulse);
-    float st = arm(p.yx, 25.0 * tw, 1.45) + arm(p, 16.0 * tw, 1.25) * 0.85;
-    add += mix(GOLD, HOT, clamp(st * 1.2, 0.0, 1.0)) * st * 1.1 * e;
+    // stretching while it is excited. This is the silhouette that says "not a firefly". Every few
+    // seconds it catches the light: the arms flash longer and whiter and a short diagonal pair shows.
+    float flash = pow(max(0.0, sin(t * 1.7 + ph * 37.0)), 28.0);
+    float tw = (0.84 + 0.16 * sin(t * 3.1 + ph * 17.0)) * (0.75 + 0.3 * e) * mix(0.92, 1.05, pulse);
+    tw *= 1.0 + 0.55 * flash;
+    float st = arm(p.yx, 19.0 * tw, 1.05) + arm(p, 12.0 * tw, 0.95) * 0.85;
+    vec2 q = vec2(p.x + p.y, p.x - p.y) * 0.7071;
+    st += (arm(q, 7.0 * tw, 0.8) + arm(q.yx, 7.0 * tw, 0.8)) * (0.12 + 0.5 * flash);
+    add += mix(GOLD, HOT, clamp(st * 1.3 + flash * 0.6, 0.0, 1.0)) * st * (1.15 + 0.6 * flash) * e;
     // Two motes: one circling on a tilted orbit (dimmer behind), one rising and fading.
     float a1 = t * (1.1 + ph * 0.5) + ph * 40.0;
-    vec2 m1 = vec2(cos(a1) * 15.0, sin(a1) * 6.5 - cos(a1) * 3.0);
-    add += GOLD * gauss(length(p - m1), 1.5) * (0.5 + 0.35 * sin(a1)) * min(e, 1.3);
+    vec2 m1 = vec2(cos(a1) * 12.0, sin(a1) * 5.0 - cos(a1) * 2.5);
+    add += GOLD * gauss(length(p - m1), 1.1) * (0.36 + 0.26 * sin(a1)) * min(e, 1.3);
     float c2 = fract(t * 0.34 + ph * 3.7);
-    vec2 m2 = vec2(sin(c2 * 9.0 + ph * 30.0) * 4.0 + (ph - 0.5) * 10.0, 6.0 - c2 * 30.0);
-    add += HOT * gauss(length(p - m2), 1.25) * sin(c2 * 3.1416) * 0.55 * min(e, 1.3);
+    vec2 m2 = vec2(sin(c2 * 9.0 + ph * 30.0) * 3.0 + (ph - 0.5) * 8.0, 5.0 - c2 * 24.0);
+    add += HOT * gauss(length(p - m2), 1.0) * sin(c2 * 3.1416) * 0.4 * min(e, 1.3);
   } else if (kind < 1.5) {
     // --- Great glint. ex = how far its ceremony has opened it (0 resting .. 1).
     float H = uGlint.z;
@@ -120,41 +124,30 @@ void main() {
     float d = r * H;
     float win = clamp(1.0 - r, 0.0, 1.0);
     float ang = atan(p.y, p.x);
-    add = bead(p, 10.5, e, t, ph, body, a);
+    add = bead(p, 8.4, e, t, ph, body, a);
     float pulse = 0.5 + 0.5 * sin(t * 1.5 + ph * 6.283);
-    add += AMBER * exp(-d / 18.0) * 0.2 * e * win * win * mix(0.82, 1.0, pulse);
-    // Petals of light: five broad ones turning slowly, five thin ones turning the other way.
-    float L = mix(38.0, 62.0, ex) * mix(0.94, 1.0, pulse);
-    float pet = pow(abs(cos(2.5 * (ang + t * 0.21))), 5.0);
-    float len = smoothstep(L, L * 0.25, d) * smoothstep(7.0, 15.0, d);
-    add += GOLD * pet * len * (0.2 + 0.04 * ex) * e;
-    float ray = pow(abs(cos(2.5 * (ang - t * 0.13) + 0.6)), 22.0);
-    add += AMBER * ray * smoothstep(L * 1.45, 12.0, d) * (0.16 + 0.05 * ex) * e * win;
-    // A fine ring that breathes, broken into slow-moving dashes.
-    float R0 = mix(31.0, 58.0, ex) + 2.0 * sin(t * 1.3 + ph * 5.0);
-    float dash = 0.55 + 0.45 * cos(ang * 7.0 - t * 0.7);
-    add += GOLD * gauss(d - R0, 1.1) * 0.2 * dash * e * (1.0 - 0.6 * ex);
-    // Twinkle and three motes.
-    float tw = (0.6 + 0.4 * sin(t * 2.3 + ph * 11.0)) * (0.8 + 0.6 * e);
-    float sx = exp(-abs(p.y) / 1.1) * exp(-abs(p.x) / (15.0 * tw));
-    float sy = exp(-abs(p.x) / 1.1) * exp(-abs(p.y) / (11.0 * tw));
-    add += GOLD * (sx + sy * 0.8) * 0.5 * e * win;
+    add += AMBER * exp(-d / 13.0) * 0.16 * e * win * win * mix(0.82, 1.0, pulse);
+    // A corolla of light: five soft petals turning slowly, unfolding as the ceremony opens it.
+    float L = mix(24.0, 46.0, ex) * mix(0.93, 1.0, pulse);
+    float pet = pow(abs(cos(2.5 * (ang + t * 0.17))), 4.0);
+    float len = smoothstep(L, L * 0.2, d) * smoothstep(5.0, 11.0, d);
+    add += GOLD * pet * len * (0.15 + 0.1 * ex) * e;
+    // The same star as the small ones, larger and slower.
+    float flash = pow(max(0.0, sin(t * 1.3 + ph * 37.0)), 22.0);
+    float tw = (0.86 + 0.14 * sin(t * 2.3 + ph * 11.0)) * (0.8 + 0.25 * e) * (1.0 + 0.4 * flash);
+    float st = arm(p.yx, 30.0 * tw, 1.3) + arm(p, 19.0 * tw, 1.15) * 0.85;
+    add += mix(GOLD, HOT, clamp(st * 1.6 + flash, 0.0, 1.0)) * st * (1.1 + 0.5 * flash) * e;
     for (int i = 0; i < 3; i++) {
       float fi = float(i);
       float a1 = t * (0.7 + fi * 0.23) + fi * 2.1 + ph * 9.0;
-      float rr = 24.0 + fi * 7.0 + 30.0 * ex;
+      float rr = 17.0 + fi * 6.0 + 22.0 * ex;
       vec2 m = vec2(cos(a1) * rr, sin(a1) * rr * 0.42 - cos(a1) * rr * 0.18);
-      add += GOLD * gauss(length(p - m), 1.7) * (0.5 + 0.35 * sin(a1)) * min(e, 1.4);
+      add += GOLD * gauss(length(p - m), 1.3) * (0.4 + 0.3 * sin(a1)) * min(e, 1.4);
     }
   } else if (kind < 2.5) {
     // --- Spark: ex = heat (1 fresh and white-hot, 0 a dying ember).
     vec3 c = mix(AMBER, HOT, clamp(ex, 0.0, 1.0));
     add = c * (gauss(r, 0.34) * 1.5 + gauss(r, 0.75) * 0.28) * e * clamp(1.0 - r, 0.0, 1.0);
-  } else if (kind < 3.5) {
-    // --- Ring: drawn at 0.84 of the quad, ex = its width as a share of the quad.
-    float w = max(ex, 0.004);
-    float g = gauss(r - 0.84, w);
-    add = mix(AMBER, GOLD, g) * (g + 0.25 * gauss(r - 0.84, w * 3.5)) * e * smoothstep(1.0, 0.95, r);
   } else if (kind < 4.5) {
     // --- Ribbon: uv.x runs head (0) to tail (1), uv.y across.
     float across = 1.0 - vUv.y * vUv.y;
@@ -223,6 +216,33 @@ export class GlintBatch {
     o = put(v, o, x + hw, y - hh, 1, -1, kind, e, ph, ex);
     o = put(v, o, x + hw, y + hh, 1, 1, kind, e, ph, ex);
     put(v, o, x - hw, y + hh, -1, 1, kind, e, ph, ex);
+  }
+
+  /** A quad of half-size (hw, hh) turned by `rot` radians about its centre (x, y). */
+  quadRot(
+    kind: number,
+    x: number,
+    y: number,
+    hw: number,
+    hh: number,
+    rot: number,
+    e: number,
+    ph: number,
+    ex: number,
+  ): void {
+    if (this.n >= this.maxQuads || e <= 0.001) return;
+    const c = Math.cos(rot);
+    const s = Math.sin(rot);
+    const ux = c * hw;
+    const uy = s * hw;
+    const vx = -s * hh;
+    const vy = c * hh;
+    const v = this.verts;
+    let o = this.n++ * 4 * FLOATS;
+    o = put(v, o, x - ux - vx, y - uy - vy, -1, -1, kind, e, ph, ex);
+    o = put(v, o, x + ux - vx, y + uy - vy, 1, -1, kind, e, ph, ex);
+    o = put(v, o, x + ux + vx, y + uy + vy, 1, 1, kind, e, ph, ex);
+    put(v, o, x - ux + vx, y - uy + vy, -1, 1, kind, e, ph, ex);
   }
 
   /**

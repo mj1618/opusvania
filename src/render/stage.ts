@@ -73,7 +73,7 @@ export class RenderStage {
     this.scene = new SceneRenderer(this.ctx);
     this.scene.init(scene);
     this.character = new CharacterRenderer(this.ctx, this.scene.layers.character);
-    this.pickups = new PickupRenderer(this.ctx, this.scene.layers.pickups);
+    this.pickups = new PickupRenderer(this.ctx, this.scene.layers.pickups, this.scene.layers.pickupsBack);
     this.post = new PostStage(this.ctx, this.scene.layers.root);
     this.hud = new Hud();
     this.overlay = new HitboxOverlay(scene);

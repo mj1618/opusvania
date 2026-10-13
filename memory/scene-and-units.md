@@ -50,8 +50,9 @@ x:  0        1000       2000       3000       4000       5000     5760
 | `far[0..2]` | 0.12, 0.25, 0.42 | far forest silhouettes, `far[0]` farthest |
 | `mid` | 0.68 | big trunks, roots, vines, fog sheets |
 | `playfield` | 1 | terrain, moss, plants, pool: the skin of the collision rects |
+| `pickupsBack` | 1 | the buds of great glints, behind the character |
 | `character` | 1 | the character |
-| `pickups` | 1 | glints and their buds (`src/render/pickups/`), over the character |
+| `pickups` | 1 | glints and the sepals cupping a great one (`src/render/pickups/`), over the character |
 | `playfieldFront` | 1 | grass fringe and the pool's surface, over the character (owned by `layers/playfield.ts`) |
 | `foreground` | 1.35 | dark blurred leaves and branches |
 | `air` | 1 | god rays, motes, fireflies, mist |
@@ -80,6 +81,8 @@ Interfaces are documented at the top of `scene/index.ts`, `character/index.ts`, 
   `shots/closeup-*.png` (character at 4x in 12 situations) and `shots/closeup-strip.png`. `--only=wide|closeup`,
   `--out=dir`, `--ambient=N` (render frames to run before shooting), `--hitboxes`, `--no-gpu`. ~1.5 s.
   Deterministic: same code, same pictures. Parallel agents: use different `--out` dirs.
+- Both tools open the game with `?nopickups` (no glints, no counter: a clean plate; so does `look:stats`).
+  Pass `--pickups` to see them. `tools/lib/browser.ts` `openGame(..., pickups)`.
 - `npm run clip -- --script "R40 R+J22 R30 .30" --name x` → `clips/x.mp4` + `.gif`, one picture per sim
   step. `--zoom 2` (centred on the character) or `--wide`; `--at x,y`; `--ambient N` for the scene
   animating with the sim frozen. Needs ffmpeg.
