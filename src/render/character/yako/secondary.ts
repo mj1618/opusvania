@@ -91,13 +91,15 @@ export class Secondary {
     const wallX = p.cx + wallSide * (p.w / 2 - 2);
     const dash = rig.wDash;
     this.smear += ((p.motion === 'dash' && p.freeze === 0 ? 1 : 0) - this.smear) * (1 - Math.exp(-dt * 20));
-    const stiff = 1 + dash * 2.2;
+    // In the somersault the chains turn with the body but looser, so the tail wraps round it.
+    const flip = rig.spinPhi * (rig.yawRaw >= 0 ? 1 : -1);
+    const stiff = (1 + dash * 2.2) * (1 + 0.5 * rig.spinW);
     for (const c of this.all) {
       c.floorY = floorY;
       c.wallSide = wallSide;
       c.wallX = wallX;
       c.d = rig.yawRaw;
-      c.rot = rig.lean * 0.5;
+      c.rot = rig.lean * 0.5 + flip;
       c.pushX = 0;
       c.pushY = 0;
     }
@@ -115,10 +117,9 @@ export class Secondary {
     tail.ay = rig.Y;
     // Air lifts loose things when he falls and presses them down when he rises.
     const airLift = -clamp(p.vy, -12, 22) * rig.wAir;
-    tail.lift =
-      rig.tailLift + sway + fl + rig.sweep() + clamp(rig.dragY * 0.03, -0.25, 0.25) + airLift * 0.034;
+    tail.lift = rig.tailLift + sway + fl + clamp(rig.dragY * 0.03, -0.25, 0.25) + airLift * 0.034;
     tail.curl = rig.tailCurl + still * 0.03 * Math.sin(clock * 0.71 + 2) + rig.wWall * -0.03;
-    tail.stiff = stiff * (1 + (rig.openT < 1 ? 1.6 : 0));
+    tail.stiff = stiff;
     tail.lenScale = 1 + this.smear * 0.3;
 
     // --- Sash tails: light cloth from the knot at the small of the back.
@@ -129,7 +130,7 @@ export class Secondary {
       c.ay = rig.Y;
       c.lift = rig.sashLift + 0.06 * gust + airLift * 0.03;
       c.curl = rig.wRun * 0.02;
-      c.stiff = stiff;
+      c.stiff = stiff * (1 - 0.6 * rig.spinW);
       c.lenScale = 1 + this.smear * 0.45;
     }
     this.sashA.lift += 0.08;
@@ -146,10 +147,10 @@ export class Secondary {
     // --- Ears: laid back by speed, perked at rest, each on its own spring; now and then one swivels.
     const lay = rig.ears + sat(Math.abs(rig.vf) / 12) * 0.12 - clamp(rig.dragX * 0.05, -0.3, 0.3);
     const droop = clamp(rig.dragY * 0.035, -0.12, 0.3);
-    const sw1 = pulse(clock, 6.1, 0.9, 41, 0.7);
-    const sw2 = pulse(clock, 7.7, 0.24, 43, 0.8);
-    const sw3 = pulse(clock, 5.3, 1.1, 47, 0.6);
-    const sw4 = pulse(clock, 9.1, 0.2, 53, 0.8);
+    const sw1 = pulse(clock, 3.1, 0.8, 41, 0.75);
+    const sw2 = pulse(clock, 4.3, 0.24, 43, 0.8);
+    const sw3 = pulse(clock, 3.7, 0.9, 47, 0.7);
+    const sw4 = pulse(clock, 5.9, 0.2, 53, 0.8);
     const bump = (t: number): number => (t > 0 ? Math.sin(Math.PI * t) ** 2 : 0);
     const flickN = still * (-0.3 * bump(sw1) + 0.2 * bump(sw2));
     const flickF = still * (0.3 * bump(sw3) - 0.18 * bump(sw4));

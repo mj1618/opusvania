@@ -133,6 +133,43 @@ describe('yako rig', () => {
   });
 });
 
+describe('yako somersault', () => {
+  it('turns once, keeps the chains near the body, and ends exactly upright', () => {
+    const rig = new Rig();
+    const sec = new Secondary();
+    const dt = 1 / 60;
+    const cx = 1000;
+    const air = view({ cx, cy: 900, feetY: 940, grounded: false, vy: -8, vx: 9.6, motion: 'rise' });
+    rig.update(dt, 0, air, [{ type: 'spawn', x: cx, y: 940 }]);
+    sec.reset();
+    let peak = 0;
+    for (let i = 1; i <= 90; i++) {
+      const ev: SimEvent[] = i === 5 ? [{ type: 'jump', kind: 'double', x: cx, y: 940, dir: 1 }] : [];
+      rig.update(dt, i * dt, air, ev);
+      sec.update(dt, i * dt, rig, air);
+      peak = Math.max(peak, rig.spinPhi);
+      for (const c of sec.all)
+        for (let k = 0; k < c.n; k++)
+          expect(Math.hypot((c.rx[k] ?? 0) - cx, (c.ry[k] ?? 0) - 900)).toBeLessThan(120);
+    }
+    expect(peak).toBeGreaterThan(Math.PI * 1.9);
+    expect(rig.spinning).toBe(false);
+    expect(rig.spinPhi).toBe(0);
+  });
+
+  it('settles upright at once when a landing cuts it short', () => {
+    const rig = new Rig();
+    const dt = 1 / 60;
+    const air = view({ grounded: false, vy: -8, vx: 9.6, motion: 'rise' });
+    rig.update(dt, 0, air, [{ type: 'spawn', x: 1000, y: 1280 }]);
+    rig.update(dt, dt, air, [{ type: 'jump', kind: 'double', x: 1000, y: 1280, dir: 1 }]);
+    for (let i = 2; i < 8; i++) rig.update(dt, i * dt, air, []);
+    for (let i = 8; i < 60; i++) rig.update(dt, i * dt, view({ vx: 9.6, motion: 'run' }), []);
+    expect(rig.spinning).toBe(false);
+    expect(rig.spinPhi).toBe(0);
+  });
+});
+
 describe('yako chain', () => {
   it('stays stable when stiffened far past 1', () => {
     const c = new Chain({

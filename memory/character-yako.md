@@ -23,6 +23,14 @@ ember-lit tip), drawn as flat cel shapes. Ported from `src/concepts/designs/yako
 - **Chains** (`chain.ts`, a copy of hooded's with `lenScale` and `push`): tail, two sash tails, charm.
   The pose only sets lift / curl / stiffness. Dash: stiff + `lenScale` > 1 = the smear.
 
+- **Double jump = somersault**: `spinPhi` (a spring following an eased 0 -> 2pi ramp over `SPIN_T`,
+  snapped to 0 at the end) is folded into the base matrix as a rotation about the body's middle, while
+  the pose blends to `SPIN_TUCK` then `EXTEND`. Chains get the flip as extra `rot`; the tail's lift and
+  curl wrap it round the ball, the sash is loosened so it spirals. Authored body shadows fade while he
+  is upside down (`shadeA`); ribbons re-light by themselves. Cut short by ground / dash / wall.
+- **Run bob** (`bob()`): a dip while the knee gives in the stance, a ballistic arc in the float.
+- Wrists (`wristN/F`) are springs driven by the hand's own motion; the hand shape rotates by them.
+
 ## Gotchas
 - A stiffened chain flips if kG + kL per sub-step exceeds 1 (the tail hung straight down in the dash).
   The copy clamps the sum to 0.85; hooded's chain clamps each to 0.9 only.

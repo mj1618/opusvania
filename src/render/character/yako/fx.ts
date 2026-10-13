@@ -5,7 +5,7 @@
  * flowing streak of light from the tail tip and a thin one from the eye when he moves fast, a
  * burst on the double jump, soft dust on hard landings and skids. Deterministic (own LCG).
  */
-import { sat } from '../hooded/math';
+import { catmull, sat } from '../hooded/math';
 import { type Cel, type RGB, rgb } from './cel';
 
 const MOTE = 0;
@@ -59,19 +59,28 @@ class Trail {
     this.n = n + 1;
   }
 
-  /** Fills the painter's streak scratch; returns the sample count. */
+  /** Fills the painter's streak scratch (a Catmull-Rom curve, two samples per point); returns the count. */
   lay(p: Cel, life: number, w: number, k: number): number {
     const n = this.n;
+    if (n < 3) return 0;
+    let m = 0;
     for (let i = 0; i < n; i++) {
-      const t = sat(this.a[i]! / life);
-      const a = i > 0 ? i - 1 : i;
-      const b = i < n - 1 ? i + 1 : i;
-      p.sx[i] = (this.x[a]! + 2 * this.x[i]! + this.x[b]!) * 0.25;
-      p.sy[i] = (this.y[a]! + 2 * this.y[i]! + this.y[b]!) * 0.25;
-      p.sw[i] = w * (1 - t) ** 1.3 + 0.4;
-      p.sa[i] = (1 - t) * (1 - t) * k * Math.min(1, i / 2);
+      const i0 = i > 0 ? i - 1 : 0;
+      const i2 = i < n - 1 ? i + 1 : i;
+      const i3 = i < n - 2 ? i + 2 : n - 1;
+      for (let h = 0; h < 2; h++) {
+        if (h === 1 && i === n - 1) break;
+        const f = h * 0.5;
+        const age = this.a[i]! + (this.a[i2]! - this.a[i]!) * f;
+        const t = sat(age / life);
+        p.sx[m] = catmull(this.x[i0]!, this.x[i]!, this.x[i2]!, this.x[i3]!, f);
+        p.sy[m] = catmull(this.y[i0]!, this.y[i]!, this.y[i2]!, this.y[i3]!, f);
+        p.sw[m] = w * (1 - t) ** 1.3 + 0.4;
+        p.sa[m] = (1 - t) * (1 - t) * k * Math.min(1, m / 4);
+        m++;
+      }
     }
-    return n;
+    return m;
   }
 }
 
@@ -84,6 +93,7 @@ export class Fx {
   private readonly eye = new Trail();
   private readonly sash = new Trail();
   private trailK = 0;
+  private tipLife = TRAIL_LIFE;
 
   private rand(): number {
     this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0;
@@ -120,6 +130,19 @@ export class Fx {
         4 + this.rand() * 4 + power * 4,
       );
     }
+  }
+
+  /** A puff where a foot scrapes down a wall. */
+  scrape(x: number, y: number, away: number): void {
+    this.add(
+      DUST,
+      x,
+      y,
+      away * (10 + this.rand() * 18),
+      6 + this.rand() * 14,
+      0.3 + this.rand() * 0.2,
+      2.2 + this.rand() * 1.6,
+    );
   }
 
   /** Double-jump beat: a soft bloom of light and a scatter of embers along the tail's sweep. */
@@ -170,7 +193,9 @@ export class Fx {
     vx: number,
     vy: number,
     flow: number,
+    ring: number,
   ): void {
+    this.tipLife = TRAIL_LIFE + 0.2 * ring;
     this.trailK += (flow - this.trailK) * (1 - Math.exp(-dt * (flow > this.trailK ? 14 : 5)));
     this.moteAcc += (2.4 + 16 * sat(flow)) * dt;
     while (this.moteAcc >= 1) {
@@ -203,7 +228,7 @@ export class Fx {
       q.x += q.vx * dt;
       q.y += q.vy * dt;
     }
-    this.tip.push(dt, tipX, tipY, TRAIL_LIFE);
+    this.tip.push(dt, tipX, tipY, this.tipLife);
     this.eye.push(dt, eyeX, eyeY, 0.14);
     this.sash.push(dt, knotX, knotY, 0.2);
   }
@@ -214,7 +239,7 @@ export class Fx {
     if (k < 0.02) return;
     let n = this.sash.lay(p, 0.2, 3.2, 0.2 * k);
     if (n >= 3) p.streak(n, EMBER_DEEP);
-    n = this.tip.lay(p, TRAIL_LIFE, 6, 0.34 * k);
+    n = this.tip.lay(p, this.tipLife, 6, 0.34 * k);
     if (n >= 3) {
       p.streak(n, EMBER_DEEP);
       for (let i = 0; i < n; i++) {

@@ -37,6 +37,8 @@ export class YakoCharacter implements CharacterSkin {
   private readonly ember: PointLight = { x: 0, y: 0, radius: 250, color: 0xff9a4a, intensity: 1 };
   private started = false;
   private flash = 0;
+  private scrapeT = 0;
+  private scrapeN = 0;
 
   constructor(
     private readonly ctx: RenderContext,
@@ -88,8 +90,16 @@ export class YakoCharacter implements CharacterSkin {
     if (sig.skid) fx.dust(feetX, feetY, player.vx > 0 ? 1 : -1, 0.5, 3);
     if (sig.dashStart && player.grounded) fx.dust(feetX, feetY, -player.dashDir, 0.5, 3);
     if (sig.wallJump) fx.dust(feetX - player.facing * 18, feetY - 12, 0, 0.3, 2);
+    if (player.motion === 'wallSlide' && player.vy > 1.5) {
+      this.scrapeT -= dt * (0.6 + player.vy * 0.2);
+      if (this.scrapeT <= 0) {
+        this.scrapeT += 0.16;
+        fx.scrape(player.cx + player.wallDir * 17, feetY - 8 - (this.scrapeN++ % 2) * 12, -player.wallDir);
+      }
+    }
     if (sig.doubleJump) fx.burst(player.cx, player.cy + 6, where.tipX, where.tipY);
-    const flow = smoothstep(6, 16, rig.speed) * 0.85 + dash * 0.9 + (rig.openT < 1 ? 1 : 0) + rig.wAir * 0.12;
+    const flow =
+      smoothstep(6, 16, rig.speed) * 0.85 + dash * 0.9 + (rig.spinning ? 1.1 : 0) + rig.wAir * 0.12;
     fx.update(
       dt,
       where.tipX,
@@ -103,6 +113,7 @@ export class YakoCharacter implements CharacterSkin {
       player.vx * 60,
       player.vy * 60,
       flow,
+      rig.spinW,
     );
 
     // Light on top: the ember on the tail tip, the charm, the eye.

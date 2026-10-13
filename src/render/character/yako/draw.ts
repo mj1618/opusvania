@@ -55,6 +55,9 @@ const RIM = rgb(0xffd9a2);
 
 const RIM_W = 0.62 * K;
 
+/** Opacity of the authored body shadows: they fade while the somersault has him upside down. */
+let shadeA = 1;
+
 const R1 = new Rib();
 const RI = new Rib();
 const ix = new Float32Array(8);
@@ -290,7 +293,7 @@ function drawArm(p: Cel, rig: Rig, side: number, far: boolean): void {
   const rim = far ? null : RIM;
 
   // Hand: a compact mitt with three clawed fingers and a thumb; closes to a fist as grip goes to 1.
-  p.push(wx, wy, Math.atan2(wy - ey, wx - ex), 1.08);
+  p.push(wx, wy, Math.atan2(wy - ey, wx - ex) + (side === 0 ? rig.wristN : rig.wristF), 1.08);
   const reach = 1 - 0.3 * grip;
   p.M(-0.6, -2.2)
     .Q(2.4, -3.1, 4.6 * reach, -2.2)
@@ -330,8 +333,8 @@ function drawArm(p: Cel, rig: Rig, side: number, far: boolean): void {
   if (!far) r.band(p, CRIMSON, 1, 1.55, 1.95, -1.12, 1.12);
 
   // Short flared sleeve with the teal lining showing at the cuff.
-  const cx = ex + (wx - ex) * 0.32;
-  const cy = ey + (wy - ey) * 0.32;
+  const cx = ex + (wx - ex) * 0.24;
+  const cy = ey + (wy - ey) * 0.24;
   r.clear();
   r.addP(p, sx, sy, 3.9 * K);
   r.addP(p, sx + (ex - sx) * 0.55, sy + (ey - sy) * 0.55, 4.4 * K);
@@ -406,7 +409,7 @@ function drawHead(p: Cel, rig: Rig, sec: Secondary): void {
     .Q(-7.2, -21, -6.4, -15)
     .L(-3.6, -12.6)
     .L(-7, -8.4);
-  p.fill(FUR_SH);
+  p.fill(FUR_SH, shadeA);
 
   // Pale mask: lower muzzle, cheek and the cheek tufts, with a sharp graphic upper edge.
   p.M(21, -10.6)
@@ -438,7 +441,7 @@ function drawHead(p: Cel, rig: Rig, sec: Secondary): void {
     .L(1.5, -1)
     .Q(4.5, -2.8, 8.5, -4.6)
     .Q(14.5, -6.2, 20.6, -8.8);
-  p.fill(PALE_SH);
+  p.fill(PALE_SH, shadeA);
 
   // Nose and the stern line of the mouth.
   p.M(20.3, -12.6).Q(23.3, -11.9, 22.6, -9.9).Q(21.4, -9.2, 20.3, -10.2).Q(19.8, -11.4, 20.3, -12.6);
@@ -510,7 +513,7 @@ function drawTorso(p: Cel, rig: Rig, h: number): void {
     .Q(-8, -29 * sy, -3, -29.5 * sy)
     .Q(-5.4, -20, -1.6, -11)
     .Q(-2.4, -4, -1.4, 1);
-  p.fill(JACKET_SH);
+  p.fill(JACKET_SH, shadeA);
   // Chest blaze in the V of the crossed collar.
   p.M(0.8, -29.6 * sy)
     .L(8, -27.8 * sy)
@@ -630,6 +633,8 @@ function torsoFrame(p: Cel, rig: Rig): void {
 /** The whole figure. Fills `where`. */
 export function drawYako(p: Cel, rig: Rig, sec: Secondary): void {
   const j = rig.j;
+  const up = Math.cos(rig.spinPhi);
+  shadeA = up > 0.6 ? 1 : up < -0.2 ? 0 : (up + 0.2) / 0.8;
   drawTail(p, sec.tail, sec.smear);
 
   body(p, rig);
