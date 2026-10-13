@@ -34,6 +34,11 @@ export const GOLD_HOT = rgb(0xfff4dc);
 const GOLD_DEEP = rgb(0xf2a85a);
 const DUST_C: RGB = [0.62, 0.78, 0.8];
 
+const SX = new Float32Array(32);
+const SY = new Float32Array(32);
+const QX = new Float32Array(32);
+const QY = new Float32Array(32);
+
 export const TRAILS = 5;
 const TN = 26;
 const TSTEP = 1 / 60;
@@ -156,7 +161,7 @@ export class Fx {
    * Per frame, after the trails were fed. (cx, cy) is the body centre: motes are born around it,
    * `moteRate` per second.
    */
-  update(dt: number, cx: number, cy: number, moteRate: number): void {
+  update(dt: number, cx: number, cy: number, moteRate: number, carryX = 0, carryY = 0): void {
     this.moteAcc += moteRate * dt;
     while (this.moteAcc >= 1) {
       this.moteAcc -= 1;
@@ -195,7 +200,13 @@ export class Fx {
         t.n = 0;
         t.acc = 0;
       }
-      for (let i = 0; i < t.n; i++) t.age[i]! += dt;
+      // `carry` moves the laid-down light along with the body (the somersault's rings stay round
+      // the ball instead of smearing into loops behind it).
+      for (let i = 0; i < t.n; i++) {
+        t.age[i]! += dt;
+        t.x[i]! += carryX;
+        t.y[i]! += carryY;
+      }
       while (t.n > 0 && t.age[t.n - 1]! > TLIFE) t.n--;
       t.acc += dt;
       if (t.acc >= TSTEP) {
@@ -227,9 +238,23 @@ export class Fx {
       for (let i = 0; i < n; i++) if (t.k[i]! > peak) peak = t.k[i]!;
       if (peak < 0.02) continue;
       const w = widths[ti] ?? 1.5;
-      // Control points: the live head, then the samples, newest first.
-      const cx = (i: number): number => (i <= 0 ? t.hx : t.x[Math.min(n, i) - 1]!);
-      const cy = (i: number): number => (i <= 0 ? t.hy : t.y[Math.min(n, i) - 1]!);
+      // Control points: the live head, then the samples, newest first; smoothed once (1-2-1) so
+      // the ribbon has no corners.
+      const N = n + 1;
+      for (let i = 0; i < N; i++) {
+        SX[i] = i === 0 ? t.hx : t.x[i - 1]!;
+        SY[i] = i === 0 ? t.hy : t.y[i - 1]!;
+      }
+      for (let i = 1; i < N - 1; i++) {
+        QX[i] = (SX[i - 1]! + 2 * SX[i]! + SX[i + 1]!) * 0.25;
+        QY[i] = (SY[i - 1]! + 2 * SY[i]! + SY[i + 1]!) * 0.25;
+      }
+      QX[0] = SX[0]!;
+      QY[0] = SY[0]!;
+      QX[N - 1] = SX[N - 1]!;
+      QY[N - 1] = SY[N - 1]!;
+      const cx = (i: number): number => QX[i < 0 ? 0 : i > n ? n : i]!;
+      const cy = (i: number): number => QY[i < 0 ? 0 : i > n ? n : i]!;
       const ca = (i: number): number => (i <= 0 ? 0 : t.age[Math.min(n, i) - 1]!);
       const ck = (i: number): number => (i <= 0 ? t.hk : t.k[Math.min(n, i) - 1]!);
       let m = 0;
@@ -241,22 +266,23 @@ export class Fx {
           const age = ca(i) + (ca(i + 1) - ca(i)) * u;
           const k = ck(i) + (ck(i + 1) - ck(i)) * u;
           const f = sat(1 - age / TLIFE);
-          p.pw[m] = w * (0.3 + 0.7 * f);
+          p.pw[m] = w * (0.12 + 0.88 * f * f);
           // Fades in over the first few px so the band itself stays crisp.
-          p.pc[m * 3] = k * f * f * f * smoothstep(0, 2.5, m);
+          p.pc[m * 3] = k * f * f * smoothstep(0, 2.5, m);
           m++;
         }
       }
       p.px[m] = cx(n);
       p.py[m] = cy(n);
-      p.pw[m] = w * 0.3;
+      p.pw[m] = w * 0.12;
       p.pc[m * 3] = 0;
       m++;
-      for (let i = 0; i < m; i++) p.pw[i]! *= 3.4;
+      // A wide soft body with a slim warm core: a ribbon of light, not a wire.
+      for (let i = 0; i < m; i++) p.pw[i]! *= 2.6;
       p.streak(m, GOLD_DEEP);
       for (let i = 0; i < m; i++) {
-        p.pw[i]! /= 3.4;
-        p.pc[i * 3]! *= 0.7;
+        p.pw[i]! *= 0.34;
+        p.pc[i * 3]! *= 0.55;
       }
       p.streak(m, GOLD_HOT);
     }

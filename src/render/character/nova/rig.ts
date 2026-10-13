@@ -95,7 +95,8 @@ const TW = 15; // hip twist, rad (shoulders counter-twist)
 const EYE = 16;
 const LOOKY = 17;
 const HYAW = 18; // head turn as a fraction of the body's
-const NP = 19;
+const TILT = 19; // pelvis tilt, px: side A's hip rides this much higher (shoulders tilt the other way)
+const NP = 20;
 
 type Pose = Float32Array;
 
@@ -109,17 +110,17 @@ function pose(v: number[]): Pose {
 export const BODY = {
   thigh: 17.5,
   shin: 18,
-  foot: 7,
+  foot: 8,
   upperArm: 9.6,
   foreArm: 11,
-  spine: 16,
-  neck: 4.2,
-  headUp: 9.8,
+  spine: 17,
+  neck: 4.8,
+  headUp: 9,
   hipHalf: 3.2,
-  shoulderHalf: 4.9,
+  shoulderHalf: 5.6,
   footHalf: 2.8,
-  headW: 9.3,
-  headH: 10.1,
+  headW: 8.5,
+  headH: 9.1,
   sinYaw: 0.906,
   sinHeadYaw: 0.7,
 } as const;
@@ -137,9 +138,13 @@ const RISE = pose([0, 40, 0.12, -0.08, -0.1, 9, 17, 0.9, -11, 1, 1.4, -8, -17, -
 const APEX = pose([0, 39, 0.05, 0.05, 0.02, 10, 15, 0.7, -9, 2, 1.25, 8, -15, -9, -16, 0.06, 1, 0, 1]);
 const FALL = pose([-1, 39, -0.07, 0.03, 0.13, 7, 1, 0.4, -5, 4, 0.9, 15, -3, -15, 5, 0, 1, 0.4, 1]);
 /** The somersault's tuck: knees to chest, arms wrapped round the shins, chin down. */
-const TUCK = pose([-12, 34, 0.95, 0.55, 0.5, 7, 25, 0.3, 5, 27.5, 0.45, -5, -16, -3, -15, 0, 0.9, 0.3, 1]);
+const TUCK = pose([
+  -14.3, 36, 0.6, 0.9, 1.47, -6.2, 23.6, 0.5, -7.6, 24.6, 0.6, -3.7, -14.2, -2.5, -13.4, 0, 0.9, 0.3, 1,
+]);
+/** The somersault's opening beat: legs long and a little forward, arms out and up for balance. */
+const OPEN = pose([0, 40, -0.04, -0.06, -0.05, 7, 1, 0.45, -1, 2, 0.75, 14, 2, -15, 4, 0, 1, 0.2, 1]);
 /** Wall-jump kick-off: a brief arched back-layout. */
-const KICK = pose([0, 36, -0.26, -0.2, -0.16, 3, 5, 1.0, -10, -1, 1.35, 7, 7, -7, 9, 0.1, 1, -0.3, 1]);
+const KICK = pose([0, 38, -0.42, -0.25, -0.2, 2, 3, 1.1, -12, 0, 1.4, 4, 14, -10, 12, 0.1, 1, -0.3, 1]);
 const WALL = pose([3, 30, 0.1, 0.1, 0.16, 19, 17, -1.15, 19, 5, -1.2, 14, 12, -4, -15, 0.2, 1, 0.4, 0.45]);
 const DASH = pose([-12, 33, 1.22, 0.08, -0.1, -44, 29, 1.5, -42, 34, 1.5, -19, -1, -18, 2, 0, 0.85, 0, 1]);
 const SKID = pose([4, 26, 0.42, 0.1, -0.15, 10, 0, 0, -20, 0, 0.4, 4, -13, -9, -10, 0.2, 0.95, 0, 1]);
@@ -191,11 +196,35 @@ function bob(ph: number): number {
   return BOB_F * 4 * t * (1 - t);
 }
 
-/** The somersault's angle progress: eased both ends, quickest a little before the middle. */
-function spinEase(u: number): number {
-  const v = sat(u) ** 0.82;
-  return v * v * (3 - 2 * v);
+/** Somersault beats as fractions of SPIN_T: snap in until SPIN_IN, rigid spin, snap out from SPIN_OUT. */
+export const SPIN_IN = 0.2;
+export const SPIN_OUT = 0.72;
+const SPIN_VMAX = 1 / (SPIN_IN / 2 + (SPIN_OUT - SPIN_IN) + (1 - SPIN_OUT) / 2);
+/** How long the opening pose lingers after the turn is done (in units of SPIN_T). */
+const SPIN_TAIL = 1.55;
+/** An interrupted somersault rights itself over this long, seconds. */
+const SPIN_CUT = 0.13;
+
+/** Fraction of the turn done at progress u: eases in over the snap-in, linear in the spin, eases out to exactly 1. */
+export function spinTurn(u: number): number {
+  if (u <= 0) return 0;
+  if (u >= 1) return 1;
+  if (u < SPIN_IN) return (SPIN_VMAX * u * u) / (2 * SPIN_IN);
+  if (u < SPIN_OUT) return SPIN_VMAX * (u - SPIN_IN / 2);
+  const r = 1 - u;
+  return 1 - (SPIN_VMAX * r * r) / (2 * (1 - SPIN_OUT));
 }
+
+/** Tuck amount at progress u: in fast, held through the spin, out fast. */
+export function spinTuck(u: number): number {
+  if (u <= 0 || u >= 1) return 0;
+  if (u < SPIN_IN) return 1 - (1 - u / SPIN_IN) ** 2.4;
+  if (u < SPIN_OUT) return 1;
+  return (1 - (u - SPIN_OUT) / (1 - SPIN_OUT)) ** 2.2;
+}
+
+/** Where a standing foot wants to be, forward of the body (A in front, B behind). */
+const IDLE_F = [7.5, -3.2] as const;
 
 export class Rig {
   readonly frame = newFrame();
@@ -232,7 +261,6 @@ export class Rig {
   private readonly squash = new Spring(0, 22, 0.6);
   private readonly velS = new Spring(0, 30, 0.9);
   private readonly lookS = new Spring(1, 4.5, 1);
-  private readonly spinS = new Spring(0, 44, 0.74);
   private readonly driftS = new Spring(0, 9, 0.7);
   /** Hand targets (HAF, HAU, HBF, HBU) and airborne foot targets (AF AU AP BF BU BP) follow through springs. */
   private readonly hand = [
@@ -258,6 +286,15 @@ export class Rig {
   private spinT = 0;
   private spinDir = 1;
   private spinFree = false;
+  private spinX = 0;
+  private cutT = 0;
+  private cutX = 0;
+  private cutW = 0;
+  private hardT = 1;
+  /** Standing feet are anchored in the world and step when the body leaves them behind. */
+  private readonly anchor = [0, 0];
+  private readonly stepFrom = [0, 0];
+  private readonly stepT = [1, 1];
   private kickT = 1;
   private blinkHold = 0;
   private vdx = 0;
@@ -301,7 +338,8 @@ export class Rig {
           sig.landed = e.vy;
           sig.landHard = e.hard;
           this.squash.v -= clamp(e.vy * 0.16, 0.5, 3.6);
-          this.crouch.v += clamp(e.vy * 13, 30, 250) + (e.hard ? 150 : 0);
+          this.crouch.v += clamp(e.vy * 13, 30, 250) + (e.hard ? 50 : 0);
+          if (e.hard) this.hardT = 0;
           break;
         case 'dashStart':
           sig.dashStart = true;
@@ -331,7 +369,11 @@ export class Rig {
       this.crouch.snap(0);
       this.squash.snap(0);
       this.velS.snap(0);
-      this.spinS.snap(0);
+      this.spinX = 0;
+      this.hardT = 1;
+      this.stepT[0] = this.stepT[1] = 1;
+      this.anchor[0] = p.cx + IDLE_F[0] * dirT;
+      this.anchor[1] = p.cx + IDLE_F[1] * dirT;
       this.driftS.snap(0);
       this.spinning = false;
       this.spinW = 0;
@@ -375,6 +417,8 @@ export class Rig {
       this.phase -= Math.floor(this.phase);
     }
 
+    this.idleFeet(dt, p, d);
+
     // --- Blend the poses.
     const out = this.out;
     out.fill(0);
@@ -384,13 +428,13 @@ export class Rig {
       for (let i = 0; i < NP; i++) out[i]! += src[i]! * w;
       wSum += w;
     };
-    if (this.wIdle > 1e-4) add(this.idlePose(clock), this.wIdle);
+    if (this.wIdle > 1e-4) add(this.idlePose(clock, p, d), this.wIdle);
     if (this.wRun > 1e-4) add(this.runPose(this.phase), this.wRun);
     if (this.wAir > 1e-4) add(this.airPose(p, clock, sgn), this.wAir);
     add(WALL, this.wWall);
     add(DASH, this.wDash);
     add(SKID, this.wSkid);
-    if (wSum < 1e-3) add(this.idlePose(clock), 1);
+    if (wSum < 1e-3) add(this.idlePose(clock, p, d), 1);
     for (let i = 0; i < NP; i++) out[i]! /= wSum;
 
     // --- Springs layered on top.
@@ -399,7 +443,7 @@ export class Rig {
     const leanTarget = p.grounded ? clamp(ax * sgn * 0.07, -0.3, 0.3) : clamp(ax * sgn * 0.03, -0.14, 0.14);
     const leanExtra = this.leanS.step(dash ? 0 : leanTarget, dt);
     const crouch = clamp(this.crouch.step(0, dt), -2.5, 15);
-    const sq = clamp(this.squash.step(0, dt), -0.14, 0.13);
+    const sqRaw = clamp(this.squash.step(0, dt), -0.14, 0.13);
     out[PU]! -= crouch;
     out[PF]! += crouch * 0.12;
     out[LEAN]! += leanExtra + crouch * 0.02;
@@ -416,6 +460,24 @@ export class Rig {
     out[HAU]! += drift;
     out[HBU]! += drift * 1.2;
 
+    // A hard landing folds right down: deep through the legs, the near hand to the ground, then up.
+    if (this.hardT < 1) {
+      this.hardT = Math.min(1, this.hardT + dt / 0.6);
+      const t = this.hardT;
+      const h =
+        smoothstep(0, 0.13, t) * (1 - smoothstep(0.38, 1, t)) * (p.grounded ? 1 : 0) * (1 - 0.75 * this.wRun);
+      out[PU] = Math.max(11, out[PU]! - 16 * h);
+      out[PF]! += 3 * h;
+      out[LEAN]! += 0.5 * h;
+      out[CURL]! += 0.16 * h;
+      out[HT]! -= 0.42 * h;
+      const shU = out[PU]! + BODY.spine * Math.cos(out[LEAN]!) + 3.4 * Math.cos(out[LEAN]! + out[CURL]!);
+      out[HAF] = lerp(out[HAF]!, 8, h);
+      out[HAU] = lerp(out[HAU]!, -(shU - 1.6), h);
+      out[HBF]! -= 6 * h;
+      out[HBU]! += 5 * h;
+    }
+
     // A slow blink now and then; eyes close briefly on a hard landing.
     let blink = bell(pulse(clock, 5.3, 0.28, 5, 0.85));
     if (sig.landHard) this.blinkHold = 0.2;
@@ -424,55 +486,56 @@ export class Rig {
 
     // --- Wall-jump kick: a brief arched layout while the body twists round.
     if (this.kickT < 1) {
-      this.kickT = Math.min(1, this.kickT + (dt / 0.42) * (air ? 1 : 4));
-      const w = smoothstep(0, 0.2, this.kickT) * (1 - smoothstep(0.35, 1, this.kickT)) * 0.85;
+      this.kickT = Math.min(1, this.kickT + (dt / 0.5) * (air ? 1 : 4));
+      const w = smoothstep(0, 0.16, this.kickT) * (1 - smoothstep(0.42, 1, this.kickT));
       for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, KICK[i]!, w);
     }
 
-    // --- Double jump: the somersault.
+    // --- Double jump: the somersault. Three beats on one clock: snap in to a ball, spin it as a
+    // rigid shape through exactly one turn, snap out. Angle and tuck are curves of the same clock.
     if (startSpin) {
-      // A spin already settling is within a hair of a whole turn: fold it back and go again.
-      this.spinS.x -= Math.round(this.spinS.x / TAU) * TAU;
       this.spinning = true;
       this.spinFree = false;
       this.spinT = 0;
       this.spinDir = Math.abs(p.vx) > 1.5 ? (p.vx > 0 ? 1 : -1) : sgn;
-      this.spinS.omega = 44;
-      this.spinS.zeta = 0.74;
     }
+    let openW = 0;
     if (this.spinning) {
-      if (p.grounded || dash || wall) this.spinFree = true;
-      let target: number;
-      let tuckT: number;
+      const before = this.spinX;
+      if (!this.spinFree && (p.grounded || dash || wall)) {
+        this.spinFree = true;
+        this.cutT = 0;
+        this.cutX = this.spinX;
+        this.cutW = this.spinW;
+      }
       if (this.spinFree) {
-        // Cut short: finish to the nearest upright, quickly, and let go of the tuck.
-        target = this.spinS.x > Math.PI ? TAU : 0;
-        this.spinS.omega = 34;
-        this.spinS.zeta = 1;
-        tuckT = 0;
+        // Cut short: to the nearest upright by the shortest way, letting go of the tuck.
+        this.cutT = Math.min(1, this.cutT + dt / SPIN_CUT);
+        const e = this.cutT * this.cutT * (3 - 2 * this.cutT);
+        this.spinX = lerp(this.cutX, this.cutX > 0.5 ? 1 : 0, e);
+        this.spinW = this.cutW * (1 - e);
+        if (this.cutT >= 1) this.spinning = false;
       } else {
         this.spinT += dt;
         const u = this.spinT / SPIN_T;
-        target = TAU * spinEase(u);
-        tuckT = smoothstep(0, 0.2, u) * (1 - smoothstep(0.58, 1.02, u));
+        this.spinX = spinTurn(u);
+        this.spinW = spinTuck(u);
+        openW = smoothstep(SPIN_OUT - 0.05, 0.93, u) * (1 - smoothstep(1.04, SPIN_TAIL, u)) * 0.85;
+        if (u >= SPIN_TAIL) this.spinning = false;
       }
-      this.spinW += (tuckT - this.spinW) * approach(tuckT > this.spinW ? 40 : 26, dt);
-      const x = this.spinS.step(target, dt);
-      this.spinVel = Math.abs(this.spinS.v);
-      this.spinPhi = x * this.spinDir;
-      const done = this.spinFree || this.spinT > SPIN_T;
-      if (done && Math.abs(x - target) < 0.004 && Math.abs(this.spinS.v) < 0.08 && this.spinW < 0.01) {
-        this.spinning = false;
-        this.spinS.snap(0);
-        this.spinPhi = 0;
+      this.spinVel = dt > 0 ? (Math.abs(this.spinX - before) * TAU) / dt : 0;
+      // A whole turn is the identity.
+      if (this.spinX >= 1) this.spinX = 0;
+      if (!this.spinning) {
+        this.spinX = 0;
         this.spinW = 0;
         this.spinVel = 0;
       }
+      this.spinPhi = this.spinX * TAU * this.spinDir;
     }
-    if (this.spinW > 1e-4) {
-      const w = this.spinW;
-      for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, TUCK[i]!, w);
-    }
+    if (openW > 1e-4) for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, OPEN[i]!, openW);
+    const tuck = this.spinW;
+    if (tuck > 1e-4) for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, TUCK[i]!, tuck);
 
     // --- Follow-through: hands always, feet only while they are free.
     const s = this.frame.s;
@@ -483,13 +546,15 @@ export class Rig {
     }
     s[S_GROUND]! += (gT - s[S_GROUND]!) * approach(gT ? 34 : 18, dt);
     const g = s[S_GROUND]!;
-    const pin = this.wDash * 0.6;
+    // In the ball nothing may lag behind: the springs are bypassed by the tuck amount.
+    const held = Math.max(tuck, openW);
+    const pin = Math.max(this.wDash * 0.6, held);
     for (let i = 0; i < 4; i++) {
       const raw = out[HAF + i]!;
       const v = this.hand[i]!.step(raw, dt);
       out[HAF + i] = lerp(v, raw, pin);
     }
-    const free = (1 - g) * (1 - this.wWall) * (1 - this.wDash * 0.5);
+    const free = (1 - g) * (1 - this.wWall) * (1 - this.wDash * 0.5) * (1 - held);
     for (let i = 0; i < 6; i++) {
       const raw = out[AF + i]!;
       const v = this.foot[i]!.step(raw, dt);
@@ -531,8 +596,8 @@ export class Rig {
     set(j, J_NECK, neckX, neckY);
     set(j, J_HEAD, headX, headY);
     // The tail root: up and back on the crown, in the head's own frame.
-    const tf = -7.2;
-    const tu = 3.4;
+    const tf = -6.6;
+    const tu = 3;
     set(j, J_TAIL, headX + (ch * tf + sh * tu) * dh, headY + sh * tf - ch * tu);
     // The waist, a little above the hips; knot behind, band end in front.
     const wx = hipX + sl * d * 3.2;
@@ -544,6 +609,7 @@ export class Rig {
 
     // Hips and shoulders: sideways offsets seen through the turn, with twist.
     const tw = out[TW]!;
+    const tilt = out[TILT]!;
     const latHip = cz * Math.cos(tw) - d * BODY.sinYaw * Math.sin(tw);
     const latSh = cz * Math.cos(-tw * 0.8) - d * BODY.sinYaw * Math.sin(-tw * 0.8);
     const shX = chestX + su * d * 3.4;
@@ -553,7 +619,7 @@ export class Rig {
     for (let side = 0; side < 2; side++) {
       const sd = side === 0 ? 1 : -1;
       const hx = hipX - sd * latHip * BODY.hipHalf;
-      const hy = hipY + 1;
+      const hy = hipY + 1 - sd * tilt;
       set(j, J_HIP_A + side, hx, hy);
       const bf = out[side === 0 ? AF : BF]!;
       const bu = out[side === 0 ? AU : BU]!;
@@ -570,7 +636,7 @@ export class Rig {
       set(j, J_TOE_A + side, ballX + Math.cos(bp) * 2 * d, ballY + Math.sin(bp) * 2 - 0.5);
 
       const sx = shX - sd * latSh * BODY.shoulderHalf;
-      const sy = shY;
+      const sy = shY + sd * tilt * 0.9;
       set(j, J_SH_A + side, sx, sy);
       const hf = out[side === 0 ? HAF : HBF]!;
       const hu = out[side === 0 ? HAU : HBU]!;
@@ -587,12 +653,12 @@ export class Rig {
       this.vdy += (p.vy / v - this.vdy) * k;
     }
     const stretchT =
-      (dash ? (p.freeze > 0 ? -0.05 : 0.12) : (1 - g) * smoothstep(8, 22, v) * 0.06) * (1 - this.spinW);
+      (dash ? (p.freeze > 0 ? -0.05 : 0.12) : (1 - g) * smoothstep(8, 22, v) * 0.06) * (1 - tuck);
     const st = 1 + this.velS.step(stretchT, dt);
     const vl = Math.hypot(this.vdx, this.vdy) || 1;
     const ux = this.vdx / vl;
     const uy = this.vdy / vl;
-    const sy = 1 + sq;
+    const sy = 1 + sqRaw * (1 - tuck);
     const sx = 1 / sy;
     const pivX = ox;
     const pivY = oy - 40 * (1 - g);
@@ -628,10 +694,39 @@ export class Rig {
   }
 
   /**
+   * Standing feet belong to the ground, not the body: each keeps a world anchor and takes a quick
+   * step when the body has drifted (a stop's last slide, a turn on the spot) and left it behind.
+   * So blending run <-> idle does not skate.
+   */
+  private idleFeet(dt: number, p: PlayerView, d: number): void {
+    for (let i = 0; i < 2; i++) {
+      const ideal = p.cx + IDLE_F[i]! * d;
+      if (this.wIdle < 0.03 || !p.grounded) {
+        this.anchor[i] = ideal;
+        this.stepT[i] = 1;
+        continue;
+      }
+      const off = this.anchor[i]! - ideal;
+      if (this.stepT[i]! < 1) {
+        const t = Math.min(1, this.stepT[i]! + dt / 0.15);
+        this.stepT[i] = t;
+        // Aim a little ahead of a body that is still moving, so the step lands where it will be.
+        const to = ideal + p.vx * 60 * 0.05 * (1 - t);
+        this.anchor[i] = lerp(this.stepFrom[i]!, to, t * t * (3 - 2 * t));
+      } else if (Math.abs(off) > 34) {
+        this.anchor[i] = ideal;
+      } else if (Math.abs(off) > 8 && this.stepT[1 - i]! >= 1) {
+        this.stepT[i] = 0;
+        this.stepFrom[i] = this.anchor[i]!;
+      }
+    }
+  }
+
+  /**
    * Standing easy: weight settled over the back leg, slow uneven breath, small drifts on unrelated
    * periods, now and then a look aside, a shift of the front foot or an idle roll of the wrist.
    */
-  private idlePose(clock: number): Pose {
+  private idlePose(clock: number, p: PlayerView, d: number): Pose {
     const o = this.tmp;
     const bx = clock * TAU * 0.2;
     const breath = Math.sin(bx + 0.45 * Math.sin(bx));
@@ -654,21 +749,27 @@ export class Rig {
     const ra = roll * TAU * 1.4;
 
     o[PF] = 1.6 + shift * 1.3;
-    o[PU] = 35 + breath * 0.45 - Math.abs(shift) * 0.6;
+    o[PU] = 37.2 + breath * 0.45 - Math.abs(shift) * 0.6;
     o[LEAN] = 0.03 + breathLate * 0.007 + sway2 * 0.012;
     o[CURL] = 0.06 - breath * 0.03;
     o[HT] = 0.04 + breathLate * 0.008 + gl * 0.03 + noise1(clock * 0.17, 14) * 0.02;
-    o[AF] = 7.5 + footF * 2.4;
-    o[AU] = footLift * 1.7;
-    o[AP] = footLift * 0.3;
-    o[BF] = -3.2;
-    o[BU] = 0;
-    o[BP] = 0;
+    // Feet stand where they were planted in the world (see idleFeet), seen in the body's frame.
+    const dd = (d >= 0 ? 1 : -1) / Math.max(0.4, Math.abs(d));
+    const la = bell(this.stepT[0]!);
+    const lb = bell(this.stepT[1]!);
+    o[AF] = clamp((this.anchor[0]! - p.cx) * dd, -26, 26) + footF * 2.4;
+    o[AU] = footLift * 1.7 + la * 3.4;
+    o[AP] = footLift * 0.3 + la * 0.5 + 0.06;
+    o[BF] = clamp((this.anchor[1]! - p.cx) * dd, -26, 26);
+    o[BU] = lb * 3.4;
+    o[BP] = lb * 0.5;
+    // Contrapposto: the weight-bearing back hip rides high, the shoulders answer the other way.
+    o[TILT] = -1.5 - shift * 0.5;
     o[HAF] = -2.6 + sway2 * 0.5 + ro * (3 + 1.6 * Math.cos(ra));
     o[HAU] = -19.4 + breath * 0.3 + ro * (4.5 + 1.6 * Math.sin(ra));
     o[HBF] = 2.2 - sway2 * 0.4;
     o[HBU] = -19.2 + breathLate * 0.3;
-    o[TW] = 0.12 + shift * 0.05;
+    o[TW] = 0.16 + shift * 0.05;
     o[EYE] = 1;
     o[LOOKY] = 0.1;
     o[HYAW] = 1 - gl * 0.7;
@@ -718,10 +819,10 @@ export class Rig {
     const b2 = bob(ph - 0.09);
     o[PF] = 1 + 0.9 * sway(2 * ph - 0.3, 0.4);
     o[PU] = 31.2 + b0;
-    o[LEAN] = 0.19 - 0.012 * b1;
-    o[CURL] = 0.04 + 0.014 * b1;
+    o[LEAN] = 0.25 - 0.014 * b1 + 0.03 * sway(2 * ph - 0.12, 0.3);
+    o[CURL] = 0.02 + 0.016 * b1 - 0.035 * sway(2 * ph - 0.2, 0.3);
     // The head rides level: it gives back most of what the spine does, late.
-    o[HT] = -0.075 - 0.009 * b2;
+    o[HT] = -0.095 - 0.009 * b2;
     // Arms hang loose and trail; each swings opposite its leg, the far one later and smaller.
     const a = sway(ph - 0.07, 0.35);
     const b = -sway(ph - 0.1, 0.3);
@@ -731,7 +832,9 @@ export class Rig {
     o[HAU] = -16.4 + 3.6 * aBack * aBack + 0.8 * Math.max(0, a) + 0.25 * b2;
     o[HBF] = -8.5 + 5 * b;
     o[HBU] = -16 + 3.2 * bBack * bBack + 0.7 * Math.max(0, b) + 0.25 * b2;
-    o[TW] = -0.24 * sway(ph - 0.04, 0.3);
+    o[TW] = -0.3 * sway(ph - 0.04, 0.3);
+    // The stance-side hip rides high; the shoulders counter it.
+    o[TILT] = 1.5 * sway(ph + 0.15, 0.25);
     o[EYE] = 1;
     o[LOOKY] = 0;
     o[HYAW] = 1;

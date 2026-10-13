@@ -25,7 +25,7 @@ import { Secondary } from './secondary';
 
 const STAR_COLOR = 0xffdf9e;
 /** Trail half-widths: wrists, ankles, the star. */
-const WIDTHS = [1.6, 1.6, 1.8, 1.8, 2] as const;
+const WIDTHS = [2.3, 2.3, 2.6, 2.6, 3.4] as const;
 
 export class NovaCharacter implements CharacterSkin {
   private readonly painter = new Painter();
@@ -37,6 +37,8 @@ export class NovaCharacter implements CharacterSkin {
   /** Smoothed "how lit up" 0..1: rises in jumps, dashes and the somersault. */
   private heat = 0;
   private shedAcc = 0;
+  private lastX = 0;
+  private lastY = 0;
 
   constructor(
     private readonly ctx: RenderContext,
@@ -90,12 +92,19 @@ export class NovaCharacter implements CharacterSkin {
       const y = j[joint * 2 + 1]!;
       const v = fx.speed(i, x, y, dt, bvx, bvy);
       const k =
-        smoothstep(120, 520, v) * (0.1 + 1.0 * heat + 0.6 * rig.spinW) * (i === 1 || i === 3 ? 0.8 : 1);
+        Math.max(smoothstep(120, 520, v), rig.spinW * 0.85) *
+        (0.1 + 0.9 * heat + 1.3 * rig.spinW) *
+        (i === 1 || i === 3 ? 0.8 : 1);
       fx.trail(i, x, y, k);
     }
     {
       const v = fx.speed(4, ex, ey, dt, bvx * 0.6, bvy * 0.6);
-      fx.trail(4, ex, ey, smoothstep(120, 600, v) * (0.06 + 0.75 * heat));
+      fx.trail(
+        4,
+        ex,
+        ey,
+        Math.max(smoothstep(120, 600, v), rig.spinW * 0.8) * (0.07 + 0.6 * rig.wDash + 0.75 * rig.spinW),
+      );
     }
 
     // --- Effects from this frame's events.
@@ -107,6 +116,7 @@ export class NovaCharacter implements CharacterSkin {
     if (sig.skid) fx.dust(feetX, feetY, player.vx > 0 ? 1 : -1, 0.5, 3);
     if (sig.dashStart && player.grounded) fx.dust(feetX, feetY, -player.dashDir, 0.5, 3);
     if (sig.wallJump) fx.dust(feetX - player.facing * 18, feetY - 12, 0, 0.3, 2);
+    if (sig.wallJump) fx.shed(feetX - player.facing * 14, feetY - 8, player.vx * 18, -30, 6, 90);
     if (sig.doubleJump) fx.burst(cx, cy, player.vx * 60, player.vy * 60);
     // The star sheds a few specks while dashing.
     this.shedAcc += rig.wDash * 22 * dt;
@@ -114,7 +124,18 @@ export class NovaCharacter implements CharacterSkin {
       this.shedAcc -= 1;
       fx.shed(ex, ey, player.vx * 12, 0, 1);
     }
-    fx.update(dt, cx, cy, 0.7 + 1.6 * heat);
+    // While the ball spins the laid-down light rides along with it.
+    const carry = fresh ? 0 : 0.9 * Math.min(1, rig.spinW * 1.5);
+    fx.update(
+      dt,
+      cx,
+      cy,
+      0.7 + 1.6 * heat,
+      (player.cx - this.lastX) * carry,
+      (player.cy - this.lastY) * carry,
+    );
+    this.lastX = player.cx;
+    this.lastY = player.cy;
 
     // --- Draw.
     const scale = Math.max(1e-3, Math.abs(this.layer.scale.x) * this.ctx.viewScale());

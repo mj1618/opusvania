@@ -7,12 +7,19 @@ violet sash and neck wrap. No concept file: designed directly in game.
 
 ## How it works
 - Reuses `../hooded/{math,chain,paint}` unchanged. Own `rig.ts`, `secondary.ts`, `draw.ts`, `fx.ts`.
-- **Somersault (double jump)**: the pose blends into `TUCK` while every solved joint is rotated about
-  the box centre by `spinPhi`. The angle is a spring following an eased 0 -> 2pi ramp over `SPIN_T`
-  (0.42 s), so it starts and ends with zero angular velocity and overshoots a little; at the end it
-  is snapped back to 0 (a whole turn = identity, no pop). `TUCK` has pelvis-forward -12 so the ball
-  is centred on the pivot. Direction = direction of travel (else facing). Cut short by ground / dash
-  / wall: it goes to the nearest upright quickly. The chains get the flip as extra `rot`.
+- **Somersault (double jump)**: three beats on one clock (`SPIN_T` 0.42 s): snap in (`SPIN_IN` 0.2),
+  rigid spin, snap out (from `SPIN_OUT` 0.72). The angle is a curve (`spinTurn`: ease in, linear,
+  ease out to exactly one turn), the tuck its own curve (`spinTuck`), no spring. Every solved joint
+  is rotated about the box centre; `TUCK` is authored so the ball's centre sits on that pivot
+  (pelvis-forward -14). Hand and foot springs are bypassed by the tuck amount (nothing lags out of
+  the ball), squash/stretch is off in it, and an `OPEN` pose is blended in over the snap-out.
+  Direction = direction of travel. Cut short (ground / dash / wall): shortest way upright over
+  0.13 s. In the ball the chains get `stiff` x3.6 and extra `curl`, so the tail wraps round it in
+  one arc; trails are carried along with the body (`fx.update` carry) so they stay rings.
+- **Standing feet** (`idleFeet`): world anchors that take a quick step when the body leaves them
+  more than 8 px behind (stop slide, turn on the spot), so run <-> idle does not skate.
+- **Tilt channel**: pelvis tilt in px (shoulders counter it): stance hip high in the run,
+  contrapposto in idle. **Hard landing**: deep fold with the near hand to the ground (`hardT`).
 - **Follow-through**: hand targets always pass through per-channel springs; foot targets do while
   airborne (blended out by the ground weight so planted feet never lag). This is what stops the
   limbs moving in lockstep with the pose.
@@ -25,10 +32,9 @@ violet sash and neck wrap. No concept file: designed directly in game.
   four parallel wires behind every jump: don't.
 
 ## Gotchas
-- `tools/shots.ts` and `tools/clip.ts` append `/?manual` to `--url`, which breaks a `?char=` query.
-  Use `--url "http://localhost:5180/?char=nova&manual#"` (the appended part lands in the hash).
 - Clips die with "Execution context was destroyed" when another agent's edit triggers a Vite
-  reload mid-capture: just retry.
+  reload mid-capture: retry, and keep clips under ~80 frames while others are editing.
+- Two upright crest tufts on the crown read as little ears/horns; one low swept-back tuft is the limit.
 - The tail's rest shape must leave the head going back and down. Rising up and over the head it
   read as an antenna with a bobble (jester / anglerfish).
 - A brow-arc "crescent" above the eyes read as eyebrows or a visor; the lit-limb crescent on the

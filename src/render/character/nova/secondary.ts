@@ -65,8 +65,9 @@ export class Secondary {
     const wallX = p.cx + wallSide * (p.w / 2 - 1.5);
     // The somersault turns the rest frame with the body (as a forward lean in the facing frame).
     const flip = rig.spinPhi * (d >= 0 ? 1 : -1);
-    // While spinning the chains go soft so they trail round as ribbons; in a dash they pin back.
-    const stiff = (1 + rig.wDash * 1.3) * (1 - 0.35 * rig.spinW);
+    // In the ball the chains are held firmly to a shape that wraps round it, so they trail the spin
+    // in one clean arc (no whipping); in a dash they pin back.
+    const stiff = 1 + rig.wDash * 1.3 + rig.spinW * 2.6;
     for (const c of this.all) {
       c.floorY = floorY;
       c.wallSide = wallSide;
@@ -84,7 +85,7 @@ export class Secondary {
     // At rest it is never quite still: a slow drift of its own on top of the wind.
     const calm = Math.max(0, 1 - rig.wRun - rig.wAir - rig.wDash - rig.wWall);
     tail.lift += calm * (0.16 * noise1(clock * 0.31, 71) + 0.07 * noise1(clock * 0.83, 73));
-    tail.curl = 0.05 * rig.wWall + calm * 0.035 * noise1(clock * 0.47, 77);
+    tail.curl = 0.05 * rig.wWall + 0.21 * rig.spinW + calm * 0.035 * noise1(clock * 0.47, 77);
 
     const sx = j[J_SASH * 2]!;
     const sy = j[J_SASH * 2 + 1]!;
@@ -94,6 +95,7 @@ export class Secondary {
     a.d = d;
     a.rot = rig.lean * 0.8 + flip;
     a.lift = -0.3 * rig.wRun;
+    a.curl = 0.3 * rig.spinW;
     const b = this.sashB;
     // The short tail hangs a touch nearer the hip.
     b.ax = sx + (j[J_HIP * 2]! - sx) * 0.3;
@@ -101,6 +103,7 @@ export class Secondary {
     b.d = d;
     b.rot = rig.lean * 0.8 + flip;
     b.lift = -0.2 * rig.wRun;
+    b.curl = 0.3 * rig.spinW;
 
     for (const c of this.all) c.advance(dt, clock);
   }

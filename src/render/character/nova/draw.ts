@@ -74,6 +74,8 @@ function dim(c: RGB, k: number): RGB {
 
 const SH_TORSO: Shade = { c0: NIGHT_LOW, c1: NIGHT_TOP, rim: 0.8, cool: 0.6, form: 0.28, band: 0.5 };
 const SH_LIMB: Shade = { c0: NIGHT_TOP, c1: NIGHT_LOW, rim: 0.95, cool: 0.65, form: 0.3, band: 0.55 };
+/** The near arm: the forearm a value lighter and fully rimmed, so its swing reads against the body. */
+const SH_ARM: Shade = { c0: NIGHT_TOP, c1: rgb(0x2a3276), rim: 1, cool: 0.95, form: 0.34, band: 0.62 };
 const SH_LIMB_FAR: Shade = {
   c0: dim(NIGHT_TOP, 0.72),
   c1: dim(NIGHT_LOW, 0.72),
@@ -217,23 +219,29 @@ function leg(p: Painter, j: Float32Array, side: number, far: boolean, glow: numb
   const dy = ty - ay;
   p.px[0] = ax - dx * 0.24;
   p.py[0] = ay - dy * 0.24;
-  p.pw[0] = 1.55;
+  p.pw[0] = 1.75;
   p.px[1] = ax + dx * 0.3;
   p.py[1] = ay + dy * 0.3;
-  p.pw[1] = 2.15;
+  p.pw[1] = 2.45;
   p.px[2] = ax + dx * 0.7;
   p.py[2] = ay + dy * 0.7;
-  p.pw[2] = 1.6;
+  p.pw[2] = 1.85;
   p.px[3] = tx;
   p.py[3] = ty;
-  p.pw[3] = 0.3;
+  p.pw[3] = 0.4;
   p.ribbon(4, sh, true, false);
   band(p, j, J_KNEE_A + side, J_ANK_A + side, 0.86, 2.5, far, glow);
 }
 
 function arm(p: Painter, j: Float32Array, side: number, far: boolean, glow: number): void {
-  const sh = far ? SH_LIMB_FAR : SH_LIMB;
-  limb(p, j, J_SH_A + side, J_EL_A + side, J_HAND_A + side, 2.8, 2.05, 1.5, sh);
+  const sh = far ? SH_LIMB_FAR : SH_ARM;
+  if (!far) {
+    // A breath of shadow behind the near arm lifts it off the torso.
+    const mx = j[(J_EL_A + side) * 2]!;
+    const my = j[(J_EL_A + side) * 2 + 1]!;
+    p.soft(mx, my, 6.5, 6.5, SHADOW, 0.3);
+  }
+  limb(p, j, J_SH_A + side, J_EL_A + side, J_HAND_A + side, 3.1, 2.1, 1.55, sh);
   const hx = j[(J_HAND_A + side) * 2]!;
   const hy = j[(J_HAND_A + side) * 2 + 1]!;
   const ex = j[(J_EL_A + side) * 2]!;
@@ -242,8 +250,8 @@ function arm(p: Painter, j: Float32Array, side: number, far: boolean, glow: numb
   const ca = Math.cos(a);
   const sa = Math.sin(a);
   // A small mitten hand with a thumb: open and relaxed.
-  p.ellipse(hx + ca * 1.9, hy + sa * 1.9, 2.5, 1.75, a, sh, 10);
-  p.ellipse(hx + ca * 1.2 - sa * 1.5, hy + sa * 1.2 + ca * 1.5, 1.3, 0.8, a + 0.7, sh, 8);
+  p.ellipse(hx + ca * 2.2, hy + sa * 2.2, 2.9, 1.85, a, sh, 12);
+  p.ellipse(hx + ca * 1.5 - sa * 1.7, hy + sa * 1.5 + ca * 1.7, 1.5, 0.85, a + 0.75, sh, 8);
   band(p, j, J_EL_A + side, J_HAND_A + side, 0.9, 2.15, far, glow);
 }
 
@@ -269,10 +277,10 @@ function torso(p: Painter, j: Float32Array): void {
       p.py[i] = catmull(hy, cy, ny, ny, u);
     }
     // Hips, a narrow waist, the chest, then up into the neck.
-    const hips = 4.9 * (1 - smoothstep(0, 0.3, t));
-    const waist = 3.7;
-    const chest = 2.1 * bellAt(t, 0.62, 0.3);
-    const neck = 1 - 0.5 * smoothstep(0.74, 1, t);
+    const hips = 4.7 * (1 - smoothstep(0, 0.3, t));
+    const waist = 3.3;
+    const chest = 3.0 * bellAt(t, 0.64, 0.26);
+    const neck = 1 - 0.42 * smoothstep(0.78, 1, t);
     p.pw[i] = (Math.max(hips, waist) + chest) * neck;
   }
   p.ribbon(N, SH_TORSO, true, true);
@@ -322,8 +330,8 @@ function tail(p: Painter, c: ChainPts, hx: number, hy: number, clock: number, gl
   p.py[0] = hy;
   p.px[1] = (hx + p.px[2]!) * 0.5;
   p.py[1] = (hy + p.py[2]!) * 0.5;
-  p.pw[0] = 7.6;
-  p.pw[1] = 7.0;
+  p.pw[0] = 6.9;
+  p.pw[1] = 6.4;
   for (let i = 0; i < 3; i++) setC(p, i, NIGHT_TOP[0], NIGHT_TOP[1], NIGHT_TOP[2]);
   const m = n - 2;
   for (let i = 0; i < m; i++) {
@@ -397,15 +405,19 @@ function head(p: Painter, f: Frame): void {
   const Hh = BODY.headH;
   // A smooth egg, a little narrower at the jaw, drawn back at the crown toward the tail.
   const SEG = 32;
-  const tipA = Math.atan2(-3.4, -7.2 * dh);
+  const tipA = Math.atan2(-3, -6.6 * dh);
+  const chinA = Math.atan2(0.86, 0.5 * dh);
   for (let i = 0; i < SEG; i++) {
     const a = (i / SEG) * Math.PI * 2;
     const ca = Math.cos(a);
     const sa = Math.sin(a);
     let da = a - tipA;
     da = Math.atan2(Math.sin(da), Math.cos(da));
-    const tip = 1 + 0.14 * Math.exp(-(da * da) / 0.5);
-    const lx = ca * W * (1 - 0.1 * Math.max(0, sa)) * tip;
+    let dc = a - chinA;
+    dc = Math.atan2(Math.sin(dc), Math.cos(dc));
+    // Drawn back to a point at the crown, a small soft chin forward and down, a narrow jaw.
+    const tip = 1 + 0.24 * Math.exp(-(da * da) / 0.34) + 0.08 * Math.exp(-(dc * dc) / 0.4);
+    const lx = ca * W * (1 - 0.17 * Math.max(0, sa)) * tip;
     const ly = sa * Hh * tip * (sa < 0 ? 1.03 : 1);
     p.px[i] = hx + lx * cr - ly * sr;
     p.py[i] = hy + lx * sr + ly * cr;
@@ -443,9 +455,9 @@ function head(p: Painter, f: Frame): void {
   for (let side = 0; side < 2; side++) {
     const sd = side === 0 ? 1 : -1;
     const near = sd * dh >= 0;
-    const lx = yaw * 2.0 - sd * czh * 3.4;
+    const lx = yaw * 2.0 - sd * czh * 3.1;
     const ly = 1.2 + lookY * 0.9;
-    const w = near ? 2.5 * (0.42 + 0.58 * czh) : 2.3 * (0.08 + 0.92 * czh);
+    const w = near ? 2.35 * (0.42 + 0.58 * czh) : 2.15 * (0.08 + 0.92 * czh);
     const h = Math.max(0.28, 1.75 * open);
     const ex = hx + lx * cr - ly * sr;
     const ey = hy + lx * sr + ly * cr;
@@ -464,6 +476,45 @@ function head(p: Painter, f: Frame): void {
     p.shape(ESEG, ex, ey, SH_EYE, ex - st * h, ey + ct * h, ex + st * h * 0.2, ey - ct * h * 0.2);
     p.glow(ex, ey, 6, EYE_GOLD, 0.11 * open);
     p.glow(ex, ey, 2.2, EYE_HOT, 0.2 * open);
+  }
+}
+
+/** Two short swept-back tufts over the braid's root: the crest that shapes the head's silhouette. */
+function crest(p: Painter, f: Frame, tailC: ChainPts, clock: number): void {
+  const { j, s } = f;
+  const hx = j[J_HEAD * 2]!;
+  const hy = j[J_HEAD * 2 + 1]!;
+  const rot = s[S_HEADROT]!;
+  const dh = s[S_DH]!;
+  const cr = Math.cos(rot);
+  const sr = Math.sin(rot);
+  // They lean with the braid's first segment, so the crest moves with the tail.
+  const bx = tailC.rx[2]! - tailC.rx[0]!;
+  const by = tailC.ry[2]! - tailC.ry[0]!;
+  const bl = Math.hypot(bx, by) || 1;
+  for (let k = 1; k < 2; k++) {
+    const lx0 = (k === 0 ? -3.6 : -5.6) * dh;
+    const ly0 = k === 0 ? -6.2 : -3.6;
+    const len = k === 0 ? 9.5 : 8;
+    const ax = hx + lx0 * cr - ly0 * sr;
+    const ay = hy + lx0 * sr + ly0 * cr;
+    // Up and back in the head's frame, bent toward the braid.
+    const ux = (k === 0 ? -0.95 : -1) * dh;
+    const uy = k === 0 ? -0.32 : -0.08;
+    let dx = ux * cr - uy * sr + (bx / bl) * 0.55;
+    let dy = ux * sr + uy * cr + (by / bl) * 0.55;
+    const dl = Math.hypot(dx, dy) || 1;
+    dx /= dl;
+    dy /= dl;
+    const wob = 0.05 * noise1(clock * 0.9, 81 + k);
+    for (let i = 0; i < 4; i++) {
+      const t = i / 3;
+      // A slight curl back along its length.
+      p.px[i] = ax + dx * len * t - dy * len * (0.18 * t * t + wob * t);
+      p.py[i] = ay + dy * len * t + dx * len * (0.18 * t * t + wob * t) * (dh >= 0 ? 1 : -1);
+      p.pw[i] = (k === 0 ? 2.9 : 2.4) * (1 - t) ** 0.8 + 0.05;
+    }
+    p.ribbon(4, SH_HEAD, false, false);
   }
 }
 
@@ -544,6 +595,7 @@ export function drawNova(p: Painter, f: Frame, sec: SecView, clock: number, glow
   leg(p, j, near, false, glow);
   cowl(p, j, d);
   tail(p, sec.tail, j[J_HEAD * 2]!, j[J_HEAD * 2 + 1]!, clock, glow);
+  crest(p, f, sec.tail, clock);
   head(p, f);
   arm(p, j, near, false, glow);
   specks(p, f, clock);
