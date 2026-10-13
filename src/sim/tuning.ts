@@ -317,6 +317,80 @@ export const defaultTuning = {
     value: 4,
     valueFinisher: 6,
   },
+  /**
+   * The lampwing: a small pale moth-wisp that hovers in the open air and is drawn to her light
+   * (rules and the reasons for these numbers: memory/enemies.md). No attack: its touch hurts.
+   */
+  lampwing: {
+    /** Collision box (drawn about 40 px across). */
+    width: 36,
+    height: 30,
+    hp: 2,
+    /** Territory: it wanders within this of its home unless the scene gives a `radius`. */
+    radius: 120,
+    /** Hover: drift speed and acceleration, px/f and px/f²; it slows inside `arrivePx` of a wander point. */
+    hoverSpeed: 0.7,
+    hoverAccel: 0.03,
+    arrivePx: 40,
+    /** A new wander point every wanderMin..Max frames (or when it gets there). */
+    wanderMin: 90,
+    wanderMax: 200,
+    /** The bob: up to this much vertical speed, px/f, on a cycle of `bobFrames`. */
+    bobSpeed: 0.16,
+    bobFrames: 84,
+    /** It notices her within this (centre to centre) with a clear line; then the tell, `curiousFrames`. */
+    noticePx: 260,
+    curiousFrames: 30,
+    /** While curious it brakes and rises at this, px/f. */
+    curiousRise: 0.5,
+    curiousAccel: 0.06,
+    /** Pursuit: top speed and acceleration (soft steering: it arcs and overshoots). */
+    pursueSpeed: 2.2,
+    pursueAccel: 0.075,
+    /** It gives up after this long, when it has not seen her for `lostFrames`, or she is `leashPx` from its home. */
+    pursueFrames: 360,
+    lostFrames: 90,
+    leashPx: 520,
+    /** Having given up (or touched her) it hangs for `restFrames`, braking at `restBrake`, then flies home. */
+    restFrames: 60,
+    restBrake: 0.14,
+    returnSpeed: 1.8,
+    returnAccel: 0.06,
+    /** Home is reached within this many px; it hovers (and can notice) again from there. */
+    homePx: 24,
+    /** It bounces off her at this speed, px/f, when its touch hurts her. */
+    bounceSpeed: 5,
+    /**
+     * Stagger after a hit, and how much of it (from the hit) its touch is harmless: all of it. A
+     * gliding hero cannot stop, so a mid-glide cut has to let her fly on through the tumbling thing.
+     */
+    hurtFrames: 16,
+    hurtSafeFrames: 16,
+    /** Knockback = the slash's `knockback` x `knockScale`, along the cut, fading `knockDecay` a frame. */
+    knockScale: 1.1,
+    knockDecay: 0.75,
+    /** Dead: it falls (gravity, capped) for at most `deadFrames`; once it lands it lies `landFrames`. */
+    deadFrames: 40,
+    landFrames: 6,
+    gravity: 0.45,
+    maxFall: 9,
+    /** Two lampwings closer than `sepPx` (centres) push apart, up to `sepAccel` px/f². */
+    sepPx: 72,
+    sepAccel: 0.3,
+    /** It stays `poolClear` px above the water, which stands `poolDepth` over a pool's floor. */
+    poolDepth: 50,
+    poolClear: 12,
+    /** What its touch costs her. */
+    contactDamage: 1,
+    /** Glints it spills when it dies, and when the finisher killed it. */
+    value: 3,
+    valueFinisher: 5,
+    /** Wing beats per frame: hovering, at full pursuit speed, while curious, while tumbling. */
+    flapHover: 0.1,
+    flapPursue: 0.17,
+    flapCurious: 0.21,
+    flapHurt: 0.04,
+  },
   /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
   pickups: {
     /** A glint within this many px of the body wakes and is hers. */

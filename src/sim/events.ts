@@ -200,6 +200,26 @@ export type SimEvent =
       cause: 'land' | 'slash';
       frames: number;
     }
+  /**
+   * A lampwing has noticed her (in range, in plain view): it turns to her (`dir` = its new facing,
+   * the side she is on) and holds `frames` of `curious` (the tell), then pursues.
+   */
+  | { type: 'enemyNotice'; id: string; kind: EnemyKind; x: number; y: number; dir: number; frames: number }
+  /**
+   * A lampwing's pursuit is over: she is too `far` from its home, `lost` from sight too long, it is
+   * `tired` (it chased its full time), her light went `dark` (she faded), or it `touch`ed her and
+   * bounced off. It rests `frames`, then flies home.
+   */
+  | {
+      type: 'enemyGiveUp';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      facing: number;
+      cause: 'far' | 'lost' | 'tired' | 'dark' | 'touch';
+      frames: number;
+    }
   /** It reached a ledge or a wall and turns round: `dir` = its new facing; it stands for `frames` first. */
   | {
       type: 'enemyTurn';

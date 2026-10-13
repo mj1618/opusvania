@@ -13,7 +13,9 @@ import { feet, hopOnto, newSim, type Sim } from './helpers';
  */
 const { jump: J, attack: A } = ActionBit;
 const bit = (d: number) => (d > 0 ? ActionBit.right : d < 0 ? ActionBit.left : 0);
-const list = GROVE.enemies ?? [];
+// The burrbacks (first in the scene's list; the lampwings are piloted in lampwing-pilot.test.ts).
+const list = (GROVE.enemies ?? []).filter((e) => e.kind === 'burrback');
+const burrs = (s: Sim) => s.state.enemies.slice(0, list.length);
 const H = defaultTuning.health;
 const count = (ev: SimEvent[], type: string) => ev.filter((e) => e.type === type).length;
 
@@ -68,10 +70,10 @@ describe('burrbacks in the grove, piloted', () => {
       expect(s.state.player.grounded, `${id}: she left its surface`).toBe(true);
       expect(feet(s).y).toBe(st[1]);
     }
-    expect(s.state.enemies.every((e) => e.mode === 'dead')).toBe(true);
+    expect(burrs(s).every((e) => e.mode === 'dead')).toBe(true);
     expect(count(s.events, 'hurt')).toBe(0);
     for (let f = 0; f < 80; f++) step(s.state, 0, s.tuning, s.scene, s.events);
-    expect(s.state.enemies.every((e) => e.gone && e.spill === 0)).toBe(true);
+    expect(burrs(s).every((e) => e.gone && e.spill === 0)).toBe(true);
     // Their glints all reached the counter, each exactly once (pods she happened to cut pay too).
     const fromEnemies = s.events.filter((e) => e.type === 'pickup' && e.enemy).length;
     expect(fromEnemies).toBe(glints);
@@ -180,7 +182,7 @@ describe('burrbacks in the grove, piloted', () => {
     // Safe ground: a solid that is not the pool, well clear of every living enemy (all back home).
     const under = GROVE.solids.find((r) => r.y === reform?.y && reform.x >= r.x && reform.x < r.x + r.w);
     expect(under?.tag).toBe('ground');
-    s.state.enemies.forEach((e, k) => {
+    burrs(s).forEach((e, k) => {
       // (One step of walking since they were put back.)
       expect(Math.abs(e.x + e.w / 2 - (list[k]?.x ?? 0))).toBeLessThanOrEqual(2);
       expect([e.y + e.h, e.hp, e.stride <= 2]).toEqual([list[k]?.y, 3, true]);

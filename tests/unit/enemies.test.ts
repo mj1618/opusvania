@@ -749,7 +749,8 @@ describe('enemies: determinism, symmetry, restart', () => {
 });
 
 describe('enemies in the grove', () => {
-  const list = GROVE.enemies ?? [];
+  // The burrbacks (they come first in the scene's list; the lampwings have lampwing.test.ts).
+  const list = (GROVE.enemies ?? []).filter((e) => e.kind === 'burrback');
 
   it('six burrbacks, validated: on a surface, clear of solids, unique, away from the spawn', () => {
     expect(list.map((e) => e.id)).toEqual([
@@ -790,7 +791,7 @@ describe('enemies in the grove', () => {
     const hi = list.map(() => -9e9);
     for (let f = 0; f < 3600; f++) {
       step(s.state, 0, s.tuning, s.scene, s.events);
-      s.state.enemies.forEach((e, i) => {
+      s.state.enemies.slice(0, list.length).forEach((e, i) => {
         lo[i] = Math.min(lo[i] as number, e.x);
         hi[i] = Math.max(hi[i] as number, e.x + e.w);
         expect(e.y + e.h).toBe(list[i]?.y);

@@ -42,15 +42,27 @@ const SceneSchema = z
       .default([]),
     enemies: z
       .array(
-        z
-          .object({
-            id: z.string().min(1),
-            kind: z.enum(['burrback']),
-            x: int,
-            y: int,
-            facing: z.union([z.literal(-1), z.literal(1)]),
-          })
-          .strict(),
+        z.discriminatedUnion('kind', [
+          z
+            .object({
+              id: z.string().min(1),
+              kind: z.literal('burrback'),
+              x: int,
+              y: int,
+              facing: z.union([z.literal(-1), z.literal(1)]),
+            })
+            .strict(),
+          z
+            .object({
+              id: z.string().min(1),
+              kind: z.literal('lampwing'),
+              x: int,
+              y: int,
+              facing: z.union([z.literal(-1), z.literal(1)]),
+              radius: int.min(0).max(400).optional(),
+            })
+            .strict(),
+        ]),
       )
       .default([]),
   })
@@ -59,8 +71,46 @@ const SceneSchema = z
 /** No enemy starts closer to the spawn point than this (feet to feet). */
 export const ENEMY_SPAWN_CLEAR = 300;
 
+/** No lampwing's home is closer to the spawn point than this (home to feet). */
+export const LAMPWING_SPAWN_CLEAR = 350;
+
+/**
+ * A lampwing's territory keeps this far from every lumen pod and great glint (edge of the territory
+ * to the thing's centre), so collecting one never means standing where a hovering lampwing drifts.
+ */
+export const LAMPWING_PRIZE_CLEAR = 100;
+
 /** A hanging pod's stem: the underside or branch it hangs from is at most this far above its top. */
 export const POD_HANG_MAX = 160;
+
+type Parsed = z.infer<typeof SceneSchema>;
+
+/**
+ * A lampwing's home (`x`, `y` = the centre of its box): in open air (a box of twice its size is
+ * clear of solids, under the canopy, inside the scene, not over a pool's water), away from the
+ * spawn, and its territory clear of pods and great glints.
+ */
+function checkLampwing(s: Parsed, e: Parsed['enemies'][number]): void {
+  const L = defaultTuning.lampwing;
+  const w = L.width;
+  const h = L.height;
+  const radius = (e.kind === 'lampwing' ? e.radius : undefined) ?? L.radius;
+  const top = s.ceilingY ?? 0;
+  if (e.x - w < 0 || e.x + w > s.width || e.y - h < top || e.y + h > s.height)
+    throw new Error(`Scene "${s.id}": enemy "${e.id}" is outside the scene`);
+  if (s.solids.some((q) => e.x + w > q.x && e.x - w < q.x + q.w && e.y + h > q.y && e.y - h < q.y + q.h))
+    throw new Error(`Scene "${s.id}": enemy "${e.id}" is inside a solid (a lampwing needs open air)`);
+  const dx = e.x - s.spawn.x;
+  const dy = e.y - s.spawn.y;
+  if (dx * dx + dy * dy < LAMPWING_SPAWN_CLEAR * LAMPWING_SPAWN_CLEAR)
+    throw new Error(`Scene "${s.id}": enemy "${e.id}" is too close to the spawn point`);
+  const near = radius + LAMPWING_PRIZE_CLEAR;
+  const prizes = [...s.pods, ...s.pickups.filter((p) => p.kind === 'great')];
+  for (const p of prizes) {
+    if ((p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) < near * near)
+      throw new Error(`Scene "${s.id}": enemy "${e.id}" hovers too close to "${p.id}"`);
+  }
+}
 
 export function parseScene(json: unknown): Scene {
   const s = SceneSchema.parse(json);
@@ -98,12 +148,17 @@ export function parseScene(json: unknown): Scene {
         `Scene "${s.id}": pod "${p.id}" has nothing to ${p.mount === 'sit' ? 'sit on' : 'hang from'}`,
       );
   }
-  // Enemies: feet centre on a surface, the whole box supported and clear, away from the spawn.
+  // Enemies. A burrback: feet centre on a surface, the whole box supported and clear, away from the
+  // spawn. A lampwing: its home in open air (see `checkLampwing`).
   const bw = defaultTuning.burrback.width;
   const bh = defaultTuning.burrback.height;
   for (const e of s.enemies) {
     if (seen.has(e.id)) throw new Error(`Scene "${s.id}": two things are called "${e.id}"`);
     seen.add(e.id);
+    if (e.kind === 'lampwing') {
+      checkLampwing(s, e);
+      continue;
+    }
     const x0 = e.x - bw / 2;
     const x1 = e.x + bw / 2;
     if (x0 < 0 || x1 > s.width || e.y - bh < 0 || e.y > s.height)

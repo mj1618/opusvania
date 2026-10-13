@@ -111,6 +111,12 @@
     { "id": "burr-rise", "kind": "burrback", "x": 3000, "y": 1152, "facing": -1 },
     { "id": "burr-ledge", "kind": "burrback", "x": 3000, "y": 448, "facing": 1 },
     { "id": "burr-root", "kind": "burrback", "x": 4400, "y": 1280, "facing": 1 },
-    { "id": "burr-far", "kind": "burrback", "x": 5620, "y": 448, "facing": -1 }
+    { "id": "burr-far", "kind": "burrback", "x": 5620, "y": 448, "facing": -1 },
+
+    { "id": "lamp-glade", "kind": "lampwing", "x": 800, "y": 690, "facing": -1, "radius": 100 },
+    { "id": "lamp-f3", "kind": "lampwing", "x": 1290, "y": 480, "facing": 1, "radius": 80 },
+    { "id": "lamp-ledge", "kind": "lampwing", "x": 2700, "y": 150, "facing": 1, "radius": 90 },
+    { "id": "lamp-glide-1", "kind": "lampwing", "x": 4400, "y": 270, "facing": -1, "radius": 60 },
+    { "id": "lamp-glide-2", "kind": "lampwing", "x": 4700, "y": 270, "facing": -1, "radius": 60 }
   ]
 }

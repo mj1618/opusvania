@@ -7,8 +7,10 @@ import type { EnemyState } from '../sim/state';
 /**
  * Collision overlay (F2, ?hitboxes, __game.debug.hitboxes): the scene's solid rects and one-ways,
  * the player's true collision box (green grounded, red airborne; white while invulnerable) and
- * velocity, and every enemy's box (magenta; orange while hurt, grey when dead). Drawn above the
- * post stage in playfield space, so it shows the truth regardless of the art.
+ * velocity, and every enemy's box (magenta; orange while hurt, grey when dead). A lampwing also
+ * shows its territory (a faint circle round its home), a line to what it is drawn to (yellow while
+ * it has noticed or pursues her, dim otherwise) and its velocity. Drawn above the post stage in
+ * playfield space, so it shows the truth regardless of the art.
  */
 export class HitboxOverlay {
   readonly layer = new Container({ label: 'debug' });
@@ -54,6 +56,18 @@ export class HitboxOverlay {
       g.moveTo(fx, e.y + e.h / 2)
         .lineTo(fx + e.facing * 10, e.y + e.h / 2)
         .stroke({ color, width: 2 });
+      if (e.kind !== 'lampwing') continue;
+      const cx = e.x + e.w / 2;
+      const cy = e.y + e.h / 2;
+      g.circle(e.homeX, e.homeY, e.radius).stroke({ color: 0xff4cf0, width: 1, alpha: 0.35 });
+      if (e.mode === 'dead') continue;
+      const hunting = e.mode === 'curious' || e.mode === 'pursue';
+      g.moveTo(cx, cy)
+        .lineTo(e.targetX, e.targetY)
+        .stroke({ color: hunting ? 0xffe14c : 0xff4cf0, width: hunting ? 2 : 1, alpha: hunting ? 0.9 : 0.5 });
+      g.moveTo(cx, cy)
+        .lineTo(cx + e.vx * 6, cy + e.vy * 6)
+        .stroke({ color: 0xffffff, width: 2 });
     }
   }
 }

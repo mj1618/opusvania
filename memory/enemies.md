@@ -1,9 +1,31 @@
-# Enemies and health: the burrback, being hurt, fade and re-form
+# Enemies and health: the burrback, the lampwing, being hurt, fade and re-form
 
-Sim: `src/sim/enemies.ts` (creature, slash hits, glint spill), `src/sim/player/player.ts`
-(`hurtPlayer`, `trackSafeGround`, `reformPlayer`), step order in `src/sim/index.ts`. Numbers:
-`tuning.burrback`, `tuning.enemies`, `tuning.health`. Tests: `tests/unit/enemies.test.ts`,
-`tests/unit/enemies-pilot.test.ts`. The creature is drawn by `src/render/enemies/` (enemies-render.md).
+Sim: `src/sim/enemies.ts` (the framework: hits, hurt / die, glint spill, contact) with one module per
+kind in `src/sim/enemies/` (`burrback.ts`, `lampwing.ts`, shared helpers in `common.ts`),
+`src/sim/player/player.ts` (`hurtPlayer`, `trackSafeGround`, `reformPlayer`), step order in
+`src/sim/index.ts`. Numbers: `tuning.burrback`, `tuning.lampwing`, `tuning.enemies`, `tuning.health`.
+Tests: `tests/unit/enemies.test.ts`, `enemies-pilot.test.ts` (burrback), `lampwing.test.ts`,
+`lampwing-pilot.test.ts`. The burrback is drawn by `src/render/enemies/` (enemies-render.md); **the
+lampwing is not drawn yet** (the renderer skips every kind but `burrback`; see it with
+`__game.debug.hitboxes(true)`).
+
+## The framework (adding a kind)
+- A kind is a `KindRules` record (`enemies/common.ts`) in `KINDS` of `enemies.ts`: its box and
+  numbers (`hp`, `hurtFrames`, `hurtSafeFrames`, `contactDamage`, `deadFrames`, `value`), `place`
+  (start position from the scene's `x, y`), `update` (one step: movement, modes, what it notices;
+  returns false when its touch cannot hurt, e.g. a dead body), `shove` (how a blow knocks it), and
+  optionally `prepare` (once per step before anyone moves), `touched` (its own reaction when its
+  touch hurt her) and `homeClear` (extra room safe ground keeps from its home).
+- Shared and identical for every kind: one hit per slash (`hitBy`), hit points, the hitstop, `hurt` /
+  `dead`, `slashHit` / `enemyHit` / `enemyDie` / `impact`, the no-hitting-through-ground line test,
+  the glint spill queue (`spill / spillTimer / spillGap`), contact and its exclusions, the pogo.
+- `EnemyState` is ONE flat record for all kinds (plain JSON; a field a kind does not use keeps its
+  start value). `homeX, homeY` = the centre of its box at the start, for every kind. The state
+  version is still 11 (the burrback tests pin it).
+- Scene data: `enemies` is a Zod union on `kind`; burrbacks first, lampwings after (the burrback
+  grove tests index the first six). `EnemySpawn.y` means feet for a burrback, home centre for a lampwing.
+- No `Math.sin` in the sim: the lampwing's bob is a two-parabola wave (`wave()`), its wander a hash
+  of its id (`mix`), like the burrback's rests.
 
 ## Step order (matters)
 re-form if a fade just ended → `updatePlayer` (her slash is resolved inside it, against where the
@@ -40,10 +62,70 @@ wins (the creature is staggered and harmless before contact is tested).
   does nothing; a one-way branch does not block. It also means a creature at the lip of a step above
   her cannot be reached from below. Pods have no such test.
 
+## The lampwing (the first flyer)
+A small pale moth-wisp, box 36 x 30 (drawn ~40 px), 2 hp, drawn to her light. No attack, no
+projectile: its touch is the danger. Slow and readable on purpose (the first thing in the air).
+- Scene data `{id, kind: 'lampwing', x, y, facing, radius?}`: `x, y` = its **home**, the centre of
+  its box and of its territory (`radius`, default 120); `facing` mirrors its wander path. Validated:
+  a box of twice its size clear of solids, under the canopy, 350 px from the spawn
+  (`LAMPWING_SPAWN_CLEAR`), and its territory 100 px clear of every pod and great glint
+  (`LAMPWING_PRIZE_CLEAR`: radius + 100 from home to the thing).
+- **No gravity, no ground.** Float velocity, integer box, moved 1 px at a time per axis
+  (`lampwingBlocked`): solids and scene edges stop it (the stopped axis loses its speed, so it
+  slides along surfaces), it never rises above `ceilingY` (0 if the scene has none), never gets
+  nearer than 12 px to the water of a `pool` solid (water = 50 px over the pool floor,
+  `poolDepth`: the same number as the playfield's `waterDepth`, keep them equal); one-way branches
+  are open air.
+- `hover`: steers (0.03 px/f²) at 0.7 px/f toward a wander point inside 80% of its radius (x) and
+  48% (y), in plain view of its home, a new one every 90-200 frames or on arrival; plus a bob of
+  0.16 px/f on an 84-frame cycle. It stays inside its radius (tested for a minute, every grove one).
+- **Notice**: her body centre within 260 px of its centre AND a clear segment between the two
+  (solids block, one-ways do not) AND she is lit (not faded) AND inside its leash. Then `curious`
+  30 frames: it turns to her, brakes, rises 0.5 px/f (13 px): the tell (`enemyNotice`). Then `pursue`.
+- `pursue`: toward her body centre at up to 2.2 px/f with acceleration 0.075 px/f²: 30 frames to
+  top speed, 60 to reverse, so it arcs and overshoots ~30 px and she can step round it. Her run is
+  9.6, her glide 10.56 along and 4.8 down: **it never catches a hero who moves away**; it reaches
+  one who stands still 205 px off in 122 frames (30 of tell + 92 of drift). Out of sight it goes to
+  where it last saw her and waits there.
+- **Gives up** (`enemyGiveUp {cause}`): `far` = she is more than 520 px from its HOME; `lost` = not
+  seen for 90 frames; `tired` = 360 frames of pursuit; `dark` = she faded; `touch` = its touch
+  hurt her. Then `rest` 60 frames (it brakes and hangs), then `return` home at 1.8 px/f, and **it
+  notices nothing until it is back** (within 24 px of home), then `hover`. That last rule is what
+  stops camping: a hero who never fights is touched at most every ~240 frames (traced on F1: hits at
+  138, 388, 652; within 90 px of her 1.8% of the time).
+- `return` goes round what is in the way: stopped dead for 20 frames, it aims for the nearer end of
+  the face it is against (`detour`), then home again.
+- **Contact**: the shared rules (1 light, the same throw, stagger, i-frames). It also bounces off
+  her: 5 px/f away from her centre, braking at 0.14 (30-60 px), and gives up (`touch`). So hit to hit
+  is ~240 frames, not the burrback's 70. Chosen: the i-frames end long before it is back, so a second
+  hit is never "it was still inside me".
+- **Harmless through its whole tumble** (16 frames + hitstop; the burrback: 8 of 14). Reason: the
+  glide. A gliding hero cannot stop; with 8 safe frames a mid-glide cut was always followed by
+  flying into the thing she had just cut (traced: hurt on the first unsafe frame). Now one cut on the
+  way in lets her fly on through it, which is the answer the design asks for.
+- **Hits**: 2 hp. cut + cut, the finisher alone (power 2), or pogo + pogo kill. Hitstop as ever (2 / 2
+  / 3). Knockback = the slash's `knockback` x 1.1 **along the cut** (forward: sideways; up cut: up;
+  down cut: down), fading 0.75 a frame: 32 px in 9 frames for a cut (the burrback: 21), 104 for the
+  finisher (it is dead then: the body flies). Stops at solids, the canopy, the water. `hitDir` is
+  still the side (-1 / 1), as for the burrback.
+- After the tumble: it goes for her at once if it can see her and she is inside its leash (no
+  second tell; a blow out of nowhere starts a fresh 360-frame pursuit, one mid-chase does not
+  extend it), else home.
+- **Pogo**: a down slash bounces her exactly as off a pod (`vy -15.5`, dash + double jump back) and
+  costs it 1 hp; it is batted 32 px down. Two in a row, ~300 px apart at the same height, are a chain.
+- **Death**: `dead` for at most 40 frames after the hitstop: the knockback carries on, gravity 0.45
+  px/f² up to 9 px/f (the only time it has any), one-ways do not catch it. If it comes down on
+  something first: `landed`, it lies 6 frames. Then `gone`. Spills 3 glints (5 from the finisher)
+  through the burrback's queue: the first 16 frames after the blow, then 5 apart, from wherever the
+  body is; `pickup {enemy: true}`.
+- Two lampwings closer than 72 px (centres) push apart (up to 0.3 px/f²): on top of the same hero
+  they stay more than 20 px apart, not stacked. Burrbacks and lampwings ignore each other.
+- Re-form: living ones are back at home, 2 hp, hovering; dead ones stay dead. Restart brings all back.
+
 ## Contact and health
-- 4 lights (`health.max`). Her box overlapping a living burrback costs 1, unless: she is invulnerable
-  (`invuln > 0`), she has faded, or the creature is in the first 8 frames of its `hurt` (plus the
-  hitstop). **Chosen: harmless for 8 of the 14 stagger frames, not all of them.** A cut at point
+- 4 lights (`health.max`). Her box overlapping a living enemy costs 1, unless: she is invulnerable
+  (`invuln > 0`), she has faded, or the creature is in the first `hurtSafeFrames` of its `hurt` (plus the
+  hitstop): burrback 8 of 14, lampwing all 16. **Chosen: harmless for 8 of the 14 stagger frames, not all of them.** A cut at point
   blank is never punished on the spot, but running on through the creature she just hit is (she
   reaches it about 10 frames after the hit): spacing is still the lesson. Its body never blocks her.
 - Hurt: thrown away from the creature's centre, `vx = +-7`, `vy = -7`: a hop of 55 px back and 24 px
@@ -70,31 +152,57 @@ wins (the creature is staggered and harmless before contact is tested).
 - **Last safe ground** (`player.safeX/safeY`, feet centre): updated every frame once she has been, for
   30 frames in a row, grounded in mode `normal`, in control, with her centre over a solid that is not
   tagged `pool` (so not on a one-way branch, not in the pool), and no living enemy within 200 px of
-  her centre, measured to where it is AND to where it starts (they go home when she re-forms). Starts
+  her centre, measured to where it is AND to where it starts (they go home when she re-forms); for a
+  lampwing the home distance is its radius + 260 (its territory and its sight), so nothing notices
+  her the moment she is back: F1, the left of F2 and of F3, and the left end of the high ledge are
+  not safe ground while their lampwing lives. Starts
   as the scene spawn. If at re-form a living enemy's start is within 200 px of it anyway, the scene
   spawn is used. `teleport` keeps the old safe spot (being placed somewhere does not make it safe)
   and her health.
 - The sim's first use of a scene tag: `pool`.
 
 ## What render gets
-- `state.enemies[i]` (`EnemyState`, exported from `src/sim/index.ts`; not yet in `SimView`): `id`,
-  `kind`, `x, y, w, h` (top-left, integers), `vx` (px/f this step: walk, shove, or 0), `facing`,
-  `hp`, `hpMax`, `mode` (`walk | pause | alert | hurt | dead`), `modeFrames` (0 on the change; holds
-  during `hitstop`), `timer` (frames left of the mode), `turning`, `stride` (px walked, never the
-  shove: drive the legs with it), `knockVx`, `hitstop`, `hitBy`, `hitDir`, `hitPower`, `hitFrame`
-  (sim frame of the last hit, -1 = never: flash from `sim.frame - hitFrame`), `teeter`, `gone`.
+- `state.enemies[i]` (`EnemyState`, exported from `src/sim/index.ts`; in `SimView.enemies`). Every
+  kind: `id`, `kind`, `x, y, w, h` (top-left, integers), `vx, vy` (px/f this step), `facing`, `hp`,
+  `hpMax`, `mode`, `modeFrames` (0 on the change; holds during `hitstop`), `timer` (frames left of a
+  timed mode), `homeX, homeY`, `knockVx, knockVy`, `hitstop`, `hitBy`, `hitDir` (side, -1 / 1),
+  `hitPower`, `hitFrame` (sim frame of the last hit, -1 = never: flash from `sim.frame - hitFrame`),
+  `gone`, and the spill queue `spill, spillTimer, spillGap`.
+- Burrback: `mode` `walk | pause | alert | hurt | dead`, `turning`, `stride` (px walked, never the
+  shove: drive the legs with it), `teeter`; `vy` and `knockVy` are always 0.
+- **Lampwing**: `mode` `hover | curious | pursue | rest | return | hurt | dead`.
+  - `vx, vy`: its own flight while it flies; while `hurt` / `dead` the knockback (and the fall); 0
+    in a hitstop. `facing`: the way it looks: its drift while hovering / returning (flips past 0.2
+    px/f), her side while curious / pursuing; unchanged while resting, tumbling, dead.
+  - `targetX, targetY`: what it is drawn to: the wander point (`hover`), her body centre or where it
+    last saw her (`curious`, `pursue`), its home (`return`; a detour corner for a moment). `lookX,
+    lookY`: the unit vector from its centre to that (kept from before while `rest` / `hurt` / `dead`).
+  - `flap`: wing-beat phase in [0, 1), one unit = one beat, advanced by the sim every step it is not
+    held or dead: 0.10 beats/frame in a still hover (6 Hz) rising with speed to 0.17 at full pursuit
+    (10 Hz), 0.21 while curious (the flutter of the tell), 0.04 while tumbling. Each starts out of
+    step with the others. No render clock needed; interpolate it like a position (mind the wrap).
+  - `timer`: frames left of `curious` (30), `rest` (60), `hurt` (16), `dead` (40, or 6 once
+    `landed`). `chase`: frames of this pursuit (of 360). `lost`: frames since it last saw her.
+    `landed`: the dead body lies on something. `radius`: its territory.
+  - A hit is `hitFrame`; the tumble is `mode: 'hurt'` with `knockVx / knockVy` fading; a kill is
+    `mode: 'dead'` (the body then moves by `vx, vy` each step until `gone`).
 - Events (enemy events: `x, y` = centre of its box): `enemyTurn {id, kind, dir, cause: ledge|wall,
-  frames}`, `enemyAlert {id, kind, facing, dir (her side), cause: land|slash, frames}`, `enemyHit {id,
-  kind, facing, slash, dir, power, hpLeft, hpMax, knockback, hitstop, frames}`, `enemyDie {..., value,
-  glintFrames, stagger, frames}`; `slashHit` / `impact` fire for enemies too, `target: {kind:
-  'burrback', id}`.
+  frames}`, `enemyAlert {id, kind, facing, dir (her side), cause: land|slash, frames}` (burrback);
+  `enemyNotice {id, kind, x, y, dir (its new facing = her side), frames (30)}`, `enemyGiveUp {id,
+  kind, x, y, facing, cause: far|lost|tired|dark|touch, frames (60, the rest)}` (lampwing);
+  `enemyHit {id, kind, facing, slash, dir, power, hpLeft, hpMax, knockback, hitstop, frames}`,
+  `enemyDie {..., value, glintFrames, stagger, frames}` (lampwing: `knockback` = 6.6 / 12.1, the
+  shove goes along `slash`; `frames` 16 / 40); `slashHit` / `impact` fire for enemies too, `target:
+  {kind, id}`; `hurt.source.kind` says who touched her.
+- The pickup renderer flies a dead lampwing's glints unchanged (it reads `spill / spillTimer /
+  spillGap`, `hitDir` and the body's box by index; `enemyDie.slash` shapes the fan).
 - Player: `hp`, `hpMax`, `invuln`, `stagger`, `faded`, `hurtDir` (the way she was thrown), `hurtSeq`
   (hits taken), `safeX`, `safeY`. `motion` is not extended: during `stagger` it reads `rise` / `fall`,
   while faded `fall` then `idle`; key the poses off `stagger > 0` and `faded > 0`.
 - `hurt {x, y, dir, hp, hpMax, damage, source: {kind, id}, hitX, hitY, stagger, invuln}`, `fade {x,
   y, frames}`, `reform` (above).
 
-## Where they are (6)
+## Where the burrbacks are (6)
 | id | feet x, y | surface (patrol range) | why |
 |---|---|---|---|
 | burr-bank | 200, 1088 | left bank (0-384) | guards the great glint on the bank |
@@ -108,9 +216,35 @@ None on the spawn ground (384-1536: the whole run would be its patrol, the spawn
 close-up shots start there), none under the trunks (the wall-slide close-ups start at 3456, 1280),
 none on the right rise (the pogo row). `?nopickups` removes the enemies too (clean plates).
 
+## Where the lampwings are (5)
+| id | home x, y | radius | where | why |
+|---|---|---|---|---|
+| lamp-glade | 800, 690 | 100 | over F1, in the glade | the first one met: it sees her as she jumps from the bank and comes down to her on F1, where she has footing |
+| lamp-f3 | 1290, 480 | 80 | over the F2 -> F3 gap | above the jump's arc (a plain jump passes 20-75 px under it); follows her onto F3 and its pod |
+| lamp-ledge | 2700, 150 | 90 | over the F5 -> high ledge gap | a plain jump passes just under it (a double jump meets it); comes down to the ledge with burr-ledge and the big pod; the mid-glide kill off trunk A |
+| lamp-glide-1 | 4400, 270 | 60 | under the summit glide line | the first bounce of the pogo chain |
+| lamp-glide-2 | 4700, 270 | 60 | 300 px on, same height | the second: summit -> far ledge, which the glide alone cannot reach (it lands on F7) |
+
+- None over the pool: `glide.test.ts` dives into it from (1696, 900) and anything within ~300 px of
+  that column meets her. None near the spawn ground or under the trunks (the close-up shots).
+- The two glide ones have small territories on purpose: their height is the route. From trunk B's
+  top: jump, double jump, glide right; close the wings to come down on each, down slash, glide on.
+  One pass leaves both at 1 hp; a second pass kills both.
+- A lampwing home must not have a solid straight above or below it within reach (it would have to
+  detour every time it goes home); all five are in clear columns.
+
 ## Audit
 - A burrback never blocks a route: one plain jump clears it from either side (piloted for all six).
 - A hit can knock her off a ledge or into the pool; she lands, keeps control, and no edge of the
   scene can be crossed. Nothing can trap her: at worst four hits, then she re-forms 200+ px from
   every living enemy.
 - The route pilots of scene.test / pickups-pilot / pods-pilot pass with the burrbacks in place.
+- Lampwings (piloted in `lampwing-pilot.test.ts`): each can be killed with real inputs (two from
+  their islands with cuts and no scratch, one in mid-glide with a forward cut then an up cut from
+  under it: 24 of 25 start times, 17 untouched; two by pogo + pogo over two summit runs). A pursuit is
+  never longer than 360 frames and is followed by at least 120 without one. A hero who stands on an
+  island and never fights is knocked along it a hit at a time and finally off it, to ground she can
+  leave; a hit in mid-glide over the right zone drops her between the root and the right rise, one
+  jump from either. The route, pickup, pod and burrback pilots pass with them in place.
+- Gotcha found here: `placePlayer` (teleport) used to reset `attackSeq`, so after a teleport the
+  first slash could pass through whatever slash 1 had hit before (`hitBy`). It keeps the count now.

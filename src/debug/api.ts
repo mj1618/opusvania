@@ -108,8 +108,10 @@ export interface GameDebugApi {
   };
   /**
    * Enemies: how many are alive, and each with where it is (`x`, `y` = feet centre; `box` = its
-   * collision box), where it started (`home`), its health and what it is doing (`mode`: walk, pause,
-   * alert, hurt, dead; `gone` once the dead body has been removed). `state().enemies` has the rest.
+   * collision box), where it started (`home`: the scene's `x`, `y`: a burrback's feet, a lampwing's
+   * home centre), its health and what it is doing (`mode`: walk, pause, alert / hover, curious,
+   * pursue, rest, return / hurt, dead; `gone` once the dead body has been removed), its velocity
+   * and, for a lampwing, what it is drawn to (`target`). `state().enemies` has the rest.
    */
   enemies(): {
     alive: number;
@@ -127,6 +129,9 @@ export interface GameDebugApi {
       mode: string;
       modeFrames: number;
       gone: boolean;
+      vx: number;
+      vy: number;
+      target: { x: number; y: number };
     }>;
   };
   /**
@@ -327,6 +332,9 @@ export function installDebugApi(deps: {
           mode: e.mode,
           modeFrames: e.modeFrames,
           gone: e.gone,
+          vx: e.vx,
+          vy: e.vy,
+          target: { x: e.targetX, y: e.targetY },
         })),
       };
     },

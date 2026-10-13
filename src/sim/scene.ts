@@ -49,16 +49,25 @@ export interface Pod {
   hp?: number;
 }
 
-/** The kinds of enemy. `burrback`: a small armoured beetle that walks its platform (src/sim/enemies.ts). */
-export type EnemyKind = 'burrback';
+/**
+ * The kinds of enemy (src/sim/enemies.ts). `burrback`: a small armoured beetle that walks its
+ * platform. `lampwing`: a small pale moth-wisp that hovers in the open air and drifts after her light.
+ */
+export type EnemyKind = 'burrback' | 'lampwing';
 
-/** Where an enemy starts: `x`, `y` = its feet centre, on a surface; `facing` = the way it sets off. */
+/**
+ * Where an enemy starts. Burrback: `x`, `y` = its feet centre, on a surface; `facing` = the way it
+ * sets off. Lampwing: `x`, `y` = its home, the centre of its box and of its territory, in open
+ * air; `radius` = how far from home it wanders (default `tuning.lampwing.radius`); `facing` = the
+ * way it looks at first (its wander path is mirrored with it).
+ */
 export interface EnemySpawn {
   id: string;
   kind: EnemyKind;
   x: number;
   y: number;
   facing: -1 | 1;
+  radius?: number;
 }
 
 export interface Scene {

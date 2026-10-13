@@ -1,4 +1,4 @@
-import { slashEnemies } from '../enemies';
+import { homeClear, slashEnemies } from '../enemies';
 import type { GlideEndReason, HurtSource, JumpKind, SimEvent, SlashDir, SlashEndReason } from '../events';
 import { ActionBit, axisX, type InputFrame } from '../input';
 import { type Body, type Collider, moveX, moveY, oneWayUnder, solidAt } from '../physics/aabb';
@@ -1042,20 +1042,21 @@ export function hurtPlayer(
   }
 }
 
-/** Is a living enemy (where it is, or where it starts) within `px` of the point? */
-function enemyNear(enemies: EnemyState[], scene: Scene, x: number, y: number, px: number): boolean {
-  const homes = scene.enemies ?? [];
+/**
+ * Is a living enemy within `px` of the point, or its home within `px` (or within what its kind
+ * asks: `homeClear`)?
+ */
+function enemyNear(enemies: EnemyState[], x: number, y: number, px: number, t: Tuning): boolean {
   for (let i = 0; i < enemies.length; i++) {
     const e = enemies[i];
     if (!e || e.mode === 'dead') continue;
     const dx = e.x + e.w / 2 - x;
     const dy = e.y + e.h / 2 - y;
     if (dx * dx + dy * dy < px * px) return true;
-    const s = homes[i];
-    if (!s) continue;
-    const hx = s.x - x;
-    const hy = s.y - e.h / 2 - y;
-    if (hx * hx + hy * hy < px * px) return true;
+    const hx = e.homeX - x;
+    const hy = e.homeY - y;
+    const clear = homeClear(e, px, t);
+    if (hx * hx + hy * hy < clear * clear) return true;
   }
   return false;
 }
@@ -1078,7 +1079,7 @@ export function trackSafeGround(state: GameState, scene: Scene, P: MoveParams): 
       if (s !== undefined && s.y === bottom && cx >= s.x && cx < s.x + s.w) ok = s.tag !== 'pool';
     }
   }
-  if (ok) ok = !enemyNear(state.enemies, scene, cx, p.y + p.h / 2, P.safeEnemyPx);
+  if (ok) ok = !enemyNear(state.enemies, cx, p.y + p.h / 2, P.safeEnemyPx, P.tuning);
   p.safeFrames = ok ? p.safeFrames + 1 : 0;
   if (p.safeFrames >= P.safeFrames) {
     p.safeX = cx;
@@ -1095,14 +1096,13 @@ export function reformPlayer(state: GameState, scene: Scene, P: MoveParams, even
   const old = state.player;
   let x = old.safeX;
   let y = old.safeY;
-  const homes = scene.enemies ?? [];
-  for (let i = 0; i < homes.length; i++) {
-    const s = homes[i];
+  for (let i = 0; i < state.enemies.length; i++) {
     const e = state.enemies[i];
-    if (!s || !e || e.mode === 'dead') continue;
-    const dx = s.x - x;
-    const dy = s.y - e.h / 2 - (y - old.h / 2);
-    if (dx * dx + dy * dy < P.safeEnemyPx * P.safeEnemyPx) {
+    if (!e || e.mode === 'dead') continue;
+    const dx = e.homeX - x;
+    const dy = e.homeY - (y - old.h / 2);
+    const clear = homeClear(e, P.safeEnemyPx, P.tuning);
+    if (dx * dx + dy * dy < clear * clear) {
       x = scene.spawn.x;
       y = scene.spawn.y;
       break;

@@ -188,10 +188,29 @@ export interface PodsState {
   burst: number;
 }
 
-/** What an enemy is doing. `pause`: standing (a turn-around if `turning`, else a rest). `alert`: a flinch. */
-export type EnemyMode = 'walk' | 'pause' | 'alert' | 'hurt' | 'dead';
+/**
+ * What an enemy is doing. Every kind: `hurt` (staggered by a hit), `dead`.
+ * Burrback: `walk`, `pause` (standing: a turn-around if `turning`, else a rest), `alert` (a flinch).
+ * Lampwing: `hover` (wandering round its home), `curious` (it has noticed her: the tell), `pursue`
+ * (drifting after her), `rest` (it has given up, or just touched her: it hangs where it is),
+ * `return` (flying home; it notices nothing until it is there).
+ */
+export type EnemyMode =
+  | 'walk'
+  | 'pause'
+  | 'alert'
+  | 'hover'
+  | 'curious'
+  | 'pursue'
+  | 'rest'
+  | 'return'
+  | 'hurt'
+  | 'dead';
 
-/** One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. */
+/**
+ * One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. One flat
+ * record for every kind (plain JSON): a field a kind does not use stays at its start value.
+ */
 export interface EnemyState {
   id: string;
   kind: EnemyKind;
@@ -200,24 +219,35 @@ export interface EnemyState {
   y: number;
   w: number;
   h: number;
-  /** Sub-pixel remainder of its horizontal movement. */
+  /** Sub-pixel remainders of its movement. */
   rx: number;
-  /** Velocity this step, px/f: the walk (facing x speed), or the knockback; 0 when it stands. */
+  ry: number;
+  /**
+   * Velocity this step, px/f. Burrback: the walk (facing x speed) or the knockback, 0 when it
+   * stands; `vy` is always 0. Lampwing: its flight (its own drift; while `hurt` / `dead` the
+   * knockback and the fall).
+   */
   vx: number;
+  vy: number;
+  /** The way it faces (a lampwing: the way it looks, toward what draws it). */
   facing: -1 | 1;
   hp: number;
   hpMax: number;
   mode: EnemyMode;
   /** Frames since `mode` last changed (0 on the frame it changes; it holds during `hitstop`). */
   modeFrames: number;
-  /** Frames left of the pause / alert / hurt / dead mode (0 while walking). */
+  /** Frames left of a timed mode (pause, alert, curious, rest, hurt, dead); 0 otherwise. */
   timer: number;
-  /** The current pause is a turn-around (`facing` flipped when it began). */
+  /** Where it started: the centre of its box then (a lampwing's home, the middle of its territory). */
+  homeX: number;
+  homeY: number;
+  /** The current pause is a turn-around (`facing` flipped when it began). Burrback. */
   turning: boolean;
-  /** Distance walked so far, px (walking only, never knockback): drive the legs with it. */
+  /** Distance walked so far, px (walking only, never knockback): drive the legs with it. Burrback. */
   stride: number;
   /** Knockback left, px/f (signed), fading; it moves the body while hurt or dead. */
   knockVx: number;
+  knockVy: number;
   /** Frames it is held still by a hit (the same beat the player holds). */
   hitstop: number;
   /** The last hit: slash number, direction of the shove (-1 / 0 / 1), power, and the sim frame (-1 = never). */
@@ -225,16 +255,44 @@ export interface EnemyState {
   hitDir: number;
   hitPower: number;
   hitFrame: number;
-  /** Side of the ledge a shove pushed it to the brink of (-1 / 1), until it walks again; else 0. */
+  /** Side of the ledge a shove pushed it to the brink of (-1 / 1), until it walks again; else 0. Burrback. */
   teeter: number;
   /** Dead and its body has been removed: draw nothing. */
   gone: boolean;
+  /**
+   * Lampwing: what it is drawn to, in scene px: its wander point while it hovers, her body centre
+   * (where it last saw her) while `curious` / `pursue`, its home on the way back. `lookX, lookY` =
+   * the unit vector from its centre toward that (0, 0 before it has one).
+   */
+  targetX: number;
+  targetY: number;
+  lookX: number;
+  lookY: number;
+  /**
+   * Lampwing: wing-beat phase in [0, 1), one unit = one full beat. The sim advances it every step
+   * at a rate that follows its effort (slow in a hover, faster in pursuit, a flutter while
+   * `curious`, nearly still while tumbling; it stands still in a hitstop and once dead).
+   */
+  flap: number;
+  /** Lampwing: the dead body has come to rest on something (it is `gone` a few frames later). */
+  landed: boolean;
   // --- Internals.
   /** Frames until it may flinch again; frames of walking until its next rest; rests taken; schedule salt. */
   alertCd: number;
   walkLeft: number;
   rests: number;
   salt: number;
+  /** Lampwing: territory radius; frames of this pursuit so far; frames since it last saw her. */
+  radius: number;
+  chase: number;
+  lost: number;
+  /** Lampwing: wander points drawn so far, frames until the next, the side its wander is mirrored to. */
+  wander: number;
+  wanderLeft: number;
+  side: number;
+  /** Lampwing: the push away from other lampwings this step, px/f². */
+  pushX: number;
+  pushY: number;
   /** Glints spilled on death still on their way to her, frames to the next, and the gap between them. */
   spill: number;
   spillTimer: number;

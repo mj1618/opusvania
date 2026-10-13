@@ -23,4 +23,4 @@ Keep entries current; delete stale ones.
 - [Combat](combat.md) — thorn slash (three-step combo table, lunge, air hang, hitstop, recoil, pogo), lumen pods (toughness, payout, placement list), what render reads
 - [Pickups: glints](pickups.md) — collectible rule and timing (wake/flight/stagger/combo), events, one-mesh renderer, bud holder, pods, enemy glints, the HUD cluster (health lanterns + count), placement list, look decisions and gotchas
 - [Enemies, render side](enemies-render.md) — how the burrback is drawn and wired: layer, interpolation, gait, turn-away pivot, death timeline, look decisions
-- [Enemies and health](enemies.md) — the burrback (patrol, flinch, hits, death, placement), contact damage, knockback and i-frames, fade / re-form and last safe ground, what render reads
+- [Enemies and health](enemies.md) — the enemy framework (one module per kind), the burrback (patrol, flinch, hits, death), the lampwing (flyer: hover, notice, pursue, give up, pogo chain; not drawn yet), placement of both, contact damage, knockback and i-frames, fade / re-form and last safe ground, what render reads

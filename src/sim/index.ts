@@ -3,7 +3,7 @@
  * No Pixi, DOM, audio, Math.random or Date.now anywhere under src/sim (enforced by
  * tsconfig.sim.json, biome overrides and tests/unit/sim-purity.test.ts).
  */
-import { createEnemies, resetEnemies, updateEnemies } from './enemies';
+import { contactDamage, createEnemies, enemyTouched, resetEnemies, updateEnemies } from './enemies';
 import type { SimEvent } from './events';
 import type { InputFrame } from './input';
 import { createPickups, updatePickups } from './pickups';
@@ -35,8 +35,8 @@ export function createState(seed: number, t: Tuning, scene: Scene, events: SimEv
 
 /**
  * Puts a fresh player with its feet centre at (x, y): at rest, facing right, every timer cleared.
- * The frame count, the RNG, what has been collected, the enemies, her health and her last safe
- * ground are kept (a player placed while faded is whole again).
+ * The frame count, the RNG, what has been collected, the enemies, her health, her last safe
+ * ground and the slash count are kept (a player placed while faded is whole again).
  */
 export function placePlayer(
   state: GameState,
@@ -52,6 +52,9 @@ export function placePlayer(
   // Being placed somewhere does not make it safe ground: the last safe spot stands until she earns a new one.
   state.player.safeX = old.safeX;
   state.player.safeY = old.safeY;
+  // Slashes stay numbered on: targets remember the last slash that hit them (`hitBy`), so a
+  // number used again would pass through whatever it hit before.
+  state.player.attackSeq = old.attackSeq;
   state.prevInput = 0;
   events.push({ type: 'spawn', x, y });
 }
@@ -75,7 +78,8 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
     const dir = pc < ec ? -1 : pc > ec ? 1 : -p.facing;
     const hitX = (Math.max(p.x, e.x) + Math.min(p.x + p.w, e.x + e.w)) / 2;
     const hitY = (Math.max(p.y, e.y) + Math.min(p.y + p.h, e.y + e.h)) / 2;
-    hurtPlayer(state, P, dir, t.burrback.contactDamage, { kind: e.kind, id: e.id }, hitX, hitY, events);
+    hurtPlayer(state, P, dir, contactDamage(state, touch, t), { kind: e.kind, id: e.id }, hitX, hitY, events);
+    enemyTouched(state, scene, touch, dir, t, events);
   }
   if (ran) trackSafeGround(state, scene, P);
   updatePods(state, scene, t.pickups.comboFrames, events);

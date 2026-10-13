@@ -16,12 +16,13 @@
 ## The scene: `content/scene/grove.json`
 `{id, width: 5760, height: 1600, spawn: {x, y}, ceilingY?: 0, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}],
 pickups: [{id, kind: glint|great, x, y}], pods: [{id, x, y, mount: sit|hang, hp?: 1-3}],
-enemies: [{id, kind: burrback, x, y (feet centre), facing: -1|1}]}` (pickups.md, combat.md, enemies.md),
+enemies: [{id, kind: burrback, x, y (feet centre), facing: -1|1} | {id, kind: lampwing, x, y (home: box centre, in open
+air), facing, radius?}]}` (burrbacks first; pickups.md, combat.md, enemies.md),
 validated by Zod in `src/scene/index.ts` (exports `GROVE`), typed in `src/sim/scene.ts`. Tags are for
 artists (`ground | pool | ledge | trunk | floating | root | branch`); the sim ignores them, except that
 `pool` is never safe ground to re-form on. The left, right and bottom scene edges are solid; the top
 has a soft ceiling at `ceilingY` (the canopy: the top of her box never rises above y = 0). One-ways block only a falling body; Down+Jump
-drops through. Nothing is lethal; burrbacks hurt (enemies.md).
+drops through. Nothing is lethal; burrbacks and lampwings hurt (enemies.md).
 
 ```
 x:  0        1000       2000       3000       4000       5000     5760

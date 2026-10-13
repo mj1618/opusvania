@@ -227,7 +227,7 @@ export class EnemyRenderer {
     let drawn = 0;
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
-      if (!e) continue;
+      if (e?.kind !== 'burrback') continue;
       let rig = this.rigs[i];
       if (!rig) {
         rig = new BurrRig(i);

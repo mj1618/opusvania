@@ -52,7 +52,7 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `step` (every 96 px of grounded travel), `turn {dir, grounded}`, `skid {dir}`.
 - `wallSlideStart/End {dir = wall side}`, `dashStart {dir, air}`, `dashEnd {dir}`.
 - `slash`, `slashHit`, `impact`, `slashEnd`, `podHit`, `podBurst`, and pod glints as `pickup {pod: true}`: combat.md.
-- `enemyTurn`, `enemyAlert`, `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`), and
+- `enemyTurn`, `enemyAlert` (burrback), `enemyNotice`, `enemyGiveUp` (lampwing), `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`), and
   enemy glints as `pickup {enemy: true}`: enemies.md. `slashEnd` / `glideEnd` have a reason `hurt`.
 - `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a
   long fall, up to 32 out of a fast fall) and `glideEnd {reason: release|land|wall|dash|fastfall}`; one
@@ -67,4 +67,6 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 `step()`: re-form if a fade just ended → player (slash hits resolved inside, pods and enemies) →
 enemies → contact damage → safe-ground tracking → pod glints → pickups. The scene's `ceilingY` (the
 canopy, movement-controller.md) and the tag `pool` (safe ground, enemies.md) are the only scene
-fields besides the rects that the player code reads.
+fields besides the rects that the player code reads; the lampwing reads both too (it stays under the
+canopy and off the water). Enemies are a framework with a module per kind: `src/sim/enemies.ts` +
+`src/sim/enemies/` (enemies.md).

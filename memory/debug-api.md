@@ -22,21 +22,24 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   also `state().pickups.count`. Dev handle `window.__pickups` (renderer, `cfg`, `cpuMs`): pickups.md.
 - `pods()` → `{burst, total, worth, list: [{id, x, y, mount, state: closed|open, hp, hpMax, worth, paid,
   left}]}` (`paid` = glints set loose so far, `left` = still flying to her): combat.md.
-- `enemies()` → `{alive, total, list: [{id, kind, x, y (feet centre), box, home, facing, hp, hpMax, mode,
-  modeFrames, gone}]}`; the full records are `state().enemies` (enemies.md).
+- `enemies()` → `{alive, total, list: [{id, kind, x, y (feet centre), box, home (the scene's x, y: a burrback's
+  feet, a lampwing's home centre), facing, hp, hpMax, mode, modeFrames, gone, vx, vy, target}]}`; the full
+  records are `state().enemies` (enemies.md).
 - `health()` → `{hp, hpMax, invuln, stagger, faded, safe: {x, y}}`; `health(n)` sets hp to n (1..hpMax)
   first, e.g. `health(1)` then walk into a burrback to see a fade.
-- `load()` restarts the scene (glints come back, pods close, enemies return, full health). `teleport(x, y)` puts the feet centre there at rest and snaps the camera (health, enemies and the last safe ground are kept).
+- `load()` restarts the scene (glints come back, pods close, enemies return, full health). `teleport(x, y)` puts the feet centre there at rest and snaps the camera (health, enemies, the last safe ground and the slash count `attackSeq` are kept).
 - `cam()` → `{x, y, zoom, follow, override}` (view centre, world px). `cam({x, y, zoom})` overrides (any
   subset; missing x/y follow the game camera), `cam({on: 'player', zoom: 4})` tracks the player,
   `cam(null)` releases. Overrides are not clamped to the scene.
 - `tuning()`, `setTuning('run.maxSpeed', 12)` or `setTuning({run: {maxSpeed: 12}})`. `lights()`.
-  `render()` redraws. `debug.hitboxes(on)` (also F2; shows enemy boxes too: magenta, orange while hurt, grey dead, with a tick on the facing side; her box is white while invulnerable), `debug.panel(on)` (also backquote).
+  `render()` redraws. `debug.hitboxes(on)` (also F2; shows enemy boxes too: magenta, orange while hurt, grey dead, with a tick on the facing side; a lampwing also gets its territory circle, a line to what it is drawn to (yellow while curious / pursuing) and its velocity in white; her box is white while invulnerable), `debug.panel(on)` (also backquote).
 
 ## Gotchas
 - In manual mode the page only redraws on API calls; change something by hand, then call `render()`.
 - `step()` with a big n renders every step's update but presents once: fine on a real GPU.
 - Keys in the page: arrows/WASD, Z/Space/K jump, X/L/Shift dash, C/J attack, R restart.
+- Lampwings are not drawn yet: the hitbox overlay is the only way to see one. A teleport inside 260 px of one
+  (in plain view) starts its tell on the next step.
 - Enemies keep walking through every `step()`: a teleport next to one a few hundred frames later finds it
   somewhere else. Read `enemies()` first, or `load()` for the start positions.
 - `?nopickups` removes the enemies too (src/main.ts). None patrols the spawn ground or the trunk shaft, where the
