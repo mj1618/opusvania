@@ -59,3 +59,23 @@ runs nearly upright (lean ~0.115 rad), hat tilt is small, the free arm trails in
 - tools/shots and tools/clip mangle `--url` queries; they get Wick anyway because it is first in
   the switcher's ORDER. Other agents' edits can reload the page mid-capture: just retry.
 - Cost: about +0.05 ms a frame over the hooded skin on an M-series laptop.
+
+## Round 3 (polish) additions
+- **Run carry is over the shoulder** (GA 153, far hand forward of the chest at grip 27) so a hand is
+  always seen on the shaft; the old low carry hid the hand behind the body and the shaft floated.
+- **Two-segment spine** (`J_CHEST`): `CURL` channel bends it, twist `TW` bows lower and upper halves
+  opposite ways and shifts the pelvis, so hips and shoulders counter-rotate in the run.
+- **Landing**: `rig.groundDist` (index.ts scans the scene rects under the feet) drives a reach pose in
+  the last ~8 frames of a fall (legs reach, glaive lifts upright). Hard landings use a softer, deeper
+  crouch spring (omega 11.5, up to 16 px) and add spine curl.
+- **Trail** is soft overlapping glow dabs along the Catmull-Rom path (fx.ts), spacing tied to radius;
+  the painter's `streak` always showed a wire core.
+- **Cloth colliders**: `wick/chain.ts` is a copy of the hooded chain plus soft circle colliders
+  (eased, 0.35 per sub-step, not snapped: snapping jitters). Scarf/tails/ribbons avoid chest, belly,
+  pelvis, head; the skirt is three chains drawn with `Painter.grid`, pushed by the knees.
+- **Somersault**: glaive lies along the body axis (GA 227), hat tilts into the ball (HAT 0.62), second
+  ribbon thins away. Interrupts verified on sheets (dash: 3 frames to upright; landing: ~4).
+- **Idle beats**: weight settle + grip slides down the shaft, hand up to the hat brim, look up at the
+  lantern (hat lifts), blink. All `pulse()` slots on incommensurate periods.
+- Wrap/skin authored darker again (0x474b60..0x847e76): the new grade clipped them to white.
+- tools/clip sometimes records at zoom 1 right after a file edit (HMR reload mid-setup): re-run.

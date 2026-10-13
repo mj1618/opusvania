@@ -57,7 +57,9 @@ export const J_TIP = 20;
 export const J_HOOK = 21;
 export const J_ORIGIN = 22;
 export const J_CENTRE = 23;
-export const J_COUNT = 24;
+/** Middle of the spine (the torso is two segments). */
+export const J_CHEST = 24;
+export const J_COUNT = 25;
 
 // --- Scalars (Frame.s).
 export const S_D = 0;
@@ -107,7 +109,8 @@ const EYE = 20;
 const LOOKY = 21;
 const HYAW = 22; // head turn as a fraction of the body's (lower = toward the camera)
 const TL = 23; // torso length delta (breath)
-const NP = 24;
+const CURL = 24; // upper spine leans this much more than the lower (rad): a curled or arched back
+const NP = 25;
 
 type Pose = Float32Array;
 
@@ -223,9 +226,10 @@ const SPIN_OUT = 0.74;
 const SOMER = pose({
   [PF]: -8,
   [PU]: 33,
-  [LEAN]: 0.75,
-  [HT]: 0.5,
-  [HAT]: 0.05,
+  [LEAN]: 0.62,
+  [CURL]: 0.55,
+  [HT]: 0.78,
+  [HAT]: 0.62,
   [AF]: -0.6,
   [AU]: 20.9,
   [AP]: 0.9,
@@ -237,7 +241,7 @@ const SOMER = pose({
   [NB]: -1,
   [GHF]: -3,
   [GHU]: -5.5,
-  [GA]: 135,
+  [GA]: 227,
   [GRIP]: 42,
   [TW]: 0,
   [FLARE]: 0,
@@ -421,6 +425,8 @@ export class Rig {
   private lastVy = 0;
   /** The somersault as a forward lean in the facing frame (radians), for the cloth. */
   flip = 0;
+  /** Set by the owner before `update`: px of clear air under the feet (Infinity if unknown). */
+  groundDist = Number.POSITIVE_INFINITY;
   /** -1..1: how much of the ball is in play, signed + for a forward somersault (for the cloth). */
   spin = 0;
   private spinT = 1;
@@ -481,7 +487,10 @@ export class Rig {
           sig.landHard = e.hard;
           const k = clamp(e.vy / 21, 0.15, 1);
           this.squash.v -= 0.6 + 3.2 * k;
-          this.crouch.v += 40 + 190 * k;
+          // Absorb through the legs: deeper and slower the harder the landing.
+          this.crouch.omega = e.hard ? 11.5 : 15 - 2 * k;
+          this.crouch.zeta = e.hard ? 0.72 : 0.62;
+          this.crouch.v += e.hard ? 285 : 50 + 190 * k;
           this.gAng.v += (1 + 3.5 * k) * facingNow;
           this.hatLag.v -= 1 + 2.5 * k;
           this.headLag.v += 0.6 + 2 * k;
@@ -595,13 +604,14 @@ export class Rig {
       ? clamp(ax * sgn * 0.085, -0.3, 0.3)
       : clamp(ax * sgn * 0.03 + (p.inputX * sgn - (p.vx * sgn) / 9.6) * 0.03, -0.14, 0.14);
     const leanExtra = this.leanS.step(dash ? 0 : leanTarget, dt);
-    const crouch = clamp(this.crouch.step(0, dt), -2.5, 11);
+    const crouch = clamp(this.crouch.step(0, dt), -2.5, 16);
     const sq = clamp(this.squash.step(0, dt), -0.15, 0.13);
     // The head and hat settle a beat after the body.
     const headLag = this.headLag.step(clamp(ay * 0.02, -0.12, 0.12), dt);
     const hatLag = this.hatLag.step(0, dt);
     out[PU]! -= crouch;
-    out[LEAN]! += leanExtra + crouch * 0.012;
+    out[LEAN]! += leanExtra + crouch * 0.01;
+    out[CURL]! += crouch * 0.016;
     out[HT]! += headLag * 0.5 - leanExtra * 0.45 + crouch * 0.012;
     out[HAT]! += clamp(hatLag * 0.09, -0.14, 0.2);
     out[NHU]! -= crouch * 0.25;
@@ -658,17 +668,24 @@ export class Rig {
     const czh = Math.sqrt(Math.max(0, 1 - (dh * BODY.sinHeadYaw) ** 2));
     const ox = p.cx;
     const oy = p.feetY;
-    const lean = out[LEAN]!;
+    // Two-segment spine: the lower half carries the hips, the upper half the shoulders. `CURL`
+    // bends it and the twist bows it the other way each stride, so the torso is never a block.
+    const tw = out[TW]!;
+    const leanLo = out[LEAN]! - out[CURL]! * 0.5 + tw * 0.13;
+    const lean = out[LEAN]! + out[CURL]! * 0.5 - tw * 0.13;
     this.lean = lean;
     const headAng = lean * 0.4 + out[HT]!;
     const sl = Math.sin(lean);
     const cl = Math.cos(lean);
-    const torso = BODY.torso + out[TL]!;
+    const half = (BODY.torso + out[TL]!) / 2;
 
-    const pelX = ox + out[PF]! * d;
+    const pelX = ox + (out[PF]! - tw * 1.1) * d;
     const pelY = oy - out[PU]!;
-    const neckX = pelX + sl * d * torso;
-    const neckY = pelY - cl * torso;
+    const chestX = pelX + Math.sin(leanLo) * d * half;
+    const chestY = pelY - Math.cos(leanLo) * half;
+    const neckX = chestX + sl * d * half;
+    const neckY = chestY - cl * half;
+    set(j, J_CHEST, chestX, chestY);
     // Head centre: a little forward of and above the neck, in a frame leaning less than the spine.
     const ha = lean * 0.45;
     const sha = Math.sin(ha);
@@ -681,7 +698,6 @@ export class Rig {
     set(j, J_ORIGIN, ox, oy);
     set(j, J_CENTRE, ox, oy - 40);
 
-    const tw = out[TW]!;
     const bendLeg = clamp(-d * 1.8, -1, 1);
     // Shoulders in the torso frame (x forward, y down from the neck).
     const shF = [2.2 + tw * 3.4, 0.5 - tw * 3.4];
@@ -812,7 +828,8 @@ export class Rig {
     const cX = ox;
     const cY = oy - 40;
     const inv = 1 / st;
-    for (let i = 0; i < J_BUTT; i++) {
+    for (let q = 0; q <= J_BUTT; q++) {
+      const i = q === J_BUTT ? J_CHEST : q;
       const x = pivX + (j[i * 2]! - pivX) * sx;
       const y = pivY + (j[i * 2 + 1]! - pivY) * sy;
       const rx = x - cX;
@@ -834,7 +851,8 @@ export class Rig {
     if (Math.abs(phi) > 1e-4) {
       const cp = Math.cos(phi);
       const sp = Math.sin(phi);
-      for (let i = 0; i <= J_HOOK; i++) {
+      for (let q = 0; q <= J_HOOK + 1; q++) {
+        const i = q === J_HOOK + 1 ? J_CHEST : q;
         const rx = j[i * 2]! - cX;
         const ry = j[i * 2 + 1]! - cY;
         j[i * 2] = cX + rx * cp - ry * sp;
@@ -873,30 +891,35 @@ export class Rig {
     // Now and then he settles his weight and lets the glaive tip a little.
     const settle = pulse(clock, 6.7, 2.4, 23, 0.8);
     const se = settle > 0 ? smoothstep(0, 0.3, settle) * (1 - smoothstep(0.55, 1, settle)) : 0;
+    // Quiet beats: a hand goes up to settle the hat brim; a look up at the lantern.
+    const hatP = pulse(clock, 12.3, 2.5, 31, 0.75);
+    const he = hatP > 0 ? smoothstep(0, 0.3, hatP) * (1 - smoothstep(0.64, 1, hatP)) : 0;
+    const tip = hatP > 0 ? smoothstep(0.3, 0.44, hatP) * (1 - smoothstep(0.5, 0.66, hatP)) : 0;
     o[PF] = -3.6 + shift * 1.5 - se * 1.2;
     o[PU] = 34.5 + breath * 0.6 - Math.abs(shift) * 0.4 - se * 0.7;
     o[LEAN] = 0.0 + shift * 0.02 + breath * 0.007 + se * 0.02;
     o[TL] = breath * 0.9;
-    o[HT] = -0.02 + breathLate * 0.014 + gl * 0.05 + se * 0.04;
-    o[HAT] = 0.19 + drift2 * 0.02;
+    o[HT] = -0.02 + breathLate * 0.014 - gl * 0.15 + se * 0.04 + tip * 0.05;
+    o[HAT] = 0.19 + drift2 * 0.02 - gl * 0.06 + tip * 0.11 - he * 0.03;
+    o[CURL] = 0.05 + breath * 0.02 + se * 0.03;
     o[AF] = 13;
     o[AU] = 0;
     o[AP] = 0.03;
     o[BF] = -2.5;
     o[BU] = 0;
     o[BP] = 0;
-    o[NHF] = 1.6 + drift * 1.3 - shift * 0.6;
-    o[NHU] = -19 + breathLate * 0.45;
+    o[NHF] = lerp(1.6 + drift * 1.3 - shift * 0.6, 9.5, he);
+    o[NHU] = lerp(-19 + breathLate * 0.45, 13.2 - tip * 1.4, he);
     o[NB] = -1;
     o[GHF] = 13.5 + shift * 0.9 + drift2 * 0.6 - se * 1.5;
-    o[GHU] = -8.5 + breathLate * 0.7 - se * 0.8;
-    o[GA] = 81 + drift * 2.2 + shift * 1.6 + se * 5;
-    o[GRIP] = 35;
+    o[GHU] = -8.5 + breathLate * 0.7 - se * 1.6;
+    o[GA] = 81 + drift * 2.2 + shift * 1.6 + se * 7;
+    o[GRIP] = 35 - se * 5;
     o[TW] = shift * 0.05;
     o[FLARE] = 0;
     o[EYE] = 1;
-    o[LOOKY] = 0.05;
-    o[HYAW] = 1 - gl * 0.75;
+    o[LOOKY] = 0.05 - gl * 0.8;
+    o[HYAW] = 1 - gl * 0.3;
     return o;
   }
 
@@ -955,10 +978,11 @@ export class Rig {
     o[NB] = -1;
     // Glaive low at the side, angled back; it rides the bounce a beat late.
     const late = wave(2 * (ph - top - 0.14) + 0.25);
-    o[GHF] = -7.5 + 1.3 * wave(ph - 0.33);
-    o[GHU] = -16.5 + 1.1 * late;
-    o[GA] = 158 + 2.4 * wave(2 * (ph - 0.62)) + 0.8 * noise1(clock * 1.3, 6);
-    o[GRIP] = 36;
+    o[GHF] = 8.6 + 0.8 * wave(ph - 0.33);
+    o[GHU] = 0.4 + 0.9 * late;
+    o[GA] = 153 + 2.6 * wave(2 * (ph - 0.62)) + 0.8 * noise1(clock * 1.3, 6);
+    o[GRIP] = 27;
+    o[CURL] = 0.07 + 0.05 * wave(2 * (ph - 0.47));
     o[TW] = 0.42 * wave(ph + 0.22);
     o[FLARE] = 0.1;
     o[EYE] = 1;
@@ -985,6 +1009,26 @@ export class Rig {
     o[NHU]! += b * 1.2 * (0.4 + fl);
     o[NHF]! += a * 0.8;
     o[GA]! += b * 2.5;
+    // Anticipate the ground: in the last frames of a fall the legs reach for it, heel first, the
+    // glaive lifts upright and the free arm opens for balance.
+    const ttg = this.groundDist / Math.max(p.vy, 1);
+    const reach = smoothstep(2, 6, p.vy) * smoothstep(8, 2.5, ttg);
+    if (reach > 0) {
+      o[PU] = lerp(o[PU]!, 35.6, reach);
+      o[LEAN] = lerp(o[LEAN]!, 0.07, reach);
+      o[AF] = lerp(o[AF]!, 10.5, reach);
+      o[AU] = lerp(o[AU]!, 2.6, reach);
+      o[AP] = lerp(o[AP]!, -0.12, reach);
+      o[BF] = lerp(o[BF]!, -6.5, reach);
+      o[BU] = lerp(o[BU]!, 2.2, reach);
+      o[BP] = lerp(o[BP]!, 0.3, reach);
+      o[NHF] = lerp(o[NHF]!, -9, reach);
+      o[NHU] = lerp(o[NHU]!, -5, reach);
+      o[GHF] = lerp(o[GHF]!, 6, reach);
+      o[GHU] = lerp(o[GHU]!, -3, reach);
+      o[GA] = lerp(o[GA]!, 98, reach);
+      o[HT] = lerp(o[HT]!, 0.2, reach);
+    }
     return o;
   }
 }

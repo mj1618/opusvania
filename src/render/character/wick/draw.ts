@@ -15,6 +15,7 @@ import {
   J_ANK,
   J_BUTT,
   J_CENTRE,
+  J_CHEST,
   J_EL,
   J_HAND,
   J_HEAD,
@@ -53,7 +54,7 @@ export interface SecView {
   tailNear: ChainPts;
   ribA: ChainPts;
   ribB: ChainPts;
-  skirt: ChainPts;
+  skirt: ChainPts[];
   lantern: ChainPts;
 }
 
@@ -89,9 +90,9 @@ const SH_SLEEVE = sh(0x2e2c68, 0x181a48, 0.9, 0.5, 0.5, { ember: 1.5 });
 const SH_SLEEVE_FAR = sh(0x15173e, 0x0d1230, 0.4, 0.35, 0.5, { ember: 1.2 });
 const SH_LEG = sh(0x1c1e46, 0x0b1228, 0.75, 0.45, 0.5);
 const SH_LEG_FAR = sh(0x0e142c, 0x080e1e, 0.3, 0.3, 0.5);
-const SH_WRAP = sh(0x5c6076, 0xa39c90, 0.9, 0.4, 0.5, { ember: 1.4, form: 0.3 });
+const SH_WRAP = sh(0x474b60, 0x847e76, 0.9, 0.4, 0.5, { ember: 1.4, form: 0.3 });
 const SH_WRAP_FAR = sh(0x2c3850, 0x505a6c, 0.45, 0.3, 0.5, { ember: 1.2 });
-const SH_SKIN = sh(0x8f8e92, 0xb5ab9c, 0.8, 0.3, 0.55, { ember: 1.4 });
+const SH_SKIN = sh(0x6c6c74, 0x90887e, 0.8, 0.3, 0.55, { ember: 1.4 });
 const SH_SKIN_FAR = sh(0x48546a, 0x6e7480, 0.5, 0.3, 0.55, { ember: 1.5 });
 const SH_TAIL = sh(0x161a44, 0x0a1a2c, 0.75, 0.5, 0.45, { ember: 1.2 });
 const SH_TAIL_FAR = sh(0x0c1430, 0x081222, 0.3, 0.3, 0.45);
@@ -626,6 +627,47 @@ function hat(p: Painter, f: Frame, lamp: Lamp): void {
   }
 }
 
+const SK_COLS = 7;
+const SK_ROWS = 4;
+/** The skirt: one sheet through its three chains (back edge, centre, front edge), hem glowing. */
+function skirtSheet(p: Painter, sk: ChainPts[], lamp: Lamp, ghost: boolean): void {
+  const { gx, gy, gc } = p;
+  const c0 = SH_SKIRT.c0;
+  const c1 = SH_SKIRT.c1;
+  for (let r = 0; r < SK_ROWS; r++) {
+    const t = r / (SK_ROWS - 1);
+    for (let c = 0; c < SK_COLS; c++) {
+      const u = (c / (SK_COLS - 1)) * 2;
+      const k = Math.min(1, Math.floor(u));
+      const f = u - k;
+      const k0 = Math.max(0, k - 1);
+      const k3 = Math.min(2, k + 2);
+      const i = r * SK_COLS + c;
+      gx[i] = catmull(sk[k0]!.rx[r]!, sk[k]!.rx[r]!, sk[k + 1]!.rx[r]!, sk[k3]!.rx[r]!, f);
+      // The hem hangs a little between the three lines.
+      gy[i] =
+        catmull(sk[k0]!.ry[r]!, sk[k]!.ry[r]!, sk[k + 1]!.ry[r]!, sk[k3]!.ry[r]!, f) +
+        t * 0.5 * Math.sin(Math.PI * f);
+      const fold = 1 + 0.16 * t * Math.sin(u * 5.2 + 0.6);
+      gc[i * 3] = lerp(c0[0], c1[0], t) * fold;
+      gc[i * 3 + 1] = lerp(c0[1], c1[1], t) * fold;
+      gc[i * 3 + 2] = lerp(c0[2], c1[2], t) * fold;
+    }
+  }
+  p.grid(SK_COLS, SK_ROWS, SH_SKIRT, 1.8);
+  if (ghost) return;
+  // A glowing thread just inside the hem.
+  const last = (SK_ROWS - 1) * SK_COLS;
+  const prev = (SK_ROWS - 2) * SK_COLS;
+  for (let c = 0; c < SK_COLS; c++) {
+    p.px[c] = lerp(gx[last + c]!, gx[prev + c]!, 0.22);
+    p.py[c] = lerp(gy[last + c]!, gy[prev + c]!, 0.22);
+    p.pw[c] = 0.65;
+    p.pc[c * 3] = 0.42 * lamp.pulse;
+  }
+  p.streak(SK_COLS, GOLD);
+}
+
 /** The whole character. */
 export function drawWick(p: Painter, f: Frame, sec: SecView, lamp: Lamp): void {
   const { j, s } = f;
@@ -667,48 +709,22 @@ export function drawWick(p: Painter, f: Frame, sec: SecView, lamp: Lamp): void {
   streamer(p, sec.tailNear, [2.4, 3.4, 3.6, 3.2, 2.4, 0.15], SH_TAIL);
 
   // 5. Short coat: flared skirt to mid-thigh, fitted chest, sash.
-  const spine = (t: number, off0: number, i: number, w: number): void => {
-    // The back rounds as the body curls into a ball.
-    const off = off0 - ball * 3.6 * Math.sin(Math.PI * Math.min(1, Math.max(0, t)));
-    p.px[i] = px + (nx - px) * t + cl * off * d;
-    p.py[i] = py + (ny - py) * t + sl * off;
+  const chx = j[J_CHEST * 2]!;
+  const chy = j[J_CHEST * 2 + 1]!;
+  const spine = (t0: number, off0: number, i: number, w: number): void => {
+    // A curve from the pelvis through the chest joint to the neck (and a little beyond each end).
+    const t = t0;
+    const a = (1 - t) * (1 - 2 * t);
+    const b = 4 * t * (1 - t);
+    const c = t * (2 * t - 1);
+    // The back rounds a touch more as the body curls into a ball.
+    const off = off0 - ball * 1.6 * Math.sin(Math.PI * Math.min(1, Math.max(0, t)));
+    p.px[i] = a * px + b * chx + c * nx + cl * off * d;
+    p.py[i] = a * py + b * chy + c * ny + sl * off;
     p.pw[i] = w;
   };
-  const sk = sec.skirt;
-  spine(0.3, 0, 0, 5.2);
-  spine(0.1, 0, 1, 6.5);
-  p.px[2] = sk.rx[1]!;
-  p.py[2] = sk.ry[1]!;
-  p.pw[2] = 8.3;
-  p.px[3] = sk.rx[2]!;
-  p.py[3] = sk.ry[2]!;
-  p.pw[3] = 9.5;
-  p.ribbon(4, SH_SKIRT, false, false);
-  // Hem: its edge, the split, and a glowing thread.
-  {
-    let tx = sk.rx[2]! - sk.rx[1]!;
-    let ty = sk.ry[2]! - sk.ry[1]!;
-    const tl = Math.hypot(tx, ty) || 1;
-    tx /= tl;
-    ty /= tl;
-    const hx0 = sk.rx[2]! - ty * 9.5;
-    const hy0 = sk.ry[2]! + tx * 9.5;
-    const hx1 = sk.rx[2]! + ty * 9.5;
-    const hy1 = sk.ry[2]! - tx * 9.5;
-    seg(p, hx0, hy0, hx1, hy1, 0.5, 0.5, SH_SKIRT, true, true);
-    seg(p, px - 0.8 * d, py - 2, sk.rx[2]! + 0.6 * d, sk.ry[2]!, 0.15, 0.8, SH_INK);
-    if (!ghost) {
-      p.px[0] = hx0 - tx * 0.9;
-      p.py[0] = hy0 - ty * 0.9;
-      p.px[1] = sk.rx[2]! - tx * 0.9;
-      p.py[1] = sk.ry[2]! - ty * 0.9;
-      p.px[2] = hx1 - tx * 0.9;
-      p.py[2] = hy1 - ty * 0.9;
-      p.pw[0] = p.pw[1] = p.pw[2] = 0.65;
-      p.pc[0] = p.pc[3] = p.pc[6] = 0.42 * lamp.pulse;
-      p.streak(3, GOLD);
-    }
-  }
+  skirtSheet(p, sec.skirt, lamp, ghost);
+  seg(p, px - 0.8 * d, py - 2, sec.skirt[1]!.rx[3]! + 0.5 * d, sec.skirt[1]!.ry[3]!, 0.15, 0.7, SH_INK);
   spine(0.22, -0.1, 0, 5.2);
   spine(0.36, 0, 1, 5.9);
   spine(0.54, 0.3, 2, 6.8);
@@ -767,7 +783,8 @@ export function drawWick(p: Painter, f: Frame, sec: SecView, lamp: Lamp): void {
 
   // 6. Hat ribbons, then the head: a hooded, shadowed face.
   streamer(p, sec.ribA, [0.7, 1.1, 1.1, 1, 0.8, 0.12], SH_RIB_A);
-  streamer(p, sec.ribB, [0.7, 1.05, 1, 0.85, 0.65, 0.12], SH_RIB_B);
+  // In the somersault's ball the two ribbons read as one arc: the second thins away.
+  if (ball < 0.95) streamer(p, sec.ribB, [0.7, 1.05, 1, 0.85, 0.65, 0.12], SH_RIB_B, 1 - ball);
   head(p, f, lamp);
 
   // 7. Scarf wound high around the neck and over the mouth.

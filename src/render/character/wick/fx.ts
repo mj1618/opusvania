@@ -43,7 +43,6 @@ export class Fx {
   private readonly ta = new Float32Array(TRAIL);
   private readonly tk = new Float32Array(TRAIL);
   private tn = 0;
-  private readonly age = new Float32Array(TRAIL * 3);
   private strength = 0;
 
   private rand(): number {
@@ -166,37 +165,51 @@ export class Fx {
     }
   }
 
-  /** The ribbon of light behind the flame (Catmull-Rom resampled, tapered); drawn behind the body. */
+  /**
+   * The ribbon of light behind the flame; drawn behind the body. The painter's streak has a sharp
+   * bright core (it reads as a wire), so the ribbon is built from soft round dabs laid along the
+   * Catmull-Rom smoothed path at even spacing: wide and bright at the flame, tapering and fading
+   * with age.
+   */
   drawTrail(p: Painter): void {
     const n = this.tn;
-    if (n < 4) return;
-    const SUB = 3;
-    let m = 0;
-    let any = 0;
+    if (n < 3) return;
+    const SUB = 4;
+    // Total length first, to space the dabs evenly whatever the speed.
+    let len = 0;
+    for (let i = 0; i < n - 1; i++)
+      len += Math.hypot(this.tx[i + 1]! - this.tx[i]!, this.ty[i + 1]! - this.ty[i]!);
+    if (len < 6) return;
+    const floor = Math.max(1.5, len / 105);
+    let step = floor;
+    let acc = step;
+    let lx = this.tx[0]!;
+    let ly = this.ty[0]!;
     for (let i = 0; i < n - 1; i++) {
       const i0 = i > 0 ? i - 1 : 0;
       const i3 = i + 2 < n ? i + 2 : n - 1;
-      for (let q = 0; q < SUB; q++) {
+      for (let q = 1; q <= SUB; q++) {
         const u = q / SUB;
-        p.px[m] = catmull(this.tx[i0]!, this.tx[i]!, this.tx[i + 1]!, this.tx[i3]!, u);
-        p.py[m] = catmull(this.ty[i0]!, this.ty[i]!, this.ty[i + 1]!, this.ty[i3]!, u);
+        const x = catmull(this.tx[i0]!, this.tx[i]!, this.tx[i + 1]!, this.tx[i3]!, u);
+        const y = catmull(this.ty[i0]!, this.ty[i]!, this.ty[i + 1]!, this.ty[i3]!, u);
+        acc += Math.hypot(x - lx, y - ly);
+        lx = x;
+        ly = y;
+        if (acc < step) continue;
+        acc = 0;
         const t = sat((this.ta[i]! + (this.ta[i + 1]! - this.ta[i]!) * u) / TRAIL_LIFE);
-        const st = this.tk[i]! + (this.tk[i + 1]! - this.tk[i]!) * u;
-        p.pw[m] = 13 * (1 - t) ** 0.6 + 0.5;
-        const k = (1 - t) ** 2 * 0.24 * Math.min(1.3, st) * Math.min(1, m / 5);
-        p.pc[m * 3] = k;
-        this.age[m] = t;
-        any = Math.max(any, k);
-        m++;
+        const st = Math.min(1.3, this.tk[i]! + (this.tk[i + 1]! - this.tk[i]!) * u);
+        const fade = (1 - t) ** 1.7 * st * Math.min(1, t * 14);
+        if (fade < 0.01) continue;
+        const r = 1.2 + 5.2 * (1 - t) ** 0.8;
+        // Brightness is per dab; neighbours overlap, so scale it by the spacing.
+        const k = fade * 0.2 * Math.min(1.8, step / 2.6);
+        p.glow(x, y, r * 1.5, WARM_DEEP, k);
+        if (t < 0.3) p.glow(x, y, r * 0.6, HOT, k * 0.9 * (1 - t / 0.3));
+        // The next dab sits about a third of a radius on, so they always fuse into one ribbon.
+        step = Math.max(floor, r * 0.5);
       }
     }
-    if (any < 0.012) return;
-    p.streak(m, WARM_DEEP);
-    for (let i = 0; i < m; i++) {
-      p.pw[i]! *= 0.4;
-      p.pc[i * 3]! *= 0.5 * (1 - sat(this.age[i]! / 0.3));
-    }
-    p.streak(m, HOT);
   }
 
   /** Particles; drawn in front of the body. */

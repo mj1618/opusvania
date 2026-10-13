@@ -1,18 +1,32 @@
 // biome-ignore-all lint/style/noNonNullAssertion: typed-array maths; indices are in range by construction
 /**
- * Wick's simulated parts, all verlet chains with rest shapes (../hooded/chain.ts):
+ * Wick's simulated parts, all verlet chains with rest shapes (./chain.ts: the hooded
+ * skin's chain plus soft body colliders, so cloth lies on the body instead of passing through it):
  *   scarf      one long tail from the back of the neck
  *   tails      the two split coat tails from the back of the waist
  *   ribbons    two short hat ribbons
- *   skirt      the short coat skirt's centre line (drawn as one flared panel)
+ *   skirt      three chains (back edge, centre, front edge) drawn as one sheet; the knees push it
  *   lantern    a true pendulum on the glaive's hook: hook -> ring -> lantern body. No rest pull,
  *              only gravity, a little air drag and the hook's motion, so it swings, lags and settles.
  */
 import type { PlayerView } from '../../contract';
 import { wind } from '../../scene/lib/look';
-import { Chain, type ChainSpec } from '../hooded/chain';
 import { clamp, smoothstep } from '../hooded/math';
-import { type Frame, J_HEAD, J_HOOK, J_NECK, J_PELVIS, type Rig, S_D, S_DH, S_FLARE, S_HATROT } from './rig';
+import { Chain, type ChainSpec } from './chain';
+import {
+  type Frame,
+  J_CHEST,
+  J_HEAD,
+  J_HOOK,
+  J_KNEE,
+  J_NECK,
+  J_PELVIS,
+  type Rig,
+  S_D,
+  S_DH,
+  S_FLARE,
+  S_HATROT,
+} from './rig';
 
 const SCARF: ChainSpec = {
   len: [5.2, 5.4, 5.4, 5.4, 5.4, 5.4, 5.2, 5],
@@ -46,15 +60,17 @@ function ribbon(len: number, a0: number, a1: number): ChainSpec {
   return { len: lens, rest, kG: [0.12, 0.004], kL: [0.24, 0.06], drag: 0.085, gravity: 760, wind: 700 };
 }
 
-const SKIRT: ChainSpec = {
-  len: [4.2, 4.2],
-  rest: [268, 266],
-  kG: [0.32, 0.16],
-  kL: [0.4, 0.28],
-  drag: 0.07,
-  gravity: 800,
-  wind: 200,
-};
+function skirt(a0: number, a1: number, len: number): ChainSpec {
+  return {
+    len: [len, len, len],
+    rest: [a0, (a0 + a1) / 2, a1],
+    kG: [0.2, 0.05],
+    kL: [0.34, 0.16],
+    drag: 0.075,
+    gravity: 900,
+    wind: 420,
+  };
+}
 
 const LANTERN: ChainSpec = {
   len: [3.2, 9],
@@ -72,13 +88,31 @@ export class Secondary {
   readonly tailNear = new Chain(TAIL_NEAR);
   readonly ribA = new Chain(ribbon(3.7, 204, 256));
   readonly ribB = new Chain(ribbon(3, 222, 266));
-  readonly skirt = new Chain(SKIRT);
+  /** Skirt: back edge, centre line, front edge. */
+  readonly skirt: Chain[] = [
+    new Chain(skirt(246, 254, 4.3)),
+    new Chain(skirt(268, 270, 4.2)),
+    new Chain(skirt(296, 286, 4.3)),
+  ];
+  /** Soft colliders (x, y, r): chest, pelvis, belly, head; and the two knees for the skirt. */
+  private readonly body = new Float32Array(4 * 3);
+  private readonly knees = new Float32Array(2 * 3);
   readonly lantern = new Chain(LANTERN);
   readonly all: Chain[];
   private readonly cloth: Chain[];
 
   constructor() {
-    this.cloth = [this.scarf, this.tailFar, this.tailNear, this.ribA, this.ribB, this.skirt];
+    this.cloth = [this.scarf, this.tailFar, this.tailNear, this.ribA, this.ribB, ...this.skirt];
+    for (const c of [this.scarf, this.tailFar, this.tailNear, this.ribA, this.ribB]) {
+      c.col = this.body;
+      c.colN = 4;
+    }
+    this.scarf.colFrom = 3;
+    for (const c of this.skirt) {
+      c.col = this.knees;
+      c.colN = 2;
+      c.colFrom = 1;
+    }
     this.all = [...this.cloth, this.lantern];
     this.all.forEach((c, i) => {
       c.phase = (i * 0.17) % 1;
@@ -152,12 +186,41 @@ export class Secondary {
     tn.lift = -flare * 0.55 + w1 * 0.1 + wrap * 0.8;
     tn.curl = -flare * 0.08 + w2 * 0.03 + wrap * 0.34;
 
-    const sk = this.skirt;
-    sk.ax = px;
-    sk.ay = py + 1.2;
-    // Tucked, the skirt lies forward over the thighs instead of hanging on down the spine's line.
-    sk.lift = ball * 1.55;
-    sk.curl = 0;
+    // Skirt: hung from the waist, back to front. Mid-turn it keeps its width (a fixed screen
+    // side per edge, like the hips). Tucked, it lies forward over the thighs.
+    const open = 1 - d * d;
+    const skF = [-5.2, 0, 5];
+    for (let i = 0; i < 3; i++) {
+      const c = this.skirt[i]!;
+      c.ax = px + (skF[i]! * cw + 3.6 * sw) * d + (i - 1) * 4.6 * open;
+      c.ay = py + skF[i]! * sw - 3.6 * cw + (i === 1 ? 0.6 : 0);
+      c.lift = ball * 1.5 + (i - 1) * flare * 0.22 + (i === 0 ? w1 : w2) * 0.05;
+      c.curl = (i - 1) * flare * 0.1;
+    }
+
+    // Colliders.
+    const b = this.body;
+    const sgn = d >= 0 ? 1 : -1;
+    for (const c of [this.scarf, this.tailFar, this.tailNear, this.ribA, this.ribB]) c.colSide = -sgn;
+    b[0] = j[J_CHEST * 2]!;
+    b[1] = j[J_CHEST * 2 + 1]!;
+    b[2] = 6.6;
+    b[3] = px;
+    b[4] = py - 2;
+    b[5] = 6.2;
+    b[6] = (b[0]! + nx) / 2;
+    b[7] = (b[1]! + ny) / 2;
+    b[8] = 6;
+    b[9] = j[J_HEAD * 2]!;
+    b[10] = j[J_HEAD * 2 + 1]!;
+    b[11] = 8.6;
+    const kn = this.knees;
+    for (let side = 0; side < 2; side++) {
+      kn[side * 3] = j[(J_KNEE + side) * 2]!;
+      kn[side * 3 + 1] = j[(J_KNEE + side) * 2 + 1]!;
+      kn[side * 3 + 2] = 4.6;
+    }
+    for (const c of this.skirt) c.colSide = sgn;
 
     // Hat frame at the head centre.
     const hr = s[S_HATROT]!;

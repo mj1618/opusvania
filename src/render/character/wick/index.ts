@@ -58,6 +58,7 @@ export class WickCharacter implements CharacterSkin {
   update(dtIn: number, clock: number, player: PlayerView, events: readonly SimEvent[]): void {
     const dt = clamp(dtIn, 0, 0.05);
     const { rig, sec, fx, painter: p, lamp } = this;
+    rig.groundDist = player.grounded ? 0 : this.clearBelow(player);
     rig.update(dt, clock, player, events);
     const sig = rig.sig;
     const fresh = sig.spawned || !this.started;
@@ -140,6 +141,20 @@ export class WickCharacter implements CharacterSkin {
     e.y = fyp - 2;
     e.radius = 270 + boost * 60;
     e.intensity = 0.8 * lamp.k;
+  }
+
+  /** Px of clear air under the feet (to the nearest solid or one-way top below them). */
+  private clearBelow(p: PlayerView): number {
+    const x0 = p.cx - p.w / 2 + 2;
+    const x1 = p.cx + p.w / 2 - 2;
+    let best = this.ctx.scene.height - p.feetY;
+    for (const r of this.ctx.scene.solids) {
+      if (r.x < x1 && r.x + r.w > x0 && r.y >= p.feetY - 1) best = Math.min(best, r.y - p.feetY);
+    }
+    for (const r of this.ctx.scene.oneWays) {
+      if (r.x < x1 && r.x + r.w > x0 && r.y >= p.feetY - 1) best = Math.min(best, r.y - p.feetY);
+    }
+    return Math.max(0, best);
   }
 
   destroy(): void {
