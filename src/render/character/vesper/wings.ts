@@ -129,11 +129,14 @@ export class Secondary {
     // The somersault: folded tight round her while she turns, thrown wide as she opens out.
     const tuck = rig.spinW;
     const up = rig.openK;
+    const hold = rig.openHold * (1 - up) * (1 - tuck);
     const spread = sat(run * 1.2 + rig.wAir + dash + wall + up) * (1 - tuck);
     this.spread += (spread - this.spread) * (1 - Math.exp(-14 * dt));
-    this.open = sat((glide + apex * 0.6 + wall * 0.5) * (1 - tuck) + up);
-    const stiff = 0.9 + 0.4 * this.spread + 1.7 * dash + 0.5 * up + 8 * tuck + 0.4 * rig.wAir;
-    const dragK = 1 - rig.wAir * (0.45 + 0.3 * rig.airRise) - 0.55 * dash - 0.3 * wall;
+    this.open = sat((glide + apex * 0.6 + wall * 0.5) * (1 - tuck) + up + 0.5 * hold);
+    const stiff = 0.9 + 0.4 * this.spread + 1.7 * dash + 0.5 * up + 8 * tuck + 0.4 * rig.wAir + 0.8 * hold;
+    const dragK = (1 - rig.wAir * (0.45 + 0.3 * rig.airRise) - 0.55 * dash - 0.3 * wall) * (1 - 0.5 * hold);
+    // The lope: a soft half-beat of the wings each stride, up through the float, down at the push.
+    const stride = Math.sin(4 * Math.PI * (rig.phase - 0.2)) * run;
     const dragT = dragK * (1 - 0.85 * tuck);
     const flip = rig.spinPhi * (d >= 0 ? 1 : -1);
 
@@ -182,7 +185,11 @@ export class Secondary {
           GLIDE[k]! * glide +
           DART[k]! * dash +
           lerp(WALL_FREE[k]!, 3, far) * wall;
-        lift = lerp(lift, TUCKED[k]!, tuck);
+        lift -= stride * (15 - 2 * k);
+        // After the somersault the wings stay half spread while she is still rising.
+        lift = lerp(lift, APEX[k]! * 0.85, hold);
+        // In the ball both wings wrap back over her spine and under: one shell.
+        lift = lerp(lift, TUCKED[k]! - 10 * far, tuck);
         lift = lerp(lift, BEAT_UP[k]!, up);
         // The far wing rides higher when open, so both read: fore and hind.
         lift += far * (-6 - 30 * (glide + apex * 0.6) + 9 * run);

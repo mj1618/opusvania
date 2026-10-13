@@ -58,6 +58,9 @@ export interface View {
   glow: number;
   /** Somersault tuck 0..1. */
   tuck: number;
+  /** Wall-slide weight 0..1 and the wall's side on screen (-1 / 1). */
+  wall: number;
+  wallDir: number;
 }
 
 function dim(c: RGB, k: number): RGB {
@@ -77,7 +80,7 @@ const LEG_TOP = rgb(0x30263e);
 const LEG_LOW = rgb(0x191422);
 const FUR = rgb(0x6f6978);
 const FUR_SHADE = rgb(0x423e54);
-const FACE_LIT = rgb(0x8c8490);
+const FACE_LIT = rgb(0x7e7684);
 const FACE_SHADE = rgb(0x4a4560);
 const CROWN_TOP = rgb(0x3d314b);
 const CROWN_LOW = rgb(0x17131f);
@@ -85,7 +88,6 @@ const HAND = rgb(0x767078);
 const WRAP = rgb(0x5c5666);
 const METAL = rgb(0xcdb98a);
 const EYE_RIM = rgb(0xd9820f);
-const EYE_CORE = rgb(0xffe79a);
 const GOLD = rgb(0xffdf9c);
 const GOLD_HOT = rgb(0xfffaea);
 const GOLD_DEEP = rgb(0xe9a04a);
@@ -93,7 +95,7 @@ const HALO: RGB = [0.78, 0.72, 0.95];
 const SHADOW: RGB = [0.01, 0.03, 0.06];
 const SPOT_DARK = rgb(0x120e1e);
 const EYE_PATCH: RGB = [0.1, 0.07, 0.15];
-const BLUSH: RGB = [0.92, 0.5, 0.56];
+const BLUSH: RGB = [0.86, 0.36, 0.46];
 
 const SH_TORSO: Shade = { c0: TUNIC_LOW, c1: TUNIC_TOP, rim: 0.7, cool: 0.4, form: 0.25, band: 0.5 };
 const SH_ARM: Shade = { c0: SLEEVE, c1: SLEEVE_LOW, rim: 0.9, cool: 0.45, form: 0.3, band: 0.55 };
@@ -169,8 +171,24 @@ const SH_FACE: Shade = {
 };
 const SH_CROWN: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 0.9, cool: 0.5, form: 0.3, band: 0.36 };
 const SH_LOCK: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 0.9, cool: 0.5, form: 0.3, band: 0.6 };
-const SH_EYE: Shade = { c0: rgb(0x8f4a06), c1: EYE_RIM, rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
-const SH_EYE_CORE: Shade = { c0: rgb(0xffcf5a), c1: EYE_CORE, rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
+const SH_LOCK_SOFT: Shade = {
+  c0: mixRGB(CROWN_TOP, FUR_SHADE, 0.25),
+  c1: CROWN_LOW,
+  rim: 0.7,
+  cool: 0.5,
+  form: 0.25,
+  band: 0.7,
+};
+const SH_EYE: Shade = { c0: rgb(0x5e2c04), c1: rgb(0xb8660c), rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
+const SH_EYE_CORE: Shade = {
+  c0: rgb(0xe89a1e),
+  c1: rgb(0xffd670),
+  rim: 0,
+  cool: 0,
+  form: 0,
+  band: 0.5,
+  ember: 0,
+};
 const SH_CATCH: Shade = {
   c0: rgb(0xfffdf2),
   c1: rgb(0xfffdf2),
@@ -349,7 +367,7 @@ function leg(p: Painter, j: Float32Array, side: number, far: boolean): void {
   p.ribbon(4, fsh, true, true);
 }
 
-function arm(p: Painter, j: Float32Array, side: number, far: boolean, wrap: boolean): void {
+function arm(p: Painter, j: Float32Array, side: number, far: boolean, wrap: boolean, grip: number): void {
   limb(p, j, J_SH_A + side, J_EL_A + side, J_HAND_A + side, 2.15, 1.6, 1.15, far ? SH_ARM_FAR : SH_ARM);
   const hx = j[(J_HAND_A + side) * 2]!;
   const hy = j[(J_HAND_A + side) * 2 + 1]!;
@@ -367,20 +385,49 @@ function arm(p: Painter, j: Float32Array, side: number, far: boolean, wrap: bool
       p.ribbon(2, far ? SH_HAND_FAR : SH_WRAP, false, false);
     }
   }
-  const a = Math.atan2(hy - ey, hx - ex);
-  // An open hand: palm and a hint of fingers trailing.
+  const a0 = Math.atan2(hy - ey, hx - ex);
+  // An open hand: palm and a hint of fingers trailing. On a wall it turns flat against the face
+  // with the fingers spread up it: a grip.
+  let da = -Math.PI / 2 - a0;
+  da = Math.atan2(Math.sin(da), Math.cos(da));
+  const a = a0 + da * grip;
   const sh = far ? SH_HAND_FAR : SH_HAND;
-  p.ellipse(hx + Math.cos(a) * 1.1, hy + Math.sin(a) * 1.1, 1.9, 1.4, a, sh, 10);
+  const ca = Math.cos(a);
+  const sa = Math.sin(a);
+  p.ellipse(hx + ca * 1.1, hy + sa * 1.1, 1.9 + 0.4 * grip, 1.4 - 0.2 * grip, a, sh, 10);
   tuft(
     p,
-    hx + Math.cos(a) * 1.6,
-    hy + Math.sin(a) * 1.6,
+    hx + ca * 1.6,
+    hy + sa * 1.6,
     hx + Math.cos(a + 0.25) * 4.4,
     hy + Math.sin(a + 0.25) * 4.4,
     0.3,
     0.9,
     sh,
   );
+  if (grip > 0.05) {
+    const g = grip;
+    tuft(
+      p,
+      hx + ca * 1.4,
+      hy + sa * 1.4,
+      hx + Math.cos(a - 0.45) * 4.2 * g,
+      hy + Math.sin(a - 0.45) * 4.2 * g,
+      0.3,
+      0.8,
+      sh,
+    );
+    tuft(
+      p,
+      hx + ca * 1.0,
+      hy + sa * 1.0,
+      hx + Math.cos(a + 0.95) * 3.4 * g,
+      hy + Math.sin(a + 0.95) * 3.4 * g,
+      0.3,
+      0.8,
+      sh,
+    );
+  }
 }
 
 function torso(p: Painter, j: Float32Array): void {
@@ -692,7 +739,8 @@ function ruff(p: Painter, f: Frame, v: View): void {
 
 /** Mane locks off the back of the head: root (f, u), tip (f, u), bow, width. Forward-frame px. */
 const LOCKS = [
-  -4.5, 6.8, -13.5, 5.2, -2.6, 4.2, -7.0, 2.4, -17.5, -2.6, -2.8, 4.6, -6.2, -3.0, -13.0, -9.6, -1.8, 3.8,
+  -3.0, 8.2, -10.5, 9.6, -2.0, 3.6, -5.6, 5.4, -14.5, 4.6, -2.4, 4.2, -7.0, 2.0, -16.5, -1.8, -2.6, 4.6, -6.6,
+  -1.6, -15.0, -6.2, -2.2, 4.2, -5.2, -4.6, -11.0, -10.0, -1.6, 3.4,
 ];
 
 function head(p: Painter, f: Frame, v: View, far: number): void {
@@ -720,8 +768,8 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
       Y(LOCKS[i + 2]! * dh, -LOCKS[i + 3]!) + v.hairY * k,
       LOCKS[i + 4]! * dh,
       LOCKS[i + 5]!,
-      SH_LOCK,
-      0.36,
+      i % 12 === 0 ? SH_LOCK : SH_LOCK_SOFT,
+      0.3,
     );
   }
 
@@ -866,27 +914,27 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
     p.soft(ex, ey, w * 1.7, R * 1.5, EYE_PATCH, 0.2);
     p.shape(ESEG, mx, my, SH_EYE, ex + st * R, ey - ct * R, ex - st * R, ey + ct * R);
     // Core: the light inside, lower in the eye, following the gaze.
-    const cry = Math.min(R * 0.68, vis * 0.44);
-    const crx = w * 0.7;
+    const cry = Math.min(R * 0.58, vis * 0.4);
+    const crx = w * 0.6;
     const cqx = lookX * w * 0.26;
     const cqy = Math.max(R * 0.16 + lookY * R * 0.24, yTop + cry + 0.15);
     const cx = ex + cqx * ct - cqy * st;
     const cy = ey + cqx * st + cqy * ct;
     if (vis > 0.9) {
       p.ellipse(cx, cy, crx, cry, tilt, SH_EYE_CORE, 14);
-      p.glow(cx, cy + cry * 0.25, 2.4, GOLD_HOT, 0.3 * v.glow);
+      p.glow(cx, cy + cry * 0.3, 1.8, GOLD_HOT, 0.12 * v.glow);
       // Catchlights: one large, upper, toward the light; one tiny, lower, opposite. Wet and alive.
       const hqx = cqx * 0.5 + w * 0.3;
       const hqy = cqy - R * 0.5;
-      const hr = R * 0.25;
+      const hr = R * 0.3;
       if (hqy - hr > yTop + 0.1) p.ellipse(ex + hqx, ey + hqy, hr * 0.9, hr, 0, SH_CATCH, 8);
       if (vis > R * 1.1)
-        p.ellipse(ex + cqx * 0.5 - w * 0.34, ey + cqy + R * 0.36, R * 0.11, R * 0.11, 0, SH_CATCH, 6);
+        p.ellipse(ex + cqx * 0.5 - w * 0.34, ey + cqy + R * 0.36, R * 0.14, R * 0.14, 0, SH_CATCH, 6);
     }
-    p.glow(mx, my, 8.5, EYE_RIM, 0.12 * open * v.glow);
+    p.glow(mx, my, 7.5, EYE_RIM, 0.05 * open * v.glow);
     // A soft warm blush on the cheek below.
     const bx = lx - sd * czh * 1.3;
-    p.soft(X(bx, ly + R + 1.5), Y(bx, ly + R + 1.5), 2.5 * (near ? 1 : 0.75), 1.5, BLUSH, 0.24);
+    p.soft(X(bx, ly + R + 1.5), Y(bx, ly + R + 1.5), 3.1 * (near ? 1 : 0.75), 1.9, BLUSH, 0.5);
   }
 }
 /** Cheek fluff: side (+1 = back of the head, -1 = front), root x (fraction of the half width), root y, length, angle below the outward axis. */
@@ -911,14 +959,14 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   p.glow(j[J_HEAD * 2]!, j[J_HEAD * 2 + 1]! - 8, 50, GOLD_DEEP, 0.075 * v.glow);
 
   wing(p, v.wings[far]!.strands, v.open, 0.52, v.glow, clock);
-  arm(p, j, far, true, false);
+  arm(p, j, far, true, false, v.wall);
   leg(p, j, far, true);
   thorn(p, f, 21 * (1 - 0.65 * v.tuck));
   torso(p, j);
   leg(p, j, near, false);
   wing(p, v.wings[near]!.strands, v.open, 1, v.glow, clock);
   ruff(p, f, v);
-  arm(p, j, near, false, true);
+  arm(p, j, near, false, true, v.wall);
   head(p, f, v, far);
   antenna(p, v.antennae[near]!, false, v.glow);
 }

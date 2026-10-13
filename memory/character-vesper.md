@@ -40,6 +40,15 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - `fx.ts`: gold motes that rise (buoyant), short comet trails from antenna tips and wing hem
   (only when the point itself moves fast), land/skid dust. Light `ember` = midpoint of the lantern tips.
 
+## Round 3 notes
+- Eyes under the zone grades: rim 0x5e2c04 -> 0xb8660c, core 0xe89a1e -> 0xffd670, almost no additive
+  glow on top (glow is what flattened them to yellow). Catchlights 0.3R / 0.14R, blush alpha 0.5.
+- Ball: TUCK head pitch 2.0 (chin right into the knees), both wings wrap back over the spine as one
+  shell. Sending the far wing forward over the head made a second lobe: don't.
+- `openHold` (decays ~0.5 s after the opening) keeps the wings half spread through the post-spin rise.
+- Run: stance 16%, pelvis arc 7.4 px, wings half-beat once per stride (`stride` in wings.ts).
+- Wall: hand x targets are the wall face itself (`ox + d*(w/2-1.4)`), hands rotate flat and splay fingers.
+
 ## Gotchas
 - Wing strands have no body collision: a stiff, fast flare throws them over the head and they
   come down in FRONT of the body. Keep the flare's stiffness boost low (0.5) and BEAT_UP <= ~-112 deg.

@@ -61,6 +61,8 @@ export class VesperCharacter implements CharacterSkin {
       hairY: 0,
       glow: 1,
       tuck: 0,
+      wall: 0,
+      wallDir: 1,
     };
   }
 
@@ -93,6 +95,8 @@ export class VesperCharacter implements CharacterSkin {
     view.hairY = ly + noise1(clock * 0.9, 53) * 0.25;
     view.open = sec.open;
     view.tuck = rig.spinW;
+    view.wall = rig.wWall;
+    view.wallDir = rig.frame.s[0]! >= 0 ? 1 : -1;
 
     // --- Her light: the two lantern tips.
     const a0 = sec.antennae[0];

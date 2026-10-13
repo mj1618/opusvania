@@ -138,8 +138,8 @@ export const BODY = {
 /** Run cycle in world px: a footfall every 128 px. */
 export const RUN_CYCLE = 256;
 /** Fraction of the cycle a foot is planted: the rest is float. */
-const STANCE = 0.18;
-const CONTACT_F = 19;
+const STANCE = 0.16;
+const CONTACT_F = 18;
 
 // Channel order: PF PU LEAN CURL HT | AF AU AP | BF BU BP | HAF HAU HBF HBU | TW EYE LOOKY HYAW
 const RISE = pose([
@@ -153,7 +153,7 @@ const FALL = pose([-1, 33, -0.1, 0.02, 0.14, 5, 2, 0.5, -5, 6, 1.0, -9, -7, 8, -
  * the box centre (the pivot), so the spin is a steady round shape.
  */
 const TUCK = pose([
-  -10, 37, 1.0, 0.6, 0.5, -4.5, 22.5, 1.3, -6, 23.5, 1.35, -3.5, -13, -2, -12, 0, 0.85, 0.3, 1,
+  -14, 37, 1.0, 0.75, 2.0, -8.5, 22.5, 1.3, -10, 23.5, 1.35, -3.5, -13, -2, -12, 0, 0.85, 0.3, 1,
 ]);
 /** Snapping out: a touch past the fall pose. Body long and open, legs reaching, arms wide. */
 const OPEN = pose([0, 33.5, -0.12, -0.16, -0.14, 5, -2, 0.7, -5, -1, 1.1, -12, 1, 10, 0, 0, 1, 0.2, 1]);
@@ -272,6 +272,8 @@ export class Rig {
   spinPhi = 0;
   spinW = 0;
   openK = 0;
+  /** Lingers after the opening (decays over ~0.5 s): the wings stay half spread through the rise. */
+  openHold = 0;
   spinning = false;
   /** 0..1 of the top run speed, smoothed. */
   speedK = 0;
@@ -385,6 +387,7 @@ export class Rig {
       this.spinPhi = 0;
       this.openT = 1;
       this.openK = 0;
+      this.openHold = 0;
       this.gazeX.snap(0);
       this.gazeY.snap(0);
       this.wide.snap(1);
@@ -493,6 +496,8 @@ export class Rig {
       const w = this.openK * (1 - this.spinW) * 0.9;
       for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, OPEN[i]!, w);
     } else this.openK = 0;
+    if (sig.opened) this.openHold = 1;
+    this.openHold *= Math.exp(-(p.grounded || dash || wall ? 14 : 2.2) * dt);
 
     // --- Springs layered on top.
     const ax = (p.vx - this.lastVx) / Math.max(dt * 60, 0.25);
@@ -602,7 +607,8 @@ export class Rig {
       const hu = out[side === 0 ? HAU : HBU]!;
       // Hands are dragged: the pose says where, the drag says how late. Not on the wall (they grip).
       const drag = side === 0 ? this.handA : this.handB;
-      const tx = sx + hf * d;
+      // On a wall the hands go to the wall's face itself, wherever the shoulders are.
+      const tx = lerp(sx + hf * d, ox + d * (p.w / 2 - 1.4), this.wWall);
       const ty = sy - hu;
       if (spawned) drag.snap(tx, ty);
       drag.step(tx, ty, dt);
@@ -759,7 +765,7 @@ export class Rig {
     const c2 = Math.cos(2 * TAU * x);
     const rise = 0.5 - 0.5 * c1 + 0.14 * (0.5 - 0.5 * c2);
     o[PF] = 1.2 + 0.9 * Math.sin(TAU * (x - 0.12));
-    o[PU] = 28.2 + 6 * rise;
+    o[PU] = 28.8 + 7.4 * rise;
     o[LEAN] = 0.05 + 0.09 * k - 0.03 * c1;
     o[CURL] = 0.05 + 0.02 * Math.cos(TAU * (x - 0.2));
     // The head stays level: it gives back what the spine leans.

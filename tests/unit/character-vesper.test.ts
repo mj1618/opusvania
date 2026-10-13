@@ -151,4 +151,26 @@ describe('vesper rig', () => {
       );
     }
   });
+
+  it('a somersault cut short by landing settles upright without a pop', () => {
+    const rig = new Rig();
+    let clock = 0;
+    const air = { cy: 1140, feetY: 1180, vy: -6, grounded: false, motion: 'rise' } as const;
+    rig.update(DT, clock, view({}), [{ type: 'spawn', x: 1000, y: 1280 }]);
+    for (let i = 0; i < 10; i++) rig.update(DT, (clock += DT), view(air), []);
+    rig.update(DT, (clock += DT), view(air), [{ type: 'jump', kind: 'double', x: 1000, y: 1180, dir: 0 }]);
+    for (let i = 0; i < 9; i++) rig.update(DT, (clock += DT), view(air), []);
+    expect(Math.abs(rig.spinPhi)).toBeGreaterThan(1);
+    let prev = rig.spinPhi;
+    let worst = 0;
+    for (let i = 0; i < 40; i++) {
+      rig.update(DT, (clock += DT), view({ cy: 1140, feetY: 1180 }), []);
+      worst = Math.max(worst, Math.abs(rig.spinPhi - prev));
+      prev = rig.spinPhi;
+    }
+    // Never more than ~70 degrees in one frame on the way back, and it ends exactly upright.
+    expect(worst).toBeLessThan(1.25);
+    expect(rig.spinPhi).toBe(0);
+    expect(rig.spinW).toBe(0);
+  });
 });
