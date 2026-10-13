@@ -95,6 +95,10 @@
   it adds velocity, so plants overshoot and wobble back on the cell springs.
 - Other agents' saves full-reload the page between `playwright-cli` calls: capture a motion sequence inside ONE
   `eval` (step, `g.render()`, `drawImage` the game canvas into a 2D canvas, return a JPEG data URL).
+- **FloraBuilder vertex indices are per chunk.** Anything that keeps indices across `plant()` calls (a strip
+  running along x, like the front moss lip) must restart when `chunkIndex(x)` changes, or the draw indexes past
+  the chunk's vertex buffer (`glDrawElements: Vertex buffer is not big enough`).
+- Hanging vines end in a `leafKnot` on a bough stub near the scene top (y 30-90), not at the frame edge.
 - GLSL: `cast` is a reserved word. Destroy shaders before the textures bound to them or Pixi warns.
 - Bake scale is fixed at boot (`viewScale` clamped to 1.5..2); a later resize does not rebake.
 - Tops are honest to within ~6 px (`__game.debug.hitboxes(true)` to check). Island tapers, ledge sag and the

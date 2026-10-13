@@ -177,7 +177,7 @@ void main() {
   float cell = floor(x / 7.0);
   float tw = hash(cell) * 6.283;
   float glint = pow(max(0.0, sin(t * (1.1 + hash(cell + 3.0)) + tw)), 14.0) * step(0.62, hash(cell + 9.0)) * pow(sin(3.14159 * fract(x / 7.0)), 2.0);
-  add += uLine * (line * tilt * 0.8 + glow * 0.12 + line * glint * 1.4);
+  add += uLine * (line * tilt * 1.05 + glow * 0.16 + line * glint * 1.9);
   // The crown of a landing splash: a bright ring racing outward along the surface.
   float spAge = t - uSplash.y;
   if (uSplash.z > 0.0 && spAge > 0.0 && spAge < 0.9) {

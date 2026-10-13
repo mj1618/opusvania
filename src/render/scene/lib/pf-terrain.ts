@@ -55,7 +55,7 @@ export const TERRAIN = {
   litter: [0xb9873a, 0x9a6a34, 0xc9a24a, 0x6f7a34] as const,
   /** 0..1: share of each top where the moss gives way to earth, stones, roots, litter. */
   mossBare: 0.3,
-  mossSun: 0x7f8a36,
+  mossSun: 0xa4b040,
   /** Moss cap: how far it rises above the collision line and how thick it hangs. */
   mossLift: 2,
   mossMound: 4,
@@ -80,7 +80,7 @@ export const TERRAIN = {
   /** Gap between the baked backdrop pieces (boulders, dead stumps) behind the walk line, px. */
   backdropGap: [260, 560] as const,
   /** 0..1: strength of the lit crest and contact shadow on elevated tops (islands, ledges, boughs, trunks). */
-  highRead: 0.8,
+  highRead: 1,
   /** How far bank faces cut back under their lip, px. */
   faceUndercut: 9,
 } as const;
@@ -240,7 +240,7 @@ function mossTone(x: number, y: number, seed: number, dull: number): { dark: num
   let body = mix(TERRAIN.moss, TERRAIN.mossOlive, olive * 0.8);
   body = mix(body, sun > 0.5 ? TERRAIN.mossSun : TERRAIN.mossShade, Math.abs(sun - 0.5) * 1.1);
   const z = zoneAt(x);
-  body = mix(mix(mix(body, 0x1f6456, z.cool * 0.4), 0x7c7a2a, z.warm * 0.5), 0x1c2c52, z.deep * 0.5);
+  body = mix(mix(mix(body, 0x1f6456, z.cool * 0.4), 0x7c7a2a, z.warm * 0.5), 0x2c1c5a, z.deep * 0.55);
   let dark = mix(TERRAIN.mossDark, mix(TERRAIN.mossOlive, TERRAIN.mossDark, 0.6), olive * 0.7);
   if (dull > 0) {
     body = mix(body, 0x10424a, dull);
@@ -410,7 +410,7 @@ function mossCap(p: Paint, x0: number, x1: number, y: number, o: MossOpts): void
         crestT,
         (t) => (3 + wobble(t * 300, o.seed + 61, 30) * 0.9) * Math.sin(Math.PI * clamp(t, 0.01, 0.99)) ** 0.3,
       ),
-      mix(mossTone((x0 + x1) / 2, y, o.seed, 0).body, TERRAIN.mossLit, 0.75),
+      mix(mossTone((x0 + x1) / 2, y, o.seed, 0).body, 0x8fc060, 0.8),
       0.98,
       { moss: 1 },
       0.5 + 0.4 * read,
@@ -974,7 +974,8 @@ function paintBackdrop(p: Paint, scene: Scene, info: TerrainInfo): void {
     x < W - 120;
     x += range(r, TERRAIN.backdropGap[0], TERRAIN.backdropGap[1])
   ) {
-    if (avoid.some(([a, b]) => x > a && x < b)) continue;
+    // Nothing on the left bank: up there a boulder catches the hero's light and reads as a pale sticker.
+    if (x < 420 || avoid.some(([a, b]) => x > a && x < b)) continue;
     // Stand clear of steps: the shape must sit on one level.
     const gy = info.groundY(x);
     if (info.groundY(clamp(x - 90, 0, W - 1)) !== gy || info.groundY(clamp(x + 90, 0, W - 1)) !== gy)

@@ -49,7 +49,7 @@ export const BAKE = {
   planes: 0.82,
   strokes: 0.42,
   crevice: 7,
-  chips: 0.55,
+  chips: 0.85,
   /** Half width (world px) of the broad beam where the key light lands; see sunAt in pf-shape.ts. */
   beamWidth: 760,
 } as const;
@@ -169,7 +169,7 @@ void main() {
   // Same dapples as sunAt() in pf-shape.ts: keep the two in step.
   float dp = 0.5 + 0.25 * sin(vWorld.x * 0.0131 + 1.7 * sin(vWorld.y * 0.004))
            + 0.25 * sin(vWorld.x * 0.0057 - vWorld.y * 0.0031 + 2.1);
-  float dapple = smoothstep(0.66, 0.84, dp);
+  float dapple = smoothstep(0.5, 0.72, dp);
   float sun = clamp(beam * 0.28 + dapple * (0.45 + 0.4 * beam), 0.0, 1.0);
 
   // Brush strokes that follow the form: along the silhouette near edges, along the grain inside.
@@ -222,10 +222,10 @@ void main() {
   // The scene's three moods: moonlit blue-green, golden, deep emerald and violet.
   float zA = smoothstep(uZone.x, uZone.y, vWorld.x);
   float zB = smoothstep(uZone.z, uZone.w, vWorld.x);
-  vec3 zoneTint = mix(mix(vec3(0.7, 0.95, 1.2) * 0.85, vec3(1.24, 0.98, 0.58) * 0.9, zA), vec3(0.94, 0.7, 1.22) * 0.72, zB);
+  vec3 zoneTint = mix(mix(vec3(0.7, 0.95, 1.2) * 0.85, vec3(1.24, 0.98, 0.58) * 0.9, zA), vec3(1.02, 0.66, 1.26) * 0.72, zB);
   c *= zoneTint;
   // Moss dims and cools where the light does not reach.
-  c *= mix(mix(0.72, 1.0, sun), mix(0.3, 1.05, sun), moss);
+  c *= mix(mix(0.72, 1.0, sun), mix(0.3, 1.55, sun), moss);
   c = mix(c, c * vec3(0.72, 0.96, 1.2), moss * (1.0 - sun) * 0.55);
   // Interiors sink into shadow; edges keep their colour.
   c *= mix(1.0, uShade.w, inside * (1.0 - moss * 0.7));
@@ -242,7 +242,7 @@ void main() {
   // Key light, warm. Things painted low (the back plane) barely catch it.
   vec3 warm = vec3(1.0, 0.84, 0.58);
   float plane = smoothstep(0.24, 0.44, hs.r / ha);
-  float reach = mix(0.14, 1.3, sun) * mix(0.3, 1.0, plane);
+  float reach = mix(0.14, 1.75, sun) * mix(0.3, 1.0, plane);
   float k = key * uShade.x * reach;
   vec3 keyCol = mix(warm, vec3(1.0, 0.93, 0.5), moss);
   c += base * keyCol * k * 1.35 + keyCol * (k * k) * uShade.y * 0.3;

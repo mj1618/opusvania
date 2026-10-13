@@ -129,6 +129,11 @@ export class FloraBuilder {
     this.fixedH = null;
   }
 
+  /** Which chunk a plant rooted at x goes into. Vertex indices are only valid within one chunk. */
+  chunkIndex(x: number): number {
+    return Math.min(this.chunks.length - 1, Math.max(0, Math.floor(x / this.chunkW)));
+  }
+
   /** Adds a vertex, returns its index. */
   v(x: number, y: number, color: number, alpha = 1, cx = 0, cy = 0): number {
     const c = this.cur;
