@@ -79,6 +79,8 @@ export class CharacterRenderer {
   /** A short on-screen label: which design this is and which number key selects each. */
   private announce(def: SkinDef): void {
     if (typeof document === 'undefined') return;
+    // Not in manual mode: the capture tools boot with ?manual and must get a clean frame.
+    if (new URLSearchParams(window.location.search).has('manual')) return;
     let el = document.getElementById('char-label');
     if (!el) {
       el = document.createElement('div');
