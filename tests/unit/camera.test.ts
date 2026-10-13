@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { clampAxis, createCamera, lerpCamera, stepCamera } from '../../src/render/camera/index';
-import { cameraTuning } from '../../src/render/camera/tuning';
 import { VIEW_H, VIEW_W } from '../../src/render/contract';
 import { LightRegistry } from '../../src/render/lights';
 import { GROVE } from '../../src/scene/index';
