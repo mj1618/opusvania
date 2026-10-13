@@ -168,9 +168,12 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
   of L / I (`SPIN_TABLE`, built once for 1 and 2 turns), so it ends exactly upright. `rig.spinOmega`,
   `rig.spinI` are exposed; the unit test checks omega x I is constant and peaks at the tightest.
 - The figure is rotated about its centre of mass (`MASS` weights) and that centre is moved onto the
-  box centre as she tucks; every length shrinks 12% in the ball (head drawn 12% smaller, wings 20%).
-  Ball: body inside a 38 px circle, wings ~35 px (probe numbers), 42 px overlay on the sheets.
-- One turn 0.48 s (peak 20 rad/s), two turns 0.6 s (peak 29 rad/s). `Rig.turns`; `?turns=1|2`, key T
+  box centre as she tucks. She must NOT visibly shrink (owner): lengths 3%, wings 4%, head never
+  scaled; roundness comes from folding. Ball: ~43 px across (body), wing shell ~41 px.
+  A 12% shrink and a 38 px ball were tried and rejected.
+- One turn 0.48 s (peak 20 rad/s), two turns 0.56 s (peak 31 rad/s), two is the DEFAULT. A tapped
+  double jump at the apex has only 30 frames (0.5 s) of air on flat ground (the tap cuts the jump),
+  so two turns land 4 frames into the kick-out and the interrupt spring finishes it. `Rig.turns`; `?turns=1|2`, key T
   (toast bottom-left, remembered in localStorage `vesper.turns`), `window.__vesper.turns`.
 - Capture gotcha: x 600-900 is under F1 and 1900 running right reaches the mid rise: both cut the
   airtime. For a full double jump use flat open ground and check the log for `headBump`.

@@ -316,18 +316,18 @@ export class VesperCharacter implements CharacterSkin {
   }
 
   /**
-   * One somersault turn or two: `?turns=1|2`, else what was chosen last (localStorage), else one.
+   * One somersault turn or two: `?turns=1|2`, else what was chosen last (localStorage), else two.
    * T flips it while playing; `window.__vesper.turns` reads and sets it for tools.
    */
   private initTurns(): void {
     if (typeof window === 'undefined') return;
-    let n = 1;
+    let n = 2;
     try {
       const q = new URLSearchParams(window.location.search).get('turns');
       const saved = window.localStorage.getItem(TURNS_KEY);
-      n = q === '2' || q === '1' ? Number(q) : saved === '2' ? 2 : 1;
+      n = q === '2' || q === '1' ? Number(q) : saved === '1' ? 1 : 2;
     } catch {
-      // Storage can be blocked: one turn.
+      // Storage can be blocked: the default.
     }
     Rig.turns = n === 2 ? 2 : 1;
     window.addEventListener('keydown', this.onKey);

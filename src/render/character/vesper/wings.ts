@@ -258,7 +258,7 @@ export class Secondary {
         c.lat = -sd * mid * 0.55 * (1 - soar);
         // In the ball the wings draw in with everything else: a close shell.
         c.scale =
-          lerp(1, SOAR_LEN[k]! * (1 + 0.05 * Math.max(0, ck)) * (1 - 0.04 * far), span) * (1 - 0.2 * tuck);
+          lerp(1, SOAR_LEN[k]! * (1 + 0.05 * Math.max(0, ck)) * (1 - 0.04 * far), span) * (1 - 0.04 * tuck);
         let lift =
           STREAM[k]! * run +
           RISE[k]! * rise +
@@ -348,7 +348,7 @@ export class Secondary {
           18 * rig.dive) *
         DEG;
       c.curl = 0.04 * run - 0.05 * glide + 0.07 * fl + 0.46 * tuck;
-      c.scale = 1 - 0.18 * tuck;
+      c.scale = 1 - 0.04 * tuck;
       c.stiff = 1 + 1.2 * dash + 7 * tuck;
       c.dragK = (1 - 0.3 * dash) * (1 - 0.7 * tuck);
       c.floorY = Number.POSITIVE_INFINITY;

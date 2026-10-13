@@ -182,7 +182,7 @@ describe('vesper rig', () => {
       expect(rig.spinPhi).toBe(0);
       expect(rig.spinW).toBe(0);
     }
-    Rig.turns = 1;
+    Rig.turns = 2;
   });
 
   it('somersault: spin rate follows 1 / moment of inertia, whole turns, tight ball', () => {
@@ -220,7 +220,7 @@ describe('vesper rig', () => {
         minI = Math.min(minI, rig.spinI);
         if (rig.spinW > 0.98) tuckedI = Math.min(tuckedI, rig.jointI);
         // Away from the first and last tenth the momentum is constant: omega x I does not change.
-        const u = (frames * DT) / (turns === 2 ? 0.6 : 0.48);
+        const u = (frames * DT) / (turns === 2 ? 0.56 : 0.48);
         if (u > 0.14 && u < 0.86) momentum.push(rig.spinOmega * rig.spinI);
         tick();
         frames++;
@@ -241,7 +241,7 @@ describe('vesper rig', () => {
       // Two turns spin faster than one.
       expect(peak).toBeGreaterThan(turns === 2 ? 26 : 18);
     }
-    Rig.turns = 1;
+    Rig.turns = 2;
   });
 
   it('glide: wings spread to both sides, stay spread through a turn, and fold on release', () => {

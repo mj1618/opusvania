@@ -26,7 +26,6 @@ import {
   J_ORIGIN,
   J_SH_A,
   J_TOE_A,
-  S_BALL,
   S_CZH,
   S_D,
   S_DH,
@@ -920,8 +919,8 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
   const sr = Math.sin(rot);
   const W = BODY.headW;
   const Hh = BODY.headH;
-  // In the ball the head is drawn a little smaller, with everything else.
-  const hs = 1 - 0.12 * s[S_BALL]!;
+  // The head is never scaled (the owner saw her shrink in the ball).
+  const hs = 1;
   const X = (lx: number, ly: number): number => hx + (lx * cr - ly * sr) * hs;
   const Y = (lx: number, ly: number): number => hy + (lx * sr + ly * cr) * hs;
 

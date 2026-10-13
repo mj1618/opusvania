@@ -204,7 +204,7 @@ const OPEN = pose([0, 33.5, -0.12, -0.16, -0.14, 5, -2, 0.7, -5, -1, 1.1, -12, 1
  */
 export const SOMERSAULT = {
   /** Seconds for one turn, and for two. */
-  time: [0.48, 0.6],
+  time: [0.48, 0.56],
   /** Fraction of the move by which she is fully tucked, and at which the kick-out begins. */
   tuckIn: [0.3, 0.24],
   kickOut: [0.58, 0.68],
@@ -212,8 +212,8 @@ export const SOMERSAULT = {
   inertiaOpen: 3.85,
   /** Extra inertia of the wings as they flare at the kick-out: an air brake. */
   inertiaFlare: 5,
-  /** In the ball every length shrinks by this much (cartoon licence, eased with the tuck). */
-  shrink: 0.12,
+  /** In the ball every length shrinks by this much: barely (the owner saw her get smaller at 12%). */
+  shrink: 0.03,
 } as const;
 
 /** Tuck 0..1 at progress u for a move of `n` turns. */
@@ -413,7 +413,7 @@ export class Rig {
   openHold = 0;
   spinning = false;
   /** Turns per somersault: 1 or 2 (the owner flips it live with T). */
-  static turns = 1;
+  static turns = 2;
   /** The model's moment of inertia (ball = 1) and angular speed (rad/s) this frame, and the ball's measured radius. */
   spinI: number = SOMERSAULT.inertiaOpen;
   spinOmega = 0;
