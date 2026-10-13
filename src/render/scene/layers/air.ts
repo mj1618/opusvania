@@ -30,6 +30,7 @@ import {
   UniformGroup,
 } from 'pixi.js';
 import type { Scene } from '../../../sim/scene';
+import type { PointLight } from '../../lights';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import type { LayerRect } from '../layer-tree';
 import {
@@ -57,41 +58,52 @@ export const AIR = {
   shafts: {
     /** Per zone: colour and strength. Cool moonlight, gold, thin violet dusk. */
     color: [0xbfe6ee, mix(PALETTE.keyWarm, PALETTE.keyGold, 0.3), 0xd9c4f2] as Three<number>,
-    zoneStrength: [0.7, 1, 0.6] as Three<number>,
+    zoneStrength: [0.7, 0.6, 0.7] as Three<number>,
     /** Strength of the shafts behind the playfield and of the veil in front of the character. */
-    back: 0.6,
-    /** 0 = no veil: the front pass then only works where the ground mist is. */
-    front: 0.12,
-    /** Extra strength high up among the canopy (fades out toward the ground). */
-    highBoost: 0.7,
+    back: 0.42,
+    front: 0.06,
     /** How much solid playfield hides the front veil (1 = beams pass fully behind it). */
     frontOcclusion: 0.9,
-    /** The canopy moves: each opening slowly widens and narrows by this fraction, at this rate. */
-    breathe: 0.35,
+    /** Extra strength high up among the canopy (fades out toward the ground). */
+    highBoost: 0,
+    /** The canopy moves: each beam slowly brightens and dims by this fraction, at this rate. */
+    breathe: 0.3,
     breatheRate: 0.11,
     /**
-     * Where the canopy lets light through: entry point (the shaft passes through it), half width
-     * across the beam, strength, and reach (0 = dies high in the air, 1 = almost touches the ground).
+     * The beams, two or three to a screen: where each passes through y = KEY_LIGHT.entryY, its
+     * half width across, strength, and reach (1 = touches the ground). A beam that reaches the
+     * ground ends in a pool of light there (`pool`: its strength as a point light for the post
+     * stage, which lands it on ground and plants only).
      */
-    groups: [
-      { x: KEY_LIGHT.entryX, y: KEY_LIGHT.entryY, halfWidth: 580, strength: 1, reach: 0.9 },
-      { x: 1560, y: KEY_LIGHT.entryY, halfWidth: 240, strength: 0.75, reach: 0.6 },
-      { x: 5650, y: KEY_LIGHT.entryY, halfWidth: 190, strength: 0.8, reach: 0.6 },
-      { x: 4700, y: KEY_LIGHT.entryY, halfWidth: 110, strength: 0.6, reach: 0.4 },
+    beams: [
+      { x: 1010, halfWidth: 100, strength: 0.5, reach: 0.5, pool: 0 },
+      { x: 1620, halfWidth: 170, strength: 0.9, reach: 1, pool: 0.4 },
+      { x: 3080, halfWidth: 150, strength: 0.8, reach: 1, pool: 0.4 },
+      { x: 3560, halfWidth: 230, strength: 1, reach: 1, pool: 0.5 },
+      { x: 4060, halfWidth: 120, strength: 0.6, reach: 0.6, pool: 0 },
+      { x: 4800, halfWidth: 110, strength: 0.6, reach: 1, pool: 0.35 },
+      { x: 5560, halfWidth: 130, strength: 0.45, reach: 1, pool: 0.35 },
     ],
+    /** The pool of light where a beam lands: radius as a multiple of the beam's half width. */
+    poolRadius: 1.6,
+    poolColor: [0xbfe6ff, PALETTE.keyWarm, 0xe6ccff] as Three<number>,
   },
   mist: {
     /** Per zone: tint and opacity. */
     color: [0x6fb7c9, mix(PALETTE.fogFar, PALETTE.keyWarm, 0.3), 0x7f8fc4] as Three<number>,
-    opacity: [0.3, 0.4, 0.4] as Three<number>,
+    opacity: [0.3, 0.22, 0.34] as Three<number>,
     /** Scale height above the ground, and how fast it fades below the surface line. */
     height: 120,
     underground: 30,
     /** How much a shaft crossing the mist lights it up, and how much point lights do. */
-    litByShaft: 2.2,
+    litByShaft: 0.5,
     litByLights: 0.55,
     /** Point lights reach this many times their radius through the mist. */
     lightReach: 2.1,
+    /** Extra mist lying over the pool: centre x, half width, how many times thicker. */
+    poolX: 1696,
+    poolWidth: 300,
+    poolBoost: 1.6,
     /** The character parts the mist: radius and amount. */
     partRadius: 230,
     partAmount: 0.7,
@@ -103,43 +115,53 @@ export const AIR = {
       { y: 330, thickness: 120, opacity: 0.3 },
       { y: 760, thickness: 150, opacity: 0.26 },
     ],
-    sheetLitByShaft: 2.4,
+    sheetLitByShaft: 1.1,
     /** How far the wind's wave pushes the sheets as it passes. */
     gust: 70,
   },
   motes: {
-    count: 760,
+    count: 420,
     /** The tile the motes wrap in (bigger than the view so the wrap is never seen). */
     tile: [2800, 1640] as const,
-    minRadius: 1.5,
-    maxRadius: 6.5,
-    baseBrightness: 0.2,
-    litBrightness: 2.6,
+    /** Small sharp points: 2-4 px across. */
+    minRadius: 1.1,
+    maxRadius: 2.4,
+    baseBrightness: 0.55,
+    litBrightness: 3.2,
     driftX: 16,
     driftY: -7,
     swirl: 26,
     /** How far the wind's wave carries a mote back and forth: gusts are seen travelling through. */
     windSway: 85,
+    /** They gather over the pool (centre x, half width) and low over the ground. */
+    poolX: 1700,
+    poolWidth: 420,
+    hugGround: 0.6,
+    /** A few big out-of-focus discs right in front of the lens: how many, radius range, brightness. */
+    bokeh: 5,
+    bokehRadius: [16, 30] as const,
+    bokehBrightness: 0.045,
     /** Per zone: a mote in shade, a mote in a shaft, how many there are, how bright in shade. */
     cool: [PALETTE.glowCyan, mix(PALETTE.fogFar, PALETTE.keyWarm, 0.6), SPORE] as Three<number>,
     warm: [0xd8f4ff, PALETTE.keyWarm, 0xf1d9ff] as Three<number>,
-    density: [0.85, 1, 0.7] as Three<number>,
-    shade: [1.25, 0.8, 1.15] as Three<number>,
+    density: [0.9, 1, 0.75] as Three<number>,
+    shade: [1.1, 0.8, 1] as Three<number>,
   },
   fireflies: {
-    /** Per zone: how many, and their colours. */
-    count: [28, 10, 16] as Three<number>,
+    /** Per zone: how many, their colours, and the x of the spots they gather around. */
+    count: [12, 4, 8] as Three<number>,
     colors: [
       [PALETTE.glowCyan, 0xbdf7ff, 0xbdf7a0, 0x8fe9ff],
       [0xffe9a0, 0xd9ff8f, 0xffd58a],
       [0xd7b0ff, 0x9fd0ff, 0xffc9f0, SPORE],
     ] as Three<readonly number[]>,
-    zoneX: [0, 1900, 3900, 5760] as const,
+    spots: [[760, 1660], [2760], [4380, 5250]] as Three<readonly number[]>,
+    spread: 210,
     /** Hover band above the ground. */
     minAbove: 36,
-    maxAbove: 250,
-    wander: 78,
-    size: 66,
+    maxAbove: 230,
+    wander: 60,
+    size: 30,
     fleeRadius: 170,
     fleePush: 900,
     spring: 2.2,
@@ -168,9 +190,9 @@ export const AIR = {
   backGlow: {
     radius: 300,
     color: [0x7fd0ee, 0xcfe8d0, 0xb7a8f0] as Three<number>,
-    alpha: [0.2, 0.1, 0.25] as Three<number>,
+    alpha: [0.07, 0.03, 0.1] as Three<number>,
     /** Extra strength with the camera high in the canopy, where everything behind is dark. */
-    high: 0.08,
+    high: 0.05,
   },
   moths: {
     count: 6,
@@ -222,6 +244,7 @@ function volumeMesh(shared: UniformGroup, ground: Texture): Mesh<Geometry, Shade
         uMist: vec4(),
         uPlayer: vec4(),
         uBands: vec4(2),
+        uPoolMist: vec4(),
         uBandLook: vec4(),
         uLightPos: vec4(AIR_LIGHTS),
         uLightCol: vec4(AIR_LIGHTS),
@@ -235,6 +258,7 @@ type VolumeU = Record<
   | 'uRect'
   | 'uView'
   | 'uBands'
+  | 'uPoolMist'
   | 'uBandLook'
   | 'uShaftColors'
   | 'uMistColors'
@@ -270,14 +294,14 @@ class Fireflies {
     const tex = glowTexture();
     const rnd = prng(0xf1ef1e);
     for (let z = 0; z < 3; z++) {
-      const x0 = cfg.zoneX[z] as number;
-      const x1 = cfg.zoneX[z + 1] as number;
       const n = cfg.count[z] as number;
       const colors = cfg.colors[z] as readonly number[];
+      const spots = cfg.spots[z] as readonly number[];
       for (let i = 0; i < n; i++) {
-        // Loose clumps: jittered slots along the zone. Zones overlap a little at their borders.
-        const slot = x0 + ((i + rnd()) / n) * (x1 - x0);
-        const hx = Math.min(ground.width - 60, Math.max(60, slot + (rnd() - 0.5) * 420));
+        // Small gatherings around a few spots, denser toward the middle of each.
+        const spot = spots[i % spots.length] as number;
+        const off = (rnd() + rnd() + rnd() - 1.5) * cfg.spread;
+        const hx = Math.min(ground.width - 60, Math.max(60, spot + off));
         const hy = ground.top(hx) - cfg.minAbove - rnd() ** 1.6 * (cfg.maxAbove - cfg.minAbove);
         const s = new Sprite(tex);
         s.anchor.set(0.5);
@@ -633,6 +657,7 @@ export class AirLayer implements EnvModule {
   private leaves!: Leaves;
   private moths!: Moths;
   private backGlow!: Sprite;
+  private readonly pools: Array<PointLight | undefined> = [];
   private backTarget!: RenderTexture;
   private frontTarget!: RenderTexture;
   private backView!: Sprite;
@@ -664,6 +689,12 @@ export class AirLayer implements EnvModule {
         antialias: false,
         scaleMode: 'linear',
       });
+    AIR.shafts.beams.forEach((b, i) => {
+      if (b.pool <= 0) return;
+      const light: PointLight = { x: 0, y: 0, radius: 1, color: 0xffffff, intensity: 0 };
+      this.pools[i] = light;
+      ctx.lights.set(`shaft${i}`, light);
+    });
     this.back = volumeMesh(this.shared, groundTex);
     this.backTarget = target();
     this.backView = new Sprite(this.backTarget);
@@ -716,7 +747,15 @@ export class AirLayer implements EnvModule {
         uNoise: noiseTexture().source,
         uGround: groundTex.source,
         airShared: this.shared,
-        motes: { uCam: vec4(), uMoteLook: vec4(), uMoteMove: vec4(), uCool: vec4(3), uWarm: vec4(3) },
+        motes: {
+          uCam: vec4(),
+          uMoteLook: vec4(),
+          uMoteMove: vec4(),
+          uClusters: vec4(),
+          uBokeh: vec4(),
+          uCool: vec4(3),
+          uWarm: vec4(3),
+        },
       },
     });
     const mesh = new Mesh({ geometry, shader });
@@ -734,13 +773,39 @@ export class AirLayer implements EnvModule {
     const su = this.shared.uniforms as { uGroups: Float32Array; uAir: Float32Array };
     su.uAir[0] = t;
     su.uGroups.fill(0);
-    shafts.groups.slice(0, MAX_SHAFT_GROUPS).forEach((g, i) => {
+    const sceneH = this.ctx.scene.height;
+    shafts.beams.slice(0, MAX_SHAFT_GROUPS).forEach((b, i) => {
+      // Each beam breathes on its own slow clock, as if the canopy above it were moving.
       const open =
         Math.sin(t * shafts.breatheRate + i * 2.1) * 0.6 + Math.sin(t * shafts.breatheRate * 2.3 + i) * 0.4;
-      su.uGroups[i * 4] = g.x * KEY_LIGHT.dirY - g.y * KEY_LIGHT.dirX + open * g.halfWidth * 0.12;
-      su.uGroups[i * 4 + 1] = g.halfWidth * (1 + shafts.breathe * 0.5 * open);
-      su.uGroups[i * 4 + 2] = g.strength * (1 + shafts.breathe * open);
-      su.uGroups[i * 4 + 3] = g.reach;
+      const strength = b.strength * (1 + shafts.breathe * open);
+      su.uGroups[i * 4] = b.x * KEY_LIGHT.dirY - KEY_LIGHT.entryY * KEY_LIGHT.dirX;
+      su.uGroups[i * 4 + 1] = b.halfWidth;
+      su.uGroups[i * 4 + 2] = strength;
+      su.uGroups[i * 4 + 3] = b.reach;
+
+      // Where the beam meets the ground it leaves a pool of light (a point light for the post
+      // stage). Walk the centre line down to the ground profile.
+      const pool = this.pools[i];
+      if (!pool) return;
+      let x = b.x;
+      let y: number = KEY_LIGHT.entryY;
+      for (let k = 0; k < 6; k++) {
+        const gy = Math.min(sceneH, this.ground.top(Math.min(this.ground.width, Math.max(0, x))));
+        x = b.x + ((gy - KEY_LIGHT.entryY) * KEY_LIGHT.dirX) / KEY_LIGHT.dirY;
+        y = gy;
+      }
+      const zw = zoneWeights(x);
+      const c = [0, 0, 0];
+      zoneColor(shafts.poolColor, zw, c);
+      pool.x = x;
+      pool.y = y - 30;
+      pool.radius = b.halfWidth * shafts.poolRadius;
+      pool.color =
+        (Math.round((c[0] as number) * 255) << 16) |
+        (Math.round((c[1] as number) * 255) << 8) |
+        Math.round((c[2] as number) * 255);
+      pool.intensity = b.pool * (1 + shafts.breathe * open) * zoneMix(shafts.zoneStrength, zw);
     });
     this.shared.update();
 
@@ -771,6 +836,7 @@ export class AirLayer implements EnvModule {
         u.uBands.set([b.y, b.thickness, b.opacity, 0], i * 4);
       });
       u.uBandLook.set([front ? 0 : 1, mist.sheetLitByShaft, shafts.highBoost, 0]);
+      u.uPoolMist.set([mist.poolX, mist.poolWidth, mist.poolBoost, 0]);
       u.uLightPos.fill(0);
       if (front) {
         const lights = this.ctx.lights.list;
@@ -809,6 +875,13 @@ export class AirLayer implements EnvModule {
       motes.litBrightness,
     ]);
     (mu.uMoteMove as Float32Array).set([motes.driftX, motes.driftY, motes.swirl, motes.windSway]);
+    (mu.uClusters as Float32Array).set([motes.poolX, motes.poolWidth, motes.hugGround, 0]);
+    (mu.uBokeh as Float32Array).set([
+      1 - motes.bokeh / motes.count,
+      motes.bokehRadius[0],
+      motes.bokehRadius[1],
+      motes.bokehBrightness,
+    ]);
     pack3(mu.uCool as Float32Array, motes.cool, motes.density);
     pack3(mu.uWarm as Float32Array, motes.warm, motes.shade);
 
@@ -817,7 +890,6 @@ export class AirLayer implements EnvModule {
     const zw = zoneWeights(p.cx);
     const tint = [0, 0, 0];
     zoneColor(bg.color, zw, tint);
-    const sceneH = this.ctx.scene.height;
     const high = Math.min(1, Math.max(0, (sceneH - 540 - frame.camera.y) / Math.max(1, sceneH - 1080)));
     this.backGlow.position.set(p.cx, p.cy - 6);
     this.backGlow.scale.set((bg.radius * 2) / this.backGlow.texture.width);

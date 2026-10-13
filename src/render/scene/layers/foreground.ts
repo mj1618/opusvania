@@ -25,19 +25,7 @@ import { BlurFilter, Container, Graphics, Matrix, Rectangle, RenderTexture, Spri
 import { VIEW_H, VIEW_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { fxDebug } from '../lib/fx-debug';
-import {
-  bladeArc,
-  bough,
-  broadLeaves,
-  flowerCluster,
-  flowers,
-  frond,
-  leafBranch,
-  mushrooms,
-  trunk,
-  vine,
-  withPlane,
-} from '../lib/fx-foliage';
+import { bladeArc, broadLeaves, frond, leafBranch, trunk, withPlane } from '../lib/fx-foliage';
 import { PALETTE, prng, wind } from '../lib/look';
 
 export const FOREGROUND = {
@@ -46,23 +34,27 @@ export const FOREGROUND = {
   bakeScale: 0.5,
   atlasWidth: 2048,
   /** Per plane: parallax, blur in atlas px (x2 on screen), opacity. */
-  near: { parallax: 1.35, blur: 1.5, alpha: 0.97 },
-  far: { parallax: 1.15, blur: 0.9, alpha: 1 },
+  near: { parallax: 1.35, blur: 4, alpha: 1 },
+  far: { parallax: 1.15, blur: 2.6, alpha: 1 },
+  /** Height of the bottom band's plants, px (5-8% of the frame once they stand in it). */
+  band: 92,
+  /** Camera x over which the corner pair swaps from top-left + bottom-right to its mirror. */
+  mirrorAt: [2500, 3300] as const,
   /**
    * Where on screen a plant is at full size: `full` and beyond (distance of its middle from the
    * frame centre, in frame widths) it is fully out; at `clear` and nearer the centre it is fully
    * withdrawn.
    */
-  clear: 0.2,
-  full: 0.37,
+  clear: 0.1,
+  full: 0.27,
   /** 0..1: how much of the camera's vertical travel the top plants ignore. */
   topLock: 0.95,
   /**
    * On the high route the frame is canopy already: the near top plants pull back by this much of
    * their height and thin to this opacity when the camera is at its highest.
    */
-  highRetract: 0.55,
-  highAlpha: 0.7,
+  highRetract: 0,
+  highAlpha: 1,
   /** Sway amplitudes (radians of rotation for hanging things, of skew for growing things). */
   swayTop: 0.022,
   swayBottom: 0.045,
@@ -154,28 +146,22 @@ export class ForegroundLayer implements EnvModule {
     const top = this.groundTop;
     const bottom = this.groundTop + VIEW_H;
 
-    // Near, top: big boughs reaching a third of the way down. Seen whole only in the corners.
+    // Near, top: big leafy boughs that fill a corner.
     const [n0, n1] = span(FOREGROUND.near.parallax);
-    for (let x = n0 + rnd() * 300; x < n1; x += 520 + rnd() * 360) {
+    for (let x = n0 + rnd() * 300; x < n1; x += 250 + rnd() * 170) {
       const dir = rnd() < 0.5 ? -1 : 1;
-      const drop = 240 + rnd() * 90;
-      add('near', 'top', x, top - 40, drop + 170, (g) => leafBranch(g, rnd, 360 + rnd() * 200, drop, dir));
-      if (rnd() < 0.4) {
-        const color = FOREGROUND.flowerColors[Math.floor(rnd() * FOREGROUND.flowerColors.length)] as number;
-        add('near', 'top', x - dir * 110, top - 30, 330, (g) =>
-          flowerCluster(g, rnd, 190 + rnd() * 110, color),
-        );
-      }
+      const drop = 330 + rnd() * 130;
+      add('near', 'top', x, top - 40, drop + 200, (g) => leafBranch(g, rnd, 520 + rnd() * 260, drop, dir));
     }
-    // Near, bottom: one designed plant per spot, rising a quarter of the way up in the corners.
-    for (let x = n0 + rnd() * 300; x < n1; x += 520 + rnd() * 380) {
+    // Near, bottom: one big designed plant per spot, filling the opposite corner.
+    for (let x = n0 + rnd() * 300; x < n1; x += 240 + rnd() * 170) {
       const r = rnd();
-      const size = 230 + rnd() * 90;
+      const size = 330 + rnd() * 130;
       const dir = rnd() < 0.5 ? -1 : 1;
-      if (r < 0.4) add('near', 'bottom', x, bottom + 26, size * 1.1, (g) => frond(g, rnd, size * 1.15, dir));
+      if (r < 0.4) add('near', 'bottom', x, bottom + 26, size * 1.1, (g) => frond(g, rnd, size * 1.1, dir));
       else if (r < 0.72)
         add('near', 'bottom', x, bottom + 24, size * 1.05, (g) => broadLeaves(g, rnd, size * 0.95));
-      else add('near', 'bottom', x, bottom + 22, size * 1.2, (g) => bladeArc(g, rnd, size * 1.25));
+      else add('near', 'bottom', x, bottom + 22, size * 1.2, (g) => bladeArc(g, rnd, size * 1.2));
     }
     for (const t of FOREGROUND.trunks) {
       const height = (VIEW_H / 2) * 2 + (ctx.scene.height - VIEW_H) * FOREGROUND.near.parallax + 400;
@@ -187,47 +173,16 @@ export class ForegroundLayer implements EnvModule {
       };
     }
 
-    // Far, top: a low fringe of sprigs and short vines.
+    // Far, bottom: the low band that closes the frame, 5-8% of its height, everywhere: grass arcs,
+    // small fronds and broad leaves shoulder to shoulder. It never withdraws.
     const [f0, f1] = span(FOREGROUND.far.parallax);
-    for (let x = f0 + rnd() * 200; x < f1; x += 300 + rnd() * 300) {
+    for (let x = f0 + rnd() * 120; x < f1; x += 70 + rnd() * 70) {
       const r = rnd();
       const dir = rnd() < 0.5 ? -1 : 1;
-      if (r < 0.55) {
-        const drop = 90 + rnd() * 60;
-        add('far', 'top', x, top - 46, drop * 0.3, (g) => bough(g, rnd, 170 + rnd() * 120, drop, dir));
-      } else if (r < 0.85) {
-        const n = 1 + Math.floor(rnd() * 3);
-        for (let i = 0; i < n; i++) {
-          const len = 110 + rnd() * 150;
-          add('far', 'top', x + i * (36 + rnd() * 50), top - 30, len * 0.55, (g) => vine(g, rnd, len));
-        }
-      }
-    }
-    // Far, bottom: a sparse fringe. Grass arcs and small fronds everywhere; flowers in the light
-    // well, glowing mushrooms in the two dark zones.
-    for (let x = f0 + rnd() * 200; x < f1; x += 330 + rnd() * 330) {
-      const r = rnd();
-      // Far-plane x of the scene's thirds (the plane agrees with the playfield at the anchor).
-      const sceneX = anchor.x + (x - anchor.x) / FOREGROUND.far.parallax;
-      const zone = sceneX < 1900 ? 0 : sceneX < 3900 ? 1 : 2;
-      const dir = rnd() < 0.5 ? -1 : 1;
-      if (r < 0.38) {
-        const size = 150 + rnd() * 70;
-        add('far', 'bottom', x, bottom + 14, size * 0.45, (g) => bladeArc(g, rnd, size));
-      } else if (r < 0.64) {
-        const size = 130 + rnd() * 60;
-        add('far', 'bottom', x, bottom + 16, size * 0.45, (g) => frond(g, rnd, size, dir));
-      } else if (r < 0.8) {
-        const size = 110 + rnd() * 50;
-        add('far', 'bottom', x, bottom + 16, size * 0.4, (g) => broadLeaves(g, rnd, size));
-      } else if (zone === 1) {
-        const size = 130 + rnd() * 60;
-        add('far', 'bottom', x, bottom + 14, size * 0.35, (g) => flowers(g, rnd, size, PALETTE.keyGold));
-      } else {
-        const size = 70 + rnd() * 30;
-        const glow = zone === 0 ? PALETTE.glowCyan : PALETTE.glowViolet;
-        add('far', 'bottom', x, bottom + 10, size * 0.3, (g) => mushrooms(g, rnd, size, glow));
-      }
+      const size = FOREGROUND.band * (0.75 + rnd() * 0.55);
+      if (r < 0.45) add('far', 'bottom', x, bottom + 16, 0, (g) => bladeArc(g, rnd, size * 1.15));
+      else if (r < 0.8) add('far', 'bottom', x, bottom + 18, 0, (g) => frond(g, rnd, size, dir));
+      else add('far', 'bottom', x, bottom + 18, 0, (g) => broadLeaves(g, rnd, size * 1.1));
     }
 
     this.pieces = pieces;
@@ -295,6 +250,10 @@ export class ForegroundLayer implements EnvModule {
     soft.filters = [new BlurFilter({ strength: blur, quality: 4, resolution: 1 })];
     const holder = new Container();
     holder.addChild(soft);
+    // Twice over itself: the blur keeps its soft edge but the body of every shape stays opaque.
+    const again = new Sprite(raw);
+    again.filters = [new BlurFilter({ strength: blur, quality: 4, resolution: 1 })];
+    holder.addChild(again);
     renderer.render({ container: holder, target: atlas, clear: true, clearColor: [0, 0, 0, 0] });
     holder.destroy({ children: true });
     raw.destroy(true);
@@ -332,6 +291,8 @@ export class ForegroundLayer implements EnvModule {
     const px = vis.x + vis.w / 2 + (p.cx - cam.x);
     const py = vis.y + vis.h / 2 + (p.cy - cam.y);
     const k = Math.min(1, frame.dt * cfg.fadeRate);
+    const mt = Math.min(1, Math.max(0, (cam.x - cfg.mirrorAt[0]) / (cfg.mirrorAt[1] - cfg.mirrorAt[0])));
+    const mirror = mt * mt * (3 - 2 * mt);
     // 0 on the ground, 1 with the camera at the top of the scene.
     const high = Math.min(1, Math.max(0, (anchor.y - cam.y) / Math.max(1, anchor.y - VIEW_H / 2)));
 
@@ -348,9 +309,19 @@ export class ForegroundLayer implements EnvModule {
 
       // Where the plant's middle is across the frame: 0 = centre, 0.5 = the frame's edge.
       const mid = piece.x + sx + piece.b.x + piece.b.width / 2;
-      const across = Math.abs(mid - (vis.x + vis.w / 2)) / vis.w;
-      const t = Math.min(1, Math.max(0, (across - cfg.clear) / (cfg.full - cfg.clear)));
-      const out = t * t * (3 - 2 * t);
+      // Mass sits in two opposite corners: top-left with bottom-right, or the mirror of that,
+      // swapping (smoothly, with the camera) along the scene.
+      const across = (mid - (vis.x + vis.w / 2)) / vis.w;
+      const side = (s0: number): number => {
+        const t = Math.min(1, Math.max(0, (across * s0 - cfg.clear) / (cfg.full - cfg.clear)));
+        return t * t * (3 - 2 * t);
+      };
+      const out =
+        piece.edge === 'trunk'
+          ? 1
+          : piece.edge === 'top'
+            ? side(-1) * (1 - mirror) + side(1) * mirror
+            : side(1) * (1 - mirror) + side(-1) * mirror;
       let away = piece.retract * (1 - out) * (piece.edge === 'top' ? -1 : 1);
       let thin = 1;
       if (piece.edge === 'top' && piece.plane === 'near') {

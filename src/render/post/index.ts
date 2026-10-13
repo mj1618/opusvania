@@ -191,6 +191,8 @@ export class PostStage {
     u.uHero[3] = ember ? hero.darken * zoneMix(ZONE_GRADE.heroPocket, zw) : 0;
     u.uHero2[0] = (hero.inner * camera.zoom) / VIEW_H;
     u.uHero2[1] = hero.desaturate;
+    u.uHero2[2] = hero.ceiling;
+    u.uHero2[3] = ember ? hero.pull : 0;
     lu.uShape[0] = VIEW_W / VIEW_H;
     lu.uShape[1] = lights.falloff;
     lu.uShape[2] = lights.hazeReach;

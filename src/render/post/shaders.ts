@@ -214,7 +214,7 @@ uniform vec4 uGrain;      // amplitude, time, aspect, unused
 uniform vec4 uLightBack;  // bloom cut on pale brights, glint, warm add, leaf light wrap
 uniform vec4 uHalo;       // rgb: the lights' mean colour
 uniform vec4 uHero;       // x, y (view heights), pocket radius, darkening
-uniform vec4 uHero2;      // inner radius left untouched, desaturation, unused x2
+uniform vec4 uHero2;      // inner radius left untouched, desaturation, luminance ceiling, pull toward it
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -246,8 +246,13 @@ void main(void) {
   // and greyer, so a small figure separates from a busy, glowing forest without an outline.
   vec2 hd = cv - (uHero.xy - vec2(0.5 * uGrain.z, 0.5));
   float h2 = dot(hd, hd);
-  float pocket = exp(-h2 / (uHero.z * uHero.z)) * (1.0 - exp(-h2 / (uHero2.x * uHero2.x))) * uHero.w;
-  col = mix(col, vec3(dot(col, LUMA)), pocket * uHero2.y) * (1.0 - pocket);
+  float pocket = exp(-h2 / (uHero.z * uHero.z)) * (1.0 - exp(-h2 / (uHero2.x * uHero2.x)));
+  // Bright surroundings are pulled down hardest (toward the ceiling in uHero2.z); dark ones are
+  // left nearly alone, so the pocket never reads as a grey disc.
+  float pl = dot(col, LUMA);
+  float over = max(pl - uHero2.z, 0.0);
+  float keep = 1.0 - pocket * (uHero.w + uHero2.w * over / max(pl, 1e-3));
+  col = mix(col, vec3(pl), pocket * uHero2.y) * keep;
 
   // Big pale bright areas (sky, lit fog) are bright enough already: they take little bloom
   // themselves, so the glow budget goes to halos around small, coloured lights.
@@ -263,7 +268,7 @@ void main(void) {
   // else, being nearest): the matte takes the light, the halo and most of the bloom off them.
   float hero = smoothstep(0.08, 0.6, texture(uMatte, vPos).a) * uProtect.x;
   float ll = dot(col, LUMA);
-  vec3 albedo = mix(vec3(ll), col, 0.72);
+  vec3 albedo = mix(vec3(ll), col, 0.92);
   float lift = uMix.y * (0.3 + 0.12 / (0.25 + ll)) * (1.0 - smoothstep(0.5, 1.0, ll));
   vec3 add = albedo * lit.rgb * lift + lit.rgb * (ll * ll * uLightBack.y + uLightBack.z);
   // Soft knee: lit moss and grass approach the cap, never white.

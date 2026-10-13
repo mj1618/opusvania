@@ -13,7 +13,7 @@ export const POST = {
     threshold: 0.58,
     knee: 0.3,
     /** How much of the blurred glow is added back. */
-    intensity: 1.05,
+    intensity: 0.85,
     /** 0..1: how much each wider blur level carries. Higher = wider, softer halo. */
     spread: 0.68,
     /** Tap distance multiplier of the upsample tent (1 = normal). */
@@ -34,11 +34,11 @@ export const POST = {
 
   lights: {
     /** Gain on surfaces: how much a light lifts the colours already there. */
-    gain: 3.6,
+    gain: 3.5,
     /** Strength left where the surroundings are bright already (the light well). */
-    inBrightPlaces: 0.45,
+    inBrightPlaces: 0.3,
     /** A little of the light's own colour added to every surface it reaches. */
-    warm: 0.07,
+    warm: 0.05,
     /** Glints: extra light on spots that are already bright (wet moss, water highlights). */
     glint: 0.35,
     /** The glow hanging in the air around a light, and how far it reaches (x the light's radius). */
@@ -54,7 +54,7 @@ export const POST = {
     /** How much silhouette edges facing the light gain and edges facing away lose. */
     direction: 0.55,
     /** Lit surfaces approach this luminance and never pass it (moss and grass must not go white). */
-    cap: 0.78,
+    cap: 0.6,
     /**
      * The hero matte (lib/fx-mask.ts): how much of the light and halo is kept off the hero's own
      * pixels (1 = all), and how much of the bloom.
@@ -71,16 +71,23 @@ export const POST = {
    * is in ZONE_GRADE.
    */
   hero: {
-    radius: 380,
+    radius: 360,
     inner: 62,
-    darken: 0.16,
+    /** Flat darkening at the heart of the pocket (0.18 = 18%). */
+    darken: 0.18,
     desaturate: 0.3,
+    /**
+     * Whatever is brighter than `ceiling` (0..1 luminance) behind the hero is pulled this far back
+     * toward it, so the surround stays under ~110/255 even in front of bright sky.
+     */
+    ceiling: 0.36,
+    pull: 0.88,
   },
 
   grade: {
     exposure: 1.04,
     /** Highlights roll off smoothly above this instead of clipping. */
-    shoulder: 0.72,
+    shoulder: 0.74,
     /** S-curve strength around the pivot (0 = none). */
     contrast: 0.16,
     pivot: 0.36,
@@ -94,9 +101,9 @@ export const POST = {
 
   vignette: {
     /** Distance from the centre (in view heights) where darkening starts / is complete. */
-    inner: 0.48,
-    outer: 1.08,
-    strength: 0.34,
+    inner: 0.38,
+    outer: 1.02,
+    strength: 0.62,
     /** The corners also go cooler. */
     tint: 0x6f9bd0,
     tintAmount: 0.3,
@@ -125,19 +132,19 @@ export const ZONE_GRADE = {
    * violet-emerald stand. Exposure, and an S-curve whose pivot sits high in the dark zones so the
    * milky mid-tones of the fog drop while glows and sky stay up.
    */
-  exposure: [0.86, 1.04, 0.92] as const,
-  contrast: [0.5, 0.16, 0.36] as const,
-  pivot: [0.5, 0.36, 0.44] as const,
+  exposure: [1.32, 1.08, 1.46] as const,
+  contrast: [0.36, 0.28, 0.36] as const,
+  pivot: [0.4, 0.36, 0.4] as const,
   /** Shadows: moonlit blue, the default teal-indigo, violet dusk. */
-  shadowTint: [0x081f52, 0x0c2450, 0x24164f] as const,
-  shadowLift: [0.16, 0.2, 0.18] as const,
+  shadowTint: [0x081f52, 0x2c2409, 0x24164f] as const,
+  shadowLift: [0.2, 0.16, 0.24] as const,
   /** Highlights: cool white, warm gold, rose. */
   highlightTint: [0xe4f3ff, 0xffe2b8, 0xffdcea] as const,
-  highlightWarmth: [0.3, 0.45, 0.4] as const,
+  highlightWarmth: [0.3, 0.6, 0.4] as const,
   saturation: [1.16, 1.08, 1.16] as const,
   vignetteTint: [0x5f93dc, 0x6f9bd0, 0x8a84d8] as const,
   /** Multiplier on POST.hero.darken: the pocket matters most where the place glows most. */
-  heroPocket: [1.25, 1.3, 1] as const,
+  heroPocket: [1.2, 1.7, 1.1] as const,
 };
 
 /** Bloom targets, widest first. Fixed in logical units so the look does not depend on window size. */

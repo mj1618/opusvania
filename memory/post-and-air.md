@@ -97,6 +97,26 @@
 - Side effect: where the hero is behind a translucent foreground plant, the matte shows as a
   slightly darker hero shape on it.
 
+## Round 6: low key (after memory/reference-study.md)
+- Measure with `npm run look:stats -- --stops=shots/<dir>` (see toolchain.md); targets are in the study.
+- Foreground is opaque near-black (tones in `foregroundTones`, luma < 12) with a faint cool rim, blur 4
+  atlas px (~16 on screen), the blurred atlas drawn twice over itself so bodies stay opaque. Mass sits
+  in two opposite corners (top-left + bottom-right, mirrored for camera x > ~2900: `mirrorAt`) plus a
+  dense low band (`band`). Thin shapes vanish under that blur: only big leaves survive. On the high
+  route the bottom corner and band are off-screen (true parallax); only the top corner remains.
+- Shafts are explicit beams now (`AIR.shafts.beams`, max 8), two or three per screen. A beam with
+  `pool > 0` registers a point light `shaft<i>` where its centre line meets the ground profile; post
+  lands it on ground and plants through the playfield mask. Shaft strength was the main reason the
+  centre measured 88-99 mean luma: back 0.42, centre zone 0.6, no boost at height.
+- Motes: 420, 2-4 px points, gathered by a swarm noise, low over the ground and over the pool
+  (`poolX`); the top `bokeh` seeds are big flat faint discs. Fireflies 12/4/8 in clusters (`spots`), size 30.
+- Hero pocket pulls anything brighter than `hero.ceiling` behind the hero toward it (`pull`), on top
+  of the flat darkening. `AIR.backGlow` is nearly off now that Vesper carries her own light values.
+- Grade per zone (`ZONE_GRADE`): exposure 1.32 / 1.08 / 1.46 gives light back to the dark zones the
+  other layers now darken at source; contrast 0.36 / 0.28 / 0.36 keeps blacks. Hero light gain 3.5,
+  cap 0.6 (higher blew the grass around her to near-white in the dark zones).
+- Stop 7's hero numbers are polluted: teleporting there collects a glint (pickup flash over her).
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").

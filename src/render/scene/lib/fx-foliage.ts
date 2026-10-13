@@ -31,25 +31,18 @@ export function withPlane<T>(far: boolean, draw: () => T): T {
   }
 }
 
-export function foregroundTones(rnd: Rnd, warmth = 0.5, rimAlpha = 0.5): Tones {
-  // Near plane: almost black, but always a teal or indigo black. Far plane: deep forest green.
-  const dark = mix(mix(PALETTE.shadowDeep, PALETTE.shadowIndigo, rnd() * 0.5), 0x01060b, 0.5);
-  const base = farPlane
-    ? mix(mix(PALETTE.foliageDark, PALETTE.shadow, 0.35 + rnd() * 0.3), 0x03131a, 0.3)
-    : dark;
-  const green = farPlane ? PALETTE.foliage : PALETTE.foliageDark;
+export function foregroundTones(rnd: Rnd, _warmth = 0.5, _rimAlpha = 0.5): Tones {
+  // Opaque near-black silhouettes (luma under ~12 of 255), always a teal or indigo black, never
+  // grey. The only modelling is a faint cool rim; the far plane is a touch lighter than the near.
+  const base = mix(0x02070b, 0x050a14, rnd());
+  const lift = farPlane ? 0x0a141c : 0x070f16;
+  const cool = mix(PALETTE.shadow, PALETTE.fogMid, 0.45);
   return {
-    body: [
-      mix(base, 0x01060b, farPlane ? 0.3 : 0.5),
-      base,
-      mix(base, green, 0.18),
-      mix(base, PALETTE.shadow, 0.3),
-      mix(base, green, 0.32),
-    ],
-    rim: mix(mix(PALETTE.foliage, PALETTE.fogMid, 0.5), PALETTE.keyWarm, 0.3 + 0.35 * warmth),
-    cool: mix(PALETTE.fogMid, PALETTE.glowCyan, 0.35),
-    rimAlpha: rimAlpha * (farPlane ? 1.15 : 1),
-    rimShift: farPlane ? 4 : 7,
+    body: [base, mix(base, lift, 0.3), mix(base, lift, 0.6), mix(base, lift, 0.45), mix(base, lift, 0.8)],
+    rim: cool,
+    cool,
+    rimAlpha: farPlane ? 0.3 : 0.22,
+    rimShift: farPlane ? 4 : 6,
   };
 }
 
