@@ -29,7 +29,8 @@ export async function openGame(
   page.on('console', (m) => {
     if (m.type() === 'error') console.error('[console error]', m.text());
   });
-  const target = `${url.replace(/\/?$/, '/')}?manual`;
+  // A url that already carries a query (e.g. ?char=yako) keeps it.
+  const target = url.includes('?') ? `${url}&manual` : `${url.replace(/\/?$/, '/')}?manual`;
   try {
     await page.goto(target);
   } catch (e) {
