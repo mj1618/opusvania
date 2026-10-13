@@ -12,7 +12,7 @@
  *   far1  a backlit stone arch standing in the light well, denser trunks to the right
  *   far2  a 700 px giant on the left, the well, then a dark stand with a huge fallen log leaning in
  */
-import { Container, Graphics, Mesh, type MeshGeometry, Shader, UniformGroup } from 'pixi.js';
+import { Container, Graphics, Mesh, type MeshGeometry, Shader, Sprite, UniformGroup } from 'pixi.js';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import type { LayerName, LayerRect } from '../layer-tree';
 import {
@@ -22,10 +22,13 @@ import {
   bakeLayer,
   type FogSpec,
   LayerView,
+  type LightMap,
   noiseTexture,
   quadGeometry,
   type SwayItem,
   SwaySet,
+  softTexture,
+  type ZoneSpec,
 } from '../lib/bg-bake';
 import { buildForest, type ForestBuild, type ForestPlan, forestLook, hangers } from '../lib/bg-forest';
 import {
@@ -38,6 +41,8 @@ import {
   ribbon,
   rr,
   TO_LIGHT,
+  type Trunk,
+  taper,
 } from '../lib/bg-shapes';
 import { mix, PALETTE, prng } from '../lib/look';
 
@@ -70,6 +75,8 @@ const ATM: readonly Atmosphere[] = [
     rimColor: PALETTE.keyWarm,
     rimStrength: 0.14,
     mottle: 0.1,
+    litGain: 1.3,
+    sunMix: 0.4,
   },
   {
     fogColor: 0x7cc0ba,
@@ -89,6 +96,8 @@ const ATM: readonly Atmosphere[] = [
     rimColor: PALETTE.keyWarm,
     rimStrength: 0.22,
     mottle: 0.14,
+    litGain: 1.5,
+    sunMix: 0.45,
   },
   {
     fogColor: 0x66b0ac,
@@ -108,6 +117,9 @@ const ATM: readonly Atmosphere[] = [
     rimColor: PALETTE.keyWarm,
     rimStrength: 0.3,
     mottle: 0.18,
+    litGain: 1.6,
+    sunMix: 0.5,
+    sunColor: 0xb9dc62,
   },
 ];
 
@@ -168,9 +180,42 @@ const HANG = [
 
 /** Birds far away, between far0 and far1. Speed in layer px/s. */
 const BIRDS = { seed: 31, count: 5, size: 9, spacing: 34, speed: 26, startX: 1150, y: 800, flap: 7.5 };
-const WATERFALL = { x: 1962, top: 700, bottom: 1215, width: 58, color: 0xe8fbf4, alpha: 0.5, speed: 0.55 };
+/** The moonlit waterfall of the left glade (far1 coordinates). */
+const WATERFALL = { x: 1960, top: 600, bottom: 1262, width: 120, color: 0xf2faff, alpha: 0.62, speed: 0.5 };
+/** The colossal hollow tree of the right stand: which far2 trunk it is, and the glow inside. */
+const HOLLOW = { x: 3700, w: 560, glow: 0xffb48a, glowAlpha: 0.5 };
+
+/** How each layer takes on the zone moods (see ZONES in bg-bake). */
+const ZONE: ReadonlyArray<Omit<ZoneSpec, 'anchorX'>> = [
+  {
+    parallax: 0.12,
+    tintL: [0.74, 0.94, 1.22],
+    tintR: [1.04, 0.84, 1.1],
+    mistL: 0xa9cdea,
+    mistR: 0xbba6d2,
+    wellL: { x: 2190, y: 650, r: 380, alpha: 0.5, color: 0xdcefff },
+    wellR: { x: 3560, y: 730, r: 340, alpha: 0.55, color: 0xffc4a4 },
+  },
+  {
+    parallax: 0.25,
+    tintL: [0.76, 0.95, 1.2],
+    tintR: [1.02, 0.85, 1.1],
+    mistL: 0x86b8de,
+    mistR: 0xa290c4,
+    wellL: { x: 1960, y: 520, r: 380, alpha: 0.26, color: 0xcfe6ff },
+    wellR: { x: 3900, y: 780, r: 340, alpha: 0.42, color: 0xf7b3ae },
+  },
+  {
+    parallax: 0.42,
+    tintL: [0.8, 0.96, 1.16],
+    tintR: [0.98, 0.87, 1.08],
+    mistL: 0x5f9ccb,
+    mistR: 0x8078b0,
+    wellR: { x: 4060, y: 820, r: 360, alpha: 0.26, color: 0xe9a8c0 },
+  },
+];
 const ARCH = { x0: 2770, x1: 3250, baseY: 1255, rise: 440, thick: 56 };
-const LOG = { x0: 3270, y0: 1290, x1: 4330, y1: 700, thick: 78 };
+const LOG = { x0: 3930, y0: 1290, x1: 4640, y1: 800, thick: 70 };
 
 const LOOKS = [
   forestLook({ leaf: 11, light: 0.35, streaks: 0.6, bands: 0.5, cool: 0.22 }),
@@ -196,12 +241,12 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       openLift: 150,
       trunks: [
         { x: 1745, w: 180, lean: 30 },
-        { x: 2200, w: 400, lean: -50, branches: 3 },
-        { x: 2560, w: 90, lean: 26, branches: 1 },
+        { x: 2030, w: 90, lean: 26, branches: 1 },
+        { x: 2440, w: 400, lean: -50, branches: 3 },
         { x: 2700, w: 46, lean: -18, branches: 1 },
         { x: 3250, w: 230, lean: 56 },
-        { x: 3530, w: 70, lean: -14, branches: 1 },
-        { x: 3860, w: 330, lean: -36, branches: 3 },
+        { x: 3420, w: 70, lean: -14, branches: 1 },
+        { x: 3880, w: 330, lean: -36, branches: 3 },
         { x: 4130, w: 120, lean: 22 },
       ],
       rootsPerSide: 2,
@@ -211,7 +256,8 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       moundR: 80,
       moss: 3,
       look: l0,
-      behind: (c, r) => waterfallCliff(c, r, l0.bark.base),
+      drop: (x) => -260 * Math.exp(-(((x - 2190) / 170) ** 2)) - 260 * Math.exp(-(((x - 3600) / 190) ** 2)),
+      groundRows: 1,
     },
     {
       seed: 2200,
@@ -225,15 +271,19 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       wellHalf: 300,
       wellLift: 330,
       openLift: 210,
-      drop: (x) => 70 * Math.exp(-(((x - 3900) / 420) ** 2)),
+      drop: (x) => -300 * Math.exp(-(((x - 1960) / 200) ** 2)) - 280 * Math.exp(-(((x - 3880) / 170) ** 2)),
+      groundRows: 1,
+      accentRate: 0.07,
+      amber: 0xd9a04a,
+      blossom: 0xd9c2ff,
       trunks: [
         { x: 1500, w: 220, lean: 20 },
-        { x: 1890, w: 100, lean: -40, branches: 1 },
+        { x: 1720, w: 100, lean: -40, branches: 1 },
         { x: 2300, w: 450, lean: 40, branches: 3 },
         { x: 2660, w: 80, lean: -22, branches: 1 },
         { x: 3400, w: 160, lean: -90, branches: 2 },
-        { x: 3730, w: 320, lean: 30, branches: 3 },
-        { x: 4000, w: 90, lean: 34, branches: 1 },
+        { x: 3640, w: 320, lean: -20, branches: 3 },
+        { x: 4070, w: 90, lean: 34, branches: 1 },
         { x: 4280, w: 270, lean: -30 },
       ],
       rootsPerSide: 2,
@@ -243,7 +293,10 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       moundR: 95,
       moss: 3,
       look: l1,
-      behind: (c, r) => stoneArch(c, r, l1),
+      behind: (c, r) => {
+        waterfallCliff(c, r, l1);
+        stoneArch(c, r, l1);
+      },
     },
     {
       seed: 3300,
@@ -257,15 +310,22 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       wellHalf: 340,
       wellLift: 380,
       openLift: 270,
-      drop: (x) => 130 * Math.exp(-(((x - 4150) / 520) ** 2)) + 60 * Math.exp(-(((x - 1500) / 380) ** 2)),
+      drop: (x) => 60 * Math.exp(-(((x - 4350) / 400) ** 2)) - 300 * Math.exp(-(((x - 4060) / 150) ** 2)),
+      groundRows: 1,
+      accentRate: 0.1,
+      amber: 0xd9a04a,
+      blossom: 0xd9c2ff,
+      onTrunk: (c, r, tr, L) => {
+        if (tr.spec.x === HOLLOW.x) hollow(c, r, tr, l2, L);
+      },
       trunks: [
-        { x: 1150, w: 210, lean: -20 },
-        { x: 1730, w: 540, lean: 80, branches: 3, roots: 3 },
+        { x: 1230, w: 500, lean: 20, branches: 3, roots: 3 },
+        { x: 2040, w: 120, lean: -30, branches: 1 },
         { x: 2480, w: 160, lean: -56, branches: 2 },
         { x: 2860, w: 76, lean: 130, branches: 1, roots: 1 },
-        { x: 3540, w: 350, lean: 40, branches: 3, roots: 3 },
-        { x: 4240, w: 460, lean: -44, branches: 3, roots: 3 },
-        { x: 4620, w: 170, lean: 30 },
+        { x: HOLLOW.x, w: HOLLOW.w, lean: -44, branches: 3, roots: 3, boughs: 3 },
+        { x: 4350, w: 330, lean: 30, branches: 2, roots: 3 },
+        { x: 4640, w: 150, lean: -20 },
       ],
       rootsPerSide: 2,
       rootArch: 0.2,
@@ -279,41 +339,88 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
   ];
 }
 
-/** far0: a pale cliff with a thin waterfall. The live shimmer is added on top by the layer. */
-function waterfallCliff(c: Container, r: Rng, rock: number): void {
+/** far1: the left glade's landmark, a mossy bluff with a tall moonlit waterfall (live shimmer on top). */
+function waterfallCliff(c: Container, r: Rng, look: (typeof LOOKS)[number]): void {
   const g = c.addChild(new Graphics());
   const n = fbm1(77);
   const w = WATERFALL;
-  const stone = mix(rock, PALETTE.shadowIndigo, 0.25);
-  const body = ribbon(
-    (t) => ({ x: w.x + 20 * Math.sin(t * 5), y: 1260 - (1260 - w.top + 70) * t }),
-    (t, side) => (190 - 95 * t) * (1 + n(t * 7 + side * 3) * 0.3) + (side === 1 ? 20 : 0),
-    26,
-  );
-  g.poly(body).fill(stone);
-  // Ledges: lighter slabs stepping down the face.
-  for (let i = 0; i < 7; i++) {
-    const y = w.top + 40 + i * rr(r, 55, 80);
-    const x = w.x + rr(r, -110, 110);
+  const stone = mix(0x040d18, PALETTE.shadowIndigo, 0.3);
+  const face = (t: number): { x: number; y: number } => ({
+    x: w.x + 26 * Math.sin(t * 5),
+    y: 1300 - (1300 - w.top + 90) * t,
+  });
+  g.poly(
+    ribbon(face, (t, side) => (270 - 120 * t) * (1 + n(t * 7 + side * 3) * 0.28) + (side === 1 ? 30 : 0), 30),
+  ).fill(stone);
+  // A dark cleft the water falls through, and lighter ledges stepping down the face.
+  g.poly(ribbon(face, (t) => w.width * (0.55 + 0.2 * t) * (1 + n(t * 9) * 0.2), 20, 0.02, 0.9)).fill({
+    color: look.bark.dark,
+    alpha: 0.55,
+  });
+  for (let i = 0; i < 12; i++) {
+    const y = w.top + 30 + i * rr(r, 40, 62);
+    const side = i % 2 === 0 ? 1 : -1;
+    const x = w.x + side * rr(r, 90, 210);
     g.poly(
       ribbon(
         quad(
           { x: x - rr(r, 40, 90), y: y + rr(r, -8, 8) },
-          { x, y: y - 10 },
+          { x, y: y - 12 },
           { x: x + rr(r, 40, 90), y: y + rr(r, -6, 14) },
         ),
-        (t) => 3 + 7 * Math.sin(Math.PI * t),
+        (t) => 3 + 8 * Math.sin(Math.PI * t),
         8,
       ),
-    ).fill({ color: PALETTE.barkLit, alpha: 0.35 });
+    ).fill({ color: look.bark.lit, alpha: 0.4 });
   }
   const fall = ribbon(
-    (t) => ({ x: w.x + 5 * Math.sin(t * 9), y: w.top + (w.bottom - w.top) * t }),
-    (t) => (w.width / 2) * (0.32 + 0.3 * t) * (1 + n(t * 11) * 0.18),
-    20,
+    (t) => ({ x: w.x + 6 * Math.sin(t * 9), y: w.top + (w.bottom - w.top) * t }),
+    (t) => (w.width / 2) * (0.34 + 0.34 * t) * (1 + n(t * 11) * 0.16),
+    24,
   );
-  g.poly(fall).fill({ color: w.color, alpha: 0.75 });
-  foliageMass(c.addChild(new Graphics()), w.x - 30, w.top - 30, 150, 60, r, LOOKS[0].leaf);
+  g.poly(fall).fill({ color: w.color, alpha: 0.8 });
+  for (let i = 0; i < 6; i++) {
+    const x = w.x + rr(r, -230, 230);
+    const y = w.top - 70 + Math.abs(x - w.x) * 0.25;
+    foliageMass(c.addChild(new Graphics()), x, y, rr(r, 70, 130), rr(r, 40, 70), r, look.leaf);
+  }
+}
+
+/** far2: the right stand's landmark, a colossal tree hollowed out at the base, lit from inside. */
+function hollow(c: Container, r: Rng, tr: Trunk, look: (typeof LOOKS)[number], L: LightMap): void {
+  const g = c.addChild(new Graphics());
+  const w = tr.spec.w;
+  const base = tr.at(0.02, -0.05);
+  const h = w * 1.05;
+  const hw = w * 0.3;
+  const n = fbm1(42);
+  // A pointed, lopsided arch.
+  const pts: number[] = [];
+  for (let i = 0; i <= 26; i++) {
+    const t = i / 26;
+    const a = Math.PI * t;
+    const k = 1 + n(t * 6) * 0.12;
+    pts.push(
+      base.x - Math.cos(a) * hw * k * (1 - 0.25 * Math.sin(a) ** 3),
+      base.y + 10 - Math.sin(a) ** 0.8 * h * k,
+    );
+  }
+  g.poly(pts).fill(mix(look.bark.dark, 0x000000, 0.35));
+  // The warm inside, set back from the lip.
+  const inner = pts.map((v, i) =>
+    i % 2 === 0 ? base.x + (v - base.x) * 0.8 + hw * 0.1 : base.y + 10 + (v - base.y - 10) * 0.88,
+  );
+  g.poly(inner).fill({ color: 0x3a1f2c, alpha: 0.9 });
+  // Aerial roots hanging across the opening.
+  for (let i = 0; i < 7; i++) {
+    const x = base.x + rr(r, -0.8, 0.8) * hw;
+    const top = base.y - h * (0.55 + 0.35 * (1 - ((x - base.x) / hw) ** 2));
+    const mid = { x: x + rr(r, -14, 14), y: top + 60 };
+    const end = { x: x + rr(r, -22, 22), y: top + rr(r, 80, 190) };
+    g.poly(taper(quad({ x, y: top }, mid, end), 9, 1.5, 7)).fill(look.bark.base);
+  }
+  L.reset(base.x, base.y - h * 0.4, hw * 1.3, h * 0.7, 0.95);
+  L.lit(base.x, base.y - h * 0.15, hw * 1.0, h * 0.45, 0.75);
 }
 
 /** far1: a natural stone arch standing in the light well, mossed on top. */
@@ -436,7 +543,7 @@ void main() {
   float n = texture(uNoise, vec2(vUV.x * 0.9, vUV.y * 0.55 - t * uFall.z)).r;
   float m = texture(uNoise, vec2(vUV.x * 2.3 + 0.37, vUV.y * 1.3 - t * uFall.z * 1.7)).g;
   float streak = smoothstep(0.35, 0.8, n * 0.6 + m * 0.55);
-  float ends = smoothstep(0.0, 0.06, vUV.y) * (1.0 - smoothstep(0.9, 1.0, vUV.y));
+  float ends = smoothstep(0.0, 0.12, vUV.y) * (1.0 - smoothstep(0.9, 1.0, vUV.y));
   float a = body * streak * ends * uFall.y;
   // Spray where it lands.
   vec2 d = (vUV - vec2(0.5, 0.92)) * vec2(3.4, 13.0);
@@ -583,6 +690,7 @@ export class FarLayers implements EnvModule {
   private ctx!: SceneContext;
   private readonly built: FarLayer[] = [];
   private flock: Flock | null = null;
+  private readonly hollowGlow: Array<{ s: Sprite; base: number }> = [];
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
@@ -605,17 +713,36 @@ export class FarLayers implements EnvModule {
       }
       const b: ForestBuild = buildForest(plan);
       const view = new LayerView(
-        bakeLayer(ctx.renderer, b.content, plan.rect, scale, atm, TO_LIGHT),
+        bakeLayer(ctx.renderer, b.content, plan.rect, scale, atm, TO_LIGHT, b.lights),
         fogSpec,
         { amp: RUSTLE[i] ?? 0, y0: plan.canopyY + 60, y1: plan.canopyY + 320 },
+        { ...(ZONE[i] ?? ZONE[0]), anchorX: ctx.layers.anchor.x } as ZoneSpec,
       );
       layer.addChild(view.container);
       b.content.destroy({ children: true });
 
       let fall: LiveFall | null = null;
-      if (i === 0) {
-        fall = new LiveFall(atmTone(atm, WATERFALL.color, WATERFALL.x, 900));
+      if (i === 1) {
+        fall = new LiveFall(WATERFALL.color);
         layer.addChild(fall.mesh);
+      }
+      if (i === 2) {
+        // The warm glow inside the hollow tree (plain additive sprites, breathing slowly).
+        const gy = plan.groundY - HOLLOW.w * 0.3;
+        for (const [k, size] of [
+          [1, HOLLOW.w * 0.9],
+          [0.6, HOLLOW.w * 1.9],
+        ] as const) {
+          const s = new Sprite(softTexture());
+          s.anchor.set(0.5);
+          s.position.set(HOLLOW.x - 14, gy);
+          s.setSize(size * 0.8, size);
+          s.tint = HOLLOW.glow;
+          s.blendMode = 'add';
+          s.alpha = HOLLOW.glowAlpha * k;
+          layer.addChild(s);
+          this.hollowGlow.push({ s, base: HOLLOW.glowAlpha * k });
+        }
       }
       const items = [...hangers(plan, b, atm, hang), ...landmarkHangers(i, atm)];
       const sway = new SwaySet(ctx.renderer, items, Math.max(1, scale * 1.2));
@@ -626,10 +753,11 @@ export class FarLayers implements EnvModule {
 
   update(frame: SceneFrame): void {
     for (const l of this.built) {
-      l.view.update(frame.clock);
+      l.view.update(frame.clock, frame.camera.x);
       l.sway.update(frame.clock, this.ctx.layers.visible(l.name, frame.camera));
       l.fall?.update(frame.clock);
     }
     this.flock?.update(frame.clock);
+    for (const g of this.hollowGlow) g.s.alpha = g.base * (0.82 + 0.18 * Math.sin(frame.clock * 0.6));
   }
 }

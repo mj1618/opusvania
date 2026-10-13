@@ -280,7 +280,11 @@ export function drawTrunk(g: Graphics, tr: Trunk, look: BarkLook, r: Rng): void 
   }
 }
 
-/** Roots spreading from a trunk's base. `arch` > 0 lifts them off the ground like bridges. */
+/**
+ * Roots spreading from a trunk's base: buttresses that sweep down and along the ground, and
+ * (with `arch` > 0) the odd one that bridges the air. They wander, swell into knots, fork and
+ * drop rootlets, so none is a clean arc.
+ */
 export function drawRoots(
   g: Graphics,
   tr: Trunk,
@@ -289,37 +293,91 @@ export function drawRoots(
   perSide: number,
   reach = 1.2,
   arch = 0,
+  moss?: readonly number[],
 ): void {
   const s = tr.spec;
+  const one = (p0: Pt, p1: Pt, end: Pt, w0: number, dir: 1 | -1, swell: number, depth: number): void => {
+    const base = quad(p0, p1, end);
+    const wob = fbm1(r() * 1000);
+    const knot = fbm1(r() * 1000);
+    const len = Math.hypot(end.x - p0.x, end.y - p0.y);
+    const amp = Math.min(w0 * 0.55, len * 0.035);
+    const c = (t: number): Pt => {
+      const p = base(t);
+      const k = wob(t * 3.1) * amp * Math.sin(Math.PI * t);
+      return { x: p.x + k * 0.4, y: p.y + k };
+    };
+    const hw = (t: number): number =>
+      (w0 / 2) * smooth(-0.02, swell, t) * (1 - 0.93 * t) * (1 + 0.3 * Math.max(0, knot(t * 6.5))) + 1;
+    g.poly(ribbon(c, hw, 22)).fill(look.base);
+    const up: 1 | -1 = dir === 1 ? -1 : 1;
+    if (look.bands > 0) {
+      g.poly(ribbon(c, (t, side) => (side === up ? hw(t) * 0.96 : -hw(t) * 0.5), 18, 0.05, 0.95)).fill({
+        color: look.lit,
+        alpha: 0.22 * look.bands,
+      });
+      g.poly(ribbon(c, (t, side) => (side === up ? -hw(t) * 0.35 : hw(t) * 0.96), 18, 0.05, 0.95)).fill({
+        color: look.dark,
+        alpha: 0.3 * look.bands,
+      });
+    }
+    if (depth <= 0) return;
+    // A fork, and thin rootlets reaching for the ground.
+    if (r() < 0.6) {
+      const t = rr(r, 0.35, 0.65);
+      const a = c(t);
+      const l = len * rr(r, 0.25, 0.5);
+      const e = { x: a.x + dir * l * rr(r, 0.5, 1), y: end.y + rr(r, 0, w0 * 0.3) };
+      one(a, { x: a.x + dir * l * 0.3, y: (a.y + e.y) / 2 - l * 0.1 }, e, hw(t) * 1.5, dir, 0.15, 0);
+    }
+    const lets = Math.floor(r() * 4);
+    for (let i = 0; i < lets; i++) {
+      const t = rr(r, 0.2, 0.9);
+      const a = c(t);
+      const drop = Math.max(8, end.y - a.y + rr(r, -6, 10));
+      if (drop < 14) continue;
+      const sw = rr(r, -0.3, 0.3) * drop;
+      g.poly(
+        taper(
+          quad(a, { x: a.x + sw * 0.2, y: a.y + drop * 0.5 }, { x: a.x + sw, y: a.y + drop }),
+          hw(t) * 0.5,
+          1,
+          6,
+        ),
+      ).fill(look.base);
+    }
+    if (moss && r() < 0.7) {
+      const t = rr(r, 0.2, 0.7);
+      const a = c(t);
+      mossCurtain(
+        g,
+        a.x,
+        a.y + hw(t) * 0.5,
+        w0 * rr(r, 0.6, 1.4),
+        w0 * rr(r, 0.8, 2.2),
+        r,
+        moss,
+        Math.max(1.6, w0 / 14),
+      );
+    }
+  };
   for (const dir of [-1, 1] as const) {
     for (let k = 0; k < perSide; k++) {
-      // Mostly buttress roots that sweep down and along the ground; some bridge the air.
       const bridge = k === 0 && r() < arch;
       const span = s.w * (bridge ? rr(r, 1.1, 1.9) : rr(r, 0.5, 1.5)) * reach;
       // A bridge that starts high but lands close reads as a fin: keep bridges long and low.
-      const h0 = bridge ? Math.min(s.w * rr(r, 0.4, 0.9), span * 0.5) : s.w * rr(r, 0.3, 1.0);
+      const h0 = bridge ? Math.min(s.w * rr(r, 0.35, 0.75), span * 0.4) : s.w * rr(r, 0.25, 0.7);
       const t0 = Math.min(0.5, h0 / tr.h);
-      // A buttress leaves the trunk tangentially: it starts just inside the edge and runs down
-      // along it while it swells, then sweeps out along the ground.
-      const p0 = tr.at(t0, dir * (bridge ? 0.15 : 0.78));
+      // A buttress leaves the trunk tangentially: it starts inside the trunk with no width and
+      // runs down along the edge while it swells, then sweeps out along the ground.
+      const p0 = tr.at(t0, dir * (bridge ? 0.15 : 0.6));
       const end = { x: s.x + dir * (s.w * 0.55 + span), y: s.baseY + rr(r, 0, s.w * 0.1) };
       const foot = tr.at(t0 * 0.2, dir);
       const p1 = bridge
-        ? { x: p0.x + (end.x - p0.x) * rr(r, 0.7, 0.85), y: p0.y - span * rr(r, 0.04, 0.2) }
+        ? { x: p0.x + (end.x - p0.x) * rr(r, 0.55, 0.75), y: p0.y - span * rr(r, 0.0, 0.1) }
         : { x: foot.x + dir * span * rr(r, 0.08, 0.2), y: end.y - s.w * rr(r, 0.04, 0.16) };
-      const w0 = s.w * (bridge ? rr(r, 0.08, 0.15) : rr(r, 0.12, 0.24));
-      const c = quad(p0, p1, end);
-      // Swells out of the trunk, then tapers along the ground (no blunt start poking out).
-      const hw = (t: number): number => (w0 / 2) * smooth(-0.02, bridge ? 0.3 : 0.6, t) * (1 - 0.92 * t) + 1;
-      g.poly(ribbon(c, hw, 16)).fill(look.base);
-      if (look.bands > 0) {
-        // Top light: a thin ribbon on the upper side.
-        const up: 1 | -1 = dir === 1 ? -1 : 1;
-        g.poly(ribbon(c, (t, side) => (side === up ? hw(t) * 0.96 : -hw(t) * 0.45), 12, 0.05, 0.95)).fill({
-          color: look.lit,
-          alpha: 0.26 * look.bands,
-        });
-      }
+      const w0 = s.w * (bridge ? rr(r, 0.07, 0.13) : rr(r, 0.12, 0.24));
+      one(p0, p1, end, w0, dir, bridge ? 0.3 : 0.7, 1);
     }
   }
 }
@@ -619,4 +677,142 @@ export function mushroom(
   }
   pts.push(top.x + rx * 0.6, top.y + ry * 0.42, top.x - rx * 0.6, top.y + ry * 0.42);
   g.poly(pts).fill(cap);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Painted foliage clumps
+// ---------------------------------------------------------------------------------------------
+
+/** Where shapes lay down soft painted light (bg-bake's LightMap). */
+export interface Lights {
+  lit(x: number, y: number, rx: number, ry: number, amount: number): void;
+  shade(x: number, y: number, rx: number, ry: number, amount: number): void;
+  reset(x: number, y: number, rx: number, ry: number, amount?: number): void;
+}
+
+export interface ClumpOpts {
+  /** Leaf size multiplier for this clump. */
+  leaf?: number;
+  /** How strongly the key light reaches it, 0..1.5. */
+  light?: number;
+  /** Colour accent: autumn leaves or small blossoms on the lit side. */
+  accent?: 'amber' | 'blossom' | null;
+  accentColor?: number;
+  /** Leaf detail, 0..1 (tiers that are mostly hidden need little). */
+  detail?: number;
+}
+
+/**
+ * A foliage clump blocked in the way a painter would: a lumpy dark silhouette of overlapping
+ * lobes, a lighter body on each lobe shifted toward the key, soft light and shadow in the light
+ * map, and leaf shapes only where they matter: a ragged fringe on the silhouette, a sparse
+ * scatter on the lit side, and small bright translucent leaves on the rim that faces the light.
+ */
+export function clump(
+  g: Graphics,
+  L: Lights,
+  cx: number,
+  cy: number,
+  r: number,
+  look: LeafLook,
+  rnd: Rng,
+  o: ClumpOpts = {},
+): void {
+  const ls = look.size * (o.leaf ?? 1);
+  const light = (o.light ?? 1) * (0.35 + look.light);
+  const detail = o.detail ?? 1;
+  const lobes: Array<{ x: number; y: number; r: number; f: number }> = [
+    { x: cx, y: cy, r: r * 0.74, f: 0.5 },
+  ];
+  const n = 4 + Math.floor(rnd() * 4);
+  for (let i = 0; i < n; i++) {
+    // Mostly over the upper half: a cauliflower top and a ragged, flatter underside.
+    const a = -Math.PI * rr(rnd, -0.12, 1.12);
+    const d = r * rr(rnd, 0.42, 0.8);
+    const f = 0.5 + 0.45 * (Math.cos(a) * TO_LIGHT.x + Math.sin(a) * TO_LIGHT.y);
+    lobes.push({
+      x: cx + Math.cos(a) * d * 1.2,
+      y: cy + Math.sin(a) * d * 0.78,
+      r: r * rr(rnd, 0.3, 0.55),
+      f,
+    });
+  }
+  for (const l of lobes) g.poly(blob(l.x, l.y, l.r * 1.06, l.r * 0.92, rnd, 0.22, 20));
+  g.fill(look.core);
+  L.reset(cx, cy, r * 1.3, r * 1.15);
+  L.shade(cx - TO_LIGHT.x * r * 0.35, cy - TO_LIGHT.y * r * 0.5, r * 1.2, r * 0.8, 0.7);
+  L.lit(cx + TO_LIGHT.x * r * 0.4, cy + TO_LIGHT.y * r * 0.5, r * 1.05, r * 0.8, 0.72 * light);
+  lobes.sort((p, q) => p.f - q.f);
+  for (const l of lobes) {
+    const sx = l.x + TO_LIGHT.x * l.r * 0.2;
+    const sy = l.y + TO_LIGHT.y * l.r * 0.2;
+    g.poly(blob(sx, sy, l.r * 0.86, l.r * 0.76, rnd, 0.2, 18)).fill(leafRamp(look, 0.12 + 0.3 * l.f));
+    L.shade(l.x - TO_LIGHT.x * l.r * 0.55, l.y - TO_LIGHT.y * l.r * 0.6, l.r * 0.8, l.r * 0.65, 0.4);
+    const k = (0.04 + 0.34 * l.f) * light;
+    L.lit(l.x + TO_LIGHT.x * l.r * 0.45, l.y + TO_LIGHT.y * l.r * 0.5, l.r * 0.8, l.r * 0.6, k);
+  }
+  const amber = o.accent === 'amber';
+  const cols = amber
+    ? { ...look, lit: mix(look.lit, o.accentColor ?? 0xd9a04a, 0.7), sun: o.accentColor ?? 0xe8b75a }
+    : look;
+  const buckets: number[][][] = Array.from({ length: RAMP }, () => []);
+  const sunLeaves: number[][] = [];
+  const dots: number[] = [];
+  const put = (v: number, pts: number[]): void => {
+    (buckets[Math.max(0, Math.min(RAMP - 1, Math.floor(v * RAMP)))] as number[][]).push(pts);
+  };
+  for (const l of lobes) {
+    const fringe = Math.round(((TAU * l.r) / ls) * 1.25 * (0.4 + 0.6 * detail));
+    for (let i = 0; i < fringe; i++) {
+      const a = rnd() * TAU;
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      const rad = rr(rnd, 0.8, 1.04);
+      const px = l.x + ca * l.r * rad;
+      const py = l.y + sa * l.r * 0.9 * rad;
+      let ang = a + rr(rnd, -0.7, 0.7);
+      ang += Math.sin(Math.PI / 2 - ang) * 0.4;
+      const len = ls * rr(rnd, 0.55, 1.7);
+      const f = 0.5 + 0.5 * (ca * TO_LIGHT.x + sa * TO_LIGHT.y);
+      const wid = len * rr(rnd, 0.36, 0.56);
+      const sunny = f > 0.7 && l.f > 0.5 && rnd() < 0.3 * light * detail;
+      if (sunny) sunLeaves.push(leafPts(px, py, ang, len * 0.7, wid * 0.7));
+      else
+        put(
+          (0.14 + 0.5 * f * l.f + rr(rnd, -0.07, 0.07)) * (0.6 + 0.5 * light),
+          leafPts(px, py, ang, len, wid),
+        );
+      if (o.accent === 'blossom' && f > 0.45 && rnd() < 0.3)
+        dots.push(px + ca * len * 0.3, py + sa * len * 0.3);
+    }
+    // A sparse scatter inside, thinning out toward the shadow side.
+    const inner = Math.round((l.r / ls) ** 2 * 1.1 * detail);
+    for (let i = 0; i < inner; i++) {
+      const a = rnd() * TAU;
+      const rad = Math.sqrt(rnd()) * 0.8;
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      const f = 0.5 + 0.5 * (ca * TO_LIGHT.x + sa * TO_LIGHT.y) * rad;
+      if (rnd() > 0.25 + 0.75 * f * (0.4 + l.f)) continue;
+      const len = ls * rr(rnd, 0.45, 1.1);
+      put(
+        (0.2 + 0.45 * f * (0.5 + l.f) + rr(rnd, -0.06, 0.06)) * (0.6 + 0.5 * light),
+        leafPts(l.x + ca * l.r * rad, l.y + sa * l.r * rad * 0.9, a + rr(rnd, -1, 1) + 0.6, len, len * 0.5),
+      );
+    }
+  }
+  buckets.forEach((b, i) => {
+    if (b.length === 0) return;
+    for (const p of b) g.poly(p);
+    g.fill(leafRamp(cols, i / (RAMP - 1)));
+  });
+  if (sunLeaves.length > 0) {
+    for (const p of sunLeaves) g.poly(p);
+    g.fill({ color: mix(cols.lit, cols.sun, 0.6), alpha: 0.85 });
+  }
+  if (dots.length > 0) {
+    for (let i = 0; i < dots.length; i += 2)
+      g.circle(dots[i] ?? 0, dots[i + 1] ?? 0, ls * rr(rnd, 0.14, 0.26));
+    g.fill(o.accentColor ?? 0xd9c2ff);
+  }
 }

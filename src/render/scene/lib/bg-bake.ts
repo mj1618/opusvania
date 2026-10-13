@@ -18,7 +18,7 @@ import {
   Matrix,
   Mesh,
   MeshGeometry,
-  Rectangle,
+  MeshSimple,
   type Renderer,
   RenderTexture,
   Shader,
@@ -143,6 +143,12 @@ export interface Atmosphere {
   rimStrength: number;
   /** Painterly blotches, 0..~0.3. */
   mottle: number;
+  /** Light map response: brightening where lit, how far lit foliage shifts to the sun colour. */
+  litGain?: number;
+  sunMix?: number;
+  sunColor?: number;
+  /** Multiplier applied in full light-map shadow (cool and dark). */
+  shadeTint?: readonly [number, number, number];
   /** Final value gain and saturation of the local colours before fog (1 = unchanged). */
   gain?: number;
   saturation?: number;
@@ -165,6 +171,10 @@ uniform vec4 uForm;
 uniform vec3 uRimColor;
 uniform vec2 uRim;
 uniform vec2 uGrade;
+uniform sampler2D uLightMap;
+uniform vec4 uLmRect;
+uniform vec4 uSun;
+uniform vec4 uShade;
 float A(vec2 uv) { return texture(uRaw, uv).a; }
 void main() {
   vec4 c = texture(uRaw, vUV);
@@ -187,6 +197,15 @@ void main() {
   float n3 = texture(uNoise, p / 61.0).b;
   col *= 1.0 + uForm.w * ((n1 - 0.5) * 1.3 + (n2 - 0.5) * 0.7 + (n3 - 0.5) * 0.25);
   col *= 1.0 + uForm.y * open - uForm.z * shut * (1.0 - open);
+  // Painted light: soft blobs laid down with the shapes (0.5 = neutral).
+  float lm = texture(uLightMap, (p - uLmRect.xy) / uLmRect.zw).r;
+  float lit = clamp((lm - 0.5) * 2.0, 0.0, 1.0);
+  float shd = clamp((0.5 - lm) * 2.0, 0.0, 1.0);
+  col = mix(col, col * uShade.rgb, shd);
+  col *= 1.0 + uShade.a * lit;
+  // Lit foliage turns toward the sun colour at its own brightness (translucent, yellow-green).
+  float lum = dot(col, vec3(0.3, 0.55, 0.15));
+  col = mix(col, uSun.rgb * (0.35 + 1.6 * lum), lit * uSun.a);
   col = mix(vec3(dot(col, vec3(0.3, 0.55, 0.15))), col, uGrade.y) * uGrade.x;
   vec2 dw = (p - uWell.xy) / uWell.z;
   float w = exp(-dot(dw, dw));
@@ -222,6 +241,121 @@ export function atmTone(atm: Atmosphere, color: number, x: number, y: number): n
   return mix(c, atm.wellColor, Math.exp(-(dx * dx + dy * dy)) * atm.wellStrength);
 }
 
+let softTex: Texture | null = null;
+
+/** A soft round blob (white, smooth falloff to nothing at the edge), from a canvas gradient. */
+export function softTexture(): Texture {
+  if (softTex) return softTex;
+  const N = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = N;
+  canvas.height = N;
+  const c2 = canvas.getContext('2d');
+  if (c2) {
+    const g = c2.createRadialGradient(N / 2, N / 2, 0, N / 2, N / 2, N / 2);
+    for (let i = 0; i <= 10; i++) {
+      const t = i / 10;
+      g.addColorStop(t, `rgba(255,255,255,${(Math.cos(t * Math.PI) * 0.5 + 0.5) ** 1.3})`);
+    }
+    c2.fillStyle = g;
+    c2.fillRect(0, 0, N, N);
+  }
+  softTex = Texture.from(canvas);
+  return softTex;
+}
+
+let clearTex: Texture | null = null;
+function clearTexture(): Texture {
+  if (!clearTex) {
+    clearTex = new Texture({
+      source: new BufferImageSource({
+        resource: new Uint8Array([0, 0, 0, 0]),
+        width: 1,
+        height: 1,
+        format: 'rgba8unorm',
+      }),
+    });
+  }
+  return clearTex;
+}
+
+/** Renders a container of soft sprites (layer coordinates) into one small texture covering `rect`. */
+export function bakeSoft(renderer: Renderer, c: Container, rect: LayerRect, scale: number): RenderTexture {
+  const rt = RenderTexture.create({
+    width: Math.ceil(rect.w * scale),
+    height: Math.ceil(rect.h * scale),
+    resolution: 1,
+  });
+  renderer.render({
+    container: c,
+    target: rt,
+    clear: true,
+    clearColor: [0, 0, 0, 0],
+    transform: new Matrix(scale, 0, 0, scale, -rect.x * scale, -rect.y * scale),
+  });
+  c.destroy({ children: true });
+  return rt;
+}
+
+let neutralTex: Texture | null = null;
+function neutralTexture(): Texture {
+  if (!neutralTex) {
+    neutralTex = new Texture({
+      source: new BufferImageSource({
+        resource: new Uint8Array([128, 128, 128, 255]),
+        width: 1,
+        height: 1,
+        format: 'rgba8unorm',
+        alphaMode: 'no-premultiply-alpha',
+      }),
+    });
+  }
+  return neutralTex;
+}
+
+/**
+ * Painted light for a layer: soft blobs laid down in the same painter's order as the shapes
+ * (`reset` under a new shape, then its shadow and its light). Baked small; the atmosphere shader
+ * multiplies the layer by it, so shapes get soft volume without any hard-edged shading polygons.
+ */
+export class LightMap {
+  private readonly c = new Container();
+  private add(x: number, y: number, rx: number, ry: number, tint: number, alpha: number): void {
+    const s = new Sprite(softTexture());
+    s.anchor.set(0.5);
+    s.position.set(x, y);
+    s.setSize(rx * 2, ry * 2);
+    s.tint = tint;
+    s.alpha = Math.max(0, Math.min(1, alpha));
+    this.c.addChild(s);
+  }
+  lit(x: number, y: number, rx: number, ry: number, amount: number): void {
+    this.add(x, y, rx, ry, 0xffffff, amount);
+  }
+  shade(x: number, y: number, rx: number, ry: number, amount: number): void {
+    this.add(x, y, rx, ry, 0x000000, amount);
+  }
+  reset(x: number, y: number, rx: number, ry: number, amount = 0.85): void {
+    this.add(x, y, rx, ry, 0x808080, amount);
+  }
+  render(renderer: Renderer, rect: LayerRect, scale: number): RenderTexture {
+    const rt = RenderTexture.create({
+      width: Math.ceil(rect.w * scale),
+      height: Math.ceil(rect.h * scale),
+      resolution: 1,
+    });
+    renderer.render({
+      container: this.c,
+      target: rt,
+      clear: true,
+      clearColor: [0.5, 0.5, 0.5, 1],
+      transform: new Matrix(scale, 0, 0, scale, -rect.x * scale, -rect.y * scale),
+    });
+    this.c.destroy({ children: true });
+    return rt;
+  }
+}
+
 export interface BakedTile {
   texture: Texture;
   x: number;
@@ -244,6 +378,7 @@ export function bakeLayer(
   scale: number,
   atm: Atmosphere,
   light: { x: number; y: number },
+  lightMap?: LightMap,
 ): BakedTile[] {
   const out: BakedTile[] = [];
   const pad = Math.ceil(Math.max(atm.formDist, atm.rimDist) + 4);
@@ -252,6 +387,8 @@ export function bakeLayer(
   const tw = rect.w / cols;
   const th = rect.h / rows;
   const noise = noiseTexture();
+  const lm = lightMap ? lightMap.render(renderer, rect, Math.max(0.12, scale * 0.25)) : null;
+  const st = atm.shadeTint ?? [0.34, 0.46, 0.6];
   for (let j = 0; j < rows; j++) {
     for (let i = 0; i < cols; i++) {
       const tx = rect.x + i * tw;
@@ -276,7 +413,14 @@ export function bakeLayer(
         resources: {
           uRaw: raw.source,
           uNoise: noise.source,
+          uLightMap: (lm ?? neutralTexture()).source,
           atm: new UniformGroup({
+            uLmRect: { value: new Float32Array([rect.x, rect.y, rect.w, rect.h]), type: 'vec4<f32>' },
+            uSun: {
+              value: new Float32Array([...rgb(atm.sunColor ?? 0xc9d977), atm.sunMix ?? 0.3]),
+              type: 'vec4<f32>',
+            },
+            uShade: { value: new Float32Array([st[0], st[1], st[2], atm.litGain ?? 1.2]), type: 'vec4<f32>' },
             uRawRect: {
               value: new Float32Array([tx - pad, ty - pad, rawW / scale, rawH / scale]),
               type: 'vec4<f32>',
@@ -315,6 +459,7 @@ export function bakeLayer(
       out.push({ texture: final, x: tx, y: ty, w: tw + (i < cols - 1 ? 0.5 : 0), h: th });
     }
   }
+  lm?.destroy(true);
   return out;
 }
 
@@ -351,6 +496,44 @@ export interface RustleSpec {
   y1: number;
 }
 
+/**
+ * The scene's three moods, by playfield x: the cool moonlit glade on the left, the golden light
+ * well in the middle, the old dusk-lit stand on the right. Weights blend smoothly between them.
+ */
+export const ZONES = { l0: 1400, l1: 2500, r0: 3500, r1: 4500 } as const;
+
+export function zoneWeights(x: number): { l: number; r: number } {
+  const st = (a: number, b: number, v: number): number => {
+    const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  return { l: 1 - st(ZONES.l0, ZONES.l1, x), r: st(ZONES.r0, ZONES.r1, x) };
+}
+
+export interface ZoneWell {
+  x: number;
+  y: number;
+  r: number;
+  alpha: number;
+  color: number;
+}
+
+/** How a layer takes on the zone moods. Applied live, per pixel, by the playfield x in front of it. */
+export interface ZoneSpec {
+  parallax: number;
+  /** The x where all layers agree (layers.anchor.x). */
+  anchorX: number;
+  /** Colour multipliers for the layer itself in the left / right zone. */
+  tintL: readonly [number, number, number];
+  tintR: readonly [number, number, number];
+  /** Mist colour in the left / right zone. */
+  mistL: number;
+  mistR: number;
+  /** A haze of light in front of the layer that only shows in its zone (the moon, the dusk gap). */
+  wellL?: ZoneWell;
+  wellR?: ZoneWell;
+}
+
 const VIEW_FRAG = `#version 300 es
 precision highp float;
 in vec2 vUV;
@@ -365,6 +548,17 @@ uniform vec4 uBand;
 uniform vec4 uWell;
 uniform vec3 uNoiseP;
 uniform vec3 uRustle;
+uniform vec4 uZone;
+uniform vec3 uTintL;
+uniform vec3 uTintR;
+uniform vec3 uMistL;
+uniform vec3 uMistR;
+uniform vec4 uWellL;
+uniform vec3 uWellLCol;
+uniform vec4 uWellR;
+uniform vec3 uWellRCol;
+uniform sampler2D uBack;
+uniform vec4 uBackRect;
 void main() {
   vec2 p = uRect.xy + vUV * uRect.zw;
   vec2 uv = vUV;
@@ -377,6 +571,14 @@ void main() {
     uv += n * sw / uRect.zw;
   }
   vec4 c = texture(uTex, uv);
+  // Zone mood by the playfield x this pixel sits behind.
+  float px = p.x + uZone.x;
+  float zl = 1.0 - smoothstep(${ZONES.l0}.0, ${ZONES.l1}.0, px);
+  float zr = smoothstep(${ZONES.r0}.0, ${ZONES.r1}.0, px);
+  c.rgb *= mix(vec3(1.0), uTintL, zl) * mix(vec3(1.0), uTintR, zr);
+  // Light painted behind the layer (sky seen through the canopy's openings).
+  c += texture(uBack, (p - uBackRect.xy) / uBackRect.zw) * (1.0 - c.a);
+  vec3 mist = mix(mix(uMist, uMistL, zl), uMistR, zr);
   float s = uNoiseP.x;
   float n = texture(uNoise, vec2(p.x * s + uTime * uNoiseP.y, p.y * s * 2.6)).r;
   float m = texture(uNoise, vec2(p.x * s * 2.3 - uTime * uNoiseP.y * 1.7, p.y * s * 4.1 + uTime * uNoiseP.y * 0.4)).g;
@@ -387,21 +589,36 @@ void main() {
   float w = exp(-dot(dw, dw));
   float breathe = 1.0 + 0.07 * sin(uTime * 0.37);
   float veil = mix(1.0, wisp * 1.7, uNoiseP.z * (1.0 - 0.75 * low));
-  float a = uBand.w * band * veil + w * uWell.w * breathe * (0.7 + 0.3 * wisp);
-  a = clamp(a, 0.0, 0.97);
-  vec3 fog = mix(uMist, uWarm, clamp(w * 1.15, 0.0, 1.0));
-  fragColor = c * (1.0 - a) + vec4(fog * a, a);
+  float a0 = uBand.w * band * veil + w * uWell.w * breathe * (0.7 + 0.3 * wisp);
+  vec3 acc = mix(mist, uWarm, clamp(w * 1.15, 0.0, 1.0)) * a0;
+  vec2 dl = (p - uWellL.xy) / uWellL.z;
+  float al = exp(-dot(dl, dl)) * uWellL.w * uZone.y * (0.75 + 0.25 * wisp);
+  vec2 dr = (p - uWellR.xy) / uWellR.z;
+  float ar = exp(-dot(dr, dr)) * uWellR.w * uZone.z * breathe * (0.75 + 0.25 * wisp);
+  acc += uWellLCol * al + uWellRCol * ar;
+  float a = a0 + al + ar;
+  float k = min(a, 0.97) / max(a, 0.0001);
+  fragColor = c * (1.0 - a * k) + vec4(acc * k, a * k);
 }`;
 
 /**
  * Shows a baked layer with the mist that hangs in front of it, in one pass per tile (a separate
- * full-screen fog quad per layer doubled the fill cost). Also rustles the canopy.
+ * full-screen fog quad per layer doubled the fill cost). Also rustles the canopy and grades the
+ * layer by zone.
  */
 export class LayerView {
   readonly container = new Container({ label: 'baked+fog' });
   private readonly uniforms: UniformGroup;
 
-  constructor(tiles: readonly BakedTile[], fog: FogSpec, rustle: RustleSpec) {
+  constructor(
+    tiles: readonly BakedTile[],
+    fog: FogSpec,
+    rustle: RustleSpec,
+    private readonly zone: ZoneSpec,
+    back?: { texture: Texture; rect: LayerRect },
+  ) {
+    const well = (z: ZoneWell | undefined): Float32Array =>
+      new Float32Array(z ? [z.x, z.y, z.r, z.alpha] : [0, 0, 1, 0]);
     this.uniforms = new UniformGroup({
       uTime: { value: 0, type: 'f32' },
       uMist: { value: rgb(fog.color), type: 'vec3<f32>' },
@@ -410,6 +627,19 @@ export class LayerView {
       uWell: { value: new Float32Array([fog.wellX, fog.wellY, fog.wellR, fog.wellAlpha]), type: 'vec4<f32>' },
       uNoiseP: { value: new Float32Array([fog.scale, fog.speed, fog.wisp]), type: 'vec3<f32>' },
       uRustle: { value: new Float32Array([rustle.amp, rustle.y0, rustle.y1]), type: 'vec3<f32>' },
+      uZone: { value: new Float32Array([0, 0, 0, 0]), type: 'vec4<f32>' },
+      uTintL: { value: new Float32Array(zone.tintL), type: 'vec3<f32>' },
+      uTintR: { value: new Float32Array(zone.tintR), type: 'vec3<f32>' },
+      uMistL: { value: rgb(zone.mistL), type: 'vec3<f32>' },
+      uMistR: { value: rgb(zone.mistR), type: 'vec3<f32>' },
+      uWellL: { value: well(zone.wellL), type: 'vec4<f32>' },
+      uWellLCol: { value: rgb(zone.wellL?.color ?? 0), type: 'vec3<f32>' },
+      uWellR: { value: well(zone.wellR), type: 'vec4<f32>' },
+      uWellRCol: { value: rgb(zone.wellR?.color ?? 0), type: 'vec3<f32>' },
+      uBackRect: {
+        value: new Float32Array(back ? [back.rect.x, back.rect.y, back.rect.w, back.rect.h] : [0, 0, 1, 1]),
+        type: 'vec4<f32>',
+      },
     });
     for (const t of tiles) {
       const shader = Shader.from({
@@ -417,6 +647,7 @@ export class LayerView {
         resources: {
           uTex: t.texture.source,
           uNoise: noiseTexture().source,
+          uBack: (back?.texture ?? clearTexture()).source,
           view: this.uniforms,
           tile: new UniformGroup({
             uRect: { value: new Float32Array([t.x, t.y, t.w, t.h]), type: 'vec4<f32>' },
@@ -427,13 +658,16 @@ export class LayerView {
     }
   }
 
-  update(clock: number): void {
-    this.uniforms.uniforms.uTime = clock;
+  update(clock: number, camX: number): void {
+    const u = this.uniforms.uniforms;
+    u.uTime = clock;
+    const z = zoneWeights(camX);
+    (u.uZone as Float32Array).set([(camX - this.zone.anchorX) * (1 - this.zone.parallax), z.l, z.r, 0]);
   }
 }
 
 // ---------------------------------------------------------------------------------------------
-// Sway sprites
+// Sway: things that hang and bend
 // ---------------------------------------------------------------------------------------------
 
 /** Something that hangs from (x, y) and swings. `draw` paints it with its top-centre at (0, 0). */
@@ -447,12 +681,20 @@ export interface SwayItem {
   /** Swing in radians at full wind. */
   amp: number;
   phase: number;
+  /** Extra quick flutter (canopy fronds), 0..1. */
+  flutter?: number;
   draw(g: Graphics): void;
 }
 
+const SWAY_SEGMENTS = 6;
+
+/**
+ * Vines, moss and fronds drawn into one atlas, each shown as a narrow strip mesh that bends along
+ * its length: the top stays put, the tip swings furthest, with a lagging ripple running down it.
+ */
 export class SwaySet {
   readonly container = new Container({ label: 'sway' });
-  private readonly sprites: Array<{ s: Sprite; item: SwayItem }> = [];
+  private readonly strips: Array<{ m: MeshSimple; item: SwayItem; base: Float32Array }> = [];
 
   constructor(renderer: Renderer, items: readonly SwayItem[], scale: number) {
     if (items.length === 0) return;
@@ -497,51 +739,51 @@ export class SwaySet {
       transform: new Matrix(scale, 0, 0, scale, 0, 0),
     });
     sheet.destroy({ children: true });
+    const n = SWAY_SEGMENTS;
     for (const sl of slots) {
-      const tex = new Texture({
-        source: rt.source,
-        frame: new Rectangle(
-          Math.floor(sl.x * scale),
-          Math.floor(sl.y * scale),
-          Math.floor(sl.w * scale),
-          Math.floor(sl.h * scale),
-        ),
-      });
-      const s = new Sprite(tex);
-      s.anchor.set(0.5, (pad + (sl.item.up ?? 0)) / sl.h);
-      s.scale.set(1 / scale);
-      s.position.set(sl.item.x, sl.item.y);
-      this.container.addChild(s);
-      this.sprites.push({ s, item: sl.item });
+      const up = pad + (sl.item.up ?? 0);
+      const verts = new Float32Array((n + 1) * 4);
+      const uvs = new Float32Array((n + 1) * 4);
+      const idx = new Uint32Array(n * 6);
+      for (let i = 0; i <= n; i++) {
+        const v = i / n;
+        const ly = -up + sl.h * v;
+        verts.set([-sl.w / 2, ly, sl.w / 2, ly], i * 4);
+        const ty = (sl.y + sl.h * v) / sheetH;
+        uvs.set([sl.x / sheetW, ty, (sl.x + sl.w) / sheetW, ty], i * 4);
+        if (i < n) idx.set([i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2], i * 6);
+      }
+      const m = new MeshSimple({ texture: rt, vertices: verts.slice(), uvs, indices: idx });
+      m.autoUpdate = false;
+      m.position.set(sl.item.x, sl.item.y);
+      this.container.addChild(m);
+      this.strips.push({ m, item: sl.item, base: verts });
     }
   }
 
   update(clock: number, vis: LayerRect): void {
-    const x0 = vis.x - 200;
-    const x1 = vis.x + vis.w + 200;
-    for (const { s, item } of this.sprites) {
+    const x0 = vis.x - 300;
+    const x1 = vis.x + vis.w + 300;
+    for (const { m, item, base } of this.strips) {
       const on = item.x > x0 && item.x < x1;
-      s.visible = on;
-      if (on) s.rotation = wind(item.x, clock, item.phase) * item.amp;
+      m.visible = on;
+      if (!on) continue;
+      const v = m.vertices;
+      const fl = item.flutter ?? 0;
+      for (let i = 0; i < v.length; i += 2) {
+        const by = base[i + 1] ?? 0;
+        const t = by <= 0 ? 0 : by / item.h;
+        // The tip lags the root: sample the wind a little in the past further down.
+        const wv = wind(item.x, clock - t * 0.55, item.phase);
+        const quick = fl * Math.sin(clock * 3.3 + item.phase * 40 + t * 3) * 0.35;
+        v[i] = (base[i] ?? 0) + (wv + quick) * item.amp * t ** 1.6 * item.h;
+      }
+      m.geometry.getBuffer('aPosition').update();
     }
   }
 }
 
-/** A soft round glow (white, premultiplied), for additive sprites. */
-export function glowTexture(renderer: Renderer): Texture {
-  const g = new Graphics();
-  const R = 32;
-  const steps = 20;
-  for (let i = 0; i < steps; i++) {
-    const t = i / steps;
-    g.circle(R, R, R * (1 - t)).fill({ color: 0xffffff, alpha: 0.012 + 0.11 * t * t });
-  }
-  const tex = renderer.generateTexture({
-    target: g,
-    frame: new Rectangle(0, 0, R * 2, R * 2),
-    resolution: 2,
-    antialias: true,
-  });
-  g.destroy();
-  return tex;
+/** A soft round glow (white), for additive sprites. */
+export function glowTexture(_renderer?: Renderer): Texture {
+  return softTexture();
 }

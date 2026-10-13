@@ -8,10 +8,11 @@
  */
 import { Container, Graphics } from 'pixi.js';
 import type { LayerRect } from '../layer-tree';
-import { type Atmosphere, atmTone, type SwayItem } from './bg-bake';
+import { type Atmosphere, atmTone, LightMap, type SwayItem } from './bg-bake';
 import {
   type BarkLook,
   blob,
+  clump,
   drawBranch,
   drawRoots,
   drawTrunk,
@@ -38,6 +39,7 @@ export interface TrunkPlace {
   branches?: number;
   /** Roots per side (default from the plan). */
   roots?: number;
+  boughs?: number;
 }
 
 export interface ForestLook {
@@ -82,17 +84,36 @@ export interface ForestPlan {
   moss: number;
   look: ForestLook;
   /** Landmarks: drawn behind the trunks / in front of them (before the ground). */
-  behind?: (c: Container, r: Rng) => void;
+  behind?: (c: Container, r: Rng, L: LightMap) => void;
   front?: (c: Container, r: Rng, b: ForestBuild) => void;
+  /** Called after each trunk is painted (bark detail, hollows). */
+  onTrunk?: (c: Container, r: Rng, tr: Trunk, L: LightMap) => void;
+  /** Extra painted light, laid down last. */
+  lights?: (L: LightMap) => void;
+  /** How much of the near canopy is present at x, 0..1 (default 0.72). */
+  cover?: (x: number) => number;
+  /** No branch-tip foliage inside the light well. */
+  clearWell?: boolean;
+  /** Canopy boughs per trunk (default 2). */
+  boughs?: number;
+  /** Share of near clumps that carry autumn leaves or blossoms, and their colours. */
+  accentRate?: number;
+  amber?: number;
+  blossom?: number;
+  /** Extra rows of bushes stepping down below the ground line. */
+  groundRows?: number;
   /** Drawn last, over the ground. */
   floor?: (c: Container, r: Rng, b: ForestBuild) => void;
 }
 
 export interface ForestBuild {
   content: Container;
+  lights: LightMap;
   trunks: Trunk[];
   /** Branch tips carrying foliage. */
   tips: Pt[];
+  /** Where the near canopy opens (centres and sizes of the clumps left out). */
+  openings: Array<{ x: number; y: number; r: number }>;
   canopyBottom(x: number): number;
   groundAt(x: number): number;
 }
@@ -100,6 +121,7 @@ export interface ForestBuild {
 export function buildForest(plan: ForestPlan): ForestBuild {
   const { rect, look } = plan;
   const content = new Container();
+  const L = new LightMap();
   const x0 = rect.x - 120;
   const x1 = rect.x + rect.w + 120;
   const top = rect.y - 80;
@@ -121,47 +143,101 @@ export function buildForest(plan: ForestPlan): ForestBuild {
     );
   };
   const groundAt = (x: number): number => plan.groundY + gn(x / 430) * plan.groundAmp;
-
+  const cover = plan.cover ?? ((): number => 0.72);
   const layer = (): Graphics => content.addChild(new Graphics());
+  const opening = fbm1(plan.seed + 5);
+  const openings: Array<{ x: number; y: number; r: number }> = [];
+  const rows = Math.max(1, Math.min(4, Math.ceil((plan.canopyY + plan.canopyAmp - top) / (R * 0.9))));
 
-  // A bank of canopy: a solid fill above the bottom edge with leaf masses along the edge.
-  const bank = (seed: number, lk: LeafLook, offset: (x: number) => number, skip: number): void => {
+  /**
+   * One depth tier of canopy: rows of big clumps (top rows first, the hanging edge last), each
+   * with medium and small satellites. Clumps drop out in clusters, so the tier has real gaps
+   * that show the tier, the layer or the sky behind it. There is no solid fill anywhere.
+   */
+  const tier = (
+    seed: number,
+    lk: LeafLook,
+    o: {
+      offset: (x: number) => number;
+      cover: number;
+      light: number;
+      leaf: number;
+      sat: number;
+      accents: boolean;
+      detail: number;
+    },
+  ): void => {
     const r = prng(seed);
-    const g = layer();
-    const edge = (x: number): number => canopyBottom(x) + offset(x);
-    const pts: number[] = [x0, top];
-    for (let x = x0; x <= x1; x += 36) pts.push(x, Math.max(top, edge(x) - R * 0.5));
-    pts.push(x1, top);
-    g.poly(pts).fill(lk.core);
-    // Shadowed masses deeper in, so the body of the canopy is never a flat fill.
-    const deep = { ...lk, light: lk.light * 0.45 };
-    for (let row = 2; row >= 1; row--) {
-      for (let x = x0; x < x1; x += R * rr(r, 0.8, 1.5)) {
-        const y = edge(x) - R * (0.9 + row * 1.0) + rr(r, -0.3, 0.3) * R;
-        if (y < top - R) continue;
-        foliageMass(layer(), x, y, R * rr(r, 0.9, 1.5), R * rr(r, 0.6, 0.95), r, deep, 0.7);
-      }
-    }
-    for (let x = x0; x < x1; x += R * rr(r, 0.5, 0.95)) {
-      const e = edge(x);
-      if (e < top - R * 0.3 || r() < skip) continue;
-      const rx = R * rr(r, 0.75, 1.5);
-      const ry = R * rr(r, 0.55, 1.0);
-      foliageMass(layer(), x, e - ry * rr(r, 0.45, 0.8), rx, ry, r, lk);
-      // Smaller clumps drooping below the edge.
-      if (r() < 0.5) {
-        const k = rr(r, 0.3, 0.55);
-        foliageMass(layer(), x + rr(r, -R, R) * 0.6, e + ry * rr(r, -0.1, 0.3), rx * k, ry * k, r, lk, 1.2);
+    const gap = fbm1(seed + 0.5);
+    const rate = plan.accentRate ?? 0;
+    for (let row = rows; row >= 0; row--) {
+      for (let x = x0; x < x1; x += R * rr(r, 0.7, 1.3)) {
+        const e = canopyBottom(x) + o.offset(x);
+        const y = e - R * (0.45 + row * 0.88) + rr(r, -0.25, 0.25) * R;
+        const keep = gap(x / (R * 2.4) + row * 7.3) * 0.5 + 0.5;
+        const rad = R * rr(r, 0.55, 1.2);
+        const leaf = o.leaf * rr(r, 0.75, 1.35);
+        const pick = r();
+        const ns = Math.floor(r() * (o.sat + 1));
+        const sats: Array<[number, number, number]> = [];
+        for (let k = 0; k < ns; k++)
+          sats.push([rr(r, 0.05, Math.PI - 0.05), rr(r, 0.8, 1.3), rr(r, 0.2, 0.46)]);
+        // Openings shared by every tier (real sky holes), then this tier's own gaps.
+        const open = opening(x / (R * 3.6) + row * 1.9) * 0.5 + 0.5;
+        const c = cover(x);
+        const isOpen = open > c - 0.15;
+        if (isOpen && o.accents && y > top) openings.push({ x, y, r: rad });
+        if (y < top - R || isOpen || keep > c * o.cover + 0.12) continue;
+        const accent = o.accents && pick < rate ? (pick < rate * 0.55 ? 'amber' : 'blossom') : null;
+        const accentColor = accent === 'amber' ? plan.amber : plan.blossom;
+        const g = layer();
+        // Clumps on the brink of an opening catch the light that falls through it.
+        const light = o.light * (row === 0 ? 0.85 : 0.7) * (0.55 + 1.3 * smooth(c - 0.5, c - 0.1, open));
+        clump(g, L, x, y, rad, lk, r, { leaf, light, accent, accentColor, detail: o.detail });
+        for (const [a, d, k] of sats) {
+          const sx = x + Math.cos(a) * rad * d * 1.15;
+          clump(g, L, sx, y + Math.sin(a) * rad * d * 0.7, rad * k, lk, r, {
+            leaf: leaf * 0.8,
+            light,
+            detail: o.detail,
+          });
+        }
       }
     }
   };
 
-  bank(plan.seed + 10, look.backLeaf, (x) => R * (0.25 + cn2(x / (R * 1.7)) * 0.55), 0);
+  // Far canopy: pale and hazy, seen through the gaps of everything nearer.
+  tier(plan.seed + 10, look.backLeaf, {
+    offset: (x) => R * (0.2 + cn2(x / (R * 1.7)) * 0.5),
+    cover: 1.15,
+    light: 0.7,
+    leaf: 1.25,
+    sat: 1,
+    accents: false,
+    detail: 0.35,
+  });
 
   const rb = prng(plan.seed + 20);
-  if (plan.behind) plan.behind(content, rb);
+  if (plan.behind) plan.behind(content, rb, L);
 
-  // Trunks, far-to-near by width so the giants sit in front.
+  // The shadowed inside of the canopy: what the dark gaps between the front clumps look into.
+  const deep: LeafLook = {
+    ...look.leaf,
+    light: look.leaf.light * 0.4,
+    lit: look.leaf.mid,
+    sun: look.leaf.lit,
+  };
+  tier(plan.seed + 15, deep, {
+    offset: () => -R * 0.35,
+    cover: 0.95,
+    light: 0.35,
+    leaf: 1.15,
+    sat: 0,
+    accents: false,
+    detail: 0.3,
+  });
+
+  // Trunks, far-to-near by width so the giants sit in front; boughs reach out inside the canopy.
   const trunks: Trunk[] = [];
   const tips: Pt[] = [];
   const rt = prng(plan.seed + 30);
@@ -179,40 +255,60 @@ export function buildForest(plan: ForestPlan): ForestBuild {
     });
     trunks.push(tr);
     const g = layer();
-    drawRoots(g, tr, look.bark, rt, p.roots ?? plan.rootsPerSide, 1.1, plan.rootArch);
+    // Soft cylinder light along the trunk.
+    for (let y = tr.spec.baseY; y > top; y -= p.w * 0.55) {
+      const t = (tr.spec.baseY - y) / tr.h;
+      const c = tr.center(t);
+      const h = tr.half(t, 1);
+      L.reset(c.x, c.y, h * 1.25, p.w * 0.75, 0.9);
+      L.shade(c.x - h * 0.62, c.y, h * 0.6, p.w * 0.75, 0.38);
+      L.lit(c.x + h * 0.5, c.y, h * 0.5, p.w * 0.75, 0.3);
+    }
+    drawRoots(g, tr, look.bark, rt, p.roots ?? plan.rootsPerSide, 1.1, plan.rootArch, look.moss);
     const nb = p.branches ?? 2;
-    for (let k = 0; k < nb; k++) {
+    const boughs = p.boughs ?? plan.boughs ?? 2;
+    for (let k = 0; k < nb + boughs; k++) {
+      const bough = k >= nb;
       const dir = rt() < 0.5 ? -1 : 1;
       const cb = canopyBottom(p.x);
-      const yb = Math.min(tr.spec.baseY - p.w * 1.6, Math.max(top + 60, cb + rr(rt, -40, 360)));
+      const yb = bough
+        ? Math.max(top + 40, cb - R * rr(rt, 0.1, 1.5))
+        : Math.min(tr.spec.baseY - p.w * 1.6, Math.max(top + 60, cb + rr(rt, -40, 360)));
       const t = (tr.spec.baseY - yb) / tr.h;
       const from = tr.at(t, dir * 0.7);
-      const ang = dir === 1 ? -rr(rt, 0.2, 0.85) : Math.PI + rr(rt, 0.2, 0.85);
-      const len = Math.max(110, Math.min(560, p.w * rr(rt, 0.9, 2.1)));
-      const got = drawBranch(g, from, ang, len, Math.max(8, p.w * rr(rt, 0.1, 0.2)), look.bark.base, rt, 1);
-      tips.push(...got);
+      const ang = dir === 1 ? -rr(rt, 0.15, 0.8) : Math.PI + rr(rt, 0.15, 0.8);
+      const len = bough ? R * rr(rt, 1.6, 3.4) : Math.max(110, Math.min(560, p.w * rr(rt, 0.9, 2.1)));
+      const wid = Math.max(8, p.w * (bough ? rr(rt, 0.12, 0.22) : rr(rt, 0.1, 0.2)));
+      tips.push(...drawBranch(g, from, ang, len, wid, look.bark.base, rt, bough ? 2 : 1));
     }
     drawTrunk(g, tr, look.bark, rt);
+    if (plan.onTrunk) plan.onTrunk(content, rt, tr, L);
   }
 
-  // Foliage on the branch tips.
+  // Foliage carried on the branch tips.
   const rf = prng(plan.seed + 40);
   for (const tip of tips) {
-    const k = rr(rf, 0.38, 0.8);
-    foliageMass(
-      layer(),
-      tip.x,
-      tip.y - R * k * 0.2,
-      R * k * rr(rf, 0.9, 1.4),
-      R * k * rr(rf, 0.6, 0.9),
-      rf,
-      look.leaf,
-    );
+    const k = rr(rf, 0.32, 0.75);
+    // Keep the light well clear: a lit bush there sits right behind the play space.
+    if (plan.clearWell && Math.abs(tip.x - plan.wellX) < plan.wellHalf * 1.2) continue;
+    clump(layer(), L, tip.x, tip.y - R * k * 0.25, R * k, look.leaf, rf, {
+      leaf: rr(rf, 0.8, 1.2),
+      light: 0.6,
+    });
   }
 
-  const build: ForestBuild = { content, trunks, tips, canopyBottom, groundAt };
+  const build: ForestBuild = { content, lights: L, trunks, tips, openings, canopyBottom, groundAt };
 
-  bank(plan.seed + 50, look.leaf, () => 0, 0);
+  // The near canopy: the hanging edge and the lit clumps in front of the trunks.
+  tier(plan.seed + 50, look.leaf, {
+    offset: () => 0,
+    cover: 1,
+    light: 1,
+    leaf: 1,
+    sat: 3,
+    accents: true,
+    detail: 1,
+  });
 
   // Static hanging moss under the canopy edge.
   const rm = prng(plan.seed + 60);
@@ -242,7 +338,7 @@ export function buildForest(plan: ForestPlan): ForestBuild {
   for (let i = 0; i < nHoles; i++) {
     const x = rr(rh, x0, x1);
     const e = canopyBottom(x);
-    const y = e - R * rr(rh, 0.25, 2.6) ** 1.0;
+    const y = e - R * rr(rh, 0.25, 2.6);
     if (y < top || onTrunk(x, y)) continue;
     const s = R * rr(rh, 0.1, 0.42);
     if (rh() < 0.4) holes.poly(blob(x, y, s * rr(rh, 0.3, 0.6), s * rr(rh, 0.25, 0.5), rh, 0.45, 18));
@@ -255,12 +351,14 @@ export function buildForest(plan: ForestPlan): ForestBuild {
         leafPts(x + Math.cos(a) * d, y + Math.sin(a) * d * 0.7, rh() * Math.PI * 2, l, l * rr(rh, 0.4, 0.7)),
       );
     }
+    // Leaves around a hole are backlit.
+    L.lit(x, y, s * 2.6, s * 2.2, 0.55);
   }
   holes.fill(0xffffff);
 
   if (plan.front) plan.front(content, rb, build);
 
-  // Ground: a rolling body with undergrowth mounds along its edge.
+  // Ground: a rolling body, rows of bushes stepping down into it (far rows first).
   const rg = prng(plan.seed + 80);
   const gg = layer();
   const pts: number[] = [x0, bottom];
@@ -269,11 +367,26 @@ export function buildForest(plan: ForestPlan): ForestBuild {
   gg.poly(pts).fill(look.ground);
   const step = 1000 / plan.mounds;
   for (let x = x0; x < x1; x += step * rr(rg, 0.45, 1.55)) {
-    const rx = plan.moundR * rr(rg, 0.6, 1.7);
-    const ry = plan.moundR * rr(rg, 0.35, 0.85);
-    foliageMass(layer(), x, groundAt(x) - ry * rr(rg, 0.0, 0.45), rx, ry, rg, look.groundLeaf);
+    const rad = plan.moundR * rr(rg, 0.5, 1.25);
+    clump(layer(), L, x, groundAt(x) - rad * rr(rg, 0.05, 0.4), rad, look.groundLeaf, rg, {
+      leaf: rr(rg, 0.8, 1.3),
+      light: 0.8,
+    });
+  }
+  for (let row = 1; row <= (plan.groundRows ?? 0); row++) {
+    for (let x = x0; x < x1; x += step * rr(rg, 0.8, 1.9)) {
+      const rad = plan.moundR * rr(rg, 0.8, 1.6);
+      clump(layer(), L, x, groundAt(x) + plan.moundR * row * rr(rg, 1.0, 1.5), rad, look.groundLeaf, rg, {
+        leaf: 1.3,
+        light: 0.55,
+      });
+    }
   }
   if (plan.floor) plan.floor(content, rg, build);
+
+  // The key light floods the canopy around the well.
+  L.lit(plan.wellX + R, plan.canopyY - R * 0.5, plan.wellHalf * 2.2, R * 3.2, 0.3);
+  if (plan.lights) plan.lights(L);
   return build;
 }
 
@@ -298,6 +411,8 @@ export interface HangerSpec {
   vineLen: readonly [number, number];
   /** Swing in radians at full wind. */
   amp: number;
+  /** Relative density by x, 0..1 (default 1 everywhere). */
+  weight?: (x: number) => number;
 }
 
 /** Vines, moss curtains and canopy fronds that hang from the canopy edge and branch tips and sway. */
@@ -315,6 +430,7 @@ export function hangers(plan: ForestPlan, b: ForestBuild, atm: Atmosphere, spec:
       }
       const x = rr(r, rect.x, rect.x + rect.w);
       const y = b.canopyBottom(x) - R * 0.3;
+      if (spec.weight && r() > spec.weight(x)) continue;
       if (y > top) return { x, y };
     }
     return null;
@@ -378,6 +494,7 @@ export function hangers(plan: ForestPlan, b: ForestBuild, atm: Atmosphere, spec:
       h: ry * 1.9 + pad,
       up: ry * 0.5 + pad,
       amp: spec.amp * 0.45 * rr(r, 0.6, 1.2),
+      flutter: 1,
       phase: r(),
       draw: (g) => foliageMass(g, 0, ry * 0.55, rx, ry, prng(seed), lk, 1.1),
     });
