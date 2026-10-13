@@ -66,6 +66,11 @@ export const FOREGROUND = {
   /** Camera x over which the corner pair swaps from top-left + bottom-right to its mirror. */
   mirrorAt: [2500, 3300] as const,
   /**
+   * ...and back again over these camera x: at the east clamp (4800) the far lantern stands in the
+   * frame's top right with the heart under it, the scene's last picture, and a leaf mass hung over it.
+   */
+  mirrorBack: [4150, 4650] as const,
+  /**
    * Where on screen a plant is at full size: `full` and beyond (distance of its middle from the
    * frame centre, in frame widths) it is fully out; at `clear` and nearer the centre it is fully
    * withdrawn.
@@ -464,7 +469,11 @@ export class ForegroundLayer implements EnvModule {
     const py = vis.y + vis.h / 2 + (p.cy - cam.y);
     const k = Math.min(1, frame.dt * cfg.fadeRate);
     const mt = Math.min(1, Math.max(0, (cam.x - cfg.mirrorAt[0]) / (cfg.mirrorAt[1] - cfg.mirrorAt[0])));
-    const mirror = mt * mt * (3 - 2 * mt);
+    const bt = Math.min(
+      1,
+      Math.max(0, (cam.x - cfg.mirrorBack[0]) / (cfg.mirrorBack[1] - cfg.mirrorBack[0])),
+    );
+    const mirror = mt * mt * (3 - 2 * mt) * (1 - bt * bt * (3 - 2 * bt));
     // 0 on the ground, 1 with the camera at the top of the scene.
     const high = Math.min(1, Math.max(0, (anchor.y - cam.y) / Math.max(1, anchor.y - VIEW_H / 2)));
 

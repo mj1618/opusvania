@@ -208,7 +208,7 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
 ## Round 12 (after the critical-path layout: far bluff, kick walls)
 - **`StageSpec.walls`** (bg-bake.ts, `STAGE.walls` in mid.ts): mist banked against a face she kicks up, thickest
   at the face and gone `reach` px out on the open side, from 240 px above `y0` down to `y1`. Two: the far bluff
-  (5472, 448-1088, k 0.85, reach 330) and trunk A's bark above the well (3200, 448-1168, k 0.4). Luma behind her
+  (5472, 448-1088 then; 768-1088 since round 13; k 0.85, reach 330) and trunk A's bark above the well (3200, 448-1168, k 0.4). Luma behind her
   on the far bluff 5 / 4 / 6 -> 55 / 54 / 43 (foot, middle, top). At k 1.7 it was a milky violet fog (88-90).
   NOT in the shaft: its glints need the dark of `MID.shaftPendant`. The far ledge's `ledges` entry is the far
   bluff's top now; its face is a wall, not a ground step.
@@ -223,3 +223,18 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   flank and the leaning mid trunk; what made it hard-edged was the playfield (an island's belly shade ruling
   the stone's top half black: playfield.md). Nothing changed in these layers for it.
 
+
+## Round 13 (the far bluff came down to 768: the last picture)
+- `STAGE`: the far bluff's ledge sheet is at y 768 and its wall runs 768-1088. The sheet is what stands behind
+  the far lantern and the hero on the top (5440-5620, 600-760: mean 46-49 -> 50-55, median 39 -> 48-59).
+- `MID.bluffClear` runs to layer x 5180, y from 300: a moss curtain hung black over the far lantern (playfield
+  5560-5700, y 300-650). With the foreground swap below, nothing dark hangs over the frame's top right there.
+- A third `walls` entry is **not a climb**: a bank against the moth-stone's east flank (1430, 1010-1280,
+  dir +1, k 0.36, reach 250). The pale wedge behind the first lantern was far-layer mist cut by the stone on
+  one side and by mid's leaning trunk on the other; the bank lies in front of that trunk, so its edge dissolves
+  (region 1455-1540, 900-1120: mean 25 -> 36, p99 46 -> 52, no edge). At k 0.5 the wedge went to 44.
+- The peach band right of trunk A (3470-3580, 600-1080 from the trunks stop) is the far pair's pass, not the
+  sky sprite or mid (`far1` hidden: 31; `mid` hidden: 126; `airBack` hidden: 96). Far fog `warm` 0xe0b060 /
+  0xd0a052 -> 0xc8984c / 0xbc8c46, `wellAlpha` 0.34 / 0.22 -> 0.2 / 0.17, far0 `wellStrength` 0.4 -> 0.28, far1
+  0.26 -> 0.22, sky `warm` / `halo` a shade down: mean 109 -> 102, p90 151 -> 136, p99 161 -> 144. Each knob moves
+  it 2-3 points: the band is the sum of them.

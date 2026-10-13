@@ -1276,7 +1276,7 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
           cy + Math.sin(a) * 34 * sc * (Math.sin(a) < 0 ? 1.1 : 0.9),
         );
       }
-      const shell = kind === 'lit' ? 0x6e6246 : kind === 'dark' ? 0x4a4434 : 0x38352a;
+      const shell = kind === 'lit' ? 0x574e38 : kind === 'dark' ? 0x4a4434 : 0x38352a;
       p.tint(
         body.map((v, i) => (i % 2 ? v + 5 : v - 2)),
         kit.abyss,
@@ -1291,8 +1291,8 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
         );
       }
       if (kind === 'lit') {
-        p.solid(blob(cx + 2 * sc, cy + 4 * sc, 10 * sc, 19 * sc, seed + 1, 0.15, 14), 0xa87e48, 0.56);
-        p.solid(blob(cx + 2 * sc, cy + 8 * sc, 4.6 * sc, 9 * sc, seed + 2, 0.15, 12), 0xe0b878, 0.6);
+        p.solid(blob(cx + 2 * sc, cy + 4 * sc, 10 * sc, 19 * sc, seed + 1, 0.15, 14), 0x8a673a, 0.56);
+        p.solid(blob(cx + 2 * sc, cy + 8 * sc, 4.6 * sc, 9 * sc, seed + 2, 0.15, 12), 0xbd9558, 0.6);
       } else if (kind === 'torn') {
         p.solid(blob(cx - 3 * sc, cy + 8 * sc, 9 * sc, 17 * sc, seed + 1, 0.4, 12), 0x0a0c0c, 0.2);
         for (const sgn of [-1, 1])
@@ -1375,7 +1375,7 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
       const c = cocoon(x + dx, len, sc, kind, 900 + k * 3);
       if (kind === 'lit') great = c;
     }
-    info.lanterns.push({ x: great[0] + 3, y: great[1] + 10, size: 60 });
+    info.lanterns.push({ x: great[0] + 3, y: great[1] + 10, size: 46 });
   }
 
   // ---- Right: a moth shrine. A tall carved wing-stone on a plinth, a cairn either side, cords
@@ -1427,11 +1427,13 @@ export function paintLandmarks(p: Paint, scene: Scene, info: TerrainInfo, kit: F
       rx: 50,
       ry: sh * 0.5 + 4,
       seed: 941,
-      color: mix(stoneCol, kit.stone[6] as number, 0.3),
+      // (A step under the mist at its foot: it was the palest thing at the shrine, paler than the
+      // ground she stands against.)
+      color: mix(mix(stoneCol, kit.stone[6] as number, 0.3), dark, 0.3),
       dark,
-      light: mix(stoneCol, kit.stone[0] as number, 0.3),
-      h: 0.3,
-      rise: 0.1,
+      light: mix(stoneCol, kit.stone[0] as number, 0.1),
+      h: 0.27,
+      rise: 0.08,
       baseY: plinth + 12,
       tilt: lean,
       boxy: 3.1,

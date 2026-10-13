@@ -294,3 +294,8 @@
   3840x2160, round 3: post ~0.9-1.2 ms, air ~0.2-0.5 ms, foreground ~0.1 ms (round 2: 1.3 / 1.0 / 0.1).
   Numbers move by +-0.5 ms when other agents' browsers share the GPU.
 - `__fx` (`lib/fx-debug.ts`) = `{post, postFilter, air, foreground, layers}`: debug handles only.
+
+## Foreground at the east clamp (2026-10-14)
+- `FOREGROUND.mirrorBack` [4150, 4650]: the corner pair swaps back to top-left + bottom-right as the camera
+  nears its east clamp (4800), where the far lantern stands in the frame's top right over the heart. (The
+  black mass that hung over the lantern there was mostly a mid-layer moss curtain: background-layers.md.)

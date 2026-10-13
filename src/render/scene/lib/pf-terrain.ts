@@ -96,8 +96,11 @@ export const TERRAIN = {
   mossDrip: 26,
   /** How far the water surface sits above the pool floor (the character wades waist-deep). */
   waterDepth: 50,
-  /** How far the edge walls bulge into the scene at most. */
-  edgeBulge: 12,
+  /**
+   * The scene's side edges (dead walls) are the hem of a thicket: how far it stands in beside the walk
+   * line (`hem`) and high up (`lean`), and the height above the walk line over which it leans in.
+   */
+  edgeGrowth: { hem: 40, lean: 104, leanFrom: 150, leanFull: 460 },
   /** Gap between the baked backdrop pieces (boulders, dead stumps) behind the walk line, px. */
   backdropGap: [260, 560] as const,
   /** 0..1: strength of the lit crest and contact shadow on elevated tops (islands, ledges, boughs, trunks). */
@@ -121,6 +124,8 @@ export const TERRAIN = {
    * height, amount] of the pool.
    */
   standMist: { cool: 0x4e6a7a, warm: 0x58623e, deep: 0x505a72, size: [165, 125, 0.62] } as const,
+  /** The heart's two pools, as shares of `standMist`'s amount: low (behind her), high (the shrine's stones). */
+  heartMist: [1.2, 0.6] as const,
   /** How far bank faces cut back under their lip, px. */
   faceUndercut: 9,
   /** A kick wall's face stays out of the ground's depth shade this far in from its edge, px. */
@@ -129,7 +134,14 @@ export const TERRAIN = {
    * Mist pooled against a kick wall's face, per zone [colour, amount]: the face is paler and calmer
    * than the hero (luma ~29) the whole way up, the earth behind it stays dark.
    */
-  faceMist: { cool: [0x4c6a78, 0.36], warm: [0x4c5a40, 0.15], deep: [0x66638a, 0.6] } as const,
+  faceMist: { cool: [0x4c6a78, 0.36], warm: [0x4c5a40, 0.15], deep: [0x5e5c84, 0.47] } as const,
+  /**
+   * A block between a kick wall and the scene edge no wider than this (the far bluff) is one mass of
+   * stone and root, painted and seen the whole way across: the ground's depth shade keeps off it down
+   * to the lower walk line, and `endMist` [colour, amount] lies over its body (a step under the face).
+   */
+  endBlock: 480,
+  endMist: [0x57557c, 0.6] as const,
 } as const;
 
 /** The mist tone of the zone at x (`TERRAIN.standMist`). */
@@ -171,6 +183,8 @@ export interface Face {
   kind: SceneTag | 'edge';
   /** A wall she kicks off (the shaft's inner faces): nothing grows on it. */
   clean?: boolean;
+  /** Scene edges: how far the thicket there stands into the scene at y (plants root on its hem). */
+  reach?: (y: number) => number;
 }
 export interface TerrainInfo {
   tops: Top[];
@@ -358,18 +372,44 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
   // mist pooled over whatever back-plane prop is behind her there. The props are as dark as she is
   // and busy; post cannot part them from her without a halo (post-and-air.md, round 15).
   const [sw, sh, sa] = TERRAIN.standMist.size;
-  for (const q of [...(scene.lanterns ?? []), ...(scene.lamps ?? []), ...(scene.heart ? [scene.heart] : [])])
+  for (const q of [...(scene.lanterns ?? []), ...(scene.lamps ?? [])])
     info.mist.push({
       x: q.x,
-      // (The shrine behind the heart is 300 px of stone: one tall pool, or its edge is a band across it.)
-      y: q.y - sh * (q === scene.heart ? 1 : 0.6),
-      rx: sw * (q === scene.heart ? 1.15 : 1),
-      ry: sh * (q === scene.heart ? 1.8 : 1),
-      amount: sa * (q === scene.heart ? 0.95 : 1),
+      y: q.y - sh * 0.6,
+      rx: sw,
+      ry: sh,
+      amount: sa,
       color: standMistAt(q.x),
       backOnly: 0.5,
       floor: q.y,
     });
+  // The heart: the shrine behind it is 300 px of stone. The pool lies low and wide, at her height, so
+  // she reads against it; the stones above her head take a thinner one, a step under it (one tall
+  // pool at full strength made the wing-stone the palest thing there and left her feet in the dark).
+  if (scene.heart) {
+    const q = scene.heart;
+    const [lowK, highK] = TERRAIN.heartMist;
+    info.mist.push({
+      x: q.x,
+      y: q.y - sh * 0.5,
+      rx: sw * 1.35,
+      ry: sh * 0.78,
+      amount: sa * lowK,
+      color: standMistAt(q.x),
+      backOnly: 0.5,
+      floor: q.y,
+      power: 1.3,
+    });
+    info.mist.push({
+      x: q.x,
+      y: q.y - sh * 1.75,
+      rx: sw * 0.95,
+      ry: sh * 1.35,
+      amount: sa * highK,
+      color: standMistAt(q.x),
+      backOnly: 0.5,
+    });
+  }
   return { paint: p, info };
 }
 
@@ -1070,6 +1110,8 @@ function paintGround(p: Paint, segs: Seg[], scene: Scene, info: TerrainInfo): vo
     const fx = s.x1;
     const fr = rngFor(seed, fx);
     if (lo - hi >= FORMS.climbStep) {
+      if (endBlock(segs, inward > 0 ? i + 1 : i, W))
+        paintEndMass(p, fx, inward > 0 ? W : 0, hi, lo, inward, info);
       paintClimbFace(p, fx, hi, lo, inward, info);
       info.faces.push({ x: fx, y0: hi, y1: lo, dir: inward > 0 ? -1 : 1, kind: 'ground', clean: true });
       return;
@@ -1137,7 +1179,11 @@ function paintGround(p: Paint, segs: Seg[], scene: Scene, info: TerrainInfo): vo
       const highIsLeft = sg.y < next.y;
       // (Behind a kick wall the face keeps its light for `faceHold` px in, top to bottom: the dark
       // came right up to the far bluff's foot, where she stands to start the climb.)
-      const hold = lo - Math.min(sg.y, next.y) >= FORMS.climbStep ? TERRAIN.faceHold : 0;
+      const climb = lo - Math.min(sg.y, next.y) >= FORMS.climbStep;
+      // (An end block is lit the whole way across: east of the far bluff's 110 px of face its body
+      // was black, a slab over a void.)
+      const end = climb && endBlock(segs, highIsLeft ? i : i + 1, W);
+      const hold = end ? 1e5 : climb ? TERRAIN.faceHold : 0;
       const dist = highIsLeft ? sg.x1 - x : x - sg.x1;
       if (dist >= 0 && dist < stepRun + hold)
         y = Math.max(y, lerp(lo, y, smoothstep(0, stepRun, dist - hold) ** 0.8));
@@ -1470,137 +1516,149 @@ function paintBackdrop(p: Paint, scene: Scene, info: TerrainInfo, taken: Array<[
 // Edge walls: the scene's invisible solid left and right bounds, dressed as living rock and an
 // enormous trunk. Only a sliver is ever on screen; plants (pf-plants.ts) do the rest.
 
+/**
+ * How far the growth of a scene edge stands into the scene at height y, px: a slim dark hem beside
+ * the walk line (`topY`: nothing of it behind the hero, a pod or a lantern), heavier and leaning in
+ * with height.
+ */
+function edgeReach(side: -1 | 1, y: number, topY: number): number {
+  const e = TERRAIN.edgeGrowth;
+  const up = smoothstep(e.leanFrom, e.leanFull, topY - y);
+  return (
+    e.hem + (e.lean - e.hem) * up + wobble(y, 300 + side, 170) * (8 + 12 * up) + wobble(y, 310 + side, 47) * 5
+  );
+}
+
+/**
+ * The scene's two side edges are dead walls (no slide, no kick: `edgeKick: false`), so neither is a
+ * face: each is the hem of a thicket, old roots twisted together and hung with dark leaves, all in
+ * the back plane (dark, barely lit, no rim, no flat bark or stone to put a foot on). The silhouette
+ * is lobes of leaves, never a line.
+ */
 function paintEdgeWalls(p: Paint, scene: Scene, info: TerrainInfo): void {
   const W = scene.width;
-  const bulge = TERRAIN.edgeBulge;
   for (const side of [-1, 1] as const) {
     const xe = side < 0 ? 0 : W;
     const inward = -side as -1 | 1;
-    const yBottom = info.groundY(side < 0 ? 1 : W - 1) + 30;
-    const pts: number[] = [xe + side * OUT, -OUT];
-    for (let y = -OUT; y <= yBottom; y += 10) {
-      const b =
-        (wobble(y, 300 + side, 120) * 0.5 + 0.5) * bulge * 0.7 + (wobble(y, 310 + side, 27) + 1) * 1.6;
-      pts.push(xe + inward * b, y);
-    }
-    pts.push(xe + side * OUT, yBottom);
-    const outline = chaikin(pts, 1);
-    if (side < 0) {
-      p.solid(outline, TERRAIN.stone[2], 0.55);
-      const r = rngFor(301);
-      for (let y = -100; y < yBottom; y += range(r, 26, 90)) {
-        const h = range(r, 24, 80);
-        const pts2 = chaikin(blob(xe - 20, y, 34 + range(r, 0, bulge), h * 0.6, y, 0.3, 8), 1);
-        p.solid(
-          pts2,
-          mix(TERRAIN.stone[r() < 0.5 ? 0 : 1] as number, TERRAIN.earth[2], range(r, 0.1, 0.5)),
-          0.62,
-        );
-      }
-    } else {
-      p.solid(outline, TERRAIN.bark, 0.55, { bark: 1 });
-      barkDetail(p, xe - 40, -100, xe + 20, yBottom, 320);
-    }
-    // Moss patches spilling over the face.
+    const topY = info.groundY(side < 0 ? 1 : W - 1);
+    const yBottom = topY + 30;
+    const reach = (y: number): number => edgeReach(side, y, topY);
+    const inX = (d: number): number => xe + inward * d;
+    const z = zoneAt(xe);
+    const deepWood = mix(TERRAIN.backDeep, 0x120f24, z.deep * 0.6);
+    const wood = mix(mix(TERRAIN.back, TERRAIN.bark, 0.35), 0x1c1a38, z.deep * 0.55);
+    const leaf = mix(mix(TERRAIN.mossDark, TERRAIN.backDeep, 0.55), 0x14122c, z.deep * 0.5);
     const r = rngFor(330 + side);
-    for (let y = -60; y < yBottom - 60; y += range(r, 60, 240)) {
-      const h = range(r, 30, 110);
+
+    // The mass itself.
+    const pts: number[] = [xe + side * OUT, -OUT];
+    for (let y = -OUT; y <= yBottom; y += 12) pts.push(inX(reach(y) - 10), y);
+    pts.push(xe + side * OUT, yBottom);
+    p.solid(chaikin(pts, 1), deepWood, 0.27, { bark: 0.6 });
+
+    // Roots as thick as her body, twisting down through it. Each keeps inside the mass.
+    const cords = 9;
+    for (let k = 0; k < cords; k++) {
+      const y0 = -120 + range(r, 0, 1) * (yBottom + 60);
+      const len = range(r, 260, 620);
+      const d0 = range(r, -10, 0.8 * reach(y0));
+      const d1 = range(r, -10, 0.8 * reach(y0 + len));
+      const w0 = range(r, 11, 24);
       const line = wander(
-        quad(xe + inward * 3, y, xe + inward * 8, y + h * 0.5, xe + inward * 2, y + h, 10),
-        3,
-        y,
-        30,
+        cubic(
+          inX(d0),
+          y0,
+          inX(d0 + range(r, -40, 40)),
+          y0 + len * 0.35,
+          inX(d1 + range(r, -40, 40)),
+          y0 + len * 0.65,
+          inX(d1),
+          y0 + len,
+          22,
+        ),
+        9,
+        340 + k + side,
+        80,
+      ).map((v, j, a) =>
+        j % 2 ? v : inX(Math.min((v - xe) * inward, reach(a[j + 1] as number) - w0 * 0.5 - 12)),
       );
-      p.solid(
-        ribbon(line, (t) => 18 * Math.sin(Math.PI * clamp(t * 0.9 + 0.05, 0, 1)) + 2),
-        TERRAIN.mossDark,
-        0.72,
-        { moss: 1 },
+      const girth = (t: number): number =>
+        w0 * (0.55 + 0.45 * Math.sin(Math.PI * clamp(t, 0.04, 0.96)) ** 0.6) +
+        Math.max(0, Math.sin(t * 13 + k)) * 2;
+      p.tint(
+        ribbon(line, (t) => girth(t) + 7),
+        TERRAIN.abyss,
+        0.5,
       );
+      p.solid(ribbon(line, girth), mix(deepWood, wood, range(r, 0.4, 1)), 0.3 + (k % 3) * 0.012, {
+        bark: 0.8,
+      });
       p.solid(
-        ribbon(line, (t) => 9 * Math.sin(Math.PI * clamp(t * 0.9 + 0.05, 0, 1)) + 1),
-        TERRAIN.moss,
-        0.8,
-        { moss: 1 },
+        ribbon(
+          line.map((v, j) => (j % 2 ? v : v - 2)),
+          (t) => girth(t) * 0.28,
+        ),
+        mix(wood, TERRAIN.bark, 0.3),
+        0.335 + (k % 3) * 0.012,
+        { bark: 0.8 },
       );
     }
-    // What the sliver belongs to: something colossal standing just off-screen.
-    const gy = yBottom - 30;
-    if (side < 0) {
-      // The foot of a cliff: fallen slabs leaning on it (back plane), and a thread of water
-      // running down the face into a wet stain.
-      const er = rngFor(311);
-      for (let i = 0; i < 4; i++) {
-        const cx = xe + range(er, 6, 80);
-        const rx = range(er, 34, 66);
-        const ry = range(er, 30, 62);
-        const stone = mix(mix(TERRAIN.back, TERRAIN.stone[2], 0.5), PALETTE.fogMid, 0.2);
-        paintRock(p, {
-          cx,
-          cy: gy - ry * 0.5 + 10,
-          rx,
-          ry,
-          seed: 311 + i * 5,
-          color: stone,
-          dark: TERRAIN.backDeep,
-          light: mix(stone, TERRAIN.stone[1], 0.3),
-          h: 0.26,
-          rise: 0.07,
-          baseY: gy + 26,
-          tilt: range(er, -0.4, 0.15),
-          rough: 1.2,
-          ground: 0.8,
+
+    // Leaves: hanging clumps all down the hem, so the outline is lobes. Bigger with height.
+    for (let y = -80; y < yBottom - 26; y += range(r, 26, 64)) {
+      const up = smoothstep(TERRAIN.edgeGrowth.leanFrom, TERRAIN.edgeGrowth.leanFull, topY - y);
+      const n = 2 + Math.floor(r() * 3);
+      const big = range(r, 15, 24) + 12 * up;
+      for (let i = 0; i < n; i++) {
+        const cy = y + range(r, -16, 22);
+        const cx = inX(reach(cy) - 12 - range(r, 0, 26) * (i ? 1 : 0));
+        const rx = big * range(r, 0.7, 1.15);
+        const ry = big * range(r, 0.55, 0.9);
+        const tone = mix(leaf, deepWood, range(r, 0, 0.6));
+        p.solid(chaikin(blob(cx, cy, rx, ry, cy + i, 0.38, 12, range(r, -0.5, 0.5)), 2), tone, 0.26, {
+          moss: 0.5,
         });
-      }
-      const fall = wander([xe + 11, -80, xe + 15, gy * 0.35, xe + 9, gy * 0.7, xe + 14, gy + 4], 5, 312, 90);
-      p.solid(
-        ribbon(fall, () => 9),
-        mix(TERRAIN.stone[2], 0x1a3a4a, 0.5),
-        0.6,
-      );
-      p.solid(
-        ribbon(fall, (t) => 3.2 + Math.sin(t * 40) * 0.8),
-        0x9fdbe6,
-        0.82,
-      );
-      p.solid(blob(xe + 16, gy + 2, 24, 7, 313, 0.3, 10), 0xbfeaf0, 0.8, {}, 0.8);
-      p.tint(blob(xe + 30, gy + 16, 60, 16, 314, 0.3, 12), 0x163a4c, 0.5);
-    } else {
-      // A root buttress as thick as a house wall, flaring off-screen, with a hollow at its foot.
-      const er = rngFor(321);
-      for (let i = 0; i < 3; i++) {
-        const fromY = gy - range(er, 240, 420) - i * 60;
-        const toX = xe - range(er, 90, 170) - i * 26;
-        const line = wander(
-          cubic(xe + 30, fromY, xe - 10, lerp(fromY, gy, 0.5), toX + 60, gy - 60, toX, gy + 12, 18),
-          7,
-          322 + i,
-          70,
-        );
-        const w0 = range(er, 70, 96) - i * 14;
-        const tone = i === 0 ? TERRAIN.back : TERRAIN.backDeep;
+        // A drooping tip under each clump.
+        const tip = range(r, 14, 34) * (0.6 + 0.6 * up);
         p.solid(
-          ribbon(line, (t) => w0 * (1 - 0.55 * t) + smoothstep(0.8, 1, t) * 24),
+          ribbon(
+            quad(
+              cx - inward * rx * 0.2,
+              cy,
+              cx + inward * range(r, -4, 8),
+              cy + ry + tip * 0.5,
+              cx + inward * range(r, -6, 12),
+              cy + ry + tip,
+              6,
+            ),
+            (t) => rx * 0.36 * (1 - t) ** 0.9 + 0.6,
+          ),
           tone,
-          0.29 - i * 0.03,
-          { bark: 0.7 },
-        );
-        p.solid(
-          ribbon(line, (t) => w0 * (1 - 0.55 * t) * 0.3),
-          mix(tone, TERRAIN.bark, 0.35),
-          0.34 - i * 0.03,
-          { bark: 0.7 },
+          0.255,
+          { moss: 0.5 },
         );
       }
-      p.solid(
-        chaikin(blob(xe - 34, gy - 50, 40, 64, 323, 0.25, 10), 2),
-        mix(TERRAIN.back, TERRAIN.bark, 0.4),
-        0.31,
-        { bark: 0.6 },
-      );
-      p.solid(chaikin(blob(xe - 34, gy - 44, 30, 52, 323, 0.25, 10), 2), 0x081622, 0.16);
     }
-    info.faces.push({ x: xe, y0: 0, y1: yBottom - 30, dir: inward, kind: 'edge' });
+
+    // Its foot: two short root toes pressed into the ground, and the dark between them.
+    for (let i = 0; i < 2; i++) {
+      const fromY = topY - range(r, 70, 130) - i * 34;
+      const toD = reach(topY - 20) + range(r, 6, 26) + i * 18;
+      const line = wander(
+        cubic(inX(4), fromY, inX(toD * 0.5), fromY + 20, inX(toD), topY - 26, inX(toD + 4), topY + 14, 12),
+        3,
+        322 + i + side,
+        50,
+      );
+      const w0 = range(r, 16, 22) - i * 4;
+      p.solid(
+        ribbon(line, (t) => w0 * (1 - 0.5 * t) + smoothstep(0.8, 1, t) * 5),
+        i ? deepWood : wood,
+        0.29 - i * 0.02,
+        { bark: 0.7 },
+      );
+    }
+    info.faces.push({ x: xe, y0: 0, y1: yBottom - 30, dir: inward, kind: 'edge', reach });
   }
 }
 
@@ -2206,6 +2264,172 @@ function paintKickWall(
       { moss: 0.8 },
     );
   }
+}
+
+/** Is ground segment `i` a narrow block standing between a face and the scene edge (TERRAIN.endBlock)? */
+function endBlock(segs: Seg[], i: number, W: number): boolean {
+  const s = segs[i];
+  if (!s || (i !== 0 && i !== segs.length - 1)) return false;
+  return Math.min(s.x1, W) - Math.max(s.x0, 0) <= TERRAIN.endBlock;
+}
+
+/**
+ * The body of an end block (the far bluff, the scene's last picture with the lantern on it and the
+ * shrine at its foot): the face's stone courses run on to the scene edge, bonded, rougher and darker
+ * as they go, and great roots come out of the edge's thicket and down across them to grip the
+ * stone. Walk plane, so it stands with the face; its value is `TERRAIN.endMist`, a step under the
+ * face's. `fx` is the face, `xe` the scene edge.
+ */
+function paintEndMass(
+  p: Paint,
+  fx: number,
+  xe: number,
+  hi: number,
+  lo: number,
+  inward: -1 | 1,
+  info: TerrainInfo,
+): void {
+  const H = lo - hi;
+  const wd = Math.abs(xe - fx);
+  const r = rngFor(631, fx);
+  const z = zoneAt(fx);
+  const E = TERRAIN.earth;
+  const stone = mix(mix(0x587480, 0x66705a, z.warm), 0x6e6c8a, z.deep);
+  const inX = (d: number): number => fx + inward * d;
+  const rows = Math.max(3, Math.round(H / 100));
+  for (let k = 0; k < rows; k++) {
+    const cy = hi + 58 + (k / (rows - 1)) * (H - 96);
+    for (let d = 132 + (k % 2 ? 0 : 58) + range(r, 0, 24); d < wd + 50; ) {
+      const rx = range(r, 50, 82);
+      const ry = range(r, 37, 50);
+      const far = clamp(d / wd, 0, 1);
+      const col = mix(stone, E[2], 0.4 + 0.22 * far + range(r, 0, 0.12));
+      const cx = inX(d + rx);
+      const y = cy + range(r, -12, 12);
+      p.tint(chaikin(blob(cx, y + 5, rx + 6, ry + 6, y + d, 0.25, 12), 2), E[4], 0.45);
+      paintRock(p, {
+        cx,
+        cy: y,
+        rx,
+        ry,
+        seed: 632 + k * 7 + Math.round(d),
+        color: col,
+        dark: E[4],
+        light: mix(col, 0xa8b4b8, 0.1),
+        h: 0.55,
+        rise: 0.06,
+        tilt: range(r, -0.12, 0.12),
+        rough: 0.9 + 0.3 * far,
+        boxy: 2.7,
+        ground: 0.45,
+        cracks: r() < 0.5 ? 1 : 0,
+      });
+      // Chinking: a small stone wedged in the joint under it.
+      if (r() < 0.6) {
+        const sx = cx + range(r, -rx, rx) * 0.8;
+        const sr = range(r, 10, 18);
+        paintRock(p, {
+          cx: sx,
+          cy: y + ry + range(r, 2, 10),
+          rx: sr * 1.3,
+          ry: sr * 0.8,
+          seed: 640 + k * 7 + Math.round(d),
+          color: mix(stone, E[2], 0.6),
+          dark: E[4],
+          h: 0.56,
+          rise: 0.05,
+          rough: 1.1,
+          ground: 0.5,
+        });
+      }
+      d += rx * 2 + range(r, 0, 12);
+    }
+  }
+  // Roots out of the edge's thicket, down across the stone, each forking once.
+  const wood: Wood = {
+    col: mix(TERRAIN.rootWood, E[2], 0.5),
+    lit: mix(TERRAIN.rootWood, 0x7a8a9c, 0.25),
+    dark: E[4],
+  };
+  const root = (
+    d0: number,
+    y0: number,
+    d1: number,
+    y1: number,
+    w0: number,
+    seed: number,
+    fork: boolean,
+  ): void => {
+    const line = wander(
+      cubic(
+        inX(d0),
+        y0,
+        inX(lerp(d0, d1, 0.35)),
+        y0 + (y1 - y0) * 0.08,
+        inX(d1 + (d0 - d1) * 0.2),
+        lerp(y0, y1, 0.5),
+        inX(d1),
+        y1,
+        22,
+      ),
+      8,
+      seed,
+      90,
+    );
+    const girth = (t: number): number => w0 * (1 - t * 0.62) + 2 + Math.max(0, Math.sin(t * 11 + seed)) * 2.5;
+    p.tint(
+      ribbon(
+        line.map((v, j) => (j % 2 ? v + 5 : v)),
+        (t) => girth(t) + 8,
+      ),
+      E[4],
+      0.5,
+    );
+    limb(p, line, girth, wood, 0.61, 0.07, seed, { bark: 0.5, grain: 2, lit: 0.1 });
+    if (fork) {
+      const j = 2 * Math.floor(range(r, 9, 13));
+      const bx = ((line[j] as number) - fx) * inward;
+      const by = line[j + 1] as number;
+      root(
+        bx,
+        by,
+        bx - range(r, 30, 70),
+        Math.min(lo + 8, by + range(r, 80, 150)),
+        w0 * 0.5,
+        seed + 3,
+        false,
+      );
+    }
+  };
+  root(wd + 40, hi + range(r, 34, 60), range(r, 150, 190), lo + 8, range(r, 25, 31), 651, true);
+  root(
+    wd + 40,
+    hi + H * range(r, 0.42, 0.52),
+    wd * range(r, 0.62, 0.72),
+    lo + 10,
+    range(r, 19, 24),
+    655,
+    true,
+  );
+  root(
+    wd * range(r, 0.72, 0.82),
+    hi + 8,
+    wd * range(r, 0.42, 0.5),
+    hi + H * range(r, 0.5, 0.62),
+    range(r, 13, 17),
+    659,
+    false,
+  );
+  const [mc, ma] = TERRAIN.endMist;
+  info.mist.push({
+    x: inX(wd * 0.72),
+    y: hi + H * 0.48,
+    rx: wd * 0.7,
+    ry: H * 0.62,
+    amount: ma,
+    color: mc,
+    power: 1.5,
+  });
 }
 
 /**

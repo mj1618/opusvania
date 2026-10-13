@@ -18,7 +18,7 @@
 Everything is still derived from the rects by tag and by rule; the rule that picks each look is in brackets.
 | x | collision | painted as |
 |---|---|---|
-| 0-384 | bank 1088 | ground + back ridge; cliff foot and water thread at the scene edge (`paintEdgeWalls`) |
+| 0-384 | bank 1088 | ground + back ridge; the scene edge is a thicket's hem (`paintEdgeWalls`, a dead wall) |
 | 384-1536 | ground 1280 | great boulder 610, log 1150; **moth-stone** 1360 (350 px, leaning) with its fallen piece at 1516 and `lantern-stone` 1448 / `pod-stone` 1500 in front (a stand-mist pool) |
 | 640-2592 | F1-F5 | islands 0-4: boulders in a snag, slate in a vine sling, aerial roots, bracket fungus, woven nest |
 | 1536-1856 | pool, floor 1408 | water surface 1358 (`pf-water.ts`), basin stones, roots |
@@ -35,7 +35,33 @@ Everything is still derived from the rects by tag and by rule; the rule that pic
 | 4256-4608 @912 | one-way | bough on a sapling at 4642 (on the rise) |
 | 4608-5472 | rise 1088 | west face a tall step (buttress, bank); boulder 4712; `lamp-rise` 4860; **shrine** at 5212 behind the heart (cairns 5090 / 5328, wing-stone 300 px); nothing tall in the last 170 px |
 | 4736-5232 | F6, F7 | islands 5 (crown limb), 6 (violet stones) |
-| 5472-5760 | far bluff 448 | west face (640 px) is the scene's last **kick wall**: stone courses, three roots, mist on the face and (mid layer) beside it; lit crest, `lantern-far` 5524, `pod-far` 5690; the great trunk and buttress roots of the scene edge behind |
+| 5472-5760 | far bluff 768 | **end block** (`paintEndMass`): west face (320 px) is the scene's last kick wall, and its stone courses run on to the scene edge with three great roots out of the edge's thicket; lit crest, `lantern-far` 5524, `pod-far` 5690. With the shrine (5212, 320 px lower) it is the scene's last picture |
+
+## Round F4: the last picture, dead edges (2026-10-14, after playtest 4)
+- **End block** (`TERRAIN.endBlock` 480: the first / last ground rect, no wider than that, behind a kick face).
+  `shadeTop` holds the ground's depth shade off it the whole way across (it was held 130 px: east of that the
+  far bluff's body was black, a slab over a void), and `paintEndMass` paints the body before `paintClimbFace`:
+  3 bonded rows of `paintRock` courses from 132 px in to past the scene edge (darker and rougher eastward,
+  chinking stones in the joints), three `limb()` roots from the edge down across them (two fork). Value is
+  `TERRAIN.endMist` (0x57557c, 0.6, centred 72% of the way in: the block is under ~50% vignette at the camera
+  clamp), a step under the face's `faceMist.deep` (now 0x5e5c84, 0.47; was 0x66638a, 0.6).
+  Measured, `--pickups`, far-bluff stop / far-ledge stop: face 55 -> 42 / 42 -> 32, body 6 -> 24 / 5 -> 20.
+- **Scene edges are dead walls** (`edgeKick: false`), so nothing there is a face: `paintEdgeWalls` is the hem of
+  a thicket (`TERRAIN.edgeGrowth`: 40 px in beside the walk line, leaning to 104 px from 150-460 px above it),
+  all back plane (relief 0.26-0.34: no light, no rim): a dark body, nine twisted root cords that keep inside it,
+  hanging leaf clumps with drooping tips all down the hem (the outline is lobes), two short root toes. Gone:
+  the pale stone face with its water thread (west: a bright 12 px stripe, the "pole"), the bark face (east) and
+  the three buttress roots that stood dark behind lantern 3. `Face.reach(y)` lets pf-plants root its edge
+  growth on the hem: ferns and moss tufts only, in `REAR` tones (a lit leaf spray standing level out of the
+  dark read as a foothold; ivy drew the wall line).
+- **The heart's mist is two pools** (`TERRAIN.heartMist` [1.2, 0.6] of `standMist`): low and wide at her
+  height (rx 223, ry 98, power 1.3), a thinner one over the shrine's stones. The wing-stone itself is a step
+  darker (colour 30% toward `backDeep`, relief 0.27 + 0.08: at 0.3 + 0.1 its crown was in the walk plane's
+  light). Far-bluff stop: wing-stone 51 -> 47, the band behind her (5130-5300, 1000-1085) 48 -> 57; from the
+  far-ledge stop 48 -> 44 and 34 -> 42. The stone does not answer to mist alone: most of its value is its own.
+- The lit great cocoon: shell 0x574e38, glow 0x8a673a / 0xbd9558, halo 46 (trunks stop: mean 55 -> 42, p99 151 -> 121).
+- Fight strips: burr-shaft (3378-3522) and burr-rise (4914-5106) get `info.calm` from their scene entry
+  (+-230 px), nothing to do by hand; checked at the shaft-pit and right-rise stops.
 
 ## Kick walls (round F3, 2026-10-14)
 - **Rule: a ground face of `FORMS.climbStep` 280 px or more (taller than a jump) is climbed by kicks**, and every

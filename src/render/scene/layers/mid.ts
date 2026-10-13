@@ -118,7 +118,9 @@ const MID = {
    * far bluff's west face (playfield x 5140-5472, y 300-1088) for the clamped camera (x 4800) as its
    * y runs from 850 at the foot to 290 at the top.
    */
-  bluffClear: { x: [4500, 4900], y: [380, 1060], w: 70 },
+  // (To layer x 5180 since the bluff's top came down to 768: a moss curtain hung black over the far
+  // lantern, playfield 5560-5700, y 300-650, in the scene's last picture.)
+  bluffClear: { x: [4500, 5180], y: [300, 1060], w: 70 },
   hang: { seed: 604, vines: 40, moss: 26, fronds: 24, vineLen: [140, 560], amp: 0.06 },
   /**
    * THE MIST STAGE: paler fog pooled just above the walk line, behind the playfield, so the hero,
@@ -138,7 +140,7 @@ const STAGE: Omit<StageSpec, 'strength'> = {
   below: 110,
   // Left bank, ground, the terrace (its step hides behind the bluff), ground, the hollow (96 down
   // and up again: narrow, so a short ease or the sheet never dips into it), the right rise. (The far
-  // bluff, 640 px up at 5472, is not a step: its top is a ledge and its face a wall, below.)
+  // bluff, 320 px up at 5472, is not a step: its top is a ledge and its face a wall, below.)
   baseY: 1088,
   steps: [
     [384, 192],
@@ -155,14 +157,18 @@ const STAGE: Omit<StageSpec, 'strength'> = {
   ledges: [
     { x0: 2432, x1: 2624, y: 960, k: 0.7 },
     { x0: 2816, x1: 3328, y: 448, k: 1 },
-    { x0: 5472, x1: 5900, y: 448, k: 1 },
+    { x0: 5472, x1: 5900, y: 768, k: 1 },
   ],
   // The faces she kicks up with open air behind her: the far bluff (the last climb, in the darkest
   // corner of the scene: luma 5 behind her without this) and trunk A's bark above the well. Not the
   // shaft: its glints need the dark that MID.shaftPendant puts behind them.
   walls: [
-    { x: 5472, y0: 448, y1: 1088, dir: -1, k: 0.85, reach: 330 },
+    { x: 5472, y0: 768, y1: 1088, dir: -1, k: 0.85, reach: 330 },
     { x: 3200, y0: 448, y1: 1168, dir: -1, k: 0.4, reach: 240 },
+    // Not a climb: a bank of mist against the moth-stone's east flank, behind the first lantern. The
+    // mist of the far layers showed there as a pale wedge cut by the stone on one side and by this
+    // layer's leaning trunk on the other; the bank lies in front of that trunk, so its edge dissolves.
+    { x: 1430, y0: 1010, y1: 1280, dir: 1, k: 0.36, reach: 250 },
   ],
   wisp: 0.5,
 };

@@ -1709,16 +1709,16 @@ function growFace(g: Garden, f: Face, info: TerrainInfo): void {
   const c: Ctx = { b: g.back, halo: g.halo, r };
   const h = f.y1 - f.y0;
   if (f.kind === 'edge') {
-    // The scene's edge walls: ferns and leafy sprays reaching in, thicker with height.
-    for (let y = f.y0 + range(r, 20, 80); y < f.y1 - 30; y += range(r, 46, 150)) {
-      const t = toneAt(BACK, f.x + y, r);
-      const up = f.dir > 0 ? -0.55 : Math.PI + 0.55;
+    // The scene's edges are a thicket's hem (dead walls): a few dark fronds and sprays lean out of
+    // it, rooted in its leaves, thicker with height. In the rear tones: nothing here is a lit hold.
+    for (let y = f.y0 + range(r, 20, 80); y < f.y1 - 70; y += range(r, 70, 190)) {
+      const t = toneAt(REAR, f.x + y, r);
+      const x = f.x + f.dir * ((f.reach?.(y) ?? 12) - 14);
+      const up = f.dir > 0 ? -0.35 : Math.PI + 0.35;
       const roll = r();
-      if (roll < 0.5) fern(c, f.x + f.dir * 6, y, range(r, 36, 64), t, up, 0.8);
-      else if (roll < 0.8)
-        spray(c, f.x + f.dir * 4, y, up + range(r, -0.3, 0.5) * f.dir, range(r, 40, 70), t);
-      else mossTuft(c, f.x + f.dir * 8, y, range(r, 16, 34), t);
-      if (r() < 0.5) ivy(c, f.x + f.dir * 9, y, y + range(r, 50, 140), f.dir, t);
+      // (No leaf sprays: a lit twig standing level out of the dark read as a foothold.)
+      if (roll < 0.65) fern(c, x, y, range(r, 34, 58), t, up, 0.8);
+      else mossTuft(c, x, y, range(r, 16, 34), t);
     }
     return;
   }

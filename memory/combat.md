@@ -141,11 +141,13 @@ Nothing in the grove asks for a jump + up cut any more.
 ## Render side (Vesper; detail in character-vesper.md, "Thorn slash")
 - One slash look: a flat cream crescent per cut, locked to her body, whole on the first active frame,
   gone 5 frames later (6 on the finisher; it holds through hitstop). Cut 1 goes down, cut 2 up, the
-  finisher is cut 1 larger; up arcs overhead, down beneath. The crescent's outer edge is the step's reach
-  for forward cuts; up / down are drawn at 0.88 of the reach and 1.75x the width.
+  finisher is cut 1 larger; up arcs overhead from her shoulder line, down beneath. The crescent's outer
+  edge is the step's reach for forward cuts; up / down are drawn at 0.88 of the reach. It is thin (belly
+  0.17 of the reach), thins to a line in hitstop, is called back for a late hit and never drawn under the floor.
 - Render reads `slash` (to start the stroke), `slashHit` (contact cross + specks at the target's near
   side, `power` 2 = larger), `enemyBlock` (a clang at `hitX, hitY`), `player.hitstop` (the cut and the
-  crescent hold) and `slashEnd` reason `dash | hurt` (blade home at once). Changing `startupFrames`
+  crescent hold) and `slashEnd` reason `dash | hurt` (blade home at once). `slashHit.hitstop` >= 4 (a
+  creature) braces her body against the recoil; `enemyBlock` plays the clang pose (blade thrown back). Changing `startupFrames`
   moves the anticipation (`wind` is authored per stroke in rig.ts `STROKES`: keep them equal); changing
   hitstop or knockback needs nothing from render.
 - Wanted from the sim, not there: an event when a cut meets terrain (a wall clang).

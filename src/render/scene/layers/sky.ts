@@ -27,8 +27,8 @@ export const SKY = {
   low: 0x17140c,
   corner: 0x040506,
   /** Wide amber halo, the warm bloom, and its core. */
-  halo: 0x7a5c26,
-  warm: 0xcf9c4c,
+  halo: 0x705222,
+  warm: 0xba8a40,
   core: 0xe6b866,
   /** Where the bloom sits on screen when the camera is at the anchor height, and how much it parallaxes. */
   glowRestY: 150,
