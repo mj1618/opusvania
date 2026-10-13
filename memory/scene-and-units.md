@@ -53,6 +53,7 @@ x:  0        1000       2000       3000       4000       5000     5760
 | `mid` | 0.68 | big trunks, roots, vines, fog sheets |
 | `playfield` | 1 | terrain, moss, plants, pool: the skin of the collision rects |
 | `pickupsBack` | 1 | the buds of great glints, behind the character |
+| `enemies` | 1 | the creatures (`src/render/enemies/`), just behind the character |
 | `character` | 1 | the character |
 | `pickups` | 1 | glints and the sepals cupping a great one (`src/render/pickups/`), over the character |
 | `playfieldFront` | 1 | grass fringe and the pool's surface, over the character (owned by `layers/playfield.ts`) |

@@ -3,7 +3,7 @@
 Sim: `src/sim/enemies.ts` (creature, slash hits, glint spill), `src/sim/player/player.ts`
 (`hurtPlayer`, `trackSafeGround`, `reformPlayer`), step order in `src/sim/index.ts`. Numbers:
 `tuning.burrback`, `tuning.enemies`, `tuning.health`. Tests: `tests/unit/enemies.test.ts`,
-`tests/unit/enemies-pilot.test.ts`. Nothing draws the creature, the hurt or the health yet.
+`tests/unit/enemies-pilot.test.ts`. The creature is drawn by `src/render/enemies/` (enemies-render.md).
 
 ## Step order (matters)
 re-form if a fade just ended → `updatePlayer` (her slash is resolved inside it, against where the
@@ -106,7 +106,7 @@ wins (the creature is staggered and harmless before contact is tested).
 
 None on the spawn ground (384-1536: the whole run would be its patrol, the spawn included, and the
 close-up shots start there), none under the trunks (the wall-slide close-ups start at 3456, 1280),
-none on the right rise (the pogo row). `?nopickups` does NOT remove enemies.
+none on the right rise (the pogo row). `?nopickups` removes the enemies too (clean plates).
 
 ## Audit
 - A burrback never blocks a route: one plain jump clears it from either side (piloted for all six).

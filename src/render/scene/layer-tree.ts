@@ -9,6 +9,7 @@ import { type CameraView, VIEW_H, VIEW_W } from '../contract';
  *   far[0..2]   0.12 0.25 0.42 far forest silhouettes, far[0] is the farthest
  *   mid         0.68          big trunks, roots, vines, fog sheets
  *   playfield   1             terrain, moss, plants, the pool (what the collision rects become)
+ *   enemies     1             the creatures (owned by src/render/enemies), just behind the character
  *   character   1             the character (owned by src/render/character)
  *   pickups     1             glints and their buds, over the character (owned by src/render/pickups)
  *   playfieldFront 1          what covers the character at its own depth: grass fringe, pool surface
@@ -35,6 +36,8 @@ export const LAYERS = [
   { name: 'playfield', parallax: 1, screen: false },
   // The buds that hold great glints: behind the character (src/render/pickups).
   { name: 'pickupsBack', parallax: 1, screen: false },
+  // Enemies (src/render/enemies): just behind the character, in front of the playfield.
+  { name: 'enemies', parallax: 1, screen: false },
   { name: 'character', parallax: 1, screen: false },
   // Collectibles: over the character (a glint flies into her), under the grass fringe.
   { name: 'pickups', parallax: 1, screen: false },
@@ -61,6 +64,8 @@ export class LayerTree {
   readonly far: readonly Container[];
   readonly mid: Container;
   readonly playfield: Container;
+  /** Enemies (owned by src/render/enemies), under the character. */
+  readonly enemies: Container;
   readonly character: Container;
   /** Glints (owned by src/render/pickups); `pickupsBack` is under the character. */
   readonly pickups: Container;
@@ -83,6 +88,7 @@ export class LayerTree {
     this.far = [this.get('far0'), this.get('far1'), this.get('far2')];
     this.mid = this.get('mid');
     this.playfield = this.get('playfield');
+    this.enemies = this.get('enemies');
     this.character = this.get('character');
     this.pickups = this.get('pickups');
     this.pickupsBack = this.get('pickupsBack');

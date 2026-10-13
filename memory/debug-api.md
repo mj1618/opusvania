@@ -10,7 +10,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   returns the state → manual. `tick(n)` advances render time only → manual. `freeze()` / `freeze(false)`,
   `pause()` (manual), `resume()` (realtime).
 - URL: `?manual` boots paused (tools and tests do this), `?seed=n`, `?hitboxes`, `?nopickups` (the scene
-  without glints or counter; the capture tools use it unless given `--pickups`).
+  without glints, pods, enemies or counter; the capture tools use it unless given `--pickups`).
 
 ## Calls
 - `state()` the sim state (`src/sim/state.ts`); `hash()`; `info()` (mode, frame, clock, canvas size, GPU);
@@ -39,5 +39,5 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - Keys in the page: arrows/WASD, Z/Space/K jump, X/L/Shift dash, C/J attack, R restart.
 - Enemies keep walking through every `step()`: a teleport next to one a few hundred frames later finds it
   somewhere else. Read `enemies()` first, or `load()` for the start positions.
-- `?nopickups` does not remove enemies. None patrols the spawn ground or the trunk shaft, where the
+- `?nopickups` removes the enemies too (src/main.ts). None patrols the spawn ground or the trunk shaft, where the
   close-up shots run.
