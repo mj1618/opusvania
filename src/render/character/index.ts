@@ -14,8 +14,9 @@ import type { CharacterSkin, SkinDef } from './skin';
 
 const modules = import.meta.glob<{ skin?: SkinDef }>('./*/index.ts', { eager: true });
 /** Display order = number-key order. Unknown ids sort after these. */
-const ORDER = ['wick', 'yako', 'vesper', 'nova', 'hooded'];
-const KEY = 'opusvania.char';
+const ORDER = ['vesper', 'yako', 'wick', 'nova', 'hooded'];
+// v2: the owner chose Vesper (2026-10-13); a new key so an older remembered choice does not override the default.
+const KEY = 'opusvania.char.v2';
 
 export class CharacterRenderer {
   readonly skins: readonly SkinDef[];
