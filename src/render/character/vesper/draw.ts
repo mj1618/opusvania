@@ -54,6 +54,9 @@ export interface View {
   /** Hair lag in world px (tips trail the head). */
   hairX: number;
   hairY: number;
+  /** A second, slower lag for the mane's outer tufts, so the fringe ruffles rather than shifts. */
+  hair2X: number;
+  hair2Y: number;
   /** Light level of her own glow 0.6..1.6. */
   glow: number;
   /** Somersault tuck 0..1. */
@@ -172,11 +175,11 @@ const SH_FACE: Shade = {
 const SH_CROWN: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 0.9, cool: 0.5, form: 0.3, band: 0.36 };
 const SH_LOCK: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 0.9, cool: 0.5, form: 0.3, band: 0.6 };
 const SH_LOCK_SOFT: Shade = {
-  c0: mixRGB(CROWN_TOP, FUR_SHADE, 0.25),
-  c1: CROWN_LOW,
-  rim: 0.7,
-  cool: 0.5,
-  form: 0.25,
+  c0: mixRGB(CROWN_TOP, FUR_SHADE, 0.75),
+  c1: mixRGB(CROWN_LOW, FUR_SHADE, 0.4),
+  rim: 0.6,
+  cool: 0.4,
+  form: 0.2,
   band: 0.7,
 };
 const SH_EYE: Shade = { c0: rgb(0x5e2c04), c1: rgb(0xb8660c), rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
@@ -309,6 +312,7 @@ function tuft(
   w: number,
   sh: Shade,
   round = 0.8,
+  tip = 0,
 ): void {
   const dx = x1 - x0;
   const dy = y1 - y0;
@@ -321,13 +325,12 @@ function tuft(
     p.px[i] = x0 + dx * t + nx * b;
     p.py[i] = y0 + dy * t + ny * b;
     // `round` < 1 keeps the width further along before the tip closes: a lock, not a spike.
-    p.pw[i] =
-      w *
-        (1 - t ** (1 / Math.max(0.2, round))) ** round *
-        (0.8 + 0.35 * Math.sin(Math.PI * Math.min(1, t * 1.5))) +
-      0.06;
+    // `tip` > 0 ends the lock in a soft rounded puff instead of a point.
+    const taper = (1 - t ** (1 / Math.max(0.2, round))) ** round;
+    const puff = 0.55 + 0.45 * Math.sin(Math.PI * (0.25 + 0.6 * t));
+    p.pw[i] = w * lerp(taper, puff, tip) * (0.8 + 0.35 * Math.sin(Math.PI * Math.min(1, t * 1.5))) + 0.06;
   }
-  p.ribbon(7, sh, true, false);
+  p.ribbon(7, sh, true, tip > 0.3);
 }
 
 function leg(p: Painter, j: Float32Array, side: number, far: boolean): void {
@@ -727,20 +730,25 @@ function ruff(p: Painter, f: Frame, v: View): void {
       p,
       rx,
       ry,
-      rx + Math.sin(a) * l + v.hairX * 0.25,
-      ry + Math.cos(a) * l * 0.82 + v.hairY * 0.25,
+      rx + Math.sin(a) * l * 0.8 + v.hairX * 0.25,
+      ry + Math.cos(a) * l * 0.66 + v.hairY * 0.25,
       (i % 2 ? 0.6 : -0.6) * d,
       w,
       i % 6 === 0 ? SH_RUFF_LOW : SH_RUFF,
       0.55,
+      0.45,
     );
   }
 }
 
 /** Mane locks off the back of the head: root (f, u), tip (f, u), bow, width. Forward-frame px. */
 const LOCKS = [
-  -3.0, 8.2, -10.5, 9.6, -2.0, 3.6, -5.6, 5.4, -14.5, 4.6, -2.4, 4.2, -7.0, 2.0, -16.5, -1.8, -2.6, 4.6, -6.6,
-  -1.6, -15.0, -6.2, -2.2, 4.2, -5.2, -4.6, -11.0, -10.0, -1.6, 3.4,
+  // outer row: dark, long, slow
+  -3.5, 8.6, -9.5, 11.0, -1.6, 3.6, 0, -6.2, 5.8, -13.5, 6.4, -2.0, 4.2, 0, -7.6, 2.2, -15.5, 0.6, -2.2, 4.6,
+  0, -7.2, -1.8, -14.0, -5.0, -1.8, 4.2, 0, -5.8, -5.2, -10.5, -9.0, -1.2, 3.4, 0,
+  // inner row: lighter, shorter, quicker, overlapping the gaps
+  -4.8, 7.2, -9.5, 8.6, -1.0, 3.0, 1, -6.8, 4.0, -11.5, 3.6, -1.2, 3.3, 1, -7.2, 0.2, -11.5, -2.2, -1.0, 3.2,
+  1, -6.4, -3.6, -9.5, -6.8, -0.8, 2.8, 1,
 ];
 
 function head(p: Painter, f: Frame, v: View, far: number): void {
@@ -758,18 +766,22 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
   const Y = (lx: number, ly: number): number => hy + lx * sr + ly * cr;
 
   // --- Mane: soft dark locks streaming off the back of the head; tips lag the head.
-  for (let i = 0; i < LOCKS.length; i += 6) {
-    const k = 0.5 + i / LOCKS.length;
+  for (let i = 0; i < LOCKS.length; i += 7) {
+    const inner = LOCKS[i + 6]! > 0.5;
+    const k = inner ? 0.7 : 1.1 + 0.15 * ((i / 7) % 2);
+    const lx = inner ? v.hairX : v.hair2X;
+    const ly = inner ? v.hairY : v.hair2Y;
     tuft(
       p,
       X(LOCKS[i]! * dh, -LOCKS[i + 1]!),
       Y(LOCKS[i]! * dh, -LOCKS[i + 1]!),
-      X(LOCKS[i + 2]! * dh, -LOCKS[i + 3]!) + v.hairX * k,
-      Y(LOCKS[i + 2]! * dh, -LOCKS[i + 3]!) + v.hairY * k,
+      X(LOCKS[i + 2]! * dh, -LOCKS[i + 3]!) + lx * k,
+      Y(LOCKS[i + 2]! * dh, -LOCKS[i + 3]!) + ly * k,
       LOCKS[i + 4]! * dh,
       LOCKS[i + 5]!,
-      i % 12 === 0 ? SH_LOCK : SH_LOCK_SOFT,
-      0.3,
+      inner ? SH_LOCK_SOFT : SH_LOCK,
+      0.5,
+      1,
     );
   }
 
@@ -799,6 +811,7 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
     2.2,
     SH_LOCK,
     0.5,
+    0.8,
   );
   tuft(
     p,
@@ -810,6 +823,7 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
     2.0,
     SH_LOCK,
     0.5,
+    0.8,
   );
 
   // --- The far antenna leaves the brow behind the face fur.
@@ -841,9 +855,10 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
       X(tx, ty) + v.hairX * 0.35,
       Y(tx, ty) + v.hairY * 0.35,
       0.5 * dh * sd,
-      2.6,
+      3.0,
       sd > 0 ? SH_FUR_LOW : SH_FUR,
       0.5,
+      0.9,
     );
   }
   const FSEG = 36;

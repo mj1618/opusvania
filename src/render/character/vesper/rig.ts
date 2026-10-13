@@ -21,7 +21,6 @@ import {
   approach,
   bell,
   clamp,
-  easeOutCubic,
   hermite,
   ik2,
   ikOut,
@@ -157,28 +156,42 @@ const TUCK = pose([
 ]);
 /** Snapping out: a touch past the fall pose. Body long and open, legs reaching, arms wide. */
 const OPEN = pose([0, 33.5, -0.12, -0.16, -0.14, 5, -2, 0.7, -5, -1, 1.1, -12, 1, 10, 0, 0, 1, 0.2, 1]);
-/** Somersault duration, seconds; the snap-in ends and the snap-out begins at these fractions. */
-export const SPIN_T = 0.42;
-const SPIN_IN = 0.17;
-const SPIN_OUT = 0.72;
+/** Somersault duration, seconds. */
+export const SPIN_T = 0.48;
+/** Fractions of it over which the angular velocity eases in and out (quintic, so no corners). */
+const SPIN_IN = 0.3;
+const SPIN_OUT = 0.4;
+
+function quintic(x: number): number {
+  const t = sat(x);
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+/** Integral of `quintic` from 0 to x (x in 0..1). */
+function quinticArea(x: number): number {
+  const t = sat(x);
+  const t4 = t * t * t * t;
+  return t4 * (t * t - 3 * t + 2.5);
+}
 
 /**
- * The somersault's angle 0..1 at progress u: angular velocity eases in over the snap-in, holds
- * steady through the spin, eases out to exactly zero at one whole turn. A curve, not a spring.
+ * The somersault's angle 0..1 at progress u. Angular velocity rises on a quintic ease, holds,
+ * and falls on a quintic ease to exactly zero at one whole turn: velocity AND acceleration are
+ * continuous everywhere, so nothing reads as a snap. A curve, not a spring.
  */
 function spinCurve(u: number): number {
   const a = SPIN_IN;
   const b = SPIN_OUT;
-  const total = a / 2 + (b - a) + (1 - b) / 2;
+  const total = a / 2 + (1 - a - b) + b / 2;
   const x = sat(u);
   let area: number;
-  if (x < a) area = (x * x) / (2 * a);
-  else if (x < b) area = a / 2 + (x - a);
-  else {
-    const q = (x - b) / (1 - b);
-    area = a / 2 + (b - a) + (1 - b) * (q - (q * q) / 2);
-  }
+  if (x < a) area = a * quinticArea(x / a);
+  else if (x < 1 - b) area = a / 2 + (x - a);
+  else area = a / 2 + (1 - a - b) + b * (0.5 - quinticArea((1 - x) / b));
   return area / total;
+}
+/** Tuck amount at progress u: folds while already turning, unfolds while still turning. */
+function tuckCurve(u: number): number {
+  return quintic(u / 0.34) * (1 - quintic((u - 0.52) / 0.46));
 }
 const WALL = pose([
   3.5, 27, 0.14, 0.08, 0.12, 18.6, 15.5, -1.15, 18.6, 4, -1.2, 11.5, 9.5, 9, -3.5, 0.2, 1, 0.3, 0.5,
@@ -296,6 +309,11 @@ export class Rig {
   private readonly handA = new Drag2(19, 0.5, 0.3, 5.5);
   private readonly handB = new Drag2(16, 0.46, 0.3, 5.5);
   private spinA = 0;
+  private spinVel = 0;
+  private spinTarget = 0;
+  private wasFree = false;
+  private antic = 0;
+  private readonly spinS = new Spring(0, 20, 1);
   private spinT = 0;
   private spinDir = 1;
   private spinFree = false;
@@ -453,34 +471,52 @@ export class Rig {
       this.spinFree = false;
       this.spinT = 0;
       this.spinA = 0;
+      this.wasFree = false;
       this.spinDir = Math.abs(p.vx) > 1.5 ? (p.vx > 0 ? 1 : -1) : sgn;
       this.openT = 1;
     }
     if (this.spinning) {
       if (p.grounded || dash || wall) this.spinFree = true;
       if (this.spinFree) {
-        // Cut short: to the nearest upright by the shortest way, and let go of the tuck.
-        const target = this.spinA > Math.PI ? TAU : 0;
-        this.spinA += (target - this.spinA) * approach(24, dt);
-        this.spinW += (0 - this.spinW) * approach(30, dt);
-        if (Math.abs(this.spinA - target) < 0.004 && this.spinW < 0.01) this.spinning = false;
+        // Cut short: carry the turn's own momentum into a critically damped settle on the nearest
+        // upright (no kink in angular velocity), and let go of the tuck.
+        if (!this.wasFree) {
+          this.spinS.x = this.spinA;
+          this.spinS.v = this.spinVel;
+          this.spinTarget = this.spinA + this.spinVel * 0.06 > Math.PI ? TAU : 0;
+        }
+        const a0 = this.spinA;
+        this.spinA = this.spinS.step(this.spinTarget, dt);
+        if (dt > 0) this.spinVel = (this.spinA - a0) / dt;
+        this.spinW += (0 - this.spinW) * approach(20, dt);
+        if (
+          Math.abs(this.spinA - this.spinTarget) < 0.004 &&
+          Math.abs(this.spinS.v) < 0.1 &&
+          this.spinW < 0.01
+        )
+          this.spinning = false;
       } else {
         const u0 = this.spinT / SPIN_T;
         this.spinT += dt;
         const u = this.spinT / SPIN_T;
+        const a0 = this.spinA;
         this.spinA = TAU * spinCurve(u);
-        // The tuck is its own curve: in fast, held, out fast.
-        this.spinW =
-          u < SPIN_IN ? easeOutCubic(u / SPIN_IN) : 1 - easeOutCubic((u - SPIN_OUT) / (1 - SPIN_OUT + 0.02));
-        if (u0 < SPIN_OUT && u >= SPIN_OUT) {
+        if (dt > 0) this.spinVel = (this.spinA - a0) / dt;
+        this.spinW = tuckCurve(u);
+        // Anticipation: the arms lift and the body lengthens for a moment, flowing into the fold.
+        this.antic = bell(u / 0.3);
+        if (u0 < 0.62 && u >= 0.62) {
           sig.opened = true;
           this.openT = 0;
         }
         if (u >= 1) this.spinning = false;
       }
+      this.wasFree = this.spinFree;
       if (!this.spinning) {
         this.spinA = 0;
         this.spinW = 0;
+        this.spinVel = 0;
+        this.antic = 0;
       }
       this.spinW = sat(this.spinW);
       this.spinPhi = this.spinA * this.spinDir;
@@ -489,10 +525,18 @@ export class Rig {
       const w = this.spinW;
       for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, TUCK[i]!, w);
     }
+    if (this.antic > 1e-3) {
+      const k = this.antic * (1 - this.spinW);
+      out[HAU]! += 9 * k;
+      out[HBU]! += 8 * k;
+      out[HAF]! += 3 * k;
+      out[PU]! += 1.5 * k;
+      out[CURL]! -= 0.12 * k;
+    }
     if (this.openT < 1) {
       // Opening out overshoots the fall pose a little, then settles into it.
-      this.openT = Math.min(1, this.openT + (dt / 0.32) * (p.grounded || dash || wall ? 4 : 1));
-      this.openK = smoothstep(0, 0.34, this.openT) * (1 - smoothstep(0.42, 1, this.openT));
+      this.openT = Math.min(1, this.openT + (dt / 0.42) * (p.grounded || dash || wall ? 4 : 1));
+      this.openK = quintic(this.openT / 0.4) * (1 - quintic((this.openT - 0.4) / 0.6));
       const w = this.openK * (1 - this.spinW) * 0.9;
       for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, OPEN[i]!, w);
     } else this.openK = 0;
@@ -765,7 +809,7 @@ export class Rig {
     const c2 = Math.cos(2 * TAU * x);
     const rise = 0.5 - 0.5 * c1 + 0.14 * (0.5 - 0.5 * c2);
     o[PF] = 1.2 + 0.9 * Math.sin(TAU * (x - 0.12));
-    o[PU] = 28.8 + 7.4 * rise;
+    o[PU] = 28.6 + 9.2 * rise ** 0.72;
     o[LEAN] = 0.05 + 0.09 * k - 0.03 * c1;
     o[CURL] = 0.05 + 0.02 * Math.cos(TAU * (x - 0.2));
     // The head stays level: it gives back what the spine leans.

@@ -136,7 +136,7 @@ export class Secondary {
     const stiff = 0.9 + 0.4 * this.spread + 1.7 * dash + 0.5 * up + 8 * tuck + 0.4 * rig.wAir + 0.8 * hold;
     const dragK = (1 - rig.wAir * (0.45 + 0.3 * rig.airRise) - 0.55 * dash - 0.3 * wall) * (1 - 0.5 * hold);
     // The lope: a soft half-beat of the wings each stride, up through the float, down at the push.
-    const stride = Math.sin(4 * Math.PI * (rig.phase - 0.2)) * run;
+    const stride = Math.sin(4 * Math.PI * (rig.phase - 0.2)) * run * 1.6;
     const dragT = dragK * (1 - 0.85 * tuck);
     const flip = rig.spinPhi * (d >= 0 ? 1 : -1);
 

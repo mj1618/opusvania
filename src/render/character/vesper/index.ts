@@ -34,6 +34,8 @@ export class VesperCharacter implements CharacterSkin {
   private readonly light: PointLight = { x: 0, y: 0, radius: 250, color: LIGHT, intensity: 1 };
   private readonly hairX = new Spring(0, 17, 0.42);
   private readonly hairY = new Spring(0, 15, 0.4);
+  private readonly hair2X = new Spring(0, 10.5, 0.34);
+  private readonly hair2Y = new Spring(0, 9.5, 0.32);
   private readonly view: View;
   private readonly pts = new Float32Array(6);
   private readonly lastX = new Float32Array(3);
@@ -59,6 +61,8 @@ export class VesperCharacter implements CharacterSkin {
       open: 0,
       hairX: 0,
       hairY: 0,
+      hair2X: 0,
+      hair2Y: 0,
       glow: 1,
       tuck: 0,
       wall: 0,
@@ -85,6 +89,8 @@ export class VesperCharacter implements CharacterSkin {
     if (fresh) {
       this.hairX.snap(hx);
       this.hairY.snap(hy);
+      this.hair2X.snap(hx);
+      this.hair2Y.snap(hy);
     }
     let lx = (this.hairX.step(hx, dt) - hx) * 0.22;
     let ly = (this.hairY.step(hy, dt) - hy) * 0.22;
@@ -93,6 +99,15 @@ export class VesperCharacter implements CharacterSkin {
     ly *= lk;
     view.hairX = lx + noise1(clock * 0.7, 51) * 0.35;
     view.hairY = ly + noise1(clock * 0.9, 53) * 0.25;
+    // The outer mane: slower, looser, and ruffled by her speed.
+    let mx = (this.hair2X.step(hx, dt) - hx) * 0.3;
+    let my = (this.hair2Y.step(hy, dt) - hy) * 0.3;
+    const mk = 1 / (1 + Math.hypot(mx, my) / 5);
+    const ruffle = 0.4 + 0.9 * sat(Math.hypot(player.vx, player.vy) / 10);
+    mx = mx * mk + noise1(clock * 2.1, 57) * ruffle * 0.7;
+    my = my * mk + noise1(clock * 2.6, 59) * ruffle * 0.6;
+    view.hair2X = mx;
+    view.hair2Y = my;
     view.open = sec.open;
     view.tuck = rig.spinW;
     view.wall = rig.wWall;

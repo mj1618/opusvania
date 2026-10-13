@@ -49,6 +49,18 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - Run: stance 16%, pelvis arc 7.4 px, wings half-beat once per stride (`stride` in wings.ts).
 - Wall: hand x targets are the wall face itself (`ox + d*(w/2-1.4)`), hands rotate flat and splay fingers.
 
+## Round 4 notes (she is THE hero now)
+- Somersault smoothed: 0.48 s; angular velocity is quintic-in (30%), flat, quintic-out (40%)
+  (`spinCurve`, integrated analytically), tuck is `tuckCurve` (quintic in over the first 34%, out over
+  the last 48%, overlapping the turn). Max frame-to-frame change at 60 Hz: angular velocity 6.8 -> 4.3
+  rad/s, tuck rate 18 -> 3.5 /s. A short arm-lift anticipation (`antic`). All driven by render dt.
+  Interrupts hand the current angular velocity to a critically damped spring (no kink).
+  To SEE a landing interrupt: teleport under trunk A (3264,1152) and `J3 .5 J3`.
+- Mane = two rows of round-tipped puffs (`tuft(..., tip)`), inner row lighter and on the fast hair
+  spring, outer on a slower one plus speed ruffle. Pointed tufts read as gear teeth. Keep the ruff
+  short and only half-rounded: long round ruff puffs read as a hand at her throat.
+- Light / halo / glow numbers belong to the atmosphere agent for now: do not retune them here.
+
 ## Gotchas
 - Wing strands have no body collision: a stiff, fast flare throws them over the head and they
   come down in FRONT of the body. Keep the flare's stiffness boost low (0.5) and BEAT_UP <= ~-112 deg.
