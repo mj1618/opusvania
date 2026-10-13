@@ -35,6 +35,7 @@ import {
   trunk,
   withPlane,
 } from '../lib/fx-foliage';
+import { GroundProfile } from '../lib/fx-ground';
 import { PALETTE, prng, wind } from '../lib/look';
 
 export const FOREGROUND = {
@@ -80,6 +81,15 @@ export const FOREGROUND = {
    */
   bottomFree: 330,
   /**
+   * Bottom plants frame; they never stand on the walk line. Each one sinks until its top is this
+   * many px under the lowest ground within `walkReach` px of the playfield x it is in front of
+   * (smoothed over `walkEase` px so it sinks and rises as the camera travels, never pops). Pinned to
+   * the frame edge with the camera up on the bluff, they covered the terrace and its creature.
+   */
+  walkClear: 12,
+  walkReach: 250,
+  walkEase: 180,
+  /**
    * On the high route the frame is canopy already: the near top plants pull back by this much of
    * their height and thin to this opacity when the camera is at its highest.
    */
@@ -101,6 +111,8 @@ export const FOREGROUND = {
   trunks: [] as Array<{ x: number; width: number; lean: number }>,
   flowerColors: [PALETTE.glowViolet, PALETTE.glowCyan, PALETTE.keyGold, 0xff9fc2] as const,
 };
+
+const WALK_STEP = 16;
 
 type Plane = 'near' | 'far';
 type Edge = 'top' | 'bottom' | 'trunk';
@@ -131,6 +143,8 @@ export class ForegroundLayer implements EnvModule {
   private pieces: Piece[] = [];
   /** Layer y of the frame's top edge when the camera rests on the ground. */
   private groundTop = 0;
+  /** The lowest walk line near each `WALK_STEP` px of world x (see `walkClear`). */
+  private walkLow = new Float32Array(0);
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
@@ -232,6 +246,35 @@ export class ForegroundLayer implements EnvModule {
       else add('far', 'bottom', x, bottom + 18, size * 1.2, (g) => toadstools(g, rnd, size * 0.75));
     }
 
+    // The lowest ground near every x: a running maximum of the ground profile (y grows downward)
+    // over reach + ease, then a triangle blur over the ease, which can only leave it at or below the
+    // true lowest line within `walkReach`.
+    {
+      const ground = new GroundProfile(ctx.scene);
+      const n = Math.ceil(ctx.scene.width / WALK_STEP) + 1;
+      const raw = Float32Array.from({ length: n }, (_, i) => ground.top(i * WALK_STEP));
+      const at = (a: Float32Array, i: number): number => a[Math.min(n - 1, Math.max(0, i))] as number;
+      const eb = Math.max(1, Math.round(FOREGROUND.walkEase / WALK_STEP));
+      const rb = Math.round(FOREGROUND.walkReach / WALK_STEP) + eb;
+      const low = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        let m = 0;
+        for (let k = -rb; k <= rb; k++) m = Math.max(m, at(raw, i + k));
+        low[i] = m;
+      }
+      this.walkLow = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        let sum = 0;
+        let w = 0;
+        for (let k = -eb; k <= eb; k++) {
+          const wk = eb + 1 - Math.abs(k);
+          sum += at(low, i + k) * wk;
+          w += wk;
+        }
+        this.walkLow[i] = sum / w;
+      }
+    }
+
     this.pieces = pieces;
     for (const plane of ['far', 'near'] as const) {
       this.bake(
@@ -319,6 +362,13 @@ export class ForegroundLayer implements EnvModule {
     }
   }
 
+  private walkLowAt(x: number): number {
+    const a = this.walkLow;
+    const f = Math.min(a.length - 1, Math.max(0, x / WALK_STEP));
+    const i = Math.min(a.length - 2, Math.floor(f));
+    return (a[i] as number) + ((a[i + 1] as number) - (a[i] as number)) * (f - i);
+  }
+
   update(frame: SceneFrame): void {
     const layers = this.ctx.layers;
     const cam = frame.camera;
@@ -385,7 +435,7 @@ export class ForegroundLayer implements EnvModule {
       }
 
       const x = piece.x + sx;
-      const y =
+      let y =
         piece.edge === 'bottom'
           ? vis.y +
             vis.h +
@@ -393,6 +443,13 @@ export class ForegroundLayer implements EnvModule {
             away +
             Math.max(0, rise - cfg.bottomFree) * par
           : piece.y + sy + lock + away;
+      if (piece.edge === 'bottom') {
+        // The walk line of the playfield behind this plant, in this layer's coordinates.
+        const line = vis.y + vis.h / 2 + (this.walkLowAt(cam.x + mid - (vis.x + vis.w / 2)) - cam.y);
+        // (A line far under the frame's bottom edge has nothing on it to hide: let go of it.)
+        const under = Math.min(1, Math.max(0, (line - (vis.y + vis.h) - 80) / 140));
+        y += Math.max(0, line + cfg.walkClear - (y + piece.b.y)) * (1 - under * under * (3 - 2 * under));
+      }
       const x0 = x + piece.b.x;
       const y0 = y + piece.b.y;
       if (

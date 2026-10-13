@@ -120,9 +120,9 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   persists with every background mesh, update and render pass disabled).
 
 ## Round 8 (glide audit)
-- The follow camera never goes above y 540 even when the hero flies to y -350, so the layers' top edges
-  (visible with a debug `cam({y: 200})`) cannot show in play. If the camera clamp ever changes, the
-  coverage rects in far.ts / mid.ts must grow upward first.
+- The follow camera's view top goes to y -540 now (`viewTop`: ceiling -420 less 120 headroom; view centre
+  y 0) for the summit glide. far.ts / mid.ts bake up to `HEADROOM` 560 above the scene top (round 10); if
+  the ceiling or the headroom moves, `HEADROOM` must grow first.
 - The crisp lit "clover" clumps the island vines hang from are the playfield's, not these layers.
 - Sway items (`atmTone`) sit at full light-map shadow (0.12 + 0.88 * shadeTint); mid lid 0.32.
 - Right zone measures violet with these layers alone; stop 6's blue comes from what is in front.
@@ -179,3 +179,19 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   openings above layer y 80..420 keep 28% of their light (`MID.skyHole.dim`) or they are pale tabs on
   the frame edge. Mid is now 1935 px tall x 1.5 = 2903 texels (limit 4096). Check with
   `cam({x, y: -20})`.
+
+## Round 11 (after the layout pass: bluff, hollow, sky line)
+- `STAGE` (mist stage) follows the new ground: the bluff (2432-2624, top 960) is a `ledges` entry (k 0.7),
+  not a ground step (a ground step put a 400 px column of mist in the air beside it); the terrace step sits
+  at 2528 behind the bluff; the hollow is two steps (3744 +96, 3968 -96). Steps take an optional third
+  number, their own ease (`[x, dy, ease]`): narrow forms need ~60, the default 150 smears them away.
+- `ForestPlan.quiet(x, y)` (0..1 at a clump's centre): near clumps there carry no amber leaves or
+  blossoms and take 45% less key light. Mid uses it (`MID.quiet`) behind the two places dormant glints
+  (dim gold motes, luma 110-130) hang in the air: the summit glide's sky line (layer x 3250-4800, y < 470)
+  and the wall-jump shaft. At 85% less light the whole crown went to a flat black wall: keep some.
+- `MID.shaftPendant`: a pendant of canopy (a `drop` + `cover` gaussian at layer x 3275) behind the upper
+  two thirds of the wall-jump shaft. Median luma behind shaft glints 4-6: 88 / 44 / 33 -> 50 / 44-60 / 34-40;
+  shaft-3 (3455, 850) still hangs on the well's glow (~100) under the pendant's edge, on purpose: lower
+  and it closes the gold light between the trunks (stop 4). It is placed for cameras inside the shaft
+  (layer x = playfield x - 0.32 * (camX - 2880)); from the terrace the shaft shows layer x ~3400 instead.
+- Layer coordinates of a playfield point: x = px - (1 - f) * (camX - 2880), y = py + (1 - f) * (1060 - camY).

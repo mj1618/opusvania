@@ -82,6 +82,20 @@ const MID = {
   },
   /** The canopy route's focal light: a hole in this layer's canopy with moonlight behind it. */
   moonHole: { x: 2330, y: 470, half: 250, lift: 420, size: 640, alpha: 0.6, color: 0xa8c8e6 },
+  /**
+   * The pendant of canopy behind the wall-jump shaft (playfield x 3328-3584 is layer x ~3230-3320
+   * for the cameras that show it): layer x, half width, how far it hangs below the canopy's edge.
+   */
+  shaftPendant: { x: 3275, half: 125, drop: 390 },
+  /**
+   * Quiet backdrops for dormant glints (dim gold motes): no amber leaves, blossoms or lit clumps
+   * there. `sky` is the summit glide's line over the right stand (playfield x 3900-5200, y -300..130
+   * is layer x ~3350-4700, y < ~470 for the cameras of the glide); `shaft` is the pendant above.
+   */
+  quiet: {
+    sky: { x0: 3250, x1: 4800, ease: 160, y: 470, yEase: 140 },
+    shaft: { x0: 3080, x1: 3470, ease: 80, y0: 420, y1: 1100 },
+  },
   /** Drifting leaves in the air of this layer. */
   fallingLeaves: 10,
   glowCaps: [4, 9],
@@ -107,17 +121,23 @@ const STAGE: Omit<StageSpec, 'strength'> = {
   color: [0x6a88a6, 0x9a8458, 0x8468a8],
   height: 260,
   below: 110,
-  // Left bank, ground, the centre rise, ground, the right rise.
+  // Left bank, ground, the terrace (its step hides behind the bluff), ground, the hollow (96 down
+  // and up again: narrow, so a short ease or the sheet never dips into it), the right rise.
   baseY: 1088,
   steps: [
     [384, 192],
-    [2560, -128],
+    [2528, -128, 100],
     [3200, 128],
+    [3744, 96, 60],
+    [3968, -96, 60],
     [4608, -192],
   ],
   ease: 150,
-  // The two high ledges (the first runs on over trunk A's top).
+  // Raised tops with their own thinner sheet: the bluff (a column of mist as wide as the ground's
+  // sheet would stand in the air beside it), then the two high ledges (the first runs on over
+  // trunk A's top).
   ledges: [
+    { x0: 2432, x1: 2624, y: 960, k: 0.7 },
     { x0: 2816, x1: 3328, y: 448, k: 1 },
     { x0: 5472, x1: 5900, y: 448, k: 1 },
   ],
@@ -249,6 +269,24 @@ interface GlowSpot {
   hollow?: 'glow' | 'spill';
 }
 
+/** 0..1: how calm the canopy must be at a layer point (MID.quiet). */
+function quiet(x: number, y: number): number {
+  const st = (a: number, b: number, v: number): number => {
+    const t = Math.min(1, Math.max(0, (v - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  const { sky, shaft } = MID.quiet;
+  const inSky =
+    st(sky.x0 - sky.ease, sky.x0 + sky.ease, x) *
+    (1 - st(sky.x1 - sky.ease, sky.x1 + sky.ease, x)) *
+    (1 - st(sky.y, sky.y + sky.yEase, y));
+  const inShaft =
+    st(shaft.x0 - shaft.ease, shaft.x0 + shaft.ease, x) *
+    (1 - st(shaft.x1 - shaft.ease, shaft.x1 + shaft.ease, x)) *
+    (y > shaft.y0 && y < shaft.y1 ? 1 : 0);
+  return Math.max(inSky, inShaft);
+}
+
 function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
   return {
     seed: 4400,
@@ -266,7 +304,10 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
       60 * Math.exp(-(((x - 4700) / 500) ** 2)) +
       50 * Math.exp(-(((x - 1900) / 450) ** 2)) +
       // A heavy bough of canopy hanging behind the high ledge.
-      330 * Math.exp(-(((x - 2940) / 300) ** 2)) -
+      330 * Math.exp(-(((x - 2940) / 300) ** 2)) +
+      // And a pendant of it behind the wall-jump shaft, so the glints that zigzag up it hang
+      // against dark leaves, not against the well's glow.
+      MID.shaftPendant.drop * Math.exp(-(((x - MID.shaftPendant.x) / MID.shaftPendant.half) ** 2)) -
       // The canopy route's focal opening: a hole the moonlight falls through.
       MID.moonHole.lift * Math.exp(-(((x - MID.moonHole.x) / MID.moonHole.half) ** 2)),
     trunks: [
@@ -296,7 +337,12 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
     boughs: 3,
     clearWell: true,
     crownOpen: 0.16,
-    cover: (x) => 0.8 + 0.08 * Math.sin(x / 700) + 0.5 * Math.exp(-(((x - 2940) / 320) ** 2)),
+    cover: (x) =>
+      0.8 +
+      0.08 * Math.sin(x / 700) +
+      0.5 * Math.exp(-(((x - 2940) / 320) ** 2)) +
+      0.4 * Math.exp(-(((x - MID.shaftPendant.x) / (MID.shaftPendant.half * 1.4)) ** 2)),
+    quiet,
     floor: (c, r, b) => undergrowth(c, r, b, spots),
   };
 }

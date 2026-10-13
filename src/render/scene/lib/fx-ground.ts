@@ -20,11 +20,16 @@ export class GroundProfile {
     this.width = scene.width;
     const n = Math.ceil(scene.width / STEP) + 1;
     this.tops = new Float32Array(n).fill(scene.height);
-    const waterline = Math.max(
-      ...scene.solids.filter((s) => s.tag === 'ground' && s.y > scene.height / 2).map((s) => s.y),
-    );
+    // A pool's surface line is taken from its own banks (the ground rects that touch it). It used to
+    // be the lowest ground top of the whole scene, which the hollow (1376) pulled 96 px under water.
+    const bank = (pool: { x: number; w: number }): number => {
+      const sides = scene.solids.filter(
+        (s) => s.tag === 'ground' && (s.x + s.w === pool.x || s.x === pool.x + pool.w),
+      );
+      return sides.length ? Math.max(...sides.map((s) => s.y)) : scene.height;
+    };
     for (const s of scene.solids) {
-      const top = s.tag === 'pool' ? waterline + 18 : GROUND_TAGS.has(s.tag) ? s.y : null;
+      const top = s.tag === 'pool' ? bank(s) + 18 : GROUND_TAGS.has(s.tag) ? s.y : null;
       if (top === null) continue;
       const i0 = Math.max(0, Math.floor(s.x / STEP));
       const i1 = Math.min(n - 1, Math.ceil((s.x + s.w) / STEP));

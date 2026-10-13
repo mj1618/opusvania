@@ -691,9 +691,12 @@ export interface StageSpec {
   /** How far the sheet fades up above the walk line (px), and how far below it still shows. */
   height: number;
   below: number;
-  /** The ground line: its y at the left edge, then steps `[x, dy]` (each eased over `ease` px). */
+  /**
+   * The ground line: its y at the left edge, then steps `[x, dy]` (each eased over `ease` px either
+   * side, or over its own third number: narrow forms like the bluff and the hollow need a short one).
+   */
   baseY: number;
-  steps: ReadonlyArray<readonly [number, number]>;
+  steps: ReadonlyArray<readonly [number, number, number?]>;
   ease: number;
   /** Raised walkable surfaces that get their own thinner sheet: x range, y, relative strength. */
   ledges: ReadonlyArray<{ x0: number; x1: number; y: number; k: number }>;
@@ -705,7 +708,7 @@ function stageGLSL(st: StageSpec | undefined): string {
   if (!st) return '';
   const f = (v: number): string => (Number.isInteger(v) ? `${v}.0` : `${v}`);
   const steps = st.steps
-    .map(([x, dy]) => `  gy += ${f(dy)} * smoothstep(${f(x - st.ease)}, ${f(x + st.ease)}, sp.x);`)
+    .map(([x, dy, e = st.ease]) => `  gy += ${f(dy)} * smoothstep(${f(x - e)}, ${f(x + e)}, sp.x);`)
     .join('\n');
   const ledges = st.ledges
     .map(

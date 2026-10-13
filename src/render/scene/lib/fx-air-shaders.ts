@@ -23,6 +23,7 @@ uniform sampler2D uNoise;
 uniform sampler2D uGround;
 uniform vec4 uGroups[${MAX_SHAFT_GROUPS}]; // one beam each: centre u, half width, strength, reach (0..1 of the way to the ground)
 uniform vec4 uAir;       // time, ground u scale, ground u offset, unused
+uniform vec4 uSky;       // the beams thin out upward: y where that ends, y where it is complete, what is left there, unused
 const vec2 LIGHT_D = vec2(${f(KEY_LIGHT.dirX)}, ${f(KEY_LIGHT.dirY)});
 const vec2 LIGHT_N = vec2(${f(KEY_LIGHT.dirY)}, ${f(-KEY_LIGHT.dirX)});
 
@@ -64,6 +65,8 @@ float shaftAt(vec2 p) {
   // Brightest just under the canopy hole and again near where it lands; thinner in mid-air.
   float fromTop = clamp((p.y + 300.0) / max(gy + 300.0, 1.0), 0.0, 1.0);
   beams *= 0.5 + 0.5 * abs(fromTop * 2.0 - 1.0);
+  // Up in the crown, where the camera now follows the summit glide, a beam is only a hint.
+  beams *= mix(uSky.z, 1.0, smoothstep(uSky.y, uSky.x, p.y));
   return beams;
 }
 `;

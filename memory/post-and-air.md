@@ -217,6 +217,24 @@
 - Camera above the scene top (y -20): shafts, motes and the pinned top boughs fill it without edges. The
   "crossed dark beams" are still there with the foreground hidden: not air or foreground.
 
+## Round 14: after the layout pass (bluff, hollow, the sky line)
+- **Bottom foreground plants never stand on a walk line** (`walkClear`, `walkReach`, `walkEase`): each sinks
+  until its top is 12 px under the lowest ground within 250 px of the playfield x it is in front of (a
+  max-filtered, smoothed copy of the ground profile, so it moves with the camera and never pops), and lets
+  go when that line is more than ~80-220 px under the frame. Pinned to the frame edge with the camera on
+  the bluff they covered the terrace, burr-rise and the hollow. Cost: at ground rest the near masses are
+  about 300 px tall at most and mostly lie on dark earth, so the bottom corners frame less than before.
+  The knob is `walkClear` (negative lets tips cross the line).
+- `GroundProfile`: a pool's surface line comes from its own banks. It was the lowest ground top of the scene,
+  which the hollow (1376) pulled 96 px down: mist, motes and leaves over the pool sat under the water.
+- Beam pools are found by marching the centre line down from the entry (`POOL_MARCH`): the first ground it
+  meets. The old fixed-point walk put beam 3080's pool on the path in the bluff's shadow (2350, 1250); it
+  lands on the bluff's top now (2498, 930).
+- `AIR.shafts.sky`: beams thin to 60% above y -260 (full below y 260). They were at full strength from the
+  entry (y -300) upward, i.e. right behind the sky line's dormant glints (backdrop luma 64-78 mean, 118
+  peak, against a glint of 110-130). At 40% with the mid canopy quieted the band was an empty black lid.
+- The "crossed dark beams" above the scene top were the playfield's leaf-knot limbs (playfield.md).
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").

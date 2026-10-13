@@ -52,6 +52,8 @@ type Three<T> = readonly [T, T, T];
 /** Size of the two volume targets (shafts, mist): half the logical view. */
 const VOLUME_SIZE = [960, 540] as const;
 const SPORE = 0xb9a2ff;
+/** Step of the walk that finds where a beam lands, px (the ground profile's own step). */
+const POOL_MARCH = 16;
 
 /** Tunables. Distances in world px, times in seconds, colours 0xRRGGBB. */
 export const AIR = {
@@ -64,6 +66,12 @@ export const AIR = {
     front: 0.06,
     /** How much solid playfield hides the front veil (1 = beams pass fully behind it). */
     frontOcclusion: 0.9,
+    /**
+     * Up in the crown (the headroom over the scene top, where the summit glide and its dormant
+     * glints are) the beams thin out: full strength below `y[0]`, down to `left` of it above `y[1]`.
+     * Under the canopy hole they were at their brightest, right behind the sky line of glints.
+     */
+    sky: { y: [260, -260] as const, left: 0.6 },
     /** Extra strength high up among the canopy (fades out toward the ground). */
     highBoost: 0,
     /** The canopy moves: each beam slowly brightens and dims by this fraction, at this rate. */
@@ -699,6 +707,10 @@ export class AirLayer implements EnvModule {
     this.shared = new UniformGroup({
       uGroups: { value: new Float32Array(MAX_SHAFT_GROUPS * 4), type: 'vec4<f32>', size: MAX_SHAFT_GROUPS },
       uAir: { value: new Float32Array([0, ...ground.uMap, 0]), type: 'vec4<f32>' },
+      uSky: {
+        value: new Float32Array([AIR.shafts.sky.y[0], AIR.shafts.sky.y[1], AIR.shafts.sky.left, 0]),
+        type: 'vec4<f32>',
+      },
     });
 
     // The two volume passes are soft by nature, so they are drawn at half the logical resolution
@@ -796,8 +808,11 @@ export class AirLayer implements EnvModule {
 
     // Shared: clock and shaft groups (entry point -> position across the beams). Each opening
     // breathes on its own slow clock, as if the canopy above it were moving.
-    const su = this.shared.uniforms as { uGroups: Float32Array; uAir: Float32Array };
+    const su = this.shared.uniforms as { uGroups: Float32Array; uAir: Float32Array; uSky: Float32Array };
     su.uAir[0] = t;
+    su.uSky[0] = shafts.sky.y[0];
+    su.uSky[1] = shafts.sky.y[1];
+    su.uSky[2] = shafts.sky.left;
     su.uGroups.fill(0);
     const sceneH = this.ctx.scene.height;
     shafts.beams.slice(0, MAX_SHAFT_GROUPS).forEach((b, i) => {
@@ -814,15 +829,19 @@ export class AirLayer implements EnvModule {
       su.uGroups[i * 4 + 3] = b.reach;
 
       // Where the beam meets the ground it leaves a pool of light (a point light for the post
-      // stage). Walk the centre line down to the ground profile.
+      // stage). Walk the centre line down until it is in the ground: the first thing it meets, so
+      // a beam that crosses the bluff lands on its top and not on the ground in its shadow.
       const pool = this.pools[i];
       if (!pool) return;
       let x = b.x;
       let y: number = KEY_LIGHT.entryY;
-      for (let k = 0; k < 6; k++) {
-        const gy = Math.min(sceneH, this.ground.top(Math.min(this.ground.width, Math.max(0, x))));
-        x = b.x + ((gy - KEY_LIGHT.entryY) * KEY_LIGHT.dirX) / KEY_LIGHT.dirY;
-        y = gy;
+      for (; y < sceneH; y += POOL_MARCH) {
+        x = b.x + ((y - KEY_LIGHT.entryY) * KEY_LIGHT.dirX) / KEY_LIGHT.dirY;
+        const gy = this.ground.top(Math.min(this.ground.width, Math.max(0, x)));
+        if (y >= gy) {
+          y = gy;
+          break;
+        }
       }
       const zw = zoneWeights(x);
       const c = [0, 0, 0];

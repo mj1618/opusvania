@@ -94,6 +94,12 @@ export interface ForestPlan {
   cover?: (x: number) => number;
   /** Extra openness of the canopy's upper rows (row 3 and up), 0..~0.2. */
   crownOpen?: number;
+  /**
+   * Places where the canopy must be a calm dark backdrop (small dim lights are seen against it):
+   * 0..1 at a clump's centre. There the near clumps carry no autumn leaves or blossoms and take
+   * little of the key light.
+   */
+  quiet?: (x: number, y: number) => number;
   /** No branch-tip foliage inside the light well. */
   clearWell?: boolean;
   /** Canopy boughs per trunk (default 2). */
@@ -192,11 +198,14 @@ export function buildForest(plan: ForestPlan): ForestBuild {
         const isOpen = open > c - 0.15 - (row >= 3 ? (plan.crownOpen ?? 0) : 0);
         if (isOpen && o.accents && y > top) openings.push({ x, y, r: rad });
         if (y < top - R || isOpen || keep > c * o.cover + 0.12) continue;
-        const accent = o.accents && pick < rate ? (pick < rate * 0.55 ? 'amber' : 'blossom') : null;
+        const q = plan.quiet?.(x, y) ?? 0;
+        const accent =
+          o.accents && q < 0.3 && pick < rate ? (pick < rate * 0.55 ? 'amber' : 'blossom') : null;
         const accentColor = accent === 'amber' ? plan.amber : plan.blossom;
         const g = layer();
         // Clumps on the brink of an opening catch the light that falls through it.
-        const light = o.light * (row === 0 ? 0.85 : 0.7) * (0.55 + 1.3 * smooth(c - 0.5, c - 0.1, open));
+        const light =
+          o.light * (row === 0 ? 0.85 : 0.7) * (0.55 + 1.3 * smooth(c - 0.5, c - 0.1, open)) * (1 - 0.45 * q);
         clump(g, L, x, y, rad, lk, r, { leaf, light, accent, accentColor, detail: o.detail });
         for (const [a, d, k] of sats) {
           const sx = x + Math.cos(a) * rad * d * 1.15;

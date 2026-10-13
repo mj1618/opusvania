@@ -183,7 +183,7 @@ const OUT = 420;
 /** Ground stretches where fights happen (world x): kept plain behind the walk line. */
 const FIGHT_SPOTS: ReadonlyArray<readonly [number, number]> = [
   [1880, 2300],
-  [2560, 3200],
+  [2624, 3200],
   [4160, 4600],
 ];
 
@@ -2350,6 +2350,9 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
   ] as const) {
     for (let i = 0; i < 2; i++) {
       const reach = range(r, 120, 180) - i * 50;
+      // To the ground where it lands, which is the hollow's floor on the west (it ended in the air
+      // there at the old ground level).
+      const footY = Math.max(y1, info.groundY(clamp(fromX + d * reach, 0, p.width - 1))) + 14;
       const line = wander(
         cubic(
           fromX,
@@ -2357,9 +2360,9 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
           fromX + d * reach * 0.5,
           s.y + 20 + i * 30,
           fromX + d * reach * 0.8,
-          y1 - 30,
+          footY - 44,
           fromX + d * reach,
-          y1 + 14,
+          footY,
           14,
         ),
         5,
@@ -2500,9 +2503,22 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
   }
   // Lesser roots braided over it: each climbs the face, crosses the crest line just below the
   // walk surface, and dives into the earth on the far side.
+  // The ground where something that leaves the mound comes down: lower than the mound's own foot
+  // on the west, where the hollow opens right beside it.
+  const footAt = (x: number): number => Math.max(y1, info.groundY(clamp(x, 0, p.width - 1)));
   const braid = (xa: number, xb: number, hump: number, w0: number, sd: number, light: number): void => {
     const line = wander(
-      cubic(xa, y1 + 14, lerp(xa, xb, 0.2), s.y + hump, lerp(xa, xb, 0.75), s.y + hump + 8, xb, y1 + 14, 20),
+      cubic(
+        xa,
+        footAt(xa) + 14,
+        lerp(xa, xb, 0.2),
+        s.y + hump,
+        lerp(xa, xb, 0.75),
+        s.y + hump + 8,
+        xb,
+        footAt(xb) + 14,
+        20,
+      ),
       4,
       sd,
       36,
@@ -2517,8 +2533,13 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
     [s.x - 40, -1],
     [x1 + 44, 1],
   ] as const) {
+    const reach = range(r, 70, 100);
+    // Along the ground, or down into the hollow where the ground falls away under it.
+    const drop = footAt(fx + d * reach) - y1;
     const feeder = wander(
-      quad(fx, y1 - 2, fx + d * 40, y1 - 9, fx + d * range(r, 70, 100), y1 + 8, 10),
+      drop > 0
+        ? quad(fx - d * 34, y1, fx - d * 16, y1 + drop * 0.6, fx + d * reach * 0.5, y1 + drop + 6, 10)
+        : quad(fx, y1 - 2, fx + d * 40, y1 - 9, fx + d * reach, y1 + 8, 10),
       3,
       fx,
       30,
@@ -2558,8 +2579,8 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
   info.tops.push({ x0: s.x, x1, y: s.y, kind: 'root', freeL: true, freeR: true });
   info.keepClear.push([s.x - 80, x1 + 80]);
   info.lee.push(
-    { x: s.x - 44, y: y1, size: 52 },
-    { x: x1 + 52, y: y1, size: 64 },
+    { x: s.x - 44, y: footAt(s.x - 44), size: 52 },
+    { x: x1 + 52, y: footAt(x1 + 52), size: 64 },
     { x: x1 + 96, y: y1, size: 40 },
   );
 }

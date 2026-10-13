@@ -60,6 +60,12 @@ export const FORMS = {
   ridge: [4, 26, 10] as const,
   /** Bank slope length as a multiple of the step height. */
   bankRun: 1.1,
+  /**
+   * Steps at least this high are cliffs she cannot jump (the bluff's faces): their bank is this much
+   * shorter, and the great buttress stands as a column instead of leaning out as far as it is high.
+   */
+  tallStep: 170,
+  tallRun: 0.5,
   /** Water surface above the pool floor (TERRAIN.waterDepth). */
   waterDepth: 50,
 } as const;
@@ -257,7 +263,10 @@ export function paintBanks(
       continue;
     }
     const underTrunk = trunkXs.some((tx) => Math.abs(tx - fx) < 40);
-    const L = H * FORMS.bankRun * range(r, 0.9, 1.15) * (underTrunk ? 0.6 : 1);
+    // A tall face (the bluff) gets a steep shoulder of earth: at the usual run it was a 45 degree
+    // slope from the lower ground to the lip, which is a ramp however dark it is painted.
+    const tall = H >= FORMS.tallStep;
+    const L = H * FORMS.bankRun * range(r, 0.9, 1.15) * (underTrunk ? 0.6 : tall ? FORMS.tallRun : 1);
     const xs = fx - d * 54;
     const xe = fx + d * L;
     spans.push([Math.min(xs, xe) - 40, Math.max(xs, xe) + 40]);
@@ -339,7 +348,7 @@ export function paintBanks(
         {
           bark: 0.8,
           grain: 3,
-          lit: 0.35,
+          lit: tall ? 0.16 : 0.35,
         },
       );
     }
@@ -529,9 +538,12 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
     // the dark behind it), near-vertical down the face, its toe sweeping out along the lower ground.
     const H = lo - hi;
     const underTrunk = trunkXs.some((tx) => Math.abs(tx - fx) < 40);
+    const tall = H >= FORMS.tallStep;
     {
-      const off = range(r, 26, 36);
-      const toe = H * range(r, 0.85, 1.1);
+      // On a tall face it stands as a column with a short toe: leaning out as far as the face is
+      // high it was a lit 45 degree ramp from the lower ground to the lip (the bluff's east side).
+      const off = tall ? range(r, 14, 22) : range(r, 26, 36);
+      const toe = tall ? range(r, 50, 74) : H * range(r, 0.85, 1.1);
       const line = wander(
         cubic(
           fx - d * range(r, 60, 90),
@@ -571,10 +583,10 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
           Math.max(0, Math.sin(t * 11 + st.index)) * 3 +
           smoothstep(0.5, 0.75, t) * 5,
         wood,
-        0.68,
-        0.1,
+        tall ? 0.6 : 0.68,
+        tall ? 0.07 : 0.1,
         fx + 9,
-        { bark: 0.3, grain: 4, lit: 0.3 },
+        { bark: tall ? 0.5 : 0.3, grain: 4, lit: tall ? 0.14 : 0.3 },
       );
       // A lesser root forking off it half way down.
       const [bx, by] = [line[20] as number, line[21] as number];
@@ -585,6 +597,93 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunk
         20,
       );
       limb(p, fork, (t) => 12 * (1 - t * 0.6) + 2, wood, 0.66, 0.06, fx + 10, { bark: 0.3, lit: 0.3 });
+    }
+    if (tall) {
+      // A cliff of root-bound earth, not a cut block: stones bedded in the face at uneven heights
+      // (flush, their noses a few px proud of it), a second root clinging to it lower down, and
+      // rootlets hanging under the lip.
+      const n = Math.round(H / 64);
+      for (let k = 0; k < n; k++) {
+        const w = range(r, 13, 24);
+        const cy = lerp(hi + 44, lo - 40, (k + range(r, 0.15, 0.85)) / n);
+        const cx = fx - d * range(r, 4, 12);
+        const c = kit.stone[(st.index * 2 + k * 3) % kit.stone.length] as number;
+        paintRock(p, {
+          cx,
+          cy,
+          rx: w,
+          ry: w * range(r, 0.6, 0.85),
+          seed: 880 + st.index * 9 + k,
+          color: mix(c, E[2] as number, 0.55),
+          dark: E[4] as number,
+          h: 0.58,
+          rise: 0.09,
+          tilt: d * range(r, -0.3, 0.3),
+          rough: 1.2,
+          moss: { ...kit.mossTone(cx, cy, 881 + k, 0.3), amount: k % 2 ? 0.7 : 0.25 },
+          ground: 0.8,
+        });
+      }
+      const y0 = lerp(hi, lo, range(r, 0.3, 0.42));
+      const cling = wander(
+        cubic(
+          fx - d * 14,
+          y0,
+          fx + d * range(r, 8, 16),
+          lerp(y0, lo, 0.3),
+          fx + d * 6,
+          lerp(y0, lo, 0.75),
+          fx + d * range(r, 26, 44),
+          lo + 5,
+          14,
+        ),
+        4,
+        882 + st.index,
+        44,
+      );
+      p.tint(
+        ribbon(cling, (t) => 20 * (1 - t * 0.5) + 2),
+        E[4] as number,
+        0.5,
+      );
+      limb(
+        p,
+        cling,
+        (t) => 15 * (1 - t * 0.45) + 2 + Math.max(0, Math.sin(t * 9 + 1)) * 3,
+        wood,
+        0.6,
+        0.06,
+        fx + 12,
+        {
+          bark: 0.5,
+          grain: 2,
+          lit: 0.14,
+        },
+      );
+      for (let k = 0; k < 5; k++) {
+        const gx = fx + d * range(r, -8, 6);
+        const len = range(r, 26, 78);
+        p.solid(
+          ribbon(
+            wander(
+              [
+                gx,
+                hi + 12,
+                gx + d * range(r, 0, 6),
+                hi + 12 + len * 0.5,
+                gx + d * range(r, -4, 8),
+                hi + 12 + len,
+              ],
+              2,
+              gx,
+              14,
+            ),
+            (t) => 2.6 * (1 - t) + 0.6,
+          ),
+          mix(kit.rootWood, E[4] as number, 0.45),
+          0.5,
+        );
+      }
     }
     // Stones slumped at the foot, low (ankle to shin), half in the moss.
     for (let k = 0; k < (underTrunk ? 1 : 3); k++) {

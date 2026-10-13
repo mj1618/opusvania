@@ -70,3 +70,81 @@ Sim-piloted and played through the debug API; what a person should now check by 
 - `page.screenshot` stalls a real-time frame ~100 ms; for real time use `video-start` / `video-stop`
   (800 px wide webm, 25 fps) and measure frame times in a separate run without screenshots.
 - To attribute an event to a frame, `step(1)` and read `events()` each time; `events(k)` after `step(k)` only gives the batch.
+
+# Playtest 2, 2026-10-14 (after the safety, burrback, fade, layout, HUD commits)
+
+Real keys in real time (`page.keyboard` in `run-code`, state only read), paused between legs. Frames:
+`shots/play2/01..10` (gitignored). Built from the working tree at 02:35-02:55 with other agents'
+uncommitted edits in `foreground.ts`, `mid.ts`, `pf-*.ts`, so backdrop details may differ from 83f9bb5.
+Delete entries as they are fixed.
+
+## The two runs
+- **Naive** (go right, jump when blocked, cut what is in the way): heart reached asleep at 24.5 s with
+  45 glints and 0 lanterns, having run past the first lantern without knowing it was one. First
+  lantern lit was the far one (36 s), second the stone (50 s); 1 hit (burr-path, 0.4 s after climbing
+  out of the pool), 3 kills. Lost to a Vite reload before the crown; never glided, never found the shaft.
+- **Thorough**: ending at 1:49 (6570 f), 6 hits (4 on purpose for the fade, 2 standing next to
+  burr-root), 1 fade, 2 kills, 84 of 189 glints, 5/6 great, 1/12 pods, **52 unspent**. About 35 s of
+  that was three failed summit attempts (below). 60 fps, no console errors.
+
+## Must fix
+1. **Nothing teaches the lantern.** A dormant lantern is a small dark hook; the refusal needs her to stand
+   still on it. A player who keeps running reaches the sleeping heart with a full wallet and no idea
+   (the pips row under the count is tiny and dim). Make the first lantern stop her: react to the glints
+   she carries as she passes, or put it where she has to stop. (01)
+2. **Dormant glints do not signpost anything.** From the shaft floor shaft-2..6 are 2 px orange specks,
+   the same as the ambient motes; from the summit sky-1 and sky-2 cannot be found at all in the frame
+   (08, 05). They only become stars when she is close (09: lovely, but too late to invite the jump).
+3. **The shaft is hidden and its entry is a trap.** Trunks stand on stilt roots, their collision starts
+   256 px up, a single jump (272) passes under them: only jump + double jump straight up from the
+   middle catches a wall, and a running jump head-bumps the trunk's underside (every attempt). Once on
+   the walls it is 3 kicks and 2 s and feels good. A foreground leaf silhouette hangs across the
+   opening (06, at 860-990 px of the frame) where the glints are.
+4. **The summit is a 128 px target at the end of a jump + double jump at full run speed**; overshoot
+   and she falls 1100 px to the hollow and climbs the shaft again. Three misses in a row (pilot with
+   ~40 ms reaction; a person will miss too). Widen the top, or catch her on something.
+5. **The help text is two DOM lines drawn on top of each other** (`#hint` and `#char-label`, bottom
+   of every frame, also under the ending's R key). The hint is the only place the glide is told
+   ("hold while falling: glide") and it cannot be read.
+
+## Should fix
+6. **Glide is not discovered** by a player who taps jump (holds under 0.4 s never open the wings).
+   The bluff does not teach it: jump + double jump at its wall is the obvious way up (the branch is
+   not needed), and the way on is a plain drop. Known and used, the glide home (04: bluff lip to the
+   first lantern's foot, 1.6 s, all five arc glints) and the summit glide (sky line, great glint,
+   lands at the far lantern, first try) are the two best moments in the scene.
+7. **Burrbacks are dark on dark**: about 30 px, ground-coloured, three dim spots. The naive hit was a
+   creature I had not seen (02). Contact rules are fair once seen: a hit every 70 f if she keeps
+   walking in, it does not chase. The calm at a kindle has no visible sign on the creature.
+8. **From the bluff top the terrace below is behind foreground leaves** (03; burr-rise walks there).
+   Not seen 10 minutes later after the `foreground.ts` edit: recheck. Leaves also sit over F7 / the
+   far ledge in the heart view (10, top right).
+9. **Fade**: fair (2 lights, 6 of 19 left where she fell, got back by walking there), but the loss is
+   not shown: the count is off screen after the re-form, and the cluster is six dim dots next to the
+   creature that killed her (07). Make the cluster pulse; show the count dropping.
+10. **Hero lost against dark props**: in front of the lantern boulder (01), the bluff root (02), the
+   shrine stones before the heart wakes.
+11. **Ending glare**: the shrine stone goes near-white and a peach wash covers a third of the frame
+   (10); the heart-wake column seen from the far ledge is the same. It lands as a beat (wings open,
+   quiet tally), but it is the one place that breaks dark-and-subtle. Tally icons have no labels.
+12. 52 glints unspent, 11 of 12 pods never opened: nothing asks for them.
+
+## Nice
+- Bright things that are not lights: the white sky gap behind the trunk at x ~1800 (seen from F3),
+  the tan glow between the shaft trunks (06), the pool (brightest patch of the left zone).
+- Stilt roots show triangle facets in their shading (05).
+- The bluff's east face is painted as a ramp down to the terrace; collision is a wall at 2624. Top
+  and west wall match. The hollow is a good small beat (three glints, one hop out).
+- Lampwing reads as a pretty moth, not a threat; one touch then it gives up, fair.
+- Lit lanterns now read well (stone warms, candle flowers stay, pips fill). Kindling pose is lovely.
+- On the far ledge the camera's right stop puts her 60 px from the frame edge.
+
+## Not tested
+- Standing on a lit lantern's safe ground with a creature at its edge: no burrback shares the stone's
+  ground and lamp-f3 hit her on F3 before I got down; the crown and far lanterns have none in reach.
+- Feel in the hands (latency, stiffness): judged from traces and frames only. No video taken.
+- 100% completion, the left route past F3, the lampwing pogo chain.
+
+## Method
+- Other agents saving files makes Vite reload the page and wipe the run. After loading, cut it off
+  with `playwright-cli -s=<name> network-state-set offline`: the game needs nothing more.

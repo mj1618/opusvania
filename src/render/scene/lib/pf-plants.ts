@@ -300,17 +300,30 @@ function lobeLump(a: number, seed: number): number {
 /** The colour of deep canopy shadow: what the vine anchors sink into. */
 const SHADE = 0x03080b;
 
-function leafKnot(c: Ctx, x: number, y: number, rad: number, t: Tone): void {
+function leafKnot(c: Ctx, x: number, y: number, rad: number, t: Tone, lean: -1 | 1, skyTop: number): void {
   const { b, r } = c;
   const phase = r();
   b.plant(x, y, 4000, phase, 0, 0, 0);
   b.fixedH = 0;
-  // The bough it grows on: a dark tapering branch curving in from above, off the top of the scene.
-  const d = r() < 0.5 ? -1 : 1;
-  const bough = quad(x + d * rad * 3.2, y - 330, x + d * rad * 1.3, y - 40, x - d * rad * 0.3, y + 4, 10);
+  // The bough it grows on: a dark tapering limb coming steeply down out of the crown. It starts
+  // above the highest the camera can look (`skyTop`: the view follows the summit glide over the
+  // scene top now, and limbs that began 330 px up showed their sawn ends there), and every knot of
+  // one island leans the same way, so two limbs never cross.
+  const flip = r() < 0.5 ? 0.85 : 1.15;
+  const d = lean;
+  const top = skyTop - 120;
+  const bough = quad(
+    x + d * rad * 2.4 * flip,
+    top,
+    x + d * rad * 1.2,
+    y - (y - top) * 0.22,
+    x - d * rad * 0.3,
+    y + 4,
+    18,
+  );
   b.strip(
     bough,
-    (u) => 44 * (1 - u) + 12,
+    (u) => 50 * (1 - u) ** 0.8 + 12,
     () => 0x04080b,
     () => mix(0x05090c, t.mid, 0.08),
   );
@@ -1095,7 +1108,7 @@ export interface Garden {
   moths: number[][];
 }
 
-export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
+export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop = 0): void {
   let shrubs = 0;
   let heroes = 0;
   for (const top of info.tops) {
@@ -1555,7 +1568,8 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
       hangVine(hc, h.yoke.x, h.yoke.y, sx, topY, range(hr, -60, 60), 15, t, true);
       hangVine(hc, h.yoke.x + 4, h.yoke.y, sx + 20, topY, range(hr, -80, 80), 7, t);
     }
-    for (const kx of knots) leafKnot(hc, kx, topY, range(hr, 70, 110), t);
+    const lean = first.x < sceneW / 2 ? -1 : 1;
+    for (const kx of knots) leafKnot(hc, kx, topY, range(hr, 70, 110), t, lean, skyTop);
   }
   for (const l of info.lanterns) {
     g.halo.plant(l.x, l.y, 10, tr(), 0, 0, 0);

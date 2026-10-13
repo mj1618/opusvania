@@ -17,6 +17,7 @@ import type { Container } from 'pixi.js';
 import type { SimEvent } from '../../../sim/events';
 import { slashBox } from '../../../sim/index';
 import { tuning } from '../../../sim/tuning';
+import { viewTop } from '../../camera/index';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { prng } from '../lib/look';
 import { bakeTerrain } from '../lib/pf-bake';
@@ -83,7 +84,8 @@ export class PlayfieldLayer implements EnvModule {
       butterflies: [] as number[][],
       moths: [] as number[][],
     };
-    growGarden(garden, info, scene.width);
+    // (The top of the highest view: what hangs from the crown has to start above it.)
+    growGarden(garden, info, scene.width, viewTop(scene));
     const rect = this.field.rect;
     const back = garden.back.build(this.field.texture, rect, false);
     const halo = garden.halo.build(this.field.texture, rect, true);

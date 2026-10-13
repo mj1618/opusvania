@@ -65,14 +65,22 @@
   droplets. **Pool**: two quads, one shader (surface, caustics, fish, ripples, splash).
 
 ## Layout pass, 2026-10-14 (the bluff, the hollow)
-- Both are plain `ground` rects and needed **no painter changes**: the generic step code gives the bluff
-  (2432-2624, top 960) a stone lip, a boulder cap, the buttress root down its west face and a banked east
-  side, and the hollow (3744-3968, floor 1376) reads as a mossy dip with a broad-leaf plant. Checked with
-  `shots/wide-8-bluff.png`, `wide-9-hollow.png` and `--hitboxes` (tops honest).
-- `FIGHT_SPOTS` still names `[2560, 3200]`: the terrace is 2624-3200 now, so the bluff's east 64 px are
-  "calm" too; harmless. burr-rise starts at 3002 (calm ±230 = 2772-3232).
-- Weak spot: the root leaning down the bluff's east side is lit like a ramp (the "lit slope" failure above,
-  mild here because the terrace is right under it).
+- Both are plain `ground` rects painted by the generic step code. **Tall steps** (`FORMS.tallStep`, H >= 170:
+  both faces of the bluff) are treated as cliffs: the great buttress stands as a column (toe 50-74 px, relief
+  0.6, `lit` 0.14) instead of leaning out as far as the face is high, the back bank is half as long
+  (`tallRun`), and the face gets bedded stones, a second clinging root and rootlets under the lip. Before, the
+  buttress was a lit 45 degree ramp from the terrace to the lip (east) and from the path to the lip (west):
+  the "lit slope" failure. Any root or bank that joins a lower walk line to a higher one at under ~65
+  degrees reads as a way up.
+- The root mound (3968-4160) stands on the hollow's east lip: whatever leaves it westward (back roots, the
+  first braid, the feeder, the lee plant) now comes down to `footAt(x)` = the hollow's floor; they ended in
+  the air at the old ground level 1280.
+- `FIGHT_SPOTS` terrace entry is `[2624, 3200]`. burr-rise starts at 3002 (calm ±230 = 2772-3232).
+- The vines' leaf knots (`leafKnot`) hang from limbs that start above `viewTop(scene)` (passed to
+  `growGarden` as `skyTop`); they began 330 px up, and with the camera's headroom two of them showed as a
+  sawn-off X over F7 (5260, -150). All knots of one island lean the same way.
+- Not done: the 1280 ground's grass still runs across the front of the root mound (the ground top is not
+  split under a `root` solid).
 
 ## Rules learned
 - Nothing manufactured: no ruled edges, flat facets, even spacing or even heights. Stone = `paintRock`,

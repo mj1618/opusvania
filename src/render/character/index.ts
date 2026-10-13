@@ -87,7 +87,7 @@ export class CharacterRenderer {
       el = document.createElement('div');
       el.id = 'char-label';
       el.style.cssText =
-        'position:fixed;right:10px;bottom:6px;font:12px/1.4 ui-monospace,monospace;color:#8890a4;pointer-events:none';
+        'position:fixed;right:10px;top:6px;font:11px/1.4 ui-monospace,monospace;color:#8890a4;opacity:0.55;pointer-events:none';
       document.body.appendChild(el);
     }
     el.textContent = this.skins
