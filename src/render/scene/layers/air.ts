@@ -1,15 +1,18 @@
 /**
  * The air: everything that floats between the eye and the forest.
  *
- *   layers.airBack (behind terrain and character)   the strong light shafts
+ *   layers.airBack (behind terrain and character)   the strong light shafts, a flock of moths
  *   layers.air     (in front of the character)      faint front shafts + ground mist (one shader
  *                                                   pass), motes, fireflies, falling leaves
  *
  * Shafts, mist and motes are stateless functions of the render clock evaluated on the GPU
- * (lib/fx-air-shaders.ts); fireflies and leaves are a few dozen sprites moved on the CPU. Nothing
- * uses Math.random: layout comes from seeded PRNGs, motion from the clock, so shots reproduce.
- * Everything is confined to the camera view: the volume quads are fitted to it, the motes wrap
- * around it, sprites outside it are hidden.
+ * (lib/fx-air-shaders.ts); fireflies, leaves and moths are a few dozen sprites moved on the CPU.
+ * Nothing uses Math.random: layout comes from seeded PRNGs, motion from the clock, so shots
+ * reproduce. Everything is confined to the camera view: the volume quads are fitted to it, the
+ * motes wrap around it, sprites outside it are hidden.
+ *
+ * Colours and densities come in threes: [left glade, light well, right stand] (lib/fx-zones.ts),
+ * blended by world x so the mood changes along the scene without a seam.
  */
 import {
   Buffer,
@@ -26,74 +29,111 @@ import {
 } from 'pixi.js';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import type { LayerRect } from '../layer-tree';
-import { MAX_SHAFT_GROUPS, MOTES_FRAG, MOTES_VERT, VOLUME_FRAG, VOLUME_VERT } from '../lib/fx-air-shaders';
+import {
+  AIR_LIGHTS,
+  MAX_SHAFT_GROUPS,
+  MOTES_FRAG,
+  MOTES_VERT,
+  VOLUME_FRAG,
+  VOLUME_VERT,
+} from '../lib/fx-air-shaders';
 import { fxDebug } from '../lib/fx-debug';
 import { GroundProfile } from '../lib/fx-ground';
+import { playfieldMaskTexture } from '../lib/fx-mask';
 import { noiseTexture } from '../lib/fx-noise';
 import { KEY_LIGHT, mix, PALETTE, prng, wind } from '../lib/look';
+
+type Three<T> = readonly [T, T, T];
+const SPORE = 0xb9a2ff;
 
 /** Tunables. Distances in world px, times in seconds, colours 0xRRGGBB. */
 export const AIR = {
   shafts: {
-    color: mix(PALETTE.keyWarm, PALETTE.keyGold, 0.25),
+    /** Per zone: colour and strength. Cool moonlight, gold, thin violet dusk. */
+    color: [0xbfe6ee, mix(PALETTE.keyWarm, PALETTE.keyGold, 0.3), 0xd9c4f2] as Three<number>,
+    zoneStrength: [0.7, 1, 0.6] as Three<number>,
     /** Strength of the shafts behind the playfield and of the veil in front of the character. */
     back: 0.55,
-    front: 0.15,
+    front: 0.17,
+    /** How much solid playfield hides the front veil (1 = beams pass fully behind it). */
+    frontOcclusion: 0.9,
+    /** The canopy moves: each opening slowly widens and narrows by this fraction, at this rate. */
+    breathe: 0.35,
+    breatheRate: 0.11,
     /**
      * Where the canopy lets light through: entry point (the shaft passes through it), half width
      * across the beam, strength, and reach (0 = dies high in the air, 1 = almost touches the ground).
      */
     groups: [
-      { x: KEY_LIGHT.entryX, y: KEY_LIGHT.entryY, halfWidth: 560, strength: 1, reach: 0.9 },
-      { x: 1560, y: KEY_LIGHT.entryY, halfWidth: 240, strength: 0.6, reach: 0.6 },
-      { x: 5650, y: KEY_LIGHT.entryY, halfWidth: 270, strength: 0.65, reach: 0.65 },
+      { x: KEY_LIGHT.entryX, y: KEY_LIGHT.entryY, halfWidth: 580, strength: 1, reach: 0.9 },
+      { x: 1560, y: KEY_LIGHT.entryY, halfWidth: 240, strength: 0.75, reach: 0.6 },
+      { x: 5650, y: KEY_LIGHT.entryY, halfWidth: 190, strength: 0.8, reach: 0.6 },
+      { x: 4700, y: KEY_LIGHT.entryY, halfWidth: 110, strength: 0.6, reach: 0.4 },
     ],
   },
   mist: {
-    color: mix(PALETTE.fogMid, PALETTE.fogFar, 0.55),
-    opacity: 0.55,
+    /** Per zone: tint and opacity. */
+    color: [0x6fb7c9, mix(PALETTE.fogFar, PALETTE.keyWarm, 0.3), 0x7f8fc4] as Three<number>,
+    opacity: [0.36, 0.4, 0.44] as Three<number>,
     /** Scale height above the ground, and how fast it fades below the surface line. */
     height: 120,
     underground: 30,
-    /** How much a shaft crossing the mist lights it up. */
+    /** How much a shaft crossing the mist lights it up, and how much point lights do. */
     litByShaft: 2.2,
+    litByLights: 0.55,
+    /** Point lights reach this many times their radius through the mist. */
+    lightReach: 2.1,
     /** The character parts the mist: radius and amount. */
     partRadius: 150,
     partAmount: 0.6,
+    /** How far the wind's wave pushes the sheets as it passes. */
+    gust: 70,
   },
   motes: {
-    count: 620,
+    count: 760,
     /** The tile the motes wrap in (bigger than the view so the wrap is never seen). */
     tile: [2800, 1640] as const,
     minRadius: 1.5,
     maxRadius: 6.5,
-    baseBrightness: 0.16,
+    baseBrightness: 0.2,
     litBrightness: 2.6,
     driftX: 16,
     driftY: -7,
     swirl: 26,
-    windSway: 34,
-    cool: mix(PALETTE.fogFar, PALETTE.glowCyan, 0.5),
-    warm: PALETTE.keyWarm,
+    /** How far the wind's wave carries a mote back and forth: gusts are seen travelling through. */
+    windSway: 85,
+    /** Per zone: a mote in shade, a mote in a shaft, how many there are, how bright in shade. */
+    cool: [PALETTE.glowCyan, mix(PALETTE.fogFar, PALETTE.keyWarm, 0.6), SPORE] as Three<number>,
+    warm: [0xd8f4ff, PALETTE.keyWarm, 0xf1d9ff] as Three<number>,
+    density: [0.85, 1, 0.7] as Three<number>,
+    shade: [1.25, 0.8, 1.15] as Three<number>,
   },
   fireflies: {
-    count: 44,
+    /** Per zone: how many, and their colours. */
+    count: [28, 10, 16] as Three<number>,
+    colors: [
+      [PALETTE.glowCyan, 0xbdf7ff, 0xbdf7a0, 0x8fe9ff],
+      [0xffe9a0, 0xd9ff8f, 0xffd58a],
+      [0xd7b0ff, 0x9fd0ff, 0xffc9f0, SPORE],
+    ] as Three<readonly number[]>,
+    zoneX: [0, 1900, 3900, 5760] as const,
     /** Hover band above the ground. */
     minAbove: 36,
     maxAbove: 250,
     wander: 78,
-    size: 62,
+    size: 66,
     fleeRadius: 170,
     fleePush: 900,
     spring: 2.2,
     damping: 2.6,
-    colors: [0xd9ff8f, 0xbdf7a0, PALETTE.glowCyan] as const,
   },
   leaves: {
-    count: 10,
-    fallSpeed: 62,
-    sway: 70,
+    count: 14,
+    fallSpeed: 58,
+    sway: 64,
     size: 11,
+    /** Seconds a leaf lies where it landed before it fades. */
+    rest: 9,
     colors: [
       PALETTE.foliage,
       PALETTE.foliageLit,
@@ -101,6 +141,14 @@ export const AIR = {
       PALETTE.keyGold,
       PALETTE.glowViolet,
     ] as const,
+  },
+  moths: {
+    count: 6,
+    /** The flock crosses the whole scene at this speed, then again from the start. */
+    speed: 120,
+    height: 520,
+    size: 7,
+    color: 0xdff3ee,
   },
 };
 
@@ -110,7 +158,13 @@ const rgbOf = (hex: number): [number, number, number] => [
   (hex & 255) / 255,
 ];
 
+/** Three zone colours plus a fourth component each, packed for a `vec4[3]` uniform. */
+function pack3(out: Float32Array, colors: Three<number>, w: Three<number>): void {
+  for (let i = 0; i < 3; i++) out.set([...rgbOf(colors[i] as number), w[i] as number], i * 4);
+}
+
 type U<T> = { uniforms: T };
+const vec4 = (n = 1) => ({ value: new Float32Array(4 * n), type: 'vec4<f32>' as const, size: n });
 
 function volumeMesh(shared: UniformGroup, ground: Texture): Mesh<Geometry, Shader> {
   const geometry = new Geometry({
@@ -127,26 +181,27 @@ function volumeMesh(shared: UniformGroup, ground: Texture): Mesh<Geometry, Shade
     resources: {
       uNoise: noiseTexture().source,
       uGround: ground.source,
+      uMask: playfieldMaskTexture().source,
       airShared: shared,
       volume: {
-        uRect: { value: new Float32Array(4), type: 'vec4<f32>' },
-        uShaftColor: { value: new Float32Array(4), type: 'vec4<f32>' },
-        uMistColor: { value: new Float32Array(4), type: 'vec4<f32>' },
-        uMist: { value: new Float32Array(4), type: 'vec4<f32>' },
-        uPlayer: { value: new Float32Array(4), type: 'vec4<f32>' },
+        uRect: vec4(),
+        uShaftColors: vec4(3),
+        uMistColors: vec4(3),
+        uVolume: vec4(),
+        uMist: vec4(),
+        uPlayer: vec4(),
+        uLightPos: vec4(AIR_LIGHTS),
+        uLightCol: vec4(AIR_LIGHTS),
       },
     },
   });
   return new Mesh({ geometry, shader });
 }
 
-type VolumeU = {
-  uRect: Float32Array;
-  uShaftColor: Float32Array;
-  uMistColor: Float32Array;
-  uMist: Float32Array;
-  uPlayer: Float32Array;
-};
+type VolumeU = Record<
+  'uRect' | 'uShaftColors' | 'uMistColors' | 'uVolume' | 'uMist' | 'uPlayer' | 'uLightPos' | 'uLightCol',
+  Float32Array
+>;
 const volumeU = (m: Mesh<Geometry, Shader>): VolumeU =>
   ((m.shader as Shader).resources.volume as U<VolumeU>).uniforms;
 
@@ -171,29 +226,35 @@ class Fireflies {
     const cfg = AIR.fireflies;
     const tex = glowTexture();
     const rnd = prng(0xf1ef1e);
-    for (let i = 0; i < cfg.count; i++) {
-      // Spread along the scene in loose clumps: jittered slots, pulled toward a few gathering spots.
-      const slot = ((i + rnd()) / cfg.count) * ground.width;
-      const hx = Math.min(ground.width - 60, Math.max(60, slot + (rnd() - 0.5) * 380));
-      const hy = ground.top(hx) - cfg.minAbove - rnd() ** 1.6 * (cfg.maxAbove - cfg.minAbove);
-      const s = new Sprite(tex);
-      s.anchor.set(0.5);
-      s.blendMode = 'add';
-      s.tint = cfg.colors[Math.floor(rnd() * cfg.colors.length)] as number;
-      this.view.addChild(s);
-      this.flies.push({
-        s,
-        hx,
-        hy,
-        ph: rnd() * 6.283,
-        rate: 0.5 + rnd() * 0.7,
-        r: cfg.wander * (0.5 + rnd()),
-        ox: 0,
-        oy: 0,
-        vx: 0,
-        vy: 0,
-        scale: 0.7 + rnd() * 0.6,
-      });
+    for (let z = 0; z < 3; z++) {
+      const x0 = cfg.zoneX[z] as number;
+      const x1 = cfg.zoneX[z + 1] as number;
+      const n = cfg.count[z] as number;
+      const colors = cfg.colors[z] as readonly number[];
+      for (let i = 0; i < n; i++) {
+        // Loose clumps: jittered slots along the zone. Zones overlap a little at their borders.
+        const slot = x0 + ((i + rnd()) / n) * (x1 - x0);
+        const hx = Math.min(ground.width - 60, Math.max(60, slot + (rnd() - 0.5) * 420));
+        const hy = ground.top(hx) - cfg.minAbove - rnd() ** 1.6 * (cfg.maxAbove - cfg.minAbove);
+        const s = new Sprite(tex);
+        s.anchor.set(0.5);
+        s.blendMode = 'add';
+        s.tint = colors[Math.floor(rnd() * colors.length)] as number;
+        this.view.addChild(s);
+        this.flies.push({
+          s,
+          hx,
+          hy,
+          ph: rnd() * 6.283,
+          rate: 0.5 + rnd() * 0.7,
+          r: cfg.wander * (0.5 + rnd()),
+          ox: 0,
+          oy: 0,
+          vx: 0,
+          vy: 0,
+          scale: 0.7 + rnd() * 0.6,
+        });
+      }
     }
   }
 
@@ -211,7 +272,7 @@ class Fireflies {
         continue;
       }
       const a = t * f.rate * 0.35 + f.ph;
-      const wx = (Math.sin(a) + 0.5 * Math.sin(a * 2.3 + f.ph * 2)) * f.r + wind(f.hx, t, f.ph) * 10;
+      const wx = (Math.sin(a) + 0.5 * Math.sin(a * 2.3 + f.ph * 2)) * f.r + wind(f.hx, t, f.ph) * 16;
       const wy = (Math.sin(a * 1.31 + f.ph * 0.7) * 0.5 + 0.3 * Math.sin(a * 2.9 + 1.1)) * f.r * 0.7;
       let x = f.hx + wx + f.ox;
       let y = f.hy + wy + f.oy;
@@ -265,15 +326,30 @@ function glowTexture(): Texture {
   return Texture.from(c);
 }
 
-/** Falling leaves and petals: sparse, tumbling, each a stateless loop of the clock. */
+/**
+ * Falling leaves and petals: sparse. Each spirals down, settles where it lands (ground or water),
+ * lies there a while and fades. A leaf's whole flight is a function of the clock; only the landing
+ * moment is worked out once per flight.
+ */
 class Leaves {
   readonly view = new Container({ label: 'leaves' });
-  private readonly leaves: Array<{ g: Graphics; seed: number; period: number; ph: number; size: number }> =
-    [];
+  private readonly leaves: Array<{
+    g: Graphics;
+    seed: number;
+    period: number;
+    ph: number;
+    cycle: number;
+    x0: number;
+    a0: number;
+    w: number;
+    drift: number;
+    land: number;
+    spin: number;
+  }> = [];
 
   constructor(
     private readonly ground: GroundProfile,
-    private readonly sceneHeight: number,
+    sceneHeight: number,
   ) {
     const cfg = AIR.leaves;
     const rnd = prng(0x1eaf);
@@ -293,47 +369,137 @@ class Leaves {
         .quadraticCurveTo(-size * 0.2, -size * 0.62, size, 0)
         .lineTo(-size, 0)
         .fill({ color, alpha: 0.9 });
+      g.moveTo(-size, 0)
+        .lineTo(size, 0)
+        .stroke({ color: mix(color, PALETTE.keyWarm, 0.4), width: 0.8, alpha: 0.6 });
       this.view.addChild(g);
       this.leaves.push({
         g,
         seed: i * 977 + 13,
-        period: (sceneHeight + 300) / (cfg.fallSpeed * (0.75 + rnd() * 0.6)),
+        period: (sceneHeight + 200) / cfg.fallSpeed + cfg.rest + 4 + rnd() * 10,
         ph: rnd(),
-        size,
+        cycle: -1,
+        x0: 0,
+        a0: 0,
+        w: 1,
+        drift: 0,
+        land: 0,
+        spin: 0,
       });
     }
   }
 
+  /** Where the leaf of this flight is `t` seconds after it let go. */
+  private path(l: (typeof this.leaves)[number], t: number): [number, number] {
+    const cfg = AIR.leaves;
+    const a = l.a0 + t * l.w;
+    return [
+      l.x0 + l.drift * t + Math.sin(a) * cfg.sway + Math.sin(a * 0.43 + 1) * cfg.sway * 0.6,
+      -160 + t * cfg.fallSpeed * (1 + 0.25 * Math.cos(a * 2)),
+    ];
+  }
+
   update(frame: SceneFrame, vis: LayerRect): void {
     const cfg = AIR.leaves;
-    const t = frame.clock;
     for (const l of this.leaves) {
-      const turn = t / l.period + l.ph;
+      const turn = frame.clock / l.period + l.ph;
       const cycle = Math.floor(turn);
-      const k = turn - cycle;
-      // A new random lane every fall.
-      const rnd = prng(l.seed + cycle * 7919);
-      const x0 = rnd() * this.ground.width;
-      const a = t * (0.7 + rnd() * 0.5) + rnd() * 6.283;
-      const y = -200 + k * (this.sceneHeight + 300);
-      const x =
-        x0 +
-        Math.sin(a) * cfg.sway +
-        Math.sin(a * 0.43 + 1) * cfg.sway * 0.6 +
-        k * 240 +
-        wind(x0, t, l.ph) * 30;
-      const floor = this.ground.top(x) - 4;
+      const t = (turn - cycle) * l.period;
+      if (cycle !== l.cycle) {
+        // A new flight: a new lane, and find the moment it touches down.
+        const rnd = prng(l.seed + cycle * 7919);
+        l.cycle = cycle;
+        l.x0 = rnd() * this.ground.width;
+        l.a0 = rnd() * 6.283;
+        l.w = 0.7 + rnd() * 0.5;
+        l.drift = 6 + rnd() * 14;
+        l.spin = rnd() * 6.283;
+        l.land = l.period;
+        for (let s = 0; s < l.period; s += 0.1) {
+          const [x, y] = this.path(l, s);
+          if (y >= this.ground.top(x) - 3) {
+            l.land = s;
+            break;
+          }
+        }
+      }
       const g = l.g;
-      if (y > floor || x < vis.x - 40 || x > vis.x + vis.w + 40 || y < vis.y - 40 || y > vis.y + vis.h + 40) {
+      const flying = t < l.land;
+      const [x, y] = this.path(l, Math.min(t, l.land));
+      const lain = t - l.land;
+      if (
+        lain > cfg.rest ||
+        x < vis.x - 40 ||
+        x > vis.x + vis.w + 40 ||
+        y < vis.y - 40 ||
+        y > vis.y + vis.h + 40
+      ) {
         g.visible = false;
         continue;
       }
       g.visible = true;
-      g.position.set(x, y);
-      // Rocking like a falling leaf, with the long axis foreshortening as it tumbles.
-      g.rotation = Math.cos(a) * 0.9 + Math.sin(a * 0.43) * 0.5 + rnd() * 6.283;
-      g.scale.set(1, 0.35 + 0.65 * Math.abs(Math.cos(a * 1.7 + l.ph * 9)));
-      g.alpha = Math.min(1, k * 12, (floor - y) / 50);
+      const a = l.a0 + Math.min(t, l.land) * l.w;
+      if (flying) {
+        // Rocking like a falling leaf, the long axis foreshortening as it tumbles; the wind's
+        // wave carries it sideways as it passes.
+        g.position.set(x + wind(x, frame.clock, l.ph) * 26, y);
+        g.rotation = Math.cos(a) * 0.9 + Math.sin(a * 0.43) * 0.5 + l.spin;
+        g.scale.set(1, 0.3 + 0.7 * Math.abs(Math.cos(a * 1.7 + l.ph * 9)));
+        g.alpha = Math.min(1, t * 1.5);
+      } else {
+        // Settled: lying flat, eased down in the first half second, fading at the end.
+        const ease = Math.min(1, lain * 2);
+        const flat = Math.sin(l.spin) * 0.25;
+        g.position.set(x, y + 2 * ease);
+        g.rotation = flat + (Math.cos(a) * 0.9 + Math.sin(a * 0.43) * 0.5 + l.spin - flat) * (1 - ease) ** 2;
+        g.scale.set(1, 0.3 + (0.3 + 0.7 * Math.abs(Math.cos(a * 1.7 + l.ph * 9)) - 0.3) * (1 - ease));
+        g.alpha = Math.min(1, (cfg.rest - lain) / 2.5);
+      }
+    }
+  }
+}
+
+/** A small flock of pale moths that crosses the scene now and then, far behind the playfield. */
+class Moths {
+  readonly view = new Container({ label: 'moths' });
+  private readonly moths: Array<{ g: Graphics; ph: number; ox: number; oy: number }> = [];
+
+  constructor(private readonly sceneWidth: number) {
+    const cfg = AIR.moths;
+    const rnd = prng(0x307b);
+    for (let i = 0; i < cfg.count; i++) {
+      const g = new Graphics();
+      const s = cfg.size * (0.75 + rnd() * 0.5);
+      // Two wings meeting at the body; flapping is a squash of the whole shape.
+      g.moveTo(0, 0)
+        .quadraticCurveTo(-s * 0.5, -s * 1.1, -s * 1.3, -s * 0.5)
+        .quadraticCurveTo(-s * 0.8, s * 0.3, 0, 0)
+        .quadraticCurveTo(s * 0.5, -s * 1.1, s * 1.3, -s * 0.5)
+        .quadraticCurveTo(s * 0.8, s * 0.3, 0, 0)
+        .fill({ color: cfg.color, alpha: 0.75 });
+      this.view.addChild(g);
+      this.moths.push({ g, ph: rnd() * 6.283, ox: (rnd() - 0.5) * 260, oy: (rnd() - 0.5) * 130 });
+    }
+  }
+
+  update(frame: SceneFrame, vis: LayerRect): void {
+    const cfg = AIR.moths;
+    const t = frame.clock;
+    // The flock's centre runs the length of the scene and a margin, then starts again.
+    const span = this.sceneWidth + 2400;
+    const cx = ((t * cfg.speed + 900) % span) - 1200;
+    const cy = cfg.height + Math.sin(t * 0.21) * 150 + Math.sin(t * 0.53 + 1) * 60;
+    for (const m of this.moths) {
+      const x = cx + m.ox + Math.sin(t * 0.9 + m.ph) * 46 + Math.sin(t * 2.3 + m.ph * 2) * 14;
+      const y = cy + m.oy + Math.cos(t * 1.1 + m.ph * 1.3) * 34 + Math.sin(t * 3.1 + m.ph) * 9;
+      if (x < vis.x - 30 || x > vis.x + vis.w + 30) {
+        m.g.visible = false;
+        continue;
+      }
+      m.g.visible = true;
+      m.g.position.set(x, y);
+      m.g.rotation = Math.sin(t * 0.9 + m.ph) * 0.3 + 0.1;
+      m.g.scale.set(1, 0.25 + 0.75 * Math.abs(Math.sin(t * 13 + m.ph * 4)));
     }
   }
 }
@@ -346,6 +512,7 @@ export class AirLayer implements EnvModule {
   private motes!: Mesh<Geometry, Shader>;
   private fireflies!: Fireflies;
   private leaves!: Leaves;
+  private moths!: Moths;
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
@@ -358,7 +525,8 @@ export class AirLayer implements EnvModule {
 
     this.back = volumeMesh(this.shared, groundTex);
     this.back.label = 'shafts-back';
-    ctx.layers.get('airBack').addChild(this.back);
+    this.moths = new Moths(ctx.scene.width);
+    ctx.layers.get('airBack').addChild(this.back, this.moths.view);
 
     this.front = volumeMesh(this.shared, groundTex);
     this.front.label = 'shafts-front+mist';
@@ -398,13 +566,7 @@ export class AirLayer implements EnvModule {
         uNoise: noiseTexture().source,
         uGround: groundTex.source,
         airShared: this.shared,
-        motes: {
-          uCam: { value: new Float32Array(4), type: 'vec4<f32>' },
-          uMoteLook: { value: new Float32Array(4), type: 'vec4<f32>' },
-          uMoteMove: { value: new Float32Array(4), type: 'vec4<f32>' },
-          uCool: { value: new Float32Array(4), type: 'vec4<f32>' },
-          uWarm: { value: new Float32Array(4), type: 'vec4<f32>' },
-        },
+        motes: { uCam: vec4(), uMoteLook: vec4(), uMoteMove: vec4(), uCool: vec4(3), uWarm: vec4(3) },
       },
     });
     const mesh = new Mesh({ geometry, shader });
@@ -415,30 +577,46 @@ export class AirLayer implements EnvModule {
   update(frame: SceneFrame): void {
     const vis = this.ctx.layers.visible('air', frame.camera);
     const { shafts, mist, motes } = AIR;
+    const t = frame.clock;
 
-    // Shared: clock and shaft groups (entry point -> position across the beams).
+    // Shared: clock and shaft groups (entry point -> position across the beams). Each opening
+    // breathes on its own slow clock, as if the canopy above it were moving.
     const su = this.shared.uniforms as { uGroups: Float32Array; uAir: Float32Array };
-    su.uAir[0] = frame.clock;
+    su.uAir[0] = t;
     su.uGroups.fill(0);
     shafts.groups.slice(0, MAX_SHAFT_GROUPS).forEach((g, i) => {
-      su.uGroups[i * 4] = g.x * KEY_LIGHT.dirY - g.y * KEY_LIGHT.dirX;
-      su.uGroups[i * 4 + 1] = g.halfWidth;
-      su.uGroups[i * 4 + 2] = g.strength;
+      const open =
+        Math.sin(t * shafts.breatheRate + i * 2.1) * 0.6 + Math.sin(t * shafts.breatheRate * 2.3 + i) * 0.4;
+      su.uGroups[i * 4] = g.x * KEY_LIGHT.dirY - g.y * KEY_LIGHT.dirX + open * g.halfWidth * 0.12;
+      su.uGroups[i * 4 + 1] = g.halfWidth * (1 + shafts.breathe * 0.5 * open);
+      su.uGroups[i * 4 + 2] = g.strength * (1 + shafts.breathe * open);
       su.uGroups[i * 4 + 3] = g.reach;
     });
     this.shared.update();
 
     const p = frame.sim.player;
-    for (const [mesh, strength, withMist] of [
+    for (const [mesh, strength, front] of [
       [this.back, shafts.back, false],
       [this.front, shafts.front, true],
     ] as const) {
       const u = volumeU(mesh);
       u.uRect.set([vis.x, vis.y, vis.w, vis.h]);
-      u.uShaftColor.set([...rgbOf(shafts.color), strength]);
-      u.uMistColor.set([...rgbOf(mist.color), withMist ? mist.opacity : 0]);
-      u.uMist.set([mist.height, mist.underground, mist.litByShaft, 0]);
+      pack3(u.uShaftColors, shafts.color, shafts.zoneStrength);
+      pack3(u.uMistColors, mist.color, mist.opacity);
+      u.uVolume.set([strength, front ? 1 : 0, front ? shafts.frontOcclusion : 0, mist.gust]);
+      u.uMist.set([mist.height, mist.underground, mist.litByShaft, mist.litByLights]);
       u.uPlayer.set([p.cx, p.feetY - 20, mist.partRadius, mist.partAmount]);
+      u.uLightPos.fill(0);
+      if (front) {
+        const lights = this.ctx.lights.list;
+        for (let i = 0, n = 0; i < lights.length && n < AIR_LIGHTS; i++) {
+          const l = lights[i];
+          if (!l || l.intensity <= 0) continue;
+          u.uLightPos.set([l.x, l.y, l.radius * mist.lightReach, l.intensity], n * 4);
+          u.uLightCol.set([...rgbOf(l.color), 1], n * 4);
+          n++;
+        }
+      }
     }
 
     const mu = ((this.motes.shader as Shader).resources.motes as U<Record<string, Float32Array>>).uniforms;
@@ -450,10 +628,11 @@ export class AirLayer implements EnvModule {
       motes.litBrightness,
     ]);
     (mu.uMoteMove as Float32Array).set([motes.driftX, motes.driftY, motes.swirl, motes.windSway]);
-    (mu.uCool as Float32Array).set([...rgbOf(motes.cool), 1]);
-    (mu.uWarm as Float32Array).set([...rgbOf(motes.warm), 1]);
+    pack3(mu.uCool as Float32Array, motes.cool, motes.density);
+    pack3(mu.uWarm as Float32Array, motes.warm, motes.shade);
 
     this.fireflies.update(frame, vis);
     this.leaves.update(frame, vis);
+    this.moths.update(frame, this.ctx.layers.visible('airBack', frame.camera));
   }
 }

@@ -13,25 +13,43 @@ export type Rnd = () => number;
 export interface Tones {
   body: readonly number[];
   rim: number;
+  /** The cool edge on the side away from the light. */
+  cool: number;
   rimAlpha: number;
   /** How far the lit copy is pushed toward the light, px. */
   rimShift: number;
 }
 
+/** Which depth plane is being drawn: the far one is lighter, greener and keeps more colour. */
+let farPlane = false;
+export function withPlane<T>(far: boolean, draw: () => T): T {
+  farPlane = far;
+  try {
+    return draw();
+  } finally {
+    farPlane = false;
+  }
+}
+
 export function foregroundTones(rnd: Rnd, warmth = 0.5, rimAlpha = 0.5): Tones {
-  // Almost black, but always a teal or indigo black.
-  const base = mix(mix(PALETTE.shadowDeep, PALETTE.shadowIndigo, rnd() * 0.5), 0x01060b, 0.55);
+  // Near plane: almost black, but always a teal or indigo black. Far plane: deep forest green.
+  const dark = mix(mix(PALETTE.shadowDeep, PALETTE.shadowIndigo, rnd() * 0.5), 0x01060b, 0.5);
+  const base = farPlane
+    ? mix(mix(PALETTE.foliageDark, PALETTE.shadow, 0.35 + rnd() * 0.3), 0x03131a, 0.3)
+    : dark;
+  const green = farPlane ? PALETTE.foliage : PALETTE.foliageDark;
   return {
     body: [
-      mix(base, 0x01060b, 0.5),
+      mix(base, 0x01060b, farPlane ? 0.3 : 0.5),
       base,
-      mix(base, PALETTE.foliageDark, 0.16),
+      mix(base, green, 0.18),
       mix(base, PALETTE.shadow, 0.3),
-      mix(base, PALETTE.foliageDark, 0.3),
+      mix(base, green, 0.32),
     ],
-    rim: mix(mix(PALETTE.foliage, PALETTE.fogMid, 0.5), PALETTE.keyWarm, 0.25 + 0.3 * warmth),
-    rimAlpha,
-    rimShift: 7,
+    rim: mix(mix(PALETTE.foliage, PALETTE.fogMid, 0.5), PALETTE.keyWarm, 0.3 + 0.35 * warmth),
+    cool: mix(PALETTE.fogMid, PALETTE.glowCyan, 0.35),
+    rimAlpha: rimAlpha * (farPlane ? 1.15 : 1),
+    rimShift: farPlane ? 4 : 7,
   };
 }
 
@@ -65,12 +83,23 @@ export function leaf(
   width: number,
   angle: number,
 ): void {
+  if (rnd() < 0.45) {
+    leafPath(g, x - LX * t.rimShift * 0.7, y + 1, len, width, angle);
+    g.fill({ color: t.cool, alpha: t.rimAlpha * 0.45 });
+  }
   if (rnd() < 0.6) {
     leafPath(g, x + LX * t.rimShift, y + LY * t.rimShift, len, width, angle);
     g.fill({ color: t.rim, alpha: t.rimAlpha * (0.4 + 0.6 * rnd()) });
   }
   leafPath(g, x, y, len, width, angle);
-  g.fill(pick(rnd, t.body));
+  const body = pick(rnd, t.body);
+  g.fill(body);
+  // A midrib, so a leaf is a leaf even as a silhouette.
+  const c = Math.cos(angle);
+  const sn = Math.sin(angle);
+  g.moveTo(x + c * len * 0.08, y + sn * len * 0.08)
+    .lineTo(x + c * len * 0.9, y + sn * len * 0.9)
+    .stroke({ color: mix(body, t.rim, 0.35), width: Math.max(1, width * 0.09), alpha: 0.55 });
 }
 
 type Pt = readonly [number, number, number];
@@ -168,7 +197,7 @@ export function bough(g: Graphics, rnd: Rnd, span: number, drop: number, dir: nu
       const p = main[
         Math.min(main.length - 1, 2 + Math.floor(((i + rnd() * 0.8) / sprays) * (main.length - 2)))
       ] as Pt;
-      const size = (70 + rnd() * 70) * (1 - 0.35 * (i / sprays));
+      const size = (0.42 + rnd() * 0.3) * Math.max(110, drop) * (1 - 0.3 * (i / sprays));
       const down = Math.PI / 2 + dir * (0.25 + rnd() * 0.5);
       cluster(
         g,
@@ -179,7 +208,7 @@ export function bough(g: Graphics, rnd: Rnd, span: number, drop: number, dir: nu
         size,
         pass ? down : down - dir * 0.9,
         1.5,
-        6 + Math.floor(rnd() * 5),
+        4 + Math.floor(rnd() * 3),
       );
     }
     if (pass === 0) litRibbon(g, t, main, t.body[0] as number);
@@ -302,42 +331,6 @@ export function trunk(g: Graphics, rnd: Rnd, width: number, height: number, lean
   }
   ribbon(g, pts, t.rim, 0.5, LX * 14, 0);
   ribbon(g, pts, t.body[1] as number);
-  // A stub of a branch or two, and creepers hanging off it.
-  for (let i = 0; i < 3; i++) {
-    const p = pts[3 + Math.floor(rnd() * (n - 9))] as Pt;
-    const side = rnd() < 0.5 ? -1 : 1;
-    const len = width * (0.9 + rnd() * 1.3);
-    const stub = curve(
-      p[0],
-      p[1],
-      p[0] + side * len * 0.6,
-      p[1] - len * 0.1,
-      p[0] + side * len,
-      p[1] - len * 0.5,
-      width * 0.34,
-      4,
-      6,
-    );
-    ribbon(g, stub, t.body[1] as number);
-    const tip = stub[stub.length - 1] as Pt;
-    cluster(g, t, rnd, tip[0], tip[1], 50 + rnd() * 40, Math.PI / 2 + side * 0.4, 2.2, 7);
-    const hang = 90 + rnd() * 160;
-    ribbon(
-      g,
-      curve(
-        tip[0],
-        tip[1],
-        tip[0] - side * 14,
-        tip[1] + hang * 0.5,
-        tip[0] + side * 6,
-        tip[1] + hang,
-        5,
-        1.5,
-        8,
-      ),
-      t.body[0] as number,
-    );
-  }
   // Bark furrows: slightly lighter and darker stripes so the mass is not a flat cut-out.
   for (let s = 0; s < 4; s++) {
     const off = (s / 3 - 0.5) * 0.7;
@@ -387,5 +380,35 @@ export function lianas(g: Graphics, rnd: Rnd, height: number, lean: number): voi
       if (rnd() < 0.5)
         leaf(g, t, rnd, p[0], p[1], size * 0.8, size * 0.3, Math.PI / 2 - side * (0.5 + rnd() * 0.6));
     }
+  }
+}
+
+/**
+ * A wildflower or two on arching stalks, ~`size` tall: a drooping bell with a touch of colour
+ * (`color`), the only thing in the foreground that is not green.
+ */
+export function flowers(g: Graphics, rnd: Rnd, size: number, color: number): void {
+  const t = foregroundTones(rnd, 0.7, 0.8);
+  const n = 1 + Math.floor(rnd() * 3);
+  for (let i = 0; i < n; i++) {
+    const k = (i + 0.5) / n - 0.5 + (rnd() - 0.5) * 0.3;
+    const h = size * (0.7 + rnd() * 0.4);
+    const bx = k * size * 0.5;
+    const tx = bx + k * size * 0.9 + (rnd() - 0.5) * 20;
+    const stalk = curve(bx, 12, bx + k * size * 0.2, -h * 1.05, tx, -h * 0.82, 4.5, 2, 9);
+    litRibbon(g, t, stalk, t.body[1] as number);
+    // A couple of leaves low on the stalk.
+    const low = stalk[2] as Pt;
+    leaf(g, t, rnd, low[0], low[1], size * 0.3, size * 0.09, -Math.PI / 2 + 0.9);
+    leaf(g, t, rnd, low[0], low[1], size * 0.26, size * 0.08, -Math.PI / 2 - 1);
+    // The bell: five petals hanging from the tip, dusky outside, a glowing heart.
+    const r = size * (0.11 + rnd() * 0.05);
+    const petal = mix(color, t.body[1] as number, 0.5);
+    for (let pth = 0; pth < 5; pth++) {
+      const a = Math.PI / 2 + (pth - 2) * 0.42;
+      leafPath(g, tx, -h * 0.82, r * 1.9, r * 0.75, a);
+      g.fill(pth % 2 ? petal : mix(petal, color, 0.35));
+    }
+    g.circle(tx, -h * 0.82 + r * 0.9, r * 0.32).fill({ color: mix(color, 0xffffff, 0.4), alpha: 0.9 });
   }
 }

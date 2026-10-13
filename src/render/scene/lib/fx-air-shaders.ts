@@ -8,9 +8,12 @@
  */
 
 import { PROFILE_RANGE, PROFILE_Y0 } from './fx-ground';
+import { ZONE_GLSL } from './fx-zones';
 import { KEY_LIGHT } from './look';
 
 export const MAX_SHAFT_GROUPS = 4;
+/** Point lights the mist reacts to. */
+export const AIR_LIGHTS = 4;
 
 const f = (n: number): string => n.toFixed(4);
 
@@ -22,6 +25,14 @@ uniform vec4 uGroups[${MAX_SHAFT_GROUPS}]; // centre u, half width, strength, re
 uniform vec4 uAir;       // time, ground u scale, ground u offset, unused
 const vec2 LIGHT_D = vec2(${f(KEY_LIGHT.dirX)}, ${f(KEY_LIGHT.dirY)});
 const vec2 LIGHT_N = vec2(${f(KEY_LIGHT.dirY)}, ${f(-KEY_LIGHT.dirX)});
+
+${ZONE_GLSL}
+/** lib/look.ts wind(), minus its smallest ripple. */
+float windAt(float x, float clock, float phase) {
+  float t = clock * 0.9 - x * 0.0016 + phase * 6.283;
+  float gust = 0.5 + 0.5 * sin(clock * 0.23 - x * 0.0005);
+  return sin(t) * (0.35 + 0.45 * gust) + sin(t * 2.7 + 1.3) * 0.14;
+}
 
 float groundY(float x) {
   return ${f(PROFILE_Y0)} + textureLod(uGround, vec2(x * uAir.y + uAir.z, 0.5), 0.0).r * ${f(PROFILE_RANGE)};
@@ -85,24 +96,38 @@ precision highp float;
 in vec2 vWorld;
 out vec4 finalColor;
 ${SHAFT_GLSL}
-uniform vec4 uShaftColor;  // rgb, strength
-uniform vec4 uMistColor;   // rgb, opacity
-uniform vec4 uMist;        // height, underground fade, lit-by-shaft amount, unused
+uniform sampler2D uMask;
+uniform vec4 uRect;
+uniform vec4 uShaftColors[3];  // per zone: rgb, strength
+uniform vec4 uMistColors[3];   // per zone: rgb, opacity
+uniform vec4 uVolume;      // shaft strength, mist on/off, how much solid playfield hides shafts, gust px
+uniform vec4 uMist;        // height, underground fade, lit-by-shaft amount, lit-by-lights amount
 uniform vec4 uPlayer;      // x, y, parting radius, parting amount
+uniform vec4 uLightPos[${AIR_LIGHTS}];  // x, y, radius, intensity
+uniform vec4 uLightCol[${AIR_LIGHTS}];
 
 void main(void) {
   vec2 p = vWorld;
   float t = uAir.x;
-  float s = uShaftColor.a > 0.0 ? shaftAt(p) : 0.0;
-  vec3 rgb = uShaftColor.rgb * (s * uShaftColor.a);
+  vec3 zone = zoneAt(p.x);
+  vec4 shaftColor = uShaftColors[0] * zone.x + uShaftColors[1] * zone.y + uShaftColors[2] * zone.z;
+  float strength = uVolume.x * shaftColor.a;
+  float s = strength > 0.0 ? shaftAt(p) : 0.0;
+  if (uVolume.z > 0.0 && s > 0.0) {
+    // Beams in front of the character still pass behind solid things at its depth.
+    s *= 1.0 - uVolume.z * texture(uMask, (p - uRect.xy) / uRect.zw).a;
+  }
+  vec3 rgb = shaftColor.rgb * (s * strength);
   float a = 0.0;
-  if (uMistColor.a > 0.0) {
+  if (uVolume.y > 0.0) {
     float gy = groundY(p.x);
     float above = gy - p.y;
     if (above > -uMist.y * 3.0 && above < uMist.x * 4.0) {
-      // Two sheets sliding past each other at different speeds.
-      float n1 = texture(uNoise, vec2(p.x / 1900.0 - t * 0.0065, p.y / 620.0 + t * 0.002)).r;
-      float n2 = texture(uNoise, vec2(p.x / 760.0 + t * 0.0105, p.y / 330.0 - 0.3)).g;
+      vec4 mistColor = uMistColors[0] * zone.x + uMistColors[1] * zone.y + uMistColors[2] * zone.z;
+      // Two sheets sliding past each other at different speeds, pushed along by the wind's wave.
+      float push = windAt(p.x, t, 0.0) * uVolume.w;
+      float n1 = texture(uNoise, vec2((p.x - push) / 1900.0 - t * 0.0065, p.y / 620.0 + t * 0.002)).r;
+      float n2 = texture(uNoise, vec2((p.x - push * 1.6) / 760.0 + t * 0.0105, p.y / 330.0 - 0.3)).g;
       float n = smoothstep(0.22, 0.85, n1 * 0.65 + n2 * 0.35);
       // Thick sheets rise higher, so the top of the mist is ragged; it thins out again right at
       // the surface line so it never draws the ground's outline.
@@ -110,8 +135,17 @@ void main(void) {
       float fall = exp(-max(above, 0.0) / h) * smoothstep(-uMist.y, uMist.y * 1.6, above + n * uMist.y);
       vec2 dp = (p - uPlayer.xy) / uPlayer.z;
       float part = 1.0 - uPlayer.w * exp(-dot(dp, dp));
-      a = uMistColor.a * fall * (0.12 + 0.88 * n) * part;
-      rgb = rgb * (1.0 - a) + uMistColor.rgb * a + uShaftColor.rgb * (s * a * uMist.z);
+      a = mistColor.a * fall * (0.12 + 0.88 * n) * part;
+      // Point lights spill a long way through the mist.
+      vec3 glow = vec3(0.0);
+      for (int i = 0; i < ${AIR_LIGHTS}; i++) {
+        vec4 l = uLightPos[i];
+        if (l.w <= 0.0) continue;
+        vec2 d = (p - l.xy) / l.z;
+        float q = clamp(1.0 - dot(d, d), 0.0, 1.0);
+        glow += uLightCol[i].rgb * (q * q * l.w);
+      }
+      rgb = rgb * (1.0 - a) + mistColor.rgb * a + shaftColor.rgb * (s * a * uMist.z) + glow * (a * uMist.w);
     }
   }
   finalColor = vec4(rgb, a);
@@ -132,14 +166,8 @@ ${SHAFT_GLSL}
 uniform vec4 uCam;        // view centre x, y, tile w, tile h
 uniform vec4 uMoteLook;   // min radius, max radius, base brightness, lit brightness
 uniform vec4 uMoteMove;   // drift x, drift y, swirl, wind sway
-uniform vec4 uCool;       // rgb
-uniform vec4 uWarm;       // rgb
-
-float windAt(float x, float clock, float phase) {
-  float t = clock * 0.9 - x * 0.0016 + phase * 6.283;
-  float gust = 0.5 + 0.5 * sin(clock * 0.23 - x * 0.0005);
-  return sin(t) * (0.35 + 0.45 * gust) + sin(t * 2.7 + 1.3) * 0.14;
-}
+uniform vec4 uCool[3];    // per zone: rgb of a mote in shade, density 0..1
+uniform vec4 uWarm[3];    // per zone: rgb of a mote in a shaft, base brightness factor
 
 void main(void) {
   float t = uAir.x;
@@ -165,7 +193,13 @@ void main(void) {
   // The nearest ones are out of focus: bigger and fainter.
   float focus = mix(1.0, 0.4, smoothstep(0.72, 1.0, z));
   float bright = (uMoteLook.z * (0.5 + 0.5 * sin(t * 0.4 + ph)) + lit * uMoteLook.w * twinkle) * mix(0.55, 1.0, z) * focus * airborne;
-  vColor = vec4(mix(uCool.rgb, uWarm.rgb, clamp(lit * 4.0, 0.0, 1.0)) * bright, 0.0);
+  vec3 zone = zoneAt(world.x);
+  vec4 cool = uCool[0] * zone.x + uCool[1] * zone.y + uCool[2] * zone.z;
+  vec4 warm = uWarm[0] * zone.x + uWarm[1] * zone.y + uWarm[2] * zone.z;
+  // Fewer motes where the zone asks for fewer: the same ones are always the first to go.
+  bright *= smoothstep(0.0, 0.08, cool.a - fract(aSeed.w * 29.3));
+  bright *= mix(warm.a, 1.0, clamp(lit * 4.0, 0.0, 1.0));
+  vColor = vec4(mix(cool.rgb, warm.rgb, clamp(lit * 4.0, 0.0, 1.0)) * bright, 0.0);
   vCorner = aPosition;
   mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
   gl_Position = vec4((mvp * vec3(world + aPosition * radius, 1.0)).xy, 0.0, 1.0);

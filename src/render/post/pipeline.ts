@@ -21,7 +21,8 @@ import {
   type TEXTURE_FORMATS,
   Texture,
 } from 'pixi.js';
-import { BLOOM_LEVELS, LIGHT_TARGET, MAX_LIGHTS, MAX_RECTS } from './config';
+import { MASK_H, MASK_W, playfieldMaskTexture } from '../scene/lib/fx-mask';
+import { BLOOM_LEVELS, LIGHT_TARGET, MAX_LIGHTS } from './config';
 import {
   COMPOSITE_FRAG,
   DOWN_FRAG,
@@ -67,14 +68,14 @@ export class PostFilter extends Filter {
     uVignetteTint: Vec;
     uGrain: Vec;
     uLightBack: Vec;
+    uHalo: Vec;
   };
   readonly prefilterU: { uTap: Vec; uCurve: Vec; uSaturation: number; uBoost: number };
   readonly lightsU: {
     uLights: Vec;
     uLightColors: Vec;
     uLightCount: number;
-    uRects: Vec;
-    uRectCount: number;
+    uDim: number;
     uShape: Vec;
   };
   /** Set by PostStage: bloom knobs that live in per-level uniforms. */
@@ -113,6 +114,7 @@ export class PostFilter extends Filter {
           uVignetteTint: { value: new Float32Array([1, 1, 1, 1]), type: 'vec4<f32>' },
           uGrain: { value: new Float32Array([0, 0, 16 / 9, 0]), type: 'vec4<f32>' },
           uLightBack: { value: new Float32Array([1, 0, 0, 0]), type: 'vec4<f32>' },
+          uHalo: { value: new Float32Array([1, 0.8, 0.5, 0]), type: 'vec4<f32>' },
         },
       },
       // Render the tree at the canvas's own resolution and multisampling: nothing goes soft.
@@ -159,13 +161,14 @@ export class PostFilter extends Filter {
     }
 
     this.lightsF = passFilter('post-lights', LIGHTS_FRAG, {
+      uMask: playfieldMaskTexture().source,
       lightUniforms: {
         uLights: { value: new Float32Array(MAX_LIGHTS * 4), type: 'vec4<f32>', size: MAX_LIGHTS },
         uLightColors: { value: new Float32Array(MAX_LIGHTS * 4), type: 'vec4<f32>', size: MAX_LIGHTS },
         uLightCount: { value: 0, type: 'i32' },
-        uRects: { value: new Float32Array(MAX_RECTS * 4), type: 'vec4<f32>', size: MAX_RECTS },
-        uRectCount: { value: 0, type: 'i32' },
-        uShape: { value: new Float32Array([16 / 9, 1.5, 0.01, 0.05]), type: 'vec4<f32>' },
+        uShape: { value: new Float32Array([16 / 9, 1.5, 1.8, 0.1]), type: 'vec4<f32>' },
+        uDim: { value: 0.5, type: 'f32' },
+        uMaskTexel: { value: new Float32Array([1 / MASK_W, 1 / MASK_H]), type: 'vec2<f32>' },
       },
     });
     this.lightsU = (this.lightsF.resources.lightUniforms as { uniforms: PostFilter['lightsU'] }).uniforms;

@@ -19,16 +19,12 @@
 import { type Container, type Filter, Rectangle } from 'pixi.js';
 import { type CameraView, type RenderContext, VIEW_H, VIEW_W, worldToView } from '../contract';
 import { fxDebug } from '../scene/lib/fx-debug';
-import { MAX_LIGHTS, MAX_RECTS, POST } from './config';
+import { renderPlayfieldMask } from '../scene/lib/fx-mask';
+import { zoneColor, zoneMix, zoneWeights } from '../scene/lib/fx-zones';
+import { MAX_LIGHTS, POST, ZONE_GRADE } from './config';
 import { PostFilter } from './pipeline';
 
 export { POST } from './config';
-
-function rgb(out: Float32Array, hex: number): void {
-  out[0] = ((hex >> 16) & 255) / 255;
-  out[1] = ((hex >> 8) & 255) / 255;
-  out[2] = (hex & 255) / 255;
-}
 
 export class PostStage {
   private filter: PostFilter | null = null;
@@ -109,65 +105,90 @@ export class PostStage {
     u.uTone[1] = Math.min(grade.shoulder, 0.999);
     u.uTone[2] = grade.contrast;
     u.uTone[3] = grade.pivot;
-    rgb(u.uShadow, grade.shadowTint);
-    u.uShadow[3] = grade.shadowLift;
-    rgb(u.uHighlight, grade.highlightTint);
-    u.uHighlight[3] = grade.highlightWarmth;
+    // The grade drifts with the scene's zones as the camera travels.
+    const zw = zoneWeights(camera.x);
+    const za = ZONE_GRADE.amount;
+    const zc = (zone: readonly [number, number, number], base: number, out: Float32Array): void => {
+      zoneColor(zone, zw, out);
+      for (let i = 0; i < 3; i++) {
+        const b = ((base >> (16 - i * 8)) & 255) / 255;
+        out[i] = b + ((out[i] as number) - b) * za;
+      }
+    };
+    const zn = (zone: readonly [number, number, number], base: number): number =>
+      base + (zoneMix(zone, zw) - base) * za;
+    zc(ZONE_GRADE.shadowTint, grade.shadowTint, u.uShadow);
+    u.uShadow[3] = zn(ZONE_GRADE.shadowLift, grade.shadowLift);
+    zc(ZONE_GRADE.highlightTint, grade.highlightTint, u.uHighlight);
+    u.uHighlight[3] = zn(ZONE_GRADE.highlightWarmth, grade.highlightWarmth);
     u.uVignette[0] = vignette.inner;
     u.uVignette[1] = vignette.outer;
     u.uVignette[2] = vignette.strength;
     u.uVignette[3] = vignette.tintAmount;
-    rgb(u.uVignetteTint, vignette.tint);
-    u.uVignetteTint[3] = grade.saturation;
+    zc(ZONE_GRADE.vignetteTint, vignette.tint, u.uVignetteTint);
+    u.uVignetteTint[3] = zn(ZONE_GRADE.saturation, grade.saturation);
     u.uGrain[0] = POST.grain;
     // Wrapped so the grain keeps its precision however long the game has been open.
     u.uGrain[1] = renderClock % 64;
     u.uGrain[2] = VIEW_W / VIEW_H;
 
+    // The playfield mask for this frame (the air layer's front shafts read it too).
+    renderPlayfieldMask(this.ctx.renderer, this.maskLayers());
+
     // Lights: world px -> view heights. Only those whose reach touches the view are sent.
     const lu = f.lightsU;
     let n = 0;
+    let hr = 0;
+    let hg = 0;
+    let hb = 0;
+    let hw = 0;
     for (const l of this.ctx.lights.list) {
       if (n >= MAX_LIGHTS) break;
       if (l.intensity <= 0 || l.radius <= 0) continue;
       const v = worldToView(camera, l.x, l.y);
-      const r = l.radius * camera.zoom;
-      if (v.x < -r || v.x > VIEW_W + r || v.y < -r || v.y > VIEW_H + r) continue;
+      const r = l.radius * lights.reach * camera.zoom;
+      const far = r * lights.hazeReach;
+      if (v.x < -far || v.x > VIEW_W + far || v.y < -far || v.y > VIEW_H + far) continue;
+      const cr = ((l.color >> 16) & 255) / 255;
+      const cg = ((l.color >> 8) & 255) / 255;
+      const cb = (l.color & 255) / 255;
       lu.uLights[n * 4] = v.x / VIEW_H;
       lu.uLights[n * 4 + 1] = v.y / VIEW_H;
       lu.uLights[n * 4 + 2] = r / VIEW_H;
       lu.uLights[n * 4 + 3] = l.intensity;
-      lu.uLightColors[n * 4] = ((l.color >> 16) & 255) / 255;
-      lu.uLightColors[n * 4 + 1] = ((l.color >> 8) & 255) / 255;
-      lu.uLightColors[n * 4 + 2] = (l.color & 255) / 255;
+      lu.uLightColors[n * 4] = cr;
+      lu.uLightColors[n * 4 + 1] = cg;
+      lu.uLightColors[n * 4 + 2] = cb;
+      hr += cr * l.intensity;
+      hg += cg * l.intensity;
+      hb += cb * l.intensity;
+      hw += l.intensity;
       n++;
     }
     lu.uLightCount = n;
     lu.uShape[0] = VIEW_W / VIEW_H;
     lu.uShape[1] = lights.falloff;
-    lu.uShape[2] = (lights.feather * camera.zoom) / VIEW_H;
-    lu.uShape[3] = (lights.reachAbove * camera.zoom) / VIEW_H;
-    u.uLightBack[0] = lights.background;
-
-    // The playfield mask: the collision rects on screen, in view heights.
-    let r = 0;
-    if (n > 0) {
-      const scene = this.ctx.scene;
-      const pad = lights.reachAbove * camera.zoom;
-      const put = (x: number, y: number, w: number, h: number): void => {
-        if (r >= MAX_RECTS) return;
-        const a = worldToView(camera, x, y);
-        const b = worldToView(camera, x + w, y + h);
-        if (b.x < -pad || a.x > VIEW_W + pad || b.y < -pad || a.y > VIEW_H + pad) return;
-        lu.uRects[r * 4] = a.x / VIEW_H;
-        lu.uRects[r * 4 + 1] = a.y / VIEW_H;
-        lu.uRects[r * 4 + 2] = b.x / VIEW_H;
-        lu.uRects[r * 4 + 3] = b.y / VIEW_H;
-        r++;
-      };
-      for (const s of scene.solids) put(s.x, s.y, s.w, s.h);
-      for (const o of scene.oneWays) put(o.x, o.y, o.w, 18);
+    lu.uShape[2] = lights.hazeReach;
+    lu.uShape[3] = lights.background;
+    lu.uDim = lights.inBrightPlaces;
+    u.uLightBack[0] = bloom.paleCut;
+    u.uLightBack[1] = lights.glint;
+    u.uLightBack[2] = lights.warm;
+    // The halo in the air is one scalar per pixel: it takes the lights' mean colour.
+    if (hw > 0) {
+      u.uHalo[0] = hr / hw;
+      u.uHalo[1] = hg / hw;
+      u.uHalo[2] = hb / hw;
     }
-    lu.uRectCount = r;
+  }
+
+  private masked: Container[] | null = null;
+
+  /** The layers that count as "solid at the character's depth". */
+  private maskLayers(): Container[] {
+    this.masked ??= ['playfield', 'playfieldFront']
+      .map((name) => this.target.getChildByLabel(name))
+      .filter((c): c is Container => c !== null);
+    return this.masked;
   }
 }

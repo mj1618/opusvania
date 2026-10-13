@@ -3,7 +3,7 @@
  * and never redeclare Pixi's own filter uniforms (their precision would have to match the vertex
  * shader's): everything they need from them arrives as a varying.
  */
-import { MAX_LIGHTS, MAX_RECTS } from './config';
+import { MAX_LIGHTS } from './config';
 
 /** For passes into our own targets: the quad fills the whole target whatever its size. */
 export const PASS_VERT = /* glsl */ `
@@ -130,46 +130,49 @@ void main(void) {
 `;
 
 /**
- * Sum of the point lights into a small target (rgb), plus "how much playfield is here" (alpha): a
- * soft mask made from the collision rects, reaching a little above their tops to catch the grass.
- * Post has no depth buffer; this is what lets the ember light the ground it stands on and not the
- * fog a hundred metres behind. Positions, radii and rects are in view heights.
+ * The light map. rgb: the point lights as they land on surfaces, i.e. multiplied by the playfield
+ * mask (lib/fx-mask.ts), softened a little. a: a wider, fainter halo for the glow hanging in the
+ * air around each light, unmasked. Positions and radii are in view heights.
  */
 export const LIGHTS_FRAG = /* glsl */ `#version 300 es
 precision highp float;
 in vec2 vPos;
 out vec4 finalColor;
+uniform sampler2D uMask;
 uniform vec4 uLights[${MAX_LIGHTS}];
 uniform vec4 uLightColors[${MAX_LIGHTS}];
 uniform int uLightCount;
-uniform vec4 uRects[${MAX_RECTS}];
-uniform int uRectCount;
-uniform vec4 uShape;  // aspect, falloff, edge feather, reach above the tops
+uniform vec4 uShape;  // aspect, falloff, halo radius factor, light reaching non-playfield
+uniform vec2 uMaskTexel;
+uniform float uDim;
 void main(void) {
   vec2 p = vec2(vPos.x * uShape.x, vPos.y);
   vec3 sum = vec3(0.0);
+  float halo = 0.0;
   for (int i = 0; i < ${MAX_LIGHTS}; i++) {
     if (i >= uLightCount) break;
     vec4 l = uLights[i];
     vec2 d = (p - l.xy) / l.z;
-    float q = clamp(1.0 - dot(d, d), 0.0, 1.0);
+    float r2 = dot(d, d);
+    float q = clamp(1.0 - r2, 0.0, 1.0);
     // A smooth window that reaches zero at the radius, with a brighter core.
-    float f = pow(q, uShape.y) * (0.55 + 0.45 * q * q);
+    float f = pow(q, uShape.y) * (0.5 + 0.5 * q * q);
     sum += uLightColors[i].rgb * (f * l.w);
+    float h = clamp(1.0 - r2 / (uShape.z * uShape.z), 0.0, 1.0);
+    halo += h * h * h * l.w;
   }
   float mask = 0.0;
-  if (dot(sum, vec3(1.0)) > 0.001) {
-    float e = uShape.z;
-    for (int i = 0; i < ${MAX_RECTS}; i++) {
-      if (i >= uRectCount) break;
-      vec4 r = uRects[i];
-      float mx = smoothstep(e, -e, max(r.x - p.x, p.x - r.z));
-      float top = smoothstep(uShape.w, -e, r.y - p.y);
-      float bottom = smoothstep(e, -e, p.y - r.w);
-      mask = max(mask, mx * top * bottom);
-    }
+  if (halo > 0.0005) {
+    vec2 t = uMaskTexel * 2.2;
+    vec4 m = texture(uMask, vPos) * 0.36
+      + (texture(uMask, vPos + vec2(t.x, t.y)) + texture(uMask, vPos + vec2(-t.x, t.y))
+       + texture(uMask, vPos + vec2(t.x, -t.y)) + texture(uMask, vPos + vec2(-t.x, -t.y))) * 0.16;
+    mask = m.a;
+    // Where the place is bright already (the light well) the hero's light matters less.
+    float ambient = dot(m.rgb, vec3(0.3, 0.55, 0.15)) / max(m.a, 0.05);
+    sum *= mix(1.0, uDim, smoothstep(0.22, 0.6, ambient));
   }
-  finalColor = vec4(sum, mask);
+  finalColor = vec4(sum * mix(uShape.w, 1.0, mask), halo);
 }
 `;
 
@@ -191,7 +194,8 @@ uniform vec4 uHighlight;  // rgb tint, warmth
 uniform vec4 uVignette;   // inner, outer, strength, tint amount
 uniform vec4 uVignetteTint; // rgb, saturation
 uniform vec4 uGrain;      // amplitude, time, aspect, unused
-uniform vec4 uLightBack;  // how much of a light reaches what is not playfield, unused x3
+uniform vec4 uLightBack;  // bloom cut on pale brights, glint, warm add, unused
+uniform vec4 uHalo;       // rgb: the lights' mean colour
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -218,20 +222,24 @@ void main(void) {
   col.r = texture(uTexture, clamp(vTextureCoord - off, vClamp.xy, vClamp.zw)).r;
   col.b = texture(uTexture, clamp(vTextureCoord + off, vClamp.xy, vClamp.zw)).b;
 
-  // Point lights: mostly a gain on what is there (so terrain lifts into its own colour, warmed),
-  // plus a breath of haze in the air.
-  // Dark surfaces get relatively more than pale fog behind them (and things that already glow get
-  // nothing: a firefly next to the ember must not blow out), and the surface colour is pulled
-  // part-way to grey first so the light's own colour shows.
+  // Big pale bright areas (sky, lit fog) are bright enough already: they take little bloom
+  // themselves, so the glow budget goes to halos around small, coloured lights.
+  float mx = max(col.r, max(col.g, col.b));
+  float pale = smoothstep(0.5, 0.9, mx) * (1.0 - (mx - min(col.r, min(col.g, col.b))) / max(mx, 1e-4));
+
+  // Point lights. On surfaces: mostly a gain on what is there, so terrain lifts into its own
+  // colour, warmed; dark surfaces get relatively more, and the surface colour is pulled part-way
+  // to grey first so the light's own colour shows. Wet, bright spots (moss tips, water) glint. In
+  // the air: a wide faint halo.
   vec4 lit = texture(uLight, vPos);
-  vec3 light = lit.rgb;
   float ll = dot(col, LUMA);
-  vec3 albedo = mix(vec3(ll), col, 0.6);
-  float lift = uMix.y * 0.35 / (0.2 + ll) * (1.0 - smoothstep(0.3, 0.85, ll));
-  col += albedo * light * (lift * mix(uLightBack.x, 1.0, lit.a)) + light * uMix.z;
+  vec3 albedo = mix(vec3(ll), col, 0.72);
+  float lift = uMix.y * (0.3 + 0.12 / (0.25 + ll)) * (1.0 - smoothstep(0.5, 1.0, ll));
+  col += albedo * lit.rgb * lift + lit.rgb * (ll * ll * uLightBack.y + uLightBack.z);
+  col += uHalo.rgb * (lit.a * uMix.z);
 
   // Bloom.
-  col += texture(uBloom, vPos).rgb * uMix.x;
+  col += texture(uBloom, vPos).rgb * (uMix.x * (1.0 - uLightBack.x * pale));
 
   // Tone: exposure, a soft shoulder instead of clipping, an S-curve around the pivot.
   col = shoulder(col * uTone.x, uTone.y);

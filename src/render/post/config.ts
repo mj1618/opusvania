@@ -10,10 +10,10 @@ export const POST = {
 
   bloom: {
     /** Brightness (max channel, 0..1) where things start to glow, and the soft knee around it. */
-    threshold: 0.62,
+    threshold: 0.58,
     knee: 0.3,
     /** How much of the blurred glow is added back. */
-    intensity: 0.85,
+    intensity: 1.05,
     /** 0..1: how much each wider blur level carries. Higher = wider, softer halo. */
     spread: 0.68,
     /** Tap distance multiplier of the upsample tent (1 = normal). */
@@ -21,24 +21,32 @@ export const POST = {
     /** Saturation of the glow, so cyan plants bleed cyan and the ember bleeds orange, not white. */
     saturation: 1.35,
     /** Extra glow for saturated light: cyan plants and the ember bloom harder than pale sky and fog. */
-    colorBoost: 1.4,
+    colorBoost: 2.6,
+    /** 0..1: how much less bloom lands on pixels that are already bright and pale (sky, lit fog). */
+    paleCut: 0.8,
   },
 
   lights: {
-    /** Multiplicative gain: how much a light lifts the colours already there. */
-    gain: 2.6,
-    /** Additive haze: the little bit of light hanging in the air around the source. */
-    haze: 0.045,
+    /** Gain on surfaces: how much a light lifts the colours already there. */
+    gain: 2.2,
+    /** Strength left where the surroundings are bright already (the light well). */
+    inBrightPlaces: 0.45,
+    /** A little of the light's own colour added to every surface it reaches. */
+    warm: 0.07,
+    /** Glints: extra light on spots that are already bright (wet moss, water highlights). */
+    glint: 0.35,
+    /** The glow hanging in the air around a light, and how far it reaches (x the light's radius). */
+    haze: 0.06,
+    hazeReach: 1.9,
     /** Falloff exponent on the smooth window (higher = tighter core). */
-    falloff: 1.6,
+    falloff: 1.25,
     /**
-     * Lights land on the playfield (a soft mask from the collision rects). This much still reaches
+     * Lights land on the playfield (the mask in lib/fx-mask.ts). This much still reaches
      * everything else on screen (0 = background untouched, 1 = no masking).
      */
-    background: 0.16,
-    /** Softness of the mask's edges and how far it reaches above a surface (grass, plants), world px. */
-    feather: 14,
-    reachAbove: 70,
+    background: 0.1,
+    /** Every light's radius is scaled by this (the skins register a modest reach). */
+    reach: 1.35,
   },
 
   grade: {
@@ -74,6 +82,23 @@ export const POST = {
 
 export type PostConfig = typeof POST;
 
+/**
+ * The grade follows the scene's three moods (lib/fx-zones.ts), blended by the camera's x:
+ * [left glade, light well, right stand]. `amount` scales how far each zone departs from POST.grade
+ * (0 = one grade everywhere).
+ */
+export const ZONE_GRADE = {
+  amount: 1,
+  /** Shadows: moonlit blue, the default teal-indigo, violet dusk. */
+  shadowTint: [0x0a2f66, 0x0c2450, 0x2a1c5a] as const,
+  shadowLift: [0.24, 0.2, 0.25] as const,
+  /** Highlights: cool white, warm gold, rose. */
+  highlightTint: [0xe4f3ff, 0xffe2b8, 0xffdcea] as const,
+  highlightWarmth: [0.3, 0.45, 0.4] as const,
+  saturation: [1.12, 1.08, 1.14] as const,
+  vignetteTint: [0x5f93dc, 0x6f9bd0, 0x8a84d8] as const,
+};
+
 /** Bloom targets, widest first. Fixed in logical units so the look does not depend on window size. */
 export const BLOOM_LEVELS: ReadonlyArray<readonly [number, number]> = [
   [960, 540],
@@ -89,6 +114,3 @@ export const LIGHT_TARGET: readonly [number, number] = [480, 270];
 
 /** Most lights drawn at once (the nearest to the view win). */
 export const MAX_LIGHTS = 12;
-
-/** Most collision rects sent to the light mask (the grove has 21). */
-export const MAX_RECTS = 28;

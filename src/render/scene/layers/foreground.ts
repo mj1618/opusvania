@@ -1,189 +1,234 @@
 /**
- * The foreground: big, dark, out-of-focus plants right in front of the lens that frame the shot.
+ * The foreground: out-of-focus foliage right in front of the lens that frames the shot.
  *
- *   top      boughs and vines hanging in from the top edge
- *   bottom   ferns, grass and broad leaves along the bottom edge
- *   trunks   a leaning trunk framing each end of the scene, and thin lianas hanging through the
- *            full height here and there between them
+ * Two depth planes, both inside `layers.foreground`:
+ *   near  parallax 1.35  big boughs from the top, big ferns and leaves from the bottom, a trunk
+ *                        at each end of the scene. Darkest, blurriest.
+ *   far   parallax 1.15  a low fringe of sprigs and short vines along the top, grass, small ferns
+ *                        and a few flowers along the bottom. Deep green, only slightly soft.
  *
- * Each plant is drawn once as vectors (lib/fx-foliage.ts), baked at half size into one atlas and
- * blurred there once: that is the whole depth-of-field, and it costs one sprite batch per frame.
- * Per frame the sprites only sway (wind) and fade.
+ * Each plant is drawn once as vectors (lib/fx-foliage.ts), baked at half size into its plane's
+ * atlas and blurred there once: that is the whole depth-of-field, and it costs two sprite batches
+ * per frame. Per frame the sprites only move, sway (wind) and fade.
  *
  * COMPOSITION RULES
- * - Heavy masses stay in the top ~15% and bottom ~10% of the frame; only thin vines and frond
- *   tips reach further in. The path through the middle of the frame stays clear.
- * - The layer has parallax 1.35, so it sweeps past faster than the playfield. The top group
- *   would sweep right through the frame when the camera climbs, so it is mostly locked to the
- *   screen vertically (`topLock`): climbing reveals a little more of the boughs instead.
+ * - The middle of the frame belongs to the game. Every plant knows where it is on screen: in the
+ *   side fifths of the frame it hangs or grows to its full size, and as the camera carries it
+ *   toward the centre it withdraws past the frame edge (`retract`), so the masses are always in
+ *   the corners and only a low fringe runs along the top and bottom in between.
+ * - The top plants would sweep right through the frame when the camera climbs (parallax > 1), so
+ *   they are mostly locked to the screen vertically (`topLock`).
  * - Anything the character is behind turns translucent (`fadeTo`) until it has passed.
  * - Layout is seeded: the same every run, different on every screen of the scene.
  */
 import { BlurFilter, Container, Graphics, Matrix, Rectangle, RenderTexture, Sprite, Texture } from 'pixi.js';
-import { VIEW_H } from '../../contract';
+import { VIEW_H, VIEW_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { fxDebug } from '../lib/fx-debug';
-import { bough, broadLeaves, fern, grass, lianas, trunk, vine } from '../lib/fx-foliage';
-import { prng, wind } from '../lib/look';
+import { bough, broadLeaves, fern, flowers, grass, trunk, vine, withPlane } from '../lib/fx-foliage';
+import { PALETTE, prng, wind } from '../lib/look';
 
 export const FOREGROUND = {
   seed: 0xf09e,
-  /** Atlas px per layer px, and the blur (in atlas px) that makes the plants out of focus. */
+  /** Atlas px per layer px. */
   bakeScale: 0.5,
-  blur: 2.2,
-  /** Trunks are the nearest things of all: baked this much smaller again, so twice as soft. */
-  trunkBake: 0.5,
   atlasWidth: 2048,
-  /** Overall opacity: a little of the scene glows through, so the frame is deep, not cardboard. */
-  alpha: 0.96,
-  /** 0..1: how much of the camera's vertical travel the top group ignores. */
+  /** Per plane: parallax, blur in atlas px (x2 on screen), opacity. */
+  near: { parallax: 1.35, blur: 2.3, alpha: 0.97 },
+  far: { parallax: 1.15, blur: 0.9, alpha: 1 },
+  /**
+   * Where on screen a plant is at full size: `full` and beyond (distance of its middle from the
+   * frame centre, in frame widths) it is fully out; at `clear` and nearer the centre it is fully
+   * withdrawn.
+   */
+  clear: 0.2,
+  full: 0.37,
+  /** 0..1: how much of the camera's vertical travel the top plants ignore. */
   topLock: 0.95,
   /** Sway amplitudes (radians of rotation for hanging things, of skew for growing things). */
-  /** The layer fades out between these zooms: in a close-up it would be one giant blur. */
-  zoomFade: [1.15, 2] as const,
   swayTop: 0.022,
-  swayBottom: 0.05,
+  swayBottom: 0.045,
   /** Opacity of a plant while the character is behind it, and how fast it gets there (1/s). */
   fadeTo: 0.3,
   fadeRate: 7,
+  /** The layer fades out between these zooms: in a close-up it would be one giant blur. */
+  zoomFade: [1.15, 2] as const,
   /**
    * Trunks frame the two ends of the scene: with the camera clamped at an end they sit at the
-   * frame edge. Layer x, so: screen x = 960 + x - (anchor.x + (cam.x - anchor.x) * 1.35).
+   * frame edge. Near-plane x: screen x = 960 + x - (anchor.x + (cam.x - anchor.x) * 1.35).
    */
   trunks: [
     { x: -730, width: 230, lean: 150 },
     { x: 6540, width: 250, lean: -170 },
   ],
-  /** Lianas hang through the full height here and there (layer x, lean in px). */
-  lianas: [
-    { x: 2165, lean: -180 },
-    { x: 3560, lean: 90 },
-    { x: 4932, lean: 220 },
-  ],
+  flowerColors: [PALETTE.glowViolet, PALETTE.glowCyan, PALETTE.keyGold, 0xff9fc2] as const,
 };
 
-type Group = 'top' | 'bottom' | 'trunk';
+type Plane = 'near' | 'far';
+type Edge = 'top' | 'bottom' | 'trunk';
 
 interface Piece {
   g: Graphics;
-  group: Group;
+  plane: Plane;
+  edge: Edge;
   x: number;
   y: number;
   phase: number;
+  /** How far it withdraws (px, away from the frame) when it is in the middle of the screen. */
+  retract: number;
   /** Local bounds of the drawing. */
   b: Rectangle;
   sprite?: Sprite;
   fade: number;
-  /** Extra reduction when baking: smaller = blurrier (nearer the lens). */
-  bake: number;
   /** Trunks only: the shape, to test whether the character is really behind it. */
   trunk?: { width: number; lean: number; height: number };
 }
 
 export class ForegroundLayer implements EnvModule {
   private ctx!: SceneContext;
-  private readonly top = new Container({ label: 'fg-top' });
-  private readonly rest = new Container({ label: 'fg-bottom+trunks' });
+  private readonly planes: Record<Plane, Container> = {
+    far: new Container({ label: 'fg-far' }),
+    near: new Container({ label: 'fg-near' }),
+  };
   private pieces: Piece[] = [];
   /** Layer y of the frame's top edge when the camera rests on the ground. */
   private groundTop = 0;
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
-    const cov = ctx.layers.coverage('foreground');
     const rnd = prng(FOREGROUND.seed);
     const pieces: Piece[] = [];
-    const add = (group: Group, x: number, y: number, draw: (g: Graphics) => void): void => {
+    const anchor = ctx.layers.anchor;
+    const add = (
+      plane: Plane,
+      edge: Edge,
+      x: number,
+      y: number,
+      retract: number,
+      draw: (g: Graphics) => void,
+    ): Piece => {
       const g = new Graphics();
-      draw(g);
+      withPlane(plane === 'far', () => draw(g));
       const lb = g.getLocalBounds();
-      pieces.push({
+      const piece: Piece = {
         g,
-        group,
+        plane,
+        edge,
         x,
         y,
+        retract,
         phase: rnd(),
         b: new Rectangle(lb.x, lb.y, lb.width, lb.height),
         fade: 1,
-        bake: 1,
-      });
+      };
+      pieces.push(piece);
+      return piece;
+    };
+    /** The x range a plane must cover: what the follow camera can show at that parallax. */
+    const span = (parallax: number): [number, number] => {
+      const reach = (ctx.scene.width / 2 - VIEW_W / 2) * parallax + VIEW_W / 2;
+      return [anchor.x - reach - 300, anchor.x + reach + 300];
     };
 
-    // Top: hanging from just above the frame edge of the ground-level view.
-    this.groundTop = ctx.layers.anchor.y - VIEW_H / 2;
-    const ty = this.groundTop - 66;
-    for (let x = cov.x - 200 + rnd() * 300; x < cov.x + cov.w + 200; x += 400 + rnd() * 420) {
-      const r = rnd();
-      if (r < 0.42) {
-        const dir = rnd() < 0.5 ? -1 : 1;
-        add('top', x, ty, (g) => bough(g, rnd, 300 + rnd() * 240, 120 + rnd() * 80, dir));
-      } else if (r < 0.66) {
-        const n = 2 + Math.floor(rnd() * 3);
-        for (let i = 0; i < n; i++) {
-          add('top', x + i * (40 + rnd() * 70), ty, (g) => vine(g, rnd, 130 + rnd() * 230));
-        }
-      } else if (r < 0.82) {
-        const dir = rnd() < 0.5 ? -1 : 1;
-        add('top', x, ty, (g) => bough(g, rnd, 150 + rnd() * 90, 80 + rnd() * 40, dir));
-        add('top', x + dir * 60, ty, (g) => vine(g, rnd, 110 + rnd() * 120));
-      }
-    }
+    // Both planes agree with the playfield at the anchor, so these two lines are the frame's
+    // top and bottom edge for a camera resting on the ground, in either plane.
+    this.groundTop = anchor.y - VIEW_H / 2;
+    const top = this.groundTop;
+    const bottom = this.groundTop + VIEW_H;
 
-    // Bottom: growing from just below the frame edge of the ground-level view.
-    const by = this.groundTop + VIEW_H + 16;
-    for (let x = cov.x - 100 + rnd() * 200; x < cov.x + cov.w + 100; x += 250 + rnd() * 330) {
-      const r = rnd();
-      if (r < 0.32) add('bottom', x, by, (g) => fern(g, rnd, 130 + rnd() * 80));
-      else if (r < 0.56) add('bottom', x, by, (g) => grass(g, rnd, 150 + rnd() * 130, 170 + rnd() * 110));
-      else if (r < 0.74) add('bottom', x, by, (g) => broadLeaves(g, rnd, 130 + rnd() * 70));
-      else if (r < 0.9) {
-        add('bottom', x, by, (g) => grass(g, rnd, 120 + rnd() * 80, 220));
-        add('bottom', x + 70, by + 6, (g) => fern(g, rnd, 120 + rnd() * 60));
-      }
+    // Near, top: big boughs reaching a third of the way down. Seen whole only in the corners.
+    const [n0, n1] = span(FOREGROUND.near.parallax);
+    for (let x = n0 + rnd() * 300; x < n1; x += 430 + rnd() * 300) {
+      const dir = rnd() < 0.5 ? -1 : 1;
+      const drop = 230 + rnd() * 110;
+      add('near', 'top', x, top - 40, drop + 150, (g) => bough(g, rnd, 380 + rnd() * 240, drop, dir));
+      if (rnd() < 0.5)
+        add('near', 'top', x + dir * 90, top - 30, 330, (g) => vine(g, rnd, 170 + rnd() * 150));
     }
-
+    // Near, bottom: big ferns and broad leaves rising a quarter of the way up.
+    for (let x = n0 + rnd() * 300; x < n1; x += 400 + rnd() * 320) {
+      const r = rnd();
+      const size = 200 + rnd() * 90;
+      if (r < 0.5) add('near', 'bottom', x, bottom + 24, size * 1.05, (g) => fern(g, rnd, size));
+      else if (r < 0.8)
+        add('near', 'bottom', x, bottom + 24, size * 1.05, (g) => broadLeaves(g, rnd, size * 0.9));
+      else add('near', 'bottom', x, bottom + 20, size * 1.2, (g) => grass(g, rnd, size * 1.15, 260));
+    }
     for (const t of FOREGROUND.trunks) {
-      add('trunk', t.x, cov.y - 60, (g) => trunk(g, rnd, t.width, cov.h + 160, t.lean));
-      const piece = pieces[pieces.length - 1] as Piece;
-      piece.trunk = { width: t.width, lean: t.lean, height: cov.h + 160 };
-      piece.bake = FOREGROUND.trunkBake;
+      const height = (VIEW_H / 2) * 2 + (ctx.scene.height - VIEW_H) * FOREGROUND.near.parallax + 400;
+      const y0 = anchor.y - (anchor.y - VIEW_H / 2) * FOREGROUND.near.parallax - VIEW_H / 2 - 120;
+      add('near', 'trunk', t.x, y0, 0, (g) => trunk(g, rnd, t.width, height, t.lean)).trunk = {
+        width: t.width,
+        lean: t.lean,
+        height,
+      };
     }
 
-    for (const l of FOREGROUND.lianas) {
-      add('trunk', l.x, cov.y - 60, (g) => lianas(g, rnd, cov.h + 120, l.lean));
+    // Far, top: a low fringe of sprigs and short vines.
+    const [f0, f1] = span(FOREGROUND.far.parallax);
+    for (let x = f0 + rnd() * 200; x < f1; x += 300 + rnd() * 300) {
+      const r = rnd();
+      const dir = rnd() < 0.5 ? -1 : 1;
+      if (r < 0.55) {
+        const drop = 90 + rnd() * 60;
+        add('far', 'top', x, top - 46, drop * 0.3, (g) => bough(g, rnd, 170 + rnd() * 120, drop, dir));
+      } else if (r < 0.85) {
+        const n = 1 + Math.floor(rnd() * 3);
+        for (let i = 0; i < n; i++) {
+          const len = 110 + rnd() * 150;
+          add('far', 'top', x + i * (36 + rnd() * 50), top - 30, len * 0.55, (g) => vine(g, rnd, len));
+        }
+      }
+    }
+    // Far, bottom: grass, small ferns, a flower here and there.
+    for (let x = f0 + rnd() * 200; x < f1; x += 230 + rnd() * 250) {
+      const r = rnd();
+      if (r < 0.36) {
+        const size = 120 + rnd() * 70;
+        add('far', 'bottom', x, bottom + 14, size * 0.45, (g) => grass(g, rnd, size, 150 + rnd() * 110));
+      } else if (r < 0.62) {
+        const size = 110 + rnd() * 60;
+        add('far', 'bottom', x, bottom + 16, size * 0.45, (g) => fern(g, rnd, size));
+      } else if (r < 0.78) {
+        const size = 110 + rnd() * 50;
+        add('far', 'bottom', x, bottom + 16, size * 0.4, (g) => broadLeaves(g, rnd, size));
+      } else if (r < 0.93) {
+        const size = 130 + rnd() * 70;
+        const color = FOREGROUND.flowerColors[Math.floor(rnd() * FOREGROUND.flowerColors.length)] as number;
+        add('far', 'bottom', x, bottom + 14, size * 0.4, (g) => grass(g, rnd, size * 0.7, 130));
+        add('far', 'bottom', x + 20, bottom + 14, size * 0.35, (g) => flowers(g, rnd, size, color));
+      }
     }
 
     this.pieces = pieces;
-    this.bake();
+    for (const plane of ['far', 'near'] as const) {
+      this.bake(
+        pieces.filter((p) => p.plane === plane),
+        FOREGROUND[plane].blur,
+        this.planes[plane],
+      );
+      this.planes[plane].alpha = FOREGROUND[plane].alpha;
+    }
+    ctx.layers.foreground.addChild(this.planes.far, this.planes.near);
     fxDebug('foreground', FOREGROUND);
     fxDebug('layers', ctx.layers);
-    ctx.layers.foreground.addChild(this.rest, this.top);
-    ctx.layers.foreground.alpha = FOREGROUND.alpha;
   }
 
-  /** Draws every piece into one atlas at reduced size, blurs it once, and makes the sprites. */
-  private bake(): void {
-    const { bakeScale: s, blur, atlasWidth } = FOREGROUND;
+  /** Draws the pieces into one atlas at reduced size, blurs it once, and makes the sprites. */
+  private bake(pieces: Piece[], blur: number, parent: Container): void {
+    const { bakeScale: k, atlasWidth } = FOREGROUND;
     const pad = Math.ceil(blur * 2.5) + 2;
     const renderer = this.ctx.renderer;
-    const max = Math.min(
-      4096,
-      (renderer as unknown as { texture?: { maxTextureSize?: number } }).texture?.maxTextureSize ?? 4096,
-    );
 
     // Shelf packing, tallest first.
-    const cells = this.pieces
-      .map((p) => {
-        const k = s * p.bake;
-        return {
-          p,
-          k,
-          w: Math.ceil(p.b.width * k) + pad * 2,
-          h: Math.ceil(p.b.height * k) + pad * 2,
-          x: 0,
-          y: 0,
-        };
-      })
+    const cells = pieces
+      .map((p) => ({
+        p,
+        w: Math.ceil(p.b.width * k) + pad * 2,
+        h: Math.ceil(p.b.height * k) + pad * 2,
+        x: 0,
+        y: 0,
+      }))
       .sort((a, b) => b.h - a.h);
     let cx = 0;
     let cy = 0;
@@ -199,7 +244,7 @@ export class ForegroundLayer implements EnvModule {
       cx += c.w;
       shelf = Math.max(shelf, c.h);
     }
-    const height = Math.min(max, cy + shelf);
+    const height = Math.min(4096, cy + shelf);
 
     const raw = RenderTexture.create({ width: atlasWidth, height, resolution: 1, antialias: true });
     let first = true;
@@ -210,7 +255,7 @@ export class ForegroundLayer implements EnvModule {
         target: raw,
         clear: first,
         clearColor: [0, 0, 0, 0],
-        transform: new Matrix(c.k, 0, 0, c.k, c.x + pad - c.p.b.x * c.k, c.y + pad - c.p.b.y * c.k),
+        transform: new Matrix(k, 0, 0, k, c.x + pad - c.p.b.x * k, c.y + pad - c.p.b.y * k),
       });
       first = false;
     }
@@ -231,65 +276,79 @@ export class ForegroundLayer implements EnvModule {
       const sprite = new Sprite(
         new Texture({ source: atlas.source, frame: new Rectangle(c.x, c.y, c.w, c.h) }),
       );
-      sprite.anchor.set((pad - p.b.x * c.k) / c.w, (pad - p.b.y * c.k) / c.h);
-      sprite.scale.set(1 / c.k);
-      sprite.position.set(p.x, p.y);
+      sprite.anchor.set((pad - p.b.x * k) / c.w, (pad - p.b.y * k) / c.h);
+      sprite.scale.set(1 / k);
       p.sprite = sprite;
-      (p.group === 'top' ? this.top : this.rest).addChild(sprite);
+      parent.addChild(sprite);
     }
   }
 
   update(frame: SceneFrame): void {
     const layers = this.ctx.layers;
     const cam = frame.camera;
-    const vis = layers.visible('foreground', cam);
-    const f = layers.parallax('foreground');
-    // How far the view has climbed from the ground-level view, in layer px.
-    const climbed = this.groundTop - (layers.anchor.y + (cam.y - layers.anchor.y) * f - VIEW_H / 2);
-    const topShift = -climbed * FOREGROUND.topLock;
-    this.top.y = topShift;
-    const [z0, z1] = FOREGROUND.zoomFade;
+    const cfg = FOREGROUND;
+    const [z0, z1] = cfg.zoomFade;
     const zoomed = Math.min(1, Math.max(0, (cam.zoom - z0) / (z1 - z0)));
-    layers.foreground.alpha = FOREGROUND.alpha * (1 - zoomed);
+    layers.foreground.alpha = 1 - zoomed;
     layers.foreground.visible = zoomed < 1;
+    if (zoomed >= 1) return;
 
-    // The character in this layer's coordinates (it is drawn at parallax 1).
+    // The layer itself is placed at the near plane's parallax; `vis` is what it shows.
+    const vis = layers.visible('foreground', cam);
+    const anchor = layers.anchor;
+    const f = layers.parallax('foreground');
+    // The character in near-plane coordinates (it is drawn at parallax 1).
     const p = frame.sim.player;
     const px = vis.x + vis.w / 2 + (p.cx - cam.x);
     const py = vis.y + vis.h / 2 + (p.cy - cam.y);
-    const k = Math.min(1, frame.dt * FOREGROUND.fadeRate);
+    const k = Math.min(1, frame.dt * cfg.fadeRate);
 
     for (const piece of this.pieces) {
       const s = piece.sprite;
       if (!s) continue;
-      const oy = piece.group === 'top' ? topShift : 0;
-      const x0 = piece.x + piece.b.x;
-      const y0 = piece.y + piece.b.y + oy;
+      // A plane with another parallax is the same layer slid by the difference.
+      const par = cfg[piece.plane].parallax;
+      const sx = (cam.x - anchor.x) * (f - par);
+      const sy = (cam.y - anchor.y) * (f - par);
+      // How far this plane's view has climbed from the ground-level view: top plants ride along.
+      const climbed = (anchor.y - cam.y) * par;
+      const lock = piece.edge === 'top' ? -climbed * cfg.topLock : 0;
+
+      // Where the plant's middle is across the frame: 0 = centre, 0.5 = the frame's edge.
+      const mid = piece.x + sx + piece.b.x + piece.b.width / 2;
+      const across = Math.abs(mid - (vis.x + vis.w / 2)) / vis.w;
+      const t = Math.min(1, Math.max(0, (across - cfg.clear) / (cfg.full - cfg.clear)));
+      const out = t * t * (3 - 2 * t);
+      const away = piece.retract * (1 - out) * (piece.edge === 'top' ? -1 : 1);
+
+      const x = piece.x + sx;
+      const y = piece.y + sy + lock + away;
+      const x0 = x + piece.b.x;
+      const y0 = y + piece.b.y;
       if (
-        x0 > vis.x + vis.w + 60 ||
-        x0 + piece.b.width < vis.x - 60 ||
-        y0 > vis.y + vis.h + 60 ||
-        y0 + piece.b.height < vis.y - 60
+        x0 > vis.x + vis.w + 80 ||
+        x0 + piece.b.width < vis.x - 80 ||
+        y0 > vis.y + vis.h + 80 ||
+        y0 + piece.b.height < vis.y - 80
       ) {
         s.visible = false;
         piece.fade = 1;
         continue;
       }
       s.visible = true;
+      s.position.set(x, y);
       const w = wind(piece.x, frame.clock, piece.phase);
-      if (piece.group === 'top') s.rotation = w * FOREGROUND.swayTop;
-      else if (piece.group === 'bottom') s.skew.x = -w * FOREGROUND.swayBottom;
+      if (piece.edge === 'top') s.rotation = w * cfg.swayTop;
+      else if (piece.edge === 'bottom') s.skew.x = -w * cfg.swayBottom;
 
-      if (piece.group === 'top' || piece.trunk) {
-        const mx = 44;
-        const my = 64;
-        const t = piece.trunk;
-        const behind = t
-          ? Math.abs(px - (piece.x + t.lean * ((py - piece.y) / t.height - 0.5))) < t.width * 0.5 + mx
-          : px > x0 - mx && px < x0 + piece.b.width + mx && py > y0 - my && py < y0 + piece.b.height + my;
-        piece.fade += ((behind ? FOREGROUND.fadeTo : 1) - piece.fade) * k;
-        s.alpha = piece.fade;
-      }
+      const mx = 30;
+      const my = 40;
+      const tr = piece.trunk;
+      const behind = tr
+        ? Math.abs(px - (x + tr.lean * ((py - y) / tr.height - 0.5))) < tr.width * 0.5 + mx
+        : px > x0 - mx && px < x0 + piece.b.width + mx && py > y0 - my && py < y0 + piece.b.height + my;
+      piece.fade += ((behind ? cfg.fadeTo : 1) - piece.fade) * k;
+      s.alpha = piece.fade;
     }
   }
 }
