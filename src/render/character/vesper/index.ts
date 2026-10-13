@@ -149,6 +149,7 @@ export class VesperCharacter implements CharacterSkin {
       swordSide: 0,
       hop: 0,
       spot: 0,
+      stream: 0,
     };
   }
 
@@ -197,6 +198,7 @@ export class VesperCharacter implements CharacterSkin {
     view.tuck = rig.spinW;
     view.wall = rig.wWall;
     view.soar = sec.soar;
+    view.stream = sec.stream;
     // The left and right zones are graded up (post exposure 1.3-1.5): keep her face the same soft pale there.
     const zw = zoneWeights(player.cx);
     view.pale = 0.72 * zw[0] + 0.94 * zw[1] + 0.68 * zw[2];
@@ -339,7 +341,7 @@ export class VesperCharacter implements CharacterSkin {
     if (sig.hurt) {
       fx.scatter(bp, 13, 7);
       // Scales knocked off her wings, thrown the way she is.
-      fx.scales(bp, 10, 14, player.vx || -player.facing, -0.6);
+      fx.scales(bp, 10, 26, player.vx || -player.facing, -0.6);
     }
     // Her last light: she comes apart into dust as she goes.
     if (rig.fadeK > 0 && rig.fadeK < 1) {
@@ -514,6 +516,10 @@ export class VesperCharacter implements CharacterSkin {
       },
       get slashName(): string {
         return SLASH_STYLES[self.slashIdx]!;
+      },
+      /** For capture tools: her mesh (walk up from it to hide what stands in front of her). */
+      get mesh(): unknown {
+        return self.painter.mesh;
       },
       get hidden(): boolean {
         return !self.painter.mesh.visible;

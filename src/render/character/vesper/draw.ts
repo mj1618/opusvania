@@ -87,6 +87,8 @@ export interface View {
   hop: number;
   /** 0..1: the wings' eye-spots flash (the scale-dust slash). */
   spot: number;
+  /** 0..1: the cape streams behind her (the run): its hem is drawn out into a forked tail. */
+  stream: number;
   /** Scales the face's pale tones (the dark zones' grade lifts them: this takes it back out). */
   pale: number;
 }
@@ -635,7 +637,13 @@ const ROWS = 17;
 /** Scalloped, slightly tattered hem: how far each column reaches (1 = the strand's end). */
 // A swallow-tail: a long point at the back edge, a notch, a second shorter point, then it rises
 // toward the front so the legs show under it.
-const HEM = [1.1, 1.17, 1.08, 0.97, 0.9, 0.88, 0.93, 1.02, 1.05, 0.97, 0.9, 0.86, 0.84];
+const HEM = [1.1, 1.17, 1.08, 0.97, 0.9, 0.88, 0.93, 1.02, 1.05, 0.95, 0.84, 0.74, 0.66];
+/**
+ * Streaming behind her in the run the hem is drawn out into one long upper tail with a short step
+ * under it. Tried and rejected: a blunt end (with the eye-spot on it, a fish's head) and a deep
+ * symmetric fork (open jaws). The eye-spot is folded away while the cape streams for the same reason.
+ */
+const HEM_STREAM = [1.18, 1.3, 1.25, 1.12, 0.98, 0.88, 0.82, 0.82, 0.88, 0.92, 0.85, 0.75, 0.66];
 /**
  * The outline spread for the glide, leading edge to trailing edge: a long fore wing with a full
  * outer margin, a waist, then a rounded hind wing that runs out into a short tail.
@@ -679,6 +687,7 @@ function wing(
   soar: number,
   back: number,
   spot: number,
+  stream: number,
 ): void {
   const ns = strands.length;
   for (let q = 0; q < ns; q++) {
@@ -707,7 +716,7 @@ function wing(
   for (let c = 0; c < COLS; c++) {
     const u = c / (COLS - 1);
     const folded =
-      tab(HEM, u) *
+      lerp(tab(HEM, u), tab(HEM_STREAM, u), stream) *
       (1 + lobes * (0.1 * bump(u, 0.2, 0.2) + 0.07 * bump(u, 0.84, 0.13) - 0.3 * bump(u, 0.57, 0.1)));
     const scale = lerp(folded, tab(HEM_SOAR, u), soar);
     for (let r = 0; r < ROWS; r++) {
@@ -800,7 +809,7 @@ function wing(
   // on the fore wing always; a smaller one on the hind wing shows as the wings spread.
   const lum = bright ? sat((k - 0.4) / 0.6) : 0;
   for (let n = 0; n < 2; n++) {
-    const size = n === 0 ? 1 : 0.78 * soar;
+    const size = n === 0 ? 1 - stream * (1 - soar) : 0.78 * soar;
     if (size < 0.2) continue;
     const i = (n === 0 ? 9 * COLS + 7 : 10 * COLS + 12) | 0;
     const ex = gx[i]!;
@@ -936,11 +945,13 @@ function ruff(p: Painter, f: Frame, v: View): void {
 
 /** Mane locks off the back of the head: root (f, u), tip (f, u), bow, width. Forward-frame px. */
 const LOCKS = [
-  // outer row: dark, long, slow. Three broad locks flowing back, overlapping: one mass, not beads.
-  -3.6, 8.2, -13.5, 10.0, -1.8, 5.0, 0, -6.6, 3.4, -17.5, 1.6, -1.4, 5.6, 0, -6.2, -2.6, -14.5, -7.4, -1.6,
-  4.8, 0,
-  // inner row: lighter, shorter, quicker, laid over the joins
-  -5.6, 6.2, -12.5, 6.6, -0.9, 3.4, 1, -6.8, 0.4, -13.5, -2.6, -0.9, 3.4, 1,
+  // Three clear shapes sweeping back, so the head's outline is a round face with a swept crest
+  // (five locks and two top tufts read as a spiky ball): the crest off the top of the skull, long
+  // and a little raised; a broad lock straight back; a short one at the nape. Dark, slow.
+  -1.5, 9.4, -19.5, 13.4, -2.6, 6.2, 0, -6.4, 3.6, -17, 2.4, -1.5, 6.0, 0, -6.0, -3.2, -12.5, -6.4, -1.2, 4.4,
+  0,
+  // One lighter, quicker lock laid over the join of the upper two.
+  -5.4, 7.0, -14.5, 8.2, -0.8, 3.0, 1,
 ];
 
 /** Forehead tufts: root x (fraction of the face half-width, + = front), tip dx, tip dy, width. */
@@ -984,7 +995,7 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
       LOCKS[i + 5]!,
       inner ? SH_LOCK_SOFT : SH_LOCK,
       0.5,
-      0.5,
+      0.22,
     );
   }
 
@@ -1002,32 +1013,6 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
     p.py[i] = Y(lx, ly);
   }
   p.shape(SEG, X(ccx, ccy), Y(ccx, ccy), SH_CROWN, hx + sr * Hh, hy - cr * Hh, hx - sr * Hh, hy + cr * Hh);
-
-  // --- A little tuft on top, between the antennae.
-  tuft(
-    p,
-    X(1.4 * dh, -Hh * 0.9),
-    Y(1.4 * dh, -Hh * 0.9),
-    X(4.2 * dh, -Hh - 5.2) + v.hairX * 0.6,
-    Y(4.2 * dh, -Hh - 5.2) + v.hairY * 0.6,
-    -1.2 * dh,
-    2.2,
-    SH_LOCK,
-    0.55,
-    0.15,
-  );
-  tuft(
-    p,
-    X(-0.6 * dh, -Hh * 0.92),
-    Y(-0.6 * dh, -Hh * 0.92),
-    X(-3.4 * dh, -Hh - 3.8) + v.hairX * 0.6,
-    Y(-3.4 * dh, -Hh - 3.8) + v.hairY * 0.6,
-    -1.0 * dh,
-    2.0,
-    SH_LOCK,
-    0.55,
-    0.15,
-  );
 
   // --- The far antenna leaves the brow behind the face fur.
   antenna(p, v.antennae[far]!, true, v.glow, gRun, v.glintT < 0.6 ? v.glintK : 0);
@@ -1232,9 +1217,20 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   const kNear = lerp(1, lerp(0.74, 1, t), soar);
   // The wing eye-spots answer a glint last, after the eyes.
   const spot = Math.max(v.spot, v.glintT < 0.8 ? v.glintK * bump((v.glintT - 0.3) / 0.14, 0, 1) : 0);
-  wing(p, v.wings[far]!.strands, v.open, kFar, v.glow, clock, v.soarW[far]!, v.back[far]!, spot);
+  wing(p, v.wings[far]!.strands, v.open, kFar, v.glow, clock, v.soarW[far]!, v.back[far]!, spot, v.stream);
   if (behind)
-    wing(p, v.wings[near]!.strands, v.open, kNear, v.glow, clock, v.soarW[near]!, v.back[near]!, spot);
+    wing(
+      p,
+      v.wings[near]!.strands,
+      v.open,
+      kNear,
+      v.glow,
+      clock,
+      v.soarW[near]!,
+      v.back[near]!,
+      spot,
+      v.stream,
+    );
   arm(p, j, far, true, false, v.wall);
   leg(p, j, far, true);
   thorn(p, f, 38 * (1 - 0.65 * v.tuck), v.slashW);
@@ -1247,7 +1243,18 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   torso(p, j);
   leg(p, j, near, false);
   if (!behind)
-    wing(p, v.wings[near]!.strands, v.open, kNear, v.glow, clock, v.soarW[near]!, v.back[near]!, spot);
+    wing(
+      p,
+      v.wings[near]!.strands,
+      v.open,
+      kNear,
+      v.glow,
+      clock,
+      v.soarW[near]!,
+      v.back[near]!,
+      spot,
+      v.stream,
+    );
   ruff(p, f, v);
   arm(p, j, near, false, true, v.wall);
   if (v.bladeFront && swFar) arm(p, j, sw, false, true, 0);

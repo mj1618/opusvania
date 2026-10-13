@@ -50,8 +50,14 @@ const WING: readonly StrandSpec[] = [
 ];
 
 // Lift per strand in degrees relative to the fold (negative = swings back and up).
-const STREAM = [-50, -45, -39, -33, -27];
-const RISE = [-16, -12, -8, -4, 0];
+// The run: the cape streams out behind her as one long pennant. These are angles in the WORLD (the
+// spine's lean is taken out of the wing frame while she runs): the upper edge a little below the
+// horizontal, the lower edge flatter still, so the two converge on the swallow-tail.
+const STREAM = [-71, -75, -79, -83, -87];
+/** Running, the roots spread down the spine (px toward the hips per strand): a broad root, a fine tip. */
+const STREAM_ROOT = 1.1;
+// Rising, the cape trails the jump: down and back in one narrow line.
+const RISE = [-36, -33, -30, -27, -24];
 const APEX = [-72, -58, -44, -29, -14];
 const GLIDE = [-100, -82, -62, -42, -21];
 const DART = [-73, -75, -78, -83, -88];
@@ -59,6 +65,8 @@ const WALL_FREE = [-118, -98, -78, -60, -42];
 const BEAT_UP = [-112, -90, -68, -46, -24];
 /** Wrapped close while she somersaults. */
 const TUCKED = [-58, -68, -80, -90, -100];
+/** Standing: the cape hangs swept back off the shoulders, its front edge behind the legs, so they read. */
+const STAND = [-5, -8, -12, -17, -23];
 /**
  * The glide. The wings unfurl to their full span and open to either side of her on screen, one
  * behind and one ahead: a shallow V. Lift per strand (the leading edge ends ~28 degrees above the
@@ -70,6 +78,14 @@ const SOAR_LEN = [2.3, 2.22, 2.02, 1.9, 1.56];
 const SOAR_CURL = [-0.13, -0.1, -0.05, 0.0, 0.03];
 /** The stoop: swept straight up and back, close together. */
 const DIVE = [-128, -131, -135, -140, -146];
+/**
+ * Running, the antennae lie back in a long lazy S: up and back off the brow, flat, a shallow dip,
+ * and the lantern tips lifting again. Degrees added to each segment's rest angle (A, then B).
+ */
+const ANT_STREAM = [
+  [20, 28, 30, 27, 14, -4],
+  [32, 42, 42, 34, 10, -14],
+];
 
 const ANTENNA_A: ChainSpec = {
   len: [7.6, 7.9, 8.2, 8.2, 8, 7.4],
@@ -120,6 +136,8 @@ export class Secondary {
   readonly faceX: [number, number] = [Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY];
   private readonly fold: [number, number] = [0, 0];
   private ripple = 0;
+  /** 0..1: streaming behind her in the run. */
+  stream = 0;
 
   constructor() {
     this.all = [...this.wings[0].strands, ...this.wings[1].strands, ...this.antennae];
@@ -144,6 +162,7 @@ export class Secondary {
 
     // --- Blend of states.
     const run = rig.wRun * (0.3 + 0.7 * rig.speedK);
+    this.stream = run * (1 - rig.spinW) * (1 - rig.soar);
     const rise = rig.wAir * rig.airRise;
     const apex = rig.wAir * rig.airApex;
     const glide = rig.wAir * rig.airFall;
@@ -172,13 +191,14 @@ export class Secondary {
       0.8 * hold +
       soar * (1.5 + 1.6 * Math.max(0, ck)) +
       1.2 * dive +
-      0.5 * Math.min(1, Math.abs(rig.slashWing));
+      0.5 * Math.min(1, Math.abs(rig.slashWing)) -
+      0.45 * run * (1 - dash) * (1 - tuck);
     const dragK =
       (1 - rig.wAir * (0.45 + 0.3 * rig.airRise) - 0.55 * dash - 0.3 * wall) *
       (1 - 0.5 * hold) *
       (1 - 0.5 * soar);
     // The lope: a soft half-beat of the wings each stride, up through the float, down at the push.
-    const stride = Math.sin(4 * Math.PI * (rig.phase - 0.2)) * run * 1.6;
+    const stride = Math.sin(4 * Math.PI * (rig.phase - 0.2)) * run * 0.5;
     const dragT = dragK * (1 - 0.85 * tuck);
 
     // --- Ripple: runs faster and deeper with speed.
@@ -189,7 +209,7 @@ export class Secondary {
     const amp =
       (0.045 * (1 - soar) +
         0.1 * settle +
-        0.26 * run +
+        0.3 * run +
         0.15 * glide * (1 - soar) +
         0.07 * wall +
         0.05 * apex * (1 - soar) +
@@ -214,7 +234,9 @@ export class Secondary {
     const mid = sat((cz - 0.42) / 0.58);
     // The wing frame's tilt on screen (clockwise +): the spine's lean, the somersault, the bank.
     const rotScreen =
-      rig.upper * 0.75 * (1 - rig.wDash) * (1 - tuck) * (1 - soar) * d + rig.spinPhi + rig.bank * soar;
+      rig.upper * 0.75 * (1 - rig.wDash) * (1 - tuck) * (1 - soar) * (1 - run) * d +
+      rig.spinPhi +
+      rig.bank * soar;
     // How far each wing has swung out to its own side of her (glide): early in the opening.
     const side = smoothstep(0.03, 0.4, soar);
     // The span grows late and shrinks early, so a folding wing is already short when it swings in.
@@ -248,7 +270,7 @@ export class Secondary {
         const c = wing.strands[k]!;
         const spec = WING[k]!;
         const rf = lerp(spec.f0, spec.f1, this.spread) - far * 1.2;
-        const ru = lerp(spec.u0, spec.u1, this.spread) + far * 0.6;
+        const ru = lerp(spec.u0, spec.u1, this.spread) + far * 0.6 - STREAM_ROOT * k * run;
         const ax0 = cx + fx * rf + ux * ru - sd * cz * 2.2;
         const ay0 = cy + fy * rf + uy * ru;
         // Spread, the roots sit on the shoulder blades, either side of the spine.
@@ -259,8 +281,10 @@ export class Secondary {
         c.lat = -sd * mid * 0.55 * (1 - soar);
         // In the ball the wings draw in with everything else: a close shell.
         c.scale =
-          lerp(1, SOAR_LEN[k]! * (1 + 0.05 * Math.max(0, ck)) * (1 - 0.04 * far), span) * (1 - 0.04 * tuck);
+          lerp(1 + 0.24 * run, SOAR_LEN[k]! * (1 + 0.05 * Math.max(0, ck)) * (1 - 0.04 * far), span) *
+          (1 - 0.04 * tuck);
         let lift =
+          STAND[k]! * rig.wIdle +
           STREAM[k]! * run +
           RISE[k]! * rise +
           APEX[k]! * apex +
@@ -288,7 +312,7 @@ export class Secondary {
         lift = lerp(lift, TUCKED[k]! - 10 * far, tuck);
         lift = lerp(lift, BEAT_UP[k]!, up);
         // The far wing rides higher when open, so both read: fore and hind.
-        lift += far * (-6 - 30 * (glide + apex * 0.6) * (1 - dive) + 9 * run) * (1 - soar);
+        lift += far * (-6 - 30 * (glide + apex * 0.6) * (1 - dive) + 17 * run) * (1 - soar);
         // At rest she resettles her wings now and then: a small lift and shiver.
         lift -= settle * (13 - k * 1.5) * (far > 0.5 ? 0.7 : 1);
         // A glint: a tiny flick; a great one opens them.
@@ -345,8 +369,7 @@ export class Secondary {
       const fl = flick > 0 ? Math.sin(Math.PI * flick) ** 2 * rig.wIdle : 0;
       // In the glide they stream back level; the catch whips them down first; a stoop blows them up.
       c.lift =
-        (13 * run +
-          30 * dash -
+        (30 * dash -
           16 * glide * (1 - rig.soar) +
           8 * rise -
           10 * up +
@@ -362,6 +385,13 @@ export class Secondary {
       c.scale = 1 - 0.04 * tuck;
       c.stiff = 1 + 1.2 * dash + 7 * tuck;
       c.dragK = (1 - 0.3 * dash) * (1 - 0.7 * tuck);
+      // The S, and a slow wave that travels out along it (each antenna on its own time).
+      const as = ANT_STREAM[a]!;
+      for (let i = 1; i < c.n; i++)
+        c.extra[i] =
+          run *
+          (1 - tuck) *
+          (as[i - 1]! * DEG + 0.1 * Math.sin(this.ripple * 0.55 - 0.9 * i + a * 1.7) * (i / (c.n - 1)));
       c.floorY = Number.POSITIVE_INFINITY;
       c.wallSide = wallSide;
       c.wallX = wallX;

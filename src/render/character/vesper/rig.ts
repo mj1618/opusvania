@@ -6,9 +6,10 @@
  * sideways s; projected through a continuous turn factor `d`, +1 right .. -1 left, so a
  * turn-around passes through the camera), tuned for a relaxed, floating mover:
  *
- *   - the run is a bounding lope: a long cycle (RUN_CYCLE px, a footfall every half of it), a short
- *     planted stance and a long float between footfalls; phase advances with distance, the stance
- *     is linear in phase, so planted feet do not slide;
+ *   - the run is a bound: a long cycle (RUN_CYCLE px, a footfall every half of it), a short planted
+ *     stance and a long float between footfalls with the legs in a split, the torso tipped forward
+ *     and the head level; a lighter upright trot at low speed. Phase advances with distance and the
+ *     stance is linear in phase, so planted feet do not slide;
  *   - nothing is driven straight from the blended pose except pelvis and feet: the spine lean, the
  *     head and the hip twist each follow through their own spring (so they trail the pelvis by
  *     different amounts), and the hands are dragged through world-space springs (they lag, swing
@@ -447,7 +448,7 @@ export const BODY = {
   upperArm: 8.4,
   foreArm: 8.8,
   spine: 13,
-  neck: 4.5,
+  neck: 6.5,
   headUp: 10.8,
   hipHalf: 2.9,
   shoulderHalf: 4.2,
@@ -460,18 +461,99 @@ export const BODY = {
   sinHeadYaw: 0.66,
 } as const;
 
-/** Run cycle in world px: a footfall every 128 px. */
-export const RUN_CYCLE = 256;
+/** Stopping out of a run: the braking step's reach (px), toe lift (rad), sink (px), lean back (rad), and how fast it lets go (1/s). */
+const STOP = { foot: 7, toe: 0.3, sink: 4, lean: 0.16, decay: 7.5 } as const;
+/** Run cycle in world px: a footfall every 144 px (a bound of nearly two body heights). */
+export const RUN_CYCLE = 288;
 /** Fraction of the cycle a foot is planted: the rest is float. */
-const STANCE = 0.16;
-const CONTACT_F = 21;
+const STANCE = 0.165;
+/** Where the ball of the foot lands ahead of her, px; it leaves the ground `RUN_CYCLE x STANCE` behind that. */
+const CONTACT_F = 25;
+const TOE_OFF_F = CONTACT_F - RUN_CYCLE * STANCE;
+/** Ball of the foot to the toe tip, px (the toe joint is drawn this far ahead of the ball). */
+const TOE = 2.1;
+/**
+ * The swing of one leg, toe-off to contact, as keys: time 0..1, ball forward, ball up, foot pitch
+ * (0 = flat, 1.57 = toes straight down, more = toes trailing behind the ankle).
+ *
+ * The bound (full speed): the leg that pushed off is left long behind her with the toes pointed
+ * (the split of the float), folds up under the hip as the other foot lands (the passing pose),
+ * reaches far ahead through the next float and comes down and back onto the toes.
+ * The trot (low speed: starting, stopping, short taps): the same path, small and close to the ground.
+ */
+const SWING_BOUND = [
+  0,
+  TOE_OFF_F,
+  0,
+  1.15,
+  0.22,
+  -37,
+  15,
+  2.35,
+  0.5,
+  -3,
+  19,
+  1.75,
+  0.78,
+  33,
+  17,
+  0.8,
+  1,
+  CONTACT_F,
+  0,
+  0.3,
+];
+const SWING_TROT = [
+  0,
+  TOE_OFF_F,
+  0,
+  1.15,
+  0.22,
+  -29,
+  6,
+  1.75,
+  0.5,
+  -4,
+  10,
+  1.2,
+  0.78,
+  25,
+  6.5,
+  0.45,
+  1,
+  CONTACT_F,
+  0,
+  0.3,
+];
+/** One channel (1 forward, 2 up, 3 pitch) of a swing table at t, with the slopes it leaves and arrives at. */
+function swingAt(k: readonly number[], ch: number, t: number, m0: number, m1: number): number {
+  const n = k.length / 4;
+  let i = 0;
+  while (i < n - 2 && t > k[(i + 1) * 4]!) i++;
+  const t0 = k[i * 4]!;
+  const t1 = k[(i + 1) * 4]!;
+  const p0 = k[i * 4 + ch]!;
+  const p1 = k[(i + 1) * 4 + ch]!;
+  const a = i === 0 ? m0 : (p1 - k[(i - 1) * 4 + ch]!) / (t1 - k[(i - 1) * 4]!);
+  const b = i === n - 2 ? m1 : (k[(i + 2) * 4 + ch]! - p0) / (k[(i + 2) * 4]! - t0);
+  const dt = t1 - t0;
+  return hermite(p0, a * dt, p1, b * dt, (t - t0) / dt);
+}
 
 // Channel order: PF PU LEAN CURL HT | AF AU AP | BF BU BP | HAF HAU HBF HBU | TW EYE LOOKY HYAW
+// Air: the same long line as the run. Rising she is stretched into the jump (chest open, chin up,
+// lead knee lifted, the other leg left long behind with the toes pointed, arms trailing low);
+// at the top she opens and floats (legs apart, arms out); falling the legs reach down for the
+// ground, toes first, and the arms lift for balance under the raised cape.
 const RISE = pose([
-  0, 32.5, 0.1, -0.08, -0.14, 3, 9, 0.9, -6, -1.5, 1.35, -3, -14, -7, -11, 0.1, 1, -0.25, 1,
+  0, 34, 0.2, -0.16, -0.24, 7, 9.5, 1.0, -10.5, -3, 1.7, -7, -11.5, -10.5, -8, 0.14, 1, -0.25, 1,
 ]);
-const APEXP = pose([0, 31, 0.04, 0.08, 0, 6, 12, 0.5, -1, 8, 0.9, -6, -10.5, 4, -10, 0.05, 1, 0, 1]);
-const FALL = pose([-1, 33, -0.1, 0.02, 0.14, 5, 2, 0.5, -5, 6, 1.0, -9, -7, 8, -8, 0, 1, 0.4, 1]);
+const APEXP = pose([
+  0, 32, 0.06, -0.05, -0.04, 8.5, 11, 0.75, -9, 5.5, 1.5, -9.5, -6.5, 7, -7.5, 0.08, 1, 0, 1,
+]);
+const FALL = pose([
+  -1, 33.5, -0.12, 0.0, 0.16, 4.5, -1.5, 1.2, -5.5, 2.5, 1.38, -10.5, -2.5, 9, -3.5, 0, 1, 0.4, 1,
+]);
 /**
  * The somersault's ball. A moth folds far tighter than a person: spine curled into a C, head ducked
  * down onto the knees, shins folded hard against the thighs with the feet under her tail, arms
@@ -578,7 +660,7 @@ const UPCUT = pose([0, 34, -0.1, -0.2, -0.32, 2.5, 0.5, 1.1, -2.5, 2, 1.3, 0, 0,
 /** The down-slash (air): knees up out of the way, curled over the blade, off-hand thrown back and up. */
 const DOWNCUT = pose([-2, 34, 0.34, 0.3, 0.42, 7, 15, 0.9, -3, 18, 1.2, 0, 0, -10.5, -2, 0, 1, 0.7, 1]);
 const WALL = pose([
-  3.5, 27, 0.14, 0.08, 0.12, 18.6, 15.5, -1.15, 18.6, 4, -1.2, 11.5, 9.5, 9, -3.5, 0.2, 1, 0.3, 0.5,
+  3.5, 27.6, 0.14, 0.06, 0.12, 18.6, 15.5, -1.15, 18.6, -0.5, -1.25, 11.5, 9.5, 9, -3.5, 0.2, 1, 0.3, 0.5,
 ]);
 const DASH = pose([-12, 31, 1.2, 0.06, -0.1, -36, 27, 1.45, -34, 33, 1.5, -14, -1, -13, 2.5, 0, 0.72, 0, 1]);
 const SKID = pose([5, 24.5, 0.42, 0.1, -0.12, 10, 0, 0, -16, 0, 0.5, 5, -11, -9, -8, 0.2, 0.95, 0, 1]);
@@ -859,6 +941,7 @@ export class Rig {
   private readonly gAxS = new Spring(0, 12, 1);
   private lastVy = 0;
   private lastStep = 0;
+  private stopK = 0;
   /** Delight from a pickup: decays in ~0.4 s. Lifts the head and chest; the wings read it too. */
   joy = 0;
   /** A great glint: the wings open wide once, hold a breath, and fold (0..1 envelope). */
@@ -1081,6 +1164,7 @@ export class Rig {
       this.wide.snap(1);
       startSpin = false;
       this.speedK = 0;
+      this.stopK = 0;
       this.lastCx = p.cx;
       this.lastVx = p.vx;
       this.phase = 0.3;
@@ -1139,6 +1223,11 @@ export class Rig {
     this.wSkid += ((skid ? 1 : 0) - this.wSkid) * approach(skid ? 26 : 13, dt);
     this.wRun += (runT - this.wRun) * approach(runT > this.wRun ? 18 : 17, dt);
     this.wIdle += ((ground ? 1 - runT : 0) - this.wIdle) * approach(17, dt);
+    // Coming to rest out of a run: a small braking step (render only; the sim stops in three frames).
+    if (ground && this.speedNow > 0.5 && speed / 9.6 < this.speedNow - 0.2 && p.inputX === 0)
+      this.stopK = Math.max(this.stopK, this.speedK);
+    if (!ground || runT > 0.9) this.stopK *= Math.exp(-30 * dt);
+    this.stopK *= Math.exp(-STOP.decay * dt);
     this.speedK += (sat(speed / 9.6) - this.speedK) * approach(9, dt);
     this.speedNow = sat(speed / 9.6);
 
@@ -1168,6 +1257,23 @@ export class Rig {
     if (wSum < 1e-3) add(this.idlePose(clock), 1);
     for (let i = 0; i < NP; i++) out[i]! /= wSum;
 
+    // The braking step: the lead foot is set out ahead, toes up, the hips sink and sit back, the
+    // arms swing through; then she rises out of it into the stand.
+    if (this.stopK > 1e-3) {
+      const k = this.stopK * (1 - this.wDash) * (1 - this.wSkid);
+      out[AF]! += STOP.foot * k;
+      out[AP]! -= STOP.toe * k;
+      out[BF]! -= STOP.foot * 0.3 * k;
+      out[BP]! += 0.25 * k;
+      out[PU]! -= STOP.sink * k;
+      out[PF]! -= 2.2 * k;
+      out[LEAN]! -= STOP.lean * k;
+      out[HT]! += 0.1 * k;
+      out[HAF]! += 5 * k;
+      out[HBF]! += 6 * k;
+      out[HAU]! += 1.5 * k;
+      out[HBU]! += 2.5 * k;
+    }
     // A ground turn-around is a pivot: both feet stay down while she swivels through the camera.
     if (p.grounded) {
       const pivot = sat(1.25 * (1 - Math.abs(d))) * (1 - this.wDash);
@@ -1751,7 +1857,13 @@ export class Rig {
       set(j, J_KNEE_A + side, ikOut.x, ikOut.y);
       set(j, J_ANK_A + side, ikOut.ex, ikOut.ey);
       // The toe rolls about the planted ball, so a planted foot stays put whatever the leg does.
-      set(j, J_TOE_A + side, ballX + Math.cos(bp) * 2.1 * d, ballY + Math.sin(bp) * 2.1 - 0.5);
+      // (If the leg cannot reach its target in the air, the foot stays on the leg: it is never drawn stretched.)
+      set(
+        j,
+        J_TOE_A + side,
+        ballX + Math.cos(bp) * TOE * d + (ikOut.ex - ankX),
+        ballY + Math.sin(bp) * TOE - 0.5 + (ikOut.ey - ankY),
+      );
 
       const sx = shX - sd * latSh * BODY.shoulderHalf;
       const sy = shY;
@@ -1999,21 +2111,29 @@ export class Rig {
     const nod = noise1(clock * 0.19, 29);
     const glance = pulse(clock, 8.3, 3.4, 11, 0.8);
     const gl = glance > 0 ? smoothstep(0, 0.22, glance) * (1 - smoothstep(0.72, 1, glance)) : 0;
-    o[PF] = 0.6 + shift * 0.9;
-    o[PU] = 32.1 + breath * 0.4 - Math.abs(shift) * 0.35;
-    o[LEAN] = 0.015 + breath * 0.012 + sway * 0.02 - shift * 0.015;
-    o[CURL] = -0.03 - breath * 0.035;
-    o[HT] = -0.04 + nod * 0.07 + gl * 0.05 - breath * 0.012;
-    o[AF] = 6.2;
+    // Tall and easy: the weight on the back leg (B) with the hips over it, the other foot set
+    // forward and apart with its heel just lifted, spine long, chest open, chin level.
+    o[PF] = 1.2 + shift * 0.9;
+    o[PU] = 33.0 + breath * 0.4 - Math.abs(shift) * 0.35;
+    o[LEAN] = 0.0 + breath * 0.012 + sway * 0.02 - shift * 0.015;
+    o[CURL] = -0.05 - breath * 0.035;
+    o[HT] = -0.05 + nod * 0.07 + gl * 0.05 - breath * 0.012;
+    o[AF] = 7.4;
     o[AU] = 0.1;
-    o[AP] = 0.08;
-    o[BF] = 3.2;
+    o[AP] = 0.2;
+    o[BF] = -1.6;
     o[BU] = 0;
     o[BP] = 0;
-    o[HAF] = 2.2 + sway * 1.1;
-    o[HAU] = -14.6 + breath * 0.5;
-    o[HBF] = -1.8 - sway * 0.9;
-    o[HBU] = -14.9 + breath * 0.22 + nod * 0.3;
+    // The near hand rests by the thorn's hilt at her hip; the other hangs loose. They trade as she turns.
+    const nearA = sat(0.5 + 1.6 * this.yaw.x);
+    const hiltF = 5.6 + sway * 0.4;
+    const hiltU = -10.6 + breath * 0.35;
+    const hangF = -2.2 - sway * 1.0;
+    const hangU = -15.0 + breath * 0.25 + nod * 0.3;
+    o[HAF] = lerp(hangF, hiltF, nearA);
+    o[HAU] = lerp(hangU, hiltU, nearA);
+    o[HBF] = lerp(hiltF, hangF, nearA);
+    o[HBU] = lerp(hiltU, hangU, nearA);
     o[TW] = 0.1 + shift * 0.1;
     o[EYE] = 0.82;
     o[LOOKY] = 0.05 + nod * 0.15;
@@ -2021,66 +2141,81 @@ export class Rig {
     return o;
   }
 
-  /** One leg of the lope at phase `ph` (0 = this foot's contact). */
-  private leg(ph: number): void {
+  /** One leg of the run at phase `ph` (0 = this foot's contact); `b` 0 = the trot .. 1 = the full bound. */
+  private leg(ph: number, b: number): void {
     const o = this.legOut;
     const f = ph - Math.floor(ph);
-    const F1 = CONTACT_F - RUN_CYCLE * STANCE;
     if (f < STANCE) {
       const t = f / STANCE;
       o.f = CONTACT_F - RUN_CYCLE * f;
-      // Lands on the ball with the toe a touch up, rolls, peels the heel late.
-      o.p = t < 0.18 ? lerp(-0.16, 0, t / 0.18) : t < 0.5 ? 0 : 1.1 * ((t - 0.5) / 0.5) ** 1.5;
-      o.u = Math.max(0, -Math.sin(o.p)) * BODY.foot * 0.7;
+      o.u = 0;
+      // Lands on the toes, the heel comes down softly, then peels away again for the push.
+      o.p =
+        t < 0.3 ? lerp(0.3, 0.06, smoothstep(0, 0.3, t)) : lerp(0.06, 1.15, sat((t - 0.45) / 0.55) ** 1.6);
+      // The toe tip is what stays put: the ball rolls up and over it as the heel lifts.
+      o.f += TOE * (1 - Math.cos(o.p));
+      o.u = TOE * Math.sin(o.p);
     } else {
       const t = (f - STANCE) / (1 - STANCE);
-      const span = RUN_CYCLE * (1 - STANCE);
-      // Leaves with the ground's speed, hangs back, swings through late and reaches.
-      o.f = hermite(F1, -span * 0.46, CONTACT_F, -span * 0.5, t);
-      const lift = Math.sin(Math.PI * t ** 0.62);
-      o.u = 17 * lift ** 1.25 * (1 - 0.35 * smoothstep(0.45, 0.9, t)) + 2.2 * Math.sin(Math.PI * t);
-      if (t < 0.16) o.p = lerp(1.1, 1.55, smoothstep(0, 0.16, t));
-      else if (t < 0.62) o.p = lerp(1.55, 0.35, smoothstep(0.16, 0.62, t));
-      else if (t < 0.9) o.p = lerp(0.35, -0.34, smoothstep(0.62, 0.9, t));
-      else o.p = lerp(-0.34, -0.16, smoothstep(0.9, 1, t));
-      o.u += Math.max(0, -Math.sin(o.p)) * BODY.foot * 0.7 * smoothstep(0.86, 1, t);
+      // It leaves and meets the ground at the ground's own speed.
+      const vf = -RUN_CYCLE * (1 - STANCE);
+      const f1 = swingAt(SWING_BOUND, 1, t, vf, vf);
+      const u1 = swingAt(SWING_BOUND, 2, t, 55, -95);
+      const p1 = swingAt(SWING_BOUND, 3, t, 4, -1.5);
+      if (b < 0.999) {
+        o.f = lerp(swingAt(SWING_TROT, 1, t, vf, vf), f1, b);
+        o.u = lerp(swingAt(SWING_TROT, 2, t, 30, -45), u1, b);
+        o.p = lerp(swingAt(SWING_TROT, 3, t, 3, -1), p1, b);
+      } else {
+        o.f = f1;
+        o.u = u1;
+        o.p = p1;
+      }
+      o.u = Math.max(0, o.u);
+      // ... and the same roll carries on for a moment either side of the stance (no step at toe-off or contact).
+      const roll = Math.max(0, 1 - t / 0.1, (t - 0.9) / 0.1);
+      o.f += TOE * (1 - Math.cos(o.p)) * roll;
+      o.u += TOE * Math.sin(o.p) * roll;
     }
   }
 
-  /** A light bounding lope: upright, floating between footfalls, arms loose and low behind. */
+  /**
+   * The run. At speed a bound: long and light, the torso tipped well forward with the head level
+   * and reaching, a float between footfalls with the legs in a split, arms trailing low behind.
+   * At low speed (starting, stopping, short taps) a lighter, more upright trot; the two blend with speed.
+   */
   private runPose(ph: number): Pose {
     const o = this.tmp2;
     const k = this.speedK;
-    this.leg(ph);
+    const b = smoothstep(0.35, 0.95, Math.min(k, this.speedNow));
+    this.leg(ph, b);
     o[AF] = this.legOut.f;
     o[AU] = this.legOut.u;
     o[AP] = this.legOut.p;
-    this.leg(ph + 0.5);
+    this.leg(ph + 0.5, b);
     o[BF] = this.legOut.f;
     o[BU] = this.legOut.u;
     o[BP] = this.legOut.p;
-    // Body height: lowest just after mid-stance, a long soft top in the float.
+    // Body height: lowest just after mid-stance (the soft give), a long rounded top in the float.
     const x = 2 * (ph - STANCE * 0.5 - 0.02);
     const c1 = Math.cos(TAU * x);
-    const c2 = Math.cos(2 * TAU * x);
-    const rise = 0.5 - 0.5 * c1 + 0.14 * (0.5 - 0.5 * c2);
-    o[PF] = 1.2 + 0.9 * Math.sin(TAU * (x - 0.12));
-    // The bound belongs to speed: starting, stopping and turning she steps low instead of hopping.
-    const fl = 0.3 + 0.7 * smoothstep(0.35, 0.95, Math.min(k, this.speedNow));
-    o[AU]! *= 0.45 + 0.55 * fl;
-    o[BU]! *= 0.45 + 0.55 * fl;
-    o[PU] = 28.2 + 11.6 * rise ** 0.66 * fl;
-    o[LEAN] = 0.08 + 0.17 * k - 0.03 * c1;
-    o[CURL] = 0.05 + 0.02 * Math.cos(TAU * (x - 0.2));
-    // The head stays level: it gives back what the spine leans.
-    o[HT] = -0.06 - 0.1 * k + 0.012 * Math.cos(TAU * (x - 0.3));
-    // Arms: low, behind the hips, open; a small lazy swing against the legs.
+    const s1 = Math.sin(TAU * x);
+    const rise = 0.5 - 0.5 * c1 + 0.1 * (0.5 - 0.5 * Math.cos(2 * TAU * x));
+    o[PU] = lerp(30.4, 27.8, b) + lerp(3.2, 9.4, b) * rise ** 0.7;
+    // The hips sit back a little under the tipped spine, and surge with each push.
+    o[PF] = 1 - 2.6 * b + 1.1 * Math.sin(TAU * (x - 0.12));
+    // Chest leading: tipped into the run, opening a touch through the float, folding into the landing.
+    o[LEAN] = 0.09 + 0.55 * k + 0.045 * b * s1;
+    o[CURL] = 0.03 + 0.09 * b + 0.025 * Math.cos(TAU * (x - 0.2));
+    // The head stays level and reaches: it gives back what the spine leans, chin a little up.
+    o[HT] = -0.05 - 0.25 * k + 0.014 * Math.cos(TAU * (x - 0.3));
+    // Arms: trailing low behind the hips, open; a small lazy swing against the legs, never a pump.
     const a = Math.sin(TAU * (ph - 0.07));
-    const b = Math.sin(TAU * (ph - 0.16));
-    o[HAF] = -7.5 + 4.2 * a;
-    o[HAU] = -13.4 + 1.4 * a * a + 0.8 * rise;
-    o[HBF] = -8 - 3.6 * b;
-    o[HBU] = -13 + 1.2 * b * b + 0.8 * rise;
+    const a2 = Math.sin(TAU * (ph - 0.16));
+    o[HAF] = lerp(-6.5, -11, b) + 3.6 * a;
+    o[HAU] = lerp(-13.4, -9.4, b) + 1.4 * a * a + 1.6 * rise * b;
+    o[HBF] = lerp(-7, -11.5, b) - 3.2 * a2;
+    o[HBU] = lerp(-13, -8.8, b) + 1.2 * a2 * a2 + 1.6 * rise * b;
     o[TW] = 0.2 * Math.sin(TAU * (ph + 0.2));
     o[EYE] = 1;
     o[LOOKY] = 0;

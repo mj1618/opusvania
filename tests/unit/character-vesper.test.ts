@@ -3,6 +3,8 @@ import { CameraKick } from '../../src/render/camera/kick';
 import { cameraTuning } from '../../src/render/camera/tuning';
 import {
   J_COUNT,
+  J_HEAD,
+  J_HIP,
   J_TOE_A,
   J_TOE_B,
   Rig,
@@ -50,7 +52,7 @@ function view(over: Partial<PlayerView>): PlayerView {
 const DT = 1 / 60;
 
 describe('vesper rig', () => {
-  it('plants the stance foot: no sliding in the lope at any frame rate', () => {
+  it('the run is a bound: planted feet do not slide at any frame rate, a long float, a wide split, the torso tipped and the head level', () => {
     for (const hz of [60, 144]) {
       const rig = new Rig();
       const dt = 1 / hz;
@@ -60,15 +62,24 @@ describe('vesper rig', () => {
       const last = [Number.NaN, Number.NaN];
       let airborne = 0;
       let frames = 0;
+      let split = 0;
+      let ahead = 0;
+      let behind = 0;
+      let headLo = Number.POSITIVE_INFINITY;
+      let headHi = Number.NEGATIVE_INFINITY;
+      let lean = 0;
+      let headTilt = 0;
       for (let i = 0; i < hz * 3; i++) {
         cx += 9.6 * 60 * dt;
         rig.update(dt, i * dt, view({ cx, vx: 9.6, motion: 'run', inputX: 1 }), []);
         if (i < hz) continue;
         let anyDown = false;
+        const toe: number[] = [];
         for (let side = 0; side < 2; side++) {
           const j = side === 0 ? J_TOE_A : J_TOE_B;
           const x = rig.frame.j[j * 2] ?? 0;
           const y = rig.frame.j[j * 2 + 1] ?? 0;
+          toe.push(x);
           const prev = last[side] ?? Number.NaN;
           const down = y > 1280 - 1.2;
           anyDown ||= down;
@@ -77,13 +88,73 @@ describe('vesper rig', () => {
         }
         frames++;
         if (!anyDown) airborne++;
+        const hx = rig.frame.j[J_HEAD * 2] ?? 0;
+        const hy = rig.frame.j[J_HEAD * 2 + 1] ?? 0;
+        split = Math.max(split, Math.abs((toe[0] ?? 0) - (toe[1] ?? 0)));
+        ahead = Math.max(ahead, Math.max(toe[0] ?? 0, toe[1] ?? 0) - hx);
+        behind = Math.max(behind, cx - Math.min(toe[0] ?? 0, toe[1] ?? 0));
+        headLo = Math.min(headLo, hy);
+        headHi = Math.max(headHi, hy);
+        lean += rig.lean;
+        headTilt = Math.max(headTilt, Math.abs(rig.headAng));
       }
       slides.sort((a, b) => a - b);
       expect(slides.length).toBeGreaterThan(20);
-      expect(slides[Math.floor(slides.length * 0.25)] ?? 1).toBeLessThan(0.05);
-      // A lope floats: both feet are off the ground for a good part of every stride.
-      expect(airborne / frames).toBeGreaterThan(0.3);
+      // The toe tip is the planted point: the ball rolls over it as the heel peels.
+      expect(slides[Math.floor(slides.length * 0.5)] ?? 1).toBeLessThan(0.05);
+      expect(slides[Math.floor(slides.length * 0.9)] ?? 1).toBeLessThan(0.6);
+      // A bound floats: both feet are off the ground for most of every stride.
+      expect(airborne / frames).toBeGreaterThan(0.55);
+      // Long: at full extension the feet are nearly a body height apart (she is ~84 px tall), the
+      // front foot reaches ahead of the head and the rear foot trails far behind her.
+      expect(split).toBeGreaterThan(62);
+      expect(ahead).toBeGreaterThan(8);
+      expect(behind).toBeGreaterThan(30);
+      // Chest leading, head level, and a clear arc.
+      expect(lean / frames).toBeGreaterThan(0.5);
+      expect(headTilt).toBeLessThan(0.16);
+      expect(headHi - headLo).toBeGreaterThan(6);
+      expect(headHi - headLo).toBeLessThan(15);
     }
+  });
+
+  it('the run blends from an upright trot at low speed to the full bound; stopping takes a braking step and settles', () => {
+    const run = (vx: number): { lean: number; split: number } => {
+      const rig = new Rig();
+      let cx = 1000;
+      rig.update(DT, 0, view({ cx }), [{ type: 'spawn', x: cx, y: 1280 }]);
+      let lean = 0;
+      let split = 0;
+      for (let i = 0; i < 180; i++) {
+        cx += vx;
+        rig.update(DT, i * DT, view({ cx, vx, motion: 'run', inputX: 1 }), []);
+        if (i < 60) continue;
+        lean += rig.lean / 120;
+        split = Math.max(split, Math.abs((rig.frame.j[J_TOE_A * 2] ?? 0) - (rig.frame.j[J_TOE_B * 2] ?? 0)));
+      }
+      return { lean, split };
+    };
+    const slow = run(3.4);
+    const fast = run(9.6);
+    expect(slow.lean).toBeLessThan(fast.lean * 0.6);
+    expect(slow.split).toBeLessThan(fast.split - 6);
+    // Stop: the hips dip into the braking step, then she is standing tall again within half a second.
+    const rig = new Rig();
+    let cx = 1000;
+    rig.update(DT, 0, view({ cx }), [{ type: 'spawn', x: cx, y: 1280 }]);
+    for (let i = 0; i < 60; i++) {
+      cx += 9.6;
+      rig.update(DT, i * DT, view({ cx, vx: 9.6, motion: 'run', inputX: 1 }), []);
+    }
+    let lowest = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < 36; i++) {
+      rig.update(DT, 1 + i * DT, view({ cx }), []);
+      if (i > 4 && i < 14) lowest = Math.max(lowest, rig.frame.j[J_HIP * 2 + 1] ?? 0);
+    }
+    const rest = rig.frame.j[J_HIP * 2 + 1] ?? 0;
+    expect(lowest - rest).toBeGreaterThan(1.2);
+    expect(Math.abs(rest - (1280 - 33))).toBeLessThan(1.5);
+    expect(rig.wRun).toBeLessThan(0.02);
   });
 
   it('wings, antennae and joints stay finite and near the body through a teleport, turn, jump, double jump and dash', () => {

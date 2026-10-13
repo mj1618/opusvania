@@ -16,9 +16,9 @@ const GATHER = 4;
 /** A wing scale knocked loose: a small crisp fleck that tumbles and falls. */
 const SCALE = 5;
 const SCALE_TINTS: readonly RGB[] = [
-  [0.86, 0.8, 0.94],
-  [0.6, 0.46, 0.84],
-  [0.95, 0.8, 0.5],
+  [0.93, 0.9, 0.98],
+  [0.78, 0.7, 0.95],
+  [0.98, 0.88, 0.66],
 ];
 const LIT: [number, number, number] = [0, 0, 0];
 const MAX = 260;
@@ -266,16 +266,17 @@ export class Fx {
   scales(pts: Float32Array, n: number, count: number, dx: number, dy: number): void {
     for (let c = 0; c < count; c++) {
       const i = Math.min(n - 1, Math.floor(this.rand() * n));
-      const sp = 120 + this.rand() * 300;
-      const a = Math.atan2(dy, dx) + (this.rand() - 0.5) * 1.9;
+      // A clear burst: most go the way she is thrown, a few every way.
+      const sp = 170 + this.rand() * 330;
+      const a = Math.atan2(dy, dx) + (this.rand() - 0.5) * (c % 4 === 0 ? 6.2 : 2.3);
       this.add(
         SCALE,
         pts[i * 2]! + (this.rand() - 0.5) * 8,
         pts[i * 2 + 1]! + (this.rand() - 0.5) * 8,
         Math.cos(a) * sp,
-        Math.sin(a) * sp - 60,
-        0.3 + this.rand() * 0.3,
-        1.1 + this.rand() * 1.3,
+        Math.sin(a) * sp - 80,
+        0.42 + this.rand() * 0.4,
+        1.9 + this.rand() * 1.5,
       );
     }
   }
@@ -317,9 +318,9 @@ export class Fx {
         q.vx = q.vx * k + Math.sin(clock * 1.7 + q.seed) * 13 * dt;
         q.vy = q.vy * k + (6 + 5 * Math.sin(clock * 1.1 + q.seed * 3)) * dt;
       } else if (q.kind === SCALE) {
-        const k = Math.exp(-5 * dt);
+        const k = Math.exp(-4.2 * dt);
         q.vx *= k;
-        q.vy = q.vy * k + 420 * dt;
+        q.vy = q.vy * k + 380 * dt;
       } else if (q.kind === GATHER) {
         // Faster the nearer it gets: it is being drawn in.
         const k = 1 - Math.exp(-(4 + 16 * (q.age / q.life)) * dt);

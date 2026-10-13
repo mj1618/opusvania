@@ -1,356 +1,170 @@
-# Character skin: Vesper, the moth (`src/render/character/vesper/`, `?char=vesper`)
+# Character skin: Vesper, the moth (`src/render/character/vesper/`)
 
-Slender moth-person; wings worn as a cape. Imports `../hooded/math` and `../hooded/paint`; `chain.ts`
-is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
+THE hero. Slender moth-person, ~84 px tall; wings worn as a cape. Imports `../hooded/math`; `chain.ts`
+(hooded chain + per-segment `extra` angle, `dragK`, `scale`) and `paint.ts` are our own copies.
+Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae; `draw.ts` shapes;
+`fx.ts` dust, trails, scales; `slashfx/` the slash's look; `index.ts` wiring, lights, `window.__vesper`.
 
-## Design decisions (owner feedback, do not undo)
-- **Face = a pale, round heart-shaped fur disc (barn-owl style) with two big gold eyes and nothing else.**
-  No nose, mouth, brows, pupils, liner. Owner asked for "cuter": the eyes are big, round, wide-set and
-  low, each a dark amber rim + a bright core that drifts with the gaze (`S_LOOKX/Y`) + two catchlights,
-  under a lid (`S_EYE`) that blinks, rests half-down in idle and squints on hard landings; they widen on
-  take-off (`S_WIDE`). Flat blank ovals read vacant. Earlier tries that failed: a narrow pale face with chin tufts
-  (skull with a beard); dark brow locks over the eyes (sunglasses / angry V). Outer eye corners are
-  slightly *raised* (relaxed, sure); lowered corners read mournful, which the owner rejected.
-- **No scarf.** Anything pale hanging by the torso reads as an arm. A short fur ruff at the neck only.
-- Antennae are thin shafts with a narrow vane; comb barbs read as fishbones, wide vanes as rabbit ears.
-- Palette (round 5): post now protects the hero (`POST.lights.heroProtect` 1, `heroBloomCut`), so
-  colours are authored near their intended look again: face 0xe4dad4, fur 0xc2bac2, wings 0x9472a6
-  -> 0x2e2548, band 0xdccbc0. Before that matte they had to be ~half as bright. If `heroProtect`
-  drops, darken the pale values again. Judge in `shots`, never by hex.
+## Look: owner decisions, do not undo
+- **Value plan**: a dark plum figure with a SOFT pale lilac-ash face; eyes, lantern tips and wing
+  eye-spots are the only bright things. "Too bright in the face", "it looked better when it wasn't so
+  bright": never brighten her to win a ratio. Face on screen: lit ~160-185 luma, shadow ~110-130.
+- **Shading is crisp and flat** (owner: highlights were "annoying, washed out and blurry"):
+  `painter.coolK = 0`, `keyK = 0.22`, `l2k = 0`. No rim light, no halo behind body or head, no glow
+  on the hem band, no additive haze. Lantern tips a 7 px bloom; eye-spots flat rings.
+- **Face** = a smooth round heart of pale fur with an opaque dark plum hairline under it (6% larger)
+  and two big gold eyes (dark amber rim, bright core that drifts with the gaze, two catchlights, a
+  lid). Nothing else: no nose, mouth, brows, pupils. Nothing may span the brow (a band or shadow there
+  reads as a monobrow / frown); the face meets the crown through four fine uneven tufts (`HAIRLINE`).
+  Outer eye corners slightly raised (lowered = mournful, rejected). Failed: a narrow face with chin
+  tufts (a skull with a beard); dark brow locks (sunglasses).
+- No scarf (anything pale by the torso reads as an arm): a short ruff only; long round ruff puffs
+  read as a hand at her throat. Rows of same-sized round puffs (cheeks, mane, ruff) read as warts.
+- Antennae: shaft half-width 1.7 -> 0.85 px, a narrow vane (comb barbs = fishbones, wide vanes =
+  rabbit ears). They must survive at 64 px.
+- **Mane = three clear locks sweeping back** (crest off the top of the skull, a broad one straight
+  back, a short one at the nape) plus one lighter lock over the join; no tufts between the antennae.
+  Five locks + two top tufts read as a spiky ball in silhouette; pointed tufts as gear teeth.
+- Pale tones are scaled per zone because post grades the zones differently: `view.pale = 0.72 / 0.94
+  / 0.68` (left / centre / right), applied through the `PALE` list and `paleNow` in draw.ts. If
+  post's exposure changes, re-measure the face (zoom 6 crop, post on) and retune those three numbers.
+- She must not visibly shrink in the somersault (lengths 3%, wings 4%, head never).
+- Light / halo numbers of the scene belong to the atmosphere work; her point light `ember` is the
+  midpoint of the lantern tips (radius 300, + dash / flash / soar).
 
-## How it works
-- `rig.ts`: hooded-style 2.5D rig, retuned. Run = lope: `RUN_CYCLE` 256 px (a footfall per 128 px,
-  NOT the sim's 96 px `step` event), stance 18% of the cycle, so both feet are off the ground ~60%
-  of the time; feet still plant (tested). Lean, curl, head pitch and hip twist each chase the blended
-  pose through their own spring (overlap down the spine); hands go through `Drag2` (world-space
-  spring, soft-clamped) so they trail and overshoot on every start, stop, jump, landing.
-- **Double jump = tuck somersault** (owner: "legs come in into a ball and then extend out again").
-  `spinCurve` drives the angle directly (velocity eases in over the snap-in, constant, eases out to
-  exactly one turn; no spring); `spinW` is its own curve (in by 17%, out from 72%); `TUCK` is centred
-  on the box centre, the pivot; spine/head springs, hand drag and squash/stretch are bypassed by
-  `spinW` so nothing lags out of the ball; `OPEN` is blended in on the way out for the overshoot.
-  Every solved joint is rotated about the centre; chains get the angle as extra `rot`. Wings wrap
-  over the back as a shell (`TUCKED` lifts + strong curl, stiff x9), antennae curl round in one arc.
-  The dust burst fires on `sig.opened`. Interrupted: angle goes to the nearest upright exponentially.
-- `wings.ts`: each wing = 5 strand chains (leading .. trailing edge), rest shape = folded cape.
-  States are tables of per-strand lift (STREAM, RISE, APEX, GLIDE, DART, WALL_FREE, TUCKED, BEAT_UP)
-  blended by rig weights; roots slide from the shoulder line to down the back as `spread` rises.
-  Ripple goes into the chains' `extra` rest angles (so the cloth filters it). Mid-turn the two wings
-  splay to either side (`lat`). The far wing rides higher when open so fore/hind both read.
-- `draw.ts`: wing = 13x13 `Painter.grid`; columns are re-sampled along their length for scallops
-  and, with `open`, a fore/hind notch. The eye-spot is painted at a grid cell so it foreshortens.
-- `fx.ts`: gold motes that rise (buoyant), short comet trails from antenna tips and wing hem
-  (only when the point itself moves fast), land/skid dust. Light `ember` = midpoint of the lantern tips.
+## Rig basics (`rig.ts`)
+- 2.5D: poses authored in a forward frame, projected through the turn factor `d` (a spring); the
+  head has its own. Generators (idle, run, air, WALL, DASH, SKID) are cross-faded by smoothed
+  weights; lean, curl, head pitch and hip twist each chase the blend through their own spring; hands
+  go through `Drag2` (world-space spring, soft-clamped) so they trail and overshoot.
+- `BODY.neck` is 6.5 (was 4.5): the head is clearly off the shoulders in every pose.
+- `limb()` blends straight segments with a Catmull-Rom bow by `ROUND` 0.35 (a full bow = banana legs).
+- Ground turn = a planted pivot: foot lift is cut by `1 - |d|` while she swivels through the camera.
+- If a leg cannot reach its target (air poses), the toe joint is moved with the reached ankle: the
+  foot is never drawn stretched.
 
-## Round 3 notes
-- Eyes under the zone grades: rim 0x5e2c04 -> 0xb8660c, core 0xe89a1e -> 0xffd670, almost no additive
-  glow on top (glow is what flattened them to yellow). Catchlights 0.3R / 0.14R, blush alpha 0.5.
-- Ball: TUCK head pitch 2.0 (chin right into the knees), both wings wrap back over the spine as one
-  shell. Sending the far wing forward over the head made a second lobe: don't.
-- `openHold` (decays ~0.5 s after the opening) keeps the wings half spread through the post-spin rise.
-- Run: stance 16%, pelvis arc 7.4 px, wings half-beat once per stride (`stride` in wings.ts).
-- Wall: hand x targets are the wall face itself (`ox + d*(w/2-1.4)`), hands rotate flat and splay fingers.
+## The run (round 17: rebuilt as a bound; owner: "effortless and relaxed like Ori", not "determined")
+- `RUN_CYCLE` 288 px (a footfall every 144 px, 15 frames at top speed; NOT the sim's 96 px `step`),
+  `STANCE` 0.165, contact 25 px ahead, toe-off 22.5 px behind. Both feet are off the ground 67% of
+  the cycle. Phase advances with distance; the stance is linear in phase; the TOE TIP is the planted
+  point (the ball rolls up over it as the heel peels: `TOE`), tested at 60 and 144 Hz.
+- The swing is a key table (`SWING_BOUND`: time, ball forward, up, pitch) through a Hermite spline
+  that leaves and meets the ground at the ground's speed: the pushed-off leg is left long behind
+  with the toes pointed (the split of the float), folds under the hip as the other foot lands (the
+  passing pose), reaches ahead, comes down and back onto the toes. Legs may stretch 24%. Measured:
+  toe-to-toe split 78 px, front toe 27 px ahead of the head, rear toe 40 px behind her centre.
+- Body: lean 0.09 + 0.55 x speed (plus curl), head gives it back and stays level (tilt < 0.1 rad),
+  pelvis 27.8 + 9.4 px arc, head bob ~9 px, hips sit back 2.6 px, arms trail low behind with a small
+  counter-swing. Each footfall kicks the crouch spring by 9 (the soft give).
+- Low speed = `SWING_TROT` (small, close to the ground) and an upright body; `b` (smoothstep of the
+  smoothed speed) blends trot -> bound. The sim reaches top speed in 3 frames and stops in 3, so
+  what is seen of the trot is the first strides and the last.
+- Stop: `stopK` (render only, `STOP`): the lead foot is set out toes-up, hips sink 4 px and sit back,
+  arms swing through; gone in ~0.3 s.
+- **The cape while running** (`wings.ts`): `STREAM` lifts are WORLD angles (the spine's lean is taken
+  out of the wing frame by `1 - run`), upper edge ~19 degrees below the horizontal and the lower edge
+  flatter so they converge; roots spread 1.1 px per strand down the spine; strands 24% longer;
+  stiffness -0.45; ripple amp 0.3; a +-7 degree lift per stride; the far wing rides 11 degrees lower
+  (a second tail). Hem while streaming = `HEM_STREAM` (one long upper tail, a short step under it)
+  and the eye-spot is folded away.
+  Rejected on the way: the cape as a fan with lean-relative lifts (a hump on her back that balloons
+  over her head in the float); roots spread to the hips (a plank at hip height); a blunt end with the
+  eye-spot showing (a fish with an eye); a deep symmetric fork (a crocodile's open jaws).
+- Antennae while running: `ANT_STREAM` adds per-segment angles so they lie back in a lazy S (A arcs
+  higher, B lower and flatter, or the two merge into one fat quiff) with a slow travelling wave.
+- Honest gap to Ori: Ori's whole body is one horizontal stroke 3-4x as long as it is tall (head low,
+  spine level, ears and tail in line). Vesper is a big-headed biped with a 13 px torso: her float is
+  ~1.4x as wide as tall and the long line is carried by the cape and the split legs, with the head
+  still on top. The arms are hidden behind the cape. Going further needs proportions (longer torso),
+  not tuning.
 
-## Round 4 notes (she is THE hero now)
-- Somersault smoothed: 0.48 s; angular velocity is quintic-in (30%), flat, quintic-out (40%)
-  (`spinCurve`, integrated analytically), tuck is `tuckCurve` (quintic in over the first 34%, out over
-  the last 48%, overlapping the turn). Max frame-to-frame change at 60 Hz: angular velocity 6.8 -> 4.3
-  rad/s, tuck rate 18 -> 3.5 /s. A short arm-lift anticipation (`antic`). All driven by render dt.
-  Interrupts hand the current angular velocity to a critically damped spring (no kink).
-  To SEE a landing interrupt: teleport under trunk A (3264,1152) and `J3 .5 J3`.
-- Mane = two rows of round-tipped puffs (`tuft(..., tip)`), inner row lighter and on the fast hair
-  spring, outer on a slower one plus speed ruffle. Pointed tufts read as gear teeth. Keep the ruff
-  short and only half-rounded: long round ruff puffs read as a hand at her throat.
-- Light / halo / glow numbers belong to the atmosphere agent for now: do not retune them here.
+## Standing (round 17)
+- Tall and easy: pelvis 33 (legs nearly straight), weight on leg B under the hips, foot A set 9 px
+  ahead with the heel just lifted, spine upright, chest open. The NEAR hand rests by the thorn's
+  hilt (the two hands trade through `yaw`); the other hangs. Owner once said "legs curved to the
+  front too much": keep the knees nearly straight.
+- Cape at rest: `STAND` sweeps the strands back (front edge 23 degrees) so the front edge hangs
+  behind the legs, and `HEM` rises to 0.66 at the front: legs and pale feet read under a tapering
+  swallow-tail. The sheath tip shows behind.
+- Alive: breath, weight shift, glance (`HYAW`), antenna flick, a wing resettle every ~7 s.
 
-## Stance (round 5, owner: "legs curved to the front too much")
-- Idle: pelvis height 32.1 (legs nearly straight; thigh+shin = 31.5 plus the ankle), pelvis over the
-  weight foot (B at +3.2), relaxed foot A ahead with the heel just lifted, spine upright, chest open.
-- `limb()` blends the two straight segments with the Catmull-Rom bow by `ROUND` 0.35: a full bow
-  drew every bent leg as one C-curve.
+## Air, wall, dash
+- `RISE`: stretched into the jump (lean 0.2, chest open, chin up, lead knee lifted, the other leg
+  long behind with the toes pointed, arms low behind); wings `RISE` trail down-and-back in a narrow
+  line. `APEXP`: open, legs apart, arms out, wings half spread. `FALL`: legs reach down toes first,
+  arms lifted, wings up behind as a parachute (`GLIDE` table). Fall > 22.5 px/f = `dive`.
+- The "long thin drips under her" on the round-16 fall silhouettes were an artefact of that
+  silhouette tool (her light changes the scenery it differenced against); nothing is drawn there.
+- Wall slide: the rig faces the wall, hands on the wall face with fingers splayed, upper foot braced,
+  lower leg long down the wall, the free wing open (`WALL_FREE`).
+- Wing strands have no body collision: a stiff fast flare throws them over the head. Keep flare
+  stiffness boosts low and `BEAT_UP` <= ~-112 degrees. Chain pulls: kG + kL < 1 per sub-step (capped
+  0.6 / 0.35) or a stiffened chain locks into a rod. Chain drag is relative to still air: `dragK` is
+  cut in the air and in the dash or the wings blow straight up/down. The wing rest frame is not
+  rotated by the dash's lean.
 
-## Round 6: value design (see memory/reference-study.md, gap 2)
-- Knight-style: darks are deep plum-indigo (wings 0x553a6e -> 0x150f28, tunic 0x34274e, legs 0x2b2044,
-  crown 0x2e2246), the face disc is the brightest surface (0xf6f0ea lit / 0xbab2cc shade), eye core
-  to 0xffe9a6, pale accents (band, cuffs, feet, ruff) second. Dark shades carry rim 1 / cool 0.95 and
-  the painter's `coolColor` is a brighter moon blue. The cool fill in hooded/paint.ts only reaches
-  edges facing upper-left: a truly continuous rim needs a copy of the painter.
-- Head halo: radius 72 warm, 0.1. `ember` light: radius 300 (+70 dash, +90 flash), intensity 1.15 x glow.
-- Run float (foot lift and pelvis arc) scales with `speedK`, so starts/stops/turns step low.
-- Pickups: `pickup` events set `rig.joy` (head/chest lift, antennae perk, small wing flick, 0.7 / (1 +
-  combo/2)) and a flash through lanterns/eyes. A 'great' runs `rig.flourish` (0.85 s envelope) which
-  drives `rig.soar` to 0.86: the wings open to both sides once and fold. While running the small
-  reaction is nearly invisible next to the pickup renderer's own burst; that is deliberate (no jitter).
+## Somersault (double jump; liked: do not change the physics or the ball)
+- Angular momentum: spin rate = L / I; `tuckAt` is the fold timeline, `inertiaAt` 1 (ball) .. 3.85
+  (open) + 5 for the wings flaring at the kick-out; the angle is the normalised integral
+  (`SPIN_TABLE`), so it ends exactly upright. Turns 1-4, **default 3** (`Rig.turns`, `?turns=`, key T,
+  localStorage `vesper.turns.v3`, `__vesper.turns`). The figure turns about its centre of mass, which
+  is moved onto the box centre as she tucks. `TUCK` pose; wings wrap as one shell (`TUCKED`, stiff x9).
+- At high spin single frames strobe: lights are smeared into rings (`drawSpinRings`); sampled trails
+  fade out there. Landing in the ball = a roll-out (`rolling`, sits 17 px lower, never rocks back).
+  A slash during it kicks her out at once (`spinCut`); dash / wall hand the angular velocity to a
+  critically damped spring. Dust burst on `sig.opened`; `openHold` keeps the wings half spread after.
+- Capture: x 600-900 is under island F1; a tapped double jump has ~30 frames of air.
 
-## Round 7
-- `paint.ts` is now our own copy of the hooded painter: `coolWrap` (0.5) puts the cool rim on every
-  edge the key light leaves dark, not only upper-left ones.
-- Ground turn = pivot: foot lift is cut by `1 - |d|` so both feet stay down through the swivel.
-- Footfall give: each half-cycle of the run kicks the crouch spring by 9.
-- Sheets: scratch `seq.mts`-style capture (one browser, step N + screenshot) survives HMR better than clips.
+## Glide (`motion === 'glide'`; liked; `GLIDE` in rig.ts, `SOAR*` in wings.ts)
+- Wings unfurl (`Chain.scale` x1.56-2.3) and lie to EITHER side on screen (wing A always screen-left)
+  so a mid-air turn swivels the body under wings that stay spread; both drawn behind her at soar > 0.5.
+- `rig.soar` (wing spread) is separate from `rig.wGlide` (body pose). `catchK` = the billow as the
+  sim sheds fall speed; the body is a pendulum about the collar (`swing`); `bank` from vx and ax;
+  slow breath, per-wing corrections, a wing beat every 3.4 s (`rig.beat`), landing reach
+  (`groundDist`), per-wing fold beside solids (`foldT / faceX`), `flare` on touch-down, backlit amber
+  membranes (`View.back`), silk wing-tip trails and shed sparks.
+- A held J only glides after a double jump or below the launch height.
 
-## Round 8: the wing glide (`motion === 'glide'`; numbers in `GLIDE` in rig.ts and the `SOAR*` tables)
-- **Silhouette**: the wings unfurl (`Chain.scale`, strand lengths x1.56-2.3, ~97 px fore wing) and lie
-  to EITHER side of her on screen, wing A always screen-left and wing B screen-right (`c.d` goes to
-  +1 / -1 instead of the body's turn `d`), like HK's Monarch Wings. Because the sides are absolute, a
-  mid-air turn only swivels the body under wings that stay spread; near/far brightness cross-fades
-  with `|d|`. Both wings are drawn BEHIND the body while `soar > 0.5`.
-- `rig.soar` (wing spread, in 25/s; out 6.5 release, 34 dash, 15 wall, 17 fastfall, 11 after the
-  landing flare) is separate from `rig.wGlide` (body pose; drops at 30/s on the ground or it would
-  hold the feet up). Span follows `soar^2`: a folding wing is already short when it swings in.
-  The far wing's flip to its own side happens early (`side`, soar 0.03-0.4), while it is small;
-  flipping at full span showed a dark edge-on slab beside her face for two frames.
-- **Catch**: `catchK` = spring (13, 0.5) kicked by `glideStart.vy` and held up by the sim's real
-  deceleration (`lastVy - vy`), so the billow lasts exactly as long as the 11-frame catch and ends in
-  one overshoot. It raises the leading edges (27 deg), cups the strands, stretches the span 5%, throws
-  the legs down and arms up. The body is a pendulum about the collar (`swing`, screen-space rotation
-  of the solved joints, head at 30%), kicked forward by the catch and driven by horizontal acceleration.
-- **Bank**: `bank` = 0.009 x vx + 0.2 x smoothed ax, added to the wings' frame (and 35% to the body).
-- Steady life: common breath (2.3 and 0.83 rad/s), per-wing noise corrections (0.47, 1.13 Hz-ish),
-  slow ripple, a 15 Hz hem flutter on the last segment scaled by airspeed.
-- Exits: land = `flare` (wings stay up ~0.1 s, +20 deg, then fold); fastfall = `dive` (table `DIVE`,
-  also any fall above 22.5 px/f); dash/wall just use fast `soarOut`. Out of the somersault `openK`'s
-  BEAT_UP is cut by `soar` so the unfurl runs straight into the opening.
-- Draw: wing grid is 17x17 now; hem and band are functions of u/t (`tab`, `bump`), `HEM_SOAR` is the
-  spread outline (waist + short hind tail), second eye-spot and warm membrane light fade in with soar.
-- Fx: `Fx.trail` sheds SPARK particles from all ten strand tips (they keep 12% of her velocity, so
-  her path draws the trail); two wing-tip `Trail`s follow wing A / wing B (fixed, not near/far, or a
-  turn draws a streak across her). Lantern trails are cut 75% in the glide (they read as speed lines).
-- Capture scripts: a held J only glides after a double jump or below the launch height; to catch a
-  long fall use `R+J8 R10 .2 R+J6 R46 R+J200` from trunk B top (3660,192). Scripts passed to
-  `g.input` queue AFTER what is already queued.
-- Round 9 additions: a slow wing beat (`rig.beat`, `pulse()` every 3.4 s, 0.8 s long: lift, press
-  down 34 deg, body rises 2.6 px, `sig.beat` puffs dust); landing reach (`rig.groundDist` from the
-  scene rects, `rig.reach` from 78 px of clear air: legs come under her, wings brake); per-wing fold
-  (`Secondary.foldT/faceX`, set from solids beside her at wing height: that wing shrinks to 30% and
-  its strands are clamped to the solid's face, which is also the wall exit); backlit membranes
-  (`View.back` per wing: the centre zone, plus `shaft<i>` lights whose beam, along KEY_LIGHT, passes
-  the wing); silk wing-tip ribbons (`Trail` with `silk`); denser, longer-lived sparks.
-- Not done: wing beat is hard to pick out on every-4th-frame sheets (tested by number, not by eye);
-  landing reach not checked at zoom.
+## Thorn slash (sim: memory/combat.md; `STROKES`, `SNAP` in rig.ts; look in `slashfx/`)
+- Three strokes per direction picked by the event's `step`; a `Stroke` = an ellipse about the chest
+  sized to the sim's reach, blade angles, frames `wind / cut / hold / home`, two body keys (`K_*`).
+  `wind` = the sim's startup; timeline is render time, frozen in hitstop (the hit frame still moves).
+  The near arm holds the thorn (`swordSide`). Body key is ADDED to the blended pose: running, the
+  stride continues under the cut. Up / down also lerp to `UPCUT` / `DOWNCUT`. Finisher = cleave with
+  a hop (`K_HOP`); the pirouette (`Rig.finisherTurn`) was built and judged worse, off.
+- Shared look: leaf blade (`BLADE_LEN` 46), ONE smear frame (first cut frame), the snap (overshoot at
+  speed, ring out; `back` 0.55). Mark laid in the blade frame as it was when the cut STARTED
+  (`markRoll`); up / down marks 55% wider on the trailing side (`markWide`).
+- Three styles (`SlashStyle`; Y cycles, `?slash=1|2|3`, `__vesper.slash`): **brush** (default: flat
+  opaque cream mark, barbs, dry-brush slits, gone by frame 6-8), ribbon (close to the look the owner
+  rejected; option only), scale-dust (tumbling scales; hers). Everything near her is opaque or
+  additive, never partial alpha (the hero matte turns a faint veil into dark glass).
+- Rejected: a wide translucent band (soap bubble); belly > 0.34 of the reach (a moon / umbrella); deep
+  V notches (shark teeth); three parallel bristles (ribcage); a second smear frame (a second blade).
+- Still open: the up cuts' mark is an arch over her head (the hit area is tall and narrow).
 
-## Value plan (owner, round 9: "too bright in the face", "it looked better when it wasn't so bright")
-- She is a dark plum figure with a SOFT pale lilac-ash face; the eyes, lantern tips and eye-spots are
-  the only bright things. Face on screen: lit side luma ~160-185, shadow ~110-130. Never near-white,
-  no head halo, no rims (see Shading below).
-  Do NOT brighten her to win the look:stats hero ratio; the owner's eye wins.
-- Post grades the three zones differently and that lifts pale surfaces by different amounts, so the
-  pale tones are scaled per zone: `view.pale = 0.72 / 0.94 / 0.68` (left / centre / right, by
-  `zoneWeights(player.cx)`), applied to the face, cheek fur, ruff, hands, wraps, feet and hem band
-  (`PALE` list and `paleNow` in draw.ts). If post's exposure changes, re-measure the face (crop at
-  zoom 6, post on) and retune these three numbers, not the base colours.
-- The face is a smooth disc with a feathered edge (a 8% larger, darker, 60% alpha copy underneath),
-  a brow shadow, three fine pointed cheek tufts. The mane is three broad dark locks plus two lighter
-  ones. Rows of same-sized round puffs (cheeks, mane, ruff) read as a bumpy, warty face at 84 px.
-- Small-glint reaction: the light RUNS: lantern flare, a bead down the antenna (0.16 s), eye bloom,
-  then the wing eye-spots (`View.glintT/glintK`, strength 0.7 + 0.1 per combo step, cap 1.1); the
-  first glint of a run puts a small skip in her stride (`crouch.v -= 34`).
+## Health (sim: memory/enemies.md; `HURT` in rig.ts)
+- `hurt`: recoil pose pops 40% past itself, tones flip for two frames (`Painter.invertK`), wings
+  blown toward the blow, 26 pale scales burst off (`Fx.scales`: 1.9-3.4 px, 0.4-0.8 s, mostly the
+  way she is thrown; no glow) plus 7 motes; then a soft alpha pulse while invulnerable (4.5 Hz;
+  7 Hz read as flicker). Low health dims lanterns and eyes. `fade` dissolves her into motes;
+  `reform` gathers 46 motes and she unfolds from a curl.
 
-## Shading (owner, round 11: "highlights are annoying, washed out and blurry"; "the monobrow looks weird")
-- Crisp and flat, the Knight's way: `painter.coolK = 0` (no cool rim at all), `keyK = 0.22` (a faint
-  warm key edge), `l2k = 0` (no rim from her own lanterns: it moved with the antennae and shimmered).
-  No halo behind the body or head, no glow on the hem band, eye-spots are flat rings (they only
-  glow for a moment when a glint's light reaches them), lantern tips a 7 px bloom, antennae solid dark.
-  Do not add rims, halos or additive haze back. Checked with 4x nearest-neighbour crops at DPR 1 and 2
-  (`shots/vesper/crisp/`): feather is `1 / (layer scale x viewScale)` = one device pixel.
-- Nothing may span the brow: no band, line or shadow across the top of the face (it reads as one
-  heavy eyebrow / a frown). The face meets the crown through four fine uneven tufts (`HAIRLINE`).
+## Pickups
+- `pickup` sets `rig.joy` and a flash; the light RUNS lantern -> antenna bead -> eyes -> eye-spots
+  (`View.glintT/glintK`); a 'great' runs `rig.flourish` (wings open once). The first glint of a run
+  puts a small skip in the stride.
 
-## Somersault (round 11: rebuilt on angular momentum; `SOMERSAULT` in rig.ts)
-- What the physics says (gymnastics / diving sources): in flight angular momentum L is fixed, so the
-  spin rate is L / I; a tight tuck has roughly a quarter to a third of the stretched body's moment of
-  inertia, so pulling in triples or quadruples the spin and kicking out slows it again; the turn is
-  about the centre of mass, which keeps to the ballistic arc; rotation is set at take-off (arm throw,
-  chest drive); the kick-out is timed so she is long and slow at the exit.
-- Ours: `tuckAt(n, u)` is the fold timeline; `inertiaAt` = 1 (ball) .. 3.85 (open; the rig's own
-  joints measure 3.85, `rig.jointI`) plus 5 for the wings flaring at the kick-out (an air brake);
-  momentum ramps in over the first tenth and out over the last; the angle is the normalised integral
-  of L / I (`SPIN_TABLE`, built once for 1 and 2 turns), so it ends exactly upright. `rig.spinOmega`,
-  `rig.spinI` are exposed; the unit test checks omega x I is constant and peaks at the tightest.
-- The figure is rotated about its centre of mass (`MASS` weights) and that centre is moved onto the
-  box centre as she tucks. She must NOT visibly shrink (owner): lengths 3%, wings 4%, head never
-  scaled; roundness comes from folding. Ball: ~43 px across (body), wing shell ~41 px.
-  A 12% shrink and a 38 px ball were tried and rejected.
-- Turns 1-4 (`MAX_TURNS`), **four is the DEFAULT** (owner: "4 summersaults per jump"): 0.48 / 0.56 /
-  0.58 / 0.60 s, peaks 20 / 31 / 42 / 52.5 rad/s (`spinPeak(n)`). Four turns = 50 degrees a frame at
-  60 Hz, chosen clear of 45 and 60 (the ball is two-lobed: at those it would stand still or run
-  backwards). `Rig.turns`; `?turns=1..4`, key T cycles (toast), localStorage `vesper.turns.v2` (the
-  key was bumped so an old stored 2 does not hide the new default), `window.__vesper.turns`.
-- At that speed single frames strobe, so her lights are smeared into rings (`drawSpinRings`,
-  `SPIN_BLUR` in fx.ts): each lantern tip and the near wing's mid point is drawn as an arc back
-  along its circle about `rig.spinCx/Cy` (0.085 s of turning, fading in from 30 to 48 rad/s, so
-  one and two turns barely show it). The sampled `Trail`s are faded out there (a 50-degree step
-  polygon is a zigzag).
-- A tapped double jump on flat ground has ~30 frames of air: four turns always land mid-spin.
-  Landing in the ball = a roll-out (`rolling`): on to the next upright at least `rollMin` (1.1 rad)
-  ahead, critically damped with omega = max(30, v / remaining) so it never rocks back, the ball
-  sits 17 px lower (on the ground) and only unrolls into the crouch in the last ~1.5 rad.
-- A slash during the somersault kicks her out at once (`spinCut`: the interrupt spring at 46, the
-  tuck released at 42/s, the wing burst fired): she unfolds INTO the cut; the blade and trail take
-  the small residual turn (`spinResid`). Delaying the cut to the natural kick-out would put the
-  blade after the sim's hit frames.
-- Capture gotcha: x 600-900 is under F1 and 1900 running right reaches the mid rise: both cut the
-  airtime. For a full double jump use flat open ground and check the log for `headBump`.
-
-## Thorn slash (sim: memory/combat.md; strokes in `STROKES` in rig.ts, the look in `slashfx/`: see the next section)
-- **Three strokes per direction, picked by the event's `step`** (`strokeFor`): fwd 1 = rising draw cut
-  out of the sheath, 2 = flat falling backhand, 3 = gather behind + cleave over the top into a deep
-  lunge with the wings thrown wide. Up: 1 back-over-to-front, 2 front-to-high, 3 gathered cleave.
-  Down: one dive cut (the pogo's rhythm never changes). A `Stroke` = an ellipse about the chest
-  (`reach` = the sim's hit reach for that step, tested against `slashBox`; `tilt`, `sq`), blade
-  angles `a0 -> a1 (+over, -relax)`, frames `wind / cut / hold / home`, and two body keys (`w` end
-  of gather, `f` end of cut; channels `K_*`). The same ellipse places the hand, turns the blade and
-  lays the trail.
-- **Timing is tied to the sim**: the press frame is drawn at stroke frame 1 and `wind` = the sim's
-  startup, so the press frame shows the gathered pose and the first possible hit lands one frame into
-  the cut. The frame a `slashHit` arrives still advances (the sim's hitstop is already > 0 on it):
-  otherwise the hold freezes the gather and the pod bursts before the blade moves. `ease` 3 puts
-  ~2/3 of the arc into that first frame. Timeline is render time, frozen while `hitstop > 0`.
-- **Chaining**: `hold` is SHORT (12 / 13 / 22 frames; home 9 / 9 / 12) so a lone tap is sheathed by
-  ~frame 20 (was 29). The sim allows the next cut from 17 / 19 / 27: by then the blade is part-way
-  down in front and the body key (which lets go over `home`, `rig.slashBody`) is still partly in the
-  follow-through; a new `slash` blends blade, hand and body from wherever they are. `slashEnd`
-  reasons `dash` and `hurt` drop it at once.
-- **The near arm holds the thorn** (`rig.swordSide`, chosen at each `slash` from the facing, or the
-  wall side on a wall slide); twist, off-hand and lead foot mirror with it. Facing left reads like
-  facing right. The sheath is drawn at the hip centre, so it needs no mirroring.
-- **Silhouettes** (check with `window.__vesper.hidden = true` + a frame difference; scratch
-  `sil.sh`): cut 1 ends HIGH (tall, chest open, head back), cut 2 ends LOW and LONG (deep lunge,
-  spine forward, off-arm up behind), the finisher gathers small, HOPS (`K_HOP` 13 px, render only,
-  down again 3 frames after the cut; the ground shadow shrinks under it) and lands wide. Half of
-  the stroke's lean / curl / head bypasses the spine springs (`direct`), or the pose arrives late.
-- Running: the stride continues (no foot sliding); each cut kicks the crouch spring (a dip).
-  Air up cut: `UPCUT` legs together and long, wings forced closed (`slashWing` -1.1): one vertical line.
-- Ends matter: a stroke must not end with the blade parked behind her head (it is held ~15 frames).
-- Body: the stroke's key is ADDED to the blended pose (run legs keep striding; feet channels only
-  when standing; `K_ROT` rolls her in the air; `K_LEGS` trails the legs). Up / down also lerp to the
-  whole poses `UPCUT` / `DOWNCUT`. The lunge leaves the back foot behind for a moment (`lungeBack`).
-  Wings read `rig.slashWing` (-1 folded .. 1.5 thrown wide), `slashTwist` (counterweight: far / near
-  wing differ) and `hangK` (lift during the air hang); antennae get the same flare.
-- **Tried and rejected**: a wide translucent swept band (soft veil + additive body + bright edge
-  line) read as a glass dome / soap bubble, and anything with partial alpha goes into post's hero
-  matte, which takes the scene's exposure off those pixels: a faint veil shows as DARK glass on a
-  lit backdrop. Solid + thin + short-lived reads as a blade and matches her flat shading. A taper
-  in thickness on a wide band draws a straight chord, not a point.
-- Camera kick: `src/render/camera/kick.ts`, numbers in `cameraTuning.kick`, on the `impact` event.
-- Wall slide: the rig faces the wall, the slash goes away. `View.bladeFront` draws the sword arm and
-  blade over the wing (arm A is the far arm when she faces left and was hidden); the head yaw target
-  becomes the slash side; the spine leans out. `View.bladeOver` draws the blade (and arm) over the
-  head on up slashes.
-- A down-slash hit runs `pogo` (legs long, then tuck).
-- Capture: `?nopickups` also removes the pods; a great glint mid-capture opens the wings (flourish)
-  and ruins an air sheet: stand clear of glints or use `?nopickups` for misses.
-- **Pirouette finisher: built, judged worse, switched off** (`Rig.finisherTurn`, `window.__vesper
-  .finisherTurn`, stroke with `turn: 1`; sheets `shots/vesper/slash14/finisher-pirouette-vs-hop.png`).
-  The 2.5D rig shows her face in both halves of a turn and the sim leaves 3 frames before the hit,
-  so at 84 px the revolution reads as a twitch, and the blade's low rising ring repeats cut 1's
-  silhouette: the phrase loses its up / flat / DOWN contrast. A readable turn needs a real back
-  view (hide the face disc, mane and wings in front) and more frames than the sim's wind gives.
-- Running cuts: she sinks and the airborne trailing leg is thrown long (planted feet are never moved).
-
-## The slash's look (round 15, owner: "the sword slash still doesn't look very good"; `slashfx/`)
-- What was wrong (measured on every-frame sheets against HK 367520-07 / -12 and Silksong 1030300-06
-  in `shots/reference/`): the trail was a thin grey sliver at the reach, ~65 px from a 26 px needle
-  of a blade, so it read as a detached moon; nothing joined hand, blade and mark; no frame was bold.
-  The references are a fat near-white wedge that starts AT the hero, is as big as the hero, has a
-  clean outer edge and a torn inner one, and is gone in 3-5 frames.
-- **Shared by every style (fixes, not options)**:
-  - The blade (`blade()` in draw.ts, `BLADE_LEN` 46): a leaf shape (`LEAF` half-widths, 5.5 px at
-    the belly), steel to cream, a dark spine, a guard, a hair of dusk under it. Sheath 38 px; at
-    rest only the gold hilt at the hip and the dark tip behind the cape show.
-  - The smear frame (`slashfx/smear.ts`, `rig.smear0/1`): on the ONE frame where the blade crosses
-    more than 40% of the arc (the first cut frame: `ease` 3 puts 62% there) the blade is drawn as a
-    single tapered opaque shape along that part of the arc, in the blade's own tones, and the
-    sword arm is stretched (`SNAP.arm`). Held through hitstop, so it is the impact frame. A second
-    smear on the next frame (29% of the arc) read as a second blade beside her head: don't.
-  - The snap (`SNAP` in rig.ts): the blade overshoots the arc's end by the stroke's `over` AT SPEED
-    (it accrues as `sw^4` during the cut; an overshoot added after an eased stop is a drift), springs
-    back `back` x that and rings out; the body's end key overshoots 28% with it. `back` 0.85 made
-    the hold a visible second swing; 0.55 holds.
-- **Three styles, one interface** (`SlashStyle` in `slashfx/types.ts`): `begin(cut, strokeAt)`,
-  `frame(f)`, `hit(...)`, `draw(p, f)`. Y cycles them (toast), `?slash=1|2|3`, localStorage
-  `vesper.slash.v1`, `window.__vesper.slash` (1-based) / `.slashName`. `Arc` (common.ts) is the
-  shared laid path: 72 samples from `show x k` to the end, each revealed when the blade passes it,
-  carried with her chest until a blow pins it. The mark's outer edge is the sim's reach; its start
-  is tucked in toward her hand (`tuck` 0.5-0.6 of the reach, cubed) so it grows out of the hand.
-  1. **brush** (default; HK school): one flat opaque cream mark, belly 0.25 / 0.30 of the reach
-     peaking at 70% of the arc, clean outer edge, inner edge stepped by four long shallow barbs,
-     two dry bristle lines near the hand, dusk under-stroke. Full ~2 frames from the cut's start,
-     then it thins to hairline fragments, gone by frame 6 (finisher 8). The finisher adds an inner
-     echo and flecks off the point. Hit: the mark is cut at the contact, a four-point star, hard streaks.
-  2. **ribbon** (Ori school): a streamer (fine tail, full head) with an opaque core plus ADDITIVE
-     light on and inside it (gold, then violet): the additive part is what blooms, because solid
-     pixels are in the hero matte and get no bloom. Slides along its own length for 7-9 frames,
-     waves at the tail, sheds motes. Finisher: a second inner streamer two frames behind. Hit: a
-     small quick ring (a 38 px, 10-frame ring read as a bubble) and motes.
-  3. **scale-dust** (hers): a razor line for ~1 frame, and 170 / 290 tumbling gold-violet scales
-     (`Painter.flake`, opaque, crisp) thrown along the tangent, gone in ~25 frames; the wings'
-     eye-spots flash (`View.spot`); the finisher adds a ring of scales from the hems. Hit: a tight spray.
-- Painter additions: `strip` (opaque band between two polylines, per-sample colour, 1 px feather)
-  and `flake` (a crisp diamond). Everything near her is opaque or additive, never partial alpha.
-- **Tried and rejected this round**: belly 0.34-0.43 of the reach (a fat moon; the finisher an
-  umbrella over her head: its mark now starts at `show x 0.75` and peaks later); deep V notches
-  (shark teeth) and blocky break-up (teeth again: it must THIN as it breaks); three long parallel
-  bristles (a ribcage); a cut line along the whole finisher arch (a dome: it only shows in front);
-  a wing-tip `Trail` as the ribbon's second streamer (the tip barely travels: a hairline).
-- Capture: scratch scripts drive ONE `playwright-cli eval` that steps, draws each frame's crop into
-  a 2D canvas grid and returns a data URL (`--filename`); two sessions, one `?manual&nopickups`, one
-  `?manual` standing at x 1915 for the 3-hit pod. Sheets: `shots/vesper/slash15/final-s<style>-*`.
-- Still short of HK / Ori: the marks are procedural, so the edges are regular where a drawn frame
-  is expressive; the body has one anticipation frame (the sim's startup) and no drawn smear of
-  its own; the up cuts are a tall narrow arch (the hit area is); a slash out of the somersault
-  bends its mark as the residual turn changes mid-cut.
-
-## Round 16: slash finish, silhouette, run, hurt
-- Slash: the mark is laid in the blade frame as it was when the cut STARTED (`Rig.strokeAtRoll`,
-  `markRoll` in index.ts): out of a somersault the residual turn changes by the frame and a mark
-  laid in the live frame came out bent. Up / down marks are let out 55% wider on the trailing side
-  (`markWide`; the reach and the striking side stay true) so they are not a tall thin arch.
-- Smear per style (`SlashStyle.smear`): brush = the blade wedge; ribbon = a thin opaque hair with
-  additive gold on it; scale-dust = a hair-line. The thin kinds only cover the last 42% of the
-  frame's arc: over the whole arc they sat inside the style's own mark as a second crescent.
-- Brush: three seeded dry-brush slits inside the belly (`DRY`: dark hairlines following the arc,
-  only where the mark is over ~5 px thick). Impact star shortened to 0.058 s: on a beetle it and
-  the creature's own flash land together, and a longer star doubled into a blob.
-- Ribbon verdict: at game size it is a clean luminous crescent line, i.e. close to the look the
-  owner rejected. Kept as an option only; brush is the blow, scale-dust is the one that is hers.
-- Silhouette: antennae 30% longer, shaft half-width 1.7 -> 0.85 px, vane 1.75 (were 1.05 -> 0.4 and
-  1.15): they survive at 64 px. Folded hem `HEM` is a swallow-tail (long back point, notch, second
-  point, rising to the front so the legs show). The face's under-copy is now an opaque dark plum
-  hairline (6% larger) instead of a 60% alpha feather: the disc keeps its outline against the mane.
-- Run: `CONTACT_F` 21 (was 18), more back extension after toe-off (swing tangent 0.46), float 11.6 px
-  (was 9.2), lean 0.08 + 0.17 x speed (was 0.05 + 0.09), head gives it back. Foot-plant tests pass.
-- Hurt: the recoil pose pops 40% past itself on frame 1 (`HURT.pop`), her solid tones are flipped
-  for two frames (`Painter.invertK / invertC`: dark plum -> pale lilac, pale face -> dark; no glow),
-  14 crisp scales fly off (`Fx.scales`). Then the invulnerability pulse as before.
-- Silhouette tool: scratch script renders a frame with and without her (`__vesper.hidden`) and
-  thresholds the difference; sheets in `shots/vesper/sil16/` (before / after, 84 px and 64 px rows).
-  Run it on open ground (x 450): at 1400 she runs into the pool, at 3760 into trunk B.
-
-## Health: hurt, fade, re-form (sim: memory/enemies.md; render numbers in `HURT` in rig.ts)
-- `hurt` event: `rig.hurtK` (recoil pose flung along `dir`, feet leading, eyes squeezed, wings thrown
-  open, antennae whipped; held 0.2 s, out over 0.28 s; in the air a jackknife: spine first, hands and
-  feet trailing toward the blow, wings streaming toward it for 0.2 s (`hurtBlow`)), 7 dust motes, slash dropped.
-- While `player.invuln > 0` after the stagger: a soft alpha pulse (`Painter.alphaK`, depth 0.36 at
-  4.5 Hz: 7 Hz read as flicker), never a white flash. `Painter.alphaK / glowK` scale everything drawn between set and reset.
-- Low health: lanterns, eyes and her point light scale `0.5 + 0.5 x (hp - 1) / (hpMax - 1)`, with a
-  slow unease on the last light.
-- `fade`: `rig.fadeK` dissolves her (alpha and glows) over 0.45 s from 0.12 s after the blow while
-  `Fx.scatter` sheds ~150 motes/s from wing hems, head, chest, hips; her light goes out.
-  `reform` (+ `spawn` the same step): `Fx.gather` draws 46 motes in to the new place, she fades in
-  curled (TUCK blend, wings closed) and unfolds over 0.6 s, lights swell once.
-- Kill: `CameraKick` multiplies the kick by `cameraTuning.kick.kill` (1.4) when an `enemyDie`
-  arrives with the `impact`. Sparks on creatures are the same as on pods.
-- Backlit membranes are amber (0.95, 0.6, 0.26), not pink; the wing beat is 58 deg / 1.0 s and still
-  only just readable on sheets.
-
-## Gotchas
-- Wing strands have no body collision: a stiff, fast flare throws them over the head and they
-  come down in FRONT of the body. Keep the flare's stiffness boost low (0.5) and BEAT_UP <= ~-112 deg.
-- Chain pulls: kG + kL must stay below 1 per sub-step (capped 0.6 / 0.35 in our `chain.ts`). With the
-  hooded cap of 0.9 each, a stiffened chain overshoots every sub-step and locks into a straight rod.
-- Fast vertical motion: chain drag is relative to still air, so high drag blows wings straight
-  up/down regardless of the rest shape. `dragK` is cut in the air and in the dash for that reason.
-- Do not rotate the wing rest frame by the dash's 1.2 rad lean (`rot` is scaled by 1 - wDash).
-- Clips fail at random while other agents' edits trigger HMR reloads: retry; for long idles step 10
-  frames per screenshot instead of 1.
+## Capture and review
+- `window.__vesper`: `turns`, `slash`, `slashName`, `finisherTurn`, `hidden`, `mesh` (her Pixi mesh).
+- One `playwright-cli eval` that steps and draws each frame's canvas crop into a 2D canvas grid and
+  returns a data URL survives other agents' HMR reloads. Clean plates: hide `mesh.parent.parent`'s
+  children `playfieldFront`, `foreground`, `air`. **Silhouettes**: hide every layer except
+  `character`, render with and without her (`hidden`), threshold the difference at ~8: exact, and no
+  scenery artefacts (differencing against the lit scene picks up her light on vines and grass).
+- Open flat ground: x 450-1400 at feet y 1280 (pool after 1536), 3200-4608 right; walls for slides at
+  x 3328 / 3584 (teleport to 3350,600 and hold L). The canvas is 1280 wide for a 1920 view: zoom 1.5
+  gives her 84 px, zoom 3 scaled 0.5 the 84 px silhouette, x0.381 the 64 px one.
+- Sheets of this round: `shots/vesper/run17/` (before / after: every-frame run cycle at zoom 4,
+  eight-phase silhouettes at 84 and 64 px, start-run-stop, turn, idle over 5 s, jump / fall, game-size
+  strips per zone).
