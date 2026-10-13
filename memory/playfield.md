@@ -27,7 +27,7 @@
   motion in the vertex shader. `Garden.butterflies` / `.moths` collect their homes during planting.
 - **Elevated tops** (`MossOpts.read`, `TERRAIN.highRead`) get a continuous lit crest and a contact shadow under
   the lip so they separate from the canopy behind.
-- **Depth around the walk line**, back to front in the back mesh: hazy backdrop shrubs and reed stands (`HAZE`), rear
+- **Depth around the walk line**, back to front in the back mesh: hazy reed stands (`HAZE`; hazy shrubs were removed, they read as pale cut-outs in fog), rear
   row shrubs (`REAR`), hero plants every screen or so (`heroGap`), features, grass; then the front fringe.
   `info.keepClear` ranges (the root mound) keep big plants off terrain that should be seen.
 - **Moss is cushions with bare stretches** (`mossCap`): stones, surface roots and leaf litter fill the gaps.
@@ -49,6 +49,15 @@
   droplets of a landing splash (`uSplash`; the quad reaches `splashRoom` px above the surface for them).
 - `pf-terrain.ts` returns `TerrainInfo` (tops, undersides, faces, twigs, pool) and `pf-plants.ts` plants
   from that, so a new solid gets plants for free.
+
+- **Low key at the source** (see reference-study.md): the ground is a form, not a section. `TERRAIN.depthShade`
+  lays washes of `abyss` over everything below the lip so it is near-black by ~150 px; detail painted there is
+  meant to be barely visible. Ground tops carry a rounded moss crown (`crownLift` + `crownMound`). The sun map
+  is discrete pools (most ground gets none); plant tone bases are near-black and only tips in a pool are bright.
+  Glow plants are rare (`glowShare`), small and dim. One hollow per screen.
+- **Islands hang** from slack vine bundles lashed to each end (back plane, baked). **Props** (`paintProps`):
+  a carved standing stone by the pool, a cocoon lantern under the great bough, a moth shrine at the right;
+  `info.lanterns` gives them a dim halo. Plants call `contact()` for a ground shadow under anything big.
 
 ## Knobs (config object at the top of each file)
 `TERRAIN` palette, moss lift/thickness/drip, `mossBare`, `faceUndercut`, `waterDepth`; `BAKE` blur sigmas, bump, key, shadow, interior, `beamWidth`, brushwork (`planes`, `strokes`, `crevice`, `chips`);

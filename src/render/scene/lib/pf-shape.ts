@@ -225,8 +225,9 @@ export function sunAt(x: number, y: number, beamWidth = 760): number {
     0.5 +
     0.25 * Math.sin(x * 0.0131 + 1.7 * Math.sin(y * 0.004)) +
     0.25 * Math.sin(x * 0.0057 - y * 0.0031 + 2.1);
-  const dapple = smoothstep(0.45, 0.8, dp);
-  return clamp(beam * 0.65 + dapple * 0.55, 0, 1);
+  // Discrete pools of light on a dark floor: most ground gets none.
+  const dapple = smoothstep(0.66, 0.84, dp);
+  return clamp(beam * 0.28 + dapple * (0.45 + 0.4 * beam), 0, 1);
 }
 
 /** Where each third of the scene's mood begins and ends (world x): pool glade | light well | deep stand. */

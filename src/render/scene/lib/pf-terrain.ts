@@ -37,9 +37,9 @@ export const TERRAIN = {
   stone: [0x4a7884, 0x3a6474, 0x2f5468, 0x55808a, 0x6c7466, 0x486a50, 0x5a5f7a, 0x76705e] as const,
   rootWood: 0x3a5a56,
   /** Bracket fungus: pale rim, flesh, dark band, pore surface. */
-  fungus: [0x9a8454, 0x7a6644, 0x5c4a3a, 0xc4b68e] as const,
+  fungus: [0x6e6654, 0x554e42, 0x3e3934, 0x8a8472] as const,
   /** The same in dusty rose-brown, for the second fungus island. */
-  fungusRose: [0x8f6a5c, 0x74524c, 0x56403f, 0xc2a898] as const,
+  fungusRose: [0x64544e, 0x4e4240, 0x3a3234, 0x857874] as const,
   bark: 0x1f3d46,
   barkDark: 0x142a34,
   barkLit: 0x3a5c58,
@@ -60,9 +60,21 @@ export const TERRAIN = {
   mossLift: 2,
   mossMound: 4,
   mossThick: 11,
+  /** Ground crown: the moss stands this far above the collision line, plus a slow swell. */
+  crownLift: 5,
+  crownMound: 8,
+  /** Ground below the lip: [depth px, alpha] washes of `abyss` laid over everything painted there. */
+  depthShade: [
+    [26, 0.3],
+    [52, 0.34],
+    [80, 0.4],
+    [112, 0.46],
+    [148, 0.55],
+  ] as ReadonlyArray<readonly [number, number]>,
+  abyss: 0x040a12,
   mossDrip: 26,
   /** How far the water surface sits above the pool floor (the character wades waist-deep). */
-  waterDepth: 38,
+  waterDepth: 50,
   /** How far the edge walls bulge into the scene at most. */
   edgeBulge: 12,
   /** Gap between the baked backdrop pieces (boulders, dead stumps) behind the walk line, px. */
@@ -108,6 +120,8 @@ export interface TerrainInfo {
   faces: Face[];
   /** Ends of painted limbs: leaf sprays grow here. Dark unless `lit` (limbs in the walk plane). */
   twigs: Array<{ x: number; y: number; angle: number; lit?: boolean }>;
+  /** Authored props that hold a small light: a dim halo goes here. */
+  lanterns: Array<{ x: number; y: number; violet?: boolean }>;
   /** Sheltered spots beside big terrain where a fern grows. */
   lee: Array<{ x: number; y: number; size: number }>;
   /** x ranges where big plants should stay away so the terrain itself is seen. */
@@ -159,6 +173,7 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
     ivy: [],
     keepClear: [],
     lee: [],
+    lanterns: [],
     pockets: [],
     pool: poolSeg
       ? {
@@ -178,6 +193,7 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
   for (const b of scene.oneWays) paintSapling(p, b.x, b.y, b.w, groundY, scene, info);
   for (const t of trunks) if (t.y + t.h < groundY(t.x + t.w / 2) - 40) paintStiltRoots(p, t, groundY);
   paintBackdrop(p, scene, info);
+  paintProps(p, scene, info);
   paintEdgeWalls(p, scene, info);
   paintGround(p, segs, scene, info);
 
@@ -208,6 +224,8 @@ interface MossOpts {
   dull?: number;
   /** 0..1 share of the top left bare. */
   bare?: number;
+  /** A slow swell of this many px on top of `lift` (the ground's rounded crown). */
+  mound?: number;
   /** 0..1: add a clean lit crest and a contact shadow under the lip (elevated tops). */
   read?: number;
 }
@@ -256,7 +274,9 @@ function mossCap(p: Paint, x0: number, x1: number, y: number, o: MossOpts): void
   const edgeFade = (x: number): number =>
     Math.min(o.drapeL ? 1 : smoothstep(xa, xa + 22, x), o.drapeR ? 1 : smoothstep(xb, xb - 22, x));
   const lift = (x: number): number => {
-    const mound = Math.max(0, wobble(x, o.seed + 3, 64)) ** 1.5 * TERRAIN.mossMound;
+    const mound = o.mound
+      ? ((wobble(x, o.seed + 3, 210) + 1) * 0.5) ** 1.3 * o.mound
+      : Math.max(0, wobble(x, o.seed + 3, 64)) ** 1.5 * TERRAIN.mossMound;
     return (lift0 + mound + (wobble(x, o.seed + 9, 11) + 1) * 0.6) * (0.35 + 0.65 * edgeFade(x));
   };
   const thick = (x: number): number => {
@@ -651,7 +671,7 @@ function paintGround(p: Paint, segs: Seg[], scene: Scene, info: TerrainInfo): vo
     [60, 24, 0.45],
   ];
   let hk = 0;
-  for (let x = range(dr, 200, 500); x < W - 100; x += range(dr, 480, 900)) {
+  for (let x = range(dr, 200, 500); x < W - 100; x += range(dr, 1500, 2100)) {
     // Well clear of any bank face, so a hollow never opens into the air.
     const top = Math.max(safeTopAt(info, x - 80, W), safeTopAt(info, x + 80, W));
     const [rx, ry, rough] = HOLLOWS[hk % HOLLOWS.length] as [number, number, number];
@@ -884,6 +904,22 @@ function paintGround(p: Paint, segs: Seg[], scene: Scene, info: TerrainInfo): vo
     info.faces.push({ x: fx, y0: hi, y1: lo, dir: inward > 0 ? -1 : 1, kind: 'ground' });
   });
 
+  // The ground is a form, not a cross-section: below the lit lip everything sinks into darkness
+  // within ~150 px, and the detail painted above (roots, boulders, seams) goes with it.
+  for (const [d, alpha] of TERRAIN.depthShade) {
+    const pts: number[] = [];
+    segs.forEach((sg, i) => {
+      const xa = i === 0 ? -OUT : sg.x0;
+      const xb = i === segs.length - 1 ? W + OUT : sg.x1;
+      for (let x = xa; x <= xb; x += 24)
+        pts.push(Math.min(x, xb), sg.y + d + wobble(x, seed + 400 + d, 150) * d * 0.14);
+      pts.push(xb, sg.y + d);
+    });
+    pts.push(W + OUT, H + OUT, -OUT, H + OUT);
+    p.tint(pts, TERRAIN.abyss, alpha);
+    p.bump(pts, 0.47, { alpha: alpha * 0.8 });
+  }
+
   // Moss caps and the walkable tops.
   segs.forEach((s, i) => {
     const prev = segs[i - 1];
@@ -898,7 +934,8 @@ function paintGround(p: Paint, segs: Seg[], scene: Scene, info: TerrainInfo): vo
       drapeR: freeR ? range(r, 34, 70) : 0,
       thick: s.pool ? 7 : TERRAIN.mossThick,
       drip: s.pool ? 8 : TERRAIN.mossDrip,
-      lift: s.pool ? 1 : TERRAIN.mossLift,
+      lift: s.pool ? 1 : TERRAIN.crownLift,
+      mound: s.pool ? 0 : TERRAIN.crownMound,
       dull: s.pool ? 1 : 0,
     });
     info.tops.push({
@@ -1111,6 +1148,163 @@ function paintBackdrop(p: Paint, scene: Scene, info: TerrainInfo): void {
       }
       p.solid(blob(lerp(x, tx, 0.5) - 6, lerp(base, ty, 0.5), 9, 14, x, 0.2, 10), TERRAIN.backDeep, 0.18);
     }
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// One authored thing per zone: old, mossy, made by someone. None is a platform: each is tall and
+// narrow or hangs, sits behind the walk plane, and has no level top.
+
+function paintProps(p: Paint, scene: Scene, info: TerrainInfo): void {
+  const stoneCol = mix(mix(TERRAIN.back, TERRAIN.stone[1], 0.55), PALETTE.fogMid, 0.12);
+  const carve = (line: number[], w: number): void => {
+    p.solid(
+      ribbon(line, (t) => w * Math.sin(Math.PI * clamp(t, 0.06, 0.94)) + 0.6),
+      TERRAIN.backDeep,
+      0.22,
+    );
+  };
+  // A moth's wings, cut as two pairs of curved strokes about a centre line.
+  const mothMotif = (cx: number, cy: number, sz: number, rot: number): void => {
+    const pt = (x: number, y: number): [number, number] => [
+      cx + x * Math.cos(rot) - y * Math.sin(rot),
+      cy + x * Math.sin(rot) + y * Math.cos(rot),
+    ];
+    for (const sgn of [-1, 1]) {
+      const a = pt(0, -sz * 0.2);
+      const b = pt(sgn * sz * 0.9, -sz * 0.95);
+      const c = pt(sgn * sz, 0);
+      const d = pt(sgn * sz * 0.6, sz * 0.8);
+      const e = pt(0, sz * 0.3);
+      carve([...a, ...b, ...c, ...pt(sgn * sz * 0.2, sz * 0.05)], 3);
+      carve([...pt(sgn * sz * 0.15, sz * 0.1), ...c, ...d, ...e], 2.6);
+    }
+    carve([...pt(0, -sz * 0.6), ...pt(0, sz * 0.6)], 3.4);
+  };
+  const pool = info.pool;
+  if (pool) {
+    // Left: a standing stone half sunk beside the pool, leaning, a moth cut into its face.
+    const x = pool.x0 - 150;
+    const gy = info.groundY(x) + 16;
+    const lean = -0.13;
+    const h = 176;
+    const w = 58;
+    const pts: number[] = [];
+    for (let i = 0; i <= 20; i++) {
+      const a = Math.PI + (Math.PI * i) / 20;
+      const u = i / 20;
+      const px = Math.cos(a) * (w / 2) * (1 + 0.08 * Math.sin(u * 9));
+      const py = -h + (1 + Math.sin(a)) * 30 + wobble(u * 200, 71, 30) * 3;
+      pts.push(x + px + -py * Math.sin(lean) * -1, gy + py);
+    }
+    pts.push(x + w / 2 + 6, gy, x - w / 2 - 6, gy);
+    p.solid(chaikin(pts, 1), stoneCol, 0.4);
+    const edge: number[] = [];
+    for (let i = 0; i <= 8; i++)
+      edge.push(
+        x + w / 2 - 9 + (h - i * 20) * Math.sin(lean) * -1 * 0.0 + Math.sin(i) * 2 + i * 20 * 0.13,
+        gy - 8 - i * 20,
+      );
+    p.solid(
+      ribbon(edge, () => 9),
+      mix(stoneCol, TERRAIN.stone[0], 0.4),
+      0.46,
+    );
+    mothMotif(x + h * 0.55 * 0.13, gy - h * 0.6, 17, lean);
+    carve([x - 12 + 9, gy - h * 0.32, x + 14 + 9, gy - h * 0.32], 2.4);
+    carve([x - 10 + 7, gy - h * 0.25, x + 12 + 7, gy - h * 0.25], 2);
+    const tone = mossTone(x, gy, 71, 0);
+    p.solid(blob(x - 6, gy - 16, 40, 20, 72, 0.4, 12), mix(tone.dark, TERRAIN.back, 0.5), 0.42, {
+      moss: 0.7,
+    });
+    p.solid(blob(x + 20, gy - h + 34, 16, 26, 73, 0.4, 10, 0.3), mix(tone.dark, TERRAIN.back, 0.4), 0.44, {
+      moss: 0.7,
+    });
+    info.keepClear.push([x - 60, x + 70]);
+  }
+  // Centre: a silk cocoon lantern hung under the great bough, faintly warm.
+  const bough = scene.solids.find(
+    (s) => s.tag === 'ledge' && scene.solids.some((o) => o.tag === 'trunk' && o.x === s.x + s.w),
+  );
+  if (bough) {
+    const x = bough.x + bough.w * 0.36;
+    const y0 = bough.y + bough.h + 20;
+    const len = 150;
+    p.solid(
+      ribbon(wander([x, y0 - 30, x + 3, y0 + len * 0.5, x, y0 + len], 2, 81, 60), () => 2.2),
+      0x8a8468,
+      0.5,
+    );
+    const cy = y0 + len + 30;
+    const body: number[] = [];
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * Math.PI * 2;
+      const taper = Math.sin(a) < 0 ? 0.62 : 1;
+      body.push(
+        x + Math.cos(a) * 19 * (0.75 + 0.25 * taper),
+        cy + Math.sin(a) * 34 * (Math.sin(a) < 0 ? 1.1 : 0.9),
+      );
+    }
+    p.solid(chaikin(body, 1), 0x9c8a5e, 0.6);
+    p.solid(blob(x + 2, cy + 4, 11, 20, 82, 0.15, 12), 0xe0b468, 0.66);
+    p.solid(blob(x + 2, cy + 8, 5.5, 10, 83, 0.15, 10), 0xffe2a0, 0.7);
+    for (let k = 0; k < 5; k++) {
+      const yy = cy - 26 + k * 12;
+      const hw = 17 * Math.sin(Math.PI * clamp((k + 0.7) / 5.6, 0.1, 0.9)) + 3;
+      p.solid(
+        ribbon(quad(x - hw, yy, x, yy + 5, x + hw, yy - 1, 6), () => 1.8),
+        0x5e563e,
+        0.66,
+        {},
+        0.8,
+      );
+    }
+    for (const d of [-1, 1]) {
+      p.solid(
+        ribbon(
+          quad(x + d * 4, cy + 30, x + d * 9, cy + 44, x + d * 5, cy + 58, 5),
+          (t) => 2.4 * (1 - t) + 0.5,
+        ),
+        0x8a8468,
+        0.5,
+      );
+    }
+    info.lanterns.push({ x: x + 2, y: cy + 6 });
+  }
+  // Right: a small moth shrine: a cairn with a carved wing-stone set upright on it, and a bowl.
+  {
+    const x = scene.width - 520;
+    const gy = info.groundY(x) + 14;
+    const sizes = [44, 34, 25];
+    let y = gy;
+    sizes.forEach((sz, i) => {
+      const cx = x + (i % 2 ? 7 : -5);
+      p.solid(
+        chaikin(blob(cx, y - sz * 0.34, sz, sz * 0.42, 90 + i, 0.3, 9, i % 2 ? 0.08 : -0.06), 2),
+        mix(stoneCol, TERRAIN.backDeep, i * 0.12),
+        0.38 + i * 0.01,
+      );
+      y -= sz * 0.58;
+    });
+    const top: number[] = [];
+    for (let i = 0; i <= 14; i++) {
+      const a = Math.PI + (Math.PI * i) / 14;
+      top.push(x + 2 + Math.cos(a) * 17, y - 50 + (1 + Math.sin(a)) * 16);
+    }
+    top.push(x + 21, y + 4, x - 17, y + 4);
+    p.solid(chaikin(top, 1), mix(stoneCol, TERRAIN.stone[6], 0.3), 0.42);
+    mothMotif(x + 2, y - 26, 11, 0);
+    p.solid(
+      chaikin([x + 44, gy - 18, x + 52, gy - 6, x + 70, gy - 5, x + 78, gy - 18, x + 61, gy - 13], 1),
+      mix(stoneCol, TERRAIN.backDeep, 0.2),
+      0.4,
+    );
+    const tone = mossTone(x, gy, 91, 0);
+    p.solid(blob(x - 26, gy - 12, 26, 13, 92, 0.4, 10), mix(tone.dark, TERRAIN.back, 0.5), 0.42, {
+      moss: 0.7,
+    });
+    info.lanterns.push({ x: x + 61, y: gy - 19, violet: true });
+    info.keepClear.push([x - 70, x + 100]);
   }
 }
 
@@ -2459,6 +2653,55 @@ function paintFloating(p: Paint, s: SolidRect, index: number, info: TerrainInfo)
     bare = 0.3;
   }
 
+  // What holds it up: a bundle of old vines coming down out of the canopy, lashed round each end.
+  // Dark and thin (the back plane), so they read as rigging, not as something to climb.
+  {
+    const vr = rngFor(s.x, 61);
+    for (const [ex, lean] of [
+      [s.x + range(vr, 14, 34), range(vr, -60, 20)],
+      [x1 - range(vr, 14, 34), range(vr, -20, 60)],
+    ] as const) {
+      const n = 2 + Math.floor(vr() * 2);
+      for (let i = 0; i < n; i++) {
+        const ox = (i - (n - 1) / 2) * range(vr, 5, 9);
+        // Each strand takes its own slack curve up into the canopy and they cross each other.
+        const bow = range(vr, -70, 70);
+        const line = wander(
+          cubic(
+            ex + ox,
+            s.y + 26,
+            ex + ox + bow,
+            s.y - 220,
+            ex + lean * 0.6 - bow * 0.6,
+            s.y - 520,
+            ex + lean * 1.8 + ox * 6,
+            -OUT,
+            26,
+          ),
+          16,
+          s.x + ex + i,
+          120,
+        );
+        const w0 = range(vr, 3, 6.5);
+        p.solid(
+          ribbon(line, () => w0),
+          i % 2 ? TERRAIN.backDeep : TERRAIN.back,
+          0.27,
+          { bark: 0.4 },
+        );
+      }
+      // The lashing: a few turns round the rim.
+      for (let k = 0; k < 3; k++) {
+        const ly = s.y + 12 + k * 7;
+        p.solid(
+          ribbon(quad(ex - 13, ly, ex, ly + 5, ex + 13, ly - 1, 6), () => 4.2),
+          mix(TERRAIN.back, TERRAIN.rootWood, 0.4),
+          0.6,
+          { bark: 0.3 },
+        );
+      }
+    }
+  }
   // Belly shadow: the underside falls away from the light.
   if (kind !== 'fungus') {
     const belly: number[] = [];

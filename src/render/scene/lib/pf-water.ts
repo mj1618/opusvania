@@ -11,7 +11,7 @@ import type { PlayerView } from '../../contract';
 import type { PointLight } from '../../lights';
 
 export const WATER = {
-  shallow: 0x2b8f96,
+  shallow: 0x35b4c2,
   deep: 0x0a2746,
   /** Sky as the water mirrors it: at the surface (horizon) and deeper (overhead). */
   skyNear: 0x6fc0bc,
@@ -123,7 +123,7 @@ void main() {
     float bands = 0.5 + 0.5 * sin((x + wob) * 0.052 + sin((x + wob) * 0.017) * 2.0);
     bands = smoothstep(0.25, 0.85, bands);
     vec3 sky = mix(uSkyNear, uSkyFar, smoothstep(0.0, 0.75, dn)) * (0.45 + 0.55 * bands);
-    float refl = exp(-depth / (total * 0.5)) * 0.62;
+    float refl = exp(-depth / (total * 0.6)) * 0.8;
     vec3 c = mix(body, sky, refl);
     float a = mix(uAlpha.x, uAlpha.y, pow(dn, 0.6)) * under;
     o = vec4(c * a, a);
@@ -141,7 +141,10 @@ void main() {
   float cx1 = sin(x * 0.09 + sin(depth * 0.3 + t * 0.9) * 1.5 + t * 0.8);
   float cx2 = sin(x * 0.05 - depth * 0.25 - t * 0.6 + sin(x * 0.021 + t * 0.3) * 2.0);
   float caustic = pow(1.0 - abs(cx1), 4.0) * pow(1.0 - abs(cx2), 2.0);
-  add += uLine * caustic * 0.3 * smoothstep(total - 30.0, total - 4.0, depth) * under;
+  add += uLine * caustic * 0.42 * smoothstep(total - 34.0, total - 4.0, depth) * under;
+  // The same light wandering up the two banks.
+  float bankGlow = exp(-min(x - uPool.x, uPool.y - x) / 14.0);
+  add += uLine * bankGlow * (0.12 + 0.3 * pow(1.0 - abs(sin(depth * 0.2 + t * 1.1)), 4.0)) * under;
   // Small fish: slim dark shapes that hang still, then dart to a new spot. A pale glint on the flank.
   for (int i = 0; i < 3; i++) {
     float fi = float(i);

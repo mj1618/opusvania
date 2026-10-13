@@ -39,7 +39,7 @@ export const BAKE = {
   key: 1.25,
   spec: 0.16,
   shadow: 0.55,
-  interior: 0.5,
+  interior: 0.36,
   /** Cast shadow: how far toward the light to look (world px) and how dark. */
   castReach: 9,
   cast: 0.55,
@@ -169,8 +169,8 @@ void main() {
   // Same dapples as sunAt() in pf-shape.ts: keep the two in step.
   float dp = 0.5 + 0.25 * sin(vWorld.x * 0.0131 + 1.7 * sin(vWorld.y * 0.004))
            + 0.25 * sin(vWorld.x * 0.0057 - vWorld.y * 0.0031 + 2.1);
-  float dapple = smoothstep(0.45, 0.8, dp);
-  float sun = clamp(beam * 0.65 + dapple * 0.55, 0.0, 1.0);
+  float dapple = smoothstep(0.66, 0.84, dp);
+  float sun = clamp(beam * 0.28 + dapple * (0.45 + 0.4 * beam), 0.0, 1.0);
 
   // Brush strokes that follow the form: along the silhouette near edges, along the grain inside.
   vec2 d = uUvPerWorld * 1.25;
@@ -222,10 +222,10 @@ void main() {
   // The scene's three moods: moonlit blue-green, golden, deep emerald and violet.
   float zA = smoothstep(uZone.x, uZone.y, vWorld.x);
   float zB = smoothstep(uZone.z, uZone.w, vWorld.x);
-  vec3 zoneTint = mix(mix(vec3(0.84, 1.0, 1.14), vec3(1.13, 1.05, 0.84), zA), vec3(0.9, 0.9, 1.08) * 0.9, zB);
+  vec3 zoneTint = mix(mix(vec3(0.7, 0.95, 1.2) * 0.85, vec3(1.16, 1.0, 0.72) * 0.9, zA), vec3(0.82, 0.76, 1.18) * 0.72, zB);
   c *= zoneTint;
   // Moss dims and cools where the light does not reach.
-  c *= mix(1.0, mix(0.5, 1.05, sun), moss);
+  c *= mix(mix(0.72, 1.0, sun), mix(0.3, 1.05, sun), moss);
   c = mix(c, c * vec3(0.72, 0.96, 1.2), moss * (1.0 - sun) * 0.55);
   // Interiors sink into shadow; edges keep their colour.
   c *= mix(1.0, uShade.w, inside * (1.0 - moss * 0.7));
@@ -242,7 +242,7 @@ void main() {
   // Key light, warm. Things painted low (the back plane) barely catch it.
   vec3 warm = vec3(1.0, 0.84, 0.58);
   float plane = smoothstep(0.24, 0.44, hs.r / ha);
-  float reach = mix(0.4, 1.3, sun) * mix(0.3, 1.0, plane);
+  float reach = mix(0.14, 1.3, sun) * mix(0.3, 1.0, plane);
   float k = key * uShade.x * reach;
   vec3 keyCol = mix(warm, vec3(1.0, 0.93, 0.5), moss);
   c += base * keyCol * k * 1.35 + keyCol * (k * k) * uShade.y * 0.3;

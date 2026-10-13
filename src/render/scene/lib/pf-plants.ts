@@ -19,10 +19,12 @@ export const PLANTS = {
   /** Gap between the oversized hazy backdrop plants, and between hero plants, px. */
   backdropGap: [320, 700] as const,
   heroGap: [800, 1300] as const,
+  /** Gap between the tall dark front clumps that break the walk line, px. */
+  breakGap: [300, 500] as const,
   /** One shrub in this many carries autumn-yellow leaves (counted across the scene, so they spread). */
   autumnEvery: 4,
   /** Grass: 0..1 share of a top that carries any, and blade heights in px. */
-  grassCover: 0.68,
+  grassCover: 0.58,
   /** Share of grass tufts that also carry a wisp of fine, feather-tipped blades. */
   fineShare: 0.55,
   grassHeight: [10, 50] as const,
@@ -34,9 +36,9 @@ export const PLANTS = {
   windPerPx: 0.15,
   bendPerPx: 0.6,
   /** Glow things: halo radius factor and alpha. */
-  haloAlpha: 0.24,
+  haloAlpha: 0.13,
   /** Share of features that are glow plants, per zone: cool glade, light well, deep stand. */
-  glowShare: [0.3, 0.07, 0.3] as const,
+  glowShare: [0.11, 0.03, 0.11] as const,
 } as const;
 
 interface Tone {
@@ -45,15 +47,15 @@ interface Tone {
   lit: number;
   sun: number;
 }
-const BACK: Tone = { dark: 0x0b3836, mid: 0x1b6d50, lit: 0x58b060, sun: 0xbcd874 };
+const BACK: Tone = { dark: 0x051a1c, mid: 0x0f4234, lit: 0x3f8a4c, sun: 0xbcd874 };
 /** The row furthest back: bushes and tall stands, darker and cooler so the walk line sits in front. */
-const REAR: Tone = { dark: 0x082c34, mid: 0x12524a, lit: 0x2f8460, sun: 0x7fb46a };
+const REAR: Tone = { dark: 0x04161c, mid: 0x0a302e, lit: 0x1f5c46, sun: 0x6fa45e };
 /** Far behind the walk line: hazy, cool, low contrast. */
-const HAZE: Tone = { dark: 0x143c48, mid: 0x1c5560, lit: 0x2c7072, sun: 0x3f8580 };
+const HAZE: Tone = { dark: 0x0a2430, mid: 0x103440, lit: 0x18484e, sun: 0x24585a };
 const AUTUMN = [0xd9a441, 0xc9b24e, 0xe08a3c, 0xb9c45a];
 const WARM_PETALS = [0xffc56b, 0xffb59a, 0xfff1dc, 0xffd98a];
 const COOL_PETALS = [0xd9c8ff, 0xbfe6ff, 0xe8f4ff, 0xc9a8f0];
-const FRONT: Tone = { dark: 0x06252a, mid: 0x0f4a3e, lit: 0x23744f, sun: 0x4f9a58 };
+const FRONT: Tone = { dark: 0x030e12, mid: 0x08241f, lit: 0x12402e, sun: 0x2f6a40 };
 const WOOD = 0x4d6b62;
 const WOOD_DARK = 0x263f40;
 
@@ -71,26 +73,26 @@ function toneAt(base: Tone, x: number, r: Rng, y = 1200): Tone {
   const sun = sunAt(x, y);
   const z = zoneAt(x);
   const cool = r() * 0.3 + (1 - sun) * 0.3;
-  const dim = 0.25 * (1 - sun) + z.deep * 0.12;
+  const dim = 0.5 * (1 - sun) + z.deep * 0.12;
   const zone = (c: number, coolC: number, warmC: number, deepC: number, k: number): number =>
     mix(mix(mix(c, coolC, z.cool * k), warmC, z.warm * k), deepC, z.deep * k);
   return {
-    dark: zone(mix(base.dark, 0x0a2f44, cool * 0.6), 0x0a3040, 0x143a2c, 0x121e3c, 0.5),
+    dark: zone(mix(base.dark, 0x061c2c, cool * 0.6), 0x05182c, 0x1c1a0c, 0x0e0c26, 0.6),
     mid: zone(
       mix(mix(mix(base.mid, 0x17666a, cool), base.lit, sun * 0.3), base.dark, dim),
-      0x1a7272,
-      0x3f7f3a,
-      0x0f5a48,
-      0.4,
+      0x0e4a58,
+      0x4a4a1c,
+      0x1a1c4a,
+      0.5,
     ),
     lit: zone(
       mix(mix(mix(base.lit, 0x3fa78a, cool), base.sun, sun * 0.6), base.mid, dim * 1.6),
-      0x62c4ae,
-      0x9cc45a,
-      0x3f9a6a,
+      0x4aa4a8,
+      0xb0a848,
+      0x2f8a5a,
       0.4,
     ),
-    sun: zone(mix(base.sun, base.lit, 1 - sun), 0xa8e0c8, 0xe0dc7a, 0x8fbf8a, 0.35),
+    sun: zone(mix(base.sun, base.lit, 1 - sun), 0x98d8d0, 0xf0d070, 0x7fbf8a, 0.4),
   };
 }
 
@@ -154,6 +156,15 @@ function grassTuft(
       t,
     );
   }
+}
+
+/** A soft dark pool on the ground under something: what makes it sit instead of float. */
+function contact(c: Ctx, x: number, y: number, w: number): void {
+  const { b } = c;
+  b.plant(x, y, 4000, 0, 0, 0, 0);
+  b.fixedH = 0;
+  b.fan(x, y + 2, w, Math.max(5, w * 0.16), 0, Math.PI * 2, 0x020a10, () => 0x020a10, 0.62, 12, 0);
+  b.fixedH = null;
 }
 
 /** A wisp of fine grass: hair-thin blades that fade out toward their tips. */
@@ -235,6 +246,7 @@ function bush(
   density = 1,
 ): void {
   const { b, r } = c;
+  contact(c, x, y, w * 0.75);
   const lobes = form === 'low' ? 4 + Math.floor(r() * 3) : 3 + Math.floor(r() * 3);
   const phase = r();
   const lean = form === 'tall' ? range(r, -0.45, 0.45) : 0;
@@ -318,10 +330,10 @@ function bush(
     }
   }
   for (const [cx, cy, rad] of centres) {
-    const leaves = Math.round(rad * 1.5 * density);
+    const leaves = Math.round(rad * 1.1 * density);
     for (let i = 0; i < leaves; i++) {
       const a = r() * Math.PI * 2;
-      const d = Math.sqrt(r()) * rad * 1.05;
+      const d = r() ** 0.35 * rad * 1.05;
       const lx = cx + Math.cos(a) * d * 1.15;
       const ly = cy + Math.sin(a) * d;
       if (ly > y - 2) continue;
@@ -332,7 +344,7 @@ function bush(
         ? (AUTUMN[Math.floor(r() * AUTUMN.length)] as number)
         : mix(t.mid, mix(t.lit, t.sun, 0.4), facing);
       const la = a * 0.55 + range(r, -0.5, 0.5) + 0.25;
-      const ll = range(r, 7, 12.5);
+      const ll = ([6.5, 9.5, 13.5][Math.floor(r() * 3)] as number) * range(r, 0.9, 1.1);
       b.plant(lx, ly, ll * 2, phase + r() * 0.2, 1.6 + h * 0.02, 5 + h * 0.08, 0.3);
       b.leaf(lx, ly, la, ll, ll * 0.55, mix(t.dark, lit, 0.3), lit, mix(lit, t.dark, 0.45), 0, 1, 3);
     }
@@ -423,6 +435,7 @@ function fern(c: Ctx, x: number, y: number, size: number, t: Tone, up = -Math.PI
 
 function broadleaf(c: Ctx, x: number, y: number, size: number, t: Tone): void {
   const { b, r } = c;
+  contact(c, x, y, size * 0.8);
   const n = 3 + Math.floor(r() * 4);
   const phase = r();
   for (let i = 0; i < n; i++) {
@@ -484,6 +497,7 @@ function flower(c: Ctx, x: number, y: number, h: number, t: Tone, col: number): 
 
 function mushroom(c: Ctx, x: number, y: number, size: number, glow: 0 | 1 | 2, tall = 1): void {
   const { b, halo, r } = c;
+  if (size > 7) contact(c, x, y, size * 1.4);
   const h = size * range(r, 0.9, 1.7) * tall;
   const lean = range(r, -0.25, 0.25) * h;
   b.plant(x, y, h + size, r(), 0.5 + size * 0.03, 2.5 + size * 0.12, 0.2);
@@ -847,8 +861,8 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
 
     const isGround = top.kind === 'ground';
 
-    // Backdrop (drawn first, so behind everything): big shadowed shrubs and tall reed stands in
-    // haze tones, between the baked boulders and stumps. Few and simple: they are mass, not detail.
+    // Backdrop (drawn first, so behind everything): tall reed stands in haze tones, between
+    // the baked boulders and stumps. (Hazy shrubs here read as pale paper cut-outs in the fog: removed.)
     if (isGround) {
       for (
         let x = a + range(r, 60, 260);
@@ -856,14 +870,8 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         x += range(r, PLANTS.backdropGap[0], PLANTS.backdropGap[1])
       ) {
         if (blocked(x)) continue;
-        const z = zoneAt(x);
         const t = toneAt(HAZE, x, r, top.y);
-        if (r() < 0.45 + z.cool * 0.3) {
-          for (let i = 0; i < 3; i++) reedStand(c, x + i * range(r, 16, 30), y + 4, range(r, 110, 190), t);
-        } else {
-          const h = range(r, 110, 170);
-          bush(c, x, y + 6, h * range(r, 1.3, 1.8), h, t, 0, r() < 0.5 ? 'round' : 'low', null, 0.6);
-        }
+        for (let i = 0; i < 3; i++) reedStand(c, x + i * range(r, 16, 30), y + 4, range(r, 110, 190), t);
       }
     }
 
@@ -923,7 +931,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
         } else if (heroes % 2) {
           // Glow mushrooms as tall as the character, in a family of sizes.
           const kind = z.deep > 0.5 ? 2 : 1;
-          const sizes = [range(r, 26, 32), range(r, 17, 22), range(r, 11, 15), range(r, 7, 10)];
+          const sizes = [range(r, 15, 19), range(r, 9, 12), range(r, 6, 8)];
           let mx = x - 40;
           for (const sz of sizes) {
             mushroom(c, mx, y, sz, kind, 1.25);
@@ -1046,6 +1054,21 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
       }
     }
 
+    // Break the horizon: every few hundred px a tall dark clump stands in front of the walk line.
+    if (isGround) {
+      const fc: Ctx = { b: g.front, halo: g.halo, r };
+      for (
+        let x = a + range(r, 120, 380);
+        x < b - 60;
+        x += range(r, PLANTS.breakGap[0], PLANTS.breakGap[1])
+      ) {
+        if (blocked(x)) continue;
+        const t = toneAt(FRONT, x, r, top.y);
+        for (let i = 0; i < 2 + Math.floor(r() * 2); i++)
+          tallGrass(fc, x + i * range(r, 10, 20), top.y + 6, t, range(r, 0.6, 0.85));
+        if (r() < 0.5) fern(fc, x + range(r, 24, 44), top.y + 6, range(r, 34, 48), t);
+      }
+    }
     // Front fringe: low, dark, in clumps, never on thin boughs.
     if (top.kind !== 'branch') {
       const fc: Ctx = { b: g.front, halo: g.halo, r };
@@ -1096,6 +1119,10 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
     const t = toneAt(tw.lit ? BACK : FRONT, tw.x, tr, tw.y);
     const n = 2 + Math.floor(tr() * 2);
     for (let i = 0; i < n; i++) spray(tc, tw.x, tw.y, tw.angle + range(tr, -0.9, 0.9), range(tr, 30, 56), t);
+  }
+  for (const l of info.lanterns) {
+    g.halo.plant(l.x, l.y, 10, tr(), 0, 0, 0);
+    g.halo.halo(l.x, l.y, 46, l.violet ? PALETTE.glowViolet : PALETTE.ember, PLANTS.haloAlpha * 1.3, 0.5);
   }
   for (const l of info.lee) fern(tc, l.x, l.y + 1, l.size, toneAt(BACK, l.x, tr, l.y));
   // Leaves along the thick vines that wind round the trunks.

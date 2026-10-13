@@ -30,8 +30,8 @@ export const PLAYFIELD = {
   /** Plant meshes are split into chunks this wide (world px) for culling. */
   chunk: 480,
   /** How much glow plants and their halos brighten when the character or a light is near. */
-  glowGain: 1.0,
-  haloGain: 0.9,
+  glowGain: 0.7,
+  haloGain: 0.7,
 } as const;
 
 export class PlayfieldLayer implements EnvModule {
