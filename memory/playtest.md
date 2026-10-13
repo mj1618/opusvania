@@ -89,149 +89,111 @@ root's foot (2), the first kindle caught by the pledge (4), the tapper at the bl
 (3), lamps read late (5), hero on dark props (7), spending (10), creatures at a distance (12), the hint
 line and skin list as debug text over the picture.
 
-# Playtest 4, 2026-10-14 (HEAD c9efdb8, frozen build on 5184)
-Real keys in real time (`page.keyboard` in `playwright-cli run-code`, state only read, 40 ms polls).
-Frames: `shots/play4/01..13`, `fade-sheet`, `slash-{1-brush,2-ribbon,3-scale-dust,up-down-brush}`,
-`hitboxes-{a,b}`, `glyph-and-moth-crops`, everything else in `shots/play4/raw/` (gitignored). 60 fps, no errors.
+# Playtest 4, 2026-10-14: what is left of it
+Fixed since and confirmed in playtest 5: the mark of the cut sits in front of her at the target (must 1, partly:
+see 5), creatures push back (2, partly), the wake is in the picture (3), moths lead (4), glide glyph only over
+drops (5, one leak), scene edges (6), lamp-f3 (7), lamps by accident (8), a sink for glints (9). Still open,
+carried into playtest 5's list: run length, far bluff's east body black from above (10), burrbacks heal on a
+fade unseen, hero on dark props.
 
-## The runs
-- **A, naive tapper** (90 ms taps, holds right, 250-400 ms reactions, cuts what is in the way, walks up to
-  what reacts and waits there): refused 3/12 at 2.3 s, cut pod-stone, lantern 1 by the pledge at **5.9 s**,
-  hit once by burr-path (one cut, then she walks into it), glide glyph at 11.2 s, lamp-trunk 12.9 s, pod-shaft,
-  up the shaft with no pause, lantern 2 at **21.2 s**, off the bough, lantern 3 at **27.3 s**, heart at
-  **31.0 s** (frame 1830). 1 hit, 0 fades, 66 gathered, 44 spent, 22 left, 4/12 pods, 1/4 lamps, 0 kills.
-  **Never stuck for 3 s.**
-- **A2, the same hands but never stopping**: every lantern's channel started and broke 9-10 frames in
-  (it needs 30 standing); **0 lanterns in 2 minutes with 86 glints**, pinballing between the scene's two
-  edge walls. The first lantern cannot teach "stand here" to someone who arrives with 0-3 glints and runs on.
-- **B, naive holder** (420-650 ms presses): glide by accident at 9.6 s (over the bluff to the high ledge),
-  lamp-high 13.3 s, lantern 2 at 17.5 s (arrived with 11, refused, the 12th drifted in), walked east off the
-  boughs, heart asleep at 2 of 3 at 34.3 s, followed the heart's four moths to the bluff face, lantern 3 at
-  41.3 s, heart at **44.8 s**. 0 hits. (About 8 s of that was the bot cutting at pod-branch-r, which hangs
-  under the branch she stood on.) 53 gathered, 9 left, lamp-rise refused 5/8.
-- **C, explorer** (left first, islands, well, both glides, all lamps): 6:47 on the clock, about 2.5 min of
-  play (the rest was me between segments). **160 of 189 glints +4, 6/6 great, 8/12 pods, 6/9 creatures, 4/4
-  lamps, 9 hits (5 on purpose), 2 fades, 68 spent, 96 left.** Not opened: pod-branch-l / -r (hang under
-  one-way branches: an up cut from a jump missed, a down cut from above missed), pod-f6, pod-row-2.
+# Playtest 5, 2026-10-14 (HEAD 4613042, frozen build on 5185, 1600x900)
+Real `KeyboardEvent`s from ONE in-page rAF loop that only reads `state()` (250-350 ms reactions, 80-240 ms
+taps). Frames: `shots/play5/01..17` (gitignored), the bots in `shots/play5/bots/`. 60 fps (0.5% slow frames), no errors.
+
+## The runs (clock = the tally's)
+- **A, naive tapper** (never stops, mashes at what is in the way): **0:20**. Lantern 1 by the pledge at 1.9 s
+  (290 px behind her), burr-path 1.7 s, burr-shaft 1.6 s, crown 13.7 s (214 px behind), burr-rise 1.5 s, far
+  19.4 s (she was at the east wall), heart 20.3 s. Each fight identical: cut, cut, brace, clang, rammed, cut,
+  dead. **3 hits (one ram each), ends on 1 light, 0 fades**, 92 gathered, 56 offered (tier 2), 8/12 pods, 0 lamps.
+  Never stuck. She saw no kindle on purpose and reached the heart 0.9 s after it woke.
+- **B, careful first-timer** (stops at what reacts, watches burr-path 3 s, follows `__goal.guide.lx/ly`, holds
+  jump when `__prompts.lesson === 'glide'`): **1:08, of which 11 s was my controller on the far cliff: ~58 s.**
+  First cut ever was a clang (it braced as she walked up), she hopped the ram 0.3 s later, killed it spent:
+  2.6 s. Then the same three more times (1.3-2.5 s each). 0 hits, 4 kills, 3/4 lamps, 110 gathered, 50 offered
+  (tier 2). Glide taught at 33 s (off trunk A into the shaft). A first attempt whose controller copied the
+  leader's x took 2:08: it oscillated 12-15 s under the moths wherever the way is vertical (pool start, shaft,
+  the drop off the catch branch): a person reads "up" / "down" there, a literal follower does not.
+- **C, skilled explorer** (seven scripted segments, paused between; burr-bank, lantern 1, burr-path, lamp-trunk,
+  burr-shaft, up trunk A's east face, burr-ledge, lamp-ledge, lamp-high, crown, the three branch pods, burr-root,
+  lamp-root, burr-rise, lamp-rise, pods, back up trunk B's east face, summit glide with one cut at lamp-sky, far,
+  heart): **1:12. 7 kills (6/6 burrbacks), 1 hit, 0 fades, 4/4 lamps, 11/12 pods, 5/6 great, 157 of 200 +2, 68
+  spent, 91 offered (tier 2; tier 3 wants the islands too).** Every burrback fight 1.3-2.3 s.
 
 ## Must fix
-1. **The slash is still not at Hollow Knight's level** (sheets). *Brush* cut 1: the cream mark is a crescent
-   that ends up ABOVE the creature, detached from blade and hero, and hangs there frames 4-7 after the blade
-   has gone back up (it reads as a claw / moon, the dark slits as feathers); the smear frame reads as two
-   blades. *Brush* cut 2 (the flat return sweep through the target) is the one that works: do cut 1 like it.
-   *Ribbon*: a thin wire arc with a ring, 9 frames, floats up and away: elegant, weightless. *Scale-dust*:
-   confetti. Missing in all three: a mark that lives 3-4 frames IN FRONT of her at the target's height and
-   tapers to the blade tip; a hit read on the creature (a white cross-streak, a real shove: 21 px today, 2
-   frames of hitstop, a pale flash for 2 frames); a body pose that commits (she finishes upright, sword
-   raised, by frame 6).
-2. **The run is 31-45 s and nothing pushes back.** The critical path now works so well that a naive player
-   sees a third of the scene and finishes before anything has asked anything of them. Creatures on the path:
-   one (burr-path). Standing at reach and cutting kills any burrback in 3 cuts / 0.6 s with no risk (three
-   times in C); they only hurt someone who walks into them. The first hits that felt earned were lampwings.
-3. **The heart's wake is off-screen from the far lantern** (08). She stands at 5524, 448; the heart is 640 px
-   below. What shows: a warm column from under the frame and the HUD bud. No moths lead down, the camera
-   does not lean. A held jump off the west lip (what the glide taught) carries her 1800 px to trunk B (C,
-   3.4 s) over the heart. The last ten seconds should be the clearest, and are the least.
+1. **A fight is one beat and the game is 20-70 s.** Every burrback in every run died inside ONE cycle:
+   spent 45 + cooldown 150 = 195 frames in which it cannot brace, and three cuts take ~55. There is never a
+   second tell. The masher pays exactly 1 light per burrback and wins anyway (3 on the path, 4 lights, no
+   fade possible). First one: good (the clang teaches the brace at once, the hop is generous: jumps as late as
+   the ram's first frame from 52 px cleared it). Third one: rote. Wanted: a creature that outlives one punish
+   (brace again after ~60 frames, or more hp, or a shell that only opens from behind / above), and three
+   encounters that differ (the shaft's walls, the ledge's edges, the rise's open ground are the same fight today).
+2. **The cut: structure is right now, the finish is not** (04-08, 12). Good: one cream crescent in front of her
+   at the target, the 4-frame hold with the creature black and a contact cross, pale flash and shove after,
+   the clang (shards, crescent cut short, blade thrown back: the best new thing), the up cut, finisher with a
+   3-frame draw-back. Still off, in order: (a) **size and value**: the crescent is ~1.4x her height (1.7x on
+   the finisher) at full cream for 7-11 frames: the largest, brightest thing on screen each cut, worst in the
+   blue zone; HK's is about one knight tall and gone in 4. (b) **Cut 1's pose does not make its mark**: she
+   stabs low and forward, the mark is an overhead chop, the blade tip never meets it (cut 2's does). (c) Cut 1
+   and cut 2 draw the same arc the same way round: no down / return rhythm. (d) It pops whole in one frame and
+   stands still through the hold: no frame where it sweeps out of the blade. (e) **Noise on top**: 8-12 flat
+   green leaf triangles per hit, drawn over the crescent, alive ~12 frames, green also on violet stone; a
+   kill's glints pop as five head-sized orange stars DURING the freeze (they move while the world is held) and
+   then fly into her face through the next cut. (f) **Pogo**: the down mark is a sliver at ground level ~100 px
+   to the side of the contact (08); only the cross says hit. (g) The finisher's 7-frame hold is rare in play: a
+   3-hp burrback takes cut, [clang], cut, cut, so it dies on a plain cut 2.
+3. **The offering is not legible, and a runner skips the last beat.** The third kindle's picture works (15:
+   lantern top right, shrine bottom centre, ten dotted moth trails down the cliff, the fourth pip a flower) and
+   nothing glares. But the wake itself is a 60 px bud and a warm haze; the HUD count is hidden from `gather`, so
+   nothing runs down; 56 and 91 offered end in the same picture (16) and the tally has no offered / tier row.
+   A reached the heart 0.9 s after the wake: no hold on the picture, ending already rolling.
 
 ## Should fix
-4. **Ember-moths: they lead from the heart, they decorate everywhere else** (crops). 12 px orange moths at
-   150 px/s against a player at 400+: in A she had passed them before they left the lamp. From the heart at 2
-   of 3 the four go to the bluff face and up it and B followed in 3 s (07): that one works. From the crown
-   they fly the sky line up to y -300, off the top of the screen for anyone on foot (B walked east under
-   them). They are the same size and colour as the ambient orange / pink butterflies (04, 12). No wall
-   crossing seen: the doorway and shaft routes stay in open air. Fewer, larger, faster, and a route for
-   walkers from the crown.
-5. **Key glyphs.** Glide: a neat pale Z cap, tasteful, on brand (01). But it shows 12 frames into ANY fall,
-   so it appears as she lands from a hop off the bluff, mid-fight, or mid-platforming (C: three times on
-   the islands before a glide mattered) and lingers 1.3 s over nothing; in the captured frames it is the cap
-   alone, no wings, so it says "Z", not "hold Z". 24 px at 1600 wide. Kick: **never shown in any run**; every
-   hand kicked before 24 frames of slide. Show the glide one only over a real drop (or at the summit lip).
-6. **Scene edges climb to nowhere** (09): the east and west walls take kicks up to the canopy (y -337), the
-   camera stops, she sits in the top corner under the HUD. A2 spent most of its two minutes there. Give the
-   last 300 px of each wall no kick, or an overhang.
-7. **lamp-f3 sits in the F2 -> F3 jump arc**: hit 0.2 s after its tell, twice (A after the ending, C). And
-   lamp-ledge reached her on the high ledge while she fought burr-ledge (C's unplanned fade at 1 hp).
-8. **Lamps kindle by accident**: lamp-high as she tops out of the well (C, B), lamp-root while chasing
-   burr-root. 8 glints go without a choice. A run-through still starts and breaks a channel unseen.
-9. **Economy**: A 22 left, B 9, C 96 left of 164 with everything bought. Lamps are the only sink (32).
-   B was refused at lamp-rise (5/8) and reached the crown one short: a holder who glides past the floor
-   glints is tight, an explorer is rich. 4-8 of 12 pods opened; the hanging pods are not hittable in practice.
-10. **Far bluff** (hitboxes-b): the pale stone face is 110 px wide, the collision 288; east of it the body
-    is black, so from above she stands on a slab over a void. The face is the palest large surface on the
-    right (chalky lavender, brighter than the shrine stone): take it down a step. The dormant far lantern is
-    a dark blue wire on near-black (06).
+4. **Lampwings are not an event.** Pale grey-violet, 25-30 px, the same read as the ambient butterflies (11,
+   17); the 36-frame tell is not visible at play zoom; 110 frames of drift at 2.2 px/f from tell to touch; two
+   up cuts. None touched A or B. lamp-sky in the glide: one cut and through. Needs a swoop and a look of its own.
+5. **Violet zone fights are the busiest** (03, 13): lamp-rise's price crown (a ring of 12 orange drops) stands
+   inside burr-rise's patch through the whole fight, next to pod-row-1 and the shrine's lights; the creature's
+   red count is three 3-4 px dots among them. Amber is the clearest zone; blue reads by the dots alone (the
+   body is dark on dark, and burr-bank is fought at the frame's left edge).
+6. **Glide glyph leaks into the shaft climb**: five times in 3 s between kicks (C, 3520, 641 -> 36), and B's
+   first one was stepping off trunk A into the shaft she had to climb. Not while a wall is within a kick's swing.
+7. **Moths when the lantern caught behind her**: the flight goes to the way's first point ((1700, 1130) for the
+   crown) and waits 290 px over the pool, 90 px behind where she stands. Otherwise they lead: 220-330 px ahead
+   on the run pool -> bluff -> well, 560 px up the shaft, across to the crown, down the boughs, over the heart
+   to the cliff, on the hook; after the wake off the west lip and into the heart (B followed in 2.5 s).
+8. **The weakest 20 s is the walk to the last lantern**: lamp-rise -> two pods -> the sleeping heart -> a 320 px
+   face (B 47.9-62.9 s): flat ground, nothing asked after burr-rise. The summit, the best view, is 2 s.
+9. Hopping burr-ledge's ram carries her off the ledge's west end to the floor (C's first attempt). A player who
+   kicks on contact is carried up trunk A's bark from the well and never meets lamp-trunk or burr-shaft.
 
 ## Nice
-- Burrbacks heal to full when she fades; enemies killed stay dead. Not shown.
-- The HUD's health row hides while she rests / stands at a light: with the count also gone (crown) the
-  corner is two different layouts.
-- pod-branch-r / -l invite a cut from the branch above that cannot land.
-- The well: 4 presses, 1.9 s, lands on lamp-high. Trunk B's east face: 5 presses, 2.3 s. Shaft: 6 presses,
-  3.3 s. None is a chore; the second and third climbs are quicker than walking round. The way back west by
-  glide from the bluff is the fastest thing in the game.
+- Her hurt frame is the whole body in pale lavender (1-2 frames): the one moment the dark hero is not dark.
+- Hero hard to find: in the pool, in front of the dark tree at x ~2100-2160 where burr-path is fought (09), at
+  the frame's right edge after the summit glide (5740), dark violet on violet at the shrine (eyes carry her).
+- Kick glyph: right moment (first wall contact: the bank at 1.7 s, the bluff), small but legible (17).
+- The bank's 192 px step wants a held jump or a kick: 100 ms taps without a kick never clear it.
+- Tally: small, calm, legible; "0:20" for A says the size of the game.
 
 ## Asked about
-- **Shaft read as the way on?** Yes for every hand: the floor ends at trunk B with the great glint at its
-  foot and the zigzag of stars overhead (03). **Far bluff?** Yes with the heart's moths and the `cliff`
-  glints (07); the tapper never needed to (glided there from the summit).
-- **Fade** (fade-sheet): right. Four hits, 50-frame dissolve, dim dip, re-formed at the lamp with 2 of 4,
-  "-32" by the count, gold cluster 232 px away under the creature that killed her, no heal for 3 s standing
-  (`restHold`), full rest after stepping out and back. A cost, not a punishment. Unplanned fade with no
-  light lit: back on F5, 9 of 28 dropped on the ledge above the well.
-- **Combat feel**: pogo is the best of it (3 down cuts, 3 bounces, 0 hits, 11). Up cuts kill a lampwing in 2.
-  Ground: see must 1 and 2.
-- **Visual rule**: no frame broke it. No glare, nothing washed; ending and wake are warm, not white.
-  Vesper is found everywhere I stood except: the far bluff top before the lantern is lit (dark on black at
-  the frame edge), the scene-edge corners, and against the shrine stones (eyes carry her). Wings now carry
-  a pale rim in the sky glide (06): fixed. Mist pools and kick walls sit naturally (13, 03); I could not
-  point at them as effects. Brightest non-lights: the peach band right of trunk A (13), the far bluff face.
-- **Art against collision** (hitboxes-a/b): trunks, high ledge root mass, boughs, terrace, bluff, far
-  bluff's west face all within ~20 px. Only the far bluff's missing body (should 10).
-- **Against Ori / Hollow Knight**: at the bar as stills: the sky glide (06), the shaft climb (04), the summit
-  at night with one lantern (05), the ending (10). The three gaps: (a) the cut (must 1); (b) length and
-  resistance: 31 s, one creature in the way (must 2); (c) guidance by light is half there: the heart's moths
-  work, the rest are ambience, and the last beat is off-screen (must 3, should 4).
+- **Far cliff with slow hands**: one kick clears it up to 20 frames of slide (30 with a 12-frame press), two
+  beyond; no loop. Bluff the same. Trunk B's west face 5-10 kicks.
+- **Visual rule**: no glare in kindles, wake or ending (warm orange, no white). What leans on it: the crescent
+  (must 2a), kill stars, price crowns two or three to a view in violet, green chips. Violet is the loudest zone
+  (magenta shafts left of the shrine) but not washed.
+- **Against Ori / Hollow Knight**: at the bar: stills in all three zones, the clang, the up cut, the ending
+  picture, the glide. Gaps by what fixing adds: (1) fights with a second beat and a longer road (must 1),
+  (2) the cut's finish (must 2), (3) a last beat that shows what she gave (must 3).
 
 ## Not tested
-- Feel in the hands. A person's eyes at play speed: "noticed" above is my read of stills and positions.
-- The kick glyph (never fired), the finisher frames (my press was late), pod-f6, pod-row-2, 100%.
-- burr-bank fought cleanly (my controller walked into it: 2 hits), lampwing sanctuary at the far lantern.
+- Feel in the hands; whether a person sees the red count at play speed (judged from stills).
+- F1-F7, lamp-glade, lamp-f3 in play (staged only), lamp-glide-1 / -2, the pogo chain, pod-branch-l,
+  100%, tier 3, a fade (none happened), art against collision (no hitbox pass), scene-edge kicks beyond a touch.
 
 ## Method notes
-- `__game.load()` does not clear the event log: reload the page between runs. `events(n)` entries carry `f`.
-- A real-key bot must stop for a channel (30 frames) and steer to what noticed her, or it lights nothing.
-- `state().player.kindling` is an index (-1 = none), not a flag.
-- `npm run clip` and `npm run shots` take `--url` (the built app's is `.../opusvania/`).
-
-## After playtest 4: what changed in the sim, and what to replay (2026-10-14)
-Each line: the finding, what was done, where to look. Not yet seen by a person.
-- **Nothing pushes back** -> the burrback's ram (brace 26 frames, ram 180 px, spent 45 frames; a braced
-  front turns a cut; enemies.md). Three on the critical path with a light before each (scene-and-units.md).
-  *Replay*: stand at reach of burr-path and mash: is the hit earned, is the tell (0.43 s) readable at play
-  speed BEFORE the render acts it (today it is only a standstill; hitboxes: thick red box, white front)?
-  Hop it and cut it spent. Fight burr-shaft in the 256 px shaft (wall kick over it). Try to cheese: cuts
-  from the doorway, from just outside a patch, baiting rams into walls.
-- **Hit weight** -> 4 frames of hitstop on a creature (7 on the finisher), 32 px shove (102), she is pushed
-  back 10 px (21); the pogo unchanged. *Replay*: does a standing cut, cut, finisher still connect (it
-  does from within 65 px), does the push back feel like weight or like slipping?
-- **lamp-f3 in the jump arc** -> moved to (1470, 420), and no lampwing hurts in the first 20 frames of its
-  tell. *Replay* F2 -> F3 with a full jump, and standing on F3 under it.
-- **A lampwing on the crossing** -> `lamp-sky` on the summit glide's line. *Replay*: the plain held glide
-  (it should hit, 21 frames after its tell: too soon? she sees it 1.8 s ahead only if the camera shows
-  it), a forward cut on the way in, closing the wings under it; the pogo chain past it.
-- **A tapper lights nothing** -> a channel that has started runs on within 260 px. *Replay*: run past each
-  lantern with its price without stopping (it catches behind her: does that read, or does it feel like
-  it happened to her?). Lamps want 20 still frames first: run over lamp-high out of the well and against
-  the rise at lamp-root (nothing), then stand (0.83 s in all: too long?).
-- **Scene-edge climbs** -> no slide, no kick on either edge. *Replay* both corners, and the summit glide
-  held into the east wall (she sinks along it, wings open, onto the bluff).
-- **The wake off-screen** -> the far bluff's top is 320 px lower (768): heart 320 below, 312 west.
-  *Replay*: kindle the far lantern on foot and from the glide: is the shrine in the picture as it wakes
-  (it is at the frame's bottom edge in the wide stop; the wake's lean and the moths are render work)?
-  The held jump off the west lip still carries her ~1500 px west over the heart.
-- **Economy** -> the offering (everything left goes into the heart during the hold; tiers 25 / 50 / 100),
-  hanging pods within a standing up cut, pod-branch-r on its branch. *Replay*: does the count running
-  down at the end read as a gift (HUD and heart need to act it)? Open pod-branch-l, pod-f6.
-- **Run length**: robots still finish in 19-24 s (they mash perfectly and react in a frame). Whether a
-  person now takes minutes is the thing to measure: time each encounter, count hits and fades.
-
+- Serve the bot from the frozen build's folder (`play5-dist/bot.js`, `await import('/opusvania/bot.js')`): one
+  rAF loop reads `state()`, dispatches keys, logs `events(n)` by `f`, crops the WebGL canvas with `drawImage`
+  inside the same rAF (not blank: the game's callback ran first) into sheets, returned as data URLs.
+- Sheets of a fight: `stage.js` (manual mode, `step(1)` closed loop, every frame grabbed at the game camera
+  and again at `cam({zoom: 3})`), then `__sheet(name, 'pz' | 'zx', from, to, every, cols)`.
+- A step that brakes before a teleported fight misses the `enemyWindup` it starts (settle 0-1 frames).
+- A follower of `guide.lx` must keep its heading while the leader is > 190 px above or below it.
