@@ -10,7 +10,7 @@
  * Deterministic (own LCG, no Math.random).
  */
 import { catmull, sat, smoothstep } from '../hooded/math';
-import { type Painter, type RGB, rgb } from '../hooded/paint';
+import { type Painter, type RGB, rgb, type Shade } from '../hooded/paint';
 
 const SPECK = 0;
 const DUST = 1;
@@ -31,9 +31,21 @@ interface Particle {
 const MAX = 96;
 export const GOLD = rgb(0xffd98c);
 export const GOLD_HOT = rgb(0xfff4dc);
-const GOLD_DEEP = rgb(0xf2a85a);
+const GOLD_DEEP = rgb(0xf29a3c);
+/** Under-stroke of the trails: a faint dusk shadow so the light also reads on a bright background. */
+const UNDER: Shade = {
+  c0: rgb(0x2b1f5c),
+  c1: rgb(0x2b1f5c),
+  rim: 0,
+  cool: 0,
+  form: 0,
+  band: 0.5,
+  ember: 0,
+  alpha: 0.2,
+};
 const DUST_C: RGB = [0.62, 0.78, 0.8];
 
+const KEEP = new Float32Array(128);
 const SX = new Float32Array(32);
 const SY = new Float32Array(32);
 const QX = new Float32Array(32);
@@ -277,6 +289,16 @@ export class Fx {
       p.pw[m] = w * 0.12;
       p.pc[m * 3] = 0;
       m++;
+      // Under-stroke first (only where the trail is bright), tapering with the light.
+      if (peak > 0.25) {
+        for (let i = 0; i < m; i++) {
+          KEEP[i] = p.pw[i]!;
+          p.pw[i] = KEEP[i]! * 1.5 * Math.min(1, p.pc[i * 3]! * 2.2);
+        }
+        UNDER.alpha = 0.26 * Math.min(1, peak);
+        p.ribbon(m, UNDER, false, false);
+        for (let i = 0; i < m; i++) p.pw[i] = KEEP[i]!;
+      }
       // A wide soft body with a slim warm core: a ribbon of light, not a wire.
       for (let i = 0; i < m; i++) p.pw[i]! *= 2.6;
       p.streak(m, GOLD_DEEP);

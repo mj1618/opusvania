@@ -58,7 +58,7 @@ const NIGHT_LOW = rgb(0x05060f);
 const NIGHT_MID = rgb(0x0b0e2a);
 const SASH_TOP = rgb(0x4a3470);
 const SASH_LOW = rgb(0x21173e);
-const MOON = rgb(0xdfe4f4);
+const MOON = rgb(0xb4bcd8);
 const MOON_SHADE = rgb(0x8c93bd);
 const EYE_HOT = rgb(0xfff6df);
 const EYE_GOLD = rgb(0xffd27a);
@@ -66,25 +66,26 @@ const STAR_BLUE = rgb(0xb9c8ff);
 const TAIL_MID = rgb(0x5b4a9c);
 const TAIL_LIT: RGB = [1, 0.9, 0.68];
 const HALO = rgb(0x5f78ff);
+const MOONGLOW = rgb(0x9fc6ff);
 const SHADOW: RGB = [0.01, 0.03, 0.06];
 
 function dim(c: RGB, k: number): RGB {
   return [c[0] * k, c[1] * k, c[2] * k];
 }
 
-const SH_TORSO: Shade = { c0: NIGHT_LOW, c1: NIGHT_TOP, rim: 0.8, cool: 0.6, form: 0.28, band: 0.5 };
-const SH_LIMB: Shade = { c0: NIGHT_TOP, c1: NIGHT_LOW, rim: 0.95, cool: 0.65, form: 0.3, band: 0.55 };
+const SH_TORSO: Shade = { c0: NIGHT_LOW, c1: NIGHT_TOP, rim: 1, cool: 1, form: 0.28, band: 0.56, ember: 1 };
+const SH_LIMB: Shade = { c0: NIGHT_TOP, c1: NIGHT_LOW, rim: 1, cool: 1, form: 0.3, band: 0.62, ember: 1 };
 /** The near arm: the forearm a value lighter and fully rimmed, so its swing reads against the body. */
-const SH_ARM: Shade = { c0: NIGHT_TOP, c1: rgb(0x2a3276), rim: 1, cool: 0.95, form: 0.34, band: 0.62 };
+const SH_ARM: Shade = { c0: NIGHT_TOP, c1: rgb(0x2a3276), rim: 1, cool: 1, form: 0.34, band: 0.66, ember: 1 };
 const SH_LIMB_FAR: Shade = {
   c0: dim(NIGHT_TOP, 0.72),
   c1: dim(NIGHT_LOW, 0.72),
-  rim: 0.4,
-  cool: 0.4,
+  rim: 0.6,
+  cool: 0.6,
   form: 0.2,
   band: 0.55,
 };
-const SH_HEAD: Shade = { c0: NIGHT_TOP, c1: NIGHT_MID, rim: 1, cool: 0.65, form: 0.3, band: 0.34 };
+const SH_HEAD: Shade = { c0: NIGHT_TOP, c1: NIGHT_MID, rim: 1, cool: 1, form: 0.3, band: 0.36, ember: 1 };
 const SH_TAIL: Shade = { c0: NIGHT_TOP, c1: TAIL_LIT, rim: 0.6, cool: 0.3, form: 0.1, band: 0.5 };
 const SH_SASH: Shade = { c0: SASH_TOP, c1: SASH_LOW, rim: 1, cool: 0.5, form: 0.2, band: 0.5, ember: 0.8 };
 const SH_SASH_FAR: Shade = {
@@ -195,16 +196,16 @@ function band(
   const x = lerp(ax, bx, at);
   const y = lerp(ay, by, at);
   const k = far ? 0.6 : 1;
-  p.glow(x, y, 15, GOLD, 0.085 * k * glow);
-  p.glow(x, y, 6.2, GOLD, 0.42 * k * glow);
+  p.glow(x, y, 20, GOLD, 0.12 * k * glow);
+  p.glow(x, y, 8, GOLD, 0.55 * k * glow);
   p.px[0] = x + dy * half;
   p.py[0] = y - dx * half;
   p.px[1] = x - dy * half;
   p.py[1] = y + dx * half;
-  p.pw[0] = 0.95;
-  p.pw[1] = 0.95;
+  p.pw[0] = 1.3;
+  p.pw[1] = 1.3;
   p.ribbon(2, far ? SH_BAND_FAR : SH_BAND, true, true);
-  p.glow(x, y, 3, GOLD_HOT, 0.5 * k * glow);
+  p.glow(x, y, 3.6, GOLD_HOT, 0.6 * k * glow);
 }
 
 function leg(p: Painter, j: Float32Array, side: number, far: boolean, glow: number): void {
@@ -230,7 +231,7 @@ function leg(p: Painter, j: Float32Array, side: number, far: boolean, glow: numb
   p.py[3] = ty;
   p.pw[3] = 0.4;
   p.ribbon(4, sh, true, false);
-  band(p, j, J_KNEE_A + side, J_ANK_A + side, 0.86, 2.5, far, glow);
+  band(p, j, J_KNEE_A + side, J_ANK_A + side, 0.86, 2.9, far, glow);
 }
 
 function arm(p: Painter, j: Float32Array, side: number, far: boolean, glow: number): void {
@@ -252,7 +253,7 @@ function arm(p: Painter, j: Float32Array, side: number, far: boolean, glow: numb
   // A small mitten hand with a thumb: open and relaxed.
   p.ellipse(hx + ca * 2.2, hy + sa * 2.2, 2.9, 1.85, a, sh, 12);
   p.ellipse(hx + ca * 1.5 - sa * 1.7, hy + sa * 1.5 + ca * 1.7, 1.5, 0.85, a + 0.75, sh, 8);
-  band(p, j, J_EL_A + side, J_HAND_A + side, 0.9, 2.15, far, glow);
+  band(p, j, J_EL_A + side, J_HAND_A + side, 0.9, 2.5, far, glow);
 }
 
 function torso(p: Painter, j: Float32Array): void {
@@ -358,7 +359,7 @@ function tail(p: Painter, c: ChainPts, hx: number, hy: number, clock: number, gl
     p.py[i] = p.py[k]!;
     p.pw[i] = lerp(2.2, 4.6, t);
     const shimmer = 0.85 + 0.15 * noise1(clock * 2.2 - t * 5, 51);
-    p.pc[i * 3] = smoothstep(0.22, 0.75, t) * 0.34 * shimmer * glow;
+    p.pc[i * 3] = smoothstep(0.22, 0.75, t) * 0.6 * shimmer * glow;
   }
   p.streak(m, GOLD);
 }
@@ -372,8 +373,8 @@ function setC(p: Painter, i: number, r: number, g: number, b: number): void {
 /** The star at the tail's tip: a small hot point with four soft rays that slowly turn and breathe. */
 export function star(p: Painter, x: number, y: number, clock: number, k: number): void {
   const tw = 0.9 + 0.1 * noise1(clock * 5.5, 61) + 0.06 * Math.sin(clock * 2.1);
-  p.glow(x, y, 30 * k, GOLD, 0.11 * tw);
-  p.glow(x, y, 12 * k, GOLD, 0.5 * tw);
+  p.glow(x, y, 40 * k, GOLD, 0.14 * tw);
+  p.glow(x, y, 15 * k, GOLD, 0.6 * tw);
   const rot = 0.3 + 0.25 * Math.sin(clock * 0.6);
   for (let r = 0; r < 2; r++) {
     const a = rot + (r * Math.PI) / 2;
@@ -555,7 +556,7 @@ function specks(p: Painter, f: Frame, clock: number): void {
     const tw = 0.5 + 0.5 * noise1(clock * (0.5 + (seed % 5) * 0.13), seed * 3);
     const k = 0.25 + 0.75 * tw * tw;
     const big = seed % 4 === 0;
-    p.glow(x, y, big ? 2.5 : 1.7, STAR_BLUE, (big ? 0.62 : 0.45) * k);
+    p.glow(x, y, big ? 3 : 2.1, STAR_BLUE, (big ? 0.95 : 0.7) * k);
   }
 }
 
@@ -573,6 +574,25 @@ function cowl(p: Painter, j: Float32Array, d: number): void {
   p.ellipse(x - Math.cos(a) * 0.8 * d, y - Math.sin(a) * 0.8 * d, 5.6, 2.9, a + 0.22 * d, SH_SASH, 14);
 }
 
+/** One piece of the moonlit edge: an additive streak through three joints, wider than the part it backs. */
+function edge(p: Painter, j: Float32Array, a: number, b: number, c: number, w0: number, w1: number): void {
+  p.px[0] = j[a * 2]!;
+  p.py[0] = j[a * 2 + 1]!;
+  p.px[1] = j[b * 2]!;
+  p.py[1] = j[b * 2 + 1]!;
+  p.px[2] = j[c * 2]!;
+  p.py[2] = j[c * 2 + 1]!;
+  // Run a little past the end joint so hands and feet are inside it too.
+  p.px[3] = p.px[2]! + (p.px[2]! - p.px[1]!) * 0.3;
+  p.py[3] = p.py[2]! + (p.py[2]! - p.py[1]!) * 0.3;
+  p.pw[0] = w0;
+  p.pw[1] = (w0 + w1) * 0.5;
+  p.pw[2] = w1;
+  p.pw[3] = w1 * 0.8;
+  for (let i = 0; i < 4; i++) p.pc[i * 3] = i === 3 ? 0.16 : 0.27;
+  p.streak(4, MOONGLOW);
+}
+
 /** The whole character. */
 export function drawNova(p: Painter, f: Frame, sec: SecView, clock: number, glow: number): void {
   const { j, s } = f;
@@ -584,7 +604,18 @@ export function drawNova(p: Painter, f: Frame, sec: SecView, clock: number, glow
   const oy = j[J_ORIGIN * 2 + 1]!;
   p.soft(ox, oy + 1, 24, 4.6, SHADOW, 0.5 * s[S_GROUND]!);
   // A cool halo so the dark figure never sinks into a dark background.
-  p.glow(j[J_CENTRE * 2]!, j[J_CENTRE * 2 + 1]! - 4, 74, HALO, 0.05 + 0.03 * s[S_SPIN]!);
+  const hcx = j[J_CENTRE * 2]!;
+  const hcy = j[J_CENTRE * 2 + 1]! - 4;
+  p.glow(hcx, hcy, 96, HALO, 0.065 + 0.03 * s[S_SPIN]!);
+  p.glow((hcx + j[J_CHEST * 2]!) * 0.5, (hcy + j[J_CHEST * 2 + 1]!) * 0.5, 52, MOONGLOW, 0.1);
+  // A moonlit edge: soft light hugging every part of the silhouette, drawn behind the body so
+  // the dark shape always stands in an outline of light.
+  for (let side = 0; side < 2; side++) {
+    edge(p, j, J_HIP_A + side, J_KNEE_A + side, J_ANK_A + side, 9, 7);
+    edge(p, j, J_SH_A + side, J_EL_A + side, J_HAND_A + side, 7.5, 6.5);
+  }
+  edge(p, j, J_HIP, J_CHEST, J_NECK, 11.5, 9);
+  p.glow(j[J_HEAD * 2]!, j[J_HEAD * 2 + 1]!, 19, MOONGLOW, 0.3);
 
   arm(p, j, far, true, glow);
   leg(p, j, far, true, glow);

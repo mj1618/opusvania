@@ -136,10 +136,14 @@ export const SPIN_T = 0.42;
 // Channel order: PF PU LEAN CURL HT | AF AU AP | BF BU BP | HAF HAU HBF HBU | TW EYE LOOKY HYAW
 const RISE = pose([0, 40, 0.12, -0.08, -0.1, 9, 17, 0.9, -11, 1, 1.4, -8, -17, -13, -13, 0.12, 1, -0.2, 1]);
 const APEX = pose([0, 39, 0.05, 0.05, 0.02, 10, 15, 0.7, -9, 2, 1.25, 8, -15, -9, -16, 0.06, 1, 0, 1]);
-const FALL = pose([-1, 39, -0.07, 0.03, 0.13, 7, 1, 0.4, -5, 4, 0.9, 15, -3, -15, 5, 0, 1, 0.4, 1]);
+const FALL = pose([-1, 39, -0.07, 0.03, 0.13, 7, 1, 0.4, -5, 4, 0.9, 12, 15, -14, 13, 0, 1, 0.4, 1]);
+/** A long fall settles into this: tipped a little forward, arms carried high, legs trailing soft. */
+const FALL2 = pose([-2, 38, 0.17, 0.05, 0.05, 9, 10, 0.7, -11, 5, 1.3, 6, 18, -16, 10, 0.08, 1, 0.5, 1]);
+/** The last of a fall: legs long under the body, feet ready, arms down and wide for balance. */
+const REACH = pose([0, 40, 0.02, 0.04, 0.2, 6, -1, 0.15, -4, 0, 0.3, 14, -12, -15, -11, 0, 1, 0.6, 1]);
 /** The somersault's tuck: knees to chest, arms wrapped round the shins, chin down. */
 const TUCK = pose([
-  -14.3, 36, 0.6, 0.9, 1.47, -6.2, 23.6, 0.5, -7.6, 24.6, 0.6, -3.7, -14.2, -2.5, -13.4, 0, 0.9, 0.3, 1,
+  -12.5, 36, 0.6, 0.9, 2.07, -6.2, 23.6, 0.5, -7.6, 24.6, 0.6, -3.7, -14.2, -2.5, -13.4, 0, 0.9, 0.3, 1,
 ]);
 /** The somersault's opening beat: legs long and a little forward, arms out and up for balance. */
 const OPEN = pose([0, 40, -0.04, -0.06, -0.05, 7, 1, 0.45, -1, 2, 0.75, 14, 2, -15, 4, 0, 1, 0.2, 1]);
@@ -168,6 +172,11 @@ export interface RigSignals {
   skid: boolean;
   dashStart: boolean;
   wallJump: boolean;
+}
+
+/** Envelope of an occasional beat: eases in, holds, eases out (0 when the pulse is idle). */
+function beat(t: number): number {
+  return t > 0 ? smoothstep(0, 0.3, t) * (1 - smoothstep(0.66, 1, t)) : 0;
 }
 
 function frac(x: number): number {
@@ -220,8 +229,11 @@ export function spinTuck(u: number): number {
   if (u <= 0 || u >= 1) return 0;
   if (u < SPIN_IN) return 1 - (1 - u / SPIN_IN) ** 2.4;
   if (u < SPIN_OUT) return 1;
-  return (1 - (u - SPIN_OUT) / (1 - SPIN_OUT)) ** 2.2;
+  return (1 - (u - SPIN_OUT) / (1 - SPIN_OUT)) ** 3.5;
 }
+
+/** How far (px) a planted foot may be left behind before it lets go and steps. */
+const PLANT_REACH = 13;
 
 /** Where a standing foot wants to be, forward of the body (A in front, B behind). */
 const IDLE_F = [7.5, -3.2] as const;
@@ -291,6 +303,14 @@ export class Rig {
   private cutX = 0;
   private cutW = 0;
   private hardT = 1;
+  private fallT = 0;
+  /** Set by the owner each frame: px from the feet to the first surface below (Infinity if none). */
+  groundDist = Number.POSITIVE_INFINITY;
+  /** Plant lock: a foot on the ground keeps its world x; `slip` is the correction being applied. */
+  private readonly lockOn = [false, false];
+  private readonly lockX = [0, 0];
+  private readonly slip = [0, 0];
+  private readonly recover = [false, false];
   /** Standing feet are anchored in the world and step when the body leaves them behind. */
   private readonly anchor = [0, 0];
   private readonly stepFrom = [0, 0];
@@ -371,6 +391,10 @@ export class Rig {
       this.velS.snap(0);
       this.spinX = 0;
       this.hardT = 1;
+      this.fallT = 0;
+      this.lockOn[0] = this.lockOn[1] = false;
+      this.slip[0] = this.slip[1] = 0;
+      this.recover[0] = this.recover[1] = false;
       this.stepT[0] = this.stepT[1] = 1;
       this.anchor[0] = p.cx + IDLE_F[0] * dirT;
       this.anchor[1] = p.cx + IDLE_F[1] * dirT;
@@ -418,6 +442,7 @@ export class Rig {
     }
 
     this.idleFeet(dt, p, d);
+    this.fallT = !p.grounded && p.vy > 2 ? this.fallT + dt : 0;
 
     // --- Blend the poses.
     const out = this.out;
@@ -520,7 +545,7 @@ export class Rig {
         const u = this.spinT / SPIN_T;
         this.spinX = spinTurn(u);
         this.spinW = spinTuck(u);
-        openW = smoothstep(SPIN_OUT - 0.05, 0.93, u) * (1 - smoothstep(1.04, SPIN_TAIL, u)) * 0.85;
+        openW = smoothstep(SPIN_OUT - 0.08, 0.88, u) * (1 - smoothstep(1.04, SPIN_TAIL, u));
         if (u >= SPIN_TAIL) this.spinning = false;
       }
       this.spinVel = dt > 0 ? (Math.abs(this.spinX - before) * TAU) / dt : 0;
@@ -614,6 +639,7 @@ export class Rig {
     const latSh = cz * Math.cos(-tw * 0.8) - d * BODY.sinYaw * Math.sin(-tw * 0.8);
     const shX = chestX + su * d * 3.4;
     const shY = chestY - cu * 3.4;
+    const plantOk = p.grounded && !dash && !skid && this.wSkid < 0.05 && tuck < 0.01;
     const bendLeg = clamp(-d * 1.7, -1, 1);
     const bendArm = clamp(d * 1.7, -1, 1);
     for (let side = 0; side < 2; side++) {
@@ -624,8 +650,26 @@ export class Rig {
       const bf = out[side === 0 ? AF : BF]!;
       const bu = out[side === 0 ? AU : BU]!;
       const bp = out[side === 0 ? AP : BP]!;
-      const ballX = ox + bf * d - sd * cz * BODY.footHalf;
-      const ballY = oy - bu;
+      const rawX = ox + bf * d - sd * cz * BODY.footHalf;
+      // Plant lock: whatever the blend of poses does, a foot that is down stays where it is in
+      // the world. If the body leaves it too far behind it lets go and catches up in a small step.
+      let lift = 0;
+      const canPlant = plantOk && bu < 0.7;
+      if (canPlant && !this.recover[side]) {
+        if (!this.lockOn[side]) {
+          this.lockOn[side] = true;
+          this.lockX[side] = rawX + this.slip[side]!;
+        }
+        this.slip[side] = this.lockX[side]! - rawX;
+        if (Math.abs(this.slip[side]!) > PLANT_REACH) this.recover[side] = true;
+      } else {
+        this.lockOn[side] = false;
+        this.slip[side]! *= Math.exp(-24 * dt);
+        if (canPlant) lift = 2.4 * Math.sin(Math.PI * sat(Math.abs(this.slip[side]!) / PLANT_REACH));
+        if (Math.abs(this.slip[side]!) < 0.3) this.recover[side] = false;
+      }
+      const ballX = rawX + this.slip[side]!;
+      const ballY = oy - bu - lift;
       // The ankle sits behind and above the ball as the heel lifts.
       const ankX = ballX - Math.cos(bp) * BODY.foot * 0.72 * d;
       const ankY = ballY - Math.sin(bp) * BODY.foot * 0.72 - 1.6;
@@ -773,6 +817,27 @@ export class Rig {
     o[EYE] = 1;
     o[LOOKY] = 0.1;
     o[HYAW] = 1 - gl * 0.7;
+    // Quiet acrobat beats, each on its own unhurried clock: up onto the toes and down again, a
+    // roll of the shoulders, and once in a long while a slow stretch.
+    const toes = beat(pulse(clock, 14.3, 2.6, 41, 0.8));
+    const shT = pulse(clock, 9.1, 1.9, 43, 0.75);
+    const sh = beat(shT);
+    const st2 = beat(pulse(clock, 31, 4.4, 47, 0.9));
+    const up = toes + st2 * 0.8;
+    o[PU]! += up * 3.3;
+    o[AP]! += up * 0.6;
+    o[BP]! += up * 0.6;
+    o[TILT]! += sh * 1.7 * Math.sin(shT * TAU);
+    o[TW]! += sh * 0.13 * Math.cos(shT * TAU);
+    o[HBU]! += sh * 1.6 * Math.max(0, Math.sin(shT * TAU));
+    o[HAU]! += sh * 1.2 * Math.max(0, -Math.sin(shT * TAU));
+    o[HAF] = lerp(o[HAF]!, 3, st2);
+    o[HAU] = lerp(o[HAU]!, 19, st2);
+    o[HBF] = lerp(o[HBF]!, -2.5, st2);
+    o[HBU] = lerp(o[HBU]!, 18, st2);
+    o[CURL]! -= 0.15 * st2;
+    o[LEAN]! -= 0.05 * st2;
+    o[HT]! -= 0.12 * st2;
     return o;
   }
 
@@ -847,6 +912,12 @@ export class Rig {
     const fl = smoothstep(2, 12, p.vy);
     const tk = Math.max(0, 1 - r - fl);
     for (let i = 0; i < NP; i++) o[i] = RISE[i]! * r + APEX[i]! * tk + FALL[i]! * fl;
+    // A long fall is not one pose: it eases into a second layout and breathes between the two,
+    // then reaches for the ground as it comes up.
+    const long = fl * smoothstep(0.3, 1.0, this.fallT) * (0.62 + 0.38 * noise1(clock * 0.55, 47));
+    const reach = fl * smoothstep(170, 45, this.groundDist);
+    if (long > 1e-3) for (let i = 0; i < NP; i++) o[i] = lerp(o[i]!, FALL2[i]!, long);
+    if (reach > 1e-3) for (let i = 0; i < NP; i++) o[i] = lerp(o[i]!, REACH[i]!, reach);
     const vf = clamp((p.vx * sgn) / 9.6, -1.4, 1.4);
     o[LEAN]! += 0.11 * vf;
     o[PF]! += 1.5 * vf;
@@ -854,12 +925,17 @@ export class Rig {
     const n1 = noise1(clock * 1.3, 31);
     const n2 = noise1(clock * 1.1, 37);
     const n3 = noise1(clock * 0.9, 41);
-    o[AF]! += n1 * 1.6;
-    o[BF]! -= n2 * 1.6;
-    o[BU]! += n3 * 1.2 * fl;
-    o[HAU]! += n2 * 1.6 * (0.4 + fl);
-    o[HBU]! += n1 * 1.8 * (0.4 + fl);
-    o[HAF]! += n3 * 1.2;
+    const loose = (0.5 + fl) * (1 - 0.7 * reach);
+    o[AF]! += n1 * 3.6 * loose;
+    o[BF]! -= n2 * 3.6 * loose;
+    o[AU]! += n2 * 1.6 * loose;
+    o[BU]! += n3 * 2 * loose;
+    o[HAU]! += n2 * 3.6 * loose;
+    o[HBU]! += n1 * 3.8 * loose;
+    o[HAF]! += n3 * 2.2 * loose;
+    o[HBF]! += n1 * 1.8 * loose;
+    o[LEAN]! += n3 * 0.035 * loose;
+    o[TW]! += n2 * 0.08 * loose;
     return o;
   }
 }

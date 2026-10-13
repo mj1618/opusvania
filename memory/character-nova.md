@@ -31,6 +31,20 @@ violet sash and neck wrap. No concept file: designed directly in game.
   point's speed *relative to the body*, times a `heat` level (spin / dash). Using world speed drew
   four parallel wires behind every jump: don't.
 
+- **Reading in dark zones** (the body is dark on purpose): additive "edge" streaks behind every limb,
+  the torso and the head give the silhouette an outline of light; all three painter lights are
+  used as rims (warm key upper right, cool fill upper left, and the painter's second light placed
+  far below the feet as moonlight, so bottom edges rim too). Bands, flecks, tail and halo are
+  authored bright; the crescent is authored darker (0xb4bcd8) so it does not clip under bloom.
+- **Plant lock** (in the leg solve): a foot whose blended target is on the ground keeps its world
+  x whatever the pose blend does; left more than 13 px behind it lets go and catches up with a
+  small lift. Off in skids, dashes, the tuck. Synthetic stop (9.6 -> 0 px/f over 12 frames): max
+  1.3 px/frame, 2.1 px total on grounded toes (toe roll included).
+- **Fall**: `FALL` -> `FALL2` with time falling (and a slow noise between them), then `REACH` as
+  `rig.groundDist` (set by index.ts from the scene rects) closes; the tail lifts with fall speed.
+- **Idle beats**: toes-rise, shoulder roll, slow stretch on separate hashed clocks (`beat(pulse(..))`).
+- Trails have a faint dusk under-stroke (alpha ribbon) so rings show on bright backgrounds.
+
 ## Gotchas
 - Clips die with "Execution context was destroyed" when another agent's edit triggers a Vite
   reload mid-capture: retry, and keep clips under ~80 frames while others are editing.

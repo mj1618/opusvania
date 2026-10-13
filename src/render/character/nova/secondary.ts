@@ -82,6 +82,8 @@ export class Secondary {
     tail.rot = rig.headAng + flip;
     // Lifts off the back when running or sliding down a wall, lies flat in a dash.
     tail.lift = -0.5 * rig.wRun - 1.0 * rig.wWall - 0.25 * rig.wAir + 0.2 * rig.wDash;
+    // Falling, it streams up over the head.
+    tail.lift -= 0.7 * rig.wAir * Math.min(1, Math.max(0, (p.vy - 4) / 10));
     // At rest it is never quite still: a slow drift of its own on top of the wind.
     const calm = Math.max(0, 1 - rig.wRun - rig.wAir - rig.wDash - rig.wWall);
     tail.lift += calm * (0.16 * noise1(clock * 0.31, 71) + 0.07 * noise1(clock * 0.83, 73));

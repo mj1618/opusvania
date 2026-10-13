@@ -32,7 +32,7 @@ export class NovaCharacter implements CharacterSkin {
   private readonly rig = new Rig();
   private readonly sec = new Secondary();
   private readonly fx = new Fx();
-  private readonly ember: PointLight = { x: 0, y: 0, radius: 250, color: STAR_COLOR, intensity: 1 };
+  private readonly ember: PointLight = { x: 0, y: 0, radius: 300, color: STAR_COLOR, intensity: 1 };
   private started = false;
   /** Smoothed "how lit up" 0..1: rises in jumps, dashes and the somersault. */
   private heat = 0;
@@ -50,13 +50,16 @@ export class NovaCharacter implements CharacterSkin {
     p.lx = -KEY_LIGHT.dirX;
     p.ly = -KEY_LIGHT.dirY;
     p.keyColor = rgb(KEY_LIGHT.color);
-    p.coolColor = rgb(0x48b8c4);
-    p.l2c = rgb(STAR_COLOR);
+    p.coolColor = rgb(0x8fdcf0);
+    // The painter's second light is used as moonlight from below, so with the warm key (upper
+    // right) and the cool fill (upper left) every edge of the silhouette carries a rim.
+    p.l2c = rgb(0xa8c4ff);
   }
 
   update(dtIn: number, clock: number, player: PlayerView, events: readonly SimEvent[]): void {
     const dt = clamp(dtIn, 0, 0.05);
     const { rig, sec, fx, painter: p } = this;
+    rig.groundDist = this.groundBelow(player);
     rig.update(dt, clock, player, events);
     const sig = rig.sig;
     const fresh = sig.spawned || !this.started;
@@ -141,10 +144,10 @@ export class NovaCharacter implements CharacterSkin {
     const scale = Math.max(1e-3, Math.abs(this.layer.scale.x) * this.ctx.viewScale());
     p.fw = clamp(1 / scale, 0.06, 1.5);
     const flicker = 0.95 + 0.04 * noise1(clock * 5, 21) + 0.03 * Math.sin(clock * 1.7);
-    p.l2x = ex;
-    p.l2y = ey;
-    p.l2r = 44;
-    p.l2k = 0.7 * flicker;
+    p.l2x = player.cx + 30;
+    p.l2y = player.feetY + 260;
+    p.l2r = 900;
+    p.l2k = 1.5;
     p.begin();
     fx.drawTrails(p, WIDTHS);
     drawNova(p, rig.frame, sec, clock, 1 + 0.5 * heat);
@@ -155,8 +158,24 @@ export class NovaCharacter implements CharacterSkin {
     const e = this.ember;
     e.x = ex;
     e.y = ey;
-    e.radius = 250 + heat * 80;
-    e.intensity = flicker * (1 + heat * 0.35);
+    e.radius = 300 + heat * 80;
+    e.intensity = flicker * (1.15 + heat * 0.35);
+  }
+
+  /** Px from the feet to the first solid or one-way top below them (Infinity if none). */
+  private groundBelow(p: PlayerView): number {
+    if (p.grounded) return 0;
+    const x0 = p.cx - p.w / 2;
+    const x1 = p.cx + p.w / 2;
+    const y = p.feetY - 2;
+    let best = this.ctx.scene.height - p.feetY;
+    for (const r of this.ctx.scene.solids) {
+      if (r.x < x1 && r.x + r.w > x0 && r.y >= y && r.y - p.feetY < best) best = r.y - p.feetY;
+    }
+    for (const r of this.ctx.scene.oneWays) {
+      if (r.x < x1 && r.x + r.w > x0 && r.y >= y && r.y - p.feetY < best) best = r.y - p.feetY;
+    }
+    return Math.max(0, best);
   }
 
   destroy(): void {
