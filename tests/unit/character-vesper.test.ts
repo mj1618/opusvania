@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { CameraKick } from '../../src/render/camera/kick';
 import { cameraTuning } from '../../src/render/camera/tuning';
 import { BladeTrail } from '../../src/render/character/vesper/fx';
-import { J_COUNT, J_TOE_A, J_TOE_B, Rig, STROKES, strokeFor } from '../../src/render/character/vesper/rig';
+import {
+  J_COUNT,
+  J_TOE_A,
+  J_TOE_B,
+  Rig,
+  STROKES,
+  spinPeak,
+  spinTime,
+  strokeFor,
+} from '../../src/render/character/vesper/rig';
 import { Secondary } from '../../src/render/character/vesper/wings';
 import type { PlayerView } from '../../src/render/contract';
 import type { SimEvent } from '../../src/sim/events';
@@ -158,8 +167,8 @@ describe('vesper rig', () => {
     }
   });
 
-  it('a somersault cut short by landing settles upright without a pop (one turn and two)', () => {
-    for (const turns of [1, 2]) {
+  it('a somersault cut short by landing settles upright without a pop (one to four turns)', () => {
+    for (const turns of [1, 2, 3, 4]) {
       Rig.turns = turns;
       const rig = new Rig();
       let clock = 0;
@@ -174,24 +183,29 @@ describe('vesper rig', () => {
       for (let i = 0; i < 9; i++) rig.update(DT, tick(), view(air), []);
       expect(Math.abs(rig.spinPhi)).toBeGreaterThan(1);
       let prev = rig.spinPhi;
+      const dir = Math.sign(prev);
       let worst = 0;
+      let back = 0;
       for (let i = 0; i < 40; i++) {
         rig.update(DT, tick(), view({ cy: 1140, feetY: 1180 }), []);
         // Whole turns are the same pose: compare the angles on the circle.
         const dphi = rig.spinPhi - prev;
         worst = Math.max(worst, Math.abs(Math.atan2(Math.sin(dphi), Math.cos(dphi))));
+        back = Math.max(back, -Math.atan2(Math.sin(dphi), Math.cos(dphi)) * dir);
         prev = rig.spinPhi;
       }
       // Never more than ~70 degrees in one frame on the way back, and it ends exactly upright.
       expect(worst).toBeLessThan(1.25);
+      // She rolls on the way she was turning: never back.
+      expect(back).toBeLessThan(0.02);
       expect(rig.spinPhi).toBe(0);
       expect(rig.spinW).toBe(0);
     }
-    Rig.turns = 2;
+    Rig.turns = 4;
   });
 
   it('somersault: spin rate follows 1 / moment of inertia, whole turns, tight ball', () => {
-    for (const turns of [1, 2]) {
+    for (const turns of [1, 2, 3, 4]) {
       Rig.turns = turns;
       const rig = new Rig();
       let clock = 0;
@@ -225,7 +239,7 @@ describe('vesper rig', () => {
         minI = Math.min(minI, rig.spinI);
         if (rig.spinW > 0.98) tuckedI = Math.min(tuckedI, rig.jointI);
         // Away from the first and last tenth the momentum is constant: omega x I does not change.
-        const u = (frames * DT) / (turns === 2 ? 0.56 : 0.48);
+        const u = (frames * DT) / spinTime(turns);
         if (u > 0.14 && u < 0.86) momentum.push(rig.spinOmega * rig.spinI);
         tick();
         frames++;
@@ -236,17 +250,23 @@ describe('vesper rig', () => {
       const lo = Math.min(...momentum);
       const hi = Math.max(...momentum);
       expect((hi - lo) / hi).toBeLessThan(0.06);
-      // Whole turns, ending upright, and no single frame jumps more than ~30 degrees.
+      // Whole turns, ending upright; one and two turns never jump more than ~30 degrees in a frame,
+      // four turns peak near 50 (kept clear of 45 and 60, where the two-lobed ball would strobe).
       expect(rig.spinPhi).toBe(0);
       expect(total / (Math.PI * 2)).toBeGreaterThan(turns - 0.06);
-      expect(worstStep).toBeLessThan(0.55);
+      expect(worstStep).toBeLessThan(turns <= 2 ? 0.55 : turns === 3 ? 0.74 : 0.92);
+      if (turns === 4) {
+        const deg = (spinPeak(4) * 180) / Math.PI / 60;
+        expect(deg).toBeGreaterThan(48);
+        expect(deg).toBeLessThan(56);
+      }
       // The posed skeleton really is ~4x easier to turn in the ball: the model's ratio is its own.
       expect(openI / tuckedI).toBeGreaterThan(3.2);
       expect(openI / tuckedI).toBeLessThan(4.6);
-      // Two turns spin faster than one.
-      expect(peak).toBeGreaterThan(turns === 2 ? 26 : 18);
+      // More turns spin faster.
+      expect(peak).toBeGreaterThan([18, 26, 38, 48][turns - 1] ?? 0);
     }
-    Rig.turns = 2;
+    Rig.turns = 4;
   });
 
   it('glide: wings spread to both sides, stay spread through a turn, and fold on release', () => {
@@ -394,7 +414,7 @@ describe('vesper rig', () => {
     for (let i = 0; i < 18; i++) tick();
     // The finisher gathers for its three frames before the cut starts.
     tick({}, [slash(3)]);
-    expect(rig.stroke).toBe(STROKES.fwd[2]);
+    expect(rig.stroke).toBe(strokeFor('fwd', 3, Rig.finisherTurn));
     expect(rig.cutQ).toBe(-1);
     tick();
     expect(rig.cutQ).toBe(-1);

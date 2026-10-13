@@ -138,6 +138,8 @@ export interface Stroke {
   home: number;
   /** How hard the cut front-loads its speed (1 = even, 2.2 = most of the arc in the first frames). */
   ease: number;
+  /** Whole turns of her body about its own upright axis through the stroke (the finisher's pirouette). */
+  turn?: number;
   /** Degrees the blade eases back from the follow-through while it is held (the guard relaxing). */
   relax: number;
   /** Fraction of the cut from which its trail shows (before that the blade is behind or beside her). */
@@ -171,12 +173,16 @@ const NK = 15;
 // off-arm thrown down behind); cut 2 ends LOW and LONG (a deep reaching lunge, spine laid forward,
 // the off-arm thrown up behind); the finisher gathers small and low, hops, and lands wide.
 //              TW    LEAN   CURL   PF   PU    HT    OF   OU  FA  FB  ROT   WING LIFT LEGS HOP
-const CUT1_W = [0.6, 0.32, 0.22, -2, -4.5, 0.18, 4, -1, 0, 0, 0.1, -0.5, 0, 0, 0];
-const CUT1_F = [-0.7, -0.12, -0.26, 5, 2.4, -0.36, -10, -5, 9, -3, -0.22, 1.05, 2, 4, 0];
+const CUT1_W = [0.6, 0.32, 0.22, -2, -4.5, 0.18, 4, -1, 0, 0, 0.1, -0.7, 0, 0, 0];
+const CUT1_F = [-0.8, -0.12, -0.26, 5, 2.4, -0.36, -10, -5, 9, -3, -0.22, 1.3, 2, 4, 0];
 const CUT2_W = [-0.7, -0.06, -0.2, 4, 2.6, -0.3, -8, -2, 9, -3, -0.14, 0.4, 0, 4, 0];
 const CUT2_F = [0.78, 0.58, 0.1, 9, -8, -0.34, -9, 10, 14, -5, 0.22, 0.95, 0, 7, 0];
 const FIN_W = [0.9, -0.22, -0.14, -6, -7, -0.1, 9, 6, 3, -2, -0.28, -1, 0, -3, 0];
 const FIN_F = [-0.95, 0.5, 0.2, 10, -7.5, -0.2, -11, 6, 14, -4, 0.36, 1.5, 0, 9, 13];
+// The pirouette: she coils away from the target (showing her back), whips round with the blade
+// trailing on a low wide ring that climbs in front of her, hops through it and lands wide and low.
+const SPIN_W = [0.5, -0.1, 0.18, -3, -6, 0.1, -7, 3, 2, -2, -0.12, -0.9, 0, -3, 0];
+const SPIN_F = [-0.9, 0.3, -0.12, 9, -8.5, -0.3, -12, 2, 15, -5, 0.2, 1.6, 0, 9, 14];
 const UP1_W = [0.4, -0.08, -0.06, 0, -1.5, -0.2, 3, -3, 0, 0, -0.1, -0.3, 0, 0, 0];
 const UP1_F = [-0.4, 0.06, -0.1, 0, 2.6, -0.26, -4, -5, 0, 0, 0.1, 0.7, 4, 3, 0];
 const UP2_W = [-0.4, 0.08, 0, 0, 1.5, -0.2, -4, -4, 0, 0, 0.1, 0.3, 0, 3, 0];
@@ -226,24 +232,25 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       w: CUT2_W,
       f: CUT2_F,
     },
-    // 3: the finisher. Gathered behind her, then a cleave over the top and down through.
+    // 3: the finisher. A full turn: the blade comes round low on her near side and climbs through.
     {
-      a0: 168,
-      a1: -34,
-      over: 13,
-      tilt: 8,
-      sq: 0.6,
+      a0: -196,
+      a1: 38,
+      over: 12,
+      tilt: 12,
+      sq: 0.44,
       reach: 135,
       wind: 3,
       cut: 3.4,
       hold: 22,
       home: 12,
       ease: 3,
-      relax: 6,
-      show: 0.4,
+      turn: 1,
+      relax: 14,
+      show: 0.5,
       thick: 0.44,
-      w: FIN_W,
-      f: FIN_F,
+      w: SPIN_W,
+      f: SPIN_F,
     },
   ],
   // Up: 1 comes up behind her and over to the front; 2 goes back over (and stops high); 3 gathers
@@ -331,16 +338,37 @@ export const HURT = {
   /** The recoil pose is held this long (the sim's stagger is 12 frames), then let go over `out`. */
   hold: 0.2,
   out: 0.28,
+  /** How long the wings stay blown inside-out by the blow. */
+  blow: 0.2,
   /** Her last light: the dissolve starts this long after the blow and takes `fadeLen`. */
   fadeAt: 0.12,
   fadeLen: 0.45,
   /** Re-forming: dust gathers, then she is whole again by the end of this. */
   reform: 0.6,
   /** While she cannot be hurt she pulses: depth of the alpha dip, pulses per second. */
-  flickerDepth: 0.4,
-  flickerHz: 7,
+  flickerDepth: 0.36,
+  flickerHz: 4.5,
 } as const;
 
+/** The finisher before the pirouette (kept for comparison: `Rig.finisherTurn = false`): gathered behind her, a cleave over the top. */
+const FIN_CLEAVE: Stroke = {
+  a0: 168,
+  a1: -34,
+  over: 13,
+  tilt: 8,
+  sq: 0.6,
+  reach: 135,
+  wind: 3,
+  cut: 3.4,
+  hold: 22,
+  home: 12,
+  ease: 3,
+  relax: 6,
+  show: 0.4,
+  thick: 0.44,
+  w: FIN_W,
+  f: FIN_F,
+};
 /** Where the blade points when it is home: back and down along the sheath. Hand reach from the shoulder, px. */
 export const SHEATH_ANG = -152;
 const HAND_WIND = 10.5;
@@ -348,8 +376,9 @@ const HAND_CUT = 16.8;
 const DEG = Math.PI / 180;
 
 /** The stroke for a slash direction and combo step (a down slash is always the one blow). */
-export function strokeFor(dir: SlashDir, step: number): Stroke {
+export function strokeFor(dir: SlashDir, step: number, turn = false): Stroke {
   const list = STROKES[dir];
+  if (dir === 'fwd' && step === 3 && !turn) return FIN_CLEAVE;
   return list[Math.min(list.length, Math.max(1, step)) - 1]!;
 }
 
@@ -445,22 +474,39 @@ const OPEN = pose([0, 33.5, -0.12, -0.16, -0.14, 5, -2, 0.7, -5, -1, 1.1, -12, 1
  * Slow while long, whipping round as she pulls into the ball, slowing by itself as she kicks out.
  */
 export const SOMERSAULT = {
-  /** Seconds for one turn, and for two. */
-  time: [0.48, 0.56],
+  /** Seconds for one, two, three and four turns. */
+  time: [0.48, 0.56, 0.58, 0.6],
   /** Fraction of the move by which she is fully tucked, and at which the kick-out begins. */
-  tuckIn: [0.3, 0.24],
-  kickOut: [0.58, 0.68],
+  tuckIn: [0.3, 0.24, 0.2, 0.17],
+  kickOut: [0.58, 0.68, 0.72, 0.75],
   /** Moment of inertia stretched out, relative to the ball (measured from the rig's own joints: see the test). */
   inertiaOpen: 3.85,
   /** Extra inertia of the wings as they flare at the kick-out: an air brake. */
   inertiaFlare: 5,
+  /**
+   * Landing in the ball: it rolls on at least `rollMin` rad and at most `rollMax` to an upright,
+   * on a critically damped brake of at least `rollOmega` rad/s; the ball sits `rollDrop` px lower (on the ground).
+   */
+  rollMin: 1.1,
+  rollMax: 6.9,
+  rollOmega: 30,
+  rollDrop: 17,
   /** In the ball every length shrinks by this much: barely (the owner saw her get smaller at 12%). */
   shrink: 0.03,
 } as const;
 
+/** Most turns a somersault can have. */
+export const MAX_TURNS = 4;
+function turnIndex(n: number): number {
+  return Math.min(MAX_TURNS, Math.max(1, Math.round(n))) - 1;
+}
+/** Peak spin rate of an `n`-turn somersault, rad/s. */
+export function spinPeak(n: number): number {
+  return (TAU * (turnIndex(n) + 1)) / (SPIN_MEAN[turnIndex(n)]! * spinTime(n));
+}
 /** Tuck 0..1 at progress u for a move of `n` turns. */
 function tuckAt(n: number, u: number): number {
-  const k = n === 2 ? 1 : 0;
+  const k = turnIndex(n);
   const a = SOMERSAULT.tuckIn[k]!;
   const b = SOMERSAULT.kickOut[k]!;
   return quintic(u / a) * (1 - quintic((u - b) / (1 - b)));
@@ -468,7 +514,7 @@ function tuckAt(n: number, u: number): number {
 /** Moment of inertia (ball = 1) at progress u. */
 function inertiaAt(n: number, u: number): number {
   const w = tuckAt(n, u);
-  const b = SOMERSAULT.kickOut[n === 2 ? 1 : 0]!;
+  const b = SOMERSAULT.kickOut[turnIndex(n)]!;
   const flare = quintic((u - b - 0.08) / (1 - b - 0.08));
   return 1 + (SOMERSAULT.inertiaOpen - 1) * (1 - w) * (1 - w) + SOMERSAULT.inertiaFlare * flare;
 }
@@ -480,7 +526,7 @@ const SPIN_N = 128;
 /** Mean of L / I over the move, per turn count: scales the angular speed so the total is whole turns. */
 const SPIN_MEAN: number[] = [];
 /** Cumulative angle 0..1 over the move, for one turn and for two: the integral of L / I, normalised. */
-const SPIN_TABLE = [1, 2].map((n) => {
+const SPIN_TABLE = [1, 2, 3, 4].map((n) => {
   const t = new Float32Array(SPIN_N + 1);
   let acc = 0;
   for (let i = 1; i <= SPIN_N; i++) {
@@ -494,14 +540,14 @@ const SPIN_TABLE = [1, 2].map((n) => {
 });
 /** Fraction of the whole rotation done at progress u. */
 function spinAt(n: number, u: number): number {
-  const t = SPIN_TABLE[n === 2 ? 1 : 0]!;
+  const t = SPIN_TABLE[turnIndex(n)]!;
   const x = sat(u) * SPIN_N;
   const i = Math.min(SPIN_N - 1, Math.floor(x));
   return t[i]! + (t[i + 1]! - t[i]!) * (x - i);
 }
 /** Somersault duration for `n` turns, seconds. */
 export function spinTime(n: number): number {
-  return SOMERSAULT.time[n === 2 ? 1 : 0]!;
+  return SOMERSAULT.time[turnIndex(n)]!;
 }
 
 function quintic(x: number): number {
@@ -662,7 +708,9 @@ export class Rig {
   openHold = 0;
   spinning = false;
   /** Turns per somersault: 1 or 2 (the owner flips it live with T). */
-  static turns = 2;
+  static turns = 4;
+  /** The finisher as a pirouette. Off: tried and judged worse than the cleave with a hop at game size (memory/character-vesper.md). */
+  static finisherTurn = false;
   /** The model's moment of inertia (ball = 1) and angular speed (rad/s) this frame, and the ball's measured radius. */
   spinI: number = SOMERSAULT.inertiaOpen;
   spinOmega = 0;
@@ -772,6 +820,7 @@ export class Rig {
   private fadeT = 0;
   private reformT = 9;
   private hurtRoll = 0;
+  hurtBlow = 0;
   /** 0..1: how much of the stroke's body key is in play; px she is off the ground in the finisher's hop. */
   slashBody = 0;
   slashHop = 0;
@@ -797,6 +846,18 @@ export class Rig {
   private spinT = 0;
   private spinDir = 1;
   private spinFree = false;
+  private rolling = false;
+  private rollK = 0;
+  /** Screen spin rate (rad/s, clockwise +) and the point she is turning about: for the motion-blur rings. */
+  spinRate = 0;
+  spinCx = 0;
+  spinCy = 0;
+  /** A slash began in the somersault: she kicks out of the ball at once and unfolds into the cut. */
+  private spinCut = false;
+  /** Pirouette progress in turns (0 = none). */
+  turnF = 0;
+  /** What is left of the somersault's turn while she cuts out of it, rad on screen: the blade turns with her. */
+  private spinResid = 0;
   private openT = 1;
   private readonly gazeX = new Spring(0, 26, 0.85);
   private readonly gazeY = new Spring(0, 14, 0.9);
@@ -1008,8 +1069,34 @@ export class Rig {
     this.yaw.omega = lerp(26, 8.2, this.wGlide);
     this.yaw.zeta = lerp(0.78, 0.95, this.wGlide);
     this.headYaw.omega = lerp(40, 15, this.wGlide);
-    const d = clamp(this.yaw.step(dirT, dt), -1, 1);
-    const sgn = d >= 0 ? 1 : -1;
+    const d0 = clamp(this.yaw.step(dirT, dt), -1, 1);
+    const sgn = d0 >= 0 ? 1 : -1;
+    // The pirouette: her whole body turns about its upright axis through the finisher. The body
+    // leads (half a turn in the gather: she coils away and shows her back), the blade trails it.
+    let turnF = 0;
+    {
+      const sk = this.stroke;
+      if (this.slashOn && sk.turn && this.wWall < 0.5 && this.soar < 0.5) {
+        const sf = (this.slashT + (p.hitstop <= 0 || sig.slashHit ? dt : 0)) * 60;
+        const u = sat((sf - sk.wind) / sk.cut);
+        turnF =
+          sf < sk.wind
+            ? 0.5 * smoothstep(0, 1, sf / sk.wind) ** 1.3
+            : 0.5 + 0.5 * (1 - (1 - u) ** sk.ease) ** 0.8;
+        turnF *= sk.turn;
+      }
+    }
+    this.turnF = turnF;
+    const theta = TAU * turnF;
+    const d = d0 * Math.cos(theta);
+    // Sideways offsets (which shoulder, hip and foot is on which side) swap for the far half of the turn.
+    const tf = turnF - Math.floor(turnF);
+    const latSign =
+      turnF <= 0 || turnF >= 1
+        ? 1
+        : tf < 0.75
+          ? clamp((0.5 - tf) * 10, -1, 1)
+          : lerp(-1, 1, smoothstep(0.75, 1, tf));
 
     // --- Pose weights.
     const speed = Math.abs(p.vx);
@@ -1077,7 +1164,8 @@ export class Rig {
       this.spinA = 0;
       this.wasFree = false;
       this.spinDir = Math.abs(p.vx) > 1.5 ? (p.vx > 0 ? 1 : -1) : sgn;
-      this.spinN = Rig.turns === 2 ? 2 : 1;
+      this.spinCut = false;
+      this.spinN = turnIndex(Rig.turns) + 1;
       this.openT = 1;
     }
     if (this.spinning) {
@@ -1089,13 +1177,30 @@ export class Rig {
           this.spinS.x = this.spinA;
           this.spinS.v = this.spinVel;
           // A dash must be level almost at once; a landing can take a moment longer.
-          this.spinS.omega = dash ? 46 : 26;
+          this.spinS.omega = dash || this.spinCut ? 46 : 26;
           this.spinTarget = Math.round((this.spinA + this.spinVel * 0.06) / TAU) * TAU;
+          // Landing in the ball: it hits the ground and rolls out. On to the next upright that is
+          // at least a little way round, braking just hard enough to stop there without rocking back.
+          this.rolling = p.grounded && !dash && !this.spinCut && this.spinW > 0.5;
+          if (this.rolling) {
+            let rem = Math.ceil((this.spinA + SOMERSAULT.rollMin) / TAU) * TAU - this.spinA;
+            if (rem > SOMERSAULT.rollMax) rem -= TAU;
+            this.spinTarget = this.spinA + rem;
+            this.spinS.omega = Math.max(SOMERSAULT.rollOmega, this.spinVel / Math.max(rem, 0.2));
+          }
+          if (this.spinCut) {
+            // The kick-out comes now: the wings are thrown wide as she opens into the cut.
+            sig.opened = true;
+            this.openT = 0;
+          }
         }
         const a0 = this.spinA;
         this.spinA = this.spinS.step(this.spinTarget, dt);
         if (dt > 0) this.spinVel = (this.spinA - a0) / dt;
-        this.spinW += (0 - this.spinW) * approach(20, dt);
+        // Rolling out she stays a ball until she is nearly round, then unrolls into the landing crouch.
+        const left = Math.abs(this.spinTarget - this.spinA);
+        const tuckT = this.rolling && p.grounded ? 0.92 * smoothstep(0.35, 1.5, left) : 0;
+        this.spinW += (tuckT - this.spinW) * approach(this.spinCut ? 42 : tuckT > this.spinW ? 30 : 20, dt);
         if (
           Math.abs(this.spinA - this.spinTarget) < 0.004 &&
           Math.abs(this.spinS.v) < 0.1 &&
@@ -1124,7 +1229,11 @@ export class Rig {
         if (u >= 1) this.spinning = false;
       }
       this.wasFree = this.spinFree;
+      if (!this.spinFree || !p.grounded) this.rolling = false;
+      this.spinResid =
+        this.spinning && this.spinFree && this.spinCut ? (this.spinA - this.spinTarget) * this.spinDir : 0;
       if (!this.spinning) {
+        this.rolling = false;
         this.spinA = 0;
         this.spinW = 0;
         this.spinVel = 0;
@@ -1135,6 +1244,8 @@ export class Rig {
       this.spinW = sat(this.spinW);
       this.spinPhi = this.spinA * this.spinDir;
     }
+    this.spinRate = this.spinning ? this.spinVel * this.spinDir : 0;
+    this.rollK += ((this.rolling ? 1 : 0) - this.rollK) * approach(this.rolling ? 34 : 16, dt);
     if (this.spinW > 1e-4) {
       const w = this.spinW;
       for (let i = 0; i < NP; i++) out[i] = lerp(out[i]!, TUCK[i]!, w);
@@ -1365,6 +1476,20 @@ export class Rig {
       out[LEAN]! += kn[K_LEAN]! * fw * gl;
       out[CURL]! += kn[K_CURL]! * fw * gl;
       out[PF]! += kn[K_PF]! * fw * gk;
+      // Running, the stride answers the cut: she sinks into it and the trailing leg (whichever is
+      // off the ground: a planted foot is never moved) is thrown long behind her.
+      const acc = this.slashOn ? bell(sat(sf / (sk.wind + sk.cut + 5))) * this.wRun * g0 * fw : 0;
+      if (acc > 1e-3) {
+        const rearA = out[AF]! < out[BF]!;
+        const RF = rearA ? AF : BF;
+        const RU = rearA ? AU : BU;
+        const off = sat(out[RU]! / 3);
+        out[RF]! -= 9 * acc * off;
+        out[RU]! += 3 * acc * off;
+        out[rearA ? AP : BP]! += 0.4 * acc * off;
+        out[PU]! -= 2.4 * acc;
+        out[LEAN]! += 0.1 * acc;
+      }
       const hop = kn[K_HOP]! * g0 * fw;
       out[PU]! += (kn[K_PU]! + kn[K_LIFT]!) * fw * gk + hop;
       out[HT]! += kn[K_HT]! * fw;
@@ -1448,22 +1573,29 @@ export class Rig {
     if (hk > 1e-3) {
       const kf = this.hurtDir * sgn;
       const up = 1 - g0;
-      out[LEAN]! -= 0.44 * kf * hk;
-      out[CURL]! += 0.26 * hk;
-      out[HT]! += 0.3 * hk;
+      // On the ground: knocked back on her heels. In the air: flung spine-first, folded round the
+      // blow like a jackknife, with hands and feet trailing toward what hit her.
+      out[LEAN]! -= (0.44 + 0.5 * up) * kf * hk;
+      out[CURL]! += (0.26 + 0.5 * up) * hk;
+      out[HT]! += (0.3 + 0.25 * up) * hk;
       out[PF]! += 3 * kf * hk;
-      out[HAF]! -= 9 * kf * hk;
-      out[HBF]! -= 7.5 * kf * hk;
-      out[HAU]! += 6 * hk;
-      out[HBU]! += 4.5 * hk;
-      out[AF]! -= 7 * kf * hk * up;
-      out[BF]! -= 4 * kf * hk * up;
-      out[AU]! += 5 * hk * up;
-      out[BU]! += 8 * hk * up;
+      out[PU]! += 3 * up * hk;
+      out[HAF]! -= (9 + 5 * up) * kf * hk;
+      out[HBF]! -= (7.5 + 5 * up) * kf * hk;
+      out[HAU]! += (6 + 5 * up) * hk;
+      out[HBU]! += (4.5 + 6 * up) * hk;
+      out[AF]! -= 15 * kf * hk * up;
+      out[BF]! -= 12 * kf * hk * up;
+      out[AU]! += 13 * hk * up;
+      out[BU]! += 9 * hk * up;
+      out[AP]! -= 0.5 * hk * up;
+      out[BP]! -= 0.5 * hk * up;
       out[EYE]! *= 1 - 0.7 * hk;
       // On screen, clockwise +: the feet lead the way she is thrown.
-      this.hurtRoll = -0.3 * this.hurtDir * hk * (0.4 + 0.6 * up);
+      this.hurtRoll = -(0.12 + 0.36 * up) * this.hurtDir * hk;
     }
+    // The wings are blown inside-out for a beat: they stream toward the blow, ahead of her.
+    this.hurtBlow = this.hurtT < HURT.blow ? Math.sin(Math.PI * sat(this.hurtT / HURT.blow)) ** 0.6 : 0;
     // Re-forming she is curled small and unfolds as the dust comes together.
     if (this.reformK > 1e-3) {
       const w = this.reformK * 0.75;
@@ -1506,11 +1638,14 @@ export class Rig {
     // --- Solve the skeleton.
     const j = this.frame.j;
     const s = this.frame.s;
-    const cz = Math.sqrt(Math.max(0, 1 - (d * BODY.sinYaw) ** 2));
+    const czAbs = Math.sqrt(Math.max(0, 1 - (d * BODY.sinYaw) ** 2));
+    const cz = czAbs * latSign;
     const look = this.lookS.step(out[HYAW]!, dt);
     // Cutting away from a wall she looks over her shoulder at the blade.
     const headDir = this.wWall > 0.5 && this.slashW > 0.2 ? this.slashFacing * 0.7 : dirT;
-    const dh = clamp(this.headYaw.step(headDir, dt) * look, -1, 1);
+    // The head spots: it stays on the target as the body starts round, then whips past it and arrives first.
+    const headTurn = Math.cos(TAU * smoothstep(0.22, 0.8, turnF));
+    const dh = clamp(this.headYaw.step(headDir, dt) * look * (turnF > 0 && turnF < 1 ? headTurn : 1), -1, 1);
     const armBend = lerp(clamp(d * 1.7, -1, 1), this.slashFacing, this.slashW);
     const czh = Math.sqrt(Math.max(0, 1 - (dh * BODY.sinHeadYaw) ** 2));
     const ox = p.cx;
@@ -1657,8 +1792,8 @@ export class Rig {
     {
       const bx = Math.cos(this.slashAng) * this.slashFacing;
       const by = -Math.sin(this.slashAng);
-      const cr = Math.cos(this.slashRoll);
-      const sr = Math.sin(this.slashRoll);
+      const cr = Math.cos(this.slashRoll + this.spinResid);
+      const sr = Math.sin(this.slashRoll + this.spinResid);
       this.bladeX = bx * cr - by * sr;
       this.bladeY = bx * sr + by * cr;
     }
@@ -1711,7 +1846,10 @@ export class Rig {
       const sp = Math.sin(phi);
       const sc = 1 - SOMERSAULT.shrink * ball;
       const tx = lerp(mx, cX, ball);
-      const ty = lerp(my, cY, ball);
+      // A ball rolling on the ground sits on it (the box centre is 40 px up; the ball is ~21 px in radius).
+      const ty = lerp(my, cY + SOMERSAULT.rollDrop * this.rollK, ball);
+      this.spinCx = tx;
+      this.spinCy = ty;
       for (let i = 0; i < J_COUNT; i++) {
         if (i === J_ORIGIN || i === J_CENTRE) continue;
         const rx = (j[i * 2]! - mx) * sc;
@@ -1731,7 +1869,7 @@ export class Rig {
     const wideK = this.wide.step(1, dt);
 
     s[S_D] = d;
-    s[S_CZ] = cz;
+    s[S_CZ] = czAbs;
     s[S_DH] = dh;
     s[S_CZH] = czh;
     s[S_HEADROT] = headAng * dh + phi + sw * 0.3;
@@ -1759,7 +1897,11 @@ export class Rig {
     this.fromHand = held ? this.handR : HAND_WIND;
     if (!held) this.gripIn = 0;
     this.kFrom.set(this.kNow);
-    this.stroke = strokeFor(dir, step);
+    this.stroke = strokeFor(dir, step, Rig.finisherTurn);
+    if (this.spinning && !this.spinFree) {
+      this.spinFree = true;
+      this.spinCut = true;
+    }
     this.slashDir = dir;
     this.slashStep = step;
     this.slashFacing = f;
@@ -1780,8 +1922,8 @@ export class Rig {
     strokeMap(st, st.a0 + (st.a1 - st.a0) * q, this.slashTilt);
     const bx = mapOut.f * this.slashFacing;
     const by = -mapOut.u;
-    const cr = Math.cos(this.slashRoll);
-    const sr = Math.sin(this.slashRoll);
+    const cr = Math.cos(this.slashRoll + this.spinResid);
+    const sr = Math.sin(this.slashRoll + this.spinResid);
     out.x = bx * cr - by * sr;
     out.y = bx * sr + by * cr;
   }

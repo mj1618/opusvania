@@ -171,10 +171,24 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
   box centre as she tucks. She must NOT visibly shrink (owner): lengths 3%, wings 4%, head never
   scaled; roundness comes from folding. Ball: ~43 px across (body), wing shell ~41 px.
   A 12% shrink and a 38 px ball were tried and rejected.
-- One turn 0.48 s (peak 20 rad/s), two turns 0.56 s (peak 31 rad/s), two is the DEFAULT. A tapped
-  double jump at the apex has only 30 frames (0.5 s) of air on flat ground (the tap cuts the jump),
-  so two turns land 4 frames into the kick-out and the interrupt spring finishes it. `Rig.turns`; `?turns=1|2`, key T
-  (toast bottom-left, remembered in localStorage `vesper.turns`), `window.__vesper.turns`.
+- Turns 1-4 (`MAX_TURNS`), **four is the DEFAULT** (owner: "4 summersaults per jump"): 0.48 / 0.56 /
+  0.58 / 0.60 s, peaks 20 / 31 / 42 / 52.5 rad/s (`spinPeak(n)`). Four turns = 50 degrees a frame at
+  60 Hz, chosen clear of 45 and 60 (the ball is two-lobed: at those it would stand still or run
+  backwards). `Rig.turns`; `?turns=1..4`, key T cycles (toast), localStorage `vesper.turns.v2` (the
+  key was bumped so an old stored 2 does not hide the new default), `window.__vesper.turns`.
+- At that speed single frames strobe, so her lights are smeared into rings (`drawSpinRings`,
+  `SPIN_BLUR` in fx.ts): each lantern tip and the near wing's mid point is drawn as an arc back
+  along its circle about `rig.spinCx/Cy` (0.085 s of turning, fading in from 30 to 48 rad/s, so
+  one and two turns barely show it). The sampled `Trail`s are faded out there (a 50-degree step
+  polygon is a zigzag).
+- A tapped double jump on flat ground has ~30 frames of air: four turns always land mid-spin.
+  Landing in the ball = a roll-out (`rolling`): on to the next upright at least `rollMin` (1.1 rad)
+  ahead, critically damped with omega = max(30, v / remaining) so it never rocks back, the ball
+  sits 17 px lower (on the ground) and only unrolls into the crouch in the last ~1.5 rad.
+- A slash during the somersault kicks her out at once (`spinCut`: the interrupt spring at 46, the
+  tuck released at 42/s, the wing burst fired): she unfolds INTO the cut; the blade and trail take
+  the small residual turn (`spinResid`). Delaying the cut to the natural kick-out would put the
+  blade after the sim's hit frames.
 - Capture gotcha: x 600-900 is under F1 and 1900 running right reaches the mid rise: both cut the
   airtime. For a full double jump use flat open ground and check the log for `headBump`.
 
@@ -238,14 +252,20 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - A down-slash hit runs `pogo` (legs long, then tuck).
 - Capture: `?nopickups` also removes the pods; a great glint mid-capture opens the wings (flourish)
   and ruins an air sheet: stand clear of glints or use `?nopickups` for misses.
-- Not done: the finisher is a hop, not a turn (a pirouette needs the 2.5D rig's turn factor driven
-  through a full revolution with the wings swapping depth: untried); run-leg accent is only a dip.
+- **Pirouette finisher: built, judged worse, switched off** (`Rig.finisherTurn`, `window.__vesper
+  .finisherTurn`, stroke with `turn: 1`; sheets `shots/vesper/slash14/finisher-pirouette-vs-hop.png`).
+  The 2.5D rig shows her face in both halves of a turn and the sim leaves 3 frames before the hit,
+  so at 84 px the revolution reads as a twitch, and the blade's low rising ring repeats cut 1's
+  silhouette: the phrase loses its up / flat / DOWN contrast. A readable turn needs a real back
+  view (hide the face disc, mane and wings in front) and more frames than the sim's wind gives.
+- Running cuts: she sinks and the airborne trailing leg is thrown long (planted feet are never moved).
 
 ## Health: hurt, fade, re-form (sim: memory/enemies.md; render numbers in `HURT` in rig.ts)
 - `hurt` event: `rig.hurtK` (recoil pose flung along `dir`, feet leading, eyes squeezed, wings thrown
-  open, antennae whipped; held 0.2 s, out over 0.28 s), 7 dust motes, slash dropped.
-- While `player.invuln > 0` after the stagger: a soft alpha pulse (`Painter.alphaK`, depth 0.4 at
-  7 Hz), never a white flash. `Painter.alphaK / glowK` scale everything drawn between set and reset.
+  open, antennae whipped; held 0.2 s, out over 0.28 s; in the air a jackknife: spine first, hands and
+  feet trailing toward the blow, wings streaming toward it for 0.2 s (`hurtBlow`)), 7 dust motes, slash dropped.
+- While `player.invuln > 0` after the stagger: a soft alpha pulse (`Painter.alphaK`, depth 0.36 at
+  4.5 Hz: 7 Hz read as flicker), never a white flash. `Painter.alphaK / glowK` scale everything drawn between set and reset.
 - Low health: lanterns, eyes and her point light scale `0.5 + 0.5 x (hp - 1) / (hpMax - 1)`, with a
   slow unease on the last light.
 - `fade`: `rig.fadeK` dissolves her (alpha and glows) over 0.45 s from 0.12 s after the blow while

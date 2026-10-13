@@ -695,3 +695,56 @@ export function drawImpact(
     p.streak(5, SLASH_WHITE);
   }
 }
+
+/** The somersault's motion blur. Rates in rad/s; brightness is deliberately low. */
+export const SPIN_BLUR = {
+  /** The rings fade in between these spin rates (one and two turns barely show them). */
+  from: 30,
+  full: 48,
+  /** How far back along its circle each light is smeared, seconds of turning. */
+  time: 0.085,
+  /** Strength at the light itself, half-width px: the two lantern tips, then the wing's eye-spot. */
+  lantern: 0.4,
+  spot: 0.3,
+  width: 1.1,
+} as const;
+
+/**
+ * At four turns she moves ~50 degrees a frame: single frames strobe. Each of her lights (`n` x, y
+ * pairs in `pts`: lantern tips first, then wing eye-spots) is drawn smeared back along the circle
+ * it is travelling about (cx, cy), so the lights fuse into steady rings round the ball. `rate` is
+ * the screen spin rate (clockwise +), `k` 0..1 scales it all (the tuck).
+ */
+export function drawSpinRings(
+  p: Painter,
+  pts: Float32Array,
+  n: number,
+  cx: number,
+  cy: number,
+  rate: number,
+  k: number,
+): void {
+  const sp = Math.abs(rate);
+  const on = k * sat((sp - SPIN_BLUR.from) / (SPIN_BLUR.full - SPIN_BLUR.from));
+  if (on < 0.02) return;
+  const span = Math.min(5.6, sp * SPIN_BLUR.time) * (rate > 0 ? -1 : 1);
+  const N = 28;
+  for (let f = 0; f < n; f++) {
+    const dx = pts[f * 2]! - cx;
+    const dy = pts[f * 2 + 1]! - cy;
+    const r = Math.hypot(dx, dy);
+    if (r < 3) continue;
+    const a0 = Math.atan2(dy, dx);
+    const lantern = f < 2;
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1);
+      const a = a0 + span * t;
+      p.px[i] = cx + Math.cos(a) * r;
+      p.py[i] = cy + Math.sin(a) * r;
+      p.pw[i] = SPIN_BLUR.width * (lantern ? 1 : 1.5) * (1 - 0.5 * t) + 0.2;
+      p.pc[i * 3] =
+        (lantern ? SPIN_BLUR.lantern : SPIN_BLUR.spot) * on * (1 - t) ** 1.3 * Math.min(1, i / 2 + 0.4);
+    }
+    p.streak(N, lantern ? GOLD_HOT : GOLD);
+  }
+}

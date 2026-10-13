@@ -239,7 +239,7 @@ export class Secondary {
       // Folded and in every other state both wings trail behind her (direction = the body's turn);
       // gliding, wing A lies to screen-left and wing B to screen-right whichever way she faces, so
       // a turn in the air swivels her under wings that stay spread.
-      const cd = lerp(d, sd, side);
+      const cd = lerp(lerp(d, sd, side), -rig.hurtDir, rig.hurtBlow * (1 - soarAll));
       const cdS = clamp(cd * 4, -1, 1);
       // ... and each makes its own small corrections, on times that never line up.
       const fix = 4.6 * noise1(clock * 0.47, 91 + w * 5) + 2.6 * noise1(clock * 1.13, 95 + w * 5);
@@ -298,13 +298,13 @@ export class Secondary {
         const sw = rig.slashWing;
         lift *= 1 - 0.75 * Math.max(0, -sw) * (1 - soar);
         lift -=
-          (Math.max(0, sw) * (24 + 9 * far) + rig.slashTwist * 24 * (2 * far - 1) + rig.hangK * 15) *
+          (Math.max(0, sw) * (24 + 9 * far) + rig.slashTwist * 32 * (2 * far - 1) + rig.hangK * 15) *
           (1 - k * 0.12) *
           (1 - soar);
         // A landing or a skid throws the hem out for a moment.
         lift -= clamp(rig.crouchPx, 0, 8) * 1.6 * (1 - k / STRANDS) * (1 - soar);
         // Hurt: they are thrown open by the blow.
-        lift -= rig.hurtK * (34 + 12 * far) * (1 - k * 0.1) * (1 - soar);
+        lift -= (rig.hurtK * (34 + 12 * far) + rig.hurtBlow * 30) * (1 - k * 0.1) * (1 - soar);
         c.lift = lift * DEG;
         const curl =
           (0.05 * run - 0.07 * glide - 0.03 * up + 0.02 * dash) * (1 - k * 0.12) * (1 - tuck) +

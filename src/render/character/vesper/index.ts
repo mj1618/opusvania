@@ -19,14 +19,15 @@ import { KEY_LIGHT } from '../../scene/lib/look';
 import { clamp, noise1, Spring, sat, smoothstep } from '../hooded/math';
 import type { CharacterSkin, SkinDef } from '../skin';
 import { drawVesper, type View } from './draw';
-import { BladeTrail, drawImpact, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
+import { BladeTrail, drawImpact, drawSpinRings, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
 import { Painter, rgb } from './paint';
-import { HURT, J_CHEST, J_HEAD, J_HIP, Rig } from './rig';
+import { HURT, J_CHEST, J_HEAD, J_HIP, MAX_TURNS, Rig } from './rig';
 
 import { Secondary } from './wings';
 
 const LIGHT = 0xffe0a0;
-const TURNS_KEY = 'vesper.turns';
+/** v2: the default became four turns; the old key's stored choice is ignored so everyone sees it. */
+const TURNS_KEY = 'vesper.turns.v2';
 
 export class VesperCharacter implements CharacterSkin {
   private readonly painter = new Painter();
@@ -54,6 +55,7 @@ export class VesperCharacter implements CharacterSkin {
   /** ... and where she comes apart from: those, plus head, chest and hips. */
   private readonly bodyPts = new Float32Array(26);
   private fadeAcc = 0;
+  private readonly ringPts = new Float32Array(6);
   private started = false;
   private flash = 0;
   private readonly back: [number, number] = [0, 0];
@@ -72,7 +74,7 @@ export class VesperCharacter implements CharacterSkin {
   private toastTimer = 0;
   private readonly onKey = (e: KeyboardEvent): void => {
     if (e.code !== 'KeyT' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    this.setTurns(Rig.turns === 2 ? 1 : 2, true);
+    this.setTurns((Rig.turns % MAX_TURNS) + 1, true);
   };
 
   constructor(
@@ -320,6 +322,8 @@ export class VesperCharacter implements CharacterSkin {
 
     // --- Trails: lit by how fast each point is really moving. The wing tips draw long soft ones
     // while she glides.
+    // At blur speed a sampled trail is a zigzag polygon: the rings take over from it.
+    const slow = 1 - sat((Math.abs(rig.spinRate) - 26) / 14);
     for (let i = 0; i < 4; i++) {
       const x = pts[i * 2]!;
       const y = pts[i * 2 + 1]!;
@@ -328,10 +332,12 @@ export class VesperCharacter implements CharacterSkin {
       this.lastY[i] = y;
       const fast = sat((v - 330) / 600);
       let k: number;
-      if (i < 2) k = fast * (1 - 0.75 * soar) + 0.3 * rig.spinW;
+      if (i < 2) k = fast * (1 - 0.75 * soar) + 0.3 * rig.spinW * slow;
       else
         k =
-          (i - 2 === nearIdx ? fast * 0.75 * (1 - sat(Math.abs(rig.slashWing))) + 0.3 * rig.spinW : 0) *
+          (i - 2 === nearIdx
+            ? fast * 0.75 * (1 - sat(Math.abs(rig.slashWing))) + 0.3 * rig.spinW * slow
+            : 0) *
             (1 - soar) +
           soar * (0.3 + 0.3 * fast);
       this.trails[i]!.push(dt, x, y, k);
@@ -368,6 +374,14 @@ export class VesperCharacter implements CharacterSkin {
     p.glowK = 1;
     this.trails[0]!.draw(p, FX_GOLD, FX_GOLD_HOT, 0.4);
     this.trails[1]!.draw(p, FX_GOLD, FX_GOLD_HOT, 0.32);
+    // A fast somersault: her lights smear into rings round the ball.
+    this.ringPts[0] = pts[0]!;
+    this.ringPts[1] = pts[1]!;
+    this.ringPts[2] = pts[2]!;
+    this.ringPts[3] = pts[3]!;
+    this.ringPts[4] = mid.rx[3]!;
+    this.ringPts[5] = mid.ry[3]!;
+    drawSpinRings(p, this.ringPts, 3, rig.spinCx, rig.spinCy, rig.spinRate, rig.spinW * whole);
     fx.draw(p, clock);
     this.blade.draw(p, chestX, chestY, 0.25 + 0.75 * view.pale);
     drawImpact(p, this.hitX, this.hitY, rig.hitT, rig.hitPower, this.hitDx, this.hitDy);
@@ -381,20 +395,21 @@ export class VesperCharacter implements CharacterSkin {
   }
 
   /**
-   * One somersault turn or two: `?turns=1|2`, else what was chosen last (localStorage), else two.
-   * T flips it while playing; `window.__vesper.turns` reads and sets it for tools.
+   * Somersault turns per double jump, 1 to 4: `?turns=1..4`, else what was chosen last
+   * (localStorage), else four. T cycles it while playing; `window.__vesper.turns` reads and sets it for tools.
    */
   private initTurns(): void {
     if (typeof window === 'undefined') return;
-    let n = 2;
+    let n = MAX_TURNS;
     try {
       const q = new URLSearchParams(window.location.search).get('turns');
       const saved = window.localStorage.getItem(TURNS_KEY);
-      n = q === '2' || q === '1' ? Number(q) : saved === '1' ? 1 : 2;
+      const pick = Number(q ?? saved);
+      if (pick >= 1 && pick <= MAX_TURNS) n = Math.round(pick);
     } catch {
       // Storage can be blocked: the default.
     }
-    Rig.turns = n === 2 ? 2 : 1;
+    Rig.turns = n;
     window.addEventListener('keydown', this.onKey);
     const self = this;
     (window as unknown as { __vesper?: unknown }).__vesper = {
@@ -402,9 +417,16 @@ export class VesperCharacter implements CharacterSkin {
         return Rig.turns;
       },
       set turns(v: number) {
-        self.setTurns(v === 2 ? 2 : 1, false);
+        self.setTurns(v, false);
       },
       /** For capture tools: hide her (a frame with and one without gives her silhouette by difference). */
+      /** The finisher as a pirouette (default) or the earlier cleave with a hop. */
+      get finisherTurn(): boolean {
+        return Rig.finisherTurn;
+      },
+      set finisherTurn(v: boolean) {
+        Rig.finisherTurn = !!v;
+      },
       get hidden(): boolean {
         return !self.painter.mesh.visible;
       },
@@ -415,7 +437,7 @@ export class VesperCharacter implements CharacterSkin {
   }
 
   private setTurns(n: number, show: boolean): void {
-    Rig.turns = n === 2 ? 2 : 1;
+    Rig.turns = Math.min(MAX_TURNS, Math.max(1, Math.round(n) || 1));
     try {
       window.localStorage.setItem(TURNS_KEY, String(Rig.turns));
     } catch {
@@ -431,7 +453,7 @@ export class VesperCharacter implements CharacterSkin {
       document.body.appendChild(el);
       this.toast = el;
     }
-    this.toast.textContent = `somersault: ${Rig.turns === 2 ? '2 turns' : '1 turn'}`;
+    this.toast.textContent = `somersault: ${Rig.turns === 1 ? '1 turn' : `${Rig.turns} turns`}`;
     this.toast.style.opacity = '1';
     window.clearTimeout(this.toastTimer);
     this.toastTimer = window.setTimeout(() => {
