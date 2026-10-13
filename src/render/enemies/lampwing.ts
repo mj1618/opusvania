@@ -1,9 +1,10 @@
 // biome-ignore-all lint/style/noNonNullAssertion: typed-array and fixed-table maths; indices are in range by construction
 /**
- * The lampwing: rig and drawing (into the shared enemies painter, behind the hero). A pale
- * moth-wisp seen from the front: a soft body with a small dark face, two pairs of pale wings with
- * dusky margins and veins beating to either side, two feathery antennae, one dim lamp in its
- * abdomen. The wings run on the sim's `flap` phase; everything else is springs on the sim state.
+ * The lampwing: rig and drawing (into the shared enemies painter, behind the hero). A ghost-moth
+ * seen from the front: a slim pale body with a small dark head and two dim pinprick eyes, two
+ * pairs of narrow, tattered, dusky translucent wings with a pale edge and pale veins, thin
+ * antennae, a long trailing abdomen with one dim lamp in it. The wings run on the sim's `flap`
+ * phase; everything else is springs on the sim state.
  */
 import type { EnemyState } from '../../sim/state';
 import { approach, clamp, noise1, Spring, sat, smoothstep } from '../character/hooded/math';
@@ -50,11 +51,17 @@ export class LampRig {
   readonly lagY = new Spring(0, 16, 0.4);
   /** 0..1 weights, eased. */
   keen = 0;
+  /** The tell: 1 while curious, easing off after. */
+  flare = 0;
   slack = 0;
   fold = 0;
   tumble = 0;
   /** Frames into the mode and since the last hit (fractional). */
   mf = 0;
+  /** Seconds since it last shed a scale (dead, falling). */
+  shedT = 0;
+  /** The dead body has gone to scales (nothing more is drawn of it). */
+  dissolved = false;
   hitAge = 1e6;
   private hitSeen = -1;
   struck = false;
@@ -84,7 +91,7 @@ export class LampRig {
       this.lean.snap(0);
       this.lagX.snap(0);
       this.lagY.snap(0);
-      this.keen = this.slack = this.fold = this.tumble = 0;
+      this.keen = this.flare = this.slack = this.fold = this.tumble = 0;
       this.hitSeen = e.hitFrame;
     } else if (simFrame !== this.frame) {
       this.px = this.cx;
@@ -113,6 +120,7 @@ export class LampRig {
     this.lastDir = e.hitDir || e.facing;
     this.lastPower = e.hitPower;
     this.wasDead = e.mode === 'dead';
+    if (!this.wasDead) this.dissolved = false;
     this.live = true;
 
     const mode = e.mode;
@@ -127,6 +135,8 @@ export class LampRig {
     this.lagX.step(e.vx * 0.55, dt);
     this.lagY.step(e.vy * 0.55, dt);
     this.keen += ((keen ? 1 : 0) - this.keen) * approach(keen ? 16 : 4, dt);
+    const curious = mode === 'curious';
+    this.flare += ((curious ? 1 : 0) - this.flare) * approach(curious ? 14 : 3.5, dt);
     const slack = mode === 'rest' || mode === 'return';
     this.slack += ((slack ? 1 : 0) - this.slack) * approach(5, dt);
     const fold = mode === 'dead' ? 1 : mode === 'hurt' ? 0.7 : 0;
@@ -151,29 +161,39 @@ const sh = (c0: V3, c1: V3, rim: number, cool: number, band: number): Shade & { 
 const W = {
   wing0: [0, 0, 0] as V3,
   wing1: [0, 0, 0] as V3,
+  edge: [0, 0, 0] as V3,
   body0: [0, 0, 0] as V3,
   body1: [0, 0, 0] as V3,
   dusk: [0, 0, 0] as V3,
   face: [0, 0, 0] as V3,
   eye: [0, 0, 0] as V3,
   lamp: [0, 0, 0] as V3,
+  lampCore: [0, 0, 0] as V3,
   pop: [0, 0, 0] as V3,
 };
-// The wings' rim is the dusky margin: the painter's rim colours are set to dusk for them.
-const SH_WING = sh(W.wing0, W.wing1, 1, 1, 0.42);
-const SH_VEIN = sh(W.dusk, W.dusk, 0, 0, 0.5);
+// The wings' rim is their pale edge: the painter's rim colours are set to `edge` for them.
+const SH_WING = sh(W.wing0, W.wing1, 1, 1, 0.3);
+const SH_VEIN = sh(W.edge, W.edge, 0, 0, 0.5);
+const SH_SPOT = sh(W.edge, W.edge, 0, 0, 0.5);
+const SH_PUPIL = sh(W.face, W.face, 0, 0, 0.5);
 const SH_BODY = sh(W.body0, W.body1, 0.2, 0.25, 0.35);
+const SH_TAIL = sh(W.body0, W.body1, 0.1, 0.2, 0.4);
 const SH_FACE = sh(W.face, W.face, 0, 0, 0.5);
 const SH_EYE = sh(W.eye, W.eye, 0, 0, 0.5);
-const SH_ANT = sh(W.body1, W.dusk, 0, 0, 0.5);
-const SH_LAMP = sh(W.lamp, W.lamp, 0, 0, 0.5);
+const SH_ANT = sh(W.body1, W.body1, 0, 0, 0.5);
+const SH_LAMP = sh(W.lampCore, W.lampCore, 0, 0, 0.5);
 
-/** Wing outlines in wing space: u along the span (0 root .. 1 tip), v across (- = leading edge). */
+/**
+ * Wing outlines in wing space: u along the span (0 root .. 1 tip), v across (- = leading edge).
+ * Narrow triangles with a pointed apex and a notched, tattered outer margin.
+ */
 const FORE_RAW: readonly number[] = [
-  0, -0.05, 0.35, -0.2, 0.75, -0.22, 1, -0.1, 1.02, 0.06, 0.8, 0.3, 0.45, 0.37, 0.12, 0.2,
+  0, -0.03, 0.34, -0.11, 0.72, -0.15, 1, -0.13, 0.97, -0.01, 0.89, 0.03, 0.9, 0.14, 0.8, 0.15, 0.77, 0.27,
+  0.62, 0.22, 0.44, 0.2, 0.18, 0.11,
 ];
 const HIND_RAW: readonly number[] = [
-  0, -0.02, 0.4, -0.14, 0.85, -0.06, 1, 0.2, 0.82, 0.5, 0.42, 0.56, 0.1, 0.3,
+  0, -0.02, 0.45, -0.11, 0.88, -0.05, 1, 0.12, 0.87, 0.2, 0.92, 0.42, 0.72, 0.36, 0.63, 0.5, 0.42, 0.4, 0.14,
+  0.22,
 ];
 /** A closed outline rounded by a Catmull-Rom pass (three points per corner): no facets at zoom. */
 function rounded(raw: readonly number[]): number[] {
@@ -184,7 +204,6 @@ function rounded(raw: readonly number[]): number[] {
     const b = i * 2;
     const c = ((i + 1) % n) * 2;
     const d = ((i + 2) % n) * 2;
-    // The root (first point) stays a corner.
     for (let k = 0; k < 3; k++) {
       const t = k / 3;
       const t2 = t * t;
@@ -208,8 +227,11 @@ function rounded(raw: readonly number[]): number[] {
 }
 const FORE: readonly number[] = rounded(FORE_RAW);
 const HIND: readonly number[] = rounded(HIND_RAW);
-const FORE_VEINS: readonly number[] = [0.95, -0.06, 0.86, 0.2, 0.5, 0.32];
-const HIND_VEINS: readonly number[] = [0.92, 0.12, 0.6, 0.48];
+/** Vein ends on the margin (u, v), and the fan centre of each outline. */
+const FORE_VEINS: readonly number[] = [0.97, -0.08, 0.9, 0.1, 0.77, 0.24, 0.5, 0.2];
+const HIND_VEINS: readonly number[] = [0.96, 0.08, 0.9, 0.38, 0.62, 0.46];
+const FORE_C: readonly number[] = [0.6, 0.03];
+const HIND_C: readonly number[] = [0.55, 0.16];
 
 let mA = 1;
 let mB = 0;
@@ -237,6 +259,7 @@ function wing(
   p: Painter,
   outline: readonly number[],
   veins: readonly number[],
+  centre: readonly number[],
   rootX: number,
   rootY: number,
   side: number,
@@ -254,8 +277,6 @@ function wing(
   const vx = side * s * len * chord;
   const vy = c * len * chord;
   const n = outline.length / 2;
-  let cxl = 0;
-  let cyl = 0;
   for (let k = 0; k < n; k++) {
     const u = outline[k * 2]!;
     const v = outline[k * 2 + 1]!;
@@ -263,38 +284,42 @@ function wing(
     const ly = rootY + uy * u + vy * v;
     p.px[k] = bx(lx, ly);
     p.py[k] = by(lx, ly);
-    cxl += p.px[k]!;
-    cyl += p.py[k]!;
   }
   SH_WING.alpha = alpha;
   const tx = rootX + ux;
   const ty = rootY + uy;
-  p.shape(n, cxl / n, cyl / n, SH_WING, bx(rootX, rootY), by(rootX, rootY), bx(tx, ty), by(tx, ty));
-  SH_VEIN.alpha = alpha * 0.5;
+  const clx = rootX + ux * centre[0]! + vx * centre[1]!;
+  const cly = rootY + uy * centre[0]! + vy * centre[1]!;
+  p.shape(n, bx(clx, cly), by(clx, cly), SH_WING, bx(rootX, rootY), by(rootX, rootY), bx(tx, ty), by(tx, ty));
+  SH_VEIN.alpha = alpha * LAMP.vein;
   for (let k = 0; k < veins.length / 2; k++) {
     const u = veins[k * 2]!;
     const v = veins[k * 2 + 1]!;
-    const ex = rootX + ux * u * 0.9 + vx * v * 0.9;
-    const ey = rootY + uy * u * 0.9 + vy * v * 0.9;
-    const mx = rootX + ux * u * 0.5 + vx * v * 0.38;
-    const my = rootY + uy * u * 0.5 + vy * v * 0.38;
+    const ex = rootX + ux * u * 0.96 + vx * v * 0.96;
+    const ey = rootY + uy * u * 0.96 + vy * v * 0.96;
+    const mx = rootX + ux * u * 0.5 + vx * v * 0.34;
+    const my = rootY + uy * u * 0.5 + vy * v * 0.34;
     p.px[0] = bx(rootX, rootY);
     p.py[0] = by(rootX, rootY);
     p.px[1] = bx(mx, my);
     p.py[1] = by(mx, my);
     p.px[2] = bx(ex, ey);
     p.py[2] = by(ex, ey);
-    p.pw[0] = 0.42;
-    p.pw[1] = 0.34;
+    p.pw[0] = 0.3;
+    p.pw[1] = 0.26;
     p.pw[2] = 0.14;
     p.ribbon(3, SH_VEIN, false, false);
   }
   if (spot) {
-    // One dusky mark on the fore wing: the family likeness with the hero's eye-spots.
-    const lx = rootX + ux * 0.62 + vx * 0.08;
-    const ly = rootY + uy * 0.62 + vy * 0.08;
-    SH_VEIN.alpha = alpha * 0.7;
-    p.ellipse(bx(lx, ly), by(lx, ly), len * 0.075, len * 0.075 * (0.5 + 0.5 * chord), 0, SH_VEIN, 8);
+    // One ringed mark on the fore wing: the family likeness with the hero's eye-spots.
+    const lx = rootX + ux * 0.66 + vx * 0.05;
+    const ly = rootY + uy * 0.66 + vy * 0.05;
+    const r = len * 0.062;
+    const ry = r * (0.55 + 0.45 * chord);
+    SH_SPOT.alpha = alpha * 0.75;
+    p.ellipse(bx(lx, ly), by(lx, ly), r, ry, 0, SH_SPOT, 10);
+    SH_PUPIL.alpha = alpha;
+    p.ellipse(bx(lx, ly), by(lx, ly), r * 0.58, ry * 0.58, 0, SH_PUPIL, 8);
   }
 }
 
@@ -316,22 +341,30 @@ export function drawLampwing(
   // --- Colours for this zone, then the tone of a hit (dark for the hold, a pale pop after).
   zone(W.wing0, L.wingColor, zw);
   zone(W.wing1, L.wingTip, zw);
+  zone(W.edge, L.edgeColor, zw);
   zone(W.body0, L.bodyColor, zw);
   zone(W.lamp, L.lampColor, zw);
+  // Pale at the core: a quarter of the way to the body's tone.
+  for (let k = 0; k < 3; k++) W.lampCore[k] = W.lamp[k]! + (W.body0[k]! - W.lamp[k]!) * 0.3;
   hex(W.dusk, L.color.dusk);
   hex(W.face, L.color.face);
   hex(W.eye, L.color.eye);
   hex(W.pop, L.color.pop);
-  for (let k = 0; k < 3; k++) W.body1[k] = W.body0[k]! * 0.62 + W.dusk[k]! * 0.2;
+  for (let k = 0; k < 3; k++) W.body1[k] = W.body0[k]! * 0.6 + W.dusk[k]! * 0.2;
   const age = rig.hitAge;
   toneDark = L.hit.dark * (1 - smoothstep(1.2, 2.8, age));
-  toneLight = L.hit.pop * smoothstep(1.4, 3, age) * (1 - smoothstep(3.2, 5.4, age));
+  toneLight = L.hit.pop * smoothstep(1.4, 3, age) * (1 - smoothstep(3.6, 5.6, age));
   // A dead one greys as it falls.
-  if (dead) toneDark = Math.max(toneDark, 0.28 * sat(t / 14));
+  if (dead) toneDark = Math.max(toneDark, 0.4 * sat(t / 14));
   tone(W.wing0);
   tone(W.wing1);
+  tone(W.edge);
   tone(W.body0);
   tone(W.body1);
+  // The body thins away over its last frames (the dissolve takes over).
+  const fade = dead ? sat(Math.min(L.death.dissolve - t, e.landed ? e.timer * 2 : 99) / L.death.fade) : 1;
+  const alphaWas = p.alphaK;
+  p.alphaK = alphaWas * (0.25 + 0.75 * fade);
 
   // --- Body frame: bob against the stroke, lean into the flight, tumble when struck, spiral when dead.
   const beat = Math.sin(rig.flap * TAU);
@@ -355,7 +388,7 @@ export function drawLampwing(
     else {
       // A falling leaf: it rocks from side to side and slips sideways with each rock.
       const sway = Math.sin(t * 0.36 + ph);
-      rot = dir * (0.5 + 0.25 * sat(t / 10)) + sway * 0.75;
+      rot = dir * (0.5 + t * 0.16) + sway * 0.5;
       ox += Math.cos(t * 0.36 + ph) * 3.2 * sat(t / 8);
     }
   }
@@ -380,51 +413,108 @@ export function drawLampwing(
   const chordF = 1 - L.twist * Math.cos(rig.flap * TAU) * flying - 0.35 * rig.fold;
   const chordH = 1 - L.twist * Math.cos((rig.flap - L.hindLag) * TAU) * flying - 0.35 * rig.fold;
   const crumple = 1 - 0.3 * rig.fold;
+  // The killing blow tears the hind pair away (they go to scales).
+  const torn = dead ? sat(t / 3) : 0;
   const keyC = p.keyColor;
   const coolC = p.coolColor;
   const wrap = p.coolWrap;
-  p.keyColor = W.dusk as unknown as RGB;
-  p.coolColor = W.dusk as unknown as RGB;
+  p.keyColor = W.edge as unknown as RGB;
+  p.coolColor = W.edge as unknown as RGB;
   p.coolWrap = 1;
-  const shoulderY = -2.5;
+  const shoulderY = -2.2;
   for (let pass = 0; pass < 2; pass++) {
     // Far side first (the side it is turned away from).
     const side = (pass === 0 ? -1 : 1) * (d >= 0 ? 1 : -1) * -1;
     const far = pass === 0;
     const k = far ? 1 - L.farShrink * ad : 1 + 0.06 * ad;
     const alpha = far ? L.farAlpha + (L.wingAlpha - L.farAlpha) * (1 - ad) : L.wingAlpha;
-    const rx0 = side * 2.6 + d * 1.2;
-    wing(p, HIND, HIND_VEINS, rx0, shoulderY + 2.2, side, ha, L.hind * k * crumple, chordH, alpha, false);
-    wing(p, FORE, FORE_VEINS, rx0, shoulderY, side, fa, L.fore * k * crumple, chordF, alpha, true);
+    const rx0 = side * 1.9 + d * 1.1;
+    if (torn < 0.95)
+      wing(
+        p,
+        HIND,
+        HIND_VEINS,
+        HIND_C,
+        rx0,
+        shoulderY + 2,
+        side,
+        ha,
+        L.hind * k * crumple * (1 - torn),
+        chordH,
+        alpha,
+        false,
+      );
+    wing(p, FORE, FORE_VEINS, FORE_C, rx0, shoulderY, side, fa, L.fore * k * crumple, chordF, alpha, true);
   }
   p.keyColor = keyC;
   p.coolColor = coolC;
   p.coolWrap = wrap;
 
-  // --- Body: abdomen with its lamp, thorax, head with a small dark face.
+  // --- Legs: thin threads hanging under the thorax, trailing the flight.
   const B = L.body;
-  const droop = 0.25 + 0.3 * rig.slack + 0.4 * rig.fold;
-  const abx = -d * (1.2 + droop * 2);
-  const aby = 6.2;
-  SH_BODY.alpha = 1;
-  p.ellipse(bx(abx, aby), by(abx, aby), B.abdomenW, B.abdomenH, rot - d * droop * 0.5, SH_BODY, 12);
-  p.ellipse(bx(d * 0.6, -0.6), by(d * 0.6, -0.6), B.thoraxW, B.thoraxH, rot, SH_BODY, 12);
-  const hxl = d * 2.2 + e.lookX * 0.8 * rig.keen;
-  const hyl = -7.2 + e.lookY * 0.9 * rig.keen;
-  p.ellipse(bx(hxl, hyl), by(hxl, hyl), B.head, B.head * 0.94, rot, SH_BODY, 12);
+  SH_ANT.alpha = 0.9;
+  for (let i = 0; i < 4; i++) {
+    const side = i < 2 ? -1 : 1;
+    const row = i & 1;
+    const rx = side * 1.3 + d * 0.5;
+    const ry = 1.2 + row * 1.6;
+    const len = L.leg * (row === 0 ? 1 : 0.8);
+    const tx = rx + side * (2.2 - row * 0.6 + 1.4 * rig.fold) - rig.lagX.x * 0.8;
+    const ty = ry + len - rig.lagY.x * 0.5 - 1.5 * rig.keen * (1 - row);
+    p.px[0] = bx(rx, ry);
+    p.py[0] = by(rx, ry);
+    p.px[1] = bx(rx + side * 2.4, ry + len * 0.35);
+    p.py[1] = by(rx + side * 2.4, ry + len * 0.35);
+    p.px[2] = bx(tx, ty);
+    p.py[2] = by(tx, ty);
+    p.pw[0] = 0.42;
+    p.pw[1] = 0.34;
+    p.pw[2] = 0.16;
+    p.ribbon(3, SH_ANT, false, false);
+  }
 
-  // --- Antennae: two short feathery plumes, forward when keen, trailing the flight.
+  // --- Body: a long tapering abdomen that trails behind the flight, a narrow thorax, a small head.
+  const droop = 0.25 + 0.3 * rig.slack + 0.4 * rig.fold;
+  const tailX = -d * (1.4 + droop * 2.5) - rig.lagX.x * 1.5;
+  const tailY = 2 + B.abdomen - Math.abs(rig.lagX.x) * 0.4 - Math.max(0, rig.lagY.x) * 0.6;
+  const midX = tailX * 0.3 - d * 0.6;
+  const midY = 2 + B.abdomen * 0.5;
+  let lampX = 0;
+  let lampY = 0;
+  for (let k = 0; k < 6; k++) {
+    const u = k / 5;
+    const a0 = (1 - u) * (1 - u);
+    const a1 = 2 * u * (1 - u);
+    const a2 = u * u;
+    const lx = a1 * midX + a2 * tailX;
+    const ly = a0 * 1.5 + a1 * midY + a2 * tailY;
+    p.px[k] = bx(lx, ly);
+    p.py[k] = by(lx, ly);
+    p.pw[k] = B.abdomenW * (k === 0 ? 0.85 : 1 - u * u * 0.86);
+    if (k === 3) {
+      lampX = lx;
+      lampY = ly;
+    }
+  }
+  SH_TAIL.alpha = 1;
+  p.ribbon(6, SH_TAIL, false, true);
+  SH_BODY.alpha = 1;
+  p.ellipse(bx(d * 0.5, -0.8), by(d * 0.5, -0.8), B.thoraxW, B.thoraxH, rot, SH_BODY, 12);
+  const hxl = d * 1.7 + e.lookX * 0.7 * rig.keen;
+  const hyl = -6 + e.lookY * 0.8 * rig.keen;
+
+  // --- Antennae: two long thin threads, swept back and out; forward when keen.
   const A = L.antenna;
   for (let i = 0; i < 2; i++) {
     const side = i === 0 ? -1 : 1;
-    const spread = 0.55 - 0.25 * rig.keen + 0.35 * rig.slack + 0.5 * rig.fold;
+    const spread = 0.75 - 0.3 * rig.keen + 0.35 * rig.slack + 0.5 * rig.fold;
     const ang = -Math.PI / 2 + side * spread + d * 0.3;
-    const rx = hxl + side * 1.6;
-    const ry = hyl - B.head * 0.7;
-    const tx = rx + Math.cos(ang) * A.len - rig.lagX.x + e.lookX * 2.2 * rig.keen;
-    const ty = ry + Math.sin(ang) * A.len - rig.lagY.x + e.lookY * 1.5 * rig.keen + 2.5 * rig.slack;
-    const mx = (rx + tx) / 2 + side * 1.6;
-    const my = (ry + ty) / 2 - 1;
+    const rx = hxl + side * 0.9;
+    const ry = hyl - B.head * 0.8;
+    const tx = rx + Math.cos(ang) * A.len - rig.lagX.x * 1.3 + e.lookX * 2.2 * rig.keen;
+    const ty = ry + Math.sin(ang) * A.len - rig.lagY.x * 1.3 + e.lookY * 1.5 * rig.keen + 3 * rig.slack;
+    const mx = (rx + tx) / 2 - side * 1.2;
+    const my = (ry + ty) / 2 - 2.2;
     for (let k = 0; k < 5; k++) {
       const u = k / 4;
       const a0 = (1 - u) * (1 - u);
@@ -434,53 +524,43 @@ export function drawLampwing(
       const ly = a0 * ry + a1 * my + a2 * ty;
       p.px[k] = bx(lx, ly);
       p.py[k] = by(lx, ly);
-      // A feather: thin at the root, widest two thirds along, a point at the tip.
-      p.pw[k] = A.w * (0.45 + 1.1 * u * (1 - u) * 2) * (k === 4 ? 0.25 : 1);
+      p.pw[k] = A.w * (1 - 0.6 * u);
     }
     SH_ANT.alpha = 0.95;
     p.ribbon(5, SH_ANT, false, false);
   }
 
-  // --- Face: a small dark mask and two tiny eyes that fix on what draws it.
-  const fx = hxl + d * 0.7;
-  const fy = hyl + 0.5;
+  // --- Head: small and dark, with two dim pinpricks that fix on what draws it.
   SH_FACE.alpha = 1;
-  p.ellipse(bx(fx, fy), by(fx, fy), B.head * 0.62, B.head * 0.74, rot, SH_FACE, 10);
+  p.ellipse(bx(hxl, hyl), by(hxl, hyl), B.head * 0.86, B.head, rot, SH_FACE, 12);
   const shut = dead ? sat(t / 5) : 0;
   if (shut < 0.9) {
-    const lx = e.lookX * 0.75;
-    const ly = e.lookY * 0.6;
-    SH_EYE.alpha = 1 - shut;
+    const lx = e.lookX * 0.55;
+    const ly = e.lookY * 0.5;
+    SH_EYE.alpha = (1 - shut) * (L.eyeDim + (1 - L.eyeDim) * rig.keen);
     for (let i = 0; i < 2; i++) {
       const side = i === 0 ? -1 : 1;
-      const ex = fx + side * 0.95 + lx * 0.7;
-      const ey = fy + 0.35 + ly * 0.8;
-      const r = L.eye * (1 + 0.2 * rig.keen);
+      const ex = hxl + d * 0.5 + side * 0.82 + lx;
+      const ey = hyl + 0.25 + ly;
+      const r = L.eye;
       p.ellipse(bx(ex, ey), by(ex, ey), r, r * (1 - shut), 0, SH_EYE, 8);
     }
   }
 
-  // --- The lamp: one small dim light low in the abdomen. Brighter when it has seen her; out when it dies.
+  // --- The lamp: one small dim light in the abdomen on a slow pulse. It flares in the tell,
+  // flickers when it is hurt, gutters out when it dies.
   const Lm = L.lamp;
   let br = 1 - Lm.pulse * (0.5 + 0.5 * Math.sin(clock * Lm.rate + ph));
-  br *= 1 + (Lm.keen - 1) * rig.keen;
+  br *= 1 + (Lm.keen - 1) * rig.keen + (Lm.flare - 1) * rig.flare;
   if (e.hp <= 1 && !dead) br *= 0.6 + 0.4 * (noise1(clock * 12 + ph, 7) > -0.2 ? 1 : 0.3);
   if (dead) br *= sat(1 - t / 12) * (0.5 + 0.5 * noise1(clock * 16 + ph, 8));
   br *= 1 - toneDark * 0.7;
   if (br > 0.02) {
-    const lx = abx - d * 0.3;
-    const ly = aby + 2.2;
+    const r = Lm.r * (1 + 0.25 * rig.flare);
     SH_LAMP.alpha = Lm.core * sat(br);
-    p.ellipse(bx(lx, ly), by(lx, ly), Lm.r * 0.9, Lm.r, rot, SH_LAMP, 10);
-    p.glow(
-      bx(lx, ly),
-      by(lx, ly),
-      Lm.r * Lm.halo,
-      W.lamp as unknown as RGB,
-      Lm.glow * br,
-      Lm.r * Lm.halo,
-      0,
-      12,
-    );
+    p.ellipse(bx(lampX, lampY), by(lampX, lampY), r * 0.8, r, rot, SH_LAMP, 10);
+    const hr = r * Lm.halo * (1 + 0.6 * rig.flare);
+    p.glow(bx(lampX, lampY), by(lampX, lampY), hr, W.lamp as unknown as RGB, Lm.glow * br, hr, 0, 12);
   }
+  p.alphaK = alphaWas;
 }

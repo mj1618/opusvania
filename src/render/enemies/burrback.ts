@@ -484,21 +484,21 @@ function drawHead(
       SH_HEAD,
       14,
     );
-    // The face: two pale forward-set eyes on the plate, with dark pupils that look at things
-    // (ahead as it walks, at her when it is wary). Wide in a flinch, shut when it dies.
+    // The face: two small dim glints on the plate that slide toward what it watches (ahead as it
+    // walks, at her when it is wary). Wider in a flinch, shut when it dies.
     const open = (dead ? 1 - curl : 1) * (1 - 0.92 * rig.blink);
     if (open > 0.05) {
       const wide = 1 + 0.22 * sat(rig.wary);
       const show = sat(aH * 1.6 - 0.3);
       for (let i = 0; i < 2; i++) {
         const k = i === 0 ? 1 : 0.78;
-        const elx = headLx + dH * H.len * (i === 0 ? 0.3 : 0.74);
-        const ely = headLy - H.high * (i === 0 ? 0.12 : 0.2);
+        const elx = headLx + dH * H.len * (i === 0 ? 0.22 : 0.68);
+        const ely = headLy - H.high * (i === 0 ? 0.08 : 0.16);
         // Blank pale eyes: the look is the eyes sliding on the plate, never a pupil (that read as a toy).
-        const ex = bx(elx, ely) + rig.lookX * 1.1 - Math.sign(dH) * 0.5;
-        const ey = by(elx, ely) + rig.lookY * 1.2;
-        const rx = H.eye * k * (0.55 + 0.45 * aH);
-        const ry = H.eye * 1.25 * k * wide * open;
+        const ex = bx(elx, ely) + rig.lookX * 0.8 - Math.sign(dH) * 0.4;
+        const ey = by(elx, ely) + rig.lookY * 0.8;
+        const rx = H.eye * k * (0.6 + 0.4 * aH);
+        const ry = H.eye * 1.1 * k * wide * open;
         SH_EYE.alpha = show;
         p.ellipse(ex, ey, rx, ry, rot, SH_EYE, 12);
       }

@@ -44,13 +44,14 @@ export const BURR = {
   },
   head: {
     /** Centre ahead of the shell's middle and above the ground; pulled back by this much when tucked. */
-    x: 22.5,
-    y: 12.5,
-    len: 9.5,
-    high: 7.6,
+    x: 22,
+    y: 11.2,
+    /** A small flat plate set under the brow horn. */
+    len: 7.4,
+    high: 5.3,
     tuck: 8,
-    /** Eye half-width (the near one; it is a tall oval). */
-    eye: 2.3,
+    /** Eye radius (the near one): two small dim glints. */
+    eye: 1.15,
   },
   feeler: { len: 22, w: 0.95, tap: 0.5 },
   fringe: { count: 17, len: 4, w: 1.35, lag: 0.022 },
@@ -84,10 +85,10 @@ export const BURR = {
     legNear: 0x33242f,
     legFar: 0x1a1019,
     plateIn: 0x8c7883,
-    /** The face plate: a step paler than the shell, so the eyes have somewhere to sit. */
-    head: 0x5a4a55,
-    headLow: 0x30232c,
-    eye: 0xe0d9c8,
+    /** The face plate: dark bone-grey, only a step off the shell; the eyes are dim glints on it. */
+    head: 0x41363b,
+    headLow: 0x231a20,
+    eye: 0xb0a794,
     feeler: 0x2a1b26,
     fringeTop: 0x1b2318,
     fringeTip: 0x36452b,
@@ -133,19 +134,19 @@ export const BURR = {
 export type BurrConfig = typeof BURR;
 
 /**
- * The lampwing: a small pale moth-wisp, seen from the front with its wings to either side. Lengths
- * are world px from the centre of its 36 x 30 box, y down. Gameplay numbers are `tuning.lampwing`.
+ * The lampwing: a ghost-moth, seen from the front with its wings to either side. Lengths are world
+ * px from the centre of its 36 x 30 box, y down. Gameplay numbers are `tuning.lampwing`.
  */
 export const LAMP = {
   /** Fore and hind wing length, and how far the far-side pair shortens when it looks to one side. */
-  fore: 20,
-  hind: 13.5,
+  fore: 23,
+  hind: 14.5,
   farShrink: 0.24,
   /** Beat: wing angle (rad above the horizontal) at the top and bottom of the stroke; the hind pair lags (beats). */
-  up: 1.05,
-  down: -0.5,
+  up: 1.0,
+  down: -0.45,
   hindLag: 0.13,
-  hindDrop: 0.62,
+  hindDrop: 0.7,
   /** Body bob against the stroke, px; chord change through the stroke (the figure of eight). */
   bob: 1.5,
   twist: 0.24,
@@ -156,35 +157,47 @@ export const LAMP = {
   /** Lean per px/f of sideways speed, rad, and its cap. */
   lean: 0.11,
   leanMax: 0.5,
-  body: { thoraxW: 4.2, thoraxH: 5, abdomenW: 3.1, abdomenH: 6.8, head: 3.2 },
-  antenna: { len: 9, w: 1.05 },
-  eye: 0.5,
+  body: { thoraxW: 2.9, thoraxH: 4.2, abdomenW: 2, abdomen: 13, head: 2.35 },
+  antenna: { len: 12, w: 0.5 },
+  leg: 6,
+  /** Eye radius, and how dim the eyes are until it has seen her (share of full). */
+  eye: 0.44,
+  eyeDim: 0.6,
+  /** Vein alpha (x the wing's). */
+  vein: 0.32,
   lamp: {
-    r: 1.5,
-    core: 0.85,
-    halo: 3.2,
-    glow: 0.18,
-    pulse: 0.3,
-    rate: 1.7,
-    /** Brighter by this factor while curious / pursuing. */
-    keen: 1.45,
+    r: 1.15,
+    core: 0.55,
+    halo: 2.8,
+    glow: 0.09,
+    /** Slow pulse: depth and rad/s. */
+    pulse: 0.55,
+    rate: 1.1,
+    /** Brighter by this factor while pursuing, and by this at the height of the tell. */
+    keen: 1.25,
+    flare: 2.4,
   },
-  /** [left, centre, right] zone tints. */
-  wingColor: [0x76899c, 0xa39678, 0x847b96] as const,
-  wingTip: [0x44546a, 0x665a40, 0x4f4764] as const,
-  bodyColor: [0x8d9aa8, 0xb0a488, 0x968ea6] as const,
+  /** [left, centre, right] zone tints: membrane at the root and the tip, the pale edge and veins, the body. */
+  wingColor: [0x5c6c80, 0x968a6e, 0x73698a] as const,
+  wingTip: [0x2e3846, 0x3e3628, 0x342c4a] as const,
+  edgeColor: [0x8a9aaa, 0xbcae90, 0x968caa] as const,
+  bodyColor: [0x78859a, 0xb2a68a, 0x898198] as const,
   lampColor: [0x1fb4d8, 0xf0a030, 0x8a4cf0] as const,
   color: {
-    /** The dusky margin of the wings and the veins. */
-    dusk: 0x2c2a3c,
-    face: 0x17121d,
-    eye: 0xe6dcc4,
+    /** What a hit darkens it to. */
+    dusk: 0x1c1b28,
+    face: 0x15111b,
+    eye: 0xb4ab96,
     /** A hit: dark for the hold, then toward this for two frames. */
     pop: 0xcfc9be,
-    scale: 0xc4bcae,
+    scale: 0xbdb6a8,
   },
-  wingAlpha: 0.92,
-  farAlpha: 0.78,
-  hit: { dark: 0.6, pop: 0.6, scales: 4, scalesFinisher: 7 },
-  death: { scales: 14, scalesFinisher: 20 },
+  wingAlpha: 0.82,
+  farAlpha: 0.7,
+  hit: { dark: 0.6, pop: 0.6, scales: 6, scalesFinisher: 10 },
+  /**
+   * Death: scales torn off by the blow; the body is flung, sheds, and goes to scales `dissolve`
+   * frames after the hold (the sim keeps it up to 40), thinning over the last `fade`.
+   */
+  death: { torn: 10, dissolve: 18, scales: 16, scalesFinisher: 24, fade: 5 },
 } as const;

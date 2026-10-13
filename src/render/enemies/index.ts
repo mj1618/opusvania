@@ -207,30 +207,46 @@ export class EnemyRenderer {
     }
   }
 
-  /** Wing scales: small crisp pale flecks that drift and flutter down. */
+  /**
+   * Wing scales: small crisp pale slivers thrown in a fan about (dx, dy), which brake at once and
+   * flutter down. `fan` is the half-angle (rad), `speed` px/s.
+   */
   private scales(
     x: number,
     y: number,
     n: number,
-    dirX: number,
-    spread: number,
+    dx: number,
+    dy: number,
+    fan: number,
     speed: number,
-    size = 1,
+    spread: number,
+    life: number,
   ): void {
+    const base = Math.atan2(dy, dx);
     for (let k = 0; k < n; k++) {
-      const a = this.rand() * 6.283;
+      const a = base + (this.rand() * 2 - 1) * fan;
+      const sp = speed * (0.35 + 0.65 * this.rand());
       const r = this.rand() * spread;
+      const ra = this.rand() * 6.283;
       this.emit(
         K_SCALE,
-        x + Math.cos(a) * r,
-        y + Math.sin(a) * r * 0.7,
-        dirX * speed * (0.3 + this.rand()) + Math.cos(a) * 22 * size * size,
-        Math.sin(a) * 30 * size - 18,
-        0.55 + this.rand() * 0.55,
-        (1.5 + this.rand() * 1.5) * size,
+        x + Math.cos(ra) * r,
+        y + Math.sin(ra) * r * 0.8,
+        Math.cos(a) * sp,
+        Math.sin(a) * sp,
+        life * (0.6 + 0.4 * this.rand()),
+        0.9 + this.rand() * 0.9,
         1e9,
       );
     }
+  }
+
+  /** What is left of a dead lampwing goes to scales where it is (once). */
+  private dissolve(rig: LampRig): void {
+    const fin = rig.lastPower >= 2;
+    const n = fin ? LAMP.death.scalesFinisher : LAMP.death.scales;
+    this.scales(rig.x, rig.y + 2, n, 0, -1, 3.2, fin ? 190 : 150, 6, 0.55);
+    rig.dissolved = true;
   }
 
   /** One lampwing: rig, scales, drawing. Returns true if it was drawn. */
@@ -250,33 +266,37 @@ export class EnemyRenderer {
       this.lamps[i] = rig;
     }
     if (e.gone) {
-      // The body dissolves into drifting scales where it last was (once).
-      if (rig.live && rig.wasDead) {
-        const fin = rig.lastPower >= 2;
-        this.scales(
-          rig.x,
-          rig.y + 4,
-          fin ? LAMP.death.scalesFinisher : LAMP.death.scales,
-          rig.lastDir,
-          9,
-          fin ? 46 : 26,
-          1.6,
-        );
-      }
+      if (rig.live && rig.wasDead && !rig.dissolved) this.dissolve(rig);
       rig.live = false;
       return false;
     }
     rig.update(e, sim.frame, sim.alpha, dt);
     if (rig.struck) {
+      // A small burst along the blow.
       const fin = e.hitPower >= 2;
-      this.scales(
-        rig.x,
-        rig.y,
-        fin ? LAMP.hit.scalesFinisher : LAMP.hit.scales,
-        e.hitDir || 1,
-        7,
-        fin ? 120 : 80,
-      );
+      const kl = Math.hypot(e.knockVx, e.knockVy);
+      const dx = kl > 0.01 ? e.knockVx / kl : e.hitDir || 1;
+      const dy = kl > 0.01 ? e.knockVy / kl : 0;
+      const n = fin ? LAMP.hit.scalesFinisher : LAMP.hit.scales;
+      this.scales(rig.x + dx * 6, rig.y + dy * 6, n, dx, dy, 0.6, fin ? 460 : 340, 4, 0.5);
+      // The killing blow tears the hind wings off: a wider, slower spray as well.
+      if (e.mode === 'dead') this.scales(rig.x, rig.y + 2, LAMP.death.torn, dx, dy, 1.5, 230, 9, 0.6);
+    }
+    if (e.mode === 'dead') {
+      if (rig.dissolved) return false;
+      // Flung dead, it sheds as it goes, and is gone to scales long before the sim drops the body
+      // (or as soon as it has lain a moment where it came down).
+      if (rig.mf >= LAMP.death.dissolve || (e.landed && e.timer <= 1)) {
+        this.dissolve(rig);
+        return false;
+      }
+      if (e.hitstop === 0) {
+        rig.shedT += dt;
+        while (rig.shedT > 0.05) {
+          rig.shedT -= 0.05;
+          this.scales(rig.x, rig.y, 1, 0, -1, 3.2, 40, 8, 0.45);
+        }
+      }
     }
     if (Math.abs(rig.x - cam.x) > halfW || Math.abs(rig.y - cam.y) > halfH) return false;
     const zw = this.zw;
@@ -470,25 +490,30 @@ export class EnemyRenderer {
         p.py[3] = y - sn * s * 0.3 + c * w * 0.1;
         p.shape(4, x + c * s * 0.1 - sn * w * 0.45, y + sn * s * 0.1 + c * w * 0.45, SH_IN);
       } else if (kind === K_SCALE) {
-        // A fleck of wing: it sinks slowly, slipping from side to side, and turns edge-on as it goes.
-        this.pvx[i] = this.pvx[i]! * (1 - 2.6 * dt);
-        this.pvy[i] = this.pvy[i]! + (34 - this.pvy[i]!) * Math.min(1, 2.4 * dt);
-        const w = clock * 7 + this.pr[i]!;
-        x += (this.pvx[i]! + Math.sin(w) * 16) * dt;
+        // A sliver of wing: thrown, it brakes at once, then sinks slowly, slipping from side to
+        // side and turning edge-on as it goes.
+        const drag = Math.min(1, 7 * dt);
+        this.pvx[i] = this.pvx[i]! * (1 - drag);
+        this.pvy[i] = this.pvy[i]! + (46 - this.pvy[i]!) * drag;
+        const w = life * 11 + this.pr[i]!;
+        x += (this.pvx[i]! + Math.sin(w) * 22 * sat(life * 4)) * dt;
         y += this.pvy[i]! * dt;
         const s = this.pz[i]!;
-        const flip = 0.35 + 0.65 * Math.abs(Math.cos(w * 0.8));
-        p.px[0] = x - s * 1.3;
-        p.py[0] = y;
-        p.px[1] = x;
-        p.py[1] = y - s * 0.8 * flip;
-        p.px[2] = x + s * 1.3;
-        p.py[2] = y;
-        p.px[3] = x;
-        p.py[3] = y + s * 0.8 * flip;
-        const tn = 0.75 + 0.25 * this.pt[i]!;
+        const rot = this.pr[i]! + this.ps[i]! * life * 0.5;
+        const c = Math.cos(rot) * s * 1.9;
+        const sn = Math.sin(rot) * s * 1.9;
+        const flip = (0.3 + 0.7 * Math.abs(Math.cos(w * 0.8))) * 0.34;
+        p.px[0] = x - c;
+        p.py[0] = y - sn;
+        p.px[1] = x + sn * flip;
+        p.py[1] = y - c * flip;
+        p.px[2] = x + c;
+        p.py[2] = y + sn;
+        p.px[3] = x - sn * flip;
+        p.py[3] = y + c * flip;
+        const tn = 0.7 + 0.3 * this.pt[i]!;
         for (let k = 0; k < 3; k++) IN_C[k] = this.scaleC[k]! * tn;
-        SH_IN.alpha = sat((1 - u) / 0.4) * 0.9;
+        SH_IN.alpha = sat((1 - u) / 0.5) * 0.9;
         p.shape(4, x, y, SH_IN);
       } else if (kind === K_MOTE) {
         this.pvy[i] = this.pvy[i]! * (1 - 0.9 * dt);
