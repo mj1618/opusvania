@@ -202,14 +202,14 @@ const SH_FACE: Shade = {
 };
 /** A slightly larger, darker, half-transparent copy under the disc: the fur's feathered edge. */
 const SH_FACE_EDGE: Shade = {
-  c0: rgb(0x5e5680),
-  c1: rgb(0x8a829e),
+  c0: rgb(0x2a2044),
+  c1: rgb(0x3a2f58),
   rim: 0,
   cool: 0,
   form: 0,
   band: 0.5,
   ember: 0,
-  alpha: 0.6,
+  alpha: 1,
 };
 const SH_CROWN: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 0.6, cool: 0.35, form: 0.3, band: 0.36 };
 const SH_LOCK: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 0.55, cool: 0.3, form: 0.3, band: 0.6 };
@@ -633,7 +633,9 @@ function blade(p: Painter, j: Float32Array, side: number, ang: number, k: number
 const COLS = 17;
 const ROWS = 17;
 /** Scalloped, slightly tattered hem: how far each column reaches (1 = the strand's end). */
-const HEM = [1, 0.965, 1.0, 0.96, 0.92, 0.965, 1.0, 0.96, 0.995, 0.965, 1.0, 0.96, 0.985];
+// A swallow-tail: a long point at the back edge, a notch, a second shorter point, then it rises
+// toward the front so the legs show under it.
+const HEM = [1.1, 1.17, 1.08, 0.97, 0.9, 0.88, 0.93, 1.02, 1.05, 0.97, 0.9, 0.86, 0.84];
 /**
  * The outline spread for the glide, leading edge to trailing edge: a long fore wing with a full
  * outer margin, a waist, then a rounded hind wing that runs out into a short tail.
@@ -859,7 +861,7 @@ function antenna(p: Painter, c: ChainPts, far: boolean, glow: number, run: numbe
     tx /= tl;
     ty /= tl;
     const nick = 1 - 0.3 * Math.max(0, Math.sin(i * 2.4 + 0.5)) ** 3;
-    const w = (1.15 * Math.sin(Math.PI * sat((t - 0.12) / 0.88) ** 0.75) ** 0.8 + 0.1) * nick;
+    const w = (1.75 * Math.sin(Math.PI * sat((t - 0.1) / 0.9) ** 0.7) ** 0.8 + 0.1) * nick;
     const side = -ty * outX + tx * outY >= 0 ? 1 : -1;
     p.px[i] = ax_[i]! + -ty * side * w * 0.75;
     p.py[i] = ay_[i]! + tx * side * w * 0.75;
@@ -870,7 +872,7 @@ function antenna(p: Painter, c: ChainPts, far: boolean, glow: number, run: numbe
     const t = i / (n - 1);
     p.px[i] = ax_[i]!;
     p.py[i] = ay_[i]!;
-    p.pw[i] = lerp(1.05, 0.4, t ** 0.7);
+    p.pw[i] = lerp(1.7, 0.85, t ** 0.7);
   }
   p.ribbon(n, far ? SH_PLUME_FAR : SH_PLUME, true, true);
   const tx = ax_[n - 1]!;
@@ -1087,8 +1089,8 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
   for (let i = 0; i < FSEG; i++) {
     ax_[i] = p.px[i]!;
     ay_[i] = p.py[i]!;
-    p.px[i] = ecx + (ax_[i]! - ecx) * 1.085;
-    p.py[i] = ecy + (ay_[i]! - ecy) * 1.085;
+    p.px[i] = ecx + (ax_[i]! - ecx) * 1.06;
+    p.py[i] = ecy + (ay_[i]! - ecy) * 1.06;
   }
   p.shape(FSEG, ecx, ecy, SH_FACE_EDGE, ecx, ecy + fhD, ecx, ecy - fhU);
   for (let i = 0; i < FSEG; i++) {

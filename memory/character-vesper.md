@@ -301,6 +301,32 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
   its own; the up cuts are a tall narrow arch (the hit area is); a slash out of the somersault
   bends its mark as the residual turn changes mid-cut.
 
+## Round 16: slash finish, silhouette, run, hurt
+- Slash: the mark is laid in the blade frame as it was when the cut STARTED (`Rig.strokeAtRoll`,
+  `markRoll` in index.ts): out of a somersault the residual turn changes by the frame and a mark
+  laid in the live frame came out bent. Up / down marks are let out 55% wider on the trailing side
+  (`markWide`; the reach and the striking side stay true) so they are not a tall thin arch.
+- Smear per style (`SlashStyle.smear`): brush = the blade wedge; ribbon = a thin opaque hair with
+  additive gold on it; scale-dust = a hair-line. The thin kinds only cover the last 42% of the
+  frame's arc: over the whole arc they sat inside the style's own mark as a second crescent.
+- Brush: three seeded dry-brush slits inside the belly (`DRY`: dark hairlines following the arc,
+  only where the mark is over ~5 px thick). Impact star shortened to 0.058 s: on a beetle it and
+  the creature's own flash land together, and a longer star doubled into a blob.
+- Ribbon verdict: at game size it is a clean luminous crescent line, i.e. close to the look the
+  owner rejected. Kept as an option only; brush is the blow, scale-dust is the one that is hers.
+- Silhouette: antennae 30% longer, shaft half-width 1.7 -> 0.85 px, vane 1.75 (were 1.05 -> 0.4 and
+  1.15): they survive at 64 px. Folded hem `HEM` is a swallow-tail (long back point, notch, second
+  point, rising to the front so the legs show). The face's under-copy is now an opaque dark plum
+  hairline (6% larger) instead of a 60% alpha feather: the disc keeps its outline against the mane.
+- Run: `CONTACT_F` 21 (was 18), more back extension after toe-off (swing tangent 0.46), float 11.6 px
+  (was 9.2), lean 0.08 + 0.17 x speed (was 0.05 + 0.09), head gives it back. Foot-plant tests pass.
+- Hurt: the recoil pose pops 40% past itself on frame 1 (`HURT.pop`), her solid tones are flipped
+  for two frames (`Painter.invertK / invertC`: dark plum -> pale lilac, pale face -> dark; no glow),
+  14 crisp scales fly off (`Fx.scales`). Then the invulnerability pulse as before.
+- Silhouette tool: scratch script renders a frame with and without her (`__vesper.hidden`) and
+  thresholds the difference; sheets in `shots/vesper/sil16/` (before / after, 84 px and 64 px rows).
+  Run it on open ground (x 450): at 1400 she runs into the pool, at 3760 into trunk B.
+
 ## Health: hurt, fade, re-form (sim: memory/enemies.md; render numbers in `HURT` in rig.ts)
 - `hurt` event: `rig.hurtK` (recoil pose flung along `dir`, feet leading, eyes squeezed, wings thrown
   open, antennae whipped; held 0.2 s, out over 0.28 s; in the air a jackknife: spine first, hands and

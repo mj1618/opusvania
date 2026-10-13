@@ -29,7 +29,7 @@ export const BRUSH = {
   duskW: 1.4,
   dusk: 0.6,
   /** The impact star: seconds, px half-length along / across the cut. */
-  star: 0.075,
+  star: 0.058,
   starLong: 34,
   starShort: 15,
 } as const;
@@ -42,10 +42,12 @@ const FLECK = 1;
 const NOTCH = 4;
 const GAP = 5;
 const BRISTLE = 2;
+const DRY = 3;
 const tan = { x: 0, y: 0 };
 
 export class BrushSlash implements SlashStyle {
   readonly id = 'brush';
+  readonly smear = 'wedge';
   readonly spot = 0;
   private readonly arc = new Arc();
   private readonly bits = new Bits(48);
@@ -60,6 +62,13 @@ export class BrushSlash implements SlashStyle {
   private readonly bR = new Float32Array(BRISTLE);
   private readonly bV0 = new Float32Array(BRISTLE);
   private readonly bV1 = new Float32Array(BRISTLE);
+  // Dry-brush gaps inside the belly: how deep in the mark (0 outer .. 1 inner), from / to along it, px wide.
+  private readonly dR = new Float32Array(DRY);
+  private readonly dV0 = new Float32Array(DRY);
+  private readonly dV1 = new Float32Array(DRY);
+  private readonly dW = new Float32Array(DRY);
+  private readonly thS = new Float32Array(ARC_N);
+  private readonly roS = new Float32Array(ARC_N);
   /** Where a blow cut the mark (-1 = nowhere). */
   private cutV = -1;
   private hitX = 0;
@@ -99,6 +108,12 @@ export class BrushSlash implements SlashStyle {
       this.bR[k] = 1.25 + 0.4 * k + 0.2 * r.next();
       this.bV0[k] = 0.1 + 0.2 * r.next();
       this.bV1[k] = 0.5 + 0.2 * r.next() - 0.1 * k;
+    }
+    for (let k = 0; k < DRY; k++) {
+      this.dR[k] = 0.22 + 0.56 * ((k + 0.15 + 0.7 * r.next()) / DRY);
+      this.dV0[k] = 0.3 + 0.3 * r.next();
+      this.dV1[k] = Math.min(0.97, this.dV0[k]! + 0.2 + 0.3 * r.next());
+      this.dW[k] = 0.55 + 0.6 * r.next();
     }
   }
 
@@ -243,6 +258,10 @@ export class BrushSlash implements SlashStyle {
         const th = T * belly * hk * thin * brk * (1 - notch);
         const ro = rk * (1 - BRUSH.tuck * (1 - vv) ** 2.6) + (pass === 0 ? BRUSH.duskW / R : 0);
         const ri = ro - th - (pass === 0 ? (2 * BRUSH.duskW * Math.min(1, th * R * 0.5)) / R : 0);
+        if (pass === 1) {
+          this.thS[i] = th;
+          this.roS[i] = ro;
+        }
         px[m] = a.x(i, ro);
         py[m] = a.y(i, ro);
         gx[m] = a.x(i, th <= 0 ? ro : ri);
@@ -262,6 +281,29 @@ export class BrushSlash implements SlashStyle {
       p.strip(m, pass === 0 ? BRUSH.dusk * (echo ? 0.6 : 1) : 1);
     }
     if (echo) return;
+    // Dry-brush gaps: where the bristles parted, thin dark slits inside the belly that follow the
+    // arc. Seeded per stroke, so the mark is never a clean vector shape twice.
+    for (let k = 0; k < DRY; k++) {
+      let m = 0;
+      for (let i = 0; i < n; i++) {
+        const v = i / (ARC_N - 1);
+        if (v < this.dV0[k]! || v > this.dV1[k]!) continue;
+        const u = (v - this.dV0[k]!) / (this.dV1[k]! - this.dV0[k]!);
+        const th = this.thS[i]!;
+        // Only where the mark is thick enough to split.
+        const w = (this.dW[k]! * Math.sin(Math.PI * u) ** 0.6 * sat((th * R - 5) / 6)) / R;
+        const r0 = this.roS[i]! - th * this.dR[k]!;
+        px[m] = a.x(i, r0 + w);
+        py[m] = a.y(i, r0 + w);
+        gx[m] = a.x(i, r0 - w);
+        gy[m] = a.y(i, r0 - w);
+        gc[m * 3] = DUSK[0]! * 2;
+        gc[m * 3 + 1] = DUSK[1]! * 2;
+        gc[m * 3 + 2] = DUSK[2]! * 2;
+        m++;
+      }
+      p.strip(m, 0.8);
+    }
     // Dry bristle lines inside the torn edge: hair-thin, each its own length.
     for (let k = 0; k < BRISTLE; k++) {
       let m = 0;

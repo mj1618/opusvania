@@ -138,6 +138,12 @@ export class Painter {
   /** Multiplies the alpha of everything solid drawn from now on, and the strength of every glow. */
   alphaK = 1;
   glowK = 1;
+  /**
+   * 0..1: solid shapes drawn from now on have their tones flipped about `invertC` (dark becomes
+   * that pale tone, pale becomes dark). A hit reaction that is a value change, not a light.
+   */
+  invertK = 0;
+  invertC: RGB = [0.64, 0.57, 0.8];
   ghost: RGB | null = null;
   ghostAlpha = 0;
 
@@ -234,6 +240,14 @@ export class Painter {
     const v = this.verts;
     // Global dissolve: solid and soft shapes by `alphaK`, lights by `glowK`.
     a *= mode === GLOW ? this.glowK : mode === GHOST ? 1 : this.alphaK;
+    if (this.invertK > 0 && mode === SOLID) {
+      const k = this.invertK;
+      const c = this.invertC;
+      r += (Math.max(0.05, c[0]! - r * 0.86) - r) * k;
+      g += (Math.max(0.04, c[1]! - g * 0.86) - g) * k;
+      b += (Math.max(0.1, c[2]! - b * 0.86) - b) * k;
+      rs *= 1 - k;
+    }
     let o = this.nv * FLOATS;
     v[o++] = x;
     v[o++] = y;

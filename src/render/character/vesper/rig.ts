@@ -338,6 +338,10 @@ export const HURT = {
   /** The recoil pose is held this long (the sim's stagger is 12 frames), then let go over `out`. */
   hold: 0.2,
   out: 0.28,
+  /** The pose pops this far past itself on the first frame and settles in ~3. */
+  pop: 0.4,
+  /** Her tones flip (dark plum <-> pale lilac) for this long: two frames. No glow, no white. */
+  invert: 0.034,
   /** How long the wings stay blown inside-out by the blow. */
   blow: 0.2,
   /** Her last light: the dissolve starts this long after the blow and takes `fadeLen`. */
@@ -460,7 +464,7 @@ export const BODY = {
 export const RUN_CYCLE = 256;
 /** Fraction of the cycle a foot is planted: the rest is float. */
 const STANCE = 0.16;
-const CONTACT_F = 18;
+const CONTACT_F = 21;
 
 // Channel order: PF PU LEAN CURL HT | AF AU AP | BF BU BP | HAF HAU HBF HBU | TW EYE LOOKY HYAW
 const RISE = pose([
@@ -833,6 +837,10 @@ export class Rig {
   private reformT = 9;
   private hurtRoll = 0;
   hurtBlow = 0;
+  /** 1 while her tones are flipped by a blow (two frames), else 0. */
+  get hurtInvert(): number {
+    return this.hurtT < HURT.invert && !this.fading ? 1 : 0;
+  }
   /** 0..1: how much of the stroke's body key is in play; px she is off the ground in the finisher's hop. */
   slashBody = 0;
   slashHop = 0;
@@ -1597,7 +1605,9 @@ export class Rig {
     const hk = this.fading
       ? 1
       : this.hurtT < HURT.hold + HURT.out
-        ? sat(this.hurtT / 0.025) * (1 - quintic((this.hurtT - HURT.hold) / HURT.out))
+        ? sat(this.hurtT / 0.017) *
+          (1 + HURT.pop * Math.exp(-this.hurtT / 0.05)) *
+          (1 - quintic((this.hurtT - HURT.hold) / HURT.out))
         : 0;
     this.hurtK = hk;
     this.fadeK = this.fading ? smoothstep(HURT.fadeAt, HURT.fadeAt + HURT.fadeLen, this.fadeT) : 0;
@@ -1954,12 +1964,26 @@ export class Rig {
    * `stroke.reach` for the edge of the hit area. The trail is laid from this.
    */
   strokeAt(q: number, out: { x: number; y: number }): void {
+    this.strokeAtRoll(q, this.slashRoll + this.spinResid, out);
+  }
+
+  /** How far the blade's frame is turned on screen right now (air roll + what is left of a somersault), rad. */
+  get bladeRoll(): number {
+    return this.slashRoll + this.spinResid;
+  }
+
+  /**
+   * `strokeAt` in a frame turned `roll` rad instead of the live one. The mark of a cut is laid in
+   * the frame the cut STARTED in (`bladeRoll` then): out of a somersault the residual turn changes
+   * by the frame, and a mark laid in the live frame comes out bent.
+   */
+  strokeAtRoll(q: number, roll: number, out: { x: number; y: number }): void {
     const st = this.stroke;
     strokeMap(st, st.a0 + (st.a1 - st.a0) * q, this.slashTilt);
     const bx = mapOut.f * this.slashFacing;
     const by = -mapOut.u;
-    const cr = Math.cos(this.slashRoll + this.spinResid);
-    const sr = Math.sin(this.slashRoll + this.spinResid);
+    const cr = Math.cos(roll);
+    const sr = Math.sin(roll);
     out.x = bx * cr - by * sr;
     out.y = bx * sr + by * cr;
   }
@@ -2012,7 +2036,7 @@ export class Rig {
       const t = (f - STANCE) / (1 - STANCE);
       const span = RUN_CYCLE * (1 - STANCE);
       // Leaves with the ground's speed, hangs back, swings through late and reaches.
-      o.f = hermite(F1, -span * 0.34, CONTACT_F, -span * 0.5, t);
+      o.f = hermite(F1, -span * 0.46, CONTACT_F, -span * 0.5, t);
       const lift = Math.sin(Math.PI * t ** 0.62);
       o.u = 17 * lift ** 1.25 * (1 - 0.35 * smoothstep(0.45, 0.9, t)) + 2.2 * Math.sin(Math.PI * t);
       if (t < 0.16) o.p = lerp(1.1, 1.55, smoothstep(0, 0.16, t));
@@ -2045,11 +2069,11 @@ export class Rig {
     const fl = 0.3 + 0.7 * smoothstep(0.35, 0.95, Math.min(k, this.speedNow));
     o[AU]! *= 0.45 + 0.55 * fl;
     o[BU]! *= 0.45 + 0.55 * fl;
-    o[PU] = 28.6 + 9.2 * rise ** 0.72 * fl;
-    o[LEAN] = 0.05 + 0.09 * k - 0.03 * c1;
+    o[PU] = 28.2 + 11.6 * rise ** 0.66 * fl;
+    o[LEAN] = 0.08 + 0.17 * k - 0.03 * c1;
     o[CURL] = 0.05 + 0.02 * Math.cos(TAU * (x - 0.2));
     // The head stays level: it gives back what the spine leans.
-    o[HT] = -0.04 - 0.04 * k + 0.012 * Math.cos(TAU * (x - 0.3));
+    o[HT] = -0.06 - 0.1 * k + 0.012 * Math.cos(TAU * (x - 0.3));
     // Arms: low, behind the hips, open; a small lazy swing against the legs.
     const a = Math.sin(TAU * (ph - 0.07));
     const b = Math.sin(TAU * (ph - 0.16));

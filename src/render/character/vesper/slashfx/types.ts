@@ -47,8 +47,12 @@ export interface SlashFrame {
   near: number;
 }
 
+/** How a style draws the smear frame: the blade as a wedge, a thin streak of light, or a hair-line. */
+export type SmearKind = 'wedge' | 'streak' | 'hair';
+
 export interface SlashStyle {
   readonly id: SlashStyleId;
+  readonly smear: SmearKind;
   /** 0..1: the wings' eye-spots flash this much (only scale-dust uses it). */
   readonly spot: number;
   /** Anything still on screen. */

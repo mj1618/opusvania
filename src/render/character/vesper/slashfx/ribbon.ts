@@ -41,6 +41,7 @@ const HOT: RGB = [1, 0.97, 0.88];
 
 export class RibbonSlash implements SlashStyle {
   readonly id = 'ribbon';
+  readonly smear = 'streak';
   readonly spot = 0;
   private readonly arc = new Arc();
   private readonly bits = new Bits(64);

@@ -13,6 +13,14 @@ const DUST = 1;
 const SPARK = 2;
 /** Dust drawn back to a point (vx, vy hold the point): she is re-forming. */
 const GATHER = 4;
+/** A wing scale knocked loose: a small crisp fleck that tumbles and falls. */
+const SCALE = 5;
+const SCALE_TINTS: readonly RGB[] = [
+  [0.86, 0.8, 0.94],
+  [0.6, 0.46, 0.84],
+  [0.95, 0.8, 0.5],
+];
+const LIT: [number, number, number] = [0, 0, 0];
 const MAX = 260;
 const GOLD = rgb(0xffd98a);
 const GOLD_HOT = rgb(0xfff6dc);
@@ -254,6 +262,24 @@ export class Fx {
     }
   }
 
+  /** A blow knocks scales off her: `count` crisp flecks from the points in `pts`, thrown along (dx, dy). */
+  scales(pts: Float32Array, n: number, count: number, dx: number, dy: number): void {
+    for (let c = 0; c < count; c++) {
+      const i = Math.min(n - 1, Math.floor(this.rand() * n));
+      const sp = 120 + this.rand() * 300;
+      const a = Math.atan2(dy, dx) + (this.rand() - 0.5) * 1.9;
+      this.add(
+        SCALE,
+        pts[i * 2]! + (this.rand() - 0.5) * 8,
+        pts[i * 2 + 1]! + (this.rand() - 0.5) * 8,
+        Math.cos(a) * sp,
+        Math.sin(a) * sp - 60,
+        0.3 + this.rand() * 0.3,
+        1.1 + this.rand() * 1.3,
+      );
+    }
+  }
+
   /** She comes apart: `count` motes from the points in `pts`, drifting up and out. */
   scatter(pts: Float32Array, n: number, count: number): void {
     for (let c = 0; c < count; c++) {
@@ -290,6 +316,10 @@ export class Fx {
         const k = Math.exp(-2.6 * dt);
         q.vx = q.vx * k + Math.sin(clock * 1.7 + q.seed) * 13 * dt;
         q.vy = q.vy * k + (6 + 5 * Math.sin(clock * 1.1 + q.seed * 3)) * dt;
+      } else if (q.kind === SCALE) {
+        const k = Math.exp(-5 * dt);
+        q.vx *= k;
+        q.vy = q.vy * k + 420 * dt;
       } else if (q.kind === GATHER) {
         // Faster the nearer it gets: it is being drawn in.
         const k = 1 - Math.exp(-(4 + 16 * (q.age / q.life)) * dt);
@@ -314,6 +344,16 @@ export class Fx {
         const k = Math.min(1, t * 10) * (1 - t) ** 1.4 * tw;
         p.glow(q.x, q.y, q.size * 3.0, GOLD_DEEP, 0.24 * k);
         p.glow(q.x, q.y, q.size * 1.0, GOLD_HOT, 0.6 * k);
+      } else if (q.kind === SCALE) {
+        const rot = q.seed + q.age * (14 + q.seed * 3);
+        const face = Math.abs(Math.cos(rot * 1.3));
+        const s = q.size * (1 - t * t);
+        const c = SCALE_TINTS[Math.floor(q.seed * 7) % 3]!;
+        const lit = 0.6 + 0.4 * face;
+        LIT[0] = c[0]! * lit;
+        LIT[1] = c[1]! * lit;
+        LIT[2] = c[2]! * lit;
+        p.flake(q.x, q.y, Math.cos(rot) * s * 2.2, Math.sin(rot) * s * 2.2, s * (0.3 + 0.6 * face), LIT, 1);
       } else if (q.kind === GATHER) {
         const k = Math.min(1, t * 6) * (1 - t * t);
         p.glow(q.x, q.y, q.size * 3.4, GOLD_DEEP, 0.4 * k, q.size * 3.4, 0, 10);

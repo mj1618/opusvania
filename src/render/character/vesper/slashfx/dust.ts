@@ -38,6 +38,7 @@ const tan = { x: 0, y: 0 };
 
 export class DustSlash implements SlashStyle {
   readonly id = 'scale-dust';
+  readonly smear = 'hair';
   private readonly arc = new Arc();
   private readonly bits = new Bits(520);
   private readonly rnd = new Rand(0xd057);

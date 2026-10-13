@@ -85,6 +85,14 @@ export class VesperCharacter implements CharacterSkin {
     near: 0,
   };
   private readonly cutAt = (q: number, out: { x: number; y: number }): void => this.rig.strokeAt(q, out);
+  /** The blade frame's turn when the cut began: the mark is laid in that frame (see `Rig.strokeAtRoll`). */
+  private markRoll = 0;
+  /** Up and down cuts: the mark's trailing side sweeps this much wider than the blade's own path. */
+  private markWide = 0;
+  private readonly markAt = (q: number, out: { x: number; y: number }): void => {
+    this.rig.strokeAtRoll(q, this.markRoll, out);
+    out.x *= 1 + this.markWide * (1 - q) ** 1.5;
+  };
   private readonly tan = { x: 0, y: 0 };
   private readonly tan2 = { x: 0, y: 0 };
 
@@ -275,7 +283,11 @@ export class VesperCharacter implements CharacterSkin {
     const chestY = rig.frame.j[J_CHEST * 2 + 1]!;
     const heavy = rig.slashStep === 3 && rig.slashDir !== 'down';
     const style = this.slashes[this.slashIdx]!;
-    if (rig.cutStart)
+    if (rig.cutStart) {
+      this.markRoll = rig.bladeRoll;
+      // The hit area of an up or down cut is narrow (100 px): drawn to it the mark is a tall thin
+      // arch. Its trailing side is let out wider; the reach, and the side that strikes, stay true.
+      this.markWide = rig.slashDir === 'fwd' ? 0 : 0.55;
       style.begin(
         {
           dir: rig.slashDir,
@@ -285,8 +297,9 @@ export class VesperCharacter implements CharacterSkin {
           reach: rig.stroke.reach,
           show: rig.stroke.show,
         },
-        this.cutAt,
+        this.markAt,
       );
+    }
     const sf = this.sf;
     sf.dt = dt;
     sf.clock = clock;
@@ -323,7 +336,11 @@ export class VesperCharacter implements CharacterSkin {
       bp[20 + i * 2] = rig.frame.j[jj * 2]!;
       bp[21 + i * 2] = rig.frame.j[jj * 2 + 1]!;
     }
-    if (sig.hurt) fx.scatter(bp, 13, 7);
+    if (sig.hurt) {
+      fx.scatter(bp, 13, 7);
+      // Scales knocked off her wings, thrown the way she is.
+      fx.scales(bp, 10, 14, player.vx || -player.facing, -0.6);
+    }
     // Her last light: she comes apart into dust as she goes.
     if (rig.fadeK > 0 && rig.fadeK < 1) {
       this.fadeAcc += dt * 150;
@@ -404,7 +421,9 @@ export class VesperCharacter implements CharacterSkin {
     this.trails[3]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.2, clock);
     p.alphaK = bodyA;
     p.glowK = whole;
+    p.invertK = rig.hurtInvert;
     drawVesper(p, rig.frame, view, clock);
+    p.invertK = 0;
     p.alphaK = 1;
     p.glowK = 1;
     this.trails[0]!.draw(p, FX_GOLD, FX_GOLD_HOT, 0.4);
@@ -423,6 +442,7 @@ export class VesperCharacter implements CharacterSkin {
       const sh = (J_SH_A + rig.swordSide) * 2;
       drawSmear(
         p,
+        style.smear,
         this.cutAt,
         rig.frame.j[sh]!,
         rig.frame.j[sh + 1]!,
