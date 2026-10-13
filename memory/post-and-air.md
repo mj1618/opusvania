@@ -86,6 +86,17 @@
   only helps against bright backgrounds.
 - `__fx.leaves` exposes the leaf system (used to find a platform landing for a screenshot).
 
+## Round 5: the hero was washed out by her own light
+- Cause (found by toggling): the post light is a gain that favours dark pixels and peaks at the
+  light; the playfield mask is 1 wherever a bush or ground is behind the hero, so the hero's own
+  dark body got the largest lift of anything on screen. Mist, bloom and back glow were minor.
+- Fix: a hero matte (`lib/fx-mask.ts`, the character layer's alpha at 960x540, redrawn every frame
+  from `PostStage.update`; this makes the character layer a render group). The composite keeps
+  light, halo, light wrap and 65% of bloom off matte pixels (`lights.heroProtect`, `heroBloomCut`).
+- Lit surfaces are soft-kneed toward `lights.cap` (0.78 luminance) so moss and grass never go white.
+- Side effect: where the hero is behind a translucent foreground plant, the matte shows as a
+  slightly darker hero shape on it.
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").

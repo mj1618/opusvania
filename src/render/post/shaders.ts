@@ -202,6 +202,8 @@ out vec4 finalColor;
 uniform sampler2D uTexture;
 uniform sampler2D uBloom;
 uniform sampler2D uLight;
+uniform sampler2D uMatte;
+uniform vec4 uProtect;    // hero matte strength, lit-surface luminance cap, bloom cut on the hero, unused
 uniform vec4 uMix;        // bloom intensity, light gain, light haze, chroma
 uniform vec4 uTone;       // exposure, shoulder, contrast, pivot
 uniform vec4 uShadow;     // rgb tint, lift
@@ -257,19 +259,29 @@ void main(void) {
   // to grey first so the light's own colour shows. Wet, bright spots (moss tips, water) glint. In
   // the air: a wide faint halo.
   vec4 lit = texture(uLight, vPos);
+  // The hero is not lit by their own light (it would lift their dark body more than anything
+  // else, being nearest): the matte takes the light, the halo and most of the bloom off them.
+  float hero = smoothstep(0.08, 0.6, texture(uMatte, vPos).a) * uProtect.x;
   float ll = dot(col, LUMA);
   vec3 albedo = mix(vec3(ll), col, 0.72);
   float lift = uMix.y * (0.3 + 0.12 / (0.25 + ll)) * (1.0 - smoothstep(0.5, 1.0, ll));
-  col += albedo * lit.rgb * lift + lit.rgb * (ll * ll * uLightBack.y + uLightBack.z);
-  col += uHalo.rgb * (lit.a * uMix.z);
+  vec3 add = albedo * lit.rgb * lift + lit.rgb * (ll * ll * uLightBack.y + uLightBack.z);
+  // Soft knee: lit moss and grass approach the cap, never white.
+  float al = dot(add, LUMA);
+  float knee = uProtect.y * 0.6;
+  float want = ll + al;
+  float got = want < knee ? want : knee + (uProtect.y - knee) * (1.0 - exp(-(want - knee) / (uProtect.y - knee)));
+  add *= clamp((got - ll) / (al + 1e-4), 0.0, 1.0);
+  col += add * (1.0 - hero);
+  col += uHalo.rgb * (lit.a * uMix.z * (1.0 - hero));
 
   // Bloom.
   vec3 bloom = texture(uBloom, vPos).rgb;
   // Light wrap: dark foliage right next to a bright opening takes some of that light through its
   // edge, in its own colour brightened toward yellow-green, like backlit leaves.
-  float wrap = dot(bloom, LUMA) * (1.0 - smoothstep(0.12, 0.5, ll)) * uLightBack.w;
+  float wrap = dot(bloom, LUMA) * (1.0 - smoothstep(0.12, 0.5, ll)) * uLightBack.w * (1.0 - hero);
   col += (col * 3.0 + vec3(0.05, 0.085, 0.025)) * bloom * wrap;
-  col += bloom * (uMix.x * (1.0 - uLightBack.x * pale));
+  col += bloom * (uMix.x * (1.0 - uLightBack.x * pale) * (1.0 - hero * uProtect.z));
 
   // Tone: exposure, a soft shoulder instead of clipping, an S-curve around the pivot.
   col = shoulder(col * uTone.x, uTone.y);

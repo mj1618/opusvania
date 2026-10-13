@@ -19,7 +19,7 @@
 import { type Container, type Filter, Rectangle } from 'pixi.js';
 import { type CameraView, type RenderContext, VIEW_H, VIEW_W, worldToView } from '../contract';
 import { fxDebug } from '../scene/lib/fx-debug';
-import { renderPlayfieldMask } from '../scene/lib/fx-mask';
+import { renderHeroMatte, renderPlayfieldMask } from '../scene/lib/fx-mask';
 import { zoneColor, zoneMix, zoneWeights } from '../scene/lib/fx-zones';
 import { MAX_LIGHTS, POST, ZONE_GRADE } from './config';
 import { PostFilter } from './pipeline';
@@ -139,6 +139,12 @@ export class PostStage {
       renderPlayfieldMask(this.ctx.renderer, this.maskLayers());
       this.maskAt = { x: camera.x, y: camera.y, zoom: camera.zoom };
     }
+
+    const character = this.target.getChildByLabel('character');
+    if (character) renderHeroMatte(this.ctx.renderer, character);
+    u.uProtect[0] = lights.heroProtect;
+    u.uProtect[1] = lights.cap;
+    u.uProtect[2] = lights.heroBloomCut;
 
     // Lights: world px -> view heights. Only those whose reach touches the view are sent.
     const lu = f.lightsU;

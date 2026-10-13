@@ -46,3 +46,44 @@ export function renderPlayfieldMask(renderer: Renderer, layers: readonly Contain
     first = false;
   }
 }
+
+/**
+ * The hero matte: the character layer's alpha over the view, redrawn every frame. Post uses it to
+ * keep its own light off the hero: the hero's light is a gain on dark pixels, and without the matte
+ * the darkest thing nearest the light, the hero's own body, was lifted most and washed out.
+ */
+export const MATTE_W = 960;
+export const MATTE_H = 540;
+let matte: RenderTexture | null = null;
+
+export function heroMatteTexture(): RenderTexture {
+  matte ??= RenderTexture.create({
+    width: MATTE_W,
+    height: MATTE_H,
+    resolution: 1,
+    antialias: false,
+    scaleMode: 'linear',
+    addressMode: 'clamp-to-edge',
+  });
+  return matte;
+}
+
+export function renderHeroMatte(renderer: Renderer, character: Container): void {
+  const kx = MATTE_W / VIEW_W;
+  const ky = MATTE_H / VIEW_H;
+  m.set(
+    character.scale.x * kx,
+    0,
+    0,
+    character.scale.y * ky,
+    character.position.x * kx,
+    character.position.y * ky,
+  );
+  renderer.render({
+    container: character,
+    target: heroMatteTexture(),
+    clear: true,
+    clearColor: [0, 0, 0, 0],
+    transform: m,
+  });
+}

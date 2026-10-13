@@ -34,7 +34,7 @@ export const POST = {
 
   lights: {
     /** Gain on surfaces: how much a light lifts the colours already there. */
-    gain: 3.0,
+    gain: 3.6,
     /** Strength left where the surroundings are bright already (the light well). */
     inBrightPlaces: 0.45,
     /** A little of the light's own colour added to every surface it reaches. */
@@ -53,8 +53,16 @@ export const POST = {
     background: 0.1,
     /** How much silhouette edges facing the light gain and edges facing away lose. */
     direction: 0.55,
+    /** Lit surfaces approach this luminance and never pass it (moss and grass must not go white). */
+    cap: 0.78,
+    /**
+     * The hero matte (lib/fx-mask.ts): how much of the light and halo is kept off the hero's own
+     * pixels (1 = all), and how much of the bloom.
+     */
+    heroProtect: 1,
+    heroBloomCut: 0.65,
     /** Every light's radius is scaled by this (the skins register a modest reach). */
-    reach: 1.35,
+    reach: 1.5,
   },
 
   /**

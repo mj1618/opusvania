@@ -21,7 +21,7 @@ import {
   type TEXTURE_FORMATS,
   Texture,
 } from 'pixi.js';
-import { MASK_H, MASK_W, playfieldMaskTexture } from '../scene/lib/fx-mask';
+import { heroMatteTexture, MASK_H, MASK_W, playfieldMaskTexture } from '../scene/lib/fx-mask';
 import { BLOOM_LEVELS, LIGHT_TARGET, MAX_LIGHTS } from './config';
 import {
   COMPOSITE_FRAG,
@@ -69,6 +69,7 @@ export class PostFilter extends Filter {
     uGrain: Vec;
     uLightBack: Vec;
     uHalo: Vec;
+    uProtect: Vec;
     uHero: Vec;
     uHero2: Vec;
   };
@@ -108,6 +109,7 @@ export class PostFilter extends Filter {
       resources: {
         uBloom: (up[0] ?? down[0] ?? light).source,
         uLight: light.source,
+        uMatte: heroMatteTexture().source,
         postUniforms: {
           uMix: { value: new Float32Array(4), type: 'vec4<f32>' },
           uTone: { value: new Float32Array([1, 0.8, 0, 0.3]), type: 'vec4<f32>' },
@@ -118,6 +120,7 @@ export class PostFilter extends Filter {
           uGrain: { value: new Float32Array([0, 0, 16 / 9, 0]), type: 'vec4<f32>' },
           uLightBack: { value: new Float32Array([1, 0, 0, 0]), type: 'vec4<f32>' },
           uHalo: { value: new Float32Array([1, 0.8, 0.5, 0]), type: 'vec4<f32>' },
+          uProtect: { value: new Float32Array([1, 0.7, 0.6, 0]), type: 'vec4<f32>' },
           uHero: { value: new Float32Array([0, 0, 0.3, 0]), type: 'vec4<f32>' },
           uHero2: { value: new Float32Array([0.06, 0.3, 0, 0]), type: 'vec4<f32>' },
         },
