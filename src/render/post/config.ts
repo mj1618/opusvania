@@ -105,6 +105,20 @@ export const POST = {
     contrast: 0.16,
     pivot: 0.36,
     saturation: 1.1,
+    /**
+     * The toe: everything darker than `toe` (0..1 luminance) is pushed down by a power curve
+     * (out = toe * (l / toe)^(1 + toeDepth)); above it nothing moves. This is what turns the
+     * dark-grey shelf into near-black without touching mid-tones (per zone in ZONE_GRADE).
+     */
+    toe: 0.2,
+    toeDepth: 0.8,
+    /**
+     * Points of light: how far the core of a SMALL very bright thing (glint, firefly, glow-plant
+     * core; found by comparing it with the blurred glow around it) goes toward its own hue at
+     * full value mixed `sparkWhite` toward white. Areas of light are not touched.
+     */
+    spark: 0.9,
+    sparkWhite: 0.7,
     /** Split toning: shadows are lifted toward `shadowTint`, highlights multiplied toward `highlightTint`. */
     shadowTint: 0x0c2450,
     shadowLift: 0.2,
@@ -149,12 +163,20 @@ export const ZONE_GRADE = {
   contrast: [0.36, 0.28, 0.36] as const,
   pivot: [0.4, 0.36, 0.4] as const,
   /** Shadows: moonlit blue, the default teal-indigo, violet dusk. */
-  shadowTint: [0x081f52, 0x2c2409, 0x24164f] as const,
+  shadowTint: [0x081f52, 0x0e2a12, 0x24164f] as const,
   shadowLift: [0.2, 0.16, 0.24] as const,
   /** Highlights: cool white, warm gold, rose. */
   highlightTint: [0xe4f3ff, 0xffe2b8, 0xffdcea] as const,
   highlightWarmth: [0.3, 0.6, 0.4] as const,
   saturation: [1.16, 1.08, 1.16] as const,
+  toeDepth: [0.8, 0.8, 0.8] as const,
+  /**
+   * Darks and mid-tones only (highlights keep `saturation`): their saturation, and a tint they
+   * are leaned toward at constant luminance: blue-teal, green (the amber stays in the openings,
+   * which are highlights), indigo-violet.
+   */
+  richSaturation: [1.5, 1.45, 1.38] as const,
+  richTint: [0xd8f0ff, 0xd0ffd4, 0xd6d4ff] as const,
   vignetteTint: [0x5f93dc, 0x6f9bd0, 0x8a84d8] as const,
   /** Multiplier on POST.hero.darken: the pocket matters most where the place glows most. */
   heroPocket: [1.2, 1.7, 1.1] as const,

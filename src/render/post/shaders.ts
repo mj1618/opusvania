@@ -209,6 +209,7 @@ uniform sampler2D uTexture;
 uniform sampler2D uBloom;
 uniform sampler2D uLight;
 uniform sampler2D uMatte;
+uniform sampler2D uWide;
 uniform vec4 uProtect;    // hero matte strength, lit-surface luminance cap, bloom cut on the hero, unused
 uniform vec4 uMix;        // bloom intensity, light gain, light haze, chroma
 uniform vec4 uTone;       // exposure, shoulder, contrast, pivot
@@ -222,6 +223,8 @@ uniform vec4 uHalo;       // rgb: the lights' mean colour
 uniform vec4 uLit;        // light colour tint 0..1, chroma gain, per-channel ceiling, unused
 uniform vec4 uHero;       // x, y (view heights), pocket radius, darkening
 uniform vec4 uHero2;      // inner radius left untouched, desaturation, luminance ceiling, pull toward it
+uniform vec4 uDeep;       // toe: luminance it ends at, extra exponent; spark: amount, whiteness of the core
+uniform vec4 uRich;       // rgb: tint multiplied into darks and mid-tones, a: their saturation
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -249,6 +252,13 @@ void main(void) {
     col.b = texture(uTexture, clamp(vTextureCoord + off, vClamp.xy, vClamp.zw)).b;
   }
 
+  // Points of light: a small, very bright thing (a glint, a firefly or glow-plant core) is far
+  // brighter than the blurred glow around it; a bright AREA (sky opening, lit fog) is not. Measured
+  // here on the untouched scene, used after the grade to let those few cores be truly light.
+  float smx = max(col.r, max(col.g, col.b));
+  float ssat = (smx - min(col.r, min(col.g, col.b))) / max(smx, 1e-4);
+  vec3 srcHue = col / max(smx, 1e-4);
+
   // The hero matte: the hero's own pixels are exempt from everything that darkens the frame
   // around them (pocket, vignette) and from their own light.
   float hero = smoothstep(0.25, 0.5, texture(uMatte, vPos).a) * uProtect.x;
@@ -257,7 +267,8 @@ void main(void) {
   // and greyer, so a small figure separates from a busy, glowing forest without an outline.
   vec2 hd = cv - (uHero.xy - vec2(0.5 * uGrain.z, 0.5));
   float h2 = dot(hd, hd);
-  float pocket = exp(-h2 / (uHero.z * uHero.z)) * (1.0 - exp(-h2 / (uHero2.x * uHero2.x)));
+  float nearHero = exp(-h2 / (uHero.z * uHero.z));
+  float pocket = nearHero * (1.0 - exp(-h2 / (uHero2.x * uHero2.x)));
   // Bright surroundings are pulled down hardest (toward the ceiling in uHero2.z); dark ones are
   // left nearly alone, so the pocket never reads as a grey disc.
   float pl = dot(col, LUMA);
@@ -285,7 +296,9 @@ void main(void) {
   float ll = dot(col, LUMA);
   float lm = max(lit.r, max(lit.g, lit.b));
   if (lm > 0.002) {
-    vec3 tint = mix(vec3(1.0), lit.rgb / lm, uLit.x);
+    // The tint fades in with the light: at full strength right from the light's rim it drew the
+    // rim as a hard-edged disc against anything bright behind (the sky opening).
+    vec3 tint = mix(vec3(1.0), lit.rgb / lm, uLit.x * smoothstep(0.0, 0.25, lm));
     float g = lm * uMix.y * (1.0 - smoothstep(0.55, 1.0, ll));
     // A floor under the gain so near-black soil still shows a little of the pool.
     vec3 lc = (col + vec3(uLightBack.z) * min(g, 1.0)) * (1.0 + g) * tint;
@@ -322,6 +335,12 @@ void main(void) {
     : 1.0 - (1.0 - uTone.w) * pow((1.0 - lc) / (1.0 - uTone.w), 1.0 + uTone.z);
   col *= curved / lc;
 
+  // The toe: the big dark-grey masses (canopy, shaded trunks, the earth under the walk line) fall
+  // to near-black, while everything above uDeep.x keeps its place. Not on the hero.
+  l = dot(col, LUMA);
+  float toe = clamp(l / uDeep.x, 1e-3, 1.0);
+  col *= mix(pow(toe, uDeep.y), 1.0, hero);
+
   // A gentle lift of the mid-tones only: blacks and highlights stay where they are.
   l = dot(col, LUMA);
   col *= 1.0 + uGrain.w * smoothstep(0.07, 0.3, l) * (1.0 - smoothstep(0.45, 0.85, l)) * (1.0 - hero);
@@ -334,9 +353,27 @@ void main(void) {
   float hi = smoothstep(0.35, 0.95, l);
   col *= mix(vec3(1.0), uHighlight.rgb, hi * uHighlight.a);
 
-  // Saturation.
+  // Saturation. Highlights take the plain amount; darks and mid-tones are made richer and leaned
+  // toward the zone's hue (uRich), less where they are saturated already or lit by a point light
+  // (lit grass near the hero must not go neon). The hero only gets the plain amount.
   l = dot(col, LUMA);
-  col = mix(vec3(l), col, uVignetteTint.a);
+  float gmx = max(col.r, max(col.g, col.b));
+  float gsat = (gmx - min(col.r, min(col.g, col.b))) / max(gmx, 1e-4);
+  float low = (1.0 - smoothstep(0.3, 0.62, l)) * (1.0 - hero);
+  float rich = low * (1.0 - 0.75 * smoothstep(0.55, 0.9, gsat)) * (1.0 - 0.8 * smoothstep(0.05, 0.4, lm));
+  col = max(mix(vec3(l), col, uVignetteTint.a + (uRich.a - 1.0) * rich), 0.0);
+  vec3 leaned = col * uRich.rgb;
+  col = mix(col, leaned * (l / max(dot(leaned, LUMA), 1e-4)), low);
+
+  // The few true highlights: cores of small lights go white-hot (the rest of the light keeps its
+  // colour, so it reads as a crisp point with a coloured edge, not a halo).
+  // (uWide is the bloom chain's 240x135 level: what this pixel would glow like if the light were
+  // an area, against what is really there once ~16 px around it are averaged.)
+  float glowHere = dot(texture(uWide, vPos).rgb, LUMA);
+  float ownGlow = max(smx - 0.55, 0.02) * (1.0 + 1.3 * ssat) * (0.4 + 0.6 * (1.0 - ssat));
+  float point = smoothstep(0.78, 0.95, smx) * (1.0 - smoothstep(0.3, 0.6, glowHere / ownGlow));
+  // Never beside the hero: nothing around her may go pale.
+  col = mix(col, mix(srcHue, vec3(1.0), uDeep.w), point * uDeep.z * (1.0 - hero) * (1.0 - nearHero));
 
   // Vignette: darker, cooler corners.
   float v = smoothstep(uVignette.x, uVignette.y, sqrt(r2)) * (1.0 - 0.85 * hero);

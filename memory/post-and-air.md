@@ -54,7 +54,7 @@
 - Top plants are locked to the screen vertically (`topLock`); with true parallax they swept through
   the frame whenever the camera climbed.
 - Anything the character is behind goes translucent. Full-height trunks and lianas mid-scene were
-  tried and removed (cardboard, ghosts, ropes through the centre); only the two end trunks remain.
+  tried and removed (cardboard, ghosts, ropes through the centre); the end trunks went in round 12.
 - The whole layer fades out above zoom ~1.15 (close-up shots).
 
 ## Round 3 additions
@@ -99,8 +99,8 @@
 
 ## Round 6: low key (after memory/reference-study.md)
 - Measure with `npm run look:stats -- --stops=shots/<dir>` (see toolchain.md); targets are in the study.
-- Foreground is opaque near-black (tones in `foregroundTones`, luma < 12) with a faint cool rim, blur 4
-  atlas px (~16 on screen), the blurred atlas drawn twice over itself so bodies stay opaque. Mass sits
+- Foreground is opaque near-black (tones in `foregroundTones`, luma < 12) with a faint cool rim (blur: see
+  round 12), the blurred atlas drawn twice over itself so bodies stay opaque. Mass sits
   in two opposite corners (top-left + bottom-right, mirrored for camera x > ~2900: `mirrorAt`) plus a
   dense low band (`band`). Thin shapes vanish under that blur: only big leaves survive. On the high
   route the bottom corner and band are off-screen (true parallax); only the top corner remains.
@@ -164,6 +164,40 @@
   shoulder on her, no shadow lift, no bloom added on her (`heroBloomCut` 1), and she feeds the bloom
   only 20% (`heroBloomSource` 0.8, applied in the prefilter). Mist and the front veil open 96% round her.
 - Still applied to her: S-curve contrast, highlight tint, saturation, grain, 15% of the vignette.
+
+## Round 12: tonal range, rich darks, a near plane (second reference study)
+- Grade additions, all after the S-curve and all off the hero (matte): a **toe** (`grade.toe` 0.2,
+  `toeDepth` 0.8 per zone: below luma ~51 the value falls by a power curve, above nothing moves; it runs
+  before the split-tone lift, so crushed blacks keep the zone's coloured floor), **rich darks**
+  (`ZONE_GRADE.richSaturation` 1.5 / 1.45 / 1.38 and `richTint`: only below luma ~0.3-0.6, less on pixels that
+  are saturated already or inside a point light; highlights keep `saturation`), centre shadow tint is deep
+  green now (was olive-brown). Measured on the stops: near-black 33 -> 47%, dark grey 39 -> 27%, chroma 22 -> 30.
+  Centre richSaturation 1.7 turned lit grass neon.
+- **Sparks** (`grade.spark`, `sparkWhite`): cores of small very bright things go white-hot. Point vs area is
+  told by `uWide` (bloom level 240x135) over the pixel's own expected glow: < 0.3 point, > 0.6 area. The
+  first try used the full bloom texture: no separation, a whole glow-mushroom cap beside the hero went white.
+  Sparks are off within the hero pocket radius. They move p99.9 by only a few points: there are too few hot
+  pixels in the scene (the 237 of the references is ~2000 px; ours are firefly, glint and HUD-flame cores).
+- Foreground: blur 2.2 / 1.3 atlas px (4 was a formless smear; shapes must read), new near shapes `toadstools`
+  and `archRoot`, never the same kind twice running, a far-plane middle tier (170-250 px, both sides), the
+  corner opposite the main bottom mass comes out 85% (`bottomOther`), bottom plants use `bottomClear` /
+  `bottomFull` (out in the side thirds). Bottom plants are **pinned to the frame's bottom edge** while the
+  camera is within `bottomFree` px of its ground rest: with true parallax the 128 px terrace dropped them out
+  of sight. They only read where the ground behind them is lit (the lip under the walk line, the pool).
+- Moths: zone-coloured dusky wings (`moths.color`, ~60% value), size 7, glow 0.07. Fireflies 26 px, peak 0.85.
+- Shafts flicker 10% over ~5 s (`shimmer`) and widen/narrow 14% with the slow breathing (`breatheWidth`);
+  the ground mist's second sheet drifts 14 px/s.
+- The glare walk (scratch script: frame every 150 px, idle + run, 480x300 crop, % over luma 185) now tops
+  out at 1.7-1.85% at x 1500 (pool edge); hiding the `mid` layer drops it to 1.0%, so it is the mist stage
+  there, not post. Watch it.
+- The "huge hard-edged disc" in the centre's sky opening was the rim of a point light (shaft pools, radius
+  ~240-370 px): the light-colour tint (`lights.tint`) applied at full strength from `lm > 0.002`, a 22% colour
+  step exactly at the light's radius, visible against anything bright. The tint now fades in with the light.
+  The hero pocket was not involved (it is two Gaussians, no edge).
+- The foreground end trunks are gone (`trunks: []`): opaque black, they were a flat slab over the last ~90 px
+  at the right camera clamp and hid the far ledge with the hero on it.
+- Right zone richSaturation is 1.38 with a bluer tint: with the mid layer's mist stage it read magenta-pink.
+- Cost at 3840x2160 (M5 Pro): post ~0.8 ms, air ~0.3 ms, foreground ~0.1 ms.
 
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00

@@ -73,6 +73,8 @@ export class PostFilter extends Filter {
     uLit: Vec;
     uHero: Vec;
     uHero2: Vec;
+    uDeep: Vec;
+    uRich: Vec;
   };
   readonly prefilterU: { uTap: Vec; uCurve: Vec; uSaturation: number; uBoost: number; uHeroSource: number };
   readonly lightsU: {
@@ -111,6 +113,8 @@ export class PostFilter extends Filter {
         uBloom: (up[0] ?? down[0] ?? light).source,
         uLight: light.source,
         uMatte: heroMatteTexture().source,
+        // A wide level of the bloom chain: tells a point of light from an area of light.
+        uWide: (down[2] ?? down[0] ?? light).source,
         postUniforms: {
           uMix: { value: new Float32Array(4), type: 'vec4<f32>' },
           uTone: { value: new Float32Array([1, 0.8, 0, 0.3]), type: 'vec4<f32>' },
@@ -125,6 +129,8 @@ export class PostFilter extends Filter {
           uLit: { value: new Float32Array([0.25, 0.4, 0.92, 0]), type: 'vec4<f32>' },
           uHero: { value: new Float32Array([0, 0, 0.3, 0]), type: 'vec4<f32>' },
           uHero2: { value: new Float32Array([0.06, 0.3, 0, 0]), type: 'vec4<f32>' },
+          uDeep: { value: new Float32Array([0.2, 0, 0, 0.6]), type: 'vec4<f32>' },
+          uRich: { value: new Float32Array([1, 1, 1, 1]), type: 'vec4<f32>' },
         },
       },
       // Render the tree at the canvas's own resolution and multisampling: nothing goes soft.

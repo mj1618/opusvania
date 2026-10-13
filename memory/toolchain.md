@@ -36,7 +36,9 @@
 - **CI renders with software GL** (very slow per frame): e2e must not step-and-render hundreds of frames.
 - **`npm run look:stats -- <dir|files>`** (`tools/look-stats.ts`) prints the numbers of memory/reference-study.md
   for PNGs with the same definitions (Rec.709 luma on sRGB bytes): mean, median, near-black/dark/near-white %,
-  border, top and bottom quarter, corners/centre, dominant hue share; `--hero=x,y,w,h` (or a `<png>.hero.json`
+  dark-grey % (15-38), area above 150, p99.9 (luma of the brightest 0.1% of pixels: are there real points of
+  light?), mean chroma (max - min channel, all pixels); dark-reference row to compare: mean 29, black 48%,
+  grey 27%, >150 2.0%, p99.9 237, chroma 34. Also border, top and bottom quarter, corners/centre, dominant hue share; `--hero=x,y,w,h` (or a `<png>.hero.json`
   sidecar) adds hero p10/p90 and p90 / mean of the 300 px around. `--stops[=dir]` shoots the seven wide stops
   with hero boxes and measures them in one go (stop list duplicated from tools/shots.ts: keep in step).
   `--only=wide`, `--json`. Decodes with ffmpeg/ffprobe, no extra dependency.

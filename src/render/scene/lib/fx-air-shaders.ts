@@ -153,7 +153,7 @@ void main(void) {
       // Two sheets sliding past each other at different speeds, pushed along by the wind's wave.
       float push = windAt(p.x, t, 0.0) * uVolume.w;
       float n1 = texture(uNoise, vec2((p.x - push) / 1900.0 - t * 0.0065, p.y / 620.0 + t * 0.002)).r;
-      float n2 = texture(uNoise, vec2((p.x - push * 1.6) / 760.0 + t * 0.0105, p.y / 330.0 - 0.3)).g;
+      float n2 = texture(uNoise, vec2((p.x - push * 1.6) / 760.0 + t * 0.0185, p.y / 330.0 - 0.3)).g;
       float n = smoothstep(0.22, 0.85, n1 * 0.65 + n2 * 0.35);
       // Thick sheets rise higher, so the top of the mist is ragged; it thins out again right at
       // the surface line so it never draws the ground's outline.

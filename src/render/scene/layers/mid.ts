@@ -75,7 +75,7 @@ const MID = {
    * creatures and plants read as silhouettes (memory/reference-study.md). Peak opacity per zone:
    * set all three to 0 to remove it. Live: `__bg.stage(left, centre, right); __game.render()`.
    */
-  stage: { left: 0.44, centre: 0.5, right: 0.56 },
+  stage: { left: 0.4, centre: 0.5, right: 0.4 },
   /** Slow life of the layer: sway of the canopy masses (px), shimmer of lit leaves, breathing light. */
   life: { breath: 3.2, shimmer: 0.14, openings: 0.07 },
 } as const;

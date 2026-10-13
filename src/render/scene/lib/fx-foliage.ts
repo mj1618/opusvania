@@ -590,3 +590,121 @@ export function mushrooms(g: Graphics, rnd: Rnd, size: number, glow: number): vo
       .stroke({ color: t.rim, width: 1.6, alpha: 0.5 });
   }
 }
+
+/**
+ * A stand of big toadstools right in front of the lens (near plane): two to four fat stalks of
+ * different heights under broad domed caps, the tallest ~`size`. Pure silhouette with a faint rim
+ * on each cap; the underside of a cap is a shade lighter so cap and stalk stay two shapes.
+ */
+export function toadstools(g: Graphics, rnd: Rnd, size: number): void {
+  const t = foregroundTones(rnd, 0.5, 0.7);
+  const n = 2 + Math.floor(rnd() * 3);
+  const tallest = Math.floor(rnd() * n);
+  for (let i = 0; i < n; i++) {
+    const h = size * (i === tallest ? 1 : 0.38 + rnd() * 0.34);
+    const x = (i - (n - 1) / 2) * size * 0.5 + (rnd() - 0.5) * size * 0.12;
+    const r = h * (0.3 + rnd() * 0.12) + size * 0.06;
+    const lean = (rnd() - 0.5) * h * 0.3;
+    const tx = x + lean;
+    const stalk = curve(x, 20, x + lean * 0.2, -h * 0.5, tx, -h, r * 0.34, r * 0.2, 8);
+    litRibbon(g, t, stalk, t.body[1] as number);
+    const tilt = lean / Math.max(h, 1);
+    // Under the cap: a shallow bowl, a shade lighter.
+    g.ellipse(tx, -h + r * 0.1, r * 0.9, r * 0.2).fill(t.body[4] as number);
+    const cap = (dx: number, dy: number): void => {
+      g.moveTo(tx - r + dx, -h + dy - tilt * r * 0.3)
+        .bezierCurveTo(
+          tx - r * 0.95 + dx,
+          -h - r * 0.95 + dy,
+          tx + r * 0.75 + dx,
+          -h - r * 1.05 + dy,
+          tx + r + dx,
+          -h + dy + tilt * r * 0.3,
+        )
+        .quadraticCurveTo(tx + dx, -h + r * 0.16 + dy, tx - r + dx, -h + dy - tilt * r * 0.3);
+    };
+    cap(LX * t.rimShift, LY * t.rimShift);
+    g.fill({ color: t.rim, alpha: t.rimAlpha });
+    cap(0, 0);
+    g.fill(pick(rnd, t.body));
+  }
+}
+
+/**
+ * An old root arching out of the ground in front of the lens (near plane): it rises from below
+ * the frame, leans over toward `dir` and plunges back, ~`size` high at its crown, knotted, with a
+ * few rootlets hanging from the arch and a tuft of leaves riding on it.
+ */
+export function archRoot(g: Graphics, rnd: Rnd, size: number, dir: number): void {
+  const t = foregroundTones(rnd, 0.6, 0.7);
+  const span = size * (1.5 + rnd() * 0.5);
+  const thick = size * (0.2 + rnd() * 0.06);
+  const wob = rnd() * 6.283;
+  // The crown sits off-centre toward `dir`: a leaning arch, not a hoop.
+  const arch = curve(
+    -dir * span * 0.5,
+    60,
+    dir * span * 0.2,
+    -size * 2.05,
+    dir * span * 0.55,
+    60,
+    thick * 1.25,
+    thick * 0.62,
+    22,
+  ).map(
+    (p, i): Pt => [
+      p[0],
+      p[1],
+      p[2] * (1 + 0.16 * Math.sin(i * 1.1 + wob) + 0.08 * Math.sin(i * 2.7 + wob * 2)),
+    ],
+  );
+  ribbon(g, arch, t.rim, t.rimAlpha, LX * t.rimShift, LY * t.rimShift * 1.4);
+  ribbon(g, arch, t.body[1] as number);
+  // A darker furrow along it, so the mass has a grain.
+  ribbon(
+    g,
+    arch.map((p): Pt => [p[0], p[1] + p[2] * 0.12, p[2] * 0.22]),
+    t.body[0] as number,
+    0.9,
+  );
+  // Rootlets hanging from the underside, and a thinner root forking off toward the ground.
+  const hangs = 3 + Math.floor(rnd() * 3);
+  for (let i = 0; i < hangs; i++) {
+    const p = arch[5 + Math.floor(rnd() * 12)] as Pt;
+    const len = size * (0.18 + rnd() * 0.3);
+    const sway = (rnd() - 0.5) * 30;
+    ribbon(
+      g,
+      curve(p[0], p[1], p[0] + sway, p[1] + len * 0.6, p[0] + sway * 0.4, p[1] + len, 5, 1.2, 6),
+      t.body[2] as number,
+    );
+  }
+  const from = arch[9 + Math.floor(rnd() * 4)] as Pt;
+  ribbon(
+    g,
+    curve(
+      from[0],
+      from[1],
+      from[0] - dir * size * 0.25,
+      from[1] + size * 0.25,
+      from[0] - dir * size * 0.3,
+      60,
+      thick * 0.45,
+      thick * 0.2,
+      10,
+    ),
+    t.body[3] as number,
+  );
+  const crown = arch[10 + Math.floor(rnd() * 3)] as Pt;
+  cluster(
+    g,
+    t,
+    rnd,
+    crown[0],
+    crown[1] - crown[2] * 0.4,
+    size * (0.22 + rnd() * 0.1),
+    -Math.PI / 2 + dir * 0.3,
+    1.5,
+    5,
+  );
+}

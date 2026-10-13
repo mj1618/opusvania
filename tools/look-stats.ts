@@ -13,7 +13,9 @@
  * server on 5180 or --url, like `npm run shots`), writes them with their hero boxes into the
  * directory (default shots/look) and then measures them: one command for a before/after number.
  *
- * Per image and averaged: mean, median, near-black % (< 15), dark % (< 38), near-white % (> 217),
+ * Per image and averaged: mean, median, near-black % (< 15), dark % (< 38), dark-grey % (15-38),
+ * area above 150 %, near-white % (> 217), the luma of the brightest 0.1% of pixels (p99.9), mean
+ * chroma (max minus min channel over all pixels; dark references: 48 / - / 27 / 2.0 / 0.5 / 237 / 34),
  * outer-10% border mean, top-quarter and bottom-quarter mean, corners / centre (mean of the four
  * 20% x 20% corners over the central 40% x 40%), dominant hue bin and its share of the chroma.
  * PNGs are decoded with ffmpeg (already needed for clips): no extra dependency.
@@ -110,6 +112,7 @@ function measure(file: string, hero: Box | null): Record<string, number | string
   const hist = new Uint32Array(256);
   const hue = new Float64Array(12);
   let chroma = 0;
+  let chromaAll = 0;
   for (let i = 0, p = 0; i < w * h; i++, p += 3) {
     const r = rgb[p] as number;
     const g = rgb[p + 1] as number;
@@ -119,6 +122,7 @@ function measure(file: string, hero: Box | null): Record<string, number | string
     hist[Math.min(255, Math.round(l))] = (hist[Math.min(255, Math.round(l))] as number) + 1;
     const mx = Math.max(r, g, b);
     const c = mx - Math.min(r, g, b);
+    chromaAll += c;
     if (c > 8) {
       const hh = mx === r ? ((g - b) / c + 6) % 6 : mx === g ? (b - r) / c + 2 : (r - g) / c + 4;
       const bin = Math.floor(((hh * 60 + 15) % 360) / 30);
@@ -166,7 +170,11 @@ function measure(file: string, hero: Box | null): Record<string, number | string
     median: percentile(hist, total, 0.5),
     black: below(15),
     dark: below(38),
+    grey: below(38) - below(15),
+    above150: 100 - below(151),
     white: 100 - below(218),
+    p999: percentile(hist, total, 0.999),
+    chroma: chromaAll / total,
     border,
     topQ: mean(0, 0, w, h * 0.25),
     botQ: mean(0, h * 0.75, w, h),
@@ -221,7 +229,11 @@ const COLS: Array<[string, string, number]> = [
   ['median', 'med', 0],
   ['black', 'blk%', 1],
   ['dark', 'drk%', 1],
-  ['white', 'wht%', 1],
+  ['grey', 'gry%', 1],
+  ['above150', '>150%', 2],
+  ['white', 'wht%', 2],
+  ['p999', 'p99.9', 0],
+  ['chroma', 'chroma', 0],
   ['border', 'bord', 0],
   ['topQ', 'topQ', 0],
   ['botQ', 'botQ', 0],

@@ -69,6 +69,11 @@ export const AIR = {
     /** The canopy moves: each beam slowly brightens and dims by this fraction, at this rate. */
     breathe: 0.3,
     breatheRate: 0.11,
+    /** With that, each opening widens and narrows by this fraction of its width. */
+    breatheWidth: 0.14,
+    /** A quicker, small flicker of each beam's strength (fraction) with this period in seconds. */
+    shimmer: 0.1,
+    shimmerPeriod: 5,
     /**
      * The beams, two or three to a screen: where each passes through y = KEY_LIGHT.entryY, its
      * half width across, strength, and reach (1 = touches the ground). A beam that reaches the
@@ -162,7 +167,10 @@ export const AIR = {
     minAbove: 36,
     maxAbove: 230,
     wander: 60,
-    size: 30,
+    /** Sprite size, px: the core is ~7% of it (a 2 px pinpoint), the rest a faint halo. */
+    size: 26,
+    /** Peak opacity (the blink); the resting glow is about half of it. */
+    peak: 0.85,
     fleeRadius: 170,
     fleePush: 900,
     spring: 2.2,
@@ -200,8 +208,13 @@ export const AIR = {
     /** The flock crosses the whole scene at this speed, then again from the start. */
     speed: 120,
     height: 800,
-    size: 10,
-    color: 0xeaf6f0,
+    size: 7,
+    /**
+     * Per zone: the wings' colour. Dusky, in the zone's own hue at about 60% value: the flock is
+     * life in the background, never brighter than the hero's face.
+     */
+    color: [0x6f9aa6, 0x9c9468, 0x8478a8] as Three<number>,
+    glow: 0.07,
   },
 };
 
@@ -368,7 +381,7 @@ class Fireflies {
       f.s.visible = true;
       f.s.position.set(x, y);
       f.s.scale.set(((cfg.size * f.scale) / f.s.texture.width) * (0.8 + 0.3 * glow));
-      f.s.alpha = Math.min(1, glow);
+      f.s.alpha = Math.min(1, glow) * cfg.peak;
     }
   }
 }
@@ -583,6 +596,8 @@ class Moths {
     rate: number;
   }> = [];
 
+  private readonly rgb = [0, 0, 0];
+
   constructor(private readonly sceneWidth: number) {
     const cfg = AIR.moths;
     const rnd = prng(0x307b);
@@ -596,20 +611,19 @@ class Moths {
           .moveTo(0, 0)
           .bezierCurveTo(side * s * 0.5, -s * 1.5, side * s * 1.9, -s * 1.3, side * s * 1.7, -s * 0.2)
           .bezierCurveTo(side * s * 1.3, s * 0.3, side * s * 0.4, s * 0.2, 0, 0)
-          .fill({ color: cfg.color, alpha: 0.7 });
+          .fill({ color: 0xffffff, alpha: 0.7 });
         wings
           .moveTo(0, s * 0.1)
           .bezierCurveTo(side * s * 0.9, s * 0.1, side * s * 1.2, s * 0.9, side * s * 0.7, s * 1.1)
           .bezierCurveTo(side * s * 0.3, s * 1.0, side * s * 0.1, s * 0.5, 0, s * 0.1)
-          .fill({ color: mix(cfg.color, PALETTE.fogFar, 0.35), alpha: 0.6 });
+          .fill({ color: 0xc4ccd0, alpha: 0.6 });
       }
-      wings.ellipse(0, s * 0.2, s * 0.16, s * 0.55).fill({ color: 0x6f7f86, alpha: 0.9 });
+      wings.ellipse(0, s * 0.2, s * 0.16, s * 0.55).fill({ color: 0x565a5c, alpha: 0.9 });
       const glow = new Sprite(tex);
       glow.anchor.set(0.5);
       glow.blendMode = 'add';
-      glow.tint = cfg.color;
-      glow.alpha = 0.22;
-      glow.scale.set((s * 7) / tex.width);
+      glow.alpha = cfg.glow;
+      glow.scale.set((s * 6) / tex.width);
       this.view.addChild(glow, wings);
       this.moths.push({
         wings,
@@ -639,6 +653,14 @@ class Moths {
       if (!on) continue;
       m.wings.position.set(x, y);
       m.glow.position.set(x, y);
+      zoneColor(cfg.color, zoneWeights(x), this.rgb);
+      const tint =
+        (Math.round((this.rgb[0] as number) * 255) << 16) |
+        (Math.round((this.rgb[1] as number) * 255) << 8) |
+        Math.round((this.rgb[2] as number) * 255);
+      m.wings.tint = tint;
+      m.glow.tint = tint;
+      m.glow.alpha = cfg.glow;
       m.wings.rotation = Math.sin(t * 0.9 + m.ph) * 0.35 + 0.15;
       // Wing beat: the wings fold toward the body (narrower), with a short glide now and then.
       const glide = Math.max(0, Math.sin(t * 0.7 + m.ph * 3)) ** 8;
@@ -779,9 +801,12 @@ export class AirLayer implements EnvModule {
       // Each beam breathes on its own slow clock, as if the canopy above it were moving.
       const open =
         Math.sin(t * shafts.breatheRate + i * 2.1) * 0.6 + Math.sin(t * shafts.breatheRate * 2.3 + i) * 0.4;
-      const strength = b.strength * (1 + shafts.breathe * open);
+      // On top of that the leaves above flicker it a little, every few seconds.
+      const w = (6.283 / shafts.shimmerPeriod) * (1 + 0.13 * Math.sin(i * 5.3));
+      const flicker = Math.sin(t * w + i * 1.7) * 0.65 + Math.sin(t * w * 1.83 + i * 4.1) * 0.35;
+      const strength = b.strength * (1 + shafts.breathe * open) * (1 + shafts.shimmer * flicker);
       su.uGroups[i * 4] = b.x * KEY_LIGHT.dirY - KEY_LIGHT.entryY * KEY_LIGHT.dirX;
-      su.uGroups[i * 4 + 1] = b.halfWidth;
+      su.uGroups[i * 4 + 1] = b.halfWidth * (1 + shafts.breatheWidth * open);
       su.uGroups[i * 4 + 2] = strength;
       su.uGroups[i * 4 + 3] = b.reach;
 

@@ -129,6 +129,12 @@ export class PostStage {
     u.uVignette[3] = vignette.tintAmount;
     zc(ZONE_GRADE.vignetteTint, vignette.tint, u.uVignetteTint);
     u.uVignetteTint[3] = zn(ZONE_GRADE.saturation, grade.saturation);
+    u.uDeep[0] = Math.max(grade.toe, 1e-3);
+    u.uDeep[1] = zn(ZONE_GRADE.toeDepth, grade.toeDepth);
+    u.uDeep[2] = grade.spark;
+    u.uDeep[3] = grade.sparkWhite;
+    zc(ZONE_GRADE.richTint, 0xffffff, u.uRich);
+    u.uRich[3] = zn(ZONE_GRADE.richSaturation, 1);
     u.uGrain[0] = POST.grain;
     // Wrapped so the grain keeps its precision however long the game has been open.
     u.uGrain[1] = renderClock % 64;
