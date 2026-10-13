@@ -939,88 +939,133 @@ function paintBackdrop(p: Paint, scene: Scene, info: TerrainInfo): void {
     k++;
     const base = gy + 14;
     if (k % 3 !== 0) {
-      // A boulder, or two leaning together, capped with moss. Domed, never level.
-      const n = 1 + Math.floor(r() * 2);
+      // A cluster of boulders, big, medium, small, shouldering into each other along the ground.
+      // Each is an uneven faceted lump with a heavy base sunk in the earth: never round, never stacked.
       const hero = k % 4 === 1;
-      for (let i = 0; i < n; i++) {
-        const rx = range(r, 46, 80) * (hero ? 1.35 : 1) * (i ? 0.7 : 1);
-        const ry = rx * range(r, 0.75, 1.2);
-        const cx = x + i * range(r, 50, 90) * (r() < 0.5 ? -1 : 1);
-        const rot = range(r, -0.3, 0.3);
-        const stone = haze(mix(TERRAIN.back, TERRAIN.stone[2], 0.45), 0.28);
-        const rock = chaikin(blob(cx, base - ry * 0.55, rx, ry, cx, 0.3, 9, rot), 2);
-        p.solid(rock, stone, 0.3);
+      const dirn = r() < 0.5 ? -1 : 1;
+      const sizes = hero ? [1.35, 0.7, 0.45] : r() < 0.5 ? [1, 0.6, 0.38] : [0.9, 0.5];
+      let cx = x;
+      const rocks: Array<{ cx: number; w: number; h: number; tilt: number }> = [];
+      sizes.forEach((sz, i) => {
+        const w = range(r, 62, 92) * sz;
+        const h = w * range(r, 0.55, 0.95);
+        if (i > 0) cx += dirn * ((rocks[i - 1] as { w: number }).w * 0.62 + w * 0.5);
+        rocks.push({ cx, w, h, tilt: range(r, -0.3, 0.3) + dirn * (i ? -0.25 : 0) });
+      });
+      // Smallest first so the big one overlaps its neighbours.
+      for (const rock of rocks.slice().reverse()) {
+        const { w, h, tilt } = rock;
+        const stoneBase = haze(mix(TERRAIN.back, TERRAIN.stone[r() < 0.5 ? 2 : 6] as number, 0.45), 0.28);
+        // Outline: a lopsided run of corners over the top, wide straight base below ground.
+        const nTop = 5 + Math.floor(r() * 2);
+        const crown: Array<[number, number]> = [];
+        const lop = range(r, 0.3, 0.7);
+        for (let i = 0; i <= nTop; i++) {
+          const u = i / nTop;
+          const px = (u - 0.5) * 2 * w * (1 + (i === 0 || i === nTop ? 0.06 : range(r, -0.07, 0.07)));
+          const arch = Math.min(u / lop, (1 - u) / (1 - lop)) ** range(r, 0.45, 0.7);
+          const py = -h * (i === 0 || i === nTop ? 0.12 : arch * range(r, 0.82, 1.08));
+          crown.push([
+            rock.cx + px * Math.cos(tilt) - py * Math.sin(tilt) * 0.4,
+            base + py + px * Math.sin(tilt) * 0.5,
+          ]);
+        }
+        const outline: number[] = [];
+        for (const [px, py] of crown) outline.push(px, py);
+        outline.push(rock.cx + w * 1.08, base + 14, rock.cx - w * 1.08, base + 14);
+        p.solid(chaikin(outline, 1), stoneBase, 0.3);
+        // Facets: planes between an inner ridge point and neighbouring corners, alternately lit and dark.
+        const ridge: [number, number] = [rock.cx + range(r, -0.2, 0.2) * w, base - h * range(r, 0.35, 0.55)];
+        for (let i = 0; i < nTop; i++) {
+          const a0 = crown[i] as [number, number];
+          const a1 = crown[i + 1] as [number, number];
+          const facing = (a0[0] + a1[0]) / 2 > ridge[0];
+          const tone = facing
+            ? mix(stoneBase, TERRAIN.stone[1], range(r, 0.15, 0.4))
+            : mix(stoneBase, TERRAIN.backDeep, range(r, 0.1, 0.45));
+          p.solid([a0[0], a0[1], a1[0], a1[1], ridge[0], ridge[1]], tone, facing ? 0.34 : 0.27, {}, 0.8);
+        }
         p.solid(
-          chaikin(blob(cx + rx * 0.2, base - ry * 0.85, rx * 0.6, ry * 0.5, cx + 1, 0.3, 8, rot), 2),
-          mix(stone, TERRAIN.stone[1], 0.3),
-          0.34,
+          [
+            crown[0]?.[0] ?? 0,
+            crown[0]?.[1] ?? 0,
+            ridge[0],
+            ridge[1],
+            rock.cx - w * 0.3,
+            base + 12,
+            rock.cx - w,
+            base + 12,
+          ],
+          mix(stoneBase, TERRAIN.backDeep, 0.4),
+          0.26,
+          {},
+          0.8,
         );
         const crack = wander(
-          quad(
-            cx - rx * 0.2,
-            base - ry * 1.3,
-            cx + range(r, -14, 14),
-            base - ry * 0.6,
-            cx + rx * 0.15,
-            base,
-            8,
-          ),
-          5,
-          cx,
-          22,
+          [
+            ridge[0],
+            ridge[1],
+            ridge[0] + range(r, -12, 12),
+            base - h * 0.15,
+            ridge[0] + range(r, -20, 20),
+            base + 6,
+          ],
+          3,
+          rock.cx,
+          16,
         );
         p.solid(
-          ribbon(crack, (t) => 3 * Math.sin(Math.PI * clamp(t, 0.05, 0.95)) + 0.6),
+          ribbon(crack, (t) => 2.6 * (1 - t) + 0.6),
           TERRAIN.backDeep,
-          0.2,
+          0.18,
         );
-        // Moss slumped over the crown.
+        // Moss draped over the upper corners, hanging further on one side.
         const cap: number[] = [];
-        for (let j = 0; j <= 12; j++) {
-          const a = Math.PI + (Math.PI * j) / 12;
-          cap.push(cx + Math.cos(a) * rx * 0.9, base - ry * 0.55 + Math.sin(a) * ry * 0.98);
-        }
-        const tone = mossTone(cx, gy, 404 + k, 0);
+        for (let i = 1; i < nTop; i++)
+          cap.push((crown[i] as [number, number])[0], (crown[i] as [number, number])[1] + 3);
+        const tone = mossTone(rock.cx, gy, 404 + k, 0);
+        const side = r() < 0.5 ? 0.25 : 0.75;
+        const thickAt = (t: number): number =>
+          (9 + 16 * Math.exp(-(((t - side) / 0.3) ** 2))) * w * 0.012 +
+          Math.max(0, wobble(t * 200, rock.cx, 26)) * 5;
         p.solid(
-          ribbon(
-            cap,
-            (t) => (16 + wobble(t * 200, cx, 30) * 6) * Math.sin(Math.PI * clamp(t, 0.03, 0.97)) ** 0.6 + 2,
-          ),
-          haze(mix(tone.dark, TERRAIN.back, 0.4), 0.2),
-          0.34,
-          { moss: 0.8 },
+          ribbon(cap, (t) => thickAt(t) * 1.5 + 2),
+          haze(mix(tone.dark, TERRAIN.back, 0.55), 0.25),
+          0.31,
+          { moss: 0.6 },
         );
         p.solid(
           ribbon(
-            cap.map((v, j) => (j % 2 ? v - 3 : v)),
-            (t) => 8 * Math.sin(Math.PI * clamp(t, 0.05, 0.95)) ** 0.7 + 1,
+            cap.map((v, j) => (j % 2 ? v - 2 : v)),
+            (t) => thickAt(t) * 0.7 + 1,
           ),
-          haze(mix(tone.body, TERRAIN.back, 0.35), 0.2),
-          0.38,
-          { moss: 0.9 },
+          haze(mix(tone.body, TERRAIN.back, 0.55), 0.25),
+          0.33,
+          { moss: 0.6 },
         );
-        if (hero && i === 0) {
-          // The landmark: a sapling has rooted in the moss on top.
-          const sx = cx + range(r, -rx * 0.2, rx * 0.2);
-          const sy = base - ry * 1.5;
-          const lean = range(r, -40, 40);
-          const stem = wander(
-            quad(sx, sy + 8, sx + lean * 0.2, sy - 60, sx + lean, sy - range(r, 110, 150), 12),
-            5,
-            sx,
-            50,
-          );
-          p.solid(
-            ribbon(stem, (t) => 11 * (1 - t) ** 0.8 + 2),
-            TERRAIN.backDeep,
-            0.27,
-            { bark: 0.7 },
-          );
-          const top = stem.length - 2;
-          info.twigs.push({ x: stem[top] as number, y: stem[top + 1] as number, angle: -Math.PI / 2 });
-          info.twigs.push({ x: stem[14] as number, y: stem[15] as number, angle: -Math.PI / 2 + 0.9 });
-          info.twigs.push({ x: stem[10] as number, y: stem[11] as number, angle: -Math.PI / 2 - 0.9 });
-        }
+      }
+      if (hero) {
+        // The landmark: a sapling rooted in the crack between the two biggest stones.
+        const a = rocks[0] as { cx: number; w: number; h: number };
+        const sx = a.cx + dirn * a.w * 0.7;
+        const sy = base - a.h * 0.45;
+        const lean = range(r, -40, 40);
+        const stem = wander(
+          quad(sx, sy + 20, sx + lean * 0.2, sy - 70, sx + lean, sy - range(r, 130, 170), 12),
+          5,
+          sx,
+          50,
+        );
+        p.solid(
+          ribbon(stem, (t) => 11 * (1 - t) ** 0.8 + 2),
+          TERRAIN.backDeep,
+          0.27,
+          { bark: 0.7 },
+        );
+        const top = stem.length - 2;
+        info.twigs.push({ x: stem[top] as number, y: stem[top + 1] as number, angle: -Math.PI / 2 });
+        info.twigs.push({ x: stem[14] as number, y: stem[15] as number, angle: -Math.PI / 2 + 0.9 });
+        info.twigs.push({ x: stem[10] as number, y: stem[11] as number, angle: -Math.PI / 2 - 0.9 });
       }
     } else {
       // A dead stump leaning out of true, its top torn to a slant.
@@ -2445,6 +2490,45 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
   const y1 = s.y + s.h;
   const r = rngFor(s.x, 13);
   const E = TERRAIN.earth;
+  // Behind it, in the back plane: the same root running on into the ground both ways, so the
+  // silhouette is a root heaving out of the earth and not a block set on it.
+  for (const [fromX, d] of [
+    [s.x + 30, -1],
+    [x1 - 30, 1],
+  ] as const) {
+    for (let i = 0; i < 2; i++) {
+      const reach = range(r, 110, 170) - i * 50;
+      const line = wander(
+        cubic(
+          fromX,
+          s.y + 26 + i * 22,
+          fromX + d * reach * 0.5,
+          s.y + 20 + i * 30,
+          fromX + d * reach * 0.8,
+          y1 - 30,
+          fromX + d * reach,
+          y1 + 14,
+          14,
+        ),
+        5,
+        fromX + i,
+        50,
+      );
+      const w0 = 46 - i * 14;
+      p.solid(
+        ribbon(line, (t) => w0 * (1 - t * 0.6) + 4),
+        i ? TERRAIN.backDeep : TERRAIN.back,
+        0.29 - i * 0.04,
+        { bark: 0.6 },
+      );
+      p.solid(
+        ribbon(line, (t) => (w0 * (1 - t * 0.6) + 4) * 0.3),
+        mix(TERRAIN.back, TERRAIN.bark, 0.35),
+        0.34 - i * 0.04,
+        { bark: 0.6 },
+      );
+    }
+  }
   // The packed earth and old wood under the arch (it is solid: no daylight through it).
   const body = boxOutline(s.x + 10, s.y + 14, x1 - 10, y1 + 12, s.x, { top: 2, side: 3, bottom: 0 });
   p.solid(body, E[3], 0.4);
@@ -2527,7 +2611,7 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
   }
   // Twist: the grain winds round the root like rope, with knots where limbs once left it.
   const nA = arch.length / 2;
-  for (let i = 2; i < nA - 3; i += 2) {
+  for (let i = 3; i < nA - 4; i += 5) {
     const ax = arch[i * 2] as number;
     const ay = arch[i * 2 + 1] as number;
     const bx = arch[i * 2 + 4] as number;
@@ -2611,15 +2695,15 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
       20,
     );
     p.solid(
-      ribbon(line, (t) => 13 * (1 - t) ** 0.6 + 2),
-      TERRAIN.mossDark,
+      ribbon(line, (t) => 8 * (1 - t) ** 0.6 + 1.5),
+      mix(TERRAIN.mossDark, TERRAIN.bark, 0.4),
       0.78,
       { moss: 1 },
     );
     p.solid(
-      ribbon(line, (t) => 7 * (1 - t) ** 0.8 + 1),
-      TERRAIN.moss,
-      0.86,
+      ribbon(line, (t) => 4 * (1 - t) ** 0.8 + 0.8),
+      TERRAIN.mossDark,
+      0.8,
       { moss: 1 },
     );
   }

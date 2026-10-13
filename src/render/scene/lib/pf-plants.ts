@@ -256,24 +256,66 @@ function bush(
     }
   }
   b.plant(x, y, h * 1.1, phase, h * 0.035 + 1, h * 0.22, 0.2);
+  // Mass: each lobe a lumpy cloud (never a disc), with a skirt widening to the ground.
+  const cloud = (cx: number, cy: number, rx: number, ry: number, seed: number): void => {
+    const N = 22;
+    const c0 = b.v(cx, cy, mix(t.dark, t.mid, 0.6));
+    let prev = -1;
+    let first = -1;
+    for (let i = 0; i <= N; i++) {
+      const a = (i / N) * Math.PI * 2;
+      const lump =
+        1 +
+        0.14 * Math.sin(a * 3 + seed) +
+        0.09 * Math.sin(a * 5 + seed * 2.3) +
+        0.05 * Math.sin(a * 9 + seed);
+      const v =
+        i === N
+          ? first
+          : b.v(
+              cx + Math.cos(a) * rx * lump,
+              Math.min(y + 2, cy + Math.sin(a) * ry * lump),
+              mix(t.dark, t.mid, 0.25 + 0.25 * Math.cos(a - 5.3)),
+            );
+      if (i === 0) first = v;
+      if (prev >= 0) b.tri(c0, prev, v);
+      prev = v;
+    }
+  };
+  centres.forEach(([cx, cy, rad], i) => {
+    cloud(cx, cy, rad * 1.15, rad, cx + i * 1.7);
+    cloud(
+      cx + range(r, -rad * 0.3, rad * 0.3),
+      (cy + y) / 2 + rad * 0.2,
+      rad * range(r, 0.9, 1.3),
+      (y - cy) / 2 + rad * 0.45,
+      cx + 5,
+    );
+  });
+  // Leaves poking out all round the rim break the outline.
   for (const [cx, cy, rad] of centres) {
-    b.fan(
-      cx,
-      cy,
-      rad * 1.15,
-      rad,
-      0,
-      Math.PI * 2,
-      mix(t.dark, t.mid, 0.6),
-      (a) => mix(t.dark, t.mid, 0.25 + 0.25 * Math.cos(a - 5.3)),
-      1,
-      12,
-    );
-    b.strip(
-      [cx, y + 2, cx, cy],
-      () => rad * 0.9,
-      () => t.dark,
-    );
+    const n = Math.round(rad * 0.3) + 4;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + range(r, -0.2, 0.2);
+      const lx = cx + Math.cos(a) * rad * 1.1;
+      const ly = cy + Math.sin(a) * rad * 0.95;
+      if (ly > y - 4) continue;
+      const ll = range(r, 9, 15);
+      b.plant(lx, ly, ll * 2, phase + r() * 0.2, 1.6 + h * 0.02, 5 + h * 0.08, 0.3);
+      b.leaf(
+        lx,
+        ly,
+        a + range(r, -0.6, 0.6),
+        ll,
+        ll * 0.55,
+        t.dark,
+        mix(t.dark, t.mid, 0.6),
+        t.dark,
+        0,
+        1,
+        3,
+      );
+    }
   }
   for (const [cx, cy, rad] of centres) {
     const leaves = Math.round(rad * 1.5 * density);
@@ -304,10 +346,23 @@ function bush(
       const fx = cx + Math.cos(a) * d * 1.15;
       const fy = cy + Math.sin(a) * d;
       const col = bloom[Math.floor(r() * bloom.length)] as number;
-      const pr = range(r, 3, 5);
+      const pr = range(r, 2.4, 3.8);
       b.plant(fx, fy, 12, phase + r() * 0.2, 1.6 + h * 0.02, 5 + h * 0.08, 0.3);
       b.fixedH = 1;
-      b.fan(fx, fy, pr, pr * 0.85, 0, Math.PI * 2, mix(col, 0xffffff, 0.45), () => col, 1, 6);
+      for (let q = 0; q < 5; q++)
+        b.leaf(
+          fx,
+          fy,
+          (q / 5) * 6.283 + fx,
+          pr,
+          pr * 0.8,
+          mix(col, 0x8a6a4a, 0.3),
+          col,
+          mix(col, 0xffffff, 0.4),
+          0,
+          1,
+          2,
+        );
       b.fan(fx, fy, pr * 0.3, pr * 0.3, 0, Math.PI * 2, 0xffe08a, () => 0xf0b860, 1, 5);
       b.fixedH = null;
     }
@@ -807,7 +862,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
           for (let i = 0; i < 3; i++) reedStand(c, x + i * range(r, 16, 30), y + 4, range(r, 110, 190), t);
         } else {
           const h = range(r, 110, 170);
-          bush(c, x, y + 6, h * range(r, 1.3, 1.8), h, t, 0, r() < 0.5 ? 'round' : 'tall', null, 0.35);
+          bush(c, x, y + 6, h * range(r, 1.3, 1.8), h, t, 0, r() < 0.5 ? 'round' : 'low', null, 0.6);
         }
       }
     }

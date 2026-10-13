@@ -8,10 +8,10 @@ import { PALETTE } from './look';
 
 export const FLUTTER = {
   /** Wing length in px, butterflies and moths. */
-  wing: [5.5, 4] as const,
+  wing: [9, 5] as const,
   /** How far they roam from home, px (x, y). */
   roam: [46, 26] as const,
-  butterfly: [0xffd98a, 0xfff1dc, 0xffb59a, 0xc9d977] as const,
+  butterfly: [0xffb84a, 0xfff1dc, 0xff9a7a, 0xf2d24a] as const,
 } as const;
 
 const VERT = `#version 300 es
@@ -63,14 +63,14 @@ export class Flutter {
       // Body point, then upper and lower tip of each wing.
       for (const [cx, cy] of [
         [0, 0],
-        [-1, -0.9],
-        [-0.8, 0.5],
-        [1, -0.9],
-        [0.8, 0.5],
+        [-1, -1],
+        [-0.75, 0.75],
+        [1, -1],
+        [0.75, 0.75],
       ] as const) {
         pos.push(x, y);
         wing.push(cx, cy, seed, size);
-        const k = cx === 0 ? 0.6 : 1;
+        const k = cx === 0 ? 0.35 : cy > 0 ? 0.8 : 1;
         col.push((((c >> 16) & 255) / 255) * k, (((c >> 8) & 255) / 255) * k, ((c & 255) / 255) * k, a);
       }
       index.push(base, base + 1, base + 2, base, base + 3, base + 4);

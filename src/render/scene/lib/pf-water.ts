@@ -33,8 +33,8 @@ export const WATER = {
   splashRoom: 64,
   /** Seconds between the small rings that appear on their own. */
   idleRipple: 4.7,
-  /** Brightness of the three fish glints. */
-  fish: 0.8,
+  /** Opacity of the three fish (0 hides them). */
+  fish: 1,
 } as const;
 
 const VERT = `#version 300 es
@@ -59,7 +59,7 @@ uniform vec4 uRipple;   // speed, life, width, -
 uniform mat4 uRipples;  // per column: x, start time, amplitude, -
 uniform mat4 uLights;   // columns 0/2: x, y, radius, intensity; 1/3: rgb
 uniform vec4 uPlayer;   // x, half width, in water 0..1, speed
-uniform float uFish;    // brightness of the fish glints
+uniform float uFish;    // opacity of the fish
 uniform vec4 uSplash;   // x, start time, strength, -
 uniform vec4 uAlpha;    // back top, back bottom, front top, front bottom
 uniform vec3 uShallow;
@@ -142,15 +142,26 @@ void main() {
   float cx2 = sin(x * 0.05 - depth * 0.25 - t * 0.6 + sin(x * 0.021 + t * 0.3) * 2.0);
   float caustic = pow(1.0 - abs(cx1), 4.0) * pow(1.0 - abs(cx2), 2.0);
   add += uLine * caustic * 0.3 * smoothstep(total - 30.0, total - 4.0, depth) * under;
-  // Small fish: three pale glints cruising at mid depth, turning at the banks.
+  // Small fish: slim dark shapes that hang still, then dart to a new spot. A pale glint on the flank.
   for (int i = 0; i < 3; i++) {
     float fi = float(i);
-    float ph = t * (0.035 + fi * 0.011) + fi * 0.37;
-    float tri = abs(fract(ph) * 2.0 - 1.0);
-    float fx = mix(uPool.x + 26.0, uPool.y - 26.0, smoothstep(0.0, 1.0, tri));
-    float fy = total * (0.52 + 0.16 * sin(t * 0.6 + fi * 2.1)) + sin(t * 3.0 + fi) * 1.2;
-    float body = exp(-pow((x - fx) / 10.0, 2.0) - pow((depth - fy) / 1.6, 2.0));
-    add += uLine * body * (0.6 + 0.4 * sin(t * 5.0 + fi * 1.7)) * uFish;
+    float ph = t * (0.21 + fi * 0.045) + fi * 0.37;
+    float leg = floor(ph);
+    float move = smoothstep(0.0, 0.22, fract(ph));
+    vec2 from = vec2(hash(leg + fi * 17.0), hash(leg + fi * 31.0 + 5.0));
+    vec2 to = vec2(hash(leg + 1.0 + fi * 17.0), hash(leg + 1.0 + fi * 31.0 + 5.0));
+    vec2 q = mix(from, to, move);
+    float fx = mix(uPool.x + 34.0, uPool.y - 34.0, q.x);
+    float fy = total * (0.42 + 0.34 * q.y) + sin(t * 2.2 + fi) * 0.8;
+    float dir = to.x > from.x ? 1.0 : -1.0;
+    float lx = (x - fx) * dir;
+    float ly = depth - fy + sin(t * 9.0 + lx * 0.5) * 0.35 * (1.0 - move * 0.0);
+    float body = (1.0 - smoothstep(0.75, 1.0, length(vec2((lx - 1.0) / 7.5, ly / 2.1))));
+    float tail = step(-11.5, lx) * step(lx, -5.5) * (1.0 - smoothstep(0.6, 1.0, abs(ly) / max(0.4, (-lx - 5.0) * 0.52)));
+    float fish = clamp(body + tail, 0.0, 1.0) * under * uFish;
+    tint = mix(tint, vec3(0.03, 0.1, 0.16), fish);
+    a = mix(a, 0.92, fish);
+    add += uLine * body * uFish * 0.55 * exp(-pow((ly + 0.9) / 0.7, 2.0)) * smoothstep(-4.0, 3.0, lx);
   }
   // Foam where the water meets the banks.
   float bankD = min(x - uPool.x, uPool.y - x);

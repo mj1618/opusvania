@@ -75,6 +75,10 @@
 - Cost: at 4K most of the playfield's time is the terrain sprites, and the atmosphere agent's hero-light mask
   draws `playfield` + `playfieldFront` a second time each frame. Big alpha-blended plants are the next cost:
   put large background shapes in the bake, not in the plant mesh.
+- Rocks are never `blob()` ellipses: backdrop boulders are faceted corner runs with a sunk base, in side-by-side
+  clusters (never stacked). Shrub lobes are lumpy `cloud()` fans with rim leaves, never plain `fan()` discs with a
+  strip under them (that combination read as snowmen and balls on blocks).
+- `npm run clip` centres on the character: to film the pool, stand in or beside it, or use `__game.cam` stills.
 - GLSL: `cast` is a reserved word. Destroy shaders before the textures bound to them or Pixi warns.
 - Bake scale is fixed at boot (`viewScale` clamped to 1.5..2); a later resize does not rebake.
 - Tops are honest to within ~6 px (`__game.debug.hitboxes(true)` to check). Island tapers, ledge sag and the
