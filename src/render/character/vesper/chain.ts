@@ -2,6 +2,8 @@
 /**
  * Copy of ../hooded/chain.ts with two additions for Vesper's wings: a per-segment `extra` angle
  * (travelling ripples, wingbeats) and a per-frame `dragK` (membranes hold their shape in a fall).
+ * The two pulls are capped so their sum stays below 1: above that a stiffened chain overshoots its
+ * target every sub-step and locks into a straight rod.
  *
  * Secondary-motion chains (wing strands, antennae): verlet points with length constraints,
  * pulled toward a rest shape so they hold a designed silhouette at rest but lag, overshoot and
@@ -204,8 +206,8 @@ export class Chain {
     const turn = this.d < -1 ? -1 : this.d > 1 ? 1 : this.d;
     for (let i = 1; i < n; i++) {
       const t = (i - 1) / Math.max(1, last - 1);
-      const kG = Math.min(0.9, (spec.kG[0]! + (spec.kG[1]! - spec.kG[0]!) * t) * this.stiff);
-      const kL = Math.min(0.9, (spec.kL[0]! + (spec.kL[1]! - spec.kL[0]!) * t) * this.stiff);
+      const kG = Math.min(0.6, (spec.kG[0]! + (spec.kG[1]! - spec.kG[0]!) * t) * this.stiff);
+      const kL = Math.min(0.35, (spec.kL[0]! + (spec.kL[1]! - spec.kL[0]!) * t) * this.stiff);
       this.restDir(i);
       gx += this.dirX * len[i]!;
       gy += this.dirY * len[i]!;

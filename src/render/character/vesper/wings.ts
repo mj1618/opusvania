@@ -11,7 +11,7 @@
  * positions, so it too is filtered by the cloth.
  */
 import type { PlayerView } from '../../contract';
-import { clamp, lerp, pulse, sat, smoothstep } from '../hooded/math';
+import { clamp, lerp, pulse, sat } from '../hooded/math';
 import { Chain, type ChainSpec } from './chain';
 import { type Frame, J_BROW_A, J_CHEST, J_COLLAR, type Rig, S_CZ, S_D, S_DH } from './rig';
 
@@ -57,7 +57,8 @@ const GLIDE = [-100, -82, -62, -42, -21];
 const DART = [-73, -75, -78, -83, -88];
 const WALL_FREE = [-118, -98, -78, -60, -42];
 const BEAT_UP = [-112, -90, -68, -46, -24];
-const BEAT_DOWN = [-58, -46, -34, -22, -10];
+/** Wrapped close while she somersaults. */
+const TUCKED = [-58, -68, -80, -90, -100];
 
 const ANTENNA_A: ChainSpec = {
   len: [6.2, 6.4, 6.6, 6.6, 6.6, 6.2],
@@ -125,21 +126,25 @@ export class Secondary {
     const glide = rig.wAir * rig.airFall;
     const dash = rig.wDash;
     const wall = rig.wWall;
-    const b = rig.beat;
-    const up = b < 1 ? smoothstep(0, 0.12, b) * (1 - smoothstep(0.16, 0.3, b)) : 0;
-    const down = b < 1 ? smoothstep(0.16, 0.3, b) * (1 - smoothstep(0.38, 0.66, b)) : 0;
-    const spread = sat(run * 1.2 + rig.wAir + dash + wall + up + down);
+    // The somersault: folded tight round her while she turns, thrown wide as she opens out.
+    const tuck = rig.spinW;
+    const up = rig.openK;
+    const spread = sat(run * 1.2 + rig.wAir + dash + wall + up) * (1 - tuck);
     this.spread += (spread - this.spread) * (1 - Math.exp(-14 * dt));
-    this.open = sat(glide + apex * 0.6 + up + down * 0.7 + wall * 0.5);
-    const stiff = 0.9 + 0.4 * this.spread + 1.7 * dash + 0.5 * (up + down) + 0.4 * rig.wAir;
+    this.open = sat((glide + apex * 0.6 + wall * 0.5) * (1 - tuck) + up);
+    const stiff = 0.9 + 0.4 * this.spread + 1.7 * dash + 0.5 * up + 8 * tuck + 0.4 * rig.wAir;
     const dragK = 1 - rig.wAir * (0.45 + 0.3 * rig.airRise) - 0.55 * dash - 0.3 * wall;
+    const dragT = dragK * (1 - 0.85 * tuck);
+    const flip = rig.spinPhi * (d >= 0 ? 1 : -1);
 
     // --- Ripple: runs faster and deeper with speed.
     const sp = pulse(clock, 7.3, 1.1, 77, 0.85);
     const settle = sp > 0 ? Math.sin(Math.PI * sp) ** 2 * rig.wIdle : 0;
     const rate = 2.6 + 9 * settle + 15 * run + 5 * glide + 3 * wall + 8 * dash;
     this.ripple += rate * dt;
-    const amp = 0.045 + 0.1 * settle + 0.26 * run + 0.15 * glide + 0.07 * wall + 0.05 * apex + 0.03 * dash;
+    const amp =
+      (0.045 + 0.1 * settle + 0.26 * run + 0.15 * glide + 0.07 * wall + 0.05 * apex + 0.03 * dash) *
+      (1 - tuck);
 
     // The collar's own axes on screen: up along the spine, forward a quarter turn toward the facing.
     const cx = j[J_COLLAR * 2]!;
@@ -168,7 +173,7 @@ export class Secondary {
         c.ax = cx + fx * rf + ux * ru - sd * cz * 2.2;
         c.ay = cy + fy * rf + uy * ru;
         c.d = d;
-        c.rot = rig.upper * 0.75 * (1 - rig.wDash);
+        c.rot = rig.upper * 0.75 * (1 - rig.wDash) * (1 - tuck) + flip;
         c.lat = -sd * mid * 0.55;
         let lift =
           STREAM[k]! * run +
@@ -177,8 +182,8 @@ export class Secondary {
           GLIDE[k]! * glide +
           DART[k]! * dash +
           lerp(WALL_FREE[k]!, 3, far) * wall;
+        lift = lerp(lift, TUCKED[k]!, tuck);
         lift = lerp(lift, BEAT_UP[k]!, up);
-        lift = lerp(lift, BEAT_DOWN[k]!, down);
         // The far wing rides higher when open, so both read: fore and hind.
         lift += far * (-6 - 30 * (glide + apex * 0.6) + 9 * run);
         // At rest she resettles her wings now and then: a small lift and shiver.
@@ -186,9 +191,11 @@ export class Secondary {
         // A landing or a skid throws the hem out for a moment.
         lift -= clamp(rig.crouchPx, 0, 8) * 1.6 * (1 - k / STRANDS);
         c.lift = lift * DEG;
-        c.curl = (0.05 * run - 0.07 * glide - 0.03 * up + 0.04 * down + 0.02 * dash) * (1 - k * 0.12);
+        c.curl =
+          (0.05 * run - 0.07 * glide - 0.03 * up + 0.02 * dash) * (1 - k * 0.12) * (1 - tuck) +
+          (0.52 + 0.07 * k) * tuck;
         c.stiff = stiff;
-        c.dragK = dragK;
+        c.dragK = dragT;
         c.floorY = floorY;
         c.wallSide = wallSide;
         c.wallX = wallX;
@@ -207,13 +214,13 @@ export class Secondary {
       c.ax = j[(J_BROW_A + a) * 2]!;
       c.ay = j[(J_BROW_A + a) * 2 + 1]!;
       c.d = dh;
-      c.rot = rig.headAng;
+      c.rot = rig.headAng + flip;
       const flick = pulse(clock, a === 0 ? 6.7 : 9.1, 0.55, 31 + a * 7, 0.8);
       const fl = flick > 0 ? Math.sin(Math.PI * flick) ** 2 * rig.wIdle : 0;
-      c.lift = (13 * run + 30 * dash - 16 * glide + 8 * rise - 10 * up + 12 * down - 20 * fl) * DEG;
-      c.curl = (0.04 * run - 0.05 * glide + 0.07 * fl) * 1;
-      c.stiff = 1 + 1.2 * dash;
-      c.dragK = 1 - 0.3 * dash;
+      c.lift = (13 * run + 30 * dash - 16 * glide + 8 * rise - 10 * up + 22 * tuck - 20 * fl) * DEG;
+      c.curl = 0.04 * run - 0.05 * glide + 0.07 * fl + 0.24 * tuck;
+      c.stiff = 1 + 1.2 * dash + 7 * tuck;
+      c.dragK = (1 - 0.3 * dash) * (1 - 0.7 * tuck);
       c.floorY = Number.POSITIVE_INFINITY;
       c.wallSide = wallSide;
       c.wallX = wallX;

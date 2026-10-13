@@ -40,7 +40,6 @@ export class VesperCharacter implements CharacterSkin {
   private readonly lastY = new Float32Array(3);
   private started = false;
   private flash = 0;
-  private beatWas = 1;
 
   constructor(
     private readonly ctx: RenderContext,
@@ -54,7 +53,15 @@ export class VesperCharacter implements CharacterSkin {
     p.ly = -KEY_LIGHT.dirY;
     p.keyColor = rgb(KEY_LIGHT.color);
     p.l2c = rgb(LIGHT);
-    this.view = { wings: this.sec.wings, antennae: this.sec.antennae, open: 0, hairX: 0, hairY: 0, glow: 1 };
+    this.view = {
+      wings: this.sec.wings,
+      antennae: this.sec.antennae,
+      open: 0,
+      hairX: 0,
+      hairY: 0,
+      glow: 1,
+      tuck: 0,
+    };
   }
 
   update(dtIn: number, clock: number, player: PlayerView, events: readonly SimEvent[]): void {
@@ -85,6 +92,7 @@ export class VesperCharacter implements CharacterSkin {
     view.hairX = lx + noise1(clock * 0.7, 51) * 0.35;
     view.hairY = ly + noise1(clock * 0.9, 53) * 0.25;
     view.open = sec.open;
+    view.tuck = rig.spinW;
 
     // --- Her light: the two lantern tips.
     const a0 = sec.antennae[0];
@@ -109,15 +117,15 @@ export class VesperCharacter implements CharacterSkin {
     if (sig.skid) fx.dust(feetX, feetY, player.vx > 0 ? 1 : -1, 0.45, 3);
     if (sig.dashStart && player.grounded) fx.dust(feetX, feetY, -player.dashDir, 0.45, 3);
     if (sig.wallJump) fx.dust(feetX - player.facing * 18, feetY - 12, 0, 0.3, 2);
-    if (sig.doubleJump) this.flash = 1;
-    // The burst leaves the wings on the downstroke, not on the button press.
-    if (this.beatWas < 0.2 && rig.beat >= 0.2 && rig.beat < 1) {
+    if (sig.doubleJump) this.flash = 0.6;
+    // The burst leaves the wings as she opens out of the somersault.
+    if (sig.opened) {
+      this.flash = 1;
       for (let w = 0; w < 2; w++) {
         const c = sec.wings[w]!.strands[1 + w]!;
-        fx.burst(c.rx[3]!, c.ry[3]!, player.vx * 12, 130, 13);
+        fx.burst(c.rx[3]!, c.ry[3]!, player.vx * 12, 60, 14);
       }
     }
-    this.beatWas = rig.beat;
     this.flash = Math.max(0, this.flash - dt * 1.9);
 
     // --- Dust rises off the wings; more of it when she moves.
@@ -133,7 +141,7 @@ export class VesperCharacter implements CharacterSkin {
       const v = fresh || dt <= 0 ? 0 : Math.hypot(x - this.lastX[i]!, y - this.lastY[i]!) / dt;
       this.lastX[i] = x;
       this.lastY[i] = y;
-      const k = sat((v - 330) / 600) * (i === 2 ? 0.75 : 1) + (i === 2 ? 0 : 0.25 * this.flash);
+      const k = sat((v - 330) / 600) * (i === 2 ? 0.75 : 1) + 0.3 * rig.spinW;
       this.trails[i]!.push(dt, x, y, k);
     }
     this.started = true;

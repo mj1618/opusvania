@@ -33,8 +33,10 @@ import {
   S_EYE,
   S_GROUND,
   S_HEADROT,
+  S_LOOKX,
   S_LOOKY,
   S_UPPER,
+  S_WIDE,
 } from './rig';
 
 export interface ChainPts {
@@ -54,6 +56,8 @@ export interface View {
   hairY: number;
   /** Light level of her own glow 0.6..1.6. */
   glow: number;
+  /** Somersault tuck 0..1. */
+  tuck: number;
 }
 
 function dim(c: RGB, k: number): RGB {
@@ -89,6 +93,7 @@ const HALO: RGB = [0.78, 0.72, 0.95];
 const SHADOW: RGB = [0.01, 0.03, 0.06];
 const SPOT_DARK = rgb(0x120e1e);
 const EYE_PATCH: RGB = [0.1, 0.07, 0.15];
+const BLUSH: RGB = [0.92, 0.5, 0.56];
 
 const SH_TORSO: Shade = { c0: TUNIC_LOW, c1: TUNIC_TOP, rim: 0.7, cool: 0.4, form: 0.25, band: 0.5 };
 const SH_ARM: Shade = { c0: SLEEVE, c1: SLEEVE_LOW, rim: 0.9, cool: 0.45, form: 0.3, band: 0.55 };
@@ -164,7 +169,17 @@ const SH_FACE: Shade = {
 };
 const SH_CROWN: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 0.9, cool: 0.5, form: 0.3, band: 0.36 };
 const SH_LOCK: Shade = { c0: CROWN_TOP, c1: CROWN_LOW, rim: 0.9, cool: 0.5, form: 0.3, band: 0.6 };
-const SH_EYE: Shade = { c0: EYE_RIM, c1: EYE_CORE, rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
+const SH_EYE: Shade = { c0: rgb(0x8f4a06), c1: EYE_RIM, rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
+const SH_EYE_CORE: Shade = { c0: rgb(0xffcf5a), c1: EYE_CORE, rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
+const SH_CATCH: Shade = {
+  c0: rgb(0xfffdf2),
+  c1: rgb(0xfffdf2),
+  rim: 0,
+  cool: 0,
+  form: 0,
+  band: 0.5,
+  ember: 0,
+};
 const SH_WING: Shade = { c0: WING_TOP, c1: WING_LOW, rim: 1, cool: 0.5, form: 0, band: 0.5, ember: 1.2 };
 const SH_WING_FAR: Shade = {
   c0: WING_TOP,
@@ -409,7 +424,7 @@ function torso(p: Painter, j: Float32Array): void {
 }
 
 /** The thorn: a slender blade sheathed at the hip, pointing back and down. */
-function thorn(p: Painter, f: Frame): void {
+function thorn(p: Painter, f: Frame, len: number): void {
   const { j, s } = f;
   const d = s[S_D]!;
   const hx = j[J_HIP * 2]!;
@@ -430,8 +445,8 @@ function thorn(p: Painter, f: Frame): void {
   const oy = hy + uy * 2.2 + fy * 2.5;
   for (let i = 0; i < 4; i++) {
     const t = i / 3;
-    p.px[i] = ox + ax * t * 21;
-    p.py[i] = oy + ay * t * 21;
+    p.px[i] = ox + ax * t * len;
+    p.py[i] = oy + ay * t * len;
     p.pw[i] = lerp(1.05, 0.12, t ** 0.8);
   }
   p.ribbon(4, SH_SHEATH, true, false);
@@ -725,19 +740,43 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
   }
   p.shape(SEG, X(ccx, ccy), Y(ccx, ccy), SH_CROWN, hx + sr * Hh, hy - cr * Hh, hx - sr * Hh, hy + cr * Hh);
 
+  // --- A little tuft on top, between the antennae.
+  tuft(
+    p,
+    X(1.4 * dh, -Hh * 0.9),
+    Y(1.4 * dh, -Hh * 0.9),
+    X(4.2 * dh, -Hh - 5.2) + v.hairX * 0.6,
+    Y(4.2 * dh, -Hh - 5.2) + v.hairY * 0.6,
+    -1.2 * dh,
+    2.2,
+    SH_LOCK,
+    0.5,
+  );
+  tuft(
+    p,
+    X(-0.6 * dh, -Hh * 0.92),
+    Y(-0.6 * dh, -Hh * 0.92),
+    X(-3.4 * dh, -Hh - 3.8) + v.hairX * 0.6,
+    Y(-3.4 * dh, -Hh - 3.8) + v.hairY * 0.6,
+    -1.0 * dh,
+    2.0,
+    SH_LOCK,
+    0.5,
+  );
+
   // --- The far antenna leaves the brow behind the face fur.
   antenna(p, v.antennae[far]!, true, v.glow);
 
-  // --- The face: a soft heart of pale fur, like a barn owl's disc. Wide cheeks, a small chin.
+  // --- The face: a round, soft heart of pale fur. Full cheeks, barely a chin.
   const yaw = dh * BODY.sinHeadYaw;
   const back = dh >= 0 ? -1 : 1;
-  const fcx = yaw * 2.6;
-  const fcy = 1.9;
-  const fw = 7.3 + 3.0 * czh;
-  const fhU = 7.3;
-  const fhD = 8.9;
+  const fcx = yaw * 2.5;
+  const fcy = 2.0;
+  const fw = 7.9 + 3.1 * czh;
+  const fhU = 7.7;
+  const fhD = 8.7;
   /** Midpoint between the eyes. */
-  const emx = yaw * 5.8;
+  const emx = yaw * 5.4;
   // Cheek fluff first, so it pokes out from behind the disc's edge and breaks the outline.
   for (let i = 0; i < CHEEK.length; i += 5) {
     const sd = CHEEK[i]!;
@@ -754,12 +793,12 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
       X(tx, ty) + v.hairX * 0.35,
       Y(tx, ty) + v.hairY * 0.35,
       0.5 * dh * sd,
-      2.3,
+      2.6,
       sd > 0 ? SH_FUR_LOW : SH_FUR,
-      0.6,
+      0.5,
     );
   }
-  const FSEG = 34;
+  const FSEG = 36;
   for (let i = 0; i < FSEG; i++) {
     const a = (i / FSEG) * Math.PI * 2;
     const ca = Math.cos(a);
@@ -767,13 +806,13 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
     let lx: number;
     let ly: number;
     if (sa >= 0) {
-      lx = ca * fw * (1 - 0.3 * sa ** 1.8);
+      lx = ca * fw * (1 - 0.17 * sa ** 2.2);
       ly = sa * fhD;
     } else {
       // The top dips between the eyes (the crown's fur comes down in a soft peak): a heart.
-      const cc = (ca * fw - (emx - fcx)) / (fw * 0.36);
-      lx = ca * fw * (1 + 0.05 * -sa);
-      ly = sa * fhU * (1 - 0.3 * Math.exp(-cc * cc));
+      const cc = (ca * fw - (emx - fcx)) / (fw * 0.34);
+      lx = ca * fw * (1 + 0.04 * -sa);
+      ly = sa * fhU * (1 - 0.24 * Math.exp(-cc * cc));
     }
     p.px[i] = X(fcx + lx, fcy + ly);
     p.py[i] = Y(fcx + lx, fcy + ly);
@@ -790,42 +829,70 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
     Y(fcx - back * fw * 0.4, fcy - fhU * 0.4),
   );
 
-  // --- Eyes: two large calm ovals of light under a relaxed lid. Nothing else on the face.
+  // --- Eyes: big, round, wide-set and low. A dark amber rim, a warm bright core that drifts with
+  // the gaze, two catchlights, and a soft lid. Nothing else on the face.
   const open = clamp(s[S_EYE]!, 0, 1);
-  const lookY = s[S_LOOKY]!;
-  const ESEG = 16;
+  const lid = 1 - open;
+  const lookY = clamp(s[S_LOOKY]!, -1, 1);
+  const lookX = clamp(s[S_LOOKX]!, -1, 1) * (dh >= 0 ? 1 : -1);
+  const wide = s[S_WIDE]!;
+  const ESEG = 20;
   for (let side = 0; side < 2; side++) {
     const sd = side === 0 ? 1 : -1;
     const near = sd * dh >= 0;
-    const lx = emx - sd * czh * 4.6;
-    const ly = 2.9 + lookY * 0.9;
-    const w = near ? 2.7 * (0.5 + 0.5 * czh) : 2.55 * (0.12 + 0.88 * czh) * 0.8;
-    const h = Math.max(0.28, 3.6 * open);
+    const lx = emx - sd * czh * 5.0;
+    const ly = 3.5;
+    const w = (near ? 3.2 * (0.5 + 0.5 * czh) : 3.0 * (0.3 + 0.7 * czh) * 0.88) * (0.6 + 0.4 * wide);
+    const R = 3.55 * wide;
     const ex = X(lx, ly);
     const ey = Y(lx, ly);
-    // Outer corners a touch raised: at ease and sure of herself, never mournful.
-    const tilt = rot + sd * 0.2 * czh;
+    const tilt = rot + sd * 0.1 * czh;
     const ct = Math.cos(tilt);
     const st = Math.sin(tilt);
+    // The lid comes down from the top; the eye never quite shuts to nothing.
+    const yTop = -R + lid * 2 * R * 0.93;
     for (let i = 0; i < ESEG; i++) {
       const a = (i / ESEG) * Math.PI * 2;
       const qx = Math.cos(a) * w;
-      const sa = Math.sin(a);
-      // The upper lid rests a third of the way down: the top is a shallow arc.
-      const qy = sa < 0 ? sa * h * 0.5 * (0.55 + 0.45 * Math.abs(sa)) : sa * h * (0.8 + 0.2 * sa);
+      let qy = Math.sin(a) * R;
+      if (qy < yTop) qy = yTop + (qy - yTop) * 0.1;
       p.px[i] = ex + qx * ct - qy * st;
       p.py[i] = ey + qx * st + qy * ct;
     }
-    const mx = ex - st * h * 0.25;
-    const my = ey + ct * h * 0.25;
-    p.soft(mx, my, w * 2.1, h * 1.5 + 1, EYE_PATCH, 0.3);
-    p.shape(ESEG, mx, my, SH_EYE, ex + st * h * 0.7, ey - ct * h * 0.7, ex - st * h * 0.5, ey + ct * h * 0.5);
-    p.glow(mx, my, 8, EYE_RIM, 0.12 * open * v.glow);
+    const vis = R - yTop;
+    const mcy = (yTop + R) * 0.5;
+    const mx = ex - mcy * st;
+    const my = ey + mcy * ct;
+    p.soft(ex, ey, w * 1.7, R * 1.5, EYE_PATCH, 0.2);
+    p.shape(ESEG, mx, my, SH_EYE, ex + st * R, ey - ct * R, ex - st * R, ey + ct * R);
+    // Core: the light inside, lower in the eye, following the gaze.
+    const cry = Math.min(R * 0.68, vis * 0.44);
+    const crx = w * 0.7;
+    const cqx = lookX * w * 0.26;
+    const cqy = Math.max(R * 0.16 + lookY * R * 0.24, yTop + cry + 0.15);
+    const cx = ex + cqx * ct - cqy * st;
+    const cy = ey + cqx * st + cqy * ct;
+    if (vis > 0.9) {
+      p.ellipse(cx, cy, crx, cry, tilt, SH_EYE_CORE, 14);
+      p.glow(cx, cy + cry * 0.25, 2.4, GOLD_HOT, 0.3 * v.glow);
+      // Catchlights: one large, upper, toward the light; one tiny, lower, opposite. Wet and alive.
+      const hqx = cqx * 0.5 + w * 0.3;
+      const hqy = cqy - R * 0.5;
+      const hr = R * 0.25;
+      if (hqy - hr > yTop + 0.1) p.ellipse(ex + hqx, ey + hqy, hr * 0.9, hr, 0, SH_CATCH, 8);
+      if (vis > R * 1.1)
+        p.ellipse(ex + cqx * 0.5 - w * 0.34, ey + cqy + R * 0.36, R * 0.11, R * 0.11, 0, SH_CATCH, 6);
+    }
+    p.glow(mx, my, 8.5, EYE_RIM, 0.12 * open * v.glow);
+    // A soft warm blush on the cheek below.
+    const bx = lx - sd * czh * 1.3;
+    p.soft(X(bx, ly + R + 1.5), Y(bx, ly + R + 1.5), 2.5 * (near ? 1 : 0.75), 1.5, BLUSH, 0.24);
   }
 }
 /** Cheek fluff: side (+1 = back of the head, -1 = front), root x (fraction of the half width), root y, length, angle below the outward axis. */
 const CHEEK = [
-  1, 0.8, 1.6, 5.4, 0.35, 1, 0.66, 4.6, 5.0, 0.85, 1, 0.82, -1.4, 4.2, -0.1, -1, 0.74, 3.6, 3.4, 0.7,
+  1, 0.82, 0.6, 5.0, 0.2, 1, 0.74, 3.8, 5.2, 0.7, 1, 0.5, 6.4, 4.2, 1.1, 1, 0.84, -2.2, 3.8, -0.2, -1, 0.8,
+  3.0, 3.6, 0.6, -1, 0.56, 6.2, 3.2, 1.1,
 ];
 
 /** The whole character, back to front. */
@@ -846,7 +913,7 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   wing(p, v.wings[far]!.strands, v.open, 0.52, v.glow, clock);
   arm(p, j, far, true, false);
   leg(p, j, far, true);
-  thorn(p, f);
+  thorn(p, f, 21 * (1 - 0.65 * v.tuck));
   torso(p, j);
   leg(p, j, near, false);
   wing(p, v.wings[near]!.strands, v.open, 1, v.glow, clock);
