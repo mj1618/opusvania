@@ -237,7 +237,7 @@ interface WingSpec {
 }
 
 const SCALLOPS = 5;
-const RAG = [1, 0.965, 1.02, 0.95, 1.0, 0.97];
+const RAG = [1, 0.955, 1.02, 0.93, 1.0, 0.96];
 
 interface Wing {
   outline: Pts;
@@ -251,7 +251,7 @@ function buildWing(s: WingSpec, t: number): Wing {
       lerp(s.th0, s.th1, u) +
       lerp(s.bow0, s.bow1, u) * Math.sin(Math.PI * Math.min(f, 1)) +
       s.wave * f * Math.sin(t * s.speed - f * 2.6 - u * 1.4 + s.phase) +
-      s.wave * 0.4 * f * f * Math.sin(t * s.speed * 1.9 - f * 4.1 + u * 2 + s.phase);
+      s.wave * 0.75 * f * f * f * Math.sin(t * s.speed * 1.9 - f * 4.1 + u * 2 + s.phase);
     const shapeR =
       1 - (1 - s.taper) * u ** 1.25 + s.lobe * (0.16 * bump(u, 0.8, 0.16) - 0.13 * bump(u, 0.55, 0.07));
     const r = s.len * shapeR * f;
@@ -262,7 +262,11 @@ function buildWing(s: WingSpec, t: number): Wing {
     const local = u * SCALLOPS - k;
     const rag = lerp(v(RAG, k), v(RAG, k + 1), local);
     // Rounded lobes between veins, cusps on the veins; one small tear.
-    return rag * (0.955 + 0.05 * Math.sin(Math.PI * local) ** 0.7) - 0.035 * bump(u, 0.31, 0.012);
+    return (
+      rag * (0.955 + 0.05 * Math.sin(Math.PI * local) ** 0.7) -
+      0.08 * bump(u, 0.31, 0.016) -
+      0.05 * bump(u, 0.74, 0.012)
+    );
   };
   const outline: Pts = [];
   const E = 14;
@@ -304,33 +308,84 @@ const wing = (
 
 const POSES: Record<ConceptPose, Pose> = {
   idle: {
-    hipY: -27.6,
-    lean: -0.035,
-    head: -0.05,
+    hipY: -28.4,
+    lean: -0.03,
+    head: -0.07,
     antenna: 0,
     near: wing(-4.6, -31.5, 2.6, -30.5, 0.36, 0.04, 55, 0.8, 0.1, -0.03, 0.035, 0, 0.08, 1.6),
-    far: wing(-3, -31.5, 3, -30.5, 0.58, 0.22, 51, 0.8, 0.08, -0.04, 0.04, 1.1, 0.08, 1.6),
+    far: wing(-3, -31.5, 3, -30.5, 0.58, 0.22, 51, 0.8, 0.08, -0.04, 0.04, 1.1, 0.08, 1.27),
     hind: wing(-3, -6, 2.5, -5, 0.42, 0, 15, 0.85, 0.08, -0.03, 0.03, 0.5, 0, 1.6),
   },
   run: {
-    hipY: -25.2,
-    lean: 0.42,
-    head: 0.1,
-    antenna: -0.32,
-    near: wing(-4, -31, 0.5, -12, 1.34, 0.8, 54, 0.62, 0.1, -0.08, 0.08, 0, 0.6, 8),
-    far: wing(-2.5, -32, 1, -20, 1.68, 1.16, 49, 0.66, 0.1, -0.06, 0.09, 1.3, 0.5, 8),
-    hind: wing(-3.4, -9, 2.4, -3, 1.0, 0.25, 23, 0.7, 0.1, -0.06, 0.11, 0.6, 0.3, 8),
+    hipY: -25.6,
+    lean: 0.17,
+    head: -0.02,
+    antenna: -0.3,
+    near: wing(-4, -31, 0, -14, 1.52, 0.94, 54, 0.62, 0.1, -0.08, 0.075, 0, 0.6, 8.5),
+    far: wing(-2.5, -32, 1, -21, 1.86, 1.3, 49, 0.66, 0.1, -0.06, 0.085, 1.3, 0.5, 8.5),
+    hind: wing(-3.4, -9, 2.4, -3, 1.22, 0.46, 23, 0.7, 0.1, -0.06, 0.11, 0.6, 0.3, 8.5),
   },
   jump: {
     hipY: -31,
-    lean: 0.14,
-    head: -0.06,
+    lean: 0.12,
+    head: -0.13,
     antenna: -0.42,
-    near: wing(-2.8, -31.5, -1, -20, 1.84, 0.5, 55, 0.62, 0.1, -0.12, 0.04, 0, 1, 2.4),
-    far: wing(-1.5, -32, 0, -24, 2.16, 1.08, 49, 0.66, 0.1, -0.1, 0.045, 0.9, 0.9, 2.4),
+    near: wing(-2.8, -31.5, -1, -20, 1.84, 0.5, 55, 0.62, 0.1, -0.12, 0.045, 0, 1, 2.4),
+    far: wing(-1.5, -32, 0, -24, 2.16, 1.08, 49, 0.66, 0.1, -0.1, 0.05, 0.9, 0.9, 1.9),
     hind: wing(-3.4, -12, 1.4, -2, 1.3, 0.1, 27, 0.68, 0.1, -0.1, 0.05, 0.5, 0.6, 2.4),
   },
 };
+
+// ---- motion helpers ---------------------------------------------------------------------------
+const TAU = Math.PI * 2;
+/** Run cadence (full cycles per second: two strides). A lope, not a sprint. */
+const RUN_HZ = 1.3;
+const STANCE = 0.26;
+
+/** Height of the body arc over one stride: brief soft touch at the bottom, long float on top. */
+const bob = (c: number): number => 1 - Math.abs(Math.cos(TAU * (c - STANCE / 2))) ** 1.4;
+
+/** Catmull-Rom through evenly spaced keys, k in 0..1. */
+function spline(keys: readonly number[], k: number): number {
+  const n = keys.length - 1;
+  const f = Math.min(n - 1e-6, Math.max(0, k * n));
+  const i = Math.floor(f);
+  const u = f - i;
+  const p0 = v(keys, Math.max(0, i - 1));
+  const p1 = v(keys, i);
+  const p2 = v(keys, i + 1);
+  const p3 = v(keys, Math.min(n, i + 2));
+  return (
+    0.5 *
+    (2 * p1 +
+      (p2 - p0) * u +
+      (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u +
+      (3 * p1 - p0 - 3 * p2 + p3) * u * u * u)
+  );
+}
+
+/** A flowing chain from a root: heading a0, bending by `curl` and by wave(s) along its length. */
+function strand(
+  x: number,
+  y: number,
+  a0: number,
+  len: number,
+  curl: number,
+  wave: (s: number) => number,
+  n = 14,
+): Pts {
+  const out: Pts = [x, y];
+  let px = x;
+  let py = y;
+  for (let i = 1; i <= n; i++) {
+    const s = i / n;
+    const a = a0 + curl * s + wave(s);
+    px += (Math.cos(a) * len) / n;
+    py += (Math.sin(a) * len) / n;
+    out.push(px, py);
+  }
+  return out;
+}
 
 // ---- limbs ------------------------------------------------------------------------------------
 const THIGH = 13.4;
@@ -356,16 +411,16 @@ function ik(
   return [ax + Math.cos(base - a * dir) * l1, ay + Math.sin(base - a * dir) * l1];
 }
 
-/** Centre line of two straight bones with a small rounded joint. */
+/** Centre line of two bones with a rounded joint. */
 function bones(hx: number, hy: number, kx: number, ky: number, ax: number, ay: number): Pts {
   const line: Pts = [];
-  for (let i = 0; i <= 5; i++) line.push(lerp(hx, kx, (i / 5) * 0.8), lerp(hy, ky, (i / 5) * 0.8));
-  const k0x = lerp(hx, kx, 0.8);
-  const k0y = lerp(hy, ky, 0.8);
-  const k1x = lerp(kx, ax, 0.2);
-  const k1y = lerp(ky, ay, 0.2);
-  for (let i = 1; i < 5; i++) {
-    const k = i / 5;
+  for (let i = 0; i <= 5; i++) line.push(lerp(hx, kx, (i / 5) * 0.72), lerp(hy, ky, (i / 5) * 0.72));
+  const k0x = lerp(hx, kx, 0.72);
+  const k0y = lerp(hy, ky, 0.72);
+  const k1x = lerp(kx, ax, 0.28);
+  const k1y = lerp(ky, ay, 0.28);
+  for (let i = 1; i < 6; i++) {
+    const k = i / 6;
     const m = 1 - k;
     line.push(m * m * k0x + 2 * m * k * kx + k * k * k1x, m * m * k0y + 2 * m * k * ky + k * k * k1y);
   }
@@ -411,12 +466,33 @@ function drawLeg(g: Graphics, hx: number, hy: number, f: Foot, color: number, li
   }
 }
 
-/** Hands, x along the forearm. Open: fingers together, thumb apart. Grip: a closed fist. */
-const HAND_OPEN = [
-  -0.3, -0.85, 1.5, -1.2, 3.1, -1.0, 4.5, -0.35, 4.4, 0.4, 3.0, 0.95, 2.2, 1.0, 2.5, 1.9, 1.9, 2.3, 0.8, 1.3,
-  -0.3, 0.85,
-];
-const HAND_GRIP = [-0.3, -0.85, 1.3, -1.45, 2.7, -1.4, 3.4, -0.5, 3.3, 0.7, 2.3, 1.5, 0.9, 1.5, -0.3, 0.85];
+/** Hand, x along the forearm: fingers loosely together, thumb apart. `curl` droops the fingers. */
+function handShape(curl: number): number[] {
+  return [
+    -0.3,
+    -0.85,
+    1.5,
+    -1.15,
+    3.0,
+    -0.95 + curl * 0.5,
+    4.3,
+    -0.2 + curl * 1.5,
+    4.1,
+    0.55 + curl * 1.7,
+    2.9,
+    0.95 + curl * 0.7,
+    2.2,
+    1.0,
+    2.4,
+    1.8,
+    1.8,
+    2.2,
+    0.8,
+    1.3,
+    -0.3,
+    0.85,
+  ];
+}
 
 function drawArm(
   g: Graphics,
@@ -424,29 +500,40 @@ function drawArm(
   sy: number,
   hx: number,
   hy: number,
-  bend: number,
-  grip: boolean,
+  curl: number,
   near: boolean,
 ): void {
-  const [ex, ey] = ik(sx, sy, hx, hy, UPPER_ARM, FOREARM, bend);
-  const arm = ribbon(bones(sx, sy, ex, ey, hx, hy), (s) => lerp(1.55, 0.85, s) + 0.12 * bump(s, 0.5, 0.08));
+  const [ex, ey] = ik(sx, sy, hx, hy, UPPER_ARM, FOREARM, -1);
+  const arm = ribbon(bones(sx, sy, ex, ey, hx, hy), (s) => lerp(1.5, 0.85, s) + 0.12 * bump(s, 0.5, 0.08));
   g.poly(arm, true).fill(near ? C.sleeve : C.sleeveFar);
   const fl = Math.hypot(hx - ex, hy - ey) || 1;
   const cs = (hx - ex) / fl;
   const sn = (hy - ey) / fl;
-  // A pale cuff, then the hand: the light value is what makes the arm read at game size.
-  const cuff = place([-2.6, -1.0, -0.2, -1.05, -0.2, 1.05, -2.6, 1.0], hx, hy, cs, sn);
-  g.poly(cuff, true).fill(near ? C.cuff : C.cuffFar);
-  const hand = place(grip ? HAND_GRIP : HAND_OPEN, hx, hy, cs, sn, bend);
-  g.poly(hand, true).fill(near ? C.hand : C.handFar);
-  if (grip) {
-    // Knuckle lines so the fist reads as fingers wrapped round something.
+  if (near) {
+    // A cloth wrap on this forearm only.
+    const wrap = place([-6.2, -1.1, -0.2, -1.0, -0.2, 1.0, -6.2, 1.15], hx, hy, cs, sn);
+    g.poly(wrap, true).fill(C.cuff);
     for (let i = 0; i < 3; i++) {
-      const p = place([1.1 + i * 0.75, -1.3, 1.3 + i * 0.75, 0.5], hx, hy, cs, sn, bend);
+      const p = place([-1.6 - i * 1.6, -1.05, -2.5 - i * 1.6, 1.1], hx, hy, cs, sn);
       g.moveTo(v(p, 0), v(p, 1)).lineTo(v(p, 2), v(p, 3));
     }
-    g.stroke({ width: 0.3, color: 0x6c6478, alpha: near ? 0.7 : 0.4, cap: 'round' });
+    g.stroke({ width: 0.3, color: 0x5d566c, alpha: 0.7 });
+    const end = strand(
+      hx - cs * 5.6 - sn * 0.8,
+      hy - sn * 5.6 + cs * 0.8,
+      Math.atan2(sn, cs) + 2.2,
+      4,
+      0.5,
+      () => 0,
+      5,
+    );
+    g.poly(
+      ribbon(end, (s) => 0.5 * (1 - s) + 0.1),
+      true,
+    ).fill(C.cuff);
   }
+  const hand = place(handShape(curl), hx, hy, cs, sn, -1);
+  g.poly(hand, true).fill(near ? C.hand : C.handFar);
   if (near) {
     rim(g, arm, KEY, 0.6, C.rim, 0.5, 1.3);
     rim(g, arm, FILL, 0.45, C.cool, 0.3, 1.4);
@@ -469,7 +556,6 @@ function drawThorn(g: Graphics, x: number, y: number, ang: number): void {
     g.moveTo(v(p, 0), v(p, 1)).lineTo(v(p, 2), v(p, 3));
   }
   g.stroke({ width: 0.3, color: 0x3a3448, alpha: 0.7 });
-  // Guard: a small swept crescent. Pommel: a seed.
   const guard = place(
     [-0.4, -3.0, 0.5, -1.6, 0.7, 0, 0.5, 1.6, -0.4, 3.0, -0.5, 1.4, -0.4, 0, -0.5, -1.4],
     x,
@@ -485,68 +571,95 @@ function drawThorn(g: Graphics, x: number, y: number, ang: number): void {
 }
 
 // ---- fixed shapes (head-local: origin at the base of the skull; body: origin at the hip) ------
-const HEAD = shape([
-  0.5, -24.5, 6, -24.8, 11, -21.5, 12.2, -15.5, 13, -10.8, 11.6, -4.6, 7.4, -1.6, 3.5, 0.2, -4.6, -0.6, -8.2,
-  -5.5, -11.6, -11.5, -8.5, -24, 0.5, -24.5,
-]);
-/** Stretch a head-local outline back from the profile, so the face takes more of the head. */
-function widen(pts: Pts): Pts {
-  const out: Pts = [];
-  for (let i = 0; i < pts.length; i += 2) {
-    const x = v(pts, i);
-    out.push(x < 9 ? 9 + (x - 9) * 1.2 : x, -11.6 + (v(pts, i + 1) + 11.6) * 1.05);
-  }
-  return out;
-}
-
-/** The face proper: a soft heart of short pale fur set into the darker head fur. */
-const FACE = widen(
-  shape(
-    [
-      6.6, -21.4, 9.2, -21.4, 11.4, -19.2, 12.0, -15.4, 12.7, -10.8, 11.5, -5.0, 7.5, -2.0, 4.6, -0.8, 0.6,
-      -2.2, -1.4, -5.6, -3.2, -9, -3.4, -14.2, -1.6, -18, 0, -20.4, 3.2, -21.4, 6.6, -21.4,
-    ],
-    12,
-  ),
+/** Skull with a soft muzzle: brow, a small nose, a set mouth, a chin. */
+const HEAD = shape(
+  [
+    0.5, -24.5, 6, -24.8, 10.6, -21.8, 11.9, -16.6, 12.2, -14.6, 12.4, -13.4, 12.8, -11.8, 13.1, -10.4, 13.8,
+    -9.3, 13.7, -8.3, 13.6, -7.5, 13.0, -7.2, 12.9, -6.4, 12.8, -5.6, 12.9, -5.0, 12.4, -4.2, 11.6, -2.6, 9.4,
+    -1.5, 7.2, -1.3, 3.5, 0.2, -4.6, -0.6, -8.2, -5.5, -11.6, -11.5, -8.5, -24, 0.5, -24.5,
+  ],
+  8,
 );
-/** Fitted tunic: fuller chest under the collar, drawn in at the waist. */
+/** Hairline: where the pale face fur gives way to the dark head fur (profile side is HEAD's). */
+const HAIRLINE = [
+  7.2, -22.4, 2.6, -22.6, -2.6, -19.6, -4.4, -14.4, -5.6, -10.6, -4.2, -6, -1, -3, 1, -1.4, 4, -1, 7.2, -1.3,
+];
+
+function buildFace(): Pts {
+  // Profile from the brow down to the chin is the first six segments of HEAD after the crown.
+  const out: Pts = [];
+  for (let i = 0; i < HEAD.length; i += 2) {
+    const x = v(HEAD, i);
+    const y = v(HEAD, i + 1);
+    if (x > 7.1 && y > -22.5 && y < -1.2) out.push(x - 0.15, y);
+  }
+  const back: Pts = [];
+  const h = HAIRLINE;
+  let px = v(h, 0);
+  let py = v(h, 1);
+  const tmp: Pts = [px, py];
+  for (let i = 2; i + 5 < h.length; i += 6) {
+    cubic(tmp, [px, py, v(h, i), v(h, i + 1), v(h, i + 2), v(h, i + 3), v(h, i + 4), v(h, i + 5)], 12);
+    px = v(h, i + 4);
+    py = v(h, i + 5);
+  }
+  for (let i = tmp.length - 2; i >= 0; i -= 2) back.push(v(tmp, i), v(tmp, i + 1));
+  return out.concat(back);
+}
+const FACE = buildFace();
+
+/** Fitted tunic: fuller chest, drawn in at the waist, open at the neck. */
 const TORSO = shape([
   4.4, -32, 8.6, -29.5, 9.8, -23.5, 7.6, -15.5, 6.4, -10.5, 5.4, -5, 4.4, 1.2, 2, 3.2, -2, 3.2, -3.4, 1, -4,
   -6, -6.2, -19, -3.6, -32, -1, -33.5, 2.4, -33.5, 4.4, -32,
 ]);
-/** Fur collar: a slim stole round the neck, a little deeper at the chest. */
-const MANTLE = shape(
+/** Scarf: a loose wrap, high at the nape and slipping low at the throat. */
+const SCARF = shape(
   [
-    -5.6, -32.4, -3, -34.2, 6, -34, 8.8, -31.8, 10.2, -30.2, 9.4, -27.8, 7.6, -26.2, 5.8, -25, 3.4, -25.2, 1,
-    -26, -1.4, -26.9, -4, -27.6, -5.6, -28.4, -7.2, -29.3, -7, -31.2, -5.6, -32.4,
+    -5.2, -33, -2.5, -34.2, 4, -33.6, 7, -31.6, 9.4, -30, 10.2, -26.6, 8, -24.4, 5.6, -22.4, 2, -25, -0.4,
+    -27.2, -2.6, -29, -4.4, -29.8, -5.6, -30.4, -6.6, -31, -6.4, -32.2, -5.2, -33,
   ],
   12,
 );
-
 interface AntennaSpec {
   /** Cubic: root, two controls, tip. */
   curve: readonly number[];
   phase: number;
   half: number;
+  /** Own tempo, so the two never move together. */
+  tempo: number;
 }
 
 /** Near: one long sweep back, tip lifted. Far: shorter and steeper, arcing over the crown. */
-const ANT_NEAR: AntennaSpec = { curve: [7.4, -22.6, 4.5, -33.5, -14, -37, -35, -31], phase: 0, half: 1.9 };
-const ANT_FAR: AntennaSpec = { curve: [10, -21.2, 12.5, -33, 4, -39.5, -12, -40], phase: 0.9, half: 1.6 };
+const ANT_NEAR: AntennaSpec = {
+  curve: [7.4, -22.6, 4.5, -33.5, -14, -37, -35, -31],
+  phase: 0,
+  half: 1.9,
+  tempo: 1,
+};
+const ANT_FAR: AntennaSpec = {
+  curve: [10, -21.2, 12.5, -33, 4, -39.5, -12, -40],
+  phase: 2.3,
+  half: 1.6,
+  tempo: 0.71,
+};
 
-function antennaLine(a: AntennaSpec, t: number, extra: number, speed: number): Pts {
+function antennaLine(a: AntennaSpec, t: number, extra: number, speed: number, flow: number): Pts {
   const rx = v(a.curve, 0);
   const ry = v(a.curve, 1);
   const raw: Pts = [rx, ry];
   cubic(raw, a.curve, 40);
   const out: Pts = [];
   const n = raw.length / 2;
+  const w = t * speed * a.tempo;
   for (let i = 0; i < n; i++) {
     const s = i / (n - 1);
+    // A slow sway from the root plus a lazy S-wave travelling out to the tip.
     const ang =
       extra * s ** 1.4 +
-      0.06 * s * Math.sin(t * speed - s * 2.6 + a.phase) +
-      0.03 * s * s * Math.sin(t * speed * 2.3 - s * 5);
+      0.06 * s * Math.sin(w - s * 2.2 + a.phase) +
+      flow * s * s * Math.sin(w * 1.37 - s * 5.4 + a.phase * 1.7) +
+      0.025 * s * Math.sin(w * 0.43 + a.phase * 3);
     const dx = v(raw, i * 2) - rx;
     const dy = v(raw, i * 2 + 1) - ry;
     out.push(rx + dx * Math.cos(ang) - dy * Math.sin(ang), ry + dx * Math.sin(ang) + dy * Math.cos(ang));
@@ -559,7 +672,6 @@ const plumeWidth = (s: number): number => Math.sin(Math.PI * s ** 0.6) ** 0.8;
 function drawAntenna(g: Graphics, line: readonly number[], half: number, near: boolean): void {
   const plume = ribbon(line, (s) => 0.2 + half * plumeWidth(s));
   g.poly(plume, true).fill({ color: near ? C.plume : C.crownDark, alpha: 0.7 });
-  // Barbs: fine comb teeth swept towards the tip.
   const n = line.length / 2;
   for (let i = 2; i < n - 1; i++) {
     const s = i / (n - 1);
@@ -576,6 +688,25 @@ function drawAntenna(g: Graphics, line: readonly number[], half: number, near: b
   rim(g, spine, KEY, 0.5, C.rim, near ? 0.6 : 0.35, 1.2);
 }
 
+/** Windswept head fur: [x, y, heading, length, half width, curl]. Back of the head, then bangs. */
+const LOCKS: readonly (readonly number[])[] = [
+  [-5.4, -5.4, 2.9, 7, 2.2, -0.45],
+  [-7.4, -11, 3.05, 11, 3.0, -0.55],
+  [-6.6, -17, 3.2, 13, 3.2, -0.65],
+  [-2.6, -21.6, 3.34, 12, 2.8, -0.7],
+  [2.4, -23.2, 3.46, 8, 2.0, -0.6],
+];
+const BANGS: readonly (readonly number[])[] = [
+  [9.4, -22.2, 2.7, 6.4, 1.4, 0.45],
+  [6.4, -23.4, 2.6, 7.6, 1.6, 0.6],
+  [2.4, -23.2, 2.4, 6.4, 1.5, 0.7],
+];
+const WISPS: readonly (readonly number[])[] = [
+  [-8, -17, 3.22, 16, 0.3, -0.3],
+  [-1, -23.4, 3.42, 14, 0.28, -0.45],
+  [-8.4, -8, 3.02, 11, 0.26, -0.15],
+];
+
 function create(pose: ConceptPose): ConceptInstance {
   const P = POSES[pose];
   const view = new Container();
@@ -589,7 +720,7 @@ function create(pose: ConceptPose): ConceptInstance {
   const gNear = new Graphics();
   const gWingGlow = new Graphics();
   const gArmNear = new Graphics();
-  const gFur = new Graphics();
+  const gScarf = new Graphics();
   const headC = new Container();
   const gHead = new Graphics();
   const gTips = new Graphics();
@@ -598,7 +729,7 @@ function create(pose: ConceptPose): ConceptInstance {
   for (const g of lights) g.blendMode = 'add';
   headC.addChild(gHead, gTips);
   headC.position.set(2.4, -33);
-  upper.addChild(gFar, gArmFar, gBody, gNear, gWingGlow, gArmNear, gFur, headC);
+  upper.addChild(gFar, gArmFar, gBody, gNear, gWingGlow, gArmNear, gScarf, headC);
   view.addChild(gHalo, gTrail, gLegs, upper, gDust);
 
   const wingGrad = vertical([
@@ -618,47 +749,40 @@ function create(pose: ConceptPose): ConceptInstance {
   const bodySide = sideShade('10,9,26', 0.6, 0.7);
   const faceGrad = vertical([
     [0, C.faceLit],
-    [0.55, 0xcfc5c8],
+    [0.55, 0xd2c8c8],
     [1, C.faceShade],
   ]);
-  const faceSide = sideShade('96,88,130', 0.75, 0.6);
+  const faceSide = sideShade('96,88,130', 0.7, 0.55);
   const crownGrad = vertical([
     [0, C.crownLit],
     [1, C.crownDark],
   ]);
-  const furGrad = vertical([
-    [0, C.furLit],
-    [0.5, 0x807d8c],
-    [1, C.furShade],
+  const scarfGrad = vertical([
+    [0, 0xc9c0b8],
+    [0.55, 0x9d96a0],
+    [1, 0x66637a],
   ]);
-  const furSide = sideShade('60,60,92', 0.55, 0.7);
+  const scarfSide = sideShade('60,60,96', 0.5, 0.7);
   const irisGrad = vertical([
-    [0, 0xfffbe6],
-    [1, 0xf6c66e],
+    [0, 0xfff6d6],
+    [1, 0xf2bd62],
   ]);
   const glow = radialGlow('rgba(255,240,200,1)', 'rgba(255,214,150,0.36)');
   const dustGlow = radialGlow('rgba(255,226,170,0.7)', 'rgba(255,206,140,0.16)');
   const haloGlow = radialGlow('rgba(255,228,180,0.2)', 'rgba(255,214,160,0.1)');
-  const trailH = new FillGradient({
-    type: 'linear',
-    start: { x: 0, y: 0 },
-    end: { x: 1, y: 0 },
-    textureSpace: 'local',
-    colorStops: [
-      { offset: 0, color: 'rgba(255,220,160,0)' },
-      { offset: 1, color: 'rgba(255,228,170,0.38)' },
-    ],
-  });
-  const trailV = new FillGradient({
-    type: 'linear',
-    start: { x: 0, y: 0 },
-    end: { x: 0, y: 1 },
-    textureSpace: 'local',
-    colorStops: [
-      { offset: 0, color: 'rgba(255,220,160,0)' },
-      { offset: 1, color: 'rgba(255,228,170,0.36)' },
-    ],
-  });
+  const trail = (x1: number, y1: number): FillGradient =>
+    new FillGradient({
+      type: 'linear',
+      start: { x: 0, y: 0 },
+      end: { x: x1, y: y1 },
+      textureSpace: 'local',
+      colorStops: [
+        { offset: 0, color: 'rgba(255,220,160,0)' },
+        { offset: 1, color: 'rgba(255,228,170,0.36)' },
+      ],
+    });
+  const trailH = trail(1, 0);
+  const trailV = trail(0, 1);
 
   const drawWing = (g: Graphics, w: Wing, near: boolean, t: number): void => {
     g.poly(w.outline, true).fill(near ? wingGrad : farGrad);
@@ -673,7 +797,6 @@ function create(pose: ConceptPose): ConceptInstance {
     }
     for (let i = 13; i >= 1; i--) fold.push(...w.at(U, (i / 14) * w.margin(U)));
     g.poly(fold, true).fill({ color: near ? 0x120f26 : 0x0a0c1c, alpha: near ? 0.26 : 0.35 });
-    // Veins.
     for (let k = 1; k < SCALLOPS; k++) {
       const u = k / SCALLOPS;
       const vein: Pts = [];
@@ -689,7 +812,7 @@ function create(pose: ConceptPose): ConceptInstance {
         const u = i / 40;
         const m = w.margin(u);
         const fade = Math.sin(Math.PI * u) ** 0.5;
-        outer.push(...w.at(u, m * 0.905));
+        outer.push(...w.at(u, Math.min(m * 0.985, 0.905 * m + 0.02)));
         const p = w.at(u, m * (0.905 - 0.07 * fade));
         inner.unshift(p[0], p[1]);
       }
@@ -710,7 +833,7 @@ function create(pose: ConceptPose): ConceptInstance {
       const ring = (to: Graphics, k: number, color: number, alpha: number): void => {
         const pts: Pts = [];
         for (let i = 0; i < 20; i++) {
-          const a = (i / 20) * Math.PI * 2;
+          const a = (i / 20) * TAU;
           pts.push(
             c[0] + (ax * Math.cos(a) + bx * Math.sin(a)) * k,
             c[1] + (ay * Math.cos(a) + by * Math.sin(a)) * k,
@@ -723,9 +846,9 @@ function create(pose: ConceptPose): ConceptInstance {
       ring(g, 0.62, 0x100d1e, 0.9);
       ring(g, 0.22, 0xfff0c8, 0.9);
       const hem: Pts = [];
-      for (let i = 0; i <= 45; i++) hem.push(...w.at(i / 45, w.margin(i / 45) * 0.985));
+      for (let i = 0; i <= 60; i++) hem.push(...w.at(i / 60, w.margin(i / 60) * 0.985));
       // The breathing light: band, hem and eye-spot.
-      const br = 0.5 + 0.5 * Math.sin(t * 1.3);
+      const br = 0.5 + 0.35 * Math.sin(t * 1.3) + 0.15 * Math.sin(t * 0.47 + 1);
       gWingGlow.poly(band, true).fill({ color: C.gold, alpha: 0.07 + 0.09 * br });
       polyline(gWingGlow, hem).stroke({ width: 0.7, color: C.gold, alpha: 0.22 + 0.16 * br, join: 'round' });
       const rr = Math.hypot(ax, ay) * (2.6 + 0.5 * br);
@@ -736,14 +859,41 @@ function create(pose: ConceptPose): ConceptInstance {
     rim(g, w.outline, FILL, near ? 0.8 : 0.6, C.cool, near ? 0.3 : 0.16, 1.6);
   };
 
+  /** Run foot path for a phase in 0..1, relative to the hip in x, ground in y. */
+  const runFoot = (ph: number, rise: number): Foot => {
+    if (ph < STANCE) {
+      // Toes brush the ground: land on the ball of the foot and roll off.
+      const k = ph / STANCE;
+      const rot = lerp(0.24, 0.34, k) + smooth(Math.max(0, (k - 0.45) / 0.55)) * 0.5;
+      return { x: lerp(9, -9, k), y: -Math.sin(rot) * 5.4, rot };
+    }
+    const k = (ph - STANCE) / (1 - STANCE);
+    // Trail and fold behind, swing through quickly, then reach and hang before the next touch.
+    const e = k < 0.5 ? 0.5 * (2 * k) ** 1.25 : 1 - 0.5 * (2 * (1 - k)) ** 1.5;
+    return {
+      x: spline([-9, -15.5, -12.5, 2, 12.5, 13.6, 9], e),
+      y: spline([-4, -9.5, -14, -12.5, -8, -5, -1.3], e) - rise * 0.8 * Math.sin(Math.PI * k) ** 0.6,
+      rot: spline([0.84, 1.45, 1.3, 0.7, 0.2, 0.1, 0.24], e),
+    };
+  };
+
   const update = (t: number): void => {
     // Under the gallery's silhouette filter the light layers would smear the shape: hide them.
     const pf = view.parent?.filters;
     const lit = !(Array.isArray(pf) ? pf.length > 0 : pf);
     for (const g of lights) g.visible = lit;
 
-    const breath = Math.sin(t * 1.55);
-    const cycle = fract(t * 2.05);
+    // Slow drifts at unrelated tempos: nothing in the idle repeats in step.
+    const breathAt = (lag: number): number =>
+      Math.sin((t - lag) * 1.38) * 0.8 + Math.sin((t - lag) * 0.52 + 1) * 0.2;
+    const breath = breathAt(0);
+    const sway = 0.6 * Math.sin(t * 0.43) + 0.4 * Math.sin(t * 0.71 + 1.3);
+    const drift = 0.6 * Math.sin(t * 0.31 + 2) + 0.4 * Math.sin(t * 0.83);
+    const cycle = fract(t * RUN_HZ);
+    // Phase-delayed copies of the stride pulse (two per cycle) drive everything downstream.
+    const pulse = (lag: number): number => bob(cycle - lag);
+    const beat = (lag: number): number => Math.sin(TAU * 2 * (cycle - lag));
+
     let hipX = 0;
     let hipY = P.hipY;
     let lean = P.lean;
@@ -752,68 +902,100 @@ function create(pose: ConceptPose): ConceptInstance {
     // Hand targets in the upper body's frame (origin at the hip).
     let nearHand: [number, number];
     let farHand: [number, number];
-    let nearGrip = false;
-    const farGrip = false;
-    let nearBend = -1;
-    let farBend = -1;
-    // The thorn hangs at the near hip; angle is the direction of the blade.
+    let nearCurl = 0.3;
+    let farCurl = 0.3;
+    let shoulderY = 0;
+    let headTilt = 0;
+    let headDrop = 0;
+    let wingLift = 0;
+    let wingLiftFar = 0;
     const thornX = 4.6;
     const thornY = -7.6;
     let thornAng = 2.16;
-    const hilt = (d: number): [number, number] => [
-      thornX - Math.cos(thornAng) * d,
-      thornY - Math.sin(thornAng) * d,
-    ];
+    // Scarf tail and hair: heading (upper / head frame), wave size and tempo.
+    let tailA = 1.9;
+    let tailWave = 0.14;
+    let tailSpeed = 1.2;
+    let hairSweep = 0;
+    let hairWave = 0.07;
+    let hairSpeed = 1.1;
+    let antFlow = 0.05;
+    let antSpeed = 1.15;
+
     if (pose === 'run') {
-      hipX = 1;
-      const foot = (ph: number): Foot => {
-        if (ph < 0.36) {
-          const k = ph / 0.36;
-          return {
-            x: hipX + lerp(10.5, -11, k),
-            y: k > 0.8 ? -(k - 0.8) * 8 : 0,
-            rot: lerp(-0.2, 0.1, Math.min(1, k * 3)) + smooth(Math.max(0, (k - 0.65) / 0.35)) * 0.7,
-          };
-        }
-        const k = (ph - 0.36) / 0.64;
-        return {
-          x: hipX + lerp(-11, 10.5, smooth(k)) - 3 * Math.sin(Math.PI * k) * (1 - k),
-          y: -1.6 - 11.5 * Math.sin(Math.PI * k ** 0.75) ** 0.9,
-          rot: lerp(1.25, -0.2, smooth(k)),
-        };
-      };
-      nearFoot = foot(cycle);
-      farFoot = foot(fract(cycle + 0.5));
-      hipY -= 1.5 * Math.abs(Math.sin(cycle * Math.PI * 2 + 0.9));
-      lean += 0.025 * Math.sin(cycle * Math.PI * 4 + 0.6);
-      thornAng = 2.3 + 0.05 * Math.sin(cycle * Math.PI * 4);
-      // One hand steadies the hilt, ready to draw; the other cuts forward for balance.
-      nearHand = hilt(3.6);
-      nearGrip = true;
-      const swing = Math.sin(cycle * Math.PI * 2);
-      farHand = [13.5 + swing * 1.5, -21 + swing * 1.2];
-      farBend = 1;
+      const rise = pulse(0) * 4.4;
+      hipY -= rise;
+      hipX = 0.6 * beat(0.06);
+      nearFoot = runFoot(cycle, rise);
+      farFoot = runFoot(fract(cycle + 0.5), rise);
+      nearFoot.x += hipX;
+      farFoot.x += hipX;
+      // Chest follows the hips a moment later; head later still, and stays level.
+      lean += 0.03 * beat(0.07);
+      shoulderY = 0.5 * beat(0.11);
+      headTilt = 0.022 * beat(0.16);
+      headDrop = 0.5 * beat(0.14);
+      wingLift = 0.07 * beat(0.2) + 0.03 * Math.sin(TAU * (cycle - 0.1));
+      wingLiftFar = 0.08 * beat(0.27) - 0.03 * Math.sin(TAU * (cycle - 0.3));
+      thornAng = 2.5 + 0.06 * beat(0.25);
+      // Arms loose, trailing behind; the wrists lag the elbows, the fingers lag the wrists.
+      nearHand = [-8.6 + 1.5 * beat(0.22) + 0.6 * Math.sin(TAU * (cycle - 0.3)), -13.4 + 1.5 * beat(0.34)];
+      farHand = [-3.5 + 1.6 * beat(0.4) - 0.7 * Math.sin(TAU * (cycle - 0.05)), -11.6 + 1.3 * beat(0.52)];
+      nearCurl = 0.45 + 0.25 * beat(0.45);
+      farCurl = 0.45 + 0.25 * beat(0.6);
+      tailA = 2.98;
+      tailWave = 0.34;
+      tailSpeed = TAU * RUN_HZ * 1.5;
+      hairSweep = -0.1;
+      hairWave = 0.16;
+      hairSpeed = TAU * RUN_HZ;
+      antFlow = 0.14;
+      antSpeed = TAU * RUN_HZ * 0.75;
     } else if (pose === 'jump') {
-      const drift = Math.sin(t * 1.2);
-      nearFoot = { x: 10 + drift * 0.4, y: -17 + drift * 0.6, rot: 0.5 };
-      farFoot = { x: -10 - drift * 0.5, y: -4, rot: 1.35 };
-      hipY += drift * 0.8;
-      thornAng = 1.95 + drift * 0.04;
-      // Both arms reach ahead for the next hold, one high, one low.
-      farHand = [14.5 + drift * 0.5, -24 + drift * 0.6];
-      farBend = 1;
-      nearHand = [17, -38.5 - drift * 0.6];
-      nearBend = 1;
+      // A long floating arc: chest leads, legs trail loosely.
+      const f1 = Math.sin(t * 1.1);
+      const f2 = Math.sin(t * 0.67 + 1.4);
+      hipY += f1 * 1.2;
+      lean += 0.025 * Math.sin(t * 1.1 - 0.6);
+      nearFoot = { x: -0.5 + f2 * 0.7, y: -5.5 + Math.sin(t * 1.1 - 0.9) * 0.9, rot: 1.0 + 0.08 * f2 };
+      farFoot = { x: -9.5 - f2 * 0.6, y: -6 + Math.sin(t * 1.1 - 1.3) * 1.1, rot: 1.3 + 0.08 * f1 };
+      shoulderY = 0.4 * Math.sin(t * 1.1 - 0.4);
+      headTilt = 0.03 * Math.sin(t * 1.1 - 0.9);
+      wingLift = 0.05 * Math.sin(t * 1.1 - 1.2) + 0.02 * f2;
+      wingLiftFar = 0.06 * Math.sin(t * 1.1 - 1.7) - 0.02 * f2;
+      thornAng = 2.3 + 0.05 * Math.sin(t * 1.1 - 1.5);
+      nearHand = [-7 + f2 * 0.8, -15.5 + Math.sin(t * 1.1 - 1.4) * 1.2];
+      farHand = [12 + f2 * 0.7, -19.5 + Math.sin(t * 1.1 - 1.0) * 1.2];
+      nearCurl = 0.5;
+      farCurl = 0.35;
+      tailA = 3.75;
+      tailWave = 0.22;
+      tailSpeed = 2.6;
+      hairSweep = 0.25;
+      hairWave = 0.1;
+      hairSpeed = 2.1;
+      antFlow = 0.09;
+      antSpeed = 1.9;
     } else {
-      nearFoot = { x: 3.4, y: 0, rot: 0 };
-      farFoot = { x: -2.4, y: 0, rot: 0.04 };
-      hipY += breath * 0.3;
+      // Weight on the back leg, the near leg easy on its toes.
+      hipX = -0.6 + sway * 0.45;
+      hipY += breath * 0.25;
+      lean += -sway * 0.012 + breathAt(0.2) * 0.006;
+      nearFoot = { x: 3.4, y: -2.6, rot: 0.5 };
+      farFoot = { x: -2.2, y: 0, rot: 0.02 };
+      shoulderY = -breathAt(0.25) * 0.45;
+      headTilt = 0.03 * drift + 0.012 * breathAt(0.5);
+      wingLift = 0.02 * breathAt(0.6) + 0.025 * Math.sin(t * 0.37 + 1) + 0.012 * Math.sin(t * 0.93);
+      wingLiftFar = 0.025 * breathAt(0.8) + 0.03 * Math.sin(t * 0.29 + 2.6);
       thornAng = 2.16 + 0.012 * Math.sin(t * 0.9);
-      // One hand rests on the pommel; the other hangs loose and ready.
-      nearHand = hilt(7.4);
-      nearHand[1] -= 1.2;
-      nearGrip = true;
-      farHand = [11.2 + 0.3 * Math.sin(t * 0.8), -12.6 + breath * 0.25];
+      // One hand draped over the pommel, the other loose at her side.
+      nearHand = [
+        thornX - Math.cos(thornAng) * 8.6 - 0.4,
+        thornY - Math.sin(thornAng) * 8.6 - 1.6 + shoulderY * 0.4,
+      ];
+      nearCurl = 0.75;
+      farHand = [9.6 + 0.5 * Math.sin(t * 0.6 + 1), -11.2 + breathAt(0.5) * 0.3];
+      farCurl = 0.45 + 0.1 * drift;
     }
 
     gLegs.clear();
@@ -829,20 +1011,34 @@ function create(pose: ConceptPose): ConceptInstance {
       hipY + p[0] * sl + p[1] * cl,
     ];
 
-    // Wings / cloak. Breathing lifts them a hair.
-    const b = breath * (pose === 'idle' ? 0.014 : 0.004);
-    const near = buildWing({ ...P.near, th1: P.near.th1 - b, th0: P.near.th0 + b }, t);
-    const far = buildWing({ ...P.far, th1: P.far.th1 - b, th0: P.far.th0 + b }, t);
+    // Wings / cloak: they trail the shoulders, each on its own delay.
+    const near = buildWing(
+      {
+        ...P.near,
+        th0: P.near.th0 + wingLift,
+        th1: P.near.th1 + wingLift * 0.5,
+        r0y: P.near.r0y + shoulderY,
+      },
+      t,
+    );
+    const far = buildWing(
+      {
+        ...P.far,
+        th0: P.far.th0 + wingLiftFar,
+        th1: P.far.th1 + wingLiftFar * 0.6,
+        r0y: P.far.r0y + shoulderY,
+      },
+      t,
+    );
     gFar.clear();
     gWingGlow.clear();
     drawWing(gFar, far, false, t);
     gArmFar.clear();
-    drawArm(gArmFar, 4.2, -29.6, farHand[0], farHand[1], farBend, farGrip, false);
+    drawArm(gArmFar, 4.2, -29.6 + shoulderY, farHand[0], farHand[1], farCurl, false);
     gBody.clear();
     gBody.poly(TORSO, true).fill(bodyGrad);
     gBody.poly(TORSO, true).fill(bodySide);
     rim(gBody, TORSO, KEY, 0.9, C.rim, 0.5, 1.4);
-    // Belt.
     gBody
       .moveTo(-4.2, -7.4)
       .quadraticCurveTo(1, -5.4, 6, -7.6)
@@ -851,138 +1047,206 @@ function create(pose: ConceptPose): ConceptInstance {
       .moveTo(1, -7.2)
       .quadraticCurveTo(4, -6.8, 6, -8.1)
       .stroke({ width: 0.35, color: C.rim, alpha: 0.5, cap: 'round' });
-    drawWing(gBody, buildWing(P.hind, t), false, t);
+    drawWing(gBody, buildWing({ ...P.hind, th0: P.hind.th0 + wingLiftFar * 1.2 }, t + 0.4), false, t);
     gNear.clear();
     drawWing(gNear, near, true, t);
     gArmNear.clear();
     drawThorn(gArmNear, thornX, thornY, thornAng);
-    drawArm(gArmNear, 2.6, -29.4, nearHand[0], nearHand[1], nearBend, nearGrip, true);
+    drawArm(gArmNear, 2.6, -29.4 + shoulderY, nearHand[0], nearHand[1], nearCurl, true);
 
-    // Fur collar: a smooth core with a soft fuzz of short hairs along its edge.
-    gFur.clear();
-    const fur: Pts = [];
-    const fn = MANTLE.length / 2;
-    for (let i = 0; i < fn; i++) fur.push(v(MANTLE, i * 2), v(MANTLE, i * 2 + 1) + breath * 0.12);
-    for (let pass = 0; pass < 2; pass++) {
-      for (let i = pass; i < fn; i += 2) {
-        const [tx, ty] = tangent(fur, i, 1, true);
-        const facing = ty * KEY.x - tx * KEY.y;
-        if (facing > 0.15 !== (pass === 1)) continue;
-        const len = 0.35 + 0.45 * Math.abs(Math.sin(i * 2.7));
-        const x = v(fur, i * 2) - ty * 0.6;
-        const y = v(fur, i * 2 + 1) + tx * 0.6;
-        const dx = ty * 0.9 - 0.25;
-        const dy = -tx * 0.9 + 0.3;
-        gFur.moveTo(x, y).lineTo(x + dx * len, y + dy * len);
-      }
-      gFur.stroke({ width: 0.9, color: pass === 1 ? 0xaaa4a8 : 0x5e5d72, alpha: 0.8, cap: 'round' });
-    }
-    gFur.poly(fur, true).fill(furGrad);
-    gFur.poly(fur, true).fill(furSide);
-    rim(gFur, fur, KEY, 0.8, 0xfff1d6, 0.5, 1.5);
-    rim(gFur, fur, FILL, 0.7, C.cool, 0.25, 1.5);
+    // Scarf: a loose wrap with one long end left to the wind.
+    gScarf.clear();
+    const tailLine = strand(
+      -5.4,
+      -31 + shoulderY,
+      tailA - lean * (pose === 'idle' ? 1 : 0),
+      pose === 'idle' ? 22 : 30,
+      pose === 'idle' ? -0.5 : 0.12,
+      (s) =>
+        tailWave * s * Math.sin(t * tailSpeed - s * 4.2) +
+        tailWave * 0.5 * s * s * Math.sin(t * tailSpeed * 1.7 - s * 7 + 1) +
+        (pose === 'idle' ? 0.1 * sway * s : 0),
+      18,
+    );
+    const tail = ribbon(
+      tailLine,
+      (s) => (0.7 + 0.75 * Math.sin(Math.PI * s ** 0.7) ** 0.8) * (1 - s ** 3 * 0.9),
+    );
+    gScarf.poly(tail, true).fill(0x9d96a0);
+    gScarf.poly(tail, true).fill({ color: 0x2c2848, alpha: 0.22 });
+    polyline(gScarf, tailLine.slice(4, 30)).stroke({ width: 0.35, color: 0x57526a, alpha: 0.5 });
+    rim(gScarf, tail, KEY, 0.6, 0xfff1d6, 0.6, 1.3);
+    rim(gScarf, tail, FILL, 0.5, C.cool, 0.25, 1.5);
+    const scarf: Pts = [];
+    for (let i = 0; i < SCARF.length; i += 2) scarf.push(v(SCARF, i), v(SCARF, i + 1) + shoulderY);
+    gScarf.poly(scarf, true).fill(scarfGrad);
+    gScarf.poly(scarf, true).fill(scarfSide);
+    gScarf
+      .moveTo(-5.4, -31.4 + shoulderY)
+      .bezierCurveTo(-1, -31.4 + shoulderY, 4.6, -30 + shoulderY, 7.4, -26 + shoulderY)
+      .stroke({ width: 0.4, color: 0x57526a, alpha: 0.55, cap: 'round' });
+    rim(gScarf, scarf, KEY, 0.7, 0xfff1d6, 0.55, 1.5);
+    rim(gScarf, scarf, FILL, 0.6, C.cool, 0.25, 1.5);
 
-    // Head: chin level or lifted, never bowed.
-    headC.rotation = P.head - lean + 0.02 * Math.sin(t * 0.55) + breath * 0.005;
+    // Head: chin a little up, following the chest late.
+    headC.rotation = P.head - lean + headTilt;
+    headC.position.set(2.4, -33 + shoulderY * 0.7 + headDrop);
     gHead.clear();
     gTips.clear();
-    const speed = pose === 'run' ? 7 : 1.25;
-    const farLine = antennaLine(ANT_FAR, t, P.antenna, speed);
-    const nearLine = antennaLine(ANT_NEAR, t, P.antenna, speed);
+    const farLine = antennaLine(ANT_FAR, t, P.antenna, antSpeed, antFlow);
+    const nearLine = antennaLine(ANT_NEAR, t, P.antenna, antSpeed, antFlow);
     drawAntenna(gHead, farLine, ANT_FAR.half, false);
+
+    const lock = (d: readonly number[], i: number, color: number, lightRim: boolean): void => {
+      const line = strand(
+        v(d, 0),
+        v(d, 1),
+        v(d, 2) + hairSweep * (v(d, 2) > 2.6 ? 1 : 0.2),
+        v(d, 3),
+        v(d, 5),
+        (s) => hairWave * s * Math.sin(t * hairSpeed * (0.8 + 0.13 * i) - s * 2.4 + i * 1.9),
+        8,
+      );
+      const hw = v(d, 4);
+      const body = ribbon(line, (s) => hw * (1 - s ** 1.5) + 0.04);
+      gHead.poly(body, true).fill(color);
+      if (lightRim) rim(gHead, body, KEY, 0.5, C.rim, 0.5, 1.4);
+    };
+    for (const [i, d] of LOCKS.entries()) lock(d, i, i % 2 ? C.crownDark : 0x241c30, true);
+    for (const [i, d] of WISPS.entries()) lock(d, i + 7, 0x2c2338, false);
     gHead.poly(HEAD, true).fill(crownGrad);
     rim(gHead, HEAD, FILL, 0.8, C.cool, 0.28, 1.5);
-    // Face: a soft-edged heart of pale fur. A mid-tone margin and combed hairs blend it into
-    // the head fur so it is a face, not a mask.
-    const fcx = 5;
+
+    // Face: pale fur with a soft margin into the head fur.
+    const fcx = 6;
     const fcy = -11.6;
     const margin: Pts = [];
     for (let i = 0; i < FACE.length; i += 2) {
       const x = v(FACE, i);
       const y = v(FACE, i + 1);
       const back = x < 9 ? 1 : 0;
-      margin.push(fcx + (x - fcx) * (1 + 0.16 * back), fcy + (y - fcy) * (1 + 0.1 * back));
+      margin.push(fcx + (x - fcx) * (1 + 0.12 * back), fcy + (y - fcy) * (1 + 0.05 * back));
     }
-    gHead.poly(margin, true).fill({ color: 0x6f6486, alpha: 0.4 });
-    const inner: Pts = [];
-    for (let i = 0; i < FACE.length; i += 2) {
-      inner.push(lerp(v(FACE, i), v(margin, i), 0.45), lerp(v(FACE, i + 1), v(margin, i + 1), 0.45));
-    }
-    gHead.poly(inner, true).fill({ color: 0x9a90ac, alpha: 0.5 });
+    gHead.poly(margin, true).fill({ color: 0x80759a, alpha: 0.5 });
+    // Cheek fluff: breaks the jaw line.
+    const cheek = [
+      [-3.6, -7.4, 2.75, 5.2, 1.9, 0.35],
+      [-2, -4.6, 2.6, 3.6, 1.4, 0.35],
+    ];
+    for (const [i, d] of cheek.entries()) lock(d, i + 12, i === 0 ? 0xa39bb4 : 0xb3aabd, false);
     gHead.poly(FACE, true).fill(faceGrad);
     gHead.poly(FACE, true).fill(faceSide);
+    // Form: shadow in the eye socket under the brow, and under the cheek along the jaw.
+    gHead
+      .moveTo(-0.6, -14.2)
+      .bezierCurveTo(2.5, -16.4, 7.5, -15.6, 9.2, -13.2)
+      .bezierCurveTo(10.6, -14.6, 12, -14.6, 12.3, -13.6)
+      .bezierCurveTo(12, -11.4, 10.4, -10.2, 9.2, -10.6)
+      .bezierCurveTo(6, -8.6, 1.4, -9.2, -0.6, -14.2)
+      .fill({ color: 0x8f86a8, alpha: 0.13 });
+    gHead
+      .moveTo(-3.8, -7)
+      .bezierCurveTo(0, -3.6, 6, -3, 11.8, -4.4)
+      .bezierCurveTo(9.4, -1.2, 5, -0.6, 1, -1.6)
+      .bezierCurveTo(-1.6, -2.8, -3.2, -4.8, -3.8, -7)
+      .fill({ color: 0x8a80a6, alpha: 0.32 });
+    // Nose: a small soft plane and its shadow. Mouth: a short level line, set at the corner.
+    gHead
+      .moveTo(12.3, -11.2)
+      .bezierCurveTo(12.7, -9.8, 13.1, -9, 13.5, -8.5)
+      .bezierCurveTo(13.2, -8.6, 12.3, -9.2, 12.3, -11.2)
+      .fill({ color: 0xfff4e4, alpha: 0.5 });
+    gHead
+      .moveTo(13.5, -7.7)
+      .bezierCurveTo(13.2, -7.2, 12.2, -7.4, 11.6, -8.2)
+      .stroke({ width: 0.5, color: 0x6c6284, alpha: 0.8, cap: 'round' });
+    gHead
+      .moveTo(12.7, -5.2)
+      .bezierCurveTo(11.6, -5.1, 10.6, -5.2, 9.7, -5.6)
+      .stroke({ width: 0.45, color: 0x574c6c, alpha: 0.9, cap: 'round' });
+    gHead
+      .moveTo(9.7, -5.6)
+      .lineTo(9.4, -5.1)
+      .stroke({ width: 0.4, color: 0x574c6c, alpha: 0.6, cap: 'round' });
+    for (const [i, d] of BANGS.entries()) lock(d, i + 16, i === 1 ? 0x2a2136 : C.crownLit, true);
     rim(gHead, HEAD, KEY, 0.9, C.rim, 0.6, 1.5);
 
-    // Eyes: large clear almonds, outer corners lifted, lit from within. Slow blink.
-    const bt = fract((t + (pose === 'idle' ? 2.4 : 0.9)) / 5.6) * 5.6;
-    const open = 1 - Math.max(0, 1 - Math.abs(bt - 0.2) / 0.11) * 0.92;
-    const almond = (
+    // Eyes: clear gold almonds under an easy upper lid. No liner. Slow, irregular blink.
+    const bt = fract((t + (pose === 'idle' ? 2.4 : 0.9)) / 6.3) * 6.3;
+    const blink = Math.max(0, 1 - Math.abs(bt - 0.2) / 0.12, 1 - Math.abs(bt - 3.9) / 0.1);
+    const ease = 0.15 + 0.03 * drift;
+    const eye = (
       ax: number,
       ay: number,
       bx: number,
       by: number,
       up: number,
       down: number,
-      fill: number | FillGradient,
+      k: number,
     ): void => {
-      gHead
-        .moveTo(ax, ay)
-        .bezierCurveTo(
-          lerp(ax, bx, 0.25),
-          lerp(ay, by, 0.25) - up,
-          lerp(ax, bx, 0.72),
-          lerp(ay, by, 0.72) - up,
-          bx,
-          by,
-        )
-        .bezierCurveTo(
-          lerp(ax, bx, 0.7),
-          lerp(ay, by, 0.7) + down,
-          lerp(ax, bx, 0.3),
-          lerp(ay, by, 0.3) + down,
-          ax,
-          ay,
-        )
-        .fill(fill);
-    };
-    const eye = (ax: number, ay: number, bx: number, by: number, h: number, k: number): void => {
+      const curve = (from: boolean, off: number): void => {
+        const [x0, y0, x1, y1] = from ? [ax, ay, bx, by] : [bx, by, ax, ay];
+        const a = from ? 0.28 : 0.3;
+        const b = from ? 0.72 : 0.7;
+        gHead.bezierCurveTo(
+          lerp(x0, x1, a),
+          lerp(y0, y1, a) + off,
+          lerp(x0, x1, b),
+          lerp(y0, y1, b) + off,
+          x1,
+          y1,
+        );
+      };
       const cx = lerp(ax, bx, 0.52);
       const cy = lerp(ay, by, 0.52);
-      const u = h * open;
-      // Dark lid line, heavier on top and carried a little past the outer corner.
-      almond(ax - (bx - ax) * 0.12, ay - (by - ay) * 0.12 - 0.25, bx, by, u * 1.14, u * 1.02, C.eye);
-      const s = 0.84;
-      almond(
-        lerp(cx, ax, s),
-        lerp(cy, ay, s) + 0.12,
-        lerp(cx, bx, s),
-        lerp(cy, by, s) + 0.12,
-        u * 0.86,
-        u * 0.9,
-        irisGrad,
-      );
-      if (open > 0.5) {
-        gHead
-          .ellipse(cx + 0.5 * k, cy + 0.1, 0.62 * k, 1.25 * k * open)
-          .fill({ color: 0x2a1c22, alpha: 0.85 });
-        gHead.ellipse(cx + 1.0 * k, cy - 0.75 * k, 0.5 * k, 0.4 * k).fill({ color: 0xffffff, alpha: 0.95 });
-      }
-      gTips.circle(cx, cy, 5.2 * k * (0.4 + 0.6 * open)).fill({ fill: glow, alpha: 0.42 });
+      gHead.moveTo(ax, ay);
+      curve(true, -up);
+      curve(false, down);
+      gHead.fill(irisGrad);
+      gHead.ellipse(cx + 0.55 * k, cy + 0.15, 0.8 * k, 1.05 * k).fill({ color: 0x3a2622, alpha: 0.9 });
+      // Upper lid: face-coloured, resting part-way down; it closes for the blink.
+      const lid = lerp(-up * (1 - ease * 2), down * 1.05, blink);
+      gHead.moveTo(ax - 0.3, ay);
+      curve(true, -up * 1.25);
+      curve(false, lid);
+      gHead.fill(0xdbd1cd);
+      gHead.moveTo(bx, by);
+      curve(false, lid);
+      gHead.stroke({ width: 0.5, color: 0x4a3f5c, alpha: 0.95, cap: 'round' });
+      if (blink < 0.5)
+        gHead.ellipse(cx + 1.0 * k, cy + 0.05, 0.42 * k, 0.36 * k).fill({ color: 0xffffff, alpha: 0.95 });
+      gTips.circle(cx, cy, 4.2 * k * (1 - 0.6 * blink)).fill({ fill: glow, alpha: 0.36 });
     };
-    eye(0.5, -12.6, 8.0, -11.4, 2.5, 1);
-    eye(9.6, -11.4, 12.1, -12.3, 2.2, 0.66);
+    eye(1.2, -12.3, 7.8, -11.3, 2.6, 1.7, 1);
+    eye(9.9, -11.3, 12.2, -11.9, 2.2, 1.5, 0.66);
+    // Brows: soft tapered marks of darker fur, level and unworried.
+    const brow = (x0: number, y0: number, x1: number, y1: number, arch: number, w: number): void => {
+      const line: Pts = [];
+      for (let i = 0; i <= 8; i++) {
+        const k = i / 8;
+        line.push(lerp(x0, x1, k), lerp(y0, y1, k) - arch * Math.sin(Math.PI * k) + 0.25 * drift * (k - 0.5));
+      }
+      gHead
+        .poly(
+          ribbon(line, (s) => w * (0.35 + 0.65 * Math.sin(Math.PI * s ** 0.8))),
+          true,
+        )
+        .fill({ color: 0x6a5f80, alpha: 0.9 });
+    };
+    brow(0.4, -15.3, 7.9, -14.5, 0.9, 0.55);
+    brow(9.7, -14.4, 12.2, -14.9, 0.4, 0.4);
     drawAntenna(gHead, nearLine, ANT_NEAR.half, true);
 
     // Antenna tips: small bright lanterns with their own halos.
-    const pulse = 0.85 + 0.15 * Math.sin(t * 1.9);
-    const tips: [Pts, number][] = [
-      [farLine, 0.8],
-      [nearLine, 1],
+    const tips: [Pts, number, number][] = [
+      [farLine, 0.8, 1.3],
+      [nearLine, 1, 0],
     ];
-    for (const [line, k] of tips) {
+    for (const [line, k, ph] of tips) {
       const x = v(line, line.length - 2);
       const y = v(line, line.length - 1);
-      gTips.circle(x, y, 7.5 * k * pulse).fill(glow);
+      const glimmer = 0.85 + 0.1 * Math.sin(t * 1.9 + ph) + 0.05 * Math.sin(t * 3.1 + ph * 2);
+      gTips.circle(x, y, 7.5 * k * glimmer).fill(glow);
       gTips.circle(x, y, 2.6 * k).fill({ fill: glow, alpha: 0.9 });
       gTips.circle(x, y, 0.95 * k).fill({ color: 0xfffaea, alpha: 1 });
     }
@@ -992,7 +1256,7 @@ function create(pose: ConceptPose): ConceptInstance {
     const hc = toRoot([pose === 'jump' ? -8 : -2, -24]);
     gHalo
       .circle(hc[0], hc[1], pose === 'idle' ? 50 : 58)
-      .fill({ fill: haloGlow, alpha: 0.85 + 0.15 * breath });
+      .fill({ fill: haloGlow, alpha: 0.85 + 0.15 * breathAt(0.4) });
 
     // Light trails off the wing hem when moving.
     gTrail.clear();
@@ -1005,7 +1269,7 @@ function create(pose: ConceptPose): ConceptInstance {
         const line: Pts = [];
         for (let k = 0; k <= 12; k++) {
           const q = k / 12;
-          const wv = Math.sin(t * (pose === 'run' ? 6 : 2.2) - q * 4 + i * 1.7) * 1.6 * q;
+          const wv = Math.sin(t * (pose === 'run' ? 5 : 2.2) - q * 4 + i * 1.7) * 1.6 * q;
           if (pose === 'run') line.push(s0[0] - len * q, s0[1] + wv - 2.5 * q);
           else line.push(s0[0] + wv - 4 * q, s0[1] - len * q);
         }
@@ -1048,7 +1312,7 @@ const concept: Concept = {
   id: 'moth',
   name: 'Vesper, the moth',
   blurb:
-    'A poised night-flier who carries her own light. Her cloak is her wings; two feathered antennae end in small lanterns; her eyes, wing-spot and the dust she sheds all glow the same pale gold. A slender thorn rides at her hip.',
+    'A night-flier who carries her own light and is in no hurry. Her cloak is her wings; two feathered antennae end in small lanterns; her eyes, wing-spot and the dust she sheds glow the same pale gold. A loose scarf, windswept fur, a slender thorn at her hip.',
   create,
 };
 

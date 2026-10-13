@@ -297,17 +297,23 @@ interface Rig {
   eye: number;
 }
 
+/** Duty factor of the lope: each foot is down for under a third of the cycle, so every stride floats. */
+const STANCE = 0.32;
+
 function runFoot(phase: number): { p: Pt; rot: number } {
   const u = (((phase / TAU) % 1) + 1) % 1;
-  if (u < 0.42) {
-    const s = u / 0.42;
-    return { p: P(19 - 41 * s, -2 - 3 * s * s * s), rot: mix(-0.35, 0.75, s * s) };
+  if (u < STANCE) {
+    // A light touch on the ball of the foot, rolling to the toe.
+    const s = u / STANCE;
+    return { p: P(17 - 38 * s, -2 - 2.5 * s * s * s), rot: mix(0.18, 0.85, s * s) };
   }
-  const s = (u - 0.42) / 0.58;
-  const lift = Math.sin(Math.PI * s) ** 0.75;
+  // Long floating swing: the foot trails, toes loose, folds through late and reaches softly.
+  const s = (u - STANCE) / (1 - STANCE);
+  const e = smooth(s ** 1.15);
+  const lift = Math.sin(Math.PI * s ** 0.9) ** 1.2 * (1 - 0.3 * s);
   return {
-    p: P(-22 + 41 * smooth(s), -5 * (1 - s) - 2 - 15 * lift * (1 - 0.35 * s)),
-    rot: mix(1.25, -0.35, smooth(s)),
+    p: P(-21 + 38 * e, -2 - 2.5 * (1 - s) ** 2 - 13 * lift),
+    rot: 0.18 + (0.67 + 0.4 * Math.sin(Math.PI * Math.min(1, s * 2.2))) * (1 - smooth(s)),
   };
 }
 
@@ -316,39 +322,42 @@ function solve(pose: ConceptPose, t: number): Rig {
   const eye = blinkT < 0.16 ? Math.max(0.1, 1 - Math.sin((Math.PI * blinkT) / 0.16)) : 1;
 
   if (pose === 'run') {
-    const ph = t * 11.5;
+    // An unhurried bounding lope. Nothing shares a phase: the chest lags the hips, the head lags
+    // the chest, the hands drift behind those, and the cloth runs on its own slower wave.
+    const ph = t * 7.4;
     const ox = 6;
-    const bob = 1.6 * Math.cos(2 * ph + 0.5);
+    const hop = Math.cos(2 * ph - TAU * 2 * (STANCE / 2));
+    const bob = 2.5 * (hop - 0.3 * (1 - hop * hop)); // lingers at the top of the arc
+    const bobLag = 2.5 * Math.cos(2 * ph - TAU * STANCE - 0.9);
     const n = runFoot(ph);
     const f = runFoot(ph + Math.PI);
-    const c = Math.cos(ph);
     return {
-      pelvis: P(ox, -30.5 + bob),
-      lean: 0.56 + 0.03 * Math.sin(2 * ph),
-      torso: 20,
-      headAng: 0.16 + 0.02 * Math.sin(2 * ph - 0.8),
-      hatTilt: 0.14 + 0.02 * Math.sin(2 * ph - 1.4),
+      pelvis: P(ox, -31 + bob),
+      lean: 0.25 + 0.022 * Math.sin(2 * ph - 0.5),
+      torso: 20 + 0.3 * Math.sin(2 * ph - 1.1),
+      headAng: 0.01 + 0.014 * Math.sin(2 * ph - 1.9),
+      hatTilt: 0.16 + 0.022 * Math.sin(2 * ph - 2.6),
       ankleN: add(n.p, ox, 0),
       ankleF: add(f.p, ox - 1, 0),
       rotN: n.rot,
       rotF: f.rot,
-      hand: P(ox - 6 + 2.5 * c, -33 + bob * 0.8),
-      freeOff: P(1 - 11.5 * c, 6 + 2.5 * c),
+      hand: P(ox - 3 + 1.4 * Math.cos(ph - 0.9), -30 + bobLag * 0.55),
+      freeOff: P(-7 - 4.2 * Math.cos(ph - 0.8) + 0.6 * Math.sin(t * 2.3), 13 + 1.3 * Math.sin(2 * ph - 2.2)),
       freeBend: -1,
-      staffAng: Math.PI + 0.5 + 0.04 * Math.sin(2 * ph - 0.9),
+      staffAng: Math.PI + 0.38 + 0.04 * Math.sin(2 * ph - 2.4) + 0.015 * Math.sin(t * 3.1),
       grip: 36,
       hookSide: -1,
-      swing: -0.7 + 0.18 * Math.sin(2 * ph - 1.6),
-      hemF: P(6.5 + Math.sin(2 * ph), 5.5 + Math.cos(2 * ph)),
-      hemM: P(-3, 7.5),
-      hemB: P(-12.5 + 1.2 * Math.sin(2 * ph + 2), 4 + 1.4 * Math.cos(2 * ph + 2)),
-      scarf: [2.95, 3.22, 0.3],
-      tails: [2.55, 3.1, 0.34],
-      clothPhase: 2 * ph,
+      swing: -0.52 + 0.14 * Math.sin(2 * ph - 3.2) + 0.04 * Math.sin(t * 4.3),
+      hemF: P(8 + 0.7 * Math.sin(2 * ph - 1.2), 7.2 + 0.8 * Math.cos(2 * ph - 1.2)),
+      hemM: P(-2, 7.4),
+      hemB: P(-11 + 1.1 * Math.sin(2 * ph - 2.4), 5.4 + 1.2 * Math.cos(2 * ph - 2.4)),
+      scarf: [3.02, 3.2, 0.26],
+      tails: [2.45, 2.95, 0.3],
+      clothPhase: t * 9.1,
       lit: -1,
-      flameWind: -3.4 + 0.5 * Math.sin(t * 17),
+      flameWind: -2.6 + 0.4 * Math.sin(t * 13) + 0.2 * Math.sin(t * 7.7),
       ember: P(-30, -5),
-      trail: [Math.PI + 0.04, 30, 0.25],
+      trail: [Math.PI + 0.03, 32, 0.3],
       eye,
     };
   }
@@ -363,11 +372,11 @@ function solve(pose: ConceptPose, t: number): Rig {
       headAng: -0.06,
       hatTilt: 0.1 + 0.02 * Math.sin(t * 2.3),
       ankleN: P(ox + 14.5, -23 + 0.8 * b),
-      ankleF: P(ox - 13, -11 + 1.2 * b),
+      ankleF: P(ox - 12, -9 + 1.2 * Math.sin(t * 1.7 - 0.6)),
       rotN: 0.35,
       rotF: 1.25,
       hand: P(ox + 16, -46 + 0.9 * b),
-      freeOff: P(-15.5 + 0.6 * Math.sin(t * 1.7 + 1), -4.5 + 1.2 * b),
+      freeOff: P(-14 + 0.8 * Math.sin(t * 1.3 + 1), 1.5 + 1.4 * Math.sin(t * 1.7 - 0.8)),
       freeBend: 1,
       staffAng: -1.02 + 0.02 * Math.sin(t * 1.7 - 0.6),
       grip: 36,
@@ -393,17 +402,17 @@ function solve(pose: ConceptPose, t: number): Rig {
   // Now and then the head turns a little toward the lantern.
   const look = smooth(Math.max(0, Math.min(1, Math.sin(t * 0.37 - 1) * 3 - 1.6)));
   return {
-    pelvis: P(ox + 0.5 * sway, -35.8 - 0.3 * b),
-    lean: 0.07 + 0.012 * sway,
+    pelvis: P(ox - 1.2 + 0.5 * sway, -35.9 - 0.3 * b - 0.12 * Math.sin(t * 0.83 + 2)),
+    lean: 0.035 + 0.012 * sway + 0.006 * Math.sin(t * 0.91),
     torso: 20 + 0.45 * b,
     headAng: -0.03 - 0.12 * look,
     hatTilt: 0.2 + 0.015 * Math.sin(t * 0.4 + 0.4),
-    ankleN: P(ox + 6.5, -2),
-    ankleF: P(ox - 6, -3.4),
-    rotN: 0,
-    rotF: 0.42,
+    ankleN: P(ox + 7.5, -2.5),
+    ankleF: P(ox - 4, -2),
+    rotN: 0.16,
+    rotF: 0,
     hand: P(ox + 19 + 0.4 * sway, -46 - 0.5 * b),
-    freeOff: P(1.5 + 0.5 * sway, 19.4 - 0.3 * b),
+    freeOff: P(0.8 + 0.6 * Math.sin(t * 0.55 - 0.9), 19.6 - 0.3 * Math.sin(t * 1.5 - 0.7)),
     freeBend: -1,
     staffAng: -Math.PI / 2 + 0.13 + 0.012 * sway,
     grip: 34,
@@ -912,7 +921,10 @@ const wick: Concept = {
     const eyeGlowB = glowDisc(2.8, G.eye);
     view.addChild(aura, light, back, front, fx, chainG, lantern, flame, halo, core, eyeGlowA, eyeGlowB);
 
-    const update = (t: number): void => {
+    const update = (clock: number): void => {
+      // Debug: set window.__wickT to freeze every instance at that time (for frame-by-frame review).
+      const forced = (globalThis as { __wickT?: number }).__wickT;
+      const t = typeof forced === 'number' ? forced : clock;
       const r = solve(pose, t);
       const pulse = 1 + 0.07 * Math.sin(t * 2.1) + 0.035 * Math.sin(t * 5.3 + 1) + 0.02 * Math.sin(t * 13.7);
       const d = draw(back, front, fx, r, pulse);

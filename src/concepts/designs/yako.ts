@@ -44,11 +44,12 @@ const BRONZE = 0xa88555;
 const RIM = 0xffd9a2;
 
 const RIM_W = 0.62;
-const THIGH = 17;
-const SHIN = 16.5;
+const THIGH = 17.5;
+const SHIN = 17;
 const UPPER = 11.5;
 const FORE = 11;
-const HEAD = 0.84;
+const HEAD = 0.78;
+const BLADE_ROT = 0.5;
 
 interface V {
   x: number;
@@ -293,6 +294,8 @@ interface Rig {
   lean: number;
   breath: number;
   headRot: number;
+  /** Vertical lag of the head behind the chest. */
+  headDy: number;
   nearAnkle: V;
   nearFoot: number;
   farAnkle: V;
@@ -302,120 +305,190 @@ interface Rig {
   nearBend: number;
   farHand: V;
   farBend: number;
+  /** Near hand rests on the blade hilt instead of following nearHand. */
+  hilt: boolean;
+  /** Shoulder offsets in torso space (tilt and twist of the shoulder line). */
+  shN: V;
+  shF: V;
   grip: number;
   tail: Flow;
   sash: Flow;
   hem: number;
-  earTwitch: number;
+  /** Ears: a shared lay-back, plus an independent swivel for each. */
   earBack: number;
+  earNear: number;
+  earFar: number;
   blink: number;
   /** Direction the spirit-light trail and motes drift, and how strongly (0 = idle wisps). */
   trail: V;
   speed: number;
 }
 
-/** Ankle target and foot angle for one leg of the sprint; p is the cycle phase 0..1. */
-function sprintFoot(p: number): { ankle: V; ang: number } {
-  const STANCE = 0.36;
-  const REACH = 23;
-  if (p < STANCE) {
-    const u = p / STANCE;
-    const ang = lerp(-0.18, 0.7, u * u * u);
-    return { ankle: v(REACH - 2 * REACH * u, -3 - Math.max(0, Math.sin(ang)) * 6.5), ang };
+/** Periodic keyframe curve: a smooth non-uniform Hermite through rows of [phase, ...values]. */
+function keyed(keys: readonly (readonly number[])[], phase: number): number[] {
+  const n = keys.length;
+  const K = (i: number): readonly number[] => keys[((i % n) + n) % n] ?? [];
+  const ph = (i: number): number => num(K(i), 0) + Math.floor(i / n);
+  let p = fract(phase);
+  if (p < ph(0)) p += 1;
+  let i = 0;
+  while (i < n - 1 && p >= ph(i + 1)) i++;
+  const t0 = ph(i - 1);
+  const t1 = ph(i);
+  const t2 = ph(i + 1);
+  const t3 = ph(i + 2);
+  const u = (p - t1) / (t2 - t1);
+  const u2 = u * u;
+  const u3 = u2 * u;
+  const out: number[] = [];
+  for (let j = 1; j < K(0).length; j++) {
+    const p0 = num(K(i - 1), j);
+    const p1 = num(K(i), j);
+    const p2 = num(K(i + 1), j);
+    const p3 = num(K(i + 2), j);
+    const m1 = ((p2 - p0) / (t2 - t0)) * (t2 - t1);
+    const m2 = ((p3 - p1) / (t3 - t1)) * (t2 - t1);
+    out.push((2 * u3 - 3 * u2 + 1) * p1 + (u3 - 2 * u2 + u) * m1 + (-2 * u3 + 3 * u2) * p2 + (u3 - u2) * m2);
   }
-  const u = (p - STANCE) / (1 - STANCE);
-  const e = u * u * (3 - 2 * u);
-  const yOff = -3 - Math.sin(0.7) * 6.5;
-  return {
-    ankle: v(
-      -REACH + 2 * REACH * e - 4 * Math.sin(PI * u) * (1 - u),
-      lerp(yOff, -3, u) - 13 * Math.sin(PI * u) ** 0.8 * (1 - 0.45 * u),
-    ),
-    ang: lerp(0.7, -0.18, e) + 0.75 * Math.sin(PI * u) * (1 - u),
-  };
+  return out;
+}
+
+/**
+ * One leg of the lope: [phase, ankle x, ankle y, foot angle]. A brief toe contact, a long relaxed
+ * follow-through behind, an easy fold, and a floating reach ahead.
+ */
+const LOPE: readonly (readonly number[])[] = [
+  [0.0, 17, -4.6, -0.02],
+  [0.13, 1, -4.2, 0.16],
+  [0.27, -17, -6.6, 0.72],
+  [0.42, -25, -17.5, 1.2],
+  [0.6, -11, -19.5, 0.95],
+  [0.76, 9, -17, 0.4],
+  [0.9, 21, -13.5, -0.2],
+];
+
+function lopeFoot(p: number): { ankle: V; ang: number } {
+  const k = keyed(LOPE, p);
+  return { ankle: v(num(k, 0), num(k, 1)), ang: num(k, 2) };
+}
+
+/** An eased bump (0..1..0) of length `dur` once every `period` seconds. */
+function bump(t: number, period: number, dur: number): number {
+  const u = (fract(t / period) * period) / dur;
+  return u < 1 ? Math.sin(PI * u) ** 2 : 0;
 }
 
 function rigFor(pose: ConceptPose, t: number): Rig {
   if (pose === 'run') {
-    const ph = t * 1.7;
+    const ph = t * 1.22;
     const w = ph * 2 * PI;
-    const near = sprintFoot(fract(ph));
-    const far = sprintFoot(fract(ph + 0.5));
+    const near = lopeFoot(ph);
+    const far = lopeFoot(ph + 0.5);
+    // Two soft arcs per cycle; the power curve makes him linger at the top of each float.
+    const air = (0.5 + 0.5 * Math.cos(2 * w - 0.78 * 2 * PI)) ** 0.7;
     return {
-      hip: v(-3, -30.5 + 1.5 * Math.cos(2 * w + 0.6)),
-      lean: 0.66 + 0.04 * Math.sin(2 * w),
+      hip: v(-3 + 0.8 * Math.sin(2 * w - 2.2), -31 - 6.6 * air),
+      lean: 0.33 + 0.03 * Math.sin(2 * w - 2.6),
       breath: 0,
-      headRot: 0.2 + 0.03 * Math.sin(2 * w + 1),
+      headRot: 0.05 + 0.028 * Math.sin(2 * w - 3.5),
+      headDy: 0.7 * Math.sin(2 * w - 3.0),
       nearAnkle: near.ankle,
       nearFoot: near.ang,
       farAnkle: far.ankle,
       farFoot: far.ang,
-      nearHand: v(-20 + 1.5 * Math.sin(w), 4 + 2 * Math.cos(w)),
+      nearHand: v(-20 + 1.5 * Math.sin(w - 1.1), 6.5 + 1.8 * Math.sin(2 * w - 3.4)),
       nearBend: 1,
-      farHand: v(-16 - 1.5 * Math.sin(w), 11 - 2 * Math.cos(w)),
+      farHand: v(-16.5 + 1.5 * Math.sin(w + PI - 1.5), 11.5 + 1.8 * Math.sin(2 * w - 3.9)),
       farBend: 1,
-      grip: 1,
-      tail: { a0: PI + 0.1, curl: -0.04, amp: 0.2, freq: 2 * PI * 3.4, lag: 0.75 },
-      sash: { a0: PI + 0.42, curl: -0.05, amp: 0.3, freq: 2 * PI * 3.4, lag: 1.0 },
-      hem: 1,
-      earTwitch: 0,
-      earBack: 0.5,
+      hilt: false,
+      shN: v(0.6 * Math.sin(w - 0.4), 0),
+      shF: v(-0.6 * Math.sin(w - 0.4), 0),
+      grip: 0.08,
+      tail: {
+        a0: PI - 0.06 + 0.07 * Math.sin(2 * w - 3.6),
+        curl: -0.02,
+        amp: 0.3,
+        freq: 2 * PI * 1.22,
+        lag: 0.85,
+      },
+      sash: {
+        a0: PI + 0.08 + 0.06 * Math.sin(2 * w - 3.9),
+        curl: -0.02,
+        amp: 0.36,
+        freq: 2 * PI * 2.44,
+        lag: 1.15,
+      },
+      hem: 0.75 + 0.2 * Math.sin(2 * w - 3.2),
+      earBack: 0.42 + 0.14 * Math.sin(2 * w - 4.1),
+      earNear: 0,
+      earFar: 0.08 * Math.sin(2 * w - 4.8),
       blink: 0,
       trail: v(-1, -0.04),
       speed: 1,
     };
   }
   if (pose === 'jump') {
-    const s = Math.sin(t * 2.2);
+    const s = Math.sin(t * 1.6);
+    const s2 = Math.sin(t * 1.6 - 0.9);
+    const s3 = Math.sin(t * 1.6 - 1.8);
     return {
-      hip: v(0, -37 + 0.6 * s),
-      lean: 0.2,
+      hip: v(0, -38 + 0.8 * s),
+      lean: 0.1 + 0.02 * s2,
       breath: 0,
-      headRot: 0.14,
-      nearAnkle: v(9 + 0.4 * s, -20),
-      nearFoot: 0.6,
-      farAnkle: v(-10, -13 + 0.5 * s),
-      farFoot: 1.0,
-      nearHand: v(12.5, 10 + 0.5 * s),
+      headRot: 0.05 + 0.02 * s3,
+      headDy: 0.3 * s2,
+      nearAnkle: v(10.5 + 0.5 * s2, -21.5 + 0.4 * s3),
+      nearFoot: 0.5 + 0.05 * s3,
+      farAnkle: v(-14.5 - 0.5 * s2, -12.5 + 0.7 * s3),
+      farFoot: 1.1 + 0.06 * s3,
+      nearHand: v(10 + 0.5 * s2, 13.5 + 0.8 * s3),
       nearBend: -1,
-      farHand: v(-17, 3 - 0.6 * s),
+      farHand: v(-15.5 - 0.6 * s2, 7 + 0.9 * s3),
       farBend: 1,
-      grip: 0.4,
-      tail: { a0: PI + 0.5, curl: 0.13, amp: 0.1, freq: 3.2, lag: 0.6 },
-      sash: { a0: PI + 0.75, curl: 0.12, amp: 0.2, freq: 5, lag: 0.9 },
-      hem: -0.8,
-      earTwitch: 0,
-      earBack: 0.3,
+      hilt: false,
+      shN: v(0, 0),
+      shF: v(0, 0),
+      grip: 0.1,
+      tail: { a0: PI + 0.22 + 0.04 * s2, curl: 0.115, amp: 0.13, freq: 1.6, lag: 0.6 },
+      sash: { a0: PI + 0.5 + 0.05 * s3, curl: 0.1, amp: 0.24, freq: 2.7, lag: 0.95 },
+      hem: -0.6 + 0.1 * s3,
+      earBack: 0.25 + 0.06 * s3,
+      earNear: 0,
+      earFar: 0.04 * s2,
       blink: 0,
       trail: v(-0.25, -1),
-      speed: 0.7,
+      speed: 0.6,
     };
   }
-  const b = Math.sin(t * 1.7);
-  const tw = fract(t / 5.3);
-  const tw2 = fract((t + 1.9) / 7.7);
-  const twitch =
-    (tw < 0.05 ? Math.sin((tw / 0.05) * PI) : 0) + (tw2 < 0.04 ? Math.sin((tw2 / 0.04) * PI) : 0);
+  // Idle: contrapposto on the near leg, every part on its own slow rhythm.
+  const b = Math.sin(t * 1.45);
+  const sway = Math.sin(t * 0.43);
+  const swayLag = Math.sin(t * 0.43 - 0.9);
   const bl = fract(t / 4.3);
   return {
-    hip: v(-1 + 0.35 * Math.sin(t * 0.55), -33.2 + 0.3 * b),
-    lean: 0.1 + 0.008 * b,
+    hip: v(-2.4 + 0.5 * sway, -35.3 + 0.25 * b),
+    lean: 0.015 + 0.014 * swayLag,
     breath: b,
-    headRot: 0.05 + 0.035 * Math.sin(t * 0.43),
-    nearAnkle: v(-6.5, -3),
+    headRot: 0.035 + 0.04 * Math.sin(t * 0.37 - 1.2) + 0.008 * Math.sin(t * 1.45 - 1),
+    headDy: 0.15 * Math.sin(t * 1.45 - 0.8),
+    nearAnkle: v(-4.5, -3),
     nearFoot: 0,
-    farAnkle: v(10, -3.2),
-    farFoot: 0.06,
-    nearHand: v(3.2, 17.2 - 0.3 * b),
-    nearBend: -1,
-    farHand: v(0.5, 22),
-    farBend: -1,
-    grip: 0.5,
-    tail: { a0: PI - 1.22, curl: 0.25, amp: 0.2, freq: 1.25, lag: 0.55 },
-    sash: { a0: PI - 1.38, curl: 0.07, amp: 0.26, freq: 1.5, lag: 0.75 },
-    hem: 0.12 * Math.sin(t * 1.1),
-    earTwitch: twitch,
+    farAnkle: v(9.5, -3.3),
+    farFoot: 0.1,
+    nearHand: v(0, 0),
+    nearBend: 1,
+    farHand: v(5.2 + 0.5 * swayLag, 20.2 - 0.25 * Math.sin(t * 1.45 - 0.7)),
+    farBend: 1,
+    hilt: true,
+    shN: v(-1.4, 0.9 - 0.25 * b),
+    shF: v(0.9, -0.7 - 0.25 * b),
+    grip: 0.35,
+    tail: { a0: PI - 1.2 + 0.05 * Math.sin(t * 0.6), curl: 0.25, amp: 0.24, freq: 0.85, lag: 0.5 },
+    sash: { a0: PI - 1.38, curl: 0.07, amp: 0.26, freq: 1.33, lag: 0.75 },
+    hem: 0.1 * Math.sin(t * 1.1 - 0.4),
     earBack: 0,
+    earNear: -0.3 * bump(t, 6.3, 1.1) + 0.2 * bump(t + 3.2, 9.1, 0.22),
+    earFar: 0.32 * bump(t + 2.6, 7.9, 0.9) - 0.18 * bump(t + 5.1, 5.7, 0.2),
     blink: bl < 0.03 ? 1 : 0,
     trail: v(-0.12, -1),
     speed: 0,
@@ -551,14 +624,24 @@ function drawLeg(pen: Pen, hip: V, ankle: V, footAng: number, far: boolean): voi
   const cuff = mix(knee, ankle, 0.44);
   const tr = new Rib(
     [hip, mix(hip, knee, 0.5), knee, mix(knee, ankle, 0.26), cuff],
-    [4.5, 4.9, 4.2, 4.7, 2.5],
+    [4.7, 4.5, 3.6, 3.5, 2.3],
     6,
   );
-  tr.cel(pen, cloth, clothSh, far ? 0 : RIM, (s) => 0.5 - 0.2 * Math.sin(s * 1.4));
+  tr.cel(pen, cloth, clothSh, far ? 0 : RIM, 0.42);
   if (!far) {
     const sh = tr.shade();
-    ink(pen, [tr.at(1.5, -sh * 0.7), tr.at(2.3, -sh * 0.1), tr.at(3.2, sh * 0.2)], 0.45);
-    ink(pen, [tr.at(3.3, -sh * 0.8), tr.at(3.6, -sh * 0.2), tr.at(3.75, sh * 0.5)], 0.4);
+    // Two decisive fold shapes: a dart behind the knee and one where the cloth gathers at the cuff.
+    for (const [s0, s1, s2, d] of [
+      [1.55, 2.05, 2.5, 0.1],
+      [3.05, 3.4, 3.75, 0.25],
+    ] as const) {
+      const a = tr.at(s0, sh);
+      const m = tr.at(s1, -sh * d);
+      const c = tr.at(s2, sh);
+      pen.M(a.x, a.y).L(m.x, m.y).L(c.x, c.y);
+      pen.fill(clothSh);
+    }
+    ink(pen, [tr.at(0.5, -sh * 0.75), tr.at(1.2, -sh * 0.3), tr.at(1.9, -sh * 0.45)], 0.4);
   }
 }
 
@@ -672,7 +755,7 @@ function drawEar(pen: Pen, far: boolean): void {
 function drawHead(pen: Pen, r: Rig): void {
   const earRot = -0.2 - 0.3 * r.earBack;
   // Far ear, behind the skull.
-  pen.push(5.2, -23.2, 0.2 - 0.3 * r.earBack + 0.1 * r.earTwitch, 0.9);
+  pen.push(5.2, -23.2, 0.2 - 0.3 * r.earBack + r.earFar, 0.9);
   drawEar(pen, true);
   pen.pop();
 
@@ -763,7 +846,7 @@ function drawHead(pen: Pen, r: Rig): void {
   ink(pen, [v(-1.2, -9.6), v(-4, -6.4), v(-8.4, -5)], 0.36, INK, 0.6);
 
   // Near ear, in front of the skull, with a notch in its back edge and a crimson cord at the base.
-  pen.push(-4.4, -22.6, earRot + 0.22 * r.earTwitch);
+  pen.push(-4.4, -22.6, earRot + r.earNear);
   drawEar(pen, false);
   pen.M(-5.3, -2.2).L(5.2, -1.6).L(5.4, 0.1).L(-5, -0.4);
   pen.fill(CRIMSON);
@@ -906,7 +989,7 @@ function drawTorso(pen: Pen, r: Rig): void {
 
 function drawBlade(pen: Pen): void {
   // Short blade across the lower back, drawn in torso space: wrapped hilt up and back.
-  pen.push(-5.5, -9, -0.62);
+  pen.push(-5.5, -9, BLADE_ROT);
   pen.M(2, -1.5).L(-13, -1.3).Q(-14.6, 0, -13, 1.3).L(2, 1.5);
   pen.fill(INK);
   pen.M(-7.4, -2.3).L(-6, -2.3).L(-6, 2.3).L(-7.4, 2.3);
@@ -985,7 +1068,9 @@ function build(pose: ConceptPose): ConceptInstance {
   view.addChild(halo, body, lightSoft, light);
   const pen = new Pen(body);
 
-  const update = (t: number): void => {
+  const update = (clock: number): void => {
+    // Debug: set window.__conceptT to freeze every pose at that time (for frame-by-frame review).
+    const t = (globalThis as { __conceptT?: number }).__conceptT ?? clock;
     const r = rigFor(pose, t);
     // The gallery's silhouette test blackens the holder with a filter: show the body only there.
     const lit = !view.parent?.filters;
@@ -1003,9 +1088,13 @@ function build(pose: ConceptPose): ConceptInstance {
     const sy = 1 + 0.012 * r.breath;
     const tailBase = pen.pt(-5.4, -3.4);
     const knot = pen.pt(-8.6, -8.8);
-    const neck = pen.pt(1.6, -30.2 * sy);
-    const nearShoulder = pen.pt(-0.4, -24.6 * sy);
-    const farShoulder = pen.pt(4.6, -25.2 * sy);
+    const neck0 = pen.pt(1.6, -30.2 * sy);
+    const neck = v(neck0.x, neck0.y + r.headDy);
+    pen.push(-5.5, -9, BLADE_ROT);
+    const hiltAt = pen.pt(-5.6, -2.6);
+    pen.pop();
+    const nearShoulder = pen.pt(-0.4 + r.shN.x, (-24.6 + r.shN.y) * sy);
+    const farShoulder = pen.pt(4.6 + r.shF.x, (-25.2 + r.shF.y) * sy);
     const nearHip = pen.pt(-1.2, -0.5);
     const farHip = pen.pt(2.6, -0.8);
     const charmTop = pen.pt(5.2, -5.4);
@@ -1043,7 +1132,8 @@ function build(pose: ConceptPose): ConceptInstance {
     const headC = pen.pt(2, -14);
     pen.pop();
 
-    drawArm(pen, nearShoulder, r.nearHand, r.nearBend, r.grip, false);
+    const nearHand = r.hilt ? v(hiltAt.x - nearShoulder.x, hiltAt.y - nearShoulder.y) : r.nearHand;
+    drawArm(pen, nearShoulder, nearHand, r.nearBend, r.grip, false);
 
     // Spirit light. A soft halo lifts the figure off the forest; the eye, the charm and the tail
     // tip burn; motes shed from the tail tip and charm; streaks trail when he moves.
