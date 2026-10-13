@@ -89,9 +89,12 @@ const ATM: Atmosphere = {
   litGain: 1.7,
   sunMix: 0.7,
   sunColor: 0xd2e052,
-  sunColorL: 0xb6e0dc,
-  sunColorR: 0xecc978,
+  sunColorL: 0xbfdcff,
+  sunColorR: 0xffb98a,
   zoneParallax: 0.68,
+  sideBody: 0.12,
+  sideLit: 0.55,
+  sideRim: 3.4,
   shadeTint: [0.26, 0.4, 0.54],
   saturation: 0.85,
 };
@@ -311,12 +314,13 @@ function barkDetail(c: Container, r: Rng, tr: Trunk, L: LightMap): void {
     L.shade(p.x, p.y, s * 1.6, s * 2, 0.35);
   }
   // Broken stubs: short limbs snapped off, pale splintered ends.
-  const stubs = Math.floor(r() * 3);
+  const stubs = r() < 0.5 ? 1 : 0;
   for (let i = 0; i < stubs; i++) {
     const dir = r() < 0.5 ? -1 : 1;
     const from = tr.at(rr(r, 0.15, 0.6), dir * 0.8);
     const len = w * rr(r, 0.16, 0.32);
-    const ang = dir === 1 ? -rr(r, 0.2, 0.7) : Math.PI + rr(r, 0.2, 0.7);
+    // Steep, so a stub never reads as a step.
+    const ang = dir === 1 ? -rr(r, 0.75, 1.15) : Math.PI + rr(r, 0.75, 1.15);
     const end = { x: from.x + Math.cos(ang) * len, y: from.y + Math.sin(ang) * len };
     const mid = { x: (from.x + end.x) / 2, y: (from.y + end.y) / 2 + len * 0.1 };
     const cv = quad(from, mid, end);

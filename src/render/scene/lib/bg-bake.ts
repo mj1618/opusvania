@@ -159,6 +159,14 @@ export interface Atmosphere {
   sunColorL?: number;
   sunColorR?: number;
   zoneParallax?: number;
+  /**
+   * In the side zones the sun colour belongs on edges only (a rim and the leaves by an opening), so
+   * clump bodies keep their deep local colour: share of the body tint kept (default 1 = everywhere),
+   * share of the lit brightening kept, and extra rim strength there.
+   */
+  sideBody?: number;
+  sideLit?: number;
+  sideRim?: number;
   /** Multiplier applied in full light-map shadow (cool and dark). */
   shadeTint?: readonly [number, number, number];
   /** Final value gain and saturation of the local colours before fog (1 = unchanged). */
@@ -190,6 +198,7 @@ uniform vec4 uShade;
 uniform vec3 uSunL;
 uniform vec3 uSunR;
 uniform vec3 uZoneMap;
+uniform vec3 uSide;
 float A(vec2 uv) { return texture(uRaw, uv).a; }
 void main() {
   vec4 c = texture(uRaw, vUV);
@@ -217,21 +226,25 @@ void main() {
   float lit = clamp((lm - 0.5) * 2.0, 0.0, 1.0);
   float shd = clamp((0.5 - lm) * 2.0, 0.0, 1.0);
   col = mix(col, col * uShade.rgb, shd);
-  col *= 1.0 + uShade.a * lit;
-  // Lit foliage turns toward the sun colour at its own brightness (translucent, yellow-green).
-  float lum = dot(col, vec3(0.3, 0.55, 0.15));
   float pxe = uZoneMap.x + (p.x - uZoneMap.x) * uZoneMap.y;
   float zl = (1.0 - smoothstep(${ZONES.l0}.0, ${ZONES.l1}.0, pxe)) * uZoneMap.z;
   float zr = smoothstep(${ZONES.r0}.0, ${ZONES.r1}.0, pxe) * uZoneMap.z;
+  float zs = max(zl, zr);
+  col *= 1.0 + uShade.a * lit * mix(1.0, uSide.y, zs);
+  // Lit foliage turns toward the sun colour at its own brightness (translucent, yellow-green).
+  float lum = dot(col, vec3(0.3, 0.55, 0.15));
   vec3 sun = mix(mix(uSun.rgb, uSunL, zl), uSunR, zr);
-  col = mix(col, sun * (0.35 + 1.6 * lum), lit * uSun.a);
+  // Edges open toward the light (the silhouette and the brink of every opening).
+  float edge = smoothstep(0.08, 0.55, open);
+  float body = mix(1.0, uSide.x + (1.0 - uSide.x) * edge, zs);
+  col = mix(col, sun * (0.35 + 1.6 * lum), lit * uSun.a * body);
   col = mix(vec3(dot(col, vec3(0.3, 0.55, 0.15))), col, uGrade.y) * uGrade.x;
   vec2 dw = (p - uWell.xy) / uWell.z;
   float w = exp(-dot(dw, dw));
   float rim = (1.0 - A(vUV + L * uRim.x)) * 0.6 + (1.0 - A(vUV + L * uRim.x * 0.45)) * 0.4;
   // Only edges with a body behind them catch the rim (thin vines and strands must not glow).
   rim *= A(vUV - L * uRim.x * 2.0);
-  col += uRimColor * rim * uRim.y * (0.3 + 0.7 * w);
+  col += mix(uRimColor, sun, zs) * rim * uRim.y * (0.3 + 0.7 * w + uSide.z * zs * (0.4 + 0.6 * lit));
   float f = mix(uFog.x, uFog.y, smoothstep(uFog.z, uFog.w, p.y));
   col = mix(col, uFogColor, f);
   col = mix(col, uWellColor, w * uWell.w);
@@ -442,6 +455,10 @@ export function bakeLayer(
             uShade: { value: new Float32Array([st[0], st[1], st[2], atm.litGain ?? 1.2]), type: 'vec4<f32>' },
             uSunL: { value: rgb(atm.sunColorL ?? atm.sunColor ?? 0xc9d977), type: 'vec3<f32>' },
             uSunR: { value: rgb(atm.sunColorR ?? atm.sunColor ?? 0xc9d977), type: 'vec3<f32>' },
+            uSide: {
+              value: new Float32Array([atm.sideBody ?? 1, atm.sideLit ?? 1, atm.sideRim ?? 0]),
+              type: 'vec3<f32>',
+            },
             uZoneMap: {
               value: new Float32Array([2880, 1 / (atm.zoneParallax ?? 1), atm.zoneParallax ? 1 : 0]),
               type: 'vec3<f32>',

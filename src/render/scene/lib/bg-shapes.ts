@@ -296,43 +296,74 @@ export function drawRoots(
   moss?: readonly number[],
 ): void {
   const s = tr.spec;
-  const one = (p0: Pt, p1: Pt, end: Pt, w0: number, dir: 1 | -1, swell: number, depth: number): void => {
+  // `gnarl` > 0: a bridging root. It kinks, swells into burls, always forks and trails rootlets
+  // and moss. `cut` < 1: it has snapped and ends in mid-air in a splintered stub.
+  const one = (
+    p0: Pt,
+    p1: Pt,
+    end: Pt,
+    w0: number,
+    dir: 1 | -1,
+    swell: number,
+    depth: number,
+    gnarl = 0,
+    cut = 1,
+  ): void => {
     const base = quad(p0, p1, end);
     const wob = fbm1(r() * 1000);
     const knot = fbm1(r() * 1000);
     const len = Math.hypot(end.x - p0.x, end.y - p0.y);
-    const amp = Math.min(w0 * 0.55, len * 0.035);
+    const amp = Math.min(w0 * 0.55, len * 0.035) * (1 + gnarl * 2.2);
+    const kink = fbm1(r() * 1000);
     const c = (t: number): Pt => {
       const p = base(t);
-      const k = wob(t * 3.1) * amp * Math.sin(Math.PI * t);
+      const k = (wob(t * 3.1) + gnarl * 0.6 * kink(t * 9)) * amp * Math.sin(Math.PI * Math.min(1, t * 1.15));
       return { x: p.x + k * 0.4, y: p.y + k };
     };
     const hw = (t: number): number =>
-      (w0 / 2) * smooth(-0.02, swell, t) * (1 - 0.93 * t) * (1 + 0.3 * Math.max(0, knot(t * 6.5))) + 1;
-    g.poly(ribbon(c, hw, 22)).fill(look.base);
+      (w0 / 2) *
+        smooth(-0.02, swell, t) *
+        (1 - (cut < 1 ? 0.45 : 0.93) * t) *
+        (1 + (0.3 + gnarl * 0.7) * Math.max(0, knot(t * (6.5 + gnarl * 5)))) +
+      1;
+    g.poly(ribbon(c, hw, gnarl > 0 ? 40 : 22, 0, cut)).fill(look.base);
+    if (cut < 1) {
+      // The snapped end: splinters, and a pale ragged face.
+      const e = c(cut);
+      const b = c(cut - 0.03);
+      const ang = Math.atan2(e.y - b.y, e.x - b.x);
+      for (let i = 0; i < 4; i++) {
+        const l = hw(cut) * rr(r, 0.9, 2.2);
+        g.poly(leafPts(e.x, e.y + rr(r, -0.7, 0.7) * hw(cut), ang + rr(r, -0.35, 0.35), l, l * 0.3));
+      }
+      g.fill(look.base);
+      g.poly(blob(e.x, e.y, hw(cut) * 0.35, hw(cut) * 0.8, r, 0.4, 9)).fill({ color: look.lit, alpha: 0.55 });
+    }
     const up: 1 | -1 = dir === 1 ? -1 : 1;
     if (look.bands > 0) {
-      g.poly(ribbon(c, (t, side) => (side === up ? hw(t) * 0.96 : -hw(t) * 0.5), 18, 0.05, 0.95)).fill({
+      g.poly(ribbon(c, (t, side) => (side === up ? hw(t) * 0.96 : -hw(t) * 0.5), 18, 0.05, 0.95 * cut)).fill({
         color: look.lit,
         alpha: 0.22 * look.bands,
       });
-      g.poly(ribbon(c, (t, side) => (side === up ? -hw(t) * 0.35 : hw(t) * 0.96), 18, 0.05, 0.95)).fill({
-        color: look.dark,
-        alpha: 0.3 * look.bands,
-      });
+      g.poly(ribbon(c, (t, side) => (side === up ? -hw(t) * 0.35 : hw(t) * 0.96), 18, 0.05, 0.95 * cut)).fill(
+        {
+          color: look.dark,
+          alpha: 0.3 * look.bands,
+        },
+      );
     }
     if (depth <= 0) return;
     // A fork, and thin rootlets reaching for the ground.
-    if (r() < 0.6) {
-      const t = rr(r, 0.35, 0.65);
+    if (r() < 0.6 + gnarl) {
+      const t = rr(r, 0.35, 0.65) * cut;
       const a = c(t);
       const l = len * rr(r, 0.25, 0.5);
       const e = { x: a.x + dir * l * rr(r, 0.5, 1), y: end.y + rr(r, 0, w0 * 0.3) };
       one(a, { x: a.x + dir * l * 0.3, y: (a.y + e.y) / 2 - l * 0.1 }, e, hw(t) * 1.5, dir, 0.15, 0);
     }
-    const lets = Math.floor(r() * 4);
+    const lets = Math.floor(r() * 4) + Math.round(gnarl * 4);
     for (let i = 0; i < lets; i++) {
-      const t = rr(r, 0.2, 0.9);
+      const t = rr(r, 0.2, 0.9) * cut;
       const a = c(t);
       const drop = Math.max(8, end.y - a.y + rr(r, -6, 10));
       if (drop < 14) continue;
@@ -346,8 +377,9 @@ export function drawRoots(
         ),
       ).fill(look.base);
     }
-    if (moss && r() < 0.7) {
-      const t = rr(r, 0.2, 0.7);
+    const tufts = moss ? (r() < 0.7 ? 1 : 0) + Math.round(gnarl * 2) : 0;
+    for (let i = 0; i < tufts && moss; i++) {
+      const t = rr(r, 0.2, 0.7) * cut;
       const a = c(t);
       mossCurtain(
         g,
@@ -377,7 +409,8 @@ export function drawRoots(
         ? { x: p0.x + (end.x - p0.x) * rr(r, 0.55, 0.75), y: p0.y - span * rr(r, 0.0, 0.1) }
         : { x: foot.x + dir * span * rr(r, 0.08, 0.2), y: end.y - s.w * rr(r, 0.04, 0.16) };
       const w0 = s.w * (bridge ? rr(r, 0.07, 0.13) : rr(r, 0.12, 0.24));
-      one(p0, p1, end, w0, dir, bridge ? 0.3 : 0.7, 1);
+      if (bridge) one(p0, p1, end, w0 * 1.25, dir, 0.3, 1, 1, r() < 0.45 ? rr(r, 0.45, 0.7) : 1);
+      else one(p0, p1, end, w0, dir, 0.7, 1);
     }
   }
 }

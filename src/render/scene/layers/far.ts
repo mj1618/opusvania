@@ -115,6 +115,9 @@ const ATM: readonly Atmosphere[] = [
     sunColorL: 0xcde6ff,
     sunColorR: 0xffcfae,
     zoneParallax: 0.25,
+    sideBody: 0.3,
+    sideLit: 0.7,
+    sideRim: 1.2,
   },
   {
     fogColor: 0x66b0ac,
@@ -137,9 +140,12 @@ const ATM: readonly Atmosphere[] = [
     litGain: 1.6,
     sunMix: 0.5,
     sunColor: 0xc6de5c,
-    sunColorL: 0xb6e0dc,
-    sunColorR: 0xecc978,
+    sunColorL: 0xbfdcff,
+    sunColorR: 0xffb98a,
     zoneParallax: 0.42,
+    sideBody: 0.15,
+    sideLit: 0.6,
+    sideRim: 2,
   },
 ];
 

@@ -74,3 +74,8 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
 - Hiding `far0`/`far1` via `__bg.layers` still works (the groups copy `visible`); hiding `far2` hides
   the whole far composite.
 - Cost now: far layers ~0.6 ms together (logical-res target), mid ~0.6 ms (the one full-res pass).
+- Side zones: the sun colour goes on edges only (`sideBody` / `sideLit` / `sideRim` in the ATM objects,
+  gated by the alpha-open-toward-light term). Tinting whole clump bodies with a pale sun colour made the
+  right canopy look frosted.
+- Bridging roots (`drawRoots`, `gnarl` / `cut`): kinked, burled, always forked, with rootlets and moss;
+  ~45% are snapped stubs. Trunk stubs in mid point steeply up (flat ones read as steps).
