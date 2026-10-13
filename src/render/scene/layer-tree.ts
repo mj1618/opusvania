@@ -28,6 +28,8 @@ export const LAYERS = [
   { name: 'far1', parallax: 0.25, screen: false },
   { name: 'far2', parallax: 0.42, screen: false },
   { name: 'mid', parallax: 0.68, screen: false },
+  // Light shafts that pass behind the terrain and the character (owned by layers/air.ts).
+  { name: 'airBack', parallax: 1, screen: false },
   { name: 'playfield', parallax: 1, screen: false },
   { name: 'character', parallax: 1, screen: false },
   { name: 'foreground', parallax: 1.35, screen: false },

@@ -1,4 +1,5 @@
 import { Pane } from 'tweakpane';
+import { POST } from '../render/post/config';
 import { applyShape, assignTuning, cloneTuning, defaultTuning, type Tuning } from '../sim/tuning';
 
 const OPTIONS: Record<string, Record<string, string>> = {
@@ -30,6 +31,22 @@ export class TuningPanel {
           applyShape(tuning);
           this.pane.refresh();
         });
+    }
+    // The post stage's knobs (bloom, lights, grade, vignette): live, not part of the sim tuning.
+    const post = this.pane.addFolder({ title: 'post (look)', expanded: false });
+    for (const [group, values] of Object.entries(POST as Record<string, unknown>)) {
+      if (typeof values === 'boolean' || typeof values === 'number')
+        post.addBinding(POST as Record<string, unknown>, group);
+      if (typeof values !== 'object' || values === null) continue;
+      const folder = post.addFolder({ title: group, expanded: false });
+      for (const [key, v] of Object.entries(values)) {
+        if (typeof v === 'number')
+          folder.addBinding(
+            values as Record<string, unknown>,
+            key,
+            /tint/i.test(key) ? { view: 'color' } : {},
+          );
+      }
     }
     this.pane.addButton({ title: 'Respawn (applies body size)' }).on('click', onRespawn);
     this.pane.addButton({ title: 'Copy JSON' }).on('click', () => {
