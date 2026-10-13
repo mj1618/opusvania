@@ -26,6 +26,7 @@ import { J_CHEST, J_HEAD, Rig, SLASH } from './rig';
 import { Secondary } from './wings';
 
 const LIGHT = 0xffe0a0;
+const TURNS_KEY = 'vesper.turns';
 
 export class VesperCharacter implements CharacterSkin {
   private readonly painter = new Painter();
@@ -58,10 +59,18 @@ export class VesperCharacter implements CharacterSkin {
   private hitX = 0;
   private hitY = 0;
 
+  private toast: HTMLElement | null = null;
+  private toastTimer = 0;
+  private readonly onKey = (e: KeyboardEvent): void => {
+    if (e.code !== 'KeyT' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    this.setTurns(Rig.turns === 2 ? 1 : 2, true);
+  };
+
   constructor(
     private readonly ctx: RenderContext,
     private readonly layer: Container,
   ) {
+    this.initTurns();
     this.painter.mesh.label = 'vesper';
     layer.addChild(this.painter.mesh);
     ctx.lights.set('ember', this.light);
@@ -72,6 +81,10 @@ export class VesperCharacter implements CharacterSkin {
     // The moon rim: brighter and bluer than the default fill, so dark shapes keep an edge.
     p.coolColor = [0.52, 0.68, 0.95];
     p.l2c = rgb(LIGHT);
+    // Crisp, flat shapes (owner: highlights read washed out and blurry): no cool rim at all, a
+    // faint warm key edge only, and no rim from her own lanterns (it moved with the antennae).
+    p.coolK = 0;
+    p.keyK = 0.22;
     this.view = {
       wings: this.sec.wings,
       antennae: this.sec.antennae,
@@ -272,7 +285,7 @@ export class VesperCharacter implements CharacterSkin {
     p.l2x = ex;
     p.l2y = ey;
     p.l2r = 60;
-    p.l2k = 0.7 * glow;
+    p.l2k = 0;
     p.begin();
     this.trails[2]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.2, clock);
     this.trails[3]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.2, clock);
@@ -300,6 +313,58 @@ export class VesperCharacter implements CharacterSkin {
     e.y = ey;
     e.radius = 300 + 70 * rig.wDash + 90 * this.flash + 50 * soar;
     e.intensity = glow * 1.15;
+  }
+
+  /**
+   * One somersault turn or two: `?turns=1|2`, else what was chosen last (localStorage), else one.
+   * T flips it while playing; `window.__vesper.turns` reads and sets it for tools.
+   */
+  private initTurns(): void {
+    if (typeof window === 'undefined') return;
+    let n = 1;
+    try {
+      const q = new URLSearchParams(window.location.search).get('turns');
+      const saved = window.localStorage.getItem(TURNS_KEY);
+      n = q === '2' || q === '1' ? Number(q) : saved === '2' ? 2 : 1;
+    } catch {
+      // Storage can be blocked: one turn.
+    }
+    Rig.turns = n === 2 ? 2 : 1;
+    window.addEventListener('keydown', this.onKey);
+    const self = this;
+    (window as unknown as { __vesper?: unknown }).__vesper = {
+      get turns(): number {
+        return Rig.turns;
+      },
+      set turns(v: number) {
+        self.setTurns(v === 2 ? 2 : 1, false);
+      },
+    };
+  }
+
+  private setTurns(n: number, show: boolean): void {
+    Rig.turns = n === 2 ? 2 : 1;
+    try {
+      window.localStorage.setItem(TURNS_KEY, String(Rig.turns));
+    } catch {
+      // Not remembered, then.
+    }
+    if (!show) return;
+    if (!this.toast) {
+      const el = document.createElement('div');
+      el.style.cssText =
+        'position:fixed;left:18px;bottom:16px;padding:5px 10px;border-radius:6px;background:rgba(10,8,20,.6);' +
+        'color:#e8dcc4;font:13px/1.2 Georgia,serif;letter-spacing:.03em;pointer-events:none;z-index:50;' +
+        'transition:opacity .25s;opacity:0';
+      document.body.appendChild(el);
+      this.toast = el;
+    }
+    this.toast.textContent = `somersault: ${Rig.turns === 2 ? '2 turns' : '1 turn'}`;
+    this.toast.style.opacity = '1';
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => {
+      if (this.toast) this.toast.style.opacity = '0';
+    }, 1100);
   }
 
   /** Px of clear air under the feet (to the nearest solid or one-way top below them). */
@@ -336,6 +401,11 @@ export class VesperCharacter implements CharacterSkin {
   }
 
   destroy(): void {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this.onKey);
+      window.clearTimeout(this.toastTimer);
+      this.toast?.remove();
+    }
     this.layer.removeChild(this.painter.mesh);
     this.painter.mesh.destroy();
     if (this.ctx.lights.get('ember') === this.light) this.ctx.lights.remove('ember');

@@ -256,7 +256,9 @@ export class Secondary {
         c.d = cd;
         c.rot = rotScreen * cdS;
         c.lat = -sd * mid * 0.55 * (1 - soar);
-        c.scale = lerp(1, SOAR_LEN[k]! * (1 + 0.05 * Math.max(0, ck)) * (1 - 0.04 * far), span);
+        // In the ball the wings draw in with everything else: a close shell.
+        c.scale =
+          lerp(1, SOAR_LEN[k]! * (1 + 0.05 * Math.max(0, ck)) * (1 - 0.04 * far), span) * (1 - 0.2 * tuck);
         let lift =
           STREAM[k]! * run +
           RISE[k]! * rise +
@@ -297,7 +299,7 @@ export class Secondary {
         c.lift = lift * DEG;
         const curl =
           (0.05 * run - 0.07 * glide - 0.03 * up + 0.02 * dash) * (1 - k * 0.12) * (1 - tuck) +
-          (0.52 + 0.07 * k) * tuck;
+          (0.7 + 0.07 * k) * tuck;
         // The billow cups the membrane: roots up, tips held down by the air.
         c.curl = lerp(
           curl,
@@ -339,13 +341,14 @@ export class Secondary {
           16 * glide * (1 - rig.soar) +
           8 * rise -
           10 * up +
-          22 * tuck -
+          34 * tuck -
           20 * fl +
           rig.soar * (9 + 30 * rig.catchK + 5 * noise1(clock * 0.9, 83 + a)) -
           16 * rig.joy -
           18 * rig.dive) *
         DEG;
-      c.curl = 0.04 * run - 0.05 * glide + 0.07 * fl + 0.24 * tuck;
+      c.curl = 0.04 * run - 0.05 * glide + 0.07 * fl + 0.46 * tuck;
+      c.scale = 1 - 0.18 * tuck;
       c.stiff = 1 + 1.2 * dash + 7 * tuck;
       c.dragK = (1 - 0.3 * dash) * (1 - 0.7 * tuck);
       c.floorY = Number.POSITIVE_INFINITY;

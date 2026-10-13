@@ -14,7 +14,6 @@ import {
   BODY,
   type Frame,
   J_ANK_A,
-  J_CENTRE,
   J_CHEST,
   J_COLLAR,
   J_EL_A,
@@ -27,6 +26,7 @@ import {
   J_ORIGIN,
   J_SH_A,
   J_TOE_A,
+  S_BALL,
   S_CZH,
   S_D,
   S_DH,
@@ -111,8 +111,6 @@ const EYE_RIM = rgb(0xd9820f);
 const GOLD = rgb(0xffdf9c);
 const GOLD_HOT = rgb(0xfffaea);
 const GOLD_DEEP = rgb(0xe9a04a);
-const HALO: RGB = [0.78, 0.72, 0.95];
-const HALO_WARM: RGB = [1, 0.9, 0.72];
 const SHADOW: RGB = [0.01, 0.03, 0.06];
 const SPOT_DARK = rgb(0x120e1e);
 const EYE_PATCH: RGB = [0.1, 0.07, 0.15];
@@ -245,20 +243,19 @@ const SH_WING_FAR: Shade = {
 };
 const SH_PLUME: Shade = {
   c0: dim(CROWN_TOP, 0.9),
-  c1: rgb(0x6f6480),
+  c1: rgb(0x43395e),
   rim: 0.8,
   cool: 0.4,
-  form: 0.2,
+  form: 0.1,
   band: 0.6,
 };
 const SH_BARB: Shade = {
-  c0: rgb(0x6f6480),
-  c1: rgb(0xa094aa),
+  c0: rgb(0x34294e),
+  c1: rgb(0x51466c),
   rim: 0.4,
   cool: 0.2,
   form: 0,
   band: 0.6,
-  alpha: 0.85,
 };
 const SH_SHEATH: Shade = { c0: rgb(0x2a2440), c1: rgb(0x0f0d1c), rim: 0.8, cool: 0.5, form: 0.2, band: 0.6 };
 const SH_METAL: Shade = { c0: METAL, c1: dim(METAL, 0.7), rim: 0.8, cool: 0.2, form: 0.3, band: 0.5 };
@@ -574,7 +571,7 @@ function blade(p: Painter, j: Float32Array, ang: number, k: number): void {
   const cx = Math.cos(ang);
   const cy = Math.sin(ang);
   const L = 25 * k;
-  p.glow(hx + cx * L * 0.6, hy + cy * L * 0.6, 12, GOLD, 0.22 * k, 4, ang);
+  p.glow(hx + cx * L * 0.6, hy + cy * L * 0.6, 9, GOLD, 0.14 * k, 3, ang);
   for (let i = 0; i < 5; i++) {
     const t = i / 4;
     p.px[i] = hx + cx * (1.5 + L * t);
@@ -724,8 +721,8 @@ function wing(
           soar *
           k *
           glow *
-          (0.07 * (1 - t) ** 2 +
-            0.06 * bump(t, 0.56, 0.2) * (bump(u, 0.42, 0.16) + 0.8 * bump(u, 0.76, 0.12)));
+          (0.03 * (1 - t) ** 2 +
+            0.03 * bump(t, 0.56, 0.2) * (bump(u, 0.42, 0.16) + 0.8 * bump(u, 0.76, 0.12)));
         cr += WARM[0] * w;
         cg += WARM[1] * w * 0.72;
         cb += WARM[2] * w;
@@ -759,7 +756,6 @@ function wing(
   // --- The eye-spots, painted on the membrane: they foreshorten and travel with the cloth. One
   // on the fore wing always; a smaller one on the hind wing shows as the wings spread.
   const lum = bright ? sat((k - 0.4) / 0.6) : 0;
-  const pulse = 0.85 + 0.15 * Math.sin(clock * 1.9);
   for (let n = 0; n < 2; n++) {
     const size = n === 0 ? 1 : 0.78 * soar;
     if (size < 0.2) continue;
@@ -776,12 +772,10 @@ function wing(
     const rx = clamp(across * 0.8, 0.5, ry);
     const rot = Math.atan2(aly, alx) - Math.PI / 2;
     if (bright) {
-      const g = glow * pulse * lum * (1 + 0.5 * soar) * (1 + 2.2 * spot);
-      p.glow(ex, ey, 11 + 7 * soar, GOLD_DEEP, 0.16 * g);
+      if (spot > 0.02) p.glow(ex, ey, 9, GOLD_DEEP, 0.3 * spot * lum);
       p.ellipse(ex, ey, rx, ry, rot, SH_SPOT, 14);
       p.ellipse(ex, ey, rx * 0.66, ry * 0.66, rot, SH_SPOT_DARK, 12);
       p.ellipse(ex, ey, rx * (0.3 + 0.2 * spot), ry * (0.3 + 0.2 * spot), rot, SH_SPOT_HOT, 8);
-      p.glow(ex, ey, 4.2 + 2 * soar, GOLD, 0.5 * g);
     } else {
       p.ellipse(ex, ey, rx * 0.9, ry * 0.9, rot, SH_SPOT_FAR, 12);
       p.ellipse(ex, ey, rx * 0.58, ry * 0.58, rot, SH_SPOT_DARK, 10);
@@ -792,12 +786,8 @@ function wing(
     for (let q = 0; q < DUST.length; q += 2) {
       const di = DUST[q]! * COLS + DUST[q + 1]!;
       const tw = Math.sin(clock * (2.1 + q * 0.37) + q * 1.9);
-      if (tw > 0.2) p.glow(gx[di]!, gy[di]!, 1.9, GOLD_HOT, (tw - 0.2) * 0.75 * glow * lum);
+      if (tw > 0.2) p.glow(gx[di]!, gy[di]!, 1.5, GOLD_HOT, (tw - 0.2) * 0.45 * glow * lum);
     }
-    // The band is faintly luminous.
-    const br = (ROWS - 2) * COLS;
-    for (let c = 1; c < COLS; c += 4)
-      p.glow(gx[br + c]!, gy[br + c]!, 6 + 5 * soar, GOLD_DEEP, (0.1 + 0.07 * soar) * glow * lum);
   }
 }
 /** (row, column) pairs of the twinkles. */
@@ -848,7 +838,7 @@ function antenna(p: Painter, c: ChainPts, far: boolean, glow: number, run: numbe
   // A glint's light: the lantern flares, then a bead of it runs down the shaft to her brow.
   if (runK > 0.01) {
     const flare = runK * Math.max(0, 1 - run * 2.2);
-    p.glow(tx, ty, 26, GOLD, 0.5 * flare * k);
+    p.glow(tx, ty, 13, GOLD, 0.5 * flare * k);
     if (run > 0.02 && run < 1) {
       const f = (1 - run) * (n - 1);
       const i0 = Math.min(n - 2, Math.floor(f));
@@ -859,10 +849,10 @@ function antenna(p: Painter, c: ChainPts, far: boolean, glow: number, run: numbe
       p.glow(bx, by, 3.2, GOLD_HOT, 1.0 * bk);
     }
   }
-  p.glow(tx, ty, 20, GOLD_DEEP, 0.26 * glow * k);
-  p.glow(tx, ty, 6, GOLD, 0.6 * glow * k);
+  p.glow(tx, ty, 7, GOLD_DEEP, 0.3 * glow * k);
+  p.glow(tx, ty, 3.4, GOLD, 0.6 * glow * k);
   p.ellipse(tx, ty, 1.35, 1.35, 0, SH_SPOT_HOT, 10);
-  p.glow(tx, ty, 2.6, GOLD_HOT, 0.9 * glow);
+  p.glow(tx, ty, 2.2, GOLD_HOT, 0.8 * glow);
 }
 const ax_ = new Float32Array(64);
 const ay_ = new Float32Array(64);
@@ -910,6 +900,9 @@ const LOCKS = [
   -5.6, 6.2, -12.5, 6.6, -0.9, 3.4, 1, -6.8, 0.4, -13.5, -2.6, -0.9, 3.4, 1,
 ];
 
+/** Forehead tufts: root x (fraction of the face half-width, + = front), tip dx, tip dy, width. */
+const HAIRLINE = [-0.62, -0.8, 2.6, 1.3, -0.2, 0.5, 3.4, 1.5, 0.3, 0.9, 2.2, 1.1, 0.7, 0.4, 2.9, 1.2];
+
 /** Seconds a glint's light takes from the lantern to the brow; the eyes answer just after. */
 const GLINT_RUN = 0.16;
 
@@ -927,8 +920,10 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
   const sr = Math.sin(rot);
   const W = BODY.headW;
   const Hh = BODY.headH;
-  const X = (lx: number, ly: number): number => hx + lx * cr - ly * sr;
-  const Y = (lx: number, ly: number): number => hy + lx * sr + ly * cr;
+  // In the ball the head is drawn a little smaller, with everything else.
+  const hs = 1 - 0.12 * s[S_BALL]!;
+  const X = (lx: number, ly: number): number => hx + (lx * cr - ly * sr) * hs;
+  const Y = (lx: number, ly: number): number => hy + (lx * sr + ly * cr) * hs;
 
   // --- Mane: soft dark locks streaming off the back of the head; tips lag the head.
   for (let i = 0; i < LOCKS.length; i += 7) {
@@ -1071,16 +1066,24 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
     Y(fcx - back * fw * 0.4, fcy - fhU * 0.4),
   );
 
-  // The brow fur's shadow across the top of the disc, and a little under the jaw: form, not a lamp.
-  p.soft(X(fcx, fcy - fhU * 0.86), Y(fcx, fcy - fhU * 0.86), fw * 1.05, 4.6, EYE_PATCH, 0.42);
-  p.soft(
-    X(fcx + back * fw * 0.3, fcy + fhD * 0.9),
-    Y(fcx + back * fw * 0.3, fcy + fhD * 0.9),
-    fw * 0.8,
-    3.2,
-    EYE_PATCH,
-    0.26,
-  );
+  // The hairline: a few fine dark tufts of the crown's fur fall over the forehead, uneven, so the
+  // face meets the crown softly. Nothing spans the brow (a band there read as one heavy eyebrow).
+  for (let i = 0; i < HAIRLINE.length; i += 4) {
+    const rx = fcx + HAIRLINE[i]! * fw * (dh >= 0 ? 1 : -1);
+    const ry = fcy - fhU * 0.98;
+    tuft(
+      p,
+      X(rx, ry - 1.2),
+      Y(rx, ry - 1.2),
+      X(rx + HAIRLINE[i + 1]! * (dh >= 0 ? 1 : -1), ry + HAIRLINE[i + 2]!) + v.hairX * 0.3,
+      Y(rx + HAIRLINE[i + 1]! * (dh >= 0 ? 1 : -1), ry + HAIRLINE[i + 2]!) + v.hairY * 0.3,
+      0.4,
+      HAIRLINE[i + 3]!,
+      SH_LOCK,
+      0.6,
+      0,
+    );
+  }
 
   // --- Eyes: big, round, wide-set and low. A dark amber rim, a warm bright core that drifts with
   // the gaze, two catchlights, and a soft lid. Nothing else on the face.
@@ -1096,7 +1099,7 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
     const lx = emx - sd * czh * 5.0;
     const ly = 3.5;
     const w = (near ? 3.2 * (0.5 + 0.5 * czh) : 3.0 * (0.3 + 0.7 * czh) * 0.88) * (0.6 + 0.4 * wide);
-    const R = 3.55 * wide;
+    const R = 3.55 * wide * hs;
     const ex = X(lx, ly);
     const ey = Y(lx, ly);
     const tilt = rot + sd * 0.1 * czh;
@@ -1136,7 +1139,7 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
       if (vis > R * 1.1)
         p.ellipse(ex + cqx * 0.5 - w * 0.34, ey + cqy + R * 0.36, R * 0.14, R * 0.14, 0, SH_CATCH, 6);
     }
-    p.glow(mx, my, 7.5 + 4 * eyeFlash, EYE_RIM, (0.05 + 0.5 * eyeFlash) * open * v.glow);
+    p.glow(mx, my, 5 + 4 * eyeFlash, EYE_RIM, (0.04 + 0.5 * eyeFlash) * open * v.glow);
     if (eyeFlash > 0.02) p.glow(cx, cy, 3.4, GOLD_HOT, 0.7 * eyeFlash * open);
     // A soft warm blush on the cheek below.
     const bx = lx - sd * czh * 1.3;
@@ -1174,10 +1177,6 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   const ox = j[J_ORIGIN * 2]!;
   const oy = j[J_ORIGIN * 2 + 1]!;
   p.soft(ox, oy + 1, 24, 4.5, SHADOW, 0.5 * s[S_GROUND]!);
-  // A faint moonlit halo so the dark figure never sinks into a dark background.
-  p.glow(j[J_CENTRE * 2]!, j[J_CENTRE * 2 + 1]! - 6, 84, HALO, 0.05 * v.glow);
-  // The halo: tight and soft round the head and lantern tips, ~1.7x her height across.
-  p.glow(j[J_HEAD * 2]!, j[J_HEAD * 2 + 1]! - 10, 58, HALO_WARM, 0.03 * v.glow);
 
   // Spread for the glide, both wings lie behind her and she hangs in front of them; the far one
   // is only a little dimmer, and the two trade places smoothly as she turns under them.

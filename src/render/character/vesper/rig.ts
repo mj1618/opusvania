@@ -81,7 +81,9 @@ export const S_LOOKX = 10;
 export const S_WIDE = 11;
 /** Somersault angle on screen, radians clockwise. */
 export const S_SPIN = 12;
-export const S_COUNT = 13;
+/** 0..1: folded into the somersault's ball (everything drawn a little smaller). */
+export const S_BALL = 13;
+export const S_COUNT = 14;
 
 /** Glide tuning (render only; the sim's numbers are in tuning.glide). */
 export const GLIDE = {
@@ -188,51 +190,81 @@ const RISE = pose([
 const APEXP = pose([0, 31, 0.04, 0.08, 0, 6, 12, 0.5, -1, 8, 0.9, -6, -10.5, 4, -10, 0.05, 1, 0, 1]);
 const FALL = pose([-1, 33, -0.1, 0.02, 0.14, 5, 2, 0.5, -5, 6, 1.0, -9, -7, 8, -8, 0, 1, 0.4, 1]);
 /**
- * The somersault's ball: pelvis back and high, spine curled right over, knees at the chest, heels
- * under the hips, hands clasped on the shins, chin down. Everything sits inside a circle about
- * the box centre (the pivot), so the spin is a steady round shape.
+ * The somersault's ball. A moth folds far tighter than a person: spine curled into a C, head ducked
+ * down onto the knees, shins folded hard against the thighs with the feet under her tail, arms
+ * wrapped round the shins. The wings close over it as the shell.
  */
-const TUCK = pose([
-  -14, 37, 1.0, 0.75, 2.0, -8.5, 22.5, 1.3, -10, 23.5, 1.35, -3.5, -13, -2, -12, 0, 0.85, 0.3, 1,
-]);
+const TUCK = pose([-6, 30, 0.4, 1.3, 2.1, 0, 22, 1.5, -1.5, 23, 1.55, 3, -15, 1, -14, 0, 0.8, 0.3, 1]);
 /** Snapping out: a touch past the fall pose. Body long and open, legs reaching, arms wide. */
 const OPEN = pose([0, 33.5, -0.12, -0.16, -0.14, 5, -2, 0.7, -5, -1, 1.1, -12, 1, 10, 0, 0, 1, 0.2, 1]);
-/** Somersault duration, seconds. */
-export const SPIN_T = 0.48;
-/** Fractions of it over which the angular velocity eases in and out (quintic, so no corners). */
-const SPIN_IN = 0.3;
-const SPIN_OUT = 0.4;
+/**
+ * The somersault is driven by angular momentum, as a real one is: she leaves the jump with a fixed
+ * L, and her spin rate is L / I, where the moment of inertia I follows how tightly she is folded.
+ * Slow while long, whipping round as she pulls into the ball, slowing by itself as she kicks out.
+ */
+export const SOMERSAULT = {
+  /** Seconds for one turn, and for two. */
+  time: [0.48, 0.6],
+  /** Fraction of the move by which she is fully tucked, and at which the kick-out begins. */
+  tuckIn: [0.3, 0.24],
+  kickOut: [0.58, 0.68],
+  /** Moment of inertia stretched out, relative to the ball (measured from the rig's own joints: see the test). */
+  inertiaOpen: 3.85,
+  /** Extra inertia of the wings as they flare at the kick-out: an air brake. */
+  inertiaFlare: 5,
+  /** In the ball every length shrinks by this much (cartoon licence, eased with the tuck). */
+  shrink: 0.12,
+} as const;
+
+/** Tuck 0..1 at progress u for a move of `n` turns. */
+function tuckAt(n: number, u: number): number {
+  const k = n === 2 ? 1 : 0;
+  const a = SOMERSAULT.tuckIn[k]!;
+  const b = SOMERSAULT.kickOut[k]!;
+  return quintic(u / a) * (1 - quintic((u - b) / (1 - b)));
+}
+/** Moment of inertia (ball = 1) at progress u. */
+function inertiaAt(n: number, u: number): number {
+  const w = tuckAt(n, u);
+  const b = SOMERSAULT.kickOut[n === 2 ? 1 : 0]!;
+  const flare = quintic((u - b - 0.08) / (1 - b - 0.08));
+  return 1 + (SOMERSAULT.inertiaOpen - 1) * (1 - w) * (1 - w) + SOMERSAULT.inertiaFlare * flare;
+}
+/** Angular momentum 0..1: thrown in over the first frames (the wing beat of the jump), spent at the very end. */
+function momentumAt(u: number): number {
+  return quintic(u / 0.1) * (1 - quintic((u - 0.9) / 0.1));
+}
+const SPIN_N = 128;
+/** Mean of L / I over the move, per turn count: scales the angular speed so the total is whole turns. */
+const SPIN_MEAN: number[] = [];
+/** Cumulative angle 0..1 over the move, for one turn and for two: the integral of L / I, normalised. */
+const SPIN_TABLE = [1, 2].map((n) => {
+  const t = new Float32Array(SPIN_N + 1);
+  let acc = 0;
+  for (let i = 1; i <= SPIN_N; i++) {
+    const u = (i - 0.5) / SPIN_N;
+    acc += momentumAt(u) / inertiaAt(n, u);
+    t[i] = acc;
+  }
+  for (let i = 1; i <= SPIN_N; i++) t[i]! /= acc;
+  SPIN_MEAN.push(acc / SPIN_N);
+  return t;
+});
+/** Fraction of the whole rotation done at progress u. */
+function spinAt(n: number, u: number): number {
+  const t = SPIN_TABLE[n === 2 ? 1 : 0]!;
+  const x = sat(u) * SPIN_N;
+  const i = Math.min(SPIN_N - 1, Math.floor(x));
+  return t[i]! + (t[i + 1]! - t[i]!) * (x - i);
+}
+/** Somersault duration for `n` turns, seconds. */
+export function spinTime(n: number): number {
+  return SOMERSAULT.time[n === 2 ? 1 : 0]!;
+}
 
 function quintic(x: number): number {
   const t = sat(x);
   return t * t * t * (t * (t * 6 - 15) + 10);
-}
-/** Integral of `quintic` from 0 to x (x in 0..1). */
-function quinticArea(x: number): number {
-  const t = sat(x);
-  const t4 = t * t * t * t;
-  return t4 * (t * t - 3 * t + 2.5);
-}
-
-/**
- * The somersault's angle 0..1 at progress u. Angular velocity rises on a quintic ease, holds,
- * and falls on a quintic ease to exactly zero at one whole turn: velocity AND acceleration are
- * continuous everywhere, so nothing reads as a snap. A curve, not a spring.
- */
-function spinCurve(u: number): number {
-  const a = SPIN_IN;
-  const b = SPIN_OUT;
-  const total = a / 2 + (1 - a - b) + b / 2;
-  const x = sat(u);
-  let area: number;
-  if (x < a) area = a * quinticArea(x / a);
-  else if (x < 1 - b) area = a / 2 + (x - a);
-  else area = a / 2 + (1 - a - b) + b * (0.5 - quinticArea((1 - x) / b));
-  return area / total;
-}
-/** Tuck amount at progress u: folds while already turning, unfolds while still turning. */
-function tuckCurve(u: number): number {
-  return quintic(u / 0.34) * (1 - quintic((u - 0.52) / 0.46));
 }
 /**
  * The glide: hanging at ease under the wings. Chest open, chin level, legs together and trailing
@@ -250,6 +282,32 @@ const WALL = pose([
 ]);
 const DASH = pose([-12, 31, 1.2, 0.06, -0.1, -36, 27, 1.45, -34, 33, 1.5, -14, -1, -13, 2.5, 0, 0.72, 0, 1]);
 const SKID = pose([5, 24.5, 0.42, 0.1, -0.12, 10, 0, 0, -16, 0, 0.5, 5, -11, -9, -8, 0.2, 0.95, 0, 1]);
+
+/** Point masses for the centre of mass: joint, weight. */
+const MASS = [
+  J_HIP,
+  3,
+  J_CHEST,
+  3,
+  J_HEAD,
+  3.2,
+  J_KNEE_A,
+  1,
+  J_KNEE_B,
+  1,
+  J_ANK_A,
+  0.7,
+  J_ANK_B,
+  0.7,
+  J_HAND_A,
+  0.4,
+  J_HAND_B,
+  0.4,
+  J_EL_A,
+  0.3,
+  J_EL_B,
+  0.3,
+];
 
 export interface Frame {
   j: Float32Array;
@@ -354,6 +412,14 @@ export class Rig {
   /** Lingers after the opening (decays over ~0.5 s): the wings stay half spread through the rise. */
   openHold = 0;
   spinning = false;
+  /** Turns per somersault: 1 or 2 (the owner flips it live with T). */
+  static turns = 1;
+  /** The model's moment of inertia (ball = 1) and angular speed (rad/s) this frame, and the ball's measured radius. */
+  spinI: number = SOMERSAULT.inertiaOpen;
+  spinOmega = 0;
+  /** Moment of inertia of the posed joints about their centre of mass (px², unit masses): a check on the model. */
+  jointI = 0;
+  private spinN = 1;
   /** 0..1 of the top run speed, smoothed. */
   speedK = 0;
   /** Run phase 0..1. */
@@ -681,6 +747,7 @@ export class Rig {
       this.spinA = 0;
       this.wasFree = false;
       this.spinDir = Math.abs(p.vx) > 1.5 ? (p.vx > 0 ? 1 : -1) : sgn;
+      this.spinN = Rig.turns === 2 ? 2 : 1;
       this.openT = 1;
     }
     if (this.spinning) {
@@ -693,7 +760,7 @@ export class Rig {
           this.spinS.v = this.spinVel;
           // A dash must be level almost at once; a landing can take a moment longer.
           this.spinS.omega = dash ? 46 : 26;
-          this.spinTarget = this.spinA + this.spinVel * 0.06 > Math.PI ? TAU : 0;
+          this.spinTarget = Math.round((this.spinA + this.spinVel * 0.06) / TAU) * TAU;
         }
         const a0 = this.spinA;
         this.spinA = this.spinS.step(this.spinTarget, dt);
@@ -706,16 +773,21 @@ export class Rig {
         )
           this.spinning = false;
       } else {
-        const u0 = this.spinT / SPIN_T;
+        const n = this.spinN;
+        const T = spinTime(n);
+        const u0 = this.spinT / T;
         this.spinT += dt;
-        const u = this.spinT / SPIN_T;
+        const u = this.spinT / T;
         const a0 = this.spinA;
-        this.spinA = TAU * spinCurve(u);
+        this.spinA = TAU * n * spinAt(n, u);
         if (dt > 0) this.spinVel = (this.spinA - a0) / dt;
-        this.spinW = tuckCurve(u);
-        // Anticipation: the arms lift and the body lengthens for a moment, flowing into the fold.
-        this.antic = bell(u / 0.3);
-        if (u0 < 0.62 && u >= 0.62) {
+        this.spinW = tuckAt(n, u);
+        this.spinI = inertiaAt(n, u);
+        this.spinOmega = (TAU * n * momentumAt(u)) / (this.spinI * SPIN_MEAN[n - 1]! * T);
+        // Initiation: the chest drives over and the arms are thrown down the way she will turn.
+        this.antic = bell(u / (SOMERSAULT.tuckIn[n - 1]! * 0.9));
+        const ko = SOMERSAULT.kickOut[n - 1]! + 0.06;
+        if (u0 < ko && u >= ko) {
           sig.opened = true;
           this.openT = 0;
         }
@@ -726,6 +798,8 @@ export class Rig {
         this.spinA = 0;
         this.spinW = 0;
         this.spinVel = 0;
+        this.spinOmega = 0;
+        this.spinI = SOMERSAULT.inertiaOpen;
         this.antic = 0;
       }
       this.spinW = sat(this.spinW);
@@ -737,11 +811,13 @@ export class Rig {
     }
     if (this.antic > 1e-3) {
       const k = this.antic * (1 - this.spinW);
-      out[HAU]! += 9 * k;
-      out[HBU]! += 8 * k;
-      out[HAF]! += 3 * k;
-      out[PU]! += 1.5 * k;
-      out[CURL]! -= 0.12 * k;
+      out[HAU]! += 4 * k;
+      out[HBU]! += 3 * k;
+      out[HAF]! += 8 * k;
+      out[HBF]! += 7 * k;
+      out[LEAN]! += 0.3 * k;
+      out[CURL]! += 0.2 * k;
+      out[HT]! += 0.25 * k;
     }
     if (this.openT < 1) {
       // Opening out overshoots the fall pose a little, then settles into it.
@@ -1140,17 +1216,43 @@ export class Rig {
       }
     }
 
-    // The somersault turns the whole solved figure about the box centre.
+    // Her centre of mass, and her moment of inertia about it (unit masses; a check on the model).
+    let mx = 0;
+    let my = 0;
+    let mw = 0;
+    for (let i = 0; i < MASS.length; i += 2) {
+      const k = MASS[i]!;
+      const w = MASS[i + 1]!;
+      mx += j[k * 2]! * w;
+      my += j[k * 2 + 1]! * w;
+      mw += w;
+    }
+    mx /= mw;
+    my /= mw;
+    let ji = 0;
+    for (let i = 0; i < MASS.length; i += 2) {
+      const k = MASS[i]!;
+      ji += MASS[i + 1]! * ((j[k * 2]! - mx) ** 2 + (j[k * 2 + 1]! - my) ** 2);
+    }
+    this.jointI = ji / mw;
+
+    // The somersault turns the whole solved figure about that centre, and the centre itself rides
+    // the sim's arc (the box centre): the ball spins in place and the limbs fold INTO it.
     const phi = this.spinPhi;
-    if (phi !== 0) {
+    const ball = this.spinW;
+    s[S_BALL] = ball;
+    if (phi !== 0 || ball > 1e-4) {
       const cp = Math.cos(phi);
       const sp = Math.sin(phi);
+      const sc = 1 - SOMERSAULT.shrink * ball;
+      const tx = lerp(mx, cX, ball);
+      const ty = lerp(my, cY, ball);
       for (let i = 0; i < J_COUNT; i++) {
         if (i === J_ORIGIN || i === J_CENTRE) continue;
-        const rx = j[i * 2]! - cX;
-        const ry = j[i * 2 + 1]! - cY;
-        j[i * 2] = cX + rx * cp - ry * sp;
-        j[i * 2 + 1] = cY + rx * sp + ry * cp;
+        const rx = (j[i * 2]! - mx) * sc;
+        const ry = (j[i * 2 + 1]! - my) * sc;
+        j[i * 2] = tx + rx * cp - ry * sp;
+        j[i * 2 + 1] = ty + rx * sp + ry * cp;
       }
     }
 

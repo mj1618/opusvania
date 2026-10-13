@@ -132,7 +132,7 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 ## Value plan (owner, round 9: "too bright in the face", "it looked better when it wasn't so bright")
 - She is a dark plum figure with a SOFT pale lilac-ash face; the eyes, lantern tips and eye-spots are
   the only bright things. Face on screen: lit side luma ~160-185, shadow ~110-130. Never near-white,
-  no head halo to speak of (0.03), rims subtle (dark shades rim 0.8 / cool 0.5, crown less).
+  no head halo, no rims (see Shading below).
   Do NOT brighten her to win the look:stats hero ratio; the owner's eye wins.
 - Post grades the three zones differently and that lifts pale surfaces by different amounts, so the
   pale tones are scaled per zone: `view.pale = 0.72 / 0.94 / 0.68` (left / centre / right, by
@@ -145,6 +145,35 @@ is a copy of the hooded chain plus a per-segment `extra` angle and a `dragK`.
 - Small-glint reaction: the light RUNS: lantern flare, a bead down the antenna (0.16 s), eye bloom,
   then the wing eye-spots (`View.glintT/glintK`, strength 0.7 + 0.1 per combo step, cap 1.1); the
   first glint of a run puts a small skip in her stride (`crouch.v -= 34`).
+
+## Shading (owner, round 11: "highlights are annoying, washed out and blurry"; "the monobrow looks weird")
+- Crisp and flat, the Knight's way: `painter.coolK = 0` (no cool rim at all), `keyK = 0.22` (a faint
+  warm key edge), `l2k = 0` (no rim from her own lanterns: it moved with the antennae and shimmered).
+  No halo behind the body or head, no glow on the hem band, eye-spots are flat rings (they only
+  glow for a moment when a glint's light reaches them), lantern tips a 7 px bloom, antennae solid dark.
+  Do not add rims, halos or additive haze back. Checked with 4x nearest-neighbour crops at DPR 1 and 2
+  (`shots/vesper/crisp/`): feather is `1 / (layer scale x viewScale)` = one device pixel.
+- Nothing may span the brow: no band, line or shadow across the top of the face (it reads as one
+  heavy eyebrow / a frown). The face meets the crown through four fine uneven tufts (`HAIRLINE`).
+
+## Somersault (round 11: rebuilt on angular momentum; `SOMERSAULT` in rig.ts)
+- What the physics says (gymnastics / diving sources): in flight angular momentum L is fixed, so the
+  spin rate is L / I; a tight tuck has roughly a quarter to a third of the stretched body's moment of
+  inertia, so pulling in triples or quadruples the spin and kicking out slows it again; the turn is
+  about the centre of mass, which keeps to the ballistic arc; rotation is set at take-off (arm throw,
+  chest drive); the kick-out is timed so she is long and slow at the exit.
+- Ours: `tuckAt(n, u)` is the fold timeline; `inertiaAt` = 1 (ball) .. 3.85 (open; the rig's own
+  joints measure 3.85, `rig.jointI`) plus 5 for the wings flaring at the kick-out (an air brake);
+  momentum ramps in over the first tenth and out over the last; the angle is the normalised integral
+  of L / I (`SPIN_TABLE`, built once for 1 and 2 turns), so it ends exactly upright. `rig.spinOmega`,
+  `rig.spinI` are exposed; the unit test checks omega x I is constant and peaks at the tightest.
+- The figure is rotated about its centre of mass (`MASS` weights) and that centre is moved onto the
+  box centre as she tucks; every length shrinks 12% in the ball (head drawn 12% smaller, wings 20%).
+  Ball: body inside a 38 px circle, wings ~35 px (probe numbers), 42 px overlay on the sheets.
+- One turn 0.48 s (peak 20 rad/s), two turns 0.6 s (peak 29 rad/s). `Rig.turns`; `?turns=1|2`, key T
+  (toast bottom-left, remembered in localStorage `vesper.turns`), `window.__vesper.turns`.
+- Capture gotcha: x 600-900 is under F1 and 1900 running right reaches the mid rise: both cut the
+  airtime. For a full double jump use flat open ground and check the log for `headBump`.
 
 ## Thorn slash (sim: memory/combat.md; render numbers in `SLASH` in rig.ts)
 - Driven by the `slash` / `slashHit` events and `player.hitstop`; strokes alternate with `seq`

@@ -125,6 +125,9 @@ export class Painter {
   coolColor: RGB = [0.35, 0.6, 0.85];
   /** 0 = the cool rim only faces the sky fill (upper left); 1 = it rings every edge evenly. */
   coolWrap = 0.5;
+  /** Global strength of the warm key rim and of the cool rim (0 = flat, crisp shapes). */
+  keyK = 1;
+  coolK = 1;
   /** Second light (the ember): position, reach, colour, strength. */
   l2x = 0;
   l2y = 0;
@@ -259,12 +262,14 @@ export class Painter {
   private light(x: number, y: number, nx: number, ny: number, s: Shade): void {
     const ndl = nx * this.lx + ny * this.ly;
     const k = ndl > 0 ? ndl : 0;
-    const wKey = s.rim * k * Math.sqrt(k);
+    const wKey = s.rim * k * Math.sqrt(k) * this.keyK;
     // Cool sky fill from the upper left.
     const ndc = nx * -0.8 + ny * -0.6;
     // ... plus a wrap: some of it on every edge the key light leaves dark (undersides, lower right).
     const wCool =
-      s.cool * ((1 - this.coolWrap) * (ndc > 0 ? ndc : 0) + this.coolWrap * (1 - Math.min(1, k * 1.6)));
+      this.coolK *
+      s.cool *
+      ((1 - this.coolWrap) * (ndc > 0 ? ndc : 0) + this.coolWrap * (1 - Math.min(1, k * 1.6)));
     let wE = 0;
     const ek = (s.ember ?? 1) * this.l2k;
     if (ek > 0) {
