@@ -10,9 +10,10 @@ export type PlayerMode = 'normal' | 'wallSlide' | 'dash';
 
 /**
  * What the body is doing, for animation: derived at the end of every step from mode, ground
- * contact, velocity and input. `dash` includes the freeze frames at its start.
+ * contact, velocity and input. `dash` includes the freeze frames at its start. `glide` is the wing
+ * glide (mode stays 'normal', `gliding` is true).
  */
-export type Motion = 'idle' | 'run' | 'skid' | 'rise' | 'fall' | 'wallSlide' | 'dash';
+export type Motion = 'idle' | 'run' | 'skid' | 'rise' | 'fall' | 'glide' | 'wallSlide' | 'dash';
 
 export interface PlayerState {
   // --- Body. (x, y) is the top-left of the collision box, integers. Feet centre = (x + w/2, y + h).
@@ -52,8 +53,13 @@ export interface PlayerState {
   /** Air dashes and double jumps left this airtime. */
   airDash: number;
   dj: number;
-  /** Highest point (smallest y) of the current airtime. */
+  /**
+   * Highest point (smallest y) of the current airtime. A glide carries her, so it restarts the
+   * count: after a glide this is where the wings last let go (a glided landing is never `hard`).
+   */
   airTopY: number;
+  /** Wing glide: wings open, sinking slowly (jump held while falling). `motion` is 'glide'. */
+  gliding: boolean;
 
   // --- Controller internals (timers, buffers). Renderers should not need these.
   coyote: number;
@@ -75,6 +81,9 @@ export interface PlayerState {
   sustainV: number;
   framesSinceJump: number;
   stepDist: number;
+  /** The current jump hold launched a ground-type jump, from this y (glide: see `carriedDropPx`). */
+  carried: boolean;
+  launchY: number;
 }
 
 /** Collectibles (src/sim/pickups.ts). */
@@ -96,7 +105,7 @@ export interface PickupsState {
 }
 
 export interface GameState {
-  version: 7;
+  version: 8;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;

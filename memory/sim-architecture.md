@@ -1,7 +1,7 @@
 # Sim / runtime architecture
 
 - `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
-  (`{version, frame, seed, rng, prevInput, player}`) and appends `SimEvent`s. The scene is static and
+  (`{version, frame, seed, rng, prevInput, player, pickups}`) and appends `SimEvent`s. The scene is static and
   not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
   (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
 - No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
@@ -28,8 +28,11 @@
 The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `vx`, `vy` (px/frame), `facing` (-1/1), `inputX` (held direction), `grounded`, `contactFrames` (frames
   since `grounded` changed = time on ground / in air), `wallDir` (-1/0/1 touching side).
-- `mode` (`normal | wallSlide | dash`) + `modeFrames`; `motion` (`idle | run | skid | rise | fall |
+- `mode` (`normal | wallSlide | dash`) + `modeFrames`; `motion` (`idle | run | skid | rise | fall | glide |
   wallSlide | dash`) + `motionFrames` (0 on the frame it changes).
+- Wing glide: `gliding` (true exactly while `motion === 'glide'`; `mode` stays `normal`). `vy` eases to
+  4.8 px/f (from up to 21.3 over ~11 frames: the catch), `vx` up to 10.56. `facing` follows the held
+  direction at once while `vx` takes ~22 frames to reverse, so a turn has `sign(vx) != facing` for a while.
 - `dashDir`, `dashTimer`, `freeze` (dash wind-up frames left: the body hangs for 2 frames before it moves),
   `airDash`, `dj` (left this airtime), `airTopY`, `skid`.
 - While wall sliding `facing` points **away** from the wall (a `turn` event fires on contact).
@@ -44,4 +47,8 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   (`vy` = impact speed px/f; `hard` = fallPx >= 320 or at max fall speed).
 - `step` (every 96 px of grounded travel), `turn {dir, grounded}`, `skid {dir}`.
 - `wallSlideStart/End {dir = wall side}`, `dashStart {dir, air}`, `dashEnd {dir}`.
+- `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a
+  long fall, up to 32 out of a fast fall) and `glideEnd {reason: release|land|wall|dash|fastfall}`; one
+  pair per glide. Same-step order: `glideEnd:land` then `land`; `glideEnd:wall` then `wallSlideStart`;
+  `glideEnd:dash` then `dashStart`.
 - `headBump`, `cornerCorrect {kind: head|ledge|dash, dx, dy}`, `dropThrough`.

@@ -1,4 +1,4 @@
-import type { JumpKind, SimEvent } from '../events';
+import type { GlideEndReason, JumpKind, SimEvent } from '../events';
 import { ActionBit, axisX, type InputFrame } from '../input';
 import { type Body, type Collider, moveX, moveY, oneWayUnder, solidAt } from '../physics/aabb';
 import type { Scene } from '../scene';
@@ -9,9 +9,9 @@ import type { MoveParams } from './params';
 /**
  * The player movement controller: run with accel/decel/turn, variable-height jump, coyote time,
  * jump buffer, apex hang, double jump, dash (with dash-jump cancel), wall slide + wall jump, fast
- * fall, one-way drop-through and three corner corrections. Everything is always enabled.
+ * fall, wing glide, one-way drop-through and three corner corrections. Everything is always enabled.
  *
- * A small state machine (normal / wallSlide / dash) run in a fixed per-frame order: freeze ->
+ * A small state machine (normal / wallSlide / dash; the glide is a flag inside normal) run in a fixed per-frame order: freeze ->
  * latch presses -> mode update (velocity) -> move X then Y -> post (timers, ground and wall probes,
  * transitions, facing, events). All numbers come from MoveParams (tuning + assists).
  */
@@ -49,6 +49,7 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     airDash: t.dash.airDashes,
     dj: t.jump.doubleJumps,
     airTopY: y,
+    gliding: false,
     coyote: 0,
     jumpBuf: 0,
     djBuf: 0,
@@ -68,6 +69,8 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     sustainV: 0,
     framesSinceJump: 0,
     stepDist: 0,
+    carried: false,
+    launchY: y,
   };
 }
 
@@ -203,6 +206,7 @@ function latch(c: Ctx): void {
   if (c.pressed(ActionBit.jump)) {
     p.jumpBuf = P.jumpBufferFrames;
     p.djBuf = P.doubleJumpBufferFrames;
+    p.carried = false; // a new hold; a ground jump it launches marks it carried again
   }
   if (c.pressed(ActionBit.dash)) p.dashBuf = P.dashBufferFrames;
 }
@@ -219,6 +223,7 @@ function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {
   p.sustainV = p.vy;
   p.framesSinceJump = 0;
   c.jumped = true;
+  endGlide(c, 'release'); // (a press needs a release first, so this is only a safeguard)
   p.retainTimer = 0; // a jump (incl. wall jump) ends wall speed retention
   c.events.push({ type: 'jump', kind, x: c.fx, y: c.fy, dir });
 }
@@ -226,6 +231,8 @@ function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {
 function groundJump(c: Ctx, kind: JumpKind): void {
   c.p.vy = -c.P.jumpSpeed;
   c.p.vx += c.inX * c.P.hBoost;
+  c.p.carried = true;
+  c.p.launchY = c.p.y;
   jumpCommon(c, kind, c.inX);
 }
 
@@ -264,8 +271,13 @@ function wallJump(c: Ctx, d: number): void {
 
 /** Landing preference: falling with ground within vy x buffer frames -> keep it buffered. */
 function landingPreferred(c: Ctx): boolean {
+  return c.P.landingPreference && groundSoon(c);
+}
+
+/** Falling, and the ground is within reach of the jump buffer (vy x buffer frames). */
+function groundSoon(c: Ctx): boolean {
   const p = c.p;
-  if (!c.P.landingPreference || p.vy <= 0) return false;
+  if (p.vy <= 0) return false;
   const dist = Math.ceil(p.vy * c.P.jumpBufferFrames);
   for (let k = 0; k <= dist; k++) {
     if (c.solid(p.x, p.y + k)) return false;
@@ -315,6 +327,7 @@ function startDash(c: Ctx, dir: number): void {
   const P = c.P;
   const air = !p.grounded;
   if (p.mode === 'wallSlide') c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: p.wallDir });
+  endGlide(c, 'dash');
   p.mode = 'dash';
   p.dashDir = dir;
   p.facing = dir > 0 ? 1 : -1;
@@ -346,12 +359,14 @@ function horizontal(c: Ctx): void {
   const P = c.P;
   if (p.forceTimer > 0) return; // wall-jump force: vx held unchanged
   const inX = c.inX;
-  const target = inX * P.maxRun;
+  const max = p.gliding ? P.glideMaxRun : P.maxRun;
+  const target = inX * max;
   const turning = inX !== 0 && sign(p.vx) === -inX;
   let a: number;
   if (p.grounded) a = inX === 0 ? P.groundDecel : turning ? P.groundTurn : P.groundAccel;
+  else if (p.gliding) a = inX === 0 ? P.glideDecel : turning ? P.glideTurn : P.glideAccel;
   else a = inX === 0 ? P.airDecel : turning ? P.airTurn : P.airAccel;
-  if (Math.abs(p.vx) > P.maxRun && sign(p.vx) === inX)
+  if (Math.abs(p.vx) > max && sign(p.vx) === inX)
     a = p.grounded ? P.overspeedDecelGround : P.overspeedDecelAir;
   p.vx = approach(p.vx, target, a);
   const skidding = p.grounded && turning;
@@ -359,9 +374,56 @@ function horizontal(c: Ctx): void {
   p.skid = skidding;
 }
 
+function endGlide(c: Ctx, reason: GlideEndReason): void {
+  if (!c.p.gliding) return;
+  c.p.gliding = false;
+  c.events.push({ type: 'glideEnd', x: c.fx, y: c.fy, reason });
+}
+
+/** A buffered press is still waiting to become a jump: the wings stay shut so it can. */
+function jumpPending(c: Ctx): boolean {
+  const p = c.p;
+  if (p.djBuf > 0 && p.dj > 0) return true;
+  return p.jumpBuf > 0 && (p.coyote > 0 || groundSoon(c) || wallInRange(c) !== 0);
+}
+
+/**
+ * Wing glide: jump held while falling. Starts and stops here (and in post: landing, wall slide;
+ * startDash: dash). A hold that launched a ground jump (`carried`) only glides once she has dropped
+ * below where she jumped from, so ordinary held jumps keep their arc.
+ */
+function updateGlide(c: Ctx): void {
+  const p = c.p;
+  const P = c.P;
+  const jump = c.held(ActionBit.jump);
+  const want = P.glide && jump && !c.held(ActionBit.down) && !p.grounded;
+  if (p.gliding) {
+    if (!want) endGlide(c, jump ? 'fastfall' : 'release');
+    return;
+  }
+  if (!want || p.vy <= P.glideMinVy) return;
+  if (p.carried && p.y < p.launchY + P.glideCarriedDropPx) return;
+  if (jumpPending(c)) return;
+  p.gliding = true;
+  c.events.push({ type: 'glideStart', x: c.fx, y: c.fy, vy: p.vy });
+}
+
+/** Glide fall: the excess speed is shed geometrically (a catch you can see), then a steady sink. */
+function glideFall(c: Ctx): void {
+  const p = c.p;
+  const P = c.P;
+  const over = p.vy - P.glideFall;
+  if (over > 0) p.vy = Math.max(P.glideFall, p.vy - Math.max(P.glideCatchMin, over * P.glideCatchRate));
+  else p.vy = Math.min(P.glideFall, p.vy + P.glideSinkAccel);
+}
+
 function gravity(c: Ctx): void {
   const p = c.p;
   const P = c.P;
+  if (p.gliding) {
+    glideFall(c);
+    return;
+  }
   const heldEff = c.held(ActionBit.jump);
   // variableJump off: releasing never cuts or ends the sustain (every jump is full height).
   const holdsRise = heldEff || !P.variableJump;
@@ -382,6 +444,7 @@ function gravity(c: Ctx): void {
 }
 
 function normal(c: Ctx): void {
+  updateGlide(c);
   horizontal(c); // a
   gravity(c); // b (a jump below overwrites vy, which is the same as skipping gravity)
   if (c.p.dashBuf > 0 && canDash(c)) {
@@ -463,7 +526,7 @@ export function updatePlayer(
 function motionOf(p: PlayerState): Motion {
   if (p.mode === 'dash') return 'dash';
   if (p.mode === 'wallSlide') return 'wallSlide';
-  if (!p.grounded) return p.vy < 0 ? 'rise' : 'fall';
+  if (!p.grounded) return p.gliding ? 'glide' : p.vy < 0 ? 'rise' : 'fall';
   if (p.skid) return 'skid';
   return p.inputX !== 0 || p.vx !== 0 ? 'run' : 'idle';
 }
@@ -553,17 +616,22 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
     p.coyote = P.coyoteFrames;
     p.airDash = P.airDashes;
     p.dj = P.doubleJumps;
+    endGlide(c, 'land');
+    p.carried = false; // still held after landing: walking off an edge glides straight away
     if (!wasGrounded) {
       const fallPx = p.y - p.airTopY;
-      const hard = fallPx >= P.hardLandFallPx || impactVy >= P.maxFall;
-      events.push({ type: 'land', x: c.fx, y: c.fy, vy: impactVy, fallPx, hard });
+      // A move that ends exactly on the ground is not "blocked": the speed is still in vy.
+      const impact = impactVy > 0 ? impactVy : p.vy;
+      const hard = fallPx >= P.hardLandFallPx || impact >= P.maxFall;
+      events.push({ type: 'land', x: c.fx, y: c.fy, vy: impact, fallPx, hard });
       p.stepDist = 0;
     }
     p.airTopY = p.y;
   } else {
     if (wasGrounded && !c.jumped && p.mode === 'normal') events.push({ type: 'fall', x: c.fx, y: c.fy });
     if (!wasGrounded && p.coyote > 0) p.coyote--;
-    if (p.y < p.airTopY) p.airTopY = p.y;
+    // The wings carry her: the fall height (hard landings) counts from where they let go.
+    if (p.y < p.airTopY || p.gliding) p.airTopY = p.y;
     p.skid = false;
   }
   if (p.vy >= 0) {
@@ -593,6 +661,7 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
       inX !== 0 &&
       (inX > 0 ? touchR : touchL)
     ) {
+      endGlide(c, 'wall');
       p.mode = 'wallSlide';
       p.wallDir = inX;
       p.stick = 0;

@@ -63,6 +63,18 @@ export interface MoveParams {
   dashBufferFrames: number;
   airDashes: number;
 
+  glide: boolean;
+  glideFall: number;
+  glideCatchRate: number;
+  glideCatchMin: number;
+  glideSinkAccel: number;
+  glideMinVy: number;
+  glideMaxRun: number;
+  glideAccel: number;
+  glideDecel: number;
+  glideTurn: number;
+  glideCarriedDropPx: number;
+
   dropThroughFrames: number;
   footstepPx: number;
   hardLandFallPx: number;
@@ -75,6 +87,7 @@ export function resolveParams(t: Tuning): MoveParams {
   const s = t.assist;
   const w = t.wall;
   const d = t.dash;
+  const gl = t.glide;
   return {
     gravity: j.gravity,
     jumpSpeed: j.jumpSpeed,
@@ -134,6 +147,18 @@ export function resolveParams(t: Tuning): MoveParams {
     dashCooldownFrames: d.cooldownFrames,
     dashBufferFrames: Math.max(1, d.bufferFrames),
     airDashes: d.airDashes,
+
+    glide: a.glide,
+    glideFall: gl.fallSpeed,
+    glideCatchRate: gl.catchRate,
+    glideCatchMin: gl.catchMin,
+    glideSinkAccel: gl.sinkAccel,
+    glideMinVy: gl.minVy,
+    glideMaxRun: r.maxSpeed * gl.speedMult,
+    glideAccel: gl.accel,
+    glideDecel: gl.decel,
+    glideTurn: gl.turn,
+    glideCarriedDropPx: gl.carriedDropPx,
 
     dropThroughFrames: t.misc.dropThroughFrames,
     footstepPx: t.misc.footstepPx,

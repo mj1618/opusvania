@@ -9,6 +9,8 @@ import type { PickupKind } from './scene';
  */
 export type JumpKind = 'ground' | 'coyote' | 'buffered' | 'wall' | 'double' | 'dashJump';
 export type CornerKind = 'head' | 'ledge' | 'dash';
+/** Why a glide ended: jump released, touched down, a wall slide began, a dash, or Down (fast fall). */
+export type GlideEndReason = 'release' | 'land' | 'wall' | 'dash' | 'fastfall';
 
 export type SimEvent =
   /** The player was placed (boot, load, teleport): snap cameras and springs, don't interpolate. */
@@ -32,6 +34,13 @@ export type SimEvent =
   | { type: 'wallSlideEnd'; x: number; y: number; dir: number }
   | { type: 'dashStart'; x: number; y: number; dir: number; air: boolean }
   | { type: 'dashEnd'; x: number; y: number; dir: number }
+  /**
+   * The wings opened (jump held while falling). `vy` is the fall speed they have to catch, px/f:
+   * about 1 just after an apex, up to maxFall (or fastFallMax) out of a long drop.
+   */
+  | { type: 'glideStart'; x: number; y: number; vy: number }
+  /** The wings closed. `land` comes just before the `land` event, `wall` before `wallSlideStart`. */
+  | { type: 'glideEnd'; x: number; y: number; reason: GlideEndReason }
   /** Head hit a ceiling while rising. `y` is the top of the box here. */
   | { type: 'headBump'; x: number; y: number }
   /** An assist nudged the body by (dx, dy) px around a corner. */

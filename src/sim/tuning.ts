@@ -120,18 +120,41 @@ export const defaultTuning = {
     bufferFrames: 6,
     airDashes: 1,
   },
+  /**
+   * Wing glide: holding jump while falling opens the wings. The fall is caught (not clamped) and
+   * she sinks slowly with a little more reach. Rules: memory/movement-controller.md.
+   */
+  glide: {
+    /** Steady sink speed, px/f (22.5% of maxFall). */
+    fallSpeed: 4.8,
+    /** The catch: each frame sheds this fraction of the speed above fallSpeed, at least catchMin px/f. */
+    catchRate: 0.3,
+    catchMin: 0.4,
+    /** Acceleration up to fallSpeed when the glide starts slower than it (just after an apex), px/f². */
+    sinkAccel: 0.35,
+    /** Falling at least this fast before the wings can open, px/f. */
+    minVy: 1,
+    /** Top horizontal speed while gliding = run.maxSpeed x this. */
+    speedMult: 1.1,
+    /** Horizontal accel toward the held direction, drift decel with nothing held, and turn-around. */
+    accel: 0.6,
+    decel: 0.25,
+    turn: 0.9,
+    /** A hold carried over from a ground jump only glides once she is this far below the launch height. */
+    carriedDropPx: 16,
+  },
   /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
   pickups: {
     /** A glint within this many px of the body wakes and is hers. */
     wakePx: 84,
     /** Frames from waking to being absorbed (render: a beat of notice, then the flight). */
-    flightFrames: 14,
+    flightFrames: 18,
     /** Great glints want a closer approach and take a longer, ceremonial pickup. */
     greatWakePx: 56,
-    greatFrames: 46,
+    greatFrames: 54,
     greatValue: 5,
     /** Pickups woken together are absorbed at least this many frames apart, nearest first. */
-    staggerFrames: 3,
+    staggerFrames: 4,
     /** A pickup this soon after the last one continues the combo. */
     comboFrames: 50,
   },
@@ -158,6 +181,7 @@ export const defaultTuning = {
     landingPreference: true,
     dashJumpCancel: true,
     wallJumpRefill: true,
+    glide: true,
   },
 };
 
