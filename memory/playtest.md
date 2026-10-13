@@ -148,3 +148,20 @@ Delete entries as they are fixed.
 ## Method
 - Other agents saving files makes Vite reload the page and wipe the run. After loading, cut it off
   with `playwright-cli -s=<name> network-state-set offline`: the game needs nothing more.
+
+# After playtest 2: the sim / layout round (2026-10-14, not replayed by a person yet)
+Piloted (`layout-pilot.test.ts`, `goal-pilot.test.ts`, `lamps.test.ts`) and played with real held keys
+through `playwright-cli`. What a person should check by hand next, by playtest 2's numbers:
+- **1 (the lantern is never taught)**: `lanternNotice` fires 68 px into the first run and `pod-stone` at the
+  lantern's foot makes "cut what is in the way" stop her on it; live: noticed f 11, refused 4/12 f 54, pod
+  open f 82, lit f 145. Nothing of the notice is drawn yet. Does a person cut the pod, and stand the 0.5 s?
+- **3 (the shaft)**: trunks down to 1168 (doorways 112 px), the well before trunk A. Live: a jump at trunk B
+  from the floor slid at once, three kicks, on trunk A 1.3 s later, no head bump. Do the doorways read as
+  low (the roots now arch at head height), or does she still jump in them?
+- **4 (the summit)**: a 192 px bough east of the top and a catch branch under it. Live: both the clean
+  arrival and a deliberate overshoot landed on the bough (3830, 3868; its end is 3904).
+- **6 (the glide)**: the leap off the bluff's east lip (movement-controller.md). Honest limit: it is
+  unmissable for anyone who holds jump and does nothing for a player who only taps.
+- **12 (the sink)**: two wayside lamps, sim only (goal.md). They need drawing before anyone can judge them.
+- Also: burr-path keeps off the bluff's foot (a tapper was hit three times there); burr-rise is gone.
+- The safe-ground case is burr-root at `lamp-root`, not at the first lantern (goal.md says why).

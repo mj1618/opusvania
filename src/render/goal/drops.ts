@@ -12,7 +12,7 @@
  */
 import type { CameraView, SimView } from '../contract';
 import { VIEW_H, VIEW_W } from '../contract';
-import { type GlintBatch, K_FLARE, K_GLINT, K_SPARK } from '../pickups/batch';
+import { type GlintBatch, K_FLARE, K_GLINT, K_SPARK, K_STAR } from '../pickups/batch';
 import { smooth } from './logic';
 import type { SurfaceLight } from './surface';
 
@@ -23,10 +23,17 @@ export const DROPS = {
   quad: 46,
   /** The lowest of them hangs this far over the ground, px (clear of the grass fringe). */
   height: 22,
-  /** Waiting: scale and brightness of each, how dormant (1 = no white heat at all). */
+  /**
+   * Waiting, they sleep like the glints of the world (the cut star, cool and pale in a dark seat:
+   * pickups/batch.ts `K_STAR`), a little larger, and their twinkle runs round the huddle one after
+   * another every `round` s. As dim gold glints (0.54 size, dormancy 0.55) they were six dots that
+   * playtest 2 could not find next to the creature that had felled her. `star` = quad half-size px.
+   */
+  star: 18,
+  round: 2.3,
+  twinkle: 0.6,
   scale: 0.54,
   gain: 0.8,
-  dormancy: 0.55,
   /** Seconds per shared breath, and how deep it goes. */
   breath: 3.6,
   breathDepth: 0.22,
@@ -37,7 +44,13 @@ export const DROPS = {
   nearPx: 300,
   nearFull: 120,
   /** Motes that lift off them, one after another, so the place is found: how high px, seconds each, brightness. */
-  motes: { n: 2, height: 64, seconds: 4.2, gain: 0.55 },
+  motes: { n: 3, height: 130, seconds: 4.6, gain: 0.85, star: 11 },
+  /**
+   * Off screen (and within `reach` px of the view): three small stars at the edge of the view
+   * nearest to them, twinkling outward in turn, so the way back is never a guess. `inset` px from
+   * the edge, `step` px apart, quad half-size px, presence.
+   */
+  marker: { reach: 2600, inset: 130, step: 34, star: 17, gain: 0.9, round: 2.4 },
   /** Their glow on the ground: radii px, strength. */
   pool: { rx: 86, ry: 46, gain: 0.3 },
   /** Falling out of her as she fades: seconds to settle and to go quiet. */
@@ -74,11 +87,11 @@ export class DropsView {
   /** Where glint `k` of a huddle of `n` sits, relative to the cluster's foot: x in out[0], y in out[1]. */
   private spot(id: number, k: number, out: number[]): void {
     const a = k * GOLDEN + id * 1.7;
-    const r = k === 0 ? 0 : 7 + 5.2 * Math.sqrt(k);
+    const r = k === 0 ? 0 : 10 + 7.5 * Math.sqrt(k);
     out[0] = Math.cos(a) * r;
     // A low mound resting on the grass tips (the fringe in front hides anything lower): the middle
     // ones a little higher.
-    out[1] = -DROPS.height - 9 * Math.abs(Math.sin(a)) * (k === 0 ? 1.9 : 1) - (k % 3) * 3.5;
+    out[1] = -DROPS.height - 13 * Math.abs(Math.sin(a)) * (k === 0 ? 1.9 : 1) - (k % 3) * 5;
   }
 
   private readonly tmp = [0, 0];
@@ -144,11 +157,43 @@ export class DropsView {
         knots.delete(id);
         continue;
       }
+      const woke = k.wake >= 0;
+      const offX = Math.abs(k.x - cam.x) - VIEW_W / 2 / cam.zoom;
+      const offY = Math.abs(k.y - cam.y) - VIEW_H / 2 / cam.zoom;
+      if (!woke && (offX > -20 || offY > -20)) {
+        // Out of the picture: a few small stars at the edge nearest to it lead the way.
+        const K = D.marker;
+        const far = Math.max(offX, offY);
+        const a = smooth(-20, 60, far) * (1 - smooth(K.reach * 0.8, K.reach, far)) * smooth(1.2, 2.4, k.age);
+        if (a > 0.01) {
+          const ix = VIEW_W / 2 / cam.zoom - K.inset;
+          const iy = VIEW_H / 2 / cam.zoom - K.inset;
+          const ex = cam.x + Math.max(-ix, Math.min(ix, k.x - cam.x));
+          const ey = cam.y + Math.max(-iy + 60, Math.min(iy - 60, k.y - cam.y));
+          const dx = k.x - ex;
+          const dy = k.y - ey;
+          const dl = Math.hypot(dx, dy) || 1;
+          for (let j = 0; j < 3; j++) {
+            const tt = (((clock - j * 0.24) % K.round) + K.round) % K.round;
+            const tw = tt < 0.6 ? Math.sin((Math.PI * tt) / 0.6) ** 2 : 0;
+            const size = K.star * (0.62 + 0.19 * j);
+            front.quad(
+              K_STAR,
+              ex - (dx / dl) * K.step * (2 - j),
+              ey - (dy / dl) * K.step * (2 - j),
+              size,
+              size,
+              K.gain * a * (0.7 + 0.3 * tw),
+              tw,
+              0,
+            );
+          }
+        }
+      }
       if (Math.abs(k.x - cam.x) > hw || Math.abs(k.y - cam.y) > hh) continue;
       const gx = k.x;
       const gy = k.y + half;
       const vis = Math.max(1, Math.min(D.max, k.n));
-      const woke = k.wake >= 0;
       // How many have left the huddle so far, and which spots still hold one.
       let gone = 0;
       if (woke) {
@@ -183,10 +228,19 @@ export class DropsView {
         const x = gx + (out[0] as number) * (1 + 0.5 * fall) + lean;
         const y = gy + (out[1] as number) - lift - (half - 6 + s * 3) * fall * fall;
         const hop = turn % vis === s ? beck * (1 - up) : 0;
-        const size = D.scale + (D.wakeScale - D.scale) * stir + 0.06 * hop;
-        const e = (D.gain * breath + (1 - D.gain) * stir + 0.25 * hop) * smooth(0, 0.12, k.age - s * 0.04);
-        const dorm = D.dormancy * (1 - Math.max(stir, 0.6 * hop));
-        back.quad(K_GLINT, x, y, D.quad * size, D.quad * size, e, (id * 0.31 + s * 0.173) % 1, dorm);
+        const inn = smooth(0, 0.12, k.age - s * 0.04);
+        // Asleep: the cut star, its twinkle running round the huddle. Stirred (fresh from her, she
+        // is near, woken): it warms and the gold glint takes its place.
+        const tt = (((clock - (s * D.round * 0.62) / vis - id) % D.round) + D.round) % D.round;
+        const tw = tt < D.twinkle ? Math.sin((Math.PI * tt) / D.twinkle) ** 2 : 0;
+        const asleep = 1 - smooth(0.25, 0.8, stir);
+        if (asleep > 0.004)
+          back.quad(K_STAR, x, y, D.star, D.star, asleep * inn, Math.max(tw, hop), smooth(0, 0.7, stir));
+        if (stir > 0.2) {
+          const size = D.scale + (D.wakeScale - D.scale) * stir + 0.06 * hop;
+          const e = (D.gain * breath + (1 - D.gain) * stir + 0.25 * hop) * inn * smooth(0.2, 0.7, stir);
+          back.quad(K_GLINT, x, y, D.quad * size, D.quad * size, e, (id * 0.31 + s * 0.173) % 1, 0);
+        }
       }
       const here = Math.min(1, held / vis);
 
@@ -198,18 +252,10 @@ export class DropsView {
       const M = D.motes;
       for (let m = 0; m < M.n; m++) {
         const ph = (clock / M.seconds + m / M.n + id * 0.41) % 1;
-        const mx = gx + Math.sin(ph * 5 + m * 2 + id) * 7 + (m - 0.5) * 8;
-        const my = gy - D.height - 10 - M.height * ph ** 0.8;
-        back.quad(
-          K_SPARK,
-          mx,
-          my,
-          2.6,
-          2.6,
-          M.gain * Math.sin(Math.PI * ph) ** 1.5 * glow,
-          0,
-          0.5 * (1 - ph),
-        );
+        const mx = gx + Math.sin(ph * 5 + m * 2 + id) * 9 + (m - 1) * 8;
+        const my = gy - D.height - 14 - M.height * ph ** 0.8;
+        const ma = M.gain * Math.sin(Math.PI * ph) ** 1.2 * glow * (1 - up);
+        back.quad(K_STAR, mx, my, M.star, M.star, ma, 0.35 * Math.sin(Math.PI * ph), 0);
       }
 
       if (!woke) continue;

@@ -74,7 +74,7 @@ const STATIONS: Array<[prefix: string, x: number, y: number]> = [
   ['f4-', 1480, 704],
   ['ledge-', 2480, 528],
   ['crown-', 3260, 448],
-  ['branch-', 2176, 1280],
+  ['branch-', 2060, 1280],
   ['rise-', 2250, 1024],
   ['root-', 4080, 1184],
   ['f6-', 4460, 912],
@@ -85,6 +85,8 @@ const STATIONS: Array<[prefix: string, x: number, y: number]> = [
   ['great-far', 5300, 592],
   ['great-hang', 1984, 1280],
   ['hollow-', 3780, 1376],
+  // (The leap's line is flown in layout-pilot.test.ts; from the terrace under it each is a hop.)
+  ['leap-', 2800, 1152],
 ];
 
 describe('gathering every glint in the grove', () => {
@@ -98,7 +100,7 @@ describe('gathering every glint in the grove', () => {
     }
   });
 
-  it('all 68 can be collected: 62 glints and 6 great ones, worth 92', () => {
+  it('all 72 can be collected: 66 glints and 6 great ones, worth 96', () => {
     const s = newSim();
     const missed: string[] = [];
     // The wall-jump shaft first: the climb itself passes through its glints.
@@ -124,10 +126,10 @@ describe('gathering every glint in the grove', () => {
       if (s.state.pickups.timers[i] !== -1 && !missed.includes(p.id)) missed.push(p.id);
     });
     expect(missed).toEqual([]);
-    expect(list).toHaveLength(68);
-    expect(s.state.pickups.taken).toBe(68);
-    expect(s.state.pickups.count).toBe(92);
-    expect(pickupsWorth(GROVE, T)).toBe(92);
+    expect(list).toHaveLength(72);
+    expect(s.state.pickups.taken).toBe(72);
+    expect(s.state.pickups.count).toBe(96);
+    expect(pickupsWorth(GROVE, T)).toBe(96);
   });
 
   it('the sky line needs the wings: the same flight without them gathers none of its far half', () => {

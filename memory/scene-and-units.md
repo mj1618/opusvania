@@ -17,7 +17,7 @@
 `{id, width: 5760, height: 1600, spawn: {x, y}, ceilingY?: -420, solids: [{tag, x, y, w, h}], oneWays: [{tag, x, y, w}],
 pickups: [{id, kind: glint|great, x, y}], pods: [{id, x, y, mount: sit|hang, hp?: 1-3}],
 enemies: [{id, kind: burrback, x, y (feet centre), facing: -1|1, radius? (its own range, box centre from its start)} | {id, kind: lampwing, x, y (home: box centre, in open
-air), facing, radius?}], lanterns: [{id, x, y (foot, on solid ground), cost?}], heart: {x, y (on solid ground)}}`
+air), facing, radius?}], lanterns: [{id, x, y (foot, on solid ground), cost?}], lamps: [the same: wayside lamps, goal.md], heart: {x, y (on solid ground)}}`
 (burrbacks first; pickups.md, combat.md, enemies.md, goal.md),
 validated by Zod in `src/scene/index.ts` (exports `GROVE`), typed in `src/sim/scene.ts`. Tags are for
 artists (`ground | pool | ledge | trunk | floating | root | branch`); the sim ignores them, except that
@@ -28,20 +28,21 @@ drops through. Nothing is lethal; burrbacks and lampwings hurt (enemies.md).
 ```
 x:  0        1000       2000       3000       4000       5000     5760
  0 ┌──────────────────────────────────────────────────────────────────┐
-                                                 ┌┐ trunk B (top 192)
-448                               ┌ledge─────┬┐  ││             ┌ledge┤
+                                                 ┌┐╌bough (192, to 3904)
+448                               ┌ledge─────┬┐  ││ ╌catch (448)  ┌ledge┤
                            ▬F5    └──────────┤│  ││        ▬F7  └─────┤
 608                  ▬F4                     ││  ││
 704            ▬F3                 trunk A → ││  ││     ▬F6
 832         ▬F2                              ││  ││  ╌branch
-960     ▬F1          ╌branch (1024) ┌bluff┐  └┘  └┘ (both end at 1024: walk under)
-1088┌bank┐                          │ 960 └terrace┐            ┌──raised ground──┤
-1280│    └────ground───┐    ┌───────┘     1152    └─ground┐ ▄root──ground──┘     │
+960     ▬F1          ╌branch (1024) ┌bluff┐  ││  ││ (both end at 1168: a 112 px doorway under each)
+1088┌bank┐                          │ 960 └terr.┐└┘  └┘        ┌──raised ground──┤
+1280│    └────ground───┐    ┌───────┘     1152  └well─ground┐ ▄root──ground──┘     │
 1408│                  └pool┘                             └hollow 1376           │
 1600└────────────────────────────────────────────────────────────────────────────┘
 ```
 - Ground tops, west to east: bank 1088 (0-384) | 1280 (384-1536) | pool floor 1408 (1536-1856) | 1280
-  (1856-2432) | **bluff 960 (2432-2624)** | terrace 1152 (2624-3200) | 1280 (3200-3744) | **hollow 1376
+  (1856-2432) | **bluff 960 (2432-2624)** | terrace 1152 (2624-3072) | 1280 (3072-3744: the well 3072-3200, under
+  trunk A, the shaft floor 3328-3584, under trunk B) | **hollow 1376
   (3744-3968)** | 1280 (3968-4608, the root 3968-4160 at 1184 on its west end) | right rise 1088 (4608-5760).
 - **The floor is not a corridor** (2026-10-14, after the playtest's 8 s hold-right run): the bluff's west
   face is 320 px, more than a jump (272). Up it: the branch (a jump from the path, then 64 px up and a 128 px
@@ -51,17 +52,31 @@ x:  0        1000       2000       3000       4000       5000     5760
 - From the bluff's top: F5 is a jump + double jump straight up-left (432 px, 32 to spare: a short cut to the
   high ledge for a sure hand); a held jump off the **west** lip is "the way home" (glide over burr-path and
   the whole pool to the first lantern: movement-controller.md, `layout-pilot.test.ts`); a held jump off the
-  east lip floats over the terrace into trunk A's bark and slides under it.
+  east lip floats over the terrace into trunk A's bark and slides down it into the well: **the leap**
+  (movement-controller.md).
 - Left route up: bank → F1..F5 → high ledge (y 448) → trunk A top → trunk B top (192, the highest point).
 - The trunk pair (gap 256 px, x 3328-3584) is the wall-jump shaft: three wall jumps from the ground to 448.
   Six glints zigzag wall to wall up it (at the three kick points and between them), the first at head
-  height on the floor.
+  height on the floor. **Both trunks come down to y 1168** (2026-10-14; they ended at 1024 and the entry was a
+  trap: a jump passed under the walls, a running jump bumped the underside). Now the gap under each is a
+  doorway 112 px high (she is 80; a jump in it bumps 32 px up, nobody takes it for a way up) and the walls
+  start a short hop over the floor: from anywhere on the shaft floor a jump toward either trunk held 14
+  frames or more ends in a wall slide, and so does a running jump at trunk A from the terrace or at trunk B
+  from the east (`layout-pilot.test.ts`). The terrace stops at 3072, 128 px short of trunk A: **the well**,
+  where a walker drops in front of the doorway, a glide off the bluff slides down trunk A's bark, and
+  `lamp-trunk` stands (3160). West out of the well is one jump.
+- **The summit is 320 px to land on** (it was trunk B's 128): a bough (one-way, 3712-3904, y 192) runs east
+  from the top, and a catch branch (one-way, 3808-4128, y 448) hangs a jump below it. Of 720 jump + double jump
+  arrivals from trunk A (start, both holds, the gap between presses, steering) none falls east any more
+  (110 did): ~460 land on the top or the bough, ~9 on the catch branch (one held jump back up through the
+  bough), the rest came up short into the shaft, which is three kicks. The summit glide takes off from the
+  lantern or the bough alike.
 - Right route up: root → branch → F6 → F7 → far ledge (448).
 - Pickups may hang above the scene top, up to 40 px under `ceilingY` (the sky line over the right zone).
 - `tests/unit/scene.test.ts` pilots every route; if you move a rect, it tells you what became unreachable.
   Reach numbers are in movement-controller.md.
 - Lanterns: 1448, 1280 (moth-stone) / 3684, 192 (trunk B's top) / 5524, 448 (far ledge); the heart: 5212, 1088
-  (the shrine). Validated: on a solid top that is not the pool, the whole trigger box supported and clear,
+  (the shrine). Wayside lamps (sim only so far): 3160, 1280 (the well) / 4566, 1280 (foot of the right rise). Validated: on a solid top that is not the pool, the whole trigger box supported and clear,
   lanterns 300 px from the spawn, a heart needs lanterns. `tests/unit/goal-pilot.test.ts` plays the whole scene
   from the spawn to the heart: move a rect and it names the leg that broke.
 
@@ -132,7 +147,8 @@ Interfaces are documented at the top of `scene/index.ts`, `character/index.ts`, 
 `lights.ts` and `contract.ts`. The driver order per render frame is in `stage.ts`.
 
 ## Shots and clips
-- `npm run shots` (dev server on 5180, or `--url`): `shots/wide-*.png` (1920x1080 at 9 camera stops; 8 = the bluff, 9 = the hollow),
+- `npm run shots` (dev server on 5180, or `--url`): `shots/wide-*.png` (1920x1080 at 12 camera stops; 8 = the bluff, 9 = the hollow, 10 = the shaft floor, 11 = the
+  summit bough, 12 = the catch branch),
   `shots/closeup-*.png` (character at 4x in 12 situations) and `shots/closeup-strip.png`. `--only=wide|closeup`,
   `--out=dir`, `--ambient=N` (render frames to run before shooting), `--hitboxes`, `--no-gpu`. ~1.5 s.
   Deterministic: same code, same pictures. Parallel agents: use different `--out` dirs.

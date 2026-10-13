@@ -1,7 +1,7 @@
 # Sim / runtime architecture
 
 - `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
-  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 14)) and appends `SimEvent`s. The scene is static and
+  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 15)) and appends `SimEvent`s. The scene is static and
   not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
   (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
 - No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
@@ -39,7 +39,8 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   `attackSeq`, `attackHits`, `attackStep` (1-3), `attackFinisher`, `lungeX`, `hang`; `hitstop` (frames the sim is holding her after a hit: x, y and every
   player timer stand still, so hold the pose) and `kickX` (recoil shove). Details: combat.md.
 - Health: `hp`, `hpMax`, `invuln`, `stagger`, `faded`, `hurtDir`, `hurtSeq` (enemies.md).
-- `kindling`: index of the lantern she is kindling this frame, -1 = none (goal.md).
+- `kindling`: index of the lantern she is kindling this frame, -1 = none (goal.md). `kindlingLamp`: the same for a
+  wayside lamp (`scene.lamps`); never both.
 - While wall sliding `facing` points **away** from the wall (a `turn` event fires on contact).
 - `motion` is `run` whenever a direction is held or vx != 0 on the ground, including pushing into a wall
   (vx = 0): check `vx` if that should look different.
@@ -65,7 +66,8 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   (`timers[]` per `scene.pickups[i]`, `count`, `taken`, `combo`...) and the rule are in pickups.md.
 - `glintsDrop`, `dropWake` and `pickup {drop: true}` (a fade's dropped glints): pickups.md.
   `enemyTurn` causes `lantern` / `wary`, `enemyAlert` cause `touch`: enemies.md.
-- `lanternRefuse`, `lanternChannel`, `lanternCancel`, `lanternKindle`, `lanternRest`, `heartSleep`,
+- `lanternNotice` (she came within 260 px of a dormant one: once per approach), `lanternRefuse`, `lanternChannel`,
+  `lanternCancel`, `lanternKindle`, `lanternRest`; the same six for wayside lamps as `lamp...`; `heartSleep`,
   `heartWake`, `gather`, `endHold`: goal.md (`x, y` = the lantern's foot / the heart, not her feet).
 
 ## Step order

@@ -114,6 +114,8 @@ export interface PlayerState {
   hurtSeq: number;
   /** Index of the lantern she is kindling this frame (`scene.lanterns`), -1 = none (memory/goal.md). */
   kindling: number;
+  /** The same for a wayside lamp (`scene.lamps`), -1 = none. Never both at once. */
+  kindlingLamp: number;
   /** Last safe ground (feet centre): where she re-forms. `safeFrames` = frames in a row on safe ground. */
   safeX: number;
   safeY: number;
@@ -348,6 +350,8 @@ export interface LanternState {
   short: number;
   /** It has told her she carries too little; it will not again until she has gone away and come back. */
   refused: boolean;
+  /** She has come near it while it was dormant (`lanternNotice` fired); cleared once she is well away. */
+  noticed: boolean;
 }
 
 /** The goal of the scene (src/sim/goal.ts, memory/goal.md): the lanterns, the heart, the ending. */
@@ -355,8 +359,19 @@ export interface GoalState {
   lanterns: LanternState[];
   /** How many are lit. */
   lit: number;
-  /** The lit lantern she last stood at: where she re-forms (index into `scene.lanterns`), -1 = none yet. */
+  /**
+   * The lit lantern she last stood at: where she re-forms (index into `scene.lanterns`), -1 = none
+   * yet, or the last light she stood at was a wayside lamp (`restLamp`).
+   */
   restAt: number;
+  /**
+   * Wayside lamps (`scene.lamps`, same order): lesser lanterns with the same rules that do not count
+   * toward the heart. `lampsLit` = how many burn; `restLamp` = the lit lamp she last stood at, if
+   * that is more recent than any lantern (-1 otherwise): she re-forms there.
+   */
+  lamps: LanternState[];
+  lampsLit: number;
+  restLamp: number;
   /**
    * The heart of the grove. `awake` once every lantern is lit; `frames` counts up from the frame
    * it woke (0 while asleep); `hinted`: she has walked up to it asleep (`heartSleep` fired).
@@ -387,6 +402,9 @@ export interface GoalState {
     greatsTotal: number;
     enemiesTotal: number;
     deaths: number;
+    /** Wayside lamps lit, of how many there are. */
+    lamps: number;
+    lampsTotal: number;
   };
   /** The hold is over (`endHold`): the scene stays calm until the restart. */
   ended: boolean;
@@ -395,7 +413,7 @@ export interface GoalState {
 }
 
 export interface GameState {
-  version: 14;
+  version: 15;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;
@@ -431,6 +449,7 @@ export function cloneState(s: GameState): GameState {
     goal: {
       ...s.goal,
       lanterns: s.goal.lanterns.map((l) => ({ ...l })),
+      lamps: s.goal.lamps.map((l) => ({ ...l })),
       heart: { ...s.goal.heart },
       ending: { ...s.goal.ending },
       run: { ...s.goal.run },

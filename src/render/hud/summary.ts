@@ -14,8 +14,8 @@ import { clockText } from '../goal/logic';
 
 export const SUMMARY = {
   /** Centre of the upper row (what she found), logical px; the lower row (how it went) sits `rowGap` under it. */
-  y: 916,
-  rowGap: 50,
+  y: 910,
+  rowGap: 64,
   font: 32,
   /** The "/ total" after a count, and the lower row, are this much smaller. */
   sub: 0.62,
@@ -27,7 +27,11 @@ export const SUMMARY = {
   /** Seconds after `endHold`: the row fades in from..to, the key from..to. */
   rowIn: [0.5, 2.1],
   keyIn: [2.6, 3.8],
-  keyY: 104,
+  keyY: 128,
+  /** Under each entry its name in small caps (the pod and the shell could not be told without): px, tracking px, drop under the baseline. */
+  label: 11.5,
+  track: 1.6,
+  labelDrop: 19,
   family: '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif',
 };
 
@@ -192,6 +196,29 @@ const ICONS: Array<(g: Ctx, s: number) => void> = [
     g.stroke();
     g.restore();
   },
+  // Wayside lamps: a small crook with its seed of glass, lit.
+  (g, s) => {
+    const k = s / 30;
+    g.save();
+    g.scale(k, k);
+    g.strokeStyle = COOL;
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(-5, 13);
+    g.bezierCurveTo(-8, 2, -6, -9, -1, -11.5);
+    g.bezierCurveTo(3, -13.5, 7, -11, 6.4, -7);
+    g.stroke();
+    g.fillStyle = 'rgba(255, 178, 80, 0.95)';
+    g.beginPath();
+    g.moveTo(6.4, -6.6);
+    g.bezierCurveTo(7, -3.6, 9.8, -1.6, 9.8, 1.2);
+    g.bezierCurveTo(9.8, 3.6, 8.2, 5, 6.4, 5);
+    g.bezierCurveTo(4.6, 5, 3, 3.6, 3, 1.2);
+    g.bezierCurveTo(3, -1.6, 5.8, -3.6, 6.4, -6.6);
+    g.closePath();
+    g.fill();
+    g.restore();
+  },
   // Fades: her light gone up in three motes.
   (g, s) => {
     const k = s / 30;
@@ -219,6 +246,10 @@ export interface Entry {
   icon: number;
   text: string;
   of?: string;
+  /** Over and above the total (what finishers paid): "+n", small, gold. */
+  plus?: string;
+  /** Its name, set in small caps under it. */
+  label?: string;
   /** Everything of its kind was found: it gets a gold flourish. */
   all?: boolean;
 }
@@ -240,6 +271,7 @@ function paintRows(rows: Entry[][]): Texture {
         (S.icon + S.gap) * k +
         width(e.text, S.font * k) +
         (e.of ? width(e.of, S.font * S.sub * k) + 5 * k : 0) +
+        (e.plus ? width(e.plus, S.font * S.sub * k) + 7 * k : 0) +
         S.between * k;
     return total;
   };
@@ -247,7 +279,7 @@ function paintRows(rows: Entry[][]): Texture {
   let widest = 0;
   for (let r = 0; r < rows.length; r++) widest = Math.max(widest, rowWidth(rows[r] as Entry[], scaleOf(r)));
   const cw = Math.ceil(widest) + pad * 2;
-  const ch = Math.ceil(S.font * 1.5 + S.rowGap * (rows.length - 1)) + pad * 2;
+  const ch = Math.ceil(S.font * 1.5 + S.rowGap * (rows.length - 1) + S.labelDrop) + pad * 2;
   const canvas = document.createElement('canvas');
   canvas.width = cw * RES;
   canvas.height = ch * RES;
@@ -303,6 +335,31 @@ function paintRows(rows: Entry[][]): Texture {
           put(e.of, size * S.sub, end + 5 * k, e.all ? 0.95 : 0.78);
           end += 5 * k + width(e.of, size * S.sub);
         }
+        if (e.plus) {
+          const px = size * S.sub;
+          g.font = fontOf(px);
+          g.save();
+          seatOn(g);
+          g.fillStyle = 'rgba(2, 12, 18, 0.6)';
+          g.fillText(e.plus, end + 7 * k, base);
+          g.restore();
+          g.fillStyle = 'rgba(255, 196, 96, 0.95)';
+          g.fillText(e.plus, end + 7 * k, base);
+          end += 7 * k + width(e.plus, px);
+        }
+        if (e.label) {
+          // Its name, small caps, cool and quiet, under the numeral.
+          g.save();
+          g.font = `600 ${S.label * (r > 0 ? 0.94 : 1)}px ${S.family}`;
+          (g as Ctx & { letterSpacing: string }).letterSpacing = `${S.track}px`;
+          seatOn(g);
+          g.fillStyle = 'rgba(2, 12, 18, 0.7)';
+          g.fillText(e.label.toUpperCase(), tx, base + S.labelDrop * k);
+          g.shadowColor = 'transparent';
+          g.fillStyle = 'rgba(176, 202, 214, 0.8)';
+          g.fillText(e.label.toUpperCase(), tx, base + S.labelDrop * k);
+          g.restore();
+        }
         if (e.all) {
           // All of them: a sprig of gold under the entry, a small star at its end.
           g.save();
@@ -311,7 +368,7 @@ function paintRows(rows: Entry[][]): Texture {
           g.strokeStyle = 'rgba(255, 214, 120, 0.95)';
           g.fillStyle = 'rgba(255, 224, 140, 0.95)';
           g.lineWidth = 1.2;
-          const y0 = base + 9;
+          const y0 = base + 9 + (e.label ? (S.labelDrop + 1) * k : 0);
           g.beginPath();
           g.moveTo(x + 2, y0 - 2);
           g.quadraticCurveTo((x + end) / 2, y0 + 5, end - 2, y0 - 2);
@@ -397,20 +454,25 @@ export class EndSummary {
       return;
     }
     const e = goal.ending;
-    const count = (icon: number, n: number, total: number): Entry =>
-      total > 0 ? { icon, text: String(n), of: `/ ${total}`, all: n >= total } : { icon, text: String(n) };
+    const count = (icon: number, label: string, n: number, total: number): Entry =>
+      total > 0
+        ? { icon, label, text: String(n), of: `/ ${total}`, all: n >= total }
+        : { icon, label, text: String(n) };
     // What she found, and under it how it went.
+    const glints = count(0, 'glints', e.glints, e.glintsTotal);
+    if (e.bonus > 0) glints.plus = `+${e.bonus}`;
     const found: Entry[] = [
-      count(0, e.glints, e.glintsTotal),
-      count(4, e.greats, e.greatsTotal),
-      count(5, e.pods, e.podsTotal),
-      count(2, e.kills, e.enemiesTotal),
+      glints,
+      count(4, 'great glints', e.greats, e.greatsTotal),
+      count(5, 'pods', e.pods, e.podsTotal),
+      count(2, 'creatures', e.kills, e.enemiesTotal),
     ];
     const went: Entry[] = [
-      { icon: 1, text: clockText(e.time) },
-      { icon: 3, text: String(e.hits) },
+      { icon: 1, label: 'time', text: clockText(e.time) },
+      { icon: 3, label: 'hits', text: String(e.hits) },
     ];
-    if (e.deaths > 0) went.push({ icon: 6, text: String(e.deaths) });
+    if ((e.lampsTotal ?? 0) > 0) found.push(count(6, 'lamps', e.lamps ?? 0, e.lampsTotal ?? 0));
+    if (e.deaths > 0) went.push({ icon: 7, label: 'fades', text: String(e.deaths) });
     const rows = [found, went];
     const sig = JSON.stringify(rows);
     if (sig !== this.shown) {

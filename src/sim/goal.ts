@@ -8,6 +8,10 @@
  *  - A lit lantern stays lit until the restart. It is a rest point: standing at it hurt for
  *    `restFrames` makes her whole, and the lit lantern she last stood at is where she re-forms.
  *  - Kindling calms the creatures round it for a while.
+ *  - A wayside lamp (`scene.lamps`) is a lesser lantern: the same rules and a smaller price, its own
+ *    events (`lamp...`), and it does not count toward the heart.
+ *  - A dormant lantern or lamp is noticed as she comes near (`lanternNotice` / `lampNotice`), once
+ *    per approach, so the picture can answer a player who never stops at it.
  *  - When every lantern is lit the heart (`scene.heart`) wakes. Walking into it then ends the run:
  *    `gather` with a summary, control is taken for `holdFrames`, then `endHold` and the scene rests
  *    (`ended`) until the restart.
@@ -21,21 +25,27 @@ import { pickupsWorth } from './pickups';
 import type { Box } from './player/attack';
 import { podsWorth } from './pods';
 import type { Lantern, Scene } from './scene';
-import type { GameState, GoalState, PlayerState } from './state';
+import type { GameState, GoalState, LanternState, PlayerState } from './state';
 import type { Tuning } from './tuning';
+
+const dormant = (): LanternState => ({
+  lit: false,
+  litFrame: -1,
+  channel: 0,
+  rest: 0,
+  short: 0,
+  refused: false,
+  noticed: false,
+});
 
 export function createGoal(scene: Scene): GoalState {
   return {
-    lanterns: (scene.lanterns ?? []).map(() => ({
-      lit: false,
-      litFrame: -1,
-      channel: 0,
-      rest: 0,
-      short: 0,
-      refused: false,
-    })),
+    lanterns: (scene.lanterns ?? []).map(dormant),
     lit: 0,
     restAt: -1,
+    lamps: (scene.lamps ?? []).map(dormant),
+    lampsLit: 0,
+    restLamp: -1,
     heart: { awake: false, frames: 0, hinted: false },
     gathered: false,
     ending: {
@@ -52,6 +62,8 @@ export function createGoal(scene: Scene): GoalState {
       greatsTotal: 0,
       enemiesTotal: 0,
       deaths: 0,
+      lamps: 0,
+      lampsTotal: 0,
     },
     ended: false,
     run: { start: -1, hits: 0, deaths: 0 },
@@ -63,6 +75,11 @@ const whole = (n: number, min: number): number => Math.max(min, Math.round(n));
 /** What a lantern takes: its own `cost`, or the default. */
 export function lanternCost(l: Lantern, t: Tuning['goal']): number {
   return whole(l.cost ?? t.cost, 0);
+}
+
+/** What a wayside lamp takes: its own `cost`, or the lamps' default. */
+export function lampCost(l: Lantern, t: Tuning['goal']): number {
+  return whole(l.cost ?? t.lampCost, 0);
 }
 
 /** A lantern's trigger box: centred on its foot, standing up from the surface. */
@@ -79,8 +96,11 @@ export function heartBox(c: { x: number; y: number }, t: Tuning['goal']): Box {
   return { x: c.x - (w >> 1), y: c.y - h, w, h };
 }
 
-/** Where she re-forms if a lantern holds her: the foot of the lit lantern she last stood at. */
+/** Where she re-forms if a light holds her: the foot of the lit lantern or lamp she last stood at. */
 export function restPoint(state: GameState, scene: Scene): { x: number; y: number } | undefined {
+  const k = state.goal.restLamp;
+  const lamp = k >= 0 ? scene.lamps?.[k] : undefined;
+  if (lamp && state.goal.lamps[k]?.lit) return lamp;
   const i = state.goal.restAt;
   const l = i >= 0 ? scene.lanterns?.[i] : undefined;
   return l && state.goal.lanterns[i]?.lit ? l : undefined;
@@ -143,6 +163,7 @@ export function updateGoal(
     else if (type === 'fade') g.run.deaths++;
   }
   p.kindling = -1;
+  p.kindlingLamp = -1;
   const heart = scene.heart;
   if (g.heart.awake) g.heart.frames++;
 
@@ -199,6 +220,8 @@ export function updateGoal(
       g.ending.greatsTotal = greatsTotal;
       g.ending.enemiesTotal = state.enemies.length;
       g.ending.deaths = g.run.deaths;
+      g.ending.lamps = g.lampsLit;
+      g.ending.lampsTotal = scene.lamps?.length ?? 0;
       // Nothing of hers is left waiting to fire while she is held.
       p.jumpBuf = 0;
       p.djBuf = 0;
@@ -226,17 +249,47 @@ export function updateGoal(
         greatsTotal: g.ending.greatsTotal,
         enemiesTotal: g.ending.enemiesTotal,
         deaths: g.ending.deaths,
+        lamps: g.ending.lamps,
+        lampsTotal: g.ending.lampsTotal,
       });
     }
   }
 
+  updateLights(state, scene, t, events, false, control, hurt, slashed);
+  updateLights(state, scene, t, events, true, control, hurt, slashed);
+}
+
+/**
+ * One step of the lanterns (`lamp` false) or of the wayside lamps (`lamp` true): the same rules,
+ * their own lists, prices and event names. Only a lantern counts for the heart.
+ */
+function updateLights(
+  state: GameState,
+  scene: Scene,
+  t: Tuning,
+  events: SimEvent[],
+  lamp: boolean,
+  control: boolean,
+  hurt: boolean,
+  slashed: boolean,
+): void {
+  const g = state.goal;
+  const G = t.goal;
+  const p = state.player;
+  const wallet = state.pickups;
+  const list = (lamp ? scene.lamps : scene.lanterns) ?? [];
+  const lights = lamp ? g.lamps : g.lanterns;
   const pcx = p.x + p.w / 2;
+  const pcy = p.y + p.h / 2;
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
-    const s = g.lanterns[i];
+    const s = lights[i];
     if (!l || !s) continue;
     const b = lanternBox(l, G);
     const at = control && standsIn(p, b);
+    const id = l.id;
+    const x = l.x;
+    const y = l.y;
 
     if (s.lit) {
       // A rest point: where she re-forms, and where she is made whole.
@@ -244,7 +297,8 @@ export function updateGoal(
         s.rest = 0;
         continue;
       }
-      g.restAt = i;
+      g.restAt = lamp ? -1 : i;
+      g.restLamp = lamp ? i : -1;
       if (p.hp >= p.hpMax) {
         s.rest = 0;
         continue;
@@ -253,11 +307,21 @@ export function updateGoal(
       const healed = p.hpMax - p.hp;
       p.hp = p.hpMax;
       s.rest = 0;
-      events.push({ type: 'lanternRest', id: l.id, x: l.x, y: l.y, hp: p.hp, hpMax: p.hpMax, healed });
+      events.push({ type: lamp ? 'lampRest' : 'lanternRest', id, x, y, hp: p.hp, hpMax: p.hpMax, healed });
       continue;
     }
 
-    const need = lanternCost(l, G);
+    const need = lamp ? lampCost(l, G) : lanternCost(l, G);
+    // Noticed as she comes near, once per approach: nothing happens here, the picture answers.
+    const nx = pcx - (b.x + b.w / 2);
+    const ny = pcy - (b.y + b.h / 2);
+    const far = nx * nx + ny * ny;
+    if (s.noticed) {
+      if (far > G.noticeLeavePx * G.noticeLeavePx) s.noticed = false;
+    } else if (control && !g.gathered && far <= G.noticePx * G.noticePx) {
+      s.noticed = true;
+      events.push({ type: lamp ? 'lampNotice' : 'lanternNotice', id, x, y, have: wallet.count, need });
+    }
     if (s.refused) {
       // Sideways only: a hop on the spot is still the same visit.
       if (Math.abs(pcx - l.x) > G.refuseLeavePx) s.refused = false;
@@ -267,9 +331,10 @@ export function updateGoal(
       s.short = 0;
       const of = whole(G.channelFrames, 1);
       s.channel++;
-      p.kindling = i;
+      if (lamp) p.kindlingLamp = i;
+      else p.kindling = i;
       if (s.channel < of) {
-        events.push({ type: 'lanternChannel', id: l.id, x: l.x, y: l.y, frames: s.channel, of });
+        events.push({ type: lamp ? 'lampChannel' : 'lanternChannel', id, x, y, frames: s.channel, of });
         continue;
       }
       // Kindled.
@@ -281,20 +346,24 @@ export function updateGoal(
       s.short = 0;
       s.refused = false;
       p.kindling = -1;
-      g.lit++;
-      g.restAt = i;
+      p.kindlingLamp = -1;
+      g.restAt = lamp ? -1 : i;
+      g.restLamp = lamp ? i : -1;
+      if (lamp) g.lampsLit++;
+      else g.lit++;
       events.push({
-        type: 'lanternKindle',
-        id: l.id,
-        x: l.x,
-        y: l.y,
+        type: lamp ? 'lampKindle' : 'lanternKindle',
+        id,
+        x,
+        y,
         cost: need,
         wallet: wallet.count,
-        lit: g.lit,
+        lit: lamp ? g.lampsLit : g.lit,
         total: list.length,
       });
       calmEnemies(state, scene, t, events, l.x, b.y + b.h / 2, G.calmPx, whole(G.calmFrames, 0));
-      if (g.lit === list.length && !g.heart.awake && heart) {
+      const heart = scene.heart;
+      if (!lamp && g.lit === list.length && !g.heart.awake && heart) {
         g.heart.awake = true;
         g.heart.frames = 0;
         events.push({ type: 'heartWake', x: heart.x, y: heart.y });
@@ -308,7 +377,7 @@ export function updateGoal(
           : slashed || p.attack !== 'none'
             ? 'attack'
             : 'leave';
-      events.push({ type: 'lanternCancel', id: l.id, x: l.x, y: l.y, frames: s.channel, reason });
+      events.push({ type: lamp ? 'lampCancel' : 'lanternCancel', id, x, y, frames: s.channel, reason });
       s.channel = 0;
     }
     // Too little: it says so once she has stood still at it a moment (a run through says nothing).
@@ -317,10 +386,10 @@ export function updateGoal(
     if (waiting && !s.refused && s.short >= whole(G.refuseFrames, 1)) {
       s.refused = true;
       events.push({
-        type: 'lanternRefuse',
-        id: l.id,
-        x: l.x,
-        y: l.y,
+        type: lamp ? 'lampRefuse' : 'lanternRefuse',
+        id,
+        x,
+        y,
         have: wallet.count,
         need,
         show: whole(G.refuseShowFrames, 0),

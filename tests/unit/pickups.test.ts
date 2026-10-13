@@ -146,7 +146,7 @@ describe('the grove pickups', () => {
   it('about sixty glints and a handful of great ones, ids unique', () => {
     const greats = list.filter((p) => p.kind === 'great');
     expect(list.length - greats.length).toBeGreaterThanOrEqual(40);
-    expect(list.length - greats.length).toBeLessThanOrEqual(64);
+    expect(list.length - greats.length).toBeLessThanOrEqual(68);
     expect(greats.length).toBeGreaterThanOrEqual(4);
     expect(greats.length).toBeLessThanOrEqual(6);
     expect(new Set(list.map((p) => p.id)).size).toBe(list.length);

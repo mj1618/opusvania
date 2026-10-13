@@ -206,10 +206,10 @@ describe('burrback: its touch is one hit', () => {
     watch(g, 800, (e, f) => {
       if (of(e, 'hurt').length) at.push(f);
     });
-    // (Its ground is 576 px since the bluff took the east end of it: a round is a little shorter.)
+    // (Its patrol is 312 px now, clear of the bluff's foot: a round is shorter.)
     expect(at.length).toBeLessThanOrEqual(3);
     for (let i = 1; i < at.length; i++)
-      expect((at[i] as number) - (at[i - 1] as number)).toBeGreaterThan(240);
+      expect((at[i] as number) - (at[i - 1] as number)).toBeGreaterThan(180);
   });
 
   it('the recoil stops at walls and at the brink of a ledge', () => {
@@ -227,7 +227,8 @@ describe('the grove: no burrback waits where she lands', () => {
   const LANDINGS: Array<[string, number, number, number]> = [
     ['out of the pool to the right (x 1856)', 1856, 1952, 1280],
     ['the foot of the bluff, where a walk off its east lip comes down (x 2624)', 2624, 2880, 1152],
-    ['up onto the terrace from the right (x 3200)', 3104, 3200, 1152],
+    ['the terrace, all of it: every way off the bluff comes down somewhere on it', 2624, 3072, 1152],
+    ["the well at trunk A's foot and the shaft floor", 3072, 3744, 1280],
     ['onto the left bank (x 384)', 288, 384, 1088],
     ['onto the high ledge from F5 (x 2816)', 2816, 2912, 448],
     [

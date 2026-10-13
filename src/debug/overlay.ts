@@ -7,7 +7,15 @@ import type { EnemyState } from '../sim/state';
 type Rect = { x: number; y: number; w: number; h: number };
 /** What the overlay draws of the goal: `channel` and `rest` are 0..1 (how far along). */
 export interface GoalBoxes {
-  lanterns: Array<{ box: Rect; lit: boolean; channel: number; rest: number; restPoint: boolean }>;
+  /** Lanterns, then wayside lamps (`lamp`). */
+  lanterns: Array<{
+    box: Rect;
+    lit: boolean;
+    channel: number;
+    rest: number;
+    restPoint: boolean;
+    lamp?: boolean;
+  }>;
   heart: { box: Rect; awake: boolean; gathered: boolean } | null;
   /** A lit lantern's sanctuary: how far burrbacks keep (sideways), and lampwings (from its centre). */
   sanctuary: number;
@@ -24,7 +32,7 @@ export interface GoalBoxes {
  * it has noticed or pursues her, dim otherwise) and its velocity. Lanterns: their trigger box (cyan
  * dormant, gold lit; a bar that fills while she kindles it or rests at it; a tick under the one she
  * re-forms at; once lit, a gold line along the ground burrbacks keep off and the circle lampwings
- * give up at). Dropped glint clusters: a yellow diamond. The heart: its box (dim violet asleep, bright orange awake, white once reached). Drawn above the post stage in
+ * give up at). Wayside lamps the same with a green box while dormant and a thinner line. Dropped glint clusters: a yellow diamond. The heart: its box (dim violet asleep, bright orange awake, white once reached). Drawn above the post stage in
  * playfield space, so it shows the truth regardless of the art.
  */
 export class HitboxOverlay {
@@ -67,8 +75,8 @@ export class HitboxOverlay {
     const goal = this.goal();
     for (const l of goal.lanterns) {
       const b = l.box;
-      const color = l.lit ? 0xffc94a : 0x4ce0ff;
-      g.rect(b.x, b.y, b.w, b.h).stroke({ color, width: 2, alpha: l.lit ? 1 : 0.7 });
+      const color = l.lit ? 0xffc94a : l.lamp ? 0x7dff9a : 0x4ce0ff;
+      g.rect(b.x, b.y, b.w, b.h).stroke({ color, width: l.lamp ? 1 : 2, alpha: l.lit ? 1 : 0.7 });
       const fill = l.lit ? l.rest : l.channel;
       if (fill > 0) g.rect(b.x, b.y - 8, b.w * Math.min(1, fill), 4).fill({ color: 0xffffff });
       if (l.restPoint)

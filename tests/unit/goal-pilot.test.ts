@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GROVE } from '../../src/scene/index';
 import type { SimEvent } from '../../src/sim/events';
-import { hashState, lanternCost, slashBox, step } from '../../src/sim/index';
+import { hashState, lampCost, lanternCost, slashBox, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
 import { pickupsWorth } from '../../src/sim/pickups';
 import { podsWorth } from '../../src/sim/pods';
@@ -17,10 +17,13 @@ import { feet, hopOnto, newSim, type Sim, wallClimb } from './helpers';
  * than break it. If a rect, a lantern or the economy moves and the run stops being possible, the
  * failing leg names where.
  *
- * The route: pod on the spawn ground -> the spawn line -> the moth-stone lantern (refused: 9 of 12)
- * -> the pool -> back to kindle it -> over the pool -> the burrback and the big pod beyond it ->
- * the mid rise (burrback, pod) -> under the trunks (great glint) -> the wall-jump shaft -> trunk A's
- * top -> trunk B's top, the summit: second lantern -> jump, double jump, glide right over the whole
+ * The route, as a first-timer who cuts what is in the way would go: the spawn line -> the pod at the
+ * moth-stone's foot (the lantern notices her at 3 of 12; cutting the pod she stands at it, and its ten
+ * glints kindle it under her) -> over the pool -> the burrback beyond it -> the branch, the bluff, its
+ * pod -> the leap: off the bluff's east lip with jump held, the wings carry her down the glint line to
+ * the bark of trunk A; she slides down it into the well at its foot, where the wayside lamp stands (8) -> the tunnel under
+ * trunk A, the shaft floor, under trunk B (great glint)
+ * -> the wall-jump shaft -> trunk A's top -> trunk B's top, the summit: second lantern -> jump, double jump, glide right over the whole
  * right zone and down onto the far ledge at its lantern (the designed approach): third lantern, the heart wakes -> down to the shrine on the right rise:
  * the heart. If the glide fails, the right route on foot (root, branch, F6, F7) is the fallback.
  */
@@ -29,6 +32,7 @@ const bit = (d: number) => (d > 0 ? RIGHT : d < 0 ? LEFT : 0);
 const G = defaultTuning.goal;
 const S = GROVE.solids;
 const lanterns = GROVE.lanterns ?? [];
+const lamps = GROVE.lamps ?? [];
 const pods = GROVE.pods ?? [];
 const foes = GROVE.enemies ?? [];
 const of = <T extends SimEvent['type']>(ev: SimEvent[], type: T) =>
@@ -171,6 +175,22 @@ function glideOnto(
   return s.state.player.grounded && at.y === r.y && at.x > r.x && at.x < r.x + r.w;
 }
 
+/**
+ * The leap off the bluff's east lip: a hop with jump held, a run off the lip still holding it. The
+ * wings open as she leaves the edge and carry her over the terrace to trunk A's bark; she slides
+ * down it into the well at its foot. Frames, or -1.
+ */
+function leap(s: Sim, maxFrames = 400): number {
+  const from = s.events.length;
+  for (let f = 0; f < 50; f++) tick(s, J);
+  for (let f = 0; f < maxFrames; f++) {
+    const p = s.state.player;
+    if (p.grounded && feet(s).y === 1280) return of(s.events.slice(from), 'glideStart').length > 0 ? f : -1;
+    tick(s, RIGHT | J);
+  }
+  return -1;
+}
+
 /** Walks toward x until the run is gathered. Frames, or -1. */
 function walkIntoHeart(s: Sim, x: number, maxFrames = 600): number {
   for (let f = 0; f < maxFrames; f++) {
@@ -209,41 +229,51 @@ function playthrough(t: Tuning = cloneTuning(defaultTuning)) {
     mark(`kindle the ${name} lantern`, lit(i));
   };
   const need = (i: number) => lanternCost(lanterns[i] as (typeof lanterns)[number], t.goal);
-
-  // --- The left: light for the first lantern.
-  mark('open pod-path-1', openPod(s, 'pod-path-1'));
-  mark('walk the spawn line to the moth-stone', walkTo(s, (lanterns[0] as { x: number }).x, 4));
-  mark(
-    'stand at it: too little light',
-    waitFor(s, () => of(s.events, 'lanternRefuse').length > 0 || lit(0), 120),
-  );
-  mark('into the pool', walkTo(s, 1696, 30));
-  waitFor(s, () => s.state.pickups.count >= need(0) || lit(0), 60);
-  if (s.state.pickups.count < need(0) && !lit(0)) {
-    // Still short (a dearer lantern): the arc over the pool, then back through the water.
-    mark('out of the pool for the arc', hopOnto(s, rect('ground', 1)) >= 0);
-    mark('walk back for a run-up', walkTo(s, 1300, 10));
-    mark('leap the pool for its arc', leapPool(s));
-    mark('back into the pool', walkTo(s, 1696, 30));
+  /** A wayside lamp on the way: lit if she can spare it (what the lanterns still ask stays in hand). */
+  const light = (i: number, name: string) => {
+    const l = lamps[i];
+    if (!l) throw new Error(`no lamp ${i}`);
+    mark(`walk to the ${name} lamp`, walkOrHop(l));
+    if (s.state.pickups.count < lampCost(l, t.goal)) return;
     mark(
-      'enough light for the first lantern',
-      waitFor(s, () => s.state.pickups.count >= need(0), 120),
+      `kindle the ${name} lamp`,
+      waitFor(s, () => s.state.goal.lamps[i]?.lit === true, 300),
     );
+  };
+
+  // --- The left: the spawn line, the pod at the moth-stone's foot, the first lantern.
+  mark('walk the spawn line to the pod at the moth-stone', openPod(s, 'pod-stone'));
+  // She cut it standing at the lantern: as its glints land the channel starts by itself.
+  waitFor(s, () => lit(0) || s.state.pickups.count >= need(0), 120);
+  if (s.state.pickups.count < need(0) && !lit(0)) {
+    // Still short (a dearer lantern): the shallows, then the arc over the pool and back.
+    mark('into the pool', walkTo(s, 1696, 30));
+    waitFor(s, () => s.state.pickups.count >= need(0), 60);
+    if (s.state.pickups.count < need(0)) {
+      mark('out of the pool for the arc', hopOnto(s, rect('ground', 1)) >= 0);
+      mark('walk back for a run-up', walkTo(s, 1300, 10));
+      mark('leap the pool for its arc', leapPool(s));
+      mark('back into the pool', walkTo(s, 1696, 30));
+      mark(
+        'enough light for the first lantern',
+        waitFor(s, () => s.state.pickups.count >= need(0), 120),
+      );
+    }
   }
   kindle(0, 'moth-stone');
 
-  // --- The centre: over the pool, the path beyond, the rise, the trunks, the summit.
+  // --- The centre: over the pool, the path beyond, the bluff, the leap, the trunks, the summit.
   mark('leap the pool', leapPool(s));
   mark('out of the pool if she fell short', hopOnto(s, rect('ground', 2)) >= 0);
   mark('cut down burr-path', fightBurr(s, 'burr-path'));
-  mark('open pod-path-2', openPod(s, 'pod-path-2'));
   // The bluff is taller than a jump: the branch is the step up to it.
   mark('onto the branch', GROVE.oneWays[0] !== undefined && hopOnto(s, GROVE.oneWays[0]) >= 0);
   mark('from the branch onto the bluff', hopOnto(s, rect('ground', 3)) >= 0);
   mark('open pod-rise', openPod(s, 'pod-rise'));
-  mark('down onto the terrace', hopOnto(s, rect('ground', 4)) >= 0);
-  mark('cut down burr-rise', fightBurr(s, 'burr-rise'));
-  mark('down to the trunks', walkTo(s, 3456, 8));
+  // The leap: a hop on the spot with jump held, then off the east lip still holding it.
+  mark('the leap off the bluff: wings open at the lip', leap(s));
+  light(0, 'trunk');
+  mark('through the tunnel under trunk A into the shaft', walkTo(s, 3456, 8));
   mark('under trunk B for the great glint', walkTo(s, 3648, 8));
   mark('back into the shaft', walkTo(s, 3456, 8));
   mark('wall jumps up the shaft', wallClimb(s, rect('trunk', 0).y, -1) >= 2);
@@ -289,10 +319,17 @@ describe('the grove can be finished', () => {
     const { s, legs, glided, ended } = playthrough();
     const ev = s.events;
     const g = s.state.goal;
-    // The first lantern turned her away once (the spawn line and one pod are not enough), then burned.
-    const refuse = of(ev, 'lanternRefuse')[0];
-    expect(refuse?.id).toBe('lantern-stone');
-    expect(refuse?.have).toBeLessThan(refuse?.need ?? 0);
+    // The first lantern noticed her coming with the spawn line's three; the pod at its foot paid
+    // the rest, and it caught without her ever being turned away.
+    const notice = of(ev, 'lanternNotice')[0];
+    // (It fires 68 px into the run, 260 px out: the spawn line's glints are still flying to her.)
+    expect(notice).toMatchObject({ id: 'lantern-stone', need: 12 });
+    expect(notice?.have).toBeLessThanOrEqual(3);
+    expect(of(ev, 'lanternRefuse')).toHaveLength(0);
+    expect(of(ev, 'lanternKindle')[0]?.wallet).toBeLessThanOrEqual(1);
+    // The leap landed her by the lamp at trunk A's foot with the line's glints; she lit it (8 more spent).
+    expect(of(ev, 'lampKindle').map((e) => e.id)).toEqual(['lamp-trunk']);
+    expect(g.lampsLit).toBe(1);
     // All three, in the order of the route; the heart woke in the step the last one caught.
     const kindled = of(ev, 'lanternKindle');
     expect(kindled.map((e) => e.id)).toEqual(['lantern-stone', 'lantern-crown', 'lantern-far']);
@@ -303,7 +340,7 @@ describe('the grove can be finished', () => {
     expect(g.lanterns.every((l) => l.lit)).toBe(true);
     // The wallet: everything gathered = what she holds + the 36 spent.
     const gathered = of(ev, 'pickup').reduce((n, e) => n + e.value, 0);
-    expect(s.state.pickups.spent).toBe(36);
+    expect(s.state.pickups.spent).toBe(36 + 8);
     expect(s.state.pickups.count + s.state.pickups.spent).toBe(gathered);
     // The summary is the run: its glints (to the gather), time, kills and hits.
     const gather = of(ev, 'gather')[0];
@@ -316,7 +353,7 @@ describe('the grove can be finished', () => {
     expect(gather.lanterns).toBe(3);
     expect(gather.kills).toBe(of(before, 'enemyDie').length);
     expect(gather.hits).toBe(of(before, 'hurt').length);
-    expect(gather.kills).toBeGreaterThanOrEqual(2);
+    expect(gather.kills).toBeGreaterThanOrEqual(1);
     // Her first input is on frame 0, so the time is the frame of the gather; the hold ends 240 steps on.
     expect(gather.time).toBe(ended - G.holdFrames - 1);
     expect(of(ev, 'endHold')).toHaveLength(1);
@@ -331,7 +368,7 @@ describe('the grove can be finished', () => {
     // The glide leg held (the walk round is only the fallback), and the run is brisk.
     expect(glided).toBe(true);
     expect(gather.time).toBeLessThan(2400);
-    expect(legs.length).toBeGreaterThan(25);
+    expect(legs.length).toBeGreaterThan(20);
     // The trace of the run: `npx vitest run tests/unit/goal-pilot.test.ts --disable-console-intercept`
     // with GOAL_TRACE=1 prints it.
     if (process.env.GOAL_TRACE) {
@@ -403,7 +440,7 @@ describe('the grove can be finished', () => {
 describe('economy: what the lanterns ask against what the grove holds', () => {
   it('36 in all: under half of the world glints alone, a fifth of everything', () => {
     expect(cost).toBe(36);
-    expect([world, podsAll, kills]).toEqual([92, 62, 35]);
+    expect([world, podsAll, kills]).toEqual([96, 62, 31]);
     // A player who never cuts a pod or a creature can still pay for all three.
     expect(world).toBeGreaterThanOrEqual(cost * 2);
     expect(cost / (world + podsAll + kills)).toBeLessThan(0.25);

@@ -23,7 +23,6 @@ const count = (ev: SimEvent[], type: string) => ev.filter((e) => e.type === type
 const STATIONS: Record<string, [x: number, y: number]> = {
   'burr-bank': [40, 1088],
   'burr-path': [1900, 1280],
-  'burr-rise': [2700, 1152],
   'burr-ledge': [2850, 448],
   'burr-root': [4200, 1280],
 };

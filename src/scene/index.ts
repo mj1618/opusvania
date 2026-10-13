@@ -71,12 +71,20 @@ const SceneSchema = z
         z.object({ id: z.string().min(1), x: int, y: int, cost: int.min(0).max(99).optional() }).strict(),
       )
       .default([]),
+    lamps: z
+      .array(
+        z.object({ id: z.string().min(1), x: int, y: int, cost: int.min(0).max(99).optional() }).strict(),
+      )
+      .default([]),
     heart: z.object({ x: int, y: int }).strict().optional(),
   })
   .strict();
 
 /** No lantern stands closer to the spawn point than this (foot to feet). */
 export const LANTERN_SPAWN_CLEAR = 300;
+
+/** A wayside lamp keeps this far (foot to foot, on the same ground) from every lantern and other lamp. */
+export const LAMP_CLEAR = 160;
 
 /** No enemy starts closer to the spawn point than this (feet to feet). */
 export const ENEMY_SPAWN_CLEAR = 300;
@@ -209,11 +217,25 @@ export function parseScene(json: unknown): Scene {
     if (dx * dx + dy * dy < LANTERN_SPAWN_CLEAR * LANTERN_SPAWN_CLEAR)
       throw new Error(`Scene "${s.id}": lantern "${l.id}" is too close to the spawn point`);
   }
+  // Wayside lamps: placed like lanterns, and never crowding one (their trigger boxes stay apart).
+  for (const l of s.lamps) {
+    if (seen.has(l.id)) throw new Error(`Scene "${s.id}": two things are called "${l.id}"`);
+    seen.add(l.id);
+    stands(`lamp "${l.id}"`, l, G.lanternWidth, G.lanternHeight);
+    const dx = l.x - s.spawn.x;
+    const dy = l.y - s.spawn.y;
+    if (dx * dx + dy * dy < LANTERN_SPAWN_CLEAR * LANTERN_SPAWN_CLEAR)
+      throw new Error(`Scene "${s.id}": lamp "${l.id}" is too close to the spawn point`);
+    for (const o of [...s.lanterns, ...s.lamps]) {
+      if (o !== l && o.y === l.y && Math.abs(o.x - l.x) < LAMP_CLEAR)
+        throw new Error(`Scene "${s.id}": lamp "${l.id}" crowds "${o.id}"`);
+    }
+  }
   if (s.heart) {
     stands('the heart', s.heart, G.heartWidth, G.heartHeight);
     if (s.lanterns.length === 0) throw new Error(`Scene "${s.id}": a heart needs lanterns to wake it`);
     const hb = { x0: s.heart.x - G.heartWidth / 2, x1: s.heart.x + G.heartWidth / 2 };
-    for (const l of s.lanterns) {
+    for (const l of [...s.lanterns, ...s.lamps]) {
       if (l.y === s.heart.y && l.x + G.lanternWidth / 2 > hb.x0 && l.x - G.lanternWidth / 2 < hb.x1)
         throw new Error(`Scene "${s.id}": lantern "${l.id}" stands in the heart`);
     }

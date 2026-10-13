@@ -726,7 +726,7 @@ describe('enemies: determinism, symmetry, restart', () => {
     expect(hashState(cloneState(a.state))).toBe(hashState(a.state));
     expect(cloneState(a.state).enemies[0]).not.toBe(a.state.enemies[0]);
     expect(of(a.events, 'hurt').length + of(a.events, 'enemyHit').length).toBeGreaterThan(2);
-    expect(a.state.version).toBe(14);
+    expect(a.state.version).toBe(15);
   });
 
   it('mirror symmetry: a mirrored scene and mirrored inputs give exactly the mirrored fight', () => {
@@ -788,8 +788,8 @@ describe('enemies in the grove', () => {
   // The burrbacks (they come first in the scene's list; the lampwings have lampwing.test.ts).
   const list = (GROVE.enemies ?? []).filter((e) => e.kind === 'burrback');
 
-  it('five burrbacks, validated: on a surface, clear of solids, unique, away from the spawn', () => {
-    expect(list.map((e) => e.id)).toEqual(['burr-bank', 'burr-path', 'burr-rise', 'burr-ledge', 'burr-root']);
+  it('four burrbacks, validated: on a surface, clear of solids, unique, away from the spawn', () => {
+    expect(list.map((e) => e.id)).toEqual(['burr-bank', 'burr-path', 'burr-ledge', 'burr-root']);
     for (const e of list) {
       const d = Math.hypot(e.x - GROVE.spawn.x, e.y - GROVE.spawn.y);
       expect(d, e.id).toBeGreaterThan(300);
@@ -832,10 +832,11 @@ describe('enemies in the grove', () => {
       // 96 px short of every drop (the bank's lip, the pool's edge, both ends of the rise and of
       // the high ledge, the far ledge's open end); right up to walls and the scene's edges.
       ['burr-bank', 0, 288],
-      ['burr-path', 1952, 2432],
-      // burr-rise has a range of its own (`radius`): it keeps 270 px from the foot of the bluff she
-      // drops from (a walk off the lip comes down 220 px out).
-      ['burr-rise', 2900, 3104],
+      // burr-path has a range of its own (`radius`): it keeps 116 px from the foot of the bluff, where
+      // a first-timer stands working out the climb (it walked right up to that wall and hit her there).
+      ['burr-path', 2004, 2316],
+      // (None on the terrace any more: every way off the bluff's east lip comes down somewhere on it,
+      // from 170 px out for a walk off to the trunk for a held jump; no patrol fits between them.)
       ['burr-ledge', 2912, 3232],
       ['burr-root', 4160, 4608],
     ]);

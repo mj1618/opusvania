@@ -106,6 +106,11 @@ export interface Scene {
   /** Moth-lanterns, in a fixed order: `GameState.goal.lanterns` is indexed like this array. */
   lanterns?: Lantern[];
   /**
+   * Wayside lamps, in a fixed order (`GameState.goal.lamps`): lesser lanterns, optional. Same data
+   * and rules as a lantern (`cost` defaults to `tuning.goal.lampCost`); not counted for the heart.
+   */
+  lamps?: Lantern[];
+  /**
    * The heart of the grove: a point on the ground (feet centre). It wakes when every lantern is
    * lit; walking into it then ends the run (src/sim/goal.ts).
    */

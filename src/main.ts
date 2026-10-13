@@ -23,7 +23,7 @@ async function boot(): Promise<void> {
   const seed = Number(params.get('seed') ?? 1) >>> 0;
   const input = new InputSampler();
   const scene = params.has('nopickups')
-    ? { ...GROVE, pickups: [], pods: [], enemies: [], lanterns: [], heart: undefined }
+    ? { ...GROVE, pickups: [], pods: [], enemies: [], lanterns: [], lamps: [], heart: undefined }
     : GROVE;
   const game = new Game(tuning, scene, seed, () => input.sample());
   if (params.has('manual')) game.mode = 'manual';

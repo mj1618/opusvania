@@ -35,11 +35,13 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   Once woken it comes wherever she goes (like every pickup).
 
 ### Dropped clusters, render (`src/render/goal/drops.ts`, knobs `DROPS`; drawn by the goal renderer's batches)
-- Waiting: up to 7 world glints (`K_GLINT`, 0.54 size, dormancy 0.55) in a low mound that hangs 22 px
-  over the ground. Lower and they are behind the grass fringe (`playfieldFront` covers every layer of
-  ours): the first try at 9 px could not be seen at all. They breathe together (3.6 s), one lifts its
-  head every 2.6 s, a mote drifts up from them, a small `SurfaceLight` pool warms the ground under them.
-  They stir when she is within 300 px.
+- Waiting: up to 7 sleeping stars (`K_STAR`, the dormant glint's look, 18 px quads; their twinkle runs
+  round the huddle every 2.3 s) in a low mound that hangs 22 px over the ground, three small stars
+  rising 130 px off it in turn. As dim gold glints (0.54 size) playtest 2 could not find them next to
+  the creature that felled her. Off screen, three small stars stand 130 px inside the view edge nearest
+  to them, twinkling outward (`DROPS.marker`; faint on purpose, and foreground leaves can cover them). Lower and they are behind the grass fringe (`playfieldFront` covers every layer of
+  ours): the first try at 9 px could not be seen at all. One lifts its head every 2.6 s, a small `SurfaceLight` pool warms the
+  ground under them. Within 300 px they warm to gold glints.
 - A thin thread of light over them (the first version, 190 px, 0.75) read as an interface line at zoom 2;
   the rising motes replaced it.
 - `glintsDrop`: they fall from where her body lay and go quiet over ~2 s (the camera has usually cut to
@@ -48,8 +50,9 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   (0.36 s of flight, a three-spark tail, a beat of light at her chest). Timed from the event, not from
   `pickup {drop}`; the state's `drops` only says the cluster still exists.
 - A scene without lanterns or a heart has no goal renderer and so draws no drops.
-- HUD: `glintsDrop` makes the count run down one by one (0.9 s for the lot, at most 0.07 s each, after
-  a 0.35 s beat) instead of jumping; the re-form relights `reform.hp` lights (2).
+- HUD: `glintsDrop` holds the count 6.5 s; after 1 s it runs down one by one (1.5 s for the lot), the
+  lost ones fall away cold, and "-n" stands beside it in cold numerals for 4 s; the re-form relights
+  `reform.hp` lights (2).
 
 ## Render (`src/render/pickups/`)
 - Layers: `pickupsBack` (under `character`: the buds) and `pickups` (over it, under
@@ -171,19 +174,25 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 - Capturing: the HUD is on the game canvas, so in ONE `playwright-cli eval` step with `__game.step`
   and `drawImage` the canvas into a 2D sheet canvas right after each step, return `toDataURL`.
   Device pixel ratio 2: `run-code` with CDP `Emulation.setDeviceMetricsOverride`.
-- burr-path (1856-2560) and burr-rise wander into "empty" capture spots: use 900 / 3456 / 4900.
+- burr-path (2004-2316) wanders into "empty" capture spots there: use 900 / 3456 / 4900.
 
 ## Look decisions (learned by looking)
 - A round glowing dot is a firefly (the scene has orange ones). The four-point star with a
   whiter-gold core is the silhouette that says "collectible"; every few seconds an arm flash
   (`flash` in the shader) sets it further apart. Keep halo and body small or the bloom and the
   vignette at frame edges turn stars back into round orange dots.
-- **Dormant by default** (study 2: 20-30 full-bright idle glints per screen out-ranked her face and
-  read as confetti). Beyond `wakePx` (260) a glint is half size, a dim gold mote (centre luma ~110-130
-  after post) that twinkles on its own 4.5-9.5 s clock; it comes fully awake by `wakeFull` (120 px)
-  and leans a few px her way. Lines and arcs still read, as faint dotted trails. Great glints idle at
-  0.72 size / half brightness and lend half their point light until she is near.
-- Lowering the energy alone does not dim it: the heart of the star stays white down to e ~0.1 (core +
+- **Dormant = a sleeping star, cool, in a dark seat** (`K_STAR` in batch.ts; playtest 2: as dim gold
+  motes they were 2 px specks, the same as the ambient motes, and the sky line and the shaft's zigzag
+  could not be seen). Beyond `wakePx` (260) a glint is a cut four-point star 25 x 15 px (`glint.star`
+  21 = quad half-size), pale blue-white (every mote in the air is a warm round dot), laid over a dark
+  seat (alpha, not added) so it stands against the amber light well as well as the black canopy, with
+  a dark pip at its heart. Found by shape and temperature: its peak luma is 190-235 over ~150 px², no
+  halo, no bloom. It warms and gives way to the gold glint between `wakePx` and `wakeFull`.
+- **The twinkle is shared along a trail**: glints whose ids differ only in the last number
+  (`sky-1..6`, `shaft-1..6`, `pool-arc-1..5`) pulse one after another, 0.26 s apart, in that order,
+  then rest 1.7 s: a line of them reads as a path that leads somewhere. Number new trails from the
+  end the player starts at. Great glints are unchanged (0.72 size / half brightness until she is near).
+- (History, the old dim-gold dormant mote.) Lowering the energy alone does not dim it: the heart of the star stays white down to e ~0.1 (core +
   arms + bloom). The shader takes a "dormancy" (aData.w for K_GLINT) and divides by `1 + 5 * d * peak`:
   a soft knee that removes the white heat and keeps the arms. At 0.42 size / 0.3 energy without the
   knee they vanished at zoom 1 yet still peaked at 250.
@@ -209,7 +218,10 @@ pilots reach; move a rect or a pickup and it names what became unreachable.
 - ffmpeg's `tile` to PNG picks a palette format: add `-pix_fmt rgb24` or contact sheets come out
   posterised and yellow.
 
-## Layout pass 2026-10-14: what moved (62 glints + 6 great = 92)
+## Layout pass 2026-10-14: what moved (66 glints + 6 great = 96 since the leap's line)
+- `leap-1..4` (2700,885 / 2790,920 / 2880,960 / 2970,1000): the line off the bluff's east lip, at the wings'
+  sink (4.8 down per 10.6 along), between the run-off glide (which takes them from below) and the held
+  kick's glide (from above). A plain fall takes the first two; from the terrace the rest are a hop.
 - `pool-arc-2..4` lowered 40-48 px (1050 / 1020 / 1015): the same five now hang on both the jump east from
   the lip and the glide west off the bluff (layout-pilot). Still 11 low glints by the first lantern.
 - `rise-1..3` (2345,880 / 2400,800 / 2460,770): the arc from the branch up onto the bluff.

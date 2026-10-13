@@ -338,6 +338,13 @@ export type SimEvent =
    */
   | { type: 'lanternRefuse'; id: string; x: number; y: number; have: number; need: number; show: number }
   /**
+   * She has come near a dormant lantern (her body centre within `tuning.goal.noticePx` of its
+   * trigger box's centre), carrying `have` of the `need` it takes: once per approach, however fast
+   * she passes (again only after she has been `noticeLeavePx` away). For the lantern to stir, the
+   * count to show its price, her head to turn. Nothing happens in the sim.
+   */
+  | { type: 'lanternNotice'; id: string; x: number; y: number; have: number; need: number }
+  /**
    * She is kindling it: every frame of the channel but the last, `frames` (1, 2, ...) of `of`. The
    * frame that would be `of` is `lanternKindle` instead.
    */
@@ -370,6 +377,33 @@ export type SimEvent =
     }
   /** Standing at a lit lantern made her whole: `healed` lights came back, `hp` of `hpMax` now. */
   | { type: 'lanternRest'; id: string; x: number; y: number; hp: number; hpMax: number; healed: number }
+  /**
+   * Wayside lamps (`scene.lamps`, `state.goal.lamps`): the lantern events under their own names,
+   * with the same fields. `lampKindle`: `lit` of `total` LAMPS burn (lanterns are not counted, and a
+   * lamp never wakes the heart).
+   */
+  | { type: 'lampNotice'; id: string; x: number; y: number; have: number; need: number }
+  | { type: 'lampRefuse'; id: string; x: number; y: number; have: number; need: number; show: number }
+  | { type: 'lampChannel'; id: string; x: number; y: number; frames: number; of: number }
+  | {
+      type: 'lampCancel';
+      id: string;
+      x: number;
+      y: number;
+      frames: number;
+      reason: 'leave' | 'hurt' | 'attack';
+    }
+  | {
+      type: 'lampKindle';
+      id: string;
+      x: number;
+      y: number;
+      cost: number;
+      wallet: number;
+      lit: number;
+      total: number;
+    }
+  | { type: 'lampRest'; id: string; x: number; y: number; hp: number; hpMax: number; healed: number }
   /**
    * She walked up to the heart of the grove (`x`, `y` = its point on the ground) while it sleeps:
    * `lit` of `total` lanterns burn. Once per run.
@@ -405,6 +439,9 @@ export type SimEvent =
       greatsTotal: number;
       enemiesTotal: number;
       deaths: number;
+      /** Wayside lamps lit, of how many there are. */
+      lamps: number;
+      lampsTotal: number;
     }
   /** The ending hold is over (`state.goal.ended`): the scene rests until the restart. `x`, `y` = the heart. */
   | { type: 'endHold'; x: number; y: number };

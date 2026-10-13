@@ -42,7 +42,7 @@ in vec2 vMask;
 in vec2 vData;   // energy, whiteness (0 amber .. 1 golden-white)
 out vec4 o;
 uniform sampler2D uMask;
-uniform vec4 uSurface;  // gain on the surface's own colour, floor, air, -
+uniform vec4 uSurface;  // gain on the surface's own colour, floor, pale-from, pale loss
 void main() {
   float r2 = dot(vUv, vUv);
   float f = max(0.0, 1.0 - r2);
@@ -58,14 +58,26 @@ void main() {
   float lum = dot(m.rgb, vec3(0.3, 0.55, 0.15));
   vec3 lit = (vec3(lum) * 0.8 + m.rgb * 0.2) * uSurface.x + m.a * uSurface.y;
   lit = lit / (1.0 + 2.2 * max(lit.r, max(lit.g, lit.b)));
-  vec3 add = lit * warm * f * vData.x + warm * f * f * uSurface.z * vData.x;
-  o = vec4(add, 0.0);
+  // Added amber on cold blue stone makes cream (the boulder and the moth-stone by the first
+  // lantern): a surface takes colour before strength. A stain of amber times its own value is
+  // laid over it (alpha), which takes the cold blue out; less light is added, and a deeper amber.
+  // The threshold only spares near-black soil (0.2 left the boulder grey-tan: its value is low).
+  float pale = smoothstep(uSurface.z, uSurface.z + 0.22, lum) * m.a;
+  float k = f * min(vData.x, 1.2);
+  vec3 deep = mix(warm, vec3(1.0, 0.36, 0.07), 0.75 * pale);
+  vec3 add = lit * deep * f * vData.x * (1.0 - uSurface.w * pale);
+  float a = 0.5 * pale * k;
+  vec3 stain = vec3(1.0, 0.42, 0.1) * lum;
+  o = vec4(add + stain * a, a);
 }`;
 
 export class SurfaceLight {
   readonly mesh: Mesh<Geometry, Shader>;
-  /** Gain on the surface's own colour, a floor for black soil, and what the bare air takes. */
-  readonly uniform = new Float32Array([2.0, 0.035, 0.0, 0]);
+  /**
+   * Gain on the surface's own colour, a floor for black soil, the value above which a surface is
+   * stained amber (over 0.22 from there), and how much of the added light a stained one loses.
+   */
+  readonly uniform = new Float32Array([2.0, 0.035, 0.03, 0.3]);
   private readonly verts: Float32Array;
   private readonly vbuf: Buffer;
   private n = 0;

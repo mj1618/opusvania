@@ -990,7 +990,7 @@ describe('lampwings in the grove', () => {
       ['lamp-glade', 800, 690, 100],
       ['lamp-f3', 1290, 480, 80],
       ['lamp-ledge', 2700, 150, 90],
-      ['lamp-glide-1', 4400, 270, 60],
+      ['lamp-glide-1', 4470, 270, 60],
       ['lamp-glide-2', 4900, 250, 60],
     ]);
     expect((GROVE.enemies ?? []).slice(0, first).every((e) => e.kind === 'burrback')).toBe(true);

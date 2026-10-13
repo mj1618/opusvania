@@ -37,6 +37,16 @@ export const STYLES: readonly LanternStyle[] = [
   { side: -1, height: 146, lean: 8, over: 22, shift: 10, extra: 'moss' },
 ];
 
+/**
+ * Wayside lamps (`scene.lamps`): the same crook and seed drawn at `WAY_SCALE`, squatter and more
+ * overgrown, so a lamp is plainly a lesser sister and five lights do not read as "five to kindle".
+ */
+export const WAY_SCALE = 0.68;
+export const WAY_STYLES: readonly LanternStyle[] = [
+  { side: -1, height: 112, lean: 12, over: 20, shift: 12, extra: 'moss' },
+  { side: 1, height: 104, lean: 14, over: 22, shift: 12, extra: 'fern' },
+];
+
 const WOOD = [0x0b2026, 0x0b1107, 0x121a36] as const;
 const WOOD_RIM = [0x3f8a86, 0xa9a860, 0x6274ac] as const;
 const GLASS = [0x0d2029, 0x090e07, 0x0b0e22] as const;
@@ -170,6 +180,7 @@ export class LanternView {
   private readonly hangY: number;
   private angle = 0;
   private spin = 0;
+  private bow = 0;
   /** Where the stem stands (world x). */
   readonly ox: number;
   /** 0..1: a cold glint on the dormant glass, and how far the creeper has leafed out. */
@@ -178,19 +189,23 @@ export class LanternView {
   private readonly glintG = new Graphics();
   private readonly lifeG = new Graphics();
 
+  /** `scale` < 1 draws the whole thing smaller about its foot (a wayside lamp, with `style`). */
   constructor(
     readonly x: number,
     readonly y: number,
     index: number,
+    readonly scale = 1,
+    style?: LanternStyle,
   ) {
-    const st = STYLES[index % STYLES.length] as LanternStyle;
+    const st = style ?? (STYLES[index % STYLES.length] as LanternStyle);
     this.style = st;
+    const K = scale;
     const w = zoneWeights(x);
     const wood = tone(WOOD, w);
     const rim = tone(WOOD_RIM, w);
     const H = st.height;
     const sx = st.side;
-    const ox = x + st.shift * sx;
+    const ox = x + st.shift * sx * K;
     this.ox = ox;
     const L = st.lean;
     const O = st.lean + st.over;
@@ -210,8 +225,8 @@ export class LanternView {
     this.hangY = (ys[hang] as number) + 1;
     let top = 0;
     for (let i = 0; i < ys.length; i++) if ((ys[i] as number) < (ys[top] as number)) top = i;
-    this.topX = ox + (xs[top] as number);
-    this.topY = y + (ys[top] as number) - 2;
+    this.topX = ox + (xs[top] as number) * K;
+    this.topY = y + ((ys[top] as number) - 2) * K;
 
     const g = new Graphics();
     // The knot of roots it stands in.
@@ -373,13 +388,14 @@ export class LanternView {
     this.root.addChild(lf);
     this.root.addChild(this.glass);
     this.root.position.set(ox, y);
+    this.root.scale.set(K);
 
     // --- The way light climbs: stem to the bottom of the curl, down the thread into the belly.
-    for (let i = 1; i <= hang; i++) this.path.add(ox + (xs[i] as number), y + (ys[i] as number));
-    this.path.add(ox + this.hangX, y + this.hangY + TOP + 3);
-    this.path.add(ox + this.hangX, y + this.hangY + CORE);
-    this.beadX = ox + this.hangX;
-    this.beadY = y + this.hangY + CORE;
+    for (let i = 1; i <= hang; i++) this.path.add(ox + (xs[i] as number) * K, y + (ys[i] as number) * K);
+    this.path.add(ox + this.hangX * K, y + (this.hangY + TOP + 3) * K);
+    this.path.add(ox + this.hangX * K, y + (this.hangY + CORE) * K);
+    this.beadX = ox + this.hangX * K;
+    this.beadY = y + (this.hangY + CORE) * K;
   }
 
   /** A push on the glass (rad/s). */
@@ -387,15 +403,27 @@ export class LanternView {
     this.spin += v;
   }
 
-  /** `rest` = the angle the wind (and her nearness) holds the glass at. */
-  update(dt: number, rest: number): void {
+  /**
+   * `rest` = the angle the wind (and her nearness) holds the glass at; `bow` = how far the whole
+   * crook leans from its foot (rad, positive = its top to the right): it bends toward her when it
+   * notices the light she carries.
+   */
+  update(dt: number, rest: number, bow = 0): void {
     const L = GOAL.lantern;
     const step = Math.min(dt, 1 / 30);
     this.spin += (-L.swingK * (this.angle - rest) - L.swingC * this.spin) * step;
     this.angle += this.spin * step;
-    this.glass.rotation = this.angle;
-    this.beadX = this.ox + this.hangX - Math.sin(this.angle) * CORE;
-    this.beadY = this.y + this.hangY + Math.cos(this.angle) * CORE;
+    this.bow += (bow - this.bow) * Math.min(1, dt * 5);
+    this.root.rotation = this.bow;
+    // The glass hangs plumb whatever the crook does.
+    this.glass.rotation = this.angle - this.bow;
+    const c = Math.cos(this.bow);
+    const sn = Math.sin(this.bow);
+    const hx = this.hangX * c - this.hangY * sn;
+    const hy = this.hangX * sn + this.hangY * c;
+    const K = this.scale;
+    this.beadX = this.ox + (hx - Math.sin(this.angle) * CORE) * K;
+    this.beadY = this.y + (hy + Math.cos(this.angle) * CORE) * K;
     this.litG.alpha = this.warmth;
     this.litG.visible = this.warmth > 0.004;
     this.glintG.alpha = this.glint;

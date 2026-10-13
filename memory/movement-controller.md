@@ -89,14 +89,28 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
 - **A held ground jump only glides below its launch height** (the `carried` rule), so a glide needs a drop:
   nothing glides on the flat or going up a staircase. That is why the early glide is taught off the bluff
   (320 px over the path) and not off the F platforms, whose next step always catches the jump.
+- **The leap** (the bluff's east lip, 2026-10-14: playtest 2 said the glide is never discovered). Any hold
+  opens the wings there: jump still held from the hop before as she runs off the lip (wings at the lip,
+  0.8 s, 510 px), a held jump from the lip (wings 16 px under it, the last 65 px), a jump held from the branch
+  (it clears the bluff's top and opens over the terrace), or the kick a first-timer does at the west wall
+  (jump at it, jump again, hold: she sails over the top and the whole terrace, 1.1 s). All of them end on
+  trunk A's bark, slide down it and stand in the well at `lamp-trunk`; `leap-1..4` hang on the line.
+  A plain fall lands 170 px out. The terrace has no creature (enemies.md).
+  **It does not teach a player who taps**: a tap never opens the wings anywhere, and no layout can change
+  that. Considered and rejected in tuning, on paper (not built or measured): opening a held GROUND jump's
+  wings at the apex when there is no ground within a jump under her (it would also open them over the gaps
+  between the F islands, about 20 frames of float per held hop onto 224 px islands, and the way home would
+  overfly the lantern by several hundred px); a shorter `carriedDropPx` (flat jumps float: the reason the
+  rule exists). What is left is telling her: the hint line, or an acting cue
+  (render can show one after a `land` with `hard` / a long fall with no `glideStart` yet in the run).
 - What the glide opens in the grove (all land on ground; nothing leaves the scene or traps her). From
   trunk B's top, jump + double jump + glide: going right it passes x 4400 at feet y -202 and 4700 at
   -63 (the two lampwings at y 270 never notice), crosses the far ledge's lip (5472) at y 288, 160 px
   over it: close the wings to drop by lantern-far (goal.md: the designed approach); held, she reaches
   the scene's wall and slides down onto the ledge's far end. Going left it reaches the left bank
   (lands at x ~210, in burr-bank's patrol). A lazy glide (a short hop off the summit, wings late)
-  flies through the lampwings' air as before. High ledge → left bank; far ledge / F7 / F6 → the shaft
-  floor under trunk B; F4 → high ledge direct (skips F5); right branch → F7 direct (skips F6); F3 →
+  flies through the lampwings' air as before. High ledge → left bank; far ledge / F7 / F6 → the foot of
+  trunk B (its doorway is 112 px: she lands and walks in); F4 → high ledge direct (skips F5); right branch → F7 direct (skips F6); F3 →
   high ledge with glide + air dash; spawn ground → over the
   pool onto the mid rise. Gaps meant to need the glide must be wider than ~1150 px at the same height
   (jump + double + dash is ~1050); gaps meant to stop it need > 1950 px or a ceiling.

@@ -329,7 +329,7 @@ describe('wing glide', () => {
     if (!pool) throw new Error('no pool');
     s.place(pool.x + pool.w / 2, 900);
     const dive = names(untilLanding(s, 'J900').events).filter(
-      (n) => !n.startsWith('pickup') && !n.startsWith('enemy'),
+      (n) => !n.startsWith('pickup') && !n.startsWith('enemy') && !n.startsWith('lantern'),
     );
     expect(dive).toEqual(['jump:double', 'apex', 'glideStart', 'glideEnd:land', 'land']);
     expect(feet(s)).toEqual({ x: feet(s).x, y: pool.y });

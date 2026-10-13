@@ -10,7 +10,7 @@
  * they read over any of the three zones without a box behind them.
  */
 import { CanvasSource, Container, Rectangle, Sprite, Texture } from 'pixi.js';
-import { lanternCost } from '../../sim/goal';
+import { lampCost, lanternCost } from '../../sim/goal';
 import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
 import { GOAL } from '../goal/config';
@@ -41,7 +41,7 @@ export const HUD = {
   /** The icon is the world glint drawn this many times larger. */
   iconScale: 1.25,
   /** The lantern pips stand this far under the count's row (or in its place when it is away). */
-  pipsDrop: 50,
+  pipsDrop: 62,
   /** A refusal shakes the count: px, and how fast it dies (per second). */
   refuse: 5,
   refuseDecay: 7,
@@ -55,9 +55,20 @@ export const HUD = {
   slideDown: 0.2,
   slideUp: 0.45,
   clear: 0.72,
-  /** Glints left behind in a fade run out of the count one by one: seconds for the whole loss, at most per glint. */
-  spill: 0.9,
-  spillStep: 0.07,
+  /**
+   * Glints left behind in a fade run out of the count one by one, once she has re-formed and the
+   * dark has lifted (`spillWait` s): seconds for the whole loss, at most per glint. The count stays
+   * `lossHold` s, and beside it stands what she lost ("-6", cool, for `lossShow` s, then it sinks
+   * away): playtest 2 read the fade as free because the count had gone before anyone looked.
+   */
+  spillWait: 1.0,
+  spill: 1.5,
+  spillStep: 0.14,
+  lossHold: 6.5,
+  lossShow: 4.2,
+  lossScale: 0.74,
+  /** A dormant lantern this near keeps the count on screen (so its price can be read against it), px. */
+  lanternPx: 330,
 };
 
 /** A glint leaving the counter as it is spent (HUD px). */
@@ -68,6 +79,8 @@ interface Drop {
   y: number;
   vx: number;
   vy: number;
+  /** A glint lost to a fade: it falls away cold instead of flying off to a lantern. */
+  lost: boolean;
 }
 
 const DIGITS = 4;
@@ -104,9 +117,16 @@ export class Hud {
   /** Seconds between two glints leaving the count after a fade (0 = a loss shows at once). */
   private spillStep = 0;
   private spillIn = 0;
+  /** What the last fade cost, and seconds since it began to show (-1 = nothing to show). */
+  private lossN = 0;
+  private lossT = -1;
+  private readonly lossGlyphs: Texture[] = [];
+  private readonly lossSprites: Sprite[] = [];
 
   constructor() {
-    this.buildGlyphs();
+    this.buildGlyphs(this.glyphs, ['#fff4dc', '#ffdc9c', '#f2ab52'], 'rgba(255, 150, 40, 0.4)');
+    // The same numerals, cold: what a fade took. The eleventh glyph is the minus.
+    this.buildGlyphs(this.lossGlyphs, ['#e4f2fa', '#a9cbe0', '#6f9cbc'], 'rgba(90, 160, 220, 0.35)');
     const shade = new Sprite(this.shadeTexture());
     shade.anchor.set(0.5);
     shade.position.set(HUD.x + 36, HUD.y);
@@ -121,13 +141,22 @@ export class Hud {
       this.shown.push(-1);
       this.group.addChild(s);
     }
+    for (let i = 0; i < 4; i++) {
+      const s = new Sprite(this.lossGlyphs[0]);
+      s.anchor.set(0.5);
+      s.visible = false;
+      s.scale.set(HUD.lossScale);
+      this.lossSprites.push(s);
+      this.group.addChild(s);
+    }
     this.shake.addChild(this.health.root, this.group, this.pips.root, this.icon.mesh);
     this.layer.addChild(this.shake, this.summary.root);
-    for (let i = 0; i < 16; i++) this.drops.push({ life: 0, max: 1, x: 0, y: 0, vx: 0, vy: 0 });
+    for (let i = 0; i < 16; i++) this.drops.push({ life: 0, max: 1, x: 0, y: 0, vx: 0, vy: 0, lost: false });
   }
 
-  /** Paints 0-9 once: dark soft shadow, warm glow, a pale-gold face. */
-  private buildGlyphs(): void {
+  /** Paints 0-9 and a minus once: dark soft shadow, a glow, a pale face (top, middle, foot colours). */
+  private buildGlyphs(into: Texture[], face: [string, string, string], glow: string): void {
+    const CHARS = '0123456789\u2212';
     const pad = 16;
     const size = HUD.font;
     const font = `500 ${size * RES}px ${HUD.family}`;
@@ -142,7 +171,7 @@ export class Hud {
     const cw = Math.ceil(w) + pad * 2;
     const ch = Math.ceil(size * 1.1) + pad * 2;
     const canvas = document.createElement('canvas');
-    canvas.width = cw * 10 * RES;
+    canvas.width = cw * CHARS.length * RES;
     canvas.height = ch * RES;
     const g = canvas.getContext('2d');
     if (g) {
@@ -151,9 +180,9 @@ export class Hud {
       g.textAlign = 'center';
       g.textBaseline = 'alphabetic';
       const base = pad + size * 0.86;
-      for (let d = 0; d < 10; d++) {
+      for (let d = 0; d < CHARS.length; d++) {
         const cx = d * cw + cw / 2;
-        const ch0 = String(d);
+        const ch0 = CHARS[d] as string;
         // A soft dark seat, so pale fog behind cannot swallow it.
         g.shadowColor = 'rgba(2, 12, 18, 0.9)';
         g.shadowBlur = 7 * RES;
@@ -162,26 +191,26 @@ export class Hud {
         g.fillText(ch0, cx, base);
         g.fillText(ch0, cx, base);
         // Warm glow.
-        g.shadowColor = 'rgba(255, 150, 40, 0.4)';
+        g.shadowColor = glow;
         g.shadowBlur = 5 * RES;
         g.shadowOffsetY = 0;
-        g.fillStyle = 'rgba(255, 190, 110, 0.25)';
+        g.fillStyle = glow;
         g.fillText(ch0, cx, base);
         // The face.
         g.shadowColor = 'transparent';
         g.shadowBlur = 0;
         const grad = g.createLinearGradient(0, base - size * 0.7, 0, base);
-        grad.addColorStop(0, '#fff4dc');
-        grad.addColorStop(0.55, '#ffdc9c');
-        grad.addColorStop(1, '#f2ab52');
+        grad.addColorStop(0, face[0]);
+        grad.addColorStop(0.55, face[1]);
+        grad.addColorStop(1, face[2]);
         g.fillStyle = grad;
         g.fillText(ch0, cx, base);
       }
     }
     const source = new CanvasSource({ resource: canvas, resolution: RES, autoGenerateMipmaps: true });
     source.scaleMode = 'linear';
-    for (let d = 0; d < 10; d++)
-      this.glyphs.push(new Texture({ source, frame: new Rectangle(d * cw, 0, cw, ch) }));
+    for (let d = 0; d < CHARS.length; d++)
+      into.push(new Texture({ source, frame: new Rectangle(d * cw, 0, cw, ch) }));
   }
 
   /** A faint dark cloud behind the whole counter. */
@@ -210,27 +239,50 @@ export class Hud {
     // left the count already (the sim takes the whole cost at the moment it catches).
     let count = sim.pickups.count;
     const kindling = sim.player.kindling;
+    const kLamp = sim.player.kindlingLamp ?? -1;
     const lamp = kindling >= 0 ? sim.scene.lanterns?.[kindling] : undefined;
-    const channel = sim.goal.lanterns[kindling]?.channel ?? 0;
-    if (lamp && channel > 0) {
-      const cost = lanternCost(lamp, tuning.goal);
+    const wayLamp = kLamp >= 0 ? sim.scene.lamps?.[kLamp] : undefined;
+    const channel = lamp
+      ? (sim.goal.lanterns[kindling]?.channel ?? 0)
+      : wayLamp
+        ? (sim.goal.lamps?.[kLamp]?.channel ?? 0)
+        : 0;
+    const kindled = lamp ?? wayLamp;
+    if (kindled && channel > 0) {
+      const cost = lamp ? lanternCost(kindled, tuning.goal) : lampCost(kindled, tuning.goal);
       count -= streamCount(channel, Math.max(1, Math.round(tuning.goal.channelFrames)), cost, GOAL.kindle.by);
       this.hold = Math.max(this.hold, 1.2);
     }
     const restart = sim.frame < this.frame;
     this.frame = sim.frame;
     for (const e of sim.events) {
-      if (e.type === 'lanternRefuse') {
+      if (e.type === 'lanternRefuse' || e.type === 'lampRefuse') {
         // "Not enough": the count shows itself and shakes its head.
         this.hold = Math.max(this.hold, e.show > 0 ? e.show / 60 : 2.6);
         this.refuseT = 0;
-      } else if (e.type === 'lanternKindle') this.hold = Math.max(this.hold, 2.4);
+      } else if (e.type === 'lanternKindle' || e.type === 'lampKindle') this.hold = Math.max(this.hold, 2.4);
       else if (e.type === 'glintsDrop') {
-        // A fade cost her these: the count shows itself and they run out of it, one by one.
-        this.hold = Math.max(this.hold, HUD.hold);
+        // A fade cost her these: once she stands again the count shows itself, they run out of
+        // it one by one, and what she lost stands beside it for a while.
+        this.hold = Math.max(this.hold, HUD.lossHold);
         this.spillStep = Math.min(HUD.spillStep, HUD.spill / Math.max(1, e.value));
-        this.spillIn = 0.35;
+        this.spillIn = HUD.spillWait;
+        this.lossN = e.value;
+        this.lossT = 0;
       }
+    }
+    // A dormant lantern close by: the count stays, so its price can be read against it.
+    if (count > 0) {
+      const px = sim.player.cx;
+      const py = sim.player.cy;
+      const close = (l: { x: number; y: number } | undefined, lit: boolean | undefined): void => {
+        if (l && !lit && Math.hypot(l.x - px, l.y - 50 - py) < HUD.lanternPx)
+          this.hold = Math.max(this.hold, 0.9);
+      };
+      const lanterns = sim.scene.lanterns ?? [];
+      for (let i = 0; i < lanterns.length; i++) close(lanterns[i], sim.goal.lanterns[i]?.lit);
+      const lamps = sim.scene.lamps ?? [];
+      for (let i = 0; i < lamps.length; i++) close(lamps[i], sim.goal.lamps?.[i]?.lit);
     }
     if (restart) {
       this.value = count;
@@ -238,6 +290,7 @@ export class Hud {
       this.hold = 0;
       this.live = 1;
       this.spillStep = 0;
+      this.lossT = -1;
       this.layout(true);
     }
     if (count >= this.value) this.spillStep = 0;
@@ -260,11 +313,12 @@ export class Hud {
         const d = this.drops[this.dropAt] as Drop;
         this.dropAt = (this.dropAt + 1) % this.drops.length;
         const k = (this.value * 0.618) % 1;
-        d.max = d.life = 0.34 + 0.12 * k;
+        d.lost = this.spillStep > 0;
+        d.max = d.life = d.lost ? 0.9 + 0.3 * k : 0.34 + 0.12 * k;
         d.x = 0;
         d.y = 0;
-        d.vx = 70 + 60 * k;
-        d.vy = 30 + 70 * ((k * 7.3) % 1);
+        d.vx = d.lost ? 14 + 30 * k : 70 + 60 * k;
+        d.vy = d.lost ? 10 : 30 + 70 * ((k * 7.3) % 1);
       }
       if (n > 0) {
         this.pulse = 0.5;
@@ -339,6 +393,28 @@ export class Hud {
         s.scale.set(1 + HUD.pop * p);
         s.y = HUD.y + 1 - 4 * p;
       }
+      // What the fade took: "-n" after the number, cold; it sinks and goes.
+      let lossA = 0;
+      if (this.lossT >= 0) {
+        this.lossT += dt;
+        const t = this.lossT - HUD.spillWait;
+        lossA =
+          t < 0 ? 0 : Math.min(1, t / 0.25) * (1 - Math.min(1, Math.max(0, (t - HUD.lossShow + 1) / 1)));
+        if (t > HUD.lossShow) this.lossT = -1;
+        const text = `\u2212${this.lossN}`;
+        const digits = String(Math.max(0, this.value)).length;
+        const x0 = HUD.x + HUD.gap + this.advance * digits + 16;
+        const sink = t > 0 ? 5 * Math.min(1, t / HUD.lossShow) ** 2 : 0;
+        for (let i = 0; i < this.lossSprites.length; i++) {
+          const sp = this.lossSprites[i] as Sprite;
+          const c = text.charCodeAt(i);
+          sp.visible = i < text.length && lossA > 0.004;
+          if (!sp.visible) continue;
+          sp.texture = this.lossGlyphs[c === 0x2212 ? 10 : c - 48] as Texture;
+          sp.alpha = lossA;
+          sp.position.set(x0 + this.advance * HUD.lossScale * (i + 0.5), HUD.y + 3 + sink);
+        }
+      } else for (const sp of this.lossSprites) sp.visible = false;
       const x = HUD.x - 10 * (1 - a) + shakeX;
       const y = HUD.y + rise;
       b.quad(K_FLARE, x, y, 40, 40, 0.4 * this.pulse * a, 0, 0.6);
@@ -349,11 +425,22 @@ export class Hud {
     for (const d of this.drops) {
       if (d.life <= 0) continue;
       d.life -= dt;
+      if (d.lost) d.vy += 260 * dt;
       d.x += d.vx * dt;
       d.y += d.vy * dt;
       const k = Math.max(0, d.life / d.max);
-      const size = 3.4 * (0.5 + 0.5 * k);
-      b.quad(K_SPARK, HUD.x + 4 + d.x, HUD.y + rise + d.y, size, size, k * 0.95 * a, 0, 0.5 + 0.4 * k);
+      const size = (d.lost ? 4.2 : 3.4) * (0.5 + 0.5 * k);
+      // Lost ones fall and go cold; spent ones fly off hot.
+      b.quad(
+        K_SPARK,
+        HUD.x + 4 + d.x,
+        HUD.y + rise + d.y,
+        size,
+        size,
+        k * 0.95 * a,
+        0,
+        d.lost ? 0.7 * k * k : 0.5 + 0.4 * k,
+      );
     }
     // Flecks of a light that went out, motes of one that caught.
     for (const s of H.sparks) {

@@ -438,6 +438,19 @@ export const defaultTuning = {
   goal: {
     /** Glints a lantern takes unless the scene gives it its own `cost`. */
     cost: 12,
+    /**
+     * A wayside lamp (`scene.lamps`): a lesser lantern, optional. The same rules (stand, channel, lit
+     * for good: rest, re-form, sanctuary, calm) but it does not count toward the heart. What it
+     * takes unless the scene gives it its own `cost`.
+     */
+    lampCost: 8,
+    /**
+     * A dormant lantern or lamp is noticed once per approach: when her body centre first comes
+     * within `noticePx` of the centre of its trigger box (`lanternNotice` / `lampNotice`, with what
+     * she carries and what it takes), and not again until she has been `noticeLeavePx` away.
+     */
+    noticePx: 260,
+    noticeLeavePx: 420,
     /** A lantern's trigger box: centred on its foot, standing up from the surface. */
     lanternWidth: 48,
     lanternHeight: 64,

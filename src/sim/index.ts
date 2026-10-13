@@ -20,7 +20,7 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 14,
+    version: 15,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
@@ -82,9 +82,9 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
     const pc = p.x + p.w / 2;
     const ec = e.x + e.w / 2;
     const dir = pc < ec ? -1 : pc > ec ? 1 : -p.facing;
-    // Kindling a lantern (`kindling` is last step's: she was in the channel) nothing can hurt her:
+    // Kindling a lantern or a lamp (`kindling` is last step's: she was in the channel) nothing can hurt her:
     // what touches her is turned away as if it had, and she is not.
-    if (p.kindling < 0) {
+    if (p.kindling < 0 && p.kindlingLamp < 0) {
       const hitX = (Math.max(p.x, e.x) + Math.min(p.x + p.w, e.x + e.w)) / 2;
       const hitY = (Math.max(p.y, e.y) + Math.min(p.y + p.h, e.y + e.h)) / 2;
       hurtPlayer(
@@ -110,7 +110,7 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
 }
 
 export type { SimEvent } from './events';
-export { goalHolds, heartBox, lanternBox, lanternCost } from './goal';
+export { goalHolds, heartBox, lampCost, lanternBox, lanternCost } from './goal';
 export { hashState } from './hash';
 export { slashBox, slashTuning } from './player/attack';
 export type { EnemyKind, EnemySpawn, Lantern, Pickup, PickupKind, Pod, PodMount, Scene } from './scene';

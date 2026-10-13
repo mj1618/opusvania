@@ -17,24 +17,26 @@ export const GLINTS = {
     /** Awake (she is near) it is this much brighter than the plain star. */
     nearGain: 0.4,
     /**
-     * Dormant by default: far from her a glint is a dim mote, `dormScale` of its size and
-     * `dormGain` of its brightness, so a screenful of them does not out-shine her face. It comes
-     * fully awake between `wakePx` and `wakeFull` px from her chest, leaning `lean` px her way.
+     * Dormant by default: far from her a glint sleeps as a small cut star (`K_STAR` in the shader):
+     * cool and pale in a dark seat, found by its shape and its temperature, not by brightness (every
+     * mote in the air is a warm round dot; as a dim gold mote it could not be told from them, and a
+     * line of them led nowhere). It warms and gives way to the gold glint between `wakePx` and
+     * `wakeFull` px from her chest, which leans `lean` px her way.
      */
-    dormScale: 0.5,
-    dormGain: 0.7,
     wakePx: 260,
     wakeFull: 120,
     lean: 4,
+    /** The sleeping star: quad half-size px (the star is 0.6 of it tall, 0.37 wide), presence 0..1. */
+    star: 21,
+    starGain: 1,
     /**
-     * Twinkle while dormant: each on its own period (seconds, min..max by its seed), and for
-     * `twinkleShare` of it the star swells by `twinkleSize` and brightens by `twinkleGain`.
+     * Its twinkle is shared along a trail (glints whose ids differ only in their last number): a
+     * pulse runs from the first to the last, `twinkleStep` s apart, each `twinkleSeconds` long, then
+     * the trail rests `twinkleRest` s. So a line of them reads as a path that leads somewhere.
      */
-    twinkleMin: 4.5,
-    twinkleMax: 9.5,
-    twinkleShare: 0.16,
-    twinkleSize: 0.55,
-    twinkleGain: 1.5,
+    twinkleStep: 0.26,
+    twinkleSeconds: 0.7,
+    twinkleRest: 1.7,
   },
   great: {
     quad: 96,

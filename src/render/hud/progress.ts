@@ -14,11 +14,12 @@ import type { SimView } from '../contract';
 
 export const PIPS = {
   /** Foot of the first crook, logical px from the row's left / top; distance between crooks. */
-  x: 62,
-  step: 23,
+  x: 64,
+  step: 36,
   /** The bud stands this much further on. */
-  gap: 9,
-  scale: 1.15,
+  gap: 12,
+  /** 1.15 with a 0.78 grey-blue line could not be read at a glance (playtest 2): now 1.8 and pale. */
+  scale: 1.8,
   /** Seconds: fade in, fade out, stay after a change, stay after she leaves a lantern. */
   fadeIn: 0.2,
   fadeOut: 0.9,
@@ -90,13 +91,13 @@ function crookDark(): Texture {
   return paint((g) => {
     seat(g, crook, false);
     seat(g, drop, true);
-    g.strokeStyle = 'rgba(150, 178, 192, 0.78)';
-    g.lineWidth = 1.25;
+    g.strokeStyle = 'rgba(198, 222, 232, 0.96)';
+    g.lineWidth = 1.5;
     crook(g);
     g.stroke();
-    g.fillStyle = 'rgba(10, 20, 30, 0.9)';
-    g.strokeStyle = 'rgba(150, 178, 192, 0.7)';
-    g.lineWidth = 0.9;
+    g.fillStyle = 'rgba(8, 18, 28, 0.94)';
+    g.strokeStyle = 'rgba(198, 222, 232, 0.92)';
+    g.lineWidth = 1.1;
     drop(g);
     g.fill();
     g.stroke();
@@ -109,7 +110,7 @@ function crookLit(): Texture {
     stem.addColorStop(0, 'rgba(214, 150, 84, 0.75)');
     stem.addColorStop(1, 'rgba(255, 216, 150, 1)');
     g.strokeStyle = stem;
-    g.lineWidth = 1.35;
+    g.lineWidth = 1.6;
     crook(g);
     g.stroke();
     const glass = g.createLinearGradient(0, -15, 0, -5);
@@ -149,14 +150,14 @@ function budDark(): Texture {
   return paint((g) => {
     g.translate(3, 0);
     seat(g, bud, true);
-    g.fillStyle = 'rgba(10, 20, 30, 0.9)';
-    g.strokeStyle = 'rgba(150, 178, 192, 0.78)';
-    g.lineWidth = 1.2;
+    g.fillStyle = 'rgba(8, 18, 28, 0.94)';
+    g.strokeStyle = 'rgba(198, 222, 232, 0.96)';
+    g.lineWidth = 1.4;
     bud(g);
     g.fill();
     g.stroke();
-    g.strokeStyle = 'rgba(150, 178, 192, 0.5)';
-    g.lineWidth = 0.8;
+    g.strokeStyle = 'rgba(198, 222, 232, 0.6)';
+    g.lineWidth = 0.9;
     g.beginPath();
     g.moveTo(0.1, -1);
     g.quadraticCurveTo(-1.4, -8, 0.4, -15);

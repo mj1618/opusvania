@@ -75,7 +75,8 @@
 - The root mound (3968-4160) stands on the hollow's east lip: whatever leaves it westward (back roots, the
   first braid, the feeder, the lee plant) now comes down to `footAt(x)` = the hollow's floor; they ended in
   the air at the old ground level 1280.
-- `FIGHT_SPOTS` terrace entry is `[2624, 3200]`. burr-rise starts at 3002 (calm ±230 = 2772-3232).
+- `FIGHT_SPOTS` terrace entry is `[2624, 3200]`: stale since 2026-10-14 (burr-rise is gone, the terrace ends at 3072,
+  burr-path keeps to 2004-2316; the fights on the floor are burr-path and burr-root 4160-4608).
 - The vines' leaf knots (`leafKnot`) hang from limbs that start above `viewTop(scene)` (passed to
   `growGarden` as `skyTop`); they began 330 px up, and with the camera's headroom two of them showed as a
   sawn-off X over F7 (5260, -150). All knots of one island lean the same way.

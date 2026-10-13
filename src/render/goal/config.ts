@@ -6,8 +6,9 @@
  */
 export const GOAL = {
   lantern: {
-    /** The point light a lit lantern registers (post lands it on ground and plants). */
-    light: { radius: 240, color: 0xffb060, intensity: 1 },
+    /** The point light a lit lantern registers (post lands it on ground and plants; it lifts a surface's own
+     * hue, so at 1 the blue boulder by the first lantern went cream: the colour comes from `pool`). */
+    light: { radius: 240, color: 0xffa850, intensity: 0.55 },
     /** The swell of light when it catches: radius from..to px, peak intensity, seconds. */
     swell: { from: 200, to: 600, intensity: 1.5, seconds: 1.25 },
     /** The bead in the glass: quad half-size px, energy lit, how far it breathes, seconds per breath. */
@@ -22,6 +23,27 @@ export const GOAL = {
     ember: 0.2,
     emberNear: 0.5,
     nearPx: 260,
+    /**
+     * It notices her (playtest 2: a dormant lantern was a small dark hook a running player passed
+     * without knowing it was anything). When she comes within `px` carrying any glints the crook
+     * bows `bow` rad toward her and the glass swings `glass` rad her way with a start (`kick`), an
+     * ember wakes in the bulb (`ember`, more the nearer her wallet is to its price), `tug` of her
+     * glints strain `reach` of the way toward it and fall back (every `tugSeconds`), and its price
+     * stands round the glass (`refuse`) from `marksPx` away, filled as far as her wallet goes.
+     */
+    notice: {
+      px: 290,
+      bow: 0.085,
+      glass: 0.34,
+      kick: 2.2,
+      ember: 0.75,
+      halo: 0.2,
+      tug: 3,
+      tugSize: 0.56,
+      reach: 0.62,
+      tugSeconds: 1.6,
+      marksPx: 330,
+    },
     /** The rest point's bead is this much brighter. */
     restGain: 1.18,
     /** Glass swing: stiffness, damping, wind sway (rad per unit of wind()). */
@@ -29,7 +51,7 @@ export const GOAL = {
     swingC: 3.2,
     sway: 0.1,
     /** Warm light on the surfaces round a lit one (surface.ts): radii px, strength. */
-    pool: { rx: 400, ry: 300, gain: 1 },
+    pool: { rx: 400, ry: 300, gain: 0.85 },
     /** The lift of the mist behind it (additive, behind the playfield): size px, height above the foot, alpha. */
     mist: { color: 0xffa050, width: 1000, height: 560, lift: 120, alpha: 0.2 },
     /** That lift per zone [left, centre, right], by where the lantern stands: less in the dark blue glade. */
@@ -73,13 +95,14 @@ export const GOAL = {
     /** Stars fade in one after another this far apart, s. */
     step: 0.03,
     /** The crown of stars round the glass: radius px, degrees between two stars, widest span; star half-height px. */
-    radius: 52,
+    radius: 58,
     pitch: 23,
     span: 262,
-    star: 7.5,
+    star: 9,
   },
   heart: {
-    light: { radius: 380, color: 0xffa858, intensity: 0.62 },
+    /** Post's point light (it lifts a surface's own hue, so on pale stone it is glare: keep it low). `bloom` = how much more at the ending. */
+    light: { radius: 300, color: 0xff9440, intensity: 0.26, bloom: 0.12 },
     /** How far the bud stands open: awake, and in full bloom at the ending. */
     awake: 0.78,
     /** Asleep, the straps part this far once every lantern but the last burns. */
@@ -91,22 +114,39 @@ export const GOAL = {
      * is added: it reads by motion.
      */
     sleep: { seconds: 5.4, inhale: 0.38, swell: [0.035, 0.05, 0.035], mote: 0.42 },
-    /** Its warm light on the shrine and the ground once awake (surface.ts). */
-    pool: 0.85,
-    /** Its glows (tints, alphas; px): cold breath asleep; awake a golden-white flower, a pillar up the hollow tree, warm mist, a glow on the horizon from afar. Golden-white on purpose: the hollow tree's own glow behind it is orange-red. */
+    /** Its warm light on the shrine and the ground once awake (surface.ts): strength, radii px, how white (0 = deep amber). */
+    pool: 0.62,
+    poolRx: 430,
+    poolRy: 360,
+    poolWhite: 0.12,
+    /**
+     * Its glows (tints, alphas; px): cold breath asleep; awake a flower of deep amber, a narrow column
+     * up the hollow tree, a little warmth in the mist, a glow on the horizon from afar. All of it deep
+     * amber and small: the first version (golden-white flower 230 px at 0.42, pillar 460 px wide,
+     * mist 1500 px, all growing by half at the ending) put a peach wash over a third of the frame and
+     * turned the shrine stone near-white. The only near-white thing is the core (`core`, 11 px).
+     */
     glow: {
       cold: 0x6fb0ff,
       coldAlpha: 0.2,
-      gold: 0xffeac4,
-      goldAlpha: 0.42,
-      pillar: 0xffcc80,
-      pillarAlpha: 0.17,
-      pillarWidth: 460,
-      pillarHeight: 1700,
-      mist: 0xffb262,
-      mistAlpha: 0.16,
-      band: 0xff9c50,
-      horizonAlpha: 0.6,
+      gold: 0xff8c2e,
+      goldAlpha: 0.3,
+      goldSize: 170,
+      pillar: 0xf07c26,
+      pillarAlpha: 0.1,
+      pillarWidth: 230,
+      pillarHeight: 1500,
+      /** The thread of light inside the column: share of its width, alpha. */
+      shaftWidth: 0.26,
+      shaftAlpha: 0.13,
+      mist: 0xd2661e,
+      mistAlpha: 0.075,
+      mistWidth: 900,
+      mistHeight: 520,
+      band: 0xd86a26,
+      horizonAlpha: 0.42,
+      horizonWidth: 760,
+      horizonHeight: 640,
       /** The glow on the horizon per zone [left, centre, right] (by camera x): the dark blue glade
        * takes far less of it, or its settled picture after the wake is washed (mean luma 35 for 28). */
       horizonZone: [0.25, 1, 1],
@@ -118,24 +158,32 @@ export const GOAL = {
     lift: 172,
     core: 11,
     coreGain: 0.85,
-    coreBloom: 1.25,
-    halo: 54,
-    haloGain: 0.26,
+    coreBloom: 1.05,
+    halo: 42,
+    haloGain: 0.2,
     /** Motes rising from the open heart: per second. */
     motes: 2.2,
     /** The wave through the forest when it wakes: px/s, half-width and half-height px, brightness. */
-    wave: { speed: 2300, width: 340, height: 640, gain: 0.28, surface: 1.1, reach: 6200 },
+    wave: { speed: 2300, width: 300, height: 600, gain: 0.2, surface: 0.9, reach: 6200 },
     /** Motes that drift toward it across the view when it wakes: how many, seconds. */
     drift: 34,
     driftSeconds: 3.4,
   },
   ending: {
-    /** How much brighter the pillar gets; alpha of the light under the canopy and along the mist band. */
-    pillar: 0.45,
-    canopy: 0.16,
-    band: 0.11,
-    /** Warmth on every surface in view (surface.ts). */
-    surface: 0.38,
+    /**
+     * The grove answers, quietly: the column brightens by `pillar`, everything the heart and the
+     * lanterns light grows wider by `wide`, a breath of amber under the canopy and along the mist
+     * band, `surface` = warmth on every surface in view (surface.ts), `lampMist` = how much more the
+     * mist behind each lantern lifts. Darks and violets must stay: measured at the shrine, no more
+     * than ~1% of the frame may pass luma 150 (it was 7%).
+     */
+    pillar: 0.3,
+    wide: 0.15,
+    canopy: 0.045,
+    band: 0.035,
+    surface: 0.17,
+    surfaceWhite: 0.1,
+    lampMist: 0.2,
     /** Fireflies rising across the view: per second. */
     motes: 4,
     /** How many of the glints she still carries lift out of her (at most). */

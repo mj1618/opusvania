@@ -6,7 +6,7 @@ import type { PointLight } from '../render/lights';
 import type { CameraOverride, RenderStage } from '../render/stage';
 import { enemiesAlive } from '../sim/enemies';
 import type { SimEvent } from '../sim/events';
-import { type GameState, goalHolds, heartBox, lanternBox, lanternCost } from '../sim/index';
+import { type GameState, goalHolds, heartBox, lampCost, lanternBox, lanternCost } from '../sim/index';
 import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
 import type { Scene } from '../sim/scene';
@@ -171,8 +171,10 @@ export interface GameDebugApi {
       restPoint: boolean;
     }>;
   };
+  /** The wayside lamps (`scene.lamps`): the same record as `lanterns()`, `lit` of `total` lamps. */
+  lamps(): ReturnType<GameDebugApi['lanterns']>;
   /**
-   * The goal at a glance: lanterns lit, the wallet (`wallet` carried, `spent`, `gathered` = both),
+   * The goal at a glance: lanterns lit (`lamps`: wayside lamps lit, of how many; `restAt` may be a lamp's id), the wallet (`wallet` carried, `spent`, `gathered` = both),
    * the heart (`x`, `y`, `box`, `awake`, `frames` since it woke, `hinted`), the ending (`gathered`,
    * `held` = no input reaches her, `frames` of `of`, `ended`, the summary) and the run so far
    * (`time` in frames since her first input, `hits`, `kills`).
@@ -184,6 +186,7 @@ export interface GameDebugApi {
     spent: number;
     gathered: number;
     restAt: string | null;
+    lamps: { lit: number; total: number };
     heart: {
       x: number;
       y: number;
@@ -248,6 +251,36 @@ export function installDebugApi(deps: {
   const redraw = (): void => {
     stage.update(0, 1);
     stage.present();
+  };
+
+  const lightList = (lamp: boolean): ReturnType<GameDebugApi['lanterns']> => {
+    const g = game.state.goal;
+    const G = game.tuning.goal;
+    const list = (lamp ? game.scene.lamps : game.scene.lanterns) ?? [];
+    const lights = lamp ? g.lamps : g.lanterns;
+    return {
+      lit: lamp ? g.lampsLit : g.lit,
+      total: list.length,
+      wallet: game.state.pickups.count,
+      spent: game.state.pickups.spent,
+      list: list.map((l, i) => {
+        const s = lights[i];
+        return {
+          id: l.id,
+          x: l.x,
+          y: l.y,
+          box: lanternBox(l, G),
+          cost: lamp ? lampCost(l, G) : lanternCost(l, G),
+          state: s?.lit ? 'lit' : (s?.channel ?? 0) > 0 ? 'channel' : 'dormant',
+          channel: s?.channel ?? 0,
+          of: Math.max(1, Math.round(G.channelFrames)),
+          rest: s?.rest ?? 0,
+          refused: s?.refused ?? false,
+          litFrame: s?.litFrame ?? -1,
+          restPoint: (lamp ? g.restLamp : g.restAt) === i,
+        };
+      }),
+    };
   };
 
   const api: GameDebugApi = {
@@ -416,34 +449,8 @@ export function installDebugApi(deps: {
         safe: { x: p.safeX, y: p.safeY },
       };
     },
-    lanterns() {
-      const g = game.state.goal;
-      const G = game.tuning.goal;
-      const list = game.scene.lanterns ?? [];
-      return {
-        lit: g.lit,
-        total: list.length,
-        wallet: game.state.pickups.count,
-        spent: game.state.pickups.spent,
-        list: list.map((l, i) => {
-          const s = g.lanterns[i];
-          return {
-            id: l.id,
-            x: l.x,
-            y: l.y,
-            box: lanternBox(l, G),
-            cost: lanternCost(l, G),
-            state: s?.lit ? 'lit' : (s?.channel ?? 0) > 0 ? 'channel' : 'dormant',
-            channel: s?.channel ?? 0,
-            of: Math.max(1, Math.round(G.channelFrames)),
-            rest: s?.rest ?? 0,
-            refused: s?.refused ?? false,
-            litFrame: s?.litFrame ?? -1,
-            restPoint: g.restAt === i,
-          };
-        }),
-      };
-    },
+    lanterns: () => lightList(false),
+    lamps: () => lightList(true),
     goal() {
       const g = game.state.goal;
       const G = game.tuning.goal;
@@ -456,7 +463,8 @@ export function installDebugApi(deps: {
         wallet: w.count,
         spent: w.spent,
         gathered: w.count + w.spent + w.lost,
-        restAt: game.scene.lanterns?.[g.restAt]?.id ?? null,
+        restAt: game.scene.lamps?.[g.restLamp]?.id ?? game.scene.lanterns?.[g.restAt]?.id ?? null,
+        lamps: { lit: g.lampsLit, total: game.scene.lamps?.length ?? 0 },
         heart: h ? { x: h.x, y: h.y, box: heartBox(h, G), ...g.heart } : null,
         ending: {
           gathered: g.gathered,
@@ -502,13 +510,19 @@ export function installDebugApi(deps: {
     const G = game.tuning.goal;
     const h = game.scene.heart;
     return {
-      lanterns: (game.scene.lanterns ?? []).map((l, i) => ({
-        box: lanternBox(l, G),
-        lit: g.lanterns[i]?.lit ?? false,
-        channel: (g.lanterns[i]?.channel ?? 0) / Math.max(1, G.channelFrames),
-        rest: (g.lanterns[i]?.rest ?? 0) / Math.max(1, G.restFrames),
-        restPoint: g.restAt === i,
-      })),
+      lanterns: [false, true].flatMap((lamp) =>
+        ((lamp ? game.scene.lamps : game.scene.lanterns) ?? []).map((l, i) => {
+          const s = (lamp ? g.lamps : g.lanterns)[i];
+          return {
+            box: lanternBox(l, G),
+            lit: s?.lit ?? false,
+            channel: (s?.channel ?? 0) / Math.max(1, G.channelFrames),
+            rest: (s?.rest ?? 0) / Math.max(1, G.restFrames),
+            restPoint: (lamp ? g.restLamp : g.restAt) === i,
+            lamp,
+          };
+        }),
+      ),
       heart: h ? { box: heartBox(h, G), awake: g.heart.awake, gathered: g.gathered } : null,
       sanctuary: G.sanctuaryPx,
       lampSanctuary: G.lampSanctuaryPx,

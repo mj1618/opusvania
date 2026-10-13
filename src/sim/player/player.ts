@@ -73,6 +73,7 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     hurtDir: 0,
     hurtSeq: 0,
     kindling: -1,
+    kindlingLamp: -1,
     safeX: Math.round(feetX),
     safeY: y + h,
     safeFrames: 0,

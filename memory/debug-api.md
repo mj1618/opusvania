@@ -29,10 +29,12 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   first, e.g. `health(1)` then walk into a burrback to see a fade.
 - `lanterns()` → `{lit, total, wallet, spent, list: [{id, x, y (foot), box, cost, state: dormant|channel|lit,
   channel, of, rest, refused, litFrame, restPoint}]}`; `goal()` → `{lit, total, wallet, spent, gathered (= both),
-  restAt (lantern id | null), heart: {x, y, box, awake, frames, hinted}, ending: {gathered, held, frames, of,
+  restAt (lantern or lamp id | null), lamps: {lit, total}, heart: {x, y, box, awake, frames, hinted}, ending: {gathered, held, frames, of,
   ended, glints, time, kills, hits + the tally}, run: {time, hits, kills, deaths}, lost, drops: [{id, x, y, value,
   left, timer}], sanctuary: {burrback, lampwing}}` (goal.md). There is no call to set the wallet:
   gather for real (teleport onto great glints: `teleport(3640, 192)`, `(3648, 1280)`, each + `step(70)`).
+- `lamps()` → the same record as `lanterns()` for the wayside lamps (`scene.lamps`; not drawn yet: the hitbox
+  overlay shows them as thin green boxes, gold once lit).
 - `load()` restarts the scene (glints come back, pods close, enemies return, full health, lanterns dark, the heart asleep, the ending undone). `teleport(x, y)` puts the feet centre there at rest and snaps the camera (health, enemies, the last safe ground and the slash count `attackSeq` are kept).
 - `cam()` → `{x, y, zoom, follow, override}` (view centre, world px). `cam({x, y, zoom})` overrides (any
   subset; missing x/y follow the game camera), `cam({on: 'player', zoom: 4})` tracks the player,
@@ -52,5 +54,5 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   (in plain view) starts its tell on the next step.
 - Enemies keep walking through every `step()`: a teleport next to one a few hundred frames later finds it
   somewhere else. Read `enemies()` first, or `load()` for the start positions.
-- `?nopickups` removes the enemies too (src/main.ts). None patrols the spawn ground or the trunk shaft, where the
+- `?nopickups` removes the enemies too (src/main.ts). None patrols the spawn ground, the terrace or the trunk shaft, where the
   close-up shots run.

@@ -101,7 +101,7 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
 | pod-path-1 | 560, 1258 | sit | 2 | ground left of F1 |
 | pod-f2 | 1136, 914 | hang | 1 | under F2: jump from the ground, up slash |
 | pod-f3 | 1500, 682 | sit | 2 | on F3, on the left route up |
-| pod-path-2 | 2000, 1258 | sit | 3 | ground right of the pool: stand and chain, the finisher opens it |
+| pod-stone | 1500, 1258 | sit | 3 | at the moth-stone's foot, by the pool's lip: cutting it she stands at the first lantern and its ten glints kindle it (goal.md). It was pod-path-2 at 2000 |
 | pod-branch-l | 2176, 1058 | hang | 1 | under the left branch: hop + up slash |
 | pod-rise | 2800, 1130 | sit | 2 | on the mid rise |
 | pod-ledge | 3100, 426 | sit | 3 | on the high ledge: the big one at the top of the left route |

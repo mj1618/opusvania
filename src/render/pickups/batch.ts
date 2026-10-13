@@ -16,6 +16,8 @@ export const K_SPARK = 2;
 export const K_RIBBON = 4;
 export const K_FLARE = 5;
 export const K_CHIP = 6;
+/** A sleeping glint: a small cut star, cool and pale in a dark seat (energy = presence, phase = twinkle 0..1, extra = warmth 0 cold .. 1 gold). */
+export const K_STAR = 7;
 
 const FLOATS = 8;
 
@@ -159,6 +161,31 @@ void main() {
     float soft = across * sqrt(max(across, 0.0));
     float core = pow(max(across, 0.0), 7.0);
     add = (mix(GOLD, AMBER, smoothstep(0.0, 0.7, vUv.x)) * soft * 0.8 + HOT * core * 0.9 * (1.0 - vUv.x)) * e;
+  } else if (kind > 6.5) {
+    // --- Sleeping glint. Found by shape and by temperature, not by brightness: a tall four-point star
+    // with hollow flanks, pale and cool (every mote in the air is a warm round dot), cut out of a dark
+    // seat so that it stands as clearly against the amber light well as against the canopy, with a
+    // dark pip at its heart (a mote is brightest there). ph = its twinkle: it swells, whitens and
+    // throws four fine rays for a moment. ex warms it to gold as she comes near.
+    float tw = clamp(ph, 0.0, 1.0);
+    vec2 q = abs(vUv) / (1.0 + 0.3 * tw);
+    float s = pow(q.x / 0.37, 0.6) + pow(q.y / 0.6, 0.6);
+    float aa = max(fwidth(s), 0.02);
+    float star = smoothstep(1.0 + aa, 1.0 - aa, s);
+    float seat = smoothstep(1.62, 1.08, s) * 0.72 + 0.3 * gauss(r, 0.55);
+    float pip = smoothstep(0.34 + aa, 0.34 - aa, s) * (1.0 - tw);
+    float win = smoothstep(1.0, 0.8, r);
+    vec3 cool = mix(vec3(0.56, 0.8, 0.93), vec3(0.84, 0.96, 1.0), tw);
+    vec3 warm = mix(vec3(0.95, 0.66, 0.26), vec3(1.0, 0.9, 0.66), tw);
+    vec3 fill = mix(cool, warm, clamp(ex, 0.0, 1.0)) * (0.82 + 0.18 * (1.0 - q.y / 0.6));
+    vec3 dark = vec3(0.02, 0.035, 0.08);
+    float k = clamp(e, 0.0, 1.0);
+    a = max(star, min(seat, 0.8)) * k * win;
+    body = mix(dark, mix(fill, dark, pip * 0.8), star);
+    // The twinkle's rays: fine, short, added.
+    vec2 pp = vUv * 20.0;
+    float rays = arm(pp.yx, 19.0, 0.7) + arm(pp, 12.0, 0.6) * 0.8;
+    add = mix(vec3(0.62, 0.86, 1.0), GOLD, clamp(ex, 0.0, 1.0)) * rays * tw * 0.5 * k * win;
   } else if (kind > 5.5) {
     // --- Chip: a fleck of husk, opaque (laid over, not added). ph = its tone between the zones'
     // cool and warm leaf colours, e = how much is left of it.

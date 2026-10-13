@@ -35,10 +35,10 @@ Dev handle `__goal` (`.cfg`, `.cpuMs`). Sheets of every moment: `shots/goal/`.
   two moths circling the glass, six fireflies, a flare over waiting glints within `wakePx`.
 - Lantern: 118-146 px tall, stem `shift`ed 10-12 px and the glass hung ~45 px to the side at head height
   or above, so she never covers it; dormant glass has a cold glint every ~4 s.
-- Price: a crown of `need` stars round the glass (`refuse`), filled from the wallet live, held 4 s and
-  for as long as `lanterns[i].short > 0`.
+- Price: a crown of `need` stars round the glass (`refuse`), filled from the wallet live. Since round 4
+  it is on whenever she is within 330 px of a dormant one (not only after a refusal).
 - Heart: bud 1.08, wicks 0.85; asleep a cold breath (`glow.cold`) and a third of its seams lit per
-  lantern; awake golden-white on purpose (the hollow tree behind is orange-red): flower glow, pillar +
+  lantern; awake it was golden-white (glare: round 4 made it deep amber): flower glow, pillar +
   shaft sprites up the tree, warm mist, surface pool; from afar the wave also runs over surfaces
   (`wave.surface`), a glow stays at the view edge nearest the heart (`glow.horizonAlpha`; faint from the
   crown, where dark canopy covers that edge), camera lean 150 px / 2.5 s (not in the air).
@@ -69,6 +69,41 @@ Dev handle `__goal` (`.cfg`, `.cpuMs`). Sheets of every moment: `shots/goal/`.
   long as she stands there short.
 - Tally: the "/ total" is at 0.78 alpha (0.6 vanished over the lit rock at the shrine).
 
+## Round 4 (after playtest 2: glare at the end, nothing taught the lantern)
+- **The ending and the wake are deep amber with one small hot core.** Measured at the shrine, 1920x1080,
+  frames 0-560 after `gather`: mean luma 54-56 -> 34-36, pixels over 150: 6.5-7.7% -> 0.6-0.9%, over 200:
+  0.6-1.4% -> 0.03-0.05%. Wake seen from the far ledge: mean 27 -> 23, over 150: 0.8% -> 0.13%. What did
+  it: every glow went from golden-white to amber (`heart.glow`), the flower 230 -> 170 px, the column
+  460 -> 230 px wide, the mist 1500 -> 900 px at half the alpha, nothing grows by more than 15% at the
+  ending (`ending.wide`; it was 30-50%), canopy / band light a third, and the heart's post point light
+  0.62 -> 0.26 (post lights lift a surface's own hue: on the pale shrine stone that IS the near-white).
+  If it ever looks timid again, raise `core` / `halo` (small things), never the wide sprites.
+- **Surfaces take colour before strength** (`surface.ts`): added amber on cold blue stone makes cream.
+  The mesh now also lays an amber stain (alpha, amber x the surface's value) over anything brighter than
+  near-black soil and adds 30% less light there (`uniform[2..3]` = 0.03, 0.3; a threshold of 0.2 missed
+  the boulder: its own value is low). With the lantern's post light 1 -> 0.55 and `pool.gain` 0.85 the
+  boulder and the moth-stone by the first lantern are brown-amber, not cream. It applies to every
+  surface light (heart pool, ending, safe ground, drops).
+- **A dormant lantern notices her** (`lantern.notice`; all from state, no event needed: the sim's
+  `lanternNotice` is not used). Within 290 px with any glints: the crook bows 0.085 rad toward her
+  (`LanternView.update(dt, rest, bow)`: the root turns about its foot, the glass stays plumb), the glass
+  swings her way with a start, an ember wakes in the bulb (more the nearer her wallet is to the price),
+  three of her glints strain 62% of the way to it on a thread of sparks and fall back. Within 330 px
+  (glints or not) its **price stands round the glass**: the refusal's crown of stars is now simply on
+  whenever she is near a dormant one, filled from her wallet, so "this wants 12 of those" is read on
+  the run. The HUD count stays up within 330 px of a dormant one, and the pips are 1.8x and pale.
+- **Wayside lamps** (`scene.lamps`, `goal.lamps`, the sim's `lamp*` events): drawn by the same `Lamp`
+  records after the lanterns (`nLanterns`, `stateOf`, `restsAt`), as a `LanternView` at `WAY_SCALE` 0.68
+  with squatter styles; pool, mist, light, bead and price crown shrink with `lamp.k`. They have no HUD
+  pip (the row is the heart's three); the tally lists them.
+- **Tally**: every entry has its name under it in small caps (the pod and the shell could not be told
+  apart from icons alone), `bonus` shows as a gold "+n" after the glints (not seen: no staged finisher
+  kill), lamps get an entry when the scene has any. Rows sit under the ground line at the shrine
+  (`SUMMARY.y` 910): at 884 the top row ran through her feet.
+- **A fade's cost** (HUD): the count holds 6.5 s after `glintsDrop`, starts running down 1 s in (the dip
+  has lifted), the lost ones fall away cold, and "-n" stands beside it in cold numerals for 4 s.
+  The waiting cluster and the marker at the view edge: pickups.md.
+
 ## Look decisions (learned by looking)
 - Lantern = shepherd's crook + hanging seed of glass (the HUD health light's shape, 1.42x). Lit, the
   nested amber fills read as a flame inside dark glass; filling the whole seed made an orange blob.
@@ -88,12 +123,15 @@ Dev handle `__goal` (`.cfg`, `.cpuMs`). Sheets of every moment: `shots/goal/`.
 
 ## Not done / weak
 - `heartSleep` is still quiet; the seams and wicks carry the heart's state instead.
-- The ending's last frames are bright round the shrine (pillar + gold flower over the statue): not
-  retuned in round 3.
-- The lit lantern's pool turns the pale boulder by the first lantern cream; watch it.
+- "+n" in the tally and the tug of her glints at running speed have only been seen staged / standing.
+- The tug glints are small (26 px stars); the crown is what reads from a screen away.
+- A lit wayside lamp is quiet (bead 0.8 of a lantern's); nobody has played to one yet.
 - The ward answer at the edge of safe ground has only been seen once (burr-far at the far ledge).
 - Dormant glints are not woken by a lit lantern (they belong to the pickup renderer); at the ending a
   soft flare is laid over the waiting ones in view.
+- Capture under other agents' edits: `page.context().setOffline(true)` after the page is ready (and
+  `false` at the end) inside one `run-code` script; live knobs then through `__goal.cfg` and
+  `__goal.surface.uniform`.
 
 ## Capturing
 `playwright-cli -s=<name> eval` with one async function that steps and `drawImage`s the canvas into a

@@ -15,7 +15,7 @@ import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } fro
 import type { PointLight } from '../lights';
 import { zoneWeights } from '../scene/lib/fx-zones';
 import { wind } from '../scene/lib/look';
-import { GlintBatch, K_CHIP, K_FLARE, K_GLINT, K_GREAT, K_SPARK } from './batch';
+import { GlintBatch, K_CHIP, K_FLARE, K_GLINT, K_GREAT, K_SPARK, K_STAR } from './batch';
 import { GLINTS, MAX_QUADS } from './config';
 import { findRoot, groundBelow, Holder } from './holder';
 import { POD, PodView } from './pod';
@@ -67,6 +67,9 @@ interface Item {
   lit: number;
   /** 0 dormant (she is far) .. 1 awake. */
   wake: number;
+  /** Its trail's twinkle: seconds per round, and when in the round its turn comes. */
+  round: number;
+  turn: number;
 }
 
 interface Flight {
@@ -229,9 +232,33 @@ export class PickupRenderer {
         ground: great ? groundBelow(scene, p.x, p.y) : null,
         lit: 1,
         wake: 0,
+        round: 4,
+        turn: seed * 4,
       };
       this.items.push(item);
       this.byId.set(p.id, item);
+    }
+    // Trails: glints whose ids differ only in the last number twinkle one after another, in that
+    // order, so a line of them reads as a path (config: `twinkleStep`).
+    const trails = new Map<string, Item[]>();
+    for (const it of this.items) {
+      if (it.great) continue;
+      const m = /^(.*?)-?(\d+)$/.exec(it.p.id);
+      const key = m ? (m[1] as string) : it.p.id;
+      const list = trails.get(key) ?? [];
+      list.push(it);
+      trails.set(key, list);
+    }
+    const num = (it: Item): number => Number(/(\d+)$/.exec(it.p.id)?.[1] ?? 0);
+    for (const [key, list] of trails) {
+      list.sort((a, b) => num(a) - num(b));
+      const g = GLINTS.glint;
+      const round = (list.length - 1) * g.twinkleStep + g.twinkleSeconds + g.twinkleRest;
+      const off = hash01(key) * round;
+      list.forEach((it, k) => {
+        it.round = round;
+        it.turn = off + k * g.twinkleStep;
+      });
     }
     for (let i = 0; i < MAX_FLIGHTS; i++)
       this.flights.push({
@@ -308,6 +335,8 @@ export class PickupRenderer {
           ground: null,
           lit: 0,
           wake: 1,
+          round: 4,
+          turn: 0,
         });
     });
     // Enemies spill glints when they die: more sources, after the pods.
@@ -329,6 +358,8 @@ export class PickupRenderer {
           ground: null,
           lit: 0,
           wake: 1,
+          round: 4,
+          turn: 0,
         });
     }
     for (let i = 0; i < MAX_CHIPS; i++)
@@ -439,8 +470,8 @@ export class PickupRenderer {
         it.x = p.x + Math.sin(tt * 0.8 + it.seed * 40) * G.glint.bobX * k;
         it.y = p.y + Math.sin(tt * 1.3 + it.phase * 6.283) * G.glint.bobY * k;
       }
-      // Dormant until it feels her coming: a dim mote that twinkles on its own slow clock, then,
-      // as she nears, the whole star at full size, leaning her way.
+      // Dormant until it feels her coming (a small cut star, cool, twinkling in its turn along its
+      // trail), then, as she nears, the gold glint at full size, leaning her way.
       const dx = it.x - this.chestX;
       const dy = it.y - this.chestY;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -449,21 +480,35 @@ export class PickupRenderer {
       it.wake = wake;
       if (!seen) continue;
       if (it.great) {
-        const size = D.dormScale + (1 - D.dormScale) * wake;
-        const e = (D.dormGain + (1 + 0.2 * wake - D.dormGain) * wake) * it.appear;
+        const size = G.great.dormScale + (1 - G.great.dormScale) * wake;
+        const e = (G.great.dormGain + (1 + 0.2 * wake - G.great.dormGain) * wake) * it.appear;
         b.quad(K_GREAT, it.x, it.y, G.great.quad * size, G.great.quad * size, e, it.phase, 0);
         continue;
       }
       const g = G.glint;
-      const per = g.twinkleMin + (g.twinkleMax - g.twinkleMin) * it.seed;
-      const ph = (clock / per + it.seed * 7.31 + it.phase) % 1;
-      const tw = ph < g.twinkleShare ? Math.sin((Math.PI * ph) / g.twinkleShare) ** 2 : 0;
-      const size = g.dormScale * (1 + g.twinkleSize * tw) * (1 - wake) + wake;
-      const e = (g.dormGain * (1 + g.twinkleGain * tw) * (1 - wake) + (1 + g.nearGain) * wake) * it.appear;
+      // Asleep: the cut star, twinkling in its turn along its trail. As she nears it warms and the
+      // gold glint takes its place.
+      const tt2 = (((clock - it.turn) % it.round) + it.round) % it.round;
+      const tw = tt2 < g.twinkleSeconds ? Math.sin((Math.PI * tt2) / g.twinkleSeconds) ** 2 : 0;
       const lean = g.lean * wake;
       it.x -= (dx / d) * lean;
       it.y -= (dy / d) * lean;
-      b.quad(K_GLINT, it.x, it.y, g.quad * size, g.quad * size, e, it.phase, (1 - wake) * (1 - 0.6 * tw));
+      const asleep = 1 - smooth(0.15, 0.75, wake);
+      if (asleep > 0.004)
+        b.quad(K_STAR, it.x, it.y, g.star, g.star, g.starGain * asleep * it.appear, tw, smooth(0, 0.6, wake));
+      if (wake > 0.004) {
+        const size = 0.5 + 0.5 * wake;
+        b.quad(
+          K_GLINT,
+          it.x,
+          it.y,
+          g.quad * size,
+          g.quad * size,
+          (1 + g.nearGain) * wake * it.appear,
+          it.phase,
+          0,
+        );
+      }
     }
 
     // --- Those on their way to her.

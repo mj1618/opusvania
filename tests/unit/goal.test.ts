@@ -20,9 +20,12 @@ const H = defaultTuning.health;
 const of = <T extends SimEvent['type']>(ev: SimEvent[], type: T) =>
   ev.filter((e): e is Extract<SimEvent, { type: T }> => e.type === type);
 const types = (ev: SimEvent[]) => ev.map((e) => e.type);
+/** (Without `lanternNotice`: it fires on every approach and has its own tests below.) */
 const goalTypes = (ev: SimEvent[]) =>
   types(ev).filter(
-    (t) => t.startsWith('lantern') || t.startsWith('heart') || t === 'gather' || t === 'endHold',
+    (t) =>
+      t !== 'lanternNotice' &&
+      (t.startsWith('lantern') || t.startsWith('heart') || t === 'gather' || t === 'endHold'),
   );
 
 const A_X = 2400;
@@ -102,6 +105,7 @@ describe('lanterns: kindling', () => {
       rest: 0,
       short: 0,
       refused: false,
+      noticed: true,
     });
     expect(s.state.player.kindling).toBe(-1);
     expect([s.state.goal.lit, s.state.goal.restAt]).toEqual([1, 0]);
@@ -750,7 +754,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
     s.run(`.${G.holdFrames + 5}`);
     expect([s.state.goal.lit, s.state.goal.ended, s.state.pickups.spent]).toEqual([3, true, 36]);
     const fresh = createState(1, s.tuning, s.scene);
-    expect(fresh.version).toBe(14);
+    expect(fresh.version).toBe(15);
     expect(fresh.goal).toEqual({
       lanterns: [0, 1, 2].map(() => ({
         lit: false,
@@ -759,9 +763,13 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
         rest: 0,
         short: 0,
         refused: false,
+        noticed: false,
       })),
       lit: 0,
       restAt: -1,
+      lamps: [],
+      lampsLit: 0,
+      restLamp: -1,
       heart: { awake: false, frames: 0, hinted: false },
       gathered: false,
       ending: {
@@ -778,11 +786,14 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
         greatsTotal: 0,
         enemiesTotal: 0,
         deaths: 0,
+        lamps: 0,
+        lampsTotal: 0,
       },
       ended: false,
       run: { start: -1, hits: 0, deaths: 0 },
     });
     expect([fresh.pickups.count, fresh.pickups.spent, fresh.player.kindling]).toEqual([0, 0, -1]);
+    expect(fresh.player.kindlingLamp).toBe(-1);
     // A teleport keeps it all.
     s.place(2000, FLOOR);
     expect([s.state.goal.lit, s.state.goal.ended, s.state.pickups.spent]).toEqual([3, true, 36]);
