@@ -101,10 +101,6 @@ export class PostStage {
     u.uMix[1] = lights.gain;
     u.uMix[2] = lights.haze;
     u.uMix[3] = POST.chroma;
-    u.uTone[0] = grade.exposure;
-    u.uTone[1] = Math.min(grade.shoulder, 0.999);
-    u.uTone[2] = grade.contrast;
-    u.uTone[3] = grade.pivot;
     // The grade drifts with the scene's zones as the camera travels.
     const zw = zoneWeights(camera.x);
     const za = ZONE_GRADE.amount;
@@ -117,6 +113,10 @@ export class PostStage {
     };
     const zn = (zone: readonly [number, number, number], base: number): number =>
       base + (zoneMix(zone, zw) - base) * za;
+    u.uTone[0] = zn(ZONE_GRADE.exposure, grade.exposure);
+    u.uTone[1] = Math.min(grade.shoulder, 0.999);
+    u.uTone[2] = zn(ZONE_GRADE.contrast, grade.contrast);
+    u.uTone[3] = zn(ZONE_GRADE.pivot, grade.pivot);
     zc(ZONE_GRADE.shadowTint, grade.shadowTint, u.uShadow);
     u.uShadow[3] = zn(ZONE_GRADE.shadowLift, grade.shadowLift);
     zc(ZONE_GRADE.highlightTint, grade.highlightTint, u.uHighlight);
@@ -133,7 +133,12 @@ export class PostStage {
     u.uGrain[2] = VIEW_W / VIEW_H;
 
     // The playfield mask for this frame (the air layer's front shafts read it too).
-    renderPlayfieldMask(this.ctx.renderer, this.maskLayers());
+    // It is soft and low-res, so every other frame is enough, unless the camera jumped.
+    const jumped = Math.abs(camera.x - this.maskAt.x) + Math.abs(camera.y - this.maskAt.y) > 120;
+    if ((this.frames++ & 1) === 0 || jumped || camera.zoom !== this.maskAt.zoom) {
+      renderPlayfieldMask(this.ctx.renderer, this.maskLayers());
+      this.maskAt = { x: camera.x, y: camera.y, zoom: camera.zoom };
+    }
 
     // Lights: world px -> view heights. Only those whose reach touches the view are sent.
     const lu = f.lightsU;
@@ -166,6 +171,20 @@ export class PostStage {
       n++;
     }
     lu.uLightCount = n;
+    lu.uDirection = lights.direction;
+
+    // The hero's pocket, centred a little above the ember (which hangs low, at a tail or lantern).
+    const ember = this.ctx.lights.get('ember');
+    const hero = POST.hero;
+    if (ember) {
+      const v = worldToView(camera, ember.x, ember.y - 14);
+      u.uHero[0] = v.x / VIEW_H;
+      u.uHero[1] = v.y / VIEW_H;
+    }
+    u.uHero[2] = (hero.radius * camera.zoom) / VIEW_H;
+    u.uHero[3] = ember ? hero.darken * zoneMix(ZONE_GRADE.heroPocket, zw) : 0;
+    u.uHero2[0] = (hero.inner * camera.zoom) / VIEW_H;
+    u.uHero2[1] = hero.desaturate;
     lu.uShape[0] = VIEW_W / VIEW_H;
     lu.uShape[1] = lights.falloff;
     lu.uShape[2] = lights.hazeReach;
@@ -183,6 +202,8 @@ export class PostStage {
   }
 
   private masked: Container[] | null = null;
+  private frames = 0;
+  private maskAt = { x: Number.NaN, y: 0, zoom: 1 };
 
   /** The layers that count as "solid at the character's depth". */
   private maskLayers(): Container[] {

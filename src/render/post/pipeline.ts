@@ -69,6 +69,8 @@ export class PostFilter extends Filter {
     uGrain: Vec;
     uLightBack: Vec;
     uHalo: Vec;
+    uHero: Vec;
+    uHero2: Vec;
   };
   readonly prefilterU: { uTap: Vec; uCurve: Vec; uSaturation: number; uBoost: number };
   readonly lightsU: {
@@ -76,6 +78,7 @@ export class PostFilter extends Filter {
     uLightColors: Vec;
     uLightCount: number;
     uDim: number;
+    uDirection: number;
     uShape: Vec;
   };
   /** Set by PostStage: bloom knobs that live in per-level uniforms. */
@@ -115,6 +118,8 @@ export class PostFilter extends Filter {
           uGrain: { value: new Float32Array([0, 0, 16 / 9, 0]), type: 'vec4<f32>' },
           uLightBack: { value: new Float32Array([1, 0, 0, 0]), type: 'vec4<f32>' },
           uHalo: { value: new Float32Array([1, 0.8, 0.5, 0]), type: 'vec4<f32>' },
+          uHero: { value: new Float32Array([0, 0, 0.3, 0]), type: 'vec4<f32>' },
+          uHero2: { value: new Float32Array([0.06, 0.3, 0, 0]), type: 'vec4<f32>' },
         },
       },
       // Render the tree at the canvas's own resolution and multisampling: nothing goes soft.
@@ -168,6 +173,7 @@ export class PostFilter extends Filter {
         uLightCount: { value: 0, type: 'i32' },
         uShape: { value: new Float32Array([16 / 9, 1.5, 1.8, 0.1]), type: 'vec4<f32>' },
         uDim: { value: 0.5, type: 'f32' },
+        uDirection: { value: 0.5, type: 'f32' },
         uMaskTexel: { value: new Float32Array([1 / MASK_W, 1 / MASK_H]), type: 'vec2<f32>' },
       },
     });

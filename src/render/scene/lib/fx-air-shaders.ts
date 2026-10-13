@@ -97,12 +97,14 @@ in vec2 vWorld;
 out vec4 finalColor;
 ${SHAFT_GLSL}
 uniform sampler2D uMask;
-uniform vec4 uRect;
+uniform vec4 uView;       // the whole visible rect (uRect, the quad, may be smaller)
 uniform vec4 uShaftColors[3];  // per zone: rgb, strength
 uniform vec4 uMistColors[3];   // per zone: rgb, opacity
 uniform vec4 uVolume;      // shaft strength, mist on/off, how much solid playfield hides shafts, gust px
 uniform vec4 uMist;        // height, underground fade, lit-by-shaft amount, lit-by-lights amount
 uniform vec4 uPlayer;      // x, y, parting radius, parting amount
+uniform vec4 uBands[2];     // high mist sheets: y, half thickness, opacity, unused
+uniform vec4 uBandLook;    // sheets on/off x strength, lit by shafts, shaft boost at height, unused
 uniform vec4 uLightPos[${AIR_LIGHTS}];  // x, y, radius, intensity
 uniform vec4 uLightCol[${AIR_LIGHTS}];
 
@@ -115,15 +117,33 @@ void main(void) {
   float s = strength > 0.0 ? shaftAt(p) : 0.0;
   if (uVolume.z > 0.0 && s > 0.0) {
     // Beams in front of the character still pass behind solid things at its depth.
-    s *= 1.0 - uVolume.z * texture(uMask, (p - uRect.xy) / uRect.zw).a;
+    s *= 1.0 - uVolume.z * texture(uMask, (p - uView.xy) / uView.zw).a;
   }
+  // Shafts read strongest up among the canopy, where they have just come through it.
+  s *= 1.0 + uBandLook.z * (1.0 - smoothstep(250.0, 950.0, p.y));
   vec3 rgb = shaftColor.rgb * (s * strength);
   float a = 0.0;
+  if (uBandLook.x > 0.0) {
+    // Thin sheets of mist hanging between the canopy tiers: they put something pale behind the
+    // high platforms and catch the shafts that cross them.
+    vec4 tint = uMistColors[0] * zone.x + uMistColors[1] * zone.y + uMistColors[2] * zone.z;
+    for (int i = 0; i < 2; i++) {
+      vec4 b = uBands[i];
+      float dy = (p.y - b.x - 60.0 * sin(p.x / 900.0 + float(i) * 2.0)) / b.y;
+      if (abs(dy) > 2.2) continue;
+      float n = texture(uNoise, vec2(p.x / 2400.0 - t * (0.004 + 0.002 * float(i)), 0.21 + 0.37 * float(i) + p.y / 2600.0)).r;
+      float d = exp(-dy * dy) * smoothstep(0.25, 0.8, n) * b.z * uBandLook.x;
+      rgb = rgb * (1.0 - d) + (tint.rgb + shaftColor.rgb * (s * uBandLook.y)) * d;
+      a = a + d * (1.0 - a);
+    }
+  }
   if (uVolume.y > 0.0) {
     float gy = groundY(p.x);
     float above = gy - p.y;
     if (above > -uMist.y * 3.0 && above < uMist.x * 4.0) {
       vec4 mistColor = uMistColors[0] * zone.x + uMistColors[1] * zone.y + uMistColors[2] * zone.z;
+      // With no veil of its own this pass still needs the shafts here, to light the mist.
+      if (strength <= 0.0) s = shaftAt(p);
       // Two sheets sliding past each other at different speeds, pushed along by the wind's wave.
       float push = windAt(p.x, t, 0.0) * uVolume.w;
       float n1 = texture(uNoise, vec2((p.x - push) / 1900.0 - t * 0.0065, p.y / 620.0 + t * 0.002)).r;
@@ -135,7 +155,7 @@ void main(void) {
       float fall = exp(-max(above, 0.0) / h) * smoothstep(-uMist.y, uMist.y * 1.6, above + n * uMist.y);
       vec2 dp = (p - uPlayer.xy) / uPlayer.z;
       float part = 1.0 - uPlayer.w * exp(-dot(dp, dp));
-      a = mistColor.a * fall * (0.12 + 0.88 * n) * part;
+      float ga = mistColor.a * fall * (0.12 + 0.88 * n) * part;
       // Point lights spill a long way through the mist.
       vec3 glow = vec3(0.0);
       for (int i = 0; i < ${AIR_LIGHTS}; i++) {
@@ -145,7 +165,8 @@ void main(void) {
         float q = clamp(1.0 - dot(d, d), 0.0, 1.0);
         glow += uLightCol[i].rgb * (q * q * l.w);
       }
-      rgb = rgb * (1.0 - a) + mistColor.rgb * a + shaftColor.rgb * (s * a * uMist.z) + glow * (a * uMist.w);
+      rgb = rgb * (1.0 - ga) + mistColor.rgb * ga + shaftColor.rgb * (s * ga * uMist.z) + glow * (ga * uMist.w);
+      a = a + ga * (1.0 - a);
     }
   }
   finalColor = vec4(rgb, a);

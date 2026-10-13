@@ -25,7 +25,18 @@ import { BlurFilter, Container, Graphics, Matrix, Rectangle, RenderTexture, Spri
 import { VIEW_H, VIEW_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { fxDebug } from '../lib/fx-debug';
-import { bough, broadLeaves, fern, flowers, grass, trunk, vine, withPlane } from '../lib/fx-foliage';
+import {
+  bough,
+  broadLeaves,
+  fern,
+  flowerCluster,
+  flowers,
+  grass,
+  leafBranch,
+  trunk,
+  vine,
+  withPlane,
+} from '../lib/fx-foliage';
 import { PALETTE, prng, wind } from '../lib/look';
 
 export const FOREGROUND = {
@@ -34,7 +45,7 @@ export const FOREGROUND = {
   bakeScale: 0.5,
   atlasWidth: 2048,
   /** Per plane: parallax, blur in atlas px (x2 on screen), opacity. */
-  near: { parallax: 1.35, blur: 2.3, alpha: 0.97 },
+  near: { parallax: 1.35, blur: 1.5, alpha: 0.97 },
   far: { parallax: 1.15, blur: 0.9, alpha: 1 },
   /**
    * Where on screen a plant is at full size: `full` and beyond (distance of its middle from the
@@ -45,6 +56,12 @@ export const FOREGROUND = {
   full: 0.37,
   /** 0..1: how much of the camera's vertical travel the top plants ignore. */
   topLock: 0.95,
+  /**
+   * On the high route the frame is canopy already: the near top plants pull back by this much of
+   * their height and thin to this opacity when the camera is at its highest.
+   */
+  highRetract: 0.55,
+  highAlpha: 0.7,
   /** Sway amplitudes (radians of rotation for hanging things, of skew for growing things). */
   swayTop: 0.022,
   swayBottom: 0.045,
@@ -138,12 +155,16 @@ export class ForegroundLayer implements EnvModule {
 
     // Near, top: big boughs reaching a third of the way down. Seen whole only in the corners.
     const [n0, n1] = span(FOREGROUND.near.parallax);
-    for (let x = n0 + rnd() * 300; x < n1; x += 430 + rnd() * 300) {
+    for (let x = n0 + rnd() * 300; x < n1; x += 520 + rnd() * 360) {
       const dir = rnd() < 0.5 ? -1 : 1;
-      const drop = 230 + rnd() * 110;
-      add('near', 'top', x, top - 40, drop + 150, (g) => bough(g, rnd, 380 + rnd() * 240, drop, dir));
-      if (rnd() < 0.5)
-        add('near', 'top', x + dir * 90, top - 30, 330, (g) => vine(g, rnd, 170 + rnd() * 150));
+      const drop = 240 + rnd() * 90;
+      add('near', 'top', x, top - 40, drop + 170, (g) => leafBranch(g, rnd, 360 + rnd() * 200, drop, dir));
+      if (rnd() < 0.4) {
+        const color = FOREGROUND.flowerColors[Math.floor(rnd() * FOREGROUND.flowerColors.length)] as number;
+        add('near', 'top', x - dir * 110, top - 30, 330, (g) =>
+          flowerCluster(g, rnd, 190 + rnd() * 110, color),
+        );
+      }
     }
     // Near, bottom: big ferns and broad leaves rising a quarter of the way up.
     for (let x = n0 + rnd() * 300; x < n1; x += 400 + rnd() * 320) {
@@ -302,6 +323,8 @@ export class ForegroundLayer implements EnvModule {
     const px = vis.x + vis.w / 2 + (p.cx - cam.x);
     const py = vis.y + vis.h / 2 + (p.cy - cam.y);
     const k = Math.min(1, frame.dt * cfg.fadeRate);
+    // 0 on the ground, 1 with the camera at the top of the scene.
+    const high = Math.min(1, Math.max(0, (anchor.y - cam.y) / Math.max(1, anchor.y - VIEW_H / 2)));
 
     for (const piece of this.pieces) {
       const s = piece.sprite;
@@ -319,7 +342,12 @@ export class ForegroundLayer implements EnvModule {
       const across = Math.abs(mid - (vis.x + vis.w / 2)) / vis.w;
       const t = Math.min(1, Math.max(0, (across - cfg.clear) / (cfg.full - cfg.clear)));
       const out = t * t * (3 - 2 * t);
-      const away = piece.retract * (1 - out) * (piece.edge === 'top' ? -1 : 1);
+      let away = piece.retract * (1 - out) * (piece.edge === 'top' ? -1 : 1);
+      let thin = 1;
+      if (piece.edge === 'top' && piece.plane === 'near') {
+        away -= piece.b.height * cfg.highRetract * high * out;
+        thin = 1 + (cfg.highAlpha - 1) * high;
+      }
 
       const x = piece.x + sx;
       const y = piece.y + sy + lock + away;
@@ -348,7 +376,7 @@ export class ForegroundLayer implements EnvModule {
         ? Math.abs(px - (x + tr.lean * ((py - y) / tr.height - 0.5))) < tr.width * 0.5 + mx
         : px > x0 - mx && px < x0 + piece.b.width + mx && py > y0 - my && py < y0 + piece.b.height + my;
       piece.fade += ((behind ? cfg.fadeTo : 1) - piece.fade) * k;
-      s.alpha = piece.fade;
+      s.alpha = piece.fade * thin;
     }
   }
 }

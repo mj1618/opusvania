@@ -57,6 +57,23 @@
   tried and removed (cardboard, ghosts, ropes through the centre); only the two end trunks remain.
 - The whole layer fades out above zoom ~1.15 (close-up shots).
 
+## Round 3 additions
+- Value plan per zone lives in `ZONE_GRADE` (post/config.ts): exposure, S-curve contrast and pivot
+  per zone. The left glade was fixed there (exposure 0.86, contrast 0.5 around pivot 0.5: milky fog
+  mid-tones drop, glows stay), not by editing the background's fog.
+- Hero pocket (`POST.hero`): a wide, faint darken + desaturate ring centred on the 'ember' light,
+  leaving the hero itself untouched. Strength per zone in `ZONE_GRADE.heroPocket`.
+- The light pass takes 9 mask taps: a softer mask and its gradient, used as a cheap normal so
+  silhouette edges facing the light gain and edges facing away lose (`lights.direction`).
+- The playfield mask is redrawn every other frame (or at once if the camera jumps > 120 px or zooms).
+- Both air volume passes (shafts, mist) render into 960x540 half-float targets and are shown as
+  sprites: a sixteenth of the pixels at 4K, no visible loss. Mist sheets between the canopy tiers
+  (`AIR.mist.sheets`) and a shaft boost at height (`shafts.highBoost`) serve the high route.
+- Chroma split is off by default (two full-res taps nobody saw).
+- Foreground near plane uses `leafBranch` (few big drip-tip leaves with veins) and `flowerCluster`;
+  blur 1.5. On the high route the near top plants pull back and thin (`highRetract`, `highAlpha`).
+- Leaves land on every solid and one-way top. Moths fly at y~800, behind the playfield.
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").
@@ -67,6 +84,6 @@
   unhooks it.
 - Timing: `performance.now()` around `__game.tick(1)` + a 1px `gl.readPixels` (forces the GPU to
   finish), toggling `__fx.post.enabled` / `__fx.layers.get(name).visible`. Measured on an M5 Pro at
-  3840x2160, round 2: post ~1.3 ms (of which the mask redraw ~0.3), air ~1 ms, foreground ~0.1 ms.
+  3840x2160, round 3: post ~0.9-1.2 ms, air ~0.2-0.5 ms, foreground ~0.1 ms (round 2: 1.3 / 1.0 / 0.1).
   Numbers move by +-0.5 ms when other agents' browsers share the GPU.
 - `__fx` (`lib/fx-debug.ts`) = `{post, postFilter, air, foreground, layers}`: debug handles only.

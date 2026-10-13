@@ -28,7 +28,7 @@ export const POST = {
 
   lights: {
     /** Gain on surfaces: how much a light lifts the colours already there. */
-    gain: 2.2,
+    gain: 3.0,
     /** Strength left where the surroundings are bright already (the light well). */
     inBrightPlaces: 0.45,
     /** A little of the light's own colour added to every surface it reaches. */
@@ -36,7 +36,7 @@ export const POST = {
     /** Glints: extra light on spots that are already bright (wet moss, water highlights). */
     glint: 0.35,
     /** The glow hanging in the air around a light, and how far it reaches (x the light's radius). */
-    haze: 0.06,
+    haze: 0.085,
     hazeReach: 1.9,
     /** Falloff exponent on the smooth window (higher = tighter core). */
     falloff: 1.25,
@@ -45,8 +45,22 @@ export const POST = {
      * everything else on screen (0 = background untouched, 1 = no masking).
      */
     background: 0.1,
+    /** How much silhouette edges facing the light gain and edges facing away lose. */
+    direction: 0.55,
     /** Every light's radius is scaled by this (the skins register a modest reach). */
     reach: 1.35,
+  },
+
+  /**
+   * The pocket around the hero (found through the 'ember' light): the surroundings within `radius`
+   * px get darker and greyer, the `inner` px on the hero itself are left alone. Strength per zone
+   * is in ZONE_GRADE.
+   */
+  hero: {
+    radius: 380,
+    inner: 62,
+    darken: 0.16,
+    desaturate: 0.3,
   },
 
   grade: {
@@ -76,8 +90,11 @@ export const POST = {
 
   /** Grain amplitude (0..1 of full scale). Also dithers away banding in the dark gradients. */
   grain: 0.016,
-  /** Red/blue split toward the frame corners, as a fraction of the view height. */
-  chroma: 0.0007,
+  /**
+   * Red/blue split toward the frame corners, as a fraction of the view height (try 0.0007). Off by
+   * default: it costs two more full-resolution taps for something nobody notices.
+   */
+  chroma: 0,
 };
 
 export type PostConfig = typeof POST;
@@ -89,14 +106,24 @@ export type PostConfig = typeof POST;
  */
 export const ZONE_GRADE = {
   amount: 1,
+  /**
+   * The value plan: a dark moonlit glade with cyan accents, a bright warm light well, a dark
+   * violet-emerald stand. Exposure, and an S-curve whose pivot sits high in the dark zones so the
+   * milky mid-tones of the fog drop while glows and sky stay up.
+   */
+  exposure: [0.86, 1.04, 0.92] as const,
+  contrast: [0.5, 0.16, 0.36] as const,
+  pivot: [0.5, 0.36, 0.44] as const,
   /** Shadows: moonlit blue, the default teal-indigo, violet dusk. */
-  shadowTint: [0x0a2f66, 0x0c2450, 0x2a1c5a] as const,
-  shadowLift: [0.24, 0.2, 0.25] as const,
+  shadowTint: [0x081f52, 0x0c2450, 0x24164f] as const,
+  shadowLift: [0.16, 0.2, 0.18] as const,
   /** Highlights: cool white, warm gold, rose. */
   highlightTint: [0xe4f3ff, 0xffe2b8, 0xffdcea] as const,
   highlightWarmth: [0.3, 0.45, 0.4] as const,
-  saturation: [1.12, 1.08, 1.14] as const,
+  saturation: [1.16, 1.08, 1.16] as const,
   vignetteTint: [0x5f93dc, 0x6f9bd0, 0x8a84d8] as const,
+  /** Multiplier on POST.hero.darken: the pocket matters most where the place glows most. */
+  heroPocket: [1.25, 1.3, 1] as const,
 };
 
 /** Bloom targets, widest first. Fixed in logical units so the look does not depend on window size. */

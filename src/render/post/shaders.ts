@@ -145,10 +145,12 @@ uniform int uLightCount;
 uniform vec4 uShape;  // aspect, falloff, halo radius factor, light reaching non-playfield
 uniform vec2 uMaskTexel;
 uniform float uDim;
+uniform float uDirection;
 void main(void) {
   vec2 p = vec2(vPos.x * uShape.x, vPos.y);
   vec3 sum = vec3(0.0);
   float halo = 0.0;
+  vec2 toward = vec2(0.0);
   for (int i = 0; i < ${MAX_LIGHTS}; i++) {
     if (i >= uLightCount) break;
     vec4 l = uLights[i];
@@ -158,16 +160,29 @@ void main(void) {
     // A smooth window that reaches zero at the radius, with a brighter core.
     float f = pow(q, uShape.y) * (0.5 + 0.5 * q * q);
     sum += uLightColors[i].rgb * (f * l.w);
+    toward -= d * (f * l.w);
     float h = clamp(1.0 - r2 / (uShape.z * uShape.z), 0.0, 1.0);
     halo += h * h * h * l.w;
   }
   float mask = 0.0;
   if (halo > 0.0005) {
-    vec2 t = uMaskTexel * 2.2;
-    vec4 m = texture(uMask, vPos) * 0.36
-      + (texture(uMask, vPos + vec2(t.x, t.y)) + texture(uMask, vPos + vec2(-t.x, t.y))
-       + texture(uMask, vPos + vec2(t.x, -t.y)) + texture(uMask, vPos + vec2(-t.x, -t.y))) * 0.16;
+    // Nine taps: a soft mask (no hard edge where a cliff face ends) and its gradient.
+    vec2 t = uMaskTexel * 3.0;
+    vec4 c = texture(uMask, vPos);
+    vec4 e = texture(uMask, vPos + vec2(t.x, 0.0));
+    vec4 w = texture(uMask, vPos - vec2(t.x, 0.0));
+    vec4 n = texture(uMask, vPos - vec2(0.0, t.y));
+    vec4 s = texture(uMask, vPos + vec2(0.0, t.y));
+    vec4 dg = texture(uMask, vPos + t * 0.7) + texture(uMask, vPos - t * 0.7)
+            + texture(uMask, vPos + vec2(t.x, -t.y) * 0.7) + texture(uMask, vPos + vec2(-t.x, t.y) * 0.7);
+    vec4 m = c * 0.2 + (e + w + n + s) * 0.12 + dg * 0.08;
     mask = m.a;
+    // The mask's gradient is a cheap normal at silhouettes: edges that face the light catch it,
+    // edges that face away fall off. Flat interiors sit in between.
+    vec2 normal = vec2(w.a - e.a, n.a - s.a);
+    float edge = min(length(normal) * 2.5, 1.0);
+    float facing = dot(normalize(normal + 1e-5), normalize(toward + 1e-5));
+    sum *= clamp(0.82 + uDirection * facing * edge, 0.15, 1.6);
     // Where the place is bright already (the light well) the hero's light matters less.
     float ambient = dot(m.rgb, vec3(0.3, 0.55, 0.15)) / max(m.a, 0.05);
     sum *= mix(1.0, uDim, smoothstep(0.22, 0.6, ambient));
@@ -196,6 +211,8 @@ uniform vec4 uVignetteTint; // rgb, saturation
 uniform vec4 uGrain;      // amplitude, time, aspect, unused
 uniform vec4 uLightBack;  // bloom cut on pale brights, glint, warm add, unused
 uniform vec4 uHalo;       // rgb: the lights' mean colour
+uniform vec4 uHero;       // x, y (view heights), pocket radius, darkening
+uniform vec4 uHero2;      // inner radius left untouched, desaturation, unused x2
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -216,11 +233,19 @@ void main(void) {
   float r2 = dot(cv, cv);
 
   // Scene, with the red and blue channels pulled apart a little toward the corners.
-  vec2 off = c * vUvScale * (uMix.w * r2);
-  vec3 col;
-  col.g = texture(uTexture, vTextureCoord).g;
-  col.r = texture(uTexture, clamp(vTextureCoord - off, vClamp.xy, vClamp.zw)).r;
-  col.b = texture(uTexture, clamp(vTextureCoord + off, vClamp.xy, vClamp.zw)).b;
+  vec3 col = texture(uTexture, vTextureCoord).rgb;
+  if (uMix.w > 0.0) {
+    vec2 off = c * vUvScale * (uMix.w * r2);
+    col.r = texture(uTexture, clamp(vTextureCoord - off, vClamp.xy, vClamp.zw)).r;
+    col.b = texture(uTexture, clamp(vTextureCoord + off, vClamp.xy, vClamp.zw)).b;
+  }
+
+  // A pocket of calm around the hero: what lies around them (not on them) goes a little darker
+  // and greyer, so a small figure separates from a busy, glowing forest without an outline.
+  vec2 hd = cv - (uHero.xy - vec2(0.5 * uGrain.z, 0.5));
+  float h2 = dot(hd, hd);
+  float pocket = exp(-h2 / (uHero.z * uHero.z)) * (1.0 - exp(-h2 / (uHero2.x * uHero2.x))) * uHero.w;
+  col = mix(col, vec3(dot(col, LUMA)), pocket * uHero2.y) * (1.0 - pocket);
 
   // Big pale bright areas (sky, lit fog) are bright enough already: they take little bloom
   // themselves, so the glow budget goes to halos around small, coloured lights.

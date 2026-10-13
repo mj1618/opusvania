@@ -32,6 +32,20 @@ export class GroundProfile {
     }
   }
 
+  /** The highest and lowest ground surface y between two world x. */
+  range(x0: number, x1: number): [number, number] {
+    const i0 = Math.max(0, Math.floor(x0 / STEP));
+    const i1 = Math.min(this.tops.length - 1, Math.ceil(x1 / STEP));
+    let lo = Number.POSITIVE_INFINITY;
+    let hi = Number.NEGATIVE_INFINITY;
+    for (let i = i0; i <= i1; i++) {
+      const v = this.tops[i] as number;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    return [lo, hi];
+  }
+
   /** Ground surface y under world x (the highest ground-like rect there). */
   top(x: number): number {
     const i = Math.min(this.tops.length - 1, Math.max(0, Math.round(x / STEP)));

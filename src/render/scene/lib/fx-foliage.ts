@@ -304,7 +304,7 @@ export function broadLeaves(g: Graphics, rnd: Rnd, size: number): void {
     litRibbon(g, t, stalk, t.body[0] as number);
     const droop = k * 1.5 + (rnd() - 0.5) * 0.4;
     const len = size * (0.55 + rnd() * 0.35);
-    leaf(g, t, () => 0, tx, ty, len, len * 0.42, -Math.PI / 2 + droop + Math.sign(k || 1) * 0.9);
+    dripLeaf(g, t, rnd, tx, ty, len, len * 0.3, -Math.PI / 2 + droop + Math.sign(k || 1) * 0.9);
   }
 }
 
@@ -410,5 +410,119 @@ export function flowers(g: Graphics, rnd: Rnd, size: number, color: number): voi
       g.fill(pth % 2 ? petal : mix(petal, color, 0.35));
     }
     g.circle(tx, -h * 0.82 + r * 0.9, r * 0.32).fill({ color: mix(color, 0xffffff, 0.4), alpha: 0.9 });
+  }
+}
+
+function dripPath(g: Graphics, x: number, y: number, len: number, width: number, angle: number): void {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const at = (along: number, side: number): [number, number] => [
+    x + c * len * along - s * width * side,
+    y + s * len * along + c * width * side,
+  ];
+  const tip = at(1, 0);
+  const [a1x, a1y] = at(0.2, 1.45);
+  const [a2x, a2y] = at(0.74, 0.3);
+  const [b1x, b1y] = at(0.74, -0.3);
+  const [b2x, b2y] = at(0.2, -1.45);
+  g.moveTo(x, y).bezierCurveTo(a1x, a1y, a2x, a2y, tip[0], tip[1]).bezierCurveTo(b1x, b1y, b2x, b2y, x, y);
+}
+
+/**
+ * A big broad leaf with a drip tip: full belly near the stalk, drawn out to a long point, with a
+ * midrib and side veins. `width` is the half width of the belly.
+ */
+export function dripLeaf(
+  g: Graphics,
+  t: Tones,
+  rnd: Rnd,
+  x: number,
+  y: number,
+  len: number,
+  width: number,
+  angle: number,
+): void {
+  dripPath(g, x - LX * t.rimShift * 0.8, y + 1.5, len, width, angle);
+  g.fill({ color: t.cool, alpha: t.rimAlpha * 0.4 });
+  dripPath(g, x + LX * t.rimShift, y + LY * t.rimShift, len, width, angle);
+  g.fill({ color: t.rim, alpha: t.rimAlpha * (0.5 + 0.4 * rnd()) });
+  dripPath(g, x, y, len, width, angle);
+  const body = pick(rnd, t.body);
+  g.fill(body);
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const vein = { color: mix(body, t.rim, 0.4), alpha: 0.5 };
+  g.moveTo(x, y)
+    .lineTo(x + c * len * 0.93, y + s * len * 0.93)
+    .stroke({ ...vein, width: Math.max(1.2, width * 0.07) });
+  for (let i = 1; i <= 4; i++) {
+    const k = 0.1 + i * 0.13;
+    const reach = width * (0.95 - i * 0.14);
+    for (const side of [-1, 1]) {
+      g.moveTo(x + c * len * k, y + s * len * k)
+        .lineTo(x + c * len * (k + 0.16) - s * reach * side, y + s * len * (k + 0.16) + c * reach * side)
+        .stroke({ ...vein, width: Math.max(0.8, width * 0.035), alpha: 0.35 });
+    }
+  }
+}
+
+/**
+ * A bough of few, big, separate leaves (near plane): a stem from the origin sweeping `dir` and
+ * drooping to `drop`, with drip-tip leaves alternating along it. Every leaf reads on its own.
+ */
+export function leafBranch(g: Graphics, rnd: Rnd, span: number, drop: number, dir: number): void {
+  const t = foregroundTones(rnd, 0.8, 0.6);
+  const stem = curve(
+    0,
+    -70,
+    dir * span * 0.5,
+    -30 + drop * 0.15,
+    dir * span,
+    drop * 0.7,
+    20 + rnd() * 8,
+    4,
+    12,
+  );
+  const leaves = 5 + Math.floor(rnd() * 3);
+  const draw = (i: number): void => {
+    const u = (i + 0.6) / (leaves + 0.2);
+    const idx = Math.min(stem.length - 2, 1 + Math.floor(u * (stem.length - 2)));
+    const p = stem[idx] as Pt;
+    const q = stem[idx + 1] as Pt;
+    const along = Math.atan2(q[1] - p[1], q[0] - p[0]);
+    const side = i % 2 ? 1 : -1;
+    const len = (0.5 + rnd() * 0.22) * Math.max(drop, 200) * (1 - 0.25 * u);
+    // Leaves hang: whatever side they leave the stem on, they turn toward the ground.
+    const a = along + side * dir * (0.75 + rnd() * 0.3);
+    const hang = a + (Math.PI / 2 - a) * 0.45;
+    dripLeaf(g, t, rnd, p[0], p[1], len, len * (0.2 + rnd() * 0.05), hang);
+  };
+  for (let i = 0; i < leaves; i += 2) draw(i);
+  litRibbon(g, t, stem, t.body[0] as number);
+  for (let i = 1; i < leaves; i += 2) draw(i);
+  const end = stem[stem.length - 1] as Pt;
+  const len = Math.max(drop, 200) * 0.42;
+  dripLeaf(g, t, rnd, end[0], end[1], len, len * 0.22, Math.PI / 2 + dir * 0.35);
+}
+
+/**
+ * A hanging cluster of blossom (near plane): a thin stem with pairs of small petals getting
+ * smaller toward the tip, in a dusky `color`.
+ */
+export function flowerCluster(g: Graphics, rnd: Rnd, length: number, color: number): void {
+  const t = foregroundTones(rnd, 0.7, 0.6);
+  const bend = (rnd() - 0.5) * length * 0.25;
+  const stem = curve(0, -50, bend, length * 0.4, bend * 0.5, length, 5, 1.5, 18);
+  litRibbon(g, t, stem, t.body[0] as number);
+  for (let i = 5; i < stem.length; i++) {
+    const p = stem[i] as Pt;
+    const u = (i - 5) / (stem.length - 6);
+    const size = (26 - 14 * u) * (0.85 + rnd() * 0.3);
+    const tone = mix(color, t.body[1] as number, 0.3 + 0.3 * rnd());
+    for (const side of [-1, 1]) {
+      leafPath(g, p[0], p[1], size, size * 0.5, Math.PI / 2 + side * (0.75 + rnd() * 0.3));
+      g.fill(tone);
+    }
+    g.circle(p[0], p[1] + size * 0.3, size * 0.16).fill({ color: mix(color, 0xffffff, 0.35), alpha: 0.8 });
   }
 }
