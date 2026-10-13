@@ -57,7 +57,7 @@ export interface GroundSeg {
 
 export const FORMS = {
   /** Back ridge: base height and the height of its slow and quicker swells, px. */
-  ridge: [4, 50, 18] as const,
+  ridge: [4, 26, 10] as const,
   /** Bank slope length as a multiple of the step height. */
   bankRun: 1.1,
 } as const;
@@ -68,8 +68,14 @@ const haze = (c: number, k: number): number => mix(c, PALETTE.fogMid, k);
 export function ridgeHeight(x: number): number {
   const a = (noise1(x / 310, 801) + 1) * 0.5;
   const b = (noise1(x / 120, 802) + 1) * 0.5;
+  // The raised centre block swells under the high ledge (its top must not be a ruled line).
+  const block = 34 * Math.exp(-(((x - 2900) / 190) ** 2)) + 16 * Math.exp(-(((x - 2660) / 70) ** 2));
   return (
-    FORMS.ridge[0] + FORMS.ridge[1] * a ** 1.8 + FORMS.ridge[2] * b * a + Math.max(0, noise1(x / 37, 803)) * 4
+    block +
+    FORMS.ridge[0] +
+    FORMS.ridge[1] * a ** 1.8 +
+    FORMS.ridge[2] * b * a +
+    Math.max(0, noise1(x / 37, 803)) * 4
   );
 }
 
@@ -210,6 +216,7 @@ export function paintBanks(
   segs: GroundSeg[],
   info: TerrainInfo,
   kit: FormKit,
+  trunkXs: number[] = [],
 ): Array<[number, number]> {
   const spans: Array<[number, number]> = [];
   for (const st of steps(segs)) {
@@ -240,7 +247,8 @@ export function paintBanks(
       }
       continue;
     }
-    const L = H * FORMS.bankRun * range(r, 0.9, 1.15);
+    const underTrunk = trunkXs.some((tx) => Math.abs(tx - fx) < 40);
+    const L = H * FORMS.bankRun * range(r, 0.9, 1.15) * (underTrunk ? 0.6 : 1);
     const xs = fx - d * 54;
     const xe = fx + d * L;
     spans.push([Math.min(xs, xe) - 40, Math.max(xs, xe) + 40]);
@@ -254,7 +262,7 @@ export function paintBanks(
       }
       const u = (t - tc) / (1 - tc);
       // Steep and bulging under the lip, easing out into talus on the lower ground.
-      const fall = 1 - (1 - u) ** 2.3;
+      const fall = 1 - (1 - u) ** 3.2;
       return (
         hi -
         shoulder * (1 - u) ** 3 -
@@ -270,21 +278,22 @@ export function paintBanks(
     const body = top.slice();
     body.push(xe, lo + 30, xs, lo + 30);
     const t0 = kit.mossTone(fx, hi, 845, 0);
-    // The same earth as the cut face beside it and nearly as lit, so wall and slope are one bank.
-    const earth = mix(mix(t0.dark, kit.earth[0] as number, 0.6), 0x4f8080, 0.22);
-    p.solid(body, earth, 0.4, { moss: 0.25 });
+    // Clearly behind the walk line (she cannot climb it): back-plane dark, overgrown, steep at
+    // the top. The face's corner is hidden by the roots and stones of paintBankFronts instead.
+    const earth = haze(mix(mix(t0.dark, kit.earth[1] as number, 0.5), kit.backDeep, 0.45), 0.08);
+    p.solid(body, earth, 0.3, { moss: 0.25 });
     // Soft relief so the slope has a belly.
     for (let k = 1; k <= 2; k++) {
       const inner = top.map((v, j) => (j % 2 ? v + k * 13 : v));
       inner.push(xe - d * k * 20, lo + 30, xs, lo + 30);
-      p.bump(inner, 0.4 + k * 0.025, { moss: 0.25 });
+      p.bump(inner, 0.3 + k * 0.012, { moss: 0.25 });
     }
-    crest(p, top, kit, 846 + st.index, 1, 0.14);
+    crest(p, top, kit, 846 + st.index, 1, 0.03);
     // Buttress roots running down it from under the lip.
     const slopeWood: Wood = {
-      col: mix(kit.rootWood, kit.earth[1] as number, 0.4),
-      lit: mix(kit.rootWood, 0x6a8a80, 0.3),
-      dark: kit.earth[4] as number,
+      col: mix(kit.backDeep, kit.rootWood, 0.4),
+      lit: mix(kit.back, 0x4a6a6a, 0.3),
+      dark: mix(kit.backDeep, kit.abyss, 0.6),
     };
     for (let k = 0; k < 3; k++) {
       const t1 = clamp(tc + (1 - tc) * range(r, 0.55, 1.02), 0, 1);
@@ -315,8 +324,8 @@ export function paintBanks(
         line,
         (t) => w0 * (1 - t * 0.72) + 4 + Math.max(0, Math.sin(t * 12 + k)) * 3,
         slopeWood,
-        0.47,
-        0.07,
+        0.3,
+        0.05,
         fx + k,
         {
           bark: 0.8,
@@ -328,7 +337,9 @@ export function paintBanks(
     // Boulders slumped on it.
     for (const [k, u] of [range(r, 0.26, 0.4), range(r, 0.62, 0.8)].entries()) {
       const t = tc + (1 - tc) * u;
-      const w = range(r, 36, 60) * (k ? 0.75 : 1);
+      const w = range(r, 30, 46) * (k ? 0.75 : 1);
+      // Under a trunk the stilt roots own the corner: no boulders there.
+      if (underTrunk) continue;
       const cx = lerp(xs, xe, t);
       const cy = yAt(t);
       paintRock(p, {
@@ -337,14 +348,14 @@ export function paintBanks(
         rx: w,
         ry: w * range(r, 0.62, 0.82),
         seed: 848 + st.index * 3 + k,
-        color: mix(kit.stone[(k + st.index) % kit.stone.length] as number, kit.earth[2] as number, 0.5),
-        dark: kit.earth[4] as number,
-        h: 0.42,
+        color: backStone(kit, k + st.index),
+        dark: mix(kit.backDeep, kit.abyss, 0.5),
+        h: 0.27,
         rise: 0.07,
         baseY: cy + w * 0.5,
         tilt: d * range(r, 0.1, 0.35),
         rough: 1.15,
-        moss: { ...kit.mossTone(cx, cy, 849 + k, 0), amount: 0.8, flag: 0.8 },
+        moss: backMoss(kit, cx, cy, 849 + k),
         ground: 0.9,
       });
     }
@@ -357,7 +368,8 @@ export function paintBanks(
 }
 
 /** Walk plane: a stone lip or buttress roots over each step's corner and down its face. */
-export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit): void {
+export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit, trunkXs: number[] = []): void {
+  const backRoot = backWood(kit);
   for (const st of steps(segs)) {
     const r = rngFor(860, st.fx);
     const { fx, hi, lo, d } = st;
@@ -444,6 +456,112 @@ export function paintBankFronts(p: Paint, segs: GroundSeg[], kit: FormKit): void
         },
       );
     }
+    // The great buttress: over the lip, standing well off the face (the square corner is lost in
+    // the dark behind it), near-vertical down the face, its toe sweeping out along the lower ground.
+    const H = lo - hi;
+    const underTrunk = trunkXs.some((tx) => Math.abs(tx - fx) < 40);
+    {
+      const off = range(r, 26, 36);
+      const toe = H * range(r, 0.85, 1.1);
+      const line = wander(
+        cubic(
+          fx - d * range(r, 60, 90),
+          hi + 12,
+          fx + d * off,
+          hi + 6,
+          fx + d * (off + 2),
+          lo - 16,
+          fx + d * toe,
+          lo + 6,
+          20,
+        ),
+        3,
+        866 + st.index,
+        40,
+      ).map((v, j) => (j % 2 ? Math.max(v, hi + 7) : v));
+      const w0 = range(r, 30, 36);
+      // The hollow between root and face.
+      const gap: number[] = [fx - d * 6, hi + 14];
+      for (let j = 6; j < line.length / 2; j++) gap.push(line[j * 2] as number, line[j * 2 + 1] as number);
+      gap.push(fx - d * 6, lo + 8);
+      p.tint(gap, kit.abyss, 0.75);
+      p.tint(
+        ribbon(
+          line.map((v, j) => (j % 2 ? v + 5 : v - d * 3)),
+          (t) => (w0 + 10) * (1 - t * 0.55) + 2,
+        ),
+        E[4] as number,
+        0.55,
+      );
+      limb(
+        p,
+        line,
+        (t) =>
+          w0 * (1 - t * 0.62) +
+          3 +
+          Math.max(0, Math.sin(t * 11 + st.index)) * 3 +
+          smoothstep(0.5, 0.75, t) * 5,
+        wood,
+        0.68,
+        0.1,
+        fx + 9,
+        { bark: 0.3, grain: 4, lit: 0.3 },
+      );
+      // A lesser root forking off it half way down.
+      const [bx, by] = [line[20] as number, line[21] as number];
+      const fork = wander(
+        quad(bx, by, bx + d * 26, lerp(by, lo, 0.6), bx + d * range(r, 50, 80), lo + 6, 9),
+        2,
+        867,
+        20,
+      );
+      limb(p, fork, (t) => 12 * (1 - t * 0.6) + 2, wood, 0.66, 0.06, fx + 10, { bark: 0.3, lit: 0.3 });
+    }
+    // Stones slumped at the foot, low (ankle to shin), half in the moss.
+    for (let k = 0; k < (underTrunk ? 1 : 3); k++) {
+      const w = range(r, 16, 30) * (k === 0 ? 1.2 : 0.8);
+      const cx = fx + d * (range(r, 22, 46) + k * range(r, 40, 62));
+      const c = kit.stone[(st.index + k * 3) % kit.stone.length] as number;
+      paintRock(p, {
+        cx,
+        cy: lo - w * 0.12,
+        rx: w,
+        ry: w * range(r, 0.55, 0.7),
+        seed: 868 + st.index * 5 + k,
+        color: mix(c, E[2] as number, 0.45),
+        dark: E[4] as number,
+        h: 0.6,
+        rise: 0.1,
+        baseY: lo + 8,
+        tilt: d * range(r, -0.1, 0.3),
+        rough: 1.1,
+        moss: { ...kit.mossTone(cx, lo, 869 + k, 0), amount: 0.7 },
+        ground: 0.8,
+      });
+    }
+    if (underTrunk) {
+      // The corner goes into the stilt-root tangle: shadow over the face, and roots leaning down
+      // from the trunk's foot onto the block's top.
+      const shade: number[] = [];
+      for (let y = hi + 8; y <= lo + 4; y += 12) shade.push(fx - d * (46 + wobble(y, 870, 30) * 12), y);
+      shade.push(fx + d * 30, lo + 4, fx + d * 30, hi + 8);
+      p.tint(shade, kit.abyss, 0.6);
+      for (let k = 0; k < 3; k++) {
+        const sx = fx + d * range(r, 20, 70);
+        const ex = fx - d * range(r, 20, 110);
+        const line = wander(
+          quad(sx, hi - range(r, 90, 130), lerp(sx, ex, 0.7), hi - range(r, 40, 80), ex, hi + 8, 12),
+          4,
+          871 + k,
+          40,
+        );
+        limb(p, line, (t) => (20 - k * 4) * (1 - t * 0.5) + 3, backRoot, 0.3, 0.06, fx + 20 + k, {
+          bark: 0.8,
+          grain: 2,
+          lit: 0.3,
+        });
+      }
+    }
   }
 }
 
@@ -453,12 +571,12 @@ type Form = { kind: 'log' | 'boulder' | 'arch'; x: number; size: number; flip?: 
 
 /** Where the big forms stand (world x of their middle), a few per zone, clear of the routes' props. */
 const GREAT: readonly Form[] = [
-  { kind: 'boulder', x: 610, size: 1.1 },
+  { kind: 'boulder', x: 610, size: 0.8 },
   { kind: 'log', x: 1150, size: 1 },
   { kind: 'boulder', x: 2150, size: 0.85, flip: true },
   { kind: 'log', x: 2870, size: 0.85, flip: true },
   { kind: 'arch', x: 4400, size: 1 },
-  { kind: 'boulder', x: 4760, size: 1.2 },
+  { kind: 'boulder', x: 4790, size: 0.72 },
   { kind: 'log', x: 5520, size: 1.1 },
 ];
 
@@ -525,11 +643,12 @@ export function paintGreatForms(p: Paint, info: TerrainInfo, kit: FormKit): Arra
       // A fallen trunk lying along the ground: the butt end propped on its own root plate, the
       // far end broken and sunk in the moss.
       const len = 300 * f.size;
-      const girth = 78 * f.size;
+      // It lies LOW (below her waist): mist must show above it, or she is lost against it.
+      const girth = 44 * f.size;
       const xa = f.x - (dir * len) / 2;
       const xb = f.x + (dir * len) / 2;
       const line = wander(
-        quad(xa, gy - girth * 0.62, f.x, gy - girth * 0.52, xb, gy - girth * 0.2, 16),
+        quad(xa, gy - girth * 0.5, f.x, gy - girth * 0.4, xb, gy - girth * 0.12, 16),
         4,
         874 + index,
         90,
@@ -551,7 +670,7 @@ export function paintGreatForms(p: Paint, info: TerrainInfo, kit: FormKit): Arra
       // The root plate: a fan of torn roots at the butt.
       for (let k = 0; k < 7; k++) {
         const a = -Math.PI / 2 + (k - 3) * 0.42 + range(r, -0.12, 0.12);
-        const rl = girth * range(r, 0.7, 1.25);
+        const rl = girth * range(r, 0.6, 1.0);
         const ex = xa - dir * Math.abs(Math.cos(a)) * rl * 0.45 - dir * 8;
         const ey = Math.min(gy + 6, gy - girth * 0.55 + Math.sin(a) * rl);
         limb(
@@ -586,7 +705,7 @@ export function paintGreatForms(p: Paint, info: TerrainInfo, kit: FormKit): Arra
       // A limb stub standing up from it, and the splintered far end.
       const [sx, sy] = [lerp(xa, xb, 0.62), gy - girth * 0.72];
       const stub = wander(
-        quad(sx, sy + 12, sx + dir * 14, sy - 50, sx + dir * 46, sy - range(r, 80, 110), 9),
+        quad(sx, sy + 12, sx + dir * 14, sy - 50, sx + dir * 46, sy - range(r, 50, 70), 9),
         3,
         877 + index,
         30,

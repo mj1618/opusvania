@@ -244,14 +244,21 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
     earth: TERRAIN.earth,
     stone: TERRAIN.stone,
   };
+  const trunkXs = trunks.map((t) => t.x);
   paintBackRidge(p, segs, fkit, scene.width);
-  const taken = [...paintBanks(p, segs, info, fkit), ...paintGreatForms(p, info, fkit)];
+  // Between the two trunks she must stand against open mist: no tall plants there.
+  if (trunks.length >= 2)
+    info.keepClear.push([
+      (trunks[0] as SolidRect).x + (trunks[0] as SolidRect).w + 30,
+      (trunks[1] as SolidRect).x - 20,
+    ]);
+  const taken = [...paintBanks(p, segs, info, fkit, trunkXs), ...paintGreatForms(p, info, fkit)];
   for (const t of trunks) if (t.y + t.h < groundY(t.x + t.w / 2) - 40) paintStiltRoots(p, t, groundY);
   paintLandmarks(p, scene, info, fkit);
   paintBackdrop(p, scene, info, taken);
   paintEdgeWalls(p, scene, info);
   paintGround(p, segs, scene, info);
-  paintBankFronts(p, segs, fkit);
+  paintBankFronts(p, segs, fkit, trunkXs);
 
   for (const s of scene.solids) {
     if (s.tag === 'trunk') paintTrunk(p, s, scene, info, trunks.indexOf(s) % 2 === 1);
@@ -284,6 +291,8 @@ export interface MossOpts {
   mound?: number;
   /** 0..1: add a clean lit crest and a contact shadow under the lip (elevated tops). */
   read?: number;
+  /** Draw the lit crest only along moss cushions (the main ground). */
+  crestOnMoss?: boolean;
   /** Scales that contact shadow (bodies that are dark already need little: it shows as a ruled bar). */
   lipShade?: number;
 }
@@ -460,16 +469,43 @@ function mossCap(p: Paint, x0: number, x1: number, y: number, o: MossOpts): void
       TERRAIN.backDeep,
       0.42 * read * (o.lipShade ?? 1),
     );
-    p.solid(
-      ribbon(
-        crestT,
-        (t) => (3 + wobble(t * 300, o.seed + 61, 30) * 0.9) * Math.sin(Math.PI * clamp(t, 0.01, 0.99)) ** 0.3,
-      ),
-      mix(mossTone((x0 + x1) / 2, y, o.seed, 0).body, 0x8fc060, 0.8),
-      0.98,
-      { moss: 1 },
-      0.5 + 0.4 * read,
-    );
+    // On elevated tops the crest runs the whole way (the walk line must read against canopy);
+    // with `crestOnMoss` (the main ground) only along the cushions, never across bare earth,
+    // where it rules a pale stepped line.
+    const runs: number[][] = [];
+    if (o.crestOnMoss) {
+      let cur: number[] = [];
+      for (let i = 0; i < crestT.length; i += 2) {
+        if (cover(crestT[i] as number) > 0.45) cur.push(crestT[i] as number, crestT[i + 1] as number);
+        else {
+          if (cur.length >= 8) runs.push(cur);
+          cur = [];
+        }
+      }
+      if (cur.length >= 8) runs.push(cur);
+    } else runs.push(crestT);
+    // In the deep stand the bake's violet tint eats green: elevated crests there start brighter.
+    const crestCol = o.crestOnMoss
+      ? mix(mossTone((x0 + x1) / 2, y, o.seed, 0).body, 0x8fc060, 0.5)
+      : mix(
+          mix(mossTone((x0 + x1) / 2, y, o.seed, 0).body, 0x8fc060, 0.8),
+          0xb0ff90,
+          zoneAt((x0 + x1) / 2).deep * 0.55,
+        );
+    for (const run of runs) {
+      p.solid(
+        ribbon(
+          run,
+          (t) =>
+            (3 + wobble(t * 300 + (run[0] as number), o.seed + 61, 30) * 0.9) *
+            Math.sin(Math.PI * clamp(t, 0.01, 0.99)) ** 0.3,
+        ),
+        crestCol,
+        0.98,
+        { moss: 1 },
+        0.5 + 0.4 * read,
+      );
+    }
   }
   // Puffs: little cushions of height only, so the light finds something to model.
   for (let x = xa + range(r, 4, 20); x < xb - 4; x += range(r, 9, 34)) {
@@ -560,7 +596,7 @@ function paintGround(p: Paint, segs: Seg[], scene: Scene, info: TerrainInfo): vo
         // An overhanging lip, an undercut belly, a toe: never a straight cut.
         const lip = smoothstep(hi + 40, hi + 8, y) * 6;
         const belly = Math.sin(Math.PI * clamp((y - hi) / (lo - hi), 0, 1)) ** 1.5 * TERRAIN.faceUndercut;
-        const toe = smoothstep(lo - 30, lo - 2, y) * 7;
+        const toe = smoothstep(lo - 44, lo - 2, y) ** 1.5 * 16;
         const lumps = wobble(y, seed + i * 13, 44) * 4 + wobble(y, seed + i * 17, 15) * 2;
         outline.push(s.x1 + lumps + outward * (lip + toe - belly), y);
       }
@@ -975,22 +1011,44 @@ function paintGround(p: Paint, segs: Seg[], scene: Scene, info: TerrainInfo): vo
 
   // The first ~120 px under the lip is the lit part of the cut face: a lighter wash (colour only,
   // so stones and roots keep their relief) that the depth shade below then takes to black.
+  // Near a step the dark does not follow the box: on the high side the "top" that depth is
+  // measured from slopes down to the lower level over `stepRun` px, so the face stays earth and
+  // the darkness falls away diagonally under the block instead of meeting the lower ground's lit
+  // band along a vertical line.
+  const stepRun = 240;
+  const shadeTop = (x: number): number => {
+    let y = info.groundY(clamp(x, 0, W - 1));
+    segs.forEach((sg, i) => {
+      const next = segs[i + 1];
+      if (!next || next.y === sg.y) return;
+      const lo = Math.max(sg.y, next.y);
+      const highIsLeft = sg.y < next.y;
+      const dist = highIsLeft ? sg.x1 - x : x - sg.x1;
+      if (dist >= 0 && dist < stepRun) y = Math.max(y, lerp(lo, y, smoothstep(0, stepRun, dist) ** 0.8));
+    });
+    return y;
+  };
   for (const [d, alpha] of TERRAIN.lipBand) {
-    const pts: number[] = [];
-    const low: number[] = [];
     segs.forEach((sg, i) => {
       if (sg.pool) return;
-      const xa = i === 0 ? -OUT : sg.x0;
-      const xb = i === segs.length - 1 ? W + OUT : sg.x1;
-      for (let x = xa; x <= xb; x += 24) {
-        pts.push(Math.min(x, xb), sg.y + 4);
-        low.push(Math.min(x, xb), sg.y + d + wobble(x, seed + 500 + d, 120) * d * 0.2);
+      const prev = segs[i - 1];
+      const next = segs[i + 1];
+      // The band runs on a little way under a higher neighbour, fading.
+      const underL = prev && !prev.pool && prev.y < sg.y ? stepRun * 0.8 : 0;
+      const underR = next && !next.pool && next.y < sg.y ? stepRun * 0.8 : 0;
+      const xa = i === 0 ? -OUT : sg.x0 - underL;
+      const xb = i === segs.length - 1 ? W + OUT : sg.x1 + underR;
+      // In sections, so the wash can ease off where a sun pool already lights the face (the bake
+      // multiplies by the sun: at full strength there the band becomes a lit box).
+      for (let x0 = xa; x0 < xb; x0 += 48) {
+        const x1 = Math.min(xb, x0 + 48);
+        const mid = (x0 + x1) / 2;
+        const fade = mid < sg.x0 ? 1 - (sg.x0 - mid) / underL : mid > sg.x1 ? 1 - (mid - sg.x1) / underR : 1;
+        const lowY = (x: number): number => sg.y + d + wobble(x, seed + 500 + d, 120) * d * 0.2;
+        const band = [x0, sg.y + 4, x1, sg.y + 4, x1, lowY(x1), mid, lowY(mid), x0, lowY(x0)];
+        const sun = sunAt(mid, sg.y + 20);
+        p.tint(band, TERRAIN.lipLight, alpha * fade * (1 - 0.75 * sun) * (1 - 0.3 * zoneAt(x0).warm));
       }
-      const band = pts.slice();
-      for (let k = low.length - 2; k >= 0; k -= 2) band.push(low[k] as number, low[k + 1] as number);
-      p.tint(band, TERRAIN.lipLight, alpha);
-      pts.length = 0;
-      low.length = 0;
     });
   }
   // What the lit band shows: stones set in the face with their top planes turned to the light,
@@ -1079,9 +1137,11 @@ function paintGround(p: Paint, segs: Seg[], scene: Scene, info: TerrainInfo): vo
     segs.forEach((sg, i) => {
       const xa = i === 0 ? -OUT : sg.x0;
       const xb = i === segs.length - 1 ? W + OUT : sg.x1;
-      for (let x = xa; x <= xb; x += 24)
-        pts.push(Math.min(x, xb), sg.y + d + wobble(x, seed + 400 + d, 150) * d * 0.14);
-      pts.push(xb, sg.y + d);
+      for (let x = xa; x <= xb; x += 24) {
+        const xx = Math.min(x, xb);
+        pts.push(xx, shadeTop(xx) + d + wobble(x, seed + 400 + d, 150) * d * 0.14);
+      }
+      pts.push(xb, shadeTop(xb) + d);
     });
     pts.push(W + OUT, H + OUT, -OUT, H + OUT);
     p.tint(pts, TERRAIN.abyss, alpha);
@@ -1106,6 +1166,7 @@ function paintGround(p: Paint, segs: Seg[], scene: Scene, info: TerrainInfo): vo
       mound: s.pool ? 0 : TERRAIN.crownMound,
       dull: s.pool ? 1 : 0,
       read: s.pool ? 0 : TERRAIN.groundRead,
+      crestOnMoss: true,
       lipShade: 0,
     });
     info.tops.push({
@@ -1346,7 +1407,7 @@ function paintEdgeWalls(p: Paint, scene: Scene, info: TerrainInfo): void {
       for (let i = 0; i < 4; i++) {
         const cx = xe + range(er, 6, 80);
         const rx = range(er, 34, 66);
-        const ry = range(er, 46, 110);
+        const ry = range(er, 30, 62);
         const stone = mix(mix(TERRAIN.back, TERRAIN.stone[2], 0.5), PALETTE.fogMid, 0.2);
         paintRock(p, {
           cx,

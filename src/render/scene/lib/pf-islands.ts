@@ -266,9 +266,9 @@ export function paintIslandBacks(p: Paint, floats: SolidRect[], info: TerrainInf
         p,
         trunk,
         (t) =>
-          84 * (1 - t) ** 0.75 +
+          64 * (1 - t) ** 0.75 +
           7 +
-          smoothstep(0.16, 0, t) * 56 +
+          smoothstep(0.12, 0, t) * 34 +
           Math.max(0, Math.sin(t * 14 + 1)) * 5 +
           12 * Math.exp(-(((t - 0.4) / 0.07) ** 2)),
         back,
@@ -367,8 +367,8 @@ export function paintIslandBacks(p: Paint, floats: SolidRect[], info: TerrainInf
         p,
         trunk,
         (t) =>
-          78 * (1 - t * 0.3) +
-          smoothstep(0.22, 0, t) * 60 +
+          60 * (1 - t * 0.3) +
+          smoothstep(0.14, 0, t) * 36 +
           Math.max(0, Math.sin(t * 11 + 2)) * 7 +
           14 * Math.exp(-(((t - 0.55) / 0.08) ** 2)),
         back,

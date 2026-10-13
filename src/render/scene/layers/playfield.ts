@@ -60,6 +60,7 @@ export class PlayfieldLayer implements EnvModule {
   private poolX: [number, number] = [0, 0];
   /** Rolling CPU cost of update(), ms (read by `window.__pf` in dev for profiling). */
   cpuMs = 0;
+  private readonly bodies: Array<{ x: number; feetY: number; vx: number; reach: number; up: number }> = [];
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
@@ -192,7 +193,14 @@ export class PlayfieldLayer implements EnvModule {
       if (ev.type === 'slash') this.onSlash(ev, frame);
       else if (ev.type === 'spawn') this.clippings.clear();
     }
-    this.field.update(frame.dt, player, lights, events);
+    // Ground creatures part the plants too (the burrbacks; fliers do not touch them).
+    const bodies = this.bodies;
+    bodies.length = 0;
+    for (const e of frame.sim.enemies) {
+      if (e.kind !== 'burrback' || e.mode === 'dead') continue;
+      bodies.push({ x: e.x + e.w / 2, feetY: e.y + e.h, vx: e.vx, reach: e.w * 0.6, up: e.h + 10 });
+    }
+    this.field.update(frame.dt, player, lights, events, bodies);
     const vis = ctx.layers.visible('playfield', frame.camera);
     for (const f of this.flora) {
       f.update(frame.clock, vis.x, vis.x + vis.w, PLAYFIELD.glowGain, PLAYFIELD.haloGain);

@@ -157,7 +157,13 @@ export class BendField {
     return { bend: this.d[i] as number, excite: this.e[i] as number };
   }
 
-  update(dt: number, player: PlayerView, lights: readonly PointLight[], events: readonly SimEvent[]): void {
+  update(
+    dt: number,
+    player: PlayerView,
+    lights: readonly PointLight[],
+    events: readonly SimEvent[],
+    bodies: ReadonlyArray<{ x: number; feetY: number; vx: number; reach: number; up: number }> = [],
+  ): void {
     const h = Math.min(dt, 1 / 30);
     if (h <= 0) return;
     const { cols, rows, d, v, e } = this;
@@ -266,30 +272,36 @@ export class BendField {
       this.live = true;
     }
 
-    // The character pushes cells its body overlaps.
+    // The character pushes cells its body overlaps; so does anything else that walks the ground
+    // (`bodies`: enemies), a little less.
     const px = player.cx;
-    const top = player.feetY - FIELD.reachUp;
-    const bottom = player.feetY + FIELD.reachDown;
-    const c0 = Math.max(0, Math.floor((px - FIELD.reachX * 2.2) / cw));
-    const c1 = Math.min(cols - 1, Math.ceil((px + FIELD.reachX * 2.2) / cw));
-    const r0 = Math.max(0, Math.floor(top / ch));
-    const r1 = Math.min(rows - 1, Math.floor(bottom / ch));
-    const drag = Math.max(-1, Math.min(1, player.vx / FIELD.dragSpeed));
-    for (let ry = r0; ry <= r1; ry++) {
-      const cy = (ry + 0.5) * ch;
-      const fy = cy < player.feetY - 60 ? Math.max(0, 1 - (player.feetY - 60 - cy) / 40) : 1;
-      for (let cx = c0; cx <= c1; cx++) {
-        const u = ((cx + 0.5) * cw - px) / FIELD.reachX;
-        const g = Math.exp(-u * u * 1.1);
-        const target = Math.max(-1, Math.min(1, u * g * 1.9 + drag * g * 0.75));
-        const f = Math.min(1, g * 1.6) * fy;
-        const i = ry * cols + cx;
-        v[i] = (v[i] as number) + (target - (d[i] as number)) * FIELD.push * f * h;
-        // Extra damping while held, so held grass does not buzz.
-        v[i] = (v[i] as number) * (1 - Math.min(1, f * 14 * h));
+    const pushBody = (bx: number, feetY: number, vx: number, reach: number, up: number, k: number): void => {
+      const top = feetY - up;
+      const bottom = feetY + FIELD.reachDown;
+      const c0 = Math.max(0, Math.floor((bx - reach * 2.2) / cw));
+      const c1 = Math.min(cols - 1, Math.ceil((bx + reach * 2.2) / cw));
+      const r0 = Math.max(0, Math.floor(top / ch));
+      const r1 = Math.min(rows - 1, Math.floor(bottom / ch));
+      const drag = Math.max(-1, Math.min(1, vx / FIELD.dragSpeed));
+      const soft = up * 0.625;
+      for (let ry = r0; ry <= r1; ry++) {
+        const cy = (ry + 0.5) * ch;
+        const fy = cy < feetY - soft ? Math.max(0, 1 - (feetY - soft - cy) / 40) : 1;
+        for (let cx = c0; cx <= c1; cx++) {
+          const u = ((cx + 0.5) * cw - bx) / reach;
+          const g = Math.exp(-u * u * 1.1);
+          const target = Math.max(-1, Math.min(1, u * g * 1.9 + drag * g * 0.75)) * k;
+          const f = Math.min(1, g * 1.6) * fy;
+          const i = ry * cols + cx;
+          v[i] = (v[i] as number) + (target - (d[i] as number)) * FIELD.push * f * h;
+          // Extra damping while held, so held grass does not buzz.
+          v[i] = (v[i] as number) * (1 - Math.min(1, f * 14 * h));
+        }
       }
-    }
-    if (r1 >= r0) this.live = true;
+      if (r1 >= r0) this.live = true;
+    };
+    pushBody(px, player.feetY, player.vx, FIELD.reachX, FIELD.reachUp, 1);
+    for (const b of bodies) pushBody(b.x, b.feetY, b.vx, b.reach, b.up, 0.8);
 
     // Glow excitement toward the nearest source.
     const sources: Array<{ x: number; y: number; r: number; k: number }> = [
