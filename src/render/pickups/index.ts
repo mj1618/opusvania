@@ -65,6 +65,8 @@ interface Item {
   ground: number | null;
   /** Great glints: 0..1 strength of the light it lends (eases out when taken). */
   lit: number;
+  /** 0 dormant (she is far) .. 1 awake. */
+  wake: number;
 }
 
 interface Flight {
@@ -183,6 +185,8 @@ export class PickupRenderer {
    */
   private readonly spill: Item[] = [];
   private foeBase = 0;
+  /** Per enemy: the cut that killed it (1 up, -1 down, 0 forward), for the shape of its glint fan. */
+  private readonly foeCut: number[] = [];
   private readonly chips: Chip[] = [];
   private chipAt = 0;
   private sparkAt = 0;
@@ -224,6 +228,7 @@ export class PickupRenderer {
         holder,
         ground: great ? groundBelow(scene, p.x, p.y) : null,
         lit: 1,
+        wake: 0,
       };
       this.items.push(item);
       this.byId.set(p.id, item);
@@ -302,6 +307,7 @@ export class PickupRenderer {
           holder: null,
           ground: null,
           lit: 0,
+          wake: 1,
         });
     });
     // Enemies spill glints when they die: more sources, after the pods.
@@ -322,6 +328,7 @@ export class PickupRenderer {
           holder: null,
           ground: null,
           lit: 0,
+          wake: 1,
         });
     }
     for (let i = 0; i < MAX_CHIPS; i++)
@@ -364,6 +371,9 @@ export class PickupRenderer {
           const it = this.byId.get(e.id);
           if (it) this.absorb(it, e.combo, pvx, pvy);
         }
+      } else if (e.type === 'enemyDie') {
+        const j = (sim.scene.enemies ?? []).findIndex((q) => q.id === e.id);
+        if (j >= 0) this.foeCut[j] = e.slash === 'up' ? 1 : e.slash === 'down' ? -1 : 0;
       } else if (e.type === 'podBurst') {
         this.burst(e.id, e.dir, e.facing, e.power);
       } else if (e.type === 'slashHit' && e.target.kind === 'pod') {
@@ -429,15 +439,31 @@ export class PickupRenderer {
         it.x = p.x + Math.sin(tt * 0.8 + it.seed * 40) * G.glint.bobX * k;
         it.y = p.y + Math.sin(tt * 1.3 + it.phase * 6.283) * G.glint.bobY * k;
       }
-      if (!seen) continue;
-      // It feels her coming.
+      // Dormant until it feels her coming: a dim mote that twinkles on its own slow clock, then,
+      // as she nears, the whole star at full size, leaning her way.
       const dx = it.x - this.chestX;
       const dy = it.y - this.chestY;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      const near = 1 - smooth(G.glint.nearPx * 0.35, G.glint.nearPx, d);
-      const e = (1 + near * G.glint.nearGain) * it.appear;
-      if (it.great) b.quad(K_GREAT, it.x, it.y, G.great.quad, G.great.quad, e, it.phase, 0);
-      else b.quad(K_GLINT, it.x, it.y, G.glint.quad, G.glint.quad, e, it.phase, it.seed);
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      const D = it.great ? G.great : G.glint;
+      const wake = 1 - smooth(D.wakeFull, D.wakePx, d);
+      it.wake = wake;
+      if (!seen) continue;
+      if (it.great) {
+        const size = D.dormScale + (1 - D.dormScale) * wake;
+        const e = (D.dormGain + (1 + 0.2 * wake - D.dormGain) * wake) * it.appear;
+        b.quad(K_GREAT, it.x, it.y, G.great.quad * size, G.great.quad * size, e, it.phase, 0);
+        continue;
+      }
+      const g = G.glint;
+      const per = g.twinkleMin + (g.twinkleMax - g.twinkleMin) * it.seed;
+      const ph = (clock / per + it.seed * 7.31 + it.phase) % 1;
+      const tw = ph < g.twinkleShare ? Math.sin((Math.PI * ph) / g.twinkleShare) ** 2 : 0;
+      const size = g.dormScale * (1 + g.twinkleSize * tw) * (1 - wake) + wake;
+      const e = (g.dormGain * (1 + g.twinkleGain * tw) * (1 - wake) + (1 + g.nearGain) * wake) * it.appear;
+      const lean = g.lean * wake;
+      it.x -= (dx / d) * lean;
+      it.y -= (dy / d) * lean;
+      b.quad(K_GLINT, it.x, it.y, g.quad * size, g.quad * size, e, it.phase, (1 - wake) * (1 - 0.6 * tw));
     }
 
     // --- Those on their way to her.
@@ -552,7 +578,7 @@ export class PickupRenderer {
         b.quad(K_GREAT, f.x, f.y, q, q, e, it.phase, open);
       } else {
         const q = G.glint.quad * scale;
-        b.quad(K_GLINT, f.x, f.y, q, q, e, it.phase, it.seed);
+        b.quad(K_GLINT, f.x, f.y, q, q, e, it.phase, 0);
       }
     }
 
@@ -908,7 +934,7 @@ export class PickupRenderer {
           flying++;
         }
         for (let j = flying; j < owed; j++)
-          this.spillOne(i, v.cx, v.cy, 0, 0.9 + 0.1 * v.tier, (first + j * gap) / 60, sim.frame);
+          this.spillOne(i, v.cx, v.cy, 0, 0.7 + 0.1 * v.tier, (first + j * gap) / 60, sim.frame);
       }
       this.requeue[i] = false;
       const p = v.pod;
@@ -921,7 +947,7 @@ export class PickupRenderer {
       // A breath of light over the seam, so the bloom finds it: small, and gone once it is spent.
       const breathe = 1 + POD.breathe * Math.sin(clock * POD.breatheRate + v.pod.x * 0.01);
       const e = v.spent ? 0.16 * v.glow * v.glow : 0.15 * breathe;
-      b.quad(K_FLARE, v.cx, v.cy, 19, 25, e, 0, 0.1);
+      b.quad(K_FLARE, v.cx, v.cy, 22 * v.size, 28 * v.size, e, 0, 0.1);
       // Now and then a mote lets go of the tip and drifts up: what catches the eye from across the screen.
       if (!v.spent && this.rand() < dt * POD.motes)
         this.spark(v.tipX, v.tipY, (this.rand() - 0.5) * 8, -10, 2, 0, 1.1, 1.9, 1.5, M_RISE);
@@ -967,8 +993,23 @@ export class PickupRenderer {
       }
       const x = e.x + e.w / 2;
       const y = e.y + e.h / 2;
+      // An up cut throws them high in a narrow plume; a down cut (she is above it) spreads them low
+      // and wide to either side, clear of her; a forward cut leans them along the blow.
+      const cut = this.foeCut[j] ?? 0;
+      const fan = cut > 0 ? 0.55 : cut < 0 ? 1.5 : 1;
+      const tall = cut > 0 ? 1.6 : cut < 0 ? 0.55 : 1;
       for (let k = flying; k < e.spill; k++)
-        this.spillOne(src, x, y, e.hitDir, 1, (e.spillTimer + k * Math.max(1, e.spillGap)) / 60, sim.frame);
+        this.spillOne(
+          src,
+          x,
+          y,
+          cut === 0 ? e.hitDir : 0,
+          1,
+          (e.spillTimer + k * Math.max(1, e.spillGap)) / 60,
+          sim.frame,
+          fan,
+          tall,
+        );
     }
   }
 
@@ -1023,13 +1064,13 @@ export class PickupRenderer {
       // A down blow scatters sideways off the ground.
       const ax = sy > 0 ? (k % 2 === 0 ? 1 : -1) * 0.9 : sx + spread * (sx === 0 ? 1 : 0.5);
       const ay = sy > 0 ? -0.5 : sy * 0.9 - 0.45 + spread * (sx === 0 ? 0.2 : 0.5);
-      c.x = x + (this.rand() - 0.5) * 14 * size;
-      c.y = y + (this.rand() - 0.5) * 18 * size;
+      c.x = x + (this.rand() - 0.5) * 20 * size * v.size;
+      c.y = y + (this.rand() - 0.5) * 26 * size * v.size;
       c.vx = ax * sp;
       c.vy = ay * sp;
       c.rot = this.rand() * 6.283;
       c.spin = (this.rand() - 0.5) * 26;
-      c.size = (2.6 + 3 * this.rand()) * (0.85 + 0.15 * v.tier);
+      c.size = (2 + 2.4 * this.rand()) * (0.85 + 0.15 * v.tier);
       c.max = 0.45 + 0.35 * this.rand();
       c.life = c.max;
       c.tone = tone;
@@ -1061,6 +1102,8 @@ export class PickupRenderer {
     size: number,
     seconds: number,
     frame: number,
+    fan = 1,
+    tall = 1,
   ): void {
     const n = this.spillN[i] ?? 0;
     this.spillN[i] = n + 1;
@@ -1077,7 +1120,7 @@ export class PickupRenderer {
     // later glints), it sets off sooner and curves in steadily; otherwise it hangs for a beat first.
     const fast = this.heroSpeed > 260 || Math.abs(this.chestX - x) + Math.abs(this.chestY - y) > 170;
     // A scatter, not a row: golden-ratio steps round a fan, near and far by turns.
-    const a = (((n * 0.618) % 1) - 0.5) * 2.5 + (this.rand() - 0.5) * 0.2;
+    const a = ((((n * 0.618) % 1) - 0.5) * 2.5 + (this.rand() - 0.5) * 0.2) * fan;
     const reach = (34 + 30 * ((n * 0.37) % 1)) * size;
     it.stage = 1;
     f.on = true;
@@ -1091,7 +1134,7 @@ export class PickupRenderer {
     f.sy = y;
     // `lean`: the side the blow threw them to (an enemy's glints leave along it).
     f.px = x + Math.sin(a) * reach + lean * FOE_LEAN;
-    f.py = y - Math.cos(a) * reach * 0.8 - 12;
+    f.py = y - Math.max(0.12, Math.cos(a)) * reach * 0.8 * tall - 12;
     f.ax = 0;
     f.ay = -1;
     f.side = 1;
@@ -1267,7 +1310,11 @@ export class PickupRenderer {
       // Fades to nothing at the edge of reach, so a light never pops when the nearest one changes.
       const edge = 1 - smooth(L.reachPx * 0.7, L.reachPx, bestD);
       light.intensity =
-        L.intensity * best.lit * edge * (0.9 + 0.1 * Math.sin(clock * 1.5 + best.phase * 6.283));
+        L.intensity *
+        best.lit *
+        edge *
+        (0.5 + 0.5 * best.wake) *
+        (0.9 + 0.1 * Math.sin(clock * 1.5 + best.phase * 6.283));
       if (!this.lightOn[s]) {
         this.ctx.lights.set(id, light);
         this.lightOn[s] = true;

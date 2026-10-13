@@ -14,9 +14,27 @@ export const GLINTS = {
     bobX: 1.6,
     bobY: 3.2,
     bobRate: 1.25,
-    /** Brightens by this much as the hero comes near (before it wakes), inside `nearPx`. */
+    /** Awake (she is near) it is this much brighter than the plain star. */
     nearGain: 0.4,
-    nearPx: 240,
+    /**
+     * Dormant by default: far from her a glint is a dim mote, `dormScale` of its size and
+     * `dormGain` of its brightness, so a screenful of them does not out-shine her face. It comes
+     * fully awake between `wakePx` and `wakeFull` px from her chest, leaning `lean` px her way.
+     */
+    dormScale: 0.5,
+    dormGain: 0.7,
+    wakePx: 260,
+    wakeFull: 120,
+    lean: 4,
+    /**
+     * Twinkle while dormant: each on its own period (seconds, min..max by its seed), and for
+     * `twinkleShare` of it the star swells by `twinkleSize` and brightens by `twinkleGain`.
+     */
+    twinkleMin: 4.5,
+    twinkleMax: 9.5,
+    twinkleShare: 0.16,
+    twinkleSize: 0.55,
+    twinkleGain: 1.5,
   },
   great: {
     quad: 96,
@@ -30,6 +48,11 @@ export const GLINTS = {
     petalGain: 0.34,
     /** How far the light lifts out of the bud before it leaves, px. */
     lift: 30,
+    /** Dormant (she is beyond `wakePx`): its size and brightness; fully awake inside `wakeFull`. */
+    dormScale: 0.72,
+    dormGain: 0.5,
+    wakePx: 340,
+    wakeFull: 150,
   },
   flight: {
     /**

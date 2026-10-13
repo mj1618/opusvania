@@ -1,10 +1,17 @@
 /**
  * A lumen pod: a closed seed-pod that holds light, the first thing the slash can break
- * (src/sim/pods.ts decides when). A plump lantern with a pointed tip: two crescent bracts in front,
- * a darker panel between them (two back bracts) with warm light glowing softly down its seam, and a
- * small calyx where it joins its stalk. A `sit` pod stands on a short stalk in a rosette, clear of
- * the grass; a `hang` pod dangles from a stem and swings. Struck, the crescents spring back like an
- * opened seed case and stay so, darker, round an empty cup with an ember that dies.
+ * (src/sim/pods.ts decides when). Small and in the values of the plants round it: it is found by
+ * its shape and by the light in its seam, not by a pale husk. Two crescent bracts in front, a
+ * darker panel between them (two back bracts) with warm light glowing softly down the seam, and a
+ * small calyx where it joins its stalk. Struck, the crescents spring back like an opened seed case
+ * and stay so, darker, round an empty cup with an ember that dies.
+ *
+ * Forms, so that a dozen do not repeat one silhouette:
+ *  - `sit`: a bud nestled in a rosette, in one of three builds (squat, slender on a bowed stalk,
+ *    plain), each leaning its own way;
+ *  - `hang`: a cocoon, long and blunt, bound with two threads, on a stem;
+ *  - a pod that takes more than one hit is a cluster: the main pod and a smaller bud at its base
+ *    per extra hit. Each hit that does not open it bursts one of the small ones.
  *
  * Drawn once with Graphics; per frame only rotations, a scale and one alpha change, and nothing at
  * all is touched while a pod is at rest except its sway.
@@ -38,8 +45,22 @@ export const POD = {
   kickSquash: 5,
   /** Sway in the wind, radians per unit of wind(). */
   sway: 0.09,
-  /** Size of a pod that takes 1, 2, 3 hits. */
-  scale: [1, 1.2, 1.4],
+  /**
+   * Size of a pod that takes 1, 2, 3 hits (1 = a 44 px husk, the sim's box). Kept well under the
+   * hero: a 3-hit cluster stands about shoulder high.
+   */
+  scale: [0.6, 0.7, 0.8],
+  /** A cluster's small buds: size relative to the main pod, and how far they lean out (rad). */
+  budScale: 0.68,
+  budLean: 0.95,
+  /** Sitting builds [squat, slender, plain]: width, height, stalk px, lean (rad, times its side). */
+  builds: [
+    [1.14, 0.84, 10, -0.1],
+    [0.86, 1.14, 19, 0.17],
+    [1, 1, 14, -0.22],
+  ],
+  /** The hanging cocoon: width and height of the plain lantern. */
+  cocoon: [0.76, 1.2],
   /** How far the crescents stand ajar once a tough pod has taken all but its last hit. */
   ajar: 0.24,
   /** A finisher (power 2) throws this much more into the springs. */
@@ -47,14 +68,15 @@ export const POD = {
 };
 
 /**
- * Husk colours per zone [cool glade, light well, violet stand]: a step lighter than the plants
- * behind (in the plain leaf tones the husk vanished), `rim` for the edge the key light catches.
+ * Husk colours per zone [cool glade, light well, violet stand]: the leaf values of the plants round
+ * it, barely lifted (a pale husk with a bright rim was louder than the story props). `rim` is the
+ * edge the key light catches, drawn faint.
  */
 const HUSK = {
-  front: [0x1f5c60, 0x55632a, 0x2a3f6c],
-  panel: [0x0e3a41, 0x2c3816, 0x17254a],
-  rim: [0x74c4b6, 0xbdb862, 0x7890c6],
-  calyx: [0x2d7a6c, 0x6f7a2e, 0x3a5a8a],
+  front: [0x14494c, 0x46541f, 0x172e4a],
+  panel: [0x0a2c31, 0x222d11, 0x101e3a],
+  rim: [0x4f9a90, 0x8f8f48, 0x56719e],
+  calyx: [0x1c5a52, 0x55602a, 0x223c5a],
 } as const;
 
 interface Bract {
@@ -86,13 +108,20 @@ export class PodView {
   glow = 1;
   spent = false;
   private readonly bracts: Bract[] = [];
-  /** Armour: an outer ring of sepals per extra hit it takes, outermost first; each peels on a hit. */
+  /** A cluster's small buds, one per extra hit it takes (their two crescents); each bursts on a hit. */
   private readonly armour: Bract[][] = [];
   private readonly peel: number[] = [];
   private readonly peelV: number[] = [];
   /** Hits taken so far (0 .. tier - 1 while it is still shut). */
   damage = 0;
-  private readonly size: number;
+  /** Overall size of the husk (POD.scale for its tier). */
+  readonly size: number;
+  /** Half-height of the main husk in world px. */
+  private readonly half: number;
+  /** A sitting pod leans a little, each its own way (rad). */
+  private readonly tilt: number;
+  /** The seam light of each small bud of a cluster (index = armour ring). */
+  private readonly budLight: Graphics[] = [];
   private readonly light = new Graphics();
   private readonly husk = new Container();
   private readonly dir: 1 | -1;
@@ -133,9 +162,17 @@ export class PodView {
 
     // Pivot: the surface under a sitting pod, the fixing of a hanging one. Local "up" (-y) points
     // away from it, so a hanging pod is the same drawing turned over. `stemLen` = pivot to husk base.
+    // Build: which of the forms this one is.
+    const pick = Math.floor(((seed * 7.13) % 1) * POD.builds.length) % POD.builds.length;
+    const build = POD.builds[pick] ?? [1, 1, POD.stalk, 0];
+    const wideK = (hang ? POD.cocoon[0] : build[0]) ?? 1;
+    const tallK = (hang ? POD.cocoon[1] : build[1]) ?? 1;
+    this.tilt = hang ? 0 : (build[3] ?? 0) * lean;
+    this.half = S * tallK * this.size;
     const pivot = hang ? attachAbove(scene, pod.x, pod.y - S) : pod.y + S;
-    const stemLen = hang ? Math.max(0, pod.y - S - pivot) : POD.stalk;
-    this.arm = S * this.size + stemLen;
+    // The drawn husk stays centred on the sim's box: a hanging one exactly, a sitting one near it.
+    const stemLen = hang ? Math.max(0, pod.y - this.half - pivot) : (build[2] ?? POD.stalk) + 3 * (tier - 1);
+    this.arm = this.half + stemLen;
     this.root.position.set(pod.x, pivot);
     this.root.scale.y = this.dir;
     this.cx = pod.x;
@@ -144,7 +181,7 @@ export class PodView {
     const base = new Graphics();
     // The stalk: sturdy and a little bowed.
     const bow = lean * Math.min(6, stemLen * 0.3);
-    const sw = (hang ? 1.5 : 2.6) * (0.7 + 0.3 * this.size * this.size);
+    const sw = (hang ? 1.1 : 1.9) * (0.7 + 0.5 * this.size * this.size);
     base
       .moveTo(-sw, 3)
       .quadraticCurveTo(bow - sw * 0.8, -stemLen * 0.5, -sw * 0.7, -stemLen - 2)
@@ -153,7 +190,7 @@ export class PodView {
       .fill({ color: STEM });
     if (hang) {
       for (const side of [-1, 1]) {
-        const len = side === lean ? 17 : 12;
+        const len = side === lean ? 12 : 8;
         base
           .moveTo(0, 2)
           .bezierCurveTo(side * len * 0.4, -len * 0.5, side * len * 0.9, -len * 0.25, side * len, len * 0.25)
@@ -162,12 +199,15 @@ export class PodView {
       }
     } else {
       // A rosette: leaves that rise a little before they fall outward, so they top the grass.
-      for (const [a, len] of [
+      // They cup the bud: it is nestled in them, not held up over them.
+      const leaf = 0.62 + 0.3 * this.size + 0.1 * pick;
+      for (const [a, l0] of [
         [-1.3, 30],
         [-0.72, 24],
         [0.78, 26],
         [1.34, 32],
       ] as const) {
+        const len = l0 * leaf;
         const tx = Math.sin(a) * len;
         const ty = -Math.cos(a) * len * 0.75 - 6;
         base
@@ -178,107 +218,149 @@ export class PodView {
         base
           .moveTo(0, 1)
           .quadraticCurveTo(tx * 0.5, ty * 0.8 - 3, tx * 0.94, ty)
-          .stroke({ color: LIT, width: 0.7, alpha: 0.3 });
+          .stroke({ color: LIT, width: 0.7, alpha: 0.2 });
       }
     }
     this.root.addChild(base);
 
     // The husk: origin at its base (where it joins the stalk), pointed tip 2S and a little away.
     this.husk.position.set(0, -stemLen);
-    const H = S * 2;
-    const tipY = -H - 5;
-    /** The lantern's outline on one side, base to tip. */
+    const H = S * 2 * tallK;
+    const tipY = hang ? -H - 1 : -H - 5;
+    /** The outline on one side, base to tip: a lantern with a point, or a cocoon with a blunt end. */
     const outline = (g: Graphics, side: number, wide: number): Graphics =>
-      g.bezierCurveTo(side * wide * 1.15, -H * 0.02, side * wide * 1.02, -H * 0.62, 0, tipY);
+      hang
+        ? g.bezierCurveTo(side * wide * 0.9, -H * 0.16, side * wide * 1.5, -H * 0.98, 0, tipY)
+        : g.bezierCurveTo(side * wide * 1.15, -H * 0.02, side * wide * 1.02, -H * 0.62, 0, tipY);
     const bract = (side: number, front: boolean, closed: number, open: number): void => {
       const g = new Graphics();
       if (front) {
         // A crescent: the outer wall of the lantern, about a third of its width. Rotated open it
         // reads as a curled-back valve of a seed case.
-        const wide = 21;
+        const wide = 21 * wideK;
         outline(g.moveTo(0, 1), side, wide)
           .bezierCurveTo(side * wide * 0.5, -H * 0.66, side * wide * 0.56, -H * 0.2, 0, 1)
           .fill({ color: FRONT });
-        // Its inner face, lit by what it holds.
-        g.moveTo(side * 2, -H * 0.06)
-          .bezierCurveTo(side * wide * 0.5, -H * 0.24, side * wide * 0.46, -H * 0.64, side * 1.2, tipY + 4)
-          .stroke({ color: 0xffb060, width: 1.6, alpha: 0.3 });
-        // A rib, and the rim the key light catches (upper right in the world).
-        g.moveTo(side * 3, -1)
-          .bezierCurveTo(side * wide * 0.86, -H * 0.1, side * wide * 0.78, -H * 0.6, side * 1, tipY + 3)
-          .stroke({ color: PANEL, width: 0.9, alpha: 0.5 });
+        // Its inner face, lit by what it holds: a breath of warmth, not a stripe.
+        g.moveTo(side * 2, -H * 0.1)
+          .bezierCurveTo(side * wide * 0.5, -H * 0.26, side * wide * 0.46, -H * 0.62, side * 1.2, tipY + 6)
+          .stroke({ color: 0xffa050, width: 1.4, alpha: 0.14 });
+        if (hang) {
+          // Two threads bind the cocoon.
+          for (const u of [0.42, 0.7])
+            g.moveTo(side * wide * 0.3, -H * (u - 0.07))
+              .quadraticCurveTo(side * wide * 0.7, -H * (u + 0.02), side * wide * 1.02, -H * (u + 0.07))
+              .stroke({ color: PANEL, width: 1.3, alpha: 0.75 });
+        } else {
+          // A rib.
+          g.moveTo(side * 3, -1)
+            .bezierCurveTo(side * wide * 0.86, -H * 0.1, side * wide * 0.78, -H * 0.6, side * 1, tipY + 3)
+            .stroke({ color: PANEL, width: 0.9, alpha: 0.5 });
+        }
+        // The rim the key light catches (upper right in the world): faint.
         const key = side > 0;
-        g.moveTo(side * wide * 0.99, -H * 0.3)
-          .bezierCurveTo(side * wide * 1.0, -H * 0.56, side * wide * 0.52, -H * 0.86, 0, tipY)
-          .stroke({ color: RIM, width: 1.3, alpha: key ? 0.9 : 0.35 });
+        if (hang)
+          g.moveTo(side * wide * 0.72, -H * 0.3)
+            .quadraticCurveTo(side * wide * 1.05, -H * 0.6, side * wide * 0.98, -H * 0.82)
+            .stroke({ color: RIM, width: 1.2, alpha: key ? 0.42 : 0.14 });
+        else
+          g.moveTo(side * wide * 0.99, -H * 0.3)
+            .bezierCurveTo(side * wide * 1.0, -H * 0.56, side * wide * 0.52, -H * 0.86, 0, tipY)
+            .stroke({ color: RIM, width: 1.2, alpha: key ? 0.42 : 0.14 });
       } else {
         // The panel between the crescents: half the lantern each, darker.
-        const wide = 17;
+        const wide = 17 * wideK;
         outline(g.moveTo(0, 1), side, wide).lineTo(0, 1).fill({ color: PANEL });
         if (side < 0) {
           // The empty cup, seen once the case has opened.
           g.ellipse(0, -5, 7.5, 5).fill({ color: DARK });
           g.ellipse(0, -4, 5, 3).fill({ color: 0x05100f, alpha: 0.7 });
           // A curled tendril at the tip.
-          g.moveTo(0, tipY + 1)
-            .bezierCurveTo(lean * 1, tipY - 6, lean * 8, tipY - 8, lean * 6.5, tipY - 2)
-            .stroke({ color: STEM, width: 1.1 });
+          if (!hang)
+            g.moveTo(0, tipY + 1)
+              .bezierCurveTo(lean * 1, tipY - 6, lean * 8, tipY - 8, lean * 6.5, tipY - 2)
+              .stroke({ color: STEM, width: 1.1 });
         }
       }
       g.rotation = closed;
       this.husk.addChild(g);
       this.bracts.push({ g, closed, open, side });
     };
+    // A cluster: one small bud at the base per extra hit it takes, leaning out, behind the main pod.
+    // Ring 0 (the first to burst) is on the side the pod leans to. They live in `armour` / `peel`.
+    for (let ring = 0; ring < tier - 1; ring++) {
+      const side = ring === 0 ? lean : -lean;
+      const bud = new Container();
+      const k = POD.budScale * (ring === 0 ? 1 : 0.86);
+      bud.position.set(side * 13 * wideK, -H * 0.1);
+      bud.rotation = side * POD.budLean * (ring === 0 ? 1 : 1.12);
+      bud.scale.set(k);
+      const bh = S * 2;
+      const tip = -bh - 4;
+      const half = (g: Graphics, sd: number, wide: number): Graphics =>
+        g.bezierCurveTo(sd * wide * 1.15, -bh * 0.02, sd * wide * 1.02, -bh * 0.62, 0, tip);
+      // Its little stalk, then the dark panel, the light in it, and two crescents that fold back.
+      const back = new Graphics();
+      back.moveTo(-2.2, 6).lineTo(-1.6, -2).lineTo(1.6, -2).lineTo(2.2, 6).fill({ color: STEM });
+      half(back.moveTo(0, 1), -1, 16).lineTo(0, 1).fill({ color: PANEL });
+      half(back.moveTo(0, 1), 1, 16).lineTo(0, 1).fill({ color: PANEL });
+      bud.addChild(back);
+      const lamp = new Graphics();
+      for (const [wd, a, col] of [
+        [6.5, 0.14, 0xff9a3a],
+        [3.4, 0.36, 0xffb050],
+        [1.3, 0.8, 0xffe0a6],
+      ] as const)
+        lamp
+          .moveTo(0, -bh * 0.14)
+          .bezierCurveTo(wd, -bh * 0.36, wd * 0.8, -bh * 0.7, 0, -bh * 0.92)
+          .bezierCurveTo(-wd * 0.8, -bh * 0.7, -wd, -bh * 0.36, 0, -bh * 0.14)
+          .fill({ color: col, alpha: a });
+      bud.addChild(lamp);
+      this.budLight[ring] = lamp;
+      const layer: Bract[] = [];
+      for (const sd of [-1, 1]) {
+        const g = new Graphics();
+        half(g.moveTo(0, 1), sd, 20)
+          .bezierCurveTo(sd * 10, -bh * 0.66, sd * 11, -bh * 0.2, 0, 1)
+          .fill({ color: ring === 0 ? FRONT : CALYX });
+        g.moveTo(sd * 19.6, -bh * 0.3)
+          .bezierCurveTo(sd * 20, -bh * 0.56, sd * 10.5, -bh * 0.86, 0, tip)
+          .stroke({ color: RIM, width: 1.6, alpha: sd * side > 0 ? 0.4 : 0.14 });
+        bud.addChild(g);
+        layer.push({ g, closed: 0, open: sd * 1.05, side: sd });
+      }
+      this.husk.addChild(bud);
+      this.armour.push(layer);
+      this.peel.push(0);
+      this.peelV.push(0);
+    }
     bract(-1, false, 0, -0.36);
     bract(1, false, 0, 0.36);
     // The light inside: soft, three nested lenses down the seam of the panel.
-    for (const [wd, a, col] of [
-      [8.5, 0.16, 0xff9a3a],
-      [4.6, 0.34, 0xffb050],
-      [1.5, 0.8, 0xffe0a6],
-    ] as const)
+    for (const [w0, a, col] of [
+      [7, 0.12, 0xff9a3a],
+      [3.8, 0.3, 0xffb050],
+      [1.35, 0.8, 0xffe0a6],
+    ] as const) {
+      const wd = w0 * wideK;
       this.light
         .moveTo(0, -H * 0.1)
         .bezierCurveTo(wd, -H * 0.34, wd * 0.8, -H * 0.72, 0, -H * 0.95)
         .bezierCurveTo(-wd * 0.8, -H * 0.72, -wd, -H * 0.34, 0, -H * 0.1)
         .fill({ color: col, alpha: a });
+    }
     this.husk.addChild(this.light);
     bract(-1, true, 0, -0.98);
     bract(1, true, 0, 0.98);
-    // Armour: for each extra hit it takes, a ring of two thick dark sepals over the lower husk,
-    // the outer ring shorter and wider. A hit peels the outermost ring that is left.
-    const ARMOUR = tone(HUSK.panel, w);
-    for (let ring = tier - 2; ring >= 0; ring--) {
-      // ring 0 is the outermost.
-      const reach = H * (ring === 0 && tier === 3 ? 0.5 : 0.68);
-      const wide = 23 + (ring === 0 && tier === 3 ? 2.5 : 0);
-      const layer: Bract[] = [];
-      for (const side of [-1, 1]) {
-        const g = new Graphics();
-        g.moveTo(0, 2)
-          .bezierCurveTo(side * wide * 1.1, 0, side * wide * 1.05, -reach * 0.7, side * wide * 0.45, -reach)
-          .bezierCurveTo(side * wide * 0.5, -reach * 0.55, side * wide * 0.28, -reach * 0.2, 0, 2)
-          .fill({ color: ring === 0 ? ARMOUR : FRONT });
-        g.moveTo(side * wide * 0.98, -reach * 0.3)
-          .quadraticCurveTo(side * wide * 0.9, -reach * 0.75, side * wide * 0.47, -reach)
-          .stroke({ color: RIM, width: 1.1, alpha: side > 0 ? 0.6 : 0.22 });
-        g.moveTo(side * 4, 0)
-          .quadraticCurveTo(side * wide * 0.7, -reach * 0.2, side * wide * 0.7, -reach * 0.7)
-          .stroke({ color: DARK, width: 1, alpha: 0.5 });
-        this.husk.addChild(g);
-        layer.push({ g, closed: 0, open: side * (1.25 + 0.2 * ring), side });
-      }
-      this.armour.unshift(layer);
-      this.peel.push(0);
-      this.peelV.push(0);
-    }
     // The calyx: three short pointed sepals clasping the base.
     const calyx = new Graphics();
-    for (const [a, len] of [
+    for (const [a, l0] of [
       [-0.95, 12],
       [0, 9],
       [0.95, 12],
     ] as const) {
+      const len = l0 * (hang ? 0.8 : 1) * (0.6 + 0.4 * wideK);
       const tx = Math.sin(a) * len;
       const ty = -Math.cos(a) * len - 1;
       calyx
@@ -348,7 +430,7 @@ export class PodView {
   update(dt: number, clock: number, sway: number): void {
     const hang = this.dir < 0;
     const [ks, cs] = hang ? POD.swingHang : POD.swingSit;
-    const rest = sway * (hang ? 1 : 0.35);
+    const rest = sway * (hang ? 1 : 0.35) + this.tilt;
     this.swingV += ((rest - this.swing) * (ks as number) - this.swingV * (cs as number)) * dt;
     this.swing += this.swingV * dt;
     if (!this.settled) {
@@ -398,12 +480,15 @@ export class PodView {
     const o = this.openness;
     for (let j = 0; j < this.armour.length; j++) {
       const k = this.peel[j] as number;
-      // A peeled sepal hangs limp and dull.
-      const d = Math.round(255 - 110 * Math.min(1, Math.max(0, k)));
+      // A burst bud stays open and dull, its light gone.
+      const kk = Math.min(1, Math.max(0, k));
+      const d = Math.round(255 - 110 * kk);
       for (const b of this.armour[j] as Bract[]) {
         b.g.rotation = b.open * k;
         b.g.tint = (d << 16) | (d << 8) | d;
       }
+      const lamp = this.budLight[j];
+      if (lamp) lamp.alpha = POD.seam * (1 - kk) * (1 - kk);
     }
     const dull = Math.round(255 - 120 * Math.min(1, Math.max(0, o)) * (1 - this.glow * 0.6));
     const tint = (dull << 16) | (dull << 8) | dull;
@@ -433,7 +518,7 @@ export class PodView {
     const cs = Math.cos(r) * this.dir;
     this.cx = this.root.x + this.arm * sn;
     this.cy = this.root.y - this.arm * cs;
-    const tip = this.arm + (POD.size + 5) * this.size;
+    const tip = this.arm + this.half + 4 * this.size;
     this.tipX = this.root.x + tip * sn;
     this.tipY = this.root.y - tip * cs;
   }

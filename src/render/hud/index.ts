@@ -17,7 +17,9 @@ import { HealthLights } from './lights';
 export const HUD = {
   /** Centre of the glint icon, logical px from the top left. */
   x: 70,
-  y: 109,
+  y: 122,
+  /** Where the count sits when the lights are hidden (it slides between the two). */
+  yTop: 66,
   /** Digit height in logical px and the gap between icon and number. */
   font: 30,
   gap: 17,
@@ -193,7 +195,10 @@ export class Hud {
     const a = this.alpha * this.alpha * (3 - 2 * this.alpha);
     this.group.visible = a > 0.003;
     this.group.alpha = a;
-    this.group.position.set(-10 * (1 - a), 0);
+    // The count sits under the lights, and slides up into their place when they are away.
+    const hv = H.alpha * H.alpha * (3 - 2 * H.alpha);
+    const rise = (HUD.yTop - HUD.y) * (1 - hv);
+    this.group.position.set(-10 * (1 - a), rise);
     const b = this.icon;
     b.begin();
     b.uniform[1] = HUD.iconQuad;
@@ -207,9 +212,10 @@ export class Hud {
         s.y = HUD.y + 1 - 4 * p;
       }
       const x = HUD.x - 10 * (1 - a);
-      b.quad(K_FLARE, x, HUD.y, 40, 40, 0.4 * this.pulse * a, 0, 0.6);
+      const y = HUD.y + rise;
+      b.quad(K_FLARE, x, y, 40, 40, 0.4 * this.pulse * a, 0, 0.6);
       const q = HUD.iconQuad * HUD.iconScale * (1 + 0.16 * this.pulse);
-      b.quad(K_GLINT, x, HUD.y, q, q, (1.05 + 0.8 * this.pulse) * a, 0.2, 0.37);
+      b.quad(K_GLINT, x, y, q, q, (1.05 + 0.8 * this.pulse) * a, 0.2, 0);
     }
     // Flecks of a light that went out, motes of one that caught.
     for (const s of H.sparks) {

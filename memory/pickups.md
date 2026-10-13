@@ -48,14 +48,17 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   reaction; shots / clip / look:stats use it by default (`--pickups` to show them).
 
 ## Lumen pods (render side; rules in combat.md)
-- `pod.ts` `PodView`: Graphics drawn once per pod, in `pickupsBack` (she walks in front of them). A
-  lantern with a pointed tip: two crescent bracts in front, a darker panel (two back bracts) with
-  three nested soft lenses of light down its seam, a calyx. `sit` = on a 14 px stalk in a rosette (so
-  the DRAWN husk centre is 14 px above the sim box centre: the grass fringe hid a third of it
-  otherwise), `hang` = on a stem fixed to the nearest underside / branch.
-- Colours: `HUSK` per zone, a step lighter than the leaves behind plus a rim on the key side. In the
-  plain bud tones the husk vanished and the seam read as a floating orange slit; derived from the
-  "lit" tone the right zone came out pale blue-grey, so the three zones are picked by hand.
+- `pod.ts` `PodView`: Graphics drawn once per pod, in `pickupsBack` (she walks in front of them).
+  Small and humble (study 2: at 80-90 px, pale-striped, twelve alike, they were louder than the story
+  props): `POD.scale` 0.6 / 0.7 / 0.8 of a 44 px husk, painted in the leaf values of the plants round
+  it (`HUSK`, faint rim), found by shape and by the soft seam light. The sim box (44x44) is unchanged
+  and the drawn husk stays centred on it (a hanging one exactly; a sitting one within a few px).
+- Forms: `sit` = a pointed bud in a rosette that cups it, one of three builds by seed (`POD.builds`:
+  squat / slender on a tall bowed stalk / plain, each with its own lean), so the row of three on the
+  right rise does not repeat; `hang` = a blunt cocoon bound with two threads (`POD.cocoon`); more than
+  one hit = a cluster, the main pod plus one small bud at its base per extra hit (they live in
+  `armour` / `peel`): each hit that does not open it bursts one small bud (crescents fold back, its
+  light goes), the last opens the main pod.
 - The front bracts are crescents on purpose: rotated open (0.98 rad) a crescent reads as a
   curled-back valve of a seed case; a leaf-shaped bract opened flat into a green star.
 - Springs for swing, opening and squash; `strike()` on `podBurst`, `set()` from `sim.pods.hp` every
@@ -70,12 +73,10 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   jump past) they skip the hang and curve in steadily (`lag` 1.55 over 78% of the time). Four
   stand-in `Item`s per pod, not scene pickups.
 - Ribbons are capped at `flight.trailMax` px however fast she or the glint is going.
-- **Toughness** (`hp` 1-3 in the scene = `PodView.tier`): 1.0 / 1.2 / 1.4 size, and a ring of two
-  thick dark armour sepals per extra hit (outermost shorter and wider). Each hit that does not open it
-  (`slashHit` on a pod whose `sim.pods.hp` is still > 0) peels the outermost ring left, sets the
-  crescents ajar (`POD.ajar`) so the seam widens and more light shows, and throws a little debris;
-  `damage` = `tier - hp` is reconciled from the state every frame. A finisher (`power` 2) jolts
-  harder and throws debris further; burst debris scales with tier.
+- **Toughness** (`hp` 1-3 in the scene = `PodView.tier`): see the cluster above; a hit that does not
+  open it (`slashHit` on a pod whose `sim.pods.hp` is still > 0) also sets the main crescents ajar
+  (`POD.ajar`) and throws a little debris; `damage` = `tier - hp` is reconciled from the state every
+  frame. A finisher (`power` 2) jolts harder and throws debris further.
 - All bracts open OUTWARD (rotation sign = side). With the signs crossed, a pod set ajar showed
   crossed tips like scissors.
 - Spilled glints are spawned from the STATE, not the events: whenever `sim.pods.left[i]` exceeds the
@@ -90,6 +91,9 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 - `?nopickups` removes pods too.
 
 ## Glints of a dead enemy
+- Fan by the killing cut (from `enemyDie.slash`): forward = leaning along the blow; down (a pogo, she
+  is above it) = low and wide to both sides, clear of her; up = a tall narrow plume. The up case
+  cannot be staged (a ground creature is never above her blade) and has not been seen.
 - Same path as a pod's spill, driven from `sim.enemies[j].spill / spillTimer / spillGap`: a spill
   "source" is a pod index or `foeBase + j` (`Flight.pod`, `spillN`, `requeue`, `SPILL` stand-in items
   each). They pop from the body centre, leaning `FOE_LEAN` px the way the blow went (`hitDir`), and
@@ -114,12 +118,15 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   all out, embers too; `reform` = they catch left to right `kindleStep` apart, each with a rising
   mote and a small lift. State jumps (`__game.health(n)`, restart) reconcile from `player.hp`.
 - Shown while hp < max, during any change, for `hold` s after, and while a living enemy is within
-  `nearX / nearY` of her; otherwise it fades out (full health, calm). In a `?nopickups` scene (clean
+  `nearX / nearY` (500 / 320: at 620 they were on almost everywhere) of her; otherwise it fades out (full health, calm). In a `?nopickups` scene (clean
   plates) the enemy-near rule is off, so it shows only when she is hurt.
 - Count: beneath the lights, icon under the first lantern (a second `GlintBatch`, the world glint at
   1.25x, which also draws the lights' sparks), 30 px serif digits painted once into a canvas atlas.
-  Appears on a pickup, ticks one by one, fades 3.6 s after the last. Positions are fixed: alone, the
-  count sits where it does under the lights.
+  Appears on a pickup, ticks one by one, fades 3.6 s after the last. When the lights are hidden it
+  sits in THEIR place (`HUD.yTop`) and slides down / up with their fade, so nothing floats under an
+  empty row. Kept the auto-hide rather than dim always-on lights: the calm picture has no HUD at all.
+- Size: `LIGHTS.scale` 1.3 = a 31 px seed (43 px with the filament) at 1920x1080; Hollow Knight's
+  masks are ~45 px.
 - Knobs: `LIGHTS` (lights.ts), `HUD` (index.ts). No dev handle; edit and reload.
 - Capturing: the HUD is on the game canvas, so in ONE `playwright-cli eval` step with `__game.step`
   and `drawImage` the canvas into a 2D sheet canvas right after each step, return `toDataURL`.
@@ -131,7 +138,17 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   whiter-gold core is the silhouette that says "collectible"; every few seconds an arm flash
   (`flash` in the shader) sets it further apart. Keep halo and body small or the bloom and the
   vignette at frame edges turn stars back into round orange dots.
-- In the low-key picture they are ~14 px tall. Bigger and they clutter: one screen holds up to 22.
+- **Dormant by default** (study 2: 20-30 full-bright idle glints per screen out-ranked her face and
+  read as confetti). Beyond `wakePx` (260) a glint is half size, a dim gold mote (centre luma ~110-130
+  after post) that twinkles on its own 4.5-9.5 s clock; it comes fully awake by `wakeFull` (120 px)
+  and leans a few px her way. Lines and arcs still read, as faint dotted trails. Great glints idle at
+  0.72 size / half brightness and lend half their point light until she is near.
+- Lowering the energy alone does not dim it: the heart of the star stays white down to e ~0.1 (core +
+  arms + bloom). The shader takes a "dormancy" (aData.w for K_GLINT) and divides by `1 + 5 * d * peak`:
+  a soft knee that removes the white heat and keeps the arms. At 0.42 size / 0.3 energy without the
+  knee they vanished at zoom 1 yet still peaked at 250.
+- Measuring a glint's luma: sample 3x3 at its drawn position (`__pickups.debug()`); comparing a frame
+  with and without the batch fails (the grain differs frame to frame).
 - Bloom + grade roughly double anything additive: author at half the brightness you want.
 - Placement: arcs were taken from real jump paths (run the sim with an input script and print the
   box centre every few frames), then thinned to 3-5 per jump.

@@ -14,12 +14,12 @@ import type { SimView } from '../contract';
 export const LIGHTS = {
   /** Top of the first filament (the point a lantern swings from), logical px from the top left. */
   x: 70,
-  y: 44,
+  y: 42,
   /** Distance between lanterns, and how much lower each hangs than the first (repeats). */
-  step: 34,
+  step: 39,
   drop: [0, 2.5, 0.5, 3],
   /** Overall size of a lantern (1 = a 16 x 24 px seed on a 9 px filament). */
-  scale: 1.12,
+  scale: 1.3,
   /** Brightness of the bead of light, of the soft glow round it (both added) and of a dark one's ember. */
   core: 0.92,
   halo: 0.25,
@@ -45,8 +45,8 @@ export const LIGHTS = {
   hold: 4,
   fadeOut: 1.3,
   /** A living enemy this close (px, x / y) keeps the lights on screen. */
-  nearX: 620,
-  nearY: 380,
+  nearX: 500,
+  nearY: 320,
 };
 
 /** Canvas pixels per logical px. */

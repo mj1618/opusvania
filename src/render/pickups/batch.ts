@@ -39,7 +39,7 @@ void main() {
 const FRAG = `#version 300 es
 precision highp float;
 in vec2 vUv;
-in vec4 vData;   // kind, energy, phase, extra
+in vec4 vData;   // kind, energy, phase, extra (glint: dormancy 0..1)
 out vec4 o;
 uniform vec4 uGlint;  // clock, glint quad half-size px, great quad half-size px, gain
 
@@ -118,6 +118,10 @@ void main() {
     float c2 = fract(t * 0.34 + ph * 3.7);
     vec2 m2 = vec2(sin(c2 * 9.0 + ph * 30.0) * 3.0 + (ph - 0.5) * 8.0, 5.0 - c2 * 24.0);
     add += HOT * gauss(length(p - m2), 1.0) * sin(c2 * 3.1416) * 0.4 * min(e, 1.3);
+    // ex = how dormant it is (0 awake .. 1): a soft knee takes the white heat out of its heart, so
+    // far from her it is a dim gold mote and not a point of pure white.
+    float peak = max(add.r, max(add.g, add.b));
+    add /= 1.0 + ex * 5.0 * peak;
   } else if (kind < 1.5) {
     // --- Great glint. ex = how far its ceremony has opened it (0 resting .. 1).
     float H = uGlint.z;
