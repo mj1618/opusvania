@@ -3,7 +3,7 @@
  * ribbons) that every painted thing is cut from. Pure maths, no Pixi. All polygons are flat
  * `[x0, y0, x1, y1, ...]` arrays.
  */
-import { prng } from './look';
+import { KEY_LIGHT, prng } from './look';
 
 export type Rng = () => number;
 
@@ -212,4 +212,15 @@ export function bounds(pts: number[]): { x0: number; y0: number; x1: number; y1:
     if (y > y1) y1 = y;
   }
   return { x0, y0, x1, y1 };
+}
+
+/**
+ * How much of the key light lands at a world point, 0..1: a broad beam along the light's path plus
+ * dapples. The bake shader has its own copy (pf-bake.ts, `sun`): same beam, different dapples.
+ */
+export function sunAt(x: number, y: number, beamWidth = 760): number {
+  const beamX = KEY_LIGHT.entryX + ((y - KEY_LIGHT.entryY) * KEY_LIGHT.dirX) / KEY_LIGHT.dirY;
+  const beam = Math.exp(-(((x - beamX) / beamWidth) ** 2));
+  const dapple = smoothstep(0.0, 0.7, noise1(x / 240, 71) * 0.7 + noise1(y / 300, 72) * 0.3);
+  return clamp(beam * 0.65 + dapple * 0.55, 0, 1);
 }

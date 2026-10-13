@@ -6,15 +6,14 @@
  *     terrain           baked, lit tiles (lib/pf-terrain.ts painted, lib/pf-bake.ts lit)
  *     plants            live meshes swaying in the wind (lib/pf-plants.ts, lib/pf-flora.ts)
  *     halos             additive glow around lantern flowers and glow mushrooms
- *   front               a container this module adds to the layer tree just above `character`:
+ *   layers.playfieldFront   in front of the character, same depth:
  *     water.front       the tint and surface line over whatever wades in the pool
  *     fringe            low dark grass over the character's feet, lily pads
  *
  * Structure, knobs and gotchas: memory/playfield.md.
  */
-import { Container } from 'pixi.js';
+import type { Container } from 'pixi.js';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
-import { placeLayer } from '../layer-tree';
 import { bakeTerrain } from '../lib/pf-bake';
 import { BendField } from '../lib/pf-field';
 import { FloraBuilder, type FloraMesh } from '../lib/pf-flora';
@@ -35,7 +34,7 @@ export const PLAYFIELD = {
 
 export class PlayfieldLayer implements EnvModule {
   private ctx!: SceneContext;
-  private readonly front = new Container({ label: 'playfield-front' });
+  private front!: Container;
   private field!: BendField;
   private flora: FloraMesh[] = [];
   private water: Water | null = null;
@@ -45,6 +44,7 @@ export class PlayfieldLayer implements EnvModule {
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
+    this.front = ctx.layers.playfieldFront;
     const scene = ctx.scene;
     const { paint, info } = paintTerrain(scene);
     const scale = Math.min(PLAYFIELD.bakeScaleMax, Math.max(PLAYFIELD.bakeScaleMin, ctx.viewScale()));
@@ -74,11 +74,6 @@ export class PlayfieldLayer implements EnvModule {
     }
     pf.addChild(baked.layer, back.container, halo.container);
     this.front.addChild(fringe.container);
-    // The layer tree has no slot between the character and the foreground at parallax 1, so
-    // this module adds one and places it itself every frame (see update).
-    const root = ctx.layers.root;
-    root.addChildAt(this.front, root.getChildIndex(ctx.layers.character) + 1);
-
     // Dev-only handle for profiling (toggle the containers, read cpuMs): see memory/playfield.md.
     if (import.meta.env.DEV)
       (globalThis as { __pf?: unknown }).__pf = { layer: this, back: pf, front: this.front };
@@ -93,7 +88,6 @@ export class PlayfieldLayer implements EnvModule {
     const { ctx } = this;
     const { player, events } = frame.sim;
     const lights = ctx.lights.list;
-    placeLayer(this.front, frame.camera, 1, ctx.layers.anchor);
     this.field.update(frame.dt, player, lights, events);
     const vis = ctx.layers.visible('playfield', frame.camera);
     for (const f of this.flora) {

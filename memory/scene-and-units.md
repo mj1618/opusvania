@@ -50,6 +50,7 @@ x:  0        1000       2000       3000       4000       5000     5760
 | `mid` | 0.68 | big trunks, roots, vines, fog sheets |
 | `playfield` | 1 | terrain, moss, plants, pool: the skin of the collision rects |
 | `character` | 1 | the character |
+| `playfieldFront` | 1 | grass fringe and the pool's surface, over the character (owned by `layers/playfield.ts`) |
 | `foreground` | 1.35 | dark blurred leaves and branches |
 | `air` | 1 | god rays, motes, fireflies, mist |
 

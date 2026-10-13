@@ -44,6 +44,8 @@ export const BAKE = {
   cast: 0.55,
   /** Height of the light above the picture plane: lower = harder side light. */
   lightZ: 0.62,
+  /** Half width (world px) of the broad beam where the key light lands; see sunAt in pf-shape.ts. */
+  beamWidth: 760,
 } as const;
 
 const CLEAR: number[] = [0, 0, 0, 0];
@@ -98,6 +100,7 @@ uniform vec3 uLight;
 uniform vec4 uBump;   // fine, mid, noise, -
 uniform vec4 uShade;  // key, spec, shadow, interior
 uniform vec2 uCast;   // reach (world px), strength
+uniform vec4 uSun;    // key entry x, y, dx per dy, beam half width
 out vec4 o;
 
 float hash(vec2 p) {
@@ -142,8 +145,31 @@ void main() {
   float ha = max(hs.a, 0.001);
   float moss = clamp(hs.g / ha, 0.0, 1.0);
   float bark = clamp(hs.b / ha, 0.0, 1.0);
+  vec4 fine = texture(uFine, vUV);
+  vec4 mid = texture(uMid, vUV);
+  vec4 wide = texture(uWide, vUV);
 
+  // Where the key light lands: a broad beam along its path plus dapples. Everything else is
+  // lit by this, so brightness comes from light, not from the paint.
+  float beamX = uSun.x + (vWorld.y - uSun.y) * uSun.z;
+  float beam = exp(-pow((vWorld.x - beamX) / uSun.w, 2.0));
+  float dapple = smoothstep(0.36, 0.7, fbm(vec2(vWorld.x * 0.0046, vWorld.y * 0.002) + 3.0));
+  float sun = clamp(beam * 0.65 + dapple * 0.55, 0.0, 1.0);
+
+  // Brush strokes that follow the form: along the silhouette near edges, along the grain inside.
   vec2 d = uUvPerWorld * 1.25;
+  vec2 dw = d * 8.0;
+  vec2 gW = vec2(texture(uWide, vUV + vec2(dw.x, 0.0)).a - texture(uWide, vUV - vec2(dw.x, 0.0)).a,
+                 texture(uWide, vUV + vec2(0.0, dw.y)).a - texture(uWide, vUV - vec2(0.0, dw.y)).a);
+  float gl = length(gW);
+  vec2 nrm = gl > 0.004 ? gW / gl : vec2(0.0, 1.0);
+  vec2 tng = vec2(-nrm.y, nrm.x);
+  float form = smoothstep(0.006, 0.05, gl);
+  vec2 sp = vec2(dot(vWorld, tng), dot(vWorld, nrm));
+  vec2 grain = mix(vec2(vWorld.x * 0.018, vWorld.y * 0.15), vec2(vWorld.y * 0.018, vWorld.x * 0.15), bark);
+  float stroke = mix(fbm(grain + 7.0), fbm(vec2(sp.x * 0.02, sp.y * 0.17) + 7.0), form * (1.0 - bark));
+  float dab = fbm(vWorld * 0.045 + 19.0);
+
   vec2 dx = vec2(d.x, 0.0);
   vec2 dy = vec2(0.0, d.y);
   vec2 gF = vec2(texture(uFine, vUV + dx).r - texture(uFine, vUV - dx).r,
@@ -160,18 +186,21 @@ void main() {
   float flatLit = uLight.z;
   float key = clamp((lit - flatLit) / (1.0 - flatLit), 0.0, 1.0);
   float shd = clamp((flatLit - lit) / (flatLit + 0.35), 0.0, 1.0);
+  // Break the smooth falloff into a few painted planes, the stroke noise deciding the borders.
+  key = mix(key, floor(key * 3.0 + 0.5 + (stroke - 0.5) * 0.9) / 3.0, 0.5);
+  shd = mix(shd, floor(shd * 3.0 + 0.5 + (dab - 0.5) * 0.9) / 3.0, 0.45);
 
-  vec4 wide = texture(uWide, vUV);
-  vec4 mid = texture(uMid, vUV);
   float inside = smoothstep(0.5, 0.97, wide.a);
 
-  // Local colour with painterly mottling, a touch of hue drift.
-  vec3 c = base * (0.78 + 0.44 * n0) * mix(1.0, 0.7 + 0.6 * n0, moss);
-  // Moss in lit and shaded patches so the cap is not one even stripe.
-  float patches = fbm(vWorld * vec2(0.013, 0.02) + 11.0);
-  c *= mix(1.0, 0.62 + 0.75 * patches, moss);
+  // Local colour: strokes in value, dabs in temperature.
+  vec3 c = base * (0.74 + 0.3 * n0 + 0.26 * stroke);
+  float temp = (dab - 0.5) * 2.0;
+  c *= mix(vec3(0.86, 1.0, 1.16), vec3(1.14, 1.02, 0.84), clamp(0.5 + temp * 0.6 + (sun - 0.5) * 0.5, 0.0, 1.0));
   float drift = fbm(vWorld * 0.008 + 5.0) - 0.5;
   c *= vec3(1.0 - drift * 0.22, 1.0 + drift * 0.08, 1.0 + drift * 0.3);
+  // Moss dims and cools where the light does not reach.
+  c *= mix(1.0, mix(0.5, 1.05, sun), moss);
+  c = mix(c, c * vec3(0.72, 0.96, 1.2), moss * (1.0 - sun) * 0.55);
   // Interiors sink into shadow; edges keep their colour.
   c *= mix(1.0, uShade.w, inside * (1.0 - moss * 0.7));
   // Shadow side: darker and bluer.
@@ -179,22 +208,29 @@ void main() {
   c = mix(c, c * vec3(0.62, 0.86, 1.3), shd * 0.6);
   // Cast shadow from anything standing proud toward the light (moss lips, stones, roots).
   vec2 toLight = uLight.xy / max(length(uLight.xy), 0.001);
-  float hHere = mid.r * 0.5 + texture(uFine, vUV).r * 0.5;
+  float hHere = mid.r * 0.5 + fine.r * 0.5;
   vec2 cuv = vUV + toLight * uCast.x * uUvPerWorld;
   float hThere = texture(uMid, cuv).r * 0.5 + texture(uFine, cuv).r * 0.5;
   float castS = clamp((hThere - hHere) * 5.0, 0.0, 1.0) * texture(uMid, cuv).a;
   c *= 1.0 - castS * uCast.y;
-  // Key light: warm, strongest on moss.
-  vec3 warm = vec3(1.0, 0.86, 0.62);
-  // Things painted low (the back plane: stilt roots, saplings) barely catch the key.
+  // Key light, warm. Things painted low (the back plane) barely catch it.
+  vec3 warm = vec3(1.0, 0.84, 0.58);
   float plane = smoothstep(0.24, 0.44, hs.r / ha);
-  float k = key * uShade.x * (0.8 + 0.25 * moss) * mix(0.3, 1.0, plane);
-  vec3 glint = mix(warm, vec3(0.78, 0.95, 0.42), moss);
-  c += base * mix(warm, vec3(1.0, 0.96, 0.52), moss) * k * (1.5 - 0.3 * moss) * mix(1.0, 0.5 + patches, moss)
-     + glint * (k * k) * uShade.y * (0.3 - moss * 0.1);
+  float reach = mix(0.4, 1.3, sun) * mix(0.3, 1.0, plane);
+  float k = key * uShade.x * reach;
+  vec3 keyCol = mix(warm, vec3(1.0, 0.93, 0.5), moss);
+  c += base * keyCol * k * 1.35 + keyCol * (k * k) * uShade.y * 0.3;
+  // A crisp rim right at the silhouette where it faces the light.
+  float edge = 1.0 - smoothstep(0.5, 0.82, fine.a);
+  float rim = edge * smoothstep(0.12, 0.45, key) * reach;
+  c += (base * 1.3 + 0.07) * keyCol * rim * uShade.y * 4.0;
   // Sky bounce on anything facing up, cool.
   float up = clamp(-n.y, 0.0, 1.0);
-  c += base * vec3(0.5, 0.8, 1.0) * up * 0.35 * (1.0 - moss * 0.75) * mix(0.4, 1.0, plane);
+  c += base * vec3(0.5, 0.8, 1.0) * up * 0.3 * (1.0 - moss * 0.75) * mix(0.4, 1.0, plane);
+
+  // Ragged, brushed edges instead of a clean vector cut.
+  float br = fbm(vWorld * 0.21 + 2.0);
+  alpha *= smoothstep(0.4 + br * 0.2, 0.48 + br * 0.2, fine.a + 0.02);
 
   o = vec4(clamp(c, 0.0, 1.0) * alpha, alpha);
 }`;
@@ -277,6 +313,15 @@ export function bakeTerrain(renderer: Renderer, src: BakeSource, scale: number):
       type: 'vec4<f32>',
     },
     uCast: { value: new Float32Array([BAKE.castReach, BAKE.cast]), type: 'vec2<f32>' },
+    uSun: {
+      value: new Float32Array([
+        KEY_LIGHT.entryX,
+        KEY_LIGHT.entryY,
+        KEY_LIGHT.dirX / KEY_LIGHT.dirY,
+        BAKE.beamWidth,
+      ]),
+      type: 'vec4<f32>',
+    },
   };
   const litShader = Shader.from({
     gl: { vertex: QUAD_VERT, fragment: LIT_FRAG },
