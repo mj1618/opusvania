@@ -221,7 +221,7 @@ export class PostStage {
 
   /** The layers that count as "solid at the character's depth". */
   private maskLayers(): Container[] {
-    this.masked ??= ['playfield', 'playfieldFront']
+    this.masked ??= ['playfield']
       .map((name) => this.target.getChildByLabel(name))
       .filter((c): c is Container => c !== null);
     return this.masked;

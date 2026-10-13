@@ -141,7 +141,7 @@ export const ZONE_GRADE = {
    * violet-emerald stand. Exposure, and an S-curve whose pivot sits high in the dark zones so the
    * milky mid-tones of the fog drop while glows and sky stay up.
    */
-  exposure: [1.48, 1.22, 1.72] as const,
+  exposure: [1.72, 1.4, 1.85] as const,
   contrast: [0.36, 0.28, 0.36] as const,
   pivot: [0.4, 0.36, 0.4] as const,
   /** Shadows: moonlit blue, the default teal-indigo, violet dusk. */

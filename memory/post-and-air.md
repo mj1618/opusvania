@@ -125,6 +125,14 @@
 - The hero pocket skips bright saturated pixels (glints, glow caps, fireflies) so it never dims them.
 - The centre beam that sat behind the high ledge moved from x 3560 to 3720 (hero ratio at stop 5).
 
+## Round 8
+- The playfield mask is `playfield` only. Drawing `playfieldFront` (the plant fringe mesh) in the mask
+  pass logged `glDrawElements: Vertex buffer is not big enough` on every mask redraw; the fringe
+  overlaps ground and back plants, so the lit result is the same without it.
+- The pale slab at the top of the left zone was the back volume pass: wide beams plus the mist
+  sheets between canopy tiers. Left beams are now three narrow ones (half width 55-90), sheets are
+  0.14 / 0.08 opacity, and every beam is dimmer in mid-air than under the canopy hole and at its landing.
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").

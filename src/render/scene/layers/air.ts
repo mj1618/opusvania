@@ -76,8 +76,9 @@ export const AIR = {
      * stage, which lands it on ground and plants only).
      */
     beams: [
-      { x: 1010, halfWidth: 100, strength: 0.5, reach: 0.5, pool: 0 },
-      { x: 1620, halfWidth: 170, strength: 0.9, reach: 1, pool: 0.4 },
+      { x: 1180, halfWidth: 55, strength: 0.45, reach: 0.7, pool: 0 },
+      { x: 1560, halfWidth: 75, strength: 0.7, reach: 1, pool: 0.4 },
+      { x: 2290, halfWidth: 90, strength: 0.75, reach: 1, pool: 0.45 },
       { x: 3080, halfWidth: 150, strength: 0.8, reach: 1, pool: 0.4 },
       { x: 3720, halfWidth: 230, strength: 1, reach: 1, pool: 0.5 },
       { x: 4060, halfWidth: 120, strength: 0.6, reach: 0.6, pool: 0 },
@@ -112,10 +113,10 @@ export const AIR = {
      * platforms something pale to stand against and catch the shafts.
      */
     sheets: [
-      { y: 330, thickness: 120, opacity: 0.3 },
-      { y: 760, thickness: 150, opacity: 0.26 },
+      { y: 330, thickness: 120, opacity: 0.14 },
+      { y: 760, thickness: 130, opacity: 0.08 },
     ],
-    sheetLitByShaft: 1.1,
+    sheetLitByShaft: 0.8,
     /** How far the wind's wave pushes the sheets as it passes. */
     gust: 70,
   },

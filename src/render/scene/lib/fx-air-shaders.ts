@@ -61,6 +61,9 @@ float shaftAt(vec2 p) {
   float gy = groundY(p.x);
   float end = gy - mix(620.0, 10.0, reach) + (fine - 0.5) * 120.0;
   beams *= 1.0 - smoothstep(end - 520.0, end, p.y);
+  // Brightest just under the canopy hole and again near where it lands; thinner in mid-air.
+  float fromTop = clamp((p.y + 300.0) / max(gy + 300.0, 1.0), 0.0, 1.0);
+  beams *= 0.5 + 0.5 * abs(fromTop * 2.0 - 1.0);
   return beams;
 }
 `;
