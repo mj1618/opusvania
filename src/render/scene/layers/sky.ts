@@ -31,7 +31,9 @@ export const SKY = {
   warm: 0xcf9c4c,
   core: 0xe6b866,
   /** Where the bloom sits on screen when the camera is at the anchor height, and how much it parallaxes. */
-  glowRestY: 170,
+  glowRestY: 150,
+  /** Screen px to the right of where the key enters: keeps the bloom off the high ledge's hero. */
+  glowOffsetX: 300,
   glowParallaxX: 0.1,
   glowParallaxY: 0.08,
   coreRadius: 95,
@@ -65,7 +67,7 @@ export function skyGlowAt(
   cam: { x: number; y: number; zoom: number },
   anchorY: number,
 ): { x: number; y: number } {
-  const x = VIEW_W / 2 + (KEY_LIGHT.entryX - cam.x) * SKY.glowParallaxX;
+  const x = VIEW_W / 2 + SKY.glowOffsetX + (KEY_LIGHT.entryX - cam.x) * SKY.glowParallaxX;
   const y = SKY.glowRestY + (anchorY - cam.y) * SKY.glowParallaxY;
   return {
     x: VIEW_W / 2 + (x - VIEW_W / 2) * cam.zoom,

@@ -107,3 +107,13 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   shadow value. Without it the fronds were the "pale paper cut-outs" over the dark canopy.
 - `MID.moonHole`: the canopy route's focal opening (a canopy `drop` plus soft sprites in `back`).
 - Violet needs red: the right-zone tints are about [1.15, 0.45, 2.4]; with red under ~0.9 it measures blue.
+
+## Round 7
+- The light well sits RIGHT of the high ledge: wellX far 3110 / 3220 / 3330, mid 3450, sky bloom
+  `SKY.glowOffsetX` 300; mid has a heavy canopy bough behind the ledge (`drop` + `cover` bumps at layer
+  x 2940). A hero on the ledge (playfield ~3000, 448) must stand against dark with the light beside her.
+- `sideBody` 0.3 / `sideLit` 0.75-0.8 (mid, far2): a little body value in clump interiors; lower and they
+  are pure silhouette.
+- The big azure window at stops 1-2 is air.ts `shafts-back` (airBack layer), not a background light.
+- The boot warning "glDrawElements: Vertex buffer is not big enough" is not from these layers (it
+  persists with every background mesh, update and render pass disabled).

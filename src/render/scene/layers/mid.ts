@@ -47,7 +47,9 @@ const MID = {
   pad: 60,
   groundY: 1345,
   canopyY: 585,
-  wellX: 3234,
+  // Right of the high ledge (playfield x ~3000): the hero there stands against dark canopy with
+  // the light beside her, over the trunk pair.
+  wellX: 3450,
   /** Fern clumps and bushes per 1000 px of ground. */
   ferns: 7,
   fernSize: [90, 190],
@@ -94,8 +96,8 @@ const ATM: Atmosphere = {
   sunColorL: 0xbfdcff,
   sunColorR: 0x7fd89a,
   zoneParallax: 0.68,
-  sideBody: 0.1,
-  sideLit: 0.5,
+  sideBody: 0.3,
+  sideLit: 0.8,
   sideRim: 2.6,
   // Warm olive-brown shadows in the centre; the ZONE tints turn them azure / violet at the sides.
   tint: [1.42, 1.0, 0.52],
@@ -187,7 +189,9 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
     openLift: 330,
     drop: (x) =>
       60 * Math.exp(-(((x - 4700) / 500) ** 2)) +
-      50 * Math.exp(-(((x - 1900) / 450) ** 2)) -
+      50 * Math.exp(-(((x - 1900) / 450) ** 2)) +
+      // A heavy bough of canopy hanging behind the high ledge.
+      330 * Math.exp(-(((x - 2940) / 300) ** 2)) -
       // The canopy route's focal opening: a hole the moonlight falls through.
       MID.moonHole.lift * Math.exp(-(((x - MID.moonHole.x) / MID.moonHole.half) ** 2)),
     trunks: [
@@ -216,7 +220,7 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
     blossom: 0xd9c2ff,
     boughs: 3,
     clearWell: true,
-    cover: (x) => 0.8 + 0.08 * Math.sin(x / 700),
+    cover: (x) => 0.8 + 0.08 * Math.sin(x / 700) + 0.5 * Math.exp(-(((x - 2940) / 320) ** 2)),
     floor: (c, r, b) => undergrowth(c, r, b, spots),
   };
 }
