@@ -26,8 +26,10 @@ import { HURT, J_CHEST, J_HEAD, J_HIP, MAX_TURNS, Rig } from './rig';
 import { Secondary } from './wings';
 
 const LIGHT = 0xffe0a0;
-/** v2: the default became four turns; the old key's stored choice is ignored so everyone sees it. */
+/** v3: the default became three turns; older keys' stored choices are ignored so everyone sees it. */
 const TURNS_KEY = 'vesper.turns.v3';
+/** Turns per double jump when nothing is stored or asked for (owner's choice, 2026-10-13). */
+const DEFAULT_TURNS = 3;
 
 export class VesperCharacter implements CharacterSkin {
   private readonly painter = new Painter();
@@ -400,7 +402,7 @@ export class VesperCharacter implements CharacterSkin {
    */
   private initTurns(): void {
     if (typeof window === 'undefined') return;
-    let n = MAX_TURNS;
+    let n = DEFAULT_TURNS;
     try {
       const q = new URLSearchParams(window.location.search).get('turns');
       const saved = window.localStorage.getItem(TURNS_KEY);
