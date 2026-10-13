@@ -33,6 +33,8 @@ export const WATER = {
   splashRoom: 64,
   /** Seconds between the small rings that appear on their own. */
   idleRipple: 4.7,
+  /** Brightness of the three fish glints. */
+  fish: 0.8,
 } as const;
 
 const VERT = `#version 300 es
@@ -57,6 +59,7 @@ uniform vec4 uRipple;   // speed, life, width, -
 uniform mat4 uRipples;  // per column: x, start time, amplitude, -
 uniform mat4 uLights;   // columns 0/2: x, y, radius, intensity; 1/3: rgb
 uniform vec4 uPlayer;   // x, half width, in water 0..1, speed
+uniform float uFish;    // brightness of the fish glints
 uniform vec4 uSplash;   // x, start time, strength, -
 uniform vec4 uAlpha;    // back top, back bottom, front top, front bottom
 uniform vec3 uShallow;
@@ -97,12 +100,12 @@ void main() {
     float sAge = t - uSplash.y;
     if (uTime.y < 0.5 || uSplash.z <= 0.0 || sAge < 0.0 || sAge > 0.75) { o = vec4(0.0); return; }
     float acc = 0.0;
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 14; i++) {
       float fi = float(i);
-      float vx = (hash(fi + 1.3) - 0.5) * 150.0;
-      float vy = 95.0 + hash(fi + 7.1) * 110.0;
+      float vx = (hash(fi + 1.3) - 0.5) * 210.0;
+      float vy = 90.0 + hash(fi + 7.1) * 150.0;
       vec2 dp = vec2(uSplash.x + vx * sAge, s - (vy * sAge - 330.0 * sAge * sAge) * uSplash.z);
-      float rad = 3.4 - 1.8 * sAge;
+      float rad = (2.6 + 2.4 * hash(fi + 3.7)) * (1.0 - sAge * 0.7);
       acc += 1.0 - smoothstep(rad - 1.4, rad, length(vWorld - dp));
     }
     float da = clamp(acc, 0.0, 1.0) * (1.0 - sAge / 0.75);
@@ -146,8 +149,8 @@ void main() {
     float tri = abs(fract(ph) * 2.0 - 1.0);
     float fx = mix(uPool.x + 26.0, uPool.y - 26.0, smoothstep(0.0, 1.0, tri));
     float fy = total * (0.52 + 0.16 * sin(t * 0.6 + fi * 2.1)) + sin(t * 3.0 + fi) * 1.2;
-    float body = exp(-pow((x - fx) / 5.5, 2.0) - pow((depth - fy) / 1.5, 2.0));
-    add += uLine * body * (0.35 + 0.3 * sin(t * 5.0 + fi * 1.7)) * 0.7;
+    float body = exp(-pow((x - fx) / 10.0, 2.0) - pow((depth - fy) / 1.6, 2.0));
+    add += uLine * body * (0.6 + 0.4 * sin(t * 5.0 + fi * 1.7)) * uFish;
   }
   // Foam where the water meets the banks.
   float bankD = min(x - uPool.x, uPool.y - x);
@@ -159,8 +162,15 @@ void main() {
   float tilt = 0.55 + clamp(-slope * 1.6, -0.35, 0.6);
   float cell = floor(x / 7.0);
   float tw = hash(cell) * 6.283;
-  float glint = pow(max(0.0, sin(t * (1.1 + hash(cell + 3.0)) + tw)), 14.0) * step(0.62, hash(cell + 9.0));
+  float glint = pow(max(0.0, sin(t * (1.1 + hash(cell + 3.0)) + tw)), 14.0) * step(0.62, hash(cell + 9.0)) * pow(sin(3.14159 * fract(x / 7.0)), 2.0);
   add += uLine * (line * tilt * 0.8 + glow * 0.12 + line * glint * 1.4);
+  // The crown of a landing splash: a bright ring racing outward along the surface.
+  float spAge = t - uSplash.y;
+  if (uSplash.z > 0.0 && spAge > 0.0 && spAge < 0.9) {
+    float sd = abs(x - uSplash.x);
+    float crown = exp(-pow((sd - spAge * 130.0) / (7.0 + spAge * 16.0), 2.0)) * (1.0 - spAge / 0.9);
+    add += uLine * crown * uSplash.z * (line * 1.6 + glow * 0.5);
+  }
   // Rings where the character stands in it.
   float pd = abs(x - uPlayer.x);
   float ring = exp(-pow((pd - uPlayer.y - 3.0) / 5.0, 2.0)) * uPlayer.z;
@@ -243,6 +253,7 @@ export class Water {
               uLights: { value: this.lights, type: 'mat4x4<f32>' },
               uPlayer: { value: this.player, type: 'vec4<f32>' },
               uSplash: { value: this.splash, type: 'vec4<f32>' },
+              uFish: { value: WATER.fish, type: 'f32' },
               uAlpha: {
                 value: new Float32Array([...WATER.backAlpha, ...WATER.frontAlpha]),
                 type: 'vec4<f32>',
@@ -299,9 +310,9 @@ export class Water {
     // Now and then something rises: a small ring somewhere on the surface.
     const beat = Math.floor(clock / WATER.idleRipple);
     if (beat !== this.idleBeat) {
-      if (this.idleBeat >= 0 && !isIn) {
+      if (this.idleBeat >= 0) {
         const h = Math.sin(beat * 91.7) * 43758.5453;
-        this.ripple(p.x0 + 30 + (h - Math.floor(h)) * (p.x1 - p.x0 - 60), clock, 1.1);
+        this.ripple(p.x0 + 30 + (h - Math.floor(h)) * (p.x1 - p.x0 - 60), clock, 1.5);
       }
       this.idleBeat = beat;
     }

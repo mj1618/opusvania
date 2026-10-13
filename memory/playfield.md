@@ -11,7 +11,7 @@
   is cropped to what was painted in it. ~45 textures, ~20 MP at bake scale 1.5, ~30 ms.
 - **Plants are a few static meshes** (`pf-flora.ts` builder + shader, `pf-plants.ts` species and placement),
   chunked every 480 px for culling. The vertex shader does wind (a GLSL copy of `wind()` in `look.ts`: keep
-  them identical), bending and glow. ~230k vertices. Three meshes: back, additive halos, front fringe.
+  them identical), bending and glow. ~190k vertices. Three meshes: back, additive halos, front fringe.
   Draw order inside the back mesh is placement order: rear row (shrubs, tall dark stands) first, then
   features, then grass.
 - **Light comes from one sun map**, not from the paint: `sunAt(x, y)` in `pf-shape.ts` (a broad beam along
@@ -20,7 +20,14 @@
 - **Three zones** (`zoneAt(x)` / `ZONES` in `pf-shape.ts`, mirrored as `uZone` in the bake shader): cool pool
   glade (x < ~1900), warm light well, deep stand (x > ~3900). They tint terrain and moss, shift plant tones,
   choose the species mix (`share(cool, warm, deep)` in `growGarden`) and the glow colour (cyan left, violet right).
-- **Depth around the walk line**, back to front in the back mesh: hazy oversized backdrop plants (`HAZE`), rear
+- **Backdrop is mostly baked**: `paintBackdrop` puts mossy boulders (every fourth one a landmark with a sapling)
+  and leaning dead stumps in the back plane behind the walk line, none flat-topped; the edge walls get a cliff
+  foot with a thread of water (left) and a root buttress with a hollow (right). Free at runtime.
+- **Fliers** (`pf-flutter.ts`): butterflies over warm flower drifts, moths by glow plants; one small mesh, all
+  motion in the vertex shader. `Garden.butterflies` / `.moths` collect their homes during planting.
+- **Elevated tops** (`MossOpts.read`, `TERRAIN.highRead`) get a continuous lit crest and a contact shadow under
+  the lip so they separate from the canopy behind.
+- **Depth around the walk line**, back to front in the back mesh: hazy backdrop shrubs and reed stands (`HAZE`), rear
   row shrubs (`REAR`), hero plants every screen or so (`heroGap`), features, grass; then the front fringe.
   `info.keepClear` ranges (the root mound) keep big plants off terrain that should be seen.
 - **Moss is cushions with bare stretches** (`mossCap`): stones, surface roots and leaf litter fill the gaps.
@@ -65,6 +72,9 @@
 - Form-following stroke noise draws contour rings round roots when posterised: keep its weight low (0.22) and
   the fine stroke layer on the plain grain. GLSL `smoothstep(a, b, x)` with a > b is undefined: flip it.
 - A wide `tint()` ribbon that follows the smoothed ground profile swoops across banks: break it at steps.
+- Cost: at 4K most of the playfield's time is the terrain sprites, and the atmosphere agent's hero-light mask
+  draws `playfield` + `playfieldFront` a second time each frame. Big alpha-blended plants are the next cost:
+  put large background shapes in the bake, not in the plant mesh.
 - GLSL: `cast` is a reserved word. Destroy shaders before the textures bound to them or Pixi warns.
 - Bake scale is fixed at boot (`viewScale` clamped to 1.5..2); a later resize does not rebake.
 - Tops are honest to within ~6 px (`__game.debug.hitboxes(true)` to check). Island tapers, ledge sag and the

@@ -6,6 +6,7 @@
  *     terrain           baked, lit tiles (lib/pf-terrain.ts painted, lib/pf-bake.ts lit)
  *     plants            live meshes swaying in the wind (lib/pf-plants.ts, lib/pf-flora.ts)
  *     halos             additive glow around lantern flowers and glow mushrooms
+ *     fliers            butterflies and moths (lib/pf-flutter.ts)
  *   layers.playfieldFront   in front of the character, same depth:
  *     water.front       the tint and surface line over whatever wades in the pool
  *     fringe            low dark grass over the character's feet, lily pads
@@ -17,6 +18,7 @@ import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { bakeTerrain } from '../lib/pf-bake';
 import { BendField } from '../lib/pf-field';
 import { FloraBuilder, type FloraMesh } from '../lib/pf-flora';
+import { Flutter } from '../lib/pf-flutter';
 import { growGarden } from '../lib/pf-plants';
 import { paintTerrain } from '../lib/pf-terrain';
 import { Water } from '../lib/pf-water';
@@ -38,6 +40,7 @@ export class PlayfieldLayer implements EnvModule {
   private field!: BendField;
   private flora: FloraMesh[] = [];
   private water: Water | null = null;
+  private flutter!: Flutter;
   private poolX: [number, number] = [0, 0];
   /** Rolling CPU cost of update(), ms (read by `window.__pf` in dev for profiling). */
   cpuMs = 0;
@@ -57,6 +60,8 @@ export class PlayfieldLayer implements EnvModule {
       back: new FloraBuilder(PLAYFIELD.chunk, scene.width),
       front: new FloraBuilder(PLAYFIELD.chunk, scene.width),
       halo: new FloraBuilder(PLAYFIELD.chunk, scene.width),
+      butterflies: [] as number[][],
+      moths: [] as number[][],
     };
     growGarden(garden, info, scene.width);
     const rect = this.field.rect;
@@ -72,7 +77,8 @@ export class PlayfieldLayer implements EnvModule {
       pf.addChild(this.water.back);
       this.front.addChild(this.water.front);
     }
-    pf.addChild(baked.layer, back.container, halo.container);
+    this.flutter = new Flutter(garden.butterflies, garden.moths);
+    pf.addChild(baked.layer, back.container, halo.container, this.flutter.mesh);
     this.front.addChild(fringe.container);
     // Dev-only handle for profiling (toggle the containers, read cpuMs): see memory/playfield.md.
     if (import.meta.env.DEV)
@@ -93,6 +99,7 @@ export class PlayfieldLayer implements EnvModule {
     for (const f of this.flora) {
       f.update(frame.clock, vis.x, vis.x + vis.w, PLAYFIELD.glowGain, PLAYFIELD.haloGain);
     }
+    this.flutter.update(frame.clock);
     if (this.water) {
       const on = this.poolX[1] > vis.x - 40 && this.poolX[0] < vis.x + vis.w + 40;
       this.water.update(frame.dt, frame.clock, player, lights, events, on);

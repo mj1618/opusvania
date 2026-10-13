@@ -10,7 +10,7 @@
  * of (stilt roots, saplings) are painted in the dark, low-relief "back" tone.
  */
 import type { Scene, SceneTag, SolidRect } from '../../../sim/scene';
-import { mix } from './look';
+import { mix, PALETTE } from './look';
 import { Paint } from './pf-paint';
 import {
   blob,
@@ -65,6 +65,10 @@ export const TERRAIN = {
   waterDepth: 38,
   /** How far the edge walls bulge into the scene at most. */
   edgeBulge: 12,
+  /** Gap between the baked backdrop pieces (boulders, dead stumps) behind the walk line, px. */
+  backdropGap: [260, 560] as const,
+  /** 0..1: strength of the lit crest and contact shadow on elevated tops (islands, ledges, boughs, trunks). */
+  highRead: 0.8,
   /** How far bank faces cut back under their lip, px. */
   faceUndercut: 9,
 } as const;
@@ -170,6 +174,7 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
   // Back plane first: everything else overlaps it.
   for (const b of scene.oneWays) paintSapling(p, b.x, b.y, b.w, groundY, scene, info);
   for (const t of trunks) if (t.y + t.h < groundY(t.x + t.w / 2) - 40) paintStiltRoots(p, t, groundY);
+  paintBackdrop(p, scene, info);
   paintEdgeWalls(p, scene, info);
   paintGround(p, segs, scene, info);
 
@@ -200,6 +205,8 @@ interface MossOpts {
   dull?: number;
   /** 0..1 share of the top left bare. */
   bare?: number;
+  /** 0..1: add a clean lit crest and a contact shadow under the lip (elevated tops). */
+  read?: number;
 }
 
 /** Moss colour at a spot: emerald to olive along the top, yellowed in the light, bluish in shade. */
@@ -353,6 +360,36 @@ function mossCap(p: Paint, x0: number, x1: number, y: number, o: MossOpts): void
   flushRun();
   if (!Number.isNaN(bareFrom)) bareRuns.push([bareFrom, xb]);
 
+  // Elevated tops sit against busy canopy: give them a clean lit crest the whole way along and
+  // a soft band of shadow tucked under the lip, so the walkable line separates from what is behind.
+  const read = o.read ?? 0;
+  if (read > 0) {
+    const crestT: number[] = [];
+    const under: number[] = [];
+    for (let x = x0 + 3; x <= x1 - 3; x += 6) {
+      const cv = cover(x);
+      crestT.push(x, y - lift(x) * cv + 1.2);
+      under.push(x, y + Math.max(2, thick(x) * cv) + 5);
+    }
+    p.tint(
+      ribbon(
+        under,
+        (t) => (11 + wobble(t * 300, o.seed + 60, 40) * 3) * Math.sin(Math.PI * clamp(t, 0.02, 0.98)) ** 0.35,
+      ),
+      TERRAIN.backDeep,
+      0.42 * read,
+    );
+    p.solid(
+      ribbon(
+        crestT,
+        (t) => (3 + wobble(t * 300, o.seed + 61, 30) * 0.9) * Math.sin(Math.PI * clamp(t, 0.01, 0.99)) ** 0.3,
+      ),
+      mix(mossTone((x0 + x1) / 2, y, o.seed, 0).body, TERRAIN.mossLit, 0.75),
+      0.98,
+      { moss: 1 },
+      0.5 + 0.4 * read,
+    );
+  }
   // Puffs: little cushions of height only, so the light finds something to model.
   for (let x = xa + range(r, 4, 20); x < xb - 4; x += range(r, 9, 34)) {
     if (cover(x) < 0.6) continue;
@@ -873,6 +910,163 @@ function paintGround(p: Paint, segs: Seg[], scene: Scene, info: TerrainInfo): vo
 }
 
 // ---------------------------------------------------------------------------------------------
+// Backdrop: big simple shapes standing behind the walk line, all in the back plane (dark, low
+// relief, a little hazed) and none of them flat-topped: mossy boulders, leaning dead stumps. They
+// are baked, so they cost nothing per frame. pf-plants.ts adds shrubs and reed stands between.
+
+function paintBackdrop(p: Paint, scene: Scene, info: TerrainInfo): void {
+  const W = scene.width;
+  const r = rngFor(404, 7);
+  const haze = (c: number, k = 0.3): number => mix(c, PALETTE.fogMid, k);
+  const avoid: Array<[number, number]> = [];
+  for (const s of scene.solids) {
+    if (s.tag === 'root') avoid.push([s.x - 110, s.x + s.w + 110]);
+    if (s.tag === 'trunk') avoid.push([s.x - 170, s.x + s.w + 170]);
+    if (s.tag === 'pool') avoid.push([s.x - 60, s.x + s.w + 60]);
+  }
+  for (const o of scene.oneWays) avoid.push([o.x + o.w - 20, o.x + o.w + 110]);
+  let k = 0;
+  for (
+    let x = range(r, 120, 300);
+    x < W - 120;
+    x += range(r, TERRAIN.backdropGap[0], TERRAIN.backdropGap[1])
+  ) {
+    if (avoid.some(([a, b]) => x > a && x < b)) continue;
+    // Stand clear of steps: the shape must sit on one level.
+    const gy = info.groundY(x);
+    if (info.groundY(clamp(x - 90, 0, W - 1)) !== gy || info.groundY(clamp(x + 90, 0, W - 1)) !== gy)
+      continue;
+    k++;
+    const base = gy + 14;
+    if (k % 3 !== 0) {
+      // A boulder, or two leaning together, capped with moss. Domed, never level.
+      const n = 1 + Math.floor(r() * 2);
+      const hero = k % 4 === 1;
+      for (let i = 0; i < n; i++) {
+        const rx = range(r, 46, 80) * (hero ? 1.35 : 1) * (i ? 0.7 : 1);
+        const ry = rx * range(r, 0.75, 1.2);
+        const cx = x + i * range(r, 50, 90) * (r() < 0.5 ? -1 : 1);
+        const rot = range(r, -0.3, 0.3);
+        const stone = haze(mix(TERRAIN.back, TERRAIN.stone[2], 0.45), 0.28);
+        const rock = chaikin(blob(cx, base - ry * 0.55, rx, ry, cx, 0.3, 9, rot), 2);
+        p.solid(rock, stone, 0.3);
+        p.solid(
+          chaikin(blob(cx + rx * 0.2, base - ry * 0.85, rx * 0.6, ry * 0.5, cx + 1, 0.3, 8, rot), 2),
+          mix(stone, TERRAIN.stone[1], 0.3),
+          0.34,
+        );
+        const crack = wander(
+          quad(
+            cx - rx * 0.2,
+            base - ry * 1.3,
+            cx + range(r, -14, 14),
+            base - ry * 0.6,
+            cx + rx * 0.15,
+            base,
+            8,
+          ),
+          5,
+          cx,
+          22,
+        );
+        p.solid(
+          ribbon(crack, (t) => 3 * Math.sin(Math.PI * clamp(t, 0.05, 0.95)) + 0.6),
+          TERRAIN.backDeep,
+          0.2,
+        );
+        // Moss slumped over the crown.
+        const cap: number[] = [];
+        for (let j = 0; j <= 12; j++) {
+          const a = Math.PI + (Math.PI * j) / 12;
+          cap.push(cx + Math.cos(a) * rx * 0.9, base - ry * 0.55 + Math.sin(a) * ry * 0.98);
+        }
+        const tone = mossTone(cx, gy, 404 + k, 0);
+        p.solid(
+          ribbon(
+            cap,
+            (t) => (16 + wobble(t * 200, cx, 30) * 6) * Math.sin(Math.PI * clamp(t, 0.03, 0.97)) ** 0.6 + 2,
+          ),
+          haze(mix(tone.dark, TERRAIN.back, 0.4), 0.2),
+          0.34,
+          { moss: 0.8 },
+        );
+        p.solid(
+          ribbon(
+            cap.map((v, j) => (j % 2 ? v - 3 : v)),
+            (t) => 8 * Math.sin(Math.PI * clamp(t, 0.05, 0.95)) ** 0.7 + 1,
+          ),
+          haze(mix(tone.body, TERRAIN.back, 0.35), 0.2),
+          0.38,
+          { moss: 0.9 },
+        );
+        if (hero && i === 0) {
+          // The landmark: a sapling has rooted in the moss on top.
+          const sx = cx + range(r, -rx * 0.2, rx * 0.2);
+          const sy = base - ry * 1.5;
+          const lean = range(r, -40, 40);
+          const stem = wander(
+            quad(sx, sy + 8, sx + lean * 0.2, sy - 60, sx + lean, sy - range(r, 110, 150), 12),
+            5,
+            sx,
+            50,
+          );
+          p.solid(
+            ribbon(stem, (t) => 11 * (1 - t) ** 0.8 + 2),
+            TERRAIN.backDeep,
+            0.27,
+            { bark: 0.7 },
+          );
+          const top = stem.length - 2;
+          info.twigs.push({ x: stem[top] as number, y: stem[top + 1] as number, angle: -Math.PI / 2 });
+          info.twigs.push({ x: stem[14] as number, y: stem[15] as number, angle: -Math.PI / 2 + 0.9 });
+          info.twigs.push({ x: stem[10] as number, y: stem[11] as number, angle: -Math.PI / 2 - 0.9 });
+        }
+      }
+    } else {
+      // A dead stump leaning out of true, its top torn to a slant.
+      const h = range(r, 110, 180);
+      const w0 = range(r, 44, 62);
+      const lean = range(r, 0.12, 0.3) * (r() < 0.5 ? -1 : 1);
+      const tx = x + Math.sin(lean) * h;
+      const ty = base - Math.cos(lean) * h;
+      const line = wander(quad(x, base, lerp(x, tx, 0.4), lerp(base, ty, 0.55), tx, ty, 12), 5, x, 60);
+      const wood = haze(TERRAIN.back, 0.22);
+      p.solid(
+        ribbon(line, (t) => w0 * (1 - 0.3 * t) + smoothstep(0.2, 0, t) * 26),
+        wood,
+        0.28,
+        { bark: 0.7 },
+      );
+      p.solid(
+        ribbon(line, (t) => w0 * 0.3 * (1 - 0.3 * t)),
+        mix(wood, TERRAIN.bark, 0.3),
+        0.33,
+        { bark: 0.7 },
+      );
+      // Shards at the break, of uneven height.
+      for (let i = 0; i < 4; i++) {
+        const off = (i - 1.5) * w0 * 0.18;
+        const sh = range(r, 14, 46);
+        p.solid(
+          [
+            tx + off - 6,
+            ty + 6,
+            tx + off + Math.sin(lean) * sh,
+            ty - Math.cos(lean) * sh,
+            tx + off + 6,
+            ty + 6,
+          ],
+          wood,
+          0.28,
+          { bark: 0.7 },
+        );
+      }
+      p.solid(blob(lerp(x, tx, 0.5) - 6, lerp(base, ty, 0.5), 9, 14, x, 0.2, 10), TERRAIN.backDeep, 0.18);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
 // Edge walls: the scene's invisible solid left and right bounds, dressed as living rock and an
 // enormous trunk. Only a sliver is ever on screen; plants (pf-plants.ts) do the rest.
 
@@ -929,6 +1123,76 @@ function paintEdgeWalls(p: Paint, scene: Scene, info: TerrainInfo): void {
         0.8,
         { moss: 1 },
       );
+    }
+    // What the sliver belongs to: something colossal standing just off-screen.
+    const gy = yBottom - 30;
+    if (side < 0) {
+      // The foot of a cliff: fallen slabs leaning on it (back plane), and a thread of water
+      // running down the face into a wet stain.
+      const er = rngFor(311);
+      for (let i = 0; i < 4; i++) {
+        const cx = xe + range(er, 6, 80);
+        const rx = range(er, 34, 66);
+        const ry = range(er, 46, 110);
+        const stone = mix(mix(TERRAIN.back, TERRAIN.stone[2], 0.5), PALETTE.fogMid, 0.2);
+        p.solid(
+          chaikin(blob(cx, gy - ry * 0.5 + 10, rx, ry, cx, 0.35, 8, range(er, -0.5, 0.2)), 1),
+          stone,
+          0.3,
+        );
+        p.solid(
+          chaikin(blob(cx + 8, gy - ry * 0.8, rx * 0.55, ry * 0.4, cx + 1, 0.3, 7, -0.3), 1),
+          mix(stone, TERRAIN.stone[1], 0.3),
+          0.34,
+        );
+      }
+      const fall = wander([xe + 11, -80, xe + 15, gy * 0.35, xe + 9, gy * 0.7, xe + 14, gy + 4], 5, 312, 90);
+      p.solid(
+        ribbon(fall, () => 9),
+        mix(TERRAIN.stone[2], 0x1a3a4a, 0.5),
+        0.6,
+      );
+      p.solid(
+        ribbon(fall, (t) => 3.2 + Math.sin(t * 40) * 0.8),
+        0x9fdbe6,
+        0.82,
+      );
+      p.solid(blob(xe + 16, gy + 2, 24, 7, 313, 0.3, 10), 0xbfeaf0, 0.8, {}, 0.8);
+      p.tint(blob(xe + 30, gy + 16, 60, 16, 314, 0.3, 12), 0x163a4c, 0.5);
+    } else {
+      // A root buttress as thick as a house wall, flaring off-screen, with a hollow at its foot.
+      const er = rngFor(321);
+      for (let i = 0; i < 3; i++) {
+        const fromY = gy - range(er, 240, 420) - i * 60;
+        const toX = xe - range(er, 90, 170) - i * 26;
+        const line = wander(
+          cubic(xe + 30, fromY, xe - 10, lerp(fromY, gy, 0.5), toX + 60, gy - 60, toX, gy + 12, 18),
+          7,
+          322 + i,
+          70,
+        );
+        const w0 = range(er, 70, 96) - i * 14;
+        const tone = i === 0 ? TERRAIN.back : TERRAIN.backDeep;
+        p.solid(
+          ribbon(line, (t) => w0 * (1 - 0.55 * t) + smoothstep(0.8, 1, t) * 24),
+          tone,
+          0.29 - i * 0.03,
+          { bark: 0.7 },
+        );
+        p.solid(
+          ribbon(line, (t) => w0 * (1 - 0.55 * t) * 0.3),
+          mix(tone, TERRAIN.bark, 0.35),
+          0.34 - i * 0.03,
+          { bark: 0.7 },
+        );
+      }
+      p.solid(
+        chaikin(blob(xe - 34, gy - 50, 40, 64, 323, 0.25, 10), 2),
+        mix(TERRAIN.back, TERRAIN.bark, 0.4),
+        0.31,
+        { bark: 0.6 },
+      );
+      p.solid(chaikin(blob(xe - 34, gy - 44, 30, 52, 323, 0.25, 10), 2), 0x081622, 0.16);
     }
     info.faces.push({ x: xe, y0: 0, y1: yBottom - 30, dir: inward, kind: 'edge' });
   }
@@ -1349,6 +1613,7 @@ function paintTrunk(p: Paint, t: SolidRect, scene: Scene, info: TerrainInfo, ivi
   }
   mossCap(p, t.x, x1, t.y, {
     seed: t.x + 9,
+    read: TERRAIN.highRead,
     drapeL: joinedL ? 0 : range(r, 30, 80),
     drapeR: range(r, 30, 80),
     thick: 10,
@@ -1493,9 +1758,10 @@ function paintLivingBough(p: Paint, s: SolidRect, anchoredRight: boolean, info: 
         quad(xa, ya, lerp(xa, xb, 0.3), lerp(ya, yb, 0.6), xb, yb, 6),
         (t) => (light ? 4 : 2.6) * Math.sin(Math.PI * clamp(t, 0.06, 0.94)) + 0.5,
       ),
-      light ? mix(wood, TERRAIN.barkLit, 0.5) : TERRAIN.barkDark,
-      light ? 0.68 : 0.44,
+      light ? mix(wood, TERRAIN.barkLit, 0.25) : mix(wood, TERRAIN.barkDark, 0.6),
+      light ? 0.61 : 0.5,
       { bark: 0.2 },
+      0.7,
     );
   }
   // Side limbs: from the tip and from under the belly, thin, each ending in leaves.
@@ -1545,6 +1811,7 @@ function paintLivingBough(p: Paint, s: SolidRect, anchoredRight: boolean, info: 
   }
   mossCap(p, s.x, x1, s.y, {
     seed: s.x + 4,
+    read: TERRAIN.highRead,
     drapeL: anchoredRight ? range(r, 24, 44) : 0,
     drapeR: anchoredRight ? 0 : range(r, 24, 44),
     thick: 13,
@@ -1727,6 +1994,7 @@ function paintCrookShelf(p: Paint, s: SolidRect, anchoredRight: boolean, info: T
   info.twigs.push({ x: tipX + dir * 44, y: tipY, angle: -Math.PI / 2 + dir * 0.6, lit: true });
   mossCap(p, s.x, x1, s.y, {
     seed: s.x + 4,
+    read: TERRAIN.highRead,
     drapeL: anchoredRight ? range(r, 30, 60) : 0,
     drapeR: anchoredRight ? 0 : range(r, 30, 60),
     thick: 12,
@@ -1989,17 +2257,31 @@ function paintFloating(p: Paint, s: SolidRect, index: number, info: TerrainInfo)
         TERRAIN.backDeep,
         0.45,
       );
-      // Zones from the rim inward: velvet edge, flesh, darker band, flesh, heart.
-      const zones: Array<[number, number, number]> = [
-        [1, tones[3], 0.64],
-        [0.9, tones[0], 0.6],
-        [0.72, tones[1], 0.56],
-        [0.55, tones[0], 0.58],
-        [0.36, tones[2], 0.54],
-        [0.18, tones[1], 0.52],
-      ];
-      for (const [sc, col, h] of zones) {
-        p.solid(chaikin(outlineOf(l, sc), 1), mix(col, tones[1], range(r, 0, 0.25)), h + (l.top ? 0.02 : 0));
+      // Velvet rim, then flesh; the zoning inside is broken arcs of slightly different flesh,
+      // never closed rings.
+      p.solid(chaikin(base, 1), tones[3], 0.64 + (l.top ? 0.02 : 0));
+      p.solid(chaikin(outlineOf(l, 0.9), 1), mix(tones[0], tones[1], range(r, 0.1, 0.5)), 0.6);
+      p.solid(chaikin(outlineOf(l, 0.5), 1), mix(tones[1], tones[0], range(r, 0.2, 0.6)), 0.57, {}, 0.6);
+      for (const sc of [0.78, 0.64, 0.4, 0.26]) {
+        const ring = outlineOf(l, sc + range(r, -0.04, 0.04));
+        const nR = ring.length / 2;
+        let i = Math.floor(r() * nR);
+        const arcs = 2 + Math.floor(r() * 2);
+        for (let k = 0; k < arcs; k++) {
+          const len = 3 + Math.floor(r() * 6);
+          const arc: number[] = [];
+          for (let j = 0; j <= len; j++)
+            arc.push(ring[((i + j) % nR) * 2] as number, ring[((i + j) % nR) * 2 + 1] as number);
+          const wd = range(r, 2.5, 5.5) * sc;
+          p.solid(
+            ribbon(arc, (t) => wd * Math.sin(Math.PI * clamp(t, 0.04, 0.96)) + 0.5),
+            mix(tones[1], r() < 0.5 ? tones[2] : tones[0], range(r, 0.3, 0.6)),
+            0.55 + range(r, -0.03, 0.04),
+            {},
+            0.7,
+          );
+          i += len + 2 + Math.floor(r() * 6);
+        }
       }
     }
     trail = 'few';
@@ -2138,6 +2420,7 @@ function paintFloating(p: Paint, s: SolidRect, index: number, info: TerrainInfo)
   }
   mossCap(p, s.x, x1, s.y, {
     seed: s.x + 2,
+    read: TERRAIN.highRead,
     drapeL: range(r, 22, 52),
     drapeR: range(r, 22, 52),
     thick: range(r, 9, 13),
@@ -2222,6 +2505,26 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
     Math.max(0, wobble(t * 300, s.x + 5, 26)) * 5;
   // Keep the crest flat where it is walked on: only the underside varies.
   strand(arch, girth, 0.68, 1);
+  // Knuckled underside: burls and swellings hang off the lower edge so it is no even band.
+  for (let i = 0; i < 7; i++) {
+    const k = Math.floor(range(r, 0.1, 0.9) * (arch.length / 2 - 1)) * 2;
+    const bx = arch[k] as number;
+    const by = (arch[k + 1] as number) + W0 * 0.42 + range(r, -4, 6);
+    const rad = range(r, 9, 19);
+    p.tint(blob(bx, by + 4, rad * 1.25 + 3, rad + 3, bx, 0.25, 10), E[4], 0.5);
+    p.solid(
+      blob(bx, by, rad * 1.25, rad, bx, 0.3, 11),
+      mix(wood, TERRAIN.barkDark, range(r, 0, 0.5)),
+      range(r, 0.64, 0.72),
+      { bark: 0.12 },
+    );
+    p.solid(
+      blob(bx + 2, by - rad * 0.3, rad * 0.6, rad * 0.4, bx + 1, 0.3, 8),
+      mix(wood, TERRAIN.barkLit, 0.5),
+      0.76,
+      { bark: 0.12 },
+    );
+  }
   // Twist: the grain winds round the root like rope, with knots where limbs once left it.
   const nA = arch.length / 2;
   for (let i = 2; i < nA - 3; i += 2) {
@@ -2482,6 +2785,7 @@ function paintBough(p: Paint, x: number, y: number, w: number, scene: Scene, inf
   }
   mossCap(p, x, x + w, y, {
     seed: x + 7,
+    read: TERRAIN.highRead,
     drapeL: side > 0 ? 14 : 0,
     drapeR: side > 0 ? 0 : 14,
     thick: 6,

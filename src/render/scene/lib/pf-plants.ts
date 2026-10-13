@@ -17,7 +17,7 @@ export const PLANTS = {
   /** Gap between groups in the rear row (shrubs, tall dark stands), px. */
   rearGap: [150, 420] as const,
   /** Gap between the oversized hazy backdrop plants, and between hero plants, px. */
-  backdropGap: [180, 420] as const,
+  backdropGap: [320, 700] as const,
   heroGap: [800, 1300] as const,
   /** One shrub in this many carries autumn-yellow leaves (counted across the scene, so they spread). */
   autumnEvery: 4,
@@ -112,7 +112,8 @@ function blade(
   b.plant(x, y, h, r(), h * PLANTS.windPerPx + 0.8, h * PLANTS.bendPerPx, 0.35);
   // The more it leans, the more the tip hangs below the crest of the arc.
   const sag = Math.min(0.4, Math.abs(lean) / h) * 0.45;
-  const line = quad(x, y + 2, x + lean * 0.12, y - h * (1.12 + sag), x + lean, y - h * (1 - sag), 6);
+  const segs = h < 26 ? 4 : 6;
+  const line = quad(x, y + 2, x + lean * 0.12, y - h * (1.12 + sag), x + lean, y - h * (1 - sag), segs);
   const tip = mix(t.lit, t.sun, r() * 0.6);
   const body = mix(t.dark, t.mid, 0.55);
   b.strip(
@@ -122,9 +123,9 @@ function blade(
     (u) => (u < 0.5 ? mix(body, t.lit, u * 2) : mix(t.lit, tip, u * 2 - 1)),
   );
   if (seedHead) {
-    const hx = line[10] as number;
-    const hy = line[11] as number;
-    const a = Math.atan2((line[13] as number) - hy, (line[12] as number) - hx);
+    const hx = line[segs * 2 - 2] as number;
+    const hy = line[segs * 2 - 1] as number;
+    const a = Math.atan2((line[segs * 2 + 1] as number) - hy, (line[segs * 2] as number) - hx);
     b.leaf(hx, hy, a, h * 0.17, 3.6, t.mid, mix(t.sun, 0xe6d9a0, 0.5), 0xf2e6b4, 0, 1, 2);
   }
 }
@@ -165,7 +166,7 @@ function fineTuft(c: Ctx, x: number, y: number, n: number, h0: number, h1: numbe
     const bx = x + u * 9 + range(r, -2, 2);
     b.plant(bx, y, h, r(), h * PLANTS.windPerPx * 1.3 + 0.8, h * PLANTS.bendPerPx, 0.4);
     const sag = Math.min(0.4, Math.abs(lean) / h) * 0.5;
-    const line = quad(bx, y + 2, bx + lean * 0.1, y - h * (1.1 + sag), bx + lean, y - h * (1 - sag), 5);
+    const line = quad(bx, y + 2, bx + lean * 0.1, y - h * (1.1 + sag), bx + lean, y - h * (1 - sag), 4);
     const w0 = range(r, 1.1, 1.9);
     const tip = mix(t.lit, t.sun, 0.3 + r() * 0.6);
     b.strip(
@@ -174,6 +175,25 @@ function fineTuft(c: Ctx, x: number, y: number, n: number, h0: number, h1: numbe
       (k) => mix(mix(t.dark, t.mid, 0.5), t.lit, k),
       (k) => mix(t.mid, tip, k ** 0.7),
       (k) => 0.95 - 0.85 * k ** 1.6,
+    );
+  }
+}
+
+/** A stand of tall reeds, drawn simply: a handful of long plain blades, for the far back. */
+function reedStand(c: Ctx, x: number, y: number, h: number, t: Tone): void {
+  const { b, r } = c;
+  const n = 4 + Math.floor(r() * 3);
+  for (let i = 0; i < n; i++) {
+    const u = (i + r()) / n - 0.5;
+    const hh = h * range(r, 0.6, 1);
+    const lean = (u * 0.7 + range(r, -0.08, 0.08)) * hh;
+    const bx = x + u * 22;
+    b.plant(bx, y, hh, r(), hh * 0.06 + 1, hh * 0.25, 0.3);
+    b.strip(
+      quad(bx, y + 2, bx + lean * 0.15, y - hh * 0.6, bx + lean, y - hh, 3),
+      (k) => 6.5 * (1 - k) ** 0.7 + 0.4,
+      (k) => mix(t.dark, t.mid, k),
+      (k) => mix(t.dark, t.lit, k),
     );
   }
 }
@@ -212,6 +232,7 @@ function bush(
   autumn: number,
   form: 'round' | 'tall' | 'low' = 'round',
   bloom: readonly number[] | null = null,
+  density = 1,
 ): void {
   const { b, r } = c;
   const lobes = form === 'low' ? 4 + Math.floor(r() * 3) : 3 + Math.floor(r() * 3);
@@ -255,7 +276,7 @@ function bush(
     );
   }
   for (const [cx, cy, rad] of centres) {
-    const leaves = Math.round(rad * 1.5);
+    const leaves = Math.round(rad * 1.5 * density);
     for (let i = 0; i < leaves; i++) {
       const a = r() * Math.PI * 2;
       const d = Math.sqrt(r()) * rad * 1.05;
@@ -316,7 +337,7 @@ function fern(c: Ctx, x: number, y: number, size: number, t: Tone, up = -Math.PI
       (k) => 2.2 * (1 - k) + 0.4,
       (k) => mix(t.dark, t.mid, k),
     );
-    const pairs = Math.max(5, Math.round(len / 5.2));
+    const pairs = Math.max(5, Math.round(len / (len > 90 ? 8 : 5.6)));
     for (let j = 1; j <= pairs; j++) {
       const k = j / (pairs + 0.6);
       const q = 1 - k;
@@ -328,6 +349,7 @@ function fern(c: Ctx, x: number, y: number, size: number, t: Tone, up = -Math.PI
       tx /= tl;
       ty /= tl;
       const pl = len * 0.3 * Math.sin(Math.PI * k ** 0.6) ** 0.8 + 1.5;
+      const pw = Math.max(1.6, (len / pairs) * 0.42);
       const col = mix(t.dark, lit, clamp(k * 1.3, 0, 1));
       for (const sgn of [-1, 1]) {
         // Pinna: a sliver leaning toward the tip. The upper side catches more light.
@@ -335,8 +357,8 @@ function fern(c: Ctx, x: number, y: number, size: number, t: Tone, up = -Math.PI
         const ny = tx * sgn;
         const upper = ny < 0;
         const tipCol = upper ? mix(col, t.sun, 0.25 * k) : mix(col, t.dark, 0.25);
-        const a0 = b.v(px - tx * 1.6, py - ty * 1.6, mix(t.dark, t.mid, k));
-        const a1 = b.v(px + tx * 1.9, py + ty * 1.9, mix(t.dark, t.mid, k));
+        const a0 = b.v(px - tx * pw, py - ty * pw, mix(t.dark, t.mid, k));
+        const a1 = b.v(px + tx * pw * 1.2, py + ty * pw * 1.2, mix(t.dark, t.mid, k));
         const a2 = b.v(px + nx * pl + tx * pl * 0.5, py + ny * pl + ty * pl * 0.5, tipCol);
         b.tri(a0, a1, a2);
       }
@@ -742,6 +764,9 @@ export interface Garden {
   front: FloraBuilder;
   /** Additive halos for glow things. */
   halo: FloraBuilder;
+  /** Where small fliers live: butterflies over warm flower drifts, moths by glow plants. [x, y] each. */
+  butterflies: number[][];
+  moths: number[][];
 }
 
 export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
@@ -767,24 +792,22 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
 
     const isGround = top.kind === 'ground';
 
-    // Backdrop (drawn first, so behind everything): oversized ferns and leaves in haze tones,
-    // standing well behind the walk line. They give the strip depth without drawing the eye.
+    // Backdrop (drawn first, so behind everything): big shadowed shrubs and tall reed stands in
+    // haze tones, between the baked boulders and stumps. Few and simple: they are mass, not detail.
     if (isGround) {
       for (
-        let x = a + range(r, 40, 200);
-        x < b - 40;
+        let x = a + range(r, 60, 260);
+        x < b - 60;
         x += range(r, PLANTS.backdropGap[0], PLANTS.backdropGap[1])
       ) {
         if (blocked(x)) continue;
         const z = zoneAt(x);
         const t = toneAt(HAZE, x, r, top.y);
-        const roll = r();
-        if (roll < 0.35 + z.cool * 0.3) fern(c, x, y + 4, range(r, 110, 170), t);
-        else if (roll < 0.75 + z.deep * 0.2) {
-          broadleaf(c, x, y + 4, range(r, 90, 140), t);
-          broadleaf(c, x + range(r, 40, 70), y + 4, range(r, 70, 100), t);
+        if (r() < 0.45 + z.cool * 0.3) {
+          for (let i = 0; i < 3; i++) reedStand(c, x + i * range(r, 16, 30), y + 4, range(r, 110, 190), t);
         } else {
-          for (let i = 0; i < 3; i++) tallGrass(c, x + i * 22, y + 3, t, range(r, 1.6, 2.1));
+          const h = range(r, 110, 170);
+          bush(c, x, y + 6, h * range(r, 1.3, 1.8), h, t, 0, r() < 0.5 ? 'round' : 'tall', null, 0.35);
         }
       }
     }
@@ -884,6 +907,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
             mushroom(c, x + (i - n / 2) * range(r, 7, 12), y, range(r, 4, 10.5), violet ? 2 : 1);
         }
         clover(c, x, y, 8, t);
+        if (g.moths.length < 40 && r() < 0.6) g.moths.push([x, y - range(r, 40, 80), violet ? 1 : 0]);
         continue;
       }
       // Cumulative shares: fern, broadleaf, tall grass, flowers, mushrooms, (rest) clover.
@@ -916,6 +940,7 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number): void {
           flower(c, fx, y, range(r, 12, 34) * scale, t, col);
         }
         clover(c, x, y, 10, t);
+        if (z.warm > 0.5 && g.butterflies.length < 24) g.butterflies.push([x, y - range(r, 30, 70), r()]);
       } else if (roll < wShroom) {
         const n = 2 + Math.floor(r() * 3);
         for (let i = 0; i < n; i++)
