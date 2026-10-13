@@ -69,6 +69,12 @@
   and petal from a fixed pool (flight computed in the vertex shader, buffer written only on spawn); the pool gets a
   line of droplets and a ripple (`Water.slash`). Power: 1, +0.12 per combo step, 1.6 for the finisher.
 
+- Slash tuning that reads at zoom 3 and zoom 1: `slashKick` 19, `gustKick` 11, 20 clippings (size 4.5-9), regrow 7 s.
+  The blast also covers `slashHangRows` rows above the box, because hanging things sample the field at their
+  anchor, which is above the box. To judge it, stand still with tall grass within 110 px and use a fixed camera.
+- Vine-anchor clumps (`leafKnot`) are painted in `SHADE` (canopy shadow) with rim alpha 0.15 and only a modest lit
+  side: they must merge into the canopy behind, never be the lightest foliage up there.
+
 ## Knobs (config object at the top of each file)
 `TERRAIN` palette, moss lift/thickness/drip, `mossBare`, `faceUndercut`, `waterDepth`; `BAKE` blur sigmas, bump, key, shadow, interior, `beamWidth`, brushwork (`planes`, `strokes`, `crevice`, `chips`);
 `PLANTS` feature gap, `rearGap`, `backdropGap`, `heroGap`, `glowShare` (per zone), `autumnEvery`, `fineShare`, grass cover and heights, fringe, wind/bend per px, halo alpha, `glowEvery`;

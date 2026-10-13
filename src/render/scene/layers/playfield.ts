@@ -37,7 +37,7 @@ export const PLAYFIELD = {
   chunk: 480,
   /** How much glow plants and their halos brighten when the character or a light is near. */
   /** Clippings a slash throws from a full box of grass (fewer with less foliage in reach). */
-  clippings: 16,
+  clippings: 20,
   glowGain: 0.7,
   haloGain: 0.7,
 } as const;
@@ -138,7 +138,7 @@ export class PlayfieldLayer implements EnvModule {
       const x0 = Math.max(top.x0, mode > 0 ? p.cx : box.x);
       const x1 = Math.min(top.x1, mode < 0 ? p.cx : box.x + box.w);
       if (x1 <= x0) return;
-      const n = Math.round((0.5 + 0.5 * ((x1 - x0) / box.w)) * PLAYFIELD.clippings * Math.min(1.5, power));
+      const n = Math.round((0.5 + 0.5 * ((x1 - x0) / box.w)) * PLAYFIELD.clippings * Math.min(1.3, power));
       for (let i = 0; i < n; i++) {
         const x = x0 + r() * (x1 - x0);
         const y = top.y - 6 - r() * 26;
@@ -153,7 +153,7 @@ export class PlayfieldLayer implements EnvModule {
           -up,
           birth + r() * 0.06,
           r() * 6.28,
-          petal ? 3.2 + r() * 1.5 : 3.5 + r() * 4,
+          petal ? 3.6 + r() * 1.6 : 4.5 + r() * 4.5,
           petal ? 2 : r() < 0.7 ? 0 : 1,
           petal ? CLIP_PETAL : (tones[Math.floor(r() * tones.length)] as number),
         );

@@ -29,12 +29,14 @@ export const FIELD = {
   landTime: 0.42,
   landWidth: 34,
   /** Slash: total kick across the hit box; the gust beyond it (kick, px it runs, seconds it takes). */
-  slashKick: 13,
-  gustKick: 4.5,
+  slashKick: 19,
+  /** Rows (24 px each) above the slash box that also take the blast, for vines and beards hanging into it. */
+  slashHangRows: 5,
+  gustKick: 11,
   gustReach: 210,
   gustTime: 0.28,
   /** Seconds for cut grass to grow back. */
-  regrow: 5,
+  regrow: 7,
   /** Glow: reach of the character in px, rise and fall time constants (s). */
   glowReach: 210,
   glowRise: 0.18,
@@ -223,7 +225,10 @@ export class BendField {
         continue;
       }
       const per = (FIELD.slashKick * bl.power * h) / bl.dur;
-      for (let ry = bl.r0; ry <= bl.r1; ry++) {
+      // Rows above the box too, weaker: things that hang into it are anchored up there.
+      const rTop = Math.max(0, bl.r0 - FIELD.slashHangRows);
+      for (let ry = rTop; ry <= bl.r1; ry++) {
+        const rowK = ry < bl.r0 ? 0.75 : 1;
         for (let cx = bl.c0; cx <= bl.c1; cx++) {
           const x = (cx + 0.5) * cw;
           const u = (x - bl.cx) / ((bl.c1 - bl.c0 + 1) * cw);
@@ -234,7 +239,7 @@ export class BendField {
               ? bl.mode * (0.45 + 0.75 * Math.min(1, Math.abs(u) * 1.4))
               : (u < 0 ? -1 : 1) * (0.4 + Math.min(0.6, Math.abs(u) * 2));
           const i = ry * cols + cx;
-          v[i] = (v[i] as number) + push * per;
+          v[i] = (v[i] as number) + push * per * rowK;
         }
       }
       this.live = true;

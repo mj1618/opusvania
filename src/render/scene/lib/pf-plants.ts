@@ -283,6 +283,9 @@ function lobeLump(a: number, seed: number): number {
 }
 
 /** A dark mass of leaves round the stub of a bough: where hanging growth comes from. */
+/** The colour of deep canopy shadow: what the vine anchors sink into. */
+const SHADE = 0x03080b;
+
 function leafKnot(c: Ctx, x: number, y: number, rad: number, t: Tone): void {
   const { b, r } = c;
   const phase = r();
@@ -295,7 +298,7 @@ function leafKnot(c: Ctx, x: number, y: number, rad: number, t: Tone): void {
     bough,
     (u) => 44 * (1 - u) + 12,
     () => 0x04080b,
-    () => mix(0x070d11, t.mid, 0.22),
+    () => mix(0x05090c, t.mid, 0.08),
   );
   // The clump: overlapping lumpy lobes, dark at the rim and core, a little lighter in the body.
   const lobes: Array<[number, number, number, number]> = [];
@@ -311,7 +314,8 @@ function leafKnot(c: Ctx, x: number, y: number, rad: number, t: Tone): void {
     ]);
   }
   for (const [cx, cy, cr, seed] of lobes) {
-    const c0 = b.v(cx + cr * 0.15, cy - cr * 0.15, mix(t.dark, t.mid, 0.6));
+    // An anchor, not a feature: darker than the canopy shadow behind, with its edge lost into it.
+    const c0 = b.v(cx + cr * 0.15, cy - cr * 0.15, mix(SHADE, t.mid, 0.12));
     let prev = -1;
     let first = -1;
     const N = 22;
@@ -324,7 +328,8 @@ function leafKnot(c: Ctx, x: number, y: number, rad: number, t: Tone): void {
           : b.v(
               cx + Math.cos(a) * cr * 1.2 * lump,
               cy + Math.sin(a) * cr * lump,
-              mix(mix(t.dark, t.mid, 0.3), 0x03080c, 0.3),
+              mix(SHADE, t.dark, 0.3),
+              0.15,
             );
       if (i === 0) first = v;
       if (prev >= 0) b.tri(c0, prev, v);
@@ -336,21 +341,34 @@ function leafKnot(c: Ctx, x: number, y: number, rad: number, t: Tone): void {
   // points out and down along the surface, and a few on the body. Colour belongs to the clump:
   // a step lighter than the mass, lighter again only on the key side (upper right).
   for (const [cx, cy, cr, seed] of lobes) {
-    const n = Math.round(cr * 0.42) + 5;
+    const n = Math.round(cr * 0.32) + 4;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + range(r, -0.15, 0.15);
       const lump = lobeLump(a, seed);
-      const inset = i % 3 === 2 ? range(r, 0.35, 0.65) : range(r, 0.78, 0.9);
+      const inset = i % 3 === 2 ? range(r, 0.25, 0.5) : range(r, 0.55, 0.78);
       const lx = cx + Math.cos(a) * cr * 1.2 * lump * inset;
       const ly = cy + Math.sin(a) * cr * lump * inset;
       const ll = ([8, 11, 15][i % 3] as number) * range(r, 0.9, 1.1);
       const key = clamp(0.5 + (Math.cos(a) * 0.42 - Math.sin(a) * 0.91) * 0.6, 0, 1);
-      const body = mix(t.dark, t.mid, 0.45 + 0.3 * key);
-      const lit = mix(body, t.lit, key > 0.75 ? 0.45 : 0.08);
+      // Mostly as dark as the mass; only the key side picks up a modest light.
+      const body = mix(SHADE, t.mid, 0.12 + 0.3 * key * key);
+      const lit = mix(body, t.mid, key > 0.75 ? 0.5 : 0.1);
       // Outward along the surface, drooping.
       const dir = Math.atan2(Math.sin(a) * 0.8 + 0.45, Math.cos(a) * 1.2) + range(r, -0.3, 0.3);
       b.plant(lx, ly, ll * 2.2, phase + r() * 0.15, 1.8, 0, 0.25);
-      b.leaf(lx, ly, dir, ll, ll * 0.52, mix(t.dark, 0x03080c, 0.2), lit, mix(body, t.dark, 0.5), 0, 1, 3);
+      b.leaf(
+        lx,
+        ly,
+        dir,
+        ll * range(r, 0.8, 1.5),
+        ll * range(r, 0.4, 0.62),
+        SHADE,
+        lit,
+        mix(body, SHADE, 0.5),
+        range(r, -0.3, 0.3),
+        1,
+        3,
+      );
     }
   }
   // Where the vines leave: tendrils and a few leaves hanging from the underside.
@@ -375,7 +393,7 @@ function leafKnot(c: Ctx, x: number, y: number, rad: number, t: Tone): void {
         ll,
         ll * 0.5,
         t.dark,
-        mix(t.dark, t.mid, 0.6),
+        mix(SHADE, t.mid, 0.25),
         t.dark,
         0,
         1,
