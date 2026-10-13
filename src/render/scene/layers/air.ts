@@ -98,7 +98,7 @@ export const AIR = {
     underground: 30,
     /** How much a shaft crossing the mist lights it up, and how much point lights do. */
     litByShaft: 0.5,
-    litByLights: 0.25,
+    litByLights: 0,
     /** Point lights reach this many times their radius through the mist. */
     lightReach: 2.1,
     /** Extra mist lying over the pool: centre x, half width, how many times thicker. */
@@ -191,9 +191,9 @@ export const AIR = {
   backGlow: {
     radius: 300,
     color: [0x7fd0ee, 0xcfe8d0, 0xb7a8f0] as Three<number>,
-    alpha: [0.07, 0.03, 0.1] as Three<number>,
+    alpha: [0, 0, 0] as Three<number>,
     /** Extra strength with the camera high in the canopy, where everything behind is dark. */
-    high: 0.05,
+    high: 0,
   },
   moths: {
     count: 6,

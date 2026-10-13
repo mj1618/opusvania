@@ -142,6 +142,18 @@
 - look:stats hero p90 depends on how much of the hero box is face: on the high ledges the box holds
   more dark background, so p90 reads lower there even when the face is near-white.
 
+## Round 10: the owner found it too bright (their eye outranks the metrics)
+- In play, everything within ~200 px of the hero was a pale washed bubble. The seven fixed stops hid
+  it: she stands on fairly bare ground there. Check with a walk of the ground route instead (frame
+  every 150 px, idle and running, a 480x300 crop round her, % of pixels over luma 185): before, 67 of
+  74 frames had > 3% pale and the worst 21%; after, none over 1.8%.
+- What it was: hero light gain (1.5 x reach 1.5) stacked on zone exposure 1.72-1.85, the mid-tone
+  lift, air halo, mist lit by lights, and bloom colour boost 2.6 on already saturated lit tips.
+- Ended on: lights.gain 0.38 (about +38% at the centre), cap 0.43, channelCap 0.62, reach 1.15, haze
+  0.006, glint 0.08, warm 0.004; bloom intensity 0.7, colorBoost 1.3; midLift 0; exposure 1.3 / 1.12 /
+  1.4; mist litByLights 0; backGlow off. Do not raise these to chase mean luma or hero ratio.
+- Resolution: nothing scales with window size (same numbers at 1920, 1280 and 960 wide).
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").

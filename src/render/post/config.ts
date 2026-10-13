@@ -13,7 +13,7 @@ export const POST = {
     threshold: 0.58,
     knee: 0.3,
     /** How much of the blurred glow is added back. */
-    intensity: 0.85,
+    intensity: 0.7,
     /** 0..1: how much each wider blur level carries. Higher = wider, softer halo. */
     spread: 0.68,
     /** Tap distance multiplier of the upsample tent (1 = normal). */
@@ -21,7 +21,7 @@ export const POST = {
     /** Saturation of the glow, so cyan plants bleed cyan and the ember bleeds orange, not white. */
     saturation: 1.35,
     /** Extra glow for saturated light: cyan plants and the ember bloom harder than pale sky and fog. */
-    colorBoost: 2.6,
+    colorBoost: 1.3,
     /**
      * Light wrap: dark pixels beside a bright opening glow at the edge like backlit leaves. `wrap` on
      * the ground route, `wrapHigh` with the camera at the top of the scene (the canopy route).
@@ -37,21 +37,21 @@ export const POST = {
      * Gain on surfaces: at the heart of a light a surface's own colour is multiplied by 1 + gain
      * (hue and shading kept).
      */
-    gain: 1.5,
+    gain: 0.38,
     /** Strength left where the surroundings are bright already (the light well). */
     inBrightPlaces: 0.3,
     /** A small floor added before the gain, so near-black soil still shows the pool. */
-    warm: 0.012,
+    warm: 0.004,
     /** How much of the light's own colour tints the surface (0 = none, 1 = fully). */
     tint: 0.22,
     /** Chroma raised with the gain: lit foliage gets richer, not paler. */
-    chroma: 0.08,
+    chroma: 0.12,
     /** No colour channel of a lit surface goes above this (keeps hue; nothing clips to white). */
-    channelCap: 0.8,
+    channelCap: 0.62,
     /** Glints: extra light on spots that are already bright (wet moss, water highlights). */
-    glint: 0.35,
+    glint: 0.08,
     /** The glow hanging in the air around a light, and how far it reaches (x the light's radius). */
-    haze: 0.04,
+    haze: 0.006,
     hazeReach: 1.9,
     /** Falloff exponent on the smooth window (higher = tighter core). */
     falloff: 1.25,
@@ -63,7 +63,7 @@ export const POST = {
     /** How much silhouette edges facing the light gain and edges facing away lose. */
     direction: 0.55,
     /** Lit surfaces approach this luminance and never pass it (moss and grass must not go white). */
-    cap: 0.55,
+    cap: 0.43,
     /**
      * The hero matte (lib/fx-mask.ts): how much of the light and halo is kept off the hero's own
      * pixels (1 = all), and how much of the bloom.
@@ -71,7 +71,7 @@ export const POST = {
     heroProtect: 1,
     heroBloomCut: 0.65,
     /** Every light's radius is scaled by this (the skins register a modest reach). */
-    reach: 1.5,
+    reach: 1.15,
   },
 
   /**
@@ -96,7 +96,7 @@ export const POST = {
   grade: {
     exposure: 1.04,
     /** Lift of the mid-tones only (0 = none): blacks and highlights are left where they are. */
-    midLift: 0.12,
+    midLift: 0,
     /** Highlights roll off smoothly above this instead of clipping. */
     shoulder: 0.74,
     /** S-curve strength around the pivot (0 = none). */
@@ -143,7 +143,7 @@ export const ZONE_GRADE = {
    * violet-emerald stand. Exposure, and an S-curve whose pivot sits high in the dark zones so the
    * milky mid-tones of the fog drop while glows and sky stay up.
    */
-  exposure: [1.72, 1.4, 1.85] as const,
+  exposure: [1.3, 1.12, 1.4] as const,
   contrast: [0.36, 0.28, 0.36] as const,
   pivot: [0.4, 0.36, 0.4] as const,
   /** Shadows: moonlit blue, the default teal-indigo, violet dusk. */
