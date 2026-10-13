@@ -49,6 +49,8 @@ const C = {
   head: v3(0),
   headLow: v3(0),
   eye: v3(0),
+  eyeGlow: v3(0),
+  calmLight: v3(0),
   feeler: v3(0),
   fringeTop: v3(0),
   fringeTip: v3(0),
@@ -57,6 +59,7 @@ const C = {
   pop: v3(0),
   shadow: v3(0),
   dust: v3(0),
+  dustPale: v3(0),
   mote: v3(0),
   spot: [v3(0), v3(0), v3(0)],
 };
@@ -80,6 +83,8 @@ export function loadColors(): void {
   set(C.head, k.head);
   set(C.headLow, k.headLow);
   set(C.eye, k.eye);
+  set(C.eyeGlow, k.eyeGlow);
+  set(C.calmLight, BURR.calm.light);
   set(C.feeler, k.feeler);
   set(C.fringeTop, k.fringeTop);
   set(C.fringeTip, k.fringeTip);
@@ -88,6 +93,7 @@ export function loadColors(): void {
   set(C.pop, k.pop);
   set(C.shadow, k.shadow);
   set(C.dust, k.dust);
+  set(C.dustPale, k.dustPale);
   set(C.mote, k.mote);
   for (let i = 0; i < 3; i++) set(C.spot[i]!, BURR.spotColor[i]!);
 }
@@ -147,6 +153,43 @@ export class BurrRig {
   private lastMode: EnemyState['mode'] = 'walk';
   /** Set for the one update in which a new hit was seen (the renderer throws chips). */
   struck = false;
+  /** Calmed, 0..1 (eased): settled, slow breath, warm lights, lids down. */
+  calmK = 0;
+  /** Breath phase, rad: integrated, so its rate can change without a jump. */
+  breath = 0;
+  /** Seconds since a calm mote last lifted off it. */
+  moteT = 0;
+  /** Why the turn in progress started (set by the renderer from `enemyTurn`), and the side of what it turns from. */
+  turnAct: '' | 'lantern' | 'wary' = '';
+  actDir = 1;
+  actNew = false;
+
+  /** A turn with a cause has begun: `dir` = the side of the light / the edge it turns from. */
+  react(cause: 'lantern' | 'wary', dir: number): void {
+    this.turnAct = cause;
+    this.actDir = dir;
+    this.actNew = true;
+  }
+  /** Shying from a lantern's light: 1 through the flinch, easing off after the turn. */
+  shyK = 0;
+  /** Peering at an edge she is under, 0..1 (eased), and the side it peers to. */
+  peerK = 0;
+  peerDir = 1;
+  /** Head craned out, 0..1; the body's weight shifted along the screen, px; burrs raised, 0..1. */
+  readonly reach = new Spring(0, 13, 0.6);
+  readonly back = new Spring(0, 13, 0.5);
+  readonly bristle = new Spring(0, 24, 0.32);
+  /** The bump of its touch: the mode start it belongs to, where the turn factors were, the way it was shoved. */
+  private touchStart = -1;
+  private touchD = 1;
+  private touchDH = 1;
+  touching = false;
+  /** Set for the one update in which its touch landed (the renderer throws dust). */
+  bumped = false;
+  /** The side a squash is taken along: the blow's, or the bump's. */
+  sqDir = 0;
+  /** Standing, last update (a wary stand is 30-frame pauses with one frame of `walk` between them). */
+  private stood = false;
   /** Death effects already thrown (bit 1: first break, bit 2: second). */
   deadStage = 0;
   /** Dust accumulator (render seconds). */
@@ -160,7 +203,11 @@ export class BurrRig {
     this.seed = hash1(index * 131 + 17);
   }
 
-  /** `hx, hy` = where the hero is (her head), world px; `clock` = render seconds. */
+  /**
+   * `hx, hy` = where the hero is (her head), world px; `feetY` = her feet, `seen` = she is there to
+   * be watched (not faded); `safe` = it is harmless for a lasting reason (inside a lit lantern's
+   * sanctuary, the run is over); `clock` = render seconds.
+   */
   update(
     e: EnemyState,
     simFrame: number,
@@ -169,6 +216,9 @@ export class BurrRig {
     hx: number,
     hy: number,
     clock: number,
+    feetY = 0,
+    seen = false,
+    safe = false,
   ): void {
     const B = BURR;
     const f = e.facing;
@@ -189,6 +239,15 @@ export class BurrRig {
       this.lag.snap(0);
       this.hurtK = this.teeterK = 0;
       this.shuffle = 0;
+      this.calmK = safe || e.calm > 0 ? 1 : 0;
+      this.turnAct = '';
+      this.shyK = this.peerK = 0;
+      this.reach.snap(0);
+      this.back.snap(0);
+      this.bristle.snap(0);
+      this.touchStart = simFrame - e.modeFrames;
+      this.touching = false;
+      this.stood = false;
     } else if (simFrame !== this.frame) {
       this.px = this.cx;
       this.ps = this.cs;
@@ -205,20 +264,73 @@ export class BurrRig {
     this.hitAge = e.hitFrame < 0 ? 1e6 : Math.max(0, simFrame - e.hitFrame + a - 1);
     if (e.mode !== 'dead') this.deadStage = 0;
 
+    // --- Calm: eases in, and lifts over its last frames.
+    const calmT = e.mode === 'dead' ? 0 : safe ? 1 : sat(e.calm / B.calm.fade);
+    this.calmK += (calmT - this.calmK) * approach(calmT > this.calmK ? B.calm.in : B.calm.out, dt);
+    const calm = this.calmK;
+    this.breath += (2.1 + (B.calm.rate - 2.1) * calm) * dt;
+
+    // --- Its touch landed: `alert` with a shove (a plain flinch has none). Seen once per mode start.
+    const modeStart = simFrame - e.modeFrames;
+    this.bumped = false;
+    if (e.mode === 'alert' && e.knockVx !== 0 && modeStart !== this.touchStart && !fresh) {
+      this.touchStart = modeStart;
+      this.touchD = this.d;
+      this.touchDH = this.dHead;
+      this.bumped = true;
+      const away = e.knockVx > 0 ? 1 : -1;
+      this.sqDir = away;
+      this.squash.x = -B.touch.squash;
+      this.squash.v = 0;
+      this.rock.v += away * B.touch.rock;
+      this.bristle.v += B.touch.kick;
+    }
+    this.touching = e.mode === 'alert' && modeStart === this.touchStart;
+
+    // --- Standing with her below it and near: it peers at the edge she is under.
+    const turningNow = e.mode === 'pause' && e.turning;
+    if (!turningNow) this.turnAct = '';
+    const standing = (e.mode === 'pause' && !e.turning) || (e.mode === 'walk' && e.vx === 0 && this.stood);
+    this.stood = standing;
+    const below = seen && feetY > e.y + e.h + B.peer.belowPx && Math.abs(hx - this.x) < B.peer.reachX;
+    let peer = standing && below && calmT === 0;
+    if (peer) this.peerDir = hx < this.x ? -1 : 1;
+
     // --- Turning: the head swings round first, the body pivots after it.
     const lastD = this.d;
-    if (e.mode === 'pause' && e.turning) {
+    /** 1 through the first beat of a turn that is a reaction (it has not begun to turn yet). */
+    let react = 0;
+    if (turningNow) {
       const total = Math.max(1, e.modeFrames + e.timer);
       const t = sat(this.mf / total);
-      this.dHead = -f + 2 * f * ease(t / 0.5);
-      this.d = -f + 2 * f * ease((t - 0.16) / 0.74);
+      // A turn with a cause starts with the reaction to it; the turn itself takes what is left.
+      const hold = this.turnAct === 'lantern' ? B.shy.hold : this.turnAct === 'wary' ? B.peer.hold : 0;
+      const u = sat((t - hold) / (1 - hold));
+      react = hold > 0 ? 1 - smoothstep(hold * 0.75, hold * 1.25, t) : 0;
+      this.dHead = -f + 2 * f * ease(u / 0.5);
+      this.d = -f + 2 * f * ease((u - 0.16) / 0.74);
+      if (this.turnAct === 'wary' && react > 0.5) {
+        peer = true;
+        this.peerDir = this.actDir;
+      }
+    } else if (this.touching) {
+      // The sim turns it away from her at once; drawn, it takes the bump first and turns after.
+      const T = B.touch;
+      this.dHead = this.touchDH + (f - this.touchDH) * ease((this.mf - T.hold) / T.head);
+      this.d = this.touchD + (f - this.touchD) * ease((this.mf - T.hold - 2) / T.body);
     } else {
-      const k = approach(22, dt);
-      this.d += (f - this.d) * k;
-      this.dHead += (f - this.dHead) * approach(30, dt);
-      if (Math.abs(this.d - f) < 0.002) this.d = f;
-      if (Math.abs(this.dHead - f) < 0.002) this.dHead = f;
+      // Peering, it turns to the edge's side; walking on, it comes back round.
+      const want = peer || (this.peerK > 0.6 && standing) ? this.peerDir : f;
+      const slow = this.peerK > 0.05;
+      this.d += (want - this.d) * approach(slow ? 7 : 22, dt);
+      this.dHead += (want - this.dHead) * approach(slow ? 11 : 30, dt);
+      if (Math.abs(this.d - want) < 0.002) this.d = want;
+      if (Math.abs(this.dHead - want) < 0.002) this.dHead = want;
     }
+    this.peerK += ((peer ? 1 : 0) - this.peerK) * approach(peer ? B.peer.in : B.peer.out, dt);
+    const shying = this.turnAct === 'lantern';
+    if (shying) this.shyK = Math.max(this.shyK, react);
+    if (!shying || react < 0.5) this.shyK += (0 - this.shyK) * approach(1 / B.shy.linger, dt);
     this.shuffle += Math.abs(this.d - lastD) * 15;
     this.dist = this.ps + (this.cs - this.ps) * a + this.shuffle;
 
@@ -230,6 +342,7 @@ export class BurrRig {
         const pw = 0.75 + 0.25 * Math.max(1, e.hitPower);
         this.squash.x = -B.hit.squash * pw;
         this.squash.v = 0;
+        this.sqDir = e.hitDir;
         if (e.mode !== 'dead') this.rock.v += (e.hitDir || f) * B.hit.rock * pw;
         this.struck = true;
       }
@@ -238,34 +351,81 @@ export class BurrRig {
     // --- Pose targets per mode.
     const mode = e.mode;
     // A flinch starts with a start: one quick flattening before it hunkers.
-    if (mode === 'alert' && this.lastMode !== 'alert' && !fresh) this.squash.x = 0.09;
+    if (mode === 'alert' && this.lastMode !== 'alert' && !fresh && !this.touching) this.squash.x = 0.09;
+    // The start at a lantern's light: the same quick flattening, and it is thrown back on its legs.
+    if (shying && this.actNew && !fresh) {
+      this.squash.x = 0.1;
+      this.back.v = -this.actDir * B.shy.kick;
+    }
+    this.actNew = false;
     this.lastMode = mode;
     const resting = mode === 'pause' && !e.turning;
     const turning = mode === 'pause' && e.turning;
+    const sliding = this.touching && Math.abs(e.knockVx) > 0.5;
     let crouchT = 0;
     let tuckT = 0;
     let leanT = 0;
-    if (mode === 'walk') leanT = this.d * B.gait.lean;
-    else if (resting) {
+    let backT = 0;
+    let reachT = 0;
+    let bristleT = 0;
+    if (mode === 'walk' && !standing) leanT = this.d * B.gait.lean;
+    else if (resting || standing) {
       crouchT = 1;
       tuckT = 0.2;
     } else if (turning) crouchT = 0.2;
-    else if (mode === 'alert') {
+    else if (sliding) {
+      // Shoved back off her: up on its legs and skidding, head pulled in, burrs up.
+      crouchT = 0.15;
+      tuckT = 0.8;
+      leanT = this.sqDir * 0.1;
+      bristleT = 1;
+    } else if (mode === 'alert') {
       crouchT = 1 + B.hunker / B.settle;
-      tuckT = 0.4;
+      tuckT = this.touching ? 0.6 : 0.4;
+      bristleT = this.touching ? 0.45 * sat(e.timer / 8) : 0;
     } else if (mode === 'hurt') {
       crouchT = 0.15;
       tuckT = 0.75;
       leanT = e.hitDir * 0.1 * sat(Math.abs(e.knockVx) / 6);
     } else tuckT = 1;
-    this.crouch.omega = mode === 'alert' ? 36 : mode === 'walk' ? 15 : 10;
-    this.crouch.zeta = mode === 'alert' ? 0.55 : 0.8;
+    // Shying from the light: ducked, head in, rocked back off its front legs, weight away from it.
+    if (shying && react > 0) {
+      crouchT += (B.shy.duck - crouchT) * react;
+      tuckT += (1 - tuckT) * react;
+      leanT += (-this.actDir * B.shy.rock - leanT) * react;
+      backT = -this.actDir * B.shy.back * react;
+    }
+    tuckT = Math.max(tuckT, 0.55 * this.shyK);
+    // Peering: low on its legs, weight back from the edge, the head craned out toward it.
+    const pk = this.peerK;
+    if (pk > 0.001) {
+      crouchT += (B.peer.crouch - crouchT) * pk;
+      tuckT *= 1 - pk;
+      leanT += (-this.peerDir * B.peer.rock - leanT) * pk;
+      backT += -this.peerDir * B.peer.back * pk;
+      reachT = pk;
+    }
+    // Calmed: all the way down, head out and easy (a calmed turn keeps turning, slowly).
+    if (calm > 0.001 && mode !== 'hurt' && mode !== 'dead') {
+      // (Only where it stands: one that walks out of a sanctuary walks, with the calm in its lights.)
+      if (!turning && (mode !== 'walk' || standing)) crouchT += (B.calm.settle - crouchT) * calm;
+      tuckT += (0.08 - tuckT) * calm;
+      leanT *= 1 - calm;
+      bristleT *= 1 - calm;
+    }
+    const sharp = (mode === 'alert' && !sliding) || (shying && react > 0.5);
+    this.crouch.omega = sharp ? 36 : mode === 'walk' ? 15 : 10;
+    this.crouch.zeta = sharp ? 0.55 : 0.8;
     this.crouch.step(crouchT, dt);
     this.tuck.step(tuckT, dt);
     this.rock.step(mode === 'dead' ? 0 : leanT, dt);
     this.squash.step(0, dt);
+    this.back.step(backT, dt);
+    this.reach.step(reachT, dt);
+    this.bristle.step(bristleT, dt);
     this.lag.step(this.vx * B.fringe.lag, dt);
-    const skid = mode === 'hurt' && (e.hitstop > 0 || Math.abs(e.knockVx) > 0.5 || e.modeFrames < 9);
+    const skid =
+      sliding || (mode === 'hurt' && (e.hitstop > 0 || Math.abs(e.knockVx) > 0.5 || e.modeFrames < 9));
     this.hurtK += ((skid ? 1 : 0) - this.hurtK) * approach(skid ? 40 : 9, dt);
     const tee = mode === 'hurt' && e.teeter !== 0;
     this.teeterK += ((tee ? 1 : 0) - this.teeterK) * approach(tee ? 26 : 10, dt);
@@ -278,19 +438,27 @@ export class BurrRig {
       lx = f * (0.2 + 0.7 * noise1(clock * 0.5 + this.seed * 31, 11));
       ly = 0.25 * noise1(clock * 0.4 + this.seed * 17, 12);
     }
-    if (this.wary > 0.02) {
+    // (Peering, they are on her too; shying, they turn from the light and narrow; calm, they sink.)
+    const onHer = Math.max(this.wary, 0.9 * pk);
+    if (onHer > 0.02) {
       const dx = hx - this.x;
       const dy = hy - (this.y - 12);
       const dl = Math.hypot(dx, dy) || 1;
-      lx += ((dx / dl) * 0.95 - lx) * sat(this.wary * 1.5);
-      ly += ((dy / dl) * 0.95 - ly) * sat(this.wary * 1.5);
+      lx += ((dx / dl) * 0.95 - lx) * sat(onHer * 1.5);
+      ly += ((dy / dl) * 0.95 - ly) * sat(onHer * 1.5);
     }
+    if (shying && react > 0) {
+      lx += (-this.actDir * 0.7 - lx) * react;
+      ly += (0.6 - ly) * react;
+    }
+    ly += (0.7 - ly) * calm * 0.8;
     const lk = approach(mode === 'alert' ? 40 : 9, dt);
     this.lookX += (lx - this.lookX) * lk;
     this.lookY += (ly - this.lookY) * lk;
     const bp = pulse(clock + this.seed * 9, 3.4, 0.14, 3 + Math.floor(this.seed * 50));
     this.blink = watch ? 0 : bp > 0 ? Math.sin(Math.PI * bp) : 0;
-    const walking = mode === 'walk' || turning;
+    this.blink = Math.max(this.blink, B.shy.squint * (shying ? react : 0), 0.3 * this.shyK);
+    const walking = (mode === 'walk' && !standing) || turning;
     this.walkK += ((walking ? 1 : 0) - this.walkK) * approach(14, dt);
   }
 }
@@ -402,6 +570,8 @@ const SH_SPOT = sh(W.spot, W.spot, 0, 0, 0, 0.5);
 
 let toneDark = 0;
 let toneLight = 0;
+/** How lit the eyes' halo is this creature (set per creature by `drawBurrback`). */
+let eyeLit = 1;
 function tone(out: V3, base: V3, k = 1): void {
   const dk = 1 - toneDark * k;
   const li = toneLight * k;
@@ -439,8 +609,10 @@ function drawHead(
   const H = B.head;
   const tuck = sat(rig.tuck.x);
   const aH = Math.abs(dH);
-  const headLx = dH * (H.x - H.tuck * tuck);
-  const headLy = -(H.y - (B.rim - rimH) * 0.55) - tuck * 1.2;
+  const reach = rig.reach.x;
+  const calm = rig.calmK;
+  const headLx = dH * (H.x - H.tuck * tuck + H.reach * reach);
+  const headLy = -(H.y - (B.rim - rimH) * 0.55) - tuck * 1.2 + reach * 1.8 + calm * 0.9;
   const hcx = bx(headLx, headLy);
   const hcy = by(headLx, headLy);
   if (aH > 0.12) {
@@ -480,27 +652,43 @@ function drawHead(
       hcy,
       H.len * (0.45 + 0.55 * aH),
       H.high,
-      rot + dH * (0.3 + 0.35 * rig.lookY * rig.wary),
+      rot + dH * (0.3 + 0.35 * rig.lookY * Math.max(rig.wary, rig.peerK) + 0.22 * reach),
       SH_HEAD,
       14,
     );
     // The face: two small dim glints on the plate that slide toward what it watches (ahead as it
     // walks, at her when it is wary). Wider in a flinch, shut when it dies.
-    const open = (dead ? 1 - curl : 1) * (1 - 0.92 * rig.blink);
+    // Calmed, the lids come most of the way down: two warm slits.
+    const open =
+      (dead ? 1 - curl : 1) * (1 - 0.92 * rig.blink) * (1 - B.calm.lids * calm * (1 - 0.5 * rig.walkK));
     if (open > 0.05) {
-      const wide = 1 + 0.22 * sat(rig.wary);
+      const wide = 1 + 0.22 * sat(Math.max(rig.wary, 0.6 * rig.peerK));
       const show = sat(aH * 1.6 - 0.3);
       for (let i = 0; i < 2; i++) {
-        const k = i === 0 ? 1 : 0.78;
-        const elx = headLx + dH * H.len * (i === 0 ? 0.22 : 0.68);
-        const ely = headLy - H.high * (i === 0 ? 0.08 : 0.16);
+        const k = i === 0 ? 1 : 0.8;
+        const elx = headLx + dH * H.len * (i === 0 ? 0.16 : 0.66);
+        const ely = headLy - H.high * (i === 0 ? 0.1 : 0.2);
         // Blank pale eyes: the look is the eyes sliding on the plate, never a pupil (that read as a toy).
-        const ex = bx(elx, ely) + rig.lookX * 0.8 - Math.sign(dH) * 0.4;
-        const ey = by(elx, ely) + rig.lookY * 0.8;
+        const ex = bx(elx, ely) + rig.lookX * 1.1 - Math.sign(dH) * 0.4;
+        const ey = by(elx, ely) + rig.lookY * 1.1;
         const rx = H.eye * k * (0.6 + 0.4 * aH);
         const ry = H.eye * 1.1 * k * wide * open;
         SH_EYE.alpha = show;
         p.ellipse(ex, ey, rx, ry, rot, SH_EYE, 12);
+        // A faint warm halo, so the two lights carry at play zoom (once, on the face over the brow).
+        if (front) {
+          const hr = H.eye * H.eyeHalo * k;
+          p.glow(
+            ex,
+            ey,
+            hr,
+            C.eyeGlow as unknown as RGB,
+            H.eyeGlow * show * (0.35 + 0.65 * open) * eyeLit,
+            hr,
+            0,
+            10,
+          );
+        }
       }
     }
   }
@@ -560,6 +748,9 @@ export function drawBurrback(
   tone(W.head, C.head);
   tone(W.headLow, C.headLow);
   tone(W.eye, C.eye, 0.3);
+  // Calmed, the eyes take the lantern's warmth; right after a blow they are not lit.
+  for (let k = 0; k < 3; k++) W.eye[k] = W.eye[k]! + (C.calmLight[k]! - W.eye[k]!) * 0.45 * rig.calmK;
+  eyeLit = 1 - sat(toneDark * 1.2);
   tone(W.feeler, C.feeler);
   tone(W.fringe0, C.fringeTop);
   tone(W.fringe1, C.fringeTip);
@@ -568,7 +759,9 @@ export function drawBurrback(
   const g = B.gait;
   const walkK = rig.walkK * (1 - rig.hurtK) * (1 - deadK);
   const crouch = rig.crouch.x;
-  const breath = Math.sin(clock * 2.1 + ph) * 0.022 * sat(crouch) * (1 - deadK);
+  const calm = rig.calmK;
+  const breathS = Math.sin(rig.breath + ph);
+  const breath = breathS * (0.022 + (B.calm.breath - 0.022) * calm) * sat(crouch) * (1 - deadK);
   const rimH = Math.max(2.2, B.rim - B.settle * crouch + bobAt(rig.dist, g) * g.bob * walkK);
   const sq = rig.squash.x;
   const sx = 1 + sq - breath * 0.4 + 0.12 * swell;
@@ -580,8 +773,8 @@ export function drawBurrback(
     e.teeter * rig.teeterK * (0.13 + 0.03 * Math.sin(clock * 14 + ph));
   const pivot = -(rimH + B.dome) / 2;
   // The squash is taken on the side away from the blow, so it shunts along it.
-  const shunt = -sq * B.halfLen * 0.55 * (e.hitDir || 0);
-  const ox = rig.x + shunt;
+  const shunt = -sq * B.halfLen * 0.55 * rig.sqDir;
+  const ox = rig.x + shunt + rig.back.x * (1 - deadK);
   const oy = rig.y - hop;
   setBody(ox, oy, sx, sy, rot, pivot);
   const alpha = 1;
@@ -764,14 +957,17 @@ export function drawBurrback(
   // The zone's light on the top edge: a thin tinted rim that lifts the dome off the dark ground.
   for (let k = 0; k < 3; k++)
     KEY[k] = C.edge[0]![k]! * zw[0]! + C.edge[1]![k]! * zw[1]! + C.edge[2]![k]! * zw[2]!;
+  // Calmed, the rim takes the lantern's warmth: the one change that carries at any zoom.
+  for (let k = 0; k < 3; k++) KEY[k] = KEY[k]! + (C.calmLight[k]! - KEY[k]!) * B.calm.rim * calm;
   p.keyColor = KEY as unknown as RGB;
-  SH_SHELL.rim = B.rimKey * (1 - toneDark);
+  SH_SHELL.rim = B.rimKey * (1 - toneDark) * (1 + B.calm.rimUp * calm);
   SH_SHELL.cool = B.rimCool;
   SH_HORN.rim = SH_SHELL.rim;
 
   // --- Signature outline, drawn under the shell so the bases are hidden: a short upturned horn on
   // the brow, a row of blunt burrs along the ridge, a raised lip at the tail.
   const dd = clamp(d * 2.5, -1, 1);
+  const bristle = clamp(rig.bristle.x, -0.3, 1.5);
   for (let i = 0; i < SPIKES.length; i++) {
     const sp = SPIKES[i]!;
     const a = Math.PI * sp[0]!;
@@ -784,7 +980,8 @@ export function drawBurrback(
     const nl = Math.hypot(nx, ny) || 1;
     nx /= nl;
     ny /= nl;
-    const len = sp[1]!;
+    // Bristling they stand longer and straighter; calmed they lie a little flatter.
+    const len = sp[1]! * (1 + B.touch.bristle * bristle * (i === 0 ? 0.45 : 1) - 0.18 * calm);
     // Lean: along the body (+ = toward the head) and up.
     const tx = rx0 + nx * len * 0.55 + dd * sp[2]! * len;
     const ty = ry0 + ny * len * 0.55 - sp[3]! * len;
@@ -884,11 +1081,18 @@ export function drawBurrback(
       const sc = W.spot;
       for (let k = 0; k < 3; k++)
         sc[k] = 0.82 * C.spot[0]![k]! * zw[0]! + C.spot[1]![k]! * zw[1]! + C.spot[2]![k]! * zw[2]!;
+      // Calmed: one warm tone, all four breathing together with the body.
+      for (let k = 0; k < 3; k++) sc[k] = sc[k]! + (C.calmLight[k]! - sc[k]!) * calm;
       const alert = e.mode === 'alert' ? sat(t / 3) * sat((e.timer + 4) / 6) : 0;
+      // Its touch: they jump at once, then fall back through the flinch.
+      const flash = rig.touching ? (B.touch.flash - 1) * (1 - smoothstep(1, 12, t)) : 0;
+      const together = B.calm.dim * (1 - B.calm.pulse * (0.5 - 0.5 * breathS));
       for (let i = 0; i < S.at.length; i++) {
         const sp = S.at[i]!;
         let br = 1 - S.pulse * (0.5 + 0.5 * Math.sin(clock * S.rate + ph - i * 0.9));
-        br *= 1 + (S.alert - 1) * alert;
+        br += (together - br) * calm;
+        br *= 1 + (S.alert - 1) * alert * (1 - calm) + flash;
+        br *= 1 - B.shy.dim * rig.shyK;
         // Hurt badly: they flicker. Dying: they gutter out one after another.
         if (e.hp <= 1 && !dead) br *= 0.55 + 0.45 * (noise1(clock * 13 + i * 7.3, 3 + i) > -0.15 ? 1 : 0.25);
         if (dead) br *= t > 1 + i * 1.8 ? 0 : 1;
@@ -917,9 +1121,9 @@ export function drawBurrback(
       const h2 = hash1(i * 13 + 5);
       const rx = u * aEff * 0.97 + (h1 - 0.5) * 1.6;
       const ry = -rimH + sag * (1 - u * u) * 0.75 - 1.6;
-      const len = Fr.len * (0.75 + 0.5 * h2) * (1 - 0.25 * Math.abs(u));
+      const len = Fr.len * (0.75 + 0.5 * h2) * (1 - 0.25 * Math.abs(u)) * (1 + 0.5 * bristle);
       const sway = Math.sin(clock * 1.7 + i * 1.3 + ph) * 0.35;
-      const tx = rx + u * 2.6 - rig.lag.x * (0.7 + 0.6 * h1) + sway;
+      const tx = rx + u * 2.6 * (1 + 1.6 * bristle) - rig.lag.x * (0.7 + 0.6 * h1) + sway;
       const ty = Math.min(-0.2, ry + len);
       const wv = Fr.w * (0.8 + 0.4 * h1);
       p.px[0] = bx(rx, ry - 1.2);
@@ -956,6 +1160,27 @@ export function stepFeelers(rig: BurrRig, e: EnemyState, clock: number, dt: numb
   for (let i = 0; i < 2; i++) {
     const spring = i === 0 ? rig.feel0 : rig.feel1;
     let target: number;
+    const shyNow = rig.turnAct === 'lantern' && rig.shyK > 0.6;
+    if (rig.calmK > 0.5 && e.mode !== 'hurt' && e.mode !== 'dead') {
+      // Calmed: laid down on the ground ahead, barely moving.
+      target = ground + 0.04 + 0.05 * Math.sin(rig.breath + i * 2 + ph);
+      spring.omega = 6;
+      spring.step(target, dt);
+      continue;
+    }
+    if (shyNow) {
+      // Thrown back from the light.
+      spring.omega = 34;
+      spring.step(-1.7 + i * 0.25, dt);
+      continue;
+    }
+    if (rig.peerK > 0.5 && e.mode !== 'alert' && e.mode !== 'hurt' && e.mode !== 'dead') {
+      // Peering: stretched out low toward the edge, feeling the air in turn.
+      target = ground - 0.2 + 0.16 * Math.sin(clock * 2.6 + i * Math.PI + ph);
+      spring.omega = 10;
+      spring.step(target, dt);
+      continue;
+    }
     if (e.mode === 'walk') {
       // One tap per footfall, the two feelers in turn.
       const s = Math.sin((rig.dist / B.gait.cycle) * Math.PI * 2 + i * Math.PI);

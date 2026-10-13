@@ -300,7 +300,7 @@ function paintRows(rows: Entry[][]): Texture {
         put(e.text, size, tx, r > 0 ? 0.85 : 1);
         let end = tx + tw;
         if (e.of) {
-          put(e.of, size * S.sub, end + 5 * k, e.all ? 0.95 : 0.6);
+          put(e.of, size * S.sub, end + 5 * k, e.all ? 0.95 : 0.78);
           end += 5 * k + width(e.of, size * S.sub);
         }
         if (e.all) {

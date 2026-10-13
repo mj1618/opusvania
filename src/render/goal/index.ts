@@ -21,12 +21,14 @@ import { vesperLink } from '../character/vesper/link';
 import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } from '../contract';
 import type { PointLight } from '../lights';
 import { GlintBatch, K_FLARE, K_SPARK } from '../pickups/batch';
+import { zoneMix, zoneWeights } from '../scene/lib/fx-zones';
 import { wind } from '../scene/lib/look';
 import { GOAL, MAX_QUADS } from './config';
+import { DropsView } from './drops';
 import { HeartView } from './heart';
 import { LanternView, Moth } from './lantern';
 import { LanternLife } from './life';
-import { priceArc, smooth, streamCount } from './logic';
+import { priceArc, sleepBreath, smooth, streamCount } from './logic';
 import { SurfaceLight } from './surface';
 
 export interface GoalLayers {
@@ -76,6 +78,9 @@ interface Lamp {
   edgeR: number;
   /** The wave from the waking heart has passed it. */
   waved: boolean;
+  /** A creature was turned away at the edge of its safe ground: 0..1, dying, and which side (-1, 1). */
+  ward: number;
+  wardSide: number;
 }
 
 /** A glint on its way from her chest into a lantern's glass (or, resting, light from the glass to her). */
@@ -158,7 +163,7 @@ export class GoalRenderer {
   private readonly heart: HeartView | null = null;
   private readonly lightBatch = new GlintBatch(48);
   /** Warm light on ground, plants and trunks (masked to the playfield). */
-  private readonly surface = new SurfaceLight(16);
+  private readonly surface = new SurfaceLight(24);
   private readonly back = new GlintBatch(MAX_QUADS);
   private readonly core = new GlintBatch(8);
   private readonly front = new GlintBatch(MAX_QUADS);
@@ -200,9 +205,12 @@ export class GoalRenderer {
   private level = 0;
   private readonly wickT: number[] = [];
   private heartMote = 0;
+  /** Where the sleeping heart is in its breath (0..1), and which breath the last mote left on. */
+  private sleepBreathV = 0;
+  private breathTurn = -1e9;
   private groveMote = 0;
-  /** Glints on their way back to her from a cluster she dropped: seconds until each lands, where from. */
-  private readonly returns: Array<{ t: number; x: number; y: number; seed: number }> = [];
+  /** The glints a fade cost her, waiting where she fell. */
+  private readonly drops = new DropsView();
   /** 0..1: how much of the bud's seams glow while it sleeps (a third per lantern), eased. */
   private seam = 0;
   /** The heart's own glows: its cold breath asleep, its golden light awake, the pillar up the hollow
@@ -281,6 +289,8 @@ export class GoalRenderer {
         edgeL,
         edgeR,
         waved: false,
+        ward: 0,
+        wardSide: 1,
       });
     }
     if (scene.heart && list.length > 0) {
@@ -557,7 +567,8 @@ export class GoalRenderer {
           s.heat = 0.05;
           s.wait = 0.08 + k * 0.07;
         }
-        this.openPrice(i, e.need, Math.max(GOAL.refuse.hold, (e.show ?? 0) / 60));
+        // The sim says how long the price is worth showing (it fires only once she has stood there).
+        this.openPrice(i, e.need, e.show > 0 ? e.show / 60 : GOAL.refuse.hold);
       } else if (e.type === 'lanternRest') {
         const lamp = this.lamps[this.lampOf(e.x, e.y)];
         if (lamp) lamp.beat = 1;
@@ -577,10 +588,17 @@ export class GoalRenderer {
           s.e = 0.6;
           s.heat = 0.5;
         }
-      } else if (e.type === 'dropWake') {
-        // She touched what she dropped: its glints come back one by one, each landing on its `pickup`.
-        for (let k = 0; k < Math.min(60, e.value); k++)
-          this.returns.push({ t: (e.frames + k * e.stagger) / 60, x: e.x, y: e.y, seed: this.rand() });
+      } else if (
+        (e.type === 'enemyTurn' && e.cause === 'lantern') ||
+        (e.type === 'enemyGiveUp' && e.cause === 'calm')
+      ) {
+        // A creature was turned away at the edge of a lit lantern's ground: the ground answers there.
+        const reach = tuning.goal.lampSanctuaryPx + 80;
+        for (const lamp of this.lamps) {
+          if (!lamp.lit || Math.hypot(e.x - lamp.view.x, e.y - (lamp.view.y - 40)) > reach + 120) continue;
+          lamp.ward = 1;
+          lamp.wardSide = e.x < lamp.view.x ? -1 : 1;
+        }
       } else if (e.type === 'heartSleep') {
         this.sleepT = 0;
       } else if (e.type === 'heartWake') {
@@ -615,6 +633,7 @@ export class GoalRenderer {
       lamp.catchT += dt;
       lamp.beat *= Math.exp(-dt * 9);
       lamp.pulse *= Math.exp(-dt * 1.5);
+      lamp.ward *= Math.exp(-dt * 1.6);
 
       // Kindling: glints leave her as the channel runs.
       if (!s.lit) {
@@ -675,7 +694,8 @@ export class GoalRenderer {
         m.orbit(clock, v.beadX, v.beadY - 6, 30 + k * 16, smooth(0.5 + k * 0.25, 0.9 + k * 0.1, lamp.alive));
       }
       const M = L.mist;
-      const ma = M.alpha * lamp.alive * (1 + 0.5 * lamp.pulse + 0.6 * this.grove);
+      const mz = zoneMix(L.mistZone as [number, number, number], zoneWeights(v.x));
+      const ma = M.alpha * mz * lamp.alive * (1 + 0.5 * lamp.pulse + 0.6 * this.grove);
       lamp.mist.visible = ma > 0.003;
       lamp.mist.alpha = ma;
       lamp.mist.width = M.width * (1 + 0.35 * this.grove);
@@ -752,7 +772,32 @@ export class GoalRenderer {
       const share = goal.lanterns.length > 0 ? goal.lit / goal.lanterns.length : 0;
       this.seam += ((this.awake ? 0 : share) - this.seam) * Math.min(1, dt * (jump ? 60 : 1.2));
       const open = this.awake ? H.awake + (H.bloom - H.awake) * bloom : H.ajar * share;
-      h.update(dt, clock, open, jump, H.lift * smooth(0.5, 3.2, this.endT));
+      // Asleep it breathes: slow in, long out, and lets one dim mote go with each breath out.
+      const SL = H.sleep;
+      const bt = clock / SL.seconds;
+      const asleep = this.awake ? 0 : 1 - 0.5 * share;
+      const breath = sleepBreath(bt, SL.inhale) * asleep;
+      this.sleepBreathV = breath;
+      const turn = Math.floor(bt - SL.inhale);
+      if (!this.awake && turn !== this.breathTurn) {
+        if (this.breathTurn !== -1e9 && this.inView(cam, h.x, h.y, 300)) {
+          const s = this.spark(
+            0,
+            h.x + (this.rand() - 0.5) * 6,
+            h.y - 92,
+            (this.rand() - 0.5) * 8,
+            -15,
+            3.4,
+            2.3,
+          );
+          s.g = -1.5;
+          s.sway = 7;
+          s.e = SL.mote;
+          s.heat = 0.1;
+        }
+        this.breathTurn = turn;
+      }
+      h.update(dt, clock, open, jump, H.lift * smooth(0.5, 3.2, this.endT), breath);
       if (jump) this.level = this.awake ? 1 : 0;
       // One wick per lantern.
       for (let i = 0; i < h.wicks.length; i++) {
@@ -810,7 +855,7 @@ export class GoalRenderer {
           sp.alpha = a;
         };
         // Asleep: a slow cold breath in the bud.
-        const cold = (1 - lvl) * (0.5 + 0.5 * Math.sin(clock * 0.8)) ** 1.5;
+        const cold = (1 - lvl) * (0.25 + 0.75 * this.sleepBreathV);
         put(g.cold, h.coreX, h.y - 44, 150, 190, H.glow.coldAlpha * cold * (1 - 0.6 * share));
         // Awake: a flower of golden light, a pillar up the hollow tree, warmth in the mist.
         put(
@@ -846,7 +891,8 @@ export class GoalRenderer {
         const ex = Math.min(cam.x + hw - 150, Math.max(cam.x - hw + 150, h.x));
         const ey = Math.min(cam.y + hh - 220, Math.max(cam.y - hh + 260, h.y - 160));
         const far = smooth(260, 900, Math.hypot(h.x - ex, h.y - 160 - ey));
-        put(g.horizon, ex, ey, 1150, 820, H.glow.horizonAlpha * lvl * far * slow);
+        const zone = zoneMix(H.glow.horizonZone as [number, number, number], zoneWeights(cam.x));
+        put(g.horizon, ex, ey, 1150, 820, H.glow.horizonAlpha * zone * lvl * far * slow);
         // The ending: light under the canopy and all along the mist band.
         put(g.canopy, h.x - 260, h.y - 730, 3400, 420, E.canopy * gr * slow);
         put(g.band, cam.x, h.y - 40, 3000 / cam.zoom, 460, E.band * gr);
@@ -1036,6 +1082,27 @@ export class GoalRenderer {
       sf.light(cam, v.beadX, v.y - 40, P.rx * 0.42, P.ry * 0.5, P.gain * 0.35 * lit * breath, 0.3);
       if (!this.inView(cam, v.x, v.y - 60, 420)) continue;
       const al = lamp.alive;
+      // Safe ground: a slow warm breath lying on the ground as far as creatures keep away. Only the
+      // surfaces take it (the air stays dark) and it has no edge: it thins out at the reach.
+      const S = L.safe;
+      const reach = tuning.goal.sanctuaryPx;
+      const sb = 1 - S.depth * (0.5 + 0.5 * Math.cos((clock * TAU) / S.breath + lamp.seed * TAU));
+      const safe = al * smooth(1.2, 3.5, lamp.catchT) * sb;
+      const cl = Math.max(v.x - reach * 1.45, lamp.edgeL - 30);
+      const cr = Math.min(v.x + reach * 1.45, lamp.edgeR + 30);
+      sf.light(cam, (cl + cr) / 2, v.y - 6, (cr - cl) / 2, S.height, S.ground * safe, 0.15);
+      for (const dir of [-1, 1]) {
+        const room = dir < 0 ? v.x - lamp.edgeL : lamp.edgeR - v.x;
+        const half = Math.min(reach, room) / 2;
+        if (half > 12) b.quad(K_FLARE, v.x + dir * half, v.y - 5, half * 1.15, 7, S.seam * safe, 0, 0);
+        // Turned away: the ground at the edge answers once, softly.
+        if (lamp.ward > 0.02 && dir === lamp.wardSide && room > reach * 0.6) {
+          const k = 1 - lamp.ward;
+          const wx = v.x + dir * Math.min(reach, room - 8);
+          b.quad(K_FLARE, wx, v.y - 5, 40 + 50 * k, 8, S.turn * lamp.ward * smooth(0, 0.08, k) * al, 0, 0.1);
+          sf.light(cam, wx, v.y - 8, 80, 40, S.turn * lamp.ward * al, 0.2);
+        }
+      }
       const fl = lamp.life.lights;
       for (let k = 0; k < fl.length; k += 3) {
         const o = fl[k + 2] as number;
@@ -1233,39 +1300,8 @@ export class GoalRenderer {
       }
     }
 
-    // --- What she dropped when she faded: a knot of glints hovering where she fell, under a thin
-    // thread of light that can be seen from across the screen.
-    const drops = sim.pickups.drops ?? [];
-    for (const d of drops) {
-      if (d.left <= 0 || !this.inView(cam, d.x, d.y, 300)) continue;
-      const bob = Math.sin(clock * 1.4 + d.id) * 3;
-      const n = Math.min(7, d.left);
-      b.quad(K_FLARE, d.x, d.y - 170, 8, 190, 0.75 + 0.15 * Math.sin(clock * 2 + d.id), 0, 0.3);
-      b.quad(K_FLARE, d.x, d.y + bob, 36, 36, 0.5, 0, 0.3);
-      for (let k = 0; k < n; k++) {
-        const a = clock * (0.9 + 0.13 * k) + k * 2.4 + d.id;
-        const r = 5 + 3.2 * k;
-        const tw = 0.7 + 0.3 * Math.sin(clock * 3.3 + k * 1.9);
-        b.quad(K_SPARK, d.x + Math.cos(a) * r, d.y + bob + Math.sin(a) * r * 0.6, 4.6, 4.6, tw, 0, 0.85);
-      }
-    }
-    for (let i = this.returns.length - 1; i >= 0; i--) {
-      const r = this.returns[i] as { t: number; x: number; y: number; seed: number };
-      r.t -= dt;
-      if (r.t <= 0) {
-        this.returns.splice(i, 1);
-        continue;
-      }
-      const fly = 0.32;
-      if (r.t > fly) continue;
-      const u = 1 - r.t / fly;
-      const k = u * u;
-      const side = (r.seed - 0.5) * 60 * Math.sin(Math.PI * u);
-      const x = r.x + (this.chestX - r.x) * k + side;
-      const y = r.y + (this.chestY - r.y) * k - 24 * Math.sin(Math.PI * u);
-      f.quad(K_SPARK, x, y, 3.8, 3.8, 0.95, 0, 0.85);
-      f.quad(K_FLARE, x, y, 11, 11, 0.25, 0, 0);
-    }
+    // --- What she dropped when she faded: a huddle of quiet glints waiting where she fell (drops.ts).
+    this.drops.update(dt, clock, cam, sim, b, f, sf, this.chestX, this.chestY);
 
     // --- Sparks and motes.
     for (const s of this.sparks) {

@@ -46,9 +46,28 @@ Dev handle `__goal` (`.cfg`, `.cpuMs`). Sheets of every moment: `shots/goal/`.
   band, fireflies rise for good. First pass (pillar x1.9, surface 0.55) blew plants pale: now 1.45 / 0.38.
 - Tally (`hud/summary.ts`): n / total for glints, great glints, pods, creatures (gold sprig when all),
   under it time, hits, fades (if any). Kills icon is a burrback shell.
-- Dropped glints (`pickups.drops`): a knot of sparks under a thin thread of light; on `dropWake` they
-  fly back timed to land on each `pickup {drop}`.
+- Dropped glints: `drops.ts` (pickups.md, "Dropped clusters, render").
 - The scratchpad is shared between agents: keep capture scripts in a subfolder of your own.
+
+## Round 3 (after ca03a1a's sim changes)
+- **Safe ground** (`lantern.safe`): a lit lantern lays a slow warm breath (5.2 s) on the ground out to
+  `tuning.goal.sanctuaryPx`: one flat `SurfaceLight` ellipse (surfaces only, so the air stays dark) plus
+  a low flare lying on the ground line each side, clipped to the solid it stands on. No ring, no edge.
+  `enemyTurn {cause: lantern}` / `enemyGiveUp {cause: calm}` near a lit one sets `lamp.ward`: the ground
+  at that edge answers once. At ground 0.5 / seam 0.11 nobody could tell it from the pool; 0.85 / 0.16
+  stands. Mean luma moves by < 0.3.
+- **Left zone after the wake** was washed (bank stop 27.9 dark -> 30.1 stone lit -> 35.1 all lit + awake).
+  Found by zeroing knobs live: 4.7 of the 7.2 was `heart.glow.horizon` (the glow at the view edge
+  nearest the heart), 1.2 the lantern's mist lift, the rest its pool. Both now scale by zone:
+  `heart.glow.horizonZone` [0.25, 1, 1] (by camera x), `lantern.mistZone` [0.65, 1, 1] (by lantern x).
+  After: bank 30.4, pool stop 35.3 (was 39.8; its unlit picture is 29.5).
+- **The sleeping heart breathes** (`heart.sleep`, `sleepBreath()` in logic.ts): in over 38% of 5.4 s, a
+  long out; the bud swells 3.5% / 5%, the straps ease apart, the cold glow follows the same breath
+  (it used to run on its own sine), and one dim mote leaves the tip per breath. No light added
+  (frame mean 24.1 -> 24.7, which is clock noise). Shallower once lanterns burn (x 1 - share / 2).
+- Refusal: the crown is held for the event's `show` (150 frames = 2.5 s; was a fixed 4 s) and for as
+  long as she stands there short.
+- Tally: the "/ total" is at 0.78 alpha (0.6 vanished over the lit rock at the shrine).
 
 ## Look decisions (learned by looking)
 - Lantern = shepherd's crook + hanging seed of glass (the HUD health light's shape, 1.42x). Lit, the
@@ -69,6 +88,10 @@ Dev handle `__goal` (`.cfg`, `.cpuMs`). Sheets of every moment: `shots/goal/`.
 
 ## Not done / weak
 - `heartSleep` is still quiet; the seams and wicks carry the heart's state instead.
+- The ending's last frames are bright round the shrine (pillar + gold flower over the statue): not
+  retuned in round 3.
+- The lit lantern's pool turns the pale boulder by the first lantern cream; watch it.
+- The ward answer at the edge of safe ground has only been seen once (burr-far at the far ledge).
 - Dormant glints are not woken by a lit lantern (they belong to the pickup renderer); at the ending a
   soft flare is laid over the waiting ones in view.
 

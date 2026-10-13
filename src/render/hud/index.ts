@@ -47,6 +47,17 @@ export const HUD = {
   refuseDecay: 7,
   /** Seconds the whole cluster takes to leave when the run ends. */
   endFade: 1.1,
+  /**
+   * The count and the health lights never share a place: the count moves down out of the lights' slot
+   * in `slideDown` s before they may show, and back up in `slideUp` s only once they are quite gone.
+   * The lights are held back until the slide has passed `clear` (0..1 of the way down).
+   */
+  slideDown: 0.2,
+  slideUp: 0.45,
+  clear: 0.72,
+  /** Glints left behind in a fade run out of the count one by one: seconds for the whole loss, at most per glint. */
+  spill: 0.9,
+  spillStep: 0.07,
 };
 
 /** A glint leaving the counter as it is spent (HUD px). */
@@ -88,6 +99,11 @@ export class Hud {
   private alpha = 0;
   private hold = 0;
   private pulse = 0;
+  /** 0 = the count sits in the lights' place, 1 = under them. */
+  private slot = 0;
+  /** Seconds between two glints leaving the count after a fade (0 = a loss shows at once). */
+  private spillStep = 0;
+  private spillIn = 0;
 
   constructor() {
     this.buildGlyphs();
@@ -206,21 +222,40 @@ export class Hud {
     for (const e of sim.events) {
       if (e.type === 'lanternRefuse') {
         // "Not enough": the count shows itself and shakes its head.
-        this.hold = Math.max(this.hold, 2.6);
+        this.hold = Math.max(this.hold, e.show > 0 ? e.show / 60 : 2.6);
         this.refuseT = 0;
       } else if (e.type === 'lanternKindle') this.hold = Math.max(this.hold, 2.4);
+      else if (e.type === 'glintsDrop') {
+        // A fade cost her these: the count shows itself and they run out of it, one by one.
+        this.hold = Math.max(this.hold, HUD.hold);
+        this.spillStep = Math.min(HUD.spillStep, HUD.spill / Math.max(1, e.value));
+        this.spillIn = 0.35;
+      }
     }
     if (restart) {
       this.value = count;
       this.alpha = 0;
       this.hold = 0;
       this.live = 1;
+      this.spillStep = 0;
       this.layout(true);
     }
+    if (count >= this.value) this.spillStep = 0;
     if (count < this.value) {
-      // Spent: the number runs down with the stream, a mote leaving the counter for each.
+      // Spent: the number runs down with the stream, a mote leaving the counter for each. What a
+      // fade took runs out more slowly, so the loss is seen.
       this.hold = Math.max(this.hold, 1.6);
-      while (this.value > count) {
+      let n = this.value - count;
+      if (this.spillStep > 0) {
+        this.spillIn -= dt;
+        n = 0;
+        while (this.spillIn <= 0 && n < this.value - count) {
+          n++;
+          this.spillIn += this.spillStep;
+        }
+      }
+      const to = this.value - n;
+      while (this.value > to) {
         this.value--;
         const d = this.drops[this.dropAt] as Drop;
         this.dropAt = (this.dropAt + 1) % this.drops.length;
@@ -231,8 +266,10 @@ export class Hud {
         d.vx = 70 + 60 * k;
         d.vy = 30 + 70 * ((k * 7.3) % 1);
       }
-      this.pulse = 0.5;
-      this.layout(false, -0.5);
+      if (n > 0) {
+        this.pulse = 0.5;
+        this.layout(false, -0.5);
+      }
     }
     if (count > this.value) {
       this.hold = HUD.hold;
@@ -275,8 +312,18 @@ export class Hud {
       shakeX = HUD.refuse * Math.sin(this.refuseT * 38) * Math.exp(-this.refuseT * HUD.refuseDecay);
       if (this.refuseT > 0.8) this.refuseT = -1;
     }
-    // The count sits under the lights, and slides up into their place when they are away.
-    const hv = H.alpha * H.alpha * (3 - 2 * H.alpha);
+    // The count sits under the lights, and takes their place when they are away. The two never
+    // overlap: it moves down before they show, and moves back up only when they are quite gone.
+    const lights = H.alpha > 0.003 ? 1 : 0;
+    if (this.alpha <= 0.003 && this.pips.root.alpha * (this.pips.root.visible ? 1 : 0) <= 0.003)
+      this.slot = lights;
+    else if (lights > this.slot) this.slot = Math.min(1, this.slot + dt / HUD.slideDown);
+    else if (lights < this.slot) this.slot = Math.max(0, this.slot - dt / HUD.slideUp);
+    const hv = this.slot * this.slot * (3 - 2 * this.slot);
+    const gk = Math.min(1, Math.max(0, (this.slot - HUD.clear) / (1 - HUD.clear)));
+    const gate = gk * gk * (3 - 2 * gk);
+    H.root.alpha *= gate;
+    H.root.visible = H.root.visible && gate > 0.003;
     const rise = (HUD.yTop - HUD.y) * (1 - hv);
     this.group.position.set(-10 * (1 - a) + shakeX, rise);
     this.pips.update(dt, clock, sim, HUD.yTop + (HUD.y - HUD.yTop) * hv + HUD.pipsDrop * a + 12);
@@ -319,7 +366,7 @@ export class Hud {
         s.y,
         size,
         size,
-        Math.min(1, k * 2.4) * Math.min(1, (1 - k) * 6) * 0.9 * H.alpha * this.shake.alpha,
+        Math.min(1, k * 2.4) * Math.min(1, (1 - k) * 6) * 0.9 * H.root.alpha * this.shake.alpha,
         0,
         k * k * s.heat,
       );

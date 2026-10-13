@@ -103,3 +103,13 @@ export function bezier(
     path.add(a * p[0] + b * p[2] + c * p[4] + d * p[6], a * p[1] + b * p[3] + c * p[5] + d * p[7]);
   }
 }
+
+/**
+ * A sleeper's breath, 0..1: in over `inhale` of the period (eased), then a long ease out and a rest.
+ * `t` in periods.
+ */
+export function sleepBreath(t: number, inhale: number): number {
+  const ph = t - Math.floor(t);
+  if (ph < inhale) return smooth(0, inhale, ph);
+  return 1 - smooth(inhale, Math.min(1, inhale + (1 - inhale) * 0.8), ph);
+}

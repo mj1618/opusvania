@@ -32,12 +32,22 @@ export const GOAL = {
     pool: { rx: 400, ry: 300, gain: 1 },
     /** The lift of the mist behind it (additive, behind the playfield): size px, height above the foot, alpha. */
     mist: { color: 0xffa050, width: 1000, height: 560, lift: 120, alpha: 0.2 },
+    /** That lift per zone [left, centre, right], by where the lantern stands: less in the dark blue glade. */
+    mistZone: [0.65, 1, 1],
     /** Fireflies that gather round it. */
     flies: 6,
     /** A lit lantern wakes the dormant glints within this, px. */
     wakePx: 380,
     /** Motes that rise from a lit glass: per second. */
     motes: 0.55,
+    /**
+     * Safe ground (the sim's sanctuary: `tuning.goal.sanctuaryPx` along the ground, `lampSanctuaryPx`
+     * round the glass): a faint warm breath on the ground out to that reach, no edge, no ring.
+     * `ground` = strength of the warmth on the surfaces, `height` its half-height px, `seam` = the
+     * low glow lying on the ground line, `breath` seconds, `depth` how far it sinks between breaths;
+     * `turn` = the answer at the edge when a creature is turned away there.
+     */
+    safe: { ground: 0.85, height: 44, seam: 0.16, breath: 5.2, depth: 0.45, turn: 0.5 },
   },
   kindle: {
     /** All of the cost has left her by this share of the channel. */
@@ -56,7 +66,8 @@ export const GOAL = {
     rise: 7,
   },
   refuse: {
-    /** Seconds the price stays after a refusal (it also stays while she stands there short), and its fade. */
+    /** Seconds the price stays after a refusal when the event gives no `show` (it does: 150 frames; it also
+     * stays while she stands there short), and its fade. */
     hold: 4,
     fadeOut: 0.7,
     /** Stars fade in one after another this far apart, s. */
@@ -73,6 +84,13 @@ export const GOAL = {
     awake: 0.78,
     /** Asleep, the straps part this far once every lantern but the last burns. */
     ajar: 0.2,
+    /**
+     * Asleep it breathes like a sleeper: `seconds` per breath (in for `inhale` of it, a long out),
+     * `swell` = how much wider / taller the bud grows and how far the straps ease apart at the top
+     * of a breath, `mote` = brightness of the one dim mote it lets go with each breath out. No light
+     * is added: it reads by motion.
+     */
+    sleep: { seconds: 5.4, inhale: 0.38, swell: [0.035, 0.05, 0.035], mote: 0.42 },
     /** Its warm light on the shrine and the ground once awake (surface.ts). */
     pool: 0.85,
     /** Its glows (tints, alphas; px): cold breath asleep; awake a golden-white flower, a pillar up the hollow tree, warm mist, a glow on the horizon from afar. Golden-white on purpose: the hollow tree's own glow behind it is orange-red. */
@@ -89,6 +107,9 @@ export const GOAL = {
       mistAlpha: 0.16,
       band: 0xff9c50,
       horizonAlpha: 0.6,
+      /** The glow on the horizon per zone [left, centre, right] (by camera x): the dark blue glade
+       * takes far less of it, or its settled picture after the wake is washed (mean luma 35 for 28). */
+      horizonZone: [0.25, 1, 1],
     },
     bloom: 1,
     open: [26, 5.2],

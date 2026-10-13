@@ -9,8 +9,10 @@ Rules and state fields: enemies.md. Current sheets: `shots/lamp2/*.png`, `shots/
   legs from the rim line down (same geometry, clipped at `rig.y - rimH + 2`), dust, chips, plates,
   wing scales. Not in the hero matte: they take the zone grade and her light like the plants.
 - `EnemyRenderer.update(dt, clock, cam, sim)` from stage.ts dispatches on `e.kind`; rigs are per
-  kind, by enemy index. Reads `sim.enemies`, `sim.frame`, `sim.alpha`, `sim.player`, no events: a
-  hit is a new `hitFrame`, death is `mode: 'dead'`, so `load()` and re-form just show. Dev handle
+  kind, by enemy index. Reads `sim.enemies`, `sim.frame`, `sim.alpha`, `sim.player`, `sim.goal` (lit
+  lanterns, `gathered`): a hit is a new `hitFrame`, death is `mode: 'dead'`, its touch is `alert` with
+  `knockVx != 0`, so `load()` and re-form just show. Only two things come from `sim.events`: why a
+  burrback turns (`enemyTurn` cause `lantern` / `wary`) and a lampwing's `enemyGiveUp` cause `calm`. Dev handle
   `window.__enemies` (`cfg` = `BURR`; `LAMP` is in config.ts too; `cpuMs`, `drawn`, `verts`).
 - `?nopickups` empties `scene.enemies` (src/main.ts): shots / clip are clean plates; `--pickups` shows them.
 - Cost (CPU fill, M-series, one on screen): lampwing ~0.04 ms / ~1100 vertices, burrback ~0.055 ms
@@ -78,3 +80,36 @@ Rules and state fields: enemies.md. Current sheets: `shots/lamp2/*.png`, `shots/
   near-white. The centre zone's green grade needs warmer, lighter sources than the other two.
 - Rejected looks: round pale wings with dusky margins + bead eyes + bright cyan tail (cute, a
   butterfly); a round dark face with 0.85 px eyes (a cartoon bee); feathery thick antennae (rabbit ears).
+
+## Acting out the sim's gentler rules (2026-10-14; sheets `shots/enemr/*.png`)
+Knobs: `BURR.calm / shy / peer / touch`, `LAMP.calm / shy` (config.ts).
+- **Calm** (`calmK`, both kinds): on while `e.calm > 0`, lifting over its last 26 frames, and also while it
+  is harmless for a lasting reason (burrback inside a lit lantern's 110 px, lampwing inside the 160 px
+  ring, `goal.gathered`), computed in index.ts with the sim's numbers. Burrback: belly down, deep slow
+  breath (phase is integrated: a rate change must not jump), feelers laid on the ground, lids 70% shut,
+  the four lights go to ONE warm tone (0xffb260) breathing together, the shell rim takes the same warmth,
+  a tiny mote lifts off every 0.7 s. Lampwing: the drawn beat is 55% of the sim's (rig keeps its own
+  phase, advanced by the sim's rate), smaller stroke with the wings held higher, a slow swell, drooped
+  antennae and tail, eyes shut, lamp warm. The colour change is the read at play zoom; in the centre zone
+  the lights are amber already, so there the pose, lids and unison breathing carry it (weakest zone).
+- Gotcha: a calmed burrback is not always standing (one walking out of a sanctuary): the settle only
+  applies where it stands, or it slides on its belly.
+- **Sanctuary**: burrback, first 42% of the 24-frame turn = the flinch (flatten, duck, head in, rocked back,
+  kicked 4 px off the light on a spring, eyes narrowed and turned away, feelers thrown back, lights down
+  50%), the turn itself in what is left, head stays tucked ~1.3 s. Lampwing: `shy()` kicks a render-only
+  offset spring away from the lantern, wings half shut, lean away, lamp dipped; then the calm look while
+  inside the ring. **No lampwing in the grove can reach a lit lantern** (every home is 780+ px from one,
+  leash 520): that give-up was only seen staged (live record moved next to lantern-stone).
+- **Wary**: the turn starts with a 10-frame peer at the edge (head craned out and down, weight back).
+  The stand: whenever it stands with her feet 24+ px lower and within 640 px, it turns (render only) to
+  her side and peers; `standing` also covers the one frame of `walk` with `vx 0` between the sim's
+  30-frame pauses. In the grove only burr-far ever stands (the others' far end is > 320 px from the lip).
+- **Touch**: seen once per mode start. Squash along the shove (`rig.sqDir`, not `hitDir`, which is stale),
+  rock back, burrs and fringe bristle on a spring, legs skid while `knockVx` > 0.5, pale dust (a blow's
+  dark dust is invisible on dark ground without the flash: `dustPale`, 2.1x denser), lights jump. The
+  sim flips `facing` at once; drawn, it holds 11 frames, then head and body come round by frame 29.
+- **Face**: plate 9.6 x 6.9 (was 7.4 x 5.3), eyes r 1.6 (was 1.15), paler warm, each with a faint halo
+  (0.11, only on the over-the-brow pass). Two lights now read at play zoom in all three zones. Brighter
+  halos (0.2) read as headlights.
+- **Lampwing, left zone**: membrane 0x3b4763 / tip 0x1a2236 (was 0x5c6c80: paler than the blue fog behind
+  it, so it washed out), wing alpha 0.9. Right next to a lit lantern the light mask still lifts it pale.

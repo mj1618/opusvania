@@ -243,8 +243,14 @@ export class HeartView {
     this.front.position.set(x, y);
   }
 
-  /** `target` = how open it should stand; `now` = no spring (a state jump). */
-  update(dt: number, clock: number, target: number, now: boolean, lift = 0): void {
+  /**
+   * `target` = how open it should stand; `now` = no spring (a state jump); `breath` = 0..1, where it
+   * is in a sleeper's breath (0 when awake): the whole bud swells and sinks and its straps ease apart.
+   */
+  update(dt: number, clock: number, target: number, now: boolean, lift = 0, breath = 0): void {
+    const [bx, by, part] = GOAL.heart.sleep.swell as [number, number, number];
+    this.back.scale.set(1 + bx * breath, 1 + by * breath);
+    this.front.scale.set(1 + bx * breath, 1 + by * breath);
     // In full bloom the light leaves the bud and stands over it.
     this.coreY = this.seatY - lift;
     const [k, c] = GOAL.heart.open as [number, number];
@@ -262,7 +268,7 @@ export class HeartView {
       // Later straps wait, then catch up.
       const a = Math.max(0, Math.min(1.15, (o - s.lag * 0.22) / (1 - s.lag * 0.22)));
       const breathe = Math.sin(clock * 0.9 + i * 1.7) * 0.012 * (1 + 2 * o);
-      s.g.rotation = s.closed + (s.open - s.closed) * a + breathe;
+      s.g.rotation = s.closed + (s.open - s.closed) * (a + part * breath * (1 - a)) + breathe;
       const inner = this.inner[i] as Graphics;
       inner.alpha = Math.min(1, a * 1.3);
       inner.visible = a > 0.01;

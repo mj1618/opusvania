@@ -70,6 +70,24 @@ export class LampRig {
   wasDead = false;
   lastDir = 1;
   lastPower = 1;
+  /** Calmed, 0..1 (eased), and the phase of its slow swell, rad. */
+  calmK = 0;
+  swell = 0;
+  /** The interpolated sim phase last update, to slow the drawn beat without a jump. */
+  private simFlap = 0;
+  /** Starting back from a lantern's light: 1 at the start, easing off; and the render-only offset it is thrown by, px. */
+  flinch = 0;
+  private awayX = 0;
+  readonly offX = new Spring(0, 8, 0.55);
+  readonly offY = new Spring(0, 8, 0.55);
+
+  /** It gives up at a light (`ax, ay` = unit vector from the light to it), or is calmed from afar (`k` < 1). */
+  shy(ax: number, ay: number, k: number): void {
+    this.flinch = Math.max(this.flinch, k);
+    this.awayX = ax;
+    this.offX.v += ax * LAMP.shy.kick * k;
+    this.offY.v += ay * LAMP.shy.kick * k * 0.7;
+  }
 
   constructor(index: number) {
     let h = (index * 2654435761) >>> 0;
@@ -77,7 +95,8 @@ export class LampRig {
     this.seed = (h % 1000) / 1000;
   }
 
-  update(e: EnemyState, simFrame: number, alpha: number, dt: number): void {
+  /** `safe` = harmless for a lasting reason (inside a lit lantern's ring, the run is over). */
+  update(e: EnemyState, simFrame: number, alpha: number, dt: number, safe = false): void {
     const nx = e.x + e.w / 2 + e.rx;
     const ny = e.y + e.h / 2 + e.ry;
     const fresh =
@@ -93,6 +112,11 @@ export class LampRig {
       this.lagY.snap(0);
       this.keen = this.flare = this.slack = this.fold = this.tumble = 0;
       this.hitSeen = e.hitFrame;
+      this.calmK = safe || e.calm > 0 ? 1 : 0;
+      this.flinch = 0;
+      this.offX.snap(0);
+      this.offY.snap(0);
+      this.flap = this.simFlap = e.flap;
     } else if (simFrame !== this.frame) {
       this.px = this.cx;
       this.py = this.cy;
@@ -109,7 +133,21 @@ export class LampRig {
     let df = this.cf - this.pf;
     if (df < -0.5) df += 1;
     else if (df > 0.5) df -= 1;
-    this.flap = this.pf + df * a;
+    // The drawn beat follows the sim's, slowed while it is calm (so the two drift apart: only the
+    // rate is the sim's, the phase is ours).
+    const calmT = e.mode === 'dead' ? 0 : safe ? 1 : sat(e.calm / LAMP.calm.fade);
+    this.calmK += (calmT - this.calmK) * approach(calmT > this.calmK ? LAMP.calm.in : LAMP.calm.out, dt);
+    const sf = this.pf + df * a;
+    let adv = sf - this.simFlap;
+    if (adv < -0.5) adv += 1;
+    else if (adv > 0.5) adv -= 1;
+    this.simFlap = sf;
+    if (!fresh) this.flap += adv * (1 - (1 - LAMP.calm.beat) * this.calmK);
+    this.flap -= Math.floor(this.flap);
+    this.swell += LAMP.calm.rate * dt;
+    this.flinch += (0 - this.flinch) * approach(LAMP.shy.ease, dt);
+    this.offX.step(0, dt);
+    this.offY.step(0, dt);
     this.mf = Math.max(0, e.modeFrames + (e.hitstop > 0 ? 0 : a - 1));
     this.hitAge = e.hitFrame < 0 ? 1e6 : Math.max(0, simFrame - e.hitFrame + a - 1);
     this.struck = false;
@@ -130,7 +168,9 @@ export class LampRig {
     const leanT =
       mode === 'hurt' || mode === 'dead'
         ? 0
-        : clamp(e.vx * LAMP.lean, -LAMP.leanMax, LAMP.leanMax) + (mode === 'curious' ? e.lookX * 0.22 : 0);
+        : clamp(e.vx * LAMP.lean, -LAMP.leanMax, LAMP.leanMax) +
+          (mode === 'curious' ? e.lookX * 0.22 : 0) +
+          this.awayX * LAMP.shy.lean * this.flinch;
     this.lean.step(leanT, dt);
     this.lagX.step(e.vx * 0.55, dt);
     this.lagY.step(e.vy * 0.55, dt);
@@ -139,8 +179,10 @@ export class LampRig {
     this.flare += ((curious ? 1 : 0) - this.flare) * approach(curious ? 14 : 3.5, dt);
     const slack = mode === 'rest' || mode === 'return';
     this.slack += ((slack ? 1 : 0) - this.slack) * approach(5, dt);
-    const fold = mode === 'dead' ? 1 : mode === 'hurt' ? 0.7 : 0;
-    this.fold += (fold - this.fold) * approach(mode === 'hurt' ? 40 : mode === 'dead' ? 14 : 9, dt);
+    const fold = mode === 'dead' ? 1 : mode === 'hurt' ? 0.7 : LAMP.shy.fold * this.flinch;
+    this.fold +=
+      (fold - this.fold) *
+      approach(mode === 'hurt' ? 40 : mode === 'dead' ? 14 : fold > this.fold ? 30 : 9, dt);
     this.tumble += ((mode === 'hurt' ? 1 : 0) - this.tumble) * approach(30, dt);
   }
 }
@@ -169,6 +211,7 @@ const W = {
   eye: [0, 0, 0] as V3,
   lamp: [0, 0, 0] as V3,
   lampCore: [0, 0, 0] as V3,
+  calmLight: [0, 0, 0] as V3,
   pop: [0, 0, 0] as V3,
 };
 // The wings' rim is their pale edge: the painter's rim colours are set to `edge` for them.
@@ -344,6 +387,10 @@ export function drawLampwing(
   zone(W.edge, L.edgeColor, zw);
   zone(W.body0, L.bodyColor, zw);
   zone(W.lamp, L.lampColor, zw);
+  // Calmed, the lamp takes the lantern's warmth.
+  const calm = rig.calmK;
+  hex(W.calmLight, L.calm.light);
+  for (let k = 0; k < 3; k++) W.lamp[k] = W.lamp[k]! + (W.calmLight[k]! - W.lamp[k]!) * calm;
   // Pale at the core: a quarter of the way to the body's tone.
   for (let k = 0; k < 3; k++) W.lampCore[k] = W.lamp[k]! + (W.body0[k]! - W.lamp[k]!) * 0.3;
   hex(W.dusk, L.color.dusk);
@@ -369,8 +416,10 @@ export function drawLampwing(
   // --- Body frame: bob against the stroke, lean into the flight, tumble when struck, spiral when dead.
   const beat = Math.sin(rig.flap * TAU);
   const flying = 1 - rig.fold;
-  let ox = rig.x;
-  let oy = rig.y + beat * L.bob * flying;
+  // (Calmed, it hangs on a slow swell; thrown back from a light, the offset rides a spring.)
+  const swell = Math.sin(rig.swell + ph);
+  let ox = rig.x + rig.offX.x;
+  let oy = rig.y + rig.offY.x + beat * L.bob * flying * (1 - 0.4 * calm) + swell * L.calm.sway * calm;
   let rot = rig.lean.x;
   if (e.mode === 'pursue' || e.mode === 'curious') {
     const k = rig.keen * L.wobble;
@@ -404,8 +453,8 @@ export function drawLampwing(
 
   // --- Wings. The stroke: up and down with `flap`; the hind pair lags; the chord narrows on the
   // upstroke and opens on the downstroke (the figure of eight, seen from the front).
-  const slack = 1 - L.slack * rig.slack;
-  const mid = (L.up + L.down) / 2;
+  const slack = (1 - L.slack * rig.slack) * (1 - L.calm.stroke * calm);
+  const mid = (L.up + L.down) / 2 + L.calm.lift * calm;
   const amp = ((L.up - L.down) / 2) * slack * flying;
   const fa = mid + amp * beat + rig.fold * (1.25 - mid) - rig.slack * 0.12;
   const hb = Math.sin((rig.flap - L.hindLag) * TAU);
@@ -474,7 +523,7 @@ export function drawLampwing(
   }
 
   // --- Body: a long tapering abdomen that trails behind the flight, a narrow thorax, a small head.
-  const droop = 0.25 + 0.3 * rig.slack + 0.4 * rig.fold;
+  const droop = 0.25 + 0.3 * rig.slack + 0.4 * rig.fold + 0.3 * calm;
   const tailX = -d * (1.4 + droop * 2.5) - rig.lagX.x * 1.5;
   const tailY = 2 + B.abdomen - Math.abs(rig.lagX.x) * 0.4 - Math.max(0, rig.lagY.x) * 0.6;
   const midX = tailX * 0.3 - d * 0.6;
@@ -507,12 +556,13 @@ export function drawLampwing(
   const A = L.antenna;
   for (let i = 0; i < 2; i++) {
     const side = i === 0 ? -1 : 1;
-    const spread = 0.75 - 0.3 * rig.keen + 0.35 * rig.slack + 0.5 * rig.fold;
+    const spread = 0.75 - 0.3 * rig.keen + 0.35 * rig.slack + 0.5 * rig.fold + 0.3 * calm;
     const ang = -Math.PI / 2 + side * spread + d * 0.3;
     const rx = hxl + side * 0.9;
     const ry = hyl - B.head * 0.8;
     const tx = rx + Math.cos(ang) * A.len - rig.lagX.x * 1.3 + e.lookX * 2.2 * rig.keen;
-    const ty = ry + Math.sin(ang) * A.len - rig.lagY.x * 1.3 + e.lookY * 1.5 * rig.keen + 3 * rig.slack;
+    const ty =
+      ry + Math.sin(ang) * A.len - rig.lagY.x * 1.3 + e.lookY * 1.5 * rig.keen + 3 * rig.slack + 2.5 * calm;
     const mx = (rx + tx) / 2 - side * 1.2;
     const my = (ry + ty) / 2 - 2.2;
     for (let k = 0; k < 5; k++) {
@@ -533,7 +583,7 @@ export function drawLampwing(
   // --- Head: small and dark, with two dim pinpricks that fix on what draws it.
   SH_FACE.alpha = 1;
   p.ellipse(bx(hxl, hyl), by(hxl, hyl), B.head * 0.86, B.head, rot, SH_FACE, 12);
-  const shut = dead ? sat(t / 5) : 0;
+  const shut = dead ? sat(t / 5) : Math.max(L.calm.lids * calm, 0.5 * rig.flinch);
   if (shut < 0.9) {
     const lx = e.lookX * 0.55;
     const ly = e.lookY * 0.5;
@@ -551,7 +601,10 @@ export function drawLampwing(
   // flickers when it is hurt, gutters out when it dies.
   const Lm = L.lamp;
   let br = 1 - Lm.pulse * (0.5 + 0.5 * Math.sin(clock * Lm.rate + ph));
+  // Calmed: a little fuller, breathing with the swell; dipped for a moment when it shies.
+  br += (L.calm.dim * (0.72 + 0.28 * swell) - br) * calm;
   br *= 1 + (Lm.keen - 1) * rig.keen + (Lm.flare - 1) * rig.flare;
+  br *= 1 - L.shy.dim * rig.flinch;
   if (e.hp <= 1 && !dead) br *= 0.6 + 0.4 * (noise1(clock * 12 + ph, 7) > -0.2 ? 1 : 0.3);
   if (dead) br *= sat(1 - t / 12) * (0.5 + 0.5 * noise1(clock * 16 + ph, 8));
   br *= 1 - toneDark * 0.7;
@@ -559,7 +612,7 @@ export function drawLampwing(
     const r = Lm.r * (1 + 0.25 * rig.flare);
     SH_LAMP.alpha = Lm.core * sat(br);
     p.ellipse(bx(lampX, lampY), by(lampX, lampY), r * 0.8, r, rot, SH_LAMP, 10);
-    const hr = r * Lm.halo * (1 + 0.6 * rig.flare);
+    const hr = r * Lm.halo * (1 + 0.6 * rig.flare) * (1 + (L.calm.halo - 1) * calm);
     p.glow(bx(lampX, lampY), by(lampX, lampY), hr, W.lamp as unknown as RGB, Lm.glow * br, hr, 0, 12);
   }
   p.alphaK = alphaWas;

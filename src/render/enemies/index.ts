@@ -12,6 +12,7 @@
  */
 import type { Container } from 'pixi.js';
 import type { EnemyState } from '../../sim/state';
+import { tuning } from '../../sim/tuning';
 import { clamp, sat } from '../character/hooded/math';
 import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } from '../contract';
 import { ZONE_EDGES } from '../scene/lib/fx-zones';
@@ -70,6 +71,8 @@ export class EnemyRenderer {
   private readonly lamps: (LampRig | undefined)[] = [];
   private readonly scaleC: [number, number, number] = [0, 0, 0];
   private readonly zw: [number, number, number] = [0, 1, 0];
+  /** Enemy id -> its index in `sim.enemies`, for the events. */
+  private readonly byId = new Map<string, number>();
   private rnd = 0x51f15e;
   // Debris: shell fragments (opaque, fall), motes (tiny lights, rise), dust (soft, spreads).
   private readonly pk = new Uint8Array(MAX_P);
@@ -92,7 +95,11 @@ export class EnemyRenderer {
     frontLayer: Container,
   ) {
     const n = ctx.scene.enemies?.length ?? 0;
-    for (let i = 0; i < n; i++) this.rigs.push(new BurrRig(i));
+    for (let i = 0; i < n; i++) {
+      this.rigs.push(new BurrRig(i));
+      const id = ctx.scene.enemies?.[i]?.id;
+      if (id !== undefined) this.byId.set(id, i);
+    }
     const sc = LAMP.color.scale;
     this.scaleC[0] = ((sc >> 16) & 255) / 255;
     this.scaleC[1] = ((sc >> 8) & 255) / 255;
@@ -249,6 +256,67 @@ export class EnemyRenderer {
     rig.dissolved = true;
   }
 
+  /**
+   * The lit lantern nearest a point: its distance (px, to the middle of its box) in `nearD`, the
+   * unit vector from it to the point in `nearX, nearY`. False if none is lit.
+   */
+  private nearD = 0;
+  private nearX = 0;
+  private nearY = 0;
+  private nearLit(sim: SimView, x: number, y: number): boolean {
+    const list = this.ctx.scene.lanterns;
+    if (!list) return false;
+    let best = -1;
+    for (let i = 0; i < list.length; i++) {
+      const l = list[i];
+      if (!l || !sim.goal.lanterns[i]?.lit) continue;
+      const dx = x - l.x;
+      const dy = y - (l.y - tuning.goal.lanternHeight / 2);
+      const dl = Math.hypot(dx, dy);
+      if (best < 0 || dl < best) {
+        best = dl;
+        this.nearX = dl > 0 ? dx / dl : 0;
+        this.nearY = dl > 0 ? dy / dl : -1;
+      }
+    }
+    this.nearD = best;
+    return best >= 0;
+  }
+
+  /** A burrback stands inside a lit lantern's sanctuary on its own ground (sim: `groundSanctuaryGap`). */
+  private inSanctuary(sim: SimView, e: Readonly<EnemyState>): boolean {
+    const list = this.ctx.scene.lanterns;
+    if (!list) return false;
+    for (let i = 0; i < list.length; i++) {
+      const l = list[i];
+      if (!l || !sim.goal.lanterns[i]?.lit || l.y !== e.y + e.h) continue;
+      const gap = l.x < e.x ? e.x - l.x : l.x > e.x + e.w ? l.x - (e.x + e.w) : 0;
+      if (gap < tuning.goal.sanctuaryPx) return true;
+    }
+    return false;
+  }
+
+  /** What the enemies' events ask of the rigs: why a burrback turns, why a lampwing gives up. */
+  private react(sim: SimView): void {
+    const evs = sim.events;
+    for (let k = 0; k < evs.length; k++) {
+      const ev = evs[k];
+      if (!ev) continue;
+      if (ev.type === 'enemyTurn' && (ev.cause === 'lantern' || ev.cause === 'wary')) {
+        const i = this.byId.get(ev.id);
+        // `dir` is its new facing: what it turns from is on the other side.
+        if (i !== undefined && ev.kind === 'burrback') this.rigs[i]?.react(ev.cause, -ev.dir);
+      } else if (ev.type === 'enemyGiveUp' && ev.cause === 'calm') {
+        const i = this.byId.get(ev.id);
+        const rig = i === undefined ? undefined : this.lamps[i];
+        if (!rig) continue;
+        // At a lantern's ring it starts back from the light; calmed from afar it only eases off.
+        if (this.nearLit(sim, ev.x, ev.y) && this.nearD < LAMP.shy.near) rig.shy(this.nearX, this.nearY, 1);
+        else rig.shy(0, -1, LAMP.shy.soft);
+      }
+    }
+  }
+
   /** One lampwing: rig, scales, drawing. Returns true if it was drawn. */
   private lampwing(
     i: number,
@@ -270,7 +338,10 @@ export class EnemyRenderer {
       rig.live = false;
       return false;
     }
-    rig.update(e, sim.frame, sim.alpha, dt);
+    const safe =
+      sim.goal.gathered ||
+      (this.nearLit(sim, e.x + e.w / 2, e.y + e.h / 2) && this.nearD < tuning.goal.lampSanctuaryPx);
+    rig.update(e, sim.frame, sim.alpha, dt, safe);
     if (rig.struck) {
       // A small burst along the blow.
       const fin = e.hitPower >= 2;
@@ -309,7 +380,9 @@ export class EnemyRenderer {
     return true;
   }
 
-  private dust(x: number, y: number, vx: number): void {
+  /** A puff of dust at the ground; `k` > 1 = denser (and `size` x larger). */
+  private dust(x: number, y: number, vx: number, k = 1, size = 1): void {
+    const i = this.next;
     this.emit(
       K_DUST,
       x,
@@ -317,9 +390,10 @@ export class EnemyRenderer {
       vx,
       -10 - this.rand() * 14,
       0.3 + this.rand() * 0.16,
-      BURR.dust.size * (0.7 + 0.6 * this.rand()),
+      BURR.dust.size * (0.7 + 0.6 * this.rand()) * size,
       y,
     );
+    this.pt[i] = k;
   }
 
   update(dt: number, clock: number, cam: CameraView, sim: SimView): void {
@@ -335,6 +409,7 @@ export class EnemyRenderer {
     const halfH = VIEW_H / 2 / cam.zoom + 90;
     const D = BURR.death;
     let drawn = 0;
+    this.react(sim);
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
       if (!e) continue;
@@ -352,11 +427,68 @@ export class EnemyRenderer {
         rig.deadStage = 3;
         continue;
       }
-      rig.update(e, sim.frame, sim.alpha, dt, sim.player.cx, sim.player.cy - 20, clock);
+      rig.update(
+        e,
+        sim.frame,
+        sim.alpha,
+        dt,
+        sim.player.cx,
+        sim.player.cy - 20,
+        clock,
+        sim.player.feetY,
+        sim.player.faded === 0,
+        sim.goal.gathered || this.inSanctuary(sim, e),
+      );
       stepFeelers(rig, e, clock, dt);
 
       // --- Debris, from the state alone.
       const dir = e.hitDir || 1;
+      // Its touch: a puff where the two met and under its feet, then the dust of the skid.
+      if (rig.bumped) {
+        const T = BURR.touch;
+        const away = rig.sqDir || 1;
+        for (let k = 0; k < T.puffs; k++) {
+          const u = k / (T.puffs - 1);
+          this.dust(
+            rig.x - away * (28 - 34 * u),
+            rig.y - (k === 0 ? 10 : 0),
+            away * (30 + 80 * u) * (0.6 + 0.8 * this.rand()),
+            T.dust,
+            T.dustSize,
+          );
+        }
+      }
+      if (rig.touching && Math.abs(e.knockVx) > 1.5) {
+        rig.dustT += dt;
+        while (rig.dustT > 0.035) {
+          rig.dustT -= 0.035;
+          const away = rig.sqDir || 1;
+          this.dust(
+            rig.x + away * (4 + this.rand() * 22),
+            rig.y,
+            away * (20 + this.rand() * 40),
+            BURR.touch.dust,
+            BURR.touch.dustSize * 0.8,
+          );
+        }
+      }
+      // Calmed: now and then a tiny warm mote lifts off the shell.
+      if (rig.calmK > 0.7 && e.mode !== 'dead') {
+        rig.moteT += dt;
+        if (rig.moteT > BURR.calm.mote) {
+          rig.moteT = 0;
+          this.emit(
+            K_MOTE,
+            rig.x + (this.rand() - 0.5) * 30,
+            rig.y - 20 - this.rand() * 10,
+            (this.rand() - 0.5) * 8,
+            -12 - this.rand() * 10,
+            1.1 + this.rand() * 0.5,
+            0.8 + this.rand() * 0.4,
+            rig.y,
+          );
+        }
+      } else rig.moteT = BURR.calm.mote * 0.6;
       if (rig.struck && e.mode !== 'dead') this.chips(rig, e, e.hitPower >= 2 ? 5 : 3);
       if (rig.struck && e.mode === 'dead') this.chips(rig, e, 4);
       if ((e.mode === 'hurt' || e.mode === 'dead') && e.hitstop === 0 && Math.abs(e.knockVx) > 1.5) {
@@ -528,7 +660,9 @@ export class EnemyRenderer {
         x += this.pvx[i]! * dt;
         y += this.pvy[i]! * dt;
         const s = this.pz[i]! * (1 + 1.5 * u);
-        p.soft(x, y, s, s * 0.62, C.dust as unknown as RGB, BURR.dust.alpha * sat(u / 0.15) * (1 - u));
+        const dense = Math.max(1, this.pt[i]!);
+        const dc = (dense > 1 ? C.dustPale : C.dust) as unknown as RGB;
+        p.soft(x, y, s, s * 0.62, dc, BURR.dust.alpha * dense * sat(u / 0.15) * (1 - u));
       }
       this.pxx[i] = x;
       this.pyy[i] = y;
