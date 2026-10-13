@@ -56,7 +56,9 @@ palette with one light. Where the list below conflicts with this, the tone wins.
 **an aura like Ori** (it carries or is partly made of light: glowing eyes, light spilling onto the
 world, light left behind in motion), look **agile** (light build, free legs, springy athletic poses:
 it sprints, leaps, dashes, wall-jumps), and have **real arms with gripping hands** to grab ledges and
-hold weapons. The final design is being chosen from the concept gallery (`/concepts.html`); the
+hold weapons. **Movement is effortless and relaxed, like Ori's**: a light, floaty, gliding run that
+never looks strained or determined, loose arms, calm level head, everything overlapping and easing;
+nothing robotic (no joints moving as plain sines in lockstep). The final design is being chosen from the concept gallery (`/concepts.html`); the
 feature list below is the superseded first design.
 - Dark indigo-plum body, slim, slightly oversized head, short limbs, readable hands and feet.
 - A pale, soft mask-like face with two large warm amber glowing eyes. No mouth.

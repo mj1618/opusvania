@@ -8,10 +8,14 @@ import { Application, ColorMatrixFilter, Container, FillGradient, Graphics, Text
 import type { Concept, ConceptInstance, ConceptPose } from './types';
 
 const modules = import.meta.glob<{ default: Concept }>('./designs/*.ts', { eager: true });
-const only = new URLSearchParams(location.search).get('only');
+const query = new URLSearchParams(location.search);
+const only = query.get('only');
+/** The owner's shortlist (2026-10-13). `?all` shows every design. */
+const FINALISTS = ['moth', 'wick', 'yako'];
+const showAll = query.has('all');
 const concepts = Object.values(modules)
   .map((m) => m.default)
-  .filter((c) => c && (!only || c.id === only))
+  .filter((c) => c && (only ? c.id === only : showAll || FINALISTS.includes(c.id)))
   .sort((a, b) => a.id.localeCompare(b.id));
 
 const CARD_W = only ? 1500 : 620;
