@@ -204,6 +204,9 @@ export class PostStage {
     u.uLightBack[3] = bloom.wrap + (bloom.wrapHigh - bloom.wrap) * high;
     u.uLightBack[1] = lights.glint;
     u.uLightBack[2] = lights.warm;
+    u.uLit[0] = lights.tint;
+    u.uLit[1] = lights.chroma;
+    u.uLit[2] = lights.channelCap;
     // The halo in the air is one scalar per pixel: it takes the lights' mean colour.
     if (hw > 0) {
       u.uHalo[0] = hr / hw;

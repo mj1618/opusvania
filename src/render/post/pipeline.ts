@@ -70,6 +70,7 @@ export class PostFilter extends Filter {
     uLightBack: Vec;
     uHalo: Vec;
     uProtect: Vec;
+    uLit: Vec;
     uHero: Vec;
     uHero2: Vec;
   };
@@ -121,6 +122,7 @@ export class PostFilter extends Filter {
           uLightBack: { value: new Float32Array([1, 0, 0, 0]), type: 'vec4<f32>' },
           uHalo: { value: new Float32Array([1, 0.8, 0.5, 0]), type: 'vec4<f32>' },
           uProtect: { value: new Float32Array([1, 0.7, 0.6, 0]), type: 'vec4<f32>' },
+          uLit: { value: new Float32Array([0.25, 0.4, 0.92, 0]), type: 'vec4<f32>' },
           uHero: { value: new Float32Array([0, 0, 0.3, 0]), type: 'vec4<f32>' },
           uHero2: { value: new Float32Array([0.06, 0.3, 0, 0]), type: 'vec4<f32>' },
         },

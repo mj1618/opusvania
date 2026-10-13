@@ -117,6 +117,14 @@
   cap 0.6 (higher blew the grass around her to near-white in the dark zones).
 - Stop 7's hero numbers are polluted: teleporting there collects a glint (pickup flash over her).
 
+## Round 7: lit surfaces keep their hue
+- The light pass used to ADD (grey-ish albedo x light + a warm constant), which walked lit grass toward
+  chalky white. It now multiplies the surface colour by `1 + gain`, tints by the light colour only
+  `lights.tint`, raises chroma a little (`chroma`; 0.45 went neon, 0.08 is right), knees the luminance
+  by scaling the whole colour, and scales back if any channel passes `channelCap`. Blade shading survives.
+- The hero pocket skips bright saturated pixels (glints, glow caps, fireflies) so it never dims them.
+- The centre beam that sat behind the high ledge moved from x 3560 to 3720 (hero ratio at stop 5).
+
 ## Gotchas
 - A custom GLSL 300 fragment needs `#version 300 es` in its own source or Pixi compiles it as ES 1.00
   (`textureLod` then "has no matching overload").

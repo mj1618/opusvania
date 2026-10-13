@@ -213,6 +213,7 @@ uniform vec4 uVignetteTint; // rgb, saturation
 uniform vec4 uGrain;      // amplitude, time, aspect, unused
 uniform vec4 uLightBack;  // bloom cut on pale brights, glint, warm add, leaf light wrap
 uniform vec4 uHalo;       // rgb: the lights' mean colour
+uniform vec4 uLit;        // light colour tint 0..1, chroma gain, per-channel ceiling, unused
 uniform vec4 uHero;       // x, y (view heights), pocket radius, darkening
 uniform vec4 uHero2;      // inner radius left untouched, desaturation, luminance ceiling, pull toward it
 
@@ -250,6 +251,10 @@ void main(void) {
   // Bright surroundings are pulled down hardest (toward the ceiling in uHero2.z); dark ones are
   // left nearly alone, so the pocket never reads as a grey disc.
   float pl = dot(col, LUMA);
+  // Small lights (glints, glow caps, fireflies) keep their full value inside the pocket.
+  float pmx = max(col.r, max(col.g, col.b));
+  float psat = (pmx - min(col.r, min(col.g, col.b))) / max(pmx, 1e-4);
+  pocket *= 1.0 - smoothstep(0.55, 0.85, pmx) * smoothstep(0.3, 0.6, psat);
   float over = max(pl - uHero2.z, 0.0);
   float keep = 1.0 - pocket * (uHero.w + uHero2.w * over / max(pl, 1e-3));
   col = mix(col, vec3(pl), pocket * uHero2.y) * keep;
@@ -259,25 +264,35 @@ void main(void) {
   float mx = max(col.r, max(col.g, col.b));
   float pale = smoothstep(0.5, 0.9, mx) * (1.0 - (mx - min(col.r, min(col.g, col.b))) / max(mx, 1e-4));
 
-  // Point lights. On surfaces: mostly a gain on what is there, so terrain lifts into its own
-  // colour, warmed; dark surfaces get relatively more, and the surface colour is pulled part-way
-  // to grey first so the light's own colour shows. Wet, bright spots (moss tips, water) glint. In
-  // the air: a wide faint halo.
+  // Point lights. On surfaces the light is a gain on the surface's own colour: hue and the
+  // light-to-dark shading of the thing survive (a lit blade of grass is a brighter, richer blade,
+  // not a paler one). Chroma is raised with the gain, the light's own colour tints only a little,
+  // and the result is kneed by luminance with the colour scaled as a whole, so nothing drifts
+  // toward white. Bright wet spots glint. In the air: a wide faint halo.
   vec4 lit = texture(uLight, vPos);
   // The hero is not lit by their own light (it would lift their dark body more than anything
   // else, being nearest): the matte takes the light, the halo and most of the bloom off them.
   float hero = smoothstep(0.08, 0.6, texture(uMatte, vPos).a) * uProtect.x;
   float ll = dot(col, LUMA);
-  vec3 albedo = mix(vec3(ll), col, 0.92);
-  float lift = uMix.y * (0.3 + 0.12 / (0.25 + ll)) * (1.0 - smoothstep(0.5, 1.0, ll));
-  vec3 add = albedo * lit.rgb * lift + lit.rgb * (ll * ll * uLightBack.y + uLightBack.z);
-  // Soft knee: lit moss and grass approach the cap, never white.
-  float al = dot(add, LUMA);
-  float knee = uProtect.y * 0.6;
-  float want = ll + al;
-  float got = want < knee ? want : knee + (uProtect.y - knee) * (1.0 - exp(-(want - knee) / (uProtect.y - knee)));
-  add *= clamp((got - ll) / (al + 1e-4), 0.0, 1.0);
-  col += add * (1.0 - hero);
+  float lm = max(lit.r, max(lit.g, lit.b));
+  if (lm > 0.002) {
+    vec3 tint = mix(vec3(1.0), lit.rgb / lm, uLit.x);
+    float g = lm * uMix.y * (1.0 - smoothstep(0.55, 1.0, ll));
+    // A floor under the gain so near-black soil still shows a little of the pool.
+    vec3 lc = (col + vec3(uLightBack.z) * min(g, 1.0)) * (1.0 + g) * tint;
+    float sl = dot(lc, LUMA);
+    lc = mix(vec3(sl), lc, 1.0 + uLit.y * min(g, 1.5));
+    lc = max(lc, 0.0);
+    // Knee on luminance, applied to the whole colour.
+    sl = dot(lc, LUMA);
+    float knee = uProtect.y * 0.6;
+    if (sl > knee) lc *= (knee + (uProtect.y - knee) * (1.0 - exp(-(sl - knee) / (uProtect.y - knee)))) / sl;
+    // No channel may clip: scale back instead, which keeps the hue.
+    float top = max(lc.r, max(lc.g, lc.b));
+    if (top > uLit.z) lc *= uLit.z / top;
+    lc += lit.rgb * (ll * ll * uLightBack.y);
+    col = mix(col, lc, 1.0 - hero);
+  }
   col += uHalo.rgb * (lit.a * uMix.z * (1.0 - hero));
 
   // Bloom.

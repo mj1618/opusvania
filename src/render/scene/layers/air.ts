@@ -79,7 +79,7 @@ export const AIR = {
       { x: 1010, halfWidth: 100, strength: 0.5, reach: 0.5, pool: 0 },
       { x: 1620, halfWidth: 170, strength: 0.9, reach: 1, pool: 0.4 },
       { x: 3080, halfWidth: 150, strength: 0.8, reach: 1, pool: 0.4 },
-      { x: 3560, halfWidth: 230, strength: 1, reach: 1, pool: 0.5 },
+      { x: 3720, halfWidth: 230, strength: 1, reach: 1, pool: 0.5 },
       { x: 4060, halfWidth: 120, strength: 0.6, reach: 0.6, pool: 0 },
       { x: 4800, halfWidth: 110, strength: 0.6, reach: 1, pool: 0.35 },
       { x: 5560, halfWidth: 130, strength: 0.45, reach: 1, pool: 0.35 },
@@ -97,7 +97,7 @@ export const AIR = {
     underground: 30,
     /** How much a shaft crossing the mist lights it up, and how much point lights do. */
     litByShaft: 0.5,
-    litByLights: 0.55,
+    litByLights: 0.25,
     /** Point lights reach this many times their radius through the mist. */
     lightReach: 2.1,
     /** Extra mist lying over the pool: centre x, half width, how many times thicker. */

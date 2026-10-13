@@ -33,16 +33,25 @@ export const POST = {
   },
 
   lights: {
-    /** Gain on surfaces: how much a light lifts the colours already there. */
-    gain: 3.5,
+    /**
+     * Gain on surfaces: at the heart of a light a surface's own colour is multiplied by 1 + gain
+     * (hue and shading kept).
+     */
+    gain: 1.5,
     /** Strength left where the surroundings are bright already (the light well). */
     inBrightPlaces: 0.3,
-    /** A little of the light's own colour added to every surface it reaches. */
-    warm: 0.05,
+    /** A small floor added before the gain, so near-black soil still shows the pool. */
+    warm: 0.012,
+    /** How much of the light's own colour tints the surface (0 = none, 1 = fully). */
+    tint: 0.22,
+    /** Chroma raised with the gain: lit foliage gets richer, not paler. */
+    chroma: 0.08,
+    /** No colour channel of a lit surface goes above this (keeps hue; nothing clips to white). */
+    channelCap: 0.8,
     /** Glints: extra light on spots that are already bright (wet moss, water highlights). */
     glint: 0.35,
     /** The glow hanging in the air around a light, and how far it reaches (x the light's radius). */
-    haze: 0.085,
+    haze: 0.04,
     hazeReach: 1.9,
     /** Falloff exponent on the smooth window (higher = tighter core). */
     falloff: 1.25,
@@ -54,7 +63,7 @@ export const POST = {
     /** How much silhouette edges facing the light gain and edges facing away lose. */
     direction: 0.55,
     /** Lit surfaces approach this luminance and never pass it (moss and grass must not go white). */
-    cap: 0.6,
+    cap: 0.55,
     /**
      * The hero matte (lib/fx-mask.ts): how much of the light and halo is kept off the hero's own
      * pixels (1 = all), and how much of the bloom.
@@ -132,7 +141,7 @@ export const ZONE_GRADE = {
    * violet-emerald stand. Exposure, and an S-curve whose pivot sits high in the dark zones so the
    * milky mid-tones of the fog drop while glows and sky stay up.
    */
-  exposure: [1.32, 1.08, 1.46] as const,
+  exposure: [1.48, 1.22, 1.72] as const,
   contrast: [0.36, 0.28, 0.36] as const,
   pivot: [0.4, 0.36, 0.4] as const,
   /** Shadows: moonlit blue, the default teal-indigo, violet dusk. */
