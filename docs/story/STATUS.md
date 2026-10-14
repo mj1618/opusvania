@@ -7,11 +7,11 @@ is central and discovered in play, mythic on the surface and technical underneat
 
 | | |
 |---|---|
-| Latest | round 26 (Tallow's logic fixed; Burn shows its deaths; Sorrel tracked each night; what you do in each fight) |
-| Last review | round 26: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (six rounds running) · **rel 9** / clarity 7 / idea 9 / world 9 / mechanics 9 / antagonist 8 / **ending 9** / original 9 / **Grove 9** / balance 8 |
-| Readers | all three found the dish-brain truth on their own; the heart reader says the Hush's motive "reads like a lab note rather than a feeling" |
+| Latest | round 27 (the Hush's motive in one felt image; timeline fixed; Night 4 lighter) |
+| Last review | round 27: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (seven rounds running) · **every score 8 or 9**: rel 9 / clarity 8 / idea 9 / world 9 / mechanics 9 / antagonist 8 / ending 9 / original 9 / Grove 9 / balance 9 |
+| Readers | all three name the moth and the sleeping world in their first sentence and find the dish-grown brain. Shared confusion left: pronouns in the endings (who "they" are) |
 | Locked | [locked.md](locked.md): spine, cast, midpoint, endings, the three big images, title |
-| Now working on | round 27: the Hush's motive felt in one image (each worker who walks out = the static of a missed ball); the forty-year timeline; Night 4 lighter; Night 1 setup |
+| Now working on | round 28: polish only (ending pronouns, seed the Hush's static in Act I, Tallow's turn, small state-tracking snags). If it holds with no shared confusion, the story is done and the prologue gets built |
 
 **Done when** two rounds in a row: the AI test passes, the director greenlights it and says it stands next to Ori / Hollow Knight / Nine Sols, all three readers would finish the game, and no confusion is shared by two readers. Then the prologue gets built in the Grove.
 
