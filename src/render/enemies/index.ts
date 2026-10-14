@@ -484,7 +484,10 @@ export class EnemyRenderer {
         if (!rig) continue;
         rig.lean.v += (w.dir || 1) * 7;
         this.scales(w.x, w.y, 4, -(w.dir || 1), -0.4, 1.2, 220, 5, 0.3);
-      } else if (ev.type === 'enemyGiveUp' && ev.cause === 'gift') {
+      } else if (
+        (ev.type === 'enemyGiveUp' && ev.cause === 'gift') ||
+        (ev.type === 'enemyGift' && ev.kind === 'lampwing')
+      ) {
         // She gave it a glint (memory/giving-render.md): it turns its lamp from her, dips, and goes home.
         const i = this.byId.get(ev.id);
         const rig = i === undefined ? undefined : this.lamps[i];

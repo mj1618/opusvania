@@ -42,6 +42,29 @@ Rules: giving.md. First pass 2026-10-14. Sheets: `shots/giving/` (`burr-sheet.pn
   glass 0.13 s apart, each landing small; the goal renderer's light still flows back into her.
 - **giftReturn**: a dull glint arcs back to her (not staged: needs a creature cut down in the 10 frames).
 
+## Pass 2 (coordinator review: "seen must be felt")
+- **Seen, pushed** (`SEEN` in vesper/index.ts, `GIVING.pool / carried`): level 0 = `Painter.dimK` 0.62 (her colours
+  go to a cool dark grey, every light down), glow 0.1, point light 0.04, no dust: a near-silhouette. Level 4 = glow
+  1.75, point light 2.6x at 1.65x radius, a strong surface pool (380 x 250 px, e 0.95) that lights grass and trunk
+  bark, a warm air halo from level 3. **The carried glints are drawn**: round(1.6 x sqrt(wallet)) motes (max 11) on
+  tilted orbits round her chest, lagging her when she runs (wallet 1: one, 6: four, 15: six, 40: ten). Strip:
+  `shots/giving/seen-strip.png` (blue / green / amber zones x wallet 0 / 1 / 6 / 15 / 40, play zoom). Level 2 is the
+  tuned look plus its motes.
+- **Unbothered** (`BURR.doze`): she within 340 px, it not aware: lids 62% down, the calm's slow breath, eyes down,
+  a sleepy mote every 1.5 s. At 1x the read is its lights going dim while she passes; the motes are small.
+- **Aware**: burrback eye halos flare x3.4 on the notice flash and stay x1.6 (`notice.eyeFlare / eyeKeep`), plus
+  its lights and turning to her side. Lampwing: `enemyAware` -> `rig.spot` (lamp x2.8, halo x2.4 for 0.7 s) and the
+  body kicked toward her (`LAMP.gift`).
+- **Lampwing given a glint**: on `enemyGift` (not only the give-up: a dive that touched her first gives up as
+  `touch`) a full shy away from her and `giftDim` (lamp down 85%, back over 3 s).
+- **Offer**: bolder pose (hips 5 px forward, lean 0.3, curl 0.16, hands 16 px out), wings fold forward (`fold`
+  1.1), 0.7 s; a small warm light at her hands/face for 0.3 s (`GIVING.face`; at 30 px / 0.75 it blew out).
+- Clip `clips/giving-m1.mp4` (10 s, 1280x720): wallet 0 past burr-path (it never stirs), cut, `load()`, wallet 15 at
+  (3150, 1280): burr-shaft aware at 260 px (frame 9), she waits 45 frames (it turns to her), walks on, it braces,
+  she offers 5 frames into the tell, it calms. Frames from `scratchpad/giving/clip.js` (run-code, one screenshot
+  per step, offline) + ffmpeg: `tools/clip.ts` cannot change the wallet mid-script. Without the `load()` before
+  part B, burr-shaft had wandered and rammed her.
+
 ## Capture
 - `scratchpad/giving/{burr,lantern,lamp,seen,pose}.js` (`playwright-cli -s=giving run-code --filename ...`) and
   `sheet.py` (the session scratchpad may be gone: the recipes are short). Burrback: load, `giving(8)`, teleport
@@ -51,6 +74,8 @@ Rules: giving.md. First pass 2026-10-14. Sheets: `shots/giving/` (`burr-sheet.pn
   that dive's touch (she is hit; then it goes home calmed).
 
 ## Weak / not done
+- Pass 2 left: level 0 eyes are still fairly bright (draw.ts clamps the eye core at 0.6); the doze motes are small
+  at 1x; the blue zone's level-4 pool goes a little cream on pale bark.
 - The hold-out is small at play zoom (17 px arms, she stands 3/4 to us); it reads at 2x, at 1x the glint is the read.
 - The seen pool reads as "lighter round her" more than "warm" in the green centre zone; no HUD cue for the level.
 - Lampwing given a glint: shy + calm look only; the lamp is not turned away on its own.
