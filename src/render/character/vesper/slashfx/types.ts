@@ -19,12 +19,15 @@ export interface CutInfo {
   facing: number;
   /** The sim's hit reach for this step, px from the origin: the crescent's outer edge. */
   reach: number;
-  /** Fraction of the cut before which the blade is behind or beside her (nothing is drawn there). */
-  show: number;
+  /** Fractions of the cut at which the blade's point is on the crescent's tail end and on its leading end. */
+  q0: number;
+  q1: number;
   /** The crescent's belly as a fraction of the reach. */
   thick: number;
   /** The crescent is let out this much across its aim (up / down: the hit area is narrow). */
   wide: number;
+  /** The belly sits this far toward the leading end (1 = the middle; the stroke's own shape). */
+  skew: number;
 }
 
 /** What the mark gets every frame. Positions are world px; times are render seconds. */

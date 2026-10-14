@@ -166,75 +166,81 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   ground) and come down behind her. Without that they drooped flat along the grass (a bow tie).
 
 ## Thorn slash (sim: memory/combat.md; `STROKES`, `CUT`, `SNAP`, `BRACE`, `CLANG` in rig.ts; look in `slashfx/crescent.ts`)
-Round 19 threw out the three switchable styles and built ONE crescent on Hollow Knight's nail-slash
-principles. Round 20 (third round on it; orchestrator's sheet review) made it a line, not a lid.
-- **One crescent** (`SlashMark`): opaque, hard-edged, flat cool cream, a thin lilac line inside the inner
-  edge, a 1 px dusk hair round it. No glow, no gradient, no particles of its own. Its INNER edge is the
-  blade point's path, the outer edge swells from it to the sim's reach. **Belly 0.16-0.19 of the reach**
-  (`Stroke.thick`; 17-19 px on a cut, 26 on the finisher), needle ends (`CRESCENT.needle`).
-- **Life**: whole on the first active frame, whole 2 frames (finisher 3), 3 frames thinning toward the
-  outer edge while the tail draws up to the lead; gone on the 6th (7th). Its clock stands still in
-  hitstop, but **in the freeze it thins to 0.42 of its belly over 2 frames** (`holdThin / holdIn`): a
-  line round the target, so the creature's reaction shows through all 4 / 7 frames.
-- **A hit always has a crescent**: `SlashMark.hit` calls it back whole if it was thin or gone (a pogo
-  from height lands on active frame 4-6), it holds the freeze and thins away after. A clang
-  (`power 0`) cuts it to the near 0.62 of its arc at half belly and it is gone a frame after the freeze.
-- **Never under the floor**: `SlashFrame.groundY` (her feet when grounded, else `rig.groundDist` under
-  her) clamps every point. On the ground a forward cut's origin is never lower than 42 px over her feet
-  (`SLASH_LOOK.clear`): running, her chest is low and most of cut 1 was underground.
-- **Origin**: chest + 4 px ahead (forward cuts 10 px lower), an offset from her body centre. It follows
-  the chest while the blade is still crossing (cut 2 lifts her ~12 px in those frames; taken once at the
-  start the crescent hung under the blade), fixed after. Laid in her UPRIGHT frame + the cut's own air
-  roll (`rig.slashRoll`), not the somersault's leftover turn (that put it over her head, off the blade).
-- **Strokes**: cut 1 DOWN in front (122 -> -56), ends in a low reaching lunge. Cut 2 the return, UP
-  (-66 -> 70): a wide driving step (hips 16 px forward, front foot 19 out, back heel peeled, chest open,
-  off-hand low behind, blade ~50 degrees up ahead), cape whipped DOWN along the back leg
-  (`Stroke.sweep` -> `rig.slashSweep`, wings.ts) where cut 1 throws it up behind. Finisher = cut 1
-  larger: three gather frames that show (ease-out: 0.56, 0.89, 1 of a deep coil: pelvis -11, blade
-  behind), a hop, held to 22. Antennae get a per-stroke whip (`Stroke.whip`, degrees, gone in ~4 frames;
-  their chain does the overshoot).
-- **Up**: the crescent has its own arc (`Stroke.mark`, tail .. lead in blade degrees): the tail starts at
-  her SHOULDER line behind her, goes over the top (apex = the sim's reach, 0.88 x 124 over her chest) and
-  ends high in front where the blade stops (58 degrees: arm up, on her toes, `upG`). An asymmetric hook
-  with the blade inside it touching near the top. Width is the ellipse's own (`sq` 0.5 = the 100 px hit
-  area); only DOWN is still let out x1.75 (a bowl under her).
-- **Blade smear**: through the cut the one blade is drawn long enough to reach the crescent's inner edge
-  (`bladeSmear`, max 1.5); in hitstop it draws back to 1.12 within two frames (frozen, a smear is just a
-  longer sword), and to 1 after the cut.
-- **Landed on a creature** (`braceK`, from `slashHit.hitstop` >= 4; pods 0.4): hips back 5.5 and down 3.4,
-  shoulders kept over the blow, front foot left out, back foot skids; lets go over ~6 frames after the freeze.
-- **Blocked** (`enemyBlock` -> `clangT / clangK`): the blade is thrown up and back over her shoulder (142
-  degrees, ringing), she is rocked back onto her heels (lean -0.46, chest open), front foot off the
-  ground, off-hand flung ahead, wings blown open, antennae thrown forward; held ~9 frames, out over 9.
-  The stroke's own body key is faded out by it. Reads apart from a hit at play zoom.
-- **Contact flash**: hard cream cross at the target's near side, 4 frames on render time, 3 / 5 specks;
-  a clang's cross lies ACROSS the cut at `hitX/hitY`, specks back at her. No terrain clang (no sim event).
-- Tone per zone: `toneFor(pale)` = 0.84 blue / violet, 1 amber.
-- A unit test pins a lone tap sheathed 21 frames after the press: `hold + home` = 21 (14 + 7); a longer
-  hold needs that test changed.
-- Rejected: belly 0.24-0.33 (a lid on the burrback for the whole freeze); up crescent at the hit area's
-  far end only (a cap floating 45 px over her head); up arc symmetric down to both shoulders (a hoop);
-  cut 2 ending tall (her standing pose); needles on the OUTER path; a mark pinned to what it hit; a
-  second smear blade; a wide translucent band; specks along the cut only.
-- Honest gaps: the up crescent's apex is still ~40 px past the blade tip (the hit area is that tall; the
-  blade touches the arc's inner edge lower down); a landed brace is subtle next to the block; frozen
-  first-active frame = the cut is 83% round, so in hitstop the blade stands a little short of the
-  crescent's lead; tall foreground grass (left zone) hides the low half of a running cut 1.
-- Capture: `__vesper.markHidden = true` hides crescent and flash. Staging that worked: wrap
-  `__enemies.update` to grab the live `sim`; park every other enemy far away; set a burrback's
-  `strikeCd = 9999` each frame for a landed three-cut combo from behind, or let it brace and press on
-  `braced` for a block; move a lampwing to 68 px over her head each frame for the up cut; teleport 84 /
-  136 px over a burrback + `D+A` for an early / late pogo (pre-steps 0). Pods at 2176 and 2570 eat
-  slashes: stage at x 2230 (ground), 2340 (pogo), 900-1000 (left zone). Sheets: `shots/vesper/slash6/`
-  (`*-3x`, `*-1x` = play zoom, `L` blue / `C` amber, `*-pose-*` = crescent hidden, `cmp-*` = round 19 on
-  top, round 20 under it); `shots/vesper/slash5/` = round 19.
+Round 19: ONE crescent on Hollow Knight's nail-slash principles. Round 20: a line, not a lid. **Round 21
+(playtest 5: "the structure is at HK's level, the finish is not")**: smaller, darker, shorter, swept out of
+the blade, three different marks.
+- **One crescent** (`SlashMark`): opaque, hard-edged, flat. Its INNER edge is the blade point's path
+  (`1 - thick` of its reach), the belly swells outward from it; thinning, it draws back onto that path.
+- **Size**: the mark's reach is `Stroke.size` x the sim's (`reach` stays the sim's: a unit test pins it).
+  Cuts 0.8 x 110 = 88 px, belly 0.13 (11 px): the whole mark is ~72 px tall, 0.86 of her 84. Finisher
+  0.78 x 135 = 105, belly 0.15: ~98 px, 1.16x. Up 0.72 x 124, down 0.9 x 120 (see pogo). It no longer
+  reaches the far end of the hit area: a creature hit at full range (shoved back by the cut before) is
+  marked by the contact cross only, 20-40 px past the crescent. Accepted for the size.
+- **Life** (`CRESCENT`; `age` counts frames it has been SEEN, not hitstop): frame 1 = the **sweep-out**: drawn
+  only as far as the blade's point has got (cut 83% round = ~75% of the arc), belly at the blade end
+  (`sweepSkew`); frame 2 whole, needle on the blade; frames 3-4 a thinning line; gone on the 5th (finisher
+  one more). Cream only while it has a belly (`bright`), a dim lilac line after (`DIM`), both x the zone
+  tone (`toneDark` 0.68 blue / violet, `toneLight` 0.88 amber). A whiff is cream for 2 frames, a hit for 1.
+- **Hitstop**: it stays where the blade stopped (the sweep-out shape, ending ON the blade's point), thins
+  to `holdThin` 0.26 within `holdIn` 1.6 frames and **shivers** (`shiver` px wave along it, `flutter` of its
+  thickness, on `heldFor`, render time). After the freeze the line completes with the blade and is gone in
+  3 frames. A line never thinner than `linePx` 3.3 world px, or it is lost at play zoom (2 screen px).
+- **The needle is on the blade**: while it sweeps (`mark.tracking`), index.ts sets the mark's origin so its
+  leading end = hand joint + drawn blade (`mark.leadAt`); the offset is then kept on her body. Not on the
+  completing frame (the blade's overshoot and her air roll made the arc jump back over her face), not for down.
+- **Gotcha**: `__game.render()` re-runs the skin with dt 0. Anything in `SlashMark.frame` that advances on
+  a call rather than on `dt` breaks every capture that re-renders (zoomed crops): `if (frames <= 0) return`.
+- **Three strokes, three marks** (whiff sheet shows them side by side): cut 1 = a DOWNWARD DIAGONAL, blade
+  128 -> -50, ellipse tilted -30 (long axis down-ahead): a "\" from in front of her brow to low ahead,
+  body dropping (pelvis -11, curl). Cut 2 = the RETURN, mirrored: -66 -> 36, tilt +30: a "/" from her knee
+  to high ahead, body rising, chest open. Finisher = a great RISING cleave: three gather frames coiled low
+  with the blade dragged behind (-150), up through the front to 55, rounder ellipse (sq 0.7), hop 14: a tall
+  bracket standing 90 px out. Tried and dropped for the finisher: a horizontal cleave as a flat ellipse
+  (sq 0.27-0.42): the mark hides under the blade / behind the grass and reads as a thrust; its far half
+  would cross her face. A rising hook over her head (tilt 55, to 85 degrees) missed the creature by 60 px.
+- **A hit always has a crescent**: `SlashMark.hit` calls it back whole for one frame if it was thin or gone
+  (late pogo, a running cut that connects on active frame 5), then it is the hold line.
+- **Clang** (`power 0`): the near 0.62 of the arc at 0.6 belly, the line through the freeze, gone the frame
+  the freeze lets go (it used to hang in the air two more frames). Pose unchanged (the best thing: keep).
+- **Pogo**: a short tight arc (65 px wide, 39 deep) whose lowest point is 58 px under her box (a falling
+  down-cut meets its target at the far end of the 80 px area, so that is where contacts are; the blade
+  does not reach it, as in HK). On the hit it moves at most 30 px sideways / 30 down / 40 up to sit ON the
+  target's top under her (`SLASH_LOOK.pogo*`), is **pinned to the world** (`markPin`: carried up with her
+  bounce it hung in mid-air) and floored at the contact (`markFloor`). Contact cross at the same point.
+- **Never under the floor**: `SlashFrame.groundY` clamps every point.
+- **Up**: own arc (`Stroke.mark`, tail .. lead in blade degrees) from her shoulder line behind over the top
+  to high in front; `q0 / q1` = the cut fractions at its ends (nothing is drawn until the blade moves).
+- **Blade smear**: drawn long enough to reach the crescent's inner edge through the cut (`stretch` 1.4), back
+  to 1.1 within two frames of hitstop: so in the hold the blade's point stands ~5 px short of the line's end.
+- **Landed on a creature** (`braceK`), **blocked** (`clangT / clangK`), contact flash (a little smaller now:
+  38 / 13 px arms), antenna whip, cape `sweep`: as round 20.
+- A unit test pins a lone tap sheathed 21 frames after the press: `hold + home` = 21 (14 + 7); unchanged.
+- Rejected over the rounds: belly 0.24-0.33 (a lid); the crescent whole on the first active frame (it stood
+  past the blade: "pops whole"); 110-135 px reach at full cream for 7-11 frames (the biggest, brightest
+  thing on screen); cut 1 and 2 on the same arc; a down bowl 150 px wide; needles on the OUTER path; a
+  forward mark pinned to what it hit; a second smear blade; a translucent band.
+- Honest gaps: at full range the crescent does not touch what it hits (above); cut 1's held pose is still
+  a low lunge with the blade ~-20 degrees (the mark says diagonal, the body says reach); the finisher and
+  cut 2 both rise (bigger, rounder, further out, with a hop, but the same direction); the hold line is
+  faint in the blue zone at play zoom (the black creature and the cross carry the freeze there); tall
+  foreground grass (left zone) hides the low end of cut 1.
+- Capture: `__vesper.markHidden = true` hides crescent and flash. Staging (round 21 script kept in
+  `shots/vesper/slash7/stage.js` + `all.sh`): wrap `__enemies.update` to grab the live `sim`; move every
+  other enemy to x -5000; set the burrback's `x / homeX`, `facing` away and `strikeCd = 9999` each frame for
+  a landed combo (`.4 A1 .20 A1 .22 A1`), leave it to brace and press 6 frames into `braced` for a block,
+  hold a lampwing 68 px over her head for the up cut, teleport 84 / 100 px over it + `D+A1` for an early /
+  late pogo. Zones: x 960 (blue), 2236 (amber; pogo at 2340: pods at 2176 and 2570 eat slashes). One eval per
+  stage (other agents' HMR reloads the page between evals). "3x" on the 1280 canvas is 2 px per world px.
+  Sheets: `shots/vesper/slash7/` (`*-3x`, `*-1x` play zoom, `L` blue / `C` amber, `cmp-*` = before on top,
+  after under, `before/`); rounds 19 / 20 in `slash5/`, `slash6/`.
 
 ## Health (sim: memory/enemies.md; `HURT` in rig.ts)
-- `hurt`: recoil pose pops 40% past itself, tones flip for two frames (`Painter.invertK`), wings
-  blown toward the blow, 26 pale scales burst off (`Fx.scales`: 1.9-3.4 px, 0.4-0.8 s, mostly the
-  way she is thrown; no glow) plus 7 motes; then a soft alpha pulse while invulnerable (4.5 Hz;
-  7 Hz read as flicker). Low health dims lanterns and eyes. `fade` dissolves her into motes;
-  `reform` gathers 46 motes and she unfolds from a curl.
+- `hurt` (round 21; owner dislikes any brightness on her, and the old two-frame tone flip turned her whole
+  body pale lavender): she goes DARK. Recoil pose pops 55% past itself, `Painter.dimK` drains every solid
+  tone to 0.6 of its own grey for 2 frames and back over 5 (`HURT.dim / dimOut`; glows x0.3, lanterns and
+  eyes dimmed), eyes shut 7 frames (`shut`), wings blown toward the blow, 9 dark plum scales (`Fx.scales`,
+  `SCALE_TINTS`; no gold motes), then the soft alpha pulse while invulnerable (4.5 Hz). Low health dims
+  lanterns and eyes. `fade` dissolves her into motes; `reform` gathers 46 motes and she unfolds from a curl.
 
 ## Pickups
 - `pickup` sets `rig.joy` and a flash; the light RUNS lantern -> antenna bead -> eyes -> eye-spots

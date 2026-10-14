@@ -166,8 +166,15 @@ export interface Stroke {
   relax: number;
   /** Fraction of the cut from which its crescent shows (before that the blade is behind or beside her). */
   show: number;
-  /** The crescent's thickness at its belly, as a fraction of the reach. */
+  /** The crescent's thickness at its belly, as a fraction of ITS reach. */
   thick: number;
+  /**
+   * The crescent's reach (and the blade point's path) as a fraction of `reach`, the sim's: the mark
+   * is about one of her heights, smaller than the area that hits.
+   */
+  size: number;
+  /** Where the crescent's belly sits: > 1 = toward its leading end. */
+  skew: number;
   /**
    * The crescent's own arc, blade degrees from its tail end to its leading end, when it is not
    * simply `show`..1 of the cut (the up cuts: the tail comes down to her shoulder line).
@@ -200,18 +207,19 @@ const K_LEGS = 13; // air: legs trail back, px
 const K_HOP = 14; // a hop through the cut: pelvis and both feet leave the ground, px (render only)
 const NK = 15;
 
-// Three silhouettes that alternate, as a nail combo does. Cut 1 comes DOWN in front of her and ends
-// LOW and LONG (a reaching lunge, spine laid forward, blade low ahead, the off-arm thrown up behind);
-// cut 2 is the return, UP through the same place, and ends TALL with the weight still forward (front
-// foot out, chest open, blade high ahead); the finisher gathers small and high behind her for three
-// frames, hops, and cleaves down wide.
+// Three silhouettes, three marks. Cut 1 is a DOWNWARD DIAGONAL: the blade comes from high behind her
+// head down to low in front, and she drops into it (hips down, spine curled over the blade, the
+// off-arm thrown up behind). Cut 2 is the RETURN, its mirror: from low in front up to high ahead,
+// and she rises with it (hips up and through, chest open, the off-hand low behind). The finisher is
+// a great RISING cleave: coiled low with the blade dragged behind her for three frames, then up
+// from under through the front to over her head, and she leaves the ground with it.
 //              TW    LEAN   CURL   PF   PU    HT    OF   OU  FA  FB  ROT   WING LIFT LEGS HOP
-const CUT1_W = [0.75, -0.16, -0.2, -3, 2.6, -0.06, 7, 1, 0, 0, -0.14, -0.7, 0, 0, 0];
-const CUT1_F = [-0.85, 0.56, 0.12, 9, -8, -0.34, -10, 9, 14, -5, 0.24, 1.25, 0, 7, 0];
-const CUT2_W = [-0.6, 0.5, 0.2, 7, -8.5, -0.2, -6, 5, 12, -4, 0.16, -0.2, 0, 5, 0];
-const CUT2_F = [0.95, -0.12, -0.34, 16, -2.5, -0.12, -14, -10, 19, -14, -0.26, 0.35, 6, 4, 0];
-const FIN_W = [1.1, -0.34, 0.14, -9, -11, 0.12, 10, 3, -3, -5, -0.34, -1.2, 0, -3, 0];
-const FIN_F = [-0.95, 0.56, 0.2, 11, -8, -0.24, -11, 7, 15, -4, 0.36, 1.5, 0, 9, 13];
+const CUT1_W = [0.75, -0.2, -0.22, -3, 3.6, -0.1, 7, 1, 0, 0, -0.16, -0.7, 0, 0, 0];
+const CUT1_F = [-0.85, 0.36, 0.3, 6, -11, -0.16, -10, 11, 13, -5, 0.26, 1.25, 0, 7, 0];
+const CUT2_W = [-0.6, 0.46, 0.2, 6, -9.5, -0.2, -6, 5, 12, -4, 0.16, -0.2, 0, 5, 0];
+const CUT2_F = [0.95, -0.2, -0.36, 15, 1.5, -0.14, -14, -11, 19, -14, -0.28, 0.35, 7, 4, 0];
+const FIN_W = [1.1, 0.38, 0.26, -7, -13, 0.16, 6, 4, 4, -6, 0.2, -1.2, 0, -3, 0];
+const FIN_F = [-0.95, -0.22, -0.42, 9, 3, -0.3, -13, -13, 10, -10, -0.34, 1.5, 0, 8, 14];
 const UP1_W = [0.4, -0.08, -0.06, 0, -2.5, -0.2, 3, -3, 0, 0, -0.1, -0.4, 0, 0, 0];
 const UP1_F = [-0.4, 0.04, -0.14, 0, 4.2, -0.26, -4, -7, 0, 0, 0.1, 0.5, 4, 3, 0];
 const UP2_W = [-0.4, 0.08, 0, 0, -1.5, -0.2, -4, -4, 0, 0, 0.1, 0.2, 0, 3, 0];
@@ -230,63 +238,73 @@ const CUT = { cut: 1.7, ease: 2 } as const;
 
 export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: readonly Stroke[] } = {
   fwd: [
-    // 1: the cut. From high behind her shoulder down through the target; ends low ahead.
+    // 1: the cut, a downward diagonal: from high behind her head to low in front. The ellipse's long
+    // axis points down and ahead, so the mark is a "\\" that leans away from her.
     {
-      a0: 122,
-      a1: -56,
-      over: 9,
-      tilt: -11,
-      sq: 0.47,
+      a0: 128,
+      a1: -50,
+      over: 7,
+      tilt: -30,
+      sq: 0.6,
       reach: 110,
       wind: 1,
       ...CUT,
       hold: 14,
       home: 7,
-      relax: 7,
-      show: 0.27,
-      thick: 0.17,
+      relax: 6,
+      show: 0.35,
+      thick: 0.13,
+      size: 0.8,
+      skew: 1.25,
       sweep: -0.25,
       whip: 30,
       w: CUT1_W,
       f: CUT1_F,
     },
-    // 2: the return. The mirror of the first: from low ahead up through the target; ends high ahead.
+    // 2: the return, its mirror: from low in front up to high ahead (the long axis points up and
+    // ahead: a "/").
     {
       a0: -66,
-      a1: 70,
-      over: 10,
-      tilt: -3,
-      sq: 0.47,
+      a1: 36,
+      over: 9,
+      tilt: 30,
+      sq: 0.6,
       reach: 110,
       wind: 1,
       ...CUT,
       hold: 15,
       home: 7,
       relax: 5,
-      show: 0.04,
-      thick: 0.17,
+      show: 0.03,
+      thick: 0.13,
+      size: 0.8,
+      skew: 1.25,
       sweep: 1,
       whip: -30,
       w: CUT2_W,
       f: CUT2_F,
     },
-    // 3: the finisher. Gathered behind her, a cleave over the top with a hop: the first cut, larger.
+    // 3: the finisher, a great rising cleave: from low behind her, under and up through the front,
+    // to high ahead (a rounder, larger ellipse than the cuts': a tall bracket that stands further
+    // out, where a creature shoved back by two cuts is).
     {
-      a0: 164,
-      a1: -50,
-      over: 11,
-      tilt: -9,
-      sq: 0.52,
+      a0: -150,
+      a1: 55,
+      over: 9,
+      tilt: 30,
+      sq: 0.7,
       reach: 135,
       wind: 3,
       ...CUT,
       hold: 22,
       home: 12,
       relax: 6,
-      show: 0.4,
-      thick: 0.19,
-      sweep: -0.4,
-      whip: 44,
+      show: 0.537,
+      thick: 0.15,
+      size: 0.78,
+      skew: 1.3,
+      sweep: 1.2,
+      whip: -44,
       w: FIN_W,
       f: FIN_F,
     },
@@ -306,8 +324,10 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       home: 7,
       relax: 8,
       show: 0.14,
-      thick: 0.16,
-      mark: [174, 42],
+      thick: 0.12,
+      size: 0.72,
+      skew: 1.2,
+      mark: [172, 50],
       whip: 22,
       w: UP1_W,
       f: UP1_F,
@@ -325,8 +345,10 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       home: 7,
       relax: 14,
       show: 0.13,
-      thick: 0.16,
-      mark: [6, 140],
+      thick: 0.12,
+      size: 0.72,
+      skew: 1.2,
+      mark: [8, 130],
       whip: -18,
       w: UP2_W,
       f: UP2_F,
@@ -344,30 +366,36 @@ export const STROKES: { fwd: readonly Stroke[]; up: readonly Stroke[]; down: rea
       home: 12,
       relax: 8,
       show: 0.24,
-      thick: 0.17,
-      mark: [178, 42],
+      thick: 0.125,
+      size: 0.74,
+      skew: 1.3,
+      mark: [176, 50],
       whip: 30,
       w: UP3_W,
       f: UP3_F,
     },
   ],
-  // Down (the pogo): the crescent arcs beneath her. Drawn straight from the sheath: from behind,
-  // under her feet, to the front. Always the same blow (the pogo's rhythm).
+  // Down (the pogo): a short tight arc under her feet, as far under them as a pogo usually lands
+  // (a falling down-cut meets its target at the far end of the hit area: 60-80 px under her feet).
+  // The blade does not reach it; it is the cut's bow wave. Always the same blow (the pogo's rhythm).
   down: [
     {
-      a0: -156,
-      a1: -26,
-      over: 8,
+      a0: -152,
+      a1: -36,
+      over: 6,
       tilt: -90,
-      sq: 0.42,
+      sq: 0.45,
       reach: 120,
       wind: 1,
       ...CUT,
       hold: 12,
       home: 9,
       relax: 8,
-      show: 0.12,
-      thick: 0.16,
+      show: 0.08,
+      thick: 0.11,
+      size: 0.9,
+      skew: 1.1,
+      mark: [-140, -40],
       whip: -20,
       w: DOWN_W,
       f: DOWN_F,
@@ -380,9 +408,14 @@ export const HURT = {
   hold: 0.2,
   out: 0.28,
   /** The pose pops this far past itself on the first frame and settles in ~3. */
-  pop: 0.4,
-  /** Her tones flip (dark plum <-> pale lilac) for this long: two frames. No glow, no white. */
-  invert: 0.034,
+  pop: 0.55,
+  /**
+   * She goes DARK, never pale: her tones are drained and dimmed in full for `dim`, back over
+   * `dimOut`; her eyes are shut for `shut`.
+   */
+  dim: 0.035,
+  dimOut: 0.085,
+  shut: 0.12,
   /** How long the wings stay blown inside-out by the blow. */
   blow: 0.2,
   /** Her last light: the dissolve starts this long after the blow and takes `fadeLen`. */
@@ -1101,8 +1134,8 @@ export class Rig {
   private hurtRoll = 0;
   hurtBlow = 0;
   /** 1 while her tones are flipped by a blow (two frames), else 0. */
-  get hurtInvert(): number {
-    return this.hurtT < HURT.invert && !this.fading ? 1 : 0;
+  get hurtDim(): number {
+    return this.fading ? 0 : 1 - smoothstep(HURT.dim, HURT.dim + HURT.dimOut, this.hurtT);
   }
   /** 0..1: how much of the stroke's body key is in play; px she is off the ground in the finisher's hop. */
   slashBody = 0;
@@ -2282,7 +2315,7 @@ export class Rig {
       out[BU]! += 9 * hk * up;
       out[AP]! -= 0.5 * hk * up;
       out[BP]! -= 0.5 * hk * up;
-      out[EYE]! *= 1 - 0.7 * hk;
+      out[EYE]! *= this.hurtT < HURT.shut && !this.fading ? 0 : 1 - 0.7 * hk;
       // On screen, clockwise +: the feet lead the way she is thrown.
       this.hurtRoll = -(0.12 + 0.36 * up) * this.hurtDir * hk;
     }

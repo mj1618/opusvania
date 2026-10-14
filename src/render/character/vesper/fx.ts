@@ -15,10 +15,11 @@ const SPARK = 2;
 const GATHER = 4;
 /** A wing scale knocked loose: a small crisp fleck that tumbles and falls. */
 const SCALE = 5;
+/** Dark: her own plums (owner: no brightness on her, least of all when she is hit). */
 const SCALE_TINTS: readonly RGB[] = [
-  [0.93, 0.9, 0.98],
-  [0.78, 0.7, 0.95],
-  [0.98, 0.88, 0.66],
+  [0.2, 0.14, 0.32],
+  [0.12, 0.08, 0.2],
+  [0.3, 0.22, 0.42],
 ];
 const LIT: [number, number, number] = [0, 0, 0];
 const MAX = 260;

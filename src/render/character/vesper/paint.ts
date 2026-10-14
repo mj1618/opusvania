@@ -139,11 +139,12 @@ export class Painter {
   alphaK = 1;
   glowK = 1;
   /**
-   * 0..1: solid shapes drawn from now on have their tones flipped about `invertC` (dark becomes
-   * that pale tone, pale becomes dark). A hit reaction that is a value change, not a light.
+   * 0..1: solid shapes drawn from now on are drained toward a dark grey-plum of their own value
+   * (`dimTo` of it) and every light is turned down. A hit reaction that takes light away: she is
+   * never made paler by it.
    */
-  invertK = 0;
-  invertC: RGB = [0.64, 0.57, 0.8];
+  dimK = 0;
+  dimTo = 0.6;
   ghost: RGB | null = null;
   ghostAlpha = 0;
 
@@ -240,14 +241,14 @@ export class Painter {
     const v = this.verts;
     // Global dissolve: solid and soft shapes by `alphaK`, lights by `glowK`.
     a *= mode === GLOW ? this.glowK : mode === GHOST ? 1 : this.alphaK;
-    if (this.invertK > 0 && mode === SOLID) {
-      const k = this.invertK;
-      const c = this.invertC;
-      r += (Math.max(0.05, c[0]! - r * 0.86) - r) * k;
-      g += (Math.max(0.04, c[1]! - g * 0.86) - g) * k;
-      b += (Math.max(0.1, c[2]! - b * 0.86) - b) * k;
+    if (this.dimK > 0 && mode === SOLID) {
+      const k = this.dimK;
+      const l = (0.3 * r + 0.59 * g + 0.11 * b) * this.dimTo;
+      r += (l * 0.96 - r) * k;
+      g += (l * 0.9 - g) * k;
+      b += (l * 1.14 - b) * k;
       rs *= 1 - k;
-    }
+    } else if (this.dimK > 0 && mode === GLOW) a *= 1 - 0.7 * this.dimK;
     let o = this.nv * FLOATS;
     v[o++] = x;
     v[o++] = y;

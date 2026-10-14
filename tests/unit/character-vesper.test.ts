@@ -633,7 +633,7 @@ describe('vesper rig', () => {
     }
   });
 
-  it('slash mark: whole on the first active frame, holds through hitstop, gone in about five frames; the contact flash is as brief', () => {
+  it('slash mark: out on the first active frame, holds through hitstop, gone in four or five frames; the contact flash is as brief', () => {
     const at = (q: number, out: { x: number; y: number }): void => {
       out.x = Math.cos(q * 2 - 1);
       out.y = -Math.sin(q * 2 - 1) * 0.5;
@@ -649,9 +649,11 @@ describe('vesper rig', () => {
           heavy,
           facing: 1,
           reach: heavy ? 135 : 110,
-          show: 0.3,
-          thick: 0.25,
+          q0: 0.3,
+          q1: 1,
+          thick: 0.13,
           wide: 1,
+          skew: 1.2,
         },
         at,
       );

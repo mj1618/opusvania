@@ -4,61 +4,72 @@
  * principles, in her tones), and the contact flash where a blow lands.
  *
  * The crescent's inner edge is the path the blade's point travels; its outer edge swells from
- * that path out to the sim's reach, most at the middle, nothing at the two ends: thickest in the
- * middle, needle points at both ends, and the blade in her hand ends on its leading point. It stands whole in front of her from the first active frame (its
- * leading end drawn back to the blade on that frame, so the blade is its head), holds, then thins
- * from the inside and from its tail and is gone: about five frames, plus the hitstop. It hangs from
- * a fixed offset on her body, so it moves with her and never drifts or stays behind. Every cut
- * (1, 2, finisher, up, down, in the air) is this one shape on a different arc.
+ * that path out to its reach. It SWEEPS out of the blade: on the first active frame it is drawn
+ * only as far as the blade has got, thickest near the blade end; on the next it is whole (needle,
+ * belly, needle) with its leading needle on the blade's point; then it thins to a line and is gone:
+ * four frames (five on the finisher). In hitstop it stays where the blade stopped, thins to a dim
+ * line within two frames and shivers. About one of her heights tall, never the brightest thing on
+ * screen for more than two frames. Every cut is this one shape on a different arc.
  *
- * Flat tones only: a pale cool cream, a thin lilac line along the inner edge, a hair of dusk round
- * it so it keeps its edge on a pale backdrop. No glow, no gradient, nothing left in the air.
+ * Flat tones only: a pale cool cream while it is whole, a dim lilac once it is a line, a hair of
+ * dusk round it so it keeps its edge on a pale backdrop. No glow, no gradient, nothing left in the air.
  */
-import { sat } from '../../hooded/math';
+import { lerp, sat } from '../../hooded/math';
 import type { Painter, RGB } from '../paint';
 import type { CutInfo, SlashFrame, StrokeAt } from './types';
 
 export const CRESCENT = {
-  /** Its tone in the darkest zone, as a fraction of the cream (1 in the amber centre). */
-  toneDark: 0.84,
+  /** Its tone at its brightest, in the darkest zone and in the amber centre (fractions of the cream). */
+  toneDark: 0.68,
+  toneLight: 0.88,
   /** Samples along it. */
   n: 44,
-  /** Frames it stands whole (a cut, the finisher), then frames it takes to thin away. */
+  /**
+   * Frames it is seen at full belly (a cut, the finisher; the first of them is the sweep-out frame),
+   * then frames it takes to thin away.
+   */
   full: [2, 3],
-  fade: 3,
-  /** How the belly is shaped along it: > 1 moves the thickest part toward the leading end. */
-  skew: 1.12,
+  fade: 2,
+  /** How fast the belly goes while it thins (higher = a line sooner). */
+  thinPow: 2.2,
   /** > 1 draws the two ends out into longer needles. */
   needle: 1.15,
+  /** The sweep-out frame: the belly sits this far toward the blade end (see `CutInfo.skew`). */
+  sweepSkew: 1.75,
   /** While it thins the tail end is drawn up toward the leading end by this fraction. */
-  retreat: 0.42,
-  /** It stands whole once the cut has got this far (the first active frame shows about 0.83). */
-  whole: 0.7,
+  retreat: 0.5,
+  /** Once it is thinner than this (px at the belly) it stays this thick until it is gone: a line that reads at play zoom. */
+  linePx: 3.3,
   /** The inner line: px wide at the belly, and never more than this fraction of the thickness. */
-  line: 2.4,
-  lineMax: 0.22,
+  line: 1.6,
+  lineMax: 0.2,
   /** The dusk hair round it, px. */
-  dusk: 1.1,
+  dusk: 1,
   /**
    * In hitstop it does not stand there whole over what it hit: over `holdIn` frames of the freeze it
-   * thins to `holdThin` of its belly (toward the outer edge: a line round the target, not a lid on it).
+   * thins to `holdThin` of its belly (a line that ends on the blade, not a lid on the target), and
+   * shivers: `shiver` px along its length, `flutter` of its thickness.
    */
-  holdThin: 0.42,
-  holdIn: 2,
+  holdThin: 0.26,
+  holdIn: 1.6,
+  shiver: 1.3,
+  flutter: 0.22,
   /** A cut that glanced off: what is left of the crescent, as a fraction of its arc and of its belly. */
   clangArc: 0.62,
-  clangThin: 0.5,
+  clangThin: 0.6,
   /** Contact flash: frames; half-lengths along / across the cut, px; half-width px. */
   flash: 4,
-  long: 44,
-  short: 15,
-  flashW: 3.2,
+  long: 38,
+  short: 13,
+  flashW: 2.8,
   /** Specks thrown along the cut: how many (a cut, the finisher), frames they live. */
   specks: [3, 5],
   speckLife: 4,
 } as const;
 
 const CREAM: RGB = [0.95, 0.955, 0.9];
+/** What it is once it is a line: a dim lilac (x the zone's tone). */
+const DIM: RGB = [0.68, 0.67, 0.9];
 const LINE: RGB = [0.6, 0.6, 0.8];
 const DUSK: RGB = [0.07, 0.05, 0.14];
 const tv = { x: 0, y: 0 };
@@ -69,7 +80,7 @@ const MAX_SPECK = 8;
  * cream that sits right on the amber centre glares on the dark blue and violet sides.
  */
 function toneFor(pale: number): number {
-  return CRESCENT.toneDark + (1 - CRESCENT.toneDark) * sat((pale - 0.68) / 0.26);
+  return lerp(CRESCENT.toneDark, CRESCENT.toneLight, sat((pale - 0.68) / 0.26));
 }
 
 export class SlashMark {
@@ -80,16 +91,20 @@ export class SlashMark {
     step: 1,
     heavy: false,
     facing: 1,
-    reach: 110,
-    show: 0.2,
-    thick: 0.27,
+    reach: 88,
+    q0: 0.2,
+    q1: 1,
+    thick: 0.13,
     wide: 1,
+    skew: 1.1,
   };
   private on = false;
   /** A cut's arc is laid (so a late hit can call the crescent back). */
   private laid = false;
-  /** Frames since the crescent appeared (stands still in hitstop). */
+  /** Frames it has been seen (stands still in hitstop): 1 on the sweep-out frame. */
   private age = 0;
+  /** This frame its leading end is the blade's point (the cut is still crossing, or has just ended on it). */
+  private onBlade = false;
   /** Frames it has been held in hitstop, and how much of its arc is left after a clang. */
   private heldFor = 0;
   private arc = 1;
@@ -144,19 +159,50 @@ export class SlashMark {
   frame(f: SlashFrame): void {
     const frames = f.dt * 60;
     this.hAge += frames;
+    this.onBlade = false;
     if (!this.on) return;
     const c = this.cut;
+    const full = CRESCENT.full[c.heavy ? 1 : 0]!;
+    if (f.held) {
+      this.heldFor += frames;
+      return;
+    }
+    // A cut that glanced off leaves nothing once the freeze lets go.
+    if (this.arc < 1 && this.heldFor > 0) {
+      this.on = false;
+      return;
+    }
+    if (frames <= 0) return;
     if (f.cutQ >= 0) {
-      // Whole as soon as the blade is most of the way round: that is the first active frame.
-      const h = f.cutQ > CRESCENT.whole ? 1 : sat((f.cutQ - c.show) / (1 - c.show) + 0.06);
+      // It reaches exactly as far as the blade's point has got (nothing until the blade moves);
+      // once it has been seen for a frame, the next completes it.
+      const h = this.age >= 1 || f.cutQ >= 1 ? 1 : f.cutQ > 0.02 ? sat((f.cutQ - c.q0) / (c.q1 - c.q0)) : 0;
+      // (Only while it sweeps: the frame that completes it keeps the origin, or the arc would jump
+      // with the blade's overshoot and her roll.)
+      this.onBlade = h > this.head && h < 1;
       if (h > this.head) this.head = h;
     } else if (this.head < 1) {
       // The cut was dropped (a dash, a blow): what is there thins away.
       this.head = Math.max(this.head, 0.5);
+      this.age = Math.max(this.age, full);
     }
-    if (f.held) this.heldFor += frames;
-    else this.age += frames;
-    if (this.age > CRESCENT.full[c.heavy ? 1 : 0]! + CRESCENT.fade + 0.5) this.on = false;
+    if (this.head > 0.08) this.age += frames;
+    if (this.age >= full + CRESCENT.fade + 0.99) this.on = false;
+  }
+
+  /** Its leading end is the blade's point this frame: `leadAt` says where that end is, px from the origin. */
+  get tracking(): boolean {
+    return this.on && this.onBlade && this.arc >= 1;
+  }
+
+  leadAt(out: { x: number; y: number }): void {
+    const N = CRESCENT.n;
+    const v = this.head * (N - 1);
+    const i0 = Math.min(N - 2, Math.floor(v));
+    const fr = v - i0;
+    const k = this.cut.reach * (1 - this.cut.thick);
+    out.x = (this.ux[i0]! + (this.ux[i0 + 1]! - this.ux[i0]!) * fr) * k;
+    out.y = (this.uy[i0]! + (this.uy[i0 + 1]! - this.uy[i0]!) * fr) * k;
   }
 
   /**
@@ -182,11 +228,12 @@ export class SlashMark {
           this.on = true;
           this.head = 1;
           this.age = full;
+          this.heldFor = 0;
         }
       } else {
         // Glanced off: it never got through. What is left is the near part, thin, and it goes fast.
         this.arc = CRESCENT.clangArc;
-        this.age = Math.max(this.age, full + 1);
+        this.age = Math.max(this.age, full);
       }
     }
     // A few sharp specks thrown on along the cut, fanned a little: fixed angles turned by a
@@ -223,21 +270,35 @@ export class SlashMark {
     const N = CRESCENT.n;
     const R = c.reach;
     const full = CRESCENT.full[c.heavy ? 1 : 0]!;
-    // `age` is 1 on the frame it appears: whole for `full` frames, then it thins over `fade`.
+    // `age` is 1 on the frame it appears: full belly for `full` frames, then it thins over `fade`.
     const d = sat((this.age - full) / (CRESCENT.fade + 1));
     if (d >= 1) return;
+    const clang = this.arc < 1;
     const hold = 1 - (1 - CRESCENT.holdThin) * sat(this.heldFor / CRESCENT.holdIn);
-    const thin = Math.min((1 - d) ** 1.35, hold) * (this.arc < 1 ? CRESCENT.clangThin : 1);
-    const v0 = CRESCENT.retreat * d * this.arc;
-    const v1 = this.head * this.arc;
+    let thin = Math.min((1 - d) ** CRESCENT.thinPow, hold) * (clang ? CRESCENT.clangThin : 1);
+    // Held, it shivers: a small wave runs along it and its thickness flutters. Never a frozen sticker.
+    const shv = f.held ? CRESCENT.shiver : 0;
+    const ph = this.heldFor * 2.7;
+    if (f.held) thin *= 1 + CRESCENT.flutter * Math.sin(this.heldFor * 4.3 + 1);
+    const v0 = CRESCENT.retreat * d * Math.min(this.arc, this.head);
+    const v1 = Math.min(this.head, this.arc);
     const gy0 = f.groundY ?? Number.POSITIVE_INFINITY;
     if (v1 - v0 < 0.08) return;
+    // Sweeping out (the blade has not got to the end yet) the belly sits at the blade end.
+    const skew = this.head < 0.995 && !clang ? CRESCENT.sweepSkew : c.skew;
+    // Cream while it has a belly, a dim lilac once it is a line.
+    const bright = sat((thin - 0.3) / 0.45);
     const tone = toneFor(f.pale);
+    const cr = lerp(DIM[0]!, CREAM[0]!, bright) * tone;
+    const cg = lerp(DIM[1]!, CREAM[1]!, bright) * tone;
+    const cb = lerp(DIM[2]!, CREAM[2]!, bright) * tone;
+    const floor = CRESCENT.linePx / R;
     const { px, py, gx, gy, gc } = p;
     const ux = this.ux;
     const uy = this.uy;
-    // pass 0: the dusk hair; 1: the cream body; 2: the inner line.
+    // pass 0: the dusk hair; 1: the body; 2: the inner line.
     for (let pass = 0; pass < 3; pass++) {
+      if (pass === 2 && bright < 0.05) break;
       for (let i = 0; i < N; i++) {
         // The whole shape (needle, belly, needle) lies between v0 and v1 of the arc.
         const w = i / (N - 1);
@@ -246,32 +307,37 @@ export class SlashMark {
         const fr = v - i0;
         const x = ux[i0]! + (ux[i0 + 1]! - ux[i0]!) * fr;
         const y = uy[i0]! + (uy[i0 + 1]! - uy[i0]!) * fr;
-        const belly = Math.sin(Math.PI * w ** CRESCENT.skew) ** CRESCENT.needle;
-        // The two needle ends lie on the blade point's own path (`1 - thick` of the reach); the
-        // belly swells out from it to the full reach. Thinning, the outer edge stays.
-        let ro = 1 - c.thick * (1 - belly);
-        const th = c.thick * belly * thin;
-        let ri = ro - th;
-        let col = CREAM;
-        let k = tone;
+        const belly = Math.sin(Math.PI * w ** skew) ** CRESCENT.needle;
+        // Both ends lie on the blade point's own path (`1 - thick` of the reach); the belly swells
+        // out from it. Thinning, it draws in toward that path: the line that is left is the blade's.
+        const th = Math.max(c.thick * belly * thin, floor * Math.min(1, belly * 2.2));
+        const wob = (shv / R) * Math.sin(ph + w * 8) * Math.min(1, belly * 3);
+        let ri = 1 - c.thick + wob;
+        let ro = ri + th;
+        let r = cr;
+        let g = cg;
+        let b = cb;
         if (pass === 0) {
-          const g = (CRESCENT.dusk / R) * Math.min(1, th * R * 0.4);
-          ro += g;
-          ri -= g;
-          col = DUSK;
-          k = 1;
+          const dg = (CRESCENT.dusk / R) * Math.min(1, th * R * 0.5);
+          ro += dg;
+          ri -= dg;
+          r = DUSK[0]!;
+          g = DUSK[1]!;
+          b = DUSK[2]!;
         } else if (pass === 2) {
-          const lw = Math.min(CRESCENT.line / R, th * CRESCENT.lineMax) * sat((th * R - 4) / 6);
+          const lw = Math.min(CRESCENT.line / R, th * CRESCENT.lineMax) * sat((th * R - 4) / 5);
           ro = ri + lw;
-          col = LINE;
+          r = LINE[0]! * tone;
+          g = LINE[1]! * tone;
+          b = LINE[2]! * tone;
         }
         px[i] = f.ox + x * R * ro;
         py[i] = Math.min(gy0, f.oy + y * R * ro);
         gx[i] = f.ox + x * R * ri;
         gy[i] = Math.min(gy0, f.oy + y * R * ri);
-        gc[i * 3] = col[0]! * k;
-        gc[i * 3 + 1] = col[1]! * k;
-        gc[i * 3 + 2] = col[2]! * k;
+        gc[i * 3] = r;
+        gc[i * 3 + 1] = g;
+        gc[i * 3 + 2] = b;
       }
       p.strip(N, 1);
     }

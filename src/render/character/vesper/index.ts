@@ -39,12 +39,14 @@ const DEFAULT_TURNS = 3;
 /** The crescent: px its origin stands ahead of and (a forward cut) below her chest, at the target's height (`clear`: never lower than this over her feet on the ground); how far an up / down one is let out sideways, and its reach as a fraction of the sim's (which is measured from her centre, below the chest). */
 const SLASH_LOOK = {
   ahead: 4,
-  drop: 10,
-  wideDown: 1.75,
-  vert: 0.88,
-  stretch: 1.5,
-  held: 1.12,
+  drop: 6,
+  stretch: 1.4,
+  held: 1.1,
   clear: 42,
+  /** A pogo: the arc is moved at most this far (px, sideways / down / up) to sit on what it hit. */
+  pogoX: 30,
+  pogoDown: 30,
+  pogoUp: 40,
   hidden: false,
 };
 
@@ -90,6 +92,12 @@ export class VesperCharacter implements CharacterSkin {
   /** Where the crescent hangs from, as an offset from her body centre: fixed when the cut begins. */
   private markOx = 0;
   private markOy = 0;
+  /** World y the crescent is never drawn below, besides the ground: the top of what a pogo landed on. */
+  private markFloor = 1e9;
+  /** A pogo that landed: the arc is held at this world point instead of on her body. */
+  private markPin = false;
+  private pinX = 0;
+  private pinY = 0;
   private readonly markAt = (q: number, out: { x: number; y: number }): void => {
     this.rig.markAtRoll(q, this.markRoll, out);
   };
@@ -301,8 +309,7 @@ export class VesperCharacter implements CharacterSkin {
     // two frames after the cut is through (it holds in hitstop with everything else).
     const seen = 0.5 + 0.5 * rig.slashLen;
     if (cq > 0 && cq < 1 && rig.clangK <= 0) {
-      const vert = rig.slashDir !== 'fwd';
-      const tipR = rig.stroke.reach * (vert ? SLASH_LOOK.vert : 1) * (1 - rig.stroke.thick) * rig.slashLen;
+      const tipR = rig.stroke.reach * rig.stroke.size * (1 - rig.stroke.thick) * rig.slashLen;
       this.bladeSmear = clamp((tipR - rig.handNow) / (BLADE_LEN * seen), 1, SLASH_LOOK.stretch);
     } else if (player.hitstop <= 0) this.bladeSmear += (1 - this.bladeSmear) * (1 - Math.exp(-dt * 60 * 0.9));
     // Frozen in hitstop a smear is just a longer sword: it draws back to a hint within two frames.
@@ -329,17 +336,22 @@ export class VesperCharacter implements CharacterSkin {
       // Laid in her upright frame plus the cut's own roll: out of a somersault what is left of the
       // turn is gone in two frames, and a crescent laid in it hangs over her head, off the blade.
       this.markRoll = rig.slashRoll;
+      this.markFloor = 1e9;
+      this.markPin = false;
+      const st = rig.stroke;
+      const span = st.a1 - st.a0;
       mark.begin(
         {
           dir: rig.slashDir,
           step: rig.slashStep,
           heavy,
           facing: sg,
-          reach: rig.stroke.reach * (rig.slashDir === 'fwd' ? 1 : SLASH_LOOK.vert),
-          show: rig.stroke.show,
-          thick: rig.stroke.thick,
-          // A down cut's hit area is narrow (100 px): the crescent is let out across it, a bowl under her.
-          wide: rig.slashDir === 'down' ? SLASH_LOOK.wideDown : 1,
+          reach: st.reach * st.size,
+          q0: st.mark ? (st.mark[0] - st.a0) / span : st.show,
+          q1: st.mark ? (st.mark[1] - st.a0) / span : 1,
+          thick: st.thick,
+          wide: 1,
+          skew: st.skew,
         },
         this.markAt,
       );
@@ -347,13 +359,22 @@ export class VesperCharacter implements CharacterSkin {
     const sf = this.sf;
     sf.dt = dt;
     sf.held = player.hitstop > 0 && !sig.slashHit;
-    sf.ox = player.cx + this.markOx;
-    sf.oy = player.cy + this.markOy;
     sf.cutQ = cq;
     sf.pale = view.pale;
-    // The ground under her cuts the crescent off: it is never drawn over the floor.
-    sf.groundY = player.feetY + (player.grounded ? 0 : rig.groundDist) + 2;
     mark.frame(sf);
+    // While the blade is crossing, the crescent's leading needle IS the blade's point: its origin
+    // is set from where the point really is (hand joint + the drawn blade), then kept on her body.
+    if (mark.tracking && rig.clangK <= 0 && rig.slashDir !== 'down') {
+      const hj = (J_HAND_A + rig.swordSide) * 2;
+      const bl = 2.2 + BLADE_LEN * view.bladeLen - 1.5;
+      mark.leadAt(this.tan);
+      this.markOx = rig.frame.j[hj]! + Math.cos(view.bladeAng) * bl - this.tan.x - player.cx;
+      this.markOy = rig.frame.j[hj + 1]! + Math.sin(view.bladeAng) * bl - this.tan.y - player.cy;
+    }
+    sf.ox = this.markPin ? this.pinX : player.cx + this.markOx;
+    sf.oy = this.markPin ? this.pinY : player.cy + this.markOy;
+    // The ground under her cuts the crescent off: it is never drawn over the floor.
+    sf.groundY = Math.min(this.markFloor, player.feetY + (player.grounded ? 0 : rig.groundDist) + 2);
     if (sig.slashHit) {
       // Where it lands: the target's side nearest her (the target draws its own burst).
       const dx = player.cx - rig.hitX;
@@ -368,15 +389,25 @@ export class VesperCharacter implements CharacterSkin {
       const tl = Math.hypot(tx, ty) || 1;
       // A blocked cut reports the very point where the blade met the shell.
       const near = sig.blocked ? 0 : 14;
-      mark.hit(
-        rig.hitX + (dx / dl) * near,
-        rig.hitY + (dy / dl) * near,
-        tx / tl,
-        ty / tl,
-        -dx / dl,
-        -dy / dl,
-        rig.hitPower,
-      );
+      let cx = rig.hitX + (dx / dl) * near;
+      let cy = rig.hitY + (dy / dl) * near;
+      if (rig.slashDir === 'down' && !sig.blocked) {
+        // A pogo: the contact is the top of what is under her, as near under her feet as it gets,
+        // and the arc is moved to sit on it (its lowest point on the contact).
+        cx = rig.hitX + clamp(player.cx - rig.hitX, -18, 18);
+        cy = rig.hitY - 12;
+        const R = rig.stroke.reach * rig.stroke.size;
+        this.markOx += clamp(cx - sf.ox, -SLASH_LOOK.pogoX, SLASH_LOOK.pogoX);
+        this.markOy += clamp(cy - (sf.oy + R), -SLASH_LOOK.pogoUp, SLASH_LOOK.pogoDown);
+        // It stays on what it hit: she is gone upward at once, and an arc carried up with her hangs in the air.
+        this.markPin = true;
+        sf.ox = this.pinX = player.cx + this.markOx;
+        sf.oy = this.pinY = player.cy + this.markOy;
+        // ... and never drawn into it.
+        this.markFloor = cy + 3;
+        sf.groundY = Math.min(sf.groundY ?? 1e9, this.markFloor);
+      }
+      mark.hit(cx, cy, tx / tl, ty / tl, -dx / dl, -dy / dl, rig.hitPower);
       if (!sig.blocked) this.flash = Math.max(this.flash, 0.2);
     }
     // --- Hurt, fading, re-forming.
@@ -388,9 +419,8 @@ export class VesperCharacter implements CharacterSkin {
       bp[21 + i * 2] = rig.frame.j[jj * 2 + 1]!;
     }
     if (sig.hurt) {
-      fx.scatter(bp, 13, 7);
-      // Scales knocked off her wings, thrown the way she is.
-      fx.scales(bp, 10, 26, player.vx || -player.facing, -0.6);
+      // A few dark scales knocked off her wings, thrown the way she is. Nothing pale, nothing lit.
+      fx.scales(bp, 10, 9, player.vx || -player.facing, -0.6);
     }
     // Her last light: she comes apart into dust as she goes.
     if (rig.fadeK > 0 && rig.fadeK < 1) {
@@ -458,7 +488,7 @@ export class VesperCharacter implements CharacterSkin {
     const low = player.hp <= 1 && player.hpMax > 1 ? 0.86 + 0.14 * Math.sin(clock * 5.2) : 1;
     const whole = (1 - rig.fadeK) * (1 - rig.reformK);
     const lit = (0.5 + 0.5 * hpK) * low * whole * rig.eyeLit;
-    view.glow = glow * lit;
+    view.glow = glow * lit * (1 - 0.6 * rig.hurtDim);
     view.eyeLit = rig.eyeLit;
     // While nothing can hurt her she pulses softly (alpha, never a white flash); gone when she has faded.
     const safe = player.invuln > 0 && player.stagger <= 0 && player.faded <= 0 ? sat(player.invuln / 12) : 0;
@@ -473,9 +503,9 @@ export class VesperCharacter implements CharacterSkin {
     this.trails[3]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.2, clock);
     p.alphaK = bodyA;
     p.glowK = whole;
-    p.invertK = rig.hurtInvert;
+    p.dimK = rig.hurtDim;
     drawVesper(p, rig.frame, view, clock);
-    p.invertK = 0;
+    p.dimK = 0;
     p.alphaK = 1;
     p.glowK = 1;
     this.trails[0]!.draw(p, FX_GOLD, FX_GOLD_HOT, 0.4);
