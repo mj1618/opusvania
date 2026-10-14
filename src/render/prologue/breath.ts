@@ -56,13 +56,23 @@ vec4 paint() {
     q = vec2(cr * q.x + sr * q.y, -sr * q.x + cr * q.y) / uP[3].z;
     float d = palm(q) * uP[3].z;
     float blur = 0.3 * uP[3].z;
-    float a = smoothstep(blur, -blur * 1.2, d) * uP[3].w;
-    float inner = smoothstep(-blur * 3.5, blur * 0.5, d);
-    // Skin lit from the pale light it rests on: a warm glow at the edge nearest it, dark within.
-    float near = exp(-length(p - lc) / 300.0);
-    vec3 warm = mix(vec3(0.07, 0.028, 0.014), vec3(0.2, 0.085, 0.035), inner);
-    warm += vec3(0.62, 0.34, 0.15) * near * (0.35 + 0.65 * inner);
-    warm *= 0.85 + 0.15 * fbm3(p / 260.0 + 3.0);
+    // Out of focus: a sigmoid edge as wide as a third of it, never a cut-out shape.
+    float a = uP[3].w / (1.0 + exp(d / blur * 2.6));
+    // How deep inside the skin, and how near the pale light (it is lit from there, through the skin).
+    float depth = clamp(-d / (blur * 2.2), 0.0, 1.0);
+    float L = exp(-length(p - lc) / 380.0);
+    float L2 = exp(-length(p - lc) / 120.0);
+    // Light through skin: deep red at the rim of the blur, amber where the light comes through.
+    vec3 rim = vec3(0.30, 0.045, 0.03);
+    vec3 flesh = vec3(0.16, 0.05, 0.03);
+    vec3 amber = vec3(0.95, 0.52, 0.22);
+    vec3 warm = mix(rim, flesh, depth);
+    warm = mix(warm, amber, clamp(L * (0.55 + 0.45 * depth) * 1.3, 0.0, 1.0));
+    warm += vec3(1.0, 0.72, 0.45) * L2 * 0.35;
+    // A soft bokeh lift in the middle of it, slow and uneven (a hand is never still).
+    warm *= 0.82 + 0.18 * fbm3(p / 340.0 + uT.x * 0.04) + 0.12 * depth;
+    // Grain in the warmth (and a dither against banding).
+    warm += (hash12(p + fract(uT.x * 13.7) * 211.0) - 0.5) * 0.02;
     col = mix(col, warm, a);
   }
 

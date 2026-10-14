@@ -21,6 +21,9 @@ touch); older: `shots/lamp2`, `shots/burr2`.
   turns (`enemyTurn` cause `lantern` / `wary`), `enemyBlock` (`rig.block`, sparks), `enemyRecover` (`rig.spent(cause)`),
   `enemyReset` (`rig.reset`), and a lampwing's `enemyGiveUp` cause `calm`. Dev handle
   `window.__enemies` (`cfg` = `BURR`; `LAMP` is in config.ts too; `cpuMs`, `drawn`, `verts`).
+- Staged beats (the prologue only): `BurrRig.cine = {reach, open, watch}` cranes the head out with the front lifted,
+  lifts the brow plate open and holds the eyes on the hero point; reach it with `EnemyRenderer.burrRig(i)`. Null in
+  the game. A second `EnemyRenderer` on a fake one-spawn scene draws a puppet (memory/prologue.md).
 - `?nopickups` empties `scene.enemies` (src/main.ts): shots / clip are clean plates; `--pickups` shows them.
 - Cost (CPU fill, M-series, one on screen): lampwing ~0.04 ms / ~1100 vertices, burrback ~0.055 ms
   / ~2400; nothing on screen ~0.006 ms (springs only).

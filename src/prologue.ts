@@ -54,9 +54,14 @@ export class PrologueDirector {
   /** The input the sim may see now. */
   mask(input: InputFrame): InputFrame {
     if (this.done) return input;
-    if (!this.dropped) return 0;
-    // Walk only, until the glint comes to her; then she holds still with it.
-    return this.t < COCOONS.glint[0] + 1.2 ? input & WALK : 0;
+    if (!this.dropped || this.t < COCOONS.shake[1]) return 0;
+    // Walk only, until the glint comes to her; then she holds still with it. No step right past
+    // the water's edge (the pool is a few px east of where she lands).
+    if (this.t >= COCOONS.glint[0] + 1.2) return 0;
+    let w = input & WALK;
+    const p = this.game.state.player;
+    if (p.x + p.w / 2 >= COCOONS.fence) w &= ~ActionBit.right;
+    return w;
   }
 
   /** Skip to the Grove. */

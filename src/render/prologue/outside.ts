@@ -22,6 +22,40 @@ import { window01 } from './track';
 const HORIZON = 700;
 /** The game's title (docs/story/locked.md: "Wing: The Kept World", 2026-10-14). */
 export const TITLE = { word: 'WING', sub: 'THE KEPT WORLD' } as const;
+/** Where the mountain (and the title over it) stands in the plate, screen x. */
+export const MOUNTAIN_X = 1300;
+
+/**
+ * The title, faint: two lines of serif in pale bone with a soft glow. Not part of the plate (the
+ * plate is mirrored to the way she looks; the words must not be).
+ */
+export function titleCard(): Container {
+  const title = new Container();
+  const word = new Text({
+    text: TITLE.word,
+    style: {
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontSize: 72,
+      letterSpacing: 34,
+      fill: 0xe0d8d0,
+      dropShadow: { color: 0xc8c0d8, alpha: 0.55, blur: 16, distance: 0, angle: 0 },
+    },
+  });
+  word.anchor.set(0.5);
+  const sub = new Text({
+    text: TITLE.sub,
+    style: {
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontSize: 22,
+      letterSpacing: 12,
+      fill: 0xc8c0c8,
+    },
+  });
+  sub.anchor.set(0.5);
+  sub.position.set(0, 66);
+  title.addChild(word, sub);
+  return title;
+}
 /** The edge of the trees, screen x: the root stops short of it. */
 const TREES = 560;
 
@@ -43,7 +77,7 @@ export function buildOutside(c: Composer): (t: number) => void {
   const view = new Container();
   R.addChild(view);
   const pulse = (t: number): number => 0.5 - 0.5 * Math.cos((2 * Math.PI * t) / 5);
-  const MX = 1300;
+  const MX = MOUNTAIN_X;
 
   // --- Sky: cold violet night, a pale breath on the horizon over the mountain.
   const sky = c.shader('sky', -80, 0, VIEW_W + 160, VIEW_H, SKY, view);
@@ -258,34 +292,6 @@ export function buildOutside(c: Composer): (t: number) => void {
     fernsC.addChild(f);
   }
 
-  // --- The title, faint, in the sky over the root and the mountain.
-  const title = new Container();
-  const word = new Text({
-    text: TITLE.word,
-    style: {
-      fontFamily: 'Georgia, "Times New Roman", serif',
-      fontSize: 72,
-      letterSpacing: 34,
-      fill: 0xe0d8d0,
-      dropShadow: { color: 0xc8c0d8, alpha: 0.55, blur: 16, distance: 0, angle: 0 },
-    },
-  });
-  word.anchor.set(0.5);
-  const sub = new Text({
-    text: TITLE.sub,
-    style: {
-      fontFamily: 'Georgia, "Times New Roman", serif',
-      fontSize: 22,
-      letterSpacing: 12,
-      fill: 0xc8c0c8,
-    },
-  });
-  sub.anchor.set(0.5);
-  sub.position.set(0, 66);
-  title.addChild(word, sub);
-  title.position.set(MX, 320);
-  R.addChild(title);
-
   return (t: number) => {
     const [o0, o1] = COCOONS.outside;
     const u = window01(t, o0, o1);
@@ -295,8 +301,6 @@ export function buildOutside(c: Composer): (t: number) => void {
     const b = pulse(t);
     coreA.alpha = 0.3 + 0.4 * b;
     coreB.alpha = 0.1 + 0.12 * b;
-    title.alpha =
-      0.42 * window01(t, COCOONS.title[0], COCOONS.title[1]) * (1 - window01(t, o1 - 1.4, o1 - 0.2));
     for (const [i, f] of fernsC.children.entries()) f.skew.x = Math.sin(t * 0.7 + i) * 0.03;
   };
 }

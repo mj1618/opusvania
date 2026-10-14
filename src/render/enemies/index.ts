@@ -128,6 +128,11 @@ export class EnemyRenderer {
     if (typeof window !== 'undefined') (window as unknown as { __enemies?: EnemyRenderer }).__enemies = this;
   }
 
+  /** The burrback rig drawn for `sim.enemies[i]` (made on its first update), for staged beats. */
+  burrRig(i: number): BurrRig | undefined {
+    return this.rigs[i];
+  }
+
   recolor(): void {
     loadColors();
   }

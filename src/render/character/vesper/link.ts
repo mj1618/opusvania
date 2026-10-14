@@ -15,6 +15,6 @@ export const vesperLink = {
   goal: null as GoalState | null,
   /** The glass of lantern i: x at [i * 2], y at [i * 2 + 1], world px. */
   beads: [] as number[],
-  /** The prologue's cues (render/prologue/grove.ts): 0..1 she holds a glint to her face; 0..1 she looks past it. */
-  cine: { hold: 0, look: 0 },
+  /** The prologue's cues (render/prologue/grove.ts): 0..1 she holds a glint to her face; 0..1 she looks past it; 0..1 she shakes out her wings. */
+  cine: { hold: 0, look: 0, shake: 0 },
 };

@@ -56,11 +56,11 @@ export const BURR = {
   /** The camera comes down through the canopy and settles at play framing. */
   descend: [42, 47],
   /** The caterpillar's twig: where it clings (world px). */
-  twig: { x: 760, y: 1210 },
+  twig: { x: 720, y: 1236 },
   /** The burrback walks in from the west and stops over the caterpillar. */
   walkIn: [45.2, 50.2],
   enterX: 400,
-  stopX: 724,
+  stopX: 704,
   /** Its head swings over the caterpillar, plate opening. */
   look: [50.2, 52.8],
   /** The caterpillar spins: a pale blur of silk, a cocoon in two seconds. */
@@ -76,7 +76,9 @@ export const BURR = {
 export const COCOONS = {
   /** Where the two cocoons hang from (a thread from above), and how low they hang. */
   sorrel: { x: 1700, y: 1060 },
-  umber: { x: 1500, y: 1080 },
+  umber: { x: 1400, y: 1080 },
+  /** The walk stops at the water's edge: no step right past this x (her centre). */
+  fence: 1462,
   /** Sorrel's splits, and he flies straight up to the dance. */
   sorrelSplit: 62.2,
   sorrelFly: [62.6, 65.4],
@@ -84,6 +86,8 @@ export const COCOONS = {
   dance: { x: 1760, y: 420, rx: 170, ry: 38 },
   /** Hers splits; she drops to the moss (the sim takes her from here: walk only). */
   umberSplit: 66,
+  /** She lands, stands and shakes out her wings like a cape; walk is hers after it. */
+  shake: [66.9, 68],
   /** A glint drifts down in front of her; walk is taken back when it arrives. */
   glint: [74, 77],
   /** She raises it to her face; the camera pushes in. */

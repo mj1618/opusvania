@@ -710,6 +710,7 @@ export class VesperCharacter implements CharacterSkin {
     cue.heartWait = false;
     cue.hold = vesperLink.cine.hold;
     cue.look = vesperLink.cine.look;
+    cue.shake = vesperLink.cine.shake;
     if (!goal) return;
     // Lanterns, then the wayside lamps: one list, as the goal renderer keeps them (its `beads` are in this order).
     const nLant = sc.lanterns?.length ?? 0;

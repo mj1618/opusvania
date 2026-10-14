@@ -18,7 +18,7 @@ import { VIEW_H, VIEW_W } from '../contract';
 import type { LayerTree } from '../scene/layer-tree';
 import { buildBreath } from './breath';
 import { GroveActors } from './grove';
-import { buildOutside } from './outside';
+import { buildOutside, MOUNTAIN_X, titleCard } from './outside';
 import { Plate } from './plate';
 import { COCOONS, PROLOGUE_END, SHOT } from './script';
 import { Track, window01 } from './track';
@@ -43,6 +43,9 @@ export class PrologueRenderer {
   private readonly world: Plate;
   private readonly outside: Plate;
   private readonly actors: GroveActors;
+  private readonly title: Container;
+  /** The way she looks when she looks past the glint: the outside plate is turned to it. */
+  private lookDir: 1 | -1 = 1;
   /** Seconds on the prologue's clock: the director sets it before each update. */
   t = 0;
 
@@ -53,7 +56,9 @@ export class PrologueRenderer {
     this.outside = new Plate(r, buildOutside);
     this.actors = new GroveActors(ctx, layers);
     this.black.rect(-4, -4, VIEW_W + 8, VIEW_H + 8).fill(0x020306);
-    this.layer.addChild(this.breath.sprite, this.world.sprite, this.outside.sprite, this.black);
+    this.title = titleCard();
+    this.title.visible = false;
+    this.layer.addChild(this.breath.sprite, this.world.sprite, this.outside.sprite, this.title, this.black);
     this.layer.eventMode = 'none';
   }
 
@@ -95,8 +100,17 @@ export class PrologueRenderer {
     const outK = window01(t, o0, o0 + 1.2) * (1 - window01(t, o1 - 1.2, o1));
     this.breath.sprite.visible = inBreath;
     this.world.sprite.visible = inWorld;
-    this.outside.sprite.visible = outK > 0.001;
-    this.outside.sprite.alpha = outK;
+    if (t < COCOONS.look[0]) this.lookDir = sim.player.facing;
+    const os = this.outside.sprite;
+    os.visible = outK > 0.001;
+    os.alpha = outK;
+    // Outside lies the way she looks: the last trunks behind her eyes, the root and mountain ahead.
+    os.scale.x = this.lookDir;
+    os.x = this.lookDir > 0 ? 0 : VIEW_W;
+    const tk = window01(t, COCOONS.title[0], COCOONS.title[1]) * (1 - window01(t, o1 - 1.4, o1 - 0.2));
+    this.title.visible = tk > 0.001;
+    this.title.alpha = 0.42 * tk * outK;
+    this.title.position.set(this.lookDir > 0 ? MOUNTAIN_X : VIEW_W - MOUNTAIN_X, 320);
     if (inBreath) this.breath.render(t, dt);
     if (inWorld) this.world.render(t, dt);
     if (outK > 0.001) this.outside.render(t, dt);

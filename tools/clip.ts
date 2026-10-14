@@ -161,7 +161,7 @@ async function prologueFrames(browser: Browser, framesDir: string, w: number, h:
   const from = Number(args.from);
   const to = Number(args.to);
   const per = Math.max(1, Math.round(60 / Number(args.fps ?? 60)));
-  const walk = args.script ?? '.30 L40 .40 R6 .30';
+  const walk = args.script ?? '.130 L40 .40 R6 .30';
   await page.evaluate((t) => window.__game.prologue?.seek(Math.min(t, 66)), from);
   let walked = false;
   const canvas = page.locator('#game');

@@ -18,8 +18,9 @@ the game boots, then hands Umber to the player in the Grove. Timings and staging
 ## How it is built
 - **Director** `src/prologue.ts` (harness side, not render): owns the clock `t` (advanced by the stage's render `dt`,
   hooked in through `RenderStage.attachPrologue`), sets the run mode (frozen until 66 s, then realtime; not under
-  `?manual`), masks input (nothing → left/right only from 66 s → nothing from 75.2 s, when the glint arrives), and
-  at 66 s teleports Umber under her cocoon (in the air: the sim drops her onto the moss). At 90 s it detaches; the HUD
+  `?manual`), masks input (nothing until she has shaken out her wings at 68 s → left/right only → nothing from
+  75.2 s, when the glint arrives; right is dropped once her centre is at `COCOONS.fence` 1462 (momentum carries her ~25 px on), the
+  pool starts at 1536), and at 66 s teleports Umber under her cocoon (x 1400, in the air: the sim drops her). At 90 s it detaches; the HUD
   and the glints fade in over ~1.2 s.
 - **Renderer** `src/render/prologue/index.ts`: a layer over the game's layers (under the dip and HUD) with the plates
   and a black for fades; while a plate covers the frame the Grove's layers are hidden. It hides Umber (and zeroes her
@@ -33,43 +34,54 @@ the game boots, then hands Umber to the player in the Grove. Timings and staging
   fake scene with one spawn, driven by a made-up `EnemyState`; it restores `window.__enemies` after construction) with
   pale root strokes in its shell seams, the two cocoons, Sorrel (a second Vesper skin on its own `LightRegistry`,
   brightened/desaturated by a ColorMatrixFilter, clock x1.25, on a made-up gliding `PlayerState`), the dance ring,
-  the glint, and Umber's acting cue.
-- **Umber's acting**: `vesperLink.cine = {hold, look}` → rig cue → `HOLD` / `PAST` poses in `actPose`; `hold` also
-  drives `offerK`, so `vesperLink.offerX/Y` is her hand and the glint sits in it.
+  the glint, and Umber's acting cues. The caterpillar group (twig, body, silk) is drawn about the twig point at
+  `CAT_SCALE` 1.7 so it reads. The burrback's beat uses `BurrRig.cine = {reach, open, watch}` (render/enemies:
+  head craned out with the front lifted, brow plate lifted open, eyes held on the given point; null in the game) via
+  `EnemyRenderer.burrRig(i)`. Sorrel flies in the skin's `rise` pose with his own flight wings drawn behind him
+  (`drawSorrelWings`: delta forewings swept back, hindwings tucked, beating 7.5 Hz): the skin's glide spread read
+  as a butterfly.
+- **Umber's acting**: `vesperLink.cine = {hold, look, shake}` → rig cue → `HOLD` / `PAST` poses in `actPose`; `hold`
+  also drives `offerK`, so `vesperLink.offerX/Y` is her hand and the glint sits in it; `shake` (66.9-68) is a
+  shiver plus a cloak flare of the wings, her cape shaken out.
+- **The outside plate follows her look**: the director-side renderer latches her facing at 81.6 s; facing left, the
+  plate sprite is mirrored (trees on the right). The title is a separate overlay (`titleCard()` in outside.ts) placed
+  over the mountain on either side, so the words never mirror.
 - **Track** (`track.ts`, unit-tested): keys `{t, v[], ease}`; `integrate()` gives a breath whose period changes
   without a phase jump (shot 1 slows from 5 s to 7.4 s while touched).
 
 ## The shots
 1. **0-14 the breath.** Black; a pale light (~40 px) breathing 2.5 in / 2.5 out with a cloud of threads inside; at
-   4.6 a huge warm blur (a palm SDF blurred by 0.3 of its size, so it never reads as a hand) slides in from the left and
-   rests; the light leans and warms a little and slows; 9-10.4 it lifts away up-left; two 4-frame flickers, a burst of
+   4.6 a huge warm blur (a palm SDF with a sigmoid edge a third of its size wide, so it never reads as a hand; lit
+   through the skin from the light: deep red at its rim, amber near the light, a slow bokeh lift, grain/dither)
+   slides in from the left and rests; the light leans and warms a little and slows; 9-10.4 it lifts away up-left; two 4-frame flickers, a burst of
    grey grain, a breath that collapses, a dim tremor, black.
 2. **14-42 the world from high.** One `LAND` shader: curved horizon, land in perspective with eye height 3 (eye 1
-   squashed every pattern into horizontal streaks), towns as clustered warm points that go out as the frost's
-   distance field passes them, frost veins = noise ridges in (angle x 14/34/80, radius) about the mountain's foot so
+   squashed every pattern into horizontal streaks), towns as warm points in clusters on a coarse 1.7-unit grid (60%
+   lit, plus stray farm lights) that go out cluster by cluster as the frost's distance field passes, the near land
+   darkening to 35% at the frame's foot, steam wisps rising where the front is, frost veins = noise ridges in (angle x 14/34/80, radius) about the mountain's foot so
    they fan out and seem to branch. The mountain is `MOUNTAIN` at z 14 with its own 5 s pulse. A ridge at z 16 on the
    right with the stag: frost strokes climb it, the stag sinks 72 px behind the ridge's crest, its antlers (drawn with
    the same branching `grow()` as the root) turn pale and root grows on from their tips. The camera drifts right,
    leans in on the stag (28.5-39), then closes on one moth-fleck and dips to black.
-3. **42-60 the burrback and the caterpillar.** Down through the canopy over the left glade to (820, 1130), then in to
-   zoom ~5 on a twig at (760, 1210) standing above the grass. The burrback walks in from x 400, stops, `alert` turns
-   it toward the caterpillar (the face comes round to camera), the caterpillar spins into a pale cocoon (51.1-53.1),
-   it waits, walks on east; the camera pans with it to the pool.
-4. **60-90 cocoons, glint, title.** Two pale cocoons on threads over the pool's west edge (1500 / 1700), amber
-   breathing in each. 62.2 Sorrel's splits (a dark torn mouth, flaps); he glides straight up to the ring of moths at
-   (1760, 420); the camera tilts up after him. 66 hers splits, she drops to the moss; walk only. 74 the glint drifts
+3. **42-60 the burrback and the caterpillar.** Down through the canopy over the left glade, then in to zoom ~5.5 on
+   a twig at (720, 1236). The burrback walks in from x 400 and stops at 704; 50.2-52.8 its head swings out and up
+   over the caterpillar (front lifting, plate open, eyes on it) while the caterpillar spins (a whirling ring of silk,
+   wraps piling into a pale cocoon, 51.1-53.1); then two short sniffs, it loses interest and walks on east; the
+   camera pans with it to the pool.
+4. **60-90 cocoons, glint, title.** Two pale cocoons on threads by the pool (1400 / 1700), amber breathing in each.
+   62.2 Sorrel's splits (a dark torn mouth, flaps); he flies straight up, wings beating, to the ring of moths at
+   (1760, 420); the camera tilts up after him. 66 hers splits, she drops to the moss and shakes out her wings; walk
+   only from 68 (no further right than the water's edge). 74 the glint drifts
    down in front of her; 77 she holds it at her chin, the camera pushes in to zoom 6.6 on her face lit from below;
    81.6 she looks past it and the camera turns her way; 83.6-89.2 a plate: the Grove's last trunks, frost, pale root
    lying across it steaming, the mountain small on the horizon, the title faint in the sky; 88.6-90 back to her and
    the follow camera; control returns at 90.
 
 ## What is weak / known gaps
-- Shot 3: the burrback "head swing, plate opening" is only its `alert` turn to face the caterpillar; no real reach.
-  The caterpillar is tiny even at zoom 5 (22 px long in world px).
-- Shot 4: "stands, shakes out her cape" is just her landing; no shake. The look past the glint pans the way she
-  faces, but the outside plate is one fixed composition (not mirrored).
-- Shot 2 towns still read a little like an even carpet near the camera; no steam visible off the frost front at
-  play size (the steam term is there but faint).
+- Shot 2: still a little murky; the ridge reads as a rise with a stag, the dead trees on it are tiny at play size.
+- Shot 3: the plate opening is subtle at this size; the head swing and front lift carry the beat. The twig stands
+  in front of the burrback.
+- Shot 4: Sorrel's own skin wings still show in the rise pose next to the drawn flight wings (it reads as a moth in
+  flight, not a perfect one). The shake is a wing flare and shiver, not a full-body shake.
 - Title text comes from `TITLE` in outside.ts (the game's title moved twice on 2026-10-14; check locked.md).
-- `docs/story/current/mouthless.md` section 3 tells a different prologue (a vole, Sorrel shivering for her); this
-  follows the key-scenes script, as asked.
+- The shot list in scenes/ is the one followed (the owner picked its images); §3 of the story outline differs.

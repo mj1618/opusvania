@@ -117,6 +117,8 @@ vec4 paint() {
   float n = fbm(w * vec2(0.9, 0.9));
   float rv = 1.0 - abs(fbm3(w * 0.35 + 2.0) * 2.0 - 1.0);
   col = vec3(0.012, 0.03, 0.036) * (0.7 + 0.6 * n) * (1.0 - 0.4 * smoothstep(0.88, 0.97, rv));
+  // The near land falls off into dark: depth, and the frame's foot is quiet.
+  col *= mix(1.0, 0.35, smoothstep(700.0, 1080.0, p.y));
   // --- Towns: warm points, clustered, many in the distance. Each goes out as the frost reaches it.
   float px = z / uP[0].z;
   vec2 cell = w / 0.28;
@@ -127,8 +129,13 @@ vec4 paint() {
     for (int i = -1; i <= 1; i++) {
       vec2 c = ci + vec2(float(i), float(j));
       float h = hash12(c * 1.31 + 7.0);
-      float cl = fbm3(c * 0.05 + 1.0);
-      float dens = (smoothstep(0.55, 0.68, cl) * 0.6 + 0.01) * uP[2].x * (1.0 - smoothstep(14.0, 30.0, z) * 0.7);
+      // Towns: clusters on a coarse grid (a few lit, most land dark), a stray farm light between.
+      vec2 cc = c * 0.28;
+      vec2 C = floor(cc / 1.7);
+      float has = step(hash12(C * 3.7 + 1.3), 0.6);
+      vec2 cen = (C + 0.2 + 0.6 * vec2(hash12(C + 5.1), hash12(C + 9.4))) * 1.7;
+      float cr = 0.45 + 0.6 * hash12(C + 2.9);
+      float dens = (has * smoothstep(cr, cr * 0.25, length(cc - cen)) * 0.85 + 0.012) * uP[2].x;
       if (h > dens) continue;
       vec2 tp = (c + vec2(hash12(c + 3.1), hash12(c + 8.7)) * 0.8 + 0.1) * 0.28;
       float td = frostDist(tp);
@@ -151,7 +158,7 @@ vec4 paint() {
   float age = clamp((R - fd) / 4.0, 0.0, 1.0);
   vec3 frostCol = pale * (0.025 + 0.02 * n) * behind;
   frostCol += pale * v * reach * (0.62 - 0.4 * age) * (0.7 + 0.3 * uT.y);
-  frostCol += pale * front * reach * v * 0.5 + pale * front * 0.03;
+  frostCol += pale * front * reach * v * 0.6 + pale * front * 0.07;
   col = mix(col, col * 0.4, behind * 0.7) + frostCol * uP[1].w;
   col += vec3(1.0, 0.68, 0.38) * towns * 1.35 * (1.0 - haze * 0.7);
   col += pale * covered * 0.25;
@@ -164,8 +171,8 @@ vec4 paint() {
     float f = exp(-abs(frostDist(ww) - R) / 0.25);
     st += f * (1.0 - float(k) / 7.0);
   }
-  float wisp = smoothstep(0.42, 0.8, fbm(vec2(p.x / 40.0, (p.y + t * 26.0) / 30.0)));
-  col += pale * st * wisp * 0.05 * uP[2].y * uP[1].w;
+  float wisp = smoothstep(0.35, 0.75, fbm(vec2(p.x / 34.0, (p.y + t * 30.0) / 26.0)));
+  col += pale * st * (0.25 + wisp) * 0.11 * uP[2].y * uP[1].w;
   // Distance haze toward the horizon.
   col = mix(col, vec3(0.04, 0.06, 0.08), haze * 0.8);
   return vec4(col, 1.0);
@@ -351,11 +358,13 @@ export function buildWorld(c: Composer): (t: number, dt: number) => void {
   const ridgeG = new Graphics();
   // The ridge, in its own px: crest at (0, 0), its foot on the land RH px below.
   const crest: Array<[number, number]> = [];
+  // Long and low to the left, broken off steep to the right, rocks along the top.
   const crestY = (x: number): number => {
-    const k = x / 250;
-    return (
-      RH * Math.min(1.2, k * k * (k < 0 ? 1.1 : 0.7)) - 3 * Math.sin(x * 0.05) * Math.max(0, 1 - Math.abs(k))
-    );
+    const k = x / 300;
+    const body = k < 0 ? RH * Math.min(1.2, k * k * 0.95) : RH * Math.min(1.2, (k * 1.9) ** 2);
+    const near = Math.max(0, 1 - Math.abs(k) * 1.4);
+    const rocks = (5 * Math.sin(x * 0.11) + 3 * Math.sin(x * 0.37 + 1) + 2 * Math.sin(x * 0.9)) * near;
+    return body - Math.max(0, rocks) - 6 * near;
   };
   for (let i = 0; i <= 48; i++) {
     const x = -480 + i * 20;
@@ -363,6 +372,23 @@ export function buildWorld(c: Composer): (t: number, dt: number) => void {
   }
   const ridgePts = crest.flat();
   ridgeG.poly([...ridgePts, 480, RH + 40, -480, RH + 40]).fill(0x03070a);
+  // Two dead trees on its shoulder, bare against the sky.
+  const trees: Branch[] = [];
+  const trng = prng(311);
+  for (const tx of [-210, -150])
+    grow(
+      trng,
+      tx,
+      crestY(tx) + 2,
+      -Math.PI / 2 + (trng() - 0.5) * 0.3,
+      70 + trng() * 30,
+      3.2,
+      3,
+      0,
+      trees,
+      0.6,
+    );
+  drawBranches(ridgeG, trees, 1, 0x03070a, 1);
   // A faint sky-rim along its crest.
   ridgeG.moveTo(crest[0]![0], crest[0]![1]);
   for (const [x, y] of crest) ridgeG.lineTo(x, y);

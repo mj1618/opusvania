@@ -24,7 +24,7 @@ const { values: args } = parseArgs({
     every: { type: 'string', default: '1.5' },
     from: { type: 'string', default: '0' },
     to: { type: 'string', default: '90' },
-    walk: { type: 'string', default: '.30 L40 .40 R6 .30' },
+    walk: { type: 'string', default: '.130 L40 .40 R6 .30' },
     cols: { type: 'string', default: '6' },
     'no-gpu': { type: 'boolean', default: false },
     help: { type: 'boolean', short: 'h' },
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
     await browser.close();
   }
 
-  // The sheet: every frame at 480x270 with its time burnt in, `cols` across.
+  // The sheet: every frame at 320x180 (small enough that viewers do not downscale it: a downscaled preview posterizes) with its time burnt in, `cols` across.
   const cols = Number(args.cols);
   const sheet = join(outDir, from === 0 && to >= 90 ? 'sheet.png' : `sheet-${from}-${to}.png`);
   const labelled = join(outDir, '.labelled');
@@ -95,7 +95,7 @@ async function main(): Promise<void> {
       '-i',
       s.file,
       '-vf',
-      `scale=480:270,drawtext=text='${s.t.toFixed(1)} s':x=8:y=8:fontsize=16:fontcolor=white@0.85:box=1:boxcolor=black@0.5:boxborderw=4`,
+      `scale=320:180,drawtext=text='${s.t.toFixed(1)} s':x=8:y=8:fontsize=13:fontcolor=white@0.85:box=1:boxcolor=black@0.5:boxborderw=4`,
       '-pix_fmt',
       'rgb24',
       join(labelled, `${String(i).padStart(4, '0')}.png`),
@@ -116,7 +116,10 @@ async function main(): Promise<void> {
     sheet,
   ]);
   rmSync(labelled, { recursive: true, force: true });
-  console.log(`${shots.length} frames -> ${framesDir}\nsheet -> ${sheet}`);
+  // A JPEG too: image previews quantize a big PNG to a palette and its dark gradients look posterized.
+  const jpg = sheet.replace(/\.png$/, '.jpg');
+  ffmpeg(['-i', sheet, '-q:v', '3', jpg]);
+  console.log(`${shots.length} frames -> ${framesDir}\nsheet -> ${sheet} (and ${jpg})`);
 }
 
 main().catch((e) => {

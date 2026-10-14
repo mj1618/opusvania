@@ -41,14 +41,14 @@ import { envelope, Track, window01 } from './track';
 const CAM = new Track([
   { t: SHOT.burr.start, v: [880, 240, 1, 0, 0, 0, 0] },
   { t: BURR.descend[1], v: [820, 1130, 1.6, 0, 0, 0, 0] },
-  { t: BURR.look[0] - 0.4, v: [758, 1222, 4.8, 0, 0, 0, 0] },
-  { t: BURR.sniff[1], v: [768, 1224, 5.2, 0, 0, 0, 0] },
+  { t: BURR.look[0] - 0.4, v: [724, 1226, 5.4, 0, 0, 0, 0] },
+  { t: BURR.sniff[1], v: [730, 1228, 5.6, 0, 0, 0, 0] },
   { t: 58.4, v: [1000, 1180, 2.3, 0, 0, 0, 0] },
   { t: 61, v: [1600, 1060, 1.6, 0, 0, 0, 0] },
   { t: COCOONS.sorrelFly[0], v: [1630, 1030, 1.7, 0, 0, 0, 0] },
   { t: 64.8, v: [1720, 660, 1.15, 0, 0, 0, 0] },
-  { t: 65.8, v: [1530, 1070, 1.9, 0, 0, 0, 0] },
-  { t: COCOONS.umberSplit + 0.8, v: [1515, 1150, 2.2, 0, 0, 0, 0] },
+  { t: 65.8, v: [1460, 1070, 1.9, 0, 0, 0, 0] },
+  { t: COCOONS.umberSplit + 0.8, v: [1440, 1150, 2.2, 0, 0, 0, 0] },
   { t: 68.6, v: [1515, 1150, 2.2, 1, 0, -30, 0] },
   { t: COCOONS.glint[0], v: [1515, 1150, 2.3, 1, 0, -40, 0] },
   { t: COCOONS.raise[0], v: [1515, 1150, 3, 1, 0, -50, 0] },
@@ -59,6 +59,8 @@ const CAM = new Track([
 ]);
 
 const PALE = 0xd9cfc4;
+/** The caterpillar, its twig and its silk are drawn this much larger than their world px. */
+const CAT_SCALE = 1.7;
 const AMBER = 0xffb36b;
 const GOLD = 0xffd9a0;
 
@@ -107,6 +109,8 @@ export class GroveActors {
   private readonly burrState: EnemyState;
   // Sorrel.
   private readonly sorrelLayer = new Container({ label: 'sorrel' });
+  /** His flight: a moth's wings, forewings swept back, hindwings tucked under them, beating. */
+  private readonly sorrelWings = new Graphics();
   private readonly sorrelSkin: CharacterSkin;
   private readonly sorrelLights = new LightRegistry();
   private readonly sorrel: PlayerState;
@@ -126,6 +130,12 @@ export class GroveActors {
     this.silkGlow = soft(0, 0, 26, PALE, 0);
     this.front.addChild(this.twig, this.cat, this.silkGlow, this.silk);
     this.drawTwig();
+    // The caterpillar is drawn at moth scale, and then made a little larger than life so it reads.
+    for (const g of [this.twig, this.cat, this.silk]) {
+      g.pivot.set(BURR.twig.x, BURR.twig.y);
+      g.position.set(BURR.twig.x, BURR.twig.y);
+      g.scale.set(CAT_SCALE);
+    }
     // The cocoons over the pool (behind her: she drops out of hers in front of it).
     this.cocoonGlow = [soft(0, 0, 60, AMBER, 0), soft(0, 0, 60, AMBER, 0)];
     this.back.addChild(this.cocoons, ...this.cocoonGlow);
@@ -193,7 +203,7 @@ export class GroveActors {
     lift.brightness(1.14, false);
     lift.saturate(-0.28, true);
     this.sorrelLayer.filters = [lift];
-    L.get('goal').addChild(this.sorrelLayer);
+    L.get('goal').addChild(this.sorrelWings, this.sorrelLayer);
     this.sorrelSkin = vesperSkin.create({ ...ctx, lights: this.sorrelLights }, this.sorrelLayer);
     this.sorrelLayer.visible = false;
   }
@@ -202,8 +212,9 @@ export class GroveActors {
     const g = this.twig;
     const { x, y } = BURR.twig;
     // A thin dead stem out of the grass, bending over, a leaf at its tip.
-    g.moveTo(x - 16, BURR.ground + 2)
-      .bezierCurveTo(x - 14, y + 12, x - 8, y + 2, x + 4, y)
+    // (Drawn about (x, y) at CAT_SCALE: its foot is put where it meets the real ground.)
+    g.moveTo(x - 16, y + (BURR.ground + 2 - y) / CAT_SCALE)
+      .bezierCurveTo(x - 15, y + 18, x - 8, y + 2, x + 4, y)
       .bezierCurveTo(x + 14, y - 1, x + 22, y + 2, x + 30, y - 4)
       .stroke({ color: 0x0c1418, width: 2.2, cap: 'round' });
     g.moveTo(x - 6, y + 4)
@@ -276,8 +287,8 @@ export class GroveActors {
     const s = this.silk;
     s.clear();
     const spinning = envelope(t, s0, s0 + 0.2, s1 - 0.5, s1 + 0.2);
-    this.silkGlow.position.set(x + 10, y + 3);
-    this.silkGlow.alpha = 0.55 * spinning * (0.75 + 0.25 * Math.sin(clock * 40));
+    this.silkGlow.position.set(x + 10 * CAT_SCALE, y + 6 * CAT_SCALE);
+    this.silkGlow.alpha = 0.7 * spinning * (0.75 + 0.25 * Math.sin(clock * 40));
     const cx = x + 10;
     const cy = y + 4 + 6 * u;
     const sway = Math.sin(clock * 1.2) * 0.06 * u;
@@ -315,8 +326,23 @@ export class GroveActors {
           )
           .stroke({ color: 0xf0e8da, width: 0.5, alpha: 0.5 * spinning });
       }
-      s.rotation = 0;
       void sway;
+    }
+    // The blur of it: silk whirling round the body faster than the eye, a pale spinning ring.
+    if (spinning > 0.01) {
+      const rcx = x + 10;
+      const rcy = y + 1 + 4 * u;
+      for (let k = 0; k < 5; k++) {
+        const a0 = clock * 26 + k * 1.26;
+        const rx = 10 - 2 * u + k * 0.6;
+        const ry = 4.5 + 3 * u;
+        s.moveTo(rcx + Math.cos(a0) * rx, rcy + Math.sin(a0) * ry);
+        for (let j = 1; j <= 10; j++) {
+          const a = a0 + j * 0.16;
+          s.lineTo(rcx + Math.cos(a) * rx, rcy + Math.sin(a) * ry);
+        }
+        s.stroke({ color: 0xf6efe2, width: 0.9, alpha: 0.55 * spinning * (1 - k * 0.12) });
+      }
     }
   }
 
@@ -338,7 +364,7 @@ export class GroveActors {
     const walking = (t >= B.walkIn[0] && t < B.walkIn[1] - 0.15) || t >= B.walkOn[0] + 0.1;
     const looking = t >= B.look[0] && t < B.sniff[0];
     const sniffing = t >= B.sniff[0] && t < B.walkOn[0];
-    const mode = walking ? 'walk' : looking ? 'alert' : sniffing ? 'pause' : 'pause';
+    const mode = walking ? 'walk' : 'pause';
     const frame = Math.floor(t * 60);
     if (e.mode !== mode) {
       e.mode = mode;
@@ -358,8 +384,8 @@ export class GroveActors {
     const look = looking || sniffing;
     const target: PlayerView = {
       ...p,
-      cx: look ? tx + 10 : cx + 400,
-      cy: look ? ty + 18 : B.ground - 40,
+      cx: look ? tx + 10 * CAT_SCALE : cx + 400,
+      cy: look ? ty - 4 : B.ground - 40,
       feetY: look ? B.ground : B.ground,
       faded: look ? 0 : 1,
     };
@@ -372,6 +398,20 @@ export class GroveActors {
       scene: this.burrScene,
       enemies: [e],
     };
+    // The beat: its head swings out over the caterpillar, the brow plate lifting open; it holds
+    // there while the silk goes round; the plate shuts, the head comes back, two short sniffs.
+    const rig = this.burr.burrRig(0);
+    if (rig) {
+      const [l0, l1] = B.look;
+      const [n0, n1] = B.sniff;
+      const sniff =
+        t >= n0 && t < n1 ? Math.max(0, Math.sin((t - n0) * 7.5)) ** 2 * (1 - window01(t, n1 - 0.6, n1)) : 0;
+      rig.cine = {
+        reach: Math.max(envelope(t, l0, l0 + 0.7, l1 - 0.3, l1 + 0.2), 0.55 * sniff),
+        open: envelope(t, l0 + 0.25, l0 + 0.9, l1 - 0.5, l1),
+        watch: envelope(t, l0 - 0.6, l0, n1 - 0.4, n1),
+      };
+    }
     this.burr.update(dt, clock, view, fake);
     // Pale root in its shell seams, and steam off it.
     const g = this.seams;
@@ -502,6 +542,7 @@ export class GroveActors {
     const [f0, f1] = C.sorrelFly;
     const on = t >= t0 && t < f1 + 0.3;
     this.sorrelLayer.visible = on;
+    this.sorrelWings.visible = on && t >= f0 - 0.15;
     this.sorrelLight.intensity = 0;
     if (!on) return;
     const top = C.sorrel.y + 24;
@@ -520,11 +561,12 @@ export class GroveActors {
     s.vy = vy;
     s.grounded = false;
     s.facing = 1;
-    s.gliding = t >= f0;
-    s.motion = t >= f0 ? 'glide' : 'fall';
+    s.gliding = false;
+    s.motion = t >= f0 ? 'rise' : 'fall';
     s.motionFrames++;
     s.modeFrames++;
     s.contactFrames++;
+    this.drawSorrelWings(x, y - 50, clock, window01(t, f0 - 0.15, f0 + 0.2));
     // Quicker: his clock runs fast.
     this.sorrelSkin.update(dt * 1.25, clock * 1.25 + 7, viewOf(s), []);
     const l = this.sorrelLights.get('ember');
@@ -532,6 +574,60 @@ export class GroveActors {
       this.sorrelLight.x = l.x;
       this.sorrelLight.y = l.y;
       this.sorrelLight.intensity = 1.1 * Math.min(1, (t - t0) * 2);
+    }
+  }
+
+  /** A moth in flight seen from behind and below: delta forewings swept back, hindwings tucked. */
+  private drawSorrelWings(x: number, y: number, clock: number, open: number): void {
+    const g = this.sorrelWings;
+    g.clear();
+    if (open <= 0.01) return;
+    // The beat: quick, the stroke mostly downward, the wings swept back at the bottom of it.
+    const ph = clock * 2 * Math.PI * 7.5;
+    const beat = Math.sin(ph);
+    const a = -0.35 + 0.75 * beat;
+    const k = open * (0.85 + 0.15 * Math.abs(Math.cos(ph)));
+    const fore: Array<[number, number]> = [
+      [0, -2],
+      [20, -12],
+      [44, -6],
+      [50, 2],
+      [34, 14],
+      [12, 16],
+      [2, 8],
+    ];
+    const hind: Array<[number, number]> = [
+      [0, 6],
+      [16, 12],
+      [26, 22],
+      [18, 32],
+      [6, 26],
+    ];
+    for (const side of [-1, 1]) {
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      const tf = (pts: Array<[number, number]>, sk: number, lag: number): number[] =>
+        pts.flatMap(([px, py]) => {
+          const c2 = Math.cos(a * lag);
+          const s2 = Math.sin(a * lag);
+          const rx = px * k * sk;
+          return [
+            x + side * (rx * c2 - py * s2 * 0.4),
+            y + rx * s2 * 0.9 + py * (lag === 1 ? ca : 1) + sa * 2,
+          ];
+        });
+      g.poly(tf(hind, 0.8, 0.6)).fill({ color: 0x2c1f3e, alpha: 0.95 * open });
+      const f = tf(fore, 0.85, 1);
+      g.poly(f).fill({ color: 0x4e3866, alpha: 0.95 * open });
+      g.poly(f).stroke({ color: 0xc4b4aa, width: 1.2, alpha: 0.4 * open });
+      // A pale vein and the spot.
+      g.moveTo(f[0]!, f[1]!)
+        .lineTo(f[6]!, f[7]!)
+        .stroke({ color: 0x8a76a0, width: 0.8, alpha: 0.5 * open });
+      g.circle(f[4]! * 0.55 + x * 0.45, f[5]! * 0.55 + y * 0.45, 2).fill({
+        color: 0xc4b4aa,
+        alpha: 0.55 * open,
+      });
     }
   }
 
@@ -543,6 +639,7 @@ export class GroveActors {
     const look = window01(t, C.look[0], C.look[1]) * (1 - window01(t, C.back[0], C.back[1]));
     vesperLink.cine.hold = hold;
     vesperLink.cine.look = look;
+    vesperLink.cine.shake = envelope(t, C.shake[0], C.shake[0] + 0.12, C.shake[1] - 0.35, C.shake[1]);
     const on = t >= g0 && t < PROLOGUE_END;
     this.glint.visible = on;
     this.glintLight.intensity = 0;
@@ -585,12 +682,14 @@ export class GroveActors {
   destroy(): void {
     vesperLink.cine.hold = 0;
     vesperLink.cine.look = 0;
+    vesperLink.cine.shake = 0;
     for (const id of ['prologue-cocoon-a', 'prologue-cocoon-b', 'prologue-glint', 'prologue-sorrel'])
       this.ctx.lights.remove(id);
     this.sorrelSkin.destroy();
     this.burr.painter.mesh.destroy();
     this.burr.front.mesh.destroy();
     this.sorrelLayer.destroy({ children: true });
+    this.sorrelWings.destroy();
     this.front.destroy({ children: true });
     this.back.destroy({ children: true });
     this.dance.destroy({ children: true });

@@ -909,6 +909,8 @@ export interface Cue {
    */
   hold: number;
   look: number;
+  /** 0..1 she shakes out her wings like a cape (the prologue, out of her cocoon). */
+  shake: number;
 }
 
 /** Point masses for the centre of mass: joint, weight. */
@@ -1056,6 +1058,7 @@ export class Rig {
     heartWait: false,
     hold: 0,
     look: 0,
+    shake: 0,
   };
   /** Acting weights 0..1: kindling, sat resting, hands to a lit lantern, the hand on the sleeping heart, the ending. */
   kindleW = 0;
@@ -3383,6 +3386,16 @@ export class Rig {
         gzy -= 0.3 * gl;
         gzw += gl;
       }
+    }
+
+    // --- The prologue: out of her cocoon, she shakes her wings out like a cape (vesperLink.cine).
+    const sh = Math.min(1, cue.shake) * aw;
+    if (sh > 1e-3) {
+      shiver = Math.max(shiver, sh);
+      cloak += sh * (0.9 + 0.8 * Math.sin(clock * 19));
+      ant += 6 * sh * Math.sin(clock * 23);
+      out[PU]! += 0.8 * sh * Math.sin(clock * 21);
+      out[LEAN]! += 0.04 * sh * Math.sin(clock * 17);
     }
 
     // --- The prologue: the first glint held up to her face, then a look past it (vesperLink.cine).
