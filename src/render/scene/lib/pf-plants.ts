@@ -1106,6 +1106,11 @@ export interface Garden {
   /** Where small fliers live: butterflies over warm flower drifts, moths by glow plants. [x, y] each. */
   butterflies: number[][];
   moths: number[][];
+  /**
+   * Every grass tuft that was really grown behind the walk line, as [x, top y, colour] triples: a
+   * slash throws clippings only from these, in their own tones (layers/playfield.ts).
+   */
+  turf?: number[];
 }
 
 export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop = 0): void {
@@ -1329,7 +1334,9 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
       // the free ends: an even stand from end to end reads as a clipped hedge on a tray.
       const patch = isGround
         ? noise1(x / 80, seed) * 0.65 + noise1(x / 17, seed + 9) * 0.35
-        : noise1(x / 38, seed) * 0.7 + noise1(x / 13, seed + 9) * 0.3 - 0.08;
+        : noise1(x / 38, seed) * 0.7 +
+          noise1(x / 13, seed + 9) * 0.3 -
+          (top.kind === 'floating' ? 0.2 : 0.08);
       if (patch < 1 - PLANTS.grassCover * 2) continue;
       const ends = isGround
         ? 1
@@ -1345,16 +1352,9 @@ export function growGarden(g: Garden, info: TerrainInfo, sceneW: number, skyTop 
       const h1 =
         lerp(PLANTS.grassHeight[0] + 5, PLANTS.grassHeight[1], tall) * scale * range(r, 0.75, 1.25) * ends;
       g.back.mute = buried(x);
-      grassTuft(
-        c,
-        x,
-        y,
-        2 + Math.floor(r() * 3),
-        h0,
-        Math.max(h0 + 3, h1),
-        range(r, 2, 7),
-        toneAt(BACK, x, r, top.y),
-      );
+      const gt = toneAt(BACK, x, r, top.y);
+      grassTuft(c, x, y, 2 + Math.floor(r() * 3), h0, Math.max(h0 + 3, h1), range(r, 2, 7), gt);
+      if (!g.back.mute && h1 > PLANTS.grassHeight[0]) g.turf?.push(x, top.y, mix(gt.mid, gt.lit, 0.5));
       // Fine wisps through and above the broad blades soften the whole stand.
       if (r() < PLANTS.fineShare) {
         fineTuft(

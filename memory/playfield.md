@@ -19,6 +19,7 @@ Everything is still derived from the rects by tag and by rule; the rule that pic
 | x | collision | painted as |
 |---|---|---|
 | 0-384 | bank 1088 | ground + back ridge; the scene edge is a thicket's hem (`paintEdgeWalls`, a dead wall) |
+| 384-448 @1184 | root step | a set stone against the bank's face (`paintRootStep`) |
 | 384-1536 | ground 1280 | great boulder 610, log 1150; **moth-stone** 1360 (350 px, leaning) with its fallen piece at 1516 and `lantern-stone` 1448 / `pod-stone` 1500 in front (a stand-mist pool) |
 | 640-2592 | F1-F5 | islands 0-4: boulders in a snag, slate in a vine sling, aerial roots, bracket fungus, woven nest |
 | 1536-1856 | pool, floor 1408 | water surface 1358 (`pf-water.ts`), basin stones, roots |
@@ -27,7 +28,7 @@ Everything is still derived from the rects by tag and by rule; the rule that pic
 | 2624-3072 | terrace 1152 | ground; its east face into the well is a plain wall (`wellStep`: no bank, no stone lip, no toe) |
 | 2816-2976 @448 | high ledge | free-standing: a hanging aerial-root mass on vines (`TERRAIN.freeLedgeIsle`), the five **cocoons** under it |
 | 2976-3200 @448 | one-way | slim limb of trunk A leaving its crown's WEST flank (`boughHost(...).west`), tip on the ledge; `pod-ledge` 3050 |
-| 3200-3328, 448-1168 | trunk A | hollow snag, squat stilt feet over the 112 px doorway; BOTH flanks kick walls; `lamp-high` 3264 on top, `lamp-trunk` 3160 in the well |
+| 3200-3328, 448-1168 | trunk A | hollow snag, two squat feet and an open 112 px doorway; only the EAST flank is a kick wall (`kick: 'east'`), the west is plain bark; `lamp-high` 3264 on top, `lamp-trunk` 3160 in the well |
 | 3584-3712, 192-1280 | trunk B | vine-wrapped, stands on the floor (no roots, no arch); both flanks kick walls; `lantern-crown` 3684 on top |
 | 3712-3904 @192 | one-way | summit bough, flush, slim |
 | 3808-4128 @448 | one-way | catch branch; its arm from trunk B's east flank is back-plane dark (behind the climb) |
@@ -62,6 +63,44 @@ Everything is still derived from the rects by tag and by rule; the rule that pic
 - The lit great cocoon: shell 0x574e38, glow 0x8a673a / 0xbd9558, halo 46 (trunks stop: mean 55 -> 42, p99 151 -> 121).
 - Fight strips: burr-shaft (3378-3522) and burr-rise (4914-5106) get `info.calm` from their scene entry
   (+-230 px), nothing to do by hand; checked at the shaft-pit and right-rise stops.
+
+## Round F5: the island road, clean stages (2026-10-14, after playtest 5)
+- **Floating islands are a road** (the ember hangs over F3). Every island pushes itself into `info.calm` (no rear
+  shrubs or tall stands, features at 0.55), grass has real gaps there (`- 0.2` on the drift noise) and the crest is a
+  third wider (`MossOpts.crest` 1.35). The air behind them is mid.ts `STAGE.pools` (background-layers.md), not
+  anything here: a MistFill only tints painted terrain.
+- **The ember's cup** (`paintEmberCup`, `TERRAIN.emberCup`): for every lantern with a `key`, at that pickup: two
+  back-plane root arms of unlike height (tips 22 / 12 px over the ember, 27 px either side), leaves down their outer
+  sides, tendrils, a low twig weave; painted BEFORE the islands so the moss covers its foot; a clear spot of 66 px.
+  `?nopickups` strips lanterns and pickups, so the clean plates have no cup.
+- **The bank's step** (`paintRootStep`, any `root` solid narrower than `TERRAIN.rootStep` 110): one stone fitted
+  under the top (`fitUnderTop`), a foot stone on its open side, two roots over its shoulder, a moss cap with crest,
+  `stepMist` on it (in the wall's shade the bake leaves stone black). The mound painter made a dark lump of it.
+- **Trunk flanks follow `solid.kick`** (`'east' | 'west'`): the other flank is ordinary bark (wobble 7 px, burls,
+  lapping plates, shelf fungi, long moss drape, no `paintKickWall`). Trunk A's west bark is that now.
+- **A doorway is two feet and nothing between** (`stiltRoots`, `door`): the two deep middle roots and the forks
+  that came back in under the trunk are gone (bars in a door). Luma under her in it 68 -> 97.
+- **Saplings keep off fight patches** (`saplingAt`, `TERRAIN.saplingOff` 58): the branch over burr-path has its
+  sapling at 1946 (was 2014, inside the patch: the "dark tree" of playtest 5) and reaches the bough with a back-plane
+  arm that leaves the stem `saplingArmDrop` (90-130 px) under the walk line, the same one-outline arm as a trunk's
+  limb with a gap. p10 under her at 2060: 15 -> 54.
+- **F6's snag stands under the island's WEST end** (foot ~4766) and leans east up to the joint: its foot stood at
+  ~4955, on burr-rise's patch.
+- **Edge hems carry mist at the walk line** (`TERRAIN.edgeMist`): under her at x 50 on the bank 13 -> 70, at 5736
+  on the far bluff 11 -> 41.
+- **Clippings** (playfield.ts `onSlash`): only from grass tufts that were really grown (`Garden.turf`, [x, top y,
+  colour] triples) inside the cut's box and ahead of her, each in its tuft's own colour (so no emerald on violet),
+  2.6-5.2 px, life 0.55 s, and the mesh is in `playfield` behind the plants' halos, the creatures and the hero (it
+  was in `playfieldFront`, over the slash mark). No grass in reach = nothing; 3 dark leaves only when an underside
+  is INSIDE the box. They are quiet now: at play zoom a few dark specks. If they should show more, raise
+  `clipSize`, not the colour.
+- Measured, `--pickups`, median luma under her silhouette (she is 37-45 by the same mask; before -> after): F1 east
+  32 -> 50, arc F1-F2 37 -> 52, F2 38 -> 61, arc F2-F3 24 -> 63, F3 west 21 -> 48, F3 east 22 -> 35 (the ember's
+  dark, on purpose), arc F3-F4 9 -> 51, F4 26 -> 50, bank foot 31 -> 76, burr-path 59 / 72 / 74 -> 69 / 72 / 74,
+  burr-rise 37 -> 39 (it reads by hue: violet mist, no trunk), shrine 22 / 32 / 37 unchanged (stones and the heart
+  itself are behind her there), F5 9 -> 25 (a dark hanging clump of mid stands behind it and takes no mist: open).
+  Method: `.scratch/envf5/stage.ts` (gitignored): per spot `load()`, teleport, 3 shots (all / hero hidden / hero and
+  creatures hidden), the mask is where the first two differ. It retries a spot when another agent's save reloads the page.
 
 ## Kick walls (round F3, 2026-10-14)
 - **Rule: a ground face of `FORMS.climbStep` 280 px or more (taller than a jump) is climbed by kicks**, and every

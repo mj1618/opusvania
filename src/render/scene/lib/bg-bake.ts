@@ -706,6 +706,13 @@ export interface StageSpec {
    * and swings there with nothing of the playfield behind her.
    */
   walls?: ReadonlyArray<{ x: number; y0: number; y1: number; dir: -1 | 1; k: number; reach: number }>;
+  /**
+   * Pools: a soft puff of the same mist hanging in open air (playfield px, half sizes, strength),
+   * gaussian, never an edge. Behind the landings of floating islands, the arcs between them and the
+   * perches of fliers, where there is no walk line for a sheet to lie on and a dark trunk of this
+   * layer stood behind a dark hero.
+   */
+  pools?: ReadonlyArray<{ x: number; y: number; rx: number; ry: number; k: number }>;
   /** How much of the sheet is wisps rather than an even band, 0..1 (it drifts with the layer's mist). */
   wisp: number;
 }
@@ -729,6 +736,12 @@ function stageGLSL(st: StageSpec | undefined): string {
     sb = max(sb, smoothstep(-90.0, 10.0, d) * o * o * (3.0 - 2.0 * o) * ${f(w.k)} * smoothstep(${f(w.y0 - 240)}, ${f(w.y0 - 40)}, sp.y) * (1.0 - smoothstep(${f(w.y1 - 60)}, ${f(w.y1 + 40)}, sp.y))); }`,
     )
     .join('\n');
+  const pools = (st.pools ?? [])
+    .map(
+      (q) =>
+        `  { vec2 d = (sp - vec2(${f(q.x)}, ${f(q.y)})) / vec2(${f(q.rx)}, ${f(q.ry)}); sb = max(sb, exp(-dot(d, d)) * ${f(q.k)} * (0.7 + 0.3 * hk)); }`,
+    )
+    .join('\n');
   return `
   // The mist stage: paler fog pooled just above the walk line of the playfield behind this pixel.
   vec2 sp = vec2(px, p.y + uZone.w);
@@ -739,6 +752,7 @@ ${steps}
   float sb = stageBand(gy - sp.y, hk);
 ${ledges}
 ${walls}
+${pools}
   float dens = mix(1.0, 0.45 + 1.1 * (n * 0.55 + m * 0.45), ${f(st.wisp)}) * (1.0 + 0.12 * sin(uTime * 0.21 + sp.x * 0.0021));
   float sa = sb * dens * mix(mix(uStageK.y, uStageK.x, zl), uStageK.z, zr);
   acc += mix(mix(uStageC, uStageL, zl), uStageR, zr) * sa;

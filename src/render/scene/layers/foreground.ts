@@ -123,6 +123,13 @@ export const FOREGROUND = {
    */
   highRetract: 0,
   highAlpha: 1,
+  /**
+   * The floating islands are a road (the ember hangs over the third): no top plant hangs over one,
+   * over the air a body's height above it (`above` px: where she stands, where a flier dives) or over
+   * the arc between two neighbours. A plant whose box reaches `soft` px into such a rect is fully
+   * withdrawn above the frame. It is a function of the camera alone, so it slides, never pops.
+   */
+  keep: { above: 190, side: 36, below: 40, soft: 70, arcGap: 420 },
   /** Sway amplitudes (radians of rotation for hanging things, of skew for growing things). */
   swayTop: 0.022,
   swayBottom: 0.045,
@@ -212,9 +219,22 @@ export class ForegroundLayer implements EnvModule {
   private walkLow = new Float32Array(0);
   /** The corner veils behind the bottom plants (`FOREGROUND.haze`): left, right. */
   private haze: Sprite[] = [];
+  /** Playfield rects [x0, y0, x1, y1] the top plants keep out of (`FOREGROUND.keep`). */
+  private keep: Array<[number, number, number, number]> = [];
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
+    {
+      const kp = FOREGROUND.keep;
+      const isles = ctx.scene.solids.filter((s) => s.tag === 'floating').sort((a, b) => a.x - b.x);
+      this.keep = isles.map((s) => [s.x - kp.side, s.y - kp.above, s.x + s.w + kp.side, s.y + kp.below]);
+      for (let i = 0; i + 1 < isles.length; i++) {
+        const a = isles[i] as (typeof isles)[number];
+        const b = isles[i + 1] as (typeof isles)[number];
+        if (b.x - (a.x + a.w) < kp.arcGap)
+          this.keep.push([a.x + a.w - 20, Math.min(a.y, b.y) - kp.above, b.x + 20, Math.max(a.y, b.y)]);
+      }
+    }
     const rnd = prng(FOREGROUND.seed);
     const pieces: Piece[] = [];
     const anchor = ctx.layers.anchor;
@@ -574,7 +594,24 @@ export class ForegroundLayer implements EnvModule {
         y += Math.max(0, line + cfg.walkClear - (y + piece.b.y)) * (1 - under * under * (3 - 2 * under));
       }
       const x0 = x + piece.b.x;
-      const y0 = y + piece.b.y;
+      let y0 = y + piece.b.y;
+      if (piece.edge === 'top') {
+        // Its box in playfield px (parallax 1: the offset from the view's centre is the world's).
+        const wx = cam.x + (x0 - (vis.x + vis.w / 2));
+        const wy = cam.y + (y0 - (vis.y + vis.h / 2));
+        let over = 0;
+        for (const [ka, kb, kc, kd] of this.keep) {
+          const ox = Math.min(kc, wx + piece.b.width) - Math.max(ka, wx);
+          const oy = Math.min(kd, wy + piece.b.height) - Math.max(kb, wy);
+          if (ox > 0 && oy > 0) over = Math.max(over, Math.min(1, Math.min(ox, oy) / cfg.keep.soft));
+        }
+        if (over > 0) {
+          const o = over * over * (3 - 2 * over);
+          y -= (piece.b.height + 60) * o;
+          y0 = y + piece.b.y;
+          thin *= 1 - o;
+        }
+      }
       if (
         x0 > vis.x + vis.w + 80 ||
         x0 + piece.b.width < vis.x - 80 ||

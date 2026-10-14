@@ -170,6 +170,22 @@ const STAGE: Omit<StageSpec, 'strength'> = {
     // layer's leaning trunk on the other; the bank lies in front of that trunk, so its edge dissolves.
     { x: 1430, y0: 1010, y1: 1280, dir: 1, k: 0.36, reach: 250 },
   ],
+  // Open air she crosses or a flier holds, with one of this layer's trunks dark behind it (luma under
+  // her silhouette before: 21-38 on the island climb, 9 between F3 and F4 and on F5; she is ~40).
+  // West to east: F1's east end, the arc to F2 and F2, the arc to F3 and its WEST end (the ember
+  // hangs over its east half and keeps its dark), lamp-f3's perch above it, the arc to F4, F4, F5.
+  pools: [
+    { x: 830, y: 900, rx: 170, ry: 110, k: 0.5 },
+    { x: 1090, y: 780, rx: 230, ry: 130, k: 0.6 },
+    { x: 1310, y: 655, rx: 120, ry: 125, k: 0.85 },
+    { x: 1470, y: 385, rx: 140, ry: 95, k: 0.32 },
+    { x: 1700, y: 570, rx: 170, ry: 130, k: 0.95 },
+    { x: 1900, y: 545, rx: 180, ry: 115, k: 0.7 },
+    { x: 2464, y: 470, rx: 190, ry: 115, k: 1 },
+    // burr-rise's patch (4914-5106): the hollow tree's dark flank stands behind its west half for the
+    // clamped camera, and the ground sheet alone left 28 under her silhouette there.
+    { x: 4990, y: 1020, rx: 230, ry: 95, k: 1.3 },
+  ],
   wisp: 0.5,
 };
 

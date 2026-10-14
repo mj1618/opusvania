@@ -238,3 +238,16 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   0xd0a052 -> 0xc8984c / 0xbc8c46, `wellAlpha` 0.34 / 0.22 -> 0.2 / 0.17, far0 `wellStrength` 0.4 -> 0.28, far1
   0.26 -> 0.22, sky `warm` / `halo` a shade down: mean 109 -> 102, p90 151 -> 136, p99 161 -> 144. Each knob moves
   it 2-3 points: the band is the sum of them.
+
+## Round 14 (the islands are a road; playtest 5)
+- **`StageSpec.pools`** (bg-bake.ts, `STAGE.pools` in mid.ts): gaussian puffs of the stage's mist in open air
+  (playfield px, half sizes, `k`; `max`ed with the sheet, so k > 1 only matters where the sheet is thin). Behind the
+  island landings and the arcs between them, lamp-f3's perch (1470, 385, k 0.32: backdrop 20 -> 36, calm), F5, and
+  burr-rise's patch (4990, 1020, k 1.3: the hollow tree's flank is behind it at the camera clamp). Each k 0.5-1 adds
+  ~25-40 luma over a dark trunk in the left zone. The F3 pool is centred WEST of the island's middle (1310) so the
+  ember's backdrop (1420-1580, 560-700) stays dark: p10 21, mean ~40 with the island's lit rim in the box.
+- A pool does nothing where playfield props or sway items stand in front: the shrine (tried, removed) and the dark
+  clump behind F5 (a hanger or a baked clump at layer ~2600, 680: not found yet).
+- **Foreground** (`FOREGROUND.keep`): top plants withdraw above the frame while their box overlaps an island, the
+  190 px of air over it or the arc to its neighbour (a function of the camera alone). The near top-left mass hung
+  over F2 / the F1-F2 arc from the first lantern's ground and over F3 from burr-path.

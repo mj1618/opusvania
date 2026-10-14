@@ -39,17 +39,21 @@ export const PLAYFIELD = {
   /** How much glow plants and their halos brighten when the character or a light is near. */
   /** Clippings a slash throws from a full box of grass (fewer with less foliage in reach). */
   clippings: 7,
+  /** Grass tufts in the cut's reach that make a full box, and the size range of a clipping, px. */
+  clipFull: 12,
+  clipSize: [2.6, 5.2],
+  /** How far above the walk line a cut still reaches grass (the blades are 10-40 px), px. */
+  clipReach: 34,
   // Glow plants warm a little near the hero or a light; they never bloom (the owner's standing
   // complaint is brightness near her, and the lanterns must be the lights where they stand).
   glowGain: 0.28,
   haloGain: 0.22,
 } as const;
 
-/** Clipping colours per zone (blade bodies and lit tips), and a petal. */
-const CLIP_COOL = [0x125a56, 0x1a7a70, 0x2f9a88];
-const CLIP_WARM = [0x234a20, 0x3f6a2a, 0x7c8a30];
-const CLIP_DEEP = [0x0e4a30, 0x14603c, 0x1f8a50];
-const CLIP_PETAL = 0xb8ae98;
+/** Leaves knocked off what hangs under a top, per zone (the shade tones of the vines there). */
+const LEAF_COOL = [0x0c3c40, 0x125248];
+const LEAF_WARM = [0x1c3a1a, 0x33521f];
+const LEAF_DEEP = [0x141a3a, 0x0e3a34];
 
 export class PlayfieldLayer implements EnvModule {
   private ctx!: SceneContext;
@@ -60,6 +64,8 @@ export class PlayfieldLayer implements EnvModule {
   private flutter!: Flutter;
   private clippings!: Clippings;
   private info!: TerrainInfo;
+  /** Grass tufts as [x, top y, colour] triples (Garden.turf). */
+  private turf: number[] = [];
   private poolX: [number, number] = [0, 0];
   /** Rolling CPU cost of update(), ms (read by `window.__pf` in dev for profiling). */
   cpuMs = 0;
@@ -83,9 +89,11 @@ export class PlayfieldLayer implements EnvModule {
       halo: new FloraBuilder(PLAYFIELD.chunk, scene.width),
       butterflies: [] as number[][],
       moths: [] as number[][],
+      turf: [] as number[],
     };
     // (The top of the highest view: what hangs from the crown has to start above it.)
     growGarden(garden, info, scene.width, viewTop(scene));
+    this.turf = garden.turf;
     const rect = this.field.rect;
     const back = garden.back.build(this.field.texture, rect, false);
     const halo = garden.halo.build(this.field.texture, rect, true);
@@ -101,8 +109,9 @@ export class PlayfieldLayer implements EnvModule {
     }
     this.flutter = new Flutter(garden.butterflies, garden.moths);
     this.clippings = new Clippings();
-    this.front.addChild(this.clippings.mesh);
-    pf.addChild(baked.layer, back.container, halo.container, this.flutter.mesh);
+    // (Behind the character, the creatures and the slash mark: in `playfieldFront` they flew over
+    // the cut itself, flat green triangles on the crescent.)
+    pf.addChild(baked.layer, back.container, this.clippings.mesh, halo.container, this.flutter.mesh);
     this.front.addChild(fringe.container);
     // Dev-only handle for profiling (toggle the containers, read cpuMs): see memory/playfield.md.
     if (import.meta.env.DEV)
@@ -128,29 +137,33 @@ export class PlayfieldLayer implements EnvModule {
     this.water?.slash(box, frame.clock + startup, power);
 
     const r = prng(ev.seq * 7919 + 13);
-    const z = zoneAt(box.x + box.w / 2);
-    const tones = z.warm > z.cool && z.warm > z.deep ? CLIP_WARM : z.deep > z.cool ? CLIP_DEEP : CLIP_COOL;
     const birth = frame.clock + startup;
-    // Grass: a walkable top running through (or just under) the box.
-    let top: { x0: number; x1: number; y: number } | null = null;
-    for (const t of this.info.tops) {
-      if (t.kind === 'poolFloor' || t.x1 < box.x || t.x0 > box.x + box.w) continue;
-      if (t.y < box.y || t.y > box.y + box.h + 14) continue;
-      if (!top || t.y < top.y) top = t;
+    const [s0, s1] = PLAYFIELD.clipSize;
+    // Grass: only where the cut really passes through it. The tufts that were grown on a walk line
+    // within the blade's reach, ahead of her (the box reaches a little behind for the hit test);
+    // each clipping leaves from one of them, in that tuft's own colour. A cut in the air, on bare
+    // stone or over a mown patch throws nothing.
+    const bx0 = mode > 0 ? p.cx : box.x;
+    const bx1 = mode < 0 ? p.cx : box.x + box.w;
+    const turf = this.turf;
+    const hit: number[] = [];
+    for (let i = 0; i < turf.length; i += 3) {
+      const x = turf[i] as number;
+      const y = turf[i + 1] as number;
+      if (x < bx0 || x > bx1 || y < box.y || y - PLAYFIELD.clipReach > box.y + box.h) continue;
+      hit.push(i);
     }
-    if (top) {
-      // Only what is ahead of her (the box reaches a little behind for the hit test).
-      const x0 = Math.max(top.x0, mode > 0 ? p.cx : box.x);
-      const x1 = Math.min(top.x1, mode < 0 ? p.cx : box.x + box.w);
-      if (x1 <= x0) return;
-      const n = Math.round((0.5 + 0.5 * ((x1 - x0) / box.w)) * PLAYFIELD.clippings * Math.min(1.3, power));
-      for (let i = 0; i < n; i++) {
-        const x = x0 + r() * (x1 - x0);
-        const y = top.y - 6 - r() * 26;
-        const petal = i < 3 && r() < 0.5;
+    if (hit.length > 0) {
+      const n = Math.round(
+        Math.min(1, hit.length / PLAYFIELD.clipFull) * PLAYFIELD.clippings * Math.min(1.3, power),
+      );
+      for (let k = 0; k < n; k++) {
+        const i = hit[Math.floor(r() * hit.length)] as number;
+        const x = (turf[i] as number) + (r() - 0.5) * 8;
+        const y = (turf[i + 1] as number) - 5 - r() * 16;
         const out = mode !== 0 ? mode : x < box.x + box.w / 2 ? -1 : 1;
-        const speed = (260 + r() * 420) * (0.8 + 0.3 * power);
-        const up = ev.dir === 'down' ? 120 + r() * 240 : 60 + r() * 230;
+        const speed = (200 + r() * 320) * (0.8 + 0.3 * power);
+        const up = ev.dir === 'down' ? 100 + r() * 200 : 50 + r() * 180;
         this.clippings.spawn(
           x,
           y,
@@ -158,28 +171,30 @@ export class PlayfieldLayer implements EnvModule {
           -up,
           birth + r() * 0.06,
           r() * 6.28,
-          petal ? 3.6 + r() * 1.6 : 4.5 + r() * 4.5,
-          petal ? 2 : r() < 0.7 ? 0 : 1,
-          petal ? CLIP_PETAL : (tones[Math.floor(r() * tones.length)] as number),
+          s0 + r() * (s1 - s0),
+          r() < 0.75 ? 0 : 1,
+          turf[i + 2] as number,
         );
       }
       return;
     }
-    // No grass: leaves knocked off whatever hangs in the box.
+    // No grass: a few leaves off what hangs INSIDE the box (an up cut under an island or a bough).
+    const z = zoneAt(box.x + box.w / 2);
+    const tones = z.warm > z.cool && z.warm > z.deep ? LEAF_WARM : z.deep > z.cool ? LEAF_DEEP : LEAF_COOL;
     for (const u of this.info.unders) {
       if (u.x1 < box.x || u.x0 > box.x + box.w) continue;
       const mx = Math.min(u.x1, Math.max(u.x0, box.x + box.w / 2));
       const uy = u.y(mx);
-      if (uy < box.y - 30 || uy > box.y + box.h) continue;
-      for (let i = 0; i < 7; i++) {
+      if (uy < box.y || uy > box.y + box.h) continue;
+      for (let i = 0; i < 3; i++) {
         this.clippings.spawn(
           Math.max(u.x0, box.x) + r() * (Math.min(u.x1, box.x + box.w) - Math.max(u.x0, box.x)),
-          uy + r() * 40,
-          (r() - 0.5) * 220 + mode * 120,
-          -40 - r() * 120,
+          uy + r() * 30,
+          (r() - 0.5) * 180 + mode * 100,
+          -30 - r() * 100,
           birth + r() * 0.06,
           r() * 6.28,
-          3.5 + r() * 3,
+          s0 + r() * (s1 - s0),
           1,
           tones[Math.floor(r() * tones.length)] as number,
         );

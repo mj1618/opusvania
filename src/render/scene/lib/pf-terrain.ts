@@ -23,7 +23,7 @@ import {
 } from './pf-forms';
 import { ISLES, type IslandKit, limb, paintFloating, paintIslandBacks, type Wood } from './pf-islands';
 import { Paint } from './pf-paint';
-import { paintRock } from './pf-rock';
+import { fitUnderTop, paintRock } from './pf-rock';
 import {
   blob,
   chaikin,
@@ -140,6 +140,16 @@ export const TERRAIN = {
    * stone and root, painted and seen the whole way across: the ground's depth shade keeps off it down
    * to the lower walk line, and `endMist` [colour, amount] lies over its body (a step under the face).
    */
+  /** Mist on the edge thickets' hems at the walk line: [half width, half height, amount]. */
+  edgeMist: [210, 130, 0.8] as const,
+  /** The ember's cup: half width at its foot, and how far its taller arm stands over the ember, px. */
+  emberCup: [50, 22] as const,
+  /** Mist on a step stone: [half width, half height, amount]. */
+  stepMist: [58, 74, 0.6] as const,
+  /** A `root` solid narrower than this is a step (a set stone), not the root mound. */
+  rootStep: 110,
+  /** A sapling that would stand on a fight's patch stands this far west of it instead. */
+  saplingOff: 58,
   endBlock: 480,
   endMist: [0x57557c, 0.6] as const,
 } as const;
@@ -362,10 +372,15 @@ export function paintTerrain(scene: Scene): { paint: Paint; info: TerrainInfo } 
   for (const s of scene.solids) {
     if (s.tag === 'trunk') paintTrunk(p, s, scene, info, trunks.indexOf(s) % 2 === 1, shaftSide(s, trunks));
   }
+  // What a lantern's key hangs in (the ember over F3): before the islands, whose moss covers its foot.
+  for (const l of scene.lanterns ?? []) {
+    const key = l.key ? scene.pickups?.find((q) => q.id === l.key) : undefined;
+    if (key) paintEmberCup(p, key.x, key.y, scene, info);
+  }
   for (const s of scene.solids) {
     if (s.tag === 'ledge') paintLedge(p, s, scene, info, kit);
     else if (s.tag === 'floating') paintFloating(p, s, floats.indexOf(s), info, kit);
-    else if (s.tag === 'root') paintRootMound(p, s, info);
+    else if (s.tag === 'root') (s.w < TERRAIN.rootStep ? paintRootStep : paintRootMound)(p, s, info);
   }
   for (const b of scene.oneWays) paintBough(p, b.x, b.y, b.w, scene, info);
   // Where she stands still and has to be seen (kindling a lantern, resting at a lamp, at the heart):
@@ -432,6 +447,8 @@ export interface MossOpts {
   mound?: number;
   /** 0..1: add a clean lit crest and a contact shadow under the lip (elevated tops). */
   read?: number;
+  /** Width of that crest, as a share of the usual 3 px. */
+  crest?: number;
   /** Draw the lit crest only along moss cushions (the main ground). */
   crestOnMoss?: boolean;
   /** Scales that contact shadow (bodies that are dark already need little: it shows as a ruled bar). */
@@ -638,7 +655,7 @@ function mossCap(p: Paint, x0: number, x1: number, y: number, o: MossOpts): void
         ribbon(
           run,
           (t) =>
-            (3 + wobble(t * 300 + (run[0] as number), o.seed + 61, 30) * 0.9) *
+            (3 * (o.crest ?? 1) + wobble(t * 300 + (run[0] as number), o.seed + 61, 30) * 0.9) *
             Math.sin(Math.PI * clamp(t, 0.01, 0.99)) ** 0.3,
         ),
         crestCol,
@@ -1659,6 +1676,20 @@ function paintEdgeWalls(p: Paint, scene: Scene, info: TerrainInfo): void {
       );
     }
     info.faces.push({ x: xe, y0: 0, y1: yBottom - 30, dir: inward, kind: 'edge', reach });
+    // She stands in front of the hem at both ends of the scene (burr-bank is fought here, the summit
+    // glide lands here), at the frame's edge under the vignette: mist pooled on it at her height
+    // (luma under her silhouette 13 west / 11 east without it; she is ~40).
+    const [ew, eh, ea] = TERRAIN.edgeMist;
+    info.mist.push({
+      x: inX(ew * 0.3),
+      y: topY - eh * 0.55,
+      rx: ew,
+      ry: eh,
+      amount: ea,
+      color: standMistAt(xe),
+      floor: topY,
+      power: 1.3,
+    });
   }
 }
 
@@ -1762,6 +1793,7 @@ function stiltRoots(t: SolidRect, groundY: (x: number) => number, shaft: -1 | 0 
   const yb = t.y + t.h;
   const r = rngFor(t.x, 77);
   const out: StiltRoot[] = [];
+  const door = groundY(t.x + t.w / 2) - yb < TERRAIN.lowDoor;
   const add = (fromX: number, fromY: number, toX: number, w0: number, deep: boolean, lvl: number): void => {
     const sgn = toX < fromX ? -1 : 1;
     const gy = groundY(toX) + 14;
@@ -1789,23 +1821,20 @@ function stiltRoots(t: SolidRect, groundY: (x: number) => number, shaft: -1 | 0 
       Math.max(0, Math.sin(u * 15 + lump)) * w0 * 0.08;
     out.push({ line, width, deep });
     if (lvl === 0) {
-      // Each main root forks on the way down.
+      // Each main root forks on the way down (not in a doorway: that fork comes back in under the
+      // trunk, a leg standing in the opening).
       const k = Math.floor(range(r, 0.4, 0.58) * 20) * 2;
-      add(
-        line[k] as number,
-        line[k + 1] as number,
-        (line[k] as number) - sgn * range(r, 24, 64),
-        w0 * 0.42,
-        true,
-        1,
-      );
+      const inX = (line[k] as number) - sgn * range(r, 24, 64);
+      if (!door) add(line[k] as number, line[k + 1] as number, inX, w0 * 0.42, true, 1);
       if (r() < 0.7) {
         const k2 = Math.floor(range(r, 0.6, 0.75) * 20) * 2;
         add(line[k2] as number, line[k2 + 1] as number, toX + sgn * range(r, 34, 70), w0 * 0.34, deep, 1);
       }
     }
   };
-  if (groundY(t.x + t.w / 2) - yb < TERRAIN.lowDoor) {
+  if (door) {
+    // A doorway is a way through (the well into the shaft): two feet, one each side, and nothing
+    // between them. (Two deep roots came down in the middle of it: bars in a door.)
     for (const sgn of [-1, 1] as const) {
       const inner = sgn === shaft;
       const inset = t.w * (inner ? 0.27 : 0.2);
@@ -1818,8 +1847,6 @@ function stiltRoots(t: SolidRect, groundY: (x: number) => number, shaft: -1 | 0 
         0,
       );
     }
-    add(t.x + t.w * 0.42, yb - 12, t.x + t.w * 0.42 - range(r, 10, 26), range(r, 26, 32), true, 0);
-    add(t.x + t.w * 0.62, yb - 12, t.x + t.w * 0.62 + range(r, 10, 26), range(r, 24, 30), true, 0);
     return out;
   }
   add(t.x + t.w * 0.2, yb - 46, t.x - range(r, 96, 136), range(r, 58, 68), false, 0);
@@ -1893,8 +1920,12 @@ function paintTrunk(
     scene.oneWays.some((o) => o.y === t.y && o.x + o.w === t.x);
   // Both flanks of a trunk are kick walls (the shaft's inner faces, trunk A's bark above the well,
   // trunk B's east face up from the hollow): close to the collision face, nothing growing out of them.
-  const cleanL = TERRAIN.kickFlanks || shaft < 0;
-  const cleanR = TERRAIN.kickFlanks || shaft > 0;
+  // (`kick: 'east' | 'west'` on the solid: only that flank is one. Trunk A's west bark above the
+  // well is ordinary bark since playtest 5: burls, lapping plates, moss and shelf fungi, no wear.)
+  const kicked = (flank: 'east' | 'west'): boolean =>
+    t.kick === undefined || t.kick === true || t.kick === flank;
+  const cleanL = (TERRAIN.kickFlanks && kicked('west')) || shaft < 0;
+  const cleanR = (TERRAIN.kickFlanks && kicked('east')) || shaft > 0;
   // A bough leaving the crown eastward: the rim runs on into it.
   const joinedR = scene.oneWays.some((o) => o.y === t.y && o.x === x1);
   const y1 = t.y + t.h;
@@ -3266,6 +3297,260 @@ function paintRootMound(p: Paint, s: SolidRect, info: TerrainInfo): void {
   );
 }
 
+/**
+ * A step at the foot of a wall too high for a tap (the bank's 192 px: `root`, 64 x 96): one old
+ * stone set against the face, its flat top mossed and lit like every other top, its foot sunk in the
+ * earth, held by a root that comes over its shoulder from the bank. Nothing else stands on or by it.
+ */
+function paintRootStep(p: Paint, s: SolidRect, info: TerrainInfo): void {
+  const x1 = s.x + s.w;
+  const y1 = s.y + s.h;
+  const r = rngFor(s.x, 14);
+  const mid = (s.x + x1) / 2;
+  const E = TERRAIN.earth;
+  // (-1: the wall it leans on is west of it.)
+  const wall = info.groundY(Math.max(0, s.x - 8)) < s.y ? -1 : info.groundY(x1 + 8) < s.y ? 1 : 0;
+  const open = wall <= 0 ? 1 : -1;
+  const tone = mossTone(mid, s.y, s.x, 0);
+  const stone = mix(TERRAIN.stone[0], TERRAIN.stone[2], 0.4);
+  const ry = (s.h + 12) / 1.5;
+  // Its shadow on the ground and on the face behind.
+  p.tint(blob(mid + open * 8, y1 + 4, s.w * 0.85, 13, s.x + 1, 0.25, 14), TERRAIN.abyss, 0.5);
+  // A lesser stone bedded at its open foot, ankle high and dark: the first of the stair.
+  paintRock(p, {
+    cx: (open > 0 ? x1 : s.x) + open * range(r, 20, 26),
+    cy: y1 + 2,
+    rx: range(r, 26, 32),
+    ry: range(r, 17, 21),
+    seed: s.x + 31,
+    color: mix(stone, E[3], 0.45),
+    dark: E[4],
+    h: 0.5,
+    rise: 0.12,
+    baseY: y1 + 12,
+    tilt: open * 0.12,
+    moss: { dark: tone.dark, body: tone.body, amount: 0.5 },
+    cracks: 1,
+    ground: 0.7,
+  });
+  paintRock(
+    p,
+    fitUnderTop(
+      {
+        cx: mid,
+        cy: s.y + 2 + ry * 0.5,
+        rx: s.w * 0.56,
+        ry,
+        seed: s.x + 7,
+        color: stone,
+        dark: E[4],
+        light: mix(stone, TERRAIN.lipLight, 0.45),
+        h: 0.56,
+        rise: 0.2,
+        topY: s.y + 2,
+        baseY: y1 + 12,
+        squat: 1.08,
+        boxy: 2.7,
+        rough: 1.1,
+        tilt: -open * 0.03,
+        spanX: [s.x - 7, x1 + 8],
+        moss: { dark: tone.dark, body: tone.body, amount: 0.6 },
+        cracks: 2,
+        ground: 0.55,
+      },
+      s.x + 3,
+      x1 - 3,
+    ),
+  );
+  // The root that holds it: off the wall, over the near shoulder, down the face into the ground.
+  const wood: Wood = {
+    col: mix(TERRAIN.rootWood, TERRAIN.bark, 0.4),
+    lit: mix(TERRAIN.rootWood, TERRAIN.barkLit, 0.6),
+    dark: TERRAIN.barkDark,
+  };
+  const wx = open > 0 ? s.x : x1;
+  for (const [i, [u, w0]] of (
+    [
+      [0.78, 9],
+      [0.34, 5.5],
+    ] as const
+  ).entries()) {
+    const ex = lerp(wx, wx + open * s.w, u) + range(r, -5, 5);
+    const line = wander(
+      cubic(
+        wx - open * 3,
+        s.y + 12 + i * 26,
+        wx + open * s.w * 0.3,
+        s.y + 14 + i * 30,
+        ex - open * 8,
+        lerp(s.y, y1, 0.5),
+        ex + open * 6,
+        y1 + 8,
+        14,
+      ),
+      3,
+      s.x + i * 5,
+      30,
+    );
+    p.tint(
+      ribbon(
+        line.map((v, k) => (k % 2 ? v + 4 : v - 1)),
+        (t) => w0 * (1 - t * 0.5) + 5,
+      ),
+      E[4],
+      0.5,
+    );
+    limb(p, line, (t) => w0 * (1 - t * 0.55) + 1.5 + smoothstep(0.85, 1, t) * 3, wood, 0.66, 0.06, s.x + i, {
+      bark: 0.4,
+      grain: 1,
+      lit: 0.3,
+    });
+  }
+  mossCap(p, s.x + 1, x1, s.y, {
+    seed: s.x + 6,
+    read: TERRAIN.highRead,
+    crest: 1.3,
+    lipShade: 0.15,
+    thick: 6,
+    drip: 9,
+    bare: 0.12,
+    ...(open > 0 ? { drapeR: range(r, 18, 28) } : { drapeL: range(r, 18, 28) }),
+  });
+  info.tops.push({ x0: s.x, x1, y: s.y, kind: 'root', freeL: open < 0, freeR: open > 0 });
+  info.keepClear.push([Math.min(s.x, s.x + open * 150), Math.max(x1, x1 + open * 150)]);
+  // It stands in the wall's shade, where the bake leaves stone near black: a breath of mist on it,
+  // so it is a pale stone against the dark face and its top reads as a step.
+  const [mw, mh, ma] = TERRAIN.stepMist;
+  info.mist.push({
+    x: mid,
+    y: s.y + s.h * 0.38,
+    rx: mw,
+    ry: mh,
+    amount: ma,
+    color: standMistAt(mid),
+    power: 1.4,
+  });
+}
+
+/**
+ * The setting of a lantern's key (the ember that hangs over F3): a cup of old growth standing on
+ * the top under it, two root arms that rise either side and lean in over it without meeting, a few
+ * tendrils between, a low weave of twigs at their feet. All back plane (dark, barely lit): it is
+ * what the coal is seen against from the ground 630 px below, and she walks in front of it.
+ */
+function paintEmberCup(p: Paint, ex: number, ey: number, scene: Scene, info: TerrainInfo): void {
+  const under = scene.solids
+    .filter((s) => s.x <= ex - 60 && s.x + s.w >= ex + 60 && s.y > ey && s.y - ey < 160)
+    .sort((a, b) => a.y - b.y)[0];
+  if (!under) return;
+  const ty = under.y;
+  const H = ty - ey;
+  const r = rngFor(ex, ey, 57);
+  const z = zoneAt(ex);
+  const C = z.deep > 0.5 ? ISLES.deep : ISLES.cool;
+  const wood: Wood = {
+    col: mix(TERRAIN.backDeep, C.wood, 0.3),
+    lit: mix(TERRAIN.back, C.woodLit, 0.3),
+    dark: mix(TERRAIN.backDeep, TERRAIN.abyss, 0.6),
+  };
+  const [aw, ah] = TERRAIN.emberCup;
+  // The weave at their feet: low arcs, ankle high.
+  for (let i = 0; i < 7; i++) {
+    const a = ex - aw + range(r, -6, 30);
+    const b = ex + aw - range(r, -6, 30);
+    const line = wander(
+      quad(a, ty + 4, lerp(a, b, range(r, 0.3, 0.7)), ty - range(r, 8, 20), b, ty + 4, 10),
+      2,
+      ex + i * 3,
+      24,
+    );
+    p.solid(
+      ribbon(line, (t) => range(r, 2.6, 4.2) * Math.sin(Math.PI * clamp(t, 0.05, 0.95)) ** 0.5 + 0.8),
+      i % 3 ? wood.col : wood.lit,
+      0.27 + (i % 3) * 0.012,
+      { bark: 0.6 },
+    );
+  }
+  // Tendrils: thin, curling in at the tip.
+  for (let i = 0; i < 4; i++) {
+    const d = i % 2 ? 1 : -1;
+    const sx = ex + d * range(r, aw * 0.45, aw * 0.9);
+    const hgt = range(r, 0.45, 0.8) * (H + ah * 0.3);
+    const line = wander(
+      cubic(sx, ty + 4, sx + d * 12, ty - hgt * 0.4, sx + d * 8, ty - hgt * 0.85, sx - d * 9, ty - hgt, 10),
+      2,
+      ex + i * 7,
+      22,
+    );
+    p.solid(
+      ribbon(line, (t) => 4.2 * (1 - t) ** 0.8 + 1),
+      wood.col,
+      0.26,
+      { bark: 0.6 },
+    );
+  }
+  // The two arms, of unlike height: out from under the moss, bellying outward, leaning back in.
+  for (const [d, base, rise, w0] of [
+    [-1, aw, H + ah, 11],
+    [1, aw * 0.9, H + ah * 0.55, 9],
+  ] as const) {
+    const tipX = ex + d * aw * 0.55;
+    const line = wander(
+      cubic(
+        ex + d * base,
+        ty + 8,
+        ex + d * (base + aw * 0.6),
+        ty - rise * 0.38,
+        ex + d * (base + aw * 0.25),
+        ty - rise * 0.82,
+        tipX,
+        ty - rise,
+        18,
+      ),
+      2.5,
+      ex + d * 11,
+      34,
+    );
+    limb(
+      p,
+      line,
+      (t) => w0 * (1 - t) ** 0.75 + 2 + smoothstep(0.14, 0, t) * 5 + Math.max(0, Math.sin(t * 12 + d)) * 1.2,
+      wood,
+      0.27,
+      0.05,
+      ex + d * 3,
+      { bark: 0.7, grain: 2, lit: 0.22 },
+    );
+    // Leaves along its outer side: small, dark, drooping.
+    for (let i = 0; i < 5; i++) {
+      const q = Math.floor(range(r, 0.18, 0.92) * 18) * 2;
+      const lx = (line[q] as number) + d * range(r, 2, 6);
+      const ly = line[q + 1] as number;
+      const ll = range(r, 8, 13);
+      p.solid(
+        blob(lx + d * ll * 0.7, ly + ll * 0.25, ll, ll * 0.42, lx + i, 0.2, 9, d * range(r, 0.2, 0.7)),
+        mix(TERRAIN.mossDark, TERRAIN.backDeep, range(r, 0.35, 0.7)),
+        0.262,
+        { moss: 0.5 },
+      );
+    }
+    // A short side shoot half way up, pointing in.
+    const k = Math.floor(range(r, 0.45, 0.6) * 18) * 2;
+    const sx = line[k] as number;
+    const sy = line[k + 1] as number;
+    p.solid(
+      ribbon(
+        wander(quad(sx, sy, sx - d * 10, sy - 14, sx - d * 20, sy - 12, 6), 1.5, ex + d * 5, 14),
+        (t) => 4 * (1 - t) ** 0.8 + 0.8,
+      ),
+      wood.col,
+      0.265,
+      { bark: 0.6 },
+    );
+  }
+  info.clearSpots.push({ x: ex, y: ty, r: aw + 16 });
+}
+
 // ---------------------------------------------------------------------------------------------
 // One-way boughs, each growing from a slender back-plane sapling.
 
@@ -3284,6 +3569,27 @@ function saplingSide(x: number, w: number, scene: Scene): -1 | 1 {
   }
   return 1;
 }
+
+/**
+ * Where a bough's sapling stands. `far`: a fight is fought where it would stand (burr-path's patch
+ * begins at 2004 and the sapling of the branch over it stood at 2014: a dark trunk as wide as she
+ * is, the "dark tree" of playtest 5), so it stands `TERRAIN.saplingOff` px clear of the patch and
+ * reaches the bough with an arm, like a trunk's limb that starts away from its trunk.
+ */
+function saplingAt(x: number, w: number, scene: Scene): { side: -1 | 1; bx: number; far: boolean } {
+  const side = saplingSide(x, w, scene);
+  let bx = side > 0 ? x + w + 34 : x - 34;
+  let far = false;
+  if (side < 0)
+    for (const [f0, f1] of FIGHT_SPOTS)
+      if (bx > f0 - 10 && bx < f1) {
+        bx = f0 - TERRAIN.saplingOff;
+        far = true;
+      }
+  return { side, bx, far };
+}
+/** How far below the bough's line a far sapling's arm leaves it (well over her head, 80 px). */
+const saplingArmDrop = (gap: number): number => clamp(gap * 1.2, 90, 130);
 
 /**
  * The trunk a one-way bough grows out of: one standing just west of it and reaching at least as
@@ -3313,10 +3619,11 @@ function paintSapling(
   scene: Scene,
   info: TerrainInfo,
 ): void {
-  const side = saplingSide(x, w, scene);
+  const { side, bx, far } = saplingAt(x, w, scene);
   const r = rngFor(x, 91);
-  const bx = side > 0 ? x + w + 34 : x - 34;
   const gy = groundY(bx) + 12;
+  // (Pinned where the bough, or the arm that carries it, leaves the stem.)
+  const pinY = far ? y + saplingArmDrop(x - bx - 6) : y + 12;
   const topY = y - range(r, 420, 520);
   // A young tree that has grown toward the light: it bows one way, then back, and forks.
   const bow = range(r, 50, 90) * (r() < 0.5 ? -1 : 1);
@@ -3330,8 +3637,7 @@ function paintSapling(
   const nL = line.length / 2;
   let at = 0;
   for (let i = 0; i < nL; i++)
-    if (Math.abs((line[i * 2 + 1] as number) - (y + 12)) < Math.abs((line[at * 2 + 1] as number) - (y + 12)))
-      at = i;
+    if (Math.abs((line[i * 2 + 1] as number) - pinY) < Math.abs((line[at * 2 + 1] as number) - pinY)) at = i;
   const shift = bx - (line[at * 2] as number);
   for (let i = 0; i < nL; i++)
     line[i * 2] = (line[i * 2] as number) + shift * Math.exp(-(((i - at) / 7) ** 2));
@@ -3425,7 +3731,9 @@ function collar(p: Paint, fx: number, cy: number, rad: number, seed: number, d: 
 function paintBough(p: Paint, x: number, y: number, w: number, scene: Scene, info: TerrainInfo): void {
   const host = boughHost({ x, y, w }, scene);
   // (-1: rooted at its west end, 1: at its east end.)
-  const side = host ? (host.west ? 1 : -1) : saplingSide(x, w, scene);
+  const sap = host ? null : saplingAt(x, w, scene);
+  const side = host ? (host.west ? 1 : -1) : (sap?.side ?? 1);
+  const far = sap?.far ?? false;
   /**
    * She comes up THROUGH a trunk's own boughs (out of the well, up trunk B's east face, off a kick's
    * swing): they are slim, so the gap between limb and leaves shows sky and nobody takes one for a
@@ -3437,17 +3745,19 @@ function paintBough(p: Paint, x: number, y: number, w: number, scene: Scene, inf
   const meetsLedgeL = scene.solids.some((o) => o.tag === 'ledge' && o.y === y && o.x + o.w === x);
   // A trunk's limb starts inside the flank it leaves (or, with a gap to cross, where its rising
   // arm levels out: see below); a sapling's bough at the sapling.
-  const hostX = host ? (host.west ? host.x : host.x + host.w) : 0;
-  const gap = host && !host.west ? x - hostX : 0;
+  const hostX = host ? (host.west ? host.x : host.x + host.w) : far && sap ? sap.bx + 6 : 0;
+  const gap = (host && !host.west) || far ? x - hostX : 0;
   const rootX = host
     ? host.west
       ? hostX + 22
       : gap > 24
         ? x - 14
         : hostX - 22
-    : side > 0
-      ? x + w + 34
-      : x - 34;
+    : far
+      ? x - 14
+      : side > 0
+        ? x + w + 34
+        : x - 34;
   const tipX = side > 0 ? x : x + w;
   // (A trunk's limbs are that trunk's wood, whatever zone their tips reach into.)
   const z = zoneAt(host ? hostX : x + w / 2);
@@ -3476,13 +3786,13 @@ function paintBough(p: Paint, x: number, y: number, w: number, scene: Scene, inf
     const t = (u * N) / n;
     return t > 1 ? lerp(girth(1), 2, (t - 1) * n * 0.5) : girth(t);
   };
-  if (host) {
+  if (host || far) {
     if (gap > 24) {
       // The bough starts away from the trunk: its arm leaves the flank lower down, climbs steeply
       // and elbows level just where the walk line begins. Arm and bough are ONE limb (one outline:
       // a join between two pieces showed as a sawn end); the arm lies in the trunk's shade, too
       // steep and too dark to be taken for footing.
-      const drop = clamp(gap * 1.7, 120, 190);
+      const drop = far ? saplingArmDrop(gap) : clamp(gap * 1.7, 120, 190);
       const jy = y + 2 + girth(0) / 2;
       const NA = 16;
       const arm = wander(
@@ -3519,7 +3829,7 @@ function paintBough(p: Paint, x: number, y: number, w: number, scene: Scene, inf
         );
     } else {
       limb(p, centre, wd, wood, 0.58, 0.1, x, { bark: 0.5, grain: 4, lit: 0.4 });
-      collar(p, hostX, y + 2 + girth(0) * 0.55, girth(0) * 0.62, x + 14, host.west ? -1 : 1);
+      collar(p, hostX, y + 2 + girth(0) * 0.55, girth(0) * 0.62, x + 14, host?.west ? -1 : 1);
     }
   } else {
     // The node on the sapling where it leaves.
@@ -3601,7 +3911,7 @@ function paintBough(p: Paint, x: number, y: number, w: number, scene: Scene, inf
     seed: x + 7,
     read: TERRAIN.highRead,
     lipShade: 0.4,
-    drapeL: side > 0 && !meetsLedgeL ? 14 : 0,
+    drapeL: (side > 0 && !meetsLedgeL) || far ? 14 : 0,
     drapeR: side > 0 ? 0 : 14,
     thick: 6,
     drip: 16,

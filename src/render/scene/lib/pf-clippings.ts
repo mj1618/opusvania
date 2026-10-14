@@ -9,7 +9,8 @@ import { Buffer, BufferUsage, Geometry, Mesh, Shader } from 'pixi.js';
 export const CLIPPINGS = {
   pool: 96,
   /** Seconds a clipping lives. */
-  life: 0.85,
+  // (0.85 until playtest 5: they outlived the cut by half a second.)
+  life: 0.55,
   gravity: 620,
   /** Velocity lost per second (air drag): they shoot out and then flutter. */
   drag: 3.2,
@@ -121,7 +122,8 @@ export class Clippings {
       d[o + 5] = spin;
       d[o + 6] = size;
       d[o + 7] = shape;
-      const shade = k === 2 ? 1.1 : 0.8;
+      // (The tip a shade up, the base a shade down: never brighter than the grass it was cut from.)
+      const shade = k === 2 ? 1 : 0.72;
       d[o + 8] = Math.min(1, (((color >> 16) & 255) / 255) * shade);
       d[o + 9] = Math.min(1, (((color >> 8) & 255) / 255) * shade);
       d[o + 10] = Math.min(1, ((color & 255) / 255) * shade);

@@ -357,13 +357,15 @@ export function paintIslandBacks(p: Paint, floats: SolidRect[], info: TerrainInf
       p.solid(blob(kx - 4, ky + 1, 9, 15, s.x + 22, 0.2, 12), back.dark, 0.18);
       info.keepClear.push([gx - 70, gx + 70]);
     } else if (index % 7 === 5) {
-      // An old snag whose crown bent over long ago: the bent limb is the island.
-      const gx = x1 - range(r, 28, 44);
+      // An old snag whose crown bent over long ago: the bent limb is the island. It stands under
+      // the island's WEST end and leans east up to the joint: its foot stood under the east end, a
+      // dark trunk as wide as she is on burr-rise's patch (luma 37 behind her there, she is ~45).
+      const gx = s.x + range(r, 22, 40);
       const gy = info.groundY(gx) + 16;
       const jx = x1 - 34;
       const jy = y1 + 6;
       const trunk = wander(
-        cubic(gx, gy, gx - 70, lerp(gy, jy, 0.35), gx + 64, lerp(gy, jy, 0.7), jx, jy, 22),
+        cubic(gx, gy, gx - 26, lerp(gy, jy, 0.42), jx - 104, lerp(gy, jy, 0.74), jx, jy, 22),
         7,
         s.x,
         70,
@@ -399,10 +401,10 @@ export function paintIslandBacks(p: Paint, floats: SolidRect[], info: TerrainInf
       limb(p, stub, (t) => 44 * (1 - t) ** 0.7 + 4, back, 0.25, 0.06, s.x + 14, { bark: 0.8, grain: 3 });
       info.twigs.push({ x: x1 + 8, y: s.y - 128, angle: -Math.PI / 2 - 0.3 });
       info.twigs.push({ x: x1 + 24, y: s.y - 60, angle: -0.4 });
-      const [bx, by] = at(trunk, 0.5);
-      const side = wander(quad(bx, by, bx - 60, by - 10, bx - 104, by - 58, 8), 4, s.x + 9, 30);
+      const [bx, by] = at(trunk, 0.36);
+      const side = wander(quad(bx, by, bx - 50, by - 6, bx - 86, by - 50, 8), 4, s.x + 9, 30);
       limb(p, side, (t) => 24 * (1 - t) ** 0.8 + 2.5, back, 0.24, 0.05, s.x + 15, { bark: 0.8 });
-      info.twigs.push({ x: bx - 104, y: by - 58, angle: -2.2 });
+      info.twigs.push({ x: bx - 86, y: by - 50, angle: -2.2 });
       // A rot hollow.
       const [kx, ky] = at(trunk, 0.28);
       p.solid(blob(kx, ky, 17, 27, s.x + 21, 0.2, 14), back.lit, 0.31, { bark: 0.8 }, 0.6);
@@ -1158,6 +1160,9 @@ export function paintFloating(
   kit.mossCap(p, s.x, x1, s.y, {
     seed: s.x + 2,
     read: kit.highRead,
+    // The islands are a road now (the ember hangs over the third): the rim that says "stand here"
+    // is a third wider than a bough's.
+    crest: 1.35,
     lipShade: 0.35,
     drapeL: range(r, 20, 46),
     drapeR: range(r, 20, 46),
@@ -1167,6 +1172,8 @@ export function paintFloating(
     bare,
   });
   info.tops.push({ x0: s.x, x1, y: s.y, kind: 'floating', freeL: true, freeR: true });
+  // A landing, and a fight's edge for the fliers that hold the air over them: nothing tall on it.
+  info.calm.push([s.x - 8, x1 + 8, s.y]);
   info.unders.push({
     x0: s.x + 12,
     x1: x1 - 12,
