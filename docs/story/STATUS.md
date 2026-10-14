@@ -7,11 +7,11 @@ is central and discovered in play, mythic on the surface and technical underneat
 
 | | |
 |---|---|
-| Latest | round 27 (the Hush's motive in one felt image; timeline fixed; Night 4 lighter) |
-| Last review | round 27: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (seven rounds running) · **every score 8 or 9**: rel 9 / clarity 8 / idea 9 / world 9 / mechanics 9 / antagonist 8 / ending 9 / original 9 / Grove 9 / balance 9 |
-| Readers | all three name the moth and the sleeping world in their first sentence and find the dish-grown brain. Shared confusion left: pronouns in the endings (who "they" are) |
+| Latest | round 28 (polish: ending pronouns, the Hush's static seeded early, Tallow's doubt) |
+| Last review | round 28: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (eight rounds running) · rel 9 / clarity 8 / idea 9 / world 9 / mechanics 9 / **antagonist 9** / ending 9 / original 8 / Grove 8 / balance 8 |
+| Readers | pronoun confusion fixed. One confusion still shared by all three: the Night 4 coal choice (it silently decides whether the Burn ending exists) |
 | Locked | [locked.md](locked.md): spine, cast, midpoint, endings, the three big images, title |
-| Now working on | round 28: polish only (ending pronouns, seed the Hush's static in Act I, Tallow's turn, small state-tracking snags). If it holds with no shared confusion, the story is done and the prologue gets built |
+| Now working on | round 29: the coal choice made visible (it burns the wall; it glows red from then on); one lab item confirming the sister; small continuity |
 
 **Done when** two rounds in a row: the AI test passes, the director greenlights it and says it stands next to Ori / Hollow Knight / Nine Sols, all three readers would finish the game, and no confusion is shared by two readers. Then the prologue gets built in the Grove.
 
