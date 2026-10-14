@@ -55,8 +55,10 @@ export async function renderTape(
   const cues: Record<string, number> = {};
   tape.forEach((fr, k) => {
     const t = offset + k / 60;
+    if (fr.prime) conductor.prime(fr.prime);
     for (const s of fr.steps)
       for (const c of conductor.step(s.events, s.snap, fr.cam, t)) cues[c.sound] = (cues[c.sound] ?? 0) + 1;
+    for (const c of conductor.prologue(fr.pro ?? null, fr.cam, t)) cues[c.sound] = (cues[c.sound] ?? 0) + 1;
     conductor.frame(fr.cam, fr.clock, t, k === 0);
   });
   const t1 = performance.now();

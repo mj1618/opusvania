@@ -3,6 +3,7 @@ import { bakeSound, SOUNDS, type SoundId } from '../../src/audio/bake';
 import { BREATH_FRAMES, hushPhase, isKnock, PULSE_FRAMES } from '../../src/audio/clock';
 import { Conductor } from '../../src/audio/conductor';
 import { biquad, peak, rms } from '../../src/audio/dsp';
+import { type ProView, proCues, proMix } from '../../src/audio/prologue';
 import {
   type AudioCam,
   type AudioSnap,
@@ -16,6 +17,7 @@ import {
 } from '../../src/audio/router';
 import { AUDIO } from '../../src/audio/tuning';
 import { parseInputScript } from '../../src/input/script';
+import { BEATS } from '../../src/render/prologue/script';
 import { GROVE } from '../../src/scene/index';
 import type { SimEvent } from '../../src/sim/events';
 import { step } from '../../src/sim/index';
@@ -339,5 +341,68 @@ describe('giving: carrying is risky, giving is gentle (memory/giving.md)', () =>
         ?.cents ?? 0;
     expect(gift(1, 11)).toBeLessThan(gift(6, 6));
     expect(gift(6, 6)).toBeLessThan(gift(11, 1));
+  });
+});
+
+describe('the prologue (milestone 3): cues keyed to beats, a mix over the game', () => {
+  /** Walks a synthetic prologue through its cinematic beats at 60 fps (the played one briefly). */
+  function walk(): { cues: Cue[]; views: ProView[] } {
+    const views: ProView[] = [];
+    let t = 0;
+    for (const b of BEATS) {
+      const len = b.len ?? 6;
+      for (let bt = 0; bt < len; bt += 1 / 60) {
+        views.push({ beat: b.id, bt, t, done: false, phase: 'leg', pt: bt, stopAt: -1, bumps: 0 });
+        t += 1 / 60;
+      }
+    }
+    views.push({ beat: 'wake', bt: 99, t, done: true });
+    const cues: Cue[] = [];
+    let prev: ProView | null = null;
+    for (const v of views) {
+      cues.push(...proCues(prev, v, CAM, CTX));
+      prev = v;
+    }
+    return { cues, views };
+  }
+
+  it('each beat has its sounds, once, from its own timing sheet', () => {
+    const { cues } = walk();
+    const n = (s: string) => cues.filter((c) => c.sound === s).length;
+    expect(n('staticBurst')).toBe(1);
+    expect(n('creak')).toBe(3);
+    expect(n('boneKnock')).toBe(1);
+    expect(n('rumble')).toBe(1);
+    expect(n('hushCall')).toBe(1);
+    // Sorrel's motif slow at the fold (12 notes), then leading her; her first two notes on the tap.
+    expect(cues.filter((c) => c.sound === 'pluck' && c.frame < 60 * 40)).toHaveLength(2);
+    expect(n('pluckBright')).toBeGreaterThan(12);
+    // Music is scheduled a frame ahead: never late, never more than a frame early.
+    for (const c of cues.filter((q) => q.bus === 'score')) {
+      expect(c.delay).toBeGreaterThanOrEqual(0);
+      expect(c.delay).toBeLessThanOrEqual(1 / 60 + 1e-9);
+    }
+    expect(walk().cues).toEqual(cues);
+  });
+
+  it('the breath is the Hush alone with the light; the warm note only while the blur rests on it', () => {
+    const at = (bt: number) => proMix({ beat: 'breath', bt, t: bt, done: false });
+    expect(at(2).bed).toBe(0);
+    expect(at(2).maker).toBe(0);
+    expect(at(5.5).maker).toBeGreaterThan(0);
+    expect(at(8.5).maker).toBe(0);
+    expect(at(2).light).toBeGreaterThan(0);
+    expect(at(8.6).light).toBe(0);
+    expect(at(2).hush).toBeGreaterThan(1);
+  });
+
+  it('hidden in the ferns, everything holds its breath; the lamp stops dead when the wash moves on', () => {
+    const hollow = (bt: number, fold = 0) =>
+      proMix({ beat: 'hollow', bt, t: 0, done: false, inFerns: fold > 0, fold });
+    expect(hollow(9).soilHz ?? 0).toBeGreaterThan(1500);
+    expect(hollow(31).lamp).toBeGreaterThan(0);
+    const hid = hollow(31, 1);
+    expect(hid.hold && hid.bed === 0 && hid.pulse === 0).toBe(true);
+    expect(hollow(42).lamp).toBe(0);
   });
 });

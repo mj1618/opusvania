@@ -37,7 +37,7 @@ export const AUDIO = {
   /** Master gain (dB). The whole mix sits near -20 LUFS integrated with this. */
   master: 10,
   /** Bus volumes (dB): Tweakpane and `__game.audio.volume(bus, v)`. */
-  bus: { world: 0, hush: 0, hero: 0, lantern: 0, creatures: 0 },
+  bus: { world: 0, hush: 0, hero: 0, lantern: 0, creatures: 0, score: 0 },
   /** Seconds the scheduler works ahead of the context clock. */
   lookahead: 0.03,
   /** Continuous layers are re-aimed at most this often (s) and glide there with this time constant. */
@@ -51,7 +51,7 @@ export const AUDIO = {
   wind: {
     /** Canopy roar (pink noise in a broad band around this) at no gust / full gust (RMS dB). */
     roarHz: 350,
-    roarDb: [-46, -37] as [number, number],
+    roarDb: [-46, -38] as [number, number],
     /** Leaf hiss: band centre by zone [blue, amber, violet], level at rest / full sway (dB). */
     hissHz: [3600, 2400, 3000] as [number, number, number],
     hissQ: 0.55,
@@ -162,6 +162,45 @@ export const AUDIO = {
     noteGapS: 0.13,
     /** The chord of what she carries (RMS dB) at seen level 1 and at 4; gone at 0. */
     chordDb: [-50, -41] as [number, number],
+  },
+  /**
+   * The prologue (milestone 3, src/audio/prologue.ts): peaks (dB) of its one-shots and music, RMS dB of
+   * its continuous tones, and how loud the Hush is in each place relative to the Grove (dB).
+   */
+  prologue: {
+    /** The breath: the Hush alone in the dark, the light's tone, the maker's warm low note, the grain. */
+    breathHushDb: 4,
+    lightDb: -40,
+    makerDb: -36,
+    staticDb: -30,
+    /** Hatching: frost crackles a second (at its coldest), their level; the fox breathing every this many s. */
+    frostRate: 5,
+    frostDb: -40,
+    foxDb: -36,
+    foxBreathS: 3.8,
+    creakDb: -31,
+    wingDb: -27,
+    /** Her motif, his motif slow (the fold) and quick (leading her), the dance's glass waltz far above. */
+    wingMotifDb: -27,
+    sorrelSlowDb: -31,
+    leadDb: -31,
+    danceDb: -38,
+    danceWingsDb: -42,
+    /** The first night's glint: its tone while held (RMS), its first shimmer, a bump's tick; the sneeze. */
+    glintToneDb: -48,
+    glintDb: -34,
+    bumpDb: -30,
+    sneezeDb: -28,
+    /** The hollow: laps, the opening's rumble, the Hush close and dry (relative), the bone knock, the shiver, the lamp. */
+    lapDb: -31,
+    rumbleDb: -31,
+    hollowHushDb: 6,
+    boneDb: -25,
+    shiverDb: -38,
+    lampDb: -40,
+    /** The summit: the mountain's breath (relative); the title: the Hush's call. */
+    mountainDb: 6,
+    callDb: -22,
   },
   /** World sounds fall off with distance from the camera: half level at this many px. */
   halfPx: 900,

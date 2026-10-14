@@ -15,6 +15,7 @@ import type { SimEvent } from '../sim/events';
 import { bakeSteps } from './bake';
 import { Conductor } from './conductor';
 import { AudioEngine } from './engine';
+import { type ProView, viewOf } from './prologue';
 import { type AudioCam, type AudioSnap, type Cue, snapOf } from './router';
 import { AUDIO, type BusId } from './tuning';
 
@@ -23,7 +24,14 @@ export interface TapeFrame {
   clock: number;
   cam: AudioCam;
   steps: Array<{ events: SimEvent[]; snap: AudioSnap }>;
+  /** The prologue as it stood this frame (absent once it is over). */
+  pro?: ProView;
+  /** The state before any step of the recording (the first frame only). */
+  prime?: AudioSnap;
 }
+
+/** What `AudioDirector.prologue` may return: the director's plan (render/prologue/plan.ts) and whether it is over. */
+export type PrologueSource = () => { plan: Parameters<typeof viewOf>[0]; done: boolean } | null;
 
 const STORE_KEY = 'wing.audio';
 
@@ -57,6 +65,12 @@ export class AudioDirector {
   private pending: TapeFrame['steps'] = [];
   private faded = 0;
   private suspending = false;
+  /**
+   * The prologue's director, read-only (main.ts: `audio.prologue = () => prologue`). Without it the
+   * director falls back to `__game.prologue.state()` (beats and their clocks only: no glint, bumps,
+   * sneeze or Sorrel's body), and without either the prologue is silent (the old `quiet`).
+   */
+  prologue: PrologueSource | null = null;
 
   constructor(
     private readonly game: Game,
@@ -147,11 +161,19 @@ export class AudioDirector {
    */
   update(clock: number, cam: AudioCam, quiet = false): void {
     this.cam = { x: cam.x, y: cam.y, zoom: cam.zoom };
-    this.quiet = quiet;
+    const pro = this.proView();
+    // The prologue sounds once audio can see it; otherwise it keeps its old silence.
+    this.quiet = quiet && !pro;
+    quiet = this.quiet;
     if (this.tape) {
-      this.tape.push({ clock, cam: this.cam, steps: this.pending });
+      const fr: TapeFrame = { clock, cam: this.cam, steps: this.pending };
+      if (pro) fr.pro = pro;
+      if (this.tape.length === 0) fr.prime = this.snap();
+      this.tape.push(fr);
       this.pending = [];
     }
+    this.conductor.prime(this.snap());
+    this.conductor.prologue(pro, this.cam, this.when(), this.audible);
     const ctx = this.ctx;
     const engine = this.engine;
     if (!ctx || !engine) return;
@@ -171,6 +193,30 @@ export class AudioDirector {
       }, 300);
     }
     if (ctx.state === 'running') this.conductor.frame(this.cam, clock, this.when());
+  }
+
+  private snap(): AudioSnap {
+    const g = this.game;
+    return snapOf(g.state, g.scene, g.tuning.goal.channelFrames, g.tuning.giving.giftCalmFrames);
+  }
+
+  /** The prologue now, if it is playing and audio can see it. */
+  private proView(): ProView | null {
+    const src = this.prologue?.();
+    if (src) return src.done ? null : viewOf(src.plan, false);
+    const api = (globalThis as { __game?: { prologue?: { state(): Record<string, unknown> } | null } }).__game
+      ?.prologue;
+    if (!api) return null;
+    const st = api.state() as {
+      beat?: string;
+      bt?: number;
+      t?: number;
+      done?: boolean;
+      phase?: string;
+      leg?: number;
+    };
+    if (st.done || typeof st.beat !== 'string') return null;
+    return { beat: st.beat, bt: st.bt ?? 0, t: st.t ?? 0, done: false, phase: st.phase, leg: st.leg };
   }
 
   /** Records every step and frame from now (for an offline clip); false stops and drops it. */

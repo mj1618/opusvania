@@ -93,6 +93,32 @@ Offline render 41 s in 2.6 s, bake ~110 ms. Cues in the clip: 9 knocks, 20 drips
 - The pilot that makes such a route must be closed-loop on the creature (offer on `enemyWindup`); the burrback's
   position depends on the frame, so an idle a few frames longer turns a windup into a walk-in hit.
 
+## Milestone 3: the prologue (src/audio/prologue.ts, voices/prologue.ts), muted like the rest
+- **Needs one line in main.ts** (not added: shared file): `audio.prologue = () => (prologue ? { plan:
+  prologue.plan, done: prologue.done } : null);` after the director is built. Without it the director
+  falls back to `__game.prologue.state()` (beats and clocks only: no glint, bumps, sneeze, Sorrel's hops,
+  fold or tackle) and the prologue's `quiet` no longer silences it once either source is there.
+- Pure: `proCues(prev, cur)` fires on crossings of a beat's clock (`bt`), every offset read by NAME from
+  render/prologue/script.ts (`span()` tolerates a re-cut sheet), music scheduled one frame ahead with an
+  exact delay; `proMix(view)` bends the game's layers (`conductor.ts bend`): the bed (wind, pool, drips),
+  the Hush (nearer, drier, held, its clock read from the prologue's `t` since the sim is stopped in the
+  breath), and three tones of its own (the maker's FM note, the light / glint tone A4, the lamp's hum A5).
+- Score (bus `score`): Wing's motif A D E F E on `pluck` (Karplus-Strong, felt); Sorrel's 3/4 lilt
+  F E F A | G F E | A G F E | F on `pluckBright` (hammered, 6.5 Hz wing tremolo), slow at the fold (84 bpm),
+  quick leading her (138, -5 dB while he waits), joining the dance as he lifts off; the dance's waltz on
+  glass `bell`s an octave up, far; the Hush's call D3 -> A2 (`hushCall`, pipe noise over beating tones) on
+  the title, then silence. Things: `creak` (cocoons, the root tip), `frost`, `lap`, `sneeze`, `rumble`
+  (the ground opening), `boneKnock` (the case), `staticBurst` (the light's stutter). In the prologue the
+  lanterns' own cues are dropped (dark set pieces).
+- Review: built from a scratch copy with the hook, `?prologue&manual`, autopilot, `advance(2)` per 30 fps
+  frame, offline render: clips/audio-m3-prologue.mp4 (131 s with the autopilot). -23.5 LUFS integrated
+  (long quiet stretches by design; LRA 11), -7.0 dBTP, 0 clipped, centroid ~500 Hz. Momentary: the breath
+  -35..-19, hatching -30..-23, the first night ~-23 (-18 at its start), the hollow's opening -17, the hide
+  -32..-29, the summit -24..-17, the title's black -70, the next night -27.
+- The wind's gust crest was what pushed the peak (-4.8 dBTP at the hollow's opening): the bed now draws
+  back while the Hush is close, and the roar tops out at -38.
+- Offline cost grew with the voices: 131 s renders in ~17 s (13% of real time; budget 5%).
+
 ## Gotchas
 - Offline render cost is the two convolvers (~2 of 2.7 s for a 41 s clip; without them 0.8 s). IRs are
   1.8 s (room) and 2.8 s (far) for that reason; 60 s renders in ~3.8 s on a busy laptop (budget 3 s).

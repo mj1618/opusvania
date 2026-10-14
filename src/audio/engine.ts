@@ -12,6 +12,7 @@ import { ChordVoice } from './voices/chord';
 import { ForestVoice } from './voices/forest';
 import { HushVoice } from './voices/hush';
 import { OneShots } from './voices/oneshots';
+import { PrologueVoice } from './voices/prologue';
 import { WindVoice } from './voices/wind';
 import { WingsVoice } from './voices/wings';
 
@@ -30,6 +31,7 @@ export class AudioEngine {
       new BowlVoice(this.graph, baked),
       new ForestVoice(this.graph, baked),
       new ChordVoice(this.graph, baked),
+      new PrologueVoice(this.graph, baked),
     ];
   }
 

@@ -20,7 +20,7 @@ export class Rubbed {
     offset: number,
     q: number,
     pure: number,
-    bus: 'lantern' | 'hero' = 'lantern',
+    bus: 'lantern' | 'hero' | 'score' = 'lantern',
   ) {
     const ctx = graph.ctx;
     this.b = band(graph, noise, offset, [

@@ -45,8 +45,9 @@ async function boot(): Promise<void> {
   const panel = new TuningPanel(tuning, () => game.reset());
   if (params.has('hitboxes')) stage.overlay.toggle(true);
   if (playPrologue) prologue = new PrologueDirector(game, stage, !manual, scene);
-  // Sound reads the sim and the camera like render does; silent while the prologue plays.
+  // Sound reads the sim and the camera like render does; it scores the prologue from the director's plan (read-only).
   const audio = new AudioDirector(game, params);
+  audio.prologue = () => (prologue ? { plan: prologue.plan, done: prologue.done } : null);
   audio.install();
   stage.afterUpdate.add(() => audio.update(stage.clock, stage.view, !!prologue && !prologue.done));
   panel.addAudio(() => audio.applyVolumes());

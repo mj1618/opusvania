@@ -1,5 +1,5 @@
 /**
- * The mixing graph: five buses (world, hush, hero, lantern, creatures), one shared room reverb and a far,
+ * The mixing graph: six buses (world, hush, hero, lantern, creatures, score), one shared room reverb and a far,
  * darker one as sends, a roll-off above 9 kHz on everything but the glass, the master gain and a
  * gentle limiter that should never touch a normal mix (it is there for pile-ups).
  *
@@ -65,6 +65,7 @@ export class AudioGraph {
       // Glass may ring above the roll-off.
       lantern: bus('lantern', 15000),
       creatures: bus('creatures', AUDIO.rolloff),
+      score: bus('score', 15000),
     };
 
     const reverb = (ir: Float32Array[], into: GainNode) => {
