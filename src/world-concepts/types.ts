@@ -1,4 +1,4 @@
-import type { Composer } from './lib/compose';
+import type { Composer } from '../render/world/compose';
 
 /** One mood frame: built into a Composer (planes, lights, hero, grade), then updated each frame. */
 export interface WorldFrame {

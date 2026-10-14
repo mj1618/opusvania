@@ -12,13 +12,13 @@
  */
 import { Container, Graphics } from 'pixi.js';
 import { prng } from '../../render/scene/lib/look';
-import { BEAM, FOG, MOUNTAIN, REFLECT, SKY, STEAM } from '../lib/bodies';
-import type { Composer } from '../lib/compose';
-import { curtain, donePods, MOUTH, mixHex, pod, podLayers, WARM } from '../lib/kit';
-import { VIEW_H, VIEW_W } from '../lib/layer';
-import { blob, glow, vgrad } from '../lib/paint';
-import { drape, grip, ruin, windowGlows } from '../lib/ruin';
-import { type Pt, smoothPath, taper, wander } from '../lib/tissue';
+import { BEAM, FOG, MOUNTAIN, REFLECT, SKY, STEAM } from '../../render/world/bodies';
+import type { Composer } from '../../render/world/compose';
+import { curtain, donePods, MOUTH, mixHex, pod, podLayers, WARM } from '../../render/world/kit';
+import { VIEW_H, VIEW_W } from '../../render/world/layer';
+import { blob, glow, vgrad } from '../../render/world/paint';
+import { drape, grip, ruin, windowGlows } from '../../render/world/ruin';
+import { type Pt, smoothPath, taper, wander } from '../../render/world/tissue';
 import type { WorldFrame } from '../types';
 
 /** Pavement top, kerb foot (the road starts there). */

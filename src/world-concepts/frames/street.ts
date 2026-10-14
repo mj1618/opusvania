@@ -7,15 +7,15 @@
  */
 import { Container, Graphics } from 'pixi.js';
 import { prng } from '../../render/scene/lib/look';
-import { FOG, MOUNTAIN, REFLECT, SKY, STEAM } from '../lib/bodies';
-import type { Composer } from '../lib/compose';
-import { braid, curtain, donePods, MOUTH, mat, mixHex, pod, podLayers, spread, WARM } from '../lib/kit';
-import { VIEW_H, VIEW_W } from '../lib/layer';
-import { moths } from '../lib/moths';
-import { blob, glow, ridge, sleeper, vgrad } from '../lib/paint';
-import { drape, grip, ruin, windowGlows } from '../lib/ruin';
-import { helix, type Pt, smoothPath, taper, wander } from '../lib/tissue';
-import { beads, rust, streaks } from '../lib/wear';
+import { FOG, MOUNTAIN, REFLECT, SKY, STEAM } from '../../render/world/bodies';
+import type { Composer } from '../../render/world/compose';
+import { braid, curtain, donePods, MOUTH, mat, mixHex, pod, podLayers, spread, WARM } from '../../render/world/kit';
+import { VIEW_H, VIEW_W } from '../../render/world/layer';
+import { moths } from '../../render/world/moths';
+import { blob, glow, ridge, sleeper, vgrad } from '../../render/world/paint';
+import { drape, grip, ruin, windowGlows } from '../../render/world/ruin';
+import { helix, type Pt, smoothPath, taper, wander } from '../../render/world/tissue';
+import { beads, rust, streaks } from '../../render/world/wear';
 import type { WorldFrame } from '../types';
 
 const GROUND = 905;

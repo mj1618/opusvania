@@ -7,8 +7,8 @@
  */
 import { Container, Graphics } from 'pixi.js';
 import { prng, wind } from '../../render/scene/lib/look';
-import { FOG, MOUNTAIN, SHAFTS, SPLIT_SKY, STEAM } from '../lib/bodies';
-import type { Composer } from '../lib/compose';
+import { FOG, MOUNTAIN, SHAFTS, SPLIT_SKY, STEAM } from '../../render/world/bodies';
+import type { Composer } from '../../render/world/compose';
 import {
   type Blade,
   curtain,
@@ -22,10 +22,10 @@ import {
   podLayers,
   spread,
   WARM,
-} from '../lib/kit';
-import { VIEW_H, VIEW_W } from '../lib/layer';
-import { blob, glow, hgrad, vgrad } from '../lib/paint';
-import { helix, type Pt, smoothPath, type TissueBatch, taper, wander } from '../lib/tissue';
+} from '../../render/world/kit';
+import { VIEW_H, VIEW_W } from '../../render/world/layer';
+import { blob, glow, hgrad, vgrad } from '../../render/world/paint';
+import { helix, type Pt, smoothPath, type TissueBatch, taper, wander } from '../../render/world/tissue';
 import type { WorldFrame } from '../types';
 
 /** The split: screen x of the line at height y. */

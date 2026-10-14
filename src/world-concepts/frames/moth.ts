@@ -12,14 +12,14 @@
  */
 import { BlurFilter, Container, Graphics } from 'pixi.js';
 import { prng } from '../../render/scene/lib/look';
-import { CASE, FOG, MOUNTAIN, PAVE, SHAFTS, SKY, STEAM } from '../lib/bodies';
-import type { Composer } from '../lib/compose';
-import { braid, curtain, MOUTH, mixHex, pour, WARM } from '../lib/kit';
-import { VIEW_H, VIEW_W } from '../lib/layer';
-import { blob, glow, hgrad, vgrad } from '../lib/paint';
-import { drape, ruin, windowGlows } from '../lib/ruin';
-import { helix, type Pt, smoothPath, type TissueBatch, taper } from '../lib/tissue';
-import { beads, rust } from '../lib/wear';
+import { CASE, FOG, MOUNTAIN, PAVE, SHAFTS, SKY, STEAM } from '../../render/world/bodies';
+import type { Composer } from '../../render/world/compose';
+import { braid, curtain, MOUTH, mixHex, pour, WARM } from '../../render/world/kit';
+import { VIEW_H, VIEW_W } from '../../render/world/layer';
+import { blob, glow, hgrad, vgrad } from '../../render/world/paint';
+import { drape, ruin, windowGlows } from '../../render/world/ruin';
+import { helix, type Pt, smoothPath, type TissueBatch, taper } from '../../render/world/tissue';
+import { beads, rust } from '../../render/world/wear';
 import type { WorldFrame } from '../types';
 
 /** The plain: far edge (against the glass) and where Umber stands. */

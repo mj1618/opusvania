@@ -1,6 +1,6 @@
 # Storyline status (always current)
 
-**The story: HUSHWING** (chosen 2026-10-14; files keep the slug `mouthless`). Your picks for the three big images are locked; the key scenes are scripted in [scenes/](scenes/). The latest version is always [`current/mouthless.md`](current/mouthless.md).
+**The game: Wing: The Kept World** (story chosen 2026-10-14; files keep the slug `mouthless`). Your picks for the three big images are locked; the key scenes are scripted in [scenes/](scenes/). The latest version is always [`current/mouthless.md`](current/mouthless.md).
 
 Anchor: a little moth against a living thing that swallowed the world; that it is a mind grown from living brain cells
 is central and discovered in play, mythic on the surface and technical underneath. Bar: Ori / Hollow Knight / Nine Sols.

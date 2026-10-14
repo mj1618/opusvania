@@ -15,13 +15,13 @@
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import { prng } from '../../render/scene/lib/look';
-import { BEAM, DISH, DOME, FOG, MOUNTAIN, REFLECT } from '../lib/bodies';
-import type { Composer } from '../lib/compose';
-import { curtain, donePods, MOUTH, mixHex, pod, podLayers, spread, WARM } from '../lib/kit';
-import { VIEW_H, VIEW_W } from '../lib/layer';
-import { moths } from '../lib/moths';
-import { blob, glow, hgrad, vgrad } from '../lib/paint';
-import { branchRoot, type Pt, smoothPath, taper } from '../lib/tissue';
+import { BEAM, DISH, DOME, FOG, MOUNTAIN, REFLECT } from '../../render/world/bodies';
+import type { Composer } from '../../render/world/compose';
+import { curtain, donePods, MOUTH, mixHex, pod, podLayers, spread, WARM } from '../../render/world/kit';
+import { VIEW_H, VIEW_W } from '../../render/world/layer';
+import { moths } from '../../render/world/moths';
+import { blob, glow, hgrad, vgrad } from '../../render/world/paint';
+import { branchRoot, type Pt, smoothPath, taper } from '../../render/world/tissue';
 import type { WorldFrame } from '../types';
 
 const FLOOR = 912;

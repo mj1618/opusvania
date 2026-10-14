@@ -17,9 +17,9 @@ import lab from './frames/lab';
 import lamp from './frames/lamp';
 import moth from './frames/moth';
 import street from './frames/street';
-import { Composer } from './lib/compose';
-import { VIEW_H, VIEW_W } from './lib/layer';
-import { Post } from './lib/post';
+import { Composer } from '../render/world/compose';
+import { VIEW_H, VIEW_W } from '../render/world/layer';
+import { Post } from '../render/world/post';
 import type { WorldFrame } from './types';
 
 const FRAMES: WorldFrame[] = [street, edge, lamp, lab, moth];

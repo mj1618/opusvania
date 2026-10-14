@@ -4,10 +4,10 @@
  * lantern light comes back as a screen-space point (`light`) so the frame can light its planes.
  */
 import { Container, type Renderer } from 'pixi.js';
-import type { CharacterSkin } from '../../render/character/skin';
-import { skin } from '../../render/character/vesper';
-import type { PlayerView, RenderContext } from '../../render/contract';
-import { LightRegistry } from '../../render/lights';
+import type { CharacterSkin } from '../character/skin';
+import { skin } from '../character/vesper';
+import type { PlayerView, RenderContext } from '../contract';
+import { LightRegistry } from '../lights';
 import { createPlayer } from '../../sim/player/player';
 import type { Scene } from '../../sim/scene';
 import type { PlayerState } from '../../sim/state';
