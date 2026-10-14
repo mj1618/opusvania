@@ -22,6 +22,7 @@
  */
 import { BEATS, BREATH, COURSE, HATCH, HOLLOW, SUMMIT, WAKE } from '../render/prologue/script';
 import type { SoundId } from './bake';
+import { hushPhase, isKnock } from './clock';
 import { hash01, salt } from './dsp';
 import type { AudioCam, Cue, RouteContext } from './router';
 import { panOf } from './router';
@@ -243,6 +244,21 @@ export function proCues(prev: ProView | null, cur: ProView, cam: AudioCam, ctx: 
       add(sound, 'score', db, { delay: Math.max(0, n.t - clock1), cents: n.cents + shift, ...over }, n.k);
   };
 
+  // The Hush's knock on the prologue's clock: in the breath, the hollow and the summit only. Ducked under
+  // the hatching and the first night, so the pulse lands as a threat when it comes back in the hollow.
+  const mix = proMix(cur);
+  if (mix.knock && prev && !prev.done) {
+    const f0 = Math.round(prev.t * 60);
+    for (let f = f0 + 1; f <= key; f++)
+      if (isKnock(f))
+        add(
+          'knock',
+          'hush',
+          AUDIO.hush.knockDb + 20 * Math.log10(Math.max(0.05, Math.min(2, mix.hush))),
+          { pan: hushPhase(f).beat % 2 === 1 ? -0.22 : 0.22, far: 0.35, priority: 2 },
+          60,
+        );
+  }
   switch (cur.beat) {
     case 'breath': {
       const [g0] = span(BREATH, 'grain', [8.32, 8.82]);
@@ -270,7 +286,13 @@ export function proCues(prev: ProView | null, cur: ProView, cam: AudioCam, ctx: 
       if (at(wp - 0.7)) add('creak', 'world', P.creakDb, placed(wi.x, wi.y), 1);
       // First wingbeats: his as he shakes out, hers as her wings open; small heartbeats.
       const [sh] = span(HATCH, 'sorrelShake', [4.4, 5.6]);
-      const [, fold1] = span(HATCH, 'fold', [14, 21]);
+      // Her wings open at `opens` (pass 3; else the fold's end); before that, a weak try that fails.
+      const foldEnd = span(HATCH, 'fold', [14, 21])[1];
+      const fold1 = span(HATCH, 'opens', [foldEnd, foldEnd])[0] + 0.3;
+      const [try0] = span(HATCH, 'tryOpen', [-1, -1]);
+      if (try0 >= 0)
+        for (let k = 0; k < 2; k++)
+          if (at(try0 + k * 0.4)) add('flutter', 'hero', P.shiverDb - 2, placed(wi.x, 1260), 4 + k);
       for (const [t0, x, k] of [
         [sh, so.x, 0],
         [sh + 0.32, so.x, 1],
@@ -280,7 +302,10 @@ export function proCues(prev: ProView | null, cur: ProView, cam: AudioCam, ctx: 
         if (at(t0)) add('wing', 'hero', P.wingDb, placed(x, 1240), k);
       // Sorrel's motif, slow and soft, as he folds his wing over her; her first two notes on the tap.
       const [f0] = span(HATCH, 'fold', [14, 21]);
-      music('pluckBright', SORREL_MOTIF, PHRASE_BEATS, 84, p0 - f0, b - f0, P.sorrelSlowDb, false);
+      // (Two bars, so it has ended when he taps her: the fold is about 4 s.)
+      const fl = span(HATCH, 'fold', [14, 21]);
+      const foldBpm = Math.min(96, Math.max(66, (60 * 6) / Math.max(1, fl[1] - fl[0] + 0.3)));
+      music('pluckBright', SORREL_MOTIF.slice(0, 7), 6, foldBpm, p0 - f0, b - f0, P.sorrelSlowDb, false);
       const [tap] = span(HATCH, 'tap', [21.2, 22]);
       music('pluck', WING_MOTIF.slice(0, 2), 2, 72, p0 - tap, b - tap, P.wingMotifDb, false);
       const [r0] = span(HATCH, 'ready', [22.5, 24]);
@@ -392,14 +417,24 @@ export function proCues(prev: ProView | null, cur: ProView, cam: AudioCam, ctx: 
           40,
         );
       music('bell', SORREL_MOTIF, PHRASE_BEATS, 96, p0, b, P.danceDb, true, { far: 1, pan: 0.15 }, -NOTE.A4);
-      music('pluckBright', SORREL_MOTIF, PHRASE_BEATS, 96, p0 - lift0, b - lift0, P.leadDb - 2, false, {
-        far: 0.5,
+      // She holds the glint out to him: its tone; he folds her hands back (his wing); the tap: her two notes.
+      const [of0] = span(SUMMIT, 'offer', [-1, -1]);
+      if (of0 >= 0 && at(of0 + 0.3)) add('offerTone', 'hero', P.glintDb + 2, { pan: -0.05 }, 41);
+      const [fb0] = span(SUMMIT, 'foldBack', [-1, -1]);
+      if (fb0 >= 0 && at(fb0 + 0.2)) add('wing', 'hero', P.wingDb - 4, { pan: 0.05 }, 42);
+      const [tp0] = span(SUMMIT, 'tap', [-1, -1]);
+      if (tp0 >= 0)
+        music('pluck', WING_MOTIF.slice(0, 2), 2, 72, p0 - tp0, b - tp0, P.wingMotifDb - 2, false);
+      // His motif joins the dance as he goes (two bars, going farther).
+      music('pluckBright', SORREL_MOTIF.slice(0, 7), 6, 120, p0 - lift0, b - lift0, P.leadDb - 2, false, {
+        far: 0.8,
         pan: 0.3,
       });
-      // Her motif alone, after he has gone.
+      // Her motif alone, fitted into the time she is alone (it ends unresolved on E as the title comes).
       const end = (SUMMIT as { end?: number }).end ?? beatLen('summit');
       const alone = span(SUMMIT, 'alone', [Math.min(end - 4.5, lift0 + 3), end])[0];
-      music('pluck', WING_MOTIF, 6, 60, p0 - alone, b - alone, P.wingMotifDb, false, { pan: -0.1 });
+      const aloneBpm = Math.min(110, Math.max(66, (60 * 4.5) / Math.max(0.5, end - 0.1 - alone)));
+      music('pluck', WING_MOTIF, 6, aloneBpm, p0 - alone, b - alone, P.wingMotifDb, false, { pan: -0.1 });
       break;
     }
     case 'wake': {
@@ -422,6 +457,8 @@ export interface ProMix {
   hushFrame: number | null;
   soilHz: number | null;
   hold: boolean;
+  /** The Hush's 4.2 s knock sounds (off under the hatching and the first night). */
+  knock: boolean;
   /** The maker's warm low note, the light's own tone, the lamp's coral hum, her glint's tone (linear gains). */
   maker: number;
   light: number;
@@ -442,6 +479,7 @@ export function proMix(v: ProView): ProMix {
     hushFrame: Math.round(v.t * 60),
     soilHz: null,
     hold: false,
+    knock: true,
     maker: 0,
     light: 0,
     lamp: 0,
@@ -474,10 +512,12 @@ export function proMix(v: ProView): ProMix {
     case 'hatch':
       m.bed = 0.55;
       m.hush = 0.5;
+      m.knock = false;
       break;
     case 'play':
       m.bed = 1;
       m.hush = 0.7;
+      m.knock = false;
       // The glint she holds has its faint tone (it is the only light either of them has).
       m.glint = v.glint?.on && v.glint.holder === 'wing' ? g(P.glintToneDb) : 0;
       break;
@@ -502,6 +542,7 @@ export function proMix(v: ProView): ProMix {
       m.lamp = b < l0 || b >= stop ? 0 : g(P.lampDb) * (0.25 + 0.75 * env(b, [l0, l0 + 5]));
       if (hidden && b < stop) {
         m.hold = true;
+        m.knock = false;
         m.bed = 0;
         m.pulse = 0;
       }
@@ -516,7 +557,12 @@ export function proMix(v: ProView): ProMix {
       m.hush = g(P.mountainDb);
       m.soilHz = 260;
       m.pulse = 0.6;
-      m.glint = g(P.glintToneDb);
+      // The glint: held out, folded away under his wing (dim), then unfolded alone (full).
+      {
+        const [fb0] = span(SUMMIT, 'foldBack', [99, 99]);
+        const [al0] = span(SUMMIT, 'alone', [99, 99]);
+        m.glint = g(P.glintToneDb) * (b >= fb0 && b < al0 ? 0.3 : 1);
+      }
       break;
     }
     case 'wake': {
@@ -526,6 +572,7 @@ export function proMix(v: ProView): ProMix {
       m.bed = up * 0.7;
       m.hush = up * 0.4;
       m.pulse = 0;
+      m.knock = false;
       m.glint = up * g(P.glintToneDb);
       break;
     }

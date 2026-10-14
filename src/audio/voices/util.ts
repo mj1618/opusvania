@@ -9,8 +9,18 @@ export function bed(graph: AudioGraph, ch: Float32Array, offset: number): AudioB
   return src;
 }
 
-/** Glides an AudioParam toward `v` from `when` (never a step: every change ramps). */
+/** The last target each param was aimed at: an unchanged target adds nothing to its timeline. */
+const aimed = new WeakMap<AudioParam, number>();
+
+/**
+ * Glides an AudioParam toward `v` from `when` (never a step: every change ramps). A target within
+ * 0.5% (or 1e-5 near zero) of the last one is skipped: most layers sit still most of the time, and
+ * every automation event costs the renderer (offline, ~30 per second per param otherwise).
+ */
 export function aim(p: AudioParam, v: number, when: number, tau: number): void {
+  const last = aimed.get(p);
+  if (last !== undefined && Math.abs(v - last) <= Math.max(1e-5, Math.abs(last) * 0.005)) return;
+  aimed.set(p, v);
   p.setTargetAtTime(v, when, tau);
 }
 

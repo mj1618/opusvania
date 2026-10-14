@@ -4,8 +4,8 @@
  * gentle limiter that should never touch a normal mix (it is there for pile-ups).
  *
  *   voice -> bus.in -> roll-off -> bus.vol -> sum -> fader -> master -> limiter -> trim -> out
- *        \-> roomIn -> room convolver ---------^
- *        \-> farIn  -> far convolver  ---------^
+ *        \-> roomIn ------------------> the convolver -^
+ *        \-> farIn  -> dull, delayed, fed back -^
  */
 import type { Baked } from './bake';
 import { dbToGain } from './dsp';
@@ -68,14 +68,21 @@ export class AudioGraph {
       score: bus('score', 15000),
     };
 
-    const reverb = (ir: Float32Array[], into: GainNode) => {
-      const conv = new ConvolverNode(ctx, { buffer: this.buffer(ir), disableNormalization: false });
-      into.connect(conv).connect(sum);
-    };
+    // One shared convolver (it is most of the render's cost). The far send reaches it duller, later and
+    // fed back on itself a little (a longer, darker tail): farther sounds duller, wetter, wider.
     this.roomIn = new GainNode(ctx);
     this.farIn = new GainNode(ctx);
-    reverb(baked.ir.room, this.roomIn);
-    reverb(baked.ir.far, this.farIn);
+    const conv = new ConvolverNode(ctx, { buffer: this.buffer(baked.ir.room), disableNormalization: false });
+    this.roomIn.connect(conv).connect(sum);
+    const dull = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 1600, Q: 0 });
+    const pre = new DelayNode(ctx, { delayTime: 0.045, maxDelayTime: 0.2 });
+    const loop = new DelayNode(ctx, { delayTime: 0.097, maxDelayTime: 0.2 });
+    const loopDull = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 1100, Q: 0 });
+    const feedback = new GainNode(ctx, { gain: 0.42 });
+    const wet = new GainNode(ctx, { gain: 1.25 });
+    this.farIn.connect(dull).connect(pre).connect(wet).connect(conv);
+    pre.connect(loop).connect(loopDull).connect(feedback).connect(loop);
+    feedback.connect(wet);
     for (const b of Object.values(this.buses)) {
       b.room.connect(this.roomIn);
       b.far.connect(this.farIn);

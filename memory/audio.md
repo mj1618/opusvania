@@ -94,10 +94,8 @@ Offline render 41 s in 2.6 s, bake ~110 ms. Cues in the clip: 9 knocks, 20 drips
   position depends on the frame, so an idle a few frames longer turns a windup into a walk-in hit.
 
 ## Milestone 3: the prologue (src/audio/prologue.ts, voices/prologue.ts), muted like the rest
-- **Needs one line in main.ts** (not added: shared file): `audio.prologue = () => (prologue ? { plan:
-  prologue.plan, done: prologue.done } : null);` after the director is built. Without it the director
-  falls back to `__game.prologue.state()` (beats and clocks only: no glint, bumps, sneeze, Sorrel's hops,
-  fold or tackle) and the prologue's `quiet` no longer silences it once either source is there.
+- main.ts feeds it the director's plan (`audio.prologue = () => ...`, e31bab6). Without that line it falls
+  back to `__game.prologue.state()` (beats and clocks only: no glint, bumps, sneeze, Sorrel's hops, fold).
 - Pure: `proCues(prev, cur)` fires on crossings of a beat's clock (`bt`), every offset read by NAME from
   render/prologue/script.ts (`span()` tolerates a re-cut sheet), music scheduled one frame ahead with an
   exact delay; `proMix(view)` bends the game's layers (`conductor.ts bend`): the bed (wind, pool, drips),
@@ -117,7 +115,20 @@ Offline render 41 s in 2.6 s, bake ~110 ms. Cues in the clip: 9 knocks, 20 drips
   -32..-29, the summit -24..-17, the title's black -70, the next night -27.
 - The wind's gust crest was what pushed the peak (-4.8 dBTP at the hollow's opening): the bed now draws
   back while the Hush is close, and the roar tops out at -38.
-- Offline cost grew with the voices: 131 s renders in ~17 s (13% of real time; budget 5%).
+- The Hush's 4.2 s knock runs on the prologue's clock (`proCues`, the game's `ambient` knock is off while a
+  prologue mix exists) and only in the breath, the hollow and the summit (`ProMix.knock`): ducked under the
+  hatching and the first night so the pulse comes back as a threat in the hollow; off in the held breath.
+- Pass 3 re-sync (9e652de): her failed try to open her wings (two weak flutters at `tryOpen`), wingbeats at
+  `opens`; Sorrel's fold motif is two bars fitted to the fold (it ends before the tap); at the summit her
+  glint's tone as she holds it out, a felt wing as he folds her hands back (the glint tone dims under the
+  fold), her two notes on the tap (the hatching's tap rhymes), his two bars going far into the dance, her
+  motif fitted into `alone` (it hangs on E as the title comes in on the Hush's D to A).
+- Render cost: one shared convolver (2.2 s IR; the far send reaches it low-passed, delayed and fed back),
+  and voices made only when first needed (`engine.ts LAZY`: glide air, pool, steam, violet air, bowls,
+  chord, the prologue's). Same tape, same load, alternating builds: 15.0 s -> 11.5 s for 131 s (an unloaded
+  run 9.9 s, 7.6% of real time; budget 5%, not met while other agents load the machine).
+- Levels after pass 3: -23.2 LUFS, -8.3 dBTP, 0 clipped; momentary breath -34..-18, hatching -31..-24,
+  first night -25..-18, hollow -27..-19, hide -31..-27, summit -26..-17, title black -83, next night -27.
 
 ## Gotchas
 - Offline render cost is the two convolvers (~2 of 2.7 s for a 41 s clip; without them 0.8 s). IRs are

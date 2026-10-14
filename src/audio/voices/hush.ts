@@ -48,7 +48,7 @@ export class HushVoice {
     }
     const curve = new Float32Array(1025);
     for (let i = 0; i < curve.length; i++) curve[i] = saturate(i / 512 - 1, 1.8);
-    const shaper = new WaveShaperNode(ctx, { curve, oversample: '2x' });
+    const shaper = new WaveShaperNode(ctx, { curve, oversample: 'none' });
     const lp = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 330, Q: 0 });
     const trim = new GainNode(ctx, { gain: 1.6 });
     this.pulse = silent(graph);

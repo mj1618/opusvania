@@ -426,7 +426,8 @@ export function ambient(
     );
   }
   // The Hush's knock at the top of each swell: left, then right.
-  if (isKnock(f) && (!mix || (mix.pulse > 0 && mix.hush > 0.3))) {
+  // (In the prologue the knock keeps the prologue's own clock: prologue.ts `proCues`.)
+  if (isKnock(f) && !mix) {
     const beat = hushPhase(f).beat;
     out.push(
       cue('knock', 'hush', ctx, f, 102, {

@@ -108,8 +108,8 @@ export interface Baked {
   sounds: Bank;
   /** Seamless stereo noise beds for the continuous layers. */
   loops: { pink: Float32Array[]; brown: Float32Array[] };
-  /** Reverb impulses: the shared room and the far, darker one. */
-  ir: { room: Float32Array[]; far: Float32Array[] };
+  /** The reverb impulse (one convolver: graph.ts sends the far sounds into it darker and later). */
+  ir: { room: Float32Array[] };
 }
 
 type Recipe = (sr: number, r: () => number, v: number) => Float32Array[];
@@ -994,7 +994,7 @@ export function bakeSteps(sr: number, seed: number): { out: Baked; steps: Array<
     sr,
     sounds: {} as Bank,
     loops: { pink: [], brown: [] },
-    ir: { room: [], far: [] },
+    ir: { room: [] },
   };
   const steps: Array<() => void> = [
     () => {
@@ -1002,10 +1002,7 @@ export function bakeSteps(sr: number, seed: number): { out: Baked; steps: Array<
       out.loops.brown = loop(sr, seed ^ 0xb40, 8, brown);
     },
     () => {
-      out.ir.room = impulse(sr, seed ^ 0x700, 1.8, 0.012, 4200, 500);
-    },
-    () => {
-      out.ir.far = impulse(sr, seed ^ 0xfa4, 2.8, 0.045, 2600, 300);
+      out.ir.room = impulse(sr, seed ^ 0x700, 2.2, 0.012, 4000, 450);
     },
   ];
   for (const id of Object.keys(SOUNDS) as SoundId[]) {

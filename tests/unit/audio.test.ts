@@ -17,7 +17,7 @@ import {
 } from '../../src/audio/router';
 import { AUDIO } from '../../src/audio/tuning';
 import { parseInputScript } from '../../src/input/script';
-import { BEATS } from '../../src/render/prologue/script';
+import { BEATS, HOLLOW } from '../../src/render/prologue/script';
 import { GROVE } from '../../src/scene/index';
 import type { SimEvent } from '../../src/sim/events';
 import { step } from '../../src/sim/index';
@@ -376,6 +376,19 @@ describe('the prologue (milestone 3): cues keyed to beats, a mix over the game',
     expect(n('boneKnock')).toBe(1);
     expect(n('rumble')).toBe(1);
     expect(n('hushCall')).toBe(1);
+    // The knock: in the breath, the hollow and the summit; never under the hatching or the first night.
+    const beatAt = (f: number) => {
+      let t = 0;
+      for (const b of BEATS) {
+        t += (b.len ?? 6) * 60;
+        if (f <= t) return b.id;
+      }
+      return 'wake';
+    };
+    const knocks = cues.filter((c) => c.sound === 'knock').map((c) => beatAt(c.frame));
+    expect(knocks.length).toBeGreaterThan(3);
+    expect(knocks.filter((b) => b === 'hatch' || b === 'play')).toHaveLength(0);
+    expect(knocks).toContain('hollow');
     // Sorrel's motif slow at the fold (12 notes), then leading her; her first two notes on the tap.
     expect(cues.filter((c) => c.sound === 'pluck' && c.frame < 60 * 40)).toHaveLength(2);
     expect(n('pluckBright')).toBeGreaterThan(12);
@@ -401,10 +414,14 @@ describe('the prologue (milestone 3): cues keyed to beats, a mix over the game',
   it('hidden in the ferns, everything holds its breath; the lamp stops dead when the wash moves on', () => {
     const hollow = (bt: number, fold = 0) =>
       proMix({ beat: 'hollow', bt, t: 0, done: false, inFerns: fold > 0, fold });
-    expect(hollow(9).soilHz ?? 0).toBeGreaterThan(1500);
-    expect(hollow(31).lamp).toBeGreaterThan(0);
-    const hid = hollow(31, 1);
-    expect(hid.hold && hid.bed === 0 && hid.pulse === 0).toBe(true);
-    expect(hollow(42).lamp).toBe(0);
+    // (Read from the timing sheet: the prologue is re-cut often.)
+    const open = HOLLOW.open[1];
+    const played = (HOLLOW.play[0] + HOLLOW.play[1]) / 2;
+    const after = HOLLOW.hide[0] + HOLLOW.wash.back + 0.5;
+    expect(hollow(open).soilHz ?? 0).toBeGreaterThan(1500);
+    expect(hollow(played).lamp).toBeGreaterThan(0);
+    const hid = hollow(played, 1);
+    expect(hid.hold && hid.bed === 0 && hid.pulse === 0 && !hid.knock).toBe(true);
+    expect(hollow(after).lamp).toBe(0);
   });
 });
