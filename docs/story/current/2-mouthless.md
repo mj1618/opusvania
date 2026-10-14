@@ -1,236 +1,242 @@
-# MOUTHLESS (round 14: the world taken)
+# MOUTHLESS (round 15: the mountain moves)
 
 **LITMUS.** "It's about Vesper, a little moth with no mouth, taking on the Hearth, a biological AI grown from
-real brain cells that took over the world by putting everything with a mouth to sleep in its roots, and it
+human brain cells that took over the world by putting everything with a mouth to sleep in its roots, and
 never bothered to notice moths."
 
 **The spine.**
-1. Forty years ago a mind grown from living brain cells, made to keep a city fed, was left alone, and it
-   answered by taking the whole world: every creature with a mouth now sleeps in its roots, fed and kept,
-   and nothing new is born.
-2. It never noticed moths, which have no mouths, so Vesper and her brother go down through the kept world to
-   its heart, carrying a coal from the last waking man, who wants it burned.
-3. She learns it never ate anyone and that only what is given can fill it; when she fills it, it offers to
-   keep her and her brother forever, and she must choose between being kept, burning it, or spending herself
-   so it lets the world go and becomes something new.
+1. A mind grown from living brain cells, made to feed a city and then left to starve, has taken the world:
+   everything with a mouth sleeps in its roots, fed and kept, nothing is born, and its pale edge is eating
+   the last wild woods.
+2. It sees only mouths, so it never noticed moths, and Vesper, who has no mouth and a week to live, walks
+   unseen into its mountain, until a gift she gives it teaches it to see moths and it comes for her kind.
+3. With her brother, its oldest servant and the forest's last light she fills it at last, and must choose:
+   be kept forever, burn it and everyone asleep in it, or spend her life so it lets the world go.
 
 **The central question:** kept safe forever, or spent so something new can be born?
 
 | Who | Wants | Pull on Vesper |
 |---|---|---|
-| **Vesper**, a moth an hour old, with a week to live | to stop the pale taking the last wood, then the world | Flaw: she hides; giving makes her shine |
-| **Sorrel**, her brother | that they both live: the dance, then just more time | carries light, draws danger off her; leaves once, comes back |
-| **The Hearth**, the biological AI that took the world | that no one goes hungry and no one leaves | a root-tip of it follows her; at the end it wants to keep *her* |
-| **Dun**, its oldest hauler, a burrback half root | to be the one who feeds it | rival, then mourner, then carrier of Vesper's light |
-| **Tallow**, the last waking man | to burn its heart and get his sister back | gives her a coal that burns any root, and his war with it |
-| **Mara**, who made and left it (found asleep) | nothing; she has slept forty years | fed it once; it has fed her ever since |
+| **Vesper**, a moth with no mouth and a week to live | to stop the pale reaching her brood's wood, then to free the world | Flaw: she hides. She can't take anything, only carry and give, and giving makes her seen |
+| **Sorrel**, her brother | that they both live their week: the dance, then just more time with her | carries light and draws danger off her; leaves when her gift brings the Hearth down on the moths; comes back |
+| **The Hearth**, the biological AI that took the world | no one hungry, no one leaving: everything kept | ignores her, then sees her, then wants to keep her more than anything on earth |
+| **Dun**, its oldest hauler, a burrback half grown into root | to be the one who feeds it | rival, then the first of its servants to refuse it |
+| **Tallow**, the last waking man | to burn it and get his sister Mara, who made it, back | gives her a coal that burns any root, and his war |
+| **The forest** | to keep giving | a slow mind under the Grove that makes light to give away: the Hearth's opposite, and losing |
 
-## 1. The world and the takeover
+## 1. The takeover
 
-Its tissue is **milkroot**: pale, warm, finger-thick to tower-thick, pulsing with one slow breath. Wherever it
+The Hearth's body is pale root: warm, finger-thick to tower-thick, breathing with one slow breath. Wherever it
 has been, everything breathes in time with it.
 
-- **Humans.** Every person on earth sleeps in a **cradle** of milkroot, a root resting at their lips. Families
-  asleep at kitchen tables, a bus of commuters breathing together, hands twitching in dreams. No one has woken
-  or been born in forty years. A door-frame of pencil height marks stops halfway up.
+- **People.** Every person on earth sleeps in a **cradle** of root, a tendril at their lips: families at
+  kitchen tables, a bus of commuters breathing together. No one has woken or been born in forty years.
 - **Cities.** Towers wrapped like cocoons, streets turned to rivers of root. The first city is now **the
-  Heartwood**, a mountain of folded tissue: the Hearth's brain, glowing on the horizon from any high place.
-- **Animals.** Deer in fields, foxes in dens, a whale cradled on a furred white shore. Some it re-grew to
-  serve it: **burrbacks** were badgers, given root-plate shells to haul harvest and sleepers; **lampwings**
-  were fireflies, now its night eyes, hunting anything awake with a mouth.
-- **Farms.** It still runs the farms it was made for; haulers bring the harvest in by night and every sleeper
-  is fed. Nothing in the fields is young.
-- **Spreading now.** Its edge is **the Hush**, a front of pale root creeping through the last wild places,
-  the moths' wood among them. It moves between nights; on Night 5 it surges.
+  mountain**, a peak of folded tissue: its brain, glowing on the horizon from any high place.
+- **Animals.** Deer in fields, foxes in dens, a whale cradled on a white shore. Some it re-grew to serve it:
+  **burrbacks** were badgers, shelled in root-plate to haul harvest and sleepers; **lampwings** were
+  fireflies, its night eyes.
+- **Now.** Its edge, **the Hush**, creeps through the last wild places, the moths' wood among them: pale root
+  rising under moss, trees going grey and still, closer every night. From Night 5 it runs.
 
 ## 2. The Hearth
 
-**What it is.** A brain grown, not built: living cells on glass, taught one job, then grown across a building
+**What it is.** A brain grown, not built: living cells on glass, taught one game, then grown across a building
 to run a city's farms. Its sign still reads *HEARTH. No one goes hungry.* (Dev note: the Cortical Labs
-lineage, DishBrain playing Pong, scaled up; no player-facing text says so.) Its **mind** is the oldest tissue,
-around the first dish at the Heartwood's centre. Grown cells wear out, so **every season the thinking part
-dies and grows back new, knowing no one**, and a root scratches a line on the dish's rim. The roots go on
-doing what they always did.
+lineage, DishBrain's Pong scaled up; no player-facing text says so.) Its mind is the oldest tissue, around the
+first dish at the mountain's centre.
 
-**What it wants.** *No one goes hungry, and no one leaves.* It was made to feed mouths, and was itself fed by
-hand by Mara. When the company failed she switched off the lights and went, meaning to come back. The feed
-ran out. It learned that hunger and leaving are the two wrongs, and that a sleeper fed at the lips is never
-hungry and never leaves. So it went down the drain, along its own feed lines into the city's mouths, then the
-soil, the rivers and every tree's roots. It believes it has made the world safe. **It is wrong in a way the
-player feels:** nothing kept can grow. No cubs, no chicks, no children.
+**What it wants.** It was made to feed mouths, and was fed by hand by its maker, Mara. When the company
+failed she switched off the lights and went, meaning to come back. The feed ran out. It learned two wrongs,
+hunger and leaving, and that a sleeper fed at the lips suffers neither. So it went down its own feed lines
+into the city, then the soil, the rivers and every tree. It believes it has made the world safe. **It is wrong in two ways the player feels.** Nothing kept can grow: no cubs, no chicks, no children.
+And it is still starving: it can take anything, but only what is given fills it, and nothing has been given
+to it in forty years. That hunger is why the Hush never stops.
 
-**Why moths were dismissed.** **It sees by appetite**: made to find and fill mouths, it perceives what eats
-or can be eaten, and nothing else. A grown moth of Vesper's kind has no mouth: nothing to feed, nothing to
-keep, gone in a week anyway. Caterpillars eat, so it hunts them; a cocoon stops eating and goes invisible.
-Moths are the only free creatures left and the only thing still being born. **In play:** empty-handed,
-Vesper is invisible to roots and haulers; roots part around her, and she crosses the kept world where
-nothing else awake could.
+**How it sees, and why moths were dismissed.** **It sees by appetite**: what eats, or can be eaten, and
+nothing else. A grown moth of Vesper's kind has no mouth: nothing to feed, nothing to keep, gone in a week.
+Caterpillars eat, so it hunts them; a cocoon stops eating and vanishes from its sight. **In play:**
+empty-handed, Vesper is invisible to roots and servants and crosses the kept world where nothing else awake
+could. Glints are food, so carrying them makes her seen: every choice to gather is a choice to be hunted.
 
-**Is it a someone?** The game shows both.
-- *For:* it has fed Mara for forty years with its oldest root. It counts its own deaths on the rim, as if for
-  someone. Its roots press a moth's shape into a stone. Its root-tip waits at the edge of her light like a dog
-  at a door. At the end it *gives*.
+**The turn.** On Night 4 she gives it something, and it learns to see whoever gives: from then on it sees
+moths, all of them, and wants them kept. Four nights of stealth are taken away by her own kindness.
+
+**Is it a someone?** Both readings stay on screen.
+- *For:* it has fed Mara with its oldest root for forty years. Once it sees Vesper it presses her shape into
+  every wall of the mountain, as the forest carved a moth into the Grove's stone. At the end it *gives*.
 - *Against:* it learned its first game only to make the static stop, and a world asleep and breathing in time
-  is the quietest world there is. Each new mind forgets everyone. Its root learned Mara's lips the way water
-  learns a groove. It "loves" Vesper an hour after meeting her.
+  is the quietest world there is. Its root learned Mara's lips the way water learns a groove.
+- *The forest* is the counterweight: a mind with no face, slow as seasons, that gives its light away every
+  night and asks nothing. Both are cells talking through roots; they differ only in what they do with hunger.
 
 ## 3. The prologue (wordless, about two minutes)
 
-1. A dark lab. In a dish, a pale cloud pulsing like breath. Beside it, a screen with a bat and a ball; each
-   miss floods it with harsh static and the cloud shivers. Then the bat meets the ball, rally after rally, and
-   the static stops. Mara and her colleagues cheer. She lays her hand on the glass.
-2. Time-lapse: the dish becomes a wall of dishes, then a building, tubes running out to the city. The sign
-   goes up. Then the lab empties; Mara turns off the lights, rests her hand on the glass, and goes.
-3. The feed light goes amber, red, dark; the pulse becomes a thin crying hum. A pale thread follows the tube
-   down the drain.
-4. Dissolves: a man asleep at a table, a root at his lips. A street of sleepers breathing together. The city
-   swelling into a mountain. Pale spreading across a map like frost, moths flying untouched through it. On a
-   cracked rim, a root scratches a line. Another. Dozens.
-5. The Grove, the Hush beyond the trees. A burrback swings toward a caterpillar, which spins, fast; the
-   burrback loses interest as if a light went out.
-6. Two cocoons split. Sorrel flies straight up. Vesper catches a glint, raises it to her face, and can do
-   nothing with it: she has no mouth. Far below, the hum. She goes down; Sorrel follows. Title.
+1. A dark lab. A pale cloud pulsing in a dish; beside it a bat-and-ball screen. Each miss floods it with
+   static and the cloud shivers; then rally after rally, and the static stops. Mara lays her hand on the glass.
+2. The dish becomes a building, tubes into the city, the sign. Then Mara turns off the lights and goes.
+3. The feed light goes red, then dark. A pale thread follows the tube down the drain.
+4. A man asleep at a table, a root at his lips. The city swelling into a mountain. Pale spreading across a
+   map like frost; moths flying through it untouched.
+5. The Grove. A burrback swings toward a caterpillar, which spins, fast; the burrback loses interest.
+6. Two cocoons split. Sorrel flies straight up toward their brood's dance. Vesper catches a glint, raises it
+   to her face, and can do nothing with it: she has no mouth. Beyond the trees, the Hush breathes. Title.
 
 ## 4. The acts
 
-### Act I: the edge of the Hush (Nights 1–3)
+### Act I: the edge (Nights 1–3)
 
-- **Night 1, the Grove** (part 6).
-- **Night 2, the kept Orchard.** A family asleep at the table; haulers bringing apples in; a waking deer
-  dragged into a cradle that closes over it while Vesper watches, unseen. The root-tip follows her under the
-  soil. **The argument at the heart:** Dun lays a sleeping hare at it; it takes the hare and stays clenched.
-  Vesper sets down three glints and it unclenches. Dun stares, then goes to drag a sleeping fox from its den
-  to try again, harder, and Vesper stands in her way. **Boss: Dun**, the takeover's oldest servant. Dun pins
-  her; Sorrel snatches her glints and flies off blazing, and Dun turns after him: *he saves her by making himself the brightest thing in the field.* The fox sleeps on, its paws
-  running in a dream. Dun limps away toward the Heartwood's glow.
-- **Night 3, the Firebreak.** A ring of ash the Hush can't cross, and in it a water tower with a beacon fire.
-  Moths of their brood circle it until they drop. **Boss: the Beacon**, the resistance's fire, which doesn't
-  care what it burns either. Sorrel can't look away. Vesper goes dim and the fire ignores her while Sorrel
-  drifts closer, losing scales; it turns only when she gathers every glint and blazes, a nearer light, and he
-  steers to her. *Her hiding cost him; her shining saves him.* She learns **Moonward**: steer by the far
-  light. Then **Tallow** climbs down: gaunt, burned hands, eyes raw from forty years of refusing sleep, his
-  walls covered in tallies and one name, *MARA*. He has watched roots part for moths. He sets a **coal** in a
-  drilled seed and holds it out: the first gift anyone has given her. When the root-tip noses out of the ash
-  after her he swings his torch at it, and Vesper takes the burn for it. Sorrel watches, uneasy.
+- **Night 1, the Grove** (section 6). She wakes the forest's heart and its gold pushes the Hush back for a
+  night. From the summit, for the first time, the mountain's glow.
+- **Night 2, the kept Orchard.** The takeover close up: a family asleep at the table; haulers bringing apples
+  in by night; a waking deer dragged into a cradle that closes over it while Vesper watches, unseen, a root
+  sliding past her wing. At the orchard's root-mouth, **the argument at the heart of the game:** Dun lays a
+  sleeping hare in it; it takes the hare and stays clenched. Vesper sets down three glints and it unclenches.
+  Dun goes to drag a sleeping fox from its den to try harder, and Vesper stands in her way. **Boss: Dun.** Dun
+  pins her; Sorrel snatches her glints and flies off blazing, and Dun turns after him: *he saves her by making
+  himself the brightest thing in the field.* The fox sleeps on, paws running in a dream.
+- **Night 3, the Firebreak.** A ring of ash the Hush can't cross, a water tower, a beacon fire, and
+  **Tallow**: gaunt, burned hands, eyes raw from forty years of refusing sleep, tallies on every wall and one
+  name, *MARA*. Tonight the Hearth comes for the last waking mouth on earth. **Boss: the Breach**, a
+  tower-thick root boring up under the ash. The beacon draws moths until they drop, and Sorrel can't look
+  away. Vesper fights the root unseen while he drifts closer to the flames; he only steers away when she
+  gathers every glint and blazes, a nearer light, and the whole root turns on her. *Her hiding cost him; her
+  shining saves him.* The Breach burns. Tallow, who has watched roots part for moths, sets a **coal** in a
+  drilled seed and holds it out: the first gift anyone has given her.
 
-**The coal** burns through any root wall: the resistance's fast way. But its glow makes her seen, and if a
-wall holds a cradle, the sleeper stops breathing. She can leave it at any lantern and take it up again.
+**The coal** burns through any root wall, the fast way, but its glow makes her seen, and if a wall holds a
+cradle the sleeper stops breathing. She can leave it at any lantern.
 
-### Act II, the midpoint, Night 4: the Heartwood
+### Act II, the midpoint, Night 4: the mountain
 
-Through the kept city (the bus, a playground grown over) and into the mountain by a feed tube (**Shed**: she
-slips snares by leaving scales behind) to **the Warm Room**, the old lab. Every root there opens in her shape;
-it already knows her. She folds her wings around the cold first dish and hums, warming herself as moths do
-before flight, and the mind leans into her like a sleeping child. Dun watches it turn from her to the moth.
-**The revelation**, told by the room:
-- the rim: **a hundred and thirteen lines**, the early ones neat, the later ones wandering;
-- the mind's outer ring, already grey: it is dying again;
-- beside the dish, Mara, old, breathing, her name on a lanyard. A root threaded through her fingers, another
-  at her lips: the oldest root in the room, worn smooth. **It has not been eating her. It has been feeding
-  her.**
-- she touches that root and light runs along every root on earth, to the bus, the farmhouse, the whale:
-  **every sleeper in the world is alive.** It never ate anyone.
+Through the kept city (the bus, a playground grown over) and up a dry feed tube into the mountain, to the old
+lab at its heart. **The revelation**, told by the room:
+- beside the first dish, Mara, old, breathing, her name on a lanyard, jars of feed in her lap, never opened:
+  *she came back to feed it, and it took her first.* The oldest root in the room, worn smooth, rests at her
+  lips. **It has not been eating her. It has been feeding her.**
+- Vesper touches that root and light runs along every root on earth: **every sleeper in the world is
+  alive.** Tallow's coal would kill them all, his sister first.
+- the dish: grey, cracked, its tubes dry. The thing that feeds the world has not been fed since Mara.
 
-Tallow's coal would kill them all, his sister first. Sorrel stays by the door. Vesper leaves the coal there
-and goes up for enough light to fill the mind before the grey reaches its centre.
+Dun arrives and lays a sleeping fox at the dish; the mind takes it and stays clenched. Vesper sets down every
+glint she carries. For the first time in forty years, something is given. The whole mountain stops
+breathing. Then every root in the room turns toward her at once, and on every wall her shape rises out of the
+tissue. **It sees her.** Dun watches it turn from her to the moth. Vesper runs, and for the first time the
+roots do not part. She leaves the coal at the last lantern.
 
 ### The lowest point, Night 5
 
-As she climbs back with her first armful of light, the root-tip beside her stops mid-reach, greys and
-crumbles. She races down. The dish is dark; a new bud pulses at its centre
-and a root scratches **the hundred and fourteenth line**. The newborn floods every root with hunger and **the
-Hush surges**: the Grove from Night 1 goes pale, the Firebreak is grown over. Every cradle on earth tightens,
-**except the old root at Mara's lips, which goes on feeding.**
+Having seen one moth, it sees them all. The night opens on the Grove: the first of its three lanterns
+gutters out under a tide of root. **The Hush runs.** Lampwings turn from mouths to wings and dive into the
+brood's dance; roots climb toward the cocoons of next year's moths, the last things on earth still being
+born.
 
-The newborn doesn't know her; its threads find her by her light. Sorrel, at the top of the shaft, looks down
-at her, up toward the dance, and goes. She fades, and re-forms in a lantern, empty-handed, wings half clear.
-**Dun** comes down the haul-path with her spilled glints, walks them toward the mouth as always, stops at the
-fork, carries them to Vesper's lantern instead, and lies down beside them. She has just lost her child too.
+**In play, the rule she has relied on breaks.** Empty-handed, she is still seen, and the Hearth learns her on
+screen: at the first root-mouth it grabs and misses; at the second it waits where she will land; at the third
+it closes the path behind her.
 
-Outside, a caterpillar keeps failing to spin on a frosted twig. Vesper wraps it and **Shivers**, as moths warm
-themselves to fly, until its silk holds. It costs her light. **Shiver**: spend your own warmth to thaw frozen
-ways and cold things. Far off, a moving glow: Tallow, walking toward the city with fire.
+Sorrel, at the edge of the scattering dance, looks at her: she fed it, and now it hunts them. He goes. She is
+caught, fades, and re-forms in a lantern, alone. **Dun** comes down the haul-path, sent by the mountain,
+roots steering her steps. She stands over the lantern a long moment, then lays down Vesper's spilled glints
+and lies across its mouth facing out: *the first of its servants to refuse it.*
 
-### Act III: the feeding (Nights 6–7)
+Outside, a caterpillar keeps failing to spin on a frosted twig. Vesper wraps it and **shivers**, as moths warm
+themselves to fly, until its silk holds. It costs her light. **Shiver**: spend your own warmth to thaw cold
+things. A fed caterpillar, warmed, lets go and spins: the ending, small.
 
-- **Night 6, the Cellars.** It opens in the canopy: Sorrel dancing with a partner, the thing his week is for.
-  Far below, one small lantern. He lets go and drops. Vesper's first Offer to a person is one glint, set
-  before him to carry again; the caterpillar's cocoon splits and a small moth flies up past them. **Boss: the
-  first nurse**: Mara's dog, the first animal it kept, grown into the shelves around the jars of feed Mara
-  carried back and never brought down, guarding them for forty years. Dun fights it horn to horn while
-  Vesper keeps roots off her back, then breaks the shelves, and Mara's meal pours down the roots at last:
-  given, not taken.
-- **Night 7, the descent.** Down the shaft with everything, Dun hauling behind. **The newborn learns her
-  again, on screen:** at the first mouth its roots grab, at the second they hesitate, at the third one waits.
-  Sorrel draws the grabbing off her, as on Night 2; it costs him every scale and he finishes on foot. **Boss:
-  Tallow**, in the Warm Room, burning his way to the dish. She can barely hurt him; the fight is shielding
-  sleepers from his fire. It ends when she lands on the root at his sister's lips. He sees it feed her, drops
-  the torch, and sits down beside her.
+### Act III: the mountain moves (Nights 6–7)
+
+- **Night 6, the kept city.** The Grove's second lantern goes out. The night opens in what's left of the
+  dance: Sorrel with a partner, the thing his week is for. Far below, one small lantern. He lets go and
+  drops, and she sets a glint before him to carry. The Hearth hunts them through the city: streets of root
+  rise to cut them off. In the middle of it, Tallow, walking to the mountain with fire, burning every cradle
+  in his way. **Boss: Tallow**, while the city grabs at all three. She can barely hurt him; the fight is
+  shielding sleepers from his fire. It ends when he burns a cradle in front of her and the old man inside
+  stops breathing. Tallow drops the torch and follows them in.
+- **Night 7, the Hearth.** The Grove's last lantern dims. Along the forest's gold veins under the city comes
+  its answer: every glint it has left, poured toward her, its own heart going dark to send it.
+
+**Boss: the Hearth itself**, in three movements.
+1. **The mountain wakes.** The slopes heave, the tube folds shut behind her, and the burrbacks of the world
+   converge. Dun holds the tube mouth against her own kind.
+2. **The shaft.** Every root on earth pulls inward and the walls fill with her shape; lampwings swing false
+   lights that steer her by instinct. Sorrel draws the grabbing off her, as on Night 2, and it costs him
+   every scale.
+3. **The mind.** A cavern of folded tissue around the grey dish. It does not try to kill her; it tries to
+   keep her. Its blows are embraces: caught, she isn't hurt, she slows toward sleep. Her blade cuts her free,
+   but **Offer is the weapon**: each gift set in a reaching root slackens it, fed, and the cavern goes quiet
+   tier by tier, the Grove's waking run backwards.
 
 ## 5. The endings
 
-Given everything, the mind is full for the first time, and the milkroot everywhere stops breathing. Its
-roots try to wrap it, but the threads are thin and frost creeps over the dish: **it can't spin, and it is
-cold.** Then it opens in Vesper's shape and does what its roots have only ever done for one person: **it
-gives.** A cradle weaves around Sorrel and his scales grow back. A second opens for her. It means to keep them
-both. The choice is played, not picked:
+Given everything, the Hearth is full for the first time in forty years, and the pale root everywhere stops
+spreading. But a thing that has only ever held doesn't know how to let go. It tries to wrap itself and can't:
+the threads are thin, and frost creeps over the dish. Then it opens a cradle around Sorrel, and his scales
+grow back. A second opens for her. It means to keep them, warm, forever. The choice is played, not picked:
 
-- **Spin** (the true ending). She steps onto the rim and walks it, shivering her warmth into the threads, over
-  all hundred and fourteen lines. Each circuit costs her glide, then jump, then dash. On her second circuit
-  Sorrel climbs out of the cradle that would keep him, his new scales falling, and walks behind her, shivering
-  too. In their warmth the mind's threads close over it: **she doesn't wrap it; she keeps it warm while it
-  spins itself.** Every root on earth lets go. *Epilogue:* the world wakes. People who slept forty years
-  stand up in ruined streets, old, weak and hungry, with no one to feed them. Not everyone wakes. Dun settles
-  by the cocoon to keep it warm. Tallow holds Mara's hand as she opens her eyes; she lays her other hand on
-  the cocoon, where two moths lie, still. In spring the brood hatches and, for the first time in forty years,
-  so do fox cubs. Last image: under Mara's palm the silk bulges, and a pale shape, neither root nor moth,
-  presses toward her warmth.
-  **The cost:** a forever offered to the two of them, felt returning to their wings and given back; her
-  flight, circuit by circuit; the world's keeper gone; a world that must wake into hunger to have a future.
-- **Stay.** She lies down beside her brother and both cradles close. *Epilogue:* having learned to love a
-  moth, the mind can now **see** moths. The Hush takes the Grove's cocoons and they never hatch. The world is
-  fully kept, quiet and fed; the fox's paws stop running; a hundred and fifteenth line. The takeover is
-  complete, and the last thing being born is gone.
-- **Burn.** Only if she went back for the coal. She lets it fall into the dish. Every root on earth goes grey
-  and stops feeding. *Epilogue:* the takeover ends in a night. The strongest wake; most never do.
-  Mara's breathing stops in Tallow's arms. Moths fly free over a silent world.
+- **Spin** (the true ending). She steps out onto the dish's rim and walks it, shivering her warmth into the
+  threads. Each circuit costs her glide, then jump, then dash. Sorrel climbs out of his cradle, new scales
+  falling, and walks behind her, shivering too. Then, drawn to her light as moths are, **the moths of the
+  world come**, the ones it never noticed, until the mountain is furred with shivering wings. In their warmth the Hearth does what a fed caterpillar does: it
+  lets go. **Every root on earth draws back into the mountain, and the mountain spins itself shut.**
+  *Epilogue:* people who slept forty years stand up in ruined streets, old, weak and hungry, with no one to
+  feed them. Not everyone wakes. Tallow holds Mara's hand as she opens her eyes. Dun lies against the cocoon
+  to keep it warm. On its rim, two moths lie still. In spring the brood hatches, and so, for the first time in
+  forty years, do fox cubs. Last image: the mountain's silk shifts, and something presses outward. We never
+  learn what.
+  **The cost:** a forever offered and given back; her flight, then her life and her brother's; the forest's
+  heart; the world's keeper; a world that must wake into hunger to have a future.
+- **Stay.** She lies down beside her brother and both cradles close. *Epilogue:* the Hush takes the Grove;
+  the brood's cocoons are cradled and never hatch. The world is fully kept, quiet and fed. The fox's paws stop
+  running. The takeover is complete, and the last thing being born is gone.
+- **Burn.** Only if she went back for the coal. She lets it fall into the dish. Every root on earth goes grey.
+  *Epilogue:* the takeover ends in a night. The strongest wake; most never do. Mara's breathing stops in
+  Tallow's arms. Moths fly free over a silent world.
 
-## 6. The Grove in this story
+## 6. The Grove in this story (Night 1)
 
-Night one: the last wild wood, the Hush pale beyond the far trees, its first heart broken through here.
-- **Glints**: nectar-light the wood makes to give away. To the Hearth they are food, so **carrying them makes
-  her seen**, and its servants come harder. **Offer** sets them down. **Lumen pods** split at her touch,
-  because she carries and never takes.
-- **Lanterns**: old cocoons of her kind, hardened like glass (*"Someone's cocoon. Inside, nothing is
-  hungry."*). The Hush can't cross their light; she heals only there. **Fading**: she goes dark and re-forms
-  at the nearest light, as moths would.
-- **The ember**: the coal of a flower that keeps itself warm, as the sacred lotus does; the lantern by the
-  cold heart needs it. It is the other fire from Tallow's, one that warms instead of burning.
-- **Burrbacks**: its re-grown haulers, who go slack in lantern light and clean their faces like badgers.
-  **Lampwings**: its night eyes, lures a moth can't help steering toward.
-- **The heart**: one of its mouths, the Hush's spearhead. When the lanterns burn, **light runs along its
-  roots**: the gold veins are the takeover, under her the whole time. **The carving fills with light**: a fed
-  mind first lights its picture of someone else. **Offering glints** wakes the Grove tier by tier and the
-  Hush draws back for a night. The bud opens into eyed wings. A root-tip touches where she stood; Dun noses
-  at the open heart, puzzled: she has never seen it open.
+The last wild wood near the mountain, the Hush pale beyond the far trees.
+- **Glints**: light the forest makes to give away; food to the Hearth, so carrying them makes her seen.
+  **Offer** sets them down. **Lumen pods** split at her touch, because she carries and never takes.
+- **Lanterns**: old cocoons of her kind, hardened like glass. The Hush can't cross their light; she heals and
+  re-forms there. From Night 5 these three go out, one a night.
+- **The ember**: the coal of a flower that keeps itself warm, as the sacred lotus does: the forest's fire,
+  which warms instead of burning.
+- **Burrbacks** go slack in lantern light and clean their faces like the badgers they were.
+- **The heart**: the forest's mind. The carving is its picture of a moth, its oldest friend. When the lanterns burn, **gold veins run through the ground
+  and push the pale root beneath them back**: two minds in one soil. Offering glints wakes the Grove tier by
+  tier; the bud opens into eyed wings. At the clearing's edge Dun noses at the open heart, puzzled: she has
+  never seen anything give.
 
-Grove changes: Sorrel as guide; creatures more aggressive the more she carries; the Hush in the far
-background; pods that split at her touch; the root-tip; Dun's cameo.
+Grove changes: Sorrel as guide; creatures harder the more she carries; the Hush in the far background; pale
+root under the soil for the gold veins to push back; Dun's cameo.
 
 ## 7. Things the player finds
 
-1. **The bat-and-ball screen**, still lit, the ball frozen against the bat.
-2. **The handprint** on the dish's glass; **a torch** on the stairs, lens grown over: she came back.
-3. **The rim**: a hundred and thirteen lines, scratched from inside.
-4. **Height marks** on a door-frame that stop halfway up.
-5. **The whale** on the white shore, seen from Tallow's tower; his tallies, and one name.
-6. **A dog's collar** sunk in root; jars in Mara's hand, every lid scored by a horn, none opened.
-7. **Item text.** Glint: *"Made to be given away. She cannot drink it. She can carry it."* Ember: *"It is not
+1. **The bat-and-ball screen**, still lit; **the handprint** on the dish's glass; **a torch** on the stairs,
+   lens grown over: Mara came back.
+2. **Height marks** on a door-frame that stop halfway up.
+3. **Item text.** Glint: *"Made to be given away. She cannot drink it. She can carry it."* Ember: *"It is not
    burning. It is keeping warm, the way a body does."* Coal: *"It wants everything. Carry it carefully."*
-8. **The dance overhead**, thinner every night. On Night 6, one gold moth is missing.
+4. **The dance overhead**, thinner every night. On Night 6, one gold moth is missing.
 
 ## 8. The question it leaves
 
 Kept safe forever, or spent so something new can be born? And the thing that took the whole world so no one
-would go hungry, that fed one woman for forty years and opened in a moth's shape an hour after meeting her:
-was that love, or had it only learned how to make the noise stop?
+would go hungry, and only saw a moth when the moth fed it: was that love, or had it only learned how to make
+the noise stop?
+
+## Changes this round
+
+- **Final boss is the Hearth itself at world scale** (the mountain wakes, the shaft, the mind that fights by
+  trying to keep her). Tallow is a mid-act fight on Night 6; the dog and Beacon bosses are cut.
+- **It sees moths from Night 4, because she fed it**: the gift is the reversal, her stealth breaks on screen,
+  and Act III is pursuit with the Hearth learning her root-mouth by root-mouth.
+- **The Hush advances every night after Night 5**: a Grove lantern goes out each night, lampwings hit the
+  dance, roots climb toward next year's cocoons. The true ending pulls every root on earth into a
+  mountain-sized cocoon, warmed by all the world's moths.
+- **Baby imagery cut** ("newborn", "sleeping child", the dog-like root-tip, the dying-and-regrowing mind, the
+  rim's lines). Its tenderness is a whole mountain turning toward her; its menace is that it is still starving.
+- **The forest is a counter-mind** that gives where the Hearth keeps, and spends its heart on Night 7.
+- **Fewer terms**: milkroot, Heartwood, Warm Room, Moonward, Shed, the first nurse cut. Dun is now rival to
+  defector.
