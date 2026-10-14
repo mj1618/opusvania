@@ -416,12 +416,18 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
     c.events,
   );
   const hits = foes + pods;
-  // Glanced off a braced shell: no hit, but she feels it (a beat, and a throw back off it).
-  if (slashBlocks() > 0 && foes === 0) {
-    p.hitstop = Math.max(p.hitstop, Math.max(0, Math.round(E.blockHitstopFrames)));
+  // Glanced off a braced shell: no hit, but she feels it (a beat, and a throw back off it). A down
+  // cut that glances (a braced or curled burrback's top) still bounces her: the pogo, nothing taken.
+  const glanced = slashBlocks() > 0 && foes === 0;
+  if (glanced) {
+    const stop = pogo ? E.pogoHitstopFrames : E.blockHitstopFrames;
+    p.hitstop = Math.max(p.hitstop, Math.max(0, Math.round(stop)));
     if (dir === 'fwd' && p.mode === 'normal') p.kickX = -p.attackFacing * E.blockRecoil;
   }
-  if (hits === 0) return;
+  if (hits === 0) {
+    if (glanced && pogo) pogoBounce(c);
+    return;
+  }
   const hitstop = Math.max(foes > 0 ? foeStop : 0, pods > 0 ? podStop : 0);
   if (p.attackHits === 0) {
     const e = c.events[first];
@@ -444,21 +450,26 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
       p.kickX = -p.attackFacing * (foes > 0 ? st.recoilFoe : st.recoil);
   } else if (dir === 'up') {
     if (!p.grounded && p.mode === 'normal') p.vy += P.recoilUp;
-  } else if (pogo) {
-    if (p.mode === 'wallSlide') {
-      c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: p.wallDir });
-      p.mode = 'normal';
-      p.stick = 0;
-    }
-    endGlide(c, 'fastfall');
-    p.vy = -P.pogoSpeed;
-    p.fromJump = false;
-    p.cut = false;
-    p.sustain = 0;
-    p.airDash = P.airDashes;
-    p.dj = P.doubleJumps;
-    p.hangUsed = 0;
+  } else if (pogo) pogoBounce(c);
+}
+
+/** The pogo: a fixed hop off what the down slash met, the air dash and double jump back. */
+function pogoBounce(c: Ctx): void {
+  const p = c.p;
+  const P = c.P;
+  if (p.mode === 'wallSlide') {
+    c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: p.wallDir });
+    p.mode = 'normal';
+    p.stick = 0;
   }
+  endGlide(c, 'fastfall');
+  p.vy = -P.pogoSpeed;
+  p.fromJump = false;
+  p.cut = false;
+  p.sustain = 0;
+  p.airDash = P.airDashes;
+  p.dj = P.doubleJumps;
+  p.hangUsed = 0;
 }
 
 function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {

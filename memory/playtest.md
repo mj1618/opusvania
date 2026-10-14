@@ -130,6 +130,14 @@ hops for all three hands (`B.hop`). Frames: `shots/play6/01..18` (gitignored), b
   timeouts: about **1:40** of play. Not 100%: lamp-glade, lamp-glide-1 / -2, lamp-sky (left at 1 hp) and the sky
   line's great glint were not taken.
 
+**Fixed since in the sim, not replayed by a person yet**: must 1 (the ember take calms everything near:
+goal.md), must 2 (the pogo: one landed down cut an exchange, it curls, the braced top glances and bounces her;
+spammer pilot 7.5-9.3 s with 4-5 rams met, pogo reader 4-6 s: enemies.md "round 2"), must 3 (re-form at the
+nearest light, a lamp she passed even dark: shaft fades re-form at lamp-trunk, goal.md), should 6 (a ram
+carries its last 32 px into a wall: the shaft's second exchange is a wall stun), should 11 (lamp-sky: after a
+`far` give-up it tells only at one well inside its leash for 5 s), should 12 (a drop onto a burrback: it gets
+out from under her and braces only once she is down), nice 4 (no ram sooner than 80 frames after a hit).
+
 ## Must fix
 1. **The lampwing on F3 hits her as she takes the ember.** lamp-f3 tells as she lands on F3 and dives while she
    stands the 54 frames at the cup: hit in 2 of 4 unskilled takes (A2, B summit-first), and A's second dive

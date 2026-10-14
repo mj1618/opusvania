@@ -140,11 +140,12 @@ function sees(e: EnemyState, p: PlayerState, scene: Scene, range: number): boole
   return !segmentBlocked(scene, ex, ey, px, py);
 }
 
-/** Is she within its leash (her centre to its home)? */
-function inLeash(e: EnemyState, p: PlayerState, t: L): boolean {
+/** Is she within its leash (her centre to its home), less `margin` px? */
+function inLeash(e: EnemyState, p: PlayerState, t: L, margin = 0): boolean {
   const dx = p.x + p.w / 2 - e.homeX;
   const dy = p.y + p.h / 2 - e.homeY;
-  return dx * dx + dy * dy <= t.leashPx * t.leashPx;
+  const r = Math.max(0, t.leashPx - margin);
+  return dx * dx + dy * dy <= r * r;
 }
 
 function face(e: EnemyState, dx: number, dead: number): void {
@@ -183,6 +184,9 @@ function giveUp(e: EnemyState, info: StepInfo, cause: GiveUpCause): void {
   e.chase = 0;
   e.lost = 0;
   e.dives = 0;
+  // She went beyond its reach: for a while it tells only at one well inside it (not at every jump
+  // at the edge of it).
+  if (cause === 'far') e.noticeCd = frames(info.t.lampwing.retellFrames);
   info.events.push({
     type: 'enemyGiveUp',
     id: e.id,
@@ -473,6 +477,7 @@ export const lampwing: KindRules = {
     const px = p.x + p.w / 2;
     const py = p.y + p.h / 2;
     let beat = t.flapHover;
+    if (e.noticeCd > 0) e.noticeCd--;
 
     if (e.mode === 'dead') {
       if (!e.landed) {
@@ -547,7 +552,9 @@ export const lampwing: KindRules = {
       drift(e, scene, t);
       face(e, e.vx, 0.2);
       const sight = e.sight > 0 ? e.sight : t.noticePx;
-      if (sight > 0 && !over && e.calm === 0 && inLeash(e, p, t) && sees(e, p, scene, sight)) {
+      // (For a while after she has left its leash once, only one well inside it.)
+      const margin = e.noticeCd > 0 ? t.retellMarginPx : 0;
+      if (sight > 0 && !over && e.calm === 0 && inLeash(e, p, t, margin) && sees(e, p, scene, sight)) {
         e.dives = 0;
         tell(e, info);
       }

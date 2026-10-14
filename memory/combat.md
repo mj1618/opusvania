@@ -78,9 +78,15 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
 - **A cut that glances off a braced burrback** (`enemyBlock`, enemies.md): no hit (`attackHits`, `slashHit`
   and `impact` do not fire), but she holds **6** frames (`enemies.blockHitstopFrames`; 3 until playtest 5: a clang late in the tell now leaves no time to hop the ram) and is thrown back at
   8 px/f (`blockRecoil`: 36 px less the lunge, about 27). The slash is spent on it.
+- **A down cut that glances** (a braced burrback's top, or a curled one: playtest 6) **still bounces her**
+  exactly as a pogo does (`pogoBounce` in player.ts), holds her the pogo's 2 frames, no throw
+  (`enemyBlock {slash: 'down', hitstop: 2, recoil: 0}`). Nothing is taken. So bouncing off the tell is a
+  hop over the ram; it is not a break.
 - **Pogo** (`assists.pogo`): a `down` slash that hits sets `vy = -15.5` (125 px up in 17 frames),
   refills the air dash, the double jump and the hangs, ends a wall slide. Bounce to bounce is 32 frames
-  = 288 px at run speed: space pogo rows 290 px apart.
+  = 288 px at run speed: space pogo rows 290 px apart. **On a burrback one pogo lands an exchange**
+  (it curls: enemies.md); a down cut that lands as she touches down gives no bounce (she is grounded)
+  and leaves her standing in it.
 - Enemies are hit by the same areas (`slashEnemies`, before the pods; `slashHit.target.kind` is then
   the enemy's kind) and a down slash pogos off them; unlike pods they need a clear line (enemies.md).
 - `impact {x, y, dir, facing, step, power, hits}`: once per blow that hits anything, on its first hit

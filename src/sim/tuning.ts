@@ -395,6 +395,36 @@ export const defaultTuning = {
     strikeCooldown: 12,
     rouseFrames: 300,
     turnOnHitPx: 320,
+    /**
+     * A ram whose length runs out with a wall within `chargeCarryPx` ahead carries on into it (a wall
+     * stun): its weight does not stop a stride short of the bark. In the shaft the ram from the
+     * doorway's mouth ended 21-24 px short of trunk B: always `spent`, never `wall` (playtest 6).
+     */
+    chargeCarryPx: 32,
+    /**
+     * After its touch or its ram hurt her it does not brace again until a ram could not reach her
+     * sooner than `rehitGapFrames` after her safety (`health.invulnFrames`) has run out.
+     */
+    rehitGapFrames: 10,
+    /**
+     * The pogo (playtest 6: four bounces killed it, no ram, no risk). A down cut that lands curls it
+     * up for `tuckFrames` (and on until it may brace again): a down cut glances off the curled shell
+     * and she bounces off it, nothing taken. A braced shell glances a down cut the same way (a bounce
+     * over the ram, not a break). Uncurling, it braces at her if she is near, even over it (her feet
+     * up to `tuckBraceAbovePx` above its ground); while she is above its ground and near (on a
+     * branch over it, dropping onto it) it stays curled. One pogo an exchange.
+     */
+    tuckFrames: 40,
+    tuckBraceAbovePx: 200,
+    /**
+     * A drop onto it (playtest 6: the blind drop from the summit landed on burr-shaft): while she falls
+     * from more than `dropPx` over its top toward its box (her box within `dropClearPx` of its own,
+     * sideways), it hurries out from under her at `dropSpeed`, and it does not brace at her until she
+     * is down.
+     */
+    dropPx: 300,
+    dropClearPx: 12,
+    dropSpeed: 3,
     /** What its touch costs her. */
     contactDamage: 1,
     /** Glints it spills when it dies, and when the finisher killed it. */
@@ -459,6 +489,14 @@ export const defaultTuning = {
     pursueFrames: 70,
     lostFrames: 90,
     leashPx: 520,
+    /**
+     * Playtest 6: lamp-sky told every 2 s at one climbing the far cliff and never dived (she came into
+     * its leash at the top of each jump and was out of it when the tell ended). For `retellFrames`
+     * after a tell or a pursuit she left (`enemyGiveUp` cause `far`) it notices only one at least
+     * `retellMarginPx` inside its leash (one who comes right back to it is seen at once).
+     */
+    retellFrames: 300,
+    retellMarginPx: 200,
     /** Having given up (or touched her) it hangs for `restFrames`, braking at `restBrake`, then flies home. */
     restFrames: 60,
     restBrake: 0.14,

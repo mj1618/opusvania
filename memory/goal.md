@@ -36,6 +36,23 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
   3x the robots, so a careful person is about 2.5-3 min, not yet the 3-5 asked for.
 - Economy: world 101 (the ember), pods 62, creatures 45 (a seventh lampwing): `glintsTotal` 208.
 
+## Playtest 6, round 2: she re-forms at the light nearest to where she fell
+- **`restPoint`** (goal.ts) = the nearest (straight line, from where her body lies to the light's foot) of:
+  every lit lantern, every lit lamp, and every wayside lamp she has **passed** (`LanternState.passed`: set by its
+  first `lanternNotice` / `lampNotice` of the run, never cleared), **dark or lit**; a dark one only while no
+  living creature's home is within the safe-ground clearance of it (`health.safeEnemyPx`, a lampwing's
+  territory + sight: `homeClear`). On a tie a lit one. None: the last safe ground, as before. Re-forming at a lit
+  light makes it `restAt` / `restLamp` and holds its rest (`restHold`, as before); at a dark lamp nothing is held.
+- Why: playtest 6's masher (0 lamps bought) re-formed at the first lantern for each of her first four fades,
+  4.3 s from the shaft, three times over the same ground. Now every shaft fade re-forms at lamp-trunk by the
+  doorway (220 px: back in the fight ~1 s after the re-form; the no-lamps tapper: fade 12.1 s, re-form 13.0,
+  braced at again 14.1; it was fade 11.7, braced again 17.0). Fades on burr-ledge re-form at lamp-trunk too
+  (lamp-high is 174 px from burr-ledge's home: not while it lives); fades at burr-rise at lamp-rise; a fade at
+  burr-path with the ember in hand at lantern-stone (the nearer), not at lamp-trunk.
+- Debug: `__game.goal().reformAt` (where she would re-form now), `lanterns()` / `lamps()` `.passed`. Tests:
+  `lamps.test.ts` (dark passed lamp wins; never passed or a creature by it does not), `goal.test.ts`,
+  `naive-pilot.test.ts` (every re-form is at a light; shaft fades at lamp-trunk).
+
 ## Playtest 6 (2026-10-14): the ember is taken in safety; a lamp's light is hers, not the fight's
 - **Taking the key** (the ember's 54-frame flight, `pickups.greatFrames`): from the step it wakes until 60
   frames after `lanternKey`, every living creature within 600 px of her (body or home) is calmed, exactly as
@@ -112,9 +129,10 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
   ever. A hop on the spot is not leaving. Another light, or kindling one, clears it. So after a fade she
   walks at 2 lights at least out of the box and back (45 px and 45 frames), or on to the next light.
   `__game.goal().restHold`. Render: the lantern should not show its "resting" breath while it holds.
-- **Re-form point**: `goal.restAt` = the lit lantern she last stood at (kindling sets it). A fade then
-  re-forms her at its foot (with 2 of 4 lights, a third of her wallet left where she fell: enemies.md;
-  the rest above is then the real heal) instead of the last safe ground, **whatever lives next to it** (safe ground
+- **Re-form point** (since playtest 6 round 2 the nearest light, not the last stood at: section above): `goal.restAt` = the
+  lit lantern she last stood at (kindling, standing at it or re-forming at it set it). A fade re-forms her at
+  the foot of the light nearest to where she fell (with 2 of 4 lights, a third of her wallet left where she fell: enemies.md;
+  the rest above is then the real heal) instead of the last safe ground, a lit one **whatever lives next to it** (safe ground
   falls back to the spawn near a creature's home; a lantern never does: she has 90 frames of safety
   and it is the promise the lantern makes). No lantern lit: safe ground as before.
 - **Calm**: kindling settles every living creature within 900 px (`calmPx`: about half a screen, so
@@ -231,7 +249,8 @@ calm on kindling, nothing hurts her while she kindles it, refuse / cancel / noti
 pips stay "of 3"). Its own events so the three-lantern render is untouched: `lampNotice`, `lampRefuse`,
 `lampChannel`, `lampCancel`, `lampKindle {cost, wallet, lit, total}` (of LAMPS), `lampRest`; her pose flag is
 `player.kindlingLamp` (index into `scene.lamps`; `kindling` stays -1). Re-form: the last light she
-stood at wins; `restAt` is -1 while that is a lamp (`restLamp` >= 0). The ending summary carries
+stood at is `restAt` / `restLamp` (`restAt` is -1 while that is a lamp); she re-forms at the nearest
+light (playtest 6 round 2, above), a lamp she has passed even dark. The ending summary carries
 `lamps` / `lampsTotal`. Validated like lanterns (`LAMP_CLEAR` 160 px from any other light on its
 ground). `?nopickups` drops them (main.ts). Debug: `__game.lamps()`, `goal().lamps {lit, total}`,
 `goal().restAt` may be a lamp's id; the hitbox overlay draws them thin green (gold once lit, with the

@@ -114,6 +114,7 @@ describe('lanterns: kindling', () => {
       short: 0,
       refused: false,
       noticed: true,
+      passed: true,
       pledged: false,
       still: 0,
       keyed: true,
@@ -534,7 +535,7 @@ describe('lanterns: a lit one is a rest point', () => {
     expect(of(rest, 'lanternRest')[0]).toMatchObject({ healed: 2, hp: 4 });
   });
 
-  it('the lit lantern she last stood at is the one; an unlit one is not; without any, safe ground as before', () => {
+  it('she re-forms at the lit lantern nearest to where she fell (it was the last she stood at); an unlit one is not; without any, safe ground as before', () => {
     const s = sim(scene({ enemies: [burr(3400)] }), 24);
     s.place(B_X, FLOOR);
     s.run('.30');
@@ -560,7 +561,20 @@ describe('lanterns: a lit one is a rest point', () => {
       t.place(e.x + e.w / 2 - 30, FLOOR);
       return of(t.run(`.${H.fadeFrames + 3}`), 'reform')[0];
     };
-    expect(die(s)?.x).toBe(B_X);
+    // Playtest 6 (the masher walked back to the first lantern three times): she re-forms at the lit
+    // light nearest to where she fell, not the one she last stood at. It is her rest point then.
+    expect(die(s)?.x).toBe(A_X);
+    expect([s.state.goal.restAt, s.state.goal.restHold]).toEqual([0, true]);
+    // Fallen nearer the other one: there.
+    s.run('.60');
+    s.place(B_X + 150, FLOOR);
+    s.state.player.hp = 1;
+    s.state.enemies[0] = {
+      ...(s.state.enemies[0] as (typeof s.state.enemies)[number]),
+      x: B_X + 160,
+      homeX: B_X + 186,
+    };
+    expect(of(s.run(`.${H.fadeFrames + 3}`), 'reform')[0]?.x).toBe(B_X);
     // No lantern lit: the last safe ground.
     const n = sim(scene({ enemies: [burr(3400)] }), 0, 2600);
     n.run('.40');
@@ -1002,7 +1016,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
     s.run(`.${G.holdFrames + 5}`);
     expect([s.state.goal.lit, s.state.goal.ended, s.state.pickups.spent]).toEqual([3, true, 36]);
     const fresh = createState(1, s.tuning, s.scene);
-    expect(fresh.version).toBe(18);
+    expect(fresh.version).toBe(19);
     expect(fresh.goal).toEqual({
       lanterns: [0, 1, 2].map(() => ({
         lit: false,
@@ -1012,6 +1026,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
         short: 0,
         refused: false,
         noticed: false,
+        passed: false,
         pledged: false,
         still: 0,
         keyed: true,

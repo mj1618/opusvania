@@ -138,20 +138,21 @@ function naive(
       } else if (e.type === 'heartSleep') say(`at the heart, asleep (${e.lit} of ${e.total})`);
       else if (e.type === 'hurt') say(`hit by ${e.source.id}`);
       else if (e.type === 'fade') say('fades');
+      else if (e.type === 'reform') say(`re-forms at ${e.x},${e.y}`);
       else if (e.type === 'podBurst') say(`${e.id} cut open`);
       else if (e.type === 'enemyDie') say(`${e.id} cut down`);
       else if (e.type === 'gather')
         say(`the heart: ${e.glints} glints, ${e.lanterns} lanterns, ${e.hits} hits`);
       else if (e.type === 'glideStart') say('wings open');
       else if (e.type === 'enemyWindup') {
-        say(`${e.id} braces`);
+        say(`${e.id} braces at ${e.x} facing ${e.dir}`);
         braceAt[ix(e.id)] = f + Math.max(0, read);
       } else if (e.type === 'enemyDive') {
         say(`${e.id} dives`);
         diveAt[ix(e.id)] = f + Math.max(0, read);
       } else if (e.type === 'lanternRest' || e.type === 'lampRest') say(`rested at ${e.id}`);
       else if (e.type === 'enemyBlock') say(`her cut glances off ${e.id}`);
-      else if (e.type === 'enemyRecover') say(`${e.id} spent (${e.cause})`);
+      else if (e.type === 'enemyRecover') say(`${e.id} spent (${e.cause}) at ${e.x}`);
       else if (e.type === 'enemyHit') say(`${e.id} cut: ${e.hpLeft} left`);
       else if (e.type === 'enemyNotice') say(`${e.id} has seen her`);
     }
@@ -463,6 +464,26 @@ describe('naive players finish the grove: the lanterns are the critical path', (
     }
   });
 
+  it('a fade in the shaft re-forms her at lamp-trunk by the doorway, lit or dark, not at the first lantern (playtest 6: three walks of 4.3 s)', () => {
+    let shaft = 0;
+    for (const o of [{}, { lamps: false }, { stand: false }]) {
+      const r = naive(5, 9, o);
+      const ev = r.events;
+      for (let k = 0; k < ev.length; k++) {
+        const e = ev[k] as SimEvent;
+        if (e.type !== 'fade' || e.x < 3328 || e.x > 3584 || e.y !== 1280) continue;
+        const re = ev.slice(k).find((q) => q.type === 'reform');
+        expect(re?.type === 'reform' && [re.x, re.y], JSON.stringify(o)).toEqual([3160, 1280]);
+        shaft++;
+      }
+      // (Every re-form is at a light: the nearest one lit, or a lamp she has passed.)
+      const at = new Set(lights.map((l) => `${l.x},${l.y}`));
+      for (const e of ev)
+        if (e.type === 'reform') expect(at.has(`${e.x},${e.y}`), `${e.x},${e.y}`).toBe(true);
+    }
+    expect(shaft).toBeGreaterThanOrEqual(2);
+  });
+
   it('is deterministic', () => {
     expect(naive(5, 9).hash).toBe(naive(5, 9).hash);
   });
@@ -488,6 +509,11 @@ describe('naive players finish the grove: the lanterns are the critical path', (
     expect(
       r.events.filter((e) => e.type === 'enemyDive' && e.id === 'wing-rise').length,
     ).toBeGreaterThanOrEqual(1);
+    // Playtest 6 (four live runs: `spent`, never `wall`): the shaft's second exchange is a wall stun.
+    // Its first ram ends at the doorway's mouth; from there the next one carries into trunk B's bark.
+    expect(
+      r.events.some((e) => e.type === 'enemyRecover' && e.id === 'burr-shaft' && e.cause === 'wall'),
+    ).toBe(true);
     // She bought the two lamps on her road and they did not shorten the fights beside them.
     expect(r.lamps).toBeGreaterThanOrEqual(2);
     expect(r.events.filter((e) => e.type === 'enemyRecover' && e.cause === 'lantern')).toEqual([]);

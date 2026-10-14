@@ -20,7 +20,7 @@ the masher and the reader)**, `lampwing.test.ts`, `lampwing-pilot.test.ts`. Both
   the glint spill queue (`spill / spillTimer / spillGap`), contact and its exclusions, the pogo.
 - `EnemyState` is ONE flat record for all kinds (plain JSON; a field a kind does not use keeps its
   start value). `homeX, homeY` = the centre of its box at the start, for every kind. The state
-  version is 18 (enemies.test pins it). `KindRules.blocks` (optional): a blow glances off (the burrback's
+  version is 19 (enemies.test pins it). `KindRules.blocks` (optional): a blow glances off (the burrback's
   braced shell): the framework fires `enemyBlock`, takes nothing, and the slash is spent on it.
 - Scene data: `enemies` is a Zod union on `kind`; burrbacks first, lampwings after (the burrback
   grove tests index the first six). `EnemySpawn.y` means feet for a burrback, home centre for a lampwing.
@@ -32,6 +32,48 @@ re-form if a fade just ended → `updatePlayer` (her slash is resolved inside it
 enemies stood) → `updateEnemies` (move, modes, flinch; returns who touches her) → contact →
 `hurtPlayer` → `trackSafeGround` → pods → pickups. So a slash and a touch on the same frame: the slash
 wins (the creature is staggered and harmless before contact is tested).
+
+## Playtest 6, round 2 (2026-10-14): the pogo, the shaft's wall, drops, re-hits, lamp-sky
+Tests: `playtest6-fights.test.ts` (`FIGHT_TRACE=1` prints the pogo timelines), `naive-pilot.test.ts`, `lamps.test.ts`.
+- **The pogo is one blow an exchange** (it was four bounces in 1.6-2.6 s, no ram). Three rules, `tuning.burrback`:
+  - **Braced, its shell has a top**: a down cut glances (`enemyBlock` slash `down`) and she bounces off it as
+    off a pogo (combat.md). Bouncing off the tell is a hop over the ram, no longer a break (`broken` now only
+    comes from a cut from behind).
+  - **A down cut that lands curls it** (`e.tuck` = `tuckFrames` 40, counting outside hitstop; set in `shove`):
+    down cuts glance off it (she bounces). Forward / up cuts land as ever, so pogo + a cut beside it works.
+    The count holds at 1 while it may not brace (`strikeCd`, `hurt`, `recover`) **and while she is above its
+    ground within `provokedPx` sideways** (on burr-path's branch, bouncing over it, dropping on it). Then it
+    uncurls: into a brace at her if she is near, **over it included** (`brace(e, info, true)`: her feet up to
+    `tuckBraceAbovePx` 200 above its ground, right over it counts as in front). Without that a spammer hanging
+    over it got the next pogo in as soon as it uncurled; with no ram at all (`strikePx` 0) it uncurls on the timer.
+  - Pilots (flat ground at 3 distances x 2 facings, and the grove): the **spammer** (jumps at it, down + attack
+    every time she comes down over it) 7.5-9.3 s, 4-5 rams met, 5 pogos landed, 8-11 glanced, 0 hits (a perfect
+    bot bounces off the braced top every time; a mistimed press is a ram); the **pogo reader** (hops the ram,
+    pogos it winded, steers off the curl, cuts what is in reach) 4.0-6.2 s, 0 hits, 2-3 pogos; the cut reader
+    and the masher as before.
+- **A ram carries its last stride into a wall** (`chargeCarryPx` 32, `wallWithin`): if its 180 px run out with a
+  wall that close ahead (and no drop, fence, doorway or lantern ground before it) it runs on into it: `wall`,
+  90 frames. Why: in the shaft the first ram (west) ends at the doorway's mouth (box 3328), and from there the
+  second (east) stopped 21-24 px short of trunk B's bark (3584): `spent`, every time. Now the careful pilot's
+  second exchange at burr-shaft is a wall stun (reactions 15 and 18; 20 kills it in the first exchange).
+- **A drop onto it is fair** (the blind drop from the summit landed on burr-shaft, hurt on the frame of its
+  brace: 60 of 60 start times for a 14 or 20-frame step-off). `dropping()`: she is in the air, falling, not
+  gliding, and the top of this airtime is `dropPx` 300 or more over its top. Then it **hurries out from under
+  her** (`dodgeDrop`, `dropSpeed` 3 px/f, the shorter way its ground and range allow, `enemyTurn` cause `drop`
+  if it turns; it stands if pinned) and **does not brace until she is down**. Also never a brace at one in
+  the air right over it (her box over its box): the touch would have come with the tell. Measured: 5 step-off
+  lengths x 30 start times from trunk B's top, never touched before she lands, the brace (if any) on or after
+  the landing frame, a ram at a stander no sooner than 26 frames after it. A glider is not dropping (she steers).
+- **A ram never lands sooner than 80 frames after the last hit** (`rehitGapFrames` 10: invuln 70 + 10). After
+  its touch or its ram hurt her, `strikeCd` >= invuln + 10 - windup - 1 (53). It was 42 after a ram that hit
+  her (30 winded + 12) and after a plain touch (30 flinch + 12): a stander met the next ram at 70-77 frames
+  (playtest: 77 on burr-bank). Measured over the mashers / standers at the bank, path, shaft and rise: min 80.
+- **lamp-sky's empty tells** (every 2 s at one climbing round the far bluff: in its leash at each jump's top,
+  out of it when the tell ended): after `enemyGiveUp` cause `far` it notices only one at least
+  `retellMarginPx` 200 inside its leash for `retellFrames` 300 (`e.noticeCd`). One who comes right back under
+  it is seen at once (lampwing.test). A notice margin on every tell was tried: it shifted lamp-sky's tell on the
+  summit glide by 4 frames and the pogo-chain pilot was hit at one start time.
+- **Re-form at the nearest light** (goal.md): the masher's shaft fades re-form at lamp-trunk, not lantern 1.
 
 ## Playtest 6 (2026-10-14): two tells a fight, the ember is safe, fair arrivals at burr-root
 - **A lit wayside lamp no longer shortens the fight beside it** (it stopped the ram and took the brace of one
@@ -89,8 +131,9 @@ The rule in one line: **stand and mash loses, read the tell and punish wins, and
   `stirred` (300 past the winded time, set by every ram) = it comes round and braces at one **inside its
   range**; one beyond it (at the bluff's foot working out the climb) is left alone. Both end on a calm.
   A plain walk-into-her touch does not stir it (it turns away as before).
-- **A blow that breaks the brace** (from behind, or a down slash from above, during `windup` or `charge`): it
-  staggers, then stands winded where it is (`enemyRecover {cause: 'spent', broken: true}`), no ram. `e.broken`.
+- **A blow that breaks the brace** (from behind, during `windup` or `charge`): it staggers, then stands winded
+  where it is (`enemyRecover {cause: 'spent', broken: true}`), no ram. `e.broken`. (A down slash from above
+  used to break it too; since playtest 6 it glances and she bounces: round 2 above.)
 - **Braced**, a forward cut from its front glances off (`enemyBlock`; she holds **6** frames now,
   `enemies.blockHitstopFrames`, was 3, and is thrown back ~27 px). A clang late in the tell leaves no time to hop.
 - **Hit points 5** (`burrback.hp`), or the scene's `hp` (burr-path 4: the teaching one).
@@ -98,7 +141,7 @@ The rule in one line: **stand and mash loses, read the tell and punish wins, and
   third cut clangs on the new brace; exchange 2 (tired) = cut, cut, finisher: dead. 0 hits, ~4 s from the first
   tell for the bot (burr-path, 4 hp: 3.2 s live with real keys; it was 1.3-2.5 s). **The masher**: clang,
   rammed, two cuts, clang, rammed, then it dies in the tired window: **2 hits a burrback** (live: path 2,
-  shaft 2 = a fade at the second). Never inside her 70 frames of safety (hit to hit >= 80).
+  shaft 2 = a fade at the second). A ram never lands sooner than 80 frames after the last hit (round 2 above).
 - **Mashing three in a row is a fade**, and after it **living creatures keep their wounds** (`resetEnemies`:
   home, calm, not healed; `enemyReset.healed` is always 0). Why: re-formed at 2 lights against a healed 4-5 hp
   burrback the masher faded for ever (piloted: a hand that glided over burr-path the first time looped there).
@@ -109,8 +152,8 @@ The rule in one line: **stand and mash loses, read the tell and punish wins, and
   trunk A: from there she gets a free cut or two when it paces near); brace while calmed, in a lit lantern's
   sanctuary (a lit wayside lamp's only while she stands at it: playtest 6 above),
   while she kindles, after `gather`, within 600 px of the woken heart.
-- **The shaft**: its west wall has the doorway in it, so a ram westward runs its length into the well; the
-  wall-stun is the ram EAST into trunk B's bark, i.e. the second exchange (she has hopped it and stands east).
+- **The shaft**: a ram westward pulls up at the doorway's mouth (`ledge`); the wall stun is the ram EAST into
+  trunk B's bark, i.e. the second exchange, from the mouth (the last 24 px carried: round 2 above).
 - Numbers tried: `recoverFrames` 40 + cooldown 14 let the finisher land in exchange 1 (5 -> 1: a plain cut
   finished it); 45 / 150 was the one-beat fight. Rousing on a plain touch rammed an idle hero every 100 frames.
 - Pilots: `burrback-ram.test.ts` (`RAM_TRACE=1`), `naive-pilot.test.ts` (`NAIVE_TRACE=1`: mashers and the
@@ -156,7 +199,7 @@ The rule in one line: **stand and mash loses, read the tell and punish wins, and
   "nothing is felt"), along a forward cut; an up or down cut shoves it sideways away from her at half
   strength. The shove stops at walls and at the brink of a ledge (at most `teeterPx` 10 of
   it hangs over; `teeter` = that side until it walks again; it then turns round and comes back).
-- A full chain kills on the finisher; finisher + one cut kills; three pogo bounces kill.
+- A full chain kills on the finisher; finisher + one cut kills; pogos land one an exchange (it curls).
 - Death: `mode: 'dead'`, still shoved, body removed (`gone`) 30 frames after the hitstop. It spills 4
   glints (6 if the finisher killed it) into `state.pickups.count`, the first 16 frames after the
   blow, then 5 apart (3 apart for 6): `pickup` events with the enemy's id and `enemy: true` (NOT
@@ -240,6 +283,7 @@ A small pale moth-wisp, box 36 x 30 (drawn ~40 px), **3 hp**, drawn to her light
 - Two lampwings closer than 72 px (centres) push apart (up to 0.3 px/f²): on top of the same hero
   they stay more than 20 px apart, not stacked. Burrbacks and lampwings ignore each other.
 - Re-form: living ones are back at home, hovering, **wounds kept**; dead ones stay dead. Restart brings all back.
+- `noticeCd` (frames): after a `far` give-up it notices only one well inside its leash (round 2 above).
 
 ## Contact and health
 - 4 lights (`health.max`). Her box overlapping a living enemy costs 1, unless: she is invulnerable
@@ -276,7 +320,8 @@ A small pale moth-wisp, box 36 x 30 (drawn ~40 px), **3 hp**, drawn to her light
   3 (then a fade next to a lit lantern is still the quickest heal). At a lit lantern the 45-frame
   rest makes her whole: resting is the heal now.
 - Kept: two thirds of her glints (the rest lies in the cluster), open pods, dead enemies, lit lanterns, **and every living creature's wounds** (playtest 5, above). Reset: every living enemy goes to its start.
-- With a lantern lit she re-forms at the lit lantern she last stood at instead (goal.md), whatever is near it.
+- With a light lit (or a wayside lamp passed) she re-forms at the one nearest to where she fell instead
+  (goal.md): a lit one whatever is near it, a dark lamp only with no creature's home near it.
 - **`enemyReset {id, kind, x, y, fromX, fromY, hp, hpMax, healed (0 now)}`** right after `reform` / `spawn`, one for
   each LIVING creature that was away from its start (none for one that stood whole at home):
   playtest 4 "burrbacks heal to full when she fades; not shown".
@@ -300,7 +345,9 @@ A small pale moth-wisp, box 36 x 30 (drawn ~40 px), **3 hp**, drawn to her light
   `hitPower`, `hitFrame` (sim frame of the last hit, -1 = never: flash from `sim.frame - hitFrame`),
   `gone`, and the spill queue `spill, spillTimer, spillGap`.
 - Burrback: `mode` `walk | pause | alert | hurt | dead`, `turning`, `stride` (px walked, never the
-  shove: drive the legs with it), `teeter`; `vy` and `knockVy` are always 0.
+  shove: drive the legs with it), `teeter`; `vy` and `knockVy` are always 0. **`tuck` > 0 = curled** (a
+  down cut landed: from the `enemyHit` with `slash: 'down'` until it uncurls, usually into an `enemyWindup`);
+  **`enemyTurn` cause `drop`** = it hurries out from under a falling hero (`vx` up to 3, `mode` walk).
 - **Lampwing**: `mode` `hover | curious | dive | stall | pursue (the climb) | rest | return | hurt | dead`.
   Events `enemyDive`, `enemyStall`, `enemyClimb` (above); `dives`, `span`, `fromX, fromY`, `sight`; `flap` runs
   0.03 beats/frame in the dive (wings folded), 0.07 stalled.

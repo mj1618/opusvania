@@ -20,7 +20,7 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 18,
+    version: 19,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
@@ -68,9 +68,9 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
   // The end of a fade: she re-forms at the last safe ground and the living enemies go home.
   if (state.player.faded > 0 && --state.player.faded === 0) {
     dropGlints(state, scene, t.health.fadeDrop, events);
-    const light = restPoint(state, scene);
+    const light = restPoint(state, scene, t);
     reformPlayer(state, scene, P, events, light);
-    goalReformed(state.goal, light !== undefined);
+    goalReformed(state.goal, light);
     resetEnemies(state, scene, t, events);
   }
   // From the end of the run on she is held (no input reaches her; she walks into the heart and

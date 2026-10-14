@@ -20,7 +20,7 @@ import type { SimEvent } from '../events';
 import { roundHalfAway, solidAt } from '../physics/aabb';
 import { groundSanctuaryDepth } from '../sanctuary';
 import type { Scene } from '../scene';
-import type { EnemyState } from '../state';
+import type { EnemyState, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
 import { frames, gap2, type KindRules, mix, type StepInfo, segmentBlocked, setMode } from './common';
 
@@ -216,16 +216,28 @@ function walk(e: EnemyState, info: StepInfo): void {
   }
 }
 
-/** She is on its ground, in front of it, within `px` (box to box) with nothing solid between. */
-function inFront(e: EnemyState, info: StepInfo, px: number, facing: number = e.facing): boolean {
+/**
+ * She is on its ground, in front of it, within `px` (box to box) with nothing solid between.
+ * `over`: uncurling, it counts her up to `tuckBraceAbovePx` above its ground, and right over it
+ * as in front.
+ */
+function inFront(
+  e: EnemyState,
+  info: StepInfo,
+  px: number,
+  facing: number = e.facing,
+  over = false,
+): boolean {
   const p = info.state.player;
   const B = info.t.burrback;
   const pc = p.x + p.w / 2;
   const ec = e.x + e.w / 2;
-  if ((pc - ec) * facing <= 0) return false;
+  const ahead = (pc - ec) * facing;
+  if (over ? ahead < 0 : ahead <= 0) return false;
   const feet = p.y + p.h;
   const bottom = e.y + e.h;
-  if (feet > bottom + B.strikeBelowPx || feet < bottom - B.strikeAbovePx) return false;
+  const above = over ? Math.max(B.strikeAbovePx, B.tuckBraceAbovePx) : B.strikeAbovePx;
+  if (feet > bottom + B.strikeBelowPx || feet < bottom - above) return false;
   const gap = facing > 0 ? p.x - (e.x + e.w) : e.x - (p.x + p.w);
   if (gap > px) return false;
   return !segmentBlocked(info.scene, ec, e.y + e.h / 2, pc, e.y + e.h / 2);
@@ -263,16 +275,21 @@ function roofAhead(e: EnemyState, scene: Scene, d: number, px: number): boolean 
  * Once braced the ram runs its length, range or no range. Never at one who has no room to jump
  * (a low ceiling over her).
  */
-function brace(e: EnemyState, info: StepInfo): boolean {
+function brace(e: EnemyState, info: StepInfo, over = false): boolean {
   const B = info.t.burrback;
   const p = info.state.player;
   if (B.strikePx <= 0 || e.strikeCd > 0 || e.calm > 0) return false;
   if (p.hp <= 0 || p.faded > 0 || p.kindling >= 0 || p.kindlingLamp >= 0 || info.state.goal.gathered)
     return false;
+  // (Not at one dropping onto it from high above, nor at one in the air right over it, coming down
+  // on it: its touch would land with the tell. It braces once she is down.)
+  if (dropping(e, p, B)) return false;
+  if (!over && !p.grounded && p.x < e.x + e.w && e.x < p.x + p.w) return false;
   const provoked = e.roused > 0;
   const reach = provoked ? B.provokedPx : B.strikePx;
-  const round = (provoked || e.stirred > 0) && !inFront(e, info, reach) && inFront(e, info, reach, -e.facing);
-  if (!round && !inFront(e, info, reach)) return false;
+  const front = inFront(e, info, reach, e.facing, over);
+  const round = (provoked || e.stirred > 0) && !front && inFront(e, info, reach, -e.facing, over);
+  if (!round && !front) return false;
   if (burrback.harmless?.(e, info)) return false;
   if (lowCeiling(info.scene, p.x, p.y, p.w, p.h, B.strikeHeadroomPx)) return false;
   span(e, info.scene, B);
@@ -293,6 +310,8 @@ function brace(e: EnemyState, info: StepInfo): boolean {
   }
   e.chargeLeft = frames(B.chargePx, 1);
   const n = frames(B.windupFrames, 1);
+  // (Curled, it uncurls into the brace.)
+  e.tuck = 0;
   setMode(e, 'windup', n);
   e.vx = 0;
   e.knockVx = 0;
@@ -381,10 +400,115 @@ function charge(e: EnemyState, info: StepInfo): void {
     e.chargeLeft -= 1;
     n -= e.facing;
     if (e.chargeLeft <= 0) {
-      spend(e, info, 'spent');
-      return;
+      // A wall a stride ahead: its weight carries it on into it (a stun, not a ram spent short of it).
+      const k = wallWithin(e, info, frames(B.chargeCarryPx));
+      if (k <= 0) {
+        spend(e, info, 'spent');
+        return;
+      }
+      e.chargeLeft = k;
     }
   }
+}
+
+/**
+ * Steps to the wall straight ahead if it is `px` or less away and nothing else would stop the ram first (a
+ * drop, its fence, a doorway, a lit lantern's ground), else 0. Its range is measured (`span`).
+ */
+function wallWithin(e: EnemyState, info: StepInfo, px: number): number {
+  const { scene, state } = info;
+  const B = info.t.burrback;
+  const G = info.t.goal;
+  if (px <= 0) return 0;
+  if (e.fenced) span(e, scene, B);
+  const x0 = e.x;
+  const here = groundSanctuaryDepth(state, scene, G, x0, x0 + e.w, e.y + e.h);
+  for (let d = 1; d <= px + 1; d++) {
+    const nx = x0 + e.facing * d;
+    if (solidAt(scene, nx, e.y, e.w, e.h)) return d;
+    const lead = e.facing > 0 ? nx + e.w - 1 : nx;
+    if (!floorAt(scene, lead, e.y + e.h)) return 0;
+    if (e.fenced && (e.facing < 0 ? nx < RANGE_L : nx + e.w > RANGE_R)) return 0;
+    if (lowCeiling(scene, nx, e.y, e.w, e.h, B.strikeHeadroomPx)) return 0;
+    if (groundSanctuaryDepth(state, scene, G, nx, nx + e.w, e.y + e.h) > here) return 0;
+  }
+  return 0;
+}
+
+/** She is above its ground (not on it), within `provokedPx` of it sideways (box to box). */
+function overhead(e: EnemyState, p: PlayerState, B: Tuning['burrback']): boolean {
+  if (p.hp <= 0 || p.faded > 0) return false;
+  if (p.y + p.h >= e.y + e.h - B.strikeBelowPx) return false;
+  const gap = Math.max(e.x - (p.x + p.w), p.x - (e.x + e.w));
+  return gap <= B.provokedPx;
+}
+
+/**
+ * She is dropping onto it from high above: in the air, falling (not gliding), from more than `dropPx`
+ * over its top (the top of this airtime), until she is down.
+ */
+function dropping(e: EnemyState, p: PlayerState, B: Tuning['burrback']): boolean {
+  // (A glider steers where she comes down: not a drop.)
+  if (p.grounded || p.gliding || p.vy <= 0 || p.hp <= 0 || p.faded > 0) return false;
+  return e.y - (p.airTopY + p.h) >= B.dropPx;
+}
+
+/**
+ * She drops onto it (`dropping`, and her box within `dropClearPx` of its own sideways): it hurries
+ * out from under her, the shorter way that its ground and range allow, at `dropSpeed`. Returns
+ * false if she is not dropping onto it. Where neither way is open it stands.
+ */
+function dodgeDrop(e: EnemyState, info: StepInfo): boolean {
+  const { scene, events } = info;
+  const B = info.t.burrback;
+  const p = info.state.player;
+  if (B.dropSpeed <= 0 || !dropping(e, p, B)) return false;
+  const c = Math.max(0, B.dropClearPx);
+  if (p.x + p.w + c <= e.x || e.x + e.w + c <= p.x) return false;
+  span(e, scene, B);
+  const lo = Math.max(MIN_X, RANGE_L);
+  const hi = Math.min(MAX_X, RANGE_R);
+  // Its box's left edge if it clears her to the left / to the right.
+  const toL = Math.floor(p.x - c - e.w);
+  const toR = Math.ceil(p.x + p.w + c);
+  const canL = toL >= lo;
+  const canR = toR + e.w <= hi;
+  let side = 0;
+  if (canL && canR) side = e.x - toL <= toR - e.x ? -1 : 1;
+  else if (canL) side = -1;
+  else if (canR) side = 1;
+  e.knockVx = 0;
+  e.teeter = 0;
+  if (e.mode !== 'walk') setMode(e, 'walk', 0);
+  e.turning = false;
+  if (side === 0) {
+    e.vx = 0;
+    e.rx = 0;
+    return true;
+  }
+  if (side !== e.facing) {
+    e.facing = side < 0 ? -1 : 1;
+    events.push({
+      type: 'enemyTurn',
+      id: e.id,
+      kind: e.kind,
+      x: e.x + e.w / 2,
+      y: e.y + e.h / 2,
+      dir: e.facing,
+      cause: 'drop',
+      frames: 0,
+    });
+  }
+  const goal = side < 0 ? toL : toR;
+  let n = Math.min(Math.max(1, Math.round(B.dropSpeed)), Math.abs(goal - e.x));
+  const x0 = e.x;
+  while (n > 0 && nudge(e, scene, side, 0) === 0) {
+    e.stride += 1;
+    n--;
+  }
+  e.vx = e.x - x0;
+  e.rx = 0;
+  return true;
 }
 
 /** Turns round where it stands: `facing` flips at once, it stands a beat, then walks back. */
@@ -466,9 +590,20 @@ export const burrback: KindRules = {
     if (e.strikeCd > 0) e.strikeCd--;
     if (e.roused > 0) e.roused--;
     if (e.stirred > 0) e.stirred--;
+    const free = (e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert') && e.knockVx === 0;
+    // Curled (a down cut landed): it holds until it may brace again, then uncurls, into a brace at
+    // her if she is near, over it included (one pogo an exchange).
+    if (e.tuck > 1) e.tuck--;
+    else if (e.tuck === 1 && e.strikeCd === 0 && e.mode !== 'hurt' && e.mode !== 'recover') {
+      if (free && brace(e, info, true)) return true;
+      // (Not while she hangs over it out of a brace's reach, on a branch above it or dropping onto
+      // it: it stays curled until she is down on its ground, or away.)
+      if (B.strikePx <= 0 || !overhead(e, p, B)) e.tuck = 0;
+    }
+    // She drops onto it from high above: it gets out from under her.
+    if (free && e.calm === 0 && dodgeDrop(e, info)) return true;
     // She is in front of it, close: it braces (out of a walk, a rest, a turn or a flinch).
-    if ((e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert') && e.knockVx === 0 && brace(e, info))
-      return true;
+    if (free && brace(e, info)) return true;
     if (e.mode === 'windup') {
       e.vx = 0;
       if (--e.timer <= 0) {
@@ -609,9 +744,12 @@ export const burrback: KindRules = {
     const B = info.t.burrback;
     const away = dir > 0 ? -1 : 1;
     // Its ram hit her: it bounces back off her, turns away and stands spent.
+    // Its next ram may not reach her sooner than `rehitGapFrames` after her safety has run out.
+    const rehit = frames(info.t.health.invulnFrames + B.rehitGapFrames) - frames(B.windupFrames, 1) - 1;
     if (e.mode === 'windup' || e.mode === 'charge') {
       e.facing = away;
       spend(e, info, 'touch');
+      e.strikeCd = Math.max(e.strikeCd, rehit);
       e.knockVx = away * Math.max(0, B.touchRecoil);
       e.teeter = 0;
       e.alertCd = e.timer + frames(B.alertCooldown);
@@ -619,7 +757,7 @@ export const burrback: KindRules = {
     }
     const n = frames(B.touchFlinchFrames, 1);
     setMode(e, 'alert', n);
-    e.strikeCd = Math.max(e.strikeCd, n + frames(B.strikeCooldown));
+    e.strikeCd = Math.max(e.strikeCd, n + frames(B.strikeCooldown), rehit);
     e.knockVx = away * Math.max(0, B.touchRecoil);
     e.rx = 0;
     e.vx = 0;
@@ -639,8 +777,12 @@ export const burrback: KindRules = {
     });
   },
 
-  /** Braced, a forward cut from the side it faces glances off its shell. */
+  /**
+   * Braced, a forward cut from the side it faces glances off its shell; a down cut glances off a
+   * braced shell (its top) and off a curled one (she bounces off it: the pogo without the blow).
+   */
   blocks(e, dir, px) {
+    if (dir === 'down') return e.braced || e.tuck > 0;
     return e.braced && dir === 'fwd' && (px - (e.x + e.w / 2)) * e.facing > 0;
   },
 
@@ -651,6 +793,8 @@ export const burrback: KindRules = {
     // Cut, it is roused: it will come round to her and brace. A blow that lands on a braced one broke its brace.
     e.roused = Math.max(e.roused, frames(t.burrback.rouseFrames));
     e.broken = e.braced;
+    // A down cut (a pogo) curls it up: the next ones glance off until it has uncurled.
+    if (dir === 'down') e.tuck = Math.max(2, frames(t.burrback.tuckFrames));
     e.knockVx = side * kb;
     e.knockVy = 0;
     e.rx = 0;

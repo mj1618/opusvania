@@ -29,7 +29,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   first, e.g. `health(1)` then walk into a burrback to see a fade.
 - `lanterns()` → `{lit, total, wallet, spent, list: [{id, x, y (foot), box, cost, state: dormant|channel|lit,
   channel, of, rest, refused, pledged, litFrame, restPoint}]}`; `goal()` → `{lit, total, wallet, spent, gathered (= both),
-  restAt (lantern or lamp id | null), restHold (she re-formed there and has not stepped out yet: no rest), lamps: {lit, total}, heart: {x, y, box, awake, frames, hinted}, ending: {gathered, held, frames, of,
+  restAt (lantern or lamp id | null), reformAt (where she would re-form now: nearest light | null), restHold (she re-formed there and has not stepped out yet: no rest), lamps: {lit, total}, heart: {x, y, box, awake, frames, hinted}, ending: {gathered, held, frames, of,
   ended, glints, time, kills, hits + the tally, offered, offerTier}, offer: {total, given, tier, tiers}, run: {time, hits, kills, deaths}, lost, drops: [{id, x, y, value,
   left, timer}], sanctuary: {burrback, lampwing, lamp: {burrback, lampwing}}}` (goal.md). There is no call to set the wallet:
   gather for real (teleport onto great glints: `teleport(3768, 192)` (great-crown, on the bough since playtest 6; it was 3640), `(3648, 1280)`, each + `step(70)`).

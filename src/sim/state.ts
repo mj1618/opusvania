@@ -363,6 +363,12 @@ export interface EnemyState {
   /** Burrback: neither its ram nor a shove takes it out of its range (the scene's `fenced`). */
   fenced: boolean;
   /**
+   * Burrback: frames left curled up after a down cut landed on it (`enemyTuck`; 0 = not curled):
+   * a down cut glances off its shell (she bounces off it, nothing is taken). The count holds at 1
+   * until it may brace again; then it uncurls, into a brace if she is near (over it included).
+   */
+  tuck: number;
+  /**
    * Lampwing: `dives` = dives made at her since it noticed her; `span` = the length of the current
    * dive in frames (`timer` counts it down) and `fromX, fromY` = where it began (centre): the arc
    * runs from there to `targetX, targetY`; `sight` = how far it notices her from.
@@ -372,6 +378,12 @@ export interface EnemyState {
   fromX: number;
   fromY: number;
   sight: number;
+  /**
+   * Lampwing: frames left in which it notices only one well inside its leash
+   * (`lampwing.retellMarginPx`), after a tell or a chase came to nothing because she was out of it
+   * (`enemyGiveUp` cause `far`): one at the edge of its reach is told once, not every jump.
+   */
+  noticeCd: number;
   /** Frames left of a calm (a lantern was kindled near it, or the run ended): its touch does nothing meanwhile. */
   calm: number;
   /** Glints spilled on death still on their way to her, frames to the next, and the gap between them. */
@@ -396,6 +408,11 @@ export interface LanternState {
   refused: boolean;
   /** She has come near it while it was dormant (`lanternNotice` fired); cleared once she is well away. */
   noticed: boolean;
+  /**
+   * She has come near it at least once this run (it stays set). A wayside lamp she has passed is a
+   * re-form point even while dark (src/sim/goal.ts `restPoint`).
+   */
+  passed: boolean;
   /**
    * Dormant: she stood at it short while enough glints were already on their way to her (a pod
    * she had just cut). It catches the step they have landed, wherever she is by then.
@@ -496,7 +513,7 @@ export interface GoalState {
 }
 
 export interface GameState {
-  version: 18;
+  version: 19;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;

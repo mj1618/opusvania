@@ -276,7 +276,9 @@ export type SimEvent =
   /**
    * It turns round: `dir` = its new facing; it stands for `frames` first. `ledge`: its ground ends
    * ahead (it turns well short of a drop); `wall`; `lantern`: a lit lantern's sanctuary is ahead;
-   * `wary`: she is below the edge ahead of it.
+   * `wary`: she is below the edge ahead of it; `hit`: it comes round to her in a fight (`frames` 0);
+   * `drop` (burrback, `frames` 0): she is dropping onto it from high above and it hurries out from
+   * under her (`vx` up to `burrback.dropSpeed`).
    */
   | {
       type: 'enemyTurn';
@@ -285,15 +287,15 @@ export type SimEvent =
       x: number;
       y: number;
       dir: number;
-      cause: 'ledge' | 'wall' | 'lantern' | 'wary' | 'hit';
+      cause: 'ledge' | 'wall' | 'lantern' | 'wary' | 'hit' | 'drop';
       frames: number;
     }
   /**
    * The burrback's ram (memory/enemies.md). `enemyWindup`: she is in front of it at close range (or
    * has just cut it from the front): it braces, shell forward, for `frames`, then rams `px` px toward
    * `dir` (its facing) at `speed` px/f. While braced (`enemies[i].braced`: the windup and the ram) a
-   * forward cut from its front glances off (`enemyBlock`); a cut from behind or a down slash from
-   * above lands in full and breaks it.
+   * forward cut from its front glances off (`enemyBlock`), and so does a down slash (she bounces off
+   * its top); a cut from behind lands in full and breaks it.
    */
   | {
       type: 'enemyWindup';

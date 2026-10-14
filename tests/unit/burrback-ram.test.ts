@@ -172,7 +172,7 @@ describe('burrback: the ram', () => {
     ]);
   });
 
-  it('braced, a forward cut from its front glances off (no damage, she is thrown back); from behind and from above it lands', () => {
+  it('braced, a forward cut from its front glances off (no damage, she is thrown back); from behind it lands; from above it glances and she bounces over the ram', () => {
     const t = cloneTuning(defaultTuning);
     t.burrback.speed = 0;
     const s = newSim(scene([burr(2200)]), t);
@@ -197,14 +197,22 @@ describe('burrback: the ram', () => {
     expect(of(hit, 'enemyHit')).toHaveLength(1);
     expect(foe(b).mode).toBe('hurt');
     expect(foe(b).braced).toBe(false);
-    // From above: a down slash lands and she bounces.
+    // From above: the braced shell has a top (playtest 6: a pogo broke the brace and the next landed
+    // before it could brace again). The down slash glances, she bounces as off a pogo, it rams on.
     const c = newSim(scene([burr(2200)]), t);
     c.place(2110, FLOOR);
     c.run('.2');
     c.place(2200, FLOOR - 70);
     const pogo = c.run('D+A4');
-    expect(of(pogo, 'enemyHit')).toHaveLength(1);
-    expect(c.state.player.vy).toBeLessThan(0);
+    expect(of(pogo, 'enemyHit')).toHaveLength(0);
+    expect(of(pogo, 'enemyBlock')[0]).toMatchObject({
+      slash: 'down',
+      hitstop: EN.pogoHitstopFrames,
+      recoil: 0,
+    });
+    expect(c.state.player.vy).toBe(-defaultTuning.attack.pogoSpeed);
+    expect([foe(c).hp, foe(c).braced]).toEqual([B.hp, true]);
+    expect(of(c.run('.40'), 'enemyCharge')).toHaveLength(1);
   });
 
   it('spent, its touch does nothing (her opening) for the 30 frames it stands winded; it may brace again 12 frames after', () => {
@@ -428,7 +436,7 @@ describe('burrback: a fight with a second beat (playtest 5)', () => {
     expect(of(kill, 'enemyDie')).toHaveLength(1);
   });
 
-  it('a blow that breaks its brace (from behind, from above) leaves it winded where it stands; no ram', () => {
+  it('a blow that breaks its brace (from behind) leaves it winded where it stands; no ram', () => {
     const s = newSim(scene([burr(2200)]), stand());
     s.place(2110, FLOOR);
     s.run('.2');

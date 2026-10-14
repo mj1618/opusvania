@@ -18,7 +18,7 @@
  *
  * Runs at the end of every step, after the pickups (so a glint that lands this frame counts).
  */
-import { calmEnemies, enemyRules } from './enemies';
+import { calmEnemies, enemyRules, homeClear } from './enemies';
 import type { SimEvent } from './events';
 import { ActionBit } from './input';
 import { pickupsWorth } from './pickups';
@@ -36,6 +36,7 @@ const dormant = (): LanternState => ({
   short: 0,
   refused: false,
   noticed: false,
+  passed: false,
   pledged: false,
   still: 0,
   keyed: true,
@@ -105,14 +106,61 @@ export function heartBox(c: { x: number; y: number }, t: Tuning['goal']): Box {
   return { x: c.x - (w >> 1), y: c.y - h, w, h };
 }
 
-/** Where she re-forms if a light holds her: the foot of the lit lantern or lamp she last stood at. */
-export function restPoint(state: GameState, scene: Scene): { x: number; y: number } | undefined {
-  const k = state.goal.restLamp;
-  const lamp = k >= 0 ? scene.lamps?.[k] : undefined;
-  if (lamp && state.goal.lamps[k]?.lit) return lamp;
-  const i = state.goal.restAt;
-  const l = i >= 0 ? scene.lanterns?.[i] : undefined;
-  return l && state.goal.lanterns[i]?.lit ? l : undefined;
+/** A light she re-forms at: its foot, which list it is in (`lamp`) and its index there, and whether it burns. */
+export interface RestPoint {
+  x: number;
+  y: number;
+  lamp: boolean;
+  i: number;
+  lit: boolean;
+}
+
+/**
+ * Where she re-forms if a light holds her: the foot of the light nearest to where she fell, of the
+ * lit lanterns and lamps and of the wayside lamps she has passed (`passed`) even if dark. Playtest 6:
+ * the masher's first four fades all re-formed her at the first lantern, 4.3 s from the shaft, three
+ * times over the same ground. A dark lamp is not a promise like a lit light: it counts only while no
+ * living creature's home is near it (the safe-ground rule, `health.safeEnemyPx`). None: undefined
+ * (the last safe ground).
+ */
+export function restPoint(state: GameState, scene: Scene, t: Tuning): RestPoint | undefined {
+  const p = state.player;
+  const fx = p.x + p.w / 2;
+  const fy = p.y + p.h;
+  let best: RestPoint | undefined;
+  let bestD = 0;
+  const consider = (l: Lantern, s: LanternState | undefined, lamp: boolean, i: number): void => {
+    if (!s || !(s.lit || (lamp && s.passed))) return;
+    if (!s.lit && creatureNear(state, l.x, l.y - p.h / 2, t)) return;
+    const dx = l.x - fx;
+    const dy = l.y - fy;
+    const d = dx * dx + dy * dy;
+    // (Nearest wins; on a tie, a lit light over a dark one, then the earlier in the scene.)
+    if (best === undefined || d < bestD || (d === bestD && s.lit && !best.lit)) {
+      best = { x: l.x, y: l.y, lamp, i, lit: s.lit };
+      bestD = d;
+    }
+  };
+  const lanterns = scene.lanterns ?? [];
+  for (let i = 0; i < lanterns.length; i++)
+    consider(lanterns[i] as Lantern, state.goal.lanterns[i], false, i);
+  const lamps = scene.lamps ?? [];
+  for (let i = 0; i < lamps.length; i++) consider(lamps[i] as Lantern, state.goal.lamps[i], true, i);
+  return best;
+}
+
+/** Is a living creature's home too near this point for her to re-form at it unprotected? */
+function creatureNear(state: GameState, x: number, y: number, t: Tuning): boolean {
+  const px = t.health.safeEnemyPx;
+  for (const e of state.enemies) {
+    if (e.mode === 'dead') continue;
+    const clear = homeClear(e, px, t);
+    const hx = e.homeX - x;
+    const hy = e.homeY - y;
+    // (Homes only: the living go home as she re-forms.)
+    if (hx * hx + hy * hy < clear * clear) return true;
+  }
+  return false;
 }
 
 /**
@@ -120,8 +168,14 @@ export function restPoint(state: GameState, scene: Scene): { x: number; y: numbe
  * she has stepped out of it and come back: a fade is not a rest. Whatever was pledged is off (a
  * third of her wallet is gone).
  */
-export function goalReformed(g: GoalState, atLight: boolean): void {
-  g.restHold = atLight;
+export function goalReformed(g: GoalState, at: RestPoint | undefined): void {
+  // A lit light she re-forms at is her rest point now (and does not make her whole until she has
+  // stepped out of it and come back); a dark lamp is only where she stands up again.
+  g.restHold = at?.lit === true;
+  if (at?.lit) {
+    g.restAt = at.lamp ? -1 : at.i;
+    g.restLamp = at.lamp ? at.i : -1;
+  }
   for (const l of g.lanterns) l.pledged = false;
   for (const l of g.lamps) l.pledged = false;
 }
@@ -479,6 +533,7 @@ function updateLights(
       if (far > G.noticeLeavePx * G.noticeLeavePx) s.noticed = false;
     } else if (control && !g.gathered && far <= G.noticePx * G.noticePx) {
       s.noticed = true;
+      s.passed = true;
       events.push({
         type: lamp ? 'lampNotice' : 'lanternNotice',
         id,

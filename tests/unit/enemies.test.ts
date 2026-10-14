@@ -464,24 +464,34 @@ describe('burrback: taking hits', () => {
     expect(s.state.pickups.count).toBe(4);
   });
 
-  it('pogo: a down slash bounces her off it, hurts it, and three bounces kill it without her touching it', () => {
+  it('pogo: a down slash bounces her off it and hurts it, and curls it up: the next bounce glances off (playtest 6); bounces kill it without her touching it', () => {
     const s = newSim(scene([burr(2200)]), still());
     s.place(2200, FLOOR - 150);
     let bounces = 0;
-    frames(s, Array.from({ length: 3 }, () => 'D+A1 .31').join(' '), (ev) => {
-      for (const h of of(ev, 'slashHit')) {
+    const order: string[] = [];
+    frames(s, Array.from({ length: 5 }, () => 'D+A1 .31').join(' '), (ev) => {
+      for (const h of [...of(ev, 'slashHit'), ...of(ev, 'enemyBlock')]) {
         bounces++;
-        expect([h.pogo, h.dir]).toEqual([true, 'down']);
+        order.push(h.type === 'slashHit' ? 'hit' : 'glance');
+        expect(h.type === 'slashHit' ? [h.pogo, h.dir] : [true, h.slash]).toEqual([true, 'down']);
+        // A glance off the curled shell bounces her all the same (and refills her air moves).
         expect(s.state.player.vy).toBe(-defaultTuning.attack.pogoSpeed);
         expect([s.state.player.dj, s.state.player.airDash]).toEqual([1, 1]);
       }
     });
-    expect(bounces).toBe(3);
+    expect(bounces).toBe(5);
+    // Each blow curls it for `tuckFrames` (40): the bounce after a blow glances, the one after that lands.
+    expect(order).toEqual(['hit', 'glance', 'hit', 'glance', 'hit']);
     expect([foe(s).mode, s.state.player.hp]).toEqual(['dead', 4]);
     // From straight above the shove is sideways and half as hard.
     expect(of(s.events, 'enemyHit')[0]?.knockback).toBe(3 * B.knockScale);
-    // The pogo keeps its short beat (the bounce rhythm is what it was).
+    // The pogo keeps its short beat (the bounce rhythm is what it was), a glance too.
     expect(of(s.events, 'slashHit').map((h) => h.hitstop)).toEqual([2, 2, 2]);
+    expect(of(s.events, 'enemyBlock').map((h) => [h.hitstop, h.recoil])).toEqual([
+      [2, 0],
+      [2, 0],
+    ]);
+    expect(B.tuckFrames).toBe(40);
   });
 
   it('the glints of a kill are counted exactly once, like a pod: first after 16 frames, then a stagger apart', () => {
@@ -778,7 +788,7 @@ describe('enemies: determinism, symmetry, restart', () => {
     expect(hashState(cloneState(a.state))).toBe(hashState(a.state));
     expect(cloneState(a.state).enemies[0]).not.toBe(a.state.enemies[0]);
     expect(of(a.events, 'hurt').length + of(a.events, 'enemyHit').length).toBeGreaterThan(2);
-    expect(a.state.version).toBe(18);
+    expect(a.state.version).toBe(19);
   });
 
   it('mirror symmetry: a mirrored scene and mirrored inputs give exactly the mirrored fight', () => {

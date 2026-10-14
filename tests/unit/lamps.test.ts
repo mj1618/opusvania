@@ -353,3 +353,47 @@ describe('wayside lamps', () => {
     expect(() => parseScene({ ...GROVE, lamps: [] })).not.toThrow();
   });
 });
+
+describe('a wayside lamp she has passed is where she re-forms, dark or lit (playtest 6: the masher`s walk back)', () => {
+  const H = defaultTuning.health;
+  /** She fades where she stands now (a creature's touch at 1 light) and re-forms: where? */
+  const fadeAt = (s: Sim, x: number) => {
+    s.state.player.hp = 1;
+    s.place(x, FLOOR);
+    const e = s.state.enemies[0];
+    if (!e) throw new Error('no enemy');
+    Object.assign(e, { x: x - 10, calm: 0, mode: 'walk', strikeCd: 0 });
+    return of(s.run(`.${H.fadeFrames + 40}`), 'reform')[0];
+  };
+
+  it('passed (noticed once), the dark lamp nearer to where she fell than the lit lantern wins; one she never came near does not count', () => {
+    // The lantern lit at 2600; she ran past the lamp at 1400 on the way (it noticed her).
+    const s = sim(scene({ enemies: [burr(800)] }), 12, LANTERN_X);
+    s.run(`.${G.channelFrames + 2}`);
+    expect(s.state.goal.lanterns[0]?.lit).toBe(true);
+    s.place(LAMP_X - 300, FLOOR);
+    s.run('R60');
+    expect(s.state.goal.lamps[0]).toMatchObject({ lit: false, passed: true });
+    // She falls at 1000: the lamp (400 px) is nearer than the lantern (1600 px).
+    const re = fadeAt(s, 1000);
+    expect([re?.x, re?.y]).toEqual([LAMP_X, FLOOR]);
+    // A dark lamp is not a rest point: it does not take over `restAt`, and holds nothing back.
+    expect([s.state.goal.restAt, s.state.goal.restLamp, s.state.goal.restHold]).toEqual([0, -1, false]);
+    // Never passed: the lit lantern, however far.
+    const n = sim(scene({ enemies: [burr(800)] }), 12, LANTERN_X);
+    n.run(`.${G.channelFrames + 2}`);
+    expect(n.state.goal.lamps[0]?.passed).toBe(false);
+    expect(fadeAt(n, 1000)?.x).toBe(LANTERN_X);
+  });
+
+  it('a dark lamp with a creature living by it is not one (a lit light is, whatever lives by it)', () => {
+    const s = sim(scene({ enemies: [burr(800), burr(LAMP_X + 150)] }), 12, LANTERN_X);
+    s.run(`.${G.channelFrames + 2}`);
+    s.place(LAMP_X - 300, FLOOR);
+    s.state.player.invuln = 1e6;
+    s.run('R60');
+    s.state.player.invuln = 0;
+    expect(s.state.goal.lamps[0]?.passed).toBe(true);
+    expect(fadeAt(s, 1000)?.x).toBe(LANTERN_X);
+  });
+});

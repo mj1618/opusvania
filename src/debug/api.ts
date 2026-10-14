@@ -6,6 +6,7 @@ import type { PointLight } from '../render/lights';
 import type { CameraOverride, RenderStage } from '../render/stage';
 import { enemiesAlive } from '../sim/enemies';
 import type { SimEvent } from '../sim/events';
+import { restPoint } from '../sim/goal';
 import { type GameState, goalHolds, heartBox, lampCost, lanternBox, lanternCost } from '../sim/index';
 import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
@@ -184,6 +185,8 @@ export interface GameDebugApi {
       pledged: boolean;
       litFrame: number;
       restPoint: boolean;
+      /** She has come near it this run: a wayside lamp she has passed is a re-form point even dark. */
+      passed: boolean;
     }>;
   };
   /** The wayside lamps (`scene.lamps`): the same record as `lanterns()`, `lit` of `total` lamps. */
@@ -201,6 +204,8 @@ export interface GameDebugApi {
     spent: number;
     gathered: number;
     restAt: string | null;
+    /** Where she would re-form if she faded now: the light nearest to her (lit, or a lamp she has passed), `null` = safe ground. */
+    reformAt: string | null;
     /** She re-formed at `restAt` and has not stepped out of it yet: it will not heal her until she does. */
     restHold: boolean;
     lamps: { lit: number; total: number };
@@ -310,6 +315,7 @@ export function installDebugApi(deps: {
           pledged: s?.pledged ?? false,
           litFrame: s?.litFrame ?? -1,
           restPoint: (lamp ? g.restLamp : g.restAt) === i,
+          passed: s?.passed ?? false,
         };
       }),
     };
@@ -490,6 +496,11 @@ export function installDebugApi(deps: {
     lanterns: () => lightList(false),
     lamps: () => lightList(true),
     goal() {
+      const reformAtId = (): string | null => {
+        const at = restPoint(game.state, game.scene, game.tuning);
+        if (!at) return null;
+        return (at.lamp ? game.scene.lamps : game.scene.lanterns)?.[at.i]?.id ?? null;
+      };
       const g = game.state.goal;
       const G = game.tuning.goal;
       const w = game.state.pickups;
@@ -502,6 +513,7 @@ export function installDebugApi(deps: {
         spent: w.spent,
         gathered: w.count + w.spent + w.lost + w.offered,
         restAt: game.scene.lamps?.[g.restLamp]?.id ?? game.scene.lanterns?.[g.restAt]?.id ?? null,
+        reformAt: reformAtId(),
         restHold: g.restHold,
         lamps: { lit: g.lampsLit, total: game.scene.lamps?.length ?? 0 },
         heart: h ? { x: h.x, y: h.y, box: heartBox(h, G), ...g.heart } : null,
