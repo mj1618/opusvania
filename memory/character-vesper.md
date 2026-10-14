@@ -292,6 +292,54 @@ the blade, three different marks.
   trigger, so the offering hand is often half behind it; the hand is a 4 px oval (no palm to turn
   up); a blow while kindling / resting is unit-tested, not looked at. Sheets: `shots/vesper/goal/`.
 
+## The ceremony: ember, summit lantern, the wait, the offering (round 22; `ACT`, `Cue`, `actPose`)
+`index.ts readGoal` adds to `rig.cue`: `emberId / emberHangs / emberDx,Dy` (the keyed lantern's pickup, relative to
+her head = feet - 62), `carry` (keyed, lantern dark, no channel on it), `lampKeyed`, `away + awayDx,Dy` (a channel
+running on a light she is not at), `heartWait`. Weights for tools: `__vesper.act.{guard, reach, wait, give, look}`.
+- **Glance up at the ember** (`lanternKindle` with the ember hanging < 900 px from that lantern; `ACT.show*`): the
+  show flight leaves the glass ~1.6 s after the catch and is out of the top of the picture at ~2.4 s (measured on
+  the sheet), so the look comes in at 1.15-1.7 s, travels glass -> ember over 1.45-2.5 s, lets go by 4.3 s. Head
+  pitch up to -0.5 (x 0.6 at a run), chest opens, antennae -40..-62 degrees (the lifted chin alone lays them back
+  flat: at -34 they still lay back). If the goal layer's flight timing changes, retime `showIn / showRise`.
+- **Taking it** (`pickupWake` of the ember .. `pickup`, 54 frames): no flourish and joy 0.22 for this pickup (a
+  great glint's wings-open is a victory pose). Both hands go out to it (it lifts out of the cup and comes down
+  from over her brow: `over`), draw in to a cup before her collar (the coal's first point is `vesperLink.offer`,
+  which is her near hand then), then `SHOULDER` 0.04-1.75 s: near hand up by it, head half turned (HYAW 0.62),
+  eyes back. **HYAW lower than ~0.5 brings her face round under the coal and it sits on her eyes** (the goal
+  layer circles it 5-25 px behind her centre at head height, in front of her on the near half).
+- **Carrying** (`rig.guard`): standing, the hanging hand at her ribs, wings 24% toward `WRAP`, a glance back
+  about every 5.9 s; running, the near arm bent at her side (-3.2, -8.6) instead of trailing, the cape's strands
+  drawn to the middle one (x0.55), 7% shorter, the stride beat x0.6. Deliberately subtle; gone when it is given.
+- **Summit lantern without it** (`lanternRefuse.key`; replaces the empty-hand refusal): up on her toes looking
+  into the glass with the near hand half lifted (0.2-1.4 s), then she TURNS to where the ember is, head first and
+  pitched down at least 0.24 (1.05-2.5 s), and back. A head turn alone (HYAW -0.6 on a body facing east) is a
+  face staring at the camera; the body has to come round.
+- **With it** (`liftT` from the channel's start at the keyed lantern while `guard` > 0.3; `GIVE`, `ACT.give`):
+  she stays standing, both hands up and out toward the glass for the coal's 0.42 s, the kneel weight is x(1 -
+  0.92 lift) so she goes down as the hands come down; `giveHold` keeps her down 0.3 s longer after that catch.
+  **Her arms are 17 px and her head 20: hands cannot go over her head.** Face height, out in front, is the top.
+- **Heart wait** (`cue.heartWait`, standing within 84 px, no input; `WAIT`): turned to the heart, tall, chin up
+  a little, breath at 1.5 rad/s with the chest a beat behind, hands eased off her sides, antennae rising, wings
+  to soar 0.2 raised 18 degrees over 2.6 s (`waitOpen`; at 0.3 unraised they lay flat at her hips: the bow tie
+  again). `waitOpen` is kept through `gather` and the walk to the centre, and the ending's unfurl takes over by max.
+- **Offering** (`heartOffer`, `giveW`): arms open to either side (near +15, far -13 forward: she is turned 0.6
+  to us, so "forward" is the only sideways there is), head down to watch them go; glints leave her near hand
+  (`offerK`). Dark arms on dark open wings: only the pale hands show, a few px either side of her waist.
+- **`groveWake`**: 1.5 s looks: flowers = down and round (HYAW 1.75, HT +0.8), paths = the other way (HYAW -0.9;
+  at -1.5 we saw the back of her head), canopy = up (HYAW 1.7, HT -0.3). Pitch only shows with the head turned.
+- **A channel that runs on behind her** (`cue.away`) and a catch with `away`: never the kneel. Head / eyes to its
+  glass (over the shoulder), standing a hand out toward it, running the near hand left 4 px higher; 0.85 s more
+  after the catch. Seen: kneel begun, run off at frame 10, caught at 28 mid-stride, no kneel; and stopped 100 px on.
+- Staging (scripts kept in `shots/vesper/ceremony/`: `cap.ts` + `scenes.ts`, a tsx script on `tools/lib/browser`,
+  own headless page set offline after boot, sheets composed in page): move enemies off every frame (grab the live
+  sim by wrapping `__enemies.update`), `health(hpMax)` after gathering (a hurt hero rests at the lantern and sits
+  down in the middle of the sheet), skip great glints when filling the wallet and take `great-crown` first (a
+  great glint arriving mid-sheet is a flourish), `setTuning({goal: {offerTier2: 40, offerTier3: 60}})` to see
+  all three tiers. tsx's `__name` helper must exist in the page (`window.__name = (f) => f`).
+- Not looked at closely: the carry glance (only on a small long-idle sheet), taking the ember at a run or in the
+  air (head only, by design), the old plain kindle / refuse / rest after this round beyond what shows on the
+  `show` and `give` sheets (kneel, catch, rise are on those).
+
 ## Capture and review
 - `window.__vesper`: `turns`, `markHidden`, `hidden`, `mesh` (her Pixi mesh),
   `act` (acting weights, `endT`, `cloak`, `antLift`, `eyeLit`, `soar`, the offer point).

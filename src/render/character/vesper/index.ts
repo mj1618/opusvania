@@ -571,6 +571,11 @@ export class VesperCharacter implements CharacterSkin {
           warm: r.warmW,
           touch: r.touchW,
           end: r.endW,
+          guard: r.guard,
+          reach: r.reachW,
+          wait: r.waitW,
+          give: r.giveW,
+          look: r.noticeK,
           endT: r.endT,
           cloak: r.cloak,
           antLift: r.antLift,
@@ -632,6 +637,12 @@ export class VesperCharacter implements CharacterSkin {
     cue.heart = false;
     cue.gathered = false;
     cue.ended = false;
+    cue.emberId = '';
+    cue.emberHangs = false;
+    cue.carry = false;
+    cue.lampKeyed = false;
+    cue.away = false;
+    cue.heartWait = false;
     if (!goal) return;
     // Lanterns, then the wayside lamps: one list, as the goal renderer keeps them (its `beads` are in this order).
     const nLant = sc.lanterns?.length ?? 0;
@@ -679,6 +690,42 @@ export class VesperCharacter implements CharacterSkin {
     }
     cue.gathered = goal.gathered;
     cue.ended = goal.ended;
+    cue.heartWait = goal.heart.awake && goal.heart.waited && !goal.heart.ready && !goal.gathered;
+    // Her head, near enough, for what she looks at.
+    const hx = p.cx;
+    const hy = p.feetY - 62;
+    // The ember: the great glint the first keyed lantern wants.
+    for (let i = 0; i < nLant; i++) {
+      const key = sc.lanterns?.[i]?.key;
+      const st = goal.lanterns[i];
+      if (key === undefined || !st) continue;
+      const pick = sc.pickups?.find((q) => q.id === key);
+      if (!pick) continue;
+      cue.emberId = key;
+      cue.emberHangs = !st.keyed && !st.lit;
+      cue.emberDx = pick.x - hx;
+      cue.emberDy = pick.y - hy;
+      cue.carry = st.keyed && !st.lit && st.channel === 0;
+      cue.lampKeyed = best === i;
+      break;
+    }
+    // A channel that runs on without her (she is on its leash, not at it): the nearest such glass.
+    if (kindling < 0) {
+      let far = 1e9;
+      for (let i = 0; i < count; i++) {
+        const st = i < nLant ? goal.lanterns[i] : goal.lamps?.[i - nLant];
+        const li = at(i);
+        if (!st || !li || st.lit || st.channel <= 0) continue;
+        const bx = vesperLink.beads[i * 2] ?? li.x;
+        const by = vesperLink.beads[i * 2 + 1] ?? li.y - 60;
+        const dd = Math.hypot(bx - hx, by - hy);
+        if (dd >= far) continue;
+        far = dd;
+        cue.away = true;
+        cue.awayDx = bx - hx;
+        cue.awayDy = by - hy;
+      }
+    }
   }
 
   /** Px of clear air under the feet (to the nearest solid or one-way top below them). */

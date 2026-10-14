@@ -754,6 +754,22 @@ const LISTEN = pose([
 const UPLIFT = pose([
   0, 33.8, -0.03, -0.16, -0.46, 3.2, 0, 0, -3.2, 0, 0, 4.2, -16.2, -3.6, -16.4, 0, 1, -0.7, 1.4,
 ]);
+/** The ember comes to her: both hands lifted to meet it, chin up, a little taller. (Hands are aimed at it in `actPose`.) */
+const REACH = pose([
+  1.2, 33.7, 0.03, -0.1, -0.2, 7.4, 0.1, 0.25, -1.6, 0, 0.1, 9, 2, 6.6, 0, 0.04, 1, -0.4, 1,
+]);
+/** Settling it at her shoulder: the near hand beside it, the other lowering, her head half turned and her eyes back on it (turned further, her face comes round under the coal and it sits on her eyes). */
+const SHOULDER = pose([
+  0.6, 32.8, -0.02, -0.05, -0.1, 7.4, 0.1, 0.2, -1.6, 0, 0, -3.6, 3.8, 2.2, -9.6, 0.07, 0.86, -0.25, 0.62,
+]);
+/** The ember offered up to the summit lantern: standing, both hands lifted toward the glass, eyes on it. (Her arms are 17 px and her head 20: face height, out in front, is as high as her hands go.) */
+const GIVE = pose([
+  1.8, 33.9, 0.05, -0.13, -0.36, 7.4, 0.1, 0.3, -1.6, 0, 0.16, 11, 10, 9, 7.4, 0.04, 1, -0.6, 1,
+]);
+/** Waiting in the waking heart: held, tall and open, hands a little away from her sides, eyes on the light. */
+const WAIT = pose([
+  0.4, 33.5, -0.02, -0.1, -0.15, 6.6, 0.1, 0.15, -1.8, 0, 0, 5.4, -13, -3.6, -14, 0.05, 0.95, -0.35, 1.1,
+]);
 /** Acting timings (seconds unless said) and amounts. */
 export const ACT = {
   /** After the lantern catches she stays down, looking up at it, this long before she rises. */
@@ -780,6 +796,39 @@ export const ACT = {
   beatLen: 1.15,
   /** A dormant lantern or lamp she comes near: her head, eyes and antennae go to it for this long (it works at a run). */
   notice: 1.3,
+  /**
+   * A lantern catches with the ember hanging near (`showPx`): her head and antennae follow the moths
+   * up to it. The look comes in over `showIn` (two times: start, full; she has risen from the kneel
+   * and the flight leaves the glass about 1.6 s after the catch, measured), travels from the glass to
+   * the ember over `showRise` (the flight is out of the top of the picture ~2.4 s after the catch),
+   * and lets go by `show`.
+   */
+  show: 4.3,
+  showIn: [1.15, 1.7],
+  showRise: [1.45, 2.5],
+  showPx: 900,
+  /** Taking the ember: after it is in her hands, when the hand that settles it at her shoulder comes and goes. */
+  settle: [0.04, 0.4, 1.05, 1.75],
+  /** The summit lantern without the ember: the look into the empty glass (in, full, out), then the head turned to where the ember is (in, full, out, gone). */
+  keyGlass: [0.22, 0.95, 1.4],
+  keyTurn: [1.05, 1.5, 2.5, 3.1],
+  /** With it: both hands lift it up as the coal leaves for the bulb (the goal layer's arc is 0.42 s from the channel's start): in by, held to, down by. She kneels as they come down. */
+  give: [0.13, 0.36, 0.62],
+  /** ... and stays down this much longer than `catchHold` after that catch. */
+  giveHold: 0.3,
+  /** Carrying the ember, standing: a glance back at it about every `carryEvery` s, `carryLook` s long. */
+  carryEvery: 5.9,
+  carryLook: 1.5,
+  /** Waiting in the heart: her wings open this far (of the glide's spread) over `waitOpenIn` s; she is "at" the heart within `waitPx` of its centre. */
+  waitOpen: 0.2,
+  /** ... lifted this many degrees over the glide's shape (at 0.3 and level they lay flat at her hips: a bow tie). */
+  waitRaise: 18,
+  waitOpenIn: 2.6,
+  waitPx: 84,
+  /** The offering: her hands stay out this long after the last batch has left them. */
+  offerHold: 0.3,
+  /** A tier of the grove wakes: the look toward it. */
+  grove: 1.5,
 } as const;
 
 /**
@@ -805,6 +854,24 @@ export interface Cue {
   /** The ending: control is taken; the hold is over. */
   gathered: boolean;
   ended: boolean;
+  /**
+   * The ember (the great glint a lantern wants, memory/goal.md): its pickup id ('' = none), whether
+   * it still hangs where it hung, and where that is relative to her head (px, dy + = below her).
+   */
+  emberId: string;
+  emberHangs: boolean;
+  emberDx: number;
+  emberDy: number;
+  /** She carries it: it is at her shoulder, its lantern is dark and not being kindled. */
+  carry: boolean;
+  /** The light she stands at is the one that wants the ember. */
+  lampKeyed: boolean;
+  /** A channel is running on a light she is not at (she is on its leash): its glass relative to her head, px. */
+  away: boolean;
+  awayDx: number;
+  awayDy: number;
+  /** She stands in the woken heart before it is ready for her (`heartWait` .. `heartReady`). */
+  heartWait: boolean;
 }
 
 /** Point masses for the centre of mass: joint, weight. */
@@ -940,6 +1007,16 @@ export class Rig {
     heartDy: 0,
     gathered: false,
     ended: false,
+    emberId: '',
+    emberHangs: false,
+    emberDx: 0,
+    emberDy: 0,
+    carry: false,
+    lampKeyed: false,
+    away: false,
+    awayDx: 0,
+    awayDy: 0,
+    heartWait: false,
   };
   /** Acting weights 0..1: kindling, sat resting, hands to a lit lantern, the hand on the sleeping heart, the ending. */
   kindleW = 0;
@@ -971,6 +1048,37 @@ export class Rig {
   private noticeDy = 0;
   /** 0..1: how much of the look is in play (the head's turn quickens with it). */
   noticeK = 0;
+  /**
+   * The ember. 0..1: she carries it (an arm kept in, wings held closer, a glance back at it now and
+   * then); read by the wings. And the weights of reaching for it as it comes and of the wait in the heart.
+   */
+  guard = 0;
+  reachW = 0;
+  waitW = 0;
+  giveW = 0;
+  /** The wings' spread the wait in the heart has opened (it is handed on to the ending's unfurl). */
+  private waitOpen = 0;
+  private waitT = 0;
+  private taking = false;
+  private takeT = 9;
+  private takeLen = 0.9;
+  private recvT = 9;
+  private showT = 9;
+  private showX0 = 0;
+  private showY0 = 0;
+  private showX1 = 0;
+  private showY1 = 0;
+  private keyRefT = 9;
+  private keyRefX = 0;
+  private keyRefY = 0;
+  private liftT = 9;
+  private wasKindling = false;
+  private offerT = 9;
+  private readonly groveT = [9, 9, 9];
+  private awayW = 0;
+  private awayHold = 0;
+  private awayX = 0;
+  private awayY = 0;
   private catchT = 9;
   private refuseT = 9;
   private healT = 9;
@@ -1334,17 +1442,20 @@ export class Rig {
           this.squash.v -= 3;
           break;
         case 'pickup': {
+          // The ember is received, not won: no flourish, hardly a lift (the acting below has the gesture).
+          const ember = e.id !== '' && e.id === this.cue.emberId;
           // A small delighted lift; calmer when she is gathering many in a row.
-          const k = e.kind === 'great' ? 1 : 0.7 / (1 + e.combo * 0.5);
+          const k = ember ? 0.22 : e.kind === 'great' ? 1 : 0.7 / (1 + e.combo * 0.5);
           this.joy = Math.max(this.joy, k);
           sig.combo = Math.max(sig.combo, e.combo);
           // The first of a run puts a tiny skip in her stride.
           if (e.combo === 0 && e.kind !== 'great' && p.grounded) this.crouch.v -= 34;
           this.wide.v += 2.2 * k;
-          if (e.kind === 'great') {
-            sig.great = true;
-            this.flourishT = 0;
-          }
+          if (ember) {
+            this.taking = false;
+            this.recvT = 0;
+          } else if (e.kind === 'great') this.flourishT = 0;
+          if (e.kind === 'great') sig.great = true;
           sig.pickup = Math.max(sig.pickup, k);
           break;
         }
@@ -1379,16 +1490,54 @@ export class Rig {
           this.noticeY = e.y - 62;
           this.wide.v += 1.5;
           break;
+        case 'pickupWake':
+          // The ember has let go of its cup and is coming to her.
+          if (e.id !== '' && e.id === this.cue.emberId) {
+            this.taking = true;
+            this.takeT = 0;
+            this.takeLen = Math.max(0.2, e.frames / 60);
+            this.wide.v += 1.2;
+          }
+          break;
         case 'lampKindle':
         case 'lanternKindle':
-          // It catches: she looks up into it, eyes wide.
-          this.catchT = 0;
-          this.wide.v += 2.4;
+          if (e.away) {
+            // It caught behind her (the channel ran on while she walked on): a look back at it, no kneel.
+            this.awayHold = 0.85;
+            this.wide.v += 1.6;
+          } else {
+            // It catches: she looks up into it, eyes wide.
+            this.catchT = 0;
+            this.wide.v += 2.4;
+          }
           sig.kindled = true;
+          // The moths rise from it to the ember that hangs near: her head goes up with them.
+          if (e.type === 'lanternKindle' && this.cue.emberHangs) {
+            const ex = p.cx + this.cue.emberDx;
+            const ey = p.feetY - 62 + this.cue.emberDy;
+            if (Math.hypot(ex - e.x, ey - (e.y - 66)) < ACT.showPx) {
+              this.showT = 0;
+              this.showX0 = e.x;
+              this.showY0 = e.y - 66;
+              this.showX1 = ex;
+              this.showY1 = ey;
+            }
+          }
           break;
         case 'lampRefuse':
         case 'lanternRefuse':
-          this.refuseT = 0;
+          // The summit lantern wants the ember: no empty hand, a look into the glass and then to where it is.
+          if (e.type === 'lanternRefuse' && e.key) {
+            this.keyRefT = 0;
+            this.keyRefX = e.key.x;
+            this.keyRefY = e.key.y;
+          } else this.refuseT = 0;
+          break;
+        case 'heartOffer':
+          this.offerT = 0;
+          break;
+        case 'groveWake':
+          this.groveT[e.part === 'flowers' ? 0 : e.part === 'paths' ? 1 : 2] = 0;
           break;
         case 'lampRest':
         case 'lanternRest':
@@ -1427,6 +1576,12 @@ export class Rig {
       this.rested = false;
       this.cloak = this.shiver = this.antLift = this.antCurl = 0;
       this.eyeLit = 1;
+      this.guard = this.cue.carry ? 1 : 0;
+      this.reachW = this.waitW = this.giveW = this.waitOpen = this.waitT = this.awayW = this.awayHold = 0;
+      this.taking = false;
+      this.takeT = this.recvT = this.showT = this.keyRefT = this.liftT = this.offerT = 9;
+      this.groveT.fill(9);
+      this.wasKindling = this.cue.kindle >= 0;
       this.yaw.snap(dirT);
       this.headYaw.snap(dirT);
       this.lookS.snap(1);
@@ -1511,7 +1666,52 @@ export class Rig {
       p.motion !== 'dash' &&
       p.motion !== 'skid';
     const quiet = calm && Math.abs(p.vx) < 0.4;
-    const kindleT = calm && (cue.kindle >= 0 || this.catchT < ACT.catchHold) ? 1 : 0;
+    // The ember: taking it, carrying it, lifting it to the lantern that wants it.
+    this.takeT += dt;
+    this.recvT += dt;
+    this.showT += dt;
+    this.keyRefT += dt;
+    this.liftT += dt;
+    this.offerT += dt;
+    for (let i = 0; i < 3; i++) this.groveT[i]! += dt;
+    if (this.taking && this.takeT > this.takeLen + 0.5) this.taking = false;
+    {
+      const reachT = this.taking ? smoothstep(0.06, 0.45, this.takeT) : 0;
+      this.reachW += (reachT - this.reachW) * approach(reachT > this.reachW ? 12 : 5.5, dt);
+      this.guard += ((cue.carry ? 1 : 0) - this.guard) * approach(cue.carry ? 2.2 : 4, dt);
+      // The channel starts at the lantern that wanted it: the coal leaves her shoulder now.
+      const kindling = cue.kindle >= 0;
+      if (kindling && !this.wasKindling && cue.lampKeyed && this.guard > 0.3) this.liftT = 0;
+      this.wasKindling = kindling;
+      // A channel that runs on behind her: where its glass is, and a moment longer once it has caught.
+      if (cue.away) {
+        this.awayX = p.cx + cue.awayDx;
+        this.awayY = p.feetY - 62 + cue.awayDy;
+      }
+      this.awayHold = Math.max(0, this.awayHold - dt);
+      const awayT = cue.away || this.awayHold > 0 ? 1 : 0;
+      this.awayW += (awayT - this.awayW) * approach(awayT ? 9 : 3.5, dt);
+    }
+    // Waiting in the woken heart: held in its light until it is ready for her.
+    const waiting =
+      cue.heartWait && quiet && cue.heart && Math.abs(cue.heartDx) < ACT.waitPx && p.inputX === 0;
+    if (waiting) this.waitT += dt;
+    else if (!cue.gathered) this.waitT = 0;
+    {
+      // (it carries over into the ending: the wings she has opened stay open and the unfurl goes on from there)
+      const on = waiting || (cue.gathered && this.waitT > 0 && this.endT < 0.7);
+      this.waitW += ((on ? 1 : 0) - this.waitW) * approach(on ? 3 : 2.4, dt);
+      const openT = waiting
+        ? ACT.waitOpen * smoothstep(0.15, ACT.waitOpenIn, this.waitT)
+        : cue.gathered
+          ? this.waitOpen
+          : 0;
+      this.waitOpen += (openT - this.waitOpen) * approach(openT > this.waitOpen ? 5 : 2.2, dt);
+    }
+    const kindleT =
+      calm && (cue.kindle >= 0 || this.catchT < ACT.catchHold + (this.liftT < 1.4 ? ACT.giveHold : 0))
+        ? 1
+        : 0;
     this.kindleW += (kindleT - this.kindleW) * approach(kindleT > this.kindleW ? 11 : 5, dt);
     // Resting: she sits while the light fills her, and stays sat until the player moves her.
     if (cue.rest >= 0 && quiet) this.seated = true;
@@ -1547,8 +1747,19 @@ export class Rig {
       const lampAt = Math.abs(cue.lampFootDx) > 7 ? cue.lampFootDx : cue.lampDx;
       const lampDir = lampAt > 4 ? 1 : lampAt < -4 ? -1 : 0;
       const toLamp =
-        kindleT > 0 || this.seated || warmOn || (this.refuseT < ACT.refuse - 0.5 && quiet && cue.lamp);
+        kindleT > 0 ||
+        this.seated ||
+        warmOn ||
+        ((this.refuseT < ACT.refuse - 0.5 || this.keyRefT < ACT.keyTurn[0]) && quiet && cue.lamp);
       if (toLamp && lampDir !== 0) dirT = lampDir;
+      // The lantern wanted the ember: she turns from the empty glass to where it is (head first), and back.
+      if (this.keyRefT > ACT.keyTurn[0] - 0.1 && this.keyRefT < ACT.keyTurn[2] && quiet && kindleT === 0) {
+        const kx = this.keyRefX - p.cx;
+        if (Math.abs(kx) > 30) dirT = kx > 0 ? 1 : -1;
+      }
+      // She turns to the ember as it comes to her, and to the heart while she waits in it.
+      if (this.taking && quiet && Math.abs(cue.emberDx) > 6) dirT = cue.emberDx > 0 ? 1 : -1;
+      if (waiting && Math.abs(cue.heartDx) > 5) dirT = cue.heartDx > 0 ? 1 : -1;
       if (touchT > 0 && cue.heartDx !== 0) dirT = cue.heartDx > 0 ? 1 : -1;
       // At the ending she turns most of the way to face us, under wings that open to either side.
       if (this.endOn) dirT *= lerp(1, ACT.endTurn, smoothstep(0.1, 1.5, this.endT));
@@ -1691,7 +1902,7 @@ export class Rig {
       this.lastStep = st;
     }
 
-    this.actPose(out, clock, dt, quiet);
+    this.actPose(out, clock, dt, quiet, p);
 
     // --- Double jump: snap into a ball, one clean turn, snap out.
     if (startSpin) {
@@ -1848,7 +2059,7 @@ export class Rig {
     this.soar = Math.max(this.soar, 0.86 * this.flourish * (1 - this.spinW));
     // The ending: they unfurl slowly to the full glide spread, standing.
     const unfurl = this.endOn ? quintic((this.endT - ACT.unfurlAt) / ACT.unfurl) : 0;
-    this.soar = Math.max(this.soar, unfurl * this.endW);
+    this.soar = Math.max(this.soar, unfurl * this.endW, this.waitOpen * (1 - this.spinW));
     this.catchK = this.catchS.step(sat(decel / GLIDE.catchDecel), dt);
     // Banking: the wing plane tips toward where she is going and leans into a turn.
     const gax = this.gAxS.step(glide ? clamp(ax, -1.2, 1.2) : 0, dt);
@@ -2721,11 +2932,19 @@ export class Rig {
    * resting, warming her hands, the hand on the sleeping heart, the look toward the waking one, the
    * ending. Sets what the wings, antennae and lights read (`cloak`, `shiver`, `antLift`, `eyeLit`).
    */
-  private actPose(out: Pose, clock: number, dt: number, quiet: boolean): void {
+  private actPose(out: Pose, clock: number, dt: number, quiet: boolean, p: PlayerView): void {
     const cue = this.cue;
     const nearA = sat(0.5 + 1.6 * this.yaw.x);
     const NF = nearA >= 0.5 ? HAF : HBF;
     const NU = nearA >= 0.5 ? HAU : HBU;
+    const FF = nearA >= 0.5 ? HBF : HAF;
+    const FU = nearA >= 0.5 ? HBU : HAU;
+    const face = this.yaw.x >= 0 ? 1 : -1;
+    // Looks that work at a run: on the ground only (in the air and on the bark her head belongs to the jump).
+    const onFeet = this.frame.s[S_GROUND]! * (1 - this.wWall) * (1 - sat(this.hurtK));
+    const headX = p.cx;
+    const headY = p.feetY - 62;
+    let quick = 0;
     // Only the stand carries these; a cut or a blow takes her out of them at once.
     const aw = this.wIdle * (1 - this.gripIn) * (1 - sat(this.hurtK));
     let cloak = 0;
@@ -2738,7 +2957,27 @@ export class Rig {
     let gzw = 0;
 
     // --- Kindling: down on one knee, the near hand lifted to the glass; as it catches she looks up.
-    const kw = this.kindleW * aw;
+    // (With the ember she first lifts it to the glass, standing: the kneel comes as her hands come down.)
+    const lt = this.liftT;
+    const liftK =
+      lt < ACT.give[2] ? smoothstep(0, ACT.give[0], lt) * (1 - smoothstep(ACT.give[1], ACT.give[2], lt)) : 0;
+    const lw = liftK * aw;
+    const kw = this.kindleW * aw * (1 - 0.92 * liftK);
+    if (lw > 1e-3) {
+      const aim = clamp((cue.lampUp - 50) / 30, -0.6, 1);
+      this.mix(out, GIVE, lw, nearA);
+      // Her hands follow the coal a little way up as it goes.
+      const follow = smoothstep(0.05, ACT.give[1], lt);
+      out[HAU]! += (1.6 * aim + 2.2 * follow) * lw;
+      out[HBU]! += (1.6 * aim + 1.6 * follow) * lw;
+      out[HT]! -= 0.08 * aim * lw;
+      cloak += 0.5 * lw;
+      ant -= 40 * lw;
+      antC -= 0.1 * lw;
+      gzx += 0.75 * lw;
+      gzy -= 0.75 * lw;
+      gzw += lw;
+    }
     if (kw > 1e-3) {
       const q = cue.kindle >= 0 ? cue.kindle : 1;
       const ct = this.catchT;
@@ -2769,6 +3008,57 @@ export class Rig {
     }
 
     // --- Refused: she reaches, nothing comes; a look into the empty hand, antennae down for a beat.
+    // --- The lantern that wants the ember, and she has none: she looks into the empty glass, then
+    // her head turns to where the ember is (west of the summit and below it), and comes back.
+    const kt = this.keyRefT;
+    if (kt < ACT.keyTurn[3]) {
+      const KG = ACT.keyGlass;
+      const KT = ACT.keyTurn;
+      const into = smoothstep(0, KG[0], kt) * (1 - smoothstep(KG[1], KG[2], kt)) * aw * (quiet ? 1 : 0);
+      const turn = smoothstep(KT[0], KT[1], kt) * (1 - smoothstep(KT[2], KT[3], kt)) * onFeet;
+      if (into > 1e-3) {
+        const aim = clamp((cue.lampUp - 50) / 30, -0.6, 1);
+        // Up on her toes a little, leaning in to look; the near hand half lifted, and it stops there.
+        out[PF]! += 1.4 * into;
+        out[PU]! += 0.7 * into;
+        out[LEAN]! += 0.08 * into;
+        out[HT]! -= (0.17 + 0.1 * aim) * into;
+        out[LOOKY]! -= 0.4 * into;
+        out[EYE] = lerp(out[EYE]!, 1, into);
+        out[NF] = lerp(out[NF]!, 8.4, 0.85 * into);
+        out[NU] = lerp(out[NU]!, -4.6, 0.85 * into);
+        ant -= 30 * into;
+        antC -= 0.1 * into;
+        gzx += 0.8 * into;
+        gzy -= 0.6 * into;
+        gzw += into;
+      }
+      if (turn > 1e-3) {
+        const dx = this.keyRefX - headX;
+        const dy = this.keyRefY - headY;
+        const side = smoothstep(-80, 40, dx * face);
+        // (it is far off: the angle alone would be nearly level, and "down there" has to read)
+        let pitch = clamp(Math.atan2(dy, Math.abs(dx) + 50) * 0.8, -0.32, 0.34);
+        if (dy > 60) pitch = Math.max(pitch, 0.24);
+        const st = turn * aw;
+        out[HYAW] = lerp(out[HYAW]!, lerp(-0.3, 1, side), turn);
+        out[HT]! += pitch * turn;
+        out[LOOKY]! += 2.2 * pitch * turn;
+        out[EYE] = lerp(out[EYE]!, 0.92, turn);
+        // The hand comes down; her weight settles back off her toes.
+        out[PU]! -= 0.9 * st;
+        out[CURL]! += 0.05 * st;
+        out[LEAN]! -= 0.03 * st;
+        ant -= 6 * turn;
+        antC += 0.03 * turn;
+        cloak -= 0.2 * st;
+        gzx += lerp(-0.75, 0.85, side) * turn;
+        gzy += 2 * pitch * turn;
+        gzw += turn;
+        quick = Math.max(quick, turn);
+      }
+    }
+
     const rt = this.refuseT;
     if (rt < ACT.refuse && quiet && aw > 1e-3) {
       const reach = smoothstep(0, 0.2, rt) * (1 - smoothstep(0.42, 0.78, rt));
@@ -2891,8 +3181,175 @@ export class Rig {
       gzx += lerp(-0.7, 0.85, side) * k;
       gzy += 2 * pitch * k;
       gzw += k;
-      this.noticeK = k;
-    } else this.noticeK = 0;
+      quick = Math.max(quick, k);
+    }
+
+    // --- A channel runs on behind her (she walked on within its leash), or has just caught there:
+    // no kneel away from the light. A look back at it and a hand left out toward it; it works at a run.
+    if (this.awayW > 1e-3) {
+      const dx = this.awayX - headX;
+      const dy = this.awayY - headY;
+      const k = this.awayW * onFeet * (1 - Math.max(this.kindleW, this.restW));
+      const side = smoothstep(-80, 40, dx * face);
+      const pitch = clamp(Math.atan2(dy, Math.abs(dx) + 50) * 0.55, -0.32, 0.3);
+      out[HYAW] = lerp(out[HYAW]!, lerp(-0.6, 1, side), k);
+      out[HT]! += pitch * k;
+      out[LOOKY]! += 2.2 * pitch * k;
+      out[EYE] = lerp(out[EYE]!, 1, k);
+      // The hand: out ahead toward it standing; at a run the trailing one is left open behind, a little higher.
+      const rk = k * (1 - this.gripIn);
+      const st = rk * this.wIdle;
+      out[NF] = lerp(out[NF]!, lerp(-9.5, 9.4, side), 0.8 * st);
+      out[NU] = lerp(out[NU]!, -3.4, 0.8 * st);
+      out[NU]! += 4.2 * rk * this.wRun;
+      out[NF]! -= 1.6 * rk * this.wRun * (1 - side);
+      ant -= (16 + 12 * this.wRun) * k * (2 * side - 1);
+      antC -= 0.05 * k;
+      gzx += lerp(-0.75, 0.85, side) * k;
+      gzy += 2 * pitch * k;
+      gzw += k;
+      quick = Math.max(quick, k);
+    }
+
+    // --- A lantern has caught and the ember hangs near, overhead: the moths rise to it and her head
+    // and antennae go up with them, from the glass to the ember, hold a beat, and come back.
+    if (this.showT < ACT.show) {
+      const t = this.showT;
+      const u = smoothstep(ACT.showRise[0], ACT.showRise[1], t);
+      const dx = lerp(this.showX0, this.showX1, u) - headX;
+      const dy = lerp(this.showY0, this.showY1, u) - headY;
+      const far = 1 - smoothstep(700, 1000, Math.abs(this.showX1 - headX));
+      const k =
+        smoothstep(ACT.showIn[0]!, ACT.showIn[1]!, t) *
+        (1 - smoothstep(ACT.show - 0.75, ACT.show, t)) *
+        far *
+        onFeet *
+        (1 - this.restW);
+      const side = smoothstep(-80, 40, dx * face);
+      // (a chin lifted further than this tips her face out of sight; less of it at a run)
+      const pitch = clamp(Math.atan2(dy, Math.abs(dx) + 50) * 0.6, -0.5, 0.3) * (0.6 + 0.4 * this.wIdle);
+      const st = k * aw;
+      out[HYAW] = lerp(out[HYAW]!, lerp(-0.6, 1, side), k);
+      out[HT]! += pitch * k;
+      out[LOOKY]! += 2.2 * pitch * k;
+      out[EYE] = lerp(out[EYE]!, 1, k);
+      // Standing, the look goes through her: chest open, a little taller.
+      out[CURL]! += 0.16 * pitch * st;
+      out[LEAN]! += 0.05 * pitch * st;
+      out[PU]! -= 1.4 * pitch * st;
+      // The antennae prick up after them (the lifted chin alone lays them back), one a little later.
+      ant -= (40 + 22 * u) * k;
+      antC -= 0.07 * k;
+      gzx += lerp(-0.7, 0.8, side) * k;
+      gzy += 2 * pitch * k;
+      gzw += k;
+      quick = Math.max(quick, 0.6 * k);
+    }
+
+    // --- The ember comes to her: both hands go out to meet it and draw in as it arrives; she
+    // receives it, and one hand sees it to her shoulder. A small careful gesture.
+    const rw2 = this.reachW * aw;
+    if (this.reachW > 1e-3) {
+      const u = sat(this.takeT / this.takeLen);
+      const k = this.reachW * onFeet;
+      const dx = cue.emberDx;
+      // (the shoulders are ~13 px under the point `emberDy` is measured from)
+      const up = -cue.emberDy - 13;
+      const side = smoothstep(-40, 20, dx * face);
+      // (it lifts out of its cup and comes down to her from over her brow)
+      const over = Math.sin(Math.PI * sat(u * 1.15)) ** 1.5;
+      const pitch =
+        (clamp(Math.atan2(cue.emberDy, Math.abs(dx) + 40) * 0.5, -0.36, 0.26) - 0.2 * over) * (1 - u * u);
+      out[HYAW] = lerp(out[HYAW]!, lerp(-0.4, 1, side), k);
+      out[HT]! += (pitch + 0.2 * u * u) * k;
+      out[LOOKY]! += (2 * pitch + 0.5 * u * u) * k;
+      out[EYE] = lerp(out[EYE]!, 1, k);
+      if (rw2 > 1e-3) {
+        this.mix(out, REACH, rw2, nearA);
+        // Out toward where it hangs, then drawn in to a cup before her collar as it arrives.
+        const inK = smoothstep(0.45, 1, u);
+        const nf = lerp(clamp(Math.abs(dx) * 0.5 + 4, 6, 11.5), 8, inK);
+        const nu = lerp(clamp(up * 0.7 + 2, -3, 10) + 6.5 * over, -3.4, inK);
+        out[NF] = lerp(out[NF]!, nf, rw2);
+        out[NU] = lerp(out[NU]!, nu, rw2);
+        out[FF] = lerp(out[FF]!, nf - 2.6, rw2);
+        out[FU] = lerp(out[FU]!, nu - 1.8, rw2);
+        out[CURL]! += 0.1 * inK * rw2;
+        out[PU]! -= 0.8 * inK * rw2;
+        cloak += 0.4 * rw2;
+      }
+      ant -= 30 * (1 - 0.5 * u) * k;
+      antC -= 0.08 * k;
+      gzx += lerp(-0.6, 0.8, side) * k;
+      gzy += (2 * pitch + 0.6 * u * u) * k;
+      gzw += k;
+      quick = Math.max(quick, 0.5 * k);
+    }
+    const SE = ACT.settle;
+    const settleK =
+      this.recvT < SE[3]
+        ? smoothstep(SE[0], SE[1], this.recvT) * (1 - smoothstep(SE[2], SE[3], this.recvT))
+        : 0;
+    const sw2 = settleK * aw;
+    if (sw2 > 1e-3) {
+      this.mix(out, SHOULDER, sw2, nearA);
+      // The hand opens away from it at the end, slowly.
+      out[NU]! -= 1.4 * smoothstep(SE[2] - 0.3, SE[3], this.recvT) * sw2;
+      ant += 8 * sw2;
+      cloak -= 0.3 * sw2;
+      gzx -= 0.8 * sw2;
+      gzy -= 0.25 * sw2;
+      gzw += sw2;
+      lit += 0.12 * Math.exp(-this.recvT / 0.5) * sw2;
+    }
+
+    // --- Carrying it: one arm kept in by her, and standing, a glance back at it now and then.
+    const gd = this.guard;
+    if (gd > 1e-3) {
+      const still = gd * aw * (1 - settleK) * (1 - Math.max(this.kindleW, this.restW, this.warmW, liftK));
+      // The hanging hand comes up to her ribs; in the run the near arm rides bent at her side, not trailing.
+      out[FF] = lerp(out[FF]!, 1.6, 0.8 * still);
+      out[FU] = lerp(out[FU]!, -10.8, 0.8 * still);
+      const run = gd * this.wRun * (1 - this.gripIn);
+      out[NF] = lerp(out[NF]!, -3.2, 0.7 * run);
+      out[NU] = lerp(out[NU]!, -8.6, 0.7 * run);
+      const gp = pulse(clock, ACT.carryEvery, ACT.carryLook, 151, 0.9);
+      const gl = gp > 0 ? smoothstep(0, 0.22, gp) * (1 - smoothstep(0.7, 1, gp)) * still * (1 - sat(gzw)) : 0;
+      if (gl > 1e-3) {
+        out[HYAW] = lerp(out[HYAW]!, 0.5, gl);
+        out[HT]! -= 0.05 * gl;
+        out[CURL]! -= 0.02 * gl;
+        ant += 7 * gl;
+        gzx -= 0.85 * gl;
+        gzy -= 0.3 * gl;
+        gzw += gl;
+      }
+    }
+
+    // --- Waiting in the woken heart: held in its light, looking into it; wings slowly opening,
+    // antennae lifted, one long breath after another. Not frozen.
+    const wtw = this.waitW * aw * (1 - this.endW);
+    if (wtw > 1e-3) {
+      const b = Math.sin(clock * 1.5);
+      const b2 = Math.sin(clock * 1.5 - 0.9);
+      const deep = smoothstep(0.2, ACT.waitOpenIn, this.waitT);
+      this.mix(out, WAIT, wtw, nearA);
+      out[PU]! += (0.75 * b + 0.5 * deep) * wtw;
+      out[CURL]! -= (0.045 * b2 + 0.04 * deep) * wtw;
+      out[HT]! -= (0.025 * b2 + 0.07 * deep) * wtw;
+      out[HAU]! += (0.6 * b2 + 1.4 * deep) * wtw;
+      out[HBU]! += (0.6 * b2 + 1.2 * deep) * wtw;
+      out[NF]! += 1.2 * deep * wtw;
+      // Drawn a little toward it.
+      out[PF]! += 0.9 * deep * wtw;
+      cloak += (0.7 + 0.5 * deep + 0.25 * b2) * wtw;
+      ant -= (16 + 14 * deep + 3 * b2) * wtw;
+      antC -= (0.05 + 0.06 * deep) * wtw;
+      lit += 0.14 * deep * wtw;
+      gzx += 0.7 * wtw;
+      gzy -= (0.25 + 0.35 * deep) * wtw;
+      gzw += wtw;
+    }
 
     // --- The ending: tall in the open flower, face lifted to the light above, breathing.
     const ew = this.endW * aw;
@@ -2910,8 +3367,54 @@ export class Rig {
       gzy -= 0.85 * ew;
       gzw += ew;
       lit += 0.32 * smoothstep(0.8, 3.2, this.endT) * ew;
+      // The offering: while her glints go into the heart her hands are out, giving, and she watches them go.
+      const og = this.giveW * ew;
+      if (og > 1e-3) {
+        const b3 = Math.sin(clock * 2.1);
+        // (she is turned most of the way to us: "forward" is hardly seen, so the arms open to either side)
+        out[NF] = lerp(out[NF]!, 15, og);
+        out[NU] = lerp(out[NU]!, -1.5 + 0.5 * b3, og);
+        out[FF] = lerp(out[FF]!, -13, og);
+        out[FU] = lerp(out[FU]!, -2.5 - 0.5 * b3, og);
+        out[HT]! += 0.26 * og;
+        out[CURL]! += 0.07 * og;
+        out[LEAN]! += 0.03 * og;
+        gzy += 0.9 * og;
+      }
+      // A tier of the grove wakes: a look out at it (the flowers at her feet, the paths behind her, the canopy).
+      for (let i = 0; i < 3; i++) {
+        const t = this.groveT[i]!;
+        if (t >= ACT.grove) continue;
+        const k = smoothstep(0.05, 0.4, t) * (1 - smoothstep(ACT.grove - 0.6, ACT.grove, t)) * ew;
+        // (her head's pitch only shows with the head turned, so each look turns it out of the front view)
+        if (i === 0) {
+          out[HT]! += 0.8 * k;
+          out[HYAW] = lerp(out[HYAW]!, 1.75, k);
+          gzx += 0.5 * k;
+          gzy += 1.7 * k;
+        } else if (i === 1) {
+          out[HT]! += 0.5 * k;
+          out[HYAW] = lerp(out[HYAW]!, -0.9, k);
+          gzx += 0.7 * k;
+          gzy += 0.9 * k;
+        } else {
+          out[HT]! -= 0.3 * k;
+          out[HYAW] = lerp(out[HYAW]!, 1.7, k);
+          out[CURL]! -= 0.05 * k;
+          gzx += 0.4 * k;
+          gzy -= 0.6 * k;
+        }
+        out[EYE] = lerp(out[EYE]!, 1, k);
+        ant -= 8 * k;
+        quick = Math.max(quick, 0.5 * k);
+      }
     }
-    this.raise = ACT.endRaise * this.endW;
+    {
+      const on = this.endOn && this.offerT < ACT.offerHold ? 1 : 0;
+      this.giveW += (on - this.giveW) * approach(on ? 4.5 : 2.2, dt);
+    }
+    this.noticeK = quick;
+    this.raise = Math.max(ACT.endRaise * this.endW, ACT.waitRaise * sat(this.waitOpen / ACT.waitOpen));
 
     this.cloak += (cloak - this.cloak) * approach(7, dt);
     this.antLift += (ant - this.antLift) * approach(8, dt);
@@ -2923,7 +3426,9 @@ export class Rig {
       this.gazeAX = gzx / gzw;
       this.gazeAY = gzy / gzw;
     }
-    this.offerK = kw;
+    // The light leaves her open near hand while she kindles and while she gives to the heart, and
+    // the ember arrives in it.
+    this.offerK = Math.max(kw, rw2, 0.85 * this.giveW * ew);
     this.offerSide = nearA >= 0.5 ? 0 : 1;
   }
 

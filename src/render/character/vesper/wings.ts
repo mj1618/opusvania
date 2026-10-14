@@ -300,7 +300,7 @@ export class Secondary {
         // In the ball the wings draw in with everything else: a close shell.
         c.scale =
           lerp(
-            1 + 0.24 * run,
+            1 + (0.24 - 0.07 * rig.guard) * run,
             SOAR_LEN[k]! * (1 + 0.05 * Math.max(0, ck) + 0.06 * first) * (1 - 0.04 * far),
             span,
           ) *
@@ -363,6 +363,12 @@ export class Secondary {
           (1 - soar);
         // A rising cut whips the cape down and forward under her; a falling one throws it up behind.
         lift += rig.slashSweep * (30 - 8 * far) * (1 - k * 0.1) * (1 - soar);
+        // Carrying the ember she holds them a little closer: drawn in at rest, a narrower stream in the run.
+        const gd = rig.guard * (1 - soar);
+        if (gd > 1e-3) {
+          lift = lerp(lift, WRAP[k]! + 3 * far, 0.24 * gd * rig.wIdle);
+          lift += (STREAM[2]! - STREAM[k]!) * 0.55 * gd * run + stride * (15 - 2 * k) * 0.4 * gd;
+        }
         // Acting: they relax open like a cloak settling (kindling), or fold round her (resting); a contented shiver.
         const ck2 = rig.cloak;
         if (ck2 > 0) lift -= ck2 * (11 - 1.3 * k) * (1 - soar);
