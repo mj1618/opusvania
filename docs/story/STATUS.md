@@ -7,11 +7,11 @@ is central and discovered in play, mythic on the surface and technical underneat
 
 | | |
 |---|---|
-| Latest | round 24 (one stealth rule; the lab reveal shown; the two moth pictures rhyme; the journey at moth scale: forest → edge → gardens → kept town → dead city → mountain) |
-| Last review | round 24: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (four rounds running) · rel 8 / clarity 7 / idea 9 / world 8 / mechanics 9 / antagonist 8 / ending 7 / **original 9** / Grove 8 / balance 8 |
-| Readers | all three retold it and found the lab-brain truth on their own. Shared confusion: does the Hush eat light or warmth, and why would a feeding brain seal everyone? |
+| Latest | round 25 (the Hush's motive plain; one light/warmth rule; the true ending costs something permanent) |
+| Last review | round 25: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (five rounds running) · rel 8 / clarity 7 / idea 9 / **world 9** / mechanics 9 / **antagonist 9** / ending 8 / original 9 / Grove 8 / balance 8 |
+| Readers | all three found the dish-grown brain on their own. Shared confusion: Tallow (gives her the coal, then is fought; writes EATEN about a sister who is alive) |
 | Locked | [locked.md](locked.md): spine, cast, midpoint, endings, the three big images, title |
-| Now working on | round 25: the Hush's motive and the light/warmth logic made plain; the true ending's cost made permanent (it gives too much back); misread lines; the coal contradiction |
+| Now working on | round 26: Tallow's logic (EATEN is his belief; he burns cases out of mercy; the Night 6 fight proves him wrong); Burn shows its deaths; Sorrel's whereabouts Nights 3-5; what the player does in each fight; the forest acts |
 
 **Done when** two rounds in a row: the AI test passes, the director greenlights it and says it stands next to Ori / Hollow Knight / Nine Sols, all three readers would finish the game, and no confusion is shared by two readers. Then the prologue gets built in the Grove.
 
