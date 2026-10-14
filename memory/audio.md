@@ -14,7 +14,7 @@ lantern bowls. No slash, glints, creatures or score yet: those events route to n
   `snapOf(state)` is all the state the sound reads (`AudioSnap`, plain JSON: what a tape records).
 - `conductor.ts`: shared by live and offline; plays cues, aims layers (every 1/30 s of render time),
   rate limits (wingbeats 80 ms). Muted it still routes: `__game.audio.cues(n)`.
-- `engine.ts` + `graph.ts` + `voices/`: buses world / hush / hero / lantern, each with its own room
+- `engine.ts` + `graph.ts` + `voices/`: buses world / hush / hero / lantern / creatures, each with its own room
   and far sends (so muting a bus mutes its reverb: the A/B), roll-off 9 kHz (lantern bus 15 kHz),
   fader (start fade, prologue silence), master, a limiter at -2 dB that a normal mix never reaches
   (Web Audio adds make-up gain for it: `trim` removes it).
@@ -68,6 +68,30 @@ median (no clicks). Without the Hush: -20.6 LUFS, -8.6 dBTP. Per bus alone (befo
 the lab run): world -30 LUFS, hush -39, hero -41 (peaks -24 dBFS), lantern -34 (peak -19).
 Offline render 41 s in 2.6 s, bake ~110 ms. Cues in the clip: 9 knocks, 20 drips, 1 far voice, 7 wingbeats,
 2 whooshes, 2 dust, 1 thump, 1 catch, 1 splash, 1 dash, 2 notices, 2 refusals, 1 kindle.
+
+## Milestone 2: giving (memory/giving.md), muted like the rest
+- Bus `creatures` added. `AudioSnap` also carries `wallet`, `seenLevel` and `creatures` (centre, kind,
+  `gift` frames left of `of`); `snapOf(..., giftFrames)`. Levels in `AUDIO.giving`.
+- `offer`: offerTone (rubbed glass A4, 45 ms soft onset, 1.1 s). `offerMiss`: flutter (three dry wing
+  grains; `none` 2 dB softer). `giftReturn`: offerTone a fifth up, softer.
+- Answers when the glint lands: `enemyGift` burrback = exhale (pink noise through two formants aa -> oo,
+  0.95 s; creatures have mouths, so formants are allowed), `was` windup/charge = settle (2.4 s, sinking);
+  lampwing = glassSettle (rubbed E5). `lanternGift` / `lampGift` = giftBowl (one bowl partial) climbing
+  A -> B -> D as the price fills (lamp an octave up). `heartGift` = D2 + D3 bowl, 5 s.
+- Calm: `calmBreath` cues from `ambient()` while `gift > 0`, intervals 2.4 s growing to 9 s (the Hush's)
+  over the calm, fading with `gift / of` (`calmBreath(elapsed, of)` in router.ts): 2-3 breaths in 10 s.
+- `enemyAware`: burrback sniff (rising in-breath, 0.32 s), lampwing wingHum (rubbed A5 swelling, 40 Hz
+  tremolo). Seen level: `ChordVoice` (voices/chord.ts), rubbed glass A4, E5, B5, D5 around her, one tone
+  per level, -50 RMS dB at level 1 to -41 at 4 (pre-master), in over ~1 s, out over ~0.5 s; none at 0.
+- Rest that costs glints (`lanternRest` / `lampRest` `cost` > 0): glintNote (struck glass, A5) per glint,
+  0.13 s apart, falling A E D B A.
+- Review: `clips/audio-m2-giving.mp4` (25 s, `--setup "g.giving(9); g.health(2)" --at 3100,1280`): chord,
+  burr-shaft's sniff and tell, offer -> settle -> calm breaths, eight offers into lamp-trunk (bowl climbing)
+  -> it catches, a rest paying her last two (notes), silence, a walk in among burr-shaft unseen. -20.5 LUFS,
+  -6.9 dBTP, 0 clipped, centroid 529 Hz; momentary -27..-16 (the lamp's bloom tops it). Alone: chord ~15 dB
+  under the bed; the hero bus is silent once she is empty-handed.
+- The pilot that makes such a route must be closed-loop on the creature (offer on `enemyWindup`); the burrback's
+  position depends on the frame, so an idle a few frames longer turns a windup into a walk-in hit.
 
 ## Gotchas
 - Offline render cost is the two convolvers (~2 of 2.7 s for a 41 s clip; without them 0.8 s). IRs are

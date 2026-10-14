@@ -131,7 +131,7 @@ export const AUDIO = {
     humDb: -48,
     humPx: 520,
     /** Lamps: smaller, higher bowls; their level relative to a lantern's (dB). */
-    lampTrim: -4,
+    lampTrim: -6,
   },
   /**
    * Giving (milestone 2, memory/giving.md): carrying light is risky (a creature's in-breath, the chord of
@@ -152,7 +152,7 @@ export const AUDIO = {
     /** A lampwing's glass letting go as it takes the glint. */
     glassDb: -31,
     /** A lantern / lamp taking a glint toward its price; the heart's deeper one. */
-    bowlDb: -34,
+    bowlDb: -32,
     heartDb: -26,
     /** Becoming aware of her: a burrback's in-breath, a lampwing's hum swelling. */
     sniffDb: -31,
