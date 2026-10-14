@@ -53,3 +53,12 @@ Full shot lists: [scenes/mouthless-key-scenes.md](scenes/mouthless-key-scenes.md
 - The rule is phrased "it only notices things that need feeding"; its ground openings are "hollows", not mouths.
 - The working title "The Moth and the Mouth" is retired; the title is open and decided once the story settles. The
   storyline file keeps the slug `mouthless`.
+
+## Distinctness guardrails (from uniqueness.md, 2026-10-14)
+- Moths never worship light; they carry and give it. The Hush is pale bone and breath: never orange glow, never
+  infected eyes (Hollow Knight's Radiance/infection).
+- The forest is one region; light is given away, not collected for power; the hero does not become a tree (Ori).
+- Sleepers are fed by a starving made thing that thinks it cares: never "humans as fuel/batteries" (Nine Sols, The Matrix).
+- Avoid a bare "light N things" structure: the lanterns are given to, and the second act's goal is a person.
+- The game must PLAY like giving: carrying light makes you seen; empty-handed you slip through; Offer calms bosses;
+  progression is paid by giving away.
