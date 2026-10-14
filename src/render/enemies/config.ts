@@ -141,9 +141,23 @@ export const BURR = {
     squash: 0.3,
     /** Rock-back kick, rad/s per point of power. */
     rock: 4.2,
-    /** Tone: how dark it goes during the hold and how far to `pop` after it. */
-    dark: 0.75,
-    pop: 0.55,
+    /**
+     * Tone: for the first `flash` frames of the hold its whole outline is one pale line (`flashW` px,
+     * `flashColor`) on a fill that has NOT gone dark yet; then it goes `dark` of the way to `struck`
+     * (a flat desaturated dusk, lighter than black ground: pure dark hid the hit) for the rest of the
+     * hold, the outline staying on at `holdLine`; `pop` after it.
+     */
+    dark: 0.62,
+    pop: 0.42,
+    struck: 0x2f2a34,
+    flash: 2,
+    flashW: 1.7,
+    flashColor: 0xf6eedc,
+    holdLine: 0.42,
+    /** Chips a blow knocks off (a finisher's), their life in seconds: gone in about ten frames. */
+    chips: 3,
+    chipsFinisher: 5,
+    chipLife: [0.13, 0.19] as const,
   },
   death: {
     /** Frames (after the hold): on its back by `roll` (with a hop, px); legs curled over `curl`; it bursts at `burst`. */
@@ -251,7 +265,9 @@ export const BURR = {
    */
   ram: {
     light: 0xff3c26,
-    pitch: 0.32,
+    pitch: 0.42,
+    /** The wedge stands taller by this share of its height (stretched up off the ground, rear highest). */
+    tall: 0.17,
     crouch: 0.3,
     back: 7,
     coil: 6,
@@ -259,10 +275,33 @@ export const BURR = {
     tremble: 1.3,
     glint: 5.5,
     glintK: 0.55,
-    out: 9,
-    down: 9,
-    edgeW: 2.2,
-    edge: 0.95,
+    out: 14,
+    down: 10,
+    edgeW: 3.3,
+    edge: 1,
+    /**
+     * The count, as one large thing: the whole rim of the shell lights in the ram's colour on each of
+     * the five beats and falls off between them. Each beat reaches further than the last: the line is
+     * `w` px wide on the first beat and `grow` px wider on each one after, with a halo behind the shell
+     * of `halo` px (+ `haloGrow` per beat) at strength `glow` (+ `glowGrow`). `pale` is what the line
+     * goes to at the top of a beat. On the release (the ram starts) everything flashes once, hard:
+     * `flashR` px, strength `flashK`, dying at `flashFade` /s.
+     */
+    rimW: 1.25,
+    rimGrow: 0.65,
+    /** Wider by this in the left zone (dark blue on dark blue: the line has to carry more there). */
+    rimLeft: 1.4,
+    rimHalo: 30,
+    rimHaloGrow: 9,
+    rimGlow: 0.2,
+    rimGlowGrow: 0.07,
+    rimPale: 0xffd9b8,
+    flashR: 70,
+    flashK: 0.75,
+    flashFade: 13,
+    /** Each beat its front feet rake the ground and kick dust at her: puffs on the first beat, one more every `kickMore` beats. */
+    kick: 1,
+    kickMore: 2,
     flat: 1,
     horn: 1.3,
     scrape: 10,
@@ -287,16 +326,32 @@ export const BURR = {
     jolt: 0.34,
     joltBack: 150,
     skid: 250,
-    tip: 0.3,
-    sit: 0.35,
+    tip: 0.62,
+    sit: 0.75,
     lift: 0.55,
-    belly: 0xa08a8e,
-    bellyLow: 0x5e4a55,
+    /** Rolled back on its haunches: the pale underside it shows her, half-length and half-height, px. */
+    bellyLen: 15,
+    bellyHigh: 10.5,
+    /**
+     * Stopped dead by a wall it is stunned (the sim's `recoverWallFrames`), harder than spent: tipped `stunTip`
+     * rad (nearly on its back), all legs off the ground pawing, rocking `stunRock` rad, lights out.
+     * Tiny pale motes circle over it: `stars` of them when spent, `stunStars` when stunned, on an
+     * orbit `starR` px wide at `starRate` rad/s.
+     */
+    stunTip: 0.95,
+    stunRock: 0.13,
+    stars: 3,
+    stunStars: 5,
+    starR: 15,
+    starRate: 5.2,
+    star: 0xfff0cc,
+    belly: 0xb7a3a0,
+    bellyLow: 0x77626a,
     seam: 0x9a8288,
-    pant: 10.5,
-    pantDepth: 0.055,
-    daze: 0.05,
-    dazeRate: 5.2,
+    pant: 7.4,
+    pantDepth: 0.12,
+    daze: 0.07,
+    dazeRate: 4.2,
     dim: 0.2,
     gather: 10,
     wary: 0.3,
@@ -331,8 +386,8 @@ export type BurrConfig = typeof BURR;
  */
 export const LAMP = {
   /** Fore and hind wing length, and how far the far-side pair shortens when it looks to one side. */
-  fore: 23,
-  hind: 14.5,
+  fore: 31,
+  hind: 20,
   farShrink: 0.24,
   /** Beat: wing angle (rad above the horizontal) at the top and bottom of the stroke; the hind pair lags (beats). */
   up: 1.0,
@@ -349,27 +404,28 @@ export const LAMP = {
   /** Lean per px/f of sideways speed, rad, and its cap. */
   lean: 0.11,
   leanMax: 0.5,
-  body: { thoraxW: 2.9, thoraxH: 4.2, abdomenW: 2, abdomen: 13, head: 2.35 },
-  antenna: { len: 12, w: 0.5 },
-  leg: 6,
+  body: { thoraxW: 3.9, thoraxH: 5.6, abdomenW: 2.5, abdomen: 21, head: 3 },
+  antenna: { len: 15, w: 0.6 },
+  leg: 7.5,
   /** Eye radius, and how dim the eyes are until it has seen her (share of full). */
-  eye: 0.44,
+  eye: 0.62,
   eyeDim: 0.6,
   /** Vein alpha (x the wing's). */
   vein: 0.32,
+  /** The lamp hangs at the end of the long tail: a bulb with a pale core, the one bright thing on a dark creature. */
   lamp: {
-    r: 1.15,
-    core: 0.55,
-    halo: 2.8,
-    glow: 0.09,
+    r: 2.6,
+    core: 0.95,
+    halo: 4,
+    glow: 0.4,
     /** Slow pulse: depth and rad/s. */
     pulse: 0.55,
     rate: 1.1,
     /** Brighter by this factor while pursuing, and by this at the height of the tell. */
-    keen: 1.7,
+    keen: 1.35,
     flare: 2.6,
     /** Larger (x radius) while it hunts. */
-    keenR: 1.35,
+    keenR: 1.25,
   },
   /**
    * Hunting (the `curious` tell, then `pursue`): the lamp and the eyes go from the zone's colour to
@@ -411,23 +467,63 @@ export const LAMP = {
     eye: 1.5,
   },
   /** [left, centre, right] zone tints: membrane at the root and the tip, the pale edge and veins, the body. */
-  wingColor: [0x3b4763, 0x968a6e, 0x73698a] as const,
-  wingTip: [0x1a2236, 0x3e3628, 0x342c4a] as const,
-  edgeColor: [0x8fa3ba, 0xbcae90, 0x968caa] as const,
-  bodyColor: [0x66748e, 0xb2a68a, 0x898198] as const,
+  wingColor: [0x222c46, 0x7c5c3a, 0x2a2140] as const,
+  wingTip: [0x0c1222, 0x35261a, 0x100c20] as const,
+  edgeColor: [0x9db4cc, 0xc9bb98, 0xa79cc0] as const,
+  bodyColor: [0x1d2436, 0x2a251d, 0x261e36] as const,
   lampColor: [0x1fb4d8, 0xf0a030, 0x8a4cf0] as const,
   color: {
     /** What a hit darkens it to. */
-    dusk: 0x1c1b28,
+    dusk: 0x3a3745,
     face: 0x15111b,
     eye: 0xb4ab96,
     /** A hit: dark for the hold, then toward this for two frames. */
     pop: 0xcfc9be,
     scale: 0xbdb6a8,
   },
-  wingAlpha: 0.9,
-  farAlpha: 0.7,
-  hit: { dark: 0.6, pop: 0.6, scales: 6, scalesFinisher: 10 },
+  wingAlpha: 0.97,
+  farAlpha: 0.88,
+  /**
+   * A blow: for `flash` frames its edges and veins go pale (`flashColor`) on wings that have not changed
+   * yet, then it goes `dark` of the way to `dusk` (a flat desaturated tone) through the hold, `pop` after.
+   * A few scales fly along the cut, gone in `scaleLife` s.
+   */
+  hit: { dark: 0.6, pop: 0.3, flash: 2, flashColor: 0xf6eedc, scales: 4, scalesFinisher: 5, scaleLife: 0.26 },
+  /**
+   * The dive, acted on whatever the sim's modes are (lampwing.ts `phaseOf`).
+   * Tell: it rears back from her (`rear` rad), a thin line of light from the lamp toward her (`aim` px
+   * long at most, strength `aimK`, flashing with the count).
+   * Swoop: the body turns head-first along its flight (`turn` of the way), stretched (`stretch`), wings
+   * swept back toward the tail (`sweep` rad, length x `sweepLen`, chord x `sweepChord`), the lamp
+   * dragging a streak (`streak` px + `streakV` per px/f, strength `streakK`). Full at `fast` px/f.
+   * Open (the hover at the bottom of the arc, and a rest): wings spread flat and wide (`openFore`,
+   * `openHind` rad) on a slow heavy beat (`openBeat` rad at `openRate` rad/s), tail hanging, eyes half
+   * shut, the lamp down to `openDim`: the moment to cut it.
+   * Climb (flying off): deep labouring strokes (x `climbStroke`).
+   */
+  dive: {
+    rear: 0.32,
+    aim: 120,
+    aimK: 0.3,
+    turn: 0.9,
+    stretch: 0.2,
+    sweep: -0.85,
+    sweepLen: 0.92,
+    sweepChord: 0.62,
+    streak: 12,
+    streakV: 5.5,
+    streakK: 0.5,
+    fast: 6,
+    openFore: 0.2,
+    openHind: -0.42,
+    openBeat: 0.16,
+    openRate: 6.5,
+    openDim: 0.28,
+    /** How far the membrane goes to the pale of its edge while it hangs open. */
+    openPale: 0.7,
+    openSag: 3,
+    climbStroke: 1.3,
+  },
   /**
    * Death: scales torn off by the blow; the body is flung, sheds, and goes to scales `dissolve`
    * frames after the hold (the sim keeps it up to 40), thinning over the last `fade`.

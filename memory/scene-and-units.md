@@ -117,6 +117,21 @@ x:  0        1000       2000       3000       4000       5000     5760
   the holder of playtest 3, who only react), `critical-path.test.ts` (each wall and stair on its own): move a
   rect and they name the leg that broke.
 
+## Collision and placement changed in playtest 5 (2026-10-14)
+- **A root step at the bank's foot**: `{root, 384, 1184, 64, 96}`. The bank's 192 px wanted a held jump or a
+  kick; a 6-frame tap is 136 px, so two taps now. It is also the last stair down from F1 (F3 -> F2 -> F1 ->
+  the step, holding left). Painted by the `root` painter as it stands. Tests that took `tag === 'root'` for
+  THE root now ask for `x === 3968`.
+- **Trunk A's west bark is no climb**: `kick: 'east'` on the solid (new: `kick: false | 'east' | 'west'`, the
+  one flank that takes a slide and a kick; `kickableAt` decides by which side of the solid her box is on).
+  The well leads through the doorway into the shaft (burr-shaft); a kicker used to go up the bark and miss
+  lamp-trunk and burr-shaft. The leap off the bluff now ends with a plain drop along the bark into the mouth
+  of the doorway, a step past lamp-trunk (it was a slide onto it). The shaft's own wall (the east face) and
+  the wall-to-wall climb are unchanged. `well-1 / well-2` moved into the doorway (3236 / 3292, 1236).
+- `great-ember` (1500, 650) over F3: the summit lantern's key (goal.md). 73 pickups, worth 101.
+- burr-ledge at 3090 (fenced, r 60), `wing-rise` at 5090, 900, burr-path `hp: 4`, lamp-sky `sight: 500`
+  (enemies.md). Scene fields new: enemy `hp`, burrback `fenced`, lampwing `sight`, lantern `key`.
+
 ## Layer tree (`src/render/scene/layer-tree.ts`), back to front
 | layer | parallax | what |
 |---|---|---|

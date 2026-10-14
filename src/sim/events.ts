@@ -220,6 +220,45 @@ export type SimEvent =
    */
   | { type: 'enemyNotice'; id: string; kind: EnemyKind; x: number; y: number; dir: number; frames: number }
   /**
+   * The lampwing's dive (memory/enemies.md). `enemyDive`: the tell is over, it commits: from `x, y`
+   * (its centre) along an arc to `tx, ty` (where she was; she can have moved on by then) in `frames`;
+   * `dive` = which one this is since it noticed her (1..). `enemyStall`: it hangs at the bottom of
+   * the arc for `frames`, open and harmless (`cause` `done`, or `wall`: something stopped it short).
+   * `enemyClimb`: it rises to a perch (`tx, ty`) to tell again.
+   */
+  | {
+      type: 'enemyDive';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      tx: number;
+      ty: number;
+      dir: number;
+      frames: number;
+      dive: number;
+    }
+  | {
+      type: 'enemyStall';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      dir: number;
+      frames: number;
+      cause: 'done' | 'wall';
+    }
+  | {
+      type: 'enemyClimb';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      tx: number;
+      ty: number;
+      dir: number;
+    }
+  /**
    * A lampwing's pursuit is over: she is too `far` from its home, `lost` from sight too long, it is
    * `tired` (it chased its full time), her light went `dark` (she faded), it `touch`ed her and
    * bounced off, or a lantern was kindled near it (`calm`; also at the ending). It rests `frames`, then flies home.
@@ -280,8 +319,10 @@ export type SimEvent =
     }
   /**
    * The ram is over: it stands spent for `frames`, open to every cut, and will not brace again for
-   * `cooldown` frames. `cause`: it ran its length (`spent`), met a `wall`, the brink of a `ledge`, a
-   * lit `lantern`'s ground, or it hit her (`touch`: it bounces back off her and turns away).
+   * `cooldown` frames after that. `cause`: it ran its length (`spent`), met a `wall` (stunned: longer),
+   * the brink of a `ledge`, a lit `lantern`'s ground, or it hit her (`touch`: it bounces back off
+   * her and turns away). It may stand `recover` again without this event: when a stagger ends
+   * inside the time it is winded.
    */
   | {
       type: 'enemyRecover';
@@ -291,6 +332,10 @@ export type SimEvent =
       y: number;
       dir: number;
       cause: 'spent' | 'wall' | 'ledge' | 'lantern' | 'touch';
+      /** It had been winded before in this fight: it stands longer now (`frames` says how long). */
+      tired: boolean;
+      /** No ram ended: a blow from behind or above broke its brace (`cause` is `spent`). */
+      broken: boolean;
       frames: number;
       cooldown: number;
     }
@@ -420,14 +465,38 @@ export type SimEvent =
    * `lanternRefuse`: she stands at a dormant lantern carrying `have` of the `need` glints it takes.
    * Once per approach (again only after she has gone away and come back).
    */
-  | { type: 'lanternRefuse'; id: string; x: number; y: number; have: number; need: number; show: number }
+  | {
+      type: 'lanternRefuse';
+      id: string;
+      x: number;
+      y: number;
+      have: number;
+      need: number;
+      show: number;
+      /** It wants this great glint (a pickup of the scene, at `x, y`) besides its price, and she has not gathered it. */
+      key?: { id: string; x: number; y: number };
+    }
+  /**
+   * The great glint a dormant lantern wants (`key`, it hung at `kx, ky`) has reached her: the
+   * lantern (`id`, its foot `x, y`) can now be kindled. Once, in the step the glint is collected.
+   */
+  | { type: 'lanternKey'; id: string; x: number; y: number; key: string; kx: number; ky: number }
   /**
    * She has come near a dormant lantern (her body centre within `tuning.goal.noticePx` of its
    * trigger box's centre), carrying `have` of the `need` it takes: once per approach, however fast
    * she passes (again only after she has been `noticeLeavePx` away). For the lantern to stir, the
    * count to show its price, her head to turn. Nothing happens in the sim.
    */
-  | { type: 'lanternNotice'; id: string; x: number; y: number; have: number; need: number }
+  | {
+      type: 'lanternNotice';
+      id: string;
+      x: number;
+      y: number;
+      have: number;
+      need: number;
+      /** As in `lanternRefuse`: the great glint it still wants. */
+      key?: { id: string; x: number; y: number };
+    }
   /**
    * She is kindling it: every frame of the channel but the last, `frames` (1, 2, ...) of `of`. The
    * frame that would be `of` is `lanternKindle` instead.
@@ -540,7 +609,32 @@ export type SimEvent =
        */
       offered: number;
       offerTier: number;
+      /** Glints the offering is short of the next tier (0 at the top tier). */
+      offerNext: number;
       offerTiers: number[];
+    }
+  /**
+   * The heart's wake is a sequence of its own (`tuning.goal.heartWakeFrames` from `heartWake`).
+   * `heartWait`: she stands in it before that is over (once; `frames` still to go): she waits in
+   * the waking light, in control. `heartReady`: the wake has played; standing in it now ends the
+   * run (`waited`: she was already there).
+   */
+  | { type: 'heartWait'; x: number; y: number; frames: number }
+  | { type: 'heartReady'; x: number; y: number; waited: boolean }
+  /**
+   * The grove answers the offering: with tier `tier` passed, `part` wakes (1 `flowers`: the
+   * shrine's; 2 `paths`: the glow plants along the three lanterns' paths; 3 `canopy`: the lights of
+   * the whole canopy). `frame` = frames into the ending hold. Same step as `heartTier`;
+   * `state.goal.grove[part]` is true from here on.
+   */
+  | {
+      type: 'groveWake';
+      x: number;
+      y: number;
+      tier: number;
+      part: 'flowers' | 'paths' | 'canopy';
+      given: number;
+      frame: number;
     }
   /**
    * The offering goes in (during the ending hold): `value` glints left her (`px`, `py` = her body

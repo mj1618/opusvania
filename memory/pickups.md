@@ -129,7 +129,7 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 - Fan by the killing cut (from `enemyDie.slash`): forward = leaning along the blow; down (a pogo, she
   is above it) = low and wide to both sides, clear of her; up = a tall narrow plume. The up case
   cannot be staged (a ground creature is never above her blade) and has not been seen.
-- Same path as a pod's spill, driven from `sim.enemies[j].spill / spillTimer / spillGap`: a spill
+- (Their look and timing since playtest 5: the section below.) Same path as a pod's spill, driven from `sim.enemies[j].spill / spillTimer / spillGap`: a spill
   "source" is a pod index or `foeBase + j` (`Flight.pod`, `spillN`, `requeue`, `SPILL` stand-in items
   each). They pop from the body centre, leaning `FOE_LEAN` px the way the blow went (`hitDir`), and
   each lands on its `pickup {enemy: true}` event. No burst of our own: the creature and its crumble
@@ -138,6 +138,19 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 - `GlintBatch.end` always uploads the fullest frame so far. The upload happens at the next draw, and
   `__game.step(n)` runs many updates per draw: with a shrinking size, quads past it stayed on the GPU
   (a ghost counter star after a restart).
+
+## Spilled glints after playtest 5 (a kill's, a pod's): small, low, after the freeze
+- `GLINTS.spill`. They are hidden for as long as the hit holds the world (`hold` = the hitstop at the moment
+  they are owed), then pop out 9-21 px from the body, low (`up` 0.55, `lean` 12 px along the blow), hang, and
+  go to her chest one after another on a nearly straight line (bulge <= 9 px) in 0.13 s, each still landing on
+  its `pickup` event. At her chest: a 13 px flare and two motes.
+- **Drawn as `K_STAR` (gold, twinkle 0.1) with an amber `K_SPARK` in it, quad half-size <= 9.8 = a 12 px
+  star.** The world glint's shader shrunk to that size loses its arms (they are ~1 px wide at full size) and
+  is a round spark, i.e. a firefly. A white-hot spark on a cream star goes pale grey-green through the
+  grade in the amber zone: keep the point amber (heat 0.05) and the twinkle low.
+- Seen: burr-path killed with the finisher (7-frame hold): nothing during the hold, six stars between her
+  and the body from frame 8, the last in by frame ~32, never above her waist. Pods use the same path (not
+  captured separately).
 
 ## HUD (`src/render/hud/`): one cluster, top left, outside the post stage
 - `lights.ts` health: one lantern per `hpMax`, a seed of dark glass on a crooked filament (the curl

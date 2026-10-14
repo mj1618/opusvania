@@ -33,6 +33,9 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   ended, glints, time, kills, hits + the tally, offered, offerTier}, offer: {total, given, tier, tiers}, run: {time, hits, kills, deaths}, lost, drops: [{id, x, y, value,
   left, timer}], sanctuary: {burrback, lampwing}}` (goal.md). There is no call to set the wallet:
   gather for real (teleport onto great glints: `teleport(3640, 192)`, `(3648, 1280)`, each + `step(70)`).
+- Playtest 5 additions: `enemies().list[]` has `rams, roused, stirred, dives`; `lanterns().list[]` has `key` (the
+  pickup id it wants, or null) and `keyed`; `goal().heart` has `ready, waited`; `goal().grove {flowers, paths,
+  canopy}`; `goal().ending.offerNext`. Hitboxes: a lampwing is thick red in its dive, green in its stall.
 - `lamps()` → the same record as `lanterns()` for the wayside lamps (`scene.lamps`; the hitbox
   overlay shows them as thin green boxes, gold once lit).
 - `load()` restarts the scene (glints come back, pods close, enemies return, full health, lanterns dark, the heart asleep, the ending undone). `teleport(x, y)` puts the feet centre there at rest and snaps the camera (health, enemies, the last safe ground and the slash count `attackSeq` are kept).
@@ -58,6 +61,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   the shaft floor (3378-3522)**: the close-ups at 3456, 1280 run without enemies (`?nopickups`); with `--pickups` a
   hero placed there is rammed (the wide stop `shaft-pit` stands at 3556 for that reason).
 - `events(n)` is not cleared by `load()` and frame numbers start again at 0: reload the page between runs.
+  (A live bot that calls `load()` twice in one page sees nothing of the second run through `events(n)`: seen 2026-10-14.)
 - `playwright-cli` takes about a second a call: nothing can react to a 26-frame tell through it. For a live
   fight, one `eval` of an async function that watches `state()` per animation frame and dispatches real
   `KeyboardEvent`s (`code: 'ArrowRight' | 'KeyZ' | 'KeyC'`) on `window`.

@@ -61,8 +61,11 @@ function calm(over: Partial<Tuning['lampwing']> = {}): Tuning {
   Object.assign(t.lampwing, { hoverSpeed: 0, bobSpeed: 0 }, over);
   return t;
 }
-/** As `calm`, and blind: it never notices her (a hit still provokes it). */
-const blind = (over: Partial<Tuning['lampwing']> = {}) => calm({ noticePx: 0, ...over });
+/**
+ * As `calm`, and blind: it never notices her (a hit still provokes it). Two hit points: the hit
+ * rules below were written for that (the grove's have three: the dive tests).
+ */
+const blind = (over: Partial<Tuning['lampwing']> = {}) => calm({ noticePx: 0, hp: 2, ...over });
 /** She stands on the floor facing a blind lampwing hanging at chest height at 2200, in reach of a cut. */
 function duel(t = blind(), at = 2110): Sim {
   const s = newSim(scene([lamp(2200, 760)]), t);
@@ -103,7 +106,7 @@ describe('lampwing: hovering', () => {
       expect(seen.size).toBeGreaterThan(12);
       expect(s.state.rng).toBe(rng0);
       const e = foe(s);
-      expect([e.homeX, e.homeY, e.radius, e.hp, e.hpMax, e.w, e.h]).toEqual([2000, 500, 120, 2, 2, 36, 30]);
+      expect([e.homeX, e.homeY, e.radius, e.hp, e.hpMax, e.w, e.h]).toEqual([2000, 500, 120, 3, 3, 36, 30]);
       return out;
     };
     const a = path('a');
@@ -131,7 +134,7 @@ describe('lampwing: hovering', () => {
     expect(small.far).toBeGreaterThan(15);
   });
 
-  it('the wing beat is the sim’s: `flap` runs 0..1, slow in a hover, quick in the tell, faster in pursuit', () => {
+  it('the wing beat is the sim’s: `flap` runs 0..1, slow in a hover, quick in the tell, folded in the dive, slow in the stall', () => {
     const s = newSim(scene([lamp(2000, 600)]), calm());
     s.place(300, FLOOR);
     const rate = (n: number) => {
@@ -149,14 +152,22 @@ describe('lampwing: hovering', () => {
     expect(rate(100)).toBeCloseTo(L.flapHover, 5);
     s.place(1850, FLOOR);
     expect(rate(30)).toBeCloseTo(L.flapCurious, 2);
-    s.run('.40');
+    // In the dive its wings are folded back; stalled at the bottom it beats slowly; climbing, hard.
+    s.state.player.invuln = 1e6;
+    s.run('.10');
+    expect(foe(s).mode).toBe('dive');
+    expect(rate(10)).toBeCloseTo(L.flapDive, 2);
+    for (let f = 0; f < 60 && foe(s).mode !== 'stall'; f++) s.run('.1');
+    expect(rate(20)).toBeCloseTo(L.flapStall, 2);
+    for (let f = 0; f < 60 && foe(s).mode !== 'pursue'; f++) s.run('.1');
+    s.run('.20');
     expect(foe(s).mode).toBe('pursue');
-    expect(rate(20)).toBeCloseTo(L.flapPursue, 2);
+    expect(rate(10)).toBeGreaterThan(L.flapHover + 0.04);
   });
 });
 
 describe('lampwing: noticing her', () => {
-  it('needs her within 260 px AND in plain view; then a 36-frame tell (it turns to her and rises), then pursuit', () => {
+  it('needs her within 260 px AND in plain view; then a 36-frame tell (it turns to her and rises), then the dive', () => {
     // Too far (340 px), for as long as she likes.
     let s = newSim(scene([lamp(2000, 600)]), calm());
     s.place(1700, FLOOR);
@@ -203,7 +214,7 @@ describe('lampwing: noticing her', () => {
       }
     });
     expect(modes.indexOf('curious')).toBe(0);
-    expect(modes.indexOf('pursue')).toBe(L.curiousFrames);
+    expect(modes.indexOf('dive')).toBe(L.curiousFrames);
     expect([L.noticePx, L.curiousFrames, L.noticeSafeFrames]).toEqual([260, 36, 20]);
     // The tell: it lifts about 13 px before it comes.
     expect((ys[0] as number) - (ys[29] as number)).toBeGreaterThanOrEqual(10);
@@ -247,56 +258,174 @@ describe('lampwing: noticing her', () => {
   });
 });
 
-describe('lampwing: pursuit', () => {
-  it('drifts after her at no more than 2.2 px/f, turning by no more than 0.075 px/f²', () => {
-    const s = newSim(scene([lamp(2000, 600)]), calm());
+describe('lampwing: the dive', () => {
+  /** She stands 150 px left of and 160 px below one at (2000, 600); it has just finished its tell. */
+  const told = (t = calm()) => {
+    const s = newSim(scene([lamp(2000, 600)]), t);
     s.place(1850, FLOOR);
-    s.state.player.invuln = 1e6;
-    let top = 0;
-    let turn = 0;
-    let pv = { x: 0, y: 0 };
-    let n = 0;
-    // She runs back and forth under it, so it has to keep turning.
-    frames(s, '.40 L14 R28 L28 R28 L28 R28 L14 .60', () => {
+    const ev = s.run(`.${L.curiousFrames + 1}`);
+    expect(foe(s).mode).toBe('dive');
+    return { s, dive: of(ev, 'enemyDive')[0] };
+  };
+
+  it('the tell over, it commits: an arc to where she stood, slow out, fast through the middle, slow in; standing still she is hit', () => {
+    const { s, dive } = told();
+    // (The tell lifted it ~15 px.) The dive: from where it hangs to her body centre, 5.4 px/f on average
+    // (slower than she runs: live, a dive at 6.5 reached one who began to run 18 frames into it).
+    const from = { x: dive?.x ?? 0, y: dive?.y ?? 0 };
+    const dist = Math.hypot(1850 - from.x, 760 - from.y);
+    expect(dive).toMatchObject({ id: 'l2000', tx: 1850, ty: 760, dive: 1, dir: -1 });
+    expect(dive?.frames).toBe(Math.round(dist / L.diveSpeed));
+    expect(foe(s)).toMatchObject({ targetX: 1850, targetY: 760, fromX: from.x, fromY: from.y, dives: 1 });
+    const path: Array<{ x: number; y: number }> = [];
+    const speed: number[] = [];
+    let hurtAt = -1;
+    frames(s, `.${(dive?.frames ?? 0) + 4}`, (ev, f) => {
       const e = foe(s);
-      if (e.mode === 'pursue' && e.modeFrames > 0) {
-        top = Math.max(top, Math.hypot(e.vx, e.vy));
-        turn = Math.max(turn, Math.hypot(e.vx - pv.x, e.vy - pv.y));
-        n++;
-      }
-      pv = { x: e.vx, y: e.vy };
+      if (hurtAt < 0 && of(ev, 'hurt').length) hurtAt = f;
+      if (e.mode !== 'dive') return;
+      path.push(mid(e));
+      speed.push(Math.hypot(e.vx, e.vy));
     });
-    expect(n).toBeGreaterThan(200);
-    expect(top).toBeLessThanOrEqual(L.pursueSpeed + 1e-9);
-    expect(top).toBeGreaterThan(L.pursueSpeed - 0.01);
-    expect(turn).toBeLessThanOrEqual(L.pursueAccel + 1e-9);
-    expect([L.pursueSpeed, L.pursueAccel]).toEqual([2.2, 0.075]);
-    expect(L.pursueSpeed).toBeLessThan(defaultTuning.run.maxSpeed / 4);
+    // Down first, then along: it never rises, never turns back, and is below the straight line to her.
+    for (let i = 1; i < path.length; i++) {
+      expect((path[i] as { y: number }).y).toBeGreaterThanOrEqual((path[i - 1] as { y: number }).y);
+      expect((path[i] as { x: number }).x).toBeLessThanOrEqual((path[i - 1] as { x: number }).x);
+    }
+    const half = path[Math.floor(path.length / 2)] as { x: number; y: number };
+    const line = from.y + ((760 - from.y) * (half.x - from.x)) / (1850 - from.x);
+    expect(half.y).toBeGreaterThan(line + 20);
+    // Eased: the first and last frames are slow, the middle is the swoop (about 1.5 x the average).
+    const top = Math.max(...speed);
+    expect(speed[0]).toBeLessThan(2.5);
+    expect(top).toBeGreaterThan(L.diveSpeed * 1.25);
+    expect(top).toBeLessThan(L.diveSpeed * 1.9);
+    // She stood still through all of it: it reaches her (never sooner than the tell + most of the dive).
+    // (Its body meets her head a little before the arc's end: about three fifths of the way in.)
+    expect(hurtAt).toBeGreaterThan((dive?.frames ?? 0) * 0.55);
+    expect(of(s.events, 'hurt')[0]?.source).toEqual({ kind: 'lampwing', id: 'l2000' });
+    expect([L.diveSpeed, L.diveMinFrames, L.diveMaxFrames, L.diveMaxPx, L.stallFrames]).toEqual([
+      5.4, 20, 52, 340, 34,
+    ]);
   });
 
-  it('standing still she is reached in about two seconds; walking away she is never caught', () => {
-    // 205 px away: the tell (30), then about 90 frames of drifting to her.
-    let s = newSim(scene([lamp(2000, 620)]), calm());
-    s.place(1850, FLOOR);
-    let hurtAt = -1;
-    frames(s, '.200', (ev, f) => {
-      if (hurtAt < 0 && of(ev, 'hurt').length) hurtAt = f;
+  it('dodgeable by moving: she walks on, the dive ends where she was, and it hangs there 34 frames, open and harmless', () => {
+    const { s, dive } = told();
+    let stallAt = -1;
+    let stall: SimEvent | undefined;
+    frames(s, 'R60', (ev, f) => {
+      if (stallAt < 0 && of(ev, 'enemyStall').length) {
+        stallAt = f;
+        stall = of(ev, 'enemyStall')[0];
+      }
     });
-    expect(hurtAt).toBeGreaterThan(105);
-    expect(hurtAt).toBeLessThan(135);
+    expect(of(s.events, 'hurt')).toEqual([]);
+    expect(stallAt).toBe((dive?.frames ?? 0) - 1);
+    expect(stall).toMatchObject({ frames: L.stallFrames, cause: 'done' });
+    // It ended where she had stood (within a pixel or two of rounding), not where she is.
+    expect(Math.abs((stall as { x: number }).x - 1850)).toBeLessThanOrEqual(2);
+    expect(Math.abs((stall as { y: number }).y - 760)).toBeLessThanOrEqual(2);
+    // Stalled, its touch does nothing: she walks back into it and stands there.
+    const q = told().s;
+    q.run('R30');
+    for (let f = 0; f < 60 && foe(q).mode !== 'stall'; f++) q.run('.1');
+    q.place(mid(foe(q)).x, FLOOR);
+    let met = 0;
+    frames(q, `.${L.stallFrames - 2}`, (ev) => {
+      if (overlap(q, foe(q))) met++;
+      expect(of(ev, 'hurt')).toEqual([]);
+      expect(foe(q).mode).toBe('stall');
+    });
+    expect(met).toBeGreaterThan(20);
+  });
 
-    // The same, but she walks off as it starts toward her: the gap only grows.
-    s = newSim(scene([lamp(2000, 620)]), calm());
-    s.place(1850, FLOOR);
-    s.run('.40');
-    expect(foe(s).mode).toBe('pursue');
-    let gap = Math.hypot(mid(foe(s)).x - her(s).x, mid(foe(s)).y - her(s).y);
-    frames(s, 'L30', () => {
-      const g = Math.hypot(mid(foe(s)).x - her(s).x, mid(foe(s)).y - her(s).y);
-      expect(g).toBeGreaterThan(gap);
-      gap = g;
+  it('then it climbs to a perch above her and tells again; three dives and it has had enough', () => {
+    const { s } = told();
+    s.state.player.invuln = 1e6;
+    const order: string[] = [];
+    let climb: SimEvent | undefined;
+    let tired = -1;
+    frames(s, '.700', (ev, f) => {
+      for (const e of ev) {
+        if (
+          e.type === 'enemyDive' ||
+          e.type === 'enemyStall' ||
+          e.type === 'enemyClimb' ||
+          e.type === 'enemyNotice'
+        )
+          order.push(e.type);
+        if (e.type === 'enemyClimb' && !climb) climb = e;
+        if (e.type === 'enemyGiveUp') {
+          order.push(e.cause);
+          if (tired < 0) tired = f;
+        }
+      }
     });
-    expect(s.state.player.hp).toBe(4);
+    expect(order.slice(0, 10)).toEqual([
+      'enemyStall',
+      'enemyClimb',
+      'enemyNotice',
+      'enemyDive',
+      'enemyStall',
+      'enemyClimb',
+      'enemyNotice',
+      'enemyDive',
+      'enemyStall',
+      'tired',
+    ]);
+    // The perch: 170 px over her body centre, 110 px to the side it is on.
+    expect(climb).toMatchObject({ ty: 760 - L.perchUpPx });
+    expect(Math.abs((climb as { tx: number }).tx - 1850)).toBe(L.perchSidePx);
+    expect(
+      of(s.events, 'enemyDive')
+        .slice(0, 3)
+        .map((d) => d.dive),
+    ).toEqual([1, 2, 3]);
+    // One whole cycle (tell, dive, stall, climb) is about two seconds; then it rests and goes home.
+    expect(tired).toBeGreaterThan(200);
+    expect(tired).toBeLessThan(480);
+    expect([L.maxDives, L.perchUpPx, L.perchSidePx, L.pursueSpeed]).toEqual([3, 170, 110, 3.4]);
+  });
+
+  it('the stall is her opening: three hit points; cut, cut and it climbs off at 1; the whole chain kills it there', () => {
+    // She steps back from the dive, steps in as it hangs, and cuts twice.
+    const a = told().s;
+    a.run('L14');
+    for (let f = 0; f < 60 && foe(a).mode !== 'stall'; f++) a.run('.1');
+    const ev = a.run('R6 R+A1 .20 A1 .60');
+    expect(of(ev, 'enemyHit').map((h) => h.hpLeft)).toEqual([2, 1]);
+    expect(of(ev, 'hurt')).toEqual([]);
+    // Struck, it climbs to come again (no rest, no flight home).
+    expect(of(ev, 'enemyClimb').length).toBeGreaterThanOrEqual(1);
+    // The chain: cut, cut, finisher inside the one stall (the tumble keeps it there).
+    const b = told().s;
+    b.run('L14');
+    for (let f = 0; f < 60 && foe(b).mode !== 'stall'; f++) b.run('.1');
+    const all = b.run('R6 R+A1 .20 A1 .22 A1 .40');
+    expect(of(all, 'enemyDie')).toHaveLength(1);
+    expect(of(all, 'enemyDie')[0]).toMatchObject({ power: 2, value: L.valueFinisher });
+    expect(L.hp).toBe(3);
+  });
+
+  it('a cut as it arrives lands (the dive is no shield), and a wall in its way stops it short', () => {
+    const { s, dive } = told();
+    // She waits for it and cuts in its last frames: it tumbles away, harmless.
+    s.run(`.${(dive?.frames ?? 0) - 17}`);
+    const ev = s.run('R+A1 .40');
+    expect(of(ev, 'enemyHit')).toHaveLength(1);
+    expect(of(ev, 'hurt')).toEqual([]);
+    // A post between them (she is seen over it): the dive never goes through it; it slides along
+    // it or stops against it, and stalls short of her.
+    const post: SolidRect = { tag: 'trunk', x: 1900, y: 730, w: 30, h: 70 };
+    const w = newSim(scene([lamp(2000, 600)], { solids: [post] }), calm());
+    w.place(1850, FLOOR);
+    let stalled = 0;
+    frames(w, '.100', (ev) => {
+      stalled += of(ev, 'enemyStall').length;
+      expect(inSolid(w.scene, foe(w))).toBe(false);
+    });
+    expect(of(w.events, 'enemyDive').length).toBeGreaterThanOrEqual(1);
+    expect(stalled + of(w.events, 'hurt').length).toBeGreaterThanOrEqual(1);
   });
 
   it('a gliding hero: flying into it costs a light; one cut and she flies on through it; passing 130 px over it, nothing', () => {
@@ -324,7 +453,7 @@ describe('lampwing: pursuit', () => {
         const dy = mid(e).y - her(s).y;
         near = Math.min(near, Math.hypot(dx, dy));
         const a: boolean =
-          cut && !prev && p.attackCd === 0 && e.hp === 2 && dx > 40 && dx < 150 && Math.abs(dy) < 45;
+          cut && !prev && p.attackCd === 0 && e.hp === e.hpMax && dx > 40 && dx < 150 && Math.abs(dy) < 45;
         const from = s.events.length;
         step(
           s.state,
@@ -345,24 +474,13 @@ describe('lampwing: pursuit', () => {
     expect(into.speed).toBeGreaterThan(11.5);
     // The answer: a cut on the way in. It tumbles, harmless, and she is through before it rights itself.
     const through = fly(1250, true);
-    expect([through.hurtAt, through.hp, through.gliding]).toEqual([-1, 1, true]);
+    expect([through.hurtAt, through.hp, through.gliding]).toEqual([-1, L.hp - 1, true]);
     expect(through.near).toBeLessThan(30);
     // Her line 130 px above its home: it sees her, lifts, turns after her, and never gets near.
     const over = fly(1380, false);
     expect(over.hurtAt).toBe(-1);
     expect(over.near).toBeGreaterThan(90);
-    expect(['curious', 'pursue', 'rest']).toContain(over.mode);
-  });
-
-  it('out of sight it goes to where it last saw her', () => {
-    const wall: SolidRect = { tag: 'trunk', x: 1650, y: 300, w: 60, h: 500 };
-    const s = newSim(scene([lamp(2000, 600)], { solids: [wall] }), calm());
-    s.place(1850, FLOOR);
-    s.run('.40');
-    s.place(1560, FLOOR);
-    s.run('.60');
-    const e = foe(s);
-    expect([e.mode, e.targetX, e.targetY, e.lost]).toEqual(['pursue', 1850, 760, 60]);
+    expect(['curious', 'dive', 'stall', 'pursue', 'rest', 'return']).toContain(over.mode);
   });
 });
 
@@ -371,7 +489,7 @@ describe('lampwing: giving up', () => {
     const s = newSim(scene([lamp(2000, 600)], extra), t);
     s.place(1850, FLOOR);
     s.run('.40');
-    expect(foe(s).mode).toBe('pursue');
+    expect(foe(s).mode).toBe('dive');
     return s;
   };
   const gaveUp = (s: Sim, script: string) => {
@@ -393,7 +511,8 @@ describe('lampwing: giving up', () => {
     const s = start();
     let dist = 0;
     let at = -1;
-    frames(s, 'L80', (ev, f) => {
+    // (Its dive is committed: it ends where she stood, hangs, and only then sees she is gone.)
+    frames(s, 'L120', (ev, f) => {
       if (at < 0 && of(ev, 'enemyGiveUp').length) {
         at = f;
         expect(of(ev, 'enemyGiveUp')[0]?.cause).toBe('far');
@@ -402,22 +521,23 @@ describe('lampwing: giving up', () => {
     });
     expect(at).toBeGreaterThan(0);
     expect(dist).toBeGreaterThan(L.leashPx);
-    expect(dist).toBeLessThan(L.leashPx + 12);
   });
 
   it('lost: it has not seen her for 90 frames', () => {
     const wall: SolidRect = { tag: 'trunk', x: 1650, y: 300, w: 60, h: 500 };
     const s = start(calm(), { solids: [wall] });
     s.place(1560, FLOOR);
-    expect(gaveUp(s, '.120')).toEqual({ at: L.lostFrames - 1, cause: 'lost' });
+    // (The dive and the stall play out; climbing, it cannot find her.)
+    const r = gaveUp(s, '.260');
+    expect(r.cause).toBe('lost');
+    expect(r.at).toBeGreaterThan(L.lostFrames);
   });
 
-  it('tired: six seconds of pursuit and it has had enough, even on top of her', () => {
+  it('tired: three dives and it has had enough, even on top of her', () => {
     const s = start();
     s.state.player.invuln = 1e6;
-    // (`start` ran 40 frames: the 36 of the tell and the first 4 of the chase.)
-    expect(gaveUp(s, '.400')).toEqual({ at: L.pursueFrames - (40 - L.curiousFrames), cause: 'tired' });
-    expect(L.pursueFrames).toBe(360);
+    expect(gaveUp(s, '.500').cause).toBe('tired');
+    expect(of(s.events, 'enemyDive')).toHaveLength(L.maxDives);
     expect(s.state.player.hp).toBe(4);
   });
 
@@ -433,7 +553,7 @@ describe('lampwing: giving up', () => {
 
   it('then: it hangs 60 frames, flies home, and notices nothing until it is there', () => {
     const s = start();
-    expect(gaveUp(s, 'L80').cause).toBe('far');
+    expect(gaveUp(s, 'L90').cause).toBe('far');
     // She comes straight back and stands under it.
     s.place(1900, FLOOR);
     s.state.player.invuln = 1e6;
@@ -447,7 +567,12 @@ describe('lampwing: giving up', () => {
       if (noticed < 0 && of(ev, 'enemyNotice').length) noticed = f;
       if (e.mode === 'return') expect([e.targetX, e.targetY]).toEqual([2000, 600]);
     });
-    expect(modes.slice(0, 4)).toEqual(['rest', 'return', 'hover', 'curious']);
+    expect(modes.slice(modes.indexOf('rest'), modes.indexOf('rest') + 4)).toEqual([
+      'rest',
+      'return',
+      'hover',
+      'curious',
+    ]);
     // Home = within 24 px of it; only then can it notice again (the frame after it is back).
     expect(home).toBeGreaterThan(30);
     expect(noticed).toBe(home + 1);
@@ -549,19 +674,19 @@ describe('lampwing: contact', () => {
     expect([foe(s).mode, mid(foe(s)).x]).toEqual(['hover', 2200]);
 
     // She cuts it and walks on into it: harmless for the hitstop and all 24 frames of its tumble
-    // (a burrback: only the first 8). The moment it rights itself, its touch counts again.
+    // (a burrback: only the first 8), and for the first 12 frames of its climb away after it.
     s = duel();
     let touched = 0;
     let hurtAt = -1;
     // (She is kept inside it, wherever the shove takes it.)
-    frames(s, 'A1 .40', (ev, f) => {
+    frames(s, 'A1 .60', (ev, f) => {
       const e = foe(s);
       if (f > 0 && e.hitstop === 0) s.state.player.x = e.x - 2;
       if (e.mode === 'hurt' && overlap(s, e)) touched++;
       if (hurtAt < 0 && of(ev, 'hurt').length) hurtAt = f;
     });
     expect(touched).toBeGreaterThanOrEqual(4);
-    expect(hurtAt).toBe(1 + EN.hitstopFrames + L.hurtFrames);
+    expect(hurtAt).toBe(1 + EN.hitstopFrames + L.hurtFrames + L.climbSafeFrames + 1);
     expect([L.hurtFrames, L.hurtSafeFrames]).toEqual([24, 24]);
 
     // Dead: the falling body is nothing to her.
@@ -635,7 +760,7 @@ describe('lampwing: taking hits', () => {
     });
     expect(die?.knockback).toBeCloseTo(12.1, 9);
     expect(s.state.pickups.count).toBe(5);
-    expect([L.value, L.valueFinisher, L.hp]).toEqual([3, 5, 2]);
+    expect([L.value, L.valueFinisher, L.hp]).toEqual([3, 5, 3]);
   });
 
   it('pogo: a down slash bounces her off it exactly like a pod, refills dash and double jump, and hurts it: two bounces kill', () => {
@@ -662,7 +787,8 @@ describe('lampwing: taking hits', () => {
     expect(ys[0]).toBe(600);
     expect(ys[1]).toBeGreaterThan(615);
     expect(of(s.events, 'enemyHit')[0]).toMatchObject({ slash: 'down', hpLeft: 1 });
-    expect([foe(s).knockVx, mid(foe(s)).x]).toEqual([0, 2200]);
+    expect(foe(s).knockVx).toBe(0);
+    expect(Math.abs(mid(foe(s)).x - 2200)).toBeLessThanOrEqual(4);
   });
 
   it('a pogo chain: two lampwings in a row carry her across a gap she could not otherwise cross that high', () => {
@@ -822,11 +948,13 @@ describe('lampwing: where it will not go', () => {
     frames(s, '.380', (_, f) => {
       const a = foe(s, 0);
       const b = foe(s, 1);
-      if (a.mode !== 'pursue' || b.mode !== 'pursue' || f < 200) return;
+      // (Both hanging at the bottom of a dive at the same spot, or climbing off it together.)
+      const on = (e: EnemyState) => (e.mode === 'stall' && e.modeFrames > 12) || e.mode === 'pursue';
+      if (!on(a) || !on(b) || f < 60) return;
       both++;
       near = Math.min(near, Math.hypot(mid(a).x - mid(b).x, mid(a).y - mid(b).y));
     });
-    expect(both).toBeGreaterThan(100);
+    expect(both).toBeGreaterThan(40);
     expect(near).toBeGreaterThan(20);
     // A burrback and a lampwing ignore each other.
     const q = newSim(scene([lamp(2000, 783), burr(2100, -1)]), blind());
@@ -883,7 +1011,7 @@ describe('lampwing: where it will not go', () => {
 });
 
 describe('lampwing: fade and re-form, restart', () => {
-  it('when she re-forms the living ones are home with full hp; the dead stay dead', () => {
+  it('when she re-forms the living ones are home, their wounds kept; the dead stay dead', () => {
     const s = newSim(
       scene([lamp(2000, 620, 1, 'a'), lamp(2600, 760, 1, 'b'), lamp(2060, 620, 1, 'c')]),
       calm(),
@@ -914,7 +1042,13 @@ describe('lampwing: fade and re-form, restart', () => {
     expect(Math.abs((re?.x ?? 0) - 2510)).toBeLessThan(12);
     for (const k of [0, 2]) {
       const e = foe(s, k);
-      expect([e.mode, e.hp, e.homeX, e.homeY, e.chase]).toEqual(['hover', 2, k === 0 ? 2000 : 2060, 620, 0]);
+      expect([e.mode, e.hp, e.homeX, e.homeY, e.chase]).toEqual([
+        'hover',
+        k === 0 ? L.hp : 1,
+        k === 0 ? 2000 : 2060,
+        620,
+        0,
+      ]);
       expect(Math.hypot(mid(e).x - e.homeX, mid(e).y - e.homeY)).toBeLessThan(16);
     }
     expect([foe(s, 1).mode, foe(s, 1).gone]).toEqual(['dead', true]);
@@ -968,7 +1102,7 @@ describe('lampwing: determinism and symmetry', () => {
     expect(hashState(cloneState(a.state))).toBe(hashState(a.state));
     expect(JSON.parse(JSON.stringify(a.state))).toEqual(a.state);
     const kinds = new Set(a.events.map((e) => e.type));
-    for (const k of ['enemyNotice', 'enemyGiveUp', 'enemyHit', 'hurt'])
+    for (const k of ['enemyNotice', 'enemyDive', 'enemyStall', 'enemyGiveUp'])
       expect(kinds.has(k as never), k).toBe(true);
   });
 
@@ -1020,7 +1154,7 @@ describe('lampwings in the grove', () => {
   const list = (GROVE.enemies ?? []).filter((e) => e.kind === 'lampwing');
   const first = (GROVE.enemies ?? []).length - list.length;
 
-  it('six, after the burrbacks; validated: open air, under the canopy, away from the spawn and from every pod and great glint', () => {
+  it('seven, after the burrbacks; validated: open air, under the canopy, away from the spawn and from every pod and great glint', () => {
     expect(list.map((e) => [e.id, e.x, e.y, e.radius])).toEqual([
       ['lamp-glade', 800, 690, 100],
       // (Playtest 4: at 1290, 480 it sat in the arc of the jump from F2 to F3 and hit 0.2 s after its
@@ -1034,7 +1168,12 @@ describe('lampwings in the grove', () => {
       // it 1.8 s ahead, and cuts it on the way in or closes her wings under it. East of the pogo
       // chain's second bounce by more than its sight, so the chain does not wake it.
       ['lamp-sky', 5180, 105, 50],
+      // Over burr-rise (playtest 5: the last fight is a pair, two tells to manage), in the gap
+      // under F7's west end, 188 px over the rise. It does not see where the stair sets her down (4770).
+      ['wing-rise', 5090, 900, 50],
     ]);
+    // lamp-sky watches the glide's lane from further than the rest (its dive has to be made in time).
+    expect(list.map((e) => e.sight ?? 0)).toEqual([0, 0, 0, 0, 0, 500, 0]);
     expect((GROVE.enemies ?? []).slice(0, first).every((e) => e.kind === 'burrback')).toBe(true);
     const prizes = [...(GROVE.pods ?? []), ...(GROVE.pickups ?? []).filter((p) => p.kind === 'great')];
     for (const e of list) {

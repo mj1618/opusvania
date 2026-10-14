@@ -4,7 +4,7 @@ import type { SimEvent } from '../../src/sim/events';
 import { hashState, lanternBox, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
 import { cloneTuning, defaultTuning, type Tuning } from '../../src/sim/tuning';
-import { feet, newSim } from './helpers';
+import { feet, hopOnto, newSim } from './helpers';
 
 /**
  * The naive players of playtest 3, as pilots. Neither knows the scene. Both do the same few things,
@@ -32,6 +32,14 @@ import { feet, newSim } from './helpers';
  * design, so they are hit, and must still finish without fading (the reader, who takes no hit, is
  * piloted in burrback-ram.test.ts).
  *
+ * Since playtest 5 the second lantern wants the ember that hangs over F3 (above the first lantern:
+ * memory/goal.md). Told so at the summit (`lanternRefuse.key`), she turns round and goes for it the
+ * only way she knows, back along the floor, the same reactions mirrored; from the bank the islands
+ * are steps toward a light she can see (the one part of the run that is aimed, not reacted: the
+ * route pilot's hops). Then east again, the road she has already walked. And the fights now have a
+ * second beat: these two, who stand and cut, pay two lights a burrback and FADE on the road; the
+ * wayside lamps they bought are where they re-form, and they finish all the same.
+ *
  * `NAIVE_TRACE=1 npx vitest run tests/unit/naive-pilot.test.ts --disable-console-intercept` prints
  * the timelines.
  */
@@ -42,11 +50,15 @@ const lights = [
 ];
 const pods = GROVE.pods ?? [];
 const heart = GROVE.heart as { x: number; y: number };
+const picks = GROVE.pickups ?? [];
+const islands = GROVE.solids.filter((r) => r.tag === 'floating').slice(0, 3);
+const bank = GROVE.solids[0] as (typeof GROVE.solids)[number];
 
 interface Run {
   ended: boolean;
   frames: number;
   hits: number;
+  fades: number;
   timeline: string[];
   events: SimEvent[];
   hash: string;
@@ -61,7 +73,7 @@ interface Run {
 function naive(
   press: number,
   beat: number,
-  o: { pods?: 'all' | 'first'; lamps?: boolean; stand?: boolean } = {},
+  o: { pods?: 'all' | 'first'; lamps?: boolean; stand?: boolean; read?: number } = {},
   t: Tuning = cloneTuning(defaultTuning),
   maxFrames = 60 * 150,
 ): Run {
@@ -79,6 +91,18 @@ function naive(
   const given = lights.map(() => 0);
   let seen = 0;
   let home = false;
+  /** The ember a lantern has asked for (index into the scene's pickups), while she is fetching it. */
+  let fetch = -1;
+  // The careful player (`read` = her reaction, frames): what she has seen begin and when she can answer it.
+  const read = o.read ?? -1;
+  const braceAt = s.state.enemies.map(() => -1);
+  const diveAt = s.state.enemies.map(() => -1);
+  let hop = 0;
+  let hopDir = 0;
+  let dodge = 0;
+  let dodgeDir = 0;
+  let wasBlocked = false;
+  const ix = (id: string) => s.state.enemies.findIndex((e) => e.id === id);
   for (let f = 0; f < maxFrames && !s.state.goal.ended; f++) {
     const p = s.state.player;
     const at = feet(s);
@@ -89,9 +113,24 @@ function naive(
       if (e.type === 'lanternNotice' || e.type === 'lampNotice') {
         const k = lights.findIndex((l) => l.id === e.id);
         if (k >= 0) stirred[k] = true;
+        // One who never stops at a light is told as she passes: the notice carries what it wants too.
+        if (e.type === 'lanternNotice' && e.key && o.stand === false) {
+          const key = e.key.id;
+          if (fetch < 0) say(`${e.id} wants ${key} (in passing): she turns back for it`);
+          fetch = picks.findIndex((q) => q.id === key);
+        }
       } else if (e.type === 'lanternKindle' || e.type === 'lampKindle')
         say(`${e.id} lit (${e.lit} of ${e.total})`);
-      else if (e.type === 'lanternRefuse' || e.type === 'lampRefuse')
+      else if (e.type === 'lanternRefuse' && e.key) {
+        const key = e.key.id;
+        if (fetch < 0) say(`${e.id} wants ${key}: she turns back for it`);
+        fetch = picks.findIndex((q) => q.id === key);
+      } else if (e.type === 'lanternKey') {
+        say(`${e.key} is hers: back to ${e.id}`);
+        fetch = -1;
+        const k = lights.findIndex((l) => l.id === e.id);
+        if (k >= 0) given[k] = 0;
+      } else if (e.type === 'lanternRefuse' || e.type === 'lampRefuse')
         say(`${e.id} refuses: ${e.have} of ${e.need}`);
       else if (e.type === 'heartWake') {
         say('the heart wakes');
@@ -104,7 +143,13 @@ function naive(
       else if (e.type === 'gather')
         say(`the heart: ${e.glints} glints, ${e.lanterns} lanterns, ${e.hits} hits`);
       else if (e.type === 'glideStart') say('wings open');
-      else if (e.type === 'enemyWindup') say(`${e.id} braces`);
+      else if (e.type === 'enemyWindup') {
+        say(`${e.id} braces`);
+        braceAt[ix(e.id)] = f + Math.max(0, read);
+      } else if (e.type === 'enemyDive') {
+        say(`${e.id} dives`);
+        diveAt[ix(e.id)] = f + Math.max(0, read);
+      } else if (e.type === 'lanternRest' || e.type === 'lampRest') say(`rested at ${e.id}`);
       else if (e.type === 'enemyBlock') say(`her cut glances off ${e.id}`);
       else if (e.type === 'enemyRecover') say(`${e.id} spent (${e.cause})`);
       else if (e.type === 'enemyHit') say(`${e.id} cut: ${e.hpLeft} left`);
@@ -112,18 +157,37 @@ function naive(
     }
     let m = 0;
     let dir = home ? Math.sign(heart.x - at.x) : 1;
+    /** She is on her way to a light that stirred, or standing at it. */
+    let tending = false;
+    // Fetching the ember: west along the floor as she came (the same reactions, mirrored); once on
+    // the bank, up the islands toward it (the route pilot's hops), and onto it.
+    const ember = fetch >= 0 ? picks[fetch] : undefined;
+    if (ember && (s.state.pickups.timers[fetch] ?? 0) === 0) {
+      dir = -1;
+      const top = islands[islands.length - 1] as (typeof islands)[number];
+      if (at.y <= top.y && at.x > top.x - 60 && at.x < top.x + top.w + 60)
+        dir = Math.abs(ember.x - at.x) <= 8 ? 0 : Math.sign(ember.x - at.x);
+      else if (p.grounded && at.y === bank.y && at.x < bank.x + bank.w - 40) {
+        let ok = true;
+        for (const r of islands) ok = ok && hopOnto(s, r) >= 0;
+        if (ok) say('up the islands, on F3');
+        prev = 0;
+        continue;
+      }
+    } else if (ember) dir = 0;
     // A light that stirred: up to it, and stand a moment.
     // (One that stands on the ground she is on, within a few steps: nothing she has to work out.)
     for (let k = 0; k < lights.length; k++) {
       const l = lights[k] as (typeof lights)[number];
       const st = l.lamp ? g.lamps[l.i] : g.lanterns[l.i];
-      if ((l.lamp && o.lamps === false) || o.stand === false) continue;
+      if ((l.lamp && o.lamps === false) || o.stand === false || fetch >= 0) continue;
       if (!stirred[k] || !st || st.lit || !p.grounded || at.y !== l.y || Math.abs(at.x - l.x) > 320) continue;
       // She gives it two seconds; if it shows its price instead (and nothing is on its way), she goes on.
       if ((st.refused && !st.pledged) || (given[k] as number) > 120) continue;
       const b = lanternBox(l, t.goal);
       if (p.x < b.x + b.w && b.x < p.x + p.w) given[k] = (given[k] as number) + 1;
       dir = Math.abs(at.x - l.x) <= 12 ? 0 : Math.sign(l.x - at.x);
+      tending = true;
       break;
     }
     // In the way, at her height, within a blade's length ahead: a closed pod or a living creature.
@@ -138,10 +202,121 @@ function naive(
     }
     for (const e of s.state.enemies) {
       const dx = (e.x + e.w / 2 - at.x) * face;
-      if (e.mode !== 'dead' && e.kind === 'burrback' && dx > 0 && dx < 120 && Math.abs(e.y + e.h - at.y) < 40)
+      if (
+        read < 0 &&
+        e.mode !== 'dead' &&
+        e.kind === 'burrback' &&
+        dx > 0 &&
+        dx < 120 &&
+        Math.abs(e.y + e.h - at.y) < 40
+      )
         cut = true;
     }
-    if (cut && p.grounded) {
+    // --- The careful player reads what is in front of her (her reaction: `read` frames).
+    let acted = false;
+    if (read >= 0 && !g.gathered) {
+      // Hurt, with a lit light on the ground she stands on a few steps away and nothing on her: rest there.
+      const foe = s.state.enemies.find(
+        (e) =>
+          e.mode !== 'dead' &&
+          Math.abs(e.x + e.w / 2 - at.x) < 300 &&
+          Math.abs(e.y + e.h - at.y) < 200 &&
+          (e.kind === 'burrback'
+            ? e.roused > 0 || e.stirred > 0 || e.braced
+            : e.mode !== 'hover' && e.mode !== 'return'),
+      );
+      if (!foe && p.hp < p.hpMax && p.grounded && !g.restHold) {
+        const k = lights.findIndex((l) => {
+          const st = l.lamp ? g.lamps[l.i] : g.lanterns[l.i];
+          return st?.lit === true && l.y === at.y && Math.abs(l.x - at.x) < 420;
+        });
+        const l = k >= 0 ? lights[k] : undefined;
+        if (l) {
+          dir = Math.abs(at.x - l.x) <= 10 ? 0 : Math.sign(l.x - at.x);
+          m |= dir > 0 ? RIGHT : dir < 0 ? LEFT : 0;
+          acted = true;
+        }
+      }
+      // A lampwing's dive is at where she stood: step out of it (and on), once she has seen it start.
+      for (let i = 0; i < s.state.enemies.length && !acted; i++) {
+        const e = s.state.enemies[i] as (typeof s.state.enemies)[number];
+        if (e.kind !== 'lampwing') continue;
+        const ex = e.x + e.w / 2;
+        if (
+          e.mode === 'dive' &&
+          f >= (diveAt[i] as number) &&
+          Math.abs(e.targetX - at.x) < 90 &&
+          dodge === 0
+        ) {
+          dodge = 16;
+          dodgeDir = dir !== 0 ? dir : at.x >= ex ? 1 : -1;
+        }
+        // Hanging at the bottom of its arc beside her: her opening.
+        const dx = ex - at.x;
+        if (
+          e.mode === 'stall' &&
+          p.grounded &&
+          Math.abs(dx) < 105 &&
+          Math.abs(e.y + e.h / 2 - (at.y - 40)) < 50
+        ) {
+          if ((prev & A) === 0 && p.attackCd === 0) m |= A;
+          if (p.facing !== Math.sign(dx) && dx !== 0) m |= dx > 0 ? RIGHT : LEFT;
+          acted = true;
+        }
+      }
+      if (!acted && dodge > 0) {
+        dodge--;
+        m |= dodgeDir > 0 ? RIGHT : LEFT;
+        acted = true;
+      }
+      // A burrback on her ground: keep a blade's length, cut it while it is open; when it braces,
+      // wait her reaction out, hop it, turn and cut it winded.
+      let best = -1;
+      for (let i = 0; i < s.state.enemies.length && !acted; i++) {
+        const e = s.state.enemies[i] as (typeof s.state.enemies)[number];
+        if (e.kind !== 'burrback' || e.mode === 'dead') continue;
+        const dx = e.x + e.w / 2 - at.x;
+        const engaged = e.roused > 0 || e.stirred > 0 || e.braced;
+        // (On her ground; in a fight she may be in the air over it. A light she is tending comes first.)
+        if (Math.abs(e.y + e.h - at.y) > (engaged ? 230 : 60) || (tending && !engaged)) continue;
+        // In her way, or already fighting her.
+        if (Math.abs(dx) < (engaged ? 460 : 190) && (engaged || dx * (dir || p.facing) > 0)) {
+          if (best < 0 || Math.abs(dx) < Math.abs((s.state.enemies[best]?.x ?? 0) + 26 - at.x)) best = i;
+        }
+      }
+      if (best >= 0 && !acted) {
+        const e = s.state.enemies[best] as (typeof s.state.enemies)[number];
+        const dx = e.x + e.w / 2 - at.x;
+        const gap = Math.abs(dx) - e.w / 2 - p.w / 2;
+        const side = dx >= 0 ? 1 : -1;
+        acted = true;
+        if (hop > 0) {
+          m |= J | (hopDir > 0 ? RIGHT : LEFT);
+          hop--;
+        } else if (e.braced) {
+          const ready = f >= (braceAt[best] as number);
+          const facingHer = (at.x - (e.x + e.w / 2)) * e.facing > 0;
+          if (!p.grounded) m |= dx * hopDir > -30 ? (hopDir > 0 ? RIGHT : LEFT) : 0;
+          else if (ready && facingHer && gap < 150 && (prev & J) === 0) {
+            hop = 9;
+            hopDir = side;
+            m |= J | (side > 0 ? RIGHT : LEFT);
+          }
+          // (Behind it, braced: its back is open.)
+          else if (!facingHer && gap < 75 && (prev & A) === 0 && p.attackCd === 0)
+            m |= A | (p.facing !== side ? (side > 0 ? RIGHT : LEFT) : 0);
+        } else if (!p.grounded)
+          m |= dx * hopDir > -30 ? (hopDir > 0 ? RIGHT : LEFT) : side > 0 ? RIGHT : LEFT;
+        else if (gap > 72) m |= side > 0 ? RIGHT : LEFT;
+        else {
+          if (p.facing !== side) m |= side > 0 ? RIGHT : LEFT;
+          if ((prev & A) === 0 && p.attackCd === 0) m |= A;
+        }
+      }
+    }
+    if (acted) {
+      // (Her hands are busy: no wall presses meanwhile.)
+    } else if (cut && p.grounded) {
       if ((prev & A) === 0) m |= A;
       if (p.facing !== face) m |= face > 0 ? RIGHT : LEFT;
     } else m |= dir > 0 ? RIGHT : dir < 0 ? LEFT : 0;
@@ -150,7 +325,12 @@ function naive(
     const down = home && heart.y > at.y;
     const blocked =
       dir !== 0 && !down && ((p.grounded && p.wallDir === dir && p.vx === 0) || p.mode === 'wallSlide');
-    if (jumpLeft > 0) {
+    // (The careful player's first press at a wall she has just met comes a reaction later.)
+    if (read > 0 && blocked && !wasBlocked && wait === 0 && jumpLeft === 0) wait = read;
+    wasBlocked = blocked;
+    if (acted) {
+      jumpLeft = 0;
+    } else if (jumpLeft > 0) {
       m |= J;
       jumpLeft--;
     } else if (wait > 0) wait--;
@@ -168,6 +348,7 @@ function naive(
     ended: s.state.goal.ended,
     frames: s.state.goal.ending.time,
     hits: s.state.goal.run.hits,
+    fades: s.state.goal.run.deaths,
     timeline,
     events: ev,
     hash: hashState(s.state),
@@ -184,7 +365,7 @@ const trace = (name: string, r: Run) => {
 };
 
 describe('naive players finish the grove: the lanterns are the critical path', () => {
-  it('the tapper (90 ms presses, holds right): three lanterns in order, then the heart; no wings; at most 3 hits, no fade', () => {
+  it('the tapper (90 ms presses, holds right): three lanterns in order with the ember fetched between, then the heart; no wings; she mashes, so she fades on the road, and still finishes', () => {
     const r = naive(5, 9);
     trace('tapper', r);
     expect(r.ended).toBe(true);
@@ -192,16 +373,34 @@ describe('naive players finish the grove: the lanterns are the critical path', (
       .filter((e) => e.type === 'lanternKindle')
       .map((e) => (e.type === 'lanternKindle' ? e.id : ''));
     expect(lit).toEqual(['lantern-stone', 'lantern-crown', 'lantern-far']);
-    expect(r.hits).toBeLessThanOrEqual(3);
-    // She met the creatures on her road and cut them down: the floor's before the bluff, the rise's before the heart.
+    // The crown asked for the ember before it caught, and she had it when she came back.
+    const order = r.events
+      .filter((e) => e.type === 'lanternRefuse' || e.type === 'lanternKey' || e.type === 'lanternKindle')
+      .map((e) => `${e.type}:${'id' in e ? e.id : ''}`);
+    expect(order.indexOf('lanternRefuse:lantern-crown')).toBeGreaterThan(0);
+    expect(order.indexOf('lanternKey:lantern-crown')).toBeGreaterThan(
+      order.indexOf('lanternRefuse:lantern-crown'),
+    );
+    expect(order.indexOf('lanternKindle:lantern-crown')).toBeGreaterThan(
+      order.indexOf('lanternKey:lantern-crown'),
+    );
+    // She met the creatures on her road and cut at them: the floor's before the bluff, the shaft's
+    // (playtest 5: on the main line now), the rise's before the heart.
+    const met = new Set(
+      r.events.filter((e) => e.type === 'enemyWindup').map((e) => (e.type === 'enemyWindup' ? e.id : '')),
+    );
+    for (const id of ['burr-path', 'burr-shaft', 'burr-rise']) expect(met.has(id), id).toBe(true);
     const cut = r.events.filter((e) => e.type === 'enemyDie').map((e) => (e.type === 'enemyDie' ? e.id : ''));
-    expect(cut).toEqual(['burr-path', 'burr-rise']);
+    expect(cut).toEqual(expect.arrayContaining(['burr-path', 'burr-rise']));
+    // Mashing costs two lights a burrback now: more hits than she has lights, so she fades (and
+    // re-forms at a light she lit, with a third of her wallet to pick up again).
+    expect(r.hits).toBeGreaterThan(4);
+    expect(r.fades).toBeGreaterThanOrEqual(1);
     expect(r.glides).toBe(0);
-    expect(r.frames).toBeLessThan(60 * 90);
-    expect(r.events.some((e) => e.type === 'fade')).toBe(false);
+    expect(r.frames).toBeLessThan(60 * 120);
   });
 
-  it('the holder (holds jump three quarters of a second): the same, and the wings open by accident on the way', () => {
+  it('the holder (holds jump three quarters of a second): the same road, and the wings open by accident on the way', () => {
     const r = naive(45, 9);
     trace('holder', r);
     expect(r.ended).toBe(true);
@@ -209,10 +408,8 @@ describe('naive players finish the grove: the lanterns are the critical path', (
       .filter((e) => e.type === 'lanternKindle')
       .map((e) => (e.type === 'lanternKindle' ? e.id : ''));
     expect(lit).toEqual(['lantern-stone', 'lantern-crown', 'lantern-far']);
-    expect(r.hits).toBeLessThanOrEqual(3);
     expect(r.glides).toBeGreaterThan(0);
-    expect(r.frames).toBeLessThan(60 * 90);
-    expect(r.events.some((e) => e.type === 'fade')).toBe(false);
+    expect(r.frames).toBeLessThan(60 * 150);
   });
 
   it('a tapper who never stops for a light still lights all three (playtest 4: 0 lanterns in two minutes) and no lamp by accident', () => {
@@ -228,10 +425,6 @@ describe('naive players finish the grove: the lanterns are the critical path', (
       expect(r.lit, hand).toBe(3);
       // Lamps want her to stand still at them: she never does, so none is bought.
       expect(r.lamps, hand).toBe(0);
-      expect(
-        r.events.some((e) => e.type === 'fade'),
-        hand,
-      ).toBe(false);
     }
   });
 
@@ -249,11 +442,6 @@ describe('naive players finish the grove: the lanterns are the critical path', (
       trace(`press ${press}, beat ${beat}`, r);
       expect(r.ended, `press ${press}, beat ${beat}`).toBe(true);
       expect(r.lit, `press ${press}, beat ${beat}`).toBe(3);
-      expect(r.hits, `press ${press}, beat ${beat}`).toBeLessThanOrEqual(3);
-      expect(
-        r.events.some((e) => e.type === 'fade'),
-        `press ${press}, beat ${beat}`,
-      ).toBe(false);
     }
   });
 
@@ -273,5 +461,37 @@ describe('naive players finish the grove: the lanterns are the critical path', (
 
   it('is deterministic', () => {
     expect(naive(5, 9).hash).toBe(naive(5, 9).hash);
+  });
+
+  it('the careful first-timer (an 18-frame reaction: reads the brace, hops the ram, cuts it winded; steps out of a dive; rests at her lights)', () => {
+    const r = naive(14, 12, { read: 18 });
+    trace('careful first-timer, reaction 18', r);
+    expect(r.ended).toBe(true);
+    expect(r.lit).toBe(3);
+    const died = r.events.filter((e) => e.type === 'enemyDie');
+    const cut = died.map((e) => (e.type === 'enemyDie' ? e.id : ''));
+    expect(cut).toEqual(expect.arrayContaining(['burr-path', 'burr-shaft', 'burr-rise']));
+    // Reading pays: the three on the road cost her at most one light each, and no fade.
+    const byBurr = (id: string) => r.events.filter((e) => e.type === 'hurt' && e.source.id === id).length;
+    for (const id of ['burr-path', 'burr-shaft', 'burr-rise']) expect(byBurr(id), id).toBeLessThanOrEqual(1);
+    expect(r.fades).toBe(0);
+    // The open-ground fight has its second tell. (The other two stand beside a wayside lamp: lit, its
+    // light stops their ram and takes their brace where she has shoved them into it, so they end sooner.)
+    const tells = (id: string) => r.events.filter((e) => e.type === 'enemyWindup' && e.id === id).length;
+    expect(tells('burr-path')).toBeGreaterThanOrEqual(2);
+    expect(tells('burr-path') + tells('burr-shaft') + tells('burr-rise')).toBeGreaterThanOrEqual(4);
+    // A kill by the finisher happens on the road.
+    const fin = died.filter((e) => e.type === 'enemyDie' && e.kind === 'burrback' && e.power >= 2).length;
+    expect(fin).toBeGreaterThanOrEqual(1);
+    expect(r.frames).toBeGreaterThan(60 * 45);
+    if (process.env.NAIVE_TRACE)
+      console.log(`careful: ${(r.frames / 60).toFixed(1)} s, ${r.hits} hits, ${r.fades} fades`);
+    // Other reactions (15 and 20 frames) finish too.
+    for (const read of [15, 20]) {
+      const q = naive(14, 12, { read });
+      trace(`careful, reaction ${read}`, q);
+      expect(q.ended, `reaction ${read}`).toBe(true);
+      expect(q.fades, `reaction ${read}`).toBeLessThanOrEqual(1);
+    }
   });
 });

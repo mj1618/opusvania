@@ -206,6 +206,59 @@ Dev handle `__goal` (`.cfg`, `.cpuMs`). Sheets of every moment: `shots/goal/`.
 - Not done: moths still fly their polyline (a join leg from her to the route can cross a solid); tier
   lights float (no stalk); zoom-out; the kick glyph is small (27 px cap at 1920).
 
+## Round 7 (after playtest 5: the last beat was gentle, the offering not legible, rings crowded the fights)
+- **The wake is a sequence** (`GOAL.wake`, pieces in `goal/wake.ts`), ~3.6 s, all small lights. 0.0 the bud
+  parts in three lurches (`open`, the glows step up with it: `level`); 0.55 **veins** run out from the heart
+  through the ground to every lit lantern, each lantern answers (`pulse`) as its vein arrives; 1.35 the
+  **moth cut in the wing-stone** fills stroke by stroke and stays lit; 2.0 **one ring** leaves the heart at
+  1050 px/s: every small light it passes swells once and stays a step higher (`ringAt` / `ringGain`: lantern
+  flowers, their fireflies, beads, pools, waiting glints anywhere in view), 52 fireflies at fixed places round
+  the shrine flash as it passes and every second one stays, a low swell runs along the heart's own ground,
+  and the old wave (now `heart.wave`, a tenth of the gain, on the ring's clock) warms surfaces as it goes.
+  The sim holds the ending back 180 frames (`heartWakeFrames`), the camera's picture is in 1.1 + held 2.5 s.
+- **Measured** (staged third kindle from the far bluff, 1920x1080, every 12 frames of 4.4 s): pixels over
+  luma 200: 0.06-0.09% (limit 0.3%), over 150: 0.22% rising to 0.74% at 2.6-3.2 s (limit 2%), mean 28.6 ->
+  36.7. The offering's ending: over 200 <= 0.1%, over 150 <= 1.6% at tier 2's peak, 1.0-1.2% settled.
+- **Veins are hand-placed** (`GOAL.wake.veins.routes`, heart -> lantern by id, `via` = branches off another):
+  world points INSIDE the ground ~20 px under its surface or inside a face, because `playfieldFront`'s grass
+  covers the ground line itself. Corners are rounded, two strands wander and cross, rootlets grow into the
+  ground only (tested against the solids). **If the rise, the far bluff, trunk B or the floor moves, move
+  them.** A vein = a head (bead + 120 px of bright vein, warming the ground as it passes) and a body; the
+  renderer says how far the head is and how bright the body stays, so the wake's veins fade after 3.4 s and
+  the offering's second tier lights the same ones for good. As straight thin lines with square corners they
+  read as wire; the wander, the rootlets and the rounded turns are what makes them roots.
+- **The carving** (`wake.ts` `Carving`): the same strokes `scene/lib/pf-forms.ts` cuts for the shrine's
+  `mothMotif` (centre heart + (-4, -218), size 30, lean -0.04: `GOAL.wake.carving`). Move it with the stone.
+- **The offering is read three ways.** HUD: the cluster stays through it (`HUD.offerStay`), the count drains
+  with the sim's wallet, a mote off the counter per glint. World, one lasting change per tier (`GOAL.offer`):
+  1 = the shrine's flowers open (a second `LanternLife` on the heart's ground, `offer.flowers`); 2 = the
+  veins stay lit out to the lanterns; 3 = 26 lights rise into the canopy across the whole frame (third band,
+  rippling out from the heart) and the canopy glow takes a breath more. Tally: `offered n` leads the lower
+  row with three marks (a gold flower per tier reached, a hollow bud per tier not). The tally moved down to
+  y 928: at 910 a lit vein ran through the numerals. Read from `goal.offer.tier` (the sim's `goal.grove`
+  flags say the same); `ending.offerNext` is not shown.
+- **One price ring at a time** (`GOAL.refuse`): only the nearest dormant light in range (lamp 330 px, lantern
+  1000 px), 1.5 s to come up, never while a creature within 400 px of her or of that light is in any mode
+  but walk / pause / hover / rest / return, nor for 1.4 s after; a lamp's is 0.76 the size at 0.6 alpha. A
+  refusal (she stands there short) shows it at once regardless. State: `priceWant`, `priceA`, `calmT`.
+- **Moths** (`guide.ts`): a way is joined AHEAD of her (as far along the route from its nearest point as she
+  is from it: 90-520 px), so the first leg never runs back; a flight that starts > 170 px from her (the
+  lantern caught behind a runner) flies to her shoulder at 900 px/s (`mode: 'come'`), passes her and then
+  leads. Where the way between her and the leader is steep (|dy| > 0.8 of the tangent) the moths STREAM
+  along it away from her, one after another, over at least 340 px kept in frame (`vert` 0..1), instead of
+  ringing overhead. Seen: lantern 1 behind a runner at the pool; the shaft from its floor. Not seen: the
+  drop off the catch branch (same code, downward).
+- **Glide glyph** (`hud/prompts.ts`): not within 90 frames of a wall slide or kick, not in a chimney (bark
+  within 236 px of her box on both sides, head to 150 px under her feet), not in `PROMPTS.shafts` (the
+  wall-jump shaft's x range below the summit: hand data). Scripted: a 420-frame climb of the shaft to the
+  summit shows it 0 times (it was 17 before the zone), stepping off trunk A 0, the far bluff's lip at fall
+  frame 8. The kick's cap is 1.28x.
+- Capture: `page.screenshot({path})` per step from one `run-code` works and is simpler than data URLs; a run
+  whose output is thrown away can fail silently and leave the old PNGs: check their times.
+- Not done: **the crown lantern now wants a great glint** (`lantern.key`, `keyed`, `lanternRefuse.key`,
+  `lanternKey`): nothing draws that yet (the price crown shows glints only, the moths lead to the lantern,
+  not to the key). `offerNext` in the tally. Tier 1's flowers are small next to tiers 2 and 3.
+
 ## Look decisions (learned by looking)
 - Lantern = shepherd's crook + hanging seed of glass (the HUD health light's shape, 1.42x). Lit, the
   nested amber fills read as a flame inside dark glass; filling the whole seed made an orange blob.

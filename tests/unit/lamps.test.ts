@@ -6,6 +6,10 @@ import type { EnemySpawn, Lantern, Scene } from '../../src/sim/scene';
 import { defaultTuning } from '../../src/sim/tuning';
 import { feet, flatScene, newSim, type Sim } from './helpers';
 
+// These rule tests were written before the heart's wake had a length: here it is ready the step
+// after it wakes (vitest gives each test file its own copy of the module). The wait has its own tests.
+defaultTuning.goal.heartWakeFrames = 0;
+
 /**
  * Two things added after playtest 2 (memory/goal.md): a dormant lantern NOTICES her as she comes
  * near (`lanternNotice`, so the picture can answer a player who never stops at it), and wayside

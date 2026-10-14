@@ -163,18 +163,22 @@ export class EnemyRenderer {
     this.pt[i] = this.rand();
   }
 
-  /** Shell chips from a blow that cracks it. */
+  /**
+   * Shell chips from a blow: a few small ones off its far side, thrown the way the cut went, gone in
+   * about ten frames. Drawn with the bodies (behind the hero and her slash), in the shell's own tone.
+   */
   private chips(rig: BurrRig, e: EnemyState, n: number): void {
     const dir = e.hitDir || 1;
+    const L = BURR.hit.chipLife;
     for (let k = 0; k < n; k++) {
       this.emit(
         K_FRAG,
-        rig.x + dir * (2 + this.rand() * 10),
-        rig.y - 20 - this.rand() * 12,
-        dir * (50 + this.rand() * 130),
-        -70 - this.rand() * 120,
-        0.38 + this.rand() * 0.22,
-        1.1 + this.rand() * 1.3,
+        rig.x + dir * (14 + this.rand() * 12),
+        rig.y - 16 - this.rand() * 22,
+        dir * (190 + this.rand() * 210),
+        -40 - this.rand() * 170,
+        L[0] + this.rand() * (L[1] - L[0]),
+        1.5 + this.rand() * 1.1,
         rig.y,
       );
     }
@@ -396,10 +400,21 @@ export class EnemyRenderer {
         );
       } else if (ev.type === 'enemyRecover' && ev.kind === 'burrback') {
         const i = this.byId.get(ev.id);
-        if (i !== undefined) this.rigs[i]?.spent(ev.cause);
+        if (i !== undefined) this.rigs[i]?.spent(ev.cause, (ev as { broken?: boolean }).broken === true);
       } else if (ev.type === 'enemyReset' && ev.kind === 'burrback') {
         const i = this.byId.get(ev.id);
         if (i !== undefined) this.rigs[i]?.reset();
+      } else if (
+        (ev as { type: string }).type === 'enemyStall' &&
+        (ev as { cause?: string }).cause === 'wall'
+      ) {
+        // Its dive met something solid: knocked silly, a few scales off it.
+        const w = ev as unknown as { id: string; x: number; y: number; dir: number };
+        const i = this.byId.get(w.id);
+        const rig = i === undefined ? undefined : this.lamps[i];
+        if (!rig) continue;
+        rig.lean.v += (w.dir || 1) * 7;
+        this.scales(w.x, w.y, 4, -(w.dir || 1), -0.4, 1.2, 220, 5, 0.3);
       } else if (ev.type === 'enemyGiveUp' && ev.cause === 'calm') {
         const i = this.byId.get(ev.id);
         const rig = i === undefined ? undefined : this.lamps[i];
@@ -443,7 +458,7 @@ export class EnemyRenderer {
       const dx = kl > 0.01 ? e.knockVx / kl : e.hitDir || 1;
       const dy = kl > 0.01 ? e.knockVy / kl : 0;
       const n = fin ? LAMP.hit.scalesFinisher : LAMP.hit.scales;
-      this.scales(rig.x + dx * 6, rig.y + dy * 6, n, dx, dy, 0.6, fin ? 460 : 340, 4, 0.5);
+      this.scales(rig.x + dx * 8, rig.y + dy * 8, n, dx, dy, 0.5, fin ? 520 : 400, 4, LAMP.hit.scaleLife);
       // The killing blow tears the hind wings off: a wider, slower spray as well.
       if (e.mode === 'dead') this.scales(rig.x, rig.y + 2, LAMP.death.torn, dx, dy, 1.5, 230, 9, 0.6);
     }
@@ -601,6 +616,20 @@ export class EnemyRenderer {
       const R = BURR.ram;
       const fd = rig.d >= 0 ? 1 : -1;
       if (rig.braceNew) this.puffs(rig.x + fd * 20, rig.y, fd, 3, 0.7);
+      // Each beat of the count its front feet rake the ground: dust kicked low at her, more each time.
+      if (rig.beatNew && e.mode === 'windup') {
+        const bn = Math.max(0, rig.beatN);
+        const n = R.kick + Math.floor(bn / R.kickMore);
+        this.puffs(rig.x + fd * (BURR.halfLen + 6), rig.y, fd, n, 0.75 + 0.12 * bn);
+        for (let k = 0; k < 2 + bn; k++)
+          this.dust(
+            rig.x + fd * (BURR.halfLen + 4 + k * 7),
+            rig.y,
+            fd * (70 + this.rand() * 60 + bn * 22),
+            1.5,
+            1 + 0.12 * bn,
+          );
+      }
       if (rig.scraped && e.mode === 'windup') {
         this.puffs(rig.x - fd * 26, rig.y, -fd, 1, 0.55);
         this.dust(rig.x - fd * 30, rig.y, -fd * (50 + this.rand() * 40), 1.3, 1);
@@ -615,7 +644,11 @@ export class EnemyRenderer {
         }
       }
       // The stop: a jolt throws dust and grit off whatever stopped it; a skid ploughs it ahead.
-      if (rig.stopped !== '' && rig.stopped !== 'touch') {
+      if (
+        rig.stopped !== '' &&
+        rig.stopped !== 'touch' &&
+        !(rig.stopped === 'spent' && e.vx === 0 && rig.ramK < 0.3)
+      ) {
         const jolt = rig.stopped !== 'spent';
         this.puffs(rig.x + fd * (BURR.halfLen + 4), rig.y, jolt ? 0 : fd, jolt ? 4 : 2, jolt ? 1.05 : 0.8);
         for (let k = 0; k < 4; k++)
@@ -680,8 +713,7 @@ export class EnemyRenderer {
           );
         }
       } else rig.moteT = BURR.calm.mote * 0.6;
-      if (rig.struck && e.mode !== 'dead') this.chips(rig, e, e.hitPower >= 2 ? 5 : 3);
-      if (rig.struck && e.mode === 'dead') this.chips(rig, e, 4);
+      if (rig.struck) this.chips(rig, e, e.hitPower >= 2 ? BURR.hit.chipsFinisher : BURR.hit.chips);
       if ((e.mode === 'hurt' || e.mode === 'dead') && e.hitstop === 0 && Math.abs(e.knockVx) > 1.5) {
         rig.dustT += dt;
         while (rig.dustT > 0.05) {
@@ -726,10 +758,9 @@ export class EnemyRenderer {
       if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
     }
 
-    // --- Debris, all of it in front of the grass.
-    p.end(cam.x - halfW, cam.y - halfH, halfW * 2, halfH * 2);
-    this.verts = p.vertexCount;
-    p = pf;
+    // --- Debris: in front of the grass, except what a blow knocks off (chips, wing scales), which
+    // goes with the bodies so her slash is drawn over it.
+    const back = p;
     const C = COLORS;
     for (let i = 0; i < MAX_P; i++) {
       const kind = this.pk[i]!;
@@ -744,6 +775,7 @@ export class EnemyRenderer {
       const u = life / max;
       let x = this.pxx[i]!;
       let y = this.pyy[i]!;
+      p = kind === K_FRAG || kind === K_SCALE ? back : pf;
       if (kind === K_PUFF) {
         // Thrown low, it brakes hard and hangs; the disc swells in its first frames, then shrinks away.
         const drag = Math.min(1, 8 * dt);
@@ -810,7 +842,8 @@ export class EnemyRenderer {
         p.py[3] = y - c * s * 0.55;
         const mixK = 0.35 + tn * 0.65;
         if (kind === K_GRIT) for (let k = 0; k < 3; k++) FRAG_C[k] = C.puff[k]! * (0.75 + 0.25 * tn);
-        else for (let k = 0; k < 3; k++) FRAG_C[k] = C.shellTop[k]! + (C.sheen[k]! - C.shellTop[k]!) * mixK;
+        // (A chip: the shell's sheen lifted toward the pale of its broken edge, so it shows on dark ground.)
+        else for (let k = 0; k < 3; k++) FRAG_C[k] = C.sheen[k]! + (C.plateIn[k]! - C.sheen[k]!) * mixK * 0.8;
         SH_FRAG.alpha = sat((1 - u) / 0.35);
         p.shape(4, x, y, SH_FRAG);
       } else if (kind === K_PLATE) {
@@ -911,9 +944,10 @@ export class EnemyRenderer {
       this.pyy[i] = y;
     }
 
-    p.end(cam.x - halfW, cam.y - halfH, halfW * 2, halfH * 2);
+    back.end(cam.x - halfW, cam.y - halfH, halfW * 2, halfH * 2);
+    pf.end(cam.x - halfW, cam.y - halfH, halfW * 2, halfH * 2);
     this.drawn = drawn;
-    this.verts += p.vertexCount;
+    this.verts = back.vertexCount + pf.vertexCount;
     this.cpuMs = performance.now() - t0;
   }
 }

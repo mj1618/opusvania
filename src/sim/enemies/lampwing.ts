@@ -4,14 +4,15 @@
  *  - `hover`: it wanders round its home inside its territory, steering softly toward wander points
  *    drawn from a hash of its id (no RNG), with a slow bob. It never enters a solid, never rises
  *    above the canopy, never dips to the water; one-way branches are open air to it.
- *  - She comes within `noticePx` with a clear line: `curious` (it brakes, turns to her and rises:
- *    the tell), then `pursue`: it drifts after her, slower than she walks, with limited
- *    acceleration, so it arcs and overshoots and she can step round it.
+ *  - She comes within its sight with a clear line: `curious` (it brakes, turns to her and rises:
+ *    the tell), then it commits: `dive`, a swoop along an arc to where she stood when the tell
+ *    ended (moving on dodges it; a gliding hero is led). At the bottom it hangs (`stall`): open,
+ *    its touch harmless: her opening. Then it climbs to a perch above her (`pursue`) and tells again.
  *  - It gives up (`rest`, then `return` home, noticing nothing until it is there) when she is too far
- *    from its home, out of sight too long, when it has chased long enough, when her light goes out,
+ *    from its home, out of sight too long, when it has dived often enough, when her light goes out,
  *    and when it has touched her (it bounces off her first).
- *  - No attack: its touch is what hurts. Hit, it is batted along the cut and tumbles (`hurt`), then
- *    goes for her again. Dead, it falls (the only time gravity touches it) and is gone.
+ *  - Its dive is its attack; its touch hurts whenever it is not stalled. Hit, it is batted along the
+ *    cut and tumbles (`hurt`), then climbs to try again. Dead, it falls and is gone.
  *
  * No gravity, no ground: it is a point of steering in free air, moved 1 px at a time per axis.
  */
@@ -181,6 +182,7 @@ function giveUp(e: EnemyState, info: StepInfo, cause: GiveUpCause): void {
   setMode(e, 'rest', n);
   e.chase = 0;
   e.lost = 0;
+  e.dives = 0;
   info.events.push({
     type: 'enemyGiveUp',
     id: e.id,
@@ -242,6 +244,143 @@ function detour(e: EnemyState, scene: Scene, t: L): void {
   e.chase = 0;
 }
 
+/** The tell is over: it commits to a dive at where she is now (led, if she glides). */
+function startDive(e: EnemyState, info: StepInfo): void {
+  const t = info.t.lampwing;
+  const p = info.state.player;
+  const cx = e.x + e.w / 2;
+  const cy = e.y + e.h / 2;
+  let tx = p.x + p.w / 2;
+  let ty = p.y + p.h / 2;
+  const span = (x: number, y: number): number => {
+    const d = Math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy));
+    const lo = frames(t.diveMinFrames, 1);
+    const hi = Math.max(lo, frames(t.diveMaxFrames, 1));
+    return Math.max(lo, Math.min(hi, Math.round(d / Math.max(0.1, t.diveSpeed))));
+  };
+  let n = span(tx, ty);
+  // A gliding hero holds her line: it dives at where the glide will have carried her.
+  if (p.gliding && t.diveLeadGlide > 0) {
+    for (let k = 0; k < 3; k++) {
+      tx = p.x + p.w / 2 + p.vx * n * t.diveLeadGlide;
+      ty = p.y + p.h / 2 + p.vy * n * t.diveLeadGlide;
+      n = span(tx, ty);
+    }
+  }
+  // Never further than its dive is long.
+  const dx = tx - cx;
+  const dy = ty - cy;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  if (d > t.diveMaxPx && d > 0) {
+    tx = cx + (dx * t.diveMaxPx) / d;
+    ty = cy + (dy * t.diveMaxPx) / d;
+    n = span(tx, ty);
+  }
+  setMode(e, 'dive', n);
+  e.span = n;
+  e.fromX = cx;
+  e.fromY = cy;
+  e.targetX = tx;
+  e.targetY = ty;
+  e.dives++;
+  e.rx = 0;
+  e.ry = 0;
+  aim(e, 0, 0);
+  face(e, tx - cx, 0);
+  info.events.push({
+    type: 'enemyDive',
+    id: e.id,
+    kind: e.kind,
+    x: cx,
+    y: cy,
+    tx,
+    ty,
+    dir: e.facing,
+    frames: n,
+    dive: e.dives,
+  });
+}
+
+/** Where the dive's arc is after `k` of its frames: a curve from its start that bends down first, eased. */
+let arcX = 0;
+let arcY = 0;
+function arc(e: EnemyState, k: number, bend: number): void {
+  const u = Math.max(0, Math.min(1, k / Math.max(1, e.span)));
+  const s = u * u * (3 - 2 * u);
+  // The bend point: under (or over) its start, at her height, a little toward her.
+  const bx = e.fromX + (e.targetX - e.fromX) * (1 - bend);
+  const by = e.targetY;
+  const a = (1 - s) * (1 - s);
+  const b = 2 * (1 - s) * s;
+  const c = s * s;
+  arcX = a * e.fromX + b * bx + c * e.targetX;
+  arcY = a * e.fromY + b * by + c * e.targetY;
+}
+
+/** The dive is over (or something stopped it): it hangs where it is, open. */
+function stall(e: EnemyState, info: StepInfo, cause: 'done' | 'wall'): void {
+  const n = frames(info.t.lampwing.stallFrames, 1);
+  setMode(e, 'stall', n);
+  e.vx = 0;
+  e.vy = 0;
+  e.rx = 0;
+  e.ry = 0;
+  info.events.push({
+    type: 'enemyStall',
+    id: e.id,
+    kind: e.kind,
+    x: e.x + e.w / 2,
+    y: e.y + e.h / 2,
+    dir: e.facing,
+    frames: n,
+    cause,
+  });
+}
+
+/** Up to a perch above her, on the side it is on, to tell again. */
+function climb(e: EnemyState, info: StepInfo): void {
+  const t = info.t.lampwing;
+  const p = info.state.player;
+  const px = p.x + p.w / 2;
+  const py = p.y + p.h / 2;
+  const side = e.x + e.w / 2 < px ? -1 : 1;
+  setMode(e, 'pursue', 0);
+  e.chase = 0;
+  e.lost = 0;
+  e.targetX = px + side * t.perchSidePx;
+  e.targetY = py - t.perchUpPx;
+  info.events.push({
+    type: 'enemyClimb',
+    id: e.id,
+    kind: e.kind,
+    x: e.x + e.w / 2,
+    y: e.y + e.h / 2,
+    tx: e.targetX,
+    ty: e.targetY,
+    dir: e.facing,
+  });
+}
+
+/** It has noticed her (or is ready to go again): the tell. */
+function tell(e: EnemyState, info: StepInfo): void {
+  const p = info.state.player;
+  const n = frames(info.t.lampwing.curiousFrames, 1);
+  setMode(e, 'curious', n);
+  e.targetX = p.x + p.w / 2;
+  e.targetY = p.y + p.h / 2;
+  aim(e, 0, 0);
+  face(e, e.targetX - (e.x + e.w / 2), 0);
+  info.events.push({
+    type: 'enemyNotice',
+    id: e.id,
+    kind: e.kind,
+    x: e.x + e.w / 2,
+    y: e.y + e.h / 2,
+    dir: e.facing,
+    frames: n,
+  });
+}
+
 export const lampwing: KindRules = {
   width: (t) => t.lampwing.width,
   height: (t) => t.lampwing.height,
@@ -258,6 +397,7 @@ export const lampwing: KindRules = {
     e.y = Math.round(spawn.y - e.h / 2);
     e.mode = 'hover';
     e.radius = Math.max(0, spawn.radius ?? t.lampwing.radius);
+    e.sight = Math.max(0, spawn.sight ?? 0);
     e.side = e.facing;
     e.targetX = e.x + e.w / 2;
     e.targetY = e.y + e.h / 2;
@@ -266,7 +406,7 @@ export const lampwing: KindRules = {
   },
 
   /** Its territory plus its sight: on re-forming she is outside what it can notice from anywhere it hovers. */
-  homeClear: (e, t) => e.radius + t.lampwing.noticePx,
+  homeClear: (e, t) => e.radius + Math.max(t.lampwing.noticePx, e.sight),
 
   /** Lampwings keep a little apart: a soft push between any two closer than `sepPx`. */
   prepare(info) {
@@ -310,12 +450,18 @@ export const lampwing: KindRules = {
   harmless(e, info) {
     const G = info.t.goal;
     if (e.mode === 'curious' && e.modeFrames <= info.t.lampwing.noticeSafeFrames) return true;
+    // Stalled at the bottom of its dive it is open; and for a beat as it lifts away. Having given up
+    // (it hangs, then flies home) it is no danger either: its dive is its attack, and a body left
+    // hanging in the middle of a fight after it has hit her must not hit her again.
+    if (e.mode === 'stall' || e.mode === 'rest' || e.mode === 'return') return true;
+    if (e.mode === 'pursue' && e.modeFrames <= info.t.lampwing.climbSafeFrames) return true;
     return nearLitLantern(info.state, info.scene, G, e.x + e.w / 2, e.y + e.h / 2, G.lampSanctuaryPx);
   },
 
   /** One that has noticed her gives up (`calm`): it rests, flies home and notices nothing on the way. */
   calm(e, info) {
-    if (e.mode === 'curious' || e.mode === 'pursue') giveUp(e, info, 'calm');
+    if (e.mode === 'curious' || e.mode === 'pursue' || e.mode === 'dive' || e.mode === 'stall')
+      giveUp(e, info, 'calm');
   },
 
   update(e, _index, info) {
@@ -376,12 +522,9 @@ export const lampwing: KindRules = {
         e.knockVy = 0;
         e.vx = 0;
         e.vy = 0;
-        // Struck, it goes for her at once if it can see her; else home.
+        // Struck, it climbs to come at her again if it can see her; else home.
         if (!over && inLeash(e, p, t) && sees(e, p, scene, 0)) {
-          setMode(e, 'pursue', 0);
-          e.lost = 0;
-          e.targetX = px;
-          e.targetY = py;
+          climb(e, info);
         } else {
           setMode(e, 'return', 0);
           e.lost = 0;
@@ -403,22 +546,10 @@ export const lampwing: KindRules = {
       e.vy += e.pushY;
       drift(e, scene, t);
       face(e, e.vx, 0.2);
-      if (t.noticePx > 0 && !over && inLeash(e, p, t) && sees(e, p, scene, t.noticePx)) {
-        const n = frames(t.curiousFrames, 1);
-        setMode(e, 'curious', n);
-        e.targetX = px;
-        e.targetY = py;
-        aim(e, 0, 0);
-        face(e, px - (e.x + e.w / 2), 0);
-        info.events.push({
-          type: 'enemyNotice',
-          id: e.id,
-          kind: e.kind,
-          x: e.x + e.w / 2,
-          y: e.y + e.h / 2,
-          dir: e.facing,
-          frames: n,
-        });
+      const sight = e.sight > 0 ? e.sight : t.noticePx;
+      if (sight > 0 && !over && inLeash(e, p, t) && sees(e, p, scene, sight)) {
+        e.dives = 0;
+        tell(e, info);
       }
     } else if (e.mode === 'curious') {
       // The tell: it brakes, turns to her and lifts a little.
@@ -434,36 +565,77 @@ export const lampwing: KindRules = {
       drift(e, scene, t);
       beat = t.flapCurious;
       if (--e.timer <= 0) {
-        setMode(e, 'pursue', 0);
-        e.chase = 0;
         e.lost = 0;
+        // The tell is over: it commits, unless her light is out, she is gone, or a lantern's light is on it.
+        const G = info.t.goal;
+        if (!lit(p)) giveUp(e, info, 'dark');
+        else if (nearLitLantern(state, scene, G, e.x + e.w / 2, e.y + e.h / 2, G.lampSanctuaryPx))
+          giveUp(e, info, 'calm');
+        else if (nearLitLantern(state, scene, G, px, py, G.lampSanctuaryPx)) giveUp(e, info, 'calm');
+        else if (!inLeash(e, p, t)) giveUp(e, info, 'far');
+        else startDive(e, info);
+      }
+    } else if (e.mode === 'dive') {
+      // Committed: along the arc to where she was, whatever she does now.
+      const k = e.span - e.timer + 1;
+      arc(e, k, Math.max(0, Math.min(1, t.diveBend)));
+      const cx = e.x + e.w / 2 + e.rx;
+      const cy = e.y + e.h / 2 + e.ry;
+      e.vx = arcX - cx;
+      e.vy = arcY - cy;
+      const x0 = e.x;
+      const y0 = e.y;
+      const hit = fly(e, scene, t, e.vx, e.vy);
+      e.vx = e.x - x0;
+      e.vy = e.y - y0;
+      face(e, e.vx, 0.5);
+      beat = t.flapDive;
+      const G = info.t.goal;
+      if (!lit(p)) giveUp(e, info, 'dark');
+      else if (nearLitLantern(state, scene, G, e.x + e.w / 2, e.y + e.h / 2, G.lampSanctuaryPx))
+        giveUp(e, info, 'calm');
+      else if (--e.timer <= 0) stall(e, info, 'done');
+      else if (hit !== 0 && e.vx === 0 && e.vy === 0) stall(e, info, 'wall');
+    } else if (e.mode === 'stall') {
+      // It hangs at the bottom of the arc, open: her opening.
+      steer(e, 0, 0, t.restBrake);
+      e.vx += e.pushX;
+      e.vy += e.pushY;
+      drift(e, scene, t);
+      beat = t.flapStall;
+      if (--e.timer <= 0) {
+        if (!lit(p)) giveUp(e, info, 'dark');
+        else if (!inLeash(e, p, t)) giveUp(e, info, 'far');
+        else if (e.dives >= frames(t.maxDives, 1)) giveUp(e, info, 'tired');
+        else climb(e, info);
       }
     } else if (e.mode === 'pursue') {
-      if (sees(e, p, scene, 0)) {
-        e.targetX = px;
-        e.targetY = py;
-        e.lost = 0;
-      } else e.lost++;
+      // The climb to a perch above her, to tell again from there.
+      if (sees(e, p, scene, 0)) e.lost = 0;
+      else e.lost++;
       e.chase++;
+      const G = info.t.goal;
       const cause: GiveUpCause | '' = !lit(p)
         ? 'dark'
-        : nearLitLantern(state, scene, info.t.goal, e.x + e.w / 2, e.y + e.h / 2, info.t.goal.lampSanctuaryPx)
+        : nearLitLantern(state, scene, G, e.x + e.w / 2, e.y + e.h / 2, G.lampSanctuaryPx)
           ? 'calm'
           : !inLeash(e, p, t)
             ? 'far'
             : e.lost >= frames(t.lostFrames, 1)
               ? 'lost'
-              : e.chase >= frames(t.pursueFrames, 1)
-                ? 'tired'
-                : '';
-      // Out of sight it goes to where it last saw her, and waits there.
-      aim(e, t.pursueSpeed, e.lost > 0 ? t.arrivePx : 0);
-      face(e, e.targetX - (e.x + e.w / 2), 2);
+              : '';
+      aim(e, t.pursueSpeed, t.arrivePx);
+      const arrived = aimLen < t.arrivePx;
+      face(e, px - (e.x + e.w / 2), 2);
       steer(e, aimX, aimY, t.pursueAccel);
       e.vx += e.pushX;
       e.vy += e.pushY;
-      drift(e, scene, t);
+      const hit = drift(e, scene, t);
       if (cause !== '') giveUp(e, info, cause);
+      else if ((arrived || hit !== 0 || e.chase >= frames(t.pursueFrames, 1)) && e.lost === 0) {
+        if (e.dives >= frames(t.maxDives, 1)) giveUp(e, info, 'tired');
+        else tell(e, info);
+      } else if (e.chase >= frames(t.pursueFrames, 1) + frames(t.lostFrames, 1)) giveUp(e, info, 'lost');
     } else if (e.mode === 'rest') {
       steer(e, 0, 0, t.restBrake);
       e.vx += e.pushX;
@@ -508,7 +680,13 @@ export const lampwing: KindRules = {
     }
 
     // The wing beat follows its effort.
-    if (e.mode !== 'curious' && e.mode !== 'hurt' && t.pursueSpeed > 0) {
+    if (
+      e.mode !== 'curious' &&
+      e.mode !== 'hurt' &&
+      e.mode !== 'dive' &&
+      e.mode !== 'stall' &&
+      t.pursueSpeed > 0
+    ) {
       const sp = Math.min(1, Math.sqrt(e.vx * e.vx + e.vy * e.vy) / t.pursueSpeed);
       beat = t.flapHover + (t.flapPursue - t.flapHover) * sp;
     }
@@ -524,8 +702,8 @@ export const lampwing: KindRules = {
     e.knockVy = dir === 'up' ? -kb : dir === 'down' ? kb : 0;
     e.rx = 0;
     e.ry = 0;
-    // A blow out of nowhere starts a fresh pursuit; one in the middle of a chase does not extend it.
-    if (e.mode !== 'pursue' && e.mode !== 'hurt') e.chase = 0;
+    // A blow out of nowhere starts a fresh count of dives.
+    if (e.mode === 'hover' || e.mode === 'rest' || e.mode === 'return') e.dives = 0;
     return kb;
   },
 

@@ -96,12 +96,33 @@ export function wayTo(
   }
   // A route that passes no nearer than the lantern itself is no help: fly straight.
   if (pick && at[0] < Math.hypot(tx - sx, ty - sy)) {
-    const a = pick[at[1]];
-    const b = pick[Math.min(pick.length - 1, at[1] + 1)];
-    const jx = X(a) + (X(b) - X(a)) * at[2];
-    const jy = Y(a) + (Y(b) - Y(a)) * at[2];
+    // Join it AHEAD of her: as far along from its nearest point as she is from it, so the first leg
+    // always makes way (playtest 5: joined at the nearest point, a flight for a runner whose lantern
+    // had caught behind her waited 290 px above and 90 px behind her).
+    let seg = at[1];
+    let k = at[2];
+    let ahead = Math.min(GOAL.guide.joinMax, Math.max(GOAL.guide.joinMin, at[0]));
+    while (seg + 1 < pick.length) {
+      const l = Math.hypot(X(pick[seg + 1]) - X(pick[seg]), Y(pick[seg + 1]) - Y(pick[seg])) || 1;
+      const room = l * (1 - k);
+      if (ahead <= room) {
+        k += ahead / l;
+        break;
+      }
+      ahead -= room;
+      if (seg + 2 >= pick.length) {
+        k = 1;
+        break;
+      }
+      seg++;
+      k = 0;
+    }
+    const a = pick[seg];
+    const b = pick[Math.min(pick.length - 1, seg + 1)];
+    const jx = X(a) + (X(b) - X(a)) * k;
+    const jy = Y(a) + (Y(b) - Y(a)) * k;
     if (Math.hypot(jx - sx, jy - sy) > 30) path.add(jx, jy);
-    for (let i = at[1] + 1; i < pick.length; i++) {
+    for (let i = seg + 1; i < pick.length; i++) {
       const p = pick[i];
       const n = path.xs.length - 1;
       if (Math.hypot(X(p) - (path.xs[n] as number), Y(p) - (path.ys[n] as number)) > 8) path.add(X(p), Y(p));
@@ -189,7 +210,14 @@ export class GuideMoths {
   /** Leader: px along the way, and where that is. For tools: `s`, `sp` (her progress), `mode`. */
   s = 0;
   sp = 0;
-  mode: 'lead' | 'wait' | 'fetch' | 'settle' | 'leave' = 'lead';
+  mode: 'come' | 'lead' | 'wait' | 'fetch' | 'settle' | 'leave' = 'lead';
+  /** Coming to her from where it set out: that place, px flown, and 0..1 how much of the flight is still on that line. */
+  private fromX = 0;
+  private fromY = 0;
+  private comeS = 0;
+  private comeK = 0;
+  /** 0..1: the way between her and the leader runs up or down (the moths stream along it). */
+  vert = 0;
   lx = 0;
   ly = 0;
   private path = new Path();
@@ -243,7 +271,14 @@ export class GuideMoths {
     this.key = key;
     this.path = path;
     this.n = Math.min(GuideMoths.FLIGHT, Math.max(1, n));
-    this.mode = 'lead';
+    // Set out far from her (the lantern caught behind a runner): to her first, past her, then lead.
+    const far = Math.hypot(fx - (path.xs[0] ?? fx), fy - (path.ys[0] ?? fy)) > GOAL.guide.comePx;
+    this.mode = far ? 'come' : 'lead';
+    this.fromX = fx;
+    this.fromY = fy;
+    this.comeS = 0;
+    this.comeK = far ? 1 : 0;
+    this.vert = 0;
     this.s = 0;
     this.sp = 0;
     this.lastSp = -1;
@@ -265,6 +300,7 @@ export class GuideMoths {
       m.vx = 0;
       m.vy = -30;
       m.hn = 0;
+      m.s = 0;
       m.wait = i * GOAL.guide.stagger;
       if (!m.on) m.view.root.visible = false;
     }
@@ -277,7 +313,7 @@ export class GuideMoths {
     this.lastSp = -1;
     this.away = 0;
     this.stale = false;
-    if (this.mode !== 'leave') this.mode = 'lead';
+    if (this.mode !== 'leave' && this.mode !== 'come') this.mode = 'lead';
   }
 
   /** `n` moths pour along `path` one after another (the last lantern's light going down to the heart). */
@@ -366,6 +402,19 @@ export class GuideMoths {
           }
         }
       }
+      // Coming: a straight run from where it set out to her shoulder; there, it goes on ahead.
+      let coming = this.mode === 'come';
+      const cdx = hx - this.fromX;
+      const cdy = hy - 46 - this.fromY;
+      const cd = Math.hypot(cdx, cdy) || 1;
+      if (coming) {
+        this.comeS += G.come * dt;
+        if (this.comeS >= cd - 30) {
+          this.mode = 'lead';
+          coming = false;
+        }
+      }
+      this.comeK += ((coming ? 1 : 0) - this.comeK) * Math.min(1, dt * (coming ? 30 : 5));
       const fetching = this.mode === 'fetch';
       this.fetchK += ((fetching ? 1 : 0) - this.fetchK) * Math.min(1, dt * (fetching ? 3.2 : 2.2));
       // The leader runs to its place: fast enough to pass her at a run, never behind her.
@@ -375,7 +424,8 @@ export class GuideMoths {
       if (leaving) this.s = Math.min(len, this.s + 60 * dt);
       const there = this.s >= len - 6;
       this.still = Math.abs(gap) < 40 && Math.abs(this.along) < 40 ? this.still + dt : 0;
-      if (!leaving && !fetching) this.mode = there ? 'settle' : this.still > 0.35 ? 'wait' : 'lead';
+      if (!leaving && !fetching && !coming)
+        this.mode = there ? 'settle' : this.still > 0.35 ? 'wait' : 'lead';
       this.settled += ((this.mode === 'settle' ? 1 : 0) - this.settled) * Math.min(1, dt * 2.4);
       path.sample(this.s / len, tmp);
       const px = tmp[0] as number;
@@ -386,8 +436,24 @@ export class GuideMoths {
       const fk = this.fetchK;
       this.lx = px + (hx - px) * fk;
       this.ly = py + (hy - 46 - py) * fk + (leaving ? -(1 - this.alpha) * 70 : 0);
-      const circ = this.mode === 'wait' || fetching ? 1 : 0;
       const set = this.settled;
+      // Is the way from her to the leader a climb or a drop? Then the flight streams along it, away
+      // from her, one moth after another, instead of hanging in a knot overhead.
+      path.sample((sp + this.s) / 2 / len, tmp);
+      const steep = Math.abs(tmp[3] as number) > G.steep && !fetching && !coming && !leaving;
+      this.vert += ((steep ? 1 - set : 0) - this.vert) * Math.min(1, dt * 4);
+      const vert = this.vert;
+      const circ = (this.mode === 'wait' && vert < 0.5) || fetching ? 1 : 0;
+      const lo = Math.min(len, sp + G.streamFrom);
+      // (At least `streamMin` px of it, as far as the picture goes: a short run beside her reads as a knot.)
+      let hi = Math.min(len, Math.max(this.s, lo + G.streamMin));
+      for (let k = 0; k < 10 && hi > Math.max(this.s, lo + 120); k++) {
+        path.sample(hi / len, tmp);
+        const dx = (tmp[0] as number) - cam.x;
+        const dy = (tmp[1] as number) - cam.y;
+        if (Math.abs(dx) < insetX && dy > -insetTop && dy < insetBot) break;
+        hi -= 30;
+      }
 
       for (let i = 0; i < this.n; i++) {
         const m = this.moths[i] as Flyer;
@@ -413,6 +479,34 @@ export class GuideMoths {
           gx += (this.lx + Math.cos(a) * r - gx) * k;
           gy += (this.ly + Math.sin(a) * r * 0.62 - 6 - gy) * k;
         }
+        // on a climb or a drop, a stream along the way: each runs from just past her to the leader
+        // and starts again, so the direction is read at a glance;
+        let streamA = 1;
+        if (vert > 0.01) {
+          const u = (this.age * G.streamRate + i / this.n) % 1;
+          path.sample((lo + (hi - lo) * u) / len, tmp);
+          const wx = Math.sin(this.age * 5.3 + ph) * 5;
+          const cx = (tmp[0] as number) - (tmp[3] as number) * wx;
+          const cy = (tmp[1] as number) + (tmp[2] as number) * wx;
+          if (vert > 0.5 && u < m.s) {
+            // Its run starts again: it is simply there, dark, and catches as it goes.
+            m.x = cx;
+            m.y = cy;
+            m.vx = (tmp[2] as number) * 200;
+            m.vy = (tmp[3] as number) * 200;
+            m.hn = 0;
+          }
+          m.s = u;
+          gx += (cx - gx) * vert;
+          gy += (cy - gy) * vert;
+          streamA = 1 - vert * (1 - Math.sin(Math.PI * u) ** 0.7);
+        }
+        // coming to her, strung out along the line from where it set out;
+        if (this.comeK > 0.001) {
+          const d = Math.max(0, Math.min(cd, this.comeS - i * G.spacing * 1.6));
+          gx += (this.fromX + (cdx / cd) * d - gx) * this.comeK;
+          gy += (this.fromY + (cdy / cd) * d - Math.sin((Math.PI * d) / cd) * 26 - gy) * this.comeK;
+        }
         // settled, along the lantern's hook.
         if (set > 0.001) {
           const o = i - (this.n - 1) / 2;
@@ -432,7 +526,7 @@ export class GuideMoths {
         }
         m.x += m.vx * dt;
         m.y += m.vy * dt;
-        m.alpha = this.alpha * Math.min(1, (this.age - i * G.stagger) / G.fadeIn);
+        m.alpha = this.alpha * Math.min(1, (this.age - i * G.stagger) / G.fadeIn) * streamA;
         this.drawMoth(m, clock, cam, hw, hh, push, f, set);
       }
       // Settled, the hook itself glows: the brightest invitation in the frame is the lantern.

@@ -44,12 +44,16 @@ export class LanternLife {
     edgeL: number,
     edgeR: number,
     seed: number,
+    /** Other places than a lantern's own (the heart's flowers): [px from `x`, stalk height]. */
+    spots: ReadonlyArray<readonly [number, number]> = SPOTS,
+    /** Seconds each 150 px of distance adds to a flower's turn. */
+    private readonly spread = 1,
   ) {
     const w = zoneWeights(x);
     const stemTone = tone(TONES.stem, w);
     const leafTone = tone(TONES.leaf, w);
-    for (let i = 0; i < SPOTS.length; i++) {
-      const [dx, h0] = SPOTS[i] as readonly [number, number];
+    for (let i = 0; i < spots.length; i++) {
+      const [dx, h0] = spots[i] as readonly [number, number];
       const bx = x + dx;
       if (bx < edgeL + 8 || bx > edgeR - 8) continue;
       const s = (seed * 7.3 + i * 0.618) % 1;
@@ -103,7 +107,7 @@ export class LanternLife {
         flower,
         x: bx + lean,
         h,
-        delay: 0.5 + Math.abs(dx) / 150 + s * 0.4,
+        delay: 0.5 + (Math.abs(dx) / 150) * this.spread + s * 0.4,
         open: 0,
         seed: s,
       });

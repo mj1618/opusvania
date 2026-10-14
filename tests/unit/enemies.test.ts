@@ -36,9 +36,13 @@ function frames(s: Sim, script: string, each: (ev: SimEvent[], f: number) => voi
     each(s.events.slice(from), f++);
   }
 }
-/** A burrback that stands still (for tests that measure something else). */
+/**
+ * A burrback that stands still (for tests that measure something else). Three hit points here and
+ * in `noRam`: the hit rules below were written for that; the grove's have 4-5 (burrback-ram.test.ts).
+ */
 function still() {
   const t = cloneTuning(defaultTuning);
+  t.burrback.hp = 3;
   t.burrback.speed = 0;
   t.burrback.alertPx = 0;
   t.burrback.strikePx = 0;
@@ -47,6 +51,7 @@ function still() {
 /** The default tuning with the ram off: the tests here are about how it walks, flinches and takes a blow (the ram: burrback-ram.test.ts). */
 function noRam() {
   const t = cloneTuning(defaultTuning);
+  t.burrback.hp = 3;
   t.burrback.strikePx = 0;
   return t;
 }
@@ -126,6 +131,8 @@ describe('burrback: patrol', () => {
         oneWays: [{ tag: 'branch', x: 3000, y: 500, w: 300 }],
       }),
     );
+    // (She stands well away: one in a patrol is rammed, and it comes round to her after.)
+    s.place(3800, FLOOR);
     const causes: string[][] = [[], [], []];
     frames(s, '.1500', (ev) => {
       for (const t of of(ev, 'enemyTurn'))
@@ -628,7 +635,7 @@ describe('fade and re-form', () => {
     expect(s.state.player.facing).toBe(1);
   });
 
-  it('living enemies go home whole, dead ones stay dead', () => {
+  it('living enemies go home with their wounds (playtest 5: no healing), dead ones stay dead', () => {
     const s = newSim(scene([burr(2200), burr(3000, 1)]), still());
     s.place(2110, FLOOR);
     foe(s, 0).hp = 1;
@@ -641,7 +648,7 @@ describe('fade and re-form', () => {
     const ev = s.run('.80');
     expect(of(ev, 'reform')).toHaveLength(1);
     expect([foe(s, 0).mode, foe(s, 0).gone]).toEqual(['dead', true]);
-    expect([foe(s, 1).x, foe(s, 1).hp, foe(s, 1).mode, foe(s, 1).facing]).toEqual([3000 - 26, 3, 'walk', 1]);
+    expect([foe(s, 1).x, foe(s, 1).hp, foe(s, 1).mode, foe(s, 1).facing]).toEqual([3000 - 26, 1, 'walk', 1]);
   });
 
   it('safe ground: 30 frames in a row on a solid; not the pool, not a branch, not near a living enemy', () => {
@@ -706,7 +713,7 @@ describe('fade and re-form', () => {
     expect(feet(s)).toEqual({ x: 2000, y: FLOOR });
   });
 
-  it('`enemyReset` says which living creatures went home and what came back to them (for the picture)', () => {
+  it('`enemyReset` says which living creatures went home (for the picture); nothing is healed', () => {
     const s = newSim(scene([burr(2200), burr(3200, 1, FLOOR, 'far'), burr(600, 1, FLOOR, 'dead')]), still());
     // One hurt and shoved, one untouched at home, one dead.
     foe(s, 0).hp = 1;
@@ -726,12 +733,12 @@ describe('fade and re-form', () => {
       y: FLOOR - 17,
       fromX: 2240,
       fromY: FLOOR - 17,
-      hp: 3,
+      hp: 1,
       hpMax: 3,
-      healed: 2,
+      healed: 0,
     });
     expect(ev.indexOf(resets[0] as SimEvent)).toBeGreaterThan(reform);
-    expect([foe(s, 0).hp, foe(s, 2).mode]).toEqual([3, 'dead']);
+    expect([foe(s, 0).hp, foe(s, 2).mode]).toEqual([1, 'dead']);
   });
 
   it('after re-forming she is safe for 90 frames, passes through enemies, and play goes on', () => {
@@ -771,7 +778,7 @@ describe('enemies: determinism, symmetry, restart', () => {
     expect(hashState(cloneState(a.state))).toBe(hashState(a.state));
     expect(cloneState(a.state).enemies[0]).not.toBe(a.state.enemies[0]);
     expect(of(a.events, 'hurt').length + of(a.events, 'enemyHit').length).toBeGreaterThan(2);
-    expect(a.state.version).toBe(17);
+    expect(a.state.version).toBe(18);
   });
 
   it('mirror symmetry: a mirrored scene and mirrored inputs give exactly the mirrored fight', () => {
@@ -891,9 +898,10 @@ describe('enemies in the grove', () => {
       ['burr-path', 2004, 2316],
       // (None on the terrace any more: every way off the bluff's east lip comes down somewhere on it,
       // from 170 px out for a walk off to the trunk for a held jump; no patrol fits between them.)
-      // burr-ledge paces by the big pod (`radius` 48): east of it the high ledge is a branch she
-      // comes up through from the well (the bark of trunk A), and nothing may stand on that.
-      ['burr-ledge', 2912, 3010],
+      // burr-ledge paces the branch by the big pod (`radius` 60), 170 px clear of the ledge's west
+      // end: playtest 5, hopping its ram from 2936 carried her off that end to the floor. (The bark
+      // of trunk A is no way up any more, so nothing rises through the branch under it.)
+      ['burr-ledge', 3004, 3176],
       // burr-root keeps 180 px off the root's foot (`radius` 110; playtest 3: it hit everyone
       // coming off the root) and still walks through the lamp at the rise's foot.
       ['burr-root', 4340, 4608],

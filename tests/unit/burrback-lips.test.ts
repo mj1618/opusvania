@@ -196,27 +196,31 @@ describe('burrback: its touch is one hit', () => {
     expect(foe(s).facing).toBe(1);
   });
 
-  it('standing still where it hit her: no second hit until its patrol brings it round again', () => {
-    const s = newSim(scene([burr(2200, -1)]));
+  it('standing still where its plain touch hit her: no second hit until its patrol brings it round again; a ram is another matter', () => {
+    // (No ram: its walk meets her, it is shoved off, turns away and walks on.)
+    const t = cloneTuning(defaultTuning);
+    t.burrback.strikePx = 0;
+    const s = newSim(scene([burr(2200, -1)]), t);
     s.place(2100, FLOOR);
     const hits: number[] = [];
-    watch(s, 900, (e, f) => {
+    watch(s, 300, (e, f) => {
       if (of(e, 'hurt').length) hits.push(f);
     });
     expect(hits).toHaveLength(1);
     expect(s.state.player.hp).toBe(H.max - 1);
     // (Before: a hit every 70 frames, the moment her safety ran out, until she faded.)
-    // In the grove, in the middle of burr-path's patrol: one hit a round, hundreds of frames apart.
+    // With its ram (playtest 5: a fight has a second beat): it has rammed her, it is roused, it
+    // comes round and rams again, each time behind a 26-frame tell and never inside her safety.
+    // While she stays inside its range, that is: thrown out of it she is left alone again.
     const g = newSim();
     g.place(2190, 1280);
     const at: number[] = [];
     watch(g, 800, (e, f) => {
       if (of(e, 'hurt').length) at.push(f);
     });
-    // (Its patrol is 312 px now, clear of the bluff's foot: a round is shorter.)
-    expect(at.length).toBeLessThanOrEqual(3);
+    expect(at.length).toBeGreaterThanOrEqual(2);
     for (let i = 1; i < at.length; i++)
-      expect((at[i] as number) - (at[i - 1] as number)).toBeGreaterThan(180);
+      expect((at[i] as number) - (at[i - 1] as number)).toBeGreaterThan(H.invulnFrames + 5);
   });
 
   it('the recoil stops at walls and at the brink of a ledge', () => {

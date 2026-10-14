@@ -232,9 +232,11 @@ export interface PodsState {
  * Burrback: `walk`, `pause` (standing: a turn-around if `turning`, else a rest), `alert` (a flinch),
  * `windup` (braced, shell forward: the tell of its ram), `charge` (the ram), `recover` (spent: it
  * stands open after a ram).
- * Lampwing: `hover` (wandering round its home), `curious` (it has noticed her: the tell), `pursue`
- * (drifting after her), `rest` (it has given up, or just touched her: it hangs where it is),
- * `return` (flying home; it notices nothing until it is there).
+ * Lampwing: `hover` (wandering round its home), `curious` (it has noticed her: the tell), `dive`
+ * (the committed swoop at where she stood when the tell ended), `stall` (it hangs at the bottom of
+ * the arc, open, its touch harmless), `pursue` (it climbs to a perch above her to try again), `rest`
+ * (it has given up, or just touched her: it hangs where it is), `return` (flying home; it notices
+ * nothing until it is there).
  */
 export type EnemyMode =
   | 'walk'
@@ -243,6 +245,8 @@ export type EnemyMode =
   | 'hover'
   | 'curious'
   | 'pursue'
+  | 'dive'
+  | 'stall'
   | 'rest'
   | 'return'
   | 'windup'
@@ -345,6 +349,29 @@ export interface EnemyState {
   braced: boolean;
   strikeCd: number;
   chargeLeft: number;
+  /**
+   * Burrback: `rams` = times it has stood winded this life (from the second on it is tired: it
+   * stands longer); `roused` = frames left of having been cut (it comes round to her and braces
+   * from further off, in its range or not); `stirred` = frames left of having rammed (it comes
+   * round to one inside its range); `broken`: the blow it is staggering from broke its brace (it
+   * stands winded when the stagger ends).
+   */
+  rams: number;
+  roused: number;
+  stirred: number;
+  broken: boolean;
+  /** Burrback: neither its ram nor a shove takes it out of its range (the scene's `fenced`). */
+  fenced: boolean;
+  /**
+   * Lampwing: `dives` = dives made at her since it noticed her; `span` = the length of the current
+   * dive in frames (`timer` counts it down) and `fromX, fromY` = where it began (centre): the arc
+   * runs from there to `targetX, targetY`; `sight` = how far it notices her from.
+   */
+  dives: number;
+  span: number;
+  fromX: number;
+  fromY: number;
+  sight: number;
   /** Frames left of a calm (a lantern was kindled near it, or the run ended): its touch does nothing meanwhile. */
   calm: number;
   /** Glints spilled on death still on their way to her, frames to the next, and the gap between them. */
@@ -379,6 +406,11 @@ export interface LanternState {
    * catch only after `tuning.goal.lampStillFrames` of that: spending there is a choice.
    */
   still: number;
+  /**
+   * It has what it needs besides its price: always true for a lantern without a `key` in the scene;
+   * for one with a key, true once she has gathered that great glint (`lanternKey` fires then).
+   */
+  keyed: boolean;
 }
 
 /** The goal of the scene (src/sim/goal.ts, memory/goal.md): the lanterns, the heart, the ending. */
@@ -406,9 +438,11 @@ export interface GoalState {
   restHold: boolean;
   /**
    * The heart of the grove. `awake` once every lantern is lit; `frames` counts up from the frame
-   * it woke (0 while asleep); `hinted`: she has walked up to it asleep (`heartSleep` fired).
+   * it woke (0 while asleep); `hinted`: she has walked up to it asleep (`heartSleep` fired);
+   * `ready`: its wake has played (`tuning.goal.heartWakeFrames` after it woke: `heartReady`), only
+   * now does standing in it end the run; `waited`: she stood in it before that (`heartWait`).
    */
-  heart: { awake: boolean; frames: number; hinted: boolean };
+  heart: { awake: boolean; frames: number; hinted: boolean; ready: boolean; waited: boolean };
   /** She has reached the woken heart (`gather`): control is taken and nothing can hurt her. */
   gathered: boolean;
   /**
@@ -440,6 +474,8 @@ export interface GoalState {
     /** The offering: what she carried into the heart (all of it is given during the hold), and the tier that reaches (0-3). */
     offered: number;
     offerTier: number;
+    /** Glints her offering was short of the next tier (0 at the top tier). */
+    offerNext: number;
   };
   /**
    * The offering to the woken heart, as it goes in during the ending hold: `total` = what she
@@ -447,6 +483,12 @@ export interface GoalState {
    * thresholds (`tuning.goal.offerTier1..3`) `given` has passed (0-3).
    */
   offer: { total: number; given: number; tier: number };
+  /**
+   * What the grove has answered the offering with so far, one part more per tier passed
+   * (`groveWake` fires as each is set): tier 1 the shrine's flowers, tier 2 the glow plants along
+   * the three lanterns' paths, tier 3 the lights of the whole canopy.
+   */
+  grove: { flowers: boolean; paths: boolean; canopy: boolean };
   /** The hold is over (`endHold`): the scene stays calm until the restart. */
   ended: boolean;
   /** The run so far: the frame of her first input (-1 = none yet), the hits she has taken, the times she faded. */
@@ -454,7 +496,7 @@ export interface GoalState {
 }
 
 export interface GameState {
-  version: 17;
+  version: 18;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;
@@ -494,6 +536,7 @@ export function cloneState(s: GameState): GameState {
       heart: { ...s.goal.heart },
       ending: { ...s.goal.ending },
       offer: { ...s.goal.offer },
+      grove: { ...s.goal.grove },
       run: { ...s.goal.run },
     },
   };

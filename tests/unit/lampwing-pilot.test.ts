@@ -154,7 +154,7 @@ function glideKill(s: Sim) {
 }
 
 describe('lampwings in the grove, piloted', () => {
-  it('from the ground: the two over the left islands come to her and fall to two cuts, without a scratch', () => {
+  it('from the ground: the two over the left islands dive at her and fall to her cuts as they arrive and hang, without a scratch', () => {
     const s = newSim();
     for (const [id, x, y] of [
       ['lamp-glade', 768, 960],
@@ -166,52 +166,41 @@ describe('lampwings in the grove, piloted', () => {
       const took = standAndCut(s, id);
       const ev = s.events.slice(from);
       expect(took, id).toBeGreaterThan(0);
-      // It noticed her, came, and died on the second cut where she stood.
+      // It noticed her, dived, and died to cuts timed to its arrival and its stall, where she stood.
       expect(
         of(ev, 'enemyNotice').some((n) => n.id === id),
         id,
       ).toBe(true);
-      expect(of(ev, 'enemyHit').filter((h) => h.id === id).length, id).toBe(1);
-      expect(
-        of(ev, 'enemyDie')
-          .filter((d) => d.id === id)
-          .map((d) => d.value),
-        id,
-      ).toEqual([L.value]);
+      expect(of(ev, 'enemyDive').filter((h) => h.id === id).length, id).toBeGreaterThanOrEqual(1);
+      const hits = of(ev, 'enemyHit').filter((h) => h.id === id).length;
+      expect(hits === L.hp - 1 || hits === L.hp - 2, id).toBe(true);
+      expect(of(ev, 'enemyDie').filter((d) => d.id === id).length, id).toBe(1);
       expect(of(ev, 'hurt'), id).toEqual([]);
       expect([s.state.player.grounded, feet(s).y], id).toEqual([true, y]);
     }
   });
 
-  it('in mid-glide: off trunk A, a cut as she reaches the one by the high ledge, on through it, and an up cut from under it', () => {
-    const s = newSim();
-    const run = glideKill(s);
-    // Two cuts, both with her wings open, and she never touched down in between.
-    expect(run.cuts).toEqual(['fwd:glide', 'up:glide']);
-    expect(run.died).toBe(true);
-    expect(run.landed).toBe(false);
-    expect(s.state.player.hp).toBe(H.max);
-    expect(foe(s, 'lamp-ledge').mode).toBe('dead');
-  });
-
-  it('the mid-glide kill does not hang on when she sets off: 24 of 25 start times, most of them untouched', () => {
-    let kills = 0;
+  it('in mid-glide off trunk A: a cut as she reaches the one by the high ledge, and she flies on through its tumble; whenever she sets off', () => {
+    let cut = 0;
     let clean = 0;
+    let n = 0;
     for (let wait = 0; wait < 2400; wait += 97) {
       const s = newSim();
-      // (The ledge's burrback walks trunk A's top too: out of the way, this is about the flyer.)
+      // (The ledge's burrback paces the branch by trunk A: out of the way, this is about the flyer.)
       Object.assign(foe(s, 'burr-ledge'), { mode: 'dead', gone: true });
       for (let f = 0; f < wait; f++) tick(s, 0);
       const run = glideKill(s);
-      if (run.died && !run.landed && run.cuts.every((c) => c.endsWith('glide'))) kills++;
-      if (run.died && s.state.player.hp === H.max) clean++;
+      n++;
+      if (run.cuts[0]?.endsWith('glide')) cut++;
+      if (s.state.player.hp === H.max) clean++;
       expect(s.state.player.hp, `wait ${wait}`).toBeGreaterThanOrEqual(H.max - 1);
     }
-    expect(kills).toBeGreaterThanOrEqual(23);
+    // (Three hit points and a dive of its own now: the kill in one flight is no longer asked for.)
+    expect(cut).toBeGreaterThanOrEqual(n - 4);
     expect(clean).toBeGreaterThanOrEqual(15);
   });
 
-  it('the pogo chain: summit to far ledge off the two over the right zone; a second run kills both', () => {
+  it('the pogo chain: summit to far ledge off the two over the right zone; the third run kills both', () => {
     const s = newSim();
     const first = pogoRun(s);
     // One flight, two bounces, each a lampwing; she comes down on the far bluff's top (y 768 since
@@ -221,12 +210,15 @@ describe('lampwings in the grove, piloted', () => {
     expect(feet(s).y).toBe(768);
     expect(feet(s).x).toBeGreaterThan(5472);
     expect(of(first.log, 'hurt')).toEqual([]);
-    expect([foe(s, 'lamp-glide-1').hp, foe(s, 'lamp-glide-2').hp]).toEqual([1, 1]);
+    expect([foe(s, 'lamp-glide-1').hp, foe(s, 'lamp-glide-2').hp]).toEqual([L.hp - 1, L.hp - 1]);
 
-    // Back on the summit she lets them drift home, then the same again: each second bounce kills.
+    // Back on the summit she lets them drift home, then the same again, and again: each third bounce kills.
     s.place(3648, 192);
     for (let f = 0; f < 900; f++) tick(s, 0);
     expect([foe(s, 'lamp-glide-1').mode, foe(s, 'lamp-glide-2').mode]).toEqual(['hover', 'hover']);
+    expect(pogoRun(s).hits).toEqual(['lamp-glide-1', 'lamp-glide-2']);
+    s.place(3648, 192);
+    for (let f = 0; f < 900; f++) tick(s, 0);
     const second = pogoRun(s);
     expect(second.hits).toEqual(['lamp-glide-1', 'lamp-glide-2']);
     expect(
@@ -286,7 +278,7 @@ describe('lampwings in the grove: audit', () => {
       // It does come (she is in its sight), but a touch sends it off: rest, home, the tell, the way back.
       expect(hurts.length, id).toBeGreaterThanOrEqual(2);
       const gaps = hurts.slice(1).map((h, i) => h - (hurts[i] as number));
-      expect(Math.min(...gaps), id).toBeGreaterThanOrEqual(180);
+      expect(Math.min(...gaps), id).toBeGreaterThanOrEqual(170);
       // Within arm's reach of her less than a fifth of the time, never for a second at a stretch.
       expect(close / N, id).toBeLessThan(0.2);
       expect(longest, id).toBeLessThan(60);
@@ -297,7 +289,7 @@ describe('lampwings in the grove: audit', () => {
     }
   });
 
-  it('a pursuit never lasts more than six seconds, and then it is gone for at least two', () => {
+  it('an attack is three dives at most (under ten seconds), and then it is gone for more than a second and a half', () => {
     const s = newSim();
     s.place(1450, 704);
     // She cannot be hurt here, so nothing ends the chase early.
@@ -309,7 +301,8 @@ describe('lampwings in the grove: audit', () => {
     let off = 0;
     for (let f = 0; f < 3600; f++) {
       tick(s, 0);
-      if (e().mode === 'pursue') {
+      const m = e().mode;
+      if (m === 'curious' || m === 'dive' || m === 'stall' || m === 'pursue') {
         if (on === 0 && off > 0 && stints.length > 0) breaks.push(off);
         on++;
         off = 0;
@@ -320,8 +313,10 @@ describe('lampwings in the grove: audit', () => {
       }
     }
     expect(stints.length).toBeGreaterThan(3);
-    expect(Math.max(...stints)).toBeLessThanOrEqual(L.pursueFrames);
-    expect(Math.min(...breaks)).toBeGreaterThanOrEqual(120);
+    const cycle = L.curiousFrames + L.diveMaxFrames + L.stallFrames + L.pursueFrames;
+    expect(Math.max(...stints)).toBeLessThanOrEqual(L.maxDives * cycle);
+    expect(Math.max(...stints)).toBeLessThan(600);
+    expect(Math.min(...breaks)).toBeGreaterThanOrEqual(100);
   });
 
   it('a hit anywhere they fly can drop her, never trap her or take her out of the scene', () => {

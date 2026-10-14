@@ -129,7 +129,21 @@ export const GOAL = {
     /** Seconds the price stays after a refusal when the event gives no `show` (it does: 150 frames; it also
      * stays while she stands there short), and its fade. */
     hold: 4,
-    fadeOut: 0.7,
+    fadeOut: 0.45,
+    /**
+     * One price at a time (playtest 5: two or three rings of orange drops in one view, lamp-rise's
+     * inside burr-rise's fighting ground for the whole fight): only the nearest dormant light in
+     * range shows its price, it comes up slowly (`fadeIn` s), and not while a creature within
+     * `alertPx` of her or of that light is alert or fighting, nor for `calm` s after. A wayside
+     * lamp's is smaller (`lampScale`) and dimmer (`lampAlpha` against a lantern's `alpha`).
+     * Standing at one without the price (the sim's refusal) shows it at once regardless.
+     */
+    fadeIn: 1.5,
+    alertPx: 400,
+    calm: 1.4,
+    alpha: 0.92,
+    lampScale: 0.76,
+    lampAlpha: 0.6,
     /** Stars fade in one after another this far apart, s. */
     step: 0.03,
     /** The crown of marks round the glass: radius px, degrees between two marks, widest span; mark half-height px. */
@@ -216,8 +230,8 @@ export const GOAL = {
     haloGain: 0.2,
     /** Motes rising from the open heart: per second. */
     motes: 2.2,
-    /** The wave through the forest when it wakes: px/s, half-width and half-height px, brightness. */
-    wave: { speed: 2300, width: 300, height: 600, gain: 0.2, surface: 0.9, reach: 6200 },
+    /** The ring's light on the forest behind and on every surface as it passes (speed and start: `wake.ring`): half-width and half-height px, brightness. */
+    wave: { width: 260, height: 520, gain: 0.1, surface: 0.8, reach: 6200 },
     /** Motes that drift toward it across the view when it wakes: how many, seconds. */
     drift: 34,
     driftSeconds: 3.4,
@@ -256,17 +270,191 @@ export const GOAL = {
     turns: 1.2,
     wind: 16,
     rise: 46,
-    lights: [5, 6, 8],
+    lights: [5, 6, 26],
     bands: [
       [90, 300, 16, 70],
       [150, 430, 110, 300],
-      [200, 620, 240, 520],
+      [90, 940, 300, 800],
     ],
     step: 0.16,
     bead: 5,
     beadGain: 1,
     halo: 20,
     haloGain: 0.24,
+    /**
+     * What each tier adds to the picture, for good (playtest 5: 56 and 91 offered ended alike):
+     *  1. the shrine's flowers open: glow-buds along the heart's ground at `flowers` (px from the
+     *     heart, stalk height), nearest first, each with a light (`flowerBead` px at `flowerGain`);
+     *  2. the veins in the roots stay lit out to the lanterns (`GOAL.wake.veins.lit`);
+     *  3. lights wake up into the canopy across the whole frame: the third band above, each rising
+     *     `riseFrom` px to its place over `riseSeconds`, the farther from the heart the later
+     *     (`ripple` px/s), and a breath more of the light under the canopy (`canopy`).
+     */
+    flowers: [
+      [-452, 17],
+      [-398, 25],
+      [-341, 14],
+      [-292, 22],
+      [-236, 16],
+      [-187, 27],
+      [-141, 15],
+      [-104, 21],
+      [108, 19],
+      [146, 26],
+      [189, 14],
+      [228, 22],
+    ] as Array<[number, number]>,
+    flowerBead: 3.8,
+    flowerGain: 0.8,
+    riseFrom: 150,
+    riseSeconds: 1.8,
+    ripple: 520,
+    canopy: 0.03,
+  },
+  /**
+   * The heart wakes: the one big moment, in beats over ~3.6 s, all of it small lights (deep amber,
+   * small hot cores, the darks kept: under 0.3% of the frame over luma 200, under 2% over 150).
+   *
+   *  0.0  the bud stirs and parts in stages: `open` = [seconds, how open], each a lurch on its
+   *       spring; the heart's glows come up in the same steps (`level` = [from, to, share]);
+   *  0.55 light runs out through the roots in the ground to every lit lantern (`veins`), and each
+   *       answers as it arrives;
+   *  1.35 the moth cut in the wing-stone fills with light, stroke by stroke (`carving`);
+   *  2.1  one ring travels out from the heart across the screen (`ring`): every small light it
+   *       passes (lantern flowers, fireflies, glass beads, pools, waiting glints) swells once
+   *       (`swell`) and settles a step higher for good (`step`); fireflies at fixed places round
+   *       the shrine flash as it passes and one in `flies.stay` remains.
+   *
+   * The camera holds the picture through it (`camera.frame`: in 1.1 s + hold); the sim holds the
+   * ending back for as long (memory/goal.md).
+   */
+  wake: {
+    open: [
+      [0, 0.3],
+      [0.6, 0.55],
+      [1.35, 0.78],
+    ],
+    level: [
+      [0, 0.35, 0.22],
+      [0.6, 1.0, 0.3],
+      [1.35, 2.0, 0.48],
+    ],
+    /**
+     * `seconds` = the shortest / longest a vein takes to its lantern (it starts slowly and gathers
+     * speed, so the stretch by the heart is seen running); a strand is a polyline of `step` px
+     * pieces wandering `wander` px about the way, `width` px wide; `body` = how bright it glows
+     * behind the head during the wake, held `hold` s then gone in `fade` s; `lit` = how bright it
+     * stays once the offering's second tier lights it; the head is a `bead` px bead with `headPx`
+     * of brighter vein behind it, warming the ground by `ground` as it passes.
+     *
+     * `routes`: heart -> lantern (by id), world points INSIDE the ground, 18-22 px under its
+     * surface or inside a face (the grass fringe hides the ground line). `via` = it runs along
+     * that vein first and branches off at its own first point. FOR THE LAYOUT OWNER: if the rise,
+     * the far bluff, trunk B or the floor moves, move these.
+     */
+    veins: {
+      start: 0.55,
+      seconds: [0.8, 2.6],
+      step: 18,
+      strands: 2,
+      wander: 6.5,
+      width: 3.4,
+      /** Corners of the way are rounded over this many px; a rootlet every ~`twigEvery` px, `twig` px long (from, to). */
+      corner: 16,
+      twigEvery: 64,
+      twig: [9, 24],
+      gain: 0.62,
+      body: 0.5,
+      hold: 3.4,
+      fade: 4.5,
+      lit: 0.62,
+      headPx: 120,
+      bead: 4.4,
+      ground: 0.5,
+      routes: {
+        'lantern-far': {
+          pts: [
+            [5232, 1108],
+            [5300, 1112],
+            [5458, 1108],
+            [5492, 1090],
+            [5490, 800],
+            [5508, 787],
+            [5524, 783],
+          ],
+        },
+        'lantern-crown': {
+          pts: [
+            [5192, 1108],
+            [5060, 1113],
+            [4630, 1108],
+            [4627, 1296],
+            [3990, 1300],
+            [3982, 1392],
+            [3760, 1396],
+            [3738, 1392],
+            [3735, 1300],
+            [3700, 1297],
+            [3696, 1270],
+            [3696, 214],
+            [3684, 208],
+          ],
+        },
+        'lantern-stone': {
+          via: 'lantern-crown',
+          pts: [
+            [3700, 1297],
+            [3090, 1300],
+            [3062, 1296],
+            [3060, 1170],
+            [2644, 1170],
+            [2612, 1166],
+            [2610, 980],
+            [2450, 980],
+            [2446, 1296],
+            [2420, 1300],
+            [1870, 1300],
+            [1866, 1422],
+            [1540, 1424],
+            [1523, 1422],
+            [1522, 1300],
+            [1448, 1298],
+          ],
+        },
+      } as Record<string, { via?: string; pts: number[][] }>,
+    },
+    /** The moth on the wing-stone: its centre from the heart's foot (`dx`, `dy`), size and lean as painted
+     * (scene/lib/pf-forms.ts, the shrine: move it with the stone). `glow` = how bright it stays. */
+    carving: {
+      start: 1.35,
+      seconds: 0.95,
+      dx: -4,
+      dy: -218,
+      size: 30,
+      lean: -0.04,
+      width: 3,
+      gain: 0.7,
+      glow: 0.42,
+    },
+    /**
+     * `ring`: seconds after the wake it leaves the heart, px/s, how wide the swelling band is, how
+     * much a light swells in it and how much higher it stays; `ground` = the low swell that runs
+     * along the heart's own ground with it (half-length, half-height px, brightness); `glint` =
+     * what a waiting glint anywhere in view gives as it passes, and keeps.
+     * `flies`: `n` fireflies within `spread` px either side of the heart, `low`..`high` px above
+     * its foot; each flashes (`flash`, a `bead` px bead in a `halo` px halo, half as large again at
+     * the peak) and every `stay`-th stays at `rest`.
+     */
+    ring: {
+      start: 2.0,
+      speed: 1050,
+      width: 260,
+      swell: 1.3,
+      step: 0.28,
+      ground: [90, 12, 0.5],
+      glint: [0.6, 0.14],
+    },
+    flies: { n: 52, spread: 1080, low: 46, high: 600, stay: 2, flash: 1.5, rest: 0.6, bead: 3.6, halo: 15 },
   },
   /**
    * Ember-moths that LEAD to the next dark lantern, or to the heart once all burn (guide.ts). One
@@ -334,6 +522,25 @@ export const GOAL = {
     perchGain: 0.3,
     fadeIn: 0.45,
     fadeOut: 0.8,
+    /**
+     * A flight that starts away from her (the lantern caught behind a runner) first comes to her
+     * (`come` px/s), passes her shoulder and only then leads: it never waits behind her line of
+     * travel. A way is joined AHEAD of her: `joinMin`..`joinMax` px further along the route than
+     * its point nearest to her (as far as she is from it), so the first leg never runs backward.
+     *
+     * Where the way between her and the leader runs up or down (`steep` = |dy| share of the
+     * tangent), the moths do not hang in a knot: they stream along it one after another, away
+     * from her, from `streamFrom` px past her to the leader (at least `streamMin` px, kept inside the picture),
+     * `streamRate` runs a second each.
+     */
+    come: 900,
+    comePx: 170,
+    joinMin: 90,
+    joinMax: 520,
+    steep: 0.8,
+    streamFrom: 64,
+    streamMin: 340,
+    streamRate: 0.85,
     size: 1,
     wing: 0.9,
     tint: 0x7a3c22,

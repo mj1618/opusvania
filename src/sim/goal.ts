@@ -38,18 +38,19 @@ const dormant = (): LanternState => ({
   noticed: false,
   pledged: false,
   still: 0,
+  keyed: true,
 });
 
 export function createGoal(scene: Scene): GoalState {
   return {
-    lanterns: (scene.lanterns ?? []).map(dormant),
+    lanterns: (scene.lanterns ?? []).map((l) => ({ ...dormant(), keyed: l.key === undefined })),
     lit: 0,
     restAt: -1,
     lamps: (scene.lamps ?? []).map(dormant),
     lampsLit: 0,
     restLamp: -1,
     restHold: false,
-    heart: { awake: false, frames: 0, hinted: false },
+    heart: { awake: false, frames: 0, hinted: false, ready: false, waited: false },
     gathered: false,
     ending: {
       frames: 0,
@@ -69,8 +70,10 @@ export function createGoal(scene: Scene): GoalState {
       lampsTotal: 0,
       offered: 0,
       offerTier: 0,
+      offerNext: 0,
     },
     offer: { total: 0, given: 0, tier: 0 },
+    grove: { flowers: false, paths: false, canopy: false },
     ended: false,
     run: { start: -1, hits: 0, deaths: 0 },
   };
@@ -123,6 +126,13 @@ export function goalReformed(g: GoalState, atLight: boolean): void {
   for (const l of g.lamps) l.pledged = false;
 }
 
+/** Index in `scene.pickups` of the pickup called `id` (-1 = none). */
+function keyIndex(scene: Scene, id: string): number {
+  const list = scene.pickups ?? [];
+  for (let i = 0; i < list.length; i++) if (list[i]?.id === id) return i;
+  return -1;
+}
+
 /** Glints already set loose and on their way to her: a cut pod's, a dead creature's. */
 function inbound(state: GameState): number {
   let n = 0;
@@ -171,6 +181,19 @@ function offer(state: GameState, scene: Scene, t: Tuning['goal'], n: number, eve
       tier: g.offer.tier,
       given: g.offer.given,
       need,
+    });
+    // What the grove answers with, one part more for each tier: the shrine's flowers, the three
+    // lantern paths' glow plants, the whole canopy's lights.
+    const part = g.offer.tier === 1 ? 'flowers' : g.offer.tier === 2 ? 'paths' : 'canopy';
+    g.grove[part] = true;
+    events.push({
+      type: 'groveWake',
+      x: heart.x,
+      y: heart.y,
+      tier: g.offer.tier,
+      part,
+      given: g.offer.given,
+      frame: g.ending.frames,
     });
   }
 }
@@ -234,7 +257,17 @@ export function updateGoal(
   p.kindling = -1;
   p.kindlingLamp = -1;
   const heart = scene.heart;
-  if (g.heart.awake) g.heart.frames++;
+  if (g.heart.awake) {
+    g.heart.frames++;
+    // The wake is a short sequence of its own: the heart takes her in only once it has played.
+    // Awake, it keeps what lives round it quiet (she may stand in its light and wait).
+    if (heart && !g.gathered && G.heartCalmPx > 0 && g.heart.frames % 30 === 1)
+      calmEnemies(state, scene, t, events, heart.x, heart.y - whole(G.heartHeight, 2) / 2, G.heartCalmPx, 45);
+    if (!g.heart.ready && g.heart.frames >= whole(G.heartWakeFrames, 0)) {
+      g.heart.ready = true;
+      if (heart) events.push({ type: 'heartReady', x: heart.x, y: heart.y, waited: g.heart.waited });
+    }
+  }
 
   // The ending hold.
   if (g.gathered) {
@@ -266,6 +299,17 @@ export function updateGoal(
       if (inside && !g.heart.hinted && list.length > 0) {
         g.heart.hinted = true;
         events.push({ type: 'heartSleep', x: heart.x, y: heart.y, lit: g.lit, total: list.length });
+      }
+    } else if (control && standsIn(p, b) && !g.heart.ready) {
+      // Early: she stands in the waking light until it is ready for her (her input stays hers).
+      if (!g.heart.waited) {
+        g.heart.waited = true;
+        events.push({
+          type: 'heartWait',
+          x: heart.x,
+          y: heart.y,
+          frames: Math.max(0, whole(G.heartWakeFrames, 0) - g.heart.frames),
+        });
       }
     } else if (control && standsIn(p, b)) {
       g.gathered = true;
@@ -303,6 +347,14 @@ export function updateGoal(
       g.ending.lampsTotal = scene.lamps?.length ?? 0;
       g.ending.offered = wallet.count;
       g.ending.offerTier = offerTier(wallet.count, G);
+      g.ending.offerNext =
+        g.ending.offerTier >= 3
+          ? 0
+          : (g.ending.offerTier === 2
+              ? G.offerTier3
+              : g.ending.offerTier === 1
+                ? G.offerTier2
+                : G.offerTier1) - wallet.count;
       g.offer.total = wallet.count;
       g.offer.given = 0;
       g.offer.tier = 0;
@@ -337,6 +389,7 @@ export function updateGoal(
         lampsTotal: g.ending.lampsTotal,
         offered: g.ending.offered,
         offerTier: g.ending.offerTier,
+        offerNext: g.ending.offerNext,
         offerTiers: [G.offerTier1, G.offerTier2, G.offerTier3],
       });
     }
@@ -404,6 +457,16 @@ function updateLights(
     }
 
     const need = lamp ? lampCost(l, G) : lanternCost(l, G);
+    // A lantern may want a great glint of the scene besides its price: until she has gathered it,
+    // it will not catch (it tells her what it wants: `lanternRefuse.key`).
+    const key = l.key === undefined ? -1 : keyIndex(scene, l.key);
+    const keyAt = key >= 0 ? scene.pickups?.[key] : undefined;
+    const keyed = key < 0 || (wallet.timers[key] ?? 0) < 0;
+    if (keyed && !s.keyed && keyAt) {
+      s.keyed = true;
+      events.push({ type: 'lanternKey', id, x, y, key: keyAt.id, kx: keyAt.x, ky: keyAt.y });
+    }
+    s.keyed = keyed;
     // Noticed as she comes near, once per approach: nothing happens here, the picture answers.
     const nx = pcx - (b.x + b.w / 2);
     const ny = pcy - (b.y + b.h / 2);
@@ -412,7 +475,15 @@ function updateLights(
       if (far > G.noticeLeavePx * G.noticeLeavePx) s.noticed = false;
     } else if (control && !g.gathered && far <= G.noticePx * G.noticePx) {
       s.noticed = true;
-      events.push({ type: lamp ? 'lampNotice' : 'lanternNotice', id, x, y, have: wallet.count, need });
+      events.push({
+        type: lamp ? 'lampNotice' : 'lanternNotice',
+        id,
+        x,
+        y,
+        have: wallet.count,
+        need,
+        ...(keyAt && !keyed ? { key: { id: keyAt.id, x: keyAt.x, y: keyAt.y } } : {}),
+      });
     }
     if (s.refused) {
       // Sideways only: a hop on the spot is still the same visit.
@@ -436,11 +507,19 @@ function updateLights(
     // Pledged: she stands at it short, and what she lacks is already in the air on its way to her
     // (the pod she cut at its foot). From here it catches the step those have landed, wherever she
     // is by then; while she stays, the channel shows (a slash does not break it any more).
-    if (!s.pledged && at && meant && !g.gathered && wallet.count < need && wallet.count + coming >= need)
+    if (
+      !s.pledged &&
+      keyed &&
+      at &&
+      meant &&
+      !g.gathered &&
+      wallet.count < need &&
+      wallet.count + coming >= need
+    )
       s.pledged = true;
     if (s.pledged && wallet.count + coming < need) s.pledged = false;
     const paid = s.pledged && wallet.count >= need && !g.gathered;
-    if (paid || ((calm || held) && wallet.count >= need) || (s.pledged && at)) {
+    if (keyed && (paid || ((calm || held) && wallet.count >= need) || (s.pledged && at))) {
       s.short = 0;
       const of = whole(G.channelFrames, 1);
       if (at) {
@@ -498,7 +577,7 @@ function updateLights(
       s.channel = 0;
     }
     // Too little: it says so once she has stood still at it a moment (a run through says nothing).
-    const waiting = at && !g.gathered && wallet.count < need && Math.abs(p.vx) < G.refuseStillVx;
+    const waiting = at && !g.gathered && (wallet.count < need || !keyed) && Math.abs(p.vx) < G.refuseStillVx;
     s.short = waiting ? s.short + 1 : 0;
     if (waiting && !s.refused && s.short >= whole(G.refuseFrames, 1)) {
       s.refused = true;
@@ -510,6 +589,7 @@ function updateLights(
         have: wallet.count,
         need,
         show: whole(G.refuseShowFrames, 0),
+        ...(keyAt && !keyed ? { key: { id: keyAt.id, x: keyAt.x, y: keyAt.y } } : {}),
       });
     }
   }

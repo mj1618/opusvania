@@ -9,6 +9,11 @@ import type { EnemySpawn, Lantern, Pickup, Scene } from '../../src/sim/scene';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { feet, flatScene, newSim, type Sim } from './helpers';
 
+// These rule tests were written before the heart's wake had a length: here it is ready the step
+// after it wakes (vitest gives each test file its own copy of the module). The wait has its own tests.
+const WAKE_FRAMES = defaultTuning.goal.heartWakeFrames;
+defaultTuning.goal.heartWakeFrames = 0;
+
 /**
  * The goal (src/sim/goal.ts, memory/goal.md): three moth-lanterns kindled with gathered light,
  * the heart of the grove, the ending. On a flat test scene (floor top at 800, 4000 wide, spawn at
@@ -25,6 +30,7 @@ const goalTypes = (ev: SimEvent[]) =>
   types(ev).filter(
     (t) =>
       t !== 'lanternNotice' &&
+      t !== 'heartReady' &&
       (t.startsWith('lantern') || t.startsWith('heart') || t === 'gather' || t === 'endHold'),
   );
 
@@ -110,6 +116,7 @@ describe('lanterns: kindling', () => {
       noticed: true,
       pledged: false,
       still: 0,
+      keyed: true,
     });
     expect(s.state.player.kindling).toBe(-1);
     expect([s.state.goal.lit, s.state.goal.restAt]).toEqual([1, 0]);
@@ -642,7 +649,13 @@ describe('the heart', () => {
     const ev = s.run('.30');
     expect(goalTypes(ev).slice(-2)).toEqual(['lanternKindle', 'heartWake']);
     expect(of(ev, 'heartWake')[0]).toEqual({ type: 'heartWake', x: HEART_X, y: FLOOR });
-    expect(s.state.goal.heart).toEqual({ awake: true, frames: 0, hinted: false });
+    expect(s.state.goal.heart).toEqual({
+      awake: true,
+      frames: 0,
+      hinted: false,
+      ready: false,
+      waited: false,
+    });
     s.run('.25');
     expect(s.state.goal.heart.frames).toBe(25);
   });
@@ -655,7 +668,13 @@ describe('the heart', () => {
     const ev = s.run('R60 .30 L60 .10 R60 .60');
     const sleep = of(ev, 'heartSleep');
     expect(sleep).toEqual([{ type: 'heartSleep', x: HEART_X, y: FLOOR, lit: 1, total: 3 }]);
-    expect(s.state.goal.heart).toEqual({ awake: false, frames: 0, hinted: true });
+    expect(s.state.goal.heart).toEqual({
+      awake: false,
+      frames: 0,
+      hinted: true,
+      ready: false,
+      waited: false,
+    });
     expect([s.state.goal.gathered, s.state.goal.ended]).toEqual([false, false]);
     // Standing in it asleep: she keeps control.
     s.place(HEART_X, FLOOR);
@@ -709,6 +728,8 @@ describe('the heart', () => {
     const s = sim(scene({ enemies: [burr(2290), burr(900, 1)] }), 36);
     s.place(2200, FLOOR);
     s.tuning.burrback.strikePx = 0;
+    // (Three hit points here: one chain.)
+    for (const e of s.state.enemies) e.hp = 3;
     s.run('R+A1 .20 R+A1 .22 R+A1 .60');
     expect(s.state.enemies[0]?.mode).toBe('dead');
     lightAll(s);
@@ -906,7 +927,7 @@ describe('the ending', () => {
     expect(s.state.goal.run.hits).toBe(0);
   });
 
-  it('a lampwing in pursuit at the gather gives up', () => {
+  it('a lampwing in its dive at the gather gives up', () => {
     const wing: EnemySpawn = {
       id: 'w',
       kind: 'lampwing',
@@ -915,12 +936,15 @@ describe('the ending', () => {
       facing: -1,
       radius: 60,
     };
-    const s = newSim(scene({ enemies: [wing] }));
+    // (Without the woken heart's own calm, which would have settled it already: below.)
+    const t = cloneTuning(defaultTuning);
+    t.goal.heartCalmPx = 0;
+    const s = newSim(scene({ enemies: [wing] }), t);
     lightAll(s);
     s.place(HEART_X + 150, FLOOR);
     // Let it notice and come at her, then walk into the heart.
     s.run('.45');
-    expect(s.state.enemies[0]?.mode).toBe('pursue');
+    expect(['dive', 'stall']).toContain(s.state.enemies[0]?.mode);
     const ev = s.run('L20');
     expect(of(ev, 'gather')).toHaveLength(1);
     expect(of(ev, 'enemyGiveUp')[0]?.cause).toBe('calm');
@@ -975,7 +999,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
     s.run(`.${G.holdFrames + 5}`);
     expect([s.state.goal.lit, s.state.goal.ended, s.state.pickups.spent]).toEqual([3, true, 36]);
     const fresh = createState(1, s.tuning, s.scene);
-    expect(fresh.version).toBe(17);
+    expect(fresh.version).toBe(18);
     expect(fresh.goal).toEqual({
       lanterns: [0, 1, 2].map(() => ({
         lit: false,
@@ -987,6 +1011,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
         noticed: false,
         pledged: false,
         still: 0,
+        keyed: true,
       })),
       lit: 0,
       restAt: -1,
@@ -994,7 +1019,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
       lampsLit: 0,
       restLamp: -1,
       restHold: false,
-      heart: { awake: false, frames: 0, hinted: false },
+      heart: { awake: false, frames: 0, hinted: false, ready: false, waited: false },
       gathered: false,
       ending: {
         frames: 0,
@@ -1014,8 +1039,10 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
         lampsTotal: 0,
         offered: 0,
         offerTier: 0,
+        offerNext: 0,
       },
       offer: { total: 0, given: 0, tier: 0 },
+      grove: { flowers: false, paths: false, canopy: false },
       ended: false,
       run: { start: -1, hits: 0, deaths: 0 },
     });
@@ -1185,5 +1212,125 @@ describe('the grove: lanterns and heart in the scene data', () => {
     expect(withL([{ id: 'ok', x: 2000, y: 1280 }], { x: 2300, y: 1200 })).toThrow(/does not stand/);
     expect(withL([{ id: 'ok', x: 2000, y: 1280 }], { x: 2030, y: 1280 })).toThrow(/stands in the heart/);
     expect(withL([{ id: 'ok', x: 2000, y: 1280 }], { x: 2300, y: 1280 })).not.toThrow();
+  });
+});
+
+describe('playtest 5: the ember, the wake that is waited for, what the offering wakes', () => {
+  const ember: Pickup = { id: 'ember', kind: 'great', x: 800, y: FLOOR - 40 };
+  const keyed = (): Scene =>
+    scene({ lanterns: [{ id: 'a', x: A_X, y: FLOOR, key: 'ember' }], pickups: [ember] });
+
+  it('a lantern with a `key` will not catch until she has gathered that great glint, and says what it wants', () => {
+    const s = sim(keyed(), 30, A_X - 300);
+    expect(lantern(s).keyed).toBe(false);
+    // Coming near: the notice carries the key. Standing at it with the price: no channel, a refusal with the key.
+    const ev = s.run('R40 .40');
+    expect(of(ev, 'lanternNotice')[0]).toMatchObject({
+      id: 'a',
+      key: { id: 'ember', x: 800, y: FLOOR - 40 },
+    });
+    s.place(A_X, FLOOR);
+    const at = s.run('.60');
+    expect(of(at, 'lanternChannel')).toHaveLength(0);
+    expect(of(at, 'lanternRefuse')[0]).toMatchObject({ have: 30, need: 12, key: { id: 'ember' } });
+    expect(s.state.goal.lit).toBe(0);
+    // She fetches it: `lanternKey` the step it reaches her; back at the lantern it catches as any other.
+    s.place(800, FLOOR);
+    const got = s.run('.80');
+    expect(of(got, 'lanternKey')).toEqual([
+      { type: 'lanternKey', id: 'a', x: A_X, y: FLOOR, key: 'ember', kx: 800, ky: FLOOR - 40 },
+    ]);
+    expect(lantern(s).keyed).toBe(true);
+    s.place(A_X, FLOOR);
+    const lit = s.run(`.${G.channelFrames}`);
+    expect(of(lit, 'lanternKindle')[0]).toMatchObject({ id: 'a', cost: 12 });
+    // The ember is a great glint like the others: its worth is in her wallet.
+    expect(s.state.pickups.spent).toBe(12);
+    // A key that is not a great glint of the scene is refused by the validation.
+    expect(() =>
+      parseScene({ ...GROVE, lanterns: [{ ...(GROVE.lanterns ?? [])[1], key: 'spawn-1' }] }),
+    ).toThrow(/not a great glint/);
+    // In the grove: the summit's lantern wants the ember that hangs over F3, above the first lantern.
+    expect((GROVE.lanterns ?? []).map((l) => l.key)).toEqual([undefined, 'great-ember', undefined]);
+    expect((GROVE.pickups ?? []).find((p) => p.id === 'great-ember')).toMatchObject({
+      kind: 'great',
+      x: 1500,
+      y: 650,
+    });
+  });
+
+  it('the wake has a length: there before it has played she stands in the waking light, in control, and the run ends when it is ready', () => {
+    const t = cloneTuning(defaultTuning);
+    t.goal.heartWakeFrames = WAKE_FRAMES;
+    expect(WAKE_FRAMES).toBe(180);
+    const s = newSim(scene(), t);
+    lightAll(s);
+    // 30 frames after it woke she is standing in it: no gather; `heartWait` once.
+    s.run('.20');
+    s.place(HEART_X, FLOOR);
+    const early = s.run('.60');
+    expect(of(early, 'gather')).toHaveLength(0);
+    expect(of(early, 'heartWait')).toHaveLength(1);
+    expect(of(early, 'heartWait')[0]?.frames).toBeGreaterThan(100);
+    expect(s.state.goal.heart).toMatchObject({ awake: true, ready: false, waited: true });
+    // Her input is her own meanwhile: she can step out and back.
+    const x = feet(s).x;
+    s.run('R6 .4 L6');
+    expect(feet(s).x).not.toBe(x - 1000);
+    expect(s.state.goal.gathered).toBe(false);
+    // The wake has played: `heartReady`, and standing there the run ends on that step or the next.
+    s.place(HEART_X, FLOOR);
+    const rest = s.run(`.${WAKE_FRAMES}`);
+    const ready = rest.findIndex((e) => e.type === 'heartReady');
+    const gather = rest.findIndex((e) => e.type === 'gather');
+    expect(ready).toBeGreaterThanOrEqual(0);
+    expect(rest[ready]).toMatchObject({ waited: true });
+    expect(gather).toBeGreaterThan(ready);
+    expect(s.state.goal.heart.frames).toBeGreaterThanOrEqual(WAKE_FRAMES);
+  });
+
+  it('awake, the heart keeps the creatures round it calm until the run ends', () => {
+    const s = newSim(scene({ enemies: [burr(HEART_X - 200, 1)] }));
+    lightAll(s);
+    s.run('.40');
+    s.place(HEART_X - 180, FLOOR);
+    s.state.goal.heart.ready = false;
+    const ev = s.run('.200');
+    expect(of(ev, 'hurt')).toHaveLength(0);
+    expect(of(ev, 'enemyWindup')).toHaveLength(0);
+    expect(s.state.enemies[0]?.calm).toBeGreaterThan(0);
+    expect(G.heartCalmPx).toBe(600);
+  });
+
+  it('each tier of the offering wakes one part more of the grove: flowers at 25, the paths at 50, the canopy at 100', () => {
+    const run = (glints: number) => {
+      const s = newSim(scene());
+      lightAll(s);
+      s.state.pickups.count = glints;
+      s.place(HEART_X, FLOOR);
+      const ev = s.run(`.${G.holdFrames + 5}`);
+      return { s, ev };
+    };
+    const none = run(10);
+    expect(of(none.ev, 'groveWake')).toHaveLength(0);
+    expect(none.s.state.goal.grove).toEqual({ flowers: false, paths: false, canopy: false });
+    expect(of(none.ev, 'gather')[0]).toMatchObject({ offered: 10, offerTier: 0, offerNext: 15 });
+    const one = run(30);
+    expect(of(one.ev, 'groveWake').map((e) => [e.tier, e.part])).toEqual([[1, 'flowers']]);
+    expect(one.s.state.goal.grove).toEqual({ flowers: true, paths: false, canopy: false });
+    expect(one.s.state.goal.ending).toMatchObject({ offered: 30, offerTier: 1, offerNext: 20 });
+    const all = run(120);
+    const woke = of(all.ev, 'groveWake');
+    expect(woke.map((e) => [e.tier, e.part])).toEqual([
+      [1, 'flowers'],
+      [2, 'paths'],
+      [3, 'canopy'],
+    ]);
+    // In order, a while apart (the offering goes in over 140 frames), each in the step its tier is passed.
+    expect((woke[1]?.frame ?? 0) - (woke[0]?.frame ?? 0)).toBeGreaterThan(15);
+    expect((woke[2]?.frame ?? 0) - (woke[1]?.frame ?? 0)).toBeGreaterThan(30);
+    expect(of(all.ev, 'heartTier').map((e) => e.tier)).toEqual([1, 2, 3]);
+    expect(all.s.state.goal.grove).toEqual({ flowers: true, paths: true, canopy: true });
+    expect(all.s.state.goal.ending.offerNext).toBe(0);
   });
 });

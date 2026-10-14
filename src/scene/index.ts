@@ -30,7 +30,7 @@ const SceneSchema = z
         y: int,
         w: int.positive(),
         h: int.positive(),
-        kick: z.boolean().optional(),
+        kick: z.union([z.boolean(), z.literal('east'), z.literal('west')]).optional(),
       }),
     ),
     oneWays: z.array(z.object({ tag: TAG, x: int, y: int, w: int.positive() })),
@@ -61,6 +61,8 @@ const SceneSchema = z
               y: int,
               facing: z.union([z.literal(-1), z.literal(1)]),
               radius: int.min(40).max(2000).optional(),
+              hp: int.min(1).max(12).optional(),
+              fenced: z.boolean().optional(),
             })
             .strict(),
           z
@@ -71,6 +73,8 @@ const SceneSchema = z
               y: int,
               facing: z.union([z.literal(-1), z.literal(1)]),
               radius: int.min(0).max(400).optional(),
+              hp: int.min(1).max(12).optional(),
+              sight: int.min(60).max(900).optional(),
             })
             .strict(),
         ]),
@@ -78,7 +82,15 @@ const SceneSchema = z
       .default([]),
     lanterns: z
       .array(
-        z.object({ id: z.string().min(1), x: int, y: int, cost: int.min(0).max(99).optional() }).strict(),
+        z
+          .object({
+            id: z.string().min(1),
+            x: int,
+            y: int,
+            cost: int.min(0).max(99).optional(),
+            key: z.string().min(1).optional(),
+          })
+          .strict(),
       )
       .default([]),
     lamps: z
@@ -226,6 +238,10 @@ export function parseScene(json: unknown): Scene {
     const dy = l.y - s.spawn.y;
     if (dx * dx + dy * dy < LANTERN_SPAWN_CLEAR * LANTERN_SPAWN_CLEAR)
       throw new Error(`Scene "${s.id}": lantern "${l.id}" is too close to the spawn point`);
+    if (l.key !== undefined && !s.pickups.some((p) => p.id === l.key && p.kind === 'great'))
+      throw new Error(
+        `Scene "${s.id}": lantern "${l.id}" needs "${l.key}", which is not a great glint of the scene`,
+      );
   }
   // Wayside lamps: placed like lanterns, and never crowding one (their trigger boxes stay apart).
   for (const l of s.lamps) {

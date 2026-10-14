@@ -72,7 +72,7 @@ describe('the grove scene', () => {
     expect(feet(s).x).toBeLessThan(bluff.x);
     // The hollow: deeper than she is tall, out of it in one jump either way.
     const beside = ground[5];
-    const root = byTag('root')[0];
+    const root = byTag('root').find((r) => r.x === 3968);
     if (!beside || !root) throw new Error('no ground by the hollow');
     expect(hollow.y - beside.y).toBeGreaterThan(defaultTuning.body.height);
     expect(hollow.y - root.y).toBeLessThanOrEqual(192);
@@ -98,15 +98,20 @@ describe('the grove scene', () => {
     expect(hopOnto(s, terrace)).toBeGreaterThan(0);
     // West of the shaft the floor is crossed on foot in both directions (the bluff by the branch or a double jump).
     const west = [...byTag('ground'), ...byTag('pool')].filter((r) => r.x < b.x).sort((p, q) => p.x - q.x);
+    // (The root step at the bank's foot, 384, is tagged `root`: a tap jump up it, then one up the bank.)
     for (const order of [west, [...west].reverse()]) {
       const q = newSim({ ...GROVE, enemies: [] });
       const first = order[0];
       if (!first) throw new Error('no floor');
       q.place(first.x + first.w / 2, first.y);
-      for (const r of order) expect(hopOnto(q, r, 600), `onto the floor at ${r.x}`).toBeGreaterThan(-1);
+      for (const r0 of order) {
+        // (Past the root step at the bank's foot, which is a floor of its own to this pilot.)
+        const r = r0.x === 384 ? { ...r0, x: 448, w: r0.w - 64 } : r0;
+        expect(hopOnto(q, r, 600), `onto the floor at ${r.x}`).toBeGreaterThan(-1);
+      }
     }
     // East of it too: hollow, root, the ground beyond, the right rise.
-    const root = byTag('root')[0];
+    const root = byTag('root').find((r) => r.x === 3968);
     const east = byTag('ground').filter((r) => r.x > b.x && r.y > 1000);
     const [hollow, beyond, rise] = east;
     if (!root || !hollow || !beyond || !rise) throw new Error('no floor east of the shaft');
@@ -171,7 +176,12 @@ describe('the grove scene', () => {
     const s = newSim();
     s.place(3800, 1280);
     const far = byTag('ground').find((r) => r.x === 5472);
-    const route = [byTag('root')[0], GROVE.oneWays[1], ...byTag('floating').slice(5), far];
+    const route = [
+      byTag('root').find((r) => r.x === 3968),
+      GROVE.oneWays[1],
+      ...byTag('floating').slice(5),
+      far,
+    ];
     for (const r of route) {
       if (!r) throw new Error('route rect missing');
       expect(hopOnto(s, r), `onto ${r.tag} at ${r.x},${r.y}`).toBeGreaterThan(0);

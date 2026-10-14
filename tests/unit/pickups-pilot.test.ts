@@ -87,6 +87,8 @@ const STATIONS: Array<[prefix: string, x: number, y: number]> = [
   ['great-arch', 3562, 1280],
   ['great-far', 5540, 768],
   ['great-hang', 1984, 1280],
+  // (The ember the crown lantern wants: on F3, over the first lantern.)
+  ['great-ember', 1380, 704],
   ['hollow-', 3780, 1376],
   // (The leap's line is flown in layout-pilot.test.ts; from the terrace under it each is a hop.)
   ['leap-', 2800, 1152],
@@ -103,18 +105,18 @@ describe('gathering every glint in the grove', () => {
     }
   });
 
-  it('all 72 can be collected: 66 glints and 6 great ones, worth 96', () => {
+  it('all 73 can be collected: 66 glints and 7 great ones (one of them the ember over F3), worth 101', () => {
     const s = newSim();
     const missed: string[] = [];
     // The wall-jump shaft first: the climb itself passes through its glints.
     s.place(3456, 1280);
     expect(wallClimb(s, 448, -1)).toBeGreaterThanOrEqual(2);
-    // The two up the bark of trunk A out of the well, and the two up trunk B's east face (the way
-    // back west): each is a climb of one wall, a kick at a time.
-    for (const [x, y, dir, top] of [
-      [3130, 1280, 1, 448],
-      [3780, 1376, -1, 192],
-    ] as const) {
+    // The two in the doorway under trunk A (they hung on its bark until playtest 5: the bark is no
+    // way up any more): a walk from the well into the shaft.
+    s.place(3130, 1280);
+    s.run('R24 .30');
+    // The two up trunk B's east face (the way back west): a climb of one wall, a kick at a time.
+    for (const [x, y, dir, top] of [[3780, 1376, -1, 192]] as const) {
       s.place(x, y);
       let prev = 0;
       for (let f = 0; f < 600 && !(s.state.player.grounded && feet(s).y === top); f++) {
@@ -146,14 +148,14 @@ describe('gathering every glint in the grove', () => {
       if (s.state.pickups.timers[i] !== -1 && !missed.includes(p.id)) missed.push(p.id);
     });
     expect(missed).toEqual([]);
-    expect(list).toHaveLength(72);
-    expect(s.state.pickups.taken).toBe(72);
+    expect(list).toHaveLength(73);
+    expect(s.state.pickups.taken).toBe(73);
     // (The stations are teleports into creatures' patches and this pilot never fights: if their rams
     // fade her on the way, a third of the wallet lies where she fell. Gathered is what counts.
     // (And a lantern she runs past with its price catches behind her now: that is spent, not missing.)
     const w = s.state.pickups;
-    expect(w.count + w.lost + w.spent).toBe(96);
-    expect(pickupsWorth(GROVE, T)).toBe(96);
+    expect(w.count + w.lost + w.spent).toBe(101);
+    expect(pickupsWorth(GROVE, T)).toBe(101);
   });
 
   it('the sky line needs the wings: the same flight without them gathers none of its far half', () => {

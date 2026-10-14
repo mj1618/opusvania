@@ -96,6 +96,36 @@ export const GLINTS = {
     /** The ribbon's greatest length, px. */
     trailMax: 84,
   },
+  /**
+   * Glints let go by a dead creature or a burst pod (playtest 5: five head-sized stars popped during
+   * the hit freeze and flew into her face through the next cut). They stay hidden while the hit holds
+   * the world, then burst out LOW and SMALL: `reach` px from the body (near, far), `up` = how much of
+   * that is height, `lift` px more, `lean` px along the blow; they pop in `pop` s, hang, and stream
+   * to her chest in `fly` s on a nearly straight line (`curve` share of the distance, `curveMax` px
+   * at most). Drawn as the cut star (`K_STAR`, gold) with a point of light: `size` = its quad's
+   * half-size px popping (from, to), `flySize` flying (from, to); the star is 0.62 of the
+   * quad tall, so 9.8 is a 12 px star, and nothing here may be larger. `gain` = the point of light, popping / flying.
+   * The ribbon is `trail` of the usual width and `trailMax` px long; at her chest a `flare` px
+   * flare and `sparks` motes, no more.
+   */
+  spill: {
+    reach: [9, 21],
+    up: 0.55,
+    lift: 5,
+    lean: 12,
+    pop: 0.07,
+    fly: 0.13,
+    curve: 0.07,
+    curveMax: 9,
+    size: [4.5, 9.4],
+    flySize: [9.8, 7],
+    gain: [0.5, 0.75],
+    flyGain: 0.9,
+    trail: 0.6,
+    trailMax: 46,
+    flare: 13,
+    sparks: 2,
+  },
   absorb: {
     sparks: 5,
     comboSparks: 4,

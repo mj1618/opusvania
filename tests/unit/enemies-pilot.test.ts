@@ -17,13 +17,14 @@ const bit = (d: number) => (d > 0 ? ActionBit.right : d < 0 ? ActionBit.left : 0
 const list = (GROVE.enemies ?? []).filter((e) => e.kind === 'burrback');
 const burrs = (s: Sim) => s.state.enemies.slice(0, list.length);
 const H = defaultTuning.health;
+const B = defaultTuning.burrback;
 const count = (ev: SimEvent[], type: string) => ev.filter((e) => e.type === type).length;
 
 /** Stations: feet positions on each burrback's own surface, a little way off, by enemy id. */
 const STATIONS: Record<string, [x: number, y: number]> = {
   'burr-bank': [40, 1088],
   'burr-path': [1900, 1280],
-  'burr-ledge': [2850, 448],
+  'burr-ledge': [2880, 448],
   'burr-root': [4200, 1280],
   'burr-shaft': [3360, 1280],
   'burr-rise': [4780, 1088],
@@ -52,7 +53,11 @@ function fight(s: Sim, i: number, maxFrames = 900): number {
       // (A short press: under the branch a full jump would land her on it.)
       hop = 10;
     }
-    if (ram && hop > 0 && (p.grounded ? (prev & J) === 0 : true)) {
+    // (A hop carried her off its ground, into the pool below it: back up first.)
+    const below = p.y + p.h > e.y + e.h + 8;
+    if (below && !ram) {
+      m = bit(dx) | (p.grounded ? ((prev & J) === 0 ? J : 0) : p.vy < 0 ? J : 0);
+    } else if (ram && hop > 0 && (p.grounded ? (prev & J) === 0 : true)) {
       m = J | bit(over);
       hop--;
     } else if (ram) m = bit(over);
@@ -76,13 +81,18 @@ describe('burrbacks in the grove, piloted', () => {
       if (!st) throw new Error(`no station for ${id}`);
       s.place(st[0], st[1]);
       expect(feet(s), `station of ${id}`).toEqual({ x: st[0], y: st[1] });
+      // (burr-rise is fought under a lampwing: that pair is the careful pilot's, naive-pilot.test.ts.
+      // Here the burrback alone.)
+      for (const w of s.state.enemies)
+        if (id === 'burr-rise' && w.id === 'wing-rise') Object.assign(w, { mode: 'dead', hp: 0, gone: true });
       const from = s.events.length;
       expect(fight(s, i), id).toBeGreaterThan(0);
       // (She may be in the air from the cut that killed it.)
       for (let f = 0; f < 60 && !s.state.player.grounded; f++) step(s.state, 0, s.tuning, s.scene, s.events);
-      const die = s.events.slice(from).find((e) => e.type === 'enemyDie');
+      const die = s.events.slice(from).find((e) => e.type === 'enemyDie' && e.id === id);
       expect(die, id).toBeDefined();
-      if (die?.type === 'enemyDie') glints += die.value;
+      // (At burr-rise the lampwing over it dives at her meanwhile, and may fall to the same cuts.)
+      for (const d of s.events.slice(from)) if (d.type === 'enemyDie') glints += d.value;
       expect(s.state.player.hp, `${id} hurt her`).toBe(H.max);
       expect(s.state.player.grounded, `${id}: she left its surface`).toBe(true);
       expect(feet(s).y).toBe(st[1]);
@@ -110,7 +120,7 @@ describe('burrbacks in the grove, piloted', () => {
       ),
     ).toBeGreaterThan(0);
     s.place(3800, 1280);
-    const root = GROVE.solids.find((r) => r.tag === 'root');
+    const root = GROVE.solids.find((r) => r.tag === 'root' && r.x === 3968);
     // (No creature walks the far bluff's top: no patrol could clear its 288 px of the jump from F7.)
     const far = GROVE.solids.find((r) => r.tag === 'ground' && r.x === 5472);
     for (const r of [root, GROVE.oneWays[1], ...f.slice(5), far])
@@ -208,7 +218,7 @@ describe('burrbacks in the grove, piloted', () => {
     burrs(s).forEach((e, k) => {
       // (One step of walking since they were put back.)
       expect(Math.abs(e.x + e.w / 2 - (list[k]?.x ?? 0))).toBeLessThanOrEqual(2);
-      expect([e.y + e.h, e.hp, e.stride <= 2]).toEqual([list[k]?.y, 3, true]);
+      expect([e.y + e.h, e.hp, e.stride <= 2]).toEqual([list[k]?.y, list[k]?.hp ?? B.hp, true]);
       expect(Math.hypot(e.x + e.w / 2 - at.x, e.y + e.h - at.y)).toBeGreaterThanOrEqual(H.safeEnemyPx);
     });
     // Play goes on: she goes back and kills it.

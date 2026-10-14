@@ -9,6 +9,10 @@
  *    forward (`windup`: the tell), then rams a fixed length (`charge`) and stands spent (`recover`).
  *    Braced, a forward cut from its front glances off; from behind or from above it lands in full.
  *    Standing and mashing loses; reading the tell (hop over it, step back) and cutting it spent wins.
+ *  - A fight has a second beat: spent, it is winded for about two cuts' worth, then (roused: it has
+ *    been cut, or has rammed) it comes round to her and braces again. Each ram tires it: the second
+ *    time it stands winded long enough for the whole chain. A ram that ends at a wall stuns it
+ *    longer still; a blow that breaks its brace (from behind, from above) leaves it winded at once.
  *  - A hit shoves it along the cut (a fading velocity that stops at walls and at the brink of a
  *    ledge) while it staggers (`hurt`); dead, the body slides on for `enemies.deadFrames`.
  */
@@ -214,16 +218,16 @@ function walk(e: EnemyState, info: StepInfo): void {
 }
 
 /** She is on its ground, in front of it, within `px` (box to box) with nothing solid between. */
-function inFront(e: EnemyState, info: StepInfo, px: number): boolean {
+function inFront(e: EnemyState, info: StepInfo, px: number, facing: number = e.facing): boolean {
   const p = info.state.player;
   const B = info.t.burrback;
   const pc = p.x + p.w / 2;
   const ec = e.x + e.w / 2;
-  if ((pc - ec) * e.facing <= 0) return false;
+  if ((pc - ec) * facing <= 0) return false;
   const feet = p.y + p.h;
   const bottom = e.y + e.h;
   if (feet > bottom + B.strikeBelowPx || feet < bottom - B.strikeAbovePx) return false;
-  const gap = e.facing > 0 ? p.x - (e.x + e.w) : e.x - (p.x + p.w);
+  const gap = facing > 0 ? p.x - (e.x + e.w) : e.x - (p.x + p.w);
   if (gap > px) return false;
   return !segmentBlocked(info.scene, ec, e.y + e.h / 2, pc, e.y + e.h / 2);
 }
@@ -243,24 +247,42 @@ function lowCeiling(scene: Scene, p: { x: number; y: number; w: number; h: numbe
 
 /**
  * Braces for its ram if she is where it can reach her and it is ready. Returns true if it did
- * (`windup`, `enemyWindup`). `provoked`: she has just cut it. Unprovoked it braces only at one who
- * has come into its own range (`radius`): one who lands beside its patch and stands there is left
- * alone, as its walk leaves her alone. Provoked it answers wherever she stands, from a little
- * further (cutting it from just outside its range is not free). Once braced the ram runs its
- * length, range or no range. Never at one who has no room to jump (a low ceiling over her).
+ * (`windup`, `enemyWindup`). In a fight (`stirred` > 0: it has rammed not long ago; or `roused` >
+ * 0: she has cut it) it comes round to her first if she is behind it (`enemyTurn` cause `hit`):
+ * the fight's second tell. Roused (cut) it answers wherever she stands, from a little further;
+ * otherwise only one who is inside its own range (`radius`): one who lands beside its patch, or
+ * stands at the wall beyond it working out the climb, is left alone, as its walk leaves her alone.
+ * Once braced the ram runs its length, range or no range. Never at one who has no room to jump
+ * (a low ceiling over her).
  */
-function brace(e: EnemyState, info: StepInfo, provoked = false): boolean {
+function brace(e: EnemyState, info: StepInfo): boolean {
   const B = info.t.burrback;
   const p = info.state.player;
   if (B.strikePx <= 0 || e.strikeCd > 0 || e.calm > 0) return false;
   if (p.hp <= 0 || p.faded > 0 || p.kindling >= 0 || p.kindlingLamp >= 0 || info.state.goal.gathered)
     return false;
-  if (!inFront(e, info, provoked ? B.provokedPx : B.strikePx)) return false;
+  const provoked = e.roused > 0;
+  const reach = provoked ? B.provokedPx : B.strikePx;
+  const round = (provoked || e.stirred > 0) && !inFront(e, info, reach) && inFront(e, info, reach, -e.facing);
+  if (!round && !inFront(e, info, reach)) return false;
   if (burrback.harmless?.(e, info)) return false;
   if (lowCeiling(info.scene, p, B.strikeHeadroomPx)) return false;
   span(e, info.scene, B);
   const inside = p.x + p.w > RANGE_L && p.x < RANGE_R;
   if (!inside && !provoked) return false;
+  if (round) {
+    e.facing = e.facing > 0 ? -1 : 1;
+    info.events.push({
+      type: 'enemyTurn',
+      id: e.id,
+      kind: e.kind,
+      x: e.x + e.w / 2,
+      y: e.y + e.h / 2,
+      dir: e.facing,
+      cause: 'hit',
+      frames: 0,
+    });
+  }
   e.chargeLeft = frames(B.chargePx, 1);
   const n = frames(B.windupFrames, 1);
   setMode(e, 'windup', n);
@@ -282,16 +304,33 @@ function brace(e: EnemyState, info: StepInfo, provoked = false): boolean {
   return true;
 }
 
-/** The ram is over: it stands spent, open, and will not brace again for a while. */
-function spend(e: EnemyState, info: StepInfo, cause: 'spent' | 'wall' | 'ledge' | 'lantern' | 'touch'): void {
+/**
+ * The ram is over (or a blow broke its brace): it stands winded, open, and will not brace again
+ * until that and a short `strikeCooldown` have passed. The first time that is about two cuts' worth
+ * (`recoverFrames`); every time after it is tired and stands longer (`recoverTiredFrames`: room for
+ * the whole chain); stopped by a wall it is stunned (`recoverWallFrames`).
+ */
+function spend(
+  e: EnemyState,
+  info: StepInfo,
+  cause: 'spent' | 'wall' | 'ledge' | 'lantern' | 'touch',
+  broken = false,
+): void {
   const B = info.t.burrback;
-  const n = frames(B.recoverFrames, 1);
+  const tired = e.rams > 0;
+  const n = frames(
+    cause === 'wall' ? B.recoverWallFrames : tired ? B.recoverTiredFrames : B.recoverFrames,
+    1,
+  );
   const cooldown = frames(B.strikeCooldown);
   setMode(e, 'recover', n);
   e.vx = 0;
   e.rx = 0;
   e.chargeLeft = 0;
   e.strikeCd = n + cooldown;
+  e.rams++;
+  e.broken = false;
+  e.stirred = n + frames(B.rouseFrames);
   info.events.push({
     type: 'enemyRecover',
     id: e.id,
@@ -302,6 +341,8 @@ function spend(e: EnemyState, info: StepInfo, cause: 'spent' | 'wall' | 'ledge' 
     cause,
     frames: n,
     cooldown,
+    tired,
+    broken,
   });
 }
 
@@ -314,12 +355,15 @@ function charge(e: EnemyState, info: StepInfo): void {
   e.rx += e.vx;
   let n = roundHalfAway(e.rx);
   e.rx -= n;
+  if (e.fenced) span(e, scene, B);
   while (n !== 0) {
     const nx = e.x + e.facing;
     const gap = groundSanctuaryGap(state, scene, e.x, e.x + e.w, e.y + e.h);
     const next = gap < 0 ? -1 : groundSanctuaryGap(state, scene, nx, nx + e.w, e.y + e.h);
     const holy = next >= 0 && next < G.sanctuaryPx && next < gap;
-    const stop = holy ? 3 : nudge(e, scene, e.facing, 0);
+    // Fenced, its ram ends where its range does (as at the brink of a ledge).
+    const fence = e.fenced && (e.facing < 0 ? nx < RANGE_L : nx + e.w > RANGE_R);
+    const stop = holy ? 3 : fence ? 2 : nudge(e, scene, e.facing, 0);
     if (stop !== 0) {
       spend(e, info, stop === 1 ? 'wall' : stop === 3 ? 'lantern' : 'ledge');
       return;
@@ -367,8 +411,11 @@ function knock(e: EnemyState, scene: Scene, t: Tuning['burrback']): void {
   e.rx += e.knockVx;
   let n = roundHalfAway(e.rx);
   e.rx -= n;
+  if (e.fenced) span(e, scene, t);
   while (n !== 0) {
-    const stop = nudge(e, scene, d, Math.max(0, Math.min(e.w - 1, frames(t.teeterPx))));
+    // Fenced, a shove does not take it out of its range either.
+    const fence = e.fenced && (d < 0 ? e.x + d < RANGE_L : e.x + d + e.w > RANGE_R);
+    const stop = fence ? 1 : nudge(e, scene, d, Math.max(0, Math.min(e.w - 1, frames(t.teeterPx))));
     if (stop !== 0) {
       if (stop === 2) e.teeter = d;
       e.rx = 0;
@@ -397,6 +444,7 @@ export const burrback: KindRules = {
     e.y = Math.round(spawn.y) - e.h;
     e.mode = 'walk';
     e.radius = Math.max(0, spawn.radius ?? 0);
+    e.fenced = spawn.fenced === true && e.radius > 0;
     e.walkLeft = nextWalk(e, t.burrback);
   },
 
@@ -406,6 +454,8 @@ export const burrback: KindRules = {
     const p = info.state.player;
     if (e.alertCd > 0) e.alertCd--;
     if (e.strikeCd > 0) e.strikeCd--;
+    if (e.roused > 0) e.roused--;
+    if (e.stirred > 0) e.stirred--;
     // She is in front of it, close: it braces (out of a walk, a rest, a turn or a flinch).
     if ((e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert') && e.knockVx === 0 && brace(e, info))
       return true;
@@ -458,6 +508,17 @@ export const burrback: KindRules = {
       knock(e, scene, B);
       if (--e.timer <= 0) {
         e.knockVx = 0;
+        // The blow broke its brace (it came from behind or from above): it stands winded.
+        if (e.broken) {
+          spend(e, info, 'spent', true);
+          return false;
+        }
+        // Still winded from its ram: it stands on, open, until that has passed.
+        const winded = e.strikeCd - frames(B.strikeCooldown);
+        if (winded > 0) {
+          setMode(e, 'recover', winded);
+          return false;
+        }
         setMode(e, 'walk', 0);
         // Cut from behind: it comes round to her (at once, no beat), and braces if she is still there.
         const pc = p.x + p.w / 2;
@@ -477,7 +538,7 @@ export const burrback: KindRules = {
             frames: 0,
           });
         }
-        brace(e, info, true);
+        brace(e, info);
       }
     } else {
       knock(e, scene, B);
@@ -519,6 +580,8 @@ export const burrback: KindRules = {
   calm(e, _info, n) {
     if (e.mode === 'pause' && e.timer >= n) return;
     e.chargeLeft = 0;
+    e.roused = 0;
+    e.stirred = 0;
     const turning = e.mode === 'pause' && e.turning;
     setMode(e, 'pause', n);
     e.turning = turning;
@@ -576,6 +639,9 @@ export const burrback: KindRules = {
   shove(e, dir, side, knockback, t) {
     const k = knockback * t.burrback.knockScale;
     const kb = dir === 'fwd' ? k : k * t.burrback.knockVertical;
+    // Cut, it is roused: it will come round to her and brace. A blow that lands on a braced one broke its brace.
+    e.roused = Math.max(e.roused, frames(t.burrback.rouseFrames));
+    e.broken = e.braced;
     e.knockVx = side * kb;
     e.knockVy = 0;
     e.rx = 0;

@@ -47,8 +47,12 @@ export function kickableAt(scene: Scene, x: number, y: number, w: number, h: num
   const solids = scene.solids;
   for (let i = 0; i < solids.length; i++) {
     const s = solids[i];
-    if (s !== undefined && s.kick !== false && x < s.x + s.w && s.x < x + w && y < s.y + s.h && s.y < y + h)
-      return true;
+    if (s === undefined || s.kick === false) continue;
+    if (!(x < s.x + s.w && s.x < x + w && y < s.y + s.h && s.y < y + h)) continue;
+    // One climbable flank only: the side of it her box is on decides.
+    if (s.kick === 'east' && x + w / 2 < s.x + s.w / 2) continue;
+    if (s.kick === 'west' && x + w / 2 > s.x + s.w / 2) continue;
+    return true;
   }
   return false;
 }

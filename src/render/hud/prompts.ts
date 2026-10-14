@@ -34,6 +34,23 @@ export const PROMPTS = {
   aheadFrames: 16,
   /** ...and no living creature within this, px. */
   creaturePx: 300,
+  /**
+   * ...and never in a climb (playtest 5: five times in 3 s between kicks up the shaft, and stepping
+   * off trunk A into the shaft she had to climb): not for `afterWall` frames after a wall slide or a
+   * wall kick, and not in a chimney: bark within `chimneyPx` of her box on BOTH sides, anywhere
+   * from her head to `chimneyBelow` px under her feet. Above the summit there is no bark beside
+   * her, so the glide off the top is still taught.
+   */
+  afterWall: 90,
+  chimneyPx: 236,
+  chimneyBelow: 150,
+  /**
+   * ...nor anywhere in the wall-jump shaft below the summit, where the upper part has bark on one
+   * side only: [x from, x to, the summit's y]. Scene data by hand: if trunk A or B moves, move it.
+   */
+  shafts: [[3328, 3584, 192]],
+  /** The kick's cap is drawn this much larger than the glide's (27 px at 1920 was small). */
+  kickScale: 1.28,
   /** Frames of one wall slide before the kick's key shows. */
   slideFrames: 6,
   /** Seconds: fade in, how long it stays after the fall / slide ends (glide, kick), fade out; and once she has done it. */
@@ -143,6 +160,26 @@ function dropUnder(sim: SimView, ahead: number, only = false): number {
   return only ? a : Math.min(under(x, x + p.w), a);
 }
 
+/** She is between two walls a kick apart (the wall-jump shaft): solids on both sides of her box within `px`. */
+function inChimney(sim: SimView, px: number, below: number): boolean {
+  const p = sim.player;
+  const top = p.feetY - p.h;
+  const bottom = p.feetY + below;
+  const x0 = p.cx - p.w / 2;
+  const x1 = p.cx + p.w / 2;
+  let left = false;
+  let right = false;
+  for (const r of sim.scene.solids) {
+    if (r.y >= bottom || r.y + r.h <= top) continue;
+    if (r.x + r.w <= x0 + 2 && x0 - (r.x + r.w) < px) left = true;
+    else if (r.x >= x1 - 2 && r.x - x1 < px) right = true;
+  }
+  if (left && right) return true;
+  for (const z of PROMPTS.shafts)
+    if (p.cx > (z[0] ?? 0) && p.cx < (z[1] ?? 0) && p.feetY > (z[2] ?? 0) + 8) return true;
+  return false;
+}
+
 function creatureNear(sim: SimView, px: number): boolean {
   const p = sim.player;
   for (const e of sim.enemies ?? []) {
@@ -171,6 +208,8 @@ export class Prompts {
   private frame = -1;
   private fall = 0;
   private slide = 0;
+  /** Sim frames since she last slid on or kicked off a wall (large = long ago). */
+  private sinceWall = 1e6;
   /** She left the ground without a jump, over a real drop (cleared when she lands). */
   private ranOff = false;
   private lesson: Lesson | null = null;
@@ -258,8 +297,10 @@ export class Prompts {
     const drop = dropUnder(sim, P.aheadFrames);
     for (const e of sim.events) {
       if (e.type === 'glideStart') this.learn('glide');
-      else if (e.type === 'jump' && e.kind === 'wall') this.learn('kick');
-      else if (e.type === 'fall') this.ranOff = dropUnder(sim, P.aheadFrames, true) > P.dropPx;
+      else if (e.type === 'jump' && e.kind === 'wall') {
+        this.learn('kick');
+        this.sinceWall = 0;
+      } else if (e.type === 'fall') this.ranOff = dropUnder(sim, P.aheadFrames, true) > P.dropPx;
       else if (e.type === 'jump') this.ranOff = false;
     }
     if (p.grounded) this.ranOff = false;
@@ -269,6 +310,8 @@ export class Prompts {
     const falling = free && !p.grounded && p.mode === 'normal' && !p.gliding && p.vy > 1.5;
     this.fall = falling ? this.fall + df : 0;
     this.slide = free && p.mode === 'wallSlide' ? this.slide + df : 0;
+    this.sinceWall = p.mode === 'wallSlide' ? 0 : Math.min(1e6, this.sinceWall + df);
+    if (sim.frame < 2) this.sinceWall = 1e6;
 
     let want: Lesson | null = null;
     if (this.enabled && hudLink.on) {
@@ -278,6 +321,8 @@ export class Prompts {
         falling &&
         (drop > P.dropPx || (this.ranOff && this.fall < P.fallFrames)) &&
         (this.ranOff || (this.fall >= P.fallFrames && p.y - p.airTopY >= P.fallPx)) &&
+        this.sinceWall > P.afterWall &&
+        !inChimney(sim, P.chimneyPx, P.chimneyBelow) &&
         !creatureNear(sim, P.creaturePx)
       )
         want = 'glide';
@@ -316,6 +361,7 @@ export class Prompts {
     this.root.visible = true;
     this.root.alpha = a;
     this.root.position.set(Math.round(this.x * 2) / 2, Math.round(this.y * 2) / 2);
+    this.root.scale.set(this.lesson === 'kick' ? P.kickScale : 1);
 
     // The cap for the key she uses.
     if (this.shownKey !== this.key) {

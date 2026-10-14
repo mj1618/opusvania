@@ -54,7 +54,7 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `step` (every 96 px of grounded travel), `turn {dir, grounded}`, `skid {dir}`.
 - `wallSlideStart/End {dir = wall side}`, `dashStart {dir, air}`, `dashEnd {dir}`.
 - `slash`, `slashHit`, `impact`, `slashEnd`, `podHit`, `podBurst`, and pod glints as `pickup {pod: true}`: combat.md.
-- `enemyTurn`, `enemyAlert`, **`enemyWindup`, `enemyCharge`, `enemyRecover`, `enemyBlock`** (burrback: its ram), `enemyNotice`, `enemyGiveUp` (lampwing), `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`, then **`enemyReset`** for each living creature that went home hurt or from elsewhere), and
+- `enemyTurn`, `enemyAlert`, **`enemyWindup`, `enemyCharge`, `enemyRecover`, `enemyBlock`** (burrback: its ram), `enemyNotice`, **`enemyDive`, `enemyStall`, `enemyClimb`** (its dive, playtest 5), `enemyGiveUp` (lampwing), `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`, then **`enemyReset`** for each living creature that went home hurt or from elsewhere), and
   enemy glints as `pickup {enemy: true}`: enemies.md. `slashEnd` / `glideEnd` have a reason `hurt`.
 - `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a
   long fall, up to 32 out of a fast fall) and `glideEnd {reason: release|land|wall|dash|fastfall}`; one
@@ -68,7 +68,7 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   `enemyTurn` causes `lantern` / `wary`, `enemyAlert` cause `touch`: enemies.md.
 - `lanternNotice` (she came within 260 px of a dormant one: once per approach), `lanternRefuse`, `lanternChannel`,
   `lanternCancel`, `lanternKindle {..., pledged, away}` (it can fire with her elsewhere: goal.md "pledge"), `lanternRest`; the same six for wayside lamps as `lamp...`; `heartSleep`,
-  `heartWake`, `gather`, **`heartOffer`, `heartTier`** (the offering during the hold), `endHold`: goal.md (`x, y` = the lantern's foot / the heart, not her feet).
+  `heartWake`, **`heartWait`, `heartReady`** (the wake has a length), **`lanternKey`** (the ember a lantern wants has reached her; `lanternNotice / lanternRefuse.key`), `gather`, **`heartOffer`, `heartTier`, `groveWake`** (the offering during the hold and what it wakes), `endHold`: goal.md (`x, y` = the lantern's foot / the heart, not her feet).
 - Scene fields the player code reads besides the rects: `ceilingY`, the tag `pool`, and **`edgeKick: false`
   / a solid's `kick: false`** (no wall slide, no wall kick on that face: movement-controller.md).
 

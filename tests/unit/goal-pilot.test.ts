@@ -106,7 +106,10 @@ function fightBurr(s: Sim, id: string, maxFrames = 900): number {
       over = Math.sign(dx) || 1;
       hop = 10;
     }
-    if (ram && hop > 0 && (p.grounded ? (prev & J) === 0 : true)) {
+    // (A hop that carried her off its ground, into the pool: back up first.)
+    const below = p.y + p.h > e.y + e.h + 8;
+    if (below && !ram) m = bit(dx) | (p.grounded ? ((prev & J) === 0 ? J : 0) : p.vy < 0 ? J : 0);
+    else if (ram && hop > 0 && (p.grounded ? (prev & J) === 0 : true)) {
       m = J | bit(over);
       hop--;
     } else if (ram) m = bit(over);
@@ -281,6 +284,35 @@ function playthrough(t: Tuning = cloneTuning(defaultTuning)) {
   }
   kindle(0, 'moth-stone');
 
+  // --- The ember over F3 (playtest 5: the summit's lantern wants it). She has seen it hang over the
+  // first lantern: west to the bank, up the three islands, and back down to the spawn ground.
+  const key = (GROVE.pickups ?? []).findIndex((q) => q.id === lanterns[1]?.key);
+  if (key >= 0) {
+    const isles = S.filter((q) => q.tag === 'floating');
+    for (const r of [S[0], isles[0], isles[1], isles[2]])
+      mark('up the islands for the ember', r !== undefined && hopOnto(s, r, 900) >= 0);
+    const at = (GROVE.pickups ?? [])[key] as { x: number };
+    // (The lampwing over F3 dives at whoever takes it: she keeps moving, and comes back if knocked off.)
+    for (let tries = 0; tries < 6 && s.state.pickups.timers[key] === 0; tries++) {
+      if (feet(s).y !== isles[2]?.y || !s.state.player.grounded)
+        for (const r of [S[0], isles[0], isles[1], isles[2]]) if (r) hopOnto(s, r, 900);
+      walkTo(s, at.x, 10, 200);
+    }
+    mark('the ember is woken', s.state.pickups.timers[key] !== 0);
+    // It is hers once woken (it reaches her on the way): off F3's west end, down to the spawn ground.
+    let down = -1;
+    for (let f = 0; f < 300 && down < 0; f++) {
+      if (s.state.player.grounded && feet(s).y >= 1184) down = f;
+      else tick(s, LEFT);
+    }
+    mark('back down to the spawn ground', down);
+    mark('a run-up for the pool', walkTo(s, 1300, 10));
+    mark(
+      'the ember',
+      waitFor(s, () => s.state.pickups.timers[key] === -1, 200),
+    );
+  }
+
   // --- The centre: over the pool, the path beyond, the bluff, the leap, the trunks, the summit.
   mark('leap the pool', leapPool(s));
   mark('out of the pool if she fell short', hopOnto(s, rect('ground', 2)) >= 0);
@@ -342,6 +374,16 @@ describe('the grove can be finished', () => {
     const { s, legs, glided, ended } = playthrough();
     const ev = s.events;
     const g = s.state.goal;
+    if (process.env.GOAL_LEGS)
+      console.log(
+        legs
+          .map(
+            (l) =>
+              `${String(l.frame).padStart(5)}  wallet ${String(l.wallet).padStart(3)}  hp ${l.hp}  ${l.leg}`,
+          )
+          .join('\n'),
+        of(ev, 'hurt').map((h) => `${h.source.id}@${h.x},${h.y}`),
+      );
     // The first lantern noticed her coming with the spawn line's three; the pod at its foot paid
     // the rest, and it caught without her ever being turned away.
     const notice = of(ev, 'lanternNotice')[0];
@@ -479,7 +521,8 @@ describe('economy: what the lanterns ask against what the grove holds', () => {
   it('36 in all: under half of the world glints alone, a fifth of everything', () => {
     expect(cost).toBe(36);
     // (Six burrbacks at 4 and six lampwings at 3 since playtest 4: two more of the one, one of the other.)
-    expect([world, podsAll, kills]).toEqual([96, 62, 42]);
+    // (Playtest 5: the ember over F3, 5; a seventh lampwing over burr-rise, 3.)
+    expect([world, podsAll, kills]).toEqual([101, 62, 45]);
     // A player who never cuts a pod or a creature can still pay for all three.
     expect(world).toBeGreaterThanOrEqual(cost * 2);
     expect(cost / (world + podsAll + kills)).toBeLessThan(0.25);

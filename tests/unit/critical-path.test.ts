@@ -464,44 +464,79 @@ describe('burr-root: every arrival on its ground is fair', () => {
         go(s);
         // Arrived, she stands and looks (three quarters of a second).
         wait(s, 45);
-        expect(hurts(s.events.slice(from)), `${name}, start ${k * 31}, at ${feet(s).x},${feet(s).y}`).toBe(0);
+        // (A held jump off the bough is the glide's lane: it ends on F7 under `lamp-sky`, which dives
+        // at one who stands there. That is its encounter, with its own tell; this is about the burrback.)
+        const byBurr = s.events.slice(from).filter((e) => e.type === 'hurt' && e.source.kind === 'burrback');
+        expect(byBurr.length, `${name}, start ${k * 31}, at ${feet(s).x},${feet(s).y}`).toBe(0);
       }
     }
   });
 });
 
-describe('the bark of trunk A: the well is a way up', () => {
+describe('the bark of trunk A is no way up any more: the well leads through the doorway', () => {
   const lamp = (GROVE.lamps ?? []).find((l) => l.id === 'lamp-high') as { x: number; y: number };
   const bridge = GROVE.oneWays.find((o) => o.y === a.y && o.x < a.x);
 
-  it('the geometry: the high ledge reaches trunk A as a branch she can come up through', () => {
+  it('the geometry: the high ledge still reaches trunk A as a branch; only trunk A’s east face (the shaft’s wall) is a climb', () => {
     const ledge = S.find((r) => r.tag === 'ledge');
     expect(ledge).toMatchObject({ x: 2816, y: 448, w: 160 });
     expect(bridge).toEqual({ tag: 'branch', x: 2976, y: 448, w: 224 });
     expect((bridge?.x ?? 0) + (bridge?.w ?? 0)).toBe(a.x);
     expect([lamp.x, lamp.y]).toEqual([3264, a.y]);
+    expect(a.kick).toBe('east');
   });
 
-  it('a jump at the bark from the well, then taps: up it, through the branch, onto the top by the lamp; burr-ledge is never there', () => {
+  it('playtest 5 (a kicker went up the bark and never met lamp-trunk or burr-shaft): a jump at the bark gives no slide and no kick; holding right she walks under it into the shaft, where burr-shaft is', () => {
     for (const [press, beat] of HANDS) {
-      for (let k = 0; k < 60; k += 4) {
-        const s = newSim();
-        wait(s, k * 37);
-        s.place(3130, 1280);
-        const from = s.events.length;
-        // (A jump first: on the floor a walker goes through the doorway, not up.)
-        s.run('R+J14');
-        const f = push(s, 1, press, beat, on(s, a.y));
-        const ev = s.events.slice(from);
-        const hand = `press ${press}, beat ${beat}, start ${k * 37}`;
-        expect(f, hand).toBeGreaterThan(0);
-        expect(f, hand).toBeLessThan(420);
-        expect(bumps(ev), hand).toBe(0);
-        wait(s, 45);
-        expect(hurts(s.events.slice(from)), hand).toBe(0);
-        expect(taken(s, 'well-'), hand).toBe(2);
+      const s = newSim();
+      s.place(3130, 1280);
+      const from = s.events.length;
+      // Jump at the bark and keep pressing on her beat, as on any wall: nothing catches.
+      let rest = 0;
+      let held = 0;
+      for (let f = 0; f < 240; f++) {
+        let m = RIGHT;
+        if (held > 0) {
+          m |= J;
+          held--;
+        } else if (rest > 0) rest--;
+        else {
+          held = press;
+          rest = beat;
+        }
+        step(s.state, m, s.tuning, s.scene, s.events);
+        // Never higher than a jump and a double jump from the well's floor.
+        expect(feet(s).y).toBeGreaterThan(a.y + 300);
+        if (feet(s).x > a.x + a.w) break;
       }
+      const ev = s.events.slice(from);
+      const hand = `press ${press}, beat ${beat}`;
+      expect(
+        ev.some((e) => e.type === 'wallSlideStart'),
+        hand,
+      ).toBe(false);
+      expect(kicks(ev), hand).toBe(0);
+      // Through the doorway (its two glints on the way), onto the shaft floor.
+      expect(feet(s).x, hand).toBeGreaterThan(a.x + a.w);
+      expect(taken(s, 'well-'), hand).toBe(2);
     }
+    // The shaft's own wall of the same trunk still takes kicks: wall to wall to trunk A's top.
+    const w = newSim({ ...GROVE, enemies: [] });
+    w.place(3456, 1280);
+    let prev = 0;
+    let slidesA = 0;
+    for (let f = 0; f < 600 && !(w.state.player.grounded && feet(w).y <= a.y); f++) {
+      const p = w.state.player;
+      const dir = p.mode === 'wallSlide' ? -p.wallDir : p.facing;
+      if (p.mode === 'wallSlide' && p.wallDir < 0) slidesA++;
+      const m =
+        (dir > 0 ? RIGHT : LEFT) |
+        ((p.grounded || p.mode === 'wallSlide') && (prev & J) === 0 ? J : p.vy < 0 ? J : 0);
+      step(w.state, m, w.tuning, w.scene, w.events);
+      prev = m;
+    }
+    expect(slidesA).toBeGreaterThan(0);
+    expect(feet(w).y).toBeLessThanOrEqual(a.y);
   });
 
   it('the left route still walks it: the high ledge, the branch, trunk A’s top are one floor', () => {
@@ -560,5 +595,19 @@ describe('a hard landing is a real fall', () => {
     expect(land(416)).toMatchObject({ fallPx: 416, hard: false });
     expect(land(420)).toMatchObject({ fallPx: 420, hard: true });
     expect(land(640)).toMatchObject({ fallPx: 640, hard: true });
+  });
+});
+
+describe('the bank has a step (playtest 5: its 192 px wanted a held jump or a kick; 100 ms taps never cleared it)', () => {
+  it('a root step 96 px high at its foot: 6-frame taps and she is on the bank, from any run-up', () => {
+    const step96 = S.find((r) => r.tag === 'root' && r.x === 384);
+    expect(step96).toEqual({ tag: 'root', x: 384, y: 1184, w: 64, h: 96 });
+    for (const from of [520, 600, 700, 900]) {
+      const s = newSim({ ...GROVE, enemies: [] });
+      s.place(from, 1280);
+      const f = push(s, -1, 6, 9, on(s, 1088));
+      expect(f, `from ${from}`).toBeGreaterThan(0);
+      expect(f, `from ${from}`).toBeLessThan(240);
+    }
   });
 });

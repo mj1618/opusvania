@@ -195,7 +195,8 @@ describe('camera glide', () => {
   const ct = cameraTuning;
 
   it('looks further ahead and below her while she glides, and eases back on landing', () => {
-    const scene = { ...GROVE, ceilingY: -420 };
+    // (No creatures: where she comes down a roused burrback would keep moving her, and the view with her.)
+    const scene = { ...GROVE, ceilingY: -420, enemies: [] };
     // Off the summit to the right, jump held (the wings open on the way down) or let go (a fall).
     const run = (hold: boolean) => {
       const s = newSim(scene);

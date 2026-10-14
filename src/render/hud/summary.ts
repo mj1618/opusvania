@@ -8,13 +8,15 @@
  * like the rest of the HUD.
  */
 import { CanvasSource, Container, Sprite, Texture } from 'pixi.js';
+import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
 import { VIEW_W } from '../contract';
 import { clockText } from '../goal/logic';
 
 export const SUMMARY = {
-  /** Centre of the upper row (what she found), logical px; the lower row (how it went) sits `rowGap` under it. */
-  y: 910,
+  /** Centre of the upper row (what she found), logical px; the lower row (how it went) sits `rowGap` under it.
+   * (928: at 910 the lit veins in the shrine's ground, ~20 px under the ground line, ran through the numerals.) */
+  y: 928,
   rowGap: 64,
   font: 32,
   /** The "/ total" after a count, and the lower row, are this much smaller. */
@@ -220,6 +222,32 @@ const ICONS: Array<(g: Ctx, s: number) => void> = [
     g.fill();
     g.restore();
   },
+  // Offered: the heart's open bud with its light.
+  (g, s) => {
+    const k = s / 30;
+    g.save();
+    g.scale(k, k);
+    g.strokeStyle = COOL;
+    g.lineWidth = 1.3;
+    g.beginPath();
+    for (const sgn of [-1, 1]) {
+      g.moveTo(sgn * 2.5, 12);
+      g.bezierCurveTo(sgn * 9, 9, sgn * 12, 0, sgn * 10.5, -8);
+      g.moveTo(sgn * 1, 12);
+      g.bezierCurveTo(sgn * 5, 6, sgn * 5.5, -2, sgn * 3.5, -10);
+    }
+    g.moveTo(-8, 12.5);
+    g.lineTo(8, 12.5);
+    g.stroke();
+    const grad = g.createRadialGradient(0, 1, 0, 0, 1, 4.6);
+    grad.addColorStop(0, '#fff4dc');
+    grad.addColorStop(1, '#f2a94e');
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(0, 1, 3.3, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+  },
   // Fades: her light gone up in three motes.
   (g, s) => {
     const k = s / 30;
@@ -253,7 +281,13 @@ export interface Entry {
   label?: string;
   /** Everything of its kind was found: it gets a gold flourish. */
   all?: boolean;
+  /** Small marks after the numeral, `[reached, of]`: the offering's tiers (a flower each, open when reached). */
+  marks?: [number, number];
 }
+
+/** Width of one tier mark and the gap before the first, as shares of the row's font size. */
+const MARK = 0.68;
+const MARK_GAP = 0.34;
 
 function paintRows(rows: Entry[][]): Texture {
   const S = SUMMARY;
@@ -273,6 +307,7 @@ function paintRows(rows: Entry[][]): Texture {
         width(e.text, S.font * k) +
         (e.of ? width(e.of, S.font * S.sub * k) + 5 * k : 0) +
         (e.plus ? width(e.plus, S.font * S.sub * k) + 7 * k : 0) +
+        (e.marks ? S.font * k * (MARK_GAP + MARK * e.marks[1]) : 0) +
         S.between * k;
     return total;
   };
@@ -347,6 +382,53 @@ function paintRows(rows: Entry[][]): Texture {
           g.fillStyle = 'rgba(255, 196, 96, 0.95)';
           g.fillText(e.plus, end + 7 * k, base);
           end += 7 * k + width(e.plus, px);
+        }
+        if (e.marks) {
+          // The tiers: a small five-petal flower each, open and gold when reached, a shut bud when not.
+          const m = size * MARK;
+          for (let i = 0; i < e.marks[1]; i++) {
+            const mx = end + size * MARK_GAP + m * (i + 0.5);
+            const my = base - size * 0.3;
+            const got = i < e.marks[0];
+            for (const pass of [0, 1]) {
+              g.save();
+              if (pass === 0) {
+                seatOn(g);
+                g.globalAlpha = 0.7;
+              }
+              g.translate(mx, my);
+              if (got) {
+                for (let q = 0; q < 5; q++) {
+                  const a = -Math.PI / 2 + (q * Math.PI * 2) / 5;
+                  g.save();
+                  g.rotate(a + Math.PI / 2);
+                  g.beginPath();
+                  g.moveTo(0, 0);
+                  g.quadraticCurveTo(m * 0.2, -m * 0.24, 0, -m * 0.46);
+                  g.quadraticCurveTo(-m * 0.2, -m * 0.24, 0, 0);
+                  g.fillStyle = q % 2 === 0 ? '#ffd9a0' : '#f2a94e';
+                  g.fill();
+                  g.restore();
+                }
+                g.beginPath();
+                g.arc(0, 0, m * 0.1, 0, Math.PI * 2);
+                g.fillStyle = '#fff4dc';
+                g.fill();
+              } else {
+                g.beginPath();
+                g.moveTo(0, m * 0.36);
+                g.bezierCurveTo(-m * 0.26, m * 0.14, -m * 0.14, -m * 0.2, 0, -m * 0.38);
+                g.bezierCurveTo(m * 0.14, -m * 0.2, m * 0.26, m * 0.14, 0, m * 0.36);
+                g.closePath();
+                g.strokeStyle = COOL;
+                g.lineWidth = 1.1;
+                g.globalAlpha *= 0.7;
+                g.stroke();
+              }
+              g.restore();
+            }
+          }
+          end += size * (MARK_GAP + MARK * e.marks[1]);
         }
         if (e.label) {
           // Its name, small caps, cool and quiet, under the numeral.
@@ -473,7 +555,20 @@ export class EndSummary {
       { icon: 3, label: 'hits', text: String(e.hits) },
     ];
     if ((e.lampsTotal ?? 0) > 0) found.push(count(6, 'lamps', e.lamps ?? 0, e.lampsTotal ?? 0));
-    if (e.deaths > 0) went.push({ icon: 7, label: 'fades', text: String(e.deaths) });
+    if (e.deaths > 0) went.push({ icon: 8, label: 'fades', text: String(e.deaths) });
+    // What she gave the heart, and how far that woke the grove: it leads the lower row.
+    const tiers = tuning.goal;
+    const offered = e.offered ?? 0;
+    const tier =
+      e.offerTier ??
+      (offered >= tiers.offerTier3
+        ? 3
+        : offered >= tiers.offerTier2
+          ? 2
+          : offered >= tiers.offerTier1
+            ? 1
+            : 0);
+    went.unshift({ icon: 7, label: 'offered', text: String(offered), marks: [tier, 3] });
     const rows = [found, went];
     const sig = JSON.stringify(rows);
     if (sig !== this.shown) {

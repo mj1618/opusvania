@@ -299,7 +299,7 @@ export const defaultTuning = {
     /** The same for a down slash (the pogo): short, so the bounce rhythm stays what it was. */
     pogoHitstopFrames: 2,
     /** A cut that glances off a braced shell: she holds this long and is thrown back at this, px/f (fading by `attack.recoilDecay`). */
-    blockHitstopFrames: 3,
+    blockHitstopFrames: 6,
     blockRecoil: 8,
     /** How long a dead body stays (for its death animation) before it is removed. */
     deadFrames: 30,
@@ -314,7 +314,8 @@ export const defaultTuning = {
     /** Collision box. */
     width: 52,
     height: 34,
-    hp: 3,
+    /** Hit points unless the scene gives it its own (`hp`): two exchanges for one who reads it. */
+    hp: 5,
     /** Walking speed, px/f. */
     speed: 1.6,
     /** Frames it stands still when it turns round at a ledge or a wall. */
@@ -380,8 +381,19 @@ export const defaultTuning = {
     windupFrames: 26,
     chargeSpeed: 10,
     chargePx: 180,
-    recoverFrames: 45,
-    strikeCooldown: 150,
+    /**
+     * Winded after a ram (or a blow that broke its brace): open and harmless for `recoverFrames`
+     * (about two cuts' worth) the first time, `recoverTiredFrames` every time after (the whole
+     * chain: the kill is the finisher), `recoverWallFrames` when a wall stopped the ram (stunned).
+     * `strikeCooldown` more and it may brace again. For `rouseFrames` after a cut (and after a
+     * ram, past the time it stands winded) the fight is on: it comes round to her and braces
+     * again; cut, wherever she stands, having only rammed, if she is inside its range.
+     */
+    recoverFrames: 30,
+    recoverTiredFrames: 66,
+    recoverWallFrames: 90,
+    strikeCooldown: 12,
+    rouseFrames: 300,
     turnOnHitPx: 320,
     /** What its touch costs her. */
     contactDamage: 1,
@@ -397,7 +409,7 @@ export const defaultTuning = {
     /** Collision box (drawn about 40 px across). */
     width: 36,
     height: 30,
-    hp: 2,
+    hp: 3,
     /** Territory: it wanders within this of its home unless the scene gives a `radius`. */
     radius: 120,
     /** Hover: drift speed and acceleration, px/f and px/f²; it slows inside `arrivePx` of a wander point. */
@@ -418,11 +430,33 @@ export const defaultTuning = {
     /** While curious it brakes and rises at this, px/f. */
     curiousRise: 0.5,
     curiousAccel: 0.06,
-    /** Pursuit: top speed and acceleration (soft steering: it arcs and overshoots). */
-    pursueSpeed: 2.2,
-    pursueAccel: 0.075,
-    /** It gives up after this long, when it has not seen her for `lostFrames`, or she is `leashPx` from its home. */
-    pursueFrames: 360,
+    /**
+     * The dive (memory/enemies.md). When the tell ends it commits: a swoop along an arc to where
+     * her body centre is at that moment (a gliding hero is led: `diveLeadGlide` x where her glide
+     * will have carried her), `diveSpeed` px/f on average (slow out, fast through the middle, slow
+     * in), never shorter than `diveMinFrames` or longer than `diveMaxFrames`, never further than
+     * `diveMaxPx`. The arc bends by `diveBend` (0 = a straight line, 1 = straight down first, then
+     * along). At the bottom it hangs for `stallFrames`, open, its touch harmless; then it climbs
+     * (`pursue`) at up to `pursueSpeed` to a perch `perchUpPx` above her and `perchSidePx` to its
+     * own side, for at most `pursueFrames`, harmless for the first `climbSafeFrames`, and tells
+     * again. After `maxDives` it has had enough (`tired`).
+     */
+    diveSpeed: 5.4,
+    diveMinFrames: 20,
+    diveMaxFrames: 52,
+    diveMaxPx: 340,
+    diveBend: 0.75,
+    diveLeadGlide: 1,
+    stallFrames: 34,
+    perchUpPx: 170,
+    perchSidePx: 110,
+    climbSafeFrames: 12,
+    maxDives: 3,
+    /** The climb back to a perch: top speed and acceleration. */
+    pursueSpeed: 3.4,
+    pursueAccel: 0.22,
+    /** The climb lasts at most this long. It gives up when it has not seen her for `lostFrames`, or she is `leashPx` from its home. */
+    pursueFrames: 70,
     lostFrames: 90,
     leashPx: 520,
     /** Having given up (or touched her) it hangs for `restFrames`, braking at `restBrake`, then flies home. */
@@ -467,6 +501,9 @@ export const defaultTuning = {
     flapPursue: 0.17,
     flapCurious: 0.21,
     flapHurt: 0.04,
+    /** In the dive its wings are folded back (nearly still); stalled it beats slowly. */
+    flapDive: 0.03,
+    flapStall: 0.07,
   },
   /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
   pickups: {
@@ -548,6 +585,14 @@ export const defaultTuning = {
     /** The heart's trigger box: centred on its point, standing up from the ground. */
     heartWidth: 96,
     heartHeight: 96,
+    /**
+     * The wake is a sequence of its own: standing in the woken heart ends the run only once it has
+     * been awake this long. One who is there sooner stands in the waking light first (`heartWait`,
+     * then `heartReady`); her input is never taken for it.
+     */
+    heartWakeFrames: 180,
+    /** The woken heart keeps the creatures within this of it (body or home) calm until the run ends (a blow still wakes one). */
+    heartCalmPx: 600,
     /** Held at the end, she walks on to within this of the heart's centre and stops there (0 = she stops where she is). */
     heartWalkPx: 12,
     /** Reaching the woken heart takes control for this many frames (`gather` ... `endHold`). */

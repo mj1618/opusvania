@@ -109,8 +109,9 @@ export interface GameDebugApi {
   /**
    * Enemies: how many are alive, and each with where it is (`x`, `y` = feet centre; `box` = its
    * collision box), where it started (`home`: the scene's `x`, `y`: a burrback's feet, a lampwing's
-   * home centre), its health and what it is doing (`mode`: walk, pause, alert / hover, curious,
-   * pursue, rest, return / hurt, dead; `gone` once the dead body has been removed), its velocity
+   * home centre), its health and what it is doing (`mode`: walk, pause, alert, windup, charge,
+   * recover / hover, curious, dive, stall, pursue (the climb), rest, return / hurt, dead; `gone`
+   * once the dead body has been removed), its velocity
    * and, for a lampwing, what it is drawn to (`target`). `state().enemies` has the rest.
    */
   enemies(): {
@@ -131,6 +132,12 @@ export interface GameDebugApi {
       /** Burrback: shell forward (windup / ram: a front cut glances off), frames until it may brace again. */
       braced: boolean;
       strikeCd: number;
+      /** Burrback: times it has stood winded (tired from the second), frames left of being roused (cut) / stirred (rammed). */
+      rams: number;
+      roused: number;
+      stirred: number;
+      /** Lampwing: dives made at her since it noticed her. */
+      dives: number;
       gone: boolean;
       vx: number;
       vy: number;
@@ -170,6 +177,9 @@ export interface GameDebugApi {
       of: number;
       rest: number;
       refused: boolean;
+      /** The great glint it wants besides its price (`null` = none), and whether she has it. */
+      key: string | null;
+      keyed: boolean;
       /** Dormant: enough glints are on their way to her; it catches when they land (goal.md). */
       pledged: boolean;
       litFrame: number;
@@ -201,6 +211,9 @@ export interface GameDebugApi {
       awake: boolean;
       frames: number;
       hinted: boolean;
+      /** Its wake has played (`tuning.goal.heartWakeFrames`): standing in it now ends the run. `waited`: she was there sooner. */
+      ready: boolean;
+      waited: boolean;
     } | null;
     ending: {
       gathered: boolean;
@@ -215,9 +228,13 @@ export interface GameDebugApi {
       /** The offering (memory/goal.md): what she carried into the heart, and the tier (0-3) it reaches. */
       offered: number;
       offerTier: number;
+      /** Glints short of the next tier (0 at the top). */
+      offerNext: number;
     };
     /** The offering as it goes in during the hold: `given` of `total` so far, tiers passed; and the thresholds. */
     offer: { total: number; given: number; tier: number; tiers: number[] };
+    /** What the grove has answered the offering with so far (tier 1 / 2 / 3). */
+    grove: { flowers: boolean; paths: boolean; canopy: boolean };
     run: { time: number; hits: number; kills: number; deaths: number };
     /** Glints lying in clusters she dropped when she faded (`lost` = their sum), and the sanctuary radii. */
     lost: number;
@@ -288,6 +305,8 @@ export function installDebugApi(deps: {
           of: Math.max(1, Math.round(G.channelFrames)),
           rest: s?.rest ?? 0,
           refused: s?.refused ?? false,
+          key: l.key ?? null,
+          keyed: s?.keyed ?? true,
           pledged: s?.pledged ?? false,
           litFrame: s?.litFrame ?? -1,
           restPoint: (lamp ? g.restLamp : g.restAt) === i,
@@ -442,6 +461,10 @@ export function installDebugApi(deps: {
           modeFrames: e.modeFrames,
           braced: e.braced,
           strikeCd: e.strikeCd,
+          rams: e.rams,
+          roused: e.roused,
+          stirred: e.stirred,
+          dives: e.dives,
           gone: e.gone,
           vx: e.vx,
           vy: e.vy,
@@ -490,6 +513,7 @@ export function installDebugApi(deps: {
           ...g.ending,
         },
         offer: { ...g.offer, tiers: [G.offerTier1, G.offerTier2, G.offerTier3] },
+        grove: { ...g.grove },
         run: {
           time: g.run.start < 0 ? 0 : game.state.frame - g.run.start,
           hits: g.run.hits,

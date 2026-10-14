@@ -20,7 +20,7 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 17,
+    version: 18,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),

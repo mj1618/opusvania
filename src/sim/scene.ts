@@ -16,9 +16,10 @@ export interface SolidRect {
   tag: SceneTag;
   /**
    * `false`: its faces give no wall slide and take no wall kick (she falls past them as past open
-   * air, and is still stopped by them). Default: every face is a climb.
+   * air, and is still stopped by them). `'east'` / `'west'`: only that face is a climb (a trunk
+   * whose one flank is a shaft wall and whose other is clean bark). Default: every face is a climb.
    */
-  kick?: boolean;
+  kick?: boolean | 'east' | 'west';
 }
 
 /** A one-way platform: a line at `y` that only blocks a body falling onto it. Down+Jump drops through. */
@@ -74,6 +75,15 @@ export interface EnemySpawn {
   y: number;
   facing: -1 | 1;
   radius?: number;
+  /**
+   * Burrback with a `radius`: neither its ram nor a shove takes it out of that range (a guard on a
+   * narrow perch: the fight stays where it stands, clear of the perch's ends).
+   */
+  fenced?: boolean;
+  /** Its hit points, if not its kind's (`tuning.<kind>.hp`): the teaching one is weaker. */
+  hp?: number;
+  /** Lampwing: how far it notices her from (default `tuning.lampwing.noticePx`): one that watches a long lane. */
+  sight?: number;
 }
 
 /**
@@ -86,6 +96,11 @@ export interface Lantern {
   x: number;
   y: number;
   cost?: number;
+  /**
+   * The id of a pickup (a great glint) it needs besides its price: until she has gathered that one
+   * it will not catch, whatever she carries (it tells her: `lanternRefuse.key`).
+   */
+  key?: string;
 }
 
 export interface Scene {

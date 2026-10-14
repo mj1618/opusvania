@@ -50,6 +50,12 @@ export const HUD = {
   /** Seconds the whole cluster takes to leave when the run ends. */
   endFade: 1.1,
   /**
+   * The offering (playtest 5: the count was hidden from `gather`, so nothing was seen to run down):
+   * the cluster stays through it, the count draining glint by glint with the sim's wallet, and
+   * leaves `offerStay` s after the last one has gone in.
+   */
+  offerStay: 0.9,
+  /**
    * The count and the health lights never share a place: the count moves down out of the lights' slot
    * in `slideDown` s before they may show, and back up in `slideUp` s only once they are quite gone.
    * The lights are held back until the slide has passed `clear` (0..1 of the way down).
@@ -113,6 +119,8 @@ export class Hud {
   private frame = -1;
   /** 1 = showing, 0 = the run has ended and the cluster has gone. */
   private live = 1;
+  /** Seconds since the last of the offering went in (0 while it runs). */
+  private offerDone = 0;
   private readonly health = new HealthLights();
   private readonly shake = new Container();
   private readonly sprites: Sprite[] = [];
@@ -290,7 +298,7 @@ export class Hud {
         this.spillIn = HUD.spillWait;
         this.lossN = e.value;
         this.lossT = 0;
-      }
+      } else if (e.type === 'gather' && e.offered > 0) this.hold = Math.max(this.hold, 8);
     }
     // A dormant lantern close by: the count stays, so its price can be read against it.
     if (count > 0) {
@@ -376,7 +384,13 @@ export class Hud {
     this.shake.position.set(H.shakeX, H.shakeY);
 
     // The run is over: the cluster leaves the picture to the ending, and the summary comes.
-    this.live = Math.min(1, Math.max(0, this.live + (sim.goal.gathered ? -dt : dt * 3) / HUD.endFade));
+    // (Not before the offering has gone in: the count is what shows it going.)
+    const offer = sim.goal.offer;
+    const offering = sim.goal.gathered && !sim.goal.ended && offer !== undefined && offer.total > 0;
+    this.offerDone = offering && offer.given < offer.total ? 0 : this.offerDone + dt;
+    if (offering && this.offerDone < HUD.offerStay) this.hold = Math.max(this.hold, 1);
+    const leave = sim.goal.gathered && !(offering && this.offerDone < HUD.offerStay);
+    this.live = Math.min(1, Math.max(0, this.live + (leave ? -dt : dt * 3) / HUD.endFade));
     // She is under the cluster (a climb into the top corner): it thins so she is never behind it.
     const U = HUD.under;
     const under =

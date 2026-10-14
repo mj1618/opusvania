@@ -8,6 +8,34 @@ Sim: `src/sim/goal.ts` (`updateGoal`, last thing in `step`), numbers in `tuning.
 the spawn). Tests: `tests/unit/goal.test.ts` (rules), `tests/unit/goal-pilot.test.ts` (one whole run
 with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.md).
 
+## Playtest 5 (2026-10-14): the ember, the wake that is waited for, what the offering wakes
+- **The summit's lantern wants the ember** (`lanterns[i].key: '<pickup id>'`, a great glint of the scene;
+  `lantern-crown` -> `great-ember` at 1500, 650: on F3, straight over the first lantern, in the picture when
+  she kindles that one). Until she has gathered it the lantern does not catch whatever she carries: no
+  channel, no pledge; `lanternNotice` and `lanternRefuse` carry `key {id, x, y}` (the refusal fires after 12
+  still frames even with the price in hand); `lanternKey {id, key, kx, ky}` the step the ember reaches her;
+  `LanternState.keyed`. **Why a key and not a dearer lantern**: a price does not say where to go (and "dearer
+  lanterns" was rejected in playtest 3); a thing she has seen hanging says exactly where. It puts F1-F3 (or
+  the high route F5-F4-F3), lamp-glade and lamp-f3's dive on the critical path, and makes the summit a place
+  she comes to twice. One who never stops at a light is told by the notice as she passes (the pilot's
+  `stand: false` reads that). The ember is an ordinary great glint (5) to the wallet and the tally.
+- **The wake has a length** (`goal.heartWakeFrames` 180): standing in the woken heart ends the run only once
+  it has been awake 3 s. Sooner, she stands in the waking light **in control** (`heartWait {frames}` once,
+  `heart.waited`); `heartReady {waited}` and `heart.ready` when it has played; `gather` on that step or the
+  next. Her input is never taken for it. **Awake, the heart keeps every creature within 600 px calm**
+  (`heartCalmPx`: wing-rise dived at her while she waited).
+- **What the offering wakes**: as each tier is passed during the hold, `groveWake {tier, part, given, frame}`
+  and `goal.grove.{flowers | paths | canopy}`: tier 1 (25) the shrine's flowers, tier 2 (50) the glow plants
+  along the three lanterns' paths, tier 3 (100) the lights of the whole canopy. Same step as `heartTier`.
+  `gather` / `goal.ending` also carry `offerNext` (glints short of the next tier, 0 at the top) beside
+  `offered` and `offerTier`. The sim does nothing else with it.
+- **Runs now** (robots that never hesitate; `NAIVE_TRACE=1`): tapper 50-54 s, 7-10 hits, **1-3 fades**, re-forms
+  at the lamps she bought (it was 19-20 s, 1 hit); holder 53 s; **careful first-timer** (18-frame reaction,
+  reads the brace, hops, cuts it winded, steps out of dives, rests at her lights) **58 s, 1-2 hits, 0 fades**,
+  121 found, 73 offered (tier 2); the goal-directed pilot 33.6 s. Playtest 5's own human-ish bots were
+  3x the robots, so a careful person is about 2.5-3 min, not yet the 3-5 asked for.
+- Economy: world 101 (the ember), pods 62, creatures 45 (a seventh lampwing): `glintsTotal` 208.
+
 ## Rules
 - **At a lantern** = grounded, mode `normal`, feet on its base line, her box overlapping its trigger
   box (48 x 64, centred on its foot), in control (not staggered, not faded). Flying or running through
@@ -124,7 +152,7 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
 - `run.start` = frame of her first input; `run.hits` counts `hurt` events. Summary: `glints` =
   `count + spent + lost - bonus` (the tally rule above), `time` = frames since the first input, `kills` = dead enemies, `hits`.
 - A scene without `lanterns` / `heart` has no goal: nothing fires. Lanterns without a heart can be lit.
-- State version 17 (playtest 4: `LanternState.still`, `goal.offer`, `ending.offered / offerTier`,
+- State version 18 (playtest 5: `keyed`, `heart.ready / waited`, `goal.grove`, `ending.offerNext`, the creatures' new fields). Was 17 (playtest 4: `LanternState.still`, `goal.offer`, `ending.offered / offerTier`,
   `pickups.offered`, the burrback's `braced / strikeCd / chargeLeft`). Existing play is untouched when the lanterns are ignored (tested: the grove with
   and without them plays identically).
 

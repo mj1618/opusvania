@@ -148,9 +148,28 @@ describe('burrback: the ram', () => {
     expect(of(all, 'enemyRecover')[0]).toMatchObject({ cause: 'spent', frames: B.recoverFrames });
     expect(foe(s)).toMatchObject({ mode: 'recover', braced: false });
     expect(of(all, 'hurt')).toHaveLength(0);
-    // Spent, then cooling: she can stand in front of it and it does not brace again for a while.
+    expect(of(all, 'enemyRecover')[0]).toMatchObject({
+      tired: false,
+      broken: false,
+      cooldown: B.strikeCooldown,
+    });
+    // Winded, then a short cooldown: she can stand in front of it and it does not brace meanwhile.
+    // Then it does (it is roused: a fight has a second tell), and that ram leaves it winded longer.
     s.place(foe(s).x - 60, FLOOR);
-    expect(of(s.run(`.${B.recoverFrames + B.strikeCooldown - 62}`), 'enemyWindup')).toHaveLength(0);
+    expect(foe(s).strikeCd).toBeGreaterThan(8);
+    expect(of(s.run(`.${foe(s).strikeCd - 2}`), 'enemyWindup')).toHaveLength(0);
+    expect(of(s.run('.4'), 'enemyWindup')).toHaveLength(1);
+    s.run('.2');
+    s.place(3600, FLOOR);
+    const second = s.run('.60');
+    expect(of(second, 'enemyRecover')[0]).toMatchObject({
+      cause: 'spent',
+      tired: true,
+      frames: B.recoverTiredFrames,
+    });
+    expect([B.recoverFrames, B.recoverTiredFrames, B.recoverWallFrames, B.strikeCooldown]).toEqual([
+      30, 66, 90, 12,
+    ]);
   });
 
   it('braced, a forward cut from its front glances off (no damage, she is thrown back); from behind and from above it lands', () => {
@@ -161,7 +180,7 @@ describe('burrback: the ram', () => {
     s.run('.2');
     expect(foe(s).mode).toBe('windup');
     const x0 = feet(s).x;
-    const ev = s.run('A8');
+    const ev = s.run('A14');
     expect(of(ev, 'enemyBlock')).toHaveLength(1);
     expect(of(ev, 'enemyBlock')[0]).toMatchObject({ slash: 'fwd', dir: 1, hitstop: EN.blockHitstopFrames });
     expect(of(ev, 'enemyHit')).toHaveLength(0);
@@ -188,7 +207,7 @@ describe('burrback: the ram', () => {
     expect(c.state.player.vy).toBeLessThan(0);
   });
 
-  it('spent, its touch does nothing (her opening); it is open to every cut and will not brace again for 150 frames after', () => {
+  it('spent, its touch does nothing (her opening) for the 30 frames it stands winded; it may brace again 12 frames after', () => {
     const t = cloneTuning(defaultTuning);
     t.burrback.speed = 0;
     const s = newSim(scene([burr(2200)]), t);
@@ -203,7 +222,7 @@ describe('burrback: the ram', () => {
     expect(foe(s).mode).toBe('recover');
     // The moment it walks again its touch counts (she is still standing in it).
     expect(of(s.run('.4'), 'hurt')).toHaveLength(1);
-    expect([B.recoverFrames, B.strikeCooldown]).toEqual([45, 150]);
+    expect([B.recoverFrames, B.strikeCooldown]).toEqual([30, 12]);
   });
 
   it('a range of its own: unprovoked it braces only at one inside it; cut from outside, it braces at her anyway; the ram runs its length either way', () => {
@@ -336,5 +355,178 @@ describe('burrback: the ram', () => {
       expect(b.hits, id).toBe(0);
       expect(b.dead, id).toBe(true);
     }
+  });
+});
+
+describe('burrback: a fight with a second beat (playtest 5)', () => {
+  const stand = () => {
+    const t = cloneTuning(defaultTuning);
+    t.burrback.speed = 0;
+    return t;
+  };
+
+  it('five hit points; the scene may give one its own (the teaching one has four)', () => {
+    expect(B.hp).toBe(5);
+    const s = newSim(scene([burr(2200), { ...burr(2600, -1, 'c'), hp: 4 }]));
+    expect([foe(s, 0).hp, foe(s, 0).hpMax, foe(s, 1).hp, foe(s, 1).hpMax]).toEqual([5, 5, 4, 4]);
+    const hp = Object.fromEntries(
+      (GROVE.enemies ?? []).filter((e) => e.kind === 'burrback').map((e) => [e.id, e.hp ?? B.hp]),
+    );
+    expect(hp).toEqual({
+      'burr-bank': 5,
+      'burr-path': 4,
+      'burr-ledge': 5,
+      'burr-root': 5,
+      'burr-shaft': 5,
+      'burr-rise': 5,
+    });
+  });
+
+  it('the winded window is two cuts, not a kill: the third glances off a fresh brace; the second time it is tired and the whole chain lands, the finisher last', () => {
+    const s = newSim(scene([burr(2600, -1)]));
+    s.place(2200, FLOOR);
+    const r = fight(s, 0, true);
+    trace('reader, two exchanges', r.lines);
+    expect(r.hits).toBe(0);
+    expect(r.dead).toBe(true);
+    // Two tells; between them exactly two cuts landed, and the cut after those met the new brace.
+    const ev = r.events;
+    const tells = ev.flatMap((e, i) => (e.type === 'enemyWindup' ? [i] : []));
+    expect(tells.length).toBe(2);
+    const between = ev.slice(tells[0], tells[1]);
+    expect(of(between, 'enemyHit').map((h) => h.hpLeft)).toEqual([4, 3]);
+    const spent = of(ev, 'enemyRecover');
+    expect(spent.map((x) => [x.tired, x.frames])).toEqual([
+      [false, B.recoverFrames],
+      [true, B.recoverTiredFrames],
+    ]);
+    // The kill is the finisher (power 2), paying the finisher's worth.
+    expect(of(ev, 'enemyDie')[0]).toMatchObject({ power: 2, value: B.valueFinisher });
+    // A whole fight: two exchanges, about five seconds from the first tell.
+    expect(r.frames).toBeGreaterThan(200);
+    expect(r.frames).toBeLessThan(420);
+  });
+
+  it('a ram that ends at a wall stuns it: 90 frames, room for the chain and more', () => {
+    const wall = { tag: 'trunk' as const, x: 2000, y: 500, w: 60, h: 300 };
+    const s = newSim({ ...flatScene({ solids: [wall] }), enemies: [burr(2200)] }, stand());
+    s.place(2110, FLOOR);
+    s.run('.2');
+    // She leaves its line (up and over); it runs into the wall behind where she stood.
+    s.place(2400, FLOOR);
+    const ev = s.run('.40');
+    expect(of(ev, 'enemyRecover')[0]).toMatchObject({
+      cause: 'wall',
+      frames: B.recoverWallFrames,
+      tired: false,
+    });
+    expect(foe(s).x).toBe(2060);
+    // Five cuts' worth before it can brace again: it dies in the one stun.
+    s.place(2180, FLOOR);
+    const kill = s.run('L1 L+A1 .20 A1 .22 A1 .26 A1 .40');
+    expect(of(kill, 'enemyWindup')).toHaveLength(0);
+    expect(of(kill, 'enemyDie')).toHaveLength(1);
+  });
+
+  it('a blow that breaks its brace (from behind, from above) leaves it winded where it stands; no ram', () => {
+    const s = newSim(scene([burr(2200)]), stand());
+    s.place(2110, FLOOR);
+    s.run('.2');
+    expect(foe(s).mode).toBe('windup');
+    s.place(2290, FLOOR);
+    const ev = s.run('L1 L+A1 .30');
+    expect(of(ev, 'enemyHit')).toHaveLength(1);
+    expect(of(ev, 'enemyCharge')).toHaveLength(0);
+    expect(of(ev, 'enemyRecover')[0]).toMatchObject({
+      cause: 'spent',
+      broken: true,
+      frames: B.recoverFrames,
+    });
+    expect(foe(s).mode).toBe('recover');
+    // Winded, its touch does nothing and it does not brace; then it comes round to her and does.
+    const next = s.run('.60');
+    expect(of(next, 'enemyTurn').some((e) => e.cause === 'hit')).toBe(true);
+    expect(of(next, 'enemyWindup')).toHaveLength(1);
+  });
+
+  it('having rammed, it comes round to one who is still in its range, but leaves one beyond it alone; cut, it answers anywhere', () => {
+    const ranged = (): Scene => scene([{ ...burr(2200), radius: 100 }]);
+    // She hops its ram and stands behind it, inside its range: it turns and braces again.
+    const a = newSim(ranged(), stand());
+    a.place(2080, FLOOR);
+    a.run('.2');
+    a.place(2300, FLOOR);
+    a.run('.50');
+    // (Its ram carried it 180 px on: she steps up behind it, still inside its range.)
+    a.place(foe(a).x + foe(a).w + 70, FLOOR);
+    expect(feet(a).x).toBeGreaterThan(2094);
+    const ev = [...a.events.slice(-60), ...a.run('.90')];
+    expect(of(ev, 'enemyRecover').length).toBeGreaterThanOrEqual(1);
+    expect(of(ev, 'enemyTurn').map((e) => e.cause)).toContain('hit');
+    expect(of(ev, 'enemyWindup').length).toBeGreaterThanOrEqual(1);
+    // The same, but she stands beyond its range's end (a wall she is working out, say): left alone.
+    const b = newSim(ranged(), stand());
+    b.place(2080, FLOOR);
+    b.run('.2');
+    b.place(2400, FLOOR);
+    expect(of(b.run('.300'), 'enemyWindup')).toHaveLength(0);
+  });
+
+  it('fenced (a guard on a narrow perch): neither its ram nor a shove takes it out of its range', () => {
+    const s = newSim(scene([{ ...burr(2200), radius: 60, fenced: true }]), stand());
+    // Its box may be between 2114 and 2286.
+    s.place(2110, FLOOR);
+    s.run('.2');
+    s.place(1800, FLOOR);
+    const ev = s.run('.60');
+    expect(of(ev, 'enemyRecover')[0]).toMatchObject({ cause: 'ledge' });
+    expect(foe(s).x).toBe(2114);
+    // Cut toward the other end, again and again: it stops at the fence.
+    s.place(2100, FLOOR);
+    s.state.player.invuln = 1e6;
+    for (let k = 0; k < 4 && foe(s).mode !== 'dead'; k++) {
+      s.place(foe(s).x - 40, FLOOR);
+      s.run('R1 R+A1 .24');
+      expect(foe(s).x + foe(s).w).toBeLessThanOrEqual(2286);
+    }
+    const ledge = (GROVE.enemies ?? []).find((e) => e.id === 'burr-ledge');
+    expect(ledge).toMatchObject({ x: 3090, radius: 60, fenced: true });
+  });
+
+  it('three on the road, mashed one after another without a rest: she fades before the third is down; the reader walks through all three', () => {
+    const order = [
+      ['burr-path', 1900],
+      ['burr-shaft', 3340],
+      ['burr-rise', 4800],
+    ] as const;
+    const m = newSim(GROVE);
+    let faded = false;
+    let hits = 0;
+    for (const [id, x] of order) {
+      if (faded) break;
+      const i = (GROVE.enemies ?? []).findIndex((e) => e.id === id);
+      m.place(x, ((GROVE.enemies ?? [])[i] as EnemySpawn).y);
+      const r = fight(m, i, false);
+      trace(`masher in a row at ${id}`, r.lines);
+      hits += r.hits;
+      faded = m.state.player.faded > 0 || m.state.player.hp <= 0 || m.state.goal.run.deaths > 0;
+    }
+    expect(faded).toBe(true);
+    expect(hits).toBeGreaterThanOrEqual(defaultTuning.health.max);
+    const rd = newSim(GROVE);
+    let taken = 0;
+    for (const [id, x] of order) {
+      const i = (GROVE.enemies ?? []).findIndex((e) => e.id === id);
+      rd.place(x, ((GROVE.enemies ?? [])[i] as EnemySpawn).y);
+      // (The lampwing over burr-rise is the pair's other half: the careful pilot's, naive-pilot.test.ts.)
+      for (const w of rd.state.enemies)
+        if (w.id === 'wing-rise') Object.assign(w, { mode: 'dead', hp: 0, gone: true });
+      const r = fight(rd, i, true);
+      trace(`reader in a row at ${id}`, r.lines);
+      expect(r.dead, id).toBe(true);
+      taken += r.hits;
+    }
+    expect(taken).toBeLessThanOrEqual(1);
+    expect(rd.state.goal.run.deaths).toBe(0);
   });
 });

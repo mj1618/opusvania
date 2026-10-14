@@ -39,7 +39,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning): EnemyState {
   const K = KINDS[spawn.kind];
   const w = frames(K.width(t), 2);
   const h = frames(K.height(t), 2);
-  const hp = frames(K.hp(t), 1);
+  const hp = frames(spawn.hp ?? K.hp(t), 1);
   const e: EnemyState = {
     id: spawn.id,
     kind: spawn.kind,
@@ -91,6 +91,16 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning): EnemyState {
     braced: false,
     strikeCd: 0,
     chargeLeft: 0,
+    rams: 0,
+    fenced: false,
+    roused: 0,
+    stirred: 0,
+    broken: false,
+    dives: 0,
+    span: 0,
+    fromX: 0,
+    fromY: 0,
+    sight: 0,
     calm: 0,
     spill: 0,
     spillTimer: 0,
@@ -107,8 +117,12 @@ export function createEnemies(scene: Scene, t: Tuning): EnemyState[] {
 }
 
 /**
- * Living enemies go back to where they started, whole; dead ones stay dead (their glints still
- * arrive). `enemyReset` for each one that was hurt or away from its start, so it can be shown.
+ * Living enemies go back to where they started, calm and rested, but **they keep their wounds**
+ * (`enemyReset.healed` is 0 now); dead ones stay dead (their glints still arrive). `enemyReset` for
+ * each one that was away from its start, so it can be shown. Why no healing (playtest 5): a fight
+ * has a second beat now, so one who only stands and cuts pays two lights a burrback; re-formed with
+ * two lights against a healed one she faded again, for ever (piloted: naive-pilot.test.ts). With
+ * wounds kept every attempt counts and the worst player still gets through, a fade's cost each time.
  */
 export function resetEnemies(state: GameState, scene: Scene, t: Tuning, events?: SimEvent[]): void {
   const list = scene.enemies ?? [];
@@ -117,8 +131,10 @@ export function resetEnemies(state: GameState, scene: Scene, t: Tuning, events?:
     const s = list[i];
     if (!e || !s || e.mode === 'dead') continue;
     const fresh = createEnemy(s, t);
+    fresh.hp = Math.min(fresh.hpMax, Math.max(1, e.hp));
+    fresh.hitFrame = e.hitFrame;
     state.enemies[i] = fresh;
-    const healed = fresh.hp - e.hp;
+    const healed = 0;
     if (events && (healed > 0 || e.x !== fresh.x || e.y !== fresh.y))
       events.push({
         type: 'enemyReset',

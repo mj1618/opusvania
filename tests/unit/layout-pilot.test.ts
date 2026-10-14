@@ -131,24 +131,26 @@ describe('the leap: off the bluff eastward, the wings carry her to the lamp at t
       const start = ev.find((e) => e.type === 'glideStart');
       expect(start && Math.abs(start.x - (bluff.x + bluff.w)) < 60, `from ${x}`).toBe(true);
       expect(glide, `from ${x}`).toBeGreaterThan(40);
-      // The bark of trunk A caught her, she slid down it, and stands in the well at the lamp.
-      expect(typesOf(ev), `from ${x}`).toContain('wallSlideStart');
+      // The bark of trunk A stopped her (no slide: it is no climb since playtest 5), she dropped along
+      // it and stands in the mouth of the doorway, a step past the lamp in the well.
+      expect(typesOf(ev), `from ${x}`).not.toContain('wallSlideStart');
       expect(typesOf(ev)).not.toContain('headBump');
       expect(hurts(ev)).toBe(0);
       expect(feet(s).y).toBe(lamp.y);
-      expect(Math.abs(feet(s).x - lamp.x), `from ${x}`).toBeLessThan(44);
+      expect(Math.abs(feet(s).x - lamp.x), `from ${x}`).toBeLessThan(60);
       expect(ev.filter((e) => e.type === 'lampNotice')).toHaveLength(1);
       wait(s, 60);
       expect(taken(s, 'leap-'), `from ${x}`).toBe(4);
     }
   });
 
-  it('carrying 8 she kindles the lamp where the slide set her down, without another step', () => {
+  it('carrying 8 she kindles the lamp a step back from where the drop set her down', () => {
     const s = newSim();
     s.state.pickups.count = 4;
     s.place(2560, bluff.y);
     s.run('J56');
     for (let f = 0; f < 200 && !(s.state.player.grounded && feet(s).y === lamp.y); f++) s.run('R+J1');
+    s.run('L5');
     wait(s, 90);
     expect(s.state.goal.lamps[0]?.lit).toBe(true);
     expect(s.state.pickups.spent).toBe(8);
@@ -161,21 +163,19 @@ describe('the leap: off the bluff eastward, the wings carry her to the lamp at t
     j.run('R3');
     const fj = j.events.length;
     for (let f = 0; f < 200 && !(j.state.player.grounded && feet(j).y === lamp.y); f++) j.run('R+J1');
-    expect(typesOf(j.events.slice(fj))).toEqual(expect.arrayContaining(['glideStart', 'wallSlideStart']));
-    expect(Math.abs(feet(j).x - lamp.x)).toBeLessThan(44);
+    expect(typesOf(j.events.slice(fj))).toEqual(expect.arrayContaining(['glideStart']));
+    expect(Math.abs(feet(j).x - lamp.x)).toBeLessThan(60);
     // What a first-timer does at the west wall: jump at it, jump again (a kick), and keep holding.
     const k = newSim({ ...GROVE, enemies: [] });
     k.place(2380, 1280);
     k.run('R+J22 R1');
-    const fk = k.events.length;
     let glide = 0;
     for (let f = 0; f < 260 && !(k.state.player.grounded && feet(k).y === lamp.y); f++) {
       k.run('R+J1');
       if (k.state.player.gliding) glide++;
     }
     expect(glide).toBeGreaterThan(50);
-    expect(typesOf(k.events.slice(fk))).toContain('wallSlideStart');
-    expect(Math.abs(feet(k).x - lamp.x)).toBeLessThan(44);
+    expect(Math.abs(feet(k).x - lamp.x)).toBeLessThan(60);
     // No hold: she drops onto the terrace 170 px out, under the line, with the first two of the four.
     const p = newSim();
     p.place(bluff.x + bluff.w - 40, bluff.y);
@@ -206,7 +206,7 @@ describe('the hollow: a real dip in the floor', () => {
     expect(feet(s).y).toBe(hollow.y);
     wait(s, 40);
     expect(taken(s, 'hollow-')).toBe(3);
-    const root = S.find((r) => r.tag === 'root');
+    const root = S.find((r) => r.tag === 'root' && r.x === 3968);
     if (!root) throw new Error('no root');
     expect(hopOnto(s, root)).toBeGreaterThan(0);
     s.place(hollow.x + 100, hollow.y);
@@ -293,7 +293,7 @@ describe('the shaft entry: a jump at either trunk from the floor catches a wall'
     }
   });
 
-  it('a running jump from outside: off the terrace she slides down trunk A into the well; from the east down trunk B', () => {
+  it('a running jump from outside: off the terrace she drops along trunk A into the well (its bark is no climb); from the east she slides down trunk B', () => {
     // Running east along the terrace, jump pressed at any moment before the well: no head bump, a slide.
     // (A jump pressed down in the well bumps the doorway 32 px up: that is the doorway, not a trap.)
     for (let k = 0; k <= 20; k++) {
@@ -301,7 +301,7 @@ describe('the shaft entry: a jump at either trunk from the floor catches a wall'
       s.place(2860, terrace.y);
       const r = attempt(s, `R${k} R+J22 R80`);
       expect(r.bumps, `jump at frame ${k}`).toBe(0);
-      expect(r.slide, `jump at frame ${k}`).toBeGreaterThanOrEqual(8);
+      expect(r.slide, `jump at frame ${k}`).toBe(0);
     }
     // Running west from beyond the hollow.
     for (let k = 0; k <= 40; k += 2) {

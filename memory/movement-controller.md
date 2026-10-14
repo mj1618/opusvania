@@ -136,3 +136,8 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
   high ledge with glide + air dash; spawn ground → over the
   pool onto the mid rise. Gaps meant to need the glide must be wider than ~1150 px at the same height
   (jump + double + dash is ~1050); gaps meant to stop it need > 1950 px or a ceiling.
+
+## One climbable flank (`kick: 'east' | 'west'`, playtest 5)
+A solid may take a slide and a kick on one side only (`kickableAt`: the side of the solid her box is on).
+Trunk A: its east face is the shaft's wall, its west bark out of the well is clean (scene-and-units.md).
+A 6-frame tap is 136 px: the bank's foot has a 96 px root step for it.

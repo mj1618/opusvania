@@ -149,7 +149,7 @@ describe('the grove pickups', () => {
     expect(list.length - greats.length).toBeGreaterThanOrEqual(40);
     expect(list.length - greats.length).toBeLessThanOrEqual(68);
     expect(greats.length).toBeGreaterThanOrEqual(4);
-    expect(greats.length).toBeLessThanOrEqual(6);
+    expect(greats.length).toBeLessThanOrEqual(7);
     expect(new Set(list.map((p) => p.id)).size).toBe(list.length);
   });
 

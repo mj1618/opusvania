@@ -330,7 +330,7 @@ describe('wing glide', () => {
       flight.events
         .filter((e) => e.type === 'enemyNotice')
         .map((e) => (e.type === 'enemyNotice' ? e.id : '')),
-    ).toEqual(['lamp-glide-2', 'lamp-sky']);
+    ).toEqual(['lamp-sky', 'lamp-glide-2']);
     // One forward cut on the way in (wings open) and she flies on through its tumble, untouched.
     const c = newSim();
     c.place(3684, 192);

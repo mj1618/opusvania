@@ -128,12 +128,12 @@ export class HitboxOverlay {
           ? 0x8a8a8a
           : e.mode === 'hurt'
             ? 0xff9a3c
-            : e.braced
+            : e.braced || e.mode === 'dive'
               ? 0xff3030
-              : e.mode === 'recover'
+              : e.mode === 'recover' || e.mode === 'stall'
                 ? 0x7dff9a
                 : 0xff4cf0;
-      g.rect(e.x, e.y, e.w, e.h).stroke({ color, width: e.braced ? 4 : 2 });
+      g.rect(e.x, e.y, e.w, e.h).stroke({ color, width: e.braced || e.mode === 'dive' ? 4 : 2 });
       // Braced: its armoured front, and (during the windup) how far the ram will carry it.
       if (e.braced) {
         const front = e.facing > 0 ? e.x + e.w : e.x;
@@ -155,7 +155,7 @@ export class HitboxOverlay {
       const cy = e.y + e.h / 2;
       g.circle(e.homeX, e.homeY, e.radius).stroke({ color: 0xff4cf0, width: 1, alpha: 0.35 });
       if (e.mode === 'dead') continue;
-      const hunting = e.mode === 'curious' || e.mode === 'pursue';
+      const hunting = e.mode === 'curious' || e.mode === 'pursue' || e.mode === 'dive' || e.mode === 'stall';
       g.moveTo(cx, cy)
         .lineTo(e.targetX, e.targetY)
         .stroke({ color: hunting ? 0xffe14c : 0xff4cf0, width: hunting ? 2 : 1, alpha: hunting ? 0.9 : 0.5 });

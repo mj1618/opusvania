@@ -1,6 +1,8 @@
 # Enemies, render side: the burrback and the lampwing (`src/render/enemies/`)
 
-Rules and state fields: enemies.md. Current sheets: `shots/enemr3/*.png` (the ram: brace, block, ram, spent,
+Rules and state fields: enemies.md. **Start with the last section (playtest 5): the tell, the hit tone, the
+winded pose and the whole lampwing changed there; older sections are right only where it does not contradict
+them.** Current sheets: `shots/enemr5/{burr,lamp}/*.png`, clip `clips/enemr5-*`. Older: `shots/enemr3/*.png` (the ram: brace, block, ram, spent,
 punished, dead, in the centre and right zones at 3x and play zoom; the wall jolt; the reset; the lampwing's
 tell and tumble) and `clips/enemr3-*.mp4`; `shots/enemr2/*.png` (per zone: before / after, notice, calm,
 touch); older: `shots/lamp2`, `shots/burr2`.
@@ -57,7 +59,7 @@ touch); older: `shots/lamp2`, `shots/burr2`.
   Hit pop: 2 dark frames then ~2 frames 55% toward 0x7d6873. `nearHero`: 20% darker beside her.
   Fringe: 17 narrow dark tufts (11 wide = teeth). At most four thin cracks (more = a tortoise).
 
-## The lampwing: a ghost-moth (`lampwing.ts`, `LAMP`)
+## The lampwing: a ghost-moth (`lampwing.ts`, `LAMP`) (look superseded by the last section; the wing / beat / death mechanics still hold)
 - Front view, back painter. Slim body: narrow thorax, a long tapering abdomen drawn as a ribbon that
   trails the flight (`lagX`), thin hanging legs, a small DARK head with two dim pinprick eyes that
   slide toward `lookX/Y` (dimmer until it has seen her), two long thin antennae.
@@ -204,3 +206,60 @@ now counts the same way, in its coral).
   (fetched with `eval --filename`), and returns the inputs as a DSL script: **that script replays in
   `npm run clip -- --pickups --at x,y --script "..."`** if the harness also stepped 30 frames after the
   teleport (`--pre`). A hot reload between the two calls loses `__out`: wait 2 s after an edit.
+
+## Playtest 5 round (2026-10-14; sheets `shots/enemr5/`, knobs `BURR.ram`, `BURR.hit`, `LAMP.dive`, `LAMP.hit`)
+Sim side of the same round: burrback hp 5, winded 30 / tired 66 / wall 90 frames, `strikeCooldown` 12, `roused`;
+lampwing hp 3 with `curious` -> `dive` -> `stall` -> `pursue` (a climb to a perch) -> `curious` again.
+- **The green leaf triangles on every cut are not ours.** They are the playfield's clippings:
+  `src/render/scene/layers/playfield.ts` `onSlash` (fires on every `slash` event, hit or not, `PLAYFIELD.clippings`
+  20 per full box of grass, colours `CLIP_COOL / WARM / DEEP`: green in every zone) drawn by
+  `src/render/scene/lib/pf-clippings.ts` (`CLIPPINGS.life` 0.85 s) in the `playfieldFront` layer, i.e. over the hero.
+- **Our chips**: `BURR.hit.chips` 3 (5 for a finisher), `chipLife` 0.13-0.19 s, thrown along `hitDir` off the far
+  side, in the shell's sheen lifted toward `plateIn`. `K_FRAG` and `K_SCALE` particles go into the BACK painter
+  (with the bodies, behind the hero and her crescent); everything else stays in front of the grass. Lampwing hit
+  scales: 4 / 5, `scaleLife` 0.26 s.
+- **The brace's count is the rim** (was four 3 px lights): the whole dome outline is a line in the ram's red, on
+  each of the five beats and falling off between, `rimW` 1.25 px + `rimGrow` 0.65 per beat (x1.4 in the left
+  zone), going to `rimPale` at the top of a beat, with a red halo behind the shell that also grows per beat
+  (`rimHalo` 30 + 9 px). On the frame the ram starts: one pale flash (`flashR` 70, gone in ~4 frames). The line
+  stays on, thinner, through the ram (it is still armoured). `rig.beatN / beatNew / relT`.
+  Silhouette: `pitch` 0.42 and `tall` 0.17 (stretched up from the ground, so the rear stands ~10 px higher), the
+  plate `out` 14 with its bone edge 3.3 px and never under 72% lit. Each beat the front feet kick puffs and dust
+  TOWARD her (`kick`, more per beat); the rear scrape still throws behind.
+- Measured (changed pixels with the enemy meshes on / off, linear luminance, 1920x1080 play zoom): the tell's
+  footprint is 3650-3930 px against 2040-2630 walking; brightest 5% of its pixels vs their background: left
+  0.17 (peak 0.22) on 0.07, centre 0.28 (0.39) on 0.07, right 0.36 (0.42) on 0.10. The mean |creature - bg| hardly
+  moves (left 0.04, centre 0.07, right 0.11): the read is the red line and the bigger shape, not overall value.
+  Left stays the weakest zone.
+- **Hit tone** (both kinds): frames 0-2 of the hold = a pale outline (`flashW` 1.7 px `flashColor`, the same
+  ribbon as the rim count; the lampwing's wing edges) on a fill that has not changed; the rest of the hold = 62%
+  toward `struck` 0x2f2a34, a flat desaturated dusk (NOT a multiply toward black: that vanished on dark ground),
+  outline on at 42%; then the `pop` (0.42; lampwing 0.3). `tone()` mixes toward `C.struck`; the near-hero dimming
+  is `nearDim` now, not part of `toneDark`. 0x4a434f for `struck` read as a pale ghost next to her light.
+- **Winded** (`recover`): rolled back, `tip` 0.62 rad with the body lifted so the rear rim rests on the ground
+  (`sitUp`: the rotation is about mid-height and would sink it), front legs off the ground pawing, head hanging
+  4.5 px lower, a pale wedge of underside between the lifted rim and the ground (drawn AFTER the fringe; drawn
+  before the shell it was hidden), one slow deep breath (`pant` 7.4 rad/s, depth 0.12), three tiny pale motes
+  circling over it. `enemyRecover.broken` (a blow broke its brace): no skid, it drops where it stands. `recover`
+  can start again after a `hurt` with no event: the rig keeps the last cause.
+- **Wall stun** (`cause: 'wall'` only, the sim's 90 frames): `stunTip` 0.95 (nearly on its back against the
+  wall), all six legs in the air, wider faster rock, five motes. Ledge / lantern stops are the jolt, then plain winded.
+- Cracks scale with `hpMax` now (hp 5: 1, 2, 3, 4 cracks at 4, 3, 2, 1). Clamp the index: at hp 0 the formula gives 5.
+- **Lampwing, the look**: larger (fore 31 / hind 20: ~55 px across; the box is still 36 x 30), DARK body and
+  membrane with the pale edge, a hooked (sickle) fore-wing apex with a notch under it, a long tail streamer on
+  each hind wing, a 21 px abdomen with the lamp as a bulb at its END (r 2.6, pale core, halo x4). Centre zone
+  membrane is a warm brown (0x7c5c3a): the dark one was invisible on dark green (weakest zone still).
+- **Lampwing, the dive** (`phaseOf(mode)` maps sim modes to tell / swoop / open / climb by NAME, so a renamed
+  mode needs one line there): tell = the old X hold plus it rears back from her, the lamp grows (x1.55) and a thin
+  line of light runs from the lamp toward `targetX/Y`; swoop (`dive`) = the body turns head-first along its
+  velocity (`rig.head`, straight down goes over on the side it faces), stretched 20%, wings swept back to the
+  tail (`sweep` -0.85) and narrow, the lamp trailing a streak; open (`stall`, `rest`) = wings flat and wide on a
+  slow beat, membrane 70% toward the pale edge (pale = soft, the same language as the burrback's underside),
+  lamp at 28%, eyes half shut; climb (`pursue`, `return`) = deep strokes (x1.3), hunt colour kept in `pursue`.
+  `enemyStall` cause `wall`: a lean kick and four scales (not seen: no wall met in the staged runs).
+- Capture: `scratchpad/e5/{page.js, go.sh}`: `go.sh <dir> '<js>'` installs the harness and runs the staging in ONE
+  `run-code`, returning the sheets as data URLs in the result (another agent's edit reloads the page between two
+  calls and loses anything kept on `window`). Plans: `reader`, `masher`, `watch`, `up`, `dodge` (steps out from
+  under the dive, cuts in the stall), `stand`. A lampwing with no footing in its sight is staged by moving its
+  live record and home (`move: {x, y}`: wrap `__enemies.update` for one step to get the sim). `H.contrast()` is the
+  mesh on / off measurement. `npm run clip` at 1920x1080 takes ~1 minute and dies on any hot reload: retry.

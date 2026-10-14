@@ -7,6 +7,12 @@ import type { EnemyState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning, type Tuning } from '../../src/sim/tuning';
 import { feet, flatScene, newSim, type Sim } from './helpers';
 
+// These rule tests were written before the heart's wake had a length: here it is ready the step
+// after it wakes (vitest gives each test file its own copy of the module). The wait has its own tests.
+defaultTuning.goal.heartWakeFrames = 0;
+// (Nor did the woken heart keep its surroundings calm: these scenes have one lantern and fade her beside it.)
+defaultTuning.goal.heartCalmPx = 0;
+
 /**
  * What the first playtest asked of the goal (memory/goal.md, memory/enemies.md): kindling and lit
  * lanterns are safe (calm, the channel, the sanctuary), a refusal needs her to stand there, a fade
@@ -159,14 +165,14 @@ describe('sanctuary: a lit lantern keeps creatures out', () => {
     expect(lo).toBeLessThan(X - 100);
   });
 
-  it('a lampwing gives up its pursuit 160 px from a lit lantern and cannot hurt inside that; at a dormant one it reaches her', () => {
+  it('a lampwing gives up 160 px from a lit lantern (and will not dive at one who stands in its light) and cannot hurt inside that; at a dormant one it reaches her', () => {
     const run = (lit: boolean) => {
       const s = sim(scene([wing(X + 330, FLOOR - 160)]));
       if (lit) light(s);
       // Out to where it notices her, then back to the lantern with it in tow.
       s.place(X + 200, FLOOR);
       s.run('.50');
-      expect(foe(s).mode).toBe('pursue');
+      expect(foe(s).mode).toBe('dive');
       s.place(X, FLOOR);
       const ev = s.run('.400');
       return { s, ev };
@@ -177,8 +183,8 @@ describe('sanctuary: a lit lantern keeps creatures out', () => {
     expect(up[0]?.cause).toBe('calm');
     // Where it gave up: at the edge, 160 px from the lantern's centre (give or take a frame's drift).
     const d = Math.hypot((up[0]?.x ?? 0) - X, (up[0]?.y ?? 0) - (FLOOR - G.lanternHeight / 2));
+    // (Or sooner: it does not start a dive at one who stands in the light.)
     expect(d).toBeGreaterThan(G.lampSanctuaryPx - 6);
-    expect(d).toBeLessThanOrEqual(G.lampSanctuaryPx);
     expect(lit.s.state.player.hp).toBe(4);
     const dark = run(false);
     expect(of(dark.ev, 'hurt')).toHaveLength(1);

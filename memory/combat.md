@@ -76,7 +76,7 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
   `contactFrames` stand still, presses still latch. Everything else (frame count, pickups, pod glints)
   and render time keep running. Plain state: replays hash the same.
 - **A cut that glances off a braced burrback** (`enemyBlock`, enemies.md): no hit (`attackHits`, `slashHit`
-  and `impact` do not fire), but she holds 3 frames (`enemies.blockHitstopFrames`) and is thrown back at
+  and `impact` do not fire), but she holds **6** frames (`enemies.blockHitstopFrames`; 3 until playtest 5: a clang late in the tell now leaves no time to hop the ram) and is thrown back at
   8 px/f (`blockRecoil`: 36 px less the lunge, about 27). The slash is spent on it.
 - **Pogo** (`assists.pogo`): a `down` slash that hits sets `vy = -15.5` (125 px up in 17 frames),
   refills the air dash, the double jump and the hangs, ends a wall slide. Bounce to bounce is 32 frames
@@ -139,11 +139,12 @@ Nothing in the grove asks for a jump + up cut any more.
   the last. In both, `value` glints are now flying: the first lands in `frames`, then every `stagger`.
 
 ## Render side (Vesper; detail in character-vesper.md, "Thorn slash")
-- One slash look: a flat cream crescent per cut, locked to her body, whole on the first active frame,
-  gone 5 frames later (6 on the finisher; it holds through hitstop). Cut 1 goes down, cut 2 up, the
-  finisher is cut 1 larger; up arcs overhead from her shoulder line, down beneath. The crescent's outer
-  edge is the step's reach for forward cuts; up / down are drawn at 0.88 of the reach. It is thin (belly
-  0.17 of the reach), thins to a line in hitstop, is called back for a late hit and never drawn under the floor.
+- One slash look: a flat crescent per cut, about one of her heights (the finisher 1.2), swept out of the
+  blade on the first active frame, whole on the second, a thin lilac line for two more; in hitstop it is
+  that line, ending on the blade. Cut 1 a downward diagonal, cut 2 its mirror rising, the finisher a great
+  rising cleave; up arcs overhead from her shoulder line; down is a short arc under her feet that sits on
+  what a pogo lands on. It is smaller than the hit area (0.8 of the reach): at full range only the contact
+  cross is on the target. Called back for a late hit, never drawn under the floor.
 - Render reads `slash` (to start the stroke), `slashHit` (contact cross + specks at the target's near
   side, `power` 2 = larger), `enemyBlock` (a clang at `hitX, hitY`), `player.hitstop` (the cut and the
   crescent hold) and `slashEnd` reason `dash | hurt` (blade home at once). `slashHit.hitstop` >= 4 (a
