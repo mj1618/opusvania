@@ -27,11 +27,12 @@ import { wind } from '../scene/lib/look';
 import { camLink } from './camera';
 import { GOAL, MAX_QUADS } from './config';
 import { DropsView } from './drops';
+import { EmberKey } from './ember';
 import { GuideMoths, wayTo } from './guide';
 import { HeartView } from './heart';
 import { LanternView, Moth, WAY_SCALE, WAY_STYLES } from './lantern';
 import { LanternLife } from './life';
-import { type Path, priceArc, sleepBreath, smooth, streamCount } from './logic';
+import { bezier, Path, priceArc, sleepBreath, smooth, streamCount } from './logic';
 import { SurfaceLight } from './surface';
 import { Carving, GroveFlies, Veins } from './wake';
 
@@ -99,6 +100,8 @@ interface Lamp {
   /** Seconds since she re-formed at it (it pays for that with its flame for a moment), and how low that holds it now (0..1). */
   gutterT: number;
   gutter: number;
+  /** It wants the ember and she does not have it: no glints will light it (its price is the ember mark). */
+  keyless: boolean;
 }
 
 /** A glint on its way from her chest into a lantern's glass (or, resting, light from the glass to her). */
@@ -272,6 +275,16 @@ export class GoalRenderer {
   private guideKey = '';
   private guideBest = 0;
   private guideIdle = 0;
+  private guideSp = 0;
+  /** The ember a lantern wants (ember.ts), if the scene has one; seconds until a flight leaves that lantern to lead her back to it (-1 = none due). */
+  readonly ember: EmberKey | null = null;
+  private keyCallIn = -1;
+  /** Seconds until, the ember taken, a flight leaves her shoulder for the lantern that wants it (-1 = none due). */
+  private keyLeadIn = -1;
+  /** The wait in the waking heart: seconds since `heartWait` (-1 = not waiting), since `heartReady` (-1 = not yet), 0..1 shown. */
+  private waitT = -1;
+  private readyT = -1;
+  private waitA = 0;
   /** Cold points on the heart's dark wicks. */
   private readonly wickCold: Sprite[] = [];
   private frame = -1;
@@ -293,6 +306,7 @@ export class GoalRenderer {
   private readonly tmp = [0, 0, 0, 0];
   private chestX = 0;
   private chestY = 0;
+  private camNow: CameraView = { x: 0, y: 0, zoom: 1 };
 
   constructor(
     private readonly ctx: RenderContext,
@@ -376,6 +390,7 @@ export class GoalRenderer {
         coldCore,
         gutterT: LONG_AGO,
         gutter: 0,
+        keyless: false,
       });
     }
     if (scene.heart && list.length > 0) {
@@ -452,6 +467,11 @@ export class GoalRenderer {
       layers.back.addChild(this.back.mesh);
       layers.front.addChild(this.front.mesh, this.price);
       for (const m of this.guide.moths) layers.front.addChild(m.view.root);
+      const at = EmberKey.find(scene);
+      if (at && this.lamps[at.lantern]) {
+        this.ember = new EmberKey(scene, at, layers.front, () => glow(GOAL.lamp.coldCore));
+        layers.front.addChild(this.ember.mark);
+      }
     }
     this.price.visible = false;
     // Dev handle, like __pickups: `__goal.cfg.lantern.light.intensity = 0; __game.render()`.
@@ -661,6 +681,7 @@ export class GoalRenderer {
     const K = GOAL.kindle;
     const goal = sim.goal;
     const p = sim.player;
+    this.camNow = cam;
     // Vesper says where the light leaves her (her open palm while she kindles); other skins: the chest.
     this.chestX = vesperLink.live ? vesperLink.offerX : p.cx;
     this.chestY = vesperLink.live ? vesperLink.offerY : p.cy - 8;
@@ -679,6 +700,10 @@ export class GoalRenderer {
       this.guide.clear();
       this.guideIn = -1;
       this.guideKey = '';
+      this.keyCallIn = -1;
+      this.keyLeadIn = -1;
+      this.waitT = -1;
+      this.readyT = -1;
       for (const lamp of this.lamps) lamp.gutterT = LONG_AGO;
     }
     this.frame = sim.frame;
@@ -712,8 +737,15 @@ export class GoalRenderer {
         const i = this.lampOf(e.x, e.y);
         const lamp = this.lamps[i];
         if (!lamp) continue;
-        lamp.flicker = 0;
         lamp.view.kick(p.cx < lamp.view.x ? -1.7 : 1.7);
+        this.forceLamp = i;
+        this.forceT = e.show > 0 ? e.show / 60 : GOAL.refuse.hold;
+        // It wants the ember, not her glints: no dry flicker, the glass only shudders (ember.ts shows what it lacks).
+        if (e.type === 'lanternRefuse' && e.key) {
+          if (this.keyCallIn < 0) this.keyCallIn = GOAL.ember.callIn;
+          continue;
+        }
+        lamp.flicker = 0;
         for (let k = 0; k < 4; k++) {
           const s = this.spark(
             0,
@@ -729,9 +761,17 @@ export class GoalRenderer {
           s.heat = 0.05;
           s.wait = 0.08 + k * 0.07;
         }
-        // The sim says how long the price is worth showing (it fires only once she has stood there).
-        this.forceLamp = i;
-        this.forceT = e.show > 0 ? e.show / 60 : GOAL.refuse.hold;
+      } else if (e.type === 'lanternNotice' && e.key) {
+        // The summit lantern has seen that she comes without the ember: a flight will lead her back.
+        if (this.keyCallIn < 0) this.keyCallIn = GOAL.ember.callIn + 0.6;
+      } else if (e.type === 'lanternKey') {
+        // She has the ember: the moths that waited on it lead on to the lantern it belongs to.
+        this.keyLeadIn = 0.9;
+      } else if (e.type === 'heartWait') {
+        this.waitT = 0;
+        this.readyT = -1;
+      } else if (e.type === 'heartReady') {
+        if (this.waitT >= 0) this.readyT = 0;
       } else if (e.type === 'lanternRest' || e.type === 'lampRest') {
         const lamp = this.lamps[this.lampOf(e.x, e.y)];
         if (lamp) lamp.beat = 1;
@@ -831,7 +871,8 @@ export class GoalRenderer {
           m.seed = this.rand();
           m.t = 0;
         }
-      } else if (e.type === 'heartTier') {
+      } else if (e.type === 'groveWake') {
+        // What the grove answers the offering with (the sim's tiers: flowers, paths, canopy).
         if (e.tier >= 1 && e.tier <= 3) this.tierT[e.tier - 1] = 0;
       }
     }
@@ -845,6 +886,7 @@ export class GoalRenderer {
       const s = this.stateOf(goal, i);
       if (!s) continue;
       const v = lamp.view;
+      lamp.keyless = this.ember !== null && i === this.ember.lantern && this.ember.wanted(sim);
       // What is true now (a restart, a state jump): no ceremony.
       if (s.lit !== lamp.lit) {
         lamp.lit = s.lit;
@@ -890,7 +932,7 @@ export class GoalRenderer {
         vesperLink.beads[i * 2 + 1] = v.beadY;
       }
       // Standing at it with too little, the price shows again for as long as she stays.
-      if (!s.lit && s.short > 0 && s.refused && wallet < lamp.cost) {
+      if (!s.lit && s.short > 0 && s.refused && (wallet < lamp.cost || lamp.keyless)) {
         this.forceLamp = i;
         this.forceT = Math.max(this.forceT, 0.5);
       }
@@ -953,7 +995,9 @@ export class GoalRenderer {
         lamp.cold.alpha = LP.coldAlpha * c0 * (1 - 0.5 * lamp.notice);
         lamp.coldCore.position.set(v.beadX, v.beadY);
         lamp.coldCore.width = lamp.coldCore.height = LP.coreSize * (1 + 0.35 * tw2);
-        lamp.coldCore.alpha = LP.coreAlpha * c0 * (0.8 + 0.2 * tw2) * (1 - 0.7 * lamp.notice);
+        // (One that waits for the ember shows a cold hollow of its shape instead of the point.)
+        lamp.coldCore.alpha =
+          LP.coreAlpha * c0 * (0.8 + 0.2 * tw2) * (1 - 0.7 * lamp.notice) * (lamp.keyless ? 0 : 1);
       }
 
       // The glass on its thread.
@@ -1139,7 +1183,7 @@ export class GoalRenderer {
       if (jump) this.level = this.awake ? 1 : 0;
       // The shrine's flowers: shut until the offering's first tier.
       const t1 = this.tierT[0] as number;
-      this.heartLife?.update(dt, clock, (goal.offer?.tier ?? 0) >= 1 ? (t1 < 0 ? LONG_AGO : t1) : -1);
+      this.heartLife?.update(dt, clock, goal.grove?.flowers ? (t1 < 0 ? LONG_AGO : t1) : -1);
       // One wick per lantern.
       for (let i = 0; i < h.wicks.length; i++) {
         const wk = h.wicks[i];
@@ -1249,7 +1293,7 @@ export class GoalRenderer {
           H.glow.horizonAlpha * zone * lvl * far * slow,
         );
         // The ending: a breath of light under the canopy and along the mist band.
-        const t3 = (goal.offer?.tier ?? 0) >= 3 ? smooth(0.4, 3, this.tierT[2] as number) : 0;
+        const t3 = goal.grove?.canopy ? smooth(0.4, 3, this.tierT[2] as number) : 0;
         put(g.canopy, h.x - 260, h.y - 730, 2600, 360, (E.canopy * gr + GOAL.offer.canopy * t3) * slow);
         put(g.band, cam.x, h.y - 40, 2400 / cam.zoom, 380, E.band * gr);
       }
@@ -1377,7 +1421,13 @@ export class GoalRenderer {
     let key = '';
     let ex = 0;
     let ey = 0;
-    if (tl) {
+    const em = this.ember;
+    if (tl?.keyless && em) {
+      // It wants the ember first: that is where they lead (and wait).
+      key = em.id;
+      ex = em.x;
+      ey = em.y - GOAL.ember.perchUp;
+    } else if (tl) {
       key = tl.id;
       ex = tl.view.topX;
       ey = tl.view.topY;
@@ -1393,6 +1443,11 @@ export class GoalRenderer {
     g.perchX = ex;
     g.perchY = ey;
     if (g.active && g.key !== key) g.release();
+    let called = false;
+    if (this.keyCallIn >= 0) {
+      this.keyCallIn -= dt;
+      called = this.keyCallIn < 0;
+    }
     // Has she come nearer?
     const d = Math.hypot(ex - p.cx, ey - p.cy);
     if (key !== this.guideKey) {
@@ -1406,10 +1461,50 @@ export class GoalRenderer {
     } else this.guideIdle += dt;
     // A kindle resets what "nearer" means (she may have to go round).
     const way = (): Path => wayTo(GD.routes, key, p.cx, p.cy - 20, ex, ey);
+    if (this.keyLeadIn >= 0) {
+      this.keyLeadIn -= dt;
+      if (this.keyLeadIn < 0 && em && tl && !tl.keyless && tl === this.lamps[em.lantern]) {
+        g.lead(key, way(), GD.moths, em.outX, em.outY - 8);
+        this.guideIdle = 0;
+        this.guideBest = d;
+        this.guideSp = 0;
+        return;
+      }
+    }
+    // The lantern has told her it wants the ember: a flight leaves its cold glass and leads her back
+    // (unless one is already leading her there, in the picture).
+    if (called && tl?.keyless && em) {
+      const leading =
+        g.active && g.key === key && !g.showing && g.mode !== 'leave' && this.inView(cam, g.lx, g.ly, 0);
+      if (!leading) {
+        g.drop();
+        g.lead(key, way(), GD.moths, tl.view.beadX, tl.view.beadY - 4);
+        this.guideIdle = 0;
+        this.guideBest = d;
+        this.guideSp = 0;
+        return;
+      }
+    }
     if (g.active && g.key === key) {
+      if (g.showing) {
+        // They wait on the ember. She does not come: they come down and lead her up the way.
+        if (g.mode !== 'leave' && this.guideIdle > GD.idle && d > 330) {
+          g.reroute(way());
+          this.guideIdle = 0;
+          this.guideBest = d;
+          this.guideSp = 0;
+        }
+        return;
+      }
+      // (Following a way that first leads away from it is coming nearer too.)
+      if (g.sp > this.guideSp + 60) {
+        this.guideSp = g.sp;
+        this.guideIdle = Math.min(this.guideIdle, 0);
+      } else if (g.sp < this.guideSp - 200) this.guideSp = g.sp;
       if (g.stale) {
         g.reroute(way());
         this.guideBest = d;
+        this.guideSp = 0;
       }
       // Nobody follows: they go, and stay away a while.
       if (g.mode !== 'leave' && this.guideIdle > GD.ignore && d > 330) {
@@ -1461,9 +1556,35 @@ export class GoalRenderer {
     const fl = this.lamps[from];
     if (!fl) return;
     if (fl.way) n = Math.max(2, n - 1);
-    g.lead(key, way(), n, fl.view.beadX, fl.view.beadY - 6);
     this.guideIdle = 0;
     this.guideBest = d;
+    this.guideSp = 0;
+    const fx = fl.view.beadX;
+    const fy = fl.view.beadY - 6;
+    if (em && key === em.id && Math.hypot(ex - fx, ey - fy) < GOAL.ember.showPx) {
+      // The ember hangs over this light: their first act is to rise to it and wait there.
+      // (Round the end of whatever it stands on: they are drawn in front of the island.)
+      const up = new Path();
+      let turn = Number.NaN;
+      let top = 0;
+      let bottom = 0;
+      for (const r of sim.scene.solids) {
+        if (ex < r.x || ex > r.x + r.w || r.y < ey || r.y > ey + 200 || r.y + r.h > fy) continue;
+        turn = ex - r.x < r.x + r.w - ex ? r.x - 46 : r.x + r.w + 46;
+        top = r.y;
+        bottom = r.y + r.h;
+      }
+      if (Number.isNaN(turn)) {
+        const side = ex < fx ? 1 : -1;
+        bezier(up, [fx, fy, fx + side * 70, fy - 230, ex - side * 80, ey + 250, ex, ey], 16);
+      } else {
+        bezier(up, [fx, fy, fx, fy - 160, turn, bottom + 260, turn, bottom + 70], 10);
+        bezier(up, [turn, bottom + 70, turn, top - 60, (turn + ex) / 2, ey - 26, ex, ey], 10);
+      }
+      g.show(key, up, n, fx, fy);
+      return;
+    }
+    g.lead(key, way(), n, fx, fy);
   }
 
   /**
@@ -1521,7 +1642,9 @@ export class GoalRenderer {
       f.quad(K_FLARE, tx, ty, 40, 40, 0.16 * this.offerBeat, 0, 0);
     }
     // What the tiers woke: small lights at fixed places round the shrine, kindled one after another.
-    const tier = sim.goal.offer?.tier ?? 0;
+    // What has woken is the sim's to say (`goal.grove`: flowers, paths, canopy = tiers 1, 2, 3).
+    const gv = sim.goal.grove;
+    const woke = [gv?.flowers === true, gv?.paths === true, gv?.canopy === true];
     // (The first tier's flowers: their lights.)
     const fl = this.heartLife?.lights ?? [];
     for (let k = 0; k < fl.length; k += 3) {
@@ -1543,8 +1666,8 @@ export class GoalRenderer {
     let n0 = 0;
     for (let k = 0; k < 3; k++) {
       const n = O.lights[k] as number;
-      if (tier > k && (this.tierT[k] as number) < 0) this.tierT[k] = LONG_AGO;
-      if (tier <= k) this.tierT[k] = -1;
+      if (woke[k] && (this.tierT[k] as number) < 0) this.tierT[k] = LONG_AGO;
+      if (!woke[k]) this.tierT[k] = -1;
       const t = this.tierT[k] as number;
       if (t >= 0) {
         this.tierT[k] = t + dt;
@@ -1589,6 +1712,89 @@ export class GoalRenderer {
     }
   }
 
+  /**
+   * She stands in the heart before its wake has played (`heartWait` .. `heartReady`): the light that
+   * is opening reaches for her and holds her, so the wait is a beat of the ceremony. A thread of
+   * sparks runs from the heart's core into her chest, a few small lights wind up round her, the
+   * ground under her warms a little; when the heart is ready they close into her.
+   */
+  private drawWait(
+    dt: number,
+    clock: number,
+    sim: SimView,
+    b: GlintBatch,
+    f: GlintBatch,
+    sf: SurfaceLight,
+  ): void {
+    const h = this.heart;
+    const W = GOAL.wait;
+    const p = sim.player;
+    if (this.waitT >= 0) this.waitT += dt;
+    if (this.readyT >= 0) this.readyT += dt;
+    // Held while she stays by it, until the heart takes her in (or she walks away).
+    const by = h !== null && Math.abs(p.cx - h.x) < 150 && Math.abs(p.feetY - h.y) < 140;
+    const on = this.waitT >= 0 && this.awake && by && this.readyT < W.close;
+    this.waitA += ((on ? 1 : 0) - this.waitA) * Math.min(1, dt * (on ? 3.5 : 5));
+    if (this.waitT >= 0 && (!this.awake || (this.readyT >= W.close && this.waitA < 0.01))) {
+      this.waitT = -1;
+      this.readyT = -1;
+    }
+    const a = this.waitA;
+    if (!h || a < 0.01) return;
+    const close = this.readyT >= 0 ? smooth(0, W.close, this.readyT) : 0;
+    const cx = this.chestX;
+    const cy = this.chestY;
+    // The thread: out of the heart's core, a low arc, into her chest.
+    const mx = (h.coreX + cx) / 2;
+    const my = Math.min(h.coreY, cy) - W.arc * 2;
+    for (let k = 0; k < W.thread; k++) {
+      const u = (((clock * W.flow + k / W.thread) % 1) + 1) % 1;
+      const q = 1 - u;
+      const x =
+        q * q * h.coreX +
+        2 * q * u * mx +
+        u * u * cx +
+        Math.sin(u * 9 + k * 1.7 + clock * 2) * 6 * Math.sin(Math.PI * u);
+      const y = q * q * h.coreY + 2 * q * u * my + u * u * cy;
+      const e = Math.sin(Math.PI * u) ** 0.6 * a;
+      f.quad(K_SPARK, x, y, 3.8 - 1.2 * u, 3.8 - 1.2 * u, W.gain * e, 0, 0.75 - 0.4 * u);
+    }
+    // Lights that wind up round her: behind her on the far half of the turn.
+    for (let k = 0; k < W.ring; k++) {
+      const ph = k / W.ring;
+      const u = (((clock * 0.36 + ph) % 1) + 1) % 1;
+      const ang = clock * W.turn + ph * TAU * 2;
+      const r = W.rx * (1 - 0.35 * u) * (1 - 0.85 * close);
+      const x = p.cx + Math.cos(ang) * r;
+      const y = p.feetY - 8 - u * W.rise + (cy - (p.feetY - 8 - u * W.rise)) * close;
+      const e = Math.sin(Math.PI * u) ** 0.7 * a * (1 + 0.8 * close);
+      const q = Math.sin(ang) > 0 ? f : b;
+      q.quad(K_SPARK, x, y, W.bead, W.bead, W.gain * e * (Math.sin(ang) > 0 ? 1 : 0.6), 0, 0.6);
+      q.quad(K_FLARE, x, y, 15, 15, 0.22 * e, 0, 0);
+    }
+    // The ground she stands on takes the light; her chest answers when it is ready.
+    sf.light(
+      this.camNow,
+      p.cx,
+      p.feetY - 20,
+      110,
+      70,
+      W.pool * a * (0.85 + 0.15 * Math.sin(clock * 2.4)),
+      0.15,
+    );
+    const held = 0.85 + 0.15 * Math.sin(clock * 2.4);
+    f.quad(
+      K_FLARE,
+      cx,
+      cy,
+      30 + 16 * close,
+      30 + 16 * close,
+      (0.24 * held + 0.34 * Math.sin(Math.PI * close)) * a,
+      0,
+      0.25,
+    );
+  }
+
   /** The long drop nearest lantern `l` (over `min` px deep): the x just past that edge, or NaN. */
   private dropBy(l: Lamp, scene: SimView['scene'], min: number): number {
     const depth = (x: number): number => {
@@ -1612,7 +1818,7 @@ export class GoalRenderer {
     const to = this.nextDark(sim.goal, p.cx, p.cy);
     const l = this.lamps[to];
     this.fallIn -= dt;
-    if (l && this.fallIn <= 0 && !sim.goal.gathered && l.charge < 0.05) {
+    if (l && this.fallIn <= 0 && !sim.goal.gathered && l.charge < 0.05 && !l.keyless) {
       const ex = this.dropBy(l, sim.scene, F.minDrop);
       const m = this.falls.find((q) => q.t < 0);
       if (m && !Number.isNaN(ex)) {
@@ -1907,6 +2113,8 @@ export class GoalRenderer {
       if (!lamp.lit) {
         // A dead ember, so it can be found; warmer as her glints gather in it.
         const c = lamp.charge;
+        // (One that waits for the ember answers no glints: its bulb is ember.ts's cold hollow.)
+        if (lamp.keyless) continue;
         const canPay = sim.pickups.count >= lamp.cost;
         // (A wayside lamp's sleeping light is its cold point, a sprite: no warm ember until it notices her.)
         let ember = lamp.way ? 0 : L.ember * (0.72 + 0.28 * Math.sin(clock * 1.2 + lamp.seed * 9));
@@ -2080,7 +2288,8 @@ export class GoalRenderer {
     if (this.priceT >= 0 && priceLamp) {
       const R = GOAL.refuse;
       this.priceT += dt;
-      if (priceLamp.lit || this.priceA <= 0.002) {
+      if (priceLamp.lit || this.priceA <= 0.002 || priceLamp.keyless) {
+        // (Keyless: its price is the one ember mark, ember.ts.)
         this.price.visible = false;
       } else {
         const t = this.priceT;
@@ -2119,6 +2328,29 @@ export class GoalRenderer {
         }
       }
     } else this.price.visible = false;
+
+    // --- The ember: on her shoulder, into the bulb, and what the lantern that lacks it shows.
+    const em = this.ember;
+    const el = em ? this.lamps[em.lantern] : undefined;
+    if (em && el) {
+      const shown = this.priceLamp === em.lantern && this.priceT >= 0 ? smooth(0, 1, this.priceA) : 0;
+      em.update(
+        dt,
+        clock,
+        sim,
+        el.view.beadX,
+        el.view.beadY,
+        this.chestX,
+        this.chestY,
+        el.notice,
+        shown,
+        GOAL.refuse.radius,
+        this.inView(cam, el.view.x, el.view.y - 60, 420),
+        b,
+        f,
+      );
+    }
+    this.drawWait(dt, clock, sim, b, f, sf);
 
     // --- What she dropped when she faded: a huddle of quiet glints waiting where she fell (drops.ts).
     this.drops.update(dt, clock, cam, sim, b, f, sf, this.chestX, this.chestY);
@@ -2269,7 +2501,7 @@ export class GoalRenderer {
       const vs = this.veins;
       if (vs && this.awake) {
         const V = WK.veins;
-        const t2 = (goal.offer?.tier ?? 0) >= 2 ? (this.tierT[1] as number) : -1;
+        const t2 = goal.grove?.paths ? (this.tierT[1] as number) : -1;
         const wt = this.wakeT - V.start;
         const wBody = V.body * (1 - smooth(V.hold, V.hold + V.fade, this.wakeT)) * (this.wakeT < 1e5 ? 1 : 0);
         for (let k = 0; k < vs.list.length; k++) {

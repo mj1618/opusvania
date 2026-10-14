@@ -156,6 +156,83 @@ export const GOAL = {
     fill: 0xf09a3a,
   },
   /**
+   * The ember, once it has left its bud (ember.ts; where it hangs: `GLINTS.ember`).
+   *
+   * `carry`: the coal at her shoulder: quad half-size px (the lump is 0.6 of it wide), `back` px
+   * behind her centre and `up` px above it, circling `rx` x `ry` px at `turn` rad/s, following her
+   * at `follow` per second (so it trails at a run); its trail = beads of `trail` px at `trailGain`,
+   * `trailStep` s apart; `halo` = the glow round it.
+   * `give`: the lantern's channel started: `seconds` from her shoulder into the bulb (lifting `arc`
+   * px on the way), `back` s to return if the channel breaks, its quad in the glass, `burn` s it
+   * takes to become the flame once the lantern has caught.
+   * `hollow`: quad half-size px of the cold socket in the bulb of the lantern that waits for it.
+   * `thread`: cold motes from that bulb toward the ember: how many, from / to px along the way,
+   * seconds each takes, wander and sag px, size px, alpha; `idle` = how much of it shows before the
+   * lantern has told her (a notice or refusal carrying the key shows all of it).
+   * `mark`: the price's ember mark: half-width / half-height px; alone (she lacks it) it stands
+   * `alone` px over the glass at `scaleAlone`; with it, filled, `over` px outside the crown of flames.
+   * `showPx`: after a lantern catches, if the ember is the next thing and hangs within this of its
+   * glass, the moths' first act is to rise to it (`GOAL.guide.showSpeed`) and wait there;
+   * `perchUp` = where they wait, px over it. `callIn` = seconds after the lantern has told her
+   * before a flight leaves its glass to lead her back; `callLeave` = she is this far away: forget it.
+   */
+  ember: {
+    carry: {
+      quad: 11.5,
+      back: 15,
+      up: 31,
+      rx: 10,
+      ry: 4.5,
+      turn: 2.1,
+      follow: 13,
+      trail: 3,
+      trailGain: 0.8,
+      trailStep: 0.028,
+      halo: 0.2,
+    },
+    give: { seconds: 0.42, back: 0.5, arc: 34, quad: 9.5, burn: 0.7 },
+    hollow: 10.5,
+    /** Seconds between the moments the hollow and the mark remember the coal (a ghost of it warms and dies). */
+    ghost: 2.8,
+    thread: {
+      n: 10,
+      from: 16,
+      reach: 420,
+      seconds: 4.6,
+      wander: 9,
+      sag: 30,
+      size: 19,
+      alpha: 0.9,
+      idle: 0.45,
+    },
+    mark: { w: 9.5, h: 7.2, alone: 56, scaleAlone: 1.5, over: 21, scale: 1.1 },
+    showPx: 900,
+    perchUp: 30,
+    callIn: 0.9,
+    callLeave: 1500,
+  },
+  /**
+   * The wait in the waking heart (the sim's `heartWait` .. `heartReady`: she stood in it before
+   * its wake had played, and stays in control): the heart's light reaches for her. A thread of
+   * `thread` sparks runs from its core to her chest (`flow` runs a second), `ring` small lights
+   * wind up round her (`rx` px wide, rising `rise` px, `turn` rad/s; beads of `bead` px), the
+   * ground under her takes a little warmth (`pool`). On `heartReady` they close into her (`close` s).
+   */
+  wait: {
+    thread: 10,
+    flow: 0.55,
+    /** The thread lifts this far over the higher of its two ends, px. */
+    arc: 96,
+    ring: 8,
+    rx: 38,
+    rise: 136,
+    turn: 1.7,
+    bead: 4.4,
+    gain: 1,
+    pool: 0.5,
+    close: 0.45,
+  },
+  /**
    * A wayside lamp asleep (playtest 3: from the terrace it was a dark hook in the roots): a cold
    * point in the glass (`coreSize` px across at `coreAlpha`) and a breath of cold light behind it
    * (`coldSize`, `coldAlpha`) that the dark crook stands against. Both go as her glints warm it.
@@ -480,7 +557,8 @@ export const GOAL = {
    * `pour`: when the last lantern catches, `n` of them run from its glass down to the heart
    * (`speed` px/s, `stagger` s apart from `first` s, weaving `weave` px).
    *
-   * `routes`: the ways INTO each lantern, keyed by its id in the scene (`heart` = into the heart):
+   * `routes`: the ways INTO each lantern, keyed by its id in the scene (`heart` = into the heart;
+   * a pickup's id = to the ember a lantern wants):
    * polylines of world points [x, y] at about her head height along the WALK / CLIMB (never the
    * glide line: playtest 4), ending near the lantern, clear of solids. A flight joins the route
    * passing nearest to her, at that nearest point. FOR THE SIM / LAYOUT OWNER: if a lantern, the
@@ -522,6 +600,8 @@ export const GOAL = {
     perchGain: 0.3,
     fadeIn: 0.45,
     fadeOut: 0.8,
+    /** A flight that SHOWS (rises to the ember and waits on it, whatever she does) flies at this, px/s. */
+    showSpeed: 430,
     /**
      * A flight that starts away from her (the lantern caught behind a runner) first comes to her
      * (`come` px/s), passes her shoulder and only then leads: it never waits behind her line of
@@ -554,20 +634,95 @@ export const GOAL = {
     /** Seconds after the wake before the flight to the heart leaves the last lantern. */
     pourLead: 2.6,
     routes: {
-      // From the first lantern: over the pool, the branch, the bluff, down to the well at trunk
-      // A's foot, in at the doorway, up the wall-jump shaft, over trunk A's top to the summit.
+      // To the EMBER over F3 (keyed by the pickup's id: the summit lantern's `key`).
+      'great-ember': [
+        // From the first lantern: back west along the ground, a jump and a second one up onto F1,
+        // then F2, F3 and along it to the cup.
+        [
+          [1380, 1190],
+          [1010, 1190],
+          [950, 1050],
+          [930, 900],
+          [850, 876],
+          [940, 800],
+          [1090, 745],
+          [1200, 745],
+          [1300, 660],
+          [1400, 618],
+          [1470, 620],
+        ],
+        // From the summit lantern (she came without it), and from as far east as the shrine: down the
+        // rise, over the root, the hollow, up trunk B's east face through the bough to the summit,
+        // across to trunk A's top, the branch and the high ledge, then F5, F4 and down onto F3.
+        [
+          [5100, 1000],
+          [4700, 1010],
+          [4585, 1030],
+          [4540, 1190],
+          [4180, 1190],
+          [4060, 1100],
+          [3945, 1120],
+          [3890, 1290],
+          [3760, 1250],
+          [3745, 300],
+          [3760, 120],
+          [3640, 110],
+          [3440, 220],
+          [3270, 360],
+          [3000, 360],
+          [2880, 360],
+          [2700, 380],
+          [2470, 440],
+          [2250, 420],
+          [1900, 520],
+          [1700, 560],
+          [1560, 620],
+        ],
+      ],
       'lantern-crown': [
+        // From the first lantern: over the pool, the branch, the bluff, down to the well at trunk
+        // A's foot, in at the doorway, up the wall-jump shaft, over trunk A's top to the summit.
         [
           [1700, 1130],
           [2176, 940],
           [2528, 890],
           [2880, 1070],
-          [3160, 1210],
+          [3090, 1085],
+          [3150, 1210],
           [3456, 1220],
           [3456, 470],
           [3470, 300],
           [3540, 130],
           [3640, 120],
+        ],
+        // From F3 with the ember: on up the islands (F4, F5), the high ledge and its branch, trunk
+        // A's top, and the jump across the shaft to the summit.
+        [
+          [1560, 620],
+          [1700, 560],
+          [1900, 520],
+          [2250, 420],
+          [2470, 440],
+          [2700, 380],
+          [2880, 360],
+          [3000, 360],
+          [3270, 360],
+          [3440, 220],
+          [3600, 110],
+        ],
+        // The way back west from the rise: the root, the hollow, up trunk B's east face.
+        [
+          [5100, 1000],
+          [4700, 1010],
+          [4585, 1030],
+          [4540, 1190],
+          [4180, 1190],
+          [4060, 1100],
+          [3945, 1120],
+          [3890, 1290],
+          [3760, 1250],
+          [3745, 300],
+          [3760, 120],
         ],
       ],
       'lantern-far': [

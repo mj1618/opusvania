@@ -15,7 +15,7 @@ import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } fro
 import type { PointLight } from '../lights';
 import { zoneWeights } from '../scene/lib/fx-zones';
 import { wind } from '../scene/lib/look';
-import { GlintBatch, K_CHIP, K_FLARE, K_GLINT, K_GREAT, K_SPARK, K_STAR } from './batch';
+import { GlintBatch, K_CHIP, K_COAL, K_FLARE, K_GLINT, K_GREAT, K_SPARK, K_STAR } from './batch';
 import { GLINTS, MAX_QUADS } from './config';
 import { findRoot, groundBelow, Holder } from './holder';
 import { POD, PodView } from './pod';
@@ -47,6 +47,8 @@ const M_GATHER = 3;
 interface Item {
   p: Pickup;
   great: boolean;
+  /** A lantern's key (`scene.lanterns[].key`): a great glint drawn as a coal, the ember. */
+  ember: boolean;
   /** 0..1, fixed per pickup: de-syncs pulses and motes. */
   seed: number;
   /** Pulse phase: runs along x so a line of glints pulses as a travelling wave. */
@@ -214,6 +216,8 @@ export class PickupRenderer {
     backLayer: Container,
   ) {
     const scene = ctx.scene;
+    const keys = new Set<string>();
+    for (const l of scene.lanterns ?? []) if (l.key !== undefined) keys.add(l.key);
     for (const p of scene.pickups ?? []) {
       const great = p.kind === 'great';
       const seed = hash01(p.id);
@@ -229,6 +233,7 @@ export class PickupRenderer {
       const item: Item = {
         p,
         great,
+        ember: great && keys.has(p.id),
         seed,
         phase: (((p.x * 0.0023 - p.y * 0.0011) % 1) + 1) % 1,
         stage: 0,
@@ -339,6 +344,7 @@ export class PickupRenderer {
         this.spill.push({
           p: { id: p.id, kind: 'glint', x: p.x, y: p.y },
           great: false,
+          ember: false,
           seed: hash01(`${p.id}/${k}`),
           phase: (k * 0.31 + hash01(p.id)) % 1,
           stage: 2,
@@ -365,6 +371,7 @@ export class PickupRenderer {
         this.spill.push({
           p: { id: q.id, kind: 'glint', x: q.x, y: q.y },
           great: false,
+          ember: false,
           seed: hash01(`${q.id}/${k}`),
           phase: (k * 0.31 + hash01(q.id)) % 1,
           stage: 2,
@@ -442,7 +449,7 @@ export class PickupRenderer {
         it.stage = 0;
         it.appear = 0;
         it.lit = 1;
-        it.holder?.set(false);
+        it.holder?.set(false, it.ember ? G.ember.cup : 0);
         this.drop(it);
       } else if (timer < 0 && it.stage !== 2) {
         it.stage = 2;
@@ -496,14 +503,14 @@ export class PickupRenderer {
         it.holder.front.visible = seen;
         if (seen) {
           const sway = wind(p.x, clock, it.seed) * G.great.sway;
-          it.holder.update(dt, sway, it.stage !== 0);
+          it.holder.update(dt, sway, it.stage !== 0, it.ember ? G.ember.cup : 0);
         }
       }
       if (it.stage !== 0) continue;
       const tt = clock * G.glint.bobRate;
       if (it.holder) {
         it.x = it.holder.seatX;
-        it.y = it.holder.seatY;
+        it.y = it.holder.seatY - (it.ember ? G.ember.lift * it.holder.dir : 0);
       } else {
         const k = it.great ? 1.6 : 1;
         it.x = p.x + Math.sin(tt * 0.8 + it.seed * 40) * G.glint.bobX * k;
@@ -518,6 +525,31 @@ export class PickupRenderer {
       const wake = 1 - smooth(D.wakeFull, D.wakePx, d);
       it.wake = wake;
       if (!seen) continue;
+      if (it.ember) {
+        // The ember: a living coal in the bud's cup, awake however far she is, and a thin thread of
+        // sparks rising from it (what is seen from the ground under the island).
+        const E = G.ember;
+        b.quad(K_FLARE, it.x, it.y + 2, E.halo, E.halo * 0.8, E.haloGain * it.appear, 0, 0);
+        b.quad(K_COAL, it.x, it.y, E.quad, E.quad, it.appear, it.phase, 1);
+        const T = E.thread;
+        for (let k = 0; k < T.n; k++) {
+          const u = (((clock / T.seconds + k / T.n + it.seed) % 1) + 1) % 1;
+          const wob = Math.sin(u * 7.3 + k * 2.1 + clock * 0.5) * T.wander * u;
+          const env = Math.sin(Math.PI * u ** 0.7) ** 0.8;
+          const sz = T.size * (1 - 0.55 * u);
+          b.quad(
+            K_SPARK,
+            it.x + wob,
+            it.y - 9 - u * T.rise,
+            sz,
+            sz,
+            T.gain * env * it.appear,
+            0,
+            0.5 * (1 - u),
+          );
+        }
+        continue;
+      }
       if (it.great) {
         const size = G.great.dormScale + (1 - G.great.dormScale) * wake;
         const e = (G.great.dormGain + (1 + 0.2 * wake - G.great.dormGain) * wake) * it.appear;
@@ -613,7 +645,7 @@ export class PickupRenderer {
         const k = notice > 0 ? f.t / notice : 1;
         const out = 1 - (1 - k) * (1 - k) * (1 - k);
         const hx = it.holder ? it.holder.seatX : f.sx;
-        const hy = it.holder ? it.holder.seatY : f.sy;
+        const hy = it.holder ? it.holder.seatY - (it.ember ? G.ember.lift * it.holder.dir : 0) : f.sy;
         if (it.great) {
           const lift = smooth(0.15, 1, k);
           const up = it.holder ? -it.holder.dir : -1;
@@ -622,8 +654,8 @@ export class PickupRenderer {
           e = 1 + 0.35 * out;
           scale = 1;
           open = smooth(0, 0.85, k);
-          this.corolla(f, it, open, 1);
-          if (this.rand() < dt * 30) this.mote(f.x, f.y, up);
+          if (!it.ember) this.corolla(f, it, open, 1);
+          if (this.rand() < dt * (it.ember ? 14 : 30)) this.mote(f.x, f.y, up);
           if (!f.waved && k > 0.3) {
             f.waved = true;
             this.wave(it);
@@ -668,7 +700,7 @@ export class PickupRenderer {
           ? (SP.flySize[0] as number) + ((SP.flySize[1] as number) - (SP.flySize[0] as number)) * es
           : 1.2 - 0.45 * es;
         open = 1;
-        if (it.great) {
+        if (it.great && !it.ember) {
           this.corolla(f, it, 1, 1 - s);
           // Light gathers into her from all round as it comes.
           if (this.rand() < dt * 46) this.gather();
@@ -684,7 +716,12 @@ export class PickupRenderer {
       f.hy[0] = f.y;
       f.hn = Math.min(n, f.hn + 1);
       if (f.left) this.ribbon(f, it.great, 1, f.pod >= 0);
-      if (it.great) {
+      if (it.ember) {
+        // The coal itself comes to her (the goal renderer shows it on her shoulder from here on).
+        const q = G.ember.flyQuad + (G.ember.quad - G.ember.flyQuad) * (1 - open);
+        b.quad(K_FLARE, f.x, f.y, q * 2, q * 2, 0.22 * e, 0, 0);
+        b.quad(K_COAL, f.x, f.y, q, q, 1, it.phase, 1);
+      } else if (it.great) {
         const q = G.great.quad * (0.9 + 0.1 * scale);
         b.quad(K_GREAT, f.x, f.y, q, q, e, it.phase, open);
       } else if (f.pod >= 0) {
@@ -943,7 +980,10 @@ export class PickupRenderer {
     const cx = this.chestX;
     const cy = this.chestY;
     const step = Math.min(combo, 6) / 6;
-    if (it.great) {
+    if (it.ember) {
+      // The ember does not go into her: it stays at her shoulder (goal/ember.ts). One small warm beat.
+      this.flare(0, 0, 12, 40, 0.4, 0.4, 0.3, true, 0, 1);
+    } else if (it.great) {
       this.flare(0, 0, 30, A.greatFlare, 0.6, 0.6, 0.9, true, 0, 1);
       // Motes wind up and outward round her, like seeds let go.
       for (let i = 0; i < A.greatSparks; i++) {

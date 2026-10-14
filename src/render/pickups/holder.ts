@@ -253,11 +253,14 @@ export class Holder {
     return this.root.dir;
   }
 
-  /** `sway` leans the bud (radians), `open` is whether the glint has left. */
-  update(dt: number, sway: number, open: boolean): void {
+  /**
+   * `sway` leans the bud (radians), `open` is whether the glint has left. `rest` = how far the
+   * sepals stand apart while it is still there (0 shut round a star; the ember sits in an open cup).
+   */
+  update(dt: number, sway: number, open: boolean, rest = 0): void {
     const seat = this.seat;
     // A soft spring so the sepals overshoot and settle.
-    const target = open ? 1 : 0;
+    const target = open ? 1 : rest;
     const k = 90;
     const c = 7.5;
     this.vel += ((target - this.openness) * k - this.vel * c) * dt;
@@ -282,8 +285,8 @@ export class Holder {
   }
 
   /** Snap to cupped (restart) or open (already taken). */
-  set(open: boolean): void {
-    this.openness = open ? 1 : 0;
+  set(open: boolean, rest = 0): void {
+    this.openness = open ? 1 : rest;
     this.vel = 0;
     this.opened.alpha = this.openness;
     this.front.alpha = 1 - this.openness;

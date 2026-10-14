@@ -73,6 +73,25 @@ export const GLINTS = {
     wakePx: 340,
     wakeFull: 150,
   },
+  /**
+   * The ember (a great glint that is a lantern's key: `scene.lanterns[].key`): not a star but a coal
+   * (`K_COAL`) in the bud's cup, always awake, so it is found from the ground far below it. `quad` =
+   * the coal's quad half-size px (the lump is 0.6 of it wide, 0.46 tall), `halo` = a tight red-gold
+   * glow round the cup (half-size px, gain), `thread` = the thin line of sparks that rises from it:
+   * how many, how high px, seconds a spark takes, how far it wanders px, its size px and gain.
+   * Taken, it flies as the same coal (`flyQuad`); what she then carries is drawn by the goal
+   * renderer (goal/ember.ts).
+   */
+  ember: {
+    quad: 20,
+    /** The coal sits this far above the light's seat (on the lip of the cup), and the sepals stand this far open under it. */
+    lift: 8,
+    cup: 0.19,
+    halo: 44,
+    haloGain: 0.3,
+    thread: { n: 9, rise: 170, seconds: 3.8, wander: 8, size: 3.3, gain: 1 },
+    flyQuad: 15,
+  },
   flight: {
     /**
      * The last part of the wake-to-collect time is the flight; before it the glint notices. The

@@ -18,6 +18,12 @@ export const K_FLARE = 5;
 export const K_CHIP = 6;
 /** A sleeping glint: a small cut star, cool and pale in a dark seat (energy = presence, phase = twinkle 0..1, extra = warmth 0 cold .. 1 gold). */
 export const K_STAR = 7;
+/**
+ * The ember (the summit lantern's key): a squat coal, dark crust over a red heart, light in its
+ * cracks. energy = presence, phase = its own clock offset, extra = heat: 1 alive and breathing,
+ * 0 a cold hollow of the same shape (the socket that waits for it).
+ */
+export const K_COAL = 8;
 
 const FLOATS = 8;
 
@@ -161,6 +167,36 @@ void main() {
     float soft = across * sqrt(max(across, 0.0));
     float core = pow(max(across, 0.0), 7.0);
     add = (mix(GOLD, AMBER, smoothstep(0.0, 0.7, vUv.x)) * soft * 0.8 + HOT * core * 0.9 * (1.0 - vUv.x)) * e;
+  } else if (kind > 7.5) {
+    // --- The ember: a coal. Read by shape (a squat faceted lump, wider than tall: no star, no
+    // drop, no bead) and by colour (red under the gold of everything else that glows).
+    vec2 p = vUv / 0.6;
+    float wob = 0.06 * sin(p.x * 4.3 + ph * 21.0) * sin(p.y * 3.7 + 1.3 + ph * 9.0);
+    float s = pow(abs(p.x), 1.45) + pow(abs(p.y) / 0.76, 1.45) + wob;
+    float aa = max(fwidth(s), 0.03);
+    float lump = smoothstep(1.0 + aa, 1.0 - aa, s);
+    float heat = clamp(ex, 0.0, 1.0);
+    float k = clamp(e, 0.0, 1.0);
+    float breath = 0.5 + 0.5 * sin(t * 1.7 + ph * 6.283);
+    float glowK = heat * e * (0.72 + 0.28 * breath);
+    // Cracks: two crossing veins that wander, widest at the heart.
+    float c1 = abs(p.y - 0.16 * sin(p.x * 2.6 + ph * 12.0) + 0.05);
+    float c2 = abs(p.x * 0.8 + p.y * 0.9 - 0.12 * sin(p.y * 4.0 + ph * 5.0));
+    float crack = max(smoothstep(0.13, 0.0, c1), smoothstep(0.1, 0.0, c2) * 0.8) * smoothstep(1.0, 0.45, s);
+    float heartG = gauss(length(p - vec2(0.04, 0.1)), 0.52);
+    vec3 RED = vec3(1.0, 0.27, 0.04);
+    vec3 crust = mix(vec3(0.09, 0.028, 0.02), vec3(0.42, 0.1, 0.02), heartG * heat);
+    // Cold: the same lump as a hollow, a pale rim round a dark well.
+    float rim = smoothstep(0.5, 0.9, s) * lump;
+    vec3 hollow = mix(vec3(0.015, 0.03, 0.06), vec3(0.5, 0.7, 0.86), rim * 0.85);
+    float seat = 0.5 * gauss(r, 0.62) * clamp(1.5 - 1.5 * r, 0.0, 1.0);
+    a = max(lump * 0.97, seat) * k;
+    body = mix(vec3(0.02, 0.012, 0.02), mix(hollow, crust, heat), lump);
+    vec2 hp = p - vec2(0.04, 0.1);
+    add = (mix(RED, GOLD, 0.35 + 0.5 * crack) * crack * 1.5 + mix(RED, GOLD, 0.3) * heartG * 0.85
+      + HOT * gauss(length(hp), 0.24) * (0.7 + 0.5 * breath)) * lump * glowK;
+    // Its glow: red-gold, tight, lying a little under it (a coal lights what it sits in).
+    add += mix(RED, GOLD, 0.25) * gauss(length(vUv - vec2(0.0, 0.06)), 0.55) * 0.34 * glowK * clamp(1.0 - r, 0.0, 1.0);
   } else if (kind > 6.5) {
     // --- Sleeping glint. Found by shape and by temperature, not by brightness: a tall four-point star
     // with hollow flanks, pale and cool (every mote in the air is a warm round dot), cut out of a dark

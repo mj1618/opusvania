@@ -82,6 +82,15 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
 - `?nopickups` (src/main.ts) boots the scene with no pickups, so no glints, no counter and no skin
   reaction; shots / clip / look:stats use it by default (`--pickups` to show them).
 
+## The ember (`great-ember`, the summit lantern's key: goal.md, goal-render.md round 8)
+- A great glint whose id is some lantern's `key` is drawn as a coal (`Item.ember`, `K_COAL`, `GLINTS.ember`), not
+  a star: always awake (no dormant size), sitting 8 px over the seat on the lip of its bud, whose sepals stand
+  0.19 open under it (`Holder.update(dt, sway, open, rest)`: the shut bud covered a small coal entirely), a
+  44 px halo and a thread of 9 sparks rising 170 px (a function of the clock, no particles).
+- Its flight is the coal itself (no corolla, no gathering motes) and ends in a small beat at her chest: from
+  the `pickup` / `lanternKey` step on the goal renderer draws it on her shoulder (`goal/ember.ts`).
+- To the wallet and the tally it is an ordinary great glint (5).
+
 ## Lumen pods (render side; rules in combat.md)
 - `pod.ts` `PodView`: Graphics drawn once per pod, in `pickupsBack` (she walks in front of them).
   Small and humble (study 2: at 80-90 px, pale-striped, twelve alike, they were louder than the story

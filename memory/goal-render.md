@@ -255,9 +255,70 @@ Dev handle `__goal` (`.cfg`, `.cpuMs`). Sheets of every moment: `shots/goal/`.
   frame 8. The kick's cap is 1.28x.
 - Capture: `page.screenshot({path})` per step from one `run-code` works and is simpler than data URLs; a run
   whose output is thrown away can fail silently and leave the old PNGs: check their times.
-- Not done: **the crown lantern now wants a great glint** (`lantern.key`, `keyed`, `lanternRefuse.key`,
-  `lanternKey`): nothing draws that yet (the price crown shows glints only, the moths lead to the lantern,
-  not to the key). `offerNext` in the tally. Tier 1's flowers are small next to tiers 2 and 3.
+- Not done: `offerNext` in the tally. Tier 1's flowers are small next to tiers 2 and 3.
+
+## Round 8 (playtest 5's sim: the ember key, the wait in the heart, the grove's tiers)
+- **The ember is a coal, not a glint.** `K_COAL` in `pickups/batch.ts` (kind 8): a squat faceted lump, dark
+  crust, cracks and a heart that breathe, red under the gold of everything else; `extra` = heat, and at heat 0
+  the same lump is a cold hollow with a pale rim (the socket). One shape in four places: on F3 (pickups.md),
+  on her shoulder, in the summit lantern's bulb / price mark, in the HUD. As a 14 px quad buried in a shut bud
+  it was a red speck nobody would see from the ground; 20 px on the lip of an open cup with a 44 px halo and
+  a thread of 9 sparks rising 170 px is found at once from lantern 1 (630 px below).
+- **`goal/ember.ts` `EmberKey`** (knobs `GOAL.ember`, dev `__goal.ember.{has, into, call, outX, outY}`); finds the
+  first lantern with a `key` that names a pickup. Carried (`timers[key] < 0` and its lantern dark): a coal
+  15 px behind and 31 px over her centre, circling 10 x 4.5 px (behind her on the far half: back batch),
+  following at 13 /s so it trails ~30 px at a run, with a short warm trail only when it moves. Given: while
+  that lantern's `channel > 0` (or it is lit) it leaves her shoulder for the bulb in 0.42 s on a 34 px arc,
+  sits in the glass while the glints stream, and burns into the flame over 0.7 s after the catch; a broken
+  channel sends it back. Wanted (`timers[key] >= 0`): `Lamp.keyless`: no warm ember, no tug of her glints, no
+  dry flicker, no crown of flames, no cold motes down the shaft; instead a cold hollow in the bulb, 10 cold
+  motes drifting 420 px from the glass toward the ember (45% strength before the lantern has told her, full
+  after a `lanternNotice / lanternRefuse` carrying `key`), and ONE hollow ember mark over the glass. Every
+  2.8 s the hollow and the mark "remember" the coal (a ghost of it warms and dies): without that the mark was
+  an orange pebble outline nobody would connect to the thing on F3. With the ember the mark is filled and
+  stands 21 px outside the usual crown of flames (it still costs 12).
+- **Moths and the ember** (`guideTick`): when the nearest dark lantern is keyless the flight's target is the
+  ember (`key` = the pickup's id, routes under `GOAL.guide.routes['great-ember']`). After a lantern catches
+  with the ember within 900 px of its glass the flight SHOWS (`GuideMoths.show`, `showing`, mode `show`): it
+  rises round the end of the island (they are drawn in front of it) to the ember at 430 px/s and perches on
+  it whatever she does; if she comes no nearer for 6 s it comes down and leads her the way (`reroute`).
+  `lanternKey`: 0.9 s later a flight leaves her shoulder for the summit lantern. A notice / refusal with
+  `key`: 0.9-1.5 s later a flight leaves the cold glass and leads back west (`GuideMoths.drop` first: `lead`
+  ignores a call for the key it already has). Progress along the flight's own way now counts as "coming
+  nearer" (the island route first runs 500 px AWAY from the ember; straight-line distance alone made the
+  flight give up at 14 s).
+- **Routes that are hand-placed, for whoever moves the layout** (`GOAL.guide.routes`, head-height points):
+  `great-ember` (a) from the first lantern: 1380,1190 / 1010,1190 / 950,1050 / 930,900 / 850,876 (F1) /
+  940,800 / 1090,745 / 1200,745 (F2) / 1300,660 / 1400,618 / 1470,620 (F3); (b) from the shrine and the summit:
+  5100,1000 / 4700,1010 / 4585,1030 / 4540,1190 / 4180,1190 / 4060,1100 (the root) / 3945,1120 / 3890,1290 (the
+  hollow) / 3760,1250 / 3745,300 (trunk B's east face) / 3760,120 / 3640,110 (summit) / 3440,220 / 3270,360
+  (trunk A's top) / 3000,360 / 2880,360 (branch, high ledge) / 2700,380 / 2470,440 (F5) / 2250,420 / 1900,520
+  (F4) / 1700,560 / 1560,620 (F3). `lantern-crown` gained (b) reversed from F3 (the high route with the ember)
+  and the way back west from the rise. A script in the capture recipe below checks every segment against the
+  solids: three old or new ones clipped a corner (the rise's west lip, the root, the terrace's east lip) and
+  were moved. Veins and `PROMPTS.shafts` did not drift (all vein points still inside solids).
+- **HUD** (`hud/progress.ts`): a lantern with a `key` has the coal's hollow for a seed (`crookSocket`); once
+  she carries it the coal glows in the socket and a larger one stands 34 px past the bud (pops on
+  `lanternKey`). The row also shows by the ember while it hangs, and on a keyed notice.
+- **The wait in the heart** (`heartWait` .. `heartReady`, `GOAL.wait`, `drawWait`): a thread of 10 sparks
+  loops from the core 96 px up and over into her chest, 8 small lights wind up round her (behind her on the
+  far half), her chest holds a soft flare, the ground under her warms; at `heartReady` they close into her in
+  0.45 s (`gather` is the same step). She stands 30 px from the core, so a straight thread could not be seen:
+  the high arc is what reads. Staged: third kindle at 828, wait from 873, ready and gather at 1008, offering
+  1053-1181, tier 1 at 1101, tier 2 at 1151, `endHold` 1248: everything still lands.
+- **Tiers come from the sim now**: `groveWake {tier, part}` starts them, `goal.grove.{flowers, paths, canopy}`
+  reconciles (it was `heartTier` / `goal.offer.tier`).
+- **lamp-rise's price ring and wing-rise**: traced live. The ring is up while the lampwing hovers and the
+  burrback walks (both calm), gone 0.45 s after `curious`, and stays away through the dive, stall and pursue.
+- Capture: the ember is worth 5 and `great-crown` beside the summit lantern another 5, so "has the ember but is
+  short" cannot be staged with the real numbers: `__game.setTuning({pickups: {greatValue: 1}})` first.
+  lamp-f3 dives at whoever stands on F3 for the ember's 54 frames (she was hit in two of three captures).
+  Route check: for each `GOAL.guide.routes` segment sample 20 points and test `scene().solids`.
+  A second `npm run e2e` in the same worktree deletes the first one's `test-results/` traces (ENOENT at
+  `browserContext.close`): run it again alone before believing it.
+- Not done: her pose while she carries or waits (the character's; `vesperLink.goal` has `heart.waited / ready`
+  and `lanterns[i].keyed`). The show flight goes straight up through the air, not along a way. The ember mark
+  and `great-crown`'s bud share 40 px of trunk B's top.
 
 ## Look decisions (learned by looking)
 - Lantern = shepherd's crook + hanging seed of glass (the HUD health light's shape, 1.42x). Lit, the

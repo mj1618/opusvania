@@ -210,7 +210,12 @@ export class GuideMoths {
   /** Leader: px along the way, and where that is. For tools: `s`, `sp` (her progress), `mode`. */
   s = 0;
   sp = 0;
-  mode: 'come' | 'lead' | 'wait' | 'fetch' | 'settle' | 'leave' = 'lead';
+  mode: 'come' | 'lead' | 'wait' | 'fetch' | 'settle' | 'leave' | 'show' = 'lead';
+  /**
+   * The flight is showing, not leading: it flies its way to the end whatever she does and waits
+   * there (the ember over the first lantern). `reroute` turns it into a flight that leads.
+   */
+  showing = false;
   /** Coming to her from where it set out: that place, px flown, and 0..1 how much of the flight is still on that line. */
   private fromX = 0;
   private fromY = 0;
@@ -256,6 +261,19 @@ export class GuideMoths {
     this.key = '';
   }
 
+  /** The flight is gone at once (it is wanted somewhere else now: `lead` again from there). */
+  drop(): void {
+    for (let i = 0; i < GuideMoths.FLIGHT; i++) {
+      const m = this.moths[i] as Flyer;
+      m.on = false;
+      m.view.root.visible = false;
+    }
+    this.active = false;
+    this.showing = false;
+    this.alpha = 0;
+    this.settled = 0;
+  }
+
   /** The flight turns away and fades (its lantern was kindled, or nobody followed). */
   release(): void {
     if (this.active && this.mode !== 'leave') this.mode = 'leave';
@@ -268,6 +286,7 @@ export class GuideMoths {
   lead(key: string, path: Path, n: number, fx: number, fy: number): void {
     if (this.active && this.key === key && this.mode !== 'leave') return;
     this.active = true;
+    this.showing = false;
     this.key = key;
     this.path = path;
     this.n = Math.min(GuideMoths.FLIGHT, Math.max(1, n));
@@ -306,8 +325,20 @@ export class GuideMoths {
     }
   }
 
+  /**
+   * `n` moths leave (fx, fy), fly `path` to its end and wait there (the renderer keeps `perchX/Y`
+   * on that place): they show her the next thing instead of leading her to it.
+   */
+  show(key: string, path: Path, n: number, fx: number, fy: number): void {
+    this.lead(key, path, n, fx, fy);
+    this.showing = true;
+    this.mode = 'show';
+    this.comeK = 0;
+  }
+
   /** A new way for the flight that is out (she strayed): it keeps flying, from where it is. */
   reroute(path: Path): void {
+    this.showing = false;
     this.path = path;
     this.s = 0;
     this.lastSp = -1;
@@ -385,7 +416,7 @@ export class GuideMoths {
         want -= 30;
       }
       // The wrong way for a while (back along the way, or far off it): come and fetch her.
-      const wrong = this.along < -G.wrongSpeed || off > G.offPx;
+      const wrong = !this.showing && (this.along < -G.wrongSpeed || off > G.offPx);
       this.away = Math.max(0, this.away + (wrong ? dt : -dt * 0.7));
       if (!leaving) {
         if (this.mode !== 'fetch' && this.away > G.wrong) {
@@ -420,12 +451,14 @@ export class GuideMoths {
       // The leader runs to its place: fast enough to pass her at a run, never behind her.
       const gap = want - this.s;
       const v = Math.max(-G.fast, Math.min(G.fast, gap * G.chase));
-      this.s = Math.max(sp + Math.min(G.leadMin, len - sp), Math.min(len, this.s + v * dt));
+      if (this.showing && !leaving)
+        this.s = Math.min(len, this.s + G.showSpeed * dt * (0.35 + 0.65 * smooth(0, 140, this.s)));
+      else this.s = Math.max(sp + Math.min(G.leadMin, len - sp), Math.min(len, this.s + v * dt));
       if (leaving) this.s = Math.min(len, this.s + 60 * dt);
       const there = this.s >= len - 6;
       this.still = Math.abs(gap) < 40 && Math.abs(this.along) < 40 ? this.still + dt : 0;
       if (!leaving && !fetching && !coming)
-        this.mode = there ? 'settle' : this.still > 0.35 ? 'wait' : 'lead';
+        this.mode = there ? 'settle' : this.showing ? 'show' : this.still > 0.35 ? 'wait' : 'lead';
       this.settled += ((this.mode === 'settle' ? 1 : 0) - this.settled) * Math.min(1, dt * 2.4);
       path.sample(this.s / len, tmp);
       const px = tmp[0] as number;
@@ -440,7 +473,7 @@ export class GuideMoths {
       // Is the way from her to the leader a climb or a drop? Then the flight streams along it, away
       // from her, one moth after another, instead of hanging in a knot overhead.
       path.sample((sp + this.s) / 2 / len, tmp);
-      const steep = Math.abs(tmp[3] as number) > G.steep && !fetching && !coming && !leaving;
+      const steep = Math.abs(tmp[3] as number) > G.steep && !fetching && !coming && !leaving && !this.showing;
       this.vert += ((steep ? 1 - set : 0) - this.vert) * Math.min(1, dt * 4);
       const vert = this.vert;
       const circ = (this.mode === 'wait' && vert < 0.5) || fetching ? 1 : 0;
