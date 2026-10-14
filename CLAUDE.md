@@ -3,7 +3,7 @@
 One scene, built by AI agents, whose only goal is to look and move like Ori and the Blind Forest / Hollow Knight. The quality bar and the art direction are in `docs/art-direction.md`: read it before drawing anything. Goal, state and scope are in `PLAN.md`; the orchestrator's loop is in `STUDIO.md`.
 
 ## Stack
-TypeScript (strict), Node 24 and npm, Vite, PixiJS v8 on WebGL2 (shaders in GLSL), everything drawn in code: no image assets, no audio. Physics is our own deterministic integer-AABB code. Scene data is JSON validated with Zod. Tools: Vitest, Playwright Test, Biome, Tweakpane. Don't add a dependency without a reason; record the reason in `memory/`.
+TypeScript (strict), Node 24 and npm, Vite, PixiJS v8 on WebGL2 (shaders in GLSL), everything drawn in code: no image assets. Audio is allowed only if generated in code (Web Audio API; no sample files); see `docs/audio-direction.md`. Physics is our own deterministic integer-AABB code. Scene data is JSON validated with Zod. Tools: Vitest, Playwright Test, Biome, Tweakpane. Don't add a dependency without a reason; record the reason in `memory/`.
 
 ## Architecture rules
 - `src/sim/` is pure and deterministic. It must not import Pixi, the DOM or anything outside `src/sim`. It must not call `Math.random` or `Date.now`; use the seeded RNG and the frame count. It runs at a fixed 60Hz.
