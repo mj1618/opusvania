@@ -39,6 +39,16 @@ export const HUD = {
   tick: 0.045,
   /** How far a digit swells when it changes. */
   pop: 0.3,
+  /**
+   * Seen (memory/giving-render.md): a creature becomes aware of the light she carries and its thread reaches
+   * her `seenAt` s later (render/giving `GIVING.caught`): the count shows itself (`seenHold` s), its digits
+   * swell x(1 + pop x `seenPop`) and the glint icon flashes warm (`seenFlash`), dying at `seenDecay` /s.
+   */
+  seenAt: 0.3,
+  seenHold: 2.2,
+  seenPop: 2.2,
+  seenFlash: 1.6,
+  seenDecay: 3.2,
   iconQuad: 40,
   /** The icon is the world glint drawn this many times larger. */
   iconScale: 1.25,
@@ -134,6 +144,9 @@ export class Hud {
   private alpha = 0;
   private hold = 0;
   private pulse = 0;
+  /** Seen: seconds until the thread reaches her (-1 = none coming), and the flash it leaves (1 -> 0). */
+  private seenIn = -1;
+  private seenK = 0;
   /** 0 = the count sits in the lights' place, 1 = under them. */
   private slot = 1;
   /** 0..1: she is under the cluster (eased). */
@@ -290,6 +303,9 @@ export class Hud {
         this.hold = Math.max(this.hold, e.show > 0 ? e.show / 60 : 2.6);
         this.refuseT = 0;
       } else if (e.type === 'lanternKindle' || e.type === 'lampKindle') this.hold = Math.max(this.hold, 2.4);
+      else if (e.type === 'enemyAware' && sim.pickups.count > 0 && sim.player.faded === 0)
+        // It has seen the light she carries: when its thread reaches her, the count answers.
+        this.seenIn = this.seenIn >= 0 ? this.seenIn : HUD.seenAt;
       else if (e.type === 'glintsDrop') {
         // A fade cost her these: once she stands again the count shows itself, they run out of
         // it one by one, and what she lost stands beside it for a while.
@@ -429,6 +445,16 @@ export class Hud {
     b.uniform[1] = HUD.iconQuad;
     b.uniform[3] = 1;
     if (this.group.visible) {
+      if (this.seenIn >= 0) {
+        this.seenIn -= dt;
+        if (this.seenIn < 0) {
+          this.seenIn = -1;
+          this.seenK = 1;
+          this.hold = Math.max(this.hold, HUD.seenHold);
+          for (let i = 0; i < DIGITS; i++) this.pops[i] = Math.max(this.pops[i] as number, HUD.seenPop);
+        }
+      }
+      this.seenK *= Math.exp(-dt * HUD.seenDecay);
       for (let i = 0; i < DIGITS; i++) {
         const s = this.sprites[i] as Sprite;
         const p = (this.pops[i] as number) * Math.exp(-dt * 11);
@@ -460,9 +486,19 @@ export class Hud {
       } else for (const sp of this.lossSprites) sp.visible = false;
       const x = HUD.x - 10 * (1 - a) + shakeX;
       const y = HUD.y + rise;
-      b.quad(K_FLARE, x, y, 40, 40, 0.4 * this.pulse * a, 0, 0.6);
-      const q = HUD.iconQuad * HUD.iconScale * (1 + 0.16 * this.pulse);
-      b.quad(K_GLINT, x, y, q, q, (1.05 + 0.8 * this.pulse) * a, 0.2, 0);
+      const sk = this.seenK;
+      b.quad(
+        K_FLARE,
+        x,
+        y,
+        40 * (1 + 0.6 * sk),
+        40 * (1 + 0.6 * sk),
+        (0.4 * this.pulse + 0.5 * HUD.seenFlash * sk) * a,
+        0,
+        0.6,
+      );
+      const q = HUD.iconQuad * HUD.iconScale * (1 + 0.16 * this.pulse + 0.3 * sk);
+      b.quad(K_GLINT, x, y, q, q, (1.05 + 0.8 * this.pulse + HUD.seenFlash * sk) * a, 0.2, 0);
     }
     // Glints leaving the counter as they are spent.
     for (const d of this.drops) {

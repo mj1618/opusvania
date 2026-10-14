@@ -460,10 +460,26 @@ export const BURR = {
   /**
    * Asleep (memory/giving-render.md): the sim's `e.dozing` (she is near and too dark to be seen; it stops
    * where it stands). Lids `lids` shut, settled in the calm's lie,
-   * the breath `breath` of the way to the calm one, its lights down by `dim`, a pale sleep mote every
-   * `mote` s, `moteK` x the calm's size (index.ts). In at `in` /s, out at `out` /s.
+   * the breath `breath` of the way to the calm one and `rise` deeper (the shell rises and falls), its lights
+   * down by `dim` but swelling `glowPulse` with each breath (peaceful, not dead), the shut eyes drawn as
+   * pale lids (`lidW` x the eye wide, `lidH` px, `lidAlpha`, `lidDrop` px low), a pale sleep mote every
+   * `mote` s, `moteK` x the calm's size, slower (index.ts): a column, the "zzz". In at `in` /s, out at `out` /s.
    */
-  doze: { lids: 1, breath: 0.75, mote: 0.42, moteK: 1.5, in: 2.2, out: 6, dim: 0.82 },
+  doze: {
+    lids: 1,
+    breath: 0.6,
+    rise: 0.035,
+    mote: 0.6,
+    moteK: 2.3,
+    in: 2.2,
+    out: 6,
+    dim: 0.8,
+    glowPulse: 0.35,
+    lidAlpha: 0.9,
+    lidW: 1.5,
+    lidH: 0.75,
+    lidDrop: 0.5,
+  },
   /**
    * It loses her (memory/giving-render.md: its awareness runs out, or her wallet empties in front of it): over
    * `close` s the eyes close by `lids`, its lights fall by `dim`, it settles `settle` of the calm's lie; held to
@@ -674,4 +690,11 @@ export const LAMP = {
    * Given a glint: a full shy away from her and the lamp down by `dim`, coming back over `dimFor` s.
    */
   gift: { spot: 1.8, spotHalo: 1.4, spotFor: 0.7, lean: 0.35, dim: 0.85, dimFor: 3 },
+  /**
+   * Roosting (the sim's `e.roosting`: it hangs asleep while she is too dark to be seen): wings folded
+   * round it (`fold` of the fold), the beat stopped, the lamp down to ~15% (`dim`) breathing at `breath`
+   * rad/s, a slow pale mote every `mote` s (index.ts). Folds in at `in` /s; on waking it snaps open at `out` /s
+   * (and the lamp flares with the thread: `gift.spot`).
+   */
+  roost: { fold: 0.95, dim: 0.85, breath: 1.1, mote: 1.4, in: 1.6, out: 16 },
 } as const;

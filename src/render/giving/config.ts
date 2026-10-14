@@ -93,29 +93,32 @@ export const GIVING = {
     out: 5,
   },
   /**
-   * Caught (`enemyAware`: a creature has just seen the light she carries): a thin warm thread from its
+   * Caught (`enemyAware`: a creature has just seen the light she carries): a solid warm thread from its
    * eyes (a burrback's: `eyeIn` px in from its front edge, `eyeUp` px over its feet) to the ring of her
-   * glints, `len` s long: it reaches her in the first `reach` of that, fades from `fadeFrom`; `width` px,
+   * glints, `len` s long: a bead (`bead` px, `beadE`) runs it out to her in the first `reach` of that
+   * (the HUD count answers then: hud `seenAt`), it holds, fades from `fadeFrom`; `width` px half-width,
    * `e`, lifted `lift` px. Her carried glints draw in by `pull`, jitter `jitter` px and flare x(1 + `flare`)
    * over `glints` s, like a breath caught.
    */
   caught: {
-    len: 0.45,
-    reach: 0.25,
-    fadeFrom: 0.45,
-    width: 1.5,
-    e: 0.9,
+    len: 0.95,
+    reach: 0.32,
+    fadeFrom: 0.72,
+    width: 2.6,
+    e: 1.15,
     lift: 6,
+    bead: 6,
+    beadE: 1,
     eyeIn: 6,
     eyeUp: 18,
-    eyeGlow: 12,
-    eyeE: 0.55,
-    herGlow: 22,
-    herE: 0.3,
-    glints: 0.6,
+    eyeGlow: 16,
+    eyeE: 0.7,
+    herGlow: 26,
+    herE: 0.4,
+    glints: 0.7,
     pull: 0.35,
     jitter: 2.5,
-    flare: 1.4,
+    flare: 1.6,
   },
   /** The offer: a warm light on her face from the glint in her hands before it leaves (`size` px, `e`, `life` s). */
   face: { size: 18, e: 0.42, life: 0.3 },

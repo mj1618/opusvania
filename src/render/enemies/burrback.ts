@@ -1202,6 +1202,19 @@ function drawHead(
         }
       }
     }
+    // Asleep: the eyes are shut, drawn as two pale closed lids (lines), so it reads "asleep", not "dark".
+    const zk = rig.dozeK * (1 - Math.min(1, open * 3)) * (dead ? 0 : 1);
+    if (zk > 0.03 && front) {
+      const show = sat(aH * 1.6 - 0.3);
+      const Z = B.doze;
+      for (let i = 0; i < 2; i++) {
+        const k = i === 0 ? 1 : 0.8;
+        const elx = headLx + dH * H.len * (i === 0 ? 0.16 : 0.66);
+        const ely = headLy - H.high * (i === 0 ? 0.1 : 0.2);
+        SH_EYE.alpha = Z.lidAlpha * zk * show;
+        p.ellipse(bx(elx, ely), by(elx, ely) + Z.lidDrop, H.eye * k * Z.lidW, Z.lidH, rot, SH_EYE, 10);
+      }
+    }
   }
 }
 
@@ -1285,7 +1298,10 @@ export function drawBurrback(
   const ramK = rig.ramK * (1 - deadK);
   const breath =
     breathS *
-    (0.022 + (B.calm.breath - 0.022) * Math.max(calm, rig.dozeK) + R.pantDepth * spentK) *
+    (0.022 +
+      (B.calm.breath - 0.022) * Math.max(calm, rig.dozeK) +
+      B.doze.rise * rig.dozeK +
+      R.pantDepth * spentK) *
     sat(crouch) *
     (1 - deadK);
   // Curled: shorter and rounder, the dome its whole shape. A down cut glancing off the top: a pound.
@@ -1908,7 +1924,7 @@ export function drawBurrback(
         br *= 1 + (B.notice.light - 1) * seenK + B.notice.flash * rig.flash * (1 - calm);
         br *= 1 - B.shy.dim * rig.shyK;
         // Asleep its lights are nearly out, breathing slowly with it; losing her they go down with its eyes.
-        br *= 1 - B.doze.dim * rig.dozeK * (1 - calm) * (0.85 + 0.15 * breathS);
+        br *= 1 - B.doze.dim * rig.dozeK * (1 - calm) * (1 - B.doze.glowPulse * (0.5 + 0.5 * breathS));
         br *= 1 - B.lose.dim * rig.lostK;
         // The count of the tell, all four as one; spent, nearly out; then back one by one, tail first.
         if (braceK > 0.001) br += (R.low + (R.peak - R.low) * rig.count - br) * braceK;

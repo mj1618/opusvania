@@ -571,6 +571,24 @@ export class EnemyRenderer {
         }
       }
     }
+    // Roosting: a slow pale mote off it now and then (asleep, like a dozing burrback's).
+    if (rig.roostK > 0.7) {
+      rig.roostMote -= dt;
+      if (rig.roostMote <= 0) {
+        rig.roostMote = LAMP.roost.mote * (0.8 + 0.4 * this.rand());
+        const K = BURR.calm;
+        this.emit(
+          K_SLEEP,
+          rig.x,
+          rig.y - 12,
+          2 * (this.rand() - 0.5),
+          -K.moteRise * 0.7,
+          K.moteLife * 1.2,
+          K.moteSize * 1.8,
+          rig.y + 400,
+        );
+      }
+    } else rig.roostMote = LAMP.roost.mote * 0.5;
     if (Math.abs(rig.x - cam.x) > halfW || Math.abs(rig.y - cam.y) > halfH) return false;
     const zw = this.zw;
     const l = 1 - smooth(ZONE_EDGES.left[0], ZONE_EDGES.left[1], rig.x);

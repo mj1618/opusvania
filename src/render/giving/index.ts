@@ -338,6 +338,41 @@ export class GivingRenderer {
     }
   }
 
+  /**
+   * A thread along the arc from u0 to u1: even width and brightness all along (a ribbon's hot core,
+   * `uv` 0 .. `hot`), not a tapering trail.
+   */
+  private thread(
+    sx: number,
+    sy: number,
+    ex: number,
+    ey: number,
+    lift: number,
+    u0: number,
+    u1: number,
+    e: number,
+    width: number,
+    hot: number,
+  ): void {
+    if (u1 - u0 < 0.005) return;
+    const n = 8;
+    const pa = this.pa;
+    const pb = this.pb;
+    GivingRenderer.at(sx, sy, ex, ey, lift, u0, pa);
+    for (let k = 1; k <= n; k++) {
+      const u = u0 + ((u1 - u0) * k) / n;
+      GivingRenderer.at(sx, sy, ex, ey, lift, u, pb);
+      const dx = pb[0]! - pa[0]!;
+      const dy = pb[1]! - pa[1]!;
+      const l = Math.hypot(dx, dy) || 1;
+      const nx = (-dy / l) * width;
+      const ny = (dx / l) * width;
+      this.batch.segment(pb[0]!, pb[1]!, nx, ny, pa[0]!, pa[1]!, nx, ny, hot, hot, e, e);
+      pa[0] = pb[0]!;
+      pa[1] = pb[1]!;
+    }
+  }
+
   update(dt: number, clock: number, cam: CameraView, sim: SimView): void {
     const t0 = performance.now();
     const p = sim.player;
@@ -526,7 +561,19 @@ export class GivingRenderer {
         const head = Math.min(1, q / Ca.reach);
         const tail = Math.max(0, (q - Ca.fadeFrom) / (1 - Ca.fadeFrom));
         const e0 = Ca.e * (1 - tail);
-        if (head - tail > 0.01) this.trail(ex, ey, tx, ty, Ca.lift, tail, head, e0, Ca.width);
+        if (head - tail > 0.005) {
+          // A solid warm line: a soft body and a hot core of even width.
+          this.thread(ex, ey, tx, ty, Ca.lift, tail, head, e0 * 0.7, Ca.width, 0.35);
+          this.thread(ex, ey, tx, ty, Ca.lift, tail, head, e0, Ca.width * 0.45, 0.02);
+        }
+        // The bead: it runs from its eyes to her glints (the eye follows it), then sits in her light.
+        {
+          const pt = this.pa;
+          GivingRenderer.at(ex, ey, tx, ty, Ca.lift, head, pt);
+          const be = Ca.beadE * (1 - tail) * (head < 1 ? 1 : 0.7 + 0.3 * Math.sin(th.t * 30));
+          b.quad(K_SPARK, pt[0]!, pt[1]!, Ca.bead, Ca.bead, be, 0, 0.85);
+          b.quad(K_FLARE, pt[0]!, pt[1]!, Ca.bead * 2.6, Ca.bead * 2.6, 0.35 * be, 0, 0.5);
+        }
         // Its eyes catch, and so does her light where it lands.
         const pop = Math.sin(Math.PI * Math.min(1, q * 1.4));
         b.quad(K_FLARE, ex, ey, Ca.eyeGlow, Ca.eyeGlow, Ca.eyeE * pop, 0, 0.6);

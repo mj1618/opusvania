@@ -132,6 +132,10 @@ export class LampRig {
   spot = 0;
   /** She gave it a glint (`enemyGiveUp` cause `gift`): the lamp turned from her and down, 1 -> 0 over `LAMP.gift.dimFor` s. */
   giftDim = 0;
+  /** Roosting (the sim's `e.roosting`, memory/giving-render.md): hung still, wings folded round it, lamp down; 0..1. */
+  roostK = 0;
+  /** Seconds to its next slow roost mote (index.ts). */
+  roostMote = 0;
   private awayX = 0;
   readonly offX = new Spring(0, 8, 0.55);
   readonly offY = new Spring(0, 8, 0.55);
@@ -198,7 +202,13 @@ export class LampRig {
     if (adv < -0.5) adv += 1;
     else if (adv > 0.5) adv -= 1;
     this.simFlap = sf;
-    if (!fresh) this.flap += adv * (1 - (1 - LAMP.calm.beat) * this.calmK);
+    {
+      const roost = e.roosting && e.mode !== 'dead' ? 1 : 0;
+      if (fresh) this.roostK = roost;
+      // Folds slowly into the roost; snaps open the moment it wakes.
+      this.roostK += (roost - this.roostK) * approach(roost ? LAMP.roost.in : LAMP.roost.out, dt);
+    }
+    if (!fresh) this.flap += adv * (1 - (1 - LAMP.calm.beat) * this.calmK) * (1 - this.roostK);
     this.flap -= Math.floor(this.flap);
     this.swell += LAMP.calm.rate * dt;
     this.flinch += (0 - this.flinch) * approach(LAMP.shy.ease, dt);
@@ -256,7 +266,12 @@ export class LampRig {
     this.hold += ((curious ? 1 : 0) - this.hold) * approach(curious ? LAMP.hunt.hold : LAMP.hunt.release, dt);
     const slack = phase === 'open';
     this.slack += ((slack ? 1 : 0) - this.slack) * approach(5, dt);
-    const fold = mode === 'dead' ? 1 : mode === 'hurt' ? 0.7 : LAMP.shy.fold * this.flinch;
+    const fold =
+      mode === 'dead'
+        ? 1
+        : mode === 'hurt'
+          ? 0.7
+          : Math.max(LAMP.shy.fold * this.flinch, LAMP.roost.fold * this.roostK);
     this.fold +=
       (fold - this.fold) *
       approach(mode === 'hurt' ? 40 : mode === 'dead' ? 14 : fold > this.fold ? 30 : 9, dt);
@@ -804,6 +819,7 @@ export function drawLampwing(
   br *= tellP;
   if (rig.tumble > 0.01 && !dead) br *= 1 - rig.tumble * (0.55 + 0.35 * noise1(clock * 17 + ph, 6));
   br *= 1 - L.shy.dim * rig.flinch;
+  br *= 1 - L.roost.dim * rig.roostK * (1 - 0.3 * (0.5 + 0.5 * Math.sin(clock * L.roost.breath + ph)));
   br *= (1 + L.gift.spot * rig.spot) * (1 - L.gift.dim * Math.min(1, rig.giftDim * 1.6));
   // Hanging open, the lamp is nearly down: it has nothing left for a moment.
   br *= 1 - (1 - Dv.openDim) * rig.open * (1 - calm);

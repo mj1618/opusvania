@@ -97,6 +97,23 @@ Rules: giving.md. First pass 2026-10-14. Sheets: `shots/giving/` (`burr-sheet.pn
   the wall, drops back and is caught again. (The wall at 2432 has no way up on foot; a staged "walk away" needs
   another spot.)
 
+## Round 4 (playtest 3: the thread easy to miss, the sleeper read as "a dark lump")
+- **Thread**: `GivingRenderer.thread()` (even width and brightness, a soft body + a hot core), 2.6 px half-width,
+  0.95 s, a bead (`caught.bead`) runs it from its eyes to her glints in 0.3 s, then sits pulsing in her light.
+- **HUD answers** (`HUD.seenAt / seenHold / seenPop / seenFlash`, hud/index.ts reads `enemyAware` itself): when the
+  bead lands the count shows, its digits swell x1.66 and the glint icon flashes warm and large, dying at 3.2 /s.
+- **Sleeper** (`BURR.doze`): motes 2.3x the calm's, slower and longer-lived, every 0.6 s (a column); the shut eyes
+  drawn as pale lid lines (`lidW / lidH / lidAlpha`; at 1x a few px: the motes carry it); the shell rises and
+  falls deeper (`rise`); its lights swell `glowPulse` with each breath (peaceful, not dead).
+- **Roost** (`LAMP.roost`, sim `e.roosting`): wings folded (the hurt/dead `fold` to 0.95), beat stopped, lamp to
+  ~15% breathing, a slow pale mote; on waking it snaps open at 16 /s and `enemyAware` flares the lamp (`gift.spot`)
+  with the thread from its body to her glints.
+- Sheets: `r4-strip.png` (asleep a / b, thread mid-travel, holding), `r4-zoom.png` (motes, HUD flare),
+  `roost-sheet.png` (roosting, waking + thread). Clip `clips/giving-m4.mp4` (10 s, follow camera zoom 1.3): wallet
+  1 on island A under lamp-glade roosting; she hops A -> B -> C (jump at the islands' east ends, the bot in
+  `scratchpad/giving/bot4.js`), gathers 2 + 2 glints: lamp-f3 sees her (thread, count flares), gives up; she takes
+  the ember (wallet 10): it sees her again, she offers 14 frames later, the 3-frame glint lands, it dims and goes.
+
 ## Capture
 - `scratchpad/giving/{burr,lantern,lamp,seen,pose}.js` (`playwright-cli -s=giving run-code --filename ...`) and
   `sheet.py` (the session scratchpad may be gone: the recipes are short). Burrback: load, `giving(8)`, teleport
