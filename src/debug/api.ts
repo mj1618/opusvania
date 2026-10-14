@@ -1,5 +1,6 @@
 import type { Game, RunMode } from '../game';
 import { type InputScript, parseInputScript } from '../input/script';
+import type { PrologueDirector } from '../prologue';
 import type { GameApp } from '../render/app';
 import { type CameraView, VIEW_H, VIEW_W } from '../render/contract';
 import type { PointLight } from '../render/lights';
@@ -252,6 +253,18 @@ export interface GameDebugApi {
   render(): void;
   /** Hero design: no argument lists `{id, skins}`; an id switches to that skin. */
   character(id?: string): { id: string; skins: string[] };
+  /**
+   * The prologue (src/prologue.ts), or null when it was not played (`?skipprologue`, or `?manual`
+   * without `?prologue`). `state()` its clock; `advance(n)` n frames of 1/60 s (the sim steps too
+   * once she is out of her cocoon), draws, returns the clock; `seek(t)` advances to `t` s (only
+   * forward); `skip()` hands over to the Grove now.
+   */
+  prologue: {
+    state(): { t: number; done: boolean; simOn: boolean };
+    advance(n?: number): number;
+    seek(t: number): number;
+    skip(): number;
+  } | null;
   debug: {
     /** Collision overlay on/off (no argument toggles). */
     hitboxes(on?: boolean): boolean;
@@ -273,8 +286,20 @@ export function installDebugApi(deps: {
   ga: GameApp;
   stage: RenderStage;
   panel: TuningPanel;
+  prologue?: PrologueDirector | null;
 }): GameDebugApi {
   const { game, ga, stage, panel } = deps;
+  const pro = deps.prologue ?? null;
+  const advance = (n: number): number => {
+    if (!pro) return 0;
+    game.mode = 'manual';
+    for (let i = 0; i < n && !pro.done; i++) {
+      if (pro.simOn) game.stepOnce();
+      stage.update(1 / 60, 1);
+    }
+    stage.present();
+    return pro.t;
+  };
   const log: Array<SimEvent & { f: number }> = [];
   let lastCall = 0;
   game.afterStep.add((events) => {
@@ -322,6 +347,16 @@ export function installDebugApi(deps: {
   };
 
   const api: GameDebugApi = {
+    prologue: pro && {
+      state: () => ({ t: pro.t, done: pro.done, simOn: pro.simOn }),
+      advance: (n = 1) => advance(n),
+      seek: (t: number) => advance(Math.max(0, Math.round((t - pro.t) * 60))),
+      skip: () => {
+        pro.skip();
+        redraw();
+        return pro.t;
+      },
+    },
     step(n = 1) {
       game.mode = 'manual';
       lastCall = log.length;

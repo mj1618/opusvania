@@ -793,6 +793,14 @@ const GIVE = pose([
 const WAIT = pose([
   0.4, 33.5, -0.02, -0.1, -0.15, 6.6, 0.1, 0.15, -1.8, 0, 0, 5.4, -13, -3.6, -14, 0.05, 0.95, -0.35, 1.1,
 ]);
+/** The prologue: a glint held up before her face in the near hand, the other at her chest, eyes on it. */
+const HOLD = pose([
+  1, 33.2, 0.04, 0.08, 0.16, 7.4, 0.1, 0.2, -1.6, 0, 0.1, 9.2, 3.2, 2.6, -7.8, 0.04, 0.85, 0.45, 0.62,
+]);
+/** ... and then looking past it, out ahead: chin up, head turned on, the hand lowered a little. */
+const PAST = pose([
+  1, 33.6, 0.02, -0.04, -0.16, 7.4, 0.1, 0.2, -1.6, 0, 0.1, 8.4, 0.6, 2.6, -7.8, 0.04, 1, -0.25, 1.15,
+]);
 /** Acting timings (seconds unless said) and amounts. */
 export const ACT = {
   /** After the lantern catches she stays down, looking up at it, this long before she rises. */
@@ -895,6 +903,12 @@ export interface Cue {
   awayDy: number;
   /** She stands in the woken heart before it is ready for her (`heartWait` .. `heartReady`). */
   heartWait: boolean;
+  /**
+   * The prologue (render/prologue, through `vesperLink.cine`): 0..1 she holds a glint up to her
+   * face (she has no mouth: she can only hold it), and 0..1 she looks past it, out ahead of her.
+   */
+  hold: number;
+  look: number;
 }
 
 /** Point masses for the centre of mass: joint, weight. */
@@ -1040,6 +1054,8 @@ export class Rig {
     awayDx: 0,
     awayDy: 0,
     heartWait: false,
+    hold: 0,
+    look: 0,
   };
   /** Acting weights 0..1: kindling, sat resting, hands to a lit lantern, the hand on the sleeping heart, the ending. */
   kindleW = 0;
@@ -3369,6 +3385,27 @@ export class Rig {
       }
     }
 
+    // --- The prologue: the first glint held up to her face, then a look past it (vesperLink.cine).
+    const hw = Math.min(1, cue.hold) * aw;
+    if (hw > 1e-3) {
+      const b = Math.sin(clock * 1.3);
+      this.mix(out, HOLD, hw, nearA);
+      out[PU]! += 0.3 * b * hw;
+      cloak += 0.25 * hw;
+      ant += (6 + 2 * b) * hw;
+      lit += 0.08 * hw;
+      gzx += 0.35 * hw;
+      gzy += 0.55 * hw;
+      gzw += hw;
+      const pw = Math.min(1, cue.look) * hw;
+      if (pw > 1e-3) {
+        this.mix(out, PAST, pw, nearA);
+        ant -= 10 * pw;
+        gzx += 0.8 * pw;
+        gzy -= 0.75 * pw;
+      }
+    }
+
     // --- Waiting in the woken heart: held in its light, looking into it; wings slowly opening,
     // antennae lifted, one long breath after another. Not frozen.
     const wtw = this.waitW * aw * (1 - this.endW);
@@ -3471,7 +3508,7 @@ export class Rig {
     }
     // The light leaves her open near hand while she kindles and while she gives to the heart, and
     // the ember arrives in it.
-    this.offerK = Math.max(kw, rw2, 0.85 * this.giveW * ew);
+    this.offerK = Math.max(kw, rw2, 0.85 * this.giveW * ew, Math.min(1, cue.hold) * aw);
     this.offerSide = nearA >= 0.5 ? 0 : 1;
   }
 

@@ -123,8 +123,11 @@ void main() { finalColor = paint(); }
     return this.p(i, ((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255, w);
   }
 
+  /** When set, its own rhythm (0..1 at time t) replaces the world's shared breath in `uT.y`. */
+  pulse: ((t: number) => number) | null = null;
+
   tick(t: number, breath: number): void {
     this.u.uT[0] = t;
-    this.u.uT[1] = breath;
+    this.u.uT[1] = this.pulse ? this.pulse(t) : breath;
   }
 }

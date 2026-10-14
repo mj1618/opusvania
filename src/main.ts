@@ -3,6 +3,7 @@ import { TuningPanel } from './debug/tuning-panel';
 import { Game } from './game';
 import { InputSampler } from './input/index';
 import { FixedStepLoop } from './loop';
+import { PrologueDirector } from './prologue';
 import { createApp } from './render/app';
 import { RenderStage } from './render/stage';
 import { GROVE } from './scene/index';
@@ -14,7 +15,8 @@ const MAX_RENDER_DT = 0.1;
 /**
  * Boot. URL params: ?seed=<n>, ?manual (start paused; drive via __game.step), ?hitboxes,
  * ?nopickups (the scene without its glints, lumen pods, enemies, lanterns and heart, so without the HUD: clean plates
- * for the look tools).
+ * for the look tools), ?skipprologue (straight into the Grove; also implied by ?manual), ?prologue (play the opening
+ * even under ?manual: then `__game.prologue.advance(n)` drives it).
  * Keys: arrows/WASD move, Z/Space/K jump, X/L/Shift dash, Down+Jump drops through branches,
  * F2 collision overlay, ` tuning panel, R restart.
  */
@@ -25,8 +27,15 @@ async function boot(): Promise<void> {
   const scene = params.has('nopickups')
     ? { ...GROVE, pickups: [], pods: [], enemies: [], lanterns: [], lamps: [], heart: undefined }
     : GROVE;
-  const game = new Game(tuning, scene, seed, () => input.sample());
-  if (params.has('manual')) game.mode = 'manual';
+  const manual = params.has('manual');
+  const playPrologue = params.has('prologue') || (!params.has('skipprologue') && !manual);
+  let prologue: PrologueDirector | null = null;
+  // While the prologue plays it decides what she may press (nothing, then walk only).
+  const game = new Game(tuning, scene, seed, () => {
+    const i = input.sample();
+    return prologue && !prologue.done ? prologue.mask(i) : i;
+  });
+  if (manual) game.mode = 'manual';
 
   const root = document.getElementById('app');
   if (!root) throw new Error('#app missing');
@@ -34,11 +43,16 @@ async function boot(): Promise<void> {
   const stage = new RenderStage(ga, game);
   const panel = new TuningPanel(tuning, () => game.reset());
   if (params.has('hitboxes')) stage.overlay.toggle(true);
-  installDebugApi({ game, ga, stage, panel });
+  if (playPrologue) prologue = new PrologueDirector(game, stage, !manual);
+  installDebugApi({ game, ga, stage, panel, prologue });
+  // The key legend waits for the prologue to hand over.
+  const hint = document.getElementById('hint');
+  if (prologue && hint) hint.style.opacity = '0';
 
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.repeat) return;
-    if (e.code === 'Backquote') panel.toggle();
+    if (e.code === 'Escape' && prologue && !prologue.done) prologue.skip();
+    else if (e.code === 'Backquote') panel.toggle();
     else if (e.code === 'F2') {
       stage.overlay.toggle();
       e.preventDefault();
@@ -53,6 +67,7 @@ async function boot(): Promise<void> {
     const resized = ga.fitWindow();
     if (resized) stage.resize();
     const dt = Math.min(loop.snap(elapsed) / 1000, MAX_RENDER_DT);
+    if (prologue?.done && hint?.style.opacity === '0') hint.style.opacity = '';
     if (game.mode === 'realtime') {
       const n = loop.advance(elapsed);
       for (let i = 0; i < n; i++) game.stepOnce();

@@ -1,8 +1,9 @@
 # World mood frames (`/world-concepts.html`)
 
 Five still 1920x1080 mood pieces for the "overgrown ruin" world (docs/art-direction.md), built before the game
-commits to it. Separate from the game: `src/world-concepts/` imports only the Umber skin, `sim/player` (to make a
-player state) and `scene/lib/look.ts` (prng, wind). Nothing in the game imports it; Vite builds only `index.html`.
+commits to it. **The kit (`lib/`) moved to `src/render/world/` (2026-10-14) so the game's prologue shares it**; the
+frames in `src/world-concepts/frames/` import it from there. `ShaderPlane.pulse` (optional) replaces the shared breath
+in `uT.y` with a plane's own rhythm. Vite builds only `index.html`.
 
 ## Run and capture
 - Dev server on 5180: `http://localhost:5180/world-concepts.html`. Keys 1-5 switch; `?frame=N`; `?clean` hides the

@@ -12,14 +12,14 @@
  * `window.__wc` = { frame, ready, show(n) } for tools.
  */
 import { Application } from 'pixi.js';
+import { Composer } from '../render/world/compose';
+import { VIEW_H, VIEW_W } from '../render/world/layer';
+import { Post } from '../render/world/post';
 import edge from './frames/edge';
 import lab from './frames/lab';
 import lamp from './frames/lamp';
 import moth from './frames/moth';
 import street from './frames/street';
-import { Composer } from '../render/world/compose';
-import { VIEW_H, VIEW_W } from '../render/world/layer';
-import { Post } from '../render/world/post';
 import type { WorldFrame } from './types';
 
 const FRAMES: WorldFrame[] = [street, edge, lamp, lab, moth];

@@ -18,7 +18,8 @@
     "check": "npm run typecheck && npm run lint && npm run test && npm run e2e",
     "shots": "tsx tools/shots.ts",
     "clip": "tsx tools/clip.ts",
-    "look:stats": "tsx tools/look-stats.ts"
+    "look:stats": "tsx tools/look-stats.ts",
+    "prologue": "tsx tools/prologue.ts"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",

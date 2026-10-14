@@ -32,6 +32,7 @@ import { Hud } from './hud/index';
 import { LightRegistry } from './lights';
 import { PickupRenderer } from './pickups/index';
 import { PostStage } from './post/index';
+import type { PrologueRenderer } from './prologue/index';
 import { SceneRenderer } from './scene/index';
 
 /**
@@ -79,6 +80,10 @@ export class RenderStage {
   /** Fade / re-form / restart: the pan that replaces the cut and the dark dip over it (camera/reform.ts). */
   private readonly reformShot = new ReformShot();
   private readonly dip = new DipOverlay();
+  /** The opening, while it plays (render/prologue; its director, src/prologue.ts, advances its clock). */
+  private prologue: PrologueRenderer | null = null;
+  private prologueTick: ((dt: number) => void) | null = null;
+  private prologueClock = 0;
 
   constructor(
     private readonly ga: GameApp,
@@ -131,6 +136,34 @@ export class RenderStage {
     });
   }
 
+  /**
+   * Puts the prologue over the game: its layer above the scene (under the dip and the HUD), its
+   * camera in place of the follow camera, `tick(dt)` called first thing in every update.
+   */
+  attachPrologue(p: PrologueRenderer, tick: (dt: number) => void): void {
+    this.prologue = p;
+    this.prologueTick = tick;
+    this.ga.root.addChildAt(p.layer, this.ga.root.getChildIndex(this.scene.layers.root) + 1);
+    this.hud.layer.alpha = 0;
+  }
+
+  /** The prologue is over: its pieces go, the game's camera, hero and HUD come back. */
+  detachPrologue(): void {
+    const p = this.prologue;
+    if (!p) return;
+    this.prologue = null;
+    this.prologueTick = null;
+    p.destroy();
+    this.scene.layers.root.visible = true;
+    this.scene.layers.character.visible = true;
+    this.scene.layers.pickups.alpha = this.scene.layers.pickupsBack.alpha = 1;
+    this.prologueClock = 0;
+    this.hudFade = 1;
+  }
+
+  /** The HUD comes up over this long once the prologue hands over (s). */
+  private hudFade = 0;
+
   /** The follow camera's own view (ignoring any override), at the latest sim frame. */
   get followView(): CameraView {
     return lerpCamera(this.prevCam, this.cam, 1);
@@ -142,6 +175,8 @@ export class RenderStage {
    */
   update(dt: number, alpha: number): void {
     this.clock += dt;
+    this.prologueTick?.(dt);
+    const pro = this.prologue;
     const player = playerView(this.game.prev.player, this.game.state.player, alpha);
     const follow = lerpCamera(this.prevCam, this.cam, alpha);
     const o = this.override;
@@ -169,13 +204,15 @@ export class RenderStage {
       this.game.scene,
       follow,
     );
-    const view: CameraView = o
+    let view: CameraView = o
       ? { x: base.x + this.kick.x, y: base.y + this.kick.y, zoom: base.zoom }
       : {
           x: base.x + this.kick.x + gc.x + rs.x,
           y: base.y + this.kick.y + gc.y + rs.y,
           zoom: base.zoom * gc.zoom,
         };
+    // The prologue's camera track, unless a debug override holds the view.
+    if (pro && !o) view = pro.camera(view, player) ?? view;
     const sim: SimView = {
       frame: this.game.state.frame,
       alpha,
@@ -188,13 +225,32 @@ export class RenderStage {
       goal: this.game.state.goal,
     };
     this.scene.layers.applyCamera(view);
+    if (pro) {
+      this.prologueClock += dt;
+      this.scene.layers.root.visible = !pro.groveHidden;
+      this.scene.layers.character.visible = !pro.heroHidden;
+      // The forest's glints wait: the first one she sees is the one that comes down to her.
+      this.scene.layers.pickups.alpha = this.scene.layers.pickupsBack.alpha = pro.hudAlpha;
+      // Before her: actors that act with her, and the cues for her acting.
+      pro.update(dt, this.prologueClock, view, sim);
+    }
     this.scene.update(dt, this.clock, view, sim);
     this.character.update(dt, this.clock, player, events);
+    if (pro?.heroHidden) {
+      // Still in her cocoon: her own light does not light the Grove.
+      const ember = this.lights.get('ember');
+      if (ember) ember.intensity = 0;
+    }
     this.enemies.update(dt, this.clock, view, sim);
     this.pickups.update(dt, this.clock, view, sim);
     this.goal.update(dt, this.clock, view, sim);
     this.post.update(dt, this.clock, view);
     this.hud.update(dt, this.clock, sim);
+    if (pro) this.hud.layer.alpha = pro.hudAlpha;
+    else if (this.hudFade > 0) {
+      this.hudFade = Math.max(0, this.hudFade - dt / 1.2);
+      this.hud.layer.alpha = 1 - this.hudFade;
+    }
     this.overlay.draw(view, player);
     this.view = view;
     this.drawn = player;

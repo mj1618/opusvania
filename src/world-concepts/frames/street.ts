@@ -9,7 +9,18 @@ import { Container, Graphics } from 'pixi.js';
 import { prng } from '../../render/scene/lib/look';
 import { FOG, MOUNTAIN, REFLECT, SKY, STEAM } from '../../render/world/bodies';
 import type { Composer } from '../../render/world/compose';
-import { braid, curtain, donePods, MOUTH, mat, mixHex, pod, podLayers, spread, WARM } from '../../render/world/kit';
+import {
+  braid,
+  curtain,
+  donePods,
+  MOUTH,
+  mat,
+  mixHex,
+  pod,
+  podLayers,
+  spread,
+  WARM,
+} from '../../render/world/kit';
 import { VIEW_H, VIEW_W } from '../../render/world/layer';
 import { moths } from '../../render/world/moths';
 import { blob, glow, ridge, sleeper, vgrad } from '../../render/world/paint';

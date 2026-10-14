@@ -119,3 +119,33 @@ test('__game API: step, state, input, load, teleport, cam, freeze', async ({ pag
   expect(r.health).toMatchObject({ hp: 4, hpMax: 4, invuln: 0, faded: 0 });
   expect(errors).toEqual([]);
 });
+
+test('the prologue plays on its own clock and hands over to the Grove', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('./?prologue&manual');
+  await page.waitForFunction(() => document.body.dataset.ready === 'true' || !!document.body.dataset.error);
+  const r = await page.evaluate(() => {
+    const p = window.__game.prologue;
+    if (!p) return null;
+    // (Software GL in CI: a few frames only; tools/prologue.ts captures the whole thing.)
+    const before = p.state();
+    const t = p.advance(20);
+    const frame = window.__game.state().frame;
+    p.skip();
+    return { before, t, frame, end: p.state() };
+  });
+  expect(r).not.toBeNull();
+  // Until her cocoon splits the sim stands still; skipping hands her to the game.
+  expect(r?.before.simOn).toBe(false);
+  expect(r?.t).toBeCloseTo(20 / 60, 3);
+  expect(r?.frame).toBe(0);
+  expect(r?.end.done).toBe(true);
+  expect(r?.end.simOn).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('?manual boots straight into the Grove (no prologue)', async ({ page }) => {
+  await boot(page);
+  expect(await page.evaluate(() => window.__game.prologue)).toBeNull();
+});
