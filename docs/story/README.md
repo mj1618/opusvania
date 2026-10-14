@@ -1,5 +1,7 @@
 # Opusvania storylines
 
+> **Current state: see [STATUS.md](STATUS.md) and [`current/`](current/).** The "finals" below predate your note that they drifted from the biological-AI-took-over-the-world idea; they are being rebuilt.
+
 Five storylines for Vesper's world, iterated by writer and critic agents toward the Ori / Hollow Knight / Nine Sols
 bar (13 rounds), then judged by an independent "greenlight panel": a narrative director deciding whether a studio
 in that tier would greenlight the outline for production. **All five were greenlit with notes; the notes are applied
