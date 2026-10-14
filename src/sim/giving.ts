@@ -172,6 +172,19 @@ export function updateOffer(
   give(state, target, events, t);
 }
 
+/**
+ * What a press would land on now (`player.offerTarget`, end of every step): the offer's own target
+ * rules, and null when a press would give nothing (empty hands, out of control, the run over).
+ */
+export function markOfferTarget(state: GameState, scene: Scene, t: Tuning, held: boolean): void {
+  const p = state.player;
+  const able = !held && p.hp > 0 && p.faded === 0 && p.stagger === 0 && state.pickups.count >= 1;
+  const to = able ? offerTarget(state, scene, t) : undefined;
+  if (!to) p.offerTarget = null;
+  else if (p.offerTarget?.kind !== to.kind || p.offerTarget.id !== to.id)
+    p.offerTarget = { kind: to.kind, id: to.id };
+}
+
 /** One glint leaves her hands for `target` (it arrives `giftFrames` later: `arrive`). */
 function give(state: GameState, target: Target, events: SimEvent[], t: Tuning): void {
   const p = state.player;

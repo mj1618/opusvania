@@ -98,6 +98,7 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     offerCd: 0,
     offerHold: 0,
     giftFrames: 0,
+    offerTarget: null,
     safeX: Math.round(feetX),
     safeY: y + h,
     safeFrames: 0,

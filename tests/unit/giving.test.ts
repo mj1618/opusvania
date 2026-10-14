@@ -105,13 +105,20 @@ describe('seen: the light she carries', () => {
       expect(g, `${glints} glints`).toBeLessThanOrEqual(reach);
       expect(g, `${glints} glints`).toBeGreaterThan(reach - 3);
     }
-    // Empty-handed: no brace, no flinch, not even a lifted head; it walks on through her, harmless.
+    // Empty-handed: no brace, no flinch, not even a lifted head. Within `dozePx` it sleeps where it
+    // stands (round 3); with its sleep off it walks on through her, harmless.
     const { s } = at(0);
     s.run('.300');
     expect(of(s.events, 'enemyWindup')).toEqual([]);
     expect(of(s.events, 'enemyAware')).toEqual([]);
     expect(of(s.events, 'hurt')).toEqual([]);
-    expect(foe(s).x + foe(s).w).toBeLessThan(s.state.player.x);
+    expect(foe(s).dozing).toBe(true);
+    const t = cloneTuning(defaultTuning);
+    t.burrback.dozePx = 0;
+    const w = sim(scene([burr(2400)]), 0, 2000, t);
+    w.run('.400');
+    expect(of(w.events, 'hurt')).toEqual([]);
+    expect(foe(w).x + foe(w).w).toBeLessThan(w.state.player.x);
   });
 
   it('it becomes aware of her (`aware`, `enemyAware`) further off than it braces, and only when it can see her light', () => {
@@ -449,5 +456,99 @@ describe('giving round 2 (playtest-giving)', () => {
     const g = of(end, 'gather')[0];
     expect([g?.offered, g?.offerTier, g?.gifted, g?.calmed]).toEqual([t.goal.offerTier1, 1, 3, 3]);
     expect(of(end, 'heartTier').map((e) => e.tier)).toEqual([1]);
+  });
+});
+
+describe('giving round 3 (playtest-giving round 2)', () => {
+  it('`player.offerTarget` is what a press would land on this frame: null empty-handed or out of reach; a creature, a light, the heart; a press then lands on exactly that', () => {
+    const s = sim(scene([burr(2150, 1)], { lanterns: [{ id: 'a', x: 2600, y: FLOOR }] }), 0, 2000);
+    s.run('.1');
+    expect(s.state.player.offerTarget).toBeNull();
+    s.state.pickups.count = 4;
+    s.run('.1');
+    expect(s.state.player.offerTarget).toEqual({ kind: 'burrback', id: 'b2150' });
+    const o = of(s.run('O1'), 'offer')[0];
+    expect(o?.target).toEqual({ kind: 'burrback', id: 'b2150' });
+    // Calmed by it now: no longer a target. Beside the lantern: the lantern.
+    s.run(`.${G.offerFlightFrames + 1}`);
+    s.place(2520, FLOOR);
+    s.run('.1');
+    expect(s.state.player.offerTarget).toEqual({ kind: 'lantern', id: 'a' });
+    s.place(3500, FLOOR);
+    s.run('.1');
+    expect(s.state.player.offerTarget).toBeNull();
+    // The lamp-glade staging: every frame offerTarget names a creature, a press lands on it (never a miss).
+    for (let k = 0; k < 70; k += 3) {
+      const g = newSim(GROVE);
+      g.place(760, 960);
+      g.state.pickups.count = 8;
+      g.run(`.${k + 1}`);
+      const to = g.state.player.offerTarget;
+      const ev = g.run('O1');
+      if (to && (to.kind === 'burrback' || to.kind === 'lampwing')) {
+        expect(of(ev, 'offerMiss'), `${k}`).toEqual([]);
+        expect(of(ev, 'offer')[0]?.target, `${k}`).toEqual(to);
+      }
+    }
+  });
+
+  it('the calm holds through the shaft: a gift to burr-shaft, then the summit or the ledge for 11 s, back on the floor it is still calm', () => {
+    for (const [x, y] of [
+      [3700, 192],
+      [3000, 448],
+    ] as const) {
+      const s = newSim(GROVE);
+      const i = s.state.enemies.findIndex((e) => e.id === 'burr-shaft');
+      const e = s.state.enemies[i] as EnemyState;
+      s.state.pickups.count = 20;
+      s.place(e.x + e.w / 2 - 90, 1280);
+      s.run(`O1 .${G.offerFlightFrames + 2}`);
+      expect(e.gift > 0 || (s.state.enemies[i]?.gift ?? 0) > 0).toBe(true);
+      s.place(x, y);
+      // (Untouchable up there: burr-ledge patrols the ledge, and a fade is not what is measured.)
+      s.state.player.invuln = 1e6;
+      s.run('.660');
+      s.state.player.invuln = 0;
+      expect(s.state.enemies[i]?.gift, `${x}, ${y}`).toBeGreaterThan(0);
+      const q = s.state.enemies[i] as EnemyState;
+      s.place(q.x + q.w / 2 - 120, 1280);
+      const ev = s.run('.60');
+      expect(
+        of(ev, 'enemyAware').filter((a) => a.id === 'burr-shaft'),
+        `${x}, ${y}`,
+      ).toEqual([]);
+      expect(of(ev, 'hurt'), `${x}, ${y}`).toEqual([]);
+    }
+  });
+
+  it('an unseen burrback sleeps: within `dozePx`, dark, it stands where it is (`dozing`); light in her hands wakes it; further off it patrols', () => {
+    const s = sim(scene([burr(2300)]), 1, 2000);
+    const x0 = foe(s).x;
+    s.run('.120');
+    expect(foe(s).dozing).toBe(true);
+    expect(foe(s).x).toBe(x0);
+    expect(foe(s).aware).toBe(0);
+    // Two glints: it wakes (and, near enough, it sees her).
+    s.state.pickups.count = G.seen1;
+    s.run('.2');
+    expect(foe(s).dozing).toBe(false);
+    // Further than `dozePx`: it patrols.
+    const far = sim(scene([burr(2000 + B.dozePx + 200)]), 0, 2000);
+    const fx = foe(far).x;
+    far.run('.60');
+    expect(foe(far).dozing).toBe(false);
+    expect(foe(far).x).not.toBe(fx);
+    // In a fight it never sleeps: cut, it knows her.
+    const c = sim(scene([burr(2100, 1)]), 0, 2000);
+    c.run('A1 .30');
+    expect(foe(c).roused).toBeGreaterThan(0);
+    expect(foe(c).dozing).toBe(false);
+  });
+
+  it("the moved pool glints are off the bluff's westward drop (a ghost coming back west is not lit over burr-path)", () => {
+    const bluff = GROVE.solids.find((r) => r.x === 2432 && r.y === 960);
+    expect(bluff).toBeDefined();
+    const west = (GROVE.pickups ?? []).filter((q) => q.x >= 2380 && q.x <= 2560 && q.y >= 840 && q.y <= 960);
+    expect(west.filter((q) => q.id.startsWith('pool'))).toEqual([]);
   });
 });

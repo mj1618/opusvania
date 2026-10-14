@@ -613,6 +613,28 @@ export const burrback: KindRules = {
     if (free && e.calm === 0 && dodgeDrop(e, info)) return true;
     // She is in front of it, close: it braces (out of a walk, a rest, a turn or a flinch).
     if (free && brace(e, info)) return true;
+    // Round 3 (memory/giving.md): she is near and too dark to be seen, and it is not in a fight with
+    // her: it sleeps where it stands (no patrol) until she carries light again, leaves, or cuts it.
+    e.dozing = false;
+    if (
+      B.dozePx > 0 &&
+      (e.mode === 'walk' || (e.mode === 'pause' && !e.turning)) &&
+      e.knockVx === 0 &&
+      e.roused === 0 &&
+      e.stirred === 0 &&
+      e.tuck === 0 &&
+      p.hp > 0 &&
+      p.faded === 0 &&
+      seenNow(info.state, info.t) === 0
+    ) {
+      const dx = p.x + p.w / 2 - (e.x + e.w / 2);
+      const dy = p.y + p.h / 2 - (e.y + e.h / 2);
+      if (dx * dx + dy * dy <= B.dozePx * B.dozePx) {
+        e.dozing = true;
+        e.vx = 0;
+        return true;
+      }
+    }
     if (e.mode === 'windup') {
       e.vx = 0;
       if (--e.timer <= 0) {

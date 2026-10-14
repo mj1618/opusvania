@@ -7,7 +7,7 @@ import { resolveParams } from '../../src/sim/player/params';
 import { hurtPlayer } from '../../src/sim/player/player';
 import type { EnemySpawn, Lantern, Pickup, Scene } from '../../src/sim/scene';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
-import { feet, flatScene, newSim, type Sim } from './helpers';
+import { feet, flatScene, newSim, type Sim, waking } from './helpers';
 
 // These rule tests were written before the heart's wake had a length: here it is ready the step
 // after it wakes (vitest gives each test file its own copy of the module). The wait has its own tests.
@@ -62,8 +62,9 @@ function scene(
   };
 }
 /** A sim with her standing at lantern `at` (if given) carrying `glints`. */
+// (`waking`: the burrbacks here walk while she stands spent at a light; giving round 3.)
 function sim(sc: Scene = scene(), glints = 0, at?: number): Sim {
-  const s = newSim(sc);
+  const s = newSim(sc, waking());
   s.state.pickups.count = glints;
   if (at !== undefined) s.place(at, FLOOR);
   return s;
@@ -825,7 +826,7 @@ describe('the heart', () => {
 });
 
 describe('the ending', () => {
-  function ended(enemies: EnemySpawn[] = [], t = cloneTuning(defaultTuning)) {
+  function ended(enemies: EnemySpawn[] = [], t = waking()) {
     const s = newSim(scene({ enemies }), t);
     lightAll(s);
     s.place(HEART_X + 150, FLOOR);

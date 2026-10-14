@@ -108,6 +108,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning): EnemyState {
     gift: 0,
     gifts: 0,
     aware: 0,
+    dozing: false,
     spill: 0,
     spillTimer: 0,
     spillGap: 0,
@@ -251,10 +252,9 @@ export function updateEnemies(
     // holds at its last frame while she stays on its ground (near its home): it ends only once she has
     // left. A player who slides back down the shaft is not taxed again.
     if (e.gift > 0) {
+      // (Sideways only, at any height (round 3): climbing the shaft over burr-shaft is staying.)
       const dx = p.x + p.w / 2 - e.homeX;
-      const dy = p.y + p.h / 2 - e.homeY;
-      const stay = t.giving.giftStayPx;
-      const near = p.hp > 0 && p.faded === 0 && dx * dx + dy * dy <= stay * stay;
+      const near = p.hp > 0 && p.faded === 0 && Math.abs(dx) <= t.giving.giftStayPx;
       if (e.gift > 1 || !near) e.gift--;
       e.calm = Math.max(e.calm, e.gift);
     }

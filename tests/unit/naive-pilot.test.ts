@@ -76,6 +76,8 @@ interface Run {
   closestOnGround: Record<string, number>;
   /** The first frame she came within 130 px (box to box, on its ground) of each burrback: her wallet then, and whether it was aware of her. */
   firstNear: Record<string, { f: number; wallet: number; aware: boolean }>;
+  /** Creatures that slept as she passed (`EnemyState.dozing`, round 3), with the first frame. */
+  dozed: Record<string, number>;
   /** Where she stood at the end (feet). */
   end: { x: number; y: number };
 }
@@ -108,6 +110,7 @@ function naive(
   const closest: Record<string, number> = {};
   const closestOnGround: Record<string, number> = {};
   const firstNear: Run['firstNear'] = {};
+  const dozed: Run['dozed'] = {};
   /** Frames left of a hop over a burrback (`pass`). */
   let vault = 0;
   const timeline: string[] = [];
@@ -433,6 +436,7 @@ function naive(
     const b = s.state.player;
     for (const e of s.state.enemies) {
       if (e.mode === 'dead') continue;
+      if (e.dozing && dozed[e.id] === undefined) dozed[e.id] = f;
       const dx = Math.max(e.x - (b.x + b.w), b.x - (e.x + e.w), 0);
       const dy = Math.max(e.y - (b.y + b.h), b.y - (e.y + e.h), 0);
       const gap = Math.round(Math.hypot(dx, dy));
@@ -463,6 +467,7 @@ function naive(
     closest,
     closestOnGround,
     firstNear,
+    dozed,
     end: feet(s),
   };
 }
@@ -679,6 +684,8 @@ describe('giving: carrying light makes her seen; offering is a way through (memo
       // one braces at a carrier (`burrback.strikePx`, box to box).
       for (const id of PATH)
         expect(r.closestOnGround[id] ?? 1e9, `${hand}: ${id}`).toBeLessThan(defaultTuning.burrback.strikePx);
+      // Round 3: each slept as she came (it stands still: the difference is behaviour, not only a look).
+      for (const id of PATH) expect(r.dozed[id], `${hand}: ${id} slept`).toBeGreaterThanOrEqual(0);
     }
   });
 
@@ -758,6 +765,10 @@ describe('giving: carrying light makes her seen; offering is a way through (memo
     expect(near).toBeDefined();
     expect(near?.wallet ?? 99).toBeLessThan(defaultTuning.giving.seen1);
     expect(near?.aware).toBe(false);
+    // Round 3: it slept as she came, dark, before she cut it.
+    const cutAt = r.events.find((e) => e.type === 'enemyHit' && e.id === 'burr-path');
+    expect(r.dozed['burr-path']).toBeGreaterThanOrEqual(0);
+    expect(cutAt).toBeDefined();
     // (She cuts what is in her way: it knows her after that. Before her first cut it never saw her.)
     const cut = r.events.findIndex((e) => e.type === 'enemyHit' && e.id === 'burr-path');
     const sawFirst = r.events.findIndex((e) => e.type === 'enemyAware' && e.id === 'burr-path');

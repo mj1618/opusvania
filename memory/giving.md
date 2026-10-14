@@ -13,6 +13,37 @@ Tests: `tests/unit/giving.test.ts` (rules, the lamp-glade case), `naive-pilot.te
 laying ghost, hoarder, offer pilots). **Round 2 (after memory/playtest-giving.md) is the section below; where it
 contradicts the older text further down, round 2 wins.**
 
+## Round 3 (2026-10-14, after playtest-giving round 2)
+- **`player.offerTarget`** (`{kind, id}` | null, `markOfferTarget` at the end of every step): what a press would land
+  on this frame, by the offer's own rules (null: empty hands, out of control, the run over, nothing in reach). The
+  HUD's V cap (`hud/prompts.ts`) shows only while it is a creature that is aware of her: a press under the cap
+  always lands (test: every 3rd frame of the lamp-glade staging). A showing = the cap rising from nothing; after
+  `offerShows` 5 unanswered (no `offer` / `offerMiss` between) it rests until her next `fade`. (Was: armed by an
+  `enemyAware` within 260, shown while any creature within 340 was aware: the curious bot pressed under it twice
+  and missed, lamp-f3 had already given up.)
+- **The calm holds through the shaft**: "her ground" is `|her x - its home x| <= giftStayPx` (520) at ANY height.
+  Staged: gift burr-shaft, 11 s at the summit (3700, 192) or the ledge (3000, 448), back on the floor: still calm,
+  not aware. The pilots now pay burr-shaft again only after the ember fetch (she went 1900 px west: really gone).
+  Not chosen: "until she lights the next light" (it would also hold through the climb, but a player who buys no
+  lamp and is short at the crown keeps a calm for the whole grove; side-to-side distance reads as "its ground").
+- **An unseen burrback sleeps** (`EnemyState.dozing`, `burrback.dozePx` 340): she is within 340 px (centres), carries
+  less than `seen1`, and it is not in a fight (not roused, stirred, braced, curled, shoved): it stands where it is,
+  no patrol, no rest schedule; it wakes the step she carries 2. Seen-but-not-yet-aware (a carrier 250 px off) still
+  patrols: a sleep there stopped every staged fight's approach. The natural tapper finds burr-path asleep (1 glint)
+  before she cuts it; the ghost finds all three road burrbacks asleep. Tests of lanterns / sanctuary that watch a
+  burrback walk while she stands spent use `waking()` (helpers.ts: `dozePx` 0).
+- **The bluff's west end holds no glint**: `pool-1, pool-2` moved to the terrace (2905 / 2965, 1110); `pool-3` stays
+  over the east lip (2652, 955). A ghost coming back west no longer lights up right over burr-path's ram.
+- For render: `e.dozing` (draw the sleep: shut lids, no stride: `stride` stops), `player.offerTarget`.
+
+| pilot | time | hits / fades | notes |
+|---|---|---|---|
+| natural tapper / holder | 50.0 / 57.6 s | 6 / 2, 6 | burr-path asleep at wallet 1 before her cut |
+| giver tapper / holder | 38.7 / 47.3 s | 1 / 0 | burr-shaft paid once per visit (again only after the ember fetch) |
+| ghost (no glints), 3 hands | 23.6-27.9 s to the heart | 0 | all three road burrbacks slept as she passed; never noticed |
+| laying ghost tapper / holder | 36.9 s / finishes | 1-2 / 0 | |
+| careful reader | 60.5 s | 2 / 0 | unchanged |
+
 ## Round 2 (2026-10-14, after playtest-giving)
 - **Teach by contrast, in the level**: `pool-1..3` moved onto the bluff's top (2452 / 2496, 918; 2652, 955 over its east
   lip) and `pool-arc-1..5` down its east side to the terrace (2660-2855): she wakes none of them before burr-path.

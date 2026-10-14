@@ -4,7 +4,7 @@ import type { SimEvent } from '../../src/sim/events';
 import { cloneState, hashState, lampCost, lanternCost, step } from '../../src/sim/index';
 import type { EnemySpawn, Lantern, Scene } from '../../src/sim/scene';
 import { defaultTuning } from '../../src/sim/tuning';
-import { feet, flatScene, newSim, type Sim } from './helpers';
+import { feet, flatScene, newSim, type Sim, waking } from './helpers';
 
 // These rule tests were written before the heart's wake had a length: here it is ready the step
 // after it wakes (vitest gives each test file its own copy of the module). The wait has its own tests.
@@ -44,8 +44,9 @@ function scene(o: { enemies?: EnemySpawn[]; lamps?: Lantern[]; lanterns?: Lanter
     pickups: [],
   };
 }
+// (`waking`: the burrbacks here walk while she stands spent at a light; giving round 3.)
 function sim(sc: Scene, glints: number, at?: number): Sim {
-  const s = newSim(sc);
+  const s = newSim(sc, waking());
   s.state.pickups.count = glints;
   if (at !== undefined) s.place(at, FLOOR);
   return s;
@@ -123,7 +124,8 @@ describe('a dormant lantern notices her', () => {
     const b = sim(scene({ lanterns: [] }), 3, LANTERN_X - 600);
     a.run('R120 L60 .20');
     b.run('R120 L60 .20');
-    expect(a.state.player).toEqual(b.state.player);
+    // (Bar what an offer would land on: the lantern is something to give to.)
+    expect({ ...a.state.player, offerTarget: null }).toEqual({ ...b.state.player, offerTarget: null });
     expect(a.state.pickups).toEqual(b.state.pickups);
     const c = sim(scene(), 3, LANTERN_X - 600);
     c.run('R120 L60 .20');

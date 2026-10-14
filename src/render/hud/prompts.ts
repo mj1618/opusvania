@@ -12,10 +12,10 @@
  *    before the old 24), the same cap, TAPPED, with a small stroke up and away from the bark. Gone
  *    for good after her first wall jump. (Walls that take no kick give no slide: the sim's `kick: false`.)
  *  - the offer (memory/giving.md; playtest-giving: nothing in the world prompted V, the natural run
- *    never pressed it): the first time a creature becomes aware of her (`enemyAware`) within
- *    `offerPx` while she carries light, the offer key's cap, TAPPED, beside her, as long as a creature
- *    near her is aware of her and she has something to give; gone for good once a gift has landed
- *    (`enemyGift`).
+ *    never pressed it): the offer key's cap, TAPPED, beside her, while a press would land on a
+ *    creature that is aware of her (the sim's `player.offerTarget`: round 3, so a press never meets
+ *    "nothing in reach"). Gone for good once a gift has landed (`enemyGift`); after `offerShows`
+ *    showings with no press she is not nagged again until her next fade.
  *
  * "For good" is kept in localStorage (try / catch: private windows have none). In `?manual` (the
  * capture tools, the tests) nothing shows and the storage is not touched, so shots stay clean;
@@ -54,9 +54,8 @@ export const PROMPTS = {
    * side only: [x from, x to, the summit's y]. Scene data by hand: if trunk A or B moves, move it.
    */
   shafts: [[3328, 3584, 192]],
-  /** The offer's lesson: armed by an `enemyAware` this near her (centre to centre, px); shown while one this near is aware of her. */
-  offerPx: 260,
-  offerNearPx: 340,
+  /** The offer's lesson: showings with no press between them before it rests until her next fade. */
+  offerShows: 5,
   /** The kick's cap is drawn this much larger than the glide's (27 px at 1920 was small). */
   kickScale: 1.28,
   /** Frames of one wall slide before the kick's key shows. */
@@ -190,13 +189,11 @@ function inChimney(sim: SimView, px: number, below: number): boolean {
   return false;
 }
 
-/** A living creature within `px` of her (centres) is aware of her (`EnemyState.aware`) and not calmed. */
-function awareNear(sim: SimView, px: number): boolean {
-  const p = sim.player;
-  for (const e of sim.enemies ?? []) {
-    if (e.mode === 'dead' || e.gone || !(e.aware > 0) || e.calm > 0) continue;
-    if (Math.hypot(e.x + e.w / 2 - p.cx, e.y + e.h / 2 - p.cy) < px) return true;
-  }
+/** A press of offer would land on a creature now (`player.offerTarget`), and it is aware of her. */
+function giftReady(sim: SimView): boolean {
+  const to = sim.player.offerTarget;
+  if (!to || (to.kind !== 'burrback' && to.kind !== 'lampwing')) return false;
+  for (const e of sim.enemies ?? []) if (e.id === to.id) return e.aware > 0;
   return false;
 }
 
@@ -226,8 +223,10 @@ export class Prompts {
   private key = 'KeyZ';
   /** The offer key she last pressed; V until she has pressed one. */
   private offerKey = 'KeyV';
-  /** A creature has become aware of her near, while she carried light: the offer's lesson is due. */
-  private offerDue = false;
+  /** Showings of the offer's cap since her last press; at `offerShows` it rests (`offerRest`) until she fades. */
+  private offerShown = 0;
+  private offerRest = false;
+  private offerWas = false;
   private shownKey = '';
   private frame = -1;
   private fall = 0;
@@ -299,7 +298,8 @@ export class Prompts {
     this.taught.glide = false;
     this.taught.kick = false;
     this.taught.offer = false;
-    this.offerDue = false;
+    this.offerShown = 0;
+    this.offerRest = false;
     this.save();
   }
 
@@ -331,7 +331,11 @@ export class Prompts {
       } else if (e.type === 'fall') this.ranOff = dropUnder(sim, P.aheadFrames, true) > P.dropPx;
       else if (e.type === 'jump') this.ranOff = false;
       else if (e.type === 'enemyGift') this.learn('offer');
-      else if (e.type === 'enemyAware' && e.px <= P.offerPx && sim.pickups.count >= 1) this.offerDue = true;
+      else if (e.type === 'offer' || e.type === 'offerMiss') this.offerShown = 0;
+      else if (e.type === 'fade') {
+        this.offerShown = 0;
+        this.offerRest = false;
+      }
     }
     if (p.grounded) this.ranOff = false;
     const df = this.frame < 0 || sim.frame < this.frame ? 0 : Math.min(4, sim.frame - this.frame);
@@ -346,14 +350,7 @@ export class Prompts {
     let want: Lesson | null = null;
     if (this.enabled && hudLink.on) {
       if (!this.taught.kick && this.slide >= P.slideFrames) want = 'kick';
-      else if (
-        !this.taught.offer &&
-        this.offerDue &&
-        free &&
-        sim.pickups.count >= 1 &&
-        awareNear(sim, P.offerNearPx)
-      )
-        want = 'offer';
+      else if (!this.taught.offer && !this.offerRest && free && giftReady(sim)) want = 'offer';
       else if (
         !this.taught.glide &&
         falling &&
@@ -365,6 +362,15 @@ export class Prompts {
       )
         want = 'glide';
     }
+    // A new showing of the offer's cap; after `offerShows` of them unanswered it rests until a fade.
+    // (A showing = the cap coming up from nothing: a flicker of the target inside one does not count.)
+    if (want === 'offer' && !this.offerWas && (this.lesson !== 'offer' || this.alpha <= 0.003)) {
+      if (this.offerShown >= P.offerShows) {
+        this.offerRest = true;
+        want = null;
+      } else this.offerShown++;
+    }
+    this.offerWas = want === 'offer';
     // The glide's key goes the instant she lands (it used to linger 1.3 s over nothing).
     if (this.lesson === 'glide' && (p.grounded || p.mode === 'wallSlide')) {
       this.linger = 0;

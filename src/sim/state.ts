@@ -141,6 +141,13 @@ export interface PlayerState {
   offerBuf: number;
   offerCd: number;
   offerHold: number;
+  /**
+   * What a press of offer would land on THIS frame (the same rules as the offer: `offerTarget` in
+   * src/sim/giving.ts), `{kind: burrback | lampwing | lantern | lamp | heart, id}`, or null (nothing in
+   * reach, empty hands, out of control, the run over). Set at the end of every step. The HUD's offer
+   * cap shows only while this is a creature (a press never meets "nothing in reach").
+   */
+  offerTarget: { kind: string; id: string } | null;
   /** The flight of the glint now in the air, frames in all (`giftTimer` counts it down): 3 to a lampwing after her, 8 to a light, 10 to a creature. */
   giftFrames: number;
   /** Last safe ground (feet centre): where she re-forms. `safeFrames` = frames in a row on safe ground. */
@@ -432,6 +439,12 @@ export interface EnemyState {
    * it is calmed. Render: a lifted head, a turned eye; the HUD: "she is seen".
    */
   aware: number;
+  /**
+   * Burrback: it sleeps where it stands (round 3, memory/giving.md): she is within `burrback.dozePx`
+   * and carries too little light to be seen, and it is not in a fight with her. It does not patrol
+   * meanwhile; it wakes the step she carries light again (or leaves, or cuts it).
+   */
+  dozing: boolean;
   /** Glints spilled on death still on their way to her, frames to the next, and the gap between them. */
   spill: number;
   spillTimer: number;

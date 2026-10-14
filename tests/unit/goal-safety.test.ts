@@ -5,7 +5,7 @@ import { dropGlints } from '../../src/sim/pickups';
 import type { EnemySpawn, Lantern, Scene } from '../../src/sim/scene';
 import type { EnemyState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning, type Tuning } from '../../src/sim/tuning';
-import { feet, flatScene, newSim, type Sim } from './helpers';
+import { feet, flatScene, newSim, type Sim, waking } from './helpers';
 
 // These rule tests were written before the heart's wake had a length: here it is ready the step
 // after it wakes (vitest gives each test file its own copy of the module). The wait has its own tests.
@@ -47,7 +47,8 @@ const scene = (enemies: EnemySpawn[] = [], lanterns: Lantern[] = one): Scene => 
   heart: { x: 3600, y: FLOOR },
   enemies,
 });
-function sim(sc: Scene, glints = 0, at?: number, t: Tuning = cloneTuning(defaultTuning)): Sim {
+// (`waking`: the burrbacks here walk round her lights while she stands there spent; giving round 3.)
+function sim(sc: Scene, glints = 0, at?: number, t: Tuning = waking()): Sim {
   const s = newSim(sc, t);
   s.state.pickups.count = glints;
   if (at !== undefined) s.place(at, FLOOR);
@@ -98,7 +99,7 @@ describe('calm: a calmed creature cannot hurt her', () => {
 
   it('the playtest case: a burrback on top of her as the lantern catches never hurts her again there', () => {
     // It stands inside her at the lantern (the first frame it could still hurt is spent by her safety).
-    const t = cloneTuning(defaultTuning);
+    const t = waking();
     const s = sim(scene([burr(X + 20, 1)]), 12, X, t);
     s.state.player.invuln = 2;
     const ev = s.run('.600');

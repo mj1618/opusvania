@@ -324,6 +324,8 @@ export const defaultTuning = {
      * (memory/giving.md: 165 / 220 / 264 / 319 px at levels 1-4; never while she carries nothing).
      */
     noticePx: 220,
+    /** Round 3 (giving.md): an unseen burrback sleeps where it stands while she is within this (centres, px). */
+    dozePx: 340,
     /** Frames it stands still when it turns round at a ledge or a wall. */
     turnPauseFrames: 24,
     /** The same when it shies from a lit lantern's light or from an edge she is under: a longer beat, room for the flinch. */
@@ -730,7 +732,8 @@ export const defaultTuning = {
     /**
      * What one glint buys a creature: `giftCalmFrames` of calm (`EnemyState.gift` counts them down:
      * the warmth fades), and then on for as long as she stays on its ground (her body centre within
-     * `giftStayPx` of its home: it holds at 1); it ends once she has left (rule 3: once she warms
+     * `giftStayPx` of its home SIDEWAYS, at any height: the shaft climb above it counts as staying;
+     * it holds at 1); it ends once she has left (rule 3: once she warms
      * one, it knows her; a player who slides back down the shaft is not taxed again). A burrback
      * first stands lowered `giftStandFrames`.
      */

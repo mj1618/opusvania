@@ -5,7 +5,7 @@
  */
 import { contactDamage, createEnemies, enemyTouched, resetEnemies, updateEnemies } from './enemies';
 import type { SimEvent } from './events';
-import { updateOffer } from './giving';
+import { markOfferTarget, updateOffer } from './giving';
 import { createGoal, goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
 import type { InputFrame } from './input';
 import { createPickups, dropGlints, updateDrops, updatePickups } from './pickups';
@@ -120,6 +120,7 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
   updateDrops(state, t.pickups, events);
   updateGoal(state, scene, t, input, events, first);
   markSeen(state, t);
+  markOfferTarget(state, scene, t, goalHolds(state.goal, t.goal));
   state.prevInput = input;
   state.frame++;
 }

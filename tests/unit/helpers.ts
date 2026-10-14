@@ -59,6 +59,17 @@ export function carrying(s: Sim, n = LIGHT): Sim {
   return s;
 }
 
+/**
+ * The default tuning with the burrback's sleep off (`burrback.dozePx` 0: giving round 3). For tests of
+ * lanterns and sanctuary that watch a burrback walk while she stands empty-handed after a kindle (an
+ * unseen burrback within 340 px would sleep where it stands). giving.test.ts tests the sleep itself.
+ */
+export function waking(): Tuning {
+  const t = cloneTuning(defaultTuning);
+  t.burrback.dozePx = 0;
+  return t;
+}
+
 /** `newSim` with `LIGHT` glints in her hands (staged fights: the creatures must be able to see her). */
 export function litSim(scene: Scene = GROVE, t: Tuning = cloneTuning(defaultTuning), n = LIGHT): Sim {
   return carrying(newSim(scene, t), n);
