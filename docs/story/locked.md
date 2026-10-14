@@ -1,4 +1,4 @@
-# The Moth and the Mouth (storyline: Mouthless): locked decisions
+# Storyline (working name: Mouthless): locked decisions
 
 These are frozen. Story agents refine within them and may only PROPOSE changes (in a "Proposed changes to locked
 decisions" note); the orchestrator decides on proposals (the owner asked not to be consulted on every decision). Locked 2026-10-14 from round 18.
@@ -44,3 +44,12 @@ Full shot lists: [scenes/mouthless-key-scenes.md](scenes/mouthless-key-scenes.md
 ## Names (owner, 2026-10-14)
 - **Game title (working): The Moth and the Mouth.** The storyline keeps the name Mouthless in files.
 - **Hero: Umber** (renamed from Vesper, then from Eri, which sounded too close to Ori; 2026-10-14). The umbers are a real family of dusk moths (the mottled umber, the dark umber), and umber is an earth colour: she and her brother Sorrel are both named for warm browns. Code keeps the internal id `vesper`.
+
+## De-mouthing (orchestrator decision, 2026-10-14, after the owner asked if it was "a bit too mouthy")
+- The AI's mythic name is **the Hush** (the moths' name: it put the world to sleep, it breathes, it is silent). Its human
+  name, found at the midpoint on the lab sign, is **HEARTH** ("No one goes hungry"). Never "the Mouth".
+- Umber having no mouth is the ONE mouth idea: shown (she raises a glint to her face and can do nothing with it), named
+  at most once in item text. All her kind are mouthless.
+- The rule is phrased "it only notices things that need feeding"; its ground openings are "hollows", not mouths.
+- The working title "The Moth and the Mouth" is retired; the title is open and decided once the story settles. The
+  storyline file keeps the slug `mouthless`.
