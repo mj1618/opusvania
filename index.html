@@ -31,12 +31,39 @@
         font: 12px/1.4 ui-monospace, monospace;
         color: #8890a4;
         pointer-events: none;
+        transition: opacity 1.2s ease;
+      }
+      #hint.quiet {
+        opacity: 0;
       }
     </style>
   </head>
   <body>
     <div id="app"></div>
-    <div id="hint">arrows/WASD move · Z/Space jump (again in air: somersault · hold while falling: glide) · X/Shift dash · C attack (with ↑ or ↓ · ↓ on a target bounces) · R restart</div>
+    <div id="hint">arrows/WASD move · Z/Space jump (again in air: somersault · hold while falling: glide) · X/Shift dash · C attack (with ↑ or ↓ · ↓ on a target bounces) · R restart · H keys</div>
+    <script>
+      // The key legend shows at start, fades once the player has been playing a while, and returns on H.
+      (() => {
+        const hint = document.getElementById('hint');
+        let quietTimer = 0;
+        const quietSoon = () => {
+          clearTimeout(quietTimer);
+          quietTimer = setTimeout(() => hint.classList.add('quiet'), 12000);
+        };
+        let started = false;
+        addEventListener('keydown', (e) => {
+          if (e.key === 'h' || e.key === 'H') {
+            hint.classList.remove('quiet');
+            quietSoon();
+            return;
+          }
+          if (!started) {
+            started = true;
+            quietSoon();
+          }
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

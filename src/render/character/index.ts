@@ -78,6 +78,8 @@ export class CharacterRenderer {
   }
 
   /** A short on-screen label: which design this is and which number key selects each. */
+  private labelTimer = 0;
+
   private announce(def: SkinDef): void {
     if (typeof document === 'undefined') return;
     // Not in manual mode: the capture tools boot with ?manual and must get a clean frame.
@@ -90,6 +92,12 @@ export class CharacterRenderer {
         'position:fixed;right:10px;top:6px;font:11px/1.4 ui-monospace,monospace;color:#8890a4;opacity:0.55;pointer-events:none';
       document.body.appendChild(el);
     }
+    el.style.transition = 'opacity 1s ease';
+    el.style.opacity = '1';
+    clearTimeout(this.labelTimer);
+    this.labelTimer = window.setTimeout(() => {
+      if (el) el.style.opacity = '0';
+    }, 2500);
     el.textContent = this.skins
       .map((s, i) => `${i + 1} ${s.id === def.id ? `[${s.name}]` : s.name}`)
       .join(' · ');
