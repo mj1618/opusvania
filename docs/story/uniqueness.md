@@ -12,7 +12,7 @@ ours is at least that far from its nearest neighbour on each axis.
 | Tone | tender, tearjerking | melancholy, eerie, lore-dense | intense, dramatic, moral | tender + eerie: Ori's heart in a world as strange as Nine Sols' | blend | medium |
 | How the story is told | wordless prologue + narrator | almost all lore in places and items | cutscenes, dialogue, a found family | wordless, mythic surface, truth found in places at the midpoint | HK | medium |
 | Real-world hook | none | none | Taoist myth | Cortical Labs: brains grown on chips, a real company | none | **far** |
-| Signature mechanic | movement flow (Bash) | the nail, pogo, charms | parry and talismans | carrying light makes you seen; giving (Offer) is the final weapon; empty-handed you slip through | none | far (if built) |
+| Signature mechanic | movement flow (Bash) | the nail, pogo, charms | parry and talismans | carrying light makes you seen; giving (Offer) is the final weapon; empty-handed you slip through | none | far (in the sim since 2026-10-14; not yet drawn) |
 | Combat today | platforming-first | nail combo, pogo, benches | parry-heavy | thorn slash combo, pogo, lantern rest points | HK | **close** |
 | Structure today | restore three lights / elements | kill three dreamers to open the way | kill the nine Sols | light three lanterns to wake a heart | Ori and HK | **close** |
 
@@ -47,3 +47,6 @@ If the game *plays* like giving, it will feel like no other metroidvania; if it 
 **Recommendation:** keep the story and world as they are; before building more, redesign the core loop around giving
 (the four bullets above) and vary the "light N things" structure (for example, the lanterns are given, not conquered,
 and the second act's goal is a person, not a count).
+
+## Update 2026-10-14
+The giving loop is now in the sim (commit dfe65ad, memory/giving.md): the seen level scales with the wallet, empty-handed she is unseen and unharmed, Offer calms a burrback for 10 s, and rest costs glints. A ghost pilot reaches the heart with 0 hits and 0 pickups. Next: draw it so players feel it.
