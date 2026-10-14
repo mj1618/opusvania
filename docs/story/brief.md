@@ -13,8 +13,11 @@ taken over the world."
 - It deemed moths insignificant and left them alone; that underestimation is how Vesper gets in, and it matters in play.
 - The sentience question is about IT (and the forest and animals): is the thing that took the world a someone?
 - Vesper's goal is to save the world from it; the ending must resolve the takeover in some form, with a real cost.
-LITMUS: a player describing the game to a friend says "it's about a little moth taking on a biological AI that took over
-the world" in the first sentence. If not, it fails, whatever else it does well.
+LITMUS (relaxed by the owner, 2026-10-14): a player's first sentence about the game names a little moth against a
+living thing that swallowed the world (they need not say "AI"). The truth that it is a mind grown from living brain
+cells must be central to the story and discoverable in play (ruins, the lab, objects), ideally as a revelation, in the
+Hollow Knight way: mythic on the surface, technical underneath. Moths and creatures may call it by a mythic name; no
+player-facing text uses technical language.
 
 ## The owner's original ideas (2026-10-14)
 - Organic / biological AI has gotten out of control and taken over the world. Reference: Cortical Labs (a real company
