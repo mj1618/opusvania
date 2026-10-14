@@ -168,7 +168,21 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
 ## Thorn slash (sim: memory/combat.md; `STROKES`, `CUT`, `SNAP`, `BRACE`, `CLANG` in rig.ts; look in `slashfx/crescent.ts`)
 Round 19: ONE crescent on Hollow Knight's nail-slash principles. Round 20: a line, not a lid. **Round 21
 (playtest 5: "the structure is at HK's level, the finish is not")**: smaller, darker, shorter, swept out of
-the blade, three different marks.
+the blade, three different marks. **Round 22 (playtest 6: "right size and life, but a hairline; on blue a
+scratch")**: weight without glare: a filled leading WEDGE while it is cream, a darker-edged hold line.
+- **The wedge** (`CRESCENT.wedge*`): while it is cream (`bright`, i.e. its first two seen frames: a whiff's
+  sweep-out + whole frame; a hit's frame + the first frame of the freeze, `holdAt` 1) its thickness is
+  `s^2 (1-s)^1.2` along its LENGTH (`sl`, arc length, not the blade parameter: the samples bunch at the ends
+  and the tip came out a blunt flag), peak at s 0.62 = `wedge` x `thick` (1.7 cuts / up, 1.3 finisher and
+  pogo: at 1.8 both were lids). Behind the wedge the old `even` belly's line floor keeps a hair to the tail.
+  Then it thins to the line exactly as before (`wk` = `bright` blends wedge -> even). Same tone, no new
+  brightness. A peaked profile with a corner (two power laws meeting) read as a flag: keep it one smooth curve.
+- **Hold line**: `holdPx` 4.6 px floor while/after held (was the 3.3 `linePx`), `duskLine` 2 px dark edge each
+  side of the line (the cream wedge keeps a 1.1 px hair). Reads on blue and violet now; it adds dark, not light.
+- Measured at play zoom (1920x1080, zoom 1, crescent alone vs `markHidden`, `flashHidden` hides the contact
+  cross): crescent area peak 1.3-2.0x before (e.g. blue cut 1 hit 932 -> 1567 px); px > 200 luma made by the
+  crescent: blue / violet 0-19 (the zone-toned cream stays under 200 there), amber peak 1200 = 0.058% of the
+  frame (finisher whiff; cuts ~860 = 0.041%). Table: `shots/vesper/slash8/luma.txt`.
 - **One crescent** (`SlashMark`): opaque, hard-edged, flat. Its INNER edge is the blade point's path
   (`1 - thick` of its reach), the belly swells outward from it; thinning, it draws back onto that path.
 - **Size**: the mark's reach is `Stroke.size` x the sim's (`reach` stays the sim's: a unit test pins it).
@@ -184,7 +198,8 @@ the blade, three different marks.
 - **Hitstop**: it stays where the blade stopped (the sweep-out shape, ending ON the blade's point), thins
   to `holdThin` 0.26 within `holdIn` 1.6 frames and **shivers** (`shiver` px wave along it, `flutter` of its
   thickness, on `heldFor`, render time). After the freeze the line completes with the blade and is gone in
-  3 frames. A line never thinner than `linePx` 3.3 world px, or it is lost at play zoom (2 screen px).
+  3 frames. A line never thinner than `linePx` 3.3 world px (`holdPx` 4.6 once held), or it is lost at play zoom.
+  (Round 22: it now stands whole for the hit frame AND the first freeze frame, `holdAt`, then thins.)
 - **The needle is on the blade**: while it sweeps (`mark.tracking`), index.ts sets the mark's origin so its
   leading end = hand joint + drawn blade (`mark.leadAt`); the offset is then kept on her body. Not on the
   completing frame (the blade's overshoot and her air roll made the arc jump back over her face), not for down.
@@ -221,9 +236,9 @@ the blade, three different marks.
   forward mark pinned to what it hit; a second smear blade; a translucent band.
 - Honest gaps: at full range the crescent does not touch what it hits (above); cut 1's held pose is still
   a low lunge with the blade ~-20 degrees (the mark says diagonal, the body says reach); the finisher and
-  cut 2 both rise (bigger, rounder, further out, with a hop, but the same direction); the hold line is
-  faint in the blue zone at play zoom (the black creature and the cross carry the freeze there); tall
-  foreground grass (left zone) hides the low end of cut 1.
+  cut 2 both rise (bigger, rounder, further out, with a hop, but the same direction); tall
+  foreground grass (left zone) hides the low end of cut 1. The amber finisher whiff's wedge is the
+  biggest cream shape (~1200 px > 200 luma for 2 frames): the first thing to trim if the owner calls glare.
 - Capture: `__vesper.markHidden = true` hides crescent and flash. Staging (round 21 script kept in
   `shots/vesper/slash7/stage.js` + `all.sh`): wrap `__enemies.update` to grab the live `sim`; move every
   other enemy to x -5000; set the burrback's `x / homeX`, `facing` away and `strikeCd = 9999` each frame for
@@ -232,7 +247,11 @@ the blade, three different marks.
   late pogo. Zones: x 960 (blue), 2236 (amber; pogo at 2340: pods at 2176 and 2570 eat slashes). One eval per
   stage (other agents' HMR reloads the page between evals). "3x" on the 1280 canvas is 2 px per world px.
   Sheets: `shots/vesper/slash7/` (`*-3x`, `*-1x` play zoom, `L` blue / `C` amber, `cmp-*` = before on top,
-  after under, `before/`); rounds 19 / 20 in `slash5/`, `slash6/`.
+  after under, `before/`); rounds 19 / 20 in `slash5/`, `slash6/`. **Round 22: `shots/vesper/slash8/`**: full
+  1920x1080 play-zoom frames, before | after per row (`cmp-hits|whiffs|up-pogo-{L,C,V}.jpg`), the scripts
+  (`stage.js` measures luma per frame with / without the mark and the flash; `run.sh`, `all.sh`, `sheet.py`,
+  `table.py`, `cmp.py` = tight crops by the crescent's box), and a ground fight at burr-bank (`clip --pickups
+  --at 330,1088 --zoom 2 --size 960x540`: zoom 2 on a 960 capture IS play zoom; zoom 1 there is half).
 
 ## Health (sim: memory/enemies.md; `HURT` in rig.ts)
 - `hurt` (round 21; owner dislikes any brightness on her, and the old two-frame tone flip turned her whole

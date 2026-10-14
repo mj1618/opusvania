@@ -5,14 +5,16 @@
  *
  * The crescent's inner edge is the path the blade's point travels; its outer edge swells from
  * that path out to its reach. It SWEEPS out of the blade: on the first active frame it is drawn
- * only as far as the blade has got, thickest near the blade end; on the next it is whole (needle,
- * belly, needle) with its leading needle on the blade's point; then it thins to a line and is gone:
+ * only as far as the blade has got, thickest near the blade end; on the next it is whole, with its
+ * leading needle on the blade's point. On those two cream frames its body is a filled wedge in the
+ * leading part (its weight at play zoom), a hair behind; then it thins to a line and is gone:
  * four frames (five on the finisher). In hitstop it stays where the blade stopped, thins to a dim
  * line within two frames and shivers. About one of her heights tall, never the brightest thing on
  * screen for more than two frames. Every cut is this one shape on a different arc.
  *
  * Flat tones only: a pale cool cream while it is whole, a dim lilac once it is a line, a hair of
- * dusk round it so it keeps its edge on a pale backdrop. No glow, no gradient, nothing left in the air.
+ * dusk round it so it keeps its edge on a pale backdrop (wider round the line: on the dark blue and
+ * violet sides the dark edge, not more light, is what keeps the line from being a scratch). No glow, no gradient, nothing left in the air.
  */
 import { lerp, sat } from '../../hooded/math';
 import type { Painter, RGB } from '../paint';
@@ -40,18 +42,40 @@ export const CRESCENT = {
   retreat: 0.5,
   /** Once it is thinner than this (px at the belly) it stays this thick until it is gone: a line that reads at play zoom. */
   linePx: 3.3,
+  /**
+   * Its weight (playtest 6: at play zoom the whole crescent was a 1-2 px outline): while it is cream
+   * (the first two frames it is seen; a hit's frame and the first frame of the freeze) its body is a
+   * WEDGE in the leading part, not an even belly: s^tail (1-s)^tip along its length, so thickest
+   * tail / (tail + tip) of the way along (~0.62), tapering to the needle on the blade, a hair that
+   * thickens slowly behind (one smooth curve: a peak with a corner read as a flag). Peak `wedge` x the
+   * stroke's belly (less on the finisher, already a big round mark, and on the pogo's short bowl: at
+   * 1.8 both were lids). The same cream, more of it where the eye is: weight, not glare.
+   */
+  wedge: 1.7,
+  wedgeHeavy: 1.3,
+  wedgeDown: 1.3,
+  wedgeTail: 2,
+  wedgeTip: 1.2,
   /** The inner line: px wide at the belly, and never more than this fraction of the thickness. */
   line: 1.6,
   lineMax: 0.2,
-  /** The dusk hair round it, px. */
-  dusk: 1,
+  /**
+   * The dusk hair round it, px: round the cream wedge, and round the line it thins to (wider: on the
+   * blue and violet sides a dim lilac line is near the backdrop's value, a dark edge keeps it apart).
+   */
+  dusk: 1.1,
+  duskLine: 2,
   /**
    * In hitstop it does not stand there whole over what it hit: over `holdIn` frames of the freeze it
    * thins to `holdThin` of its belly (a line that ends on the blade, not a lid on the target), and
    * shivers: `shiver` px along its length, `flutter` of its thickness.
    */
   holdThin: 0.26,
+  /** Frames of the freeze it still stands whole (the blow's frame + this = its two cream frames), then frames it takes to thin. */
+  holdAt: 1,
   holdIn: 1.6,
+  /** Held, the line is never thinner than this (px): the freeze is the longest it is seen. */
+  holdPx: 4.6,
   shiver: 1.3,
   flutter: 0.22,
   /** A cut that glanced off: what is left of the crescent, as a fraction of its arc and of its belly. */
@@ -86,6 +110,8 @@ function toneFor(pale: number): number {
 export class SlashMark {
   private readonly ux = new Float32Array(CRESCENT.n);
   private readonly uy = new Float32Array(CRESCENT.n);
+  /** Where each sample of the drawn span lies along it by length, 0..1 (the wedge is laid out on this). */
+  private readonly sl = new Float32Array(CRESCENT.n);
   private cut: CutInfo = {
     dir: 'fwd',
     step: 1,
@@ -260,9 +286,12 @@ export class SlashMark {
     }
   }
 
+  /** For capture tools: draw the crescent without the contact flash (to measure the crescent alone). */
+  flashHidden = false;
+
   draw(p: Painter, f: SlashFrame): void {
     if (this.on) this.crescent(p, f);
-    if (this.hAge < CRESCENT.flash) this.contact(p, f);
+    if (this.hAge < CRESCENT.flash && !this.flashHidden) this.contact(p, f);
   }
 
   private crescent(p: Painter, f: SlashFrame): void {
@@ -274,7 +303,7 @@ export class SlashMark {
     const d = sat((this.age - full) / (CRESCENT.fade + 1));
     if (d >= 1) return;
     const clang = this.arc < 1;
-    const hold = 1 - (1 - CRESCENT.holdThin) * sat(this.heldFor / CRESCENT.holdIn);
+    const hold = 1 - (1 - CRESCENT.holdThin) * sat((this.heldFor - CRESCENT.holdAt) / CRESCENT.holdIn);
     let thin = Math.min((1 - d) ** CRESCENT.thinPow, hold) * (clang ? CRESCENT.clangThin : 1);
     // Held, it shivers: a small wave runs along it and its thickness flutters. Never a frozen sticker.
     const shv = f.held ? CRESCENT.shiver : 0;
@@ -292,10 +321,38 @@ export class SlashMark {
     const cr = lerp(DIM[0]!, CREAM[0]!, bright) * tone;
     const cg = lerp(DIM[1]!, CREAM[1]!, bright) * tone;
     const cb = lerp(DIM[2]!, CREAM[2]!, bright) * tone;
-    const floor = CRESCENT.linePx / R;
+    // The wedge while it is cream (never on a cut that glanced off: that is the near part, thin).
+    const wk = clang ? 0 : bright;
+    const floor = (this.heldFor > 0 && !clang ? CRESCENT.holdPx : CRESCENT.linePx) / R;
+    const dusk = lerp(CRESCENT.duskLine, CRESCENT.dusk, wk) / R;
+    const wa = CRESCENT.wedgeTail;
+    const wb = CRESCENT.wedgeTip;
+    const wp = wa / (wa + wb);
+    const wpk = c.dir === 'down' ? CRESCENT.wedgeDown : c.heavy ? CRESCENT.wedgeHeavy : CRESCENT.wedge;
+    const wn = wpk / (wp ** wa * (1 - wp) ** wb);
     const { px, py, gx, gy, gc } = p;
     const ux = this.ux;
     const uy = this.uy;
+    const sl = this.sl;
+    // The wedge is laid out by length along the drawn span (the samples bunch up where the blade
+    // turns slowest, at its ends: laid out on them the tip came out blunt).
+    {
+      let lx = 0;
+      let ly = 0;
+      let acc = 0;
+      for (let i = 0; i < N; i++) {
+        const v = (v0 + ((v1 - v0) * i) / (N - 1)) * (N - 1);
+        const i0 = Math.min(N - 2, Math.floor(v));
+        const fr = v - i0;
+        const x = ux[i0]! + (ux[i0 + 1]! - ux[i0]!) * fr;
+        const y = uy[i0]! + (uy[i0 + 1]! - uy[i0]!) * fr;
+        if (i > 0) acc += Math.hypot(x - lx, y - ly);
+        sl[i] = acc;
+        lx = x;
+        ly = y;
+      }
+      for (let i = 0; i < N; i++) sl[i] = acc > 0 ? sl[i]! / acc : i / (N - 1);
+    }
     // pass 0: the dusk hair; 1: the body; 2: the inner line.
     for (let pass = 0; pass < 3; pass++) {
       if (pass === 2 && bright < 0.05) break;
@@ -307,10 +364,12 @@ export class SlashMark {
         const fr = v - i0;
         const x = ux[i0]! + (ux[i0 + 1]! - ux[i0]!) * fr;
         const y = uy[i0]! + (uy[i0 + 1]! - uy[i0]!) * fr;
-        const belly = Math.sin(Math.PI * w ** skew) ** CRESCENT.needle;
+        const even = Math.sin(Math.PI * w ** skew) ** CRESCENT.needle;
+        const s = sl[i]!;
+        const belly = lerp(even, s ** wa * (1 - s) ** wb * wn, wk);
         // Both ends lie on the blade point's own path (`1 - thick` of the reach); the belly swells
         // out from it. Thinning, it draws in toward that path: the line that is left is the blade's.
-        const th = Math.max(c.thick * belly * thin, floor * Math.min(1, belly * 2.2));
+        const th = Math.max(c.thick * belly * thin, floor * Math.min(1, even * 2.2));
         const wob = (shv / R) * Math.sin(ph + w * 8) * Math.min(1, belly * 3);
         let ri = 1 - c.thick + wob;
         let ro = ri + th;
@@ -318,7 +377,7 @@ export class SlashMark {
         let g = cg;
         let b = cb;
         if (pass === 0) {
-          const dg = (CRESCENT.dusk / R) * Math.min(1, th * R * 0.5);
+          const dg = dusk * Math.min(1, th * R * 0.5);
           ro += dg;
           ri -= dg;
           r = DUSK[0]!;

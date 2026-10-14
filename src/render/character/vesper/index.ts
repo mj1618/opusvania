@@ -562,6 +562,13 @@ export class VesperCharacter implements CharacterSkin {
       set markHidden(v: boolean) {
         SLASH_LOOK.hidden = !!v;
       },
+      /** For capture tools: hide only the contact flash and specks (the crescent alone). */
+      get flashHidden(): boolean {
+        return self.mark.flashHidden;
+      },
+      set flashHidden(v: boolean) {
+        self.mark.flashHidden = !!v;
+      },
       /** Her acting at the lanterns and the heart, for tools: pose weights and what the wings, antennae and lights read. */
       get act(): Record<string, number> {
         const r = self.rig;
