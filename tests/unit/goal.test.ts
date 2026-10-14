@@ -941,6 +941,9 @@ describe('the ending', () => {
     t.goal.heartCalmPx = 0;
     const s = newSim(scene({ enemies: [wing] }), t);
     lightAll(s);
+    // (The last kindling calmed it: a calmed lampwing notices nothing. That is waited out far from it.)
+    s.place(HEART_X - 900, FLOOR);
+    s.run(`.${G.calmFrames + 5}`);
     s.place(HEART_X + 150, FLOOR);
     // Let it notice and come at her, then walk into the heart.
     s.run('.45');

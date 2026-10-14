@@ -262,29 +262,65 @@ describe('wayside lamps', () => {
     expect(s.state.player.hp).toBe(4);
   });
 
-  it('a lit lamp is a sanctuary: a burrback on its ground turns 110 px short of it, for good', () => {
+  it('a lit lamp is a sanctuary only for one who stands AT it: there a burrback turns 64 px short (its ram too) and cannot hurt her; with her away it walks through the light as if it were dark', () => {
+    // She kindles it and stays: the creature comes, braces, rams, and every time ends short of her spot.
     const lit = sim(scene({ enemies: [burr(LAMP_X - 500, 1)] }), 8, LAMP_X);
     lit.run(`.${LAMP_FRAMES}`);
-    lit.place(3400, FLOOR);
+    expect(lit.state.goal.lamps[0]?.lit).toBe(true);
     const from = lit.events.length;
     let nearest = 9e9;
     for (let f = 0; f < 1500; f++) {
       step(lit.state, 0, lit.tuning, lit.scene, lit.events);
       const e = lit.state.enemies[0];
-      if (e) nearest = Math.min(nearest, LAMP_X - (e.x + e.w));
+      if (e && f > G.calmFrames) nearest = Math.min(nearest, LAMP_X - (e.x + e.w));
     }
-    expect(nearest).toBeGreaterThanOrEqual(G.sanctuaryPx);
-    expect(nearest).toBeLessThan(G.sanctuaryPx + 4);
-    const turns = of(lit.events.slice(from), 'enemyTurn').filter((e) => e.cause === 'lantern');
-    expect(turns.length).toBeGreaterThanOrEqual(1);
-    // Dormant, the same creature walks straight through it.
-    const dark = sim(scene({ enemies: [burr(LAMP_X - 500, 1)] }), 0, 3400);
+    const ev = lit.events.slice(from);
+    expect(of(ev, 'hurt')).toHaveLength(0);
+    expect(nearest).toBeGreaterThanOrEqual(G.waysidePx);
+    expect(nearest).toBeLessThan(G.waysidePx + 4);
+    expect(G.waysidePx).toBeLessThan(G.sanctuaryPx);
+    const turns = of(ev, 'enemyTurn').filter((e) => e.cause === 'lantern');
+    const stops = of(ev, 'enemyRecover').filter((e) => e.cause === 'lantern');
+    expect(turns.length + stops.length).toBeGreaterThanOrEqual(1);
+    // She walks away: the lit lamp is no wall to it any more (playtest 6: a lit lamp beside a fight
+    // stopped the ram and took the brace; the fight had one tell).
+    lit.place(3400, FLOOR);
     let past = false;
-    for (let f = 0; f < 1500; f++) {
-      step(dark.state, 0, dark.tuning, dark.scene, dark.events);
-      if ((dark.state.enemies[0]?.x ?? 0) > LAMP_X) past = true;
+    for (let f = 0; f < 3600; f++) {
+      step(lit.state, 0, lit.tuning, lit.scene, lit.events);
+      if ((lit.state.enemies[0]?.x ?? 0) > LAMP_X) past = true;
     }
     expect(past).toBe(true);
+    // Shoved into the light of a lit lamp she is not at, it still braces at her (a lantern's light takes the brace).
+    const fight = sim(scene({ enemies: [burr(LAMP_X + 40, 1)] }), 8, LAMP_X);
+    fight.run(`.${LAMP_FRAMES}`);
+    fight.place(LAMP_X + 190, FLOOR);
+    const braces = of(fight.run(`.${G.calmFrames + 120}`), 'enemyWindup');
+    expect(braces.length).toBeGreaterThanOrEqual(1);
+    expect(Math.abs((braces[0]?.x ?? 0) - LAMP_X)).toBeLessThan(G.sanctuaryPx + 50);
+  });
+
+  it('a lampwing gives up at a lit lamp only when she stands at it, and only 90 px out', () => {
+    const wing: EnemySpawn = {
+      id: 'w1',
+      kind: 'lampwing',
+      x: LAMP_X + 150,
+      y: FLOOR - 190,
+      facing: -1,
+      radius: 40,
+    };
+    // At the lit lamp: it notices her, and as its tell ends it gives up (her light is the lamp's).
+    const s = sim(scene({ enemies: [wing] }), 8, LAMP_X);
+    s.run(`.${LAMP_FRAMES}`);
+    const ev = s.run(`.${G.calmFrames + 400}`);
+    expect(of(ev, 'hurt')).toHaveLength(0);
+    expect(of(ev, 'enemyDive')).toHaveLength(0);
+    expect(of(ev, 'enemyGiveUp').some((e) => e.cause === 'calm')).toBe(true);
+    // 120 px from the lit lamp (inside a lantern's 160): it dives.
+    const q = sim(scene({ enemies: [wing] }), 8, LAMP_X);
+    q.run(`.${LAMP_FRAMES}`);
+    q.place(LAMP_X + 120, FLOOR);
+    expect(of(q.run(`.${G.calmFrames + 400}`), 'enemyDive').length).toBeGreaterThanOrEqual(1);
   });
 
   it('the ending tallies them; a clone copies them; a scene without lamps has none', () => {

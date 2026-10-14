@@ -524,64 +524,45 @@ describe('naive players', () => {
     expect(late).toEqual([]);
   });
 
-  it('"walks into the step she cannot walk up": at the right rise that is the wayside lamp; it catches only once she stands still there', () => {
+  it('lamp-root stands on the floor before the right rise’s step (playtest 6: out of burr-root’s patch); it catches only once she stands still there', () => {
     const lamp = (GROVE.lamps ?? [])[1] as { id: string; x: number; y: number };
-    expect([lamp.id, lamp.x, lamp.y]).toEqual(['lamp-root', 4566, 1280]);
+    expect([lamp.id, lamp.x, lamp.y]).toEqual(['lamp-root', 4350, 1280]);
     const s = newSim({ ...GROVE, enemies: [] });
     s.state.pickups.count = 9;
-    s.place(4300, 1280);
+    s.place(4200, 1280);
     const from = s.events.length;
-    s.run('R45');
-    // Pressed against the rise, still holding right: she is at the lamp, and nothing starts
+    // Running through it and on into the step, still holding right: nothing starts
     // (playtest 4: it caught under her while she chased burr-root, 8 glints without a choice).
+    s.run('R105');
     expect(feet(s).x).toBe(4588);
-    expect(s.state.player.kindlingLamp).toBe(-1);
-    s.run('R60');
     expect(typesOf(s.events.slice(from))).not.toContain('lampChannel');
     expect(s.state.pickups.count).toBe(9);
-    // She lets go and stands: 20 frames, then the channel, and it is lit.
+    // She walks back to it, lets go and stands: 20 frames, then the channel, and it is lit.
+    s.place(lamp.x, lamp.y);
     s.run('.25');
     expect(s.state.player.kindlingLamp).toBe(1);
     s.run('.30');
     expect(typesOf(s.events.slice(from))).toEqual(
       expect.arrayContaining(['lampNotice', 'lampChannel', 'lampKindle']),
     );
-    // With too little it says so instead (she is standing still against the wall).
+    // With too little it says so instead.
     const q = newSim({ ...GROVE, enemies: [] });
     q.state.pickups.count = 3;
-    q.place(4300, 1280);
-    q.run('R60');
+    q.place(lamp.x, lamp.y);
+    q.run('.60');
     expect(q.events.filter((e) => e.type === 'lampRefuse')).toHaveLength(1);
   });
 });
 
-describe('safe ground seen working: burr-root and the lamp on its ground', () => {
+describe('a rest before the fight, not inside it: lamp-root and burr-root', () => {
   const lamp = (GROVE.lamps ?? [])[1] as { id: string; x: number; y: number };
   const foes = GROVE.enemies ?? [];
   const idx = foes.findIndex((e) => e.id === 'burr-root');
-  const G = defaultTuning.goal;
+  const B = defaultTuning.burrback;
 
-  it('dormant: its patrol reaches the lamp, in plain view along 450 px of flat ground', () => {
-    const s = newSim();
-    s.state.player.invuln = 1e9;
-    let hi = 0;
-    for (let f = 0; f < 1800; f++) {
-      step(s.state, 0, s.tuning, s.scene, s.events);
-      const e = s.state.enemies[idx];
-      if (e) hi = Math.max(hi, e.x + e.w);
-    }
-    expect(hi).toBeGreaterThan(lamp.x);
-  });
-
-  it('kindling it under the creature costs her nothing; lit, the creature turns 110 px short of it for good and she can stand there', () => {
+  it('dark or lit, its walk never comes within a brace’s reach of one who stands at the lamp; she kindles it and rests there untouched', () => {
     const s = newSim();
     s.state.pickups.count = 8;
-    // Wait for it to come to the wall end of its walk, then stand at the lamp in its way.
-    for (let f = 0; f < 2000; f++) {
-      const e = s.state.enemies[idx];
-      if (e && e.facing > 0 && e.x + e.w > lamp.x - 140) break;
-      step(s.state, 0, s.tuning, s.scene, s.events);
-    }
     s.place(lamp.x, lamp.y);
     const from = s.events.length;
     wait(s, 60);
@@ -590,15 +571,13 @@ describe('safe ground seen working: burr-root and the lamp on its ground', () =>
     for (let f = 0; f < 3600; f++) {
       step(s.state, 0, s.tuning, s.scene, s.events);
       const e = s.state.enemies[idx];
-      if (e && f > 200) nearest = Math.min(nearest, lamp.x - (e.x + e.w));
+      if (e) nearest = Math.min(nearest, e.x - (s.state.player.x + s.state.player.w));
     }
     const ev = s.events.slice(from);
     expect(hurts(ev)).toBe(0);
     expect(s.state.player.hp).toBe(4);
-    expect(nearest).toBeGreaterThanOrEqual(G.sanctuaryPx);
-    expect(ev.filter((e) => e.type === 'enemyTurn' && e.cause === 'lantern').length).toBeGreaterThan(3);
-    // It still has room to walk.
-    const e = s.state.enemies[idx];
-    expect(e?.mode).not.toBe('dead');
+    expect(nearest).toBeGreaterThanOrEqual(B.strikePx);
+    expect(ev.filter((e) => e.type === 'enemyWindup')).toEqual([]);
+    expect(s.state.enemies[idx]?.mode).not.toBe('dead');
   });
 });

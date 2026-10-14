@@ -455,7 +455,7 @@ export const lampwing: KindRules = {
     // hanging in the middle of a fight after it has hit her must not hit her again.
     if (e.mode === 'stall' || e.mode === 'rest' || e.mode === 'return') return true;
     if (e.mode === 'pursue' && e.modeFrames <= info.t.lampwing.climbSafeFrames) return true;
-    return nearLitLantern(info.state, info.scene, G, e.x + e.w / 2, e.y + e.h / 2, G.lampSanctuaryPx);
+    return nearLitLantern(info.state, info.scene, G, e.x + e.w / 2, e.y + e.h / 2);
   },
 
   /** One that has noticed her gives up (`calm`): it rests, flies home and notices nothing on the way. */
@@ -547,7 +547,7 @@ export const lampwing: KindRules = {
       drift(e, scene, t);
       face(e, e.vx, 0.2);
       const sight = e.sight > 0 ? e.sight : t.noticePx;
-      if (sight > 0 && !over && inLeash(e, p, t) && sees(e, p, scene, sight)) {
+      if (sight > 0 && !over && e.calm === 0 && inLeash(e, p, t) && sees(e, p, scene, sight)) {
         e.dives = 0;
         tell(e, info);
       }
@@ -569,9 +569,8 @@ export const lampwing: KindRules = {
         // The tell is over: it commits, unless her light is out, she is gone, or a lantern's light is on it.
         const G = info.t.goal;
         if (!lit(p)) giveUp(e, info, 'dark');
-        else if (nearLitLantern(state, scene, G, e.x + e.w / 2, e.y + e.h / 2, G.lampSanctuaryPx))
-          giveUp(e, info, 'calm');
-        else if (nearLitLantern(state, scene, G, px, py, G.lampSanctuaryPx)) giveUp(e, info, 'calm');
+        else if (nearLitLantern(state, scene, G, e.x + e.w / 2, e.y + e.h / 2)) giveUp(e, info, 'calm');
+        else if (nearLitLantern(state, scene, G, px, py)) giveUp(e, info, 'calm');
         else if (!inLeash(e, p, t)) giveUp(e, info, 'far');
         else startDive(e, info);
       }
@@ -592,8 +591,7 @@ export const lampwing: KindRules = {
       beat = t.flapDive;
       const G = info.t.goal;
       if (!lit(p)) giveUp(e, info, 'dark');
-      else if (nearLitLantern(state, scene, G, e.x + e.w / 2, e.y + e.h / 2, G.lampSanctuaryPx))
-        giveUp(e, info, 'calm');
+      else if (nearLitLantern(state, scene, G, e.x + e.w / 2, e.y + e.h / 2)) giveUp(e, info, 'calm');
       else if (--e.timer <= 0) stall(e, info, 'done');
       else if (hit !== 0 && e.vx === 0 && e.vy === 0) stall(e, info, 'wall');
     } else if (e.mode === 'stall') {
@@ -617,7 +615,7 @@ export const lampwing: KindRules = {
       const G = info.t.goal;
       const cause: GiveUpCause | '' = !lit(p)
         ? 'dark'
-        : nearLitLantern(state, scene, G, e.x + e.w / 2, e.y + e.h / 2, G.lampSanctuaryPx)
+        : nearLitLantern(state, scene, G, e.x + e.w / 2, e.y + e.h / 2)
           ? 'calm'
           : !inLeash(e, p, t)
             ? 'far'

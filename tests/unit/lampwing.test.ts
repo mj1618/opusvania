@@ -1172,8 +1172,9 @@ describe('lampwings in the grove', () => {
       // under F7's west end, 188 px over the rise. It does not see where the stair sets her down (4770).
       ['wing-rise', 5090, 900, 50],
     ]);
-    // lamp-sky watches the glide's lane from further than the rest (its dive has to be made in time).
-    expect(list.map((e) => e.sight ?? 0)).toEqual([0, 0, 0, 0, 0, 500, 0]);
+    // lamp-sky watches the glide's lane from further than the rest (its dive has to be made in time);
+    // lamp-ledge sees F5's east end and the high ledge under it (playtest 6: at 260 it noticed no one there).
+    expect(list.map((e) => e.sight ?? 0)).toEqual([0, 0, 400, 0, 0, 500, 0]);
     expect((GROVE.enemies ?? []).slice(0, first).every((e) => e.kind === 'burrback')).toBe(true);
     const prizes = [...(GROVE.pods ?? []), ...(GROVE.pickups ?? []).filter((p) => p.kind === 'great')];
     for (const e of list) {

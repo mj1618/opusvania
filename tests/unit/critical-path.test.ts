@@ -357,8 +357,8 @@ describe('burr-root: every arrival on its ground is fair', () => {
   const idx = foes.findIndex((e) => e.id === 'burr-root');
   const lamp = (GROVE.lamps ?? []).find((l) => l.id === 'lamp-root') as { x: number; y: number };
 
-  it('it keeps 180 px off the root’s foot and still walks through the lamp at the rise’s foot', () => {
-    expect(foes[idx]).toMatchObject({ x: 4476, y: 1280, radius: 110 });
+  it('it paces the foot of the rise only (4506-4608): east of every tap jump from the root, and of a walk off the rise; lamp-root stands before its patch, not in it', () => {
+    expect(foes[idx]).toMatchObject({ x: 4572, y: 1280, radius: 40 });
     const s = newSim();
     s.state.player.invuln = 1e9;
     let lo = 9e9;
@@ -370,9 +370,10 @@ describe('burr-root: every arrival on its ground is fair', () => {
       lo = Math.min(lo, e.x);
       hi = Math.max(hi, e.x + e.w);
     }
-    expect([lo, hi]).toEqual([4340, 4608]);
-    expect(lo - 4160).toBe(180);
-    expect(hi).toBeGreaterThan(lamp.x);
+    expect([lo, hi]).toEqual([4506, 4608]);
+    // The lamp is the rest before the fight: more than a lamp's light and a ram's reach (130) short of the patch.
+    expect([lamp.x, lamp.y]).toEqual([4350, 1280]);
+    expect(lo - lamp.x).toBeGreaterThanOrEqual(130);
   });
 
   /** Runs an input until she has been in the air and stands again. */
@@ -457,6 +458,55 @@ describe('burr-root: every arrival on its ground is fair', () => {
 
   it('60 start times each: off the root, out of the hollow, down from the catch branch and the bough, off the right branch: no hit on arrival', () => {
     for (const [name, go] of ARRIVALS) {
+      for (let k = 0; k < 60; k++) {
+        const s = newSim();
+        wait(s, k * 31);
+        const from = s.events.length;
+        go(s);
+        // Arrived, she stands and looks (three quarters of a second).
+        wait(s, 45);
+        // (A held jump off the bough is the glide's lane: it ends on F7 under `lamp-sky`, which dives
+        // at one who stands there. That is its encounter, with its own tell; this is about the burrback.)
+        const byBurr = s.events.slice(from).filter((e) => e.type === 'hurt' && e.source.kind === 'burrback');
+        expect(byBurr.length, `${name}, start ${k * 31}, at ${feet(s).x},${feet(s).y}`).toBe(0);
+      }
+    }
+  });
+
+  const LATE: Array<[string, (s: Sim) => void]> = [
+    // Playtest 6: the two that were left unfair. A tap jump from the root's lip (it landed in the old
+    // patrol, 4336-4473: 27 of 60), pressed at the lip or a few steps before it, 3 to 8 frames long.
+    ...[0, 40, 80].flatMap((back) =>
+      [3, 5, 8].map((hold): [string, (s: Sim) => void] => [
+        `a ${hold}-frame tap jump ${back} px before the root’s lip`,
+        (s) => {
+          s.place(3990, 1184);
+          while (feet(s).x < 4160 - back && s.state.player.grounded) s.run('R1');
+          s.run(`R+J${hold}`);
+          until(s, 'R');
+        },
+      ]),
+    ),
+    // ... and walking off the rise's west lip onto its ground (lamp-root dark), a tap jump off it too.
+    [
+      'walking off the rise’s west lip',
+      (s) => {
+        s.place(4700, 1088);
+        until(s, 'L');
+      },
+    ],
+    [
+      'a tap jump off the rise’s west lip',
+      (s) => {
+        s.place(4700, 1088);
+        s.run('L8 L+J5');
+        until(s, 'L');
+      },
+    ],
+  ];
+
+  it('playtest 6, 60 start times each: a tap jump from the root’s lip, a walk or a tap jump off the rise’s west lip: no hit on arrival', () => {
+    for (const [name, go] of LATE) {
       for (let k = 0; k < 60; k++) {
         const s = newSim();
         wait(s, k * 31);

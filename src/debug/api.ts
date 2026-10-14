@@ -239,7 +239,7 @@ export interface GameDebugApi {
     /** Glints lying in clusters she dropped when she faded (`lost` = their sum), and the sanctuary radii. */
     lost: number;
     drops: Array<{ id: number; x: number; y: number; value: number; left: number; timer: number }>;
-    sanctuary: { burrback: number; lampwing: number };
+    sanctuary: { burrback: number; lampwing: number; lamp: { burrback: number; lampwing: number } };
   };
   /** Dynamic lights registered this frame (world px). */
   lights(): PointLight[];
@@ -522,7 +522,11 @@ export function installDebugApi(deps: {
         },
         lost: w.lost,
         drops: w.drops.map((d) => ({ ...d })),
-        sanctuary: { burrback: G.sanctuaryPx, lampwing: G.lampSanctuaryPx },
+        sanctuary: {
+          burrback: G.sanctuaryPx,
+          lampwing: G.lampSanctuaryPx,
+          lamp: { burrback: G.waysidePx, lampwing: G.waysideWingPx },
+        },
       };
     },
     lights: () => stage.lights.list.map((l) => ({ ...l })),
@@ -568,6 +572,8 @@ export function installDebugApi(deps: {
       heart: h ? { box: heartBox(h, G), awake: g.heart.awake, gathered: g.gathered } : null,
       sanctuary: G.sanctuaryPx,
       lampSanctuary: G.lampSanctuaryPx,
+      wayside: G.waysidePx,
+      waysideWing: G.waysideWingPx,
       drops: game.state.pickups.drops,
     };
   };

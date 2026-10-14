@@ -107,11 +107,11 @@ x:  0        1000       2000       3000       4000       5000     5760
 - **Encounters on the critical path (playtest 4), each with a light before it**: `burr-path` on the floor before the
   bluff (2004-2316; lantern-stone behind her) | `burr-shaft` on the shaft floor (3378-3522; `lamp-trunk` in the well
   before the doorway) | `lamp-sky` on the summit glide's line (5180, 105; the crown lantern at the take-off) |
-  `burr-rise` before the heart (4914-5106; `lamp-rise` 54 px before its patch). The walker meets path and rise, the
+  `burr-rise` before the heart (4914-5106; `lamp-rise` 154 px before its patch since playtest 6). The walker meets path and rise, the
   shaft-floor player all three, the glider path (or flies it) and the sky. Rules and fairness: enemies.md.
 - Lanterns: 1448, 1280 (moth-stone) / 3684, 192 (trunk B's top) / 5524, 768 (the far bluff's top); the heart: 5212, 1088
-  (the shrine). Wayside lamps: 3160, 1280 (the well) / 4566, 1280 (foot of the right rise) / 3264, 448 (trunk
-  A's top) / 4860, 1088 (the rise, before the heart). Validated: on a solid top that is not the pool, the whole trigger box supported and clear,
+  (the shrine). Wayside lamps: 3160, 1280 (the well) / **4350**, 1280 (the floor before the right rise's step) / 3264, 448 (trunk
+  A's top) / **4760**, 1088 (the rise, before the heart). Validated: on a solid top that is not the pool, the whole trigger box supported and clear,
   lanterns 300 px from the spawn, a heart needs lanterns. Pilots that play the whole scene from the spawn:
   `tests/unit/goal-pilot.test.ts` (a goal-directed run with the glide), `naive-pilot.test.ts` (the tapper and
   the holder of playtest 3, who only react), `critical-path.test.ts` (each wall and stair on its own): move a
@@ -131,6 +131,17 @@ x:  0        1000       2000       3000       4000       5000     5760
 - `great-ember` (1500, 650) over F3: the summit lantern's key (goal.md). 73 pickups, worth 101.
 - burr-ledge at 3090 (fenced, r 60), `wing-rise` at 5090, 900, burr-path `hp: 4`, lamp-sky `sight: 500`
   (enemies.md). Scene fields new: enemy `hp`, burrback `fenced`, lampwing `sight`, lantern `key`.
+
+## Placement changed in playtest 6 (2026-10-14; no solid moved)
+| what | was | is | why |
+|---|---|---|---|
+| `lamp-rise` | 4860, 1088 | **4760**, 1088 (100 px west) | 54 px from burr-rise's patch: the fight ran into its light, and wing-rise dived at one who stood at it. Now 154 px before the patch, 330 px from wing-rise's home (never noticed there). The painted boulder (4712) is 48 px west of it |
+| `lamp-root` | 4566, 1280 (at the rise's wall) | **4350**, 1280 (216 px west) | burr-root paces that wall now: the lamp is the rest before its patch (156 px), not inside it |
+| `burr-root` | feet 4476, r 110 (box 4340-4608) | feet **4572**, r 40, facing -1 (box **4506-4608**) | every tap jump from the root's lip (lands 4283-4473, slides to 4478) and a walk off the rise's west lip (4436) land west of it |
+| `great-crown` | 3648, 134 (on trunk B's top, 36 px west of the lantern) | **3768**, 134 (over the summit bough, 84 px east of it; pod-bough 82 px further) | the bud and the ember's socket mark shared 40 px |
+| `lamp-ledge` | sight 260 (default) | `sight: 400` | it saw no one on F5 or the high ledge |
+`lamp-trunk` (3160) did not move: it is 218 px from burr-shaft's patch. `wing-rise` did not move (5090, 900): the
+lamp left its sight instead, and its dives end where she fights burr-rise (enemies.md).
 
 ## Layer tree (`src/render/scene/layer-tree.ts`), back to front
 | layer | parallax | what |

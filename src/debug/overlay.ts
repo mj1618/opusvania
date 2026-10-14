@@ -20,6 +20,9 @@ export interface GoalBoxes {
   /** A lit lantern's sanctuary: how far burrbacks keep (sideways), and lampwings (from its centre). */
   sanctuary: number;
   lampSanctuary: number;
+  /** The same for a lit wayside lamp (its own standing spot only). */
+  wayside: number;
+  waysideWing: number;
   /** Clusters of dropped glints (their centres). */
   drops: ReadonlyArray<{ x: number; y: number; left: number }>;
 }
@@ -45,7 +48,15 @@ export class HitboxOverlay {
   /** How far a burrback's ram carries it (`tuning.burrback.chargePx`; set by the debug API). */
   ramPx: () => number = () => 0;
   /** The lanterns' and the heart's trigger boxes and what they are doing (set by the debug API). */
-  goal: () => GoalBoxes = () => ({ lanterns: [], heart: null, sanctuary: 0, lampSanctuary: 0, drops: [] });
+  goal: () => GoalBoxes = () => ({
+    lanterns: [],
+    heart: null,
+    sanctuary: 0,
+    lampSanctuary: 0,
+    wayside: 0,
+    waysideWing: 0,
+    drops: [],
+  });
 
   constructor(scene: Scene) {
     for (const s of scene.solids) this.solids.rect(s.x, s.y, s.w, s.h);
@@ -99,10 +110,15 @@ export class HitboxOverlay {
       // The sanctuary: the stretch of ground burrbacks keep off, and the lampwings' circle.
       const b = l.box;
       const cx = b.x + b.w / 2;
-      g.moveTo(cx - goal.sanctuary, b.y + b.h + 2)
-        .lineTo(cx + goal.sanctuary, b.y + b.h + 2)
+      const ground = l.lamp ? goal.wayside : goal.sanctuary;
+      g.moveTo(cx - ground, b.y + b.h + 2)
+        .lineTo(cx + ground, b.y + b.h + 2)
         .stroke({ color: 0xffc94a, width: 2, alpha: 0.6 });
-      g.circle(cx, b.y + b.h / 2, goal.lampSanctuary).stroke({ color: 0xffc94a, width: 1, alpha: 0.35 });
+      g.circle(cx, b.y + b.h / 2, l.lamp ? goal.waysideWing : goal.lampSanctuary).stroke({
+        color: 0xffc94a,
+        width: 1,
+        alpha: 0.35,
+      });
     }
     for (const d of goal.drops) {
       g.moveTo(d.x, d.y - 12)

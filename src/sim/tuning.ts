@@ -577,11 +577,26 @@ export const defaultTuning = {
      */
     sanctuaryPx: 110,
     lampSanctuaryPx: 160,
+    /**
+     * A lit wayside lamp's sanctuary is only its own standing spot, and only while she stands in it
+     * (her box at the lamp reaches 63 px from its foot): then burrbacks keep `waysidePx` from its
+     * foot and lampwings `waysideWingPx` from its centre. As a lantern's (110 / 160, always) a lamp
+     * beside a fight stopped the ram and took the brace of one shoved into it: one tell a fight.
+     */
+    waysidePx: 64,
+    waysideWingPx: 90,
     /** It tells her again only after she has been this far from it (sideways). */
     refuseLeavePx: 160,
     /** Kindling calms the creatures within this of the lantern for `calmFrames` (burrbacks stand, lampwings give up). */
     calmPx: 900,
     calmFrames: 120,
+    /**
+     * A lantern's key (the ember): from the step it wakes to her until `keyCalmFrames` after it has
+     * reached her, the creatures within `keyCalmPx` of her (body or home) are calmed: harmless, and
+     * a lampwing that has noticed her gives up.
+     */
+    keyCalmPx: 600,
+    keyCalmFrames: 60,
     /** The heart's trigger box: centred on its point, standing up from the ground. */
     heartWidth: 96,
     heartHeight: 96,

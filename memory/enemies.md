@@ -33,6 +33,43 @@ enemies stood) → `updateEnemies` (move, modes, flinch; returns who touches her
 `hurtPlayer` → `trackSafeGround` → pods → pickups. So a slash and a touch on the same frame: the slash
 wins (the creature is staggered and harmless before contact is tested).
 
+## Playtest 6 (2026-10-14): two tells a fight, the ember is safe, fair arrivals at burr-root
+- **A lit wayside lamp no longer shortens the fight beside it** (it stopped the ram and took the brace of one
+  shoved into its light: the careful pilot saw one tell at burr-shaft and burr-rise, wing-rise never dived). A
+  lamp's sanctuary is its own standing spot and only while she is AT it (goal.md, `sanctuary.ts`); lanterns as before.
+  Shrinking it to 64 px alone was not enough: two cuts after a ram shoved burr-rise the 120 px into it.
+- **A ram does not run in under a doorway, nor does a shove carry it there** (`roofAhead` in `burrback.ts`: a
+  solid lower than `strikeHeadroomPx` 136 over its ground; the ram ends `enemyRecover` cause `ledge`). Why:
+  burr-shaft's first ram is always westward (she comes in by the doorway and hops east), it ended in the
+  doorway, her cuts pushed it on under trunk A, and she followed into the doorway, where it does not brace
+  at her: one tell. Now it pulls up at the mouth (box x 3328) and the second brace comes. `fenced` was tried
+  instead: with its 46 px range the ram was 14 px long and she landed on it.
+- **The careful pilot** (18-frame reaction; `naive-pilot.test.ts` asks for two tells at each): burr-path braces
+  3.6 / 5.3 s, down 6.2 (2.8 s from her first cut); burr-shaft 12.1 / 13.6, down 14.6 (3.2 s); burr-rise 49.8 /
+  51.4 with wing-rise's dive at 51.8, down 52.8 (3.3 s). 58.6 s, 1 hit (burr-ledge, off the path), 0 fades.
+  Still ~3 s a fight for a robot: no number was changed (hp, winded times as before). Its kills are plain
+  cuts now, not the finisher (the opening cut it gets for free leaves 1 hp for the tired window's first cut).
+- **The mashers**: 8 hits and 3 fades each (tapper 53 s, holder 57 s), still finish; the tapper no longer kills
+  burr-rise (it was the lamp's light that let her): she wounds it, fades, and its ram carries it past her.
+- **A calmed lampwing notices nothing** (`e.calm === 0` in its hover): it used to start a tell while calmed
+  and give up a frame later.
+- **Taking the ember calms everything within 600 px** from the step it wakes until 60 frames after (goal.md).
+- **lamp-ledge `sight: 400`**: it sees F5's east end and the whole high ledge (not burr-ledge's patch east of
+  3005 from its home); its tell is on screen from both (`playtest6.test.ts`). It now joins the burr-ledge fight
+  when that drifts west (the careful pilot: seen 23.5 s, dive 24.1).
+- **wing-rise stays at (5090, 900)**; `lamp-rise` moved out of its sight instead (4760: 330 px from its home,
+  260 + its 50 px territory = 310). One who stands at the lamp, dark or lit, is never noticed; its dives end
+  where she fights burr-rise (stalls 100+ px east of the post). Moving it 150 px east (5240) would have put
+  it over the heart and out of sight of the west half of burr-rise's patch: the pair fight would be lost.
+- **burr-root paces the foot of the rise's step only** (feet 4572, `radius` 40: box 4506-4608; it was
+  4340-4608). Measured landings on its floor: off the root 4283, tap jumps from the root's lip 4283-4473 (a
+  3 to 8 frame press, at the lip or up to 120 px before it; she slides on to 4478), a walk off the rise's west
+  lip 4436, a tap jump off it 4330. All west of 4498 (her box), so 60 start times each: 0 hits. **Left**: a
+  press of 10-30 frames from the root's lip comes down in its patch or against the wall over it, and stepping
+  off the rise's lip and letting go lands on it (4546): the whole floor is somebody's landing; this strip is
+  the one no plain move ends in. It cannot be run at from the east (no ground there): from the east she drops
+  off the rise beyond it. `lamp-root` moved west out of its patch (4350).
+
 ## The burrback's ram, with a second beat (playtest 5: "every fight is one beat, ~2 s; the masher pays 1 light a burrback and wins")
 The rule in one line: **stand and mash loses, read the tell and punish wins, and one punish is not a kill.**
 - **Brace** (`mode: 'windup'`, `enemyWindup {dir, frames 26, px 180, speed 10}`): she is in front of it, on its
@@ -70,8 +107,7 @@ The rule in one line: **stand and mash loses, read the tell and punish wins, and
   only: hopping its ram used to end off the ledge's west end, on the floor.
 - **What it never does**: brace at one with a solid lower than 136 px over her ground (the doorway under
   trunk A: from there she gets a free cut or two when it paces near); brace while calmed, in a lit lantern's
-  sanctuary (**a lit wayside lamp beside its patch makes the fight shorter**: its ram toward the lamp ends
-  `lantern`, and shoved into the light it cannot brace: lamp-trunk for burr-shaft, lamp-rise for burr-rise),
+  sanctuary (a lit wayside lamp's only while she stands at it: playtest 6 above),
   while she kindles, after `gather`, within 600 px of the woken heart.
 - **The shaft**: its west wall has the doorway in it, so a ram westward runs its length into the well; the
   wall-stun is the ram EAST into trunk B's bark, i.e. the second exchange (she has hopped it and stands east).
@@ -316,10 +352,10 @@ and trunk B: bait the ram into the bark; **on the main line now**: trunk A's wes
 | burr-bank | 200, 1088 | left bank 0-384: **0-288** (wall, lip) | guards the great glint on the bank |
 | burr-path | 2160, 1280 | ground right of the pool 1856-2432: **2004-2316** (`radius` 130) | the first fight, under the branch. Clear of the pool's landing (it starts 52 px further out) and of the bluff's foot: it used to walk right up to that wall and hit a first-timer three times while she worked out the climb |
 | burr-ledge | **3090**, 448 | the branch by trunk A: **3004-3176** (`radius` 60, **`fenced`**; it was 2936, r 48: hopping its ram ended off the ledge's west end. Nothing rises through the branch any more) | by pod-ledge (3050), the big one. East of 2976 the ledge is a branch she comes up through from the well (the bark of trunk A, her swing reaches 3015-3200): with its old range (to 3232) it stood on her as she rose through it |
-| burr-root | 4476, 1280 | between the root and the right rise: **4340-4608** (`radius` 110; the rise's wall); **4340-4456** once `lamp-root` (4566) is lit | under the right branch and its pod; the creature that shows a lit lamp's safe ground (goal.md). Playtest 3: it hit all three runs coming off the root (its patrol started at 4160, under the landing at 4283). Now 180 px off the root's foot |
+| burr-root | **4572**, 1280 | the foot of the right rise's step: **4506-4608** (`radius` 40; the rise's wall) | playtest 6 (above): east of every tap jump from the root and of a walk off the rise. `lamp-root` (4350) is the rest before it. It was 4340-4608 (playtest 3: 4160-) |
 
 | **burr-shaft** | 3450, 1280 | the shaft floor: **3378-3522** (`radius` 46) | playtest 4: guards `pod-shaft` and the way to trunk B's foot (`great-arch`). 50 px inside the shaft from the doorway (in the doorway she cannot jump: it does not brace at her there), 62 px short of trunk B's bark where she stands to start the climb. A 256 px arena with a wall each side: its ram always ends at a wall, a wall kick clears it |
-| **burr-rise** | 5010, 1088 | the right rise between `lamp-rise` and the heart: **4914-5106** (`radius` 70; from 4970 once the lamp is lit) | playtest 4: the walker's last fight, on 550 px of flat ground. 140 px past where the stair from the summit sets her down (4770), 58 px short of the heart's box. `pod-row-1` (5060) is in its patch. A glider who lands on the far bluff comes to the heart from the east and never meets it: her encounter is `lamp-sky` |
+| **burr-rise** | 5010, 1088 | the right rise between `lamp-rise` (4760 since playtest 6) and the heart: **4914-5106** (`radius` 70, lamp lit or not) | playtest 4: the walker's last fight, on 550 px of flat ground. 140 px past where the stair from the summit sets her down (4770), 58 px short of the heart's box. `pod-row-1` (5060) is in its patch. A glider who lands on the far bluff comes to the heart from the east and never meets it: her encounter is `lamp-sky` |
 
 - **`radius` on a burrback** (scene data, optional, 40-2000): its box centre stays within that of where it
   started, where its ground would let it go further; the end of the range turns it like a wall (`enemyTurn`
@@ -341,10 +377,10 @@ and trunk B: bait the ram into the bark; **on the main line now**: trunk A's wes
 the root (lands 4283), out of the hollow with a held jump (4280) or with taps and off the root, walking off
 the catch branch (she lands on the right branch at 4420, not on its ground), stepping off it and letting go
 (4185), a tap jump (4516 on the branch) or a held jump off the catch branch or the bough (over everything),
-walking off the right branch westward (onto the root): **0 hits in every one**. Not fair, and left so: a tap
-jump from the root's lip INTO its patrol (lands 4336-4473: 27 of 60; she sees it from the root), running on
-20 frames after landing (52 of 60: that is walking into it), and walking off the rise's west lip onto it
-while `lamp-root` is dark (its walk has to reach the lamp, which stands at that wall).
+walking off the right branch westward (onto the root), **and since playtest 6 a tap jump from the root's lip
+(3, 5, 8 frames; at the lip, 40 and 80 px before it), a walk and a tap jump off the rise's west lip**: 0 hits
+in every one. Not fair, and left so: running on 20 frames after landing (that is walking into it), and the
+two named under playtest 6 above.
 
 Landing audit (`tests/unit/burrback-lips.test.ts`: five minutes, with her standing under each lip in
 turn): no burrback box ever enters 1856-1952 (out of the pool), the whole terrace, 288-384 (onto the
@@ -359,13 +395,13 @@ enemies too (clean plates; the close-ups at 3456, 1280 are in burr-shaft's patch
 
 ## Where the lampwings are (7)
 `wing-rise` (5090, 900, r 50): over burr-rise, under F7's west end, 188 px over the rise. It does not see the
-stair's landing (4770). Not `lamp-...` (those ids are also the wayside lamps'). A simple pilot that only
+stair's landing (4770) nor `lamp-rise` (4760). Not `lamp-...` (those ids are also the wayside lamps'). A simple pilot that only
 fights the burrback takes its dives; the careful one steps out of them and cuts it in its stall.
 | id | home x, y | radius | where | why |
 |---|---|---|---|---|
 | lamp-glade | 800, 690 | 100 | over F1, in the glade | the first one met: it sees her as she jumps from the bank and comes down to her on F1, where she has footing |
 | lamp-f3 | **1470, 420** | 60 | high over F3's middle | playtest 4: at (1290, 480) it sat IN the arc of the F2 -> F3 jump (hit 0.2 s after its tell, twice). Now 90 px east of that arc: the jump is noticed, and it comes down to her on F3's 256 px of footing. A hero standing under it on F3 is noticed too (244 px) |
-| lamp-ledge | 2700, 150 | 90 | over the F5 -> high ledge gap | a plain jump passes just under it (a double jump meets it); comes down to the ledge with burr-ledge and the big pod; the mid-glide kill off trunk A |
+| lamp-ledge (`sight` 400 since playtest 6) | 2700, 150 | 90 | over the F5 -> high ledge gap | a plain jump passes just under it (a double jump meets it); comes down to the ledge with burr-ledge and the big pod; the mid-glide kill off trunk A |
 | lamp-glide-1 | 4620, 200 | 60 | under the summit glide line. **Not at (4470, 270)**: a held jump off the bough's end or the catch branch's end (the walker's road east since playtest 3) falls through (4460-4500, 250-350) before the wings open, and it sat there (hit 55 of 60, both). At 4620, 200 both arcs pass 140+ px under it (0 of 60), nothing on the bough, the catch branch, the right branch or F6 is noticed, the full summit glide passes 300 px over it | the first bounce of the pogo chain |
 | lamp-glide-2 | 4900, 250 | 60 | 280 px on (the pogo chain still holds: lampwing-pilot) | the second bounce; and the far lantern's guard: 646 px from it, inside its leash (520) + the sanctuary edge, so it follows the summit glide (which passes 200 px over it) to the lantern and gives up at the light. Not nearer: at (4960, 330) it noticed her on F7 |
 

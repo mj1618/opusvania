@@ -36,6 +36,24 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
   3x the robots, so a careful person is about 2.5-3 min, not yet the 3-5 asked for.
 - Economy: world 101 (the ember), pods 62, creatures 45 (a seventh lampwing): `glintsTotal` 208.
 
+## Playtest 6 (2026-10-14): the ember is taken in safety; a lamp's light is hers, not the fight's
+- **Taking the key** (the ember's 54-frame flight, `pickups.greatFrames`): from the step it wakes until 60
+  frames after `lanternKey`, every living creature within 600 px of her (body or home) is calmed, exactly as
+  by a kindling (`goal.keyCalmPx`, `keyCalmFrames`; `calmEnemies` each step from the lantern's block in
+  `goal.ts`). lamp-f3 hit her in the take in two of three staged captures; now a dive in flight gives up
+  (`enemyGiveUp` cause `calm`), and a calmed lampwing notices nothing. No state field: it reads the key
+  pickup's timer. Tests: `playtest6.test.ts`.
+- **A wayside lamp's sanctuary is its standing spot, and only while she stands in it** (`sanctuary.ts`):
+  with her box in the lit lamp's trigger box, burrbacks on its ground keep 64 px from its foot
+  (`goal.waysidePx`: her box at the lamp reaches 63) and one inside is harmless and does not brace, a ram
+  ends there (`lantern`); lampwings are harmless and give up within 90 px of its centre (`waysideWingPx`), and
+  one whose tell ends while she is at it gives up. **With her anywhere else a lit lamp is as dark to the
+  creatures**: they walk, ram and brace through its light. Lanterns keep 110 / 160, always. Why: a lamp beside
+  a fight made it one beat (enemies.md). Render still draws a lamp's safe ground at `sanctuaryPx` (110).
+- `lamp-rise` 4760 (was 4860), `lamp-root` 4350 (was 4566, at the wall), `great-crown` 3768, 134 (was 3648:
+  the bud is on the bough east of the lantern now, the socket mark has trunk B's top to itself).
+  scene-and-units.md has the table.
+
 ## Rules
 - **At a lantern** = grounded, mode `normal`, feet on its base line, her box overlapping its trigger
   box (48 x 64, centred on its foot), in control (not staggered, not faded). Flying or running through
@@ -177,8 +195,9 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
 - One per third of the scene (cool / warm / deep), none within 300 px of the spawn (validated).
 - The cocoons under the great bough have no lantern (nothing to stand on under them; the ledge above
   already has a burrback, a lampwing and the big pod).
-- `great-crown` (3648, 134) shares trunk B's 128 px top with `lantern-crown`: the bud is 36 px left of
-  the lantern's foot. If they crowd each other when drawn, move the great glint, not the lantern.
+- `great-crown` is at (3768, 134) since playtest 6: over the summit bough, 84 px east of the lantern's foot
+  (it shared trunk B's top with the lantern and the ember's socket mark). Standing at the lantern does not
+  wake it; a few steps east does.
 
 ## Economy (audit, default tuning)
 | source | glints |
@@ -222,8 +241,8 @@ same sanctuary line and circle). Tests: `tests/unit/lamps.test.ts`.
 |---|---|---|
 | `lamp-trunk` | 3160, 1280 | in the well at trunk A's foot, by the doorway into the shaft. Every glide off the bluff ends sliding down trunk A's bark onto it (below); a walker drops into the well beside it. The leap's four glints and pod-rise (6) pay for it. A rest and re-form point before the climb. |
 | `lamp-high` | 3264, 448 | on trunk A's top: where the wall-to-wall shaft climb, the bark of trunk A (out of the well) and the left route all arrive, one jump before the summit. burr-ledge keeps west of 3010 (lit or not) |
-| `lamp-rise` | 4860, 1088 | on the right rise, 90 px past where the walker's stair from the summit sets her down (4770), 350 px before the heart: the rest before the last climb. No creature on the rise |
-| `lamp-root` | 4566, 1280 | at the foot of the right rise's 192 px step, on burr-root's ground (off the critical path now: the floor road no longer comes this way). A first-timer who runs into the step stands pressed against it, which is standing AT the lamp: with 8 it starts to catch under her (kindled after 0.5 s if she does not jump first), with less it tells her. **The one place safe ground is seen working with a burrback**: dormant, burr-root walks right through it (4340-4608); lit, it turns 110 px short for good (4340-4456). |
+| `lamp-rise` | **4760**, 1088 | on the right rise, where the walker's stair from the summit sets her down (4770), 154 px before burr-rise's patch and out of wing-rise's sight: the rest before the last fight (it was 4860: inside the fight) |
+| `lamp-root` | **4350**, 1280 | on the floor between the root and the right rise's step, 156 px before burr-root's patch at the wall (4506-4608): the rest before that fight. It was at the wall (4566), where a first-timer pressed against the step stood AT it and burr-root walked through it; burr-root paces that wall now (enemies.md) |
 
 Why not at the first lantern, as asked: the lantern's ground is the spawn ground. A burrback that reaches
 the stone's light has to walk through the spawn point (tried: home 760; it knocked an idle player off

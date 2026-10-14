@@ -116,7 +116,7 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
 | pod-rise | 2570, 938 | sit | 2 | on the bluff's top |
 | pod-ledge | 3050, 426 | sit | 3 | on the branch that joins the high ledge to trunk A, by burr-ledge: the big one at the top of the left route |
 | pod-branch-r | 4470, 890 | **sit** | 1 | ON the right branch now, in the walker's road east from the summit (it hung under it, 250 px over the ground: out of reach) |
-| pod-f6 | 4830, 930 | hang | 2 | under F6 on a long stem, 30 px west of `lamp-rise`: two standing up cuts from the rise |
+| pod-f6 | 4830, 930 | hang | 2 | under F6 on a long stem, 70 px east of `lamp-rise` (4760): two standing up cuts from the rise |
 | pod-row-1, 2 | 5060 / 5350, 1066 | sit | 1 | the pogo row on the right rise, 290 px apart, either side of the heart (two since the far bluff stands where the third was) |
 | pod-far | 5690, 746 | sit | 1 | on the far bluff's top (768 now), past the third lantern and `great-far` (was pod-row-3) |
 

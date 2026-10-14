@@ -108,7 +108,7 @@
     { "id": "cliff-1", "kind": "glint", "x": 5432, "y": 980 },
     { "id": "cliff-2", "kind": "glint", "x": 5432, "y": 860 },
     { "id": "great-bank", "kind": "great", "x": 120, "y": 1030 },
-    { "id": "great-crown", "kind": "great", "x": 3648, "y": 134 },
+    { "id": "great-crown", "kind": "great", "x": 3768, "y": 134 },
     { "id": "great-arch", "kind": "great", "x": 3536, "y": 1222 },
     { "id": "great-far", "kind": "great", "x": 5600, "y": 710 },
     { "id": "great-hang", "kind": "great", "x": 1984, "y": 760 },
@@ -141,13 +141,13 @@
       "radius": 60,
       "fenced": true
     },
-    { "id": "burr-root", "kind": "burrback", "x": 4476, "y": 1280, "facing": 1, "radius": 110 },
+    { "id": "burr-root", "kind": "burrback", "x": 4572, "y": 1280, "facing": -1, "radius": 40 },
     { "id": "burr-shaft", "kind": "burrback", "x": 3450, "y": 1280, "facing": 1, "radius": 46 },
     { "id": "burr-rise", "kind": "burrback", "x": 5010, "y": 1088, "facing": 1, "radius": 70 },
 
     { "id": "lamp-glade", "kind": "lampwing", "x": 800, "y": 690, "facing": -1, "radius": 100 },
     { "id": "lamp-f3", "kind": "lampwing", "x": 1470, "y": 420, "facing": 1, "radius": 60 },
-    { "id": "lamp-ledge", "kind": "lampwing", "x": 2700, "y": 150, "facing": 1, "radius": 90 },
+    { "id": "lamp-ledge", "kind": "lampwing", "x": 2700, "y": 150, "facing": 1, "radius": 90, "sight": 400 },
     { "id": "lamp-glide-1", "kind": "lampwing", "x": 4620, "y": 200, "facing": -1, "radius": 60 },
     { "id": "lamp-glide-2", "kind": "lampwing", "x": 4900, "y": 250, "facing": -1, "radius": 60 },
     { "id": "lamp-sky", "kind": "lampwing", "x": 5180, "y": 105, "facing": -1, "radius": 50, "sight": 500 },
@@ -160,9 +160,9 @@
   ],
   "lamps": [
     { "id": "lamp-trunk", "x": 3160, "y": 1280 },
-    { "id": "lamp-root", "x": 4566, "y": 1280 },
+    { "id": "lamp-root", "x": 4350, "y": 1280 },
     { "id": "lamp-high", "x": 3264, "y": 448 },
-    { "id": "lamp-rise", "x": 4860, "y": 1088 }
+    { "id": "lamp-rise", "x": 4760, "y": 1088 }
   ],
   "heart": { "x": 5212, "y": 1088 }
 }

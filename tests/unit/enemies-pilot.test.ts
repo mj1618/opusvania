@@ -134,6 +134,10 @@ describe('burrbacks in the grove, piloted', () => {
       for (const dir of [-1, 1]) {
         // (Burrbacks only: the jump over burr-ledge westward carries on off the ledge's end into
         // lamp-ledge's air, which is that one's test.)
+        // (burr-root paces the foot of the rise's step, against its wall: there is no ground east of
+        // it to run from. From the east she comes down off the rise and lands beyond it:
+        // critical-path.test.ts, "a walk or a tap jump off the rise's west lip".)
+        if (list[i]?.id === 'burr-root' && dir === -1) continue;
         const s = newSim({ ...GROVE, enemies: list });
         // Wait until it walks toward a spot she can stand on, then run at it from there and jump.
         let ok = false;

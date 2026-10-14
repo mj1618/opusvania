@@ -462,6 +462,10 @@ function updateLights(
     const key = l.key === undefined ? -1 : keyIndex(scene, l.key);
     const keyAt = key >= 0 ? scene.pickups?.[key] : undefined;
     const keyed = key < 0 || (wallet.timers[key] ?? 0) < 0;
+    // Taking it is a ceremony (the great glint's flight to her): nothing may hurt her in it, nor for
+    // a beat after. The creatures round her are calmed, as by a kindling.
+    if (keyAt && ((wallet.timers[key] ?? 0) > 0 || (keyed && !s.keyed)))
+      calmEnemies(state, scene, t, events, pcx, pcy, G.keyCalmPx, whole(G.keyCalmFrames, 0));
     if (keyed && !s.keyed && keyAt) {
       s.keyed = true;
       events.push({ type: 'lanternKey', id, x, y, key: keyAt.id, kx: keyAt.x, ky: keyAt.y });

@@ -18,7 +18,7 @@
  */
 import type { SimEvent } from '../events';
 import { roundHalfAway, solidAt } from '../physics/aabb';
-import { groundSanctuaryGap } from '../sanctuary';
+import { groundSanctuaryDepth } from '../sanctuary';
 import type { Scene } from '../scene';
 import type { EnemyState } from '../state';
 import type { Tuning } from '../tuning';
@@ -185,9 +185,8 @@ function walk(e: EnemyState, info: StepInfo): void {
     // Short of a drop: outward past the patrol's end is refused (back in from beyond it is not).
     const lip = e.facing < 0 ? LIP_L && nx < MIN_X : LIP_R && nx + e.w > MAX_X;
     // A lit lantern's sanctuary ahead: it does not go nearer.
-    const gap = groundSanctuaryGap(state, scene, e.x, e.x + e.w, e.y + e.h);
-    const next = gap < 0 ? -1 : groundSanctuaryGap(state, scene, nx, nx + e.w, e.y + e.h);
-    const holy = next >= 0 && next < G.sanctuaryPx && next < gap;
+    const next = groundSanctuaryDepth(state, scene, G, nx, nx + e.w, e.y + e.h);
+    const holy = next > 0 && next > groundSanctuaryDepth(state, scene, G, e.x, e.x + e.w, e.y + e.h);
     // The end of its own range: as good as a wall (back in from beyond it is never refused).
     const leash = e.facing < 0 ? nx < RANGE_L : nx + e.w > RANGE_R;
     const stop = holy ? 3 : lip ? 2 : leash ? 1 : nudge(e, scene, e.facing, 0);
@@ -233,16 +232,25 @@ function inFront(e: EnemyState, info: StepInfo, px: number, facing: number = e.f
 }
 
 /** Is there a solid low over her head (within `px` of the ground she stands on)? Then she cannot jump a ram. */
-function lowCeiling(scene: Scene, p: { x: number; y: number; w: number; h: number }, px: number): boolean {
-  const feet = p.y + p.h;
+function lowCeiling(scene: Scene, x: number, y: number, w: number, h: number, px: number): boolean {
+  const feet = y + h;
   const solids = scene.solids;
   for (let i = 0; i < solids.length; i++) {
     const s = solids[i];
-    if (s === undefined || s.x >= p.x + p.w || s.x + s.w <= p.x) continue;
+    if (s === undefined || s.x >= x + w || s.x + s.w <= x) continue;
     const under = s.y + s.h;
-    if (under <= p.y && under > feet - px) return true;
+    if (under <= y && under > feet - px) return true;
   }
   return false;
+}
+
+/**
+ * Would a step `d` take it in under a low ceiling (a doorway) from open ground? Neither its ram nor
+ * a shove does: under there she cannot jump, so it does not brace at her, and a fight that drifted
+ * in had no second tell (burr-shaft and the doorway under trunk A). One already under may move.
+ */
+function roofAhead(e: EnemyState, scene: Scene, d: number, px: number): boolean {
+  return lowCeiling(scene, e.x + d, e.y, e.w, e.h, px) && !lowCeiling(scene, e.x, e.y, e.w, e.h, px);
 }
 
 /**
@@ -266,7 +274,7 @@ function brace(e: EnemyState, info: StepInfo): boolean {
   const round = (provoked || e.stirred > 0) && !inFront(e, info, reach) && inFront(e, info, reach, -e.facing);
   if (!round && !inFront(e, info, reach)) return false;
   if (burrback.harmless?.(e, info)) return false;
-  if (lowCeiling(info.scene, p, B.strikeHeadroomPx)) return false;
+  if (lowCeiling(info.scene, p.x, p.y, p.w, p.h, B.strikeHeadroomPx)) return false;
   span(e, info.scene, B);
   const inside = p.x + p.w > RANGE_L && p.x < RANGE_R;
   if (!inside && !provoked) return false;
@@ -358,12 +366,13 @@ function charge(e: EnemyState, info: StepInfo): void {
   if (e.fenced) span(e, scene, B);
   while (n !== 0) {
     const nx = e.x + e.facing;
-    const gap = groundSanctuaryGap(state, scene, e.x, e.x + e.w, e.y + e.h);
-    const next = gap < 0 ? -1 : groundSanctuaryGap(state, scene, nx, nx + e.w, e.y + e.h);
-    const holy = next >= 0 && next < G.sanctuaryPx && next < gap;
+    const next = groundSanctuaryDepth(state, scene, G, nx, nx + e.w, e.y + e.h);
+    const holy = next > 0 && next > groundSanctuaryDepth(state, scene, G, e.x, e.x + e.w, e.y + e.h);
     // Fenced, its ram ends where its range does (as at the brink of a ledge).
     const fence = e.fenced && (e.facing < 0 ? nx < RANGE_L : nx + e.w > RANGE_R);
-    const stop = holy ? 3 : fence ? 2 : nudge(e, scene, e.facing, 0);
+    // (Nor does it run in under a doorway: it pulls up at its mouth, as at a brink.)
+    const roof = roofAhead(e, scene, e.facing, B.strikeHeadroomPx);
+    const stop = holy ? 3 : fence || roof ? 2 : nudge(e, scene, e.facing, 0);
     if (stop !== 0) {
       spend(e, info, stop === 1 ? 'wall' : stop === 3 ? 'lantern' : 'ledge');
       return;
@@ -413,9 +422,10 @@ function knock(e: EnemyState, scene: Scene, t: Tuning['burrback']): void {
   e.rx -= n;
   if (e.fenced) span(e, scene, t);
   while (n !== 0) {
-    // Fenced, a shove does not take it out of its range either.
+    // Fenced, a shove does not take it out of its range either; and none takes it in under a doorway.
     const fence = e.fenced && (d < 0 ? e.x + d < RANGE_L : e.x + d + e.w > RANGE_R);
-    const stop = fence ? 1 : nudge(e, scene, d, Math.max(0, Math.min(e.w - 1, frames(t.teeterPx))));
+    const roof = roofAhead(e, scene, d, t.strikeHeadroomPx);
+    const stop = fence || roof ? 1 : nudge(e, scene, d, Math.max(0, Math.min(e.w - 1, frames(t.teeterPx))));
     if (stop !== 0) {
       if (stop === 2) e.teeter = d;
       e.rx = 0;
@@ -590,8 +600,7 @@ export const burrback: KindRules = {
 
   /** Inside a lit lantern's sanctuary (it was there when the lantern caught, or was shoved in): harmless. */
   harmless(e, info) {
-    const gap = groundSanctuaryGap(info.state, info.scene, e.x, e.x + e.w, e.y + e.h);
-    return gap >= 0 && gap < info.t.goal.sanctuaryPx;
+    return groundSanctuaryDepth(info.state, info.scene, info.t.goal, e.x, e.x + e.w, e.y + e.h) > 0;
   },
 
   /** Its touch hurt her (or met her kindling): it is shoved back from her, flinches, and turns away. */

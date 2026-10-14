@@ -902,13 +902,13 @@ describe('enemies in the grove', () => {
       // end: playtest 5, hopping its ram from 2936 carried her off that end to the floor. (The bark
       // of trunk A is no way up any more, so nothing rises through the branch under it.)
       ['burr-ledge', 3004, 3176],
-      // burr-root keeps 180 px off the root's foot (`radius` 110; playtest 3: it hit everyone
-      // coming off the root) and still walks through the lamp at the rise's foot.
-      ['burr-root', 4340, 4608],
+      // burr-root paces the foot of the rise's step only (`radius` 40, playtest 6): every tap jump
+      // from the root's lip (4283-4473) and a walk off the rise's west lip (4436) land west of it.
+      ['burr-root', 4506, 4608],
       // burr-shaft paces the shaft floor by pod-shaft (`radius` 46): 50 px clear of the doorway she
       // comes in by and 62 px short of trunk B's bark, where she stands to start the climb.
       ['burr-shaft', 3378, 3522],
-      // burr-rise: between lamp-rise (4860) and the heart (its box starts at 5164), `radius` 70.
+      // burr-rise: between lamp-rise (4760 now, 154 px before its patch) and the heart (its box starts at 5164), `radius` 70.
       ['burr-rise', 4914, 5106],
     ]);
   });

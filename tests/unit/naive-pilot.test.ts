@@ -391,7 +391,11 @@ describe('naive players finish the grove: the lanterns are the critical path', (
     );
     for (const id of ['burr-path', 'burr-shaft', 'burr-rise']) expect(met.has(id), id).toBe(true);
     const cut = r.events.filter((e) => e.type === 'enemyDie').map((e) => (e.type === 'enemyDie' ? e.id : ''));
-    expect(cut).toEqual(expect.arrayContaining(['burr-path', 'burr-rise']));
+    expect(cut).toEqual(expect.arrayContaining(['burr-path', 'burr-shaft']));
+    // (burr-rise she only wounds: lamp-rise's light no longer stops its ram or takes its brace, so the
+    // masher fades there, re-forms at the lamp, and its last ram carries it past her; she walks on.)
+    const wounds = r.events.filter((e) => e.type === 'enemyHit' && e.id === 'burr-rise').length;
+    expect(wounds).toBeGreaterThanOrEqual(3);
     // Mashing costs two lights a burrback now: more hits than she has lights, so she fades (and
     // re-forms at a light she lit, with a third of her wallet to pick up again).
     expect(r.hits).toBeGreaterThan(4);
@@ -475,14 +479,19 @@ describe('naive players finish the grove: the lanterns are the critical path', (
     const byBurr = (id: string) => r.events.filter((e) => e.type === 'hurt' && e.source.id === id).length;
     for (const id of ['burr-path', 'burr-shaft', 'burr-rise']) expect(byBurr(id), id).toBeLessThanOrEqual(1);
     expect(r.fades).toBe(0);
-    // The open-ground fight has its second tell. (The other two stand beside a wayside lamp: lit, its
-    // light stops their ram and takes their brace where she has shoved them into it, so they end sooner.)
+    // Every fight on the road has its second tell (playtest 6: a lit lamp beside the shaft's and the
+    // rise's stopped the ram and took the brace, and the fight in the shaft drifted into the doorway,
+    // where it does not brace: one tell each). wing-rise joins the last one.
     const tells = (id: string) => r.events.filter((e) => e.type === 'enemyWindup' && e.id === id).length;
-    expect(tells('burr-path')).toBeGreaterThanOrEqual(2);
-    expect(tells('burr-path') + tells('burr-shaft') + tells('burr-rise')).toBeGreaterThanOrEqual(4);
-    // A kill by the finisher happens on the road.
-    const fin = died.filter((e) => e.type === 'enemyDie' && e.kind === 'burrback' && e.power >= 2).length;
-    expect(fin).toBeGreaterThanOrEqual(1);
+    for (const id of ['burr-path', 'burr-shaft', 'burr-rise'])
+      expect(tells(id), id).toBeGreaterThanOrEqual(2);
+    expect(
+      r.events.filter((e) => e.type === 'enemyDive' && e.id === 'wing-rise').length,
+    ).toBeGreaterThanOrEqual(1);
+    // She bought the two lamps on her road and they did not shorten the fights beside them.
+    expect(r.lamps).toBeGreaterThanOrEqual(2);
+    expect(r.events.filter((e) => e.type === 'enemyRecover' && e.cause === 'lantern')).toEqual([]);
+    expect(r.hits).toBeLessThanOrEqual(3);
     expect(r.frames).toBeGreaterThan(60 * 45);
     if (process.env.NAIVE_TRACE)
       console.log(`careful: ${(r.frames / 60).toFixed(1)} s, ${r.hits} hits, ${r.fades} fades`);
