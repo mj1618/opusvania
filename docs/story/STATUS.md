@@ -7,11 +7,11 @@ is central and discovered in play, mythic on the surface and technical underneat
 
 | | |
 |---|---|
-| Latest | round 29 (polish) |
-| Last review | round 29: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (nine rounds running; "stands beside Ori and Nine Sols") · rel 9 / clarity 8 / idea 9 / world 9 / mechanics 9 / antagonist 9 / ending 9 / original 8 / Grove 8 / balance 8 |
-| Readers | still shared by all three: the Night 4 coal choice. Two rounds of making it visible didn't fix it, so round 30 removes the hidden choice instead |
+| Latest | round 30 (the hidden coal choice removed: she carries Tallow's red coal to the end; Burn always open) |
+| Last review | round 30: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (ten rounds running) · rel 9 / clarity 8 / idea 9 / world 9 / mechanics 9 / antagonist 9 / ending 8 / **original 9** / Grove 8 / balance 8 |
+| Readers | the coal confusion is gone. Shared now by two readers: why the cocoon (Spin) frees the world |
 | Locked | [locked.md](locked.md): spine, cast, midpoint, endings, the three big images, title |
-| Now working on | round 30: no hidden coal choice (she carries Tallow's red coal from Night 3 to the end; Burn is always open at the dish); the partner's fate in Burn; Tallow on Night 3 |
+| Now working on | round 31: one image for why Spin works (the stalks are drawn out of the cases and spun into the silk); the partner's pod path; small pronoun and place snags |
 
 **Done when** two rounds in a row: the AI test passes, the director greenlights it and says it stands next to Ori / Hollow Knight / Nine Sols, all three readers would finish the game, and no confusion is shared by two readers. Then the prologue gets built in the Grove.
 
