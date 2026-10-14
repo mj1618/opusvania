@@ -7,11 +7,11 @@ is central and discovered in play, mythic on the surface and technical underneat
 
 | | |
 |---|---|
-| Latest | round 23 (de-mouthed: the AI is the Hush, HEARTH on the lab sign; the sister came back too late; Dun's turn motivated) |
-| Last review | round 23: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (third round running) · rel 8 / clarity 7 / idea 9 / world 8 / mechanics 9 / antagonist 9 / ending 8 / original 8 / Grove 8 / balance 8 |
-| Readers | all three retold it correctly and would finish it; each remembered a different scene. Shared confusion: the dark/light stealth rules contradict each other (all three) |
+| Latest | round 24 (one stealth rule; the lab reveal shown; the two moth pictures rhyme; the journey at moth scale: forest → edge → gardens → kept town → dead city → mountain) |
+| Last review | round 24: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (four rounds running) · rel 8 / clarity 7 / idea 9 / world 8 / mechanics 9 / antagonist 8 / ending 7 / **original 9** / Grove 8 / balance 8 |
+| Readers | all three retold it and found the lab-brain truth on their own. Shared confusion: does the Hush eat light or warmth, and why would a feeding brain seal everyone? |
 | Locked | [locked.md](locked.md): spine, cast, midpoint, endings, the three big images, title |
-| Now working on | round 24: one clean stealth rule; the lab reveal shown not lectured; link the two hearts; the world moved to moth scale at night (forest → edge → gardens → kept town → dead city → mountain) |
+| Now working on | round 25: the Hush's motive and the light/warmth logic made plain; the true ending's cost made permanent (it gives too much back); misread lines; the coal contradiction |
 
 **Done when** two rounds in a row: the AI test passes, the director greenlights it and says it stands next to Ori / Hollow Knight / Nine Sols, all three readers would finish the game, and no confusion is shared by two readers. Then the prologue gets built in the Grove.
 
