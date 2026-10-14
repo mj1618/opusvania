@@ -64,25 +64,68 @@ Bad / confusing / bugs:
   given part of its price says nothing about where the rest is.
 - Tally (`06`, `07`): no row for calmed or gifted; the pacifist reads as `0/13 creatures`, tier 0.
 
-## 4. The three changes that would most improve the fun (ranked)
-1. **Teach it in the level, by contrast.** (a) The kindle of lantern-stone already empties her (pledged: g0 at
-   f377); only the pool's glints stand between it and burr-path (`pool-1..3` at 1630-1762 on her walk, `pool-arc-1..5`
-   over it). Move them east of burr-path (past 2400): she meets it dark and it dozes as she passes, then she fills up
-   and burr-shaft lifts its head at her. (b) An `offer` lesson in prompts.ts (the key cap over her, like
-   glide / kick): the first time a creature becomes aware of her inside 260 px while she carries, until her first
-   `enemyGift`. (c) Hold V streams (one glint every ~8 frames) as the prologue taught.
-2. **Make a lampwing gift landable**: while a lampwing is in its tell or dive, offer reaches it at its sight (or
-   `offerReachPx` 150 -> 260 for lampwings) and a glint to a diving one lands at once (`offerFlightFrames` 10 -> 0-3
-   for an enemy in `dive`). Then "it saw my light, give it some" is the answer to the red glow, and the L4 harassment
-   on the far climb has an answer a player can find.
-3. **Pay giving back where the player looks**: the tally gets a `calmed` count next to creatures (calmed + kills /
-   13), and glints given to creatures count toward the heart's offering (they went into the grove, not lost), so the
-   giver is not tier 0 with `0/13`. Small extra: a cut aimed at a pod does not hit a calmed creature.
-Honourable mentions: seen4 30 -> 45 (natural sits at L4 for half the run with nothing to spend on); a calm that
-lasts until she leaves its ground (the story says "once she warms one of them, it knows her").
+## 4. Round 1's top 3 (all built in ab4429a / fc6a972; see Round 2)
+Teach by contrast + a V prompt + hold to pour; lampwing gifts landable; giving counted at the heart and a calmed
+row in the tally (plus: pod cuts skip calmed creatures, seen4 45, calm held while she stays, promised lanterns).
 
 ## Method notes
 - `go.sh <mode> <outdir>` (bots/): clears localStorage, opens `/opusvania/?skipprologue` on the frozen build,
   imports `bot.js` then `pol.js`, polls `window.__result`, dumps log + JPEG snaps. Build: `git archive HEAD` into the
   scratchpad, symlink node_modules, `vite build --outDir`, `vite preview --port 5187 --outDir`.
 - Offer timing is staged in `?manual` with `G.input('O1')` + `step(1)`; `giving(n)` sets the wallet.
+
+# Round 2 (2026-10-14, HEAD fc6a972: sim ab4429a + render fc6a972; frozen build on :5188)
+Same bot, plus `curious` (plays like natural, presses V 250-450 ms after the V prompt shows; after its first gift
+it gives to ~65% of creatures, fights the rest) and a right-first variant (`order summit`) of natural and curious.
+Bot `bots/pol-r2.js`, logs `logs/R2*.txt`, frames `r2-*`. Stuck time is my bot's shaft climb (named).
+| run | time | hits / fades / kills | gifts (calmed) | offered / tier | seen 0/1/2/3/4 % |
+|-|-|-|-|-|-|
+| natural, ember first | 1:23 | 5 / 1 / 2 | 0 | 52 / **2** | 22/2/6/42/27 |
+| natural, right first | 1:19 | 9 / 1 / 3 | 0 | 63 / 2 | 22/4/1/14/59 |
+| curious, ember first | 2:12 (~65 s bot in shaft) | 2 / 0 / 1 | 10 (4) | 41 / 1 | 15/2/4/78/0 |
+| curious, right first | 1:34 | 2 / 0 / 2 | 6 (5) | 57 / 2 | 22/3/2/38/35 |
+| giver | 1:27 (25 s rescue) | **0** / 0 / 0 | 8 (6) | 30 / 1 | 24/2/10/64/0 |
+| ghost (no pods, pours) | 1:42 (2 rescues) | 2 / 0 / 0 | 11 (8) | 11 / 0 | 41/15/21/23/0 |
+
+## 1. Discovery: yes for Offer, still no for the seen rule
+- **The V prompt teaches Offer within 10-13 s.** Ember-first: lamp-f3 tells at 10.5 s, the cap shows beside her
+  (`r2-01`, `r2-03`: small, same style as the kick cap), the press at 13.1 s lands and the red lampwing goes pale and
+  peels off (`r2-02`): cause and effect read at 1x. Right-first: first gift on burr-path at 9.8 s.
+- **But the first presses can miss**: curious (ember first) pressed twice at f850 / f882 with the cap up and got
+  `offerMiss none` (`r2-11`): lamp-f3 had already given up (`/calm`, f843) and the cap stayed while it was still
+  "aware". First impression: "V does nothing". The cap is shown for awareness, not for an offer that would land.
+- **The seen rule is still not discovered.** The contrast works in the sim (burr-path passed at wallet 1, not aware,
+  both right-first runs) but **does not read**: at 1x the unseen burrback is a patrolling beetle with orange eyes
+  (`r2-04`, `r2-05`), and both HK-grammar players cut it on sight (f628, f737), which rouses it. Ember-first players
+  never meet burr-path on its ground. A ghost coming back WEST off the bluff carries the moved pool glints (6, L2) and
+  lands in burr-path's ram (f962, `r2-06`). The prompt teaches "V calms"; nothing teaches "your light woke it".
+
+## 2. Fun now
+- **A real choice now, no single dominant strategy.** Giver: 0 hits, tier 1. Natural: 5-9 hits and a fade, tier 2.
+  Curious (mix): 2 hits, tier 1-2: mixing is best, which is healthy. The tally shows it (`r2-08`: calmed 6/13 beside
+  creatures 0/13, offered 30 with a star).
+- **Pour is good**: held V draws one ribbon into the glass, flames fill (`r2-07`); a lamp in ~1.3 s (ghost f1936-f2009).
+- **Carrying is still felt as punishment by non-givers**: wing-rise on the far climb at L4 (52-80 in hand) hit the
+  natural 4 times + fade in BOTH natural runs (f3524-f4484; f3594-f4310) (`r2-09`). The difference now: the V cap is
+  up during it (`r2-10`), and the curious player took 1 hit there. The answer is on screen; the cause still is not.
+- Glints: still a reason (lights, tiers; gifts count). Fighting: a reason (kills feed the tier), at a price (hits).
+
+## 3. New bugs
+- **Prompt without a target** (above): show the cap only when `offerTarget` would return a creature now.
+- **The calm still re-taxes the shaft**: `giftStayPx` 520 is measured as a distance, so climbing the shaft ends it.
+  Staged (`?manual`, wallet 20, gift burr-shaft, teleport): to the summit (3700,192) or the ledge (3000,448) for 660
+  frames -> gift 0, back on the floor it is aware again (45); on the floor 3150 / 3800 it holds at 1. Runs: curious
+  paid burr-shaft 6 glints (f1465-f5368), giver 3, ghost 3.
+- **The prompt nags a non-giver all run** (natural: shown 7 and 13 times, never pressed). Not harmful, a bit loud.
+- The ghost still stands empty at lantern-far after pouring it short (no glints near); the promise rule is right,
+  but nothing points to where the rest is. Minor.
+
+## 4. Top 3 next changes (ranked)
+1. **Make the seen rule visible at the moment it flips.** On `enemyAware`, a thin warm thread / glance line from the
+   creature to her glow for ~0.4 s and the wallet number pulses; when she is unseen within 340 px, the burrback stops
+   and sleeps (stands, lids fully shut, a slow "z"-like mote), not patrols. Then "it woke when I picked those up" and
+   "it sleeps while I'm dark" are both seen. Keep the bluff glints off the westward drop too (burr-path from the east).
+2. **The V cap only when an offer would land** (`offerTarget` returns a creature), and it stops after ~5 unanswered
+   showings until the next fade. No first press should miss.
+3. **Calm holds through the shaft**: `giftStayPx` on x only (|dx| < 520), or the calm lasts until she lights the
+   next light. A struggling player should not pay the same creature six times.
