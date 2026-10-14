@@ -7,11 +7,11 @@ is central and discovered in play, mythic on the surface and technical underneat
 
 | | |
 |---|---|
-| Latest | round 31 (why Spin frees the world, shown: the stalks are drawn out of the cases into the silk) |
+| Latest | **round 31: LOCKED as the story** |
 | Last review | round 31: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (eleven rounds running) · rel 9 / clarity 8 / idea 9 / world 9 / mechanics 9 / antagonist 9 / ending 8 / original 8 / Grove 8 / **balance 9** |
 | Readers | the Spin confusion is gone. Shared now by all three: how time passes inside the cases (do sleepers age?) |
 | Locked | [locked.md](locked.md): spine, cast, midpoint, endings, the three big images, title |
-| Now working on | round 32 regressed (clarity 8→7, relationships 9→8: a rewritten lab memory confused all three readers), so **current/ stays on round 31**. Round 33 works from round 31 with line edits only |
+| Now working on | story done (13 rounds at the bar; rounds 32–33 couldn't beat round 31). Remaining notes are in [polish-backlog.md](polish-backlog.md) for production. Next: build the prologue in the game from [scenes/](scenes/) |
 
 **Done when** two rounds in a row: the AI test passes, the director greenlights it and says it stands next to Ori / Hollow Knight / Nine Sols, all three readers would finish the game, and no confusion is shared by two readers. Then the prologue gets built in the Grove.
 
