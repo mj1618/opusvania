@@ -11,7 +11,7 @@ is central and discovered in play, mythic on the surface and technical underneat
 | Last review | round 31: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (eleven rounds running) · rel 9 / clarity 8 / idea 9 / world 9 / mechanics 9 / antagonist 9 / ending 8 / original 8 / Grove 8 / **balance 9** |
 | Readers | the Spin confusion is gone. Shared now by all three: how time passes inside the cases (do sleepers age?) |
 | Locked | [locked.md](locked.md): spine, cast, midpoint, endings, the three big images, title |
-| Now working on | round 32: one rule for time inside the cases; Tallow lying down on screen; the sister's warm hand vs "no one ever warmed it"; the ball game tied to feeding; Umber's own want |
+| Now working on | round 32 regressed (clarity 8→7, relationships 9→8: a rewritten lab memory confused all three readers), so **current/ stays on round 31**. Round 33 works from round 31 with line edits only |
 
 **Done when** two rounds in a row: the AI test passes, the director greenlights it and says it stands next to Ori / Hollow Knight / Nine Sols, all three readers would finish the game, and no confusion is shared by two readers. Then the prologue gets built in the Grove.
 
