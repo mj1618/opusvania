@@ -4,11 +4,11 @@
 world and never noticed moths.
 
 **The spine.**
-1. A living thing the moths call the Hush has grown over the world and put everyone to sleep. It never noticed moths.
-2. At its heart Umber finds what it is: a brain people grew from their own cells in a dish, then abandoned. It
-   has fed the world ever since, and no one has warmed it.
-3. When she warms it, it sees moths for the first time and comes for them, and she must choose: be kept, burn it, or
-   spend her life so it lets go.
+1. A living thing the moths call the Hush has grown over the world and put everyone to sleep.
+2. At its heart Umber finds what it is: a brain people grew in a dish from their own cells, then abandoned. It has fed
+   the world ever since, but no one has ever warmed it.
+3. When she warms it, it sees moths for the first time and comes for them. She must choose: be kept, burn it, or spend
+   her life so it lets go.
 
 **The central question:** kept safe forever, or spent so something new can be born?
 
@@ -25,163 +25,164 @@ world and never noticed moths.
 
 ## 1. The takeover
 
-Pale tissue, cool as bone, covers the human world. Hollows in the roads draw living things down into grey cases that
-hang on stalks like fruit. Inside, each sleeper is thin but fed. No one wakes, and no one is born. The first city is now
-a breathing mountain. Animals are kept too; some are regrown as its servants: badgers in root armour, and
-lampwings, which were once fireflies. Its root still creeps into the last wild places. When it hurts, it hisses grey
-static. One man is still awake: Tallow. His sister was too, until she walked up the road with a torch and never came
-back.
+Pale tissue, cool as bone, covers the human world. Hollows open in the roads and draw living things down into grey
+cases that hang on stalks like fruit. Each sleeper is fed through its stalk, thin but alive. No one wakes, and no one is
+born. The first city is now a breathing mountain. Animals are kept too, and some are regrown as its servants: badgers
+in root armour, and lampwings, which were once fireflies. Its root still creeps into the last wild places. When it
+hurts, it hisses grey static. One man is still awake: Tallow.
 
 ## 2. The rules
 
 1. **Give warmth, don't fight.** A glint is a drop of the forest's warmth. Giving one calms a creature or makes root
-   let go; her blade only buys a moment. With no glints left, she shivers to give her own warmth, and that slows her
-   until she rests.
-2. **Moths go unseen.** The Hush and its badgers notice only things that eat, so they pass over moths. Lampwings see
-   light, and dive at any glint she carries.
-3. **Lanterns** are old moth cocoons hardened like glass. A glint lights one. A lit lantern holds root back, and she
+   let go. Her blade only buys a moment.
+2. **Shiver when the glints run out.** She can shiver to give her own warmth instead, but it slows her until she rests.
+3. **Moths go unseen.** The Hush and its badgers notice only things that eat, so they pass over moths. Once she warms
+   one of them, it knows her.
+4. **Lampwings see light.** They dive at any light a moth carries.
+5. **Lanterns** are old moth cocoons hardened like glass. A glint lights one. A lit lantern holds root back, and she
    rests and re-forms there.
 
-## 3. The prologue (wordless, ninety seconds)
+## 3. The prologue (wordless)
 
-1. Black. A small pale light, breathing. A warm blur rests on it and it steadies. The blur lifts, frost creeps in, and
+1. Black. A small pale light, breathing. A warm blur rests on it, and it steadies. The blur lifts, frost creeps in, and
    the light breaks into static.
-2. From high above: a pale mountain with that light at its core. Root spreads from it like frost; town lights go out.
-3. Umber's wood at dusk: a black pool below, the summit where the moths dance above. Dun, furred with root, wades
-   through the dance without seeing them. Nearby a vole gnaws a seed, and Dun's head swings round.
+2. From high above: a pale mountain with that light at its core. Root spreads from it like frost, and town lights go
+   out.
+3. Umber's wood at dusk: a black pool below, a summit above where the moths dance. Dun, furred with root, wades through
+   the dance without seeing them. Nearby a vole gnaws a seed, and Dun's head swings round.
 4. On a frosty night two cocoons split over the pool. Sorrel flies up; Umber drops to the moss, too cold to fly. He
-   comes back, folds his wing over hers and shivers until she can fly, taps her wingtip, and is gone. A glint drops
-   before her. She lifts it to her face, as the vole did its seed, then holds it out, and it lights her. Item text:
+   comes back, folds his wing over hers and shivers until she can fly, taps her wingtip, and is gone. A glint drops in
+   front of her. She lifts it to her face, as the vole did its seed, then holds it out, and it lights her. Item text:
    *"Warmth the forest grows to give away. A moth has no mouth to keep it."* Under the pool, pale root steams. Title.
 
 ## 4. The acts
 
 ### Act I: out of the wood (Nights 1–3)
 
-**Night 1, the wood.** Racing Sorrel up the trunks, she learns his somersault, dash and glide. He shows her the
-pale mountain breathing on the horizon, and the high island where a big glint grows for the summit lantern. At the
-summit he dances with his partner, a silver-edged moth, while Umber watches from the dark. She lights the two lower
-lanterns. **Boss: a great lampwing** dives at the big glint as she carries it home. *Play:* each time it
-hangs in the air, she gives it a glint, until its lamp folds. When all three lanterns burn, light fills a moth carved on
-a standing stone, the only picture the forest makes. **The forest acts:** warmth runs through the ground, the root under
-the pool shrinks back, and a thorn grows from the shrine into her grasp: her blade.
+**Night 1, the wood.** Racing Sorrel up the trunks, she learns his somersault, dash and glide. He shows her the pale
+mountain breathing on the horizon, and the high island where a big glint grows for the summit lantern. At the summit
+he dances with his partner, a silver-edged moth, while Umber watches from the dark. She lights the two lower lanterns.
+**Boss: a great lampwing** dives at the big glint as she carries it home. *Play:* each time it hangs in the air, she
+gives it a glint, until its lamp folds. When all three lanterns burn, light fills a moth carved on a standing stone,
+the only picture the forest makes. **The forest acts:** warmth runs through the ground, the root under the pool shrinks
+back, and a thorn grows from the shrine into her grasp: her blade.
 
-**Night 2, the gardens.** A hollow swallows a hare, and its case swings up into an orchard where hundreds hang among
-the apples. **Boss: Dun,** heading for a vixen's den. *Play:* it never attacks; each glint drives it back a step,
-while Sorrel draws the lampwings off. When her glints run out, the vixen bolts across a frozen pond and Dun crashes
-through the ice after her. It lies there shaking, hissing static. Umber folds her wings over its snout and
-shivers until the shaking and the static stop. Later, when Sorrel is too cold to fly, she shivers for him, and he taps
-her wingtip.
+**Night 2, the gardens.** A hollow swallows a hare, and its case swings up into an orchard where hundreds of cases hang
+among the apples. **Boss: Dun,** heading for a vixen's den. *Play:* Dun never attacks. Each glint she drops loosens the
+root under its feet, and it stumbles back a step, while Sorrel draws the lampwings off. When her glints run out, the
+vixen bolts across a frozen pond, and Dun crashes through the ice after her. It lies there shaking, hissing static.
+Umber folds her wings over its snout and shivers until the shaking stops, and its eyes find her for the first time.
+Later, when Sorrel is too cold to fly, she shivers for him, and he taps her wingtip.
 
 **Night 3, the kept town.** A family's cases hang round a kitchen table set for dinner. Tallow's house stands in a
-ring of ash. On his wall, beside a photo of his sister in a greenhouse coat, is a tally of
-twenty winters and one word: *EATEN*. He holds his torch to a case. To him it is grey and blind as stone. Umber, pressed
-against it, sees a sleeping face inside, and the camera holds on it as it goes dark. Static hisses up the stalk;
-Tallow doesn't look back. **Boss: a root as thick as a tower** bores up through the street for him. *Play:* she climbs
-it, giving a glint into each knot until it sinks. Tallow gives her a red coal from his fire, and it
-glows at her side from then on. Item text: *"It never goes out. It is for the thing in the mountain."* At dawn Sorrel flies home to
-his partner; Umber goes on alone.
+ring of ash. On his wall, beside a photo of his sister in a greenhouse coat, are tally marks for twenty winters and one
+word: *EATEN*. He holds his torch to a case; to him it is blind grey stone. Umber, pressed to its skin, sees a sleeping
+face inside, and the camera stays on the face as the flame takes it.
+**Boss: a root as thick as a tower** bores up through the street for him. *Play:* she climbs it, giving a glint into
+each knot until it sinks. Tallow gives her a red coal from his fire. Item text:
+*"It never goes out. It is for the thing in the mountain."* At dawn Sorrel flies home to his partner, and Umber goes on
+alone.
 
 ### Act II: the midpoint (Night 4)
 
-**The old road** climbs the mountain to the lab. Its door is grown shut with cases; she slips in through a crack only a
-moth would fit.
+**The old road** climbs the mountain past a peeling poster: a light lifted from a woman's hand into a
+dish, *Grown from us*; the dish wired to greenhouses and dinner tables, *Now it feeds us*. At the top, the lab's door is
+grown shut, with cases hanging under its sign, *No one goes hungry*, and *CLOSED* pasted across it. She slips in
+through a crack only a moth would fit.
 
-**The lab.** Dark greenhouses round one dish.
-- Over the door: *No one goes hungry*, with *CLOSED* pasted across it.
-- A poster in three panels: a light lifted from a woman's hand into a dish, *Grown from us*; the dish and a ball
-  between two paddles, *First it learned to catch*; the dish wired to greenhouses and tables, *Now it feeds us*.
-- On a hook, the greenhouse coat from Tallow's photo. Item text: *"Hers. The first light in the dish came from her own
-  hand."*
-- The dish, grey and cracked. A case has grown against it, and inside is Tallow's sister, old now, kneeling, her palm on
-  the dish through the case's skin. The Hush's thickest stalk runs into it.
+**The lab.** Dark greenhouses surround one dish. The greenhouse coat from Tallow's photo hangs on a hook. Item text:
+*"Hers. The first light in the dish came from her own hand."* The dish is grey and cracked. Tallow's sister, old now,
+kneels in a case grown against it, her palm on the dish through the case's skin. The Hush's thickest stalk runs into
+the dish.
 
-**The memory.** Umber touches the stalk, and the prologue's first shot returns. The pale light is a cloud of
-cells in this dish; the warm blur is the sister's hand on the glass as it plays the ball game. Each missed ball
-hisses static; the cloud flinches. Then *CLOSED* goes up. The workers walk out one by one, and each leaving hisses
-like a missed ball. The sister goes last, looking back, and the static never stops. The town starves. The first root
-slides down a pipe into it, a case closes round a sleeping child, and the static drops a little. Years later the sister walks back in, grey, carrying a lit torch. The cloud flinches from the flame. She pinches
-it out, lays her hand on the glass, and a case closes round her.
+**The memory.** Umber touches the stalk, and the prologue's first shot returns. The pale light is a cloud of cells in
+this dish; the warm blur is the sister's hand on the dish while the cloud plays a ball game. Each missed ball hisses
+static, and the cloud flinches. Then *CLOSED* goes up. The workers walk out one by one, and each leaving hisses like a
+missed ball. The sister goes last, looking back. The greenhouses go dark, the town goes hungry, and the static never
+stops. Then the first root slides down a pipe to a hungry child. A case closes round her, she is fed, and the static
+drops a little. Years later the sister walks back in, grey-haired, carrying a lit torch. The cloud flinches from the
+flame. She pinches it out, lays her hand on the dish, and a case closes round her.
 
-**The turn.** Dun, who tracked the vixen here, lays her at the dish, and root lifts to draw her down. Umber pours all
-her glints in. The root lets the vixen go, the static stops, and the cloud's threads draw a moth with open wings:
-Umber, the first picture the Hush has ever made. Dun stares at her and knows her from the ice. One root cups her, and a
-case no bigger than a seed starts to close round her, warm as a folded wing: the first warmth anyone has ever given her back. She almost stays. Then she wriggles free, and as she flies, the
-static floods back. The Hush comes after her the only way it can: every root on earth turns toward moths. She flees
-until she fades, and every lantern near her is smothered. **The forest acts:** it pushes warmth up the Hush's own root
-into the nearest lantern, and she re-forms. Far away, a lampwing comes to rest on Sorrel as he dances.
+**The turn.** Dun lays a sleeping hare at the dish, and root lifts to draw it down. Umber pours all her
+glints into the dish. The root lets the hare go, the static stops, and the cloud's threads draw a moth with open wings:
+Umber, the first picture the Hush has ever made. Dun looks from the picture to her. A root cups her, and a case no
+bigger than a seed starts to close round her, warm as a folded wing. She almost stays. Then she wriggles free, and as
+she flies the static floods back. The Hush comes after her: every root on earth turns toward moths. Root smothers every
+lantern near her, and she flees until she fades.
+**The forest acts:** it pushes warmth up the Hush's own root into the nearest lantern, and she re-forms. Far away, a
+lampwing lands on Sorrel as he dances and leaves its coral glow on his wings, a light he cannot put down.
 
 ### The lowest point (Night 5): the wood overrun
 
-Overnight, root pours from the pool over the wood. Badgers wade through the dance as always, and this time every head
-swings round. Lampwings lift moths, gently, into warm little cases on the root; roots climb toward next year's cocoons.
-**Boss: three hollows that learn her moves.** *Play:* each opens where she last landed.
+Overnight, root pours from the pool over the wood. Badgers wade through the dance, and this time every head
+swings round. Lampwings lift moths gently into warm little cases on the root, and roots climb toward next year's
+cocoons. **Boss: three hollows that learn her moves.** *Play:* each one opens where she last landed.
 
-Sorrel finds his partner sealed in a case no bigger than a seed, her silver edge showing through, with a root drawing
-it toward the pool. He wraps himself round it. Umber folds her wing over his. He does not move, and lampwings rise. She
-leaves him. The camera holds on him, a dark knot round a pale case, as root closes over the lantern beside him. Then he
-shivers: he is alive, and keeping her warm.
+Sorrel finds his partner sealed in a seed-sized case on a root, her silver edge showing through. He wraps himself round
+it. Umber folds her wing over his. He does not move, and lampwings rise toward his glowing wings. She leaves him. The
+camera holds on him, a dark knot round a pale case, as root closes over the lantern beside him. Then he shivers: he is
+alive, and keeping the case warm. At dawn the root tears it from his wings and drags it toward the mountain.
 
-She re-forms alone, and the mountain sends Dun to take her. Instead Dun noses her spilled glints together, pulls against
-its own root until it snaps, and lies across her lantern's door, facing out. From then on Dun guards whatever lantern
-she rests at, and fleeing moths gather there.
+She re-forms alone, and the mountain sends Dun to take her. Instead Dun noses her spilled glints together, pulls
+against its own root until it snaps, and lies across her lantern's door, facing out. From then on Dun guards whatever
+lantern she rests at, and fleeing moths gather there.
 
-A caterpillar on a frosted twig keeps trying to spin; each time its threads curl round it, then fall open. Umber wraps
-it and shivers; the silk holds, then the frost cracks it open. She shivers again until she can barely move, and this
-time it holds.
+A caterpillar on a frosted twig keeps trying to spin a cocoon; each time its threads curl round it, then fall open.
+Umber wraps it and shivers. The silk holds, then the frost cracks it open. She shivers again until she can barely
+move, and this time it holds.
 
 ### Act III: the mountain moves (Nights 6–7)
 
-**Night 6, the dead city.** At dawn root pulls his partner's case out of Sorrel's wings and into the pool, and Sorrel
-flies after Umber. Under the food halls' *No one goes hungry* sign, cases hang from the beams, and the Hush's picture of
-Umber is grown over every wall. Moths from every wood fly to the last streetlamp and are taken; back home, the wood's
-lanterns go out one by one. Sorrel draws the lampwings off her, and at her lantern he folds his
-wing over hers.
+**Night 6, the dead city.** Sorrel follows his partner's root toward the mountain and catches up with Umber. The
+Hush's picture of Umber is grown over every wall of the food halls. Moths fleeing the woods
+crowd round the city's last streetlamp, and lampwings fold them into cases. Sorrel, still glowing coral, draws the lampwings off her, and at her lantern he folds his wing over hers.
 
 **Boss: Tallow,** out of his ring of ash to burn the city's cases. *Play:* she cuts each case's stalk before his torch
-reaches it, and Dun drags it clear. At last he lights one she can't reach, worn thin as a leaf, and through the flame
-he sees a face inside, breathing, like the one on his street. Tallow lays the torch down.
+reaches it, and Dun drags it clear. At last he lights one she can't reach, worn thin as a leaf. Through the flame he
+sees a face inside, breathing, like the one on his street. He lays the torch down.
 
 The wood's last lantern goes out, and root climbs toward the forest's heart. **The forest acts:** instead of holding
-out a few more nights, it sends her all it has left, a river of gold across the sky. On the stone, the
-carving empties.
+out a few more nights, it sends her everything it has left, a river of gold across the sky. On the stone, the carving
+empties.
 
-**Night 7, inside the mountain.** Dun holds the way in. Small dark dishes line a flooded passage. Item text:
-*"Brothers and sisters that never woke."* Sorrel draws the roots off her once more, at the cost of every scale, and
-follows her down. At the back, Tallow has laid himself down in a new case beside his sister's, palm to palm through
-the skin. His torch lies unlit at the door.
+**Night 7, inside the mountain.** Dun holds the door. A flooded passage is lined with smaller dishes, cold and empty.
+Item text: *"Grown beside it. Only one lived."* Sorrel draws the roots off her once more, losing every scale, and
+follows her down. At the back, his partner's little case hangs beside the dish. Tallow has laid
+himself down in a new case next to his sister's, palm to palm through the skin.
 
-**Boss: the Hush itself.** *Play:* its hollows open under her; she closes each with the forest's last glints. When the
-last one closes, the root stops creeping across the world. But the dish stays grey, the static crawls on, and no case
+**Boss: the Hush itself.** *Play:* its hollows open under her, and she closes each with the forest's last glints. When
+the last one closes, the root stops creeping across the world. But the dish stays grey, the static goes on, and no case
 opens. Its threads curl round the dish and fall open, like the caterpillar's.
 
 ## 5. The endings
 
-Her glints are gone, and still it reaches. A root grows a case round Sorrel; another lifts his partner's little case
-from the pool and sets it against his. Inside, Sorrel's colour returns, and on the skin of the two cases he dances
-with his partner, long past their week. A third case opens beside them, Umber's size.
-She chooses by acting: walk into the open case, press against the glass, or drop the coal into the dish.
+Her glints are gone, and still it reaches. A root grows a case round Sorrel and sets it against his partner's. Inside,
+his colour returns, and two shadows dance on the lit skin, long past their week. A third case opens beside them,
+Umber's size. She chooses by acting: lie down in the open case, press herself to the dish, or
+drop the coal in.
 
-- **Spin** (the true ending). *Play:* Umber presses against the glass and shivers until the static fades, then circles
-  the rim while threads reach for her; each lap costs her glide, then somersault, then dash. Sorrel looks once at his
-  dancing partner, then climbs out to shiver beside Umber. Moths come from every wood until the mountain is furred with
-  wings. The threads curl, and this time they hold: it spins a cocoon round itself, and through the silk
-  its pale cloud takes the shape of a sleeping moth. Cases split across the world, and people wake, old and hungry. When
-  Umber can't walk, Sorrel folds his wing over hers and taps her wingtip, and Dun lies down beside them. Neither moth
-  rises. *Epilogue:* the forest is spent; the carving stays empty and no glints grow. Tallow and his sister walk down
-  hand in hand to clear the greenhouses. The little case splits, and Sorrel's partner, no older than the night she was
-  taken, lands beside the two still moths, taps Sorrel's wingtip, and flies home to circle the summit alone for the
-  rest of her week. In spring the caterpillar's cocoon splits on its twig, and moths hatch into an ordinary dark wood,
-  with only themselves to give. *Last image:* that autumn, Tallow's sister lays her palm on the mountain's silk, like
-  the prologue's blur. Something presses back from inside. She doesn't lift her hand.
-- **Stay.** Umber lies down in the open case and it closes. Inside, warm, she can fly; on the skin of the cases the three
-  moths dance, and Dun lies across them, facing out. *Epilogue:* every sleeper is warm and fed. Root covers the
-  wood gently, and next year's cocoons stay unopened. The static has stopped for good. Nothing is born again.
-- **Burn.** Umber drops the coal into the dish, and every root on earth goes grey. Beside her the two small cases split:
-  Sorrel climbs out, and his partner, kept only days, shakes her silver edge free. *Epilogue:* the Hush dies in a night,
-  and most of its sleepers with it; only those kept days, not years, wake. Tallow wakes and holds his sister as she stops
-  breathing. Flying home, the three moths see the family's cases go dark round the kitchen table, then the orchard, tree
-  by tree, while Dun, a badger again, pads below them. On her last night Umber dances at the
+- **Spin** (the true ending). *Play:* Umber presses herself to the dish and shivers until the static fades, then
+  circles the rim, and its threads follow her round. Each lap costs her glide, then somersault, then dash.
+  Sorrel climbs out of his case to circle beside her. Moths come from every wood until the mountain is furred with
+  wings. As they circle, the Hush's stalks draw out of every case on earth and are spun into the threads, until the
+  silk closes round the dish: a cocoon with nothing left to feed through, mouthless, like her. Across the world the
+  cases go slack and open, and people wake, old and hungry. Through the silk, the pale cloud takes the shape of a
+  sleeping moth. When Umber can't walk, Sorrel folds his wing over hers and taps her wingtip, and Dun lies down beside
+  them. Neither moth rises. *Epilogue:* the forest is spent; the carving stays empty and no glints grow. Tallow and his
+  sister walk down hand in hand to clear the greenhouses. The partner's case opens with the rest. No older than the
+  night she was taken, she lands beside the two still moths, taps Sorrel's wingtip, and flies home to circle the summit
+  alone for the rest of her week. In spring the caterpillar's cocoon splits on its twig, and moths hatch into an
+  ordinary dark wood, with only themselves to give. *Last image:* that autumn, Tallow's sister lays her palm on the
+  mountain's silk, like the blur in the prologue. Something presses back from inside. She doesn't lift her hand.
+- **Stay.** Umber lies down in the open case, and it closes beside the other two. Inside, warm, she can fly; three
+  shadows dance on the lit skin, and Dun lies across the cases, facing out. *Epilogue:* every sleeper is warm and fed.
+  Root covers the wood gently, and next year's cocoons never open. The static has stopped for good. Nothing is born
+  again.
+- **Burn.** Umber drops the coal into the dish, and every root on earth goes grey. The two small cases split, and Sorrel
+  and his partner climb out. *Epilogue:* the Hush dies in a
+  night, and most of its sleepers with it; only those kept days, not years, wake. Tallow wakes and holds his sister as
+  she stops breathing. Flying home, the three moths watch the cases go dark round the family's kitchen table, then
+  through the orchard, tree by tree, while Dun, a badger again, pads below them. At dawn, her last, Umber dances at the
   summit for the first time, with Sorrel and his partner, in a wood where nothing else moves.
 
 ## 6. The question it leaves
@@ -196,9 +197,11 @@ warmth: that is what the Hush lacks.
 
 ## Editor's cuts
 
-- **Names: 7 → 6.** Kept Umber, Sorrel, the Hush, Dun, Tallow, and Cortical Labs (lineage note only). Cut "the Grove".
-  The only special terms left are glint, lantern and lampwing. "Burrback" is cut.
-- **Rules: 4 → 3.** "Shiver" is folded into "Give warmth, don't fight". All rules are stated only in section 2.
-- **Words: 3,073 → 2,700** (by `wc -w`, not counting this list). Cut "Changes this round", the Grove dev note, and
-  lines that explain what a scene already shows. "Shivers to stay ahead" contradicted the shiver rule, so now she flees.
-  Rewrote three lines that needed a second read. No beats were cut.
+- **Proper names: 6 → 6** (Umber, Sorrel, the Hush, Dun, Tallow; Cortical Labs in the dev note only). Coined terms
+  kept because each is load-bearing: glint, lantern, lampwing, hollow, case, the static.
+- **Rules: 8 → 5.** Shivering is its own rule; lampwings split out of "moths go unseen". The repeat in Act II
+  ("now every lampwing can find him") and the round notes that re-explained rules are gone.
+- **Words: 3,160 → 2,695** (story, by `wc -w`, before this list). Cut the "Changes this round" dev notes, the
+  sister's torch walk from the takeover (the memory shows it), the second "lanterns go out" on Night 6, and small
+  explanations. Clarified "it goes dark" (Night 3), the smother-then-fade order (Night 4), "keeping her warm" → "the
+  case" (Night 5), and how the ending is chosen. No beat, relationship moment or ending cut.
