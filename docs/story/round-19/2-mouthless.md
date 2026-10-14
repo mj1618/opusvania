@@ -30,7 +30,7 @@ living things down. Every person on earth hangs grey and still from a stalk in a
 has woken or been born in forty years. The first city is now the mountain, a pale peak of folded tissue on every
 horizon. Animals are sealed too: a fox-shaped case in a hedge, a whale-shaped one on a white shore. Some it re-grew as
 servants: burrbacks were badgers, shelled in root to haul cases; lampwings were fireflies, now its eyes. Its root is
-still creeping through the last wild places, the moths' wood among them.
+creeping through the last wild places, the moths' wood among them.
 
 ## 2. The Mouth
 
@@ -48,9 +48,8 @@ sleepers.
 with jars of feed, and it took her before she could open one. **A thing that takes everything can never be given
 anything,** so the root never stops.
 
-**Is it a someone?** Both readings stay on screen. *For:* once it sees Vesper it raises her shape on every wall, and
-at the end it gives. *Against:* it learned its first game only to make the static stop, and a world kept still is the
-quietest world there is.
+**Is it a someone?** *For:* once it sees Vesper it raises her shape on every wall, and at the end it gives. *Against:*
+it learned its first game only to make the static stop, and a world kept still is the quietest world there is.
 
 ## 3. The rules
 
@@ -65,12 +64,11 @@ quietest world there is.
    its creatures, and let her rest and leave things. The game is her week of seven nights. When she fades, the nearest
    lantern spins her again and the night goes on. Within a night the world is open, and it changes as the root
    advances.
-4. **Root walls are full of sleepers.** Each case in a wall is a grey bead on her map. Tallow's coal, a black seed
-   that gives no light until it burns, burns the wall and those beads go dark. From Night 5, Dun can carry the cases
-   aside instead.
+4. **Root walls are full of sleepers.** Each case in a wall is a grey bead on her map. Tallow's coal, carried in a
+   black seed, burns through a wall, and those beads go dark. From Night 5, Dun can carry the cases aside instead.
 5. **Shiver.** She can spend her own warmth to warm something cold. It leaves her slow until she rests.
 
-## 4. The prologue (wordless, about ninety seconds)
+## 4. The prologue (wordless, ninety seconds)
 
 1. Black. A small pale light, pulsing like breath. Something warm rests against it, then lifts away. The light
    flickers. *(A seed? An egg? A heart?)*
@@ -79,7 +77,7 @@ quietest world there is.
 3. The Grove. A caterpillar chews a leaf; a burrback swings toward the sound. The caterpillar stops eating and wraps
    itself in silk, and the burrback, finding no mouth, loses interest.
 4. Two cocoons split. Sorrel flies straight up to the brood's dance. Vesper catches a glint, raises it to her face,
-   and can do nothing with it. Beyond the trees the root steams. Title.
+   and can do nothing with it. Title.
 
 ## 5. The acts
 
@@ -89,8 +87,7 @@ quietest world there is.
 she can. The summit lantern needs the forest's biggest glint, from a high island. Carrying it she can't hide, and for
 the first time every lampwing turns to her. **Boss: a great lampwing.** When the lanterns burn, the forest's heart
 wakes under its stone carving of a moth, its oldest friend. It pushes the root back and gives her a thorn blade. Dun,
-who has never seen anything give, noses at the open heart, puzzled. From the summit, Vesper sees the mountain's pale
-glow.
+who has never seen anything give, noses at the open heart, puzzled. From the summit she sees the mountain's pale glow.
 
 **Night 2, the orchards.** Burrbacks feed grey cases to a mouth in the ground. A root slides past Vesper's wing
 without seeing her. In the cellar, cases hang in rows like fruit put by for winter. Above, Dun heads for the den of a
@@ -181,9 +178,10 @@ second case opens for her. The choice is played, not picked:
   Warmed, the Mouth does what the caterpillar did: it lets go. **Every root on earth draws back into the mountain, and
   the mountain spins itself shut.** *Epilogue:* on her map, bead after bead warms; some stay grey. In the kept city
   one case splits and a thin grey hand reaches toward an empty food hall: the world wakes old and hungry. Tallow wakes
-  at his sister's side as she opens her eyes. Dun lies against the cocoon to keep it warm. On its rim, two moths lie
-  still. In spring the brood hatches, and so, for the first time in forty years, do the vixen's cubs. Last image: the
-  mountain's silk pulsing slow and warm like the first frame's breath, a thin crack of gold at its crown.
+  at his sister's side as she opens her eyes. Dun lies against the spun mountain to keep it warm. On the dish's rim,
+  two moths lie still. In spring the brood hatches, and so, for the first time in forty years, do the vixen's cubs.
+  Last image: the mountain's silk pulsing slow and warm like the first frame's breath, a thin crack of gold at its
+  crown.
 - **Stay.** She lies down beside her brother and both cases close. *Epilogue:* the root takes the Grove and the
   brood's cocoons never hatch. Tallow sleeps beside his sister. The world is kept, quiet and fed, and nothing is ever
   born again.
@@ -195,3 +193,20 @@ second case opens for her. The choice is played, not picked:
 
 The thing that took the whole world so no one would go hungry, and only saw a moth when the moth fed it: was that
 love, or had it only learned how to make the static stop?
+
+## Editor's cuts
+
+- **Names: 7 → 6.** Kept Vesper, Sorrel, the Mouth, Dun, Tallow, the Grove. Cortical Labs left the dev note (the
+  lineage itself stays). "Great glint" became "the forest's biggest glint"; "ember", "beacon", "dead torch" and "red
+  feed light" went with the change notes. Glint, burrback and lampwing stay: they are the game's existing pickup and
+  creatures.
+- **Rules: 11 → 5.** Merged: unseen by mouths + lampwings see light + seen once fed + gold/pale code (rule 1); give
+  only + every power is a gift (rule 2); lanterns + respawn + seven nights + open world per night (rule 3); root walls
+  + beads + coal or Dun (rule 4); shiver (rule 5). Removed the re-explanations in "The gifts" (section folded into
+  the acts and rule 2), Night 1's glint definition and "can't be dark", the Mouth boss's glint mechanic, and both
+  change notes.
+- **Words: 3,471 → 2,699** (story body, excluding this list). Cut "Changes this round" and "Proposed changes to
+  locked decisions" (the lampwings-see-light proposal now lives in rule 1, so it is still visible to the owner);
+  cut interpretive italics ("he saves her by making himself the brightest thing", "her hiding nearly cost him",
+  "the cost:" line). Fixed double-reads: the forest's carving, "she turns off the lights" (now the woman), "Given
+  everything", the coal "burns ... burns", Tallow "already taken", the Tallow fight's win condition, Dun's cocoon.

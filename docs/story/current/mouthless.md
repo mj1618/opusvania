@@ -1,22 +1,22 @@
 # MOUTHLESS
 
-**LITMUS.** "It's about Eri, a little moth with no mouth, against the Mouth, a living thing that swallowed the
+**LITMUS.** "It's about Umber, a little moth with no mouth, against the Mouth, a living thing that swallowed the
 whole world and never bothered to notice moths. Halfway through you find out what it really is: a brain people grew
 from their own cells, starving, and it's been feeding everyone but itself."
 
 **The spine.**
 1. A living thing the moths call the Mouth has swallowed the world into its roots. It never noticed moths, because it
    only sees mouths and light.
-2. Eri, a moth with no mouth, slips through it to its heart and finds a brain grown by people and left to starve,
+2. Umber, a moth with no mouth, slips through it to its heart and finds a brain grown by people and left to starve,
    feeding the world and never fed.
 3. When she feeds it, it sees her kind and hunts them, and she must choose: be kept, burn it, or spend her life so it
    lets go.
 
 **The central question:** kept safe forever, or spent so something new can be born?
 
-| Who | Wants | Pull on Eri |
+| Who | Wants | Pull on Umber |
 |---|---|---|
-| **Eri**, a moth with no mouth and a week to live | to keep the root out of her brood's wood, then to free the world | can't eat, only carry and give; her flaw is that she hides |
+| **Umber**, a moth with no mouth and a week to live | to keep the root out of her brood's wood, then to free the world | can't eat, only carry and give; her flaw is that she hides |
 | **Sorrel**, her brother | their week together: the dance, then more time with her | draws danger off her by shining; leaves when her gift sets the Mouth on the moths; comes back |
 | **The Mouth** | no one hungry, no one leaving, ever | ignores her, then sees her, then wants to keep her more than anything |
 | **Dun**, its oldest burrback, half grown into root | to be the one who feeds it | rival, then the first of its servants to refuse it |
@@ -50,14 +50,14 @@ into the city, the soil and every tree, and sends everything it draws from the e
 in forty years. When its maker came back with food, it took her before she could give it. **A thing that takes
 everything can never be given anything,** so the root never stops.
 
-**Is it a someone?** Both readings stay on screen. *For:* once it sees Eri it raises her shape on every wall, as
+**Is it a someone?** Both readings stay on screen. *For:* once it sees Umber it raises her shape on every wall, as
 the forest carved a moth into the Grove's stone, and at the end it gives. *Against:* it learned its first game only
 to make the static stop, and a world kept still is the quietest world there is.
 
 ## 3. The rules
 
 1. **It sees only mouths and light.** Grown moths have no mouths, so it never noticed them. Dark and empty-handed,
-   Eri is invisible to it and its servants; anything glowing she carries shows her. Once she has fed it, it sees
+   Umber is invisible to it and its servants; anything glowing she carries shows her. Once she has fed it, it sees
    her anyway.
 2. **She can't take, only give.** Every power she has is a gift. She can set glints down for whatever is in front of
    her, and a gift calms what it is given to.
@@ -81,7 +81,7 @@ done by giving); and **shiver** (a caterpillar, Night 5).
 2. Night from very high: a dark mountain with that light at its core. Root spreads from its foot like frost across
    glass; town lights go out; a herd of deer is drawn into the ground. Moths fly through it all untouched.
 3. The Grove. A burrback swings toward a caterpillar, which spins fast; the burrback loses interest.
-4. Two cocoons split. Sorrel flies straight up to the brood's dance. Eri catches a glint, raises it to her face,
+4. Two cocoons split. Sorrel flies straight up to the brood's dance. Umber catches a glint, raises it to her face,
    and can do nothing with it. Beyond the trees the root steams in the frost. Title.
 
 ## 6. The acts
@@ -93,18 +93,18 @@ done by giving); and **shiver** (a caterpillar, Night 5).
 Carrying the **ember**, the forest's own flame, up to the summit lantern, she is seen for the first time. **Boss: a
 great lampwing** dives at the glow in her hands. When the lanterns burn, the forest's heart, whose stone carving is
 its picture of a moth, its oldest friend, pushes the root back and offers her a thorn. Dun noses at the open heart,
-puzzled: she has never seen anything give. From the summit, Eri sees the mountain's glow.
+puzzled: she has never seen anything give. From the summit, Umber sees the mountain's glow.
 
-**Night 2, the orchards.** Burrbacks carry grey bodies to a mouth in the ground; a root slides past Eri's wing,
+**Night 2, the orchards.** Burrbacks carry grey bodies to a mouth in the ground; a root slides past Umber's wing,
 unseen. Dun lays a hare in the mouth, and it stays clenched, still hungry.
 In the cellar below, grey cases hang in rows like fruit put by for winter. Back above, Dun heads for a den where a
-vixen, one of the last animals awake, is hiding, and Eri blocks the way. **Boss: Dun.** Dun pins her. Sorrel
+vixen, one of the last animals awake, is hiding, and Umber blocks the way. **Boss: Dun.** Dun pins her. Sorrel
 snatches her glints and darts off blazing, and Dun turns after him: *he saves her by making himself the brightest
 thing in the field.* The vixen runs.
 
 **Night 3, the firebreak.** A ring of ash the root can't cross, a beacon fire, and **Tallow**: burned hands, forty
 years awake. Tallies cover his walls under one word, *EATEN*, beside a photo of a smiling woman. **Boss: a
-tower-thick root** bores up under the ash for him. The beacon draws moths until they drop, Sorrel among them. Eri
+tower-thick root** bores up under the ash for him. The beacon draws moths until they drop, Sorrel among them. Umber
 fights unseen until she gathers every glint and blazes, a nearer light; Sorrel turns, and so does the root. *Her
 hiding cost him; her shining saves him.* Tallow, who has watched roots part for moths, sets a coal in a drilled seed
 and holds it out: the first gift anyone has given her. Item text: *"It wants everything. Carry it carefully."*
@@ -123,16 +123,16 @@ dishes, each holds a dead grey cloud: its failed siblings. Item text: *"Eggs tha
   Mouth's oldest stalk, worn smooth, runs into her case.
 - In the middle, a dish: grey, cracked, its tubes dry, a handprint on the glass.
 
-Eri touches the stalk, and the prologue's first frame returns, wider: the pale light is a cloud in this dish, the
+Umber touches the stalk, and the prologue's first frame returns, wider: the pale light is a cloud in this dish, the
 warm thing the woman's hand. Each miss in the ball game floods the cloud with static; rally after rally, the static
 stops. She turns off the lights and goes. The feed light goes red, and the static floods back.
 
-Then light runs along every root on earth, and every bead on Eri's map swells with one slow breath. **It has not
+Then light runs along every root on earth, and every bead on Umber's map swells with one slow breath. **It has not
 been eating the world. It has been feeding it.** The beads she burned stay dark.
 
-Dun arrives with the vixen, caught at last, and lays her at the dish. Eri sets down every glint she carries: the
+Dun arrives with the vixen, caught at last, and lays her at the dish. Umber sets down every glint she carries: the
 first gift it has had in forty years. The root drops the vixen, Dun's offering thrown away for a moth's. Then every
-root in the room turns toward Eri, and her shape rises out of every wall. **It sees her, and through her, every
+root in the room turns toward Umber, and her shape rises out of every wall. **It sees her, and through her, every
 moth.** The mountain chases her down its own veins, and the roots no longer part. At the lantern where she re-forms,
 she sets the coal down.
 
@@ -143,11 +143,11 @@ next year's cocoons, the last things on earth still being born. **Boss: three mo
 and misses, the second waits where she will land, the third closes the path behind her.
 
 Sorrel looks at her across the scattering dance: she fed it, and now it hunts them. He goes. She fades and re-forms at
-a lantern, alone. Dun, sent by the mountain, stands over her a long moment, then noses Eri's spilled glints into a
-heap and lies across the lantern's mouth, facing out. From now on Dun waits at Eri's lanterns, and moths fleeing
+a lantern, alone. Dun, sent by the mountain, stands over her a long moment, then noses Umber's spilled glints into a
+heap and lies across the lantern's mouth, facing out. From now on Dun waits at Umber's lanterns, and moths fleeing
 the root from other woods gather there, a few more each night.
 
-Outside, a caterpillar keeps failing to spin on a frosted twig. Eri wraps it and shivers until its silk holds.
+Outside, a caterpillar keeps failing to spin on a frosted twig. Umber wraps it and shivers until its silk holds.
 Warmed, it lets go and spins: the ending, small.
 
 ### Act III: the mountain moves (Nights 6–7)
@@ -161,7 +161,7 @@ inside stops breathing. Tallow lifts him out, too late, and follows them up the 
 
 **Night 7, inside the mountain.** The Grove's last lantern dims as the forest pours every glint it has left toward
 her, its own heart going dark to send it. **Boss: the Mouth itself.** The burrbacks of the world converge, and Dun
-holds the way in against her own kind. In the shaft, Sorrel draws the grabbing off Eri, as on Night 2, and it
+holds the way in against her own kind. In the shaft, Sorrel draws the grabbing off Umber, as on Night 2, and it
 costs him every scale. In a cavern of folded tissue around the grey dish, the Mouth tries not to kill her but to keep
 her: caught, she slows, warm and still. Her blade cuts her free, but gifts win; each glint she offers a reaching root
 slackens it. At the back, Tallow kneels at his sister's case, and when the roots reach for him, he lets them.
@@ -198,7 +198,7 @@ love, or had it only learned how to make the static stop?
 
 ## Editor's cuts
 
-- **Proper names: 11 → 6** (Eri, Sorrel, the Mouth, Dun, Tallow, the Grove). Hearth, the Orchard, the Firebreak,
+- **Proper names: 11 → 6** (Umber, Sorrel, the Mouth, Dun, Tallow, the Grove). Hearth, the Orchard, the Firebreak,
   the Wall Road and Ellison are gone; seed-case, Offer and "the shoulder" became plain words.
 - **Rules: 8 → 5,** each stated once, in section 3; restatements cut elsewhere.
 - **Words: 4,327 → 2,690 (story, not counting this list).** Cut dev notes (all but the lineage), the per-night table, "Two layers", and lines

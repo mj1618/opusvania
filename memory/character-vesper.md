@@ -1,6 +1,6 @@
 # Character skin: Vesper, the moth (`src/render/character/vesper/`)
 
-> The hero was renamed **Eri** (from Vesper) on 2026-10-14. Code and these notes keep the internal id `vesper`.
+> The hero was renamed **Umber** (from Vesper) on 2026-10-14. Code and these notes keep the internal id `vesper`.
 
 THE hero. Slender moth-person, ~84 px tall; wings worn as a cape. Imports `../hooded/math`; `chain.ts`
 (hooded chain + per-segment `extra` angle, `dragK`, `scale`) and `paint.ts` are our own copies.
