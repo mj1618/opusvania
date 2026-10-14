@@ -1,11 +1,11 @@
 /**
  * World mood frames: http://localhost:5180/world-concepts.html
  *
- * Four still compositions of the "overgrown ruin" world (docs/art-direction.md), at 1920x1080, in
+ * Five still compositions of the "overgrown ruin" world (docs/art-direction.md), at 1920x1080, in
  * the Grove's rendering language, with Umber small in frame for scale. Not the game: nothing here
  * touches the sim or the scene.
  *
- *   1-4 / ?frame=N   switch frame
+ *   1-5 / ?frame=N   switch frame
  *   ?t=SECONDS       freeze render time there (stepped from 0 in 1/60 s steps: same picture every time)
  *   ?clean           no caption (for captures)
  *
@@ -15,13 +15,14 @@ import { Application } from 'pixi.js';
 import edge from './frames/edge';
 import lab from './frames/lab';
 import lamp from './frames/lamp';
+import moth from './frames/moth';
 import street from './frames/street';
 import { Composer } from './lib/compose';
 import { VIEW_H, VIEW_W } from './lib/layer';
 import { Post } from './lib/post';
 import type { WorldFrame } from './types';
 
-const FRAMES: WorldFrame[] = [street, edge, lamp, lab];
+const FRAMES: WorldFrame[] = [street, edge, lamp, lab, moth];
 
 const q = new URLSearchParams(location.search);
 const fixedT = q.has('t') ? Number(q.get('t')) : null;

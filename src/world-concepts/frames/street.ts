@@ -7,11 +7,12 @@
  */
 import { Container, Graphics } from 'pixi.js';
 import { prng } from '../../render/scene/lib/look';
-import { FOG, MOUNTAIN, SKY, STEAM } from '../lib/bodies';
+import { FOG, MOUNTAIN, REFLECT, SKY, STEAM } from '../lib/bodies';
 import type { Composer } from '../lib/compose';
-import { building, curtain, donePods, MOUTH, mat, pod, podLayers, pour, spread, WARM } from '../lib/kit';
+import { braid, curtain, donePods, MOUTH, mat, pod, podLayers, spread, WARM } from '../lib/kit';
 import { VIEW_H, VIEW_W } from '../lib/layer';
 import { blob, glow, ridge, vgrad } from '../lib/paint';
+import { drape, grip, ruin, windowGlows } from '../lib/ruin';
 import { helix, type Pt, smoothPath, taper, wander } from '../lib/tissue';
 import type { WorldFrame } from '../types';
 
@@ -26,8 +27,8 @@ function build(c: Composer): void {
     shadowK: 0.035,
     deep: 0x020310,
     deepK: 0.78,
-    saturation: 0.92,
-    contrast: 1.04,
+    saturation: 1.05,
+    contrast: 1.08,
     grain: 0.028,
     vignette: 0.3,
     vignetteSoft: 0.55,
@@ -63,66 +64,87 @@ function build(c: Composer): void {
     mtn.p(i, 1210 + (x - 1210) * 0.86, HORIZON + (y - HORIZON) * 0.84, rx * 0.86, ry * 0.84);
   mtn
     .p(8, 1210, 640, 300, 0.008)
-    .c(9, 0xb8a49e)
+    .c(9, 0xc8a8a4)
     .c(10, 0x1e1a2c)
-    .c(11, 0xe8b8a8)
-    .c(12, 0x272a44, 0.36)
+    .c(11, 0xf4b4a8)
+    .c(12, 0x272a44, 0.32)
     .p(13, HORIZON + 10, 3, 1);
   // Its core: the small pale light at its foot.
   const core = new Container();
   core.blendMode = 'add';
   R.addChild(core);
   const coreG = glow(1210, 630, 70, 0xffd8c8, 0.4);
-  const coreG2 = glow(1210, 615, 300, 0xa07080, 0.16);
+  const coreG2 = glow(1210, 615, 360, 0xb07080, 0.2);
   core.addChild(coreG2, coreG);
   c.on((_t, b) => {
     coreG.alpha = 0.3 + 0.25 * b;
     coreG2.alpha = 0.12 + 0.08 * b;
   });
 
+  const breathers: ((b: number) => void)[] = [];
+  const POD_GLOW = 0xd8b8c0;
+
   // --- Far city: blocks swallowed at the mountain's foot, roots running out over the land like frost.
   const far = c.plane('far', {
-    fog: 0x2e3048,
-    fogK: 0.6,
-    ramp: [560, 780, 0.05, 0.22],
+    fog: 0x30344e,
+    fogK: 0.64,
+    ramp: [440, 720, -0.05, 0.25],
     mottle: 0.1,
-    blur: 1.2,
+    blur: 2.2,
     lit: 0.5,
     seed: 1,
+    edge: [8, 0.2, 0, 0],
+    brush: [0.06, 60, 1.57, 7],
   });
   const farG = new Graphics();
   far.view.addChild(farG);
-  const farCol = 0x141428;
-  const farLit: Pt[] = [];
-  const farBlocks = [
-    [330, 120, 470],
-    [440, 90, 520],
-    [520, 70, 560],
-    [590, 110, 500],
-    [690, 60, 585],
-    [1660, 120, 470],
-    [1770, 80, 430],
-    [1840, 120, 520],
-    [1560, 70, 560],
-  ] as const;
-  for (const [x, w, top] of farBlocks)
-    farLit.push(
-      ...building(rng, farG, {
+  const farRoots = c.batch('far-roots', { glow: MOUTH.inner, glowK: 0.5, swell: 0.03 }, far.view);
+  const farLit: { x: number; y: number; w: number; h: number }[] = [];
+  for (const [x0, x1] of [
+    [220, 820],
+    [1540, 1980],
+  ] as const)
+    for (let x = x0 + rng() * 20; x < x1; ) {
+      const w = 60 + rng() * 90;
+      const r = ruin(rng, farG, {
         x,
         w,
-        top,
-        bottom: HORIZON + 40,
-        color: farCol,
-        win: [16, 22, 6, 9],
-        winColor: 0x06060f,
-        litChance: 0.03,
-        broken: 18,
-      }),
-    );
+        top: 420 + rng() * 150,
+        bottom: HORIZON + 50,
+        color: 0x161830,
+        sky: 0x3a3c5c,
+        lean: (rng() - 0.5) * 24,
+        sag: rng() * 8,
+        breaks: [1 + Math.floor(rng() * 2), 30 + rng() * 40],
+        storey: 22,
+        cols: Math.max(2, Math.round(w / 22)),
+        win: [6, 9],
+        bricked: 0.3,
+        broken: 0.1,
+        lit: 0.05,
+        weather: 0.3,
+        clutter: 2,
+      });
+      farLit.push(...r.lit);
+      if (rng() < 0.7)
+        drape(rng, farRoots, r, {
+          color: MOUTH.boneMoon,
+          shadow: MOUTH.boneShadow,
+          glow: 0.4,
+          fold: [1.5, 5],
+          pours: 2,
+          pourLen: [30, 140],
+          pourW: 2.5,
+          lobes: 0.4,
+          from: rng() * 0.5,
+          span: 0.5,
+        });
+      x += w + rng() * 30 - 8;
+    }
   // The land at the mountain's foot: low swells of root, paler toward the horizon.
   farG.poly(ridge(rng, -20, VIEW_W + 20, HORIZON + 6, 14, 820, 16).flat()).fill(
     vgrad([
-      [0, 0x1e1b30],
+      [0, 0x2a2840],
       [0.5, 0x121124],
       [1, 0x0b0b18],
     ]),
@@ -133,7 +155,6 @@ function build(c: Composer): void {
       .poly(blob(rng, x, HORIZON + 16 + rng() * 40, 40 + rng() * 90, 10 + rng() * 14, 0.25).flat())
       .fill(0x1a1828);
   }
-  const farRoots = c.batch('far-roots', { glow: MOUTH.inner, glowK: 0.5, swell: 0.03 }, far.view);
   // Frost-lines: from the mountain's foot out across the land toward us.
   for (let i = 0; i < 26; i++) {
     const side = i % 2 === 0 ? -1 : 1;
@@ -149,134 +170,237 @@ function build(c: Composer): void {
     for (const p of pts) p[1] = HORIZON + 2 + Math.abs(p[0] - 1210) * 0.05 + (p[1] - HORIZON) * 0.15;
     farRoots.strip(pts, taper(3.2, 0.5), { color: MOUTH.boneMoon, glow: 0.6, seed: rng() });
   }
-  // Drapes down the far blocks.
-  for (const [x, w, top] of farBlocks)
-    curtain(rng, farRoots, x + 4, x + w - 4, top + 6, [40, 160], [2, 5], MOUTH.boneMoon, 0.4, [30, 90]);
   farRoots.done();
-  const farGlows = new Container();
-  farGlows.blendMode = 'add';
-  far.view.addChild(farGlows);
-  for (const [x, y] of farLit) farGlows.addChild(glow(x, y, 16, MOUTH.inner, 0.35));
+  const farWg = windowGlows(rng, farG, farLit, POD_GLOW, 0.3);
+  far.view.addChild(farWg.view);
+  breathers.push(farWg.update);
 
-  // --- Haze between far and mid.
+  // --- Haze between far and the far side of the street, lit by the mountain's core.
   const haze = c.shader('haze', 0, 0, VIEW_W, VIEW_H, FOG, R);
   haze
-    .c(0, 0x2c3150, 0.42)
+    .c(0, 0x2c3150, 0.5)
     .p(1, 900, 120, 0.006, 0)
     .p(2, HORIZON - 220, HORIZON - 30, HORIZON + 120, HORIZON + 260)
-    .p(3, 0.25, 0.85, 0.3, 0.25)
-    .p(5, 1210, 640, 300, 0.9)
+    .p(3, 0.25, 0.85, 0.3, 0.3)
+    .p(5, 1210, 640, 320, 0.9)
     .c(6, 0x8a6670);
 
-  // --- Mid: the street's tall buildings framing the view, and the far kerb.
-  const mid = c.plane('mid', {
-    fog: 0x1c1e36,
+  // --- The far side of the street: a row of small shops and houses, gables and flat roofs, all
+  // swallowed; the queue of cases waits on its pavement.
+  const row = c.plane('row', {
+    fog: 0x22243e,
     fogK: 0.42,
-    ramp: [520, 900, 0, 0.2],
+    ramp: [560, 800, -0.05, 0.18],
+    amb: 0x9098c0,
     mottle: 0.16,
-    blur: 0.5,
+    blur: 1,
     lit: 0.7,
+    seed: 5,
+    edge: [9, 0.16, 0.06, 0],
+    rim: 0x6a6488,
+    rimK: 0.22,
+    rimDir: [0.2, -1],
+    rimW: 4,
+    brush: [0.1, 40, 1.57, 6],
+  });
+  const rowG = new Graphics();
+  row.view.addChild(rowG);
+  const rowRoots = c.batch(
+    'row-roots',
+    { glow: MOUTH.inner, glowK: 0.5, rim: MOUTH.static, rimK: 0.15, swell: 0.04, sss: POD_GLOW, sssK: 0.12 },
+    row.view,
+  );
+  const rowLit: { x: number; y: number; w: number; h: number }[] = [];
+  for (let x = 300 + rng() * 20; x < 1700; ) {
+    const w = 110 + rng() * 120;
+    const gable = rng() < 0.5;
+    const r = ruin(rng, rowG, {
+      x,
+      w,
+      top: 640 + rng() * 50,
+      bottom: 784,
+      color: 0x14142a,
+      sky: 0x34385a,
+      lean: (rng() - 0.5) * 14,
+      sag: gable ? 0 : rng() * 10,
+      peak: gable ? 30 + rng() * 40 : 0,
+      breaks: [Math.floor(rng() * 2), 30],
+      storey: 46,
+      cols: Math.max(2, Math.round(w / 50)),
+      win: [16, 20],
+      bricked: 0.15,
+      broken: 0.1,
+      lit: 0.3,
+      weather: 0.5,
+      clutter: 2,
+      shop: true,
+    });
+    rowLit.push(...r.lit);
+    drape(rng, rowRoots, r, {
+      color: MOUTH.boneMoon,
+      shadow: MOUTH.boneShadow,
+      glow: 0.5,
+      fold: [2, 9],
+      pours: 2,
+      pourLen: [30, 120],
+      pourW: 4,
+      lobes: 0.6,
+      from: rng() * 0.3,
+      span: 0.4 + rng() * 0.6,
+    });
+    x += w + rng() * 26 - 6;
+  }
+  // The far pavement, and the dead lamps along it.
+  rowG.rect(0, 780, VIEW_W, 10).fill(0x262640);
+  for (const x of [330, 930, 1580]) {
+    rowG.rect(x - 2, 640, 4, 142).fill(0x15152a);
+    rowG.poly([x - 2, 642, x - 30, 636, x - 34, 642, x - 2, 650]).fill(0x15152a);
+  }
+  const rowGlows = new Container();
+  rowGlows.blendMode = 'add';
+  const rowPods = podLayers(c, row.view, 0.55, rowGlows);
+  // A queue of cases standing on the far pavement, where people waited for a bus.
+  for (let i = 0; i < 9; i++) {
+    const x = 980 + i * 34 + rng() * 10;
+    const len = 32 + rng() * 9;
+    pod(rng, rowPods, {
+      x,
+      y: 782 - len - 4,
+      stalk: 2,
+      len,
+      w: 9.5 + rng() * 2,
+      lean: (rng() - 0.5) * 4,
+      glow: 0.4 + rng() * 0.3,
+    });
+  }
+  mat(rng, rowRoots, 300, 1700, 784, 14, [1.5, 3.5], MOUTH.boneMoon, 4, 0.5);
+  rowRoots.done();
+  donePods(rowPods);
+  row.view.addChild(rowGlows);
+  const rowWg = windowGlows(rng, rowG, rowLit, POD_GLOW, 0.32);
+  row.view.addChild(rowWg.view);
+  breathers.push(rowWg.update);
+
+  const haze2 = c.shader('haze2', 0, 0, VIEW_W, VIEW_H, FOG, R);
+  haze2.c(0, 0x262a46, 0.4).p(1, 700, 90, 0.008, 0).p(2, 600, 760, 800, 880).p(3, 0.3, 0.85, 0.3, 0.2);
+
+  // --- Mid: the street's tall buildings framing the view, the road, the slung root with its cases.
+  const mid = c.plane('mid', {
+    fog: 0x1a1c34,
+    fogK: 0.3,
+    amb: 0x7a80a8,
+    ramp: [420, 900, 0, 0.22],
+    mottle: 0.2,
+    mottleScale: 180,
+    blur: 0.4,
+    lit: 0.75,
     seed: 2,
+    edge: [12, 0.12, 0.12, 0],
+    rim: 0x5a5a88,
+    rimK: 0.3,
+    rimDir: [0.6, -0.8],
+    rimW: 5,
+    rimLights: 0.6,
+    brush: [0.15, 50, 1.5, 7],
+    paint: 3,
   });
   const midG = new Graphics();
   mid.view.addChild(midG);
-  const midCol = 0x0f0f22;
-  const midLit: Pt[] = [];
-  midLit.push(
-    ...building(rng, midG, {
-      x: -20,
-      w: 300,
-      top: 70,
-      bottom: 800,
-      color: midCol,
-      win: [42, 58, 18, 26],
-      winColor: 0x05050d,
-      litChance: 0.08,
-      broken: 10,
-    }),
-  );
-  midLit.push(
-    ...building(rng, midG, {
-      x: 250,
-      w: 150,
-      top: 300,
-      bottom: 800,
-      color: 0x121228,
-      win: [36, 50, 14, 22],
-      winColor: 0x05050d,
-      litChance: 0.06,
-      broken: 26,
-    }),
-  );
-  midLit.push(
-    ...building(rng, midG, {
-      x: 1690,
-      w: 260,
-      top: 150,
-      bottom: 800,
-      color: midCol,
-      win: [42, 58, 18, 26],
-      winColor: 0x05050d,
-      litChance: 0.08,
-      broken: 12,
-    }),
-  );
-  // The far pavement and road.
-  midG.rect(0, 780, VIEW_W, 20).fill(0x1a1a30);
-  midG.rect(0, 798, VIEW_W, 112).fill(
+  // The road between the pavements.
+  midG.rect(0, 788, VIEW_W, 122).fill(
     vgrad([
-      [0, 0x0e0e1f],
+      [0, 0x121226],
       [1, 0x0a0a17],
     ]),
   );
-  // Lane dashes, half under root.
-  for (let x = 30; x < VIEW_W; x += 150) midG.rect(x, 852, 70, 3).fill({ color: 0x3c3a52, alpha: 0.5 });
-  // Far dead lamps along the far pavement.
-  for (const x of [610, 930, 1580]) {
-    midG.rect(x - 2, 640, 4, 142).fill(0x15152a);
-    midG.poly([x - 2, 642, x - 30, 636, x - 34, 642, x - 2, 650]).fill(0x15152a);
-  }
+  for (let x = 30; x < VIEW_W; x += 150) midG.rect(x, 850, 70, 3).fill({ color: 0x3c3a52, alpha: 0.4 });
   const midRoots = c.batch(
     'mid-roots',
-    { glow: MOUTH.inner, glowK: 0.55, rim: MOUTH.static, rimK: 0.1, swell: 0.04 },
+    { glow: MOUTH.inner, glowK: 0.55, rim: MOUTH.static, rimK: 0.15, swell: 0.04, sss: POD_GLOW, sssK: 0.14 },
     mid.view,
   );
-  // Root pouring over the right building's parapet and down its face.
-  for (let i = 0; i < 4; i++)
-    pour(
-      rng,
-      midRoots,
-      1700 + rng() * 240,
-      152,
-      Math.PI / 2 + (rng() - 0.5) * 0.5,
-      300 + rng() * 300,
-      7 + rng() * 6,
-      MOUTH.boneMoon,
-      0.5,
-      2,
-      0.05,
-    );
-  for (let i = 0; i < 4; i++)
-    pour(
-      rng,
-      midRoots,
-      10 + rng() * 260,
-      72,
-      Math.PI / 2 + (rng() - 0.5) * 0.5,
-      280 + rng() * 360,
-      7 + rng() * 6,
-      MOUTH.boneMoon,
-      0.5,
-      2,
-      0.05,
-    );
-  curtain(rng, midRoots, 1690, 1950, 156, [40, 260], [2, 5], MOUTH.boneShadow, 0.5, [16, 44]);
+  const midLit: { x: number; y: number; w: number; h: number }[] = [];
+  const left = ruin(rng, midG, {
+    x: -60,
+    w: 360,
+    top: 40,
+    bottom: 800,
+    color: 0x111024,
+    sky: 0x2c2c4c,
+    lean: 26,
+    sag: 8,
+    breaks: [2, 80],
+    storey: 64,
+    cols: 4,
+    win: [24, 32],
+    bricked: 0.25,
+    broken: 0.15,
+    lit: 0.08,
+    weather: 0.8,
+    clutter: 2,
+    shop: true,
+  });
+  const right = ruin(rng, midG, {
+    x: 1650,
+    w: 330,
+    top: 120,
+    bottom: 800,
+    color: 0x100f22,
+    sky: 0x2c2c4c,
+    lean: -30,
+    sag: 6,
+    breaks: [2, 90],
+    storey: 64,
+    cols: 4,
+    win: [24, 32],
+    bricked: 0.25,
+    broken: 0.15,
+    lit: 0.08,
+    weather: 0.8,
+    clutter: 2,
+    shop: true,
+  });
+  midLit.push(...left.lit, ...right.lit);
+  for (const [r, side] of [
+    [left, 1],
+    [right, -1],
+  ] as const) {
+    drape(rng, midRoots, r, {
+      color: MOUTH.boneMoon,
+      shadow: MOUTH.boneShadow,
+      glow: 0.5,
+      fold: [6, 22],
+      pours: 5,
+      pourLen: [200, 560],
+      pourW: 10,
+    });
+    grip(rng, midRoots, r, side, {
+      color: MOUTH.boneMoon,
+      shadow: MOUTH.boneShadow,
+      glow: 0.5,
+      w: 24,
+      arms: 5,
+      bottom: 800,
+    });
+  }
+  curtain(
+    rng,
+    midRoots,
+    1650,
+    1950,
+    (x) => right.roofAt(x) + 8,
+    [40, 260],
+    [2, 5],
+    MOUTH.boneShadow,
+    0.5,
+    [16, 44],
+  );
   curtain(
     rng,
     midRoots,
     -20,
-    400,
-    (x) => (x < 250 ? 74 : 304),
+    320,
+    (x) => left.roofAt(x) + 8,
     [40, 260],
     [2, 5],
     MOUTH.boneShadow,
@@ -286,36 +410,42 @@ function build(c: Composer): void {
   // Roots crossing the road toward us.
   mat(rng, midRoots, 0, VIEW_W, 792, 16, [2, 5], MOUTH.boneMoon, 6, 0.5);
   mat(rng, midRoots, 0, VIEW_W, 860, 10, [2, 4], MOUTH.boneShadow, 30, 0.4);
-  // A root slung high across the street from building to building: the cases hang from it like fruit.
+  // A root slung high across the street from building to building, braided from several strands that
+  // twist round each other and sag; the cases hang from it like fruit.
   const sling = smoothPath(
     [
-      [180, 90],
-      [520, 210],
-      [900, 250],
-      [1260, 236],
-      [1560, 170],
-      [1800, 140],
+      [200, 100],
+      [520, 214],
+      [900, 258],
+      [1260, 240],
+      [1560, 180],
+      [1700, 150],
     ],
     24,
   );
-  midRoots.strip(sling, taper(16, 10, 0.3, 0.2), { color: MOUTH.boneMoon, glow: 0.4, seed: 0.37 });
-  for (let k = 0; k < 3; k++) {
-    const sl = sling.map(([x, y], i) => [x + 3 * k, y + 4 + Math.sin(i * 0.13 + k * 2) * (6 + 3 * k)] as Pt);
-    midRoots.strip(sl, taper(8 - 2 * k, 5 - k, 0.3, 0.6 + k * 0.1), {
-      color: k === 1 ? MOUTH.boneShadow : MOUTH.boneMoon,
-      glow: 0.3,
-      seed: 0.61 + k * 0.1,
+  for (let k = 0; k < 5; k++) {
+    const ph = k * 1.3;
+    const amp = 5 + k * 2.2;
+    const sl = sling.map(
+      ([x, y], i) => [x + Math.cos(i * 0.09 + ph) * 2, y + Math.sin(i * 0.09 + ph) * amp + k * 1.5] as Pt,
+    );
+    const w0 = [15, 9, 7, 5, 4][k]!;
+    sl.reverse();
+    midRoots.strip(sl, (t) => w0 * (0.75 + 0.4 * Math.sin(t * 19 + ph) * Math.sin(t * 6 + k)) + 1, {
+      color: k % 2 ? MOUTH.boneShadow : MOUTH.boneMoon,
+      glow: 0.4,
+      seed: 0.37 + k * 0.11,
     });
   }
   curtain(
     rng,
     midRoots,
     300,
-    1700,
+    1650,
     (x) =>
       sling[
-        Math.min(sling.length - 1, Math.max(0, Math.round(((x - 180) / 1620) * (sling.length - 1))))
-      ]![1] + 8,
+        Math.min(sling.length - 1, Math.max(0, Math.round(((x - 200) / 1500) * (sling.length - 1))))
+      ]![1] + 10,
     [6, 60],
     [1.5, 4],
     MOUTH.boneShadow,
@@ -330,31 +460,19 @@ function build(c: Composer): void {
     const big = rng();
     pod(rng, midPods, {
       x,
-      y: y + 8,
-      stalk: 20 + rng() ** 2 * 260,
+      y: y + 12,
+      stalk: 8 + rng() ** 3 * 140,
       len: 36 + big * 22,
       w: 12 + big * 6,
       glow: 0.45 + rng() * 0.4,
     });
   }
-  // A queue of cases standing on the far pavement, where people waited.
-  for (let i = 0; i < 7; i++) {
-    const x = 1010 + i * 36 + rng() * 12;
-    const len = 34 + rng() * 8;
-    pod(rng, midPods, {
-      x,
-      y: 782 - len - 4,
-      stalk: 2,
-      len,
-      w: 10 + rng() * 2,
-      lean: (rng() - 0.5) * 4,
-      glow: 0.35 + rng() * 0.3,
-    });
-  }
   donePods(midPods);
   midRoots.done();
   mid.view.addChild(midGlows);
-  for (const [x, y] of midLit) midGlows.addChild(glow(x, y, 26, MOUTH.inner, 0.3));
+  const midWg = windowGlows(rng, midG, midLit, POD_GLOW, 0.24);
+  mid.view.addChild(midWg.view);
+  breathers.push(midWg.update);
 
   // --- Low mist on the road.
   const mist = c.shader('mist', 0, 0, VIEW_W, VIEW_H, FOG, R);
@@ -370,11 +488,19 @@ function build(c: Composer): void {
   const near = c.plane('near', {
     fog: 0x0e1026,
     fogK: 0.06,
+    amb: 0x8a8cb0,
     ramp: [700, 1080, 0, 0.12],
     mottle: 0.14,
     mottleScale: 160,
     lit: 1,
     seed: 3,
+    edge: [6, 0.04, 0.08, 0],
+    rim: 0x5a5a88,
+    rimK: 0.18,
+    rimDir: [0.4, -0.9],
+    rimW: 3,
+    rimLights: 0.7,
+    brush: [0.08, 30, 0.2, 5],
   });
   const nearBack = c.batch('near-back', { glow: MOUTH.inner, glowK: 0.45, swell: 0.045 }, near.view);
   const shelter = new Graphics();
@@ -425,21 +551,27 @@ function build(c: Composer): void {
   const AD = { x: SX1 - 106, y: ROOF + 40, w: 92, h: 200 };
   shelter.roundRect(AD.x - 6, AD.y - 6, AD.w + 12, AD.h + 12, 3).fill(metal);
   shelter.rect(AD.x, AD.y, AD.w, AD.h).fill(0x3a3446);
-  const adTissue = c.batch('ad-tissue', { glow: 0xe8c4b8, glowK: 0.42, swell: 0.06 }, near.view);
-  for (let i = 0; i < 6; i++) {
-    const y = AD.y + 14 + i * 34 + rng() * 8;
-    const pts = smoothPath(
-      [
-        [AD.x - 4, y],
-        [AD.x + AD.w * 0.3, y + (rng() - 0.5) * 18],
-        [AD.x + AD.w * 0.7, y + (rng() - 0.5) * 18],
-        [AD.x + AD.w + 4, y],
-      ],
-      10,
-    );
-    adTissue.strip(pts, taper(21, 17, 0.5, rng()), { color: 0x8a7478, kind: 1, glow: 0.8, seed: rng() });
-  }
-  adTissue.done();
+  // Folded tissue packed inside the dead lightbox, pressing on the glass and bulging out of its
+  // broken foot: the mountain's own folds, at the scale of a poster.
+  const adT = c.shader('ad-tissue', AD.x - 8, AD.y - 6, AD.w + 16, AD.h + 60, MOUNTAIN, near.view);
+  const adLobes: [number, number, number, number][] = [
+    [30, 40, 34, 44],
+    [72, 70, 32, 50],
+    [40, 120, 38, 40],
+    [80, 150, 30, 36],
+    [44, 190, 34, 30],
+    [70, 222, 30, 26],
+    [50, 246, 26, 18],
+    [90, 30, 20, 30],
+  ];
+  for (const [i, l] of adLobes.entries()) adT.p(i, ...l);
+  adT
+    .p(8, 54, 130, 140, 0.03)
+    .c(9, 0xc8b0ac)
+    .c(10, 0x2a2230)
+    .c(11, 0xf0c8b8)
+    .c(12, 0x3a3046, 0.1)
+    .p(13, 2000, 2, 3.2);
   nearGlows.addChild(glow(AD.x + AD.w / 2, AD.y + AD.h / 2, 150, 0xe6c2b6, 0.18));
   const adGlow = nearGlows.children[nearGlows.children.length - 1]!;
   // Frame: posts, roof slab, ad frame front edge.
@@ -482,23 +614,16 @@ function build(c: Composer): void {
     ],
     14,
   );
-  nearRoots.strip(main, taper(30, 11, 0.25, 0.1), { color: MOUTH.boneMoon, glow: 0.7, kind: 0, seed: 0.13 });
-  const main2 = main.map(
-    ([x, y], i) => [x - 4 + Math.sin(i * 0.15) * 7, y - 12 + Math.cos(i * 0.11) * 6] as Pt,
+  braid(
+    rng,
+    nearRoots,
+    main,
+    30,
+    12,
+    [MOUTH.boneMoon, MOUTH.boneShadow, 0xb4a6a4, MOUTH.boneMoon, 0x6a6070],
+    0.7,
+    6,
   );
-  nearRoots.strip(main2.slice(0, 84), taper(15, 5, 0.3, 0.5), {
-    color: MOUTH.boneMoon,
-    glow: 0.8,
-    seed: 0.71,
-  });
-  const main3 = main.map(
-    ([x, y], i) => [x + 6 + Math.sin(i * 0.21 + 1) * 5, y + 9 + Math.cos(i * 0.17) * 4] as Pt,
-  );
-  nearRoots.strip(main3.slice(0, 70), taper(11, 4, 0.3, 0.8), {
-    color: MOUTH.boneShadow,
-    glow: 0.5,
-    seed: 0.33,
-  });
   // Down the left post as a winding root.
   {
     const hx = helix(SX0 + 10, ROOF + 6, GROUND, 13, 3.2, 0.4);
@@ -601,7 +726,7 @@ function build(c: Composer): void {
   spread(rng, lampRoots, LX, GROUND + 3, 6, [120, 320], [5, 8], MOUTH.boneMoon, 0.6);
   pod(rng, nearPods, { x: LX - 132, y: LTOP + 4, stalk: 18, len: 62, w: 19, lean: 2, glow: 0.55 });
 
-  // The ground she stands on.
+  // The ground she stands on: the pavement slab, its kerb, and the near half of the road below.
   const ground = new Graphics();
   ground.rect(-20, GROUND - 3, VIEW_W + 40, 22).fill(
     vgrad([
@@ -612,13 +737,35 @@ function build(c: Composer): void {
   );
   for (let x = -20; x < VIEW_W; x += 96 + rng() * 20)
     ground.rect(x, GROUND - 1, 2, 18).fill({ color: 0x07070f, alpha: 0.6 });
-  ground.rect(-20, GROUND + 19, VIEW_W + 40, VIEW_H - GROUND).fill(
+  ground.rect(-20, GROUND + 19, VIEW_W + 40, 8).fill({ color: 0x3a3854, alpha: 0.5 });
+  ground.rect(-20, GROUND + 27, VIEW_W + 40, VIEW_H - GROUND).fill(
     vgrad([
-      [0, 0x0a0a18],
-      [0.3, 0x05050e],
-      [1, 0x020206],
+      [0, 0x0c0c1a],
+      [0.3, 0x07070f],
+      [1, 0x030307],
     ]),
   );
+  // Root crossing the near road toward us, in perspective: thin at the kerb, fat at the frame's foot.
+  for (let i = 0; i < 18; i++) {
+    const x0 = -100 + rng() * (VIEW_W + 200);
+    if (Math.abs(x0 - 1040) < 120) continue;
+    const x1 = x0 + (x0 - 1100) * (0.4 + rng() * 0.8);
+    const ph = rng() * 6;
+    const pts: Pt[] = [];
+    for (let k = 0; k <= 24; k++) {
+      const t = k / 24;
+      pts.push([
+        x0 + (x1 - x0) * t * t + Math.sin(t * 7 + ph) * 16 * t,
+        GROUND + 24 + (VIEW_H + 40 - GROUND - 24) * t * t,
+      ]);
+    }
+    const w = 0.5 + rng();
+    nearRoots.strip(pts, (t) => (1 + t * t * 14 * w) * (0.8 + 0.3 * Math.sin(t * 11 + ph)), {
+      color: rng() < 0.5 ? MOUTH.boneShadow : 0x4a4258,
+      glow: 0.3,
+      seed: rng(),
+    });
+  }
   near.view.addChildAt(ground, 0);
 
   nearBack.done();
@@ -665,7 +812,33 @@ function build(c: Composer): void {
   );
 
   // --- Foreground: out-of-focus root and a hanging case at the frame's edges.
-  const fg = c.plane('fg', { fog: 0x05050e, fogK: 0.2, mottle: 0.1, blur: 7, lit: 0.3, seed: 4 });
+  // Wet road: the cases' breath and her light lie on it in soft streaks.
+  const wet = c.shader('wet', 0, 0, VIEW_W, VIEW_H, REFLECT, R);
+  wet
+    .p(0, 1040, 22, 0.35, 120)
+    .p(1, SX0 + 152, 40, 0.14, 120)
+    .p(2, AD.x + 46, 40, 0.12, 110)
+    .p(3, LX - 130, 30, 0.12, 120)
+    .p(4, 1210, 300, 0.06, 140)
+    .c(6, WARM.gold)
+    .c(7, 0xd8b8c0)
+    .c(8, 0xd8b8c0)
+    .c(9, 0xd8b8c0)
+    .c(10, 0x8a6a80)
+    .p(12, GROUND + 30, 1, 0.45)
+    .c(13, 0x24263e);
+  wet.mesh.blendMode = 'add';
+
+  const fg = c.plane('fg', {
+    fog: 0x04040c,
+    fogK: 0.25,
+    mottle: 0.1,
+    blur: 12,
+    lit: 0.3,
+    seed: 4,
+    rimLights: 0.4,
+    rimW: 6,
+  });
   const fgRoots = c.batch(
     'fg-roots',
     { glow: MOUTH.inner, glowK: 0.25, rim: 0x8090c0, rimK: 0.4, swell: 0.05 },
@@ -673,8 +846,13 @@ function build(c: Composer): void {
   );
   const fgG = new Graphics();
   fg.view.addChildAt(fgG, 0);
-  fgG.poly([-40, 1000, 260, 960, 520, 1010, 760, 1100, -40, 1100]).fill(0x07070f);
-  fgG.poly([1560, 1100, 1700, 990, 1880, 940, 1980, 950, 1980, 1100]).fill(0x07070f);
+  for (const [x, y, rx, ry] of [
+    [120, 1090, 420, 120],
+    [-40, 980, 150, 170],
+    [1820, 1080, 320, 150],
+    [1990, 930, 130, 220],
+  ] as const)
+    fgG.poly(blob(rng, x, y, rx, ry, 0.2, 40).flat()).fill(0x05050b);
   for (let i = 0; i < 7; i++) {
     const pts = wander(rng, {
       x: -60,
@@ -732,6 +910,7 @@ function build(c: Composer): void {
   ];
   c.light({ x: 1210, y: 630, radius: 650, color: 0xb89aa8, intensity: 0.35, scatter: 0.4 });
   c.on((t, b) => {
+    for (const f of breathers) f(b);
     L.x = hero.light.x;
     L.y = hero.light.y;
     L.intensity = 0.85 * hero.light.k;

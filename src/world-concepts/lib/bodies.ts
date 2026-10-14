@@ -263,3 +263,181 @@ vec4 paint() {
   vec3 c = uP[0].rgb * k * scan * vig * uP[0].a;
   return vec4(c, 1.0);
 }`;
+
+/**
+ * Wet ground: lights smeared into long vertical streaks below them, broken by ripples, over a dark
+ * sheen that takes a little of the sky (additive).
+ *   uP0..5 lights (x px, half-width px, strength, length px); uP6..11 their rgb
+ *   uP12 water top y, ripple amount, sheen strength, unused; uP13 sheen rgb
+ */
+export const REFLECT = /* glsl */ `
+vec4 paint() {
+  vec2 p = vPx;
+  float y0 = uP[12].x;
+  if (p.y < y0) return vec4(0.0);
+  float dy = p.y - y0;
+  float t = uT.x;
+  // Ripples: smooth horizontal bands that drift; the streak breaks into dashes along them.
+  float rip = (fbm3(vec2(p.x / 60.0 + t * 0.05, dy / 5.0 + t * 0.3)) - 0.5) * uP[12].y * (10.0 + dy * 0.16);
+  float brk = smoothstep(0.3, 0.75, fbm3(vec2(p.x / 22.0, dy / 2.6 - t * 0.4)));
+  vec3 c = vec3(0.0);
+  for (int i = 0; i < 6; i++) {
+    vec4 L = uP[i];
+    if (L.z <= 0.0) continue;
+    float w = L.y * (1.0 + dy * 0.004);
+    float x = (p.x + rip - L.x) / w;
+    float k = exp(-x * x) * exp(-dy / L.w) * L.z * (0.35 + 0.65 * brk);
+    c += uP[6 + i].rgb * k;
+  }
+  float sheen = fbm3(vec2(p.x / 300.0, dy / 30.0 + 2.0)) * exp(-dy / 140.0) * uP[12].z;
+  c += uP[13].rgb * sheen * (0.5 + 0.5 * brk);
+  return vec4(c, 0.0);
+}`;
+
+/**
+ * A case seen big: a membrane that sits on what holds it (fuller, flatter below), lit from inside by
+ * the sleeper's breathing glow; the sleeper's curled shape a soft shadow in it; veins that branch;
+ * thick (opaque) at its rim and thin (glowing) in its middle; a moon rim on top.
+ *   uP0 centre xy, radii xy; uP1 x: base squareness (2 = ellipse, 3+ flatter), yz: a torn hole's centre
+ *   (0 = none), w: breath swell
+ *   uP2..7 the sleeper: ellipses (x, y, rx, ry); uP8 rotations of 2..5, uP9.xy rotations of 6..7,
+ *   uP9.zw a y below which it fades out (0 = never), fade width
+ *   uP10 glow centre xy, radius, strength; uP11 glow rgb; uP12 membrane rgb; uP13 vein rgb, amount
+ *   uP14 rim rgb, amount; uP15 sleeper softness px, sleeper darkness, vein scale, hole radius px
+ */
+export const CASE = /* glsl */ `
+float sdEl(vec2 p, vec4 e, float rot) {
+  float c = cos(rot);
+  float s = sin(rot);
+  vec2 d = p - e.xy;
+  d = vec2(c * d.x + s * d.y, -s * d.x + c * d.y);
+  return (length(d / e.zw) - 1.0) * min(e.z, e.w);
+}
+float smin2(float a, float b, float k) {
+  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+  return mix(b, a, h) - k * h * (1.0 - h);
+}
+vec4 paint() {
+  vec2 p = vPx;
+  float sw = 1.0 + uP[1].w * uT.y;
+  vec2 q = (p - uP[0].xy) / (uP[0].zw * vec2(sw, 1.0));
+  float e = q.y > 0.0 ? uP[1].x : 2.0;
+  float d = pow(pow(abs(q.x), e) + pow(abs(q.y), e), 1.0 / e) - 1.0;
+  float dpx = d * min(uP[0].z, uP[0].w) + (fbm3(p * 0.03) - 0.5) * 4.0;
+  float a = smoothstep(1.5, -1.5, dpx);
+  if (uP[9].z > 0.0) a *= smoothstep(uP[9].z, uP[9].z - uP[9].w, p.y);
+  float holeEdge = 0.0;
+  if (uP[15].w > 0.0) {
+    vec2 hq = (p - uP[1].yz) * vec2(0.62, 1.0);
+    float hd = length(hq) - uP[15].w + (fbm(p * 0.035) - 0.5) * uP[15].w * 0.7;
+    a *= smoothstep(-2.0, 2.0, hd);
+    holeEdge = 1.0 - smoothstep(0.0, 18.0, hd);
+  }
+  if (a <= 0.001) return vec4(0.0);
+  float thick = max(smoothstep(-0.4, 0.0, d), holeEdge);
+  float qq = min(1.0, dot(q, q));
+  vec3 n = normalize(vec3(q.x, q.y * 0.9, sqrt(max(0.03, 1.0 - qq))));
+  float key = clamp(dot(n, normalize(vec3(0.25, -0.85, 0.45))), 0.0, 1.0);
+  // The sleeper inside.
+  float rots[6] = float[6](uP[8].x, uP[8].y, uP[8].z, uP[8].w, uP[9].x, uP[9].y);
+  float sd = 1e5;
+  for (int i = 0; i < 6; i++) {
+    vec4 el = uP[2 + i];
+    if (el.z <= 0.0) continue;
+    sd = smin2(sd, sdEl(p, el, rots[i]), 24.0);
+  }
+  float sl = smoothstep(uP[15].x, -uP[15].x, sd) * uP[15].y;
+  float gl = exp(-length((p - uP[10].xy) * vec2(0.9, 1.0)) / uP[10].z) * uP[10].w * (0.7 + 0.3 * uT.y);
+  vec3 col = uP[12].rgb * (0.22 + 0.5 * key) * (0.45 + 0.55 * thick);
+  col += uP[11].rgb * gl * (1.0 - sl) * (1.0 - thick * 0.75);
+  col *= 1.0 - sl * 0.3;
+  // Veins: domain-warped ridges, branching rather than gridded.
+  vec2 w = p * uP[15].z + (vec2(fbm3(p * 0.004), fbm3(p * 0.004 + 3.7)) - 0.5) * 140.0;
+  float v1 = 1.0 - abs(vnoise(w * 0.012) * 2.0 - 1.0);
+  float v2 = 1.0 - abs(vnoise(w * 0.031 + 7.0) * 2.0 - 1.0);
+  float vein = smoothstep(0.94, 0.99, v1) + 0.55 * smoothstep(0.95, 0.995, v2);
+  col = mix(col, uP[13].rgb * (0.4 + 0.8 * gl), clamp(vein * uP[13].a, 0.0, 1.0));
+  // Soft vertical folds where it settles.
+  float fold = sin(p.x * 0.05 + fbm3(p * 0.008) * 6.0) * smoothstep(0.2, 0.9, q.y);
+  col *= 1.0 + 0.12 * fold;
+  col += uP[14].rgb * uP[14].a * smoothstep(-0.1, 0.0, d) * key;
+  float spec = smoothstep(0.8, 0.95, vnoise(p * 0.05)) * pow(key, 4.0) * (1.0 - thick * 0.5);
+  col += vec3(0.9, 0.9, 1.0) * spec * 0.12;
+  float al = a * mix(0.82, 1.0, thick);
+  return vec4(col * al, al);
+}`;
+
+/**
+ * Silk thrown over a figure: the figure is a few ellipsoid bumps (head, shoulders, back, knees); the
+ * silk lies on them and falls straight down from them to the floor, folding more the further it
+ * falls; lit by one key light, thin (and lit through) at its edges.
+ *   uP0..5 bumps (x, y, rx, ry); uP6 rotations of 0..3, uP7.xy rotations of 4..5
+ *   uP8 floor y, fall length px, fold frequency, fold depth
+ *   uP9 key direction (x, y, z), intensity; uP10 key rgb; uP11 ambient rgb; uP12 silk rgb
+ *   uP13 rim rgb, amount; uP14 rgb of light through the thin silk, amount
+ */
+export const SHROUD = /* glsl */ `
+float bumpH(vec2 p, vec4 e, float rot) {
+  float c = cos(rot);
+  float s = sin(rot);
+  vec2 d = p - e.xy;
+  d = vec2(c * d.x + s * d.y, -s * d.x + c * d.y) / e.zw;
+  float r2 = dot(d, d);
+  return r2 >= 1.0 ? -1.0 : sqrt(1.0 - r2) * min(e.z, e.w);
+}
+float bodyH(vec2 p) {
+  float rots[6] = float[6](uP[6].x, uP[6].y, uP[6].z, uP[6].w, uP[7].x, uP[7].y);
+  float h = -1.0;
+  float acc = 0.0;
+  for (int i = 0; i < 6; i++) {
+    vec4 e = uP[i];
+    if (e.z <= 0.0) continue;
+    float b = bumpH(p, e, rots[i]);
+    if (b > 0.0) acc += exp(b / 10.0);
+  }
+  return acc > 0.0 ? 10.0 * log(acc) : -1.0;
+}
+float silkH(vec2 p, out float fall) {
+  // The silk at p rests on the figure, or hangs from the highest point of it above p.
+  float best = bodyH(p);
+  fall = 0.0;
+  float drop = uP[8].y;
+  for (int k = 1; k <= 10; k++) {
+    float dy = float(k) / 10.0 * drop;
+    if (p.y > uP[8].x + 6.0) break;
+    float h = bodyH(p - vec2(0.0, dy));
+    if (h <= 0.0) continue;
+    // Hanging cloth lies flatter than cloth on a form: it reads as a sheet, not a tube.
+    float hang = h * (0.45 - float(k) * 0.025) - 2.0;
+    if (hang > best) {
+      best = hang;
+      fall = dy / drop;
+    }
+  }
+  if (p.y > uP[8].x) best = -1.0;
+  return best;
+}
+vec4 paint() {
+  vec2 p = vPx;
+  float fall;
+  float h = silkH(p, fall);
+  float edgeN = (fbm3(p * 0.05) - 0.5) * 3.0;
+  float a = smoothstep(-0.5, 2.0, h + edgeN);
+  if (a <= 0.001) return vec4(0.0);
+  float sw = 1.0 + 0.004 * uT.y;
+  float f1;
+  float hx = silkH(p + vec2(2.0, 0.0), f1);
+  float hy = silkH(p + vec2(0.0, 2.0), f1);
+  float folds = uP[8].w * (0.25 + fall) * sin(p.x * uP[8].z + fbm3(p * 0.01) * 5.0 + p.y * 0.004);
+  float foldsX = uP[8].w * (0.25 + fall) * sin((p.x + 2.0) * uP[8].z + fbm3((p + vec2(2.0, 0.0)) * 0.01) * 5.0 + p.y * 0.004);
+  vec3 n = normalize(vec3((h - hx) * 0.5 + (folds - foldsX) * 0.5, (h - hy) * 0.5, 1.0 * sw));
+  float key = clamp(dot(n, normalize(uP[9].xyz)), 0.0, 1.0);
+  vec3 col = uP[12].rgb * (uP[11].rgb + uP[10].rgb * key * uP[9].w);
+  // Thin at its edges and at the hem: light comes through.
+  float thin = 1.0 - smoothstep(0.0, 14.0, h);
+  col += uP[14].rgb * uP[14].a * thin;
+  col += uP[13].rgb * uP[13].a * smoothstep(0.55, 0.9, key) * (1.0 - fall);
+  float grain = vnoise(vec2(p.x * 0.6, p.y * 0.04)) - 0.5;
+  col *= 1.0 + grain * 0.08;
+  return vec4(col * a, a);
+}`;

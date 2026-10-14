@@ -54,77 +54,98 @@ out vec4 finalColor;
 uniform vec4 uT;
 uniform vec4 uGlow;   // inner light colour, strength
 uniform vec4 uRim;    // rim colour, strength
+uniform vec4 uSss;    // subsurface colour, strength
 ${NOISE_GLSL}
 void main() {
   float v = vUV.y;
   float ax = abs(v);
   float cyl = sqrt(max(0.0, 1.0 - v * v));
   float hw = max(vPar.w, 0.5);
+  // Pattern scale: big strips get more detail, not magnified detail (no wood grain on a giant).
+  float hs = min(hw, 22.0);
   float u = vUV.x;
   float seed = vPar.y;
   float kind = vPar.z;
-  float lam = clamp(v * vUV.z * 0.75 + cyl * 0.55, 0.0, 1.0);
-  float fib = vnoise(vec2(u / (hw * 2.6 + 5.0), v * 2.4 + seed * 13.0));
-  float fib2 = vnoise(vec2(u / (hw * 0.9 + 2.0), v * 6.0 + seed * 7.0));
-  float warp = fbm3(vec2(u / (hw * 5.0 + 12.0), seed * 9.0)) * 5.0;
-  float fold = sin(u / (hw * 1.3 + 2.0) * 3.14159 + warp + v * (0.9 + seed));
-  float crease = smoothstep(0.45, 0.98, fold);
-  float ridge = smoothstep(-0.2, -0.95, fold);
+  float lsgn = sign(vUV.z + 1e-4);
+  // Facing the light: +1 on the lit edge, -1 on the far edge. Painted as two big values (a lit
+  // plane and a shadow plane) with a soft, broken terminator, not a smooth CG cylinder.
+  float facing = v * vUV.z;
+  float tn = fbm3(vec2(u / (hs * 2.2 + 9.0), v * 1.3 + seed * 17.0)) - 0.5;
+  float lit = smoothstep(-0.32, 0.42, facing + 0.22 * cyl + tn * 0.55);
   vec3 base = vCol.rgb;
-  vec3 c;
   float a = vCol.a;
   float g = vPar.x * uGlow.a * (0.5 + 0.5 * vWave) * (0.55 + 0.45 * uT.y);
   float core = cyl * cyl * cyl;
+  // Thin flesh lets light through: warm where the strip is narrow, and along its outline.
+  float thin = 1.0 - smoothstep(2.0, 16.0, hw);
+  float edgeT = smoothstep(0.62, 1.0, ax);
+  vec3 cool = vec3(0.74, 0.8, 1.1);
+  vec3 c;
+  // Creases: ridged noise, warped along the strip and bent round it (they wrap the form).
+  float warp = fbm3(vec2(u / (hs * 4.0 + 24.0), seed * 9.0)) * 2.4;
+  float wrapU = u / (hs * 1.15 + 5.0) + warp + v * v * 0.45 * lsgn;
+  float r1 = 1.0 - abs(vnoise(vec2(wrapU, seed * 5.0 + v * 0.55)) * 2.0 - 1.0);
+  float r2 = 1.0 - abs(vnoise(vec2(wrapU * 2.3 + 3.1, seed * 11.0 + v * 1.4)) * 2.0 - 1.0);
+  float spk = vnoise(vec2(u / (hs * 0.6 + 2.5), v * 3.2 + seed * 21.0));
   if (kind < 0.5) {
-    // Root: long soft streaks along it, a knot here and there, warm at its core.
-    float streak = fbm3(vec2(u / (hw * 7.0 + 30.0), v * 1.4 + seed * 13.0));
-    float fine = vnoise(vec2(u / (hw * 1.6 + 4.0), v * 7.0 + seed * 7.0));
-    float ring = smoothstep(0.9, 1.0, sin(u / (hw * 4.0 + 8.0) + warp * 1.7)) * (0.5 + 0.5 * cyl);
-    c = base * (0.34 + 0.66 * lam);
-    c *= 0.74 + 0.44 * streak - 0.1 * fine;
-    c *= 1.0 - 0.28 * ring;
-    c *= mix(1.0, 0.58, smoothstep(0.5, 1.0, ax));
-    c = mix(c, c * vec3(1.1, 0.96, 0.93), core * 0.6);
-    c += uGlow.rgb * g * core * (0.45 + 0.55 * streak);
+    // Root: long fibres along it, a few creases, warm at the core.
+    float streak = fbm3(vec2(u / (hs * 6.0 + 30.0), v * 2.2 + seed * 13.0));
+    float fine = vnoise(vec2(u / (hs * 1.4 + 4.0), v * 8.0 + seed * 7.0));
+    float cr = smoothstep(0.86, 0.98, r1) * (0.4 + 0.6 * cyl);
+    vec3 sh = base * 0.36 * cool;
+    c = mix(sh, base, lit);
+    c *= 0.8 + 0.36 * streak - 0.08 * fine;
+    c *= 1.0 - 0.14 * cr;
+    c *= mix(1.0, 0.72, edgeT * (1.0 - lit));
+    c += uGlow.rgb * g * core * (0.4 + 0.6 * streak);
+    float sheen = smoothstep(0.84, 0.97, spk) * smoothstep(0.3, 0.85, facing) * (1.0 - cr);
+    c += vec3(0.92, 0.94, 1.0) * sheen * 0.16;
   } else if (kind < 1.5) {
-    // Tissue: soft lobes folded against each other; thin irregular creases, lit bulges between.
-    float n1 = vnoise(vec2(u / (hw * 1.1 + 5.0) + v * 0.3, v * 0.55 + seed * 9.0) + vec2(warp * 0.2, 0.0));
-    float n2 = vnoise(vec2(u / (hw * 0.6 + 3.0), v * 0.8 + seed * 3.0));
-    float rid = 1.0 - abs(n1 * 2.0 - 1.0);
-    float rid2 = 1.0 - abs(n2 * 2.0 - 1.0);
-    float cr = smoothstep(0.8, 0.98, rid) + 0.35 * smoothstep(0.9, 0.99, rid2);
-    float bulge = smoothstep(0.2, 0.6, 1.0 - rid);
-    c = base * (0.36 + 0.64 * lam);
-    c *= 0.86 + 0.2 * fib;
-    c *= 1.0 - 0.45 * cr * (0.5 + 0.5 * cyl);
-    c += base * 0.12 * bulge * lam;
-    c *= mix(1.0, 0.6, smoothstep(0.55, 1.0, ax));
-    c += uGlow.rgb * g * core * (0.4 + 0.6 * (1.0 - cr));
+    // Tissue: soft lobes folded against each other; dark irregular creases, lit bulges between.
+    float cr = smoothstep(0.74, 0.97, r1) * 0.7 + 0.3 * smoothstep(0.86, 0.99, r2);
+    float bulge = smoothstep(0.15, 0.6, 1.0 - r1);
+    vec3 sh = base * 0.34 * cool;
+    c = mix(sh, base * 1.04, lit);
+    c *= 1.0 - 0.36 * cr * (0.45 + 0.55 * cyl);
+    c += base * 0.16 * bulge * lit;
+    c *= mix(1.0, 0.66, edgeT * (1.0 - lit));
+    c += uGlow.rgb * g * core * (0.35 + 0.65 * (1.0 - cr));
+    float sheen = smoothstep(0.86, 0.98, spk) * smoothstep(0.35, 0.9, facing) * bulge;
+    c += vec3(0.95, 0.94, 1.0) * sheen * 0.2;
   } else if (kind < 2.5) {
     // Pod membrane: thin and lit from within; veins; thicker (more opaque) toward the rim.
-    float vein = abs(sin(v * 5.5 + fbm3(vec2(u / (hw * 1.8), seed * 3.0)) * 4.0));
+    float vein = abs(sin(v * 5.5 * max(1.0, hw / 30.0) + fbm3(vec2(u / (hs * 1.8), seed * 3.0)) * 4.0));
     float veinK = smoothstep(0.93, 1.0, vein) * (1.0 - ax * 0.5);
-    c = base * (0.5 + 0.5 * lam);
+    c = mix(base * 0.5 * cool, base, 0.35 + 0.65 * lit);
     c += uGlow.rgb * g * (0.45 + 0.55 * core) * 1.3;
     c *= 1.0 - 0.3 * veinK;
     c += uRim.rgb * uRim.a * smoothstep(0.72, 0.97, ax);
+    float sheen = smoothstep(0.8, 0.95, spk) * smoothstep(0.4, 0.9, facing);
+    c += vec3(1.0) * sheen * 0.12;
     a *= 0.42 + 0.58 * pow(ax, 2.2);
   } else if (kind < 3.5) {
     // Bark: dark wood with deep fissures along the grain; no light of its own.
-    float grain = vnoise(vec2(u / (hw * 4.0 + 20.0), v * 3.2 + seed * 5.0));
-    float fis = smoothstep(0.62, 0.8, vnoise(vec2(u / (hw * 2.2 + 8.0), v * 4.5 + seed * 11.0)));
-    c = base * (0.35 + 0.65 * lam);
+    float grain = vnoise(vec2(u / (hs * 4.0 + 20.0), v * 3.2 + seed * 5.0));
+    float fis = smoothstep(0.62, 0.8, vnoise(vec2(u / (hs * 2.2 + 8.0), v * 4.5 + seed * 11.0)));
+    c = mix(base * 0.45 * cool, base * 1.1, lit);
     c *= 0.82 + 0.3 * grain;
     c *= 1.0 - 0.45 * fis;
-    c *= mix(1.0, 0.7, smoothstep(0.6, 1.0, ax));
+    c *= mix(1.0, 0.7, edgeT * (1.0 - lit));
   } else {
     // Stalk: smooth, pale, a fine line of light down its middle.
-    c = base * (0.45 + 0.55 * lam);
+    c = mix(base * 0.45 * cool, base, lit);
     c += uGlow.rgb * g * core * 0.8;
   }
-  // The rim: a thin line of the key light on the lit side.
-  c += uRim.rgb * uRim.a * 0.35 * smoothstep(0.7, 0.98, v * sign(vUV.z + 1e-4)) * step(kind, 1.5) * max(0.0, vUV.z);
-  float edge = smoothstep(1.0, 1.0 - 1.6 / hw, ax);
+  // Light through thin flesh (not wood).
+  float flesh = 1.0 - step(2.5, kind) * step(kind, 3.5);
+  c += uSss.rgb * uSss.a * flesh * (thin * 0.55 + edgeT * 0.45 * (1.0 - lit * 0.6)) * (0.6 + 0.4 * uT.y);
+  // The rim: a thin line of the key light on the lit edge; a faint cold bounce on the other.
+  float rimLit = smoothstep(0.72, 0.98, v * lsgn) * max(0.0, abs(vUV.z));
+  float rimBack = smoothstep(0.8, 1.0, -v * lsgn);
+  c += uRim.rgb * uRim.a * (0.5 * rimLit + 0.1 * rimBack) * step(kind, 3.5);
+  // A painted edge: soft, and a little broken.
+  float en = vnoise(vec2(u / 5.0, seed * 31.0));
+  float edge = smoothstep(1.0, 1.0 - (1.4 + 1.6 * en) / hw, ax);
   a *= edge;
   finalColor = vec4(max(c, 0.0) * a, a);
 }`;
@@ -148,6 +169,9 @@ export interface BatchStyle {
   swell?: number;
   /** Light direction in screen space (unit, y down), toward the light. */
   light?: Pt;
+  /** Light through thin flesh: colour and strength (default: the glow colour, 0.12). */
+  sss?: number;
+  sssK?: number;
 }
 
 /** One mesh of strips. Build it with `strip` / helpers, then `done()` once. */
@@ -155,7 +179,7 @@ export class TissueBatch {
   readonly mesh: Mesh<Geometry, Shader>;
   private v: number[] = [];
   private i: number[] = [];
-  private readonly u: { uT: Float32Array; uGlow: Float32Array; uRim: Float32Array };
+  private readonly u: { uT: Float32Array; uGlow: Float32Array; uRim: Float32Array; uSss: Float32Array };
   private readonly vbuf: Buffer;
   private readonly ibuf: Buffer;
   private readonly lx: number;
@@ -167,6 +191,10 @@ export class TissueBatch {
       uT: { value: new Float32Array([0, 0, style.swell ?? 0.05, 0.9817]), type: 'vec4<f32>' },
       uGlow: { value: new Float32Array([...rgb(style.glow), style.glowK]), type: 'vec4<f32>' },
       uRim: { value: new Float32Array([...rgb(style.rim ?? 0xffffff), style.rimK ?? 0]), type: 'vec4<f32>' },
+      uSss: {
+        value: new Float32Array([...rgb(style.sss ?? style.glow), style.sssK ?? 0.12]),
+        type: 'vec4<f32>',
+      },
     });
     this.u = group.uniforms as unknown as TissueBatch['u'];
     const l = style.light ?? [0.35, -0.94];
@@ -330,7 +358,13 @@ function angDiff(a: number, b: number): number {
 export function taper(w0: number, w1: number, bulge = 0, seed = 0): (t: number) => number {
   return (t) => {
     const k = (1 - t) ** 0.85;
-    const b = 1 + bulge * Math.sin(t * 9 + seed * 6.28) * (1 - t);
+    // Thickness wanders a lot: slow swells, knots, pinches; never a clean cone.
+    const b =
+      1 +
+      bulge *
+        (0.6 * Math.sin(t * 9 + seed * 6.28) +
+          0.4 * Math.sin(t * 23 + seed * 17.1) * Math.sin(t * 5 + seed * 3)) *
+        (1 - t * 0.7);
     return Math.max(0.4, (w1 + (w0 - w1) * k) * b * (t > 0.97 ? (1 - t) / 0.03 : 1) + 0.4);
   };
 }

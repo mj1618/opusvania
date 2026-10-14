@@ -66,13 +66,20 @@ export function pod(rng: () => number, L: PodLayers, s: PodSpec): Pt {
     glow: 0.4,
     seed: rng(),
   });
-  const bot: Pt = [s.x + lean, top[1] + s.len];
+  const bot: Pt = [s.x + lean, top[1] + s.len * 1.12];
   const body = smoothPath([top, [top[0] + lean * 0.5 + (rng() - 0.5) * 4, top[1] + s.len * 0.5], bot], 14);
+  // A cocoon, not an egg: long, fullest a little above the middle, a neck at the stalk, a soft point below.
   const prof = (t: number) => {
-    const k = Math.sin(Math.PI * Math.min(1, t * 1.02)) ** 0.62 * (0.82 + 0.3 * t);
-    return Math.max(1, s.w * k);
+    if (s.seated) {
+      // Settled on what holds it: fullest low down, a broad rounded base.
+      const k = Math.sin(Math.PI * Math.min(1, t ** 1.7 * 0.97 + 0.02)) ** 0.42;
+      return Math.max(1, s.w * k);
+    }
+    const k = Math.sin(Math.PI * Math.min(1, t ** 0.9 * 1.01)) ** 0.8 * (1.04 - 0.16 * t);
+    const neck = t < 0.1 ? 0.5 + 0.5 * (t / 0.1) : 1;
+    return Math.max(1, s.w * 0.62 * k * neck);
   };
-  const col = s.color ?? MOUTH.bone;
+  const col = s.color ?? mixHex(MOUTH.bone, MOUTH.boneShadow, 0.3);
   const seed = rng();
   L.back.strip(body, prof, { color: col, kind: 2, glow: s.glow ?? 0.8, seed });
   const cx = top[0] + lean * 0.5;
@@ -438,5 +445,68 @@ export class Grass {
       const my = b.y - b.h * 0.55;
       g.poly([b.x - b.w, b.y, mx - b.w * 0.5, my, tx, ty, mx + b.w * 0.5, my, b.x + b.w, b.y]).fill(b.color);
     }
+  }
+}
+
+/**
+ * A rope of root: several strands of different weights that twist round one spine, part and rejoin,
+ * each with its own knots, so a big root never reads as one smooth pipe. `w` is the whole rope's
+ * half-width at its start; it thins to `w1` at its end.
+ */
+export function braid(
+  rng: () => number,
+  b: TissueBatch,
+  spine: readonly Pt[],
+  w: number,
+  w1: number,
+  colors: readonly number[],
+  glowK: number,
+  strands = 5,
+  kind = 0,
+): void {
+  const n = spine.length;
+  // Normals along the spine.
+  const nrm: Pt[] = spine.map((_p, i) => {
+    const a = spine[Math.max(0, i - 1)]!;
+    const c = spine[Math.min(n - 1, i + 1)]!;
+    const dx = c[0] - a[0];
+    const dy = c[1] - a[1];
+    const l = Math.hypot(dx, dy) || 1;
+    return [-dy / l, dx / l];
+  });
+  let len = 0;
+  const along: number[] = spine.map((p, i) => {
+    if (i > 0) len += Math.hypot(p[0] - spine[i - 1]![0], p[1] - spine[i - 1]![1]);
+    return len;
+  });
+  for (let k = 0; k < strands; k++) {
+    const weight = k === 0 ? 0.62 : 0.22 + rng() * 0.32;
+    const ph = rng() * 6.28;
+    const freq = (0.008 + rng() * 0.012) * (rng() < 0.5 ? 1 : -1);
+    const reach = k === 0 ? 0.2 : 0.55 + rng() * 0.35;
+    // Some strands only run part of the way.
+    const s0 = k === 0 ? 0 : Math.floor(rng() * 0.3 * n);
+    const s1 = k === 0 ? n : n - Math.floor(rng() * 0.35 * n);
+    const pts: Pt[] = [];
+    for (let i = s0; i < s1; i++) {
+      const t = i / (n - 1);
+      const ww = w + (w1 - w) * t;
+      const off = Math.sin(along[i]! * freq + ph) * ww * reach;
+      pts.push([spine[i]![0] + nrm[i]![0] * off, spine[i]![1] + nrm[i]![1] * off]);
+    }
+    if (pts.length < 2) continue;
+    const t0 = s0 / (n - 1);
+    const t1 = (s1 - 1) / (n - 1);
+    b.strip(
+      pts,
+      (u) => {
+        const t = t0 + (t1 - t0) * u;
+        const ww = w + (w1 - w) * t;
+        const knot = 0.8 + 0.3 * Math.sin(t * 31 + ph) * Math.sin(t * 7 + ph * 2);
+        const ends = k === 0 ? 1 : Math.min(1, u / 0.08, (1 - u) / 0.08);
+        return Math.max(0.6, ww * weight * knot * (0.25 + 0.75 * ends));
+      },
+      { color: colors[k % colors.length]!, glow: glowK * (0.6 + 0.4 * rng()), seed: rng(), kind },
+    );
   }
 }

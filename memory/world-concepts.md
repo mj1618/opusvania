@@ -1,11 +1,11 @@
 # World mood frames (`/world-concepts.html`)
 
-Four still 1920x1080 mood pieces for the "overgrown ruin" world (docs/art-direction.md), built before the game
+Five still 1920x1080 mood pieces for the "overgrown ruin" world (docs/art-direction.md), built before the game
 commits to it. Separate from the game: `src/world-concepts/` imports only the Umber skin, `sim/player` (to make a
 player state) and `scene/lib/look.ts` (prng, wind). Nothing in the game imports it; Vite builds only `index.html`.
 
 ## Run and capture
-- Dev server on 5180: `http://localhost:5180/world-concepts.html`. Keys 1-4 switch; `?frame=N`; `?clean` hides the
+- Dev server on 5180: `http://localhost:5180/world-concepts.html`. Keys 1-5 switch; `?frame=N`; `?clean` hides the
   caption; `?t=6` steps render time from 0 to 6 s in 1/60 s steps and freezes there (same picture every time).
 - `window.__wc = { frame, ready, show(n) }`. Capture: `playwright-cli -s=world resize 1920 1080`, goto
   `?frame=N&t=6&clean`, wait for `__wc.ready`, screenshot. All four run at 60 fps live.
@@ -15,7 +15,7 @@ player state) and `scene/lib/look.ts` (prng, wind). Nothing in the game imports 
 ## What each frame tests
 1. **The kept street**: can a human street read as swallowed but cared for? Bus shelter with a case on the bench,
    a lightbox full of folded tissue, a queue of standing cases on the far kerb, cases hung like fruit from a root
-   slung between buildings, the folded mountain on the horizon. Everything the Mouth owns breathes on one rhythm.
+   slung between buildings, the folded mountain on the horizon. Everything the Hush owns breathes on one rhythm.
 2. **The edge**: the signature transition in one look: left the Grove's language pushed amber (wind in ferns and
    grass, glints, shafts), right bone-pale and still (no wind, spores that do not drift); the line runs down one tree.
 3. **The last lamp**: the one neon-ish moment: a dead city dark to the sky, one sodium lamp, a moth swarm, root drawn
@@ -39,6 +39,38 @@ player state) and `scene/lib/look.ts` (prng, wind). Nothing in the game imports 
   or `gliding` with nothing below) and settles 150 steps before the first picture.
 - The folded mountain (`MOUNTAIN` body: lobes + warped ridged noise lit from a core) doubles as the lab ceiling.
 
-## Honest state (2026-10-14)
-Edge and last lamp are the strongest. The street reads but its middle band is thin and the buildings flat. The lab
-tells its story (handprint legible at 1080p) but its props still look like rubbery CG rather than painted.
+## Pass 2 (2026-10-14): what changed and what worked
+- Shots: `shots/world-concepts/pass2/` (five frames, `pass1-vs-pass2.png`, `street-two-scales.png`,
+  `sheet-with-grove.png`). Pass 1 stays in `shots/world-concepts/` for comparison. Frame 5 (key 5) is the kept street
+  at moth scale (`frames/moth.ts`). All five still run 60 fps live.
+- **Plane filter (layer.ts) gained what makes cut-outs read as painted:** `edge` (8+8 alpha samples: fog creeps in at
+  the silhouette, cores darken), `rim` / `rimDir` (key rim on edges facing it), `rimLights` (each scene light rims the
+  edges facing it: the lamp, the dish, Umber), `brush` (value noise stretched along a wandering direction: strokes,
+  not mottle) and `paint` (Kuwahara radius, a separate filter). Splitting a frame's flanks into their own planes so
+  each gets a rim toward the corridor was the single biggest win on the lamp.
+- **Ruins (lib/ruin.ts):** `ruin()` = lean, sag, stepped bites with hanging floor slabs and rods, roof clutter, peaks,
+  hand-cut window quads (bricked / broken / lit); `windowGlows` (breathing case light behind lit windows), `drape`
+  (fold riding a decimated roofline + pours), `grip` (fat root column over a corner so the rectangle is lost).
+  Window grids still read "vector" up close: keep them in fog, let lights find only a few.
+- **Tissue shader:** two-value lit/shadow with a noisy terminator, cool shadows, light through thin parts (`sss`),
+  sheen only on noise peaks. Pattern frequencies are capped (`hs = min(hw, 22)`) or giant strips grow wood grain.
+  Ridged-noise creases on roots read as topographic contour lines: keep root creases faint (0.14).
+- **Big organic forms want shaders, not strips:** `CASE` (membrane, inner glow, sleeper silhouette as soft ellipses,
+  branching veins, optional torn hole and bottom fade) for the giant case and the lab's dome; `MOUNTAIN` reused for
+  the lightbox's packed tissue, the lab pedestal and lobes sagging from the ceiling. Glowing things go in their own
+  plane (an `amb` multiply in a dark plane killed the case's glow).
+- **The maker under silk:** the `SHROUD` height-field shader read as balloons / an armchair; a hand-drawn hunched
+  silhouette (`smoothPath`), horizontal value gradient toward the dish, a few wide fold strokes, in a plane with
+  `paint: 4` and light blur reads as a person under a sheet. `SHROUD` is kept in bodies.ts but unused.
+- **Bottom thirds:** roots crossing a road toward the camera in perspective (thin at the kerb, fat at the frame's foot)
+  plus `REFLECT` (wet streaks of each light) fill the ground band and lead the eye in; used in street, lamp, edge.
+- Failed: crumpled strips in the lightbox (fingers), finger lobes round the dome base (a crown of candles), tapered
+  stalks under a ledge (icicles), many short tributaries (worms), wood-grain on giant pods.
+
+## Honest state after pass 2
+Edge is at the Grove's level (5 planes, amber rims, a filled ground band). The lamp is close (soft corridor of
+towers, rimmed flanks, reflection). The lab now tells the midpoint (HEARTH sign, dish under its torn dome with the
+handprint, the maker hunched under silk, coat, torch, unopened jars) but the silk figure is still a sheet-ghost and
+the dome a bubble. The street has a value hierarchy now (pink mountain glow, Umber the warm light) but its near props
+(shelter, lamp post) are still clean vector. The moth-scale street proves the idea (jar cave, bench ledge, case as a
+building, rivers, kerb drop into fog) but its plain, bench and glass are the flattest surfaces in the set.

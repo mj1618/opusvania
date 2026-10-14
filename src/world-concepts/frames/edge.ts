@@ -158,15 +158,18 @@ function build(c: Composer): void {
     gap: number,
     wr: [number, number],
     seed: number,
+    blur = 1.6 - seed * 0.4,
   ) => {
     const pl = c.plane(name, {
       fog: fogL,
       fogK,
       ramp: [480, 900, -0.08, 0.12],
       mottle: 0.12,
-      blur: 1.6 - seed * 0.4,
+      blur,
       lit: 0.5,
       seed,
+      edge: [8, 0.2, 0, 0],
+      brush: [0.06, 70, 1.57, 8],
       split: { x0: SPLIT.x0, x1: SPLIT.x1, fog: fogR, sat: 0.6 },
     });
     const bb = c.batch(`${name}-trunks`, { glow: MOUTH.inner, glowK: 0.3, light: [-0.5, -0.86] }, pl.view);
@@ -178,21 +181,24 @@ function build(c: Composer): void {
       const st = trunk(rng, bb, x, 780, -60, w, mixHex(0x0e2226, 0x9a8e92, pale), pale > 0.5 ? 0 : 3, 0.3);
       if (pale > 0.5) branches(rng, bb, st, 2, w * 0.5, 0x9a8e92, 0, 0.3);
     }
-    // Canopy over the forest half: a dark mass whose underside hangs in lobes.
-    const under: Pt[] = [[-40, -20]];
-    for (let x = -40; x <= 1000; x += 18) {
-      const fade = Math.max(0, (x - 760) / 240);
-      under.push([
-        x,
-        120 + seed * 30 + Math.sin(x * 0.011 + seed) * 40 + Math.sin(x * 0.037) * 18 - fade * 260,
-      ]);
-    }
-    under.push([1000, -20]);
-    gg.poly(under.flat()).fill(0x0a1c1e);
-    for (let i = 0; i < 26; i++) {
-      const x = rng() * 940;
-      const y = 120 + seed * 30 + Math.sin(x * 0.011 + seed) * 40 + (rng() - 0.3) * 50;
-      gg.poly(blob(rng, x, y, 26 + rng() * 40, 16 + rng() * 22, 0.25, 32).flat()).fill(0x0a1c1e);
+    // Canopy over the forest half: a dark mass whose underside hangs in lobes (not on the farthest rank:
+    // the amber glow must show through there).
+    if (seed < 2) {
+      const under: Pt[] = [[-40, -20]];
+      for (let x = -40; x <= 1000; x += 18) {
+        const fade = Math.max(0, (x - 760) / 240);
+        under.push([
+          x,
+          120 + seed * 30 + Math.sin(x * 0.011 + seed) * 40 + Math.sin(x * 0.037) * 18 - fade * 260,
+        ]);
+      }
+      under.push([1000, -20]);
+      gg.poly(under.flat()).fill(0x0a1c1e);
+      for (let i = 0; i < 26; i++) {
+        const x = rng() * 940;
+        const y = 120 + seed * 30 + Math.sin(x * 0.011 + seed) * 40 + (rng() - 0.3) * 50;
+        gg.poly(blob(rng, x, y, 26 + rng() * 40, 16 + rng() * 22, 0.25, 32).flat()).fill(0x0a1c1e);
+      }
     }
     gg.rect(-20, 700, VIEW_W + 40, 220).fill(
       vgrad([
@@ -204,6 +210,23 @@ function build(c: Composer): void {
     bb.done();
     return pl;
   };
+  farLayer('far3', 0.84, 0x3a5a56, 0x8a849a, 80, [5, 9], 5, 2.6);
+  const fogFar3 = c.shader('fog-far3', 0, 0, VIEW_W, VIEW_H, FOG, R);
+  fogFar3
+    .c(0, 0x2a4a48, 0.4)
+    .p(1, 900, 220, 0.004, 0)
+    .p(2, 100, 400, 760, 900)
+    .p(3, 0.3, 0.85, 0, 0.2)
+    .p(4, -400, 990, 200)
+    .p(5, 330, 330, 420, 0.7)
+    .c(6, 0x9a6a30);
+  const fogFar3R = c.shader('fog-far3-r', 0, 0, VIEW_W, VIEW_H, FOG, R);
+  fogFar3R
+    .c(0, 0x6a6680, 0.45)
+    .p(1, 900, 220, 0, 0)
+    .p(2, 100, 400, 760, 900)
+    .p(3, 0.3, 0.85, 0.2, 0.25)
+    .p(4, 990, 2400, 200);
   farLayer('far2', 0.74, 0x2c4a48, 0x7a7488, 110, [8, 14], 0);
   const fogMid = c.shader('fog-far', 0, 0, VIEW_W, VIEW_H, FOG, R);
   fogMid
@@ -248,6 +271,14 @@ function build(c: Composer): void {
     blur: 0.4,
     seed: 2,
     split: { x0: SPLIT.x0 - 40, x1: SPLIT.x1 + 40, fog: 0x4a4660, sat: 0.7 },
+    edge: [10, 0.08, 0.1, 0],
+    rim: 0xffb870,
+    rimK: 0.22,
+    rimDir: [-0.55, -0.83],
+    rimW: 4,
+    rimLights: 0.7,
+    brush: [0.1, 60, 1.57, 7],
+    paint: 3,
   });
   const bark = c.batch(
     'bark',
@@ -405,6 +436,10 @@ function build(c: Composer): void {
     lit: 1,
     seed: 3,
     split: { x0: SPLIT.x0, x1: SPLIT.x1, fog: 0x0e1026 },
+    edge: [6, 0.03, 0.06, 0],
+    rimLights: 0.9,
+    rimW: 3,
+    brush: [0.08, 30, 0.1, 5],
   });
   const ground = new Graphics();
   near.view.addChild(ground);
@@ -590,6 +625,95 @@ function build(c: Composer): void {
   const herHalo = glow(HX, groundY(HX) - 60, 80, WARM.key, 0.12);
   her.addChild(herPool, herHalo);
 
+  // --- The ground below the surface: roots running toward us in perspective on the kept side,
+  // moss mounds and a few small lights on the wild side; a low mist over both.
+  const low = c.plane('low', {
+    fog: 0x061418,
+    fogK: 0.1,
+    blur: 1.2,
+    edge: [10, 0.2, 0, 0],
+    ramp: [880, VIEW_H, 0.0, 0.25],
+    mottle: 0.16,
+    lit: 1,
+    seed: 6,
+    split: { x0: SPLIT.x0, x1: SPLIT.x1, fog: 0x14142c },
+    rimLights: 0.8,
+    rimW: 3,
+  });
+  const lowG = new Graphics();
+  low.view.addChild(lowG);
+  for (let i = 0; i < 16; i++) {
+    const x = -40 + rng() * (lx - 40);
+    const y = groundY(x) + 30 + rng() * 140;
+    lowG
+      .poly(blob(rng, x, y, 40 + rng() * 90, 14 + rng() * 20, 0.3, 24).flat())
+      .fill(mixHex(0x04100e, 0x0a2420, rng()));
+  }
+  const lowRoots = c.batch(
+    'low-roots',
+    { glow: MOUTH.inner, glowK: 0.5, rim: 0xa8b8e0, rimK: 0.35, swell: 0.05, sss: 0xd8b8c0, sssK: 0.14 },
+    low.view,
+  );
+  for (let i = 0; i < 16; i++) {
+    const x0 = lx + 20 + rng() * (VIEW_W - lx);
+    const x1 = x0 + (x0 - 1200) * (0.3 + rng() * 0.7) + (rng() - 0.5) * 200;
+    const ph = rng() * 6;
+    const pts: Pt[] = [];
+    const y0 = groundY(x0) + 6;
+    for (let k = 0; k <= 24; k++) {
+      const t = k / 24;
+      pts.push([x0 + (x1 - x0) * t * t + Math.sin(t * 7 + ph) * 16 * t, y0 + (VIEW_H + 40 - y0) * t * t]);
+    }
+    const w = 0.5 + rng();
+    lowRoots.strip(pts, (t) => (1 + t * t * 14 * w) * (0.8 + 0.3 * Math.sin(t * 11 + ph)), {
+      color: rng() < 0.5 ? MOUTH.boneShadow : 0x5a5266,
+      glow: 0.35,
+      seed: rng(),
+    });
+  }
+  // The root's front, reaching under the line into the forest's soil.
+  for (let i = 0; i < 6; i++) {
+    const pts = wander(rng, {
+      x: lx + 20,
+      y: groundY(lx) + 30 + rng() * 80,
+      ang: Math.PI + (rng() - 0.5) * 0.6,
+      len: 120 + rng() * 200,
+      step: 7,
+      curl: 0.2,
+    });
+    lowRoots.strip(pts, taper(3 + rng() * 4, 0.6, 0.4, rng()), {
+      color: MOUTH.boneShadow,
+      glow: 0.5,
+      seed: rng(),
+    });
+  }
+  lowRoots.done();
+  const lowGlows = new Container();
+  lowGlows.blendMode = 'add';
+  low.view.addChild(lowGlows);
+  for (let i = 0; i < 7; i++) {
+    const x = 40 + rng() * (lx - 120);
+    const y = groundY(x) + 40 + rng() * 120;
+    lowG.circle(x, y, 2.5).fill(0x8ff0f8);
+    lowGlows.addChild(glow(x, y, 16, FOREST.cyan, 0.3));
+  }
+  const groundMist = c.shader('ground-mist', 0, 0, VIEW_W, VIEW_H, FOG, R);
+  groundMist
+    .c(0, 0x1a3a3a, 0.4)
+    .p(1, 500, 80, 0.01, 0)
+    .p(2, 900, 980, VIEW_H, VIEW_H + 100)
+    .p(3, 0.3, 0.85, 0, 0.25)
+    .p(4, -400, 990, 160)
+    .p(5, 600, 960, 300, 0.4)
+    .c(6, 0x5a4a28);
+  const groundMistR = c.shader('ground-mist-r', 0, 0, VIEW_W, VIEW_H, FOG, R);
+  groundMistR
+    .c(0, 0x4a4660, 0.45)
+    .p(1, 500, 80, 0, 0)
+    .p(2, 900, 980, VIEW_H, VIEW_H + 100)
+    .p(3, 0.3, 0.85, 0.3, 0.3)
+    .p(4, 990, 2400, 160);
+
   // --- Air: fireflies and glints drift in the forest; over the root the spores hang dead still.
   const steam = c.shader('steam', 0, 0, VIEW_W, VIEW_H, STEAM, R);
   steam
@@ -634,12 +758,21 @@ function build(c: Composer): void {
   );
 
   // --- Foreground: dark fronds at the left edge, a dark lip of root at the right.
-  const fg = c.plane('fg', { fog: 0x02080c, fogK: 0.2, mottle: 0.1, blur: 8, lit: 0.25, seed: 4 });
+  const fg = c.plane('fg', {
+    fog: 0x02080c,
+    fogK: 0.2,
+    mottle: 0.1,
+    blur: 12,
+    lit: 0.4,
+    seed: 4,
+    rimLights: 0.6,
+    rimW: 8,
+  });
   const fgG = new Graphics();
   fg.view.addChild(fgG);
   for (let i = 0; i < 6; i++) {
     const f = new Graphics();
-    fern(rng, f, 220 + rng() * 140, (rng() - 0.5) * 0.8, 0x04100e, 0x061612, 0x0a1e18);
+    fern(rng, f, 260 + rng() * 160, (rng() - 0.5) * 0.8, 0x061a14, 0x0a2a20, 0x12382a);
     f.position.set(-30 + rng() * 260, 1100);
     f.rotation = 0.2 + rng() * 0.6;
     fg.view.addChild(f);
