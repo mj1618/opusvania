@@ -98,4 +98,16 @@ claimed than nature (Ori-likes) or neon cyberpunk.
 - **One permitted neon moment:** a dead city whose last lamp still burns and draws moths.
 - **The edge** between forest and root (half amber and alive, half pale and still, the line moving night to night) is the
   signature transition.
+### Moth scale, at night (2026-10-14)
+- **Scale:** the world is seen at Umber's size. A kerb is a cliff, a bench a plateau, a dropped jar a cave, a kitchen
+  table with sleepers' cases around it a whole region. Smallness is the premise (she is overlooked), so the camera makes
+  human things vast. In the forest: ferns as trees, moss as meadows, a mushroom as a building.
+- **Time:** she is nocturnal; the game lives at dusk and night: moonlight, the Hush's faint breathing glow, and the few
+  warm lights she finds or makes.
+- **Journey inward:** the last wild wood (the Grove, lush, amber; Act I) → the edge → half-swallowed gardens and
+  orchards → the kept town at moth scale (street, bus stop, houses, kitchens) → the city's dead lights (the last lamp)
+  → the mountain and the lab. Each step paler, stiller, more "kept".
+- **The lush forest is one region, never the whole game:** its beauty is the contrast that makes the pale hurt. Keep it
+  ours, not Ori's: moth scale, night and dusk (not glowing blue-green), amber glints (not spirit light), the pale always
+  at the edge of the frame.
 - **No cyberpunk tropes:** no neon signage, chrome, cables, holograms or rain-soaked megacity.
