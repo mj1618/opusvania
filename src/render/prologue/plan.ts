@@ -11,6 +11,8 @@ export type PlayPhase =
   | 'leg'
   /** ...and waits at its mark for her, hopping "come on". */
   | 'wait'
+  /** She fell behind: he comes back down to her and leads that leg again. */
+  | 'back'
   /** On F4 under the dance he stops racing and stares up (she wins). */
   | 'stop'
   /** A glint drifts down between them; she catches it. */

@@ -25,7 +25,6 @@ import { Plate } from './plate';
 import { BEATS, HATCH, HOLLOW, SUMMIT, WAKE } from './script';
 import { buildSummit } from './summit';
 import { window01 } from './track';
-import { project } from './world';
 
 export class PrologueRenderer {
   /** Over the game's layers (plates, the title, the black), under the dip and the HUD. */
@@ -92,7 +91,7 @@ export class PrologueRenderer {
     const P = this.plan;
     const t = P.bt;
     const inBreath = P.beat === 'breath';
-    const summitT = P.beat === 'summit' ? t : P.beat === 'wake' ? 25 + t : -1;
+    const summitT = P.beat === 'summit' ? t : P.beat === 'wake' ? SUMMIT.end + t : -1;
     const inSummit = summitT >= 0 && (P.beat === 'summit' || t < WAKE.black[1]);
     this.breath.sprite.visible = inBreath;
     this.summit.sprite.visible = inSummit;
@@ -104,8 +103,10 @@ export class PrologueRenderer {
         ? window01(t, WAKE.title[0], WAKE.title[1]) * (1 - window01(t, WAKE.titleOut[0], WAKE.titleOut[1]))
         : 0;
     this.title.visible = tk > 0.001;
-    this.title.alpha = 0.5 * tk;
-    this.title.position.set(project(0.2, 60, 0.35).x, 300);
+    // Big enough to read on a phone, over the dance and the sky.
+    this.title.alpha = 0.72 * tk;
+    this.title.scale.set(1.9);
+    this.title.position.set(640, 210);
     const ik = P.beat === 'wake' ? window01(t, WAKE.rise[1], WAKE.rise[1] + 1) : 0;
     this.item.visible = ik > 0.001;
     this.item.alpha = 0.7 * ik;
@@ -122,7 +123,6 @@ export class PrologueRenderer {
     this.black.visible = k > 0.001;
     this.black.alpha = k;
     void BEATS;
-    void SUMMIT;
   }
 
   destroy(): void {

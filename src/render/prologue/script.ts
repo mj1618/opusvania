@@ -11,9 +11,9 @@ export const BEATS = [
   { id: 'breath', len: 10 },
   { id: 'hatch', len: 28 },
   { id: 'play', len: null },
-  { id: 'hollow', len: 40 },
-  { id: 'summit', len: 25 },
-  { id: 'wake', len: 12 },
+  { id: 'hollow', len: 43 },
+  { id: 'summit', len: 15 },
+  { id: 'wake', len: 13 },
 ] as const;
 export type BeatId = (typeof BEATS)[number]['id'];
 
@@ -77,6 +77,14 @@ export const HATCH = {
  */
 export const COURSE = {
   near: 120,
+  /** She has been below him this long (s): he goes back for her and leads again. */
+  lagBack: 4,
+  /** Where each leg starts, by the level she is on when he comes back for her. */
+  levels: [
+    { y: 1280, leg: 0, from: { x: 1280, y: 1280 } },
+    { y: 960, leg: 1, from: { x: 850, y: 960 } },
+    { y: 704, leg: 2, from: { x: 1493, y: 704 } },
+  ],
   /** He hops "come on" this often while he waits, s. */
   hopEvery: 3,
   hop: 'J3 .1',
@@ -138,13 +146,15 @@ export const HOLLOW = {
   lampLit: [26.5, 27.6],
   lampTurn: [27, 28],
   /** Played: the coral wash comes down toward her; get her off the case into the ferns and fold. */
-  play: [28, 35],
+  play: [28.6, 35.6],
   /** The wash reaches the case by the end of the played bit; it crosses the ferns after. */
-  washIn: [28, 34],
+  washIn: [28.6, 34.6],
   /** If she is still on the case: the lamp begins to dive, Sorrel tackles her into the ferns. */
-  tackle: [33.2, 35],
-  /** In the ferns: the wash crosses, slows, stops over them, moves on, rests on the case, goes dark. */
-  hide: [35, 40],
+  tackle: [33.8, 35.6],
+  /** In the ferns: the wash crosses, slows, stops over them (held), moves on, rests on the case, goes dark. */
+  hide: [35.6, 43],
+  /** ...its beats, s into the hide: across to the ferns, held over them, back to the case, dark. */
+  wash: { cross: 2.4, hold: 4.8, back: 6.2, dark: 7 },
   /** Where the hollow and the case are (the fox drank here), and the ferns 200 px west. */
   x: 1440,
   ferns: 1250,
@@ -156,30 +166,34 @@ export const HOLLOW = {
   lamp: { x: 1470, y: 420 },
 } as const;
 
-/** 5. The summit (bt 0-25): the world from high as what they see. */
+/** 5. The summit (bt 0-15): he chooses the dance and leaves her; she stays with the glint. */
 export const SUMMIT = {
-  fadeIn: [0, 1.2],
-  looks: [10, 14],
-  silver: [14, 16],
-  offer: [16, 18],
-  foldBack: [18, 19.2],
-  tap: [19.4, 20],
-  lift: [20, 21.5],
-  alone: [21, 25],
-  fadeOut: [24.2, 25],
+  fadeIn: [0, 0.8],
+  /** He looks up at the dance; she looks out over the world. */
+  looks: [0.4, 3.4],
+  /** The silver-edged moth leaves the ring and circles him once. */
+  silver: [3, 5.2],
+  /** He turns to her and offers: a hand to her, then up at the dance (come). */
+  offer: [5.2, 7.2],
+  /** She hesitates, and folds her wing over the glint. */
+  fold: [7.4, 8.4],
+  /** He taps her wingtip, and goes up into the dance; she watches him there. */
+  tap: [9, 9.7],
+  lift: [9.9, 12.6],
+  end: 15,
 } as const;
 
 /** 6. Title, then the next night (bt 0-12): the title over the summit, black, she wakes by the pool. */
 export const WAKE = {
-  title: [0.4, 1.6],
-  titleOut: [3.6, 4.6],
-  black: [4.6, 6],
-  fadeUp: [6, 7.6],
+  title: [0.2, 1.2],
+  titleOut: [5.2, 6.2],
+  black: [6.2, 7.2],
+  fadeUp: [7.2, 8.6],
   /** She wakes under a leaf where the fox slept. */
   at: { x: 1300, y: MOSS },
-  rise: [7.4, 9.5],
+  rise: [8.4, 10.5],
   /** Control and the HUD at the end. */
-  hud: [11, 12],
+  hud: [12, 13],
 } as const;
 
 // --- v1 (retired from the opening; the code is kept: world.ts, outside.ts) ---

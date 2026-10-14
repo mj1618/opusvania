@@ -33,6 +33,7 @@ import { glowTexture } from '../world/paint';
 import { Fox, foxPose } from './fox';
 import type { ProloguePlan } from './plan';
 import { COURSE, FOX_DRINK, HATCH, HOLLOW, MOSS, WAKE } from './script';
+import { drawFlightWings } from './sorrel';
 import { envelope, Track, window01 } from './track';
 
 const PALE = 0xd9cfc4;
@@ -68,7 +69,7 @@ const HOLLOW_CAM = new Track([
   { t: HOLLOW.dim[0], v: [1430, 1200, 2.4, 0] },
   { t: HOLLOW.lampLit[0], v: [1462, 560, 1.8, 0] },
   { t: HOLLOW.play[0] + 0.6, v: [1462, 560, 1.8, 0] },
-  { t: HOLLOW.play[0] + 1.6, v: [1320, 1200, 1.5, 0] },
+  { t: HOLLOW.play[0] + 2.2, v: [1320, 1200, 1.5, 0] },
   { t: HOLLOW.play[1], v: [1260, 1200, 1.5, 0] },
   { t: HOLLOW.hide[0] + 0.8, v: [1190, 1238, 2.7, 0] },
   { t: HOLLOW.hide[1], v: [1200, 1236, 2.8, 0] },
@@ -351,7 +352,9 @@ export class GroveActors {
     POST_CINE.frost = P.beat === 'hatch' ? 1 - window01(P.bt, HATCH.frostOut[0], HATCH.frostOut[1]) : 0;
     POST_CINE.dim =
       P.beat === 'hollow'
-        ? 0.7 * window01(P.bt, HOLLOW.dim[0], HOLLOW.dim[1]) * (1 - 0.5 * window01(P.bt, 38.5, 40))
+        ? 0.7 *
+          window01(P.bt, HOLLOW.dim[0], HOLLOW.dim[1]) *
+          (1 - 0.5 * window01(P.bt, HOLLOW.hide[1] - 1.5, HOLLOW.hide[1]))
         : 0;
     if (!inGrove) {
       this.wingAt.on = this.sorrelAt.on = false;
@@ -614,7 +617,8 @@ export class GroveActors {
       this.sleeper.view.position.set(cx - 4, cy + ch * 0.4);
       this.sleeper.view.scale.set(0.62 * (0.5 + 0.5 * rise));
       this.sleeper.view.alpha = rise;
-      this.sleeper.view.tint = 0x58546a;
+      // Warm and alive in there, asleep: the colour comes through the bone.
+      this.sleeper.view.tint = 0xd8a080;
       this.sleeper.draw(sp, clock);
       // The case: a lens of bone-pale skin, thick at its rim, thin (lit through) in the middle.
       // A cocoon lying on its stalk: full in the middle, drawn to a point at each end.
@@ -628,8 +632,8 @@ export class GroveActors {
         }
         return pts;
       };
-      c.poly(lens(1)).fill({ color: 0x8e867e, alpha: 0.28 });
-      c.poly(lens(0.8)).fill({ color: 0xd8d0c6, alpha: 0.06 });
+      c.poly(lens(1)).fill({ color: 0xc8beb2, alpha: 0.2 });
+      c.poly(lens(0.8)).fill({ color: 0xffd0a8, alpha: 0.05 + 0.04 * b });
       // Silk wraps round it, and veins.
       for (let i = 1; i < 8; i++) {
         const u = i / 8;
@@ -794,6 +798,7 @@ export class GroveActors {
     this.sorrelLayer.tint = tint;
     // Draw (or hide) each, and lend its light to the Grove.
     this.drawMoth(this.wing, this.wingLayer, wv, dt, clock, this.wingLights, this.lights.wing!, this.wingAt);
+    this.sorrel.hideWings = !!sv && !sv.grounded;
     this.drawMoth(
       this.sorrel,
       this.sorrelLayer,
@@ -865,7 +870,9 @@ export class GroveActors {
       const fx = H.ferns - 110;
       let x = fx;
       let air = false;
-      const tug = envelope(t, 30.6, 31.2, 31.6, 32.4) * (her.cx > H.ferns + 20 ? 1 : 0);
+      const tug =
+        envelope(t, H.play[0] + 2.6, H.play[0] + 3.2, H.play[0] + 3.6, H.play[0] + 4.4) *
+        (her.cx > H.ferns + 20 ? 1 : 0);
       x += (her.cx - 40 - fx) * tug;
       if (this.plan.tackleAt >= 0) {
         const k = envelope(
@@ -914,48 +921,12 @@ export class GroveActors {
     }
   }
 
-  /** His flight wings (delta forewings swept back, hindwings tucked), whenever he is in the air. */
+  /** His flight wings (sorrel.ts), whenever he is in the air. */
   private drawSorrelWings(v: PlayerView | null, clock: number): void {
     const g = this.sorrelWings;
     g.clear();
     if (!v || v.grounded) return;
-    const x = v.cx;
-    const y = v.feetY - 50;
-    const ph = clock * 2 * Math.PI * 7.5;
-    const a = -0.35 + 0.75 * Math.sin(ph);
-    const k = 0.85 + 0.15 * Math.abs(Math.cos(ph));
-    const fore: Array<[number, number]> = [
-      [0, -2],
-      [20, -12],
-      [44, -6],
-      [50, 2],
-      [34, 14],
-      [12, 16],
-      [2, 8],
-    ];
-    const hind: Array<[number, number]> = [
-      [0, 6],
-      [16, 12],
-      [26, 22],
-      [18, 32],
-      [6, 26],
-    ];
-    for (const side of [-1, 1]) {
-      const tf = (pts: Array<[number, number]>, sk: number, lag: number): number[] =>
-        pts.flatMap(([px, py]) => {
-          const c2 = Math.cos(a * lag);
-          const s2 = Math.sin(a * lag);
-          const rx = px * k * sk;
-          return [
-            x + side * (rx * c2 - py * s2 * 0.4),
-            y + rx * s2 * 0.9 + py * (lag === 1 ? Math.cos(a) : 1) + Math.sin(a) * 2,
-          ];
-        });
-      g.poly(tf(hind, 0.8, 0.6)).fill({ color: 0x2c1f3e, alpha: 0.95 });
-      const f = tf(fore, 0.85, 1);
-      g.poly(f).fill({ color: 0x4e3866, alpha: 0.95 });
-      g.poly(f).stroke({ color: 0xc4b4aa, width: 1.2, alpha: 0.4 });
-    }
+    drawFlightWings(g, v.cx, v.feetY - 50, clock * 7.5);
   }
 
   // --- The glint: where the director has it, or in a hand.
@@ -1056,12 +1027,15 @@ export class GroveActors {
       k = window01(t, H.washIn[0], H.washIn[0] + 1.5);
       if (t >= H.hide[0]) {
         const s = t - H.hide[0];
+        const Wb = H.wash;
         const over = H.ferns - 80;
-        const cross = window01(s, 0, 1.6);
-        const back = window01(s, 2.6, 4);
-        wx = this.wingAt.x + 40 + (over - this.wingAt.x - 40) * cross + (H.x + 30 - over) * back;
+        const cross = window01(s, 0, Wb.cross);
+        // Over the ferns it slows and stops, searching (a slow drift), then goes back to the case.
+        const search = Math.sin(s * 1.7) * 18 * (s > Wb.cross ? 1 - window01(s, Wb.hold - 0.6, Wb.hold) : 0);
+        const back = window01(s, Wb.hold, Wb.back);
+        wx = H.x + 30 + (over - H.x - 30) * cross + (H.x + 30 - over) * back + search;
         wy = MOSS - 30;
-        k = 1 - window01(s, 4, 4.8);
+        k = 1 - window01(s, Wb.back + 0.2, Wb.dark);
       }
     }
     w.position.set(wx, wy);

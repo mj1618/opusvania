@@ -29,7 +29,9 @@ is in `src/render/prologue/script.ts` (beats, staging, Sorrel's course).
 - **Sorrel the guide** (`src/prologue/guide.ts`): a second body on the real sim, his own `GameState` stepped with the
   same pure `step()` and tuning (in the same creature-less Grove), in lockstep with hers (`game.afterStep`). He plays
   recorded clips (the input DSL, `COURSE.legs`), then waits at each mark until she is within 120 px, hopping "come on"
-  every 3 s. Chosen over a render-side puppet so every move he shows is a move she can copy with the same physics.
+  every 3 s. If she is below him and has not come up for 4 s (`COURSE.lagBack`), he goes back for her: walks down
+  (off the branch) and over to her, then to the start of the leg from her level (`COURSE.levels`) and leads it again.
+  Chosen over a render-side puppet so every move he shows is a move she can copy with the same physics.
   The clips were found on the pure sim headless; `tests/unit/prologue-course.test.ts` fails if a sim change stops a
   leg landing on its mark. Gaps: he does not come back for her if she falls off; he just waits and hops.
 - **Moves unlocked as he shows them** (the mask): walk and jump from the start of the first night; dash from the frame
@@ -39,7 +41,8 @@ is in `src/render/prologue/script.ts` (beats, staging, Sorrel's course).
   (`VesperOptions.cine`, link.ts `CineCues`: hold, look, shake, fold, huddle, tap, lookUp) and own light registry,
   `link: false` so they leave `vesperLink` to the player's skin. Hers is fed the sim's player in played stretches and a
   staged pose (`Stand`) in cinematic ones; his the guide's body or a staged pose. The real character layer stays
-  hidden for the whole prologue. His moth flight wings (`drawSorrelWings`) draw whenever he is in the air.
+  hidden for the whole prologue. In the air his skin's own wings are left out (`VesperCharacter.hideWings` →
+  draw.ts `noWings`) and his moth flight wings (sorrel.ts `drawFlightWings`) are drawn instead.
 - **Staged creatures on the game's painters**: the lampwing over the pool is a second `EnemyRenderer` on a fake
   one-spawn scene and a made-up state, its lamp scaled by `LampRig.cine.lit` (dark until the Hush looks through it).
   `BurrRig.cine` (v1) is still there, unused.
@@ -65,19 +68,21 @@ is in `src/render/prologue/script.ts` (beats, staging, Sorrel's course).
    steam), the fox sinks asleep; the moths flutter up; a root tip rises to her face, pauses, sinks; the case rises on
    its stalk (a lens of bone skin with the fox asleep inside, its ember grey); she lands against it and folds her wing
    over it; the lights dim; a pulse runs up the stalk to the lamp; the lamp lights coral and turns to her glint (the
-   camera tilts up and holds on it). Played 28-35: get her into the ferns and hold give (fold). Still on the case at
-   33.2: Sorrel tackles her in. 35-40: two silhouettes in the ferns, the coral wash crosses, stops, moves on.
-5. **The summit (bt 0-25).** The land with no towns, root fanned across it stopped just short of the wood, the
-   mountain small on the horizon breathing, the pale point of the case in the canopy and a faint line out to the
-   root's front, the dance above, two moths on a twig against the horizon glow. He looks up, she looks down; the
-   silver moth circles him; she holds the glint out; it is folded back; the tap; he lifts off into the dance.
-6. **Title, the next night (bt 0-12).** WING / THE KEPT WORLD over the mountain, black, she wakes under a leaf by the
+   camera tilts up and holds on it, then follows the wash down). Played 28.6-35.6: get her into the ferns and hold give
+   (fold; she cannot run on past the ferns out of the picture). Still on the case at 33.8: Sorrel tackles her in.
+   35.6-43: two silhouettes in the ferns; the coral wash crosses, stops over them searching (held ~2.4 s), moves on.
+5. **The summit (bt 0-15), the peak.** Close on the two of them on a twig at the top of the wood (their own
+   skins at 2.3x, moonlit; plate exposure 1.35 and a moon wash), the world from high below (no towns, the root's fan,
+   the mountain breathing on the horizon, the case's pale point and its line), the dance close above (one moth edged
+   silver). He looks up at the dance, she looks out; the silver moth circles him; he turns to her and offers (a hand,
+   then up: come); she hesitates and folds her wing over the glint (she hides); he taps her wingtip and flies up into
+   the dance (his flight wings); she watches him there, the glint leaking amber from under her wing.
+6. **Title, the next night (bt 0-13).** WING / THE KEPT WORLD large in the left sky (scale 1.9, ~4 s held), black, she wakes under a leaf by the
    pool (husks, the case breathing, no fox, no Sorrel), the item text, the HUD with one glint, control.
 
 ## What is weak / known gaps
-- The fox is drawn simply (curled it reads; standing it is a stiff, plain canine; the walk is a shuffle).
-- The case's fox inside is faint; the hollow's root lips are strokes.
-- The summit is dark and small: two silhouettes on a twig, a lot of black land.
-- Sorrel's skin wings still show beside his drawn flight wings in the air.
+- The fox is drawn in flat shapes (a lithe body on a curved spine, tapered legs, a brush, a four-beat walk, the dip to
+  drink); it has no shading beyond fur tufts. The hollow's root lips are strokes.
+- On the summit the twig is dark on the dark canopy; only its moonlit top edge separates it.
 - The autopilot places her at the start of each of his legs (small cuts in captures) and on the moss after the dive.
 - The item text is shown by the prologue (bottom left, fading at hand-over), not by a HUD item system.

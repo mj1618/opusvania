@@ -61,6 +61,10 @@ export class PrologueDirector {
   /** The sail: from where, and frames into it. */
   private sail = { x: 0, y: 0, f: 0 };
   private hopT = 0;
+  /** Seconds she has been below him without coming up (he goes back for her after `COURSE.lagBack`). */
+  private lagT = 0;
+  /** Where he will start leading again when he has gone back for her. */
+  private backTo: (typeof COURSE.levels)[number] | null = null;
   /** Keep-it-up: whose turn it is to bump it. */
   private toward: 'her' | 'him' = 'her';
   private botLeg = -1;
@@ -180,6 +184,14 @@ export class PrologueDirector {
       if (P.bt >= HATCH.ready[0] && gx > COURSE.start.x + 8) return L;
       return 0;
     }
+    if (P.beat === 'play' && P.phase === 'back') {
+      // Walking back for her (off the branch if need be), then to where the leg starts.
+      const p = this.game.state.player;
+      const hx = p.x + p.w / 2;
+      const target = this.backTo && Math.abs(p.y + p.h - this.guide.y) < 10 ? this.backTo.from.x : hx;
+      if (Math.abs(gx - target) > 10) return gx < target ? R : L;
+      return 0;
+    }
     if (P.beat === 'play' && P.phase === 'wait') {
       // "Come on": a hop every few seconds while she is not with him.
       this.hopT += 1 / 60;
@@ -233,11 +245,33 @@ export class PrologueDirector {
       case 'wait':
         if (g.idle && Math.hypot(hx - g.x, hy - g.y) < COURSE.near && p.grounded) {
           P.leg++;
-          if (P.leg === 1) P.raceAt = P.pt;
+          if (P.leg === 1 && P.raceAt < 0) P.raceAt = P.pt;
           g.play(COURSE.legs[P.leg]!.clip);
           this.setPhase('leg');
+          break;
+        }
+        // She fell behind (below him) and has not come up for a while: he goes back for her.
+        this.lagT = hy > g.y + 100 ? this.lagT + 1 / 60 : 0;
+        if (this.lagT > COURSE.lagBack && g.idle) {
+          this.lagT = 0;
+          this.backTo = null;
+          this.setPhase('back');
         }
         break;
+      case 'back': {
+        // Down to her level and over to her; then to the start of the leg from where she stands, and lead again.
+        const level = COURSE.levels.find((l) => Math.abs(hy - l.y) < 6 || (l.y === MOSS && hy > MOSS - 6));
+        const together = Math.abs(hx - g.x) < 140 && Math.abs(hy - g.y) < 10 && g.state.player.grounded;
+        if (together && level && p.grounded) {
+          this.backTo = level;
+          if (Math.abs(g.x - level.from.x) < 14) {
+            P.leg = level.leg;
+            g.play(COURSE.legs[P.leg]!.clip);
+            this.setPhase('leg');
+          }
+        }
+        break;
+      }
       case 'stop':
         // She overtakes him on F4 and wins; he does not notice. Then a glint comes down between them.
         if (since > 1.2 && p.grounded && Math.abs(hy - F4.y) < 3 && hx > F4.x0) {

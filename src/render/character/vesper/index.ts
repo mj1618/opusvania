@@ -154,6 +154,8 @@ export class VesperCharacter implements CharacterSkin {
 
   /** Where the light leaves her hand (or her chest), world px, every frame (the same point `vesperLink.offerX/Y` gets). */
   readonly offer = { x: 0, y: 0 };
+  /** Leave the wings out this frame (a stand-in whose flight wings are drawn elsewhere). */
+  hideWings = false;
   private readonly cine: CineCues;
   private readonly link: boolean;
 
@@ -575,6 +577,7 @@ export class VesperCharacter implements CharacterSkin {
     p.outline = EDGE.hidden ? 0 : EDGE.px;
     p.outlineColor = EDGE.color;
     p.outlineAlpha = EDGE.alpha;
+    view.noWings = this.hideWings;
     drawVesper(p, rig.frame, view, clock);
     p.outline = 0;
     p.dimK = 0;

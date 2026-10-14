@@ -63,6 +63,8 @@ export interface View {
   /** Wall-slide weight 0..1 and the wall's side on screen (-1 / 1). */
   wall: number;
   wallDir: number;
+  /** Leave the wings out (another painter draws them). */
+  noWings?: boolean;
   /** 0..1: wings spread to both sides (the glide). */
   soar: number;
   /** ... per wing (index as `wings`). */
@@ -1223,8 +1225,11 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   const kNear = lerp(1, lerp(0.74, 1, t), tint);
   // The wing eye-spots answer a glint last, after the eyes.
   const spot = Math.max(v.spot, v.glintT < 0.8 ? v.glintK * bump((v.glintT - 0.3) / 0.14, 0, 1) : 0);
-  wing(p, v.wings[far]!.strands, v.open, kFar, v.glow, clock, v.soarW[far]!, v.back[far]!, spot, v.stream);
-  if (behind)
+  // (A body with flight wings drawn by someone else, the prologue's Sorrel in the air, hides these.)
+  const wings = !v.noWings;
+  if (wings)
+    wing(p, v.wings[far]!.strands, v.open, kFar, v.glow, clock, v.soarW[far]!, v.back[far]!, spot, v.stream);
+  if (behind && wings)
     wing(
       p,
       v.wings[near]!.strands,
@@ -1248,7 +1253,7 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   if (swFar && !v.bladeFront && !v.bladeOver && v.slashW > 0.5) blade(p, j, sw, v.bladeAng, bk, v.bladeLen);
   torso(p, j);
   leg(p, j, near, false);
-  if (!behind)
+  if (!behind && wings)
     wing(
       p,
       v.wings[near]!.strands,

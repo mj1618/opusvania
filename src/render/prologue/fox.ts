@@ -267,151 +267,193 @@ export class Fox {
     }
   }
 
-  /** Up: standing, walking, drinking, shaking its head, sneezing, sinking. */
+  /**
+   * Up: a lithe fox, side on, facing +x. A long low body on a curved spine, deep chest, tucked
+   * belly; slim legs that taper to small dark paws (the hind ones with a hock); a long neck; a
+   * narrow head on a long muzzle, tall ears; a full brush of a tail carried low. Walking, the legs
+   * step in a four-beat walk and the body rides on them; drinking, the neck reaches down and the
+   * muzzle dips; it sneezes (a jerk back) and shakes its head.
+   */
   private standing(g: Graphics, down: number, b: number, o: FoxPose, clock: number): void {
     const a = 1 - o.curl;
-    const y0 = down;
-    const ph = o.walk * Math.PI * 2;
     const w = o.walking;
-    // Legs: far pair first (darker), a trot when walking.
-    const legs: Array<[number, number, number]> = [
-      [-80, 0.5, 1],
-      [60, 0, 1],
-      [-70, 0, 0],
-      [70, 0.5, 0],
-    ];
-    const legPts = (hipX: number, off: number): [P, P, P] => {
-      const s = Math.sin(ph + off * Math.PI * 2) * w;
-      const lift = Math.max(0, Math.cos(ph + off * Math.PI * 2)) * 14 * w;
-      const hip: P = [hipX, y0 - 92];
-      const knee: P = [hipX + 6 + s * 16, y0 - 48 - lift * 0.5];
-      const foot: P = [hipX + s * 30, y0 - lift];
-      return [hip, knee, foot];
+    const ph = o.walk * Math.PI * 2;
+    // The body rides the stride a little; drinking, the forequarters drop.
+    const bob = Math.sin(ph * 2) * 2.5 * w;
+    const dip = 18 * o.drink;
+    const y0 = down - bob;
+    // Legs (far pair first, darker): hip / shoulder, knee, hock or wrist, paw. Four-beat walk.
+    const leg = (x: number, phase: number, hind: boolean, far: boolean): void => {
+      const p = ph + phase * Math.PI * 2;
+      const stride = Math.sin(p) * 26 * w;
+      const lift = Math.max(0, Math.cos(p)) * 16 * w;
+      const top: P = [x, y0 - (hind ? 100 : 98 - dip * (hind ? 0 : 1)) + (far ? 2 : 0)];
+      const paw: P = [x + stride + (hind ? -6 : 4), down - lift];
+      const col = far ? FUR_FAR : FUR_SH;
+      if (hind) {
+        const knee: P = [x + 14 + stride * 0.4, y0 - 62];
+        const hock: P = [x - 10 + stride * 0.7, down - 26 - lift * 0.6];
+        limb(g, top, knee, hock, far ? 10 : 12, 5, col);
+        limb(g, hock, [(hock[0] + paw[0]) / 2, (hock[1] + paw[1]) / 2], paw, 4.2, 3.4, col);
+      } else {
+        const elbow: P = [x - 4 + stride * 0.3, y0 - 62 + dip * 0.5];
+        const wrist: P = [x + stride * 0.8, down - 18 - lift * 0.7];
+        limb(g, top, elbow, wrist, far ? 9 : 11, 4, col);
+        limb(g, wrist, [(wrist[0] + paw[0]) / 2, (wrist[1] + paw[1]) / 2], paw, 3.6, 3.2, col);
+      }
+      g.ellipse(paw[0] + 3, paw[1] - 2, 6, 3.2).fill({ color: INK, alpha: a });
     };
-    for (const [x, off, far] of legs) {
-      if (!far) continue;
-      const [h, k, f] = legPts(x, off);
-      limb(g, h, k, f, 9, 3.5, FUR_FAR);
-    }
-    // The tail: long, low, swaying; its tip pale, the ember at the end.
-    const sway = Math.sin(clock * 1.3) * 10 + Math.sin(ph) * 6 * w;
+    leg(-96, 0.5, true, true);
+    leg(64, 0.75, false, true);
+    // The brush: from the rump, carried low and full, swaying; its tip pale, the ember at the end.
+    const sway = Math.sin(clock * 1.3) * 8 + Math.sin(ph) * 6 * w;
+    const root: P = [-126, y0 - 112];
     const tail: P[] = [
-      [-110, y0 - 110],
-      [-170, y0 - 124 + sway * 0.3],
-      [-240, y0 - 106 + sway],
-      [-290, y0 - 70 + sway],
-      [-268, y0 - 44 + sway],
-      [-200, y0 - 58 + sway * 0.6],
-      [-120, y0 - 80],
+      root,
+      [-168, y0 - 118 + sway * 0.2],
+      [-214, y0 - 106 + sway * 0.6],
+      [-258, y0 - 80 + sway],
+      [-286, y0 - 52 + sway],
+      [-272, y0 - 34 + sway],
+      [-236, y0 - 44 + sway * 0.8],
+      [-196, y0 - 70 + sway * 0.5],
+      [-150, y0 - 90],
+      [-124, y0 - 96],
     ];
     blobPath(g, tail).fill({ color: FUR_SH, alpha: a });
-    tufts(g, tail.slice(1, 4), 10, FUR_SH, a, 2);
+    tufts(g, tail.slice(1, 5), 9, FUR_SH, a, 2);
     blobPath(g, [
-      [-246, y0 - 86 + sway],
-      [-282, y0 - 64 + sway],
-      [-262, y0 - 52 + sway],
-      [-238, y0 - 66 + sway],
+      [-262, y0 - 78 + sway],
+      [-286, y0 - 52 + sway],
+      [-272, y0 - 34 + sway],
+      [-250, y0 - 44 + sway],
     ]).fill({ color: PALE, alpha: 0.75 * a });
     if (a > 0.5) {
-      this.tip[0] = -280;
-      this.tip[1] = y0 - 60 + sway;
+      this.tip[0] = -282;
+      this.tip[1] = y0 - 44 + sway;
     }
-    // Body: deep chest, tucked belly; breathing.
+    // The body on its spine: a slight dip behind the withers, the rump higher, chest deep, belly tucked.
     const body: P[] = [
-      [-128, y0 - 96],
-      [-112, y0 - 128 * b],
-      [-30, y0 - 136 * b],
-      [60, y0 - 130 * b],
-      [104, y0 - 116],
-      [104, y0 - 80],
-      [60, y0 - 70],
-      [-40, y0 - 76],
-      [-118, y0 - 80],
+      [-142, y0 - 98],
+      [-134, y0 - 120 * b],
+      [-90, y0 - 128 * b],
+      [-30, y0 - 120 * b],
+      [30, y0 - 122 * b + dip * 0.4],
+      [76, y0 - 130 * b + dip],
+      [104, y0 - 112 + dip],
+      [108, y0 - 90 + dip * 0.8],
+      [84, y0 - 72 + dip * 0.5],
+      [40, y0 - 78],
+      [-20, y0 - 86],
+      [-70, y0 - 84],
+      [-112, y0 - 80],
     ];
     blobPath(g, body).fill({ color: FUR, alpha: a });
-    tufts(g, body.slice(0, 5), 8, FUR, a, 4);
+    tufts(g, body.slice(1, 5), 7, FUR, a, 4);
+    // The rust along the back, a pale chest and belly.
     blobPath(g, [
-      [-100, y0 - 122 * b],
-      [-20, y0 - 136 * b],
-      [60, y0 - 130 * b],
-      [0, y0 - 120 * b],
-    ]).fill({ color: RUST, alpha: 0.4 * a });
-    // A paler belly.
+      [-128, y0 - 118 * b],
+      [-60, y0 - 126 * b],
+      [20, y0 - 120 * b + dip * 0.4],
+      [-40, y0 - 112 * b],
+    ]).fill({ color: RUST, alpha: 0.5 * a });
     blobPath(g, [
-      [-60, y0 - 80],
-      [0, y0 - 74],
-      [70, y0 - 74],
-      [96, y0 - 84],
-      [40, y0 - 92],
-    ]).fill({ color: PALE, alpha: 0.25 * a });
-    // Near legs.
-    for (const [x, off, far] of legs) {
-      if (far) continue;
-      const [h, k, f] = legPts(x, off);
-      limb(g, h, k, f, 10, 4, FUR_SH);
-      limb(g, [(k[0] + f[0]) / 2, (k[1] + f[1]) / 2], [f[0] - 1, f[1] - 6], f, 4.5, 4.5, INK);
-    }
-    // Neck and head: pitched down to drink, shaken, jerked back by the sneeze.
-    const neck: P = [90, y0 - 112];
-    let pitch = 1.05 * o.drink - 0.35 * o.sneeze + 0.08 * Math.sin(clock * 0.5) * (1 - o.drink);
+      [70, y0 - 110 + dip],
+      [104, y0 - 106 + dip],
+      [100, y0 - 82 + dip * 0.8],
+      [70, y0 - 76 + dip * 0.5],
+      [40, y0 - 82],
+    ]).fill({ color: PALE, alpha: 0.4 * a });
+    leg(-82, 0, true, false);
+    leg(78, 0.25, false, false);
+    // Neck and head: the neck reaches down to drink; shaken; jerked back by the sneeze.
+    const neck: P = [86, y0 - 118 + dip];
+    let pitch = 1.15 * o.drink - 0.4 * o.sneeze + 0.06 * Math.sin(clock * 0.5) * (1 - o.drink);
     pitch += Math.sin(clock * 18) * 0.12 * o.shake;
-    const R = (p: P): P => rot([p[0], y0 + p[1]], neck, pitch);
-    const head: P[] = [
-      [96, -150],
-      [122, -172],
-      [154, -166],
-      [184, -150],
-      [212, -138],
-      [208, -132],
-      [168, -124],
-      [120, -116],
-      [92, -112],
-    ].map((p) => R(p as P));
-    // The neck joins chest to head.
+    const R = (p: P): P => rot([p[0], y0 + dip + p[1]], neck, pitch);
     blobPath(g, [
-      [70, y0 - 126],
-      ...[
-        [100, -156],
-        [126, -150],
-        [118, -112],
-      ].map((p) => R(p as P)),
-      [96, y0 - 84],
+      [64, y0 - 132 * b + dip],
+      ...(
+        [
+          [104, -170],
+          [130, -164],
+          [124, -120],
+        ] as P[]
+      ).map(R),
+      [100, y0 - 92 + dip * 0.8],
     ]).fill({ color: FUR, alpha: a });
+    const head: P[] = (
+      [
+        [104, -168],
+        [126, -182],
+        [152, -176],
+        [176, -160],
+        [214, -146],
+        [218, -140],
+        [204, -134],
+        [164, -130],
+        [128, -124],
+        [104, -130],
+      ] as P[]
+    ).map(R);
     blobPath(g, head).fill({ color: FUR, alpha: a });
-    // Pale throat and cheek.
+    // The pale cheek and jaw under the muzzle.
     blobPath(
       g,
-      [
-        [98, -118],
-        [140, -126],
-        [176, -128],
-        [150, -116],
-        [108, -104],
-      ].map((p) => R(p as P)),
+      (
+        [
+          [118, -130],
+          [150, -136],
+          [196, -138],
+          [168, -128],
+          [126, -122],
+        ] as P[]
+      ).map(R),
     ).fill({ color: PALE, alpha: 0.55 * a });
-    // Nose.
-    const nose = R([210, -136]);
-    g.circle(nose[0], nose[1], 4.5).fill({ color: INK, alpha: a });
-    // Ears: tall, the near one rust inside; they flick.
+    const nose = R([218, -142]);
+    g.circle(nose[0], nose[1], 4.2).fill({ color: INK, alpha: a });
+    // Ears: tall and pointed; the near one rust inside; they flick now and then.
     const flick = Math.sin(clock * 0.9) > 0.97 ? 0.2 : 0;
-    const e1 = [R([110, -160]), R([104, -222 + 6 * o.sink]), R([134, -168])];
-    const e2 = [R([124, -168]), R([132 + 8 * flick, -230]), R([152, -166])];
+    const e1 = (
+      [
+        [116, -170],
+        [112, -226 + 6 * o.sink],
+        [138, -178],
+      ] as P[]
+    ).map(R);
+    const e2 = (
+      [
+        [130, -176],
+        [140 + 10 * flick, -236],
+        [158, -174],
+      ] as P[]
+    ).map(R);
     g.poly(e1.flat()).fill({ color: FUR_SH, alpha: a });
     g.poly(e2.flat()).fill({ color: FUR, alpha: a });
-    g.poly([R([131, -168]), R([135, -204]), R([145, -166])].flat()).fill({ color: RUST, alpha: 0.7 * a });
+    g.poly(
+      (
+        [
+          [136, -178],
+          [141 + 6 * flick, -220],
+          [151, -176],
+        ] as P[]
+      ).flatMap(R),
+    ).fill({ color: RUST, alpha: 0.7 * a });
     // The eye: a dim gleam, closing as it sinks.
-    const eye = R([160, -150]);
+    const eye = R([168, -158]);
     const open = Math.max(0, Math.min(1, o.eyes));
-    g.ellipse(eye[0], eye[1], 5, 4.2 * open + 0.6).fill({ color: INK, alpha: a });
+    g.ellipse(eye[0], eye[1], 5, 3.6 * open + 0.6).fill({ color: INK, alpha: a });
     if (open > 0.2)
       g.circle(eye[0] + 1.2, eye[1] - 0.8, 1.2).fill({ color: 0xd9b070, alpha: 0.7 * open * a });
   }
 
   /** The nose tip in the fox's own px for the current pose (for the glint's landing and steam). */
   nose(o: FoxPose): P {
-    const neck: P = [90, o.sink * 190 - 112];
-    const pitch = 1.05 * o.drink - 0.35 * o.sneeze;
-    return rot([199, o.sink * 190 - 138], neck, pitch);
+    const dip = 18 * o.drink;
+    const y0 = o.sink * 190;
+    const neck: P = [86, y0 - 118 + dip];
+    const pitch = 1.15 * o.drink - 0.4 * o.sneeze;
+    return rot([218, y0 + dip - 142], neck, pitch);
   }
 
   destroy(): void {
