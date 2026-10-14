@@ -67,10 +67,48 @@ player state) and `scene/lib/look.ts` (prng, wind). Nothing in the game imports 
 - Failed: crumpled strips in the lightbox (fingers), finger lobes round the dome base (a crown of candles), tapered
   stalks under a ledge (icicles), many short tributaries (worms), wood-grain on giant pods.
 
-## Honest state after pass 2
-Edge is at the Grove's level (5 planes, amber rims, a filled ground band). The lamp is close (soft corridor of
-towers, rimmed flanks, reflection). The lab now tells the midpoint (HEARTH sign, dish under its torn dome with the
-handprint, the maker hunched under silk, coat, torch, unopened jars) but the silk figure is still a sheet-ghost and
-the dome a bubble. The street has a value hierarchy now (pink mountain glow, Umber the warm light) but its near props
-(shelter, lamp post) are still clean vector. The moth-scale street proves the idea (jar cave, bench ledge, case as a
-building, rivers, kerb drop into fog) but its plain, bench and glass are the flattest surfaces in the set.
+## Pass 3 (2026-10-14): what changed and what worked
+- Shots: `shots/world-concepts/pass3/` (five frames, `pass2-vs-pass3.png`, `sheet-with-grove.png`, and
+  `{1-street,4-lab,5-moth-street}-vs-grove.png`). Session `-s=world3`; capture = goto `?frame=N&t=6&clean`, wait
+  for `__wc.ready`, screenshot (a zsh loop with `set -- $f` does not split: call each frame explicitly).
+- **Ground in true perspective (`PAVE` in bodies.ts):** world coords from screen (eye height 1, focal 900, the
+  street rotated so its vanishing point sits at x 1430). Voronoi stones (radius jittered, not all cells, or it
+  reads as polka dots), air pits, lichen rosettes with a lobed bright rim, ridged-noise cracks, slab joints with
+  moss spilling out, a speckled granite kerb stone, a lip highlight; a cut rectangle (`uP8`) for what stands in
+  front. The same body with eye 2.5 and `side -1` paints the road far below the kerb (worn yellow line).
+  `toScreen(wx, wy, z)` / `toWorld` in moth.ts place grains, moss stalks (setae + capsules: a forest at moth
+  scale), rootlets (a random walk in world space, so it foreshortens) and the leaf (a 3D sheet: curl, droop past
+  the edge, shadow clamped to the kerb).
+- **A cliff needs its face toward the camera.** From on the pavement the kerb's face points away: it reads as a
+  table edge. Put the camera a little out over the road (kerb line W.x = -0.9): the face becomes a wedge from the
+  vanishing point, strata fanned toward it, roots pouring down it, then hide its foot in a luminous fog bank so the
+  depth is unknown. The fog must be brighter than the plateau so the edge silhouettes against it.
+- **Luminous volumes are what the Grove has and the ruins lacked:** `SHAFTS` (additive) under the lattice bench
+  in the case's pink, with lit dust motes; a glowing fog bank with wisps and `STEAM` rising off it. Push grade
+  contrast (1.14) and saturation (1.18) and darken the mid planes so the lights carry.
+- **Life:** `lib/moths.ts` (small moths circling a light, pure function of t), a firefly with a trail (the one
+  other warm source), a beetle on the leaf, a dandelion seed, a spider thread with dew, glinting quartz grains.
+- **Wear (`lib/wear.ts`):** `rust` (patch, pit, chalky paint loss, a run), `streaks`, `beads` (condensation).
+  Thin lighter "paint flakes" over rust patches read as rows of tiny hammers: dropped.
+- **DOME (bodies.ts) for the lab:** lumpy outline (low noise on the angle), ribs from ridged noise along the angle
+  (regular, they read as a scallop shell; a fibre texture keyed to the angle does the same), thin glowing membrane
+  between ribs, pink in the creases, torn lip lit. A few sagging fibres across the tear (many straight ones read as
+  wheel spokes).
+- **The maker reads as a person** when: the silk ends at the seat so the chair legs show; the back humps, dips at
+  the neck and the hooded head bumps forward lower than the shoulders; a bare hand (the `hand()` used for the
+  print) reaches out of a sleeve toward the dish; the figure is darker than the window behind and rim-lit by the
+  dish (`rimLights` 2.2, `lit` 0.5). A light ellipse on the hood read as a helmet ring.
+- **Street:** a rooftop row with chimneys and aerials against the mountain; swallowed cars (side-view saloon,
+  wheel arches, flat tyres, root draped via a fake `Ruin`) with a sleeper's case glowing pink in the driver's
+  window; bollards, a bin; the shelter roof sags, posts lean with rust from the feet, the stop's roundel faded
+  pink; the lamp leans with a base and a door; the frame-5 jar and leaf lie under the bench at human scale.
+- Failed: runs of the case's tissue down the bench lip (candles again: use `drape` lobes instead), root straps
+  over the case (stood up like stakes), a bite out of the kerb to show a face (a table with a notch).
+- Pixi v8 warns on `Graphics.addChild` (Graphics is a leaf): draw into the Graphics or use a Container.
+
+## Honest state after pass 3
+Moth street (5) is near the Grove's level: dense at many depths, two warm lights, pink shafts, a fog bank, framing
+blades; weakest are the case (a flat pink shape) and the jar (still a little graphic). The street (1) has colour and
+a full mid-ground now but its lower third is empty road and the sling's cases stay grey. The lab (4) tells its
+story at a glance (dome of flesh, the maker reaching) but stays monochrome and sparse by design; below the Grove in
+richness. Edge (2) and lamp (3) unchanged from pass 2.

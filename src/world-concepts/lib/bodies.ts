@@ -441,3 +441,198 @@ vec4 paint() {
   col *= 1.0 + grain * 0.08;
   return vec4(col * a, a);
 }`;
+
+/**
+ * Ground at moth scale: concrete (or tarmac) seen from just above it, in true perspective, so every
+ * stone, pit, lichen and crack shrinks toward the horizon. World coords W: eye height = 1 unit,
+ * rotated so W.x runs across the street and W.y along it (the kerb is a line W.x = const).
+ *   uP0 horizon y, top y (nothing above), focal px, centre x
+ *   uP1 kerb: x at top y, slope (px of x per px of y), jag px, street angle (rad)
+ *   uP2 base rgb, stain amount; uP3 stone rgb, share of cells with a stone; uP4 pit rgb, share
+ *   uP5 sage lichen rgb, share; uP6 rust lichen rgb, share; uP7 moss rgb, amount
+ *   uP8 cut: nothing left of x and above y (what stands in front); uP9 joints: along W.x, across W.y, half width, kerb joint W.x
+ *   uP10 kerb stone rgb, speckle; uP11 side (1 keep left of the kerb, -1 right), eye height, near dark, cracks
+ *   uP12 painted line: W.x, half width, amount; uP13 line rgb, wear
+ *   uP14 lip rgb, width px; uP15 scales: stones, pits, lichen, stray moss amount
+ */
+export const PAVE = /* glsl */ `
+vec2 h22(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.xx + p3.yz) * p3.zy);
+}
+vec3 vor(vec2 g, out vec2 rr) {
+  vec2 gi = floor(g);
+  vec2 gf = fract(g);
+  float best = 9.0;
+  vec2 bc = vec2(0.0);
+  rr = vec2(0.0);
+  for (int j = -1; j <= 1; j++)
+    for (int i = -1; i <= 1; i++) {
+      vec2 c = gi + vec2(float(i), float(j));
+      vec2 r = vec2(float(i), float(j)) + 0.15 + h22(c) * 0.7 - gf;
+      float d = dot(r, r);
+      if (d < best) { best = d; bc = c; rr = r; }
+    }
+  return vec3(sqrt(best), hash12(bc + 0.37), hash12(bc + 17.3));
+}
+vec4 paint() {
+  vec2 p = vPx;
+  float dy = p.y - uP[0].x;
+  if (p.y < uP[0].y - 1.0 || dy < 3.0) return vec4(0.0);
+  float side = uP[11].x;
+  float kx = uP[1].x + (p.y - uP[0].y) * uP[1].y + (fbm3(vec2(p.y / 23.0, 5.1)) - 0.5) * uP[1].z;
+  if (p.x < uP[8].x && p.y < uP[8].y) return vec4(0.0);
+  float ka = side > 0.0 ? smoothstep(kx + 1.0, kx - 1.0, p.x) : smoothstep(kx - 1.0, kx + 1.0, p.x);
+  if (ka <= 0.0) return vec4(0.0);
+  float eye = uP[11].y;
+  float cs = cos(uP[1].w);
+  float sn = sin(uP[1].w);
+  vec2 C = vec2((p.x - uP[0].w) / dy, uP[0].z / dy) * eye;
+  vec2 W = vec2(C.x * cs - C.y * sn, C.x * sn + C.y * cs);
+  float px = eye / dy;
+  vec2 rr;
+  // Concrete: stains, damp, wear.
+  float st = fbm(W * 0.9 + 3.0);
+  float st2 = fbm3(W * 4.0 + 11.0);
+  vec3 col = uP[2].rgb * (1.0 + (st - 0.5) * uP[2].a * 2.0 + (st2 - 0.5) * uP[2].a);
+  // Aggregate: stones set in it, worn flat on top, lit from the far side.
+  vec3 v = vor(W * uP[15].x, rr);
+  float rad = (0.12 + 0.3 * v.y * v.y) * (1.0 + 0.35 * (vnoise(rr * 3.0 / max(0.1, 0.2 + 0.3 * v.y) + v.z * 40.0) - 0.5));
+  float has = step(1.0 - uP[3].a, v.z);
+  float fw = px * uP[15].x * 1.2;
+  float stone = has * smoothstep(rad + fw, rad - fw, v.x) * (0.55 + 0.45 * v.y);
+  vec2 nr = -rr / rad;
+  float hgt = sqrt(max(0.0, 1.0 - dot(nr, nr)));
+  float lit = clamp(dot(normalize(vec3(nr, hgt * 1.2)), normalize(vec3(-0.35, 0.7, 0.6))), 0.0, 1.0);
+  vec3 sc = uP[3].rgb * mix(0.65, 1.3, v.y) * mix(vec3(1.0), vec3(1.12, 0.95, 0.88), step(0.6, v.z));
+  col = mix(col, sc * (0.5 + 0.8 * lit), stone);
+  col *= 1.0 - 0.4 * has * smoothstep(rad * 1.6, rad, v.x) * (1.0 - stone) * smoothstep(0.0, -0.4, nr.y);
+  // Pits: air holes, their near wall catching the light.
+  vec3 q = vor(W * uP[15].y + 7.7, rr);
+  float pr = 0.1 + 0.14 * q.y;
+  float fp = px * uP[15].y * 1.2;
+  float pit = step(1.0 - uP[4].a, q.z) * smoothstep(pr + fp, pr - fp, q.x);
+  col = mix(col, uP[4].rgb * (0.6 + 1.2 * clamp(rr.y / pr, 0.0, 1.0)), pit);
+  // The kerb stone: speckled granite, no aggregate.
+  float onK = side > 0.0 ? smoothstep(uP[9].w - px, uP[9].w + px, W.x) : 0.0;
+  if (onK > 0.0) {
+    float s1 = vnoise(W * 60.0);
+    float s2 = vnoise(W * 150.0 + 5.0);
+    vec3 g = uP[10].rgb * (0.85 + 0.3 * st2);
+    g = mix(g, g * 0.45, smoothstep(0.62, 0.7, s2) * uP[10].a);
+    g = mix(g, g * vec3(1.5, 1.3, 1.35), smoothstep(0.72, 0.8, s1) * uP[10].a);
+    g = mix(g, vec3(0.75, 0.74, 0.8), smoothstep(0.86, 0.9, s2) * uP[10].a * 0.6);
+    col = mix(col, g, onK);
+  }
+  // Lichen: rosettes with a lobed, brighter growing rim.
+  vec3 lv = vor(W * uP[15].z + 3.3, rr);
+  float lr = 0.22 + 0.24 * lv.y;
+  float an = atan(rr.y, rr.x);
+  float lob = lr * (1.0 + 0.16 * sin(an * 7.0 + lv.z * 20.0) + 0.14 * (vnoise(vec2(an * 2.0 + lv.y * 9.0, 1.0)) - 0.5));
+  float lf = uP[15].z * px * 1.5;
+  float h1 = step(1.0 - uP[5].a, lv.z);
+  float h2 = step(1.0 - uP[6].a, fract(lv.z * 7.13)) * (1.0 - h1);
+  float lich = (h1 + h2) * smoothstep(lob + lf, lob - lf, lv.x);
+  float ring = 0.72 + 0.3 * smoothstep(lob * 0.6, lob * 0.95, lv.x) + 0.1 * sin(lv.x / lob * 18.0);
+  float tex = 0.75 + 0.5 * vnoise(W * 110.0 + lv.y * 30.0);
+  vec3 lc = h1 > 0.5 ? uP[5].rgb : uP[6].rgb;
+  col = mix(col, lc * ring * tex, lich * 0.9);
+  // Cracks: a few, long, thin.
+  vec2 wq = W * 0.8 + vec2(fbm3(W * 0.6), fbm3(W * 0.6 + 4.0)) * 1.6;
+  float rdg = 1.0 - abs(vnoise(wq * 2.0) * 2.0 - 1.0);
+  float cm = smoothstep(0.48, 0.6, fbm3(W * 0.45 + 9.0)) * uP[11].w;
+  float fr = fwidth(rdg);
+  float crack = smoothstep(0.972 - fr * 1.5, 0.972 + fr * 0.5, rdg) * cm;
+  float crackLip = smoothstep(0.93 - fr, 0.96, rdg) * cm * (1.0 - crack);
+  col *= 1.0 - 0.85 * crack;
+  col *= 1.0 + 0.25 * crackLip;
+  // Joints between slabs: a dark gap, moss cushioned in and spilling out of it.
+  float jn = (fbm3(W * vec2(0.6, 2.5)) - 0.5) * 0.06;
+  float dL = abs(W.x - uP[9].x + jn);
+  float dC = abs(W.y - uP[9].y + (fbm3(W * vec2(2.5, 0.6) + 2.0) - 0.5) * 0.06);
+  float dK = side > 0.0 ? abs(W.x - uP[9].w + jn * 0.5) : 9.0;
+  float dj = min(min(dL, dC), dK);
+  float jw = uP[9].z;
+  float joint = smoothstep(jw + px * 1.2, jw - px * 1.2, dj);
+  float mz = fbm3(W * 5.0 + 1.3);
+  float fib = vnoise(W * 150.0) * 0.6 + vnoise(W * 320.0) * 0.4;
+  float spill = jw + 0.02 + 0.13 * mz * mz;
+  float moss = smoothstep(spill + px * 2.0, spill - px * 2.0, dj - 0.03 * fib) * uP[7].a;
+  float stray = smoothstep(0.7, 0.74, fbm3(W * 1.8 + 5.0) + 0.04 * fib) * uP[15].w;
+  moss = max(moss, stray);
+  vec3 mc = uP[7].rgb * (0.45 + 0.95 * fib) * (0.7 + 0.6 * mz);
+  col = mix(col, vec3(0.012, 0.012, 0.024), joint);
+  col = mix(col, mc, moss * (1.0 - joint * 0.5));
+  // A painted line, worn.
+  if (uP[12].z > 0.0) {
+    float ld = abs(W.x - uP[12].x);
+    float ln = smoothstep(uP[12].y + px, uP[12].y - px, ld);
+    ln *= uP[12].z * (1.0 - uP[13].a * smoothstep(0.4, 0.7, fbm3(W * 3.0)));
+    col = mix(col, uP[13].rgb, ln);
+  }
+  // The kerb's lip: the rounded edge catches the fog beyond.
+  if (side > 0.0) {
+    float rw = uP[14].w * dy / 300.0;
+    float lip = smoothstep(kx - rw, kx - 1.0, p.x);
+    col = mix(col, uP[14].rgb * (0.8 + 0.4 * fib), lip * 0.85);
+  }
+  col *= mix(1.0, uP[11].z, smoothstep(uP[0].y, 1080.0, p.y));
+  return vec4(col * ka, ka);
+}`;
+
+/**
+ * A dome of grown tissue over a light: a lumpy outline, ribs that run from its crown down to its
+ * foot (ridged noise, never a regular sine: that reads as candy stripes), thin glowing membrane
+ * between them, thick and opaque at its silhouette, sick pink in its deepest creases, torn open at
+ * the crown with a lit, ragged lip.
+ *   uP0 base centre xy, radii xy (height); uP1 lump amplitude px, lump frequency, rib frequency, rib depth
+ *   uP2 tear centre xy, radius px (0 = none), raggedness; uP3 inner light xy, radius, strength
+ *   uP4 light rgb; uP5 membrane rgb; uP6 crease rgb, amount; uP7 rim rgb, amount
+ *   uP8 y where it fades out (its foot), fade width, alpha of the thin membrane; uP9.x 0 = the inner
+ *   back wall (no tear, lit from inside), 1 = the front
+ */
+export const DOME = /* glsl */ `
+vec4 paint() {
+  vec2 p = vPx;
+  float sw = 1.0 + 0.008 * uT.y;
+  vec2 q = (p - uP[0].xy) / (uP[0].zw * vec2(sw, sw));
+  float ang = atan(q.x, -q.y);
+  float r = length(q);
+  float mn = min(uP[0].z, uP[0].w);
+  float lump = (fbm3(vec2(ang * uP[1].y + 1.7, 3.1)) - 0.5) * uP[1].x / mn;
+  float d = r - (1.0 + lump);
+  float a = smoothstep(1.5, -1.5, d * mn);
+  a *= smoothstep(uP[8].x, uP[8].x - uP[8].y, p.y);
+  float front = uP[9].x;
+  float holeEdge = 0.0;
+  if (front > 0.5 && uP[2].z > 0.0) {
+    vec2 hq = (p - uP[2].xy) * vec2(0.62, 1.0);
+    float hd = length(hq) - uP[2].z + (fbm(p * 0.035) - 0.5) * uP[2].z * uP[2].w;
+    a *= smoothstep(-2.0, 2.0, hd);
+    holeEdge = 1.0 - smoothstep(0.0, 22.0, hd);
+  }
+  if (a <= 0.001) return vec4(0.0);
+  float thick = max(smoothstep(-0.3, 0.0, d), holeEdge);
+  float rr = min(1.0, r);
+  vec3 n = normalize(vec3(q.x, q.y * 0.9, sqrt(max(0.03, 1.0 - rr * rr))));
+  float key = clamp(dot(n, normalize(vec3(0.3, -0.8, 0.5))), 0.0, 1.0);
+  // Ribs from the crown to the foot: ridged noise around the dome, wandering as they run down.
+  vec2 w = vec2(ang * uP[1].z, r * 1.6 + (fbm3(q * 2.2) - 0.5) * 1.8);
+  float rib = 1.0 - abs(vnoise(w) * 2.0 - 1.0);
+  float rib2 = 1.0 - abs(vnoise(vec2(ang * uP[1].z * 2.6 + 5.0, r * 4.0 + fbm3(q * 5.0))) * 2.0 - 1.0);
+  float ribs = pow(rib, 2.5) * 0.7 + pow(rib2, 3.0) * 0.3;
+  float crease = smoothstep(0.35, 0.0, rib) * uP[1].w;
+  float gl = exp(-length((p - uP[3].xy) * vec2(0.9, 1.0)) / uP[3].z) * uP[3].w * (0.7 + 0.3 * uT.y);
+  vec3 col = uP[5].rgb * (0.16 + 0.32 * key) * (0.55 + 0.45 * thick) * (0.55 + 0.9 * ribs);
+  // Light through: strongest where it is thin (between ribs, away from the silhouette).
+  float thin = (1.0 - thick * 0.75) * (1.0 - ribs * 0.55);
+  col += uP[4].rgb * gl * thin * (front > 0.5 ? 1.0 : 0.7);
+  col = mix(col, uP[6].rgb * (0.25 + 0.9 * gl), clamp(crease * uP[6].a, 0.0, 1.0));
+  col += uP[7].rgb * uP[7].a * smoothstep(-0.08, 0.0, d) * key;
+  col += uP[4].rgb * holeEdge * (0.35 + 0.5 * gl);
+  // Fibre: fine streaks along the ribs.
+  col *= 0.86 + 0.28 * fbm3(p * 0.06);
+  float al = a * (front > 0.5 ? mix(uP[8].z, 1.0, max(thick, ribs * 0.6)) : 1.0);
+  return vec4(col * al, al);
+}`;

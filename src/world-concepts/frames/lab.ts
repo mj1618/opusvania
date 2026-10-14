@@ -15,10 +15,11 @@
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import { prng } from '../../render/scene/lib/look';
-import { BEAM, CASE, DISH, FOG, MOUNTAIN, REFLECT } from '../lib/bodies';
+import { BEAM, DISH, DOME, FOG, MOUNTAIN, REFLECT } from '../lib/bodies';
 import type { Composer } from '../lib/compose';
 import { curtain, donePods, MOUTH, mixHex, pod, podLayers, spread, WARM } from '../lib/kit';
 import { VIEW_H, VIEW_W } from '../lib/layer';
+import { moths } from '../lib/moths';
 import { blob, glow, hgrad, vgrad } from '../lib/paint';
 import { branchRoot, type Pt, smoothPath, taper } from '../lib/tissue';
 import type { WorldFrame } from '../types';
@@ -491,19 +492,20 @@ function build(c: Composer): void {
     .p(13, FLOOR + 30, 3, 2.2);
   // The dome: tissue grown over the dish, lit through from inside. Its back half first (behind the
   // dish, its inside lit), then its front, torn open at the top where the lid and its hand show.
-  const domeAt = (name: string, hole: boolean) => {
-    const ox = D.x - 300;
-    const oy = D.y - 330;
-    const d = c.shader(name, ox, oy, 600, 460, CASE, R);
-    d.p(0, D.x - ox, D.y + 70 - oy, 250, 300)
-      .p(1, 2.4, D.x - 30 - ox, D.y - 18 - oy, 0.004)
-      .p(9, 0, 0, D.y + 96 - oy, 40)
-      .p(10, D.x - ox, D.y - 10 - oy, hole ? 200 : 220, hole ? 0.7 : 0.75)
-      .c(11, 0xd8e0f0)
-      .c(12, hole ? 0x8a8490 : 0x6a6878)
-      .c(13, 0x5a5466, hole ? 0.6 : 0.3)
-      .c(14, 0xc8d4ec, hole ? 0.3 : 0)
-      .p(15, 1, 0, 1, hole ? 96 : 0);
+  const domeAt = (name: string, front: boolean) => {
+    const ox = D.x - 320;
+    const oy = D.y - 350;
+    const d = c.shader(name, ox, oy, 640, 480, DOME, R);
+    d.p(0, D.x - ox, D.y + 70 - oy, 256, 300)
+      .p(1, 46, 3.4, 2.9, 1)
+      .p(2, D.x - 30 - ox, D.y - 22 - oy, front ? 84 : 0, 0.9)
+      .p(3, D.x - ox, D.y - 10 - oy, front ? 220 : 240, front ? 0.8 : 0.85)
+      .c(4, 0xd8e0f0)
+      .c(5, front ? 0x8a8090 : 0x5a5466)
+      .c(6, 0xb07888, 0.75)
+      .c(7, 0xc8d4ec, front ? 0.3 : 0)
+      .p(8, D.y + 100 - oy, 46, 0.7)
+      .p(9, front ? 1 : 0);
     return d;
   };
   // The dish: dark glass bottom, the cloud, the glass and its dusty lid, the cracks, the hand.
@@ -571,6 +573,27 @@ function build(c: Composer): void {
   cr.stroke({ color: 0xe0e8f4, width: 1.3, alpha: 0.55 });
   R.addChild(cr);
   domeAt('dome', true);
+  // Fibres the tear left spanning it: thin strands, sagging, lit by the dish.
+  const fibres = c.batch(
+    'tear-fibres',
+    { glow: 0xd8e0f0, glowK: 0.6, rim: 0xc8d4ec, rimK: 0.4, swell: 0.02 },
+    R,
+  );
+  for (let k = 0; k < 4; k++) {
+    const a0 = Math.PI * (0.65 + rng() * 0.7);
+    const a1 = a0 + Math.PI * (0.6 + rng() * 0.5);
+    const hx = D.x - 30;
+    const hy = D.y - 22;
+    const p0: Pt = [hx + Math.cos(a0) * 126, hy + Math.sin(a0) * 78];
+    const p1: Pt = [hx + Math.cos(a1) * 126, hy + Math.sin(a1) * 78];
+    const sag = 30 + rng() * 40;
+    fibres.strip(
+      smoothPath([p0, [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 + sag], p1], 10),
+      (t) => 0.8 + 1.4 * Math.abs(t - 0.5) * 2,
+      { color: 0x6a6670, kind: 4, glow: 0.3, seed: rng() },
+    );
+  }
+  fibres.done();
   // Light out of the tear, up into the dust; the glow round the whole dome.
   const up = c.shader('up-beam', 0, 0, VIEW_W, VIEW_H, BEAM, R);
   up.c(0, COLD, 0.07)
@@ -624,68 +647,68 @@ function build(c: Composer): void {
     fogK: 0.04,
     mottle: 0.14,
     mottleScale: 120,
-    lit: 1,
+    lit: 0.5,
     seed: 8,
     edge: [10, 0.05, 0.12, 0],
-    rimLights: 1.1,
-    rimW: 4,
-    blur: 0.8,
+    rimLights: 2.2,
+    rimW: 5,
+    blur: 0.5,
     brush: [0.1, 40, 1.57, 6],
-    paint: 4,
+    paint: 3,
   });
   const silk = new Graphics();
   maker.view.addChild(silk);
   const X = CHAIR.x;
-  // Hunched: the upper back is the highest point; the head bowed forward below it; the forearms
-  // rest on the knees, the hands reaching toward the dish.
+  // Seated, facing the dish: the back rounded, the head bowed below the shoulders, the knees forward,
+  // the silk falling from the head and back to the floor behind the chair and from the knees in front.
   const fig: Pt[] = smoothPath(
     [
-      [X - 84, FLOOR + 2],
-      [X - 80, 860],
-      [X - 74, 800],
-      [X - 86, 756],
-      [X - 76, 722],
-      [X - 50, 704],
-      [X - 20, 696],
-      [X + 20, 688],
-      [X + 40, 670],
-      [X + 30, 646],
-      [X + 8, 636],
-      [X - 6, 616],
-      [X - 4, 590],
-      [X + 10, 570],
-      [X + 34, 562],
-      [X + 56, 570],
-      [X + 70, 584],
-      [X + 90, 566],
-      [X + 120, 552],
-      [X + 152, 564],
-      [X + 172, 600],
-      [X + 180, 660],
-      [X + 184, 740],
-      [X + 192, 820],
-      [X + 206, 880],
-      [X + 218, FLOOR + 2],
-      [X + 150, FLOOR + 6],
-      [X + 60, FLOOR + 3],
-      [X - 30, FLOOR + 6],
+      [X + 186, 806],
+      [X + 198, 760],
+      [X + 192, 700],
+      [X + 180, 640],
+      [X + 166, 590],
+      [X + 128, 560],
+      [X + 92, 566],
+      [X + 68, 594],
+      [X + 50, 590],
+      [X + 26, 586],
+      [X + 2, 596],
+      [X - 18, 618],
+      [X - 26, 642],
+      [X - 16, 662],
+      [X - 2, 674],
+      [X - 6, 696],
+      [X - 24, 712],
+      [X - 62, 718],
+      [X - 92, 738],
+      [X - 90, 790],
+      [X - 84, 860],
+      [X - 104, FLOOR + 3],
+      [X - 18, FLOOR + 3],
+      [X - 26, 860],
+      [X - 16, 806],
+      [X + 30, 796],
+      [X + 110, 808],
     ],
-    6,
+    7,
   );
   silk.poly(fig.flat()).fill(
     hgrad([
-      [0, 0x6a6c7a],
-      [0.3, 0x464856],
-      [0.7, 0x262834],
-      [1, 0x16171f],
+      [0, 0x464856],
+      [0.25, 0x2c2e3a],
+      [0.6, 0x1a1c24],
+      [1, 0x0e0f14],
     ]),
   );
-  // The head, a little lighter where the dish finds it; the hollow under the chin and arms in shadow.
-  silk.ellipse(X + 18, 586, 22, 20).fill({ color: 0x9aa0b4, alpha: 0.3 });
+  // The hood over the bowed head: its crown catching the dish, the shadow where her face is.
+  silk.poly(blob(rng, X - 12, 648, 11, 16, 0.3, 12).flat()).fill({ color: 0x08090e, alpha: 0.5 });
+  // The shoulder's line and the curve of her back under the silk.
   silk
-    .poly([X + 40, 640, X + 60, 610, X + 120, 640, X + 140, 700, X + 60, 710])
-    .fill({ color: 0x1a1c28, alpha: 0.35 });
-  // Folds: soft bands that fall from the shoulders and knees, lighter and darker by turns.
+    .moveTo(X + 150, 590)
+    .quadraticCurveTo(X + 110, 610, X + 50, 646)
+    .stroke({ color: 0x0e0f16, width: 6, alpha: 0.35, cap: 'round' });
+  // Folds: from the back and the knees to the floor.
   const fold = (x0: number, y0: number, x1: number, y1: number, w: number, color: number, a: number) => {
     const mx = (x0 + x1) / 2 + (rng() - 0.5) * 16;
     silk
@@ -693,33 +716,82 @@ function build(c: Composer): void {
       .quadraticCurveTo(mx, (y0 + y1) / 2, x1, y1)
       .stroke({ color, width: w, alpha: a, cap: 'round' });
   };
+  for (let i = 0; i < 4; i++) {
+    const x0 = X - 84 + i * 18 + rng() * 8;
+    fold(
+      x0,
+      744 + rng() * 20,
+      x0 - 10 + rng() * 8,
+      FLOOR,
+      4 + rng() * 7,
+      i % 2 ? 0x8a8ea0 : 0x0e0f14,
+      0.14 + rng() * 0.1,
+    );
+  }
   for (let i = 0; i < 5; i++) {
-    const x0 = X - 70 + i * 20 + rng() * 10;
+    const x0 = X + 110 + i * 16 + rng() * 8;
     fold(
       x0,
-      770 + rng() * 20,
-      x0 - 10 + rng() * 10,
-      FLOOR,
-      4 + rng() * 9,
-      i % 2 ? 0xa8acbc : 0x14151c,
+      612 + i * 14,
+      x0 + 8 + i * 3,
+      800,
+      5 + rng() * 8,
+      i % 2 ? 0x7a7e92 : 0x0e0f14,
       0.12 + rng() * 0.1,
     );
   }
-  for (let i = 0; i < 6; i++) {
-    const x0 = X + 70 + i * 18 + rng() * 10;
-    fold(
-      x0,
-      600 + i * 10,
-      x0 + 10 + i * 5,
-      FLOOR,
-      5 + rng() * 10,
-      i % 2 ? 0x8a90a4 : 0x101118,
-      0.12 + rng() * 0.1,
+  // The hem pooled at her feet.
+  silk.poly(blob(rng, X - 60, FLOOR + 4, 60, 8, 0.3, 20).flat()).fill({ color: 0x2a2c36, alpha: 0.9 });
+  // Her arm, out of the silk: the sleeve from the shoulder to the elbow on her knee, the forearm
+  // reaching toward the dish, the silk hanging from it in one fold.
+  const arm = smoothPath(
+    [
+      [X + 40, 646],
+      [X - 10, 684],
+      [X - 60, 700],
+      [X - 120, 680],
+      [X - 170, 664],
+    ],
+    10,
+  );
+  {
+    const L: number[] = [];
+    const Rt: number[] = [];
+    for (let k = 0; k < arm.length; k++) {
+      const p = arm[k]!;
+      const q = arm[Math.min(arm.length - 1, k + 1)]!;
+      const o = arm[Math.max(0, k - 1)]!;
+      const tx = q[0] - o[0];
+      const ty = q[1] - o[1];
+      const tl = Math.hypot(tx, ty) || 1;
+      const w = 22 - 12 * (k / (arm.length - 1));
+      L.push(p[0] - (ty / tl) * w, p[1] + (tx / tl) * w);
+      Rt.push(p[0] + (ty / tl) * w, p[1] - (tx / tl) * w);
+    }
+    const pts = [...L];
+    for (let k = Rt.length - 2; k >= 0; k -= 2) pts.push(Rt[k]!, Rt[k + 1]!);
+    // The fold of silk hanging from the forearm toward her knees.
+    silk.poly([X - 150, 676, X - 70, 712, X - 66, 756, X - 112, 736]).fill({ color: 0x2a2c38, alpha: 0.85 });
+    silk.poly(pts).fill(
+      hgrad([
+        [0, 0x6a6c7c],
+        [1, 0x2a2c38],
+      ]),
     );
   }
-  for (let i = 0; i < 5; i++) fold(X - 40 + i * 22, 726, X - 30 + i * 26, 742, 2, 0x1a1c26, 0.25);
-  // The hem pooled on the floor.
-  silk.poly(blob(rng, X + 60, FLOOR + 4, 170, 10, 0.3, 30).flat()).fill({ color: 0x3a3c48, alpha: 0.9 });
+  // The hand: bare, open, reaching for the dish; the same hand as the print on its lid.
+  const reach = new Graphics();
+  hand(reach, 0x787c8e, 1);
+  reach.position.set(X - 186, 662);
+  reach.rotation = -Math.PI / 2 - 0.12;
+  reach.scale.set(0.42, 0.5);
+  maker.view.addChild(reach);
+  const reachShade = new Graphics();
+  hand(reachShade, 0x2a2c38, 0.5);
+  reachShade.position.set(X - 184, 668);
+  reachShade.rotation = -Math.PI / 2 - 0.12;
+  reachShade.scale.set(0.42, 0.42);
+  maker.view.addChildAt(reachShade, maker.view.children.length - 1);
   // Her coat on the floor at her feet: fallen in folds, one sleeve out toward the dish.
   const coatG = new Graphics();
   maker.view.addChild(coatG);
@@ -794,6 +866,18 @@ function build(c: Composer): void {
   const herPool = glow(HX, FLOOR + 2, 130, WARM.gold, 0.24);
   const herHalo = glow(HX, FLOOR - 40, 60, WARM.key, 0.12);
   her.addChild(herPool, herHalo);
+
+  // Moths at the dish: pale, slow, circling the only light in the room.
+  moths(c, rng, R, {
+    x: D.x - 20,
+    y: D.y - 150,
+    rx: 240,
+    ry: 110,
+    count: 5,
+    size: [10, 18],
+    color: 0xc8d0e0,
+    alpha: 0.7,
+  });
 
   // --- Air: dust hanging in the dish's light.
   c.mote(
