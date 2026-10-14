@@ -84,15 +84,18 @@ Fluid above all. Driven by sim state plus springs, never by popping between pose
 - Every secondary part (ears, cloak, tail) is simulated (verlet or spring chains) and follows through.
 - Smooth shading: soft gradients, a rim from the key light, a glow halo. Anti-aliased at any zoom.
 
-## The world beyond the Grove (story: The Moth and the Mouth, 2026-10-14)
-Two worlds, and the line between them is the story.
-- **The forest** (the Grove and the last wild woods): what is drawn now. Amber, alive, irregular, giving. It is a
-  character: the slow mind that makes light to give away. Keep it as Act I's home and the warm half of the palette.
-- **The Mouth's world** (the kept world): pale, warm root grown over human things. Bone-white to static grey,
-  everything breathing in one slow shared rhythm; towers wrapped like cocoons, streets as rivers of root, sleepers in
-  seed-pod cases on stalks, a mountain of folded tissue glowing on the horizon, the lab with its cracked dish. Organic
-  but wrong. This is the game's own look; nature alone puts us in Ori's lane.
-- **The edge:** where pale root meets forest; half the frame amber and alive, half pale and still, and the line moves
-  night to night. The next scene to build after the Grove.
-- In the Grove now: the pale on the far horizon, root under the soil, the mountain's glow from the summit.
-- The hero (Umber) is the one warm light moving through the pale world.
+## The world: overgrown ruin (owner's direction, 2026-10-14)
+The owner is not attached to the current art; the question is what serves the audience best. Decision: neither pure
+nature nor cyberpunk. **The human world, swallowed and overgrown by grown living tissue** ("organic ruin"): pale, warm,
+slowly breathing root and folded tissue over bus stops, streets, towers, kitchens and labs; sleepers in seed-pod cases on
+stalks; a mountain of folded tissue breathing on the horizon. It makes the story visible in one screenshot, serves all
+three audiences (Ori: beauty; Hollow Knight: eerie melancholy; Nine Sols: sci-fi myth underneath), and is far less
+claimed than nature (Ori-likes) or neon cyberpunk.
+- **Keep the rendering, not the subject:** painterly, layered atmospheric depth, dark and subtle, small precious lights.
+- **Palette:** the Mouth's world is bone-white, pale flesh-pink and static grey in cold blue-violet dark; living things
+  are warm (amber). Umber, small and dark and warm, is the one moving light in it.
+- **Nature is a minority:** the last wild pockets (the Grove is one), amber and alive, maybe two regions in eight.
+- **One permitted neon moment:** a dead city whose last lamp still burns and draws moths.
+- **The edge** between forest and root (half amber and alive, half pale and still, the line moving night to night) is the
+  signature transition.
+- **No cyberpunk tropes:** no neon signage, chrome, cables, holograms or rain-soaked megacity.
