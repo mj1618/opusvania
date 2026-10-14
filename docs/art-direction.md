@@ -83,3 +83,16 @@ Fluid above all. Driven by sim state plus springs, never by popping between pose
   scaled by impact speed. Cloak and tail lag and overshoot.
 - Every secondary part (ears, cloak, tail) is simulated (verlet or spring chains) and follows through.
 - Smooth shading: soft gradients, a rim from the key light, a glow halo. Anti-aliased at any zoom.
+
+## The world beyond the Grove (story: The Moth and the Mouth, 2026-10-14)
+Two worlds, and the line between them is the story.
+- **The forest** (the Grove and the last wild woods): what is drawn now. Amber, alive, irregular, giving. It is a
+  character: the slow mind that makes light to give away. Keep it as Act I's home and the warm half of the palette.
+- **The Mouth's world** (the kept world): pale, warm root grown over human things. Bone-white to static grey,
+  everything breathing in one slow shared rhythm; towers wrapped like cocoons, streets as rivers of root, sleepers in
+  seed-pod cases on stalks, a mountain of folded tissue glowing on the horizon, the lab with its cracked dish. Organic
+  but wrong. This is the game's own look; nature alone puts us in Ori's lane.
+- **The edge:** where pale root meets forest; half the frame amber and alive, half pale and still, and the line moves
+  night to night. The next scene to build after the Grove.
+- In the Grove now: the pale on the far horizon, root under the soil, the mountain's glow from the summit.
+- The hero (Umber) is the one warm light moving through the pale world.
