@@ -10,9 +10,9 @@ taken over the world."
   backdrop, not a metaphor, not one small sad creature, not a local problem.
 - The takeover is concrete: what it did to humans, cities, animals, the forest; how it spreads; what it is doing now; what
   it wants (an understandable goal, in the Ori/HK/Nine Sols tradition of antagonists who are wrong in an illuminating way).
-- It deemed moths insignificant and left them alone; that underestimation is how Vesper gets in, and it matters in play.
+- It deemed moths insignificant and left them alone; that underestimation is how Eri gets in, and it matters in play.
 - The sentience question is about IT (and the forest and animals): is the thing that took the world a someone?
-- Vesper's goal is to save the world from it; the ending must resolve the takeover in some form, with a real cost.
+- Eri's goal is to save the world from it; the ending must resolve the takeover in some form, with a real cost.
 LITMUS (relaxed by the owner, 2026-10-14): a player's first sentence about the game names a little moth against a
 living thing that swallowed the world (they need not say "AI"). The truth that it is a mind grown from living brain
 cells must be central to the story and discoverable in play (ruins, the lab, objects), ideally as a revelation, in the
@@ -23,9 +23,9 @@ player-facing text uses technical language.
 - Organic / biological AI has gotten out of control and taken over the world. Reference: Cortical Labs (a real company
   growing human neurons on silicon chips; "DishBrain" learned to play Pong in 2022; the CL1 "biological computer" went on
   sale in 2025). "This kind of tech has grown out of control."
-- Vesper is a moth, the main character, trying to save the world.
+- Eri is a moth, the main character, trying to save the world.
 - Maybe the AIs decided not to bother subjugating moths, deeming them insignificant and no threat, but they underestimated
-  Vesper.
+  Eri.
 - Sentience is a core concept: the forest has sentience, so do all the animals; maybe the AI has sentience or maybe it
   doesn't. That ambiguity "could be a cool concept".
 
@@ -36,7 +36,7 @@ player-facing text uses technical language.
   and pulls of it."
 - Then: "don't just rebuild around people, try and go based on what Ori/HK/NineSols have done, there needs to be a
   balance, I was just calling out the lack of relationships in the current stories."
-So: a small cast (Vesper + 3–5) whose simple wants pull on her in different directions, relationships shown through
+So: a small cast (Eri + 3–5) whose simple wants pull on her in different directions, relationships shown through
 actions and companionship in play (the game has little or no dialogue), a spine retellable in three plain sentences, one
 clear central question, few names, simple rules; AND keep the strong idea, world mystery, environmental storytelling and
 mechanics-as-theme. Model the balance the references strike:
@@ -49,7 +49,7 @@ mechanics-as-theme. Model the balance the references strike:
 ## What already exists in the game (the story must fit it, or say what would change)
 One scene so far, "the Grove": an old-growth forest at blue hour, three zones (moonlit blue left, amber light-well
 centre, violet right). Drawn in code, painterly, dark and subtle with small precious lights.
-- Vesper: a small dark plum moth with a pale lilac face, amber glowing eyes, plume antennae, swallow-tail cape/wings, no
+- Eri: a small dark plum moth with a pale lilac face, amber glowing eyes, plume antennae, swallow-tail cape/wings, no
   mouth; serious, quiet, "an aura like Ori", not a jester, cute simple face, effortless movement. Abilities: run,
   double-jump somersault, dash, wall-kick, glide, thorn-blade slash (combo, up, pogo).
 - Goal of the scene: three moth-lanterns she kindles with "glints" (small lights gathered from the air and from "lumen

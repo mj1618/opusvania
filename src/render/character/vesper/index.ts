@@ -846,6 +846,6 @@ export class VesperCharacter implements CharacterSkin {
 
 export const skin: SkinDef = {
   id: 'vesper',
-  name: 'Vesper, the moth',
+  name: 'Eri, the moth',
   create: (ctx, layer) => new VesperCharacter(ctx, layer),
 };

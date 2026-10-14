@@ -42,8 +42,8 @@ and canopy all sway with phase offset by x). Plants bend when the character pass
 Glow plants brighten near the character. Motes drift, shafts shimmer slowly, water ripples and
 reflects. Camera is soft: look-ahead, gentle vertical dead zone, no snapping.
 
-## The character: Vesper (chosen 2026-10-13)
-The owner picked **Vesper, the moth** (`src/render/character/vesper/`, memory/character-vesper.md) from
+## The character: Eri (chosen 2026-10-13)
+The owner picked **Eri, the moth** (`src/render/character/vesper/`, memory/character-vesper.md) from
 four playable candidates. All character work goes into her from now on; the other skins (yako, wick,
 nova, hooded) stay in the repo behind the number keys but are frozen. What follows is the history of
 the brief; the tone and "more from the owner" paragraphs still apply to her.

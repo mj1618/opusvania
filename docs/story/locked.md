@@ -6,7 +6,7 @@ decisions" note); the orchestrator decides on proposals (the owner asked not to 
 ## Spine
 1. A living thing the moths call the Mouth has swallowed the world into its roots. It never noticed moths, because it
    only sees mouths.
-2. Vesper, a moth with no mouth, slips through it to its heart and finds a brain grown by people and left to starve,
+2. Eri, a moth with no mouth, slips through it to its heart and finds a brain grown by people and left to starve,
    feeding the world and never fed.
 3. When she feeds it, it sees her kind and comes for them, and she must choose: be kept, burn it, or spend her life so
    it lets go.
@@ -17,15 +17,15 @@ decisions" note); the orchestrator decides on proposals (the owner asked not to 
 - A mind grown from living brain cells took over the world; on screen and active in every act, at world scale.
 - Mythic on the surface (the moths' name for it, wordless first hour); the grown-brain truth is found in play and lands
   at the midpoint.
-- It sees only what eats; moths have no mouth, so it dismissed them. That is how Vesper gets in.
+- It sees only what eats; moths have no mouth, so it dismissed them. That is how Eri gets in.
 
 ## Cast (no new principal characters)
-Vesper (no mouth, a week to live; flaw: she hides) · Sorrel, her brother · the Mouth · Dun, its oldest burrback ·
+Eri (no mouth, a week to live; flaw: she hides) · Sorrel, her brother · the Mouth · Dun, its oldest burrback ·
 Tallow, the last man awake, and his sister who made it (seen, not a principal) · the forest.
 
 ## Fixed beats
 - **Midpoint (Night 4):** in the lab at the mountain's heart she finds it has been feeding the world, not eating it; it
-  has never been given anything; its maker came back. Vesper gives it every glint she carries; it sees her, and through
+  has never been given anything; its maker came back. Eri gives it every glint she carries; it sees her, and through
   her every moth.
 - **Lowest point (Night 5):** the Grove overrun; the Mouth now sees her; Sorrel leaves; Dun refuses it.
 - **Endings:** Spin (true: every moth warms it until it lets go; the world wakes old and hungry; both moths die), Stay
@@ -43,4 +43,4 @@ Full shot lists: [scenes/mouthless-key-scenes.md](scenes/mouthless-key-scenes.md
 
 ## Names (owner, 2026-10-14)
 - **Game title (working): The Moth and the Mouth.** The storyline keeps the name Mouthless in files.
-- **Hero: Vesper** (kept; keep it out of the game title, since "Vesper" is a 2021 platformer's title).
+- **Hero: Eri** (renamed from Vesper by the owner, 2026-10-14). The eri silk moth's silk is "peace silk": it is spun from cocoons the moths have already left alive, which is the Spin ending in one fact. Code keeps the internal id `vesper`.
