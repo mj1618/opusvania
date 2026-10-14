@@ -12,6 +12,7 @@ import {
   type AudioSnap,
   ambient,
   type Cue,
+  creatureCues,
   type Layers,
   layers,
   type RouteContext,
@@ -41,12 +42,14 @@ export class Conductor {
 
   /** One sim step: its events and the state after it, played at context time `when`. */
   step(events: readonly SimEvent[], snap: AudioSnap, cam: AudioCam, when: number, play = true): Cue[] {
+    const prev = this.last;
     this.last = snap;
     const cues: Cue[] = [];
     events.forEach((e, i) => {
       cues.push(...route(e, i, snap, this.ctx));
     });
     cues.push(...ambient(snap, cam, this.ctx, this.mix));
+    cues.push(...creatureCues(prev, snap, this.ctx));
     const kept: Cue[] = [];
     for (const c of cues) {
       // In the prologue the lanterns are dark set pieces: they neither notice nor refuse her.

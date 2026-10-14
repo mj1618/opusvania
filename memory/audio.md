@@ -130,6 +130,16 @@ Offline render 41 s in 2.6 s, bake ~110 ms. Cues in the clip: 9 knocks, 20 drips
 - Levels after pass 3: -23.2 LUFS, -8.3 dBTP, 0 clipped; momentary breath -34..-18, hatching -31..-24,
   first night -25..-18, hollow -27..-19, hide -31..-27, summit -26..-17, title black -83, next night -27.
 
+## Giving round 3 (asleep, caught, lost), muted
+- Snap creatures also carry `aware`, `dozing`, `down` (dead / hurt). Asleep (`e.dozing`): `sleepBreath` (in, then a
+  longer low out, 2.6 s) about every 3.6 s with a seeded lateness (`sleepBreath()` in router.ts), -37 dB, faded
+  by her distance and silent beyond 420 px. Noticing (`enemyAware`): a burrback's `catchBreath` (sharp 0.2 s in-
+  breath; it replaced the old sniff) or a lampwing's hum, plus `chordCatch` on her (her A4 + E5 shivering: 9 Hz
+  tremolo, +-12 cents wobble, 0.75 s), -36 dB +2 a seen level, only when she carries something. Losing her
+  (`creatureCues(prev, snap)`: awareness runs out while not calmed / dead / hurt): `settle` a semitone down, -34.
+- Clip clips/audio-giving-r3.mp4 (13.5 s: empty-handed past burr-path asleep; then 20 glints: caught over the
+  pool, lost going back): -21.2 LUFS, -7.6 dBTP, 0 clipped.
+
 ## Gotchas
 - Offline render cost is the two convolvers (~2 of 2.7 s for a 41 s clip; without them 0.8 s). IRs are
   1.8 s (room) and 2.8 s (far) for that reason; 60 s renders in ~3.8 s on a busy laptop (budget 3 s).

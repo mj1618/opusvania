@@ -55,7 +55,17 @@ export interface AudioSnap {
   wallet?: number;
   seenLevel?: number;
   /** Creatures: centre, kind, frames left of a gift's calm of `of` (0 = none). */
-  creatures?: Array<{ kind: string; x: number; y: number; gift: number; of: number }>;
+  creatures?: Array<{
+    kind: string;
+    x: number;
+    y: number;
+    gift: number;
+    of: number;
+    /** Round 3: frames left of its awareness of her, asleep (`dozing`), out of the fight (dead / hurt). */
+    aware?: number;
+    dozing?: boolean;
+    down?: boolean;
+  }>;
 }
 
 export function snapOf(state: GameState, scene: Scene, channelFrames: number, giftFrames = 600): AudioSnap {
@@ -93,7 +103,16 @@ export function snapOf(state: GameState, scene: Scene, channelFrames: number, gi
     seenLevel: p.seenLevel ?? 0,
     creatures: state.enemies
       .filter((e) => !e.gone)
-      .map((e) => ({ kind: e.kind, x: e.x + e.w / 2, y: e.y + e.h / 2, gift: e.gift ?? 0, of: giftFrames })),
+      .map((e) => ({
+        kind: e.kind,
+        x: e.x + e.w / 2,
+        y: e.y + e.h / 2,
+        gift: e.gift ?? 0,
+        of: giftFrames,
+        aware: e.aware ?? 0,
+        dozing: !!e.dozing,
+        down: e.mode === 'dead' || e.mode === 'hurt' || e.hp <= 0,
+      })),
   };
 }
 
@@ -333,14 +352,56 @@ function routeGiving(e: SimEvent, i: number, snap: AudioSnap, ctx: RouteContext)
         cue('heartGift', 'lantern', ctx, f, i, { x: e.x, y: e.y - 60, db: G.heartDb, far: 0.2, priority: 5 }),
       ];
     case 'enemyAware': {
+      // It notices her: a sharp little in-breath (a lampwing: its hum swelling toward her light), and the
+      // chord of what she carries catches, a shiver of her own glass (louder the more she carries).
       const at = { x: e.x, y: e.y, place: 'world' as const, priority: 3 };
-      return e.kind === 'lampwing'
-        ? [cue('wingHum', 'creatures', ctx, f, i, { ...at, db: G.humDb, far: 0.05 })]
-        : [cue('sniff', 'creatures', ctx, f, i, { ...at, db: G.sniffDb })];
+      const out =
+        e.kind === 'lampwing'
+          ? [cue('wingHum', 'creatures', ctx, f, i, { ...at, db: G.humDb, far: 0.05 })]
+          : [cue('catchBreath', 'creatures', ctx, f, i, { ...at, db: G.sniffDb })];
+      const lv = Math.max(0, Math.min(4, e.level));
+      if (lv > 0) out.push(mine('chordCatch', G.catchDb + 2 * (lv - 1), { priority: 4, cents: 0 }));
+      return out;
     }
     default:
       return [];
   }
+}
+
+/** Frames a sleeping creature breathes on: about every `sleepS`, each breath a little early or late. */
+export function sleepBreath(seed: number, frame: number, who: number): boolean {
+  const per = Math.round(AUDIO.giving.sleepS * 60);
+  const off = Math.floor(hash01(seed, who, salt('sleep')) * per);
+  const g = frame + off;
+  const k = Math.floor(g / per);
+  return g % per === Math.floor(hash01(seed, who, k, salt('sleep')) * 30);
+}
+
+/**
+ * Between two snaps: a creature that loses her (its awareness runs out while it is neither calmed nor
+ * down) lets a long out-breath settle.
+ */
+export function creatureCues(prev: AudioSnap | null, snap: AudioSnap, ctx: RouteContext): Cue[] {
+  const was = prev?.creatures;
+  const now = snap.creatures;
+  if (!was || !now || was.length !== now.length) return [];
+  const out: Cue[] = [];
+  now.forEach((c, k) => {
+    const p = was[k];
+    if (!p || p.kind !== c.kind || !((p.aware ?? 0) > 0) || (c.aware ?? 0) > 0 || c.gift > 0 || c.down)
+      return;
+    if (c.kind === 'burrback')
+      out.push(
+        cue('settle', 'creatures', ctx, snap.frame, 130 + k, {
+          x: c.x,
+          y: c.y,
+          db: AUDIO.giving.loseDb,
+          cents: -120,
+          priority: 2,
+        }),
+      );
+  });
+  return out;
 }
 
 /**
@@ -441,6 +502,22 @@ export function ambient(
       }),
     );
   }
+  // A burrback asleep breathes slow and soft, heard only near her (silence and sleep are safety).
+  (snap.creatures ?? []).forEach((c, k) => {
+    if (c.kind !== 'burrback' || !c.dozing) return;
+    const d = Math.hypot(c.x - snap.hero.x, c.y - (snap.hero.y - 30));
+    const near = 1 - d / AUDIO.giving.sleepPx;
+    if (near <= 0 || !sleepBreath(seed, f, k)) return;
+    out.push(
+      cue('sleepBreath', 'creatures', ctx, f, 120 + k, {
+        x: c.x,
+        y: c.y,
+        db: AUDIO.giving.sleepDb + amp(0.15 + 0.85 * near),
+        cents: -150,
+        priority: 0,
+      }),
+    );
+  });
   // Calmed burrbacks breathe slower and slower, into the Hush's rhythm, fading as the calm runs out.
   (snap.creatures ?? []).forEach((c, k) => {
     if (c.kind !== 'burrback' || c.gift <= 0) return;

@@ -77,6 +77,10 @@ export const SOUNDS = {
   staticBurst: 1,
   rumble: 1,
   hushCall: 1,
+  // Giving round 3: a creature asleep, catching her light, losing it.
+  sleepBreath: 4,
+  catchBreath: 4,
+  chordCatch: 3,
 } as const;
 export type SoundId = keyof typeof SOUNDS;
 
@@ -910,6 +914,58 @@ const RECIPES: Record<SoundId, Recipe> = {
     biquad(x, sr, 'lowpass', 900);
     return normalize([x]);
   },
+  /** A burrback asleep: a slow, soft breath, in and a longer out, low (oo), mostly air. */
+  sleepBreath(sr, r) {
+    const d = 2.6;
+    const n = len(sr, d);
+    const x = new Float32Array(n);
+    const inb = breath(sr, r, 0.9, 0.35, [330, 760], [380, 820], 0.4);
+    const outb = breath(sr, r, 1.5, 0.25, [400, 860], [300, 700], 0.55);
+    normalize([inb], 0.55);
+    normalize([outb]);
+    mixInto(x, inb);
+    mixInto(x, outb, 1, at(sr, 1.0 + r() * 0.1));
+    biquad(x, sr, 'lowpass', 1600);
+    return normalize([x]);
+  },
+  /** It notices her: a sharp little in-breath, quick up, cut soft. */
+  catchBreath(sr, r) {
+    const d = 0.2;
+    const n = len(sr, d);
+    const x = pink(n, r);
+    biquad(x, sr, 'bandpass', (i) => exp(900, 1900 + r() * 300, i / sr / 0.12), 2.5);
+    biquad(x, sr, 'lowpass', 3200);
+    shape(x, sr, (t) => (t < 0.12 ? (t / 0.12) ** 1.5 : Math.exp(-(t - 0.12) / 0.025)));
+    return normalize([shape(x, sr, arEnv(0.004, 0, 1e3, d))]);
+  },
+  /**
+   * Her carried chord catching as she is seen: her two glass tones (A4, E5) shiver for half a second,
+   * a 9 Hz tremolo and a wobble of +-12 cents, as if the light held its breath.
+   */
+  chordCatch(sr, r) {
+    const d = 0.75;
+    const n = len(sr, d);
+    const x = new Float32Array(n);
+    for (const [f, a] of [
+      [PITCH.A4, 1],
+      [PITCH.E5, 0.6],
+    ] as const) {
+      let ph = r() * 6.283;
+      const rate = 8 + r() * 2;
+      for (let i = 0; i < n; i++) {
+        const t = i / sr;
+        const wob = 2 ** ((12 * Math.sin(2 * Math.PI * 5.5 * t) * Math.exp(-t / 0.35)) / 1200);
+        ph += (2 * Math.PI * f * wob) / sr;
+        const trem = 1 - 0.55 * (0.5 + 0.5 * Math.sin(2 * Math.PI * rate * t)) * Math.exp(-t / 0.4);
+        x[i] = (x[i] as number) + Math.sin(ph) * a * trem;
+      }
+    }
+    const air = pink(n, r);
+    biquad(air, sr, 'bandpass', PITCH.A4 * 2, 8);
+    normalize([air], 0.15);
+    mixInto(x, air);
+    return normalize([shape(x, sr, arEnv(0.03, 0.12, 0.2, d))]);
+  },
   /** A lampwing takes a glint: its glass tone opens and lets go, low and soft. */
   glassSettle(sr, r) {
     const n = len(sr, 1.6);
@@ -932,6 +988,7 @@ const GLASS: readonly SoundId[] = [
   'wingHum',
   'glassSettle',
   'bell',
+  'chordCatch',
 ];
 
 /** The last pass over every variant: a roll-off above ~7 kHz (but glass), a 2 ms fade to zero, peak 0.9. */

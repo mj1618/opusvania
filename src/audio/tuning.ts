@@ -155,11 +155,18 @@ export const AUDIO = {
     bowlDb: -32,
     heartDb: -26,
     /** Becoming aware of her: a burrback's in-breath, a lampwing's hum swelling. */
-    sniffDb: -31,
+    sniffDb: -33,
     humDb: -33,
     /** Rest paid in glints: one small falling note per glint, this far apart (s). */
     noteDb: -31,
     noteGapS: 0.13,
+    /** Round 3: asleep, a breath about every `sleepS` s, heard within `sleepPx` of her; noticing: her chord
+     * catching (at seen level 1, +2 dB a level); losing her: a long settling out-breath. */
+    sleepDb: -37,
+    sleepS: 3.6,
+    sleepPx: 420,
+    catchDb: -36,
+    loseDb: -34,
     /** The chord of what she carries (RMS dB) at seen level 1 and at 4; gone at 0. */
     chordDb: [-50, -41] as [number, number],
   },

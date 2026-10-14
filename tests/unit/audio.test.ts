@@ -9,6 +9,7 @@ import {
   type AudioSnap,
   ambient,
   type Cue,
+  creatureCues,
   layers,
   materialAt,
   route,
@@ -278,7 +279,7 @@ describe('giving: carrying is risky, giving is gentle (memory/giving.md)', () =>
     });
     const cues = routeAll(frames);
     const names = sounds(cues);
-    expect(names).toContain('sniff');
+    expect(names).toContain('catchBreath');
     expect(names).toContain('offerTone');
     expect(names.some((n) => n === 'exhale' || n === 'settle')).toBe(true);
     expect(names.indexOf('offerTone')).toBeLessThan(names.findIndex((n) => n === 'exhale' || n === 'settle'));
@@ -423,5 +424,57 @@ describe('the prologue (milestone 3): cues keyed to beats, a mix over the game',
     const hid = hollow(played, 1);
     expect(hid.hold && hid.bed === 0 && hid.pulse === 0 && !hid.knock).toBe(true);
     expect(hollow(after).lamp).toBe(0);
+  });
+});
+
+describe('giving round 3: asleep, caught, lost', () => {
+  const FLOOR = 800;
+  const scene = {
+    ...flatScene(),
+    enemies: [{ id: 'b', kind: 'burrback' as const, x: 2400, y: FLOOR, facing: -1 as const }],
+  };
+  const ctx = { scene, seed: 1 };
+  const cuesOf = (frames: Frame[]) => {
+    const out: Cue[] = [];
+    let prev: AudioSnap | null = null;
+    for (const x of frames) {
+      out.push(...x.events.flatMap((e, i) => route(e, i, x.snap, ctx)));
+      out.push(...ambient(x.snap, CAM, ctx), ...creatureCues(prev, x.snap, ctx));
+      prev = x.snap;
+    }
+    return out;
+  };
+
+  it('empty-handed near a sleeping burrback: only its slow breath, soft, and none from far away', () => {
+    const s = newSim(scene);
+    s.state.pickups.count = 0;
+    s.place(2200, FLOOR);
+    const near = tape(s, '.600');
+    expect(near.some((x) => x.snap.creatures?.[0]?.dozing)).toBe(true);
+    const breaths = cuesOf(near).filter((c) => c.sound === 'sleepBreath');
+    expect(breaths.length).toBeGreaterThanOrEqual(2);
+    expect(breaths.length).toBeLessThanOrEqual(4);
+    expect(cuesOf(near).some((c) => c.sound === 'catchBreath' || c.sound === 'chordCatch')).toBe(false);
+    // Every breath comes from a sleeper within earshot of her (it may wander close and sleep there).
+    const far = newSim(scene);
+    far.state.pickups.count = 0;
+    far.place(1500, FLOOR);
+    for (const x of tape(far, '.600')) {
+      const c = x.snap.creatures?.[0];
+      const heard = ambient(x.snap, CAM, ctx).filter((q) => q.sound === 'sleepBreath');
+      if (!c?.dozing || Math.hypot(c.x - x.snap.hero.x, c.y - x.snap.hero.y + 30) > AUDIO.giving.sleepPx)
+        expect(heard).toHaveLength(0);
+    }
+  });
+
+  it('carrying, it catches her: a sharp in-breath and her chord catching; walking off, it loses her with a long out-breath', () => {
+    const s = newSim(scene);
+    s.state.pickups.count = 15;
+    s.place(2050, FLOOR);
+    const seen = cuesOf(tape(s, '.60'));
+    expect(sounds(seen)).toContain('catchBreath');
+    expect(sounds(seen)).toContain('chordCatch');
+    const away = cuesOf(tape(s, 'L120 .240'));
+    expect(sounds(away)).toContain('settle');
   });
 });
