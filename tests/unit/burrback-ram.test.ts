@@ -6,7 +6,8 @@ import { ActionBit } from '../../src/sim/input';
 import type { EnemySpawn, Scene } from '../../src/sim/scene';
 import type { EnemyState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
-import { feet, flatScene, newSim, type Sim } from './helpers';
+// Staged fights: she carries `LIGHT` glints, or the creatures would not see her (memory/giving.md).
+import { feet, flatScene, litSim as newSim, type Sim } from './helpers';
 
 /**
  * The burrback's ram (memory/enemies.md). Two players meet one on open ground:

@@ -4,7 +4,11 @@
  *  - It walks its platform at a steady pace and turns round at ledges (it never walks off) and at
  *    walls, standing a beat as it turns. Now and then it rests mid-walk, on a fixed schedule from
  *    its id. It has no gravity, does not chase and has no attack: touching it is what hurts.
- *  - It notices her in one way: when she lands or starts a slash close by, it flinches (`alert`).
+ *  - It notices her by the light she carries (memory/giving.md): empty-handed she is unseen (no
+ *    brace, no flinch); the more she carries, the further off it braces. Once she has cut it, it
+ *    knows her whatever she carries. When she lands or starts a slash close by, it flinches (`alert`).
+ *  - A glint she gives it (`gift`) calms it: it stops, lowers, stands a moment, then walks on
+ *    harmless and braces at nothing until the calm has run out.
  *  - Its ram: she stands in front of it at close range, or cuts it from the front: it braces, shell
  *    forward (`windup`: the tell), then rams a fixed length (`charge`) and stands spent (`recover`).
  *    Braced, a forward cut from its front glances off; from behind or from above it lands in full.
@@ -20,6 +24,7 @@ import type { SimEvent } from '../events';
 import { roundHalfAway, solidAt } from '../physics/aabb';
 import { groundSanctuaryDepth } from '../sanctuary';
 import type { Scene } from '../scene';
+import { seenNow, seenScale } from '../seen';
 import type { EnemyState, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
 import { frames, gap2, type KindRules, mix, type StepInfo, segmentBlocked, setMode } from './common';
@@ -286,7 +291,11 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
   if (dropping(e, p, B)) return false;
   if (!over && !p.grounded && p.x < e.x + e.w && e.x < p.x + p.w) return false;
   const provoked = e.roused > 0;
-  const reach = provoked ? B.provokedPx : B.strikePx;
+  // It sees her by the light she carries (memory/giving.md): empty-handed she is unseen; the more she
+  // carries, the further off it braces. One she has cut it knows, whatever she carries.
+  const seen = seenNow(info.state, info.t);
+  if (!provoked && seen === 0) return false;
+  const reach = provoked ? B.provokedPx : B.strikePx * seenScale(seen, info.t.giving);
   const front = inFront(e, info, reach, e.facing, over);
   const round = (provoked || e.stirred > 0) && !front && inFront(e, info, reach, -e.facing, over);
   if (!round && !front) return false;
@@ -695,9 +704,11 @@ export const burrback: KindRules = {
       return false;
     }
     // A flinch: she landed or drew her blade close by.
+    // (Only at one it can see: empty-handed she lands beside it unnoticed, unless she has cut it.)
     if (
       stir !== '' &&
       e.alertCd === 0 &&
+      (e.roused > 0 || seenNow(info.state, info.t) > 0) &&
       (e.mode === 'walk' || (e.mode === 'pause' && !e.turning)) &&
       gap2(p, e) <= B.alertPx * B.alertPx
     ) {
@@ -731,6 +742,41 @@ export const burrback: KindRules = {
     setMode(e, 'pause', n);
     e.turning = turning;
     e.vx = 0;
+  },
+
+  /**
+   * A glint she gave reached it: whatever it was doing (braced, ramming, winded, curled) it stops,
+   * lowers and stands `giving.giftStandFrames`, then walks its round again, calm (the framework set
+   * `calm` / `gift`: its touch does nothing and it braces at nothing until they run out).
+   */
+  gift(e, info) {
+    const n = frames(info.t.giving.giftStandFrames, 1);
+    e.tuck = 0;
+    e.chargeLeft = 0;
+    e.broken = false;
+    e.knockVx = 0;
+    e.rx = 0;
+    setMode(e, 'pause', n);
+    e.vx = 0;
+    return n;
+  },
+
+  /**
+   * It sees her (memory/giving.md): she carries light, her body centre is within `noticePx` of its
+   * centre scaled by how much, and nothing solid is between. It lifts its head (render); what it
+   * does about her is still the brace's rules (in front, in reach, in its range).
+   */
+  sees(e, info, seen) {
+    if (seen === 0) return false;
+    const p = info.state.player;
+    if (p.hp <= 0 || p.faded > 0) return false;
+    const r = info.t.burrback.noticePx * seenScale(seen, info.t.giving);
+    const ex = e.x + e.w / 2;
+    const ey = e.y + e.h / 2;
+    const px = p.x + p.w / 2;
+    const py = p.y + p.h / 2;
+    if ((px - ex) * (px - ex) + (py - ey) * (py - ey) > r * r) return false;
+    return !segmentBlocked(info.scene, ex, ey, px, py);
   },
 
   /** Inside a lit lantern's sanctuary (it was there when the lantern caught, or was shoved in): harmless. */

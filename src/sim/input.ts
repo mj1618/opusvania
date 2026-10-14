@@ -3,7 +3,11 @@
  * Devices (src/input) produce it. Edge detection ("pressed this frame") and input buffering are
  * derived inside the sim from the previous frame's mask, so a scripted run replays exactly.
  */
-export const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'dash', 'attack'] as const;
+/**
+ * `offer` (bit 128, memory/giving.md): give one carried glint to what is in reach (a creature, a
+ * dormant lantern or lamp, the heart).
+ */
+export const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'dash', 'attack', 'offer'] as const;
 
 export type Action = (typeof ACTIONS)[number];
 export type InputFrame = number;

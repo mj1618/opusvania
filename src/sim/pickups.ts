@@ -27,6 +27,7 @@ export function createPickups(scene: Scene): PickupsState {
     timers,
     count: 0,
     spent: 0,
+    gifted: 0,
     offered: 0,
     lost: 0,
     bonus: 0,

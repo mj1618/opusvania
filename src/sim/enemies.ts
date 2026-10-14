@@ -24,6 +24,7 @@ import { lampwing } from './enemies/lampwing';
 import type { SimEvent } from './events';
 import type { Box } from './player/attack';
 import type { EnemyKind, EnemySpawn, Scene } from './scene';
+import { seenNow } from './seen';
 import type { AttackDir, EnemyState, GameState, PlayerState } from './state';
 import type { Tuning } from './tuning';
 
@@ -104,6 +105,9 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning): EnemyState {
     sight: 0,
     noticeCd: 0,
     calm: 0,
+    gift: 0,
+    gifts: 0,
+    aware: 0,
     spill: 0,
     spillTimer: 0,
     spillGap: 0,
@@ -234,12 +238,16 @@ export function updateEnemies(
     }
   }
   let touch = -1;
+  // What she carries (memory/giving.md): empty-handed, a creature that is not already in a fight
+  // with her does not see her, and its touch does her no harm (she slips past).
+  const seen = seenNow(state, t);
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
     if (!e) continue;
     spill(e, state, t.pickups.comboFrames, events);
     if (e.gone) continue;
     if (e.calm > 0) e.calm--;
+    if (e.gift > 0) e.gift--;
     if (e.hitstop > 0) {
       e.hitstop--;
       e.vx = 0;
@@ -248,12 +256,16 @@ export function updateEnemies(
     }
     e.modeFrames++;
     const K = KINDS[e.kind];
-    if (!K.update(e, i, I)) continue;
+    const alive = K.update(e, i, I);
+    aware(e, K, I, seen);
+    if (!alive) continue;
     // Contact: its touch hurts, except for the first beat after it was hit, while it is calmed,
-    // and inside a lit lantern's sanctuary.
+    // inside a lit lantern's sanctuary, and when it does not see her (she carries nothing and it is
+    // not in a fight with her).
     if (
       touch < 0 &&
       e.calm === 0 &&
+      (seen > 0 || fighting(e)) &&
       !(e.mode === 'hurt' && e.modeFrames < frames(K.hurtSafeFrames(t))) &&
       !K.harmless?.(e, I)
     ) {
@@ -261,6 +273,44 @@ export function updateEnemies(
     }
   }
   return touch;
+}
+
+/** It is in a fight with her, whatever she carries: braced, or roused / stirred (a burrback she has cut, or that has rammed). */
+function fighting(e: EnemyState): boolean {
+  return e.braced || e.roused > 0 || e.stirred > 0;
+}
+
+/**
+ * Its awareness of her this step (`aware`, `enemyAware` on the rising edge): its kind says whether
+ * it sees her now (`KindRules.sees`); a fight counts; a calmed or dead one is aware of nothing.
+ */
+function aware(e: EnemyState, K: KindRules, I: StepInfo, seen: number): void {
+  if (e.mode === 'dead' || e.calm > 0) {
+    e.aware = 0;
+    return;
+  }
+  const now = fighting(e) || (K.sees?.(e, I, seen) ?? false);
+  if (!now) {
+    if (e.aware > 0) e.aware--;
+    return;
+  }
+  if (e.aware === 0) {
+    const p = I.state.player;
+    const px = p.x + p.w / 2;
+    const dx = px - (e.x + e.w / 2);
+    const dy = p.y + p.h / 2 - (e.y + e.h / 2);
+    I.events.push({
+      type: 'enemyAware',
+      id: e.id,
+      kind: e.kind,
+      x: e.x + e.w / 2,
+      y: e.y + e.h / 2,
+      dir: px < e.x + e.w / 2 ? -1 : 1,
+      level: seen,
+      px: Math.round(Math.sqrt(dx * dx + dy * dy)),
+    });
+  }
+  e.aware = Math.max(1, Math.round(I.t.giving.awareFrames));
 }
 
 /**
@@ -366,8 +416,9 @@ export function slashEnemies(
     // The side the blow sends it to: along a forward cut; for an up / down cut, away from her.
     const side = dir === 'fwd' ? (facing < 0 ? -1 : 1) : cx < px ? -1 : cx > px ? 1 : facing < 0 ? -1 : 1;
     const kb = K.shove(e, dir, side, knockback, t);
-    // A blow ends its calm: what she cuts is awake again (it can brace, and its touch counts).
+    // A blow ends its calm, a gift's too: what she cuts is awake again (it can brace, and its touch counts).
     e.calm = 0;
+    e.gift = 0;
     e.hitBy = seq;
     e.hitDir = side;
     e.hitPower = power;
@@ -481,6 +532,39 @@ export function calmEnemies(
     if (e.mode === 'hurt' || e.hitstop > 0) continue;
     KINDS[e.kind].calm?.(e, I, n);
   }
+}
+
+/**
+ * A glint she gave has reached enemy `i` (src/sim/giving.ts): it is calmed for
+ * `giving.giftCalmFrames` (`gift`, and `calm` at least as long: harmless, no brace, no notice), it
+ * forgets the fight (`roused`, `stirred`), and its kind settles it its own way (`KindRules.gift`; one
+ * that is staggered or held keeps its tumble). Returns false if it is not there to take it.
+ */
+export function giftEnemy(state: GameState, scene: Scene, t: Tuning, i: number, events: SimEvent[]): boolean {
+  const e = state.enemies[i];
+  if (!e || e.gone || e.mode === 'dead') return false;
+  const n = frames(t.giving.giftCalmFrames, 1);
+  const was = e.mode;
+  e.calm = Math.max(e.calm, n);
+  e.gift = n;
+  e.gifts++;
+  e.roused = 0;
+  e.stirred = 0;
+  const K = KINDS[e.kind];
+  const stand =
+    e.mode !== 'hurt' && e.hitstop === 0 && K.gift ? K.gift(e, info(state, scene, t, events), n) : 0;
+  events.push({
+    type: 'enemyGift',
+    id: e.id,
+    kind: e.kind,
+    x: e.x + e.w / 2,
+    y: e.y + e.h / 2,
+    was,
+    frames: n,
+    stand,
+    gifts: e.gifts,
+  });
+  return true;
 }
 
 /** How many enemies are still alive. */

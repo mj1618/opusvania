@@ -82,7 +82,9 @@ describe('calm: a calmed creature cannot hurt her', () => {
     const ev = s.run(`.${G.calmFrames - 1}`);
     expect(of(ev, 'hurt')).toHaveLength(0);
     expect(foe(s, 0).calm).toBe(1);
-    // The calm ends (it is outside the sanctuary here): its touch counts again.
+    // The calm ends (it is outside the sanctuary here): its touch counts again (for one it can see:
+    // the kindling took all she had, and empty-handed she slips past it: memory/giving.md).
+    s.state.pickups.count = 2;
     expect(of(s.run('.3'), 'hurt')).toHaveLength(1);
   });
 
@@ -167,7 +169,8 @@ describe('sanctuary: a lit lantern keeps creatures out', () => {
 
   it('a lampwing gives up 160 px from a lit lantern (and will not dive at one who stands in its light) and cannot hurt inside that; at a dormant one it reaches her', () => {
     const run = (lit: boolean) => {
-      const s = sim(scene([wing(X + 330, FLOOR - 160)]));
+      // (Some light in her hands, or it would not see her at all: memory/giving.md.)
+      const s = sim(scene([wing(X + 330, FLOOR - 160)]), 6);
       if (lit) light(s);
       // Out to where it notices her, then back to the lantern with it in tow.
       s.place(X + 200, FLOOR);
@@ -330,7 +333,8 @@ describe('a fade costs', () => {
     const rest = s.run(`.${G.restFrames}`);
     expect(of(rest, 'lanternRest')[0]).toMatchObject({ healed: 2, hp: 4 });
     // The lantern, what she spent and the cluster are all kept through it.
-    expect([s.state.goal.lit, s.state.pickups.spent, s.state.pickups.lost]).toEqual([1, 12, 3]);
+    // (And the rest cost a glint a light: rest = give, memory/giving.md.)
+    expect([s.state.goal.lit, s.state.pickups.spent, s.state.pickups.lost]).toEqual([1, 14, 3]);
   });
 
   it('clusters are state: cloned, hashed, kept by a teleport, gone on a restart; the summary counts them as gathered', () => {

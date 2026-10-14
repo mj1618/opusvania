@@ -6,7 +6,10 @@
  *    slash breaks the channel and nothing is spent. Kindling takes the cost out of her wallet
  *    (`state.pickups.count`; `spent` goes up by as much). With too little she is told once per approach.
  *  - A lit lantern stays lit until the restart. It is a rest point: standing at it hurt for
- *    `restFrames` makes her whole, and the lit lantern she last stood at is where she re-forms.
+ *    `restFrames` makes her whole for a glint a light (`giving.restCost`; up to `health.reformHp`
+ *    for nothing: memory/giving.md), and the lit lantern she last stood at is where she re-forms.
+ *  - Glints given to a dormant light by hand (`LanternState.given`, src/sim/giving.ts) are kept: its
+ *    price is less by that much, and one given its whole price catches wherever she is.
  *  - Kindling calms the creatures round it for a while.
  *  - A wayside lamp (`scene.lamps`) is a lesser lantern: the same rules and a smaller price, its own
  *    events (`lamp...`), and it does not count toward the heart.
@@ -40,6 +43,7 @@ const dormant = (): LanternState => ({
   pledged: false,
   still: 0,
   keyed: true,
+  given: 0,
 });
 
 export function createGoal(scene: Scene): GoalState {
@@ -72,10 +76,13 @@ export function createGoal(scene: Scene): GoalState {
       offered: 0,
       offerTier: 0,
       offerNext: 0,
+      gifted: 0,
+      calmed: 0,
     },
     offer: { total: 0, given: 0, tier: 0 },
     grove: { flowers: false, paths: false, canopy: false },
     ended: false,
+    heartGiven: 0,
     run: { start: -1, hits: 0, deaths: 0 },
   };
 }
@@ -207,24 +214,27 @@ function offer(state: GameState, scene: Scene, t: Tuning['goal'], n: number, eve
   const w = state.pickups;
   const heart = scene.heart;
   const p = state.player;
-  const give = Math.min(n, w.count, g.offer.total - g.offer.given);
-  if (give <= 0 || !heart) return;
+  const give = Math.max(0, Math.min(n, w.count, g.offer.total - g.offer.given));
+  if (!heart) return;
+  const tier = offerTier(g.offer.given + give, t);
+  // (Nothing to give and no tier to pass: what she gave by hand has already been counted.)
+  if (give <= 0 && tier <= g.offer.tier) return;
   w.count -= give;
   w.offered += give;
   g.offer.given += give;
-  const tier = offerTier(g.offer.given, t);
-  events.push({
-    type: 'heartOffer',
-    x: heart.x,
-    y: heart.y,
-    px: p.x + p.w / 2,
-    py: p.y + p.h / 2,
-    value: give,
-    given: g.offer.given,
-    of: g.offer.total,
-    wallet: w.count,
-    tier,
-  });
+  if (give > 0)
+    events.push({
+      type: 'heartOffer',
+      x: heart.x,
+      y: heart.y,
+      px: p.x + p.w / 2,
+      py: p.y + p.h / 2,
+      value: give,
+      given: g.offer.given,
+      of: g.offer.total,
+      wallet: w.count,
+      tier,
+    });
   while (g.offer.tier < tier) {
     g.offer.tier++;
     const need = g.offer.tier === 1 ? t.offerTier1 : g.offer.tier === 2 ? t.offerTier2 : t.offerTier3;
@@ -326,10 +336,10 @@ export function updateGoal(
   // The ending hold.
   if (g.gathered) {
     // The offering: what she carries goes into the heart, a little each step.
-    if (!g.ended && g.offer.given < g.offer.total) {
+    if (!g.ended && (g.offer.given < g.offer.total || g.offer.tier < offerTier(g.offer.given, G))) {
       const since = g.ending.frames + 1 - whole(G.offerDelayFrames, 0);
       const span = whole(G.offerSpanFrames, 1);
-      const gap = Math.max(1, Math.floor(span / g.offer.total));
+      const gap = Math.max(1, Math.floor(span / Math.max(1, g.offer.total)));
       if (since >= 0 && since % gap === 0)
         offer(state, scene, G, Math.ceil((g.offer.total * gap) / span), events);
     }
@@ -399,8 +409,10 @@ export function updateGoal(
       g.ending.deaths = g.run.deaths;
       g.ending.lamps = g.lampsLit;
       g.ending.lampsTotal = scene.lamps?.length ?? 0;
-      g.ending.offered = wallet.count;
-      g.ending.offerTier = offerTier(wallet.count, G);
+      // The offering: all she carries, and what she gave the heart by hand on the way (memory/giving.md).
+      const offered = wallet.count + g.heartGiven;
+      g.ending.offered = offered;
+      g.ending.offerTier = offerTier(offered, G);
       g.ending.offerNext =
         g.ending.offerTier >= 3
           ? 0
@@ -408,9 +420,13 @@ export function updateGoal(
               ? G.offerTier3
               : g.ending.offerTier === 1
                 ? G.offerTier2
-                : G.offerTier1) - wallet.count;
-      g.offer.total = wallet.count;
-      g.offer.given = 0;
+                : G.offerTier1) - offered;
+      g.ending.gifted = wallet.gifted;
+      let calmed = 0;
+      for (const e of state.enemies) if (e.gifts > 0) calmed++;
+      g.ending.calmed = calmed;
+      g.offer.total = offered;
+      g.offer.given = g.heartGiven;
       g.offer.tier = 0;
       // Nothing of hers is left waiting to fire while she is held.
       p.jumpBuf = 0;
@@ -445,6 +461,8 @@ export function updateGoal(
         offerTier: g.ending.offerTier,
         offerNext: g.ending.offerNext,
         offerTiers: [G.offerTier1, G.offerTier2, G.offerTier3],
+        gifted: g.ending.gifted,
+        calmed: g.ending.calmed,
       });
     }
   }
@@ -502,15 +520,41 @@ function updateLights(
         s.rest = 0;
         continue;
       }
-      if (++s.rest < whole(G.restFrames, 1)) continue;
-      const healed = p.hpMax - p.hp;
-      p.hp = p.hpMax;
-      s.rest = 0;
-      events.push({ type: lamp ? 'lampRest' : 'lanternRest', id, x, y, hp: p.hp, hpMax: p.hpMax, healed });
+      // (Once a visit: rested as far as she could give for, she stays as she is until she steps away.)
+      const of = whole(G.restFrames, 1);
+      if (s.rest >= of || ++s.rest < of) continue;
+      // Rest = give (memory/giving.md): up to a re-form's health for nothing, every light above that
+      // for `giving.restCost` glints, as far as her wallet goes.
+      const floor = Math.min(p.hpMax, whole(t.health.reformHp, 1));
+      const base = Math.max(p.hp, floor);
+      const price = whole(t.giving.restCost, 0);
+      const bought = price > 0 ? Math.min(p.hpMax - base, Math.floor(wallet.count / price)) : p.hpMax - base;
+      const free = base - p.hp;
+      const cost = bought * price;
+      const healed = free + bought;
+      wallet.count -= cost;
+      wallet.spent += cost;
+      p.hp = base + bought;
+      // Made whole: the next rest is a new one. Short of it: none again this visit.
+      if (p.hp >= p.hpMax) s.rest = 0;
+      events.push({
+        type: lamp ? 'lampRest' : 'lanternRest',
+        id,
+        x,
+        y,
+        hp: p.hp,
+        hpMax: p.hpMax,
+        healed,
+        free,
+        cost,
+        wallet: wallet.count,
+        short: p.hp < p.hpMax,
+      });
       continue;
     }
 
-    const need = lamp ? lampCost(l, G) : lanternCost(l, G);
+    // (What she has given it by hand is kept: its price is less by that much.)
+    const need = Math.max(0, (lamp ? lampCost(l, G) : lanternCost(l, G)) - s.given);
     // A lantern may want a great glint of the scene besides its price: until she has gathered it,
     // it will not catch (it tells her what it wants: `lanternRefuse.key`).
     const key = l.key === undefined ? -1 : keyIndex(scene, l.key);
@@ -577,7 +621,8 @@ function updateLights(
     )
       s.pledged = true;
     if (s.pledged && wallet.count + coming < need) s.pledged = false;
-    const paid = s.pledged && wallet.count >= need && !g.gathered;
+    // Given its whole price by hand (and it has its key): it catches, wherever she is.
+    const paid = ((s.pledged && wallet.count >= need) || (s.given > 0 && need === 0 && keyed)) && !g.gathered;
     if (keyed && (paid || ((calm || held) && wallet.count >= need) || (s.pledged && at))) {
       s.short = 0;
       const of = whole(G.channelFrames, 1);

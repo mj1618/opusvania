@@ -4,7 +4,8 @@ import type { SimEvent } from '../../src/sim/events';
 import { step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
 import { defaultTuning } from '../../src/sim/tuning';
-import { feet, hopOnto, newSim, type Sim } from './helpers';
+// Staged fights: she carries `LIGHT` glints, or the creatures would not see her (memory/giving.md).
+import { feet, hopOnto, litSim as newSim, type Sim } from './helpers';
 
 /**
  * Proof with the real controller and real inputs that every burrback in the grove can be killed

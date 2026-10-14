@@ -47,6 +47,23 @@ export function newSim(scene: Scene = GROVE, t: Tuning = cloneTuning(defaultTuni
   };
 }
 
+/**
+ * Light in her hands for a staged fight. The creatures notice her by the light she carries
+ * (memory/giving.md): empty-handed she is unseen. `LIGHT` (6) is level 2, the level at which their
+ * notice ranges are the ones every staged fight was tuned at (`giving.scale2` = 1). A flat test
+ * scene has nothing to pick up or spend, so the wallet stays as set.
+ */
+export const LIGHT = 6;
+export function carrying(s: Sim, n = LIGHT): Sim {
+  s.state.pickups.count = n;
+  return s;
+}
+
+/** `newSim` with `LIGHT` glints in her hands (staged fights: the creatures must be able to see her). */
+export function litSim(scene: Scene = GROVE, t: Tuning = cloneTuning(defaultTuning), n = LIGHT): Sim {
+  return carrying(newSim(scene, t), n);
+}
+
 export const feet = (s: Sim) => ({
   x: s.state.player.x + s.state.player.w / 2,
   y: s.state.player.y + s.state.player.h,

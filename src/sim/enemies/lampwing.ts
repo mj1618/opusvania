@@ -9,8 +9,11 @@
  *    ended (moving on dodges it; a gliding hero is led). At the bottom it hangs (`stall`): open,
  *    its touch harmless: her opening. Then it climbs to a perch above her (`pursue`) and tells again.
  *  - It gives up (`rest`, then `return` home, noticing nothing until it is there) when she is too far
- *    from its home, out of sight too long, when it has dived often enough, when her light goes out,
- *    and when it has touched her (it bounces off her first).
+ *    from its home, out of sight too long, when it has dived often enough, when her light goes out
+ *    (she faded, or she carries nothing any more: memory/giving.md), when it has touched her (it
+ *    bounces off her first), and when she gives it a glint (`gift`: it settles and goes home).
+ *  - It sees only the light she carries: empty-handed she is dark to it; the more she carries, the
+ *    further its sight reaches (`seenScale`).
  *  - Its dive is its attack; its touch hurts whenever it is not stalled. Hit, it is batted along the
  *    cut and tumbles (`hurt`), then climbs to try again. Dead, it falls and is gone.
  *
@@ -19,6 +22,7 @@
 import { roundHalfAway, solidAt } from '../physics/aabb';
 import { nearLitLantern } from '../sanctuary';
 import type { Scene, SolidRect } from '../scene';
+import { seenNow, seenScale } from '../seen';
 import type { EnemyState, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
 import { frames, type KindRules, mix, type StepInfo, segmentBlocked, setMode } from './common';
@@ -26,7 +30,7 @@ import { frames, type KindRules, mix, type StepInfo, segmentBlocked, setMode } f
 type L = Tuning['lampwing'];
 
 /** Why a pursuit ended. */
-export type GiveUpCause = 'far' | 'lost' | 'tired' | 'dark' | 'touch' | 'calm';
+export type GiveUpCause = 'far' | 'lost' | 'tired' | 'dark' | 'touch' | 'calm' | 'gift';
 
 /** May its box be at (x, y)? Solids and the scene's edges, the canopy, the water of a pool. */
 export function lampwingBlocked(scene: Scene, x: number, y: number, w: number, h: number, t: L): boolean {
@@ -127,7 +131,11 @@ function wave(u: number): number {
   return u < 0.5 ? s : -s;
 }
 
-const lit = (p: PlayerState): boolean => p.hp > 0 && p.faded === 0;
+// Her level of being seen this step (`update` sets it before anything else: memory/giving.md).
+let SEEN = 0;
+
+/** Her light: she is whole and carries something (empty-handed she is dark to it). */
+const lit = (p: PlayerState): boolean => p.hp > 0 && p.faded === 0 && SEEN > 0;
 
 /** Can it see her (a clear line between the two centres), within `range` px if given? */
 function sees(e: EnemyState, p: PlayerState, scene: Scene, range: number): boolean {
@@ -462,6 +470,18 @@ export const lampwing: KindRules = {
     return nearLitLantern(info.state, info.scene, G, e.x + e.w / 2, e.y + e.h / 2);
   },
 
+  /** It is aware of her while it is after her: the tell, the dive, the stall, the climb. */
+  sees(e) {
+    return e.mode === 'curious' || e.mode === 'dive' || e.mode === 'stall' || e.mode === 'pursue';
+  },
+
+  /** A glint she gave reached it: one that has noticed her gives up (`gift`) and goes home; it notices nothing while the calm lasts. */
+  gift(e, info) {
+    if (e.mode === 'curious' || e.mode === 'pursue' || e.mode === 'dive' || e.mode === 'stall')
+      giveUp(e, info, 'gift');
+    return 0;
+  },
+
   /** One that has noticed her gives up (`calm`): it rests, flies home and notices nothing on the way. */
   calm(e, info) {
     if (e.mode === 'curious' || e.mode === 'pursue' || e.mode === 'dive' || e.mode === 'stall')
@@ -478,6 +498,7 @@ export const lampwing: KindRules = {
     const py = p.y + p.h / 2;
     let beat = t.flapHover;
     if (e.noticeCd > 0) e.noticeCd--;
+    SEEN = seenNow(state, info.t);
 
     if (e.mode === 'dead') {
       if (!e.landed) {
@@ -527,8 +548,8 @@ export const lampwing: KindRules = {
         e.knockVy = 0;
         e.vx = 0;
         e.vy = 0;
-        // Struck, it climbs to come at her again if it can see her; else home.
-        if (!over && inLeash(e, p, t) && sees(e, p, scene, 0)) {
+        // Struck, it climbs to come at her again if it can see her; else home (calmed: home).
+        if (!over && e.calm === 0 && inLeash(e, p, t) && sees(e, p, scene, 0)) {
           climb(e, info);
         } else {
           setMode(e, 'return', 0);
@@ -551,7 +572,8 @@ export const lampwing: KindRules = {
       e.vy += e.pushY;
       drift(e, scene, t);
       face(e, e.vx, 0.2);
-      const sight = e.sight > 0 ? e.sight : t.noticePx;
+      // (The light she carries sets how far it sees her: memory/giving.md.)
+      const sight = (e.sight > 0 ? e.sight : t.noticePx) * seenScale(SEEN, info.t.giving);
       // (For a while after she has left its leash once, only one well inside it.)
       const margin = e.noticeCd > 0 ? t.retellMarginPx : 0;
       if (sight > 0 && !over && e.calm === 0 && inLeash(e, p, t, margin) && sees(e, p, scene, sight)) {

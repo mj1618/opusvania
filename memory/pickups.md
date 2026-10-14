@@ -15,7 +15,7 @@ Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold fo
   total}`. Here `x, y` = where the pickup hung (NOT the feet), `px, py` = body-box centre at the
   moment it goes in, `combo` = 0, 1, 2... through a run less than `comboFrames` (50) apart.
 - **`count` is a wallet** since the lanterns (goal.md): kindling one takes its cost out (`count -= cost`, `spent +=
-  cost`), so `count` can go down and `pickup.total` is the wallet at that moment, not a running total. Everything
+  cost`; rests and glints given by hand are `spent` too, `gifted` = the creatures' share, the heart's go to `offered`: giving.md), so `count` can go down and `pickup.total` is the wallet at that moment, not a running total. **The wallet is also how visible she is** (giving.md). Everything
   gathered = `count + spent + lost + offered` (`offered`: what went into the heart at the end, goal.md). `taken` = how many scene pickups were collected (unchanged).
 - Restart (`R`, `__game.load()`) makes a new state, so everything is back; `teleport` keeps the count.
 - The sim only decides when; the flight is render. Timing history: 60 px / 20 frames = every pickup

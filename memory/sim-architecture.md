@@ -1,7 +1,7 @@
 # Sim / runtime architecture
 
 - `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
-  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 17)) and appends `SimEvent`s. The scene is static and
+  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 20)) and appends `SimEvent`s. The scene is static and
   not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
   (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
 - No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
@@ -69,13 +69,16 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `lanternNotice` (she came within 260 px of a dormant one: once per approach), `lanternRefuse`, `lanternChannel`,
   `lanternCancel`, `lanternKindle {..., pledged, away}` (it can fire with her elsewhere: goal.md "pledge"), `lanternRest`; the same six for wayside lamps as `lamp...`; `heartSleep`,
   `heartWake`, **`heartWait`, `heartReady`** (the wake has a length), **`lanternKey`** (the ember a lantern wants has reached her; `lanternNotice / lanternRefuse.key`), `gather`, **`heartOffer`, `heartTier`, `groveWake`** (the offering during the hold and what it wakes), `endHold`: goal.md (`x, y` = the lantern's foot / the heart, not her feet).
+- Giving (giving.md): `enemyAware`, `offer`, `offerMiss`, `enemyGift`, `lanternGift`, `lampGift`, `heartGift`,
+  `giftReturn`; `enemyGiveUp` cause `gift`; `lanternRest / lampRest` carry `free, cost, wallet, short`.
+- Input: 8 actions now (`offer` = bit 128, DSL `O`).
 - Scene fields the player code reads besides the rects: `ceilingY`, the tag `pool`, and **`edgeKick: false`
   / a solid's `kick: false`** (no wall slide, no wall kick on that face: movement-controller.md).
 
 ## Step order
 `step()`: re-form if a fade just ended (a third of the wallet is dropped where she lay; she is back
 at the lit lantern she last stood at, else the last safe ground, with 2 lights) → player (slash hits resolved inside, pods and enemies; from `gather` on her input is replaced:
-goal.md) → enemies → contact damage (none from a calmed creature or one inside a lit lantern's sanctuary; while she
+goal.md) → **her offer** (`updateOffer`, giving.md: a press, a glint landing) → enemies (they read the wallet: giving.md) → contact damage (none from a calmed creature or one inside a lit lantern's sanctuary; while she
 kindles the touch only turns the creature away; off from `gather` on) → safe-ground tracking → pod glints →
 pickups → dropped clusters → the goal (`updateGoal`: lanterns, heart, ending; last, so a glint landing this frame counts). The scene's `ceilingY` (the
 canopy, movement-controller.md) and the tag `pool` (safe ground, enemies.md) are the only scene

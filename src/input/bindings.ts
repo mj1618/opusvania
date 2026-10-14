@@ -15,6 +15,8 @@ export const DEFAULT_KEYS: KeyBindings = {
   jump: ['Space', 'KeyZ', 'KeyK'],
   dash: ['KeyX', 'KeyL', 'ShiftLeft', 'ShiftRight'],
   attack: ['KeyC', 'KeyJ'],
+  // Offer (give a glint): V beside the C of the cut on the left hand, F as the usual "use" key, I over J.
+  offer: ['KeyV', 'KeyF', 'KeyI'],
 };
 
 export const DEFAULT_PAD: PadBindings = {
@@ -25,6 +27,7 @@ export const DEFAULT_PAD: PadBindings = {
   jump: [0], // A / Cross
   dash: [5, 7], // RB, RT
   attack: [2], // X / Square
+  offer: [3], // Y / Triangle
 };
 
 /** Stick: a 0.25 radial deadzone, then an axis counts as a direction past 0.5. */

@@ -6,7 +6,8 @@ import type { SimEvent } from '../../src/sim/events';
 import { step } from '../../src/sim/index';
 import type { EnemySpawn } from '../../src/sim/scene';
 import { defaultTuning } from '../../src/sim/tuning';
-import { feet, flatScene, hopOnto, newSim, type Sim } from './helpers';
+// Staged fights: she carries `LIGHT` glints, or the creatures would not see her (memory/giving.md).
+import { feet, flatScene, hopOnto, litSim as newSim, type Sim } from './helpers';
 
 /**
  * Playtest 6 (memory/enemies.md, goal.md): taking the ember is safe, as kindling is; the lampwings of

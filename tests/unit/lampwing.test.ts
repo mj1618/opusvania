@@ -8,7 +8,8 @@ import { ActionBit } from '../../src/sim/input';
 import type { EnemySpawn, Scene, SolidRect } from '../../src/sim/scene';
 import type { EnemyState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning, type Tuning } from '../../src/sim/tuning';
-import { feet, flatScene, newSim, type Sim } from './helpers';
+// Staged fights: she carries `LIGHT` glints, or the creatures would not see her (memory/giving.md).
+import { feet, flatScene, LIGHT, litSim as newSim, type Sim } from './helpers';
 
 /**
  * The lampwing, the first flyer (memory/enemies.md). Flat test scenes: floor top at y = 800, so
@@ -759,7 +760,7 @@ describe('lampwing: taking hits', () => {
       frames: 40,
     });
     expect(die?.knockback).toBeCloseTo(12.1, 9);
-    expect(s.state.pickups.count).toBe(5);
+    expect(s.state.pickups.count).toBe(LIGHT + 5);
     expect([L.value, L.valueFinisher, L.hp]).toEqual([3, 5, 3]);
   });
 
@@ -922,7 +923,7 @@ describe('lampwing: death', () => {
       }
     });
     expect(got).toEqual([16, 21, 26]);
-    expect([s.state.pickups.count, s.state.pickups.taken]).toEqual([3, 0]);
+    expect([s.state.pickups.count, s.state.pickups.taken]).toEqual([LIGHT + 3, 0]);
     expect([foe(s).spill, foe(s).spillTimer, foe(s).gone]).toEqual([0, 0, true]);
   });
 });

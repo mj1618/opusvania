@@ -116,6 +116,30 @@ export interface PlayerState {
   kindling: number;
   /** The same for a wayside lamp (`scene.lamps`), -1 = none. Never both at once. */
   kindlingLamp: number;
+  /**
+   * Being seen (src/sim/giving.ts, memory/giving.md): the creatures notice her by the light she
+   * carries. `seenLevel` 0-4 (0 = she carries nothing: unseen; the steps are `tuning.giving.seen1..4`
+   * of her wallet), `seen` = the same as 0..1 (level / 4). Set at the end of every step from
+   * `pickups.count`; the creatures read the wallet as it stands when they move.
+   */
+  seen: number;
+  seenLevel: number;
+  /**
+   * Offer (the `offer` action): `offering` = frames left of her holding a glint out (the pose; 0 =
+   * none), `offerSeq` numbers her offers. The glint in flight: `giftTo` = what it goes to (`''` none,
+   * `enemy`, `lantern`, `lamp`, `heart`), `giftIndex` its index in the scene's list, `giftTimer`
+   * frames until it arrives, `giftX, giftY` the point it flies to (as it was when she gave it).
+   */
+  offering: number;
+  offerSeq: number;
+  giftTo: '' | 'enemy' | 'lantern' | 'lamp' | 'heart';
+  giftIndex: number;
+  giftTimer: number;
+  giftX: number;
+  giftY: number;
+  /** Offer: a buffered press, and frames until the next offer may go. */
+  offerBuf: number;
+  offerCd: number;
   /** Last safe ground (feet centre): where she re-forms. `safeFrames` = frames in a row on safe ground. */
   safeX: number;
   safeY: number;
@@ -177,9 +201,14 @@ export interface PickupsState {
    * gathered goes in; kindling a lantern takes its cost out (`spent`).
    */
   count: number;
-  /** Value spent on lanterns so far. `count + spent + lost + offered` = everything gathered this run. */
+  /**
+   * Value spent so far: on lanterns, lamps, rests, and given by hand (the `offer` action) to
+   * creatures and to dormant lights. `count + spent + lost + offered` = everything gathered this run.
+   */
   spent: number;
-  /** Value given to the woken heart at the end of the run (memory/goal.md: the offering). */
+  /** Of `spent`: glints she gave by hand to creatures (memory/giving.md). */
+  gifted: number;
+  /** Value given to the heart: by hand during the run (`goal.heartGiven`), and all she carries at the end (memory/goal.md: the offering). */
   offered: number;
   /** Value lying in dropped clusters (`drops`), still to be picked up again. */
   lost: number;
@@ -386,6 +415,20 @@ export interface EnemyState {
   noticeCd: number;
   /** Frames left of a calm (a lantern was kindled near it, or the run ended): its touch does nothing meanwhile. */
   calm: number;
+  /**
+   * Frames left of the calm a glint she gave it bought (memory/giving.md; `calm` covers it too, so
+   * its touch does nothing, a burrback braces at nothing, a lampwing notices nothing). 0 = none.
+   * A blow ends it. `gifts` = glints she has given it this life.
+   */
+  gift: number;
+  gifts: number;
+  /**
+   * Frames left of its being aware of her (memory/giving.md): it has seen the light she carries, or
+   * it is in a fight with her (a lampwing's tell, dive, stall and climb; a burrback that is braced,
+   * roused or stirred). `enemyAware` fires as it becomes aware; 0 = she is unseen by it. Never while
+   * it is calmed. Render: a lifted head, a turned eye; the HUD: "she is seen".
+   */
+  aware: number;
   /** Glints spilled on death still on their way to her, frames to the next, and the gap between them. */
   spill: number;
   spillTimer: number;
@@ -428,6 +471,8 @@ export interface LanternState {
    * for one with a key, true once she has gathered that great glint (`lanternKey` fires then).
    */
   keyed: boolean;
+  /** Glints given to it by hand while dormant (the `offer` action): its price is less by that much. */
+  given: number;
 }
 
 /** The goal of the scene (src/sim/goal.ts, memory/goal.md): the lanterns, the heart, the ending. */
@@ -493,6 +538,9 @@ export interface GoalState {
     offerTier: number;
     /** Glints her offering was short of the next tier (0 at the top tier). */
     offerNext: number;
+    /** Glints she gave creatures by hand during the run, and how many creatures one calmed (memory/giving.md). */
+    gifted: number;
+    calmed: number;
   };
   /**
    * The offering to the woken heart, as it goes in during the ending hold: `total` = what she
@@ -508,12 +556,14 @@ export interface GoalState {
   grove: { flowers: boolean; paths: boolean; canopy: boolean };
   /** The hold is over (`endHold`): the scene stays calm until the restart. */
   ended: boolean;
+  /** Glints given to the heart by hand during the run (the `offer` action): they count in the offering. */
+  heartGiven: number;
   /** The run so far: the frame of her first input (-1 = none yet), the hits she has taken, the times she faded. */
   run: { start: number; hits: number; deaths: number };
 }
 
 export interface GameState {
-  version: 19;
+  version: 20;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;

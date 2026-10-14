@@ -3,8 +3,9 @@ import { GROVE } from '../../src/scene/index';
 import type { SimEvent } from '../../src/sim/events';
 import { hashState, lanternBox, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
+import type { Scene } from '../../src/sim/scene';
 import { cloneTuning, defaultTuning, type Tuning } from '../../src/sim/tuning';
-import { feet, hopOnto, newSim } from './helpers';
+import { feet, hopOnto, newSim, type Sim } from './helpers';
 
 /**
  * The naive players of playtest 3, as pilots. Neither knows the scene. Both do the same few things,
@@ -43,7 +44,7 @@ import { feet, hopOnto, newSim } from './helpers';
  * `NAIVE_TRACE=1 npx vitest run tests/unit/naive-pilot.test.ts --disable-console-intercept` prints
  * the timelines.
  */
-const { jump: J, attack: A, left: LEFT, right: RIGHT } = ActionBit;
+const { jump: J, attack: A, offer: O, left: LEFT, right: RIGHT } = ActionBit;
 const lights = [
   ...(GROVE.lanterns ?? []).map((l, i) => ({ ...l, lamp: false, i })),
   ...(GROVE.lamps ?? []).map((l, i) => ({ ...l, lamp: true, i })),
@@ -67,17 +68,42 @@ interface Run {
   lamps: number;
   wallet: number;
   found: number;
+  /** Every time a creature took notice of her: its first tell / brace / flinch, with her box gap and centre distance then, and her wallet. */
+  notices: { id: string; kind: string; type: string; gap: number; d: number; wallet: number; f: number }[];
+  /** The nearest she came to each creature (box to box), and to each burrback on its own ground (her feet within 60 px of its). */
+  closest: Record<string, number>;
+  closestOnGround: Record<string, number>;
+  /** Where she stood at the end (feet). */
+  end: { x: number; y: number };
 }
 
 /** One naive run. `press` = how long she holds jump down per press; `beat` = frames between presses. */
 function naive(
   press: number,
   beat: number,
-  o: { pods?: 'all' | 'first'; lamps?: boolean; stand?: boolean; read?: number } = {},
+  o: {
+    pods?: 'all' | 'first';
+    lamps?: boolean;
+    stand?: boolean;
+    read?: number;
+    /** Giving (memory/giving.md): a burrback in her way is given a glint instead of cut (`offer`), or hopped (`pass`). */
+    offer?: boolean;
+    pass?: boolean;
+    /** Another scene (the grove without its glints), a wallet to start with, and when to stop. */
+    scene?: Scene;
+    wallet?: number;
+    until?: (s: Sim) => boolean;
+  } = {},
   t: Tuning = cloneTuning(defaultTuning),
   maxFrames = 60 * 150,
 ): Run {
-  const s = newSim(GROVE, t);
+  const s = newSim(o.scene ?? GROVE, t);
+  if (o.wallet !== undefined) s.state.pickups.count = o.wallet;
+  const notices: Run['notices'] = [];
+  const closest: Record<string, number> = {};
+  const closestOnGround: Record<string, number> = {};
+  /** Frames left of a hop over a burrback (`pass`). */
+  let vault = 0;
   const timeline: string[] = [];
   const say = (what: string) =>
     timeline.push(
@@ -103,13 +129,27 @@ function naive(
   let dodgeDir = 0;
   let wasBlocked = false;
   const ix = (id: string) => s.state.enemies.findIndex((e) => e.id === id);
-  for (let f = 0; f < maxFrames && !s.state.goal.ended; f++) {
+  for (let f = 0; f < maxFrames && !s.state.goal.ended && !o.until?.(s); f++) {
     const p = s.state.player;
     const at = feet(s);
     const g = s.state.goal;
     // What happened last step: a light stirred, the heart woke.
     for (; seen < s.events.length; seen++) {
       const e = s.events[seen] as SimEvent;
+      if (
+        e.type === 'enemyWindup' ||
+        e.type === 'enemyNotice' ||
+        e.type === 'enemyAware' ||
+        (e.type === 'enemyAlert' && e.cause !== 'touch')
+      ) {
+        const q = s.state.enemies.find((n) => n.id === e.id);
+        if (q) {
+          const gap = Math.max(q.x - (p.x + p.w), p.x - (q.x + q.w), 0);
+          const d = Math.round(Math.hypot(q.x + q.w / 2 - (p.x + p.w / 2), q.y + q.h / 2 - (p.y + p.h / 2)));
+          notices.push({ id: e.id, kind: q.kind, type: e.type, gap, d, wallet: s.state.pickups.count, f });
+        }
+      }
+      if (e.type === 'enemyGift') say(`${e.id} given a glint (it was ${e.was}): calm ${e.frames}`);
       if (e.type === 'lanternNotice' || e.type === 'lampNotice') {
         const k = lights.findIndex((l) => l.id === e.id);
         if (k >= 0) stirred[k] = true;
@@ -201,10 +241,17 @@ function naive(
       if ((s.state.pods.hp[i] ?? 0) > 0 && dx > -10 && dx < 96 && Math.abs(q.y - (at.y - 40)) < 60)
         cut = true;
     }
+    // (One who gives does not swing her blade beside a creature: a cut that met it would wake it.)
+    if (cut && o.offer)
+      for (const e of s.state.enemies)
+        if (e.mode !== 'dead' && Math.abs(e.x + e.w / 2 - at.x) < 170 && Math.abs(e.y + e.h - at.y) < 120)
+          cut = false;
     for (const e of s.state.enemies) {
       const dx = (e.x + e.w / 2 - at.x) * face;
       if (
         read < 0 &&
+        !o.offer &&
+        !o.pass &&
         e.mode !== 'dead' &&
         e.kind === 'burrback' &&
         dx > 0 &&
@@ -315,6 +362,36 @@ function naive(
         }
       }
     }
+    // --- Giving (memory/giving.md): a burrback in her way on her ground is given a glint instead of
+    // cut (she walks up into reach, gives, waits for it to land, then walks on past it: calmed, it is
+    // harmless); with nothing to give, or told to pass, she hops it.
+    if ((o.offer || o.pass) && !acted && !g.gathered) {
+      if (vault > 0) {
+        vault--;
+        m |= J | (face > 0 ? RIGHT : LEFT);
+        acted = true;
+      } else
+        for (const e of s.state.enemies) {
+          if (e.kind !== 'burrback' || e.mode === 'dead' || e.gift > 0) continue;
+          const dx = (e.x + e.w / 2 - at.x) * face;
+          if (Math.abs(e.y + e.h - at.y) > 40 || dx < -30 || dx > 220) continue;
+          if (o.offer && s.state.pickups.count > 0) {
+            acted = true;
+            // (Its glint is on its way: she waits for it to land.)
+            if (p.giftTo === 'enemy' && p.giftTimer > 0) break;
+            const gap = Math.abs(dx) - e.w / 2 - p.w / 2;
+            if (gap > 100) m |= face > 0 ? RIGHT : LEFT;
+            else if ((prev & O) === 0 && p.offerCd === 0) m |= O;
+            break;
+          }
+          if (p.grounded && dx > 60 && dx < 170) {
+            vault = 17;
+            m |= J | (face > 0 ? RIGHT : LEFT);
+            acted = true;
+          }
+          break;
+        }
+    }
     if (acted) {
       // (Her hands are busy: no wall presses meanwhile.)
     } else if (cut && p.grounded) {
@@ -342,6 +419,16 @@ function naive(
     }
     step(s.state, m, s.tuning, s.scene, s.events);
     prev = m;
+    const b = s.state.player;
+    for (const e of s.state.enemies) {
+      if (e.mode === 'dead') continue;
+      const dx = Math.max(e.x - (b.x + b.w), b.x - (e.x + e.w), 0);
+      const dy = Math.max(e.y - (b.y + b.h), b.y - (e.y + e.h), 0);
+      const gap = Math.round(Math.hypot(dx, dy));
+      closest[e.id] = Math.min(closest[e.id] ?? 1e9, gap);
+      if (Math.abs(b.y + b.h - (e.y + e.h)) <= 60)
+        closestOnGround[e.id] = Math.min(closestOnGround[e.id] ?? 1e9, gap);
+    }
   }
   say(s.state.goal.ended ? 'the end' : 'GAVE UP HERE');
   const ev = s.events;
@@ -358,6 +445,10 @@ function naive(
     lamps: s.state.goal.lampsLit,
     wallet: s.state.pickups.count,
     found: s.state.goal.ending.glints,
+    notices,
+    closest,
+    closestOnGround,
+    end: feet(s),
   };
 }
 
@@ -527,6 +618,120 @@ describe('naive players finish the grove: the lanterns are the critical path', (
       trace(`careful, reaction ${read}`, q);
       expect(q.ended, `reaction ${read}`).toBe(true);
       expect(q.fades, `reaction ${read}`).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+// --- Giving (memory/giving.md): the creatures see the light she carries; she can give it away.
+const BARE: Scene = { ...GROVE, pickups: [], pods: [] };
+const pastHeart = (s: Sim) => feet(s).x >= heart.x - 40 && feet(s).y === heart.y;
+const PATH = ['burr-path', 'burr-shaft', 'burr-rise'];
+
+describe('giving: carrying light makes her seen; offering is a way through (memory/giving.md)', () => {
+  it("the GHOST: carrying nothing (the grove without its glints), she crosses from the spawn to the heart and no creature ever notices her, though she passes every burrback on her road at arm's length", () => {
+    for (const [press, beat] of [
+      [5, 9],
+      [14, 12],
+      [45, 9],
+    ] as const) {
+      const hand = `press ${press}, beat ${beat}`;
+      const r = naive(
+        press,
+        beat,
+        { scene: BARE, pass: true, until: pastHeart },
+        cloneTuning(defaultTuning),
+        60 * 120,
+      );
+      trace(`ghost, ${hand}`, r);
+      if (process.env.NAIVE_TRACE) console.log(JSON.stringify(r.closestOnGround));
+      // She got there, untouched, with nothing in her hands the whole way.
+      expect(r.end.x, hand).toBeGreaterThanOrEqual(heart.x - 40);
+      expect(r.hits, hand).toBe(0);
+      expect(
+        r.events.filter((e) => e.type === 'pickup'),
+        hand,
+      ).toEqual([]);
+      // Not a tell, not a brace, not a flinch, not a lifted head: unseen by all of them.
+      const noticed = r.events.filter(
+        (e) =>
+          e.type === 'enemyAware' ||
+          e.type === 'enemyNotice' ||
+          e.type === 'enemyWindup' ||
+          (e.type === 'enemyAlert' && e.cause !== 'touch'),
+      );
+      expect(noticed, hand).toEqual([]);
+      // And it was close: every burrback on the road, on its own ground, inside the reach at which
+      // one braces at a carrier (`burrback.strikePx`, box to box).
+      for (const id of PATH)
+        expect(r.closestOnGround[id] ?? 1e9, `${hand}: ${id}`).toBeLessThan(defaultTuning.burrback.strikePx);
+    }
+  });
+
+  it('the HOARDER: carrying everything she is seen from far: each creature on the road becomes aware of her about half as far again as of one with a handful', () => {
+    const hoard = naive(
+      5,
+      9,
+      { scene: BARE, pass: true, wallet: 80, stand: false, lamps: false, until: pastHeart },
+      cloneTuning(defaultTuning),
+      60 * 120,
+    );
+    const light = naive(
+      5,
+      9,
+      { scene: BARE, pass: true, wallet: 8, stand: false, lamps: false, until: pastHeart },
+      cloneTuning(defaultTuning),
+      60 * 120,
+    );
+    trace('hoarder (80 glints)', hoard);
+    trace('a handful (8 glints)', light);
+    const firstAware = (r: Run, id: string) => r.notices.find((n) => n.type === 'enemyAware' && n.id === id);
+    const G = defaultTuning.giving;
+    const B = defaultTuning.burrback;
+    const W = defaultTuning.lampwing;
+    for (const id of ['burr-shaft', 'burr-rise', 'wing-rise']) {
+      const h = firstAware(hoard, id);
+      const l = firstAware(light, id);
+      if (process.env.NAIVE_TRACE) console.log(id, 'hoarder', h, 'handful', l);
+      expect(h, id).toBeDefined();
+      expect(l, id).toBeDefined();
+      expect(h?.wallet ?? 0, id).toBeGreaterThanOrEqual(G.seen4);
+      expect(l?.wallet ?? 0, id).toBeLessThan(G.seen3);
+      // Far: past the whole range a handful is seen at, and half as far again.
+      const base = id.startsWith('burr') ? B.noticePx : W.noticePx;
+      expect(l?.d ?? 0, id).toBeLessThanOrEqual(base);
+      expect(h?.d ?? 0, id).toBeGreaterThan(base * 1.3);
+      expect((h?.d ?? 0) / (l?.d ?? 1), id).toBeGreaterThan(1.35);
+    }
+    // The lampwing over the last fight tells (and so dives) from the far side of the rise.
+    const tell = hoard.notices.find((n) => n.type === 'enemyNotice' && n.id === 'wing-rise');
+    expect(tell?.d ?? 0).toBeGreaterThan(W.noticePx * G.scale3);
+  });
+
+  it('the OFFER pilot: the tapper gives each burrback on her road a glint instead of cutting it, and walks past it calmed; she finishes, barely touched, every one of them alive', () => {
+    for (const [press, beat] of [
+      [5, 9],
+      [45, 9],
+    ] as const) {
+      const hand = `press ${press}, beat ${beat}`;
+      const r = naive(press, beat, { offer: true });
+      trace(`offer, ${hand}`, r);
+      expect(r.ended, hand).toBe(true);
+      expect(r.lit, hand).toBe(3);
+      for (const id of PATH) {
+        const gifts = r.events.filter((e) => e.type === 'enemyGift' && e.id === id);
+        expect(gifts.length, `${hand}: ${id}`).toBeGreaterThanOrEqual(1);
+      }
+      // Not one cut landed on a burrback, and none died.
+      const struck = r.events.filter(
+        (e) => (e.type === 'enemyHit' || e.type === 'enemyDie') && e.kind === 'burrback',
+      );
+      expect(struck, hand).toEqual([]);
+      // Giving costs: a glint each (the summary says so), and it is cheap next to the masher's lights.
+      const gather = r.events.find((e) => e.type === 'gather');
+      expect(gather?.type === 'gather' && gather.calmed >= 3 && gather.gifted >= 3, hand).toBe(true);
+      expect(r.hits, hand).toBeLessThanOrEqual(2);
+      expect(r.fades, hand).toBe(0);
+      // (The masher on the same road takes more than four hits and fades: the first test above.)
     }
   });
 });

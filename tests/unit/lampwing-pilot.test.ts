@@ -5,7 +5,8 @@ import { slashBox, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
 import type { EnemyState } from '../../src/sim/state';
 import { defaultTuning } from '../../src/sim/tuning';
-import { feet, hopOnto, newSim, type Sim } from './helpers';
+// Staged fights: she carries `LIGHT` glints, or the creatures would not see her (memory/giving.md).
+import { feet, hopOnto, litSim as newSim, type Sim } from './helpers';
 
 /**
  * Proof with the real controller and real inputs, in the grove: every lampwing can be killed (from

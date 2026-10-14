@@ -118,6 +118,7 @@ describe('lanterns: kindling', () => {
       pledged: false,
       still: 0,
       keyed: true,
+      given: 0,
     });
     expect(s.state.player.kindling).toBe(-1);
     expect([s.state.goal.lit, s.state.goal.restAt]).toEqual([1, 0]);
@@ -458,14 +459,17 @@ describe('lanterns: the wallet', () => {
 });
 
 describe('lanterns: a lit one is a rest point', () => {
-  it('standing at it hurt for 45 frames makes her whole; leaving starts the count over', () => {
-    const s = sim(scene(), 12, A_X);
+  it('standing at it hurt for 45 frames makes her whole for a glint a light (rest = give); leaving starts the count over', () => {
+    // 12 for the lantern, 3 to rest with.
+    const s = sim(scene(), 15, A_X);
     s.run('.30');
+    expect(s.state.pickups.count).toBe(3);
     s.state.player.hp = 1;
     const ev = s.run(`.${G.restFrames - 1}`);
     expect(goalTypes(ev)).toEqual([]);
     expect([s.state.player.hp, lantern(s).rest]).toEqual([1, G.restFrames - 1]);
     const done = s.run('.1');
+    // Up to a re-form's health for nothing (1 -> 2), then a glint a light (2 -> 4).
     expect(of(done, 'lanternRest')[0]).toEqual({
       type: 'lanternRest',
       id: 'a',
@@ -474,18 +478,61 @@ describe('lanterns: a lit one is a rest point', () => {
       hp: 4,
       hpMax: 4,
       healed: 3,
+      free: 1,
+      cost: 2,
+      wallet: 1,
+      short: false,
     });
-    expect([s.state.player.hp, lantern(s).rest, s.state.pickups.count]).toEqual([4, 0, 0]);
+    expect([s.state.player.hp, lantern(s).rest, s.state.pickups.count]).toEqual([4, 0, 1]);
+    expect(s.state.pickups.spent).toBe(14);
     // Whole: nothing more.
     expect(goalTypes(s.run('.200'))).toEqual([]);
     // Stepping out half way starts over.
-    s.state.player.hp = 2;
+    s.state.player.hp = 3;
     s.run('.30 R12 .5');
     expect(lantern(s).rest).toBe(0);
     s.run('L12');
     const again = s.run('.60');
     expect(of(again, 'lanternRest')).toHaveLength(1);
-    expect(s.state.player.hp).toBe(4);
+    expect([s.state.player.hp, s.state.pickups.count]).toEqual([4, 0]);
+  });
+
+  it("empty-handed, a rest lifts her to a re-form's health and no further; the rest of it waits for glints and a new visit", () => {
+    const s = sim(scene(), 12, A_X);
+    s.run('.30');
+    expect(s.state.pickups.count).toBe(0);
+    s.state.player.hp = 1;
+    const ev = s.run(`.${G.restFrames}`);
+    expect(of(ev, 'lanternRest')[0]).toMatchObject({
+      hp: H.reformHp,
+      healed: 1,
+      free: 1,
+      cost: 0,
+      wallet: 0,
+      short: true,
+    });
+    // Once a visit: standing on, nothing more, even with a glint come to hand.
+    s.state.pickups.count = 1;
+    expect(of(s.run(`.${G.restFrames * 3}`), 'lanternRest')).toEqual([]);
+    // Out and back: a new rest, and the glint buys a light.
+    s.run('R12 .5 L12');
+    const back = s.run(`.${G.restFrames + 5}`);
+    expect(of(back, 'lanternRest')[0]).toMatchObject({
+      hp: 3,
+      healed: 1,
+      free: 0,
+      cost: 1,
+      wallet: 0,
+      short: true,
+    });
+    // At the floor with nothing to give: the rest still comes (the light breathes), and heals nothing.
+    s.run('R12 .5 L12');
+    expect(of(s.run(`.${G.restFrames + 5}`), 'lanternRest')[0]).toMatchObject({
+      hp: 3,
+      healed: 0,
+      cost: 0,
+      short: true,
+    });
   });
 
   it('kindling hurt: the rest follows 45 frames later; a dormant lantern heals nothing', () => {
@@ -508,6 +555,9 @@ describe('lanterns: a lit one is a rest point', () => {
     const safe = s.state.player.safeX;
     expect(safe).toBeGreaterThan(A_X + 300);
     s.state.player.hp = 1;
+    // (A glint or two in hand, or it would not see her and she would slip past it: memory/giving.md.
+    // Under 3, nothing is dropped.)
+    s.state.pickups.count = 2;
     const e = s.state.enemies[0];
     if (!e) throw new Error('no enemy');
     s.place(e.x + e.w / 2 - 30, FLOOR);
@@ -517,7 +567,7 @@ describe('lanterns: a lit one is a rest point', () => {
     expect([re?.x, re?.y]).toEqual([A_X, FLOOR]);
     expect(feet(s)).toEqual({ x: A_X, y: FLOOR });
     expect(lantern(s).lit).toBe(true);
-    expect([s.state.pickups.count, s.state.pickups.spent, s.state.goal.lit]).toEqual([0, 12, 1]);
+    expect([s.state.pickups.count, s.state.pickups.spent, s.state.goal.lit]).toEqual([2, 12, 1]);
     // A fade costs: 2 of 4 lights, and the lantern she re-formed in does not make her whole where
     // she stands (playtest 3: "a fade has no sting"): only once she has stepped out of it and come back.
     expect(s.state.player.hp).toBe(H.reformHp);
@@ -526,13 +576,14 @@ describe('lanterns: a lit one is a rest point', () => {
     expect([s.state.player.hp, lantern(s).rest]).toEqual([H.reformHp, 0]);
     // A hop on the spot is not leaving.
     expect(of(s.run(`J20 .40 .${G.restFrames}`), 'lanternRest')).toEqual([]);
-    // Out of its box and back: now it is a rest.
+    // Out of its box and back: now it is a rest (two glints to give for the two lights: rest = give).
     s.run('R12 .8');
     expect(s.state.goal.restHold).toBe(false);
     s.run('L12 .8');
     expect(feet(s).x).toBe(A_X);
+    s.state.pickups.count = 2;
     const rest = s.run(`.${G.restFrames}`);
-    expect(of(rest, 'lanternRest')[0]).toMatchObject({ healed: 2, hp: 4 });
+    expect(of(rest, 'lanternRest')[0]).toMatchObject({ healed: 2, hp: 4, cost: 2, wallet: 0 });
   });
 
   it('she re-forms at the lit lantern nearest to where she fell (it was the last she stood at); an unlit one is not; without any, safe ground as before', () => {
@@ -556,6 +607,8 @@ describe('lanterns: a lit one is a rest point', () => {
     expect(s.state.goal.restAt).toBe(1);
     const die = (t: Sim) => {
       t.state.player.hp = 1;
+      // (Light in hand, or it would not see her: memory/giving.md.)
+      t.state.pickups.count = Math.max(2, t.state.pickups.count);
       const e = t.state.enemies[0];
       if (!e) throw new Error('no enemy');
       t.place(e.x + e.w / 2 - 30, FLOOR);
@@ -569,6 +622,7 @@ describe('lanterns: a lit one is a rest point', () => {
     s.run('.60');
     s.place(B_X + 150, FLOOR);
     s.state.player.hp = 1;
+    s.state.pickups.count = Math.max(2, s.state.pickups.count);
     s.state.enemies[0] = {
       ...(s.state.enemies[0] as (typeof s.state.enemies)[number]),
       x: B_X + 160,
@@ -588,6 +642,7 @@ describe('lanterns: a lit one is a rest point', () => {
     // (Calmed by the kindling it is harmless for 120 frames: wait that out.)
     s.run(`.${G.calmFrames + 5}`);
     s.state.player.hp = 1;
+    s.state.pickups.count = 2;
     const e = s.state.enemies[0];
     if (!e) throw new Error('no enemy');
     s.place(e.x + e.w / 2 - 30, FLOOR);
@@ -959,6 +1014,8 @@ describe('the ending', () => {
     s.place(HEART_X - 900, FLOOR);
     s.run(`.${G.calmFrames + 5}`);
     s.place(HEART_X + 150, FLOOR);
+    // (Some light in her hands, or it would not see her: memory/giving.md.)
+    s.state.pickups.count = 6;
     // Let it notice and come at her, then walk into the heart.
     s.run('.45');
     expect(['dive', 'stall']).toContain(s.state.enemies[0]?.mode);
@@ -1016,7 +1073,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
     s.run(`.${G.holdFrames + 5}`);
     expect([s.state.goal.lit, s.state.goal.ended, s.state.pickups.spent]).toEqual([3, true, 36]);
     const fresh = createState(1, s.tuning, s.scene);
-    expect(fresh.version).toBe(19);
+    expect(fresh.version).toBe(20);
     expect(fresh.goal).toEqual({
       lanterns: [0, 1, 2].map(() => ({
         lit: false,
@@ -1030,6 +1087,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
         pledged: false,
         still: 0,
         keyed: true,
+        given: 0,
       })),
       lit: 0,
       restAt: -1,
@@ -1058,10 +1116,13 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
         offered: 0,
         offerTier: 0,
         offerNext: 0,
+        gifted: 0,
+        calmed: 0,
       },
       offer: { total: 0, given: 0, tier: 0 },
       grove: { flowers: false, paths: false, canopy: false },
       ended: false,
+      heartGiven: 0,
       run: { start: -1, hits: 0, deaths: 0 },
     });
     expect([fresh.pickups.count, fresh.pickups.spent, fresh.player.kindling]).toEqual([0, 0, -1]);

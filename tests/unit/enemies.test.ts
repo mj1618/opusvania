@@ -6,7 +6,8 @@ import { cloneState, createState, hashState, step } from '../../src/sim/index';
 import type { EnemySpawn, Pod, Scene } from '../../src/sim/scene';
 import type { EnemyState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
-import { feet, flatScene, newSim, type Sim } from './helpers';
+// Staged fights: she carries `LIGHT` glints, or the creatures would not see her (memory/giving.md).
+import { newSim as bareSim, feet, flatScene, LIGHT, litSim as newSim, type Sim } from './helpers';
 
 const H = defaultTuning.health;
 const B = defaultTuning.burrback;
@@ -461,7 +462,7 @@ describe('burrback: taking hits', () => {
     const ev = s.run('L+A1 .16 L+A1 .18 R+A1 .32 R8 A1 .80');
     expect(of(ev, 'enemyHit').map((e) => [e.power, e.hpLeft])).toEqual([[2, 1]]);
     expect(of(ev, 'enemyDie').map((e) => [e.power, e.value, e.stagger])).toEqual([[1, 4, 5]]);
-    expect(s.state.pickups.count).toBe(4);
+    expect(s.state.pickups.count).toBe(LIGHT + 4);
   });
 
   it('pogo: a down slash bounces her off it and hurts it, and curls it up: the next bounce glances off (playtest 6); bounces kill it without her touching it', () => {
@@ -508,7 +509,7 @@ describe('burrback: taking hits', () => {
       }
     });
     expect(got).toEqual([16, 19, 22, 25, 28, 31]);
-    expect([s.state.pickups.count, s.state.pickups.taken]).toEqual([6, 0]);
+    expect([s.state.pickups.count, s.state.pickups.taken]).toEqual([LIGHT + 6, 0]);
     expect([B.value, B.valueFinisher]).toEqual([4, 6]);
   });
 
@@ -583,7 +584,11 @@ describe('fade and re-form', () => {
   const POOL = { tag: 'pool' as const, x: 2600, y: 760, w: 300, h: 40 };
 
   it('the fourth hit: she fades for 50 frames out of control, then re-forms on the last safe ground with 2 lights, a third of her glints left where she lay', () => {
-    const s = newSim(scene([burr(2600)], {}, [{ id: 'pod', x: 1700, y: FLOOR - 22, mount: 'sit' }]), noRam());
+    // (Empty-handed to start: the wallet is what the pod pays.)
+    const s = bareSim(
+      scene([burr(2600)], {}, [{ id: 'pod', x: 1700, y: FLOOR - 22, mount: 'sit' }]),
+      noRam(),
+    );
     // Safe ground is made here: 30 frames standing, far from it. Then a pod, for something to keep.
     s.place(1790, FLOOR);
     s.run('L+A1 .60');
@@ -788,7 +793,7 @@ describe('enemies: determinism, symmetry, restart', () => {
     expect(hashState(cloneState(a.state))).toBe(hashState(a.state));
     expect(cloneState(a.state).enemies[0]).not.toBe(a.state.enemies[0]);
     expect(of(a.events, 'hurt').length + of(a.events, 'enemyHit').length).toBeGreaterThan(2);
-    expect(a.state.version).toBe(19);
+    expect(a.state.version).toBe(20);
   });
 
   it('mirror symmetry: a mirrored scene and mirrored inputs give exactly the mirrored fight', () => {

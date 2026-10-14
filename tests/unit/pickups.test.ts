@@ -117,6 +117,7 @@ describe('pickups (sim rule)', () => {
       timers: (GROVE.pickups ?? []).map(() => 0),
       count: 0,
       spent: 0,
+      gifted: 0,
       offered: 0,
       lost: 0,
       bonus: 0,

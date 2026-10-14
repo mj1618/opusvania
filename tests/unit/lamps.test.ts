@@ -310,14 +310,15 @@ describe('wayside lamps', () => {
       radius: 40,
     };
     // At the lit lamp: it notices her, and as its tell ends it gives up (her light is the lamp's).
-    const s = sim(scene({ enemies: [wing] }), 8, LAMP_X);
+    // (8 for the lamp and some light left in her hands, or it would not see her: memory/giving.md.)
+    const s = sim(scene({ enemies: [wing] }), 14, LAMP_X);
     s.run(`.${LAMP_FRAMES}`);
     const ev = s.run(`.${G.calmFrames + 400}`);
     expect(of(ev, 'hurt')).toHaveLength(0);
     expect(of(ev, 'enemyDive')).toHaveLength(0);
     expect(of(ev, 'enemyGiveUp').some((e) => e.cause === 'calm')).toBe(true);
     // 120 px from the lit lamp (inside a lantern's 160): it dives.
-    const q = sim(scene({ enemies: [wing] }), 8, LAMP_X);
+    const q = sim(scene({ enemies: [wing] }), 14, LAMP_X);
     q.run(`.${LAMP_FRAMES}`);
     q.place(LAMP_X + 120, FLOOR);
     expect(of(q.run(`.${G.calmFrames + 400}`), 'enemyDive').length).toBeGreaterThanOrEqual(1);
@@ -359,6 +360,8 @@ describe('a wayside lamp she has passed is where she re-forms, dark or lit (play
   /** She fades where she stands now (a creature's touch at 1 light) and re-forms: where? */
   const fadeAt = (s: Sim, x: number) => {
     s.state.player.hp = 1;
+    // (Light in hand, or it would not see her and she would slip past: memory/giving.md.)
+    s.state.pickups.count = Math.max(2, s.state.pickups.count);
     s.place(x, FLOOR);
     const e = s.state.enemies[0];
     if (!e) throw new Error('no enemy');

@@ -318,6 +318,12 @@ export const defaultTuning = {
     hp: 5,
     /** Walking speed, px/f. */
     speed: 1.6,
+    /**
+     * It is aware of her (`EnemyState.aware`, `enemyAware`: it lifts its head, nothing else changes)
+     * within this of its centre, her body centre, with a clear line, scaled by the light she carries
+     * (memory/giving.md: 165 / 220 / 264 / 319 px at levels 1-4; never while she carries nothing).
+     */
+    noticePx: 220,
     /** Frames it stands still when it turns round at a ledge or a wall. */
     turnPauseFrames: 24,
     /** The same when it shies from a lit lantern's light or from an edge she is under: a longer beat, room for the flinch. */
@@ -662,6 +668,53 @@ export const defaultTuning = {
     offerTier3: 100,
     /** After `endHold`: false = she stays held until the restart; true = she may walk on (nothing can hurt her). */
     endedControl: false,
+  },
+  /**
+   * Giving (src/sim/giving.ts, memory/giving.md): the game plays like giving.
+   *
+   * SEEN: the creatures notice her by the light she carries (`pickups.count`), not by nearness
+   * alone. Empty-handed (level 0) a burrback does not brace at her nor flinch at her, and a
+   * lampwing does not see her at all: she slips past at arm's length (its touch still hurts if she
+   * walks into it). Carrying, her level is the highest `seenN` she has reached (1-4) and their
+   * notice ranges are scaled by `scaleN`: the burrback's brace reach (`burrback.strikePx`), the
+   * lampwing's sight (`lampwing.noticePx` or the scene's `sight`). Level 2 (the handful a lantern
+   * costs) is the old tuned fight; a hoard is seen from much further. A creature she has CUT knows
+   * her (`roused`): that does not depend on what she carries.
+   *
+   * OFFER (the `offer` action): one glint from her wallet to what is in reach: a creature (it is
+   * calmed for `giftCalmFrames`: harmless, it braces at nothing, a lampwing gives up and goes
+   * home; a braced or ramming burrback stops and lowers first, standing `giftStandFrames`), a
+   * dormant lantern or lamp (a part of its price, kept: `LanternState.given`), or the heart (into
+   * the offering, ahead of the ending). The glint flies `offerFlightFrames`, then takes effect.
+   *
+   * REST = GIVE: a lit light makes her whole for `restCost` glints a light. Below
+   * `health.reformHp` it lifts her that far free (a fade is never a better heal than a rest).
+   */
+  giving: {
+    /** Wallet thresholds for the levels 1-4 of being seen (0 = carries nothing). */
+    seen1: 1,
+    seen2: 6,
+    seen3: 15,
+    seen4: 30,
+    /** Notice range at each level, as a share of the creature's own (level 0 = unseen). */
+    scale1: 0.75,
+    scale2: 1,
+    scale3: 1.2,
+    scale4: 1.45,
+    /** Offer: reach (her body centre to the nearest point of the target's box), the glint's flight, the gap between offers, a press good for this long. */
+    offerReachPx: 150,
+    offerFlightFrames: 10,
+    offerCooldownFrames: 14,
+    offerBufferFrames: 16,
+    /** Frames she holds the glint out (the pose; it never locks her movement). */
+    offerPoseFrames: 16,
+    /** What one glint buys a creature: frames of calm, and how long a burrback stands lowered first. */
+    giftCalmFrames: 600,
+    giftStandFrames: 60,
+    /** Rest at a lit light: glints a light restored (above the free floor of `health.reformHp`). */
+    restCost: 1,
+    /** A creature stays aware of her (`EnemyState.aware`) this long after it last saw her. */
+    awareFrames: 45,
   },
   /**
    * The canopy: a soft ceiling at the scene's `ceilingY` (scene data; none if absent), so she never

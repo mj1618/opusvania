@@ -270,7 +270,7 @@ export type SimEvent =
       x: number;
       y: number;
       facing: number;
-      cause: 'far' | 'lost' | 'tired' | 'dark' | 'touch' | 'calm';
+      cause: 'far' | 'lost' | 'tired' | 'dark' | 'touch' | 'calm' | 'gift';
       frames: number;
     }
   /**
@@ -536,8 +536,25 @@ export type SimEvent =
       pledged: boolean;
       away: boolean;
     }
-  /** Standing at a lit lantern made her whole: `healed` lights came back, `hp` of `hpMax` now. */
-  | { type: 'lanternRest'; id: string; x: number; y: number; hp: number; hpMax: number; healed: number }
+  /**
+   * Standing at a lit lantern rested her (memory/giving.md: rest = give): `healed` lights came back,
+   * `hp` of `hpMax` now. `free` of them came for nothing (up to `health.reformHp`), the rest cost
+   * `cost` glints (`tuning.giving.restCost` a light), and her wallet now holds `wallet`. `short`:
+   * she had nothing to give for the rest of it (`healed` may be 0: the light breathes, she stays hurt).
+   */
+  | {
+      type: 'lanternRest';
+      id: string;
+      x: number;
+      y: number;
+      hp: number;
+      hpMax: number;
+      healed: number;
+      free: number;
+      cost: number;
+      wallet: number;
+      short: boolean;
+    }
   /**
    * Wayside lamps (`scene.lamps`, `state.goal.lamps`): the lantern events under their own names,
    * with the same fields. `lampKindle`: `lit` of `total` LAMPS burn (lanterns are not counted, and a
@@ -566,7 +583,19 @@ export type SimEvent =
       pledged: boolean;
       away: boolean;
     }
-  | { type: 'lampRest'; id: string; x: number; y: number; hp: number; hpMax: number; healed: number }
+  | {
+      type: 'lampRest';
+      id: string;
+      x: number;
+      y: number;
+      hp: number;
+      hpMax: number;
+      healed: number;
+      free: number;
+      cost: number;
+      wallet: number;
+      short: boolean;
+    }
   /**
    * She walked up to the heart of the grove (`x`, `y` = its point on the ground) while it sleeps:
    * `lit` of `total` lanterns burn. Once per run.
@@ -606,14 +635,18 @@ export type SimEvent =
       lamps: number;
       lampsTotal: number;
       /**
-       * The offering: `offered` glints (everything she still carries) will go into the heart during
-       * the hold (`heartOffer`), reaching tier `offerTier` (0-3) of `offerTiers` (the thresholds).
+       * The offering: `offered` glints (everything she still carries, and what she gave the heart by
+       * hand on the way: `goal.heartGiven`, already in) go into the heart during the hold
+       * (`heartOffer`), reaching tier `offerTier` (0-3) of `offerTiers` (the thresholds).
        */
       offered: number;
       offerTier: number;
       /** Glints the offering is short of the next tier (0 at the top tier). */
       offerNext: number;
       offerTiers: number[];
+      /** Giving (memory/giving.md): glints she gave creatures by hand, and how many creatures she calmed so. */
+      gifted: number;
+      calmed: number;
     }
   /**
    * The heart's wake is a sequence of its own (`tuning.goal.heartWakeFrames` from `heartWake`).
@@ -658,6 +691,66 @@ export type SimEvent =
   /** The offering passed threshold number `tier` (1-3: `need` glints): more of the grove wakes. `x`, `y` = the heart. */
   | { type: 'heartTier'; x: number; y: number; tier: number; given: number; need: number }
   /** The ending hold is over (`state.goal.ended`): the scene rests until the restart. `x`, `y` = the heart. */
-  | { type: 'endHold'; x: number; y: number };
+  | { type: 'endHold'; x: number; y: number }
+  /**
+   * Giving (memory/giving.md). `offer`: she holds a glint out and lets it go (the `offer` action):
+   * `x, y` = her body centre, `tx, ty` = what it flies to (a creature's centre, a light's or the
+   * heart's middle), `target` = who, `frames` = its flight; it left her wallet (`wallet` now) on
+   * this step. It arrives as `enemyGift` / `lanternGift` / `lampGift` / `heartGift`, or comes back
+   * (`giftReturn`) if what it was given to is gone. `seq` = `player.offerSeq`.
+   */
+  | {
+      type: 'offer';
+      x: number;
+      y: number;
+      tx: number;
+      ty: number;
+      target: { kind: 'burrback' | 'lampwing' | 'lantern' | 'lamp' | 'heart'; id: string };
+      frames: number;
+      wallet: number;
+      seq: number;
+    }
+  /**
+   * A creature became aware of her (`EnemyState.aware`): it has seen the light she carries, or a
+   * fight with her has begun. `x, y` = its centre, `dir` = her side, `level` = her level of being
+   * seen then (0-4: `player.seenLevel`), `px` = how far she was (centre to centre).
+   */
+  | {
+      type: 'enemyAware';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      dir: number;
+      level: number;
+      px: number;
+    }
+  /** She pressed offer and nothing went: `empty` = she carries nothing; `none` = nothing in reach to give to. */
+  | { type: 'offerMiss'; x: number; y: number; reason: 'empty' | 'none'; wallet: number }
+  /**
+   * A glint she gave reached a creature: it is calmed for `frames` (`EnemyState.gift`, `calm`):
+   * harmless, it braces at nothing, a lampwing gives up (`enemyGiveUp` cause `gift`) and goes home.
+   * `was` = what it was doing (a burrback `windup` / `charge`: it stops and lowers, standing
+   * `stand` frames; `recover`, a curl: it uncurls and stands). `gifts` = glints given it so far.
+   * `x, y` = its centre.
+   */
+  | {
+      type: 'enemyGift';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      was: string;
+      frames: number;
+      stand: number;
+      gifts: number;
+    }
+  /** A glint she gave reached a dormant lantern / lamp: `given` of its price is in it now, `need` still to give (`x, y` = its foot). */
+  | { type: 'lanternGift'; id: string; x: number; y: number; given: number; need: number; wallet: number }
+  | { type: 'lampGift'; id: string; x: number; y: number; given: number; need: number; wallet: number }
+  /** A glint she gave reached the heart: `given` by hand so far (it counts in the ending's offering). */
+  | { type: 'heartGift'; x: number; y: number; given: number; wallet: number }
+  /** A glint she gave found nothing to take it (cut down, already lit): it flies back from `x, y` to her (`px, py`). */
+  | { type: 'giftReturn'; x: number; y: number; px: number; py: number; wallet: number };
 
 export type SimEventType = SimEvent['type'];

@@ -5,7 +5,8 @@ import { step } from '../../src/sim/index';
 import type { EnemySpawn, Scene } from '../../src/sim/scene';
 import type { EnemyState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
-import { feet, flatScene, newSim, type Sim } from './helpers';
+// Staged fights: she carries `LIGHT` glints, or the creatures would not see her (memory/giving.md).
+import { feet, flatScene, litSim as newSim, type Sim } from './helpers';
 
 /**
  * Burrbacks and edges (memory/enemies.md): they keep off the lips she arrives over, back away

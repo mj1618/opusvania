@@ -20,6 +20,16 @@ import type { MoveParams, SlashStep } from './params';
  */
 
 /** A player at rest with its feet centre at (feetX, feetY), facing right. Lifted out of any solid. */
+/** A fresh player (re-formed, placed) keeps the count of her offers and the glint she let go, still in flight. */
+export function keepOffer(p: PlayerState, old: PlayerState): void {
+  p.offerSeq = old.offerSeq;
+  p.giftTo = old.giftTo;
+  p.giftIndex = old.giftIndex;
+  p.giftTimer = old.giftTimer;
+  p.giftX = old.giftX;
+  p.giftY = old.giftY;
+}
+
 export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Scene): PlayerState {
   const w = t.body.width;
   const h = t.body.height;
@@ -74,6 +84,17 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     hurtSeq: 0,
     kindling: -1,
     kindlingLamp: -1,
+    seen: 0,
+    seenLevel: 0,
+    offering: 0,
+    offerSeq: 0,
+    giftTo: '',
+    giftIndex: -1,
+    giftTimer: 0,
+    giftX: 0,
+    giftY: 0,
+    offerBuf: 0,
+    offerCd: 0,
     safeX: Math.round(feetX),
     safeY: y + h,
     safeFrames: 0,
@@ -1168,6 +1189,7 @@ export function reformPlayer(
   p.attackFacing = old.facing;
   p.attackSeq = old.attackSeq;
   p.hurtSeq = old.hurtSeq;
+  keepOffer(p, old);
   p.invuln = P.reformInvulnFrames;
   // A fade costs: she comes back with part of her health (a lit lantern is where she is made whole).
   p.hp = Math.max(1, Math.min(p.hpMax, Math.round(P.tuning.health.reformHp)));

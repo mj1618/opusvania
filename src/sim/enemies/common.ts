@@ -129,6 +129,17 @@ export interface KindRules {
    * through its own quiet path. Only called while it is alive and not held or staggered.
    */
   calm?(e: EnemyState, info: StepInfo, frames: number): void;
+  /**
+   * A glint she gave reached it (memory/giving.md; the framework has already set `calm` and `gift`
+   * for `frames`): it settles its own way. Returns the frames it stands still for first (0 = none).
+   * Only called while it is alive and not held or staggered.
+   */
+  gift?(e: EnemyState, info: StepInfo, frames: number): number;
+  /**
+   * Does it see her this step (memory/giving.md)? `seen` = her level (0 = she carries nothing).
+   * Drives `aware` / `enemyAware` only; what it does about her is its own `update`.
+   */
+  sees?(e: EnemyState, info: StepInfo, seen: number): boolean;
   /** Its touch can do nothing this step, whatever else holds (it is inside a lit lantern's sanctuary). */
   harmless?(e: EnemyState, info: StepInfo): boolean;
   /**

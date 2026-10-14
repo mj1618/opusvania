@@ -120,8 +120,10 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
   run spent the beat at frame 60, already past it). `show` (150, `refuseShowFrames`) = how long the
   price is worth showing. If glints land while she stands there the channel just starts.
 - **Lit** until the restart (`R`, `__game.load()`); a fade / re-form and a teleport keep it.
-- **Rest point**: standing at a lit lantern while hurt for 45 frames (`restFrames`) makes her whole
-  (`lanternRest`), free. 45 > 30 so resting is a longer breath than kindling, and kindling hurt gives
+- **Rest point**: standing at a lit lantern while hurt for 45 frames (`restFrames`) rests her (`lanternRest`).
+  **Since 2026-10-14 rest = give (giving.md)**: free up to `health.reformHp`, then a glint a light
+  (`giving.restCost`); once a visit. Glints given to a dormant light by hand (`LanternState.given`) lower its price;
+  to the heart (`goal.heartGiven`) they count in the offering. 45 > 30 so resting is a longer breath than kindling, and kindling hurt gives
   the rest 45 frames later without moving. Not instant, so it is no shield in a fight.
 - **A re-form is not a rest** (`goal.restHold`, playtest 3: "a fade has no sting": she re-formed on the light
   and its rest healed her 1.8 s later without a step). The light she re-forms at does not count her rest
@@ -188,7 +190,7 @@ with real inputs + the economy audit). Drawn by `src/render/goal/` (goal-render.
 - `run.start` = frame of her first input; `run.hits` counts `hurt` events. Summary: `glints` =
   `count + spent + lost - bonus` (the tally rule above), `time` = frames since the first input, `kills` = dead enemies, `hits`.
 - A scene without `lanterns` / `heart` has no goal: nothing fires. Lanterns without a heart can be lit.
-- State version 18 (playtest 5: `keyed`, `heart.ready / waited`, `goal.grove`, `ending.offerNext`, the creatures' new fields). Was 17 (playtest 4: `LanternState.still`, `goal.offer`, `ending.offered / offerTier`,
+- State version 20 since giving.md (19: playtest 6). 18 (playtest 5: `keyed`, `heart.ready / waited`, `goal.grove`, `ending.offerNext`, the creatures' new fields). Was 17 (playtest 4: `LanternState.still`, `goal.offer`, `ending.offered / offerTier`,
   `pickups.offered`, the burrback's `braced / strikeCd / chargeLeft`). Existing play is untouched when the lanterns are ignored (tested: the grove with
   and without them plays identically).
 

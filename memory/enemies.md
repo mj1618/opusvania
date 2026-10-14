@@ -20,7 +20,9 @@ the masher and the reader)**, `lampwing.test.ts`, `lampwing-pilot.test.ts`. Both
   the glint spill queue (`spill / spillTimer / spillGap`), contact and its exclusions, the pogo.
 - `EnemyState` is ONE flat record for all kinds (plain JSON; a field a kind does not use keeps its
   start value). `homeX, homeY` = the centre of its box at the start, for every kind. The state
-  version is 19 (enemies.test pins it). `KindRules.blocks` (optional): a blow glances off (the burrback's
+  version is 20 (enemies.test pins it). **What they notice and when their touch counts depends on the light she
+  carries since 2026-10-14 (giving.md)**: empty-handed she is unseen and a creature not in a fight with her does
+  her no harm; `KindRules.sees` / `gift` and `aware`, `gift`, `gifts` are the framework's hooks for it. `KindRules.blocks` (optional): a blow glances off (the burrback's
   braced shell): the framework fires `enemyBlock`, takes nothing, and the slash is spent on it.
 - Scene data: `enemies` is a Zod union on `kind`; burrbacks first, lampwings after (the burrback
   grove tests index the first six). `EnemySpawn.y` means feet for a burrback, home centre for a lampwing.

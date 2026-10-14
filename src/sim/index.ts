@@ -5,14 +5,23 @@
  */
 import { contactDamage, createEnemies, enemyTouched, resetEnemies, updateEnemies } from './enemies';
 import type { SimEvent } from './events';
+import { updateOffer } from './giving';
 import { createGoal, goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
 import type { InputFrame } from './input';
 import { createPickups, dropGlints, updateDrops, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
-import { createPlayer, hurtPlayer, reformPlayer, trackSafeGround, updatePlayer } from './player/player';
+import {
+  createPlayer,
+  hurtPlayer,
+  keepOffer,
+  reformPlayer,
+  trackSafeGround,
+  updatePlayer,
+} from './player/player';
 import { createPods, updatePods } from './pods';
 import { seedRng } from './rng';
 import type { Scene } from './scene';
+import { markSeen } from './seen';
 import type { GameState } from './state';
 import type { Tuning } from './tuning';
 
@@ -20,7 +29,7 @@ export const SIM_HZ = 60;
 
 export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 19,
+    version: 20,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
@@ -57,6 +66,7 @@ export function placePlayer(
   // Slashes stay numbered on: targets remember the last slash that hit them (`hitBy`), so a
   // number used again would pass through whatever it hit before.
   state.player.attackSeq = old.attackSeq;
+  keepOffer(state.player, old);
   state.prevInput = 0;
   events.push({ type: 'spawn', x, y });
 }
@@ -77,6 +87,8 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
   // stops) and nothing can hurt her.
   const held = goalHolds(state.goal, t.goal);
   const ran = updatePlayer(state, scene, held ? heldInput(state, scene, t.goal) : input, P, t.pods, events);
+  // Her offer (memory/giving.md): a glint given this step, one arriving.
+  updateOffer(state, scene, t, held ? 0 : input, held, events);
   const touch = updateEnemies(state, scene, t, events, first);
   const p = state.player;
   const e = touch >= 0 ? state.enemies[touch] : undefined;
@@ -107,6 +119,7 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
   updatePickups(state, scene, t.pickups, events);
   updateDrops(state, t.pickups, events);
   updateGoal(state, scene, t, input, events, first);
+  markSeen(state, t);
   state.prevInput = input;
   state.frame++;
 }

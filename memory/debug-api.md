@@ -17,7 +17,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - `state()` the sim state (`src/sim/state.ts`); `hash()`; `info()` (mode, frame, clock, canvas size, GPU);
   `scene()` the scene data; `events()` events of the last `step()` call, `events(n)` of the last n frames
   (each with `f`, the frame).
-- `input('R30 R+J12 .5')` queues scripted input: `R L U D`, `J` jump, `X` dash, `A` attack, `.` nothing, `+` combines,
+- `input('R30 R+J12 .5')` queues scripted input: `R L U D`, `J` jump, `X` dash, `A` attack, `O` offer, `.` nothing, `+` combines,
   number = frames; a re-press needs a gap (`J1 .1 J1`). Long form `right+jump*12` also works. `clearInput()`.
 - `pickups()` → `{count, taken, worth, list: [{id, kind, x, y, state: waiting|flying|taken}]}`; the count is
   also `state().pickups.count`. Dev handle `window.__pickups` (renderer, `cfg`, `cpuMs`): pickups.md.
@@ -26,6 +26,9 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - `enemies()` → `{alive, total, list: [{id, kind, x, y (feet centre), box, home (the scene's x, y: a burrback's
   feet, a lampwing's home centre), facing, hp, hpMax, mode, modeFrames, braced, strikeCd, gone, vx, vy, target}]}`; the full
   records are `state().enemies` (enemies.md).
+- `giving(wallet?)` → `{wallet, seen, level, steps, reach: {burrback: {brace, aware}, lampwing}, target, gift, offerCd,
+  gifted, heartGiven, aware: [ids]}`; with a number it sets the wallet first (being seen IS the wallet: giving.md).
+  `enemies().list[]` has `aware, calm, gift, gifts`. Keys in the page: V / F / I offer.
 - `health()` → `{hp, hpMax, invuln, stagger, faded, safe: {x, y}}`; `health(n)` sets hp to n (1..hpMax)
   first, e.g. `health(1)` then walk into a burrback to see a fade.
 - `lanterns()` → `{lit, total, wallet, spent, list: [{id, x, y (foot), box, cost, state: dormant|channel|lit,
