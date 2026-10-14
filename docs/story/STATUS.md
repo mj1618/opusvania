@@ -7,11 +7,12 @@ is central and discovered in play, mythic on the surface and technical underneat
 
 | | |
 |---|---|
-| Latest | round 18 (mythic first: the moths call it the Mouth; the grown brain is found at the midpoint) |
-| Last review | round 18: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** · rel 8 / clarity 8 / idea 9 / world 8 / mechanics 9 / antagonist 9 / ending 8 / original 8 / Grove 8 / balance 8 |
-| First-time reader | retold it correctly from memory; confused by too many kinds of light and a few small points ([retell](round-18-retell/2-mouthless.md)) |
+| Latest | round 19 (fewer kinds of light, reader confusions fixed, every beat drawable) |
+| Last review | round 19: AI test PASS (9) · GREENLIGHT WITH NOTES · at the bar: **no, narrowly** (the player's own complicity: burning root walls kills sleepers before the reveal, and nothing marks it) · rel 8 / clarity 7 / idea 9 / world 8 / mechanics 9 / antagonist 9 / ending 8 / original 7 / Grove 9 / balance 8 |
 | Locked | [locked.md](locked.md): spine, cast, midpoint, endings, the three big images, title |
-| Now working on | round 19 polish (fewer kinds of light, the reader's confusions) and the key scenes scripted shot by shot, with choices for you on the biggest beats |
+| Now working on | round 20: land the complicity reversal, one consistent visibility rule, Act III gaps, a shorter epilogue, a stronger forest; three readers (lore-hunter, Ori fan, casual) |
+
+**Done when** two rounds in a row: the AI test passes, the director greenlights it and says it stands next to Ori / Hollow Knight / Nine Sols, all three readers would finish the game, and no confusion is shared by two readers. Then the prologue gets built in the Grove.
 
 The four other storylines are kept in [`alternatives/`](alternatives/) at their round-16 state. Every round of every
 story is kept in this folder (`round-*`). The brief every agent works from: [brief.md](brief.md). The loop script:

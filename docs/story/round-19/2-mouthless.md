@@ -1,22 +1,22 @@
 # MOUTHLESS
 
-**LITMUS.** "It's about Vesper, a little moth with no mouth, against the Mouth, a living thing that swallowed the
+**LITMUS.** "It's about Umber, a little moth with no mouth, against the Mouth, a living thing that swallowed the
 whole world and never bothered to notice moths. Halfway through you find out what it really is: a brain people grew
 from their own cells, starving, and it's been feeding everyone but itself."
 
 **The spine.**
 1. A living thing the moths call the Mouth has swallowed the world into its roots. It never noticed moths, because it
    only sees mouths.
-2. Vesper, a moth with no mouth, slips through it to its heart and finds a brain grown by people and left to starve,
+2. Umber, a moth with no mouth, slips through it to its heart and finds a brain grown by people and left to starve,
    feeding the world and never fed.
 3. When she feeds it, it sees her kind and comes for them, and she must choose: be kept, burn it, or spend her life so
    it lets go.
 
 **The central question:** kept safe forever, or spent so something new can be born?
 
-| Who | Wants | Pull on Vesper |
+| Who | Wants | Pull on Umber |
 |---|---|---|
-| **Vesper**, a moth with no mouth and a week to live | to keep the root out of her brood's wood, then to free the world | can only carry and give; her flaw is that she hides |
+| **Umber**, a moth with no mouth and a week to live | to keep the root out of her brood's wood, then to free the world | can only carry and give; her flaw is that she hides |
 | **Sorrel**, her brother | the dance, then more time with her | shines to draw danger off her; leaves when her gift sets the Mouth on the moths; comes back |
 | **The Mouth** | no one hungry, no one leaving, ever | ignores her, then sees her, then wants to keep her |
 | **Dun**, its oldest burrback, half grown into root | to be the one who feeds it | rival, then the first servant to refuse it |
@@ -48,7 +48,7 @@ sleepers.
 with jars of feed, and it took her before she could open one. **A thing that takes everything can never be given
 anything,** so the root never stops.
 
-**Is it a someone?** *For:* once it sees Vesper it raises her shape on every wall, and at the end it gives. *Against:*
+**Is it a someone?** *For:* once it sees Umber it raises her shape on every wall, and at the end it gives. *Against:*
 it learned its first game only to make the static stop, and a world kept still is the quietest world there is.
 
 ## 3. The rules
@@ -76,7 +76,7 @@ it learned its first game only to make the static stop, and a world kept still i
    glass, and a road of town lights goes out, one by one. Moths fly through it all untouched.
 3. The Grove. A caterpillar chews a leaf; a burrback swings toward the sound. The caterpillar stops eating and wraps
    itself in silk, and the burrback, finding no mouth, loses interest.
-4. Two cocoons split. Sorrel flies straight up to the brood's dance. Vesper catches a glint, raises it to her face,
+4. Two cocoons split. Sorrel flies straight up to the brood's dance. Umber catches a glint, raises it to her face,
    and can do nothing with it. Title.
 
 ## 5. The acts
@@ -89,16 +89,16 @@ the first time every lampwing turns to her. **Boss: a great lampwing.** When the
 wakes under its stone carving of a moth, its oldest friend. It pushes the root back and gives her a thorn blade. Dun,
 who has never seen anything give, noses at the open heart, puzzled. From the summit she sees the mountain's pale glow.
 
-**Night 2, the orchards.** Burrbacks feed grey cases to a mouth in the ground. A root slides past Vesper's wing
+**Night 2, the orchards.** Burrbacks feed grey cases to a mouth in the ground. A root slides past Umber's wing
 without seeing her. In the cellar, cases hang in rows like fruit put by for winter. Above, Dun heads for the den of a
-vixen, one of the last animals awake, and Vesper blocks the way. **Boss: Dun.** Dun pins her. Sorrel snatches her
-glints and darts off blazing; the lampwings swing to him, and Dun follows their lamps. The vixen runs, and Vesper
+vixen, one of the last animals awake, and Umber blocks the way. **Boss: Dun.** Dun pins her. Sorrel snatches her
+glints and darts off blazing; the lampwings swing to him, and Dun follows their lamps. The vixen runs, and Umber
 learns to dash chasing her brother.
 
 **Night 3, the firebreak.** A ring of ash the root can't cross, a fire on a pole, and **Tallow**, burned hands, forty
 years awake. Tallies cover his walls under one word, *EATEN*. The first is circled, under a photo of a smiling woman
 holding up a jar. **Boss: a tower-thick root** bores up under the ash for Tallow, the only eater awake for miles. His
-fire draws moths until they drop, Sorrel among them. Vesper fights unseen until she gathers every glint and blazes, a
+fire draws moths until they drop, Sorrel among them. Umber fights unseen until she gathers every glint and blazes, a
 nearer light than the fire, and Sorrel turns to her out of the flame. Tallow sets a coal in a drilled black seed and
 holds it out: the first gift anyone has given her. Item text: *"It wants everything. Carry it carefully."*
 
@@ -116,16 +116,16 @@ dishes each hold a dead grey cloud: its failed siblings. Item text: *"Eggs that 
   Mouth's oldest stalk, worn smooth, runs into her case.
 - In the middle, a dish: grey, cracked, its tubes dry, a handprint on the glass.
 
-Vesper touches the stalk, and the prologue's first frame returns, wider: the pale light is a cloud in this dish, the
+Umber touches the stalk, and the prologue's first frame returns, wider: the pale light is a cloud in this dish, the
 warm thing the woman's hand. Each miss in the ball game floods the cloud with static; rally after rally, the static
 stops. Then the woman turns off the lights and goes, the tubes run dry, and the static floods back.
 
-Pale light runs along every root on earth, and every bead on Vesper's map swells with one slow breath. **It has not
+Pale light runs along every root on earth, and every bead on Umber's map swells with one slow breath. **It has not
 been eating the world. It has been feeding it.** The beads she burned stay dark.
 
-Dun arrives with the vixen, caught at last, and lays her at the dish. Vesper sets down every glint she carries: the
+Dun arrives with the vixen, caught at last, and lays her at the dish. Umber sets down every glint she carries: the
 first gift it has had in forty years. The root drops the vixen, Dun's offering, for the moth's. Every root in the room
-turns toward Vesper, and her shape rises out of every wall. **It sees her, and through her, every moth.** The mountain
+turns toward Umber, and her shape rises out of every wall. **It sees her, and through her, every moth.** The mountain
 chases her down its own veins. She re-forms at the lantern at the old road's foot and leaves the coal on its step.
 
 ### The lowest point, Night 5: the Grove, overrun
@@ -135,13 +135,13 @@ roots climb toward next year's cocoons. **Boss: three mouths** that learn her: t
 waits where she will land, the third closes the path behind her.
 
 After, Sorrel finds a dancer hanging from a root in a case no bigger than a seed: alive, wings folded, still. Kept,
-not killed. He looks at Vesper across the scattered dance, and goes. She fades and re-forms at a lantern, alone.
+not killed. He looks at Umber across the scattered dance, and goes. She fades and re-forms at a lantern, alone.
 
 The mountain sends Dun to carry her to a case. Dun stands over her a long moment, then noses the spilled glints into a
-heap and lies across the lantern's door, facing out. From now on Dun waits at whichever lantern Vesper rests at, where
+heap and lies across the lantern's door, facing out. From now on Dun waits at whichever lantern Umber rests at, where
 moths fleeing other woods gather, a few more each night.
 
-Outside, a caterpillar on a frosted twig shivers and keeps failing to spin. Vesper wraps it and shivers with it until
+Outside, a caterpillar on a frosted twig shivers and keeps failing to spin. Umber wraps it and shivers with it until
 its silk holds. Warmed, it lets go and spins: the ending, small.
 
 ### Act III: the mountain moves (Nights 6–7)
@@ -152,7 +152,7 @@ with strangers round it; he drops, and the dance follows him down. Tallow is bur
 **Boss: Tallow.** She can barely hurt him; the fight is shielding the cases while Dun carries them clear. It ends when
 he burns one in front of her anyway: its slow breath stops, its bead goes dark, and his fire dies on its pole.
 
-From the roofs, the Grove's last lantern goes out far behind them. Then a river of gold crosses the sky to Vesper: the
+From the roofs, the Grove's last lantern goes out far behind them. Then a river of gold crosses the sky to Umber: the
 forest sending her every glint it has left, its heart going dark to do it. Below, Tallow walks up the old road into
 the mountain, empty-handed.
 
@@ -196,7 +196,7 @@ love, or had it only learned how to make the static stop?
 
 ## Editor's cuts
 
-- **Names: 7 → 6.** Kept Vesper, Sorrel, the Mouth, Dun, Tallow, the Grove. Cortical Labs left the dev note (the
+- **Names: 7 → 6.** Kept Umber, Sorrel, the Mouth, Dun, Tallow, the Grove. Cortical Labs left the dev note (the
   lineage itself stays). "Great glint" became "the forest's biggest glint"; "ember", "beacon", "dead torch" and "red
   feed light" went with the change notes. Glint, burrback and lampwing stay: they are the game's existing pickup and
   creatures.
