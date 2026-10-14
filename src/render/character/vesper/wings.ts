@@ -13,7 +13,19 @@
 import type { PlayerView } from '../../contract';
 import { clamp, lerp, noise1, pulse, sat, smoothstep } from '../hooded/math';
 import { Chain, type ChainSpec } from './chain';
-import { type Frame, J_BROW_A, J_CHEST, J_COLLAR, type Rig, S_CZ, S_D, S_DH, S_GROUND, YEARN } from './rig';
+import {
+  type Frame,
+  J_BROW_A,
+  J_CHEST,
+  J_COLLAR,
+  LAND,
+  type Rig,
+  S_CZ,
+  S_D,
+  S_DH,
+  S_GROUND,
+  YEARN,
+} from './rig';
 
 const DEG = Math.PI / 180;
 export const STRANDS = 5;
@@ -88,6 +100,13 @@ const ANT_STREAM = [
   [20, 28, 30, 27, 14, -4],
   [32, 42, 42, 34, 10, -14],
 ];
+
+/**
+ * Antennae while she stands and acts: how far acting may straighten them before it is eased off
+ * (`straight` rad / segment of curl; past it only `past` of the rest counts), how much arch they keep
+ * when lifted 45 degrees (`arch`), and their sway (rad / segment at the tip, standing and lifted).
+ */
+const ANT_ACT = { straight: -0.07, past: 0.3, arch: 0.05, sway: 0.018, swayLifted: 0.03 } as const;
 
 const ANTENNA_A: ChainSpec = {
   len: [7.6, 7.9, 8.2, 8.2, 8, 7.4],
@@ -344,6 +363,8 @@ export class Secondary {
         // Folding on the ground after a glide they stay lifted while the span draws in, then come
         // down behind her as the cape (left to the blend alone they droop flat along the grass).
         lift -= 36 * 4 * soar * (1 - soar) * lead * onGround * (1 - yearn);
+        // A great glint while she stands: half open and lifted into a V over her back (flat, a bow tie).
+        lift -= LAND.flourishRaise * onGround * rig.flourish * lead;
         // In the ball both wings wrap back over her spine and under: one shell.
         lift = lerp(lift, TUCKED[k]! - 10 * far, tuck);
         lift = lerp(lift, BEAT_UP[k]!, up);
@@ -374,8 +395,10 @@ export class Secondary {
         if (ck2 > 0) lift -= ck2 * (11 - 1.3 * k) * (1 - soar);
         else lift = lerp(lift, WRAP[k]! + 3 * far, sat(-ck2) * (1 - soar));
         lift += rig.shiver * 4.5 * Math.sin(clock * 34 + k * 1.3 + w * 2.1) * (1 - soar);
-        // A landing or a skid throws the hem out for a moment.
+        // A landing or a skid throws the hem out for a moment; a landing from a fall lifts the cape
+        // behind her as it catches the air (by how fast she came down) and lets it settle.
         lift -= clamp(rig.crouchPx, 0, 8) * 1.6 * (1 - k / STRANDS) * (1 - soar);
+        lift -= rig.landCatch * LAND.lift * (1 - 0.15 * k) * (1 - soar);
         // Hurt: they are thrown open by the blow.
         lift -= (rig.hurtK * (34 + 12 * far) + rig.hurtBlow * 30) * (1 - k * 0.1) * (1 - soar);
         c.lift = lift * DEG;
@@ -442,18 +465,36 @@ export class Secondary {
           rig.slashWhip +
           rig.antLift * (a === 0 ? 1 : 0.72)) *
         DEG;
-      // Acting: tipped toward a light they bow forward over her brow; drooping they curl down.
-      c.curl = 0.04 * run - 0.05 * glide + 0.07 * fl + 0.46 * tuck + rig.antCurl * (a === 0 ? 1 : 0.78);
+      // Acting: tipped toward a light they bow forward over her brow; drooping they curl down. Their
+      // rest shape bends ~22 degrees a segment and -0.4 here undoes it all (two rods: playtest 6, the
+      // notice and the kindle): what acting asks to straighten is eased off past `ANT_ACT.straight`,
+      // and the more they are lifted the more of their own arch they keep (`arch`).
+      const lifted = sat(Math.abs(rig.antLift) / 45) * (1 - run);
+      const ac = rig.antCurl * (a === 0 ? 1 : 0.78);
+      const st = ANT_ACT.straight;
+      c.curl =
+        0.04 * run -
+        0.05 * glide +
+        0.07 * fl +
+        0.46 * tuck +
+        (ac < st ? st + (ac - st) * ANT_ACT.past : ac) +
+        ANT_ACT.arch * lifted;
       c.scale = 1 - 0.04 * tuck;
       c.stiff = 1 + 1.2 * dash + 7 * tuck;
       c.dragK = (1 - 0.3 * dash) * (1 - 0.7 * tuck);
-      // The S, and a slow wave that travels out along it (each antenna on its own time).
+      // The S, and a slow wave that travels out along it (each antenna on its own time). Out of the run
+      // a slower, smaller sway of their own, more of it while she acts (lifted, they are listening).
       const as = ANT_STREAM[a]!;
-      for (let i = 1; i < c.n; i++)
+      const sway = (1 - run) * (1 - tuck) * (1 - rig.soar) * (ANT_ACT.sway + ANT_ACT.swayLifted * lifted);
+      for (let i = 1; i < c.n; i++) {
+        const t = i / (c.n - 1);
         c.extra[i] =
-          run *
-          (1 - tuck) *
-          (as[i - 1]! * DEG + 0.1 * Math.sin(this.ripple * 0.55 - 0.9 * i + a * 1.7) * (i / (c.n - 1)));
+          run * (1 - tuck) * (as[i - 1]! * DEG + 0.1 * Math.sin(this.ripple * 0.55 - 0.9 * i + a * 1.7) * t) +
+          sway *
+            t *
+            (Math.sin(clock * (1.7 + 0.31 * a) - 0.8 * i + a * 2.3) +
+              0.45 * Math.sin(clock * (0.73 + 0.13 * a) - 0.5 * i + 1.1 + a));
+      }
       c.floorY = Number.POSITIVE_INFINITY;
       c.wallSide = wallSide;
       c.wallX = wallX;

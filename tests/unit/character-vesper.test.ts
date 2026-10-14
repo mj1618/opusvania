@@ -417,6 +417,75 @@ describe('vesper rig', () => {
     }
   });
 
+  it('a landing is a catch of air, not a sail: out of a glide the span draws in at once; a long fall lifts the cape and lets it settle', () => {
+    const span = (sec: Secondary): number => {
+      let x0 = Number.POSITIVE_INFINITY;
+      let x1 = Number.NEGATIVE_INFINITY;
+      for (const w of sec.wings)
+        for (const c of w.strands)
+          for (let i = 0; i < c.n; i++) {
+            x0 = Math.min(x0, c.rx[i] ?? 0);
+            x1 = Math.max(x1, c.rx[i] ?? 0);
+          }
+      return x1 - x0;
+    };
+    const stage = () => {
+      const rig = new Rig();
+      const sec = new Secondary();
+      let clock = 0;
+      const step = (over: Partial<PlayerView>, ev: SimEvent[] = []): void => {
+        const p = view(over);
+        rig.update(DT, clock, p, ev);
+        if (rig.sig.spawned) sec.reset();
+        sec.update(DT, clock, rig, rig.frame, p);
+        clock += DT;
+      };
+      return { rig, sec, step };
+    };
+    // Out of a glide: wide open in the air, under ~her height (84 px) within three frames of the touch.
+    {
+      const { rig, sec, step } = stage();
+      step({ motion: 'fall', vy: 12, grounded: false }, [{ type: 'spawn', x: 1000, y: 1280 }]);
+      step({ motion: 'glide', vy: 4.8, vx: 10, grounded: false }, [
+        { type: 'glideStart', x: 1000, y: 1200, vy: 12 },
+      ]);
+      for (let i = 0; i < 90; i++) step({ motion: 'glide', vy: 4.8, vx: 10, grounded: false });
+      expect(span(sec)).toBeGreaterThan(150);
+      const land: SimEvent[] = [
+        { type: 'glideEnd', x: 1000, y: 1280, reason: 'land' },
+        { type: 'land', x: 1000, y: 1280, vy: 4.8, fallPx: 5, hard: false },
+      ];
+      const spans: number[] = [];
+      for (let i = 0; i < 30; i++) {
+        step({ motion: i < 3 ? 'run' : 'idle', vx: i < 3 ? 4 : 0 }, i === 0 ? land : []);
+        spans.push(span(sec));
+      }
+      expect(Math.max(...spans.slice(3))).toBeLessThan(90);
+      expect(spans[12] ?? 999).toBeLessThan(60);
+      expect(rig.soar).toBeLessThan(0.05);
+    }
+    // A long fall (no glide): the half-open tries shut, the cape lifts (the catch) and settles; never a sail.
+    {
+      const { rig, sec, step } = stage();
+      step({ motion: 'fall', vy: 21, grounded: false }, [{ type: 'spawn', x: 1000, y: 300 }]);
+      for (let i = 0; i < 45; i++) step({ motion: 'fall', vy: 21.3, grounded: false });
+      let peak = 0;
+      let widest = 0;
+      for (let i = 0; i < 40; i++) {
+        step(
+          { motion: 'idle' },
+          i === 0 ? [{ type: 'land', x: 1000, y: 1280, vy: 21.3, fallPx: 980, hard: true }] : [],
+        );
+        peak = Math.max(peak, rig.landCatch);
+        widest = Math.max(widest, span(sec));
+      }
+      expect(peak).toBeGreaterThan(0.9);
+      expect(widest).toBeLessThan(92);
+      expect(rig.landCatch).toBeLessThan(0.05);
+      expect(rig.yearn).toBeLessThan(0.01);
+    }
+  });
+
   it("slash: three different strokes, each from the last one's follow-through; the cut holds through hitstop; back to rest", () => {
     const rig = new Rig();
     let clock = 0;

@@ -50,6 +50,13 @@ const SLASH_LOOK = {
   hidden: false,
 };
 
+/**
+ * Her silhouette edge (playtest 6: hard to find on the bank's dark rock, the shaft's foot, the shrine):
+ * `px` device px of `color` (darker than any of her tones; never black) round the whole figure, under
+ * it, so it shows only where she meets the background (`Painter.outline`). `hidden` for capture tools.
+ */
+const EDGE = { px: 1.5, color: [0.035, 0.022, 0.055] as const, alpha: 0.95, hidden: false };
+
 export class VesperCharacter implements CharacterSkin {
   private readonly painter = new Painter();
   private readonly rig = new Rig();
@@ -504,7 +511,11 @@ export class VesperCharacter implements CharacterSkin {
     p.alphaK = bodyA;
     p.glowK = whole;
     p.dimK = rig.hurtDim;
+    p.outline = EDGE.hidden ? 0 : EDGE.px;
+    p.outlineColor = EDGE.color;
+    p.outlineAlpha = EDGE.alpha;
     drawVesper(p, rig.frame, view, clock);
+    p.outline = 0;
     p.dimK = 0;
     p.alphaK = 1;
     p.glowK = 1;
@@ -591,6 +602,53 @@ export class VesperCharacter implements CharacterSkin {
           offerX: vesperLink.offerX,
           offerY: vesperLink.offerY,
         };
+      },
+      /**
+       * For capture tools: the wings' extent in world px (every strand node; the membrane is drawn a
+       * little past them) next to the body's (every joint), and the soar / flare the rig reads.
+       */
+      get wingBox(): Record<string, number> {
+        let x0 = 1e9;
+        let x1 = -1e9;
+        let y0 = 1e9;
+        let y1 = -1e9;
+        for (const w of self.sec.wings)
+          for (const c of w.strands)
+            for (let i = 0; i < c.n; i++) {
+              x0 = Math.min(x0, c.rx[i]!);
+              x1 = Math.max(x1, c.rx[i]!);
+              y0 = Math.min(y0, c.ry[i]!);
+              y1 = Math.max(y1, c.ry[i]!);
+            }
+        const j = self.rig.frame.j;
+        let bx0 = 1e9;
+        let bx1 = -1e9;
+        let by0 = 1e9;
+        let by1 = -1e9;
+        for (let i = 0; i < j.length; i += 2) {
+          bx0 = Math.min(bx0, j[i]!);
+          bx1 = Math.max(bx1, j[i]!);
+          by0 = Math.min(by0, j[i + 1]!);
+          by1 = Math.max(by1, j[i + 1]!);
+        }
+        return {
+          w: x1 - x0,
+          h: y1 - y0,
+          top: y0,
+          bodyW: bx1 - bx0,
+          bodyH: by1 - by0,
+          bodyTop: by0,
+          soar: self.rig.soar,
+          flare: self.rig.flare,
+          crouch: self.rig.crouchPx,
+          yearn: self.rig.yearn,
+          landCatch: self.rig.landCatch,
+          verts: self.painter.vertexCount,
+        };
+      },
+      /** For capture tools and tuning: her silhouette edge (`px`, `alpha`, `hidden`). */
+      get edge(): typeof EDGE {
+        return EDGE;
       },
       /** For capture tools: her mesh (walk up from it to hide what stands in front of her). */
       get mesh(): unknown {

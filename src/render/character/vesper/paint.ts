@@ -50,6 +50,9 @@ export interface Shade {
 const FLOATS = 13;
 const MAX_VERTS = 20000;
 const MAX_INDICES = 100000;
+/** The silhouette underlay (`outline`): its own vertex and index space, merged in front at `end`. */
+const MAX_UNDER_VERTS = 12000;
+const MAX_UNDER_INDICES = 60000;
 
 const VERT = `#version 300 es
 in vec2 aPosition;
@@ -147,6 +150,15 @@ export class Painter {
   dimTo = 0.6;
   ghost: RGB | null = null;
   ghostAlpha = 0;
+  /**
+   * The silhouette edge. While `outline` > 0, every opaque solid shape (ribbon, shape, ellipse, grid)
+   * is also drawn grown by `outline` device px in `outlineColor` into an underlay that ends up BEHIND
+   * everything drawn this frame: only where the figure meets the background does it show, as a thin
+   * edge darker than any of her tones. A darkening, never a light: no rim, no glow, no halo.
+   */
+  outline = 0;
+  outlineColor: RGB = [0.04, 0.025, 0.06];
+  outlineAlpha = 1;
 
   /** Scratch polylines for callers: fill px/py/pw (and optionally pc) then call ribbon/shape. */
   readonly px = new Float32Array(256);
@@ -159,8 +171,16 @@ export class Painter {
   /** Optional per-sample core colours (r,g,b triples). */
   readonly pc = new Float32Array(256 * 3);
 
-  private readonly verts = new Float32Array(MAX_VERTS * FLOATS);
-  private readonly indices = new Uint16Array(MAX_INDICES);
+  private readonly verts = new Float32Array((MAX_VERTS + MAX_UNDER_VERTS) * FLOATS);
+  private readonly indices = new Uint16Array(MAX_INDICES + MAX_UNDER_INDICES);
+  private readonly uVerts = new Float32Array(MAX_UNDER_VERTS * FLOATS);
+  private readonly uIndices = new Uint16Array(MAX_UNDER_INDICES);
+  private readonly mainIdx = new Uint16Array(MAX_INDICES);
+  private nu = 0;
+  private niu = 0;
+  /** Set while a shape is being emitted into the underlay (see `outline`); `fw0` = the true feather. */
+  private under = false;
+  private fw0 = 0.5;
   private readonly vbuf: Buffer;
   private readonly ibuf: Buffer;
   private nv = 0;
@@ -199,10 +219,55 @@ export class Painter {
   begin(): void {
     this.nv = 0;
     this.ni = 0;
+    this.nu = 0;
+    this.niu = 0;
+  }
+
+  /**
+   * Whether the shape about to be drawn also goes into the silhouette underlay: an opaque solid
+   * while `outline` is on. The caller then draws it once with `under` set and the feather grown by
+   * the outline (`beginUnder` / `endUnder`), then as usual.
+   */
+  private wantsUnder(s: Shade): boolean {
+    return (
+      this.outline > 0 &&
+      !this.under &&
+      !this.ghost &&
+      (s.alpha ?? 1) >= 0.95 &&
+      this.nu < MAX_UNDER_VERTS - 2048 &&
+      this.niu < MAX_UNDER_INDICES - 8192
+    );
+  }
+
+  private beginUnder(): void {
+    this.under = true;
+    this.fw0 = this.fw;
+    this.fw = this.fw * (1 + this.outline);
+  }
+
+  private endUnder(): void {
+    this.fw = this.fw0;
+    this.under = false;
   }
 
   /** Uploads what was drawn since `begin`. `cx, cy` centre the mesh's bounds. */
   end(cx: number, cy: number): void {
+    // The silhouette underlay goes in front of everything else in draw order (so behind it on
+    // screen): its vertices after the frame's, its triangles first.
+    if (this.niu > 0) {
+      const nu = this.nu;
+      this.verts.set(this.uVerts.subarray(0, nu * FLOATS), this.nv * FLOATS);
+      const ni = this.ni;
+      this.mainIdx.set(this.indices.subarray(0, ni));
+      const off = this.nv;
+      const niu = this.niu;
+      const idx = this.indices;
+      const ui = this.uIndices;
+      for (let i = 0; i < niu; i++) idx[i] = ui[i]! + off;
+      idx.set(this.mainIdx.subarray(0, ni), niu);
+      this.nv += nu;
+      this.ni += niu;
+    }
     // Degenerate triangles for the unused tail of the index buffer.
     if (this.lastNi > this.ni) this.indices.fill(0, this.ni, this.lastNi);
     this.lastNi = this.ni;
@@ -238,6 +303,28 @@ export class Painter {
     cov: number,
     mode: number,
   ): number {
+    if (this.under) {
+      // The underlay: one flat dark colour, no rim, and the coverage scaled so that it is whole out
+      // to `outline` device px past the edge and feathers over the last one (the feather vertex,
+      // cov 0, sits at the grown `fw`).
+      const u = this.uVerts;
+      const c = this.outlineColor;
+      let q = this.nu * FLOATS;
+      u[q++] = x;
+      u[q++] = y;
+      u[q++] = c[0]!;
+      u[q++] = c[1]!;
+      u[q++] = c[2]!;
+      u[q++] = a * this.outlineAlpha * this.alphaK * this.alphaK;
+      u[q++] = 0;
+      u[q++] = 0;
+      u[q++] = 0;
+      u[q++] = 0;
+      u[q++] = 0;
+      u[q++] = cov > 0 ? 1 + this.outline : 0;
+      u[q] = SOLID;
+      return this.nu++;
+    }
     const v = this.verts;
     // Global dissolve: solid and soft shapes by `alphaK`, lights by `glowK`.
     a *= mode === GLOW ? this.glowK : mode === GHOST ? 1 : this.alphaK;
@@ -267,6 +354,13 @@ export class Painter {
   }
 
   private tri(a: number, b: number, c: number): void {
+    if (this.under) {
+      const u = this.uIndices;
+      u[this.niu++] = a;
+      u[this.niu++] = b;
+      u[this.niu++] = c;
+      return;
+    }
     const i = this.indices;
     i[this.ni++] = a;
     i[this.ni++] = b;
@@ -325,6 +419,11 @@ export class Painter {
    */
   ribbon(n: number, s: Shade, cap0 = false, cap1 = false, perSample = false): void {
     if (n < 2 || this.full()) return;
+    if (this.wantsUnder(s)) {
+      this.beginUnder();
+      this.ribbon(n, s, cap0, cap1, perSample);
+      this.endUnder();
+    }
     const { px, py, pw, pc, fw } = this;
     const ghost = this.ghost;
     const mode = ghost ? GHOST : SOLID;
@@ -546,6 +645,11 @@ export class Painter {
    */
   shape(n: number, cx: number, cy: number, s: Shade, gx0 = 0, gy0 = 0, gx1 = 0, gy1 = 0): void {
     if (n < 3 || this.full()) return;
+    if (this.wantsUnder(s)) {
+      this.beginUnder();
+      this.shape(n, cx, cy, s, gx0, gy0, gx1, gy1);
+      this.endUnder();
+    }
     const { px, py, fw } = this;
     const ghost = this.ghost;
     const mode = ghost ? GHOST : SOLID;
@@ -637,6 +741,11 @@ export class Painter {
    */
   grid(cols: number, rows: number, s: Shade, bandPx: number): void {
     if (cols < 3 || rows < 3 || this.full()) return;
+    if (this.wantsUnder(s)) {
+      this.beginUnder();
+      this.grid(cols, rows, s, bandPx);
+      this.endUnder();
+    }
     const { gx, gy, gc, fw } = this;
     const ghost = this.ghost;
     const mode = ghost ? GHOST : SOLID;

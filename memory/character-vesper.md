@@ -13,6 +13,17 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
 - **Shading is crisp and flat** (owner: highlights were "annoying, washed out and blurry"):
   `painter.coolK = 0`, `keyK = 0.22`, `l2k = 0`. No rim light, no halo behind body or head, no glow
   on the hem band, no additive haze. Lantern tips a 7 px bloom; eye-spots flat rings.
+- **Silhouette edge** (round 23, playtest 6 "hard to find on the bank / shaft foot / shrine"): `EDGE` in
+  index.ts -> `Painter.outline`: every opaque solid (ribbon, shape, ellipse, grid) is also emitted grown by
+  1.5 DEVICE px in a near-black plum (0x090614-ish, alpha 0.95) into an underlay that `end()` puts first in
+  draw order, so it shows only where she meets the background (no internal lines). A darkening, not a rim.
+  Constant in device px: crisp 1.5 px at play zoom, a hairline at 3x. Cost ~+4.3k vertices, ~0 ms. Under
+  `alphaK` it fades as alphaK^2 (dissolves). `__vesper.edge.hidden / px` for captures. Measured (thin bands:
+  |mean 1-3 px outside - mean 0-2 px inside| per 12 px cell; 5-frame averages, same frames off/on): shaft
+  stand 42 -> 53 (p10 9 -> 17), walk 38 -> 48; shrine stand 20 -> 24 (cells < 10: 32% -> 27%), walk 28 -> 36;
+  bank walk 20 -> 23; bank STANDING unchanged (22): there the rock behind her legs is darker than she is
+  and a dark edge cannot help (lost cells went up on some runs). 1 px was within noise; 1.6 px is the
+  measured gain. Script and sheets: `shots/vesper/r23/` (`edge-contrast.txt`, `edge-spots-*`).
 - **Face** = a smooth round heart of pale fur with an opaque dark plum hairline under it (6% larger)
   and two big gold eyes (dark amber rim, bright core that drifts with the gaze, two catchlights, a
   lid). Nothing else: no nose, mouth, brows, pupils. Nothing may span the brow (a band or shadow there
@@ -161,9 +172,20 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
 - **First glide of a run** (`firstOpen`, 0.75 s): soar rate 42, catch spring + 1.6, wings 14 degrees
   higher and 6% longer for the beat, body lifted 2.6 px with the chest open, eyes wide, the hem puff.
   24 degrees + a catch kick of 2.6 stood the wings up like sails for 20 frames.
-- Landing out of a glide: no squash (the sim's land is never `hard`); `flare` holds the spread ~6
-  frames, then the wings stay lifted while the span draws in (`36 x 4 soar (1 - soar)` on the
-  ground) and come down behind her. Without that they drooped flat along the grass (a bow tie).
+- Landing out of a glide (round 23; playtest 6: "her wings flare larger than she is on every landing"):
+  no squash; the span starts drawing in as the ground comes (glide soar target `1 - LAND.reachFold x reach`),
+  and on the touch it folds at `LAND.fold` 24/s (it used to hold full spread for 6 frames: 177 px on the
+  grass, then 8 more frames over 100). Measured span: 104 / 96 / 76 / 43 px on frames 0-3 (was 165-177
+  through frame 5). The wings stay lifted while the span draws in (`36 x 4 soar (1 - soar)` + `20 flare`) and
+  come down behind her; without that they droop flat along the grass (a bow tie).
+- **Landing from a fall** (`LAND`, `rig.landCatch`): the cape lifts behind her and settles, by `fallPx` (NOT
+  vy: every drop over ~160 px lands at max fall speed 21.3): `((fallPx - 48) / 592)^0.7` x 26 degrees, peak
+  0.07 s, gone by ~0.4 s. The yearn's half-open tries shut at 34/s on the ground (16 before). Span after a
+  980 px fall: 79 / 76 / 36 px (was 84 / 83 / 64 / 74 / 81). A unit test pins both.
+- **A great glint while standing** (`flourish`; this, collected just after a landing, was the "flare on
+  every landing" in playtest 6's frames 06 / 09): soar x `LAND.flourishGround` 0.4 on the ground and lifted
+  `flourishRaise` 34 degrees into a V outside the soar blend: ~90 px wide (was 0.86 soar, ~170 px, a sail).
+  Half open and flat it is a bow tie; the raise has to be outside the soar lerp or it is scaled by soar.
 
 ## Thorn slash (sim: memory/combat.md; `STROKES`, `CUT`, `SNAP`, `BRACE`, `CLANG` in rig.ts; look in `slashfx/crescent.ts`)
 Round 19: ONE crescent on Hollow Knight's nail-slash principles. Round 20: a line, not a lid. **Round 21
@@ -296,8 +318,7 @@ scratch")**: weight without glare: a filled leading WEDGE while it is cream, a d
   glide's wing drift and the ordinary blinks for as long as it lasts. A state already ended skips
   the ceremony. Works from either side.
 - **Notice** (`lanternNotice` / `lampNotice`, `ACT.notice` 1.3 s; not scaled by the stand, so it
-  shows at a run): antennae tip forward (20 degrees standing, 38 running: more straightens them into
-  rods when she stands), chin up a little, eyes wide, gaze to it; the head follows the glass as she
+  shows at a run): antennae tip forward (20 degrees standing, 38 running), chin up a little, eyes wide, gaze to it; the head follows the glass as she
   passes (`HYAW` 1 -> -0.6 by how far ahead it is, `lookS` quickened to 12) and lets go. Ground
   only (in the air it turned her head away from the jump for a whole wall kick), off while kindling
   or resting.
@@ -305,8 +326,12 @@ scratch")**: weight without glare: a filled leading WEDGE while it is cream, a d
   `scene.lamps`, the goal renderer's `beads` order), kindle flag `kindling` or `kindlingLamp`, state
   from `goal.lamps`; `lampKindle / lampRefuse / lampRest` share the lantern handlers.
 - Antennae gotcha: their rest shape bends back ~22 degrees per segment, so `antCurl` -0.4 exactly
-  straightens them (two rods: rabbit ears). Keep it under ~-0.2 for an arc. The head's pitch also
-  turns them (chin up = antennae back), so a "forward" lift has to beat that first.
+  straightens them (two rods: rabbit ears). Even -0.13..-0.2 (kindle, glance at the ember) read as rods
+  (playtest 6). Since round 23 wings.ts eases any straightening past `ANT_ACT.straight` -0.07 to 30%, adds
+  back `arch` 0.05 rad / segment when lifted 45 degrees, and gives them a slow sway out of the run
+  (0.018 rad / segment at the tip standing, + 0.03 lifted; two sines per antenna, render clock). So the
+  `antC` numbers in `actPose` are now mostly a direction, not a shape. The head's pitch also turns them
+  (chin up = antennae back), so a "forward" lift has to beat that first.
 - Not solved: the lantern's stem stands in front of her wherever the player stops inside the 48 px
   trigger, so the offering hand is often half behind it; the hand is a 4 px oval (no palm to turn
   up); a blow while kindling / resting is unit-tested, not looked at. Sheets: `shots/vesper/goal/`.
@@ -385,7 +410,10 @@ running on a light she is not at), `heartWait`. Weights for tools: `__vesper.act
 - Sheets of round 18 (fall / first glide / landing / notice / lamp kindle / wall kicks / start-stop,
   1:1, zoom 3 and game size, `base/` = before): `shots/vesper/r18/`. Foot slide is measured, not
   looked at: drive `Rig` with the sim's accel profile and difference the toe joints while y < 1.2.
-- Where she is still hard to find at game size (ground route, running): against the big dark fallen
-  log and trunk bases of the left zone (x ~900-1400) and the dark rock shelf of the right zone
-  (x ~3300-3600): only face, eyes and lanterns carry her there. Fine in the centre zone and wherever
-  the mist band is behind her.
+- Where she is still hard to find at game size: wherever the ground behind her is DARKER than she is
+  (the bank's rock behind her legs, x ~0-400): the round-23 edge only helps against lighter ground. Without
+  brightening her that is the scene's / post's side (a paler stage behind the walk line).
+- Capture kit of round 23 (`shots/vesper/r23/scripts/`): `tool.js` = `__vcap` (start with enemies moved off,
+  screen pos, crops, silhouette, the edge metric), `land.js` + `cases*.js` + `runland.sh` (landings: span per
+  frame from `__vesper.wingBox`, which reports wing / body extents, soar, flare, yearn, landCatch, verts),
+  `act.js` (notice / kindle). Use a `?manual&nopickups` page for landings (glints otherwise fly in and flare).

@@ -125,6 +125,29 @@ export const YEARN = {
   /** The first glide of a run: the open is a beat of its own, this long (s). */
   first: 0.75,
 } as const;
+/**
+ * Touching down (playtest 6: "her wings flare open on every landing, larger than she is"). A landing is
+ * a small catch of air, never a sail: the cape lifts behind her by how far she fell and settles. A fall
+ * of `fall0 .. fall1` px maps to 0..1 (to the power `curve`, so a ledge drop still shows it) of `lift`
+ * degrees (upper edge; less toward the hem), peaking `peak` s after the touch (the speed of every drop
+ * over ~160 px is the same: max fall). Out of a glide the spread draws in at `fold` /s (it held full for 6 frames and
+ * stood 170 px wide on the grass) while the wings stay lifted, and the last `reachFold` of the span is let go
+ * as the ground comes (`reach`); a fall's half-open tries shut at `shut` /s.
+ * A great glint's wing-opening is `flourishGround` of the air one while she stands.
+ */
+export const LAND = {
+  fall0: 48,
+  fall1: 640,
+  curve: 0.7,
+  lift: 26,
+  peak: 0.07,
+  fold: 24,
+  reachFold: 0.4,
+  shut: 34,
+  flourishGround: 0.4,
+  /** ... raised into a V by this many more degrees (half open and flat they read as a bow tie). */
+  flourishRaise: 34,
+} as const;
 /** The wall kick: the turn away from the bark is quick, the pushing leg is left long behind for this long (s). */
 export const KICK = { turn: 0.13, push: 0.2 } as const;
 
@@ -1260,6 +1283,10 @@ export class Rig {
    */
   yearn = 0;
   yearnPh = 0;
+  /** The cape's catch of air on a landing (0..1 envelope, `LAND`), and its strength and clock. */
+  landCatch = 0;
+  private landAmp = 0;
+  private landT = 9;
   firstOpen = 0;
   private fallT = 0;
   private firstT = 9;
@@ -1376,6 +1403,8 @@ export class Rig {
           sig.landHard = e.hard;
           this.squash.v -= clamp(e.vy * 0.16, 0.5, 3.6);
           this.crouch.v += clamp(e.vy * 11, 26, 230);
+          this.landT = 0;
+          this.landAmp = sat((e.fallPx - LAND.fall0) / (LAND.fall1 - LAND.fall0)) ** LAND.curve;
           break;
         case 'glideStart': {
           // The wings snap open and catch the air: how hard depends on the fall they have to stop.
@@ -1601,6 +1630,8 @@ export class Rig {
       this.wGlide = 0;
       this.soar = 0;
       this.flare = 0;
+      this.landT = 9;
+      this.landCatch = 0;
       this.flourishT = 9;
       this.flourish = 0;
       this.slashT = 9;
@@ -2027,13 +2058,19 @@ export class Rig {
     this.lastVy = p.vy;
     this.wGlide += ((glide ? 1 : 0) - this.wGlide) * approach(glide ? 13 : p.grounded || dash ? 30 : 8, dt);
     this.flare *= Math.exp(-(p.grounded ? 6.5 : 12) * dt);
-    const spreadT = glide || this.flare > 0.5 ? 1 : 0;
+    // Touching down out of a glide the span draws in at once (the lift in wings.ts keeps them up meanwhile).
+    // As the ground comes (`reach`, last frame's) the span already starts to draw in: she lands under
+    // wings that are closing, not open.
+    const spreadT = glide ? 1 - LAND.reachFold * this.reach : 0;
     // The first glide of a run: they snap to the full spread, overshoot upward and settle (`firstOpen`).
     const fo = this.firstT / YEARN.first;
     this.firstOpen = fo < 1 ? quintic(fo / 0.16) * (1 - quintic((fo - 0.3) / 0.7)) : 0;
     this.soar +=
       (spreadT - this.soar) *
-      approach(spreadT ? (fo < 0.4 ? 42 : 25) : this.flare > 0.05 ? 11 : this.soarOut, dt);
+      approach(spreadT ? (fo < 0.4 ? 42 : 25) : this.flare > 0.05 ? LAND.fold : this.soarOut, dt);
+    this.landT += dt;
+    const lu = this.landT / LAND.peak;
+    this.landCatch = lu < 8 ? this.landAmp * lu * Math.exp(1 - lu) : 0;
     // A fall she is not gliding: the wings want to open. They half unfurl, catch the air, are blown
     // shut and try again, sooner and wider the longer she falls (the tries themselves are in wings.ts).
     const falling =
@@ -2049,14 +2086,20 @@ export class Rig {
     this.fallT = falling && !this.glidedAir ? this.fallT + dt : 0;
     const yearnT =
       smoothstep(YEARN.after, YEARN.full, this.fallT) * (this.glided ? YEARN.known : 1) * (1 - this.dive);
-    this.yearn += (yearnT - this.yearn) * approach(yearnT > this.yearn ? 9 : glide ? 30 : 16, dt);
+    this.yearn +=
+      (yearnT - this.yearn) *
+      approach(yearnT > this.yearn ? 9 : glide ? 30 : p.grounded ? LAND.shut : 16, dt);
     this.yearnPh += dt * lerp(YEARN.hz0, YEARN.hz1, this.yearn) * (0.9 + 0.2 * noise1(clock * 0.9, 137));
     this.soar = Math.max(this.soar, YEARN.base * this.yearn * (1 - this.spinW));
     // A great glint opens them the same way for a moment, wherever she is.
     this.flourishT += dt;
     const fu = this.flourishT / 0.85;
     this.flourish = fu < 1 && !dash && !wall ? quintic(fu / 0.22) * (1 - quintic((fu - 0.5) / 0.5)) : 0;
-    this.soar = Math.max(this.soar, 0.86 * this.flourish * (1 - this.spinW));
+    const onGround = this.frame.s[S_GROUND]!;
+    this.soar = Math.max(
+      this.soar,
+      0.86 * this.flourish * (1 - this.spinW) * (1 - (1 - LAND.flourishGround) * onGround),
+    );
     // The ending: they unfurl slowly to the full glide spread, standing.
     const unfurl = this.endOn ? quintic((this.endT - ACT.unfurlAt) / ACT.unfurl) : 0;
     this.soar = Math.max(this.soar, unfurl * this.endW, this.waitOpen * (1 - this.spinW));
