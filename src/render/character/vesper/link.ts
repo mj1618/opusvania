@@ -12,7 +12,8 @@ import type { GoalState } from '../../../sim/state';
  * mouth: it can only be held); `look` past it, out ahead; `shake` the wings out like a cape;
  * `fold` a wing folded over something beside (another moth, a case, a held glint); `huddle` down in
  * the cold, wings stuck shut, shivering, eyes dim; `tap` a wingtip touched to another's; `lookUp`
- * the head lifted to something high.
+ * the head lifted to something high; `wings` the wings' habitual set (shut / half open); `give` both
+ * hands held out, offering.
  */
 export interface CineCues {
   hold: number;
@@ -22,10 +23,14 @@ export interface CineCues {
   huddle: number;
   tap: number;
   lookUp: number;
+  /** -1 wings held shut round her .. 1 wings held half open (a body's habit, all the time). */
+  wings: number;
+  /** 0..1 both hands held out, giving (what she holds is offered to the one in front of her). */
+  give: number;
 }
 
 export function newCues(): CineCues {
-  return { hold: 0, look: 0, shake: 0, fold: 0, huddle: 0, tap: 0, lookUp: 0 };
+  return { hold: 0, look: 0, shake: 0, fold: 0, huddle: 0, tap: 0, lookUp: 0, wings: 0, give: 0 };
 }
 
 export const vesperLink = {

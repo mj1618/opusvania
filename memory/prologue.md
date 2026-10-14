@@ -86,3 +86,30 @@ is in `src/render/prologue/script.ts` (beats, staging, Sorrel's course).
 - On the summit the twig is dark on the dark canopy; only its moonlit top edge separates it.
 - The autopilot places her at the start of each of his legs (small cuts in captures) and on the moss after the dive.
 - The item text is shown by the prologue (bottom left, fading at hand-over), not by a HUD item system.
+
+## Pass 3 (after the blind review, docs/story/reviews/prologue-v2-pass2.md)
+The review's diagnosis: every failed beat was acting at play scale. The fix is held close-ups (camera zoom) on every
+acting beat, and two siblings who cannot be confused.
+- **The siblings** (`looks.ts`): Sorrel lighter (ColorMatrix brightness 1.3, a warmer hue), 1.12x, wings habitually
+  half open (`CineCues.wings` +); Wing darker (0.76), 0.9x, wings held shut (`wings` -). Her look eases back to the
+  game's own over the wake, so the hand-over is seamless. Size is a pivot-scale of the stand-in layer about the feet.
+- **Hatching** at ~3-3.9x, each beat held: he looks up at the dance, waits under her cocoon, she lies in frost and
+  tries to open her wings (a weak shake), he folds over her (~4 s), her eyes brighten (huddle eases off), her wings
+  open, the tap, she looks back at the fox. Beat length 26 s.
+- **The dance** (`dance.ts`, shared by the Grove and the summit): soft pale-gold rounded wings, no dark marks (two
+  dark marks read as owl eyes), a fading light trail per moth, the silver one swoops past Sorrel's face on F4.
+- **The hollow**: the fox's muzzle goes into the water (rings), twice; the hollow's rim is soft rolled lips and
+  curling tendrils (never teeth: the de-mouthing rule); a tapered swaying root tip rises to her face and sinks; the
+  case (`case.ts`) is cold bone-white with the fox asleep inside greying from warm to grey; she lands ON the case in
+  his fold; the moths' warm lights are kept low there so the case reads cold. The camera follows a pulse up the stalk
+  to the lamp (no cut). In the hide Sorrel pulls her in and folds over her.
+- **The summit** follows the shot list: he looks up, she looks down at the case's point (brighter, with a bead of light
+  running along its line to the root's front) then out; the silver moth circles him; he turns to go; SHE holds the
+  glint out (`give` cue); he folds her hands back over it; the tap; he goes without looking back; she watches; alone
+  she unfolds her hands and the glint lights her, held ~2.7 s; then the title (~4 s). Camera on the plate (`CAM`):
+  wide, in to 1.9x for the offer/fold/tap, out to see him go, in on her alone. 16.5 s.
+- **Play** framed at ~1.4x (closer for the glint, the bumps and the sneeze; eased, not snapped).
+- **After the hand-over** `remains.ts` keeps the case breathing by the pool, the root thread and the two husks (render
+  only, owned by the stage).
+- Beat ids are unchanged (breath, hatch, play, hollow, summit, wake); lengths changed: hatch 26, hollow 43, summit 16.5,
+  wake 13 (the audio agent scores by beat name).

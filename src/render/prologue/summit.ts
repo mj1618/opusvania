@@ -13,7 +13,7 @@
  * into the dance; she watches him there, alone, the glint's light leaking from under her wing.
  * `t` is the summit's own clock; the title beat keeps the last frame (`t` > SUMMIT end).
  */
-import { ColorMatrixFilter, Container, Graphics } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { createPlayer } from '../../sim/player/player';
 import type { Scene } from '../../sim/scene';
 import type { PlayerState } from '../../sim/state';
@@ -26,9 +26,11 @@ import { MOUNTAIN } from '../world/bodies';
 import type { Composer } from '../world/compose';
 import { VIEW_H, VIEW_W } from '../world/layer';
 import { glow } from '../world/paint';
+import { DanceRing } from './dance';
+import { LOOK, sorrelFilter, wingFilter } from './looks';
 import { SUMMIT } from './script';
 import { drawFlightWings } from './sorrel';
-import { envelope, window01 } from './track';
+import { envelope, Track, window01 } from './track';
 import { CURVE, E, F, H, LAND, PAD_X, PAD_Y, project } from './world';
 
 /** The twig they stand on (screen px), and how big they are drawn (screen px per world px). */
@@ -55,10 +57,15 @@ class Figure {
   readonly cue: CineCues = newCues();
   private readonly s: PlayerState;
 
-  constructor(renderer: RenderContext['renderer'], scene: Scene, sx: number) {
-    const ctx: RenderContext = { renderer, scene, lights: new LightRegistry(), viewScale: () => SCALE };
-    this.layer.scale.set(SCALE);
-    this.layer.position.set(sx - WX * SCALE, TWIG.y - FLOOR * SCALE);
+  constructor(renderer: RenderContext['renderer'], scene: Scene, sx: number, size = 1) {
+    const ctx: RenderContext = {
+      renderer,
+      scene,
+      lights: new LightRegistry(),
+      viewScale: () => SCALE * size,
+    };
+    this.layer.scale.set(SCALE * size);
+    this.layer.position.set(sx - WX * SCALE * size, TWIG.y - FLOOR * SCALE * size);
     this.skin = new VesperCharacter(ctx, this.layer, { cine: this.cue, link: false });
     this.s = createPlayer(WX, FLOOR, tuning, scene);
   }
@@ -160,38 +167,19 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
   wood.moveTo(crowns[0]!, crowns[1]!);
   for (let i = 2; i < crowns.length; i += 2) wood.lineTo(crowns[i]!, crowns[i + 1]!);
   wood.stroke({ color: 0x5a7090, width: 2, alpha: 0.45 });
+  // The line from the case out to the root's front, and the case itself: pale, breathing, findable.
   const line = new Graphics();
+  line.blendMode = 'add';
   R.addChild(line);
   const point = new Container();
   point.blendMode = 'add';
   R.addChild(point);
-  const pA = glow(POINT.x, POINT.y, 9, 0xe8e2dc, 0.9);
-  const pB = glow(POINT.x, POINT.y, 50, 0xb8b0b8, 0.25);
+  const pA = glow(POINT.x, POINT.y, 14, 0xf4f0ea, 1);
+  const pB = glow(POINT.x, POINT.y, 80, 0xc8c0c8, 0.35);
   point.addChild(pB, pA);
-  // --- The dance above: close enough to see the moths; one edged silver.
-  type Dancer = { c: Container; w: Graphics; silver: boolean; ph: number; r: number; sp: number };
-  const dancers: Dancer[] = [];
-  for (let i = 0; i < 22; i++) {
-    const cc = new Container();
-    const w = new Graphics();
-    const silver = i === 4;
-    const span = silver ? 26 : 16 + (i % 4) * 2;
-    for (const side of [-1, 1]) {
-      const pts = [0, 0, side * span * 0.5, -span * 0.32, side * span * 0.42, span * 0.16];
-      w.poly(pts).fill({ color: silver ? 0x2c2a3c : 0xead8b8, alpha: 0.95 });
-      if (silver) w.poly(pts).stroke({ color: 0xf2f6ff, width: 2, alpha: 1 });
-    }
-    cc.addChild(glow(0, 0, silver ? 34 : 24, silver ? 0xdfe8ff : 0xffd9a0, 0.5), w);
-    R.addChild(cc);
-    dancers.push({
-      c: cc,
-      w,
-      silver,
-      ph: (i / 22) * Math.PI * 2,
-      r: 0.75 + (i % 3) * 0.14,
-      sp: 0.5 + (i % 5) * 0.05,
-    });
-  }
+  // --- The dance above: close, turning, trailing light; one moth edged silver.
+  const dance = new DanceRing(22, 30);
+  R.addChild(dance.view);
   // --- The twig they stand on, dark against the moonlit world, coming in from the left.
   const twig = new Graphics();
   R.addChild(twig);
@@ -222,7 +210,7 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
       ])
       .fill(0x070a10);
   }
-  // --- The two of them.
+  // --- The two of them: he lighter, a little bigger, wings half open; she darker, smaller, wings shut.
   const scene: Scene = {
     id: 'summit',
     width: 6000,
@@ -231,12 +219,10 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
     solids: [{ x: 0, y: FLOOR, w: 6000, h: 200, tag: 'ground' }],
     oneWays: [],
   };
-  const her = new Figure(c.renderer, scene, WING_X);
-  const him = new Figure(c.renderer, scene, WING_X);
-  const lift = new ColorMatrixFilter();
-  lift.brightness(1.14, false);
-  lift.saturate(-0.28, true);
-  him.layer.filters = [lift];
+  const her = new Figure(c.renderer, scene, WING_X, LOOK.wing.scale);
+  const him = new Figure(c.renderer, scene, WING_X, LOOK.sorrel.scale);
+  him.layer.filters = [sorrelFilter()];
+  her.layer.filters = [wingFilter()];
   const hisWings = new Graphics();
   R.addChild(hisWings, him.layer, her.layer);
   const glint = new Container();
@@ -249,8 +235,18 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
   const gap = (SORREL_X - WING_X) / SCALE;
   for (let i = 0; i < 90; i++) {
     her.skin.update(1 / 60, i / 60, her.pose(0, 0, 1, false), []);
-    him.skin.update(1 / 60, i / 60, him.pose(gap, 0, -1, false), []);
+    him.skin.update(1 / 60, i / 60, him.pose(gap, 0, 1, false), []);
   }
+  // The camera on the plate: wide on the world, in for the offer, out to see him go, in on her alone.
+  const CAM = new Track([
+    { t: 0, v: [960, 560, 1] },
+    { t: SUMMIT.looks[1], v: [920, 600, 1.12] },
+    { t: SUMMIT.offer[0] + 0.6, v: [WING_X + 70, TWIG.y - 170, 1.9] },
+    { t: SUMMIT.tap[1], v: [WING_X + 70, TWIG.y - 170, 1.9] },
+    { t: SUMMIT.lift[1], v: [1000, 520, 1.15] },
+    { t: SUMMIT.alone[0] + 1.4, v: [WING_X + 20, TWIG.y - 160, 1.75] },
+    { t: SUMMIT.end, v: [WING_X + 20, TWIG.y - 160, 1.8] },
+  ]);
 
   return (t: number, dt: number) => {
     const S = SUMMIT;
@@ -258,40 +254,52 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
     const b = pulse(t);
     coreA.alpha = 0.35 + 0.45 * b;
     coreB.alpha = 0.12 + 0.12 * b;
-    pA.alpha = 0.6 + 0.3 * b;
+    pA.alpha = 0.75 + 0.25 * b;
+    pB.alpha = 0.3 + 0.15 * b;
+    // The line, with a bead of light running out along it from the case to the root's front: one thing.
     line.clear();
+    const lp = (u: number): [number, number] => [
+      POINT.x + (FRONT.x - POINT.x) * u + Math.sin(u * 7) * 8,
+      POINT.y + (FRONT.y - POINT.y) * u,
+    ];
     line.moveTo(POINT.x, POINT.y);
-    for (let i = 1; i <= 20; i++) {
-      const u = i / 20;
-      line.lineTo(POINT.x + (FRONT.x - POINT.x) * u + Math.sin(u * 7) * 8, POINT.y + (FRONT.y - POINT.y) * u);
-    }
-    line.stroke({ color: 0xd9cfc4, width: 1.6, alpha: 0.22 + 0.16 * b });
+    for (let i = 1; i <= 24; i++) line.lineTo(...lp(i / 24));
+    line.stroke({ color: 0xe8e0d8, width: 2.6, alpha: 0.35 + 0.2 * b });
+    const bead = lp((t * 0.35) % 1);
+    line.circle(bead[0], bead[1], 4).fill({ color: 0xffffff, alpha: 0.8 });
     // His and her cues.
     const H2 = him.cue;
     const W = her.cue;
     for (const cc of [H2, W]) for (const k of Object.keys(cc) as (keyof CineCues)[]) cc[k] = 0;
-    // He looks up at the dance; she looks out over the world.
-    H2.lookUp =
-      envelope(bt, S.looks[0], S.looks[0] + 0.8, S.offer[0] - 0.2, S.offer[0]) +
-      window01(bt, S.offer[0] + 0.9, S.offer[0] + 1.4) * (1 - window01(bt, S.offer[1] - 0.2, S.offer[1]));
-    W.look = envelope(bt, S.looks[0] + 0.4, S.looks[0] + 1.4, S.fold[0] - 0.4, S.fold[0]);
-    W.hold = 0.5 * (1 - window01(bt, S.fold[0], S.fold[0] + 0.6));
-    // He turns to her and offers: a hand out to her, then up at the dance.
-    const turned = bt >= S.offer[0] && bt < S.lift[0] + 0.3;
-    H2.tap =
-      envelope(bt, S.offer[0] + 0.2, S.offer[0] + 0.6, S.offer[0] + 0.9, S.offer[0] + 1.3) +
-      envelope(bt, S.tap[0], S.tap[0] + 0.2, S.tap[1] - 0.2, S.tap[1]);
-    // She hesitates, and folds her wing over the glint.
-    W.fold = window01(bt, S.fold[0], S.fold[0] + 0.9);
-    W.tap = 0.4 * envelope(bt, S.tap[0], S.tap[0] + 0.2, S.tap[1] - 0.2, S.tap[1]);
-    // She watches him go.
-    W.lookUp = window01(bt, S.lift[0] + 0.4, S.lift[0] + 1.4);
+    H2.wings = LOOK.sorrel.wings;
+    W.wings = LOOK.wing.wings;
+    // He looks up at the dance; she looks down at the pale point (her glint in her hands), then out along its line.
+    H2.lookUp = envelope(bt, S.looks[0], S.looks[0] + 0.8, S.offer[0] - 0.4, S.offer[0]);
+    W.hold = 0.6 * envelope(bt, S.looks[0], S.looks[0] + 0.6, S.looks[0] + 1.6, S.looks[0] + 2.2);
+    W.look = envelope(bt, S.looks[0] + 1.8, S.looks[0] + 2.6, S.offer[0] - 0.2, S.offer[0]);
+    // He turns to go (wings opening); she holds the glint out to him: take it; or, stay.
+    H2.wings = LOOK.sorrel.wings + 0.6 * envelope(bt, S.turn[0], S.turn[1], S.offer[0] + 0.4, S.offer[0] + 1);
+    W.give = envelope(bt, S.offer[0], S.offer[0] + 0.7, S.foldBack[0] + 0.3, S.foldBack[0] + 1.1);
+    // He folds her hands back over it with his wing; taps her wingtip; goes, not looking back.
+    const facingHer = bt >= S.offer[0] + 0.5 && bt < S.lift[0];
+    H2.fold = envelope(bt, S.foldBack[0], S.foldBack[0] + 0.5, S.foldBack[1] - 0.3, S.foldBack[1]);
+    W.hold = Math.max(
+      W.hold,
+      0.7 * envelope(bt, S.foldBack[0] + 0.6, S.foldBack[0] + 1, S.lift[1], S.alone[0] + 0.4),
+    );
+    H2.tap = envelope(bt, S.tap[0], S.tap[0] + 0.2, S.tap[1] - 0.2, S.tap[1]);
+    W.tap = 0.5 * H2.tap;
+    // She does look back: she watches him go into the dance.
+    W.lookUp = envelope(bt, S.lift[0] + 0.3, S.lift[0] + 1, S.alone[0] + 0.4, S.alone[0] + 1.2);
+    // Alone, she unfolds her hands; the glint lights her.
+    const alone = window01(bt, S.alone[0] + 0.6, S.alone[0] + 1.6);
+    W.hold = Math.max(W.hold, alone);
     // He goes: up off the twig, beating, into the dance; smaller as he goes.
     const up = window01(bt, S.lift[0], S.lift[1]);
     const ux = (up * (DANCE.x - 120 - SORREL_X)) / SCALE;
     const uy = (up * (TWIG.y - DANCE.y - 30)) / SCALE;
     const air = up > 0.01;
-    const hv = him.pose(gap + ux, uy, turned && !air ? -1 : 1, air);
+    const hv = him.pose(gap + ux, uy, facingHer && !air ? -1 : 1, air);
     him.skin.hideWings = air;
     him.layer.alpha = 1 - window01(bt, S.lift[1] - 0.6, S.lift[1]);
     him.skin.update(dt * 1.25, t * 1.25 + 7, hv, []);
@@ -300,7 +308,6 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
     if (air) {
       const sx = WING_X + (hv.cx - WX) * SCALE;
       const sy = TWIG.y + (hv.feetY - 50 - FLOOR) * SCALE;
-      hisWings.scale.set(1);
       drawFlightWings(
         hisWings,
         sx,
@@ -308,30 +315,30 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
         t * 7.5,
         Math.min(1, up * 6) * (1 - window01(bt, S.lift[1] - 0.6, S.lift[1])),
       );
-      hisWings.scale.set(1);
     }
-    // The glint: in her hands; folded over, it only leaks amber from under her wing.
-    const hx = WING_X + (her.skin.offer.x - WX) * SCALE;
-    const hy = TWIG.y + (her.skin.offer.y - FLOOR) * SCALE;
+    // The glint: in her hands; held out; folded back (dim, leaking amber); alone, bright, lighting her.
+    const hx = WING_X + (her.skin.offer.x - WX) * SCALE * LOOK.wing.scale;
+    const hy = TWIG.y + (her.skin.offer.y - FLOOR) * SCALE * LOOK.wing.scale;
     glint.position.set(hx, hy);
-    const hidden = 0.8 * W.fold;
-    glint.alpha =
-      (0.75 + 0.25 * Math.sin(t * 3)) * (1 - hidden) + 0.15 * W.fold * (0.6 + 0.4 * Math.sin(t * 2.3));
+    const covered = envelope(bt, S.foldBack[0] + 0.4, S.foldBack[1], S.alone[0] + 0.4, S.alone[0] + 1.4);
+    glint.alpha = (0.7 + 0.2 * Math.sin(t * 3)) * (1 - 0.8 * covered);
+    glint.scale.set(1 + 0.6 * alone);
     // The dance; the silver one leaves it and circles him, once.
-    for (const [i, d] of dancers.entries()) {
-      const a = t * d.sp * 0.7 + d.ph;
-      let x = DANCE.x + Math.cos(a) * DANCE.rx * d.r + Math.sin(a * 2.1 + i) * 12;
-      let y = DANCE.y + Math.sin(a) * DANCE.ry * d.r + Math.cos(a * 2.9 + i) * 8;
-      if (d.silver) {
-        const k = envelope(bt, S.silver[0], S.silver[0] + 0.6, S.silver[1] - 0.6, S.silver[1]);
-        const u = window01(bt, S.silver[0], S.silver[1]) * Math.PI * 2;
-        x += (SORREL_X + Math.cos(u) * 110 - x) * k;
-        y += (TWIG.y - 170 + Math.sin(u) * 50 - y) * k;
-      }
-      d.c.position.set(x, y);
-      d.w.scale.y = 0.3 + 0.7 * Math.abs(Math.sin(t * (11 + (i % 3)) + i));
-      d.c.alpha = 0.85 + 0.15 * Math.sin(t * 3 + i);
-    }
+    const sk = envelope(bt, S.silver[0], S.silver[0] + 0.6, S.silver[1] - 0.6, S.silver[1]);
+    const su = window01(bt, S.silver[0], S.silver[1]) * Math.PI * 2;
+    dance.update(
+      t,
+      DANCE.x,
+      DANCE.y,
+      DANCE.rx,
+      DANCE.ry,
+      { x: SORREL_X + Math.cos(su) * 120, y: TWIG.y - 190 + Math.sin(su) * 60 },
+      sk,
+    );
+    // The camera.
+    const [fx, fy, z] = CAM.sample(bt) as [number, number, number];
+    R.scale.set(z);
+    R.position.set(VIEW_W / 2 - fx * z, VIEW_H / 2 - fy * z);
     R.alpha = window01(t, S.fadeIn[0], S.fadeIn[1]);
   };
 }

@@ -935,6 +935,9 @@ export interface Cue {
   huddle: number;
   tap: number;
   lookUp: number;
+  /** -1..1 the wings' set: held shut round her .. half open. 0..1 hands held out, giving. */
+  wings: number;
+  give: number;
 }
 
 /** Point masses for the centre of mass: joint, weight. */
@@ -1087,6 +1090,8 @@ export class Rig {
     huddle: 0,
     tap: 0,
     lookUp: 0,
+    wings: 0,
+    give: 0,
   };
   /** Acting weights 0..1: kindling, sat resting, hands to a lit lantern, the hand on the sleeping heart, the ending. */
   kindleW = 0;
@@ -3541,6 +3546,16 @@ export class Rig {
       gzw += tp;
     }
     // --- A look up, high (the dance).
+    // --- The wings' habitual set: one sibling keeps them half open, the other shut round her.
+    if (cue.wings !== 0) cloak += 1.1 * cue.wings * aw;
+    // --- Both hands held out, offering what she holds.
+    const gv = Math.min(1, cue.give) * aw;
+    if (gv > 1e-3) {
+      this.mix(out, OFFER, gv, nearA);
+      gzx += 0.8 * gv;
+      gzy += 0.2 * gv;
+      gzw += gv;
+    }
     const lu = Math.min(1, cue.lookUp) * aw;
     if (lu > 1e-3) {
       out[HT]! -= 0.42 * lu;
@@ -3688,7 +3703,7 @@ export class Rig {
       kw,
       rw2,
       0.85 * this.giveW * ew,
-      Math.min(1, cue.hold) * aw,
+      Math.min(1, Math.max(cue.hold, cue.give)) * aw,
       this.giveK,
       this.emptyK,
     );

@@ -14,7 +14,7 @@
  *    (the game's lampwing painter on a made-up state, `LampRig.cine`), the coral wash, the ferns,
  *    the glint, the give prompt, the dance with its one silver-edged moth, the leaf she wakes under.
  */
-import { ColorMatrixFilter, Container, Graphics, Sprite } from 'pixi.js';
+import { Container, Graphics, Sprite } from 'pixi.js';
 import { createEnemy } from '../../sim/enemies';
 import { createPlayer } from '../../sim/player/player';
 import type { Scene } from '../../sim/scene';
@@ -30,9 +30,12 @@ import type { LayerTree } from '../scene/layer-tree';
 import { prng } from '../scene/lib/look';
 import { fern } from '../world/kit';
 import { glowTexture } from '../world/paint';
+import { CaseView } from './case';
+import { DanceRing } from './dance';
 import { Fox, foxPose } from './fox';
+import { LOOK, setWingLook, sorrelFilter, wingFilter } from './looks';
 import type { ProloguePlan } from './plan';
-import { COURSE, FOX_DRINK, HATCH, HOLLOW, MOSS, WAKE } from './script';
+import { COURSE, FOX_DRINK, HATCH, HOLLOW, MOSS, WAKE, WATER } from './script';
 import { drawFlightWings } from './sorrel';
 import { envelope, Track, window01 } from './track';
 
@@ -55,24 +58,35 @@ function soft(r: number, color: number, alpha = 1): Sprite {
 const HATCH_CAM = new Track([
   { t: 0, v: [HATCH.sorrel.x, HATCH.sorrel.y + 2, 4, 0] },
   { t: HATCH.pullOut[0], v: [HATCH.sorrel.x, HATCH.sorrel.y + 2, 4, 0] },
-  { t: HATCH.pullOut[1], v: [1325, 1150, 2, 0] },
-  { t: HATCH.wait[1], v: [1340, 1170, 2, 0] },
-  { t: HATCH.fold[0], v: [1385, 1212, 2.3, 0] },
-  { t: HATCH.fold[0] + 3, v: [1394, 1240, 3.6, 0] },
-  { t: HATCH.tap[1], v: [1394, 1240, 3.6, 0] },
-  { t: HATCH.lookFox[0], v: [1350, 1196, 2.2, 0] },
-  { t: HATCH.follow[1], v: [1350, 1196, 1, 1] },
+  { t: HATCH.pullOut[1], v: [1275, 1175, 3, 0] },
+  { t: HATCH.sorrelShake[1], v: [1255, 1222, 3.2, 0] },
+  { t: HATCH.lookUp[1], v: [1255, 1175, 2.8, 0] },
+  { t: HATCH.wait[1], v: [1365, 1185, 2.8, 0] },
+  { t: HATCH.tryOpen[1], v: [1396, 1236, 3.5, 0] },
+  { t: HATCH.fold[0] + 1, v: [1392, 1240, 3.9, 0] },
+  { t: HATCH.tap[1], v: [1392, 1240, 3.9, 0] },
+  { t: HATCH.ready[1], v: [1360, 1222, 3, 0] },
+  { t: HATCH.lookFox[1], v: [1360, 1218, 3, 0] },
+  { t: HATCH.follow[1], v: [1360, 1218, 1.4, 1] },
 ]);
 
 const HOLLOW_CAM = new Track([
-  { t: 0, v: [1440, 1206, 2.5, 0] },
-  { t: HOLLOW.dim[0], v: [1430, 1200, 2.4, 0] },
-  { t: HOLLOW.lampLit[0], v: [1462, 560, 1.8, 0] },
-  { t: HOLLOW.play[0] + 0.6, v: [1462, 560, 1.8, 0] },
-  { t: HOLLOW.play[0] + 2.2, v: [1320, 1200, 1.5, 0] },
-  { t: HOLLOW.play[1], v: [1260, 1200, 1.5, 0] },
-  { t: HOLLOW.hide[0] + 0.8, v: [1190, 1238, 2.7, 0] },
-  { t: HOLLOW.hide[1], v: [1200, 1236, 2.8, 0] },
+  { t: 0, v: [1500, 1220, 2.6, 0] },
+  { t: HOLLOW.drinks[1]![1], v: [1505, 1230, 2.7, 0] },
+  { t: HOLLOW.rootTip[0], v: [1460, 1170, 2.9, 0] },
+  { t: HOLLOW.rootTip[0] + 1.4, v: [1458, 1150, 3.4, 0] },
+  { t: HOLLOW.rootTip[1], v: [1458, 1150, 3.4, 0] },
+  { t: HOLLOW.caseRise[1], v: [1460, 1180, 2.7, 0] },
+  { t: HOLLOW.fold[0] + 0.8, v: [1452, 1160, 3.3, 0] },
+  { t: HOLLOW.dim[0], v: [1455, 1165, 3.2, 0] },
+  // Up the stalk with the pulse, to the lamp as it lights: one thing, the Hush's eye.
+  { t: HOLLOW.pulse[0], v: [1470, 1160, 2.4, 0] },
+  { t: HOLLOW.pulse[1], v: [1470, 470, 1.9, 0] },
+  { t: HOLLOW.play[0] + 0.6, v: [1468, 480, 1.9, 0] },
+  { t: HOLLOW.play[0] + 2.2, v: [1330, 1190, 1.6, 0] },
+  { t: HOLLOW.play[1], v: [1260, 1200, 1.6, 0] },
+  { t: HOLLOW.hide[0] + 0.8, v: [1172, 1232, 3, 0] },
+  { t: HOLLOW.hide[1], v: [1176, 1230, 3.1, 0] },
 ]);
 
 const WAKE_CAM = new Track([
@@ -116,6 +130,14 @@ function viewOf(prev: PlayerState, cur: PlayerState, alpha = 1): PlayerView {
   return { ...cur, x, y, rx: 0, ry: 0, cx: x + cur.w / 2, cy: y + cur.h / 2, feetY: y + cur.h };
 }
 
+/** Between two views by `k` (positions; the pose fields of the nearer). */
+function blend(a: PlayerView, b: PlayerView, k: number): PlayerView {
+  const base = k < 0.5 ? a : b;
+  const x = a.x + (b.x - a.x) * k;
+  const y = a.y + (b.y - a.y) * k;
+  return { ...base, x, y, cx: x + a.w / 2, cy: y + a.h / 2, feetY: y + a.h };
+}
+
 export class GroveActors {
   private readonly back = new Container({ label: 'prologue-back' });
   private readonly actors = new Container({ label: 'prologue-actors' });
@@ -127,30 +149,20 @@ export class GroveActors {
   private readonly paleThread = new Graphics();
   private readonly steam: Sprite[] = [];
   private readonly hollow = new Graphics();
-  private readonly caseG = new Graphics();
-  private readonly caseGlow: Sprite;
+  private readonly caseV = new CaseView();
   private readonly pulse = new Graphics();
   private readonly fox = new Fox();
   private readonly foxP = foxPose();
-  /** The fox again, asleep inside the case. */
-  private readonly sleeper = new Fox();
-  private readonly sleeperP = foxPose();
+  /** Rings on the water where the fox's muzzle is in it. */
+  private readonly ripples = new Graphics();
   private readonly ferns = new Container({ label: 'prologue-ferns' });
   private readonly leaf = new Graphics();
   private readonly glint = new Container();
   private readonly prompt = new Graphics();
   private readonly wash: Sprite;
   private readonly lampGlow: Sprite;
-  private readonly dance = new Container();
-  private readonly danceMoths: Array<{
-    c: Container;
-    w: Graphics;
-    g: Sprite;
-    ph: number;
-    sp: number;
-    r: number;
-    silver: boolean;
-  }> = [];
+  private readonly dance = new DanceRing(18, 16);
+  private readonly wingLook = wingFilter();
   // Lights in the Grove's registry.
   private readonly lights: Record<string, PointLight> = {};
   // The two moths.
@@ -182,10 +194,9 @@ export class GroveActors {
     const L = layers;
     L.get('goal').addChild(this.back, this.actors);
     L.get('playfieldFront').addChild(this.front);
-    L.get('airBack').addChild(this.dance);
+    L.get('airBack').addChild(this.dance.view);
     // Back to front: threads and cocoons, the hollow, the fox, the case, the pulse.
     this.cocoonGlow = [soft(60, AMBER, 0), soft(60, AMBER, 0)];
-    this.caseGlow = soft(140, PALE, 0);
     this.back.addChild(
       this.threads,
       this.cocoons,
@@ -193,9 +204,8 @@ export class GroveActors {
       this.paleThread,
       this.hollow,
       this.fox.view,
-      this.sleeper.view,
-      this.caseG,
-      this.caseGlow,
+      this.ripples,
+      this.caseV.view,
       this.pulse,
     );
     for (let i = 0; i < 8; i++) {
@@ -204,11 +214,9 @@ export class GroveActors {
       this.back.addChild(s);
     }
     // The moths in front of the fox.
-    const lift = new ColorMatrixFilter();
-    lift.resolution = 'inherit';
-    lift.brightness(1.14, false);
-    lift.saturate(-0.28, true);
-    this.sorrelLayer.filters = [lift];
+    // Two different people: he lighter and bigger, wings half open; she darker, smaller, wings shut.
+    this.sorrelLayer.filters = [sorrelFilter()];
+    this.wingLayer.filters = [this.wingLook];
     this.actors.addChild(this.sorrelWings, this.sorrelLayer, this.wingLayer);
     this.wing = new VesperCharacter({ ...ctx, lights: this.wingLights }, this.wingLayer, {
       cine: this.wingCue,
@@ -229,30 +237,6 @@ export class GroveActors {
     this.front.addChild(this.frost, this.lampGlow, this.ferns, this.leaf, this.glint, this.prompt);
     this.drawFrost();
     this.drawFerns();
-    // The dance ring: small moths turning slowly, one with a silver edge.
-    for (let i = 0; i < 18; i++) {
-      const c = new Container();
-      const w = new Graphics();
-      const silver = i === 5;
-      const span = silver ? 15 : 10 + (i % 4) * 1.5;
-      for (const side of [-1, 1]) {
-        const pts = [0, 0, side * span * 0.5, -span * 0.32, side * span * 0.42, span * 0.14];
-        w.poly(pts).fill({ color: silver ? 0x3a3448 : 0xe8dcc8, alpha: 0.92 });
-        if (silver) w.poly(pts).stroke({ color: 0xe8eef8, width: 1.4, alpha: 0.95 });
-      }
-      const g = soft(silver ? 22 : 18, silver ? 0xdfe8ff : GOLD, 0.5);
-      c.addChild(g, w);
-      this.dance.addChild(c);
-      this.danceMoths.push({
-        c,
-        w,
-        g,
-        ph: (i / 18) * Math.PI * 2,
-        sp: 0.55 + (i % 5) * 0.06,
-        r: 0.8 + (i % 3) * 0.12,
-        silver,
-      });
-    }
     // The lampwing over the pool: the game's own painter on a state of ours.
     const spawn = {
       id: 'prologue-lamp',
@@ -298,12 +282,14 @@ export class GroveActors {
 
   private drawFerns(): void {
     const rng = prng(3131);
-    for (let i = 0; i < 6; i++) {
+    // Fronds either side of where the two of them hide (a gap round 1120-1210 so they show).
+    const xs = [-250, -200, -160, -24, 14];
+    for (let i = 0; i < xs.length; i++) {
       const f = new Container();
       const g = new Graphics();
       fern(rng, g, 120 + rng() * 80, (rng() - 0.4) * 0.5, 0x04070a, 0x060b0c, 0x0a1210);
       f.addChild(g);
-      f.position.set(HOLLOW.ferns - 250 + i * 40 + rng() * 16, MOSS + 8);
+      f.position.set(HOLLOW.ferns + xs[i]! + rng() * 10, MOSS + 8);
       f.rotation = (rng() - 0.5) * 0.7;
       this.ferns.addChild(f);
     }
@@ -317,37 +303,62 @@ export class GroveActors {
     else if (P.beat === 'hollow') v = HOLLOW_CAM.sample(P.bt);
     else if (P.beat === 'wake') v = WAKE_CAM.sample(P.bt);
     else if (P.beat === 'play') {
-      // The follow camera, leaning toward him so he is in frame ahead of her; wider up on F3-F4
-      // (the dance at the top of frame, the pool's lip at the bottom); in on her while she holds the glint.
+      // Closer than play framing (the glint and the sneeze must read): the follow camera at ~1.4x
+      // leaning toward him ahead of her; wider up on F3-F4 (the dance at the top); in on her for the
+      // glint; on the two of them and the dance when he stops; on her and the fox for the dive and the sneeze.
       const s = P.sorrel?.cur;
-      const lead = s ? Math.max(-500, Math.min(500, s.x + s.w / 2 - p.cx)) * 0.32 : 0;
+      const sx = s ? s.x + s.w / 2 : p.cx;
+      const sy = s ? s.y + s.h / 2 : p.cy;
+      const lead = Math.max(-420, Math.min(420, sx - p.cx)) * 0.4;
       const wide = window01(-p.feetY, -900, -720) * window01(p.cx, 1250, 1450);
-      // Close on the two of them for the glint: held, given, kept up.
-      const close =
-        P.phase === 'hold' || P.phase === 'give' || P.phase === 'his' || P.phase === 'bumps' ? 1 : 0;
-      this.holdK += (close - this.holdK) * 0.04;
-      const z = 1 - 0.2 * wide;
-      const mx = s ? (p.cx + s.x + s.w / 2) / 2 : p.cx;
-      const my = p.cy - (P.phase === 'bumps' ? 90 : 40);
-      this.cam.x = follow.x + lead + (mx - follow.x - lead) * this.holdK * 0.9;
-      this.cam.y = follow.y - 60 * wide + (my - follow.y + 60 * wide) * this.holdK * 0.9;
-      this.cam.zoom = z + ((P.phase === 'bumps' ? 1.55 : 1.9) - z) * this.holdK;
+      let tx = follow.x + lead;
+      let ty = follow.y - 70 * wide;
+      let tz = 1.4 - 0.15 * wide;
+      const ph = P.phase;
+      if (ph === 'hold' || ph === 'give' || ph === 'his') {
+        tx = (p.cx * 2 + sx) / 3;
+        ty = p.cy - 40;
+        tz = 1.9;
+      } else if (ph === 'bumps') {
+        tx = (p.cx + sx) / 2;
+        ty = p.cy - 100;
+        tz = 1.6;
+      } else if (ph === 'stop' || ph === 'glint') {
+        tx = (p.cx + sx) / 2;
+        ty = sy - 120;
+        tz = 1.55;
+      } else if (ph === 'sail' || ph === 'nose' || ph === 'end') {
+        tx = (p.cx + COURSE.nose.x) / 2;
+        ty = Math.min(p.cy, COURSE.nose.y) + 40;
+        tz = 1.35;
+      }
+      if (!this.playCam) this.playCam = { x: tx, y: ty, zoom: tz };
+      const c = this.playCam;
+      c.x += (tx - c.x) * 0.06;
+      c.y += (ty - c.y) * 0.06;
+      c.zoom += (tz - c.zoom) * 0.05;
+      this.cam.x = c.x;
+      this.cam.y = c.y;
+      this.cam.zoom = c.zoom;
       return this.cam;
     }
     if (!v) return null;
     const [x, y, zoom, game] = v as [number, number, number, number];
     this.cam.x = x + (follow.x - x) * game;
     this.cam.y = y + (follow.y - y) * game;
-    this.cam.zoom = zoom + (follow.zoom - zoom) * game;
+    // (`game` takes the follow camera's position only; the zoom is the key's.)
+    this.cam.zoom = zoom;
     return this.cam;
   }
 
-  private holdK = 0;
+  private playCam: { x: number; y: number; zoom: number } | null = null;
+
+  private wingSize: number = LOOK.wing.scale;
 
   update(dt: number, clock: number, view: CameraView, sim: SimView): void {
     const P = this.plan;
     const inGrove = P.beat === 'hatch' || P.beat === 'play' || P.beat === 'hollow' || P.beat === 'wake';
-    this.back.visible = this.actors.visible = this.front.visible = this.dance.visible = inGrove;
+    this.back.visible = this.actors.visible = this.front.visible = this.dance.view.visible = inGrove;
     for (const l of Object.values(this.lights)) l.intensity = 0;
     POST_CINE.frost = P.beat === 'hatch' ? 1 - window01(P.bt, HATCH.frostOut[0], HATCH.frostOut[1]) : 0;
     POST_CINE.dim =
@@ -504,6 +515,21 @@ export class GroveActors {
     this.fox.view.visible = shown;
     this.fox.view.position.set(x, MOSS);
     this.fox.draw(o, clock);
+    // Its muzzle in the water: rings spread from where it drinks.
+    const rp = this.ripples;
+    rp.clear();
+    if (shown && o.drink > 0.55 && o.sink < 0.3) {
+      const n = this.fox.nose(o);
+      const nx = x + n[0];
+      for (let i = 0; i < 3; i++) {
+        const u = (clock * 0.7 + i / 3) % 1;
+        rp.ellipse(nx, WATER, 6 + 46 * u, 2 + 7 * u).stroke({
+          color: 0xd8f0f4,
+          width: 1.4,
+          alpha: 0.5 * (1 - u),
+        });
+      }
+    }
     this.foxX = x;
     if (shown) {
       const l = this.lights.fox!;
@@ -555,22 +581,40 @@ export class GroveActors {
       const cx = H.x + 30;
       h.ellipse(cx, MOSS + 3, 158 * open, 26 * open).fill({ color: 0x0a0b10, alpha: 0.6 });
       h.ellipse(cx, MOSS + 3, 140 * open, 20 * open).fill({ color: 0x050609, alpha: 0.95 });
-      // Lips of root curling over the edge, broken, uneven, pale; they breathe.
+      // Its rim: a soft lip of pale root lying round it (never anything like teeth), breathing,
+      // a few long tendrils curling away flat over the moss, steam off them.
       const br = 1 + 0.04 * Math.sin(clock * 0.98);
-      for (let i = 0; i < 14; i++) {
-        const a0 = (i / 14) * Math.PI * 2 + 0.2 * Math.sin(i * 3.1);
-        const lx = cx + Math.cos(a0) * 146 * open * br;
-        const ly = MOSS + 3 + Math.sin(a0) * 22 * open;
-        const len = (16 + 12 * Math.abs(Math.sin(i * 1.7))) * open;
-        const dir = Math.sin(a0) < 0 ? -1 : 1;
-        h.moveTo(lx - Math.cos(a0) * 10, ly - dir * 3)
-          .quadraticCurveTo(
-            lx + Math.cos(a0) * len * 0.4,
-            ly - 6 * dir - 6,
-            lx + Math.cos(a0) * len * 0.2,
-            ly + dir * 2,
+      for (let k = 0; k < 3; k++) {
+        const rr = (150 - k * 5) * open * br;
+        const rh = (24 - k * 2) * open;
+        h.moveTo(cx - rr, MOSS + 3);
+        for (let i = 1; i <= 24; i++) {
+          const a0 = Math.PI + (i / 24) * Math.PI;
+          h.lineTo(cx + Math.cos(a0) * rr, MOSS + 3 + Math.sin(a0) * rh + Math.sin(i * 1.3 + k) * 1.2);
+        }
+        h.stroke({
+          color: k === 1 ? 0xf0e8e0 : PALE,
+          width: 5 - k * 1.4,
+          alpha: 0.8 - k * 0.2,
+          cap: 'round',
+        });
+      }
+      h.ellipse(cx, MOSS + 3, 150 * open * br, 22 * open).stroke({ color: 0xbfb5aa, width: 3, alpha: 0.55 });
+      for (let i = 0; i < 5; i++) {
+        const side = i % 2 === 0 ? -1 : 1;
+        const x0 = cx + side * (120 + 10 * i) * open;
+        const len = (40 + 20 * i) * open;
+        const curl = Math.sin(clock * 0.6 + i) * 6;
+        h.moveTo(x0, MOSS + 2)
+          .bezierCurveTo(
+            x0 + side * len * 0.4,
+            MOSS - 6 + curl,
+            x0 + side * len * 0.8,
+            MOSS + 6,
+            x0 + side * len,
+            MOSS + 1 - curl * 0.5,
           )
-          .stroke({ color: i % 3 === 0 ? 0xbfb5aa : PALE, width: 2.2 + (i % 2), alpha: 0.75, cap: 'round' });
+          .stroke({ color: PALE, width: 2.2, alpha: 0.6, cap: 'round' });
       }
     }
     // The root tip: up out of it to her face, a pause, back down. It looked, and did not see.
@@ -582,77 +626,48 @@ export class GroveActors {
       const by = MOSS;
       const ex = bx + (tx - bx) * k;
       const ey = by + (ty + 12 - by) * k;
-      h.moveTo(bx - 10, by)
-        .bezierCurveTo(bx - 4, by - 50 * k, ex + 20, ey + 40, ex, ey)
-        .stroke({ color: PALE, width: 3, alpha: 0.9, cap: 'round' });
-      h.circle(ex, ey, 2.4).fill({ color: 0xf4eee8, alpha: 0.9 });
+      // A tapered tendril, swaying as it feels the air in front of her face; it pauses there.
+      const sway = Math.sin(clock * 3.1) * 6 * k;
+      const pts: Array<[number, number]> = [];
+      for (let i = 0; i <= 16; i++) {
+        const u = i / 16;
+        const a = 1 - u;
+        // Cubic from the hollow's middle up to the tip.
+        const x =
+          a * a * a * (bx - 10) +
+          3 * a * a * u * (bx - 4) +
+          3 * a * u * u * (ex + 26 + sway) +
+          u * u * u * (ex + sway * 0.5);
+        const y = a * a * a * by + 3 * a * a * u * (by - 60 * k) + 3 * a * u * u * (ey + 46) + u * u * u * ey;
+        pts.push([x, y]);
+      }
+      const left: number[] = [];
+      const right: number[] = [];
+      for (let i = 0; i < pts.length; i++) {
+        const [x, y] = pts[i]!;
+        const [nx0, ny0] = pts[Math.min(pts.length - 1, i + 1)]!;
+        const [px0, py0] = pts[Math.max(0, i - 1)]!;
+        const dx = nx0 - px0;
+        const dy = ny0 - py0;
+        const l = Math.hypot(dx, dy) || 1;
+        const w = 4.5 * (1 - i / pts.length) + 1;
+        left.push(x - (dy / l) * w, y + (dx / l) * w);
+        right.unshift(x + (dy / l) * w, y - (dx / l) * w);
+      }
+      h.poly([...left, ...right]).fill({ color: PALE, alpha: 0.95 });
+      h.circle(ex + sway * 0.5, ey, 2.4).fill({ color: 0xf8f4ee, alpha: 0.95 });
     }
     // The case: up out of the closing hollow on a pale stalk, bone, the fox asleep inside, breathing.
-    const c = this.caseG;
-    c.clear();
-    this.caseGlow.alpha = 0;
     const rise = t >= 0 ? window01(t, H.caseRise[0], H.caseRise[1]) : 0;
-    this.sleeper.view.visible = rise > 0.01;
+    const grey = t >= 99 ? 1 : window01(t, H.caseRise[1], H.caseRise[1] + 8);
+    this.caseV.draw(rise, grey, clock);
     if (rise > 0.01) {
-      const b = 0.5 - 0.5 * Math.cos((2 * Math.PI * clock) / 6.4);
-      const rx = H.caseRx * (0.35 + 0.65 * rise);
-      const ch = H.caseH * rise * (1 + 0.02 * b);
-      const cx = H.x + 30;
-      const bottom = MOSS - H.stalk * rise;
-      const cy = bottom - ch / 2;
-      // Stalk: thick, pale, rooted in the moss.
-      c.poly([cx - 16, MOSS + 2, cx - 9, bottom + 6, cx + 9, bottom + 6, cx + 18, MOSS + 2]).fill({
-        color: 0x9a9088,
-      });
-      c.moveTo(cx - 34, MOSS + 1)
-        .quadraticCurveTo(cx - 14, MOSS - 6, cx - 10, bottom + 8)
-        .stroke({ color: PALE, width: 2, alpha: 0.6 });
-      // The fox asleep inside (drawn under the skin), breathing.
-      const sp = this.sleeperP;
-      sp.curl = 1;
-      sp.eyes = 0;
-      sp.ember = 0;
-      sp.sink = 0;
-      sp.breath = clock * 0.9;
-      this.sleeper.view.position.set(cx - 4, cy + ch * 0.4);
-      this.sleeper.view.scale.set(0.62 * (0.5 + 0.5 * rise));
-      this.sleeper.view.alpha = rise;
-      // Warm and alive in there, asleep: the colour comes through the bone.
-      this.sleeper.view.tint = 0xd8a080;
-      this.sleeper.draw(sp, clock);
-      // The case: a lens of bone-pale skin, thick at its rim, thin (lit through) in the middle.
-      // A cocoon lying on its stalk: full in the middle, drawn to a point at each end.
-      const lens = (sc: number): number[] => {
-        const pts: number[] = [];
-        for (let i = 0; i <= 32; i++) {
-          const a = (i / 32) * Math.PI * 2;
-          const x = Math.cos(a);
-          const y = Math.sin(a) * (0.55 + 0.45 * (1 - Math.abs(Math.cos(a)) ** 3));
-          pts.push(cx + x * rx * sc, cy + y * (ch / 2) * sc);
-        }
-        return pts;
-      };
-      c.poly(lens(1)).fill({ color: 0xc8beb2, alpha: 0.2 });
-      c.poly(lens(0.8)).fill({ color: 0xffd0a8, alpha: 0.05 + 0.04 * b });
-      // Silk wraps round it, and veins.
-      for (let i = 1; i < 8; i++) {
-        const u = i / 8;
-        const xx = cx - rx + 2 * rx * u;
-        const hh = (ch / 2) * Math.sqrt(Math.max(0, 1 - (2 * u - 1) ** 2)) * 0.96;
-        c.moveTo(xx - 6, cy - hh)
-          .quadraticCurveTo(xx + 8, cy, xx - 4, cy + hh)
-          .stroke({ color: 0xe8e0d6, width: 1.1, alpha: 0.35 });
-      }
-      c.poly(lens(1)).stroke({ color: 0xe0d8ce, width: 2.4, alpha: 0.75 });
-      c.poly(lens(0.94)).stroke({ color: 0xc8beb4, width: 1.2, alpha: 0.4 });
-      this.caseGlow.position.set(cx, cy);
-      this.caseGlow.alpha = (0.05 + 0.05 * b) * rise;
       const l = this.lights.case!;
-      l.x = cx;
-      l.y = cy;
+      l.x = this.caseV.mid.x;
+      l.y = this.caseV.mid.y;
       l.radius = 200;
-      l.intensity = (0.18 + 0.12 * b) * rise;
-      this.caseTop = { x: cx, y: cy - ch / 2 };
+      l.intensity = (0.18 + 0.12 * this.caseV.breath) * rise;
+      this.caseTop = { x: this.caseV.top.x, y: this.caseV.top.y };
     }
     // The pulse: up the stalk, through the case, on up into the dark to where the lamp hangs.
     const p = this.pulse;
@@ -665,7 +680,7 @@ export class GroveActors {
       const y1 = H.lamp.y + 16;
       p.moveTo(x0, y0)
         .lineTo(x0 + (H.lamp.x - x0) * u, y0 + (y1 - y0) * u)
-        .stroke({ color: PALE, width: 1.2, alpha: 0.35 * fade });
+        .stroke({ color: PALE, width: 2.2, alpha: 0.55 * fade });
       const by = y0 + (y1 - y0) * u;
       p.circle(x0 + (H.lamp.x - x0) * u, by, 3.5).fill({
         color: 0xffffff,
@@ -676,33 +691,21 @@ export class GroveActors {
 
   private caseTop = { x: HOLLOW.x + 30, y: MOSS - 150 };
 
-  // --- The dance high above; the silver-edged moth sweeps low past him when he stops racing.
+  // --- The dance high above; the silver-edged moth swoops close past him when he stops racing.
   private updateDance(clock: number): void {
     const P = this.plan;
     const D = COURSE.dance;
-    for (const [i, m] of this.danceMoths.entries()) {
-      const a = clock * m.sp * 0.6 + m.ph;
-      let x = D.x + Math.cos(a) * D.rx * m.r + Math.sin(a * 2.3 + i) * 8;
-      let y = D.y + Math.sin(a) * D.ry * m.r + Math.cos(a * 3.1 + i) * 5;
-      if (m.silver && P.beat === 'play' && P.stopAt >= 0) {
-        const s = P.pt - P.stopAt;
-        const k = envelope(
-          s,
-          COURSE.silverSweep[0],
-          COURSE.silverSweep[0] + 0.9,
-          COURSE.silverSweep[1] - 0.9,
-          COURSE.silverSweep[1],
-        );
-        const u = window01(s, COURSE.silverSweep[0], COURSE.silverSweep[1]);
-        const sx = this.sorrelAt.x - 120 + 240 * u;
-        const sy = this.sorrelAt.y - 90 + Math.sin(u * Math.PI) * 30;
-        x += (sx - x) * k;
-        y += (sy - y) * k;
-      }
-      m.c.position.set(x, y);
-      m.w.scale.y = 0.25 + 0.75 * Math.abs(Math.sin(clock * (12 + (i % 4)) + i));
-      m.g.alpha = (m.silver ? 0.55 : 0.4) + 0.45 * Math.max(0, Math.sin(clock * 3.3 + i * 1.7));
+    let k = 0;
+    let to: { x: number; y: number } | undefined;
+    if (P.beat === 'play' && P.stopAt >= 0) {
+      const s = P.pt - P.stopAt;
+      const [s0, s1] = COURSE.silverSweep;
+      k = envelope(s, s0, s0 + 0.7, s1 - 0.7, s1);
+      const u = window01(s, s0, s1);
+      // Down from the ring, across in front of his face within a wing's length, and back up.
+      to = { x: this.sorrelAt.x - 90 + 180 * u, y: this.sorrelAt.y - 110 + Math.sin(u * Math.PI) * 50 };
     }
+    this.dance.update(clock, D.x, D.y, D.rx, D.ry, to, k);
   }
 
   // --- The two moths.
@@ -719,18 +722,23 @@ export class GroveActors {
     const facing = (from: number, to: number): 1 | -1 => (to >= from ? 1 : -1);
     if (P.beat === 'hatch') {
       if (t >= HATCH.wingSplit + 0.1) {
+        // Down in the frost, wings stuck shut, eyes dim; she tries to open them and can't; warmed,
+        // her eyes brighten and they open; then she looks back at the fox.
         wv = { ...her, facing: t >= HATCH.lookFox[0] ? -1 : 1 };
         W.huddle =
           window01(t, HATCH.huddle[0], HATCH.huddle[0] + 0.4) *
-          (1 - window01(t, HATCH.fold[1] - 1.6, HATCH.fold[1]));
-        W.shake = envelope(
+          (1 - window01(t, HATCH.brighten[0], HATCH.brighten[1]));
+        W.shake =
+          0.55 *
+            envelope(t, HATCH.tryOpen[0], HATCH.tryOpen[0] + 0.2, HATCH.tryOpen[1] - 0.3, HATCH.tryOpen[1]) +
+          envelope(t, HATCH.opens[0], HATCH.opens[0] + 0.2, HATCH.opens[1] - 0.2, HATCH.opens[1]);
+        W.look = envelope(
           t,
-          HATCH.fold[1] - 1,
-          HATCH.fold[1] - 0.6,
-          HATCH.fold[1] + 0.2,
-          HATCH.fold[1] + 0.6,
+          HATCH.lookFox[0] + 0.3,
+          HATCH.lookFox[0] + 0.9,
+          HATCH.lookFox[1] - 0.4,
+          HATCH.lookFox[1],
         );
-        W.look = 0;
       }
       if (gs && t >= HATCH.sorrelSplit + 0.1) {
         const toHer = facing(gs.cx, her.cx);
@@ -752,7 +760,7 @@ export class GroveActors {
           HATCH.lookUp[1] - 0.4,
           HATCH.lookUp[1],
         );
-        S.fold = envelope(t, HATCH.fold[0], HATCH.fold[0] + 1, HATCH.fold[1] - 0.6, HATCH.fold[1]);
+        S.fold = envelope(t, HATCH.fold[0], HATCH.fold[0] + 0.7, HATCH.fold[1] - 0.5, HATCH.fold[1]);
         S.tap = envelope(t, HATCH.tap[0], HATCH.tap[0] + 0.2, HATCH.tap[1] - 0.25, HATCH.tap[1]);
         W.tap = 0.6 * S.tap;
       }
@@ -790,6 +798,13 @@ export class GroveActors {
         W.huddle = 1 - window01(t, WAKE.rise[0], WAKE.rise[1]);
       }
     }
+    // Their habits: his wings half open, hers shut (unless the moment says otherwise).
+    if (S.fold < 0.5 && S.huddle < 0.5) S.wings = LOOK.sorrel.wings;
+    if (W.fold < 0.5 && W.huddle < 0.5 && W.shake < 0.3) W.wings = LOOK.wing.wings;
+    // She eases back to the game's own look as she wakes (the hand-over is seamless).
+    const ease = P.beat === 'wake' ? 1 - window01(t, WAKE.rise[0], WAKE.hud[1]) : 1;
+    setWingLook(this.wingLook, ease);
+    this.wingSize = 1 + (LOOK.wing.scale - 1) * ease;
     // In the ferns, against the coral: two silhouettes.
     const sil = P.beat === 'hollow' ? window01(t, HOLLOW.hide[0] - 0.4, HOLLOW.hide[0] + 0.4) : 0;
     const shade = Math.round(255 - 225 * sil);
@@ -797,7 +812,17 @@ export class GroveActors {
     this.wingLayer.tint = tint;
     this.sorrelLayer.tint = tint;
     // Draw (or hide) each, and lend its light to the Grove.
-    this.drawMoth(this.wing, this.wingLayer, wv, dt, clock, this.wingLights, this.lights.wing!, this.wingAt);
+    this.drawMoth(
+      this.wing,
+      this.wingLayer,
+      wv,
+      dt,
+      clock,
+      this.wingLights,
+      this.lights.wing!,
+      this.wingAt,
+      this.wingSize,
+    );
     this.sorrel.hideWings = !!sv && !sv.grounded;
     this.drawMoth(
       this.sorrel,
@@ -808,42 +833,49 @@ export class GroveActors {
       this.sorrelLights,
       this.lights.sorrel!,
       this.sorrelAt,
+      LOOK.sorrel.scale,
     );
     this.drawSorrelWings(sv, clock);
   }
 
-  /** The hollow, staged: on the fox's back, up over the hollow, down beside the case; in the escape, hers is the sim's. */
+  /**
+   * The hollow, staged: on the fox's back; up over the hollow; she lands ON the case and folds her
+   * wing over it, his fold from the hatching (and it does not warm it); in the escape hers is the
+   * sim's (a hop down off the case first); he pulls her into the ferns and folds over her there.
+   */
   private hollowMoths(t: number, her: PlayerView, clock: number): { wv: PlayerView; sv: PlayerView } {
     const H = HOLLOW;
     const W = this.wingCue;
     const S = this.sorrelCue;
     const backY = MOSS - 132;
     const hover = { x: H.x + 10, y: MOSS - 118 + 4 * Math.sin(clock * 3) };
-    const side = H.x + 30 - H.caseRx - 12;
+    const onCase = { x: H.x + 4, y: MOSS - H.stalk - H.caseH + 6 };
     // Hers.
     let wv: PlayerView;
     if (t < H.play[0]) {
       const up = window01(t, H.flutter[0], H.flutter[1]);
       const down = window01(t, H.land[0], H.land[1]);
-      const x = FOX_DRINK + 10 + (hover.x - FOX_DRINK - 10) * up + (side - hover.x) * down;
-      const y = backY + (hover.y - backY) * up + (MOSS - hover.y) * down;
+      const x = FOX_DRINK + 10 + (hover.x - FOX_DRINK - 10) * up + (onCase.x - hover.x) * down;
+      const y = backY + (hover.y - backY) * up + (onCase.y - hover.y) * down;
       const air = up > 0.02 && down < 0.98;
-      wv = this.wingStand.set(x, y, t > H.land[0] ? 1 : -1, air, air ? 0.4 * Math.sin(clock * 9) : 0);
-      W.huddle = t < H.paling[0] ? 0.3 : 0;
+      wv = this.wingStand.set(x, y, 1, air, air ? 0.4 * Math.sin(clock * 9) : 0);
+      W.huddle = t < H.paling[0] ? 0.3 : 0.35 * window01(t, H.land[1], H.land[1] + 0.6);
       W.fold = window01(t, H.fold[0], H.fold[0] + 0.8);
       W.hold = t < H.flutter[0] ? 0.4 : 0;
     } else {
-      const sim = her;
-      wv = sim;
+      wv = her;
+      // Off the case: a hop down to where she stands.
+      const hop = window01(t, H.play[0], H.play[0] + 0.5);
+      if (hop < 1) wv = blend(this.wingStand.set(onCase.x, onCase.y, 1, false), her, hop);
       if (this.plan.tackleAt >= 0) {
         const k = window01(t, this.plan.tackleAt, this.plan.tackleAt + 0.9);
-        const tk = this.wingStand.set(
-          side + (H.ferns - 70 - side) * k,
-          MOSS - 30 * Math.sin(k * Math.PI),
-          -1,
-          k > 0 && k < 1,
-        );
-        if (t < this.plan.tackleAt + 0.9) wv = tk;
+        if (t < this.plan.tackleAt + 0.9)
+          wv = this.wingStand.set(
+            her.cx + (H.ferns - 70 - her.cx) * k,
+            MOSS - 30 * Math.sin(k * Math.PI),
+            -1,
+            k > 0 && k < 1,
+          );
       }
       W.fold = Math.max(
         this.plan.fold,
@@ -865,8 +897,8 @@ export class GroveActors {
         0.4 * Math.sin(clock * 9 + 1),
       );
       S.huddle = t < H.flutter[0] ? 0.6 : 0;
-    } else {
-      // In the ferns, beckoning; then out to tug at her (or to tackle her).
+    } else if (t < H.hide[0]) {
+      // In the ferns, beckoning; out to tug at her; when she comes near, he pulls her in with him.
       const fx = H.ferns - 110;
       let x = fx;
       let air = false;
@@ -874,6 +906,8 @@ export class GroveActors {
         envelope(t, H.play[0] + 2.6, H.play[0] + 3.2, H.play[0] + 3.6, H.play[0] + 4.4) *
         (her.cx > H.ferns + 20 ? 1 : 0);
       x += (her.cx - 40 - fx) * tug;
+      const pull = window01(H.ferns + 160 - her.cx, 0, 60);
+      x += (her.cx - 36 - x) * pull;
       if (this.plan.tackleAt >= 0) {
         const k = envelope(
           t,
@@ -882,12 +916,16 @@ export class GroveActors {
           this.plan.tackleAt + 0.6,
           this.plan.tackleAt + 1,
         );
-        x += (her.cx - fx) * k;
+        x += (her.cx - x) * k;
         air = k > 0.1 && k < 0.9;
       }
       sv = this.sorrelStand.set(x, MOSS - (air ? 30 : 0), her.cx > x ? 1 : -1, air);
-      S.fold = t < H.hide[0] ? 0.8 * Math.max(0, Math.sin((t - H.play[0]) * 1.4)) : 0.6;
-      S.tap = t < H.hide[0] ? 0.5 * Math.max(0, Math.sin(t * 4)) : 0;
+      S.fold = Math.max(0.8 * Math.max(0, Math.sin((t - H.play[0]) * 1.4)) * (1 - pull), 0.9 * pull);
+      S.tap = 0.5 * Math.max(0, Math.sin(t * 4)) * (1 - pull);
+    } else {
+      // The hide: at her side, his wing over her while hers is over the light.
+      sv = this.sorrelStand.set(her.cx - 34, MOSS, 1, false);
+      S.fold = 1;
       S.lookUp = window01(t, H.hide[1] - 1.6, H.hide[1] - 0.8);
     }
     return { wv, sv };
@@ -902,22 +940,28 @@ export class GroveActors {
     reg: LightRegistry,
     out: PointLight,
     at: { x: number; y: number; hx: number; hy: number; on: boolean },
+    size = 1,
   ): void {
     layer.visible = !!v;
     at.on = !!v;
     if (!v) return;
     skin.update(dt, clock, v, []);
+    // Drawn at `size` about the feet.
+    layer.pivot.set(v.cx, v.feetY);
+    layer.position.set(v.cx, v.feetY);
+    layer.scale.set(size);
     at.x = v.cx;
     at.y = v.feetY;
-    at.hx = skin.offer.x;
-    at.hy = skin.offer.y;
+    at.hx = v.cx + (skin.offer.x - v.cx) * size;
+    at.hy = v.feetY + (skin.offer.y - v.feetY) * size;
     const l = reg.get('ember');
     if (l) {
       out.x = l.x;
       out.y = l.y;
       out.radius = l.radius;
       out.color = l.color;
-      out.intensity = l.intensity;
+      // (In the hollow their warm lights are kept low: the case must read bone-cold.)
+      out.intensity = l.intensity * (this.plan.beat === 'hollow' ? 0.35 : 1);
     }
   }
 
@@ -926,7 +970,7 @@ export class GroveActors {
     const g = this.sorrelWings;
     g.clear();
     if (!v || v.grounded) return;
-    drawFlightWings(g, v.cx, v.feetY - 50, clock * 7.5);
+    drawFlightWings(g, v.cx, v.feetY - 50 * LOOK.sorrel.scale, clock * 7.5, LOOK.sorrel.scale);
   }
 
   // --- The glint: where the director has it, or in a hand.
@@ -956,7 +1000,7 @@ export class GroveActors {
     if (!on) return;
     const pulse = 0.85 + 0.15 * Math.sin(clock * 3.4);
     // Folded under her wing it shows only as a thread of amber.
-    const hidden = P.beat === 'hollow' ? 0.85 * P.fold : 0;
+    const hidden = P.beat === 'hollow' ? 0.85 * Math.max(P.fold, this.wingCue.fold) : 0;
     this.glint.position.set(x, y);
     this.glint.alpha = pulse * (1 - hidden);
     const l = this.lights.glint!;
@@ -1109,11 +1153,11 @@ export class GroveActors {
     this.lamp.painter.mesh.destroy();
     this.lamp.front.mesh.destroy();
     this.fox.destroy();
-    this.sleeper.destroy();
+    this.caseV.destroy();
     this.back.destroy({ children: true });
     this.actors.destroy({ children: true });
     this.front.destroy({ children: true });
-    this.dance.destroy({ children: true });
+    this.dance.destroy();
     void this.layers;
     void this.foxX;
   }

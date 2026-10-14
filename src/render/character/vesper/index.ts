@@ -783,6 +783,8 @@ export class VesperCharacter implements CharacterSkin {
     cue.huddle = cc.huddle;
     cue.tap = cc.tap;
     cue.lookUp = cc.lookUp;
+    cue.wings = cc.wings;
+    cue.give = cc.give;
     if (!goal) return;
     // Lanterns, then the wayside lamps: one list, as the goal renderer keeps them (its `beads` are in this order).
     const nLant = sc.lanterns?.length ?? 0;

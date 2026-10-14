@@ -34,6 +34,7 @@ import { LightRegistry } from './lights';
 import { PickupRenderer } from './pickups/index';
 import { PostStage } from './post/index';
 import type { PrologueRenderer } from './prologue/index';
+import { Remains } from './prologue/remains';
 import { SceneRenderer } from './scene/index';
 
 /**
@@ -92,6 +93,8 @@ export class RenderStage {
   private prologue: PrologueRenderer | null = null;
   private prologueTick: ((dt: number) => void) | null = null;
   private prologueClock = 0;
+  /** The prologue's leavings in the Grove (the case, the husks), once it is over. */
+  private remains: Remains | null = null;
 
   constructor(
     private readonly ga: GameApp,
@@ -163,6 +166,8 @@ export class RenderStage {
     this.prologue = null;
     this.prologueTick = null;
     p.destroy();
+    // What it leaves in the Grove: the fox's case by the pool, the husks.
+    this.remains = new Remains(this.scene.layers);
     this.scene.layers.root.visible = true;
     this.scene.layers.character.visible = true;
     this.scene.layers.pickups.alpha = this.scene.layers.pickupsBack.alpha = 1;
@@ -243,6 +248,7 @@ export class RenderStage {
       // Before her: actors that act with her, and the cues for her acting.
       pro.update(dt, this.prologueClock, view, sim);
     }
+    this.remains?.update(this.clock);
     this.scene.update(dt, this.clock, view, sim);
     this.character.update(dt, this.clock, player, events);
     if (pro?.heroHidden) {

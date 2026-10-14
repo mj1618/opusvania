@@ -177,8 +177,10 @@ export class Fox {
     this.emberHalo.position.set(this.tip[0], this.tip[1]);
     this.ember.setSize(16, 16);
     this.emberHalo.setSize(90, 90);
-    this.ember.alpha = (0.15 + 0.85 * e) * k * (1 - o.sink * 0.6);
-    this.emberHalo.alpha = 0.32 * e * k * (1 - o.sink);
+    // A faint ember (asleep, curled, fainter still: it lies by its nose and must not read as a lamp).
+    const faint = 1 - 0.55 * o.curl;
+    this.ember.alpha = (0.15 + 0.85 * e) * k * (1 - o.sink * 0.6) * faint;
+    this.emberHalo.alpha = 0.22 * e * k * (1 - o.sink) * faint;
     this.ember.tint = e > 0.3 ? 0xffd0a0 : 0x9a9aa0;
   }
 
@@ -207,7 +209,7 @@ export class Fox {
       [-20, y0 - 86 * b],
       [-90, y0 - 70 * b],
     ]).fill({ color: RUST, alpha: 0.8 * a });
-    tufts(g, back.slice(1, 7), 9, FUR, a, 1);
+    tufts(g, back.slice(1, 7), 5, FUR, 0.8 * a, 1);
     // The head, laid down at the front, muzzle to the right and down, half under the tail.
     const hx = 76;
     const hy = y0 - 54;
@@ -253,7 +255,7 @@ export class Fox {
       [-110, y0 - 22],
     ];
     blobPath(g, tail).fill({ color: FUR_SH, alpha: a });
-    tufts(g, tail.slice(4, 9), 8, FUR_SH, a, 3);
+    tufts(g, tail.slice(4, 9), 5, FUR_SH, 0.8 * a, 3);
     blobPath(g, [
       [130, y0 - 4],
       [158, y0 - 28],
@@ -280,7 +282,7 @@ export class Fox {
     const ph = o.walk * Math.PI * 2;
     // The body rides the stride a little; drinking, the forequarters drop.
     const bob = Math.sin(ph * 2) * 2.5 * w;
-    const dip = 18 * o.drink;
+    const dip = 56 * o.drink;
     const y0 = down - bob;
     // Legs (far pair first, darker): hip / shoulder, knee, hock or wrist, paw. Four-beat walk.
     const leg = (x: number, phase: number, hind: boolean, far: boolean): void => {
@@ -349,7 +351,7 @@ export class Fox {
       [-112, y0 - 80],
     ];
     blobPath(g, body).fill({ color: FUR, alpha: a });
-    tufts(g, body.slice(1, 5), 7, FUR, a, 4);
+    tufts(g, body.slice(1, 5), 5, FUR, 0.8 * a, 4);
     // The rust along the back, a pale chest and belly.
     blobPath(g, [
       [-128, y0 - 118 * b],
@@ -368,7 +370,7 @@ export class Fox {
     leg(78, 0.25, false, false);
     // Neck and head: the neck reaches down to drink; shaken; jerked back by the sneeze.
     const neck: P = [86, y0 - 118 + dip];
-    let pitch = 1.15 * o.drink - 0.4 * o.sneeze + 0.06 * Math.sin(clock * 0.5) * (1 - o.drink);
+    let pitch = 1.55 * o.drink - 0.4 * o.sneeze + 0.06 * Math.sin(clock * 0.5) * (1 - o.drink);
     pitch += Math.sin(clock * 18) * 0.12 * o.shake;
     const R = (p: P): P => rot([p[0], y0 + dip + p[1]], neck, pitch);
     blobPath(g, [
@@ -449,10 +451,10 @@ export class Fox {
 
   /** The nose tip in the fox's own px for the current pose (for the glint's landing and steam). */
   nose(o: FoxPose): P {
-    const dip = 18 * o.drink;
+    const dip = 56 * o.drink;
     const y0 = o.sink * 190;
     const neck: P = [86, y0 - 118 + dip];
-    const pitch = 1.15 * o.drink - 0.4 * o.sneeze;
+    const pitch = 1.55 * o.drink - 0.4 * o.sneeze;
     return rot([218, y0 + dip - 142], neck, pitch);
   }
 
