@@ -270,7 +270,13 @@ export function proCues(prev: ProView | null, cur: ProView, cam: AudioCam, ctx: 
       const placed = (x: number, y: number) => ({ x, y, place: 'world' as const });
       // Frost crackle through the cold part of the hatching; the fox's slow breath while it sleeps.
       const [, frostEnd] = span(HATCH, 'frostOut', [24, 30]);
-      if (b < frostEnd && hash01(ctx.seed, key, salt('frost')) < (P.frostRate / 60) * (1 - b / frostEnd))
+      // (The frost comes in as he waits under her cocoon: pass 4's picture shows it from about 6 s in.)
+      const [frostIn] = span(HATCH, 'frostIn', [span(HATCH, 'lookUp', [6, 6])[0] + 0.6, 0]);
+      if (
+        b >= frostIn &&
+        b < frostEnd &&
+        hash01(ctx.seed, key, salt('frost')) < (P.frostRate / 60) * (1 - b / frostEnd)
+      )
         add('frost', 'world', P.frostDb, {
           ...placed(fox.x + (hash01(ctx.seed, key, 7) - 0.5) * 700, 1260),
           far: hash01(ctx.seed, key, 8) * 0.6,
@@ -308,6 +314,9 @@ export function proCues(prev: ProView | null, cur: ProView, cam: AudioCam, ctx: 
       music('pluckBright', SORREL_MOTIF.slice(0, 7), 6, foldBpm, p0 - f0, b - f0, P.sorrelSlowDb, false);
       const [tap] = span(HATCH, 'tap', [21.2, 22]);
       music('pluck', WING_MOTIF.slice(0, 2), 2, 72, p0 - tap, b - tap, P.wingMotifDb, false);
+      // She leans to the fox's face: its breath, close.
+      const [lf] = span(HATCH, 'lookFox', [-1, -1]);
+      if (lf >= 0 && at(lf + 0.6)) add('calmBreath', 'creatures', P.foxDb + 4, placed(fox.x + 40, fox.y), 9);
       const [r0] = span(HATCH, 'ready', [22.5, 24]);
       if (at(r0)) add('wing', 'hero', P.wingDb - 3, placed(so.x - 60, 1240), 5);
       break;
@@ -397,6 +406,11 @@ export function proCues(prev: ProView | null, cur: ProView, cam: AudioCam, ctx: 
       if (at(c0 + 0.5)) add('boneKnock', 'hush', P.boneDb, w(1240), 35);
       // Her shiver against the case: small dry flutters.
       const [fo0, fo1] = span(HOLLOW, 'fold', [17, 28]);
+      // Her wing over the case, the rhyme of his fold: his fold motif returns on HER strings, slower, and
+      // breaks off: the first bar, one note of the second, then nothing answers.
+      music('pluck', SORREL_MOTIF.slice(0, 5), 6, 54, p0 - fo0 - 1, b - fo0 - 1, P.wingMotifDb - 2, false, {
+        pan: -0.05,
+      });
       if (b > fo0 && b < fo1 && hash01(ctx.seed, key, salt('shiver')) < 1.6 / 60)
         add('flutter', 'hero', P.shiverDb, w(1200), 36);
       if ((cur.tackleAt ?? -1) >= 0 && (prev?.tackleAt ?? -1) < 0) {
@@ -422,6 +436,10 @@ export function proCues(prev: ProView | null, cur: ProView, cam: AudioCam, ctx: 
       if (of0 >= 0 && at(of0 + 0.3)) add('offerTone', 'hero', P.glintDb + 2, { pan: -0.05 }, 41);
       const [fb0] = span(SUMMIT, 'foldBack', [-1, -1]);
       if (fb0 >= 0 && at(fb0 + 0.2)) add('wing', 'hero', P.wingDb - 4, { pan: 0.05 }, 42);
+      // The silver moth swoops low past him.
+      const [sv0] = span(SUMMIT, 'silver', [-1, -1]);
+      if (sv0 >= 0 && at(sv0 + 0.6))
+        add('whoosh', 'world', AUDIO.hero.whooshDb - 4, { pan: 0.25, far: 0.3 }, 43);
       const [tp0] = span(SUMMIT, 'tap', [-1, -1]);
       if (tp0 >= 0)
         music('pluck', WING_MOTIF.slice(0, 2), 2, 72, p0 - tp0, b - tp0, P.wingMotifDb - 2, false);
@@ -548,7 +566,11 @@ export function proMix(v: ProView): ProMix {
       }
       // After the wash goes dark the wood breathes out again.
       if (b >= stop) m.bed = env(b, [stop + 0.5, stop + 4]) * 0.8;
-      m.glint = b > (span(HOLLOW, 'land', [16, 17.2])[0] ?? 16) && !hidden ? g(P.glintToneDb) : 0;
+      // She carries the glint in from the first night; hidden under her wing it is silent.
+      m.glint = !hidden ? g(P.glintToneDb) : 0;
+      // The root tip at her face: her glint dims while it looks.
+      const [rt0, rt1] = span(HOLLOW, 'rootTip', [-1, -1]);
+      if (b > rt0 && b < rt1) m.glint *= 0.35;
       break;
     }
     case 'summit': {

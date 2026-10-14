@@ -130,6 +130,15 @@ Offline render 41 s in 2.6 s, bake ~110 ms. Cues in the clip: 9 knocks, 20 drips
 - Levels after pass 3: -23.2 LUFS, -8.3 dBTP, 0 clipped; momentary breath -34..-18, hatching -31..-24,
   first night -25..-18, hollow -27..-19, hide -31..-27, summit -26..-17, title black -83, next night -27.
 
+- Pass 4 re-sync (461aac0): frost from `lookUp` + 0.6 (no sheet field for it); the fox's breath close as she
+  leans to its face (`lookFox`); **her wing over the case (`HOLLOW.fold`) brings his fold motif back on HER
+  strings, 54 bpm, broken off after one note of the second bar: nothing answers**; her glint's tone is with her
+  from the hollow's start, dims to 35% under the root tip (`rootTip`), silent hidden; the silver moth's swoop
+  (`SUMMIT.silver`) a far whoosh; the Hush's title call down to -25 (it topped the momentary at -15).
+- Levels on pass 4 (142 s with the autopilot): -22.7 LUFS, -7.0 dBTP, 0 clipped, centroid 523 Hz; momentary
+  breath -34..-18, hatching -31..-24, first night -25..-19, hollow -27..-16 (the opening), her wing over the
+  case -25..-18, hide -32..-28, summit -23..-17, title call -17, black -84, next night -29..-23. Render 11.7 s.
+
 ## Giving round 3 (asleep, caught, lost), muted
 - Snap creatures also carry `aware`, `dozing`, `down` (dead / hurt). Asleep (`e.dozing`): `sleepBreath` (in, then a
   longer low out, 2.6 s) about every 3.6 s with a seeded lateness (`sleepBreath()` in router.ts), -37 dB, faded

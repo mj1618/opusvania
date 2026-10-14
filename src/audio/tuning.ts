@@ -207,7 +207,7 @@ export const AUDIO = {
     lampDb: -40,
     /** The summit: the mountain's breath (relative); the title: the Hush's call. */
     mountainDb: 6,
-    callDb: -22,
+    callDb: -25,
   },
   /** World sounds fall off with distance from the camera: half level at this many px. */
   halfPx: 900,
