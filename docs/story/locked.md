@@ -1,4 +1,4 @@
-# Storyline (working name: Mouthless): locked decisions
+# HUSHWING: locked story decisions
 
 These are frozen. Story agents refine within them and may only PROPOSE changes (in a "Proposed changes to locked
 decisions" note); the orchestrator decides on proposals (the owner asked not to be consulted on every decision). Locked 2026-10-14 from round 18.
@@ -42,7 +42,7 @@ Tallow, the last man awake, and his sister who made it (seen, not a principal) Â
 Full shot lists: [scenes/mouthless-key-scenes.md](scenes/mouthless-key-scenes.md).
 
 ## Names (owner, 2026-10-14)
-- **Game title (working): The Moth and the Mouth.** The storyline keeps the name Mouthless in files.
+- **Game title: HUSHWING.** A moth (wing) against the Hush; quick web check found no game by that name.
 - **Hero: Umber** (renamed from Vesper, then from Eri, which sounded too close to Ori; 2026-10-14). The umbers are a real family of dusk moths (the mottled umber, the dark umber), and umber is an earth colour: she and her brother Sorrel are both named for warm browns. Code keeps the internal id `vesper`.
 
 ## De-mouthing (orchestrator decision, 2026-10-14, after the owner asked if it was "a bit too mouthy")
@@ -51,8 +51,7 @@ Full shot lists: [scenes/mouthless-key-scenes.md](scenes/mouthless-key-scenes.md
 - Umber having no mouth is the ONE mouth idea: shown (she raises a glint to her face and can do nothing with it), named
   at most once in item text. All her kind are mouthless.
 - The rule is phrased "it only notices things that need feeding"; its ground openings are "hollows", not mouths.
-- The working title "The Moth and the Mouth" is retired; the title is open and decided once the story settles. The
-  storyline file keeps the slug `mouthless`.
+- The game is titled **HUSHWING** (owner rejected "Mouthless", 2026-10-14). Files keep the slug `mouthless`.
 
 ## Distinctness guardrails (from uniqueness.md, 2026-10-14)
 - Moths never worship light; they carry and give it. The Hush is pale bone and breath: never orange glow, never
