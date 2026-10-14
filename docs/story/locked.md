@@ -34,3 +34,9 @@ Tallow, the last man awake, and his sister who made it (seen, not a principal) Â
 ## Constraints
 - Wordless or nearly; no audio yet (design big beats so they can be sound-led later).
 - Every beat must be drawable in this engine (code-drawn, few new characters).
+
+## The three big images (owner's picks, 2026-10-14)
+- **Prologue opening: A, "The breath."** A small pale light breathing in the dark; a warm blur (the maker's palm, unreadable) rests on it, lifts away, and the light stutters into grey grain. Night 4 widens this exact frame.
+- **Night 4 turning moment: B, "The cloud draws a moth."** Amber enters the dish for the first time, the static stops, its threads draw a moth (the first picture it has ever made); then every root turns to her; end on one lampwing's lamp settling on Sorrel in the Grove.
+- **Final image: C, "The hand, returned."** The maker, old, lays her palm on the mountain's silk, framed like the prologue's blur; something presses back from inside; she doesn't lift her hand.
+Full shot lists: [scenes/mouthless-key-scenes.md](scenes/mouthless-key-scenes.md).
