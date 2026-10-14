@@ -146,14 +146,14 @@ export class PostStage {
     // Staged looks (the prologue): frost pales and cools the night; dim takes the wood's light down.
     const fr = POST_CINE.frost;
     if (fr > 0) {
-      u.uVignetteTint[3] *= 1 - 0.45 * fr;
+      u.uVignetteTint[3] *= 1 - 0.6 * fr;
       u.uHighlight[3] *= 1 - 0.85 * fr;
       for (let i = 0; i < 3; i++) {
         const cold = [0.78, 0.88, 1][i] as number;
         u.uHighlight[i] = (u.uHighlight[i] as number) + (cold - (u.uHighlight[i] as number)) * fr;
       }
-      u.uShadow[3] = (u.uShadow[3] as number) * (1 + 0.6 * fr);
-      u.uTone[0] = (u.uTone[0] as number) * (1 + 0.06 * fr);
+      u.uShadow[3] = (u.uShadow[3] as number) * (1 + 1.2 * fr);
+      u.uTone[0] = (u.uTone[0] as number) * (1 + 0.12 * fr);
     }
     if (POST_CINE.dim > 0) u.uTone[0] = (u.uTone[0] as number) * (1 - 0.5 * POST_CINE.dim);
 

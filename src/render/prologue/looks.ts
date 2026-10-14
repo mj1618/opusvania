@@ -11,11 +11,11 @@ export const LOOK = {
   wing: { scale: 0.9, wings: -0.75 },
 } as const;
 
-/** Sorrel: lighter, a warmer rose-plum. */
-export function sorrelFilter(): ColorMatrixFilter {
+/** Sorrel: lighter, a warmer rose-plum (`k` how much lighter: less where his pale face would blow out). */
+export function sorrelFilter(k = 1): ColorMatrixFilter {
   const f = new ColorMatrixFilter();
   f.resolution = 'inherit';
-  f.brightness(1.3, false);
+  f.brightness(1 + 0.3 * k, false);
   f.hue(-14, true);
   f.saturate(-0.12, true);
   return f;

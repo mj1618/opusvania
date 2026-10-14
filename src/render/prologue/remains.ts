@@ -60,7 +60,7 @@ export class Remains {
         const sy = Math.cos(a);
         const w = 19 * (0.5 + 0.45 * (1 - sy) * 0.5 + 0.25 * Math.sin((1 - sy) * 1.6));
         let yy = top + 40 - sy * 40;
-        if (sy < -0.2) yy -= (12 + 6 * Math.sin(k * 2.7)) * (-sy - 0.2);
+        if (sy < -0.2) yy -= 14 * (-sy - 0.2);
         pts.push(x + sx(a) * w * (1 + 0.15 * (sy < 0 ? -sy : 0)), yy);
       }
       g.poly(pts).fill({ color: 0x6a6458, alpha: 0.96 });

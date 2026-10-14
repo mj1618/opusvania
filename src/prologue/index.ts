@@ -116,6 +116,8 @@ export class PrologueDirector {
     if (P.beat === 'hatch') {
       if (at(HATCH.sorrelSplit)) this.guide.place(HATCH.sorrel.x, HATCH.sorrel.y + 40);
       if (at(HATCH.wingSplit)) this.game.teleport(HATCH.wing.x, HATCH.wing.y + 40);
+      // A few steps to the fox's sleeping face, to look at it (her own feet, on the real sim).
+      if (at(HATCH.lookFox[0] - 0.7)) this.game.queueInput(parseInputScript('R7'));
     } else if (P.beat === 'hollow') {
       if (at(HOLLOW.play[0])) this.game.teleport(HOLLOW.x + 30 - HOLLOW.caseRx - 12, MOSS);
       // Still on the case when the lamp starts down: Sorrel tackles her into the ferns.
@@ -155,7 +157,9 @@ export class PrologueDirector {
       P.can.jump = true;
       this.guide.play(COURSE.legs[0]!.clip);
     } else if (P.beat === 'hollow') {
-      // Placed on the fox's back (drawn so); her body stands under it.
+      // Where she was when it ends (the renderer flies her stand-in down from there onto the fox's back).
+      P.from = { x: this.herX(), y: this.herFeet(), sx: this.guide.x, sy: this.guide.y };
+      // Placed by the fox (drawn on its back); her body stands under it.
       this.game.teleport(FOX_DRINK, MOSS);
       P.glint.holder = 'wing';
     }
@@ -333,17 +337,19 @@ export class PrologueDirector {
         P.glint.x = a * this.sail.x + b * cx + c * N.x;
         P.glint.y = a * this.sail.y + b * cy + c * N.y;
         if (u >= 1) {
-          P.sneezeAt = P.pt;
+          // It rests on the fox's nose a moment; the fox's nose twitches; then the sneeze.
+          P.sneezeAt = P.pt + COURSE.sneezeWait;
           this.setPhase('nose');
         }
         break;
       }
       case 'nose': {
-        // The sneeze pops it up; it hangs over the fox's back for her.
-        const k = Math.min(1, since / 0.8);
-        P.glint.x = COURSE.nose.x + (FOX_DRINK - 30 - COURSE.nose.x) * k;
-        P.glint.y = COURSE.nose.y - 120 * Math.sin(Math.min(1, k) * Math.PI * 0.6) - 4 * Math.sin(P.pt * 3);
-        if (Math.abs(hx - FOX_DRINK) < COURSE.foxReach + 60 && hy > 1100 && since > 0.6) {
+        // The sneeze (held close: no control) pops it up off the fox's nose; then they come down
+        // onto the fox (the hollow beat begins with that, from wherever they are: no cut).
+        const k = Math.max(0, Math.min(1, (since - COURSE.sneezeWait) / 0.8));
+        P.glint.x = COURSE.nose.x + (FOX_DRINK + 60 - COURSE.nose.x) * k;
+        P.glint.y = COURSE.nose.y - 150 * Math.sin(Math.min(1, k) * Math.PI * 0.5) - 4 * Math.sin(P.pt * 3);
+        if (since >= COURSE.sneezeHold) {
           P.glint.holder = 'wing';
           this.setPhase('end');
           this.nextBeat();
@@ -439,7 +445,7 @@ export class PrologueDirector {
       return m;
     }
     if (P.beat !== 'play') return 0;
-    if (P.phase === 'hold' || P.phase === 'his' || P.phase === 'end') return 0;
+    if (P.phase === 'hold' || P.phase === 'his' || P.phase === 'nose' || P.phase === 'end') return 0;
     let m = L | R;
     if (P.can.jump) m |= J;
     if (P.can.dash) m |= X;
@@ -492,19 +498,6 @@ export class PrologueDirector {
         this.botSail = true;
         game.teleport(F4.x1 - 52, F4.y);
         game.queueInput(parseInputScript(`.8 ${COURSE.dive.clip}`));
-        return;
-      }
-      if (P.phase === 'nose') {
-        // (Landed up on a branch: the autopilot just puts her down by the water.)
-        if (hy < 1200 && game.state.player.grounded) {
-          game.teleport(FOX_DRINK - 220, MOSS);
-          return;
-        }
-        if (Math.abs(hx - FOX_DRINK) > COURSE.foxReach) {
-          one(hx < FOX_DRINK ? R : L);
-          return;
-        }
-        one(0);
         return;
       }
       one(0);

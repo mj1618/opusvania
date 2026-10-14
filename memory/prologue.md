@@ -113,3 +113,30 @@ acting beat, and two siblings who cannot be confused.
   only, owned by the stage).
 - Beat ids are unchanged (breath, hatch, play, hollow, summit, wake); lengths changed: hatch 26, hollow 43, summit 16.5,
   wake 13 (the audio agent scores by beat name).
+
+## Pass 4 (after the second blind review, docs/story/reviews/prologue-v2-pass3.md)
+Lesson: a beat that exists in code but is 30 px on screen does not exist. Verify each beat in frames from the clip
+at phone size before claiming it (`ffmpeg -ss <t> -i clips/prologue.mp4 -frames:v 1`), not from the cue values.
+- **The wing-fold** is drawn, not posed (`wrap.ts` `drawWrap`): a broad wing from the shoulder, its leading edge
+  arching over the thing and its tip down on the far side, pale hem, one eye-spot. The same function draws his over
+  her (r 30, his colour) and hers over the case (r 62, her colour): the rhyme is one silhouette. The skin's own
+  cape-wing pose could not read at this size. Drawn in world px in `actors`, not inside the scaled stand-in layers.
+- **Her in the frost**: a pale frost bed behind her (her dark shape on it), the stand-in layer rotated ~1.35 rad about her feet (lying on her side), rime dots on her,
+  a hoarfrost crust and feathers along the moss, rime on the fox's back, a stronger frost grade.
+- **The tap**: a flash ring at the midpoint of their hand points (hatch and summit).
+- **The fox drinks** with its muzzle in the pool: the head travels (`DRINK_REACH`) and tips (`DRINK_PITCH`), nose at
+  (1632, 1356) = `COURSE.nose`, ripples at `WATER`. The fox and the moths draw in `playfieldFront` so the muzzle is in
+  front of the bank's edge; the fox's ground clip only applies while it sinks (it hid the muzzle before).
+- **The sneeze**: the played stretch ends with a 3 s held close-up (no control; the camera gets there during the sail) of the fox drinking as the glint lands, rests 0.8 s (`sneezeWait`), and the sneeze sprays drops and pops it up
+  on its nose and pops up; the hollow begins from where they were (`plan.from`, the play camera blends into the
+  hollow's: no cut).
+- **The lamp** is no longer the lampwing creature: a pale bulb on a pale thread from the case's top, kindling coral,
+  with a narrow coral cone toward her. The pulse is a bright bead climbing the stalk and the thread (2.5 s), the
+  camera tilting with it.
+- **Summit**: silhouettes (backs to us, a ColorMatrix dim: `tint` does not reach through the layer's filter) for the
+  looks, lit for the offer and for her alone; his brightening off there (his pale face blew out); the silver-edged
+  moth is drawn as a moth (swept silver forewings, antennae) and swoops to him, waits, and leads him up; dead towns
+  (dark rimed blocks, LAND `uP[3].x`) so the land reads as land; the mound's core light and dark creases toned down
+  (it read as a face with one eye); the case's point sits under the twig.
+- **Husks**: the torn lip is a soft rolled ring (the flap strokes read as fangs).
+- Beat lengths: breath 10, hatch 30, play (player-paced; ~24 s autopilot), hollow 46, summit 20, wake 13.

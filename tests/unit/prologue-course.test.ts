@@ -31,6 +31,7 @@ describe('prologue course', () => {
     const last = COURSE.legs[COURSE.legs.length - 1]?.mark ?? COURSE.start;
     const g = run(last.x, last.y, COURSE.dive.clip);
     expect(g.y).toBe(1280);
-    expect(Math.abs(g.x - COURSE.nose.x)).toBeLessThan(120);
+    // (He lands on the bank above where the fox drinks: its nose is out over the water.)
+    expect(Math.abs(g.x - COURSE.nose.x)).toBeLessThan(160);
   });
 });

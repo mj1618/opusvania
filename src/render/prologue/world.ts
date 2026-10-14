@@ -125,6 +125,8 @@ vec4 paint() {
   vec2 ci = floor(cell);
   float towns = 0.0;
   float covered = 0.0;
+  float dead = 0.0;
+  float deadRim = 0.0;
   for (int j = -1; j <= 1; j++)
     for (int i = -1; i <= 1; i++) {
       vec2 c = ci + vec2(float(i), float(j));
@@ -135,7 +137,19 @@ vec4 paint() {
       float has = step(hash12(C * 3.7 + 1.3), 0.6);
       vec2 cen = (C + 0.2 + 0.6 * vec2(hash12(C + 5.1), hash12(C + 9.4))) * 1.7;
       float cr = 0.45 + 0.6 * hash12(C + 2.9);
-      float dens = (has * smoothstep(cr, cr * 0.25, length(cc - cen)) * 0.85 + 0.012) * uP[2].x;
+      float dens0 = has * smoothstep(cr, cr * 0.25, length(cc - cen)) * 0.85 + 0.012;
+      // Dead towns (uP[3].x): small dark blocks of roofs, no light, where the towns were.
+      if (uP[3].x > 0.0 && h < dens0 * 1.6) {
+        vec2 bp = (c + vec2(hash12(c + 1.7), hash12(c + 6.1)) * 0.7 + 0.15) * 0.28;
+        vec2 q = (w - bp) / px;
+        float bs = max((0.05 + 0.05 * hash12(c + 4.4)) / px, 1.5);
+        vec2 qa = abs(q) - vec2(bs * 1.4, bs * 0.7);
+        float m = max(qa.x, qa.y);
+        float box = 1.0 - smoothstep(-0.6, 0.6, m);
+        dead = max(dead, box);
+        deadRim = max(deadRim, exp(-abs(m) / 0.8) * step(qa.y, 0.6));
+      }
+      float dens = dens0 * uP[2].x;
       if (h > dens) continue;
       vec2 tp = (c + vec2(hash12(c + 3.1), hash12(c + 8.7)) * 0.8 + 0.1) * 0.28;
       float td = frostDist(tp);
@@ -161,6 +175,9 @@ vec4 paint() {
   frostCol += pale * front * reach * v * 0.6 + pale * front * 0.07;
   col = mix(col, col * 0.4, behind * 0.7) + frostCol * uP[1].w;
   col += vec3(1.0, 0.68, 0.38) * towns * 1.35 * (1.0 - haze * 0.7);
+  col = mix(col, vec3(0.004, 0.008, 0.012), dead * uP[3].x * (1.0 - haze * 0.6));
+  // Their roofs rimed pale: rows of dead houses, so the land reads as land.
+  col += vec3(0.5, 0.52, 0.56) * deadRim * 0.35 * uP[3].x * (1.0 - haze * 0.7);
   col += pale * covered * 0.25;
   // --- Steam where the front passes: look down the screen for the front, wisps rise from it.
   float st = 0.0;

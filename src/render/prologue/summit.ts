@@ -13,7 +13,7 @@
  * into the dance; she watches him there, alone, the glint's light leaking from under her wing.
  * `t` is the summit's own clock; the title beat keeps the last frame (`t` > SUMMIT end).
  */
-import { Container, Graphics } from 'pixi.js';
+import { ColorMatrixFilter, Container, Graphics } from 'pixi.js';
 import { createPlayer } from '../../sim/player/player';
 import type { Scene } from '../../sim/scene';
 import type { PlayerState } from '../../sim/state';
@@ -42,8 +42,8 @@ const SORREL_X = 840;
 /** The dance, above and to the right (screen px). */
 const DANCE = { x: 1320, y: 250, rx: 250, ry: 56 };
 /** The pale point (the case) in the canopy below, and the root's front it joins. */
-const POINT = { x: 1260, y: 1000 };
-const FRONT = { x: 1390, y: 850 };
+const POINT = { x: 830, y: 978 };
+const FRONT = { x: 1340, y: 878 };
 /** The mountain, far: on the horizon, small. */
 const FAR = { x: 0.2, z: 60 };
 /** World px where the stand-ins live (a floor of their own). */
@@ -115,7 +115,7 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
   const land = c.shader('land', -PAD_X, -PAD_Y, VIEW_W + 2 * PAD_X, VIEW_H + 2 * PAD_Y, LAND, R);
   land.pulse = pulse;
   const mp = project(FAR.x, FAR.z, camX);
-  land.p(0, H, CURVE, F, camX).p(1, FAR.x, 26, 20.5, 1.4).p(2, 0, 3, mp.x, E);
+  land.p(0, H, CURVE, F, camX).p(1, FAR.x, 26, 20.5, 0.85).p(2, 0, 3, mp.x, E).p(3, 1);
   // Moonlight over it all: a cool wash from high on the left.
   const moon = new Container();
   moon.blendMode = 'add';
@@ -137,23 +137,23 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
     [70, -280, 86, 80],
     [-430, 0, 120, 34],
   ];
-  const MS = 0.3;
+  const MS = 0.22;
   for (const [i, [x, y, rx, ry]] of lobes.entries())
     mtn.p(i, foot.x + x * MS, foot.y + y * MS, rx * MS, ry * MS);
   mtn
-    .p(8, foot.x, foot.y - 12, 60, 0.012)
-    .c(9, 0x8a8490)
-    .c(10, 0x12141e)
-    .c(11, 0xd8d0cc)
+    .p(8, foot.x, foot.y - 4, 140, 0.012)
+    .c(9, 0x7a7680)
+    .c(10, 0x3a3a48)
+    .c(11, 0x6a6670)
     .c(12, 0x1a2234, 0.25)
     .p(13, foot.y + 6, 3, 1.7);
   mtn.mesh.position.set(mp.x - foot.x, mp.y - foot.y + 8);
   const core = new Container();
   core.blendMode = 'add';
   R.addChild(core);
-  const coreA = glow(mp.x, mp.y - 10, 12, 0xe8e2dc, 0.6);
-  const coreB = glow(mp.x, mp.y - 10, 90, 0xa8a4b0, 0.2);
-  core.addChild(coreB, coreA);
+  // (No bright core: on the horizon a single light in the mound reads as an eye.)
+  const coreB = glow(mp.x, mp.y - 30, 160, 0x8a8698, 0.1);
+  core.addChild(coreB);
   // --- The wood below them: rounded crowns in moonlight, the pale point in it, its line out to the root's front.
   const wood = new Graphics();
   R.addChild(wood);
@@ -179,6 +179,8 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
   point.addChild(pB, pA);
   // --- The dance above: close, turning, trailing light; one moth edged silver.
   const dance = new DanceRing(22, 30);
+  // Moths, not lights: their glow kept low here.
+  dance.glowK = 0.45;
   R.addChild(dance.view);
   // --- The twig they stand on, dark against the moonlit world, coming in from the left.
   const twig = new Graphics();
@@ -221,10 +223,14 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
   };
   const her = new Figure(c.renderer, scene, WING_X, LOOK.wing.scale);
   const him = new Figure(c.renderer, scene, WING_X, LOOK.sorrel.scale);
-  him.layer.filters = [sorrelFilter()];
-  her.layer.filters = [wingFilter()];
+  // (On the summit he is lit less: a pale face at this size blows out to white.)
+  const dimH = new ColorMatrixFilter();
+  const dimW = new ColorMatrixFilter();
+  him.layer.filters = [sorrelFilter(0), dimH];
+  her.layer.filters = [wingFilter(), dimW];
+  const tapFx = new Graphics();
   const hisWings = new Graphics();
-  R.addChild(hisWings, him.layer, her.layer);
+  R.addChild(hisWings, him.layer, her.layer, tapFx);
   const glint = new Container();
   glint.blendMode = 'add';
   R.addChild(glint);
@@ -252,8 +258,7 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
     const S = SUMMIT;
     const bt = Math.min(t, S.end);
     const b = pulse(t);
-    coreA.alpha = 0.35 + 0.45 * b;
-    coreB.alpha = 0.12 + 0.12 * b;
+    coreB.alpha = 0.06 + 0.08 * b;
     pA.alpha = 0.75 + 0.25 * b;
     pB.alpha = 0.3 + 0.15 * b;
     // The line, with a bead of light running out along it from the case to the root's front: one thing.
@@ -267,6 +272,14 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
     line.stroke({ color: 0xe8e0d8, width: 2.6, alpha: 0.35 + 0.2 * b });
     const bead = lp((t * 0.35) % 1);
     line.circle(bead[0], bead[1], 4).fill({ color: 0xffffff, alpha: 0.8 });
+    // Backs to us, looking out: moonlit silhouettes; lit (by the glint, the moon) for the offer and after.
+    const lit = Math.max(
+      envelope(bt, S.turn[0], S.offer[0], S.lift[0] + 0.4, S.lift[0] + 1.2),
+      window01(bt, S.alone[0] + 0.6, S.alone[0] + 1.8),
+    );
+    // (A ColorMatrix, not `tint`: a tint does not reach through the layer's own filter.)
+    dimH.brightness(0.28 + 0.52 * lit, false);
+    dimW.brightness(0.28 + 0.72 * lit, false);
     // His and her cues.
     const H2 = him.cue;
     const W = her.cue;
@@ -323,18 +336,30 @@ export function buildSummit(c: Composer): (t: number, dt: number) => void {
     const covered = envelope(bt, S.foldBack[0] + 0.4, S.foldBack[1], S.alone[0] + 0.4, S.alone[0] + 1.4);
     glint.alpha = (0.7 + 0.2 * Math.sin(t * 3)) * (1 - 0.8 * covered);
     glint.scale.set(1 + 0.6 * alone);
-    // The dance; the silver one leaves it and circles him, once.
-    const sk = envelope(bt, S.silver[0], S.silver[0] + 0.6, S.silver[1] - 0.6, S.silver[1]);
-    const su = window01(bt, S.silver[0], S.silver[1]) * Math.PI * 2;
-    dance.update(
-      t,
-      DANCE.x,
-      DANCE.y,
-      DANCE.rx,
-      DANCE.ry,
-      { x: SORREL_X + Math.cos(su) * 120, y: TWIG.y - 190 + Math.sin(su) * 60 },
-      sk,
-    );
+    // The silver-edged moth: swoops down to him, circles him, waits close by; when he goes, it
+    // leads him up (he follows it, not the light).
+    const sk =
+      window01(bt, S.silver[0], S.silver[0] + 1.2) * (1 - window01(bt, S.lift[1] - 0.8, S.lift[1] + 0.4));
+    const hsx = WING_X + (hv.cx - WX) * SCALE;
+    const hsy = TWIG.y + (hv.feetY - 60 - FLOOR) * SCALE;
+    const circ = window01(bt, S.silver[0] + 0.8, S.silver[1]) * Math.PI * 2;
+    let sx2 = hsx + 40 + Math.cos(circ + t * 0.5) * 80;
+    let sy2 = hsy - 150 + Math.sin(circ * 1.3 + t * 0.7) * 26;
+    if (air) {
+      sx2 = hsx + 90;
+      sy2 = hsy - 110;
+    }
+    dance.update(t, DANCE.x, DANCE.y, DANCE.rx, DANCE.ry, { x: sx2, y: sy2 }, sk);
+    // The tap: a small flash where their wingtips touch.
+    tapFx.clear();
+    if (bt >= S.tap[0] && bt < S.tap[1] + 0.5) {
+      const u = (bt - S.tap[0]) / (S.tap[1] + 0.5 - S.tap[0]);
+      const kk = Math.sin(Math.min(1, u * 1.6) * Math.PI);
+      const px = (hx + hsx) / 2 + 10;
+      const py = hy - 10;
+      tapFx.circle(px, py, 4 + 30 * u).stroke({ color: 0xffe8c0, width: 2.5, alpha: 0.8 * (1 - u) });
+      tapFx.circle(px, py, 5 * kk + 0.5).fill({ color: 0xfff6e0, alpha: 0.95 * kk });
+    }
     // The camera.
     const [fx, fy, z] = CAM.sample(bt) as [number, number, number];
     R.scale.set(z);

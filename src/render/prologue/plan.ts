@@ -61,6 +61,8 @@ export interface ProloguePlan {
   inFerns: boolean;
   fold: number;
   tackleAt: number;
+  /** Where the two of them were when the played stretch ended (feet, world px). */
+  from: { x: number; y: number; sx: number; sy: number };
   /** What she may do now. */
   can: { jump: boolean; dash: boolean; glide: boolean };
 }
@@ -85,6 +87,7 @@ export function newPlan(): ProloguePlan {
     inFerns: false,
     fold: 0,
     tackleAt: -1,
+    from: { x: 0, y: 0, sx: 0, sy: 0 },
     can: { jump: false, dash: false, glide: false },
   };
 }

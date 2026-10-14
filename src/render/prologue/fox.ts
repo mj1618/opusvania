@@ -17,7 +17,13 @@ const FUR_FAR = 0x120e16;
 const RUST = 0x4a2a26;
 const PALE = 0x8e857c;
 const INK = 0x0b0910;
+type P = [number, number];
+
 const EMBER = 0xff8a3a;
+/** Drinking: how far the head travels (forward, down) and how far it tips, rad: the muzzle reaches
+ * the water ~76 px below the bank it stands on, ~190 px in front of it. */
+const DRINK_REACH: P = [10, 45];
+const DRINK_PITCH = 0.95;
 
 export interface FoxPose {
   curl: number;
@@ -48,8 +54,6 @@ export function foxPose(): FoxPose {
     ember: 1,
   };
 }
-
-type P = [number, number];
 
 const rot = (p: P, o: P, a: number): P => {
   const c = Math.cos(a);
@@ -143,6 +147,7 @@ export class Fox {
   private readonly ember: Sprite;
   private readonly emberHalo: Sprite;
   private readonly mask = new Graphics();
+  private clipped = true;
   /** Where the tail's ember is, in the fox's own px (for a light). */
   readonly tip: P = [0, 0];
 
@@ -166,6 +171,13 @@ export class Fox {
   draw(o: FoxPose, clock: number): void {
     const g = this.g;
     g.clear();
+    // Clipped at the ground only while it sinks (drinking, its muzzle goes below the bank into the pool).
+    const sinking = o.sink > 0.001;
+    if (sinking !== this.clipped) {
+      this.clipped = sinking;
+      this.mask.clear();
+      this.mask.rect(-600, -600, 1200, sinking ? 604 : 1200).fill(0xffffff);
+    }
     const down = o.sink * 190;
     const b = 1 + 0.035 * Math.sin(o.breath);
     if (o.curl > 0.01) this.curled(g, down, b, o, clock);
@@ -369,10 +381,14 @@ export class Fox {
     leg(-82, 0, true, false);
     leg(78, 0.25, false, false);
     // Neck and head: the neck reaches down to drink; shaken; jerked back by the sneeze.
-    const neck: P = [86, y0 - 118 + dip];
-    let pitch = 1.55 * o.drink - 0.4 * o.sneeze + 0.06 * Math.sin(clock * 0.5) * (1 - o.drink);
+    // Drinking, the neck reaches forward and down (the head travels, `DRINK_REACH`) and the head
+    // tips nose-down, ears still up and back; the muzzle goes into the water.
+    const sx = DRINK_REACH[0] * o.drink;
+    const sy = DRINK_REACH[1] * o.drink;
+    const neck: P = [86 + sx, y0 - 118 + dip + sy];
+    let pitch = DRINK_PITCH * o.drink - 0.4 * o.sneeze + 0.06 * Math.sin(clock * 0.5) * (1 - o.drink);
     pitch += Math.sin(clock * 18) * 0.12 * o.shake;
-    const R = (p: P): P => rot([p[0], y0 + dip + p[1]], neck, pitch);
+    const R = (p: P): P => rot([p[0] + sx, y0 + dip + sy + p[1]], neck, pitch);
     blobPath(g, [
       [64, y0 - 132 * b + dip],
       ...(
@@ -453,9 +469,11 @@ export class Fox {
   nose(o: FoxPose): P {
     const dip = 56 * o.drink;
     const y0 = o.sink * 190;
-    const neck: P = [86, y0 - 118 + dip];
-    const pitch = 1.55 * o.drink - 0.4 * o.sneeze;
-    return rot([218, y0 + dip - 142], neck, pitch);
+    const sx = DRINK_REACH[0] * o.drink;
+    const sy = DRINK_REACH[1] * o.drink;
+    const neck: P = [86 + sx, y0 - 118 + dip + sy];
+    const pitch = DRINK_PITCH * o.drink - 0.4 * o.sneeze;
+    return rot([218 + sx, y0 + dip + sy - 142], neck, pitch);
   }
 
   destroy(): void {

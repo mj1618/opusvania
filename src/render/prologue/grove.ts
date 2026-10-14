@@ -38,6 +38,7 @@ import type { ProloguePlan } from './plan';
 import { COURSE, FOX_DRINK, HATCH, HOLLOW, MOSS, WAKE, WATER } from './script';
 import { drawFlightWings } from './sorrel';
 import { envelope, Track, window01 } from './track';
+import { drawWrap } from './wrap';
 
 const PALE = 0xd9cfc4;
 const AMBER = 0xffb36b;
@@ -61,32 +62,42 @@ const HATCH_CAM = new Track([
   { t: HATCH.pullOut[1], v: [1275, 1175, 3, 0] },
   { t: HATCH.sorrelShake[1], v: [1255, 1222, 3.2, 0] },
   { t: HATCH.lookUp[1], v: [1255, 1175, 2.8, 0] },
-  { t: HATCH.wait[1], v: [1365, 1185, 2.8, 0] },
-  { t: HATCH.tryOpen[1], v: [1396, 1236, 3.5, 0] },
-  { t: HATCH.fold[0] + 1, v: [1392, 1240, 3.9, 0] },
-  { t: HATCH.tap[1], v: [1392, 1240, 3.9, 0] },
-  { t: HATCH.ready[1], v: [1360, 1222, 3, 0] },
-  { t: HATCH.lookFox[1], v: [1360, 1218, 3, 0] },
-  { t: HATCH.follow[1], v: [1360, 1218, 1.4, 1] },
+  { t: HATCH.wait[1], v: [1380, 1200, 2.8, 0] },
+  // Her in the frost, rimed, wings stuck: close.
+  { t: HATCH.wingSplit + 1.4, v: [1428, 1262, 5, 0] },
+  { t: HATCH.tryOpen[1], v: [1428, 1262, 5.2, 0] },
+  { t: HATCH.fold[0] + 1, v: [1405, 1244, 4, 0] },
+  { t: HATCH.tap[1], v: [1405, 1240, 4, 0] },
+  { t: HATCH.ready[1], v: [1395, 1230, 3.3, 0] },
+  // Her look at the fox's sleeping face.
+  { t: HATCH.lookFox[0] + 0.8, v: [1450, 1236, 3.8, 0] },
+  { t: HATCH.lookFox[1], v: [1450, 1236, 3.8, 0] },
+  { t: HATCH.follow[1], v: [1380, 1218, 1.4, 1] },
 ]);
 
 const HOLLOW_CAM = new Track([
-  { t: 0, v: [1500, 1220, 2.6, 0] },
-  { t: HOLLOW.drinks[1]![1], v: [1505, 1230, 2.7, 0] },
-  { t: HOLLOW.rootTip[0], v: [1460, 1170, 2.9, 0] },
-  { t: HOLLOW.rootTip[0] + 1.4, v: [1458, 1150, 3.4, 0] },
-  { t: HOLLOW.rootTip[1], v: [1458, 1150, 3.4, 0] },
-  { t: HOLLOW.caseRise[1], v: [1460, 1180, 2.7, 0] },
-  { t: HOLLOW.fold[0] + 0.8, v: [1452, 1160, 3.3, 0] },
-  { t: HOLLOW.dim[0], v: [1455, 1165, 3.2, 0] },
-  // Up the stalk with the pulse, to the lamp as it lights: one thing, the Hush's eye.
-  { t: HOLLOW.pulse[0], v: [1470, 1160, 2.4, 0] },
-  { t: HOLLOW.pulse[1], v: [1470, 470, 1.9, 0] },
-  { t: HOLLOW.play[0] + 0.6, v: [1468, 480, 1.9, 0] },
-  { t: HOLLOW.play[0] + 2.2, v: [1330, 1190, 1.6, 0] },
-  { t: HOLLOW.play[1], v: [1260, 1200, 1.6, 0] },
-  { t: HOLLOW.hide[0] + 0.8, v: [1172, 1232, 3, 0] },
-  { t: HOLLOW.hide[1], v: [1176, 1230, 3.1, 0] },
+  { t: 0, v: [1590, 1290, 2, 0] },
+  { t: HOLLOW.arrive[1], v: [1530, 1235, 2.5, 0] },
+  // The muzzle in the water, twice.
+  { t: HOLLOW.drinks[1]![1], v: [1540, 1245, 2.6, 0] },
+  // The root tip at her face: close.
+  { t: HOLLOW.rootTip[0], v: [1462, 1175, 3, 0] },
+  { t: HOLLOW.rootTip[0] + 1.4, v: [1460, 1162, 3.5, 0] },
+  { t: HOLLOW.rootTip[1], v: [1460, 1162, 3.5, 0] },
+  { t: HOLLOW.caseRise[1], v: [1470, 1190, 2.7, 0] },
+  // Her fold on the case: pushed in, held.
+  { t: HOLLOW.fold[0] + 0.6, v: [1462, 1182, 3, 0] },
+  { t: HOLLOW.fold[0] + 3.8, v: [1462, 1180, 3.4, 0] },
+  { t: HOLLOW.dim[0], v: [1465, 1182, 3, 0] },
+  // Up the stalk with the pulse (2.5 s), to the lamp as it kindles: one thing, the Hush's eye.
+  { t: HOLLOW.pulse[0], v: [1470, 1190, 2.5, 0] },
+  { t: HOLLOW.pulse[1], v: [1470, 470, 2, 0], ease: 'inOut' },
+  { t: HOLLOW.play[0] + 0.8, v: [1468, 480, 2, 0] },
+  // And down with the wash.
+  { t: HOLLOW.play[0] + 3.2, v: [1360, 1150, 1.6, 0] },
+  { t: HOLLOW.play[1], v: [1270, 1200, 1.6, 0] },
+  { t: HOLLOW.hide[0] + 0.8, v: [1180, 1225, 2.6, 0] },
+  { t: HOLLOW.hide[1], v: [1185, 1222, 2.7, 0] },
 ]);
 
 const WAKE_CAM = new Track([
@@ -142,6 +153,17 @@ export class GroveActors {
   private readonly back = new Container({ label: 'prologue-back' });
   private readonly actors = new Container({ label: 'prologue-actors' });
   private readonly front = new Container({ label: 'prologue-front' });
+  private readonly foxLayer = new Container({ label: 'prologue-fox' });
+  /** His wing round her in the frost; hers round the fox's case: the same shape (wrap.ts). */
+  private readonly wrapS = new Graphics();
+  private readonly wrapW = new Graphics();
+  /** Frost on her as she lies; the flash where their wingtips touch. */
+  private readonly rime = new Graphics();
+  private readonly tapFx = new Graphics();
+  /** A pale bed of frost behind her where she lies, so her dark shape reads against it. */
+  private readonly frostBed = new Graphics();
+  /** 0..1 she lies on her side in the frost (her stand-in turned about her feet). */
+  private lie = 0;
   private readonly threads = new Graphics();
   private readonly cocoons = new Graphics();
   private readonly cocoonGlow: [Sprite, Sprite];
@@ -161,6 +183,7 @@ export class GroveActors {
   private readonly prompt = new Graphics();
   private readonly wash: Sprite;
   private readonly lampGlow: Sprite;
+  private readonly lampG = new Graphics();
   private readonly dance = new DanceRing(18, 16);
   private readonly wingLook = wingFilter();
   // Lights in the Grove's registry.
@@ -192,8 +215,9 @@ export class GroveActors {
     private readonly plan: ProloguePlan,
   ) {
     const L = layers;
-    L.get('goal').addChild(this.back, this.actors);
-    L.get('playfieldFront').addChild(this.front);
+    // The fox and the moths stand in front of the bank's edge (its muzzle goes down into the pool).
+    L.get('goal').addChild(this.back);
+    L.get('playfieldFront').addChild(this.foxLayer, this.actors, this.front);
     L.get('airBack').addChild(this.dance.view);
     // Back to front: threads and cocoons, the hollow, the fox, the case, the pulse.
     this.cocoonGlow = [soft(60, AMBER, 0), soft(60, AMBER, 0)];
@@ -203,11 +227,10 @@ export class GroveActors {
       ...this.cocoonGlow,
       this.paleThread,
       this.hollow,
-      this.fox.view,
-      this.ripples,
       this.caseV.view,
       this.pulse,
     );
+    this.foxLayer.addChild(this.fox.view, this.ripples);
     for (let i = 0; i < 8; i++) {
       const s = soft(26, PALE, 0);
       this.steam.push(s);
@@ -217,7 +240,7 @@ export class GroveActors {
     // Two different people: he lighter and bigger, wings half open; she darker, smaller, wings shut.
     this.sorrelLayer.filters = [sorrelFilter()];
     this.wingLayer.filters = [this.wingLook];
-    this.actors.addChild(this.sorrelWings, this.sorrelLayer, this.wingLayer);
+    this.actors.addChild(this.sorrelWings, this.sorrelLayer, this.frostBed, this.wingLayer);
     this.wing = new VesperCharacter({ ...ctx, lights: this.wingLights }, this.wingLayer, {
       cine: this.wingCue,
       link: false,
@@ -228,13 +251,24 @@ export class GroveActors {
     });
     this.wingStand = new Stand(ctx.scene);
     this.sorrelStand = new Stand(ctx.scene);
+    // (In world px, over both of them; not inside their scaled layers.)
+    this.actors.addChild(this.wrapW, this.wrapS);
     // In front: frost, ferns, the leaf, the glint, the prompt, the coral wash.
     this.wash = soft(260, CORAL, 0);
-    this.lampGlow = soft(54, CORAL, 0);
+    this.lampGlow = soft(90, CORAL, 0);
     this.wash.scale.y *= 0.45;
     this.glint.addChild(soft(34, AMBER, 0.55), soft(9, 0xfff1d4, 1));
-    this.back.addChild(this.wash);
-    this.front.addChild(this.frost, this.lampGlow, this.ferns, this.leaf, this.glint, this.prompt);
+    this.back.addChild(this.wash, this.lampG);
+    this.front.addChild(
+      this.rime,
+      this.tapFx,
+      this.frost,
+      this.lampGlow,
+      this.ferns,
+      this.leaf,
+      this.glint,
+      this.prompt,
+    );
     this.drawFrost();
     this.drawFerns();
     // The lampwing over the pool: the game's own painter on a state of ours.
@@ -266,17 +300,41 @@ export class GroveActors {
   private drawFrost(): void {
     const g = this.frost;
     const rng = prng(7171);
-    // Rime on the moss: fine glints of frost along the blades' tips, denser near the cocoons.
-    for (let i = 0; i < 220; i++) {
-      const x = 1060 + rng() * 560;
-      const y = MOSS - 2 - rng() * rng() * 34;
-      const r = 0.5 + rng() * 1.1;
-      g.circle(x, y, r).fill({ color: 0xeef4ff, alpha: 0.35 + 0.4 * rng() });
-      if (rng() < 0.3) {
-        g.moveTo(x - r * 2.5, y)
-          .lineTo(x + r * 2.5, y)
-          .stroke({ color: 0xeef4ff, width: 0.5, alpha: 0.4 });
+    // Hoarfrost on the moss: a pale crust along the top with feathers standing up out of it.
+    g.moveTo(1060, MOSS - 1);
+    for (let x = 1060; x <= 1540; x += 12) g.lineTo(x, MOSS - 2 - 2 * rng());
+    g.stroke({ color: 0xe8f2ff, width: 3, alpha: 0.55 });
+    for (let i = 0; i < 120; i++) {
+      const x = 1060 + rng() * 480;
+      let px = x;
+      let py = MOSS - 2;
+      let a = -Math.PI / 2 + (rng() - 0.5) * 1.2;
+      const len = 6 + rng() * 12;
+      g.moveTo(px, py);
+      for (let k = 0; k < 3; k++) {
+        px += Math.cos(a) * len * 0.34;
+        py += Math.sin(a) * len * 0.34;
+        g.lineTo(px, py);
+        a += (rng() - 0.5) * 0.9;
       }
+      g.stroke({ color: 0xf0f6ff, width: 1.3, alpha: 0.7 });
+    }
+    // Frost glints, bigger near the cocoons and the fox.
+    for (let i = 0; i < 160; i++) {
+      const x = 1060 + rng() * 520;
+      const y = MOSS - 2 - rng() * rng() * 40;
+      const r = 0.8 + rng() * 1.8;
+      g.circle(x, y, r).fill({ color: 0xf4f8ff, alpha: 0.45 + 0.4 * rng() });
+    }
+    // Rime along the sleeping fox's back and tail.
+    for (let i = 0; i < 70; i++) {
+      const u = i / 70;
+      const x = HATCH.fox - 135 + u * 255;
+      const top = MOSS - 4 - 102 * Math.sin(Math.min(1, u * 1.15) * Math.PI) * (u < 0.85 ? 1 : 0.6);
+      g.circle(x + (rng() - 0.5) * 6, top + rng() * 10, 1 + rng() * 1.4).fill({
+        color: 0xeef6ff,
+        alpha: 0.6,
+      });
     }
   }
 
@@ -327,23 +385,41 @@ export class GroveActors {
         tx = (p.cx + sx) / 2;
         ty = sy - 120;
         tz = 1.55;
-      } else if (ph === 'sail' || ph === 'nose' || ph === 'end') {
+      } else if (ph === 'sail' && P.pt - P.phaseAt < 1.4) {
         tx = (p.cx + COURSE.nose.x) / 2;
         ty = Math.min(p.cy, COURSE.nose.y) + 40;
         tz = 1.35;
+      } else if (ph === 'sail') {
+        // Ahead of the glint, onto the drinking fox's face where it will land.
+        tx = COURSE.nose.x - 40;
+        ty = COURSE.nose.y - 66;
+        tz = 2;
+      } else if (ph === 'nose' || ph === 'end') {
+        // The sneeze, close: the fox's face and the glint popping off its nose.
+        tx = COURSE.nose.x - 40;
+        ty = COURSE.nose.y - 66;
+        tz = 2;
       }
       if (!this.playCam) this.playCam = { x: tx, y: ty, zoom: tz };
       const c = this.playCam;
-      c.x += (tx - c.x) * 0.06;
-      c.y += (ty - c.y) * 0.06;
-      c.zoom += (tz - c.zoom) * 0.05;
+      const ease = ph === 'nose' || ph === 'sail' ? 0.1 : 0.06;
+      c.x += (tx - c.x) * ease;
+      c.y += (ty - c.y) * ease;
+      c.zoom += (tz - c.zoom) * ease;
       this.cam.x = c.x;
       this.cam.y = c.y;
       this.cam.zoom = c.zoom;
       return this.cam;
     }
     if (!v) return null;
-    const [x, y, zoom, game] = v as [number, number, number, number];
+    let [x, y, zoom, game] = v as [number, number, number, number];
+    // Out of the played stretch without a cut: from where its camera was.
+    if (P.beat === 'hollow' && this.playCam && P.bt < HOLLOW.arrive[1]) {
+      const k = window01(P.bt, 0, HOLLOW.arrive[1]);
+      x = this.playCam.x + (x - this.playCam.x) * k;
+      y = this.playCam.y + (y - this.playCam.y) * k;
+      zoom = this.playCam.zoom + (zoom - this.playCam.zoom) * k;
+    }
     this.cam.x = x + (follow.x - x) * game;
     this.cam.y = y + (follow.y - y) * game;
     // (`game` takes the follow camera's position only; the zoom is the key's.)
@@ -359,6 +435,7 @@ export class GroveActors {
     const P = this.plan;
     const inGrove = P.beat === 'hatch' || P.beat === 'play' || P.beat === 'hollow' || P.beat === 'wake';
     this.back.visible = this.actors.visible = this.front.visible = this.dance.view.visible = inGrove;
+    this.foxLayer.visible = inGrove;
     for (const l of Object.values(this.lights)) l.intensity = 0;
     POST_CINE.frost = P.beat === 'hatch' ? 1 - window01(P.bt, HATCH.frostOut[0], HATCH.frostOut[1]) : 0;
     POST_CINE.dim =
@@ -415,7 +492,7 @@ export class GroveActors {
         const sx = Math.sin(a);
         const w = 19 * (0.5 + 0.45 * (1 - sy) * 0.5 + 0.25 * Math.sin((1 - sy) * 1.6));
         let yy = top + 40 - sy * 40;
-        if (open > 0 && sy < -0.2) yy -= open * (12 + 6 * Math.sin(k * 2.7)) * (-sy - 0.2);
+        if (open > 0 && sy < -0.2) yy -= open * 14 * (-sy - 0.2);
         pts.push(x + sx * w * (1 + open * 0.15 * (sy < 0 ? -sy : 0)), yy);
       }
       g.poly(pts).fill({ color: open > 0.5 ? 0x6a6458 : 0x9a917f, alpha: 0.96 });
@@ -441,13 +518,12 @@ export class GroveActors {
       if (open > 0.02) {
         const lip = top + 80 - 16 * open;
         g.ellipse(x, lip, 12 * open, 5 * open).fill({ color: 0x15120f, alpha: 0.95 });
-        for (let k = 0; k < 4; k++) {
-          const fx = x - 12 + k * 8;
-          const len = (8 + 7 * Math.sin(k * 2.3 + 1)) * open;
-          g.moveTo(fx, lip)
-            .quadraticCurveTo(fx + (k - 1.5) * 3, lip + len * 0.6, fx + (k - 1.5) * 4 + sway * 0.2, lip + len)
-            .stroke({ color: 0xb8ae98, width: 2.2, alpha: 0.7 * open, cap: 'round' });
-        }
+        // A soft, rounded lip of torn silk (no prongs).
+        g.ellipse(x, lip + 2 * open, 15 * open, 4 * open).stroke({
+          color: 0xb8ae98,
+          width: 2.4,
+          alpha: 0.6 * open,
+        });
       }
       // Amber breathing inside, on the breath's own rhythm (5 s: the match cut from the black).
       const b = 0.5 - 0.5 * Math.cos((2 * Math.PI * (hatch ? P.bt : clock)) / 5 + ph * 0.3);
@@ -518,6 +594,22 @@ export class GroveActors {
     // Its muzzle in the water: rings spread from where it drinks.
     const rp = this.ripples;
     rp.clear();
+    // The sneeze: a spray of drops off its nose.
+    if (P.beat === 'play' && P.sneezeAt >= 0 && shown) {
+      const sz = P.pt - P.sneezeAt;
+      if (sz >= 0 && sz < 0.9) {
+        const n = this.fox.nose(o);
+        const nx = x + n[0];
+        const ny = MOSS + n[1];
+        for (let i = 0; i < 14; i++) {
+          const a = -Math.PI * (0.1 + 0.8 * (i / 13));
+          const v = 140 + 60 * Math.sin(i * 7.3);
+          const px = nx + Math.cos(a) * v * sz;
+          const py = ny + Math.sin(a) * v * sz + 300 * sz * sz;
+          rp.circle(px, py, 2.4 - 1.6 * sz).fill({ color: 0xe8f4f8, alpha: 0.9 * (1 - sz / 0.9) });
+        }
+      }
+    }
     if (shown && o.drink > 0.55 && o.sink < 0.3) {
       const n = this.fox.nose(o);
       const nx = x + n[0];
@@ -555,7 +647,7 @@ export class GroveActors {
       const u = i / 12;
       g.lineTo(1470 + u * 74, MOSS - 1 - 1.5 * Math.sin(u * 9 + clock * (0.3 + stir)));
     }
-    g.stroke({ color: PALE, width: 1.6 + stir, alpha: 0.75 });
+    g.stroke({ color: PALE, width: 2.6 + stir, alpha: 0.9 });
     g.moveTo(1490, MOSS)
       .quadraticCurveTo(1460, MOSS - 4, 1420, MOSS - 1)
       .stroke({ color: PALE, width: 1, alpha: 0.5 });
@@ -569,7 +661,7 @@ export class GroveActors {
       const u = (clock * 0.22 + i / this.steam.length) % 1;
       const sx = (big > 0.2 ? H.x - 60 + i * 18 : 1474 + i * 9) + Math.sin(clock * 0.7 + i) * 6;
       s.position.set(sx, MOSS - 6 - u * (40 + 80 * big));
-      s.alpha = (0.05 + 0.12 * big) * Math.sin(u * Math.PI);
+      s.alpha = (0.14 + 0.1 * big) * Math.sin(u * Math.PI);
       s.setSize(30 + 40 * u + 30 * big, 30 + 40 * u + 30 * big);
     }
     // The hollow: lips of root round a dark mouth; it opens, the fox goes down, it closes.
@@ -620,8 +712,9 @@ export class GroveActors {
     // The root tip: up out of it to her face, a pause, back down. It looked, and did not see.
     if (t >= H.rootTip[0] && t < H.rootTip[1]) {
       const k = envelope(t, H.rootTip[0], H.rootTip[0] + 1.1, H.rootTip[1] - 1.1, H.rootTip[1]);
-      const tx = this.wingAt.x + 6;
-      const ty = this.wingAt.y - 60;
+      // Her face, not her light: in front of it and a little below her eyes.
+      const tx = this.wingAt.x + 14;
+      const ty = this.wingAt.y - 84 * LOOK.wing.scale;
       const bx = H.x + 10;
       const by = MOSS;
       const ex = bx + (tx - bx) * k;
@@ -641,6 +734,12 @@ export class GroveActors {
         const y = a * a * a * by + 3 * a * a * u * (by - 60 * k) + 3 * a * u * u * (ey + 46) + u * u * u * ey;
         pts.push([x, y]);
       }
+      // Its tip curls over, like a fern head, toward her face.
+      const [lx, ly] = pts[pts.length - 1]!;
+      for (let i = 1; i <= 6; i++) {
+        const a = Math.PI + (i / 6) * Math.PI * 1.25 * k;
+        pts.push([lx + 7 + 7 * Math.cos(a), ly + 7 * Math.sin(a)]);
+      }
       const left: number[] = [];
       const right: number[] = [];
       for (let i = 0; i < pts.length; i++) {
@@ -650,7 +749,7 @@ export class GroveActors {
         const dx = nx0 - px0;
         const dy = ny0 - py0;
         const l = Math.hypot(dx, dy) || 1;
-        const w = 4.5 * (1 - i / pts.length) + 1;
+        const w = 3 * (1 - i / pts.length) + 0.8;
         left.push(x - (dy / l) * w, y + (dx / l) * w);
         right.unshift(x + (dy / l) * w, y - (dx / l) * w);
       }
@@ -669,23 +768,45 @@ export class GroveActors {
       l.intensity = (0.18 + 0.12 * this.caseV.breath) * rise;
       this.caseTop = { x: this.caseV.top.x, y: this.caseV.top.y };
     }
-    // The pulse: up the stalk, through the case, on up into the dark to where the lamp hangs.
+    // The thread: from the case's top up into the dark to the lamp (pale, faint; the pulse shows it).
+    // The pulse: a bead of light climbing the stalk, through the case, up the thread to the lamp.
     const p = this.pulse;
     p.clear();
-    if (t >= H.pulse[0] && t < H.lampLit[1] + 1.5) {
+    const x0 = this.caseTop.x;
+    const yTop = H.lamp.y + 26;
+    const threadK = t >= 0 && t < 99 ? window01(t, H.caseRise[1], H.caseRise[1] + 2) : 0;
+    if (threadK > 0) {
+      p.moveTo(x0, this.caseTop.y)
+        .bezierCurveTo(x0 - 10, this.caseTop.y - 200, H.lamp.x + 14, yTop + 200, H.lamp.x, yTop)
+        .stroke({ color: PALE, width: 1.4, alpha: 0.22 * threadK });
+    }
+    if (t >= H.pulse[0] && t < H.lampLit[1] + 0.4) {
       const u = window01(t, H.pulse[0], H.pulse[1]);
-      const fade = 1 - window01(t, H.lampLit[1], H.lampLit[1] + 1.5);
-      const x0 = this.caseTop.x;
-      const y0 = MOSS;
-      const y1 = H.lamp.y + 16;
-      p.moveTo(x0, y0)
-        .lineTo(x0 + (H.lamp.x - x0) * u, y0 + (y1 - y0) * u)
-        .stroke({ color: PALE, width: 2.2, alpha: 0.55 * fade });
-      const by = y0 + (y1 - y0) * u;
-      p.circle(x0 + (H.lamp.x - x0) * u, by, 3.5).fill({
-        color: 0xffffff,
-        alpha: 0.9 * fade * (u < 1 ? 1 : 0),
-      });
+      // The path: stalk foot -> case top (first 25%), then the thread (Bezier) up to the lamp.
+      const at = (v: number): [number, number] => {
+        if (v < 0.25) return [x0, MOSS + (this.caseTop.y - MOSS) * (v / 0.25)];
+        const q = (v - 0.25) / 0.75;
+        const a1 = 1 - q;
+        const ax =
+          a1 ** 3 * x0 + 3 * a1 * a1 * q * (x0 - 10) + 3 * a1 * q * q * (H.lamp.x + 14) + q ** 3 * H.lamp.x;
+        const ay =
+          a1 ** 3 * this.caseTop.y +
+          3 * a1 * a1 * q * (this.caseTop.y - 200) +
+          3 * a1 * q * q * (yTop + 200) +
+          q ** 3 * yTop;
+        return [ax, ay];
+      };
+      // Its trail.
+      const [sx0, sy0] = at(Math.max(0, u - 0.12));
+      p.moveTo(sx0, sy0);
+      for (let i = 1; i <= 10; i++) {
+        const [tx2, ty2] = at(Math.max(0, u - 0.12 + (0.12 * i) / 10));
+        p.lineTo(tx2, ty2);
+      }
+      p.stroke({ color: 0xf4f0ea, width: 7, alpha: 0.7 });
+      const [bx, by] = at(u);
+      p.circle(bx, by, 24).fill({ color: PALE, alpha: 0.3 });
+      p.circle(bx, by, 10).fill({ color: 0xffffff, alpha: 0.95 });
     }
   }
 
@@ -720,25 +841,33 @@ export class GroveActors {
     let sv: PlayerView | null = null;
     const gs = P.sorrel ? viewOf(P.sorrel.prev, P.sorrel.cur, sim.alpha) : null;
     const facing = (from: number, to: number): 1 | -1 => (to >= from ? 1 : -1);
+    this.lie = 0;
+    let wrapS = 0;
+    let wrapW = 0;
     if (P.beat === 'hatch') {
       if (t >= HATCH.wingSplit + 0.1) {
-        // Down in the frost, wings stuck shut, eyes dim; she tries to open them and can't; warmed,
-        // her eyes brighten and they open; then she looks back at the fox.
-        wv = { ...her, facing: t >= HATCH.lookFox[0] ? -1 : 1 };
+        // Down in the frost on her side, rimed, wings stuck shut, eyes dim; she tries to open them and
+        // can't; warmed, her eyes brighten, she sits up and they open; then she looks back at the fox,
+        // a hand on its muzzle.
+        const lookK = envelope(
+          t,
+          HATCH.lookFox[0],
+          HATCH.lookFox[0] + 0.6,
+          HATCH.lookFox[1] - 0.5,
+          HATCH.lookFox[1],
+        );
+        wv = { ...her, facing: 1 };
+        this.lie =
+          window01(t, HATCH.wingSplit + 0.25, HATCH.wingSplit + 0.55) *
+          (1 - window01(t, HATCH.brighten[1] - 0.6, HATCH.opens[0] + 0.5));
         W.huddle =
           window01(t, HATCH.huddle[0], HATCH.huddle[0] + 0.4) *
           (1 - window01(t, HATCH.brighten[0], HATCH.brighten[1]));
         W.shake =
-          0.55 *
+          0.8 *
             envelope(t, HATCH.tryOpen[0], HATCH.tryOpen[0] + 0.2, HATCH.tryOpen[1] - 0.3, HATCH.tryOpen[1]) +
           envelope(t, HATCH.opens[0], HATCH.opens[0] + 0.2, HATCH.opens[1] - 0.2, HATCH.opens[1]);
-        W.look = envelope(
-          t,
-          HATCH.lookFox[0] + 0.3,
-          HATCH.lookFox[0] + 0.9,
-          HATCH.lookFox[1] - 0.4,
-          HATCH.lookFox[1],
-        );
+        W.fold = 0.85 * lookK;
       }
       if (gs && t >= HATCH.sorrelSplit + 0.1) {
         const toHer = facing(gs.cx, her.cx);
@@ -761,8 +890,9 @@ export class GroveActors {
           HATCH.lookUp[1],
         );
         S.fold = envelope(t, HATCH.fold[0], HATCH.fold[0] + 0.7, HATCH.fold[1] - 0.5, HATCH.fold[1]);
-        S.tap = envelope(t, HATCH.tap[0], HATCH.tap[0] + 0.2, HATCH.tap[1] - 0.25, HATCH.tap[1]);
-        W.tap = 0.6 * S.tap;
+        wrapS = envelope(t, HATCH.fold[0], HATCH.fold[0] + 1.1, HATCH.fold[1] - 0.6, HATCH.fold[1] + 0.2);
+        S.tap = envelope(t, HATCH.tap[0], HATCH.tap[0] + 0.25, HATCH.tap[1] - 0.3, HATCH.tap[1]);
+        W.tap = 0.8 * S.tap;
       }
     } else if (P.beat === 'play') {
       wv = her;
@@ -792,6 +922,12 @@ export class GroveActors {
       if (P.phase === 'give') W.hold = 0.55;
     } else if (P.beat === 'hollow') {
       ({ wv, sv } = this.hollowMoths(t, her, clock));
+      wrapW =
+        t < HOLLOW.play[0]
+          ? window01(t, HOLLOW.fold[0], HOLLOW.fold[0] + 1.2) *
+            (1 - window01(t, HOLLOW.play[0] - 0.3, HOLLOW.play[0]))
+          : 0;
+      if (t >= HOLLOW.hide[0] - 0.6) wrapS = window01(t, HOLLOW.hide[0] - 0.6, HOLLOW.hide[0] + 0.4);
     } else if (P.beat === 'wake') {
       if (t >= WAKE.fadeUp[0]) {
         wv = { ...her, facing: 1 };
@@ -822,6 +958,7 @@ export class GroveActors {
       this.lights.wing!,
       this.wingAt,
       this.wingSize,
+      this.lie * 1.35,
     );
     this.sorrel.hideWings = !!sv && !sv.grounded;
     this.drawMoth(
@@ -836,6 +973,95 @@ export class GroveActors {
       LOOK.sorrel.scale,
     );
     this.drawSorrelWings(sv, clock);
+    this.drawWraps(wv, sv, wrapS, wrapW, clock);
+    this.drawRimeAndTap(clock);
+  }
+
+  /** The wing-folds: his over her (lying in the frost, or hidden in the ferns), hers over the case. */
+  private drawWraps(
+    wv: PlayerView | null,
+    sv: PlayerView | null,
+    ks: number,
+    kw: number,
+    clock: number,
+  ): void {
+    this.wrapS.clear();
+    this.wrapW.clear();
+    const P = this.plan;
+    if (sv && wv && ks > 0.01) {
+      // Over her body: lying (the hatching) her middle is beside her feet; sitting (the ferns) above them.
+      const lying = this.lie > 0.3;
+      const tx = lying ? wv.cx + 26 : wv.cx;
+      const ty = lying ? wv.feetY - 12 : wv.feetY - 30;
+      drawWrap(this.wrapS, {
+        sx: sv.cx + sv.facing * 6,
+        sy: sv.feetY - 56,
+        tx,
+        ty,
+        r: lying ? 30 : 34,
+        k: ks,
+        color: 0x6e5288,
+        dark: 0x3e2c58,
+        shiver: P.beat === 'hatch' ? 1 : 0.4,
+        clock,
+      });
+    }
+    if (wv && kw > 0.01) {
+      // Over the case's top: the same wing, round the cold thing.
+      drawWrap(this.wrapW, {
+        sx: wv.cx + 4,
+        sy: wv.feetY - 46,
+        tx: this.caseTop.x + 4,
+        ty: this.caseTop.y + 48,
+        r: 62,
+        k: kw,
+        color: 0x3e2c56,
+        dark: 0x22182e,
+        shiver: 1,
+        clock,
+      });
+    }
+  }
+
+  /** Rime on her while she lies in the frost; a small flash where their wingtips touch. */
+  private drawRimeAndTap(clock: number): void {
+    const P = this.plan;
+    const r = this.rime;
+    r.clear();
+    const fr = POST_CINE.frost * this.lie;
+    const bed = this.frostBed;
+    bed.clear();
+    if (fr > 0.01 && this.wingAt.on) {
+      for (let i = 0; i < 4; i++)
+        bed.ellipse(this.wingAt.x + 30, this.wingAt.y - 8, 52 - i * 10, 20 - i * 3.5).fill({
+          color: 0xdfeaf8,
+          alpha: 0.16 * fr,
+        });
+    }
+    if (fr > 0.01 && this.wingAt.on) {
+      const x = this.wingAt.x + 26;
+      const y = this.wingAt.y - 14;
+      for (let i = 0; i < 26; i++) {
+        const a = i * 2.39996;
+        const d = 6 + ((i * 37) % 23);
+        const px = x + Math.cos(a) * d * 1.3;
+        const py = y + Math.sin(a) * d * 0.55;
+        const tw = 0.6 + 0.4 * Math.sin(clock * 2 + i);
+        r.circle(px, py, 1.1 + (i % 3) * 0.5).fill({ color: 0xf0f6ff, alpha: 0.85 * fr * tw });
+      }
+    }
+    const fx = this.tapFx;
+    fx.clear();
+    if (P.beat !== 'hatch' || !this.wingAt.on || !this.sorrelAt.on) return;
+    const [t0, t1] = HATCH.tap;
+    if (P.bt < t0 || P.bt > t1 + 0.6) return;
+    const u = (P.bt - t0) / (t1 + 0.6 - t0);
+    const x = (this.wingAt.hx + this.sorrelAt.hx) / 2;
+    const y = (this.wingAt.hy + this.sorrelAt.hy) / 2;
+    const k = Math.sin(Math.min(1, u * 1.6) * Math.PI);
+    fx.circle(x, y, 5 + 34 * u).stroke({ color: 0xffe8c0, width: 2.6, alpha: 0.85 * (1 - u) });
+    fx.circle(x, y, 10 * k + 1).fill({ color: 0xffe0a8, alpha: 0.35 * k });
+    fx.circle(x, y, 4.5 * k + 0.5).fill({ color: 0xfff6e0, alpha: 0.95 * k });
   }
 
   /**
@@ -849,18 +1075,29 @@ export class GroveActors {
     const S = this.sorrelCue;
     const backY = MOSS - 132;
     const hover = { x: H.x + 10, y: MOSS - 118 + 4 * Math.sin(clock * 3) };
-    const onCase = { x: H.x + 4, y: MOSS - H.stalk - H.caseH + 6 };
+    // On the case's top, kneeling (its left shoulder: she wraps over the top).
+    const onCase = { x: H.x + 2, y: MOSS - H.stalk - H.caseH + 10 };
+    // Coming down onto the fox's back from wherever the played stretch left them.
+    const arrive = window01(t, H.arrive[0], H.arrive[1]);
+    const from = this.plan.from;
     // Hers.
     let wv: PlayerView;
     if (t < H.play[0]) {
       const up = window01(t, H.flutter[0], H.flutter[1]);
       const down = window01(t, H.land[0], H.land[1]);
-      const x = FOX_DRINK + 10 + (hover.x - FOX_DRINK - 10) * up + (onCase.x - hover.x) * down;
-      const y = backY + (hover.y - backY) * up + (onCase.y - hover.y) * down;
-      const air = up > 0.02 && down < 0.98;
+      let x = FOX_DRINK + 10 + (hover.x - FOX_DRINK - 10) * up + (onCase.x - hover.x) * down;
+      let y = backY + (hover.y - backY) * up + (onCase.y - hover.y) * down;
+      let air = up > 0.02 && down < 0.98;
+      if (arrive < 1 && from.y > 0) {
+        x = from.x + (x - from.x) * arrive;
+        y = from.y + (y - from.y) * arrive - Math.sin(arrive * Math.PI) * 60;
+        air = arrive > 0.02;
+      }
       wv = this.wingStand.set(x, y, 1, air, air ? 0.4 * Math.sin(clock * 9) : 0);
-      W.huddle = t < H.paling[0] ? 0.3 : 0.35 * window01(t, H.land[1], H.land[1] + 0.6);
-      W.fold = window01(t, H.fold[0], H.fold[0] + 0.8);
+      // Kneeling on the case, wings round it: eyes dimming, shivering, and it stays cold.
+      const onIt = window01(t, H.land[1], H.land[1] + 0.6);
+      W.huddle = t < H.paling[0] ? 0.3 : 0.65 * onIt;
+      W.fold = 0.5 * window01(t, H.fold[0], H.fold[0] + 0.8);
       W.hold = t < H.flutter[0] ? 0.4 : 0;
     } else {
       wv = her;
@@ -889,13 +1126,22 @@ export class GroveActors {
       const x = FOX_DRINK - 40 + (hover.x - 70 - FOX_DRINK + 40) * up;
       const y = backY + 4 + (hover.y - 20 - backY - 4) * up;
       // Half asleep in the fur; then up; he hovers behind her, not landing, looking round.
-      sv = this.sorrelStand.set(
-        x,
-        y,
-        up > 0.5 ? (Math.sin(t * 0.9) > 0 ? 1 : -1) : 1,
-        up > 0.02,
-        0.4 * Math.sin(clock * 9 + 1),
-      );
+      if (arrive < 1 && from.sy > 0) {
+        sv = this.sorrelStand.set(
+          from.sx + (x - from.sx) * arrive,
+          from.sy + (y - from.sy) * arrive - Math.sin(arrive * Math.PI) * 50,
+          1,
+          arrive > 0.02,
+          0.4 * Math.sin(clock * 9 + 1),
+        );
+      } else
+        sv = this.sorrelStand.set(
+          x,
+          y,
+          up > 0.5 ? (Math.sin(t * 0.9) > 0 ? 1 : -1) : 1,
+          up > 0.02,
+          0.4 * Math.sin(clock * 9 + 1),
+        );
       S.huddle = t < H.flutter[0] ? 0.6 : 0;
     } else if (t < H.hide[0]) {
       // In the ferns, beckoning; out to tug at her; when she comes near, he pulls her in with him.
@@ -941,6 +1187,7 @@ export class GroveActors {
     out: PointLight,
     at: { x: number; y: number; hx: number; hy: number; on: boolean },
     size = 1,
+    rotation = 0,
   ): void {
     layer.visible = !!v;
     at.on = !!v;
@@ -950,10 +1197,15 @@ export class GroveActors {
     layer.pivot.set(v.cx, v.feetY);
     layer.position.set(v.cx, v.feetY);
     layer.scale.set(size);
+    layer.rotation = rotation;
     at.x = v.cx;
     at.y = v.feetY;
-    at.hx = v.cx + (skin.offer.x - v.cx) * size;
-    at.hy = v.feetY + (skin.offer.y - v.feetY) * size;
+    const ox = (skin.offer.x - v.cx) * size;
+    const oy = (skin.offer.y - v.feetY) * size;
+    const c = Math.cos(rotation);
+    const sn = Math.sin(rotation);
+    at.hx = v.cx + ox * c - oy * sn;
+    at.hy = v.feetY + ox * sn + oy * c;
     const l = reg.get('ember');
     if (l) {
       out.x = l.x;
@@ -995,12 +1247,28 @@ export class GroveActors {
       on = true;
       x = this.wingAt.hx;
       y = this.wingAt.hy - 4;
+      // Popped up off the fox's nose by the sneeze, it comes down into her hands as she lands.
+      const k = window01(P.bt, 0, HOLLOW.arrive[1]);
+      if (k < 1) {
+        x = gl.x + (x - gl.x) * k;
+        y = gl.y + (y - gl.y) * k;
+      }
     }
     this.glint.visible = on;
     if (!on) return;
     const pulse = 0.85 + 0.15 * Math.sin(clock * 3.4);
     // Folded under her wing it shows only as a thread of amber.
-    const hidden = P.beat === 'hollow' ? 0.85 * Math.max(P.fold, this.wingCue.fold) : 0;
+    const rootK =
+      P.beat === 'hollow'
+        ? envelope(
+            P.bt,
+            HOLLOW.rootTip[0] - 0.6,
+            HOLLOW.rootTip[0],
+            HOLLOW.rootTip[1],
+            HOLLOW.rootTip[1] + 0.4,
+          )
+        : 0;
+    const hidden = P.beat === 'hollow' ? 0.85 * Math.max(P.fold, this.wingCue.fold, rootK) : 0;
     this.glint.position.set(x, y);
     this.glint.alpha = pulse * (1 - hidden);
     const l = this.lights.glint!;
@@ -1036,18 +1304,40 @@ export class GroveActors {
     e.lookX = ((tx - cx) / dl) * turn;
     e.lookY = ((ty - cy) / dl) * turn + 0.6 * (1 - turn);
     e.facing = tx < cx ? -1 : 1;
-    e.mode = lit > 0.5 ? 'curious' : 'hover';
-    e.flap = (clock * 0.9) % 1;
-    const rig = this.lamp.lampRig(0);
-    if (rig) rig.cine = { lit };
-    this.lamp.update(dt, clock, view, {
-      ...sim,
-      frame,
-      alpha: 1,
-      events: [],
-      scene: this.lampScene,
-      enemies: [e],
-    });
+    // (Not the lampwing creature: a pale lamp on the thread, which kindles coral: the Hush's eye.)
+    e.gone = true;
+    void frame;
+    void dt;
+    void view;
+    void sim;
+    const lg = this.lampG;
+    lg.clear();
+    if (on && t >= H.caseRise[1]) {
+      // The bulb: bone-pale, a teardrop hanging from the thread; coral wakes inside it.
+      const bx = cx;
+      const by = cy;
+      lg.moveTo(bx, by - 40)
+        .lineTo(bx, by - 12)
+        .stroke({ color: PALE, width: 1.4, alpha: 0.5 });
+      lg.ellipse(bx, by + 6, 22, 30).fill({ color: 0xcfc8c0, alpha: 0.88 });
+      lg.circle(bx, by - 18, 9).fill({ color: 0xcfc8c0, alpha: 0.88 });
+      lg.ellipse(bx, by + 10, 15 * lit + 3, 21 * lit + 3).fill({ color: CORAL, alpha: 0.2 + 0.8 * lit });
+      lg.ellipse(bx - 7, by - 2, 4, 10).fill({ color: 0xffffff, alpha: 0.35 });
+      // It turns its light on her: a narrow cone.
+      if (turn > 0.01) {
+        const ang = Math.atan2(ty - by, tx - bx);
+        const len = Math.min(dl, 900) * turn;
+        const half = 0.07;
+        lg.poly([
+          bx,
+          by + 6,
+          bx + Math.cos(ang - half) * len,
+          by + 6 + Math.sin(ang - half) * len,
+          bx + Math.cos(ang + half) * len,
+          by + 6 + Math.sin(ang + half) * len,
+        ]).fill({ color: CORAL, alpha: 0.12 * lit * turn });
+      }
+    }
     this.lampGlow.position.set(cx, cy + 6);
     this.lampGlow.alpha = on ? 0.55 * lit * (0.85 + 0.15 * Math.sin(clock * 2.3)) : 0;
     if (!on) {
@@ -1065,9 +1355,11 @@ export class GroveActors {
     let wy = H.lamp.y + 200;
     let k = 0;
     if (t >= H.washIn[0]) {
-      const u = window01(t, H.washIn[0], H.washIn[1]);
-      wx = H.x - 40 + (this.wingAt.x - H.x + 40) * u * 0.9;
-      wy = H.lamp.y + 240 + (MOSS - 30 - H.lamp.y - 240) * u;
+      // Down the bark under the lamp first, then along the moss toward the case and her.
+      const down = window01(t, H.washIn[0], H.washIn[0] + 3.4);
+      const along = window01(t, H.washIn[0] + 3, H.washIn[1]);
+      wx = H.x + 20 + (this.wingAt.x - H.x - 20) * along * 0.85;
+      wy = H.lamp.y + 120 + (MOSS - 30 - H.lamp.y - 120) * down;
       k = window01(t, H.washIn[0], H.washIn[0] + 1.5);
       if (t >= H.hide[0]) {
         const s = t - H.hide[0];
@@ -1156,6 +1448,7 @@ export class GroveActors {
     this.caseV.destroy();
     this.back.destroy({ children: true });
     this.actors.destroy({ children: true });
+    this.foxLayer.destroy({ children: true });
     this.front.destroy({ children: true });
     this.dance.destroy();
     void this.layers;
