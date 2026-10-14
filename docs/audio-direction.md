@@ -11,18 +11,18 @@ This follows `docs/story/locked.md`, `docs/story/current/mouthless.md` and the *
 
 ## 0. Three rules
 
-1. **Mouths breathe; Wing doesn't.** Things with mouths (the Mouth, burrbacks, Tallow) make breath and vowel
+1. **Mouths breathe; Wing doesn't.** Things with mouths (the Hush, burrbacks, Tallow) make breath and vowel
    sounds. Wing never vocalises: no gasp, no cry, and none of her instruments is blown. Her sounds are
    touched, plucked and fluttered. Formants, the vowel resonances of a voice, belong only to things that eat.
-2. **Regular is the enemy.** The Mouth keeps one slow, exact clock. The forest never repeats. Where root
-   has reached, the forest's sounds drift into step with the Mouth. Things turning regular is how the
+2. **Regular is the enemy.** The Hush keeps one slow, exact clock. The forest never repeats. Where root
+   has reached, the forest's sounds drift into step with the Hush. Things turning regular is how the
    player hears the root arrive.
 3. **Depth is atmosphere.** Farther sounds are duller, wetter and wider; nearer ones drier. The foreground
    is almost silent, the way it is almost black.
 
 ## 1. The sound of the world
 
-### The Mouth
+### The Hush
 **Its breath**: a very slow swell, about 9 s in and 9 s out. Band-passed brown noise through two formant
 filters gliding between *oo* and *aa*, too low and soft to read as a voice: felt more than heard. In the
 Grove it is under the soil, low-passed, as faint as the root steam you see.
@@ -71,9 +71,9 @@ She is light, so she is quiet, and every movement sound is unpitched: air, felt,
 - **Lanterns** are cocoons hardened like glass: singing bowls. `lanternNotice`: the dormant bowl rings
   faintly *at the pitch of the light she carries*. Channel: a rubbed rim swelling. Kindle: the bowl blooms
   into the forest's chord. Rest: a low steady hum. Refuse: the rubbing stops on a hollow knock. **A lit
-  lantern muffles the Mouth** (low-passed, breath modulation gone): safety is audible. Wayside lamps are
+  lantern muffles the Hush** (low-passed, breath modulation gone): safety is audible. Wayside lamps are
   smaller, higher, single-partial bowls.
-- **Burrbacks** were badgers and have mouths: they huff, and **their gait falls on the Mouth's clock**.
+- **Burrbacks** were badgers and have mouths: they huff, and **their gait falls on the Hush's clock**.
   The brace is a rising creak of root (the creak *is* the countdown); the ram a low rumble; a wall stun a
   thud and a ringing shell. Calmed, they breathe slower, *out of step* with the pulse.
 - **Lampwings** were fireflies, now its eyes: a fast exact wing hum and a thin glassy lamp tone. The
@@ -83,9 +83,9 @@ She is light, so she is quiet, and every movement sound is unpitched: air, felt,
 ## 2. The score
 
 ### Pitch world
-Home is **D**, modal. The forest is in just intonation; the Mouth is detuned so it beats.
-- **The Mouth: D falling to A.** A falling fourth alternating at the pulse: the rally, its only game.
-- **Wing: A rising to D, then E, F, back to E.** Her motif *starts with the Mouth's interval turned upward*
+Home is **D**, modal. The forest is in just intonation; the Hush is detuned so it beats.
+- **The Hush: D falling to A.** A falling fourth alternating at the pulse: the rally, its only game.
+- **Wing: A rising to D, then E, F, back to E.** Her motif *starts with the Hush's interval turned upward*
   (the same two notes, going somewhere) and stops on E, unresolved. She never reaches home on her own.
 - **Sorrel: a 3/4 lilt circling her top notes** (F E F A, G F E), a third above her when they play
   together, so the two in canon make the moths' dance. His is the only music you could dance to.
@@ -96,14 +96,14 @@ Home is **D**, modal. The forest is in just intonation; the Mouth is detuned so 
 ### Instruments (all synthesis)
 - **Wing**: plucked strings (Karplus-Strong, felt excitation, like a small harp) and struck glass. Never
   blown, never voiced. **Sorrel**: the same strings, brighter and hammered, with a wing tremolo.
-- **The Mouth**: breath and pipe: formant-filtered noise, a low blown pipe (noise into a tuned comb), the
+- **The Hush**: breath and pipe: formant-filtered noise, a low blown pipe (noise into a tuned comb), the
   beating tones. From the lab on, the breath carries a metal resonance: the throat is pipe.
 - **The forest**: modal glass bells, rubbed glass (noise-excited resonators), granular seeded noise.
 - **The maker**: the only human-made timbre, one warm, slightly out-of-tune low FM note.
 
 ### Key beats
 - **Prologue.** A breath, not music: **one low note (the maker's) under the warm blur, stopping when it
-  lifts**; the stutter a burst of static. From very high, music enters on the Mouth's slow pulse over a
+  lifts**; the stutter a burst of static. From very high, music enters on the Hush's slow pulse over a
   chord, and **each town going out drops a note until it is thin**. Moths flutter through *off* its beat.
   The burrback breathes; the caterpillar's spin is a dry rustle. Wing catches a glint: one glass note that
   just sustains. The music thins to her one voice; **the title lands on silence**.
@@ -113,9 +113,9 @@ Home is **D**, modal. The forest is in just intonation; the Mouth is detuned so 
 - **Sorrel saves her (Night 2).** The pin has only her wingbeats. Sorrel's blaze is his theme, full and
   fast, *panning away with him*; Dun's feet recede after it. The danger leaves with the light.
 - **The lab (Night 4).** The room of dead dishes: only drips. At the heart, the screen's rally plays the
-  Mouth's two knocks fast and clean: the pulse under the whole world was this game. At the stalk, each
+  Hush's two knocks fast and clean: the pulse under the whole world was this game. At the stalk, each
   miss floods static and each long rally clears it: **silence is what it wanted**. The light along every
-  root is **the one place the score swells for the Mouth**, cut to static at the dish. Wing's gift is
+  root is **the one place the score swells for the Hush**, cut to static at the dish. Wing's gift is
   **one bright note per glint**, and **the pulse stops for the first time in the game: true silence.** The
   moth forming in its threads is one held voice, its drone slid off D onto *her* note; when it tries her
   motif it can only manage D–A, D–A. The chase runs on its pulse, now fast.
@@ -125,23 +125,23 @@ Home is **D**, modal. The forest is in just intonation; the Mouth is detuned so 
   once, slowed, with a rest where Sorrel's answering third should be.
 - **The Spin ending.** Each circuit costs an ability and *its sound leaves the mix* (glide air, wingbeat,
   dash), while **each loss drops a note from her theme until one voice remains**. Sorrel adds a second;
-  the moths are a rising choir of shivering wings. The Mouth's rally slows and stops. **The let-go is
+  the moths are a rising choir of shivering wings. The Hush's rally slows and stops. **The let-go is
   silence; then the full theme once, never louder, resolving to D for the first time**, its voice and hers
   together. Epilogue: the forest's field returns, irregular; **the prologue's low note at the maker's touch
-  on the silk; one heartbeat at the press, not on the Mouth's clock; 3 s of silence over black.**
+  on the silk; one heartbeat at the press, not on the Hush's clock; 3 s of silence over black.**
 - **Stay**: the pulse forever under a lullaby of their two motifs that loops *exactly*; the exact loop is
   the horror. **Burn**: a crackle, then the pulse and every layer of ambience stop dead. Wings over silence.
 
 **Where silence is right:** the prologue's opening, the title, after the gift, Sorrel's leaving, before the
 choice, every fade until a lantern speaks, exploration before the lanterns give music back, and Wing
-herself, always. Silence is safety *and* loss: dark and empty-handed, the Mouth can't hear her either.
+herself, always. Silence is safety *and* loss: dark and empty-handed, the Hush can't hear her either.
 
 ## 3. What the player learns from sound alone
 
 - **Carried light makes a tone.** While she holds glints a faint chord of their pitches hangs around her,
   louder the more she carries (the ember adds a warm crackle): "it sees only mouths and light", made
   audible. Dark and empty, she is silent. Hiding, her flaw, is the quiet.
-- **The Mouth listens.** When she carries light near root, the pulse *slows* and its breath holds at the
+- **The Hush listens.** When she carries light near root, the pulse *slows* and its breath holds at the
   top; lampwings' tones snap to her pitch. A dragging pulse means danger.
 - **Regular means root; muffled means safe; on the beat means a servant.** Dun's turn is heard (its breath
   off the beat) before it is understood. The midpoint recasts the whole soundtrack: the pulse was a game.
@@ -158,11 +158,11 @@ and a `memory/audio.md` need adding when it lands.)
   player and camera, for panning, distance and zones.
 - `router.ts`: **pure** `(SimEvent, state) → Cue[]`, no AudioContext, unit-tested over real sim tapes.
 - `graph.ts`: buses (`world`, `hero`, `creatures`, `score`), one shared reverb send plus a "far" send, a
-  gentle limiter. `voices/`: one file per family (wind, mouth, wings, glass, bowl).
+  gentle limiter. `voices/`: one file per family (wind, hush, wings, glass, bowl).
 - `bake.ts`: one-shots rendered into `AudioBuffer`s at boot in plain JS (Karplus-Strong, modal glass,
   wingbeat variants, a seeded ~2.4 s reverb impulse). Plain JS sidesteps Web Audio's 128-frame minimum
   delay in feedback loops, which caps live Karplus-Strong near 375 Hz.
-- `tuning.ts`: every level, period and pitch. `clock.ts`: `mouthPhase(frame)`, pure, so render can later
+- `tuning.ts`: every level, period and pitch. `clock.ts`: `hushPhase(frame)`, pure, so render can later
   make root steam and veins breathe in time.
 
 **Continuous layers are state-driven; one-shots are event-driven**, so unmuting mid-play or after a
@@ -191,14 +191,14 @@ sound; ZzFX is what the owner hated.
 
 ### First milestone
 1. **The Grove's ambience**: two-band wind from render's wind function, seeded drips by depth, the three
-   zones, the pool, the far voice, the Mouth faint under the soil.
+   zones, the pool, the far voice, the Hush faint under the soil.
 2. **Wing's movement**: wingbeat, double-jump flutter, glide catch and airflow, dash, landing puff (soft and
    hard), wall-slide scrape; moss footsteps silent. No slash, glints or creatures yet.
-3. **The lantern kindle**: notice, channel, kindle, rest, refuse, and the lit lantern muffling the Mouth.
+3. **The lantern kindle**: notice, channel, kindle, rest, refuse, and the lit lantern muffling the Hush.
 
 All behind the mute toggle, **default muted**. Deliverable for the owner: a 40–60 s clip with audio of a
 scripted run (idle in the blue zone, run, jump, glide, dash, a hard landing, kindle the first lantern) and
-a take without the Mouth layer, for an A/B. The default flips only when he approves.
+a take without the Hush layer, for an A/B. The default flips only when he approves.
 
 ## 5. Risks, and how to avoid "cheap synth"
 

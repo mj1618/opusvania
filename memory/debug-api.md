@@ -40,6 +40,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - Playtest 5 additions: `enemies().list[]` has `rams, roused, stirred, dives`; `lanterns().list[]` has `key` (the
   pickup id it wants, or null) and `keyed`; `goal().heart` has `ready, waited`; `goal().grove {flowers, paths,
   canopy}`; `goal().ending.offerNext`. Hitboxes: a lampwing is thick red in its dive, green in its stall.
+- `audio` (memory/audio.md): `state()`, `mute(bool)`, `volume(bus | 'master', dB)`, `cues(n)` (the last cues routed, muted or not), `record()` then `render({mute?: ['hush']})` (offline WAV base64 + levels). Null-safe: `g.audio?.`.
 - `lamps()` → the same record as `lanterns()` for the wayside lamps (`scene.lamps`; the hitbox
   overlay shows them as thin green boxes, gold once lit).
 - `load()` restarts the scene (glints come back, pods close, enemies return, full health, lanterns dark, the heart asleep, the ending undone). `teleport(x, y)` puts the feet centre there at rest and snaps the camera (health, enemies, the last safe ground and the slash count `attackSeq` are kept).

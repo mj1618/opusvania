@@ -8,7 +8,7 @@ TypeScript (strict), Node 24 and npm, Vite, PixiJS v8 on WebGL2 (shaders in GLSL
 ## Architecture rules
 - `src/sim/` is pure and deterministic. It must not import Pixi, the DOM or anything outside `src/sim`. It must not call `Math.random` or `Date.now`; use the seeded RNG and the frame count. It runs at a fixed 60Hz.
 - Render code only reads sim state and events. It never changes the sim. Render animation runs on render time (`dt`, `clock`), never on wall-clock calls, and never uses `Math.random` for layout, so screenshots are reproducible.
-- Stay in your directory: `src/render/scene/` (environment, one file per layer), `src/render/character/`, `src/render/post/`. The shared contract is `src/render/contract.ts`; see `memory/scene-and-units.md`.
+- Stay in your directory: `src/render/scene/` (environment, one file per layer), `src/render/character/`, `src/render/post/`, `src/audio/` (sound: reads the sim like render, never imported by render; `memory/audio.md`). The shared contract is `src/render/contract.ts`; see `memory/scene-and-units.md`.
 - Gameplay numbers go in tuning files (`src/sim/tuning.ts`, `src/render/camera/tuning.ts`), never inline as magic numbers.
 - Keep the `window.__game` debug API working (`memory/debug-api.md`).
 
