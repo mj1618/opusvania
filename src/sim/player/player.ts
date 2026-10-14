@@ -26,6 +26,7 @@ export function keepOffer(p: PlayerState, old: PlayerState): void {
   p.giftTo = old.giftTo;
   p.giftIndex = old.giftIndex;
   p.giftTimer = old.giftTimer;
+  p.giftFrames = old.giftFrames;
   p.giftX = old.giftX;
   p.giftY = old.giftY;
 }
@@ -95,6 +96,8 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     giftY: 0,
     offerBuf: 0,
     offerCd: 0,
+    offerHold: 0,
+    giftFrames: 0,
     safeX: Math.round(feetX),
     safeY: y + h,
     safeFrames: 0,

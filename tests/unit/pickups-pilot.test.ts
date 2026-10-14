@@ -66,8 +66,10 @@ function seek(s: Sim, i: number, maxFrames = 300): number {
 /** Stations: feet positions on surfaces the route pilots reach. Pickup ids start with the key. */
 const STATIONS: Array<[prefix: string, x: number, y: number]> = [
   ['spawn-', 1120, 1280],
-  ['pool-arc-', 1440, 1280],
-  ['pool-', 1480, 1280],
+  // (Giving round 2: the pool's glints are east of burr-path now, so she meets it dark after the
+  // first lantern: the line on the bluff's top, the arc down its east side to the terrace.)
+  ['pool-arc-', 2760, 1152],
+  ['pool-', 2540, 960],
   ['bank-', 640, 1280],
   ['f1-', 300, 1088],
   ['f3-', 1150, 832],

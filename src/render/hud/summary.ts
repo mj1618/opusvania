@@ -262,6 +262,37 @@ const ICONS: Array<(g: Ctx, s: number) => void> = [
       g.fill();
     }
   },
+  // Calmed (memory/giving.md): a burrback's shell the right way up, at rest, a warm glint kept in it.
+  (g, s) => {
+    const k = s / 30;
+    g.save();
+    g.scale(k, k);
+    g.strokeStyle = COOL;
+    g.fillStyle = 'rgba(16, 28, 40, 0.92)';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(-12, 7);
+    g.bezierCurveTo(-11, -9, 11, -9, 12, 7);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    // Folded legs: short strokes tucked under the rim.
+    g.lineWidth = 1;
+    g.beginPath();
+    for (const x of [-8, -3, 3, 8]) {
+      g.moveTo(x, 7);
+      g.lineTo(x + (x < 0 ? 1.6 : -1.6), 9.4);
+    }
+    g.stroke();
+    const grad = g.createRadialGradient(0, -1, 0, 0, -1, 5.4);
+    grad.addColorStop(0, '#fff4dc');
+    grad.addColorStop(1, 'rgba(242, 169, 78, 0)');
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(0, -1, 5.4, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+  },
 ];
 
 function seatOn(g: Ctx): void {
@@ -550,6 +581,11 @@ export class EndSummary {
       count(5, 'pods', e.pods, e.podsTotal),
       count(2, 'creatures', e.kills, e.enemiesTotal),
     ];
+    // Calmed by a gift (memory/giving.md), beside the felled: one met either way is one met.
+    const calmed = e.calmed ?? 0;
+    found.push(count(9, 'calmed', calmed, e.enemiesTotal));
+    const met = found[3];
+    if (met && e.kills + calmed >= e.enemiesTotal && e.enemiesTotal > 0) met.all = true;
     const went: Entry[] = [
       { icon: 1, label: 'time', text: clockText(e.time) },
       { icon: 3, label: 'hits', text: String(e.hits) },

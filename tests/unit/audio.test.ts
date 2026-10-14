@@ -306,8 +306,10 @@ describe('giving: carrying is risky, giving is gentle (memory/giving.md)', () =>
       return layers(snap, CAM, 0, CTX).chord;
     };
     expect(at(0)).toEqual([0, 0, 0, 0]);
-    const one = at(1);
-    const four = at(40);
+    // (Level 1 is two glints since giving round 2: one is too small a light.)
+    const one = at(2);
+    // (Level 4 is 45 glints since giving round 2.)
+    const four = at(50);
     expect(one.filter((g) => g > 0)).toHaveLength(1);
     expect(four.filter((g) => g > 0)).toHaveLength(4);
     const power = (c: number[]) => Math.sqrt(c.reduce((a, g) => a + g * g, 0));

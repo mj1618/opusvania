@@ -9,11 +9,60 @@ light... any light a moth carries". The slash and the pogo stay; no new creature
 Sim: `src/sim/seen.ts` (levels), `src/sim/giving.ts` (the offer), `enemies.ts` (`giftEnemy`, awareness, contact),
 `enemies/burrback.ts` / `lampwing.ts` (`sees`, `gift`), `goal.ts` (rest = give, `LanternState.given`,
 `heartGiven`). Numbers: `tuning.giving` (+ `burrback.noticePx`). State version 20.
-Tests: `tests/unit/giving.test.ts` (rules), `naive-pilot.test.ts` "giving" (ghost, hoarder, offer pilots).
+Tests: `tests/unit/giving.test.ts` (rules, the lamp-glade case), `naive-pilot.test.ts` "giving" (natural, ghost,
+laying ghost, hoarder, offer pilots). **Round 2 (after memory/playtest-giving.md) is the section below; where it
+contradicts the older text further down, round 2 wins.**
+
+## Round 2 (2026-10-14, after playtest-giving)
+- **Teach by contrast, in the level**: `pool-1..3` moved onto the bluff's top (2452 / 2496, 918; 2652, 955 over its east
+  lip) and `pool-arc-1..5` down its east side to the terrace (2660-2855): she wakes none of them before burr-path.
+  **`seen1` is 2** (one glint is too small a light to find her), so the first lantern's kindle (13 in, 12 out) leaves
+  her one glint and **unseen**: burr-path dozes as she passes; carrying 20 at the shaft, burr-shaft lifts its head.
+  Tried first: lantern-stone `cost: 13` (empties her). Rejected: it moved the careful pilot's arrival at the shaft by
+  0.3 s and its second tell went (one cut from behind out of the doorway), and pinned 12s across six test files.
+  The pool's "way home" trail (layout-pilot) is gone with it.
+- **The offer prompt** (`src/render/hud/prompts.ts`, lesson `offer`): armed by the first `enemyAware` within
+  `offerPx` 260 while she carries; the offer key's cap (V, or the one she uses) tapped beside her while a creature
+  within 340 px is aware of her and she has something; gone for good at her first `enemyGift`.
+- **Hold to stream** (as the prologue teaches): a press gives one; held past `offerStreamDelayFrames` 16, one every
+  `offerStreamFrames` 8 into a dormant light or the heart (`offerTarget(..., lights = true)`), never a creature (one
+  per press, however long held). A glint to a light flies `offerLightFlightFrames` 8 (= the gap: one in flight).
+  A lamp of 8 from a held V: about 1.1 s.
+- **A lampwing gift is landable**: one in its tell / dive / stall / climb is in reach as far off as it sees her (its
+  sight x her scale, at least 150), and a glint to it lands in `offerWingFlightFrames` 3. The playtest's lamp-glade
+  case (8 glints at 760, 960: tell at 0, dive at 36, touch at 60) is a test: a press at any frame 0..51 stops it,
+  untouched. (It was: a press up to dive+10 out of reach, dive+15 landed after the touch.)
+- **A gift's calm lasts until she leaves its ground**: `gift` counts down `giftCalmFrames` (the warmth fades; render
+  and sound read the share) and then holds at 1 while her body centre is within `giftStayPx` 520 of its home; it
+  ends once she is further. No re-tax for sliding back down the shaft (the playtest bot paid burr-shaft 7 glints).
+- **Reward giving**: glints given to creatures count in the heart's offering and tier at `gather` (`offered` =
+  wallet + `heartGiven` + `gifted`; still `spent` in the glint tally, never counted twice). The tally
+  (`src/render/hud/summary.ts`) has a **calmed n / 13** entry (icon: a shell the right way up with a warm glint)
+  beside creatures; creatures' gold flourish when felled + calmed = all.
+- **A cut aimed at a pod passes over a creature she has calmed** (`slashEnemies`: a closed pod in the hit area ->
+  gift-calmed creatures are skipped for the whole slash). With no pod in reach a cut still lands and ends the calm.
+- **Level 4 is 45 glints** (`seen4`), not 30.
+- **Laying light down never strands her**: a LANTERN given part of its price by hand is *promised*: it catches
+  (`lanternKindle {away: true}`) the step her wallet covers the rest, wherever she is (the pledge's rule). Lamps are
+  optional and wait for her. The laying ghost (below: no pods, gives every creature a glint, holds V at every dormant
+  light it reaches) finished only after this: before, the holder laid 3 into the stone, glided over it with the
+  ember and never came back (heart asleep "1 of 3" at 152 s).
+- **For render** (not mine to change, src/render/giving): `offer.frames` / new `player.giftFrames` is the flight now
+  (3 / 8 / 10); `GivingRenderer` still divides by `tuning.giving.offerFlightFrames` (10), so the 3-frame glint to a
+  lampwing starts two thirds along its arc. The calm-breath sound reads `gift` as a countdown: it still is.
+
+| pilot (naive tapper / holder unless named) | time | hits / fades | gifts (calmed) | kills | offered / tier |
+|---|---|---|---|---|---|
+| natural (masher, never presses V) | 50.0 / 59.2 s | 6 / 2 (tapper), 8 (holder) | 0 | 2 | 43 / 1 (tapper) |
+| natural: burr-path on first approach | wallet 1, not aware (contrast holds) | | | | |
+| giver (`offer`) | 38.7 / 47.3 s | 1 / 0 | 6 (4) | 0 | 36 / **1** |
+| ghost (no glints at all, hops them) | 18.5-21.4 s to the heart | 0 | 0 | 0 | never noticed |
+| laying ghost (no pods, `offer` + `lay`) | 36.8 / 41.7 s | 1-2 / 0 | 5-6 (4-5) | 0 | 9 / 0 |
+| careful reader | 60.5 s | 2 / 0 | 0 | all on the road | |
 
 ## 1. Seen: the light she carries
-- `seenLevel(count)`: 0 with an empty wallet; 1 from `seen1` (1), 2 from `seen2` (6), 3 from `seen3` (15),
-  4 from `seen4` (30). Each level scales the creatures' own notice ranges by `scale1..4` = 0.75 / 1 / 1.2 / 1.45.
+- `seenLevel(count)`: 0 under `seen1` (2: empty-handed or one glint); 1 from 2, 2 from `seen2` (6), 3 from `seen3`
+  (15), 4 from `seen4` (45). Each level scales the creatures' own notice ranges by `scale1..4` = 0.75 / 1 / 1.2 / 1.45.
   **Level 2 (a handful: about half a lantern) is exactly the old tuned fight**; every fight and placement was tuned
   at scale 1, so a carrier of 6-14 meets the grove as before.
 - Burrback: brace reach `strikePx` 130 x scale = 98 / 130 / 156 / 189 (box to box); awareness `noticePx` 220 x
@@ -45,7 +94,7 @@ Tests: `tests/unit/giving.test.ts` (rules), `naive-pilot.test.ts` "giving" (ghos
   (`spent` + 1, `gifted` + 1 for a creature; the heart's goes to `offered` / `goal.heartGiven`) and arrives
   `offerFlightFrames` (10) later. Nothing in reach / empty hands: `offerMiss {reason: none | empty}`, nothing spent
   (she still opens her hands: `offering`).
-- **To a creature** (`giftEnemy`): `calm` and `gift` = `giftCalmFrames` 600 (10 s); `roused` / `stirred` cleared.
+- **To a creature** (`giftEnemy`): `calm` and `gift` = `giftCalmFrames` 600, then held while she stays near (round 2); `roused` / `stirred` cleared.
   A burrback stops whatever it was doing (brace, ram, winded, curl), lowers and stands `giftStandFrames` 60, then
   walks its round harmless and braces at nothing; a lampwing that is after her gives up (`enemyGiveUp` cause `gift`)
   and goes home, noticing nothing while the calm lasts (a staggered one goes home after its tumble). A cut ends the

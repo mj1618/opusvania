@@ -18,9 +18,10 @@ import { giftEnemy } from './enemies';
 import { segmentBlocked } from './enemies/common';
 import type { SimEvent } from './events';
 import { heartBox, lampCost, lanternBox, lanternCost } from './goal';
-import { type InputFrame, wasPressed } from './input';
+import { type InputFrame, isHeld, wasPressed } from './input';
 import type { Box } from './player/attack';
 import type { Scene } from './scene';
+import { seenNow, seenScale } from './seen';
 import type { GameState, PlayerState } from './state';
 import type { Tuning } from './tuning';
 
@@ -40,25 +41,37 @@ interface Target {
   id: string;
 }
 
+/** A lampwing after her: its tell, its dive, its stall, its climb. */
+const chasing = (e: { kind: string; mode: string }): boolean =>
+  e.kind === 'lampwing' &&
+  (e.mode === 'curious' || e.mode === 'dive' || e.mode === 'stall' || e.mode === 'pursue');
+
 /**
  * What an offer now would go to: the nearest creature in reach that is not already calmed by a
- * gift (a clear line from her to it); else the nearest dormant lantern or lamp in reach with some
- * of its price still to give; else the heart, if it is in reach and the run is not over.
+ * gift (a clear line from her to it; a lampwing after her is in reach as far off as it sees her);
+ * else the nearest dormant lantern or lamp in reach with some of its price still to give; else the
+ * heart, if it is in reach and the run is not over. `lights`: lights and the heart only (the stream
+ * of a held offer: a creature takes one glint per press).
  */
-export function offerTarget(state: GameState, scene: Scene, t: Tuning): Target | undefined {
+export function offerTarget(state: GameState, scene: Scene, t: Tuning, lights = false): Target | undefined {
   const p = state.player;
   const G = t.giving;
   const px = p.x + p.w / 2;
   const py = p.y + p.h / 2;
   const r2 = G.offerReachPx * G.offerReachPx;
+  const sight = Math.max(G.offerReachPx, seenScale(Math.max(1, seenNow(state, t)), G) * t.lampwing.noticePx);
   let best: Target | undefined;
   let bestD = 0;
-  for (let i = 0; i < state.enemies.length; i++) {
+  for (let i = 0; i < state.enemies.length && !lights; i++) {
     const e = state.enemies[i];
     if (!e || e.gone || e.mode === 'dead' || e.gift > 0) continue;
     if (p.giftTo === 'enemy' && p.giftIndex === i && p.giftTimer > 0) continue;
     const d = dist2(px, py, e);
-    if (d > r2) continue;
+    // (One that is after her she can reach as far as it can see her.)
+    const own =
+      e.sight > 0 ? Math.max(G.offerReachPx, (sight * e.sight) / Math.max(1, t.lampwing.noticePx)) : sight;
+    const r = chasing(e) ? own : G.offerReachPx;
+    if (d > r * r) continue;
     const ex = e.x + e.w / 2;
     const ey = e.y + e.h / 2;
     if (segmentBlocked(scene, px, py, ex, ey)) continue;
@@ -129,10 +142,20 @@ export function updateOffer(
     return;
   }
   if (p.offerCd > 0) p.offerCd--;
+  p.offerHold = isHeld(input, 'offer') ? p.offerHold + 1 : 0;
   if (wasPressed(input, state.prevInput, 'offer')) p.offerBuf = Math.max(1, Math.round(G.offerBufferFrames));
   else if (p.offerBuf > 0) p.offerBuf--;
-  if (p.offerBuf === 0) return;
   const able = !held && p.hp > 0 && p.faded === 0 && p.stagger === 0 && p.mode !== 'dash';
+  // Held on: a steady stream into a light or the heart (never a creature), one in flight at a time.
+  const lead = Math.max(1, Math.round(G.offerStreamDelayFrames));
+  const gap = Math.max(1, Math.round(G.offerStreamFrames));
+  if (p.offerBuf === 0 && p.offerHold > lead && (p.offerHold - lead) % gap === 1 % gap) {
+    if (!able || p.giftTimer > 0 || w.count < 1) return;
+    const to = offerTarget(state, scene, t, true);
+    if (to) give(state, to, events, t);
+    return;
+  }
+  if (p.offerBuf === 0) return;
   if (!able || p.offerCd > 0 || p.giftTimer > 0) return;
   p.offerBuf = 0;
   const cx = p.x + p.w / 2;
@@ -146,6 +169,16 @@ export function updateOffer(
     events.push({ type: 'offerMiss', x: cx, y: cy, reason: w.count < 1 ? 'empty' : 'none', wallet: w.count });
     return;
   }
+  give(state, target, events, t);
+}
+
+/** One glint leaves her hands for `target` (it arrives `giftFrames` later: `arrive`). */
+function give(state: GameState, target: Target, events: SimEvent[], t: Tuning): void {
+  const p = state.player;
+  const G = t.giving;
+  const w = state.pickups;
+  const cx = p.x + p.w / 2;
+  const cy = p.y + p.h / 2;
   w.count -= 1;
   if (target.to === 'heart') {
     // Into the offering at once (the tally: `offered`), as the ending's would.
@@ -155,10 +188,22 @@ export function updateOffer(
     w.spent += 1;
     if (target.to === 'enemy') w.gifted += 1;
   }
-  const n = Math.max(1, Math.round(G.offerFlightFrames));
+  // The flight: at once to a lampwing that is after her, a light's gap to a light, else the plain one.
+  const e = target.to === 'enemy' ? state.enemies[target.i] : undefined;
+  const n = Math.max(
+    1,
+    Math.round(
+      e && chasing(e)
+        ? G.offerWingFlightFrames
+        : target.to === 'enemy'
+          ? G.offerFlightFrames
+          : G.offerLightFlightFrames,
+    ),
+  );
   p.giftTo = target.to;
   p.giftIndex = target.i;
   p.giftTimer = n;
+  p.giftFrames = n;
   p.giftX = target.x;
   p.giftY = target.y;
   p.offerCd = Math.max(0, Math.round(G.offerCooldownFrames));

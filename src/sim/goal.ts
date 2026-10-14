@@ -409,8 +409,10 @@ export function updateGoal(
       g.ending.deaths = g.run.deaths;
       g.ending.lamps = g.lampsLit;
       g.ending.lampsTotal = scene.lamps?.length ?? 0;
-      // The offering: all she carries, and what she gave the heart by hand on the way (memory/giving.md).
-      const offered = wallet.count + g.heartGiven;
+      // The offering: all she carries, and what she gave by hand on the way, to the heart and to the
+      // creatures (memory/giving.md: that light went into the grove too; the giver is not tier 0).
+      const handed = g.heartGiven + wallet.gifted;
+      const offered = wallet.count + handed;
       g.ending.offered = offered;
       g.ending.offerTier = offerTier(offered, G);
       g.ending.offerNext =
@@ -426,7 +428,7 @@ export function updateGoal(
       for (const e of state.enemies) if (e.gifts > 0) calmed++;
       g.ending.calmed = calmed;
       g.offer.total = offered;
-      g.offer.given = g.heartGiven;
+      g.offer.given = handed;
       g.offer.tier = 0;
       // Nothing of hers is left waiting to fire while she is held.
       p.jumpBuf = 0;
@@ -621,8 +623,14 @@ function updateLights(
     )
       s.pledged = true;
     if (s.pledged && wallet.count + coming < need) s.pledged = false;
-    // Given its whole price by hand (and it has its key): it catches, wherever she is.
-    const paid = ((s.pledged && wallet.count >= need) || (s.given > 0 && need === 0 && keyed)) && !g.gathered;
+    // Given its whole price by hand (and it has its key): it catches, wherever she is. A LANTERN given
+    // part of it by hand is promised: it catches the step her wallet covers the rest, wherever she is
+    // (as a pledge does), so laying light down never strands her (playtest-giving: the ghost gave
+    // lantern-far all she had and stood empty at a dead end). Lamps are optional: they wait for her.
+    const promised = !lamp && s.given > 0 && keyed && wallet.count >= need;
+    const paid =
+      ((s.pledged && wallet.count >= need) || (s.given > 0 && need === 0 && keyed) || promised) &&
+      !g.gathered;
     if (keyed && (paid || ((calm || held) && wallet.count >= need) || (s.pledged && at))) {
       s.short = 0;
       const of = whole(G.channelFrames, 1);

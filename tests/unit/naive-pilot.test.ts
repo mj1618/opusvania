@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GROVE } from '../../src/scene/index';
 import type { SimEvent } from '../../src/sim/events';
+import { offerTarget } from '../../src/sim/giving';
 import { hashState, lanternBox, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
 import type { Scene } from '../../src/sim/scene';
@@ -73,6 +74,8 @@ interface Run {
   /** The nearest she came to each creature (box to box), and to each burrback on its own ground (her feet within 60 px of its). */
   closest: Record<string, number>;
   closestOnGround: Record<string, number>;
+  /** The first frame she came within 130 px (box to box, on its ground) of each burrback: her wallet then, and whether it was aware of her. */
+  firstNear: Record<string, { f: number; wallet: number; aware: boolean }>;
   /** Where she stood at the end (feet). */
   end: { x: number; y: number };
 }
@@ -88,6 +91,8 @@ function naive(
     read?: number;
     /** Giving (memory/giving.md): a burrback in her way is given a glint instead of cut (`offer`), or hopped (`pass`). */
     offer?: boolean;
+    /** She lays her light down: holds offer at any dormant light (or the heart) in reach, streaming into it. */
+    lay?: boolean;
     pass?: boolean;
     /** Another scene (the grove without its glints), a wallet to start with, and when to stop. */
     scene?: Scene;
@@ -102,6 +107,7 @@ function naive(
   const notices: Run['notices'] = [];
   const closest: Record<string, number> = {};
   const closestOnGround: Record<string, number> = {};
+  const firstNear: Run['firstNear'] = {};
   /** Frames left of a hop over a burrback (`pass`). */
   let vault = 0;
   const timeline: string[] = [];
@@ -392,6 +398,11 @@ function naive(
           break;
         }
     }
+    // Laying light down: a dormant light in reach (and no creature to give to first): hold offer.
+    if (o.lay && !g.gathered && s.state.pickups.count > 0 && fetch < 0) {
+      const to = offerTarget(s.state, s.scene, s.tuning, true);
+      if (to && to.to !== 'heart') m |= O;
+    }
     if (acted) {
       // (Her hands are busy: no wall presses meanwhile.)
     } else if (cut && p.grounded) {
@@ -426,8 +437,11 @@ function naive(
       const dy = Math.max(e.y - (b.y + b.h), b.y - (e.y + e.h), 0);
       const gap = Math.round(Math.hypot(dx, dy));
       closest[e.id] = Math.min(closest[e.id] ?? 1e9, gap);
-      if (Math.abs(b.y + b.h - (e.y + e.h)) <= 60)
+      if (Math.abs(b.y + b.h - (e.y + e.h)) <= 60) {
         closestOnGround[e.id] = Math.min(closestOnGround[e.id] ?? 1e9, gap);
+        if (gap <= 130 && !firstNear[e.id])
+          firstNear[e.id] = { f, wallet: s.state.pickups.count, aware: e.aware > 0 };
+      }
     }
   }
   say(s.state.goal.ended ? 'the end' : 'GAVE UP HERE');
@@ -448,6 +462,7 @@ function naive(
     notices,
     closest,
     closestOnGround,
+    firstNear,
     end: feet(s),
   };
 }
@@ -731,7 +746,49 @@ describe('giving: carrying light makes her seen; offering is a way through (memo
       expect(gather?.type === 'gather' && gather.calmed >= 3 && gather.gifted >= 3, hand).toBe(true);
       expect(r.hits, hand).toBeLessThanOrEqual(2);
       expect(r.fades, hand).toBe(0);
+      // What she gave counts in the offering (giving round 2): the giver is not tier 0.
+      expect(gather?.type === 'gather' && gather.offerTier >= 1, hand).toBe(true);
       // (The masher on the same road takes more than four hits and fades: the first test above.)
+    }
+  });
+
+  it('the NATURAL tapper is taught by contrast: the first lantern leaves her one glint, too little to be seen, and burr-path does not see her come; later, carrying, burr-shaft does', () => {
+    const r = naive(5, 9);
+    const near = r.firstNear['burr-path'];
+    expect(near).toBeDefined();
+    expect(near?.wallet ?? 99).toBeLessThan(defaultTuning.giving.seen1);
+    expect(near?.aware).toBe(false);
+    // (She cuts what is in her way: it knows her after that. Before her first cut it never saw her.)
+    const cut = r.events.findIndex((e) => e.type === 'enemyHit' && e.id === 'burr-path');
+    const sawFirst = r.events.findIndex((e) => e.type === 'enemyAware' && e.id === 'burr-path');
+    expect(cut).toBeGreaterThan(0);
+    expect(sawFirst === -1 || sawFirst > cut).toBe(true);
+    expect(
+      r.notices.some(
+        (n) => n.type === 'enemyAware' && n.id === 'burr-shaft' && n.wallet >= defaultTuning.giving.seen1,
+      ),
+    ).toBe(true);
+  });
+
+  it('the GHOST who lays her light down (no pods; she gives each creature a glint and holds offer at every dormant light she reaches) is never stranded: she finishes', () => {
+    const NOPODS: Scene = { ...GROVE, pods: [] };
+    for (const [press, beat] of [
+      [5, 9],
+      [45, 9],
+    ] as const) {
+      const hand = `press ${press}, beat ${beat}`;
+      const r = naive(press, beat, { scene: NOPODS, offer: true, lay: true });
+      trace(`ghost laying light down, ${hand}`, r);
+      expect(r.ended, hand).toBe(true);
+      expect(r.lit, hand).toBe(3);
+      expect(
+        r.events.some((e) => e.type === 'lanternGift'),
+        hand,
+      ).toBe(true);
+      expect(
+        r.events.filter((e) => e.type === 'enemyDie' && e.kind === 'burrback'),
+        hand,
+      ).toEqual([]);
     }
   });
 });

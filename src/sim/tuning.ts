@@ -691,11 +691,15 @@ export const defaultTuning = {
    * `health.reformHp` it lifts her that far free (a fade is never a better heal than a rest).
    */
   giving: {
-    /** Wallet thresholds for the levels 1-4 of being seen (0 = carries nothing). */
-    seen1: 1,
+    /**
+     * Wallet thresholds for the levels 1-4 of being seen. Under `seen1` she is unseen: empty-handed,
+     * or one glint (too small a light to find her; the first lantern leaves her one, and she meets
+     * burr-path dark: giving round 2, teach the rule by contrast).
+     */
+    seen1: 2,
     seen2: 6,
     seen3: 15,
-    seen4: 30,
+    seen4: 45,
     /** Notice range at each level, as a share of the creature's own (level 0 = unseen). */
     scale1: 0.75,
     scale2: 1,
@@ -708,7 +712,29 @@ export const defaultTuning = {
     offerBufferFrames: 16,
     /** Frames she holds the glint out (the pose; it never locks her movement). */
     offerPoseFrames: 16,
-    /** What one glint buys a creature: frames of calm, and how long a burrback stands lowered first. */
+    /**
+     * HOLDING offer (as the prologue teaches): after `offerStreamDelayFrames` held, one glint every
+     * `offerStreamFrames` into a dormant light or the heart (never a creature: a creature takes one per
+     * press). A glint to a light / the heart flies `offerLightFlightFrames` (= the stream's gap: one in
+     * flight at a time).
+     */
+    offerStreamDelayFrames: 16,
+    offerStreamFrames: 8,
+    offerLightFlightFrames: 8,
+    /**
+     * A lampwing that is after her (its tell, dive, stall, climb) can be given to as far off as it
+     * sees her (its sight x her `scaleN`, never less than `offerReachPx`), and a glint to it lands in
+     * `offerWingFlightFrames` (playtest-giving: the dive's touch came before every glint landed).
+     */
+    offerWingFlightFrames: 3,
+    /**
+     * What one glint buys a creature: `giftCalmFrames` of calm (`EnemyState.gift` counts them down:
+     * the warmth fades), and then on for as long as she stays on its ground (her body centre within
+     * `giftStayPx` of its home: it holds at 1); it ends once she has left (rule 3: once she warms
+     * one, it knows her; a player who slides back down the shaft is not taxed again). A burrback
+     * first stands lowered `giftStandFrames`.
+     */
+    giftStayPx: 520,
     giftCalmFrames: 600,
     giftStandFrames: 60,
     /** Rest at a lit light: glints a light restored (above the free floor of `health.reformHp`). */

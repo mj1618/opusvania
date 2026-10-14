@@ -191,12 +191,12 @@ describe('the grove pickups', () => {
     }
   });
 
-  it('running right from the spawn and jumping the pool gathers the first line and the arc', () => {
+  it('running right from the spawn and jumping the pool gathers the first line, and nothing over the pool (she meets burr-path dark: giving.md)', () => {
     const s = newSim();
     const ev = s.run('R36 R+J30 R40 .30');
     const ids = takes(ev).map((e) => e.id);
     expect(ids.slice(0, 3)).toEqual(['spawn-1', 'spawn-2', 'spawn-3']);
-    expect(ids.filter((id) => id.startsWith('pool-arc')).length).toBeGreaterThanOrEqual(4);
+    expect(ids.filter((id) => id.startsWith('pool')).length).toBe(0);
     // A line plays as a run: each a few frames after the last, the combo climbing.
     expect(takes(ev).map((e) => e.combo)).toEqual(ids.map((_, i) => i));
   });

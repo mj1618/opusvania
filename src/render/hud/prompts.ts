@@ -11,6 +11,11 @@
  *  - the wall kick: on a wall slide that has lasted `slideFrames` (a few frames: every hand kicked
  *    before the old 24), the same cap, TAPPED, with a small stroke up and away from the bark. Gone
  *    for good after her first wall jump. (Walls that take no kick give no slide: the sim's `kick: false`.)
+ *  - the offer (memory/giving.md; playtest-giving: nothing in the world prompted V, the natural run
+ *    never pressed it): the first time a creature becomes aware of her (`enemyAware`) within
+ *    `offerPx` while she carries light, the offer key's cap, TAPPED, beside her, as long as a creature
+ *    near her is aware of her and she has something to give; gone for good once a gift has landed
+ *    (`enemyGift`).
  *
  * "For good" is kept in localStorage (try / catch: private windows have none). In `?manual` (the
  * capture tools, the tests) nothing shows and the storage is not touched, so shots stay clean;
@@ -49,6 +54,9 @@ export const PROMPTS = {
    * side only: [x from, x to, the summit's y]. Scene data by hand: if trunk A or B moves, move it.
    */
   shafts: [[3328, 3584, 192]],
+  /** The offer's lesson: armed by an `enemyAware` this near her (centre to centre, px); shown while one this near is aware of her. */
+  offerPx: 260,
+  offerNearPx: 340,
   /** The kick's cap is drawn this much larger than the glide's (27 px at 1920 was small). */
   kickScale: 1.28,
   /** Frames of one wall slide before the kick's key shows. */
@@ -81,7 +89,9 @@ const CELL = 72;
 const PALE = 'rgba(226, 236, 240, 0.94)';
 const PALE_N = 0xe2ecf0;
 
-type Lesson = 'glide' | 'kick';
+type Lesson = 'glide' | 'kick' | 'offer';
+/** The keys of the offer (src/input/bindings.ts) and the letter on their cap. */
+const OFFER_KEYS: Record<string, string> = { KeyV: 'V', KeyF: 'F', KeyI: 'I' };
 
 /** A key cap with its letter (or the space bar's mark), pale on a soft dark seat. `wide` = half-width px. */
 function paintCap(label: string, wide: number): Texture {
@@ -180,6 +190,16 @@ function inChimney(sim: SimView, px: number, below: number): boolean {
   return false;
 }
 
+/** A living creature within `px` of her (centres) is aware of her (`EnemyState.aware`) and not calmed. */
+function awareNear(sim: SimView, px: number): boolean {
+  const p = sim.player;
+  for (const e of sim.enemies ?? []) {
+    if (e.mode === 'dead' || e.gone || !(e.aware > 0) || e.calm > 0) continue;
+    if (Math.hypot(e.x + e.w / 2 - p.cx, e.y + e.h / 2 - p.cy) < px) return true;
+  }
+  return false;
+}
+
 function creatureNear(sim: SimView, px: number): boolean {
   const p = sim.player;
   for (const e of sim.enemies ?? []) {
@@ -193,7 +213,7 @@ export class Prompts {
   readonly root = new Container({ label: 'hud-prompts' });
   /** Off in `?manual` (captures, tests). */
   enabled = true;
-  readonly taught: Record<Lesson, boolean> = { glide: false, kick: false };
+  readonly taught: Record<Lesson, boolean> = { glide: false, kick: false, offer: false };
   private readonly store: boolean;
   private readonly caps = new Map<string, Texture>();
   private readonly cap = new Sprite();
@@ -204,6 +224,10 @@ export class Prompts {
   private readonly away = new Graphics();
   /** The jump key she last pressed (a `KeyboardEvent.code`); Z until she has pressed one. */
   private key = 'KeyZ';
+  /** The offer key she last pressed; V until she has pressed one. */
+  private offerKey = 'KeyV';
+  /** A creature has become aware of her near, while she carried light: the offer's lesson is due. */
+  private offerDue = false;
   private shownKey = '';
   private frame = -1;
   private fall = 0;
@@ -235,6 +259,7 @@ export class Prompts {
         const got = raw ? (JSON.parse(raw) as Partial<Record<Lesson, boolean>>) : {};
         this.taught.glide = got.glide === true;
         this.taught.kick = got.kick === true;
+        this.taught.offer = got.offer === true;
       } catch {
         // No storage: she is taught once per visit.
       }
@@ -242,6 +267,7 @@ export class Prompts {
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', (e) => {
         if (e.code === 'Space' || e.code === 'KeyZ' || e.code === 'KeyK') this.key = e.code;
+        else if (OFFER_KEYS[e.code]) this.offerKey = e.code;
       });
       (window as unknown as { __prompts?: Prompts }).__prompts = this;
     }
@@ -272,6 +298,8 @@ export class Prompts {
   reset(): void {
     this.taught.glide = false;
     this.taught.kick = false;
+    this.taught.offer = false;
+    this.offerDue = false;
     this.save();
   }
 
@@ -302,6 +330,8 @@ export class Prompts {
         this.sinceWall = 0;
       } else if (e.type === 'fall') this.ranOff = dropUnder(sim, P.aheadFrames, true) > P.dropPx;
       else if (e.type === 'jump') this.ranOff = false;
+      else if (e.type === 'enemyGift') this.learn('offer');
+      else if (e.type === 'enemyAware' && e.px <= P.offerPx && sim.pickups.count >= 1) this.offerDue = true;
     }
     if (p.grounded) this.ranOff = false;
     const df = this.frame < 0 || sim.frame < this.frame ? 0 : Math.min(4, sim.frame - this.frame);
@@ -316,6 +346,14 @@ export class Prompts {
     let want: Lesson | null = null;
     if (this.enabled && hudLink.on) {
       if (!this.taught.kick && this.slide >= P.slideFrames) want = 'kick';
+      else if (
+        !this.taught.offer &&
+        this.offerDue &&
+        free &&
+        sim.pickups.count >= 1 &&
+        awareNear(sim, P.offerNearPx)
+      )
+        want = 'offer';
       else if (
         !this.taught.glide &&
         falling &&
@@ -342,7 +380,7 @@ export class Prompts {
         this.side = want === 'kick' ? (p.wallDir > 0 ? -1 : 1) : 1;
         if (this.alpha <= 0.003) this.place(1);
       }
-      this.linger = want === 'kick' ? P.lingerKick : P.linger;
+      this.linger = want === 'glide' ? P.linger : P.lingerKick;
     } else this.linger -= dt;
     const done = this.lesson !== null && this.taught[this.lesson];
     const on = this.lesson !== null && !done && this.linger > 0 && this.enabled;
@@ -363,14 +401,18 @@ export class Prompts {
     this.root.position.set(Math.round(this.x * 2) / 2, Math.round(this.y * 2) / 2);
     this.root.scale.set(this.lesson === 'kick' ? P.kickScale : 1);
 
-    // The cap for the key she uses.
-    if (this.shownKey !== this.key) {
-      this.shownKey = this.key;
-      const wide = this.key === 'Space' ? P.cap * 2.3 : P.cap;
-      let tex = this.caps.get(this.key);
+    // The cap for the key she uses (the jump's; the offer's on its lesson).
+    const keyNow = this.lesson === 'offer' ? this.offerKey : this.key;
+    if (this.shownKey !== keyNow) {
+      this.shownKey = keyNow;
+      const wide = keyNow === 'Space' ? P.cap * 2.3 : P.cap;
+      let tex = this.caps.get(keyNow);
       if (!tex) {
-        tex = paintCap(this.key === 'Space' ? ' ' : this.key === 'KeyK' ? 'K' : 'Z', wide);
-        this.caps.set(this.key, tex);
+        tex = paintCap(
+          keyNow === 'Space' ? ' ' : (OFFER_KEYS[keyNow] ?? (keyNow === 'KeyK' ? 'K' : 'Z')),
+          wide,
+        );
+        this.caps.set(keyNow, tex);
       }
       this.cap.texture = tex;
       this.lip
@@ -379,7 +421,7 @@ export class Prompts {
         .lineTo(wide - 4, P.cap + 3.4)
         .stroke({ width: 1.1, color: PALE_N, alpha: 0.42, cap: 'round' });
     }
-    const wide = this.key === 'Space' ? P.cap * 2.3 : P.cap;
+    const wide = keyNow === 'Space' ? P.cap * 2.3 : P.cap;
     const hold = this.lesson === 'glide';
     let down = 0;
     let held = 0;
@@ -422,7 +464,7 @@ export class Prompts {
       w.rotation = side * (1 - open) * 0.7;
     }
     // Tapped at a wall: a stroke up and away from the bark, flicked on each press.
-    const flick = hold ? 0 : smooth(0.02, 0.2, held) * (1 - smooth(0.45, 0.85, held));
+    const flick = this.lesson !== 'kick' ? 0 : smooth(0.02, 0.2, held) * (1 - smooth(0.45, 0.85, held));
     this.away.visible = flick > 0.01;
     this.away.alpha = flick;
     this.away.scale.set(this.side, 1);

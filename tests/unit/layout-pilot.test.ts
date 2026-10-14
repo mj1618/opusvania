@@ -61,8 +61,7 @@ describe('the bluff: a rise in the floor path that must be climbed', () => {
       expect(feet(s).x, runUp).toBeLessThan(1536);
       expect(Math.abs(feet(s).x - stone.x), runUp).toBeLessThan(120);
       wait(s, 60);
-      // The trail: every glint over the pool, in the one flight.
-      expect(taken(s, 'pool-arc-'), runUp).toBe(5);
+      // (The trail of glints over the pool moved east of burr-path in giving round 2: giving.md.)
       expect(s.events.filter((e) => e.type === 'glideStart').length, runUp).toBeGreaterThanOrEqual(1);
     }
     // Without the wings the same inputs drop her on the far bank or in the water.
@@ -74,7 +73,6 @@ describe('the bluff: a rise in the floor path that must be climbed', () => {
     until(q, 'L+J');
     if (feet(q).y === 1024) until(q, 'L+J');
     expect(feet(q).x).toBeGreaterThan(1536);
-    expect(taken(q, 'pool-arc-')).toBeLessThan(5);
   });
 
   it('a jump and a double jump from its top reach F5: a short cut up to the high ledge', () => {
@@ -466,6 +464,7 @@ describe('naive players', () => {
     expect(refuse).toBeLessThan(kindle);
     expect(s.state.goal.lanterns[0]?.lit).toBe(true);
     expect(s.state.frame).toBeLessThan(300);
+    // (One left: a single glint is too little to be seen, so she meets burr-path dark: giving.md.)
     expect(s.state.pickups.count).toBe(1);
     expect(hurts(ev)).toBe(0);
   });

@@ -267,23 +267,11 @@ function playthrough(t: Tuning = cloneTuning(defaultTuning)) {
   mark('walk the spawn line to the pod at the moth-stone', openPod(s, 'pod-stone'));
   // She cut it standing at the lantern: as its glints land the channel starts by itself.
   waitFor(s, () => lit(0) || s.state.pickups.count >= need(0), 120);
-  if (s.state.pickups.count < need(0) && !lit(0)) {
-    // Still short (a dearer lantern): the shallows, then the arc over the pool and back.
-    mark('into the pool', walkTo(s, 1696, 30));
-    waitFor(s, () => s.state.pickups.count >= need(0), 60);
-    if (s.state.pickups.count < need(0)) {
-      mark('out of the pool for the arc', hopOnto(s, rect('ground', 1)) >= 0);
-      mark('walk back for a run-up', walkTo(s, 1300, 10));
-      mark('leap the pool for its arc', leapPool(s));
-      mark('back into the pool', walkTo(s, 1696, 30));
-      mark(
-        'enough light for the first lantern',
-        waitFor(s, () => s.state.pickups.count >= need(0), 120),
-      );
-    }
-  }
-  kindle(0, 'moth-stone');
-
+  // Still short (a dearer lantern): the pool holds no glints since giving round 2 (she meets
+  // burr-path dark), so she fetches the ember over F3 first (the bank, the islands, the ember: 5 and
+  // more) and lights the moth-stone on her way back.
+  const short = s.state.pickups.count < need(0) && !lit(0);
+  if (!short) kindle(0, 'moth-stone');
   // --- The ember over F3 (playtest 5: the summit's lantern wants it). She has seen it hang over the
   // first lantern: west to the bank, up the three islands, and back down to the spawn ground.
   const key = (GROVE.pickups ?? []).findIndex((q) => q.id === lanterns[1]?.key);
@@ -311,6 +299,15 @@ function playthrough(t: Tuning = cloneTuning(defaultTuning)) {
       'the ember',
       waitFor(s, () => s.state.pickups.timers[key] === -1, 200),
     );
+  }
+  if (short) {
+    mark('back to the moth-stone', walkTo(s, (lanterns[0] as { x: number }).x, 8));
+    mark(
+      'enough light for the first lantern',
+      waitFor(s, () => s.state.pickups.count >= need(0), 60),
+    );
+    kindle(0, 'moth-stone');
+    mark('a run-up for the pool', walkTo(s, 1300, 10));
   }
 
   // --- The centre: over the pool, the path beyond, the bluff, the leap, the trunks, the summit.
@@ -536,7 +533,7 @@ describe('economy: what the lanterns ask against what the grove holds', () => {
     expect(cost / gathered).toBeLessThan(0.55);
   });
 
-  it('the first lantern cannot be paid from the spawn line alone, but can from what lies within a screen of it', () => {
+  it('the first lantern cannot be paid from the spawn line alone: pod-stone at its foot pays it (the pool holds nothing since giving round 2)', () => {
     const l = lanterns[0] as (typeof lanterns)[number];
     const near = (px: number) =>
       (GROVE.pickups ?? [])
@@ -546,11 +543,13 @@ describe('economy: what the lanterns ask against what the grove holds', () => {
     expect((GROVE.pickups ?? []).filter((p) => p.x > GROVE.spawn.x && p.x < l.x && p.y > 1200)).toHaveLength(
       3,
     );
-    // Low glints within 450 px (spawn line, pool arc, pool shallows): one short of the cost.
-    expect(near(450)).toBe(11);
-    expect(near(450)).toBeLessThan(lanternCost(l, T.goal));
-    // Within a screen: enough.
-    expect(near(1000)).toBeGreaterThanOrEqual(lanternCost(l, T.goal));
+    // Low glints within 450 px: the spawn line only (giving round 2 moved the pool's east of burr-path:
+    // she meets it dark). `pod-stone` at its foot pays the rest (10).
+    expect(near(450)).toBe(3);
+    expect(near(450) + 10).toBeGreaterThanOrEqual(lanternCost(l, T.goal));
+    // Within a screen there is not enough without the pod: the first lantern is paid at its foot.
+    expect(near(1000)).toBeLessThan(lanternCost(l, T.goal));
+    expect((GROVE.pods ?? []).find((q) => q.id === 'pod-stone')?.x).toBe(1500);
   });
 });
 

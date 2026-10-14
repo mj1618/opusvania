@@ -247,7 +247,17 @@ export function updateEnemies(
     spill(e, state, t.pickups.comboFrames, events);
     if (e.gone) continue;
     if (e.calm > 0) e.calm--;
-    if (e.gift > 0) e.gift--;
+    // A gift's calm (`gift` counts down: the warmth inside it fades, render and sound follow it)
+    // holds at its last frame while she stays on its ground (near its home): it ends only once she has
+    // left. A player who slides back down the shaft is not taxed again.
+    if (e.gift > 0) {
+      const dx = p.x + p.w / 2 - e.homeX;
+      const dy = p.y + p.h / 2 - e.homeY;
+      const stay = t.giving.giftStayPx;
+      const near = p.hp > 0 && p.faded === 0 && dx * dx + dy * dy <= stay * stay;
+      if (e.gift > 1 || !near) e.gift--;
+      e.calm = Math.max(e.calm, e.gift);
+    }
     if (e.hitstop > 0) {
       e.hitstop--;
       e.vx = 0;
@@ -376,10 +386,25 @@ export function slashEnemies(
   const b: PlayerState = state.player;
   const px = b.x + (b.w >> 1);
   const py = b.y + (b.h >> 1);
+  // A cut aimed at a pod (a closed one is in its reach) passes over a creature she has calmed with a
+  // gift (playtest-giving: she paid a glint and was hurt for cutting the pod beside it).
+  const pods = scene.pods ?? [];
+  const pr = t.pods.radius;
+  let podAimed = false;
+  for (let i = 0; i < pods.length && !podAimed; i++) {
+    const q = pods[i];
+    if (!q || (state.pods.hp[i] ?? 0) <= 0) continue;
+    podAimed = q.x + pr > box.x && q.x - pr < box.x + box.w && q.y + pr > box.y && q.y - pr < box.y + box.h;
+  }
   let hits = 0;
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
     if (!e || e.mode === 'dead' || e.hitBy === seq) continue;
+    if (podAimed && e.gift > 0) {
+      // (For the whole slash: once the pod bursts it must not land on the creature after all.)
+      e.hitBy = seq;
+      continue;
+    }
     const l = Math.max(box.x, e.x);
     const r = Math.min(box.x + box.w, e.x + e.w);
     const top = Math.max(box.y, e.y);

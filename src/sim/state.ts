@@ -137,9 +137,12 @@ export interface PlayerState {
   giftTimer: number;
   giftX: number;
   giftY: number;
-  /** Offer: a buffered press, and frames until the next offer may go. */
+  /** Offer: a buffered press, and frames until the next offer may go; frames the button has been held (the stream). */
   offerBuf: number;
   offerCd: number;
+  offerHold: number;
+  /** The flight of the glint now in the air, frames in all (`giftTimer` counts it down): 3 to a lampwing after her, 8 to a light, 10 to a creature. */
+  giftFrames: number;
   /** Last safe ground (feet centre): where she re-forms. `safeFrames` = frames in a row on safe ground. */
   safeX: number;
   safeY: number;
