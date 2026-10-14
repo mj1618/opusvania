@@ -7,11 +7,11 @@ is central and discovered in play, mythic on the surface and technical underneat
 
 | | |
 |---|---|
-| Latest | round 21 (the siblings: a shared wing-tap habit from birth to the rim; Sorrel stays with his sealed partner on Night 5) |
-| Last review | round 21: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (first time with three readers) · rel 9 / clarity 6 / idea 9 / world 8 / mechanics 8 / antagonist 9 / ending 8 / original 8 / Grove 9 / balance 8 |
-| Readers | all three would buy and finish it; the Ori fan: "the siblings and Dun's turn carry it the way Naru and Ori did". Shared confusion: eating vs feeding vs glints that hurt; do all moths lack a mouth or only Umber? |
+| Latest | round 22 (giving vs taking runs one way; all moths of her kind are mouthless) |
+| Last review | round 22: AI test PASS (9) · GREENLIGHT WITH NOTES · **at the bar: yes** (second round running) · rel 8 / clarity 7 / idea 9 / world 8 / mechanics 8 / antagonist 8 / ending 8 / original 7 / Grove 8 / balance 8 |
+| Readers | all three would buy and finish it. Confusions still shared by 2+ readers: the sister (left for good, or came back too late?), Dun's turn unmotivated, "last man awake" vs "the few", coral lamps unexplained, what the cocoon becomes, what the AI's original job was |
 | Locked | [locked.md](locked.md): spine, cast, midpoint, endings, the three big images, title |
-| Now working on | round 22: make giving vs taking run one way only (the midpoint must hit, not puzzle); all moths are mouthless, shown; clarity back up |
+| Now working on | round 23: de-mouthing (the AI is the Hush; HEARTH on the lab sign; title reopened) and the shared confusions above |
 
 **Done when** two rounds in a row: the AI test passes, the director greenlights it and says it stands next to Ori / Hollow Knight / Nine Sols, all three readers would finish the game, and no confusion is shared by two readers. Then the prologue gets built in the Grove.
 
