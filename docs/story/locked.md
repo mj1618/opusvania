@@ -1,7 +1,7 @@
 # The Moth and the Mouth (storyline: Mouthless): locked decisions
 
 These are frozen. Story agents refine within them and may only PROPOSE changes (in a "Proposed changes to locked
-decisions" note); nothing here changes without the owner's OK. Locked 2026-10-14 from round 18.
+decisions" note); the orchestrator decides on proposals (the owner asked not to be consulted on every decision). Locked 2026-10-14 from round 18.
 
 ## Spine
 1. A living thing the moths call the Mouth has swallowed the world into its roots. It never noticed moths, because it
