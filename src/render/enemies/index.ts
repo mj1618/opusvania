@@ -133,6 +133,11 @@ export class EnemyRenderer {
     return this.rigs[i];
   }
 
+  /** The lampwing rig drawn for `sim.enemies[i]` (made on its first update), for staged beats. */
+  lampRig(i: number): LampRig | undefined {
+    return this.lamps[i];
+  }
+
   recolor(): void {
     loadColors();
   }
@@ -479,6 +484,27 @@ export class EnemyRenderer {
         if (!rig) continue;
         rig.lean.v += (w.dir || 1) * 7;
         this.scales(w.x, w.y, 4, -(w.dir || 1), -0.4, 1.2, 220, 5, 0.3);
+      } else if (ev.type === 'enemyGiveUp' && ev.cause === 'gift') {
+        // She gave it a glint (memory/giving-render.md): it turns its lamp from her, dips, and goes home.
+        const i = this.byId.get(ev.id);
+        const rig = i === undefined ? undefined : this.lamps[i];
+        if (!rig) continue;
+        const dx = ev.x - sim.player.cx;
+        const dy = ev.y - sim.player.cy;
+        const dl = Math.hypot(dx, dy) || 1;
+        rig.shy(dx / dl, dy / dl, 1);
+        rig.giftDim = 1;
+      } else if (ev.type === 'enemyAware' && ev.kind === 'lampwing') {
+        // It has seen her: the lamp flares and the body swings toward her.
+        const i = this.byId.get(ev.id);
+        const rig = i === undefined ? undefined : this.lamps[i];
+        if (!rig) continue;
+        rig.spot = 1;
+        const dx = sim.player.cx - ev.x;
+        const dy = sim.player.cy - ev.y;
+        const dl = Math.hypot(dx, dy) || 1;
+        rig.offX.v += (dx / dl) * LAMP.shy.kick * LAMP.gift.lean;
+        rig.offY.v += (dy / dl) * LAMP.shy.kick * LAMP.gift.lean * 0.7;
       } else if (ev.type === 'enemyGiveUp' && ev.cause === 'calm') {
         const i = this.byId.get(ev.id);
         const rig = i === undefined ? undefined : this.lamps[i];
@@ -760,9 +786,9 @@ export class EnemyRenderer {
         this.puffs(rig.x - kd * 14, rig.y, -kd, fin ? 6 : 3, fin ? 1.15 : 0.85);
       }
       // Calmed: now and then a tiny warm mote lifts off the shell.
-      if (rig.calmK > 0.7 && e.mode !== 'dead') {
+      if ((rig.calmK > 0.7 || rig.dozeK > 0.7) && e.mode !== 'dead') {
         rig.moteT += dt;
-        if (rig.moteT > BURR.calm.mote) {
+        if (rig.moteT > (rig.calmK > 0.7 ? BURR.calm.mote : BURR.doze.mote)) {
           rig.moteT = 0;
           // Breathed out over its head end, it drifts up clear of the shell before it fades.
           const K = BURR.calm;

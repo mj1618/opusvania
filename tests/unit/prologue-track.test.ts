@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BREATH, COCOONS, PROLOGUE_END, SHOT } from '../../src/render/prologue/script';
+import { BEATS, BREATH, COURSE, HATCH, HOLLOW } from '../../src/render/prologue/script';
 import { ease, envelope, integrate, Track, window01 } from '../../src/render/prologue/track';
 
 describe('prologue track', () => {
@@ -61,13 +61,13 @@ describe('prologue track', () => {
   });
 
   it('the shot list runs in order and fits the script', () => {
-    expect(SHOT.breath.end).toBe(SHOT.world.start);
-    expect(SHOT.world.end).toBe(SHOT.burr.start);
-    expect(SHOT.burr.end).toBe(SHOT.cocoons.start);
-    expect(PROLOGUE_END).toBe(90);
+    expect(BEATS.map((b) => b.id)).toEqual(['breath', 'hatch', 'play', 'hollow', 'summit', 'wake']);
+    expect(BREATH.fadeOut[1]).toBe(BEATS[0].len);
     expect(BREATH.period).toBe(5);
-    expect(COCOONS.sorrelSplit).toBeLessThan(COCOONS.umberSplit);
-    expect(COCOONS.umberSplit).toBeLessThan(COCOONS.glint[0]);
-    expect(COCOONS.outside[1]).toBeLessThanOrEqual(PROLOGUE_END);
+    expect(HATCH.sorrelSplit).toBeLessThan(HATCH.wingSplit);
+    expect(HATCH.follow[1]).toBe(BEATS[1].len);
+    expect(HOLLOW.play[1]).toBeLessThan(HOLLOW.hide[1]);
+    expect(HOLLOW.hide[1]).toBe(BEATS[3].len);
+    expect(COURSE.legs.length).toBeGreaterThan(1);
   });
 });

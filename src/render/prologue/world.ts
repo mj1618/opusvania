@@ -25,16 +25,16 @@ import { WORLD } from './script';
 import { envelope, Track, window01 } from './track';
 
 /** The land's projection: horizon y at the frame's centre, its droop per px^2 (the curve), focal px. */
-const H = 430;
-const CURVE = 0.00004;
-const F = 900;
+export const H = 430;
+export const CURVE = 0.00004;
+export const F = 900;
 /** Eye height in land units: high, so the land is not squashed flat toward the horizon. */
-const E = 3;
+export const E = 3;
 /** The land's plane runs this far past the frame on each side (the camera leans in and pans). */
-const PAD_X = 900;
-const PAD_Y = 500;
+export const PAD_X = 900;
+export const PAD_Y = 500;
 /** The mountain's foot on the land, and where the frost starts. */
-const M = { x: 0.15, z: 14 };
+export const M = { x: 0.15, z: 14 };
 /** The frost front's radius (land units) at time t. */
 const FROST_MAX = 13;
 
@@ -51,7 +51,7 @@ const DRIFT = new Track([
 ]);
 
 /** Screen x, y of a land point (X, Z) with the camera at `camX`. */
-function project(x: number, z: number, camX: number): { x: number; y: number } {
+export function project(x: number, z: number, camX: number): { x: number; y: number } {
   const sx = VIEW_W / 2 + ((x - camX) * F) / z;
   const dx = sx - VIEW_W / 2;
   return { x: sx, y: H + CURVE * dx * dx + (E * F) / z };
@@ -61,7 +61,7 @@ function project(x: number, z: number, camX: number): { x: number; y: number } {
  * uP0 horizon y, curve, focal, camera X; uP1 frost source X, Z, front radius, fade-in;
  * uP2 town density, steam, unused, unused.
  */
-const LAND = /* glsl */ `
+export const LAND = /* glsl */ `
 float horizonY(float x) { float d = x - 960.0; return uP[0].x + uP[0].y * d * d; }
 float frostWarp(vec2 w) {
   return (fbm3(w * 0.42) - 0.5) * 2.6 + (vnoise(w * 1.7) - 0.5) * 0.5;
@@ -179,14 +179,14 @@ vec4 paint() {
 }`;
 
 /** A branching line: points, each with a width; grown from its root at `born` (0..1 of the growth). */
-interface Branch {
+export interface Branch {
   pts: Array<[number, number]>;
   w: number;
   born: number;
 }
 
 /** Root that branches as it goes: a random walk along `dir`, children shed to the sides. */
-function grow(
+export function grow(
   rng: () => number,
   x: number,
   y: number,
@@ -229,7 +229,13 @@ function grow(
 }
 
 /** Draws branches grown to `k` (0..1). */
-function drawBranches(g: Graphics, list: readonly Branch[], k: number, color: number, alpha: number): void {
+export function drawBranches(
+  g: Graphics,
+  list: readonly Branch[],
+  k: number,
+  color: number,
+  alpha: number,
+): void {
   for (const b of list) {
     if (k <= b.born) continue;
     const u = Math.min(1, (k - b.born) / (1 - b.born));

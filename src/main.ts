@@ -1,3 +1,4 @@
+import { AudioDirector } from './audio/index';
 import { installDebugApi } from './debug/api';
 import { TuningPanel } from './debug/tuning-panel';
 import { Game } from './game';
@@ -16,9 +17,9 @@ const MAX_RENDER_DT = 0.1;
  * Boot. URL params: ?seed=<n>, ?manual (start paused; drive via __game.step), ?hitboxes,
  * ?nopickups (the scene without its glints, lumen pods, enemies, lanterns and heart, so without the HUD: clean plates
  * for the look tools), ?skipprologue (straight into the Grove; also implied by ?manual), ?prologue (play the opening
- * even under ?manual: then `__game.prologue.advance(n)` drives it).
+ * even under ?manual: then `__game.prologue.advance(n)` drives it), ?audio (sound on for review; ?audio=0 off).
  * Keys: arrows/WASD move, Z/Space/K jump, X/L/Shift dash, Down+Jump drops through branches,
- * F2 collision overlay, ` tuning panel, R restart.
+ * F2 collision overlay, ` tuning panel, R restart, M sound on / off (muted by default: src/audio).
  */
 async function boot(): Promise<void> {
   const params = new URLSearchParams(location.search);
@@ -30,7 +31,7 @@ async function boot(): Promise<void> {
   const manual = params.has('manual');
   const playPrologue = params.has('prologue') || (!params.has('skipprologue') && !manual);
   let prologue: PrologueDirector | null = null;
-  // While the prologue plays it decides what she may press (nothing, then walk only).
+  // While the prologue plays it decides what she may press (nothing in its cinematic beats; the moves Sorrel has shown).
   const game = new Game(tuning, scene, seed, () => {
     const i = input.sample();
     return prologue && !prologue.done ? prologue.mask(i) : i;
@@ -43,11 +44,22 @@ async function boot(): Promise<void> {
   const stage = new RenderStage(ga, game);
   const panel = new TuningPanel(tuning, () => game.reset());
   if (params.has('hitboxes')) stage.overlay.toggle(true);
-  if (playPrologue) prologue = new PrologueDirector(game, stage, !manual);
-  installDebugApi({ game, ga, stage, panel, prologue });
+  if (playPrologue) prologue = new PrologueDirector(game, stage, !manual, scene);
+  // Sound reads the sim and the camera like render does; silent while the prologue plays.
+  const audio = new AudioDirector(game, params);
+  audio.install();
+  stage.afterUpdate.add(() => audio.update(stage.clock, stage.view, !!prologue && !prologue.done));
+  panel.addAudio(() => audio.applyVolumes());
+  installDebugApi({ game, ga, stage, panel, prologue, audio });
   // The key legend waits for the prologue to hand over.
   const hint = document.getElementById('hint');
   if (prologue && hint) hint.style.opacity = '0';
+  const soundKey = document.getElementById('sound-key');
+  const showSound = (muted: boolean) => {
+    if (soundKey) soundKey.textContent = muted ? 'M sound' : 'M mute';
+  };
+  showSound(audio.muted);
+  audio.onChange = showSound;
 
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.repeat) return;
@@ -57,6 +69,7 @@ async function boot(): Promise<void> {
       stage.overlay.toggle();
       e.preventDefault();
     } else if (e.code === 'KeyR') game.reset();
+    else if (e.code === 'KeyM') audio.toggle();
   });
 
   const loop = new FixedStepLoop(1000 / 60);

@@ -240,3 +240,104 @@ describe('the baked sounds', () => {
     }
   });
 });
+
+describe('giving: carrying is risky, giving is gentle (memory/giving.md)', () => {
+  const FLOOR = 800;
+  const scene = {
+    ...flatScene(),
+    enemies: [{ id: 'b', kind: 'burrback' as const, x: 2400, y: FLOOR, facing: -1 as const }],
+  };
+  /** Steps one frame at a time with `mask(s)` and keeps the tape. */
+  function drive(s: Sim, frames: number, mask: (s: Sim) => string): Frame[] {
+    const out: Frame[] = [];
+    for (let f = 0; f < frames; f++) out.push(...tape(s, mask(s)));
+    return out;
+  }
+  const ctx = { scene, seed: 1 };
+  const routeAll = (frames: Frame[]) =>
+    frames.flatMap((x) => [
+      ...x.events.flatMap((e, i) => route(e, i, x.snap, ctx)),
+      ...ambient(x.snap, CAM, ctx),
+    ]);
+
+  it('a burrback draws breath as it sees her, her offer is glass, it answers with a breath, then calms slower and slower', () => {
+    const s = newSim(scene);
+    s.state.pickups.count = 15;
+    s.place(2000, FLOOR);
+    let offered = false;
+    const frames = drive(s, 700, (q) => {
+      const e = q.state.enemies[0];
+      const near = e && Math.abs(e.x + e.w / 2 - (q.state.player.x + q.state.player.w / 2)) < 150;
+      if (!offered && near && (e?.aware ?? 0) > 0) {
+        offered = true;
+        return 'O1';
+      }
+      return offered || near ? '.1' : 'R1';
+    });
+    const cues = routeAll(frames);
+    const names = sounds(cues);
+    expect(names).toContain('sniff');
+    expect(names).toContain('offerTone');
+    expect(names.some((n) => n === 'exhale' || n === 'settle')).toBe(true);
+    expect(names.indexOf('offerTone')).toBeLessThan(names.findIndex((n) => n === 'exhale' || n === 'settle'));
+    // Calm: two to four breaths, each further apart and fainter than the last.
+    const calm = cues.filter((c) => c.sound === 'calmBreath');
+    expect(calm.length).toBeGreaterThanOrEqual(2);
+    expect(calm.length).toBeLessThanOrEqual(4);
+    for (let k = 1; k < calm.length; k++) expect(calm[k]?.db ?? 0).toBeLessThan(calm[k - 1]?.db ?? 0);
+    const gaps = calm.slice(1).map((c, k) => c.frame - (calm[k]?.frame ?? 0));
+    for (let k = 1; k < gaps.length; k++) expect(gaps[k] ?? 0).toBeGreaterThan(gaps[k - 1] ?? 0);
+  });
+
+  it('empty hands make a dry flutter, not a tone', () => {
+    const s = newSim(flatScene());
+    s.state.pickups.count = 0;
+    expect(sounds(routed(tape(s, '.5 O1 .20')))).toEqual(['flutter']);
+  });
+
+  it('the chord of what she carries: silent empty-handed, fuller and louder with every level', () => {
+    const s = newSim(flatScene());
+    const at = (n: number) => {
+      s.state.pickups.count = n;
+      const f = tape(s, '.1');
+      const snap = f[0]?.snap as AudioSnap;
+      return layers(snap, CAM, 0, CTX).chord;
+    };
+    expect(at(0)).toEqual([0, 0, 0, 0]);
+    const one = at(1);
+    const four = at(40);
+    expect(one.filter((g) => g > 0)).toHaveLength(1);
+    expect(four.filter((g) => g > 0)).toHaveLength(4);
+    const power = (c: number[]) => Math.sqrt(c.reduce((a, g) => a + g * g, 0));
+    expect(power(four)).toBeGreaterThan(power(one) * 2);
+  });
+
+  it('a rest that costs glints lets them go as small falling notes; a lantern given its price climbs toward D', () => {
+    const snap = tape(newSim(), '.1')[0]?.snap as AudioSnap;
+    const rest: SimEvent = {
+      type: 'lanternRest',
+      id: 'l',
+      x: 1448,
+      y: 1280,
+      hp: 4,
+      hpMax: 4,
+      healed: 3,
+      free: 0,
+      cost: 3,
+      wallet: 2,
+      short: false,
+    };
+    const notes = route(rest, 0, snap, CTX).filter((c) => c.sound === 'glintNote');
+    expect(notes).toHaveLength(3);
+    for (let k = 1; k < 3; k++) {
+      expect(notes[k]?.cents ?? 0).toBeLessThan(notes[k - 1]?.cents ?? 0);
+      expect(notes[k]?.delay ?? 0).toBeGreaterThan(notes[k - 1]?.delay ?? 0);
+    }
+    expect(route({ ...rest, cost: 0 }, 0, snap, CTX).filter((c) => c.sound === 'glintNote')).toHaveLength(0);
+    const gift = (given: number, need: number) =>
+      route({ type: 'lanternGift', id: 'l', x: 1448, y: 1280, given, need, wallet: 5 }, 0, snap, CTX)[0]
+        ?.cents ?? 0;
+    expect(gift(1, 11)).toBeLessThan(gift(6, 6));
+    expect(gift(6, 6)).toBeLessThan(gift(11, 1));
+  });
+});

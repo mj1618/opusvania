@@ -26,6 +26,7 @@ import { ReformShot } from './camera/reform';
 import { CharacterRenderer } from './character/index';
 import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
 import { EnemyRenderer } from './enemies/index';
+import { GivingRenderer } from './giving/index';
 import { GoalCamera } from './goal/camera';
 import { GoalRenderer } from './goal/index';
 import { Hud } from './hud/index';
@@ -61,12 +62,19 @@ export class RenderStage {
   readonly enemies: EnemyRenderer;
   readonly pickups: PickupRenderer;
   readonly goal: GoalRenderer;
+  /** Giving, drawn: the glint she gives in flight, it being received, a calmed creature's warmth (memory/giving-render.md). */
+  readonly giving: GivingRenderer;
   readonly hud: Hud;
   readonly post: PostStage;
   readonly overlay: HitboxOverlay;
   /** Seconds of render time since boot. */
   clock = 0;
   override: CameraOverride | null = null;
+  /**
+   * Called at the end of every `update` with its `dt` (after the view is final). Listeners only
+   * read (the audio director hears the camera here); render knows nothing of them.
+   */
+  readonly afterUpdate = new Set<(dt: number) => void>();
   /** The camera and player as last drawn. */
   view: CameraView;
   drawn: PlayerView;
@@ -102,6 +110,7 @@ export class RenderStage {
       back: L.get('goal'),
       front: L.pickups,
     });
+    this.giving = new GivingRenderer(this.ctx, L.pickups, L.get('goal'), this.goal);
     this.post = new PostStage(this.ctx, this.scene.layers.root);
     this.hud = new Hud();
     this.overlay = new HitboxOverlay(scene);
@@ -244,6 +253,7 @@ export class RenderStage {
     this.enemies.update(dt, this.clock, view, sim);
     this.pickups.update(dt, this.clock, view, sim);
     this.goal.update(dt, this.clock, view, sim);
+    this.giving.update(dt, this.clock, view, sim);
     this.post.update(dt, this.clock, view);
     this.hud.update(dt, this.clock, sim);
     if (pro) this.hud.layer.alpha = pro.hudAlpha;
@@ -254,6 +264,7 @@ export class RenderStage {
     this.overlay.draw(view, player);
     this.view = view;
     this.drawn = player;
+    for (const fn of this.afterUpdate) fn(dt);
   }
 
   /** Draws the frame to the canvas. */

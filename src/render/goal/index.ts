@@ -54,7 +54,10 @@ interface Lamp {
   mist: Sprite;
   /** 0..1: how alive the place is (eased after it catches). */
   alive: number;
+  /** What it still asks: its price less what she has given it by hand (`LanternState.given`), set every frame. */
   cost: number;
+  /** Its whole price (the crown shows this many: the given ones kept lit, then her wallet). */
+  base: number;
   /** A wayside lamp (`scene.lamps`): smaller, and everything it lights is smaller by `k` (1 for a lantern). */
   way: boolean;
   k: number;
@@ -181,6 +184,8 @@ function glow(tint: number): Sprite {
 const LONG_AGO = 1e6;
 /** A creature in one of these modes is minding its own business (the price ring may show near it). */
 const CALM: ReadonlySet<string> = new Set(['walk', 'pause', 'hover', 'rest', 'return']);
+/** A flame of the price she has given by hand: kept lit, a deeper amber than one her wallet would fill. */
+const GIVEN_TINT = 0xff9f5c;
 
 export class GoalRenderer {
   readonly cfg = GOAL;
@@ -355,6 +360,7 @@ export class GoalRenderer {
         mist,
         alive: 0,
         cost: way ? lampCost(l, tuning.goal) : lanternCost(l, tuning.goal),
+        base: way ? lampCost(l, tuning.goal) : lanternCost(l, tuning.goal),
         way,
         k: way ? WAY_SCALE : 1,
         seed: (i * 0.618 + 0.27) % 1,
@@ -772,6 +778,17 @@ export class GoalRenderer {
         this.readyT = -1;
       } else if (e.type === 'heartReady') {
         if (this.waitT >= 0) this.readyT = 0;
+      } else if (e.type === 'lanternGift' || e.type === 'lampGift') {
+        // A glint she gave it by hand has poured in: the glass beats, its price stands and the flame it paid for lights.
+        const i = this.lampOf(e.x, e.y);
+        const lamp = this.lamps[i];
+        if (lamp) {
+          lamp.beat = 1;
+          lamp.pulse = Math.max(lamp.pulse, 0.5);
+          this.forceLamp = i;
+          this.forceT = Math.max(this.forceT, GOAL.refuse.giftHold);
+          if (e.given > 0) this.starPop[e.given - 1] = 1;
+        }
       } else if (e.type === 'lanternRest' || e.type === 'lampRest') {
         const lamp = this.lamps[this.lampOf(e.x, e.y)];
         if (lamp) lamp.beat = 1;
@@ -886,6 +903,8 @@ export class GoalRenderer {
       const s = this.stateOf(goal, i);
       if (!s) continue;
       const v = lamp.view;
+      // Given by hand (the `offer` action) is paid: it asks only the rest.
+      lamp.cost = Math.max(0, lamp.base - (s.given ?? 0));
       lamp.keyless = this.ember !== null && i === this.ember.lantern && this.ember.wanted(sim);
       // What is true now (a restart, a state jump): no ceremony.
       if (s.lit !== lamp.lit) {
@@ -913,7 +932,11 @@ export class GoalRenderer {
           }
         } else if (lamp.emitted > 0) this.spill(i, lamp);
       }
-      const target = s.lit ? 1 : lamp.cost > 0 ? Math.min(1, lamp.arrived / lamp.cost) : 0;
+      const target = s.lit
+        ? 1
+        : lamp.base > 0
+          ? Math.min(1, (lamp.base - lamp.cost + lamp.arrived) / lamp.base)
+          : 0;
       lamp.charge += (target - lamp.charge) * Math.min(1, dt * (target > lamp.charge ? 14 : 4));
 
       // Resting: light flows from the glass to her.
@@ -1097,7 +1120,7 @@ export class GoalRenderer {
         this.priceA = Math.max(0, this.priceA - dt / R.fadeOut);
         if (this.priceA <= 0) {
           const next = this.lamps[this.priceWant];
-          if (next) this.openPrice(this.priceWant, next.cost);
+          if (next) this.openPrice(this.priceWant, next.base);
           else {
             this.priceLamp = -1;
             this.priceT = -1;
@@ -1376,6 +1399,21 @@ export class GoalRenderer {
   }
 
   /** The sim's record of lamp `i` (a lantern, or after them a wayside lamp). */
+  /**
+   * Where a light's glass hangs now (world px), for the giving renderer: lantern `i` of
+   * `scene.lanterns`, or wayside lamp `i` of `scene.lamps`. Null if there is none.
+   */
+  glass(lamp: boolean, i: number): { x: number; y: number } | null {
+    const l = this.lamps[lamp ? this.nLanterns + i : i];
+    if (!l || (lamp ? !l.way : l.way)) return null;
+    return { x: l.view.beadX, y: l.view.beadY };
+  }
+
+  /** The heart's core (world px), or null. */
+  heartCore(): { x: number; y: number } | null {
+    return this.heart ? { x: this.heart.coreX, y: this.heart.coreY } : null;
+  }
+
   private stateOf(goal: SimView['goal'], i: number): SimView['goal']['lanterns'][number] | undefined {
     return i < this.nLanterns ? goal.lanterns[i] : goal.lamps?.[i - this.nLanterns];
   }
@@ -2296,7 +2334,9 @@ export class GoalRenderer {
         // A wayside lamp's price is smaller and dimmer than a lantern's.
         const pk = priceLamp.way ? R.lampScale : 1;
         const pa = (priceLamp.way ? R.lampAlpha : R.alpha) * smooth(0, 1, this.priceA);
-        const have = Math.max(0, Math.min(this.priceNeed, sim.pickups.count));
+        // Given by hand (kept, lit for good) first, then as far as her wallet goes.
+        const given = Math.max(0, Math.min(this.priceNeed, this.stateOf(goal, this.priceLamp)?.given ?? 0));
+        const have = given + Math.max(0, Math.min(this.priceNeed - given, sim.pickups.count));
         // A glint gathered while it shows fills the next star.
         if (this.priceHave >= 0) for (let i = this.priceHave; i < have; i++) this.starPop[i] = 1;
         this.priceHave = have;
@@ -2311,9 +2351,13 @@ export class GoalRenderer {
           const pop = (this.starPop[i] as number) * Math.exp(-dt * 6);
           this.starPop[i] = pop;
           const filled = i < have;
+          const kept = i < given;
           st.fill.visible = filled;
+          st.fill.tint = kept ? GIVEN_TINT : 0xffffff;
           st.root.alpha = a;
-          st.root.scale.set((filled ? 1 + 0.45 * (1 - inn) : 0.82 + 0.18 * inn) * (1 + 0.6 * pop) * pk);
+          st.root.scale.set(
+            (filled ? 1 + 0.45 * (1 - inn) : 0.82 + 0.18 * inn) * (1 + 0.6 * pop) * (kept ? 1.14 : 1) * pk,
+          );
           if (filled)
             f.quad(
               K_SPARK,
@@ -2321,9 +2365,9 @@ export class GoalRenderer {
               this.price.y + spot[1],
               7 * pk,
               7 * pk,
-              (0.2 + 0.8 * pop) * a,
+              (kept ? 0.7 + 0.1 * Math.sin(clock * 2.3 + i) + 0.3 * pop : 0.2 + 0.8 * pop) * a,
               0,
-              0.3 + 0.5 * pop,
+              kept ? 0.55 + 0.4 * pop : 0.3 + 0.5 * pop,
             );
         }
       }

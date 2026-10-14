@@ -1,102 +1,199 @@
 /**
- * The prologue's timing sheet (its tuning file): when every beat of the shot list in
- * docs/story/scenes/mouthless-key-scenes.md section 1 starts and ends, in seconds on the
- * prologue's own clock, and where in the Grove it is staged (world px). The renderers and the
- * director read only these numbers; change the cut here.
+ * The prologue's timing sheet (its tuning file), v2 "The first night": the shot list in
+ * docs/story/scenes/prologue-v2.md. Seconds are each beat's own clock (`bt`, from the start of
+ * the beat); the played stretch (beat 3) has no fixed length, so beats after it start when it ends.
+ * World px for the staging (memory/scene-and-units.md). The director (src/prologue/) and the
+ * renderers read only these numbers; change the cut here.
  */
 
-export const SHOT = {
-  /** 1. The breath: black, a small pale light breathing, a warm blur rests on it and lifts; it stutters. */
-  breath: { start: 0, end: 14 },
-  /** 2. The world from very high: frost-root spreads from the mountain, towns go out, the stag, the moths. */
-  world: { start: 14, end: 42 },
-  /** 3. Down into the Grove: the burrback and the caterpillar. */
-  burr: { start: 42, end: 60 },
-  /** 4. Two cocoons, a glint, the title. */
-  cocoons: { start: 60, end: 90 },
-} as const;
+/** The beats, in order. `len` in seconds (the played stretch: null, it ends when she gets there). */
+export const BEATS = [
+  { id: 'breath', len: 10 },
+  { id: 'hatch', len: 28 },
+  { id: 'play', len: null },
+  { id: 'hollow', len: 40 },
+  { id: 'summit', len: 25 },
+  { id: 'wake', len: 12 },
+] as const;
+export type BeatId = (typeof BEATS)[number]['id'];
 
-/** The whole prologue, seconds. */
-export const PROLOGUE_END = SHOT.cocoons.end;
-
-/** Shot 1, seconds. */
+/** 1. The breath (0-10 s), the locked image A cut short. */
 export const BREATH = {
-  fadeIn: [0, 1.6],
+  fadeIn: [0, 1],
   /** The light breathes in 2.5 s and out 2.5 s. */
   period: 5,
   /** Touched, its breath slows to this period. */
   slowPeriod: 7.4,
   /** The warm blur comes in from the left, rests against the light, lifts away out of frame. */
-  touchIn: [4.6, 6.4],
-  touchOut: [9, 10.4],
+  touchIn: [3.5, 4.8],
+  touchOut: [6.8, 7.8],
   /** Two flickers (start times, each ~4 frames), a burst of grey grain, a breath that does not finish. */
-  flickers: [10.55, 10.86],
-  grain: [11.05, 11.6],
-  brokenBreath: [11.6, 12.25],
-  fadeOut: [13.1, 14],
+  flickers: [7.95, 8.18],
+  grain: [8.32, 8.82],
+  brokenBreath: [8.82, 9.3],
+  fadeOut: [9.3, 10],
 } as const;
 
-/** Shot 2, seconds. */
+/** Where the hatching happens: the west moss by the pool (ground 1280). */
+export const MOSS = 1280;
+
+/** 2. Hatching (bt 0-28), frost on everything. */
+export const HATCH = {
+  /** The two cocoons hang from threads above; how low their bottoms hang (y of the case's middle). */
+  sorrel: { x: 1240, y: 1060 },
+  wing: { x: 1400, y: 1080 },
+  /** The fox sleeps curled here (its middle, on the moss). */
+  fox: 1320,
+  /** Match cut out of black on the amber light in his cocoon, then the pull out. */
+  fadeIn: [0, 0.6],
+  pullOut: [1.2, 3],
+  /** His splits; he tumbles out, shakes, looks up at the dance a long look. */
+  sorrelSplit: 3.2,
+  sorrelShake: [4.4, 5.6],
+  lookUp: [5.6, 7],
+  /** He looks at her cocoon (frost creeping up it), drops back under it and waits. */
+  wait: [7, 10],
+  /** Hers splits; she drops into the frost beside the fox's paw and lies there shivering, wings stuck. */
+  wingSplit: 10,
+  huddle: [10.6, 21],
+  /** He folds his wing over hers; they shiver together; her eyes brighten, her wings open. */
+  fold: [14, 21],
+  /** He taps her wingtip, once. */
+  tap: [21.2, 22],
+  /** He hops back, ready, looking west; she looks at the fox a beat longer. */
+  ready: [22.5, 24],
+  lookFox: [24, 26.5],
+  /** The camera eases out to the follow framing on her. */
+  follow: [25, 28],
+  /** The frost grade fades as the night goes on (gone by the time they play). */
+  frostOut: [24, 30],
+} as const;
+
+/**
+ * 3. The first night (played): Sorrel's course. Each leg is a recorded clip in the input DSL
+ * (src/input/script.ts) played on his own sim body from the mark before it, then he waits at its
+ * mark (feet, world px) until she is within `near` px. Found on the pure sim (no enemies, no
+ * pickups): see memory/prologue.md.
+ */
+export const COURSE = {
+  near: 120,
+  /** He hops "come on" this often while he waits, s. */
+  hopEvery: 3,
+  hop: 'J3 .1',
+  start: { x: 1280, y: MOSS },
+  legs: [
+    // 3a: west along the moss, a double jump up onto F1 (the somersault at the top).
+    { id: 'f1', clip: 'L24 L+J16 L2 L+J16 L6 .30', mark: { x: 850, y: 960 }, unlock: 'jump' },
+    // 3b: the race: F2, F3...
+    { id: 'f3', clip: 'R4 R+J16 R12 .2 R4 R+J16 R14 .20', mark: { x: 1493, y: 704 }, unlock: 'jump' },
+    // ...and F4, a dash across the gap past her (dash is hers from his dash on).
+    { id: 'f4', clip: 'R6 R+J10 R+X1 R4 .30', mark: { x: 1944, y: 608 }, unlock: 'dash' },
+  ],
+  /** 3e: his dive after the glint off F4, wings open (glide is hers from when he opens them). */
+  dive: { clip: 'L24 R4 .8 J2 .2 J118 L+J12 J76 .20' },
+  /** The dance ring over F4, and the silver-edged moth's low sweep past him (s after he stops). */
+  dance: { x: 1900, y: 400, rx: 170, ry: 38 },
+  silverSweep: [1, 3.4],
+  /** 3c: the glint drifts down between them; the hold; the give; he raises it, looks at her, tosses it. */
+  glintFall: 3,
+  holdCine: 3,
+  giveHold: 0.5,
+  hisHold: [0, 1.8],
+  hisLook: [1.8, 2.6],
+  toss: 2.8,
+  /** 3d: bumps: her jump into it sends it to him, his hop sends it back; after this many of hers it sails west. */
+  bumps: 2,
+  /** 3e: where the glint comes down (the fox's nose at the pool's lip) and where the fox drinks. */
+  nose: { x: 1528, y: 1214 },
+  /** Control ends when she is within this of the fox; she is placed on its back. */
+  foxReach: 160,
+} as const;
+
+/** The fox drinks here (its middle; it faces east, its head over the water). */
+export const FOX_DRINK = 1420;
+
+/** 4. The hollow (bt 0-40). */
+export const HOLLOW = {
+  /** The fox shakes its head, drinks, drinks again; the moss at its paws turns pale. */
+  shake: [0, 1],
+  drinks: [
+    [1.2, 2.6],
+    [3, 5.4],
+  ],
+  paling: [3.6, 6],
+  /** The ground opens; the fox sinks, eyes closing; the moths flutter up; a root tip rises to her face and sinks. */
+  open: [6, 7.5],
+  sink: [6.5, 11.5],
+  flutter: [6.4, 7.6],
+  rootTip: [8.6, 11.6],
+  /** The hollow closes; the case rises on its stalk; the ember on its tail goes grey. */
+  close: [12, 13],
+  caseRise: [12.4, 15.6],
+  /** She lands against the case and folds her wing over it; shivers; Sorrel hovers, looking round. */
+  land: [16, 17.2],
+  fold: [17, 28],
+  /** The lights dim; a pulse runs up the stalk; the lamp lights coral and swings toward her glint. */
+  dim: [24, 26],
+  pulse: [25, 27],
+  lampLit: [26.5, 27.6],
+  lampTurn: [27, 28],
+  /** Played: the coral wash comes down toward her; get her off the case into the ferns and fold. */
+  play: [28, 35],
+  /** The wash reaches the case by the end of the played bit; it crosses the ferns after. */
+  washIn: [28, 34],
+  /** If she is still on the case: the lamp begins to dive, Sorrel tackles her into the ferns. */
+  tackle: [33.2, 35],
+  /** In the ferns: the wash crosses, slows, stops over them, moves on, rests on the case, goes dark. */
+  hide: [35, 40],
+  /** Where the hollow and the case are (the fox drank here), and the ferns 200 px west. */
+  x: 1440,
+  ferns: 1250,
+  /** The case: half-width, height, the stalk under it. */
+  caseRx: 96,
+  caseH: 92,
+  stalk: 22,
+  /** The lampwing that wakes (lamp-f3's home). */
+  lamp: { x: 1470, y: 420 },
+} as const;
+
+/** 5. The summit (bt 0-25): the world from high as what they see. */
+export const SUMMIT = {
+  fadeIn: [0, 1.2],
+  looks: [10, 14],
+  silver: [14, 16],
+  offer: [16, 18],
+  foldBack: [18, 19.2],
+  tap: [19.4, 20],
+  lift: [20, 21.5],
+  alone: [21, 25],
+  fadeOut: [24.2, 25],
+} as const;
+
+/** 6. Title, then the next night (bt 0-12): the title over the summit, black, she wakes by the pool. */
+export const WAKE = {
+  title: [0.4, 1.6],
+  titleOut: [3.6, 4.6],
+  black: [4.6, 6],
+  fadeUp: [6, 7.6],
+  /** She wakes under a leaf where the fox slept. */
+  at: { x: 1300, y: MOSS },
+  rise: [7.4, 9.5],
+  /** Control and the HUD at the end. */
+  hud: [11, 12],
+} as const;
+
+// --- v1 (retired from the opening; the code is kept: world.ts, outside.ts) ---
+
+/** v1 shot 2's timeline, as world.ts's world-from-high plate still plays it. */
 export const WORLD = {
   fadeIn: [14, 16],
-  /** The frost leaves the mountain's foot at `frost[0]` and has covered the near land by `frost[1]`. */
   frost: [14.6, 38],
-  /** The stag: the frost reaches it, it sinks, root grows on from its antlers. */
   stagSink: [32.2, 35],
   stagRoot: [34.4, 38],
-  /** The moth-flecks cross from here; the camera picks one and follows it down. */
   moths: [35.5, 42],
   follow: [38.6, 42],
   fadeOut: [41, 42],
 } as const;
 
-/** Shot 3, seconds and world px (the Grove's left glade, on the 1280 ground). */
-export const BURR = {
-  fadeIn: [42, 43.4],
-  /** The camera comes down through the canopy and settles at play framing. */
-  descend: [42, 47],
-  /** The caterpillar's twig: where it clings (world px). */
-  twig: { x: 720, y: 1236 },
-  /** The burrback walks in from the west and stops over the caterpillar. */
-  walkIn: [45.2, 50.2],
-  enterX: 400,
-  stopX: 704,
-  /** Its head swings over the caterpillar, plate opening. */
-  look: [50.2, 52.8],
-  /** The caterpillar spins: a pale blur of silk, a cocoon in two seconds. */
-  spin: [51.1, 53.1],
-  /** It sniffs, loses interest and walks on east. */
-  sniff: [52.8, 55.2],
-  walkOn: [55.4, 61],
-  exitX: 1180,
-  ground: 1280,
-} as const;
-
-/** Shot 4, seconds and world px (the pool: water 1536-1856, the moss 1280 west of it). */
-export const COCOONS = {
-  /** Where the two cocoons hang from (a thread from above), and how low they hang. */
-  sorrel: { x: 1700, y: 1060 },
-  umber: { x: 1400, y: 1080 },
-  /** The walk stops at the water's edge: no step right past this x (her centre). */
-  fence: 1462,
-  /** Sorrel's splits, and he flies straight up to the dance. */
-  sorrelSplit: 62.2,
-  sorrelFly: [62.6, 65.4],
-  /** The dance: a ring of moths in the canopy over the pool. */
-  dance: { x: 1760, y: 420, rx: 170, ry: 38 },
-  /** Hers splits; she drops to the moss (the sim takes her from here: walk only). */
-  umberSplit: 66,
-  /** She lands, stands and shakes out her wings like a cape; walk is hers after it. */
-  shake: [66.9, 68],
-  /** A glint drifts down in front of her; walk is taken back when it arrives. */
-  glint: [74, 77],
-  /** She raises it to her face; the camera pushes in. */
-  raise: [77, 78.4],
-  /** She looks past it; the camera follows her eyes out of the Grove. */
-  look: [81.6, 83.2],
-  /** Outside: pale root steaming in the frost; the title in the sky. */
-  outside: [83.6, 89.2],
-  title: [85.2, 87.6],
-  /** Back to her; control returns at the end. */
-  back: [88.6, 90],
-} as const;
+/** v1's outside plate and title timing (outside.ts). */
+export const OUTSIDE = { span: [83.6, 89.2] } as const;

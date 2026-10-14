@@ -1,3 +1,7 @@
+import type { AudioDirector } from '../audio/index';
+import { type RenderOptions, type RenderResult, renderTape } from '../audio/offline';
+import type { Cue } from '../audio/router';
+import type { BusId } from '../audio/tuning';
 import type { Game, RunMode } from '../game';
 import { type InputScript, parseInputScript } from '../input/script';
 import type { PrologueDirector } from '../prologue';
@@ -7,11 +11,13 @@ import type { PointLight } from '../render/lights';
 import type { CameraOverride, RenderStage } from '../render/stage';
 import { enemiesAlive } from '../sim/enemies';
 import type { SimEvent } from '../sim/events';
+import { offerTarget } from '../sim/giving';
 import { restPoint } from '../sim/goal';
 import { type GameState, goalHolds, heartBox, lampCost, lanternBox, lanternCost } from '../sim/index';
 import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
 import type { Scene } from '../sim/scene';
+import { markSeen, seenNow, seenScale } from '../sim/seen';
 import type { Tuning } from '../sim/tuning';
 import type { TuningPanel } from './tuning-panel';
 
@@ -30,7 +36,7 @@ export interface GameDebugApi {
   tick(n?: number): number;
   /** Plain-JSON copy of the sim state (src/sim/state.ts). */
   state(): GameState;
-  /** Queues scripted input (`R30 R+J12 A1 .5`, A = attack, or `right*30 right+jump*12`, src/input/script.ts). Returns frames queued in total. */
+  /** Queues scripted input (`R30 R+J12 A1 .5`, A = attack, O = offer, or `right*30 right+jump*12`, src/input/script.ts). Returns frames queued in total. */
   input(script: InputScript): number;
   /** Drops queued input. */
   clearInput(): void;
@@ -140,11 +146,38 @@ export interface GameDebugApi {
       stirred: number;
       /** Lampwing: dives made at her since it noticed her. */
       dives: number;
+      /** Giving (memory/giving.md): frames left of being aware of her, of a calm, of the calm a gift bought; glints she has given it. */
+      aware: number;
+      calm: number;
+      gift: number;
+      gifts: number;
       gone: boolean;
       vx: number;
       vy: number;
       target: { x: number; y: number };
     }>;
+  };
+  /**
+   * Giving (memory/giving.md). `seen` 0..1 / `level` 0-4: how visible the light she carries makes
+   * her (`steps` = the wallet thresholds of levels 1-4); `reach` = how far each kind notices her now
+   * (`burrback`: brace reach box to box and awareness centre to centre; `lampwing`: its sight, px,
+   * unless the scene gives one its own); `target` = what an offer would go to now (null = nothing in
+   * reach); `gift` = the glint in flight; `gifted` = glints given to creatures; `heartGiven` = to
+   * the heart; `aware` = ids of the creatures aware of her now. With a number: sets the wallet
+   * first (for tests: being seen is the wallet).
+   */
+  giving(wallet?: number): {
+    wallet: number;
+    seen: number;
+    level: number;
+    steps: number[];
+    reach: { burrback: { brace: number; aware: number }; lampwing: number };
+    target: { kind: string; id: string } | null;
+    gift: { to: string; index: number; frames: number; x: number; y: number } | null;
+    offerCd: number;
+    gifted: number;
+    heartGiven: number;
+    aware: string[];
   };
   /**
    * Her health: `{hp, hpMax, invuln, stagger, faded, safe}` (`safe` = where she would re-form).
@@ -254,16 +287,40 @@ export interface GameDebugApi {
   /** Hero design: no argument lists `{id, skins}`; an id switches to that skin. */
   character(id?: string): { id: string; skins: string[] };
   /**
-   * The prologue (src/prologue.ts), or null when it was not played (`?skipprologue`, or `?manual`
-   * without `?prologue`). `state()` its clock; `advance(n)` n frames of 1/60 s (the sim steps too
+   * The prologue (src/prologue/), or null when it was not played (`?skipprologue`, or `?manual`
+   * without `?prologue`). `state()` its clock and beat; `autopilot(on)` plays her part (captures,
+   * tests); `advance(n)` n frames of 1/60 s (the sim steps too
    * once she is out of her cocoon), draws, returns the clock; `seek(t)` advances to `t` s (only
    * forward); `skip()` hands over to the Grove now.
    */
   prologue: {
-    state(): { t: number; done: boolean; simOn: boolean };
+    state(): {
+      t: number;
+      done: boolean;
+      simOn: boolean;
+      beat: string;
+      bt: number;
+      phase: string;
+      leg: number;
+    };
+    autopilot(on?: boolean): boolean;
     advance(n?: number): number;
     seek(t: number): number;
     skip(): number;
+  } | null;
+  /**
+   * Sound (src/audio, memory/audio.md). Muted by default; `mute(false)` unmutes (in a real page the
+   * context starts on the next gesture). `cues(n)`: the last cues routed, muted or not.
+   * `record()` starts a tape of every step from now; `render(opts)` plays it offline into a WAV
+   * (base64) with level numbers (`npm run clip -- --audio`).
+   */
+  audio: {
+    state(): ReturnType<AudioDirector['state']>;
+    mute(on?: boolean): boolean;
+    volume(bus?: BusId | 'master', db?: number): Record<string, number>;
+    cues(n?: number): Cue[];
+    record(on?: boolean): number;
+    render(opts?: RenderOptions): Promise<RenderResult>;
   } | null;
   debug: {
     /** Collision overlay on/off (no argument toggles). */
@@ -287,6 +344,7 @@ export function installDebugApi(deps: {
   stage: RenderStage;
   panel: TuningPanel;
   prologue?: PrologueDirector | null;
+  audio?: AudioDirector | null;
 }): GameDebugApi {
   const { game, ga, stage, panel } = deps;
   const pro = deps.prologue ?? null;
@@ -298,7 +356,7 @@ export function installDebugApi(deps: {
       stage.update(1 / 60, 1);
     }
     stage.present();
-    return pro.t;
+    return pro.plan.t;
   };
   const log: Array<SimEvent & { f: number }> = [];
   let lastCall = 0;
@@ -346,15 +404,39 @@ export function installDebugApi(deps: {
     };
   };
 
+  const au = deps.audio ?? null;
   const api: GameDebugApi = {
+    audio: au && {
+      state: () => au.state(),
+      mute(on = true) {
+        au.mute(on);
+        return au.muted;
+      },
+      volume: (bus, db) => au.volume(bus, db),
+      cues: (n) => au.cues(n),
+      record: (on = true) => au.record(on),
+      render: (opts) => renderTape(au.recording(), game.scene, game.seed, opts),
+    },
     prologue: pro && {
-      state: () => ({ t: pro.t, done: pro.done, simOn: pro.simOn }),
+      state: () => ({
+        t: pro.plan.t,
+        done: pro.done,
+        simOn: pro.simOn,
+        beat: pro.plan.beat,
+        bt: pro.plan.bt,
+        phase: pro.plan.phase,
+        leg: pro.plan.leg,
+      }),
+      autopilot: (on = true) => {
+        pro.autopilot = on;
+        return on;
+      },
       advance: (n = 1) => advance(n),
-      seek: (t: number) => advance(Math.max(0, Math.round((t - pro.t) * 60))),
+      seek: (t: number) => advance(Math.max(0, Math.round((t - pro.plan.t) * 60))),
       skip: () => {
         pro.skip();
         redraw();
-        return pro.t;
+        return pro.plan.t;
       },
     },
     step(n = 1) {
@@ -506,11 +588,50 @@ export function installDebugApi(deps: {
           roused: e.roused,
           stirred: e.stirred,
           dives: e.dives,
+          aware: e.aware,
+          calm: e.calm,
+          gift: e.gift,
+          gifts: e.gifts,
           gone: e.gone,
           vx: e.vx,
           vy: e.vy,
           target: { x: e.targetX, y: e.targetY },
         })),
+      };
+    },
+    giving(wallet) {
+      const st = game.state;
+      const t = game.tuning;
+      if (wallet !== undefined) {
+        if (!(wallet >= 0)) throw new Error('wallet must be 0 or more');
+        st.pickups.count = Math.round(wallet);
+        markSeen(st, t);
+      }
+      const p = st.player;
+      const level = seenNow(st, t);
+      const k = seenScale(level, t.giving);
+      const target = offerTarget(st, game.scene, t);
+      return {
+        wallet: st.pickups.count,
+        seen: level / 4,
+        level,
+        steps: [t.giving.seen1, t.giving.seen2, t.giving.seen3, t.giving.seen4],
+        reach: {
+          burrback: {
+            brace: Math.round(t.burrback.strikePx * k),
+            aware: Math.round(t.burrback.noticePx * k),
+          },
+          lampwing: Math.round(t.lampwing.noticePx * k),
+        },
+        target: st.pickups.count >= 1 && target ? { kind: target.kind, id: target.id } : null,
+        gift:
+          p.giftTimer > 0
+            ? { to: p.giftTo, index: p.giftIndex, frames: p.giftTimer, x: p.giftX, y: p.giftY }
+            : null,
+        offerCd: p.offerCd,
+        gifted: st.pickups.gifted,
+        heartGiven: st.goal.heartGiven,
+        aware: st.enemies.filter((e) => e.aware > 0).map((e) => e.id),
       };
     },
     health(hp) {

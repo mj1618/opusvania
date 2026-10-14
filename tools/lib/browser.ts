@@ -18,6 +18,30 @@ export async function launch(opts: { gpu?: boolean } = {}): Promise<Browser> {
   return chromium.launch({ args });
 }
 
+/**
+ * A stand-in for Vite's client with no hot reload: a long capture is not thrown away when someone
+ * else saves a file mid-run (the page keeps the code it booted with). CSS-in-JS helpers are no-ops.
+ */
+const NO_HMR_CLIENT = `
+const hot = { accept() {}, acceptExports() {}, dispose() {}, prune() {}, invalidate() {}, decline() {}, on() {}, off() {}, send() {}, data: {} };
+export function createHotContext() { return hot; }
+export function injectQuery(url) { return url; }
+export function updateStyle(id, css) {
+  let el = document.querySelector('style[data-vite-dev-id="' + id + '"]');
+  if (!el) { el = document.createElement('style'); el.setAttribute('data-vite-dev-id', id); document.head.appendChild(el); }
+  el.textContent = css;
+}
+export function removeStyle(id) { document.querySelector('style[data-vite-dev-id="' + id + '"]')?.remove(); }
+export class ErrorOverlay {}
+`;
+
+/** Serves the page without Vite's hot reload (see NO_HMR_CLIENT). */
+export async function freezeCode(page: Page): Promise<void> {
+  await page.route('**/@vite/client', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/javascript', body: NO_HMR_CLIENT }),
+  );
+}
+
 export async function openGame(
   browser: Browser,
   url: string,
@@ -27,6 +51,7 @@ export async function openGame(
   pickups = false,
 ): Promise<Page> {
   const page = await browser.newPage({ viewport, deviceScaleFactor });
+  await freezeCode(page);
   page.on('pageerror', (e) => console.error('[page error]', e.message));
   page.on('console', (m) => {
     if (m.type() === 'error') console.error('[console error]', m.text());

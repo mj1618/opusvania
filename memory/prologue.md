@@ -1,87 +1,83 @@
-# The prologue (wordless opening, ~90 s)
+# The prologue, v2 "The first night"
 
-The script is `docs/story/scenes/mouthless-key-scenes.md` section 1 (opening image A, "The breath"). It plays when
-the game boots, then hands Wing to the player in the Grove. Timings and staging positions live in one tuning file:
-`src/render/prologue/script.ts`.
+The script is `docs/story/scenes/prologue-v2.md` (two moths born, he teaches her to fly, they play, the hollow takes
+their fox, they hide, they see how big it is, he leaves for the dance). About 2 min 50 s with a human; 2 min 17 s
+with the autopilot (it plays the first night fast). The hero is **Wing** (code id `vesper`). Every number of the cut
+is in `src/render/prologue/script.ts` (beats, staging, Sorrel's course).
 
 ## Run and capture
-- Plays by default. `?skipprologue` goes straight to the Grove; `?manual` (tools, tests) also skips it; `?prologue`
-  forces it, even under `?manual`. Escape skips it while it plays.
-- Debug API: `__game.prologue` (null when not played): `state()` → `{t, done, simOn}`, `advance(n)` (n frames of
-  1/60 s; the sim steps too once she is out of her cocoon), `seek(t)` (forward only), `skip()`.
-- Frame sheet: `npm run prologue` (every 1.5 s → `shots/prologue/frames/*.png` + `sheet.png`; `--from --to --every
-  --walk "<input DSL>"`). Motion: `npm run clip -- --prologue --fps 30 --name prologue` (→ `clips/prologue.mp4/.gif`;
-  `--from/--to` for a window; `--script` is what the player presses from 66 s). Both default to a short walk LEFT:
-  walking right from the drop point puts her in the pool (it is 40 px away).
-- Capture is deterministic: everything runs on the prologue clock (render time), no wall clock, no Math.random.
+- Plays by default; `?skipprologue` skips it; `?manual` (tools, tests) skips it; `?prologue` forces it, also under
+  `?manual`. Escape skips to the next night.
+- `__game.prologue`: `state()` → `{t, done, simOn, beat, bt, phase, leg}`; `autopilot(on)` plays her part (captures,
+  tests); `advance(n)`, `seek(t)` (global seconds, forward only), `skip()`.
+- Frame sheet: `npm run prologue` (autopilot on, every 2 s → `shots/prologue/frames/`, `sheet.png` and `sheet.jpg`,
+  each frame labelled with its beat). Motion: `npm run clip -- --prologue --fps 30 --name prologue`.
+- **Judge from `sheet.jpg` or the frames**: an image preview turns the big PNG into a palette and the dark gradients
+  look banded when they are not.
+- The capture tools serve the page with a stub of Vite's client (`freezeCode` in tools/lib/browser.ts), so a file
+  saved by another agent mid-run no longer reloads the page and throws the capture away.
 
-## How it is built
-- **Director** `src/prologue.ts` (harness side, not render): owns the clock `t` (advanced by the stage's render `dt`,
-  hooked in through `RenderStage.attachPrologue`), sets the run mode (frozen until 66 s, then realtime; not under
-  `?manual`), masks input (nothing until she has shaken out her wings at 68 s → left/right only → nothing from
-  75.2 s, when the glint arrives; right is dropped once her centre is at `COCOONS.fence` 1462 (momentum carries her ~25 px on), the
-  pool starts at 1536), and at 66 s teleports Wing under her cocoon (x 1400, in the air: the sim drops her). At 90 s it detaches; the HUD
-  and the glints fade in over ~1.2 s.
-- **Renderer** `src/render/prologue/index.ts`: a layer over the game's layers (under the dip and HUD) with the plates
-  and a black for fades; while a plate covers the frame the Grove's layers are hidden. It hides Wing (and zeroes her
-  `ember` light) until her cocoon splits, and hides the Grove's glints so the first she sees is the one sent to her.
-- **Plates** (`plate.ts`): a world-kit `Composer` + the kit's `Post`, rendered into a 1920x1080 texture shown as one
-  sprite, so the kit's screen-space maths holds at any window size. `breath.ts` (shot 1, one shader: light, threads,
-  palm SDF, static), `world.ts` (shot 2), `outside.ts` (end of shot 4 + title).
-- **Grove actors** `grove.ts`: everything shots 3-4 add to the game's own layers (so it takes the Grove's post):
-  the keyframed camera (`Track` values x, y, zoom, her-weight, dx, dy, game-weight: the last key blends into the game's
-  follow camera, so the hand-off has no cut), the twig + caterpillar + spin, a burrback (a second `EnemyRenderer` on a
-  fake scene with one spawn, driven by a made-up `EnemyState`; it restores `window.__enemies` after construction) with
-  pale root strokes in its shell seams, the two cocoons, Sorrel (a second Vesper skin on its own `LightRegistry`,
-  brightened/desaturated by a ColorMatrixFilter, clock x1.25, on a made-up gliding `PlayerState`), the dance ring,
-  the glint, and Wing's acting cues. The caterpillar group (twig, body, silk) is drawn about the twig point at
-  `CAT_SCALE` 1.7 so it reads. The burrback's beat uses `BurrRig.cine = {reach, open, watch}` (render/enemies:
-  head craned out with the front lifted, brow plate lifted open, eyes held on the given point; null in the game) via
-  `EnemyRenderer.burrRig(i)`. Sorrel flies in the skin's `rise` pose with his own flight wings drawn behind him
-  (`drawSorrelWings`: delta forewings swept back, hindwings tucked, beating 7.5 Hz): the skin's glide spread read
-  as a butterfly.
-- **Wing's acting**: `vesperLink.cine = {hold, look, shake}` → rig cue → `HOLD` / `PAST` poses in `actPose`; `hold`
-  also drives `offerK`, so `vesperLink.offerX/Y` is her hand and the glint sits in it; `shake` (66.9-68) is a
-  shiver plus a cloak flare of the wings, her cape shaken out.
-- **The outside plate follows her look**: the director-side renderer latches her facing at 81.6 s; facing left, the
-  plate sprite is mirrored (trees on the right). The title is a separate overlay (`titleCard()` in outside.ts) placed
-  over the mountain on either side, so the words never mirror.
-- **Track** (`track.ts`, unit-tested): keys `{t, v[], ease}`; `integrate()` gives a breath whose period changes
-  without a phase jump (shot 1 slows from 5 s to 7.4 s while touched).
+## Architecture (the choices)
+- **Director, harness side** (`src/prologue/index.ts`): the beat machine and clocks (render time), the input mask,
+  teleports, the scene the sim runs, the first night's glint, the autopilot. It writes a plain `plan`
+  (`src/render/prologue/plan.ts`) that render reads. The sim is untouched.
+- **The scene swap** (`Game.useScene`, src/game.ts): the sim runs the Grove **without creatures, glints or pods**
+  for the whole prologue (the script wants them absent; nothing can hurt her), then at the next night the whole
+  Grove plus one extra glint (`sorrels-glint`) where she wakes, so the HUD comes up with one real glint. The stage's
+  renderers keep the full scene in `ctx.scene`; they index enemies and pickups by the state, so the empty state draws
+  nothing.
+- **Sorrel the guide** (`src/prologue/guide.ts`): a second body on the real sim, his own `GameState` stepped with the
+  same pure `step()` and tuning (in the same creature-less Grove), in lockstep with hers (`game.afterStep`). He plays
+  recorded clips (the input DSL, `COURSE.legs`), then waits at each mark until she is within 120 px, hopping "come on"
+  every 3 s. Chosen over a render-side puppet so every move he shows is a move she can copy with the same physics.
+  The clips were found on the pure sim headless; `tests/unit/prologue-course.test.ts` fails if a sim change stops a
+  leg landing on its mark. Gaps: he does not come back for her if she falls off; he just waits and hops.
+- **Moves unlocked as he shows them** (the mask): walk and jump from the start of the first night; dash from the frame
+  his body dashes; the glide from the frame his body glides (before that, a jump held while falling is let go);
+  give only when asked; the blade never. In the hollow's escape: walk and give (held = fold). Elsewhere nothing.
+- **The two moths are stand-ins** (grove.ts): two `VesperCharacter`s, each with its own acting cues
+  (`VesperOptions.cine`, link.ts `CineCues`: hold, look, shake, fold, huddle, tap, lookUp) and own light registry,
+  `link: false` so they leave `vesperLink` to the player's skin. Hers is fed the sim's player in played stretches and a
+  staged pose (`Stand`) in cinematic ones; his the guide's body or a staged pose. The real character layer stays
+  hidden for the whole prologue. His moth flight wings (`drawSorrelWings`) draw whenever he is in the air.
+- **Staged creatures on the game's painters**: the lampwing over the pool is a second `EnemyRenderer` on a fake
+  one-spawn scene and a made-up state, its lamp scaled by `LampRig.cine.lit` (dark until the Hush looks through it).
+  `BurrRig.cine` (v1) is still there, unused.
+- **Post looks for a cinematic** (`POST_CINE` in render/post/config.ts): `frost` (the hatching: colder, paler, less
+  saturated) and `dim` (the hollow: the wood's lights go down). 0 in play.
+- Plates (the world kit at 1920x1080 with its own post, shown as one sprite): `breath.ts` (beat 1), `summit.ts`
+  (beat 5 and the title; the world-from-high pieces exported from world.ts: the land shader, the mountain).
 
-## The shots
-1. **0-14 the breath.** Black; a pale light (~40 px) breathing 2.5 in / 2.5 out with a cloud of threads inside; at
-   4.6 a huge warm blur (a palm SDF with a sigmoid edge a third of its size wide, so it never reads as a hand; lit
-   through the skin from the light: deep red at its rim, amber near the light, a slow bokeh lift, grain/dither)
-   slides in from the left and rests; the light leans and warms a little and slows; 9-10.4 it lifts away up-left; two 4-frame flickers, a burst of
-   grey grain, a breath that collapses, a dim tremor, black.
-2. **14-42 the world from high.** One `LAND` shader: curved horizon, land in perspective with eye height 3 (eye 1
-   squashed every pattern into horizontal streaks), towns as warm points in clusters on a coarse 1.7-unit grid (60%
-   lit, plus stray farm lights) that go out cluster by cluster as the frost's distance field passes, the near land
-   darkening to 35% at the frame's foot, steam wisps rising where the front is, frost veins = noise ridges in (angle x 14/34/80, radius) about the mountain's foot so
-   they fan out and seem to branch. The mountain is `MOUNTAIN` at z 14 with its own 5 s pulse. A ridge at z 16 on the
-   right with the stag: frost strokes climb it, the stag sinks 72 px behind the ridge's crest, its antlers (drawn with
-   the same branching `grow()` as the root) turn pale and root grows on from their tips. The camera drifts right,
-   leans in on the stag (28.5-39), then closes on one moth-fleck and dips to black.
-3. **42-60 the burrback and the caterpillar.** Down through the canopy over the left glade, then in to zoom ~5.5 on
-   a twig at (720, 1236). The burrback walks in from x 400 and stops at 704; 50.2-52.8 its head swings out and up
-   over the caterpillar (front lifting, plate open, eyes on it) while the caterpillar spins (a whirling ring of silk,
-   wraps piling into a pale cocoon, 51.1-53.1); then two short sniffs, it loses interest and walks on east; the
-   camera pans with it to the pool.
-4. **60-90 cocoons, glint, title.** Two pale cocoons on threads by the pool (1400 / 1700), amber breathing in each.
-   62.2 Sorrel's splits (a dark torn mouth, flaps); he flies straight up, wings beating, to the ring of moths at
-   (1760, 420); the camera tilts up after him. 66 hers splits, she drops to the moss and shakes out her wings; walk
-   only from 68 (no further right than the water's edge). 74 the glint drifts
-   down in front of her; 77 she holds it at her chin, the camera pushes in to zoom 6.6 on her face lit from below;
-   81.6 she looks past it and the camera turns her way; 83.6-89.2 a plate: the Grove's last trunks, frost, pale root
-   lying across it steaming, the mountain small on the horizon, the title faint in the sky; 88.6-90 back to her and
-   the follow camera; control returns at 90.
+## The beats
+1. **The breath (0-10).** v1's shader, cut to 10 s.
+2. **Hatching (bt 0-28).** Match cut out of black onto the amber in his cocoon at zoom 4 (both breathe on the
+   breath's 5 s), pull out to 2x: two cocoons, the fox asleep curled below (fox.ts), frost (grade + rime). 3.2 his
+   splits, he lands, shakes out, looks up at the dance; walks back under hers and waits; 10 hers splits, she lies in
+   the frost (huddle cue); 14-21 he folds his wing over her (fold cue, camera in to 3.6x); her wings open (shake);
+   21.2 the tap; he hops west, ready; she looks back at the fox; the camera blends into the follow camera.
+3. **The first night (played).** Legs: moss → F1 (double jump), F1 → F3, F3 → F4 (his dash). On F4 he stops under
+   the dance (the silver-edged moth sweeps past him) and she wins. A glint drifts down to her; 3 s she holds it to her
+   face; the give prompt (a key cap, a ring filling) over him: hold give → it streams to him; he holds it up, looks at
+   her, tosses it. Keep it up: her body bumps it to him, his hop sends it back (turns, so one jump is one bump); on
+   her third it sails west; he dives after it gliding; it lands on the fox's nose, the fox sneezes, it hangs over the
+   fox's back; within reach of the fox the played stretch ends. The fox woke when the race began and went to drink.
+4. **The hollow (bt 0-40).** On the fox's back; it drinks, drinks again; the moss pales; the hollow opens (root lips,
+   steam), the fox sinks asleep; the moths flutter up; a root tip rises to her face, pauses, sinks; the case rises on
+   its stalk (a lens of bone skin with the fox asleep inside, its ember grey); she lands against it and folds her wing
+   over it; the lights dim; a pulse runs up the stalk to the lamp; the lamp lights coral and turns to her glint (the
+   camera tilts up and holds on it). Played 28-35: get her into the ferns and hold give (fold). Still on the case at
+   33.2: Sorrel tackles her in. 35-40: two silhouettes in the ferns, the coral wash crosses, stops, moves on.
+5. **The summit (bt 0-25).** The land with no towns, root fanned across it stopped just short of the wood, the
+   mountain small on the horizon breathing, the pale point of the case in the canopy and a faint line out to the
+   root's front, the dance above, two moths on a twig against the horizon glow. He looks up, she looks down; the
+   silver moth circles him; she holds the glint out; it is folded back; the tap; he lifts off into the dance.
+6. **Title, the next night (bt 0-12).** WING / THE KEPT WORLD over the mountain, black, she wakes under a leaf by the
+   pool (husks, the case breathing, no fox, no Sorrel), the item text, the HUD with one glint, control.
 
 ## What is weak / known gaps
-- Shot 2: still a little murky; the ridge reads as a rise with a stag, the dead trees on it are tiny at play size.
-- Shot 3: the plate opening is subtle at this size; the head swing and front lift carry the beat. The twig stands
-  in front of the burrback.
-- Shot 4: Sorrel's own skin wings still show in the rise pose next to the drawn flight wings (it reads as a moth in
-  flight, not a perfect one). The shake is a wing flare and shiver, not a full-body shake.
-- Title text comes from `TITLE` in outside.ts (the game's title moved twice on 2026-10-14; check locked.md).
-- The shot list in scenes/ is the one followed (the owner picked its images); §3 of the story outline differs.
+- The fox is drawn simply (curled it reads; standing it is a stiff, plain canine; the walk is a shuffle).
+- The case's fox inside is faint; the hollow's root lips are strokes.
+- The summit is dark and small: two silhouettes on a twig, a lot of black land.
+- Sorrel's skin wings still show beside his drawn flight wings in the air.
+- The autopilot places her at the start of each of his legs (small cuts in captures) and on the moss after the dive.
+- The item text is shown by the prologue (bottom left, fading at hand-over), not by a HUD item system.

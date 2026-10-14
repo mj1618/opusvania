@@ -222,6 +222,11 @@ export class BurrRig {
   noticed = false;
   noticeK = 0;
   flash = 0;
+  /**
+   * Unbothered (memory/giving-render.md): she is near and it has NOT seen her (she carries nothing,
+   * or too little to be seen from there): lids down, a slow breath, a sleepy mote now and then.
+   */
+  dozeK = 0;
   /** Standing, last update (a wary stand is 30-frame pauses with one frame of `walk` between them). */
   private stood = false;
   /** Death effects already thrown (bit 1: first break, bit 2: second). */
@@ -439,7 +444,11 @@ export class BurrRig {
     const calmT = e.mode === 'dead' ? 0 : safe ? 1 : sat(e.calm / B.calm.fade);
     this.calmK += (calmT - this.calmK) * approach(calmT > this.calmK ? B.calm.in : B.calm.out, dt);
     const calm = this.calmK;
-    this.breath += (2.1 + (B.calm.rate - 2.1) * calm + (B.ram.pant - 2.1) * this.spentK) * dt;
+    this.breath +=
+      (2.1 +
+        (B.calm.rate - 2.1) * Math.max(calm, B.doze.breath * this.dozeK) +
+        (B.ram.pant - 2.1) * this.spentK) *
+      dt;
 
     // --- Its touch landed: `alert` with a shove (a plain flinch has none). Seen once per mode start.
     const modeStart = simFrame - e.modeFrames;
@@ -468,14 +477,13 @@ export class BurrRig {
     let peer = standing && below && calmT === 0;
     if (peer) this.peerDir = hx < this.x ? -1 : 1;
 
-    // --- Noticing her: near, lit, on about its level. One start (burrs kicked up, it perks), then
-    // it keeps its burrs raised and its eyes on her for as long as she is close.
+    // --- Noticing her: the sim's awareness (memory/giving.md: it has seen the light she carries;
+    // empty-handed she is unseen and it never stirs). One start (burrs kicked up, it perks), then it
+    // keeps its burrs raised and its eyes on her for as long as it sees her; standing, it turns to her.
     const N = B.notice;
     const awake = seen && calmT === 0 && this.calmK < 0.5 && e.mode !== 'dead';
-    const near =
-      Math.abs(hx - this.x) < N.reach + (this.noticed ? N.slack : 0) &&
-      Math.abs(feetY - (e.y + e.h)) < N.level;
-    const noticedNow = awake && near;
+    const noticedNow = awake && e.aware > 0;
+    const faceHer = noticedNow && standing && !turningNow ? (hx < this.x ? -1 : 1) : 0;
     if (noticedNow && !this.noticed && !fresh) {
       this.flash = 1;
       this.bristle.v += N.kick;
@@ -488,6 +496,13 @@ export class BurrRig {
     this.noticed = noticedNow;
     this.noticeK += ((noticedNow ? 1 : 0) - this.noticeK) * approach(noticedNow ? N.in : N.out, dt);
     this.flash += (0 - this.flash) * approach(N.fade, dt);
+    {
+      const Z = B.doze;
+      const near =
+        seen && Math.abs(hx - this.x) < Z.px && Math.abs(feetY - (e.y + e.h)) < Z.level && !noticedNow;
+      const doze = near && calmT === 0 && (e.mode === 'walk' || e.mode === 'pause') ? 1 : 0;
+      this.dozeK += (doze - this.dozeK) * approach(doze ? Z.in : Z.out, dt);
+    }
 
     // --- Turning: the head swings round first, the body pivots after it.
     const lastD = this.d;
@@ -515,8 +530,8 @@ export class BurrRig {
       this.d = this.touchD + (f - this.touchD) * ease((this.mf - hold - 2) / T.body);
     } else {
       // Peering, it turns to the edge's side; walking on, it comes back round.
-      const want = peer || (this.peerK > 0.6 && standing) ? this.peerDir : f;
-      const slow = this.peerK > 0.05;
+      const want = peer || (this.peerK > 0.6 && standing) ? this.peerDir : faceHer !== 0 ? faceHer : f;
+      const slow = this.peerK > 0.05 || faceHer !== 0;
       this.d += (want - this.d) * approach(slow ? 7 : 22, dt);
       this.dHead += (want - this.dHead) * approach(slow ? 11 : 30, dt);
       if (Math.abs(this.d - want) < 0.002) this.d = want;
@@ -849,7 +864,7 @@ export class BurrRig {
       lx += (-this.actDir * 0.7 - lx) * react;
       ly += (0.6 - ly) * react;
     }
-    ly += (0.7 - ly) * calm * 0.8;
+    ly += (0.7 - ly) * Math.max(calm, this.dozeK) * 0.8;
     // Spent, they roll.
     if (this.spentK > 0.01) {
       lx += (Math.cos(clock * 6.3 + this.seed * 5) * 0.9 - lx) * this.spentK;
@@ -1124,9 +1139,13 @@ function drawHead(
     // walks, at her when it is wary). Wider in a flinch, shut when it dies.
     // Calmed, the lids come most of the way down: two warm slits.
     const open =
-      (dead ? 1 - curl : 1) * (1 - 0.92 * rig.blink) * (1 - B.calm.lids * calm * (1 - 0.5 * rig.walkK));
+      (dead ? 1 - curl : 1) *
+      (1 - 0.92 * rig.blink) *
+      (1 - B.calm.lids * calm * (1 - 0.5 * rig.walkK)) *
+      (1 - B.doze.lids * rig.dozeK);
     if (open > 0.05) {
-      const wide = 1 + 0.22 * sat(Math.max(rig.wary, 0.6 * rig.peerK, rig.noticeK));
+      const wide =
+        1 + 0.22 * sat(Math.max(rig.wary, 0.6 * rig.peerK, rig.noticeK)) + B.notice.eyeWide * rig.flash;
       const show = sat(aH * 1.6 - 0.3);
       for (let i = 0; i < 2; i++) {
         const k = i === 0 ? 1 : 0.8;
@@ -1142,13 +1161,15 @@ function drawHead(
         p.ellipse(ex, ey, rx, ry, rot, SH_EYE, 12);
         // A faint warm halo, so the two lights carry at play zoom (once, on the face over the brow).
         if (front) {
-          const hr = H.eye * H.eyeHalo * k;
+          // It has seen her: the eyes flare as it turns (`notice.eyeFlare`), and stay a step brighter.
+          const seenEye = 1 + B.notice.eyeFlare * rig.flash + B.notice.eyeKeep * rig.noticeK;
+          const hr = H.eye * H.eyeHalo * k * (1 + 0.5 * B.notice.eyeFlare * rig.flash);
           p.glow(
             ex,
             ey,
             hr,
             C.eyeGlow as unknown as RGB,
-            H.eyeGlow * show * (0.35 + 0.65 * open) * eyeLit,
+            H.eyeGlow * show * (0.35 + 0.65 * open) * eyeLit * seenEye,
             hr,
             0,
             10,

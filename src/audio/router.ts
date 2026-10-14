@@ -51,9 +51,14 @@ export interface AudioSnap {
   };
   /** Lanterns then lamps: foot position, lit, channel progress 0..1. */
   lights: Array<{ x: number; y: number; lit: boolean; progress: number; lamp: boolean }>;
+  /** The light she carries: glints in hand and her seen level 0-4 (memory/giving.md). */
+  wallet?: number;
+  seenLevel?: number;
+  /** Creatures: centre, kind, frames left of a gift's calm of `of` (0 = none). */
+  creatures?: Array<{ kind: string; x: number; y: number; gift: number; of: number }>;
 }
 
-export function snapOf(state: GameState, scene: Scene, channelFrames: number): AudioSnap {
+export function snapOf(state: GameState, scene: Scene, channelFrames: number, giftFrames = 600): AudioSnap {
   const p = state.player;
   const of = Math.max(1, channelFrames);
   const lights: AudioSnap['lights'] = [];
@@ -84,6 +89,11 @@ export function snapOf(state: GameState, scene: Scene, channelFrames: number): A
       kindlingLamp: p.kindlingLamp,
     },
     lights,
+    wallet: state.pickups.count,
+    seenLevel: p.seenLevel ?? 0,
+    creatures: state.enemies
+      .filter((e) => !e.gone)
+      .map((e) => ({ kind: e.kind, x: e.x + e.w / 2, y: e.y + e.h / 2, gift: e.gift ?? 0, of: giftFrames })),
   };
 }
 
@@ -231,7 +241,7 @@ export function route(e: SimEvent, i: number, snap: AudioSnap, ctx: RouteContext
       const sound = `${lamp ? 'lamp' : 'lantern'}${what}` as SoundId;
       const db =
         L[`${what.toLowerCase() as 'notice' | 'refuse' | 'kindle' | 'rest'}Db`] + (lamp ? L.lampTrim : 0);
-      return [
+      const out = [
         cue(sound, 'lantern', ctx, f, i, {
           x: e.x,
           y: e.y - 40,
@@ -240,10 +250,109 @@ export function route(e: SimEvent, i: number, snap: AudioSnap, ctx: RouteContext
           priority: what === 'Kindle' ? 6 : 4,
         }),
       ];
+      // A rest paid in glints: each leaves her as a small note, falling down the chord.
+      if ((e.type === 'lanternRest' || e.type === 'lampRest') && e.cost > 0)
+        out.push(...restNotes(e.cost, i, snap, ctx));
+      return out;
+    }
+    default:
+      return routeGiving(e, i, snap, ctx);
+  }
+}
+
+/** Cents above A3 for the chord tones a lantern climbs as it is given its price: A, B, then home D. */
+const TOWARD_D = [0, 204, 498];
+/** Cents below A5 of the notes a paid rest falls through: A, E, D, B, A (the forest's chord, downward). */
+const FALLING = [0, -498, -702, -1018, -1200];
+
+function restNotes(cost: number, i: number, snap: AudioSnap, ctx: RouteContext): Cue[] {
+  const G = AUDIO.giving;
+  const h = snap.hero;
+  return Array.from({ length: Math.min(cost, 8) }, (_, k) => ({
+    ...cue('glintNote', 'hero', ctx, snap.frame, i * 16 + k, {
+      x: h.x,
+      y: h.y - 40,
+      db: G.noteDb - k * 0.8,
+      delay: 0.25 + k * G.noteGapS,
+      place: 'hero' as const,
+      priority: 3,
+    }),
+    cents: (FALLING[k % FALLING.length] ?? 0) + (hash01(ctx.seed, snap.frame, k, salt('note')) - 0.5) * 8,
+  }));
+}
+
+/**
+ * Giving (memory/giving.md): her offer is glass leaving her hands; what takes it answers (a breath for a
+ * creature with a mouth, a bowl partial for a lantern, a deeper bowl for the heart). Creatures that notice
+ * her draw a breath in; a lampwing's hum swells toward her light.
+ */
+function routeGiving(e: SimEvent, i: number, snap: AudioSnap, ctx: RouteContext): Cue[] {
+  const G = AUDIO.giving;
+  const f = snap.frame;
+  const h = snap.hero;
+  const mine = (sound: SoundId, db: number, over: Partial<Cue> = {}) =>
+    cue(sound, 'hero', ctx, f, i, { x: h.x, y: h.y - 40, db, place: 'hero', priority: 3, ...over });
+  switch (e.type) {
+    case 'offer':
+      return [mine('offerTone', G.offerDb)];
+    case 'offerMiss':
+      return [mine('flutter', G.missDb - (e.reason === 'none' ? 2 : 0), { priority: 1 })];
+    case 'giftReturn':
+      // The glint comes back to her: the same glass, a fifth higher, softer.
+      return [mine('offerTone', G.returnDb, { cents: 702 })];
+    case 'enemyGift': {
+      const at = { x: e.x, y: e.y, place: 'world' as const, priority: 4 };
+      if (e.kind === 'lampwing')
+        return [cue('glassSettle', 'creatures', ctx, f, i, { ...at, db: G.glassDb, far: 0.1 })];
+      // A ram (or its build-up) cut off: one long settling breath; otherwise a low exhale.
+      const ram = e.was === 'windup' || e.was === 'charge';
+      return [
+        cue(ram ? 'settle' : 'exhale', 'creatures', ctx, f, i, { ...at, db: ram ? G.settleDb : G.exhaleDb }),
+      ];
+    }
+    case 'lanternGift':
+    case 'lampGift': {
+      const lamp = e.type === 'lampGift';
+      const p = e.given / Math.max(1, e.given + e.need);
+      const step = TOWARD_D[Math.min(TOWARD_D.length - 1, Math.floor(p * TOWARD_D.length))] ?? 0;
+      return [
+        {
+          ...cue('giftBowl', 'lantern', ctx, f, i, {
+            x: e.x,
+            y: e.y - 40,
+            db: G.bowlDb + (lamp ? AUDIO.lantern.lampTrim : 0),
+            far: 0.1,
+            priority: 4,
+          }),
+          cents: step + (lamp ? 1200 : 0),
+        },
+      ];
+    }
+    case 'heartGift':
+      return [
+        cue('heartGift', 'lantern', ctx, f, i, { x: e.x, y: e.y - 60, db: G.heartDb, far: 0.2, priority: 5 }),
+      ];
+    case 'enemyAware': {
+      const at = { x: e.x, y: e.y, place: 'world' as const, priority: 3 };
+      return e.kind === 'lampwing'
+        ? [cue('wingHum', 'creatures', ctx, f, i, { ...at, db: G.humDb, far: 0.05 })]
+        : [cue('sniff', 'creatures', ctx, f, i, { ...at, db: G.sniffDb })];
     }
     default:
       return [];
   }
+}
+
+/**
+ * A calmed creature's breathing: intervals growing from `calmS[0]` to `calmS[1]` s over the gift's calm,
+ * fading out with it. Breath k falls where the phase integral of 1 / interval crosses k + 1/2.
+ */
+export function calmBreath(elapsed: number, of: number): boolean {
+  const [a, z] = AUDIO.giving.calmS;
+  const span = Math.max(1, of) / 60;
+  const b = (z - a) / span;
+  const phase = (t: number) => (b > 0 ? Math.log(1 + (b * t) / a) / b : t / a) + 0.5;
+  return elapsed > 0 && Math.floor(phase(elapsed / 60)) > Math.floor(phase((elapsed - 1) / 60));
 }
 
 /** Frames of the far voice's calls, up to and including `frame` (seeded; never on the knock). */
@@ -324,6 +433,19 @@ export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[
       }),
     );
   }
+  // Calmed burrbacks breathe slower and slower, into the Hush's rhythm, fading as the calm runs out.
+  (snap.creatures ?? []).forEach((c, k) => {
+    if (c.kind !== 'burrback' || c.gift <= 0) return;
+    if (!calmBreath(c.of - c.gift, c.of)) return;
+    out.push(
+      cue('calmBreath', 'creatures', ctx, f, 110 + k, {
+        x: c.x,
+        y: c.y,
+        db: AUDIO.giving.calmDb + amp(Math.max(0.08, c.gift / c.of)),
+        priority: 1,
+      }),
+    );
+  });
   // Claws on bark: sparse grains while she slides, more the faster.
   const h = snap.hero;
   if (h.mode === 'wallSlide' && !h.faded) {
@@ -372,6 +494,9 @@ export interface Layers {
   poolPan: number;
   steam: number;
   glass: number;
+  /** The chord of the light she carries: a gain per tone (A4, E5, B5, D5), and where she is. */
+  chord: [number, number, number, number];
+  chordPan: number;
 }
 
 /** Screen pan of world x: -1..1 at the view's edges. */
@@ -476,7 +601,16 @@ export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: Route
   const steam = dbToGain(F.steamDb) * zw[1] * breathe;
   const glass = dbToGain(F.glassDb) * zw[2] * (0.4 + 0.6 * gust);
 
+  // What she carries makes a tone: one more chord tone per seen level, louder as it grows; none empty-handed.
+  const level = h.faded ? 0 : Math.max(0, Math.min(4, snap.seenLevel ?? 0));
+  const G = AUDIO.giving;
+  const total = level > 0 ? dbToGain(lerp(G.chordDb[0], G.chordDb[1], (level - 1) / 3)) : 0;
+  const each = level > 0 ? total / Math.sqrt(level) : 0;
+  const chord = [0, 1, 2, 3].map((k) => (k < level ? each : 0)) as Layers['chord'];
+
   return {
+    chord,
+    chordPan: panOf(h.x, cam) * H.panWidth,
     roar,
     hissL,
     hissR,

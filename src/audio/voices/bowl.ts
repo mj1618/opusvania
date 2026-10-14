@@ -8,13 +8,20 @@ import type { Layers } from '../router';
 import { PITCH } from '../tuning';
 import { aim, type Band, band, silent } from './util';
 
-class Rubbed {
+export class Rubbed {
   readonly gain: GainNode;
   readonly pan: StereoPannerNode;
   private readonly b: Band;
   private readonly oscs: OscillatorNode[];
 
-  constructor(graph: AudioGraph, noise: Float32Array, offset: number, q: number, pure: number) {
+  constructor(
+    graph: AudioGraph,
+    noise: Float32Array,
+    offset: number,
+    q: number,
+    pure: number,
+    bus: 'lantern' | 'hero' = 'lantern',
+  ) {
     const ctx = graph.ctx;
     this.b = band(graph, noise, offset, [
       ['bandpass', PITCH.D3, q],
@@ -32,8 +39,8 @@ class Rubbed {
       o.start(0);
       return o;
     });
-    this.gain.connect(this.pan).connect(graph.buses.lantern.in);
-    this.pan.connect(graph.buses.lantern.room);
+    this.gain.connect(this.pan).connect(graph.buses[bus].in);
+    this.pan.connect(graph.buses[bus].room);
   }
 
   set(g: number, hz: number, pan: number, when: number, tau: number): void {

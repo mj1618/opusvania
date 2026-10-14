@@ -10,7 +10,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   returns the state → manual. `tick(n)` advances render time only → manual. `freeze()` / `freeze(false)`,
   `pause()` (manual), `resume()` (realtime).
 - URL: `?manual` boots paused (tools and tests do this; it also skips the prologue), `?skipprologue`, `?prologue`
-  (play the opening even under `?manual`; drive it with `prologue.advance(n)` / `seek(t)` / `skip()`: memory/prologue.md), `?seed=n`, `?hitboxes`, `?nopickups` (the scene
+  (play the opening even under `?manual`; drive it with `prologue.autopilot(true)` / `advance(n)` / `seek(t)` / `skip()`: memory/prologue.md), `?seed=n`, `?hitboxes`, `?nopickups` (the scene
   without glints, pods, enemies, lanterns, heart or counter; the capture tools use it unless given `--pickups`).
 
 ## Calls

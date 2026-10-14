@@ -22,7 +22,18 @@ import { clamp, noise1, Spring, sat, smoothstep } from '../hooded/math';
 import type { CharacterSkin, SkinDef } from '../skin';
 import { BLADE_LEN, drawVesper, type View } from './draw';
 import { drawSpinRings, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
-import { vesperLink } from './link';
+import { type CineCues, vesperLink } from './link';
+
+/**
+ * A second body with this skin (the prologue's Sorrel, or a staged stand-in for her): its own cues
+ * instead of `vesperLink.cine`, and `link: false` so it leaves `vesperLink` (the goal renderer's
+ * hand-off for the player) alone.
+ */
+export interface VesperOptions {
+  cine?: CineCues;
+  link?: boolean;
+}
+
 import { Painter, rgb } from './paint';
 import { HURT, J_CHEST, J_HAND_A, J_HEAD, J_HIP, MAX_TURNS, Rig } from './rig';
 import { type SlashFrame, SlashMark } from './slashfx';
@@ -57,6 +68,25 @@ const SLASH_LOOK = {
  */
 const EDGE = { px: 1.5, color: [0.035, 0.022, 0.055] as const, alpha: 0.95, hidden: false };
 
+/**
+ * Being seen (memory/giving.md, memory/giving-render.md): the light she carries is the light that
+ * finds her. By `player.seenLevel` 0-4 (her wallet), her own lights (`glow`: lantern tips, eyes, wing
+ * spots), her point light (`light`, `radius`) and the gold dust off her wings (`dust`). Level 2 is the
+ * look she was tuned at (a handful); 0 is a dark moth with two dim eyes; 4 is a lamp that walks.
+ * Eased at `rate` /s (a glint given or taken is felt over half a second, not popped). Only the
+ * player's own skin (a staged stand-in, and any scene without glints, keeps level 2).
+ */
+const SEEN = {
+  glow: [0.1, 0.5, 1, 1.35, 1.75],
+  light: [0.04, 0.45, 1, 1.7, 2.6],
+  radius: [0.4, 0.75, 1, 1.3, 1.65],
+  dust: [0.05, 0.45, 1, 1.6, 2.6],
+  eyes: [0.3, 0.7, 1, 1.12, 1.25],
+  /** Hidden: her colours go toward a cool dark grey (`Painter.dimK`) and her lights down; 0 from level 2. */
+  dark: [0.62, 0.22, 0, 0, 0],
+  rate: 2.2,
+};
+
 export class VesperCharacter implements CharacterSkin {
   private readonly painter = new Painter();
   private readonly rig = new Rig();
@@ -86,6 +116,10 @@ export class VesperCharacter implements CharacterSkin {
   private readonly ringPts = new Float32Array(6);
   private started = false;
   private flash = 0;
+  /** Her level of being seen, eased (0..4: `SEEN`). */
+  private seenK = 2;
+  /** How hidden she is now (0..1: `SEEN.dark`), for the painter. */
+  private seenDark = 0;
   private readonly back: [number, number] = [0, 0];
   private glintT = 9;
   private glintK = 0;
@@ -118,10 +152,18 @@ export class VesperCharacter implements CharacterSkin {
     if (e.code === 'KeyT') this.setTurns((Rig.turns % MAX_TURNS) + 1, true);
   };
 
+  /** Where the light leaves her hand (or her chest), world px, every frame (the same point `vesperLink.offerX/Y` gets). */
+  readonly offer = { x: 0, y: 0 };
+  private readonly cine: CineCues;
+  private readonly link: boolean;
+
   constructor(
     private readonly ctx: RenderContext,
     private readonly layer: Container,
+    opts: VesperOptions = {},
   ) {
+    this.cine = opts.cine ?? vesperLink.cine;
+    this.link = opts.link ?? true;
     this.initTurns();
     this.painter.mesh.label = 'vesper';
     layer.addChild(this.painter.mesh);
@@ -180,9 +222,13 @@ export class VesperCharacter implements CharacterSkin {
       const j = rig.frame.j;
       const hand = (J_HAND_A + rig.offerSide) * 2;
       const k = rig.offerK;
-      vesperLink.live = true;
-      vesperLink.offerX = j[J_CHEST * 2]! + (j[hand]! - j[J_CHEST * 2]!) * k;
-      vesperLink.offerY = j[J_CHEST * 2 + 1]! + (j[hand + 1]! - 2.5 - j[J_CHEST * 2 + 1]!) * k;
+      this.offer.x = j[J_CHEST * 2]! + (j[hand]! - j[J_CHEST * 2]!) * k;
+      this.offer.y = j[J_CHEST * 2 + 1]! + (j[hand + 1]! - 2.5 - j[J_CHEST * 2 + 1]!) * k;
+      if (this.link) {
+        vesperLink.live = true;
+        vesperLink.offerX = this.offer.x;
+        vesperLink.offerY = this.offer.y;
+      }
     }
     const sig = rig.sig;
     const fresh = sig.spawned || !this.started;
@@ -446,7 +492,21 @@ export class VesperCharacter implements CharacterSkin {
 
     // --- Dust rises off the wings; more of it when she moves.
     const moving = sat(Math.hypot(player.vx, player.vy) / 10);
-    const rate = fresh ? 0 : (2.2 + 9 * moving) * (1 - 0.7 * soar) + 22 * rig.wDash + 8 * this.flash;
+    // How seen she is: the light she carries (eased; a stand-in keeps the tuned look).
+    {
+      // (A scene with nothing to carry, the clean plates of `?nopickups`, keeps the tuned look.)
+      const carry = (this.ctx.scene.pickups?.length ?? 0) > 0;
+      const lvl = this.link && carry && Number.isFinite(player.seenLevel) ? clamp(player.seenLevel, 0, 4) : 2;
+      this.seenK = fresh ? lvl : this.seenK + (lvl - this.seenK) * (1 - Math.exp(-SEEN.rate * dt));
+    }
+    const seenAt = (t: readonly number[]): number => {
+      const k = this.seenK;
+      const i = Math.min(3, Math.floor(k));
+      return t[i]! + (t[i + 1]! - t[i]!) * (k - i);
+    };
+    const rate =
+      (fresh ? 0 : (2.2 + 9 * moving) * (1 - 0.7 * soar) + 22 * rig.wDash + 8 * this.flash) *
+      seenAt(SEEN.dust);
     fx.shed(dt, rate, mid.rx[2]!, mid.ry[2]!, 13, player.vx * 9, player.vy * 9);
     // Gliding, it comes off the wing tips and the hem instead and hangs behind her as a fine trail.
     if (!fresh)
@@ -495,8 +555,9 @@ export class VesperCharacter implements CharacterSkin {
     const low = player.hp <= 1 && player.hpMax > 1 ? 0.86 + 0.14 * Math.sin(clock * 5.2) : 1;
     const whole = (1 - rig.fadeK) * (1 - rig.reformK);
     const lit = (0.5 + 0.5 * hpK) * low * whole * rig.eyeLit;
-    view.glow = glow * lit * (1 - 0.6 * rig.hurtDim);
-    view.eyeLit = rig.eyeLit;
+    view.glow = glow * lit * (1 - 0.6 * rig.hurtDim) * seenAt(SEEN.glow);
+    this.seenDark = seenAt(SEEN.dark);
+    view.eyeLit = rig.eyeLit * seenAt(SEEN.eyes);
     // While nothing can hurt her she pulses softly (alpha, never a white flash); gone when she has faded.
     const safe = player.invuln > 0 && player.stagger <= 0 && player.faded <= 0 ? sat(player.invuln / 12) : 0;
     const pulse = 0.5 - 0.5 * Math.cos(clock * 6.283 * HURT.flickerHz);
@@ -510,7 +571,7 @@ export class VesperCharacter implements CharacterSkin {
     this.trails[3]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.2, clock);
     p.alphaK = bodyA;
     p.glowK = whole;
-    p.dimK = rig.hurtDim;
+    p.dimK = Math.max(rig.hurtDim, this.seenDark);
     p.outline = EDGE.hidden ? 0 : EDGE.px;
     p.outlineColor = EDGE.color;
     p.outlineAlpha = EDGE.alpha;
@@ -536,8 +597,8 @@ export class VesperCharacter implements CharacterSkin {
     const e = this.light;
     e.x = ex;
     e.y = ey;
-    e.radius = 300 + 70 * rig.wDash + 90 * this.flash + 50 * soar;
-    e.intensity = glow * 1.15 * lit;
+    e.radius = (300 + 70 * rig.wDash + 90 * this.flash + 50 * soar) * seenAt(SEEN.radius);
+    e.intensity = glow * 1.15 * lit * seenAt(SEEN.light);
   }
 
   /**
@@ -599,6 +660,9 @@ export class VesperCharacter implements CharacterSkin {
           antLift: r.antLift,
           eyeLit: r.eyeLit,
           soar: r.soar,
+          seen: self.seenK,
+          giveK: r.giveK,
+          emptyK: r.emptyK,
           offerX: vesperLink.offerX,
           offerY: vesperLink.offerY,
         };
@@ -708,9 +772,14 @@ export class VesperCharacter implements CharacterSkin {
     cue.lampKeyed = false;
     cue.away = false;
     cue.heartWait = false;
-    cue.hold = vesperLink.cine.hold;
-    cue.look = vesperLink.cine.look;
-    cue.shake = vesperLink.cine.shake;
+    const cc = this.cine;
+    cue.hold = cc.hold;
+    cue.look = cc.look;
+    cue.shake = cc.shake;
+    cue.fold = cc.fold;
+    cue.huddle = cc.huddle;
+    cue.tap = cc.tap;
+    cue.lookUp = cc.lookUp;
     if (!goal) return;
     // Lanterns, then the wayside lamps: one list, as the goal renderer keeps them (its `beads` are in this order).
     const nLant = sc.lanterns?.length ?? 0;
@@ -840,7 +909,7 @@ export class VesperCharacter implements CharacterSkin {
       window.clearTimeout(this.toastTimer);
       this.toast?.remove();
     }
-    vesperLink.live = false;
+    if (this.link) vesperLink.live = false;
     this.layer.removeChild(this.painter.mesh);
     this.painter.mesh.destroy();
     if (this.ctx.lights.get('ember') === this.light) this.ctx.lights.remove('ember');

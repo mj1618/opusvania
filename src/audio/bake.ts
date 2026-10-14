@@ -53,6 +53,18 @@ export const SOUNDS = {
   lampKindle: 1,
   lampRest: 1,
   lampRefuse: 2,
+  // Giving (milestone 2): her offer is glass, a creature's answer is breath (it has a mouth).
+  offerTone: 4,
+  glintNote: 4,
+  flutter: 4,
+  giftBowl: 2,
+  heartGift: 1,
+  exhale: 4,
+  settle: 2,
+  calmBreath: 4,
+  sniff: 4,
+  wingHum: 3,
+  glassSettle: 3,
 } as const;
 export type SoundId = keyof typeof SOUNDS;
 
@@ -67,6 +79,8 @@ export const SLOW: Partial<Record<SoundId, number>> = {
   lampNotice: 4,
   lampKindle: 4,
   lampRest: 4,
+  giftBowl: 4,
+  heartGift: 4,
 };
 
 /** The rate a sound is baked at, for a context running at `sr`. */
@@ -157,6 +171,35 @@ function bowl(
   modes(x, sr, list, 0, 0.007);
   mixInto(x, click(sr, r, len(sr, 0.05), 900, 0.006), 0.05);
   return shape(x, sr, arEnv(0.001, 0, 1e3, n / sr));
+}
+
+/**
+ * A creature's breath (only things with mouths breathe: rule 1): pink noise through two formants
+ * gliding from `a` to `b` (F1, F2 Hz), an attack of `att` s, `d` s long, the tail `tail` of it.
+ */
+function breath(
+  sr: number,
+  r: () => number,
+  d: number,
+  att: number,
+  a: [number, number],
+  b: [number, number],
+  tail: number,
+): Float32Array {
+  const n = len(sr, d);
+  const src = pink(n, r);
+  const k = (i: number) => Math.min(1, i / sr / (d * 0.8));
+  const f1 = biquad(src.slice(), sr, 'bandpass', (i) => exp(a[0], b[0], k(i)), 3);
+  const f2 = biquad(src.slice(), sr, 'bandpass', (i) => exp(a[1], b[1], k(i)), 5);
+  const air = biquad(src.slice(), sr, 'highpass', 1800);
+  normalize([f1]);
+  normalize([f2]);
+  normalize([air]);
+  mixInto(f1, f2, 0.45);
+  mixInto(f1, air, 0.12);
+  biquad(f1, sr, 'lowpass', 2600);
+  const tau = Math.max(0.05, d * tail * 0.4);
+  return shape(f1, sr, arEnv(att, d * (1 - tail) - att, tau, d));
 }
 
 const RECIPES: Record<SoundId, Recipe> = {
@@ -571,6 +614,104 @@ const RECIPES: Record<SoundId, Recipe> = {
     normalize([x]);
     mixInto(x, click(sr, r, n, 1500, 0.003), 0.2);
     return normalize([shape(x, sr, arEnv(0.001, 0, 1e3, 0.5))]);
+  },
+  /**
+   * A glint leaves her hands: a small warm glass tone at her light's pitch (A4), its onset rubbed out
+   * of noise (soft, never a click and never blown), a faint inharmonic partial, a short ring.
+   */
+  offerTone(sr, r) {
+    const d = 1.1;
+    const n = len(sr, d);
+    const f = PITCH.A4 * (1 + (r() - 0.5) * 0.003);
+    const x = rubbed(sr, r, n, f, swell(0.045, 0.32, d), { breath: 0.8, pure: 0.6, beat: 1.1 });
+    return normalize([x]);
+  },
+  /** One glint leaving her for a rest: a small struck glass bell (A5; pitched by the cue). */
+  glintNote(sr, r) {
+    const n = len(sr, 0.7);
+    const f = PITCH.A4 * 2 * (1 + (r() - 0.5) * 0.003);
+    const x = new Float32Array(n);
+    modes(
+      x,
+      sr,
+      [
+        { f, tau: 0.2, amp: 1, beat: 1.5, ph: r() },
+        { f: f * 2.76, tau: 0.06, amp: 0.18 },
+        { f: f * 5.4, tau: 0.02, amp: 0.05 },
+      ],
+      0,
+      0.003,
+    );
+    normalize([x]);
+    mixInto(x, click(sr, r, n, 2500, 0.0015), 0.04);
+    return normalize([shape(x, sr, arEnv(0.001, 0, 1e3, 0.7))]);
+  },
+  /** Open hands, nothing in them: a tiny dry flutter (three soft wing grains, no tone). */
+  flutter(sr, r) {
+    const n = len(sr, 0.16);
+    const out = new Float32Array(n);
+    for (let k = 0; k < 3; k++) {
+      const g = white(len(sr, 0.04), r);
+      biquad(g, sr, 'bandpass', 1300 + r() * 500, 1.1);
+      shape(g, sr, arEnv(0.004, 0.002, 0.008, 0.04));
+      normalize([g], 1 - k * 0.25);
+      mixInto(out, g, 1, at(sr, k * (0.032 + r() * 0.01)));
+    }
+    biquad(out, sr, 'lowpass', 3500);
+    return normalize([out]);
+  },
+  /** A lantern takes a glint toward its price: one bowl partial (A3; the cue climbs it toward D). */
+  giftBowl(sr, r) {
+    const n = len(sr, 3.2);
+    return normalize([bowl(sr, r, n, PITCH.A3 * (1 + (r() - 0.5) * 0.003), 1, 0.45)]);
+  },
+  /** The heart takes a glint: deeper, D2 and D3 struck together, long. */
+  heartGift(sr, r) {
+    const n = len(sr, 5);
+    const x = bowl(sr, r, n, PITCH.D3 / 2, 2, 0.8);
+    const y = bowl(sr, r, n, PITCH.D3, 1, 0.6);
+    normalize([x]);
+    normalize([y]);
+    return normalize([mixInto(x, y, 0.45)]);
+  },
+  /** A burrback takes a glint: a low exhale through the vowel of an open mouth (aa closing to oo). */
+  exhale(sr, r) {
+    return normalize([breath(sr, r, 0.95, 0.12, [560, 1050], [380, 820], 0.25)]);
+  },
+  /** Its ram was cut off: a long settling breath, sinking. */
+  settle(sr, r) {
+    return normalize([breath(sr, r, 2.4, 0.18, [600, 1100], [320, 760], 0.7)]);
+  },
+  /** Calmed, it breathes slower and slower (the cue fades it): a soft low out-breath. */
+  calmBreath(sr, r) {
+    return normalize([breath(sr, r, 1.6, 0.45, [420, 900], [330, 780], 0.45)]);
+  },
+  /** A burrback notices her: a short in-breath, rising, cut soft. */
+  sniff(sr, r) {
+    const d = 0.32;
+    const n = len(sr, d);
+    const x = pink(n, r);
+    biquad(x, sr, 'bandpass', (i) => exp(700, 1500 + r() * 200, i / sr / d), 2.2);
+    biquad(x, sr, 'lowpass', 3000);
+    shape(x, sr, (t) => (t < d ? Math.sin((Math.PI * t) / d) ** 0.7 * (t / d) : 0));
+    return normalize([shape(x, sr, arEnv(0.01, 0, 1e3, d))]);
+  },
+  /** A lampwing notices her: its lamp-hum swells toward her light (A5), with its fast wing tremolo. */
+  wingHum(sr, r) {
+    const d = 0.9;
+    const n = len(sr, d);
+    const f = PITCH.A4 * 2 * (1 + (r() - 0.5) * 0.004);
+    const x = rubbed(sr, r, n, f, swell(0.42, 0.18, d), { breath: 0.6, pure: 0.6, beat: 2 });
+    const rate = 38 + r() * 6;
+    shape(x, sr, (t) => 1 - 0.25 * (0.5 + 0.5 * Math.sin(2 * Math.PI * rate * t)));
+    return normalize([x]);
+  },
+  /** A lampwing takes a glint: its glass tone opens and lets go, low and soft. */
+  glassSettle(sr, r) {
+    const n = len(sr, 1.6);
+    const f = PITCH.E4 * 2 * (1 + (r() - 0.5) * 0.004);
+    const x = rubbed(sr, r, n, f, swell(0.08, 0.4, 1.6), { breath: 0.7, pure: 0.5, beat: 0.8 });
+    return normalize([x]);
   },
 };
 

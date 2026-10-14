@@ -86,7 +86,7 @@ Every staged fight was written with an empty wallet; creatures would not see her
 `LIGHT` (6 = level 2, the old ranges) and `litSim` / `carrying`: the fight files import `litSim as newSim`. Contact
 tests that start empty give her 2 (under 3: a fade drops nothing).
 
-## What render / HUD can read (not drawn yet)
+## What render / HUD can read (drawn: giving-render.md)
 - Player: `seen`, `seenLevel`, `offering` (frames left of the hold-out pose, from `offerPoseFrames` 16), `offerSeq`,
   `giftTo` / `giftIndex` / `giftTimer` / `giftX, giftY` (the glint in flight).
 - Enemy: `aware`, `gift`, `gifts`, `calm`. Lantern: `given`. Goal: `heartGiven`, `ending.gifted`, `ending.calmed`.

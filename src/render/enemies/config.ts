@@ -458,14 +458,22 @@ export const BURR = {
     dustEvery: 0.05,
   },
   /**
-   * It has noticed her (render only: the sim's creature never chases): she is within `reach` px on
-   * about its level (`level` px) and lit. Burrs up (`bristle`, with a kick), eyes on her and wide,
-   * lights up by `light` and a flash of `flash` that fades at `fade` /s. Lets go `slack` px further out.
+   * Unbothered (memory/giving-render.md): she passes within `px` (and `level` px of its ground) and it
+   * has not seen her: lids `lids` shut, the breath goes `breath` of the way to the calm one, a sleepy
+   * mote every `mote` s (index.ts). In at `in` /s, out at `out` /s.
+   */
+  doze: { px: 340, level: 150, lids: 0.62, breath: 0.75, mote: 1.5, in: 2.5, out: 6 },
+  /**
+   * It has noticed her: the sim's `EnemyState.aware` (memory/giving.md: it sees the light she
+   * carries, from farther the more she carries; never while she is empty-handed). Burrs up
+   * (`bristle`, with a kick), eyes on her and wide, lights up by `light` and a flash of `flash` that
+   * fades at `fade` /s; standing, it turns to her side (render only).
    */
   notice: {
-    reach: 420,
-    slack: 70,
-    level: 150,
+    /** The moment it sees her: its eye halos flare x(1 + `eyeFlare`) on the flash (and widen by `eyeWide`), then stay x(1 + `eyeKeep`). */
+    eyeFlare: 2.4,
+    eyeWide: 0.35,
+    eyeKeep: 0.6,
     bristle: 0.95,
     kick: 26,
     light: 1.6,
@@ -653,4 +661,10 @@ export const LAMP = {
    * the lamp dipped by `dim`), easing off at `ease` /s. A calm from a kindling far off is `soft` of that.
    */
   shy: { kick: 95, fold: 0.5, lean: 0.4, dim: 0.65, ease: 3.2, soft: 0.35, near: 260 },
+  /**
+   * Giving (memory/giving-render.md). Seeing her (`enemyAware`): the lamp flares x(1 + `spot`), halo
+   * x(1 + `spotHalo`), fading over `spotFor` s, and the body is kicked toward her (`lean` of the shy kick).
+   * Given a glint: a full shy away from her and the lamp down by `dim`, coming back over `dimFor` s.
+   */
+  gift: { spot: 1.8, spotHalo: 1.4, spotFor: 0.7, lean: 0.35, dim: 0.85, dimFor: 3 },
 } as const;

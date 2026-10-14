@@ -22,7 +22,7 @@ import type { PointLight } from '../lights';
 import { fxDebug } from '../scene/lib/fx-debug';
 import { renderHeroMatte, renderPlayfieldMask } from '../scene/lib/fx-mask';
 import { zoneColor, zoneMix, zoneWeights } from '../scene/lib/fx-zones';
-import { GOAL_LIGHTS, MAX_LIGHTS, POST, ZONE_GRADE } from './config';
+import { GOAL_LIGHTS, MAX_LIGHTS, POST, POST_CINE, ZONE_GRADE } from './config';
 import { PostFilter } from './pipeline';
 
 export { POST } from './config';
@@ -143,6 +143,19 @@ export class PostStage {
     u.uGrain[1] = renderClock % 64;
     u.uGrain[2] = VIEW_W / VIEW_H;
     u.uGrain[3] = grade.midLift;
+    // Staged looks (the prologue): frost pales and cools the night; dim takes the wood's light down.
+    const fr = POST_CINE.frost;
+    if (fr > 0) {
+      u.uVignetteTint[3] *= 1 - 0.45 * fr;
+      u.uHighlight[3] *= 1 - 0.85 * fr;
+      for (let i = 0; i < 3; i++) {
+        const cold = [0.78, 0.88, 1][i] as number;
+        u.uHighlight[i] = (u.uHighlight[i] as number) + (cold - (u.uHighlight[i] as number)) * fr;
+      }
+      u.uShadow[3] = (u.uShadow[3] as number) * (1 + 0.6 * fr);
+      u.uTone[0] = (u.uTone[0] as number) * (1 + 0.06 * fr);
+    }
+    if (POST_CINE.dim > 0) u.uTone[0] = (u.uTone[0] as number) * (1 - 0.5 * POST_CINE.dim);
 
     // The playfield mask for this frame (the air layer's front shafts read it too).
     // It is soft and low-res, so every other frame is enough, unless the camera jumped.

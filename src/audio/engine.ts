@@ -8,6 +8,7 @@ import { AudioGraph } from './graph';
 import type { AudioCam, Cue, Layers } from './router';
 import { AUDIO } from './tuning';
 import { BowlVoice } from './voices/bowl';
+import { ChordVoice } from './voices/chord';
 import { ForestVoice } from './voices/forest';
 import { HushVoice } from './voices/hush';
 import { OneShots } from './voices/oneshots';
@@ -28,6 +29,7 @@ export class AudioEngine {
       new WingsVoice(this.graph, baked),
       new BowlVoice(this.graph, baked),
       new ForestVoice(this.graph, baked),
+      new ChordVoice(this.graph, baked),
     ];
   }
 

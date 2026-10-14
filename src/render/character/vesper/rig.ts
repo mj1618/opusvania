@@ -798,6 +798,18 @@ const HOLD = pose([
   1, 33.2, 0.04, 0.08, 0.16, 7.4, 0.1, 0.2, -1.6, 0, 0.1, 9.2, 3.2, 2.6, -7.8, 0.04, 0.85, 0.45, 0.62,
 ]);
 /** ... and then looking past it, out ahead: chin up, head turned on, the hand lowered a little. */
+/**
+ * Giving (memory/giving.md, the `offer` action): both forelegs held out and a little up, palms open,
+ * leaning in over them, head inclined to what she gives to. A gesture of giving, never a strike:
+ * the elbows stay soft and the hands stay close (17 px arms). Hands are aimed at the target in `actPose`.
+ */
+const OFFER = pose([
+  5.2, 31, 0.3, 0.16, 0.2, 10.5, 0.1, 0.35, -4, 0, 0.3, 16.5, 3.4, 15.5, 2.2, 0.05, 0.92, 0.35, 0.85,
+]);
+/** ... and nothing in her hands: they open, a little apart and low, and she looks down into them. */
+const OPEN_HANDS = pose([
+  0.4, 31.6, 0.05, 0.2, 0.4, 7.4, 0.1, 0.2, -1.8, 0, 0.05, 9.5, -2.6, 6.5, -4.2, 0.04, 0.72, 0.75, 0.8,
+]);
 const PAST = pose([
   1, 33.6, 0.02, -0.04, -0.16, 7.4, 0.1, 0.2, -1.6, 0, 0.1, 8.4, 0.6, 2.6, -7.8, 0.04, 1, -0.25, 1.15,
 ]);
@@ -858,6 +870,13 @@ export const ACT = {
   waitPx: 84,
   /** The offering: her hands stay out this long after the last batch has left them. */
   offerHold: 0.3,
+  /**
+   * The `offer` action (memory/giving.md): hands out in `out` s (the glint leaves on the press and lands
+   * 10 frames later), the whole gesture `len` s, letting go over the last `back`; `none` (nothing in
+   * reach) is a shorter one; `empty`: the reach lets go by [0..1], the look into her open hands is
+   * in by [1] and gone over [2..3]. `fold`: how far her wings fold forward round her while she gives.
+   */
+  offer: { out: 0.07, len: 0.7, back: 0.32, none: 0.42, empty: [0.16, 0.34, 0.85, 1.15], fold: 1.1 },
   /** A tier of the grove wakes: the look toward it. */
   grove: 1.5,
 } as const;
@@ -911,6 +930,11 @@ export interface Cue {
   look: number;
   /** 0..1 she shakes out her wings like a cape (the prologue, out of her cocoon). */
   shake: number;
+  /** The rest of the prologue's cues (link.ts `CineCues`): a wing folded over, huddled in the cold, a wingtip tap, a look up. */
+  fold: number;
+  huddle: number;
+  tap: number;
+  lookUp: number;
 }
 
 /** Point masses for the centre of mass: joint, weight. */
@@ -1059,6 +1083,10 @@ export class Rig {
     hold: 0,
     look: 0,
     shake: 0,
+    fold: 0,
+    huddle: 0,
+    tap: 0,
+    lookUp: 0,
   };
   /** Acting weights 0..1: kindling, sat resting, hands to a lit lantern, the hand on the sleeping heart, the ending. */
   kindleW = 0;
@@ -1116,6 +1144,14 @@ export class Rig {
   private liftT = 9;
   private wasKindling = false;
   private offerT = 9;
+  /** The `offer` action (memory/giving.md): seconds since she held a glint out, where it went (px from her centre), and why nothing went. */
+  private giveT = 9;
+  private giveDx = 0;
+  private giveDy = 0;
+  private giveMiss: '' | 'empty' | 'none' = '';
+  /** 0..1: how far her hands are out giving (the glint leaves from the near one); 0..1 the empty-handed beat. */
+  giveK = 0;
+  emptyK = 0;
   private readonly groveT = [9, 9, 9];
   private awayW = 0;
   private awayHold = 0;
@@ -1584,6 +1620,18 @@ export class Rig {
         case 'heartOffer':
           this.offerT = 0;
           break;
+        case 'offer':
+          this.giveT = 0;
+          this.giveDx = e.tx - e.x;
+          this.giveDy = e.ty - e.y;
+          this.giveMiss = '';
+          break;
+        case 'offerMiss':
+          this.giveT = 0;
+          this.giveDx = p.facing * 40;
+          this.giveDy = 0;
+          this.giveMiss = e.reason;
+          break;
         case 'groveWake':
           this.groveT[e.part === 'flowers' ? 0 : e.part === 'paths' ? 1 : 2] = 0;
           break;
@@ -1627,7 +1675,8 @@ export class Rig {
       this.guard = this.cue.carry ? 1 : 0;
       this.reachW = this.waitW = this.giveW = this.waitOpen = this.waitT = this.awayW = this.awayHold = 0;
       this.taking = false;
-      this.takeT = this.recvT = this.showT = this.keyRefT = this.liftT = this.offerT = 9;
+      this.takeT = this.recvT = this.showT = this.keyRefT = this.liftT = this.offerT = this.giveT = 9;
+      this.giveK = this.emptyK = 0;
       this.groveT.fill(9);
       this.wasKindling = this.cue.kindle >= 0;
       this.yaw.snap(dirT);
@@ -1723,6 +1772,7 @@ export class Rig {
     this.keyRefT += dt;
     this.liftT += dt;
     this.offerT += dt;
+    this.giveT += dt;
     for (let i = 0; i < 3; i++) this.groveT[i]! += dt;
     if (this.taking && this.takeT > this.takeLen + 0.5) this.taking = false;
     {
@@ -3141,6 +3191,76 @@ export class Rig {
       lit -= 0.12 * look * aw;
     }
 
+    // --- Giving (the `offer` action, memory/giving.md): her forelegs go out to what she gives to, open,
+    // she leans in over them and her wings fold forward round her; then they come back. Standing it is
+    // the whole body; running, in the air, only the hands (the run or the jump keeps the rest).
+    // Empty-handed (`offerMiss` empty): the hands go out, open on nothing, and she looks down into them.
+    {
+      const t = this.giveT;
+      const miss = this.giveMiss;
+      const G = ACT.offer;
+      const len = miss === 'empty' ? G.empty[3] : miss === 'none' ? G.none : G.len;
+      let g = 0;
+      let open = 0;
+      if (t < len) {
+        if (miss === 'empty') {
+          g = smoothstep(0, G.out, t) * (1 - smoothstep(G.empty[0], G.empty[1], t));
+          open = smoothstep(G.empty[0] * 0.7, G.empty[1], t) * (1 - smoothstep(G.empty[2], G.empty[3], t));
+        } else g = smoothstep(0, G.out, t) * (1 - smoothstep(len - G.back, len, t));
+      }
+      // Only what can carry it: not on the bark, not in a blow, not through a cut.
+      const can = (1 - this.wWall) * (1 - sat(this.hurtK)) * (1 - sat(this.slashW));
+      g *= can;
+      open *= can;
+      this.giveK = g;
+      this.emptyK = open;
+      if (g > 1e-3) {
+        // Aimed: up to a glass that hangs high, down to a creature on the ground.
+        const dx = Math.max(10, Math.abs(this.giveDx));
+        const ang = miss ? 0 : clamp(Math.atan2(-this.giveDy, dx), -0.7, 0.95);
+        const su = Math.sin(ang);
+        const body = g * aw;
+        const hands = g * (1 - aw);
+        if (body > 1e-3) {
+          this.mix(out, OFFER, body, nearA);
+          out[NU]! += 9 * su * body;
+          out[FU]! += 8 * su * body;
+          out[NF]! -= 3 * Math.abs(su) * body;
+          out[HT]! -= 0.45 * su * body;
+          out[LOOKY]! -= 0.9 * su * body;
+          out[PU]! += 0.6 * Math.max(0, su) * body;
+        }
+        if (hands > 1e-3) {
+          // Over a run or a jump: only the forelegs, held out ahead.
+          out[NF] = lerp(out[NF]!, 12 - 3 * Math.abs(su), hands);
+          out[NU] = lerp(out[NU]!, 2.5 + 9 * su, hands);
+          out[FF] = lerp(out[FF]!, 10, hands);
+          out[FU] = lerp(out[FU]!, 1 + 8 * su, hands);
+          out[HT]! -= 0.3 * su * hands;
+        }
+        cloak -= G.fold * g;
+        ant -= 18 * g;
+        antC -= 0.08 * g;
+        lit += 0.06 * g * (miss ? 0 : 1);
+        gzx += 0.85 * g;
+        gzy += clamp(this.giveDy / 70, -1, 1) * 0.8 * g;
+        gzw += g;
+        quick = Math.max(quick, g);
+      }
+      if (open > 1e-3) {
+        const ow = open * Math.max(aw, 0.35);
+        this.mix(out, OPEN_HANDS, ow, nearA);
+        out[PU]! -= 0.9 * ow;
+        ant += 34 * open;
+        antC += 0.1 * open;
+        cloak -= 0.25 * open;
+        lit -= 0.1 * open;
+        gzx += 0.5 * open;
+        gzy += 0.9 * open;
+        gzw += open;
+      }
+    }
+
     // --- Resting: sat on her heels under the lantern, wings round her; the light fills her and she lifts her face to it.
     const rw = this.restW * aw;
     if (this.restW < 0.02) this.rested = false;
@@ -3388,6 +3508,49 @@ export class Rig {
       }
     }
 
+    // --- The prologue: newly out, down in the frost: sat low, head bowed, wings stuck shut round her, shivering, eyes dim.
+    const hu = Math.min(1, cue.huddle) * aw;
+    if (hu > 1e-3) {
+      this.mix(out, REST, hu, nearA);
+      out[PU]! += 0.6 * hu * Math.sin(clock * 31);
+      cloak -= 1.1 * hu;
+      shiver = Math.max(shiver, 0.8 * hu);
+      lit -= 0.55 * hu;
+      ant += 12 * hu;
+    }
+    // --- A wing folded over what is beside her (another moth, a case, a held glint): leaning to it,
+    // the near arm laid over, the wings drawn round like a blanket, a slow shiver.
+    const fo = Math.min(1, cue.fold) * aw;
+    if (fo > 1e-3) {
+      this.mix(out, LISTEN, fo, nearA);
+      out[LEAN]! += 0.12 * fo;
+      out[PU]! += 0.4 * fo * Math.sin(clock * 27);
+      cloak -= 1.3 * fo;
+      shiver = Math.max(shiver, 0.55 * fo);
+      gzx += 0.6 * fo;
+      gzy += 0.5 * fo;
+      gzw += fo;
+    }
+    // --- The wingtip tap: the near hand out to touch, quick.
+    const tp = Math.min(1, cue.tap) * aw;
+    if (tp > 1e-3) {
+      out[NF]! += 7 * tp;
+      out[NU]! += 5 * tp;
+      cloak += 0.6 * tp;
+      gzx += 0.8 * tp;
+      gzw += tp;
+    }
+    // --- A look up, high (the dance).
+    const lu = Math.min(1, cue.lookUp) * aw;
+    if (lu > 1e-3) {
+      out[HT]! -= 0.42 * lu;
+      out[CURL]! -= 0.05 * lu;
+      ant -= 14 * lu;
+      gzx += 0.2 * lu;
+      gzy -= 1.1 * lu;
+      gzw += lu;
+    }
+
     // --- The prologue: out of her cocoon, she shakes her wings out like a cape (vesperLink.cine).
     const sh = Math.min(1, cue.shake) * aw;
     if (sh > 1e-3) {
@@ -3521,7 +3684,14 @@ export class Rig {
     }
     // The light leaves her open near hand while she kindles and while she gives to the heart, and
     // the ember arrives in it.
-    this.offerK = Math.max(kw, rw2, 0.85 * this.giveW * ew, Math.min(1, cue.hold) * aw);
+    this.offerK = Math.max(
+      kw,
+      rw2,
+      0.85 * this.giveW * ew,
+      Math.min(1, cue.hold) * aw,
+      this.giveK,
+      this.emptyK,
+    );
     this.offerSide = nearA >= 0.5 ? 0 : 1;
   }
 

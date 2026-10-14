@@ -149,3 +149,32 @@ test('?manual boots straight into the Grove (no prologue)', async ({ page }) => 
   await boot(page);
   expect(await page.evaluate(() => window.__game.prologue)).toBeNull();
 });
+
+test('sound is muted by default: no AudioContext until M, and the game plays the same either way', async ({
+  page,
+}) => {
+  const errors = await boot(page);
+  const play = () =>
+    page.evaluate(() => {
+      const g = window.__game;
+      g.load();
+      g.input('R30 R+J20 R10 .2 J20 R+X3 R30 .20');
+      g.step(110);
+      return { hash: g.hash(), cues: g.audio?.cues(50).map((c) => c.sound) ?? [] };
+    });
+  const muted = await page.evaluate(() => window.__game.audio?.state());
+  expect(muted).toMatchObject({ muted: true, context: 'none', ready: false });
+  const quiet = await play();
+  // The router still runs muted (cues for tests), but nothing exists to play them.
+  expect(quiet.cues).toContain('wing');
+  expect(await page.evaluate(() => window.__game.audio?.state().context)).toBe('none');
+  await page.keyboard.press('KeyM');
+  const on = await page.evaluate(() => window.__game.audio?.state());
+  expect(on?.muted).toBe(false);
+  expect(on?.context).not.toBe('none');
+  expect((await play()).hash).toBe(quiet.hash);
+  await page.keyboard.press('KeyM');
+  expect(await page.evaluate(() => window.__game.audio?.state().muted)).toBe(true);
+  expect(await page.locator('#sound-key').textContent()).toBe('M sound');
+  expect(errors).toEqual([]);
+});

@@ -132,7 +132,7 @@ export class AudioDirector {
 
   private onStep(events: readonly SimEvent[]): void {
     const g = this.game;
-    const snap = snapOf(g.state, g.scene, g.tuning.goal.channelFrames);
+    const snap = snapOf(g.state, g.scene, g.tuning.goal.channelFrames, g.tuning.giving.giftCalmFrames);
     // The prologue plays another version of the scene, then hands over the whole Grove.
     this.conductor.ctx.scene = g.scene;
     // A restart begins the frame count again.

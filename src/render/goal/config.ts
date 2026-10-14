@@ -154,6 +154,8 @@ export const GOAL = {
     /** A mark is a small hollow flame: its rim, and what fills it. Warm, never the glints' pale blue. */
     mark: 0xd99a55,
     fill: 0xf09a3a,
+    /** A glint given into it by hand (memory/giving-render.md): its price stands this long (s) and that flame lights for good. */
+    giftHold: 2.4,
   },
   /**
    * The ember, once it has left its bud (ember.ts; where it hangs: `GLINTS.ember`).

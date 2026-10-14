@@ -16,7 +16,7 @@ import { fern, MOUTH, mixHex, WARM } from '../world/kit';
 import { VIEW_H, VIEW_W } from '../world/layer';
 import { blob, glow, vgrad } from '../world/paint';
 import type { Pt } from '../world/tissue';
-import { COCOONS } from './script';
+import { OUTSIDE } from './script';
 import { window01 } from './track';
 
 const HORIZON = 700;
@@ -293,7 +293,7 @@ export function buildOutside(c: Composer): (t: number) => void {
   }
 
   return (t: number) => {
-    const [o0, o1] = COCOONS.outside;
+    const [o0, o1] = OUTSIDE.span;
     const u = window01(t, o0, o1);
     // A slow drift right and in: her look going on out.
     view.position.set(-50 * u, -10 * u);

@@ -37,7 +37,7 @@ export const AUDIO = {
   /** Master gain (dB). The whole mix sits near -20 LUFS integrated with this. */
   master: 10,
   /** Bus volumes (dB): Tweakpane and `__game.audio.volume(bus, v)`. */
-  bus: { world: 0, hush: 0, hero: 0, lantern: 0 },
+  bus: { world: 0, hush: 0, hero: 0, lantern: 0, creatures: 0 },
   /** Seconds the scheduler works ahead of the context clock. */
   lookahead: 0.03,
   /** Continuous layers are re-aimed at most this often (s) and glide there with this time constant. */
@@ -132,6 +132,36 @@ export const AUDIO = {
     humPx: 520,
     /** Lamps: smaller, higher bowls; their level relative to a lantern's (dB). */
     lampTrim: -4,
+  },
+  /**
+   * Giving (milestone 2, memory/giving.md): carrying light is risky (a creature's in-breath, the chord of
+   * what she carries), giving is gentle (glass leaving her, a breath answering). Peaks (dB) unless RMS.
+   */
+  giving: {
+    offerDb: -27,
+    /** `offerMiss`: the dry flutter of empty hands (nothing in reach: a little softer still). */
+    missDb: -37,
+    /** A glint flying back to her (`giftReturn`). */
+    returnDb: -32,
+    /** A burrback's exhale as the glint reaches it; the long settling breath when it cut off a ram. */
+    exhaleDb: -29,
+    settleDb: -27,
+    /** Calm: breaths every `calmS[0]` s at first slowing to `calmS[1]` (the Hush's 9 s), fading out with the gift. */
+    calmDb: -32,
+    calmS: [2.4, 9] as [number, number],
+    /** A lampwing's glass letting go as it takes the glint. */
+    glassDb: -31,
+    /** A lantern / lamp taking a glint toward its price; the heart's deeper one. */
+    bowlDb: -34,
+    heartDb: -26,
+    /** Becoming aware of her: a burrback's in-breath, a lampwing's hum swelling. */
+    sniffDb: -31,
+    humDb: -33,
+    /** Rest paid in glints: one small falling note per glint, this far apart (s). */
+    noteDb: -31,
+    noteGapS: 0.13,
+    /** The chord of what she carries (RMS dB) at seen level 1 and at 4; gone at 0. */
+    chordDb: [-50, -41] as [number, number],
   },
   /** World sounds fall off with distance from the camera: half level at this many px. */
   halfPx: 900,

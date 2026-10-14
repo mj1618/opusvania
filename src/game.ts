@@ -29,7 +29,7 @@ export class Game {
 
   constructor(
     readonly tuning: Tuning,
-    readonly scene: Scene,
+    public scene: Scene,
     readonly seed: number,
     private liveInput: () => InputFrame = () => 0,
   ) {
@@ -68,6 +68,15 @@ export class Game {
     this.state = createState(this.seed, this.tuning, this.scene, events);
     this.prev = cloneState(this.state);
     for (const fn of this.afterStep) fn(events);
+  }
+
+  /**
+   * Plays another version of the scene from now on (the prologue runs the Grove without its
+   * creatures and glints, then hands over the whole Grove): a fresh state in it, at its spawn.
+   */
+  useScene(scene: Scene): void {
+    this.scene = scene;
+    this.reset();
   }
 
   /** Puts the player at rest with its feet centre at (x, y) in sim px. */

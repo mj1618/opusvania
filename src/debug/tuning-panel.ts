@@ -1,4 +1,5 @@
 import { Pane } from 'tweakpane';
+import { AUDIO } from '../audio/tuning';
 import { POST } from '../render/post/config';
 import { applyShape, assignTuning, cloneTuning, defaultTuning, type Tuning } from '../sim/tuning';
 
@@ -56,6 +57,14 @@ export class TuningPanel {
       assignTuning(tuning, cloneTuning(defaultTuning));
       this.pane.refresh();
     });
+  }
+
+  /** Sound: master and per-bus volume (dB), live. `onChange` re-reads them into the mix. */
+  addAudio(onChange: () => void): void {
+    const f = this.pane.addFolder({ title: 'audio (dB)', expanded: false });
+    f.addBinding(AUDIO, 'master');
+    for (const k of Object.keys(AUDIO.bus)) f.addBinding(AUDIO.bus, k as keyof typeof AUDIO.bus);
+    f.on('change', onChange);
   }
 
   /** Re-reads the tuning object (after it was changed from code). */

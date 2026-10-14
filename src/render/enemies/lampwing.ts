@@ -87,6 +87,11 @@ export class LampRig {
   /** Antennae lag behind the body, px. */
   readonly lagX = new Spring(0, 16, 0.4);
   readonly lagY = new Spring(0, 16, 0.4);
+  /**
+   * A staged beat (the prologue: render/prologue), or null: `lit` 0..1 scales its lamp (0 = dark:
+   * hanging unseen until the Hush looks through it). Never set by the game.
+   */
+  cine: { lit: number } | null = null;
   /** 0..1 weights, eased. */
   keen = 0;
   /** The tell: 1 while curious, easing off after. */
@@ -123,6 +128,10 @@ export class LampRig {
   private simFlap = 0;
   /** Starting back from a lantern's light: 1 at the start, easing off; and the render-only offset it is thrown by, px. */
   flinch = 0;
+  /** It has just seen her (`enemyAware`): the lamp flares and swings onto her, 1 -> 0. */
+  spot = 0;
+  /** She gave it a glint (`enemyGiveUp` cause `gift`): the lamp turned from her and down, 1 -> 0 over `LAMP.gift.dimFor` s. */
+  giftDim = 0;
   private awayX = 0;
   readonly offX = new Spring(0, 8, 0.55);
   readonly offY = new Spring(0, 8, 0.55);
@@ -193,6 +202,8 @@ export class LampRig {
     this.flap -= Math.floor(this.flap);
     this.swell += LAMP.calm.rate * dt;
     this.flinch += (0 - this.flinch) * approach(LAMP.shy.ease, dt);
+    this.spot = Math.max(0, this.spot - dt / LAMP.gift.spotFor);
+    this.giftDim = Math.max(0, this.giftDim - dt / LAMP.gift.dimFor);
     this.offX.step(0, dt);
     this.offY.step(0, dt);
     this.mf = Math.max(0, e.modeFrames + (e.hitstop > 0 ? 0 : a - 1));
@@ -793,11 +804,13 @@ export function drawLampwing(
   br *= tellP;
   if (rig.tumble > 0.01 && !dead) br *= 1 - rig.tumble * (0.55 + 0.35 * noise1(clock * 17 + ph, 6));
   br *= 1 - L.shy.dim * rig.flinch;
+  br *= (1 + L.gift.spot * rig.spot) * (1 - L.gift.dim * Math.min(1, rig.giftDim * 1.6));
   // Hanging open, the lamp is nearly down: it has nothing left for a moment.
   br *= 1 - (1 - Dv.openDim) * rig.open * (1 - calm);
   if (e.hp <= 1 && !dead) br *= 0.6 + 0.4 * (noise1(clock * 12 + ph, 7) > -0.2 ? 1 : 0.3);
   if (dead) br *= sat(1 - t / 12) * (0.5 + 0.5 * noise1(clock * 16 + ph, 8));
   br *= 1 - toneDark * 0.7;
+  if (rig.cine) br *= rig.cine.lit;
   if (br > 0.02) {
     const lwx = bx(lampX, lampY);
     const lwy = by(lampX, lampY);
@@ -837,7 +850,12 @@ export function drawLampwing(
     const r = Lm.r * (1 + 0.55 * rig.flare * (0.7 + 0.3 * tellP)) * (1 + (Lm.keenR - 1) * hunt);
     SH_LAMP.alpha = Lm.core * sat(br);
     p.ellipse(bx(lampX, lampY), by(lampX, lampY), r * 0.8, r, rot, SH_LAMP, 10);
-    const hr = r * Lm.halo * (1 + 1.1 * rig.flare * (0.6 + 0.4 * tellP)) * (1 + (L.calm.halo - 1) * calm);
+    const hr =
+      r *
+      Lm.halo *
+      (1 + 1.1 * rig.flare * (0.6 + 0.4 * tellP)) *
+      (1 + (L.calm.halo - 1) * calm) *
+      (1 + L.gift.spotHalo * rig.spot);
     p.glow(bx(lampX, lampY), by(lampX, lampY), hr, W.lamp as unknown as RGB, Lm.glow * br, hr, 0, 12);
   }
   p.alphaK = alphaWas;
