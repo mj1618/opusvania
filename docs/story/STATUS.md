@@ -7,10 +7,11 @@ is central and discovered in play, mythic on the surface and technical underneat
 
 | | |
 |---|---|
-| Latest | round 19 (fewer kinds of light, reader confusions fixed, every beat drawable) |
-| Last review | round 19: AI test PASS (9) · GREENLIGHT WITH NOTES · at the bar: **no, narrowly** (the player's own complicity: burning root walls kills sleepers before the reveal, and nothing marks it) · rel 8 / clarity 7 / idea 9 / world 8 / mechanics 9 / antagonist 9 / ending 8 / original 7 / Grove 9 / balance 8 |
+| Latest | round 20 (complicity reversal landed, one visibility rule, Act III gaps closed) |
+| Last review | round 20: AI test PASS (9) · GREENLIGHT WITH NOTES · at the bar: **no, narrowly** (Sorrel's exit on Night 5 doesn't read; the siblings need more small moments together) · rel 7 / clarity 8 / idea 9 / world 8 / mechanics 9 / antagonist 9 / ending 8 / original 8 / Grove 9 / balance 8 |
+| Readers | all three would buy and finish it (yes / yes / yes, probably); all three remember Dun lying across the lantern door and snapping her leash |
 | Locked | [locked.md](locked.md): spine, cast, midpoint, endings, the three big images, title |
-| Now working on | round 20: land the complicity reversal, one consistent visibility rule, Act III gaps, a shorter epilogue, a stronger forest; three readers (lore-hunter, Ori fan, casual) |
+| Now working on | round 21: Sorrel and Umber's relationship (small moments together; his Night 5 exit readable: he stays with his sealed partner), the forest acting once per act, the Spin ending's physics |
 
 **Done when** two rounds in a row: the AI test passes, the director greenlights it and says it stands next to Ori / Hollow Knight / Nine Sols, all three readers would finish the game, and no confusion is shared by two readers. Then the prologue gets built in the Grove.
 
