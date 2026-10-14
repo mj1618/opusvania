@@ -18,6 +18,8 @@ export const GIVING = {
     trail: 0.42,
     width: 2.4,
     tailLife: 0.16,
+    /** A flight shorter than this many frames (a lampwing after her: 3) is drawn as a bright streak from her hands. */
+    streakAt: 8,
   },
   /**
    * It lands: a bloom that swells and dies (`bloom` px, `bloomLife` s, `bloomE`), and `sparks` motes
@@ -69,6 +71,27 @@ export const GIVING = {
    * the far side, drifting with her (`lag`). So a screenshot shows about how much she has.
    */
   carried: { k: 1.6, max: 11, r: 24, spread: 12, speed: 1.05, size: 4.2, e: 0.75, lift: 18, lag: 9 },
+  /**
+   * A pour (held V into a lantern, lamp or heart: one glint every `offerStreamFrames` 8): once two have
+   * gone within `gap` s of each other it is drawn as one ribbon from her hands to the glass (`ribbon`
+   * energy, `width` px) with `beads` glints running down it at `speed` arcs/s (`size`, `bead`), a steady
+   * glow at the glass (`glass` px, `glassE`) and at her hands; in at `in` /s, out at `out` /s after the last.
+   */
+  pour: {
+    gap: 0.3,
+    ribbon: 0.55,
+    width: 2.8,
+    beads: 5,
+    speed: 2.2,
+    size: 5,
+    bead: 0.85,
+    glass: 26,
+    glassE: 0.35,
+    hands: 14,
+    handsE: 0.3,
+    in: 10,
+    out: 5,
+  },
   /** The offer: a warm light on her face from the glint in her hands before it leaves (`size` px, `e`, `life` s). */
   face: { size: 18, e: 0.42, life: 0.3 },
   /** Empty hands: a few dull specks fall from them (nothing in them). */

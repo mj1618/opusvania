@@ -65,6 +65,21 @@ Rules: giving.md. First pass 2026-10-14. Sheets: `shots/giving/` (`burr-sheet.pn
   per step, offline) + ffmpeg: `tools/clip.ts` cannot change the wallet mid-script. Without the `load()` before
   part B, burr-shaft had wandered and rammed her.
 
+## Round 2 sim (ab4429a) follow-ups
+- The flight is `player.giftFrames` (3 to a lampwing after her, 8 to a light, 10 to a creature), not
+  `offerFlightFrames`; under `flight.streakAt` (8) frames the trail covers the whole arc from her hands: a streak.
+- **Pour** (`GIVING.pour`): two offers to the same light / heart within 0.3 s = held V. Drawn as one ribbon hand ->
+  glass with 5 beads running down it, a steady glow at the glass and her hands; the per-glint landing shrinks to
+  half and the crown fills flame by flame (given flames deeper amber). A lamp of 8 takes ~1.1 s. `shots/giving/pour-sheet.png`.
+- The tally's "calmed" icon: its kept glint is amber now (a pale core read grey on the dark shell). The V prompt
+  (hud/prompts.ts) matches the other key caps; left as it is. `shots/giving/tally-zoom.png`, `prompt-v-crop.png`.
+- `clips/giving-m2.mp4`: a natural run replayed from a pilot tape (a copy of naive-pilot's `naive(5, 9, {offer,
+  lay})` with offers only to AWARE creatures and laying only into lamps, its masks through `formatInputScript`,
+  replayed in the page with `__prompts.enabled = true` + `reset()`; the page sim matches node frame for frame).
+  Windows: 100-260 (lantern-stone leaves her 1, burr-path below her), 330-470 (burr-shaft aware at 359, the V
+  prompt), 620-760 (burr-ledge: aware 646, given 700), then a cut to lamp-root (4285, 1280) holding V 150 frames.
+  On the natural route she passes burr-path from the islands above, not on its ground: the "dozes" read is far.
+
 ## Capture
 - `scratchpad/giving/{burr,lantern,lamp,seen,pose}.js` (`playwright-cli -s=giving run-code --filename ...`) and
   `sheet.py` (the session scratchpad may be gone: the recipes are short). Burrback: load, `giving(8)`, teleport

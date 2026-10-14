@@ -74,6 +74,12 @@ export class GivingRenderer {
   private carriedN = 0;
   private lagX: number | null = null;
   private lagY = 0;
+  /** A pour into a light (held V): what to (`kind`, id), glints so far in this run of them, seconds since the last, its weight. */
+  private pourKind = '';
+  private pourId = '';
+  private pourN = 0;
+  private pourLast = 9;
+  private pourK = 0;
   /** Seconds since she held a glint out (the light on her face). */
   private faceT = 9;
   private readonly flights: Flight[] = [];
@@ -346,8 +352,18 @@ export class GivingRenderer {
 
     // --- What happened.
     for (const ev of sim.events) {
-      if (ev.type === 'offer') this.faceT = 0;
-      else if (ev.type === 'enemyGift') {
+      if (ev.type === 'offer') {
+        this.faceT = 0;
+        // Held V into a light: glints one after another (`offerStreamFrames` apart) are a pour.
+        const k = ev.target.kind;
+        if (k === 'lantern' || k === 'lamp' || k === 'heart') {
+          const same = this.pourKind === k && this.pourId === ev.target.id && this.pourLast < GIVING.pour.gap;
+          this.pourN = same ? this.pourN + 1 : 1;
+          this.pourKind = k;
+          this.pourId = ev.target.id;
+          this.pourLast = 0;
+        } else this.pourN = 0;
+      } else if (ev.type === 'enemyGift') {
         const i = this.enemyIndex(sim, ev.id);
         const e = sim.enemies[i];
         const y = e ? e.y + e.h / 2 - (e.kind === 'burrback' ? GIVING.warm.lift : 0) : ev.y;
@@ -359,11 +375,11 @@ export class GivingRenderer {
         const list = (lamp ? this.ctx.scene.lamps : this.ctx.scene.lanterns) ?? [];
         const i = list.findIndex((l) => l.id === ev.id);
         const g = this.goal.glass(lamp, i);
-        this.land(g?.x ?? ev.x, g?.y ?? ev.y - 60, lamp ? 0.6 : 0.8, -1);
+        this.land(g?.x ?? ev.x, g?.y ?? ev.y - 60, (lamp ? 0.6 : 0.8) * (this.pourK > 0.5 ? 0.5 : 1), -1);
         this.tailT = 0;
       } else if (ev.type === 'heartGift') {
         const h = this.goal.heartCore();
-        this.land(h?.x ?? ev.x, h?.y ?? ev.y, 0.9, -1);
+        this.land(h?.x ?? ev.x, h?.y ?? ev.y, this.pourK > 0.5 ? 0.45 : 0.9, -1);
         this.tailT = 0;
       } else if (ev.type === 'giftReturn') {
         const B = GIVING.back;
@@ -514,7 +530,10 @@ export class GivingRenderer {
     }
 
     // --- The glint in flight (the sim's own clock: it lands on the step the gift takes).
-    const n = Math.max(1, Math.round(tuning.giving.offerFlightFrames));
+    // (Its own length: 3 frames to a lampwing after her, 8 to a light, 10 to a creature: `giftFrames`.)
+    const n = Math.max(1, Math.round(p.giftFrames > 0 ? p.giftFrames : tuning.giving.offerFlightFrames));
+    // A fast one is a streak from her hands: the trail covers more of the arc the shorter the flight.
+    const trailU = Math.min(1, F.trail * Math.max(1, F.streakAt / n));
     if (p.giftTo !== '' && p.giftTimer > 0) {
       const u = Math.min(1, Math.max(0, (n - p.giftTimer - 1 + sim.alpha) / Math.max(1, n - 1)));
       const end = this.end;
@@ -529,7 +548,17 @@ export class GivingRenderer {
       GivingRenderer.at(sx, sy, end.x, end.y, lift, ue, pt);
       const hx = pt[0]!;
       const hy = pt[1]!;
-      this.trail(sx, sy, end.x, end.y, lift, Math.max(0, ue - F.trail), ue, 0.75, F.width);
+      this.trail(
+        sx,
+        sy,
+        end.x,
+        end.y,
+        lift,
+        Math.max(0, ue - trailU),
+        ue,
+        n < F.streakAt ? 1 : 0.75,
+        F.width,
+      );
       b.quad(K_FLARE, hx, hy, F.halo, F.halo, F.haloE, 0, 0.4);
       b.quad(K_GLINT, hx, hy, 46, 46, F.size, (clock * 0.37) % 1, 0);
       this.lastU = ue;
@@ -552,12 +581,69 @@ export class GivingRenderer {
         this.lastEx,
         this.lastEy,
         this.lastLift,
-        Math.min(1, 1 - F.trail + F.trail * q),
+        Math.min(1, 1 - trailU + trailU * q),
         1,
         0.75 * (1 - q),
         F.width * (1 - 0.5 * q),
       );
       this.tailT += dt;
+    }
+
+    // --- A pour: held V into a light is one continuous ribbon of glints from her hands to the glass.
+    {
+      const P = GIVING.pour;
+      this.pourLast += dt;
+      const on = this.pourN >= 2 && this.pourLast < P.gap ? 1 : 0;
+      this.pourK += (on - this.pourK) * (1 - Math.exp(-dt * (on ? P.in : P.out)));
+      if (this.pourK > 0.01) {
+        let ex = Number.NaN;
+        let ey = 0;
+        if (this.pourKind === 'heart') {
+          const h = this.goal.heartCore();
+          if (h) {
+            ex = h.x;
+            ey = h.y;
+          }
+        } else {
+          const lamp = this.pourKind === 'lamp';
+          const list = (lamp ? this.ctx.scene.lamps : this.ctx.scene.lanterns) ?? [];
+          const g = this.goal.glass(
+            lamp,
+            list.findIndex((l) => l.id === this.pourId),
+          );
+          if (g) {
+            ex = g.x;
+            ey = g.y;
+          }
+        }
+        if (!Number.isNaN(ex)) {
+          const sx = this.handX(sim);
+          const sy = this.handY(sim);
+          const lift = F.lift + F.liftK * Math.hypot(ex - sx, ey - sy);
+          const k = this.pourK;
+          this.trail(sx, sy, ex, ey, lift, 0, 1, P.ribbon * k, P.width);
+          for (let j = 0; j < P.beads; j++) {
+            const u = (clock * P.speed + j / P.beads) % 1;
+            const ue = u * u * (3 - 2 * u) * 0.35 + u * 0.65;
+            const pt = this.pa;
+            GivingRenderer.at(sx, sy, ex, ey, lift, ue, pt);
+            const e = P.bead * k * Math.sin(Math.PI * u) ** 0.6;
+            b.quad(K_SPARK, pt[0]!, pt[1]!, P.size, P.size, e, 0, 0.7);
+          }
+          // The glass takes it: a steady glow while it pours.
+          b.quad(
+            K_FLARE,
+            ex,
+            ey,
+            P.glass,
+            P.glass,
+            P.glassE * k * (0.85 + 0.15 * Math.sin(clock * 9)),
+            0,
+            0.45,
+          );
+          b.quad(K_FLARE, sx, sy, P.hands, P.hands, P.handsE * k, 0, 0.4);
+        }
+      }
     }
 
     // --- Flights: a glint coming back to her; the glints a rest costs going into the light.

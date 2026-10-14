@@ -284,12 +284,14 @@ const ICONS: Array<(g: Ctx, s: number) => void> = [
       g.lineTo(x + (x < 0 ? 1.6 : -1.6), 9.4);
     }
     g.stroke();
-    const grad = g.createRadialGradient(0, -1, 0, 0, -1, 5.4);
-    grad.addColorStop(0, '#fff4dc');
-    grad.addColorStop(1, 'rgba(242, 169, 78, 0)');
+    // (A warm amber, the gift's own colour: a pale core alone read grey on the dark shell.)
+    const grad = g.createRadialGradient(0, 0, 0, 0, 0, 6.4);
+    grad.addColorStop(0, '#fff1d2');
+    grad.addColorStop(0.35, 'rgba(255, 186, 92, 0.95)');
+    grad.addColorStop(1, 'rgba(242, 140, 50, 0)');
     g.fillStyle = grad;
     g.beginPath();
-    g.arc(0, -1, 5.4, 0, Math.PI * 2);
+    g.arc(0, 0, 6.4, 0, Math.PI * 2);
     g.fill();
     g.restore();
   },
