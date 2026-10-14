@@ -1,4 +1,4 @@
-# Mouthless: locked decisions
+# The Moth and the Mouth (storyline: Mouthless): locked decisions
 
 These are frozen. Story agents refine within them and may only PROPOSE changes (in a "Proposed changes to locked
 decisions" note); nothing here changes without the owner's OK. Locked 2026-10-14 from round 18.
@@ -32,7 +32,7 @@ Tallow, the last man awake, and his sister who made it (seen, not a principal) Â
   (kept together forever; nothing born again), Burn (it dies in a night; most sleepers die with it).
 
 ## Constraints
-- Wordless or nearly; no audio yet (design big beats so they can be sound-led later).
+- Wordless or nearly. Audio is now allowed if generated in code (see ../audio-direction.md); design big beats to be sound-led.
 - Every beat must be drawable in this engine (code-drawn, few new characters).
 
 ## The three big images (owner's picks, 2026-10-14)
@@ -40,3 +40,7 @@ Tallow, the last man awake, and his sister who made it (seen, not a principal) Â
 - **Night 4 turning moment: B, "The cloud draws a moth."** Amber enters the dish for the first time, the static stops, its threads draw a moth (the first picture it has ever made); then every root turns to her; end on one lampwing's lamp settling on Sorrel in the Grove.
 - **Final image: C, "The hand, returned."** The maker, old, lays her palm on the mountain's silk, framed like the prologue's blur; something presses back from inside; she doesn't lift her hand.
 Full shot lists: [scenes/mouthless-key-scenes.md](scenes/mouthless-key-scenes.md).
+
+## Names (owner, 2026-10-14)
+- **Game title (working): The Moth and the Mouth.** The storyline keeps the name Mouthless in files.
+- **Hero: Vesper** (kept; keep it out of the game title, since "Vesper" is a 2021 platformer's title).

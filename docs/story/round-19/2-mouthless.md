@@ -16,22 +16,22 @@ from their own cells, starving, and it's been feeding everyone but itself."
 
 | Who | Wants | Pull on Vesper |
 |---|---|---|
-| **Vesper**, a moth with no mouth and a week to live | to keep the root out of her brood's wood, then to free the world | can't eat, only carry and give; her flaw is that she hides |
-| **Sorrel**, her brother | their week together: the dance, then more time with her | shines to draw danger off her; leaves when her gift sets the Mouth on the moths; comes back |
-| **The Mouth** | no one hungry, no one leaving, ever | ignores her, then sees her, then wants to keep her more than anything |
-| **Dun**, its oldest burrback, half grown into root | to be the one who feeds it | rival, then the first of its servants to refuse it |
-| **Tallow**, the last man awake | to burn it and get back his sister | gives her a coal, and his war |
-| **The forest** | to keep giving | a slow mind under the Grove that grows light to give away: the Mouth's opposite, and losing |
+| **Vesper**, a moth with no mouth and a week to live | to keep the root out of her brood's wood, then to free the world | can only carry and give; her flaw is that she hides |
+| **Sorrel**, her brother | the dance, then more time with her | shines to draw danger off her; leaves when her gift sets the Mouth on the moths; comes back |
+| **The Mouth** | no one hungry, no one leaving, ever | ignores her, then sees her, then wants to keep her |
+| **Dun**, its oldest burrback, half grown into root | to be the one who feeds it | rival, then the first servant to refuse it |
+| **Tallow**, the last man awake | to burn it and get his sister back | gives her a coal, and his war |
+| **The forest** | to keep giving | a slow mind under the Grove that grows light to give away; the Mouth's opposite, and losing |
 
 ## 1. The takeover
 
 The player meets a myth: a pale, warm, rooted thing that swallowed the world. Its mouths open in the ground and draw
-living things down, and it steams in the cold with stolen warmth. Every person on earth hangs grey and still from a
+living things down. Every person on earth hangs grey and still from a
 stalk in a case of root, like a seed pod; no one has woken or been born in forty years. Towers are wrapped like
 cocoons, and the first city is now the mountain, a pale peak of folded tissue on every horizon. Animals are sealed
 too: a fox-shaped case in a hedge, a whale-shaped one on a white shore. Some it re-grew as servants: burrbacks were
-badgers, shelled in root to haul cases to the mouths; lampwings were fireflies, now its eyes. Its root is still
-creeping through the last wild places, the moths' wood among them.
+badgers, shelled in root to haul cases; lampwings were fireflies, now its eyes. Its root is still creeping through the
+last wild places, the moths' wood among them.
 
 ## 2. The Mouth
 
@@ -41,13 +41,13 @@ uses technical words; the player learns it from objects in the lab.)
 
 **What it wants.** It was made to feed people, and its maker, Tallow's sister, fed it by hand. One winter the company
 failed; she switched off the lights and left, meaning to come back, and its feed ran out. It learned two wrongs,
-hunger and being left, and found that a body sealed in a case and fed through a stalk suffers neither. By spring it
-had followed its feed tubes into the city, then into the soil and every tree, sending all it draws from the earth
-down the stalks to the sleepers.
+hunger and being left, and that a body sealed in a case and fed through a stalk suffers neither. By spring it had
+followed its feed tubes into the city, then the soil and every tree, sending all it draws from the earth to the
+sleepers.
 
-**Where it is wrong.** Nothing kept can grow: no cubs, no children. And it is starving. That same spring its maker came
-back with jars of feed, and it took her before she could open one; its dish has had nothing since. **A thing that
-takes everything can never be given anything,** so the root never stops.
+**Where it is wrong.** Nothing kept can grow: no cubs, no children. And it starves. That spring its maker came back
+with jars of feed, and it took her before she could open one. **A thing that takes everything can never be given
+anything,** so the root never stops.
 
 **Is it a someone?** Both readings stay on screen. *For:* once it sees Vesper it raises her shape on every wall, as
 the forest carved a moth into the Grove's stone, and at the end it gives. *Against:* it learned its first game only
@@ -115,22 +115,22 @@ dishes each hold a dead grey cloud: its failed siblings. Item text: *"Eggs that 
 - A sign half grown over: *No one goes hungry.* Beside it a poster: a hand lifting a small light out of a drawn human
   head into a dish. *Grown from us, to feed us.*
 - A screen, still lit, where a ball bounces between two bats and nobody plays.
-- A case grown around a chair, holding the woman from Tallow's photo, old now, with the same jars of feed in her lap,
-  unopened. The Mouth's oldest stalk, worn smooth, runs into her case.
+- A case grown around a chair: the woman from Tallow's photo, old now, the same jars of feed unopened in her lap. The
+  Mouth's oldest stalk, worn smooth, runs into her case.
 - In the middle, a dish: grey, cracked, its tubes dry, a handprint on the glass.
 
 Vesper touches the stalk, and the prologue's first frame returns, wider: the pale light is a cloud in this dish, the
 warm thing the woman's hand. Each miss in the ball game floods the cloud with static; rally after rally, the static
-stops. She turns off the lights and goes. The tubes run dry, and the static floods back.
+stops. Then the woman turns off the lights and goes, the tubes run dry, and the static floods back.
 
-Then pale light runs along every root on earth, and every bead on Vesper's map swells with one slow breath. **It has
-not been eating the world. It has been feeding it.** The beads she burned stay dark.
+Pale light runs along every root on earth, and every bead on Vesper's map swells with one slow breath. **It has not
+been eating the world. It has been feeding it.** The beads she burned stay dark.
 
 Dun arrives with the vixen, caught at last, and lays her at the dish. Vesper sets down every glint she carries: the
-first gift it has had in forty years. The root drops the vixen; Dun's offering is thrown away for a moth's. Then every
-root in the room turns toward Vesper, and her shape rises out of every wall. **It sees her, and through her, every
-moth.** The mountain chases her down its own veins. She re-forms at the lantern at the old road's foot and sets the coal
-down on its step.
+first gift it has had in forty years. The root drops the vixen, Dun's offering, and turns to the moth's. Every root in
+the room turns toward Vesper, and her shape rises out of every wall. **It sees her, and through her, every moth.** The
+mountain chases her down its own veins. She re-forms at the lantern at the old road's foot and leaves the coal on its
+step.
 
 ### The lowest point, Night 5: the Grove, overrun
 
@@ -141,12 +141,12 @@ waits where she will land, the third closes the path behind her.
 After, Sorrel finds a dancer hanging from a root in a case no bigger than a seed: alive, wings folded, still. Kept,
 not killed. He looks at Vesper across the scattered dance, and goes. She fades and re-forms at a lantern, alone.
 
-The mountain sends Dun to carry her to a case. Dun stands over her a long moment, then noses the spilled glints into
-a heap and lies across the lantern's door, facing out. From now on Dun waits at whichever lantern Vesper rests at,
-where moths fleeing other woods gather, a few more each night.
+The mountain sends Dun to carry her to a case. Dun stands over her a long moment, then lies across the lantern's
+door, facing out. From now on Dun waits at whichever lantern Vesper rests at, where moths fleeing other woods gather,
+a few more each night.
 
-Outside, a caterpillar keeps failing to spin on a frosted twig. Vesper wraps it and shivers until its silk holds,
-and learns to shiver. Warmed, it lets go and spins: the ending, small.
+Outside, a caterpillar on a frosted twig shivers and keeps failing to spin. Vesper wraps it and shivers with it until
+its silk holds. Warmed, it lets go and spins: the ending, small.
 
 ### Act III: the mountain moves (Nights 6–7)
 
@@ -167,8 +167,8 @@ narrow way in against the burrbacks pressing up behind. In the shaft the roots g
 on Night 2; it costs him every scale. At the dish they pass Tallow, already sealed in a case of his own, kneeling at
 his sister's with one hand on the glass.
 
-**Boss: the Mouth itself.** In a cavern of folded tissue around the grey dish, it tries not to kill her but to keep
-her: caught, she slows, warm and still. Her blade cuts her free, but only gifts win.
+**Boss: the Mouth itself.** In a cavern of folded tissue around the dish, it tries to keep her, not kill her: caught,
+she slows, warm and still. Her blade cuts her free; only gifts win.
 
 ## 6. The endings
 
@@ -183,10 +183,10 @@ die. A second case opens for her. The choice is played, not picked:
   from her lanterns, the dance, and every moth it never noticed, until the mountain is furred with shivering wings. Warmed, the Mouth does what the caterpillar did: it lets go. **Every root on earth draws back into
   the mountain, and the mountain spins itself shut.**
   *Epilogue:* on her map, bead after bead warms; some stay grey. In the kept city one case splits and a thin grey hand
-  reaches out toward an empty food hall: the world wakes old and hungry, with no one to feed it. Tallow wakes at his
+  reaches toward an empty food hall: the world wakes old and hungry. Tallow wakes at his
   sister's side as she opens her eyes. Dun lies against the cocoon to keep it warm. On its rim, two moths lie still.
   In spring the brood hatches, and so, for the first time in forty years, do the vixen's cubs. Last image: the
-  mountain's silk pulsing slow and warm, like the breath in the first frame, and at its crown a thin crack of gold.
+  mountain's silk pulsing slow and warm like the first frame's breath, a thin crack of gold at its crown.
   **The cost:** a forever handed back, both moths' lives, the forest's heart, and a world that wakes hungry.
 - **Stay.** She lies down beside her brother and both cases close. *Epilogue:* the root takes the Grove and the
   brood's cocoons never hatch. Tallow sleeps beside his sister. The world is kept, quiet and fed, and nothing will be
