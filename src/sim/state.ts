@@ -445,6 +445,11 @@ export interface EnemyState {
    * meanwhile; it wakes the step she carries light again (or leaves, or cuts it).
    */
   dozing: boolean;
+  /**
+   * Lampwing: it roosts (round 4, memory/giving.md): she is within `lampwing.roostPx` and too dark to
+   * be seen; it hangs still, wings folded, lamp low; it wakes the step she carries light.
+   */
+  roosting: boolean;
   /** Glints spilled on death still on their way to her, frames to the next, and the gap between them. */
   spill: number;
   spillTimer: number;

@@ -618,7 +618,8 @@ export const burrback: KindRules = {
     e.dozing = false;
     if (
       B.dozePx > 0 &&
-      (e.mode === 'walk' || (e.mode === 'pause' && !e.turning)) &&
+      // (Mid-turn too, round 4: it lies down the step she comes within `dozePx`, never at 100 px.)
+      (e.mode === 'walk' || e.mode === 'pause') &&
       e.knockVx === 0 &&
       e.roused === 0 &&
       e.stirred === 0 &&

@@ -71,8 +71,10 @@ const STATIONS: Array<[prefix: string, x: number, y: number]> = [
   // one over the east lip, the arc down to the terrace, two on the terrace.)
   ['pool-arc-', 2760, 1152],
   ['pool-', 2900, 1152],
-  ['bank-', 640, 1280],
-  ['f1-', 300, 1088],
+  // (Round 4: the bank's two are on the far bluff's top by lantern-far (the no-pod ghost was 2 short), F1's
+  // two on F2: she crosses the bank and F1 dark, past a sleeping burrback and a roosting lampwing.)
+  ['bank-', 5530, 768],
+  ['f1-', 1136, 832],
   ['f3-', 1150, 832],
   ['f4-', 1480, 704],
   ['ledge-', 2480, 528],

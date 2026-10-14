@@ -552,3 +552,64 @@ describe('giving round 3 (playtest-giving round 2)', () => {
     expect(west.filter((q) => q.id.startsWith('pool'))).toEqual([]);
   });
 });
+
+describe('giving round 4 (playtest-giving round 3)', () => {
+  it('a lampwing that cannot see her roosts: within `roostPx`, dark, it hangs still, wings nearly still; light in her hands wakes it, and then it notices', () => {
+    const s = sim(scene([wing(2000 + 200, 700)]), 1, 2000);
+    s.run('.200');
+    const e = foe(s);
+    expect(e.roosting).toBe(true);
+    expect(e.mode).toBe('hover');
+    const x0 = e.x;
+    const y0 = e.y;
+    const f0 = e.flap;
+    s.run('.60');
+    expect([Math.abs(foe(s).x - x0) <= 1, Math.abs(foe(s).y - y0) <= 1]).toEqual([true, true]);
+    expect((foe(s).flap - f0 + 1) % 1).toBeLessThan(L.flapRoost * 61 + 1e-9);
+    expect(of(s.events, 'enemyNotice')).toEqual([]);
+    // A handful: it wakes and, near enough, tells.
+    s.state.pickups.count = 6;
+    const ev = s.run('.3');
+    expect(foe(s).roosting).toBe(false);
+    expect(of(ev, 'enemyNotice').length).toBe(1);
+    // Further off it wanders as ever.
+    const far = sim(scene([wing(2000 + L.roostPx + 200, 700)]), 0, 2000);
+    far.run('.120');
+    expect(foe(far).roosting).toBe(false);
+  });
+
+  it('the sleeper lies down the step she comes within `dozePx`, even in a turn pause', () => {
+    const s = sim(scene([burr(2600)]), 0, 1800);
+    // Make it stand in a turn-around pause, facing away, at the edge of reach.
+    const e = foe(s);
+    e.mode = 'pause';
+    e.turning = true;
+    e.timer = 24;
+    s.place(e.x + e.w / 2 - B.dozePx - 30, FLOOR);
+    s.run('.1');
+    expect(foe(s).dozing).toBe(false);
+    // Step in to just inside `dozePx`: asleep at once.
+    s.place(foe(s).x + foe(s).w / 2 - B.dozePx + 20, FLOOR);
+    s.run('.1');
+    expect(foe(s).dozing).toBe(true);
+  });
+
+  it('offer goes where she means it: a burrback bracing at her 180 px off beats a dormant lamp in reach; `offerTarget` says the same', () => {
+    // (The lamp beside her, in reach, not under her: standing in it with its price she would kindle it.)
+    const sc = scene([burr(2260, -1)], { lamps: [{ id: 'm', x: 1880, y: FLOOR }] });
+    // (20 in hand: level 3, it braces from 156 px, past the plain reach of an offer.)
+    const s = sim(sc, 20, 2000);
+    let braced = false;
+    for (let f = 0; f < 120 && !braced; f++) braced = of(s.run('.1'), 'enemyWindup').length > 0;
+    expect(braced).toBe(true);
+    const e = foe(s);
+    const p = s.state.player;
+    const gap = e.x - (p.x + p.w);
+    expect(gap).toBeGreaterThan(G.offerReachPx - p.w / 2);
+    expect(s.state.player.offerTarget).toEqual({ kind: 'burrback', id: 'b2260' });
+    const ev = s.run('O1');
+    expect(of(ev, 'offer')[0]?.target).toEqual({ kind: 'burrback', id: 'b2260' });
+    expect(of(s.run(`.${G.offerFlightFrames}`), 'enemyGift')[0]?.was).toBe('windup');
+    expect(s.state.goal.lamps[0]?.given).toBe(0);
+  });
+});

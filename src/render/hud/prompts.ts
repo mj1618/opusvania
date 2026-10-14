@@ -371,6 +371,11 @@ export class Prompts {
       } else this.offerShown++;
     }
     this.offerWas = want === 'offer';
+    // The offer's cap goes the frame its target does (round 4: a fade tail invited a press that missed).
+    if (this.lesson === 'offer' && want !== 'offer') {
+      this.linger = 0;
+      this.alpha = 0;
+    }
     // The glide's key goes the instant she lands (it used to linger 1.3 s over nothing).
     if (this.lesson === 'glide' && (p.grounded || p.mode === 'wallSlide')) {
       this.linger = 0;

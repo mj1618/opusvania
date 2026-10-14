@@ -148,6 +148,14 @@ function sees(e: EnemyState, p: PlayerState, scene: Scene, range: number): boole
   return !segmentBlocked(scene, ex, ey, px, py);
 }
 
+/** She is within `roostPx` of it, whole, and too dark to be seen (round 4): it roosts. */
+function roosts(e: EnemyState, p: PlayerState, t: L): boolean {
+  if (SEEN > 0 || p.hp <= 0 || p.faded > 0 || t.roostPx <= 0) return false;
+  const dx = p.x + p.w / 2 - (e.x + e.w / 2);
+  const dy = p.y + p.h / 2 - (e.y + e.h / 2);
+  return dx * dx + dy * dy <= t.roostPx * t.roostPx;
+}
+
 /** Is she within its leash (her centre to its home), less `margin` px? */
 function inLeash(e: EnemyState, p: PlayerState, t: L, margin = 0): boolean {
   const dx = p.x + p.w / 2 - e.homeX;
@@ -499,6 +507,7 @@ export const lampwing: KindRules = {
     let beat = t.flapHover;
     if (e.noticeCd > 0) e.noticeCd--;
     SEEN = seenNow(state, info.t);
+    e.roosting = false;
 
     if (e.mode === 'dead') {
       if (!e.landed) {
@@ -559,6 +568,14 @@ export const lampwing: KindRules = {
           e.targetY = e.homeY;
         }
       }
+    } else if (e.mode === 'hover' && roosts(e, p, t)) {
+      // Round 4 (giving.md): she is near and too dark to be seen: it roosts, hanging still.
+      e.roosting = true;
+      steer(e, 0, 0, t.roostBrake);
+      e.vx += e.pushX;
+      e.vy += e.pushY;
+      drift(e, scene, t);
+      beat = t.flapRoost;
     } else if (e.mode === 'hover') {
       e.wanderLeft--;
       const dx = e.targetX - (e.x + e.w / 2);
@@ -708,6 +725,7 @@ export const lampwing: KindRules = {
 
     // The wing beat follows its effort.
     if (
+      !e.roosting &&
       e.mode !== 'curious' &&
       e.mode !== 'hurt' &&
       e.mode !== 'dive' &&

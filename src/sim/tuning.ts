@@ -450,6 +450,14 @@ export const defaultTuning = {
     hp: 3,
     /** Territory: it wanders within this of its home unless the scene gives a `radius`. */
     radius: 120,
+    /**
+     * Round 4 (giving.md): a lampwing that cannot see her ROOSTS while she is within `roostPx` (centres)
+     * and too dark to be seen: it brakes at `roostBrake` and hangs still, no wander, no bob, wings
+     * nearly still (`flapRoost` beats a frame). It wakes the step she carries light (then it may notice).
+     */
+    roostPx: 340,
+    roostBrake: 0.05,
+    flapRoost: 0.012,
     /** Hover: drift speed and acceleration, px/f and px/f²; it slows inside `arrivePx` of a wander point. */
     hoverSpeed: 0.7,
     hoverAccel: 0.03,
@@ -738,6 +746,12 @@ export const defaultTuning = {
      * first stands lowered `giftStandFrames`.
      */
     giftStayPx: 520,
+    /**
+     * Round 4: what the player means. A creature that is aware of her or braced (its tell, its ram)
+     * is in reach this far (her body centre to its box), and it comes before any dormant light or the
+     * heart (playtest round 3: two presses went into lamp-rise while burr-rise rammed her at 157 px).
+     */
+    offerAwareReachPx: 200,
     giftCalmFrames: 600,
     giftStandFrames: 60,
     /** Rest at a lit light: glints a light restored (above the free floor of `health.reformHp`). */

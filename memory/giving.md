@@ -13,6 +13,39 @@ Tests: `tests/unit/giving.test.ts` (rules, the lamp-glade case), `naive-pilot.te
 laying ghost, hoarder, offer pilots). **Round 2 (after memory/playtest-giving.md) is the section below; where it
 contradicts the older text further down, round 2 wins.**
 
+## Round 4 (2026-10-15, after playtest-giving round 3)
+- **The contrast on the moths' road**: a lampwing that cannot see her ROOSTS (`EnemyState.roosting`; `lampwing.roostPx`
+  340, `roostBrake` 0.05, `flapRoost` 0.012): in `hover`, she within 340 px (centres) and under `seen1`, it brakes to a
+  standstill, no wander, no bob, wings nearly still; it wakes the step she carries 2 (then it may tell). And the
+  moths' road is now walked dark: `bank-1, bank-2` moved to the far bluff's top (5495 / 5555, 726: item 4 below),
+  `f1-1, f1-2` to F2 (1085 / 1185, 790). Ember first, the first creature she meets is burr-bank, asleep (wallet 0,
+  ~1 s in), then lamp-glade roosting over F1; F2's two and f3's two light her (3-4, level 1) before F3, and the ember
+  (5) makes lamp-f3 tell. lamp-f3 itself does not roost on that road: being dark on F3 would take every glint off the
+  islands' line (the only line that leads up to the ember); lamp-glade carries the contrast instead.
+- **The sleeper lies down at full range**: a burrback in a turn pause sleeps too (it waited for the pause to end and
+  lay down at ~100 px: "cowering"). Test: a turn pause, she steps inside `dozePx`: asleep that step.
+- **Offer goes where she means it**: a creature that is aware of her or braced is in reach out to
+  `giving.offerAwareReachPx` 200 (her centre to its box), and creatures always come before lights and the heart.
+  Test: burr-rise-like bracing at 156 px (level 3) with a dormant lamp in reach: the press and `offerTarget` both name
+  the burrback. The V cap (`hud/prompts.ts`) drops to nothing the frame its target goes (no fade tail).
+- **The no-pod ghost is not 2 short at lantern-far**: the bank's two glints now lie on the far bluff's top beside it
+  (a rebalance, totals unchanged: 101 world). The moths leading to pod-far when she is short is render's call.
+- **Pilots on both roads** (`naive-pilot.test.ts` "giving round 4"; `emberFirst`: west from the spawn to the ember,
+  then down off F3's WEST end so the first lantern is passed on foot; `curious`: presses V when the cap would show):
+
+| road / player | time | hits | first creature met (wallet) |
+|---|---|---|---|
+| right / natural | 50.0 s | 6 | burr-path asleep (1) |
+| right / curious | 47.0 s | 1 | burr-path asleep (1) |
+| right / giver | 38.7 s | 1 | burr-path asleep (1) |
+| right / ghost (no pods, lays light) | 36.9 s | 1 | burr-path asleep (0) |
+| ember / natural | 34.1 s | 4 | burr-bank asleep (0), then lamp-glade roosting |
+| ember / curious | 30.6 s | 0 | burr-bank asleep (0), lamp-glade roosting |
+| ember / giver | 26.7 s | 0 | burr-bank asleep (0), lamp-glade roosting |
+| ember / ghost | 24.4 s | 0 | burr-bank asleep (0), lamp-glade roosting |
+
+- For render: `e.roosting` (wings folded, lamp low; `flap` barely moves), and the cap drop in prompts.ts is done.
+
 ## Round 3 (2026-10-14, after playtest-giving round 2)
 - **`player.offerTarget`** (`{kind, id}` | null, `markOfferTarget` at the end of every step): what a press would land
   on this frame, by the offer's own rules (null: empty hands, out of control, the run over, nothing in reach). The

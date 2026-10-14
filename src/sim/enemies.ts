@@ -109,6 +109,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning): EnemyState {
     gifts: 0,
     aware: 0,
     dozing: false,
+    roosting: false,
     spill: 0,
     spillTimer: 0,
     spillGap: 0,

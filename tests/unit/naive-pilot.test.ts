@@ -78,6 +78,10 @@ interface Run {
   firstNear: Record<string, { f: number; wallet: number; aware: boolean }>;
   /** Creatures that slept as she passed (`EnemyState.dozing`, round 3), with the first frame. */
   dozed: Record<string, number>;
+  /** Round 4: every creature that slept (burrback `dozing`) or roosted (lampwing `roosting`) while she was dark, and the frame. */
+  slept: Record<string, number>;
+  /** The first creature she came within 340 px of (centres), and whether it slept then. */
+  firstMet: { id: string; f: number; wallet: number; asleep: boolean } | null;
   /** Where she stood at the end (feet). */
   end: { x: number; y: number };
 }
@@ -95,6 +99,10 @@ function naive(
     offer?: boolean;
     /** She lays her light down: holds offer at any dormant light (or the heart) in reach, streaming into it. */
     lay?: boolean;
+    /** Round 4: the moths' road: she goes for the ember over F3 first (west, the bank, the islands). */
+    emberFirst?: boolean;
+    /** Round 4: the curious player: plays as the natural one, and presses offer when it would land on a creature that is aware of her (the V cap). */
+    curious?: boolean;
     pass?: boolean;
     /** Another scene (the grove without its glints), a wallet to start with, and when to stop. */
     scene?: Scene;
@@ -111,6 +119,8 @@ function naive(
   const closestOnGround: Record<string, number> = {};
   const firstNear: Run['firstNear'] = {};
   const dozed: Run['dozed'] = {};
+  const slept: Run['slept'] = {};
+  let firstMet: Run['firstMet'] = null;
   /** Frames left of a hop over a burrback (`pass`). */
   let vault = 0;
   const timeline: string[] = [];
@@ -127,7 +137,7 @@ function naive(
   let seen = 0;
   let home = false;
   /** The ember a lantern has asked for (index into the scene's pickups), while she is fetching it. */
-  let fetch = -1;
+  let fetch = o.emberFirst ? picks.findIndex((q) => q.id === 'great-ember') : -1;
   // The careful player (`read` = her reaction, frames): what she has seen begin and when she can answer it.
   const read = o.read ?? -1;
   const braceAt = s.state.enemies.map(() => -1);
@@ -225,6 +235,11 @@ function naive(
         continue;
       }
     } else if (ember) dir = 0;
+    // The moths' road (round 4): the ember first, then down off F3's WEST end to the spawn ground, so the
+    // first lantern is passed on foot (east off F3 she would glide over it and the pool).
+    const stone = g.lanterns[0];
+    if (o.emberFirst && fetch < 0 && stone && !stone.lit && at.y < 1200 && at.x > 950 && at.x < 1700 && !home)
+      dir = -1;
     // A light that stirred: up to it, and stand a moment.
     // (One that stands on the ground she is on, within a few steps: nothing she has to work out.)
     for (let k = 0; k < lights.length; k++) {
@@ -371,6 +386,15 @@ function naive(
         }
       }
     }
+    // --- The curious player: the V cap is up (a press would land on a creature that is aware of her): V.
+    if (o.curious && !g.gathered && (prev & O) === 0 && s.state.pickups.count >= 1) {
+      const to = p.offerTarget;
+      const foe = to ? s.state.enemies.find((e) => e.id === to.id) : undefined;
+      if (foe && foe.aware > 0) {
+        m |= O;
+        cut = false;
+      }
+    }
     // --- Giving (memory/giving.md): a burrback in her way on her ground is given a glint instead of
     // cut (she walks up into reach, gives, waits for it to land, then walks on past it: calmed, it is
     // harmless); with nothing to give, or told to pass, she hops it.
@@ -437,6 +461,9 @@ function naive(
     for (const e of s.state.enemies) {
       if (e.mode === 'dead') continue;
       if (e.dozing && dozed[e.id] === undefined) dozed[e.id] = f;
+      if ((e.dozing || e.roosting) && slept[e.id] === undefined) slept[e.id] = f;
+      if (!firstMet && Math.hypot(e.x + e.w / 2 - (b.x + b.w / 2), e.y + e.h / 2 - (b.y + b.h / 2)) <= 340)
+        firstMet = { id: e.id, f, wallet: s.state.pickups.count, asleep: e.dozing || e.roosting };
       const dx = Math.max(e.x - (b.x + b.w), b.x - (e.x + e.w), 0);
       const dy = Math.max(e.y - (b.y + b.h), b.y - (e.y + e.h), 0);
       const gap = Math.round(Math.hypot(dx, dy));
@@ -468,6 +495,8 @@ function naive(
     closestOnGround,
     firstNear,
     dozed,
+    slept,
+    firstMet,
     end: feet(s),
   };
 }
@@ -801,5 +830,32 @@ describe('giving: carrying light makes her seen; offering is a way through (memo
         hand,
       ).toEqual([]);
     }
+  });
+});
+
+describe("giving round 4: both roads (right first; the moths' road, the ember first)", () => {
+  const NOPODS: Scene = { ...GROVE, pods: [] };
+  const players = [
+    ['natural', {}],
+    ['curious', { curious: true }],
+    ['giver', { offer: true }],
+    ['ghost (no pods, lays light down)', { scene: NOPODS, offer: true, lay: true }],
+  ] as const;
+  it('natural, curious, giver and ghost finish on both roads; the first creature each road meets sleeps (a burrback dozing, a lampwing roosting) because she is dark', () => {
+    for (const emberFirst of [false, true])
+      for (const [name, o] of players) {
+        const hand = `${emberFirst ? 'ember first' : 'right first'}, ${name}`;
+        const r = naive(5, 9, { ...o, emberFirst });
+        trace(hand, r);
+        expect(r.ended, hand).toBe(true);
+        expect(r.lit, hand).toBe(3);
+        expect(r.firstMet?.asleep, `${hand}: ${JSON.stringify(r.firstMet)}`).toBe(true);
+        expect(r.firstMet?.wallet ?? 99, hand).toBeLessThan(defaultTuning.giving.seen1);
+        // The moths' road: the bank's burrback sleeps, and the glade's lampwing roosts over F1.
+        if (emberFirst) {
+          expect(r.firstMet?.id, hand).toBe('burr-bank');
+          expect(r.slept['lamp-glade'], hand).toBeGreaterThanOrEqual(0);
+        } else expect(r.firstMet?.id, hand).toBe('burr-path');
+      }
   });
 });

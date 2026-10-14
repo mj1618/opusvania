@@ -70,7 +70,9 @@ export function offerTarget(state: GameState, scene: Scene, t: Tuning, lights = 
     // (One that is after her she can reach as far as it can see her.)
     const own =
       e.sight > 0 ? Math.max(G.offerReachPx, (sight * e.sight) / Math.max(1, t.lampwing.noticePx)) : sight;
-    const r = chasing(e) ? own : G.offerReachPx;
+    // (Aware of her or braced at her: in reach a little further: round 4.)
+    const meant = e.aware > 0 || e.braced;
+    const r = chasing(e) ? own : meant ? Math.max(G.offerReachPx, G.offerAwareReachPx) : G.offerReachPx;
     if (d > r * r) continue;
     const ex = e.x + e.w / 2;
     const ey = e.y + e.h / 2;
