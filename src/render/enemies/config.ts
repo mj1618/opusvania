@@ -360,6 +360,104 @@ export const BURR = {
     wakeRock: 0.075,
   },
   /**
+   * Curled (sim `tuck` > 0: a down cut landed; it stays curled through the flinch and the winded time
+   * until it uncurls, usually straight into its brace). Rolls up at `in` /s (out at `out`, or `outBrace`
+   * into a brace), right down on the ground (`crouch`), `short`er and `tall`er, its lower sides drawn
+   * in under it (`pinch`: a ball, not a dome on a rim), horn
+   * bent under (`horn`), fringe in (`fringe`), legs folded to `fold` of their stance, head `headIn` px
+   * further in, burrs up a little (`burrs`), rocking `rock` rad at `rockRate` rad/s. Its row of lights
+   * goes to `lights`; one slit of light at its front (`slitAt` rad up the outline, `slitIn` px inside
+   * it, `slitW` x `slitH` px, `slitPale` toward the eyes' colour, a glow `slitGlowR` px at `slitGlow`).
+   * A landed pogo pounds it flat (`pound`, squash per power) instead of pushing it along.
+   * Uncurling into the brace is one motion: stretched up (`unrollStretch`), rolled forward over its
+   * front (`unrollRoll` rad/s), the plate thrown out (`unrollGuard`), burrs kicked (`unrollBristle`).
+   * Uncurling on the timer, it shakes itself out (`shake`).
+   */
+  curl: {
+    in: 24,
+    out: 7,
+    outBrace: 11,
+    crouch: 1.3,
+    short: 0.1,
+    /** The lower sides drawn in under it (share of its half-length at the ground): a ball. */
+    pinch: 0.3,
+    tall: 0.1,
+    horn: 0.5,
+    fringe: 0.45,
+    fold: 0.5,
+    headIn: 7,
+    burrs: 0.3,
+    rock: 0.075,
+    rockRate: 2.4,
+    /** Moved while curled, the rock runs faster by this, rad per px (a waddle, not a slide). */
+    waddle: 0.05,
+    lights: 0,
+    slitAt: 0.3,
+    slitIn: 3,
+    slitW: 4.2,
+    slitH: 0.55,
+    slitPale: 0.35,
+    slitGlowR: 7,
+    slitGlow: 0.32,
+    pound: 0.16,
+    unrollStretch: 0.1,
+    unrollRoll: 7,
+    unrollGuard: 16,
+    unrollBristle: 22,
+    shake: 18,
+  },
+  /**
+   * A down cut glanced off its top (`enemyBlock` slash `down`: a braced or a curled shell): a clang on
+   * the TOP, not the front. Pounded flat (`squash`) and ringing up and down (`bounce` px, `pound` share,
+   * `rot` rad, at `hz`, dying at `fade` /s), tipped away from where it was struck (`rock` rad/s), burrs
+   * rattled (`bristle`). The crown line goes `pale` and a swelling (`line`, + `lineAll` everywhere) runs
+   * out both ways from the spot at `run` (half-lengths /s); the spot blooms (`glowR` px, `glow`); the
+   * seams catch the light (`seams`). `chips` hot chips spray UP in a `fan` (rad) at `speed` px/s.
+   */
+  clang: {
+    squash: 0.14,
+    bounce: 1.4,
+    pound: 0.035,
+    rot: 0.02,
+    hz: 16,
+    fade: 9,
+    rock: 2.2,
+    bristle: 12,
+    pale: 0.7,
+    line: 1.5,
+    lineAll: 0.35,
+    run: 5,
+    glowR: 9,
+    glow: 0.5,
+    seams: 0.6,
+    chips: 6,
+    fan: 0.55,
+    speed: [150, 290] as const,
+  },
+  /**
+   * Hurrying out from under a falling hero (sim: `walk` at up to 3 px/f; `enemyTurn` cause `drop`):
+   * when `walk` runs at `minVx` px/f or more, or she is dropping onto it and it walks or stands (render
+   * reads the sim's `dropping`). Low (`crouch`), leaning into it (`lean`), feet lifted `low` less, head in (`tuck`),
+   * burrs laid back (`flat`), eyes on her; it looks up at her as it starts (`tilt` rad of head, fading
+   * at `glanceFade` /s). In at `in` /s, out at `out`. Dust off its heels every `dustEvery` s.
+   */
+  scurry: {
+    minVx: 2.5,
+    in: 30,
+    out: 5,
+    crouch: 0.8,
+    lean: 0.1,
+    low: 0.45,
+    tuck: 0.9,
+    flat: 0.35,
+    tilt: 0.7,
+    /** Head this much further in, px; the eyes slide this much further toward her, px. */
+    headIn: 4,
+    eyeUp: 1.4,
+    glanceFade: 2.2,
+    dustEvery: 0.05,
+  },
+  /**
    * It has noticed her (render only: the sim's creature never chases): she is within `reach` px on
    * about its level (`level` px) and lit. Burrs up (`bristle`, with a kick), eyes on her and wide,
    * lights up by `light` and a flash of `flash` that fades at `fade` /s. Lets go `slack` px further out.

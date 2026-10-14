@@ -1,8 +1,9 @@
 # Enemies, render side: the burrback and the lampwing (`src/render/enemies/`)
 
-Rules and state fields: enemies.md. **Start with the last section (playtest 5): the tell, the hit tone, the
-winded pose and the whole lampwing changed there; older sections are right only where it does not contradict
-them.** Current sheets: `shots/enemr5/{burr,lamp}/*.png`, clip `clips/enemr5-*`. Older: `shots/enemr3/*.png` (the ram: brace, block, ram, spent,
+Rules and state fields: enemies.md. **Start with the last two sections (playtest 5, playtest 6 round 2): the
+tell, the hit tone, the winded pose, the whole lampwing, the curl, the top clang and the scurry are there; older
+sections are right only where they do not contradict them.** Current sheets: `shots/enemr6/{path,rise,shaft}/*.png`
+(curl / clang / scurry / wall stun), `shots/enemr5/{burr,lamp}/*.png`, clip `clips/enemr5-*`. Older: `shots/enemr3/*.png` (the ram: brace, block, ram, spent,
 punished, dead, in the centre and right zones at 3x and play zoom; the wall jolt; the reset; the lampwing's
 tell and tumble) and `clips/enemr3-*.mp4`; `shots/enemr2/*.png` (per zone: before / after, notice, calm,
 touch); older: `shots/lamp2`, `shots/burr2`.
@@ -263,3 +264,40 @@ lampwing hp 3 with `curious` -> `dive` -> `stall` -> `pursue` (a climb to a perc
   under the dive, cuts in the stall), `stand`. A lampwing with no footing in its sight is staged by moving its
   live record and home (`move: {x, y}`: wrap `__enemies.update` for one step to get the sim). `H.contrast()` is the
   mesh on / off measurement. `npm run clip` at 1920x1080 takes ~1 minute and dies on any hot reload: retry.
+
+## Playtest 6 round 2 (2026-10-14; `BURR.curl`, `BURR.clang`, `BURR.scurry`; sheets `shots/enemr6/`)
+Sim side: enemies.md "Playtest 6, round 2" (`tuck`, `enemyBlock` slash `down`, `enemyTurn` cause `drop`, the carried ram).
+- **Curled** (`e.tuck > 0`, not in windup / charge): `rig.curlK` in at 24 /s. Right down (`crouch` 1.3), shorter and
+  taller, and the lower sides of the outline PINCHED in under it (`gPinch` / `pinch(sn)` in `rimPt`, the belly, burrs,
+  crown and sheen): a ball, not a dome on a rim; without the pinch it read as the calm "settled" pose. Legs folded
+  to half their stance (hidden), head 7 px further in and the face plate off, horn bent under (`horn` 0.5: at 0.35
+  it stuck out at the ground like a beak), fringe in, burrs up a little, a slow rock (`rockRate`) that runs faster
+  when it is moved (`waddle`: the sim walks a curled one at 1.6 px/f and shoves it; without it the ball slid).
+  The row of lights goes OUT (`lights` 0: at 0.06 four dim dots still showed) and one slit (`slitW` x `slitH`, the
+  zone light 35% toward the eye colour, faint glow) sits low at its front. Curl overrides the winded pose (a pogo
+  on a winded or wall-stunned one: no open seams, no lifted front). A landed pogo's held squash is a flattening
+  (`curl.pound`, `rig.pogo` set from `enemyHit` slash `down`), not the sideways shunt.
+- **Uncurl into the brace**: when `windup` starts with `curlK` > 0.3 there is no plant flattening; it is stretched
+  up, rolled forward (`unrollRoll`), the plate thrown out, burrs kicked, while `curlK` falls at 11 /s. Every
+  frame (`rise/3x-uncurl-everyframe.png`): the first red beat lands on the still-round ball, legs out by frame 2,
+  the wedge by frame 3-4. Reads as one motion. Uncurled on the timer: a shake-out (`shake` on the bristle spring).
+- **Top clang** (`enemyBlock` slash `down`: braced, curled, also a ramming one): `rig.blockTop(u)` (u = hitX along
+  the shell), NOT `block()`. Pounded flat (`squash` +0.14) and a fast vertical ring (`bounce` px, `pound` share at
+  `hz`), tipped away from the strike; the crown line goes pale and a swelling runs OUT BOTH WAYS from the struck
+  point; a small pale bloom there; the seams catch light. Chips: `sparksUp()` in index.ts, `chips` 6 K_SPARK in a
+  narrow fan straight UP + 2 grit, thrown after the creature is drawn (it needs the drawn crown point:
+  `topHit`, exported from burrback.ts; `rig.topNew` is cleared when off screen). Her own slash cross dominates
+  the hit frame at play zoom; ours is the after-ring (chips up, pale crown) for ~6 frames. Dark and subtle on purpose.
+- **Scurry**: on when `walk` at >= `minVx` 2.5 px/f, or when she is dropping onto it (index.ts `dropping()`, the
+  sim's rule + near sideways) and it walks or stands. Low (`crouch` 0.8), leaning in, feet lifted less, head 4 px
+  further in, burrs laid back, feelers streaming back, eyes on her and rolled to the top of the plate (`eyeUp`),
+  head tilted up (`tilt`) on the `glance` (from `startle()` on `enemyTurn` cause `drop`, or the scurry's start),
+  dust off its heels. **At play zoom the summit drop's scurry is off screen**: the camera follows her and the
+  shaft floor comes into view only ~3 frames before she lands (`shaft/play.png`); it reads at 3x only.
+- **Wall stun after a carried ram** (`shaft/3x-carry-wallstun-curl.png`, pogo spammer at burr-shaft from x 3530:
+  the 2nd ram runs 20 frames into trunk B's bark): the jolt, then the stun tip and legs up, unchanged and right.
+  A pogo on the stunned one curls it for the rest of the 90 frames.
+- Capture: `scratchpad/e6/{page.js, go.sh}` (the session scratchpad is wiped on a restart: e5 was lost; page.js is
+  e5's `H.stage` cut down + plans `pogo` (the spammer of `playtest6-fights.test.ts`) and `dropL` (teleport to
+  3640, 192, hold left `hold` frames; `pre` 170 / hold 14 gives a `drop` turn at frame 13, landing 67), `capFrom /
+  capTo` to skip capture on dry runs. `playwright-cli -s=<s> resize 1920 1080` first: the default canvas is 1280x720.

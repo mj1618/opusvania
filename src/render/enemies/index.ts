@@ -16,7 +16,7 @@ import { tuning } from '../../sim/tuning';
 import { clamp, sat } from '../character/hooded/math';
 import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } from '../contract';
 import { ZONE_EDGES } from '../scene/lib/fx-zones';
-import { BurrRig, COLORS, drawBurrback, loadColors, stepFeelers } from './burrback';
+import { BurrRig, COLORS, drawBurrback, loadColors, stepFeelers, topHit } from './burrback';
 import { BURR, LAMP } from './config';
 import { drawLampwing, LampRig } from './lampwing';
 import { Painter, type RGB, type Shade } from './paint';
@@ -303,6 +303,40 @@ export class EnemyRenderer {
       );
   }
 
+  /**
+   * Her down cut glanced off its top: hot chips sprayed UP off the crown at (x, y) in a narrow fan,
+   * leaning a little away from where she struck (`lean` -1..1), and a few specks of grit.
+   */
+  private sparksUp(x: number, y: number, lean: number, floor: number): void {
+    const K = BURR.clang;
+    for (let k = 0; k < K.chips; k++) {
+      const u = K.chips > 1 ? k / (K.chips - 1) - 0.5 : 0;
+      const a = -Math.PI / 2 + u * 2 * K.fan + lean * 0.25 + (this.rand() - 0.5) * 0.2;
+      const sp = K.speed[0] + this.rand() * (K.speed[1] - K.speed[0]);
+      this.emit(
+        K_SPARK,
+        x + u * 8,
+        y - 1 - this.rand() * 2,
+        Math.cos(a) * sp,
+        Math.sin(a) * sp,
+        0.16 + this.rand() * 0.16,
+        1 + this.rand() * 0.8,
+        floor,
+      );
+    }
+    for (let k = 0; k < 2; k++)
+      this.emit(
+        K_GRIT,
+        x + (this.rand() - 0.5) * 10,
+        y,
+        (this.rand() - 0.5) * 120,
+        -110 - this.rand() * 100,
+        0.3 + this.rand() * 0.2,
+        0.7 + this.rand() * 0.5,
+        floor,
+      );
+  }
+
   /** `n` crisp pale puffs kicked up low from (x, y) toward `dir` (0 = both ways), `k` x the usual speed and size. */
   private puffs(x: number, y: number, dir: number, n: number, k = 1): void {
     const T = BURR.touch;
@@ -364,6 +398,17 @@ export class EnemyRenderer {
     return best >= 0;
   }
 
+  /**
+   * She is dropping onto this burrback from high above (the sim's `dropping`: in the air, falling, not
+   * gliding, from `dropPx` or more over its top) and is near it sideways: it hurries out from under her.
+   */
+  private dropping(sim: SimView, e: Readonly<EnemyState>): boolean {
+    const p = sim.player;
+    if (p.grounded || p.gliding || p.vy <= 0 || p.hp <= 0 || p.faded > 0) return false;
+    if (e.y - (p.airTopY + p.h) < tuning.burrback.dropPx) return false;
+    return Math.abs(p.cx - (e.x + e.w / 2)) < e.w / 2 + p.w / 2 + 60;
+  }
+
   /** A burrback stands inside a lit lantern's sanctuary on its own ground (sim: `groundSanctuaryGap`). */
   private inSanctuary(sim: SimView, e: Readonly<EnemyState>): boolean {
     const list = this.ctx.scene.lanterns;
@@ -383,7 +428,16 @@ export class EnemyRenderer {
     for (let k = 0; k < evs.length; k++) {
       const ev = evs[k];
       if (!ev) continue;
-      if (ev.type === 'enemyTurn' && (ev.cause === 'lantern' || ev.cause === 'wary')) {
+      if (ev.type === 'enemyTurn' && (ev.cause as string) === 'drop') {
+        // It turns to hurry out from under her: a start and a look up.
+        const i = this.byId.get(ev.id);
+        if (i !== undefined && ev.kind === 'burrback') this.rigs[i]?.startle();
+      } else if (ev.type === 'enemyHit' && ev.kind === 'burrback' && ev.slash === 'down') {
+        // A pogo landed: the blow pounds it flat (it curls).
+        const i = this.byId.get(ev.id);
+        const rig = i === undefined ? undefined : this.rigs[i];
+        if (rig) rig.pogo = true;
+      } else if (ev.type === 'enemyTurn' && (ev.cause === 'lantern' || ev.cause === 'wary')) {
         const i = this.byId.get(ev.id);
         // `dir` is its new facing: what it turns from is on the other side.
         if (i !== undefined && ev.kind === 'burrback') this.rigs[i]?.react(ev.cause, -ev.dir);
@@ -391,6 +445,11 @@ export class EnemyRenderer {
         const i = this.byId.get(ev.id);
         const rig = i === undefined ? undefined : this.rigs[i];
         if (!rig) continue;
+        if (ev.slash === 'down') {
+          // Off its top (braced or curled): a clang on the crown; the chips go once it is drawn.
+          rig.blockTop(clamp((ev.hitX - ev.x) / BURR.halfLen, -0.8, 0.8));
+          continue;
+        }
         rig.block(ev.dir);
         this.sparks(
           ev.x + ev.facing * (BURR.halfLen + 3),
@@ -547,6 +606,7 @@ export class EnemyRenderer {
         sim.player.feetY,
         sim.player.faded === 0,
         sim.goal.gathered || this.inSanctuary(sim, e),
+        this.dropping(sim, e),
       );
       stepFeelers(rig, e, clock, dt);
 
@@ -733,7 +793,20 @@ export class EnemyRenderer {
         }
       }
 
-      if (Math.abs(rig.x - cam.x) > halfW || Math.abs(rig.y - 20 - cam.y) > halfH) continue;
+      // Hurrying out from under her: dust off its heels.
+      if (rig.scurryK > 0.5 && Math.abs(e.vx) > 1.5) {
+        rig.dustT += dt;
+        while (rig.dustT > BURR.scurry.dustEvery) {
+          rig.dustT -= BURR.scurry.dustEvery;
+          const sd = e.vx > 0 ? 1 : -1;
+          this.dust(rig.x - sd * (16 + this.rand() * 12), rig.y, -sd * (30 + this.rand() * 40), 1.4, 0.9);
+        }
+      }
+
+      if (Math.abs(rig.x - cam.x) > halfW || Math.abs(rig.y - 20 - cam.y) > halfH) {
+        rig.topNew = false;
+        continue;
+      }
       const zw = this.zw;
       const l = 1 - smooth(ZONE_EDGES.left[0], ZONE_EDGES.left[1], rig.x);
       const r = smooth(ZONE_EDGES.right[0], ZONE_EDGES.right[1], rig.x);
@@ -756,6 +829,10 @@ export class EnemyRenderer {
           this.dust(rig.x + (k - 1.5) * 12, rig.y - 26 + this.rand() * 8, (k - 1.5) * 14, 1.3, 0.8);
       }
       if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
+      if (rig.topNew) {
+        rig.topNew = false;
+        this.sparksUp(topHit.x, topHit.y, rig.topU, rig.y);
+      }
     }
 
     // --- Debris: in front of the grass, except what a blow knocks off (chips, wing scales), which
