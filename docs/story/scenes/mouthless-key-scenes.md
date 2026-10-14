@@ -10,12 +10,12 @@ marked **[VARIANT]**, with my pick after each; `choices.md` has them on one page
 
 - **The forest gives amber:** glints, lanterns, the heart, the ember (`#ffb36b`, `#ffd9a0`).
 - **The Mouth is pale:** milk-and-bone root (`#d9cfc4` lit from inside), always steaming, never saturated, never
-  brighter than Umber. Its own light is a cold, flickering grey-white: static.
+  brighter than Wing. Its own light is a cold, flickering grey-white: static.
 - **Lampwing coral** (`#ff7a6a`) is the Mouth looking.
 - The turn of the story is a colour change: **the first time amber enters the dish** (Night 4). The last frame of the
   game is the mountain lit amber from inside.
 
-**Reused, not rebuilt:** the Grove, Umber, lanterns and the kindling stream, the heart's wake, burrbacks, lampwings,
+**Reused, not rebuilt:** the Grove, Wing, lanterns and the kindling stream, the heart's wake, burrbacks, lampwings,
 glints and the wallet's pour, ambient moths, the fade and re-form, `GoalCamera`, and the frozen fox skin **Yako**
 (the vixen and, small, her cubs). **One new piece of tech everything needs:** a keyframed camera track (pan, zoom,
 hold, ease) over the `__game.cam` override, and a dip to black in post.
@@ -29,7 +29,7 @@ or very low, so the player's first idea of it is a myth.
 
 ### Shot 1. The opening image [VARIANT] (0–14 s)
 
-**A. "The breath" (as in the storyline).** Black. Centre frame, a soft pale light the size Umber's head will be,
+**A. "The breath" (as in the storyline).** Black. Centre frame, a soft pale light the size Wing's head will be,
 pulsing: in 2.5 s, out 2.5 s. Inside it, a faint cloud of threads. At 5 s a huge, out-of-focus warm blur comes in from
 the left and rests against it; we can't tell it is a palm. The light leans toward it and its pulse slows. At 9 s the
 warmth lifts away out of frame. The light pulses on, then **stutters**: two flickers, a burst of grey grain, a breath
@@ -86,14 +86,14 @@ Dun). **SOUND:** the burrback's breath; the spin a dry rustle.
 
 - **60–66 s.** Two cocoons hang over the pool, amber breathing in each. One splits: **Sorrel**, quick and bright,
   flies straight up toward a glittering ring of moths in the canopy (the brood's dance). He doesn't look back.
-- **66–74 s.** The other splits. Umber drops to the moss, stands, shakes out her cape. CONTROL: **walk only**; she
+- **66–74 s.** The other splits. Wing drops to the moss, stands, shakes out her cape. CONTROL: **walk only**; she
   is the player's now.
 - **74–82 s.** A glint drifts down in front of her, the forest's first gift. She raises it to her face; the camera
   pushes in slowly on a pale face with no mouth, lit amber from below. She can't use it. She holds it.
 - **82–90 s.** She looks past it, and the camera follows her eyes past the last trunks: outside the Grove, pale root
   **steams in the frost**, quietly, a few metres from the trees. The title, faint, in the sky above it.
 *Lands as:* a face with no mouth lit by a gift it can't use, and beyond it the thing that only takes.
-**BUILD:** Sorrel (a Umber skin variant: lighter plum, longer brighter antennae, quicker idle; no new rig), the dance
+**BUILD:** Sorrel (a Wing skin variant: lighter plum, longer brighter antennae, quicker idle; no new rig), the dance
 (ambient moths on an orbit), cocoons. **SOUND:** the music thins to one voice for her; the title lands on silence.
 
 ---
@@ -103,7 +103,7 @@ Dun). **SOUND:** the burrback's breath; the spin a dry rustle.
 The orchards at night: rows of dead fruit trees, moonlit tall grass, the vixen's den in a bank. The Dun fight is
 gameplay; this is its last minute.
 
-1. **The pin (0–4 s).** Dun's ram connects. Doubled hitstop, then the camera eases in 15% to ground level: Umber on
+1. **The pin (0–4 s).** Dun's ram connects. Doubled hitstop, then the camera eases in 15% to ground level: Wing on
    her back under Dun's front shell, her glints spilled round her in a loose ring, the only warm things on screen.
    CONTROL: she can struggle; it rocks her a few pixels and changes nothing.
 2. **It sees the light (4–7 s).** Dun's head swings to the glints, mouth-plate opening over them and her. Far off, a
@@ -112,12 +112,12 @@ gameplay; this is its last minute.
    wing, and scoops: the glints stream to him (the kindling stream reversed) and he **blazes**. The field gets a
    moving amber key light.
 4. **The decoy (10–18 s).** He darts off low across the field, slow enough to be chased, the grass lighting in a
-   wave under him. Dun rears off Umber and turns after him. Camera: one long pan with Sorrel, then it **stops dead**
+   wave under him. Dun rears off Wing and turns after him. Camera: one long pan with Sorrel, then it **stops dead**
    and lets him cross the screen alone, Dun crashing after him, its root-leash tearing a furrow. The frame: a dark
    field, one burning moth drawing a line through it, a dark mass following the line, and in the foreground grass,
-   small and dim, Umber sitting up.
+   small and dim, Wing sitting up.
 5. **The vixen (18–24 s).** CONTROL: full; she carries nothing, so she is invisible again. The vixen (Yako, thinner,
-   greyer) slips from the den, looks straight at Umber for one beat, the first animal ever to look at her, and runs.
+   greyer) slips from the den, looks straight at Wing for one beat, the first animal ever to look at her, and runs.
 6. **After (player-paced).** The furrow leads to the orchard's end. Sorrel sits on a branch, dark, every glint spent
    as a decoy behind him; Dun far off, nosing one in the grass. He drops beside her, does his somersault, showing off,
    then holds still and lets her lean on him. Two seconds; their first touch.
@@ -133,11 +133,11 @@ systems.
 
 The room at the mountain's heart breaks the palette on purpose: for the first time, **straight lines** (doorframe,
 desk, screen, shelves), every edge softened by pale folded tissue. Light is cold: the screen's grey glow and the
-dish's pulse. No amber except what Umber carries.
+dish's pulse. No amber except what Wing carries.
 
 ### The room (CONTROL: full)
 
-She enters from a dry pipe at floor level; the camera pulls out to its widest framing yet and holds, Umber tiny at
+She enters from a dry pipe at floor level; the camera pulls out to its widest framing yet and holds, Wing tiny at
 bottom left. Crossing it, she finds:
 - **The sign**, half grown over: *No one goes hungry*, readable only when her glints light it.
 - **The poster:** a hand lifting a small light out of a drawn head into a dish. *Grown from us, to feed us.*
@@ -157,7 +157,7 @@ bottom left. Crossing it, she finds:
    stops. After a long rally her hand pats the glass once.
 4. **(22–32 s)** Amber evening, an emptied room. Her silhouette in the doorway, hand on the switch. She looks back at
    the dish, 2 s. Switches off. Goes. The feed light turns red, the grain floods back and does not stop.
-5. **(32–40 s)** The present, same framing: the grey dish and her case side by side, Umber between them.
+5. **(32–40 s)** The present, same framing: the grey dish and her case side by side, Wing between them.
 
 ### The world breathes (CONTROL: none, 15 s)
 
@@ -169,7 +169,7 @@ return to the dish.
 
 ### Dun's offering (CONTROL: none, 15 s)
 
-Dun shoulders in, the vixen limp in its jaws, walks past Umber without seeing her, lays the vixen in the dish's
+Dun shoulders in, the vixen limp in its jaws, walks past Wing without seeing her, lays the vixen in the dish's
 tubes and backs off, head low: it has done this all its life. Pale threads lift toward the vixen.
 
 ### The turning moment [VARIANT] (about 25 s)
@@ -177,7 +177,7 @@ tubes and backs off, head low: it has done this all its life. Pale threads lift 
 CONTROL: the hold-to-give prompt from the heart appears at the rim. The game waits as long as the player does.
 Holding pours **every glint she carries**; she can't pour some. The threads round the vixen go slack and drop her.
 
-**A. "Her shape on every wall" (as in the storyline).** Every root in the room swivels toward Umber, a slow
+**A. "Her shape on every wall" (as in the storyline).** Every root in the room swivels toward Wing, a slow
 sunflower turn, and from the tissue of every wall her shape rises in pale relief, dozens of moths with open wings,
 the pose of the carving on the Grove's stone. The camera pulls back to the widest frame and holds: a cathedral of her.
 *Lands as:* seen everywhere at once, in the same picture the forest made of a friend.
@@ -185,7 +185,7 @@ the pose of the carving on the Grove's stone. The camera pulls back to the wides
 **B. "The cloud draws a moth".** Extreme close-up over the dish (zoom ~2.5x), glints falling in like coals into
 water. For the first time **amber enters the dish**: the cloud warms from the edges in and the grain stops, entirely,
 the stillest second of the game. Then its threads draw together into a shape: **a moth, wings open,** made of its own
-lit cells, the first picture it has ever made. Hold 3 s. The camera rises to Umber's face reflected in the glass,
+lit cells, the first picture it has ever made. Hold 3 s. The camera rises to Wing's face reflected in the glass,
 and behind her every root in the room turning toward her.
 *Lands as:* inside a brain made by people, the first thing it ever pictures is her.
 
@@ -204,7 +204,7 @@ one held voice; the Grove cut is only the dance's wings.
 
 ### The chase (CONTROL: full)
 
-The vixen wakes and bolts. Dun stares at its dropped offering, then at Umber: the first time it sees her. The mountain
+The vixen wakes and bolts. Dun stares at its dropped offering, then at Wing: the first time it sees her. The mountain
 chases her down its veins; roots no longer part; lampwings track her dark. At the lantern where she re-forms she can
 set the coal down, silently.
 
@@ -227,7 +227,7 @@ next year's cocoons. The boss, three mouths in the ground, is staged so each ope
 part of the frame: the player learns that pale means danger.
 
 **Sorrel goes (CONTROL: none, 12 s).**
-1. **(0–4 s)** The last mouth closes. Umber lands on a high limb. Camera eases in.
+1. **(0–4 s)** The last mouth closes. Wing lands on a high limb. Camera eases in.
 2. **(4–8 s)** Across the gap Sorrel, alone; behind him the last of the dance scattering. He looks at her. Neither
    moves. A coral lamp sweeps between them and stops on her, not him.
 3. **(8–12 s)** He turns and flies up and out of frame, as in the prologue. This time the camera does not follow.
@@ -248,7 +248,7 @@ part of the frame: the player learns that pale means danger.
 the night; the theme returns once, slowed, on the wide hold.
 
 **The caterpillar (CONTROL: full, the shiver tutorial).** Outside, a caterpillar keeps failing to spin on a frosted
-twig; the silk breaks and blows away in the cold. Umber wraps it and holds shiver: her glow drains into it, the HUD
+twig; the silk breaks and blows away in the cold. Wing wraps it and holds shiver: her glow drains into it, the HUD
 lanterns cool, the silk holds. It spins. The ending, small, taught by doing.
 
 **BUILD:** the root tide (the one root painter with a surf-like growth front), the overrun grade, Dun's lie-down and
@@ -259,7 +259,7 @@ nose-push poses, the snapping leash, shiver (a glow drain on existing light syst
 ## 5. Night 7 and the Spin ending
 
 **The cavern.** The fight against the Mouth ends in a cavern of breathing tissue: the grey dish at the bottom of a
-deep round bowl, its rim a ring path Umber can walk. Tallow kneels at the back by his sister's case.
+deep round bowl, its rim a ring path Wing can walk. Tallow kneels at the back by his sister's case.
 
 1. **Full (0–10 s).** The last glint goes in. The dish glows amber all the way through. Every root stops. Cut to the
    world from high: the frost-root halts mid-branch everywhere. Back.
@@ -267,7 +267,7 @@ deep round bowl, its rim a ring path Umber can walk. Tallow kneels at the back b
    inward (the root's branching shader, white). Pale strands rise to wrap it, sag, fall: too thin.
 3. **The offer (25–45 s).** A root rises behind Sorrel, scaleless and dim at the rim, and grows a case round him,
    gently. Through its thin skin his colour returns, and projected on the inside like light through leaves, **the
-   dance plays on overhead, forever.** A second case opens beside it, Umber's size.
+   dance plays on overhead, forever.** A second case opens beside it, Wing's size.
 
 ### Spin: the choice, played (CONTROL: walk; abilities lost one by one; about 90 s)
 
@@ -329,7 +329,7 @@ cocoon-mountain.
 
 ## Everything new that must be drawn
 
-- **Characters:** Sorrel (a Umber skin variant), Dun (a burrback variant), the caterpillar, the vixen and cubs (the
+- **Characters:** Sorrel (a Wing skin variant), Dun (a burrback variant), the caterpillar, the vixen and cubs (the
   frozen Yako skin), the maker (one silhouette in three poses plus one hand asset, used three times). Tallow appears
   here only kneeling. No human is ever drawn with a face.
 - **Sets:** the world from high (prologue, Night 4, ending; built once, run forwards and back), the orchard field, the

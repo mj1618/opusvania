@@ -1,7 +1,7 @@
 # The prologue (wordless opening, ~90 s)
 
 The script is `docs/story/scenes/mouthless-key-scenes.md` section 1 (opening image A, "The breath"). It plays when
-the game boots, then hands Umber to the player in the Grove. Timings and staging positions live in one tuning file:
+the game boots, then hands Wing to the player in the Grove. Timings and staging positions live in one tuning file:
 `src/render/prologue/script.ts`.
 
 ## Run and capture
@@ -20,10 +20,10 @@ the game boots, then hands Umber to the player in the Grove. Timings and staging
   hooked in through `RenderStage.attachPrologue`), sets the run mode (frozen until 66 s, then realtime; not under
   `?manual`), masks input (nothing until she has shaken out her wings at 68 s → left/right only → nothing from
   75.2 s, when the glint arrives; right is dropped once her centre is at `COCOONS.fence` 1462 (momentum carries her ~25 px on), the
-  pool starts at 1536), and at 66 s teleports Umber under her cocoon (x 1400, in the air: the sim drops her). At 90 s it detaches; the HUD
+  pool starts at 1536), and at 66 s teleports Wing under her cocoon (x 1400, in the air: the sim drops her). At 90 s it detaches; the HUD
   and the glints fade in over ~1.2 s.
 - **Renderer** `src/render/prologue/index.ts`: a layer over the game's layers (under the dip and HUD) with the plates
-  and a black for fades; while a plate covers the frame the Grove's layers are hidden. It hides Umber (and zeroes her
+  and a black for fades; while a plate covers the frame the Grove's layers are hidden. It hides Wing (and zeroes her
   `ember` light) until her cocoon splits, and hides the Grove's glints so the first she sees is the one sent to her.
 - **Plates** (`plate.ts`): a world-kit `Composer` + the kit's `Post`, rendered into a 1920x1080 texture shown as one
   sprite, so the kit's screen-space maths holds at any window size. `breath.ts` (shot 1, one shader: light, threads,
@@ -34,13 +34,13 @@ the game boots, then hands Umber to the player in the Grove. Timings and staging
   fake scene with one spawn, driven by a made-up `EnemyState`; it restores `window.__enemies` after construction) with
   pale root strokes in its shell seams, the two cocoons, Sorrel (a second Vesper skin on its own `LightRegistry`,
   brightened/desaturated by a ColorMatrixFilter, clock x1.25, on a made-up gliding `PlayerState`), the dance ring,
-  the glint, and Umber's acting cues. The caterpillar group (twig, body, silk) is drawn about the twig point at
+  the glint, and Wing's acting cues. The caterpillar group (twig, body, silk) is drawn about the twig point at
   `CAT_SCALE` 1.7 so it reads. The burrback's beat uses `BurrRig.cine = {reach, open, watch}` (render/enemies:
   head craned out with the front lifted, brow plate lifted open, eyes held on the given point; null in the game) via
   `EnemyRenderer.burrRig(i)`. Sorrel flies in the skin's `rise` pose with his own flight wings drawn behind him
   (`drawSorrelWings`: delta forewings swept back, hindwings tucked, beating 7.5 Hz): the skin's glide spread read
   as a butterfly.
-- **Umber's acting**: `vesperLink.cine = {hold, look, shake}` → rig cue → `HOLD` / `PAST` poses in `actPose`; `hold`
+- **Wing's acting**: `vesperLink.cine = {hold, look, shake}` → rig cue → `HOLD` / `PAST` poses in `actPose`; `hold`
   also drives `offerK`, so `vesperLink.offerX/Y` is her hand and the glint sits in it; `shake` (66.9-68) is a
   shiver plus a cloak flare of the wings, her cape shaken out.
 - **The outside plate follows her look**: the director-side renderer latches her facing at 81.6 s; facing left, the

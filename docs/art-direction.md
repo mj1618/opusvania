@@ -42,8 +42,8 @@ and canopy all sway with phase offset by x). Plants bend when the character pass
 Glow plants brighten near the character. Motes drift, shafts shimmer slowly, water ripples and
 reflects. Camera is soft: look-ahead, gentle vertical dead zone, no snapping.
 
-## The character: Umber (chosen 2026-10-13)
-The owner picked **Umber, the moth** (`src/render/character/vesper/`, memory/character-vesper.md) from
+## The character: Wing (chosen 2026-10-13)
+The owner picked **Wing, the moth** (`src/render/character/vesper/`, memory/character-vesper.md) from
 four playable candidates. All character work goes into her from now on; the other skins (yako, wick,
 nova, hooded) stay in the repo behind the number keys but are frozen. What follows is the history of
 the brief; the tone and "more from the owner" paragraphs still apply to her.
@@ -93,13 +93,13 @@ three audiences (Ori: beauty; Hollow Knight: eerie melancholy; Nine Sols: sci-fi
 claimed than nature (Ori-likes) or neon cyberpunk.
 - **Keep the rendering, not the subject:** painterly, layered atmospheric depth, dark and subtle, small precious lights.
 - **Palette:** the Mouth's world is bone-white, pale flesh-pink and static grey in cold blue-violet dark; living things
-  are warm (amber). Umber, small and dark and warm, is the one moving light in it.
+  are warm (amber). Wing, small and dark and warm, is the one moving light in it.
 - **Nature is a minority:** the last wild pockets (the Grove is one), amber and alive, maybe two regions in eight.
 - **One permitted neon moment:** a dead city whose last lamp still burns and draws moths.
 - **The edge** between forest and root (half amber and alive, half pale and still, the line moving night to night) is the
   signature transition.
 ### Moth scale, at night (2026-10-14)
-- **Scale:** the world is seen at Umber's size. A kerb is a cliff, a bench a plateau, a dropped jar a cave, a kitchen
+- **Scale:** the world is seen at Wing's size. A kerb is a cliff, a bench a plateau, a dropped jar a cave, a kitchen
   table with sleepers' cases around it a whole region. Smallness is the premise (she is overlooked), so the camera makes
   human things vast. In the forest: ferns as trees, moss as meadows, a mushroom as a building.
 - **Time:** she is nocturnal; the game lives at dusk and night: moonlight, the Hush's faint breathing glow, and the few

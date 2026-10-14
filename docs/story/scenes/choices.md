@@ -41,6 +41,6 @@ the question stays open. B is the quieter fallback.
 ## Smaller calls made in the script (flag any you disagree with)
 
 - The deer herd is one stag whose antlers turn into root; waking crowds are one row of cases, one of which never opens.
-- The prologue hands Umber to the player (walk only) for its last 25 s.
+- The prologue hands Wing to the player (walk only) for its last 25 s.
 - Dun's root-leash snaps when it lies across the lantern on Night 5.
 - In the Spin, she loses glide, then jump, then dash, one per lap of the dish's rim, with no text.

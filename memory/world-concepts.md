@@ -20,7 +20,7 @@ in `uT.y` with a plane's own rhythm. Vite builds only `index.html`.
 2. **The edge**: the signature transition in one look: left the Grove's language pushed amber (wind in ferns and
    grass, glints, shafts), right bone-pale and still (no wind, spores that do not drift); the line runs down one tree.
 3. **The last lamp**: the one neon-ish moment: a dead city dark to the sky, one sodium lamp, a moth swarm, root drawn
-   back from its pool of light, Umber gliding in. Warm and small, not cyberpunk.
+   back from its pool of light, Wing gliding in. Warm and small, not cyberpunk.
 4. **The lab**: straight lines softened by tissue, cold light only (dish, screen), the cracked dish with its grey
    cloud and a handprint on the dusty lid; the sign, the poster, the screen's bat-and-ball, her case on its chair.
 
@@ -28,15 +28,15 @@ in `uT.y` with a plane's own rhythm. Vite builds only `index.html`.
 - `lib/compose.ts` Composer: depth `Plane`s (layer.ts: one filter per plane does ambient, up to 8 screen-space point
   lights, value mottle, fog by amount + vertical ramp, optional split look left/right of an x band, blur), shader
   planes (plane.ts + bodies.ts: sky, split sky, folded mountain, fog with a light inside, steam, beams, shafts,
-  dish cloud, CRT), `TissueBatch` strips (tissue.ts), mote fields (air.ts), Umber (hero.ts), a grade (post.ts:
+  dish cloud, CRT), `TissueBatch` strips (tissue.ts), mote fields (air.ts), Wing (hero.ts), a grade (post.ts:
   scene to RT, two bloom blurs added, one grade pass).
 - **Breath** (`lib/time.ts`, 6.4 s, in 40% / out 60%) drives tissue swell, a ripple that travels along every root,
-  pod and mountain glow, steam. Keep pod lights low: at full breath they blew out brighter than Umber.
+  pod and mountain glow, steam. Keep pod lights low: at full breath they blew out brighter than Wing.
 - **Tissue strips**: kinds 0 root, 1 folded tissue, 2 pod membrane, 3 bark (does not breathe), 4 stalk/tube. A
   regular `sin` crease along a strip reads as a candy-stripe rope: creases must come from ridged noise.
 - **Hanging root**: tapered strands read as icicles/stalactites. `kit.curtain` makes sagging loops plus strands with
   round tips; loops need span > sag or they read as handles.
-- **Umber in a still**: `Hero` drives the real vesper skin with a hand-made `PlayerState` (standing on a fake floor,
+- **Wing in a still**: `Hero` drives the real vesper skin with a hand-made `PlayerState` (standing on a fake floor,
   or `gliding` with nothing below) and settles 150 steps before the first picture.
 - The folded mountain (`MOUNTAIN` body: lobes + warped ridged noise lit from a core) doubles as the lab ceiling.
 
@@ -46,7 +46,7 @@ in `uT.y` with a plane's own rhythm. Vite builds only `index.html`.
   at moth scale (`frames/moth.ts`). All five still run 60 fps live.
 - **Plane filter (layer.ts) gained what makes cut-outs read as painted:** `edge` (8+8 alpha samples: fog creeps in at
   the silhouette, cores darken), `rim` / `rimDir` (key rim on edges facing it), `rimLights` (each scene light rims the
-  edges facing it: the lamp, the dish, Umber), `brush` (value noise stretched along a wandering direction: strokes,
+  edges facing it: the lamp, the dish, Wing), `brush` (value noise stretched along a wandering direction: strokes,
   not mottle) and `paint` (Kuwahara radius, a separate filter). Splitting a frame's flanks into their own planes so
   each gets a rim toward the corridor was the single biggest win on the lamp.
 - **Ruins (lib/ruin.ts):** `ruin()` = lean, sag, stepped bites with hanging floor slabs and rods, roof clutter, peaks,

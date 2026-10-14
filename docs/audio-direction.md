@@ -7,12 +7,12 @@ he has listened and said yes.
 
 This follows `docs/story/locked.md`, `docs/story/current/mouthless.md` and the **SOUND** notes in
 `docs/story/scenes/mouthless-key-scenes.md`, which this document agrees with and fills in. The hero is
-**Umber** (code id `vesper`).
+**Wing** (code id `vesper`).
 
 ## 0. Three rules
 
-1. **Mouths breathe; Umber doesn't.** Things with mouths (the Mouth, burrbacks, Tallow) make breath and vowel
-   sounds. Umber never vocalises: no gasp, no cry, and none of her instruments is blown. Her sounds are
+1. **Mouths breathe; Wing doesn't.** Things with mouths (the Mouth, burrbacks, Tallow) make breath and vowel
+   sounds. Wing never vocalises: no gasp, no cry, and none of her instruments is blown. Her sounds are
    touched, plucked and fluttered. Formants, the vowel resonances of a voice, belong only to things that eat.
 2. **Regular is the enemy.** The Mouth keeps one slow, exact clock. The forest never repeats. Where root
    has reached, the forest's sounds drift into step with the Mouth. Things turning regular is how the
@@ -49,7 +49,7 @@ The opposite: irregular and giving.
 - **Zones** by camera x: the blue left cold and airy, the amber centre warm with root steam under the
   light-well, the violet right glassy. The pool laps faintly.
 
-### Umber
+### Wing
 She is light, so she is quiet, and every movement sound is unpitched: air, felt, scale-dust.
 - **Wingbeat** (jump): one soft *fff*, noise band-passed from 1.8 kHz down to 700 Hz in 90 ms. Double
   jump: two beats and a whoosh that pans across her as she turns.
@@ -85,16 +85,16 @@ She is light, so she is quiet, and every movement sound is unpitched: air, felt,
 ### Pitch world
 Home is **D**, modal. The forest is in just intonation; the Mouth is detuned so it beats.
 - **The Mouth: D falling to A.** A falling fourth alternating at the pulse: the rally, its only game.
-- **Umber: A rising to D, then E, F, back to E.** Her motif *starts with the Mouth's interval turned upward*
+- **Wing: A rising to D, then E, F, back to E.** Her motif *starts with the Mouth's interval turned upward*
   (the same two notes, going somewhere) and stops on E, unresolved. She never reaches home on her own.
 - **Sorrel: a 3/4 lilt circling her top notes** (F E F A, G F E), a third above her when they play
   together, so the two in canon make the moths' dance. His is the only music you could dance to.
 - **The forest: a chord, not a tune.** Stacked fifths (D A E B), open and generous; every glint is one of
-  its notes. Now and then, far off in glass, it quotes Umber's first three notes: it carved a moth in stone
+  its notes. Now and then, far off in glass, it quotes Wing's first three notes: it carved a moth in stone
   and knows her kind.
 
 ### Instruments (all synthesis)
-- **Umber**: plucked strings (Karplus-Strong, felt excitation, like a small harp) and struck glass. Never
+- **Wing**: plucked strings (Karplus-Strong, felt excitation, like a small harp) and struck glass. Never
   blown, never voiced. **Sorrel**: the same strings, brighter and hammered, with a wing tremolo.
 - **The Mouth**: breath and pipe: formant-filtered noise, a low blown pipe (noise into a tuned comb), the
   beating tones. From the lab on, the breath carries a metal resonance: the throat is pipe.
@@ -105,23 +105,23 @@ Home is **D**, modal. The forest is in just intonation; the Mouth is detuned so 
 - **Prologue.** A breath, not music: **one low note (the maker's) under the warm blur, stopping when it
   lifts**; the stutter a burst of static. From very high, music enters on the Mouth's slow pulse over a
   chord, and **each town going out drops a note until it is thin**. Moths flutter through *off* its beat.
-  The burrback breathes; the caterpillar's spin is a dry rustle. Umber catches a glint: one glass note that
+  The burrback breathes; the caterpillar's spin is a dry rustle. Wing catches a glint: one glass note that
   just sustains. The music thins to her one voice; **the title lands on silence**.
 - **The Grove (Night 1).** Ambience only at first; each kindled lantern adds a voice to the forest's
   field. In the heart's wake, notes run along the veins (panned with their x), and as the carving fills
-  **the forest plays Umber's motif complete for the first time**. The ring is one held chord.
+  **the forest plays Wing's motif complete for the first time**. The ring is one held chord.
 - **Sorrel saves her (Night 2).** The pin has only her wingbeats. Sorrel's blaze is his theme, full and
   fast, *panning away with him*; Dun's feet recede after it. The danger leaves with the light.
 - **The lab (Night 4).** The room of dead dishes: only drips. At the heart, the screen's rally plays the
   Mouth's two knocks fast and clean: the pulse under the whole world was this game. At the stalk, each
   miss floods static and each long rally clears it: **silence is what it wanted**. The light along every
-  root is **the one place the score swells for the Mouth**, cut to static at the dish. Umber's gift is
+  root is **the one place the score swells for the Mouth**, cut to static at the dish. Wing's gift is
   **one bright note per glint**, and **the pulse stops for the first time in the game: true silence.** The
   moth forming in its threads is one held voice, its drone slid off D onto *her* note; when it tries her
   motif it can only manage D–A, D–A. The chase runs on its pulse, now fast.
 - **The lowest point (Night 5).** The Grove's field is one voice, its gusts and drips locked to the
   pulse. **No music through Sorrel's leaving**, only wind and fading wings. Dun's breath falls *off* the
-  beat for the first time; **the leash snapping is the loudest sound of the night**; Umber's theme returns
+  beat for the first time; **the leash snapping is the loudest sound of the night**; Wing's theme returns
   once, slowed, with a rest where Sorrel's answering third should be.
 - **The Spin ending.** Each circuit costs an ability and *its sound leaves the mix* (glide air, wingbeat,
   dash), while **each loss drops a note from her theme until one voice remains**. Sorrel adds a second;
@@ -133,7 +133,7 @@ Home is **D**, modal. The forest is in just intonation; the Mouth is detuned so 
   the horror. **Burn**: a crackle, then the pulse and every layer of ambience stop dead. Wings over silence.
 
 **Where silence is right:** the prologue's opening, the title, after the gift, Sorrel's leaving, before the
-choice, every fade until a lantern speaks, exploration before the lanterns give music back, and Umber
+choice, every fade until a lantern speaks, exploration before the lanterns give music back, and Wing
 herself, always. Silence is safety *and* loss: dark and empty-handed, the Mouth can't hear her either.
 
 ## 3. What the player learns from sound alone
@@ -192,7 +192,7 @@ sound; ZzFX is what the owner hated.
 ### First milestone
 1. **The Grove's ambience**: two-band wind from render's wind function, seeded drips by depth, the three
    zones, the pool, the far voice, the Mouth faint under the soil.
-2. **Umber's movement**: wingbeat, double-jump flutter, glide catch and airflow, dash, landing puff (soft and
+2. **Wing's movement**: wingbeat, double-jump flutter, glide catch and airflow, dash, landing puff (soft and
    hard), wall-slide scrape; moss footsteps silent. No slash, glints or creatures yet.
 3. **The lantern kindle**: notice, channel, kindle, rest, refuse, and the lit lantern muffling the Mouth.
 
