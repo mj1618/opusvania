@@ -458,11 +458,18 @@ export const BURR = {
     dustEvery: 0.05,
   },
   /**
-   * Unbothered (memory/giving-render.md): she passes within `px` (and `level` px of its ground) and it
-   * has not seen her: lids `lids` shut, the breath goes `breath` of the way to the calm one, a sleepy
-   * mote every `mote` s (index.ts). In at `in` /s, out at `out` /s.
+   * Asleep (memory/giving-render.md): the sim's `e.dozing` (she is near and too dark to be seen; it stops
+   * where it stands). Lids `lids` shut, settled in the calm's lie,
+   * the breath `breath` of the way to the calm one, its lights down by `dim`, a pale sleep mote every
+   * `mote` s, `moteK` x the calm's size (index.ts). In at `in` /s, out at `out` /s.
    */
-  doze: { px: 340, level: 150, lids: 0.62, breath: 0.75, mote: 1.5, in: 2.5, out: 6 },
+  doze: { lids: 1, breath: 0.75, mote: 0.42, moteK: 1.5, in: 2.2, out: 6, dim: 0.82 },
+  /**
+   * It loses her (memory/giving-render.md: its awareness runs out, or her wallet empties in front of it): over
+   * `close` s the eyes close by `lids`, its lights fall by `dim`, it settles `settle` of the calm's lie; held to
+   * `hold` s, gone by `len` (a dozing one carries on into its sleep).
+   */
+  lose: { close: 1.1, hold: 1.8, len: 2.6, lids: 0.85, dim: 0.6, settle: 0.7 },
   /**
    * It has noticed her: the sim's `EnemyState.aware` (memory/giving.md: it sees the light she
    * carries, from farther the more she carries; never while she is empty-handed). Burrs up

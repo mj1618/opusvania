@@ -795,14 +795,16 @@ export class EnemyRenderer {
           rig.moteT = 0;
           // Breathed out over its head end, it drifts up clear of the shell before it fades.
           const K = BURR.calm;
+          // (Asleep: larger and slower, its breath made visible, so a sleeping one reads at play zoom.)
+          const zk = rig.calmK > 0.7 ? 1 : BURR.doze.moteK;
           this.emit(
             K_SLEEP,
             rig.x + rig.d * (8 + this.rand() * 10),
             rig.y - 24 - this.rand() * 4,
             rig.d * (3 + this.rand() * 5),
-            -K.moteRise * (0.85 + 0.3 * this.rand()),
-            K.moteLife * (0.85 + 0.3 * this.rand()),
-            K.moteSize * (0.85 + 0.3 * this.rand()),
+            (-K.moteRise * (0.85 + 0.3 * this.rand())) / Math.sqrt(zk),
+            K.moteLife * (0.85 + 0.3 * this.rand()) * Math.sqrt(zk),
+            K.moteSize * (0.85 + 0.3 * this.rand()) * zk,
             rig.y,
           );
         }

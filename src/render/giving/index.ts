@@ -82,6 +82,9 @@ export class GivingRenderer {
   private pourK = 0;
   /** Seconds since she held a glint out (the light on her face). */
   private faceT = 9;
+  /** Caught: a creature has just seen her light (`enemyAware`): the thread from its eyes, and her glints' start. */
+  private readonly threads: { t: number; enemy: number }[] = [];
+  private caughtT = 9;
   private readonly flights: Flight[] = [];
   private readonly blooms: Bloom[] = [];
   // Sparks: position, velocity, age, life, size, energy, heat, pull target (x, y; NaN = none).
@@ -352,7 +355,18 @@ export class GivingRenderer {
 
     // --- What happened.
     for (const ev of sim.events) {
-      if (ev.type === 'offer') {
+      if (ev.type === 'enemyAware') {
+        // "It sees your light": a thread from its eyes to her, and the glints she carries catch their breath.
+        const i = this.enemyIndex(sim, ev.id);
+        if (i >= 0 && sim.player.faded === 0) {
+          const old = this.threads.find((q) => q.enemy === i || q.t >= GIVING.caught.len);
+          if (old) {
+            old.t = 0;
+            old.enemy = i;
+          } else this.threads.push({ t: 0, enemy: i });
+          this.caughtT = 0;
+        }
+      } else if (ev.type === 'offer') {
         this.faceT = 0;
         // Held V into a light: glints one after another (`offerStreamFrames` apart) are a pour.
         const k = ev.target.kind;
@@ -470,15 +484,53 @@ export class GivingRenderer {
         const fade = Math.min(1, this.carriedN - j);
         const ph = j * 2.399;
         const a = clock * C.speed * (0.8 + 0.4 * ((j * 0.618) % 1)) + ph;
-        const r = C.r + C.spread * ((j * 0.381) % 1);
+        const Ca = GIVING.caught;
+        // Caught: they flare and jitter and draw in close to her, like a breath held.
+        const ck = this.caughtT < Ca.glints ? (1 - this.caughtT / Ca.glints) ** 1.5 : 0;
+        const r = (C.r + C.spread * ((j * 0.381) % 1)) * (1 - Ca.pull * ck);
         // Each on its own tilted ring; the far half behind her, dimmer.
         const tilt = 0.35 + 0.3 * ((j * 0.73) % 1);
         const front = Math.sin(a);
-        const mx = this.lagX + Math.cos(a) * r;
-        const my = this.lagY + front * r * tilt + Math.sin(clock * 1.3 + ph) * 3;
-        const k = fade * (0.55 + 0.45 * (0.5 + 0.5 * front));
+        const mx = this.lagX + Math.cos(a) * r + Ca.jitter * ck * Math.sin(clock * 47 + j * 3.1);
+        const my =
+          this.lagY +
+          front * r * tilt +
+          Math.sin(clock * 1.3 + ph) * 3 +
+          Ca.jitter * ck * Math.sin(clock * 53 + j * 1.7);
+        const k = fade * (0.55 + 0.45 * (0.5 + 0.5 * front)) * (1 + Ca.flare * ck);
         b.quad(K_SPARK, mx, my, C.size, C.size, C.e * k, 0, 0.5 + 0.3 * front);
         b.quad(K_FLARE, mx, my, C.size * 2.4, C.size * 2.4, 0.12 * k, 0, 0);
+      }
+    }
+
+    this.caughtT += dt;
+
+    // --- Caught: a thin warm thread from the creature's eyes to her light, out and gone in ~0.4 s.
+    {
+      const Ca = GIVING.caught;
+      for (const th of this.threads) {
+        if (th.t >= Ca.len) continue;
+        th.t += dt;
+        const e = sim.enemies[th.enemy];
+        if (!e || e.gone || e.mode === 'dead') {
+          th.t = Ca.len;
+          continue;
+        }
+        const side = p.cx < e.x + e.w / 2 ? -1 : 1;
+        const ex = e.x + e.w / 2 + e.rx + (e.kind === 'burrback' ? side * (e.w / 2 - Ca.eyeIn) : 0);
+        const ey = e.kind === 'burrback' ? e.y + e.h - Ca.eyeUp : e.y + e.h / 2 + e.ry;
+        const tx = this.lagX ?? p.cx;
+        const ty = this.lagY;
+        const q = th.t / Ca.len;
+        // It shoots out to her in the first `reach` of its life, holds, then fades from its own end.
+        const head = Math.min(1, q / Ca.reach);
+        const tail = Math.max(0, (q - Ca.fadeFrom) / (1 - Ca.fadeFrom));
+        const e0 = Ca.e * (1 - tail);
+        if (head - tail > 0.01) this.trail(ex, ey, tx, ty, Ca.lift, tail, head, e0, Ca.width);
+        // Its eyes catch, and so does her light where it lands.
+        const pop = Math.sin(Math.PI * Math.min(1, q * 1.4));
+        b.quad(K_FLARE, ex, ey, Ca.eyeGlow, Ca.eyeGlow, Ca.eyeE * pop, 0, 0.6);
+        if (head >= 1) b.quad(K_FLARE, tx, ty, Ca.herGlow, Ca.herGlow, Ca.herE * (1 - tail), 0, 0.4);
       }
     }
 

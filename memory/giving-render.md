@@ -80,6 +80,23 @@ Rules: giving.md. First pass 2026-10-14. Sheets: `shots/giving/` (`burr-sheet.pn
   prompt), 620-760 (burr-ledge: aware 646, given 700), then a cut to lamp-root (4285, 1280) holding V 150 frames.
   On the natural route she passes burr-path from the islands above, not on its ground: the "dozes" read is far.
 
+## Round 3 (re-playtest: the seen rule was invisible)
+- **Asleep** (`e.dozing`, the sim's: an unseen burrback within `dozePx` 340 stops where it stands): `rig.dozeK` drives
+  the calm's lie (crouch, flat dome, burrs down, head low, slow deep breath) WITHOUT the gift's warm lights; lids fully
+  shut (`BURR.doze.lids` 1), its row of lights down 82% and breathing, a column of pale sleep motes (every 0.42 s,
+  1.5x the calm's size: a "zzz" that reads at 1x). The render-only doze rule of pass 2 is gone.
+- **Caught** (`enemyAware`, `GIVING.caught`): a thin warm thread from its eyes (burrback: 6 px in from its front on
+  her side, 18 px up) shoots to the ring of her carried glints in 0.11 s, holds, fades from its own end by 0.45 s;
+  its eyes and her light flare; her glints draw in 35%, jitter 2.5 px and flare x2.4 over 0.6 s.
+- **Lost** (`BURR.lose`, `rig.lostT / lostK`): `aware` falls while it is not calmed / dead / hurt: over 1.1 s its
+  eyes close 85%, lights fall 60%, it settles 70% of the calm's lie; gone by 2.6 s (a dozing one sleeps on).
+- Sheets: `shots/giving/r3-strip.png` (wallet 0 near / beside / past / asleep; wallet 20 caught +4 / +12 / seen /
+  lost), `r3-asleep.png`, `r3-asleep-1x-zoom.png`, `m3-sheet.png`, `m3-lose.png`. Clip `clips/giving-m3.mp4` (10 s,
+  fixed camera at 2330, 1195 zoom 1.75): wallet 0 she runs past burr-path asleep, stops by the wall at 2400; wallet
+  20: the thread, it watches; she stands at the edge of its sight and it loses her (eyes close, settles); she tries
+  the wall, drops back and is caught again. (The wall at 2432 has no way up on foot; a staged "walk away" needs
+  another spot.)
+
 ## Capture
 - `scratchpad/giving/{burr,lantern,lamp,seen,pose}.js` (`playwright-cli -s=giving run-code --filename ...`) and
   `sheet.py` (the session scratchpad may be gone: the recipes are short). Burrback: load, `giving(8)`, teleport

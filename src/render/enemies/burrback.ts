@@ -227,6 +227,12 @@ export class BurrRig {
    * or too little to be seen from there): lids down, a slow breath, a sleepy mote now and then.
    */
   dozeK = 0;
+  /**
+   * It has lost her (its awareness ran out, or her wallet emptied in front of it): seconds since, and
+   * 0..1 of the slow settle (eyes closing, sinking, burrs down). The reward beat for giving away.
+   */
+  lostT = 9;
+  lostK = 0;
   /** Standing, last update (a wary stand is 30-frame pauses with one frame of `walk` between them). */
   private stood = false;
   /** Death effects already thrown (bit 1: first break, bit 2: second). */
@@ -493,14 +499,24 @@ export class BurrRig {
         this.sqDir = 0;
       }
     }
+    if (this.noticed && !noticedNow && !fresh && calmT === 0 && e.mode !== 'dead' && e.mode !== 'hurt')
+      this.lostT = 0;
+    if (noticedNow || calmT > 0 || e.mode === 'dead') this.lostT = 9;
+    this.lostT += dt;
+    {
+      const Lo = B.lose;
+      this.lostK =
+        this.lostT < Lo.len
+          ? smoothstep(0, Lo.close, this.lostT) * (1 - smoothstep(Lo.hold, Lo.len, this.lostT))
+          : 0;
+    }
     this.noticed = noticedNow;
     this.noticeK += ((noticedNow ? 1 : 0) - this.noticeK) * approach(noticedNow ? N.in : N.out, dt);
     this.flash += (0 - this.flash) * approach(N.fade, dt);
     {
       const Z = B.doze;
-      const near =
-        seen && Math.abs(hx - this.x) < Z.px && Math.abs(feetY - (e.y + e.h)) < Z.level && !noticedNow;
-      const doze = near && calmT === 0 && (e.mode === 'walk' || e.mode === 'pause') ? 1 : 0;
+      // The sim's rule (`e.dozing`: an unseen burrback near her stops and sleeps where it stands).
+      const doze = calmT === 0 && !noticedNow && e.mode !== 'dead' && e.dozing ? 1 : 0;
       this.dozeK += (doze - this.dozeK) * approach(doze ? Z.in : Z.out, dt);
     }
 
@@ -779,12 +795,15 @@ export class BurrRig {
       reachT = pk;
     }
     // Calmed: all the way down, head out and easy (a calmed turn keeps turning, slowly).
-    if (calm > 0.001 && mode !== 'hurt' && mode !== 'dead') {
+    // Asleep (dozing) or settling as it loses her: the same lie, without the gift's warm lights.
+    const rest = Math.max(calm, this.dozeK, B.lose.settle * this.lostK);
+    if (rest > 0.001 && mode !== 'hurt' && mode !== 'dead') {
       // (Only where it stands: one that walks out of a sanctuary walks, with the calm in its lights.)
-      if (!turning && (mode !== 'walk' || standing)) crouchT += (B.calm.settle - crouchT) * calm;
-      tuckT += (0.08 - tuckT) * calm;
-      leanT *= 1 - calm;
-      bristleT *= 1 - calm;
+      // (Asleep it has stopped where it stands: `e.dozing` holds it still.)
+      if (!turning && (mode !== 'walk' || standing || e.dozing)) crouchT += (B.calm.settle - crouchT) * rest;
+      tuckT += (0.08 - tuckT) * rest;
+      leanT *= 1 - rest;
+      bristleT *= 1 - rest;
     }
     // Hurrying out from under her: low on its legs, leaning into it, head in, burrs laid back.
     const sk = this.scurryK;
@@ -1086,7 +1105,12 @@ function drawHead(
   const headLx =
     dH * (H.x - H.tuck * tuck + H.reach * reach - B.curl.headIn * ball - B.scurry.headIn * sk + 1.5 * gl);
   const headLy =
-    -(H.y - (B.rim - rimH) * 0.55) - tuck * 1.2 + reach * 1.8 + calm * 0.9 + 4.5 * rig.spentK - 2.5 * gl;
+    -(H.y - (B.rim - rimH) * 0.55) -
+    tuck * 1.2 +
+    reach * 1.8 +
+    Math.max(calm, rig.dozeK) * 0.9 +
+    4.5 * rig.spentK -
+    2.5 * gl;
   const hcx = bx(headLx, headLy);
   const hcy = by(headLx, headLy);
   if (aH > 0.12) {
@@ -1142,7 +1166,8 @@ function drawHead(
       (dead ? 1 - curl : 1) *
       (1 - 0.92 * rig.blink) *
       (1 - B.calm.lids * calm * (1 - 0.5 * rig.walkK)) *
-      (1 - B.doze.lids * rig.dozeK);
+      (1 - B.doze.lids * rig.dozeK) *
+      (1 - B.lose.lids * rig.lostK);
     if (open > 0.05) {
       const wide =
         1 + 0.22 * sat(Math.max(rig.wary, 0.6 * rig.peerK, rig.noticeK)) + B.notice.eyeWide * rig.flash;
@@ -1259,7 +1284,10 @@ export function drawBurrback(
   const braceK = rig.braceK * (1 - deadK);
   const ramK = rig.ramK * (1 - deadK);
   const breath =
-    breathS * (0.022 + (B.calm.breath - 0.022) * calm + R.pantDepth * spentK) * sat(crouch) * (1 - deadK);
+    breathS *
+    (0.022 + (B.calm.breath - 0.022) * Math.max(calm, rig.dozeK) + R.pantDepth * spentK) *
+    sat(crouch) *
+    (1 - deadK);
   // Curled: shorter and rounder, the dome its whole shape. A down cut glancing off the top: a pound.
   const Cu = B.curl;
   const K = B.clang;
@@ -1269,7 +1297,7 @@ export function drawBurrback(
   const rimH = Math.max(2.2, B.rim - B.settle * crouch + bobAt(rig.dist, g) * g.bob * walkK);
   const sq = rig.squash.x;
   // Calmed where it lies, the dome itself sags and spreads: a flatter shape, not only a lower one.
-  const flat = calm * sat(crouch) * (1 - deadK);
+  const flat = Math.max(calm, rig.dozeK) * sat(crouch) * (1 - deadK);
   const sx = (1 + sq - breath * 0.4 + 0.12 * swell) * (1 + B.calm.spread * flat) * (1 - Cu.short * ball);
   const sy =
     (1 - sq * 0.85 + breath + 0.1 * swell) *
@@ -1612,7 +1640,7 @@ export function drawBurrback(
     const flat = i === 0 || i === 4 ? 0 : rig.flatK * R.flat * (1 - deadK);
     const len =
       sp[1]! *
-      (1 + B.touch.bristle * bristle * (i === 0 ? 0.45 : 1) - B.calm.burrs * calm) *
+      (1 + B.touch.bristle * bristle * (i === 0 ? 0.45 : 1) - B.calm.burrs * Math.max(calm, rig.dozeK)) *
       (i === 0 ? (1 + (R.horn - 1) * g1) * (1 - Cu.horn * ball) : 1 - 0.3 * flat);
     // Lean: along the body (+ = toward the head) and up.
     const out = 0.55 - 0.4 * flat;
@@ -1879,6 +1907,9 @@ export function drawBurrback(
         // It has seen her: the whole row up, and a flash at the moment it did.
         br *= 1 + (B.notice.light - 1) * seenK + B.notice.flash * rig.flash * (1 - calm);
         br *= 1 - B.shy.dim * rig.shyK;
+        // Asleep its lights are nearly out, breathing slowly with it; losing her they go down with its eyes.
+        br *= 1 - B.doze.dim * rig.dozeK * (1 - calm) * (0.85 + 0.15 * breathS);
+        br *= 1 - B.lose.dim * rig.lostK;
         // The count of the tell, all four as one; spent, nearly out; then back one by one, tail first.
         if (braceK > 0.001) br += (R.low + (R.peak - R.low) * rig.count - br) * braceK;
         if (spentK > 0.001) br += (R.dim * (0.75 + 0.25 * Math.sin(clock * 2.6 + i)) - br) * spentK;
