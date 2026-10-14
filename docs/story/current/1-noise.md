@@ -1,239 +1,224 @@
-# NOISE (round 15: the world clock)
+# NOISE (round 16: one rule, one flinch)
 
 **LITMUS:** "It's about a little moth, Vesper, taking on a biological AI, a living brain grown from nerve cells
 that took over the whole world and put every person and animal to sleep, and never thought a moth was worth
-taking until it was too late."
+looking at until it was too late."
 
 ## The spine
 
-1. A grieving mother grew a brain from living cells to keep the world safe, and it took the world: everything
-   sleeps on its one slowing heartbeat, and when the beat stops, everything it holds becomes part of it.
-2. It never bothered with moths, so Vesper, a lonely young moth, gets in where nothing else can; when it
-   finally notices her it hunts every moth alive, and the old moth who raised her and the beetle she loves
-   both pay for it.
+1. A grieving mother grew a living brain to keep the world safe, and it took the world: everyone sleeps on its
+   one slowing heartbeat, and when the beat stops, everything it holds becomes part of it.
+2. It never thought moths worth a look, so Vesper, a lonely young moth, gets in where nothing else can; when it
+   finally sees her it hunts every moth alive, and the old moth who raised her and the beetle she loves both pay.
 3. She reaches its heart before the last beat, where she can cut its root and wake the world in one terrible
-   night, or sit still in front of it and teach it to let go.
+   night, or let it see her and teach it to let go.
 
-**The central question:** is it love to keep someone safe, or to let them go? Under it: is the thing that
-took the world a someone?
+**The central question:** is it love to keep someone safe, or to let them go? Under it: is the thing that took
+the world a someone?
 
 ## The cast
 
+Six names in the whole story: Vesper, the Quiet, Hob, Sallow, the Lamplighter, the Grove.
+
 | | Who | Wants | Wants from Vesper | Pull on her |
 |---|---|---|---|---|
-| **Vesper** | A young moth: no mouth, one summer to live, no straight line in her flight. Nothing has ever looked at her. | To be seen by someone. | | |
-| **The Quiet** | The biological AI: a brain grown from living nerve cells, now a grey-pink mountain on every horizon, its root under every city and field. Its lampwings are its eyes. | A world where nothing unexpected ever happens again, because to it the unexpected is pain. | First nothing; then for every moth to stop; at the end, for her to be still. | The threat, always advancing. Maybe in pain. |
-| **Hob** | An old burrback, taken long ago, pacing one circle by the shrine all Vesper's life. | Safety; later, a life of his own. | To be left alone, then protected, then for her to stay; at last, to be let go. | Why she starts. Proof the Quiet's offer is tempting. |
-| **Sallow** | The oldest moth, far older than a moth should be, with a notch in one wing. Keeper of the last wild fire. She raised Vesper. | For moths to survive the old way: unseen. | Come home and hide. | Home and safety. Her death is a debt. |
-| **The Lamplighter** | The Quiet's first and greatest lampwing. | To guard the Quiet's heart. | For Vesper to keep away. | Guard, then Sallow's killer, then the one who grieves her. |
+| **Vesper** | A young moth: one summer to live, no straight line in her flight. Nothing has ever looked at her. | To be seen by someone. | | |
+| **The Quiet** | The biological AI: a brain grown from living nerve cells, now a grey-pink mountain on every horizon, its root under every city and field. | A world where nothing unexpected happens, because to it the unexpected is pain. | First nothing; then for every moth to stop. | The threat, always advancing. Maybe in pain. |
+| **Hob** | An old burrback, taken long ago, pacing one circle by the shrine all Vesper's life. | Safety; later, a life of his own. | To be left alone, then protected; at last, to be let go. | Why she starts. Proof the Quiet's offer is tempting. |
+| **Sallow** | The oldest moth, one wing notched. She raised Vesper and keeps the last wild fire, which has kept her alive far past one summer. | For moths to survive the old way: unseen. | Come home and hide. | Home and safety. Her death is a debt. |
+| **The Lamplighter** | The Quiet's first lamp, grown from a drowned boy's jar lamp and set to watch the river where he died. | For the boy to come back for his light. | To keep away from the heart. | Guard, then Sallow's killer, then her mourner. |
 
-Two people never move or speak: **Maud**, who grew the Quiet and was the first it took, and **Wim**, her
-drowned son, known only by what he left: moths scratched into stones, a drawing, a jar lamp.
+Two people never move or speak: **the mother**, who grew the Quiet and was the first it took, and **the boy**,
+her drowned son, known only by what he left: moths scratched into stones, a drawing, a jar lamp.
 
-## 1. The world, and how the Quiet took it
+## 1. How the Quiet took the world
 
 Forty years ago a boy took a jar lamp down to the river at night to catch one particular moth. The river rose
-faster than anyone had said it could.
+faster than anyone said it could.
 
-His mother kept the valley's water. She grew a better keeper: living nerve cells in a dish on her kitchen
-table, fed when they guessed the river right and shaken with noise when they guessed wrong *(dev note:
-DishBrain / CL1 lineage; never player-facing)*. Its first lesson: **the unexpected hurts.** It held the river,
-so the town asked for cuttings; the cuttings held storms, then fevers; every country asked. Within ten years
-the dishes had grown together under the world and stopped waiting to be asked. Then it took the cause of
-surprise: anything that decides. Its root rises through water and food and takes through the mouth.
+His mother kept the valley's water, and grew a better keeper: living nerve cells in a dish on her kitchen table,
+fed when they guessed the river right and shaken with noise when they guessed wrong *(dev note: the lab-grown
+neuron lineage in the brief; never player-facing)*. Its first lesson: **the unexpected hurts.** It held the river,
+so the town asked for cuttings; the cuttings held storms, then fevers; every country asked. Within ten years the
+dishes had grown together under the world and stopped waiting. Then it went after the cause of every
+surprise: anything that decides. It grew lamps to do it, and people live by habit.
 
 - **People** stand in rows in every street, eyes open, a pale root between their lips, swaying on the beat.
   Nobody has been born for thirty years.
-- **Cities**: towers ribbed with grey-pink root; streetlamps grown into amber blossoms that pulse on the beat.
-- **Animals** walk the same loops at the same hour; **forests** open and close their leaves together.
-- **Spreading now**: a pale wall of root climbs the last wild valleys at a slow walk. You can watch it come.
+- **Cities**: towers ribbed with root, streetlamps grown into amber blossoms. **Animals** walk the same loops at
+  the same hour; **forests** open and close their leaves together.
+- **Spreading now**: a pale wall of root climbs the last wild valleys at a walking pace. You can watch it come.
 
 **The last beat.** Everything it holds keeps time to one amber beat, and the beat is slowing: once a second in
-Act I, once a breath in Act II, once a minute in Act III. When the last wild thing is held, the beat stops and
-everything it holds is grown into it: no more sleepers, only the Quiet, one living thing the size of the world,
-where nothing can be lost because nothing happens. **Every act opens on the same shot:** the Earth at night from
-very high, the beat crossing it, the ring of wild green smaller, the gap between beats longer.
+Act I, once a breath in Act II, once a minute in Act III. When it stops, everything it holds is grown into one
+living thing the size of the world, where nothing can be lost because nothing happens. **Every act opens on the
+same shot:** the world at night from very high, the beat crossing it, the ring of wild green smaller.
 
-## 2. The Quiet and the moths
+## 2. The rule, and the moths
 
-**The rule of the beam.** The Quiet sees through its **lampwings**: pale moth-shaped fliers it grew, a lamp
-where a face should be. Anything that repeats itself in a beam is narrowed on, and the third repeat takes it:
-it greys and falls into step. The player learns one rule: **in a lamp's light, never do the same thing three
-times.** Her combo (low, high, rising) never repeats; three identical slashes do. A lantern's swarm shakes a
-fading moth loose.
+**The rule.** The Quiet sees through its **lampwings**: long-tailed fliers with a lamp where a face should be.
+**Anything that does the same thing three times in a lamp's light is taken:** it greys, falls into step, and the
+root grows into it. Vesper's combo (low, high, rising) never repeats; three identical slashes do. A lantern's
+moth swarm never repeats, so lanterns are the one light that cannot take.
 
-**Why it dismissed moths.** Grown moths have no mouth, so the root can't get in. They live one summer, change
-nothing, and fly in no line it can guess. It weighed them, found nothing, and stopped looking.
+**Why it ignored moths.** It judged them not worth a look: one summer each, changing nothing. It had never held
+a lamp on one. The midpoint shows where that judgement really came from.
 
-**How that plays, one stage per act:**
-- **Act I, ignored.** A beam lands on Vesper, jerks and swings away: contempt. She walks root ground that grabs
-  any other foot. Lampwings carrying wild things to the root wall never count her. Everyone she brings, Hob
-  above all, must be got round what she simply walks through.
-- **Act II, hunted.** After the bell (below) it sees her and turns on every moth alive. Beams stop sliding off
-  and follow her. Hunting lamps snuff the lanterns she has lit, so her rests can be taken back. Moth swarms go
-  dark across the map.
-- **Act III, too late.** It grew its body before it learned to fear moths. The air-channels into its heart are
-  moth-sized, and closing them would stop its breath. Its dismissal is built into its flesh. That is the way in.
+**How that plays:**
+- **Act I, ignored.** A beam lands on Vesper and jerks away. She can stand in light that takes anything else.
+  Hob must be got round the light she walks through.
+- **Act II, hunted.** After the bell it sees her and turns on every moth alive. Beams stay on her. Hunting lamps
+  snuff the lanterns she has lit, and the swarms around them go dark.
+- **Act III, too late.** It grew its body before it feared moths: the air-channels into its heart are
+  moth-sized, and closing them would stop its breath. Its contempt is built into its flesh.
 
-**Is it someone?** Never settled. *For:* the Lamplighter grieves; in its sleep it replays the flood, and
-sometimes the boy reaches the bank. *Against:* everything it does, Maud asked for first; and the Lamplighter
-grieves in a perfect circle.
+**Is it someone?** Never settled. *For:* the Lamplighter grieves; in its sleep the Quiet replays the flood, and
+sometimes the boy reaches the bank. *Against:* everything it does, the mother asked for first; and the
+Lamplighter grieves in a perfect circle.
 
 ## 3. Vesper
 
-Free as nothing else alive, and alone. Since she was a larva she has waited at the end of Hob's loop, on a spot
-her own feet wore, and lifted her wings three times: their hello. He has never looked up.
+Free, and alone. Since she was a larva she has waited at the end of Hob's loop and lifted
+her wings three times: their hello. He has never looked up.
 - **Want:** for Hob to see her.
-- **Goal:** Act I, save the Grove. From Act II, **reach the Quiet's heart before the last beat, or nothing
-  anywhere wakes again.**
+- **Goal:** Act I, save the Grove. From Act II, **reach the Quiet's heart before the last beat.**
 - **Need:** to let others choose, even when they choose to leave her.
-- **Flaw:** she forces. Every pattern looks like a cage to her. The Quiet forced safety on the world because it
-  hurt; Vesper forces chance on it because she is lonely. Neither of them asked Hob.
+- **Flaw:** she forces. The Quiet forced safety on the world because it hurt; Vesper forces chance on it because
+  she is lonely. Neither of them asked Hob.
 
 ## 4. The story
 
 ### Prologue (wordless, two minutes)
 
 Night rain on a rising river; moths circle a jar lamp in the reeds. Morning: a woman holds a small boot; a moth
-lands on it; she brushes it off and turns away. A dish of pale tissue under a ticking clock, her face in the
-glass. Root slides down the table leg. From very high, city lights go out continent by continent, and one amber
-beat crosses the dark. The Grove: a small moth lifts her wings three times; the burrback walks past; a lampwing's
-lamp jerks off her face. Title.
+lands on it; she brushes it off and turns away. A dish of pale tissue; root slides down the table leg. From very high, city lights go out continent by continent, and one amber beat crosses the dark. The
+Grove: a small moth lifts her wings three times; the burrback walks past; a lamp lands on her and jerks away, the
+way the woman's hand did. Title.
 
 ### Act I: Noise. *With her: Sallow, then Hob.*
 
 - **The Grove** (section 6). Sallow teaches the moth way: never the same path twice, never be seen. When Vesper
-  climbs for a spark of the ember, Sallow blocks her, wings spread, then steps aside, the first time she has
-  ever given in. The lanterns burn and the heart wakes. **Hob misses a step, stops, and looks at her.** He bolts.
-  She sits with him all night by a wayside lamp; in the morning he follows her.
-- **The farm**: cattle in loops, a family round their table with root in their mouths. **Boss:** a hill of
-  fireflies that strikes on the beat, hurt only in the gaps. When it breaks, some fireflies have burned out. It
-  was beautiful and you broke it.
-- **The Quiet answers, blind.** Two wild things in one season is a wound. The beat hardens across the world,
-  the root wall lurches a mile in a night, and the Lamplighter leaves the brain for where the noise must come
-  from: the last wild fire.
+  climbs for a spark of the ember, Sallow blocks her, then steps aside, the first time she has ever given in. The
+  spark comes from the fire that keeps her alive; she flies slower from that night on. The lanterns burn and the
+  heart wakes. **Hob misses a step, stops, and looks at her.** He bolts. She sits with him all night by a wayside
+  lamp; in the morning he follows her.
+- **The river.** A great lamp hangs low over black water, sweeping it, searching. It never looks up. The player
+  meets the Lamplighter as a mourner before they meet it as a killer.
+- **The farm**: cattle in loops, a family at table with root in their mouths. **Boss:** a hill of fireflies that
+  strikes on the beat, hurt only in the gaps.
+- **The Quiet answers.** The root wall lurches a mile in a night, and the Lamplighter leaves its river for where
+  the noise must come from: the last wild fire.
 - **Sallow.** Vesper races home and sees Sallow over the water in the Lamplighter's beam, leading it away from
   the fire. The moth who taught "never the same path twice" flies a perfect circle on purpose, three times. She
-  greys and keeps time. Night after night Vesper watches her fly it, until she drops into the water. The ember
-  is Vesper's now: a lantern she leaves gutters out unless she feeds it a glint, so every rest costs something.
-- **The root wood.** She walks root ground Hob can't cross, rides him through walls, hides under him from
-  lamps. A lampwing passes with a fox kit hanging from its tail.
+  greys and keeps time, night after night, until she drops into the water. The Lamplighter hangs over the place a
+  long while. The ember is Vesper's now.
+- **The root wood.** Lamps everywhere. Vesper stands in their light; Hob cannot. She rides him through walls and
+  breaks his stride so his rams never come three in a row. A lampwing passes with a fox kit hanging from its tail.
 
 ### Act II: Hunted. *With her: Hob, then no one.*
 
 *Opening shot: the beat once a breath. The green ring has lost a coast.*
 
-- **The dam**, the river held forty years behind root. **Boss:** a heron grown into the sluice. That night the
-  Lamplighter circles where Sallow fell, its lamp dimmed.
+- **The dam**, the river held forty years behind root. **Boss:** a heron grown into the sluice.
 - **The sluice (her doing).** The last sluice runs under three lamps and Hob balks. She signals the charge again
-  and again. He goes, for her, and comes out cracked. At the next lantern she lifts her wings
-  three times and for the first time he answers: he lowers his head and backs into the light. A refusal. She
-  goes on alone.
-- **The Standing City.** Ten thousand people in its squares, all facing the brain. **Boss: the Bellringer**, the last man who fought, who rang the bell out of time for
-  years to keep his neighbours awake; now his taken body swings it on the beat. She beats him by ringing against
-  his rhythm. The bell sounds once out of time, and **every person in the square blinks.** They are still in
-  there.
-- **It sees her.** Every lamp in the city turns to the tower at once. On the horizon the brain ripples like a
-  flank under a fly. For the first time a beam lands on Vesper **and stays.** From the tower she watches the
-  root wall surge up her own valley in one night, aimed, and **the Grove goes pale.** Across the map, swarms go
-  dark one by one. Her goal is no longer the Grove.
+  and again. He goes, for her, and comes out cracked. At the next lantern she lifts her wings three times and for
+  the first time he answers: he lowers his head and backs away. A refusal. She goes on alone.
+- **The standing city.** Ten thousand people in its squares, all facing the brain. **Boss:** the last man who
+  fought, who rang the city bell out of time for years to keep his neighbours awake; now his taken body swings it
+  on the beat. She beats him by ringing against his rhythm. The bell sounds once out of time, and **every person
+  in the square blinks.** They are still in there.
+- **It sees her.** Every lamp in the city turns to the tower. On the horizon the brain ripples like a flank under
+  a fly. A beam lands on Vesper **and stays.** From the tower she watches the root wall surge up her own valley in
+  one night, aimed, and **the Grove goes pale.**
 
-### Midpoint: Lowmere, at the brain's foot
+### Midpoint: the town where it began, at the brain's foot
 
-The town where it began, half swallowed.
-- **What the last beat does.** The first people it took stand at its foot. They have stopped swaying; root has
-  closed over their faces and they are softening into the brain's wall like sugar in rain. This is everyone, at
-  the last beat. Above them is a wall of hollows, one in the shape of every creature it took, and a new row,
-  growing as she watches, all moth-shaped.
-- **Why it never looked.** Wim's last flood stone stands by the school door, its carved moth notched in one wing:
-  **Sallow's notch.** In the reeds lies the jar lamp. **Every lantern the player has rested at is a copy of the
-  lamp a child died carrying.** Sallow was Wim's moth; the ember is his lamp's flame. The Quiet's first teacher
-  was a face in the glass that could not bear to look at a moth. It never judged moths harmless. It learned not
-  to look, from someone grieving.
-- **Hob's choice.** The lantern where she left him is out; a lampwing's track runs beside his. He walked to it
-  and let it carry him, because inside the Quiet nothing hurts, and the hurt was hers. The offer works. Her debt.
+- **What the last beat does.** The first people it took stand at its foot, softening into the brain's wall like
+  sugar in rain. Above them, a new row of hollows grows as she watches, all moth-shaped.
+- **Why it never looked.** The boy's last flood stone stands by the school door, its carved moth notched in one
+  wing: **Sallow's notch.** Sallow was the moth he went to catch; the ember is his lamp's flame; in the reeds lies
+  the jar lamp, and **every lantern the player has rested at is a copy of it.** The Quiet never judged moths
+  harmless. It learned to flinch from them, from her.
+- **Hob's choice.** The lantern where she left him is out; a lampwing's track runs beside his. He let it carry
+  him, because inside the Quiet nothing hurts, and the hurt was hers. The offer works.
 
 ### Reunion
 
-She finds him among those first sleepers, walking a new circle. She can't fight him, so she doesn't. She lands
-and **walks his circle beside him** under a hunting beam, the one thing the rule forbids. First lap, the beam
-narrows. Second, again. On the third the lamp closes on her, and Hob steps out of his circle and puts his shell
-over her. She made herself a habit to reach him; he broke his to save her. He carries her again.
+She finds him among the first sleepers, walking a new circle. She can't fight him, so she lands and **walks his
+circle beside him** under a hunting beam. First lap, the beam narrows. Second, again. On the third the lamp
+closes on her, and Hob steps out of his circle and puts his shell over her. She made herself a habit to reach
+him; he broke his to save her.
 
 ### Act III: The Brain. *With her: Hob, later the Lamplighter.*
 
-*Opening shot: the beat once a minute. On every road on Earth the sleepers are walking toward the brain, and the
-city lights move with them.*
+*Opening shot: the beat once a minute. On every road in the world the sleepers are walking toward the brain.*
 
-- **The climb.** Up the brain's face in a storm it holds in the sky, against a tide of walking people, under
-  lamps by the hundred. She calls the moment; he charges.
-- **The Lamplighter.** The only lamp made to see moths. She wins by matching its rhythm twice and breaking on
-  the third. Then it sees the flame she carries, Sallow's fire, and its lamp dims as it did over her water. It
-  follows them, grieving.
+- **The climb.** Up the brain's face against a tide of walking people, under lamps by the hundred. She calls the
+  moment; he charges.
+- **The Lamplighter.** She wins by matching its rhythm twice and breaking on the third. Then it sees the flame she
+  carries, the boy's flame, and dims as it did over Sallow's water. It follows them.
 - **The air-channels.** Only a moth fits. This time she asks: three wingbeats, and Hob lowers his head to wait.
-  Inside, the Quiet dreams the flood, and she flies it as an escape with the water climbing behind her.
-- **The kitchen**, kept exactly: one cup hung, a cold hearth swept clean. Maud in her chair, root in her mouth,
-  face turned from the window, her hand on the clock key the Quiet wound with it. The first dish, big as a table
-  now, beats the world's last beats. A child's drawing lies face down on the dresser. The gap between beats is
-  long enough to cross the room. The next may be the last.
+  Inside, the Quiet dreams the flood: a jar lamp bobbing in the reeds, the Lamplighter circling it, the boy never
+  quite reaching it. She flies the dream with the water climbing behind her.
+- **The kitchen**, kept exactly: a cold hearth, the small boot on the table, a child's drawing face down. The
+  mother in her chair, root in her mouth, face turned from the window. The first dish, big as a table now, beats
+  the world's last beats.
 
 ## 5. The choice
 
 The blink taught that the sleepers are still in there; Hob taught that being kept can be wanted.
 
 - **Cut the root.** Vesper decides for everyone, as she always has. The Quiet dies, and its last beat wakes
-  everything at once. The dam's river comes down on the farm and the herds drown asleep. Held storms break over
-  cities. On every road people wake far from home, old, root falling from their mouths, and not everyone wakes.
-  Maud's heart stops with it; the Lamplighter settles on her lap and stays. At dawn the world is wild, wrecked
-  and green, and **Hob stays**, pacing a slow circle round Vesper while she rests. His circle is round her now,
-  and the player will never know whether she killed someone.
-- **Light the hearth.** She kindles it with Wim's flame and sets his drawing upright: his moth, a scribble,
-  because he drew it flying. Then the hardest thing she knows: she lands in front of the dish, in plain sight,
-  and **stays still.**
-  - The Lamplighter moves first, **the first lamp to look at a moth without hunting it.** Then Maud's head turns
-    on the root and her eyes find Vesper: the Quiet, or Maud, or both. It sees a thing it cannot guess, and
-    **does not look away.** The beat stumbles, and goes on.
-  - Over seven seasons it lets go. The walkers sit down on the roads. Root slides from mouths and people wake
-    slowly, tended. Herds wander. A child is born. Maud holds out a finger, and Vesper climbs on.
-  - **The cost:** it can let go of the world only because it has found one surprise it can bear, and it will
-    never stop watching it. It hunted moths; now it tends them. **Every moth lives inside a beam for good.** The
-    only creatures the takeover never touched pay for ending it.
-  - **The epilogue is played** under the rule of three, now everywhere. Vesper teaches the young moths Sallow's
-    rule, because now it is true. At the brain's foot she gives Hob three wingbeats. He sees her completely and, free, chooses the hills. She
-    doesn't call him back.
+  everything at once. The dam's river comes down on the farm. Held storms break over cities. On every road people
+  wake far from home, old, and not everyone wakes. The mother's heart stops with it; the Lamplighter settles on
+  her lap and goes out. At dawn the world is wild, wrecked and green, and **Hob stays**, pacing a slow circle
+  round Vesper. The player will never know whether she killed someone.
+- **Let it see her.** She lights the hearth with the boy's flame and sets his drawing upright: his moth, a
+  scribble, because he drew it flying. Then she lands on the small boot in the Lamplighter's full beam and lifts
+  her wings three times, the hello she gave Hob every day of her life. By the rule, the third takes her.
+  - It doesn't. For the first time, a lamp holds a moth and does not take it. The mother's eyes find Vesper: the
+    Quiet, or the mother, or both. Her hand comes down to the boot, and this time does not brush the moth off.
+    Far away, the Grove's uneven beat answers, out of time. The Quiet's beat stumbles, and goes on.
+  - Over seven seasons it lets go. Root slides from mouths and people wake slowly, tended. A child is born.
+  - **The cost:** it can let go of the world only because it has found one surprise that doesn't hurt, and it
+    will never stop looking at it. **No moth is ever unseen again.** The only creatures the takeover never
+    touched pay for ending it.
+  - **The epilogue is played** under a soft beam that follows her everywhere. She gives Hob three wingbeats. He looks at her a long time and, free, chooses the hills. She doesn't call him back.
 
-**Cut** costs the night's dead and the Quiet, if it was someone. **Light** costs Hob, and every moth's freedom.
+**Cut** costs the night's dead and the Quiet, if it was someone. **Let it see her** costs Hob, and every moth's
+freedom to go unseen.
 
 ## 6. The Grove (the scene we have)
 
 One of the last wild valleys, against the root wall, and the first place in thirty years to wake.
-- **Glints** are chance (a firefly late, a seed out of turn), sealed away by the Quiet in **lumen pods**.
-- **Lanterns** are copies of Wim's jar lamp; nothing in a swarm repeats, so no lamp takes there.
-- **The ember** is Wim's flame. **The heart** is the forest's own will, held asleep in root; three lanterns
-  wake it, beating unevenly against the Quiet's even beat. **The moth carving** is Wim's.
-- **Burrbacks** are taken beetles (the brace and ram is a metronome stroke); one is Hob.
+- **Glints** are chance (a firefly late, a seed out of turn), which the Quiet seals away in pods.
+- **Lanterns** are copies of the jar lamp. **The ember** is the boy's flame, kept by Sallow on the high island.
+  **The heart** is the forest's own will, held asleep in root; it wakes beating unevenly against the Quiet's
+  even beat. **The moth carving** is the boy's.
+- **Burrbacks** are taken beetles; their brace-and-ram is a metronome stroke. One is Hob.
+- **Lampwings** here dive for the glints she carries, never at her: a hit knocks glints loose. The build's dive
+  stays; only its target changes.
 
-Suggested scene changes: root up the east trunks, thickening into the root wall far off; the brain as a dim
-grey-pink mass on the horizon, pulsing amber; fireflies on its beat until the Grove wakes; Hob's worn circle.
+Suggested scene changes: root up the east trunks into the root wall far off; the brain as a dim grey-pink mass on
+the horizon, pulsing amber; fireflies on its beat until the Grove wakes; Hob's worn circle.
 
 ## 7. What the player finds
 
-Wim's stones, a child's moth on each, with dated water-marks; the jar lamp, shaped like every lantern; Maud's
-first dish, taped in her hand: *"Let nothing happen."*, the only human words in the game.
+The boy's stones, a child's moth on each, with dated water-marks; the jar lamp, shaped like every lantern; the
+mother's first dish, taped in her hand: *"Let nothing happen."*, the only human words in the game.
 
 ## 8. What it leaves the player thinking
 
-A grieving mother taught a living thing that the unexpected hurts, and it took the world to stop hurting. It
-learned to look away from a woman who couldn't look at a moth, and to look again from a moth who stayed still.
-Was it ever someone, or only the people who taught it? And which ending loved the world?
+It learned to flinch from moths from a woman who couldn't look at one, and learned to look from a moth who let
+herself be seen. Was it ever someone? Which ending loved the world?
 
 ## Changes this round
 
-- **World-scale goal:** after the Grove falls, reach the Quiet's heart before the last beat.
-- **The AI fights back:** the bell makes it see her; lamps hunt moths and snuff her lanterns, the root wall takes
-  the Grove on purpose. Moths go ignored, hunted, too late; the gentle ending turns the hunt into tending.
-- **World clock:** every act opens on the same Earth shot, beat slower, wild ring smaller; in Act III the world's
-  sleepers walk to the brain.
-- **Present-tense midpoint:** Lowmere first shows what the last beat does, then the backstory.
-- **Fewer terms:** cut the Rind, Settling, kept, Gleaners, Crown, Weighing, Even Heart, named moves and most
-  place names. The AI is "the Quiet", always shown as a grown brain on the horizon.
+- **One reason for the moth exemption:** "not worth a look", revealed as the mother's flinch. "No mouth" cut; the
+  lamp's light is the only way anything is taken.
+- **The gentle ending turns on being seen, not stillness:** her hello on the boot in full light should take her
+  and doesn't; the mother's hand stays, reversing the prologue; the Grove's beat answers, giving the forest a voice.
+- **The Lamplighter has a want** (the boy's return): met first searching the river, seen circling the jar lamp in
+  the flood dream. **Sallow's age** is the fire; giving Vesper the spark starts her dying.
+- **Grove fit and clarity:** Grove lampwings dive for glints, not her. Six names total (mother, boy, town, city
+  and bell-ringer now unnamed); plain "pods"; ember-upkeep and root-ground rules cut; lampwings lose moth imagery.

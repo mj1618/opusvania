@@ -8,13 +8,13 @@ both. Bar: Ori / Hollow Knight / Nine Sols, with relationships you feel and a st
 
 | Story | Latest | Your AI test | Craft verdict | Scores (rel / clarity / idea / world / mechanics / antagonist / ending / original / Grove / balance) | Next round fixes |
 |---|---|---|---|---|---|
-| 1 Noise | round 15 | PASS (anchor 9) | GREENLIGHT WITH NOTES | 8 / 7 / 8 / 9 / 8 / 8 / 8 / 7 / 7 / 8 | one reason moths were ignored (Maud's flinch); the Lamplighter's want |
-| 2 Mouthless | round 15 | PASS (anchor 9) | GREENLIGHT WITH NOTES | 8 / 6 / 9 / 9 / 9 / 9 / 8 / 7 / 9 / 8 | first gift must be Night 4; fewer names/terms |
-| 3 Reply | round 15 | PASS (anchor 8) | GREENLIGHT WITH NOTES | 8 / 6 / 9 / 8 / 9 / 8 / 8 / 7 / 8 / 7 | "Ward follows Reply, not her"; replace the mirror boss; Act III crowding |
-| 4 What the Lanterns Burn | round 15 | PASS (anchor 9) | GREENLIGHT WITH NOTES | 8 / 6 / 9 / 8 / 9 / 9 / 8 / 8 / 8 / 7 | simplify the lantern rules; make the Burned ending a real choice |
-| 5 One Night | round 15 | PASS (anchor 9) | GREENLIGHT WITH NOTES | 8 / 7 / 9 / 9 / 9 / 8 / 8 / 7 / 9 / 7 | fix the egg rule; plant the moths' plan early; Ori echoes |
+| 1 Noise | round 16 | PASS (9) | GREENLIGHT WITH NOTES | 8 / 6 / 9 / 8 / 9 / 8 / 8 / 8 / 8 / 7 | lamps flinch from moths vs the Lamplighter taking Sallow |
+| 2 Mouthless | round 16 | PASS (9) | GREENLIGHT WITH NOTES | 8 / 7 / 9 / 8 / 9 / 9 / 8 / 8 / 9 / 8 | what the AI feeds the sleepers; prologue gives away the night-4 twist |
+| 3 Reply | round 16 | PASS (9) | GREENLIGHT WITH NOTES | 8 / 6 / 9 / 8 / 9 / 8 / 8 / 7 / 9 / 8 | the glass rules grew to ~7; spare lampwings instead of forcing kills |
+| 4 What the Lanterns Burn | round 16 | PASS (9) | GREENLIGHT WITH NOTES | 8 / 7 / 9 / 9 / 9 / 9 / 8 / 8 / 7 / 8 | where the ember is; ~10 systems; the Taper's secret on screen |
+| 5 One Night | round 16 | PASS (9) | GREENLIGHT WITH NOTES | 8 / 7 / 9 / 9 / 9 / 8 / 8 / 8 / 8 / 8 | seed the cost before dawn; re-form Vesper at lanterns, daughters only for story deaths |
 
-Across all five the weakest score is **clarity (6–7)**: too many names and invented terms. Round 16 targets that hardest.
+Clarity is still the weak score (6–7): the writers keep adding rules while fixing notes. Round 17 adds a separate simplifying editor and a "retell test" (a reader who has only the story retells it from memory).
 
 The full brief every agent works from: [brief.md](brief.md).
 
