@@ -124,16 +124,17 @@ export class CharacterRenderer {
       .join(' · ');
   }
 
-  /** `hatch`: the sim's `state.hatch` (absent or null: no hatching). */
+  /** `hatch`: the sim's `state.hatch` (absent or null: no hatching); `flags`: the save's story flags. */
   update(
     dt: number,
     clock: number,
     player: PlayerView,
     events: readonly SimEvent[],
     hatch: Readonly<HatchState> | null = null,
+    flags: readonly string[] = [],
   ): void {
     this.cast.link(dt, hatch, events);
     this.current?.update(dt, clock, player, events);
-    this.cast.update(dt, clock, hatch, player, events);
+    this.cast.update(dt, clock, hatch, player, events, flags);
   }
 }

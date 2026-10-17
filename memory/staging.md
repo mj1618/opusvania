@@ -54,3 +54,14 @@ flies into, the player in control, input never held; the camera may lift, widen 
 - **Tatter at a rest**: a `patchRest` within 700 px turns its look to her, lifts it a little and stirs its wings
   once for ~3 s (`TATTER.rest`), at P1, P3 and wherever it sits.
 - Story-camera framings are clamped inside the room at the beat's zoom (the glade's bask showed past its west wall).
+
+## The root ladder and Tatter ahead (2026-10-18, level round 1 fe620a4)
+- `marks.tatter.when` / `until` (story flags): Tatter is drawn only once / until the flag is in the save
+  (`Tatter.present`, checked every frame through `CharacterRenderer.update(..., flags)`). The hub's Tatter is
+  `until: wood-root-ladder`, its `want` the first bracket cap (96, 2656); after the ladder it is ahead of her at
+  R8's p-dark, R10's P4 and R11's P5 (`when: wood-root-ladder`).
+- `stage.rootFall` (R14 wood-caps): on the flag's `flagSet` (the trigger west of the cut root) the root falls
+  away down the chute. `stage.ladders` (hub): roots hanging as ladders once the flag is saved (shelf face, and
+  shelf up to the bracket cap).
+- Floor bark (kit.ts): moonlight wells up through it (pale slits, a faint breathing column over it), so a dead
+  end over a floor panel reads as a door (R9).

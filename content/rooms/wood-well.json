@@ -100,6 +100,7 @@
     { "from": "out", "to": "p4", "oneWay": true }
   ],
   "marks": {
+    "tatter": { "x": 3236, "y": 2112, "facing": -1, "when": "wood-root-ladder" },
     "notes": [
       {
         "x": 10200,

@@ -269,7 +269,21 @@ export class KitView {
       hatch(g, x, b.y, b.w, b.h, 14);
       g.stroke({ color: KC.barkHatch, width: 2, alpha: 0.8 });
       g.rect(x, b.y, b.w, b.h).stroke({ color: KC.barkEdge, width: 2, alpha: 0.9 });
-      if (b.floor) g.rect(x, b.y, b.w, GB.topPx).fill({ color: GB.solidTop, alpha: 0.6 });
+      if (b.floor) {
+        g.rect(x, b.y, b.w, GB.topPx).fill({ color: GB.solidTop, alpha: 0.6 });
+        // Moonlight welling up through a floor panel (a dead end that is a door): pale slits in the bark and
+        // a faint rising glow over it that breathes, the moon patches' light from below.
+        const breath = 0.75 + 0.25 * Math.sin(clock * 1.1 + hash01(b.id, 3) * 6);
+        for (let k = 1; k < 5; k++) {
+          const sxk = x + (b.w * k) / 5 + Math.sin(k * 2.3) * 6;
+          g.moveTo(sxk, b.y + 6).lineTo(sxk + 4, b.y + b.h - 6);
+        }
+        g.stroke({ color: KC.hollow, width: 2, alpha: 0.45 * breath });
+        for (let k = 0; k < 5; k++) {
+          const hgt = 40 + k * 34;
+          g.rect(x + k * 8, b.y - hgt, b.w - k * 16, hgt).fill({ color: KC.hollow, alpha: 0.035 * breath });
+        }
+      }
       const max = b.hp ?? tuning.kit.bark.hp;
       for (let k = 0; k < max; k++) {
         const px = b.x + b.w / 2 + (k - (max - 1) / 2) * 14;

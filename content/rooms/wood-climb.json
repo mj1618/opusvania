@@ -22,6 +22,7 @@
     { "from": "spawn", "to": "p5" }
   ],
   "marks": {
+    "tatter": { "x": 1700, "y": 640, "facing": -1, "when": "wood-root-ladder" },
     "notes": [
       {
         "x": 600,

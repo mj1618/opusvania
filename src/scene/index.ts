@@ -266,6 +266,8 @@ const SceneSchema = z
             y: int,
             facing: z.union([z.literal(-1), z.literal(1)]),
             want: z.tuple([int, int]).optional(),
+            when: z.string().min(1).optional(),
+            until: z.string().min(1).optional(),
           })
           .strict()
           .optional(),

@@ -63,6 +63,7 @@
     { "from": "root-cut", "to": "s", "oneWay": true }
   ],
   "marks": {
+    "stage": { "rootFall": { "flag": "wood-root-ladder", "x": 224, "y": 448, "len": 192 } },
     "notes": [
       {
         "x": 2900,

@@ -95,6 +95,7 @@ export class Cast {
     hatch: Readonly<HatchState> | null,
     her: PlayerView,
     events: readonly SimEvent[],
+    flags: readonly string[] = [],
   ): void {
     const row = this.row;
     if (!row.any && !this.tatter) return;
@@ -124,7 +125,9 @@ export class Cast {
       const b = p.mesh.boundsArea;
       b.copyFrom(this.bounds);
     }
-    if (this.tatter) {
+    // Tatter is somewhere only once / until its story flag (`marks.tatter.when` / `until`).
+    if (this.tatter) this.tatter.mesh.visible = this.tatter.present(flags);
+    if (this.tatter?.mesh.visible) {
       const stirred = events.some((e) => e.type === 'hatchStir');
       const rested = events.some((e) => e.type === 'patchRest');
       this.tatter.update(

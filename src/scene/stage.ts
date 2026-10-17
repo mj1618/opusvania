@@ -105,6 +105,15 @@ export const StageSchema = z
       })
       .strict()
       .optional(),
+    /** Root ladders that hang once `flag` is set (the hub, after the cap stair's root is cut): x, top, bottom. */
+    ladders: z
+      .array(z.object({ flag: z.string().min(1), x: z.number(), y0: z.number(), y1: z.number() }).strict())
+      .optional(),
+    /** On `flag`'s flagSet, a root `len` px long falls from (x, y) (the cap stair's top: the root she cut). */
+    rootFall: z
+      .object({ flag: z.string().min(1), x: z.number(), y: z.number(), len: z.number().positive() })
+      .strict()
+      .optional(),
     /**
      * The wings-twitch cue (wood.md R5: a tapper never opens the wings): after `catches` fall catches in the
      * room, standing within `r` of (x, y) (her feet) plays her wings flicking open twice, now and then.

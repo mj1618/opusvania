@@ -52,6 +52,9 @@ const C = {
   moonlight: 0xc6d4ff,
   dead: 0x737b8e,
   wing: 0x8a93a8,
+  /** The root ladder (the level kit's bark colours). */
+  root: 0x5e4a33,
+  rootLight: 0x9c7b52,
 };
 
 /** Point and unit tangent at arc length `s` (0..1 of the whole) along a polyline. */
@@ -114,6 +117,8 @@ export class StagingView {
   private twitchT = 1e6;
   /** Each circling lure's moths, once it is out: seconds since (they scatter). */
   private readonly scatter = new Map<string, number>();
+  /** Seconds since the root was cut (large = not this visit). */
+  private rootT = 1e6;
 
   constructor(private readonly stage: StageMarks | undefined) {
     const v = stage?.vista;
@@ -142,6 +147,7 @@ export class StagingView {
       } else if (e.type === 'fallCatch') this.catches++;
       else if (e.type === 'lureSnuff' && this.stage?.circlers?.some((c) => c.lure === e.id))
         this.scatter.set(e.id, 0);
+      else if (e.type === 'flagSet' && e.flag === this.stage?.rootFall?.flag) this.rootT = 0;
     }
   }
 
@@ -153,6 +159,8 @@ export class StagingView {
     if (!S) return;
     this.drawFar(far, clock, cam);
     for (const p of S.props ?? []) this.deadMoth(back, p.x, p.y, p.facing ?? 1);
+    for (const l of S.ladders ?? []) if (sim.save.flags.includes(l.flag)) this.ladder(back, l.x, l.y0, l.y1);
+    this.drawRootFall(back, dt);
     this.drawStragglers(front, clock);
     this.drawCirclers(front, dt, clock, sim);
     this.drawGlimpse(front, clock);
@@ -383,6 +391,41 @@ export class StagingView {
         .closePath()
         .fill({ color: C.wing, alpha: 0.55 * open });
     }
+  }
+
+  /** A root hanging as a ladder: a thick wavering root with short side roots for rungs. */
+  private ladder(g: Graphics, x: number, y0: number, y1: number): void {
+    const n = Math.max(2, Math.round((y1 - y0) / 24));
+    g.moveTo(x, y0);
+    for (let i = 1; i <= n; i++) {
+      const y = y0 + ((y1 - y0) * i) / n;
+      g.lineTo(x + Math.sin(i * 1.3) * 5, y);
+    }
+    g.stroke({ color: C.root, width: 9, cap: 'round', join: 'round' });
+    for (let y = y0 + 30; y < y1 - 10; y += 44) {
+      const s = Math.round(y / 44) % 2 === 0 ? 1 : -1;
+      g.moveTo(x, y).lineTo(x + s * 22, y + 10);
+    }
+    g.stroke({ color: C.rootLight, width: 3, cap: 'round' });
+  }
+
+  /** The root she cut, falling away down the chute. */
+  private drawRootFall(g: Graphics, dt: number): void {
+    const R = this.stage?.rootFall;
+    if (!R || this.rootT > 1.6) return;
+    this.rootT += dt;
+    const t = this.rootT;
+    const drop = 0.5 * 1800 * t * t;
+    const ang = 0.35 * t * t;
+    const x0 = R.x + 30 * t;
+    const y0 = R.y + drop;
+    const x1 = x0 + Math.sin(ang) * R.len;
+    const y1 = y0 + Math.cos(ang) * R.len;
+    const a = 1 - Math.max(0, (t - 1.2) / 0.4);
+    g.moveTo(x0, y0).lineTo(x1, y1).stroke({ color: C.root, width: 11, cap: 'round', alpha: a });
+    g.moveTo(x0, y0)
+      .lineTo(x1, y1)
+      .stroke({ color: C.rootLight, width: 2, alpha: 0.6 * a });
   }
 
   /** A dead moth on its back on the ground: grey, still, wings flat. */

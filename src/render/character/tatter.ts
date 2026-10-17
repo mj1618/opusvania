@@ -107,6 +107,9 @@ export class Tatter {
   private goneT = 0;
   /** What it wants and cannot reach (world px), and seconds since she arrived (-1 = not yet). */
   private readonly want: readonly [number, number] | null;
+  /** It is here only once / until these story flags are set. */
+  private readonly when: string | null;
+  private readonly until: string | null;
   private wantT = -1;
   /** Seconds since she rested near it (large = not lately). */
   private restT = 1e6;
@@ -115,9 +118,11 @@ export class Tatter {
     private readonly ctx: RenderContext,
     private readonly layer: Container,
     room: Room,
-    at: { x: number; y: number; facing: -1 | 1; want?: [number, number] },
+    at: { x: number; y: number; facing: -1 | 1; want?: [number, number]; when?: string; until?: string },
   ) {
     this.want = at.want ?? null;
+    this.when = at.when ?? null;
+    this.until = at.until ?? null;
     this.x = at.x;
     this.y = at.y;
     this.facing = at.facing;
@@ -187,6 +192,13 @@ export class Tatter {
    * `her`: Wing as drawn (null = not drawn: still inside), `cocoon` her cocoon's hang point,
    * `sinceBreak` render seconds since the break (large = none seen), `stirred` a stir this frame.
    */
+  /** Is it here, by the save's story flags? (The root ladder: it leaves the hub, and is ahead of her after.) */
+  present(flags: readonly string[]): boolean {
+    if (this.when && !flags.includes(this.when)) return false;
+    if (this.until && flags.includes(this.until)) return false;
+    return true;
+  }
+
   update(
     dt: number,
     clock: number,

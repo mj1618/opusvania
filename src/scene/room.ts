@@ -154,9 +154,10 @@ export interface RoomMarks {
   /**
    * Tatter, the torn-winged moth who stays: feet centre on the branch and the way it faces. `want`: a
    * point it wants and cannot reach (the hub's root shelf): it looks at it, and when she arrives it turns
-   * to her and tries for it once, and fails (render/character/tatter.ts).
+   * to her and tries for it once, and fails (render/character/tatter.ts). `when` / `until`: it is here only
+   * once / until that story flag is set (the root ladder: it leaves the hub and is ahead of her after).
    */
-  tatter?: { x: number; y: number; facing: -1 | 1; want?: [number, number] };
+  tatter?: { x: number; y: number; facing: -1 | 1; want?: [number, number]; when?: string; until?: string };
   /** The swarm's path through the sky, west to east (world px polyline). */
   swarm?: Array<[number, number]>;
   /**
