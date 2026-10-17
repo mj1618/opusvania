@@ -92,6 +92,9 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
   touched her as long (`e.hitstop`; it keeps its bounce velocity for after). In hitstop `invuln` does not count
   down (nor does the stagger), so the hold costs no i-frames: hit to hit is 70 + 8. Presses in it are ignored
   (the stagger's input mask applies). Thorns use the same hold (inside their 30-frame return).
+- **Back from a hazard or a fade** (level-kit.md "Returns never chain"): `fadeIn` frames take no input, and the bits in
+  `inputLock` (whatever was held as she came back) are added to the previous input for edges until let go, so a
+  held button is a hold, never a press.
 - **Corner corrections**: head bump (slide ≤ 20 px sideways around a ceiling corner), ledge pop-up (≤ 16 px
   up onto a lip), dash (≤ 24 px up/down). Each emits `cornerCorrect`.
 - **Performance**: no closures in the per-step path; keep `solidAt` allocation-free.

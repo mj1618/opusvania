@@ -37,6 +37,17 @@ a swinging lure's core must be clear along the whole arc and its pivot inside th
   **Thorns ignore i-frames** (a creature's blow never carries her across a bed for free). The last light is a
   fade instead (no hold). Safe ground is never within `safeMargin` 96 of a thorn rect (48 put her back one
   step from the bed: walking on re-entered it) nor on a kit solid (`SolidRect.kit`).
+- **Returns never chain** (impatient first-timer, 2026-10-17: put back on R6's T3 with jump + right still held, she
+  re-jumped into the thorn branch: 3 hearts in ~3 s, twice; `placePlayer` zeroes `prevInput`, so a held jump read as
+  a press). After any `fallReturn` (thorns or a fall catch) and any `reform`: an 18-frame fade-in (`room.returnFadeIn`:
+  no input, untouchable; `fallReturn.fadeIn`, `reform.fadeIn`), and no button held as she came back is a press until
+  it is let go (`player.inputLock`, OR-ed into the controller's previous input). Its hold still acts: held right + jump
+  she walks off the lip with the wings open (the walk-off line), never a jump by itself. And the return spot
+  (src/sim/return.ts `clearOfThorns`) steps back from the lip she left `room.returnProbeStep` 40 px at a time until a
+  jump held toward that lip (and the glide after it) meets no thorns within `returnProbeFrames` 180: a short run of the
+  real controller on a copy of the state, once per return. On the first-timer's gap 3 (branch at 1112-1272) she went
+  back 72 px from the lip, where every jump-glide meets the branch; now 312 px, where a standing jump-glide lands on
+  T4. Tests: `tests/unit/hazard-return.test.ts` (a copy of that gap: R6's branch has since been raised to 920).
 - **Pogo**: a down cut in the air on thorns / a seed-case / standing bark bounces (`pogoBounce`, refills) with the
   pogo's hitstop 2 (the rhythm). The step a down cut lands on thorns, their touch is forgiven.
 - **Seed-case clang**: forward / up cut = `kitClang`, hitstop 6, thrown back 8 px/f (the burrback glance's numbers).

@@ -587,6 +587,8 @@ export interface EnemyState {
   goalSeg: number;
   goalT: number;
   cut: string;
+  /** Old burrback: cuts that have landed in this open window (it gets up after `openHits`). */
+  taken: number;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */

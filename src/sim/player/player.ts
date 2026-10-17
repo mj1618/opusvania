@@ -106,6 +106,8 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     faded: 0,
     hurtDir: 0,
     hurtSeq: 0,
+    fadeIn: 0,
+    inputLock: 0,
     kindling: -1,
     kindlingLamp: -1,
     lure: -1,
@@ -1016,12 +1018,21 @@ export function updatePlayer(
   const facing0 = p.facing;
   // (Held by a hitstop her i-frames stand still: a blow's hold costs her none of them.)
   if (p.invuln > 0 && p.hitstop === 0) p.invuln--;
+  // Back from a hazard or a fade (`freshStart`): the fade-in takes no input at all, and a button she
+  // held as she came back is never a press until it has been let go (its hold still counts: held right
+  // she runs, held jump she glides off the lip, the safe line; she never re-jumps by itself).
+  if (p.inputLock !== 0) p.inputLock &= input;
+  let fresh = input;
+  if (p.fadeIn > 0) {
+    p.fadeIn--;
+    fresh = 0;
+  }
   // Out of control: thrown by a hit (directions come back for the tail of it), or faded.
   const sides = ActionBit.left | ActionBit.right;
-  const eff = p.faded > 0 || p.stagger > P.steerFrames ? 0 : p.stagger > 0 ? input & sides : input;
+  const eff = p.faded > 0 || p.stagger > P.steerFrames ? 0 : p.stagger > 0 ? fresh & sides : fresh;
   tickLures(state);
   tickGrab(p);
-  const c = new Ctx(state, p, scene, eff, state.prevInput, P, events);
+  const c = new Ctx(state, p, scene, eff, state.prevInput | p.inputLock, P, events);
   c.inX = axisX(eff);
   p.inputX = c.inX;
   // Hitstop: a slash connected. She holds for a beat; presses are still buffered.
@@ -1562,6 +1573,7 @@ export function reformPlayer(
   p.hurtSeq = old.hurtSeq;
   keepOffer(p, old);
   p.invuln = P.reformInvulnFrames;
+  freshStart(p, P.tuning);
   // A fade costs: she comes back with part of her health (a lit lantern is where she is made whole).
   p.hp = Math.max(1, Math.min(p.hpMax, Math.round(P.tuning.health.reformHp)));
   state.player = p;
@@ -1578,6 +1590,22 @@ export function reformPlayer(
     hp: p.hp,
     hpMax: p.hpMax,
     invuln: p.invuln,
+    fadeIn: p.fadeIn,
   });
   events.push({ type: 'spawn', x: fx, y: fy });
+}
+
+/** Every input bit: `inputLock` set to it locks whatever is held on her first frame back. */
+const ALL_INPUT = 0xffff;
+
+/**
+ * Put back after a hazard or re-formed (`room.returnFadeIn`): a fade-in with no input and no harm, and
+ * no button held as she comes back counts as a press until it is let go and pressed again, so a held
+ * jump + right cannot throw her straight back into what just hurt her (Celeste / HK).
+ */
+export function freshStart(p: PlayerState, t: Tuning): void {
+  const n = Math.max(0, Math.round(t.room.returnFadeIn));
+  p.fadeIn = n;
+  p.inputLock = ALL_INPUT;
+  p.invuln = Math.max(p.invuln, n);
 }
