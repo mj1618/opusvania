@@ -176,6 +176,7 @@ export function createLocal(scene: Scene, t: Tuning, save: SaveState, fresh: boo
     // The room's boss (memory/bosses.md): beaten for good, a retry, or a first meeting; it sets up its own lures and creature.
     boss: createBoss(scene, t, { lures, enemies, save }),
     entry: null,
+    seam: null,
   };
 }
 
@@ -286,6 +287,8 @@ export function enterRoom(
   remember(state.save.visited, to);
   state.room = to;
   Object.assign(state, createLocal(scene, t, state.save, firstVisit));
+  // Seam hysteresis: the opening she came in by stays shut behind her for a moment (src/sim/index.ts).
+  if (entry.kind === 'edge') state.seam = { exit: entry.exit.id, frames: 0 };
   state.prevInput = entry.kind === 'edge' ? state.prevInput : 0;
   events.push({ type: 'roomEnter', room: to, from, x: fx, y: fy });
   events.push({ type: 'spawn', x: fx, y: fy });

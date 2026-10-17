@@ -1395,6 +1395,12 @@ export const defaultTuning = withVariants({
     transitionFrames: 18,
     /** Entering by an edge, her box centre is put at least this far inside it, px (no crossing straight back). */
     entryInset: 24,
+    /**
+     * Seam hysteresis: after she comes in through an opening, that opening is shut behind her this many frames
+     * (an edge is a wall or a floor there; the top is simply not crossed), so turning straight back never
+     * swaps rooms twice in a second and a jump that peeks over a seam and falls back never strobes.
+     */
+    seamLockFrames: 60,
     /** A door's box (`scene.doors`): width and height over its foot, px. Press up standing in it. */
     doorWidth: 96,
     doorHeight: 160,

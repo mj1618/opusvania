@@ -162,6 +162,31 @@ function glideAssistOver(state: GameState, scene: Scene): boolean {
 }
 
 /**
+ * Seam hysteresis (`state.seam`, `room.seamLockFrames`): while the opening she just came in by is shut, an east /
+ * west one is a wall just outside the edge (she arrives `entryInset` inside it, clear of it), and no opening of
+ * hers carries her back (`crossedExit` skips it: at a top or bottom edge she simply is not carried, as the
+ * body that came up through a floor still overlaps its line). Counts the lock down.
+ */
+function seamScene(scene: Scene, state: GameState, t: Tuning): Scene {
+  const seam = state.seam;
+  if (!seam) return scene;
+  if (++seam.frames > Math.max(0, Math.round(t.room.seamLockFrames))) {
+    state.seam = null;
+    return scene;
+  }
+  const e = scene.exits?.find((q) => q.id === seam.exit);
+  if (!e || (e.edge !== 'e' && e.edge !== 'w')) return scene;
+  const wall = {
+    tag: 'ground' as const,
+    x: e.edge === 'e' ? scene.width : -64,
+    y: e.from,
+    w: 64,
+    h: e.to - e.from,
+  };
+  return { ...scene, solids: [...scene.solids, wall] };
+}
+
+/**
  * Health from moth milestones (core.md §6, area 1 plan r5): `lights` = milestones in `health.mothMilestones` her
  * freed moths (`save.moths`) have reached; `prev` = the last one reached (0 = none), `next` = the one ahead (0 =
  * all reached). The HUD's "x / 60" is `moths / next`.
@@ -221,9 +246,12 @@ function crossedExit(state: GameState, scene: Scene): RoomExit | null {
   const exits = scene.exits;
   if (!exits) return null;
   const p = state.player;
+  // (The opening she just came in by does not carry her back yet: seam hysteresis, `seamScene`.)
+  const shut = state.seam?.exit;
   const cx = p.x + p.w / 2;
   const cy = p.y + p.h / 2;
   for (const e of exits) {
+    if (e.id === shut) continue;
     const along = e.edge === 'n' || e.edge === 's' ? cx : cy;
     if (along < e.from || along > e.to) continue;
     const out =
@@ -316,7 +344,7 @@ export function step(
   const first = events.length;
   state.save.time++;
   // The scene as played: closed shortcuts are solids (memory/world.md), and a boss's doors while sealed.
-  const S = lockedScene(withShortcuts(scene, state.save), state.boss);
+  const S = seamScene(lockedScene(withShortcuts(scene, state.save), state.boss), state, t);
   // Leaving the room: no new input reaches her while the room holds her; then the next room, or the
   // room again when nothing is there.
   const ex = state.exit;

@@ -36,6 +36,14 @@ A room file must also be one import line in `FILES` (`src/scene/index.ts`; tsx t
   room's geometry: once it tunnelled her through C's gate) and inside its span along it, lifted out of solids
   (<= 96 px), safe ground = the ground under her (else the spawn). The room's local state is rebuilt from scene +
   save; `roomEnter {room, from: "A#exit"}` + `spawn`. `Game.stepOnce` swaps `game.scene` when `state.room` changes.
+- **Seam hysteresis** (2026-10-18, area 1 video r4 #7: a casual run crossed the crown/canopy seam 190 times in
+  3.5 min, each a fade): after an edge entry the opening she came in by is shut for `room.seamLockFrames` 60
+  (`state.seam`, room-local): an east / west one becomes a wall just outside the edge (she stands `entryInset` inside
+  it, clear), and no opening of hers carries her back (`crossedExit` skips it; at a top or bottom edge she is just
+  not carried, since a body that came up through a floor still overlaps its line and a solid there would trap her).
+  So turning straight back waits a second, and no seam swaps rooms twice within one (`seams.test.ts`: every two-way
+  seam of the world, jittery hands; without the lock most of them fail). Not done: the plan's "fire only 64 px past
+  the edge" (past an edge there is no floor: she would fall before the swap).
 - Doors: same hold, she comes out at the target door's foot at rest.
 - The hatch exit (`at` 1790, 1026 px above wood-hatch's bottom) lands her at the top of the room below, falling.
 - A fade with `save.patch` set re-forms her at that patch in any room (`roomEnter {from: 'reform'}`, `reform`,

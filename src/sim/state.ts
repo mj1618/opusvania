@@ -929,6 +929,12 @@ export interface RoomLocal {
    * never beside what faded her (feel review round 2, problem 7). Null until she has stood.
    */
   entry: { x: number; y: number } | null;
+  /**
+   * Seam hysteresis (area 1 video r4 #7: 190 crown/canopy crossings in 3.5 min, each a fade): the exit she came
+   * in by (`exit`) is shut behind her (a wall, a floor, or simply not crossed at the top) until `room.seamLockFrames`
+   * have passed (`frames`). Null otherwise.
+   */
+  seam: { exit: string; frames: number } | null;
 }
 
 export interface GameState {
@@ -963,6 +969,12 @@ export interface GameState {
   boss: BossState | null;
   /** Her door into this room (`RoomLocal.entry`). */
   entry: { x: number; y: number } | null;
+  /**
+   * Seam hysteresis (area 1 video r4 #7: 190 crown/canopy crossings in 3.5 min, each a fade): the exit she came
+   * in by (`exit`) is shut behind her (a wall, a floor, or simply not crossed at the top) until `room.seamLockFrames`
+   * have passed (`frames`). Null otherwise.
+   */
+  seam: { exit: string; frames: number } | null;
 }
 
 export function cloneState(s: GameState): GameState {
@@ -1020,6 +1032,7 @@ export function cloneState(s: GameState): GameState {
     kit: cloneKit(s.kit),
     boss: s.boss ? { ...s.boss } : null,
     entry: s.entry ? { ...s.entry } : null,
+    seam: s.seam ? { ...s.seam } : null,
   };
 }
 
