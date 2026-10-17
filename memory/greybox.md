@@ -25,8 +25,8 @@ STUDIO.md: regions are designed and played in grey before any art. A room whose 
   (lanterns, lamps): cyan pillar; the heart: violet box. The spawn: a chevron.
 - The world's things (`greybox/world.ts`, memory/world.md): a moon patch is a pale stacked shaft (brighter while
   she stands in it; a filled moon over it once it is her save patch, a ring when she rests, "rested · saved");
-  a glade a tall pale pillar (dim once taken; the grant flashes and its line, e.g. "GLIDE: hold jump in the air",
-  rides over her 3.5 s); a shortcut amber while shut with a white bar on the side that opens it, an outline once
+  a glade a tall pale pillar (dim once taken; the grant flashes and its item line, the wood's own: "Your wings have dried. Hold jump to glide." / "Your claws have hardened. Jump at a wall to climb." (5 s),
+  rides over her); a shortcut amber while shut with a white bar on the side that opens it, an outline once
   open; a door a green arch.
 - Creatures: their hitboxes in the overlay's state colours (`drawEnemyBoxes`, exported from
   `src/debug/overlay.ts` and shared with F2).

@@ -1,0 +1,79 @@
+{
+  "id": "wood-lantern",
+  "title": "The first lantern (greybox)",
+  "region": "wood",
+  "width": 3200,
+  "height": 1600,
+  "spawn": { "x": 300, "y": 1280 },
+  "edgeKick": false,
+  "abilities": ["glide"],
+  "art": { "mode": "greybox", "labels": true },
+  "exits": [
+    { "id": "w", "edge": "w", "from": 1024, "to": 1280 },
+    { "id": "n", "edge": "n", "from": 2560, "to": 3072 }
+  ],
+  "solids": [
+    { "tag": "ground", "x": 0, "y": 1280, "w": 3200, "h": 320 },
+    { "tag": "branch", "x": 192, "y": 640, "w": 256, "h": 32, "kick": false },
+    { "tag": "trunk", "x": 288, "y": 672, "w": 64, "h": 608, "kick": false },
+    { "tag": "trunk", "x": 2432, "y": 0, "w": 128, "h": 480, "kick": false },
+    { "tag": "trunk", "x": 2432, "y": 480, "w": 128, "h": 320, "kick": false },
+    { "tag": "trunk", "x": 2432, "y": 800, "w": 128, "h": 288, "kick": "east" },
+    { "tag": "trunk", "x": 3072, "y": 960, "w": 128, "h": 320, "kick": false },
+    { "tag": "trunk", "x": 3072, "y": 0, "w": 128, "h": 960, "kick": "west" }
+  ],
+  "oneWays": [
+    { "tag": "root", "x": 864, "y": 1120, "w": 160 },
+    { "tag": "branch", "x": 1024, "y": 960, "w": 512 }
+  ],
+  "thorns": [{ "id": "thorn-band", "x": 2560, "y": 480, "w": 16, "h": 320 }],
+  "lures": [
+    { "id": "lantern-hall", "kind": "lantern", "x": 1280, "y": 704 },
+    { "id": "wick-high", "kind": "wick", "x": 320, "y": 560 }
+  ],
+  "enemies": [
+    {
+      "id": "burr-lantern",
+      "kind": "burrback",
+      "x": 1312,
+      "y": 1280,
+      "facing": -1,
+      "radius": 544,
+      "guards": "lantern-hall"
+    }
+  ],
+  "routes": [
+    { "from": "spawn", "to": "w" },
+    { "from": "w", "to": "n", "needs": ["wallJump"], "oneWay": true },
+    { "from": "n", "to": "w", "oneWay": true }
+  ],
+  "marks": {
+    "notes": [
+      {
+        "x": 100,
+        "y": 1380,
+        "text": "R8b wood-lantern  PURPOSE: teach + lock + combine (the first lantern; the broken face)"
+      },
+      { "x": 1000, "y": 560, "text": "L1 lantern-hall: 2 hits, jump-cuts from P (256 below it)" },
+      { "x": 1000, "y": 1080, "text": "root step 160, platform P (one-way, 1024-1536, y 960)" },
+      { "x": 800, "y": 1240, "text": "burr-lantern patrols the floor under P (headroom 320); it guards L1" },
+      { "x": 100, "y": 560, "text": "DJ ledge, slick stalk: a wick (postgame: double jump)" },
+      {
+        "x": 2000,
+        "y": 200,
+        "text": "THE BROKEN FACE (wall jump): kick up the west face, kick-glide across, up the east face"
+      },
+      { "x": 2000, "y": 600, "text": "west face: thorn band 800-480 (and slick above)" },
+      { "x": 2000, "y": 1000, "text": "west face kickable 1088-800" },
+      { "x": 2700, "y": 1180, "text": "east face slick 1280-960, kickable 960-0" },
+      {
+        "x": 2600,
+        "y": 100,
+        "text": "N: up to wood-climb. TODO render: L1's freed moths fly up the shaft (up, later)"
+      }
+    ]
+  },
+  "shots": {
+    "wide": [{ "name": "lantern", "x": 1280, "y": 1280 }, { "name": "shaft", "x": 2800, "y": 1280 }]
+  }
+}

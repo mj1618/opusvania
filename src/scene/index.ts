@@ -8,9 +8,14 @@ import labWorldCJson from '../../content/rooms/lab-world-c.json' with { type: 'j
 import testGroveJson from '../../content/rooms/test-grove.json' with { type: 'json' };
 import woodBurrowJson from '../../content/rooms/wood-burrow.json' with { type: 'json' };
 import woodChaseJson from '../../content/rooms/wood-chase.json' with { type: 'json' };
+import woodClimbJson from '../../content/rooms/wood-climb.json' with { type: 'json' };
 import woodGladeJson from '../../content/rooms/wood-glade.json' with { type: 'json' };
 import woodGlidewalkJson from '../../content/rooms/wood-glidewalk.json' with { type: 'json' };
 import woodHatchJson from '../../content/rooms/wood-hatch.json' with { type: 'json' };
+import woodHawkersJson from '../../content/rooms/wood-hawkers.json' with { type: 'json' };
+import woodHollowJson from '../../content/rooms/wood-hollow.json' with { type: 'json' };
+import woodLanternJson from '../../content/rooms/wood-lantern.json' with { type: 'json' };
+import woodWellJson from '../../content/rooms/wood-well.json' with { type: 'json' };
 import woodWicksJson from '../../content/rooms/wood-wicks.json' with { type: 'json' };
 import worldJson from '../../content/world.json' with { type: 'json' };
 import { ABILITIES } from '../sim/abilities';
@@ -576,6 +581,11 @@ const FILES: readonly unknown[] = [
   woodBurrowJson,
   woodGladeJson,
   woodGlidewalkJson,
+  woodHollowJson,
+  woodHawkersJson,
+  woodLanternJson,
+  woodWellJson,
+  woodClimbJson,
   labWorldAJson,
   labWorldBJson,
   labWorldCJson,

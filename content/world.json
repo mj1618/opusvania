@@ -6,7 +6,12 @@
     { "id": "wood-wicks", "x": 11264, "y": 4736 },
     { "id": "wood-burrow", "x": 15104, "y": 4608 },
     { "id": "wood-glade", "x": 18944, "y": 6400 },
-    { "id": "wood-glidewalk", "x": 21824, "y": 8064 }
+    { "id": "wood-glidewalk", "x": 21824, "y": 8064 },
+    { "id": "wood-hollow", "x": 27584, "y": 7168 },
+    { "id": "wood-hawkers", "x": 31424, "y": 8768 },
+    { "id": "wood-lantern", "x": 34624, "y": 8768 },
+    { "id": "wood-well", "x": 27584, "y": 10416 },
+    { "id": "wood-climb", "x": 37184, "y": 6208 }
   ],
   "tests": [
     "test-grove",

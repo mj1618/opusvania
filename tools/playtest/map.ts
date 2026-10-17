@@ -40,6 +40,31 @@ export interface Move {
   /** Horizontal px to cross (0 for up / drop / through) and the height change (px, + = down). */
   gap: number;
   rise: number;
+  /** A jump across a gap no jump spans, over a chain of pogo targets (seed-cases): down cuts on the way. */
+  pogo?: boolean;
+}
+
+/** Most px between a launch, the seed-cases and the landing for a pogo chain the planner trusts. */
+const POGO_SPAN = 320;
+
+/**
+ * Seed-cases spanning a gap from `ax` to `bx` (feet line `y`): every hop of the chain, the first from the
+ * lip and the last onto the far side, at most `POGO_SPAN` px, the cases near the launch height.
+ */
+function pogoChain(pogos: readonly { x: number; y: number }[], ax: number, bx: number, y: number): boolean {
+  const lo = Math.min(ax, bx);
+  const hi = Math.max(ax, bx);
+  const xs = pogos
+    .filter((q) => q.x > lo && q.x < hi && q.y > y - 96 && q.y < y + 160)
+    .map((q) => q.x)
+    .sort((a, b) => a - b);
+  if (xs.length === 0) return false;
+  let at = lo;
+  for (const x of [...xs, hi]) {
+    if (x - at > POGO_SPAN) return false;
+    at = x;
+  }
+  return true;
 }
 
 /** Rolling steps up to this many px are walked over (the sim's rolling ground is 12). */
@@ -175,7 +200,11 @@ export function reachFor(abilities: readonly string[], margin = 0.82): Reach {
 }
 
 /** Every move between known surfaces. */
-export function buildMoves(surfaces: readonly Surface[], reach: Reach): Move[] {
+export function buildMoves(
+  surfaces: readonly Surface[],
+  reach: Reach,
+  pogos: readonly { x: number; y: number }[] = [],
+): Move[] {
   const moves: Move[] = [];
   const byId = new Map(surfaces.map((s) => [s.id, s]));
   const push = (m: Omit<Move, 'key' | 'gap' | 'rise'> & { gap?: number; rise?: number }): void => {
@@ -194,7 +223,8 @@ export function buildMoves(surfaces: readonly Surface[], reach: Reach): Move[] {
         const bx = dir > 0 ? b.x0 : b.x1;
         const dx = Math.abs(bx - ax);
         const dy = yAt(b, bx) - yAt(a, ax);
-        if (dx > reach.across(dy)) continue;
+        const pogo = dx > reach.across(dy) && Math.abs(dy) <= 64 && pogoChain(pogos, ax, bx, yAt(a, ax));
+        if (dx > reach.across(dy) && !pogo) continue;
         const walk = dx <= 24 && dy > 0;
         push({
           from: a.id,
@@ -204,7 +234,8 @@ export function buildMoves(surfaces: readonly Surface[], reach: Reach): Move[] {
           launchX: ax,
           gap: dx,
           rise: dy,
-          cost: dx + Math.abs(dy) * (dy < 0 ? 1.5 : 0.5) + (walk ? 10 : 60),
+          cost: dx + Math.abs(dy) * (dy < 0 ? 1.5 : 0.5) + (walk ? 10 : pogo ? 200 : 60),
+          ...(pogo ? { pogo } : {}),
         });
         continue;
       }
@@ -410,7 +441,7 @@ export class Mind {
       [...this.oneWays].sort((a, b) => a - b),
       this.tops,
     );
-    this.moves = buildMoves(this.surfaces, this.reach);
+    this.moves = buildMoves(this.surfaces, this.reach, this.scene.seedCases ?? []);
   }
 
   under(x: number, y: number): Surface | null {

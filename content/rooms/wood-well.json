@@ -1,0 +1,56 @@
+{
+  "id": "wood-well",
+  "title": "STUB: the well (R10 not built)",
+  "region": "wood",
+  "width": 3840,
+  "height": 1600,
+  "spawn": { "x": 2300, "y": 1472 },
+  "edgeKick": false,
+  "abilities": ["glide"],
+  "art": { "mode": "greybox", "labels": true },
+  "exits": [
+    { "id": "n", "edge": "n", "from": 384, "to": 640 },
+    { "id": "out", "edge": "n", "from": 2560, "to": 2944 }
+  ],
+  "patches": [{ "id": "p4", "x": 2300, "y": 1472 }],
+  "glades": [{ "id": "glade-claws", "x": 2048, "y": 1216, "w": 512, "h": 256, "ability": "wallJump" }],
+  "solids": [
+    { "tag": "ground", "x": 0, "y": 640, "w": 384, "h": 64, "kick": false },
+    { "tag": "trunk", "x": 320, "y": 0, "w": 64, "h": 640, "kick": false },
+    { "tag": "trunk", "x": 640, "y": 0, "w": 64, "h": 704, "kick": false },
+    { "tag": "ground", "x": 704, "y": 640, "w": 1344, "h": 64, "kick": false },
+    { "tag": "ground", "x": 0, "y": 1472, "w": 2944, "h": 128 },
+    { "tag": "ground", "x": 2048, "y": 0, "w": 512, "h": 1216, "kick": "east" },
+    { "tag": "ground", "x": 2944, "y": 0, "w": 896, "h": 1600, "kick": "west" },
+    { "tag": "root", "x": 2880, "y": 736, "w": 64, "h": 32 }
+  ],
+  "oneWays": [],
+  "routes": [
+    { "from": "n", "to": "p4", "oneWay": true },
+    { "from": "spawn", "to": "p4" },
+    { "from": "p4", "to": "glade-claws" },
+    { "from": "p4", "to": "out", "needs": ["wallJump"], "oneWay": true },
+    { "from": "out", "to": "p4", "oneWay": true }
+  ],
+  "marks": {
+    "notes": [
+      {
+        "x": 200,
+        "y": 900,
+        "text": "STUB: R10 wood-well is not built (another builder): only what joins the world"
+      },
+      {
+        "x": 200,
+        "y": 960,
+        "text": "TODO: the old burrback (pogo exam), W8 + the root gate + its ledge, the pit camera lock, slick well walls"
+      },
+      { "x": 2100, "y": 1150, "text": "glade 2: WALL JUMP, P4" },
+      {
+        "x": 2600,
+        "y": 600,
+        "text": "climb-out (both faces kickable), rest ledge at 736; up through the hub's grate"
+      }
+    ]
+  },
+  "shots": { "wide": [{ "name": "glade", "x": 2300, "y": 1472 }] }
+}

@@ -13,10 +13,10 @@ import type { SimView } from '../contract';
 import { GB } from './palette';
 import { label } from './static';
 
-/** What a glade's grant says (core.md: one item line per ability). */
+/** What a glade's grant says (core.md: one item line per ability; the wood's lines, wood.md §4). */
 const LINES: Record<string, string> = {
-  glide: 'GLIDE: hold jump in the air',
-  wallJump: 'WALL JUMP: jump off a wall',
+  glide: 'Your wings have dried. Hold jump to glide.',
+  wallJump: 'Your claws have hardened. Jump at a wall to climb.',
   doubleJump: 'DOUBLE JUMP: jump again in the air',
   dash: 'DASH',
 };
@@ -42,7 +42,7 @@ export class WorldView {
   onEvents(events: readonly SimEvent[]): void {
     for (const e of events) {
       if (e.type === 'patchRest') this.add('rest', e.x, e.y - 100, 0.9, 'rested · saved');
-      else if (e.type === 'gladeGrant') this.add('grant', e.x, e.y - 260, 3.5, LINES[e.ability] ?? e.ability);
+      else if (e.type === 'gladeGrant') this.add('grant', e.x, e.y - 260, 5, LINES[e.ability] ?? e.ability);
       else if (e.type === 'shortcutOpen') this.add('open', e.x, e.y, 0.8, 'opened');
       else if (e.type === 'spawn' && events.some((o) => o.type === 'roomEnter')) this.clear();
     }

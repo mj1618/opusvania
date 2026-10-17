@@ -1,6 +1,6 @@
 {
   "id": "wood-burrow",
-  "title": "STUB: the burrow (R4 not built)",
+  "title": "The burrow (greybox)",
   "region": "wood",
   "width": 4480,
   "height": 1792,
@@ -17,50 +17,82 @@
     { "tag": "ground", "x": 0, "y": 1280, "w": 1216, "h": 512 },
     { "tag": "ground", "x": 1216, "y": 1344, "w": 1600, "h": 448 },
     { "tag": "root", "x": 2624, "y": 1152, "w": 192, "h": 192 },
-    { "tag": "ground", "x": 2816, "y": 1408, "w": 640, "h": 384 },
-    { "tag": "root", "x": 2816, "y": 1280, "w": 96, "h": 128 },
+    { "tag": "ground", "x": 2816, "y": 1472, "w": 640, "h": 320 },
+    { "tag": "root", "x": 2816, "y": 1312, "w": 96, "h": 160 },
+    { "tag": "root", "x": 2752, "y": 768, "w": 768, "h": 96, "kick": false },
     { "tag": "ground", "x": 3456, "y": 1152, "w": 640, "h": 640 },
-    { "tag": "trunk", "x": 4352, "y": 0, "w": 128, "h": 1792, "kick": false }
+    { "tag": "ground", "x": 4352, "y": 1152, "w": 128, "h": 640 },
+    { "tag": "trunk", "x": 4416, "y": 192, "w": 64, "h": 832, "kick": "west" },
+    { "tag": "branch", "x": 3904, "y": 512, "w": 512, "h": 64 }
   ],
-  "oneWays": [{ "tag": "branch", "x": 3072, "y": 1152, "w": 128 }],
+  "oneWays": [],
+  "seedCases": [{ "id": "seed-1", "x": 3008, "y": 1152 }, { "id": "seed-2", "x": 3296, "y": 1152 }],
+  "lures": [
+    { "id": "wick-burr", "kind": "wick", "x": 1984, "y": 1144 },
+    { "id": "wick-high", "kind": "wick", "x": 3136, "y": 704 }
+  ],
+  "enemies": [
+    {
+      "id": "burr-first",
+      "kind": "burrback",
+      "x": 1984,
+      "y": 1344,
+      "facing": -1,
+      "radius": 576,
+      "hp": 4,
+      "guards": "wick-burr"
+    }
+  ],
+  "routes": [{ "from": "spawn", "to": "w" }, { "from": "w", "to": "p1" }, { "from": "p1", "to": "hole" }],
   "marks": {
+    "tatter": { "x": 3880, "y": 1152, "facing": -1 },
     "notes": [
       {
         "x": 200,
-        "y": 300,
-        "text": "STUB: R4 wood-burrow is not built (it waits on the burrback and seed-cases)"
-      },
-      {
-        "x": 200,
-        "y": 360,
-        "text": "this stand-in only joins wood-wicks to wood-glade for the world check and the bots"
+        "y": 200,
+        "text": "R4 wood-burrow  PURPOSE: teach + rest (the blade against things: first predator, pogo intro, the required pogo)"
       },
       { "x": 200, "y": 1200, "text": "F1 (0-1216, y 1280): dark" },
+      { "x": 1500, "y": 960, "text": "W3 wick-burr, 200 up: a jump-cut works and is never caught" },
       {
-        "x": 1400,
+        "x": 1500,
+        "y": 1000,
+        "text": "burr-first (4 hp) guards W3: it notices her only in W3's light; snuff W3 and it curls and sleeps"
+      },
+      { "x": 1500, "y": 1460, "text": "F2 (1216-2816, y 1344): the burrback patrols 1408-2560" },
+      {
+        "x": 2440,
         "y": 1080,
-        "text": "TODO W3 wick-burr at (1984, 1144), guarded by burr-first (4 hp, patrol 1408-2560)"
+        "text": "root step 192: hop its ram and land on the braced shell (a free pogo bounce)"
       },
-      { "x": 2500, "y": 1080, "text": "root step (2624-2816, top 1152)" },
+      { "x": 2780, "y": 680, "text": "root roof 288 over the gap: a jump is capped at ~200 of rise" },
+      { "x": 2830, "y": 1100, "text": "THE SEED-CASE GAP: hop, down-cut, bounce, drift, down-cut, land" },
       {
         "x": 2830,
-        "y": 700,
-        "text": "TODO the seed-case gap: root roof 768-864, seed-cases at (3008, 1152), (3296, 1152)"
+        "y": 1600,
+        "text": "a miss lands on a safe floor (1472: at the paper's 1408 a jump climbed F3 and skipped the pogo); root steps back up"
       },
-      {
-        "x": 2830,
-        "y": 760,
-        "text": "STUB plank (one-way at 3072): stands in for the seed-cases. Delete it with R4"
-      },
-      { "x": 2830, "y": 1520, "text": "safe floor under the gap, root steps back up" },
       {
         "x": 3000,
-        "y": 500,
-        "text": "TODO W-hi4 (3136, 704); trunk 4416-4480 (y 192-1024); shelf H (3904-4416, y 512); F3 past the hole"
+        "y": 560,
+        "text": "W-hi4 wick-high: wall jump + glide from shelf H (a lock seen from P1)"
       },
-      { "x": 3700, "y": 1000, "text": "P1 moon patch, Tatter resting (TODO render)" },
-      { "x": 4000, "y": 1300, "text": "hole: down into wood-glade" }
+      { "x": 3920, "y": 460, "text": "shelf H (3904-4416, y 512)" },
+      { "x": 4200, "y": 160, "text": "trunk (to y 1024), west face kickable" },
+      { "x": 3600, "y": 1000, "text": "P1 moon patch, Tatter resting" },
+      { "x": 4100, "y": 1300, "text": "hole: down into wood-glade (W3's freed moths fly into it)" },
+      {
+        "x": 3600,
+        "y": 1060,
+        "text": "TODO sim: until P1 is touched, a fade re-forms her at wood-wicks' landing"
+      }
     ]
   },
-  "shots": { "wide": [{ "name": "patch", "x": 3776, "y": 1152 }] }
+  "shots": {
+    "wide": [
+      { "name": "burrback", "x": 1700, "y": 1344 },
+      { "name": "seed-gap", "x": 2700, "y": 1152 },
+      { "name": "patch", "x": 3776, "y": 1152 }
+    ]
+  }
 }

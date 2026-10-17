@@ -1,0 +1,38 @@
+{
+  "id": "wood-climb",
+  "title": "STUB: the climb (R11 not built)",
+  "region": "wood",
+  "width": 2048,
+  "height": 2560,
+  "spawn": { "x": 1600, "y": 640 },
+  "edgeKick": false,
+  "abilities": ["glide", "wallJump"],
+  "art": { "mode": "greybox", "labels": true },
+  "exits": [{ "id": "s", "edge": "s", "from": 0, "to": 512 }],
+  "patches": [{ "id": "p5", "x": 1600, "y": 640 }],
+  "solids": [
+    { "tag": "trunk", "x": 0, "y": 640, "w": 64, "h": 1792, "kick": "east" },
+    { "tag": "ground", "x": 512, "y": 640, "w": 1536, "h": 1920, "kick": "west" }
+  ],
+  "oneWays": [],
+  "routes": [
+    { "from": "s", "to": "p5", "needs": ["wallJump"], "oneWay": true },
+    { "from": "p5", "to": "s", "oneWay": true },
+    { "from": "spawn", "to": "p5" }
+  ],
+  "marks": {
+    "notes": [
+      {
+        "x": 600,
+        "y": 300,
+        "text": "STUB: R11 wood-climb is not built (another builder): a plain two-face shaft and P5"
+      },
+      {
+        "x": 600,
+        "y": 360,
+        "text": "TODO: broken faces with thorn bands, L2, W10 + hawk-climb, S2 niche, the look back, E exit to wood-web"
+      }
+    ]
+  },
+  "shots": { "wide": [{ "name": "top", "x": 1600, "y": 640 }] }
+}

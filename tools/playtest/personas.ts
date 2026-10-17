@@ -96,9 +96,42 @@ function dirBit(dir: number): number {
 }
 
 /**
+ * The pogo every persona knows (it is a verb from the start): falling onto a seed-case, a down cut. One
+ * press (a rising edge after `last`), when the case is under her feet and close.
+ */
+function pogoPress(o: Obs, scene: Scene, last: number): number {
+  const p = o.p;
+  if (p.grounded || last & A) return 0;
+  // Within the down cut's reach (120 from her body centre: the case's top within ~60 under her feet).
+  const half = 28;
+  const hit = (scene.seedCases ?? []).some(
+    (q) => Math.abs(q.x - o.feetX) < 60 && q.y - half - o.feetY > -12 && q.y - half - o.feetY < 60,
+  );
+  return hit ? A | D : 0;
+}
+
+/**
+ * Rotten bark in the way (wood.md: the secret language, taught on the path in R6): pressed against a
+ * standing bark wall she faces, a cut. Broken bark is open air, so she is never pressed against it.
+ */
+function barkPress(o: Obs, scene: Scene, last: number): number {
+  const p = o.p;
+  if (last & A) return 0;
+  const edge = p.facing > 0 ? p.x + p.w : p.x;
+  const hit = (scene.bark ?? []).some((b) => {
+    if (b.floor) return false;
+    const face = p.facing > 0 ? b.x : b.x + b.w;
+    return Math.abs(edge - face) <= 4 && p.y < b.y + b.h && p.y + p.h > b.y;
+  });
+  return hit ? A : 0;
+}
+
+/**
  * The brief's naive player (tests/unit/rooms.test.ts): hold the way on; jump (held 14 frames) when
  * blocked by a wall or at the edge of a gap. When it makes no headway for 8 s it turns round for 3 s,
- * like a stuck player trying the other way, then holds on again. Mashes jump in the cocoon.
+ * like a stuck player trying the other way, then holds on again. Mashes jump in the cocoon. Once it owns
+ * glide (the glade's line told it to hold jump), a gap jump is held from then on: later edges are walked
+ * off gliding.
  */
 class Naive implements Persona {
   readonly name = 'naive';
@@ -110,6 +143,10 @@ class Naive implements Persona {
   private bestAt = 0;
   private turnUntil = -1;
   private exitSeen = false;
+  private last = 0;
+  /** A glider holding jump from her last gap jump on. */
+  private holding = false;
+  private room = '';
 
   constructor(readonly seed: number) {}
 
@@ -127,6 +164,12 @@ class Naive implements Persona {
       this.best = Number.NEGATIVE_INFINITY;
     }
     let dir = this.dir;
+    // Headway is per room (x starts again at each room's west edge).
+    if (o.room !== this.room) {
+      this.room = o.room;
+      this.best = Number.NEGATIVE_INFINITY;
+      this.bestAt = f;
+    }
     const prog = o.feetX * this.dir;
     if (prog > this.best + 32) {
       this.best = prog;
@@ -138,9 +181,26 @@ class Naive implements Persona {
     }
     if (f < this.turnUntil) dir = -this.dir;
     const p = o.p;
-    if (f >= this.jumpUntil + 1 && p.grounded && (p.wallDir === dir || !groundAhead(scene, o, dir, 12)))
+    // A gap that is a way out (a south exit under it: the green opening, the moths going in) is walked into.
+    const ahead = o.feetX + dir * 40;
+    const hole = (scene.exits ?? []).some((e) => e.edge === 's' && ahead >= e.from && ahead <= e.to);
+    const wall = p.grounded && p.wallDir === dir;
+    const gap = p.grounded && !groundAhead(scene, o, dir, 12) && !hole;
+    // Once a glade has shown its line ("Hold jump to glide") it takes it at its word: a jump at a gap is
+    // held, through the landing and on (so the next edge is walked off with the wings open: a walk-off
+    // glide); it lets go for one frame only to press again at a wall. Before that: 14-frame jumps.
+    const glider = o.abilities.includes('glide');
+    let jump: boolean;
+    if (f >= this.jumpUntil + 1 && (wall || (gap && !(glider && this.holding)))) {
       this.jumpUntil = f + 14;
-    return dirBit(dir) | (f < this.jumpUntil ? J : 0);
+      if (glider && !wall) this.holding = true;
+    }
+    if (glider && this.holding) jump = !(wall && this.last & J);
+    else jump = f < this.jumpUntil;
+    const mask =
+      dirBit(dir) | (jump ? J : 0) | pogoPress(o, scene, this.last) | barkPress(o, scene, this.last);
+    this.last = mask;
+    return mask;
   }
 }
 
@@ -175,6 +235,8 @@ interface Target {
   y: number;
   stand: (s: Surface) => boolean;
   leave?: number;
+  /** Walk off the end (a hole in the floor that is an exit), rather than leap off it. */
+  drop?: boolean;
   /** Also arrived when this is true (a pickup taken, a light seen up close). */
   done?: (o: Obs) => boolean;
 }
@@ -189,6 +251,8 @@ interface RoomMemory {
   lightsSeen: Map<string, { x: number; y: number }>;
   lightsVisited: Set<string>;
   exitsSeen: Map<string, { x: number; y: number; edge: string }>;
+  /** Given up for want of a route on what it had seen: tried again once it sees more. */
+  noRoute: Set<string>;
 }
 
 /** The id of the exit whose opening is nearest a point (feet), or null in a room with none. */
@@ -219,6 +283,7 @@ function roomMemory(): RoomMemory {
     lightsSeen: new Map(),
     lightsVisited: new Set(),
     exitsSeen: new Map(),
+    noRoute: new Set(),
   };
 }
 
@@ -233,6 +298,8 @@ class Planner implements Persona {
   private routeFrom = -1;
   private routeVersion = '';
   private air: Move | null = null;
+  /** Walking off `m`'s end with jump held (a walk-off glide). */
+  private walkGlide: Move | null = null;
   private airTo: Surface | null = null;
   private mindNow: Mind | null = null;
   private jumpUntil = -1;
@@ -344,7 +411,11 @@ class Planner implements Persona {
     }
     const mind = this.mind(o, scene);
     this.mindNow = mind;
-    mind.see(o.solids, o.oneWays, o.abilities, o.tops);
+    // Something new seen: targets given up for want of a route get another look.
+    if (mind.see(o.solids, o.oneWays, o.abilities, o.tops)) {
+      for (const k of this.mem.noRoute) this.given.delete(k);
+      this.mem.noRoute.clear();
+    }
     this.remember(o, mind);
     const p = o.p;
 
@@ -380,7 +451,7 @@ class Planner implements Persona {
       return this.wander(o, scene) | slash;
     }
     this.idleSince = -1;
-    return this.fly(o, scene, mind, t) | slash;
+    return this.fly(o, scene, mind, t) | slash | barkPress(o, scene, this.lastMask);
   }
 
   private hatch(o: Obs): number {
@@ -498,11 +569,15 @@ class Planner implements Persona {
     const out: Array<Target & { rank: number }> = [];
     // Exits it gave up on (the arrival opening among them) leave the forward frontier open.
     const exits = [...this.exitsSeen.entries()]
-      .map(([id, e]) => this.exitTarget(mind, id, e))
+      .map(([id, e]) => this.exitTarget(mind, id, e, o.feetX))
       .filter((e) => !this.given.has(e.key));
     if (this.opt.pick === 'exit' && exits.length > 0) return exits.map((e) => ({ ...e, rank: 0 }));
     if (this.opt.pick === 'forward' || this.opt.pick === 'exit') {
-      if (exits.length > 0) return exits.map((e) => ({ ...e, rank: 0 }));
+      // Forward: a way through before a one-way drop (the hub's well is a turn back on purpose).
+      const oneWay = (key: string) =>
+        (mind.scene.exits ?? []).some((q) => `exit:${q.id}` === key && q.oneWay === true);
+      if (exits.length > 0)
+        return exits.map((e) => ({ ...e, rank: this.opt.pick === 'forward' && oneWay(e.key) ? 1 : 0 }));
       return this.frontier(o, mind, true).map((c) => ({ ...c, rank: 1 }));
     }
     // Explorer: pickups, lights, unwalked ground, then dangling ends, then exits.
@@ -578,8 +653,22 @@ class Planner implements Persona {
     return out;
   }
 
-  private exitTarget(mind: Mind, id: string, e: { x: number; y: number; edge: string }): Target {
-    const s = mind.standFor(e.x, e.edge === 's' ? e.y - 400 : e.y);
+  private exitTarget(
+    mind: Mind,
+    id: string,
+    e: { x: number; y: number; edge: string },
+    from: number,
+  ): Target {
+    // A hole in a floor (a south exit): stand on a floor that ends at its edge, however deep the shaft.
+    mind.refresh();
+    const span = e.edge === 's' ? (mind.scene.exits ?? []).find((q) => q.id === id) : undefined;
+    // The lip on her side of it.
+    const lip = span
+      ? mind.surfaces
+          .filter((q) => Math.abs(q.x1 - span.from) <= 48 || Math.abs(q.x0 - span.to) <= 48)
+          .sort((a, b) => Math.abs((a.x0 + a.x1) / 2 - from) - Math.abs((b.x0 + b.x1) / 2 - from))[0]
+      : undefined;
+    const s = lip ?? mind.standFor(e.x, e.edge === 's' ? e.y - 400 : e.y);
     const dir = e.edge === 'w' ? -1 : e.edge === 'e' ? 1 : s ? (e.x >= (s.x0 + s.x1) / 2 ? 1 : -1) : 1;
     const ex = s ? (dir > 0 ? s.x1 : s.x0) : e.x;
     return {
@@ -589,6 +678,7 @@ class Planner implements Persona {
       y: s ? yAt(s, ex) : e.y,
       stand: (q) => same(q, s),
       leave: dir,
+      ...(lip ? { drop: true } : {}),
     };
   }
 
@@ -610,6 +700,7 @@ class Planner implements Persona {
   private giveUp(t: Target, why: string, f: number): void {
     if (this.given.has(t.key)) return;
     this.given.add(t.key);
+    if (why.startsWith('no route')) this.mem.noRoute.add(t.key);
     this.notes.push(`f${f}: gave up on ${t.why}: ${why}`);
     this.target = null;
     this.route = null;
@@ -622,9 +713,26 @@ class Planner implements Persona {
       this.giveUp(t, 'not reached in 45 s', f);
       return 0;
     }
-    if (!p.grounded) return this.steerAir(o, t);
-    // Landed: did the move in flight work?
-    const cur = mind.under(o.feetX, o.feetY);
+    if (!p.grounded) {
+      // Ran off the launch end a frame early (a landing right at the end of a short step): the coyote
+      // frames still take the jump it meant to make there.
+      const next = this.route?.[0];
+      if (this.walkGlide) {
+        // Walked off holding jump: the wings are open; keep holding to the landing.
+        this.air = this.walkGlide;
+        this.airTo = this.mindNow?.surfaces.find((q) => q.id === this.walkGlide?.to) ?? null;
+        this.walkGlide = null;
+        this.jumpUntil = f + 600;
+      }
+      if (!this.air && next?.kind === 'jump' && p.contactFrames <= 4 && p.vy >= 0) {
+        if (this.lastMask & J) return dirBit(next.dir);
+        return dirBit(next.dir) | this.jump(o, next);
+      }
+      return this.steerAir(o, t) | pogoPress(o, scene, this.lastMask);
+    }
+    // Landed: did the move in flight work? (Standing on the last pixels her feet point can be past the end.)
+    const cur =
+      mind.under(o.feetX, o.feetY) ?? mind.under(o.feetX - 19, o.feetY) ?? mind.under(o.feetX + 19, o.feetY);
     if (this.air) {
       const m = this.air;
       this.air = null;
@@ -686,7 +794,19 @@ class Planner implements Persona {
     const edgeStop = this.edgeLook(o, m, d);
     if (edgeStop >= 0) return edgeStop;
     if (m.kind === 'walk' || m.kind === 'drop') return dirBit(m.dir);
-    if (d <= this.opt.edge + Math.abs(p.vx) * 0.5) return dirBit(m.dir) | this.jump(o, m);
+    // A long drop with jump still held from the glide that brought her here: walk off it held (a walk-off
+    // glide: low, and under anything hanging over a jump's hump, like R6's thorn branch).
+    if (m.kind === 'jump' && m.rise >= 256 && o.abilities.includes('glide') && this.lastMask & J) {
+      this.walkGlide = m;
+      return dirBit(m.dir) | J;
+    }
+    this.walkGlide = null;
+    if (d <= this.opt.edge + Math.abs(p.vx) * 0.5) {
+      // Jump still held from a landing at the very end (a chained jump): brake for the release frame,
+      // or she runs off the end before a new press can count.
+      if (this.lastMask & J && m.kind === 'jump') return dirBit(-m.dir);
+      return dirBit(m.dir) | this.jump(o, m);
+    }
     return dirBit(m.dir) | this.run(o, scene, m.dir, d);
   }
 
@@ -727,7 +847,8 @@ class Planner implements Persona {
     this.djUsed = false;
     // A hop (short hold) for a short gap down: a lower arc lands sooner. Up, or far: the full jump.
     const hop = this.opt.hop && m.kind === 'jump' && m.rise > 16 && m.gap < 260;
-    this.jumpUntil = f + (hop ? Math.min(this.opt.hold, 9) : this.opt.hold);
+    // Over seed-cases: a hop (wood.md R4: "hop, down-cut, bounce"); a full jump flies over the first one.
+    this.jumpUntil = f + (m.pogo ? 4 : hop ? Math.min(this.opt.hold, 9) : this.opt.hold);
     return J;
   }
 
@@ -785,7 +906,12 @@ class Planner implements Persona {
     if (t.leave) {
       if ((o.feetX - t.x) * t.leave > -16) {
         // At the end: go on, jumping off it (a player leaps rather than walks into the dark).
-        if (f >= this.jumpUntil + 1 && p.grounded && !groundAhead(scene, o, t.leave, this.opt.edge))
+        if (
+          !t.drop &&
+          f >= this.jumpUntil + 1 &&
+          p.grounded &&
+          !groundAhead(scene, o, t.leave, this.opt.edge)
+        )
           this.jumpUntil = f + this.opt.hold;
         if (p.grounded && p.wallDir === t.leave && f >= this.jumpUntil + 1)
           this.jumpUntil = f + this.opt.hold;

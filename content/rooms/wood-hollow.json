@@ -1,0 +1,107 @@
+{
+  "id": "wood-hollow",
+  "title": "The hollow: the hub (greybox)",
+  "region": "wood",
+  "width": 3840,
+  "height": 3248,
+  "spawn": { "x": 1500, "y": 3136 },
+  "edgeKick": false,
+  "abilities": ["glide"],
+  "art": { "mode": "greybox", "labels": true },
+  "exits": [
+    { "id": "w", "edge": "w", "from": 2624, "to": 2880 },
+    { "id": "e", "edge": "e", "from": 2624, "to": 2880 },
+    { "id": "well", "edge": "s", "from": 384, "to": 640, "oneWay": true },
+    { "id": "climb", "edge": "s", "from": 2560, "to": 2944 }
+  ],
+  "patches": [{ "id": "p3", "x": 1280, "y": 3136 }],
+  "shortcuts": [{ "id": "grate", "x": 2560, "y": 3136, "w": 384, "h": 32, "opens": "s" }],
+  "triggers": [{ "id": "glimpse", "x": 1152, "y": 2944, "w": 256, "h": 192, "sets": "wood-firefly-glimpse" }],
+  "solids": [
+    { "tag": "root", "x": 0, "y": 2880, "w": 960, "h": 64 },
+    { "tag": "root", "x": 0, "y": 2944, "w": 384, "h": 192 },
+    { "tag": "ground", "x": 0, "y": 3136, "w": 384, "h": 112 },
+    { "tag": "ground", "x": 640, "y": 3136, "w": 1920, "h": 112 },
+    { "tag": "ground", "x": 2944, "y": 3136, "w": 896, "h": 112 },
+    { "tag": "root", "x": 3584, "y": 3008, "w": 128, "h": 128 },
+    { "tag": "root", "x": 3712, "y": 2880, "w": 128, "h": 256 },
+    { "tag": "trunk", "x": 2496, "y": 640, "w": 64, "h": 2336, "kick": "east" },
+    { "tag": "trunk", "x": 2944, "y": 640, "w": 64, "h": 2336, "kick": "west" },
+    { "tag": "branch", "x": 1856, "y": 640, "w": 640, "h": 64, "kick": false },
+    { "tag": "branch", "x": 3008, "y": 640, "w": 832, "h": 64 },
+    { "tag": "branch", "x": 256, "y": 512, "w": 512, "h": 48, "kick": false }
+  ],
+  "oneWays": [],
+  "lures": [
+    { "id": "wick-crown", "kind": "wick", "x": 3392, "y": 448 },
+    { "id": "lantern-gap", "kind": "lantern", "x": 1280, "y": 512, "spin": 1 },
+    { "id": "wick-firefly", "kind": "wick", "x": 512, "y": 400 }
+  ],
+  "routes": [
+    { "from": "spawn", "to": "p3" },
+    { "from": "w", "to": "p3" },
+    { "from": "p3", "to": "e" },
+    { "from": "p3", "to": "well", "oneWay": true },
+    { "from": "climb", "to": "p3", "door": "grate" }
+  ],
+  "marks": {
+    "tatter": { "x": 1400, "y": 3136, "facing": 1 },
+    "notes": [
+      { "x": 40, "y": 2560, "text": "R7 wood-hollow  PURPOSE: hub + rest + story" },
+      { "x": 40, "y": 2620, "text": "W: in from wood-glidewalk onto the root shelf; drop 256 to the floor" },
+      { "x": 300, "y": 3010, "text": "the well alcove (dark, moonlit): the well, one way down to wood-well" },
+      { "x": 40, "y": 3080, "text": "drowned-roots stub: seeping back wall (T2, opens from the marsh side)" },
+      {
+        "x": 1150,
+        "y": 2880,
+        "text": "P3 moon patch, Tatter facing the arch. THE GLIMPSE trigger (flag wood-firefly-glimpse)"
+      },
+      {
+        "x": 1150,
+        "y": 2820,
+        "text": "TODO render: camera looks up the canopy gap 4 s; a small warm light hangs W-ff and darts away"
+      },
+      {
+        "x": 2580,
+        "y": 3060,
+        "text": "the grate: shows glade 2's moonlight; opens from below (wood-well's climb-out)"
+      },
+      {
+        "x": 2580,
+        "y": 2400,
+        "text": "UP-SHAFT (wall jump): both inner faces kickable, 2496 px to the crown"
+      },
+      { "x": 3100, "y": 560, "text": "crown shelf: W-crown wick (the payoff ~1 min after the key)" },
+      { "x": 3100, "y": 300, "text": "canopy log stub (T3+)" },
+      { "x": 900, "y": 700, "text": "canopy gap (open). L-gap lantern spin 1 (postgame fling anchor)" },
+      {
+        "x": 260,
+        "y": 300,
+        "text": "far branch (no kick): W-ff glow-cap (postgame: fling or double jump + glide)"
+      },
+      {
+        "x": 260,
+        "y": 340,
+        "text": "TODO sim: W-ff should appear with the glimpse; it burns from the start for now"
+      },
+      {
+        "x": 3300,
+        "y": 2780,
+        "text": "E arch (the floor steps up 256): east to wood-hawkers. TODO render: it glows gold"
+      },
+      {
+        "x": 1150,
+        "y": 3220,
+        "text": "SEAM FIX: interior 256 lower than the paper so W (R6's T4) and E (hawkers) meet at y 2880"
+      }
+    ]
+  },
+  "shots": {
+    "wide": [
+      { "name": "patch", "x": 1280, "y": 3136 },
+      { "name": "alcove", "x": 700, "y": 3136 },
+      { "name": "shaft", "x": 2750, "y": 3136 },
+      { "name": "crown", "x": 3200, "y": 640 }
+    ]
+  }
+}

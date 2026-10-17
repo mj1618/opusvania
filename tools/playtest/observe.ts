@@ -37,8 +37,10 @@ export function exitRect(scene: Scene, e: RoomExit, depth = 320): Rect {
   const along = { a: e.from, b: e.to };
   switch (e.edge) {
     case 's': {
+      // A hole in a floor reads as a way down from its lip, however deep the shaft under it.
       const at = e.at ?? scene.height;
-      return { x: along.a, y: at - depth, w: along.b - along.a, h: depth * 2 };
+      const d = Math.max(depth, 720);
+      return { x: along.a, y: at - d, w: along.b - along.a, h: d * 2 };
     }
     case 'n': {
       const at = e.at ?? 0;

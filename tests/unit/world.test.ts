@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Game } from '../../src/game';
-import { getRoom, WOOD_HATCH } from '../../src/scene/index';
+import { getRoom, WOOD_HATCH, WORLD } from '../../src/scene/index';
 import type { Room } from '../../src/scene/room';
 import { GAME_WORLD, progression, validateWorld } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
@@ -74,15 +74,8 @@ describe('the world check', () => {
   it('the shipped world is sound: mirrors, no overlaps, connected, every room and glade reachable, no softlock', () => {
     expect(validateWorld()).toEqual([]);
     const p = progression(GAME_WORLD);
-    expect(p.abilities).toEqual(['glide']);
-    for (const id of [
-      'wood-hatch',
-      'wood-chase',
-      'wood-wicks',
-      'wood-burrow',
-      'wood-glade',
-      'wood-glidewalk',
-    ])
+    expect(p.abilities).toEqual(['glide', 'wallJump']);
+    for (const id of WORLD.rooms.map((r) => r.id))
       expect([...p.reached].some((n) => n.startsWith(`${id}:`))).toBe(true);
   });
 

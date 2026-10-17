@@ -102,21 +102,35 @@ done at 83 s (6 catches). Read these as "what a bot does", not yet as the lab's 
 - Reach is approximate; a jump the bot drops may still be makeable by a person (the note says which).
 - `npm run check` on a loaded machine (load average 170+ from parallel agents): the e2e boots time out; rerun later.
 
-## The wood, first rooms (2026-10-18, `--until none` from wood-hatch; R4 / R6 stubs)
-| persona | chase (30-60 s) | wicks (60-120 s) | glade (45-90 s) | notes |
-|---|---|---|---|---|
-| naive | 15.8 s | 10.1 s | never leaves | it taps (14-frame jumps), so it never glides: lost 120 s at R5's lip, 48 catches. The design's "tapper" risk (wood.md §3); the fix is render's hint / wings cue, not geometry |
-| cautious | 17.7 s | 11.7 s | 8.0 s | no deaths; caught by W2 at the knob, not W1 (its standing jump is short) |
-| explorer | 16.5 s | 29.6 s | 53.9 s | 39 chasm catches before a glide stuck (its glide hands) |
-| speedrunner | 10.0 s | 6.6 s | 5.3 s | |
-A scripted careful player in the page with real keys (vista look 2.5 s, caught by W1, beat free, cut W2 at the knob,
-a pause in the glade, jump-glide): chase 13.1 s, wicks 8.0 s, glade 5.8 s. **The bots run these rooms in 1/3 to 1/10 of
-the first-timer targets**: the targets count reading, the vista hold, the bask and trying things; geometry is fixed by
-world placement, so judge with the first-timer agent and Matt, not by stretching rooms.
+## The wood, R2-R9 (2026-10-18, `--until none` from wood-hatch; R10 / R11 stubs)
+| persona | chase | wicks | burrow | glade | glidewalk | hollow | hawkers | lantern | how it ends |
+|---|---|---|---|---|---|---|---|---|---|
+| target (wood.md §9) | 30-60 | 60-120 | 90-180 | 45-90 | 180-270 | 45-90 | 90-150 | 140-250 | |
+| naive | 9.9 | 5.6 | 8.7 | 5.2 | 11.3 | 7.0 | 6.0 | 9.3 | at R9's lock at 1:16; then back and forth hawkers <-> lantern (it never turns back 3 rooms to the well) |
+| speedrunner | 10.0 | 6.6 | 9.0 | 5.3 | 16.2 | 3.1 | | | well first (its shortest route), done in R10's stub (planners cannot wall-climb) |
+| cautious | 17.2 | 12.2 | 24.2 | 8.6 | 26 (stops) | | | | stands on E0: T2 never comes into view from where it stops |
+| explorer | 16.5 | 29.6 | 13.3 | 52.0 | 155 (stops) | | | | jump-glides into gap 2's thorns and the thorn branch: 94 hits |
+Hits per encounter: burr-first 0-1 (planners) / 1-4 (naive, 1 fade); burr-ledge 1; hawk-first 0-1; thorns 0 for the
+naive (it walk-off glides), up to 52 + 42 for the explorer. The live naive run (real keys, page) matched to the frame.
+**Bots run the rooms 3-15x faster than the first-timer targets**: judge times with the first-timer agent and Matt.
+What the planners learned this round (tools/playtest/): the **pogo** (a seed-case under her feet within the down
+cut's reach: a down cut; map.ts lets a jump span a gap over a chain of seed-cases <= 320 apart, executed as a 4-frame
+hop); **rotten bark** in the way gets cut; a **south exit is a hole**: stand on the lip on her side and walk off it,
+never leap it (the R4 hole has a ledge past it), and a hole is seen from its lip (observe's exit rect is 720 deep);
+a **walk-off glide** when jump is still held from the glide that landed her (R6 gap 3's thorn branch); a landing
+right at a launch end is not "off the map" (feet past the end); a target given up for want of a route is tried
+again once more of the room is seen; forward personas prefer a way through to a one-way drop. The naive: once it
+owns glide (the glade's line) a gap jump is held from then on, so later edges are walk-off glides; it walks into a
+gap that is a south exit; its headway resets per room (a stale best x from the last room turned it round in R6).
+Not done: planners cannot wall-climb (R10's stub, R9's shaft, the up-shaft) and do not choose a glide line; the
+cautious one does not look ahead from a lip.
+
+## Multi-room notes (2026-10-18)
 - Planner fix: its memory (exits, lights, pickups, walked cells, given-up targets, move tries) is **per room**
   (`RoomMemory`); before, a given-up `exit:e` in one room shut the next room's `e`, and the cautious bot ended "done"
   in wood-chase chasing wood-hatch's exits. On entering a room the opening she came in by is given up (planners
   bounced between two rooms' facing exits), and given-up exits no longer hide the forward frontier.
 - `playwright-cli` + `eval` of a long in-page player on the dev server died with "execution context destroyed" while
-  other agents edited files (HMR reloads). A snapshot works: `npx vite build --outDir <scratch>/dist` and
-  `npx vite preview --outDir <scratch>/dist --port 5191`, then `http://localhost:5191/opusvania/?room=...`.
+  other agents edited files (HMR reloads), and `tsx` / vitest runs broke on their half-written sim files. A HEAD
+  snapshot works: `git archive HEAD | tar -x -C <scratch>/snap`, symlink node_modules, copy your own files over, and
+  run tsx / vitest / `npx vite --port 5192` (live runs need the dev server: they import /tools/) from there.
