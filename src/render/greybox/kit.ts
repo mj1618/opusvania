@@ -40,8 +40,22 @@ const UPGRADE_LINES: Record<string, string> = {
   keenBlade: 'KEEN BLADE: a longer reach to the flame',
 };
 
-/** A sign's flashes: `.` short, `-` long (seconds lit), with a dark gap between. */
-function rhythmLit(rhythm: string, t: number): boolean {
+/** Seconds one pass of a sign's rhythm takes, and the rest between its two passes. */
+function rhythmLen(rhythm: string): number {
+  let at = 0;
+  for (const ch of rhythm) at += (ch === '-' ? 0.45 : 0.15) + 0.2;
+  return at;
+}
+const RHYTHM_REST = 0.9;
+
+/**
+ * A sign's flashes: `.` short, `-` long (seconds lit), with a dark gap between; played twice with a rest
+ * between (the firefly's call, as the grove's far flicker will repeat it).
+ */
+function rhythmLit(rhythm: string, t0: number): boolean {
+  const pass = rhythmLen(rhythm) + RHYTHM_REST;
+  if (t0 >= 2 * pass) return false;
+  const t = t0 % pass;
   let at = 0;
   for (const ch of rhythm) {
     const on = ch === '-' ? 0.45 : 0.15;
@@ -416,6 +430,13 @@ export class KitView {
         const y = sg.y - 120 + Math.sin(a) * 40;
         const alpha = lit ? 1 : read ? 0.55 : 0.2 + 0.1 * Math.sin(clock * 2 + k);
         g.circle(x, y, lit ? 9 : 6).fill({ color: KC.sign, alpha });
+      }
+      // The call itself: one warm light over the ring that blinks the rhythm (the firefly's signal).
+      if (t !== undefined && t < 2 * (rhythmLen(sg.rhythm ?? '...-') + RHYTHM_REST)) {
+        const cx = sg.x;
+        const cy = sg.y - 215;
+        g.circle(cx, cy, lit ? 34 : 14).fill({ color: KC.sign, alpha: lit ? 0.16 : 0.05 });
+        g.circle(cx, cy, lit ? 8 : 4).fill({ color: KC.sign, alpha: lit ? 1 : 0.35 });
       }
       g.moveTo(sg.x - 60, sg.y - 120)
         .lineTo(sg.x - 60, sg.y)

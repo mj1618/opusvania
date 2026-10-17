@@ -53,6 +53,7 @@
   ],
   "oneWays": [{ "tag": "branch", "x": 3584, "y": 1056, "w": 640 }],
   "marks": {
+    "stage": {"moon": {"x": 5980, "y": 930, "r": 64}, "lights": {"x": 5820, "y": 1600, "w": 820, "h": 220, "count": 28}, "stream": {"points": [[4300, 640], [4900, 760], [5500, 960], [5950, 1300], [6150, 1640]], "count": 160, "speed": 240}, "vista": {"flag": "wood-vista", "zone": "vista", "x": 5520, "y": 1300, "zoom": 0.92, "hold": 2.2, "title": "LAMPFALL", "parallax": 0.25}, "stragglers": {"count": 8, "path": [[5200, 1000], [5600, 1200], [5900, 1450], [6000, 1800], [6050, 2050]]}},
     "notes": [
       {
         "x": 1024,

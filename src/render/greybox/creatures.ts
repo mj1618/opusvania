@@ -32,6 +32,8 @@ export const CREATURE = {
   burrback: 0x7b6b5c,
   oldBurrback: 0x6c6358,
   ridge: 0x4e463f,
+  /** The old burrback's cracked shell (one crack per lost point). */
+  crack: 0xd8cfc0,
   hawker: 0x5f6e86,
   weaver: 0x6e6280,
   other: 0x6b7385,
@@ -285,6 +287,26 @@ export class CreatureView {
           this.bursts.push({ kind: 'star', x: e.hitX, y: e.hitY, r: 40, t: 0, life: 0.12 });
           this.bursts.push({ kind: 'ring', x: e.hitX, y: e.hitY, r: 16, t: 0, life: 0.25 });
           break;
+        case 'enemyCrack':
+          // A third of the old burrback gone: shell chips fly off its top and a star (its cracks are drawn from hp).
+          for (let i = 0; i < 5; i++) {
+            const a = -Math.PI / 2 + (i - 2) * 0.45 + (hash01(e.id, e.third * 7 + i) - 0.5) * 0.3;
+            const sp = 220 + 120 * hash01(e.id, e.third * 7 + i + 3);
+            this.shards.push({
+              x: e.x,
+              y: e.y - 12,
+              vx: Math.cos(a) * sp,
+              vy: Math.sin(a) * sp,
+              a,
+              va: (hash01(e.id, i + 50) - 0.5) * 16,
+              s: 8,
+              color: i % 2 === 0 ? CREATURE.crack : bodyColor(e.kind),
+              t: 0,
+              life: 0.6,
+            });
+          }
+          this.bursts.push({ kind: 'star', x: e.x, y: e.y - 12, r: 46, t: 0, life: 0.24 });
+          break;
         case 'enemyDive': {
           const f = this.get(e.id);
           f.diveX = e.tx;
@@ -427,6 +449,7 @@ export class CreatureView {
       const pts = xf.map(domePts(w, h, shoulder, this.pa));
       back.poly(pts).fill({ color: white ? CREATURE.flash : CREATURE.stun });
       back.poly(pts).stroke({ color: CREATURE.open, width: 3 });
+      if (old) this.cracks(back, e, xf, h, shoulder, CREATURE.ridge);
       for (let k = 0; k < 3; k++) {
         const lx = w * (0.25 + 0.25 * k);
         const kick = Math.sin(clock * 14 + k * 2.1) * 6;
@@ -463,6 +486,7 @@ export class CreatureView {
           .lineTo(xf.x(lx), xf.y(h * 0.82))
           .stroke({ color: CREATURE.ridge, width: 3 });
       }
+      this.cracks(back, e, xf, h, shoulder, CREATURE.crack);
       // The top of the shell: amber while a pogo would land (braced, not yet pogoed), grey once it has.
       if (braced) {
         const band = xf.map(domeTopPts(w, h * 0.86, shoulder, 0.3, this.pa));
@@ -502,6 +526,26 @@ export class CreatureView {
     if (white) {
       front.poly(dome).fill({ color: CREATURE.flash, alpha: 0.95 });
       front.poly(pp).fill({ color: CREATURE.flash, alpha: 0.95 });
+    }
+  }
+
+  /**
+   * The old burrback's health as cracks in its shell (staging item 6): one more jagged crack per point
+   * lost, so the fight's progress reads on the body (no bar over a mini-boss). Drawn through `xf`, so
+   * they turn over with it on its back.
+   */
+  private cracks(g: Graphics, e: EnemyState, xf: Xf, h: number, shoulder: number, color: number): void {
+    const w = e.w;
+    const lost = Math.max(0, Math.min(12, e.hpMax - e.hp));
+    for (let k = 0; k < lost; k++) {
+      const x0 = w * (0.15 + 0.7 * hash01(e.id, k * 3));
+      const y0 = h * 0.86 * shoulder * (0.15 + 0.5 * hash01(e.id, k * 3 + 1));
+      const dir = hash01(e.id, k * 3 + 2) < 0.5 ? -1 : 1;
+      g.moveTo(xf.x(x0), xf.y(y0))
+        .lineTo(xf.x(x0 + dir * 6), xf.y(y0 + 9))
+        .lineTo(xf.x(x0 - dir * 3), xf.y(y0 + 16))
+        .lineTo(xf.x(x0 + dir * 8), xf.y(y0 + 25))
+        .stroke({ color, width: 2, alpha: 0.85 });
     }
   }
 

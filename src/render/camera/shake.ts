@@ -75,6 +75,9 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
       case 'enemyDie':
         add += B.kill;
         break;
+      case 'enemyCrack':
+        add += B.crack;
+        break;
       case 'enemyRecover':
         if (e.cause === 'wall') add += B.wallRam;
         break;

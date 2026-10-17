@@ -73,6 +73,12 @@ export const TATTER = {
   /** After she has gone: a glance the way she went about every `glanceEvery` s. */
   glanceEvery: 7.5,
   glanceLen: 2.6,
+  /**
+   * Its want (`marks.tatter.want`, the hub's root shelf it cannot climb; wood.md rescope 7): it waits gazing
+   * at it; when she first comes within `arrive` px it starts (a jolt), turns to her, then makes its one try
+   * at the shelf (the swarm's try, timed from her arrival by `tryAt` s) and fails.
+   */
+  want: { arrive: 420, tryAt: 0.9, gaze: 0.6 },
 } as const;
 
 export class Tatter {
@@ -94,13 +100,17 @@ export class Tatter {
   private lookY = 0;
   /** Render time she has been out of its sight (for the glances after she is gone). */
   private goneT = 0;
+  /** What it wants and cannot reach (world px), and seconds since she arrived (-1 = not yet). */
+  private readonly want: readonly [number, number] | null;
+  private wantT = -1;
 
   constructor(
     private readonly ctx: RenderContext,
     private readonly layer: Container,
     room: Room,
-    at: { x: number; y: number; facing: -1 | 1 },
+    at: { x: number; y: number; facing: -1 | 1; want?: [number, number] },
   ) {
+    this.want = at.want ?? null;
     this.x = at.x;
     this.y = at.y;
     this.facing = at.facing;
@@ -180,13 +190,18 @@ export class Tatter {
   ): void {
     const T = TATTER;
     const rig = this.rig;
-    const t = sinceBreak;
+    // With a want, its try is timed from her arrival instead of the hatching's break.
+    const want = this.want;
+    if (want && this.wantT < 0 && her && Math.hypot(her.cx - this.x, her.feetY - this.y) < T.want.arrive)
+      this.wantT = 0;
+    else if (this.wantT >= 0) this.wantT += dt;
+    const t = want ? (this.wantT >= 0 ? this.wantT + T.want.tryAt : 1e6) : sinceBreak;
     this.lastT = t;
     const headY = this.y - 46;
     // --- What it looks at, and how firmly.
-    let lx = this.x + this.facing * 200;
-    let ly = this.y - 30;
-    let lw = 0.25;
+    let lx = want ? want[0] : this.x + this.facing * 200;
+    let ly = want ? want[1] : this.y - 30;
+    let lw = want ? T.want.gaze : 0.25;
     if (!her && cocoon) {
       // Shut in: its eyes on her cocoon, and on every stir.
       lx = cocoon.x;
@@ -198,7 +213,14 @@ export class Tatter {
       lx = her.cx;
       ly = her.feetY - 50;
       lw = 0.3 + 0.7 * near;
-      if (near < 0.05) this.goneT += dt;
+      if (want) {
+        // It waits gazing at what it wants; as she comes close it turns to her.
+        lx = lerp(want[0], her.cx, near);
+        ly = lerp(want[1], her.feetY - 50, near);
+        lw = lerp(T.want.gaze, 1, near);
+      }
+      if (want) this.goneT = 0;
+      else if (near < 0.05) this.goneT += dt;
       else this.goneT = 0;
       // She has gone: it looks the way she went now and then, and otherwise at the branch before it.
       if (this.goneT > 1.5) {
@@ -217,9 +239,9 @@ export class Tatter {
       const camX = Math.max(960, her?.cx ?? this.x);
       const camY = (her?.feetY ?? this.y) + T.camDy;
       const f = this.focus;
-      const sx = f ? camX + (f.x - 960) : this.x + 300;
-      const sy = f ? camY + (f.y - 540) : this.swarmY;
-      lx = lerp(lx, sx + lerp(T.swarmDx[0], T.swarmDx[1], u), sw);
+      const sx = want ? want[0] : f ? camX + (f.x - 960) : this.x + 300;
+      const sy = want ? want[1] : f ? camY + (f.y - 540) : this.swarmY;
+      lx = lerp(lx, sx + (want ? 0 : lerp(T.swarmDx[0], T.swarmDx[1], u)), sw);
       ly = lerp(ly, sy, sw);
       lw = lerp(lw, 1, sw);
     }

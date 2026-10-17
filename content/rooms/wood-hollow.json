@@ -75,7 +75,8 @@
     { "from": "climb", "to": "p3", "door": "grate" }
   ],
   "marks": {
-    "tatter": { "x": 1400, "y": 3136, "facing": 1 },
+    "stage": {"glimpse": {"flag": "wood-firefly-glimpse", "x": 1300, "y": 620, "zoom": 0.75, "secs": 4.2, "path": [[1900, 180], [1300, 260], [800, 330], [512, 400]], "away": [[512, 400], [300, 260], [-150, 120]]}},
+    "tatter": { "x": 1050, "y": 3136, "facing": -1, "want": [930, 2870] },
     "notes": [
       { "x": 40, "y": 2560, "text": "R7 wood-hollow  PURPOSE: hub + rest + story" },
       { "x": 40, "y": 2620, "text": "W: in from wood-glidewalk onto the root shelf; drop 256 to the floor" },

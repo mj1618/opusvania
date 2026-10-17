@@ -1,5 +1,6 @@
 import type { AbilityId } from '../sim/abilities';
 import type { Scene } from '../sim/scene';
+import type { StageMarks } from './stage';
 
 /**
  * A room: the sim's `Scene` plus the fields only render, the tools and the acting agents read.
@@ -150,8 +151,12 @@ export interface CocoonMark {
 
 export interface RoomMarks {
   cocoons?: CocoonMark[];
-  /** Tatter, the torn-winged moth who stays: feet centre on the branch and the way it faces. */
-  tatter?: { x: number; y: number; facing: -1 | 1 };
+  /**
+   * Tatter, the torn-winged moth who stays: feet centre on the branch and the way it faces. `want`: a
+   * point it wants and cannot reach (the hub's root shelf): it looks at it, and when she arrives it turns
+   * to her and tries for it once, and fails (render/character/tatter.ts).
+   */
+  tatter?: { x: number; y: number; facing: -1 | 1; want?: [number, number] };
   /** The swarm's path through the sky, west to east (world px polyline). */
   swarm?: Array<[number, number]>;
   /**
@@ -175,6 +180,8 @@ export interface RoomMarks {
   notes?: Array<{ x: number; y: number; text: string }>;
   /** Camera hints for the acting / camera work: named views (centre in world px, optional zoom). */
   camera?: Array<{ id: string; x: number; y: number; zoom?: number; note?: string }>;
+  /** Greybox story staging (src/scene/stage.ts, memory/staging.md): render only. */
+  stage?: StageMarks;
 }
 
 /**

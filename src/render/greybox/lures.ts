@@ -10,9 +10,11 @@ import type { SimEvent } from '../../sim/events';
 import { flameAt, lureRowNow } from '../../sim/lures';
 import { tuning } from '../../sim/tuning';
 import { withUpgrades } from '../../sim/upgrades';
+import { STAGE_BEATS } from '../camera/stage-cam';
 import type { SimView } from '../contract';
 import { FreedMoths } from './moths';
 import { GB } from './palette';
+import { STAGING } from './staging';
 
 interface Fx {
   kind: 'beat' | 'hit' | 'snuff' | 'catch' | 'free';
@@ -96,6 +98,8 @@ export class LureView {
       if (!l) continue;
       const K = lureRowNow(sim.lures, i, l, tuning);
       const hp = sim.lures.hp[i] ?? 0;
+      // The firefly's glow-cap (a lure with `after`) is hung during the glimpse: not there until it is.
+      if (l.after && STAGE_BEATS.glimpse >= 0 && STAGE_BEATS.glimpse < STAGING.glimpse.pulse0) continue;
       // Where the flame is now: a swinging one on its arc (memory/level-kit.md), on the sim's frame
       // interpolated like her (the latest step used frame - 1).
       const at = flameAt(sim.lures, i, l, sim.frame - 2 + sim.alpha, tuning, AT);

@@ -25,6 +25,7 @@ import { BOSS, bossNodes, checkBoss } from './boss';
 import { checkCreatures, ENEMIES, SENSES } from './creatures';
 import { CAMERA_ZONES, checkKit, KIT_FIELDS, kitNodes, ROUTE_FLAGS, SWING } from './kit';
 import type { Room } from './room';
+import { StageSchema } from './stage';
 
 /**
  * The room registry. Each room is one JSON file in content/rooms/<id>.json (sim px, see
@@ -263,6 +264,7 @@ const SceneSchema = z
             x: int,
             y: int,
             facing: z.union([z.literal(-1), z.literal(1)]),
+            want: z.tuple([int, int]).optional(),
           })
           .strict()
           .optional(),
@@ -309,6 +311,7 @@ const SceneSchema = z
           .optional(),
         drop: z.object({ x: int, y: int }).strict().optional(),
         notes: z.array(z.object({ x: int, y: int, text: z.string().min(1) }).strict()).optional(),
+        stage: StageSchema.optional(),
         camera: z
           .array(
             z

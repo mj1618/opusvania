@@ -68,6 +68,7 @@ export const cameraTuning = {
       hurt: 0.5,
       snuff: 0.45,
       kill: 0.3,
+      crack: 0.3,
       wallRam: 0.3,
       barkBreak: 0.3,
       hardLand: 0.2,

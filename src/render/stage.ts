@@ -32,6 +32,7 @@ import { CameraKick } from './camera/kick';
 import { ReformShot } from './camera/reform';
 import { RoomFade } from './camera/room-fade';
 import { CameraShake } from './camera/shake';
+import { StageCamera } from './camera/stage-cam';
 import { type CameraTuning, cameraFor } from './camera/tuning';
 import { CharacterRenderer } from './character/index';
 import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
@@ -117,6 +118,8 @@ export class RenderStage {
   private readonly roomFade: RoomFade;
   /** The room's scripted beats: the hatch kick, the lean toward the swarm (camera/beats.ts). */
   private beats!: CameraBeats;
+  /** The story's camera beats from `marks.stage`: the vista hold, the glimpse, the bask (camera/stage-cam.ts). */
+  private stageCam!: StageCamera;
   /** The follow camera's tuning for this room (`room.camera` framing over `cameraTuning`). */
   private ct!: CameraTuning;
   /** Post-processing as the page booted: a greybox room turns it off, a painted one back to this. */
@@ -186,6 +189,7 @@ export class RenderStage {
     const scene = game.scene;
     this.ct = cameraFor(scene);
     this.beats = new CameraBeats(scene.camera);
+    this.stageCam = new StageCamera(scene, game.state.save.flags);
     this.roomFade.setRoomFadeIn(scene.camera?.fadeIn ?? 0);
     // The room's look first: shaders are built with its zone edges and key light (room-look.ts).
     setRoomLook(scene);
@@ -300,15 +304,17 @@ export class RenderStage {
       this.game.scene,
       follow,
     );
+    const sc = this.stageCam;
+    sc.update(dt, events, this.cam.zone, follow, this.game.state.save.flags);
     // The kick and the shake: render-side offsets, the follow camera never sees them.
     const kx = this.kick.x + this.shake.x;
     const ky = this.kick.y + this.shake.y;
     const view: CameraView = o
       ? { x: base.x + kx, y: base.y + ky, zoom: base.zoom, w: vs.w, h: vs.h }
       : {
-          x: base.x + kx + gc.x + rs.x + this.beats.x,
-          y: base.y + ky + gc.y + rs.y + this.beats.y,
-          zoom: base.zoom * gc.zoom,
+          x: base.x + kx + gc.x + rs.x + this.beats.x + sc.x,
+          y: base.y + ky + gc.y + rs.y + this.beats.y + sc.y,
+          zoom: base.zoom * gc.zoom * sc.zoom,
           w: vs.w,
           h: vs.h,
         };

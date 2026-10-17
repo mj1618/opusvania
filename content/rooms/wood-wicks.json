@@ -34,6 +34,7 @@
     { "id": "wick-high", "kind": "wick", "x": 1408, "y": 352 }
   ],
   "marks": {
+    "stage": {"circlers": [{"lure": "wick-caught", "count": 7, "r": 95}], "props": [{"kind": "deadMoth", "x": 1300, "y": 1120, "facing": -1}]},
     "notes": [
       { "x": 300, "y": 120, "text": "R3 wood-wicks  PURPOSE: teach (pull, Caught and snuff by consequence)" },
       { "x": 300, "y": 200, "text": "N in (one way): she falls ~900 and lands on L in the dark" },

@@ -20,6 +20,7 @@ import { KitView, kitLabels } from './kit';
 import { LureView } from './lures';
 import { Motes } from './motes';
 import { GB } from './palette';
+import { StagingView } from './staging';
 import { buildLabels, buildStatic } from './static';
 import { WorldView } from './world';
 
@@ -61,14 +62,17 @@ export class GreyboxLayer {
   private readonly kit = new KitView();
   /** A boss fight (memory/bosses.md): doors, threads, tells, the label and the name card. */
   private boss!: BossView;
+  /** The story's set pieces in grey (staging.ts, memory/staging.md). */
+  private staging!: StagingView;
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
     const room = ctx.scene;
     GREYBOX.labels = room.art?.labels ?? true;
-    ctx.layers.sky.addChild(this.sky);
+    this.staging = new StagingView(room.marks?.stage);
+    ctx.layers.sky.addChild(this.sky, this.staging.far, this.staging.farText);
     ctx.layers.playfield.addChild(buildStatic(room));
-    ctx.layers.get('goal').addChild(this.lureBack, this.creatureBack);
+    ctx.layers.get('goal').addChild(this.staging.back, this.lureBack, this.creatureBack);
     this.labels = buildLabels(room);
     kitLabels(room, this.labels);
     // Patches, glades, shortcuts and doors (memory/world.md): under her, their flashes and lines over her.
@@ -77,6 +81,7 @@ export class GreyboxLayer {
     this.boss = new BossView(flashText);
     ctx.layers.playfield.addChild(this.world.back, this.kit.back, this.boss.back);
     ctx.layers.air.addChild(
+      this.staging.front,
       this.creatures,
       this.moteGfx,
       this.front,
@@ -91,6 +96,8 @@ export class GreyboxLayer {
   update(frame: SceneFrame): void {
     this.drawSky();
     const { sim, dt, clock } = frame;
+    this.staging.onEvents(sim.events);
+    this.staging.draw(dt, clock, sim, frame.camera);
     this.lures.onEvents(sim.events, sim);
     this.lureBack.clear();
     this.front.clear();
