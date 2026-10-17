@@ -264,7 +264,10 @@ export function buildMoves(
         if (inGap.length > 0) {
           if (inGap.every((w) => w.bark) && Math.abs(dy) <= 24 && dx <= 200)
             push({ from: a.id, to: b.id, kind: 'cut', dir, launchX: ax, gap: dx, rise: dy, cost: dx + 40 });
-          if (inGap.some((w) => w.y < Math.min(ya, ya + dy) - reach.up)) continue;
+          // Taller than a jump from where she takes off (not from the target's height: a ledge higher than her
+          // does not lower a wall in front of it).
+          if (inGap.some((w) => w.y < Math.min(ya, ya + dy) - reach.up || w.y < ya - reach.up * 0.95))
+            continue;
         }
         const pogo = dx > reach.across(dy) && Math.abs(dy) <= 64 && pogoChain(pogos, ax, bx, ya);
         // A lamp in reach of a jump off this end that throws as far as the other side (the throw gap).
@@ -309,7 +312,12 @@ export function buildMoves(
         if (b.x0 - 40 > a.x0 + 8) spots.push([b.x0 - 40, 1]);
         if (b.x1 + 40 < a.x1 - 8) spots.push([b.x1 + 40, -1]);
         if (b.oneWay) spots.push([(lo + hi) / 2, 0]);
-        for (const [x, dir] of spots)
+        // Room over the launch for her head all the way up to b's height (a ceiling there: no jump from it).
+        const headroom = (x: number) =>
+          !walls.some(
+            (w) => w.x < x + 24 && w.x + w.w > x - 24 && w.y < ya - BODY_H && w.y + w.h > yb - BODY_H - 12,
+          );
+        for (const [x, dir] of spots.filter(([x]) => headroom(x)))
           push({
             from: a.id,
             to: b.id,
@@ -322,8 +330,10 @@ export function buildMoves(
       } else if (yb > ya + ROLL) {
         // b is below: walk off an end of a that hangs over b, or drop through a one-way. Not when something
         // solid lies between (a thorn bed over a tunnel: she would land on it, not on b).
-        const solidBetween = (x: number) =>
-          walls.some((w) => w.x < x + 20 && w.x + w.w > x - 20 && w.y > ya + ROLL && w.y < yAt(b, x) - ROLL);
+        // Anything solid in the column she would fall down counts, however high it starts (a floor over a tunnel
+        // ends at a wall that rises above it and goes on down: no walk-off into the tunnel there).
+        const solidBetween = (x: number, top = ya - BODY_H + ROLL) =>
+          walls.some((w) => w.x < x + 20 && w.x + w.w > x - 20 && w.y < yAt(b, x) - ROLL && w.y + w.h > top);
         if (a.oneWay) {
           // Down + jump falls through to the first thing under her (rungs stacked over a floor: the next rung).
           const x = (lo + hi) / 2;
@@ -331,7 +341,7 @@ export function buildMoves(
             (c) =>
               c !== a && c !== b && c.x0 <= x && c.x1 >= x && yAt(c, x) > ya + ROLL && yAt(c, x) < yb - ROLL,
           );
-          if (between || solidBetween(x)) continue;
+          if (between || solidBetween(x, ya + ROLL)) continue;
           push({
             from: a.id,
             to: b.id,

@@ -447,3 +447,44 @@ describe('playtest harness: area 1 skills (throws, hatches, the pogo-wick, thorn
     expect(thorny).toBeGreaterThan(1e5);
   });
 });
+
+describe('playtest harness: walls the planner reads (builder 1, R8)', () => {
+  const surf = (id: number, x0: number, x1: number, y: number, oneWay = false) => ({
+    id,
+    x0,
+    x1,
+    pieces: [{ x0, x1, y }],
+    oneWay,
+  });
+  const reach = reachFor(['glide']);
+
+  it('no walk-off down a column a wall fills, however high the wall starts (a floor over a tunnel)', () => {
+    const floor = surf(0, 0, 1000, 1000);
+    const tunnel = surf(1, 0, 2000, 1500);
+    const wall = { x: 1000, y: 800, w: 100, h: 700 };
+    const open = buildMoves([floor, tunnel], reach);
+    expect(open.some((m) => m.kind === 'drop' && m.from === 0 && m.to === 1)).toBe(true);
+    const walled = buildMoves([floor, tunnel], reach, [], [wall]);
+    expect(walled.some((m) => m.kind === 'drop' && m.from === 0 && m.to === 1 && m.dir === 1)).toBe(false);
+  });
+
+  it('a wall in a gap counts from where she takes off, not from the higher ledge beyond', () => {
+    const near = surf(0, 0, 500, 1000);
+    const far = surf(1, 650, 1200, 850);
+    const wall = { x: 560, y: 720, w: 40, h: 400 };
+    expect(buildMoves([near, far], reach).some((m) => m.from === 0 && m.to === 1)).toBe(true);
+    expect(buildMoves([near, far], reach, [], [wall]).some((m) => m.from === 0 && m.to === 1)).toBe(false);
+  });
+
+  it('a jump up is not planned from a spot with a ceiling over it', () => {
+    const floor = surf(0, 0, 1200, 1000);
+    const ledge = surf(1, 500, 800, 850);
+    const ceiling = { x: 430, y: 780, w: 50, h: 20 };
+    const spots = (walls: Array<{ x: number; y: number; w: number; h: number }>) =>
+      buildMoves([floor, ledge], reach, [], walls)
+        .filter((m) => m.kind === 'up' && m.to === 1)
+        .map((m) => m.launchX);
+    expect(spots([])).toEqual([460, 840]);
+    expect(spots([ceiling])).toEqual([840]);
+  });
+});

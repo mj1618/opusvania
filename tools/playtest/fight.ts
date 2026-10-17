@@ -92,6 +92,14 @@ function wallAt(scene: Scene, s: GameState, dir: number, upTo: number): number {
 }
 
 /** The tactics a persona knows against creature `i`. `toward`: the way its route goes on. */
+/** Standing on a one-way (a drop-through ledge or mesh)? */
+function onOneWay(s: GameState, scene: Scene): boolean {
+  const p = s.player;
+  if (!p.grounded) return false;
+  const fy = p.y + p.h;
+  return (scene.oneWays ?? []).some((o) => Math.abs(o.y - fy) <= 2 && o.x < p.x + p.w && o.x + o.w > p.x);
+}
+
 export function fightTactics(scene: Scene, i: number, toward: number, lead = 0): Candidate[] {
   const out: Candidate[] = [];
   const toE = (s: GameState, e: EnemyState) => Math.sign(centre(e).x - (s.player.x + s.player.w / 2)) || 1;
@@ -114,6 +122,9 @@ export function fightTactics(scene: Scene, i: number, toward: number, lead = 0):
       'press and cut',
       (s, e, _k, prev) => {
         const d = toE(s, e);
+        // Up on a one-way over it (an escape ledge): down through it first.
+        if (onOneWay(s, scene) && e.y > s.player.y + s.player.h + 40 && dx(s, e) < 400)
+          return prev & J ? ActionBit.down : ActionBit.down | J;
         const near = dx(s, e) < 120;
         let m = near ? 0 : dirBit(d);
         if (near && s.player.facing !== d) m |= dirBit(d);
@@ -208,6 +219,19 @@ export function fightTactics(scene: Scene, i: number, toward: number, lead = 0):
         },
       ),
     );
+  // Down to it: off the ledge she waits on (through a one-way, or off the end toward it), to bait its ram.
+  out.push(
+    tactic(
+      'come down',
+      (s, e, _k, prev) => {
+        const p = s.player;
+        if (!p.grounded) return 0;
+        if (onOneWay(s, scene)) return prev & J ? ActionBit.down : ActionBit.down | J;
+        return dirBit(toE(s, e));
+      },
+      i,
+    ),
+  );
   // Its lamp: a lamp-guarder (and every creature guarding the same wick, R9's beetle and dangler) gives up when
   // the flame it guards goes out. To the flame, up to it, cut it (up, down or ahead, as it hangs).
   out.push(

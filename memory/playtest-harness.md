@@ -135,6 +135,12 @@ A bot that plays like a person, over the whole chunk, watched as video. Built 20
 - **Lamp-guarders** (`fight.ts` tactic `snuff its lamp`): to the flame a creature guards, cut it (up, down or ahead);
   R9's beetle and dangler at one wick go together. The human player uses it for ground creatures (not a flyer's lamp:
   that is often the throw it needs).
+- **Planner fixes (builder 1's R8 report)**: a walk-off is refused when any solid fills the fall column; a wall in a
+  gap counts from the take-off height; an `up` move needs headroom over its launch spot; a side exit's target
+  accepts the surface it was computed on after it grows (the hub floor: bots ping-ponged hollow <-> glidewalk); a fight
+  is let be after 10 s (30 s for bots) from the **last** blow either way, not from its start (bots waited on R10's
+  escape ledges for minutes); from a ledge over the old burrback a person comes down (`come down`, through a
+  one-way); `press and cut` drops through a one-way to a creature below.
 - What they found on df4b0c5: R8's throw works but the look-ahead bots take the dark tunnel (cheaper); R10's
   pogo-wick is not required for a glider (the 9728 -> 9088 glide makes it); naive (no look-ahead) still stalls in R8.
 - **Region targets table** the harness reads (targets.ts): any markdown table in `docs/design/regions/*.md` with a

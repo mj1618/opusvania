@@ -270,6 +270,8 @@ export function humanTactic(
   hitsTaken = 0,
   patience = 3,
   lampLit = false,
+  /** She stands on a ledge well above its ground. */
+  above = false,
 ): string {
   const mode = e.mode as string;
   // It guards a lamp still burning: put the lamp out and it gives up (taught from R3: "snuff and it sleeps").
@@ -289,6 +291,8 @@ export function humanTactic(
     case 'oldBurrback':
       // The ram's tell: jump in it (it carries the ram past or short of her); braced and close: pogo the shell.
       if (mode === 'windup' || mode === 'charge') return 'hop over';
+      // Safe up on a ledge over its ground: a person comes down to bait it (it does not climb to her).
+      if (above) return 'come down';
       if ((e.braced || mode === 'feint') && dist < 160) return 'pogo';
       return dist < 220 ? 'back off' : 'wait';
     case 'burrback':

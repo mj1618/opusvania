@@ -38,7 +38,7 @@ import {
   onSurface,
   type SimCtx,
 } from './lines';
-import { Mind, type Move, moveKey, reachFor, type Surface, topUnder, yAt } from './map';
+import { Mind, type Move, moveKey, ROLL, reachFor, type Surface, topUnder, yAt } from './map';
 import type { Obs } from './observe';
 
 const D = ActionBit.down;
@@ -534,6 +534,10 @@ class Planner implements Persona {
     tactics: Map<string, number>;
     /** What the creature was showing when the tactic was picked (a person answers a new tell at once). */
     look: string;
+    /** The frame of the last blow either way (its hp or her hurt count changed), and those two then. */
+    quiet: number;
+    lastHp: number;
+    lastHurt: number;
   } | null = null;
   private ignoreFoesUntil = 0;
   /** Caught with no line playing: the throw aimed at the target. */
@@ -760,14 +764,23 @@ class Planner implements Persona {
         hurt: o.p.hurtSeq,
         tactics: new Map(),
         look: '',
+        quiet: f,
+        lastHp: e?.hp ?? 0,
+        lastHurt: o.p.hurtSeq,
       };
       this.fighting = fz;
       this.notes.push(`f${f}: a fight with ${id} (${e?.kind})`);
     }
-    // Long and nothing happening either way: leave it be for a while (it will not come, or cannot be reached).
-    // A person moves on sooner (10 s).
+    // Long and nothing happening either way: leave it be for a while (it will not come, or cannot be reached:
+    // she waits on a ledge it cannot climb). Counted from the last blow either way, not from the fight's start
+    // (an early hit kept bots on R10's escape ledges for minutes). A person moves on sooner (10 s).
+    if ((e?.hp ?? 0) !== fz.lastHp || o.p.hurtSeq !== fz.lastHurt) {
+      fz.lastHp = e?.hp ?? 0;
+      fz.lastHurt = o.p.hurtSeq;
+      fz.quiet = f;
+    }
     const letBe = this.opt.human ? 600 : 1800;
-    if (f - fz.since > letBe && (e?.hp ?? 0) === fz.hp && o.p.hurtSeq === fz.hurt) {
+    if (f - fz.quiet > letBe) {
       this.ignoreFoesUntil = f + 600;
       this.notes.push(`f${f}: let ${id} be (${letBe / 60} s, nothing dealt or taken)`);
       this.fighting = null;
@@ -798,6 +811,7 @@ class Planner implements Persona {
                   this.hitsBy.get(foeNow.kind as string) ?? 0,
                   h.patience,
                   foeNow.guard >= 0 && !((ctx.state.lures.out[foeNow.guard] ?? 0) > 0),
+                  o.p.grounded && foeNow.y + foeNow.h - o.feetY > 100,
                 )
               : 'wait';
             const cand = tactics.find((q) => q.name === name) ?? tactics[0];
@@ -1318,12 +1332,15 @@ class Planner implements Persona {
     const s = lip ?? mind.standFor(e.x, e.edge === 's' ? e.y - 400 : e.y);
     const dir = e.edge === 'w' ? -1 : e.edge === 'e' ? 1 : s ? (e.x >= (s.x0 + s.x1) / 2 ? 1 : -1) : 1;
     const ex = s ? (dir > 0 ? s.x1 : s.x0) : e.x;
+    const sx = ex - dir * 24;
+    const sy = s ? yAt(s, ex) : e.y;
     return {
       key: `exit:${id}`,
       why: `exit ${id}`,
-      x: ex - dir * 24,
-      y: s ? yAt(s, ex) : e.y,
-      stand: (q) => same(q, s),
+      x: sx,
+      y: sy,
+      // That surface, or what it has grown into as more of the floor came into view (the hub's floor).
+      stand: (q) => same(q, s) || (!!s && q.oneWay === s.oneWay && holds(q, sx, sy)),
       leave: dir,
       ...(lip ? { drop: true } : {}),
     };
@@ -1876,6 +1893,11 @@ export function standsAt(q: Surface, x: number, y: number): boolean {
 }
 
 /** Surfaces are rebuilt (new ids) as more of the room is seen: compare them by geometry. */
+/** Does surface `q` run under the point (x, y) (its top within a rolling step there)? */
+function holds(q: Surface, x: number, y: number): boolean {
+  return q.x0 <= x && q.x1 >= x && Math.abs(yAt(q, x) - y) <= ROLL;
+}
+
 export function same(a: Surface | null | undefined, b: Surface | null | undefined): boolean {
   return !!a && !!b && Math.abs(a.x0 - b.x0) < 2 && Math.abs(a.x1 - b.x1) < 2 && a.oneWay === b.oneWay;
 }

@@ -112,12 +112,12 @@ snuff, bounce, L2.
   R10's pit escape ledges and the climb-out's catch ledges are one-ways (a bot under a solid ledge flush with a
   wall jumps into its underside for minutes): the climb-out has one every ~420 px, alternating faces (2560 @1700,
   2880 @1280, 2560 @860, 2880 @460), then the root step at 160.
-- **The bots' map (tools/playtest/map.ts) reads walls only from below:** a walk-off counts a solid between only if
-  it starts under the surface's top, and a side-by-side jump ignores a wall shorter than its reach from the target's
-  height. So a floor over a tunnel (R8's pit) reads as walk-offs into the tunnel, and bots retry them for minutes
-  (round 4's first try held 4 runs 4-8 min in the pit). R8's pit floor has a 3 px lip under it (1265-1268, 20+
-  past each end) so the map sees a solid between; abutting tunnel-floor seams made it worse (side-by-side walks).
-  Its `up` move also launches 40 px beside a one-way's end without checking the ceiling there: keep that spot open.
+- **The bots' map reads walls right now (fixed in tools/playtest/map.ts, 2026-10-18):** a walk-off is refused when any
+  solid fills the column she would fall down (however high it starts), a wall in a gap counts from her take-off
+  height, and a jump up needs headroom over its launch spot. R8's 3 px lip under the pit floor (2540, 1265) and the
+  1 px knuckle on the far ledge's lip (3007, 765) are no longer needed: without them all four look-ahead bots' region
+  results are unchanged and 9 of 9 human-like runs go through (7 of 9 with them). Level geometry need not carry
+  bot hacks; tell the playtest tools engineer when the bots misread a room.
 - A one-way's `noDrop` may name a flag (refuses drop-through until it is set).
 - A floor bark panel is hit by a down cut from the air (cut ~70-90 px over it, falling): each hit bounces
   her; cut as she lands and it hits with no bounce; a standing down cut does not reach it.
