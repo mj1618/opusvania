@@ -12,7 +12,7 @@
  * One mesh, one shader; the CPU only writes the clock and her trail. Render only: reads sim state.
  */
 import { Buffer, BufferUsage, Container, Geometry, Mesh, Shader } from 'pixi.js';
-import type { BranchPlan } from './pf-branch';
+import { type BranchPlan, freeEast, freeWest } from './pf-branch';
 
 export const RIM = {
   /** Lit and leaf-shaded rim colours (before post). */
@@ -131,9 +131,11 @@ export class Rim {
     const verts: number[] = [];
     const index: number[] = [];
     for (const st of plan.stretches) {
+      // The far branch is another tree a plane back: no rim (it must not read as a ledge).
+      if (st.far) continue;
       // Over a free end the rim runs on a little and fades; at a joint it stops flush.
-      const freeL = st.west === 'tip' || st.west === 'hook';
-      const freeR = st.east === 'fork' || st.east === 'end' || st.east === 'knee';
+      const freeL = freeWest(st);
+      const freeR = freeEast(st);
       const x0 = st.x0 - (freeL ? 10 : st.west === 'trunk' ? 26 : 0);
       const x1 = st.x1 + (freeR ? 10 : 0);
       const seed = (st.x0 * 0.0137) % 50;
@@ -143,8 +145,10 @@ export class Rim {
       for (let i = 0; i <= n; i++) {
         const x = x0 + ((x1 - x0) * i) / n;
         const fade = Math.min(1, (x - x0) / (freeL ? 24 : 8), (x1 - x) / (freeR ? 24 : 8));
-        verts.push(x, st.y - 10, st.y, fade, seed);
-        verts.push(x, st.y + 12, st.y, fade, seed);
+        // It follows the painted, rolled top (the moss rises ~2 px over the bark).
+        const y = st.top(Math.min(st.x1, Math.max(st.x0, x))) - 2;
+        verts.push(x, y - 12, y, fade, seed);
+        verts.push(x, y + 12, y, fade, seed);
         if (i > 0) {
           const k = base + i * 2;
           index.push(k - 2, k - 1, k, k - 1, k + 1, k);

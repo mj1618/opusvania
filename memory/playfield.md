@@ -38,45 +38,46 @@ Everything is still derived from the rects by tag and by rule; the rule that pic
 | 4736-5232 | F6, F7 | islands 5 (crown limb), 6 (violet stones) |
 | 5472-5760 | far bluff 768 | **end block** (`paintEndMass`): west face (320 px) is the scene's last kick wall, and its stone courses run on to the scene edge with three great roots out of the edge's thicket; lit crest, `lantern-far` 5524, `pod-far` 5690. With the shrine (5212, 320 px lower) it is the scene's last picture |
 
-## The wood: the hatching branch (wood kit, 2026-10-17)
+## The wood: the hatching branch (wood kit, round 2, 2026-10-17)
 `pf-branch.ts` (painter), `pf-branch-flora.ts` (growth), `pf-rim.ts` (live rim). The Grove keeps everything below
 this section; nothing here runs for it (`isGroveKit()` in playfield.ts), and its bake shader text is byte-identical.
-- **Rects -> stretches.** Each non-trunk solid is a stretch of one limb; its ends are classified from the rects
-  (`planStretches`): `trunk` (touches the bole), `burl` (abutting, the next is higher: the knot swells over the step),
-  `knee` / `under` (abutting, lower: the limb kinks down, grain bends round it, a thin twig fork runs on east),
-  `fork` / `hook` (a gap within `joinGap` 340 and `joinRise` 220: the upper prong tapers past the rect's end into an
-  upturned tip with twigs; the main mass **dips** under the gap (back plane, mist at its bottom) and rises into the
-  next stretch's belly 170-300 px in; the next's west end is a blunt nub, `hookKeep` 0.74), `end` (nothing after:
-  tip + the main mass dives into the canopy), `edge` / `far` (touches the room edge with a free west end: another
-  tree's branch, a step hazier). wood-hatch: S1 trunk..burl, S2 burl..fork, S3 hook..knee, S4 under..fork,
-  S5 hook..fork, S6 hook..end, far branch tip..edge.
-- **Top = walk line, underside free.** `th(x)` (thickness: `thick` + `thickNear` near the trunk, flare at the trunk,
-  tip taper from below, `swell` / `ripple`, a sag in long spans) plus soft lumps (`under(x)`). Collision tops are
-  honest; free ends run `tipExt` past the rect, rounding away. **Collision geometry was not changed.**
-- **`paintLimb`** paints any limb (centre line + width per point): solid, relief shells high toward the top (so the
-  belly turns from the moon), value ramps (`gradBand`: soft nested bands, never one hard tint), mottling blobs
-  (green up, grey down), a furrow network that parts round knots, knots (soft `dome`, rings, socket), lichen.
-  Back-plane limbs (`backH` 0.22) keep their shells low (`rise` 0.4): the bake decides plane by relief height,
-  and at 0.42+ a "back" limb is lit like the path and the mist (`backOnly`) skips it.
-- **The bole** wraps the limb root: limbs are painted first, then the bole with a round `collar` swelling under
-  the walk line only (above it she walks up to x 224), grain wrapping the collar, bark-ridge folds above.
-- **`WOOD_BAKE`** (pf-bake.ts `BakeLook`): cool silver key, broad moon (`sun` 0.4 + 0.36 dapple), no warm, mood
-  tint mild, `interior` 0.66 (the Grove's 0.36 turned every limb wider than ~70 px flat black).
-- **Growth** (`growBranch`, instead of `growGarden`): moss fruit (stalk + pale capsule) in patches on the tops, low
-  dark tufts in front, polypody ferns at ends and joints, old man's beard clumps and silk threads under the limb
-  (none within 20 px of a cocoon's hang point or 60 px of Tatter: `plan.clear` from `marks`), silk strung along
-  the lip between cocoons, leaf sprigs at every twig end, canopy leaf clumps at the end.
-- **Live rim** (`Rim`, over the bake, under the plants): fuzzy moss edge, a leaf-shade dapple mask drifting with
-  `wind()`, and light that remembers her (a 12-point trail of her grounded feet, held ~2.2 s). Knobs `RIM`.
-  Measured wide-1: rim row p90 ~120, bark below 25-40; the mist stage behind the walk line there is ~95, so the
-  rim's contrast to the sky is the weak side (the stage is mid.ts's).
-- Cost: 24 tiles, 7.5 MP at x1.5, 44.7k plant vertices, playfield update ~0.06 ms.
+Round 1 failed review (docs/design/scenes/reviews/01-round-1.md, problem 1: cut planks, square ends, notches,
+slabs on struts). Round 2 rules:
+- **One limb, one taper.** Thickness is a function of x along the whole route (`thickRoot` 122 at the trunk to
+  `thickEnd` 36 at the end, `v^0.65`), x `cocoonThin` 0.7 along the cocoon row, + trunk flare, swell / ripple
+  noise and a mild per-stretch `belly`. Never per-rect constants (that made each rect a slab).
+- **Ends, from the rects** (`planStretches`): `trunk`; `burl` (abutting, higher); `knee` / `under` (abutting,
+  lower); across every gap **`tip` -> `stub`**: the west side thins to a prong that runs `prongReach` (50-66 %) of
+  the gap toward the other side, aimed at the far stub's face and never above its top (`prong`, a thin neck, not a
+  ramp), ending in twigs; the east side is a **snapped stub** (`snapped`: a jagged break slanting back at the bottom,
+  pale torn wood on the face, splinters, the longest at the top, a dark heart, moss stopping short of it). `end`:
+  a drooping prong + the main mass diving into the canopy. `edge` + free west = `far` (another tree).
+  Alternating stub / prong gave stretches with stubs at both ends = tables.
+- **No struts.** Nothing connects stretches below. Side limbs (`subLimb`, back plane, dark, one per long stretch
+  and one under the knee) go steeply down and away and end in mist and twigs, cutting fog holes. Failed here: U-dips
+  under every gap (a sine wave of struts), sub-limbs at both ends (table legs), curled hook ends (tusks).
+- **The top must not read straight** (the collision is flat, HK-style): `top(x)` rolls the painted bark top by
+  `roll` px, free ends round away over `endRound`, moss tufts (`tuftGap` / `tuftLift`) break the line, moss fruit
+  stands on it. The live rim follows `top(x)`.
+- **Cocoon row:** the limb is thinner there and its underside follows the cocoons' hang points `cocoonSilk` px
+  above them (`marks.cocoons`), so it slopes with the row; each cocoon hangs on 3 silk threads from the underside
+  (flora). Want the cocoons higher in frame: move the hang points up, the underside follows.
+- **Far branch:** relief `farH` 0.24 (dimly lit), dark haze `farHaze` + a flattening mist pool `farFlat`, thin
+  (`farThin` 34 -> +52 to the edge), a soft sag, no moss blanket, no rim, no moss life, deep beards. Pale haze made it
+  a pale plank lighter than the mid trunks behind it (depth read backwards): a plane back at night is a soft DARK
+  low-contrast shape. It still draws in front of mid's giant trunks (layer order).
+- **Canopy at the end:** `canopyClumps` 34 dense leaf clumps (flora, rx*ry/38 leaves) over small dark bases, and
+  `tangleLimbs` level or drooping dark limbs (rising ones read as tentacles).
+- Joints: burl (dome + eye, `burlSwell`), knee (`kneeRound` 44 shoulder, a face bulging out with a knot, grain
+  bending round it (`bendGrain`), an S-curve belly; still the weakest join). The bole wraps the limb root in a round
+  collar (under the walk line only).
+- `paintLimb`, `gradBand`, mottling, furrows, knots, lichen; `WOOD_BAKE` (cool moon, `interior` 0.66); growth and
+  rim as in round 1 (moss fruit, tufts, ferns at ends, old man's beard, silk, sprigs; rim dapples + her trail).
+- Cost (7424 room): 41 tiles, 10 MP at x1.5, 109k plant vertices (the canopy is most of the rise), update ~0.08 ms.
 - **Gotcha: a tint over relief with no solid under it is a translucent ghost** (albedo alpha = the tint's alpha,
-  relief alpha 1). Keep every tint, dome and grain line inside a `solid`; the burl's lit blob and the knee's grain
-  did this. And one flat `bump` blob is a plateau the bake lights as a pale disc with a hard rim: use `dome`.
-- Shapes that failed here: dives straight down from both sides of a gap (table legs), two limbs crossing under a
-  step-down gap (trestle with sawn ends), an elbow rising straight into a box end (a J-pipe on a crate), underside
-  lumps as repeated half-circles (a scalloped curtain), symmetric tapered ends on every stretch (canoes).
+  relief alpha 1). Keep every tint, dome and grain line inside a `solid`. One flat `bump` blob is a plateau the
+  bake lights as a pale disc: use `dome`. A back-plane limb needs relief < ~0.35 total or the bake lights it as walk
+  plane and `backOnly` mist skips it.
 
 ## Round F4: the last picture, dead edges (2026-10-14, after playtest 4)
 - **End block** (`TERRAIN.endBlock` 480: the first / last ground rect, no wider than that, behind a kick face).

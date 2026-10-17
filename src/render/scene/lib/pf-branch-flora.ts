@@ -12,7 +12,7 @@
  * Night tones only: nothing warm, nothing glows. Placement is seeded from the plan (pf-branch.ts).
  */
 import { mix } from './look';
-import type { BranchPlan } from './pf-branch';
+import { type BranchPlan, freeEast } from './pf-branch';
 import type { FloraBuilder } from './pf-flora';
 import type { Garden } from './pf-plants';
 import { clamp, quad, type Rng, range, rngFor, wobble } from './pf-shape';
@@ -77,7 +77,7 @@ function sprig(b: FloraBuilder, r: Rng, x: number, y: number, a: number, size: n
 
 /** A leaf clump of the canopy: leaves on short stems round a dome, lit along its crown. */
 function clump(b: FloraBuilder, r: Rng, cx: number, cy: number, rx: number, ry: number): void {
-  const n = Math.round((rx * ry) / 90);
+  const n = Math.round((rx * ry) / 38);
   for (let i = 0; i < n; i++) {
     const a = range(r, -Math.PI, 0.25);
     const d = Math.sqrt(r());
@@ -85,7 +85,7 @@ function clump(b: FloraBuilder, r: Rng, cx: number, cy: number, rx: number, ry: 
     const py = cy + Math.sin(a) * ry * d * (a > 0 ? 0.6 : 1);
     const crown = Math.max(0, -Math.sin(a)) * d;
     const la = a + range(r, -0.7, 0.7);
-    const len = range(r, 10, 20);
+    const len = range(r, 12, 24) * (1.2 - d * 0.4);
     b.plant(px, py, len * 2, (px * 0.003) % 1, 2.4 + crown * 2, 0, 0.15);
     const lit = crown > 0.7 && r() < 0.6;
     b.leaf(
@@ -254,20 +254,22 @@ export function growBranch(g: Garden, plan: BranchPlan): void {
 
   // Walk tops: moss fruit in patches; a dark tuft in front now and then; ferns at joints and ends.
   for (const st of plan.stretches) {
+    // (The far branch carries no moss life: it is another tree, a plane back.)
+    if (st.far) continue;
     const r = rngFor(st.x0, st.y, 31);
     for (let x = st.x0 + range(r, 4, 20); x < st.x1 - 4; x += range(r, 10, 34)) {
       if (wobble(x, st.x0 + 5, 110) < 1 - 2 * F.fruitCover) continue;
       const w = range(r, 8, 22);
       g.back.mute = clearAt(x, st.y);
-      fruit(g.back, r, x, st.y + 1, w);
+      fruit(g.back, r, x, st.top(x) - 1, w);
       g.back.mute = false;
     }
     for (let x = st.x0 + range(r, 40, 200); x < st.x1 - 20; x += range(r, 120, 320)) {
-      tuft(g.front, r, x, st.y + 2);
+      tuft(g.front, r, x, st.top(x));
     }
     const spots: number[] = [];
     if (st.west !== 'under') spots.push(st.x0 + range(r, 24, 70));
-    if (st.east === 'fork' || st.east === 'end' || st.east === 'knee') spots.push(st.x1 - range(r, 30, 80));
+    if (freeEast(st)) spots.push(st.x1 - range(r, 30, 80));
     if (st.east === 'burl') spots.push(st.x1 + range(r, 30, 60));
     for (
       let x = st.x0 + range(r, 300, 700);
@@ -277,7 +279,7 @@ export function growBranch(g: Garden, plan: BranchPlan): void {
       spots.push(x);
     for (const x of spots) {
       if (clearAt(x, st.y, 30)) continue;
-      fern(g.back, r, x, st.y + 4, range(r, 18, 30), st.far ? 0.5 : 1);
+      fern(g.back, r, x, st.top(x) + 3, range(r, 18, 30), 1);
     }
   }
 
@@ -303,6 +305,25 @@ export function growBranch(g: Garden, plan: BranchPlan): void {
     ) {
       if (clearAt(x, h.y(x) - 60, 10)) continue;
       silk(g.back, r, x, h.y(x) - 2, range(r, F.silkLen[0] as number, F.silkLen[1] as number));
+    }
+  }
+  // Each cocoon hangs on silk from the underside down to its hang point.
+  for (const c of plan.cocoons) {
+    const st = plan.stretches.find((o) => !o.far && c.x >= o.x0 && c.x <= o.x1);
+    if (!st) continue;
+    const uy = st.under(c.x) - 3;
+    if (c.y - uy < 4) continue;
+    const r = rngFor(c.x, c.y, 9);
+    for (let k = 0; k < 3; k++) {
+      const ox = range(r, -7, 7);
+      g.back.plant(c.x, uy, c.y - uy, r(), 0, 0, 0);
+      g.back.strip(
+        [c.x + ox, uy, c.x + ox * 0.4, (uy + c.y) / 2, c.x, c.y],
+        () => 0.9,
+        () => T.silk,
+        () => T.silk,
+        0.4,
+      );
     }
   }
   // Silk strung along the lip between neighbouring cocoons (their row is a nursery).
