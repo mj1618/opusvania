@@ -4,23 +4,25 @@ The game is built room by room (docs/design/tech.md). The Grove is the test bed 
 
 ## Files and registry
 - `content/rooms/<id>.json`: one room = the old scene format plus the fields below. `content/world.json`: `start`
-  (the boot room), `rooms` (the real game's, with world x / y for exits and the map later) and `tests` (outside
-  the world: `test-grove`). A new room = its file + one import line in `FILES` (`src/scene/index.ts`) + world.json.
+  (the boot room), `rooms` (the real game's, placed in world px: exits link where openings meet, memory/world.md)
+  and `tests` (outside the world: `test-grove`, `lab-lamps`). A new room = its file + one import line in `FILES`
+  (`src/scene/index.ts`) + world.json. Patches, glades, doors, shortcuts, one-way exits, routes: memory/world.md.
 - `src/scene/index.ts`: `parseScene` (Zod + placement rules, now also exits / catches / shot stops), `ROOMS`,
   `ROOM_IDS`, `DEFAULT_ROOM`, `getRoom(id)`, `GROVE` (= test-grove: the 26 Grove test files still import it),
   `WOOD_HATCH`. `src/scene/room.ts`: the `Room` type = sim `Scene` + render-only `title, region, art, marks, shots`.
   Every extra field is optional, so a flat test scene is a Room; `RenderContext.scene` / `SimView.scene` are Rooms.
-- Boot: `?room=<id>`, the panel's Room list (reloads), `__game.room(id)`. Tools: `--room` (default wood-hatch).
+- Boot: no `?room` = the game (Continue from the save, memory/save.md); `?room=<id>` = a test boot. The panel's Room
+  list and `__game.goto(id)` / `room(id)` move her there in place, the save kept. Tools: `--room` (default wood-hatch).
 
 ## Sim fields (all optional; absent = the old behaviour)
 | field | what |
 |---|---|
 | `abilities: AbilityId[]` | the starting kit (`src/sim/abilities.ts`: `glide, wallJump, doubleJump, dash`). Absent = all (test scenes, the grove) |
-| `exits: [{id, edge: n/s/e/w, from, to, at?}]` | an open span of an edge (`at`: the line across the edge where the crossing counts, default the edge) (no wall there: `solidAt` / `kickableAt` honour it). Box centre past the edge inside the span: `roomExit`, she is held `tuning.room.exitFrames` (42) with no input, then the room restarts in the sim (`roomEnter` + `spawn`; `save` and the frame count go on). The target is never authored (stage 1 finds it from world placement) |
+| `exits: [{id, edge: n/s/e/w, from, to, at?, oneWay?}]` | an open span of an edge (`at`: the line across the edge where the crossing counts, default the edge) (no wall there: `solidAt` / `kickableAt` honour it). Box centre past the edge inside the span: `roomExit`, then she enters the neighbour found from world placement (memory/world.md). With no neighbour: held `tuning.room.exitFrames` (36) with no input, then the room restarts (`roomEnter` + `spawn`; `save` and the frame count go on) |
 | `catches: [{id, x, y, w, h}]` | a fall into the rect costs nothing: `fallCatch`, held `catchFrames` (18), then `fallReturn` + `spawn` at her last safe ground, moved `returnInset` (72) px in from that top's end (the lip she fell from loops a hold-right player otherwise) |
 | `lures: [{id, kind, x, y, spin?}]` | the story's lamps (memory/lures.md) |
 | `hatch: {x, y}` | she starts shut in the cocoon at (x, y) (render); her body stands at `spawn`, no input moves her. Presses of ANY button (a bit set that was not the step before) after `tuning.hatch.listenFrom` (150, the fade-up) stir it (`hatchStir`); the 3rd breaks it (`hatch`); with no input it stirs on its own every 90 frames from 300 and breaks at 720 (`auto`). The breaking press is not also a jump. **`placePlayer` (teleport) ends it silently** |
-State v21: `room`, `save: {abilities}`, `exit`, `caught`, `hatch`. `resolveParams(t, abilities)` turns off what she does not own:
+State v22 (memory/save.md): `room`, `save` (abilities, snuffed, moths, taken, flags, opened, visited, seen, crossed, patch, time), `exit` (a `TransitState`), `caught`, `hatch`, `rest`. `resolveParams(t, abilities)` turns off what she does not own:
 glide; wall slide AND wall kick (`P.wallJump`, checked in `wallInRange`); double jump (`doubleJumps 0`); dash (`P.dash`,
 in `canDash`). Run, variable jump, fast fall, the blade and pogo stay. The Game harness keeps a granted kit through
 restarts (`Game.setAbilities`, `?abilities=`).
@@ -44,7 +46,7 @@ stretch table below is the source); a test checks widths, abutting, steps <= 12 
 Trees (`marks.trees`, centre x / width / top..bottom): `west` 112 / 224 / -500..2816, the only solid; `crown` 3360 / 200 /
 -500..2816 (the gap between S4 and S5 is this trunk: she drops past it); `droop` 5152 / 170 / 260..2816. All `plane: 'walk'`.
 `marks.farBranch`: no collision now, a polyline for a back layer, (4930, 536) -> (7700, 470), width 56; `promise` 3296..4930, y 736.
-Room 7424 x 2816. Exit `drop`: the south edge 6144-7424, **`at` 1790** (fires while she is still in the frame).
+Room 7424 x 2816. Exit `drop`: the south edge 6144-7424, **`at` 1790** (fires while she is still in the frame), `oneWay`: it leads into the room below (lab-world-a for now, wood-chase later).
 Catch `below`: x 224-6144, y 1600-2816. A caught fall returns her `returnInset` in from the end of the whole rolling top.
 - **Rules learned for paintable joins:** abutting steps only for small changes (a +64 burl, a -96 knee); bigger height
   changes go across a gap. Abutting +96 / +128 / -192 steps painted as square boxes. Rolling tops: the painter must
@@ -122,7 +124,9 @@ no `art`: unit tests) or `wood`.
 
 ## Render side of the new events
 `camera/room-fade.ts` (`RoomFade`, knobs `cameraTuning.room`): `roomExit` fades to black over the hold (reaching
-black 0.12 s before the restart), `roomEnter` lifts it over 0.9 s; `fallCatch` dips to 0.85 over its hold,
+black 0.12 s before the swap), `roomEnter` lifts it over `enterLift` 0.3 s into another room (`from` `room#exit`,
+`goto`, `continue`), `exitLift` 0.9 s after a re-form, the room's own `fadeIn` on a restart; the stage rebuilds the
+room's renderers on the swap (memory/world.md); `fallCatch` dips to 0.85 over its hold,
 `fallReturn` lifts over 0.35 s; a plain teleport / load clears it. The acting agent owns the cocoon and the hatch: drawn since 2026-10-17 (memory/hatch-and-tatter.md).
 
 ## What the art agents should know

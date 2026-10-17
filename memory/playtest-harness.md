@@ -71,9 +71,11 @@ remember what they saw (`Mind`, one per room). The speedrunner alone knows the w
 - Every event type is counted in the report's "Events" line, so new sim events show up before anything reads them.
 - **outcome**: `exit` (left by an exit), `done` (a planning persona had nothing left to go to for 5 s: rooms with no
   exit, like the labs), `lost` (no progress for `--give-up`), `timeout` (`--seconds`).
-- Multi-room: everything is keyed by `state.room`; headless.ts re-reads `game.scene` every step and remakes the
-  camera on `spawn`. With `--until exit` (default) a run ends at the first `roomExit`, since an exit restarts the room
-  today; use `--until none` once exits lead to other rooms.
+- Multi-room: everything is keyed by `state.room`; headless.ts plays in `GAME_WORLD` (a room id given; a test-built
+  room plays alone), re-reads `game.scene` every step and remakes the camera on `spawn`. `--until exit` (default)
+  ends a run at the first `roomExit`; `--until none` follows her through the world (2026-10-17: from wood-hatch the
+  bots reach lab A, B and C; the naive one ends pinned against C's east wall, the planners stop when nothing is
+  left that they want).
 
 ## First numbers (wood-hatch, 2026-10-17, room as of 8a2c01e + the level agent's working copy)
 | persona | exit at | from hatch | catches | lost | backtrack |

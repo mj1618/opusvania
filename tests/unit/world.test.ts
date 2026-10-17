@@ -254,7 +254,9 @@ describe('moon patches, glades, shortcuts, the re-form', () => {
     const s = play('lab-world-c');
     expect(s.g.state.save.abilities).toEqual([]);
     const ev = s.until(L, () => s.g.state.save.abilities.includes('glide'), 120);
-    expect(ev.filter((e) => e.type === 'gladeGrant')).toMatchObject([{ id: 'glade-glide', ability: 'glide' }]);
+    expect(ev.filter((e) => e.type === 'gladeGrant')).toMatchObject([
+      { id: 'glade-glide', ability: 'glide' },
+    ]);
     expect(s.g.state.save.taken).toEqual(['lab-world-c:glade-glide']);
     s.run(R, 40);
     expect(s.run(L, 40).some((e) => e.type === 'gladeGrant')).toBe(false);

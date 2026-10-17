@@ -21,8 +21,13 @@ STUDIO.md: regions are designed and played in grey before any art. A room whose 
 - A 256 px world grid at 6% (on a flat background it is the only thing that shows speed).
 - Solids: flat `#434b5a` with a 4 px light top (the walkable line); faces with `kick: false` / `east` / `west`
   get a dark band on the faces that take no kick. Tag `pool` = hazard, red. One-ways: a light line with ticks.
-- Catch zones: red wash, dashed rim. Exits: a green bar on the open span. Rest points (lanterns, lamps): cyan
-  pillar; the heart: violet box. The spawn: a chevron.
+- Catch zones: red wash, dashed rim. Exits: a green bar on the open span (label says `one way`). Rest points
+  (lanterns, lamps): cyan pillar; the heart: violet box. The spawn: a chevron.
+- The world's things (`greybox/world.ts`, memory/world.md): a moon patch is a pale stacked shaft (brighter while
+  she stands in it; a filled moon over it once it is her save patch, a ring when she rests, "rested · saved");
+  a glade a tall pale pillar (dim once taken; the grant flashes and its line, e.g. "GLIDE: hold jump in the air",
+  rides over her 3.5 s); a shortcut amber while shut with a white bar on the side that opens it, an outline once
+  open; a door a green arch.
 - Creatures: their hitboxes in the overlay's state colours (`drawEnemyBoxes`, exported from
   `src/debug/overlay.ts` and shared with F2).
 - Lures: memory/lures.md "Render".

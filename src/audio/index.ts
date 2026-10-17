@@ -133,6 +133,8 @@ export class AudioDirector {
 
   private onStep(events: readonly SimEvent[]): void {
     const g = this.game;
+    // She may be in another room now (memory/world.md): materials and the pool are the room's.
+    this.conductor.ctx.scene = g.scene;
     const snap = snapOf(g.state, g.scene, g.tuning.goal.channelFrames, g.tuning.giving.giftCalmFrames);
     // A restart begins the frame count again.
     if (snap.frame === 0) this.conductor.reset();

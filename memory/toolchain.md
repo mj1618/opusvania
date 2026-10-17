@@ -36,6 +36,8 @@
 - **`npm run check` takes ~6 s**: typecheck, Biome, Vitest (~0.2 s), then 3 e2e smoke tests against a fresh
   production build. Looks are never asserted in check; they are judged from `npm run shots`.
 - **CI renders with software GL** (very slow per frame): e2e must not step-and-render hundreds of frames.
+- **`npm run leak`** (`tools/leak.ts`, dev server, real GPU): 20 room swaps with heap / GPU texture / buffer counts
+  after a forced GC (memory/world.md "Render lifecycle").
 - **`npm run look:stats -- <dir|files>`** (`tools/look-stats.ts`) prints the numbers of memory/reference-study.md
   for PNGs with the same definitions (Rec.709 luma on sRGB bytes): mean, median, near-black/dark/near-white %,
   dark-grey % (15-38), area above 150, p99.9 (luma of the brightest 0.1% of pixels: are there real points of

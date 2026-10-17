@@ -210,7 +210,7 @@ The Grove's hand-scripted pilots stay as the Grove's tests. The Grove becomes `t
 | Boot to ready (load, parse, all bakes) | ~0.9–1.0 s | ~1.0–1.1 s |
 | Playfield bake (44 tiles) | 22 MP, 60 ms | 39 MP, 62 ms |
 | Textures in the display tree (excludes off-tree far bakes and post targets) | ~33 MP ≈ 130 MB | ~50 MP ≈ 200 MB |
-| JS heap reported after boot | ~700 MB (suspicious: find out what holds it before room 2) | same |
+| JS heap reported after boot | ~700 MB was the grove's baked Graphics contexts, kept by Pixi until destroyed with `context: true` (fixed 2026-10-17: grove ~174 MB, wood-hatch ~99 MB after GC; memory/world.md) | same |
 | Bundle | 1.37 MB, 460 KB gzipped, one chunk | |
 | GPU per frame at 3840×2160 (memory notes) | far 0.42, mid 0.7–0.8, post 0.8, air 0.3, foreground 0.1 ms | |
 

@@ -1,7 +1,11 @@
 # Sim / runtime architecture
 
-- `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
-  (`{version, room, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal, save, exit, caught, hatch}` (version 21: `save.abilities`, the room exit / fall catch / hatching, memory/rooms.md)) and appends `SimEvent`s. The scene is static and
+- `src/sim/` is pure: `step(state, inputMask, tuning, scene, events, world?)` mutates a plain-JSON `GameState`
+  (`{version, room, frame, seed, rng, prevInput, player, pickups, pods, lures, enemies, goal, save, exit, caught, hatch, rest}`
+  (version 22: the persistent `save` and the room-local rest, memory/save.md)) and appends `SimEvent`s. With `world`
+  (`src/sim/world.ts`) exits lead into other rooms and the sim changes `state.room` itself; the caller passes that
+  room's scene from the next step on (`Game` does: memory/world.md). Closed shortcuts are added to the scene's
+  solids by `withShortcuts` at the top of the step. The scene is static and
   not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
   (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
 - No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
@@ -47,8 +51,10 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 
 ## Sim events (`src/sim/events.ts`)
 `x, y` = feet centre at the event; `dir` = -1/1.
-- Rooms (memory/rooms.md): `roomExit {id, edge, frames}` then, `frames` later, `roomEnter {room, from}` + `spawn`
-  (the room restarts); `fallCatch {id, frames}` then `fallReturn {id, x, y}` + `spawn` (back on her last ground, step
+- Rooms (memory/rooms.md, memory/world.md): `roomExit {id, edge (n/s/e/w/door), frames, to}` then, `frames` later,
+  `roomEnter {room, from}` + `spawn` (`from` = `room#exit` from a neighbour, the exit id when the room restarts,
+  `load`, `reform`, `goto`, `continue`); `patchRest {id, room, x, y, hp}`, `gladeGrant {id, ability, x, y}`,
+  `shortcutOpen {id, x, y}`; `fallCatch {id, frames}` then `fallReturn {id, x, y}` + `spawn` (back on her last ground, step
   in from the lip); `hatchStir {auto, presses, of, frames}` and `hatch {cx, cy, auto, frames}` (the cocoon).
 - `spawn`: placed (boot, load, teleport): snap, don't interpolate.
 - `jump {kind: ground|coyote|buffered|wall|double|dashJump, dir}` (wall: `dir` = away from the wall).
@@ -83,12 +89,13 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   / a solid's `kick: false`** (no wall slide, no wall kick on that face: movement-controller.md).
 
 ## Step order
-`step()`: a room exit's hold (input 0; at its end the room restarts and the step ends) → a caught fall's hold
+`step()`: `save.time++` → a room exit's hold (to a neighbour: only she moves, on the input held as she crossed,
+then `enterRoom` and the step ends; with nothing beyond: input 0, at its end the room restarts) → a caught fall's hold
 (at its end she is placed back) → the hatching (`updateHatch`: while shut, input 0) → re-form if a fade just ended (a third of the wallet is dropped where she lay; she is back
 at the lit lantern she last stood at, else the last safe ground, with 2 lights) → player (slash hits resolved inside, pods and enemies; from `gather` on her input is replaced:
 goal.md) → **her offer** (`updateOffer`, giving.md: a press, a glint landing) → enemies (they read the wallet: giving.md) → contact damage (none from a calmed creature or one inside a lit lantern's sanctuary; while she
-kindles the touch only turns the creature away; off from `gather` on) → safe-ground tracking → catch zones, then exits → pod glints →
-pickups → dropped clusters → the goal (`updateGoal`: lanterns, heart, ending; last, so a glint landing this frame counts). The scene's `ceilingY` (the
+kindles the touch only turns the creature away; off from `gather` on) → safe-ground tracking → shortcuts, glades, the moon patch (progress.ts) → catch zones, then exits, then doors (up) → pod glints →
+pickups → dropped clusters → the goal (`updateGoal`: lanterns, heart, ending; last, so a glint landing this frame counts) → what she has seen (the map). A fade with a saved patch re-forms her there (another room: `enterRoom`, the step ends). The scene's `ceilingY` (the
 canopy, movement-controller.md) and the tag `pool` (safe ground, enemies.md) are the only scene
 fields besides the rects that the player code reads; the lampwing reads both too (it stays under the
 canopy and off the water). Enemies are a framework with a module per kind: `src/sim/enemies.ts` +

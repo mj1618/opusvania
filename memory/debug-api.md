@@ -11,15 +11,20 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   `pause()` (manual), `resume()` (realtime).
 - URL: `?manual` boots paused (tools and tests do this), `?seed=n`, `?hitboxes`, `?nopickups` (the scene
   without glints, pods, enemies, lanterns, heart or counter; the capture tools use it unless given `--pickups`).
-- **Rooms** (memory/rooms.md): `?room=<id>` (default `wood-hatch`; `test-grove` is the old demo level, and every
-  Grove coordinate in this file is a test-grove one), `?abilities=all | none | glide,wallJump,doubleJump,dash`
+- **Rooms** (memory/rooms.md, memory/world.md): `?room=<id>` (a test boot: new game there, the save slot untouched;
+  `test-grove` is the old demo level, and every Grove coordinate in this file is a test-grove one); no `?room` =
+  the game (Continue from the slot; `?fresh` = new game; memory/save.md). `?abilities=all | none | glide,wallJump,doubleJump,dash`
   (what she owns instead of the room's starting kit; kept through restarts). The tuning panel's first row is
-  the **Room** list (it reloads the page with `?room=`). The tools take `--room <id>`.
+  the **Room** list (`goto`: she goes there, the save kept; it follows her through exits). The tools take `--room <id>`.
 
 ## Calls
-- `room()` the room's id; `room(id)` switches room by reloading the page (`?room=`; nothing after it in the same
-  evaluate runs on the new room). `rooms()` every id (the game's, then the test rooms). `load(id)` with another
-  room's id throws (use `room(id)`).
+- `room()` the room's id; `room(id)` = `goto(id)`. `rooms()` every id (the game's, then the test rooms).
+  `load(id?)` = a new game in that room (default the current one), fresh save, in place (no reload).
+- **World** (memory/world.md): `goto(id, x?, y?)` puts her in any room (feet at x, y; default its spawn), at rest,
+  the save kept, renderers rebuilt; returns the state. `world()` -> `{start, rooms: [{id, x, y, w, h, placed,
+  region}], links: {'room#exit': {to, exit} | null}, doors}`. `save()` -> `{save, stored (the slot), autosave}`,
+  `clearSave()`. `map(on?)` the map overlay (Tab). `debug.gpu(list?)` -> `{textures, textureMB, buffers, builds}`
+  (what the GPU holds; `list` adds every texture): the leak checks read it.
 - `abilities()` → `{owned, all}` (`state().save.abilities`); `grant('glide', ...)` / `grant('all')`,
   `revoke('dash')` / `revoke('all')`: from the next step, kept by `load()` / R / a room restart; no redraw.
 - wood-hatch fades up from black at boot (not with `?manual`) and on `load()`: render time has to run (`step` / `tick`
@@ -75,7 +80,8 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 ## Gotchas
 - In manual mode the page only redraws on API calls; change something by hand, then call `render()`.
 - `step()` with a big n renders every step's update but presents once: fine on a real GPU.
-- Keys in the page: arrows/WASD, Z/Space/K jump, X/L/Shift dash, C/J attack, R restart.
+- Keys in the page: arrows/WASD, Z/Space/K jump, X/L/Shift dash, C/J attack, Tab map, R restart (a game page: back
+  to the last save; a `?room=` page: new game in the room).
 - After `gather` no
   input reaches her (`goal().ending.held`): `load()` to play on.
 - A scripted `input()` longer than the `step(n)` after it leaves frames in the queue: later one-frame inputs then
@@ -87,6 +93,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - `?nopickups` removes the enemies too (src/main.ts). None patrols the spawn ground or the terrace. **burr-shaft paces
   the shaft floor (3378-3522)**: the close-ups at 3456, 1280 run without enemies (`?nopickups`); with `--pickups` a
   hero placed there is rammed (the wide stop `shaft-pit` stands at 3556 for that reason).
+- `goto` / a crossing rebuilds the room's renderers: a painted room takes ~150 ms (and ~25 s in software GL).
 - `events(n)` is not cleared by `load()` and frame numbers start again at 0: reload the page between runs.
   (A live bot that calls `load()` twice in one page sees nothing of the second run through `events(n)`: seen 2026-10-14.)
 - `playwright-cli` takes about a second a call: nothing can react to a 26-frame tell through it. For a live
