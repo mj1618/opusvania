@@ -368,7 +368,13 @@ describe('the top of the trunk: the crown wick and its hawker', () => {
     return s;
   }
 
-  it('the hawker sees her on the face; the top of the climb is in the crown wick’s grip', () => {
+  it('on a rhythm the hawker swoops through the crown wick’s orbit; the top of the climb is in its grip', () => {
+    const r = play();
+    r.g.teleport(2780, 912);
+    const passes = r
+      .run(0, 500)
+      .filter((e) => e.type === 'enemyDive' && (e as { id?: string }).id === 'hawk-crown');
+    expect(passes.length).toBeGreaterThanOrEqual(2);
     const s = toUpperFace();
     const ev = climb(
       s,
@@ -376,17 +382,22 @@ describe('the top of the trunk: the crown wick and its hawker', () => {
       () => s.g.state.player.lure >= 0 || (s.g.state.player.grounded && s.feet().y <= RIM),
       900,
     );
-    expect(has(ev, 'enemyAware', 'hawk-crown')).toBe(true);
-    expect(s.lureIs('wick-crown')).toBe(true);
+    expect(has(ev, 'lureCaught', 'wick-crown')).toBe(true);
   });
 
-  it('beaten free up-right at once she is thrown onto the rim', () => {
-    const quick = toUpperFace();
-    climb(quick, 1, () => quick.g.state.player.lure >= 0, 900);
-    const ev = beatFree(quick, U | R).concat(land(quick, R, 120));
-    expect(has(ev, 'hurt')).toBe(false);
-    expect(quick.feet().y).toBe(RIM);
-    expect(quick.feet().x).toBeGreaterThan(S1);
+  it('caught and beaten free up-right she is thrown onto the rim; caught as it passes, struck down onto a ledge under the orbit', () => {
+    const ends = new Set<number>();
+    for (let w = 0; w <= 240; w += 20) {
+      const q = toUpperFace();
+      q.run(R, w);
+      climb(q, 1, () => q.g.state.player.lure >= 0, 600);
+      beatFree(q, U | R);
+      land(q, R, 200);
+      ends.add(q.feet().y);
+    }
+    // Measured: 10 of 13 timings on the rim; the rest struck straight down onto a ledge under the orbit (1080).
+    expect(ends.has(RIM)).toBe(true);
+    for (const y of ends) expect([RIM, 912, 1080], `ended at ${y}`).toContain(y);
   });
 
   it('from the rim’s lip a standing cut puts the crown wick out and the hawker leaves', () => {
@@ -405,11 +416,12 @@ describe('the crown: the root, P5, the cloud, the gate', () => {
     const s = play();
     s.g.teleport(2964, RIM);
     s.run(0, 3);
+    for (const e of s.g.state.enemies) e.gone = true;
     s.run(R, 60);
-    expect(s.feet().x).toBeLessThan(3008);
+    expect(s.feet().x).toBeLessThan(3136);
     s.run(R | J, 20);
     land(s, R);
-    expect(s.feet().x).toBeLessThan(3008);
+    expect(s.feet().x).toBeLessThan(3136);
     const ev = s.run(A, 1).concat(s.run(0, 10), s.run(R, 30));
     expect(has(ev, 'barkBreak', 'root-knot')).toBe(true);
     expect(s.g.state.save.flags).toContain('wood-root-ladder');
@@ -418,7 +430,7 @@ describe('the crown: the root, P5, the cloud, the gate', () => {
   it('the finale holds her for the whole cloud (540 f), the gate stays shut till it has gone, then east to area 2', () => {
     const s = play();
     s.g.state.save.opened.push('wood-hollow:root-knot');
-    s.g.teleport(3100, RIM);
+    s.g.teleport(3240, RIM);
     s.run(0, 3);
     let ev = s.run(R, 30);
     const hold = ev.find((e) => e.type === 'storyHold') as { frames: number } | undefined;

@@ -126,12 +126,19 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   walk off and down-cut in frames 0-8 (snuff, pogo, onto the foothold 2848-2944 at 1248). A fall from the bridge
   lands on the glow-cap ledge. Zone `snuff` (0.85) frames the tip.
 - **Falls:** from every face and the bridge she lands within 620 px (tested at 12 drop points): rungs 3264 / 2752,
-  the ledge and buttress 2240, the glow-cap ledge 1760, the bridge 1312, the foothold 1248, a catch ledge 912.
-- **Top:** `wick-crown` (2838, 540) off the rim's lip with `hawk-crown`; the rim 576 from 2944 east. `root-knot`
-  (bark, 1 cut, full height) bars it; trigger `root-cut` sets `wood-root-ladder`. P5 3328. The **finale**: trigger
-  `crown` (3264-3456) `hold: 540, finale: true, endSets: "wood-crown-gone"`; gate `crown-gate` (3712-3776, flag
-  `wood-crown-gone`) shuts the `canopy` exit until the hold ends. Stage: `cloud` (flag wood-crown), `vista` (zoom 0.5,
-  hold 9 s), `rootFall`, the ladder down the near face (x 2928, 576-3840), Tatter at 3488 `when` the root.
+  the ledge and buttress 2240, the glow-cap ledge 1760, the bridge 1312, the foothold 1248, a face ledge 1080 and
+  the catch ledge 2736-2880 at 912 under the crown wick's orbit. (A catch ledge that reaches the near face catches a
+  one-wall climber's kick-out: she bounces between it and the face and never gets up. Keep ledges 64+ px off a face
+  she climbs, or right against it.)
+- **Top:** `wick-crown` (2838, 540) off the rim's lip; `hawk-crown` on its **rhythm** (`orbit: wick-crown`, perches
+  260 each side, 150 up: the east one, 3098, is why the root's knot sits at 3136): a catch timed after a pass is
+  thrown onto the rim, a mistimed one is struck straight down onto the 1080 / 912 ledges (10 of 13 timings rim).
+  The rim 576 from 2944 east. `root-knot` (bark, 1 cut, full height, 3136) bars it; trigger `root-cut` sets
+  `wood-root-ladder`. P5 3456. The **finale**: trigger `crown` (3392-3584) `hold: 540, finale: true, endSets:
+  "wood-crown-gone"`; gate `crown-gate` (3712-3776, flag `wood-crown-gone`) shuts the `canopy` exit until the hold
+  ends. Stage: `cloud` (flag wood-crown), `vista` (zoom 0.5, hold 9 s), `rootFall`, the ladder down the near face
+  (x 2928, 576-3840). **Tatter:** a room has one `marks.tatter`; the oak's is the floor one (`until` the root), so
+  its climb to the crown and its seat beside her need staging (a second mark or a climb path).
 - **Fades:** `reform` (1280, 3840): a fade in the oak re-forms her at her patch if it is in the oak (P3 / P-ledge /
   P5), else at P3, never in R8. Not `reformPatch`: its nearest patch is P5 for any fade near the top, which skips the
   root's cut and the hawker (it should take only patches at or below where she lay).

@@ -93,7 +93,7 @@
     },
     {
       "id": "p5",
-      "x": 3328,
+      "x": 3456,
       "y": 576
     }
   ],
@@ -126,7 +126,7 @@
     },
     {
       "id": "root-cut",
-      "x": 3072,
+      "x": 3200,
       "y": 384,
       "w": 128,
       "h": 192,
@@ -134,7 +134,7 @@
     },
     {
       "id": "crown",
-      "x": 3264,
+      "x": 3392,
       "y": 384,
       "w": 192,
       "h": 192,
@@ -330,9 +330,15 @@
     },
     {
       "tag": "root",
-      "x": 2848,
+      "x": 2736,
       "y": 912,
-      "w": 96
+      "w": 144
+    },
+    {
+      "tag": "root",
+      "x": 2880,
+      "y": 1080,
+      "w": 64
     }
   ],
   "thorns": [
@@ -354,7 +360,7 @@
     },
     {
       "id": "root-knot",
-      "x": 3008,
+      "x": 3136,
       "y": 0,
       "w": 64,
       "h": 576,
@@ -426,7 +432,8 @@
       "facing": 1,
       "radius": 160,
       "hp": 3,
-      "guards": "wick-crown"
+      "guards": "wick-crown",
+      "orbit": "wick-crown"
     }
   ],
   "routes": [
@@ -590,17 +597,17 @@
         "text": "FIND: bark knot, W-knot behind it"
       },
       {
-        "x": 2700,
+        "x": 2600,
         "y": 980,
-        "text": "the open crown: W-crown off the rim's lip, hawk-crown dives at her on the face / in the orbit"
+        "text": "the open crown: W-crown off the rim's lip; hawk-crown swoops through its orbit on a rhythm (perches 260 each side); a mistimed catch drops her onto the catch ledge"
       },
       {
-        "x": 2960,
+        "x": 3090,
         "y": 360,
         "text": "the root's knot (one cut): the root falls down the trunk; Tatter climbs"
       },
       {
-        "x": 3290,
+        "x": 3380,
         "y": 330,
         "text": "P5, THE CROWN (finale hold 540): the look-out, the cloud lifts off; the gate opens when it has gone"
       },
@@ -642,7 +649,7 @@
       ],
       "rootFall": {
         "flag": "wood-root-ladder",
-        "x": 3040,
+        "x": 3168,
         "y": 384,
         "len": 3264
       },

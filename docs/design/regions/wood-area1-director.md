@@ -651,7 +651,10 @@ play, in one or two sentences, with the moment it was decided.
   straight (the creatures agent, 816bf0d), and the catch ledge at 912 limits any fall off the lip to ~340.
 - **Item 7:** the crown trigger is the finale (hold 540, `endSets: wood-crown-gone`), and the gate on the east exit
   opens on that flag. The stage `vista` frames the crown at zoom 0.5 for 9 s; the hatching tree's silhouette west is
-  staging's (no prop exists yet).
+  staging's (no prop exists yet). **For staging:** the oak has one `marks.tatter` (the floor, `until` the root), so
+  Tatter's climb up the fallen root and its seat by P5 (x ~3616, y 576) need a staging mark of their own.
+- **The crown hawker is on the rhythm** (`orbit: wick-crown`, 816bf0d): time the catch after a pass and the throw
+  reaches the rim; mistimed, it strikes her straight down onto the ledges under the orbit (1080, 912).
 - **Item 2:** the glimpse holds 180 and frames the crown ring and W-ff together (2752, 1300, zoom 0.5); the firefly
   hangs the glow-cap at W-ff's own point. No exit inside the tree (no green line in the trunk). A zoom-out at the
   trunk's foot is the camera agent's (a 0.5 zone there lurched the camera at the room's foot).
