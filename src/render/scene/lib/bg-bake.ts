@@ -25,7 +25,7 @@ import {
   Texture,
   UniformGroup,
 } from 'pixi.js';
-import { VIEW_H } from '../../contract';
+import { VIEW_MAX_H, VIEW_MAX_W } from '../../contract';
 import type { LayerName, LayerRect } from '../layer-tree';
 import { mix, prng } from './look';
 import { LOOK } from './room-look';
@@ -491,13 +491,20 @@ export const HEADROOM = 560;
 export function coverRect(
   layers: {
     coverage(name: LayerName): LayerRect;
-    visible(name: LayerName, cam: { x: number; y: number; zoom: number }): LayerRect;
+    visible(name: LayerName, cam: { x: number; y: number; zoom: number; w: number; h: number }): LayerRect;
   },
   name: LayerName,
   pad: number,
 ): LayerRect {
   const c = layers.coverage(name);
-  const up = layers.visible(name, { x: 0, y: VIEW_H / 2 - HEADROOM, zoom: 1 });
+  // The largest view (contract.ts VIEW_MAX_*), lifted HEADROOM above the scene top.
+  const up = layers.visible(name, {
+    x: 0,
+    y: VIEW_MAX_H / 2 - HEADROOM,
+    zoom: 1,
+    w: VIEW_MAX_W,
+    h: VIEW_MAX_H,
+  });
   const y = Math.min(c.y, up.y);
   return { x: c.x - pad, y: y - pad, w: c.w + pad * 2, h: c.y + c.h - y + pad * 2 };
 }

@@ -8,10 +8,15 @@
  * above the scene top (`viewTop`). Standing still at a lantern or the heart eases the view toward it;
  * while she is faded the view holds. Soft everywhere: nothing snaps except on a `spawn` event (and
  * the re-form's snap is covered by a render-side pan: `reform.ts`).
+ *
+ * The view's size (`vw`, `vh`) is the real logical view (contract.ts `ViewSize`): at least the 16:9
+ * safe area, more on a wider or taller window. Framing (the feet line, the vertical window) is
+ * measured in the safe area, which is centred in the view, so every window shape frames her the
+ * same and only sees more around; the clamp to the scene uses the real size.
  */
 import type { Scene } from '../../sim/scene';
 import type { GameState } from '../../sim/state';
-import { type CameraView, VIEW_H, VIEW_W } from '../contract';
+import { type CameraView, SAFE_H, SAFE_W } from '../contract';
 import { type CameraTuning, cameraTuning } from './tuning';
 
 export interface CameraState {
@@ -35,6 +40,9 @@ export interface CameraState {
   /** View top-left after clamping to the scene, world px. */
   x: number;
   y: number;
+  /** The view's size in world px at zoom 1 (the real logical view, >= the safe area). */
+  vw: number;
+  vh: number;
 }
 
 /**
@@ -63,13 +71,19 @@ export function viewTop(scene: Scene, ct: CameraTuning = cameraTuning): number {
   return Math.min(0, (scene.ceilingY ?? 0) - ct.headroom);
 }
 
+/** From the view's top edge to the line her feet rest on: the safe area's anchor line. */
+function feetLine(cam: CameraState, ct: CameraTuning): number {
+  return (cam.vh - SAFE_H) / 2 + ct.anchorY * SAFE_H;
+}
+
 function place(cam: CameraState, scene: Scene, ct: CameraTuning): void {
   const top = viewTop(scene, ct);
-  cam.x = clampAxis(cam.fx - VIEW_W / 2, 0, scene.width, VIEW_W);
-  cam.y = clampAxis(cam.fy - ct.anchorY * VIEW_H, top, scene.height - top, VIEW_H);
+  const line = feetLine(cam, ct);
+  cam.x = clampAxis(cam.fx - cam.vw / 2, 0, scene.width, cam.vw);
+  cam.y = clampAxis(cam.fy - line, top, scene.height - top, cam.vh);
   // Held by the top or the bottom: the spring rests there too, so the view answers at once when
   // she comes back (a glide off the summit), not after the spring has crossed the slack.
-  const fy = cam.y + ct.anchorY * VIEW_H;
+  const fy = cam.y + line;
   if (fy !== cam.fy) {
     if ((cam.fy < fy && cam.fvy < 0) || (cam.fy > fy && cam.fvy > 0)) cam.fvy = 0;
     cam.fy = fy;
@@ -97,8 +111,17 @@ export function restOffset(
   return { x: Math.max(-R.maxX, Math.min(R.maxX, (best.x - cx) * R.share)), y: -R.lift };
 }
 
-/** A camera already settled on the player. */
-export function createCamera(s: GameState, scene: Scene, ct: CameraTuning = cameraTuning): CameraState {
+/**
+ * A camera already settled on the player, for a view of vw x vh world px at zoom 1 (default: the
+ * safe area).
+ */
+export function createCamera(
+  s: GameState,
+  scene: Scene,
+  ct: CameraTuning = cameraTuning,
+  vw: number = SAFE_W,
+  vh: number = SAFE_H,
+): CameraState {
   const p = s.player;
   const feet = p.y + p.h;
   const cam: CameraState = {
@@ -115,9 +138,28 @@ export function createCamera(s: GameState, scene: Scene, ct: CameraTuning = came
     restY: 0,
     x: 0,
     y: 0,
+    vw,
+    vh,
   };
   place(cam, scene, ct);
   return cam;
+}
+
+/**
+ * The window changed shape: the same follow state seen through a vw x vh view (re-clamped to the
+ * scene). Nothing else moves, so a resize never jolts the springs.
+ */
+export function resizeCamera(
+  cam: CameraState,
+  scene: Scene,
+  vw: number,
+  vh: number,
+  ct: CameraTuning = cameraTuning,
+): void {
+  if (cam.vw === vw && cam.vh === vh) return;
+  cam.vw = vw;
+  cam.vh = vh;
+  place(cam, scene, ct);
 }
 
 /** Steps the camera one sim frame toward the player. */
@@ -158,7 +200,8 @@ export function stepCamera(
 
   // Vertical: dead zone (the target holds while the feet stay in the window), fast-fall follow.
   let smoothY = ct.smoothY;
-  const feetScreen = (feet - cam.y) / VIEW_H;
+  // Where her feet are in the safe area (0 top, 1 bottom): the window is the same on every screen.
+  const feetScreen = (feet - cam.y - (cam.vh - SAFE_H) / 2) / SAFE_H;
   if (p.vy > ct.fallFollowVy && feet > cam.targetY + ct.fallBelow) {
     // A real fall (past the line the view rests on; coming down from a jump is not one).
     cam.targetY = feet + ct.fallLookahead;
@@ -184,11 +227,15 @@ export function stepCamera(
   place(cam, scene, ct);
 }
 
-/** The view between two camera states (alpha 0 = prev, 1 = cur), at zoom 1. */
+/** The view between two camera states (alpha 0 = prev, 1 = cur), at zoom 1, with the current view's size. */
 export function lerpCamera(prev: CameraState, cur: CameraState, alpha: number): CameraView {
+  const px = prev.x + prev.vw / 2;
+  const py = prev.y + prev.vh / 2;
   return {
-    x: prev.x + (cur.x - prev.x) * alpha + VIEW_W / 2,
-    y: prev.y + (cur.y - prev.y) * alpha + VIEW_H / 2,
+    x: px + (cur.x + cur.vw / 2 - px) * alpha,
+    y: py + (cur.y + cur.vh / 2 - py) * alpha,
     zoom: 1,
+    w: cur.vw,
+    h: cur.vh,
   };
 }

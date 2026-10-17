@@ -10,7 +10,7 @@
  * where it is in the view, which is where the mask is sampled.
  */
 import { Buffer, BufferUsage, Geometry, GlProgram, Mesh, Rectangle, Shader } from 'pixi.js';
-import { type CameraView, VIEW_H, VIEW_W } from '../contract';
+import type { CameraView } from '../contract';
 import { playfieldMaskTexture } from '../scene/lib/fx-mask';
 
 const FLOATS = 8;
@@ -121,8 +121,8 @@ export class SurfaceLight {
   /** An ellipse of light centred on (x, y), radii (rx, ry) world px. */
   light(cam: CameraView, x: number, y: number, rx: number, ry: number, e: number, white = 0): void {
     if (this.n >= this.maxQuads || e <= 0.002) return;
-    const hw = VIEW_W / 2 / cam.zoom;
-    const hh = VIEW_H / 2 / cam.zoom;
+    const hw = cam.w / 2 / cam.zoom;
+    const hh = cam.h / 2 / cam.zoom;
     if (Math.abs(x - cam.x) > hw + rx || Math.abs(y - cam.y) > hh + ry) return;
     const v = this.verts;
     let o = this.n++ * 4 * FLOATS;
@@ -138,8 +138,9 @@ export class SurfaceLight {
       v[o++] = wy;
       v[o++] = u;
       v[o++] = w;
-      v[o++] = 0.5 + ((wx - cam.x) * cam.zoom) / VIEW_W;
-      v[o++] = 0.5 + ((wy - cam.y) * cam.zoom) / VIEW_H;
+      // The playfield mask's uv: it covers the whole visible view (fx-mask.ts).
+      v[o++] = 0.5 + ((wx - cam.x) * cam.zoom) / cam.w;
+      v[o++] = 0.5 + ((wy - cam.y) * cam.zoom) / cam.h;
       v[o++] = e;
       v[o++] = white;
     }

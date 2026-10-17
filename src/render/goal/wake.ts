@@ -17,7 +17,6 @@
  */
 import type { Scene } from '../../sim/scene';
 import type { CameraView } from '../contract';
-import { VIEW_H, VIEW_W } from '../contract';
 import { type GlintBatch, K_FLARE, K_SPARK } from '../pickups/batch';
 import { GOAL } from './config';
 import { Path, smooth } from './logic';
@@ -200,8 +199,8 @@ export class Veins {
     const V = GOAL.wake.veins;
     const at = head - v.lead;
     if (at <= 0 || (body <= 0.004 && flash <= 0.004)) return;
-    const hw = VIEW_W / 2 / cam.zoom + 60;
-    const hh = VIEW_H / 2 / cam.zoom + 60;
+    const hw = cam.w / 2 / cam.zoom + 60;
+    const hh = cam.h / 2 / cam.zoom + 60;
     for (let k = 0; k < v.strands.length; k++) {
       const s = v.strands[k] as Path;
       const half = (k === 0 ? V.width : V.width * 0.62) / 2;
@@ -418,8 +417,8 @@ export class GroveFlies {
     ring: (x: number, y: number, out: number[]) => void,
   ): void {
     const F = GOAL.wake.flies;
-    const hw = VIEW_W / 2 / cam.zoom + 30;
-    const hh = VIEW_H / 2 / cam.zoom + 30;
+    const hw = cam.w / 2 / cam.zoom + 30;
+    const hh = cam.h / 2 / cam.zoom + 30;
     for (const f of this.flies) {
       if (Math.abs(f.x - cam.x) > hw || Math.abs(f.y - cam.y) > hh) continue;
       ring(f.x, f.y, tmp);

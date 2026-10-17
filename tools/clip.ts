@@ -15,7 +15,8 @@
  * --ambient  capture this many frames of render time with the sim standing still instead
  * --at x,y   start with the feet centre here (sim px; default: the scene's spawn)
  * --zoom n   camera zoom, centred on the character (default 2). --wide = the follow camera at zoom 1
- * --size WxH capture size (default 960x540). --fps (default 60; the GIF is 30)
+ * --size WxH capture size (default 960x540; any shape: the view extends past the 16:9 safe area,
+ *            memory/view-size.md; keep both even for the mp4). --fps (default 60; the GIF is 30)
  * --pre n    settle steps before recording (default 30). --hitboxes, --no-gpu, --url, --keep-frames
  * --pickups  with the glints and the counter (left out by default)
  * --audio    with sound: the game's audio director records every step while the clip steps the game

@@ -26,7 +26,6 @@
  */
 import { CanvasSource, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { SimView } from '../contract';
-import { VIEW_H, VIEW_W } from '../contract';
 import { hudLink } from './link';
 
 export const PROMPTS = {
@@ -486,8 +485,10 @@ export class Prompts {
   private place(k: number): void {
     const P = PROMPTS;
     const z = hudLink.zoom;
-    const tx = Math.min(VIEW_W - 60, Math.max(60, hudLink.x + this.side * P.dx * z));
-    const ty = Math.min(VIEW_H - 80, Math.max(50, hudLink.y + P.dy * z));
+    // Inside the visible view (any window shape), clear of its edges.
+    const v = hudLink.view;
+    const tx = Math.min(v.left + v.w - 60, Math.max(v.left + 60, hudLink.x + this.side * P.dx * z));
+    const ty = Math.min(v.top + v.h - 80, Math.max(v.top + 50, hudLink.y + P.dy * z));
     this.x += (tx - this.x) * k;
     this.y += (ty - this.y) * k;
   }

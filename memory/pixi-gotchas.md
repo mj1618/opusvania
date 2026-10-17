@@ -4,8 +4,9 @@ Carried over from the old render pipeline (deleted; `git log -- memory/render-pi
 new skeleton. Add what bites you.
 
 - **Resolution**: the canvas is backed at CSS size x devicePixelRatio and resized on window resize
-  (`src/render/app.ts`, `renderer.resize(w, h, dpr)`); the stage root is scaled to logical 1920x1080
-  units. Filters render to textures at the *filter's* resolution, not the canvas's: give filters
+  (`src/render/app.ts`, `renderer.resize(w, h, dpr)`); the stage root is scaled to logical units
+  (the 1920x1080 safe area at 0,0 and the view around it: view-size.md). `filterArea` is in the
+  container's LOCAL coordinates (Pixi applies its world transform). Filters render to textures at the *filter's* resolution, not the canvas's: give filters
   `resolution: ctx.viewScale()`-ish values (and `antialias` where edges matter) or the picture goes
   soft. Rebuild size-dependent targets in `PostStage.resize()`.
 - Changing `renderer.resolution` at runtime once crashed Pixi's filter stack (`_findFilterResolution` on a

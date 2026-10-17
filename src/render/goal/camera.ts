@@ -17,7 +17,7 @@
 import type { SimEvent } from '../../sim/events';
 import type { Scene } from '../../sim/scene';
 import type { GoalState } from '../../sim/state';
-import { type CameraView, VIEW_H, VIEW_W } from '../contract';
+import { type CameraView, SAFE_H, SAFE_W } from '../contract';
 import { GOAL } from './config';
 import { smooth } from './logic';
 
@@ -86,7 +86,8 @@ export class GoalCamera {
         const x1 = Math.max(kx, e.x) + F.side;
         const y0 = Math.min(ky - F.above, e.y - F.above);
         const y1 = Math.max(ky, e.y) + F.below;
-        const z = Math.min(1, VIEW_W / (x1 - x0), VIEW_H / (y1 - y0));
+        // Both in the safe area, so the picture holds on every window shape.
+        const z = Math.min(1, SAFE_W / (x1 - x0), SAFE_H / (y1 - y0));
         if (z >= F.minZoom) {
           this.shotT = 0;
           this.shotX = (x0 + x1) / 2;
@@ -123,8 +124,9 @@ export class GoalCamera {
     let wy = 0;
     if (heart && goal.heart.awake && !goal.gathered && camLink.on) {
       const P = C.pull;
-      const hw0 = VIEW_W / 2 / base.zoom;
-      const hh0 = VIEW_H / 2 / base.zoom;
+      // Measured in the safe area: the heart comes inside it on every window shape.
+      const hw0 = SAFE_W / 2 / base.zoom;
+      const hh0 = SAFE_H / 2 / base.zoom;
       const hx = heart.x;
       const hy = heart.y - 40;
       if (Math.abs(hx - camLink.x) < P.px && Math.abs(hy - camLink.y) < P.py) {
@@ -162,8 +164,9 @@ export class GoalCamera {
       this.zoom *= 1 + (this.shotZoom - 1) * s;
     }
     // Keep the view inside the scene wherever the base view was inside it.
-    const hw = VIEW_W / 2 / (base.zoom * this.zoom);
-    const hh = VIEW_H / 2 / (base.zoom * this.zoom);
+    // The real view (any window shape).
+    const hw = base.w / 2 / (base.zoom * this.zoom);
+    const hh = base.h / 2 / (base.zoom * this.zoom);
     if (base.x + x > scene.width - hw) x = Math.max(Math.min(x, 0), scene.width - hw - base.x);
     if (base.x + x < hw) x = Math.min(Math.max(x, 0), hw - base.x);
     if (base.y + y > scene.height - hh) y = Math.max(Math.min(y, 0), scene.height - hh - base.y);

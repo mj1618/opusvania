@@ -4,7 +4,7 @@
  * stage puts it over the post-processed picture and under the HUD. `set(0)` hides it.
  */
 import { Sprite, Texture } from 'pixi.js';
-import { VIEW_H, VIEW_W } from '../contract';
+import { SAFE_VIEW, type ViewSize } from '../contract';
 
 const DIP = { color: [3, 5, 9], centre: 0.8, edge: 1 };
 
@@ -26,15 +26,21 @@ export class DipOverlay {
     }
     this.layer = new Sprite(Texture.from(c));
     this.layer.label = 'dip';
-    this.layer.setSize(VIEW_W + 4, VIEW_H + 4);
-    this.layer.position.set(-2, -2);
+    this.cover(SAFE_VIEW);
     this.layer.eventMode = 'none';
     this.layer.visible = false;
   }
 
-  /** `k` 0..1: how far the dip is on. */
-  set(k: number): void {
+  /** `k` 0..1: how far the dip is on, over the whole view `v`. */
+  set(k: number, v: ViewSize = SAFE_VIEW): void {
     this.layer.visible = k > 0.002;
     this.layer.alpha = Math.min(1, Math.max(0, k));
+    if (this.layer.visible) this.cover(v);
+  }
+
+  /** Covers the visible view (with 2 px to spare at every edge). */
+  private cover(v: ViewSize): void {
+    this.layer.position.set(v.left - 2, v.top - 2);
+    this.layer.setSize(v.w + 4, v.h + 4);
   }
 }

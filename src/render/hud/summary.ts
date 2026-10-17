@@ -10,7 +10,7 @@
 import { CanvasSource, Container, Sprite, Texture } from 'pixi.js';
 import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
-import { VIEW_W } from '../contract';
+import { SAFE_W } from '../contract';
 import { clockText } from '../goal/logic';
 
 export const SUMMARY = {
@@ -615,7 +615,8 @@ export class EndSummary {
       if (!this.row) {
         this.row = new Sprite();
         this.row.anchor.set(0.5);
-        this.row.position.set(VIEW_W / 2, SUMMARY.y + SUMMARY.rowGap / 2);
+        // Centred in the safe area (on every window shape).
+        this.row.position.set(SAFE_W / 2, SUMMARY.y + SUMMARY.rowGap / 2);
         this.key = new Sprite(paintKey());
         this.key.anchor.set(0.5);
         this.root.addChild(this.row, this.key);
@@ -624,7 +625,7 @@ export class EndSummary {
       // The key stands at the end of the rows, level with their middle: under them it sat on the
       // page's hint line (the bottom 28 px are not ours).
       this.key?.position.set(
-        VIEW_W / 2 + this.row.width / 2 + SUMMARY.keyGap,
+        SAFE_W / 2 + this.row.width / 2 + SUMMARY.keyGap,
         SUMMARY.y + SUMMARY.rowGap / 2 + 2,
       );
       old?.destroy(true);

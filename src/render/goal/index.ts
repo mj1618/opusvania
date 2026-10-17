@@ -18,7 +18,7 @@ import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { lampCost, lanternCost } from '../../sim/goal';
 import { tuning } from '../../sim/tuning';
 import { vesperLink } from '../character/vesper/link';
-import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } from '../contract';
+import { type CameraView, type RenderContext, SAFE_H, SAFE_VIEW, SAFE_W, type SimView } from '../contract';
 import { hudLink } from '../hud/link';
 import type { PointLight } from '../lights';
 import { GlintBatch, K_FLARE, K_GLINT, K_SPARK } from '../pickups/batch';
@@ -311,7 +311,7 @@ export class GoalRenderer {
   private readonly tmp = [0, 0, 0, 0];
   private chestX = 0;
   private chestY = 0;
-  private camNow: CameraView = { x: 0, y: 0, zoom: 1 };
+  private camNow: CameraView = { x: 0, y: 0, zoom: 1, w: SAFE_VIEW.w, h: SAFE_VIEW.h };
 
   constructor(
     private readonly ctx: RenderContext,
@@ -695,8 +695,8 @@ export class GoalRenderer {
     const wallet = sim.pickups.count;
     // The HUD has no camera: tell it where she is on screen.
     hudLink.on = true;
-    hudLink.x = VIEW_W / 2 + (p.cx - cam.x) * cam.zoom;
-    hudLink.y = VIEW_H / 2 + (p.cy - cam.y) * cam.zoom;
+    hudLink.x = SAFE_W / 2 + (p.cx - cam.x) * cam.zoom;
+    hudLink.y = SAFE_H / 2 + (p.cy - cam.y) * cam.zoom;
     hudLink.zoom = cam.zoom;
     camLink.on = true;
     camLink.x = p.cx;
@@ -1301,8 +1301,8 @@ export class GoalRenderer {
           H.glow.mistAlpha * lvl * (1 + 0.4 * gr),
         );
         // From far away: a glow low at the edge of the view nearest the heart.
-        const hw = VIEW_W / 2 / cam.zoom;
-        const hh = VIEW_H / 2 / cam.zoom;
+        const hw = cam.w / 2 / cam.zoom;
+        const hh = cam.h / 2 / cam.zoom;
         const ex = Math.min(cam.x + hw - 150, Math.max(cam.x - hw + 150, h.x));
         const ey = Math.min(cam.y + hh - 220, Math.max(cam.y - hh + 260, h.y - 160));
         const far = smooth(260, 900, Math.hypot(h.x - ex, h.y - 160 - ey));
@@ -1327,7 +1327,7 @@ export class GoalRenderer {
           this.groveMote += 0.6 + 0.8 * this.rand();
           const sp = this.spark(
             0,
-            cam.x + (this.rand() - 0.5) * VIEW_W,
+            cam.x + (this.rand() - 0.5) * cam.w,
             cam.y + 60 + this.rand() * 330,
             (this.rand() - 0.5) * 16,
             -22 - 34 * this.rand(),
@@ -1585,7 +1585,7 @@ export class GoalRenderer {
       }
       if (from < 0) {
         const side = ex < p.cx ? 1 : -1;
-        g.lead(key, way(), n, p.cx + side * (VIEW_W / 2 / cam.zoom + 30), p.cy - 190);
+        g.lead(key, way(), n, p.cx + side * (cam.w / 2 / cam.zoom + 30), p.cy - 190);
         this.guideIdle = 0;
         this.guideBest = d;
         return;
@@ -1925,7 +1925,7 @@ export class GoalRenderer {
 
   private inView(cam: CameraView, x: number, y: number, pad: number): boolean {
     return (
-      Math.abs(x - cam.x) < VIEW_W / 2 / cam.zoom + pad && Math.abs(y - cam.y) < VIEW_H / 2 / cam.zoom + pad
+      Math.abs(x - cam.x) < cam.w / 2 / cam.zoom + pad && Math.abs(y - cam.y) < cam.h / 2 / cam.zoom + pad
     );
   }
 
@@ -1933,8 +1933,8 @@ export class GoalRenderer {
   private drift(cam: CameraView, hx: number, hy: number): void {
     const H = GOAL.heart;
     for (let k = 0; k < H.drift; k++) {
-      const x = cam.x + (this.rand() - 0.5) * VIEW_W * 1.05;
-      const y = cam.y + (this.rand() - 0.5) * VIEW_H * 0.95;
+      const x = cam.x + (this.rand() - 0.5) * cam.w * 1.05;
+      const y = cam.y + (this.rand() - 0.5) * cam.h * 0.95;
       const d = Math.hypot(hx - x, hy - y) || 1;
       const sp = 46 + 70 * this.rand();
       const s = this.spark(
@@ -2615,7 +2615,7 @@ export class GoalRenderer {
         const fade = (1 - smooth(W.reach * 0.9, W.reach, R)) * smooth(0, 300, R);
         for (const dir of [-1, 1]) {
           const x = h.x + dir * R;
-          if (Math.abs(x - cam.x) > VIEW_W / 2 / cam.zoom + W.width) continue;
+          if (Math.abs(x - cam.x) > cam.w / 2 / cam.zoom + W.width) continue;
           sf.light(cam, x, cam.y, W.width, 900, W.surface * fade, 0.2);
           lb.quad(K_FLARE, x, h.y - 300, W.width, W.height, W.gain * fade, 0, 0);
         }

@@ -162,7 +162,8 @@ void main(void) {
 /**
  * The light map. rgb: the point lights as they land on surfaces, i.e. multiplied by the playfield
  * mask (lib/fx-mask.ts), softened a little. a: a wider, fainter halo for the glow hanging in the
- * air around each light, unmasked. Positions and radii are in view heights.
+ * air around each light, unmasked. Positions (from the view's top-left) and radii are in safe-area
+ * heights (1080 logical px).
  */
 export const LIGHTS_FRAG = /* glsl */ `#version 300 es
 precision highp float;
@@ -172,12 +173,13 @@ uniform sampler2D uMask;
 uniform vec4 uLights[${MAX_LIGHTS}];
 uniform vec4 uLightColors[${MAX_LIGHTS}];
 uniform int uLightCount;
-uniform vec4 uShape;  // aspect, falloff, halo radius factor, light reaching non-playfield
+uniform vec4 uShape;  // unused (was the aspect), falloff, halo radius factor, light reaching non-playfield
+uniform vec2 uFrame;  // the view's size in safe-area heights (1080 logical px): 16:9 = (1.78, 1)
 uniform vec2 uMaskTexel;
 uniform float uDim;
 uniform float uDirection;
 void main(void) {
-  vec2 p = vec2(vPos.x * uShape.x, vPos.y);
+  vec2 p = vPos * uFrame;
   vec3 sum = vec3(0.0);
   float halo = 0.0;
   vec2 toward = vec2(0.0);
@@ -242,15 +244,16 @@ uniform vec4 uShadow;     // rgb tint, lift
 uniform vec4 uHighlight;  // rgb tint, warmth
 uniform vec4 uVignette;   // inner, outer, strength, tint amount
 uniform vec4 uVignetteTint; // rgb, saturation
-uniform vec4 uGrain;      // amplitude, time, aspect, mid-tone lift
+uniform vec4 uGrain;      // amplitude, time, aspect of the vignette's ellipse (16:9, stretched over any view), mid-tone lift
+uniform vec4 uFrame;      // the view's size in safe-area heights (1080 logical px): 16:9 = (1.78, 1)
 uniform vec4 uLightBack;  // bloom cut on pale brights, glint, warm add, leaf light wrap
 uniform vec4 uHalo;       // rgb: the lights' mean colour
 uniform vec4 uLit;        // light colour tint 0..1, chroma gain, per-channel ceiling, gain on the soft matte (separation)
-uniform vec4 uHero;       // x, y (view heights), pocket radius, darkening
+uniform vec4 uHero;       // x, y (safe-area heights from the view's top-left), pocket radius, darkening
 uniform vec4 uHero2;      // inner radius left untouched, desaturation, luminance ceiling, pull toward it
 uniform vec4 uDeep;       // toe: luminance it ends at, extra exponent; spark: amount, whiteness of the core
 uniform vec4 uRich;       // rgb: tint multiplied into darks and mid-tones, a: their saturation
-uniform vec4 uGoal[${GOAL_LIGHTS}];  // the goal's lights (lit lanterns, heart): x, y, radius (view heights), strength 0..1
+uniform vec4 uGoal[${GOAL_LIGHTS}];  // the goal's lights (lit lanterns, heart): x, y, radius (safe-area heights, from the view's top-left), strength 0..1
 uniform vec4 uSep;        // separation behind the hero: pivot luminance, width, lift, darkening
 uniform vec4 uSepLook;    // xy: the lift fades out between these two luminances; z: how much of the vignette lights are spared, w: from what value (max channel)
 uniform vec4 uSepTint;    // rgb: the colour of the lift (luminance 1), a: desaturation under it
@@ -295,7 +298,9 @@ void main(void) {
 
   // A pocket of calm around the hero: what lies around them (not on them) goes a little darker
   // and greyer, so a small figure separates from a busy, glowing forest without an outline.
-  vec2 hd = cv - (uHero.xy - vec2(0.5 * uGrain.z, 0.5));
+  // Distances to lights in safe-area heights (the same in every window shape), from the view's top-left.
+  vec2 cw = c * uFrame.xy;
+  vec2 hd = cw - (uHero.xy - 0.5 * uFrame.xy);
   float h2 = dot(hd, hd);
   float nearHero = exp(-h2 / (uHero.z * uHero.z));
   // The lights she has lit: how strongly one of them reaches this pixel, and whether this is its
@@ -305,7 +310,7 @@ void main(void) {
   for (int i = 0; i < ${GOAL_LIGHTS}; i++) {
     vec4 gl = uGoal[i];
     if (gl.w <= 0.0) continue;
-    vec2 gd = (cv - (gl.xy - vec2(0.5 * uGrain.z, 0.5))) / gl.z;
+    vec2 gd = (cw - (gl.xy - 0.5 * uFrame.xy)) / gl.z;
     float gq = clamp(1.0 - dot(gd, gd), 0.0, 1.0);
     goalHere += gq * gq * gl.w;
     goalCore = max(goalCore, smoothstep(0.85, 0.95, gq) * min(gl.w * 2.0, 1.0));

@@ -3,12 +3,14 @@
  *
  * THE HOOK
  *   `target` is the container holding the whole layer tree (sky .. air) in logical view units
- *   (VIEW_W x VIEW_H; the stage root above it scales to device pixels). Everything inside it is
- *   post-processed; the debug overlay sits outside and is not.
+ *   (the stage root above it scales to device pixels). The filter covers the whole visible view
+ *   (`ctx.view()`: any window shape, the 16:9 safe area at 0..SAFE_W x 0..SAFE_H inside it).
+ *   Everything inside it is post-processed; the debug overlay sits outside and is not.
  *   - `update(dt, clock, camera)` runs once per render frame, after scene and character have
  *     updated and before the frame is presented: it feeds the knobs (config.ts), the clock and the
  *     lights (`ctx.lights.list`, world px -> view) to the pipeline.
- *   - `resize()` runs when the canvas size or resolution changes.
+ *   - `resize()` runs when the canvas size or resolution changes (a new view shape rebuilds the
+ *     filter: its targets are sized to the view's shape).
  *
  * HOW IT WORKS
  *   One filter (pipeline.ts) on the layer tree: Pixi draws the tree into a texture at canvas
@@ -17,7 +19,7 @@
  *   config.ts (`POST`), live-editable; memory/post-and-air.md has the notes.
  */
 import { type Container, type Filter, Rectangle } from 'pixi.js';
-import { type CameraView, type RenderContext, VIEW_H, VIEW_W, worldToView } from '../contract';
+import { type CameraView, type RenderContext, SAFE_H, SAFE_W, type ViewSize, worldToView } from '../contract';
 import type { PointLight } from '../lights';
 import { fxDebug } from '../scene/lib/fx-debug';
 import { renderHeroMatte, renderPlayfieldMask } from '../scene/lib/fx-mask';
@@ -38,7 +40,8 @@ export class PostStage {
   ) {
     // The tree is far bigger than the view (whole parallax layers): tell Pixi the filter covers
     // exactly the view instead of letting it measure everything every frame.
-    target.filterArea = new Rectangle(0, 0, VIEW_W, VIEW_H);
+    target.filterArea = new Rectangle();
+    this.fitArea(ctx.view());
     fxDebug('post', POST);
     fxDebug('zoneGrade', ZONE_GRADE);
   }
@@ -48,23 +51,42 @@ export class PostStage {
   }
 
   /**
-   * The canvas size or resolution changed. The pipeline's own targets have fixed sizes and Pixi
-   * sizes the scene texture per frame, so only a resolution change needs anything: Pixi's filter
-   * stack has crashed on pooled textures across a resolution change, so start from a fresh filter.
+   * The canvas size or resolution changed. Pixi sizes the scene texture per frame; the pipeline's
+   * own targets follow the view's shape, so a new shape needs a new filter. So does a resolution
+   * change: Pixi's filter stack has crashed on pooled textures across one.
    */
   resize(): void {
-    const res = this.ctx.renderer.resolution;
-    if (this.filter && res !== this.builtAt) this.rebuild();
+    const v = this.ctx.view();
+    this.fitArea(v);
+    if (this.filter && this.stale(v)) this.rebuild();
   }
 
   private builtAt = 0;
+  private builtW = 0;
+  private builtH = 0;
+
+  private stale(v: ViewSize): boolean {
+    return this.ctx.renderer.resolution !== this.builtAt || v.w !== this.builtW || v.h !== this.builtH;
+  }
+
+  /** The filter covers the visible view exactly. */
+  private fitArea(v: ViewSize): void {
+    const a = this.target.filterArea as Rectangle;
+    a.x = v.left;
+    a.y = v.top;
+    a.width = v.w;
+    a.height = v.h;
+  }
 
   private rebuild(): void {
+    const v = this.ctx.view();
     this.setFilters(null);
     this.filter?.destroy();
-    this.filter = new PostFilter(this.ctx.renderer);
+    this.filter = new PostFilter(this.ctx.renderer, v);
     fxDebug('postFilter', this.filter);
     this.builtAt = this.ctx.renderer.resolution;
+    this.builtW = v.w;
+    this.builtH = v.h;
     this.on = false;
   }
 
@@ -76,7 +98,9 @@ export class PostStage {
       }
       return;
     }
-    if (!this.filter) this.rebuild();
+    const view = this.ctx.view();
+    this.fitArea(view);
+    if (!this.filter || this.stale(view)) this.rebuild();
     const f = this.filter as PostFilter;
     if (!this.on) {
       this.setFilters([f]);
@@ -141,19 +165,20 @@ export class PostStage {
     u.uGrain[0] = POST.grain;
     // Wrapped so the grain keeps its precision however long the game has been open.
     u.uGrain[1] = renderClock % 64;
-    u.uGrain[2] = VIEW_W / VIEW_H;
+    // The vignette's ellipse is the 16:9 one stretched over the view (it closes any frame alike).
+    u.uGrain[2] = SAFE_W / SAFE_H;
     u.uGrain[3] = grade.midLift;
 
     // The playfield mask for this frame (the air layer's front shafts read it too).
     // It is soft and low-res, so every other frame is enough, unless the camera jumped.
     const jumped = Math.abs(camera.x - this.maskAt.x) + Math.abs(camera.y - this.maskAt.y) > 120;
     if ((this.frames++ & 1) === 0 || jumped || camera.zoom !== this.maskAt.zoom) {
-      renderPlayfieldMask(this.ctx.renderer, this.maskLayers());
+      renderPlayfieldMask(this.ctx.renderer, this.maskLayers(), view);
       this.maskAt = { x: camera.x, y: camera.y, zoom: camera.zoom };
     }
 
     const character = this.target.getChildByLabel('character');
-    if (character) renderHeroMatte(this.ctx.renderer, character);
+    if (character) renderHeroMatte(this.ctx.renderer, character, view);
     u.uProtect[0] = lights.heroProtect;
     u.uProtect[1] = lights.cap;
     u.uProtect[2] = lights.heroBloomCut;
@@ -178,7 +203,11 @@ export class PostStage {
     u.uGoalLook[1] = lights.goalPocket;
     u.uGoalLook[2] = lights.goalTint;
 
-    // Lights: world px -> view heights. Only those whose reach touches the view are sent.
+    // Lights: world px -> safe-area heights (1080 logical px) from the view's top-left. Only those
+    // whose reach touches the view are sent.
+    const H = SAFE_H;
+    const vx0 = view.left;
+    const vy0 = view.top;
     const lu = f.lightsU;
     let n = 0;
     let hr = 0;
@@ -200,9 +229,10 @@ export class PostStage {
       if (l.intensity <= 0 || l.radius <= 0) continue;
       const v = worldToView(camera, l.x, l.y);
       const far = l.radius * lights.reach * camera.zoom * lights.hazeReach;
-      if (v.x < -far || v.x > VIEW_W + far || v.y < -far || v.y > VIEW_H + far) continue;
+      if (v.x < vx0 - far || v.x > vx0 + view.w + far || v.y < vy0 - far || v.y > vy0 + view.h + far)
+        continue;
       const first = l === ember0 || goal.has(l);
-      picked.push({ l, key: first ? -1 : Math.hypot(v.x - VIEW_W / 2, v.y - VIEW_H / 2) });
+      picked.push({ l, key: first ? -1 : Math.hypot(v.x - SAFE_W / 2, v.y - SAFE_H / 2) });
     }
     if (picked.length > MAX_LIGHTS) picked.sort((a, b) => a.key - b.key);
     u.uGoal.fill(0);
@@ -214,18 +244,18 @@ export class PostStage {
       const r = src.radius * lights.reach * camera.zoom;
       const l = { color: src.color, intensity: src.intensity * (isGoal ? lights.goalBoost : 1) };
       if (isGoal && gn < GOAL_LIGHTS) {
-        u.uGoal[gn * 4] = v.x / VIEW_H;
-        u.uGoal[gn * 4 + 1] = v.y / VIEW_H;
-        u.uGoal[gn * 4 + 2] = r / VIEW_H;
+        u.uGoal[gn * 4] = (v.x - vx0) / H;
+        u.uGoal[gn * 4 + 1] = (v.y - vy0) / H;
+        u.uGoal[gn * 4 + 2] = r / H;
         u.uGoal[gn * 4 + 3] = Math.min(1, src.intensity);
         gn++;
       }
       const cr = ((l.color >> 16) & 255) / 255;
       const cg = ((l.color >> 8) & 255) / 255;
       const cb = (l.color & 255) / 255;
-      lu.uLights[n * 4] = v.x / VIEW_H;
-      lu.uLights[n * 4 + 1] = v.y / VIEW_H;
-      lu.uLights[n * 4 + 2] = r / VIEW_H;
+      lu.uLights[n * 4] = (v.x - vx0) / H;
+      lu.uLights[n * 4 + 1] = (v.y - vy0) / H;
+      lu.uLights[n * 4 + 2] = r / H;
       lu.uLights[n * 4 + 3] = l.intensity;
       lu.uLightColors[n * 4] = cr;
       lu.uLightColors[n * 4 + 1] = cg;
@@ -244,23 +274,23 @@ export class PostStage {
     const hero = POST.hero;
     if (ember) {
       const v = worldToView(camera, ember.x, ember.y - 14);
-      u.uHero[0] = v.x / VIEW_H;
-      u.uHero[1] = v.y / VIEW_H;
+      u.uHero[0] = (v.x - vx0) / H;
+      u.uHero[1] = (v.y - vy0) / H;
     }
-    u.uHero[2] = (hero.radius * camera.zoom) / VIEW_H;
+    u.uHero[2] = (hero.radius * camera.zoom) / H;
     u.uHero[3] = ember ? hero.darken * zoneMix(ZONE_GRADE.heroPocket, zw) : 0;
-    u.uHero2[0] = (hero.inner * camera.zoom) / VIEW_H;
+    u.uHero2[0] = (hero.inner * camera.zoom) / H;
     u.uHero2[1] = hero.desaturate;
     u.uHero2[2] = hero.ceiling;
     u.uHero2[3] = ember ? hero.pull : 0;
-    lu.uShape[0] = VIEW_W / VIEW_H;
+    lu.uShape[0] = view.w / view.h;
     lu.uShape[1] = lights.falloff;
     lu.uShape[2] = lights.hazeReach;
     lu.uShape[3] = lights.background;
     lu.uDim = lights.inBrightPlaces;
     u.uLightBack[0] = bloom.paleCut;
     const sceneH = this.ctx.scene.height;
-    const high = Math.min(1, Math.max(0, (sceneH - VIEW_H / 2 - camera.y) / Math.max(1, sceneH - VIEW_H)));
+    const high = Math.min(1, Math.max(0, (sceneH - SAFE_H / 2 - camera.y) / Math.max(1, sceneH - SAFE_H)));
     u.uLightBack[3] = bloom.wrap + (bloom.wrapHigh - bloom.wrap) * high;
     u.uLightBack[1] = lights.glint;
     u.uLightBack[2] = lights.warm;

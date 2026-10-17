@@ -11,7 +11,6 @@
  * there); `glintsDrop` and `dropWake` only start the two moments. Render time only.
  */
 import type { CameraView, SimView } from '../contract';
-import { VIEW_H, VIEW_W } from '../contract';
 import { type GlintBatch, K_FLARE, K_GLINT, K_SPARK, K_STAR } from '../pickups/batch';
 import { smooth } from './logic';
 import type { SurfaceLight } from './surface';
@@ -145,8 +144,8 @@ export class DropsView {
     this.land *= Math.exp(-dt * 14);
 
     const half = sim.player.h / 2;
-    const hw = VIEW_W / 2 / cam.zoom + 200;
-    const hh = VIEW_H / 2 / cam.zoom + 200;
+    const hw = cam.w / 2 / cam.zoom + 200;
+    const hh = cam.h / 2 / cam.zoom + 200;
     const out = this.tmp;
     for (const [id, k] of knots) {
       k.age += dt;
@@ -158,16 +157,16 @@ export class DropsView {
         continue;
       }
       const woke = k.wake >= 0;
-      const offX = Math.abs(k.x - cam.x) - VIEW_W / 2 / cam.zoom;
-      const offY = Math.abs(k.y - cam.y) - VIEW_H / 2 / cam.zoom;
+      const offX = Math.abs(k.x - cam.x) - cam.w / 2 / cam.zoom;
+      const offY = Math.abs(k.y - cam.y) - cam.h / 2 / cam.zoom;
       if (!woke && (offX > -20 || offY > -20)) {
         // Out of the picture: a few small stars at the edge nearest to it lead the way.
         const K = D.marker;
         const far = Math.max(offX, offY);
         const a = smooth(-20, 60, far) * (1 - smooth(K.reach * 0.8, K.reach, far)) * smooth(1.2, 2.4, k.age);
         if (a > 0.01) {
-          const ix = VIEW_W / 2 / cam.zoom - K.inset;
-          const iy = VIEW_H / 2 / cam.zoom - K.inset;
+          const ix = cam.w / 2 / cam.zoom - K.inset;
+          const iy = cam.h / 2 / cam.zoom - K.inset;
           const ex = cam.x + Math.max(-ix, Math.min(ix, k.x - cam.x));
           const ey = cam.y + Math.max(-iy + 60, Math.min(iy - 60, k.y - cam.y));
           const dx = k.x - ex;

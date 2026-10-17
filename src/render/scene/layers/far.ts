@@ -23,7 +23,7 @@ import {
   Sprite,
   UniformGroup,
 } from 'pixi.js';
-import { VIEW_H, VIEW_W } from '../../contract';
+import { SAFE_H, SAFE_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import type { LayerName, LayerRect } from '../layer-tree';
 import {
@@ -59,7 +59,7 @@ import {
 } from '../lib/bg-shapes';
 import { mix, PALETTE, prng } from '../lib/look';
 import { isGroveKit } from '../lib/room-look';
-import { SKY_OUTPUT } from './sky';
+import { SKY_OUTPUT, SKY_RECT } from './sky';
 
 const NAMES = ['far0', 'far1', 'far2'] as const;
 
@@ -805,7 +805,7 @@ export class FarLayers implements EnvModule {
     const rects = NAMES.map((n) => coverRect(ctx.layers, n, PAD));
     this.ctx = ctx;
     this.scene.addChild(...this.groups);
-    this.target = RenderTexture.create({ width: VIEW_W + 16, height: VIEW_H + 16, resolution: 1 });
+    this.target = RenderTexture.create({ width: SAFE_W + 16, height: SAFE_H + 16, resolution: 1 });
     this.output = new Sprite(this.target);
     this.output.label = 'far-composite';
     this.output.blendMode = 'none';
@@ -848,7 +848,7 @@ export class FarLayers implements EnvModule {
           { fog: FOG[0] as FogSpec, zone: z0 },
           { fog: fogSpec, zone },
           rustle,
-          { texture: sky, x: -8, y: -8, w: VIEW_W + 16, h: VIEW_H + 16 },
+          { texture: sky, ...SKY_RECT },
           ctx.layers.anchor,
           LIFE[0],
         );
@@ -894,9 +894,11 @@ export class FarLayers implements EnvModule {
       g.position.copyFrom(L.position);
       g.scale.copyFrom(L.scale);
     });
+    // The target covers the visible view (ctx.view(): any window shape), 8 px to spare at each edge.
+    const v = this.ctx.view();
     const k = Math.min(FAR_TARGET_SCALE, this.ctx.viewScale());
-    const w = Math.ceil((VIEW_W + 16) * k);
-    const h = Math.ceil((VIEW_H + 16) * k);
+    const w = Math.ceil((v.w + 16) * k);
+    const h = Math.ceil((v.h + 16) * k);
     if (this.target.width !== w || this.target.height !== h) {
       // A resized render texture kept drawing into its old area (black beyond it): replace it.
       const old = this.target;
@@ -904,7 +906,7 @@ export class FarLayers implements EnvModule {
       this.output.texture = this.target;
       old.destroy(true);
     }
-    this.toTarget.set(k, 0, 0, k, 8 * k, 8 * k);
+    this.toTarget.set(k, 0, 0, k, (8 - v.left) * k, (8 - v.top) * k);
     this.ctx.renderer.render({
       container: this.scene,
       target: this.target,
@@ -914,8 +916,8 @@ export class FarLayers implements EnvModule {
     const host = far[2];
     if (host) {
       const sx = host.scale.x || 1;
-      this.output.position.set((-8 - host.position.x) / sx, (-8 - host.position.y) / sx);
-      this.output.setSize((VIEW_W + 16) / sx, (VIEW_H + 16) / sx);
+      this.output.position.set((v.left - 8 - host.position.x) / sx, (v.top - 8 - host.position.y) / sx);
+      this.output.setSize((v.w + 16) / sx, (v.h + 16) / sx);
     }
   }
 }

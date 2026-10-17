@@ -22,7 +22,7 @@
  * - Layout is seeded: the same every run, different on every screen of the scene.
  */
 import { BlurFilter, Container, Graphics, Matrix, Rectangle, RenderTexture, Sprite, Texture } from 'pixi.js';
-import { VIEW_H, VIEW_W } from '../../contract';
+import { SAFE_H, SAFE_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { fxDebug } from '../lib/fx-debug';
 import {
@@ -263,17 +263,21 @@ export class ForegroundLayer implements EnvModule {
       pieces.push(piece);
       return piece;
     };
-    /** The x range a plane must cover: what the follow camera can show at that parallax. */
+    /**
+     * The x range a plane must cover: what the follow camera can show at that parallax. (At a
+     * parallax over 1 a wider view reaches less far, since the camera stops sooner: the 16:9 view
+     * is the widest reach, and so the tallest one for the trunks below.)
+     */
     const span = (parallax: number): [number, number] => {
-      const reach = (ctx.scene.width / 2 - VIEW_W / 2) * parallax + VIEW_W / 2;
+      const reach = (ctx.scene.width / 2 - SAFE_W / 2) * parallax + SAFE_W / 2;
       return [anchor.x - reach - 300, anchor.x + reach + 300];
     };
 
     // Both planes agree with the playfield at the anchor, so these two lines are the frame's
     // top and bottom edge for a camera resting on the ground, in either plane.
-    this.groundTop = anchor.y - VIEW_H / 2;
+    this.groundTop = anchor.y - SAFE_H / 2;
     const top = this.groundTop;
-    const bottom = this.groundTop + VIEW_H;
+    const bottom = this.groundTop + SAFE_H;
 
     // Near, top: big leafy boughs that fill a corner.
     const [n0, n1] = span(FOREGROUND.near.parallax);
@@ -300,8 +304,8 @@ export class ForegroundLayer implements EnvModule {
       else add('near', 'bottom', x, bottom + 30, out, (g) => archRoot(g, rnd, size * 0.72, dir));
     }
     for (const t of FOREGROUND.trunks) {
-      const height = (VIEW_H / 2) * 2 + (ctx.scene.height - VIEW_H) * FOREGROUND.near.parallax + 400;
-      const y0 = anchor.y - (anchor.y - VIEW_H / 2) * FOREGROUND.near.parallax - VIEW_H / 2 - 120;
+      const height = (SAFE_H / 2) * 2 + (ctx.scene.height - SAFE_H) * FOREGROUND.near.parallax + 400;
+      const y0 = anchor.y - (anchor.y - SAFE_H / 2) * FOREGROUND.near.parallax - SAFE_H / 2 - 120;
       add('near', 'trunk', t.x, y0, 0, (g) => trunk(g, rnd, t.width, height, t.lean)).trunk = {
         width: t.width,
         lean: t.lean,
@@ -495,7 +499,7 @@ export class ForegroundLayer implements EnvModule {
     );
     const mirror = mt * mt * (3 - 2 * mt) * (1 - bt * bt * (3 - 2 * bt));
     // 0 on the ground, 1 with the camera at the top of the scene.
-    const high = Math.min(1, Math.max(0, (anchor.y - cam.y) / Math.max(1, anchor.y - VIEW_H / 2)));
+    const high = Math.min(1, Math.max(0, (anchor.y - cam.y) / Math.max(1, anchor.y - SAFE_H / 2)));
 
     // The corner veils: from each bottom corner along the bottom edge, as tall as the room under
     // the lowest walk line they lie in front of.
@@ -530,6 +534,9 @@ export class ForegroundLayer implements EnvModule {
     }
 
     const rise = anchor.y - cam.y;
+    // A view taller than the safe area (Vert+, contract.ts ViewSize): the top plants hang from its
+    // real top edge, not the safe area's. The bottom ones already stand on `vis`'s bottom edge.
+    const tallTop = -(vis.h - SAFE_H / cam.zoom) / 2;
     for (const piece of this.pieces) {
       const s = piece.sprite;
       if (!s) continue;
@@ -575,10 +582,10 @@ export class ForegroundLayer implements EnvModule {
         piece.edge === 'bottom'
           ? vis.y +
             vis.h +
-            (piece.y - this.groundTop - VIEW_H) +
+            (piece.y - this.groundTop - SAFE_H) +
             away +
             Math.max(0, rise - cfg.bottomFree) * par
-          : piece.y + sy + lock + away;
+          : piece.y + sy + lock + away + (piece.edge === 'top' ? tallTop : 0);
       if (piece.edge === 'bottom') {
         // The walk line of the playfield behind this plant, in this layer's coordinates.
         // The lowest one under the plant's whole width, not just its middle: the big near plants are

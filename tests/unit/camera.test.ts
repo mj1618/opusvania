@@ -3,13 +3,22 @@ import {
   clampAxis,
   createCamera,
   lerpCamera,
+  resizeCamera,
   restOffset,
   stepCamera,
   viewTop,
 } from '../../src/render/camera/index';
 import { ReformShot, reformSeconds } from '../../src/render/camera/reform';
 import { cameraTuning } from '../../src/render/camera/tuning';
-import { VIEW_H, VIEW_W } from '../../src/render/contract';
+import {
+  SAFE_H,
+  SAFE_W,
+  VIEW_H,
+  VIEW_MAX_H,
+  VIEW_MAX_W,
+  VIEW_W,
+  viewSizeFor,
+} from '../../src/render/contract';
 import { LightRegistry } from '../../src/render/lights';
 import { GROVE } from '../../src/scene/index';
 import { feet, hopOnto, newSim } from './helpers';
@@ -97,7 +106,52 @@ describe('camera', () => {
     const a = createCamera(s.state, GROVE);
     const b = { ...a, x: a.x + 10, y: a.y + 4 };
     const v = lerpCamera(a, b, 0.5);
-    expect(v).toEqual({ x: a.x + 5 + VIEW_W / 2, y: a.y + 2 + VIEW_H / 2, zoom: 1 });
+    expect(v).toEqual({ x: a.x + 5 + VIEW_W / 2, y: a.y + 2 + VIEW_H / 2, zoom: 1, w: VIEW_W, h: VIEW_H });
+  });
+});
+
+describe('view shapes (memory/view-size.md)', () => {
+  it('fits the safe area and extends the other axis, capped', () => {
+    expect(viewSizeFor(1920, 1080)).toEqual({ w: 1920, h: 1080, left: 0, top: 0, scale: 1 });
+    expect(viewSizeFor(1280, 720)).toMatchObject({ w: 1920, h: 1080, scale: 2 / 3 });
+    // 21:9: Hor+.
+    expect(viewSizeFor(2560, 1080)).toMatchObject({ w: 2560, h: 1080, left: -320, top: 0, scale: 1 });
+    // 16:10 and 4:3: Vert+.
+    expect(viewSizeFor(1920, 1200)).toMatchObject({ w: 1920, h: 1200, left: 0, top: -60 });
+    expect(viewSizeFor(1440, 1080)).toMatchObject({ w: 1920, h: 1440, top: -180, scale: 0.75 });
+    // Past 2.4:1 and 5:4 the view stops growing (the rest is letterbox).
+    expect(viewSizeFor(5120, 1080)).toMatchObject({ w: VIEW_MAX_W, h: 1080 });
+    expect(viewSizeFor(1080, 1920)).toMatchObject({ w: 1920, h: VIEW_MAX_H });
+  });
+
+  it('frames her the same in the safe area on every shape, and clamps with the real size', () => {
+    const s = newSim();
+    const base = createCamera(s.state, GROVE);
+    for (const [w, h] of [
+      [2560, 1080],
+      [1920, 1200],
+      [1920, 1440],
+      [VIEW_MAX_W, VIEW_MAX_H],
+    ] as const) {
+      const cam = createCamera(s.state, GROVE, cameraTuning, w, h);
+      const v = lerpCamera(cam, cam, 1);
+      expect([v.w, v.h]).toEqual([w, h]);
+      // Inside the scene (and its headroom) with the real size.
+      expect(cam.x).toBeGreaterThanOrEqual(0);
+      expect(cam.x + w).toBeLessThanOrEqual(GROVE.width);
+      expect(cam.y).toBeGreaterThanOrEqual(viewTop(GROVE));
+      expect(cam.y + h).toBeLessThanOrEqual(GROVE.height + 1e-9);
+      // Where the clamp allows, the centre is where the 16:9 view's is.
+      const b = lerpCamera(base, base, 1);
+      if (cam.x > 0 && cam.x + w < GROVE.width) expect(v.x).toBeCloseTo(b.x);
+    }
+    // A resize keeps the follow state and re-clamps.
+    const cam = createCamera(s.state, GROVE);
+    const fx = cam.fx;
+    resizeCamera(cam, GROVE, 2560, 1440);
+    expect([cam.vw, cam.vh, cam.fx]).toEqual([2560, 1440, fx]);
+    expect(cam.y + 1440).toBeLessThanOrEqual(GROVE.height + 1e-9);
+    expect(SAFE_W / SAFE_H).toBeCloseTo(16 / 9);
   });
 });
 
@@ -273,7 +327,7 @@ describe('camera glide', () => {
 
 describe('re-form shot', () => {
   const R = cameraTuning.reform;
-  const view = (x: number, y: number) => ({ x, y, zoom: 1 });
+  const view = (x: number, y: number) => ({ x, y, zoom: 1, w: VIEW_W, h: VIEW_H });
 
   it('starts where the view was, never exceeds the pan cap, and decays to zero in time', () => {
     for (const [fx, fy, tx, ty] of [

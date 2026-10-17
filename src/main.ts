@@ -30,7 +30,8 @@ function abilitiesParam(v: string | null): string[] | null {
  * ?nopickups (the scene without its glints, lumen pods, enemies, lanterns and heart, so without the HUD: clean plates
  * for the look tools), ?audio (sound on for review; ?audio=0 off).
  * Keys: arrows/WASD move, Z/Space/K jump, X/L/Shift dash, Down+Jump drops through branches,
- * F2 collision overlay, ` tuning panel, R restart, M sound on / off (muted by default: src/audio).
+ * F2 collision overlay, ` tuning panel, R restart, M sound on / off (muted by default: src/audio),
+ * Enter (or a double-click on the picture) full screen on / off.
  */
 async function boot(): Promise<void> {
   const params = new URLSearchParams(location.search);
@@ -71,9 +72,23 @@ async function boot(): Promise<void> {
   showSound(audio.muted);
   audio.onChange = showSound;
 
+  // Full screen: the page (canvas and key hint), so the picture refits like any window (render/app.ts).
+  const toggleFullscreen = (): void => {
+    const req = document.documentElement.requestFullscreen?.bind(document.documentElement);
+    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+    else if (req) void req({ navigationUI: 'hide' }).catch(() => {});
+  };
+  ga.app.canvas.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    toggleFullscreen();
+  });
+
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.repeat) return;
-    if (e.code === 'Backquote') panel.toggle();
+    if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+      toggleFullscreen();
+      e.preventDefault();
+    } else if (e.code === 'Backquote') panel.toggle();
     else if (e.code === 'F2') {
       stage.overlay.toggle();
       e.preventDefault();

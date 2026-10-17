@@ -8,8 +8,10 @@
  *   input + up[0] + light ──composite (grade, vignette, grain)──> output
  *
  * The blurs happen in small targets with small kernels (dual filtering), so the glow is wide and
- * smooth with no ghost copies and costs little. Targets have fixed logical sizes, so nothing here
- * depends on the window size: only `input` changes on resize, and Pixi manages that.
+ * smooth with no ghost copies and costs little. Targets have logical sizes: the config's 16:9 sizes
+ * stretched by the view's shape (contract.ts ViewSize: 2592x1080 view = 1.35x wider targets), so a
+ * glow stays round in any window. A pixel size change alone needs nothing (Pixi sizes `input`); a
+ * change of the view's shape needs a new PostFilter (PostStage.resize does that).
  */
 import {
   Filter,
@@ -21,6 +23,7 @@ import {
   type TEXTURE_FORMATS,
   Texture,
 } from 'pixi.js';
+import { SAFE_H, SAFE_W, type ViewSize } from '../contract';
 import { heroMatteTexture, MASK_H, MASK_W, playfieldMaskTexture } from '../scene/lib/fx-mask';
 import { BLOOM_LEVELS, GOAL_LIGHTS, LIGHT_TARGET, MAX_LIGHTS } from './config';
 import {
@@ -81,6 +84,7 @@ export class PostFilter extends Filter {
     uSep: Vec;
     uSepTint: Vec;
     uSepLook: Vec;
+    uFrame: Vec;
   };
   readonly prefilterU: { uTap: Vec; uCurve: Vec; uSaturation: number; uBoost: number; uHeroSource: number };
   readonly lightsU: {
@@ -108,22 +112,27 @@ export class PostFilter extends Filter {
   /** 0..1: how much of the wider blur level the soft matte carries (set by PostStage). */
   softSpread = 0.6;
 
-  constructor(renderer: Renderer) {
+  constructor(renderer: Renderer, view: ViewSize) {
     // Half-float targets keep the wide, faint gradients of the glow free of banding.
     const gl = (renderer as unknown as { gl?: WebGL2RenderingContext }).gl;
     const float =
       !!gl?.getExtension('EXT_color_buffer_float') || !!gl?.getExtension('EXT_color_buffer_half_float');
     const format: TEXTURE_FORMATS = float ? 'rgba16float' : 'rgba8unorm';
-    const down = BLOOM_LEVELS.map((s) => target(s, format));
-    const up = BLOOM_LEVELS.slice(0, -1).map((s) => target(s, format));
-    const light = target(LIGHT_TARGET, format);
-    const softSizes: ReadonlyArray<readonly [number, number]> = [
-      [480, 270],
-      [240, 135],
-      [120, 68],
-      [240, 135],
-      [480, 270],
+    // A 16:9 size stretched to the view's shape (exactly the config's sizes in a 16:9 window).
+    const sx = view.w / SAFE_W;
+    const sy = view.h / SAFE_H;
+    const sized = (s: readonly [number, number]): [number, number] => [
+      Math.max(1, Math.round(s[0] * sx)),
+      Math.max(1, Math.round(s[1] * sy)),
     ];
+    const levels = BLOOM_LEVELS.map(sized);
+    const down = levels.map((s) => target(s, format));
+    const up = levels.slice(0, -1).map((s) => target(s, format));
+    const light = target(sized(LIGHT_TARGET), format);
+    // The hero matte (the view's size) a quarter, an eighth, a sixteenth, and back.
+    const matte = heroMatteTexture(view);
+    const q = (d: number): [number, number] => [Math.ceil(matte.width / d), Math.ceil(matte.height / d)];
+    const softSizes: ReadonlyArray<readonly [number, number]> = [q(4), q(8), q(16), q(8), q(4)];
     const soft = softSizes.map((s) => target(s, 'rgba8unorm'));
 
     super({
@@ -156,6 +165,7 @@ export class PostFilter extends Filter {
           uSep: { value: new Float32Array([0.09, 0.04, 0, 0]), type: 'vec4<f32>' },
           uSepTint: { value: new Float32Array([1, 1, 1, 0]), type: 'vec4<f32>' },
           uSepLook: { value: new Float32Array([0.3, 0.5, 0, 0]), type: 'vec4<f32>' },
+          uFrame: { value: new Float32Array([view.w / SAFE_H, view.h / SAFE_H, 0, 0]), type: 'vec4<f32>' },
         },
       },
       // Render the tree at the canvas's own resolution and multisampling: nothing goes soft.
@@ -184,7 +194,7 @@ export class PostFilter extends Filter {
     ).uniforms;
 
     for (let i = 1; i < down.length; i++) {
-      const src = BLOOM_LEVELS[i - 1] as readonly [number, number];
+      const src = levels[i - 1] as readonly [number, number];
       this.downF.push(
         passFilter('post-down', DOWN_FRAG, {
           downUniforms: { uTexel: { value: new Float32Array([1 / src[0], 1 / src[1]]), type: 'vec2<f32>' } },
@@ -239,6 +249,7 @@ export class PostFilter extends Filter {
         uDim: { value: 0.5, type: 'f32' },
         uDirection: { value: 0.5, type: 'f32' },
         uMaskTexel: { value: new Float32Array([1 / MASK_W, 1 / MASK_H]), type: 'vec2<f32>' },
+        uFrame: { value: new Float32Array([view.w / SAFE_H, view.h / SAFE_H]), type: 'vec2<f32>' },
       },
     });
     this.lightsU = (this.lightsF.resources.lightUniforms as { uniforms: PostFilter['lightsU'] }).uniforms;

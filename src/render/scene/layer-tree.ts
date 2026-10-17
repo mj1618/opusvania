@@ -2,12 +2,12 @@ import { Container } from 'pixi.js';
 import type { Room } from '../../scene/room';
 import type { Scene } from '../../sim/scene';
 import { viewTop } from '../camera/index';
-import { type CameraView, VIEW_H, VIEW_W } from '../contract';
+import { type CameraView, SAFE_H, SAFE_W, VIEW_MAX_H, VIEW_MAX_W } from '../contract';
 
 /**
  * The layer tree, back to front (docs/art-direction.md "Layers, back to front"):
  *
- *   sky         screen space  the sky glow; never moves (0..VIEW_W x 0..VIEW_H logical units)
+ *   sky         screen space  the sky glow; never moves (covers the view: ctx.view(), logical units)
  *   far[0..2]   0.12 0.25 0.42 far forest silhouettes, far[0] is the farthest
  *   mid         0.68          big trunks, roots, vines, fog sheets
  *   playfield   1             terrain, moss, plants, the pool (what the collision rects become)
@@ -24,7 +24,8 @@ import { type CameraView, VIEW_H, VIEW_W } from '../contract';
  * (< 1 lags behind = far away, > 1 runs ahead = near). The anchor is the scene's horizontal
  * centre at the camera's lowest resting height, so "on the ground, mid-scene"
  * is where all layers agree. Use `visible(name, cam)` to know what part of a layer is on screen
- * and `coverage(name)` for the most the follow camera can ever show of it.
+ * and `coverage(name)` for the most the follow camera can ever show of it (at the largest view
+ * shape, VIEW_MAX_W x VIEW_MAX_H, so a bake covers every window and a resize needs no re-bake).
  *
  * Zoom scales every world layer about the view centre (close-ups keep their parallax offsets).
  */
@@ -108,7 +109,8 @@ export class LayerTree {
     this.air = this.get('air');
     // The room may say where its background is composed for (`art.anchorY`); else the lowest resting view.
     const anchorY = (scene as Room).art?.anchorY;
-    this.anchor = { x: scene.width / 2, y: anchorY ?? Math.max(VIEW_H / 2, scene.height - VIEW_H / 2) };
+    // Measured with the safe area, so it never moves when the window changes shape.
+    this.anchor = { x: scene.width / 2, y: anchorY ?? Math.max(SAFE_H / 2, scene.height - SAFE_H / 2) };
   }
 
   get(name: LayerName): Container {
@@ -129,11 +131,11 @@ export class LayerTree {
     }
   }
 
-  /** The part of a world layer on screen right now, in that layer's own coordinates. */
+  /** The part of a world layer on screen right now (the whole view, not just the safe area), in that layer's own coordinates. */
   visible(name: LayerName, cam: CameraView): LayerRect {
     const f = this.parallax(name);
-    const w = VIEW_W / cam.zoom;
-    const h = VIEW_H / cam.zoom;
+    const w = cam.w / cam.zoom;
+    const h = cam.h / cam.zoom;
     const cx = this.anchor.x + (cam.x - this.anchor.x) * f;
     const cy = this.anchor.y + (cam.y - this.anchor.y) * f;
     return { x: cx - w / 2, y: cy - h / 2, w, h };
@@ -141,19 +143,27 @@ export class LayerTree {
 
   /**
    * The most of a world layer the follow camera (zoom 1, clamped to the scene, plus its headroom
-   * above the scene top: camera/index.ts `viewTop`) can ever show.
+   * above the scene top: camera/index.ts `viewTop`) can ever show, with the largest view
+   * (VIEW_MAX_W x VIEW_MAX_H: a bigger view reaches further past the anchor at parallax < 1).
    */
   coverage(name: LayerName): LayerRect {
     const s = this.scene;
-    const lo = this.visible(name, { x: VIEW_W / 2, y: viewTop(s) + VIEW_H / 2, zoom: 1 });
-    const hi = this.visible(name, { x: s.width - VIEW_W / 2, y: s.height - VIEW_H / 2, zoom: 1 });
+    const W = VIEW_MAX_W;
+    const H = VIEW_MAX_H;
+    const cam = (x: number, y: number): CameraView => ({ x, y, zoom: 1, w: W, h: H });
+    // A scene narrower (or shorter) than the view is centred in it (camera/index.ts `clampAxis`).
+    const xs = s.width <= W ? [s.width / 2] : [W / 2, s.width - W / 2];
+    const top = viewTop(s);
+    const ys = s.height - top <= H ? [(top + s.height) / 2] : [top + H / 2, s.height - H / 2];
+    const lo = this.visible(name, cam(xs[0] as number, ys[0] as number));
+    const hi = this.visible(name, cam(xs[xs.length - 1] as number, ys[ys.length - 1] as number));
     const x0 = Math.min(lo.x, hi.x);
     const y0 = Math.min(lo.y, hi.y);
     return {
       x: x0,
       y: y0,
-      w: Math.max(lo.x, hi.x) + VIEW_W - x0,
-      h: Math.max(lo.y, hi.y) + VIEW_H - y0,
+      w: Math.max(lo.x, hi.x) + W - x0,
+      h: Math.max(lo.y, hi.y) + H - y0,
     };
   }
 }
@@ -168,5 +178,6 @@ export function placeLayer(
   const cx = anchor.x + (cam.x - anchor.x) * parallax;
   const cy = anchor.y + (cam.y - anchor.y) * parallax;
   c.scale.set(cam.zoom);
-  c.position.set(VIEW_W / 2 - cx * cam.zoom, VIEW_H / 2 - cy * cam.zoom);
+  // The view centre is the safe area's centre in logical coordinates, whatever the view's size.
+  c.position.set(SAFE_W / 2 - cx * cam.zoom, SAFE_H / 2 - cy * cam.zoom);
 }

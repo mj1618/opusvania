@@ -5,8 +5,9 @@ import type { BusId } from '../audio/tuning';
 import type { Game, RunMode } from '../game';
 import { type InputScript, parseInputScript } from '../input/script';
 import type { GameApp } from '../render/app';
-import { type CameraView, VIEW_H, VIEW_W } from '../render/contract';
+import { type CameraView, SAFE_H, SAFE_W, type ViewSize } from '../render/contract';
 import type { PointLight } from '../render/lights';
+import { POST } from '../render/post/config';
 import type { CameraOverride, RenderStage } from '../render/stage';
 import { ROOM_IDS } from '../scene/index';
 import type { Room } from '../scene/room';
@@ -83,13 +84,17 @@ export interface GameDebugApi {
   events(n?: number): Array<SimEvent & { f: number }>;
   /** The room's data (content/rooms/<id>.json, validated; the sim's part and the render-only fields). */
   scene(): Room;
-  /** Mode, frame, view and canvas sizes, GPU. */
+  /**
+   * Mode, frame, view and canvas sizes, GPU. `view` is the logical view now (any window shape:
+   * contract.ts ViewSize, memory/view-size.md); `safe` the 16:9 safe area inside it.
+   */
   info(): {
     mode: RunMode;
     frame: number;
     clock: number;
     scene: { id: string; width: number; height: number };
-    view: { w: number; h: number };
+    view: ViewSize;
+    safe: { x: number; y: number; w: number; h: number };
     canvas: { w: number; h: number; resolution: number };
     gpu: string;
   };
@@ -322,6 +327,13 @@ export interface GameDebugApi {
     hitboxes(on?: boolean): boolean;
     /** Tuning panel on/off. */
     panel(on?: boolean): boolean;
+    /** Post-processing on/off (no argument toggles); redraws. */
+    post(on?: boolean): boolean;
+    /**
+     * The canvas's clear colour (what an uncovered pixel shows: the letterbox past the widest or
+     * tallest view); no argument reads it. Redraws. The coverage e2e sets a loud one.
+     */
+    clearColor(rgb?: number): number;
   };
 }
 
@@ -497,7 +509,8 @@ export function installDebugApi(deps: {
         frame: game.state.frame,
         clock: stage.clock,
         scene: { id: game.scene.id, width: game.scene.width, height: game.scene.height },
-        view: { w: VIEW_W, h: VIEW_H },
+        view: { ...ga.view() },
+        safe: { x: 0, y: 0, w: SAFE_W, h: SAFE_H },
         canvas: { w: ga.app.canvas.width, h: ga.app.canvas.height, resolution: ga.app.renderer.resolution },
         gpu: String((ext && gl?.getParameter(ext.UNMASKED_RENDERER_WEBGL)) ?? 'unknown'),
       };
@@ -701,6 +714,19 @@ export function installDebugApi(deps: {
         return v;
       },
       panel: (on) => panel.toggle(on),
+      post(on) {
+        POST.enabled = on ?? !POST.enabled;
+        redraw();
+        return POST.enabled;
+      },
+      clearColor(rgb) {
+        const bg = ga.app.renderer.background;
+        if (rgb !== undefined) {
+          bg.color = rgb;
+          redraw();
+        }
+        return bg.color.toNumber();
+      },
     },
   };
   // The collision overlay draws the enemies' true boxes from the live state.

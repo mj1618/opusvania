@@ -2,7 +2,7 @@
  * Screenshots for judging the look. Boots the game against a running dev server, drives it
  * deterministically through window.__game and writes PNGs:
  *
- *   wide-<n>-<name>.png     the full 1920x1080 view at the room's camera stops (its `shots.wide` in
+ *   wide-<n>-<name>.png     the full view (1920x1080, or --size) at the room's camera stops (its `shots.wide` in
  *                           content/rooms/<id>.json), with the character standing in view
  *   closeup-<name>.png      the character at 4x zoom in one situation each (idle, run, jump rise,
  *                           apex, fall, land, wall slide, dash, skid, double jump)
@@ -17,6 +17,9 @@
  *   npm run shots -- --no-gpu           # software GL
  *   npm run shots -- --pickups          # with the glints and the counter (left out by default: the
  *                                       # stops stand next to some, so they would be mid-pickup)
+ *   npm run shots -- --size 2560x1080   # another window shape (21:9; 1920x1200 = 16:10, 1440x1080 =
+ *                                       # 4:3): the view extends past the 16:9 safe area
+ *                                       # (memory/view-size.md). Default out dir: shots/<W>x<H>/
  *
  * Same code + same flags = same pictures: the sim is stepped, never timed, and render time
  * advances exactly 1/60 s per step.
@@ -33,7 +36,8 @@ const { values: args } = parseArgs({
   options: {
     url: { type: 'string', default: DEFAULT_URL },
     room: { type: 'string', default: DEFAULT_ROOM },
-    out: { type: 'string', default: 'shots' },
+    out: { type: 'string' },
+    size: { type: 'string', default: '1920x1080' },
     only: { type: 'string' },
     ambient: { type: 'string', default: '60' },
     zoom: { type: 'string', default: '4' },
@@ -45,12 +49,19 @@ const { values: args } = parseArgs({
 });
 if (args.help || (args.only && args.only !== 'wide' && args.only !== 'closeup')) {
   console.log(
-    'npm run shots -- [--room=<id>] [--only=wide|closeup] [--out=dir] [--url=http://localhost:5180] [--ambient=60] [--zoom=4] [--hitboxes] [--pickups] [--no-gpu]',
+    'npm run shots -- [--room=<id>] [--only=wide|closeup] [--out=dir] [--size=1920x1080] [--url=http://localhost:5180] [--ambient=60] [--zoom=4] [--hitboxes] [--pickups] [--no-gpu]',
   );
   process.exit(args.help ? 0 : 1);
 }
 
-const VIEW = { width: 1920, height: 1080 };
+const [sizeW, sizeH] = (args.size ?? '1920x1080').split('x').map(Number);
+if (!sizeW || !sizeH || sizeW < 320 || sizeH < 180) {
+  console.error(`--size wants WxH (e.g. 2560x1080), got "${args.size}"`);
+  process.exit(1);
+}
+/** The window (and canvas) size: any shape; the game fills it (src/render/app.ts). */
+const VIEW = { width: sizeW, height: sizeH };
+const DEFAULT_SIZE = VIEW.width === 1920 && VIEW.height === 1080;
 /** Close-up tile: this part of the centre of the zoomed view, in canvas px. */
 const TILE = { width: 640, height: 760 };
 
@@ -100,7 +111,7 @@ async function shoot(page: Page, file: string, clip?: Clip): Promise<Buffer> {
 
 async function main(): Promise<void> {
   const t0 = Date.now();
-  const outDir = resolve(args.out ?? 'shots');
+  const outDir = resolve(args.out ?? (DEFAULT_SIZE ? 'shots' : `shots/${VIEW.width}x${VIEW.height}`));
   mkdirSync(outDir, { recursive: true });
   const ambient = Number(args.ambient);
   const zoom = Number(args.zoom);

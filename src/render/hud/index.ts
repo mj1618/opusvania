@@ -12,7 +12,7 @@
 import { CanvasSource, Container, Rectangle, Sprite, Texture } from 'pixi.js';
 import { lampCost, lanternCost } from '../../sim/goal';
 import { tuning } from '../../sim/tuning';
-import type { SimView } from '../contract';
+import { SAFE_VIEW, type SimView, type ViewSize } from '../contract';
 import { GOAL } from '../goal/config';
 import { streamCount } from '../goal/logic';
 import { GlintBatch, K_FLARE, K_GLINT, K_SPARK } from '../pickups/batch';
@@ -273,7 +273,12 @@ export class Hud {
     return Texture.from(canvas);
   }
 
-  update(dt: number, clock: number, sim: SimView): void {
+  /**
+   * `view`: the visible view this frame (contract.ts ViewSize). The corner cluster (lights, count,
+   * pips) sits in its real top-left corner; the end summary stays centred in the safe area.
+   */
+  update(dt: number, clock: number, sim: SimView, view: ViewSize = SAFE_VIEW): void {
+    hudLink.view = view;
     // The wallet as she sees it: while she kindles a lantern the glints streaming out of her have
     // left the count already (the sim takes the whole cost at the moment it catches).
     let count = sim.pickups.count;
@@ -397,7 +402,7 @@ export class Hud {
     // the count or the pips are up, the lights are up too, each in its own fixed place.
     const pipsUp = this.pips.root.visible && this.pips.root.alpha > 0.003;
     H.update(dt, clock, sim, quiet, this.hold > 0 || pipsUp);
-    this.shake.position.set(H.shakeX, H.shakeY);
+    this.shake.position.set(view.left + H.shakeX, view.top + H.shakeY);
 
     // The run is over: the cluster leaves the picture to the ending, and the summary comes.
     // (Not before the offering has gone in: the count is what shows it going.)
@@ -411,7 +416,8 @@ export class Hud {
     const U = HUD.under;
     const under =
       hudLink.on && !sim.goal.gathered
-        ? (1 - sm(U.x, U.x + U.soft, hudLink.x)) * (1 - sm(U.y, U.y + U.soft, hudLink.y))
+        ? (1 - sm(U.x, U.x + U.soft, hudLink.x - view.left)) *
+          (1 - sm(U.y, U.y + U.soft, hudLink.y - view.top))
         : 0;
     this.clear += (under - this.clear) * Math.min(1, dt * U.rate);
     this.shake.alpha = this.live * this.live * (3 - 2 * this.live) * (1 - (1 - U.alpha) * this.clear);

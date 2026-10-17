@@ -1,14 +1,14 @@
 # Scene, units, layers, ownership
 
 ## Units
-- **Sim px** (= "world px") everywhere. The logical view is **1920x1080** (16:9) at zoom 1
-  (`VIEW_W/VIEW_H`, `src/render/contract.ts`). One "tile" is **64 px** (`TILE`, `src/scene/index.ts`):
+- **Sim px** (= "world px") everywhere. The logical view is **at least the 1920x1080 safe area** at zoom 1
+  and extends with the window's shape (`ctx.view()`, `cam.w/h`; never assume 1920x1080: view-size.md). One "tile" is **64 px** (`TILE`, `src/scene/index.ts`):
   a layout grid only, the sim has no tiles.
 - The player's collision box is **40x80** (`tuning.body`); `(x, y)` is its top-left, integers. The
   drawn character is ~1.3 tiles (ears overhang the box). "Feet" = bottom-centre `(x + w/2, y + h)`:
   events, `teleport` and the scene's `spawn` all use it.
 - Velocities are px per sim frame (x60 = px/s); the sim runs at 60Hz. y grows downward.
-- **Rendering is at full device resolution**: the canvas fills the window letterboxed to 16:9, backed
+- **Rendering is at full device resolution**: the canvas fills the window (any shape: view-size.md), backed
   at CSS size x devicePixelRatio, and the stage root is scaled (`src/render/app.ts`). Everything under
   it works in logical units, so draw vectors/meshes and they stay crisp; nothing is upscaled. Shaders
   that need device pixels use `ctx.viewScale()`. Camera and player are interpolated between sim frames.
@@ -146,7 +146,7 @@ lamp left its sight instead, and its dives end where she fights burr-rise (enemi
 ## Layer tree (`src/render/scene/layer-tree.ts`), back to front
 | layer | parallax | what |
 |---|---|---|
-| `sky` | screen space | sky glow; 0..1920 x 0..1080, never moves |
+| `sky` | screen space | sky glow; covers the largest view (`SKY_RECT`), never moves |
 | `far[0..2]` | 0.12, 0.25, 0.42 | far forest silhouettes, `far[0]` farthest |
 | `mid` | 0.68 | big trunks, roots, vines, fog sheets |
 | `goalLight` | 1 | additive warm light behind the terrain: heart waking, ending (`src/render/goal/`) |
@@ -218,7 +218,7 @@ Interfaces are documented at the top of `scene/index.ts`, `character/index.ts`, 
   the grove. The stops and close-up spots are the room's `shots` in its JSON (they used to be a list in
   `tools/shots.ts`); `look:stats --stops` reads the same list. `npm run clip -- --room test-grove ...` for Grove
   coordinates.
-- `npm run shots -- --room test-grove` (dev server on 5180, or `--url`): `shots/wide-*.png` (1920x1080 at 13 camera stops; 8 = the bluff, 9 = the hollow, 10 = the shaft floor, 11 = the
+- `npm run shots -- --room test-grove` (dev server on 5180, or `--url`; `--size 2560x1080` etc. for other window shapes): `shots/wide-*.png` (1920x1080 at 13 camera stops; 8 = the bluff, 9 = the hollow, 10 = the shaft floor, 11 = the
   summit bough, 12 = the catch branch, 13 = the foot of the far bluff),
   `shots/closeup-*.png` (character at 4x in 12 situations) and `shots/closeup-strip.png`. `--only=wide|closeup`,
   `--out=dir`, `--ambient=N` (render frames to run before shooting), `--hitboxes`, `--no-gpu`. ~1.5 s.

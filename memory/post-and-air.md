@@ -152,7 +152,8 @@
 - Ended on: lights.gain 0.38 (about +38% at the centre), cap 0.43, channelCap 0.62, reach 1.15, haze
   0.006, glint 0.08, warm 0.004; bloom intensity 0.7, colorBoost 1.3; midLift 0; exposure 1.3 / 1.12 /
   1.4; mist litByLights 0; backGlow off. Do not raise these to chase mean luma or hero ratio.
-- Resolution: nothing scales with window size (same numbers at 1920, 1280 and 960 wide).
+- Resolution: nothing scales with window size (same numbers at 1920, 1280 and 960 wide). The window's
+  SHAPE stretches the targets (view-size.md): light units are safe-area heights, the vignette stretches.
 
 ## Round 11: what post does to the hero (measured)
 - Post does not blur her: edge gradient on her box is the same or higher with post on, MSAA on/off

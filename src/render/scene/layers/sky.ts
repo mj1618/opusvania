@@ -14,7 +14,7 @@ import {
   Sprite,
   UniformGroup,
 } from 'pixi.js';
-import { VIEW_H, VIEW_W } from '../../contract';
+import { SAFE_H, SAFE_W, VIEW_MAX_H, VIEW_MAX_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { BG_VERT, noiseTexture, quadGeometry, rgb, ZONES, zoneWeights } from '../lib/bg-bake';
 import { KEY_LIGHT } from '../lib/look';
@@ -63,9 +63,22 @@ export const SKY = {
 } as const;
 
 /**
- * The shaded sky: a small texture covering x -8..VIEW_W+8, y -8..VIEW_H+8 of the logical view, and
- * the sprite that shows it. far.ts composites the texture itself in its far-pair pass and hides
- * the sprite (one full-screen pass less).
+ * What the sky texture covers, in logical view coordinates: the largest view (contract.ts
+ * VIEW_MAX_*) centred on the safe area, 8 px to spare at every edge. Shading that much always (it is
+ * a quarter-size texture) means a resize never reallocates it, and its texels fall on the same
+ * logical grid as a 16:9-only sky did (336 and 228 are multiples of 1 / renderScale).
+ */
+export const SKY_RECT = {
+  x: (SAFE_W - VIEW_MAX_W) / 2 - 8,
+  y: (SAFE_H - VIEW_MAX_H) / 2 - 8,
+  w: VIEW_MAX_W + 16,
+  h: VIEW_MAX_H + 16,
+} as const;
+
+/**
+ * The shaded sky: a small texture covering SKY_RECT of the logical view, and the sprite that shows
+ * it. far.ts composites the texture itself in its far-pair pass and hides the sprite (one
+ * full-screen pass less).
  */
 export const SKY_OUTPUT: { texture: RenderTexture | null; sprite: Sprite | null } = {
   texture: null,
@@ -77,11 +90,11 @@ export function skyGlowAt(
   cam: { x: number; y: number; zoom: number },
   anchorY: number,
 ): { x: number; y: number } {
-  const x = VIEW_W / 2 + SKY.glowOffsetX + (KEY_LIGHT.entryX - cam.x) * SKY.glowParallaxX;
+  const x = SAFE_W / 2 + SKY.glowOffsetX + (KEY_LIGHT.entryX - cam.x) * SKY.glowParallaxX;
   const y = SKY.glowRestY + (anchorY - cam.y) * SKY.glowParallaxY;
   return {
-    x: VIEW_W / 2 + (x - VIEW_W / 2) * cam.zoom,
-    y: VIEW_H / 2 + (y - VIEW_H / 2) * cam.zoom,
+    x: SAFE_W / 2 + (x - SAFE_W / 2) * cam.zoom,
+    y: SAFE_H / 2 + (y - SAFE_H / 2) * cam.zoom,
   };
 }
 
@@ -119,12 +132,13 @@ uniform vec4 uBand;
 uniform vec3 uBandCol;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main() {
-  vec2 p = vUV * vec2(${VIEW_W + 16}.0, ${VIEW_H + 16}.0) - 8.0;
+  // Logical view coordinates (the safe area is 0..${SAFE_W} x 0..${SAFE_H}; SKY_RECT reaches past it).
+  vec2 p = vUV * vec2(${SKY_RECT.w}.0, ${SKY_RECT.h}.0) + vec2(${SKY_RECT.x}.0, ${SKY_RECT.y}.0);
   float t = uTimeCam.x;
   float zoom = uTimeCam.z;
-  float y = p.y / ${VIEW_H}.0;
+  float y = p.y / ${SAFE_H}.0;
   // Zone mood by the playfield x behind each pixel.
-  float px = uTimeCam.y + (p.x - ${VIEW_W / 2}.0) / zoom;
+  float px = uTimeCam.y + (p.x - ${SAFE_W / 2}.0) / zoom;
   float zl = 1.0 - smoothstep(${ZONES.l0}.0, ${ZONES.l1}.0, px);
   float zr = smoothstep(${ZONES.r0}.0, ${ZONES.r1}.0, px);
   vec3 top = mix(mix(uTop, uTopL, zl), uTopR, zr);
@@ -135,7 +149,7 @@ void main() {
   float dx = (p.x - uGlow.x) / (1500.0 * zoom);
   col = mix(col, uCorner, clamp(dx * dx * (1.0 - y * 0.75), 0.0, 0.8));
 
-  vec2 q = (p - vec2(${VIEW_W / 2}.0, ${VIEW_H / 2}.0)) / zoom + vec2(uTimeCam.y * 0.06, 0.0);
+  vec2 q = (p - vec2(${SAFE_W / 2}.0, ${SAFE_H / 2}.0)) / zoom + vec2(uTimeCam.y * 0.06, 0.0);
   float n = texture(uNoise, q / 1900.0 + vec2(t * 0.0035, t * 0.0006)).r;
   float m = texture(uNoise, q / 700.0 + vec2(-t * 0.006, t * 0.0015)).g;
   float mist = n * 0.65 + m * 0.35;
@@ -183,7 +197,7 @@ export class SkyLayer implements EnvModule {
   init(ctx: SceneContext): void {
     this.anchorY = ctx.layers.anchor.y;
     this.uniforms = new UniformGroup({
-      uGlow: { value: new Float32Array([VIEW_W / 2, SKY.glowRestY]), type: 'vec2<f32>' },
+      uGlow: { value: new Float32Array([SAFE_W / 2, SKY.glowRestY]), type: 'vec2<f32>' },
       uDir: { value: new Float32Array([KEY_LIGHT.dirX, KEY_LIGHT.dirY]), type: 'vec2<f32>' },
       uTimeCam: { value: new Float32Array([0, 0, 1, 0]), type: 'vec4<f32>' },
       uTop: { value: rgb(SKY.top), type: 'vec3<f32>' },
@@ -232,23 +246,24 @@ export class SkyLayer implements EnvModule {
       resources: { uNoise: noiseTexture().source, sky: this.uniforms },
     });
     // Overdraw a little so sub-pixel canvas rounding never shows the clear colour.
-    this.mesh = new Mesh({ geometry: quadGeometry(-8, -8, VIEW_W + 16, VIEW_H + 16), shader });
+    const R = SKY_RECT;
+    this.mesh = new Mesh({ geometry: quadGeometry(R.x, R.y, R.w, R.h), shader });
     // The sky is all soft gradients and mostly hidden: shade it small, then stretch it (a full-size
     // pass of this shader was the most expensive thing in the background).
     const k = SKY.renderScale;
     this.renderer = ctx.renderer;
     this.target = RenderTexture.create({
-      width: Math.ceil((VIEW_W + 16) * k),
-      height: Math.ceil((VIEW_H + 16) * k),
+      width: Math.ceil(R.w * k),
+      height: Math.ceil(R.h * k),
       resolution: 1,
     });
-    this.toTarget = new Matrix(k, 0, 0, k, 8 * k, 8 * k);
+    this.toTarget = new Matrix(k, 0, 0, k, -R.x * k, -R.y * k);
     const sprite = new Sprite(this.target);
     SKY_OUTPUT.texture = this.target;
     SKY_OUTPUT.sprite = sprite;
     sprite.label = 'sky-glow';
-    sprite.position.set(-8, -8);
-    sprite.setSize(VIEW_W + 16, VIEW_H + 16);
+    sprite.position.set(R.x, R.y);
+    sprite.setSize(R.w, R.h);
     ctx.layers.sky.addChild(sprite);
     if (import.meta.env.DEV) {
       // Lets tools toggle layers: __bg.layers.get('playfield').visible = false; __game.render().
@@ -268,7 +283,7 @@ export class SkyLayer implements EnvModule {
     const at = (x: number, y: number, homeX: number): [number, number] => {
       const sx = x + (homeX - cam.x) * SKY.glowParallaxX;
       const sy = y + (this.anchorY - cam.y) * SKY.glowParallaxY;
-      return [VIEW_W / 2 + (sx - VIEW_W / 2) * cam.zoom, VIEW_H / 2 + (sy - VIEW_H / 2) * cam.zoom];
+      return [SAFE_W / 2 + (sx - SAFE_W / 2) * cam.zoom, SAFE_H / 2 + (sy - SAFE_H / 2) * cam.zoom];
     };
     // The ending (memory/goal.md): the grove wakes, so the key bloom shows a little in the side zones too.
     const goal = frame.sim.goal;

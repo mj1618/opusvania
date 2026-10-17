@@ -6,7 +6,7 @@
  */
 import { Sprite, Texture } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
-import { VIEW_H, VIEW_W } from '../contract';
+import { SAFE_VIEW, type ViewSize } from '../contract';
 import { type CameraTuning, cameraTuning } from './tuning';
 
 function ease(t: number): number {
@@ -27,8 +27,6 @@ export class RoomFade {
     this.layer = new Sprite(Texture.WHITE);
     this.layer.label = 'room-fade';
     this.layer.tint = 0x000000;
-    this.layer.setSize(VIEW_W + 4, VIEW_H + 4);
-    this.layer.position.set(-2, -2);
     this.layer.eventMode = 'none';
     this.layer.visible = false;
   }
@@ -41,7 +39,12 @@ export class RoomFade {
   }
 
   /** Reads this frame's sim events and advances by `dt` seconds of render time. */
-  update(dt: number, events: readonly SimEvent[], ct: CameraTuning = cameraTuning): void {
+  update(
+    dt: number,
+    events: readonly SimEvent[],
+    v: ViewSize = SAFE_VIEW,
+    ct: CameraTuning = cameraTuning,
+  ): void {
     const R = ct.room;
     for (const e of events) {
       if (e.type === 'roomExit') this.go(1, e.frames / 60 - R.exitEarly);
@@ -63,5 +66,8 @@ export class RoomFade {
     }
     this.layer.visible = this.k > 0.002;
     this.layer.alpha = Math.min(1, this.k);
+    // Over the whole visible view, 2 px to spare at every edge.
+    this.layer.position.set(v.left - 2, v.top - 2);
+    this.layer.setSize(v.w + 4, v.h + 4);
   }
 }

@@ -11,7 +11,7 @@
  */
 import { Container } from 'pixi.js';
 import type { Pickup } from '../../sim/scene';
-import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } from '../contract';
+import type { CameraView, RenderContext, SimView } from '../contract';
 import type { PointLight } from '../lights';
 import { zoneWeights } from '../scene/lib/fx-zones';
 import { wind } from '../scene/lib/look';
@@ -467,8 +467,8 @@ export class PickupRenderer {
     b.uniform[1] = G.glint.quad;
     b.uniform[2] = G.great.quad;
     b.uniform[3] = G.gain;
-    const halfW = VIEW_W / 2 / cam.zoom + 160;
-    const halfH = VIEW_H / 2 / cam.zoom + 160;
+    const halfW = cam.w / 2 / cam.zoom + 160;
+    const halfH = cam.h / 2 / cam.zoom + 160;
 
     // --- Which stars lead: of each trail, the few untaken ones nearest to her. The rest are seeds.
     for (const list of this.trails) {
@@ -1045,8 +1045,8 @@ export class PickupRenderer {
   private updatePods(dt: number, clock: number, cam: CameraView, sim: SimView): void {
     const hp = sim.pods.hp;
     const b = this.batch;
-    const halfW = VIEW_W / 2 / cam.zoom + 120;
-    const halfH = VIEW_H / 2 / cam.zoom + 120;
+    const halfW = cam.w / 2 / cam.zoom + 120;
+    const halfH = cam.h / 2 / cam.zoom + 120;
     const player = sim.player;
     const list = sim.scene.pods ?? [];
     for (let i = 0; i < this.pods.length; i++) {
