@@ -33,9 +33,11 @@ brightest place in the world. It is not evil; it is lonely. Rules that make this
   Ori's Bash), then things she can snuff out. The dark is safe; light is danger and speed.
 - **Every lamp she puts out frees a cloud of moths.** They fly with her for a while, then go on toward the mountain.
   Lamps she can't reach yet are the reason to come back with new abilities. The count of freed moths is completion.
-- **The goal is in view.** The mountain under the moon is seen at vistas (canopy gaps, clifftops, a camera lift each
-  time a lamp goes out) and gets closer each region. Underground, the freed moths flying off show the way.
-- **Regions, in order (all natural art):** the wood (the Grove, the demo level), the valley of lamps, the marsh, the
+- **The goal shows at vistas, not always.** The mountain under the moon is a reward view at a few vistas per region and
+  gets closer each region; it does not have to be in frame (Matt, 2026-10-17: too hard to get right). The way on is
+  shown by the freed moths flying off, the moon's side of the sky, the lamps themselves and the map
+  (`docs/design/journey.md` §5).
+- **Regions, in order (all natural art):** the wood, the valley of lamps, the marsh, the
   pass, and the cave.
 
 ## Opening
@@ -44,7 +46,7 @@ moon over the mountain. Control within 10 seconds, title over the moon. Upgrade 
 the last to hatch, chases the swarm streaming past the moon, sees it break apart over the valley lamps, gets caught by one and
 beats free.
 
-## Bosses (first ideas)
+## Bosses (first ideas; the current line-up is in `docs/design/creatures.md`)
 - The mantis under the brightest lamp (a fast fighter).
 - A grove of lamps that pull from every side.
 - The bat colony under the bridge.
@@ -63,5 +65,6 @@ game is home.
 - **Try before cutting:** hard parts (the fast mantis, scripted scenes, the firefly's acting) get a real attempt when
   we reach them. Cut them only if that attempt fails, as judged by Matt.
 - Judge story work from built frames and play, never from docs. AI critic scores are not the bar (`ai-critics.md`).
-- The demo level stays as it is until gameplay work deliberately changes it. Its glints, lanterns, burrbacks and
-  lampwings come from the old design and will be reworked toward this story one increment at a time.
+- The demo level (the Grove) is a test bed, not part of the real game, and constrains nothing in it. Its glints,
+  lanterns, burrbacks and lampwings come from the old design and are reworked or dropped as `docs/design/core.md` §5 says.
+- The whole game's rough plan (abilities, world, creatures, journey, look, tech, scope tiers) is `docs/design/`.

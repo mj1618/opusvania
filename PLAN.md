@@ -20,7 +20,14 @@ The demo level: one scene, the Grove (`content/scene/grove.json`), about three s
 The earlier games (the L-loop levels, Kid Tallow, the "Kept World" story and its prologue, the other hero skins) were
 deleted; git history has them.
 
+## The plan for the whole game
+`docs/design/` (start at its README): pillars, the ability chain, the world map and scope tiers, creatures and
+bosses, the journey, the look and sound, the tech roadmap, and the open questions for Matt. Tier 1, the first
+target, is the wood and the valley of lamps as a standalone chapter (27 rooms, 25 lamps, two bosses, 1.5–2 h).
+The demo level is a test bed (`test-grove`) and constrains nothing in the real game.
+
 ## Next
-Bring the story into play one increment at a time, each polished to the bar before the next. First the core verb:
-a lamp that pulls Wing in, a swarm of moths circling it, and putting it out to free them, built in the Grove.
-Matt plays it, and then we decide what comes next.
+One increment at a time, each played by Matt and polished to the bar before the next (`docs/design/README.md`,
+"How we build it"). First: the lamp verb in the test grove as a greybox (pull with swirl, caught and beat free, snuff
+with the blade, its predators scatter). Matt plays it. Then the lamp brought to the bar (flame, snuff, freed moths,
+the two-light re-key), then tech stage 0 and the first real room, the hatching branch.
