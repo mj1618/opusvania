@@ -58,6 +58,9 @@ checkbox design: one-off elements added to hit counts. So:
   and position errors, hesitation, a first-timer's knowledge, and the screen as their only view. Each run is recorded
   as a video. Reviewers watch it and judge feel and flow, not just numbers.
 - **Step back every few rounds.** Ask whether the strategy is working, and write any change here.
+- **No sunk cost (Matt, 2026-10-18).** Deleting and reworking is fine, and often right. A large problem usually
+  needs a large rework: rooms, mechanics, creatures, kit pieces or whole systems. Agents tend to patch instead of
+  rework. Here, reworking is expected whenever new understanding shows the existing design is wrong.
 
 ## Playtesting without Matt
 - **Persona bots** (`npm run playtest`): naive, explorer, speedrunner and cautious. Each run records telemetry: time per room,
