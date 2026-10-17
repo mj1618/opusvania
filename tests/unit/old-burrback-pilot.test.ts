@@ -108,7 +108,13 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
     if (jumpHold > 0) {
       m |= J | (jumpDir > 0 ? toward : jumpDir < 0 ? away : 0);
       jumpHold--;
-    } else if (e.mode === 'roll' && !p.grounded && p.vy > 0 && Math.abs(dx) < e.w / 2 + 20 && dice(6, f >> 4) < 600) {
+    } else if (
+      e.mode === 'roll' &&
+      !p.grounded &&
+      p.vy > 0 &&
+      Math.abs(dx) < e.w / 2 + 20 &&
+      dice(6, f >> 4) < 600
+    ) {
       // Coming down over the ball: a down cut, most times.
       if (f - lastPress >= 10) {
         m |= ActionBit.down | A;
@@ -160,8 +166,15 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
           console.log(f, ev.type, before);
       }
     prev = m;
-    if (process.env.OLD_STATE && seed === Number(process.env.OLD_SEED ?? 1) && react === Number(process.env.OLD_REACT ?? 20) && f % 60 === 0)
-      console.log(`t${f / 60} ph${e.phase} ${e.mode}:${e.timer} st${e.stunned ? 1 : 0} hp${e.hp} ex${Math.round(e.x)} spd${e.ramSpeed} | p ${Math.round(p.x)},${Math.round(p.y)} hp${p.hp} camp${e.camp}`);
+    if (
+      process.env.OLD_STATE &&
+      seed === Number(process.env.OLD_SEED ?? 1) &&
+      react === Number(process.env.OLD_REACT ?? 20) &&
+      f % 60 === 0
+    )
+      console.log(
+        `t${f / 60} ph${e.phase} ${e.mode}:${e.timer} st${e.stunned ? 1 : 0} hp${e.hp} ex${Math.round(e.x)} spd${e.ramSpeed} | p ${Math.round(p.x)},${Math.round(p.y)} hp${p.hp} camp${e.camp}`,
+      );
     for (let i = from; i < events.length; i++) {
       const ev = events[i] as SimEvent;
       if (ev.type === 'hurt') {
