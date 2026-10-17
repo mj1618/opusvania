@@ -44,6 +44,8 @@ type TatterEntry = {
   pull: number;
   gone: number;
   key: string;
+  /** Its try at the air starts on this story flag's `flagSet` (`stage.tatters[].tryOn`). */
+  tryOn: string | null;
 };
 
 /** Tatters gone through their door this session (`room:index`): they do not come back on a re-entry. */
@@ -76,10 +78,26 @@ export class Cast {
     this.row = new CocoonRow(room);
     const t = room.marks?.tatter;
     if (t)
-      this.tatters.push({ t: new Tatter(ctx, layer, room, t), climb: null, u: 0, pull: 0, gone: 0, key: '' });
+      this.tatters.push({
+        t: new Tatter(ctx, layer, room, t),
+        climb: null,
+        u: 0,
+        pull: 0,
+        gone: 0,
+        key: '',
+        tryOn: null,
+      });
     for (const [i, m] of (room.marks?.stage?.tatters ?? []).entries()) {
       const key = `${room.id}:${i}`;
-      const e = { t: new Tatter(ctx, layer, room, m), climb: m.climb ?? null, u: 0, pull: 0, gone: 0, key };
+      const e = {
+        t: new Tatter(ctx, layer, room, m),
+        climb: m.climb ?? null,
+        u: 0,
+        pull: 0,
+        gone: 0,
+        key,
+        tryOn: m.tryOn ?? null,
+      };
       if (VANISHED.has(key)) e.gone = 1;
       this.tatters.push(e);
     }
@@ -196,6 +214,7 @@ export class Cast {
           alpha: TATTER_HALO.alpha * wide,
         });
       if (c.climb) this.climb(c, dt, her);
+      if (c.tryOn && events.some((e) => e.type === 'flagSet' && e.flag === c.tryOn)) t.tryT = 0;
       // (It is drawn about its mark: her, seen from where it has climbed to.)
       const seen = hatchLink.inside
         ? null

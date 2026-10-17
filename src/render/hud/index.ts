@@ -12,6 +12,7 @@
 import { CanvasSource, Container, Rectangle, Sprite, Texture } from 'pixi.js';
 import { lampCost, lanternCost } from '../../sim/goal';
 import { tuning } from '../../sim/tuning';
+import { STAGE_HOLD } from '../camera/stage-cam';
 import { type CameraView, SAFE_VIEW, type SimView, type ViewSize } from '../contract';
 import { GOAL } from '../goal/config';
 import { streamCount } from '../goal/logic';
@@ -432,7 +433,17 @@ export class Hud {
           (1 - sm(U.y, U.y + U.soft, hudLink.y - view.top))
         : 0;
     this.clear += (under - this.clear) * Math.min(1, dt * U.rate);
-    this.shake.alpha = this.live * this.live * (3 - 2 * this.live) * (1 - (1 - U.alpha) * this.clear);
+    // A held beat is a scene: the HUD steps out of it (plan r5 item 9) and comes back as it ends.
+    const held = 1 - STAGE_HOLD.held;
+    this.shake.alpha =
+      this.live *
+      this.live *
+      (3 - 2 * this.live) *
+      (1 - (1 - U.alpha) * this.clear) *
+      held *
+      held *
+      (3 - 2 * held);
+    this.prompts.root.alpha = held;
     this.shake.visible = this.live > 0.003;
     this.summary.update(dt, clock, sim);
     this.prompts.update(dt, clock, sim);

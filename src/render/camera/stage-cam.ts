@@ -21,6 +21,17 @@ import type { CameraView } from '../contract';
 /** Seconds of each beat's ease in / out (the hold is the data's). */
 export const STAGE_CAM = {
   finale: { in: 1.4, out: 1.6 },
+  /**
+   * The camera never stands still in a held beat: over its hold it pushes in by `push` (a share of its zoom) and
+   * drifts `drift` px (toward where it looks); a `storyHold` with no shot pushes in on her by `holdPush` over
+   * `holdSecs`. `heldIn` / `heldOut`: seconds the hold state takes to come and go.
+   */
+  push: 0.06,
+  drift: 60,
+  holdPush: 0.05,
+  holdSecs: 4,
+  heldIn: 0.35,
+  heldOut: 0.5,
   /** How far over the room's top (and past its sides) the finale's wide frame may look (open sky over the crown), px. */
   skyAbove: 1600,
   vista: { in: 1.0, out: 1.1 },
@@ -32,6 +43,13 @@ export const STAGE_CAM = {
 export const DONE = 1e6;
 
 export const STAGE_BEATS = { vista: -1, glimpse: -1, bask: -1, finale: -1 };
+
+/**
+ * A held beat reads as a scene, not a freeze (plan r5, item 9): `held` 0..1 = how far a beat holds the view now (a
+ * stage shot's weight, or a sim `storyHold` with no shot): the HUD fades by it; `look` = what the camera shows, for
+ * her head to turn to (`w` = how firmly). Written by `StageCamera.update`, read by the HUD and the character.
+ */
+export const STAGE_HOLD = { held: 0, look: { x: 0, y: 0, w: 0 } };
 
 function smoother(a: number, b: number, t: number): number {
   const u = Math.min(1, Math.max(0, (t - a) / (b - a)));
@@ -55,6 +73,11 @@ export class StageCamera {
   y = 0;
   zoom = 1;
   private shot: Shot | null = null;
+  /** A sim `storyHold` with no shot of its own: seconds since it began (-1 = none) and its length. */
+  private holdT = -1;
+  private holdLen = 0;
+  /** The hold state as eased (STAGE_HOLD.held for a shotless hold). */
+  private heldK = 0;
   private readonly zonesSeen = new Set<string>();
 
   constructor(
@@ -128,8 +151,12 @@ export class StageCamera {
       // A sim-held story beat (a trigger with `hold`, memory/level-kit.md): the beat its flag just started
       // holds while her input does, and lets go when it does (she has the view back as she has control).
       for (const e of events) {
+        if (e.type === 'storyHold' && (!this.shot || this.shot.t > 0)) {
+          this.holdT = 0;
+          this.holdLen = e.frames / 60;
+        } else if (e.type === 'storyHoldEnd') this.holdT = -1;
         const sh = this.shot;
-        if (!sh) break;
+        if (!sh) continue;
         if (e.type === 'storyHold' && sh.t === 0) sh.hold = Math.max(sh.hold, e.frames / 60 - sh.in);
         else if (e.type === 'storyHoldEnd' && sh.t > sh.in && sh.t < sh.in + sh.hold) sh.hold = sh.t - sh.in;
       }
@@ -144,6 +171,21 @@ export class StageCamera {
     if (!s) {
       this.x = this.y = 0;
       this.zoom = 1;
+      // A shotless hold: the view pushes in on her, slowly, for as long as it lasts (never a still frame).
+      if (this.holdT >= 0) {
+        this.holdT += dt;
+        if (this.holdT >= this.holdLen) this.holdT = -1;
+      }
+      const want = this.holdT >= 0 ? 1 : 0;
+      const C = STAGE_CAM;
+      this.heldK =
+        want > this.heldK
+          ? Math.min(1, this.heldK + dt / C.heldIn)
+          : Math.max(0, this.heldK - dt / C.heldOut);
+      const u = this.holdT >= 0 ? Math.min(1, this.holdT / C.holdSecs) : 1;
+      this.zoom = 1 + C.holdPush * this.heldK * u * u * (3 - 2 * u);
+      STAGE_HOLD.held = this.heldK;
+      STAGE_HOLD.look.w = 0;
       return;
     }
     s.t += dt;
@@ -151,6 +193,8 @@ export class StageCamera {
       this.shot = null;
       this.x = this.y = 0;
       this.zoom = 1;
+      STAGE_HOLD.held = 0;
+      STAGE_HOLD.look.w = 0;
       return;
     }
     const w = this.weight;
@@ -178,8 +222,19 @@ export class StageCamera {
     const top = Math.min(0, R.ceilingY ?? 0) - sky;
     const ty =
       R.height - top > 2 * hh ? Math.min(R.height - hh, Math.max(top + hh, s.y)) : (R.height + top) / 2;
-    this.x = (tx - follow.x) * w;
-    this.y = (ty - follow.y) * w;
-    this.zoom = 1 + (s.zoom / follow.zoom - 1) * w;
+    // Through the hold the camera keeps moving: a slow push in and a drift toward what it shows.
+    const C = STAGE_CAM;
+    const u = Math.min(1, Math.max(0, (s.t - s.in) / Math.max(0.1, s.hold + s.out)));
+    const ease = u * u * (3 - 2 * u);
+    const dx = s.x - follow.x;
+    const dy = s.y - follow.y;
+    const dl = Math.max(1, Math.hypot(dx, dy));
+    this.x = (tx - follow.x) * w + (dx / dl) * C.drift * ease * w;
+    this.y = (ty - follow.y) * w + (dy / dl) * C.drift * 0.5 * ease * w;
+    this.zoom = (1 + (s.zoom / follow.zoom - 1) * w) * (1 + C.push * ease * w);
+    STAGE_HOLD.held = w;
+    STAGE_HOLD.look.x = s.x;
+    STAGE_HOLD.look.y = s.y;
+    STAGE_HOLD.look.w = w;
   }
 }

@@ -111,6 +111,11 @@ export class Tatter {
   private readonly when: string | null;
   private readonly until: string | null;
   private wantT = -1;
+  /**
+   * Its try at the air on a story beat (`stage.tatters[].tryOn`, the crown: wings open, the torn one too, one
+   * beat, a hop, it lands and looks at her): seconds since the beat (-1 = none). Set by `Cast`.
+   */
+  tryT = -1;
   /** Where it has climbed to (world px from its mark; `Cast` moves it along a `climb` path). */
   ox = 0;
   oy = 0;
@@ -218,7 +223,15 @@ export class Tatter {
     if (want && this.wantT < 0 && her && Math.hypot(her.cx - this.x, her.feetY - this.y) < T.want.arrive)
       this.wantT = 0;
     else if (this.wantT >= 0) this.wantT += dt;
-    const t = want ? (this.wantT >= 0 ? this.wantT + T.want.tryAt : 1e6) : sinceBreak;
+    if (this.tryT >= 0) this.tryT += dt;
+    const t =
+      this.tryT >= 0
+        ? this.tryT + T.want.tryAt
+        : want
+          ? this.wantT >= 0
+            ? this.wantT + T.want.tryAt
+            : 1e6
+          : sinceBreak;
     if (rested && her && Math.hypot(her.cx - this.x, her.feetY - this.y) < T.rest.near) this.restT = 0;
     else this.restT += dt;
     /** 0..1: how much of the rest reaction is on (in fast, out slowly). */

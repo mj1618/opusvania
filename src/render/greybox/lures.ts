@@ -60,6 +60,23 @@ export const LURE_GLYPH = {
 /** Shown this page load (the glyph shows once). */
 let glyphShown = false;
 
+/**
+ * The aim hint (plan r5 item 3, review fix c: the throw's aim was found by accident at the stair): on the first
+ * catch of the game (no lamp out yet), beside the arc (its `at`-th point), "hold a direction" with a four-way mark, while she
+ * is held; once a page load. Fades in over `in` s, out over `out` s once she is free; px off that point.
+ */
+export const AIM_HINT = {
+  text: 'hold a direction',
+  size: 20,
+  in: 0.3,
+  out: 0.4,
+  at: 3,
+  dx: 30,
+  dy: -40,
+  alpha: 0.85,
+};
+let aimShown = false;
+
 /** Scratch for a flame's position this frame. */
 const AT = { x: 0, y: 0 };
 
@@ -70,6 +87,8 @@ export class LureView {
   private readonly outT = new Map<string, number>();
   /** The attack glyph: a key cap and its letter, over her (add `glyph` to a layer over the lures). */
   readonly glyph = new Container({ label: 'greybox-attack-glyph' });
+  /** The aim hint (world space, over her): add with `glyph`. */
+  readonly aimLayer = new Container({ label: 'greybox-aim-hint' });
   private readonly glyphCap = new Graphics();
   private readonly glyphKey: Text;
   /** Seconds in reach without a cut; the glyph's age (-1 = not up) and its fade; seconds out of reach. */
@@ -79,7 +98,19 @@ export class LureView {
   private awayT = 0;
   private glyphEnd = false;
 
+  /** The aim hint's text and fade; whether it is on this catch. */
+  private readonly aimText: Text;
+  private aimA = 0;
+  private aimOn = false;
+
   constructor() {
+    this.aimText = new Text({
+      text: AIM_HINT.text,
+      style: { fontFamily: 'Menlo, Consolas, monospace', fontSize: AIM_HINT.size, fill: 0xe8ecf6 },
+      resolution: 2,
+    });
+    this.aimText.anchor.set(0, 0.5);
+    this.aimText.visible = false;
     const G = LURE_GLYPH;
     this.glyphKey = new Text({
       text: G.key,
@@ -93,6 +124,7 @@ export class LureView {
     });
     this.glyphKey.anchor.set(0.5, 0.5);
     this.glyph.addChild(this.glyphCap, this.glyphKey);
+    this.aimLayer.addChild(this.aimText);
     this.glyph.visible = false;
   }
 
@@ -111,9 +143,13 @@ export class LureView {
         this.fx.push({ kind: 'beat', x: e.x, y: e.y, t: 0, life: LIFE.beat, r: 30 + e.out });
       else if (e.type === 'lureHit')
         this.fx.push({ kind: 'hit', x: e.x, y: e.y, t: 0, life: LIFE.hit, r: 24 });
-      else if (e.type === 'lureCaught')
+      else if (e.type === 'lureCaught') {
         this.fx.push({ kind: 'catch', x: e.x, y: e.y, t: 0, life: LIFE.catch, r: 70 });
-      else if (e.type === 'lureFree')
+        if (!aimShown && sim.save.snuffed.length === 0) {
+          aimShown = true;
+          this.aimOn = true;
+        }
+      } else if (e.type === 'lureFree')
         this.fx.push({ kind: 'free', x: sim.player.cx, y: sim.player.cy, t: 0, life: LIFE.free, r: 20 });
       else if (e.type === 'lureSnuff') {
         this.fx.push({ kind: 'snuff', x: e.x, y: e.y, t: 0, life: LIFE.snuff, r: 20 });
@@ -288,6 +324,26 @@ export class LureView {
           front
             .circle(ex, ey, last ? 12 : 9)
             .stroke({ color: GB.flameHot, width: 2, alpha: last ? 0.8 : 0.35 });
+          if (this.aimOn) {
+            // The first catch: the hint beside the arc's start (near her: the landing may be off screen), and a
+            // four-way mark (the stick).
+            const A = AIM_HINT;
+            const j = Math.min(n - 1, A.at);
+            const hx = (arc[j * 2] as number) + A.dx;
+            const hy = (arc[j * 2 + 1] as number) + A.dy;
+            this.aimText.position.set(hx + 22, hy);
+            const k = 0.85 * this.aimA;
+            for (const [ax, ay] of [
+              [0, -1],
+              [1, 0],
+              [0, 1],
+              [-1, 0],
+            ] as const)
+              front
+                .moveTo(hx + ax * 6, hy + ay * 6)
+                .lineTo(hx + ax * 13, hy + ay * 13)
+                .stroke({ color: 0xe8ecf6, width: 2, alpha: k });
+          }
         }
       }
     }
@@ -336,6 +392,13 @@ export class LureView {
     }
     this.moths.update(dt, clock, p.cx, p.cy, front, sim.scene.marks?.stage?.oak ?? null);
     this.drawGlyph(dt, sim, reach);
+    // The aim hint: in while she is held on that first catch, out once she is free (and never again).
+    const A = AIM_HINT;
+    const heldNow = this.aimOn && p.lure >= 0;
+    this.aimA = heldNow ? Math.min(1, this.aimA + dt / A.in) : Math.max(0, this.aimA - dt / A.out);
+    if (this.aimOn && p.lure < 0 && this.aimA <= 0) this.aimOn = false;
+    this.aimText.visible = this.aimA > 0;
+    this.aimText.alpha = A.alpha * this.aimA;
   }
 
   /** The attack glyph over the flame in reach (once, before her first snuff). */

@@ -128,3 +128,16 @@ Contract with the builders (room data, render only; none placed yet):
   sides, so the valley east of the rim is in frame; the valley's lights moved past the rim (x 3920-4560, y 620).
 - **The crowd at the far oak's crown** (`STAGING.crowd`, `areaShare`): the area's freed share of moths as specks
   round the far oak's ring, which brightens with it. In the oak itself the crown cloud is `save.moths`.
+
+## Area 1 round 5, render (2026-10-18)
+- **Held beats are scenes** (`stage-cam.ts STAGE_HOLD`): a stage shot's weight (or a sim `storyHold` with no shot)
+  fades the HUD's lights and prompts (the moth count and the item line stay); her head turns to the shot's subject
+  (`CharacterSkin.lookAt` -> `rig.look`); through the hold the camera pushes in `STAGE_CAM.push` (6%) and drifts
+  `drift` (60 px) toward what it shows; a shotless hold pushes in on her `holdPush` (5%) over 4 s. Holds over 4 s are
+  the data's (the glimpse's 5 s, the crown's 9 s): tell the builders.
+- **The den** (`stage.den {flag, crack?, plug, column, breath?, walls?}`): the breathing dark and sifting dust under
+  the mesh before the fight; the crack flag lets one blade of light through the plug; the death flag drops the plug
+  in pieces, pours the moon column down and lights the wing-layered walls. Waiting for the builders' marks and the
+  sim's flags (the fight's transition, its death `sets`).
+- **Tatter's try on a flag** (`stage.tatters[].tryOn`): its swarm try (wings up, a hop, it sinks, then looks at her)
+  on that flag's `flagSet`; the crown's sitter tries on `wood-crown`.

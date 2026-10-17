@@ -47,6 +47,24 @@ export const STAGING = {
   hatchFar: { from: 0.8, over: 0.15 },
   /** The crowd at the far oak's crown: specks at most (all freed), their size (px at k 1), opacity, spin, ring glow. */
   crowd: { max: 70, dot: 9, alpha: 0.75, spin: 0.25, ring: 0.5 },
+  /**
+   * The den: the breath's rate (rad/s) and darkness, dust motes and how far they fall; the crack's blade (in, s;
+   * alpha); the fall: plug pieces and their seconds, the column's pour (s) and alpha, the walls' wings coming in.
+   */
+  den: {
+    breathRate: 0.9,
+    breathAlpha: 0.55,
+    dust: 18,
+    dustFall: 260,
+    crackIn: 0.4,
+    bladeAlpha: 0.22,
+    pieces: 7,
+    fallSecs: 1.4,
+    pour: 1.8,
+    columnAlpha: 0.14,
+    wallsIn: 1.5,
+    wallAlpha: 0.6,
+  },
   /** The wing carpet: px of floor per wing, a wing's length, how high the middle is piled, its opacity. */
   carpet: { every: 11, len: 30, pile: 18, alpha: 0.7 },
   /**
@@ -95,6 +113,9 @@ export const STAGING = {
   /** Far things' parallax when the vista sets none. */
   parallax: 0.25,
 };
+
+/** The den's colours: the plug (earth and root), the moonlight, the dust. */
+const C_DEN = { plug: 0x2a2620, light: 0xc6d4ff, dust: 0x9aa3b8 };
 
 const C = {
   moon: 0xd9dfec,
@@ -184,6 +205,9 @@ export class StagingView {
   private guideGone = -1;
   /** Seconds since the root was cut (large = not this visit). */
   private rootT = 1e6;
+  /** The den: seconds since its crack / its fall this visit (big = before this visit, -1 = not yet). */
+  private denCrackT = -1;
+  private denFallT = -1;
   /** Seconds since the crown cloud lifted (-1 = waiting; `DONE` = it went before this visit). */
   private cloudT = -1;
 
@@ -214,6 +238,8 @@ export class StagingView {
         this.guideS = -1;
         this.guideGone = -1;
         this.cloudT = -1;
+        this.denCrackT = -1;
+        this.denFallT = -1;
         this.snatched.clear();
         this.puffs.length = 0;
       } else if (e.type === 'fallCatch') this.catches++;
@@ -227,6 +253,8 @@ export class StagingView {
       } else if (e.type === 'lureSnuff' && this.stage?.circlers?.some((c) => c.lure === e.id))
         this.scatter.set(e.id, 0);
       else if (e.type === 'flagSet' && e.flag === this.stage?.rootFall?.flag) this.rootT = 0;
+      else if (e.type === 'flagSet' && e.flag === this.stage?.den?.crack) this.denCrackT = 0;
+      else if (e.type === 'flagSet' && e.flag === this.stage?.den?.flag) this.denFallT = 0;
       else if (e.type === 'flagSet' && e.flag === this.stage?.cloud?.flag) this.cloudT = 0;
     }
   }
@@ -240,6 +268,7 @@ export class StagingView {
     if (!S) return;
     this.drawFar(far, clock, cam, sim);
     this.drawCarpet(back);
+    this.drawDen(back, front, dt, clock, sim);
     for (const p of S.props ?? []) this.deadMoth(back, p.x, p.y, p.facing ?? 1);
     for (const l of S.ladders ?? []) if (sim.save.flags.includes(l.flag)) this.ladder(back, l.x, l.y0, l.y1);
     this.drawRootFall(back, dt);
@@ -842,6 +871,128 @@ export class StagingView {
   }
 
   /** A dead moth on its back on the ground: grey, still, wings flat. */
+  /**
+   * The den under the oak (`stage.den`, plan r5 item 1). Before the fight a slow dark breathes under the mesh and
+   * dust sifts through it; at the crack one thin blade of moonlight enters through the plug; at its death the plug
+   * falls in pieces, the moon column pours down into the den, and the walls show the wings layered on them.
+   * A flag saved before this visit: the after-state (plug gone, column in, walls lit).
+   */
+  private drawDen(back: Graphics, front: Graphics, dt: number, clock: number, sim: SimView): void {
+    const D = this.stage?.den;
+    if (!D) return;
+    const T = STAGING.den;
+    const flags = sim.save.flags;
+    if (this.denFallT < 0 && flags.includes(D.flag)) this.denFallT = 1e6;
+    if (this.denCrackT < 0 && D.crack && flags.includes(D.crack)) this.denCrackT = 1e6;
+    if (this.denFallT >= 0) this.denFallT += dt;
+    if (this.denCrackT >= 0) this.denCrackT += dt;
+    const fell = this.denFallT >= 0;
+    const P = D.plug;
+    const col = D.column;
+    // The breathing dark (only before the fall): a soft shadow swelling and easing, dust motes sifting down.
+    if (!fell && D.breath) {
+      const b = D.breath;
+      const br = 0.5 + 0.5 * Math.sin(clock * T.breathRate);
+      back.ellipse(b.x, b.y, b.r * (0.9 + 0.12 * br), b.r * 0.45 * (0.9 + 0.12 * br)).fill({
+        color: 0x020305,
+        alpha: T.breathAlpha * (0.6 + 0.4 * br),
+      });
+      for (let i = 0; i < T.dust; i++) {
+        const u = (clock * 0.12 + hash01('dust', i)) % 1;
+        const x = P.x + hash01('dust', i + 9) * P.w;
+        back.circle(x, P.y + P.h + u * T.dustFall, 1.6).fill({ color: C_DEN.dust, alpha: 0.5 * (1 - u) });
+      }
+    }
+    // The plug: whole (cracked once the crack is in), or falling in pieces.
+    if (!fell) {
+      back.rect(P.x, P.y, P.w, P.h).fill({ color: C_DEN.plug, alpha: 0.95 });
+      if (this.denCrackT >= 0) {
+        // One blade of moonlight through a crack in it, down to the den's floor.
+        const k = Math.min(1, this.denCrackT / T.crackIn);
+        const cx = col.x;
+        back
+          .moveTo(cx - 3, P.y)
+          .lineTo(cx + 9, P.y + P.h)
+          .stroke({ color: C_DEN.light, width: 2, alpha: 0.9 * k });
+        back
+          .poly([cx - 4, P.y + P.h, cx + 10, P.y + P.h, cx + 26, col.foot, cx - 20, col.foot])
+          .fill({ color: C_DEN.light, alpha: T.bladeAlpha * k });
+      }
+    } else {
+      const t = this.denFallT;
+      if (t < T.fallSecs)
+        for (let i = 0; i < T.pieces; i++) {
+          const px = P.x + ((i + 0.5) / T.pieces) * P.w;
+          const delay = hash01('plug', i) * 0.4;
+          const tt = Math.max(0, t - delay);
+          const y = P.y + 0.5 * 2200 * tt * tt;
+          if (y > col.foot) continue;
+          const r = (hash01('plug', i + 5) - 0.5) * 6 * tt;
+          const s = P.w / T.pieces;
+          back
+            .poly(
+              [
+                [-s / 2, -P.h / 2],
+                [s / 2, -P.h / 2],
+                [s / 2, P.h / 2],
+                [-s / 2, P.h / 2],
+              ].flatMap(([dx, dy]) => [
+                px + (dx as number) * Math.cos(r) - (dy as number) * Math.sin(r),
+                y + P.h / 2 + (dx as number) * Math.sin(r) + (dy as number) * Math.cos(r),
+              ]),
+            )
+            .fill({ color: C_DEN.plug, alpha: 0.95 });
+        }
+      // The moon column pours down: from a thread to its full width over `pour` s, its foot spreading.
+      const k = Math.min(1, t / T.pour);
+      const w = col.w * (0.08 + 0.92 * k * k * (3 - 2 * k));
+      const reach = col.top + (col.foot - col.top) * Math.min(1, t / (T.pour * 0.6));
+      back
+        .poly([
+          col.x - w / 2,
+          col.top,
+          col.x + w / 2,
+          col.top,
+          col.x + w * 0.7,
+          reach,
+          col.x - w * 0.7,
+          reach,
+        ])
+        .fill({ color: C_DEN.light, alpha: T.columnAlpha });
+      back
+        .poly([
+          col.x - w * 0.25,
+          col.top,
+          col.x + w * 0.25,
+          col.top,
+          col.x + w * 0.35,
+          reach,
+          col.x - w * 0.35,
+          reach,
+        ])
+        .fill({
+          color: C_DEN.light,
+          alpha: T.columnAlpha,
+        });
+      // The walls: wings layered on them, coming into the light.
+      const lit = Math.min(1, Math.max(0, (t - T.pour * 0.5) / T.wallsIn));
+      if (lit > 0)
+        for (const wr of D.walls ?? [])
+          for (let y = wr.y + 14; y < wr.y + wr.h; y += 18)
+            for (let x = wr.x + ((y / 18) % 2) * 12; x < wr.x + wr.w; x += 24) {
+              const h = hash01('wall', Math.round(x * 7 + y));
+              const len = 14 + 8 * h;
+              const a = (h - 0.5) * 1.2;
+              front
+                .moveTo(x, y)
+                .lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len * 0.5 - 4)
+                .lineTo(x + Math.cos(a) * len * 0.5, y + 4)
+                .closePath()
+                .fill({ color: h < 0.3 ? C.wing : C.dead, alpha: T.wallAlpha * lit });
+            }
+    }
+  }
+
   /** The wing carpet (`stage.carpet`): pale chevrons strewn on the floor, denser in the middle, all still. */
   private drawCarpet(g: Graphics): void {
     const c = this.stage?.carpet;

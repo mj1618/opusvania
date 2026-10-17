@@ -68,6 +68,17 @@ a dust puff off her feet the recoil's way; shake budget `clang` 0.18. Bark: ever
 came within 28 px of unbroken bark in its live frames and hit nothing ticks and shakes the panel ("tink").
 The dangler's tell draws its swing: dashes down the drop, then round the arc toward her side to its end.
 
+## Round 5 (2026-10-18)
+- **Throw-cut** (the sim's `slash.heavy`): its hits draw a wide white sweep about her along the cut, a 70 px star and
+  a ring (`HEAVY_FX`); `throwCut` adds shake `heavy` 0.25.
+- **The first catch** shows "hold a direction" and a four-way mark beside the arc's 3rd point, once a page load
+  (`AIM_HINT`), only before any lamp is out.
+- **HUD "x / 60"**: the moth count shows `/ next` and a thin bar to it from `mothMilestone(tuning, moths)`; a
+  `healthUp` pops it, holds it longer, and two rings go out from her.
+- **Hollow grants felt** (greybox/kit.ts `GRANT_FELT`): moonlight closes into her; keen blade flashes its new reach,
+  quick wings flick her wings, night eyes sends a wave that makes every burning lamp in the room glint. The map
+  draws unseen burning lamps as pulsing rings once night eyes is owned.
+
 ## Gotchas
 - Pixi v8 `Graphics.poly(points)` keeps the array (`new Polygon(flat)` does not copy): a scratch array reused for
   two polys redraws both as the last. creatures.ts `Xf.map` returns a new array every call for this reason.

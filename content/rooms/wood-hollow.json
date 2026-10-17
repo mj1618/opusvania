@@ -702,6 +702,7 @@
           "y": 3840,
           "facing": 1,
           "when": "wood-root-ladder",
+          "tryOn": "wood-crown",
           "climb": {
             "path": [[2896, 3840], [2896, 576], [3480, 576]]
           },

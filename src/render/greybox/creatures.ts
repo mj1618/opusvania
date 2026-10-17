@@ -110,6 +110,9 @@ interface Shard {
   life: number;
 }
 
+/** A throw-cut's hit (plan r5 item 2): the sweep's radius and life, the star's, the ring's. */
+export const HEAVY_FX = { sweepR: 96, sweepLife: 0.28, star: 70, starLife: 0.36, ringLife: 0.4 };
+
 /** A blocked cut (`enemyBlock`): star radii (side cut / down cut), its life, the ring's, sparks, the recoil puff. */
 export const BLOCK_FX = {
   star: 56,
@@ -123,7 +126,7 @@ export const BLOCK_FX = {
 };
 
 interface Burst {
-  kind: 'ring' | 'star' | 'puff' | 'sparks';
+  kind: 'ring' | 'star' | 'puff' | 'sparks' | 'sweep';
   /** `puff` / `sparks`: the way they go (unit x). */
   dir?: number;
   x: number;
@@ -278,11 +281,18 @@ export class CreatureView {
 
   /** Reads this render frame's events. */
   /** `sim` (optional): her, for the recoil puff of a blocked cut. */
+  /** The slash in progress is a throw-cut (`slash.heavy`). */
+  private heavyOn = false;
   /** Her centre x this frame (the dangler's tell swings toward her side). */
   private herX = 0;
 
   onEvents(events: readonly SimEvent[], sim?: SimView): void {
     for (const e of events) {
+      // A moth milestone (the sim's `healthUp`): a light more, so two pale rings go out from her.
+      if (e.type === 'healthUp' && sim) {
+        this.bursts.push({ kind: 'ring', x: sim.player.cx, y: sim.player.cy, r: 24, t: 0, life: 0.6 });
+        this.bursts.push({ kind: 'ring', x: sim.player.cx, y: sim.player.cy, r: 8, t: -0.2, life: 0.8 });
+      }
       switch (e.type) {
         case 'spawn':
           // A restart or a re-form: creatures are whole and home again.
@@ -301,6 +311,26 @@ export class CreatureView {
           f.burst = false;
           f.hitT = 0;
           f.hitHold = f.dieHold;
+          break;
+        }
+        case 'slash':
+          // A throw-cut (the sim's `slash.heavy`): its hits read heavy until it ends.
+          this.heavyOn = e.heavy === true;
+          break;
+        case 'slashEnd':
+          this.heavyOn = false;
+          break;
+        case 'slashHit': {
+          // A throw-cut (plan r5 item 2): a cut swung in a throw's launch lands heavy. Its read: a wide white
+          // sweep along the blade's path, a big star and a ring at the target, flashed for longer.
+          const heavy = this.heavyOn && e.target.kind !== 'pod';
+          if (!heavy) break;
+          const H = HEAVY_FX;
+          const dir =
+            e.dir === 'up' ? -Math.PI / 2 : e.dir === 'down' ? Math.PI / 2 : e.facing > 0 ? 0 : Math.PI;
+          this.bursts.push({ kind: 'sweep', x: e.px, y: e.py, r: H.sweepR, t: 0, life: H.sweepLife, dir });
+          this.bursts.push({ kind: 'star', x: e.x, y: e.y, r: H.star, t: 0, life: H.starLife });
+          this.bursts.push({ kind: 'ring', x: e.x, y: e.y, r: 20, t: 0, life: H.ringLife });
           break;
         }
         case 'enemyBlock': {
@@ -1020,8 +1050,21 @@ export class CreatureView {
         this.bursts.splice(i, 1);
         continue;
       }
+      // (A burst may start late: a negative age waits.)
+      if (u < 0) continue;
       const ease = 1 - (1 - u) * (1 - u);
-      if (b.kind === 'sparks') {
+      if (b.kind === 'sweep') {
+        // The heavy cut's sweep: a thick crescent about her, along the cut (`dir` = its angle), thinning out.
+        const a0 = (b.dir ?? 0) - 1.1;
+        const a1 = (b.dir ?? 0) + 1.1;
+        const r = b.r * (0.8 + 0.3 * ease);
+        g.moveTo(b.x + Math.cos(a0) * r, b.y + Math.sin(a0) * r)
+          .arc(b.x, b.y, r, a0, a1)
+          .stroke({ color: CREATURE.flash, width: 14 * (1 - u) + 2, alpha: 0.9 * (1 - u) });
+        g.moveTo(b.x + Math.cos(a0) * r * 0.75, b.y + Math.sin(a0) * r * 0.75)
+          .arc(b.x, b.y, r * 0.75, a0, a1)
+          .stroke({ color: CREATURE.flash, width: 4 * (1 - u) + 1, alpha: 0.5 * (1 - u) });
+      } else if (b.kind === 'sparks') {
         // Five sparks fanned back from the blade (straight up for a down cut), slowing and falling.
         const d = b.dir ?? 0;
         for (let k = 0; k < 5; k++) {

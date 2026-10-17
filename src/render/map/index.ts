@@ -14,6 +14,7 @@ import { Container, Graphics, Text } from 'pixi.js';
 import type { Game } from '../../game';
 import { WORLD } from '../../scene/index';
 import type { Room } from '../../scene/room';
+import { upgradesOwned } from '../../sim/upgrades';
 import type { WorldRoom } from '../../sim/world';
 import { SAFE_H, SAFE_W, type ViewSize } from '../contract';
 
@@ -98,6 +99,7 @@ export class MapOverlay {
     this.title.position.set(MAP.margin / 2, MAP.margin / 3);
     for (const t of this.texts.values()) t.visible = false;
     const save = game.state.save;
+    const nightEyes = upgradesOwned(save).includes('nightEyes');
     const world = game.world;
     const here = game.state.room;
     // Areas drawn by a moth-stone she has read (in any room, a test room's too).
@@ -214,7 +216,16 @@ export class MapOverlay {
           .fill({ color: MAP.glade });
       }
       for (const l of s.lures ?? []) {
-        if (!seen(r, l.id)) continue;
+        if (!seen(r, l.id)) {
+          // Night eyes (the oak's hollow): the lamps she has not seen, still burning, as pulsing rings to hunt.
+          if (nightEyes && !save.snuffed.includes(`${r.id}:${l.id}`))
+            g.circle(X(r, l.x), Y(r, l.y), 5 + 1.5 * Math.sin(clock * 3 + l.x * 0.01)).stroke({
+              color: MAP.lamp,
+              width: 1.5,
+              alpha: 0.75,
+            });
+          continue;
+        }
         const out = save.snuffed.includes(`${r.id}:${l.id}`);
         if (out) g.circle(X(r, l.x), Y(r, l.y), 4).stroke({ color: MAP.husk, width: 1.5 });
         else g.circle(X(r, l.x), Y(r, l.y), 5).fill({ color: MAP.lamp });

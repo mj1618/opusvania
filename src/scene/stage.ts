@@ -70,6 +70,27 @@ export const StageSchema = z
      * A carpet of fallen wings on a floor (plan r3 items 5 and 8: the old burrback sleeps on what it has eaten):
      * pale wing chevrons from x0 to x1 along the floor at y, `count` of them (default one per 11 px).
      */
+    /**
+     * The den under the oak (plan r5 item 1, the staged death): `breath` (x, y, r) the dark that breathes under the
+     * mesh before the fight; `crack` (a flag: the fight's transition) a thin blade of moonlight through the `plug`
+     * (rect); `flag` (its death) the plug falls in pieces and the moon `column` (x, its top and foot, w) pours into the
+     * den; `walls` (rects) the moth wings layered on its walls, seen once the light is in.
+     */
+    den: z
+      .object({
+        flag: z.string().min(1),
+        crack: z.string().min(1).optional(),
+        plug: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }).strict(),
+        column: z
+          .object({ x: z.number(), top: z.number(), foot: z.number(), w: z.number().positive() })
+          .strict(),
+        breath: z.object({ x: z.number(), y: z.number(), r: z.number().positive() }).strict().optional(),
+        walls: z
+          .array(z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }).strict())
+          .optional(),
+      })
+      .strict()
+      .optional(),
     carpet: z
       .object({
         x0: z.number(),
@@ -153,6 +174,8 @@ export const StageSchema = z
             want: pt.optional(),
             when: z.string().min(1).optional(),
             until: z.string().min(1).optional(),
+            /** On this flag's `flagSet` it tries the air once (the crown: wings open, a beat, a hop, then a look at her). */
+            tryOn: z.string().min(1).optional(),
             climb: z
               .object({
                 path,

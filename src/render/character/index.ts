@@ -11,6 +11,7 @@
 import type { Container } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import type { HatchState } from '../../sim/state';
+import { STAGE_HOLD } from '../camera/stage-cam';
 import type { PlayerView, RenderContext } from '../contract';
 import { Cast } from './cast';
 import type { CharacterSkin, SkinDef } from './skin';
@@ -23,6 +24,8 @@ const KEY = 'opusvania.char.v2';
 
 /** The catch fade (seconds): out over a catch's start, in on the return. */
 const CATCH_FADE = { out: 0.18, in: 0.35 };
+/** How firmly she looks at a held beat's subject (0..1). */
+const LOOK_HELD = 0.9;
 
 export class CharacterRenderer {
   private fade = 1;
@@ -162,6 +165,13 @@ export class CharacterRenderer {
         ? Math.max(this.fadeTo, this.fade - rate)
         : Math.min(this.fadeTo, this.fade + rate);
     if (this.current) this.current.fade = this.fade;
+    // In a held beat she looks where the camera looks (the shot's target, eased in with it).
+    if (this.current?.lookAt) {
+      const L = STAGE_HOLD.look;
+      this.current.lookAt.x = L.x;
+      this.current.lookAt.y = L.y;
+      this.current.lookAt.w = L.w * LOOK_HELD;
+    }
     this.current?.update(dt, clock, player, events);
     this.cast.update(dt, clock, hatch, player, events, flags);
   }

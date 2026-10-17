@@ -13,6 +13,8 @@ export interface CharacterSkin {
   destroy(): void;
   /** 0..1: how much of her is shown (the catch fade: she goes, the world stays lit). Optional. */
   fade?: number;
+  /** Something to look at (world px) and how firmly 0..1 (a held beat: what the camera shows). */
+  lookAt?: { x: number; y: number; w: number };
 }
 
 export interface SkinDef {

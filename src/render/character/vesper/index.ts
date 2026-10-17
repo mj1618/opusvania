@@ -87,6 +87,7 @@ const SEEN = {
 export class VesperCharacter implements CharacterSkin {
   /** 0..1: the catch fade (CharacterRenderer): she goes out over a catch's hold and comes back on the return. */
   fade = 1;
+  lookAt = { x: 0, y: 0, w: 0 };
   private readonly painter = new Painter();
   private readonly rig = new Rig();
   private readonly sec = new Secondary();
@@ -217,6 +218,10 @@ export class VesperCharacter implements CharacterSkin {
     rig.groundDist = player.grounded ? 0 : this.clearBelow(player);
     this.sideGaps(player);
     this.readGoal(player);
+    // A held beat: her head turns to what the camera shows (plan r5 item 9: she acts, the frame is no freeze).
+    rig.look.x = this.lookAt.x;
+    rig.look.y = this.lookAt.y;
+    rig.look.w = this.lookAt.w;
     rig.update(dt, clock, player, events);
     // Where the light leaves her (and comes to her): the open palm while she kindles, else her chest.
     {

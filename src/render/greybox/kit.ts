@@ -63,6 +63,13 @@ function rhythmLit(rhythm: string, t0: number): boolean {
   return false;
 }
 
+/**
+ * A hollow's grant felt on her: seconds the moonlight takes to close into her, the rings' start radius; seconds the
+ * upgrade's own show lasts; keen blade's reach drawn past the flame radius; night eyes' wave speed (px/s), how long
+ * the wave is drawn, how long each lamp glints.
+ */
+const GRANT_FELT = { close: 0.7, ring: 160, show: 1.4, reach: 60, wave: 1400, waveSecs: 1.6, glint: 0.6 };
+
 /** How near (px) a cut's box must come to rotten bark for a graze to show. */
 const BARK_GRAZE = 28;
 
@@ -86,6 +93,8 @@ interface Fx {
   h: number;
   t: number;
   life: number;
+  /** A hollow's grant: the upgrade's id. */
+  up?: string;
 }
 
 const LIFE: Record<Fx['kind'], number> = {
@@ -231,6 +240,8 @@ export class KitView {
       else if (e.type === 'hollowGrant') {
         // (Its line is the HUD's item line, hud/item-line.ts.)
         this.add('grant', e.x, e.y, 0, 0);
+        const last = this.fx[this.fx.length - 1];
+        if (last) last.up = e.upgrade;
       } else if (e.type === 'kitClang') this.add('clang', e.hitX, e.hitY, 0, 0);
       else if (e.type === 'slashHit' && (e.target.kind === 'seedCase' || e.target.kind === 'thorns'))
         this.add('pogo', e.x, e.y, 0, 0);
@@ -528,6 +539,7 @@ export class KitView {
       } else if (e.kind === 'grant') {
         const burst = Math.min(1, e.t / 0.6);
         f.circle(e.x, e.y - 120, 50 + 300 * burst).stroke({ color: 0xffffff, width: 4, alpha: 1 - burst });
+        this.drawGrantFelt(f, e, sim);
         if (this.line) {
           this.line.position.set(sim.player.cx, sim.player.feetY - 160);
           this.line.alpha = k < 0.75 ? 1 : (1 - k) / 0.25;
@@ -538,6 +550,65 @@ export class KitView {
         }
       } else f.circle(e.x, e.y, 30 + 60 * k).stroke({ color: KC.thorn, width: 4, alpha: a });
       if (e.t >= e.life) this.fx.splice(i, 1);
+    }
+  }
+
+  /**
+   * A hollow's upgrade, felt on her (plan r5 item 6): moonlight closing into her (rings shrinking onto her), then
+   * what it does, shown once: keen blade, its longer reach flashed in front of her twice; quick wings, her wings
+   * flick twice; night eyes, a seeing wave runs out from her and every lamp still burning in the room glints as it
+   * passes (the map now shows the ones she has not seen).
+   */
+  private drawGrantFelt(f: Graphics, e: Fx, sim: SimView): void {
+    const p = sim.player;
+    const t = e.t;
+    const G = GRANT_FELT;
+    // The light going into her.
+    for (let i = 0; i < 3; i++) {
+      const u = (t - i * 0.15) / G.close;
+      if (u < 0 || u > 1) continue;
+      f.circle(p.cx, p.cy, G.ring * (1 - u) + 10).stroke({ color: 0xc6d4ff, width: 3, alpha: 0.8 * u });
+    }
+    const after = t - G.close;
+    if (after < 0) return;
+    if (e.up === 'keenBlade') {
+      const on = Math.max(0, Math.sin((after / G.show) * Math.PI * 4));
+      if (after < G.show) {
+        const reach = tuning.upgrades.keenBlade.flameRadiusAdd + G.reach;
+        f.moveTo(p.cx, p.cy - 10)
+          .arc(
+            p.cx,
+            p.cy - 10,
+            reach,
+            p.facing > 0 ? -0.9 : Math.PI - 0.9,
+            p.facing > 0 ? 0.9 : Math.PI + 0.9,
+          )
+          .stroke({ color: 0xf2e6c8, width: 3, alpha: 0.85 * on });
+      }
+    } else if (e.up === 'quickWings') {
+      if (after < G.show) {
+        const open = Math.max(0, Math.sin((after / G.show) * Math.PI * 4)) ** 0.7;
+        for (const sd of [-1, 1]) {
+          const ang = -Math.PI / 2 + sd * (0.3 + 0.9 * open);
+          const len = 30 + 26 * open;
+          f.moveTo(p.cx, p.cy - 8)
+            .lineTo(p.cx + Math.cos(ang) * len, p.cy - 8 + Math.sin(ang) * len)
+            .stroke({ color: 0xc6d4ff, width: 4, alpha: 0.8 * open });
+        }
+      }
+    } else if (e.up === 'nightEyes') {
+      const r = after * G.wave;
+      if (after < G.waveSecs)
+        f.circle(p.cx, p.cy, r).stroke({ color: 0xc6d4ff, width: 2, alpha: 0.5 * (1 - after / G.waveSecs) });
+      const room = sim.scene;
+      (room.lures ?? []).forEach((l, i) => {
+        if ((sim.lures.hp[i] ?? 0) <= 0) return;
+        const d = Math.hypot(l.x - p.cx, l.y - p.cy);
+        const since = after - d / G.wave;
+        if (since < 0 || since > G.glint) return;
+        const k = 1 - since / G.glint;
+        f.circle(l.x, l.y, 30 + 50 * (1 - k)).stroke({ color: 0xffd38a, width: 3, alpha: 0.9 * k });
+      });
     }
   }
 

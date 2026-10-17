@@ -10,6 +10,7 @@
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import { getRoom, WORLD } from '../../scene/index';
+import { mothMilestone } from '../../sim/index';
 import { tuning } from '../../sim/tuning';
 import { STAGE_BEATS } from '../camera/stage-cam';
 import type { CameraView, SimView, ViewSize } from '../contract';
@@ -27,6 +28,8 @@ export const MOTHS_HUD = {
   /** Moths that fly in on a snuff: at most this many (the rest tick at the end), first after `wait`, `every` apart. */
   fly: { max: 8, wait: 0.55, every: 0.11, secs: 1.15 },
   alpha: 0.85,
+  /** The next health milestone's bar under the count (plan r5 item 6: "40 / 60"): px long, a tick at its end. */
+  bar: 92,
 };
 
 interface Flyer {
@@ -50,6 +53,8 @@ export class MothCount {
   private readonly g = new Graphics();
   private readonly num: Text;
   private readonly lamps: Text;
+  /** " / 60": the next milestone, dimmer. */
+  private readonly next: Text;
   private shown = -1;
   private hold = 0;
   private alpha = 0;
@@ -65,7 +70,9 @@ export class MothCount {
     this.num.anchor.set(0, 0.5);
     this.lamps = new Text({ text: '', style: { ...style, fontSize: 18, fill: 0xb8c2d6 }, resolution: 2 });
     this.lamps.anchor.set(0, 0.5);
-    this.root.addChild(this.g, this.num, this.lamps);
+    this.next = new Text({ text: '', style: { ...style, fontSize: 20, fill: 0x9aa6bc }, resolution: 2 });
+    this.next.anchor.set(0, 0.5);
+    this.root.addChild(this.g, this.num, this.next, this.lamps);
     this.root.visible = false;
   }
 
@@ -94,6 +101,11 @@ export class MothCount {
             seed: this.seed++,
           });
       } else if (e.type === 'stoneRead' || e.type === 'patchRest') this.hold = Math.max(this.hold, M.hold);
+      // (The sim's milestone: a light more. The count holds up and pops; her lights grow by one themselves.)
+      else if (e.type === 'healthUp') {
+        this.hold = Math.max(this.hold, M.hold + 2);
+        this.pop = 1.8;
+      }
     }
     // Anything not yet accounted for by a flyer (a load, a count from elsewhere) is shown at once.
     if (this.shown + this.inFlight() < target) this.shown = target - this.inFlight();
@@ -104,8 +116,14 @@ export class MothCount {
       if (f.t < 0) continue;
       const u = Math.min(1, f.t / M.fly.secs);
       if (u >= 1) {
+        const before = this.shown;
         this.shown += f.n;
         this.pop = 1;
+        // A milestone crossed: a bigger pop and a longer hold (the light it gives shows in her lights).
+        if (mothMilestone(tuning, this.shown).lights > mothMilestone(tuning, before).lights) {
+          this.pop = 1.8;
+          this.hold = Math.max(this.hold, M.hold + 2);
+        }
         // The count shows itself when the first moth reaches it (feel review r2: not a "0" before).
         this.hold = Math.max(this.hold, M.hold);
         this.flyers.splice(i, 1);
@@ -132,6 +150,23 @@ export class MothCount {
     this.num.scale.set(1 + 0.25 * this.pop);
     this.num.alpha = M.alpha * a;
     this.num.visible = a > 0.003;
+    // The next milestone: " / 60" and a thin bar under the count filled to it, a tick at its end.
+    // (The sim's own reading: `mothMilestone`, its lights from `health.mothMilestones`.)
+    const ms = mothMilestone(tuning, this.shown);
+    const nx = ms.next;
+    if (nx > 0 && a > 0.003) {
+      const prev = ms.prev;
+      this.next.text = `/ ${nx}`;
+      this.next.position.set(ix + M.gap + this.num.width + 8, iy + 2);
+      this.next.alpha = 0.7 * a;
+      this.next.visible = true;
+      const bx = ix - 10;
+      const by = iy + 20;
+      const k = Math.min(1, Math.max(0, (this.shown - prev) / Math.max(1, nx - prev)));
+      g.rect(bx, by, M.bar, 2).fill({ color: 0x9aa6bc, alpha: 0.35 * a });
+      g.rect(bx, by, M.bar * k, 2).fill({ color: 0xdfe6f2, alpha: 0.85 * a });
+      g.rect(bx + M.bar - 1, by - 4, 2, 10).fill({ color: 0xdfe6f2, alpha: 0.7 * a });
+    } else this.next.visible = false;
     // The area's lamps, once its moth-stone has been read.
     const key = `${sim.scene.id}|${sim.save.snuffed.length}|${sim.save.taken.length}`;
     if (key !== this.areaKey) {
@@ -141,7 +176,7 @@ export class MothCount {
     const area = this.area;
     if (area && a > 0.003) {
       this.lamps.text = `lamps ${area.out} / ${area.total} · moths ${area.freed} / ${area.moths}`;
-      this.lamps.position.set(ix - 10, iy + 34);
+      this.lamps.position.set(ix - 10, iy + 40);
       this.lamps.alpha = 0.75 * a;
       this.lamps.visible = true;
     } else this.lamps.visible = false;

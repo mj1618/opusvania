@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DONE, STAGE_BEATS, StageCamera } from '../../src/render/camera/stage-cam';
+import { DONE, STAGE_BEATS, STAGE_CAM, StageCamera } from '../../src/render/camera/stage-cam';
 import type { CameraView } from '../../src/render/contract';
 import type { Room } from '../../src/scene/room';
 import { StageSchema } from '../../src/scene/stage';
@@ -43,8 +43,11 @@ describe('story staging camera (marks.stage)', () => {
       peak = Math.max(peak, c.weight);
     }
     expect(peak).toBeCloseTo(1, 3);
-    expect(c.x).toBeCloseTo(1500, 0);
-    expect(c.zoom).toBeCloseTo(0.9, 3);
+    // At the point, the hold's slow drift and push on it (plan r5 item 9: a held beat never stands still).
+    expect(Math.abs(c.x - 1500)).toBeLessThanOrEqual(STAGE_CAM.drift + 0.5);
+    expect(c.x).toBeGreaterThan(1500);
+    expect(c.zoom).toBeGreaterThan(0.9);
+    expect(c.zoom).toBeLessThanOrEqual(0.9 * (1 + STAGE_CAM.push) + 1e-6);
     for (let i = 0; i < 60 * 2; i++) c.update(1 / 60, [], '', view, []);
     expect([c.x, c.y, c.zoom]).toEqual([0, 0, 1]);
     // Once only.
