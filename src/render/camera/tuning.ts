@@ -46,6 +46,11 @@ export const cameraTuning = {
    */
   fallLead: { vy0: 2, vy1: 14, landUp: 0 },
   /**
+   * Falling over a floor exit within `reach` px of the floor (and `margin` of its span), the view may show up to
+   * `px` past the room's floor (eased over `frames`): a fall across a room seam stays framed (greybox rooms).
+   */
+  seamLook: { px: 1200, reach: 1600, margin: 64, frames: 6 },
+  /**
    * Frames of a spring the vertical TARGET runs through before the view follows it (0 = none). With
    * it, a target that jumps (a fall's lead switching on) starts the view moving with no step in its
    * velocity: the onset eases in. Rooms set it; the test grove has none.

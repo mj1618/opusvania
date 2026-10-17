@@ -436,7 +436,7 @@ export class Hud {
     this.shake.visible = this.live > 0.003;
     this.summary.update(dt, clock, sim);
     this.prompts.update(dt, clock, sim);
-    this.itemLine.update(dt, sim.events);
+    this.itemLine.update(dt, sim);
     // The moth count sits under the lights (and under the glint count when that is up).
     const camView = cam ?? { x: sim.player.cx, y: sim.player.cy, zoom: 1, w: view.w, h: view.h };
     this.moths.update(dt, clock, sim, view, camView, this.group.visible ? 56 : 0);

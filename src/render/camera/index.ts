@@ -14,6 +14,7 @@
  * measured in the safe area, which is centred in the view, so every window shape frames her the
  * same and only sees more around; the clamp to the scene uses the real size.
  */
+import { isGreybox, type Room } from '../../scene/room';
 import type { Scene } from '../../sim/scene';
 import type { GameState } from '../../sim/state';
 import { type CameraView, SAFE_H, SAFE_W } from '../contract';
@@ -63,6 +64,12 @@ export interface CameraState {
   zone: string;
   /** 0..1: how far a fall is leading the view (the zones yield to it). */
   fallK: number;
+  /**
+   * World px the view may show past the room's floor (eased): falling into a floor exit the camera looks on
+   * into the room below, so a fall across a room seam stays framed (the hollow oak's trunk, 7e1c353).
+   */
+  seam: number;
+  seamV: number;
 }
 
 /**
@@ -110,7 +117,7 @@ function place(cam: CameraState, scene: Scene, ct: CameraTuning): void {
   const W = shownW(cam);
   const H = shownH(cam);
   cam.x = clampAxis(cam.fx - W / 2, 0, scene.width, W);
-  cam.y = clampAxis(cam.fy - line, top, scene.height - top, H);
+  cam.y = clampAxis(cam.fy - line, top, scene.height + cam.seam - top, H);
   // Held by the top or the bottom: the spring rests there too, so the view answers at once when
   // she comes back (a glide off the summit), not after the spring has crossed the slack.
   const fy = cam.y + line;
@@ -123,7 +130,7 @@ function place(cam: CameraState, scene: Scene, ct: CameraTuning): void {
   // A camera zone's shift (eased: `stepZones`), then the scene's bounds again.
   if (cam.ox !== 0 || cam.oy !== 0) {
     cam.x = clampAxis(cam.x + cam.ox, 0, scene.width, W);
-    cam.y = clampAxis(cam.y + cam.oy, top, scene.height - top, H);
+    cam.y = clampAxis(cam.y + cam.oy, top, scene.height + cam.seam - top, H);
   }
 }
 
@@ -254,6 +261,8 @@ export function createCamera(
     ovy: 0,
     zone: '',
     fallK: 0,
+    seam: 0,
+    seamV: 0,
   };
   stepZones(cam, scene, p.x + p.w / 2, p.y + p.h / 2, ct, true);
   return cam;
@@ -343,6 +352,21 @@ export function stepCamera(
   const drop = feet - cam.groundY - ct.fallBelow;
   // The speed lead (feel review r2: at max fall her feet sat at 0.93-0.97), so the view shows the floor
   // before she reaches it.
+  // Over a floor exit, falling: the view may look on past the floor into the room below (greybox rooms; a
+  // painted room's bakes stop at its edge). Eased in and out, so the bound never jumps.
+  const S = ct.seamLook;
+  let seamWant = 0;
+  if (S.px > 0 && isGreybox(scene as Room) && !p.grounded && p.vy > 0)
+    for (const ex of scene.exits ?? [])
+      if (
+        ex.edge === 's' &&
+        cx >= ex.from - S.margin &&
+        cx <= ex.to + S.margin &&
+        feet > scene.height - S.reach
+      )
+        seamWant = S.px;
+  [cam.seam, cam.seamV] = smoothDamp(cam.seam, cam.seamV, seamWant, S.frames);
+  if (cam.seam < 0.5 && seamWant === 0) cam.seam = cam.seamV = 0;
   const L = ct.fallLead;
   // From the first frame she descends, the lead grows with her fall speed (`vy0` -> `vy1`), never past
   // the ground under her (`landBelow`): the view starts down with her and stops with the floor in view.
@@ -376,7 +400,7 @@ export function stepCamera(
     // (Less a camera zone's shift: the view is the follow plus that shift, clamped once more.)
     const line = feetLine(cam, ct) - cam.oy;
     const lo = viewTop(scene, ct) + line;
-    const hi = scene.height - shownH(cam) + line;
+    const hi = scene.height + cam.seam - shownH(cam) + line;
     if (hi >= lo) target = Math.min(hi, Math.max(lo, target));
   }
   // The target through its own spring first (when the room asks): the view's velocity never steps.

@@ -146,6 +146,11 @@ column, `stage.oak` x 1344, top 348 = world ~4700). Tests: tests/unit/wood-heart
   floor), peak < 8 px/f². wood-hatch went to `smoothYFastFall` 6 with it (5 peaked at 9.9). The hub's `rest` zone is a
   small frame at P3 (zoom 0.8), but the hub's floor is 112 px above the room's bottom, so standing there her feet
   are at ~0.9 whatever the camera does: the room needs ~250 px of ground under the floor (level).
+- **Falls across a room seam (7e1c353's trunk):** a room's camera never showed past its own floor, so falling into a
+  floor exit her feet reached 1.03 of the frame before the swap. Now (greybox rooms) while she falls within `reach`
+  of the floor over a `s` exit's span, the view may show up to `seamLook.px` past the floor (an eased extra bound,
+  `cam.seam`): the dark under the room is the way on. `wood-camera.test.ts` drops her down wood-heart's trunk:
+  <= 0.80 until the swap (0.66). A rise through a ceiling exit is not covered (the top has only its headroom).
 - **Every wood greybox room carries the fall block too (2026-10-17, feel review problem 5):** `realFallPx` 250,
   `targetSmoothY` 10, `fallLookahead` 320, but `smoothYFastFall` **6** (5 gave 8.2-8.7 px/f² at the onset of the
   long straight drops, R2's exit, R9's branch, R11); `lookaheadX` 330 / `leadFrames` 36 in R2, R6 and R9. And in

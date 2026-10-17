@@ -163,3 +163,39 @@ describe('the fall camera in the wood rooms', () => {
     });
   }
 });
+
+describe('the fall camera across a room seam', () => {
+  // (Without the camera's seam look, `seamLook`, her feet reached 1.03 of the frame here before the swap.)
+  it('down the trunk from wood-heart: her feet stay <= 0.80 until she crosses into the hollow', () => {
+    const scene = getRoom('wood-heart');
+    const exit = (scene.exits ?? []).find((e) => e.edge === 's');
+    expect(exit).toBeDefined();
+    const t = cloneTuning(defaultTuning);
+    const events: SimEvent[] = [];
+    const s = createState(1, t, scene, events);
+    const ct = cameraFor(scene);
+    const p = s.player;
+    // In the trunk under its root ledges, over the floor exit, already falling (about 1400 px to the seam).
+    const START = 1400;
+    p.x = Math.round(((exit?.from ?? 0) + (exit?.to ?? 0)) / 2 - p.w / 2);
+    p.y = START - p.h;
+    p.grounded = false;
+    p.vy = 2;
+    const cam = createCamera(s, scene, ct);
+    let worst = 0;
+    let frames = 0;
+    for (let f = 0; f < 600 && !s.exit; f++) {
+      const from = events.length;
+      step(s, 0, t, scene, events);
+      if (s.exit || events.slice(from).some((e) => e.type === 'roomExit')) break;
+      stepCamera(cam, s, scene, ct);
+      const v = lerpCamera(cam, cam, 1);
+      const top = v.y - cam.vh / 2 / cam.zoom;
+      const feet = ((s.player.y + s.player.h - top) * cam.zoom - (cam.vh - SAFE_H) / 2) / SAFE_H;
+      if (s.player.y + s.player.h - START > FALL) worst = Math.max(worst, feet);
+      frames = f;
+    }
+    expect(frames).toBeGreaterThan(30);
+    expect(worst).toBeLessThanOrEqual(FALL_FEET);
+  });
+});

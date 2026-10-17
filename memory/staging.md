@@ -87,3 +87,6 @@ Contract with the builders (room data, render only; none placed yet):
   `to` along a rising curve over ~6-8 s. Once the flag is saved the cloud is gone. Give the trigger a `hold` and a
   `stage.vista`-style framing if the view should hold (stage-cam reads `storyHold`).
 - Still to come: the throw arc while caught (the sim agent exposes the predicted arc on the player state).
+- The glide reminder (hud/item-line.ts `REMIND`): in a room with `stage.twitch`, once she owns glide, the
+  `twitch.catches`-th fall catch there and every third after show "Hold jump as you fall to glide." again (a
+  human-like run looped R5's chasm 14 times in 21 s).
