@@ -16,7 +16,7 @@
  * dusk round it so it keeps its edge on a pale backdrop (wider round the line: on the dark blue and
  * violet sides the dark edge, not more light, is what keeps the line from being a scratch). No glow, no gradient, nothing left in the air.
  */
-import { lerp, sat } from '../../hooded/math';
+import { lerp, sat } from '../../math';
 import type { Painter, RGB } from '../paint';
 import type { CutInfo, SlashFrame, StrokeAt } from './types';
 

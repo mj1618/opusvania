@@ -11,7 +11,7 @@
  * positions, so it too is filtered by the cloth.
  */
 import type { PlayerView } from '../../contract';
-import { clamp, lerp, noise1, pulse, sat, smoothstep } from '../hooded/math';
+import { clamp, lerp, noise1, pulse, sat, smoothstep } from '../math';
 import { Chain, type ChainSpec } from './chain';
 import {
   type Frame,

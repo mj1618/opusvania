@@ -4,7 +4,7 @@
  * trails drawn by the antenna tips and the wing hem, a soft dust puff on hard landings and skids.
  * Deterministic (own LCG, no Math.random); fixed pools, no allocation per frame.
  */
-import { sat } from '../hooded/math';
+import { sat } from '../math';
 import { type Painter, type RGB, rgb } from './paint';
 
 const MOTE = 0;

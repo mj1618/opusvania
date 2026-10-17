@@ -1,5 +1,6 @@
 /**
- * The character renderer: a switcher over the candidate hero designs ("skins").
+ * The character renderer: a switcher over the hero designs ("skins"). Only Vesper is left (the
+ * other candidates were removed on 2026-10-17); the switcher stays so a new skin is one directory.
  *
  * Every directory `character/<id>/` whose index.ts exports `skin: SkinDef` is a skin. Pick one with
  * `?char=<id>` in the URL, the number keys 1..9 (in ORDER), or `__game.character('<id>')`. The
@@ -14,7 +15,7 @@ import type { CharacterSkin, SkinDef } from './skin';
 
 const modules = import.meta.glob<{ skin?: SkinDef }>('./*/index.ts', { eager: true });
 /** Display order = number-key order. Unknown ids sort after these. */
-const ORDER = ['vesper', 'yako', 'wick', 'nova', 'hooded'];
+const ORDER = ['vesper'];
 // v2: the owner chose Vesper (2026-10-13); a new key so an older remembered choice does not override the default.
 const KEY = 'opusvania.char.v2';
 
@@ -84,6 +85,8 @@ export class CharacterRenderer {
     if (typeof document === 'undefined') return;
     // Not in manual mode: the capture tools boot with ?manual and must get a clean frame.
     if (new URLSearchParams(window.location.search).has('manual')) return;
+    // Nothing to choose between with a single skin.
+    if (this.skins.length < 2) return;
     let el = document.getElementById('char-label');
     if (!el) {
       el = document.createElement('div');

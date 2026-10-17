@@ -198,13 +198,6 @@ export const POST = {
 export type PostConfig = typeof POST;
 
 /**
- * Staged looks laid over the grade by a cinematic (the prologue), each 0..1 and 0 in play:
- * `frost` a colder, paler, less saturated night (the hatching); `dim` the wood's lights going down
- * (the hollow: everything darker, so the case, the glint and the lamp carry the frame).
- */
-export const POST_CINE = { frost: 0, dim: 0 };
-
-/**
  * The grade follows the scene's three moods (lib/fx-zones.ts), blended by the camera's x:
  * [left glade, light well, right stand]. `amount` scales how far each zone departs from POST.grade
  * (0 = one grade everywhere).

@@ -1,6 +1,6 @@
 # Opusvania
 
-One scene, built by AI agents, whose only goal is to look and move like Ori and the Blind Forest / Hollow Knight. The quality bar and the art direction are in `docs/art-direction.md`: read it before drawing anything. Goal, state and scope are in `PLAN.md`; the orchestrator's loop is in `STUDIO.md`.
+**Lampfall**, a metroidvania built by AI agents, aiming to look and move like Ori and the Blind Forest / Hollow Knight. Today it is one scene, the demo level. The story is in `memory/story.md`. The quality bar and the art direction are in `docs/art-direction.md`: read it before drawing anything. Goal, state and scope are in `PLAN.md`; the orchestrator's loop is in `STUDIO.md`.
 
 ## Stack
 TypeScript (strict), Node 24 and npm, Vite, PixiJS v8 on WebGL2 (shaders in GLSL), everything drawn in code: no image assets. Audio is allowed only if generated in code (Web Audio API; no sample files); see `docs/audio-direction.md`. Physics is our own deterministic integer-AABB code. Scene data is JSON validated with Zod. Tools: Vitest, Playwright Test, Biome, Tweakpane. Don't add a dependency without a reason; record the reason in `memory/`.

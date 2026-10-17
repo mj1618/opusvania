@@ -30,59 +30,66 @@ Mixing was best: no dominant strategy. Pour reads well (`r2-07`); the tally show
 showed for awareness, not for a landable gift (two misses, `r2-11`); the calm still ended when she climbed the
 shaft; an unseen burrback looked like a patrolling one (`r2-05`) and HK players cut it. Top 3 were built in round 3.
 
-# Round 3 (2026-10-15, HEAD 93d0512: sim a37f5de, render 623e5bc, audio 93d0512 muted; frozen build on :5189)
-| run | time | hits / fades / kills | gifts (calmed) | offered / tier | seen 0/1/2/3/4 % |
-|-|-|-|-|-|-|
-| natural, ember first | 0:57 | 3 / 0 / 2 | 0 | 34 / 1 | 30/5/15/50/0 |
-| natural, right first | 2:08 (~50 s bot in shaft) | 6 / 1 / 4 | 0 | 56 / 2 | 15/2/1/10/72 |
-| curious, ember first | 1:22 (one rescue) | 1 / 0 / 0 | 5 (5) | 25 / 1 | 22/3/9/66/0 |
-| curious, right first | 1:37 | 3 / 0 / 1 | 5 (5) | 52 / 2 | 18/3/1/47/31 |
-| giver | **0:51** | **0** / 0 / 0 | 6 (5) | 16 / 0 | 37/4/36/23/0 |
-| ghost (no pods) | lantern-far 2 short at 92 s (pod-far, 3, is 190 px away; the bot won't cut it) | 2 / 0 / 0 | 7 | - | - |
+# Round 3 (93d0512): the seen rule learnable on the right-first road only
+Right-first curious: burr-path asleep at 1 glint, burr-shaft catches her at 21 (thread + cap), first gift 11.4 s.
+The HK player cut the sleeper; ember-first players never met one; the thread was 1-2 px for 0.45 s; the cap's fade
+tail ate presses; a lamp stole an offer meant for a bracing burrback; sleepers lay down late in a turn pause; giver
+0:51, 0 hits, tier 0. All addressed in round 4 (7d3e392, 3da504f). Frames `r3-*`, logs `logs/R3*`.
 
-## 1. Does a first-timer get the SEEN rule now? On the right-first road, in ~11 s, if they don't swing first
-- **Right first, curious** (`logs/R3F`): burr-path lies down as she passes with 1 glint (f624), she walks by, picks up
-  the terrace glints, and burr-shaft catches her at 21 (f823: thread + V cap, `r3-04`), first gift f875 (11.4 s). Dark:
-  it sleeps; lit: it wakes. That's the whole rule, and it reads as a story.
-- **But the HK player swings at the sleeper**: natural right-first cut burr-path 3 frames after it lay down (f627),
-  woke it and learned nothing about light. At 1x the sleeper is a dark lump with lights out and one pale mote
-  (`r3-01`, zoom `r3-01b`); it reads as "harmless", not clearly as "asleep because I'm dark".
-- **Ember first (the road the moths lead): no burrback ever sleeps** (0 doze events in R3A and R3D). The first creature
-  is lamp-f3 at 2-3 glints (V cap, `r3-05`), then burrbacks met at L2-3 with the thread. These players learn Offer,
-  and see the thread, but never the contrast.
-- **The thread works, but quietly**: from its eyes to her ring of glints, 1-2 px dotted, gone in 0.45 s (`r3-02`,
-  zoom `r3-03`); her glints flare. At 1x it's easy to miss in motion; the in-breath that goes with it is muted.
-- The ghost (wallet 0) saw burr-path sleep from 331 px and burr-rise from 168: the rule reads perfectly for someone
-  already playing it.
+# Round 4 (2026-10-15, HEAD 3da504f: sim 7d3e392, render 3da504f; frozen build `playtest-giving-r4-dist` on :5191)
+"Ember" = kindles the stone, watches the moths, follows them west (islands F1-F3) to the ember. Times are the tally's;
+"loop" = my bot circling the shaft / high route (no rescue fired because it kept moving). Logs `logs/R4*.txt`.
+| run | time | hits / fades / kills | gifts (calmed) | offered / tier |
+|-|-|-|-|-|
+| natural, ember (A4) | 0:58 | 3 / 0 / 3 | 0 | 43 / 1 |
+| natural, ember (A3) | 1:40 (loop ~45 s) | 4 / 0 / 4 | 0 | 66 / 2 |
+| natural, stone -> burr-path -> ember (A2) | 2:04 (loop) | 5 / 0 / 5 | 0 | 69 / 2 |
+| natural, right first (E) | 1:19 | 6 / 0 / 3 | 0 | 65 / 2 |
+| curious, ember (D2) | **0:56** | 1 / 0 / 1 | 3 (3) | 26 / 1 |
+| curious, right first (F) | 1:17 | 3 / 0 / 1 | 6 (5) | 52 / 2 |
+| giver (B) | 1:28 (loop ~50 s) | **0** / 0 / 0 | 6 (6) | 33 / 1 |
+| ghost, no pods (C) | 2:20 (loop + 1 rescue) | 0 / 0 / 0 | 10 (7) | 10 / 0 |
 
-## 2. Fun, dominance, punishment
-- **Giving now edges toward dominant for a first-timer**: giver fastest (0:51) with 0 hits; the only cost is the tier
-  (16 offered, tier 0, `r3-07b`), shown at the very end. Natural 3-6 hits; curious (mix) 1-3 hits, tier 1-2. Fighting
-  is now only done by players who don't know V; once known, cutting has no reason except the tier.
-- **Carrying is explained a little now**: each notice draws a thread to her glints and the V cap answers it. Still,
-  natural right-first sat at L4 for 72% of the run and burr-rise + wing-rise took 4 lights and a fade (f6524-f7031).
-- Good moments: the sleep-then-catch sequence (right first); the red lampwing turning pale to a quick streak; the pour.
+## 1. Ember-first: the contrast is there, but it doesn't land as cause and effect
+- What a first-timer on the moths' road meets (A3, A4, D2 alike): **lamp-glade roosting** as she hops past it with
+  1 glint (f602-f725, `r4-03`; zoom `r4-04`: wings folded, lamp dim, a mote: reads at 1x as "resting"). It **wakes
+  silently** when she picks up her 2nd glint, by then 242-324 px past it (no thread: it never sees her). **0.5 s later
+  lamp-f3 catches her** at 3 glints with a bright, solid thread to her glints, the count flaring, and the V cap
+  (`r4-05`: the best "you are seen" frame yet). So the pieces are all there, but on two different creatures, and the
+  roost is behind her. Likely read: "lampwings notice me", not "they notice my light".
+- **The first V caps on this road are flickers**: lamp-f3's lasted 10, 4, 13 and 15 frames (A3, A4, D2). At level 1 its
+  reach is its sight x 0.75 (~195 px); she is moving away, and it gives up `/calm` 50 frames after noticing (lantern-
+  stone's circle). The curious player couldn't answer them; it first gave at lamp-ledge (cap 21 frames, pressed at
+  ~20) at **16.0 s** (D2, `r4-06`). Burrback caps last 70-165 frames: plenty.
+- No burrback sleeps on this road for my players (burr-bank, the round-4 sleeper, is only met going WEST from the
+  spawn before the stone; following the moths after the stone never passes it).
 
-## 3. Bugs
-- **The V cap's fade-out still eats the first presses**: cap up at f700 (lamp-f3 aware), lamp-f3 gives up (`/calm`) at
-  f717, presses at f721 and f749 miss (`r3-06`). The cap lived 0.28 s before its target left; its fade tail invites
-  the press. Hide it on the frame `offerTarget` goes null, or let a press within ~0.4 s go to that creature.
-- **A lamp steals an offer meant for a bracing burrback**: burr-rise in windup at gap 137/130, two presses, both went
-  to lamp-rise (`lampGift`, f3753/f3773); rammed at f3784 (`r3-09`). Same in the giver (f2123). The creature is
-  just outside 150 px, the lamp is in reach.
-- **The sleep waits for a turn pause**: in both right-first runs burr-path was in `pause` and lay down only at
-  104-113 px (staged from the pool: 316-324 px). Lying down 0.1 s before she arrives reads as cowering.
-- Ghost walking back west with 6 (terrace glints, for the ember) lands in burr-path's ram (f1030, f1121); mostly my
-  bot's 3 s "watch" stance. A no-pod ghost ends 2 short at lantern-far; pod-far is the answer but nothing hints at it.
+## 2. Does the natural player still swing at sleepers? Yes, where it meets one
+- burr-path asleep from 323-339 px (full range now, `r4-01`, zoom `r4-02`), asleep 0.2-2.5 s by the time she reaches
+  it; the natural cut it every time (A, A2 f803/f806, E f736), it woke (`r4-01c`), and the kill paid 4-6 glints.
+  (My natural bot always swings; the picture gives a human no reason not to: a dim beetle with one mote, in the way.)
+- Ember-road naturals met no sleeper, so they had nothing to swing at.
 
-## 4. Top 3 next changes (ranked)
-1. **Put the contrast on the moths' road.** Most first-timers follow the moths to the ember and never see a burrback
-   sleep. Give the lampwings the same read: a lampwing that doesn't see her roosts (wings folded, lamp at ~15%, a
-   slow mote) and lights up with the thread when she carries 2+; or put a sleeping burrback on F3 / the bank before
-   the ember. The first creature each route meets should sleep when she's dark.
-2. **Tie the thread to the number and make it read at 1x**: thread 2-3 px and held ~0.8 s; when it lands the glint
-   count in the HUD flares; the sleeper gets larger, slower "zzz" motes (2x) and lies down from the edge of `dozePx`
-   even mid-pause. Then the corner number IS what they see. (And unmute the notice in-breath once Matt approves.)
-3. **Make the offer target what the player means**: prefer an aware or bracing creature within ~200 px over a
-   dormant light, and drop the V cap the instant `offerTarget` is null. Each costs a first-timer a hit or a
-   "V does nothing".
+## 3. Fun and dominance
+- **Fixed and good**: no press under the cap missed (0 in all runs), no lamp stole an offer meant for a creature (0),
+  the thread + count flare read at 1x, the curious ember run is the cleanest yet (0:56, 1 hit).
+- **No single dominant line**: giver 0 hits, tier 1; natural 3-6 hits (no fades), tier 1-2; curious 1-3 hits, tier 1-2.
+  Fighting is the greedy line (kills feed the tier), giving the safe one. Carrying still bites the natural at L4
+  (30-60% of its run) on the far climb, but every notice now shows its cause on screen.
+
+## 4. Bugs
+- **Roost flicker at the edge of range**: wing-rise roost/wake toggled 8 times in 22 s with the ghost at 254-339 px
+  (C, f7009-f8319); lamp-glade roost -> wake -> roost in 7 frames at 118 px (A4 f718-f726, D2 f719-f725). Each wake
+  snaps the wings open: a visible flap-flap. Needs hysteresis (wake at 380 px, or only on wallet >= 2).
+- Lampwing caps at level 1 live 4-15 frames (above): accurate, but too short to answer.
+- (Bot, not game: the ghost's held V misses while jumping at lantern-far, 4 `offerMiss none`.)
+
+## 5. Top 3 next changes (ranked)
+1. **Make the ember-road wake causal**: put the 2nd glint where lamp-glade still sees her (inside its ~195 px sight
+   at level 1, e.g. on F1 under it), so picking it up wakes it AND draws its thread at once: "I took that, it saw me".
+   Add roost hysteresis while there.
+2. **Give lamp-f3's first notice room to be answered**: keep a lampwing that noticed her offerable for its whole tell
+   + dive (at least ~0.6 s of cap), and don't let lantern-stone's circle call off lamp-f3 50 frames after it notices.
+3. **Make the sleeper argue against the swing**: a sleeping burrback curls into its shell (the existing clang on top:
+   a cut glances, no damage, it wakes grumpy), or lies just off the walking line. Then "walk past, it's asleep"
+   is what the screen says, and the HK reflex teaches the rule instead of skipping it.

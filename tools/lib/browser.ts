@@ -56,7 +56,7 @@ export async function openGame(
   page.on('console', (m) => {
     if (m.type() === 'error') console.error('[console error]', m.text());
   });
-  // A url that already carries a query (e.g. ?char=yako) keeps it.
+  // A url that already carries a query (e.g. ?seed=2) keeps it.
   const flags = pickups ? 'manual' : 'manual&nopickups';
   const target = url.includes('?') ? `${url}&${flags}` : `${url.replace(/\/?$/, '/')}?${flags}`;
   try {

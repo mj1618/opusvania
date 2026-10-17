@@ -13,7 +13,7 @@
 import type { Container } from 'pixi.js';
 import type { EnemyState } from '../../sim/state';
 import { tuning } from '../../sim/tuning';
-import { clamp, sat } from '../character/hooded/math';
+import { clamp, sat } from '../character/math';
 import { type CameraView, type RenderContext, type SimView, VIEW_H, VIEW_W } from '../contract';
 import { ZONE_EDGES } from '../scene/lib/fx-zones';
 import { BurrRig, COLORS, drawBurrback, loadColors, stepFeelers, topHit } from './burrback';
@@ -126,16 +126,6 @@ export class EnemyRenderer {
     frontLayer.addChild(this.front.mesh);
     // Dev handle, like __pickups: `__enemies.cfg.spots.glow = 0.5; __game.render()`.
     if (typeof window !== 'undefined') (window as unknown as { __enemies?: EnemyRenderer }).__enemies = this;
-  }
-
-  /** The burrback rig drawn for `sim.enemies[i]` (made on its first update), for staged beats. */
-  burrRig(i: number): BurrRig | undefined {
-    return this.rigs[i];
-  }
-
-  /** The lampwing rig drawn for `sim.enemies[i]` (made on its first update), for staged beats. */
-  lampRig(i: number): LampRig | undefined {
-    return this.lamps[i];
   }
 
   recolor(): void {

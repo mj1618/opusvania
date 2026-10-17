@@ -12,7 +12,6 @@ import { ChordVoice } from './voices/chord';
 import { GlassAirVoice, PoolVoice, SteamVoice } from './voices/forest';
 import { HushVoice } from './voices/hush';
 import { OneShots } from './voices/oneshots';
-import { PrologueVoice } from './voices/prologue';
 import { WindVoice } from './voices/wind';
 import { WingsVoice } from './voices/wings';
 
@@ -21,7 +20,7 @@ type Voice = { apply(L: Layers, when: number, tau: number): void };
 /**
  * Voices only some places need, made the first frame they are asked for (each costs the renderer
  * every frame it exists, sounding or not): her glide's air, the pool, the steam, the violet air, the
- * lantern bowls, the carried-light chord, the prologue's.
+ * lantern bowls, the carried-light chord.
  */
 const LAZY: Array<{ need: (L: Layers) => boolean; make: (g: AudioGraph, b: Baked) => Voice }> = [
   { need: (L) => L.air > 0, make: (g, b) => new WingsVoice(g, b) },
@@ -30,7 +29,6 @@ const LAZY: Array<{ need: (L: Layers) => boolean; make: (g: AudioGraph, b: Baked
   { need: (L) => L.glass > 1e-5, make: (g, b) => new GlassAirVoice(g, b) },
   { need: (L) => L.rub > 0 || L.hum > 0, make: (g, b) => new BowlVoice(g, b) },
   { need: (L) => L.chord.some((x) => x > 0), make: (g, b) => new ChordVoice(g, b) },
-  { need: (L) => L.maker > 0 || L.light > 0 || L.lamp > 0, make: (g, b) => new PrologueVoice(g, b) },
 ];
 
 export class AudioEngine {
@@ -61,7 +59,7 @@ export class AudioEngine {
     });
   }
 
-  /** The whole mix up or down (the prologue's silence, a fade in at start), gliding. */
+  /** The whole mix up or down (mute, a fade in at start), gliding. */
   fade(to: number, when: number, tau: number): void {
     this.graph.fader.gain.setTargetAtTime(to, when, tau);
   }

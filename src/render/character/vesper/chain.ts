@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/noNonNullAssertion: typed-array maths; indices are in range by construction
 /**
- * Copy of ../hooded/chain.ts with two additions for Vesper's wings: a per-segment `extra` angle
+ * Verlet chains, with two additions for Vesper's wings: a per-segment `extra` angle
  * (travelling ripples, wingbeats) and a per-frame `dragK` (membranes hold their shape in a fall).
  * The two pulls are capped so their sum stays below 1: above that a stiffened chain overshoots its
  * target every sub-step and locks into a straight rod.

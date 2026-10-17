@@ -26,7 +26,7 @@ import {
   Spring,
   sat,
   smoothstep,
-} from '../character/hooded/math';
+} from '../character/math';
 import { BURR } from './config';
 import { bobAt, foot, footAt, LEG_ROW, LEG_SIDE, rockAt } from './gait';
 import type { Painter, RGB, Shade } from './paint';
@@ -261,12 +261,6 @@ export class BurrRig {
   count = 0;
   windU = 0;
   readonly guard = new Spring(0, 30, 0.42);
-  /**
-   * A staged beat (the prologue: render/prologue/grove.ts), or null. `reach` 0..1 cranes the head
-   * out toward what it watches, `open` 0..1 lifts the brow plate open, `watch` 0..1 holds its eyes on
-   * the hero point it is given. Never set by the game.
-   */
-  cine: { reach: number; open: number; watch: number } | null = null;
   /** Rear feet scraping through the tell: phase in strokes; set for the one update a stroke starts. */
   scrapeP = 0;
   scraped = false;
@@ -825,12 +819,6 @@ export class BurrRig {
       reachT *= 1 - ck;
       bristleT += (Cu.burrs - bristleT) * ck;
     }
-    // A staged beat: the head out and up toward what it watches, the front lifting with it.
-    const cine = this.cine;
-    if (cine) {
-      reachT = Math.max(reachT, cine.reach);
-      leanT -= this.d * 0.26 * cine.reach;
-    }
     const sharp =
       (mode === 'alert' && !sliding) || (shying && react > 0.5) || wind || (curledNow && ck < 0.9);
     this.crouch.omega = sharp ? 36 : mode === 'walk' ? 15 : 10;
@@ -840,7 +828,7 @@ export class BurrRig {
     this.rock.zeta = bracedNow ? 0.55 : spentM || curledNow ? 0.34 : 0.26;
     this.rock.step(mode === 'dead' ? 0 : leanT, dt);
     this.squash.step(squashT, dt);
-    this.guard.step(bracedNow ? 1 : cine && cine.open > 0 ? -cine.open : -R.lift * gather, dt);
+    this.guard.step(bracedNow ? 1 : -R.lift * gather, dt);
     this.back.step(backT, dt);
     this.reach.step(reachT, dt);
     this.bristle.step(bristleT, dt);
@@ -863,15 +851,7 @@ export class BurrRig {
     }
     // (Peering, they are on her too; shying, they turn from the light and narrow; calm, they sink.)
     const onHer =
-      Math.max(
-        this.wary,
-        0.9 * pk,
-        this.noticeK,
-        seen ? sat(this.cdK * 4) * 0.8 : 0,
-        sk,
-        this.cine?.watch ?? 0,
-      ) *
-      (1 - this.spentK);
+      Math.max(this.wary, 0.9 * pk, this.noticeK, seen ? sat(this.cdK * 4) * 0.8 : 0, sk) * (1 - this.spentK);
     if (onHer > 0.02) {
       const dx = hx - this.x;
       const dy = hy - (this.y - 12);

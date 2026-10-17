@@ -723,7 +723,7 @@ export const defaultTuning = {
     /** Frames she holds the glint out (the pose; it never locks her movement). */
     offerPoseFrames: 16,
     /**
-     * HOLDING offer (as the prologue teaches): after `offerStreamDelayFrames` held, one glint every
+     * HOLDING offer: after `offerStreamDelayFrames` held, one glint every
      * `offerStreamFrames` into a dormant light or the heart (never a creature: a creature takes one per
      * press). A glint to a light / the heart flies `offerLightFlightFrames` (= the stream's gap: one in
      * flight at a time).

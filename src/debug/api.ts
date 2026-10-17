@@ -4,7 +4,6 @@ import type { Cue } from '../audio/router';
 import type { BusId } from '../audio/tuning';
 import type { Game, RunMode } from '../game';
 import { type InputScript, parseInputScript } from '../input/script';
-import type { PrologueDirector } from '../prologue';
 import type { GameApp } from '../render/app';
 import { type CameraView, VIEW_H, VIEW_W } from '../render/contract';
 import type { PointLight } from '../render/lights';
@@ -287,28 +286,6 @@ export interface GameDebugApi {
   /** Hero design: no argument lists `{id, skins}`; an id switches to that skin. */
   character(id?: string): { id: string; skins: string[] };
   /**
-   * The prologue (src/prologue/), or null when it was not played (`?skipprologue`, or `?manual`
-   * without `?prologue`). `state()` its clock and beat; `autopilot(on)` plays her part (captures,
-   * tests); `advance(n)` n frames of 1/60 s (the sim steps too
-   * once she is out of her cocoon), draws, returns the clock; `seek(t)` advances to `t` s (only
-   * forward); `skip()` hands over to the Grove now.
-   */
-  prologue: {
-    state(): {
-      t: number;
-      done: boolean;
-      simOn: boolean;
-      beat: string;
-      bt: number;
-      phase: string;
-      leg: number;
-    };
-    autopilot(on?: boolean): boolean;
-    advance(n?: number): number;
-    seek(t: number): number;
-    skip(): number;
-  } | null;
-  /**
    * Sound (src/audio, memory/audio.md). Muted by default; `mute(false)` unmutes (in a real page the
    * context starts on the next gesture). `cues(n)`: the last cues routed, muted or not.
    * `record()` starts a tape of every step from now; `render(opts)` plays it offline into a WAV
@@ -343,21 +320,9 @@ export function installDebugApi(deps: {
   ga: GameApp;
   stage: RenderStage;
   panel: TuningPanel;
-  prologue?: PrologueDirector | null;
   audio?: AudioDirector | null;
 }): GameDebugApi {
   const { game, ga, stage, panel } = deps;
-  const pro = deps.prologue ?? null;
-  const advance = (n: number): number => {
-    if (!pro) return 0;
-    game.mode = 'manual';
-    for (let i = 0; i < n && !pro.done; i++) {
-      if (pro.simOn) game.stepOnce();
-      stage.update(1 / 60, 1);
-    }
-    stage.present();
-    return pro.plan.t;
-  };
   const log: Array<SimEvent & { f: number }> = [];
   let lastCall = 0;
   game.afterStep.add((events) => {
@@ -416,28 +381,6 @@ export function installDebugApi(deps: {
       cues: (n) => au.cues(n),
       record: (on = true) => au.record(on),
       render: (opts) => renderTape(au.recording(), game.scene, game.seed, opts),
-    },
-    prologue: pro && {
-      state: () => ({
-        t: pro.plan.t,
-        done: pro.done,
-        simOn: pro.simOn,
-        beat: pro.plan.beat,
-        bt: pro.plan.bt,
-        phase: pro.plan.phase,
-        leg: pro.plan.leg,
-      }),
-      autopilot: (on = true) => {
-        pro.autopilot = on;
-        return on;
-      },
-      advance: (n = 1) => advance(n),
-      seek: (t: number) => advance(Math.max(0, Math.round((t - pro.plan.t) * 60))),
-      skip: () => {
-        pro.skip();
-        redraw();
-        return pro.plan.t;
-      },
     },
     step(n = 1) {
       game.mode = 'manual';

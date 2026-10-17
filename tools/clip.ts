@@ -15,11 +15,6 @@
  * --size WxH capture size (default 960x540). --fps (default 60; the GIF is 30)
  * --pre n    settle steps before recording (default 30). --hitboxes, --no-gpu, --url, --keep-frames
  * --pickups  with the glints and the counter (left out by default)
- * --prologue the opening (src/prologue/) instead: from --from to --to seconds of its clock (or its
- *            end), one picture every 60 / --fps frames; her part in the played stretches is played
- *            by the director's autopilot.
- *   npm run clip -- --prologue --fps 30 --name prologue            # all of it (about 3 min)
- *   npm run clip -- --prologue --from 60 --to 70 --name play
  * --audio    with sound: the game's audio director records every step while the clip steps the game
  *            (muted, so nothing plays), then renders it offline (OfflineAudioContext, src/audio/offline.ts)
  *            and muxes it into the mp4; clips/<name>.wav beside it, and its levels printed (tools/lib/levels.ts).
@@ -31,7 +26,6 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import type { Browser } from '@playwright/test';
 import { parseInputScript } from '../src/input/script';
 import { DEFAULT_URL, launch, openGame } from './lib/browser';
 import { formatLevels, measure } from './lib/levels';
@@ -49,12 +43,9 @@ const { values: args } = parseArgs({
     pre: { type: 'string', default: '30' },
     hitboxes: { type: 'boolean', default: false },
     pickups: { type: 'boolean', default: false },
-    prologue: { type: 'boolean', default: false },
     audio: { type: 'boolean', default: false },
     ab: { type: 'boolean', default: false },
     setup: { type: 'string' },
-    from: { type: 'string', default: '0' },
-    to: { type: 'string', default: '400' },
     'no-gpu': { type: 'boolean', default: false },
     'keep-frames': { type: 'boolean', default: false },
     url: { type: 'string', default: DEFAULT_URL },
@@ -62,7 +53,7 @@ const { values: args } = parseArgs({
     help: { type: 'boolean', short: 'h' },
   },
 });
-if (args.help || (!args.script && !args.ambient && !args.prologue)) {
+if (args.help || (!args.script && !args.ambient)) {
   console.log(
     'npm run clip -- --script "R40 R+J22 R30 .30" [--name n] [--at x,y] [--zoom 2 | --wide] [--ambient frames] [--size 960x540] [--hitboxes]',
   );
@@ -89,15 +80,6 @@ async function main(): Promise<void> {
 
   const browser = await launch({ gpu: !args['no-gpu'] });
   const takes: Array<{ suffix: string; wav: string }> = [];
-  if (args.prologue) {
-    try {
-      await prologueFrames(browser, framesDir, w, h);
-    } finally {
-      await browser.close();
-    }
-    encode(framesDir, outDir, name);
-    return;
-  }
   try {
     const page = await openGame(browser, args.url ?? DEFAULT_URL, { width: w, height: h }, 1, args.pickups);
     if (args.setup) await page.evaluate(`(() => { const g = window.__game; ${args.setup} })()`);
@@ -195,32 +177,6 @@ function encode(
   ]);
   if (!args['keep-frames']) rmSync(framesDir, { recursive: true, force: true });
   console.log(`  ${gif}`);
-}
-
-/** The prologue, one picture every 60 / fps of its frames (`__game.prologue.advance`). */
-async function prologueFrames(browser: Browser, framesDir: string, w: number, h: number): Promise<void> {
-  const url = (args.url ?? DEFAULT_URL).replace(/\/?$/, '/');
-  const page = await openGame(browser, `${url}?prologue`, { width: w, height: h }, 1, true);
-  const from = Number(args.from);
-  const to = Number(args.to);
-  const per = Math.max(1, Math.round(60 / Number(args.fps ?? 60)));
-  // Her part in the played stretches is played by the director's autopilot.
-  await page.evaluate((t) => {
-    const p = window.__game.prologue;
-    p?.autopilot(true);
-    p?.seek(t);
-  }, from);
-  const canvas = page.locator('#game');
-  for (let i = 0; ; i++) {
-    const st = await page.evaluate(() => window.__game.prologue?.state());
-    if (!st || st.t > to) break;
-    writeFileSync(
-      join(framesDir, `${String(i).padStart(5, '0')}.png`),
-      await canvas.screenshot({ type: 'png' }),
-    );
-    if (st.done) break;
-    await page.evaluate((k) => window.__game.prologue?.advance(k), per);
-  }
 }
 
 main().catch((e) => {

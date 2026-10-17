@@ -120,34 +120,25 @@ test('__game API: step, state, input, load, teleport, cam, freeze', async ({ pag
   expect(errors).toEqual([]);
 });
 
-test('the prologue plays on its own clock and hands over to the Grove', async ({ page }) => {
+test('the default boot plays the Grove straight away (no prologue)', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto('./?prologue&manual');
+  await page.goto('./');
   await page.waitForFunction(() => document.body.dataset.ready === 'true' || !!document.body.dataset.error);
+  expect(await page.evaluate(() => document.body.dataset.error)).toBeUndefined();
   const r = await page.evaluate(() => {
-    const p = window.__game.prologue;
-    if (!p) return null;
-    // (Software GL in CI: a few frames only; tools/prologue.ts captures the whole thing.)
-    const before = p.state();
-    const t = p.advance(20);
-    const frame = window.__game.state().frame;
-    p.skip();
-    return { before, t, frame, end: p.state() };
+    const g = window.__game;
+    // Realtime from the first frame: pause it so the reading is stable.
+    const mode = g.pause();
+    const s = g.state();
+    return { mode, prologue: 'prologue' in g, glints: s.pickups.timers.length, hp: s.player.hp };
   });
-  expect(r).not.toBeNull();
-  // Until her cocoon splits the sim stands still; skipping hands her to the game.
-  expect(r?.before.simOn).toBe(false);
-  expect(r?.t).toBeCloseTo(20 / 60, 3);
-  expect(r?.frame).toBe(0);
-  expect(r?.end.done).toBe(true);
-  expect(r?.end.simOn).toBe(true);
+  expect(r.prologue).toBe(false);
+  expect(r.mode).toBe('manual');
+  // The whole Grove: its glints are there and she is at full health.
+  expect(r.glints).toBeGreaterThan(0);
+  expect(r.hp).toBe(4);
   expect(errors).toEqual([]);
-});
-
-test('?manual boots straight into the Grove (no prologue)', async ({ page }) => {
-  await boot(page);
-  expect(await page.evaluate(() => window.__game.prologue)).toBeNull();
 });
 
 test('sound is muted by default: no AudioContext until M, and the game plays the same either way', async ({

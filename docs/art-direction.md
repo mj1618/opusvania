@@ -1,6 +1,6 @@
 # Art direction: the Grove
 
-One scene, three screens wide. No enemies, no story, no HUD. The only goal is that a screenshot or a
+One scene, three screens wide (the demo level). The goal is that a screenshot or a
 ten-second clip could sit next to Ori and the Blind Forest / Hollow Knight and not look out of place.
 Everything is drawn in code (vector shapes, meshes, GLSL). No image assets.
 
@@ -44,8 +44,8 @@ reflects. Camera is soft: look-ahead, gentle vertical dead zone, no snapping.
 
 ## The character: Wing (chosen 2026-10-13)
 The owner picked **Wing, the moth** (`src/render/character/vesper/`, memory/character-vesper.md) from
-four playable candidates. All character work goes into her from now on; the other skins (yako, wick,
-nova, hooded) stay in the repo behind the number keys but are frozen. What follows is the history of
+four playable candidates. All character work goes into her; the other candidate skins were deleted on 2026-10-17 (git history
+has them). What follows is the history of
 the brief; the tone and "more from the owner" paragraphs still apply to her.
 
 ### History: the first brief (Ember)
@@ -64,7 +64,7 @@ world, light left behind in motion), look **agile** (light build, free legs, spr
 it sprints, leaps, dashes, wall-jumps), and have **real arms with gripping hands** to grab ledges and
 hold weapons. **Movement is effortless and relaxed, like Ori's**: a light, floaty, gliding run that
 never looks strained or determined, loose arms, calm level head, everything overlapping and easing;
-nothing robotic (no joints moving as plain sines in lockstep). The final design is being chosen from the concept gallery (`/concepts.html`); the
+nothing robotic (no joints moving as plain sines in lockstep). The final design is Wing (above); the
 feature list below is the superseded first design.
 - Dark indigo-plum body, slim, slightly oversized head, short limbs, readable hands and feet.
 - A pale, soft mask-like face with two large warm amber glowing eyes. No mouth.
@@ -84,30 +84,17 @@ Fluid above all. Driven by sim state plus springs, never by popping between pose
 - Every secondary part (ears, cloak, tail) is simulated (verlet or spring chains) and follows through.
 - Smooth shading: soft gradients, a rim from the key light, a glow halo. Anti-aliased at any zoom.
 
-## The world: overgrown ruin (owner's direction, 2026-10-14)
-The owner is not attached to the current art; the question is what serves the audience best. Decision: neither pure
-nature nor cyberpunk. **The human world, swallowed and overgrown by grown living tissue** ("organic ruin"): pale, warm,
-slowly breathing root and folded tissue over bus stops, streets, towers, kitchens and labs; sleepers in seed-pod cases on
-stalks; a mountain of folded tissue breathing on the horizon. It makes the story visible in one screenshot, serves all
-three audiences (Ori: beauty; Hollow Knight: eerie melancholy; Nine Sols: sci-fi myth underneath), and is far less
-claimed than nature (Ori-likes) or neon cyberpunk.
-- **Keep the rendering, not the subject:** painterly, layered atmospheric depth, dark and subtle, small precious lights.
-- **Palette:** the Mouth's world is bone-white, pale flesh-pink and static grey in cold blue-violet dark; living things
-  are warm (amber). Wing, small and dark and warm, is the one moving light in it.
-- **Nature is a minority:** the last wild pockets (the Grove is one), amber and alive, maybe two regions in eight.
-- **One permitted neon moment:** a dead city whose last lamp still burns and draws moths.
-- **The edge** between forest and root (half amber and alive, half pale and still, the line moving night to night) is the
-  signature transition.
-### Moth scale, at night (2026-10-14)
-- **Scale:** the world is seen at Wing's size. A kerb is a cliff, a bench a plateau, a dropped jar a cave, a kitchen
-  table with sleepers' cases around it a whole region. Smallness is the premise (she is overlooked), so the camera makes
-  human things vast. In the forest: ferns as trees, moss as meadows, a mushroom as a building.
-- **Time:** she is nocturnal; the game lives at dusk and night: moonlight, the Hush's faint breathing glow, and the few
-  warm lights she finds or makes.
-- **Journey inward:** the last wild wood (the Grove, lush, amber; Act I) → the edge → half-swallowed gardens and
-  orchards → the kept town at moth scale (street, bus stop, houses, kitchens) → the city's dead lights (the last lamp)
-  → the mountain and the lab. Each step paler, stiller, more "kept".
-- **The lush forest is one region, never the whole game:** its beauty is the contrast that makes the pale hurt. Keep it
-  ours, not Ori's: moth scale, night and dusk (not glowing blue-green), amber glints (not spirit light), the pale always
-  at the edge of the frame.
-- **No cyberpunk tropes:** no neon signage, chrome, cables, holograms or rain-soaked megacity.
+## The world: the moths' road (2026-10-17)
+The old "overgrown ruin" world went with the dropped story. The new story (`memory/story.md`) is a night
+migration through wild country, and every region is natural, so the forest kit carries the whole game.
+- **Keep the rendering:** painterly, layered atmospheric depth, dark and subtle, small precious lights.
+- **Moth scale, at night.** The world is seen at Wing's size: ferns are trees, moss is a meadow, a mushroom is a building.
+  The game lives at dusk and night, under moonlight.
+- **Two kinds of light, always told apart.** The **real moon** is cool, pale and high, the one constant in the sky. The
+  **false lights** (the firefly's lamps) are warm, close, low and hungry: they pull. Swarms of moths circling a lamp
+  are the signature image. The dark between lights is safety.
+- **The mountain under the moon** is seen at vistas (canopy gaps, clifftops, each time a lamp goes out), and it gets
+  closer region by region.
+- **The road, in order:** the wood (the Grove), the valley of lamps, the marsh, the pass, and the cave. The cave is the
+  brightest place in the world, lit by the firefly's whole collection, until the end.
+- **No human buildings and no cyberpunk.** If people appear at all, it's at the far edge of the frame.

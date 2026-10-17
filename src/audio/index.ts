@@ -15,7 +15,6 @@ import type { SimEvent } from '../sim/events';
 import { bakeSteps } from './bake';
 import { Conductor } from './conductor';
 import { AudioEngine } from './engine';
-import { type ProView, viewOf } from './prologue';
 import { type AudioCam, type AudioSnap, type Cue, snapOf } from './router';
 import { AUDIO, type BusId } from './tuning';
 
@@ -24,14 +23,9 @@ export interface TapeFrame {
   clock: number;
   cam: AudioCam;
   steps: Array<{ events: SimEvent[]; snap: AudioSnap }>;
-  /** The prologue as it stood this frame (absent once it is over). */
-  pro?: ProView;
   /** The state before any step of the recording (the first frame only). */
   prime?: AudioSnap;
 }
-
-/** What `AudioDirector.prologue` may return: the director's plan (render/prologue/plan.ts) and whether it is over. */
-export type PrologueSource = () => { plan: Parameters<typeof viewOf>[0]; done: boolean } | null;
 
 const STORE_KEY = 'wing.audio';
 
@@ -60,17 +54,10 @@ export class AudioDirector {
   private ctx: AudioContext | null = null;
   private engine: AudioEngine | null = null;
   private cam: AudioCam = { x: 0, y: 0, zoom: 1 };
-  private quiet = false;
   private tape: TapeFrame[] | null = null;
   private pending: TapeFrame['steps'] = [];
   private faded = 0;
   private suspending = false;
-  /**
-   * The prologue's director, read-only (main.ts: `audio.prologue = () => prologue`). Without it the
-   * director falls back to `__game.prologue.state()` (beats and their clocks only: no glint, bumps,
-   * sneeze or Sorrel's body), and without either the prologue is silent (the old `quiet`).
-   */
-  prologue: PrologueSource | null = null;
 
   constructor(
     private readonly game: Game,
@@ -141,45 +128,34 @@ export class AudioDirector {
   }
 
   private get audible(): boolean {
-    return !!this.engine && !this.muted && !this.quiet && this.ctx?.state === 'running';
+    return !!this.engine && !this.muted && this.ctx?.state === 'running';
   }
 
   private onStep(events: readonly SimEvent[]): void {
     const g = this.game;
     const snap = snapOf(g.state, g.scene, g.tuning.goal.channelFrames, g.tuning.giving.giftCalmFrames);
-    // The prologue plays another version of the scene, then hands over the whole Grove.
-    this.conductor.ctx.scene = g.scene;
     // A restart begins the frame count again.
     if (snap.frame === 0) this.conductor.reset();
     this.conductor.step(events, snap, this.cam, this.when(), this.audible);
     if (this.tape) this.pending.push({ events: events.map((e) => ({ ...e })), snap });
   }
 
-  /**
-   * After each render frame: the camera (view centre and zoom) and the render clock. `quiet` holds
-   * the mix silent (the prologue has its own silence).
-   */
-  update(clock: number, cam: AudioCam, quiet = false): void {
+  /** After each render frame: the camera (view centre and zoom) and the render clock. */
+  update(clock: number, cam: AudioCam): void {
     this.cam = { x: cam.x, y: cam.y, zoom: cam.zoom };
-    const pro = this.proView();
-    // The prologue sounds once audio can see it; otherwise it keeps its old silence.
-    this.quiet = quiet && !pro;
-    quiet = this.quiet;
     if (this.tape) {
       const fr: TapeFrame = { clock, cam: this.cam, steps: this.pending };
-      if (pro) fr.pro = pro;
       if (this.tape.length === 0) fr.prime = this.snap();
       this.tape.push(fr);
       this.pending = [];
     }
     this.conductor.prime(this.snap());
-    this.conductor.prologue(pro, this.cam, this.when(), this.audible);
     const ctx = this.ctx;
     const engine = this.engine;
     if (!ctx || !engine) return;
     const run = !this.muted && this.game.mode === 'realtime';
     if (run && ctx.state === 'suspended') void ctx.resume();
-    const target = run && !quiet ? 1 : 0;
+    const target = run ? 1 : 0;
     if (target !== this.faded) {
       engine.fade(target, ctx.currentTime, target ? 0.5 : 0.08);
       this.faded = target;
@@ -198,25 +174,6 @@ export class AudioDirector {
   private snap(): AudioSnap {
     const g = this.game;
     return snapOf(g.state, g.scene, g.tuning.goal.channelFrames, g.tuning.giving.giftCalmFrames);
-  }
-
-  /** The prologue now, if it is playing and audio can see it. */
-  private proView(): ProView | null {
-    const src = this.prologue?.();
-    if (src) return src.done ? null : viewOf(src.plan, false);
-    const api = (globalThis as { __game?: { prologue?: { state(): Record<string, unknown> } | null } }).__game
-      ?.prologue;
-    if (!api) return null;
-    const st = api.state() as {
-      beat?: string;
-      bt?: number;
-      t?: number;
-      done?: boolean;
-      phase?: string;
-      leg?: number;
-    };
-    if (st.done || typeof st.beat !== 'string') return null;
-    return { beat: st.beat, bt: st.bt ?? 0, t: st.t ?? 0, done: false, phase: st.phase, leg: st.leg };
   }
 
   /** Records every step and frame from now (for an offline clip); false stops and drops it. */

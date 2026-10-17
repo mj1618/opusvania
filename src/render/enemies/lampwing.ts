@@ -7,7 +7,7 @@
  * phase; everything else is springs on the sim state.
  */
 import type { EnemyState } from '../../sim/state';
-import { approach, clamp, noise1, Spring, sat, smoothstep } from '../character/hooded/math';
+import { approach, clamp, noise1, Spring, sat, smoothstep } from '../character/math';
 import { LAMP } from './config';
 import type { Painter, RGB, Shade } from './paint';
 
@@ -87,11 +87,6 @@ export class LampRig {
   /** Antennae lag behind the body, px. */
   readonly lagX = new Spring(0, 16, 0.4);
   readonly lagY = new Spring(0, 16, 0.4);
-  /**
-   * A staged beat (the prologue: render/prologue), or null: `lit` 0..1 scales its lamp (0 = dark:
-   * hanging unseen until the Hush looks through it). Never set by the game.
-   */
-  cine: { lit: number } | null = null;
   /** 0..1 weights, eased. */
   keen = 0;
   /** The tell: 1 while curious, easing off after. */
@@ -826,7 +821,6 @@ export function drawLampwing(
   if (e.hp <= 1 && !dead) br *= 0.6 + 0.4 * (noise1(clock * 12 + ph, 7) > -0.2 ? 1 : 0.3);
   if (dead) br *= sat(1 - t / 12) * (0.5 + 0.5 * noise1(clock * 16 + ph, 8));
   br *= 1 - toneDark * 0.7;
-  if (rig.cine) br *= rig.cine.lit;
   if (br > 0.02) {
     const lwx = bx(lampX, lampY);
     const lwy = by(lampX, lampY);

@@ -3,9 +3,9 @@
  * Vesper, the moth: a night-flier who carries her own light. Skin id `vesper`.
  *
  *   rig.ts    pose generators + springs -> skeleton (2.5D, continuous turn, dragged hands)
- *   chain.ts  verlet chains with rest shapes (copy of hooded/chain.ts + per-segment ripple)
+ *   chain.ts  verlet chains with rest shapes (+ per-segment ripple)
  *   wings.ts  the two wing membranes (five strands each) and the two antennae
- *   draw.ts   skeleton + chains -> shaded shapes (through hooded/paint.ts, one mesh)
+ *   draw.ts   skeleton + chains -> shaded shapes (through paint.ts, one mesh)
  *   fx.ts     rising gold dust, light trails, landing dust
  *   slashfx/  the slash's look: one crescent per cut and the contact flash
  *
@@ -18,21 +18,11 @@ import type { PlayerView, RenderContext } from '../../contract';
 import type { PointLight } from '../../lights';
 import { zoneWeights } from '../../scene/lib/fx-zones';
 import { KEY_LIGHT } from '../../scene/lib/look';
-import { clamp, noise1, Spring, sat, smoothstep } from '../hooded/math';
+import { clamp, noise1, Spring, sat, smoothstep } from '../math';
 import type { CharacterSkin, SkinDef } from '../skin';
 import { BLADE_LEN, drawVesper, type View } from './draw';
 import { drawSpinRings, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './fx';
-import { type CineCues, vesperLink } from './link';
-
-/**
- * A second body with this skin (the prologue's Sorrel, or a staged stand-in for her): its own cues
- * instead of `vesperLink.cine`, and `link: false` so it leaves `vesperLink` (the goal renderer's
- * hand-off for the player) alone.
- */
-export interface VesperOptions {
-  cine?: CineCues;
-  link?: boolean;
-}
+import { vesperLink } from './link';
 
 import { Painter, rgb } from './paint';
 import { HURT, J_CHEST, J_HAND_A, J_HEAD, J_HIP, MAX_TURNS, Rig } from './rig';
@@ -73,8 +63,8 @@ const EDGE = { px: 1.5, color: [0.035, 0.022, 0.055] as const, alpha: 0.95, hidd
  * finds her. By `player.seenLevel` 0-4 (her wallet), her own lights (`glow`: lantern tips, eyes, wing
  * spots), her point light (`light`, `radius`) and the gold dust off her wings (`dust`). Level 2 is the
  * look she was tuned at (a handful); 0 is a dark moth with two dim eyes; 4 is a lamp that walks.
- * Eased at `rate` /s (a glint given or taken is felt over half a second, not popped). Only the
- * player's own skin (a staged stand-in, and any scene without glints, keeps level 2).
+ * Eased at `rate` /s (a glint given or taken is felt over half a second, not popped). A scene
+ * without glints keeps level 2.
  */
 const SEEN = {
   glow: [0.1, 0.5, 1, 1.35, 1.75],
@@ -154,18 +144,11 @@ export class VesperCharacter implements CharacterSkin {
 
   /** Where the light leaves her hand (or her chest), world px, every frame (the same point `vesperLink.offerX/Y` gets). */
   readonly offer = { x: 0, y: 0 };
-  /** Leave the wings out this frame (a stand-in whose flight wings are drawn elsewhere). */
-  hideWings = false;
-  private readonly cine: CineCues;
-  private readonly link: boolean;
 
   constructor(
     private readonly ctx: RenderContext,
     private readonly layer: Container,
-    opts: VesperOptions = {},
   ) {
-    this.cine = opts.cine ?? vesperLink.cine;
-    this.link = opts.link ?? true;
     this.initTurns();
     this.painter.mesh.label = 'vesper';
     layer.addChild(this.painter.mesh);
@@ -226,11 +209,9 @@ export class VesperCharacter implements CharacterSkin {
       const k = rig.offerK;
       this.offer.x = j[J_CHEST * 2]! + (j[hand]! - j[J_CHEST * 2]!) * k;
       this.offer.y = j[J_CHEST * 2 + 1]! + (j[hand + 1]! - 2.5 - j[J_CHEST * 2 + 1]!) * k;
-      if (this.link) {
-        vesperLink.live = true;
-        vesperLink.offerX = this.offer.x;
-        vesperLink.offerY = this.offer.y;
-      }
+      vesperLink.live = true;
+      vesperLink.offerX = this.offer.x;
+      vesperLink.offerY = this.offer.y;
     }
     const sig = rig.sig;
     const fresh = sig.spawned || !this.started;
@@ -494,11 +475,11 @@ export class VesperCharacter implements CharacterSkin {
 
     // --- Dust rises off the wings; more of it when she moves.
     const moving = sat(Math.hypot(player.vx, player.vy) / 10);
-    // How seen she is: the light she carries (eased; a stand-in keeps the tuned look).
+    // How seen she is: the light she carries (eased).
     {
       // (A scene with nothing to carry, the clean plates of `?nopickups`, keeps the tuned look.)
       const carry = (this.ctx.scene.pickups?.length ?? 0) > 0;
-      const lvl = this.link && carry && Number.isFinite(player.seenLevel) ? clamp(player.seenLevel, 0, 4) : 2;
+      const lvl = carry && Number.isFinite(player.seenLevel) ? clamp(player.seenLevel, 0, 4) : 2;
       this.seenK = fresh ? lvl : this.seenK + (lvl - this.seenK) * (1 - Math.exp(-SEEN.rate * dt));
     }
     const seenAt = (t: readonly number[]): number => {
@@ -577,7 +558,6 @@ export class VesperCharacter implements CharacterSkin {
     p.outline = EDGE.hidden ? 0 : EDGE.px;
     p.outlineColor = EDGE.color;
     p.outlineAlpha = EDGE.alpha;
-    view.noWings = this.hideWings;
     drawVesper(p, rig.frame, view, clock);
     p.outline = 0;
     p.dimK = 0;
@@ -775,16 +755,6 @@ export class VesperCharacter implements CharacterSkin {
     cue.lampKeyed = false;
     cue.away = false;
     cue.heartWait = false;
-    const cc = this.cine;
-    cue.hold = cc.hold;
-    cue.look = cc.look;
-    cue.shake = cc.shake;
-    cue.fold = cc.fold;
-    cue.huddle = cc.huddle;
-    cue.tap = cc.tap;
-    cue.lookUp = cc.lookUp;
-    cue.wings = cc.wings;
-    cue.give = cc.give;
     if (!goal) return;
     // Lanterns, then the wayside lamps: one list, as the goal renderer keeps them (its `beads` are in this order).
     const nLant = sc.lanterns?.length ?? 0;
@@ -914,7 +884,7 @@ export class VesperCharacter implements CharacterSkin {
       window.clearTimeout(this.toastTimer);
       this.toast?.remove();
     }
-    if (this.link) vesperLink.live = false;
+    vesperLink.live = false;
     this.layer.removeChild(this.painter.mesh);
     this.painter.mesh.destroy();
     if (this.ctx.lights.get('ember') === this.light) this.ctx.lights.remove('ember');

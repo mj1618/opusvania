@@ -65,18 +65,6 @@ export const SOUNDS = {
   sniff: 4,
   wingHum: 3,
   glassSettle: 3,
-  // The prologue (milestone 3): strings for the motifs, and its few things.
-  pluck: 4,
-  pluckBright: 4,
-  bell: 4,
-  creak: 3,
-  frost: 6,
-  lap: 5,
-  sneeze: 1,
-  boneKnock: 2,
-  staticBurst: 1,
-  rumble: 1,
-  hushCall: 1,
   // Giving round 3: a creature asleep, catching her light, losing it.
   sleepBreath: 4,
   catchBreath: 4,
@@ -97,8 +85,6 @@ export const SLOW: Partial<Record<SoundId, number>> = {
   lampRest: 4,
   giftBowl: 4,
   heartGift: 4,
-  hushCall: 2,
-  rumble: 2,
 };
 
 /** The rate a sound is baked at, for a context running at `sr`. */
@@ -189,33 +175,6 @@ function bowl(
   modes(x, sr, list, 0, 0.007);
   mixInto(x, click(sr, r, len(sr, 0.05), 900, 0.006), 0.05);
   return shape(x, sr, arEnv(0.001, 0, 1e3, n / sr));
-}
-
-/**
- * A plucked string (Karplus-Strong in plain JS, so no 128-frame delay floor): a felt excitation
- * (noise low-passed at `bright` Hz) into a tuned loop with a gentle averaging filter.
- */
-function string(
-  sr: number,
-  r: () => number,
-  f: number,
-  d: number,
-  bright: number,
-  decay: number,
-): Float32Array {
-  const n = len(sr, d);
-  const N = Math.max(2, Math.round(sr / f));
-  const exc = white(N, r);
-  biquad(exc, sr, 'lowpass', bright);
-  biquad(exc, sr, 'lowpass', bright);
-  const y = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const fb = i >= N ? 0.5 * ((y[i - N] as number) + (y[i - N - 1] ?? 0)) * decay : 0;
-    y[i] = (i < N ? (exc[i] as number) * (0.5 - 0.5 * Math.cos((Math.PI * i) / N)) : 0) + fb;
-  }
-  // A body: the string through a soft resonance, and a little of its pluck noise.
-  biquad(y, sr, 'lowpass', 4000);
-  return shape(y, sr, arEnv(0.002, 0, 1e3, d));
 }
 
 /**
@@ -751,169 +710,6 @@ const RECIPES: Record<SoundId, Recipe> = {
     shape(x, sr, (t) => 1 - 0.25 * (0.5 + 0.5 * Math.sin(2 * Math.PI * rate * t)));
     return normalize([x]);
   },
-  /**
-   * Wing's strings: a small harp plucked with felt (Karplus-Strong, a soft low-passed excitation),
-   * baked at D4 and pitched by the cue. Never blown.
-   */
-  pluck(sr, r) {
-    return normalize([string(sr, r, PITCH.D4, 2.6, 900, 0.996)]);
-  },
-  /** Sorrel's: the same strings, brighter and hammered, with his wing tremolo. */
-  pluckBright(sr, r) {
-    const x = string(sr, r, PITCH.D4, 1.8, 3200, 0.993);
-    const rate = 6.5 + r();
-    shape(x, sr, (t) => 1 - 0.22 * (0.5 + 0.5 * Math.sin(2 * Math.PI * rate * t)));
-    return normalize([x]);
-  },
-  /** A small glass bell (A5; the dance's music far above, pitched by the cue). */
-  bell(sr, r) {
-    const n = len(sr, 1.4);
-    const f = PITCH.A4 * 2 * (1 + (r() - 0.5) * 0.002);
-    const x = new Float32Array(n);
-    modes(
-      x,
-      sr,
-      [
-        { f, tau: 0.45, amp: 1, beat: 1.2, ph: r() },
-        { f: f * 2.76, tau: 0.12, amp: 0.15 },
-        { f: f * 5.4, tau: 0.04, amp: 0.04 },
-      ],
-      0,
-      0.004,
-    );
-    return normalize([shape(x, sr, arEnv(0.001, 0, 1e3, 1.4))]);
-  },
-  /** A cocoon giving: a fibrous creak, stick-slip pulses speeding up through a woody band. */
-  creak(sr, r) {
-    const d = 0.75 + r() * 0.2;
-    const n = len(sr, d);
-    const x = new Float32Array(n);
-    let t = 0;
-    while (t < d - 0.02) {
-      const at0 = at(sr, t);
-      const g = white(len(sr, 0.006), r);
-      shape(g, sr, arEnv(0.0005, 0, 0.0015, 0.006));
-      mixInto(x, g, 0.5 + r() * 0.5, at0);
-      const k = t / d;
-      t += (1 / (25 + 70 * k)) * (0.8 + r() * 0.4);
-    }
-    biquad(x, sr, 'bandpass', 520 + r() * 200, 2.5);
-    biquad(x, sr, 'bandpass', 900 + r() * 300, 1.5);
-    shape(x, sr, arEnv(0.08, d * 0.5, 0.08, d));
-    return normalize([x]);
-  },
-  /** Frost: a single crackle of ice, tiny and dry. */
-  frost(sr, r) {
-    const n = len(sr, 0.05);
-    const x = white(n, r);
-    biquad(x, sr, 'highpass', 1800);
-    biquad(x, sr, 'bandpass', 2600 + r() * 1000, 2);
-    shape(x, sr, arEnv(0.001, 0, 0.005, 0.05));
-    biquad(x, sr, 'lowpass', 4500);
-    return normalize([shape(x, sr, arEnv(0.0005, 0, 1e3, 0.05))]);
-  },
-  /** The fox drinks: a wet lap, a quick tongue of noise and a small hollow plop. */
-  lap(sr, r) {
-    const n = len(sr, 0.16);
-    const x = white(n, r);
-    biquad(x, sr, 'bandpass', (i) => exp(900, 380, i / sr / 0.05), 2);
-    shape(x, sr, arEnv(0.003, 0.01, 0.018, 0.16));
-    normalize([x]);
-    const p = new Float32Array(n);
-    modes(p, sr, [{ f: 300 + r() * 80, tau: 0.03, amp: 1 }], at(sr, 0.02), 0.002);
-    normalize([p]);
-    return normalize([mixInto(x, p, 0.5)]);
-  },
-  /** The fox sneezes (it has a mouth): a catch of breath in, then a short bright burst out. */
-  sneeze(sr, r) {
-    const n = len(sr, 0.55);
-    const x = new Float32Array(n);
-    const inb = pink(len(sr, 0.22), r);
-    biquad(inb, sr, 'bandpass', (i) => exp(900, 1600, i / sr / 0.22), 3);
-    shape(inb, sr, (t) => Math.sin((Math.PI * t) / 0.22) ** 2 * 0.5);
-    mixInto(x, inb);
-    const out = white(len(sr, 0.25), r);
-    biquad(out, sr, 'bandpass', 2400, 1.4);
-    biquad(out, sr, 'lowpass', 5000);
-    shape(out, sr, arEnv(0.004, 0.02, 0.045, 0.25));
-    normalize([out]);
-    mixInto(x, out, 1, at(sr, 0.27));
-    return normalize([x]);
-  },
-  /** The case closing: a bone knock, hard and dry, short. */
-  boneKnock(sr, r) {
-    const n = len(sr, 0.4);
-    const x = new Float32Array(n);
-    const f = 410 + r() * 40;
-    modes(
-      x,
-      sr,
-      [
-        { f, tau: 0.05, amp: 1 },
-        { f: f * 2.73, tau: 0.025, amp: 0.5 },
-        { f: f * 4.9, tau: 0.012, amp: 0.25 },
-        { f: 120, tau: 0.06, amp: 0.6 },
-      ],
-      0,
-      0.0015,
-    );
-    normalize([x]);
-    return normalize([mixInto(x, click(sr, r, n, 2500, 0.002), 0.3)]);
-  },
-  /** The light's tone breaking: a burst of grey grain, ragged, 0.5 s. */
-  staticBurst(sr, r) {
-    const d = 0.55;
-    const n = len(sr, d);
-    const x = white(n, r);
-    let g = 0;
-    const step = len(sr, 0.004);
-    for (let i = 0; i < n; i++) {
-      if (i % step === 0) g = r() < 0.55 ? r() : 0.05;
-      x[i] = (x[i] as number) * g;
-    }
-    biquad(x, sr, 'lowpass', 5200);
-    biquad(x, sr, 'highpass', 300);
-    shape(x, sr, arEnv(0.01, d * 0.6, 0.06, d));
-    return normalize([x]);
-  },
-  /** The ground opening: soil shifting, a slow low rumble. */
-  rumble(sr, r) {
-    const d = 2.4;
-    const n = len(sr, d);
-    const x = brown(n, r);
-    biquad(x, sr, 'lowpass', 220);
-    biquad(x, sr, 'highpass', 35);
-    shape(x, sr, arEnv(0.5, 0.6, 0.45, d));
-    return normalize([x]);
-  },
-  /**
-   * The Hush's call: D falling to A (D3, A2), the rally, its only game. Breath into a tuned pipe
-   * (narrow noise) over two low beating tones, saturated so a laptop hears it.
-   */
-  hushCall(sr, r) {
-    const d = 3.6;
-    const n = len(sr, d);
-    const x = new Float32Array(n);
-    for (const [f, t0, dur] of [
-      [PITCH.D3, 0, 1.6],
-      [PITCH.D3 * 0.75, 1.55, 2.0],
-    ] as const) {
-      const m = len(sr, dur);
-      const tone = new Float32Array(m);
-      modes(tone, sr, [{ f, tau: 1e3, amp: 1, beat: 0.24, ph: r() }], 0, 0.02);
-      modes(tone, sr, [{ f: f * 2.005, tau: 1e3, amp: 0.3 }], 0, 0.02);
-      for (let i = 0; i < m; i++) tone[i] = Math.tanh(1.6 * (tone[i] as number));
-      const pipe = pink(m, r);
-      biquad(pipe, sr, 'bandpass', f * 2, 25);
-      biquad(pipe, sr, 'bandpass', f * 2, 25);
-      normalize([pipe], 0.35);
-      mixInto(tone, pipe);
-      shape(tone, sr, arEnv(0.35, dur - 0.8, 0.25, dur));
-      mixInto(x, tone, 1, at(sr, t0));
-    }
-    biquad(x, sr, 'lowpass', 900);
-    return normalize([x]);
-  },
   /** A burrback asleep: a slow, soft breath, in and a longer out, low (oo), mostly air. */
   sleepBreath(sr, r) {
     const d = 2.6;
@@ -987,7 +783,6 @@ const GLASS: readonly SoundId[] = [
   'glintNote',
   'wingHum',
   'glassSettle',
-  'bell',
   'chordCatch',
 ];
 

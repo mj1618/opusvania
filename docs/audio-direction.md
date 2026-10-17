@@ -5,9 +5,11 @@ quiet and sparse. The owner "really hated the sound effect" of the old game (ZzF
 a *boop* per jump), so restraint comes first: most events make no sound, and nothing ships unmuted until
 he has listened and said yes.
 
-This follows `docs/story/locked.md`, `docs/story/current/mouthless.md` and the **SOUND** notes in
-`docs/story/scenes/mouthless-key-scenes.md`, which this document agrees with and fills in. The hero is
-**Wing** (code id `vesper`).
+The hero is **Wing** (code id `vesper`). **Story note (2026-10-16):** this doc was written for the dropped
+"Kept World" story. The sounds in §1 describe what the demo level plays today, so they stay. "The Hush" is
+that story's antagonist and survives here only as the name of an audio layer. The new story is in `memory/story.md`
+(false lights hung by the last firefly; the dark is safety). When audio work resumes, re-aim the rules at it. For
+example, "regular is the enemy" could become the lamps' steady hum against the forest's irregular life.
 
 ## 0. Three rules
 
@@ -100,41 +102,6 @@ Home is **D**, modal. The forest is in just intonation; the Hush is detuned so i
   beating tones. From the lab on, the breath carries a metal resonance: the throat is pipe.
 - **The forest**: modal glass bells, rubbed glass (noise-excited resonators), granular seeded noise.
 - **The maker**: the only human-made timbre, one warm, slightly out-of-tune low FM note.
-
-### Key beats
-- **Prologue.** A breath, not music: **one low note (the maker's) under the warm blur, stopping when it
-  lifts**; the stutter a burst of static. From very high, music enters on the Hush's slow pulse over a
-  chord, and **each town going out drops a note until it is thin**. Moths flutter through *off* its beat.
-  The burrback breathes; the caterpillar's spin is a dry rustle. Wing catches a glint: one glass note that
-  just sustains. The music thins to her one voice; **the title lands on silence**.
-- **The Grove (Night 1).** Ambience only at first; each kindled lantern adds a voice to the forest's
-  field. In the heart's wake, notes run along the veins (panned with their x), and as the carving fills
-  **the forest plays Wing's motif complete for the first time**. The ring is one held chord.
-- **Sorrel saves her (Night 2).** The pin has only her wingbeats. Sorrel's blaze is his theme, full and
-  fast, *panning away with him*; Dun's feet recede after it. The danger leaves with the light.
-- **The lab (Night 4).** The room of dead dishes: only drips. At the heart, the screen's rally plays the
-  Hush's two knocks fast and clean: the pulse under the whole world was this game. At the stalk, each
-  miss floods static and each long rally clears it: **silence is what it wanted**. The light along every
-  root is **the one place the score swells for the Hush**, cut to static at the dish. Wing's gift is
-  **one bright note per glint**, and **the pulse stops for the first time in the game: true silence.** The
-  moth forming in its threads is one held voice, its drone slid off D onto *her* note; when it tries her
-  motif it can only manage D–A, D–A. The chase runs on its pulse, now fast.
-- **The lowest point (Night 5).** The Grove's field is one voice, its gusts and drips locked to the
-  pulse. **No music through Sorrel's leaving**, only wind and fading wings. Dun's breath falls *off* the
-  beat for the first time; **the leash snapping is the loudest sound of the night**; Wing's theme returns
-  once, slowed, with a rest where Sorrel's answering third should be.
-- **The Spin ending.** Each circuit costs an ability and *its sound leaves the mix* (glide air, wingbeat,
-  dash), while **each loss drops a note from her theme until one voice remains**. Sorrel adds a second;
-  the moths are a rising choir of shivering wings. The Hush's rally slows and stops. **The let-go is
-  silence; then the full theme once, never louder, resolving to D for the first time**, its voice and hers
-  together. Epilogue: the forest's field returns, irregular; **the prologue's low note at the maker's touch
-  on the silk; one heartbeat at the press, not on the Hush's clock; 3 s of silence over black.**
-- **Stay**: the pulse forever under a lullaby of their two motifs that loops *exactly*; the exact loop is
-  the horror. **Burn**: a crackle, then the pulse and every layer of ambience stop dead. Wings over silence.
-
-**Where silence is right:** the prologue's opening, the title, after the gift, Sorrel's leaving, before the
-choice, every fade until a lantern speaks, exploration before the lanterns give music back, and Wing
-herself, always. Silence is safety *and* loss: dark and empty-handed, the Hush can't hear her either.
 
 ## 3. What the player learns from sound alone
 

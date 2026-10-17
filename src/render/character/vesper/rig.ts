@@ -2,7 +2,7 @@
 /**
  * Vesper's skeleton and animation.
  *
- * Same 2.5D idea as the hooded rig (poses authored in a forward frame: f forward, u up, a small
+ * A 2.5D rig (poses authored in a forward frame: f forward, u up, a small
  * sideways s; projected through a continuous turn factor `d`, +1 right .. -1 left, so a
  * turn-around passes through the camera), tuned for a relaxed, floating mover:
  *
@@ -32,7 +32,7 @@ import {
   sat,
   smoothstep,
   TAU,
-} from '../hooded/math';
+} from '../math';
 
 // --- Joints (x, y pairs in Frame.j), world px.
 export const J_HIP = 0;
@@ -793,11 +793,6 @@ const GIVE = pose([
 const WAIT = pose([
   0.4, 33.5, -0.02, -0.1, -0.15, 6.6, 0.1, 0.15, -1.8, 0, 0, 5.4, -13, -3.6, -14, 0.05, 0.95, -0.35, 1.1,
 ]);
-/** The prologue: a glint held up before her face in the near hand, the other at her chest, eyes on it. */
-const HOLD = pose([
-  1, 33.2, 0.04, 0.08, 0.16, 7.4, 0.1, 0.2, -1.6, 0, 0.1, 9.2, 3.2, 2.6, -7.8, 0.04, 0.85, 0.45, 0.62,
-]);
-/** ... and then looking past it, out ahead: chin up, head turned on, the hand lowered a little. */
 /**
  * Giving (memory/giving.md, the `offer` action): both forelegs held out and a little up, palms open,
  * leaning in over them, head inclined to what she gives to. A gesture of giving, never a strike:
@@ -809,9 +804,6 @@ const OFFER = pose([
 /** ... and nothing in her hands: they open, a little apart and low, and she looks down into them. */
 const OPEN_HANDS = pose([
   0.4, 31.6, 0.05, 0.2, 0.4, 7.4, 0.1, 0.2, -1.8, 0, 0.05, 9.5, -2.6, 6.5, -4.2, 0.04, 0.72, 0.75, 0.8,
-]);
-const PAST = pose([
-  1, 33.6, 0.02, -0.04, -0.16, 7.4, 0.1, 0.2, -1.6, 0, 0.1, 8.4, 0.6, 2.6, -7.8, 0.04, 1, -0.25, 1.15,
 ]);
 /** Acting timings (seconds unless said) and amounts. */
 export const ACT = {
@@ -922,22 +914,6 @@ export interface Cue {
   awayDy: number;
   /** She stands in the woken heart before it is ready for her (`heartWait` .. `heartReady`). */
   heartWait: boolean;
-  /**
-   * The prologue (render/prologue, through `vesperLink.cine`): 0..1 she holds a glint up to her
-   * face (she has no mouth: she can only hold it), and 0..1 she looks past it, out ahead of her.
-   */
-  hold: number;
-  look: number;
-  /** 0..1 she shakes out her wings like a cape (the prologue, out of her cocoon). */
-  shake: number;
-  /** The rest of the prologue's cues (link.ts `CineCues`): a wing folded over, huddled in the cold, a wingtip tap, a look up. */
-  fold: number;
-  huddle: number;
-  tap: number;
-  lookUp: number;
-  /** -1..1 the wings' set: held shut round her .. half open. 0..1 hands held out, giving. */
-  wings: number;
-  give: number;
 }
 
 /** Point masses for the centre of mass: joint, weight. */
@@ -1083,15 +1059,6 @@ export class Rig {
     awayDx: 0,
     awayDy: 0,
     heartWait: false,
-    hold: 0,
-    look: 0,
-    shake: 0,
-    fold: 0,
-    huddle: 0,
-    tap: 0,
-    lookUp: 0,
-    wings: 0,
-    give: 0,
   };
   /** Acting weights 0..1: kindling, sat resting, hands to a lit lantern, the hand on the sleeping heart, the ending. */
   kindleW = 0;
@@ -3513,90 +3480,6 @@ export class Rig {
       }
     }
 
-    // --- The prologue: newly out, down in the frost: sat low, head bowed, wings stuck shut round her, shivering, eyes dim.
-    const hu = Math.min(1, cue.huddle) * aw;
-    if (hu > 1e-3) {
-      this.mix(out, REST, hu, nearA);
-      out[PU]! += 0.6 * hu * Math.sin(clock * 31);
-      cloak -= 1.1 * hu;
-      shiver = Math.max(shiver, 0.8 * hu);
-      lit -= 0.55 * hu;
-      ant += 12 * hu;
-    }
-    // --- A wing folded over what is beside her (another moth, a case, a held glint): leaning to it,
-    // the near arm laid over, the wings drawn round like a blanket, a slow shiver.
-    const fo = Math.min(1, cue.fold) * aw;
-    if (fo > 1e-3) {
-      this.mix(out, LISTEN, fo, nearA);
-      out[LEAN]! += 0.12 * fo;
-      out[PU]! += 0.4 * fo * Math.sin(clock * 27);
-      cloak -= 1.3 * fo;
-      shiver = Math.max(shiver, 0.55 * fo);
-      gzx += 0.6 * fo;
-      gzy += 0.5 * fo;
-      gzw += fo;
-    }
-    // --- The wingtip tap: the near hand out to touch, quick.
-    const tp = Math.min(1, cue.tap) * aw;
-    if (tp > 1e-3) {
-      out[NF]! += 7 * tp;
-      out[NU]! += 5 * tp;
-      cloak += 0.6 * tp;
-      gzx += 0.8 * tp;
-      gzw += tp;
-    }
-    // --- A look up, high (the dance).
-    // --- The wings' habitual set: one sibling keeps them half open, the other shut round her.
-    if (cue.wings !== 0) cloak += 1.1 * cue.wings * aw;
-    // --- Both hands held out, offering what she holds.
-    const gv = Math.min(1, cue.give) * aw;
-    if (gv > 1e-3) {
-      this.mix(out, OFFER, gv, nearA);
-      gzx += 0.8 * gv;
-      gzy += 0.2 * gv;
-      gzw += gv;
-    }
-    const lu = Math.min(1, cue.lookUp) * aw;
-    if (lu > 1e-3) {
-      out[HT]! -= 0.42 * lu;
-      out[CURL]! -= 0.05 * lu;
-      ant -= 14 * lu;
-      gzx += 0.2 * lu;
-      gzy -= 1.1 * lu;
-      gzw += lu;
-    }
-
-    // --- The prologue: out of her cocoon, she shakes her wings out like a cape (vesperLink.cine).
-    const sh = Math.min(1, cue.shake) * aw;
-    if (sh > 1e-3) {
-      shiver = Math.max(shiver, sh);
-      cloak += sh * (0.9 + 0.8 * Math.sin(clock * 19));
-      ant += 6 * sh * Math.sin(clock * 23);
-      out[PU]! += 0.8 * sh * Math.sin(clock * 21);
-      out[LEAN]! += 0.04 * sh * Math.sin(clock * 17);
-    }
-
-    // --- The prologue: the first glint held up to her face, then a look past it (vesperLink.cine).
-    const hw = Math.min(1, cue.hold) * aw;
-    if (hw > 1e-3) {
-      const b = Math.sin(clock * 1.3);
-      this.mix(out, HOLD, hw, nearA);
-      out[PU]! += 0.3 * b * hw;
-      cloak += 0.25 * hw;
-      ant += (6 + 2 * b) * hw;
-      lit += 0.08 * hw;
-      gzx += 0.35 * hw;
-      gzy += 0.55 * hw;
-      gzw += hw;
-      const pw = Math.min(1, cue.look) * hw;
-      if (pw > 1e-3) {
-        this.mix(out, PAST, pw, nearA);
-        ant -= 10 * pw;
-        gzx += 0.8 * pw;
-        gzy -= 0.75 * pw;
-      }
-    }
-
     // --- Waiting in the woken heart: held in its light, looking into it; wings slowly opening,
     // antennae lifted, one long breath after another. Not frozen.
     const wtw = this.waitW * aw * (1 - this.endW);
@@ -3699,14 +3582,7 @@ export class Rig {
     }
     // The light leaves her open near hand while she kindles and while she gives to the heart, and
     // the ember arrives in it.
-    this.offerK = Math.max(
-      kw,
-      rw2,
-      0.85 * this.giveW * ew,
-      Math.min(1, Math.max(cue.hold, cue.give)) * aw,
-      this.giveK,
-      this.emptyK,
-    );
+    this.offerK = Math.max(kw, rw2, 0.85 * this.giveW * ew, this.giveK, this.emptyK);
     this.offerSide = nearA >= 0.5 ? 0 : 1;
   }
 

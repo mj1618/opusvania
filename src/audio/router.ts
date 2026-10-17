@@ -433,20 +433,13 @@ export function voiceFrame(seed: number, frame: number): boolean {
 }
 
 /** The one-shots the world makes by itself on this sim frame. */
-export function ambient(
-  snap: AudioSnap,
-  cam: AudioCam,
-  ctx: RouteContext,
-  /** The prologue's bend (prologue.ts): the bed scales drips and the far voice, the Hush's pulse the knock. */
-  mix: { bed: number; pulse: number; hush: number } | null = null,
-): Cue[] {
-  const bed = mix ? mix.bed : 1;
+export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[] {
   const F = AUDIO.forest;
   const f = snap.frame;
   const out: Cue[] = [];
   const seed = ctx.seed;
   // Drips: rare, at canopy positions across the view, duller and wetter the farther back.
-  if (bed > 0.1 && hash01(seed, f, salt('drip')) < 1 / (F.dripMeanS * 60)) {
+  if (hash01(seed, f, salt('drip')) < 1 / (F.dripMeanS * 60)) {
     const u = hash01(seed, f, salt('drip'), 1);
     const depth = hash01(seed, f, salt('drip'), 2) ** 0.7;
     const x = cam.x + (hash01(seed, f, salt('drip'), 3) - 0.5) * 2 * F.dripSpanPx;
@@ -465,14 +458,14 @@ export function ambient(
       cue(sound, 'world', ctx, f, 100, {
         x: px,
         y: py,
-        db: F.dripDb - 9 * depth + amp(bed),
+        db: F.dripDb - 9 * depth,
         far: 0.2 + 0.8 * depth,
         priority: 0,
       }),
     );
   }
   // The far voice: the forest's own mind, never on a beat.
-  if (bed > 0.5 && voiceFrame(seed, f)) {
+  if (voiceFrame(seed, f)) {
     const side = hash01(seed, f, salt('voice'), 1) < 0.5 ? -1 : 1;
     out.push(
       cue('voice', 'world', ctx, f, 101, {
@@ -487,8 +480,7 @@ export function ambient(
     );
   }
   // The Hush's knock at the top of each swell: left, then right.
-  // (In the prologue the knock keeps the prologue's own clock: prologue.ts `proCues`.)
-  if (isKnock(f) && !mix) {
+  if (isKnock(f)) {
     const beat = hushPhase(f).beat;
     out.push(
       cue('knock', 'hush', ctx, f, 102, {
@@ -579,10 +571,6 @@ export interface Layers {
   poolPan: number;
   steam: number;
   glass: number;
-  /** The prologue's tones (prologue.ts `ProMix`): the maker's note, the light's / glint's tone, the lamp's hum. */
-  maker: number;
-  light: number;
-  lamp: number;
   /** The chord of the light she carries: a gain per tone (A4, E5, B5, D5), and where she is. */
   chord: [number, number, number, number];
   chordPan: number;
@@ -698,9 +686,6 @@ export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: Route
   const chord = [0, 1, 2, 3].map((k) => (k < level ? each : 0)) as Layers['chord'];
 
   return {
-    maker: 0,
-    light: 0,
-    lamp: 0,
     chord,
     chordPan: panOf(h.x, cam) * H.panWidth,
     roar,

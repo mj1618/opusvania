@@ -16,7 +16,7 @@ lantern bowls. No slash, glints, creatures or score yet: those events route to n
   rate limits (wingbeats 80 ms). Muted it still routes: `__game.audio.cues(n)`.
 - `engine.ts` + `graph.ts` + `voices/`: buses world / hush / hero / lantern / creatures, each with its own room
   and far sends (so muting a bus mutes its reverb: the A/B), roll-off 9 kHz (lantern bus 15 kHz),
-  fader (start fade, prologue silence), master, a limiter at -2 dB that a normal mix never reaches
+  fader (start fade, mute), master, a limiter at -2 dB that a normal mix never reaches
   (Web Audio adds make-up gain for it: `trim` removes it).
 - `bake.ts`: every one-shot in plain JS (dsp.ts), 1-8 seeded variants, all peak 0.9, a 2 ms fade to
   zero, everything but glass rolled off above 7 kHz. Long bowls bake at 1/4 rate (`SLOW`). ~110 ms in
@@ -93,51 +93,15 @@ Offline render 41 s in 2.6 s, bake ~110 ms. Cues in the clip: 9 knocks, 20 drips
 - The pilot that makes such a route must be closed-loop on the creature (offer on `enemyWindup`); the burrback's
   position depends on the frame, so an idle a few frames longer turns a windup into a walk-in hit.
 
-## Milestone 3: the prologue (src/audio/prologue.ts, voices/prologue.ts), muted like the rest
-- main.ts feeds it the director's plan (`audio.prologue = () => ...`, e31bab6). Without that line it falls
-  back to `__game.prologue.state()` (beats and clocks only: no glint, bumps, sneeze, Sorrel's hops, fold).
-- Pure: `proCues(prev, cur)` fires on crossings of a beat's clock (`bt`), every offset read by NAME from
-  render/prologue/script.ts (`span()` tolerates a re-cut sheet), music scheduled one frame ahead with an
-  exact delay; `proMix(view)` bends the game's layers (`conductor.ts bend`): the bed (wind, pool, drips),
-  the Hush (nearer, drier, held, its clock read from the prologue's `t` since the sim is stopped in the
-  breath), and three tones of its own (the maker's FM note, the light / glint tone A4, the lamp's hum A5).
-- Score (bus `score`): Wing's motif A D E F E on `pluck` (Karplus-Strong, felt); Sorrel's 3/4 lilt
-  F E F A | G F E | A G F E | F on `pluckBright` (hammered, 6.5 Hz wing tremolo), slow at the fold (84 bpm),
-  quick leading her (138, -5 dB while he waits), joining the dance as he lifts off; the dance's waltz on
-  glass `bell`s an octave up, far; the Hush's call D3 -> A2 (`hushCall`, pipe noise over beating tones) on
-  the title, then silence. Things: `creak` (cocoons, the root tip), `frost`, `lap`, `sneeze`, `rumble`
-  (the ground opening), `boneKnock` (the case), `staticBurst` (the light's stutter). In the prologue the
-  lanterns' own cues are dropped (dark set pieces).
-- Review: built from a scratch copy with the hook, `?prologue&manual`, autopilot, `advance(2)` per 30 fps
-  frame, offline render: clips/audio-m3-prologue.mp4 (131 s with the autopilot). -23.5 LUFS integrated
-  (long quiet stretches by design; LRA 11), -7.0 dBTP, 0 clipped, centroid ~500 Hz. Momentary: the breath
-  -35..-19, hatching -30..-23, the first night ~-23 (-18 at its start), the hollow's opening -17, the hide
-  -32..-29, the summit -24..-17, the title's black -70, the next night -27.
-- The wind's gust crest was what pushed the peak (-4.8 dBTP at the hollow's opening): the bed now draws
-  back while the Hush is close, and the roar tops out at -38.
-- The Hush's 4.2 s knock runs on the prologue's clock (`proCues`, the game's `ambient` knock is off while a
-  prologue mix exists) and only in the breath, the hollow and the summit (`ProMix.knock`): ducked under the
-  hatching and the first night so the pulse comes back as a threat in the hollow; off in the held breath.
-- Pass 3 re-sync (9e652de): her failed try to open her wings (two weak flutters at `tryOpen`), wingbeats at
-  `opens`; Sorrel's fold motif is two bars fitted to the fold (it ends before the tap); at the summit her
-  glint's tone as she holds it out, a felt wing as he folds her hands back (the glint tone dims under the
-  fold), her two notes on the tap (the hatching's tap rhymes), his two bars going far into the dance, her
-  motif fitted into `alone` (it hangs on E as the title comes in on the Hush's D to A).
+## Milestone 3 (the prologue's score): deleted
+The prologue and its score (`audio/prologue.ts`, `voices/prologue.ts`, the score sounds `pluck`, `bell`,
+`hushCall` and the rest, the layer bend) were removed with the prologue on 2026-10-17; git history
+(e31bab6 .. 875ba79) has them. What it taught that still holds:
+- The wind's gust crest pushes the peak (-4.8 dBTP once): the roar tops out at -38.
 - Render cost: one shared convolver (2.2 s IR; the far send reaches it low-passed, delayed and fed back),
   and voices made only when first needed (`engine.ts LAZY`: glide air, pool, steam, violet air, bowls,
-  chord, the prologue's). Same tape, same load, alternating builds: 15.0 s -> 11.5 s for 131 s (an unloaded
-  run 9.9 s, 7.6% of real time; budget 5%, not met while other agents load the machine).
-- Levels after pass 3: -23.2 LUFS, -8.3 dBTP, 0 clipped; momentary breath -34..-18, hatching -31..-24,
-  first night -25..-18, hollow -27..-19, hide -31..-27, summit -26..-17, title black -83, next night -27.
-
-- Pass 4 re-sync (461aac0): frost from `lookUp` + 0.6 (no sheet field for it); the fox's breath close as she
-  leans to its face (`lookFox`); **her wing over the case (`HOLLOW.fold`) brings his fold motif back on HER
-  strings, 54 bpm, broken off after one note of the second bar: nothing answers**; her glint's tone is with her
-  from the hollow's start, dims to 35% under the root tip (`rootTip`), silent hidden; the silver moth's swoop
-  (`SUMMIT.silver`) a far whoosh; the Hush's title call down to -25 (it topped the momentary at -15).
-- Levels on pass 4 (142 s with the autopilot): -22.7 LUFS, -7.0 dBTP, 0 clipped, centroid 523 Hz; momentary
-  breath -34..-18, hatching -31..-24, first night -25..-19, hollow -27..-16 (the opening), her wing over the
-  case -25..-18, hide -32..-28, summit -23..-17, title call -17, black -84, next night -29..-23. Render 11.7 s.
+  chord). 15.0 s -> 11.5 s for a 131 s tape (an unloaded run 9.9 s, 7.6% of real time; budget 5%, not met
+  while other agents load the machine).
 
 ## Giving round 3 (asleep, caught, lost), muted
 - Snap creatures also carry `aware`, `dozing`, `down` (dead / hurt). Asleep (`e.dozing`): `sleepBreath` (in, then a
@@ -153,8 +117,7 @@ Offline render 41 s in 2.6 s, bake ~110 ms. Cues in the clip: 9 knocks, 20 drips
 - Offline render cost is the two convolvers (~2 of 2.7 s for a 41 s clip; without them 0.8 s). IRs are
   1.8 s (room) and 2.8 s (far) for that reason; 60 s renders in ~3.8 s on a busy laptop (budget 3 s).
 - Web Audio low/high-pass Q is in dB, band-pass Q is linear: `band()` converts.
-- `game.scene` can change (`useScene`, the prologue): the director re-reads it every step.
-- In `manual` / `frozen` the context is suspended; live listening needs realtime (`?audio&skipprologue`,
+- In `manual` / `frozen` the context is suspended; live listening needs realtime (`?audio`,
   then any key: browsers allow no context before a gesture).
 - Agents can't hear: the numbers catch loud, harsh, dense and clicky (`clicks` = HF energy per 5 ms vs
   its median), not ugly. The owner's ear is the gate.

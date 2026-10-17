@@ -1,5 +1,5 @@
 /**
- * The mixing graph: six buses (world, hush, hero, lantern, creatures, score), one shared room reverb and a far,
+ * The mixing graph: five buses (world, hush, hero, lantern, creatures), one shared room reverb and a far,
  * darker one as sends, a roll-off above 9 kHz on everything but the glass, the master gain and a
  * gentle limiter that should never touch a normal mix (it is there for pile-ups).
  *
@@ -30,7 +30,7 @@ export class AudioGraph {
   readonly roomIn: GainNode;
   readonly farIn: GainNode;
   readonly master: GainNode;
-  /** The whole mix faded in and out (start, the prologue's silence): separate from the master level. */
+  /** The whole mix faded in and out (start, mute): separate from the master level. */
   readonly fader: GainNode;
   /** Muting a bus for an A/B (offline: the take without the Hush). */
   readonly off = new Set<BusId>();
@@ -65,7 +65,6 @@ export class AudioGraph {
       // Glass may ring above the roll-off.
       lantern: bus('lantern', 15000),
       creatures: bus('creatures', AUDIO.rolloff),
-      score: bus('score', 15000),
     };
 
     // One shared convolver (it is most of the render's cost). The far send reaches it duller, later and

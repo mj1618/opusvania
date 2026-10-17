@@ -2,8 +2,8 @@
 
 > The hero was renamed **Wing** (from Vesper, then Eri, then Umber) on 2026-10-14. Code and these notes keep the internal id `vesper`.
 
-THE hero. Slender moth-person, ~84 px tall; wings worn as a cape. Imports `../hooded/math`; `chain.ts`
-(hooded chain + per-segment `extra` angle, `dragK`, `scale`) and `paint.ts` are our own copies.
+THE hero (the only skin). Slender moth-person, ~84 px tall; wings worn as a cape. Imports `../math` (shared
+with the creatures); `chain.ts` (verlet chain + per-segment `extra` angle, `dragK`, `scale`) and `paint.ts` are its own.
 Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae; `draw.ts` shapes;
 `fx.ts` dust, trails, scales; `slashfx/` the slash's crescent and contact flash; `link.ts` hand-off with the goal renderer;
 `index.ts` wiring, lights, `window.__vesper`.

@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/noNonNullAssertion: typed-array maths; indices are in range by construction
 /**
- * Vesper's copy of ../hooded/paint.ts with one change: the cool rim wraps the whole silhouette
+ * One change from the earlier skins' painter: the cool rim wraps the whole silhouette
  * (`coolWrap`), so every edge the warm key does not reach still carries a thin moon-light edge.
  *
  * The painter: one dynamic mesh and one small shader that draw the whole character.

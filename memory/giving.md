@@ -1,10 +1,9 @@
 # Giving: the game plays like giving (seen, offer, rest = give)
 
-Why: the analysis (docs/story/uniqueness.md "The biggest lever", locked.md "Distinctness guardrails") found the
-story distinct but the PLAY Hollow Knight's grammar. The fix: carrying light makes you seen, empty-handed you slip
-through, Offer calms what you would cut, healing is paid by giving. Story rules it follows (current/mouthless.md
-section 2): "Give warmth, don't fight", "Moths go unseen... once she warms one of them, it knows her", "Lampwings see
-light... any light a moth carries". The slash and the pogo stay; no new creatures.
+Why: an analysis for the old (deleted) story found the story distinct but the PLAY following Hollow Knight's grammar. The fix: carrying
+light makes you seen, empty-handed you slip through, Offer calms what you would cut, healing is paid by giving. (The
+old story's rules were "give warmth, don't fight" and "moths go unseen". The new story, `story.md`, keeps "the dark is
+safe, light is danger" and will rework this loop over time.) The slash and the pogo stay; no new creatures.
 
 Sim: `src/sim/seen.ts` (levels), `src/sim/giving.ts` (the offer), `enemies.ts` (`giftEnemy`, awareness, contact),
 `enemies/burrback.ts` / `lampwing.ts` (`sees`, `gift`), `goal.ts` (rest = give, `LanternState.given`,
@@ -88,7 +87,7 @@ contradicts the older text further down, round 2 wins.**
 - **The offer prompt** (`src/render/hud/prompts.ts`, lesson `offer`): armed by the first `enemyAware` within
   `offerPx` 260 while she carries; the offer key's cap (V, or the one she uses) tapped beside her while a creature
   within 340 px is aware of her and she has something; gone for good at her first `enemyGift`.
-- **Hold to stream** (as the prologue teaches): a press gives one; held past `offerStreamDelayFrames` 16, one every
+- **Hold to stream**: a press gives one; held past `offerStreamDelayFrames` 16, one every
   `offerStreamFrames` 8 into a dormant light or the heart (`offerTarget(..., lights = true)`), never a creature (one
   per press, however long held). A glint to a light flies `offerLightFlightFrames` 8 (= the gap: one in flight).
   A lamp of 8 from a held V: about 1.1 s.
