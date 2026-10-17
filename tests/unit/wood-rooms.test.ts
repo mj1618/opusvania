@@ -1012,7 +1012,10 @@ describe('R7 wood-hollow: the oak, its hollow floor (the trunk and crown: wood-o
     const zones = getRoom('wood-hollow').camera?.zones ?? [];
     for (const z of zones) {
       expect(z.fit ?? false, z.id).toBe(false);
-      expect(z.y + z.h, z.id).toBeLessThanOrEqual(3840 - 320);
+      // (But the trunk's foot, plan r3 "the oak, every visit": standing at the column the view frames it tall;
+      // the stone and the sign west of it stay out of every zone.)
+      if (z.id === 'trunk-foot') expect(z.x, z.id).toBeGreaterThan(2300 + 64);
+      else expect(z.y + z.h, z.id).toBeLessThanOrEqual(3840 - 320);
     }
   });
 });

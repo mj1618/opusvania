@@ -111,6 +111,9 @@ export class Tatter {
   private readonly when: string | null;
   private readonly until: string | null;
   private wantT = -1;
+  /** Where it has climbed to (world px from its mark; `Cast` moves it along a `climb` path). */
+  ox = 0;
+  oy = 0;
   /** Seconds since she rested near it (large = not lately). */
   private restT = 1e6;
 
@@ -397,7 +400,7 @@ export class Tatter {
     p.outline = 1.5;
     p.outlineColor = [0.03, 0.025, 0.045];
     p.outlineAlpha = 0.95;
-    p.mesh.position.set(this.me.cx, this.me.feetY + this.hopY * TATTER.scale);
+    p.mesh.position.set(this.me.cx + this.ox, this.me.feetY + this.oy + this.hopY * TATTER.scale);
     p.begin();
     // Its own moth wings (tatter-wing.ts): the good one behind it, the torn one over it.
     const j = this.rig.frame.j;

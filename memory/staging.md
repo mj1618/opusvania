@@ -108,3 +108,11 @@ Contract with the builders (room data, render only; none placed yet):
   (the branch is over it), from 1.2 s; fade out after she breaks out.
 - **Attack glyph** (greybox/lures.ts `LURE_GLYPH`): before her first snuff, 1.5 s in reach of a flame without a
   slash shows a "C" key cap over it, once a page load; gone on a slash, after 4 s or 0.8 s out of reach.
+- **More than one Tatter** (`stage.tatters[]`, like `marks.tatter` plus `climb {path, lead?, speed?}`; character/cast.ts
+  `TATTER_CLIMB`): the oak's second Tatter (from `wood-root-ladder`) climbs the root in pulls, ~420 px above her feet
+  as she climbs (never back down), and sits by P5 at the path's end. It keeps its perched pose (no climbing rig yet).
+- **The hatching tree far** (`stage.hatchTree {x, y, top, w?}`, oak coordinates of wood-hatch's trunk): a trunk, its
+  long branch east with the cocoons, a crown, through the same projection as the far oak (`farPlace`); the crown's
+  wide frame shows it on the west horizon.
+- The glimpse holds for the trigger's whole `storyHold` (measured: zoom 0.5 from ~0.9 s to ~3.3 s after the
+  trigger at hold 180); a `storyHold` only stretches a beat started the same frame.

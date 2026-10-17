@@ -175,7 +175,11 @@ export const cameraTuning = {
    * Camera zones (zones.ts, memory/level-kit.md): frames of the spring that eases the view's shift into
    * (and out of) a zone's bounds, and of the zoom's.
    */
-  zones: { frames: 30, zoomFrames: 30 },
+  /**
+   * Camera zones: springs (frames). `edgeKnee`: while a zone's zoom is off 1, the room's edges take the view over
+   * this many px instead of stopping it dead (in full once the zoom is `kneeBlend` off 1).
+   */
+  zones: { frames: 30, zoomFrames: 30, edgeKnee: 220, kneeBlend: 0.15 },
   room: {
     exitEarly: 0.12,
     exitLift: 0.9,

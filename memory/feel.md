@@ -48,6 +48,14 @@ side (hurt hitstop 8 / last light 14, kill bonus +3, `slashTerrain`, the lure th
 fades instead (`CharacterSkin.fade`, character/index.ts): out over the sim's hold (`fallCatch.frames` /
 `thornHit.frames`, at most 0.18 s), in over `fallReturn.fadeIn`. A real death's reform keeps its (lighter) dip.
 
+## Camera zones by a room edge (plan r3, the oak's trunk-foot zone, 2026-10-18)
+- A zone zooming out by a wall: the edge clamp moving in met her free view head-on (+11 -> -18 px/f in a frame).
+  `place()` now clamps softly while the zoom is off 1 (`zones.edgeKnee` 220 px, blended in over `kneeBlend` 0.15 of
+  zoom): 17.8 -> 4.9 px/f^2. At zoom 1 the hard clamp is untouched (a soft clamp everywhere broke 7 camera tests).
+  A filter on the clamped view was worse (it overshoots the edge, then the hard clamp bites).
+- The floor-exit seam look-through opened on a hop over a roofed floor exit (the oak's root mesh): it now needs
+  nothing under her (`landBelow`) before the room's floor. That was the 20-34 px/f^2 lurch in wood-camera's hollow run.
+
 ## Gotchas
 - Pixi v8 `Graphics.poly(points)` keeps the array (`new Polygon(flat)` does not copy): a scratch array reused for
   two polys redraws both as the last. creatures.ts `Xf.map` returns a new array every call for this reason.

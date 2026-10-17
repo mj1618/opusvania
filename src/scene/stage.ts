@@ -138,6 +138,38 @@ export const StageSchema = z
       .strict()
       .optional(),
     /**
+     * More of Tatter (the room's `marks.tatter` is the first; plan r3: the oak holds it at its floor, then on the
+     * root after the cut, then by P5 at the finale). Each like `marks.tatter`, here by `when` / `until`; with `climb`
+     * it goes up `path` (from its mark) staying `lead` px above her feet as she climbs (never back down), at most
+     * `speed` px/s, in effortful pulls, and sits at the path's end.
+     */
+    tatters: z
+      .array(
+        z
+          .object({
+            x: z.number(),
+            y: z.number(),
+            facing: z.union([z.literal(-1), z.literal(1)]),
+            want: pt.optional(),
+            when: z.string().min(1).optional(),
+            until: z.string().min(1).optional(),
+            climb: z
+              .object({ path, lead: z.number().optional(), speed: z.number().positive().optional() })
+              .strict()
+              .optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    /**
+     * The hatching tree as a far silhouette (plan r3: the crown's wide frame looks back west to where she was born),
+     * like `oak`, in this room's coordinates: `x` its trunk, `y` its foot, `top` its crown, `w` its trunk's width.
+     */
+    hatchTree: z
+      .object({ x: z.number(), y: z.number(), top: z.number(), w: z.number().positive().optional() })
+      .strict()
+      .optional(),
+    /**
      * The crown cloud: every moth she has freed (`save.moths`), waiting at (x, y) in an ellipse `r` wide, lifts
      * off toward `to` when `flag` is set (the finale's trigger; a `hold` on it holds the view). Once the flag is
      * saved the cloud has gone.

@@ -111,13 +111,28 @@ function shownH(cam: CameraState): number {
   return cam.vh / cam.zoom;
 }
 
+/**
+ * `clampAxis` with a soft knee `k` px wide at each end: the view eases into an edge instead of being stopped
+ * dead by it (its speed is continuous), and still never passes it. `k` 0 = `clampAxis`.
+ */
+export function softClampAxis(v: number, lo: number, size: number, view: number, k: number): number {
+  if (size <= view || k <= 0) return clampAxis(v, lo, size, view);
+  const hi = lo + size - view;
+  const kk = Math.min(k, (hi - lo) / 2);
+  if (v < lo + kk) return lo + kk - kk * (1 - Math.exp(-(lo + kk - v) / kk));
+  if (v > hi - kk) return hi - kk + kk * (1 - Math.exp(-(v - (hi - kk)) / kk));
+  return v;
+}
+
 function place(cam: CameraState, scene: Scene, ct: CameraTuning): void {
   const top = viewTop(scene, ct);
   const line = feetLine(cam, ct);
   const W = shownW(cam);
   const H = shownH(cam);
-  cam.x = clampAxis(cam.fx - W / 2, 0, scene.width, W);
-  cam.y = clampAxis(cam.fy - line, top, scene.height + cam.seam - top, H);
+  const freeX = cam.fx - W / 2;
+  const freeY = cam.fy - line;
+  cam.x = clampAxis(freeX, 0, scene.width, W);
+  cam.y = clampAxis(freeY, top, scene.height + cam.seam - top, H);
   // Held by the top or the bottom: the spring rests there too, so the view answers at once when
   // she comes back (a glide off the summit), not after the spring has crossed the slack.
   const fy = cam.y + line;
@@ -131,6 +146,18 @@ function place(cam: CameraState, scene: Scene, ct: CameraTuning): void {
   if (cam.ox !== 0 || cam.oy !== 0) {
     cam.x = clampAxis(cam.x + cam.ox, 0, scene.width, W);
     cam.y = clampAxis(cam.y + cam.oy, top, scene.height + cam.seam - top, H);
+  }
+  // Zoomed by a zone: the room's edges take the view softly (a zoom-out by the oak's east wall stopped the view
+  // dead, 18 px/f^2, plan r3). Blended in with the zoom, so at zoom 1 nothing changes. (Soft both times: a zone's
+  // shift pushing the view back into an edge must not meet a hard stop either.)
+  const Z = ct.zones;
+  const k = Z.edgeKnee * Math.min(1, Math.abs(1 - cam.zoom) / Z.kneeBlend);
+  if (k > 0) {
+    const sh = scene.height + cam.seam - top;
+    const bx = softClampAxis(freeX, 0, scene.width, W, k);
+    const by = softClampAxis(freeY, top, sh, H, k);
+    cam.x = cam.ox === 0 ? bx : softClampAxis(bx + cam.ox, 0, scene.width, W, k);
+    cam.y = cam.oy === 0 ? by : softClampAxis(by + cam.oy, top, sh, H, k);
   }
 }
 
@@ -362,7 +389,9 @@ export function stepCamera(
         ex.edge === 's' &&
         cx >= ex.from - S.margin &&
         cx <= ex.to + S.margin &&
-        feet > scene.height - S.reach
+        feet > scene.height - S.reach &&
+        // (Nothing under her ends the fall first: a hop over a floor exit roofed by a mesh is no fall into it.)
+        landBelow(scene, cx, feet) >= scene.height
       )
         seamWant = S.px;
   [cam.seam, cam.seamV] = smoothDamp(cam.seam, cam.seamV, seamWant, S.frames);

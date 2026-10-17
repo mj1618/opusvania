@@ -315,6 +315,7 @@ export class StagingView {
       g.circle(m.x, m.y, S.moon.r * z).fill({ color: C.moon, alpha: 0.5 });
     }
     this.drawOakFar(g, clock, cam, sim);
+    this.drawHatchFar(g, cam, sim);
     // The valley's lamps: dim warm points far below that flicker, one by one.
     const L = S.lights;
     if (L) {
@@ -535,33 +536,89 @@ export class StagingView {
    * closer to its true place; a far one is drawn smaller and pulled in to stay inside the frame on its side.
    * Screen space (the sky layer), behind the terrain.
    */
-  private drawOakFar(g: Graphics, clock: number, cam: CameraView, sim: SimView): void {
-    const oak = this.stage?.oak;
-    if (!oak) return;
+  /**
+   * A far landmark's place on screen (the sky layer), or null where it stands in this room or is too small:
+   * toward where it really is, compressed by its distance, kept inside the frame's side and its crown in the sky.
+   */
+  private farPlace(
+    m: { x: number; y: number; top: number; w?: number },
+    cam: CameraView,
+    sim: SimView,
+  ): { x: number; topY: number; footY: number; w: number; h: number; k: number } | null {
     const R = sim.scene;
-    if (oak.x >= 0 && oak.x <= R.width && oak.y >= 0 && oak.top <= R.height) return; // the oak is this room
+    if (m.x >= 0 && m.x <= R.width && m.y >= 0 && m.top <= R.height) return null;
     const T = STAGING.oakFar;
     const z = cam.zoom;
-    const midY = (oak.y + oak.top) / 2;
-    const dist = Math.hypot(oak.x - cam.x, midY - cam.y);
+    const midY = (m.y + m.top) / 2;
+    const dist = Math.hypot(m.x - cam.x, midY - cam.y);
     const k = Math.min(T.maxK, Math.max(T.minK, T.near / Math.max(1, dist)));
-    // Where it sits on screen: toward it, compressed by k, kept inside the frame's edge.
     const halfW = cam.w / 2 - T.margin;
-    let sx = (oak.x - cam.x) * k * z;
+    let sx = (m.x - cam.x) * k * z;
     if (Math.abs(sx) > halfW) sx = Math.sign(sx) * halfW;
-    let footY = 540 + (oak.y - cam.y) * k * z;
-    let topY = 540 + (oak.top - cam.y) * k * z;
-    // Its crown kept in the sky part of the frame (a room far under it would sink the ring below the floor; one
-    // far over it would lift it off the top): the whole tree slides, its height kept.
+    let footY = 540 + (m.y - cam.y) * k * z;
+    let topY = 540 + (m.top - cam.y) * k * z;
     const lo = 540 - cam.h / 2 + T.marginY;
     const hi = 540 - cam.h * T.skyK;
     const shift = topY < lo ? lo - topY : topY > hi ? hi - topY : 0;
     topY += shift;
     footY += shift;
-    const x = 960 + sx;
-    const w = (oak.w ?? 384) * k * z * T.widen;
     const h = footY - topY;
-    if (h < 4) return;
+    if (h < 4) return null;
+    return { x: 960 + sx, topY, footY, w: (m.w ?? 384) * k * z * T.widen, h, k };
+  }
+
+  /**
+   * The hatching tree, far to the west of the oak (`stage.hatchTree`): its trunk, the long branch she hung from with
+   * the empty cocoons under it, a ragged crown. Darker and smaller than the oak; no light of its own.
+   */
+  private drawHatchFar(g: Graphics, cam: CameraView, sim: SimView): void {
+    const m = this.stage?.hatchTree;
+    if (!m) return;
+    const f = this.farPlace(m, cam, sim);
+    if (!f) return;
+    const T = STAGING.oakFar;
+    const { x, topY, footY, w, h } = f;
+    const a = T.alpha;
+    g.poly([
+      x - w * 0.4,
+      topY + h * 0.2,
+      x + w * 0.4,
+      topY + h * 0.2,
+      x + w * 0.8,
+      footY,
+      x - w * 0.8,
+      footY,
+    ]).fill({
+      color: T.color,
+      alpha: a,
+    });
+    // The branch east, a little up, then the cocoons hanging under it.
+    const by = topY + h * 0.36;
+    const bl = h * 0.7;
+    g.poly([x, by - h * 0.02, x + bl, by - h * 0.05, x + bl, by - h * 0.035, x, by + h * 0.025]).fill({
+      color: T.color,
+      alpha: a,
+    });
+    for (let i = 1; i <= 6; i++) {
+      const cx = x + (bl * i) / 7;
+      const cy = by - (h * (0.05 * i)) / 7 + h * 0.04;
+      g.ellipse(cx, cy, Math.max(1, h * 0.008), Math.max(1.5, h * 0.022)).fill({ color: T.color, alpha: a });
+    }
+    for (let i = 0; i < 4; i++)
+      g.ellipse(x + (i - 1.5) * w * 0.9, topY + h * 0.12 + (i % 2) * h * 0.04, w * 1.2, h * 0.1).fill({
+        color: T.color,
+        alpha: a,
+      });
+  }
+
+  private drawOakFar(g: Graphics, clock: number, cam: CameraView, sim: SimView): void {
+    const oak = this.stage?.oak;
+    if (!oak) return;
+    const f = this.farPlace(oak, cam, sim);
+    if (!f) return;
+    const T = STAGING.oakFar;
+    const z = cam.zoom;
+    const { x, topY, footY, w, h, k } = f;
     const a = T.alpha;
     // The trunk, flaring at its foot.
     g.poly([
