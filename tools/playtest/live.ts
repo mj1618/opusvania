@@ -10,9 +10,13 @@
  *   eval "(async () => (await import('/tools/playtest/live.ts')).play({persona: 'explorer'}))()"
  * `record()` instead records a person's (or an agent's) own play until `stop()`.
  */
+
+import { parseInputScript } from '../../src/input/script';
+import { GAME_WORLD } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
 import { ActionBit } from '../../src/sim/input';
 import type { Scene } from '../../src/sim/scene';
+import type { Tuning } from '../../src/sim/tuning';
 import { observe, viewRect } from './observe';
 import { makePersona } from './personas';
 import { Recorder, type RunTrace } from './recorder';
@@ -59,15 +63,19 @@ export interface LiveResult {
 }
 
 function regionOf(scene: Scene): (room: string) => string | undefined {
-  return (room) => (room === scene.id ? (scene as { region?: string }).region : undefined);
+  return (room) =>
+    room === scene.id
+      ? (scene as { region?: string }).region
+      : (GAME_WORLD.rooms[room]?.scene as { region?: string } | undefined)?.region;
 }
 
 /** Plays one run from a fresh `load()` and resolves with its trace. */
 export function play(opts: LiveOpts): Promise<LiveResult> {
   const g = window.__game;
   g.load();
+  const tuning = g.tuning() as unknown as Tuning;
   let scene = g.scene() as unknown as Scene;
-  const persona = makePersona(opts.persona, opts.personaSeed ?? 1);
+  const persona = makePersona(opts.persona, opts.personaSeed ?? 1, { world: GAME_WORLD });
   const rec = new Recorder(opts.persona, scene.id, 1, 'live', {
     lostAfter: (opts.lostAfter ?? 10) * 60,
     regionOf: regionOf(scene),
@@ -117,7 +125,7 @@ export function play(opts: LiveOpts): Promise<LiveResult> {
           return;
         }
       }
-      const mask = persona.decide(observe(st, scene, view), scene);
+      const mask = persona.decide(observe(st, scene, view), scene, { state: st, tuning, world: GAME_WORLD });
       press(mask, held);
       held = mask;
       requestAnimationFrame(tick);
@@ -175,4 +183,114 @@ export async function stop(): Promise<RunTrace | null> {
   const t = await recording.done;
   recording = null;
   return t;
+}
+
+// ---- The first-timer agent (firsttimer.ts drives these through Playwright).
+
+/** An event as a player would put it ('' = not worth a word). */
+export function say(e: SimEvent, title: (room: string) => string): string {
+  const r = e as unknown as Record<string, unknown>;
+  switch (e.type) {
+    case 'hatch':
+      return 'broke out of the cocoon';
+    case 'hurt':
+      return `hit by ${(r.source as { kind?: string } | undefined)?.kind ?? 'something'} (${r.hp}/${r.hpMax} left)`;
+    case 'fade':
+      return 'faded (died)';
+    case 'reform':
+      return 're-formed';
+    case 'fallCatch':
+      return 'fell, and was put back';
+    case 'roomEnter':
+      return `came into ${title(String(r.room))}`;
+    case 'roomExit':
+      return 'left the room';
+    case 'gladeGrant':
+      return `gained ${r.ability}`;
+    case 'patchRest':
+      return 'rested at a moon patch';
+    case 'enemyDie':
+      return `killed a ${r.kind}`;
+    case 'enemyHit':
+      return `cut a ${r.kind}`;
+    case 'pickup':
+      return '';
+    default:
+      if (e.type === ('lureCaught' as SimEvent['type'])) return 'caught by a lamp';
+      if (e.type === ('lureFree' as SimEvent['type'])) return 'broke free of a lamp';
+      if (e.type === ('lureSnuff' as SimEvent['type'])) return `put out a lamp (${r.moths ?? 0} moths freed)`;
+      if (e.type === ('grab' as SimEvent['type'])) return 'grabbed';
+      if (e.type === ('barkBreak' as SimEvent['type'])) return 'broke some rotten bark';
+      if (e.type === ('shortcutOpen' as SimEvent['type'])) return 'opened a way';
+      return '';
+  }
+}
+
+/** What the player knows about herself right now (and where, for the notes). */
+export function summary(): Record<string, unknown> {
+  const g = window.__game;
+  const st = g.state();
+  const sc = g.scene() as unknown as Scene & { title?: string };
+  const p = st.player;
+  return {
+    room: st.room,
+    title: sc.title ?? st.room,
+    hp: `${p.hp}/${p.hpMax}`,
+    abilities: st.save.abilities,
+    x: Math.round(p.x + p.w / 2),
+    y: Math.round(p.y + p.h),
+    roomSize: `${sc.width}x${sc.height}`,
+    time: `${(st.save.time / 60).toFixed(1)} s`,
+    shut: !!st.hatch && !st.hatch.done,
+  };
+}
+
+let bursting: { done: boolean; said: string[]; frames: number } | null = null;
+
+/**
+ * Plays `script` (the input DSL: `R60 R+J20 .30`, one token per run of frames) in real time with real
+ * keys, then pauses the game (the agent thinks with the world still). `burstStatus()` polls it.
+ */
+export function burst(script: string): void {
+  const g = window.__game;
+  const masks = parseInputScript(script);
+  const title = (room: string) =>
+    (GAME_WORLD.rooms[room]?.scene as { title?: string } | undefined)?.title ?? room;
+  const b = { done: false, said: [] as string[], frames: 0 };
+  bursting = b;
+  let held = 0;
+  const f0 = g.state().frame;
+  let lastF = f0;
+  g.resume();
+  const tick = (): void => {
+    const st = g.state();
+    const f = st.frame;
+    if (f > lastF) {
+      for (const e of g.events(f - lastF) as unknown as SimEvent[]) {
+        const w = say(e, title);
+        if (w && b.said[b.said.length - 1] !== w) b.said.push(w);
+      }
+      lastF = f;
+    } else if (f < lastF) lastF = f;
+    const i = f - f0;
+    b.frames = Math.max(0, i);
+    if (i >= masks.length) {
+      press(0, held);
+      g.pause();
+      b.done = true;
+      return;
+    }
+    const m = masks[i] ?? 0;
+    press(m, held);
+    held = m;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/** The burst under way: done yet, frames played, and what happened since the last poll. */
+export function burstStatus(): { done: boolean; frames: number; said: string[] } {
+  if (!bursting) return { done: true, frames: 0, said: [] };
+  const said = bursting.said.splice(0);
+  return { done: bursting.done, frames: bursting.frames, said };
 }

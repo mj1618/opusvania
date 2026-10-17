@@ -227,8 +227,13 @@ export function reportMarkdown(t: RunTrace, meta: ReportMeta): string {
       );
       out.push('');
     }
-    for (const n of t.notes.slice(0, 30)) out.push(`- ${n}`);
-    if (t.notes.length > 30) out.push(`- ... ${t.notes.length - 30} more in trace.json`);
+    // Unwalked ground it could not reach is routine: counted, not listed.
+    const routine = t.notes.filter((n) => /unwalked ground at \d+: no route/.test(n));
+    const shown = t.notes.filter((n) => !routine.includes(n));
+    for (const n of shown.slice(0, 60)) out.push(`- ${n}`);
+    if (shown.length > 60) out.push(`- ... ${shown.length - 60} more in trace.json`);
+    if (routine.length)
+      out.push(`- (${routine.length} patches of unwalked ground it saw and found no route to)`);
     out.push('');
   }
 
@@ -247,6 +252,159 @@ export function reportMarkdown(t: RunTrace, meta: ReportMeta): string {
   out.push('');
   out.push(
     'Heatmap legend: grey = solids, olive line = one-ways, green = exits, dark red = catch zones; heat = time spent (blue little, yellow / white most); path cyan (early) to magenta (late), a white dot and its second every 5 s; white disc = spawn; red X = death; orange ring = fall catch; yellow dot = hit taken; yellow box = a lost stretch; lights (lanterns, lamps, lures): grey ring unseen, blue ring seen, gold disc lit, violet disc put out.',
+  );
+  return out.join('\n');
+}
+
+/** Per room, what one run did there (all its visits summed). */
+export interface RoomStats {
+  frames: number;
+  visits: number;
+  maxLost: number;
+  deaths: number;
+  catches: number;
+  hits: number;
+  lamps: { total: number; seen: number; out: number };
+}
+
+export function roomStats(t: RunTrace, room: string): RoomStats {
+  const visits = t.rooms.filter((v) => v.room === room);
+  const lamps = Object.entries(t.lights).filter(([k, l]) => k.startsWith(`${room}/`) && l.kind === 'lures');
+  return {
+    frames: visits.reduce((a, v) => a + (v.leave - v.enter), 0),
+    visits: visits.length,
+    maxLost: Math.max(0, ...t.lost.filter((l) => l.room === room).map((l) => l.to - l.from)),
+    deaths: t.deaths.filter((d) => d.room === room).length,
+    catches: t.catches.filter((d) => d.room === room).length,
+    hits: t.hurts.filter((d) => d.room === room).length,
+    lamps: {
+      total: lamps.length,
+      seen: lamps.filter(([, l]) => l.seen !== null).length,
+      out: lamps.filter(([, l]) => l.snuffed !== null).length,
+    },
+  };
+}
+
+const mmss = (sec: number): string => {
+  const r = Math.round(sec);
+  return `${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}`;
+};
+
+/**
+ * The region report: every persona's run through the chunk's rooms side by side, against the region
+ * doc's targets (time, max lost, deaths, lamps), then encounters, abilities and how each run ended.
+ */
+export function regionMarkdown(
+  traces: readonly RunTrace[],
+  rooms: readonly string[],
+  targets: Record<string, Target>,
+  meta: { when: string; command: string; region: string; upto: string | null },
+): string {
+  const out: string[] = [];
+  const names = traces.map((t) => t.persona);
+  out.push(`# Region run: ${meta.region}${meta.upto ? ` (to ${meta.upto})` : ''}`);
+  out.push('');
+  out.push(
+    `${meta.when}. \`${meta.command}\`. Headless, from the world's start, every persona, \`--until none\`.`,
+  );
+  out.push('');
+  out.push('## How each run ended');
+  out.push('');
+  out.push('| persona | ended | time | deaths | hits | lost (all) | rooms reached | abilities |');
+  out.push('|---|---|---|---|---|---|---|---|');
+  for (const t of traces) {
+    const how =
+      t.outcome === 'through'
+        ? `through the chunk (out of ${meta.upto})`
+        : t.outcome === 'lost'
+          ? `lost in ${t.rooms[t.rooms.length - 1]?.room ?? '?'}`
+          : t.outcome === 'done'
+            ? `stopped in ${t.rooms[t.rooms.length - 1]?.room ?? '?'} (nothing left it could do)`
+            : `${t.outcome} in ${t.rooms[t.rooms.length - 1]?.room ?? '?'}`;
+    const reached = rooms.filter((r) => t.rooms.some((v) => v.room === r)).length;
+    const ab = t.abilities.map((a) => `${a.id} ${mmss(a.f / 60)}`).join(', ') || 'none';
+    out.push(
+      `| ${t.persona} | ${how} | ${mmss(t.frames / 60)} | ${t.deaths.length} | ${t.hurts.length} | ${mmss(t.lostFrames / 60)} | ${reached} of ${rooms.length} | ${ab} |`,
+    );
+  }
+  out.push('');
+  const stats = traces.map((t) => new Map(rooms.map((r) => [r, roomStats(t, r)])));
+  const table = (
+    title: string,
+    note: string,
+    target: (r: string) => string,
+    cell: (s: RoomStats) => string,
+  ) => {
+    out.push(`## ${title}`);
+    out.push('');
+    if (note) out.push(note, '');
+    out.push(`| room | target | ${names.join(' | ')} |`);
+    out.push(`|---|---|${names.map(() => '---|').join('')}`);
+    for (const r of rooms) {
+      const cells = stats.map((m) => {
+        const s = m.get(r);
+        return s && s.visits > 0 ? cell(s) : '-';
+      });
+      out.push(`| ${r} | ${target(r)} | ${cells.join(' | ')} |`);
+    }
+    out.push('');
+  };
+  table(
+    'Time per room (all visits)',
+    'Bots play 3-15x faster than a first-timer: judge times with the first-timer agent and Matt; read bot times as "it can be done that fast".',
+    (r) => {
+      const t = targets[r];
+      return t ? `${mmss(t.lo)}-${mmss(t.hi)}` : '-';
+    },
+    (s) => `${mmss(s.frames / 60)}${s.visits > 1 ? ` (${s.visits} visits)` : ''}`,
+  );
+  table(
+    'Longest stretch lost (no progress for 10 s or more)',
+    '',
+    (r) => (targets[r]?.maxLost !== undefined ? `<= ${mmss(targets[r]?.maxLost ?? 0)}` : '-'),
+    (s) => (s.maxLost > 0 ? mmss(s.maxLost / 60) : '0'),
+  );
+  table(
+    'Deaths (fades), fall catches and hits taken',
+    '',
+    (r) => {
+      const d = targets[r]?.deaths;
+      return d ? `${d.lo === d.hi ? d.lo : `${d.lo}-${d.hi}`} deaths` : '-';
+    },
+    (s) => `${s.deaths} / ${s.catches} / ${s.hits}`,
+  );
+  table(
+    'Lamps (lures): put out / seen / there',
+    '',
+    (r) => targets[r]?.lamps ?? '-',
+    (s) => (s.lamps.total ? `${s.lamps.out} / ${s.lamps.seen} / ${s.lamps.total}` : 'none'),
+  );
+  out.push('## Encounters');
+  out.push('');
+  out.push(`| encounter | ${names.join(' | ')} |`);
+  out.push(`|---|${names.map(() => '---|').join('')}`);
+  const keys = [...new Set(traces.flatMap((t) => Object.keys(t.encounters ?? {})))].filter((k) =>
+    rooms.includes(k.slice(0, k.indexOf(':'))),
+  );
+  for (const k of keys)
+    out.push(
+      `| ${k} | ${traces
+        .map((t) => {
+          const e = t.encounters?.[k];
+          return e ? `${e.hits} hit(s), ${e.outcome}${e.grabs ? `, ${e.grabs} grab(s)` : ''}` : '-';
+        })
+        .join(' | ')} |`,
+    );
+  out.push('');
+  out.push('## Moths and abilities');
+  out.push('');
+  for (const t of traces)
+    out.push(
+      `- ${t.persona}: ${t.mothsFreed.reduce((a, m) => a + m.n, 0)} moths freed; ${t.abilities.map((a) => `${a.id} at ${mmss(a.f / 60)} in ${a.room}`).join(', ') || 'no ability'}.`,
+    );
+  out.push('');
+  out.push(
+    'Each persona has its own report (heatmaps per room, the fights, the lines it chose) beside this file.',
   );
   return out.join('\n');
 }

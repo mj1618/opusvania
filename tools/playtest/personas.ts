@@ -15,11 +15,25 @@ import { ActionBit } from '../../src/sim/input';
 import { solidAt } from '../../src/sim/physics/aabb';
 import { rngInt, seedRng } from '../../src/sim/rng';
 import type { Scene } from '../../src/sim/scene';
+import type { World } from '../../src/sim/world';
+import { chooseTactic, fightTactics, foe } from './fight';
+import {
+  type Candidate,
+  chooseLine,
+  climbLine,
+  dirBit,
+  type Goal,
+  type Hands,
+  type Line,
+  leapLines,
+  linesFor,
+  nearSurface,
+  onSurface,
+  type SimCtx,
+} from './lines';
 import { Mind, type Move, moveKey, type Surface, yAt } from './map';
 import type { Obs } from './observe';
 
-const L = ActionBit.left;
-const R = ActionBit.right;
 const D = ActionBit.down;
 const J = ActionBit.jump;
 const X = ActionBit.dash;
@@ -27,8 +41,11 @@ const A = ActionBit.attack;
 
 export interface Persona {
   readonly name: string;
-  /** The input mask for this frame. `scene` is the room she is in now (it changes at a room exit). */
-  decide(o: Obs, scene: Scene): number;
+  /**
+   * The input mask for this frame. `scene` is the room she is in now (it changes at a room exit); `ctx`
+   * the sim as it stands, for the planners' look-ahead (lines.ts).
+   */
+  decide(o: Obs, scene: Scene, ctx: SimCtx): number;
   /** What it gave up on, and why (for the report). */
   readonly notes: string[];
   /** Where it decided to go, and when (planning personas). */
@@ -40,7 +57,31 @@ export interface Persona {
 export const PERSONAS = ['naive', 'explorer', 'speedrunner', 'cautious'] as const;
 export type PersonaName = (typeof PERSONAS)[number];
 
-export function makePersona(name: string, seed = 1): Persona {
+export interface PersonaWorld {
+  world?: World;
+  /** The room a speedrunner heads for (default: the placed room furthest from the start). */
+  goal?: string;
+}
+
+/** The placed room the most link hops from the start (the end of the region as built). */
+export function furthestRoom(world: World): string {
+  const hops = new Map<string, number>([[world.start, 0]]);
+  const queue = [world.start];
+  while (queue.length) {
+    const r = queue.shift() as string;
+    for (const [k, v] of Object.entries(world.links)) {
+      if (!v || !k.startsWith(`${r}#`) || hops.has(v.to)) continue;
+      hops.set(v.to, (hops.get(r) ?? 0) + 1);
+      queue.push(v.to);
+    }
+  }
+  return [...hops.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? world.start;
+}
+
+export function makePersona(name: string, seed = 1, w: PersonaWorld = {}): Persona {
+  const world = w.world;
+  const goal = w.goal ?? (world ? furthestRoom(world) : undefined);
+  const known = { ...(world ? { world } : {}), ...(goal ? { goal } : {}) };
   switch (name) {
     case 'naive':
       return new Naive(seed);
@@ -53,6 +94,7 @@ export function makePersona(name: string, seed = 1): Persona {
         hatchAfter: 120,
         pick: 'explore',
         slash: true,
+        turnBack: true,
       });
     case 'speedrunner':
       return new Planner('speedrunner', seed, {
@@ -64,6 +106,8 @@ export function makePersona(name: string, seed = 1): Persona {
         hatchAfter: 0,
         pick: 'exit',
         slash: true,
+        turnBack: true,
+        ...known,
       });
     case 'cautious':
       return new Planner('cautious', seed, {
@@ -78,6 +122,7 @@ export function makePersona(name: string, seed = 1): Persona {
         stopEvery: [110, 260],
         stopFor: [25, 80],
         waitForCreatures: 420,
+        turnBack: true,
       });
     default:
       throw new Error(`Unknown persona "${name}". Personas: ${PERSONAS.join(', ')}`);
@@ -89,10 +134,6 @@ export function groundAhead(scene: Scene, o: Obs, dir: number, ahead: number): b
   const p = o.p;
   const x = dir > 0 ? p.x + p.w + ahead : p.x - ahead - 1;
   return solidAt(scene, x, p.y + p.h, 1, 16);
-}
-
-function dirBit(dir: number): number {
-  return dir > 0 ? R : dir < 0 ? L : 0;
 }
 
 /**
@@ -146,11 +187,15 @@ class Naive implements Persona {
   private last = 0;
   /** A glider holding jump from her last gap jump on. */
   private holding = false;
+  /** Turn-rounds in this room (two at the same lock: it turns back for good). */
+  private turns = 0;
+  /** Where it last jumped at a wall. */
+  private wallX = -1000;
   private room = '';
 
   constructor(readonly seed: number) {}
 
-  decide(o: Obs, scene: Scene): number {
+  decide(o: Obs, scene: Scene, _ctx?: SimCtx): number {
     const f = o.frame;
     if (o.shut) return f % 8 < 2 ? J : 0;
     if (o.held) return 0;
@@ -166,7 +211,14 @@ class Naive implements Persona {
     let dir = this.dir;
     // Headway is per room (x starts again at each room's west edge).
     if (o.room !== this.room) {
+      // Walked out of the room while turned round: that is the way on now.
+      if (f < this.turnUntil && this.room !== '') {
+        this.dir = -this.dir;
+        this.turnUntil = -1;
+        this.notes.push(`f${f}: turned back out of ${this.room}: going on this way`);
+      }
       this.room = o.room;
+      this.turns = 0;
       this.best = Number.NEGATIVE_INFINITY;
       this.bestAt = f;
     }
@@ -177,7 +229,16 @@ class Naive implements Persona {
     } else if (f - this.bestAt > 480 && f > this.turnUntil) {
       this.turnUntil = f + 180;
       this.bestAt = f + 180;
+      this.turns++;
       this.notes.push(`f${f}: no headway for 8 s at x ${Math.round(o.feetX)}, turned round for 3 s`);
+      // Stuck at the same lock again: the way on is the other way (back to the drop it passed).
+      if (this.turns >= 2) {
+        this.dir = -this.dir;
+        this.turns = 0;
+        this.turnUntil = -1;
+        this.best = Number.NEGATIVE_INFINITY;
+        this.notes.push(`f${f}: a lock this way: the way on is back the other way now`);
+      }
     }
     if (f < this.turnUntil) dir = -this.dir;
     const p = o.p;
@@ -192,13 +253,24 @@ class Naive implements Persona {
     const glider = o.abilities.includes('glide');
     let jump: boolean;
     if (f >= this.jumpUntil + 1 && (wall || (gap && !(glider && this.holding)))) {
-      this.jumpUntil = f + 14;
+      // The brief's 14 frames; at the same wall again, a full jump (a step a short hop does not clear).
+      const again = wall && Math.abs(o.feetX - this.wallX) < 16;
+      if (wall) this.wallX = o.feetX;
+      this.jumpUntil = f + (again ? 22 : 14);
       if (glider && !wall) this.holding = true;
     }
     if (glider && this.holding) jump = !(wall && this.last & J);
     else jump = f < this.jumpUntil;
+    // A creature right in front: a cut (anyone who has the button presses it).
+    const front = o.enemies.some(
+      (e) =>
+        Math.abs(e.x - o.feetX) < 110 &&
+        Math.abs(e.y - o.feetY) < 100 &&
+        Math.sign(e.x - o.feetX) === p.facing,
+    );
+    const cut = front && !(this.last & A) ? A : 0;
     const mask =
-      dirBit(dir) | (jump ? J : 0) | pogoPress(o, scene, this.last) | barkPress(o, scene, this.last);
+      dirBit(dir) | (jump ? J : 0) | pogoPress(o, scene, this.last) | barkPress(o, scene, this.last) | cut;
     this.last = mask;
     return mask;
   }
@@ -225,6 +297,11 @@ interface PlannerOpts {
   stopFor?: [number, number];
   /** Stands still while a creature within this many px faces her (up to 4 s). */
   waitForCreatures?: number;
+  /** Out of things to do in a room: back out by an exit (a region run goes on), rather than stop. */
+  turnBack?: boolean;
+  /** The world, and the room it heads for (a speedrunner's knowledge of the route). */
+  world?: World;
+  goal?: string;
 }
 
 /** Something to go to. `leave`: on arriving, keep going that way (off an end, into an exit). */
@@ -239,6 +316,8 @@ interface Target {
   drop?: boolean;
   /** Also arrived when this is true (a pickup taken, a light seen up close). */
   done?: (o: Obs) => boolean;
+  /** Up this face into what it cannot see yet (it owns wall jump); `exit`: out through the top. */
+  climb?: { faceX: number; w: number; exit?: boolean };
 }
 
 /** A planner's memory of one room. */
@@ -253,6 +332,10 @@ interface RoomMemory {
   exitsSeen: Map<string, { x: number; y: number; edge: string }>;
   /** Given up for want of a route on what it had seen: tried again once it sees more. */
   noRoute: Set<string>;
+  /** Exits it has left by (`exit:id`), how often; and the one it came in by last. */
+  taken: Map<string, number>;
+  arrival: string;
+  lastTurn: number;
 }
 
 /** The id of the exit whose opening is nearest a point (feet), or null in a room with none. */
@@ -284,6 +367,9 @@ function roomMemory(): RoomMemory {
     lightsVisited: new Set(),
     exitsSeen: new Map(),
     noRoute: new Set(),
+    taken: new Map(),
+    arrival: '',
+    lastTurn: -1000,
   };
 }
 
@@ -297,16 +383,24 @@ class Planner implements Persona {
   private route: Move[] | null = null;
   private routeFrom = -1;
   private routeVersion = '';
-  private air: Move | null = null;
-  /** Walking off `m`'s end with jump held (a walk-off glide). */
-  private walkGlide: Move | null = null;
-  private airTo: Surface | null = null;
-  private mindNow: Mind | null = null;
+  /** The line under way (lines.ts): a move of the route, or a climb into the unknown. */
+  private active: {
+    line: Line;
+    name: string;
+    k: number;
+    goal: Goal;
+    from: Surface | null;
+    move: Move | null;
+    target: Target | null;
+    left: boolean;
+    hits0: number;
+    foreseenHits: number;
+  } | null = null;
+  /** Lines chosen (for the report) and how many candidates were played ahead in all. */
+  readonly chosen: Array<{ f: number; line: string; frames: number; hits: number; caught: number }> = [];
+  linesTried = 0;
   private jumpUntil = -1;
   private lastMask = 0;
-  private djUsed = false;
-  private moveSince = 0;
-  private moveKey = '';
   /**
    * What it remembers, one record per room: ids (exits, lights, pickups) and cells repeat from room to
    * room (every room has an `n` or an `e`), so a given-up `exit:e` in one room must not shut the next one's.
@@ -346,6 +440,32 @@ class Planner implements Persona {
   private targetSince = 0;
   private wayOn = 1;
   private idleSince = -1;
+  /** The fight under way (fight.ts). */
+  private fighting: {
+    i: number;
+    id: string;
+    room: string;
+    since: number;
+    line: Line | null;
+    k: number;
+    name: string;
+    hp: number;
+    hurt: number;
+    tactics: Map<string, number>;
+  } | null = null;
+  private ignoreFoesUntil = 0;
+  private airClimbAt = -1000;
+  private kit = '';
+  /** Jumps made at a target from under it (a lamp out of reach is given up after a few). */
+  private readonly jumpsAt = new Map<string, number>();
+  private hops: Map<string, number> | null = null;
+  private goal: string | undefined;
+  private frameNow = 0;
+  /** Exits (`room#exit`) it could not take, and rooms it has been in. */
+  private readonly blocked = new Set<string>();
+  private readonly roomsBeen = new Set<string>();
+  /** `room/target` keys no line was found for (not tried again by a turn back). */
+  private readonly noLine = new Set<string>();
   finished = false;
 
   constructor(
@@ -356,6 +476,7 @@ class Planner implements Persona {
     let h = 0;
     for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
     this.rng = { rng: seedRng(seed ^ h) };
+    this.goal = opt.goal;
     this.nextStop = this.range(opt.stopEvery);
   }
 
@@ -372,13 +493,23 @@ class Planner implements Persona {
     }
     this.mem = mem;
     if (o.room !== this.room) {
+      // The way it left the last room.
+      const last = this.memory.get(this.room);
+      if (last && this.target?.key.startsWith('exit:'))
+        last.taken.set(this.target.key, (last.taken.get(this.target.key) ?? 0) + 1);
+      this.target = null;
       // Just came in: the opening she came through is not the way on (two planners used to bounce
       // between two rooms' facing exits). It stays known; she can still leave by it later on foot.
       if (this.room !== '') {
         const back = nearestExit(scene, o.feetX, o.feetY);
-        if (back) mem.given.add(`exit:${back}`);
+        if (back) {
+          mem.given.add(`exit:${back}`);
+          mem.arrival = `exit:${back}`;
+        }
       }
       this.room = o.room;
+      // A climb out through the top goes on into this room; anything else stops at the crossing.
+      if (this.active?.goal.kind !== 'exit') this.active = null;
     }
     let m = this.minds.get(o.room);
     if (!m || m.scene !== scene) {
@@ -390,29 +521,60 @@ class Planner implements Persona {
     return m;
   }
 
-  decide(o: Obs, scene: Scene): number {
-    const mask = this.think(o, scene);
+  decide(o: Obs, scene: Scene, ctx: SimCtx): number {
+    const mask = this.think(o, scene, ctx);
     this.lastMask = mask;
     return mask;
   }
 
-  private think(o: Obs, scene: Scene): number {
+  private think(o: Obs, scene: Scene, ctx: SimCtx): number {
     const f = o.frame;
+    this.frameNow = f;
+    // A new ability: every way it gave up on may go now (the shaft, the far ledge).
+    const kit = o.abilities.join(',');
+    if (kit !== this.kit) {
+      if (this.kit !== '') this.notes.push(`f${f}: now owns ${kit}: tries again what it gave up on`);
+      this.kit = kit;
+      for (const m of this.memory.values()) {
+        const arrival = m.given.has(m.arrival) ? m.arrival : '';
+        m.given.clear();
+        if (arrival) m.given.add(arrival);
+        m.noRoute.clear();
+        m.tries.clear();
+      }
+      for (const m of this.minds.values()) m.bad.clear();
+      this.noLine.clear();
+      this.blocked.clear();
+      this.hops = null;
+      this.target = null;
+      this.route = null;
+    }
+    if (!this.roomsBeen.has(o.room)) {
+      this.roomsBeen.add(o.room);
+      this.hops = null;
+    }
     if (o.shut) return this.hatch(o);
+    const mind = this.mind(o, scene);
+    // A line under way plays to its end (it handles a catch itself).
+    if (this.active) {
+      mind.see(o.solids, o.oneWays, o.abilities, o.tops, o.view, ctx.state.save);
+      this.remember(o, mind);
+      return this.runLine(o, ctx, mind, scene);
+    }
     if (o.held) {
-      this.air = null;
+      // A leap off an end (or a walk to a target) that ends in a fall catch, thorns or a fade: not that way again.
+      const t = this.target;
+      if (t && (ctx.state.caught || o.p.faded > 0) && !this.given.has(t.key))
+        this.giveUp(t, ctx.state.caught ? 'it fell (caught) going there' : 'she faded going there', f);
       return 0;
     }
     if (o.lured) {
-      this.air = null;
       // Caught by a lure: a fighter cuts the flame (it goes out), the rest beat free with jump; a dash frees at once.
       if (this.opt.dash && o.abilities.includes('dash') && !(this.lastMask & X)) return X;
       return f % 6 < 2 ? (this.opt.slash ? A : J) : 0;
     }
-    const mind = this.mind(o, scene);
-    this.mindNow = mind;
     // Something new seen: targets given up for want of a route get another look.
-    if (mind.see(o.solids, o.oneWays, o.abilities, o.tops)) {
+    if (mind.see(o.solids, o.oneWays, o.abilities, o.tops, o.view, ctx.state.save)) {
       for (const k of this.mem.noRoute) this.given.delete(k);
       this.mem.noRoute.clear();
     }
@@ -427,7 +589,7 @@ class Planner implements Persona {
       }
       if (f < this.stopUntil) return 0;
     }
-    if (p.grounded && this.opt.waitForCreatures) {
+    if (p.grounded && this.opt.waitForCreatures && foe(ctx.state, 300, 200) < 0) {
       const near = o.enemies.find(
         (e) =>
           Math.abs(e.x - o.feetX) < (this.opt.waitForCreatures ?? 0) && Math.sign(o.feetX - e.x) === e.facing,
@@ -437,6 +599,22 @@ class Planner implements Persona {
         return 0;
       }
       if (!near) this.waited = 0;
+    }
+
+    // A creature close by: fight it by look-ahead (or slip past it, if that comes out best).
+    // (Once in a fight it stays in it until the creature is well away: no flicker at the edge of range.)
+    const fi =
+      f >= this.ignoreFoesUntil ? foe(ctx.state, this.fighting ? 700 : 420, this.fighting ? 400 : 260) : -1;
+    if (fi >= 0) return this.fightBeat(o, ctx, scene, fi);
+    if (this.fighting) {
+      const fz = this.fighting;
+      const e = ctx.state.enemies.find((q) => q.id === fz.id);
+      const end = !e || e.mode === 'dead' || e.gone ? 'it is down' : 'it is behind her';
+      const tactics = [...fz.tactics.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} x${n}`);
+      this.notes.push(
+        `f${f}: the fight with ${fz.id} over after ${((f - fz.since) / 60).toFixed(1)} s (${end}; ${o.p.hurtSeq - fz.hurt} hit(s) taken): ${tactics.join(', ')}`,
+      );
+      this.fighting = null;
     }
 
     const slash = this.opt.slash ? this.slash(o) : 0;
@@ -451,7 +629,50 @@ class Planner implements Persona {
       return this.wander(o, scene) | slash;
     }
     this.idleSince = -1;
-    return this.fly(o, scene, mind, t) | slash | barkPress(o, scene, this.lastMask);
+    const m = this.fly(o, scene, mind, t, ctx);
+    // A line just started plays alone (the look-ahead played exactly these buttons).
+    return this.active ? m : m | slash | barkPress(o, scene, this.lastMask);
+  }
+
+  /** One beat of a fight: replay the chosen tactic for a few frames, then look again. */
+  private fightBeat(o: Obs, ctx: SimCtx, scene: Scene, i: number): number {
+    const f = o.frame;
+    const e = ctx.state.enemies[i];
+    const id = e?.id ?? '?';
+    let fz = this.fighting;
+    if (!fz || fz.i !== i || fz.room !== o.room) {
+      fz = {
+        i,
+        id,
+        room: o.room,
+        since: f,
+        line: null,
+        k: 0,
+        name: '',
+        hp: e?.hp ?? 0,
+        hurt: o.p.hurtSeq,
+        tactics: new Map(),
+      };
+      this.fighting = fz;
+      this.notes.push(`f${f}: a fight with ${id} (${e?.kind})`);
+    }
+    // Long and nothing happening either way: leave it be for a while (it will not come, or cannot be reached).
+    if (f - fz.since > 1800 && (e?.hp ?? 0) === fz.hp && o.p.hurtSeq === fz.hurt) {
+      this.ignoreFoesUntil = f + 600;
+      this.notes.push(`f${f}: let ${id} be (30 s, nothing dealt or taken)`);
+      this.fighting = null;
+      return 0;
+    }
+    if (!fz.line || fz.k >= 20) {
+      const toward = this.target ? Math.sign(this.target.x - o.feetX) || this.wayOn : this.wayOn;
+      const pick = chooseTactic(ctx, scene, fightTactics(scene, i, toward), i, fz.name);
+      if (!pick) return 0;
+      fz.line = pick.cand.make();
+      fz.k = 0;
+      fz.name = pick.cand.name;
+      fz.tactics.set(fz.name, (fz.tactics.get(fz.name) ?? 0) + 1);
+    }
+    return fz.line.act(ctx.state, fz.k++, this.lastMask);
   }
 
   private hatch(o: Obs): number {
@@ -519,7 +740,7 @@ class Planner implements Persona {
     const fx = o.feetX + p.facing * 70;
     if (o.strands.some((q) => crosses(q, fx - 55, cy - 50, fx + 55, cy + 40))) return A;
     const l = o.lights.find(
-      (q) => q.kind === 'lures' && !q.out && Math.abs(q.x - o.feetX) < 110 && Math.abs(q.y - cy) < 130,
+      (q) => q.kind === 'lures' && !q.out && Math.abs(q.x - o.feetX) < 150 && Math.abs(q.y - cy) < 150,
     );
     if (!l) return 0;
     if (l.y < cy - 70 && Math.abs(l.x - o.feetX) < 60) return A | ActionBit.up;
@@ -537,7 +758,8 @@ class Planner implements Persona {
       if (f - this.targetSince < 90 || this.opt.pick === 'exit') return t;
     }
     if (t && (t.done?.(o) ?? false)) this.given.add(t.key);
-    const cands = this.candidates(o, mind).filter((c) => !this.given.has(c.key));
+    let cands = this.candidates(o, mind).filter((c) => !this.given.has(c.key));
+    if (cands.length === 0) cands = this.turnBack(o, mind, f);
     if (cands.length === 0) {
       this.target = null;
       return null;
@@ -552,17 +774,84 @@ class Planner implements Persona {
     cands.sort((a, b) => score(a) - score(b));
     const next = cands[0] ?? null;
     if (next && next.key !== t?.key) {
-      this.itinerary.push({
-        f,
-        why: next.why,
-        x: Math.round(next.x),
-        y: Math.round(next.y),
-      });
+      this.itinerary.push({ f, why: next.why, x: Math.round(next.x), y: Math.round(next.y) });
       this.target = next;
       this.targetSince = f;
       this.route = null;
     }
     return this.target;
+  }
+
+  /**
+   * Nothing left here: turn back. The exit it has left by least (not the one it just came in by, unless
+   * there is no other) gets another go; a dead end sends it back the way it came (a region run goes on).
+   */
+  private turnBack(o: Obs, mind: Mind, f: number): Array<Target & { rank: number }> {
+    if (!this.opt.turnBack) return [];
+    const keys = [...this.exitsSeen.keys()].map((id) => `exit:${id}`);
+    const usable = keys.filter((k) => !this.mem.noRoute.has(k) && !this.noLine.has(`${o.room}/${k}`));
+    const pool = usable.filter((k) => k !== this.mem.arrival);
+    const pick = (pool.length ? pool : usable).sort(
+      (a, b) => (this.mem.taken.get(a) ?? 0) - (this.mem.taken.get(b) ?? 0),
+    )[0];
+    if (!pick || f - this.mem.lastTurn < 120) return [];
+    this.mem.lastTurn = f;
+    this.given.delete(pick);
+    this.notes.push(`f${f}: nothing new here: back out by ${pick}`);
+    const id = pick.slice(5);
+    const e = this.exitsSeen.get(id);
+    return e ? [{ ...this.exitTarget(mind, id, e, o.feetX), rank: 0 }] : [];
+  }
+
+  /**
+   * World hops from where an exit leads to the goal room (the speedrunner knows the world). Exits it
+   * could not take are left out; when the goal cannot be reached any more from here, it heads for the
+   * nearest room it has not been in instead.
+   */
+  private hopsToGoal(room: string, exitId: string): number {
+    const w = this.opt.world;
+    if (!w || !this.goal) return 0;
+    const usable = (k: string) => !this.blocked.has(k);
+    const bfs = (from: string, forward: boolean): Map<string, number> => {
+      const adj = new Map<string, string[]>();
+      for (const [k, v] of Object.entries(w.links)) {
+        if (!v || !usable(k)) continue;
+        const a = k.slice(0, k.indexOf('#'));
+        const [x, y] = forward ? [a, v.to] : [v.to, a];
+        adj.set(x, [...(adj.get(x) ?? []), y]);
+      }
+      const hops = new Map<string, number>([[from, 0]]);
+      const queue = [from];
+      while (queue.length) {
+        const r = queue.shift() as string;
+        for (const q of adj.get(r) ?? [])
+          if (!hops.has(q)) {
+            hops.set(q, (hops.get(r) ?? 0) + 1);
+            queue.push(q);
+          }
+      }
+      return hops;
+    };
+    if (!this.hops) {
+      this.hops = bfs(this.goal, false);
+      if (!this.hops.has(room)) {
+        const ahead = [...bfs(room, true).entries()]
+          .filter(([r]) => !this.roomsBeen.has(r))
+          .sort((a, b) => a[1] - b[1]);
+        const next = ahead[0]?.[0];
+        if (next && next !== this.goal) {
+          this.notes.push(
+            `f${this.frameNow}: ${this.goal} cannot be reached from ${room}: heading for ${next}`,
+          );
+          this.goal = next;
+          this.hops = bfs(next, false);
+        }
+      }
+    }
+    const k = `${room}#${exitId}`;
+    const link = w.links[k];
+    if (!link || !usable(k)) return 1000;
+    return this.hops.get(link.to) ?? 1000;
   }
 
   private candidates(o: Obs, mind: Mind): Array<Target & { rank: number }> {
@@ -571,11 +860,13 @@ class Planner implements Persona {
     const exits = [...this.exitsSeen.entries()]
       .map(([id, e]) => this.exitTarget(mind, id, e, o.feetX))
       .filter((e) => !this.given.has(e.key));
-    if (this.opt.pick === 'exit' && exits.length > 0) return exits.map((e) => ({ ...e, rank: 0 }));
+    // A one-way drop is a turn back on purpose (the hub's well): every other way first.
+    const oneWay = (key: string) =>
+      (mind.scene.exits ?? []).some((q) => `exit:${q.id}` === key && q.oneWay === true);
+    if (this.opt.pick === 'exit' && exits.length > 0)
+      return exits.map((e) => ({ ...e, rank: this.hopsToGoal(o.room, e.key.slice(5)) }));
     if (this.opt.pick === 'forward' || this.opt.pick === 'exit') {
-      // Forward: a way through before a one-way drop (the hub's well is a turn back on purpose).
-      const oneWay = (key: string) =>
-        (mind.scene.exits ?? []).some((q) => `exit:${q.id}` === key && q.oneWay === true);
+      // Forward: a way through before a one-way drop.
       if (exits.length > 0)
         return exits.map((e) => ({ ...e, rank: this.opt.pick === 'forward' && oneWay(e.key) ? 1 : 0 }));
       return this.frontier(o, mind, true).map((c) => ({ ...c, rank: 1 }));
@@ -606,7 +897,7 @@ class Planner implements Persona {
       });
     }
     for (const c of this.frontier(o, mind, false)) out.push({ ...c, rank: c.leave ? 2 : 1 });
-    for (const e of exits) out.push({ ...e, rank: 3 });
+    for (const e of exits) out.push({ ...e, rank: oneWay(e.key) ? 4 : 3 });
     return out;
   }
 
@@ -640,6 +931,13 @@ class Planner implements Persona {
         if (dir > 0 ? ex >= mind.scene.width - 8 : ex <= 8) continue;
         if (solidAt(mind.scene, dir > 0 ? ex + 2 : ex - 3, ey - 64, 1, 32)) continue;
         if (forwardOnly && dir !== this.wayOn) continue;
+        // The lip of a hole that is an exit is the exit's business, not a leap into the unknown.
+        if (
+          (mind.scene.exits ?? []).some(
+            (q) => q.edge === 's' && ex + dir * 40 >= q.from - 8 && ex + dir * 40 <= q.to + 8,
+          )
+        )
+          continue;
         out.push({
           key: `end:${Math.round(ex)},${Math.round(ey)}`,
           why: `a dangling end at ${Math.round(ex)}, ${Math.round(ey)}`,
@@ -650,6 +948,28 @@ class Planner implements Persona {
         });
       }
     }
+    // Faces rising out of sight (she owns the wall jump): up them, into what she cannot see yet.
+    if (mind.climber && !forwardOnly)
+      for (const fc of mind.faces()) {
+        if (fc.x <= 0 || fc.x >= mind.scene.width) continue;
+        const sx = fc.x - fc.w * 26;
+        const floor = mind.surfaces
+          .filter(
+            (q) => sx >= q.x0 - 8 && sx <= q.x1 + 8 && fc.y0 < yAt(q, sx) - 64 && fc.y1 >= yAt(q, sx) - 400,
+          )
+          .sort((a, b) => yAt(b, sx) - yAt(a, sx))[0];
+        if (!floor) continue;
+        const fy = yAt(floor, sx);
+        if (fy - fc.y0 < 500 || fc.y0 > o.view.y + 64) continue;
+        out.push({
+          key: `climb:${Math.round(fc.x)},${fc.w}`,
+          why: `up the face at ${Math.round(fc.x)}`,
+          x: sx,
+          y: fy,
+          stand: (q) => same(q, floor),
+          climb: { faceX: fc.x, w: fc.w },
+        });
+      }
     return out;
   }
 
@@ -659,8 +979,38 @@ class Planner implements Persona {
     e: { x: number; y: number; edge: string },
     from: number,
   ): Target {
-    // A hole in a floor (a south exit): stand on a floor that ends at its edge, however deep the shaft.
     mind.refresh();
+    // A way out at the top (a shaft): up a face under it, if she owns the wall jump.
+    if (e.edge === 'n' && mind.climber) {
+      const span = (mind.scene.exits ?? []).find((q) => q.id === id);
+      const faces = mind
+        .faces()
+        .filter(
+          (fc) => span && fc.x >= span.from - 8 && fc.x <= span.to + 8 && fc.x > 0 && fc.x < mind.scene.width,
+        )
+        .sort((a, b) => b.y1 - a.y1);
+      for (const fc of faces) {
+        const sx = fc.x - fc.w * 26;
+        // A floor beside the face that the face rises from (it may start a jump above her head).
+        const floor = mind.surfaces
+          .filter((q) => {
+            if (sx < q.x0 - 8 || sx > q.x1 + 8) return false;
+            const y = yAt(q, sx);
+            return fc.y0 < y - 64 && fc.y1 >= y - 400;
+          })
+          .sort((a, b) => yAt(b, sx) - yAt(a, sx))[0];
+        if (!floor) continue;
+        return {
+          key: `exit:${id}`,
+          why: `exit ${id} (up the shaft)`,
+          x: sx,
+          y: yAt(floor, sx),
+          stand: (q) => same(q, floor),
+          climb: { faceX: fc.x, w: fc.w, exit: true },
+        };
+      }
+    }
+    // A hole in a floor (a south exit): stand on a floor that ends at its edge, however deep the shaft.
     const span = e.edge === 's' ? (mind.scene.exits ?? []).find((q) => q.id === id) : undefined;
     // The lip on her side of it.
     const lip = span
@@ -700,48 +1050,220 @@ class Planner implements Persona {
   private giveUp(t: Target, why: string, f: number): void {
     if (this.given.has(t.key)) return;
     this.given.add(t.key);
+    if (t.key.startsWith('exit:')) {
+      this.blocked.add(`${this.room}#${t.key.slice(5)}`);
+      this.hops = null;
+    }
     if (why.startsWith('no route')) this.mem.noRoute.add(t.key);
     this.notes.push(`f${f}: gave up on ${t.why}: ${why}`);
     this.target = null;
     this.route = null;
   }
 
-  private fly(o: Obs, scene: Scene, mind: Mind, t: Target): number {
+  private hands(): Hands {
+    return { edge: this.opt.edge, hold: this.opt.hold, dash: this.opt.dash, cut: this.opt.slash };
+  }
+
+  /** Waits a line may start with: none, or (a creature in view) a beat or two to let it pass. */
+  private waits(o: Obs): number[] {
+    return o.enemies.length > 0 || o.lights.some((l) => l.kind === 'lures' && !l.out) ? [0, 40, 90] : [0];
+  }
+
+  /** Plays the line under way; ends it (and judges it) when she lands, fails or runs out of time. */
+  private runLine(o: Obs, ctx: SimCtx, mind: Mind, scene: Scene): number {
+    const a = this.active;
+    if (!a) return 0;
+    const f = o.frame;
+    const p = o.p;
+    const end = (ok: boolean, why: string): void => {
+      this.active = null;
+      this.route = null;
+      // A leap or a climb into the unknown that worked has done its job: on from wherever she is now.
+      if (ok && a.target) {
+        this.given.add(a.target.key);
+        if (this.target?.key === a.target.key) this.target = null;
+      }
+      if (a.move) {
+        if (ok) this.tries.delete(moveKey(a.move));
+        else this.failed(a.move, f, why, mind);
+      } else if (!ok && a.target) this.giveUp(a.target, why, f);
+      if (!ok && a.target?.leave === undefined)
+        this.notes.push(`f${f}: ${a.name} did not go as foreseen (${why})`);
+    };
+    if (o.held && a.goal.kind === 'exit' && ctx.state.exit) {
+      // Out of a room with no world beyond (a test room): that was the way out.
+      if (!ctx.world) {
+        end(true, 'out');
+        return 0;
+      }
+      return a.line.act(ctx.state, a.k++, this.lastMask);
+    }
+    if (o.held) {
+      if (ctx.state.exit && a.goal.kind !== 'surface') end(true, 'out by an exit');
+      else end(false, ctx.state.caught ? 'caught (a fall or thorns)' : 'held');
+      return 0;
+    }
+    if (o.p.hurtSeq > a.hits0 + a.foreseenHits) {
+      // A hit the look-ahead did not see coming (a live run's timing): remember the move as risky.
+      a.hits0 = o.p.hurtSeq;
+      if (a.move) this.failed(a.move, f, 'a hit it did not foresee', mind);
+    }
+    if (p.grounded && !o.lured && a.goal.kind === 'exit') {
+      if (o.room !== a.goal.room && p.contactFrames >= 6 && o.feetY < scene.height - 32) {
+        end(true, 'through');
+        return 0;
+      }
+    } else if (p.grounded && !o.lured) {
+      const goal = a.goal;
+      if (goal.kind === 'surface' && onSurface(ctx.state, goal.surface)) {
+        end(true, 'landed');
+        return 0;
+      }
+      if (goal.kind === 'rise' && o.feetY <= goal.fromY - goal.rise) {
+        end(true, 'rose');
+        return 0;
+      }
+      const home =
+        nearSurface(ctx.state, a.from) || (goal.kind === 'surface' && nearSurface(ctx.state, goal.surface));
+      // As the look-ahead judges it (lines.ts `simulate`): a leap is done on any other ground, a climb
+      // into the unknown goes on from a ledge on the way, a move must land on its surface.
+      if (a.left && !home && goal.kind === 'leap') {
+        end(true, 'landed');
+        return 0;
+      }
+      if (a.left && !home && goal.kind === 'surface') {
+        end(false, `landed elsewhere (${Math.round(o.feetX)}, ${Math.round(o.feetY)})`);
+        return 0;
+      }
+    } else a.left = true;
+    if (a.k >= a.line.max) {
+      end(false, 'too long');
+      return 0;
+    }
+    return a.line.act(ctx.state, a.k++, this.lastMask);
+  }
+
+  /** Looks ahead over the candidate lines for a move (or a climb into the unknown) and starts the best. */
+  private startLine(
+    o: Obs,
+    ctx: SimCtx,
+    scene: Scene,
+    mind: Mind,
+    from: Surface | null,
+    goal: Goal,
+    cands: Candidate[],
+    move: Move | null,
+    target: Target | null,
+  ): number {
+    const f = o.frame;
+    const c = chooseLine(ctx, scene, cands, from, goal);
+    this.linesTried += c.tried;
+    if (!c.cand) {
+      const what = move ? `a ${move.kind} at x ${Math.round(move.launchX)}` : (target?.why ?? 'a climb');
+      this.notes.push(`f${f}: no line for ${what} (${c.tried} tried: ${c.fails || 'none'})`);
+      if (move) {
+        mind.bad.add(moveKey(move));
+        this.route = null;
+      } else if (target) {
+        this.noLine.add(`${o.room}/${target.key}`);
+        this.giveUp(target, 'no line works', f);
+      }
+      return 0;
+    }
+    const line = c.cand.make();
+    this.active = {
+      line,
+      name: c.cand.name,
+      k: 0,
+      goal,
+      from,
+      move,
+      target,
+      left: false,
+      hits0: o.p.hurtSeq,
+      foreseenHits: c.outcome.hits,
+    };
+    this.chosen.push({
+      f,
+      line: c.cand.name,
+      frames: c.outcome.frames,
+      hits: c.outcome.hits,
+      caught: c.outcome.caught,
+    });
+    if (c.outcome.hits > 0)
+      this.notes.push(
+        `f${f}: took ${c.cand.name} knowing it costs ${c.outcome.hits} hit(s): no clean line (${c.fails})`,
+      );
+    return this.runLine(o, ctx, mind, scene);
+  }
+
+  private fly(o: Obs, scene: Scene, mind: Mind, t: Target, ctx: SimCtx): number {
     const p = o.p;
     const f = o.frame;
     if (f - this.targetSince > 60 * 45) {
       this.giveUp(t, 'not reached in 45 s', f);
       return 0;
     }
-    if (!p.grounded) {
-      // Ran off the launch end a frame early (a landing right at the end of a short step): the coyote
-      // frames still take the jump it meant to make there.
-      const next = this.route?.[0];
-      if (this.walkGlide) {
-        // Walked off holding jump: the wings are open; keep holding to the landing.
-        this.air = this.walkGlide;
-        this.airTo = this.mindNow?.surfaces.find((q) => q.id === this.walkGlide?.to) ?? null;
-        this.walkGlide = null;
-        this.jumpUntil = f + 600;
+    if (!p.grounded && mind.climber && (p.vy < -2 || p.mode === 'wallSlide') && f - this.airClimbAt > 30) {
+      // Carried up into a room (the climb-out through the grate) or rising beside a wall: climb on, onto
+      // the first ground at or above here, if a face near her makes that work.
+      this.airClimbAt = f;
+      const cands: Candidate[] = [];
+      for (const fc of mind.faces()) {
+        if (Math.abs(fc.x - o.feetX) > 400 || fc.y1 < o.feetY - 400 || fc.y0 > o.feetY) continue;
+        const n = `climb on (face at ${Math.round(fc.x)})`;
+        cands.push({
+          name: n,
+          make: () =>
+            climbLine(
+              n,
+              scene,
+              { kind: 'rise', fromY: o.feetY, rise: 0 },
+              fc.x,
+              { faceX: fc.x, w: fc.w, wait: 0 },
+              this.hands(),
+              600,
+            ),
+        });
       }
-      if (!this.air && next?.kind === 'jump' && p.contactFrames <= 4 && p.vy >= 0) {
-        if (this.lastMask & J) return dirBit(next.dir);
-        return dirBit(next.dir) | this.jump(o, next);
+      if (cands.length) {
+        const c = chooseLine(ctx, scene, cands, null, { kind: 'rise', fromY: o.feetY, rise: 0 });
+        if (c.cand) {
+          this.active = {
+            line: c.cand.make(),
+            name: c.cand.name,
+            k: 0,
+            goal: { kind: 'rise', fromY: o.feetY, rise: 0 },
+            from: null,
+            move: null,
+            target: null,
+            left: true,
+            hits0: o.p.hurtSeq,
+            foreseenHits: c.outcome.hits,
+          };
+          this.chosen.push({
+            f,
+            line: c.cand.name,
+            frames: c.outcome.frames,
+            hits: c.outcome.hits,
+            caught: c.outcome.caught,
+          });
+          return this.runLine(o, ctx, mind, scene);
+        }
       }
-      return this.steerAir(o, t) | pogoPress(o, scene, this.lastMask);
     }
-    // Landed: did the move in flight work? (Standing on the last pixels her feet point can be past the end.)
+    if (!p.grounded) {
+      // Falling with no line (thrown, or off an end it leaves by): steer toward the target, wings open.
+      let m = 0;
+      if (t.leave && (o.feetX - t.x) * t.leave > -16) m |= dirBit(t.leave);
+      else if (Math.abs(t.x - o.feetX) > 24) m |= dirBit(Math.sign(t.x - o.feetX));
+      if (f < this.jumpUntil || (p.vy > 2 && o.abilities.includes('glide') && !t.drop)) m |= J;
+      return m | pogoPress(o, scene, this.lastMask);
+    }
     const cur =
       mind.under(o.feetX, o.feetY) ?? mind.under(o.feetX - 19, o.feetY) ?? mind.under(o.feetX + 19, o.feetY);
-    if (this.air) {
-      const m = this.air;
-      this.air = null;
-      const ok = same(cur, this.airTo);
-      if (!ok) this.failed(m, f, `landed elsewhere (${Math.round(o.feetX)}, ${Math.round(o.feetY)})`, mind);
-      this.route = null;
-    }
     if (!cur) return this.wander(o, scene);
-    if (t.stand(cur)) return this.finish(o, scene, t);
+    if (t.stand(cur)) return this.finish(o, scene, mind, t, ctx, cur);
     const version = `${mind.surfaces.length}:${mind.moves.length}:${mind.bad.size}`;
     if (!this.route || this.routeFrom !== cur.id || this.routeVersion !== version) {
       this.route = mind.route(cur.id, t.stand);
@@ -753,8 +1275,27 @@ class Planner implements Persona {
       }
     }
     const m = this.route[0];
-    if (!m) return this.finish(o, scene, t);
-    return this.approach(o, scene, mind, m);
+    if (!m) return this.finish(o, scene, mind, t, ctx, cur);
+    const to = mind.surfaces.find((q) => q.id === m.to);
+    if (!to) {
+      this.route = null;
+      return 0;
+    }
+    // Far from where the move starts: walk there (the look-ahead is for the move itself).
+    const d = m.launchX - o.feetX;
+    if (Math.abs(d) > 560) return dirBit(Math.sign(d)) | this.run(o, scene, Math.sign(d), Math.abs(d));
+    // Cautious: go to the lip and look before a jump or a drop.
+    if (m.kind !== 'up' && m.kind !== 'climb' && m.kind !== 'through') {
+      const toEdge = m.dir > 0 ? m.launchX - o.feetX : o.feetX - m.launchX;
+      const look = this.edgeLook(o, m, toEdge);
+      if (look >= 0) return look;
+    }
+    const tx = Math.max(to.x0 + 40, Math.min(to.x1 - 40, t.x));
+    const cands = linesFor(m, cur, to, tx, scene, o.abilities, this.hands(), {
+      waits: this.waits(o),
+      faces: mind.faces(),
+    });
+    return this.startLine(o, ctx, scene, mind, cur, { kind: 'surface', surface: to }, cands, m, null);
   }
 
   private failed(m: Move, f: number, why: string, mind: Mind): void {
@@ -767,49 +1308,6 @@ class Planner implements Persona {
     }
   }
 
-  /** On the move's surface: go to its launch point, then go. */
-  private approach(o: Obs, scene: Scene, mind: Mind, m: Move): number {
-    const p = o.p;
-    const f = o.frame;
-    const k = moveKey(m);
-    if (k !== this.moveKey) {
-      this.moveKey = k;
-      this.moveSince = f;
-    } else if (f - this.moveSince > 60 * 8) {
-      this.failed(m, f, 'could not get to it in 8 s', mind);
-      this.failed(m, f, 'could not get to it in 8 s', mind);
-      this.route = null;
-      this.moveKey = '';
-      return 0;
-    }
-    if (m.kind === 'through') return f % 4 < 2 ? D | J : D;
-    if (m.kind === 'up') {
-      const dx = m.launchX - o.feetX;
-      if (Math.abs(dx) > 14) return dirBit(Math.sign(dx)) | this.run(o, scene, Math.sign(dx), Math.abs(dx));
-      return this.jump(o, m);
-    }
-    // Distance to the end (negative: her body already hangs over it).
-    const d = m.dir > 0 ? m.launchX - o.feetX : o.feetX - m.launchX;
-    if (p.wallDir === m.dir && m.kind === 'jump') return dirBit(m.dir) | this.jump(o, m);
-    const edgeStop = this.edgeLook(o, m, d);
-    if (edgeStop >= 0) return edgeStop;
-    if (m.kind === 'walk' || m.kind === 'drop') return dirBit(m.dir);
-    // A long drop with jump still held from the glide that brought her here: walk off it held (a walk-off
-    // glide: low, and under anything hanging over a jump's hump, like R6's thorn branch).
-    if (m.kind === 'jump' && m.rise >= 256 && o.abilities.includes('glide') && this.lastMask & J) {
-      this.walkGlide = m;
-      return dirBit(m.dir) | J;
-    }
-    this.walkGlide = null;
-    if (d <= this.opt.edge + Math.abs(p.vx) * 0.5) {
-      // Jump still held from a landing at the very end (a chained jump): brake for the release frame,
-      // or she runs off the end before a new press can count.
-      if (this.lastMask & J && m.kind === 'jump') return dirBit(-m.dir);
-      return dirBit(m.dir) | this.jump(o, m);
-    }
-    return dirBit(m.dir) | this.run(o, scene, m.dir, d);
-  }
-
   /** Cautious: stop and look before an edge; then creep (taps) to the last pixels. */
   private edgeLook(o: Obs, m: Move, d: number): number {
     if (!this.opt.edgeLook) return -1;
@@ -820,8 +1318,8 @@ class Planner implements Persona {
       this.lookUntil = f + this.range(this.opt.edgeLook);
     }
     if (f < this.lookUntil) return 0;
-    // Creep: walk in pulses near the edge.
-    if (this.lookedAt === k && d < 70 && d > this.opt.edge + 2) return f % 6 < 3 ? dirBit(m.dir) : 0;
+    // Creep up to the lip in pulses, then go.
+    if (this.lookedAt !== k && d >= 70) return f % 6 < 3 ? dirBit(m.dir) : 0;
     return -1;
   }
 
@@ -839,72 +1337,83 @@ class Planner implements Persona {
     return 0;
   }
 
-  private jump(o: Obs, m: Move): number {
-    const f = o.frame;
-    if (this.lastMask & J) return 0; // a press needs a release first
-    this.air = m;
-    this.airTo = this.mindNow?.surfaces.find((s) => s.id === m.to) ?? null;
-    this.djUsed = false;
-    // A hop (short hold) for a short gap down: a lower arc lands sooner. Up, or far: the full jump.
-    const hop = this.opt.hop && m.kind === 'jump' && m.rise > 16 && m.gap < 260;
-    // Over seed-cases: a hop (wood.md R4: "hop, down-cut, bounce"); a full jump flies over the first one.
-    this.jumpUntil = f + (m.pogo ? 4 : hop ? Math.min(this.opt.hold, 9) : this.opt.hold);
-    return J;
-  }
-
-  private steerAir(o: Obs, t: Target): number {
-    const p = o.p;
-    const f = o.frame;
-    const m = this.air;
-    let mask = 0;
-    const to = m ? this.airTo : null;
-    if (to && m) {
-      const top = yAt(to, Math.max(to.x0, Math.min(to.x1, o.feetX)));
-      const inX = o.feetX > to.x0 + 28 && o.feetX < to.x1 - 28;
-      if (m.kind === 'up' && o.feetY > top - 4 && !inX) {
-        // Rise beside it first, then over it.
-        mask |= o.feetY < top + 40 ? dirBit(m.dir) : 0;
-      } else if (!inX) mask |= dirBit(o.feetX < to.x0 + 28 ? 1 : -1);
-      else {
-        const tx = Math.max(to.x0 + 40, Math.min(to.x1 - 40, t.x));
-        mask |= Math.abs(tx - o.feetX) > 24 ? dirBit(Math.sign(tx - o.feetX)) : 0;
-      }
-      const hold = f < this.jumpUntil;
-      // Sail on (glide) while short of it; a second jump at the apex when it is still above her.
-      const far = !inX && p.vy > 0 && o.abilities.includes('glide');
-      if (hold || far) mask |= J;
-      if (
-        !hold &&
-        !this.djUsed &&
-        p.vy > -1 &&
-        (o.feetY > top - 8 || Math.abs(to.x0 - o.feetX) > 360 || !inX) &&
-        o.abilities.includes('doubleJump') &&
-        p.dj > 0
-      ) {
-        if (this.lastMask & J) mask &= ~J;
-        else {
-          mask |= J;
-          this.djUsed = true;
-          this.jumpUntil = f + this.opt.hold;
-        }
-      }
-      return mask;
-    }
-    // Off the end it meant to leave by: keep going that way.
-    if (t.leave && (o.feetX - t.x) * t.leave > -16) mask |= dirBit(t.leave);
-    // Falling with no plan: steer toward the target.
-    else if (Math.abs(t.x - o.feetX) > 24) mask |= dirBit(Math.sign(t.x - o.feetX));
-    if (f < this.jumpUntil) mask |= J;
-    return mask;
-  }
-
-  /** On the target's surface: walk to it; take a hanging pickup with a jump; leave the way it says. */
-  private finish(o: Obs, scene: Scene, t: Target): number {
+  /** On the target's surface: walk to it; take a hanging pickup with a jump; leave the way it says; climb on. */
+  private finish(o: Obs, scene: Scene, mind: Mind, t: Target, ctx: SimCtx, cur: Surface): number {
     const p = o.p;
     const f = o.frame;
     const dx = t.x - o.feetX;
+    if (t.climb) {
+      // Up a face into what it cannot see yet: the look-ahead only keeps her off thorns and slick bark.
+      const c = t.climb;
+      if (Math.abs(c.faceX - c.w * 26 - o.feetX) > 40 && p.wallDir !== c.w)
+        return dirBit(Math.sign(c.faceX - c.w * 26 - o.feetX));
+      const goal: Goal = c.exit
+        ? { kind: 'exit', id: t.key.slice(5), room: o.room }
+        : { kind: 'rise', fromY: o.feetY, rise: 240 };
+      const next = (r: string) => ctx.world?.rooms[r]?.scene;
+      const faces = mind.faces();
+      const cands: Candidate[] = [];
+      for (const wait of [0]) {
+        const n = 'wall climb into the unknown';
+        cands.push({
+          name: n,
+          make: () =>
+            climbLine(n, scene, goal, c.faceX, { faceX: c.faceX, w: c.w, wait, next }, this.hands(), 1200),
+        });
+        // Out through the top into the next room: the last kick must fall just under the seam.
+        if (c.exit)
+          for (const kickDelay of [3, 6, 9, 12, 15, 18, 21])
+            cands.push({
+              name: `${n} (kicks ${kickDelay}f late)`,
+              make: () =>
+                climbLine(
+                  n,
+                  scene,
+                  goal,
+                  c.faceX,
+                  { faceX: c.faceX, w: c.w, wait, next, kickDelay },
+                  this.hands(),
+                  1200,
+                ),
+            });
+        for (const fc of faces) {
+          const gap = (fc.x - c.faceX) * -c.w;
+          if (fc.w !== -c.w || gap < 120 || gap > 900) continue;
+          for (const up of [200, 360, 520, 680, 840]) {
+            const across = { x: fc.x, atY: o.feetY - up };
+            const nm = `climb, kick-glide across at ${up} up`;
+            cands.push({
+              name: nm,
+              make: () =>
+                climbLine(
+                  nm,
+                  scene,
+                  goal,
+                  c.faceX,
+                  { faceX: c.faceX, w: c.w, across, wait, next },
+                  this.hands(),
+                  1200,
+                ),
+            });
+          }
+        }
+      }
+      return this.startLine(o, ctx, scene, mind, cur, goal, cands, null, t);
+    }
     if (t.leave) {
       if ((o.feetX - t.x) * t.leave > -16) {
+        // Cautious: a look over the lip first.
+        if (this.opt.edgeLook && this.lookedAt !== t.key) {
+          this.lookedAt = t.key;
+          this.lookUntil = f + this.range(this.opt.edgeLook) + 30;
+        }
+        if (f < this.lookUntil) return 0;
+        // A dangling end: a leap into what it cannot see, but not into the thorns it can (the look-ahead).
+        if (t.key.startsWith('end:')) {
+          const ex = t.x + t.leave * 24;
+          const cands = leapLines(ex, t.leave, scene, o.abilities, this.hands(), this.waits(o));
+          return this.startLine(o, ctx, scene, mind, cur, { kind: 'leap' }, cands, null, t);
+        }
         // At the end: go on, jumping off it (a player leaps rather than walks into the dark).
         if (
           !t.drop &&
@@ -919,11 +1428,20 @@ class Planner implements Persona {
       }
       return dirBit(Math.sign(dx)) | this.run(o, scene, Math.sign(dx), Math.abs(dx));
     }
-    if (Math.abs(dx) > 20) return dirBit(Math.sign(dx)) | this.run(o, scene, Math.sign(dx), Math.abs(dx));
-    // Under it: a pickup or a light above her head wants a jump.
+    // As near under it as this ground goes (a lamp hangs off the end of a ledge: a jump-cut from its end).
+    const sx = Math.max(cur.x0 + 20, Math.min(cur.x1 - 20, t.x));
+    const sdx = sx - o.feetX;
+    if (Math.abs(sdx) > 20) return dirBit(Math.sign(sdx)) | this.run(o, scene, Math.sign(sdx), Math.abs(sdx));
+    // Under it: a pickup or a light above her head wants a jump (toward it, if it hangs off to the side).
     if (t.y < o.feetY - 60 && !(this.lastMask & J)) {
+      const n = (this.jumpsAt.get(t.key) ?? 0) + 1;
+      this.jumpsAt.set(t.key, n);
+      if (n > 4) {
+        this.giveUp(t, 'out of reach of a jump from here', f);
+        return 0;
+      }
       this.jumpUntil = f + this.opt.hold;
-      return J;
+      return J | (Math.abs(dx) > 40 ? dirBit(Math.sign(dx)) : 0);
     }
     if (f < this.jumpUntil) return J;
     // Standing at it: done.

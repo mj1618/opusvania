@@ -225,3 +225,72 @@ describe('playtest harness: targets and pictures', () => {
     expect(encodePng(1, 1, new Uint8Array([1, 2, 3, 4])).length).toBeGreaterThan(40);
   });
 });
+
+describe('playtest harness: hands (look-ahead lines, climbs, fights)', () => {
+  /** A 512-wide shaft rising 1400 from a floor to an exit at the top; both faces kickable. */
+  function shaft(): Room {
+    return {
+      id: 'shaft-lab',
+      region: 'lab',
+      width: 2000,
+      height: 1800,
+      spawn: { x: 600, y: 1600 },
+      solids: [
+        { tag: 'ground', x: 0, y: 1600, w: 2000, h: 200 },
+        { tag: 'trunk', x: 600 + 200, y: 0, w: 128, h: 1450 },
+        { tag: 'trunk', x: 600 + 200 + 128 + 512, y: 0, w: 128, h: 1450 },
+      ],
+      oneWays: [],
+      exits: [{ id: 'top', edge: 'n', from: 928, to: 1440 }],
+    };
+  }
+
+  it('a persona that owns the wall jump climbs a shaft and leaves by its top', () => {
+    const r = runHeadless({ room: shaft(), persona: 'speedrunner', seconds: 60, abilities: ['wallJump'] });
+    expect(r.trace.outcome).toBe('exit');
+    expect(r.trace.exitId).toBe('top');
+    expect(r.trace.hurts).toHaveLength(0);
+  });
+
+  it('without it, the shaft is a lock: no way out found', () => {
+    const r = runHeadless({ room: shaft(), persona: 'speedrunner', seconds: 30, abilities: [] });
+    expect(r.trace.outcome).not.toBe('exit');
+  });
+
+  it('the look-ahead picks a line round thorns hanging over the jump (a walk-off glide under them)', () => {
+    // A ledge, a long drop to a far floor, thorns where a jump's hump would go.
+    const room: Room = {
+      id: 'thorn-lab',
+      region: 'lab',
+      width: 4000,
+      height: 1600,
+      spawn: { x: 300, y: 800 },
+      solids: [
+        { tag: 'ground', x: 0, y: 800, w: 700, h: 800 },
+        { tag: 'ground', x: 1700, y: 1300, w: 2300, h: 300 },
+      ],
+      oneWays: [],
+      thorns: [{ id: 'branch', x: 780, y: 560, w: 500, h: 120 }],
+      catches: [{ id: 'pit', x: 700, y: 1400, w: 1000, h: 200 }],
+      exits: [{ id: 'east', edge: 'e', from: 1100, to: 1300 }],
+    };
+    const r = runHeadless({ room, persona: 'explorer', seconds: 60, abilities: ['glide'] });
+    expect(r.trace.outcome).toBe('exit');
+    expect(r.trace.hurts).toHaveLength(0);
+  });
+
+  it('a creature in the way is fought by look-ahead (or passed) without a fade', () => {
+    const room: Room = {
+      ...gapRoom(),
+      id: 'burr-lab',
+      solids: [{ tag: 'ground', x: 0, y: 800, w: 4000, h: 400 }],
+      enemies: [{ id: 'burr', kind: 'burrback', x: 1400, y: 800, facing: -1 }],
+      exits: [{ id: 'east', edge: 'e', from: 0, to: 800 }],
+    };
+    for (const persona of ['explorer', 'speedrunner']) {
+      const r = runHeadless({ room, persona, seconds: 90 });
+      expect(r.trace.outcome, persona).toBe('exit');
+      expect(r.trace.deaths, persona).toHaveLength(0);
+    }
+  });
+});

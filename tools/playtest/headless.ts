@@ -13,7 +13,7 @@ import { GAME_WORLD } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { observe, viewRect } from './observe';
-import { makePersona } from './personas';
+import { makePersona, type Persona } from './personas';
 import { Recorder, type RunTrace } from './recorder';
 
 export interface RunOpts {
@@ -33,6 +33,12 @@ export interface RunOpts {
   /** `exit`: stop at the first room exit (default); `none`: run to the time limit. */
   until?: 'exit' | 'none';
   lostAfter?: number;
+  /** The room a speedrunner heads for (default: the placed room furthest from the start). */
+  goal?: string;
+  /** Start here (feet, room px) instead of the spawn: a teleport, so the hatching is skipped. */
+  at?: { x: number; y: number };
+  /** A chunk of a region: the run is through once she leaves this room by a way other than the one she came in by. */
+  upto?: string;
 }
 
 export interface HeadlessResult {
@@ -40,6 +46,7 @@ export interface HeadlessResult {
   /** One input mask per sim step, from frame 0 (replay with `formatInputScript`). */
   tape: number[];
   hash: string;
+  persona: Persona;
 }
 
 export function runHeadless(opts: RunOpts): HeadlessResult {
@@ -50,11 +57,16 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
   const world = typeof opts.room === 'string' ? GAME_WORLD : null;
   const game = new Game(tuning, room, opts.seed ?? 1, () => 0, opts.abilities ?? null, { world });
   game.mode = 'manual';
+  if (opts.at) game.teleport(opts.at.x, opts.at.y);
   let events: readonly SimEvent[] = [];
   game.afterStep.add((ev) => {
     events = ev;
   });
-  const persona = makePersona(opts.persona, opts.personaSeed ?? 1);
+  const persona = makePersona(
+    opts.persona,
+    opts.personaSeed ?? 1,
+    world ? { world, ...(opts.goal ? { goal: opts.goal } : {}) } : {},
+  );
   const rec = new Recorder(opts.persona, room.id, opts.seed ?? 1, 'headless', {
     lostAfter: (opts.lostAfter ?? 10) * 60,
     regionOf: (id) => {
@@ -73,9 +85,14 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
   const giveUp = Math.round((opts.giveUp ?? 120) * 60);
   const tape: number[] = [];
   let outcome = 'timeout';
+  let uptoArrival = '';
   for (let i = 0; i < maxFrames; i++) {
     const view = viewRect(lerpCamera(cam, cam, 1));
-    const mask = persona.decide(observe(game.state, scene, view), scene);
+    const mask = persona.decide(observe(game.state, scene, view), scene, {
+      state: game.state,
+      tuning,
+      ...(world ? { world } : {}),
+    });
     tape.push(mask);
     game.queueInput([mask]);
     game.stepOnce();
@@ -87,6 +104,16 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
     if (events.some((e) => e.type === 'spawn')) cam = createCamera(game.state, scene, ct);
     else stepCamera(cam, game.state, scene, ct);
     rec.record(game.state, mask, events, viewRect(lerpCamera(cam, cam, 1)), scene);
+    for (const e of events)
+      if (e.type === 'roomEnter' && e.room === opts.upto && world) {
+        const link = world.links[e.from];
+        uptoArrival = link?.exit ?? '';
+      }
+    const out = events.find((e) => e.type === 'roomExit');
+    if (opts.upto && out?.type === 'roomExit' && game.state.room === opts.upto && out.id !== uptoArrival) {
+      outcome = 'through';
+      break;
+    }
     if ((opts.until ?? 'exit') === 'exit' && events.some((e) => e.type === 'roomExit')) {
       outcome = 'exit';
       break;
@@ -100,5 +127,5 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
       break;
     }
   }
-  return { trace: rec.finish(outcome, persona.notes, persona.itinerary), tape, hash: game.hash() };
+  return { trace: rec.finish(outcome, persona.notes, persona.itinerary), tape, hash: game.hash(), persona };
 }

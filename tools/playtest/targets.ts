@@ -13,6 +13,20 @@ export interface Target {
   lo: number;
   hi: number;
   source: string;
+  /** The longest stretch lost allowed there (seconds), if the table has a "lost" column. */
+  maxLost?: number;
+  /** Deaths allowed (low, high), if the table has a "deaths" column. */
+  deaths?: { lo: number; hi: number };
+  /** The "lamps" cell as written (e.g. `2/3 / 3/3`). */
+  lamps?: string;
+}
+
+/** `0`, `0–1`, `1-2 (2-4 pips)` -> a range. */
+function parseCount(cell: string): { lo: number; hi: number } | null {
+  const m = /^\s*(\d+)\s*(?:[-–]\s*(\d+))?/.exec(cell.replace(/[`*]/g, ''));
+  if (!m) return null;
+  const lo = Number(m[1]);
+  return { lo, hi: m[2] ? Number(m[2]) : lo };
 }
 
 /** Seconds from a time cell, or null. */
@@ -55,8 +69,11 @@ export function targetsFromMarkdown(
     if (!head.includes('|') || !/^\s*\|?\s*:?-{3,}/.test(sep)) continue;
     const hs = cells(head).map((h) => h.toLowerCase());
     const rc = hs.findIndex((h) => /\broom\b/.test(h));
-    const tc = hs.findIndex((h, k) => k !== rc && /target|time|\bmin|minutes|duration/.test(h));
+    const tc = hs.findIndex((h, k) => k !== rc && /target|time|\bmin\b|minutes|duration/.test(h));
     if (rc < 0 || tc < 0) continue;
+    const lc = hs.findIndex((h, k) => k !== tc && /lost/.test(h));
+    const dc = hs.findIndex((h) => /death/.test(h));
+    const pc = hs.findIndex((h) => /lamp/.test(h));
     for (let j = i + 2; j < lines.length && (lines[j] ?? '').includes('|'); j++) {
       const row = cells(lines[j] ?? '');
       const roomCell = (row[rc] ?? '').replace(/[`*]/g, '');
@@ -64,7 +81,20 @@ export function targetsFromMarkdown(
         new RegExp(`(^|[^\\w-])${r.replace(/[-]/g, '\\-')}([^\\w-]|$)`).test(roomCell),
       );
       const t = parseTime(row[tc] ?? '');
-      if (id && t) out[id] = { ...t, source };
+      if (!id || !t) continue;
+      const lost = lc >= 0 ? parseTime(row[lc] ?? '') : null;
+      const deaths = dc >= 0 ? parseCount(row[dc] ?? '') : null;
+      const lamps = pc >= 0 ? (row[pc] ?? '').trim() : '';
+      const prev = out[id];
+      // A room the route enters twice has two rows: the times add up.
+      out[id] = {
+        lo: t.lo + (prev?.lo ?? 0),
+        hi: t.hi + (prev?.hi ?? 0),
+        source,
+        ...(lost ? { maxLost: lost.hi } : prev?.maxLost !== undefined ? { maxLost: prev.maxLost } : {}),
+        ...(deaths ? { deaths } : prev?.deaths ? { deaths: prev.deaths } : {}),
+        ...(lamps ? { lamps } : prev?.lamps ? { lamps: prev.lamps } : {}),
+      };
     }
   }
   return out;

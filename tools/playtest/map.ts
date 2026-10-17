@@ -6,7 +6,7 @@
  * Reach is approximate (memory/movement-controller.md "Reach"), with a safety margin: a planned jump
  * that fails is remembered as bad and the planner routes round it.
  */
-import type { Scene } from '../../src/sim/scene';
+import type { Scene, SolidRect } from '../../src/sim/scene';
 
 /** One flat-ish piece of a surface: a top from x0 to x1 at y. */
 export interface Piece {
@@ -24,7 +24,7 @@ export interface Surface {
   oneWay: boolean;
 }
 
-export type MoveKind = 'walk' | 'jump' | 'up' | 'drop' | 'through';
+export type MoveKind = 'walk' | 'jump' | 'up' | 'drop' | 'through' | 'climb' | 'cut';
 
 export interface Move {
   from: number;
@@ -42,6 +42,8 @@ export interface Move {
   rise: number;
   /** A jump across a gap no jump spans, over a chain of pogo targets (seed-cases): down cuts on the way. */
   pogo?: boolean;
+  /** A climb: the face she kicks up first (`dir` = the way she holds into it). */
+  faceX?: number;
 }
 
 /** Most px between a launch, the seed-cases and the landing for a pogo chain the planner trusts. */
@@ -204,6 +206,8 @@ export function buildMoves(
   surfaces: readonly Surface[],
   reach: Reach,
   pogos: readonly { x: number; y: number }[] = [],
+  /** Known standing solids (a wall in a gap blocks a jump across it; rotten bark in it is a cut). */
+  walls: readonly { x: number; y: number; w: number; h: number; bark?: boolean }[] = [],
 ): Move[] {
   const moves: Move[] = [];
   const byId = new Map(surfaces.map((s) => [s.id, s]));
@@ -223,7 +227,19 @@ export function buildMoves(
         const bx = dir > 0 ? b.x0 : b.x1;
         const dx = Math.abs(bx - ax);
         const dy = yAt(b, bx) - yAt(a, ax);
-        const pogo = dx > reach.across(dy) && Math.abs(dy) <= 64 && pogoChain(pogos, ax, bx, yAt(a, ax));
+        // A wall standing in the gap, higher than a jump: no jump; if it is rotten bark, a cut through.
+        const ya = yAt(a, ax);
+        const lo = Math.min(ax, bx);
+        const hi = Math.max(ax, bx);
+        const inGap = walls.filter(
+          (w) => w.x < hi + 4 && w.x + w.w > lo - 4 && w.y < Math.min(ya, ya + dy) - 40 && w.y + w.h > ya - 8,
+        );
+        if (inGap.length > 0) {
+          if (inGap.every((w) => w.bark) && Math.abs(dy) <= 24 && dx <= 200)
+            push({ from: a.id, to: b.id, kind: 'cut', dir, launchX: ax, gap: dx, rise: dy, cost: dx + 40 });
+          if (inGap.some((w) => w.y < Math.min(ya, ya + dy) - reach.up)) continue;
+        }
+        const pogo = dx > reach.across(dy) && Math.abs(dy) <= 64 && pogoChain(pogos, ax, bx, ya);
         if (dx > reach.across(dy) && !pogo) continue;
         const walk = dx <= 24 && dy > 0;
         push({
@@ -301,6 +317,75 @@ export function buildMoves(
   return moves;
 }
 
+/** A face she can kick off: the side of a solid (or the room's edge) at `x`, kicked from the `w` side (w = the way she holds into it). */
+export interface Face {
+  x: number;
+  w: number;
+  y0: number;
+  y1: number;
+}
+
+/** Every face the scene offers a kick on, from the solids given (indices) and the room's edges. */
+export function facesOf(scene: Scene, solids: Iterable<number>): Face[] {
+  const out: Face[] = [];
+  for (const i of solids) {
+    const s = scene.solids[i];
+    if (!s || s.kick === false) continue;
+    if (s.kick !== 'east') out.push({ x: s.x, w: 1, y0: s.y, y1: s.y + s.h });
+    if (s.kick !== 'west') out.push({ x: s.x + s.w, w: -1, y0: s.y, y1: s.y + s.h });
+  }
+  if (scene.edgeKick !== false) {
+    out.push({ x: 0, w: -1, y0: 0, y1: scene.height });
+    out.push({ x: scene.width, w: 1, y0: 0, y1: scene.height });
+  }
+  return out;
+}
+
+/**
+ * Wall climbs (she owns wall jump): from a surface to one above it that no jump reaches, up a kickable
+ * face that rises beside where she can stand. Loose on purpose: the look-ahead (lines.ts) decides
+ * whether the climb really goes, and a climb that does not is dropped like any failed move.
+ */
+export function buildClimbs(surfaces: readonly Surface[], faces: readonly Face[], reach: Reach): Move[] {
+  const out: Move[] = [];
+  for (const a of surfaces) {
+    // Faces she can stand beside on `a` (the stand point on it), rising from its level.
+    const near = faces.filter((fc) => {
+      const stand = fc.x - fc.w * 26;
+      if (stand < a.x0 - 8 || stand > a.x1 + 8) return false;
+      const ya = topUnder(a, Math.max(a.x0, Math.min(a.x1, stand)));
+      return fc.y0 < ya - 64 && fc.y1 >= ya - 220;
+    });
+    if (near.length === 0) continue;
+    for (const b of surfaces) {
+      if (b === a) continue;
+      for (const fc of near) {
+        const stand = fc.x - fc.w * 26;
+        const ya = topUnder(a, Math.max(a.x0, Math.min(a.x1, stand)));
+        const bx = Math.max(b.x0, Math.min(b.x1, fc.x));
+        const yb = topUnder(b, bx);
+        if (yb > ya - reach.up * 0.5 || ya - yb > 2800) continue;
+        if (Math.abs(bx - fc.x) > 760) continue;
+        const key = `climb:${fc.w}:${Math.round(fc.x)}>${b.x0},${b.pieces[0]?.y ?? 0}`;
+        if (out.some((q) => q.key === key)) continue;
+        out.push({
+          from: a.id,
+          to: b.id,
+          kind: 'climb',
+          dir: fc.w,
+          launchX: stand,
+          faceX: fc.x,
+          cost: (ya - yb) * 2 + 150 + Math.abs(bx - fc.x),
+          key,
+          gap: Math.abs(bx - fc.x),
+          rise: yb - ya,
+        });
+      }
+    }
+  }
+  return out;
+}
+
 /** A move by its geometry (stable when the surfaces are rebuilt with new ids). */
 export function moveKey(m: Move): string {
   return m.key;
@@ -369,7 +454,50 @@ export function plan(
   return null;
 }
 
-/** What the persona remembers of a room. */
+/** A solid the kit adds while it stands: rotten bark, a shut gate, a shortcut not yet opened. */
+export interface KitRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  kind: 'bark' | 'gate' | 'shortcut';
+  /** Gone when the save has this in `opened` (bark, shortcuts: `room:id`) or `flags` (a gate's flag). */
+  open: string;
+  kick?: boolean | 'east' | 'west';
+}
+
+/** The kit pieces of a room that stand until something opens them. */
+export function kitRects(scene: Scene): KitRect[] {
+  const out: KitRect[] = [];
+  for (const b of scene.bark ?? [])
+    out.push({
+      x: b.x,
+      y: b.y,
+      w: b.w,
+      h: b.h,
+      kind: 'bark',
+      open: `${scene.id}:${b.id}`,
+      ...(b.kick !== undefined ? { kick: b.kick } : {}),
+    });
+  for (const g of scene.gates ?? [])
+    out.push({
+      x: g.x,
+      y: g.y,
+      w: g.w,
+      h: g.h,
+      kind: 'gate',
+      open: g.flag,
+      ...(g.kick !== undefined ? { kick: g.kick } : {}),
+    });
+  for (const c of scene.shortcuts ?? [])
+    out.push({ x: c.x, y: c.y, w: c.w, h: c.h, kind: 'shortcut', open: `${scene.id}:${c.id}` });
+  return out;
+}
+
+/**
+ * What the persona remembers of a room. Its solids are the room's plus the kit's standing pieces (bark,
+ * gates, shut shortcuts: `kitRects`, indices after the room's own); one that opens drops out of the map.
+ */
 export class Mind {
   readonly solids = new Set<number>();
   /** Solids whose top edge has been in view (only those are ground it knows of). */
@@ -378,6 +506,11 @@ export class Mind {
   surfaces: Surface[] = [];
   moves: Move[] = [];
   readonly bad = new Set<string>();
+  /** The room's solids, then the kit's (see `kitRects`). */
+  readonly rects: SolidRect[];
+  private readonly kit: KitRect[];
+  private openKey = '';
+  private openSet = new Set<number>();
   private dirty = true;
   private reach: Reach;
   private abilities = '';
@@ -388,8 +521,22 @@ export class Mind {
     readonly knowsAll = false,
   ) {
     this.reach = reachFor([]);
+    this.kit = kitRects(scene);
+    this.rects = [
+      ...scene.solids,
+      ...this.kit.map(
+        (k): SolidRect => ({
+          x: k.x,
+          y: k.y,
+          w: k.w,
+          h: k.h,
+          tag: 'root',
+          ...(k.kick !== undefined ? { kick: k.kick } : {}),
+        }),
+      ),
+    ];
     if (knowsAll) {
-      scene.solids.forEach((_, i) => {
+      this.rects.forEach((_, i) => {
         this.solids.add(i);
         this.tops.add(i);
       });
@@ -399,12 +546,17 @@ export class Mind {
     }
   }
 
-  /** Adds what is in view; returns true when something new was seen. */
+  /**
+   * Adds what is in view; returns true when something new was seen. `view` lets it see the kit's pieces,
+   * `save` tells it which have opened.
+   */
   see(
     solids: readonly number[],
     oneWays: readonly number[],
     abilities: readonly string[],
     tops: readonly number[] = solids,
+    view: { x: number; y: number; w: number; h: number } | null = null,
+    save: { opened: readonly string[]; flags: readonly string[] } | null = null,
   ): boolean {
     let fresh = false;
     for (const i of tops)
@@ -422,6 +574,29 @@ export class Mind {
         this.oneWays.add(i);
         fresh = true;
       }
+    const n = this.scene.solids.length;
+    if (view)
+      this.kit.forEach((k, j) => {
+        const i = n + j;
+        if (this.solids.has(i)) return;
+        if (k.x < view.x + view.w && view.x < k.x + k.w && k.y < view.y + view.h && view.y < k.y + k.h) {
+          this.solids.add(i);
+          if (k.y >= view.y && k.y <= view.y + view.h) this.tops.add(i);
+          fresh = true;
+        }
+      });
+    if (save) {
+      const open = new Set<number>();
+      this.kit.forEach((k, j) => {
+        if ((k.kind === 'gate' ? save.flags : save.opened).includes(k.open)) open.add(n + j);
+      });
+      const key = [...open].join(',');
+      if (key !== this.openKey) {
+        this.openKey = key;
+        this.openSet = open;
+        fresh = true;
+      }
+    }
     const ab = abilities.join(',');
     if (ab !== this.abilities) {
       this.abilities = ab;
@@ -432,18 +607,41 @@ export class Mind {
     return fresh;
   }
 
+  /** It owns the wall jump (climb moves are in the map). */
+  get climber(): boolean {
+    return this.abilities.split(',').includes('wallJump');
+  }
+
+  /** Known solids standing now (indices into `rects`). */
+  standing(): number[] {
+    return [...this.solids].filter((i) => !this.openSet.has(i)).sort((a, b) => a - b);
+  }
+
+  /** Faces she could kick off among what it knows. */
+  faces(): Face[] {
+    return facesOf({ ...this.scene, solids: this.rects }, this.standing());
+  }
+
   refresh(): void {
     if (!this.dirty) return;
     this.dirty = false;
+    const played = { ...this.scene, solids: this.rects };
+    const standing = this.standing();
     this.surfaces = buildSurfaces(
-      this.scene,
-      [...this.solids].sort((a, b) => a - b),
+      played,
+      standing,
       [...this.oneWays].sort((a, b) => a - b),
       this.tops,
     );
-    this.moves = buildMoves(this.surfaces, this.reach, this.scene.seedCases ?? []);
+    const n = this.scene.solids.length;
+    const walls = standing.map((i) => {
+      const r = this.rects[i] as SolidRect;
+      return { x: r.x, y: r.y, w: r.w, h: r.h, bark: i >= n && this.kit[i - n]?.kind === 'bark' };
+    });
+    this.moves = buildMoves(this.surfaces, this.reach, this.scene.seedCases ?? [], walls);
+    if (this.abilities.split(',').includes('wallJump'))
+      this.moves.push(...buildClimbs(this.surfaces, facesOf(played, standing), this.reach));
   }
-
   under(x: number, y: number): Surface | null {
     this.refresh();
     return surfaceAt(this.surfaces, x, y);

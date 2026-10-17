@@ -6,6 +6,7 @@
  *   npm run playtest -- --persona explorer --live            # in the page, real keys (dev server on 5180)
  *   npm run playtest -- --persona speedrunner --clip         # + the run replayed in the page as a clip
  *   npm run playtest -- --from trace.json                    # a report for a trace recorded in the page
+ *   npm run playtest -- --region wood --upto wood-well       # every persona from the world's start through the chunk
  *
  * --room id[,id]       rooms to start in (default wood-hatch)
  * --persona a,b        naive, explorer, speedrunner, cautious (default all)
@@ -19,6 +20,10 @@
  * --live               play in the page with real keys instead of headless (needs the dev server)
  * --clip               replay each run's input in the page and record it with tools/clip.ts
  * --clip-seconds n     the clip's length (default 30; one screenshot a frame)
+ * --region name       a region run: from the world's start, `--until none`, all the region's rooms in one
+ *                      report (<stamp>-region.md) against the region doc's §9 targets (docs/design/regions/<name>.md)
+ * --upto room          the chunk ends there: a run is through once she leaves that room by another way than in
+ * --goal room          where the speedrunner heads (default: the placed room furthest from the start)
  * --url, --out dir     dev server (default http://localhost:5180), reports dir (default playtest-reports)
  */
 import { spawnSync } from 'node:child_process';
@@ -27,6 +32,7 @@ import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { formatInputScript } from '../../src/input/script';
 import { getRoom, ROOM_IDS } from '../../src/scene/index';
+import { GAME_WORLD } from '../../src/scene/world';
 import { ABILITIES } from '../../src/sim/abilities';
 import { DEFAULT_URL, launch, openGame } from '../lib/browser';
 import { runHeadless } from './headless';
@@ -34,7 +40,7 @@ import { drawRoom } from './heatmap';
 import type { LiveResult } from './live';
 import { PERSONAS } from './personas';
 import type { RunTrace } from './recorder';
-import { reportMarkdown, type Summary, summarize, summaryTable } from './report';
+import { regionMarkdown, reportMarkdown, type Summary, summarize, summaryTable } from './report';
 import { loadTargets } from './targets';
 
 const { values: args } = parseArgs({
@@ -54,6 +60,9 @@ const { values: args } = parseArgs({
     from: { type: 'string' },
     url: { type: 'string', default: DEFAULT_URL },
     out: { type: 'string', default: 'playtest-reports' },
+    region: { type: 'string' },
+    upto: { type: 'string' },
+    goal: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -201,7 +210,9 @@ async function main(): Promise<void> {
     rows.push(summarize(trace));
     dirs.push(dir);
   } else {
-    const rooms = (args.room ?? 'wood-hatch').split(',');
+    const region = args.region;
+    const rooms = region ? [GAME_WORLD.start] : (args.room ?? 'wood-hatch').split(',');
+    const traces: RunTrace[] = [];
     const personas = (args.persona ?? '').split(',').filter(Boolean);
     const runs = Number(args.runs);
     for (const room of rooms)
@@ -231,8 +242,10 @@ async function main(): Promise<void> {
               abilities,
               seconds: Number(args.seconds),
               giveUp: Number(args['give-up']),
-              until: args.until === 'none' ? 'none' : 'exit',
+              until: region || args.until === 'none' ? 'none' : 'exit',
               lostAfter,
+              ...(args.upto ? { upto: args.upto } : {}),
+              ...(args.goal ? { goal: args.goal } : {}),
             });
             trace = r.trace;
             tape = r.tape;
@@ -250,7 +263,30 @@ async function main(): Promise<void> {
           }
           rows.push(summarize(trace));
           dirs.push(dir);
+          traces.push(trace);
         }
+    if (region) {
+      // The region's rooms in the order its doc lists them (the expected route), up to `--upto`.
+      const order = Object.keys(targets).filter((r) => {
+        try {
+          return getRoom(r).region === region;
+        } catch {
+          return false;
+        }
+      });
+      const end = args.upto ? order.indexOf(args.upto) : -1;
+      const chunk = end >= 0 ? order.slice(0, end + 1) : order;
+      const md = regionMarkdown(traces, chunk, targets, {
+        when: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        command,
+        region,
+        upto: args.upto ?? null,
+      });
+      const file = join(outRoot, `${stamp}-region.md`);
+      writeFileSync(file, `${md}\n`);
+      console.log(`\n${md.split('## Time per room')[0]}`);
+      console.log(`  ${relative(process.cwd(), file)}`);
+    }
   }
   const table = summaryTable(rows);
   console.log(`\n${table}\n`);
