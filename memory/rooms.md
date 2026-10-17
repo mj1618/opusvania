@@ -72,8 +72,7 @@ no `art`: unit tests) or `wood`.
 ## Render side of the new events
 `camera/room-fade.ts` (`RoomFade`, knobs `cameraTuning.room`): `roomExit` fades to black over the hold (reaching
 black 0.12 s before the restart), `roomEnter` lifts it over 0.9 s; `fallCatch` dips to 0.85 over its hold,
-`fallReturn` lifts over 0.35 s; a plain teleport / load clears it. The acting agent owns the cocoon and the hatch:
-**render does not hide her while `state.hatch.done` is false yet**, nor draw cocoons, Tatter or the swarm.
+`fallReturn` lifts over 0.35 s; a plain teleport / load clears it. The acting agent owns the cocoon and the hatch: drawn since 2026-10-17 (memory/hatch-and-tatter.md).
 
 ## What the art agents should know
 - The wood's backgrounds are still the Grove's forest plans with the landmarks taken out: composed for a camera

@@ -230,7 +230,7 @@ export class RenderStage {
     };
     this.scene.layers.applyCamera(view);
     this.scene.update(dt, this.clock, view, sim);
-    this.character.update(dt, this.clock, player, events);
+    this.character.update(dt, this.clock, player, events, this.game.state.hatch);
     this.enemies.update(dt, this.clock, view, sim);
     this.pickups.update(dt, this.clock, view, sim);
     this.goal.update(dt, this.clock, view, sim);

@@ -18,6 +18,7 @@ import type { PlayerView, RenderContext } from '../../contract';
 import type { PointLight } from '../../lights';
 import { zoneWeights } from '../../scene/lib/fx-zones';
 import { KEY_LIGHT } from '../../scene/lib/look';
+import { hatchLink } from '../hatch-link';
 import { clamp, noise1, Spring, sat, smoothstep } from '../math';
 import type { CharacterSkin, SkinDef } from '../skin';
 import { BLADE_LEN, drawVesper, type View } from './draw';
@@ -25,12 +26,13 @@ import { drawSpinRings, FX_GOLD, FX_GOLD_DEEP, FX_GOLD_HOT, Fx, Trail } from './
 import { vesperLink } from './link';
 
 import { Painter, rgb } from './paint';
-import { HURT, J_CHEST, J_HAND_A, J_HEAD, J_HIP, MAX_TURNS, Rig } from './rig';
+import { BIRTH, HURT, J_CHEST, J_HAND_A, J_HEAD, J_HIP, MAX_TURNS, Rig } from './rig';
 import { type SlashFrame, SlashMark } from './slashfx';
 
 import { Secondary } from './wings';
 
-const LIGHT = 0xffe0a0;
+/** Her point light: pale silver-cream, never warm (warm is the lamps'; docs/design/look-and-sound.md). */
+const LIGHT = 0xd9dbd3;
 /** She is "at" a lantern for her acting within this many px of its foot, sideways (its trigger is 24 either side). */
 const LAMP_REACH = 62;
 /** v3: the default became three turns; older keys' stored choices are ignored so everyone sees it. */
@@ -56,6 +58,9 @@ const SLASH_LOOK = {
  * `px` device px of `color` (darker than any of her tones; never black) round the whole figure, under
  * it, so it shows only where she meets the background (`Painter.outline`). `hidden` for capture tools.
  */
+/** Just born and her light not yet on, she is this much darker (`Painter.dimK`): damp, a dark thing out of a husk. */
+const BIRTH_DARK = 0.45;
+
 const EDGE = { px: 1.5, color: [0.035, 0.022, 0.055] as const, alpha: 0.95, hidden: false };
 
 /**
@@ -142,6 +147,9 @@ export class VesperCharacter implements CharacterSkin {
     if (e.code === 'KeyT') this.setTurns((Rig.turns % MAX_TURNS) + 1, true);
   };
 
+  /** Hidden by a capture tool (`__vesper.hidden`). */
+  private hiddenByTool = false;
+
   /** Where the light leaves her hand (or her chest), world px, every frame (the same point `vesperLink.offerX/Y` gets). */
   readonly offer = { x: 0, y: 0 };
 
@@ -195,9 +203,13 @@ export class VesperCharacter implements CharacterSkin {
     };
   }
 
-  update(dtIn: number, clock: number, player: PlayerView, events: readonly SimEvent[]): void {
+  update(dtIn: number, clock: number, sim: PlayerView, events: readonly SimEvent[]): void {
     const dt = clamp(dtIn, 0, 0.05);
     const { rig, sec, fx, painter: p, view } = this;
+    // The hatching (memory/hatch-and-tatter.md): shut in, she is not drawn; out, the birth plays.
+    const hl = hatchLink;
+    rig.birthT = hl.inside ? 0 : hl.birthT;
+    const player = this.emerge(dt, sim);
     rig.groundDist = player.grounded ? 0 : this.clearBelow(player);
     this.sideGaps(player);
     this.readGoal(player);
@@ -501,6 +513,7 @@ export class VesperCharacter implements CharacterSkin {
         player.vx * 60,
         player.vy * 60,
       );
+    if (hl.inside) fx.clear();
     fx.update(dt, clock);
 
     // --- Trails: lit by how fast each point is really moving. The wing tips draw long soft ones
@@ -538,9 +551,13 @@ export class VesperCharacter implements CharacterSkin {
     const low = player.hp <= 1 && player.hpMax > 1 ? 0.86 + 0.14 * Math.sin(clock * 5.2) : 1;
     const whole = (1 - rig.fadeK) * (1 - rig.reformK);
     const lit = (0.5 + 0.5 * hpK) * low * whole * rig.eyeLit;
-    view.glow = glow * lit * (1 - 0.6 * rig.hurtDim) * seenAt(SEEN.glow);
-    this.seenDark = seenAt(SEEN.dark);
-    view.eyeLit = rig.eyeLit * seenAt(SEEN.eyes);
+    // Just born, her light is still coming on (and she is darker for it).
+    const born = rig.birthLight;
+    view.glow = glow * lit * (1 - 0.6 * rig.hurtDim) * seenAt(SEEN.glow) * born;
+    this.seenDark = Math.max(seenAt(SEEN.dark), BIRTH_DARK * (1 - born));
+    view.eyeLit = rig.eyeLit * seenAt(SEEN.eyes) * (0.35 + 0.65 * born);
+    // Curled in the husk her thorn would stick out of it: it is there once she stands.
+    view.thornA = 1 - rig.birthW;
     // While nothing can hurt her she pulses softly (alpha, never a white flash); gone when she has faded.
     const safe = player.invuln > 0 && player.stagger <= 0 && player.faded <= 0 ? sat(player.invuln / 12) : 0;
     const pulse = 0.5 - 0.5 * Math.cos(clock * 6.283 * HURT.flickerHz);
@@ -576,12 +593,32 @@ export class VesperCharacter implements CharacterSkin {
     fx.draw(p, clock);
     if (!SLASH_LOOK.hidden) mark.draw(p, sf);
     p.end(player.cx, player.cy);
+    // (the break's first frames are the crack and its flash alone: then she is seen in the split)
+    const unseen = hl.inside || (hl.birthT < BIRTH.seen && hl.birthT >= 0);
+    p.mesh.visible = !unseen && !this.hiddenByTool;
 
     const e = this.light;
     e.x = ex;
     e.y = ey;
     e.radius = (300 + 70 * rig.wDash + 90 * this.flash + 50 * soar) * seenAt(SEEN.radius);
-    e.intensity = glow * 1.15 * lit * seenAt(SEEN.light);
+    e.intensity = unseen ? 0 : glow * 1.15 * lit * seenAt(SEEN.light) * born;
+  }
+
+  /** 0..1: how much of the emergence's drop is left (it lets go fast once she moves). */
+  private dropK = 1;
+
+  /**
+   * The emergence: at the break she is still down in the husk (`BIRTH.drop` px under her feet, drawn
+   * behind its open halves) and is pulled up onto the branch over `BIRTH.rise` s. Render only.
+   */
+  private emerge(dt: number, p: PlayerView): PlayerView {
+    const hl = hatchLink;
+    if (hl.inside || hl.birthT < 0.02) this.dropK = 1;
+    else if (!p.grounded || Math.abs(p.vx) > 0.4) this.dropK = Math.max(0, this.dropK - dt * 9);
+    const u = hl.inside ? 0 : sat((hl.birthT - BIRTH.riseAt) / BIRTH.rise);
+    const drop = BIRTH.drop * (1 - u * u * (3 - 2 * u)) * this.dropK;
+    if (drop < 0.05) return p;
+    return { ...p, y: p.y + drop, cy: p.cy + drop, feetY: p.feetY + drop };
   }
 
   /**
@@ -702,10 +739,16 @@ export class VesperCharacter implements CharacterSkin {
         return self.painter.mesh;
       },
       get hidden(): boolean {
-        return !self.painter.mesh.visible;
+        return self.hiddenByTool;
       },
       set hidden(v: boolean) {
-        self.painter.mesh.visible = !v;
+        self.hiddenByTool = !!v;
+        self.painter.mesh.visible = !v && !hatchLink.inside;
+      },
+      /** The birth after the break (memory/hatch-and-tatter.md): its weight, her light, the wings' fill. */
+      get birth(): Record<string, number> {
+        const r = self.rig;
+        return { t: r.birthT, w: r.birthW, light: r.birthLight, fill: r.wingFill, drop: self.dropK };
       },
     };
   }

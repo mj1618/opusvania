@@ -805,6 +805,51 @@ const OFFER = pose([
 const OPEN_HANDS = pose([
   0.4, 31.6, 0.05, 0.2, 0.4, 7.4, 0.1, 0.2, -1.8, 0, 0.05, 9.5, -2.6, 6.5, -4.2, 0.04, 0.72, 0.75, 0.8,
 ]);
+// --- The birth and the cast (memory/hatch-and-tatter.md). Same channel order as the acting poses.
+/** Just out of the cocoon: crouched low on her toes, curled over her knees, head down, hands drawn in, eyes shut. */
+const CURLED = pose([
+  -1, 15.5, 0.55, 0.42, 0.5, 6.5, 0, 0.9, -3.5, 0, 1, 7, -5.5, 5.5, -7, 0.05, 0, 0.8, 0.55,
+]);
+/** Tatter at rest: sat back on its heels on the branch, hunched, hands in its lap, head a little low. */
+const PERCH = pose([
+  -2, 15, 0.3, 0.42, 0.34, -7.5, 1.2, 1.4, -11.5, 1.2, 1.4, 6.4, -9.4, 4.2, -8.6, 0, 0.6, 0.4, 0.8,
+]);
+/** ... up off its heels, straining toward the sky: chest open, chin up, hands a little out. */
+const STRAIN = pose([
+  0.5, 27, -0.06, -0.14, -0.42, 6.5, 0.1, 0.6, -5, 0, 0.5, 6.5, -6, 2.5, -9, 0, 1, -0.7, 0.9,
+]);
+/**
+ * The birth's timeline, seconds after the break: `riseAt` + `rise` she is pulled up out of the husk
+ * (render draws her `drop` px lower at the break, the owner's job); `breath` the first breath (in, full, out);
+ * `eyes` they open (start, open); `unfold` her wings open once (start, full, folded); `stand` she
+ * straightens (start, up); `light` her light comes on (start, full); `fill` the damp wings fill out.
+ */
+export const BIRTH = {
+  drop: 80,
+  /** The crack and its flash show alone this long (she is not drawn yet). */
+  seen: 0.05,
+  /** She is pulled up out of it from `riseAt` over `rise` s. */
+  riseAt: 0.14,
+  rise: 0.5,
+  breath: [0.38, 0.62, 0.98],
+  eyes: [0.5, 0.82],
+  unfold: [0.62, 0.86, 1.28],
+  /** Spread of the one wing opening (of the glide's) and how far it is raised over that shape, degrees. */
+  spread: 0.46,
+  raise: 32,
+  stand: [0.85, 1.4],
+  light: [0.45, 1.3],
+  fill: [0.3, 1.2],
+  /** The damp wings' size at the break. */
+  wet: 0.72,
+  /** How long until it is over (the weight eases off from `stand[1]`). */
+  len: 1.5,
+} as const;
+
+/** Tatter's try at the air (`Rig.tryWings` 1): its wings' spread (of the glide's) and their raise, degrees. */
+const CAST_SPREAD = 0.42;
+const CAST_RAISE = 26;
+
 /** Acting timings (seconds unless said) and amounts. */
 export const ACT = {
   /** After the lantern catches she stays down, looking up at it, this long before she rises. */
@@ -1098,6 +1143,37 @@ export class Rig {
   reachW = 0;
   waitW = 0;
   giveW = 0;
+  /**
+   * The birth (memory/hatch-and-tatter.md; set by the owner before `update`): seconds since she broke
+   * out of her cocoon (large = never, or long ago). While it runs (`BIRTH`, under 1.5 s) she is curled,
+   * damp and dark, takes a first breath, opens her wings once and stands. Moving ends it at once.
+   */
+  birthT = 9;
+  /** 0..1: how much of the birth is on her now (eased; 0 once she has moved). */
+  birthW = 0;
+  /** 0..1: her own light as it comes on after the birth (eyes and lanterns; 1 = as usual). */
+  birthLight = 1;
+  /** Her wing membranes' size (the birth: damp and crumpled, they fill out): 1 = as usual. */
+  wingFill = 1;
+  private birthGone = false;
+  /** 0..1: the birth's one opening of the wings, this frame. */
+  private birthOpen = 0;
+  /**
+   * Something to look at (world px) and how firmly (0..1): head, eyes and antennae turn to it, over the
+   * shoulder if it is behind. Set by the owner each frame (the cast: Tatter watching her go).
+   */
+  readonly look = { x: 0, y: 0, w: 0 };
+  /**
+   * The cast's own acting (Tatter, memory/hatch-and-tatter.md): `perch` 0..1 sat hunched on the branch,
+   * old and hurt; `strain` 0..1 up off its heels, chin lifted to the sky; `tryWings` 0..1 its wings lift
+   * to fly (one torn: they cannot). Set by the owner each frame.
+   */
+  perch = 0;
+  strain = 0;
+  tryWings = 0;
+  /** Added to the antennae's lift (degrees, + = droop) and bend (rad / segment) by the owner. */
+  antExtra = 0;
+  antCurlExtra = 0;
   /** The wings' spread the wait in the heart has opened (it is handed on to the ending's unfurl). */
   private waitOpen = 0;
   private waitT = 0;
@@ -2144,6 +2220,8 @@ export class Rig {
     // The ending: they unfurl slowly to the full glide spread, standing.
     const unfurl = this.endOn ? quintic((this.endT - ACT.unfurlAt) / ACT.unfurl) : 0;
     this.soar = Math.max(this.soar, unfurl * this.endW, this.waitOpen * (1 - this.spinW));
+    // The birth's one opening of the wings, and the cast's try at the air.
+    this.soar = Math.max(this.soar, BIRTH.spread * this.birthOpen, CAST_SPREAD * this.tryWings);
     this.catchK = this.catchS.step(sat(decel / GLIDE.catchDecel), dt);
     // Banking: the wing plane tips toward where she is going and leans into a turn.
     const gax = this.gAxS.step(glide ? clamp(ax, -1.2, 1.2) : 0, dt);
@@ -3567,8 +3645,105 @@ export class Rig {
       const on = this.endOn && this.offerT < ACT.offerHold ? 1 : 0;
       this.giveW += (on - this.giveW) * approach(on ? 4.5 : 2.2, dt);
     }
+    // --- The birth: curled and damp out of the husk, a first breath, her eyes open, her wings open
+    // once (a shiver to dry them) and she stands. Any move ends it: the weight lets go at once.
+    {
+      const t = this.birthT;
+      if (t < 0.02) this.birthGone = false;
+      const on = t < BIRTH.len;
+      if (on && t > 0.04 && !quiet) this.birthGone = true;
+      const live = on && !this.birthGone;
+      const bwT = live ? 1 - smoothstep(BIRTH.stand[1], BIRTH.len, t) : 0;
+      this.birthW = bwT >= this.birthW ? bwT : this.birthW + (bwT - this.birthW) * approach(14, dt);
+      const lightT = on ? smoothstep(BIRTH.light[0], BIRTH.light[1], t) : 1;
+      this.birthLight =
+        lightT <= this.birthLight || live
+          ? lightT
+          : this.birthLight + (lightT - this.birthLight) * approach(6, dt);
+      const fillT = live ? lerp(BIRTH.wet, 1, smoothstep(BIRTH.fill[0], BIRTH.fill[1], t)) : 1;
+      this.wingFill = live ? fillT : this.wingFill + (fillT - this.wingFill) * approach(5, dt);
+      const bw = this.birthW * aw;
+      this.birthOpen = 0;
+      if (bw > 1e-3) {
+        const B = BIRTH;
+        const curl = 1 - smoothstep(B.stand[0], B.stand[1], t);
+        const br =
+          t < B.breath[2]
+            ? smoothstep(B.breath[0], B.breath[1], t) * (1 - smoothstep(B.breath[1], B.breath[2], t))
+            : 0;
+        const eyes = smoothstep(B.eyes[0], B.eyes[1], t);
+        const u =
+          t < B.unfold[2]
+            ? smoothstep(B.unfold[0], B.unfold[1], t) * (1 - smoothstep(B.unfold[1], B.unfold[2], t))
+            : 0;
+        const wet = 1 - smoothstep(B.unfold[0], B.unfold[2], t);
+        this.mix(out, CURLED, curl * bw, nearA);
+        // The first breath: the chest fills and opens, the head comes up off her knees.
+        out[PU]! += 3.4 * br * bw;
+        out[CURL]! -= 0.34 * br * bw;
+        out[LEAN]! -= 0.14 * br * bw;
+        out[HT]! -= 0.5 * br * bw;
+        out[EYE] = lerp(out[EYE]!, eyes, bw * curl);
+        // Damp antennae lie back along her head until the breath lifts them.
+        ant += (44 * wet - 34 * br) * bw;
+        antC += 0.12 * wet * bw;
+        // Wrapped round her, then opened once (and shaken dry) and let fall as the cape.
+        cloak -= 0.9 * wet * (1 - u) * bw;
+        shiver = Math.max(shiver, 0.7 * u * bw);
+        this.birthOpen = u * bw;
+        gzx += 0.3 * bw * curl;
+        gzy += (0.9 * (1 - eyes) - 0.6 * br) * bw * curl;
+        gzw += bw * curl;
+      }
+    }
+
+    // --- The cast (Tatter): sat hunched on the branch, breathing slow; up off its heels toward the sky.
+    const pw = this.perch * aw;
+    if (pw > 1e-3) {
+      const b = Math.sin(clock * 0.95 + 0.4);
+      const b2 = Math.sin(clock * 1.9 + 1.1);
+      this.mix(out, PERCH, pw, nearA);
+      out[PU]! += 0.8 * b * pw;
+      out[CURL]! -= (0.05 * b + 0.015 * b2) * pw;
+      out[HT]! -= 0.03 * b * pw;
+      // Old and tired: the antennae droop forward over its brow.
+      ant += 34 * pw;
+      antC += 0.18 * pw;
+    }
+    const sw = this.strain * aw;
+    if (sw > 1e-3) {
+      this.mix(out, STRAIN, sw, nearA);
+      ant -= 16 * sw;
+      antC -= 0.04 * sw;
+      gzy -= 0.8 * sw;
+      gzw += 0.5 * sw;
+    }
+    ant += this.antExtra;
+    antC += this.antCurlExtra;
+    // A look at something (head first, over the shoulder once it is behind).
+    const lk = this.look.w * (1 - sat(this.hurtK));
+    if (lk > 1e-3) {
+      const dx = this.look.x - headX;
+      const dy = this.look.y - headY;
+      const side = smoothstep(-60, 40, dx * face);
+      const pitch = clamp(Math.atan2(dy, Math.abs(dx) + 40) * 0.75, -0.75, 0.4);
+      out[HYAW] = lerp(out[HYAW]!, lerp(-0.7, 1, side), lk);
+      out[HT]! += (pitch - 0.05) * lk * lerp(0.6, 1, side);
+      out[LOOKY]! += 2 * pitch * lk;
+      out[EYE] = lerp(out[EYE]!, 1, 0.6 * lk);
+      ant -= 14 * lk;
+      gzx += lerp(-0.7, 0.85, side) * lk;
+      gzy += 2 * pitch * lk;
+      gzw += lk;
+    }
+
     this.noticeK = quick;
-    this.raise = Math.max(ACT.endRaise * this.endW, ACT.waitRaise * sat(this.waitOpen / ACT.waitOpen));
+    this.raise = Math.max(
+      ACT.endRaise * this.endW,
+      ACT.waitRaise * sat(this.waitOpen / ACT.waitOpen),
+      BIRTH.raise * sat(this.birthOpen * 5),
+      CAST_RAISE * sat(this.tryWings * 5),
+    );
 
     this.cloak += (cloak - this.cloak) * approach(7, dt);
     this.antLift += (ant - this.antLift) * approach(8, dt);

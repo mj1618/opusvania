@@ -45,6 +45,9 @@ Files: `rig.ts` poses + springs -> skeleton; `wings.ts` wing strands + antennae;
   / 0.68` (left / centre / right), applied through the `PALE` list and `paleNow` in draw.ts. If
   post's exposure changes, re-measure the face (zoom 6 crop, post on) and retune those three numbers.
 - She must not visibly shrink in the somersault (lengths 3%, wings 4%, head never).
+- **Her light is pale silver-cream** (2026-10-17, look-and-sound): lantern tips, eye-spots, dust, trails and the
+  point light; only the eyes stay gold. The birth out of the cocoon and Tatter (a re-paletted copy of her rig):
+  memory/hatch-and-tatter.md.
 - Light / halo numbers of the scene belong to the atmosphere work; her point light `ember` is the
   midpoint of the lantern tips (radius 300, + dash / flash / soar).
 

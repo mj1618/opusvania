@@ -3,6 +3,7 @@ import { CameraKick } from '../../src/render/camera/kick';
 import { cameraTuning } from '../../src/render/camera/tuning';
 import {
   ACT,
+  BIRTH,
   J_COUNT,
   J_HEAD,
   J_HIP,
@@ -995,5 +996,61 @@ describe('vesper acting at the lanterns and the heart', () => {
     b.run(90);
     expect(b.rig.soar).toBeGreaterThan(0.9);
     expect(b.st.beats).toBe(0);
+  });
+
+  it('the birth: curled and dark at the break, wings open once, stood and lit within BIRTH.len; a step ends it at once', () => {
+    const rig = new Rig();
+    const sec = new Secondary();
+    const p = view({});
+    // Shut in: held curled (birthT 0) long enough for the springs to settle.
+    rig.birthT = 0;
+    for (let i = 0; i < 120; i++) rig.update(DT, i * DT, p, []);
+    const curledHead = rig.frame.j[J_HEAD * 2 + 1] ?? 0;
+    expect(rig.birthLight).toBeLessThan(0.01);
+    let maxSoar = 0;
+    for (let i = 0; i <= Math.round(BIRTH.len * 60) + 30; i++) {
+      rig.birthT = i * DT;
+      rig.update(DT, 2 + i * DT, p, []);
+      sec.update(DT, 2 + i * DT, rig, rig.frame, p);
+      maxSoar = Math.max(maxSoar, rig.soar);
+    }
+    expect(maxSoar).toBeGreaterThan(BIRTH.spread * 0.8);
+    expect(rig.soar).toBeLessThan(0.05);
+    expect(rig.birthW).toBeLessThan(0.02);
+    expect(rig.birthLight).toBeGreaterThan(0.99);
+    expect(rig.wingFill).toBeGreaterThan(0.99);
+    // Stood up: the head is well above where it was curled.
+    expect(curledHead - (rig.frame.j[J_HEAD * 2 + 1] ?? 0)).toBeGreaterThan(15);
+    // A run out of the husk lets go of it at once.
+    const r2 = new Rig();
+    r2.birthT = 0;
+    for (let i = 0; i < 60; i++) r2.update(DT, i * DT, p, []);
+    for (let i = 1; i <= 12; i++) {
+      r2.birthT = i * DT;
+      r2.update(DT, 1 + i * DT, view({ vx: 6, motion: 'run' }), []);
+    }
+    expect(r2.birthW).toBeLessThan(0.2);
+  });
+
+  it('a torn wing (Tatter) is shorter than the whole one and stays finite', () => {
+    const rig = new Rig();
+    const sec = new Secondary();
+    sec.tear[1] = 1;
+    sec.hold[1] = 34;
+    const p = view({ facing: -1 });
+    for (let i = 0; i < 180; i++) {
+      rig.update(DT, i * DT, p, []);
+      sec.update(DT, i * DT, rig, rig.frame, p);
+    }
+    const reach = (w: 0 | 1): number => {
+      let m = 0;
+      for (const c of sec.wings[w].strands) {
+        const d = Math.hypot((c.rx[c.n - 1] ?? 0) - (c.rx[0] ?? 0), (c.ry[c.n - 1] ?? 0) - (c.ry[0] ?? 0));
+        expect(Number.isFinite(d)).toBe(true);
+        m = Math.max(m, d);
+      }
+      return m;
+    };
+    expect(reach(1)).toBeLessThan(reach(0) * 0.85);
   });
 });

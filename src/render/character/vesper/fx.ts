@@ -23,9 +23,10 @@ const SCALE_TINTS: readonly RGB[] = [
 ];
 const LIT: [number, number, number] = [0, 0, 0];
 const MAX = 260;
-const GOLD = rgb(0xffd98a);
-const GOLD_HOT = rgb(0xfff6dc);
-const GOLD_DEEP = rgb(0xe9a04a);
+// Her light, shed as dust and trails: pale silver-cream (the names are older than the colour).
+const GOLD = rgb(0xe6e1d4);
+const GOLD_HOT = rgb(0xfaf8f1);
+const GOLD_DEEP = rgb(0xaab4ba);
 const DUST_C: RGB = [0.66, 0.74, 0.78];
 
 interface Particle {

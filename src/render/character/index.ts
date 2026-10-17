@@ -10,7 +10,9 @@
  */
 import type { Container } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
+import type { HatchState } from '../../sim/state';
 import type { PlayerView, RenderContext } from '../contract';
+import { Cast } from './cast';
 import type { CharacterSkin, SkinDef } from './skin';
 
 const modules = import.meta.glob<{ skin?: SkinDef }>('./*/index.ts', { eager: true });
@@ -23,11 +25,14 @@ export class CharacterRenderer {
   readonly skins: readonly SkinDef[];
   private current: CharacterSkin | null = null;
   private currentId = '';
+  /** The hatching branch's cocoons and Tatter (cast.ts): behind and in front of the hero. */
+  private readonly cast: Cast;
 
   constructor(
     private readonly ctx: RenderContext,
     private readonly layer: Container,
   ) {
+    this.cast = new Cast(ctx, layer);
     const rank = (id: string): number => {
       const i = ORDER.indexOf(id);
       return i < 0 ? ORDER.length : i;
@@ -67,6 +72,8 @@ export class CharacterRenderer {
     this.current?.destroy();
     this.current = def.create(this.ctx, this.layer);
     this.currentId = def.id;
+    // Her cocoon's front stays in front of her.
+    this.layer.addChild(this.cast.frontMesh);
     this.announce(def);
     if (remember && typeof window !== 'undefined') {
       try {
@@ -106,7 +113,16 @@ export class CharacterRenderer {
       .join(' · ');
   }
 
-  update(dt: number, clock: number, player: PlayerView, events: readonly SimEvent[]): void {
+  /** `hatch`: the sim's `state.hatch` (absent or null: no hatching). */
+  update(
+    dt: number,
+    clock: number,
+    player: PlayerView,
+    events: readonly SimEvent[],
+    hatch: Readonly<HatchState> | null = null,
+  ): void {
+    this.cast.link(dt, hatch, events);
     this.current?.update(dt, clock, player, events);
+    this.cast.update(dt, clock, hatch, player, events);
   }
 }

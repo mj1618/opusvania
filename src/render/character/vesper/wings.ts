@@ -108,6 +108,18 @@ const ANT_STREAM = [
  */
 const ANT_ACT = { straight: -0.07, past: 0.3, arch: 0.05, sway: 0.018, swayLifted: 0.03 } as const;
 
+/**
+ * A torn wing (Tatter, memory/hatch-and-tatter.md; `Secondary.tear`): how much shorter each strand is
+ * at tear 1 (leading .. trailing edge, uneven so the hem is ragged), how far it hangs lower (degrees),
+ * and the wrong flutter of what is left (rad per segment at the tip, its rate in Hz).
+ */
+const TEAR = {
+  len: [0.3, 0.62, 0.4, 0.66, 0.52],
+  droop: [-10, -2, 8, 17, 26],
+  flutter: 0.11,
+  hz: 7.3,
+} as const;
+
 const ANTENNA_A: ChainSpec = {
   len: [7.6, 7.9, 8.2, 8.2, 8, 7.4],
   rest: [78, 100, 124, 146, 163, 174],
@@ -159,6 +171,12 @@ export class Secondary {
   private ripple = 0;
   /** 0..1: streaming behind her in the run. */
   stream = 0;
+  /** Per wing 0..1: torn short (Tatter's near wing: `TEAR`). Index as `wings`. */
+  readonly tear: [number, number] = [0, 0];
+  /** Per wing, degrees it is held out from the cape (back and up), set by the owner (Tatter's torn wing, held off its back). */
+  readonly hold: [number, number] = [0, 0];
+  /** Per antenna, its length (1 = whole; Tatter's far one is snapped short). */
+  readonly antLen: [number, number] = [1, 1];
 
   constructor() {
     this.all = [...this.wings[0].strands, ...this.wings[1].strands, ...this.antennae];
@@ -323,7 +341,9 @@ export class Secondary {
             SOAR_LEN[k]! * (1 + 0.05 * Math.max(0, ck) + 0.06 * first) * (1 - 0.04 * far),
             span,
           ) *
-          (1 - 0.04 * tuck);
+          (1 - 0.04 * tuck) *
+          rig.wingFill *
+          (1 - this.tear[w]! * TEAR.len[k]!);
         let lift =
           STAND[k]! * rig.wIdle +
           STREAM[k]! * run +
@@ -401,6 +421,9 @@ export class Secondary {
         lift -= rig.landCatch * LAND.lift * (1 - 0.15 * k) * (1 - soar);
         // Hurt: they are thrown open by the blow.
         lift -= (rig.hurtK * (34 + 12 * far) + rig.hurtBlow * 30) * (1 - k * 0.1) * (1 - soar);
+        // Torn: what is left of it hangs lower and limp.
+        lift += this.tear[w]! * TEAR.droop[k]!;
+        lift -= this.hold[w]! * (1 - 0.1 * k) * (1 - soar);
         c.lift = lift * DEG;
         const curl =
           (0.05 * run - 0.07 * glide - 0.03 * up + 0.02 * dash) * (1 - k * 0.12) * (1 - tuck) +
@@ -430,6 +453,14 @@ export class Secondary {
               (i - 1) *
               0.5 *
               Math.sin(clock * 27 + k * 1.9 + w * 2.3 - i * 0.9 + 1.3 * Math.sin(clock * 5.3 + k));
+        }
+        // A torn wing flutters wrong: a stutter at the ragged edge, never in time with the other.
+        const tw = this.tear[w]!;
+        if (tw > 1e-3) {
+          const st =
+            Math.sin(clock * TEAR.hz * 6.283 + k * 2.1) * Math.max(0, noise1(clock * 1.7 + k, 151 + k));
+          c.extra[c.n - 1]! += tw * TEAR.flutter * st;
+          c.extra[c.n - 2]! -= tw * TEAR.flutter * 0.5 * st;
         }
         // The hem flutters in the air stream.
         c.extra[c.n - 1]! +=
@@ -479,7 +510,7 @@ export class Secondary {
         0.46 * tuck +
         (ac < st ? st + (ac - st) * ANT_ACT.past : ac) +
         ANT_ACT.arch * lifted;
-      c.scale = 1 - 0.04 * tuck;
+      c.scale = (1 - 0.04 * tuck) * this.antLen[a]!;
       c.stiff = 1 + 1.2 * dash + 7 * tuck;
       c.dragK = (1 - 0.3 * dash) * (1 - 0.7 * tuck);
       // The S, and a slow wave that travels out along it (each antenna on its own time). Out of the run

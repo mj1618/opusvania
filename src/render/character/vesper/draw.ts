@@ -93,6 +93,12 @@ export interface View {
   pale: number;
   /** The light in her eyes: 1 as usual, lower = the bright core shrinks (her light going into a lantern). */
   eyeLit: number;
+  /** No thorn at the hip (the cast: Tatter carries none). */
+  unarmed?: boolean;
+  /** Per antenna (index as `antennae`), its lantern tip's light (0 = none: a snapped antenna). */
+  tips?: readonly [number, number];
+  /** 0..1: the thorn at her hip is drawn this solid (the birth: it is not there while she is curled). */
+  thornA?: number;
 }
 
 function dim(c: RGB, k: number): RGB {
@@ -121,9 +127,15 @@ const HAND = rgb(0xb4aab0);
 const WRAP = rgb(0x968ea0);
 const METAL = rgb(0xcdb98a);
 const EYE_RIM = rgb(0xd9820f);
-const GOLD = rgb(0xffdf9c);
+// Her eyes keep the gold (an owner decision). Gold is for the eyes only.
 const GOLD_HOT = rgb(0xfffaea);
-const GOLD_DEEP = rgb(0xe9a04a);
+/**
+ * Her own light (lantern tips, wing eye-spots, the dust in her scales): pale silver-cream, never warm,
+ * so she never reads as a lamp (docs/design/look-and-sound.md; warm is the lamps' alone).
+ */
+const LAMP = rgb(0xece6d6);
+const LAMP_HOT = rgb(0xfbf9f2);
+const LAMP_DEEP = rgb(0xb7c0c4);
 const SHADOW: RGB = [0.01, 0.03, 0.06];
 const SPOT_DARK = rgb(0x120e1e);
 const EYE_PATCH: RGB = [0.1, 0.07, 0.15];
@@ -273,8 +285,8 @@ const SH_BARB: Shade = {
 const SH_SHEATH: Shade = { c0: rgb(0x2a2440), c1: rgb(0x0f0d1c), rim: 0.8, cool: 0.5, form: 0.2, band: 0.6 };
 const SH_METAL: Shade = { c0: METAL, c1: dim(METAL, 0.7), rim: 0.8, cool: 0.2, form: 0.3, band: 0.5 };
 const SH_SPOT: Shade = {
-  c0: rgb(0xe3c68c),
-  c1: rgb(0xb99f7a),
+  c0: rgb(0xd6d2c6),
+  c1: rgb(0xa4a6a6),
   rim: 0,
   cool: 0,
   form: 0,
@@ -283,7 +295,7 @@ const SH_SPOT: Shade = {
 };
 const SH_SPOT_DARK: Shade = { c0: SPOT_DARK, c1: SPOT_DARK, rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
 const SH_SPOT_FAR: Shade = { ...SH_SPOT, c0: dim(SH_SPOT.c0, 0.42), c1: dim(SH_SPOT.c1, 0.42) };
-const SH_SPOT_HOT: Shade = { c0: GOLD_HOT, c1: GOLD, rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
+const SH_SPOT_HOT: Shade = { c0: LAMP_HOT, c1: LAMP, rim: 0, cool: 0, form: 0, band: 0.5, ember: 0 };
 
 function paleCopy(sh: Shade): { sh: Shade; c0: RGB; c1: RGB } {
   const q = { sh, c0: sh.c0, c1: sh.c1 };
@@ -826,7 +838,7 @@ function wing(
     const rx = clamp(across * 0.8, 0.5, ry);
     const rot = Math.atan2(aly, alx) - Math.PI / 2;
     if (bright) {
-      if (spot > 0.02) p.glow(ex, ey, 9, GOLD_DEEP, 0.3 * spot * lum);
+      if (spot > 0.02) p.glow(ex, ey, 9, LAMP_DEEP, 0.3 * spot * lum);
       p.ellipse(ex, ey, rx, ry, rot, SH_SPOT, 14);
       p.ellipse(ex, ey, rx * 0.66, ry * 0.66, rot, SH_SPOT_DARK, 12);
       p.ellipse(ex, ey, rx * (0.3 + 0.2 * spot), ry * (0.3 + 0.2 * spot), rot, SH_SPOT_HOT, 8);
@@ -840,7 +852,7 @@ function wing(
     for (let q = 0; q < DUST.length; q += 2) {
       const di = DUST[q]! * COLS + DUST[q + 1]!;
       const tw = Math.sin(clock * (2.1 + q * 0.37) + q * 1.9);
-      if (tw > 0.2) p.glow(gx[di]!, gy[di]!, 1.5, GOLD_HOT, (tw - 0.2) * 0.45 * glow * lum);
+      if (tw > 0.2) p.glow(gx[di]!, gy[di]!, 1.5, LAMP_HOT, (tw - 0.2) * 0.45 * glow * lum);
     }
   }
 }
@@ -892,21 +904,22 @@ function antenna(p: Painter, c: ChainPts, far: boolean, glow: number, run: numbe
   // A glint's light: the lantern flares, then a bead of it runs down the shaft to her brow.
   if (runK > 0.01) {
     const flare = runK * Math.max(0, 1 - run * 2.2);
-    p.glow(tx, ty, 13, GOLD, 0.5 * flare * k);
+    p.glow(tx, ty, 13, LAMP, 0.5 * flare * k);
     if (run > 0.02 && run < 1) {
       const f = (1 - run) * (n - 1);
       const i0 = Math.min(n - 2, Math.floor(f));
       const bx = lerp(ax_[i0]!, ax_[i0 + 1]!, f - i0);
       const by = lerp(ay_[i0]!, ay_[i0 + 1]!, f - i0);
       const bk = runK * Math.sin(Math.PI * run) ** 0.6 * k;
-      p.glow(bx, by, 9, GOLD_DEEP, 0.55 * bk);
-      p.glow(bx, by, 3.2, GOLD_HOT, 1.0 * bk);
+      p.glow(bx, by, 9, LAMP_DEEP, 0.55 * bk);
+      p.glow(bx, by, 3.2, LAMP_HOT, 1.0 * bk);
     }
   }
-  p.glow(tx, ty, 7, GOLD_DEEP, 0.3 * glow * k);
-  p.glow(tx, ty, 3.4, GOLD, 0.6 * glow * k);
-  p.ellipse(tx, ty, 1.35, 1.35, 0, SH_SPOT_HOT, 10);
-  p.glow(tx, ty, 2.2, GOLD_HOT, 0.8 * glow);
+  p.glow(tx, ty, 7, LAMP_DEEP, 0.3 * glow * k);
+  p.glow(tx, ty, 3.4, LAMP, 0.6 * glow * k);
+  // (out, the tip is only a pale bead)
+  if (glow > 0.05) p.ellipse(tx, ty, 1.35, 1.35, 0, SH_SPOT_HOT, 10);
+  p.glow(tx, ty, 2.2, LAMP_HOT, 0.8 * glow);
 }
 const ax_ = new Float32Array(64);
 const ay_ = new Float32Array(64);
@@ -1017,7 +1030,7 @@ function head(p: Painter, f: Frame, v: View, far: number): void {
   p.shape(SEG, X(ccx, ccy), Y(ccx, ccy), SH_CROWN, hx + sr * Hh, hy - cr * Hh, hx - sr * Hh, hy + cr * Hh);
 
   // --- The far antenna leaves the brow behind the face fur.
-  antenna(p, v.antennae[far]!, true, v.glow, gRun, v.glintT < 0.6 ? v.glintK : 0);
+  antenna(p, v.antennae[far]!, true, v.glow * (v.tips?.[far] ?? 1), gRun, v.glintT < 0.6 ? v.glintK : 0);
 
   // --- The face: a round, soft heart of pale fur. Full cheeks, barely a chin.
   const yaw = dh * BODY.sinHeadYaw;
@@ -1239,7 +1252,13 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
     );
   arm(p, j, far, true, false, v.wall);
   leg(p, j, far, true);
-  thorn(p, f, 38 * (1 - 0.65 * v.tuck), v.slashW);
+  const ta = v.unarmed ? 0 : (v.thornA ?? 1);
+  if (ta > 0.01) {
+    const a0 = p.alphaK;
+    p.alphaK = a0 * ta;
+    thorn(p, f, 38 * (1 - 0.65 * v.tuck), v.slashW);
+    p.alphaK = a0;
+  }
   // The sword arm is side A: behind the body when she faces left.
   const bk = sat(v.slashW * 2 - 1);
   // The sword arm is the near arm when the slash starts; if she turns under it, it goes behind her.
@@ -1270,5 +1289,12 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
     if (swFar) arm(p, j, sw, false, true, 0);
     blade(p, j, sw, v.bladeAng, bk, v.bladeLen);
   }
-  antenna(p, v.antennae[near]!, false, v.glow, sat(v.glintT / GLINT_RUN), v.glintT < 0.6 ? v.glintK : 0);
+  antenna(
+    p,
+    v.antennae[near]!,
+    false,
+    v.glow * (v.tips?.[near] ?? 1),
+    sat(v.glintT / GLINT_RUN),
+    v.glintT < 0.6 ? v.glintK : 0,
+  );
 }

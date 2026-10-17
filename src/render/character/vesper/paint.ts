@@ -148,6 +148,12 @@ export class Painter {
    */
   dimK = 0;
   dimTo = 0.6;
+  /**
+   * A re-palette for everything drawn from now on (solids and lights; not the silhouette edge): each
+   * colour goes `sat` of the way from its own grey to itself, times `val`, times `tint`. Null = off.
+   * Tatter is Wing's painter through one of these (memory/hatch-and-tatter.md).
+   */
+  grade: { sat: number; val: number; tint: RGB; lightSat: number; lightVal: number } | null = null;
   ghost: RGB | null = null;
   ghostAlpha = 0;
   /**
@@ -326,6 +332,16 @@ export class Painter {
       return this.nu++;
     }
     const v = this.verts;
+    const gr = this.grade;
+    if (gr && mode !== GHOST) {
+      const light = mode === GLOW;
+      const sk = light ? gr.lightSat : gr.sat;
+      const vk = light ? gr.lightVal : gr.val;
+      const l = 0.3 * r + 0.59 * g + 0.11 * b;
+      r = (l + (r - l) * sk) * vk * gr.tint[0]!;
+      g = (l + (g - l) * sk) * vk * gr.tint[1]!;
+      b = (l + (b - l) * sk) * vk * gr.tint[2]!;
+    }
     // Global dissolve: solid and soft shapes by `alphaK`, lights by `glowK`.
     a *= mode === GLOW ? this.glowK : mode === GHOST ? 1 : this.alphaK;
     if (this.dimK > 0 && mode === SOLID) {
