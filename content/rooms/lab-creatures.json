@@ -296,10 +296,11 @@
     {
       "id": "hawk-f",
       "kind": "hawker",
-      "x": 14050,
-      "y": 860,
+      "x": 14310,
+      "y": 870,
       "facing": -1,
-      "guards": "wick-f"
+      "guards": "wick-f",
+      "orbit": "wick-f"
     },
     {
       "id": "burr-g",
@@ -376,7 +377,7 @@
       {
         "x": 13750,
         "y": 640,
-        "text": "F  hawker at a wick beside a lantern's pull (R11)"
+        "text": "F  hawker on a rhythm through the wick's orbit: catch after its swoop (R8, the crown)"
       },
       {
         "x": 16600,

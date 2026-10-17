@@ -143,6 +143,13 @@ export interface EnemySpawn {
   drop?: number;
   /** Burrback: its brace's tell in frames, if not the row's (a first encounter's is longer). */
   windup?: number;
+  /**
+   * Hawker: the lure whose circling moths it hunts on a rhythm (area1-plan-r3 §4.3): it waits at a perch
+   * beside the flame, tells, and swoops through the orbit to the other side every `period` frames (default
+   * `tuning.hawker.passPeriod`), taking a moth each pass; one caught there during a pass is struck down.
+   */
+  orbit?: string;
+  period?: number;
   /** A story flag set when it dies (the old burrback's root gate: src/sim/kit.ts). */
   sets?: string;
   /**

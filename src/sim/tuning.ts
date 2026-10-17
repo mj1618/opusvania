@@ -674,6 +674,9 @@ export const defaultTuning = withVariants({
      * a jump in the tell's first half used to land in the ram).
      */
     ramUnderJump: false,
+    /** The first `firstTellRams` rams of a fight (this life) are told `firstTellMult` x as long (0 = none). */
+    firstTellRams: 0,
+    firstTellMult: 1,
     ramUnderMax: 40,
     underExtraPx: 60,
     // (First-timer r2: the plain one's touch is its drawn dome too.)
@@ -752,6 +755,19 @@ export const defaultTuning = withVariants({
      * plays in full; beating free before the strike arrives dodges it.
      */
     huntCaught: false,
+    /** Any other blow of it knocks her straight up, never sideways (the crown: never over the rim). */
+    straightKnock: false,
+    /**
+     * On a rhythm (`EnemySpawn.orbit`, area1-plan-r3 §4.3): a pass every `passPeriod` frames, a tell of
+     * `passTellFrames`, the swoop through the orbit `passFrames` long between perches `passRadius` to each
+     * side and `passHeight` above the flame; one caught there as it passes is struck down at `passKnockDown`.
+     */
+    passPeriod: 210,
+    passTellFrames: 30,
+    passFrames: 30,
+    passRadius: 260,
+    passHeight: 150,
+    passKnockDown: 9,
     stallFrames: 34,
     perchUpPx: 170,
     perchSidePx: 110,
@@ -1360,6 +1376,9 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       deadFrames: 150,
       deathHoldFrames: 90,
       ramUnderJump: true,
+      // (area1-plan-r3 #8: casual runs faded 8-9 times and gave up; first tries lasted 11-21 s.)
+      firstTellRams: 2,
+      firstTellMult: 1.5,
       pogoShell: true,
       asleep: true,
       wakePx: 1400,
@@ -1411,6 +1430,7 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       diveWindupFrames: 6,
       diveBackPx: 24,
       huntCaught: true,
+      straightKnock: true,
       // (A breather after a hit: one who stood still under it was hit every 4 s and faded in a loop.)
       touchCalmFrames: 180,
       value: 0,

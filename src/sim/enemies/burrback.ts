@@ -376,7 +376,9 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
     });
   }
   e.chargeLeft = frames(B.chargePx, 1);
-  const n = frames(e.span > 0 ? e.span : B.windupFrames, 1);
+  // (The first rams of a fight are told longer (area1-plan-r3 #8): `firstTellRams` of them, x `firstTellMult`.)
+  const base = e.span > 0 ? e.span : B.windupFrames;
+  const n = frames(e.rams < B.firstTellRams ? base * B.firstTellMult : base, 1);
   // (Curled, it uncurls into the brace.)
   e.tuck = 0;
   // (A fresh exchange: the old burrback's feint comes first, one pogo a brace, its shell shut.)

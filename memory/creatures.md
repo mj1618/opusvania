@@ -76,6 +76,12 @@ round 2 (feel review r2 #1, #2: "a masher wins in 10.8 s", "shorter than she is"
 - **Its death is a beat**: the killing blow holds 20 f extra (`killHitstopFrames`, her and it), the body lies 150 f
   (`deadFrames`), and a 90 f story hold (`deathHoldFrames`: the kit's `storyHold` / `storyHoldEnd`, no input, she cannot
   be hurt) covers the gate's opening and the claws' beam. `KindRules.killHold` / `deathHold`.
+- **Round 3** (area1-plan-r3: casual runs faded 8-9 times, first tries 11-21 s): its first 2 rams of a life
+  (`firstTellRams`) are told 1.5x (`firstTellMult`): 42 f; a jump started 12-48 f into that tell clears it (12 f = a
+  200 ms reaction; earlier, the jump lands before the ram). Open = harmless is asserted over every pilot run. Slow pilot:
+  22 of 24 at the first attempt, 17-67 s; masher still always fades. Human-like (HEAD e6023a5 + this, 9 runs): all 7
+  that reached wood-well killed it at the first try, 0 fades there, 1-3 hits, 15.5-24.6 s (casual 18.5 s, skilled
+  15.5-19.7 s); the 2 casual runs that did not finish were lost earlier (8/10 rooms).
 
 ## The plain burrback, round 2 (first-timer casual r2: "↓+C on it hurt me", "hit from a body-length", "it slid to
 where I landed")
@@ -137,17 +143,34 @@ Each hunts one moment of the lamp verb; placement is the builders', these are th
 - **Juvenile beetle** (`kind: 'juvenileBurrback'`, row `tuning.juvenileBurrback`): the first creature (R4, the crawlid
   slot). 38 x 26, 2 hp, **no brace, no ram** (`strikePx` 0); a gentle tell: the first time it sees her (lit, 260 px) it
   stops and turns to her 30 f (`noticeFrames`, `enemyNotice`), then walks at her (`hunt`, it does not stop short: its
-  touch is the danger). Two cuts kill it; stomps bounce. Slow pilot: wins every run in 2.7 s, 0 hits.
+  touch is the danger). Two cuts kill it; stomps bounce. Slow pilot: wins every run in 2.7 s, 0 hits. It **ignores
+  light** (sense always, area1-plan-r3 §1: met on a dark floor; it notices her at 260 px lit or not).
 - **Beetle hunts landings** (`landHuntPx` 420, lamp rooms only: the grove's tuned fights untouched): she lands lit on its
   ground within 420 px and it turns to her at once (`enemyTurn` cause `hunt`), walking at her into its brace.
 - **Dangler hunts the stop** (`stopFrames` 8, `stillVx` 1.5, `noticePx` 220): it tells once she has stood still, lit,
   below it, for 8 frames: the spot she stands on to cut the flame. A runner under it is let pass (it used to drop on
   runners). Hang it over the cut spot (the knob, the ledge under the wick).
-- **Hawker hunts the caught** (`huntCaught`): a moth held by a flame (or a web) is seen anywhere in its leash, even from
+- **Hawker hunts the caught** (`huntCaught`, still on; area1-plan-r3: it hit no one in 9 runs, beating free takes
+  ~0.4 s and its tell + strike over 1 s, so a race is no twist; the rhythm below is): a moth held by a flame (or a web) is seen anywhere in its leash, even from
   a rest or on its way home, and it strikes at the orbit's centre (the flame). The tell plays in full (36 + 6 f, then
   ~28 f of strike: ~64 f from the notice to contact). Slow pilot (reacting 20-30 f after the tell, beats 6-10 f apart,
   holding away from it): freed and never struck in 9 of 9 timings. Beating free with no direction can throw her into
   its lane: "aim the throw out of its lane" is the skill (the director's R8 east half).
+
+## The hawker on a rhythm (`orbit: '<lure id>'`, area1-plan-r3 §4.3: timing, not a race)
+- Spawn `{kind: 'hawker', orbit: '<lamp id>', period? (90-900, default `passPeriod` 210 f), guards?}`. It waits at a
+  perch `passRadius` 260 px to one side of the flame and `passHeight` 150 px above, harmless; tells `passTellFrames` 30
+  (`enemyNotice`, mode `curious`); pulls back 6 f (`enemyDive {tx, ty}` = the flame), then a 30 f curve through the
+  flame to the mirror perch (`passFrames`), taking a moth mid-pass (`enemySnatch {lure, x, y}`: render takes one
+  circling moth). One every period, from either side alternately. Its own chase / dive rules are off while the lamp
+  burns; snuffed, a guarder leaves as before.
+- Caught (or anywhere in its path) as it passes, she is struck straight down (`passKnockDown` 9 px/f, vx 0): a pip and
+  the drop below the lamp (R8: into the tunnel). Caught just after a pass, a slow player (react 20-30 f, beats 6-10 f
+  apart) is free long before the next (unit tests). So the skill is: wait for the swoop, then catch and throw.
+- **`straightKnock`** (hawker row): any other blow of it while she stands knocks her straight up, never sideways (the
+  crown rim). Struck in the air or caught, she flies along her aimed throw (`strikeOut`) as before.
+- Lab station F (`?room=lab-creatures`, x ~13500): hawk-f on a rhythm through wick-f. Greybox reads: the tell ring at
+  the perch, then the swoop's trail through the flame.
 
 ## Composed encounters and placement guidance (for the level builder)
 - Creatures ignore each other (no collisions), so any overlap works; one lure can be guarded by several (a snuff
@@ -155,6 +178,11 @@ Each hunts one moment of the lamp verb; placement is the builders', these are th
 - **Hawker**: home no more than ~450 px over the line she walks, inside its lamp's light (wick 384 px, lantern 576).
   Put its lamp so she spends ≥ 1.5 s in the light before she can cut it (high, or reachable only from a spot in the
   dive lane: a hummock, a cap bounce). A dark half beside it is the rest.
+- **Rhythm hawker** (R8, the crown): `orbit` = the lamp she must catch to cross; its perches need 260 px clear each
+  side of the flame and 150 px above. A pit or tunnel under the orbit is the cost of a mistimed catch.
+- **No lamp pull over a creature patrol before R6** (a level rule): the beetle turns to any lit landing within 420 px
+  on its floor (`landHuntPx`), so a throw that lands on a patrolled floor brings it at once; keep throw landings
+  > 420 px from a beetle's floor, or on another floor.
 - **Dangler**: over where she has to stop or land: a glide landing, a platform with a burrback (station I), a ledge
   top after a climb, the foot of a jump. Its lamp must light the approach ~300 px before the tie point (station H's
   wick was moved for this), and the floor under it should have ≥ 300 px of safe room to step back into.

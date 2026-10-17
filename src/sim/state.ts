@@ -622,6 +622,12 @@ export interface EnemyState {
   taken: number;
   /** Burrback: this ram's speed, px/f (0 = its row's `chargeSpeed`): faster to pass under a jump in progress. */
   ramSpeed: number;
+  /**
+   * Hawker on a rhythm (`EnemySpawn.orbit`): the lure whose circling moths it hunts (index, -1 = none) and
+   * its pass period, frames. `side` = the perch it is at (-1 west, 1 east of the flame).
+   */
+  orbit: number;
+  period: number;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */

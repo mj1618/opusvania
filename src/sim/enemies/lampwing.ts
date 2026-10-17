@@ -293,7 +293,7 @@ function heldAt(info: StepInfo): { x: number; y: number } | null {
 }
 
 /** She was just knocked out of a lure's orbit (`lureFree` how `hurt` this step): thrown along her aim instead. */
-function strikeOut(info: StepInfo): void {
+function strikeOut(info: StepInfo): boolean {
   const p = info.state.player;
   const ev = info.events;
   let freed = false;
@@ -304,13 +304,150 @@ function strikeOut(info: StepInfo): void {
       break;
     }
   }
-  if (!freed || (p.lureAimX === 0 && p.lureAimY === 0)) return;
+  if (!freed || (p.lureAimX === 0 && p.lureAimY === 0)) return false;
   const L = info.t.lures;
   p.vx = 0;
   p.pullX = p.lureAimX * L.freeSpeed;
   p.vy = p.lureAimY * L.freeSpeed - L.freeLift;
   p.lureThrow = Math.max(0, Math.round(L.throwFrames));
   p.thrown = true;
+  return true;
+}
+
+/** Was she standing when the blow came (her feet on a top)? */
+function onGround(info: StepInfo): boolean {
+  const p = info.state.player;
+  return p.contactFrames > 0 ? false : solidAt(info.scene, p.x, p.y + p.h, p.w, 1);
+}
+
+const FL = { x: 0, y: 0 };
+
+/**
+ * The rhythm (a hawker with an `orbit`): it waits at a perch beside the flame (`passRadius` to the side,
+ * `passHeight` above), tells (`passTellFrames`), pulls back and swoops through the orbit to the mirror perch
+ * in `passFrames` (a curve through the flame), taking a moth at the flame (`enemySnatch`), and waits there
+ * for the next pass: one every `period` frames. Returns false when it is not hunting on its rhythm now (its
+ * lamp is out, it is hurt, dead or leaving: the ordinary rules then).
+ */
+function rhythm(e: EnemyState, info: StepInfo, t: L): boolean {
+  if (e.mode === 'dead' || e.mode === 'hurt' || e.mode === 'leave' || e.gone) return false;
+  const l = info.scene.lures?.[e.orbit];
+  if (!l || (info.state.lures.hp[e.orbit] ?? 0) <= 0) return false;
+  const f = lureAt(l, info.state.frame, info.t, FL);
+  const period = Math.max(
+    frames(t.passTellFrames + t.diveWindupFrames + t.passFrames + 20),
+    e.period || t.passPeriod,
+  );
+  const wait = period - frames(t.passTellFrames) - frames(t.diveWindupFrames) - frames(t.passFrames);
+  const cx = e.x + e.w / 2;
+  const cy = e.y + e.h / 2;
+  if (e.mode !== 'perch' && e.mode !== 'curious' && e.mode !== 'dive') {
+    // (Joining its rhythm: to the nearer perch.)
+    e.side = cx < f.x ? -1 : 1;
+    setMode(e, 'perch', wait);
+  }
+  const px = f.x + e.side * t.passRadius;
+  const py = f.y - t.passHeight;
+  if (e.mode === 'perch') {
+    e.targetX = px;
+    e.targetY = py;
+    aim(e, t.pursueSpeed, t.arrivePx);
+    steer(e, aimX, aimY, t.pursueAccel);
+    drift(e, info.scene, t);
+    face(e, f.x - cx, 0);
+    e.flap += t.flapHover;
+    if (--e.timer <= 0) {
+      const n = frames(t.passTellFrames, 1);
+      setMode(e, 'curious', n);
+      info.events.push({
+        type: 'enemyNotice',
+        id: e.id,
+        kind: e.kind,
+        x: cx,
+        y: cy,
+        dir: e.facing,
+        frames: n,
+      });
+    }
+  } else if (e.mode === 'curious') {
+    steer(e, 0, 0, t.curiousAccel);
+    drift(e, info.scene, t);
+    e.flap += t.flapCurious;
+    if (--e.timer <= 0) {
+      const n = frames(t.diveWindupFrames) + frames(t.passFrames, 1);
+      setMode(e, 'dive', n);
+      e.span = n;
+      e.fromX = cx;
+      e.fromY = cy;
+      e.targetX = f.x - e.side * t.passRadius;
+      e.targetY = f.y - t.passHeight;
+      e.vx = 0;
+      e.vy = 0;
+      e.rx = 0;
+      e.ry = 0;
+      info.events.push({
+        type: 'enemyDive',
+        id: e.id,
+        kind: e.kind,
+        x: cx,
+        y: cy,
+        tx: f.x,
+        ty: f.y,
+        dir: -e.side,
+        frames: n,
+        dive: 1,
+      });
+    }
+  } else {
+    // The pass: a pull-back, then a curve from its perch down through the flame and up to the mirror perch.
+    const w = frames(t.diveWindupFrames);
+    const k = e.span - e.timer + 1;
+    let ux = f.x - e.fromX;
+    let uy = f.y - e.fromY;
+    const d = Math.sqrt(ux * ux + uy * uy) || 1;
+    ux /= d;
+    uy /= d;
+    const bx = e.fromX - ux * t.diveBackPx;
+    const by = e.fromY - uy * t.diveBackPx;
+    let gx: number;
+    let gy: number;
+    if (k <= w) {
+      const q = w > 0 ? k / w : 1;
+      gx = e.fromX + (bx - e.fromX) * q;
+      gy = e.fromY + (by - e.fromY) * q;
+    } else {
+      const q = Math.min(1, (k - w) / Math.max(1, e.span - w));
+      // Through the flame at the curve's middle: control = 2F - (A + B) / 2.
+      const qx = 2 * f.x - (bx + e.targetX) / 2;
+      const qy = 2 * f.y - (by + e.targetY) / 2;
+      const a = (1 - q) * (1 - q);
+      const b = 2 * (1 - q) * q;
+      const c = q * q;
+      gx = a * bx + b * qx + c * e.targetX;
+      gy = a * by + b * qy + c * e.targetY;
+      if (k - w === Math.ceil((e.span - w) / 2))
+        info.events.push({ type: 'enemySnatch', id: e.id, kind: e.kind, x: f.x, y: f.y, lure: l.id });
+    }
+    const x0 = e.x;
+    const y0 = e.y;
+    e.x = Math.round(gx - e.w / 2);
+    e.y = Math.round(gy - e.h / 2);
+    e.vx = e.x - x0;
+    e.vy = e.y - y0;
+    face(e, e.vx, 0.5);
+    e.flap += t.flapDive;
+    if (--e.timer <= 0) {
+      // It lands on the far perch (its swoop's speed would carry it off the screen).
+      e.side = -e.side;
+      e.vx = 0;
+      e.vy = 0;
+      e.rx = 0;
+      e.ry = 0;
+      setMode(e, 'perch', wait);
+    }
+  }
+  while (e.flap >= 1) e.flap -= 1;
+  return true;
 }
 
 /** The tell is over: it commits to a dive at where she is now (led, if she glides). */
@@ -559,6 +696,8 @@ export const lampwing: KindRules = {
    */
   harmless(e, info) {
     const G = info.t.goal;
+    // (On a rhythm only its pass through the orbit is a danger: its perch and its tell are not.)
+    if (e.orbit >= 0 && (e.mode === 'perch' || e.mode === 'curious')) return true;
     if (e.mode === 'curious' && e.modeFrames <= rowOf(info.t, e).noticeSafeFrames) return true;
     // Stalled at the bottom of its dive it is open; and for a beat as it lifts away. Having given up
     // (it hangs, then flies home) it is no danger either: its dive is its attack, and a body left
@@ -640,6 +779,9 @@ export const lampwing: KindRules = {
       }
       return false;
     }
+
+    // A hawker on a rhythm (area1-plan-r3 §4.3): it hunts the moths circling its lamp, a pass every period.
+    if (e.orbit >= 0 && rhythm(e, info, t)) return e.mode === 'dive';
 
     if (e.mode === 'leave') {
       // Its lamp went out (memory/creatures.md): up and away, harmless, then gone.
@@ -889,6 +1031,14 @@ export const lampwing: KindRules = {
     if (e.mode === 'dead') return;
     const t = rowOf(info.t, e);
     const p = info.state.player;
+    // On a rhythm: a moth caught in the orbit as it passes is struck straight down (into the tunnel under
+    // a throw gap: a pip and the slow way), and the pass goes on to the other perch.
+    if (e.orbit >= 0 && e.mode === 'dive') {
+      p.vx = 0;
+      p.pullX = 0;
+      p.vy = t.passKnockDown;
+      return;
+    }
     const dx = e.x + e.w / 2 - (p.x + p.w / 2);
     const dy = e.y + e.h / 2 - (p.y + p.h / 2);
     const len = Math.sqrt(dx * dx + dy * dy);
@@ -902,7 +1052,13 @@ export const lampwing: KindRules = {
     // Struck out of a flame's orbit (it hunts the caught): she flies out along the throw she was aiming
     // (the arc drawn while she circles), not wherever the blow's side would have sent her (human-like r1:
     // in R8 the blow dropped her into the thorn bed under the throw gap).
-    if (t.huntCaught) strikeOut(info);
+    if (t.huntCaught && strikeOut(info)) return;
+    // A hawker blow on one standing knocks her straight up, never sideways (area1-plan-r3: the crown hawker
+    // must never carry her over the rim). (`hurtPlayer` has already cleared `grounded`: read her feet.)
+    if (t.straightKnock && onGround(info)) {
+      p.vx = 0;
+      p.pullX = 0;
+    }
   },
 };
 

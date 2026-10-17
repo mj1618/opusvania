@@ -146,7 +146,11 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     // (An old burrback hunts its den whatever the light (wood.md §6); a weaver feels her touch, lit or not.)
     sense: senseCode(
       spawn.senses ??
-        (spawn.kind === 'oldBurrback' || spawn.kind === 'weaver' || spawn.kind === 'weaverBoss'
+        // (The juvenile ignores light: it is met on a dark floor, area1-plan-r3 §1.)
+        (spawn.kind === 'oldBurrback' ||
+        spawn.kind === 'weaver' ||
+        spawn.kind === 'weaverBoss' ||
+        spawn.kind === 'juvenileBurrback'
           ? 'always'
           : scene?.senses),
     ),
@@ -162,6 +166,8 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     cut: '',
     taken: 0,
     ramSpeed: 0,
+    orbit: spawn.orbit ? (scene?.lures ?? []).findIndex((l) => l.id === spawn.orbit) : -1,
+    period: Math.max(0, spawn.period ?? 0),
   };
   K.place(e, spawn, t);
   if (scene) K.init?.(e, spawn, scene, t);

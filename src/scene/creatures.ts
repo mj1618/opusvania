@@ -87,6 +87,8 @@ export const ENEMIES = z
           kind: z.literal('hawker'),
           radius: int.min(0).max(400).optional(),
           sight: int.min(60).max(900).optional(),
+          orbit: z.string().min(1).optional(),
+          period: int.min(90).max(900).optional(),
         })
         .strict(),
       z
@@ -334,6 +336,10 @@ export function checkCreatures(s: RoomLike, seen: Set<string>): void {
   for (const e of s.enemies) {
     if (seen.has(e.id)) throw new Error(`Scene "${s.id}": two things are called "${e.id}"`);
     seen.add(e.id);
+    if (e.kind === 'hawker' && e.orbit !== undefined && !lures.has(e.orbit))
+      throw new Error(
+        `Scene "${s.id}": hawker "${e.id}" hunts the orbit of "${e.orbit}", which is no lure of the room`,
+      );
     if (e.guards !== undefined && !lures.has(e.guards))
       throw new Error(`Scene "${s.id}": enemy "${e.id}" guards "${e.guards}", which is no lure of the room`);
     if (e.kind === 'lampwing' || e.kind === 'hawker') checkFlyer(s, e);

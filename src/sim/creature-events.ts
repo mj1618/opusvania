@@ -72,6 +72,8 @@ export type CreatureEvent =
       hpMax: number;
       third: number;
     }
+  /** A hawker on a rhythm swept through its lamp's orbit and took a moth (`lure` = the lamp; `x`, `y` = the flame). */
+  | { type: 'enemySnatch'; id: string; kind: EnemyKind; x: number; y: number; lure: string }
   /** A dangler's thread was cut (tied at `fromX`, `fromY`): it falls. */
   | {
       type: 'enemyThreadCut';

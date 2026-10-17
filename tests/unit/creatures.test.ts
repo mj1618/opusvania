@@ -227,32 +227,31 @@ describe('the old burrback', () => {
           break;
         }
       }
-      expect(f).toBe(O.windupFrames);
+      expect(f).toBe(Math.round(O.windupFrames * O.firstTellMult));
     }
   });
 
   it('a jump started anywhere in its tell (or just after the ram starts) clears the ram: quick reactions are never punished', () => {
-    for (const gap of [140, 180, 230])
-      for (let off = 0; off <= O.windupFrames + 4; off += 2) {
-        const s = newSim(pit());
-        const o = enemy(s, 'o');
-        o.mode = 'walk';
-        s.place(o.x - gap - 20, FLOOR);
-        let ev: SimEvent[] = [];
-        for (let i = 0; i < 200 && !types(ev).includes('enemyWindup'); i++) ev = s.run('.1');
-        // Straight up, over it, and away from it.
-        for (const jump of ['J24', 'R+J24', 'L+J24']) {
-          const c = newSim(pit());
-          const oc = enemy(c, 'o');
-          oc.mode = 'walk';
-          c.place(oc.x - gap - 20, FLOOR);
-          let e2: SimEvent[] = [];
-          for (let i = 0; i < 200 && !types(e2).includes('enemyWindup'); i++) e2 = c.run('.1');
-          const after = c.run(`${off > 0 ? `.${off} ` : ''}${jump} .80`);
-          expect(types(after)).toContain('enemyCharge');
-          expect(types(after)).not.toContain('hurt');
-        }
-      }
+    // First rams (a longer tell): from any reaction (12 f = 200 ms and up; a jump before that lands again
+    // before the ram and must be jumped again). Later rams: from frame 0.
+    for (const later of [false, true]) {
+      const tell = later ? O.windupFrames : Math.round(O.windupFrames * O.firstTellMult);
+      for (const gap of [140, 180, 230])
+        for (let off = later ? 0 : 12; off <= tell + 4; off += 2)
+          // Straight up, over it, and away from it.
+          for (const jump of ['J24', 'R+J24', 'L+J24']) {
+            const c = newSim(pit());
+            const oc = enemy(c, 'o');
+            oc.mode = 'walk';
+            if (later) oc.rams = O.firstTellRams;
+            c.place(oc.x - gap - 20, FLOOR);
+            let e2: SimEvent[] = [];
+            for (let i = 0; i < 200 && !types(e2).includes('enemyWindup'); i++) e2 = c.run('.1');
+            const after = c.run(`${off > 0 ? `.${off} ` : ''}${jump} .80`);
+            expect(types(after)).toContain('enemyCharge');
+            expect(types(after)).not.toContain('hurt');
+          }
+    }
   });
 
   it('its death is a beat: a long hold on the killing blow, the body lying, a story hold', () => {
@@ -308,6 +307,8 @@ describe('the old burrback', () => {
     const s = newSim(pit(), t);
     const o = enemy(s, 'o');
     o.mode = 'walk';
+    // (Past its first two rams: the plain tell.)
+    o.rams = O.firstTellRams;
     s.place(o.x - O.strikeMinPx - 60, FLOOR);
     const frameOf: Record<string, number> = {};
     for (let f = 0; f < 200; f++) {
@@ -413,6 +414,7 @@ describe('the old burrback', () => {
     const o = enemy(s, 'o');
     o.mode = 'walk';
     o.facing = -1;
+    o.rams = O.firstTellRams;
     // Stand west of it (between it and the wall), and jump over it in its tell: the ram passes under her into the wall.
     s.place(o.x - 118, FLOOR);
     let ev: SimEvent[] = [];
@@ -807,6 +809,68 @@ describe('the hawker hunts the caught', () => {
         // Away from it (it comes from the east): hold left as she beats.
         const beats = `L+J1 L${gap} L+J1 L${gap} L+J1`;
         const after = s.run(`.${react} ${beats} L30 .120`);
+        expect(types(after)).toContain('lureFree');
+        expect(of(after, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
+      }
+  });
+});
+
+describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not race it', () => {
+  const H = T.hawker;
+  // The throw wick and its hawker, perched to the east.
+  const scene = () =>
+    room(
+      [{ id: 'h', kind: 'hawker', x: 2260, y: 350, facing: -1, orbit: 'w', guards: 'w' }],
+      [wick('w', 2000, 500)],
+    );
+  const at = (s: Sim, n: number) => {
+    const out: Array<{ f: number; e: SimEvent }> = [];
+    for (let f = 0; f < n; f++) for (const e of s.run('.1')) out.push({ f, e });
+    return out;
+  };
+
+  it('it passes through the orbit every period, taking a moth each pass, through the flame', () => {
+    const s = newSim(scene());
+    s.place(1400, FLOOR);
+    const ev = at(s, H.passPeriod * 3 + 10);
+    const snatches = ev.filter((x) => x.e.type === 'enemySnatch').map((x) => x.f);
+    expect(snatches.length).toBeGreaterThanOrEqual(2);
+    expect((snatches[1] ?? 0) - (snatches[0] ?? 0)).toBe(H.passPeriod);
+    const dive = ev.find((x) => x.e.type === 'enemyDive')?.e as Extract<SimEvent, { type: 'enemyDive' }>;
+    expect([dive.tx, dive.ty]).toEqual([2000, 500]);
+    // Its tell comes first, a fixed length.
+    // It keeps to its perches between passes (never carried off by the swoop).
+    const h = s.state.enemies[0];
+    expect(Math.abs((h?.x ?? 0) + (h?.w ?? 0) / 2 - 2000)).toBeLessThan(H.passRadius + 60);
+    expect(Math.abs((h?.y ?? 0) + (h?.h ?? 0) / 2 - (500 - H.passHeight))).toBeLessThan(60);
+    const notice = ev.find((x) => x.e.type === 'enemyNotice')?.f ?? 0;
+    expect((ev.find((x) => x.e.type === 'enemyDive')?.f ?? 0) - notice).toBe(H.passTellFrames);
+  });
+
+  it('caught as it passes, she is struck straight down (a pip and the slow way below)', () => {
+    const s = newSim(scene());
+    s.place(1400, FLOOR);
+    // Wait for the first tell, then into the core and stay.
+    let ev: SimEvent[] = [];
+    for (let i = 0; i < 400 && !types(ev).includes('enemyNotice'); i++) ev = s.run('.1');
+    s.place(2000, 540);
+    let hurt: SimEvent[] = [];
+    for (let i = 0; i < 80 && !types(hurt).includes('hurt'); i++) hurt = s.run('.1');
+    expect(of(hurt, 'hurt')[0]?.source).toEqual({ kind: 'hawker', id: 'h' });
+    expect(s.state.player.vx).toBe(0);
+    expect(s.state.player.vy).toBeGreaterThan(0);
+  });
+
+  it('caught just after a pass, a slow player (beats 6-10 frames apart, 20-30 frames to start) is free long before the next', () => {
+    for (const react of [20, 25, 30])
+      for (const gap of [6, 8, 10]) {
+        const s = newSim(scene());
+        s.place(1400, FLOOR);
+        let ev: SimEvent[] = [];
+        for (let i = 0; i < 600 && !types(ev).includes('enemySnatch'); i++) ev = s.run('.1');
+        for (let i = 0; i < 60 && s.state.enemies[0]?.mode === 'dive'; i++) s.run('.1');
+        s.place(2000, 540);
+        const after = s.run(`.${react} R+J1 R${gap} R+J1 R${gap} R+J1 R40 .200`);
         expect(types(after)).toContain('lureFree');
         expect(of(after, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
       }
