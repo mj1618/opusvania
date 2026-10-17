@@ -4,12 +4,15 @@
  * fit), where she is, the moon patches she has seen (the one she last rested at ringed), the lamps she
  * has seen still burning (warm dots; put out: dim rings), glades not taken, and exits she has seen but
  * not gone through (green ticks: the way on). No map art: the map draws itself from the world.
+ * A moth-stone she has read (memory/level-kit.md) draws its whole area: rooms she has not been in show
+ * faint (their shape only), with the area's count of lamps she has not seen.
  *
  * Tab opens and closes it (main.ts pauses the game while it is open). Screen space, over the HUD.
  * Reads the game; never writes it.
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Game } from '../../game';
+import { WORLD } from '../../scene/index';
 import type { Room } from '../../scene/room';
 import type { WorldRoom } from '../../sim/world';
 import { SAFE_H, SAFE_W, type ViewSize } from '../contract';
@@ -97,10 +100,18 @@ export class MapOverlay {
     const save = game.state.save;
     const world = game.world;
     const here = game.state.room;
+    // Areas drawn by a moth-stone she has read (in any room, a test room's too).
+    const areas = new Set<string>();
+    for (const r of Object.values(world?.rooms ?? {}))
+      for (const m of r.scene.mothStones ?? []) if (save.taken.includes(`${r.id}:${m.id}`)) areas.add(m.area);
+    const revealed = new Set(WORLD.areas.filter((a) => areas.has(a.id)).flatMap((a) => a.rooms));
+    const known = (r: WorldRoom) => save.visited.includes(r.id) || r.id === here;
     const rooms: WorldRoom[] = world
-      ? Object.values(world.rooms).filter((r) => r.placed && (save.visited.includes(r.id) || r.id === here))
+      ? Object.values(world.rooms).filter((r) => r.placed && (known(r) || revealed.has(r.id)))
       : [];
-    // A room outside the world (a test room): just that room.
+    // A room outside the world (a test room): just that room, unless a stone has drawn an area.
+    const inWorld = rooms.some((r) => r.id === here);
+    if (!inWorld && revealed.size === 0) rooms.length = 0;
     if (rooms.length === 0) rooms.push({ id: here, x: 0, y: 0, placed: false, scene: game.scene });
     let x0 = Infinity;
     let y0 = Infinity;
@@ -122,7 +133,33 @@ export class MapOverlay {
     const X = (r: WorldRoom, x: number) => ox + (r.x + x) * k;
     const Y = (r: WorldRoom, y: number) => oy + (r.y + y) * k;
     const seen = (r: WorldRoom, id: string) => save.seen.includes(`${r.id}:${id}`);
+    // A drawn area's rooms she has not been in: their shape only, faint.
     for (const r of rooms) {
+      if (known(r)) continue;
+      const s = r.scene as Room;
+      g.rect(X(r, 0), Y(r, 0), s.width * k, s.height * k)
+        .fill({ color: MAP.room, alpha: 0.5 })
+        .stroke({ color: MAP.roomEdge, width: 1, alpha: 0.4 });
+      for (const q of s.solids) g.rect(X(r, q.x), Y(r, q.y), Math.max(1, q.w * k), Math.max(1, q.h * k));
+      g.fill({ color: MAP.solid, alpha: 0.3 });
+    }
+    // Each drawn area: its count of lamps she has not seen (still burning), over its top-left room.
+    for (const a of WORLD.areas) {
+      if (!areas.has(a.id)) continue;
+      const inA = rooms.filter((r) => a.rooms.includes(r.id));
+      if (inA.length === 0) continue;
+      let unseen = 0;
+      for (const r of inA)
+        for (const l of r.scene.lures ?? [])
+          if (!save.seen.includes(`${r.id}:${l.id}`) && !save.snuffed.includes(`${r.id}:${l.id}`)) unseen++;
+      const top = inA.reduce((b, r) => (r.y < b.y || (r.y === b.y && r.x < b.x) ? r : b));
+      const t = this.label(`area:${a.id}`, '');
+      t.text = `${a.id}: ${unseen} lamp${unseen === 1 ? '' : 's'} unseen`;
+      t.visible = true;
+      t.position.set(X(top, 0), Y(top, 0) - 22);
+    }
+    for (const r of rooms) {
+      if (!known(r)) continue;
       const s = r.scene as Room;
       g.rect(X(r, 0), Y(r, 0), s.width * k, s.height * k)
         .fill({ color: MAP.room })
@@ -131,6 +168,15 @@ export class MapOverlay {
       g.fill({ color: MAP.solid, alpha: 0.9 });
       for (const o of s.oneWays) g.rect(X(r, o.x), Y(r, o.y), Math.max(1, o.w * k), 1.5);
       g.fill({ color: MAP.oneWay });
+      // The level kit's solids: caps, bark not broken, gates still shut (memory/level-kit.md).
+      for (const c of s.caps ?? []) g.rect(X(r, c.x), Y(r, c.y), Math.max(2, c.w * k), Math.max(2, c.h * k));
+      for (const b of s.bark ?? [])
+        if (!save.opened.includes(`${r.id}:${b.id}`))
+          g.rect(X(r, b.x), Y(r, b.y), Math.max(2, b.w * k), Math.max(2, b.h * k));
+      for (const q of s.gates ?? [])
+        if (!save.flags.includes(q.flag))
+          g.rect(X(r, q.x), Y(r, q.y), Math.max(2, q.w * k), Math.max(2, q.h * k));
+      g.fill({ color: MAP.solid, alpha: 0.6 });
       // Shortcuts still shut are solid.
       for (const c of s.shortcuts ?? [])
         if (!save.opened.includes(`${r.id}:${c.id}`))

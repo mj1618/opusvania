@@ -52,6 +52,8 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   `flag()` lists the save's story flags, `flag(name)` sets, `flag(name, false)` clears (gates follow next step).
   `lures().list[].x, y` = where the flame is now (a swinging one moves). `cam().zoom` < 1 inside a camera zone.
   `?room=lab-kit` is the level-kit lab (memory/level-kit.md). F2 draws the kit's boxes.
+  `finds()` → `{stones, signs, hollows (read / taken), caps (with their rise), areas (drawn on the map), upgrades}`;
+  `upgrade()` lists, `upgrade('quickWings')` grants, `upgrade(id, false)` takes away.
 - **Bosses (memory/bosses.md)**: `boss()` → `{id, name, stage, phase, phaseName, locked, retry, attempt, time, phaseTime,
   creature: {mode, x, y, hp, hpMax, open, stunned, gone}, tell: {attack, frames, x0, x1, safeX} | null, thread, heart:
   {x, y, row, radius, hp, shield}, rings: [{id, burning}], flags: {met, down}}` (null without a boss); `boss({phase: n})`

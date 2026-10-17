@@ -26,7 +26,8 @@
  * Pure: + - * / floor round min max abs.
  */
 import type { SimEvent, SlashDir } from './events';
-import type { Bark } from './kit-data';
+import { updateFinds } from './finds';
+import type { Bark, BounceCap } from './kit-data';
 import type { Box } from './player/attack';
 import type { Scene, SolidRect } from './scene';
 import type { GameState, PlayerState, SaveState } from './state';
@@ -40,12 +41,18 @@ export interface KitState {
   barkHitBy: number[];
   seedHitBy: number[];
   thornHitBy: number[];
+  capHitBy: number[];
   /** Per `scene.gates`: 1 once its flag is set (open), 0 shut. */
   gates: number[];
   /** A thorn's hold is under way (`state.caught`): its length in frames; 0 = none. */
   hold: number;
   /** `state.frame + 1` of the step a down cut bounced off thorns (that step the touch is forgiven). */
   pogoFrame: number;
+  /** A down cut met a bounce cap this step: its index (the pogo is thrown the cap's height), -1 none. */
+  capPogo: number;
+  /** Firefly signs (src/sim/finds.ts): the one she stands by (-1 none) and for how many still frames. */
+  signAt: number;
+  signStill: number;
 }
 
 /** The save key of a piece of this room. */
@@ -65,9 +72,13 @@ export function createKit(scene: Scene, t: Tuning, save: SaveState): KitState {
     barkHitBy: bark.map(() => 0),
     seedHitBy: (scene.seedCases ?? []).map(() => 0),
     thornHitBy: (scene.thorns ?? []).map(() => 0),
+    capHitBy: (scene.caps ?? []).map(() => 0),
     gates: (scene.gates ?? []).map((g) => (save.flags.includes(g.flag) ? 1 : 0)),
     hold: 0,
     pogoFrame: 0,
+    capPogo: -1,
+    signAt: -1,
+    signStill: 0,
   };
 }
 
@@ -77,9 +88,13 @@ export function cloneKit(k: KitState): KitState {
     barkHitBy: k.barkHitBy.slice(),
     seedHitBy: k.seedHitBy.slice(),
     thornHitBy: k.thornHitBy.slice(),
+    capHitBy: k.capHitBy.slice(),
     gates: k.gates.slice(),
     hold: k.hold,
     pogoFrame: k.pogoFrame,
+    capPogo: k.capPogo,
+    signAt: k.signAt,
+    signStill: k.signStill,
   };
 }
 
@@ -95,6 +110,12 @@ export function kitSolids(scene: Scene, save: SaveState): { key: string; solids:
     k += `b${b.id}|`;
     const s: SolidRect = { x: b.x, y: b.y, w: b.w, h: b.h, tag: 'root', kit: 'bark' };
     if (b.kick !== undefined) s.kick = b.kick;
+    solids.push(s);
+  }
+  for (const c of scene.caps ?? []) {
+    k += `c${c.id}|`;
+    const s: SolidRect = { x: c.x, y: c.y, w: c.w, h: c.h, tag: 'floating', kit: 'cap' };
+    if (c.kick !== undefined) s.kick = c.kick;
     solids.push(s);
   }
   for (const g of scene.gates ?? []) {
@@ -152,7 +173,13 @@ export function slashKit(
   const px = p.x + (p.w >> 1);
   const py = p.y + (p.h >> 1);
   const pogoStop = Math.max(0, Math.round(t.enemies.pogoHitstopFrames));
-  const hit = (kind: 'thorns' | 'seedCase' | 'bark', id: string, x: number, y: number, stop: number) =>
+  const hit = (
+    kind: 'thorns' | 'seedCase' | 'bark' | 'cap',
+    id: string,
+    x: number,
+    y: number,
+    stop: number,
+  ) =>
     events.push({
       type: 'slashHit',
       x,
@@ -217,6 +244,21 @@ export function slashKit(
     RES.clang = true;
     RES.stop = Math.max(RES.stop, stop);
   }
+  // Bounce caps: a pogo off one is thrown the cap's height (`updateKit` sets the speed after the bounce).
+  const caps = scene.caps ?? [];
+  if (dir === 'down' && pogo) {
+    for (let i = 0; i < caps.length; i++) {
+      const c = caps[i];
+      if (!c || kit.capHitBy[i] === seq || !overlaps(box, c.x, c.y, c.w, c.h)) continue;
+      kit.capHitBy[i] = seq;
+      kit.capPogo = i;
+      hit('cap', c.id, Math.max(c.x, Math.min(c.x + c.w, px)), c.y, pogoStop);
+      RES.hits++;
+      RES.bounce = true;
+      RES.stop = Math.max(RES.stop, pogoStop);
+      break;
+    }
+  }
   // Rotten bark: a cut a hit, whatever its power; a floor panel only from above.
   const bark = scene.bark ?? [];
   for (let i = 0; i < bark.length; i++) {
@@ -253,6 +295,71 @@ export function slashKit(
     events.push({ type: 'barkBreak', id: b.id, x: cx, y: cy, w: b.w, h: b.h, dir, floor });
   }
   return RES;
+}
+
+/** The rise a cap throws her (px): its `height`, else its tier's; `held` (jump held) throws higher. */
+export function capHeight(c: BounceCap, t: Tuning, held: boolean): number {
+  const T = t.kit.caps;
+  const h = c.height ?? T.tiers[c.tier ?? 'small'];
+  return h * (held ? T.heldScale : 1);
+}
+
+/**
+ * The launch speed (px/f) that rises `h` px under gravity `g` with the sim's integrator (`tuning.ts`
+ * `speedForHeight`, inlined: the sim does not import the helper's module twice).
+ */
+function launchSpeed(g: number, h: number): number {
+  return (g * (-1 + Math.sqrt(1 + (8 * h) / g))) / 2;
+}
+
+/** Throws her up off cap `i` (a landing or a pogo): the speed, a pogo's refills, a `capBounce`. */
+function bounceOff(
+  state: GameState,
+  scene: Scene,
+  i: number,
+  t: Tuning,
+  held: boolean,
+  pogo: boolean,
+  events: SimEvent[],
+): void {
+  const c = (scene.caps ?? [])[i];
+  if (!c) return;
+  const p = state.player;
+  const height = capHeight(c, t, held);
+  // (Set after this step's move: the next step takes gravity off before it moves her, so one g more.)
+  const vy = launchSpeed(t.jump.gravity, height) + t.jump.gravity;
+  p.vy = -vy;
+  if (p.grounded) {
+    p.grounded = false;
+    p.contactFrames = 0;
+  }
+  // A press that met the cap is spent on its higher throw, not a jump off it a frame later.
+  p.coyote = 0;
+  p.jumpBuf = 0;
+  p.djBuf = 0;
+  p.fromJump = false;
+  p.cut = false;
+  p.sustain = 0;
+  p.airTopY = p.y;
+  p.launchY = p.y;
+  p.hangUsed = 0;
+  // A bounce refills like a pogo (the double jump and the air dash she owns).
+  p.airDash = Math.max(p.airDash, state.save.abilities.includes('dash') ? Math.round(t.dash.airDashes) : 0);
+  p.dj = Math.max(p.dj, state.save.abilities.includes('doubleJump') ? Math.round(t.jump.doubleJumps) : 0);
+  events.push({ type: 'capBounce', id: c.id, x: p.x + p.w / 2, y: p.y + p.h, vy, height, pogo, held });
+}
+
+/** The cap whose top her feet stand on (grounded), -1 if none. */
+function capUnder(scene: Scene, p: PlayerState): number {
+  const caps = scene.caps;
+  if (!caps || !p.grounded) return -1;
+  const cx = p.x + p.w / 2;
+  const bottom = p.y + p.h;
+  for (let i = 0; i < caps.length; i++) {
+    const c = caps[i];
+    if (c && c.y === bottom && cx >= c.x && cx < c.x + c.w) return i;
+  }
+  return -1;
 }
 
 /** Her box overlaps (or comes within `margin` px of) a thorn rect: the index, -1 if none. */
@@ -295,10 +402,21 @@ export function updateKit(
   t: Tuning,
   hurt: (dir: number, damage: number, id: string, hitX: number, hitY: number) => void,
   events: SimEvent[],
+  jumpHeld = false,
 ): boolean {
   const kit = state.kit;
   const save = state.save;
   const p = state.player;
+  // Bounce caps: a pogo off one (the bounce just set the pogo's speed: the cap's is a pogo's, held),
+  // or landing on one (jump held throws higher). Not while a hitstop holds her (the bounce waits).
+  if (kit.capPogo >= 0) {
+    bounceOff(state, scene, kit.capPogo, t, true, true, events);
+    kit.capPogo = -1;
+  } else if (p.hitstop === 0 && p.faded === 0 && p.mode !== 'dash' && !state.exit && !state.caught) {
+    const c = capUnder(scene, p);
+    if (c >= 0) bounceOff(state, scene, c, t, jumpHeld, false, events);
+  }
+  updateFinds(state, scene, t, events);
   // A hold that ended some other way (a teleport, a restart) leaves no thorn hold behind.
   if (!state.caught && kit.hold > 0) kit.hold = 0;
   const cx = p.x + p.w / 2;

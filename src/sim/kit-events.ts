@@ -52,7 +52,25 @@ export type KitEvent =
       recoil: number;
     }
   | { type: 'flagSet'; flag: string; by: string; x: number; y: number }
-  | { type: 'gateOpen'; id: string; flag: string; x: number; y: number; w: number; h: number };
+  | { type: 'gateOpen'; id: string; flag: string; x: number; y: number; w: number; h: number }
+  /**
+   * A bounce cap threw her up (`x`, `y` = her feet): `vy` the speed (px/f, up), `height` the rise it
+   * gives, `pogo` = off a down cut, `held` = jump was held (the higher throw).
+   */
+  | {
+      type: 'capBounce';
+      id: string;
+      x: number;
+      y: number;
+      vy: number;
+      height: number;
+      pogo: boolean;
+      held: boolean;
+    }
+  /** Finds (src/sim/finds.ts; `x`, `y` = the find's foot / a hollow's floor centre). The save has `room:id` in `taken`. */
+  | { type: 'stoneRead'; id: string; room: string; area: string; x: number; y: number }
+  | { type: 'signRead'; id: string; room: string; x: number; y: number; flag: string; rhythm: string }
+  | { type: 'hollowGrant'; id: string; upgrade: string; x: number; y: number };
 
 /** What the kit adds to `slashHit.target.kind`. */
-export type KitTargetKind = 'thorns' | 'seedCase' | 'bark';
+export type KitTargetKind = 'thorns' | 'seedCase' | 'bark' | 'cap';

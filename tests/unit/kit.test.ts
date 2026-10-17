@@ -270,10 +270,16 @@ describe('swinging lures', () => {
     s.state.frame = Math.round(quarter);
     const f = lureAt(l, s.state.frame, s.tuning);
     s.place(f.x, f.y + 40);
-    const ev = once(s, 0);
+    // (A core catches her as she moves into it, or after she has stayed in it a few frames.)
+    const ev: SimEvent[] = [];
+    let at = { x: 0, y: 0 };
+    for (let k = 0; k < 30 && of(ev, 'lureCaught').length === 0; k++) {
+      at = { ...lureAt(l, s.state.frame, s.tuning) };
+      ev.push(...once(s, 0));
+    }
     const caught = of(ev, 'lureCaught')[0];
     expect(caught?.id).toBe('swing-lantern');
-    expect(caught?.x).toBeCloseTo(f.x, 6);
+    expect(caught?.x).toBeCloseTo(at.x, 6);
     expect(Math.abs((caught?.x ?? 0) - l.x)).toBeGreaterThan(200);
   });
 
@@ -416,9 +422,10 @@ describe('room data', () => {
 
   it('the lab parses and every kit piece in it is where the lab says', () => {
     const s = newSim(LAB);
-    expect(s.state.kit.bark).toEqual([3, 3]);
+    expect(s.state.kit.bark).toEqual([3, 3, 3]);
     expect(s.state.kit.gates).toEqual([0]);
     const sv = newSave();
-    expect(withShortcuts(LAB, sv).solids.filter((q) => q.kit !== undefined)).toHaveLength(3);
+    // Three bark panels, the gate and three caps.
+    expect(withShortcuts(LAB, sv).solids.filter((q) => q.kit !== undefined)).toHaveLength(7);
   });
 });

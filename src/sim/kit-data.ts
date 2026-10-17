@@ -68,3 +68,55 @@ export interface Swing {
   period?: number;
   phase?: number;
 }
+
+/**
+ * A bounce cap: a mushroom cap, a solid whose top throws her up when she lands on it (or pogos off
+ * it). `tier` names a row of `kit.caps.tiers` (the height she is thrown, px); `height` overrides it.
+ */
+export interface BounceCap {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  tier?: 'small' | 'mid' | 'big';
+  height?: number;
+  kick?: boolean | 'east' | 'west';
+}
+
+/**
+ * The area's moth-stone (core.md §6): `x`, `y` = its foot on the ground. Touching it draws `area` (an
+ * id of `world.json` `areas`) on the map, unvisited rooms faint, with its count of unseen lamps.
+ */
+export interface MothStone {
+  id: string;
+  x: number;
+  y: number;
+  area: string;
+}
+
+/**
+ * A firefly sign (lore): `x`, `y` = its foot. Standing still beside it reads it once: the save keeps
+ * `room:id` in `taken` and sets `flag` if given; `rhythm` is its flash pattern for render (`.` short,
+ * `-` long).
+ */
+export interface FireflySign {
+  id: string;
+  x: number;
+  y: number;
+  flag?: string;
+  rhythm?: string;
+}
+
+/**
+ * A moonlit hollow: a hidden rect of moonlight; her body centre inside grants `upgrade` once (an id of
+ * `UPGRADES`, src/sim/upgrades.ts: the save gets the flag `upgrade:<id>`).
+ */
+export interface Hollow {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  upgrade: string;
+}

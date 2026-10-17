@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { defaultTuning } from '../sim/tuning';
+import { UPGRADE_IDS } from '../sim/upgrades';
 
 /**
  * The level kit's room data (memory/level-kit.md): the Zod shapes `parseScene` (src/scene/index.ts)
@@ -23,6 +24,37 @@ export const KIT_FIELDS = {
     .optional(),
   gates: z.array(z.object({ ...rect, flag: id, kick }).strict()).optional(),
   triggers: z.array(z.object({ ...rect, sets: id }).strict()).optional(),
+  caps: z
+    .array(
+      z
+        .object({
+          ...rect,
+          tier: z.enum(['small', 'mid', 'big']).optional(),
+          height: int.min(64).max(2000).optional(),
+          kick,
+        })
+        .strict(),
+    )
+    .optional(),
+  // --- Finds (src/sim/finds.ts).
+  mothStones: z.array(z.object({ id, x: int, y: int, area: id }).strict()).optional(),
+  signs: z
+    .array(
+      z
+        .object({
+          id,
+          x: int,
+          y: int,
+          flag: id.optional(),
+          rhythm: z
+            .string()
+            .regex(/^[.-]+$/)
+            .optional(),
+        })
+        .strict(),
+    )
+    .optional(),
+  hollows: z.array(z.object({ ...rect, upgrade: z.enum(UPGRADE_IDS) }).strict()).optional(),
 };
 
 /** A lure's `swing` (src/sim/paths.ts). */
@@ -77,6 +109,10 @@ interface KitRoom {
   bark?: Array<Box & { id: string }> | undefined;
   gates?: Array<Box & { id: string; flag: string }> | undefined;
   triggers?: Array<Box & { id: string; sets: string }> | undefined;
+  caps?: Array<Box & { id: string }> | undefined;
+  mothStones?: Array<{ id: string; x: number; y: number }> | undefined;
+  signs?: Array<{ id: string; x: number; y: number }> | undefined;
+  hollows?: Array<Box & { id: string }> | undefined;
   lures?:
     | Array<{
         id: string;
@@ -135,6 +171,30 @@ export function checkKit(s: KitRoom, seen: Set<string>): void {
     named(t);
     inside(`trigger "${t.id}"`, t);
   }
+  for (const c of s.caps ?? []) {
+    named(c);
+    inside(`cap "${c.id}"`, c);
+    if (s.solids.some((q) => hits(q, c))) bad(`cap "${c.id}" overlaps a solid (it is its own solid)`);
+    if (hits(c, spawn)) bad(`cap "${c.id}" covers the spawn`);
+  }
+  // Finds: a stone and a sign stand on a top (a solid's or a cap's); a hollow is a rect in the room.
+  const tops = [...s.solids, ...(s.caps ?? []), ...(s.bark ?? [])];
+  const onTop = (what: string, p: { id: string; x: number; y: number }) => {
+    if (!tops.some((q) => q.y === p.y && p.x >= q.x && p.x < q.x + q.w))
+      bad(`${what} "${p.id}" does not stand on a top`);
+  };
+  for (const m of s.mothStones ?? []) {
+    named(m);
+    onTop('moth-stone', m);
+  }
+  for (const g of s.signs ?? []) {
+    named(g);
+    onTop('firefly sign', g);
+  }
+  for (const h of s.hollows ?? []) {
+    named(h);
+    inside(`hollow "${h.id}"`, h);
+  }
   // A swinging lure: its pivot inside the room and the core clear of solids along the whole arc.
   const L = defaultTuning.lures;
   for (const l of s.lures ?? []) {
@@ -158,7 +218,24 @@ export function checkKit(s: KitRoom, seen: Set<string>): void {
   }
 }
 
-/** The kit's things a route claim can name: triggers (they are where flags come from). */
-export function kitNodes(s: { triggers?: Array<{ id: string }> | undefined }): string[] {
-  return (s.triggers ?? []).map((t) => t.id);
+/**
+ * The kit's things a route claim can name: triggers (they are where flags come from) and finds (a route
+ * can say what reaching one takes; finds never open a way: src/scene/world.ts).
+ */
+export function kitNodes(s: {
+  triggers?: Array<{ id: string }> | undefined;
+  mothStones?: Array<{ id: string }> | undefined;
+  signs?: Array<{ id: string }> | undefined;
+  hollows?: Array<{ id: string }> | undefined;
+}): string[] {
+  return [...(s.triggers ?? []).map((t) => t.id), ...findIds(s)];
+}
+
+/** The ids of a room's finds: its moth-stones, firefly signs and moonlit hollows. */
+export function findIds(s: {
+  mothStones?: Array<{ id: string }> | undefined;
+  signs?: Array<{ id: string }> | undefined;
+  hollows?: Array<{ id: string }> | undefined;
+}): string[] {
+  return [...(s.mothStones ?? []), ...(s.signs ?? []), ...(s.hollows ?? [])].map((f) => f.id);
 }

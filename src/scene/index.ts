@@ -617,6 +617,8 @@ const WorldSchema = z
     start: z.string(),
     rooms: z.array(z.object({ id: z.string(), x: int, y: int }).strict()),
     tests: z.array(z.string()),
+    // Areas (world.md §2.2): which placed rooms each area holds (a moth-stone draws its area: memory/level-kit.md).
+    areas: z.array(z.object({ id: z.string().min(1), rooms: z.array(z.string()) }).strict()).default([]),
   })
   .strict();
 

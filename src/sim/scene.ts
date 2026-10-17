@@ -1,6 +1,17 @@
 import type { AbilityId } from './abilities';
 import type { BossSpec } from './boss/data';
-import type { Bark, FlagGate, FlagTrigger, SeedCase, Swing, Thorns } from './kit-data';
+import type {
+  Bark,
+  BounceCap,
+  FireflySign,
+  FlagGate,
+  FlagTrigger,
+  Hollow,
+  MothStone,
+  SeedCase,
+  Swing,
+  Thorns,
+} from './kit-data';
 
 /**
  * A room's collision data, as the sim sees it: plain axis-aligned rects in sim px. This is types
@@ -26,7 +37,7 @@ export interface SolidRect {
    */
   kick?: boolean | 'east' | 'west';
   /** Set on the solids the level kit adds while they stand (src/sim/kit.ts): never safe ground. */
-  kit?: 'bark' | 'gate';
+  kit?: 'bark' | 'gate' | 'cap';
 }
 
 /** A one-way platform: a line at `y` that only blocks a body falling onto it. Down+Jump drops through. */
@@ -327,6 +338,12 @@ export interface Scene {
   bark?: Bark[];
   gates?: FlagGate[];
   triggers?: FlagTrigger[];
+  /** Bounce caps (src/sim/kit.ts): mushroom caps that throw her up. */
+  caps?: BounceCap[];
+  /** Finds (src/sim/finds.ts, memory/level-kit.md): the area's moth-stone, firefly signs, moonlit hollows. */
+  mothStones?: MothStone[];
+  signs?: FireflySign[];
+  hollows?: Hollow[];
   /**
    * Where a fade re-forms her in this room while no moon patch is saved (instead of her last safe
    * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4).

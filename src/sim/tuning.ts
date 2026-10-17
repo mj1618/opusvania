@@ -376,7 +376,24 @@ export const defaultTuning = withVariants({
     thorns: { damage: 1, holdFrames: 30, returnInvuln: 60, safeMargin: 96 },
     seedCase: { size: 56, clangHitstop: 6, clangRecoil: 8 },
     bark: { hp: 3, hitstop: 4, breakHitstop: 8 },
+    /**
+     * Bounce caps: landing on one (or a pogo off it) throws her up `tiers[tier]` px (the rise under
+     * rising gravity, exact for the integrator); jump held as she meets it throws `heldScale` x as high.
+     * The bounce refills like a pogo. A jump of hers rises 272: `small` is a little more, `big` a stair.
+     */
+    caps: { tiers: { small: 320, mid: 448, big: 640 }, heldScale: 1.2 },
   },
+  /**
+   * Finds (src/sim/finds.ts, memory/level-kit.md): a moth-stone is touched (`stoneWidth` x `stoneHeight`
+   * over its foot); a firefly sign is read by standing still (grounded, no direction, `signFrames`) inside
+   * `signWidth` x `signHeight` over its foot.
+   */
+  finds: { stoneWidth: 96, stoneHeight: 160, signWidth: 200, signHeight: 200, signFrames: 40 },
+  /**
+   * Moonlit hollows' upgrades (src/sim/upgrades.ts; core.md §6), each a number: `quickWings` beats free
+   * of a lure in `beats` presses (3 without), `keenBlade` grows the flame's hit box by `flameRadiusAdd`.
+   */
+  upgrades: { quickWings: { beats: 2 }, keenBlade: { flameRadiusAdd: 20 } },
   /**
    * Vesper's health (rules: memory/enemies.md). She has `max` lights; contact with an enemy costs
    * one, knocks her back and makes her untouchable for a while. At none she fades and re-forms at

@@ -19,7 +19,7 @@ import type { AbilityId } from '../sim/abilities';
 import { exitSegment, linkWorld, mirrorOf, type World, type WorldRoom } from '../sim/world';
 import { bossNodes } from './boss';
 import { ROOMS, WORLD } from './index';
-import { kitNodes } from './kit';
+import { findIds, kitNodes } from './kit';
 import type { Room } from './room';
 
 /** Every room (placed ones with their world position; test rooms at 0, 0, unplaced). */
@@ -201,7 +201,20 @@ export function progression(world: World): Progression {
 }
 
 /** Problems with the world (empty = good). `world` defaults to the game's. */
-export function validateWorld(world: World = GAME_WORLD): string[] {
+/** An area of the world (content/world.json `areas`): the placed rooms it holds. */
+export interface Area {
+  id: string;
+  rooms: string[];
+}
+
+/**
+ * Problems with the world (empty = good). `world` defaults to the game's, `areas` to world.json's for it (none
+ * for another world). A moth-stone draws its area: memory/level-kit.md.
+ */
+export function validateWorld(
+  world: World = GAME_WORLD,
+  areas: readonly Area[] = world === GAME_WORLD ? WORLD.areas : [],
+): string[] {
   const out: string[] = [];
   const placed = Object.values(world.rooms).filter((r) => r.placed);
   if (!world.rooms[world.start]?.placed)
@@ -284,6 +297,20 @@ export function validateWorld(world: World = GAME_WORLD): string[] {
           out.push(
             `route "${r.id}:${q.from}" -> "${q.to}" needs flag "${f}", which nothing in the world sets`,
           );
+  // Areas: real placed rooms, each in one area; every moth-stone names an area.
+  const inArea = new Map<string, string>();
+  for (const a of areas)
+    for (const id of a.rooms) {
+      if (!world.rooms[id]?.placed)
+        out.push(`area "${a.id}" names room "${id}", which is not placed in the world`);
+      const was = inArea.get(id);
+      if (was) out.push(`room "${id}" is in two areas ("${was}", "${a.id}")`);
+      inArea.set(id, a.id);
+    }
+  for (const r of placed)
+    for (const m of r.scene.mothStones ?? [])
+      if (!areas.some((a) => a.id === m.area))
+        out.push(`moth-stone "${r.id}:${m.id}" draws area "${m.area}", which is no area of the world`);
   // Progression.
   const prog = progression(world);
   const { edges } = graph(world);
@@ -293,6 +320,11 @@ export function validateWorld(world: World = GAME_WORLD): string[] {
     for (const g of r.scene.glades ?? [])
       if (!prog.reached.has(`${r.id}:${g.id}`))
         out.push(`glade "${r.id}:${g.id}" (${g.ability}) cannot be reached`);
+    // Finds open no way (they are never abilities), but each must be reachable: in a room with routes, a
+    // route has to name it.
+    for (const f of findIds(r.scene))
+      if (!prog.reached.has(`${r.id}:${f}`))
+        out.push(`find "${r.id}:${f}" cannot be reached (name it in a route)`);
   }
   // No softlock: from every place reachable, a moon patch is reachable with what she had when she got there.
   const patches = new Set(placed.flatMap((r) => (r.scene.patches ?? []).map((p) => `${r.id}:${p.id}`)));

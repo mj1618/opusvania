@@ -4,7 +4,8 @@ Generic, data-driven level pieces any room can use, built for the wood (docs/des
 sim doesn't have yet"). Sim: `src/sim/kit.ts` (+ `kit-data.ts` types, `kit-events.ts`), `src/sim/paths.ts`
 (pendulum); data: `src/scene/kit.ts` (Zod + placement rules, spread into `parseScene`); render:
 `src/render/greybox/kit.ts`, `src/render/camera/zones.ts`; overlay: `src/debug/kit-overlay.ts`. Lab:
-`?room=lab-kit` (a test room, every ability; stations A-F). Tests: `tests/unit/kit.test.ts`.
+`?room=lab-kit` (a test room, every ability; stations A-F, G caps / stone / sign, H a hollow behind bark). Tests:
+`tests/unit/kit.test.ts`, `tests/unit/kit-finds.test.ts`.
 
 ## Room JSON
 | field | shape | what |
@@ -17,6 +18,11 @@ sim doesn't have yet"). Sim: `src/sim/kit.ts` (+ `kit-data.ts` types, `kit-event
 | `lures[].swing` | `{length, reach?, period?, phase?}` | the lure hangs `length` under a pivot over its `x, y` (the bottom of the arc), swings `reach` px each side, one swing there and back per `period` frames |
 | `camera.zones` | `[{id, x, y, w, h, zoom?, fit?, lock?, bounds?}]` | render only: inside the rect (her body centre) the view eases to `zoom` (`fit`: the frame inside the 16:9 safe area) and keeps inside `bounds` (`lock`: the zone itself) |
 | `routes[].flags` | `string[]` | the world check: the way needs these flags |
+| `caps` | `[{id, x, y, w, h, tier?: small/mid/big, height?, kick?}]` | bounce cap: a solid (`kit: 'cap'`, never safe ground) whose top throws her up `kit.caps.tiers[tier]` px (or `height`) |
+| `mothStones` | `[{id, x, y (foot on a top), area}]` | touched: draws `area` (world.json `areas`) on the map |
+| `signs` | `[{id, x, y (foot on a top), flag?, rhythm?}]` | firefly sign: read by standing still beside it; `rhythm` `.`/`-` for render |
+| `hollows` | `[{id, x, y, w, h, upgrade}]` | moonlit hollow: body centre inside grants `upgrade` (an id of `UPGRADE_IDS`) |
+| world.json `areas` | `[{id, rooms: [placed ids]}]` | the areas a moth-stone can draw; each room in one area |
 | `lures[].after` | flag | the lure burns only once the flag is set (out before, lit the step it appears, out for good once snuffed: the firefly's glow-cap W-ff after the glimpse) |
 | `enemies[].sets` | flag | set when the creature dies (`flagSet` by its id): a flag gate opens behind it (the old burrback's root gate). The world check cannot see it: leave it out of `routes[].flags` |
 | `reform` | `{x, y}` | where a fade re-forms her in this room while no moon patch is saved (no light either), instead of her last safe ground beside whatever faded her (`src/sim/index.ts`) |
@@ -51,10 +57,37 @@ a swinging lure's core must be clear along the whole arc and its pivot inside th
   zoomFrames 30}); the clamp and the feet line use the zoomed view; `lerpCamera` interpolates the zoom. Lab arena
   2176 x 1280 -> fit 0.844 (the Weaver's 2176 x 1216 -> 0.88). A wider window sees more around, still centred.
 
+- **Bounce caps** (`kit.caps` {tiers small 320 / mid 448 / big 640, heldScale 1.2}): landing on a cap's top
+  (grounded on it, not dashing, not in hitstop) or a pogo off it throws her the tier's rise. Jump held as she
+  meets it = `heldScale` x (a pogo counts as held). The speed is exact for the integrator: `speedForHeight(g, h)
+  + g` (set after the step's move, so the next step takes one g off first: without the + g every bounce was 24-34
+  px short). The press that meets a cap is spent on it (`jumpBuf`, `djBuf` cleared: else the buffered double jump
+  fired a frame later and killed the bounce). Refills like a pogo. Works with glide (jump held: the wings open
+  after the apex). One cap hit a slash (`capHitBy`).
+- **Finds** (`src/sim/finds.ts`, run from `updateKit`): all once ever, kept in **`save.taken`** as `room:id` (the
+  glades' list: no save-format change). A **moth-stone**: her box touching `finds.stoneWidth` 96 x `stoneHeight`
+  160 over its foot. A **sign**: grounded, no direction, not moving, not slashing, `signFrames` 40 inside
+  `signWidth` 200 x `signHeight` 200 over its foot; sets its `flag`. A **hollow**: body centre inside; sets the
+  flag `upgrade:<id>`.
+- **Upgrades** (`src/sim/upgrades.ts`): flags `upgrade:<id>`; `step` starts with `t = withUpgrades(base, save)` (a
+  shallow copy of the changed groups, only when one is owned; else the same object), so `resolveParams` and every
+  rule read upgraded numbers. Render / debug that show a number (the beat pips, `lures().caught.of`) call it too.
+  The list (numbers in `tuning.upgrades`): **quickWings** (beat free in 2, not 3; the wood's hollow), **keenBlade**
+  (flame hit box +20 px). The rest of core.md §6's list waits for the abilities they change.
+- **The map** (`src/render/map/`): a read stone's area shows every room of it, unvisited ones faint (shape only),
+  with `<area>: N lamps unseen` (lures not in `seen`, not snuffed). Kit solids (caps, standing bark, shut gates) are
+  drawn too. In a test room with a stone read, the map shows the drawn area instead of the test room.
+- **The world check**: finds never add abilities; a route can name a find (`kitNodes`), and every find must be
+  reached (in a room with routes, name it in one: `find "room:id" cannot be reached`). Areas name placed rooms, a
+  room is in one area, a stone's area exists (`validateWorld(world, areas)`; areas default to world.json's for
+  the game world only).
+
 ## Events (`x, y` = the piece's centre unless said)
 `thornHit {id, x, y (her feet), hp, damage, frames}`, `barkHit {id, dir, hpLeft, hpMax, floor}`, `barkBreak {id, w, h,
 dir, floor}`, `kitClang {id, kind: 'seedCase', hitX, hitY, dir, hitstop, recoil}`, `flagSet {flag, by}`,
-`gateOpen {id, flag, w, h}`; `slashHit.target.kind` `thorns | seedCase | bark`; `hurt.source.kind` `thorns`.
+`gateOpen {id, flag, w, h}`, `capBounce {id, x, y (feet), vy, height, pogo, held}`, `stoneRead {id, room, area}`,
+`signRead {id, room, flag, rhythm}`, `hollowGrant {id, upgrade}`; `slashHit.target.kind` `thorns | seedCase | bark |
+cap`; `hurt.source.kind` `thorns`.
 
 ## Greybox look
 Thorns red with teeth; seed-case an amber ring; bark a brown hatched panel with cut pips and spores rising from
@@ -63,6 +96,5 @@ its seams (the one secret language), a ghost outline once broken; a gate a pale 
 pivot. Labels with G. **Painted rooms draw none of the kit yet.** Room-fade dips over a thorn's hold.
 
 ## Not done / gaps
-- The map does not draw bark or gates (a broken-bark doorway shows as open air there).
 - A zoom < 1 in a PAINTED room shows past the bakes' coverage (they cover the cap view at zoom 1); greybox only.
 - Hurt audio / character art for thorns use the generic `hurt`; no kit sounds yet.

@@ -30,6 +30,7 @@ import type { RoomDoor, RoomExit, Scene, SolidRect } from './scene';
 import { markSeen } from './seen';
 import { cloneSave, type GameState, newSave, type SaveState } from './state';
 import type { Tuning } from './tuning';
+import { withUpgrades } from './upgrades';
 import { createLocal, enterRoom, remember, type World, withShortcuts } from './world';
 
 export const SIM_HZ = 60;
@@ -262,11 +263,13 @@ const CARRY = ActionBit.left | ActionBit.right | ActionBit.up | ActionBit.down |
 export function step(
   state: GameState,
   input: InputFrame,
-  t: Tuning,
+  base: Tuning,
   scene: Scene,
   events: SimEvent[],
   world?: World,
 ): void {
+  // The moonlit hollows' upgrades she owns, applied to the numbers (src/sim/upgrades.ts).
+  const t = withUpgrades(base, state.save);
   const P = resolveParams(t, state.save.abilities);
   const first = events.length;
   state.save.time++;
@@ -381,6 +384,7 @@ export function step(
       if (state.player.lure >= 0) freePlayer(state, S, t, 'hurt', events);
     },
     events,
+    (live & ActionBit.jump) !== 0,
   );
   // A boss fight (memory/bosses.md): the lock, its phases and cues, before its creature moves.
   updateBoss(state, S, t, events);
@@ -523,5 +527,6 @@ export type {
   SaveState,
 } from './state';
 export { cloneSave, cloneState, newSave } from './state';
+export { isUpgrade, UPGRADE_IDS, type UpgradeId, upgradeFlag, upgradesOwned, withUpgrades } from './upgrades';
 export type { Entry, ExitLink, World, WorldRoom } from './world';
 export { enterRoom, exitSegment, linkWorld, mirrorOf, withShortcuts } from './world';

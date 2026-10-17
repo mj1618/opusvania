@@ -76,7 +76,9 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   re-form calls `resetBoss` after `resetEnemies`.
 - Level kit (memory/level-kit.md): `thornHit`, `barkHit`, `barkBreak`, `kitClang`, `flagSet`, `gateOpen`;
   `slashHit.target.kind` `thorns | seedCase | bark`; `hurt.source.kind` `thorns`; a thorn's return is `fallReturn` id `thorns:<id>`.
-  State `kit` (room-local); `withShortcuts` also adds standing bark and shut gates; `updateKit` runs after her offer, before enemies.
+  State `kit` (room-local); `withShortcuts` also adds standing bark, shut gates and caps; `updateKit` runs after her offer, before enemies
+  (cap bounces, finds, triggers, gates, thorns). Also `capBounce`, `stoneRead`, `signRead`, `hollowGrant`.
+- `step(state, input, base, ...)` starts with `t = withUpgrades(base, state.save)` (moonlit hollows' upgrades).
 - `enemyTurn`, `enemyAlert`, **`enemyWindup`, `enemyCharge`, `enemyRecover`, `enemyBlock`** (burrback: its ram), `enemyNotice`, **`enemyDive`, `enemyStall`, `enemyClimb`** (its dive, playtest 5), `enemyGiveUp` (lampwing), `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`, then **`enemyReset`** for each living creature that went home hurt or from elsewhere), and
   enemy glints as `pickup {enemy: true}`: enemies.md. `slashEnd` / `glideEnd` have a reason `hurt`.
 - Creatures (memory/creatures.md, src/sim/creature-events.ts): `grab`, `grabBeat`, `grabFree {how}`, `enemyDisperse

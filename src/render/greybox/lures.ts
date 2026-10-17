@@ -9,6 +9,7 @@ import type { Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import { flameAt, lureRowNow } from '../../sim/lures';
 import { tuning } from '../../sim/tuning';
+import { withUpgrades } from '../../sim/upgrades';
 import type { SimView } from '../contract';
 import { FreedMoths } from './moths';
 import { GB } from './palette';
@@ -143,7 +144,8 @@ export class LureView {
       // Held: the beats it takes, as pips over the flame (over her), and where the last beat would
       // throw her: out along the radius she is at, bent toward the held direction (as the sim does).
       if (held) {
-        const of = Math.max(1, Math.round(T.beats));
+        // (Quick wings beats free in fewer: the upgraded number, src/sim/upgrades.ts.)
+        const of = Math.max(1, Math.round(withUpgrades(tuning, sim.save).lures.beats));
         const top = ly - K.core - T.orbitShare * K.core - 46;
         for (let k = 0; k < of; k++) {
           const x = lx + (k - (of - 1) / 2) * 22;

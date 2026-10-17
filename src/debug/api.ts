@@ -20,12 +20,13 @@ import type { SimEvent } from '../sim/events';
 import { offerTarget } from '../sim/giving';
 import { restPoint } from '../sim/goal';
 import { type GameState, goalHolds, heartBox, lampCost, lanternBox, lanternCost } from '../sim/index';
-import { barkHpMax } from '../sim/kit';
+import { barkHpMax, capHeight } from '../sim/kit';
 import { flameAt, lureHpMax, lureRowNow } from '../sim/lures';
 import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
 import { markSeen, seenNow, seenScale } from '../sim/seen';
 import type { Tuning } from '../sim/tuning';
+import { isUpgrade, UPGRADE_IDS, upgradeFlag, upgradesOwned, withUpgrades } from '../sim/upgrades';
 import type { TuningPanel } from './tuning-panel';
 
 /**
@@ -228,6 +229,21 @@ export interface GameDebugApi {
    * false)` clears it. Gates follow from the next step (`gateOpen` when one opens). Returns the flags.
    */
   flag(name?: string, on?: boolean): string[];
+  /**
+   * Finds (memory/level-kit.md): the room's moth-stones (`read`), firefly signs (`read`, the flag and
+   * rhythm), moonlit hollows (`taken`, the upgrade), the areas drawn on the map, the upgrades she owns,
+   * and bounce caps with the rise each gives.
+   */
+  finds(): {
+    stones: Array<{ id: string; x: number; y: number; area: string; read: boolean }>;
+    signs: Array<{ id: string; x: number; y: number; flag: string; rhythm: string; read: boolean }>;
+    hollows: Array<{ id: string; upgrade: string; taken: boolean }>;
+    caps: Array<{ id: string; x: number; y: number; w: number; tier: string; height: number }>;
+    areas: string[];
+    upgrades: string[];
+  };
+  /** Upgrades: `upgrade()` lists hers; `upgrade(id)` grants one (`quickWings`, `keenBlade`), `upgrade(id, false)` takes it away. */
+  upgrade(id?: string, on?: boolean): string[];
   /**
    * Enemies: how many are alive, and each with where it is (`x`, `y` = feet centre; `box` = its
    * collision box), where it started (`home`: the scene's `x`, `y`: a burrback's feet, a lampwing's
@@ -803,6 +819,53 @@ export function installDebugApi(deps: {
         hold: k.hold,
       };
     },
+    finds() {
+      const sc = game.scene;
+      const sv = game.state.save;
+      const read = (id: string) => sv.taken.includes(`${sc.id}:${id}`);
+      const areas = new Set<string>();
+      for (const r of Object.values(game.world?.rooms ?? {}))
+        for (const m of r.scene.mothStones ?? []) if (sv.taken.includes(`${r.id}:${m.id}`)) areas.add(m.area);
+      return {
+        stones: (sc.mothStones ?? []).map((m) => ({
+          id: m.id,
+          x: m.x,
+          y: m.y,
+          area: m.area,
+          read: read(m.id),
+        })),
+        signs: (sc.signs ?? []).map((s) => ({
+          id: s.id,
+          x: s.x,
+          y: s.y,
+          flag: s.flag ?? '',
+          rhythm: s.rhythm ?? '',
+          read: read(s.id),
+        })),
+        hollows: (sc.hollows ?? []).map((h) => ({ id: h.id, upgrade: h.upgrade, taken: read(h.id) })),
+        caps: (sc.caps ?? []).map((c) => ({
+          id: c.id,
+          x: c.x,
+          y: c.y,
+          w: c.w,
+          tier: c.tier ?? 'small',
+          height: capHeight(c, game.tuning, false),
+        })),
+        areas: [...areas],
+        upgrades: upgradesOwned(sv),
+      };
+    },
+    upgrade(id, on = true) {
+      const sv = game.state.save;
+      if (id !== undefined) {
+        if (!isUpgrade(id)) throw new Error(`upgrade: no upgrade "${id}" (${UPGRADE_IDS.join(', ')})`);
+        const f = upgradeFlag(id);
+        const at = sv.flags.indexOf(f);
+        if (on && at < 0) sv.flags.push(f);
+        if (!on && at >= 0) sv.flags.splice(at, 1);
+      }
+      return upgradesOwned(sv);
+    },
     flag(name, on = true) {
       const flags = game.state.save.flags;
       if (name !== undefined) {
@@ -827,7 +890,7 @@ export function installDebugApi(deps: {
               id: held.id,
               frames: p.lureFrames,
               beats: p.lureBeats,
-              of: Math.max(1, Math.round(game.tuning.lures.beats)),
+              of: Math.max(1, Math.round(withUpgrades(game.tuning, game.state.save).lures.beats)),
               out: p.lureOut,
             }
           : null,

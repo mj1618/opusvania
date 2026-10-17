@@ -5,7 +5,7 @@
  * dashed violet frame. Reads the scene, the save and `sim.kit`; the beats come from the kit's events.
  * Render time only (`clock`), no randomness: shots are reproducible.
  */
-import { type Container, Graphics } from 'pixi.js';
+import { Container, Graphics, type Text } from 'pixi.js';
 import type { Room } from '../../scene/room';
 import type { SimEvent } from '../../sim/events';
 import { tuning } from '../../sim/tuning';
@@ -26,10 +26,33 @@ const KC = {
   silk: 0xdcdcf0,
   trigger: 0x5cc8e0,
   zone: 0xb48cff,
+  cap: 0xc77fd6,
+  capTop: 0xf0c8f5,
+  stone: 0x7d8aa6,
+  stoneGlyph: 0xe8ecf6,
+  sign: 0xffd27a,
+  hollow: 0xd8e6ff,
 } as const;
 
+/** What a hollow's upgrade says (core.md §6: one line, the glade ritual shorter). */
+const UPGRADE_LINES: Record<string, string> = {
+  quickWings: 'QUICK WINGS: beat free in two',
+  keenBlade: 'KEEN BLADE: a longer reach to the flame',
+};
+
+/** A sign's flashes: `.` short, `-` long (seconds lit), with a dark gap between. */
+function rhythmLit(rhythm: string, t: number): boolean {
+  let at = 0;
+  for (const ch of rhythm) {
+    const on = ch === '-' ? 0.45 : 0.15;
+    if (t >= at && t < at + on) return true;
+    at += on + 0.2;
+  }
+  return false;
+}
+
 interface Fx {
-  kind: 'chip' | 'break' | 'clang' | 'pogo' | 'gate' | 'flag' | 'thorn';
+  kind: 'chip' | 'break' | 'clang' | 'pogo' | 'gate' | 'flag' | 'thorn' | 'bounce' | 'stone' | 'grant';
   x: number;
   y: number;
   w: number;
@@ -46,6 +69,9 @@ const LIFE: Record<Fx['kind'], number> = {
   gate: 1.0,
   flag: 0.9,
   thorn: 0.4,
+  bounce: 0.35,
+  stone: 1.2,
+  grant: 3.5,
 };
 
 /** A small stable number in [0, 1) from a string (spores and shakes differ per piece, the same every run). */
@@ -96,6 +122,16 @@ export function kitLabels(room: Room, into: Container): void {
     into.addChild(label(`gate ${g.id}: until "${g.flag}"`, g.x + g.w / 2, g.y - 10, KC.silk, 15));
   for (const t of room.triggers ?? [])
     into.addChild(label(`trigger ${t.id}: sets "${t.sets}"`, t.x + t.w / 2, t.y - 10, KC.trigger, 15));
+  for (const c of room.caps ?? [])
+    into.addChild(
+      label(`cap ${c.id} (${c.height ?? c.tier ?? 'small'})`, c.x + c.w / 2, c.y - 64, KC.capTop, 15),
+    );
+  for (const m of room.mothStones ?? [])
+    into.addChild(label(`moth-stone ${m.id}: area ${m.area}`, m.x, m.y - 140, KC.stoneGlyph, 15));
+  for (const sg of room.signs ?? [])
+    into.addChild(label(`firefly sign ${sg.id}`, sg.x, sg.y - 190, KC.sign, 15));
+  for (const h of room.hollows ?? [])
+    into.addChild(label(`hollow ${h.id}: ${h.upgrade}`, h.x + h.w / 2, h.y - 10, KC.hollow, 15));
   for (const z of room.camera?.zones ?? []) {
     const how = [z.fit ? 'fit' : `zoom ${z.zoom ?? 1}`, z.lock ? 'lock' : '', z.bounds ? 'bounds' : '']
       .filter(Boolean)
@@ -108,21 +144,44 @@ export class KitView {
   private readonly fx: Fx[] = [];
   /** Per bark id: seconds since its last cut (the panel shakes for a moment). */
   private readonly shake = new Map<string, number>();
-  /** Under her: thorns, seed-cases, bark, gates, triggers, zones. */
+  /** Per cap id: seconds since it last threw her (it squashes); per sign id: seconds since it was read. */
+  private readonly squash = new Map<string, number>();
+  private readonly reading = new Map<string, number>();
+  /** Under her: thorns, seed-cases, bark, gates, triggers, zones, caps, finds. */
   readonly back = new Graphics();
-  /** Over her: the beats. */
-  readonly front = new Graphics();
+  /** Over her: the beats (`fg`) and a hollow's line. */
+  readonly front = new Container({ label: 'greybox-kit-front' });
+  private readonly fg = new Graphics();
+  private line: Text | null = null;
+
+  constructor() {
+    this.front.addChild(this.fg);
+  }
 
   onEvents(events: readonly SimEvent[]): void {
     for (const e of events) {
       if (e.type === 'spawn' && events.some((o) => o.type === 'roomEnter')) {
         this.fx.length = 0;
         this.shake.clear();
+        this.squash.clear();
+        this.reading.clear();
+        this.line?.destroy();
+        this.line = null;
       } else if (e.type === 'barkHit') {
         this.shake.set(e.id, 0);
         this.add('chip', e.x, e.y, 0, 0);
       } else if (e.type === 'barkBreak') this.add('break', e.x, e.y, e.w, e.h);
-      else if (e.type === 'kitClang') this.add('clang', e.hitX, e.hitY, 0, 0);
+      else if (e.type === 'capBounce') {
+        this.squash.set(e.id, 0);
+        this.add('bounce', e.x, e.y, 0, 0);
+      } else if (e.type === 'stoneRead') this.add('stone', e.x, e.y - 60, 0, 0);
+      else if (e.type === 'signRead') this.reading.set(e.id, 0);
+      else if (e.type === 'hollowGrant') {
+        this.add('grant', e.x, e.y, 0, 0);
+        this.line?.destroy();
+        this.line = label(UPGRADE_LINES[e.upgrade] ?? e.upgrade, e.x, e.y - 220, 0xffffff, 30);
+        this.front.addChild(this.line);
+      } else if (e.type === 'kitClang') this.add('clang', e.hitX, e.hitY, 0, 0);
       else if (e.type === 'slashHit' && (e.target.kind === 'seedCase' || e.target.kind === 'thorns'))
         this.add('pogo', e.x, e.y, 0, 0);
       else if (e.type === 'gateOpen') this.add('gate', e.x, e.y, e.w, e.h);
@@ -238,8 +297,9 @@ export class KitView {
       }
       g.stroke({ color: KC.silk, width: 2, alpha: 0.75 });
     });
+    this.drawCapsAndFinds(g, dt, clock, sim);
     // The beats, over her.
-    const f = this.front.clear();
+    const f = this.fg.clear();
     for (let i = this.fx.length - 1; i >= 0; i--) {
       const e = this.fx[i] as Fx;
       e.t += dt;
@@ -278,8 +338,102 @@ export class KitView {
         f.stroke({ color: KC.silk, width: 2, alpha: a });
       } else if (e.kind === 'flag')
         f.circle(e.x, e.y, 30 + 140 * k).stroke({ color: KC.trigger, width: 3, alpha: a });
-      else f.circle(e.x, e.y, 30 + 60 * k).stroke({ color: KC.thorn, width: 4, alpha: a });
+      else if (e.kind === 'bounce')
+        f.circle(e.x, e.y, 20 + 60 * k).stroke({ color: KC.capTop, width: 3, alpha: a });
+      else if (e.kind === 'stone') {
+        f.circle(e.x, e.y, 40 + 500 * k).stroke({ color: KC.stoneGlyph, width: 4, alpha: a });
+        f.circle(e.x, e.y, 20 + 260 * k).stroke({ color: KC.stoneGlyph, width: 2, alpha: a * 0.6 });
+      } else if (e.kind === 'grant') {
+        const burst = Math.min(1, e.t / 0.6);
+        f.circle(e.x, e.y - 120, 50 + 300 * burst).stroke({ color: 0xffffff, width: 4, alpha: 1 - burst });
+        if (this.line) {
+          this.line.position.set(sim.player.cx, sim.player.feetY - 160);
+          this.line.alpha = k < 0.75 ? 1 : (1 - k) / 0.25;
+        }
+        if (e.t >= e.life) {
+          this.line?.destroy();
+          this.line = null;
+        }
+      } else f.circle(e.x, e.y, 30 + 60 * k).stroke({ color: KC.thorn, width: 4, alpha: a });
       if (e.t >= e.life) this.fx.splice(i, 1);
+    }
+  }
+
+  /** Bounce caps (a squashing dome), moth-stones (a carved slab), firefly signs (glow-caps), hollows (a shaft). */
+  private drawCapsAndFinds(g: Graphics, dt: number, clock: number, sim: SimView): void {
+    const room = sim.scene;
+    const taken = (id: string) => sim.save.taken.includes(`${room.id}:${id}`);
+    for (const c of room.caps ?? []) {
+      const since = this.squash.get(c.id);
+      let dip = 0;
+      if (since !== undefined) {
+        dip = Math.max(0, 1 - since / 0.25) * 12;
+        this.squash.set(c.id, since + dt);
+      }
+      const r = Math.min(c.h, c.w / 2, 28);
+      g.roundRect(c.x, c.y + dip, c.w, c.h - dip, r).fill({ color: KC.cap });
+      g.roundRect(c.x, c.y + dip, c.w, Math.min(10, c.h), 5).fill({ color: KC.capTop });
+      for (let k = 0; k < Math.max(1, Math.floor(c.w / 60)); k++)
+        g.circle(c.x + 24 + k * 60, c.y + dip + c.h * 0.55, 5).fill({ color: KC.capTop, alpha: 0.7 });
+      // The tier as chevrons over it (one small, two mid, three big).
+      const n = c.tier === 'big' ? 3 : c.tier === 'mid' ? 2 : 1;
+      for (let k = 0; k < n; k++) {
+        const y = c.y - 22 - k * 12 - 4 * Math.sin(clock * 3);
+        g.moveTo(c.x + c.w / 2 - 12, y + 8)
+          .lineTo(c.x + c.w / 2, y)
+          .lineTo(c.x + c.w / 2 + 12, y + 8);
+      }
+      g.stroke({ color: KC.capTop, width: 3, alpha: 0.7 });
+    }
+    for (const m of room.mothStones ?? []) {
+      const read = taken(m.id);
+      g.roundRect(m.x - 34, m.y - 120, 68, 120, 14).fill({ color: KC.stone });
+      // The carving: a moth (two wings and a body).
+      const cy = m.y - 70;
+      g.moveTo(m.x, cy)
+        .lineTo(m.x - 22, cy - 18)
+        .lineTo(m.x - 18, cy + 12)
+        .closePath();
+      g.moveTo(m.x, cy)
+        .lineTo(m.x + 22, cy - 18)
+        .lineTo(m.x + 18, cy + 12)
+        .closePath();
+      g.fill({ color: KC.stoneGlyph, alpha: read ? 0.95 : 0.35 + 0.1 * Math.sin(clock * 1.5) });
+      g.rect(m.x - 2, cy - 14, 4, 30).fill({ color: KC.stoneGlyph, alpha: read ? 0.95 : 0.45 });
+    }
+    for (const sg of room.signs ?? []) {
+      const read = taken(sg.id);
+      const t = this.reading.get(sg.id);
+      let lit = false;
+      if (t !== undefined) {
+        lit = rhythmLit(sg.rhythm ?? '...-', t);
+        this.reading.set(sg.id, t + dt);
+      }
+      // A ring of glow-caps the firefly hung: dim unread, soft once read, bright on its flashes.
+      for (let k = 0; k < 6; k++) {
+        const a = Math.PI + (k / 5) * Math.PI;
+        const x = sg.x + Math.cos(a) * 60;
+        const y = sg.y - 120 + Math.sin(a) * 40;
+        const alpha = lit ? 1 : read ? 0.55 : 0.2 + 0.1 * Math.sin(clock * 2 + k);
+        g.circle(x, y, lit ? 9 : 6).fill({ color: KC.sign, alpha });
+      }
+      g.moveTo(sg.x - 60, sg.y - 120)
+        .lineTo(sg.x - 60, sg.y)
+        .stroke({ color: KC.sign, width: 1, alpha: 0.25 });
+    }
+    for (const h of room.hollows ?? []) {
+      const got = taken(h.id);
+      for (let k = 0; k < 4; k++)
+        g.rect(h.x + k * 8, h.y - 200, h.w - k * 16, h.h + 200).fill({
+          color: KC.hollow,
+          alpha: got ? 0.015 : 0.04,
+        });
+      g.rect(h.x, h.y, h.w, h.h).stroke({ color: KC.hollow, width: 2, alpha: got ? 0.15 : 0.6 });
+      if (!got)
+        g.star(h.x + h.w / 2, h.y + h.h / 2, 4, 10, 4).fill({
+          color: KC.hollow,
+          alpha: 0.6 + 0.3 * Math.sin(clock * 2),
+        });
     }
   }
 }

@@ -13,6 +13,24 @@
     { "id": "wood-well", "x": 27584, "y": 10416 },
     { "id": "wood-climb", "x": 37184, "y": 6208 }
   ],
+  "areas": [
+    {
+      "id": "wood-floor",
+      "rooms": [
+        "wood-hatch",
+        "wood-chase",
+        "wood-wicks",
+        "wood-burrow",
+        "wood-glade",
+        "wood-glidewalk",
+        "wood-hollow",
+        "wood-hawkers",
+        "wood-lantern",
+        "wood-well"
+      ]
+    },
+    { "id": "wood-high", "rooms": ["wood-climb"] }
+  ],
   "tests": [
     "test-grove",
     "lab-lamps",
