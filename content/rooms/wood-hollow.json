@@ -27,7 +27,8 @@
   "exits": [
     { "id": "w", "edge": "w", "from": 2624, "to": 2880 },
     { "id": "e", "edge": "e", "from": 2624, "to": 2880 },
-    { "id": "climb", "edge": "s", "from": 2560, "to": 2944 }
+    { "id": "climb", "edge": "s", "from": 2560, "to": 2944 },
+    { "id": "n", "edge": "n", "from": 2560, "to": 2944 }
   ],
   "patches": [{ "id": "p3", "x": 1280, "y": 2880 }],
   "mothStones": [{ "id": "stone-oak", "x": 1800, "y": 2880, "area": "wood-floor" }],
@@ -49,7 +50,9 @@
     { "from": "p3", "to": "stone-oak" },
     { "from": "p3", "to": "sign-trunk" },
     { "from": "climb", "to": "p3", "oneWay": true },
-    { "from": "p3", "to": "climb", "flags": ["wood-climbout"], "oneWay": true }
+    { "from": "p3", "to": "climb", "flags": ["wood-climbout"], "oneWay": true },
+    { "from": "p3", "to": "n", "needs": ["wallJump"] },
+    { "from": "n", "to": "p3", "oneWay": true }
   ],
   "marks": {
     "tatter": { "x": 2700, "y": 2880, "facing": 1, "want": [2752, 900], "until": "wood-root-ladder" },
@@ -94,18 +97,15 @@
       { "x": 400, "y": 1600, "text": "LANDMARK: the hollow oak, the moon column down its trunk" }
     ],
     "stage": {
-      "ladders": [
-        { "flag": "wood-root-ladder", "x": 985, "y0": 2880, "y1": 3136 },
-        { "flag": "wood-root-ladder", "x": 170, "y0": 2688, "y1": 2880 }
-      ],
+      "ladders": [{ "flag": "wood-root-ladder", "x": 2928, "y0": 0, "y1": 2880 }],
       "glimpse": {
         "flag": "wood-firefly-glimpse",
-        "x": 1300,
-        "y": 620,
+        "x": 2752,
+        "y": 900,
         "zoom": 0.75,
         "secs": 3,
-        "path": [[1900, 180], [1300, 260], [800, 330], [512, 400]],
-        "away": [[512, 400], [300, 260], [-150, 120]]
+        "path": [[3600, 2300], [3150, 1500], [2780, 1000], [2860, 240]],
+        "away": [[2860, 240], [2800, -200], [2760, -900]]
       },
       "oak": { "x": 2752, "y": 2880, "top": -2468, "w": 384 }
     }

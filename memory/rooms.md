@@ -77,7 +77,7 @@ line (to area 2). `wood-lantern` is now `wood-silk`.
 | R4 `wood-burrow` | 15104, 4608 | 4480x1792 | `burr-juv` (juvenileBurrback) under `wick-door`; `burr-first` (windup 32) under W3; `wick-gap` (2990, 920) on the jump's path off the root step: thrown right onto F3; dark floor 1472, tunnel under F3, hatch at 3904; `bark-hole` floor over the hole (full jump, cut ~80 over it: each hit bounces -15.5, the third breaks); W-hi4 (3820, 430) by shelf H |
 | R5 `wood-glade` | 18944, 6400 | 2880x2504 | the alcove's root rungs (1216-1312: 1920, 1792, a hatch at 1664) |
 | R6 `wood-glidewalk` | 21824, 8064 | 5760x2368 | gaps 1-2 as before; `wick-bend` (4150, 1440) over gap 3; `wick-ledge` (4880, 1800) with `burr-ledge` on T4's landing; bark floor pocket only |
-| R7 `wood-hollow` | 27584, 7168 | 3840x3248 | floor 2880 (368 of ground under it), doors W/E at floor level; P3 1280, glimpse trigger (hold 150), `stone-oak` (1800), `sign-trunk` (2300); trunk walls 2496-2560 / 2944-3008 to 2720 (kick inward); root mesh one-way 2560-2944 at 2880, `noDrop: "wood-climbout"`; Tatter (2700, 2880); zone `look-up` (no fit). The top exit into wood-heart is added when that room lands (2560-2944, world x 30144-30528) |
+| R7 `wood-hollow` | 27584, 7168 | 3840x3248 | floor 2880 (368 of ground under it), doors W/E at floor level; P3 1280, glimpse trigger (hold 150), `stone-oak` (1800), `sign-trunk` (2300); trunk walls 2496-2560 / 2944-3008 to 2720 (kick inward); root mesh one-way 2560-2944 at 2880, `noDrop: "wood-climbout"`; Tatter (2700, 2880); zone `look-up` (no fit). Top exit `n` 2560-2944 (world x 30144-30528) into R7b's `down` (route p3 -> n needs wallJump); the glimpse's firefly flies up the trunk and out of the top; Tatter's ladder (x 2928) hangs down the trunk once `wood-root-ladder` |
 | R8 `wood-hawkers` | 31424, 7424 | 3840x2992 | hawker A at W7 over the hummocks; the throw gap: near ledge to 2560 (2624), thorn pit 2560-3008, far ledge 3008-3456 at 2304 (320 up: only the throw), `wick-throw` (2700, 2330) + `hawk-throw`; tunnel 2304-3712 (y 2864-2960), hatches at 2304 and 3600; `hollow-wings` behind `bark-hollow` (3392); step 3456 y2464 back up onto the far ledge; P-dark 3530 |
 | R9 `wood-silk` | 35264, 7424 | 3840x2992 | floor 2624; knob 760 + W-s1 + `dang-s1`; W-s2 (1400, 2380) throws up-right onto the root shelf 1600-2400 at 2304 past `dang-s2`; dip 1824-2176 (2880) with root steps; knob 2780 + W-s3 with `burr-silk` and `dang-s3` (one snuff, both off); `sign-silk` 3650; `bark-panel` floor 3200-3456 -> R10 `shaft`; postgame W-dj on a hung ledge |
 | R10 `wood-well` | 27584, 10416 | 11264x2240 | west hall (the drowned-roots stub); climb-out 2560-2944 with a top step; glade 2 2560-3264 under the mesh, P4 3136; gate 3520; pit 3584-5632 (zone `pit` frames the gate); `window` trigger (hold 120) + zone on L4; P-chute (6300, 1216) = `reform`; the stair L4..L0, two lit pockets (`wick-pocket`/`dang-pocket` over L3, `wick-chute`/`dang-chute` over L2); `wick-pogo` (9640, 760) under L1's lip with a root ceiling over L1's west end (no jump there) |
@@ -88,6 +88,38 @@ snuff, bounce, L2.
 - A floor bark panel is hit by a down cut from the air (cut ~70-90 px over it, falling): each hit bounces
   her; cut as she lands and it hits with no bounce; a standing down cut does not reach it.
 - Catch zones sit 200 above a room's foot (the camera keeps her in frame).
+
+### R7b `wood-heart` (the oak's heart + the crown) and the area-2 stub `wood-canopy`
+Placed at 28992, 4352 (2560x2816, its bottom on the hub's top); `wood-canopy` (STUB, area `wood-high`) at
+31552, 4096, its `w` exit on the rim's line. Local coordinates; the hub's shaft comes in at x 1152-1536 (the oak's
+column, `stage.oak` x 1344, top 348 = world ~4700). Tests: tests/unit/wood-heart.test.ts (each claim measured).
+- **Lower third:** the lower shaft (both faces hold), the **rest ledge** (704-1152, y 2240) with `wick-rest` (960,
+  2196: a standing cut from either side) and `dang-knot` hanging under the bridge at x 960, drop 880 (it bites a
+  stander at the cut spot; stepping back at its thread clears it; the snuff sends it). A root step on the near face
+  (1472-1536, y 2240). The spawn (the return point for a thorn hit before she has stood anywhere) is the tunnel
+  floor (480, 2688): any spawn from which a walker can drop into the lower shaft fails wood-camera.test (the view
+  clamps at the seam, her feet reach ~0.84 of the frame before the crossing into the hub).
+- **Middle third:** the near (east) face holds to 1640, slick to 1544, the thorn band 1344-1544. `wick-firefly`
+  W-ff (1380, 1460, `after: wood-firefly-glimpse`): a held-right climber is caught at the top of the face (25 of
+  28 timings; 1 thorn). Beaten free up-left: thrown onto the knot bridge (one-way 832-1376, y 1312) or the band's
+  top (1408), never the thorns; up-right or nothing: the thorns. **The snuff:** walk off the bridge's tip and
+  down-cut in the first 0-6 frames: snuff, pogo, holding right onto the foothold over the thorns (1472-1536, 1248).
+  With W-ff out, a kick-glide from the near face at 1740-1840 reaches the far face's band (576-704, 1408-1800;
+  slick below), whose top is a jump from the bridge.
+- **The dark way:** the hole at the ledge's back (704-784) -> the tunnel (2560-2688) -> the chimney (384-576) up
+  through its lid onto the band's top; no lamp near; slower than the throw (tested). The **bark knot** (find) is at
+  the band top's west end (3 cuts) with `wick-knot` behind it (a standing cut from the doorway).
+- **Upper third:** the near face holds 576-1344 to the rim. `wick-crown` (1430, 540) hangs off the rim's lip,
+  `hawk-crown` (1240, 470) guards it: the climb's top runs into the grip, and caught she is struck unless she beats
+  free at once (up-right: onto the rim). From the lip a standing cut west snuffs it and the hawker leaves.
+- **The crown (rim y 576):** `root-knot` bark (1600, the whole height to the room's top, hp 1) bars the rim; behind it
+  trigger `root-cut` sets `wood-root-ladder` (stage `rootFall`, the ladder down the trunk, Tatter at 2080 `when` it).
+  P5 (1920); trigger `crown` (1856-2048, hold 150) sets `wood-crown` (stage `cloud`, `vista`); exit `e` (320-576)
+  -> the stub. `lantern-crown` (760, 340) is postgame: every critical-path point is > its radius + 60 from it.
+- **Bots** (from the hub with glide + claws, 2026-10-18): speedrunner through, 32 s in R7b, 1 hawker hit; explorer
+  through (~90 s, 4 snuffs, the dark way first); cautious through in 1 of 2 runs (110 s; the other never jumps from the
+  band's top to the bridge: a planner limit, 128 across / 96 up). The naive bot does not climb, so it never gets here.
+- Gotcha: a scratchpad is shared by sibling agents: use your own subfolder for probes.
 
 ## The room camera (`room.camera`, src/render/camera/)
 - Framing overrides: `cameraFor(room)` (tuning.ts) = `cameraTuning` + the room's `anchorY`, `lookaheadX`,

@@ -1,0 +1,453 @@
+{
+  "id": "wood-heart",
+  "title": "The oak's heart: the trunk climb and the crown (greybox)",
+  "region": "wood",
+  "width": 2560,
+  "height": 2816,
+  "spawn": {
+    "x": 480,
+    "y": 2688
+  },
+  "edgeKick": false,
+  "abilities": ["glide", "wallJump"],
+  "art": {
+    "mode": "greybox",
+    "labels": false
+  },
+  "camera": {
+    "realFallPx": 250,
+    "targetSmoothY": 10,
+    "smoothYFastFall": 6,
+    "fallLookahead": 320,
+    "zones": [
+      {
+        "id": "crown",
+        "x": 1536,
+        "y": 256,
+        "w": 1024,
+        "h": 320,
+        "zoom": 0.75,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 2560,
+          "h": 1400
+        }
+      }
+    ]
+  },
+  "exits": [
+    {
+      "id": "down",
+      "edge": "s",
+      "from": 1152,
+      "to": 1536
+    },
+    {
+      "id": "e",
+      "edge": "e",
+      "from": 320,
+      "to": 576
+    }
+  ],
+  "patches": [
+    {
+      "id": "p5",
+      "x": 1920,
+      "y": 576
+    }
+  ],
+  "triggers": [
+    {
+      "id": "root-cut",
+      "x": 1664,
+      "y": 384,
+      "w": 128,
+      "h": 192,
+      "sets": "wood-root-ladder"
+    },
+    {
+      "id": "crown",
+      "x": 1856,
+      "y": 384,
+      "w": 192,
+      "h": 192,
+      "sets": "wood-crown",
+      "hold": 150
+    }
+  ],
+  "solids": [
+    {
+      "tag": "trunk",
+      "x": 784,
+      "y": 2240,
+      "w": 368,
+      "h": 448
+    },
+    {
+      "tag": "trunk",
+      "x": 576,
+      "y": 2240,
+      "w": 128,
+      "h": 320,
+      "kick": "west"
+    },
+    {
+      "tag": "trunk",
+      "x": 0,
+      "y": 2688,
+      "w": 1152,
+      "h": 128,
+      "kick": "east"
+    },
+    {
+      "tag": "trunk",
+      "x": 0,
+      "y": 1408,
+      "w": 384,
+      "h": 1280,
+      "kick": "east"
+    },
+    {
+      "tag": "trunk",
+      "x": 0,
+      "y": 1216,
+      "w": 64,
+      "h": 192,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 0,
+      "y": 640,
+      "w": 384,
+      "h": 576,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 576,
+      "y": 1408,
+      "w": 128,
+      "h": 392
+    },
+    {
+      "tag": "trunk",
+      "x": 576,
+      "y": 1800,
+      "w": 128,
+      "h": 440,
+      "kick": "west"
+    },
+    {
+      "tag": "trunk",
+      "x": 1536,
+      "y": 1640,
+      "w": 1024,
+      "h": 1176,
+      "kick": "west"
+    },
+    {
+      "tag": "trunk",
+      "x": 1536,
+      "y": 1344,
+      "w": 1024,
+      "h": 296,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 1536,
+      "y": 576,
+      "w": 1024,
+      "h": 768,
+      "kick": "west"
+    }
+  ],
+  "oneWays": [
+    {
+      "tag": "root",
+      "x": 384,
+      "y": 1408,
+      "w": 192
+    },
+    {
+      "tag": "root",
+      "x": 832,
+      "y": 1312,
+      "w": 544
+    },
+    {
+      "tag": "root",
+      "x": 1472,
+      "y": 1248,
+      "w": 64
+    },
+    {
+      "tag": "root",
+      "x": 1472,
+      "y": 2240,
+      "w": 64
+    }
+  ],
+  "thorns": [
+    {
+      "id": "thorn-band",
+      "x": 1504,
+      "y": 1344,
+      "w": 32,
+      "h": 200
+    }
+  ],
+  "bark": [
+    {
+      "id": "bark-knot",
+      "x": 320,
+      "y": 1216,
+      "w": 64,
+      "h": 192
+    },
+    {
+      "id": "root-knot",
+      "x": 1600,
+      "y": 0,
+      "w": 64,
+      "h": 576,
+      "hp": 1
+    }
+  ],
+  "lures": [
+    {
+      "id": "wick-rest",
+      "kind": "wick",
+      "x": 960,
+      "y": 2196
+    },
+    {
+      "id": "wick-firefly",
+      "kind": "wick",
+      "x": 1380,
+      "y": 1460,
+      "spin": 1,
+      "after": "wood-firefly-glimpse"
+    },
+    {
+      "id": "wick-crown",
+      "kind": "wick",
+      "x": 1430,
+      "y": 540,
+      "spin": -1
+    },
+    {
+      "id": "wick-knot",
+      "kind": "wick",
+      "x": 200,
+      "y": 1366
+    },
+    {
+      "id": "lantern-crown",
+      "kind": "lantern",
+      "x": 760,
+      "y": 340,
+      "spin": 1
+    }
+  ],
+  "enemies": [
+    {
+      "id": "dang-knot",
+      "kind": "dangler",
+      "x": 960,
+      "y": 1336,
+      "facing": 1,
+      "drop": 880,
+      "guards": "wick-rest"
+    },
+    {
+      "id": "hawk-crown",
+      "kind": "hawker",
+      "x": 1240,
+      "y": 470,
+      "facing": 1,
+      "radius": 160,
+      "hp": 3,
+      "guards": "wick-crown"
+    }
+  ],
+  "routes": [
+    {
+      "from": "spawn",
+      "to": "down"
+    },
+    {
+      "from": "down",
+      "to": "root-cut",
+      "needs": ["wallJump"],
+      "oneWay": true
+    },
+    {
+      "from": "root-cut",
+      "to": "p5"
+    },
+    {
+      "from": "p5",
+      "to": "crown"
+    },
+    {
+      "from": "p5",
+      "to": "e"
+    },
+    {
+      "from": "p5",
+      "to": "down",
+      "oneWay": true
+    }
+  ],
+  "marks": {
+    "tatter": {
+      "x": 2080,
+      "y": 576,
+      "facing": -1,
+      "when": "wood-root-ladder"
+    },
+    "notes": [
+      {
+        "x": 40,
+        "y": 2700,
+        "text": "R7b wood-heart  PURPOSE: the climb up the inside of the oak (claws), the glow-cap snuffed, Tatter's root, the crown"
+      },
+      {
+        "x": 1180,
+        "y": 2760,
+        "text": "DOWN: the hub's up-shaft carries on (both faces hold)"
+      },
+      {
+        "x": 720,
+        "y": 2300,
+        "text": "REST LEDGE: W-rest's cut spot; dang-knot drops on it from the knot-hole (step back, cut it hanging)"
+      },
+      {
+        "x": 420,
+        "y": 2520,
+        "text": "THE DARK WAY: the hole at the ledge's back, the tunnel, the chimney (no lamps, slower) up to the band's top"
+      },
+      {
+        "x": 1560,
+        "y": 1700,
+        "text": "the near face holds up to W-ff; above it a thorn band"
+      },
+      {
+        "x": 1180,
+        "y": 1660,
+        "text": "W-ff, the firefly's glow-cap (lit after the glimpse): be caught, beat free up-left, thrown to the band"
+      },
+      {
+        "x": 720,
+        "y": 1600,
+        "text": "the far face's band (holds); slick under it"
+      },
+      {
+        "x": 880,
+        "y": 1290,
+        "text": "the knot bridge (one-way): from its tip, down-cut W-ff (pogo snuff); jump to the near face over the thorns"
+      },
+      {
+        "x": 80,
+        "y": 1180,
+        "text": "FIND: bark knot, W-knot behind it"
+      },
+      {
+        "x": 1300,
+        "y": 980,
+        "text": "the open crown: W-crown, hawk-crown dives across the shaft at her on the face / in the orbit"
+      },
+      {
+        "x": 1550,
+        "y": 360,
+        "text": "the root's knot (one cut): the root falls down the trunk; Tatter climbs"
+      },
+      {
+        "x": 1880,
+        "y": 330,
+        "text": "P5, THE CROWN (trigger crown, hold): the look-out, the cloud of every moth she freed lifts off"
+      },
+      {
+        "x": 2300,
+        "y": 300,
+        "text": "E: the canopy road east (area 2)"
+      },
+      {
+        "x": 620,
+        "y": 220,
+        "text": "postgame: the lantern over the crown gap (the Fling promise)"
+      }
+    ],
+    "stage": {
+      "moon": {
+        "x": 2300,
+        "y": 120,
+        "r": 56
+      },
+      "lights": {
+        "x": 2100,
+        "y": 380,
+        "w": 460,
+        "h": 120,
+        "count": 26
+      },
+      "rootFall": {
+        "flag": "wood-root-ladder",
+        "x": 1632,
+        "y": 384,
+        "len": 2400
+      },
+      "ladders": [
+        {
+          "flag": "wood-root-ladder",
+          "x": 1520,
+          "y0": 576,
+          "y1": 2816
+        }
+      ],
+      "oak": {
+        "x": 1344,
+        "y": 2816,
+        "top": 348,
+        "w": 384
+      },
+      "cloud": {
+        "x": 1120,
+        "y": 420,
+        "r": 320,
+        "flag": "wood-crown",
+        "to": [3800, -700]
+      },
+      "vista": {
+        "flag": "wood-crown",
+        "x": 1500,
+        "y": 420,
+        "zoom": 0.7,
+        "hold": 3,
+        "parallax": 0.25
+      }
+    }
+  },
+  "shots": {
+    "wide": [
+      {
+        "name": "ledge",
+        "x": 1090,
+        "y": 2240
+      },
+      {
+        "name": "bridge",
+        "x": 1100,
+        "y": 1312
+      },
+      {
+        "name": "crown",
+        "x": 1920,
+        "y": 576
+      }
+    ]
+  }
+}

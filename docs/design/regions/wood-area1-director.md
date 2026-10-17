@@ -591,3 +591,30 @@ play, in one or two sentences, with the moment it was decided.
 - **Level:** rebuild R3, R4, R6, R7, R8, R9 and R10's stair; add R7b; delete R14 and the hub's cap climb.
 - **Feel and sim:** §5's four essentials.
 - **Staging:** the vista's three layers, the glimpse inside the trunk, the window, the crown cloud and Tatter's climb.
+
+---
+
+## 9. Build notes (builders write here where they deviate or need to agree something)
+
+### R7b `wood-heart` and the crown, as built (2026-10-18; memory/rooms.md "R7b")
+- **Placement:** R7b at world (28992, 4352), 2560 × 2816, its bottom on the hub's top: the hub's `n` exit (x
+  2560–2944) is R7b's `down` (world x 30144–30528). The oak's column (`stage.oak`) is world x 30336 in both. The
+  crown's rim is world y 4928; its `e` exit leads to the stub `wood-canopy` (area `wood-high`). `wood-climb` is gone.
+- **Flags:** cutting Tatter's root sets `wood-root-ladder` (the hub's Tatter is `until` it; at the crown it is `when`
+  it; a root ladder hangs down the trunk in both rooms). The crown trigger (hold 150) sets `wood-crown` (the cloud).
+- **The hub's staging marks** now point at the trunk: the glimpse's firefly flies in from the east arch, up the
+  trunk, hangs at its top and darts out through it (W-ff itself is R7b's lure, lit `after` the glimpse).
+- **Deviations from §5:**
+  - *W-ff is snuffed from above, not from the far face.* A face 700 px across can't reach it, and a shelf over the
+    far face is a head-bump on its climb. So the throw lands her on **the knot bridge** (a one-way over W-ff) or the
+    band's top, and the snuff is a walk-off **pogo down-cut** from the bridge's tip, which bounces her onto a foothold
+    over the thorn band. That concludes the pogo ladder too (R10's pogo-wick taught it).
+  - *The dark way* is a hole at the back of the rest ledge, a tunnel and a chimney to the band's top: no lamps,
+    measurably slower than the throw. The near face's foot has a root step level with the ledge.
+  - *The crown wick* hangs off the rim's lip, so the last stretch of the climb runs into its grip and the hawker dives
+    at the orbit (the R8 twist, concluded); a standing cut from the lip snuffs it.
+  - *The hanging root* is a bark curtain (1 cut) across the rim between the climb and P5, so cutting it is on the
+    critical path.
+- **For the hub's builder:** the hub's shaft is 2720 px of plain two-face climb before R7b starts (~5,000 px from the
+  hub floor to the crown in all). Consider shortening the hub (its top lower) or giving its shaft a beat; R7b moves
+  down by the same amount.

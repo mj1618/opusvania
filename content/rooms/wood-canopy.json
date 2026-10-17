@@ -1,0 +1,64 @@
+{
+  "id": "wood-canopy",
+  "title": "STUB: the canopy road (area 2 starts here)",
+  "region": "wood",
+  "width": 2560,
+  "height": 1536,
+  "spawn": {
+    "x": 400,
+    "y": 832
+  },
+  "edgeKick": false,
+  "abilities": ["glide", "wallJump"],
+  "art": {
+    "mode": "greybox",
+    "labels": false
+  },
+  "camera": {
+    "realFallPx": 250,
+    "targetSmoothY": 10,
+    "smoothYFastFall": 6,
+    "fallLookahead": 320
+  },
+  "exits": [
+    {
+      "id": "w",
+      "edge": "w",
+      "from": 576,
+      "to": 832
+    }
+  ],
+  "solids": [
+    {
+      "tag": "branch",
+      "x": 0,
+      "y": 832,
+      "w": 2560,
+      "h": 704
+    }
+  ],
+  "oneWays": [],
+  "marks": {
+    "notes": [
+      {
+        "x": 300,
+        "y": 532,
+        "text": "STUB: area 2 begins at the crown: the canopy road east over the hawkers and the silk hall"
+      },
+      {
+        "x": 300,
+        "y": 592,
+        "text": "TODO area 2: the canopy line (W-canopy, dang-canopy), lanterns, bounce caps, the Weaver"
+      }
+    ]
+  },
+  "shots": {
+    "wide": [
+      {
+        "name": "road",
+        "x": 600,
+        "y": 832
+      }
+    ]
+  }
+}
