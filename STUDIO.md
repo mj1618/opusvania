@@ -50,6 +50,9 @@ Problems found at a higher layer go back into the chunk loop for the rooms they 
 ## Working rules
 - Sub-agents work in parallel, and each owns one directory or area.
 - Agents commit only their own files (`git commit -- <paths>`). Never `git add -A`, stash or reset.
+- **HEAD must always build.** Many agents share one working tree, so a commit of only your hunks can leave out a
+  definition you depend on. After every commit, typecheck and run the unit tests on a clean checkout of HEAD
+  (`git worktree add --detach <tmp> HEAD` with `node_modules` symlinked). The first-timer tool plays HEAD.
 - Each agent runs `npm run check` and looks at its own result.
 - Reviewers are separate from builders, and harsh. "Good for greybox" is a fail: the bar is the reference games minus
   their art.
