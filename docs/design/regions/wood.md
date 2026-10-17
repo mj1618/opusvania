@@ -447,7 +447,26 @@ critical-path lamps.
 | Lost | ≤ 2 min anywhere, ≤ 60 s at the hub |
 | Deaths | in the pit and the trunk, none in R1–R3 |
 
-Per-room first-timer minutes come from the beat sheet (A2) ± 30%. Reviewers also answer the director's 13
+**Per-room targets** (first-timer; read by the playtest harness, `tools/playtest/targets.ts`; rows in route order for
+`--chunk a..b`). The times come from the director's minute marks (A2), with roughly ±30% ranges. `wood-hollow` is
+one row covering both visits: 1:30 the first time and 0:30 coming up through the mesh. `wood-heart` includes the
+crown. Lamps are critical path / optional finds.
+
+| room | target | lost | deaths | lamps | minutes (A2) |
+|---|---|---|---|---|---|
+| `wood-hatch` | 0:30–0:55 | 10 s | 0 | 0 / 0 | 0:00–0:40 |
+| `wood-chase` | 0:45–1:20 | 15 s | 0 | 0 / 1 | 0:40–1:40 |
+| `wood-wicks` | 1:00–1:45 | 30 s | 0 | 2 / 1 (return) | 1:40–3:00 |
+| `wood-burrow` | 1:30–2:40 | 30 s | 0–1 | 3 / 2 | 3:00–5:00 |
+| `wood-glade` | 0:45–1:20 | 60 s | 0 | 0 / 1 | 5:00–6:00 |
+| `wood-glidewalk` | 3:00–5:00 | 45 s | 0–1 | 3 / 2 | 6:00–10:00 |
+| `wood-hollow` | 1:30–2:40 | 60 s | 0 | 0 / 0 | 10:00–11:30, 27:00–27:30 |
+| `wood-hawkers` | 3:00–5:00 | 45 s | 0–1 | 2 / 0 (+ the hollow) | 11:30–15:30 |
+| `wood-silk` | 3:20–5:50 | 60 s | 0–2 | 3 / 0 | 15:30–20:00 |
+| `wood-well` | 5:00–9:00 | 45 s | 1–3 | 3 / 1 | 20:00–27:00 |
+| `wood-heart` | 4:00–7:00 | 45 s | 1–2 | 3 / 1 | 27:30–33:00 |
+
+Reviewers also answer the director's 13
 experience questions (director §7) from a first-timer's video or journal and their own play.
 
 ## A10. Exit criteria, and what we cut first
