@@ -15,7 +15,7 @@
  * height on the 1080-tall safe area into the layer's own y, so the picture lines up with the
  * branch whatever the room's background anchor is. Positions across are in layer x.
  */
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite } from 'pixi.js';
 import type { Scene } from '../../../sim/scene';
 import { SAFE_H } from '../../contract';
 import type { LayerRect } from '../layer-tree';
@@ -25,6 +25,7 @@ import {
   LightMap,
   type StageSpec,
   type SwayItem,
+  softTexture,
   type ZoneSpec,
 } from './bg-bake';
 import {
@@ -56,10 +57,11 @@ export const WOOD = {
   /** One fog colour for the whole wood (look target: `#1f3550`), and the blue-black of the drop. */
   fog: 0x1f3550,
   /** The fog pooled between rows of crowns: paler than the crowns, so their tops stand dark on it. */
-  fogPale: 0x34557a,
+  fogPale: 0x3d6088,
   deep: 0x03070d,
   /** Share of the crowns that are fir spires. */
-  spires: 0.35,
+  // (Few: a band of spires seen side on read as a wall, not crowns seen from above: review round 3.)
+  spires: 0.18,
   /** far0: top of each crown row (screen), crown radius range (layer px), fog pooled under each. */
   far0: {
     rows: [0.8, 0.82, 0.85, 0.89, 0.94, 1.0, 1.08, 1.18],
@@ -207,8 +209,8 @@ export function woodZone(parallax: number, mist: number): Omit<ZoneSpec, 'anchor
 /** Bake atmosphere of a far layer: fogged toward the wood's fog colour, a deep fall at the bottom. */
 function farAtm(i: 0 | 1 | 2, anchorY: number): Atmosphere {
   const p = [0.12, 0.25, 0.42][i] as number;
-  const fogTop = [0.42, 0.3, 0.16][i] as number;
-  const fogLow = [0.36, 0.24, 0.12][i] as number;
+  const fogTop = [0.68, 0.6, 0.48][i] as number;
+  const fogLow = [0.6, 0.5, 0.36][i] as number;
   return {
     fogColor: WOOD.fog,
     fogTop,
@@ -246,9 +248,10 @@ function farAtm(i: 0 | 1 | 2, anchorY: number): Atmosphere {
       color: WOOD.deep,
       // Under the pale band the drop sinks to blue-black (review round 2: bottom quarter 20-30,
       // target 6-16; the bottom 15% <= 12).
-      y0: layerY([0.84, 0.84, 0.83][i] as number, p, anchorY),
-      y1: layerY([1.0, 0.98, 0.95][i] as number, p, anchorY),
-      k: [0.8, 0.92, 0.97][i] as number,
+      // The crowns under the band stay at 30-48; the drop falls to black below them.
+      y0: layerY([0.92, 0.91, 0.9][i] as number, p, anchorY),
+      y1: layerY([1.06, 1.03, 1.0][i] as number, p, anchorY),
+      k: [0.75, 0.88, 0.96][i] as number,
     },
   };
 }
@@ -261,15 +264,16 @@ function farFog(i: 0 | 1 | 2, anchorY: number): FogSpec {
     warm: WOOD.fog,
     yTop: layerY(0.62, p, anchorY),
     yFull: layerY(1.0, p, anchorY),
-    alphaTop: 0.08,
-    alpha: [0.22, 0.2, 0.16][i] as number,
+    alphaTop: 0.1,
+    alpha: [0.24, 0.24, 0.22][i] as number,
     wellX: 0,
     wellY: 0,
     wellR: 1,
     wellAlpha: 0,
     scale: [1 / 1500, 1 / 1300, 1 / 1100][i] as number,
-    speed: [0.006, 0.009, 0.012][i] as number,
-    wisp: 0.6,
+    // Mist you can see drift (R15: the drop was still for a second).
+    speed: [0.02, 0.03, 0.045][i] as number,
+    wisp: 0.85,
   };
 }
 
@@ -287,8 +291,11 @@ export function woodMidAtm(anchorY: number): Atmosphere {
   const p = 0.68;
   return {
     fogColor: WOOD.fog,
-    fogTop: 0.08,
-    fogGround: 0.26,
+    // A step of haze over the giants, so they sit one value above the playfield (review round 3:
+    // 7-11, no lighter than the branch; target 14-26).
+    // (Post's toe crushes the lower values: 0.24 measured 12 after post against the limbs' 14.)
+    fogTop: 0.5,
+    fogGround: 0.56,
     fogY0: layerY(0.5, p, anchorY),
     fogY1: layerY(1.3, p, anchorY),
     wellX: 0,
@@ -328,15 +335,16 @@ export function woodMidFog(anchorY: number): FogSpec {
     warm: WOOD.fog,
     yTop: layerY(0.7, p, anchorY),
     yFull: layerY(1.15, p, anchorY),
-    alphaTop: 0.03,
-    alpha: 0.14,
+    alphaTop: 0.08,
+    alpha: 0.22,
     wellX: 0,
     wellY: 0,
     wellR: 1,
     wellAlpha: 0,
-    scale: 1 / 900,
-    speed: 0.016,
-    wisp: 0.65,
+    scale: 1 / 700,
+    // Drifting fast enough to see in a second (R15).
+    speed: 0.05,
+    wisp: 0.85,
   };
 }
 
@@ -473,6 +481,28 @@ function spire(
   L.shade(x - w * 0.25, base - h * 0.3, w * 0.5, h * 0.5, 0.4);
 }
 
+/** Soft puffs of fog hanging among a row of crowns: their own ragged values, no edges. */
+function fogPuffs(
+  c: Container,
+  r: Rng,
+  x0: number,
+  x1: number,
+  y: number,
+  rad: number,
+  color: number,
+  alpha: number,
+): void {
+  const tex = softTexture();
+  for (let x = x0; x < x1; x += rad * rr(r, 0.6, 1.4)) {
+    const s = c.addChild(new Sprite(tex));
+    s.anchor.set(0.5);
+    s.tint = color;
+    s.alpha = alpha * rr(r, 0.4, 1);
+    s.position.set(x, y + rad * rr(r, 0.5, 1.6));
+    s.setSize(rad * rr(r, 2, 4.5), rad * rr(r, 0.9, 1.8));
+  }
+}
+
 /**
  * One row of treetops seen from above: broad crowns (a dome with knobbly satellites, lit from the
  * moon's side) and fir spires, over a dark body that runs down to `bottom` so nothing behind shows
@@ -584,18 +614,12 @@ function crownSea(
       const ny = layerY(next, parallax, anchorY);
       const fg = c.addChild(new Graphics());
       const top = y + rad[1] * grow * 0.4;
-      fogPool(
-        fg,
-        L,
-        x0,
-        x1,
-        top,
-        Math.max(60, ny - top + rad[1] * 0.6),
-        bottom,
-        WOOD.fogPale,
-        fog,
-        seed + i * 31,
-      );
+      const depth = Math.max(60, ny - top + rad[1] * 0.6);
+      // Fog rising between the crowns in soft puffs (never a level sheet: a straight fog line under
+      // a row gave every crown a flat underside, "floating platforms", review round 3), over a
+      // deeper base that thickens lower down.
+      fogPuffs(c, r, x0, x1, y, rad[1] * grow, WOOD.fogPale, fog * 0.55);
+      fogPool(fg, L, x0, x1, top + depth * 0.35, depth, bottom, WOOD.fogPale, fog * 0.8, seed + i * 31);
     }
   });
 }
@@ -612,7 +636,7 @@ export function buildWoodFar(
     const look = crownLook(
       [9, 12, 15][i] as number,
       [0.45, 0.55, 0.65][i] as number,
-      [0.5, 0.35, 0.2][i] as number,
+      [0.3, 0.2, 0.1][i] as number,
     );
     crownSea(
       c,
@@ -1128,7 +1152,7 @@ export function woodMidHangers(
       w: sp.size * 2.6,
       h: sp.size * 1.1,
       up: sp.size * 1.15,
-      amp: sp.species === 'droop' ? 0.09 : 0.05,
+      amp: sp.species === 'droop' ? 0.14 : 0.08,
       phase: r(),
       flutter: 0.25,
       draw: (g: Graphics) => spray(g, NO_LIGHT, prng(seed), 0, 0, sp.dir, sp.size, sp.species, look, bark),

@@ -70,7 +70,7 @@ export const SKY = {
      * The moon's face: how much value the maria lose (Matt: "moons aren't totally white"; target:
      * highlands ~205-220, maria ~150-185 after post), edge softness (px).
      */
-    maria: 0.33,
+    maria: 0.4,
     edge: 2.5,
     /** Stars: chance per cell, cell size (view px), peak brightness, how far up the haze lets them go. */
     stars: 0.16,
@@ -103,7 +103,7 @@ export const SKY = {
     cloud: 0x1c2e4c,
     cloudLit: 0x8aa6cc,
     /** Cloud drift, view px per second (visible in a second's difference, not a rush). */
-    cloudDrift: 16,
+    cloudDrift: 30,
   },
 } as const;
 
@@ -266,19 +266,25 @@ void main() {
     float rr0 = rm / max(uDisc.x, 1.0);
     float face = smoothstep(uDisc.x + uMoonFace.y, uDisc.x - uMoonFace.y, rm) * uDisc.y;
     vec2 mp = (p - uMoon.xy) / max(uDisc.x, 1.0);
-    vec2 warp = (vec2(texture(uNoise, mp * 0.55 + 0.13).r, texture(uNoise, mp * 0.55 + 0.71).g) - 0.5) * 0.22;
+    // Maria: one connected, irregular system (review round 3: separate rounded blobs read as
+    // stickers). A broad cluster (the big western sea flowing into a northern chain, an eastern sea,
+    // a small isolated one at the limb, a southern arm) multiplied by two noise scales, so the
+    // boundaries are ragged, the floors patchy and the seas multi-toned, darker in their cores.
+    vec2 warp = (vec2(texture(uNoise, mp * 0.5 + 0.13).r, texture(uNoise, mp * 0.5 + 0.71).g) - 0.5) * 0.4;
     vec2 mw = mp + warp;
-    float sea = 0.0;
-    sea = max(sea, smoothstep(1.0, 0.55, length((mw - vec2(-0.42, 0.06)) / vec2(0.34, 0.5))));
-    sea = max(sea, smoothstep(1.0, 0.5, length((mw - vec2(-0.2, -0.32)) / vec2(0.3, 0.24))));
-    sea = max(sea, smoothstep(1.0, 0.5, length((mw - vec2(0.12, -0.28)) / vec2(0.2, 0.18))));
-    sea = max(sea, smoothstep(1.0, 0.5, length((mw - vec2(0.3, -0.02)) / vec2(0.24, 0.2))));
-    sea = max(sea, smoothstep(1.0, 0.5, length((mw - vec2(0.08, 0.26)) / vec2(0.22, 0.13))) * 0.8);
-    sea = max(sea, smoothstep(1.0, 0.45, length((mw - vec2(0.62, -0.24)) / vec2(0.12, 0.1))));
-    // Inside the seas the floor is uneven too; the highlands are mottled and grainy.
+    float big = exp(-pow(length((mw - vec2(-0.34, 0.02)) / vec2(0.5, 0.62)), 2.0)) * 0.95;
+    big = max(big, exp(-pow(length((mw - vec2(0.02, -0.3)) / vec2(0.42, 0.22)), 2.0)) * 0.95);
+    big = max(big, exp(-pow(length((mw - vec2(0.32, -0.06)) / vec2(0.3, 0.26)), 2.0)) * 1.0);
+    big = max(big, exp(-pow(length((mw - vec2(0.62, -0.24)) / vec2(0.13, 0.11)), 2.0)) * 1.0);
+    big = max(big, exp(-pow(length((mw - vec2(0.02, 0.3)) / vec2(0.32, 0.14)), 2.0)) * 0.6);
+    float n1 = texture(uNoise, mp * 0.85 + 0.31).r;
+    float n2 = texture(uNoise, mp * 2.4 + 0.77).g;
+    float field = big * (0.6 + 0.8 * n1) + (n2 - 0.5) * 0.22;
+    float sea = smoothstep(0.28, 0.75, field);
+    sea *= mix(0.5, 1.0, smoothstep(0.5, 0.95, field)) * (0.85 + 0.3 * n2);
+    // The highlands are mottled and grainy.
     float hm = texture(uNoise, mp * 1.6 + 0.37).b;
     float hf = texture(uNoise, mp * 4.2 + 0.9).r;
-    sea *= 0.82 + 0.3 * hm;
     float shade = 1.0 - uMoonFace.x * sea + (hm - 0.5) * 0.1 + (hf - 0.5) * 0.07;
     // Craters: dark floors with a lit rim on the side away from the sun (light from the upper right).
     vec3 cr[5] = vec3[5](vec3(-0.05, 0.52, 0.09), vec3(0.47, 0.4, 0.07), vec3(-0.6, -0.45, 0.08), vec3(0.38, -0.56, 0.06), vec3(-0.3, 0.36, 0.06));

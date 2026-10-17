@@ -253,7 +253,7 @@ export type ZoneGrade = { amount: number } & { [K in Exclude<keyof typeof ZONE_G
 
 export const WOOD_GRADE: ZoneGrade = {
   ...ZONE_GRADE,
-  exposure: [1.04, 1.04, 1.04],
+  exposure: [1.1, 1.1, 1.1],
   contrast: [0.36, 0.36, 0.36],
   pivot: [0.4, 0.4, 0.4],
   shadowTint: [0x0a1a3a, 0x0a1a3a, 0x0a1a3a],
@@ -267,7 +267,7 @@ export const WOOD_GRADE: ZoneGrade = {
   heroPocket: [1.2, 1.2, 1.2],
   // A gentler toe than the glade's 0.8: the night sky and the lit crowns sit at luma 18-48 and the
   // full toe crushed them under the branch's shadow (review round 1: sky 3-14).
-  toeDepth: [0.65, 0.65, 0.65],
+  toeDepth: [0.72, 0.72, 0.72],
 };
 
 /** Bloom targets, widest first. Fixed in logical units so the look does not depend on window size. */

@@ -268,7 +268,7 @@ const AIR_WOOD: typeof AIR = {
   motes: {
     ...AIR.motes,
     // (150 measured 3-6 visible per frame in review round 1; the look target wants 20-60.)
-    count: 420,
+    count: 560,
     minRadius: 1.2,
     maxRadius: 2.6,
     baseBrightness: 0.7,
@@ -294,7 +294,8 @@ const WOOD_AIR = {
     /** Strands in the view at once (they wrap around it), length range px, drift px/s, colour, opacity. */
     // Few and soft: gossamer that shows only where the moon is behind it (more, or bright
     // everywhere, read as lens scratches: review round 2).
-    count: 4,
+    // Cut (count 0): even soft and near the moon, the threads read as hairlines in the sky (review round 3).
+    count: 0,
     length: [110, 210] as const,
     drift: [14, 34] as const,
     color: 0xb8cce6,

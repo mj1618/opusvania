@@ -84,8 +84,8 @@ const LIFE: readonly LifeSpec[] = [
  * an idle second must not be still there (review round 1, R15). Same LifeSpec meaning as LIFE.
  */
 const WOOD_LIFE: readonly LifeSpec[] = [
-  { breath: 3.5, shimmer: 0.12, openings: 0.065 },
-  { breath: 5.5, shimmer: 0.16, openings: 0.065 },
+  { breath: 5, shimmer: 0.16, openings: 0.065 },
+  { breath: 8, shimmer: 0.22, openings: 0.065 },
 ];
 
 /**
@@ -905,7 +905,7 @@ export class FarLayers implements EnvModule {
       b.content.destroy({ children: true });
       const zone = { ...z, anchorX: ctx.layers.anchor.x } as ZoneSpec;
       // The crowns stir everywhere (no canopy line to keep still under).
-      const rustle = { amp: (RUSTLE[k] ?? 0) * 1.2, y0: rect.y + rect.h + 1000, y1: rect.y + rect.h + 1001 };
+      const rustle = { amp: (RUSTLE[k] ?? 0) * 2, y0: rect.y + rect.h + 1000, y1: rect.y + rect.h + 1001 };
       const sky = SKY_OUTPUT.texture;
       let view: LayerView | FarPairView | null = null;
       if (k === 0) {

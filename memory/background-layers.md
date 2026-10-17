@@ -303,6 +303,23 @@ knob: `lib/bg-wood.ts` (`WOOD`, `WOOD_STAGE`).
     `farBranch()` in mid's bake BEHIND the giants, hazed 60% toward the fog, thick at the east, fraying west
     into twigs and sprays; placed for the promise camera (4110, 636). Absent mark = nothing.
   - mid's bake scale is capped so its rect stays one row of tiles (room 2816 tall: `4000 / rect.h`).
+- **Round 4 (review round 3, problem 4) and where it stopped (artwork paused 2026-10-17):**
+  - Depth by haze: far `fogTop` 0.68/0.6/0.48, paler pooled fog (`fogPale`), lighter far crowns; mid `fogTop`
+    0.5 / `fogGround` 0.56. **Post's toe crushes low values**: mid 28 at source -> 12 after post; 0.5 gives
+    19 against the limbs' 14 (target 14-26). Spires cut to 0.18 (a band of spires read as a wall seen side on).
+  - Fog among the crowns as soft puffs (`fogPuffs`) over a deeper pool: a level fog line under each row gave
+    every crown a flat underside ("floating platforms").
+  - Faster mist (far fog speed 0.02-0.045, mid 0.05, wisp 0.85), cloud drift 30 px/s, bigger crown rustle and
+    `WOOD_LIFE`, droop sprays amp 0.14, 560 motes, silk cut (count 0: hairlines).
+  - Maria: one connected noise field over a broad cluster (`big` x two noise scales), multi-toned.
+  - **Measured at the stop:** 1920 stops mean 25-30, near-black 36-45%, p99.9 221-233, bottom quarter 6-16;
+    moon highlands p80 207-221, maria p25 180-197 (darkest seas ~150); mid giant 19 vs playfield 14 at 'under';
+    idle 1 s: 8.5-12.3% of pixels change > 6 luma, but 68-76% of 24 px cells are still (p90 < 6).
+  - **Next, when art resumes:** (1) R15 stillness: the dark drop and sky can't change 6 luma/s with gentle
+    motion; try wind-driven mist streaks in airBack with real contrast, falling flakes in the drop, cloud bands
+    with harder edges. (2) Far crown band still ~20-28 in boxes that include near darks (target 30-48): measure
+    on layer-isolated renders before lifting more. (3) The moon's x drifts 1510 -> 1409 (pivot `keyEntryX`,
+    shared with the swarm). (4) The far branch from `marks.farBranch` reads as an even bar at the top edge.
 - far crown seas: `WOOD_LIFE` (far.ts) and 1.2x rustle: the lower frame must not be still in an idle second.
 - Measured round 3 (look:stats, 8 stops x 1920x1080 / 2560x1080 / 1440x1080): mean 21-30, near-black 39-56%,
   >150 0.5-1.2%, p99.9 198-227, chroma 25-33, azure 99%, top quarter 17-33, bottom quarter 6-22 (crown stop
