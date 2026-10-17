@@ -43,7 +43,8 @@
     { "tag": "ground", "x": 3712, "y": 1024, "w": 128, "h": 240 },
     { "tag": "ground", "x": 2112, "y": 1360, "w": 1728, "h": 32 },
     { "tag": "ground", "x": 2112, "y": 1264, "w": 192, "h": 96 },
-    { "tag": "ground", "x": 3712, "y": 1264, "w": 128, "h": 96 }
+    { "tag": "ground", "x": 3712, "y": 1264, "w": 128, "h": 96 },
+    { "tag": "trunk", "x": 3776, "y": 448, "w": 64, "h": 320, "kick": false }
   ],
   "oneWays": [
     { "tag": "root", "x": 3600, "y": 1200, "w": 112 },
@@ -129,10 +130,18 @@
         "x": 1000,
         "y": 800,
         "text": "LANDMARK: twin hummocks under the hawker's lane; the oak's bulk behind the west arch"
+      },
+      {
+        "x": 3560,
+        "y": 420,
+        "text": "the east doorway: a trunk post over the door (the way on to the silk hall)"
       }
     ],
     "tatter": { "x": 3620, "y": 1024, "facing": -1, "when": "wood-root-ladder" },
-    "stage": { "oak": { "x": -1088, "y": 1024, "top": -2468, "w": 384 } }
+    "stage": {
+      "oak": { "x": -1088, "y": 1024, "top": -2468, "w": 384 },
+      "circlers": [{ "lure": "wick-throw", "count": 6, "r": 95 }]
+    }
   },
   "shots": {
     "wide": [

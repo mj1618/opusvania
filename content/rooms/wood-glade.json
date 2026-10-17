@@ -96,12 +96,6 @@
       { "x": 1500, "y": 1440, "text": "LANDMARK: the lip over the moonlit chasm, the far trunk across it" },
       {
         "x": 1000,
-        "y": 1900,
-        "text": "FIND: an alcove under the lip (1216-1408 x 1856-2048): walk off, turn back, glide in. W-alcove"
-      },
-      { "x": 1500, "y": 1440, "text": "LANDMARK: the lip over the moonlit chasm, the far trunk across it" },
-      {
-        "x": 1000,
         "y": 1960,
         "text": "root rungs up a slot from the alcove to a hatch in the glade floor: the alcove is never a place she can't leave (a fall from it returns her there)"
       }
