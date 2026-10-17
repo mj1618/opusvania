@@ -3,21 +3,22 @@
  * drawn with minimal readable graphics instead of the painted layers, so a whole region can be
  * designed and played before any art. One environment module (`GreyboxLayer`) replaces every
  * painted one (src/render/scene/index.ts picks it); Wing keeps her real rig; the creatures draw as
- * their hitboxes in the overlay's state colours (src/debug/overlay.ts `drawEnemyBoxes`). The stage
+ * filled greybox shapes with their danger parts over her (creatures.ts). The stage
  * turns post-processing off and hides the painted creatures for such a room.
  *
  *   sky        a flat dark background with a subtle vertical gradient over the whole view (any shape)
  *   playfield  the grid, solids (a bright walkable top), one-ways, hazards, catch zones, exits, rest points
- *   goal       lures: field, core, flame, husk (behind her)
- *   air        creatures as boxes, lure effects, freed moths, labels (over her)
+ *   goal       lures: field, core, flame, husk, the dark a snuff leaves; creatures' bodies (behind her)
+ *   air        creatures' danger parts and tells, lure effects, freed moths, motes, labels (over her)
  */
 import { Container, Graphics } from 'pixi.js';
-import { drawEnemyBoxes, drawWebs } from '../../debug/overlay';
-import { tuning } from '../../sim/tuning';
+import { drawWebs } from '../../debug/overlay';
 import type { SceneContext, SceneFrame } from '../scene/index';
 import { BossView } from './boss';
+import { CreatureView } from './creatures';
 import { KitView, kitLabels } from './kit';
 import { LureView } from './lures';
+import { Motes } from './motes';
 import { GB } from './palette';
 import { buildLabels, buildStatic } from './static';
 import { WorldView } from './world';
@@ -45,7 +46,14 @@ export class GreyboxLayer {
   private skyKey = '';
   private readonly lureBack = new Graphics();
   private readonly front = new Graphics();
+  /** Webs' strands, creatures' danger parts, tells and the answers to blows: over her. */
   private readonly creatures = new Graphics();
+  /** Creatures' bodies: under her (creatures.ts). */
+  private readonly creatureBack = new Graphics();
+  private readonly creatureView = new CreatureView();
+  /** Dust and sparks off her body (motes.ts): over her. */
+  private readonly motes = new Motes();
+  private readonly moteGfx = new Graphics();
   private labels!: Container;
   private readonly lures = new LureView();
   private world!: WorldView;
@@ -60,7 +68,7 @@ export class GreyboxLayer {
     GREYBOX.labels = room.art?.labels ?? true;
     ctx.layers.sky.addChild(this.sky);
     ctx.layers.playfield.addChild(buildStatic(room));
-    ctx.layers.get('goal').addChild(this.lureBack);
+    ctx.layers.get('goal').addChild(this.lureBack, this.creatureBack);
     this.labels = buildLabels(room);
     kitLabels(room, this.labels);
     // Patches, glades, shortcuts and doors (memory/world.md): under her, their flashes and lines over her.
@@ -70,6 +78,7 @@ export class GreyboxLayer {
     ctx.layers.playfield.addChild(this.world.back, this.kit.back, this.boss.back);
     ctx.layers.air.addChild(
       this.creatures,
+      this.moteGfx,
       this.front,
       this.world.front,
       this.kit.front,
@@ -95,7 +104,10 @@ export class GreyboxLayer {
     const g = this.creatures.clear();
     // Webs first (their strands), then the creatures over them (memory/creatures.md).
     drawWebs(g, sim.scene, sim.enemies, sim.player);
-    drawEnemyBoxes(g, sim.enemies, tuning.burrback.chargePx);
+    this.creatureView.onEvents(sim.events);
+    this.creatureView.draw(dt, clock, sim, this.creatureBack.clear(), g);
+    this.motes.onEvents(sim.events);
+    this.motes.update(dt, sim.player, this.moteGfx.clear());
     this.labels.visible = GREYBOX.labels;
   }
 

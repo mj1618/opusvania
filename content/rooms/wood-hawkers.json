@@ -8,6 +8,7 @@
   "edgeKick": false,
   "abilities": ["glide"],
   "art": { "mode": "greybox", "labels": true },
+  "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
   "exits": [
     { "id": "w", "edge": "w", "from": 1024, "to": 1280 },
     { "id": "e", "edge": "e", "from": 1024, "to": 1280 }

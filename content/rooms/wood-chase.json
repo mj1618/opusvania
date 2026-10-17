@@ -221,6 +221,12 @@
     ]
   },
   "camera": {
+    "realFallPx": 250,
+    "targetSmoothY": 10,
+    "smoothYFastFall": 6,
+    "fallLookahead": 320,
+    "lookaheadX": 330,
+    "leadFrames": 36,
     "zones": [
       {
         "id": "vista",

@@ -48,9 +48,40 @@ export const cameraTuning = {
    * The kick when a slash lands (render-side, `kick.ts`): the view jumps this many world px against
    * the cut (a cut, the finisher), `vertical` x that for up / down cuts, and returns on a critically
    * damped spring of `omega` rad/s (35 = home, to within 5%, in about 8 frames). The blow that kills
-   * an enemy kicks `kill` x as far.
+   * an enemy kicks `kill` x as far; a snuff kicks as far as the finisher whatever cut it was. 3.5 / 7
+   * until the chunk-1 feel review ("0.2% of a 1920 view: can't be seen").
    */
-  kick: { power1: 3.5, power2: 7, vertical: 0.8, omega: 35, kill: 1.4 },
+  kick: { power1: 6, power2: 11, vertical: 0.8, omega: 35, kill: 1.4 },
+  /**
+   * Screen shake (render-side, `shake.ts`, memory/feel.md): one trauma value 0..1. Each event adds
+   * its `budget` (capped at 1); the view is offset `max` world px x trauma² by smooth noise at `freq`
+   * Hz, and trauma drains `decay` per second. Loudest first: her last light, her hurt, the snuff, a
+   * kill, a ram into a wall, a bark break, a hard landing, the finisher, a clang, a cut into a wall.
+   * `FEEL.shake` off (the accessibility toggle) stops it and the kick.
+   */
+  shake: {
+    max: 22,
+    decay: 1.8,
+    freq: 24,
+    budget: {
+      fade: 0.6,
+      hurt: 0.5,
+      snuff: 0.45,
+      kill: 0.3,
+      wallRam: 0.3,
+      barkBreak: 0.3,
+      hardLand: 0.2,
+      finisher: 0.12,
+      clang: 0.1,
+      terrain: 0.05,
+    },
+  },
+  /**
+   * Her being hurt, on screen (`hurt-fx.ts`): a dark vignette that comes on over `in` s, peaks at
+   * `peak` (of its own opacity: dark edges, a clear centre) and is gone `out` s later; on her last
+   * light it peaks at `peakLast` and holds `holdLast` s first.
+   */
+  hurtVignette: { in: 0.04, out: 0.3, peak: 0.55, peakLast: 0.85, holdLast: 0.25 },
   /**
    * Headroom: the view may rise above the scene top, to this far above the scene's canopy ceiling
    * (`scene.ceilingY`, the highest her box can go), so she keeps sky over her head on the summit and

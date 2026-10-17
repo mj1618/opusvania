@@ -5,7 +5,13 @@
  * comes back on a critically damped spring. No rotation, no zoom, nothing on a miss.
  */
 import type { SimEvent } from '../../sim/events';
+import { FEEL } from './shake';
 import { type CameraTuning, cameraTuning } from './tuning';
+
+function snuffIn(events: readonly SimEvent[]): boolean {
+  for (const e of events) if (e.type === 'lureSnuff') return true;
+  return false;
+}
 
 export class CameraKick {
   /** Offset to add to the view centre, world px. */
@@ -23,11 +29,13 @@ export class CameraKick {
     const k = ct.kick;
     let struck = false;
     let kill = false;
+    let snuff = false;
     for (const e of events) {
       if (e.type === 'enemyDie') kill = true;
+      if (e.type === 'lureSnuff') snuff = true;
       if (e.type === 'spawn') this.reset();
       if (e.type !== 'impact') continue;
-      const px = e.power >= 2 ? k.power2 : k.power1;
+      const px = e.power >= 2 || snuffIn(events) ? k.power2 : k.power1;
       // Against the cut: forward cuts shove the view back, an up cut down, a down cut up.
       const dx = e.dir === 'fwd' ? -e.facing : 0;
       const dy = e.dir === 'up' ? 1 : e.dir === 'down' ? -1 : 0;
@@ -37,10 +45,12 @@ export class CameraKick {
       struck = true;
     }
     // The blow that kills lands a little harder.
-    if (struck && kill) {
+    if (struck && (kill || snuff)) {
       this.x *= k.kill;
       this.y *= k.kill;
     }
+    // Shake off (accessibility): the kick stays home too.
+    if (!FEEL.shake) this.reset();
     if (dt <= 0) return;
     // Critically damped: x(t) = (x0 + (v0 + w x0) t) e^(-w t), exact for any dt.
     const w = k.omega;

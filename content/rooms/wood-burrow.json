@@ -8,6 +8,7 @@
   "edgeKick": false,
   "abilities": [],
   "art": { "mode": "greybox", "labels": true },
+  "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
   "reform": { "x": 300, "y": 1280 },
   "exits": [
     { "id": "w", "edge": "w", "from": 1024, "to": 1280 },

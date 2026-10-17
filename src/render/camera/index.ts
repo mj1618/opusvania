@@ -342,10 +342,21 @@ export function stepCamera(
     cam.targetY = Math.max(cam.targetY, feet + G.lookDown * cam.glide);
     smoothY = G.smoothY;
   }
-  // The target through its own spring first (when the room asks): the view's velocity never steps.
+  // Rooms with the fall rule: the target never asks for a view past the scene's top or bottom, so the
+  // springs ease into the bound instead of being stopped dead by the clamp (a fall toward a catch zone
+  // or a drop exit at the room's foot hit 18-29 px/f² in one frame without this). Clamped before the
+  // target's own spring, so the two springs in a row round the stop off.
   let target = cam.targetY;
+  if (ct.realFallPx > 0) {
+    // (Less a camera zone's shift: the view is the follow plus that shift, clamped once more.)
+    const line = feetLine(cam, ct) - cam.oy;
+    const lo = viewTop(scene, ct) + line;
+    const hi = scene.height - shownH(cam) + line;
+    if (hi >= lo) target = Math.min(hi, Math.max(lo, target));
+  }
+  // The target through its own spring first (when the room asks): the view's velocity never steps.
   if (ct.targetSmoothY > 0) {
-    [cam.ty, cam.tvy] = smoothDamp(cam.ty, cam.tvy, cam.targetY, ct.targetSmoothY * (1 - 0.5 * fastK));
+    [cam.ty, cam.tvy] = smoothDamp(cam.ty, cam.tvy, target, ct.targetSmoothY * (1 - 0.5 * fastK));
     target = cam.ty;
   }
   [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, target, smoothY);

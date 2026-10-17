@@ -55,7 +55,13 @@
     { "from": "p4", "to": "out", "needs": ["wallJump"], "oneWay": true },
     { "from": "out", "to": "p4", "oneWay": true }
   ],
-  "camera": { "zones": [{ "id": "pit", "x": 0, "y": 704, "w": 2048, "h": 896, "lock": true, "fit": true }] },
+  "camera": {
+    "realFallPx": 250,
+    "targetSmoothY": 10,
+    "smoothYFastFall": 6,
+    "fallLookahead": 320,
+    "zones": [{ "id": "pit", "x": 0, "y": 704, "w": 2048, "h": 896, "lock": true, "fit": true }]
+  },
   "marks": {
     "notes": [
       {

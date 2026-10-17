@@ -5,6 +5,7 @@ import type { BusId } from '../audio/tuning';
 import type { Game, RunMode } from '../game';
 import { type InputScript, parseInputScript } from '../input/script';
 import type { GameApp } from '../render/app';
+import { FEEL, setShake } from '../render/camera/shake';
 import { type CameraView, SAFE_H, SAFE_W, type ViewSize } from '../render/contract';
 import { GREYBOX } from '../render/greybox/index';
 import type { PointLight } from '../render/lights';
@@ -514,6 +515,11 @@ export interface GameDebugApi {
     };
     /** Greybox rooms: the marker labels and notes on/off (no argument toggles; also the G key); redraws. */
     labels(on?: boolean): boolean;
+    /**
+     * Screen shake and the camera kick on/off (the accessibility toggle, memory/feel.md; no argument
+     * toggles). Remembered in localStorage; `?shake=off` / `?noshake` at boot.
+     */
+    shake(on?: boolean): boolean;
     /**
      * The canvas's clear colour (what an uncovered pixel shows: the letterbox past the widest or
      * tallest view); no argument reads it. Redraws. The coverage e2e sets a loud one.
@@ -1171,6 +1177,7 @@ export function installDebugApi(deps: {
         redraw();
         return GREYBOX.labels;
       },
+      shake: (on) => setShake(on ?? !FEEL.shake),
       gpu(list) {
         type Src = {
           uid: number;

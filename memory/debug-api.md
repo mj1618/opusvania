@@ -46,7 +46,8 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   also `state().pickups.count`. Dev handle `window.__pickups` (renderer, `cfg`, `cpuMs`): pickups.md.
 - `lures()` → `{snuffed, freed, total, caught: {id, frames, beats, of, out} | null, pullX, grace: {id, frames} | null,
   list: [{id, kind, x, y, spin, state: burning|out, hp, hpMax, radius, core, moths, outFrame}]}` (memory/lures.md).
-  `debug.labels(on?)` (also the G key): a greybox room's labels and notes (memory/greybox.md). `?room=lab-lamps` is the
+  `debug.labels(on?)` (also the G key): a greybox room's labels and notes (memory/greybox.md). `debug.shake(on?)`: screen
+  shake and the camera kick on / off (the accessibility toggle, remembered; `?shake=off` / `?noshake`; memory/feel.md). `?room=lab-lamps` is the
   lamp lab (greybox, every ability).
 - `kit()` → `{thorns, seedCases, bark: [{id, ..., floor, hp, hpMax, broken}], gates: [{id, flag, open}], triggers: [{id, sets, set}], flags, hold}`;
   `flag()` lists the save's story flags, `flag(name)` sets, `flag(name, false)` clears (gates follow next step).

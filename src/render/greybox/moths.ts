@@ -33,7 +33,7 @@ interface Moth {
 }
 
 /** A small integer hash in [0, 1). */
-function hash01(s: string, i: number): number {
+export function hash01(s: string, i: number): number {
   let h = 2166136261 ^ i;
   for (let k = 0; k < s.length; k++) h = Math.imul(h ^ s.charCodeAt(k), 16777619);
   h = Math.imul(h ^ (h >>> 15), 2246822507);
@@ -110,12 +110,16 @@ export class FreedMoths {
         m.x += m.vx * dt;
         m.y += m.vy * dt;
       }
-      // A moth: a dot with two wing flecks that beat.
-      const beat = Math.abs(Math.sin(clock * 26 + m.bob)) * 8 + 2;
+      // A moth: a chevron about 12 px across whose wings beat (the V opens and closes), and a body dot.
+      const beat = Math.sin(clock * 26 + m.bob);
       const fade = m.age > SPIRAL + FOLLOW ? Math.max(0, 1 - (m.age - SPIRAL - FOLLOW) / LEAVE) : 1;
-      g.circle(m.x, m.y, 4).fill({ color: GB.moth, alpha: 0.95 * fade });
-      g.rect(m.x - 2 - beat, m.y - 3, beat, 6).rect(m.x + 2, m.y - 3, beat, 6);
-      g.fill({ color: GB.moth, alpha: 0.7 * fade });
+      const span = 6 + 1.5 * Math.abs(beat);
+      const lift = 2 + 5 * beat;
+      g.moveTo(m.x - span, m.y - lift)
+        .lineTo(m.x, m.y + 2)
+        .lineTo(m.x + span, m.y - lift)
+        .stroke({ color: GB.moth, width: 3, alpha: 0.9 * fade, join: 'round', cap: 'round' });
+      g.circle(m.x, m.y + 1, 2.5).fill({ color: GB.moth, alpha: 0.95 * fade });
     }
   }
 }

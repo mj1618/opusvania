@@ -8,6 +8,7 @@
  *     │                    window's edges (ga.view(): contract.ts ViewSize, memory/view-size.md)
  *     ├ layers.root        the PostStage's target (filters go here)
  *     │   sky, far0..2, mid, playfield, character, pickups, foreground, air   (scene/layer-tree.ts)
+ *     ├ hurt vignette        the dark pulse when she is hurt (camera/hurt-fx.ts)
  *     ├ dip                  the dark dip over a re-form / restart (camera/dip.ts), under the HUD
  *     ├ hud                health lights and the glint count, not post-processed (render/hud)
  *     └ debug overlay      collision boxes, not post-processed
@@ -25,10 +26,12 @@ import type { PlayerState } from '../sim/state';
 import type { GameApp } from './app';
 import { CameraBeats } from './camera/beats';
 import { DipOverlay } from './camera/dip';
+import { HurtVignette } from './camera/hurt-fx';
 import { type CameraState, createCamera, lerpCamera, resizeCamera, stepCamera } from './camera/index';
 import { CameraKick } from './camera/kick';
 import { ReformShot } from './camera/reform';
 import { RoomFade } from './camera/room-fade';
+import { CameraShake } from './camera/shake';
 import { type CameraTuning, cameraFor } from './camera/tuning';
 import { CharacterRenderer } from './character/index';
 import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
@@ -101,6 +104,10 @@ export class RenderStage {
   private pending: SimEvent[] = [];
   /** A blow landing shoves the view a few px (added at view time; the follow camera never sees it). */
   private readonly kick = new CameraKick();
+  /** Screen shake: one trauma value the loud beats add to (camera/shake.ts, memory/feel.md). */
+  private readonly shake = new CameraShake();
+  /** The dark pulse at the edges when she is hurt (camera/hurt-fx.ts). */
+  private readonly hurtVignette = new HurtVignette();
   /** The heart waking leans the view toward it; the ending eases it in (render-side, like the kick). */
   private readonly goalCam = new GoalCamera();
   /** Fade / re-form / restart: the pan that replaces the cut and the dark dip over it (camera/reform.ts). */
@@ -123,7 +130,13 @@ export class RenderStage {
     this.roomFade = new RoomFade(scene.camera?.fadeIn ?? 0);
     this.hud = new Hud();
     this.overlay = new HitboxOverlay(scene);
-    ga.root.addChild(this.dip.layer, this.roomFade.layer, this.hud.layer, this.overlay.layer);
+    ga.root.addChild(
+      this.hurtVignette.layer,
+      this.dip.layer,
+      this.roomFade.layer,
+      this.hud.layer,
+      this.overlay.layer,
+    );
     this.build();
     // Boot: the room comes up from black (if it says so). Not when booted paused (`?manual`: the tools
     // and tests want the picture at once); `__game.load()` restarts with the fade.
@@ -255,6 +268,8 @@ export class RenderStage {
     const events = this.pending;
     this.pending = [];
     this.kick.update(dt, events);
+    this.shake.update(dt, events);
+    this.hurtVignette.update(dt, events, vs);
     const st = this.game.state;
     this.beats.update(dt, st.frame, alpha, {
       hatch: st.hatch,
@@ -285,11 +300,14 @@ export class RenderStage {
       this.game.scene,
       follow,
     );
+    // The kick and the shake: render-side offsets, the follow camera never sees them.
+    const kx = this.kick.x + this.shake.x;
+    const ky = this.kick.y + this.shake.y;
     const view: CameraView = o
-      ? { x: base.x + this.kick.x, y: base.y + this.kick.y, zoom: base.zoom, w: vs.w, h: vs.h }
+      ? { x: base.x + kx, y: base.y + ky, zoom: base.zoom, w: vs.w, h: vs.h }
       : {
-          x: base.x + this.kick.x + gc.x + rs.x + this.beats.x,
-          y: base.y + this.kick.y + gc.y + rs.y + this.beats.y,
+          x: base.x + kx + gc.x + rs.x + this.beats.x,
+          y: base.y + ky + gc.y + rs.y + this.beats.y,
           zoom: base.zoom * gc.zoom,
           w: vs.w,
           h: vs.h,

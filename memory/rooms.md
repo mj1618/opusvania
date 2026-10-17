@@ -108,6 +108,14 @@ timings reach Z, every one a catch; walk-off glide and jump-glides all cross. Th
   9-frame follow, a long fall or the exit the full lead on `smoothYFastFall` 5). Measured on the naive run: peak
   camera acceleration 0.85 px/f^2 on the gap drops, 5.8 in the final drop; she stays at 0.47-0.78 of the frame
   through the drop and the fade. `tests/unit/rooms.test.ts` runs the camera headless over the whole run (< 8).
+- **Every wood greybox room carries the fall block too (2026-10-17, feel review problem 5):** `realFallPx` 250,
+  `targetSmoothY` 10, `fallLookahead` 320, but `smoothYFastFall` **6** (5 gave 8.2-8.7 px/f² at the onset of the
+  long straight drops, R2's exit, R9's branch, R11); `lookaheadX` 330 / `leadFrames` 36 in R2, R6 and R9. And in
+  rooms with `realFallPx` the vertical target is clamped to what the scene's bounds can show (less a zone's shift)
+  BEFORE its spring: a fall toward a catch or a drop exit at a room's foot was stopped dead by the clamp (18-29
+  px/f² in one frame). `tests/unit/wood-camera.test.ts` runs a hopping runner and two walkers from each room's spawn:
+  peak < 8 px/f², feet < 0.97 of the frame above the room's last 200 px. A catch zone or exit at the very bottom of
+  a room is under the lowest view: she falls out of frame before it fires; give such a room 200+ px under its catch.
 - **A rounding bug, fixed:** `place()` zeroed the spring's velocity whenever `cam.y + line` missed `cam.fy` by an ulp
   (it took that for a clamp); a fast follow stuttered every other frame at half speed. Now only a real clamp does.
 - Beats (`beats.ts` `CameraBeats`, render-side offsets like the kick):

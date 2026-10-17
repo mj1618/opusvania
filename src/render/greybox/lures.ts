@@ -28,12 +28,22 @@ interface Fx {
 
 const LIFE = { beat: 0.35, hit: 0.25, snuff: 0.9, catch: 0.4, free: 0.45 } as const;
 
+/**
+ * The dark a snuff leaves (feel review problem 4, memory/feel.md): a flat disc grows from the flame to
+ * the old pull radius over `grow` s at `peak` opacity, then settles over `settle` s to a lasting `wash`
+ * where the field was, so a cleared room looks safe. A lure out before she came in has the wash only.
+ * `flash`: the frames of white on the frame the flame goes out.
+ */
+const DARK = { color: 0x04060a, grow: 0.5, settle: 0.7, peak: 0.42, wash: 0.2, flash: 2 } as const;
+
 /** Scratch for a flame's position this frame. */
 const AT = { x: 0, y: 0 };
 
 export class LureView {
   private readonly fx: Fx[] = [];
   readonly moths = new FreedMoths();
+  /** Seconds since each lure went out while she was here (by id); absent = out before. */
+  private readonly outT = new Map<string, number>();
 
   /** Reads this render frame's events. */
   onEvents(events: readonly SimEvent[], sim: SimView): void {
@@ -42,6 +52,7 @@ export class LureView {
         // A restart: everything burns again, the moths are gone.
         this.moths.clear();
         this.fx.length = 0;
+        this.outT.clear();
       } else if (e.type === 'lureBeat')
         this.fx.push({ kind: 'beat', x: e.x, y: e.y, t: 0, life: LIFE.beat, r: 30 + e.out });
       else if (e.type === 'lureHit')
@@ -52,6 +63,7 @@ export class LureView {
         this.fx.push({ kind: 'free', x: sim.player.cx, y: sim.player.cy, t: 0, life: LIFE.free, r: 20 });
       else if (e.type === 'lureSnuff') {
         this.fx.push({ kind: 'snuff', x: e.x, y: e.y, t: 0, life: LIFE.snuff, r: 20 });
+        this.outT.set(e.id, 0);
         this.moths.free(e.id, e.x, e.y, e.moths);
       }
     }
@@ -62,6 +74,23 @@ export class LureView {
     const list = sim.scene.lures ?? [];
     const p = sim.player;
     const T = tuning.lures;
+    for (const [id, t] of this.outT) this.outT.set(id, t + dt);
+    // First the dark where flames went out: under every field still burning.
+    for (let i = 0; i < list.length; i++) {
+      const l = list[i];
+      if (!l || (sim.lures.hp[i] ?? 0) > 0) continue;
+      const R = lureRowNow(sim.lures, i, l, tuning).radius;
+      const at = flameAt(sim.lures, i, l, sim.frame - 2 + sim.alpha, tuning, AT);
+      const t = this.outT.get(l.id) ?? 1e6;
+      const grow = Math.min(1, t / DARK.grow);
+      const r = R * (1 - (1 - grow) * (1 - grow) * (1 - grow));
+      const settle = Math.min(1, Math.max(0, (t - DARK.grow) / DARK.settle));
+      const a = DARK.peak + (DARK.wash - DARK.peak) * settle * settle * (3 - 2 * settle);
+      // Two steps, so the edge is soft even flat.
+      back.circle(at.x, at.y, r).fill({ color: DARK.color, alpha: a * 0.45 });
+      back.circle(at.x, at.y, r * 0.86).fill({ color: DARK.color, alpha: a * 0.65 });
+      if (t < DARK.flash / 60) back.circle(at.x, at.y, 110).fill({ color: GB.flameHot, alpha: 0.95 });
+    }
     for (let i = 0; i < list.length; i++) {
       const l = list[i];
       if (!l) continue;
