@@ -15,8 +15,15 @@ import { SKY } from '../scene/layers/sky';
 import { fxDebug } from '../scene/lib/fx-debug';
 import { LOOK } from '../scene/lib/room-look';
 import { SWARM, type SwarmLayerCfg } from './config';
-import { PATH_POINTS, pathLength, RiverBehaviour, type SwarmPlan, timeTable } from './paths';
-import { SWARM_FRAG, SWARM_VERT } from './shader';
+import {
+  crossFromPolyline,
+  PATH_POINTS,
+  pathLength,
+  RiverBehaviour,
+  type SwarmPlan,
+  timeTable,
+} from './paths';
+import { HAZE_FRAG, HAZE_VERT, SWARM_FRAG, SWARM_VERT } from './shader';
 
 const vec4 = (n = 1) => ({ value: new Float32Array(4 * n), type: 'vec4<f32>' as const, size: n });
 
@@ -48,7 +55,7 @@ interface SwarmLayer {
 function buildMesh(
   cfg: SwarmLayerCfg,
   seed: number,
-): { mesh: Mesh<Geometry, Shader>; u: Record<string, Float32Array> } {
+): { mesh: Mesh<Geometry, Shader>; u: Record<string, Float32Array>; group: UniformGroup } {
   const n = cfg.count;
   const rnd = prng(seed);
   const a = new Float32Array(n * 4);
@@ -100,6 +107,7 @@ function buildMesh(
     uGlint: vec4(),
     uSheen: vec4(),
     uDebug: vec4(),
+    uHaze: vec4(),
   };
   const group = new UniformGroup(uniforms);
   const shader = new Shader({
@@ -110,12 +118,39 @@ function buildMesh(
   mesh.label = cfg.layer;
   const u: Record<string, Float32Array> = {};
   for (const [k, v] of Object.entries(uniforms)) u[k] = v.value;
-  return { mesh, u };
+  return { mesh, u, group };
+}
+
+/** The river's haze: a strip of `HAZE_SEGMENTS` along the path, drawn under the far moths with their uniforms. */
+const HAZE_SEGMENTS = 96;
+function buildHaze(group: UniformGroup): Mesh<Geometry, Shader> {
+  const n = HAZE_SEGMENTS;
+  const pos = new Float32Array((n + 1) * 4);
+  const idx = new Uint32Array(n * 6);
+  for (let i = 0; i <= n; i++) pos.set([i / n, -1, i / n, 1], i * 4);
+  for (let i = 0; i < n; i++) {
+    const a = i * 2;
+    idx.set([a, a + 1, a + 2, a + 1, a + 3, a + 2], i * 6);
+  }
+  const geometry = new Geometry({
+    attributes: {
+      aPosition: { buffer: new Buffer({ data: pos, usage: BufferUsage.VERTEX }), format: 'float32x2' },
+    },
+    indexBuffer: new Buffer({ data: idx, usage: BufferUsage.INDEX }),
+  });
+  const shader = new Shader({
+    glProgram: GlProgram.from({ vertex: HAZE_VERT, fragment: HAZE_FRAG, name: 'swarm-haze' }),
+    resources: { swarm: group },
+  });
+  const mesh = new Mesh({ geometry, shader });
+  mesh.label = 'swarmHaze';
+  return mesh;
 }
 
 export class SwarmRenderer {
   private readonly layers: SwarmLayer[] = [];
   private readonly river: RiverBehaviour | null;
+  private haze: Mesh<Geometry, Shader> | null = null;
   private readonly times: number[] = [];
   private lastFrame = -1;
   private plan: SwarmPlan | null = null;
@@ -137,11 +172,22 @@ export class SwarmRenderer {
     const releaseX = promise ? promise.x0 - SWARM.release.before : room.width;
     const cross =
       at ?? (promise ? { x: (promise.x0 + promise.x1) / 2, y: promise.y - 100 } : { x: room.width, y: 0 });
-    this.river = new RiverBehaviour(releaseX, { x: cross.x, y: cross.y });
+    // The crossing follows the room's swarm polyline (the level agent moves it in the room file).
+    this.river = new RiverBehaviour(
+      releaseX,
+      { x: cross.x, y: cross.y },
+      crossFromPolyline(marks.swarm, cross),
+    );
     const seed = (room.art?.seed ?? 1) * 7919;
     SWARM.layers.forEach((cfg, i) => {
-      const { mesh, u } = buildMesh(cfg, seed + i * 1013);
+      const { mesh, u, group } = buildMesh(cfg, seed + i * 1013);
       mesh.visible = false;
+      // The haze goes under the first (farthest) layer's moths and shares its uniforms.
+      if (i === 0) {
+        this.haze = buildHaze(group);
+        this.haze.visible = false;
+        tree.get(cfg.layer).addChild(this.haze);
+      }
       tree.get(cfg.layer).addChild(mesh);
       this.layers.push({ cfg, mesh, u, parallax: tree.parallax(cfg.layer) });
     });
@@ -217,6 +263,7 @@ export class SwarmRenderer {
     this.plan = plan;
     const on = SWARM.enabled && plan.active;
     for (const l of this.layers) l.mesh.visible = on;
+    if (this.haze) this.haze.visible = on && SWARM.haze.strength > 0;
     if (!on) {
       this.cpuMs = performance.now() - t0;
       return;
@@ -257,7 +304,8 @@ export class SwarmRenderer {
       set(u.uClock, clock, plan.tau, rate, plan.releaseTau);
       set(u.uFeed, f.rampIn, f.peakEnd, f.decline, f.tail * cfg.tail * cfg.peak);
       set(u.uFeed2, f.releaseFade, cfg.peak, S.gaps.depth, S.gaps.rate);
-      set(u.uFeed3, f.headStart, 0, 0, 0);
+      // Every layer's head is equally far along at the start: slower layers were fed earlier.
+      set(u.uFeed3, f.headStart / cfg.speed, 0, 0, 0);
       set(u.uWaves, S.waves.k[0], S.waves.amp[0], S.waves.k[1], S.waves.amp[1]);
       set(u.uWaves2, S.waves.speed, S.neck.amp, S.neck.k, S.neck.rate);
       set(u.uLook, cfg.size[0], cfg.size[1], cfg.flutter, cfg.blur);
@@ -278,6 +326,7 @@ export class SwarmRenderer {
       set(u.uGlint, ...rgb(c.glint), 1);
       set(u.uSheen, S.sheen.gain, S.sheen.floor, S.sheen.rim, 0);
       set(u.uDebug, S.debug.lineup ? 1 : 0, S.debug.spacing, 0, 0);
+      set(u.uHaze, S.haze.strength, S.haze.width, S.haze.patches, 0);
     }
   }
 }

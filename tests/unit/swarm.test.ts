@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { SWARM } from '../../src/render/swarm/config';
 import {
   blendFormations,
+  crossFromPolyline,
   FORMATIONS,
   feedAt,
   PATH_POINTS,
   RiverBehaviour,
   timeTable,
 } from '../../src/render/swarm/paths';
+import { SWARM_PASS, swarmPassWeight } from '../../src/render/swarm/timing';
 
 describe('swarm paths (memory/swarm.md)', () => {
   it('every formation has the same number of points, west to east', () => {
@@ -42,7 +44,7 @@ describe('the river behaviour', () => {
 
   it('keeps leaving when she stands still, and never comes back for her', () => {
     const r = new RiverBehaviour(2184, { x: 3700, y: 860 });
-    r.start(0, 960, 800);
+    r.start(12, 960, 800);
     const a = step(r, 960, 900, 120);
     const b = step(r, 960, 900, 120);
     expect(b.fx).toBeGreaterThan(a.fx + SWARM.follow.drift * 1.5);
@@ -65,6 +67,39 @@ describe('the river behaviour', () => {
     expect(p.releaseTau).toBeLessThan(1e5);
     p = step(r, 2400, 2300, 600);
     expect(Math.abs(p.fx - 3700)).toBeLessThan(60);
+  });
+
+  it('the pass over the moon plays out even if she runs straight off (rides with the camera)', () => {
+    const r = new RiverBehaviour(2184, { x: 3700, y: 860 });
+    r.start(-SWARM.delay, 960, 800);
+    let x = 960;
+    let p = r.update({ dt: 1 / 60, camX: x, camY: 800, heroX: x });
+    for (let i = 0; i < 60 * (SWARM.pass.out - 1); i++) {
+      x += 9.6;
+      p = r.update({ dt: 1 / 60, camX: x, camY: 800, heroX: x });
+      if (r.sinceHatch > SWARM.pass.full && r.sinceHatch < SWARM.pass.hold)
+        expect(Math.abs(p.fx - x)).toBeLessThan(2);
+    }
+    expect(p.releaseTau).toBeGreaterThan(1e5);
+    for (let i = 0; i < 120; i++) p = r.update({ dt: 1 / 60, camX: x, camY: 800, heroX: x });
+    expect(p.releaseTau).toBeLessThan(1e5);
+  });
+
+  it('the timing API: a plateau over the pass, nothing before or after', () => {
+    expect(swarmPassWeight(0)).toBe(0);
+    expect(swarmPassWeight((SWARM_PASS.full + SWARM_PASS.hold) / 2)).toBe(1);
+    expect(swarmPassWeight(SWARM_PASS.out + 0.1)).toBe(0);
+  });
+
+  it('the crossing follows the room polyline', () => {
+    const f = crossFromPolyline(
+      [
+        [0, 500],
+        [10000, 500],
+      ],
+      { x: 3700, y: 860 },
+    );
+    for (const p of f) expect(p[1]).toBe(-360);
   });
 
   it('finishes once the last moth has crossed', () => {

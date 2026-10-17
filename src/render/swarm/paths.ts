@@ -12,6 +12,7 @@
  * a closed loop formation with its frame at the lamp; freed moths a formation with its frame on her.
  */
 import { SWARM } from './config';
+import { swarmPassWeight } from './timing';
 
 export const PATH_POINTS = 8;
 
@@ -72,7 +73,11 @@ export const FORMATIONS = {
 export type FormationId = keyof typeof FORMATIONS;
 
 /** Blends formations by weight (weights need not sum to 1; they are normalised). */
-export function blendFormations(weights: Partial<Record<FormationId, number>>): PathPoint[] {
+export function blendFormations(
+  weights: Partial<Record<FormationId, number>>,
+  /** Room-built shapes that replace the defaults (the river's `cross` comes from the room's swarm polyline). */
+  shapes: Partial<Record<FormationId, Formation>> = {},
+): PathPoint[] {
   const out: [number, number, number, number][] = [];
   let sum = 0;
   for (const w of Object.values(weights)) sum += Math.max(0, w ?? 0);
@@ -81,12 +86,37 @@ export function blendFormations(weights: Partial<Record<FormationId, number>>): 
   for (const [id, w0] of Object.entries(weights) as [FormationId, number][]) {
     const w = Math.max(0, w0) / sum;
     if (w === 0) continue;
-    FORMATIONS[id].forEach((p, i) => {
+    (shapes[id] ?? FORMATIONS[id]).forEach((p, i) => {
       const o = out[i] as [number, number, number, number];
       for (let k = 0; k < 4; k++) o[k] = (o[k] as number) + (p[k] as number) * w;
     });
   }
   return out;
+}
+
+/**
+ * The crossing built from the room's swarm polyline (`marks.swarm`, world px), in frame space around
+ * the `at` point: the polyline resampled at the default `cross` formation's x offsets (held level past
+ * its ends), with the default bands and speed weights. The level agent can move the path in the room
+ * file and the river follows it.
+ */
+export function crossFromPolyline(
+  line: readonly (readonly [number, number])[],
+  at: { x: number; y: number },
+): Formation {
+  const yAt = (x: number): number => {
+    const first = line[0] as readonly [number, number];
+    const last = line[line.length - 1] as readonly [number, number];
+    if (x <= first[0]) return first[1];
+    if (x >= last[0]) return last[1];
+    for (let i = 1; i < line.length; i++) {
+      const a = line[i - 1] as readonly [number, number];
+      const b = line[i] as readonly [number, number];
+      if (x <= b[0]) return a[1] + ((b[1] - a[1]) * (x - a[0])) / Math.max(1e-6, b[0] - a[0]);
+    }
+    return last[1];
+  };
+  return FORMATIONS.cross.map(([dx, , hw, sp]) => [dx, yAt(at.x + dx) - at.y, hw, sp] as const);
 }
 
 /**
@@ -178,6 +208,7 @@ export class RiverBehaviour {
   private vy = 0;
   private tx = 0;
   private prevCamX = 0;
+  private prevCamXLock = 0;
   /** Debug: never let go (look at the pass anywhere in the room). */
   hold = false;
 
@@ -186,7 +217,14 @@ export class RiverBehaviour {
     private readonly releaseX: number,
     /** Where the frame goes once released (the promise camera mark). */
     private readonly crossAt: { x: number; y: number },
+    /** The crossing's shape (room-built: `crossFromPolyline`); absent = the default. */
+    private readonly crossShape?: Formation,
   ) {}
+
+  /** Seconds since the `hatch` event (the swarm starts `SWARM.delay` s later). */
+  get sinceHatch(): number {
+    return this.tau + SWARM.delay;
+  }
 
   get running(): boolean {
     return this.started;
@@ -208,7 +246,7 @@ export class RiverBehaviour {
 
   /** The camera jumped (a teleport): the frame jumps with it. */
   snap(camX: number, camY: number): void {
-    this.fx = this.tx = this.prevCamX = camX;
+    this.fx = this.tx = this.prevCamX = this.prevCamXLock = camX;
     this.fy = camY;
     this.vx = this.vy = 0;
   }
@@ -231,7 +269,8 @@ export class RiverBehaviour {
     if (
       !released &&
       !this.hold &&
-      this.tau > 0 &&
+      // Never before the pass over the moon is over: a player who runs at once still sees it.
+      this.sinceHatch >= SWARM.pass.out &&
       (i.heroX > this.releaseX || this.tx > this.releaseX + 400)
     ) {
       this.releaseTau = this.tau;
@@ -267,11 +306,24 @@ export class RiverBehaviour {
     this.vy += ay * dt;
     this.fx += this.vx * dt;
     this.fy += this.vy * dt;
+    // The pass belongs to the sky: while it plays, the river rides with the camera like the moon.
+    const lock = this.releaseTau < 1e5 ? 0 : swarmPassWeight(this.sinceHatch);
+    if (lock > 0) {
+      this.fx += (i.camX - this.fx) * lock;
+      this.fy += (i.camY - this.fy) * lock;
+      this.vx += (dt > 0 ? (i.camX - this.prevCamXLock) / dt - this.vx : 0) * lock;
+      if (i.camX > this.tx) this.tx = i.camX;
+    }
+    this.prevCamXLock = i.camX;
 
     const B = SWARM.blend;
-    const lead = smooth(B.leadFrom, B.leadFrom + B.leadDur, this.tau);
+    // After the pass: the thinner stream ahead and above her.
+    const lead = smooth(SWARM.pass.hold, SWARM.pass.hold + B.leadDur, this.sinceHatch);
     const cross = this.releaseTau < 1e5 ? smooth(this.releaseTau, this.releaseTau + B.crossDur, this.tau) : 0;
-    const path = blendFormations({ pass: (1 - lead) * (1 - cross), lead: lead * (1 - cross), cross });
+    const path = blendFormations(
+      { pass: (1 - lead) * (1 - cross), lead: lead * (1 - cross), cross },
+      this.crossShape ? { cross: this.crossShape } : {},
+    );
     // Done: the last moth fed has had a full trip (at the slowest layer's pace) since the feed dried up.
     const slowest = Math.min(...SWARM.layers.map((l) => l.speed)) * (1 - SWARM.spread);
     const over = this.releaseTau + SWARM.feed.releaseFade + SWARM.period / slowest + 1;

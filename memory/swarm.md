@@ -7,7 +7,9 @@ Scene 1's river of moths: Wing's kind, leaving without her (docs/design/scenes/0
   drawn just after `mid` so the big trunks never hide the river), `swarmMid` (0.75), `swarmNear` (1.2, before
   `foreground`: blurred moths that pass in front of her). Real GL instancing: a 4-vertex quad + per-instance
   `aA` (phase, speed, lateral, rank) and `aB` (seeds, size), `instanceCount` on the Geometry (Pixi 8 supports
-  it; name the corner attribute `aPosition` so Pixi's bounds code finds it). 700 / 260 / 9 moths.
+  it; name the corner attribute `aPosition` so Pixi's bounds code finds it). 700 / 260 / 9 moths. Under the
+  far moths, in the same container and with the far layer's uniform group, the **haze**: a 96-segment strip
+  along the path (shader.ts `HAZE_*`).
 - **Everything about a moth is a pure function in the vertex shader** of its seeds, `tau` (seconds since the
   swarm started) and the render clock: no CPU per moth, reproducible stills. A moth runs along the path
   (`w = fract(phase + tau * rate)`); each trip is a "cycle"; it is alive on a cycle only if its rank (re-rolled
@@ -21,13 +23,20 @@ Scene 1's river of moths: Wing's kind, leaving without her (docs/design/scenes/0
   px from screen centre at zoom 1; the moon is at frame (460, -350)) + band half width + a speed weight
   (low = moths dwell there). Catmull-Rom through them; a time table makes the speed weights real.
   Each layer places the frame at its own parallax: `layerPos = anchor + (F - anchor) * p + offset`.
-- **Scene 1's behaviour, `river`**: `pass` (head into view ~1.2 s after `hatch`, arcs across the moon, densest
-  ~3-7 s) blends to `lead` (6.5-11 s: a thinner stream ahead and above, x 0.6-0.95) and, once her x passes
-  `promise.x0 - 760` (or the drifting frame does), to `cross` (anchored on the room's `promise` camera mark:
-  dips over the gap toward the far branch, climbs away east) while the feed dries up. The frame follows the
-  camera with a spring that also takes the camera's speed (no lag at her 576 px/s run), never goes back, and
-  drifts on at 55 px/s when she stands still: it never waits for her. After the release + a slowest trip it
-  stops drawing.
+- **Scene 1's behaviour, `river`** (times in s since `hatch`): `pass` (the head enters frame left at ~0, is on
+  the moon disc from ~3.7, 9-50 moths on the disc through ~9; 250-420 blobs on screen at the peak) blends to
+  `lead` from `pass.hold` (8 s: a thinner stream ahead and above, x 0.6-0.95) and, once her x passes
+  `promise.x0 - 760` (or the drifting frame does) **and never before `pass.out` (9.5 s)**, to `cross` while the
+  feed dries up. **While the pass plays (its weight > 0) the frame is locked to the camera**: the river rides
+  with the screen like the moon, so a player who runs at once still sees it cross the moon. After it, the frame
+  follows the camera with a spring that also takes the camera's speed (no lag at her 576 px/s run), never goes
+  back, and drifts on at 55 px/s when she stands still: it never waits for her. After the release + a slowest
+  trip it stops drawing.
+- **The crossing comes from the room**: `crossFromPolyline(marks.swarm, promise camera mark)` resamples the
+  room's swarm polyline at the default `cross` x offsets, so the level agent moves it in the room file. The pass
+  and lead are frame-relative (the moon is screen-fixed, so a world-anchored pass would miss it).
+- **Layer heads are synced**: `uFeed3.x = feed.headStart / layer.speed`, so the slower far layer was fed earlier
+  and reaches the moon with the mid moths (it lagged behind by half the frame before).
 - **Events**: `hatch` starts it; `roomEnter` (or a fresh state, frame count going back) stops it until the
   next hatch; a teleport (`spawn` mid-run: the capture tools) starts it late (`lateStart` 14 s, the thin
   lead stream) or snaps the frame. A room without `marks.swarm` has no swarm; without `hatch`, it starts late.
@@ -37,9 +46,27 @@ Scene 1's river of moths: Wing's kind, leaving without her (docs/design/scenes/0
   never on antennae), a sheen on the moon-side half of the wings that comes and goes with the beat (only away
   from the moon: backlit they stay dark), a faint membrane light on the halo, a rare glint. Never warm.
 
+## Timing API (for the camera's lean and Tatter's gaze: `src/render/swarm/timing.ts`, pure, no Pixi)
+- `SWARM_PASS` = `{in, full, hold, out}` = 2.4 / 3.8 / 8.0 / 9.5 s after the sim's `hatch` event.
+- `swarmPassWeight(sinceHatch)` 0..1: rises in..full, holds, falls hold..out (smoothstep plateau).
+- `swarmPassFocus(room)`: where the pass is densest, the room's moon in logical view px (safe area 0..1920 x
+  0..1080; nearly screen-fixed), or null. The camera agent's `room.camera.lean` should use these numbers
+  (camera/beats.ts times its lean in sim seconds since `hatch` too).
+
+## The look on a night sky (round 2)
+- Dark moths on a dark sky vanish, and rims alone read as stars, rain or sparks. What reads (and stays dark):
+  **the haze**, a soft band of moonlit scale dust along the river's core (`haze.strength` 0.28 of the rim
+  colour, `width` 1.9 x the band, a few soft patches), lit by the feed's envelope (not its gaps) for the moths
+  at that point: dark moths inside a faint pale band = the river's curve as one shape, even at a thumbnail.
+  Under ~0.1 the post toe crushes it to nothing; 0.35 starts to read as a cloud.
+- Far moths: no rim, no haze toward the sky (both made pale specks = stars), 5-10 px, faster (0.85) than
+  before so they share the pass. Mid: 10-20 px, beat 7-11 Hz (readable flap), rim 0.45, sheen 0.16.
+- Wing shape round 2: a rounded forewing (quad, rounding 0.1) over a big round hindwing, view tilt 0.7 (mid
+  stroke shows both wings spread, the ends a sail up / down). Sharp triangles read as bats or leaves.
+
 ## Knobs (`SWARM` in config.ts, live as `__fx.swarm`)
 `period`, `spread`, `feed` (headStart, rampIn, peakEnd, decline, tail, releaseFade), `gaps`, `waves`, `neck`,
-`blend`, `follow` (drift, omegaX/Y), `release` (before, omega), `dart` / `loop` / `straggle` / `wander`,
+`pass`, `blend`, `haze`, `follow` (drift, omegaX/Y), `release` (before, omega), `dart` / `loop` / `straggle` / `wander`,
 `flap` (amp, tilt), `sheen` (gain, floor, rim), `colors`, `halo`, per layer: count, size, speed, band, dx/dy,
 flutter, beat, blur, haze, alpha, rim, peak/tail. Formations: `FORMATIONS` in paths.ts.
 
@@ -52,9 +79,9 @@ flutter, beat, blur, haze, alpha, rim, peak/tail. Formations: `FORMATIONS` in pa
 - Counting moths on screen: hide every layer but `swarm*`, post off, body / sky / rim colours pure red, and
   count connected red blobs (a scratch numpy script). Peak pass ~230-300 blobs (a few are split moths).
 
-## Cost (M5 Pro, 3840x2160, all ~970 moths, pass peak)
-GPU: frame time with the swarm on vs off differs by <= 0.1 ms (the timer's resolution; method in
-post-and-air.md "Timing"). CPU: < 0.1 ms (uniforms only). Budget was 0.3 ms GPU / 0.1 ms CPU.
+## Cost (M5 Pro, 3840x2160, all ~970 moths + the haze strip, pass peak)
+GPU: frame time with the swarm on vs off is the same within the noise (round 1: <= 0.1 ms; round 2: on/off
+both 10.0-10.5 ms; method in post-and-air.md "Timing"). CPU: < 0.1 ms (uniforms only). Budget 0.3 / 0.1 ms.
 
 ## Gotchas
 - A thin shape is "all rim" if the rim is a shifted-coverage test: keep the rim 1 px and constant; a
@@ -63,16 +90,20 @@ post-and-air.md "Timing"). CPU: < 0.1 ms (uniforms only). Budget was 0.3 ms GPU 
 - Top-down wing shapes (bow ties) read as arrowheads / mantas at 15 px; the side-on beat reads as a moth.
 - `SAFE_W/2, SAFE_H/2` in index.ts is the view centre on every window shape, not a cull: nothing is culled,
   and every formation reaches past the widest view (VIEW_MAX_W 2592 -> +-1296 from centre).
-- The release can come before the `lead` blend finishes: she runs the branch in ~5 s.
+- Round 1's release fired at 1.5 s when she ran at once, so the pass never crossed the moon: the release is
+  now gated on `pass.out` and the pass is locked to the camera.
+- Moon-disc counts are measured with the debug colours (Debug above) and a disc mask at the moon's view px.
 
 ## Adding a behaviour (lamp swarms, freed moths later)
 Add a formation (8 points; a closed loop works the same, with the first and last points meeting) and a class
 like `RiverBehaviour` that returns a `SwarmPlan` (frame point, path, tau, release). For many swarms at once,
 give each its own mesh set or move the plan into per-instance attributes (a behaviour id + its own frame).
 
-## Weak (judged harshly, 2026-10-17)
-1. It does not yet read as a river at a glance in the current wood: the sky behind the path is mostly dark
-   canopy, and the moths read by rim only. Needs the opened sky / moon of the wood background, then a retune
-   (more mid moths on the bright sky, maybe a faint haze band along the river's core).
-2. The moon crossing is only seen with a camera override today (the opening frame's canopy hides the moon).
-3. Far specks can look like rain or sparks (1 px rim slashes) rather than moths.
+## Weak (judged harshly, round 2, 2026-10-17)
+1. Not yet seen against the moon in the real opening: the backdrop / room were mid-change during this round
+   (no moon in frame at the hatch). Retune `haze.strength` and the mid rim once the moon and a 18-35 luma sky
+   are back; the disc count (9-50) may then be too dense near 6-7 s.
+2. Single far moths still read as specks, not moths; the river reads as a band, its members don't (only the
+   mid layer's 10-20 px moths show wings, and only at full resolution).
+3. The near layer (9 blurred moths) rarely lands in frame during the pass, and the lead stream after the pass
+   is thin and mostly off the top of the frame on the redesigned route.

@@ -11,15 +11,8 @@
  *            cool silver, moonlight through the wings on the halo, a rare glint. Premultiplied.
  */
 
-export const SWARM_VERT = /* glsl */ `#version 300 es
-precision highp float;
-in vec2 aPosition;      // quad corner, -1..1
-in vec4 aA;             // phase on the path, speed 0..1, lateral -1..1, rank 0..1
-in vec4 aB;             // seeds 0..1, size 0..1
-uniform mat3 uProjectionMatrix;
-uniform mat3 uWorldTransformMatrix;
-uniform mat3 uTransformMatrix;
-
+/** Uniforms and helpers shared by the moths and the river's haze (one uniform group per layer). */
+const COMMON = /* glsl */ `
 uniform vec4 uPath[8];  // layer px x, y, band half width, share of the trip before this point
 uniform vec4 uClock;    // render clock, tau, base rate (trips/s), release tau
 uniform vec4 uFeed;     // ramp in, peak end, decline, tail level
@@ -40,12 +33,6 @@ uniform vec4 uBeh5;     // wander rate, heading swing, glint share, glint every
 uniform vec4 uBeh6;     // glint dur, glint gain, view tilt (rad: 0 from below, pi/2 side on), flap amplitude (rad)
 uniform vec4 uDebug;    // lineup 0/1 (every moth in a still row in front of the camera: shape work), spacing px, unused x2
 
-out vec2 vLocal;        // moth units: 1 = half the wingspan; x forward, y across
-out vec4 vFlap;         // upper tip, lower tip, glint, alpha
-out vec4 vMoon;         // moon direction (local), halo, on the disc
-out vec4 vLook;         // device px per unit, blur in device px, haze, detail
-out float vSheen;       // how squarely the wings face the moon this instant (the beat), 0..1
-
 const float TAU = 6.2831853;
 
 float hash1(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
@@ -56,12 +43,18 @@ float noise1(float x) {
   return mix(hash1(i), hash1(i + 1.0), f);
 }
 
-// The feed: how full the stream is for moths entering the path at time tc (0..1).
-float feed(float tc) {
+// The feed's envelope (no gaps), 0..1: ramp in, the peak, the thinner tail, dried up after the release.
+float feedEnvelope(float tc) {
   if (tc < -uFeed3.x) return 0.0;
   float d = smoothstep(-uFeed3.x, uFeed.x - uFeed3.x, tc);
   d *= 1.0 - (1.0 - uFeed.w / max(uFeed2.y, 1e-3)) * smoothstep(uFeed.y, uFeed.y + uFeed.z, tc);
   d *= 1.0 - smoothstep(uClock.w, uClock.w + uFeed2.x, tc);
+  return d;
+}
+
+// The feed: how full the stream is for moths entering the path at time tc (0..1).
+float feed(float tc) {
+  float d = feedEnvelope(tc);
   // Gaps and knots: whole stretches of the river thin out together.
   float g = noise1(tc * uFeed2.w + 17.0) * 0.65 + noise1(tc * uFeed2.w * 2.7 + 3.0) * 0.35;
   d *= 1.0 - uFeed2.z * smoothstep(0.38, 0.72, g);
@@ -89,6 +82,24 @@ vec2 pathAt(float w, out float hw, out vec2 tang) {
   hw = mix(p1.z, p2.z, f);
   return pos;
 }
+
+`;
+
+export const SWARM_VERT = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 aPosition;      // quad corner, -1..1
+in vec4 aA;             // phase on the path, speed 0..1, lateral -1..1, rank 0..1
+in vec4 aB;             // seeds 0..1, size 0..1
+uniform mat3 uProjectionMatrix;
+uniform mat3 uWorldTransformMatrix;
+uniform mat3 uTransformMatrix;
+
+${COMMON}
+out vec2 vLocal;        // moth units: 1 = half the wingspan; x forward, y across
+out vec4 vFlap;         // upper tip, lower tip, glint, alpha
+out vec4 vMoon;         // moon direction (local), halo, on the disc
+out vec4 vLook;         // device px per unit, blur in device px, haze, detail
+out float vSheen;       // how squarely the wings face the moon this instant (the beat), 0..1
 
 // A pulse of length dur every [every.x, every.y] s (per moth), as 0..1 progress or -1 when idle.
 float pulse(float tau, vec2 every, float dur, float s) {
@@ -275,17 +286,13 @@ float sdSeg(vec2 p, vec2 a, vec2 b) {
 // A forewing like a swept triangle (straight leading edge, pointed apex, slanted outer margin) over
 // a rounder hindwing lobe; the notch between them is what says "moth" at 15 px.
 float wing(vec2 q) {
-  float fore = sdQuad(q, vec2(0.0, 0.2), vec2(1.0, -0.14), vec2(0.56, -0.5), vec2(0.0, -0.12));
-  // The costa bulges forward a little, and the apex is rounded.
-  vec2 cq = q - vec2(0.48, 0.05);
-  float ca = 0.95;
-  float sa = 0.31;
-  fore = min(fore, sdEllipse(vec2(ca * cq.x - sa * cq.y, sa * cq.x + ca * cq.y), vec2(0.5, 0.12)));
-  fore -= 0.035;
-  vec2 h = q - vec2(0.3, -0.4);
-  float c = 0.85;
-  float sn = 0.53;
-  float hind = sdEllipse(vec2(c * h.x + sn * h.y, -sn * h.x + c * h.y), vec2(0.3, 0.2));
+  // Broad and soft: a rounded forewing, its apex a little forward of the outer margin, over a big
+  // round hindwing. Sharp corners read as bats or leaves.
+  float fore = sdQuad(q, vec2(0.0, 0.16), vec2(0.86, 0.02), vec2(0.66, -0.4), vec2(0.0, -0.14)) - 0.1;
+  vec2 h = q - vec2(0.26, -0.42);
+  float c = 0.9;
+  float sn = 0.44;
+  float hind = sdEllipse(vec2(c * h.x + sn * h.y, -sn * h.x + c * h.y), vec2(0.32, 0.27));
   return min(fore, hind);
 }
 
@@ -361,5 +368,51 @@ void main(void) {
   col = mix(col, uGlint.rgb, clamp(vFlap.z * wm * (1.0 - disc), 0.0, 1.0));
   float A = a * vFlap.w;
   o = vec4(col * A, A);
+}
+`;
+
+/**
+ * The river's haze: a strip along the path (aPosition = trip share 0..1, side -1..1), as bright as the
+ * stream is full there right now (the feed at the time moths now at w entered the path), soft across,
+ * patchy along. Moonlit scale dust: it is what lets the river's curve read as one shape against the
+ * night sky where single moths are too dark to see. Uses the far layer's uniforms.
+ */
+export const HAZE_VERT = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 aPosition;
+uniform mat3 uProjectionMatrix;
+uniform mat3 uWorldTransformMatrix;
+uniform mat3 uTransformMatrix;
+${COMMON}
+uniform vec4 uHaze;     // strength, width (x band), patch scale, unused
+out vec2 vRib;          // side -1..1, strength here
+
+void main(void) {
+  float w = aPosition.x;
+  float hw;
+  vec2 tang;
+  vec2 pos = pathAt(w, hw, tang);
+  float tau = uClock.y;
+  float tc = tau - w / max(uClock.z, 1e-4);
+  // The envelope, not the gaps: the veil is the river's bed; the moths make the knots.
+  float full = feedEnvelope(tc);
+  // Knots and necks, as the moths have them.
+  float neck = 1.0 + uWaves2.y * sin(TAU * (uWaves2.z * w - uWaves2.w * tau));
+  float ends = smoothstep(0.0, 0.08, w) * (1.0 - smoothstep(0.92, 1.0, w));
+  pos += vec2(-tang.y, tang.x) * aPosition.y * hw * uHaze.y * neck;
+  vRib = vec2(aPosition.y, full * ends * uHaze.x * (0.6 + 0.4 * noise1(w * uHaze.z - tau * 0.35)));
+  mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+  gl_Position = vec4((mvp * vec3(pos, 1.0)).xy, 0.0, 1.0);
+}
+`;
+
+export const HAZE_FRAG = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vRib;
+out vec4 o;
+uniform vec4 uRim;
+void main(void) {
+  float a = exp(-vRib.x * vRib.x * 3.2) * vRib.y;
+  o = vec4(uRim.rgb * a, a);
 }
 `;
