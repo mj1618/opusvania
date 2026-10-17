@@ -1,6 +1,6 @@
 # Lampfall: core design
 
-Draft 1, 2026-10-17. The foundation the other design pieces (world map, creatures and bosses, story journey, look and
+Draft 1, 2026-10-17; §4 and §6 rescoped 2026-10-18 for an Ori-length game. The foundation the other design pieces (world map, creatures and bosses, story journey, look and
 sound, tech) are checked against. The story is `memory/story.md`; this doc turns it into play. Where a call here is
 big enough for Matt, it is listed at the end with a recommendation, and the doc assumes the recommendation until he
 answers.
@@ -50,7 +50,7 @@ idea. Progress is the night coming back.
   more. A down-slash on a flame is a pogo, so she can bounce off a lamp while beating it out. The skill is hitting
   the flame from just outside the core (the slash reaches about 110 px, and the core will be smaller than that) or
   on a pass, without being dragged in. Glass lamps make the blade glance off, using the framework's existing
-  `blocks` hook, and only Shroud (ability 6) can put them out.
+  `blocks` hook, and only Shroud (ability 8) can put them out.
 - **Fling** (ability 4). Inside a pull, hold the Lamp button and she locks into orbit at her current radius and
   builds speed. Release and she flies off along the tangent, with the stick bending the exit direction up to ±45°.
   A fling refills her double jump and dash. *Easy path:* we chose orbit-and-release over Ori's Bash (slow motion
@@ -98,29 +98,50 @@ to gate. Abilities come from **moonlit glades**: a shaft of real moonlight at th
 glade presents the same way: she basks in it, gets one item line, and sees one button glyph. Real moonlight makes
 her stronger and false light pulls her down, so the source of her power is the story's own contrast.
 
-| # | Ability | In the sim? | Region | What it opens | How it's taught |
+**Rescoped 2026-10-18 to twelve abilities over ~9.75 h** (`quality-bar.md` G3: 9–12 abilities, the first in ≤ 15
+min, three in ≤ 75, then one every 40–75 min, no gap over 90). Draft 1 had seven over ~5.5 h, which at Ori's length
+would be one every ~80 minutes. Five are new (Gust, Fold, Soar, Grip, Shadow dash), and three of those are mostly
+numbers and flags on moves that exist. The clock is the first-timer's time since the hatch (`world.md` §2.2).
+
+| # | Ability | In the sim? | Area, clock (gap) | What it opens | How it's taught |
 |---|---|---|---|---|---|
 | 0 | Run, variable jump, fast fall, blade (forward, up, down, 3-hit combo), pogo | **yes** | start | the first lamps (wicks are snuffed with the blade), thorn pogo routes | the hatching branch and the first room. A wick over a short gap teaches the pull and the snuff by consequence |
-| 1 | **Glide** | **yes** | wood, within the first 5 min | wide gaps, long drops, crossing a pull field on a line | her wings dry in the first glade. The way out is a drop too long to survive without it |
-| 2 | **Wall cling and wall jump** | **yes** | wood, mid | vertical shafts, which are the wood's main gates | the glade sits at the bottom of a shaft, and the only way out is up its walls |
-| 3 | *Fling* | new | valley of lamps, early | lamp chains across chasms, tall shafts lit by lamps. Traps become launchers | the region's first big lamp hangs over a pit she can't cross. Being caught and beating free there already throws her halfway, and the glade beyond lets her choose the throw |
-| 4 | **Double jump** | **yes** | valley, boss reward | high ledges back in the wood, combined with fling | the boss arena's exit ledge is one jump too high |
-| 5 | **Dash** | **yes** | marsh | horizontal gaps, fast currents, instant escape from Caught, the flicker timing rooms | a marsh corridor with a flicker lamp you can only pass in its off-beat with a dash |
-| 6 | *Shroud* | new | marsh, late | fold her wings, go dark: no pull, unseen by predators that hunt by light, and the only way to smother glass lamps and the glass hearts of great lamps from the marsh on. It opens the dense lamp fields | a glass lamp blocks the way out of the glade's room. Shroud and land on it |
-| 7 | *Moonflight* | new | pass, after the beacon | real sustained flight: wingbeats that drain while she is in lamp light and refill in the dark. Opens the final climb and high secrets everywhere | the pass's cliff with no walls, at night, under the open moon |
-| 8+ | *slots* | | any | reserved: call the swarm, a carried lure-light, a marsh dive, and others | |
+| 1 | **Glide** | **yes** | wood floor, 0:05 | wide gaps, long drops, crossing a pull field on a line | her wings dry in the first glade. The way out is a drop too long to survive without it |
+| 2 | **Wall jump** | **yes** (kicks; the cling comes with Grip) | wood floor, 0:28 (23) | vertical shafts, which are the wood's main gates | the glade sits at the bottom of the well after the old burrback, and the only way out is up its walls |
+| 3 | ***Gust*** | new (`spit`, one projectile) | high wood, 1:06 (38), the Weaver's reward at the canopy edge | snuffs a wick at range (one hit on any flame), tears web strands, pushes flyers off their dive, spins seed wheels, pushes drifters, and kicks her back a little in the air | the glade is the first open moonlight above the canopy. A wick behind a thorn band burns across the edge: blow it out. *Reason: three abilities within 75 min (G3), and HK's first spell right after its first boss* |
+| 4 | *Fling* | new | the rim, 1:46 (40) | lamp chains across chasms, tall shafts lit by lamps. Traps become launchers | the region's first big lamp hangs over a pit she can't cross. Being caught and beating free there already throws her halfway, and the glade beyond lets her choose the throw. The Emperor (mini) is its exam |
+| 5 | **Double jump** | **yes** | the roost, 2:35 (49), the glade at the roost tree's crown | high ledges in the valley and back in the wood, combined with fling | the crown's way down is a ledge one jump too high. *Moved from the Mantis's reward. Reason: the gap from fling to the next ability would be 85 min* |
+| 6 | **Dash** | **yes** | the bright floor, 3:15 (40), the Mantis's reward | horizontal gaps, instant escape from Caught, the flicker timing rooms, keeping up in the chase | the floor's exit is a flicker corridor passable only in its off-beat with a dash, and the chase follows at once. *Moved from the marsh. Reason: G3, and HK's dash learned after its fast duellist (Hornet)* |
+| 7 | ***Fold*** | new (fast fall exists) | the reedbeds, 4:00 (45) | tap Shroud in the air: she folds her wings and drops like a stone. The landing breaks **crust floors** and husk lids, and a fold onto a flame, creature or seed-case bounces her twice a pogo's height | a crust floor seals the glade's room; fold through it. The Great Toad's head is its exam. *New. Reason: G3; it is Ori's Stomp and HK's dive in our language, and it teaches the button Shroud will use* |
+| 8 | *Shroud* | new | the fen, 4:45 (45) | hold Shroud: folded, she also goes **dark**: no pull, unseen by predators that hunt by light, and a folded landing smothers glass lamps and the glass hearts of great lamps from the marsh on. Opens the dense lamp fields | a glass lamp blocks the way out of the glade's room. Shroud and land on it. Then the empty meadow, watched unseen. *Changed: an upgrade of Fold rather than a separate move* |
+| 9 | ***Soar*** | new (glide numbers) | the bridge, 5:30 (45), the Colony's reward | her wings at full span: glide sinks half as fast, and **rides updrafts and wind fields upward** (without it wind only pushes her) | the drowned roots' escape: rising water below, an updraft in the shaft above. *New. Reason: G3, "flight is the joy", and the pass's wind needs it* |
+| 10 | ***Grip*** | new (a cling state) | the cliffs, 6:40 (70) | claws that hold: she clings to a face without sliding, climbs it slowly, and **frost and slick faces** (kick-proof until now) become holdable | the glade sits under a frost face with no other way out. *New. Reason: G3; Ori's Climb, and slick faces seen since the wood become back payoffs* |
+| 11 | *Moonflight* | new | the beacon, 7:20 (40), the glade at its foot | real sustained flight: wingbeats that drain while she is in lamp light and refill in the dark. Opens the Beacon, the wall-less climb to the cave, and high secrets everywhere | the beacon's foot, at night, under the open moon. *Changed: before the Beacon, not after it, so the Beacon tests it (journey.md set piece 6, creatures.md §3)* |
+| 12 | ***Shadow dash*** | new (a flag: dash while shrouded) | the cave mouth, 8:30 (70), the last moonlight through a crack in the roof | a dash while shrouded passes through thorns, briar curtains, web and glow-worm strands, and creatures, unharmed and never Caught | a briar curtain is the glade's only way out. *New. Reason: G3 (no gap > 90 after Moonflight), and "the dark is safe" as the last power: in the dark nothing can touch her* |
+| 13+ | *slots* | | any | reserved: call the swarm, a carried lure-light, a marsh dive, and others | |
 
 Notes:
-- **Shroud** is "the dark is safe" made into a button, and it does two jobs (traversal and snuffing), so we get two
-  verbs for the cost of one ability. While shrouded she falls like a seed: no glide and no attack. That gives it a
-  cost.
+- **Gust** is the first new verb, and the only ranged one. It counts as one hit on a flame, so a wick goes out and a
+  lantern still needs a second; it has a short cooldown and no resource. It makes the wood's revisits a power trip,
+  which is the point. Lamps from the valley on are placed so that Gust alone never solves a room (bigger flames,
+  pulls that bend the puff, flames behind glass).
+- **Fold and Shroud are one move in two steps.** Fold (tap Shroud in the air) is a visible dive with an impact.
+  Shroud (hold) is the same fold, dark. Two abilities for one move, and Shroud's teaching starts from a button the
+  player already knows. While shrouded she falls like a seed: no glide and no attack. That gives it a cost.
+- **Soar and Shadow dash are mostly numbers and flags**, the easy path the bar asks for ("verb upgrades, such as a
+  longer glide"). Grip is one new state (cling) plus a face flag the rooms already have (`kick: false` splits into
+  *never* and *slick*).
 - **Moonflight** is cheap to build in the sim but risky for level design, because free flight can trivialise rooms.
   The rule that it drains in light keeps it tied to the pillar. Try it in the pass and cut it only if a real attempt
   fails.
+- **Cadence check (G3):** 0:05, 0:28, 1:06, then gaps of 40, 49, 40, 45, 45, 45, 70, 40, 70 minutes. Each ability
+  pays something visible within 5 minutes and something old within 15 (`world.md` §3 lists them). If the wood runs
+  long, Gust's glade moves before the Weaver (into the knot) so that it still lands by 1:15.
 - **Extending the chain:** abilities are flags in a set, and gates in scene data name an ability id. A new ability is
   a flag, a move, and gates in rooms. Old rooms need no rework. They gain secrets.
-- Controls end up as five actions: jump, attack, dash, Lamp (fling), and Shroud. The last two are separate buttons
-  so she can shroud her way through a pull field.
+- **Controls stay at five actions:** jump, attack, dash, **Lamp** (tap: Gust; hold inside a pull: Fling), and
+  **Shroud** (tap in the air: Fold; hold: Shroud; with dash: Shadow dash). Lamp and Shroud stay separate so she can
+  shroud her way through a pull field.
 
 ## 5. Combat and threat
 
@@ -132,7 +153,7 @@ Notes:
   Predators notice her by how much lamp light she is in, which reworks today's "seen" system (visibility from the
   glint wallet) into visibility from being lit. Shroud makes her unseen. The firefly is the cause, never the everyday
   enemy.
-- **Health:** 4 pips at the start, as now, plus up to 4 more from moth milestones. Each snuff restores 1, which
+- **Health:** 4 pips at the start, as now, plus up to 5 more from moth milestones (§6). Each snuff restores 1, which
   rewards playing aggressively at lamps. A moonlit rest spot restores all of it.
 - **Death:** she fades and re-forms at the last **moon patch** she rested at (small shafts of moonlight, which are the
   save and rest points). The room's creatures reset. Lamps she put out stay out. Nothing else is lost. Touching a
@@ -164,22 +185,37 @@ increment removes the old piece it replaces.
 
 ## 6. Completion and collectibles
 
-Kept small on purpose. There are three things to find:
+**Rescoped 2026-10-18.** Draft 1 had one kind of find (lamps), which the bar's shortfall 3 flags: HK and Ori each
+have 3–5 kinds of find in their first area, and every find feeling the same makes exploring a chore. Draft 2 keeps
+the moths as the one completion number and health still comes from moths, but adds **three small kinds of find**,
+each a pickup on the tech that exists. Every area holds lamps, one moth-stone, one or two firefly signs and usually
+one moonlit hollow (`world.md` §2.3). *Reason: C3 (≥ 2 kinds of reward a chunk, one find every 2–3 minutes) and
+G11 (≥ 3 kinds of optional reward).*
 
-1. **Freed moths**, the completion number, shown as moths (for example "312 / 600") on the map screen. Rough budget:
-   wick 5, lantern 10, flicker or ember 15, great lamp 60, and about 12 lamps per region.
-2. **Health from moth milestones:** +1 max health at fixed moth counts set for the full game (about 140 / 280 /
-   550 / 800 of ~1,000; `world.md` §8.5), never percentages, since the total grows with each tier. *Easy path:* no separate
-   heart-piece hunt with fragments and its own UI. The reward for exploring is still more health, it is just counted
-   in moths. The first milestone falls on the critical path. The rest need exploring.
-3. **Abilities** (section 4).
+| Kind | What it is | How many | What it pays | Cost |
+|---|---|---|---|---|
+| **Lamps → freed moths** | every lamp she snuffs, on the path or hidden | ~285 lamps, ~2,800 moths (computed from data) | the completion number, the health milestones, the ending's ceiling | exists |
+| **Moth-stones** (map) | a carved stone with a moth on it, near each area's hub, sometimes a little off the path. Touching it draws the whole area on the map (unvisited rooms faint) and its count of unseen lamps | one an area (14, +2 optional) | wayfinding, and the area's lamp count. Each carving shows a moment of an older migration, so the stones together are the moths' history, wordlessly | S (a pickup and a map reveal) |
+| **Firefly signs** (lore) | something the firefly hung and left: a ring of glow-caps, a half-strung chandelier, a pattern scratched in light. Standing still beside one plays its flash rhythm once | one or two an area (~22) | lore assembled before the meadow by those who look: the rhythm is a call, and the patterns get lonelier. Collected rhythms show as a row of glyphs on the map screen | S (a prop and a pulse cue) |
+| **Moonlit hollows** (upgrades) | a small hidden shaft of moonlight, usually behind a secret. The glade ritual, shorter: one line, one small upgrade | ~12 (10 in main areas, 2 in optional ones) | an ability-adjacent upgrade, each a tuning number: quick wings (beat free in 2 presses), keen blade (+20 px snuff reach), long gust, wide throw (fling bend ±60°), second wind (a snuff refills double jump), quick dash, heavy fold, drift (steer while shrouded), night eyes (each room's unseen lamps on the map), moon reserve (+30% Moonflight), warm heart (lanterns and bigger give 2 health back), silent wings (double jump and dash are quiet to bats). Region docs set the final list | S each (a number in `resolveParams`) |
 
-**Secrets** are lamps, so every secret pays in moths: lamps behind false walls, up shafts you can only climb later,
-at the end of optional movement gauntlets (Celeste-style challenge rooms, with ghosts almost for free from the
-deterministic sim), and in rooms that open only after backtracking with a new ability. The **map** fills in
-automatically as she explores, and it shows every lamp still burning as a lit dot. The map is the to-do list.
+And two rewards that are not finds:
+1. **Health from moth milestones:** +1 max health at fixed moth counts set for the full game: **110 / 350 / 800 /
+   1,400 / 2,100** of ~2,800 (draft 1: 140 / 280 / 550 / 800 of ~1,000), never percentages, since the total grows with
+   each tier. That is 4 pips at the start and 9 at most. The first milestone falls on the critical path (the Weaver's
+   great lamp, `regions/wood.md` §8). The rest need exploring; Tier 1 can award the first three. *Easy path:* no
+   separate heart-piece hunt with fragments and its own UI. *Reason for the new counts: the moth total nearly tripled.*
+2. **Abilities** (section 4).
 
-Not in the first scope: currency, shops, charms, lore items. Each one is a slot if play shows it is missed.
+**Secrets** pay in moths, hollows, signs or a stone: lamps behind rotten bark (the wood's language, then one tell a
+region: crusts that Fold breaks, glass Shroud smothers, briar Shadow dash passes), shafts she can only climb later, the
+ends of optional movement gauntlets (Celeste-style challenge rooms and the moth trials, with ghosts almost for free
+from the deterministic sim), and rooms that open only after backtracking with a new ability. Every area has at
+least one secret a first-timer misses (C3). The **map** fills in as she explores and shows every lamp she has seen
+still burning as a lit dot, plus a per-area "unseen" count. The map is the to-do list.
+
+Not in scope: currency, shops, charms. Each one is a slot if play shows it is missed. The hollows cover the
+"small upgrade" job that charms do in HK, without a menu.
 
 ## 7. Easy-path choices
 
@@ -213,7 +249,7 @@ Not in the first scope: currency, shops, charms, lore items. Each one is a slot 
    trivialises rooms in a real attempt.
 6. **Lamps stay out for good,** and the firefly relights only at scripted beats. *Recommend:* yes. Permanent darkness
    is the visible progress.
-7. **First scope.** *Recommend:* the wood and the valley of lamps, abilities 0–4, the lamp kinds wick, lantern,
+7. **First scope.** (Superseded 2026-10-18: Tier 1 is now five areas, abilities 0–6, ~3.5 h; README scope tiers.) *Recommend:* the wood and the valley of lamps, abilities 0–4, the lamp kinds wick, lantern,
    flicker and great, two bosses, about 25 lamps, roughly 1.5–2 hours. The marsh, pass and cave then extend it through
    new rows, new flags and new scenes, with no rework.
 8. **Five buttons** (jump, attack, dash, Lamp, Shroud). *Recommend:* yes, which is about Hollow Knight's count. A

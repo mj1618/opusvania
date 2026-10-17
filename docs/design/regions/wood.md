@@ -6,6 +6,78 @@ and persona bots and reviewers check the build against it. It follows `docs/desi
 (`wood-hatch`) is kept as built. Where this doc changes a number from those docs, §11 says so and why. Matt said
 "don't ask, decide", so every call is made here and the big ones are listed at the end for his veto.
 
+## Rescope (2026-10-18): the wood becomes two areas, ~70 minutes
+
+Matt set the game's length to Ori's (`quality-bar.md` §1.6), and the bar's §5.4 finds the wood compressed: glide,
+wall jump, a mini-boss, a boss and two set pieces in ~38 minutes, against HK's 45–70 minutes for one boss and one
+spell. The whole-game plan is now 14 areas (`world.md` §2.2, `core.md` §4). **This section wins over the rest of
+this doc** where they disagree. §1's 35–45 minutes, the §2 beat sheet after 10:00, the §9 targets, §10's exit
+criterion 3 and §11's decision 16 are superseded until the chunk iteration rewrites them.
+
+**The new shape.**
+
+| Area | Rooms | Median (range) | Abilities | Peaks | Hub |
+|---|---|---|---|---|---|
+| **1. The wood floor** (the current chunk) | R1–R10 as built, plus **R14 `wood-caps`** (new) | **35 min (30–40)**, from ~22 on paper | glide ~0:05, wall jump ~0:28 | the chase and vista 0:01, the glide test ~0:09, the old burrback ~0:25 | the hollow (R7) |
+| **2. The high wood** (the next chunk) | R11 climb, **R15 `wood-boughs`**, **R16 `wood-knot`** (the area's hub), R12 web, R13 grove and the canopy edge; optional **R17 `wood-gallery`** | **35 min (30–40)** | ***Gust*** ~1:06 (glade 3 at the canopy edge, the Weaver's reward) | the web gauntlet ~0:48, the Weaver ~1:00 and the relight | the knot (R16) |
+
+Area 1 ends with the crown payoff after wall jump; area 2 starts at R9's broken-face shaft. The wood's arc and three
+feelings stay, and the third ("my wings are getting stronger") gets a third beat: glide, claws, then a wingbeat
+strong enough to blow out a flame. *Reason: G2 (areas of 25–60 min), G3 (three abilities within 75 min), and the
+bar's §5.4 (the wood at 50–75 min in two areas).*
+
+**What the current chunk must add** to reach ~35 minutes with quality: more to do, never more walking (R5). Ranked;
+each line names the rubric item it fixes.
+
+1. **A third creature kind: the dangler** (C2, C13; shortfall 1). A small spider that drops on silk at a lit point,
+   with the thread shown first (the Weaver's P2 tell, small), swings once, hangs open for a cut, and climbs back. A
+   lamp-guarder: it only drops inside its lamp's light, and a snuff sends it up for good. Sim: the weaver's drop on a
+   small weaver (S). Ladder: alone over a safe floor in R14, then over a glide landing or a cap bounce, then under L1 in
+   R9 with the burrback below (the chunk's first two-creature combination). It rehearses the Weaver's drops 30
+   minutes before the fight.
+2. **A new terrain toy: bounce caps** (C2, R2; "flight is the joy"). Mushroom caps that throw her up when she lands
+   on them (a solid with a bounce number; the wood kit already lists mushrooms as buildings). Safe in R14, then a
+   hawker over a cap-bounce gap in R8, then reused in the high wood.
+3. **R14 `wood-caps`, the cap stair** (~4–5 min, 3–4 screens; purpose teach + secret). The hub's third branch: from
+   the hollow's root shelf, north-west and up toward the canopy. The caps and the dangler alone, then together; **the
+   wood's moth-stone** at the top, with a view across the canopy gap to the firefly's glow-cap from the other side; a
+   **moonlit hollow** behind rotten bark (quick wings: beat free in 2 presses), the chunk's secret a first-timer
+   misses; 2–3 lamps; and a drop back to the hub floor, so it is a loop. The hub becomes a real three-way choice
+   (C7: briefly unsure, never lost).
+4. **Grow R8 and R9** (R2, R3, R10; suspect 2: both are 3200×1600 boxes with one floor and one lamp). Each to ~4
+   screens with height and two lines through it. R8: the hawker's wick over a gap with bounce caps under it, and the
+   dark half keeps S1 and adds a firefly sign. R9: the lantern over a two-level floor, the burrback low and a dangler
+   high, and the broken-face shaft as it is.
+5. **Finds of four kinds** (C3; shortfall 3), from one optional find every ~5 min to one every ~2.5: +4–6 optional
+   lamps (R14, R8, R9), the moth-stone (R14), two firefly signs (under R6's gap 1, in R8's dark half) and the hollow
+   (R14). The first health milestone stays at 110 moths, in the Weaver's burst.
+6. **Return legs that aren't dead walking** (R5, C6; suspect 7). The walk back from R9's lock gets a cap-bounce
+   shortcut from R8's floor back up to the hub's arch, and the walk east after wall jump passes the R8 sign and a new
+   high line over R8's caps. Loops then: the grate, the cap stair's drop, R8's shortcut, and the optional R1–R5 return.
+7. **Tatter wants something** (C11; suspect 8). It walks the road and keeps getting stuck: at the hub it waits under
+   the root shelf it can't climb. When she cuts the hanging root at the top of the cap stair, the root falls as a
+   ladder, and from then on Tatter is ahead of her at the next patch. A flag gate and two Tatter positions (both
+   exist). A small story call, flagged for Matt (README).
+8. **Fix the measured forgiveness problems** (R7, R9, C8; suspect 5): W5's throw landing in gap 2's thorns, R6's
+   gap-3 skip by gliding on after W5, L1's hit and catch rates.
+
+**Target beat sheet for area 1** (first-timer minutes; the chunk iteration measures and corrects it): hatch, chase,
+vista 0:00–1:30 · wicks and burrow, the seed-cases, P1 1:30–5:00 · glide 5:15 · glidewalk 6:30–10:00 · the hub and
+the glimpse 10:30 · the cap stair 11:30–16:00 · the hawkers 16:00–19:30 · the lantern and the lock 19:30–23:00 ·
+the well and the old burrback 23:30–27:00 · wall jump 27:30 · climb-out and crown 28:00–30:00 · the optional R1–R5
+return or straight on up R9's shaft 30:00–35:00. About 18 novelties in 35 minutes (C1), 3 creature kinds and ~10
+challenge types (C2), ≥ 4 combinations (C2), ≥ 6 visible locks (C4), three loops (C6).
+
+**For the next chunk (area 2),** in outline: R15 `wood-boughs` (crumbling bark bridges above the canopy line, the
+**bombardier** on a ledge spitting arcs across them, a swinging lantern); R16 `wood-knot` (the area's hub: P5, a
+moth-stone, Tatter, three exits: the web hall, the optional R17 gallery with a sign and a hollow, and the landing
+of the edge drop); the **web gauntlet** in R12 (the orb web, a bombardier behind it and a dangler composed, Nine
+Sols' gauntlet before the boss); glade 3 (**Gust**) in the open moonlight at the canopy edge after P7; and **the
+edge drop**, one way back into the knot, past Gust's first old payoffs (R11's thorn niche, the web hall's high
+strands). Area 2 holds ~20 lamps.
+
+---
+
 **Draft 2** answers paper review 1 (`reviews/wood-paper-1.md`) and uses the lamp lab's real lure numbers
 (`memory/lures.md`). Every reach number below was measured in the sim (headless probes on `step`, the way
 `tests/unit/glide.test.ts` does it), not taken from a straight line. What changed:
