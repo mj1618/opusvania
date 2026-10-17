@@ -68,16 +68,16 @@ export const SWARM = {
    * back of the path: `rampIn` s to full, full until `peakEnd`, down to `tail` over `decline` s;
    * after the release (the promise gap) down to nothing over `releaseFade` s.
    */
-  feed: { headStart: 3.0, rampIn: 1.2, peakEnd: 6.0, decline: 5.0, tail: 0.3, releaseFade: 3.0 },
+  feed: { headStart: 3.0, rampIn: 1.2, peakEnd: 6.0, decline: 5.0, tail: 0.42, releaseFade: 3.0 },
   /** Gaps and knots: the feed dips this deep (0..1) on a slow noise of this rate (Hz). */
   gaps: { depth: 0.75, rate: 0.32 },
   /**
    * Density waves along the river: two travelling compressions, `speed` x the flow, amplitudes as
    * a share of the strongest that keeps moths in order (1).
    */
-  waves: { k: [2.1, 3.7] as [number, number], amp: [0.55, 0.3] as [number, number], speed: 1.5 },
+  waves: { k: [2.1, 3.7] as [number, number], amp: [0.62, 0.28] as [number, number], speed: 1.5 },
   /** The band breathes: knots and necks, its half width x (1 ± `amp`) on a wave of `k` per path. */
-  neck: { amp: 0.4, k: 1.3, rate: 0.35 },
+  neck: { amp: 0.5, k: 1.3, rate: 0.35 },
   /**
    * The pass over the moon, in seconds since the `hatch` event (timing.ts hands it to the camera and
    * Tatter): its weight rises from `in` to `full`, holds while the densest part crosses the disc, and
@@ -135,18 +135,19 @@ export const SWARM = {
    */
   sheen: { gain: 0.16, floor: 0.2, rim: 0.45 },
   /**
-   * The river's haze (shader.ts HAZE_*): moonlit scale dust along the stream's core, as strong as the
-   * stream is full there. `strength` = its peak alpha of the rim colour (keep it faint: a value step
-   * of a few luma), `width` x the band, `patches` = how many soft patches along the path.
+   * The river's haze (shader.ts HAZE_*): scale dust stirred by the wings, as bright and wide as the moths
+   * are thick there (feed with gaps x density-wave compression ^ `contrast` / the neck), clumpy and
+   * ragged-edged, brighter on the moon's halo. `strength` = peak alpha of the rim colour, `width` x the
+   * band, `patches` = clump scale along the path.
    */
-  haze: { strength: 0.45, width: 1.25, patches: 7 },
+  haze: { strength: 0.55, width: 1.5, patches: 9, contrast: 1.8 },
   /** The moon's halo reach (x the disc radius) for rim and wing light. */
   halo: 3.2,
   layers: [
     {
       layer: 'swarmFar',
       count: 1100,
-      size: [5, 10],
+      size: [6, 11],
       speed: 0.85,
       band: 0.8,
       core: 0.75,
@@ -175,7 +176,8 @@ export const SWARM = {
       dy: 0,
       flutter: 9,
       beat: [6.6, 7.4],
-      tilt: 0.5,
+      tilt: 0.22,
+      body: 1.35,
       blur: 0,
       haze: 0.08,
       alpha: 1,

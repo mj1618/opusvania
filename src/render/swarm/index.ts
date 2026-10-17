@@ -334,7 +334,7 @@ export class SwarmRenderer {
       set(u.uGlint, ...rgb(c.glint), 1);
       set(u.uSheen, S.sheen.gain, S.sheen.floor, S.sheen.rim, 0);
       set(u.uDebug, S.debug.lineup ? 1 : 0, S.debug.spacing, 0, 0);
-      set(u.uHaze, S.haze.strength, S.haze.width, S.haze.patches, 0);
+      set(u.uHaze, S.haze.strength, S.haze.width, S.haze.patches, S.haze.contrast);
       set(u.uShape, cfg.tilt ?? S.flap.tilt, cfg.body ?? 1, S.phaseWave.waves, S.phaseWave.share);
     }
   }

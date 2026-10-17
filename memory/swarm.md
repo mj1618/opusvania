@@ -138,7 +138,32 @@ give each its own mesh set or move the plan into per-instance attributes (a beha
   trunks. The haze (in `swarmFar`, after `mid`) now lies over the mid giants, so the dark moths show on it.
   Trunks in the playfield layer (the giant the branch slabs sit on) still cover it: correct depth.
 
-## Weak (judged harshly, round 4, 2026-10-17)
+## Round 5 (review round 3, problem 3) — where it stopped (2026-10-17, artwork paused)
+- **Depth corrected**: `swarmFar` (0.4) and `swarmMid` (now 0.6) are drawn BEFORE `mid` in layer-tree.ts:
+  the mid giants cover the river (round 4 drew the haze over them: a depth error). `swarmNear` stays in front.
+- **Haze follows the moths** (shader.ts HAZE_*): brightness = feed with its gaps x density-wave compression
+  ^ `haze.contrast` / the band's neck; width grows in knots; brighter on the moon's halo; a ragged soft
+  edge and clumps from 2D noise in the fragment. `haze` 0.55 / width 1.5 / contrast 1.8. It now reads as a
+  lit knot of dust where the river is thick, nothing where it thins: no even contrail.
+- **Moth silhouette**: a paddle forewing (rotated ellipse + root ellipse) held a little forward over a round
+  hindwing, abdomen past them; mid tilt 0.22 + body 1.35 (the beat now squashes the silhouette from a
+  four-lobed moth to a thin line), near tilt 0.3 + body 1.6. Lineup at zoom 2: moths, not bats.
+- Knots and necks stronger: density waves 0.62 / 0.28, neck 0.5; the tail stream after the pass 0.42.
+- Far specks 6-11 px. Disc counts were 4-17 before this round's tweaks (not re-measured after).
+
+## Next (when artwork resumes)
+1. Re-measure the disc count (8-20) and the 480 px thumbnail on the current backdrop; the river's left part
+   sits behind the opening frame's foreground leaves, so the visible river is short.
+2. Make far specks read as a mass (they are near-invisible dark dots at 1x): a darker, denser core or a
+   value step in the haze under them.
+3. The lead / crossing stream after the pass is thin and mostly behind the giants' crowns on the new route:
+   route `lead` and `cross` (paths.ts FORMATIONS, `crossFromPolyline`) through the open sky between them.
+4. The naive bot falls at x ~2400 on the round-3 route, so run captures stop there: use teleports
+   (`g.teleport(x, y)` starts the swarm late, in the lead / crossing) for later stretches.
+5. e2e on 2026-10-17: all 8 boot tests timed out when run in parallel (pass alone in ~45 s), test-grove ones
+   included (no swarm there): load from the other agents' work, not checked further.
+
+## Weak (round 4; still true unless noted in round 5)
 1. The haze arc is smooth and even: a contrail or a milky way more than dust stirred by wings. It needs
    knots that brighten with the moth density and a ragged edge.
 2. Far moths are dark specks; the core reads as dark dots on a pale arc, not as a dense mass of moths.
