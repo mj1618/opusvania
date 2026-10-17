@@ -195,3 +195,55 @@ describe('the fall camera down the oak', () => {
     expect(worst).toBeLessThanOrEqual(FALL_FEET);
   });
 });
+
+describe('the climb camera in the oak (first-timer r6: thorns off screen when a climb began)', () => {
+  /** Climbs from `x, y` holding toward the face (`dir`), a jump pressed at each wall touch; the view's headroom (feet to the view's top, world px) per frame. */
+  function climbView(x: number, y: number, dir: 1 | -1, untilY: number) {
+    const scene = getRoom('wood-hollow');
+    const t = cloneTuning(defaultTuning);
+    const events: SimEvent[] = [];
+    const s = createState(1, t, scene, events, ['glide', 'wallJump']);
+    const ct = cameraFor(scene);
+    const p = s.player;
+    p.x = x - p.w / 2;
+    p.y = y - p.h;
+    const cam = createCamera(s, scene, ct);
+    const top = () => {
+      const v = lerpCamera(cam, cam, 1);
+      return v.y - cam.vh / 2 / cam.zoom;
+    };
+    for (let f = 0; f < 120; f++) {
+      step(s, 0, t, scene, events);
+      stepCamera(cam, s, scene, ct);
+    }
+    const startTop = top();
+    let least = Infinity;
+    let pr = 0;
+    let slide = 0;
+    for (let f = 0; f < 900 && !(p.grounded && p.y + p.h <= untilY); f++) {
+      slide = p.wallDir === dir && !p.grounded ? slide + 1 : 0;
+      if ((p.grounded && f > 2 && p.y + p.h > untilY + 200) || slide === 5) pr = 7;
+      step(s, (dir === 1 ? R : L) | (pr > 0 ? J : 0), t, scene, events);
+      stepCamera(cam, s, scene, ct);
+      pr--;
+      if (!p.grounded) least = Math.min(least, p.y + p.h - top());
+    }
+    return { startTop, least, end: p.y + p.h };
+  }
+
+  it('standing on P-ledge the whole near face and the floor over it are in view; climbing it, the view keeps the wall ahead', () => {
+    const r = climbView(2880, 2240, 1, 1776);
+    expect(r.end).toBe(1776);
+    expect(r.startTop).toBeLessThan(1776 - 200);
+    // Measured 484 at the trunk zone's 0.8 (290 at zoom 1: a kick and a bit, so the band was off screen).
+    expect(r.least).toBeGreaterThan(440);
+  });
+
+  it('from the floor at the column the rest ledge is in view; from the shelf both footholds are, and the wall stays ahead', () => {
+    expect(climbView(2688, 3840, 1, 3264).startTop).toBeLessThan(2240 - 200);
+    const up = climbView(2890, 1248, 1, 576);
+    expect(up.startTop).toBeLessThan(800 - 64);
+    // Measured 348: the follow's dead zone (winTop) sets the floor while she rises off a foothold.
+    expect(up.least).toBeGreaterThan(300);
+  });
+});

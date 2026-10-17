@@ -177,13 +177,16 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   floor above (1800, drop 400); the one-way across the column; **P-ledge** (2880) on the buttress, 500 px from
   W-rest (dark: the dangler never drops on a rester). The dark way's hole is at the ledge's back (2112-2192).
 - **Middle (round 4: the catch is a choice).** The near face (2944) holds only from P-ledge up to **the floor under
-  W-ff** (one-way 2112-2944, y 1776); above it, slick 1344-1776 with the **thorn band 1344-1404** (round 6: 60 px, out of a jump from the floor). W-ff hangs at
-  (2620, 1460), 300 px off the face: a held-right climber from P-ledge is never caught and never meets the thorns
+  W-ff** (one-way 2112-2944, y 1776); above it, slick 1344-1776. **No thorns in the oak** (first-timer r6: the band ~900 px over P-ledge was off screen
+  when a climb began, and W-ff's release held right flung her into it). W-ff hangs at
+  (2620, 1460), 300 px off the face: a held-right climber from P-ledge is never caught
   (24 press rhythms: 16 reach the floor, the rest still climbing at 10 s). From the floor, out of the pull, a hop
   (10 f) under W-ff is caught; beaten free up-left she lands on the **knot bridge** (one-way 2112-2624, y 1312, on
   from the band's top and the chimney's lid) in 36 of 36 rhythms x orbit phases. The bridge's tip is over W-ff:
   walk off and down-cut in frames 0-4 (snuff, pogo, onto the foothold 2848-2944 at 1248). With W-ff out the far
-  band climbs from the floor to the bridge (the permanence way). Zone `snuff` (0.85) frames the tip.
+  band climbs from the floor to the bridge (the permanence way). Zone `snuff` (0.85) frames the tip; zone `trunk`
+  (0.8, last, so the others win) is the climb's look-ahead: at zoom 1 the follow's dead zone let her rise to ~290 px
+  under the view's top while climbing; at 0.8 ~480, and from P-ledge the whole face and the floor over it show.
 - **Falls:** from 16 drop points on the faces, the bridge and the upper rung she lands within 600 px: rungs 3264 /
   2752, the ledge and buttress 2240, the floor 1776 and the chimney's lid 1312 (`noDrop`: human-like personas dropped through them, 900-1400 px), the bridge
   1312, the shelf 2680-2944 at 1248 (a step up from the bridge's tip), footholds against the face at 1048 and 800,

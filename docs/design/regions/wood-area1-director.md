@@ -748,3 +748,7 @@ play, in one or two sentences, with the moment it was decided.
   were tried and removed: their tops at the room's top edge read as unreachable ground, and the personas wandered
   the oak after the finale (1 of 9 through). The trunk's narrowing to its ring is render's.
 - **Tatter framed close:** camera zones `hollow` (1.4) and `crown-close` (1.3) for render's two beats.
+- **First-timer r6 (thorns off screen, a lamp's release into thorns):** the band is gone. Out of a jump's reach it
+  only punished W-ff's throw, and it sat ~900 px over P-ledge, off screen when the climb began; no place on the
+  trunk was both in view from a patch and clear of every throw. No thorns in the oak now. Zone `trunk` (0.8) over
+  the climb so the wall ahead shows (a climb look-up in the follow camera would be render's).

@@ -93,6 +93,14 @@
           "w": 1024,
           "h": 960
         }
+      },
+      {
+        "id": "trunk",
+        "x": 1792,
+        "y": 576,
+        "w": 1152,
+        "h": 2880,
+        "zoom": 0.8
       }
     ]
   },
@@ -439,15 +447,6 @@
       "w": 460
     }
   ],
-  "thorns": [
-    {
-      "id": "thorn-band",
-      "x": 2912,
-      "y": 1344,
-      "w": 32,
-      "h": 60
-    }
-  ],
   "bark": [
     {
       "id": "bark-knot",
@@ -680,7 +679,7 @@
       {
         "x": 2960,
         "y": 1780,
-        "text": "the near face holds from P-ledge up to the floor under W-ff; slick above, the thorn band in it"
+        "text": "the near face holds from P-ledge up to the floor under W-ff; slick above it, then holds again from the shelf"
       },
       {
         "x": 2300,
@@ -695,7 +694,7 @@
       {
         "x": 2140,
         "y": 1270,
-        "text": "the knot bridge: from its tip, walk off and down-cut W-ff (pogo snuff); on to the foothold over the thorns"
+        "text": "the knot bridge: from its tip, walk off and down-cut W-ff (pogo snuff); on to the foothold on the face"
       },
       {
         "x": 1480,

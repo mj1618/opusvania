@@ -11,7 +11,7 @@ import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
  * director doc "Round 3 revisions" 1; memory/rooms.md "The oak"), and the area-2 stub `wood-canopy` east of the
  * crown. Each claim is measured in the sim. Room coordinates: the floor y 3840; the column x 2560-2944 (catch
  * rungs at 3264 and 2752); the rest ledge y 2240 (P-ledge on its buttress, W-rest); the floor under W-ff (1776)
- * and W-ff (2620, 1460) out of the near face's reach, the thorn band 1404-1544 above where the face holds; the
+ * and W-ff (2620, 1460) out of the near face's reach, the face slick above it and no thorns anywhere (first-timer r6); the
  * knot bridge y 1312 (from the band's top to its tip over W-ff); the upper rung (1000) under the crown wick
  * (2560, 720), off the climb; the rim y 576 with the root's knot, P5, the finale trigger and the gate (round 4).
  */
@@ -304,16 +304,11 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
     expect(floor).toBeGreaterThanOrEqual(12);
   });
 
-  it('the thorn band (60 px, round 6) is out of reach of a jump from the floor under W-ff, held into the face', () => {
-    for (const x of [2860, 2900, 2924]) {
-      for (const hold of [6, 12, 20]) {
-        const s = play({ glimpse: false });
-        s.g.teleport(x, MID);
-        s.run(0, 2);
-        const ev = s.run(R | J, hold).concat(s.run(R, 60));
-        expect(has(ev, 'thornHit'), `x ${x} hold ${hold}`).toBe(false);
-      }
-    }
+  it('no thorns in the oak (first-timer r6): none off screen above a patch, none where a lamp’s throw lands', () => {
+    // The trunk's thorn band sat on the slick face over the floor under W-ff, ~900 px above P-ledge (off screen
+    // when the climb began), and W-ff's beat-free release held right flung her into it. Out of a jump's reach
+    // it only punished the throw, so it is gone; the climb's tension is the crown hawker.
+    expect(OAK.thorns ?? []).toEqual([]);
   });
 
   it('the floor under it stands out of its pull; a hop up from it is caught; beaten free up-left she lands on the bridge', () => {
@@ -344,7 +339,7 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
     expect(bridge / n).toBeGreaterThanOrEqual(0.9);
   });
 
-  it('from the bridge’s tip a walk-off down-cut puts it out and the pogo carries her to the foothold over the thorns', () => {
+  it('from the bridge’s tip a walk-off down-cut puts it out and the pogo carries her to the foothold on the face', () => {
     for (const k of [0, 2, 4]) {
       const s = play();
       expect(has(tipCut(s, k), 'lureSnuff', 'wick-firefly'), `cut at ${k}`).toBe(true);
@@ -413,7 +408,7 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
 });
 
 describe('the top of the trunk: the near face to the rim, footholds up it', () => {
-  it('from the shelf over the thorns the near face climbs to the rim, with no lamp’s grip and no hawker on the way', () => {
+  it('from the shelf the near face climbs to the rim, with no lamp’s grip and no hawker on the way', () => {
     const s = play();
     s.g.teleport(2900, 1248);
     s.run(0, 3);
