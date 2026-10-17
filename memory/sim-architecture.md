@@ -1,14 +1,14 @@
 # Sim / runtime architecture
 
 - `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
-  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 20)) and appends `SimEvent`s. The scene is static and
+  (`{version, room, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal, save, exit, caught, hatch}` (version 21: `save.abilities`, the room exit / fall catch / hatching, memory/rooms.md)) and appends `SimEvent`s. The scene is static and
   not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
   (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
 - No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
   last bit. `sqrt/floor/round/abs/min/max` are exact. Enforced by `tests/unit/sim-purity.test.ts`,
   `tsconfig.sim.json` (no DOM lib) and a Biome override.
 - Scene data: `src/scene/index.ts` (outside the sim: it uses Zod and imports the JSON) validates
-  `content/scene/grove.json` and exports `GROVE`; the sim only knows the `Scene` type.
+  every room in `content/rooms/` (registry: `ROOMS`, `getRoom`, `GROVE` = test-grove; memory/rooms.md); the sim only knows the `Scene` type.
 - `src/game.ts` (`Game`) is the harness: `prev` + `state` for interpolation, the scripted input queue,
   `reset()` / `teleport()`, and `afterStep` listeners that receive each step's events. Modes: realtime,
   frozen, manual. No DOM, so it runs in Vitest.
@@ -47,6 +47,9 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 
 ## Sim events (`src/sim/events.ts`)
 `x, y` = feet centre at the event; `dir` = -1/1.
+- Rooms (memory/rooms.md): `roomExit {id, edge, frames}` then, `frames` later, `roomEnter {room, from}` + `spawn`
+  (the room restarts); `fallCatch {id, frames}` then `fallReturn {id, x, y}` + `spawn` (back on her last ground, step
+  in from the lip); `hatchStir {auto, presses, of, frames}` and `hatch {cx, cy, auto, frames}` (the cocoon).
 - `spawn`: placed (boot, load, teleport): snap, don't interpolate.
 - `jump {kind: ground|coyote|buffered|wall|double|dashJump, dir}` (wall: `dir` = away from the wall).
 - `fall` (left the ground without jumping), `apex` (stopped rising), `land {vy, fallPx, hard}`
@@ -76,10 +79,11 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   / a solid's `kick: false`** (no wall slide, no wall kick on that face: movement-controller.md).
 
 ## Step order
-`step()`: re-form if a fade just ended (a third of the wallet is dropped where she lay; she is back
+`step()`: a room exit's hold (input 0; at its end the room restarts and the step ends) → a caught fall's hold
+(at its end she is placed back) → the hatching (`updateHatch`: while shut, input 0) → re-form if a fade just ended (a third of the wallet is dropped where she lay; she is back
 at the lit lantern she last stood at, else the last safe ground, with 2 lights) → player (slash hits resolved inside, pods and enemies; from `gather` on her input is replaced:
 goal.md) → **her offer** (`updateOffer`, giving.md: a press, a glint landing) → enemies (they read the wallet: giving.md) → contact damage (none from a calmed creature or one inside a lit lantern's sanctuary; while she
-kindles the touch only turns the creature away; off from `gather` on) → safe-ground tracking → pod glints →
+kindles the touch only turns the creature away; off from `gather` on) → safe-ground tracking → catch zones, then exits → pod glints →
 pickups → dropped clusters → the goal (`updateGoal`: lanterns, heart, ending; last, so a glint landing this frame counts). The scene's `ceilingY` (the
 canopy, movement-controller.md) and the tag `pool` (safe ground, enemies.md) are the only scene
 fields besides the rects that the player code reads; the lampwing reads both too (it stays under the

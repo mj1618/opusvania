@@ -10,6 +10,7 @@
  * thin ground mist.
  */
 import { Container, Graphics, Sprite } from 'pixi.js';
+import type { Scene } from '../../../sim/scene';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import {
   type Atmosphere,
@@ -41,6 +42,7 @@ import {
   taper,
 } from '../lib/bg-shapes';
 import { mix, PALETTE, prng } from '../lib/look';
+import { isGroveKit } from '../lib/room-look';
 
 const MID = {
   bakeScale: 1.5,
@@ -132,7 +134,7 @@ const MID = {
   life: { breath: 3.2, shimmer: 0.14, openings: 0.07 },
 } as const;
 
-/** Where the stage lies (playfield px) and what it is made of. Follows content/scene/grove.json. */
+/** Where the stage lies (playfield px) and what it is made of. Follows content/rooms/test-grove.json (the wood derives its own: `woodStage`). */
 const STAGE: Omit<StageSpec, 'strength'> = {
   // Cool blue-grey, warm amber-grey, violet-grey.
   color: [0x6a88a6, 0x9a8458, 0x8468a8],
@@ -332,7 +334,33 @@ function quiet(x: number, y: number): number {
   return Math.max(inSky, inShaft);
 }
 
+/**
+ * The wood kit's mist stage, derived from the room's own rects (the test grove's STAGE is hand-placed
+ * from its file): the walk line runs along the solids west to east, each one that starts where the
+ * last left off; one that overlaps the line (a far branch above it) gets its own thinner sheet.
+ */
+function woodStage(scene: Scene): Omit<StageSpec, 'strength'> {
+  const tops = scene.solids.filter((s) => s.tag !== 'trunk').sort((a, b) => a.x - b.x);
+  const first = tops[0];
+  const steps: Array<[number, number]> = [];
+  const ledges: Array<{ x0: number; x1: number; y: number; k: number }> = [];
+  let y = first?.y ?? scene.height;
+  let end = first ? first.x + first.w : 0;
+  for (const s of tops.slice(1)) {
+    if (s.x < end - 4) {
+      ledges.push({ x0: s.x, x1: s.x + s.w, y: s.y, k: 0.6 });
+      continue;
+    }
+    // The step sits halfway across a gap (or at the joint).
+    steps.push([Math.round((end + s.x) / 2), s.y - y]);
+    y = s.y;
+    end = s.x + s.w;
+  }
+  return { ...STAGE, baseY: first?.y ?? scene.height, steps, ledges, walls: [], pools: [] };
+}
+
 function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
+  const grove = isGroveKit();
   return {
     seed: 4400,
     rect,
@@ -346,22 +374,28 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
     wellLift: 260,
     openLift: 330,
     drop: (x) =>
-      60 * Math.exp(-(((x - 4700) / 500) ** 2)) +
-      50 * Math.exp(-(((x - 1900) / 450) ** 2)) +
-      // A heavy bough of canopy hanging behind the high ledge.
-      330 * Math.exp(-(((x - 2940) / 300) ** 2)) +
-      // And a pendant of it behind the wall-jump shaft, so the glints that zigzag up it hang
-      // against dark leaves, not against the well's glow.
-      MID.shaftPendant.drop * Math.exp(-(((x - MID.shaftPendant.x) / MID.shaftPendant.half) ** 2)) +
-      MID.shaftTongue.drop * Math.exp(-(((x - MID.shaftTongue.x) / MID.shaftTongue.half) ** 4)) -
-      // The canopy route's focal opening: a hole the moonlight falls through.
-      MID.moonHole.lift * Math.exp(-(((x - MID.moonHole.x) / MID.moonHole.half) ** 2)),
+      !grove
+        ? // The wood: only the canopy's slow swell (no Grove bough, pendant or moon hole).
+          60 * Math.exp(-(((x - 4700) / 500) ** 2)) + 50 * Math.exp(-(((x - 1900) / 450) ** 2))
+        : 60 * Math.exp(-(((x - 4700) / 500) ** 2)) +
+          50 * Math.exp(-(((x - 1900) / 450) ** 2)) +
+          // A heavy bough of canopy hanging behind the high ledge.
+          330 * Math.exp(-(((x - 2940) / 300) ** 2)) +
+          // And a pendant of it behind the wall-jump shaft, so the glints that zigzag up it hang
+          // against dark leaves, not against the well's glow.
+          MID.shaftPendant.drop * Math.exp(-(((x - MID.shaftPendant.x) / MID.shaftPendant.half) ** 2)) +
+          MID.shaftTongue.drop * Math.exp(-(((x - MID.shaftTongue.x) / MID.shaftTongue.half) ** 4)) -
+          // The canopy route's focal opening: a hole the moonlight falls through.
+          MID.moonHole.lift * Math.exp(-(((x - MID.moonHole.x) / MID.moonHole.half) ** 2)),
     trunks: [
       // The left glade's giant: 720 px wide, cropped by the frame top and bottom.
       { x: 1090, w: 720, lean: 40, branches: 3, roots: 4, boughs: 3 },
       { x: 2160, w: 300, lean: 60, branches: 2, roots: 2 },
       { x: 3800, w: 370, lean: -80, branches: 3, roots: 3 },
-      { x: HOLLOW.x, w: HOLLOW.w, lean: -24, branches: 2, roots: 4, boughs: 3 },
+      // The right stand's hollow tree is the test grove's; the wood has a plain giant there.
+      grove
+        ? { x: HOLLOW.x, w: HOLLOW.w, lean: -24, branches: 2, roots: 4, boughs: 3 }
+        : { x: 4560, w: 460, lean: -24, branches: 2, roots: 4, boughs: 3 },
       { x: 5150, w: 230, lean: 30, branches: 2 },
     ],
     rootsPerSide: 2,
@@ -386,8 +420,10 @@ function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
     cover: (x) =>
       0.8 +
       0.08 * Math.sin(x / 700) +
-      0.5 * Math.exp(-(((x - 2940) / 320) ** 2)) +
-      0.4 * Math.exp(-(((x - MID.shaftPendant.x) / (MID.shaftPendant.half * 1.4)) ** 2)),
+      (grove
+        ? 0.5 * Math.exp(-(((x - 2940) / 320) ** 2)) +
+          0.4 * Math.exp(-(((x - MID.shaftPendant.x) / (MID.shaftPendant.half * 1.4)) ** 2))
+        : 0),
     quiet,
     floor: (c, r, b) => undergrowth(c, r, b, spots),
   };
@@ -694,7 +730,7 @@ export class MidLayer implements EnvModule {
       s.alpha = MID.skyHole.alpha * (MID.skyHole.dim + (1 - MID.skyHole.dim) * up * up * (3 - 2 * up));
       sky.addChild(s);
     }
-    {
+    if (isGroveKit()) {
       const h = MID.moonHole;
       for (const [k, a] of [
         [1, h.alpha],
@@ -721,7 +757,10 @@ export class MidLayer implements EnvModule {
       { ...ZONE, tintL: [1, 1, 1], tintR: [1, 1, 1], anchorX: ctx.layers.anchor.x },
       back,
       MID.life,
-      { ...STAGE, strength: [MID.stage.left, MID.stage.centre, MID.stage.right] },
+      {
+        ...(isGroveKit() ? STAGE : woodStage(ctx.scene)),
+        strength: [MID.stage.left, MID.stage.centre, MID.stage.right],
+      },
     );
     if (import.meta.env.DEV) {
       const g = globalThis as { __bg?: Record<string, unknown> };
@@ -769,7 +808,8 @@ export class MidLayer implements EnvModule {
       const size = rr(r, 9, 16);
       const g = new Graphics()
         .poly(leafPts(-size / 2, 0, 0, size, size * 0.5))
-        .fill(r() < 0.4 ? 0x8a7a3a : 0x1f5a44);
+        // (No gold leaves in the wood: warm is the lamps' alone.)
+        .fill(r() < 0.4 && isGroveKit() ? 0x8a7a3a : 0x1f5a44);
       g.alpha = 0.8;
       layer.addChild(g);
       this.leaves.push({ g, x: rr(r, 0, 1), y: rr(r, 0, 1), phase: r() * 6.283, fall: rr(r, 22, 46) });

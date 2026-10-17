@@ -1,12 +1,17 @@
 import { z } from 'zod';
-import groveJson from '../../content/scene/grove.json' with { type: 'json' };
-import type { Scene } from '../sim/scene';
+import testGroveJson from '../../content/rooms/test-grove.json' with { type: 'json' };
+import woodHatchJson from '../../content/rooms/wood-hatch.json' with { type: 'json' };
+import worldJson from '../../content/world.json' with { type: 'json' };
+import { ABILITIES } from '../sim/abilities';
 import { defaultTuning } from '../sim/tuning';
+import type { Room } from './room';
 
 /**
- * The one scene. Collision data lives in content/scene/grove.json (sim px, see
- * memory/scene-and-units.md); it is validated here once at import and shared by the sim, the
- * renderers and the tools. No Pixi or DOM in this file, so Node tools and tests can import it.
+ * The room registry. Each room is one JSON file in content/rooms/<id>.json (sim px, see
+ * memory/scene-and-units.md and memory/rooms.md), validated here once at import and shared by the
+ * sim, the renderers and the tools. content/world.json says which rooms are the real game and where
+ * a new game starts; `test-grove` (the old demo level) is a test bed outside it. No Pixi or DOM in
+ * this file, so Node tools and tests can import it. A new room: its JSON file plus one line in `FILES`.
  */
 
 /** One "tile": the grid the scene is laid out on. Only a layout convention, the sim has no tiles. */
@@ -99,6 +104,87 @@ const SceneSchema = z
       )
       .default([]),
     heart: z.object({ x: int, y: int }).strict().optional(),
+    // --- Rooms (memory/rooms.md).
+    title: z.string().optional(),
+    region: z.string().optional(),
+    abilities: z.array(z.enum(ABILITIES)).optional(),
+    exits: z
+      .array(
+        z.object({ id: z.string().min(1), edge: z.enum(['n', 's', 'e', 'w']), from: int, to: int }).strict(),
+      )
+      .optional(),
+    catches: z
+      .array(
+        z.object({ id: z.string().min(1), x: int, y: int, w: int.positive(), h: int.positive() }).strict(),
+      )
+      .optional(),
+    hatch: z.object({ x: int, y: int }).strict().optional(),
+    art: z
+      .object({
+        kit: z.enum(['grove', 'wood']),
+        seed: int,
+        moon: z.object({ x: z.number(), y: z.number(), r: z.number().positive() }).strict().optional(),
+        afterglow: z
+          .object({ x: z.number(), y: z.number(), strength: z.number().min(0).max(1) })
+          .strict()
+          .optional(),
+        moods: z.array(z.object({ x: int, mood: z.enum(['cool', 'warm', 'deep']) }).strict()).optional(),
+        anchorY: int.optional(),
+      })
+      .strict()
+      .optional(),
+    marks: z
+      .object({
+        cocoons: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1),
+                x: int,
+                y: int,
+                len: int.positive(),
+                state: z.enum(['split', 'closed']),
+              })
+              .strict(),
+          )
+          .optional(),
+        tatter: z
+          .object({ x: int, y: int, facing: z.union([z.literal(-1), z.literal(1)]) })
+          .strict()
+          .optional(),
+        swarm: z.array(z.tuple([z.number(), z.number()])).optional(),
+        promise: z.object({ x0: int, x1: int, y: int }).strict().optional(),
+        drop: z.object({ x: int, y: int }).strict().optional(),
+        camera: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1),
+                x: z.number(),
+                y: z.number(),
+                zoom: z.number().positive().optional(),
+                note: z.string().optional(),
+              })
+              .strict(),
+          )
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    shots: z
+      .object({
+        wide: z.array(z.object({ name: z.string().min(1), x: int, y: int }).strict()),
+        closeup: z
+          .object({
+            ground: z.tuple([int, int]),
+            idle: z.tuple([int, int]).optional(),
+            wall: z.tuple([int, int]).optional(),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -152,8 +238,39 @@ function checkLampwing(s: Parsed, e: Parsed['enemies'][number]): void {
   }
 }
 
-export function parseScene(json: unknown): Scene {
+export function parseScene(json: unknown): Room {
   const s = SceneSchema.parse(json);
+  // Exits: open spans along an edge, inside it, not overlapping another on the same edge.
+  const exitIds = new Set<string>();
+  for (const e of s.exits ?? []) {
+    if (exitIds.has(e.id)) throw new Error(`Scene "${s.id}": two exits are called "${e.id}"`);
+    exitIds.add(e.id);
+    const len = e.edge === 'n' || e.edge === 's' ? s.width : s.height;
+    if (e.from < 0 || e.to > len || e.from >= e.to)
+      throw new Error(`Scene "${s.id}": exit "${e.id}" is not a span of its edge (0..${len})`);
+    for (const o of s.exits ?? [])
+      if (o !== e && o.edge === e.edge && o.from < e.to && e.from < o.to)
+        throw new Error(`Scene "${s.id}": exits "${e.id}" and "${o.id}" overlap`);
+  }
+  for (const c of s.catches ?? []) {
+    if (exitIds.has(c.id))
+      throw new Error(`Scene "${s.id}": an exit and a catch zone are both called "${c.id}"`);
+    exitIds.add(c.id);
+    if (c.x < 0 || c.y < 0 || c.x + c.w > s.width || c.y + c.h > s.height)
+      throw new Error(`Scene "${s.id}": catch zone "${c.id}" leaves the scene bounds`);
+    const sp = s.spawn;
+    if (sp.x >= c.x && sp.x < c.x + c.w && sp.y - 40 >= c.y && sp.y - 40 < c.y + c.h)
+      throw new Error(`Scene "${s.id}": the spawn is inside catch zone "${c.id}"`);
+  }
+  if (
+    s.hatch &&
+    (s.hatch.x < 0 || s.hatch.x > s.width || s.hatch.y < (s.ceilingY ?? 0) || s.hatch.y > s.height)
+  )
+    throw new Error(`Scene "${s.id}": the hatch (the cocoon) is outside the scene`);
+  for (const stop of s.shots?.wide ?? []) {
+    if (stop.x < 0 || stop.x > s.width || stop.y < (s.ceilingY ?? 0) || stop.y > s.height)
+      throw new Error(`Scene "${s.id}": shot stop "${stop.name}" is outside the scene`);
+  }
   for (const r of s.solids) {
     if (r.x < 0 || r.y < 0 || r.x + r.w > s.width || r.y + r.h > s.height)
       throw new Error(`Scene "${s.id}": solid at (${r.x}, ${r.y}) leaves the scene bounds`);
@@ -269,4 +386,48 @@ export function parseScene(json: unknown): Scene {
   return s;
 }
 
-export const GROVE: Scene = parseScene(groveJson);
+const FILES: readonly unknown[] = [woodHatchJson, testGroveJson];
+
+/** Every room, by id. */
+export const ROOMS: Readonly<Record<string, Room>> = Object.fromEntries(
+  FILES.map((json) => {
+    const room = parseScene(json);
+    return [room.id, room];
+  }),
+);
+
+const WorldSchema = z
+  .object({
+    start: z.string(),
+    rooms: z.array(z.object({ id: z.string(), x: int, y: int }).strict()),
+    tests: z.array(z.string()),
+  })
+  .strict();
+
+/**
+ * content/world.json: the real game's rooms (world placement in px, for exits and the map later),
+ * the room a new game starts in, and the test rooms outside the world.
+ */
+export const WORLD = WorldSchema.parse(worldJson);
+for (const id of [WORLD.start, ...WORLD.rooms.map((r) => r.id), ...WORLD.tests])
+  if (!ROOMS[id])
+    throw new Error(`content/world.json names room "${id}", which has no file in content/rooms/`);
+
+/** Every room id: the real game's rooms first, then the test rooms. */
+export const ROOM_IDS: readonly string[] = [...WORLD.rooms.map((r) => r.id), ...WORLD.tests];
+
+/** The room the page boots into without `?room=`. */
+export const DEFAULT_ROOM: string = WORLD.start;
+
+/** A room by id; throws, naming the rooms there are, if there is none. */
+export function getRoom(id: string): Room {
+  const room = ROOMS[id];
+  if (!room) throw new Error(`Unknown room "${id}". Rooms: ${ROOM_IDS.join(', ')}.`);
+  return room;
+}
+
+/** The test grove (the old demo level): the Grove's tests and pilots run against it. */
+export const GROVE: Room = getRoom('test-grove');
+
+/** Scene 1, the hatching branch. */
+export const WOOD_HATCH: Room = getRoom('wood-hatch');

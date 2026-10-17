@@ -1,3 +1,4 @@
+import type { AbilityId } from './abilities';
 import type { InputFrame } from './input';
 import type { EnemyKind } from './scene';
 
@@ -583,8 +584,36 @@ export interface GoalState {
   run: { start: number; hits: number; deaths: number };
 }
 
+/**
+ * What persists past a room restart (docs/design/tech.md §3; more fields come with save/load). For now
+ * only the abilities she owns, in `ABILITIES` order (src/sim/abilities.ts).
+ */
+export interface SaveState {
+  abilities: AbilityId[];
+}
+
+/**
+ * She crossed an open room edge (`scene.exits`): the room is held for `tuning.room.exitFrames`, then
+ * restarts. The same shape for a catch zone (`scene.catches`, `tuning.room.catchFrames`).
+ */
+export interface ExitState {
+  /** The exit's (or catch zone's) id in the scene. */
+  id: string;
+  /** Frames since she crossed it. */
+  frames: number;
+}
+
+/** Shut in the cocoon (src/sim/hatch.ts): frames since the room started, presses counted, broken out yet. */
+export interface HatchState {
+  frames: number;
+  presses: number;
+  done: boolean;
+}
+
 export interface GameState {
-  version: 20;
+  version: 21;
+  /** The room (scene id) this state belongs to. */
+  room: string;
   /** Sim steps taken. The sim's only clock. */
   frame: number;
   seed: number;
@@ -596,6 +625,13 @@ export interface GameState {
   pods: PodsState;
   enemies: EnemyState[];
   goal: GoalState;
+  save: SaveState;
+  /** Leaving the room through an exit: null while she is in it. */
+  exit: ExitState | null;
+  /** Caught after a fall (`scene.catches`; `id` = the zone): null unless she is being put back. */
+  caught: ExitState | null;
+  /** The hatching: null in a room without one (`scene.hatch`). */
+  hatch: HatchState | null;
 }
 
 export function cloneState(s: GameState): GameState {
@@ -627,5 +663,9 @@ export function cloneState(s: GameState): GameState {
       grove: { ...s.goal.grove },
       run: { ...s.goal.run },
     },
+    save: { abilities: s.save.abilities.slice() },
+    exit: s.exit ? { ...s.exit } : null,
+    caught: s.caught ? { ...s.caught } : null,
+    hatch: s.hatch ? { ...s.hatch } : null,
   };
 }

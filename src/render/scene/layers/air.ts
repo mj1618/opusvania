@@ -37,9 +37,9 @@ import {
   AIR_LIGHTS,
   MAX_SHAFT_GROUPS,
   MOTES_FRAG,
-  MOTES_VERT,
-  VOLUME_FRAG,
+  motesVert,
   VOLUME_VERT,
+  volumeFrag,
 } from '../lib/fx-air-shaders';
 import { fxDebug } from '../lib/fx-debug';
 import { GroundProfile } from '../lib/fx-ground';
@@ -47,6 +47,7 @@ import { playfieldMaskTexture } from '../lib/fx-mask';
 import { noiseTexture } from '../lib/fx-noise';
 import { zoneColor, zoneMix, zoneWeights } from '../lib/fx-zones';
 import { KEY_LIGHT, mix, PALETTE, prng, wind } from '../lib/look';
+import { isGroveKit } from '../lib/room-look';
 
 type Three<T> = readonly [T, T, T];
 /** Size of the two volume targets (shafts, mist): half the logical view. */
@@ -254,7 +255,7 @@ function volumeMesh(shared: UniformGroup, ground: Texture): Mesh<Geometry, Shade
     indexBuffer: new Buffer({ data: new Uint32Array([0, 1, 2, 0, 2, 3]), usage: BufferUsage.INDEX }),
   });
   const shader = new Shader({
-    glProgram: GlProgram.from({ vertex: VOLUME_VERT, fragment: VOLUME_FRAG, name: 'air-volume' }),
+    glProgram: GlProgram.from({ vertex: VOLUME_VERT, fragment: volumeFrag(), name: 'air-volume' }),
     resources: {
       uNoise: noiseTexture().source,
       uGround: ground.source,
@@ -318,10 +319,17 @@ class Fireflies {
     const cfg = AIR.fireflies;
     const tex = glowTexture();
     const rnd = prng(0xf1ef1e);
-    for (let z = 0; z < 3; z++) {
-      const n = cfg.count[z] as number;
+    // The test grove's three zones each have their spots; the wood is cool all the way: the cool
+    // zone's colours, a gathering every ~1000 px of the room.
+    const grove = isGroveKit();
+    const woodSpots = Array.from(
+      { length: Math.max(1, Math.floor(ground.width / 1000)) },
+      (_, i) => 500 + i * 1000,
+    );
+    for (let z = 0; z < (grove ? 3 : 1); z++) {
+      const n = grove ? (cfg.count[z] as number) : (cfg.count[0] as number);
       const colors = cfg.colors[z] as readonly number[];
-      const spots = cfg.spots[z] as readonly number[];
+      const spots = grove ? (cfg.spots[z] as readonly number[]) : woodSpots;
       for (let i = 0; i < n; i++) {
         // Small gatherings around a few spots, denser toward the middle of each.
         const spot = spots[i % spots.length] as number;
@@ -480,8 +488,21 @@ class Leaves {
       const size = cfg.size * (0.7 + rnd() * 0.7);
       // Mostly greens, a few gold, a rare violet petal.
       const pick = rnd();
+      // (The wood: greens only, no gold: warm is the lamps' alone.)
       const color = cfg.colors[
-        pick < 0.3 ? 0 : pick < 0.58 ? 1 : pick < 0.78 ? 2 : pick < 0.94 ? 3 : 4
+        isGroveKit()
+          ? pick < 0.3
+            ? 0
+            : pick < 0.58
+              ? 1
+              : pick < 0.78
+                ? 2
+                : pick < 0.94
+                  ? 3
+                  : 4
+          : pick < 0.5
+            ? 0
+            : 1
       ] as number;
       const g = new Graphics();
       g.moveTo(-size, 0)
@@ -780,7 +801,7 @@ export class AirLayer implements EnvModule {
       indexBuffer: new Buffer({ data: indices, usage: BufferUsage.INDEX }),
     });
     const shader = new Shader({
-      glProgram: GlProgram.from({ vertex: MOTES_VERT, fragment: MOTES_FRAG, name: 'air-motes' }),
+      glProgram: GlProgram.from({ vertex: motesVert(), fragment: MOTES_FRAG, name: 'air-motes' }),
       resources: {
         uNoise: noiseTexture().source,
         uGround: groundTex.source,

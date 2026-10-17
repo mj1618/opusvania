@@ -526,6 +526,7 @@ function groundJump(c: Ctx, kind: JumpKind): void {
 /** Nearest wall within the wall-jump grace distance: side -1/1, or 0. Ties: the wall behind facing. */
 function wallInRange(c: Ctx): number {
   const p = c.p;
+  if (!c.P.wallJump) return 0;
   for (let k = 1; k <= c.P.wallCheckPx; k++) {
     const r = c.kickable(p.x + k, p.y);
     const l = c.kickable(p.x - k, p.y);
@@ -606,7 +607,7 @@ function tryJump(c: Ctx): void {
 
 function canDash(c: Ctx): boolean {
   const p = c.p;
-  return p.dashCd === 0 && (p.grounded || p.airDash > 0);
+  return c.P.dash && p.dashCd === 0 && (p.grounded || p.airDash > 0);
 }
 
 function startDash(c: Ctx, dir: number): void {

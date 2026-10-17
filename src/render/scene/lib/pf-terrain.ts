@@ -456,7 +456,7 @@ export interface MossOpts {
 }
 
 /** Moss colour at a spot: emerald to olive along the top, yellowed in the light, bluish in shade. */
-function mossTone(x: number, y: number, seed: number, dull: number): { dark: number; body: number } {
+export function mossTone(x: number, y: number, seed: number, dull: number): { dark: number; body: number } {
   const olive = (wobble(x, seed + 90, 170) + 1) * 0.5;
   const sun = sunAt(x, y);
   let body = mix(TERRAIN.moss, TERRAIN.mossOlive, olive * 0.8);
@@ -475,7 +475,7 @@ function mossTone(x: number, y: number, seed: number, dull: number): { dark: num
  * The moss on a walkable top from x0 to x1 at collision height y: cushions of uneven thickness
  * with bare stretches between them where earth, a stone, a surface root or leaf litter shows.
  */
-function mossCap(p: Paint, x0: number, x1: number, y: number, o: MossOpts): void {
+export function mossCap(p: Paint, x0: number, x1: number, y: number, o: MossOpts): void {
   const r = rngFor(o.seed, x0, y);
   const thick0 = o.thick ?? TERRAIN.mossThick;
   const dripMax = o.drip ?? TERRAIN.mossDrip;

@@ -1074,7 +1074,7 @@ describe('goal: restart, determinism, symmetry, scenes without one', () => {
     s.run(`.${G.holdFrames + 5}`);
     expect([s.state.goal.lit, s.state.goal.ended, s.state.pickups.spent]).toEqual([3, true, 36]);
     const fresh = createState(1, s.tuning, s.scene);
-    expect(fresh.version).toBe(20);
+    expect(fresh.version).toBe(21);
     expect(fresh.goal).toEqual({
       lanterns: [0, 1, 2].map(() => ({
         lit: false,

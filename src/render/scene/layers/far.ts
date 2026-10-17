@@ -58,6 +58,7 @@ import {
   TO_LIGHT,
 } from '../lib/bg-shapes';
 import { mix, PALETTE, prng } from '../lib/look';
+import { isGroveKit } from '../lib/room-look';
 import { SKY_OUTPUT } from './sky';
 
 const NAMES = ['far0', 'far1', 'far2'] as const;
@@ -312,6 +313,7 @@ const LOOKS = [
 
 function plans(rects: readonly LayerRect[]): ForestPlan[] {
   const [r0, r1, r2] = rects as [LayerRect, LayerRect, LayerRect];
+  const grove = isGroveKit();
   const [l0, l1, l2] = LOOKS;
   return [
     {
@@ -379,10 +381,13 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       moundR: 95,
       moss: 3,
       look: l1,
-      behind: (c, r) => {
-        waterfallCliff(c, r, l1);
-        stoneArch(c, r, l1);
-      },
+      // The test grove's landmarks (the wood kit has none of its own yet: room-look.ts).
+      behind: grove
+        ? (c, r) => {
+            waterfallCliff(c, r, l1);
+            stoneArch(c, r, l1);
+          }
+        : undefined,
     },
     {
       seed: 3300,
@@ -417,7 +422,7 @@ function plans(rects: readonly LayerRect[]): ForestPlan[] {
       moundR: 110,
       moss: 8,
       look: l2,
-      front: (c, r) => fallenLog(c, r, l2),
+      front: grove ? (c, r) => fallenLog(c, r, l2) : undefined,
     },
   ];
 }
@@ -815,7 +820,7 @@ export class FarLayers implements EnvModule {
       if (!layer || !atm || !fogSpec || !hang) return;
       const scale = BAKE_SCALE[i] ?? 1;
       const zone = { ...(ZONE[i] ?? ZONE[0]), anchorX: ctx.layers.anchor.x } as ZoneSpec;
-      if (i === 2) {
+      if (i === 2 && isGroveKit()) {
         // Birds: in front of far1 (which is drawn in the far-pair pass), behind far2's trunks.
         const a1 = ATM[1] ?? atm;
         this.flock = new Flock(rects[1] ?? plan.rect, atmTone(a1, 0x1b3b47, plan.wellX - 600, BIRDS.y));
@@ -854,14 +859,14 @@ export class FarLayers implements EnvModule {
       if (view) layer.addChild(view.container);
 
       const falls: LiveFall[] = [];
-      if (i === 1) {
+      if (i === 1 && isGroveKit()) {
         for (const st of fallStages()) {
           const f = new LiveFall(st);
           falls.push(f);
           layer.addChild(f.mesh);
         }
       }
-      const items = [...hangers(plan, b, atm, hang), ...landmarkHangers(i, atm)];
+      const items = [...hangers(plan, b, atm, hang), ...(isGroveKit() ? landmarkHangers(i, atm) : [])];
       // A soft atlas: far vines must not be crisper than the blurred layer they hang from.
       const sway = new SwaySet(ctx.renderer, items, scale * 0.45, zone);
       layer.addChild(sway.container);

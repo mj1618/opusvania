@@ -2,13 +2,14 @@
  * Screenshots for judging the look. Boots the game against a running dev server, drives it
  * deterministically through window.__game and writes PNGs:
  *
- *   wide-<n>-<name>.png     the full 1920x1080 view at camera stops spanning the scene, with the
- *                           character standing in view
+ *   wide-<n>-<name>.png     the full 1920x1080 view at the room's camera stops (its `shots.wide` in
+ *                           content/rooms/<id>.json), with the character standing in view
  *   closeup-<name>.png      the character at 4x zoom in one situation each (idle, run, jump rise,
  *                           apex, fall, land, wall slide, dash, skid, double jump)
  *   closeup-strip.png       all close-ups side by side, labelled
  *
- *   npm run shots                       # everything, into shots/
+ *   npm run shots                       # everything, into shots/, in the default room (wood-hatch)
+ *   npm run shots -- --room test-grove  # the test grove's stops and close-ups
  *   npm run shots -- --only=wide        # or --only=closeup
  *   npm run shots -- --out=shots/before --url=http://localhost:5199
  *   npm run shots -- --ambient=90       # let render time run this many frames first (default 60)
@@ -24,11 +25,14 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { Page } from '@playwright/test';
+import { DEFAULT_ROOM, getRoom } from '../src/scene/index';
+import { ABILITIES } from '../src/sim/abilities';
 import { DEFAULT_URL, launch, openGame } from './lib/browser';
 
 const { values: args } = parseArgs({
   options: {
     url: { type: 'string', default: DEFAULT_URL },
+    room: { type: 'string', default: DEFAULT_ROOM },
     out: { type: 'string', default: 'shots' },
     only: { type: 'string' },
     ambient: { type: 'string', default: '60' },
@@ -41,7 +45,7 @@ const { values: args } = parseArgs({
 });
 if (args.help || (args.only && args.only !== 'wide' && args.only !== 'closeup')) {
   console.log(
-    'npm run shots -- [--only=wide|closeup] [--out=dir] [--url=http://localhost:5180] [--ambient=60] [--zoom=4] [--hitboxes] [--pickups] [--no-gpu]',
+    'npm run shots -- [--room=<id>] [--only=wide|closeup] [--out=dir] [--url=http://localhost:5180] [--ambient=60] [--zoom=4] [--hitboxes] [--pickups] [--no-gpu]',
   );
   process.exit(args.help ? 0 : 1);
 }
@@ -50,44 +54,38 @@ const VIEW = { width: 1920, height: 1080 };
 /** Close-up tile: this part of the centre of the zoomed view, in canvas px. */
 const TILE = { width: 640, height: 760 };
 
-/** Camera stops: where the character stands (feet centre, sim px). The follow camera frames it. */
-const WIDE: Array<{ name: string; x: number; y: number }> = [
-  { name: 'left-bank', x: 520, y: 1280 },
-  { name: 'pool', x: 1440, y: 1280 },
-  { name: 'canopy-route', x: 1980, y: 608 },
-  { name: 'trunks', x: 3050, y: 1152 },
-  { name: 'high-ledge', x: 3110, y: 448 },
-  { name: 'right-rise', x: 4500, y: 1280 },
-  // (The far bluff's top: lowered to 768 after playtest 4, so the far lantern and the heart are one picture.)
-  { name: 'far-ledge', x: 5524, y: 768 },
-  { name: 'bluff', x: 2528, y: 960 },
-  { name: 'hollow', x: 3856, y: 1376 },
-  // (At trunk B's foot: the middle of the shaft floor is burr-shaft's patch, and with `--pickups` it would ram her.)
-  { name: 'shaft-pit', x: 3556, y: 1280 },
-  { name: 'summit-bough', x: 3800, y: 192 },
-  { name: 'catch-branch', x: 3960, y: 448 },
-  // The foot of the far bluff (the old far ledge, a wall down to the rise now), past the heart.
-  { name: 'far-bluff', x: 5390, y: 1088 },
-];
+const ROOM = getRoom(args.room ?? DEFAULT_ROOM);
+
+/** Camera stops: where the character stands (feet centre, sim px), from the room's JSON. The follow camera frames it. */
+const WIDE = ROOM.shots?.wide ?? [{ name: 'spawn', x: ROOM.spawn.x, y: ROOM.spawn.y }];
 
 /**
- * Close-up situations: start standing at `at`, queue `script`, step `frames` sim frames, shoot.
- * Scripts use the input DSL (src/input/script.ts): R/L/U/D, J jump, X dash, `.` nothing.
+ * Close-up situations: start standing at the room's close-up spot (`shots.closeup`: `ground`, `idle`
+ * or `wall`), queue `script`, step `frames` sim frames, shoot. Scripts use the input DSL
+ * (src/input/script.ts): R/L/U/D, J jump, X dash, `.` nothing. She is given every ability first, so
+ * the double jump, dash and wall close-ups show the moves even in a room that starts without them;
+ * the wall ones are skipped in a room with no `wall` spot.
  */
-const CLOSEUPS: Array<{ name: string; at: [number, number]; script: string; frames: number }> = [
-  { name: 'idle', at: [1120, 1280], script: '', frames: 45 },
-  { name: 'run', at: [1000, 1280], script: 'R60', frames: 26 },
-  { name: 'skid', at: [1000, 1280], script: 'R30 L10', frames: 32 },
-  { name: 'jump-rise', at: [1000, 1280], script: 'R14 R+J40', frames: 21 },
-  { name: 'apex', at: [1000, 1280], script: 'R14 R+J40', frames: 42 },
-  { name: 'fall', at: [1000, 1280], script: 'R14 R+J30 R40', frames: 56 },
-  { name: 'land', at: [1000, 1280], script: 'R14 R+J30 R40', frames: 71 },
-  { name: 'double-jump', at: [1000, 1280], script: 'R14 R+J24 R2 R+J30', frames: 46 },
-  { name: 'wall-slide', at: [3456, 1280], script: 'R+J30 R40', frames: 44 },
-  { name: 'wall-jump', at: [3456, 1280], script: 'R+J30 R14 . L+J20', frames: 52 },
-  { name: 'dash', at: [1000, 1280], script: 'R10 R+X1 R20', frames: 18 },
-  { name: 'air-dash', at: [1000, 1280], script: 'R14 R+J22 R+X1 R20', frames: 44 },
+const SPOT = ROOM.shots?.closeup ?? { ground: [ROOM.spawn.x, ROOM.spawn.y] as [number, number] };
+const CLOSEUPS: Array<{ name: string; at: 'ground' | 'idle' | 'wall'; script: string; frames: number }> = [
+  { name: 'idle', at: 'idle', script: '', frames: 45 },
+  { name: 'run', at: 'ground', script: 'R60', frames: 26 },
+  { name: 'skid', at: 'ground', script: 'R30 L10', frames: 32 },
+  { name: 'jump-rise', at: 'ground', script: 'R14 R+J40', frames: 21 },
+  { name: 'apex', at: 'ground', script: 'R14 R+J40', frames: 42 },
+  { name: 'fall', at: 'ground', script: 'R14 R+J30 R40', frames: 56 },
+  { name: 'land', at: 'ground', script: 'R14 R+J30 R40', frames: 71 },
+  { name: 'double-jump', at: 'ground', script: 'R14 R+J24 R2 R+J30', frames: 46 },
+  { name: 'wall-slide', at: 'wall', script: 'R+J30 R40', frames: 44 },
+  { name: 'wall-jump', at: 'wall', script: 'R+J30 R14 . L+J20', frames: 52 },
+  { name: 'dash', at: 'ground', script: 'R10 R+X1 R20', frames: 18 },
+  { name: 'air-dash', at: 'ground', script: 'R14 R+J22 R+X1 R20', frames: 44 },
 ];
+
+function spot(at: 'ground' | 'idle' | 'wall'): [number, number] | null {
+  if (at === 'wall') return SPOT.wall ?? null;
+  return at === 'idle' ? (SPOT.idle ?? SPOT.ground) : SPOT.ground;
+}
 
 type Clip = { x: number; y: number; width: number; height: number };
 
@@ -109,7 +107,9 @@ async function main(): Promise<void> {
   const browser = await launch({ gpu: !args['no-gpu'] });
   const written: string[] = [];
   try {
-    const page = await openGame(browser, args.url ?? DEFAULT_URL, VIEW, 1, args.pickups);
+    const page = await openGame(browser, args.url ?? DEFAULT_URL, VIEW, 1, args.pickups, ROOM.id);
+    const playing = await page.evaluate(() => window.__game.room());
+    if (playing !== ROOM.id) throw new Error(`The page plays "${playing}", expected "${ROOM.id}"`);
     const info = await page.evaluate(() => window.__game.info());
     if (info.canvas.w !== VIEW.width || info.canvas.h !== VIEW.height)
       throw new Error(`Canvas is ${info.canvas.w}x${info.canvas.h}, expected ${VIEW.width}x${VIEW.height}`);
@@ -141,7 +141,10 @@ async function main(): Promise<void> {
         y: (VIEW.height - TILE.height) / 2,
         ...TILE,
       };
+      await page.evaluate((all) => window.__game.grant(...all), [...ABILITIES]);
       for (const c of CLOSEUPS) {
+        const at = spot(c.at);
+        if (!at) continue;
         const note = await page.evaluate(
           ([x, y, script, frames, z, n]) => {
             const g = window.__game;
@@ -154,7 +157,7 @@ async function main(): Promise<void> {
             g.clearInput();
             return `${s.player.motion} f${s.player.motionFrames}`;
           },
-          [c.at[0], c.at[1], c.script, c.frames, zoom, ambient] as const,
+          [at[0], at[1], c.script, c.frames, zoom, ambient] as const,
         );
         const file = join(outDir, `closeup-${c.name}.png`);
         tiles.push({ name: c.name, png: await shoot(page, file, clip), note });
@@ -175,7 +178,9 @@ async function main(): Promise<void> {
       writeFileSync(file, await strip.locator('body').screenshot({ type: 'png' }));
       written.push(file);
     }
-    console.log(`${written.length} shots in ${((Date.now() - t0) / 1000).toFixed(1)} s (${info.gpu})`);
+    console.log(
+      `${ROOM.id}: ${written.length} shots in ${((Date.now() - t0) / 1000).toFixed(1)} s (${info.gpu})`,
+    );
     for (const f of written) console.log(`  ${f}`);
   } finally {
     await browser.close();

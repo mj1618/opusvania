@@ -1,0 +1,5 @@
+{
+  "start": "wood-hatch",
+  "rooms": [{ "id": "wood-hatch", "x": 0, "y": 0 }],
+  "tests": ["test-grove"]
+}

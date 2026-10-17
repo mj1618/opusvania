@@ -8,6 +8,9 @@ import type { GameApp } from '../render/app';
 import { type CameraView, VIEW_H, VIEW_W } from '../render/contract';
 import type { PointLight } from '../render/lights';
 import type { CameraOverride, RenderStage } from '../render/stage';
+import { ROOM_IDS } from '../scene/index';
+import type { Room } from '../scene/room';
+import { ABILITIES, type AbilityId, isAbility } from '../sim/abilities';
 import { enemiesAlive } from '../sim/enemies';
 import type { SimEvent } from '../sim/events';
 import { offerTarget } from '../sim/giving';
@@ -15,7 +18,6 @@ import { restPoint } from '../sim/goal';
 import { type GameState, goalHolds, heartBox, lampCost, lanternBox, lanternCost } from '../sim/index';
 import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
-import type { Scene } from '../sim/scene';
 import { markSeen, seenNow, seenScale } from '../sim/seen';
 import type { Tuning } from '../sim/tuning';
 import type { TuningPanel } from './tuning-panel';
@@ -39,8 +41,24 @@ export interface GameDebugApi {
   input(script: InputScript): number;
   /** Drops queued input. */
   clearInput(): void;
-  /** Restarts the scene (fresh state at the spawn, frame 0). The id is accepted for compatibility; there is one scene. */
-  load(sceneId?: string): GameState;
+  /**
+   * Restarts the room (fresh state at the spawn, frame 0; abilities granted with `grant` / `?abilities` are
+   * kept). An id other than the current room's throws: rooms switch by reloading (`room(id)`).
+   */
+  load(roomId?: string): GameState;
+  /**
+   * The current room's id. With an id: switches to that room by reloading the page with `?room=<id>`
+   * (the page's other params are kept), so nothing after it in the same evaluate runs on the new room.
+   */
+  room(id?: string): string;
+  /** Every room id: the real game's rooms (content/world.json), then the test rooms. */
+  rooms(): string[];
+  /** What she owns (`state().save.abilities`) and every ability there is. */
+  abilities(): { owned: AbilityId[]; all: AbilityId[] };
+  /** She owns these too from the next step on (`'all'` = everything); a restart keeps them. Returns what she owns. */
+  grant(...ids: string[]): AbilityId[];
+  /** She no longer owns these (`'all'` = none). Returns what she owns. */
+  revoke(...ids: string[]): AbilityId[];
   /** Puts the player at rest with its feet centre at (x, y) sim px (lifted out of solids). Snaps the camera. */
   teleport(x: number, y: number): GameState;
   /**
@@ -63,8 +81,8 @@ export interface GameDebugApi {
   resume(): RunMode;
   /** Sim events of the most recent step() call (all its steps), or of the last n logged steps. */
   events(n?: number): Array<SimEvent & { f: number }>;
-  /** The scene data (content/scene/grove.json, validated). */
-  scene(): Scene;
+  /** The room's data (content/rooms/<id>.json, validated; the sim's part and the render-only fields). */
+  scene(): Room;
   /** Mode, frame, view and canvas sizes, GPU. */
   info(): {
     mode: RunMode;
@@ -407,12 +425,39 @@ export function installDebugApi(deps: {
     clearInput() {
       game.clearInput();
     },
-    load(sceneId) {
-      if (sceneId !== undefined && sceneId !== game.scene.id)
-        throw new Error(`Unknown scene "${sceneId}". There is one scene: "${game.scene.id}".`);
+    load(roomId) {
+      if (roomId !== undefined && roomId !== game.scene.id)
+        throw new Error(
+          `This page plays "${game.scene.id}". Switch rooms with room("${roomId}") or ?room=${roomId} (rooms: ${ROOM_IDS.join(', ')}).`,
+        );
       game.reset();
       redraw();
       return snapshot();
+    },
+    room(id) {
+      if (id !== undefined && id !== game.scene.id) {
+        if (!ROOM_IDS.includes(id)) throw new Error(`Unknown room "${id}". Rooms: ${ROOM_IDS.join(', ')}.`);
+        const q = new URLSearchParams(location.search);
+        q.set('room', id);
+        location.search = q.toString();
+      }
+      return game.scene.id;
+    },
+    rooms: () => [...ROOM_IDS],
+    abilities: () => ({ owned: game.abilities, all: [...ABILITIES] }),
+    grant(...ids) {
+      const add = ids.includes('all') ? [...ABILITIES] : ids;
+      const bad = add.filter((a) => !isAbility(a));
+      if (bad.length)
+        throw new Error(`Unknown ability "${bad.join(', ')}". Abilities: ${ABILITIES.join(', ')}.`);
+      // (No redraw: nothing on screen shows what she owns, and a redraw would move render springs.)
+      return game.setAbilities([...game.abilities, ...add]);
+    },
+    revoke(...ids) {
+      const bad = ids.filter((a) => a !== 'all' && !isAbility(a));
+      if (bad.length)
+        throw new Error(`Unknown ability "${bad.join(', ')}". Abilities: ${ABILITIES.join(', ')}.`);
+      return game.setAbilities(ids.includes('all') ? [] : game.abilities.filter((a) => !ids.includes(a)));
     },
     teleport(x, y) {
       game.teleport(x, y);
@@ -443,7 +488,7 @@ export function installDebugApi(deps: {
       const from = game.state.frame - n;
       return log.filter((e) => e.f > from);
     },
-    scene: () => JSON.parse(JSON.stringify(game.scene)) as Scene,
+    scene: () => JSON.parse(JSON.stringify(game.scene)) as Room,
     info() {
       const gl = (ga.app.renderer as unknown as { gl?: WebGL2RenderingContext }).gl;
       const ext = gl?.getExtension('WEBGL_debug_renderer_info');

@@ -24,6 +24,32 @@ export type HurtSource = { kind: EnemyKind; id: string };
 export type SimEvent =
   /** The player was placed (boot, load, teleport): snap cameras and springs, don't interpolate. */
   | { type: 'spawn'; x: number; y: number }
+  /**
+   * She crossed an open room edge (`scene.exits`, `id` = the exit). The room holds her (no input,
+   * she keeps falling or running on) for `frames` (= `tuning.room.exitFrames`), then restarts:
+   * render fades out over them. Fires once per exit.
+   */
+  | { type: 'roomExit'; id: string; edge: 'n' | 's' | 'e' | 'w'; x: number; y: number; frames: number }
+  /** The room started again after an exit (`from` = its id); a `spawn` follows at once. */
+  | { type: 'roomEnter'; room: string; from: string; x: number; y: number }
+  /**
+   * She fell into a catch zone (`scene.catches`, `id`): it costs nothing. She is held (no input) for
+   * `frames` (= `tuning.room.catchFrames`), then `fallReturn` puts her back on her last safe ground.
+   */
+  | { type: 'fallCatch'; id: string; x: number; y: number; frames: number }
+  /** Back on her last safe ground after a catch (`x, y` = there); a `spawn` follows at once. */
+  | { type: 'fallReturn'; id: string; x: number; y: number }
+  /**
+   * The cocoon stirs (`scene.hatch`, src/sim/hatch.ts): a press of any button (`auto` false;
+   * `presses` of `of` so far) or, with no input, on its own (`auto`, harder as `frames` grows toward
+   * `tuning.hatch.autoFrames`). `x, y` = her feet at the spawn.
+   */
+  | { type: 'hatchStir'; x: number; y: number; auto: boolean; presses: number; of: number; frames: number }
+  /**
+   * She breaks out: control from the next step. `cx, cy` = the cocoon (`scene.hatch`), `x, y` = her
+   * feet on the branch. `auto`: it broke on its own (no presses enough by `tuning.hatch.autoFrames`).
+   */
+  | { type: 'hatch'; x: number; y: number; cx: number; cy: number; auto: boolean; frames: number }
   /** A jump left the ground / wall / air. `dir` is the held direction (0 = none; wall: away from it). */
   | { type: 'jump'; kind: JumpKind; x: number; y: number; dir: number }
   /** Left the ground without jumping (walked off an edge, dropped through). */

@@ -6,7 +6,12 @@ A metroidvania whose look and feel could sit next to Ori and the Blind Forest or
 home. The story is told by the world and the play, not by cutscenes or text. `docs/art-direction.md` is the visual brief and the bar.
 
 ## Where we are
-The demo level: one scene, the Grove (`content/scene/grove.json`), about three screens wide. It has:
+**Rooms (tech stage 0, 2026-10-17).** The page boots into scene 1, `wood-hatch` (`content/rooms/wood-hatch.json`,
+blocked out: the hatching branch, the promise gap, the bend down, the drop; plain wood-kit art). Abilities are
+gated in the sim (it starts with none of glide, wall jump, double jump, dash). `?room=test-grove` (or the debug
+panel's Room list) loads the old demo level as a test bed. memory/rooms.md.
+
+The test grove (`content/rooms/test-grove.json`), about three screens wide, has:
 - A deterministic 60Hz sim with the full movement set (run, variable jump, coyote time, jump buffer, apex hang,
   double jump, dash, glide, wall slide and wall jump, fast fall, corner corrections, one-way platforms), the blade,
   health with fade and re-form.

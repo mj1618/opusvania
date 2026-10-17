@@ -3,10 +3,12 @@
  * No Pixi, DOM, audio, Math.random or Date.now anywhere under src/sim (enforced by
  * tsconfig.sim.json, biome overrides and tests/unit/sim-purity.test.ts).
  */
+import { ABILITIES, normalizeAbilities } from './abilities';
 import { contactDamage, createEnemies, enemyTouched, resetEnemies, updateEnemies } from './enemies';
 import type { SimEvent } from './events';
 import { markOfferTarget, updateOffer } from './giving';
 import { createGoal, goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
+import { createHatch, updateHatch } from './hatch';
 import type { InputFrame } from './input';
 import { createPickups, dropGlints, updateDrops, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
@@ -27,9 +29,20 @@ import type { Tuning } from './tuning';
 
 export const SIM_HZ = 60;
 
-export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
+/**
+ * A fresh run in `scene`: she stands at its spawn. `abilities` = what she owns (default: the room's
+ * starting kit, `scene.abilities`, or all of them when the room names none).
+ */
+export function createState(
+  seed: number,
+  t: Tuning,
+  scene: Scene,
+  events: SimEvent[] = [],
+  abilities: readonly string[] = scene.abilities ?? ABILITIES,
+): GameState {
   const state: GameState = {
-    version: 20,
+    version: 21,
+    room: scene.id,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
@@ -39,9 +52,57 @@ export function createState(seed: number, t: Tuning, scene: Scene, events: SimEv
     pods: createPods(scene),
     enemies: createEnemies(scene, t),
     goal: createGoal(scene),
+    save: { abilities: normalizeAbilities(abilities) },
+    exit: null,
+    caught: null,
+    hatch: createHatch(scene),
   };
   events.push({ type: 'spawn', x: scene.spawn.x, y: scene.spawn.y });
   return state;
+}
+
+/**
+ * The room starts again (after an exit, until neighbouring rooms exist): everything that belongs to
+ * the room is rebuilt from the scene, as at boot; `save`, the frame count, the seed and the RNG go on.
+ */
+function restartRoom(state: GameState, t: Tuning, scene: Scene, from: string, events: SimEvent[]): void {
+  events.push({ type: 'roomEnter', room: scene.id, from, x: scene.spawn.x, y: scene.spawn.y });
+  const fresh = createState(state.seed, t, scene, events, state.save.abilities);
+  Object.assign(state, { ...fresh, frame: state.frame, rng: state.rng, save: state.save });
+}
+
+/** The catch zone her box centre is in, if any. */
+function inCatch(state: GameState, scene: Scene): string | null {
+  const zones = scene.catches;
+  if (!zones) return null;
+  const p = state.player;
+  const cx = p.x + p.w / 2;
+  const cy = p.y + p.h / 2;
+  for (const z of zones) if (cx >= z.x && cx < z.x + z.w && cy >= z.y && cy < z.y + z.h) return z.id;
+  return null;
+}
+
+/** Her box centre has crossed an open edge of the room: she is leaving by that exit. */
+function crossedExit(state: GameState, scene: Scene): { id: string; edge: 'n' | 's' | 'e' | 'w' } | null {
+  const exits = scene.exits;
+  if (!exits) return null;
+  const p = state.player;
+  const cx = p.x + p.w / 2;
+  const cy = p.y + p.h / 2;
+  for (const e of exits) {
+    const along = e.edge === 'n' || e.edge === 's' ? cx : cy;
+    if (along < e.from || along > e.to) continue;
+    const out =
+      e.edge === 's'
+        ? cy > scene.height
+        : e.edge === 'n'
+          ? cy < 0
+          : e.edge === 'e'
+            ? cx > scene.width
+            : cx < 0;
+    if (out) return e;
+  }
+  return null;
 }
 
 /**
@@ -68,13 +129,44 @@ export function placePlayer(
   state.player.attackSeq = old.attackSeq;
   keepOffer(state.player, old);
   state.prevInput = 0;
+  // Placed back in the room: whatever exit she was leaving by, or fall she was caught in, is
+  // forgotten, and a hatching still under way is over (she is out, silently: no `hatch` event).
+  state.exit = null;
+  state.caught = null;
+  if (state.hatch) state.hatch.done = true;
   events.push({ type: 'spawn', x, y });
 }
 
 /** Advances the sim by exactly one 1/60 s step, mutating `state` and appending to `events`. */
 export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scene, events: SimEvent[]): void {
-  const P = resolveParams(t);
+  const P = resolveParams(t, state.save.abilities);
   const first = events.length;
+  // Leaving the room: no input reaches her while the room holds her, then it starts again.
+  if (state.exit) {
+    if (++state.exit.frames >= Math.max(1, Math.round(t.room.exitFrames))) {
+      restartRoom(state, t, scene, state.exit.id, events);
+      state.frame++;
+      return;
+    }
+  }
+  // Caught after a fall: held a moment, then back on her last safe ground (it costs nothing).
+  if (state.caught && ++state.caught.frames >= Math.max(1, Math.round(t.room.catchFrames))) {
+    const id = state.caught.id;
+    const y = state.player.safeY;
+    // Not on the very lip she fell from: a step in from the end of that top.
+    let x = state.player.safeX;
+    const inset = Math.round(t.room.returnInset);
+    for (const q of scene.solids) {
+      if (q.y !== y || x < q.x || x >= q.x + q.w) continue;
+      x = Math.max(q.x + Math.min(inset, q.w / 2), Math.min(q.x + q.w - Math.min(inset, q.w / 2), x));
+      x = Math.round(x);
+    }
+    events.push({ type: 'fallReturn', id, x, y });
+    placePlayer(state, x, y, t, scene, events);
+  }
+  // Shut in the cocoon: presses stir it, no input moves her.
+  const shut = updateHatch(state, scene, input, state.prevInput, t, events);
+  const live = state.exit || state.caught || shut ? 0 : input;
   // The end of a fade: she re-forms at the last safe ground and the living enemies go home.
   if (state.player.faded > 0 && --state.player.faded === 0) {
     dropGlints(state, scene, t.health.fadeDrop, events);
@@ -86,9 +178,9 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
   // From the end of the run on she is held (no input reaches her; she walks into the heart and
   // stops) and nothing can hurt her.
   const held = goalHolds(state.goal, t.goal);
-  const ran = updatePlayer(state, scene, held ? heldInput(state, scene, t.goal) : input, P, t.pods, events);
+  const ran = updatePlayer(state, scene, held ? heldInput(state, scene, t.goal) : live, P, t.pods, events);
   // Her offer (memory/giving.md): a glint given this step, one arriving.
-  updateOffer(state, scene, t, held ? 0 : input, held, events);
+  updateOffer(state, scene, t, held ? 0 : live, held, events);
   const touch = updateEnemies(state, scene, t, events, first);
   const p = state.player;
   const e = touch >= 0 ? state.enemies[touch] : undefined;
@@ -115,16 +207,35 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
     enemyTouched(state, scene, touch, dir, t, events);
   }
   if (ran) trackSafeGround(state, scene, P);
+  if (!state.exit && !state.caught) {
+    const id = inCatch(state, scene);
+    if (id) {
+      const frames = Math.max(1, Math.round(t.room.catchFrames));
+      state.caught = { id, frames: 0 };
+      events.push({ type: 'fallCatch', id, x: p.x + p.w / 2, y: p.y + p.h, frames });
+    }
+  }
+  if (!state.exit && !state.caught) {
+    const out = crossedExit(state, scene);
+    if (out) {
+      const frames = Math.max(1, Math.round(t.room.exitFrames));
+      state.exit = { id: out.id, frames: 0 };
+      events.push({ type: 'roomExit', id: out.id, edge: out.edge, x: p.x + p.w / 2, y: p.y + p.h, frames });
+    }
+  }
   updatePods(state, scene, t.pickups.comboFrames, events);
   updatePickups(state, scene, t.pickups, events);
   updateDrops(state, t.pickups, events);
-  updateGoal(state, scene, t, input, events, first);
+  updateGoal(state, scene, t, live, events, first);
   markSeen(state, t);
   markOfferTarget(state, scene, t, goalHolds(state.goal, t.goal));
-  state.prevInput = input;
+  // Presses are edges of the real input (the hatching counts them while `live` is 0).
+  state.prevInput = shut ? input : live;
   state.frame++;
 }
 
+export type { AbilityId } from './abilities';
+export { ABILITIES, isAbility, normalizeAbilities } from './abilities';
 export type { SimEvent } from './events';
 export { goalHolds, heartBox, lampCost, lanternBox, lanternCost } from './goal';
 export { hashState } from './hash';
@@ -143,5 +254,6 @@ export type {
   PlayerMode,
   PlayerState,
   PodsState,
+  SaveState,
 } from './state';
 export { cloneState } from './state';

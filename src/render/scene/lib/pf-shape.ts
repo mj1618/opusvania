@@ -4,6 +4,7 @@
  * `[x0, y0, x1, y1, ...]` arrays.
  */
 import { KEY_LIGHT, prng } from './look';
+import { LOOK } from './room-look';
 
 export type Rng = () => number;
 
@@ -231,7 +232,20 @@ export function sunAt(x: number, y: number, beamWidth = 760): number {
 }
 
 /** Where each third of the scene's mood begins and ends (world x): pool glade | light well | deep stand. */
-export const ZONES = { coolEnd: 1650, warmStart: 2150, warmEnd: 3650, deepStart: 4150 } as const;
+export const ZONES = {
+  get coolEnd(): number {
+    return 1650 + LOOK.zoneShift.left;
+  },
+  get warmStart(): number {
+    return 2150 + LOOK.zoneShift.left;
+  },
+  get warmEnd(): number {
+    return 3650 + LOOK.zoneShift.right;
+  },
+  get deepStart(): number {
+    return 4150 + LOOK.zoneShift.right;
+  },
+};
 
 /**
  * The scene's three moods as weights that sum to 1: `cool` (the moonlit pool glade on the left),

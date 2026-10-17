@@ -4,6 +4,8 @@
  * Source of truth for the intent is docs/art-direction.md.
  */
 
+import { LOOK } from './room-look';
+
 /** Palette anchors (0xRRGGBB). Mix between them; don't invent new hue families. */
 export const PALETTE = {
   shadowDeep: 0x061a24,
@@ -25,17 +27,22 @@ export const PALETTE = {
 } as const;
 
 /**
- * The warm key light. It enters above the canopy at ENTRY (world px, playfield space) and travels
- * along DIR (unit vector, y down): down and to the left. Shafts follow DIR; rims sit on the side of
- * a shape that faces -DIR (its upper right).
+ * The key light (warm in the test grove; the moon, cool, in the wood). It enters above the canopy at
+ * ENTRY (world px, playfield space) and travels along DIR (unit vector, y down): down and to the
+ * left. Shafts follow DIR; rims sit on the side of a shape that faces -DIR (its upper right). The
+ * entry x and the colour are the room's (room-look.ts); the direction is shared by every room.
  */
 export const KEY_LIGHT = {
-  entryX: 3400,
+  get entryX(): number {
+    return LOOK.keyEntryX;
+  },
   entryY: -300,
   dirX: -0.42,
   dirY: 0.91,
-  color: PALETTE.keyWarm,
-} as const;
+  get color(): number {
+    return LOOK.keyColor;
+  },
+};
 
 /**
  * Wind as a travelling wave. Returns roughly -1..1: how far something at world x leans right now.

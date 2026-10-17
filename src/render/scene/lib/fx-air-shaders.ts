@@ -8,7 +8,7 @@
  */
 
 import { PROFILE_RANGE, PROFILE_Y0 } from './fx-ground';
-import { ZONE_GLSL } from './fx-zones';
+import { zoneGlsl } from './fx-zones';
 import { KEY_LIGHT } from './look';
 
 export const MAX_SHAFT_GROUPS = 8;
@@ -18,7 +18,7 @@ export const AIR_LIGHTS = 4;
 const f = (n: number): string => n.toFixed(4);
 
 /** Shared by the volume fragment shader and the motes vertex shader. */
-const SHAFT_GLSL = /* glsl */ `
+const shaftGlsl = (): string => /* glsl */ `
 uniform sampler2D uNoise;
 uniform sampler2D uGround;
 uniform vec4 uGroups[${MAX_SHAFT_GROUPS}]; // one beam each: centre u, half width, strength, reach (0..1 of the way to the ground)
@@ -27,7 +27,7 @@ uniform vec4 uSky;       // the beams thin out upward: y where that ends, y wher
 const vec2 LIGHT_D = vec2(${f(KEY_LIGHT.dirX)}, ${f(KEY_LIGHT.dirY)});
 const vec2 LIGHT_N = vec2(${f(KEY_LIGHT.dirY)}, ${f(-KEY_LIGHT.dirX)});
 
-${ZONE_GLSL}
+${zoneGlsl()}
 /** lib/look.ts wind(), minus its smallest ripple. */
 float windAt(float x, float clock, float phase) {
   float t = clock * 0.9 - x * 0.0016 + phase * 6.283;
@@ -95,11 +95,12 @@ void main(void) {
  * Shafts (additive) and ground mist (alpha) in one pass. Output is premultiplied: additive light
  * goes into rgb without alpha.
  */
-export const VOLUME_FRAG = /* glsl */ `#version 300 es
+/** Built when called: the zone edges are the room's (room-look.ts). */
+export const volumeFrag = (): string => /* glsl */ `#version 300 es
 precision highp float;
 in vec2 vWorld;
 out vec4 finalColor;
-${SHAFT_GLSL}
+${shaftGlsl()}
 uniform sampler2D uMask;
 uniform vec4 uView;       // the whole visible rect (uRect, the quad, may be smaller)
 uniform vec4 uShaftColors[3];  // per zone: rgb, strength
@@ -187,14 +188,15 @@ void main(void) {
  * Motes: stateless particles. Each lives in a tile that wraps around the camera, with its own
  * depth (parallax, size, brightness), and lights up when it drifts through a shaft.
  */
-export const MOTES_VERT = /* glsl */ `
+/** Built when called: the zone edges are the room's (room-look.ts). */
+export const motesVert = (): string => /* glsl */ `
 ${MESH_HEAD}
 in vec2 aPosition;
 in vec4 aSeed;
 out vec2 vCorner;
 out vec4 vColor;
 out float vSoft;
-${SHAFT_GLSL}
+${shaftGlsl()}
 uniform vec4 uClusters;   // pool centre x, pool half width, how much they hug the ground, unused
 uniform vec4 uBokeh;      // seed threshold, min radius, max radius, brightness
 uniform vec4 uCam;        // view centre x, y, tile w, tile h

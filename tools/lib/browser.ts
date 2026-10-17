@@ -49,6 +49,8 @@ export async function openGame(
   deviceScaleFactor = 1,
   /** false (default) opens the scene without glints (`?nopickups`): a clean plate for judging the look. */
   pickups = false,
+  /** The room (`?room=`); absent = the page's default (content/world.json's start). */
+  room?: string,
 ): Promise<Page> {
   const page = await browser.newPage({ viewport, deviceScaleFactor });
   await freezeCode(page);
@@ -57,7 +59,11 @@ export async function openGame(
     if (m.type() === 'error') console.error('[console error]', m.text());
   });
   // A url that already carries a query (e.g. ?seed=2) keeps it.
-  const flags = pickups ? 'manual' : 'manual&nopickups';
+  const flags = [
+    'manual',
+    ...(pickups ? [] : ['nopickups']),
+    ...(room ? [`room=${encodeURIComponent(room)}`] : []),
+  ].join('&');
   const target = url.includes('?') ? `${url}&${flags}` : `${url.replace(/\/?$/, '/')}?${flags}`;
   try {
     await page.goto(target);

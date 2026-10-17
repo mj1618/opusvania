@@ -3,11 +3,14 @@
  * server, grabs exactly one picture per sim step (deterministic, not wall-clock) and encodes an
  * mp4 and a GIF with ffmpeg into clips/.
  *
- *   npm run clip -- --script "R40 R+J22 R30 .30" --name run-jump
- *   npm run clip -- --script "R+J30 R14 . L+J20 L30" --at 3456,1280 --zoom 2 --name wall-jump
- *   npm run clip -- --ambient 180 --at 1440,1280 --name pool-idle      # sim frozen, scene animating
+ *   npm run clip -- --script "R40 R+J22 R30 .30" --name run-jump            # the default room (wood-hatch)
+ *   npm run clip -- --room test-grove --script "R+J30 R14 . L+J20 L30" --at 3456,1280 --zoom 2 --name wall-jump
+ *   npm run clip -- --room test-grove --ambient 180 --at 1440,1280 --name pool-idle   # sim frozen, scene animating
  *   npm run clip -- --script "R120" --wide --name pan                  # follow camera, full view
  *
+ * --room id  the room (`?room=`; default content/world.json's start, wood-hatch). The --at examples above
+ *            are test-grove coordinates.
+ * --abilities all | none | glide,dash,...  what she owns instead of the room's starting kit
  * --script   input DSL (src/input/script.ts): R/L/U/D, J jump, X dash, `.` nothing, count = frames
  * --ambient  capture this many frames of render time with the sim standing still instead
  * --at x,y   start with the feet centre here (sim px; default: the scene's spawn)
@@ -49,6 +52,8 @@ const { values: args } = parseArgs({
     'no-gpu': { type: 'boolean', default: false },
     'keep-frames': { type: 'boolean', default: false },
     url: { type: 'string', default: DEFAULT_URL },
+    room: { type: 'string' },
+    abilities: { type: 'string' },
     out: { type: 'string', default: 'clips' },
     help: { type: 'boolean', short: 'h' },
   },
@@ -81,7 +86,11 @@ async function main(): Promise<void> {
   const browser = await launch({ gpu: !args['no-gpu'] });
   const takes: Array<{ suffix: string; wav: string }> = [];
   try {
-    const page = await openGame(browser, args.url ?? DEFAULT_URL, { width: w, height: h }, 1, args.pickups);
+    const base = args.url ?? DEFAULT_URL;
+    const url = args.abilities
+      ? `${base}${base.includes('?') ? '&' : '?'}abilities=${encodeURIComponent(args.abilities)}`
+      : base;
+    const page = await openGame(browser, url, { width: w, height: h }, 1, args.pickups, args.room);
     if (args.setup) await page.evaluate(`(() => { const g = window.__game; ${args.setup} })()`);
     await page.evaluate(
       ([at, zoom, wide, pre, hitboxes, script, audio]) => {

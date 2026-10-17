@@ -7,8 +7,8 @@
  * is rendered at full device resolution (the stage root is scaled, nothing is upscaled).
  */
 import type { Renderer } from 'pixi.js';
+import type { Room } from '../scene/room';
 import type { SimEvent } from '../sim/events';
-import type { Scene } from '../sim/scene';
 import type { EnemyState, GameState, PickupsState, PlayerState, PodsState } from '../sim/state';
 import type { LightRegistry } from './lights';
 
@@ -47,7 +47,8 @@ export interface SimView {
   readonly player: PlayerView;
   /** Sim events since the previous render update (usually 0-1 sim steps' worth). */
   readonly events: readonly SimEvent[];
-  readonly scene: Scene;
+  /** The room being played: the sim's scene plus its render-only fields (`art`, `marks`: src/scene/room.ts). */
+  readonly scene: Room;
   /** Collectibles at the latest sim frame: `timers[i]` belongs to `scene.pickups[i]`. Read only. */
   readonly pickups: Readonly<PickupsState>;
   /** Lumen pods at the latest sim frame: `hp[i] > 0` = `scene.pods[i]` is still closed. Read only. */
@@ -61,7 +62,8 @@ export interface SimView {
 /** Services every renderer gets at construction. */
 export interface RenderContext {
   readonly renderer: Renderer;
-  readonly scene: Scene;
+  /** The room being played: the sim's scene plus its render-only fields (`art`, `marks`: src/scene/room.ts). */
+  readonly scene: Room;
   /** Dynamic point lights: the character registers its ember, environment and post read them. */
   readonly lights: LightRegistry;
   /** Device pixels per world px at zoom 1 (canvas width / VIEW_W). Changes on window resize. */

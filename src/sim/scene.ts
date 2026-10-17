@@ -1,7 +1,10 @@
+import type { AbilityId } from './abilities';
+
 /**
- * The one scene's collision data, as the sim sees it: plain axis-aligned rects in sim px. This is
- * types only; the data lives in content/scene/grove.json and is validated by src/scene/index.ts.
- * The scene is static, so it is not part of GameState.
+ * A room's collision data, as the sim sees it: plain axis-aligned rects in sim px. This is types
+ * only; the data lives in content/rooms/<id>.json and is validated by src/scene/index.ts (which adds
+ * the render-only fields: `Room` in src/scene/room.ts). The scene is static, so it is not part of
+ * GameState.
  */
 
 /** Semantic tag for the environment artists (how to skin the rect); the sim ignores it. */
@@ -103,9 +106,22 @@ export interface Lantern {
   key?: string;
 }
 
+/**
+ * An open span of a room edge: the edge wall is not there between `from` and `to` (room px along
+ * the edge: x for `n` / `s`, y for `e` / `w`). When her box centre crosses the edge inside the span
+ * she leaves the room (`roomExit`); until neighbouring rooms exist the room then restarts. The
+ * target room is never authored: it will be found from world placement (docs/design/tech.md §2.2).
+ */
+export interface RoomExit {
+  id: string;
+  edge: 'n' | 's' | 'e' | 'w';
+  from: number;
+  to: number;
+}
+
 export interface Scene {
   id: string;
-  /** Scene size in sim px. The edges and the bottom are solid; the top is open. */
+  /** Scene size in sim px. The edges and the bottom are solid (except `exits`); the top is open. */
   width: number;
   height: number;
   /** Where the player's feet (bottom-centre of the collision box) start. */
@@ -140,4 +156,30 @@ export interface Scene {
    * lit; walking into it then ends the run (src/sim/goal.ts).
    */
   heart?: { x: number; y: number };
+  /**
+   * The abilities she owns when a run starts in this room (src/sim/abilities.ts). Absent = all of
+   * them (test scenes and the test grove).
+   */
+  abilities?: AbilityId[];
+  /** Open spans of the room's edges: the ways out. */
+  exits?: RoomExit[];
+  /**
+   * Catch zones: falling into one costs nothing. When her box centre enters it she is held for
+   * `tuning.room.catchFrames`, then put back on her last safe ground (`fallCatch`, `fallReturn`).
+   */
+  catches?: CatchZone[];
+  /**
+   * The hatching (src/sim/hatch.ts): she starts shut in her cocoon here (`x`, `y` = the cocoon's
+   * centre, for render; her body stands at `spawn`). Absent = she starts free.
+   */
+  hatch?: { x: number; y: number };
+}
+
+/** A rect (sim px) that catches a fall: see `Scene.catches`. */
+export interface CatchZone {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }

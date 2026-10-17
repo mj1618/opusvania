@@ -28,6 +28,7 @@ import {
 import { VIEW_H } from '../../contract';
 import type { LayerName, LayerRect } from '../layer-tree';
 import { mix, prng } from './look';
+import { LOOK } from './room-look';
 
 export const BG_VERT = `
 in vec2 aPosition;
@@ -46,7 +47,21 @@ void main() {
  * The scene's three moods, by playfield x: the cool moonlit glade on the left, the golden light
  * well in the middle, the old dusk-lit stand on the right. Weights blend smoothly between them.
  */
-export const ZONES = { l0: 1400, l1: 2500, r0: 3500, r1: 4500 } as const;
+/** The Grove's zone edges, moved by the room's mood stops (`LOOK.zoneShift`, room-look.ts). */
+export const ZONES = {
+  get l0(): number {
+    return 1400 + LOOK.zoneShift.left;
+  },
+  get l1(): number {
+    return 2500 + LOOK.zoneShift.left;
+  },
+  get r0(): number {
+    return 3500 + LOOK.zoneShift.right;
+  },
+  get r1(): number {
+    return 4500 + LOOK.zoneShift.right;
+  },
+};
 
 export function rgb(hex: number): Float32Array {
   return new Float32Array([((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255]);
@@ -193,7 +208,7 @@ export interface Atmosphere {
   saturation?: number;
 }
 
-const ATM_FRAG = `#version 300 es
+const atmFrag = (): string => `#version 300 es
 precision highp float;
 in vec2 vUV;
 out vec4 fragColor;
@@ -541,7 +556,7 @@ export function bakeLayer(
       const u0 = (pad * scale) / rawW;
       const v0 = (pad * scale) / rawH;
       const shader = Shader.from({
-        gl: { vertex: BG_VERT, fragment: ATM_FRAG },
+        gl: { vertex: BG_VERT, fragment: atmFrag() },
         resources: {
           uRaw: raw.source,
           uNoise: noise.source,
@@ -1031,7 +1046,7 @@ void main() {
   vX = pos.x;
 }`;
 
-const SWAY_FRAG = `#version 300 es
+const swayFrag = (): string => `#version 300 es
 precision highp float;
 in vec2 vUV;
 in float vX;
@@ -1144,7 +1159,7 @@ export class SwaySet {
       uTintR: { value: new Float32Array(zone?.tintR ?? [1, 1, 1]), type: 'vec3<f32>' },
     });
     const shader = Shader.from({
-      gl: { vertex: SWAY_VERT, fragment: SWAY_FRAG },
+      gl: { vertex: SWAY_VERT, fragment: swayFrag() },
       resources: { uTex: rt.source, sway: this.uniforms },
     });
     this.container.addChild(new Mesh({ geometry, shader }));
@@ -1200,7 +1215,7 @@ function mistDecl(k: 0 | 1): string {
     .join('\n');
 }
 
-const PAIR_FRAG = `#version 300 es
+const pairFrag = (): string => `#version 300 es
 precision highp float;
 in vec2 vUV;
 out vec4 fragColor;
@@ -1326,7 +1341,7 @@ export class FarPairView {
     this.uniforms = new UniformGroup(u as ConstructorParameters<typeof UniformGroup>[0]);
     for (const t of tiles1) {
       const shader = Shader.from({
-        gl: { vertex: BG_VERT, fragment: PAIR_FRAG },
+        gl: { vertex: BG_VERT, fragment: pairFrag() },
         resources: {
           uTex0: far0.texture.source,
           uTex1: t.texture.source,

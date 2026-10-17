@@ -11,8 +11,19 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   `pause()` (manual), `resume()` (realtime).
 - URL: `?manual` boots paused (tools and tests do this), `?seed=n`, `?hitboxes`, `?nopickups` (the scene
   without glints, pods, enemies, lanterns, heart or counter; the capture tools use it unless given `--pickups`).
+- **Rooms** (memory/rooms.md): `?room=<id>` (default `wood-hatch`; `test-grove` is the old demo level, and every
+  Grove coordinate in this file is a test-grove one), `?abilities=all | none | glide,wallJump,doubleJump,dash`
+  (what she owns instead of the room's starting kit; kept through restarts). The tuning panel's first row is
+  the **Room** list (it reloads the page with `?room=`). The tools take `--room <id>`.
 
 ## Calls
+- `room()` the room's id; `room(id)` switches room by reloading the page (`?room=`; nothing after it in the same
+  evaluate runs on the new room). `rooms()` every id (the game's, then the test rooms). `load(id)` with another
+  room's id throws (use `room(id)`).
+- `abilities()` → `{owned, all}` (`state().save.abilities`); `grant('glide', ...)` / `grant('all')`,
+  `revoke('dash')` / `revoke('all')`: from the next step, kept by `load()` / R / a room restart; no redraw.
+- The hatching (`wood-hatch` starts shut in the cocoon, `state().hatch`): three presses of any button after the
+  fade-up (150 frames), or wait 720 frames. **A `teleport` ends it silently**, so the capture tools just teleport.
 - `state()` the sim state (`src/sim/state.ts`); `hash()`; `info()` (mode, frame, clock, canvas size, GPU);
   `scene()` the scene data; `events()` events of the last `step()` call, `events(n)` of the last n frames
   (each with `f`, the frame).

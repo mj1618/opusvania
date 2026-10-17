@@ -2,7 +2,7 @@
 
 Vesper is drawn to light, so what she gathers is light. `glint` = a tiny gold four-point star
 (worth 1); `great` = a larger one cradled in a bud (worth `greatValue`, 5). Data: `pickups:
-[{id, kind, x, y}]` in `content/scene/grove.json` (x, y = centre of the light), validated in
+[{id, kind, x, y}]` in `content/rooms/test-grove.json` (x, y = centre of the light), validated in
 `src/scene/index.ts` (unique ids, inside the scene, not inside a solid).
 
 ## Sim (`src/sim/pickups.ts`, numbers in `tuning.pickups`)

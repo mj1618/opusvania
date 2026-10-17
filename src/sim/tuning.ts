@@ -768,6 +768,30 @@ export const defaultTuning = {
   ceiling: {
     rate: 0.5,
   },
+  /** Rooms (docs/design/tech.md §2.3). */
+  room: {
+    /**
+     * Frames she is held after crossing an open room edge (`scene.exits`) before the room restarts
+     * (until neighbouring rooms exist). She keeps falling with no input; render fades over them.
+     */
+    exitFrames: 42,
+    /** Frames she is held after falling into a catch zone (`scene.catches`) before she is back on her last safe ground. */
+    catchFrames: 18,
+    /** Put back after a catch, she stands at least this far in from the end of the top she fell from, px. */
+    returnInset: 72,
+  },
+  /**
+   * The hatching (`scene.hatch`, src/sim/hatch.ts): she is shut in her cocoon until `presses`
+   * presses of any button (counted after `listenFrom` frames: the picture fades up first), or until
+   * `autoFrames` pass. With no input it stirs on its own every `autoStirEvery` frames from `autoStirFrom`.
+   */
+  hatch: {
+    presses: 3,
+    listenFrom: 150,
+    autoFrames: 720,
+    autoStirFrom: 300,
+    autoStirEvery: 90,
+  },
   misc: {
     dropThroughFrames: 10,
     /** Grounded distance between `step` (footstep) events. */

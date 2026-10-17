@@ -1,4 +1,5 @@
 import { Container } from 'pixi.js';
+import type { Room } from '../../scene/room';
 import type { Scene } from '../../sim/scene';
 import { viewTop } from '../camera/index';
 import { type CameraView, VIEW_H, VIEW_W } from '../contract';
@@ -105,7 +106,9 @@ export class LayerTree {
     this.playfieldFront = this.get('playfieldFront');
     this.foreground = this.get('foreground');
     this.air = this.get('air');
-    this.anchor = { x: scene.width / 2, y: Math.max(VIEW_H / 2, scene.height - VIEW_H / 2) };
+    // The room may say where its background is composed for (`art.anchorY`); else the lowest resting view.
+    const anchorY = (scene as Room).art?.anchorY;
+    this.anchor = { x: scene.width / 2, y: anchorY ?? Math.max(VIEW_H / 2, scene.height - VIEW_H / 2) };
   }
 
   get(name: LayerName): Container {

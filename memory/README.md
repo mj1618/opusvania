@@ -4,11 +4,12 @@ Shared project knowledge. One topic per file, one line per file here: `- [Title]
 Keep entries current; delete stale ones.
 
 <!-- entries below -->
+- [Rooms](rooms.md) — **rooms, abilities, the hatching (2026-10-17)**: `content/rooms/` + world.json, `?room=` / panel / `--room`, abilities gated in `resolveParams`, exits / catch zones / the cocoon in the sim, **wood-hatch's layout and marks**, what is per-room in render (room-look.ts) and what is still Grove-only
 - [The story](story.md) — **Lampfall, locked 2026-10-17**: Wing flies by the real moon through the last firefly's false lights to the migration cave; mechanics, regions, bosses, ending, ground rules
 - [Reference games](reference-games.md) — **which games to study per design problem** (bosses, openings, secrets, creatures, wordless relationships, mastery), plus market warnings
 - [AI critics](ai-critics.md) — why story critics scored 8–9 on a story Matt found bad; use critics as lint, judge the built thing
 - [Scene and units](scene-and-units.md) — units, view size, scene format and layout (**the lanterns are the critical path: trunk B on the floor, the stair east, the far bluff (top at 768 now), the bark of trunk A; the encounters on it**), layer tree, who owns which directory, shots and clips; **playtest 5 collision: the bank's root step, trunk A's west bark no climb (`kick: 'east'`), the ember**; **playtest 6: the table of what moved (two lamps, burr-root, great-crown)**
-- [Debug API](debug-api.md) — `window.__game`: step/tick/freeze time model, input DSL, teleport, camera override, URL params
+- [Debug API](debug-api.md) — `window.__game`: step/tick/freeze time model, input DSL, teleport, camera override, URL params; **`room()`, `grant()` / `revoke()`, `?room=`, `?abilities=`**
 - [Sim architecture](sim-architecture.md) — how sim, Game harness, loop and render driver fit together; player state for animators; **sim event list**
 - [Movement controller](movement-controller.md) — order of ops, rounding, feature notes, jump/dash reach numbers; faces that refuse the climb (`edgeKick` / `kick: false`); **wall kicks rise in full on a tap (one wall is enough to climb)**, what a hard landing is
 - [Pixi gotchas](pixi-gotchas.md) — Pixi v8 filter, resolution, GLSL and headless-GPU traps

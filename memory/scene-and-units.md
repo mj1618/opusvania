@@ -13,7 +13,7 @@
   it works in logical units, so draw vectors/meshes and they stay crisp; nothing is upscaled. Shaders
   that need device pixels use `ctx.viewScale()`. Camera and player are interpolated between sim frames.
 
-## The scene: `content/scene/grove.json`
+## The test grove: `content/rooms/test-grove.json` (id `test-grove`; every room: memory/rooms.md)
 `{id, width: 5760, height: 1600, spawn: {x, y}, ceilingY?: -420, edgeKick?: false (the scene's side edges take no wall slide / kick), solids: [{tag, x, y, w, h, kick?: false (the same for one solid)}], oneWays: [{tag, x, y, w}],
 pickups: [{id, kind: glint|great, x, y}], pods: [{id, x, y, mount: sit|hang, hp?: 1-3}],
 enemies: [{id, kind: burrback, x, y (feet centre), facing: -1|1, radius? (its own range, box centre from its start)} | {id, kind: lampwing, x, y (home: box centre, in open
@@ -208,13 +208,17 @@ Zoom scales every world layer about the view centre.
 | `src/render/character/` | character (replace the placeholder wholesale; keep the class name, constructor and `update`) |
 | `src/render/post/` | post (keep `PostStage`'s constructor, `update`, `resize`) |
 | `src/render/contract.ts`, `stage.ts`, `lights.ts`, `app.ts`, `camera/`, `scene/index.ts`, `scene/layer-tree.ts` | orchestrator: ask before changing |
-| `src/sim/`, `content/scene/` | orchestrator |
+| `src/sim/`, `content/rooms/`, `content/world.json` | orchestrator |
 
 Interfaces are documented at the top of `scene/index.ts`, `character/index.ts`, `post/index.ts`,
 `lights.ts` and `contract.ts`. The driver order per render frame is in `stage.ts`.
 
 ## Shots and clips
-- `npm run shots` (dev server on 5180, or `--url`): `shots/wide-*.png` (1920x1080 at 13 camera stops; 8 = the bluff, 9 = the hollow, 10 = the shaft floor, 11 = the
+- **Per room** (memory/rooms.md): `npm run shots` shoots the default room (`wood-hatch`); `-- --room test-grove`
+  the grove. The stops and close-up spots are the room's `shots` in its JSON (they used to be a list in
+  `tools/shots.ts`); `look:stats --stops` reads the same list. `npm run clip -- --room test-grove ...` for Grove
+  coordinates.
+- `npm run shots -- --room test-grove` (dev server on 5180, or `--url`): `shots/wide-*.png` (1920x1080 at 13 camera stops; 8 = the bluff, 9 = the hollow, 10 = the shaft floor, 11 = the
   summit bough, 12 = the catch branch, 13 = the foot of the far bluff),
   `shots/closeup-*.png` (character at 4x in 12 situations) and `shots/closeup-strip.png`. `--only=wide|closeup`,
   `--out=dir`, `--ambient=N` (render frames to run before shooting), `--hitboxes`, `--no-gpu`. ~1.5 s.
@@ -224,5 +228,5 @@ Interfaces are documented at the top of `scene/index.ts`, `character/index.ts`, 
 - `npm run clip -- --script "R40 R+J22 R30 .30" --name x` → `clips/x.mp4` + `.gif`, one picture per sim
   step. `--zoom 2` (centred on the character) or `--wide`; `--at x,y`; `--ambient N` for the scene
   animating with the sim frozen. Needs ffmpeg.
-- Both launch headless Chromium on the real GPU (`--use-angle=metal` on macOS); both read the stops and
-  situations from the top of `tools/shots.ts`, so add a stop there when the scene gains a landmark.
+- Both launch headless Chromium on the real GPU (`--use-angle=metal` on macOS). Add a stop to the room's
+  `shots.wide` when it gains a landmark.

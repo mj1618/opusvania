@@ -29,6 +29,8 @@ import { growGarden } from '../lib/pf-plants';
 import { zoneAt } from '../lib/pf-shape';
 import { paintTerrain, type TerrainInfo } from '../lib/pf-terrain';
 import { Water } from '../lib/pf-water';
+import { paintWoodTerrain } from '../lib/pf-wood';
+import { isGroveKit, LOOK } from '../lib/room-look';
 
 export const PLAYFIELD = {
   /** Terrain is baked at the view scale, clamped to this range (texture px per world px). */
@@ -75,7 +77,8 @@ export class PlayfieldLayer implements EnvModule {
     this.ctx = ctx;
     this.front = ctx.layers.playfieldFront;
     const scene = ctx.scene;
-    const { paint, info } = paintTerrain(scene);
+    // The test grove keeps its hand-tuned painter; the wood kit paints from the room's rects (pf-wood.ts).
+    const { paint, info } = isGroveKit() ? paintTerrain(scene) : paintWoodTerrain(scene, LOOK.seed);
     this.info = info;
     const scale = Math.min(PLAYFIELD.bakeScaleMax, Math.max(PLAYFIELD.bakeScaleMin, ctx.viewScale()));
     const baked = bakeTerrain(ctx.renderer, paint, scale, info.mist);

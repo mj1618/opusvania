@@ -355,7 +355,7 @@ describe('offer: one glint to what is in reach', () => {
     expect(a.events).toEqual(b.events);
     const c = cloneState(a.state);
     expect(hashState(c)).toBe(hashState(a.state));
-    expect(createState(1, a.tuning, a.scene).version).toBe(20);
+    expect(createState(1, a.tuning, a.scene).version).toBe(21);
   });
 });
 

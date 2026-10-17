@@ -4,13 +4,14 @@ import { expect, type Page, test } from '@playwright/test';
  * The whole e2e suite: the game boots clean, the character moves, the debug API works. Keep it
  * small (CI renders with software GL); looks are judged with `npm run shots`, not asserted here.
  */
-async function boot(page: Page): Promise<string[]> {
+/** Boots paused in the test grove (the old demo level: its glints, enemies and coordinates), or in `query`'s room. */
+async function boot(page: Page, query = '?manual&room=test-grove'): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text());
   });
-  await page.goto('./?manual');
+  await page.goto(`./${query}`);
   await page.waitForFunction(() => document.body.dataset.ready === 'true' || !!document.body.dataset.error);
   expect(await page.evaluate(() => document.body.dataset.error)).toBeUndefined();
   return errors;
@@ -19,7 +20,7 @@ async function boot(page: Page): Promise<string[]> {
 test('boots without errors and fills a 16:9 canvas', async ({ page }) => {
   const errors = await boot(page);
   const info = await page.evaluate(() => window.__game.info());
-  expect(info.scene).toEqual({ id: 'grove', width: 5760, height: 1600 });
+  expect(info.scene).toEqual({ id: 'test-grove', width: 5760, height: 1600 });
   expect(info.canvas.w / info.canvas.h).toBeCloseTo(16 / 9, 2);
   expect(info.canvas.w).toBe(1280);
   // Something was drawn: the canvas is not one flat colour.
@@ -120,24 +121,64 @@ test('__game API: step, state, input, load, teleport, cam, freeze', async ({ pag
   expect(errors).toEqual([]);
 });
 
-test('the default boot plays the Grove straight away (no prologue)', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto('./');
-  await page.waitForFunction(() => document.body.dataset.ready === 'true' || !!document.body.dataset.error);
-  expect(await page.evaluate(() => document.body.dataset.error)).toBeUndefined();
+test('the default boot is scene 1 (wood-hatch): shut in the cocoon, then running with the starting kit', async ({
+  page,
+}) => {
+  const errors = await boot(page, '');
   const r = await page.evaluate(() => {
     const g = window.__game;
     // Realtime from the first frame: pause it so the reading is stable.
     const mode = g.pause();
-    const s = g.state();
-    return { mode, prologue: 'prologue' in g, glints: s.pickups.timers.length, hp: s.player.hp };
+    g.load();
+    const s0 = g.state();
+    const x0 = s0.player.x;
+    // Wait out the fade-up, then three presses break the cocoon.
+    g.step(160);
+    g.input('J1 .3 A1 .3 J1 .3');
+    g.step(12);
+    const hatch = g.events(20).filter((e) => e.type === 'hatch' || e.type === 'hatchStir').length;
+    g.input('R40');
+    const ran = g.step(40).player;
+    return {
+      mode,
+      room: g.room(),
+      rooms: g.rooms(),
+      prologue: 'prologue' in g,
+      shut: s0.hatch,
+      hatch,
+      moved: ran.x - x0,
+      abilities: g.abilities(),
+      granted: g.grant('glide', 'dash'),
+      revoked: g.revoke('dash'),
+      glints: s0.pickups.timers.length,
+      enemies: g.enemies().total,
+    };
   });
   expect(r.prologue).toBe(false);
   expect(r.mode).toBe('manual');
-  // The whole Grove: its glints are there and she is at full health.
-  expect(r.glints).toBeGreaterThan(0);
-  expect(r.hp).toBe(4);
+  expect(r.room).toBe('wood-hatch');
+  expect(r.rooms).toEqual(['wood-hatch', 'test-grove']);
+  expect(r.shut).toEqual({ frames: 0, presses: 0, done: false });
+  expect(r.hatch).toBe(4);
+  expect(r.moved).toBeGreaterThan(150);
+  expect(r.abilities.owned).toEqual([]);
+  expect(r.granted).toEqual(['glide', 'dash']);
+  expect(r.revoked).toEqual(['glide']);
+  // Scene 1 has no glints and no creatures.
+  expect([r.glints, r.enemies]).toEqual([0, 0]);
+  expect(errors).toEqual([]);
+});
+
+test('?room and ?abilities choose the room and the kit; the panel lists the rooms', async ({ page }) => {
+  const errors = await boot(page, '?manual&room=test-grove&abilities=glide');
+  const r = await page.evaluate(() => ({
+    room: window.__game.room(),
+    owned: window.__game.abilities().owned,
+    options: [...(document.querySelector('.tp-dfwv select')?.querySelectorAll('option') ?? [])].map(
+      (o) => o.textContent,
+    ),
+  }));
+  expect(r).toEqual({ room: 'test-grove', owned: ['glide'], options: ['wood-hatch', 'test-grove'] });
   expect(errors).toEqual([]);
 });
 

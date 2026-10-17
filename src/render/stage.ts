@@ -23,6 +23,7 @@ import { DipOverlay } from './camera/dip';
 import { type CameraState, createCamera, lerpCamera, stepCamera } from './camera/index';
 import { CameraKick } from './camera/kick';
 import { ReformShot } from './camera/reform';
+import { RoomFade } from './camera/room-fade';
 import { CharacterRenderer } from './character/index';
 import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
 import { EnemyRenderer } from './enemies/index';
@@ -34,6 +35,7 @@ import { LightRegistry } from './lights';
 import { PickupRenderer } from './pickups/index';
 import { PostStage } from './post/index';
 import { SceneRenderer } from './scene/index';
+import { setRoomLook } from './scene/lib/room-look';
 
 /**
  * Debug camera override (`__game.cam`). Every field is optional: a missing x / y follows the game
@@ -87,12 +89,16 @@ export class RenderStage {
   /** Fade / re-form / restart: the pan that replaces the cut and the dark dip over it (camera/reform.ts). */
   private readonly reformShot = new ReformShot();
   private readonly dip = new DipOverlay();
+  /** Leaving the room (a black fade over the exit's hold) and the dip of a caught fall: camera/room-fade.ts. */
+  private readonly roomFade = new RoomFade();
 
   constructor(
     private readonly ga: GameApp,
     private readonly game: Game,
   ) {
     const scene = game.scene;
+    // The room's look first: shaders are built with its zone edges and key light (room-look.ts).
+    setRoomLook(scene);
     this.ctx = { renderer: ga.app.renderer, scene, lights: this.lights, viewScale: ga.viewScale };
     this.scene = new SceneRenderer(this.ctx);
     this.scene.init(scene);
@@ -109,7 +115,13 @@ export class RenderStage {
     this.post = new PostStage(this.ctx, this.scene.layers.root);
     this.hud = new Hud();
     this.overlay = new HitboxOverlay(scene);
-    ga.root.addChild(this.scene.layers.root, this.dip.layer, this.hud.layer, this.overlay.layer);
+    ga.root.addChild(
+      this.scene.layers.root,
+      this.dip.layer,
+      this.roomFade.layer,
+      this.hud.layer,
+      this.overlay.layer,
+    );
 
     this.cam = createCamera(game.state, scene);
     this.prevCam = { ...this.cam };
@@ -160,6 +172,7 @@ export class RenderStage {
     const rs = this.reformShot;
     rs.update(dt);
     this.dip.set(rs.dip);
+    this.roomFade.update(dt, events);
     const base: CameraView = o
       ? {
           x: o.x ?? (o.on === 'player' ? player.cx : follow.x),

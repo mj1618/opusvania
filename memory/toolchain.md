@@ -20,7 +20,7 @@
 - **Biome and worktrees**: agent worktrees live in `.claude/worktrees/` (untracked); Biome found their
   `biome.json` as nested roots and refused to run, so `biome.json` excludes `.claude`.
 - **JSON imports need `with { type: 'json' }`**: Playwright loads specs as native Node ESM, which rejects
-  bare JSON imports (Vite and tsx don't care). `src/scene/index.ts` imports `content/scene/grove.json` this way.
+  bare JSON imports (Vite and tsx don't care). `src/scene/index.ts` imports every `content/rooms/*.json` (and `content/world.json`) this way.
 - **Tweakpane rewrites bound values on refresh**: it clamps to a binding's min/max
   and snaps to its `step` grid (`setTuning('jump.gravity', 1234)` read back 1233.9967).
   Number bindings in the tuning panel have neither.

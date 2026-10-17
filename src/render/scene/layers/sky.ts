@@ -18,6 +18,7 @@ import { VIEW_H, VIEW_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { BG_VERT, noiseTexture, quadGeometry, rgb, ZONES, zoneWeights } from '../lib/bg-bake';
 import { KEY_LIGHT } from '../lib/look';
+import { LOOK } from '../lib/room-look';
 
 export const SKY = {
   // Low key: the sky is a dark amber-brown dusk, and its one bright thing is a small bloom that
@@ -53,6 +54,12 @@ export const SKY = {
   /** At the ending the side zones' dimming of the key bloom eases by this share, over this many sim frames. */
   wake: 0.4,
   wakeFrames: 240,
+  /**
+   * The wood kit (room-look.ts): no warm bloom; the room's moon (`art.moon`, view px) as a disc with
+   * a cool halo (its glow sigma = `glowK` x the disc radius), screen-fixed but for `parallax`; the
+   * far warm afterglow (`art.afterglow`) as a low band on the right, `bandHalf` px half height.
+   */
+  wood: { core: 0xdce8f6, glowK: 1.1, parallax: 0.02, band: 0x6a4a3e, bandHalf: 34 },
 } as const;
 
 /**
@@ -78,7 +85,7 @@ export function skyGlowAt(
   };
 }
 
-const FRAG = `#version 300 es
+const frag = (): string => `#version 300 es
 precision highp float;
 in vec2 vUV;
 out vec4 fragColor;
@@ -106,6 +113,10 @@ uniform vec4 uMoon;
 uniform vec3 uMoonCol;
 uniform vec4 uDusk;
 uniform vec3 uDuskCol;
+uniform vec4 uDisc;
+uniform vec3 uDiscCol;
+uniform vec4 uBand;
+uniform vec3 uBandCol;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main() {
   vec2 p = vUV * vec2(${VIEW_W + 16}.0, ${VIEW_H + 16}.0) - 8.0;
@@ -151,6 +162,12 @@ void main() {
   float rd = length((p - uDusk.xy) / zoom * vec2(1.0, 1.25));
   float dg = (exp(-rd * rd / (2.0 * uDusk.z * uDusk.z)) * 0.9 + exp(-rd / (uDusk.z * 3.0)) * 0.5) * uZoneCam.y;
   col = mix(col, uDuskCol, clamp(dg * (1.0 + 0.05 * sin(t * 0.4)), 0.0, 1.0));
+  // The wood's moon: a disc over its halo (uDisc: radius, strength), and the far warm afterglow
+  // (uBand: x where it starts, y, strength, half height). Both are off in the Grove.
+  col = mix(col, uDiscCol, smoothstep(uDisc.x + 2.0, uDisc.x - 2.0, rm) * uDisc.y);
+  float bx = smoothstep(uBand.x - 520.0, uBand.x + 260.0, p.x);
+  float by = exp(-pow((p.y - uBand.y) / max(1.0, uBand.w), 2.0));
+  col = mix(col, uBandCol, clamp(bx * by * uBand.z, 0.0, 1.0));
   col += (hash(gl_FragCoord.xy + fract(t) * 61.0) - 0.5) / 255.0;
   fragColor = vec4(col, 1.0);
 }`;
@@ -198,9 +215,20 @@ export class SkyLayer implements EnvModule {
         type: 'vec4<f32>',
       },
       uDuskCol: { value: rgb(SKY.right.dusk), type: 'vec3<f32>' },
+      uDisc: { value: new Float32Array([LOOK.moon?.r ?? 0, LOOK.moon ? 1 : 0, 0, 0]), type: 'vec4<f32>' },
+      uDiscCol: { value: rgb(SKY.wood.core), type: 'vec3<f32>' },
+      uBand: {
+        value: new Float32Array(
+          LOOK.afterglow
+            ? [LOOK.afterglow.x, LOOK.afterglow.y, LOOK.afterglow.strength, SKY.wood.bandHalf]
+            : [0, 0, 0, 1],
+        ),
+        type: 'vec4<f32>',
+      },
+      uBandCol: { value: rgb(SKY.wood.band), type: 'vec3<f32>' },
     });
     const shader = Shader.from({
-      gl: { vertex: BG_VERT, fragment: FRAG },
+      gl: { vertex: BG_VERT, fragment: frag() },
       resources: { uNoise: noiseTexture().source, sky: this.uniforms },
     });
     // Overdraw a little so sub-pixel canvas rounding never shows the clear colour.
@@ -247,8 +275,18 @@ export class SkyLayer implements EnvModule {
     const e = goal.gathered ? Math.min(1, goal.ending.frames / SKY.wakeFrames) : 0;
     const wake = e * e * (3 - 2 * e) * SKY.wake;
     const dim = 1 - (SKY.keyDimL * z.l + SKY.keyDimR * z.r) * (1 - wake);
-    (u.uZoneCam as Float32Array).set([z.l, z.r, dim * (1 + 0.3 * wake), 0]);
-    (u.uMoon as Float32Array).set(at(SKY.left.moonX, SKY.left.moonY, 960));
+    const moon = LOOK.moon;
+    if (moon) {
+      // The wood: the room's moon, nearly screen-fixed, and no warm bloom at all.
+      const k = SKY.wood.parallax / SKY.glowParallaxX;
+      const [mx, my] = at(moon.x, moon.y, cam.x + (LOOK.keyEntryX - cam.x) * k);
+      (u.uZoneCam as Float32Array).set([1, 0, 0, 0]);
+      (u.uMoon as Float32Array).set([mx, my, moon.r * SKY.wood.glowK, 0]);
+      (u.uDisc as Float32Array)[0] = moon.r * cam.zoom;
+    } else {
+      (u.uZoneCam as Float32Array).set([z.l, z.r, dim * (1 + 0.3 * wake), 0]);
+      (u.uMoon as Float32Array).set(at(SKY.left.moonX, SKY.left.moonY, 960));
+    }
     (u.uDusk as Float32Array).set(at(SKY.right.duskX, SKY.right.duskY, 4800));
     this.renderer.render({
       container: this.mesh,

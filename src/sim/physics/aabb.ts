@@ -24,11 +24,28 @@ export function roundHalfAway(r: number): number {
 }
 
 /**
+ * True if the part of a box that sticks out through `edge` (from `a` to `b` along it) lies inside one
+ * of the scene's open exit spans. Hot path: no closures, no allocation.
+ */
+export function edgeOpen(scene: Scene, edge: 'n' | 's' | 'e' | 'w', a: number, b: number): boolean {
+  const exits = scene.exits;
+  if (exits === undefined) return false;
+  for (let i = 0; i < exits.length; i++) {
+    const e = exits[i];
+    if (e !== undefined && e.edge === edge && a >= e.from && b <= e.to) return true;
+  }
+  return false;
+}
+
+/**
  * True if a w×h box at integer (x, y) overlaps a solid rect or leaves the scene through its left,
- * right or bottom edge (the top is open). Hot path: no closures, no allocation.
+ * right or bottom edge (the top is open), except through an open exit span (`scene.exits`). Hot
+ * path: no closures, no allocation.
  */
 export function solidAt(scene: Scene, x: number, y: number, w: number, h: number): boolean {
-  if (x < 0 || x + w > scene.width || y + h > scene.height) return true;
+  if (x < 0 && !edgeOpen(scene, 'w', y, y + h)) return true;
+  if (x + w > scene.width && !edgeOpen(scene, 'e', y, y + h)) return true;
+  if (y + h > scene.height && !edgeOpen(scene, 's', x, x + w)) return true;
   const solids = scene.solids;
   for (let i = 0; i < solids.length; i++) {
     const s = solids[i];
@@ -43,7 +60,10 @@ export function solidAt(scene: Scene, x: number, y: number, w: number, h: number
  * not false). The scene's outer walls lead nowhere, so the grove turns them off.
  */
 export function kickableAt(scene: Scene, x: number, y: number, w: number, h: number): boolean {
-  if ((x < 0 || x + w > scene.width) && scene.edgeKick !== false) return true;
+  if (scene.edgeKick !== false) {
+    if (x < 0 && !edgeOpen(scene, 'w', y, y + h)) return true;
+    if (x + w > scene.width && !edgeOpen(scene, 'e', y, y + h)) return true;
+  }
   const solids = scene.solids;
   for (let i = 0; i < solids.length; i++) {
     const s = solids[i];

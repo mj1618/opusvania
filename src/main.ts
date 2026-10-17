@@ -6,14 +6,27 @@ import { InputSampler } from './input/index';
 import { FixedStepLoop } from './loop';
 import { createApp } from './render/app';
 import { RenderStage } from './render/stage';
-import { GROVE } from './scene/index';
+import { DEFAULT_ROOM, getRoom, ROOM_IDS } from './scene/index';
+import { ABILITIES } from './sim/abilities';
 import { tuning } from './sim/tuning';
 
 /** Longest render-time step fed to the renderers, so a stall never explodes a spring. */
 const MAX_RENDER_DT = 0.1;
 
 /**
- * Boot. URL params: ?seed=<n>, ?manual (start paused; drive via __game.step), ?hitboxes,
+ * `?abilities=all | none | glide,dash,...`: what she owns instead of the room's starting kit (null = the kit).
+ */
+function abilitiesParam(v: string | null): string[] | null {
+  if (v === null) return null;
+  if (v === 'all' || v === '') return [...ABILITIES];
+  if (v === 'none') return [];
+  return v.split(',').map((s) => s.trim());
+}
+
+/**
+ * Boot. URL params: ?room=<id> (default content/world.json's start: wood-hatch; `test-grove` is the
+ * old demo level), ?abilities=all|none|glide,wallJump,doubleJump,dash, ?seed=<n>, ?manual (start
+ * paused; drive via __game.step), ?hitboxes,
  * ?nopickups (the scene without its glints, lumen pods, enemies, lanterns and heart, so without the HUD: clean plates
  * for the look tools), ?audio (sound on for review; ?audio=0 off).
  * Keys: arrows/WASD move, Z/Space/K jump, X/L/Shift dash, Down+Jump drops through branches,
@@ -23,17 +36,27 @@ async function boot(): Promise<void> {
   const params = new URLSearchParams(location.search);
   const seed = Number(params.get('seed') ?? 1) >>> 0;
   const input = new InputSampler();
+  const room = getRoom(params.get('room') ?? DEFAULT_ROOM);
   const scene = params.has('nopickups')
-    ? { ...GROVE, pickups: [], pods: [], enemies: [], lanterns: [], lamps: [], heart: undefined }
-    : GROVE;
-  const game = new Game(tuning, scene, seed, () => input.sample());
+    ? { ...room, pickups: [], pods: [], enemies: [], lanterns: [], lamps: [], heart: undefined }
+    : room;
+  const game = new Game(tuning, scene, seed, () => input.sample(), abilitiesParam(params.get('abilities')));
   if (params.has('manual')) game.mode = 'manual';
 
   const root = document.getElementById('app');
   if (!root) throw new Error('#app missing');
   const ga = await createApp(root);
   const stage = new RenderStage(ga, game);
-  const panel = new TuningPanel(tuning, () => game.reset());
+  const panel = new TuningPanel(tuning, () => game.reset(), {
+    room: room.id,
+    rooms: ROOM_IDS,
+    // Switching room reloads the page with ?room= (the renderers are built once per room).
+    onRoom: (id) => {
+      const q = new URLSearchParams(location.search);
+      q.set('room', id);
+      location.search = q.toString();
+    },
+  });
   if (params.has('hitboxes')) stage.overlay.toggle(true);
   // Sound reads the sim and the camera like render does (read-only).
   const audio = new AudioDirector(game, params);

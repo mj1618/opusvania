@@ -1,9 +1,10 @@
+import { ABILITIES, type AbilityId } from '../abilities';
 import type { Tuning } from '../tuning';
 
 /**
- * The flat, per-frame parameter set the controller reads. Built from the live tuning and the
- * assist toggles, so the controller never branches on "is this assist on": a disabled assist just
- * shows up here as 0 / false.
+ * The flat, per-frame parameter set the controller reads. Built from the live tuning, the assist
+ * toggles and the abilities she owns, so the controller never branches on "is this assist on" or
+ * "does she have glide": a disabled assist or an unowned ability just shows up here as 0 / false.
  */
 export interface MoveParams {
   gravity: number;
@@ -43,6 +44,8 @@ export interface MoveParams {
   landingPreference: boolean;
 
   wallSlide: boolean;
+  /** She owns the wall jump (a kick off a wall, sliding or not). */
+  wallJump: boolean;
   slideMax: number;
   slideStartMax: number;
   slideRamp: number;
@@ -54,6 +57,8 @@ export interface MoveParams {
   wallCheckPx: number;
   wallJumpRefill: boolean;
 
+  /** She owns the dash (ground and air). */
+  dash: boolean;
   dashSpeed: number;
   dashFrames: number;
   dashFreezeFrames: number;
@@ -142,8 +147,15 @@ function slashStep(s: Tuning['slash1']): SlashStep {
   };
 }
 
-export function resolveParams(t: Tuning): MoveParams {
+/**
+ * `abilities`: what she owns (`GameState.save.abilities`); default all. Not owned: `glide` -> no
+ * glide, `wallJump` -> no wall slide and no wall kick, `doubleJump` -> no double jump, `dash` -> no
+ * dash. Run, variable jump, fast fall, the blade and pogo are always hers.
+ */
+export function resolveParams(t: Tuning, abilities: readonly AbilityId[] = ABILITIES): MoveParams {
   const a = t.assists;
+  const owns = (id: AbilityId) => abilities.includes(id);
+  const wall = owns('wallJump');
   const j = t.jump;
   const r = t.run;
   const s = t.assist;
@@ -162,7 +174,7 @@ export function resolveParams(t: Tuning): MoveParams {
     apexHangVy: a.apexHang ? j.apexHangVy : 0,
     apexHangMult: a.apexHang ? j.apexHangMult : 1,
     hBoost: j.hBoost,
-    doubleJumps: j.doubleJumps,
+    doubleJumps: owns('doubleJump') ? j.doubleJumps : 0,
     maxFall: j.maxFall,
     fastFallMax: a.fastFall ? j.fastFallMax : j.maxFall,
     fastFallAccel: j.fastFallAccel,
@@ -188,7 +200,8 @@ export function resolveParams(t: Tuning): MoveParams {
     wallRetainFrames: a.wallSpeedRetain ? s.wallRetainFrames : 0,
     landingPreference: a.landingPreference,
 
-    wallSlide: a.wallSlide,
+    wallSlide: a.wallSlide && wall,
+    wallJump: wall,
     slideMax: w.slideMax,
     slideStartMax: w.slideStartMax,
     slideRamp: w.slideRamp,
@@ -201,6 +214,7 @@ export function resolveParams(t: Tuning): MoveParams {
     wallCheckPx: a.wallJumpGrace ? Math.max(1, w.checkPx) : 1,
     wallJumpRefill: a.wallJumpRefill,
 
+    dash: owns('dash'),
     dashSpeed: d.speed,
     dashFrames: d.frames,
     dashFreezeFrames: d.freezeFrames,
@@ -211,7 +225,7 @@ export function resolveParams(t: Tuning): MoveParams {
     dashBufferFrames: Math.max(1, d.bufferFrames),
     airDashes: d.airDashes,
 
-    glide: a.glide,
+    glide: a.glide && owns('glide'),
     glideFall: gl.fallSpeed,
     glideCatchRate: gl.catchRate,
     glideCatchMin: gl.catchMin,

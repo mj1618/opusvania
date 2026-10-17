@@ -9,9 +9,11 @@
  *   npm run look:stats -- shots/r9 --json             machine-readable
  *
  * A file `<image>.hero.json` holding `{"x":..,"y":..,"w":..,"h":..}` next to an image is used as
- * its hero box automatically. `--stops[=dir]` shoots the seven wide camera stops itself (dev
- * server on 5180 or --url, like `npm run shots`), writes them with their hero boxes into the
- * directory (default shots/look) and then measures them: one command for a before/after number.
+ * its hero box automatically. `--stops[=dir]` shoots the room's wide camera stops itself (`--room`,
+ * default wood-hatch; the same `shots.wide` list as `npm run shots`; dev server on 5180 or --url),
+ * writes them with their hero boxes into the directory (default shots/look) and then measures them:
+ * one command for a before/after number. (The test grove's numbers in reference-study.md were taken
+ * with its first seven stops, the high ledge at x 3000.)
  *
  * Per image and averaged: mean, median, near-black % (< 15), dark % (< 38), dark-grey % (15-38),
  * area above 150 %, near-white % (> 217), the luma of the brightest 0.1% of pixels (p99.9), mean
@@ -24,6 +26,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { DEFAULT_ROOM, getRoom } from '../src/scene/index';
 import { DEFAULT_URL, launch, openGame } from './lib/browser';
 
 const { values: args, positionals } = parseArgs({
@@ -34,6 +37,7 @@ const { values: args, positionals } = parseArgs({
     json: { type: 'boolean', default: false },
     stops: { type: 'string' },
     url: { type: 'string', default: DEFAULT_URL },
+    room: { type: 'string', default: DEFAULT_ROOM },
     ambient: { type: 'string', default: '60' },
     help: { type: 'boolean', short: 'h' },
   },
@@ -42,7 +46,7 @@ const wantsStops = args.stops !== undefined || process.argv.includes('--stops');
 if (args.help || (positionals.length === 0 && !wantsStops)) {
   console.log(
     'npm run look:stats -- <dir|files...> [--only=text] [--hero=x,y,w,h] [--json]\n' +
-      'npm run look:stats -- --stops[=dir] [--url=http://localhost:5180] [--ambient=60]',
+      'npm run look:stats -- --stops[=dir] [--room=<id>] [--url=http://localhost:5180] [--ambient=60]',
   );
   process.exit(args.help ? 0 : 1);
 }
@@ -54,16 +58,9 @@ interface Box {
   h: number;
 }
 
-/** The camera stops of tools/shots.ts (feet centre, sim px). Keep in step with it. */
-const STOPS: Array<[string, number, number]> = [
-  ['left-bank', 520, 1280],
-  ['pool', 1440, 1280],
-  ['canopy-route', 1980, 608],
-  ['trunks', 3050, 1152],
-  ['high-ledge', 3000, 448],
-  ['right-rise', 4500, 1280],
-  ['far-ledge', 5524, 768],
-];
+/** The room's camera stops (feet centre, sim px): its `shots.wide`, as `npm run shots` uses. */
+const ROOM = getRoom(args.room ?? DEFAULT_ROOM);
+const STOPS: Array<[string, number, number]> = (ROOM.shots?.wide ?? []).map((s) => [s.name, s.x, s.y]);
 
 const HUES = [
   'red',
@@ -206,7 +203,7 @@ function measure(file: string, hero: Box | null): Record<string, number | string
 async function shootStops(dir: string): Promise<string[]> {
   mkdirSync(dir, { recursive: true });
   const browser = await launch();
-  const page = await openGame(browser, args.url as string, { width: 1920, height: 1080 });
+  const page = await openGame(browser, args.url as string, { width: 1920, height: 1080 }, 1, false, ROOM.id);
   const files: string[] = [];
   let i = 1;
   for (const [name, x, y] of STOPS) {

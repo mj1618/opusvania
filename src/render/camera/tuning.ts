@@ -87,5 +87,16 @@ export const cameraTuning = {
     restartDip: 0.9,
     restartSec: 0.5,
   },
+  /**
+   * Leaving a room and being caught after a fall (`roomExit` / `fallCatch`, room-fade.ts): a black
+   * fade over the sim's hold (it reaches black `exitEarly` s before the room restarts), lifted over
+   * `exitLift` s after `roomEnter`. A catch dips to `catchDepth` over its hold and lifts over `catchLift` s.
+   */
+  room: {
+    exitEarly: 0.12,
+    exitLift: 0.9,
+    catchDepth: 0.85,
+    catchLift: 0.35,
+  },
 };
 export type CameraTuning = typeof cameraTuning;

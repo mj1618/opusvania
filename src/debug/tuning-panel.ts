@@ -7,17 +7,39 @@ const OPTIONS: Record<string, Record<string, string>> = {
   'jump.releaseMode': { gravity: 'gravity', zero: 'zero' },
 };
 
+/** The room selector at the top of the panel. */
+export interface RoomChoice {
+  /** The room being played. */
+  room: string;
+  /** Every room id (content/world.json order: the game's rooms, then the test rooms). */
+  rooms: readonly string[];
+  /** Called with the chosen id (main.ts reloads the page with `?room=`). */
+  onRoom(id: string): void;
+}
+
 /**
  * Tweakpane panel bound to the live tuning object. Hidden by default; toggle with backquote.
+ * The Room list at the top switches room (the test grove lives there).
  * Shape edits re-derive the jump constants. "Copy JSON" copies the current values so they can be
  * written back into src/sim/tuning.ts.
  */
 export class TuningPanel {
   private readonly pane: Pane;
 
-  constructor(tuning: Tuning, onRespawn: () => void) {
+  constructor(tuning: Tuning, onRespawn: () => void, rooms?: RoomChoice) {
     this.pane = new Pane({ title: 'Tuning  ( ` to hide )' });
     this.pane.hidden = true;
+    if (rooms) {
+      const pick = { room: rooms.room };
+      this.pane
+        .addBinding(pick, 'room', {
+          label: 'Room',
+          options: Object.fromEntries(rooms.rooms.map((id) => [id, id])),
+        })
+        .on('change', (e) => {
+          if (e.value !== rooms.room) rooms.onRoom(e.value);
+        });
+    }
     const root = tuning as unknown as Record<string, Record<string, unknown>>;
     for (const [group, values] of Object.entries(root)) {
       const folder = this.pane.addFolder({ title: group, expanded: group === 'shape' });
