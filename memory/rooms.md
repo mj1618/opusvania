@@ -145,7 +145,7 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   walk off and down-cut in frames 0-4 (snuff, pogo, onto the foothold 2848-2944 at 1248). With W-ff out the far
   band climbs from the floor to the bridge (the permanence way). Zone `snuff` (0.85) frames the tip.
 - **Falls:** from 16 drop points on the faces, the bridge and the upper rung she lands within 600 px: rungs 3264 /
-  2752, the ledge and buttress 2240, the floor 1776 (`noDrop`: bots dropped through it to the tunnel), the bridge
+  2752, the ledge and buttress 2240, the floor 1776 and the chimney's lid 1312 (`noDrop`: human-like personas dropped through them, 900-1400 px), the bridge
   1312, the shelf 2680-2944 at 1248 (a step up from the bridge's tip), footholds against the face at 1048 and 800,
   the upper rung 2240-2700 at 1000. (A ledge 64+ px off a face she climbs catches a one-wall climber's kick-out and
   she bounces between it and the face: keep ledges right against the face or well clear of it.)
@@ -155,6 +155,9 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   over onto the rim), P5 3392, then the finale trigger `crown` (3328-3520, **the rim's full height**, so no jump
   skips it: `hold: 540, finale: true, endSets: "wood-crown-gone"`; a finale's hold sends the room's creatures away)
   and the exit `canopy` (no gate: the hold is the shut door; a gate made the bots plan the exit as unreachable).
+- **Human-like runs on 4424bd7** (full chunk, 9): 5 through (0 on 57eee9a); every run with the claws reached P5,
+  claws -> P5 69-189 s; the big falls left were drops through the chimney's lid (now `noDrop`) and leaps west off
+  the rim; two skilled runs explored the oak's west after the finale until lost (the personas finish every cell).
 - **Cut in round 4:** the postgame crown lantern (in view of the rim it drew players off the top: human-like
   personas chased it and fell), the west crown's top (an unreachable ledge in view: the west wood is solid to the
   room's top now), the chimney rungs (frontier the personas could not reach).
