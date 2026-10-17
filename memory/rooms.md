@@ -141,9 +141,11 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
 - **Fades:** `reformPatch: true` (8036fc0: the nearest patch at or below where she lay): a fade above the rest ledge
   re-forms her at P-ledge, below it at P3; `reform` (P3) stays as the fallback. Never in R8.
 - **The first visit (round 4: it lasted 10 s):** the glimpse trigger is P3's patch box (1224-1336) with `hold: 300,
-  finale: true` (a long beat; the rest happens inside it); the **east arch is shut** (`arch-gate`, flag
-  `wood-firefly-glimpse`) until it has played. `stage.glimpse` frames the crown ring and W-ff (2752, 1300, 0.5, 6 s).
-  Tatter: `marks.tatter` looks up at W-ff until the glimpse; `stage.tatters`: it leads her out of the east arch
+  finale: true` (a long beat; the rest happens inside it); then **Tatter's look-up** under the trunk (trigger
+  `look-up`, 2384-2544 west of the mesh, hold 180, sets `wood-oak-looked`; the trunk-foot zone frames tall); the
+  **east arch is shut** (`arch-gate`, flag `wood-oak-looked`) until both have played. Human-like runs before the
+  look-up: first visit 12 s (target 25). `stage.glimpse` frames the crown ring and W-ff (2752, 1300, 0.5, 6 s).
+  Tatter: `marks.tatter` looks up at W-ff until the look-up; `stage.tatters`: it leads her out of the east arch
   (`climb.path` + `lead`) until `wood-climbout`, sits under the trunk looking up until the root, then climbs the root.
 - **For the creatures agent:** `hawk-crown` keeps swooping through the finale's wide frame: it should leave on
   `wood-crown` (the finale trigger's flag). No creature field reads a flag yet.

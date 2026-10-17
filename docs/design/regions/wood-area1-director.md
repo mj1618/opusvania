@@ -672,5 +672,7 @@ play, in one or two sentences, with the moment it was decided.
 - **The crown wick is off the climb** (2560, 720 over the upper rung): the last face to the rim has no lamp and no
   hawker lane. **For the creatures agent:** have `hawk-crown` leave on `wood-crown` (the finale's flag) so it stops
   diving through the release.
-- **The first visit:** P3's glimpse holds 300 frames with the rest inside it; the east arch is shut until it has
-  played; Tatter leads her out (`stage.tatters`, render's `climb.lead`).
+- **The first visit:** P3's glimpse holds 300 frames with the rest inside it; then Tatter's look-up under the trunk
+  holds 180 (the trunk-foot zone frames it tall); the east arch is shut until both have played; then Tatter leads her
+  out (`stage.tatters`, render's `climb.lead`). That is ~8 s of held beats plus the walk: ~15-17 s, still short of 25.
+  Longer would need more held input (I'd rather not) or a reason to stand that isn't a hold.

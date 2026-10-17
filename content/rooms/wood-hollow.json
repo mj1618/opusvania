@@ -140,6 +140,15 @@
       "finale": true
     },
     {
+      "id": "look-up",
+      "x": 2384,
+      "y": 3648,
+      "w": 160,
+      "h": 192,
+      "sets": "wood-oak-looked",
+      "hold": 180
+    },
+    {
       "id": "root-cut",
       "x": 3200,
       "y": 384,
@@ -422,7 +431,7 @@
       "y": 3584,
       "w": 64,
       "h": 256,
-      "flag": "wood-firefly-glimpse",
+      "flag": "wood-oak-looked",
       "kick": false
     }
   ],
@@ -552,11 +561,15 @@
     {
       "from": "p3",
       "to": "e",
-      "flags": ["wood-firefly-glimpse"]
+      "flags": ["wood-oak-looked"]
     },
     {
       "from": "e",
       "to": "p3"
+    },
+    {
+      "from": "p3",
+      "to": "look-up"
     }
   ],
   "marks": {
@@ -565,7 +578,7 @@
       "y": 3840,
       "facing": 1,
       "want": [2620, 1460],
-      "until": "wood-firefly-glimpse"
+      "until": "wood-oak-looked"
     },
     "notes": [
       {
@@ -596,7 +609,7 @@
       {
         "x": 2580,
         "y": 3584,
-        "text": "Tatter under the trunk, looking up at W-ff: it can't climb. Her kicks slide too (claws: R10's glade 2)"
+        "text": "TATTER'S LOOK-UP (trigger look-up, hold 180): under the trunk, Tatter looks up at W-ff and she with it; the east arch opens; Tatter leads her out"
       },
       {
         "x": 2580,
@@ -680,7 +693,7 @@
           "x": 2700,
           "y": 3840,
           "facing": 1,
-          "when": "wood-firefly-glimpse",
+          "when": "wood-oak-looked",
           "until": "wood-climbout",
           "climb": {
             "path": [[2700, 3840], [3780, 3840]],

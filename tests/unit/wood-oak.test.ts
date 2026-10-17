@@ -178,7 +178,7 @@ describe('the oak: one room from the roots to the crown', () => {
 });
 
 describe('the hollow at the foot of the oak', () => {
-  it('the glimpse at P3 holds 300 (the rest happens in it); the firefly hangs W-ff in the room; the east arch is shut until then', () => {
+  it('the glimpse at P3 holds 300 (the rest inside it), Tatter’s look-up under the trunk 180; the east arch is shut until both', () => {
     const glimpse = (OAK.triggers ?? []).find((t) => t.id === 'glimpse');
     expect(glimpse?.hold).toBe(300);
     const path = OAK.marks?.stage?.glimpse?.path ?? [];
@@ -198,7 +198,12 @@ describe('the hollow at the foot of the oak', () => {
     expect(ev.find((e) => e.type === 'storyHold')).toMatchObject({ id: 'glimpse', frames: 300 });
     ev = ev.concat(s.run(R, 300));
     expect(has(ev, 'patchRest')).toBe(true);
-    for (let i = 0; i < 600 && s.g.state.room === 'wood-hollow'; i++) s.run(R);
+    // Under the trunk Tatter's look-up holds her 180 more; then the arch is open and she leaves.
+    for (let i = 0; i < 600 && s.g.state.room === 'wood-hollow'; i++) ev = ev.concat(s.run(R));
+    expect(ev.filter((e) => e.type === 'storyHold').map((e) => (e as { id?: string }).id)).toEqual([
+      'glimpse',
+      'look-up',
+    ]);
     expect(s.g.state.room).toBe('wood-hawkers');
   });
 });
