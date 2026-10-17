@@ -300,3 +300,16 @@
 - `FOREGROUND.mirrorBack` [4150, 4650]: the corner pair swaps back to top-left + bottom-right as the camera
   nears its east clamp (4800), where the far lantern stands in the frame's top right over the heart. (The
   black mass that hung over the lantern there was mostly a mid-layer moss curtain: background-layers.md.)
+
+## The wood (2026-10-17)
+- Post: `WOOD_GRADE` (config.ts) replaces `ZONE_GRADE` when the kit is not the grove (index.ts `ZG`). The glade's
+  left-zone grade (exposure 1.3, richSaturation 1.5) turned the wood's big sky and fog royal blue (chroma 50-56);
+  now exposure 1.16, richSaturation 1.25, cool highlight tint. The moon measures ~(200,210,222): cool, not warm
+  (the old warmth was the sky's amber `halo` mist colour, which the wood now overrides).
+- Air: `AIR_WOOD` (air.ts; `A` is the room's config, set in init): five thin cool beams placed so the first lands
+  on the cocoon row, mist sheets low in the drop, 150 cool motes, no fireflies (the last firefly is a character),
+  no ambient moth flock (the swarm owns moths), 6 leaves.
+- Foreground: `FOREGROUND.wood`: no floor band, tier or ground plants; flipped `leafBranch` twigs reach up into
+  the bottom corners (`g.scaleTransform(1, -1)` before drawing). The top boughs are near-black on a near-black sky
+  at the opening frame: they frame by value only.
+- Motion is thin in the wood: 1.7% of pixels change > 6 luma in 1 s idle (target: no 10% region still).

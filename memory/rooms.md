@@ -43,7 +43,7 @@ The naive bot of the brief (hold right, a 14-frame jump when grounded and blocke
 exit with no catches, pressed out or waiting the 12 s (`tests/unit/rooms.test.ts`, under 45 s).
 Marks (render / acting only): `cocoons` (hang point + length + split/closed), `tatter`, `swarm` (a world polyline,
 a rough first path), `promise`, `drop`, `camera` (named views: vista, swarm, promise, drop, with notes).
-`art`: kit `wood`, seed 7, moon (view px 1420, 190, r 88), afterglow (view px 1500, 900, 0.35), moods all cool.
+`art`: kit `wood`, seed 7, moon (view px 1420, 190, r 88), afterglow (view px 1500, 850, 0.35; it rides at far0's parallax), `anchorY` 880, moods all cool.
 
 ## Per-room look: what is per room now, what is still Grove-only
 `src/render/scene/lib/room-look.ts` `setRoomLook(room)` runs first in `RenderStage` (shaders are built after it, so
@@ -75,10 +75,6 @@ black 0.12 s before the restart), `roomEnter` lifts it over 0.9 s; `fallCatch` d
 `fallReturn` lifts over 0.35 s; a plain teleport / load clears it. The acting agent owns the cocoon and the hatch: drawn since 2026-10-17 (memory/hatch-and-tatter.md).
 
 ## What the art agents should know
-- The wood's backgrounds are still the Grove's forest plans with the landmarks taken out: composed for a camera
-  on the floor, so the far floor (ferns) shows at the bottom, not crowns seen from above. `art.anchorY` moves
-  the vertical composition (the camera centre the layers line up at); far / mid need wood plans of their own.
-- The moon is only seen where far / mid leave a canopy opening: at the opening frame (camera clamped at x 960)
-  the top right is canopy. Open the canopy there (each plan's `drop`) or the moon is not in the first picture.
-- `pf-wood.ts` limbs still read as stone wedges (the bake's bark relief); the cocoons, Tatter, the swarm and the
-  break-out are not drawn at all yet.
+- The wood's backdrop is its own (canopy height, 2026-10-17): memory/background-layers.md "The wood". It is
+  composed for `art.anchorY` 880 and a reference camera y 800; the camera's feet line is a backdrop knob too.
+- `pf-wood.ts` / `pf-branch*` are the playfield agent's; cocoons, Tatter and the swarm are the acting / swarm agents'.

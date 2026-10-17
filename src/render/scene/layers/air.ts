@@ -230,6 +230,60 @@ export const AIR = {
   },
 };
 
+/**
+ * The wood (high in the canopy, the moon the only light): a few thin cool shafts from the moon's
+ * side, height fog in the drop under the branch, cool drifting spores instead of fireflies (the
+ * firefly is the last of its kind), no gold anywhere, no ambient moth flock (the swarm is its own).
+ */
+const AIR_WOOD: typeof AIR = {
+  ...AIR,
+  shafts: {
+    ...AIR.shafts,
+    color: [0xbcd2ee, 0xbcd2ee, 0xbcd2ee],
+    zoneStrength: [0.55, 0.55, 0.55],
+    back: 0.3,
+    front: 0.035,
+    // Entry x on y = KEY_LIGHT.entryY (a beam lands ~0.46 px left per px it falls): the first lands
+    // on the cocoon row, the others down the run.
+    beams: [
+      { x: 1500, halfWidth: 60, strength: 0.55, reach: 0.95, pool: 0 },
+      { x: 1980, halfWidth: 34, strength: 0.35, reach: 0.8, pool: 0 },
+      { x: 3000, halfWidth: 70, strength: 0.5, reach: 1, pool: 0 },
+      { x: 4300, halfWidth: 80, strength: 0.5, reach: 1, pool: 0 },
+      { x: 5300, halfWidth: 50, strength: 0.4, reach: 1, pool: 0 },
+    ],
+    poolColor: [0xbcd2ee, 0xbcd2ee, 0xbcd2ee],
+  },
+  mist: {
+    ...AIR.mist,
+    color: [0x5a7ea6, 0x5a7ea6, 0x5a7ea6],
+    opacity: [0, 0, 0],
+    // Fog lying in the drop under the branch, lit where a shaft crosses it.
+    sheets: [
+      { y: 1330, thickness: 150, opacity: 0.06 },
+      { y: 1720, thickness: 200, opacity: 0.04 },
+    ],
+  },
+  motes: {
+    ...AIR.motes,
+    count: 150,
+    baseBrightness: 0.45,
+    litBrightness: 2.6,
+    hugGround: 0,
+    bokeh: 3,
+    cool: [0x9fc0e6, 0x9fc0e6, 0x9fc0e6],
+    warm: [0xd8e6ff, 0xd8e6ff, 0xd8e6ff],
+    density: [1, 1, 1],
+    shade: [0.9, 0.9, 0.9],
+  },
+  fireflies: { ...AIR.fireflies, count: [0, 0, 0] },
+  leaves: { ...AIR.leaves, count: 6 },
+  moths: { ...AIR.moths, count: 0 },
+};
+
+/** The air of the room being played (set in AirLayer.init: one room per page). */
+let A: typeof AIR = AIR;
+
 const rgbOf = (hex: number): [number, number, number] => [
   ((hex >> 16) & 255) / 255,
   ((hex >> 8) & 255) / 255,
@@ -316,7 +370,7 @@ class Fireflies {
   }> = [];
 
   constructor(ground: GroundProfile) {
-    const cfg = AIR.fireflies;
+    const cfg = A.fireflies;
     const tex = glowTexture();
     const rnd = prng(0xf1ef1e);
     // The test grove's three zones each have their spots; the wood is cool all the way: the cool
@@ -359,7 +413,7 @@ class Fireflies {
   }
 
   update(frame: SceneFrame, vis: LayerRect): void {
-    const cfg = AIR.fireflies;
+    const cfg = A.fireflies;
     const t = frame.clock;
     const dt = Math.min(frame.dt, 0.05);
     const p = frame.sim.player;
@@ -482,7 +536,7 @@ class Leaves {
       ]),
       ...scene.oneWays.map((o): [number, number, number] => [o.x, o.x + o.w, o.y]),
     ];
-    const cfg = AIR.leaves;
+    const cfg = A.leaves;
     const rnd = prng(0x1eaf);
     for (let i = 0; i < cfg.count; i++) {
       const size = cfg.size * (0.7 + rnd() * 0.7);
@@ -536,7 +590,7 @@ class Leaves {
 
   /** Where the leaf of this flight is `t` seconds after it let go. */
   private path(l: (typeof this.leaves)[number], t: number): [number, number] {
-    const cfg = AIR.leaves;
+    const cfg = A.leaves;
     const a = l.a0 + t * l.w;
     return [
       l.x0 + l.drift * t + Math.sin(a) * cfg.sway + Math.sin(a * 0.43 + 1) * cfg.sway * 0.6,
@@ -545,7 +599,7 @@ class Leaves {
   }
 
   update(frame: SceneFrame, vis: LayerRect): void {
-    const cfg = AIR.leaves;
+    const cfg = A.leaves;
     for (const l of this.leaves) {
       const turn = frame.clock / l.period + l.ph;
       const cycle = Math.floor(turn);
@@ -631,7 +685,7 @@ class Moths {
   private readonly rgb = [0, 0, 0];
 
   constructor(private readonly sceneWidth: number) {
-    const cfg = AIR.moths;
+    const cfg = A.moths;
     const rnd = prng(0x307b);
     const tex = glowTexture();
     for (let i = 0; i < cfg.count; i++) {
@@ -669,7 +723,7 @@ class Moths {
   }
 
   update(frame: SceneFrame, vis: LayerRect): void {
-    const cfg = AIR.moths;
+    const cfg = A.moths;
     const t = frame.clock;
     // The flock's centre runs the length of the scene and a margin, then starts again.
     const span = this.sceneWidth + 2400;
@@ -722,6 +776,7 @@ export class AirLayer implements EnvModule {
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
+    A = isGroveKit() ? AIR : AIR_WOOD;
     const ground = new GroundProfile(ctx.scene);
     this.ground = ground;
     const groundTex = ground.texture();
@@ -729,7 +784,7 @@ export class AirLayer implements EnvModule {
       uGroups: { value: new Float32Array(MAX_SHAFT_GROUPS * 4), type: 'vec4<f32>', size: MAX_SHAFT_GROUPS },
       uAir: { value: new Float32Array([0, ...ground.uMap, 0]), type: 'vec4<f32>' },
       uSky: {
-        value: new Float32Array([AIR.shafts.sky.y[0], AIR.shafts.sky.y[1], AIR.shafts.sky.left, 0]),
+        value: new Float32Array([A.shafts.sky.y[0], A.shafts.sky.y[1], A.shafts.sky.left, 0]),
         type: 'vec4<f32>',
       },
     });
@@ -748,7 +803,7 @@ export class AirLayer implements EnvModule {
         antialias: false,
         scaleMode: 'linear',
       });
-    AIR.shafts.beams.forEach((b, i) => {
+    A.shafts.beams.forEach((b, i) => {
       if (b.pool <= 0) return;
       const light: PointLight = { x: 0, y: 0, radius: 1, color: 0xffffff, intensity: 0 };
       this.pools[i] = light;
@@ -773,12 +828,12 @@ export class AirLayer implements EnvModule {
     this.leaves = new Leaves(ground, ctx.scene);
     this.fireflies = new Fireflies(ground);
     ctx.layers.air.addChild(this.frontView, this.leaves.view, this.motes, this.fireflies.view);
-    fxDebug('air', AIR);
+    fxDebug('air', A);
     fxDebug('leaves', this.leaves);
   }
 
   private buildMotes(groundTex: Texture): Mesh<Geometry, Shader> {
-    const n = AIR.motes.count;
+    const n = A.motes.count;
     const rnd = prng(0x907e5);
     const corners = new Float32Array(n * 8);
     const seeds = new Float32Array(n * 16);
@@ -824,7 +879,7 @@ export class AirLayer implements EnvModule {
 
   update(frame: SceneFrame): void {
     const vis = this.ctx.layers.visible('air', frame.camera);
-    const { shafts, mist, motes } = AIR;
+    const { shafts, mist, motes } = A;
     const t = frame.clock;
 
     // Shared: clock and shaft groups (entry point -> position across the beams). Each opening
@@ -955,7 +1010,7 @@ export class AirLayer implements EnvModule {
     pack3(mu.uWarm as Float32Array, motes.warm, motes.shade);
 
     // The glow behind the hero.
-    const bg = AIR.backGlow;
+    const bg = A.backGlow;
     const zw = zoneWeights(p.cx);
     const tint = [0, 0, 0];
     zoneColor(bg.color, zw, tint);

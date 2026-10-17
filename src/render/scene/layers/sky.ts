@@ -17,6 +17,7 @@ import {
 import { SAFE_H, SAFE_W, VIEW_MAX_H, VIEW_MAX_W } from '../../contract';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { BG_VERT, noiseTexture, quadGeometry, rgb, ZONES, zoneWeights } from '../lib/bg-bake';
+import { WOOD } from '../lib/bg-wood';
 import { KEY_LIGHT } from '../lib/look';
 import { LOOK } from '../lib/room-look';
 
@@ -59,7 +60,37 @@ export const SKY = {
    * a cool halo (its glow sigma = `glowK` x the disc radius), screen-fixed but for `parallax`; the
    * far warm afterglow (`art.afterglow`) as a low band on the right, `bandHalf` px half height.
    */
-  wood: { core: 0xdce8f6, glowK: 1.1, parallax: 0.02, band: 0x6a4a3e, bandHalf: 34 },
+  wood: {
+    core: 0xdce8f6,
+    glowK: 0.9,
+    parallax: 0.02,
+    band: 0x6a4a3e,
+    bandHalf: 26,
+    /** How far the afterglow's band reaches left of its x (view px) before it is gone. */
+    bandReach: 420,
+    /** Night: top, the band above the haze, low (under the horizon, mostly hidden by the crowns). */
+    top: 0x04080f,
+    mid: 0x0a1424,
+    low: 0x0a1320,
+    /** The moon's halo colour (falls off with `glowK`), and the cool mist that drifts in the sky. */
+    halo: 0x6585ad,
+    mist: 0x16243a,
+    /**
+     * The pale haze along the far horizon, right behind the walk line: its centre (view y at the
+     * reference camera, bg-wood WOOD.refCamY), how far it fades up and down (px), peak mix, colour.
+     * It moves with far0 (`horizonParallax`) so it stays on the crowns' line.
+     */
+    horizonY: 800,
+    horizonUp: 230,
+    horizonDown: 70,
+    horizon: 0.6,
+    horizonCol: 0x2a4562,
+    horizonParallax: 0.12,
+    /** Thin cloud streaks: amount, and how much the moon silvers the ones near it. */
+    clouds: 0.4,
+    cloud: 0x18294a,
+    cloudLit: 0x7894bc,
+  },
 } as const;
 
 /**
@@ -130,6 +161,11 @@ uniform vec4 uDisc;
 uniform vec3 uDiscCol;
 uniform vec4 uBand;
 uniform vec3 uBandCol;
+uniform vec4 uHorizon;
+uniform vec3 uHorizonCol;
+uniform vec4 uCloud;
+uniform vec3 uCloudCol;
+uniform vec3 uCloudLit;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main() {
   // Logical view coordinates (the safe area is 0..${SAFE_W} x 0..${SAFE_H}; SKY_RECT reaches past it).
@@ -178,8 +214,23 @@ void main() {
   col = mix(col, uDuskCol, clamp(dg * (1.0 + 0.05 * sin(t * 0.4)), 0.0, 1.0));
   // The wood's moon: a disc over its halo (uDisc: radius, strength), and the far warm afterglow
   // (uBand: x where it starts, y, strength, half height). Both are off in the Grove.
+  // The wood's horizon haze (uHorizon: y, reach up, reach down, strength) and thin cloud streaks
+  // that the moon silvers near it (uCloud: amount, moon radius); both off in the Grove.
+  float hd = p.y - uHorizon.x;
+  float hz = exp(-pow(hd / (hd < 0.0 ? uHorizon.y : uHorizon.z), 2.0));
+  col = mix(col, uHorizonCol * (0.85 + 0.3 * mist), clamp(hz * uHorizon.w, 0.0, 1.0));
+  if (uCloud.x > 0.0) {
+    vec2 cq = q + vec2(t * 3.0, 0.0);
+    float c1 = texture(uNoise, vec2(cq.x / 2300.0, cq.y / 260.0 + 0.17)).r;
+    float c2 = texture(uNoise, vec2(cq.x / 900.0 + 0.4, cq.y / 140.0)).g;
+    float cl = smoothstep(0.52, 0.82, c1 * 0.75 + c2 * 0.35) * smoothstep(0.62, 0.15, y);
+    float near = exp(-rm / (uCloud.y * 2.6));
+    // A clean disc for the swarm to cross: the streaks thin out over it.
+    cl *= 1.0 - 0.8 * smoothstep(uCloud.y * 1.25, uCloud.y * 0.9, rm);
+    col = mix(col, mix(uCloudCol, uCloudLit, near), cl * uCloud.x);
+  }
   col = mix(col, uDiscCol, smoothstep(uDisc.x + 2.0, uDisc.x - 2.0, rm) * uDisc.y);
-  float bx = smoothstep(uBand.x - 520.0, uBand.x + 260.0, p.x);
+  float bx = smoothstep(uBand.x - uDisc.z, uBand.x + 260.0, p.x);
   float by = exp(-pow((p.y - uBand.y) / max(1.0, uBand.w), 2.0));
   col = mix(col, uBandCol, clamp(bx * by * uBand.z, 0.0, 1.0));
   col += (hash(gl_FragCoord.xy + fract(t) * 61.0) - 0.5) / 255.0;
@@ -229,7 +280,30 @@ export class SkyLayer implements EnvModule {
         type: 'vec4<f32>',
       },
       uDuskCol: { value: rgb(SKY.right.dusk), type: 'vec3<f32>' },
-      uDisc: { value: new Float32Array([LOOK.moon?.r ?? 0, LOOK.moon ? 1 : 0, 0, 0]), type: 'vec4<f32>' },
+      uDisc: {
+        value: new Float32Array([
+          LOOK.moon?.r ?? 0,
+          LOOK.moon ? 1 : 0,
+          LOOK.moon ? SKY.wood.bandReach : 520,
+          0,
+        ]),
+        type: 'vec4<f32>',
+      },
+      uHorizon: {
+        value: new Float32Array(
+          LOOK.moon
+            ? [SKY.wood.horizonY, SKY.wood.horizonUp, SKY.wood.horizonDown, SKY.wood.horizon]
+            : [0, 1, 1, 0],
+        ),
+        type: 'vec4<f32>',
+      },
+      uHorizonCol: { value: rgb(SKY.wood.horizonCol), type: 'vec3<f32>' },
+      uCloud: {
+        value: new Float32Array([LOOK.moon ? SKY.wood.clouds : 0, LOOK.moon?.r ?? 1, 0, 0]),
+        type: 'vec4<f32>',
+      },
+      uCloudCol: { value: rgb(SKY.wood.cloud), type: 'vec3<f32>' },
+      uCloudLit: { value: rgb(SKY.wood.cloudLit), type: 'vec3<f32>' },
       uDiscCol: { value: rgb(SKY.wood.core), type: 'vec3<f32>' },
       uBand: {
         value: new Float32Array(
@@ -241,6 +315,23 @@ export class SkyLayer implements EnvModule {
       },
       uBandCol: { value: rgb(SKY.wood.band), type: 'vec3<f32>' },
     });
+    if (LOOK.moon) {
+      // The wood: one cool night everywhere (its zones are all "left"), a cool halo and mist.
+      const u = this.uniforms.uniforms as Record<string, Float32Array>;
+      const W = SKY.wood;
+      for (const [k, c] of [
+        ['uTop', W.top],
+        ['uTopL', W.top],
+        ['uMid', W.mid],
+        ['uMidL', W.mid],
+        ['uLow', W.low],
+        ['uLowL', W.low],
+        ['uCorner', W.top],
+        ['uHalo', W.mist],
+        ['uMoonCol', W.halo],
+      ] as const)
+        u[k]?.set(rgb(c));
+    }
     const shader = Shader.from({
       gl: { vertex: BG_VERT, fragment: frag() },
       resources: { uNoise: noiseTexture().source, sky: this.uniforms },
@@ -298,6 +389,15 @@ export class SkyLayer implements EnvModule {
       (u.uZoneCam as Float32Array).set([1, 0, 0, 0]);
       (u.uMoon as Float32Array).set([mx, my, moon.r * SKY.wood.glowK, 0]);
       (u.uDisc as Float32Array)[0] = moon.r * cam.zoom;
+      // The horizon haze and the afterglow ride with the far crowns (far0's parallax).
+      const W = SKY.wood;
+      const hy = W.horizonY + (WOOD.refCamY - cam.y) * W.horizonParallax;
+      (u.uHorizon as Float32Array)[0] = SAFE_H / 2 + (hy - SAFE_H / 2) * cam.zoom;
+      const glow = LOOK.afterglow;
+      if (glow) {
+        const by = glow.y + (WOOD.refCamY - cam.y) * W.horizonParallax;
+        (u.uBand as Float32Array)[1] = SAFE_H / 2 + (by - SAFE_H / 2) * cam.zoom;
+      }
     } else {
       (u.uZoneCam as Float32Array).set([z.l, z.r, dim * (1 + 0.3 * wake), 0]);
       (u.uMoon as Float32Array).set(at(SKY.left.moonX, SKY.left.moonY, 960));

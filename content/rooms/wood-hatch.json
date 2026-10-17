@@ -25,7 +25,8 @@
     "kit": "wood",
     "seed": 7,
     "moon": { "x": 1420, "y": 190, "r": 88 },
-    "afterglow": { "x": 1500, "y": 900, "strength": 0.35 },
+    "afterglow": { "x": 1500, "y": 850, "strength": 0.35 },
+    "anchorY": 880,
     "moods": [{ "x": 0, "mood": "cool" }]
   },
   "marks": {

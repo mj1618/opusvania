@@ -14,6 +14,7 @@ import type { Scene } from '../../../sim/scene';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import {
   type Atmosphere,
+  atmTone,
   bakeLayer,
   bakeSoft,
   coverRect,
@@ -41,6 +42,7 @@ import {
   type Trunk,
   taper,
 } from '../lib/bg-shapes';
+import { buildWoodMid, woodMidAtm, woodMidFog, woodMidHangers, woodZone } from '../lib/bg-wood';
 import { mix, PALETTE, prng } from '../lib/look';
 import { isGroveKit } from '../lib/room-look';
 
@@ -133,6 +135,11 @@ const MID = {
   /** Slow life of the layer: sway of the canopy masses (px), shimmer of lit leaves, breathing light. */
   life: { breath: 3.2, shimmer: 0.14, openings: 0.07 },
 } as const;
+
+/** The wood's mist stage colour (cool, moonlit; one fog colour for the wood). */
+const WOOD_STAGE = [0x587a9e, 0x587a9e, 0x587a9e] as const;
+/** The wood's stage: strength, and how far it fades up above the walk line (px). */
+const WOOD_STAGE_LOOK = { strength: 0.5, height: 330 };
 
 /** Where the stage lies (playfield px) and what it is made of. Follows content/rooms/test-grove.json (the wood derives its own: `woodStage`). */
 const STAGE: Omit<StageSpec, 'strength'> = {
@@ -708,6 +715,10 @@ export class MidLayer implements EnvModule {
   init(ctx: SceneContext): void {
     this.ctx = ctx;
     const rect = coverRect(ctx.layers, 'mid', MID.pad);
+    if (!isGroveKit()) {
+      this.initWood(ctx, rect);
+      return;
+    }
     const spots: GlowSpot[] = [];
     const p = plan(rect, spots);
     const b = buildForest(p);
@@ -832,10 +843,53 @@ export class MidLayer implements EnvModule {
     }
   }
 
+  /**
+   * The wood (lib/bg-wood.ts): colossal trunks rising out of the drop past the branch, limbs with
+   * moss and silk swinging in the wind, the mist stage along the walk line. No glows, no fireflies
+   * (the firefly is the last of its kind: memory/story.md).
+   */
+  private initWood(ctx: SceneContext, rect: ForestPlan['rect']): void {
+    const anchorY = ctx.layers.anchor.y;
+    const atm = woodMidAtm(anchorY);
+    const zone = { ...woodZone(ZONE.parallax, 0x14283c), anchorX: ctx.layers.anchor.x };
+    const b = buildWoodMid(rect, anchorY);
+    this.view = new LayerView(
+      bakeLayer(ctx.renderer, b.content, rect, MID.bakeScale, atm, TO_LIGHT, b.lights),
+      woodMidFog(anchorY),
+      // The leaf masses up high stir; the trunks below them stay put.
+      { amp: MID.rustle, y0: rect.y + rect.h * 0.3, y1: rect.y + rect.h * 0.45 },
+      zone,
+      undefined,
+      MID.life,
+      {
+        ...woodStage(ctx.scene),
+        color: WOOD_STAGE,
+        height: WOOD_STAGE_LOOK.height,
+        strength: [WOOD_STAGE_LOOK.strength, WOOD_STAGE_LOOK.strength, WOOD_STAGE_LOOK.strength],
+      },
+    );
+    if (import.meta.env.DEV) {
+      const g = globalThis as { __bg?: Record<string, unknown> };
+      g.__bg = Object.assign(g.__bg ?? {}, {
+        stage: (l: number, c = l, r = l) => this.view.setStage([l, c, r]),
+      });
+    }
+    ctx.layers.mid.addChild(this.view.container);
+    b.content.destroy({ children: true });
+    this.sway = new SwaySet(
+      ctx.renderer,
+      woodMidHangers(b.hooks, (c, x, y) => atmTone(atm, c, x, y)),
+      MID.bakeScale * 0.5,
+      zone,
+    );
+    ctx.layers.mid.addChild(this.sway.container);
+  }
+
   update(frame: SceneFrame): void {
     const t = frame.clock;
     this.sway.update(t, frame.camera.x);
     this.view.update(t, frame.camera.x, frame.camera.y, this.ctx.layers.anchor.y);
+    if (!isGroveKit()) return;
     // The hollow tree answers the goal: a dull cold ember while the grove sleeps, a step warmer with
     // each lantern, swelling to full gold when the heart wakes and further through the ending.
     // Dev: `__bg.goal = {lit, heart: {awake, frames}, gathered, ending: {frames}}` previews a goal state.

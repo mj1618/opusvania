@@ -37,6 +37,7 @@ import {
 } from '../lib/fx-foliage';
 import { zoneWeights } from '../lib/fx-zones';
 import { PALETTE, prng, wind } from '../lib/look';
+import { isGroveKit } from '../lib/room-look';
 
 export const FOREGROUND = {
   seed: 0xf09e,
@@ -145,6 +146,8 @@ export const FOREGROUND = {
    */
   trunks: [] as Array<{ x: number; width: number; lean: number }>,
   flowerColors: [PALETTE.glowViolet, PALETTE.glowCyan, PALETTE.keyGold, 0xff9fc2] as const,
+  /** The wood: twigs reaching up into the bottom corners (spacing and leaf drop, px). */
+  wood: { every: [520, 820] as const, size: [240, 330] as const },
 };
 
 const WALK_STEP = 16;
@@ -286,10 +289,23 @@ export class ForegroundLayer implements EnvModule {
       const drop = 330 + rnd() * 130;
       add('near', 'top', x, top - 40, drop + 200, (g) => leafBranch(g, rnd, 520 + rnd() * 260, drop, dir));
     }
+    if (!isGroveKit()) {
+      // The wood (high in the canopy): nothing grows up from a floor. Leafy twigs of a nearer limb
+      // reach up into the bottom corners now and then, flipped boughs; the drop stays open between.
+      const w = FOREGROUND.wood;
+      for (let x = n0 + rnd() * 400; x < n1; x += w.every[0] + rnd() * (w.every[1] - w.every[0])) {
+        const dir = rnd() < 0.5 ? -1 : 1;
+        const drop = w.size[0] + rnd() * (w.size[1] - w.size[0]);
+        add('near', 'bottom', x, bottom + 40, drop + 160, (g) => {
+          g.scaleTransform(1, -1);
+          leafBranch(g, rnd, 420 + rnd() * 220, drop, dir);
+        });
+      }
+    }
     // Near, bottom: one big designed silhouette per spot (never the same kind twice running).
     const [s0, s1] = FOREGROUND.nearSize;
     let last = -1;
-    for (let x = n0 + rnd() * 300; x < n1; x += 190 + rnd() * 110) {
+    for (let x = n0 + rnd() * 300; x < (isGroveKit() ? n1 : n0); x += 190 + rnd() * 110) {
       let kind = Math.floor(rnd() * 5);
       if (kind === last) kind = (kind + 1 + Math.floor(rnd() * 4)) % 5;
       last = kind;
@@ -315,7 +331,9 @@ export class ForegroundLayer implements EnvModule {
 
     // Far, bottom: the low band that closes the frame, 5-8% of its height, everywhere: grass arcs,
     // small fronds and broad leaves shoulder to shoulder. It never withdraws.
-    const [f0, f1] = span(FOREGROUND.far.parallax);
+    const [f0, f1Grove] = span(FOREGROUND.far.parallax);
+    // (The wood has no floor band: the drop is open under the branch.)
+    const f1 = isGroveKit() ? f1Grove : f0;
     for (let x = f0 + rnd() * 120; x < f1; x += 70 + rnd() * 70) {
       const r = rnd();
       const dir = rnd() < 0.5 ? -1 : 1;

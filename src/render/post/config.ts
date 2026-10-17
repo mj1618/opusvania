@@ -232,6 +232,32 @@ export const ZONE_GRADE = {
   heroPocket: [1.2, 1.7, 1.1] as const,
 };
 
+/**
+ * The wood kit's grade (room-look.ts; the test grove keeps ZONE_GRADE). The wood is one cool night,
+ * so all three entries agree. Calmer than the glade's: the sky and the far fog are large areas, and
+ * the glade's exposure and rich-dark saturation turned them a loud royal blue (chroma 50-56 against
+ * the look target's 30-42).
+ */
+type Three = readonly [number, number, number];
+/** A zone grade table (ZONE_GRADE's shape, any numbers). */
+export type ZoneGrade = { amount: number } & { [K in Exclude<keyof typeof ZONE_GRADE, 'amount'>]: Three };
+
+export const WOOD_GRADE: ZoneGrade = {
+  ...ZONE_GRADE,
+  exposure: [1.16, 1.16, 1.16],
+  contrast: [0.36, 0.36, 0.36],
+  pivot: [0.4, 0.4, 0.4],
+  shadowTint: [0x0a1a3a, 0x0a1a3a, 0x0a1a3a],
+  shadowLift: [0.16, 0.16, 0.16],
+  highlightTint: [0xe4f0ff, 0xe4f0ff, 0xe4f0ff],
+  highlightWarmth: [0.3, 0.3, 0.3],
+  saturation: [1.02, 1.02, 1.02],
+  richSaturation: [1.25, 1.25, 1.25],
+  richTint: [0xe0ecff, 0xe0ecff, 0xe0ecff],
+  vignetteTint: [0x5a7fb8, 0x5a7fb8, 0x5a7fb8],
+  heroPocket: [1.2, 1.2, 1.2],
+};
+
 /** Bloom targets, widest first. Fixed in logical units so the look does not depend on window size. */
 export const BLOOM_LEVELS: ReadonlyArray<readonly [number, number]> = [
   [960, 540],

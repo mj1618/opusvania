@@ -206,6 +206,11 @@ export interface Atmosphere {
   /** Final value gain and saturation of the local colours before fog (1 = unchanged). */
   gain?: number;
   saturation?: number;
+  /**
+   * Depth below: from layer y `y0` to `y1` the finished colour falls toward `color` by up to `k`
+   * (the wood's drop into blue-black under the crowns). Absent = off.
+   */
+  deep?: { color: number; y0: number; y1: number; k: number };
 }
 
 const atmFrag = (): string => `#version 300 es
@@ -237,6 +242,8 @@ uniform vec3 uTint;
 uniform vec4 uZTintL;
 uniform vec4 uZTintR;
 uniform vec3 uLid;
+uniform vec4 uDeep;
+uniform vec3 uDeepColor;
 float A(vec2 uv) { return texture(uRaw, uv).a; }
 void main() {
   vec4 c = texture(uRaw, vUV);
@@ -289,6 +296,7 @@ void main() {
   float f = mix(uFog.x, uFog.y, smoothstep(uFog.z, uFog.w, p.y));
   col = mix(col, uFogColor, f);
   col = mix(col, uWellColor, w * uWell.w);
+  col = mix(col, uDeepColor, uDeep.z * smoothstep(uDeep.x, uDeep.y, p.y));
   fragColor = vec4(col * a, a);
 }`;
 
@@ -621,6 +629,11 @@ export function bakeLayer(
             uRimColor: { value: rgb(atm.rimColor), type: 'vec3<f32>' },
             uRim: { value: new Float32Array([atm.rimDist, atm.rimStrength]), type: 'vec2<f32>' },
             uGrade: { value: new Float32Array([atm.gain ?? 1, atm.saturation ?? 1]), type: 'vec2<f32>' },
+            uDeep: {
+              value: new Float32Array(atm.deep ? [atm.deep.y0, atm.deep.y1, atm.deep.k, 0] : [0, 1, 0, 0]),
+              type: 'vec4<f32>',
+            },
+            uDeepColor: { value: rgb(atm.deep?.color ?? 0), type: 'vec3<f32>' },
           }),
         },
       });

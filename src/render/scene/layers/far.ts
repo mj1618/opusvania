@@ -57,6 +57,7 @@ import {
   rr,
   TO_LIGHT,
 } from '../lib/bg-shapes';
+import { buildWoodFar, woodFar } from '../lib/bg-wood';
 import { mix, PALETTE, prng } from '../lib/look';
 import { isGroveKit } from '../lib/room-look';
 import { SKY_OUTPUT, SKY_RECT } from './sky';
@@ -810,6 +811,10 @@ export class FarLayers implements EnvModule {
     this.output.label = 'far-composite';
     this.output.blendMode = 'none';
     ctx.layers.far[2]?.addChild(this.output);
+    if (!isGroveKit()) {
+      this.initWood(ctx, rects);
+      return;
+    }
     let far0: { tiles: BakedTile[]; plan: ForestPlan } | null = null;
     plans(rects).forEach((plan, i) => {
       const name = NAMES[i] ?? 'far0';
@@ -871,6 +876,51 @@ export class FarLayers implements EnvModule {
       const sway = new SwaySet(ctx.renderer, items, scale * 0.45, zone);
       layer.addChild(sway.container);
       this.built.push({ name, view, sway, falls });
+    });
+  }
+
+  /**
+   * The wood (lib/bg-wood.ts): crown seas seen from above in place of the Grove's trunks. Same
+   * passes as the Grove: far0 + far1 + the sky in one pair view, far2 alone.
+   */
+  private initWood(ctx: SceneContext, rects: LayerRect[]): void {
+    const anchorY = ctx.layers.anchor.y;
+    let far0: BakedTile | null = null;
+    woodFar(anchorY).forEach(({ atm, fog, zone: z }, i) => {
+      const k = i as 0 | 1 | 2;
+      const layer = this.groups[k];
+      const rect = rects[k];
+      if (!layer || !rect) return;
+      const b = buildWoodFar(k, rect, anchorY);
+      const tiles = bakeLayer(ctx.renderer, b.content, rect, BAKE_SCALE[k], atm, TO_LIGHT, b.lights);
+      b.content.destroy({ children: true });
+      const zone = { ...z, anchorX: ctx.layers.anchor.x } as ZoneSpec;
+      // The crowns stir everywhere (no canopy line to keep still under).
+      const rustle = { amp: (RUSTLE[k] ?? 0) * 0.6, y0: rect.y + rect.h + 1000, y1: rect.y + rect.h + 1001 };
+      const sky = SKY_OUTPUT.texture;
+      let view: LayerView | FarPairView | null = null;
+      if (k === 0) {
+        far0 = tiles.length === 1 && sky ? (tiles[0] ?? null) : null;
+        if (!far0) view = new LayerView(tiles, fog, rustle, zone);
+      } else if (k === 1 && far0 && sky) {
+        const f0 = woodFar(anchorY)[0];
+        view = new FarPairView(
+          far0,
+          tiles,
+          { fog: f0?.fog ?? fog, zone: { ...(f0?.zone ?? z), anchorX: ctx.layers.anchor.x } as ZoneSpec },
+          { fog, zone },
+          rustle,
+          { texture: sky, ...SKY_RECT },
+          ctx.layers.anchor,
+          LIFE[0],
+        );
+        if (SKY_OUTPUT.sprite) SKY_OUTPUT.sprite.visible = false;
+      } else {
+        view = new LayerView(tiles, fog, rustle, zone, undefined, LIFE[1]);
+      }
+      if (view) layer.addChild(view.container);
+      const sway = new SwaySet(ctx.renderer, [], 1, zone);
+      this.built.push({ name: NAMES[k], view, sway, falls: [] });
     });
   }
 

@@ -251,3 +251,29 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
 - **Foreground** (`FOREGROUND.keep`): top plants withdraw above the frame while their box overlaps an island, the
   190 px of air over it or the arc to its neighbour (a function of the camera alone). The near top-left mass hung
   over F2 / the F1-F2 arc from the first lantern's ground and over F3 from burr-path.
+
+## The wood: canopy height (scene 1, 2026-10-17)
+Room kit `wood` (room-look.ts) takes its own path in far.ts / mid.ts (`initWood`); the Grove's plans are untouched
+(test-grove wide stops diffed pixel-identical). Builders and every knob: `lib/bg-wood.ts` (`WOOD`).
+- **Composition by screen height**: `layerY(screen, parallax, anchorY)` = the layer y that shows at that fraction of
+  the safe area when the camera is at `WOOD.refCamY` (800: the cocoon row / run). Room `art.anchorY` is 880 (the
+  middle of the run's cameras) so all layers line up near where she is; the default anchor (the lowest view, 1508)
+  put every layer 300-600 px off. **If the camera's feet line moves** (tuning `anchorY` 0.72 now; the look target
+  wants the branch at 0.60-0.66), move `refCamY` by the same screen px or the horizon slides behind the branch.
+- Planes: sky (moon, clouds, horizon haze) / far0 0.12 / far1 0.25 / far2 0.42 crown seas / mid 0.68 giants /
+  playfield / foreground 1.35. far rows: `WOOD.far0..2.rows` (crown-top screen heights; far0 starts at 0.78 =
+  the horizon, just under the walk line), fog pooled between rows (`fogPool`, colour `fogPale`) so dark tops stand
+  on paler fog; `spires` share of fir tops (what makes it read as treetops and not cloud: round puffs alone, or
+  pale lit clumps, always read as cumulus). far2 `emergents`: tall firs standing out against the haze.
+- Depth to blue-black: `Atmosphere.deep` (bg-bake, new, off by default): colour / y0 / y1 / k after fog.
+- mid: `WOOD.mid.trunks` (x, width, lean); axis and flanks are overridden on the `Trunk` (two slow bends + a
+  quick one, swelling flanks: no parallel edges). Limbs (`limb()`) are drawn BEHIND the trunk (their flat root
+  face showed as a sawn plank in front), rise-elbow-droop, leaf pads along them (`light` 0.12: lit pads = clouds).
+  `WOOD.mid.clear` keeps layer x 1640-2460 above screen 0.45 free: the moon at the opening frame and the swarm lean.
+  Trunk x were chosen so no wide stop has the moon fully behind a trunk (camera x where a trunk's top crosses the
+  moon: 2560 + (trunkTopX - 3020) / 0.68; it covers +-(halfWidth + 88) / 0.68 around that).
+- Mist stage in the wood: `WOOD_STAGE` / `WOOD_STAGE_LOOK` in mid.ts (0x587a9e, 0.5, 330 px tall).
+- Sky (`SKY.wood`): night colours, halo `glowK`, `horizon*` (haze band riding at far0's parallax), `clouds`
+  (thinned over the disc so it stays clean for the swarm), afterglow band (also at far0's parallax, `bandReach`).
+- Measured (look:stats, 7 wide stops x 1920x1080 / 2560x1080 / 1440x1080): mean 21-29, near-black 44-61%,
+  >150 0.1-1.3%, p99.9 189-239, chroma 26-31, azure 99%, bottom quarter 8-27 (promise/bend 20-27: too bright).

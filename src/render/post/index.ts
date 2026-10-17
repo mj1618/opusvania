@@ -24,7 +24,8 @@ import type { PointLight } from '../lights';
 import { fxDebug } from '../scene/lib/fx-debug';
 import { renderHeroMatte, renderPlayfieldMask } from '../scene/lib/fx-mask';
 import { zoneColor, zoneMix, zoneWeights } from '../scene/lib/fx-zones';
-import { GOAL_LIGHTS, MAX_LIGHTS, POST, ZONE_GRADE } from './config';
+import { isGroveKit } from '../scene/lib/room-look';
+import { GOAL_LIGHTS, MAX_LIGHTS, POST, WOOD_GRADE, ZONE_GRADE, type ZoneGrade } from './config';
 import { PostFilter } from './pipeline';
 
 export { POST } from './config';
@@ -130,7 +131,8 @@ export class PostStage {
     u.uMix[3] = POST.chroma;
     // The grade drifts with the scene's zones as the camera travels.
     const zw = zoneWeights(camera.x);
-    const za = ZONE_GRADE.amount;
+    const ZG: ZoneGrade = isGroveKit() ? ZONE_GRADE : WOOD_GRADE;
+    const za = ZG.amount;
     const zc = (zone: readonly [number, number, number], base: number, out: Float32Array): void => {
       zoneColor(zone, zw, out);
       for (let i = 0; i < 3; i++) {
@@ -140,28 +142,28 @@ export class PostStage {
     };
     const zn = (zone: readonly [number, number, number], base: number): number =>
       base + (zoneMix(zone, zw) - base) * za;
-    u.uTone[0] = zn(ZONE_GRADE.exposure, grade.exposure);
+    u.uTone[0] = zn(ZG.exposure, grade.exposure);
     u.uTone[1] = Math.min(grade.shoulder, 0.999);
-    u.uTone[2] = zn(ZONE_GRADE.contrast, grade.contrast);
-    u.uTone[3] = zn(ZONE_GRADE.pivot, grade.pivot);
-    zc(ZONE_GRADE.shadowTint, grade.shadowTint, u.uShadow);
-    u.uShadow[3] = zn(ZONE_GRADE.shadowLift, grade.shadowLift);
-    zc(ZONE_GRADE.highlightTint, grade.highlightTint, u.uHighlight);
-    u.uHighlight[3] = zn(ZONE_GRADE.highlightWarmth, grade.highlightWarmth);
+    u.uTone[2] = zn(ZG.contrast, grade.contrast);
+    u.uTone[3] = zn(ZG.pivot, grade.pivot);
+    zc(ZG.shadowTint, grade.shadowTint, u.uShadow);
+    u.uShadow[3] = zn(ZG.shadowLift, grade.shadowLift);
+    zc(ZG.highlightTint, grade.highlightTint, u.uHighlight);
+    u.uHighlight[3] = zn(ZG.highlightWarmth, grade.highlightWarmth);
     u.uVignette[0] = vignette.inner;
     u.uVignette[1] = vignette.outer;
     u.uVignette[2] = vignette.strength;
     u.uVignette[3] = vignette.tintAmount;
     u.uSepLook[2] = vignette.lightKeep;
     u.uSepLook[3] = vignette.lightFrom;
-    zc(ZONE_GRADE.vignetteTint, vignette.tint, u.uVignetteTint);
-    u.uVignetteTint[3] = zn(ZONE_GRADE.saturation, grade.saturation);
+    zc(ZG.vignetteTint, vignette.tint, u.uVignetteTint);
+    u.uVignetteTint[3] = zn(ZG.saturation, grade.saturation);
     u.uDeep[0] = Math.max(grade.toe, 1e-3);
-    u.uDeep[1] = zn(ZONE_GRADE.toeDepth, grade.toeDepth);
+    u.uDeep[1] = zn(ZG.toeDepth, grade.toeDepth);
     u.uDeep[2] = grade.spark;
     u.uDeep[3] = grade.sparkWhite;
-    zc(ZONE_GRADE.richTint, 0xffffff, u.uRich);
-    u.uRich[3] = zn(ZONE_GRADE.richSaturation, 1);
+    zc(ZG.richTint, 0xffffff, u.uRich);
+    u.uRich[3] = zn(ZG.richSaturation, 1);
     u.uGrain[0] = POST.grain;
     // Wrapped so the grain keeps its precision however long the game has been open.
     u.uGrain[1] = renderClock % 64;
@@ -278,7 +280,7 @@ export class PostStage {
       u.uHero[1] = (v.y - vy0) / H;
     }
     u.uHero[2] = (hero.radius * camera.zoom) / H;
-    u.uHero[3] = ember ? hero.darken * zoneMix(ZONE_GRADE.heroPocket, zw) : 0;
+    u.uHero[3] = ember ? hero.darken * zoneMix(ZG.heroPocket, zw) : 0;
     u.uHero2[0] = (hero.inner * camera.zoom) / H;
     u.uHero2[1] = hero.desaturate;
     u.uHero2[2] = hero.ceiling;
