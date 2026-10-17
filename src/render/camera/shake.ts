@@ -94,6 +94,16 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
         // A throw-cut swung (plan r5 item 2): the heavy cut's weight lands with it.
         add += B.heavy;
         break;
+      case 'enemySlam':
+        add += e.big ? B.bigSlam : B.slam;
+        break;
+      case 'enemyTaproot':
+        add += B.taproot;
+        break;
+      case 'enemyHeavy':
+      case 'enemyUnroll':
+        add += B.heavy;
+        break;
       case 'enemyBlock':
         // A down cut that glances is a bounce, not a clang.
         if (e.slash !== 'down') add += B.clang;

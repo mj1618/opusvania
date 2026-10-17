@@ -141,3 +141,11 @@ Contract with the builders (room data, render only; none placed yet):
   sim's flags (the fight's transition, its death `sets`).
 - **Tatter's try on a flag** (`stage.tatters[].tryOn`): its swarm try (wings up, a hop, it sinks, then looks at her)
   on that flag's `flagSet`; the crown's sitter tries on `wood-crown`.
+- **The boss in greybox** (round 5b, greybox/creatures.ts): `rear` stands it taller with a red ring over it and red
+  dashes running out along its floor (the slam's reach, `SLAM_FX.warnPx`); `enemySlam` sends two shockwave fronts
+  along the floor and a ring (shake `slam` / `bigSlam`); `curl` / `roll` draw a 64 px shell ball (`rollTouchPx`: what
+  is drawn is what hurts) whose ridges turn with the distance rolled, streaks behind it; `enemyBounce` / `enemyRoll`
+  puff dust, `enemyUnroll` / `enemyHeavy` a big star, `enemyTaproot` a star, sparks and dust (shake `taproot`).
+- **Carriers** (`kind: 'carrier'`): a small dark ant (3 segments, 6 walking legs, a feeler) with a pale moth wing on
+  its back; not drawn `under`; their `trail` drawn as faint scent dots to a dark notch (the crack).
+- Clips that need a phase use a test-only handle on the game in a scratch copy (no debug API sets a creature's mode).

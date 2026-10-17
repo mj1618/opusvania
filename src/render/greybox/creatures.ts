@@ -31,6 +31,9 @@ import { hash01 } from './moths';
 export const CREATURE = {
   burrback: 0x7b6b5c,
   oldBurrback: 0x6c6358,
+  /** The carriers: a dark ant; the pale wing it carries (and its trail's scent dots). */
+  carrier: 0x544b45,
+  carried: 0xb8c0d0,
   /** The juvenile beetle: warmer and lighter than the floor so it never reads as a block of it. */
   juvenile: 0x9a8468,
   /** Crawlers' eyes: two pale points, so a body reads as a creature (first-timer r3). */
@@ -110,6 +113,11 @@ interface Shard {
   life: number;
 }
 
+/** The slam's floor warning (px each way at most) and its shockwave (px/s, its life). */
+export const SLAM_FX = { warnPx: 900, wave: 2200, life: 0.6 };
+/** A carriers' trail: px between scent dots, their radius, opacity. */
+const TRAIL_FX = { every: 26, dot: 2, alpha: 0.35 };
+
 /** A throw-cut's hit (plan r5 item 2): the sweep's radius and life, the star's, the ring's. */
 export const HEAVY_FX = { sweepR: 96, sweepLife: 0.28, star: 70, starLife: 0.36, ringLife: 0.4 };
 
@@ -126,7 +134,7 @@ export const BLOCK_FX = {
 };
 
 interface Burst {
-  kind: 'ring' | 'star' | 'puff' | 'sparks' | 'sweep';
+  kind: 'ring' | 'star' | 'puff' | 'sparks' | 'sweep' | 'wave';
   /** `puff` / `sparks`: the way they go (unit x). */
   dir?: number;
   x: number;
@@ -333,6 +341,46 @@ export class CreatureView {
           this.bursts.push({ kind: 'ring', x: e.x, y: e.y, r: 20, t: 0, life: H.ringLife });
           break;
         }
+        // The old burrback as a boss (round 5): each beat of the fight answers on screen.
+        case 'enemySlam':
+          // A shockwave along its floor both ways (and up the walls it reaches), a ring where it landed.
+          this.bursts.push({
+            kind: 'wave',
+            x: e.x,
+            y: e.y,
+            r: e.px,
+            t: 0,
+            life: e.big ? SLAM_FX.life * 1.4 : SLAM_FX.life,
+          });
+          this.bursts.push({ kind: 'ring', x: e.x, y: e.y - 20, r: e.big ? 60 : 40, t: 0, life: 0.4 });
+          break;
+        case 'enemyPhase':
+          this.bursts.push({ kind: 'ring', x: e.x, y: e.y, r: 70, t: 0, life: 0.7 });
+          this.bursts.push({ kind: 'ring', x: e.x, y: e.y, r: 30, t: -0.15, life: 0.7 });
+          break;
+        case 'enemyBounce':
+          this.bursts.push({ kind: 'puff', x: e.x, y: e.y, r: 18, t: 0, life: 0.4, dir: -e.dir });
+          this.bursts.push({ kind: 'star', x: e.x, y: e.y - 20, r: 26, t: 0, life: 0.15 });
+          break;
+        case 'enemyRoll':
+          this.bursts.push({ kind: 'puff', x: e.x, y: e.y, r: 16, t: 0, life: 0.4, dir: -e.dir });
+          break;
+        case 'enemyUnroll':
+        case 'enemyHeavy':
+          // Knocked out of its roll, or a throw-cut landing on it: a big star and a ring.
+          this.bursts.push({ kind: 'star', x: e.x, y: e.y, r: 64, t: 0, life: 0.3 });
+          this.bursts.push({ kind: 'ring', x: e.x, y: e.y, r: 24, t: 0, life: 0.4 });
+          break;
+        case 'enemyTaproot':
+          // Its ram into the taproot: a star on the root, sparks off it, bark dust.
+          this.bursts.push({ kind: 'star', x: e.x, y: e.y, r: 60 + 12 * e.n, t: 0, life: 0.3 });
+          this.bursts.push({ kind: 'sparks', x: e.x, y: e.y, r: 80, t: 0, life: 0.4, dir: 0 });
+          this.bursts.push({ kind: 'puff', x: e.x, y: e.y + 30, r: 22, t: 0, life: 0.6, dir: 0 });
+          break;
+        case 'enemyUnder':
+        case 'enemyEmerge':
+          this.bursts.push({ kind: 'puff', x: e.x, y: e.y, r: 8, t: 0, life: 0.35, dir: 0 });
+          break;
         case 'enemyBlock': {
           // Unmistakable (first-timer r4: "the armoured front gave only a small spark"; HK's nail clink): a big
           // white clink star and a ring at the blade, sparks thrown back toward her, and a puff of dust off her
@@ -418,6 +466,7 @@ export class CreatureView {
   /** Draws every creature: bodies into `back` (under her), danger parts and effects into `front`. */
   draw(dt: number, clock: number, sim: SimView, back: Graphics, front: Graphics): void {
     this.herX = sim.player.cx;
+    this.trails(back, sim);
     for (const f of this.fx.values()) {
       f.hitT += dt;
       f.dieT += dt;
@@ -459,6 +508,8 @@ export class CreatureView {
         } else if (!f.burst) this.burst(e, f);
         continue;
       }
+      // A carrier in its crack is not drawn (memory/creatures.md).
+      if (e.kind === 'carrier' && e.mode === 'under') continue;
       this.creature(e, f, sim, clock, back, front);
     }
     this.effects(dt, front);
@@ -526,6 +577,7 @@ export class CreatureView {
       // The boss view draws its body (boss.ts); here only the answer to a blow.
       if (white) front.rect(e.x, e.y, e.w, e.h).fill({ color: CREATURE.flash, alpha: 0.9 });
     } else if (kind === 'dangler') this.dangler(e, clock, back, front, sq, white);
+    else if (kind === 'carrier') this.carrier(e, clock, back, front, sq, white);
     else if (kind === 'weaver') this.spider(e, clock, back, front, sq, white, false);
     else this.generic(e, back, front, sq, white);
 
@@ -559,6 +611,10 @@ export class CreatureView {
     white: boolean,
   ): void {
     const old = e.kind === 'oldBurrback';
+    if (old && (e.mode === 'roll' || e.mode === 'curl')) {
+      this.ball(e, f, clock, back, front, white);
+      return;
+    }
     const stunned = e.stunned && (e.mode === 'recover' || e.mode === 'hurt');
     const feint = e.mode === 'feint';
     const curled = e.tuck > 0;
@@ -568,6 +624,13 @@ export class CreatureView {
       // Shell down, tucked low.
       sx *= 1.06;
       sy *= 0.82;
+    }
+    // Rearing for the slam (the anti-camp tell): up on its back legs, taller, its front lifted.
+    const rear = e.mode === 'rear' ? Math.min(1, (e.modeFrames - e.timer + 1) / 8) : 0;
+    if (rear > 0) {
+      sy *= 1 + 0.35 * rear;
+      sx *= 1 - 0.1 * rear;
+      this.rearWarn(front, e, clock, rear);
     }
     // Alive at rest: it breathes; walking, its shell bobs with its steps (a body, not a block of floor).
     sy *=
@@ -677,6 +740,134 @@ export class CreatureView {
     if (white) {
       front.poly(dome).fill({ color: CREATURE.flash, alpha: 0.95 });
       front.poly(pp).fill({ color: CREATURE.flash, alpha: 0.95 });
+    }
+  }
+
+  /**
+   * The old burrback curled (`curl`) or rolling (`roll`): a shell ball `rollTouchPx` high (what hurts is what is
+   * drawn), its ridges turning with the distance rolled, speed streaks behind it; curling, it shivers.
+   */
+  private ball(e: EnemyState, f: Fx, clock: number, back: Graphics, front: Graphics, white: boolean): void {
+    const r = tuning.oldBurrback.rollTouchPx / 2;
+    const cx = e.x + e.w / 2;
+    const cy = e.y + e.h - r;
+    const curling = e.mode === 'curl';
+    const sh = curling ? Math.sin(clock * 40) * 2 : 0;
+    // Its turn: the distance rolled over its radius (render-only, from where it is).
+    const ang = e.x / r;
+    if (!curling && Math.abs(e.vx) > 0.5)
+      for (let k = 1; k <= 3; k++)
+        back
+          .moveTo(cx - Math.sign(e.vx) * (r + 10 * k), cy - r * 0.5 + k * 10)
+          .lineTo(cx - Math.sign(e.vx) * (r + 10 * k + Math.abs(e.vx) * 4), cy - r * 0.5 + k * 10)
+          .stroke({ color: CREATURE.ridge, width: 2, alpha: 0.5 });
+    back.circle(cx + sh, cy, r).fill({ color: white ? CREATURE.flash : CREATURE.oldBurrback });
+    back.circle(cx + sh, cy, r).stroke({ color: CREATURE.hunt, width: 3, alpha: curling ? 0.6 : 0.9 });
+    for (let k = 0; k < 4; k++) {
+      const a = ang + (k * Math.PI) / 4;
+      back
+        .moveTo(cx + sh + Math.cos(a) * r * 0.9, cy + Math.sin(a) * r * 0.9)
+        .lineTo(cx + sh - Math.cos(a) * r * 0.9, cy - Math.sin(a) * r * 0.9)
+        .stroke({ color: CREATURE.ridge, width: 3 });
+    }
+    if (f.clangT < 4 * F) front.circle(cx, cy, r + 6).stroke({ color: CREATURE.flash, width: 3, alpha: 0.8 });
+  }
+
+  /** The slam's tell (`rear`): the floor it will shake, dashes running out both ways, pulsing; a ring over it. */
+  private rearWarn(front: Graphics, e: EnemyState, clock: number, k: number): void {
+    const fy = e.y + e.h;
+    const cx = e.x + e.w / 2;
+    const pulse = 0.5 + 0.5 * Math.sin(clock * 20);
+    const reach = Math.min(tuning.oldBurrback.slamReachPx, SLAM_FX.warnPx);
+    for (const dir of [-1, 1])
+      for (let d = 40; d < reach * k; d += 36)
+        front
+          .moveTo(cx + dir * d, fy - 2)
+          .lineTo(cx + dir * (d + 18), fy - 2)
+          .stroke({
+            color: CREATURE.hunt,
+            width: 4,
+            alpha: (0.45 + 0.5 * pulse) * Math.max(0.35, 1 - d / reach),
+          });
+    front.circle(cx, e.y - 34, 16 + 8 * pulse).stroke({ color: CREATURE.hunt, width: 4, alpha: 0.9 });
+  }
+
+  /**
+   * A carrier (an ant on its trail): three small segments, six legs that walk with its stride, a feeler, and on
+   * its back the pale wing of a dead moth it carries home.
+   */
+  private carrier(
+    e: EnemyState,
+    clock: number,
+    back: Graphics,
+    front: Graphics,
+    sq: number,
+    white: boolean,
+  ): void {
+    const fy = e.y + e.h;
+    const cx = e.x + e.w / 2;
+    const dir = e.facing;
+    const body = white ? CREATURE.flash : CREATURE.carrier;
+    const by = fy - 7 - Math.abs(Math.sin(e.stride * 0.3)) * 1.5;
+    const step = e.stride * 0.35;
+    for (let k = 0; k < 3; k++) {
+      const lx = cx + (k - 1) * 8 * dir;
+      for (const side of [-1, 1]) {
+        const sw = Math.sin(step + k * 2.1 + (side > 0 ? Math.PI : 0)) * 4;
+        back
+          .moveTo(lx, by + 2)
+          .lineTo(lx + sw + side * 3, fy)
+          .stroke({ color: CREATURE.belly, width: 1.5 });
+      }
+    }
+    back.ellipse(cx - 10 * dir, by, 7 * (1 + 0.2 * sq), 5).fill({ color: body });
+    back.ellipse(cx, by, 5, 4).fill({ color: body });
+    back.circle(cx + 9 * dir, by - 1, 4).fill({ color: body });
+    const tw = Math.sin(clock * 9 + e.x * 0.05) * 0.3;
+    back
+      .moveTo(cx + 11 * dir, by - 3)
+      .lineTo(cx + (18 + 2 * tw) * dir, by - 9 + 3 * tw)
+      .stroke({ color: CREATURE.belly, width: 1.5 });
+    // The load: a dead moth's wing held over its back (a pale chevron), swaying with its steps.
+    if (e.mode !== 'bite' && e.mode !== 'hurt') {
+      const sway = Math.sin(e.stride * 0.3) * 0.15;
+      const wx = cx - 2 * dir;
+      const wy = by - 9;
+      front
+        .poly([
+          wx + 6 * dir,
+          wy + 2,
+          wx - dir * 18 * Math.cos(sway),
+          wy - 10 - 18 * Math.sin(sway),
+          wx - 10 * dir,
+          wy + 4,
+        ])
+        .fill({ color: CREATURE.carried, alpha: 0.85 });
+    }
+    if (e.mode === 'bite') front.circle(cx + 14 * dir, by, 5).fill({ color: CREATURE.hunt, alpha: 0.8 });
+  }
+
+  /**
+   * The carriers' trails (round 5: "trails readable as paths"): from each carrier's start along its `trail` to its
+   * crack, a faint dotted line of scent marks on the ground; the crack a small dark notch.
+   */
+  private trails(back: Graphics, sim: SimView): void {
+    for (const sp of sim.scene.enemies ?? []) {
+      if (sp.kind !== 'carrier' || !sp.trail || sp.trail.length === 0) continue;
+      const pts: [number, number][] = [[sp.x, sp.y], ...sp.trail];
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1] as [number, number];
+        const b = pts[i] as [number, number];
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        for (let d = 0; d < len; d += TRAIL_FX.every) {
+          const u = d / Math.max(1, len);
+          back
+            .circle(a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u - 2, TRAIL_FX.dot)
+            .fill({ color: CREATURE.carried, alpha: TRAIL_FX.alpha });
+        }
+      }
+      const end = pts[pts.length - 1] as [number, number];
+      back.ellipse(end[0], end[1] - 3, 10, 4).fill({ color: 0x050608, alpha: 0.9 });
     }
   }
 
@@ -1053,7 +1244,20 @@ export class CreatureView {
       // (A burst may start late: a negative age waits.)
       if (u < 0) continue;
       const ease = 1 - (1 - u) * (1 - u);
-      if (b.kind === 'sweep') {
+      if (b.kind === 'wave') {
+        // The slam's shockwave: two fronts running out along the floor to its reach, a ridge of dust on each.
+        const d = Math.min(b.r, SLAM_FX.wave * b.t);
+        for (const sd of [-1, 1]) {
+          const fx = b.x + sd * d;
+          g.moveTo(fx, b.y)
+            .lineTo(fx - sd * 30, b.y - 18 * (1 - u))
+            .lineTo(fx - sd * 70, b.y)
+            .stroke({ color: CREATURE.flash, width: 3, alpha: 0.8 * (1 - u) });
+          g.moveTo(b.x, b.y - 1)
+            .lineTo(fx, b.y - 1)
+            .stroke({ color: CREATURE.hunt, width: 2, alpha: 0.35 * (1 - u) });
+        }
+      } else if (b.kind === 'sweep') {
         // The heavy cut's sweep: a thick crescent about her, along the cut (`dir` = its angle), thinning out.
         const a0 = (b.dir ?? 0) - 1.1;
         const a1 = (b.dir ?? 0) + 1.1;

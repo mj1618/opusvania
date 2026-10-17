@@ -53,7 +53,7 @@ export const STAGING = {
    */
   den: {
     breathRate: 0.9,
-    breathAlpha: 0.55,
+    breathAlpha: 0.22,
     dust: 18,
     dustFall: 260,
     crackIn: 0.4,
