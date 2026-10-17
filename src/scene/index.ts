@@ -123,6 +123,7 @@ const SceneSchema = z
             y: int,
             spin: z.union([z.literal(-1), z.literal(1)]).optional(),
             swing: SWING,
+            after: z.string().min(1).optional(),
           })
           .strict(),
       )
@@ -159,6 +160,7 @@ const SceneSchema = z
       )
       .optional(),
     hatch: z.object({ x: int, y: int }).strict().optional(),
+    reform: z.object({ x: int, y: int }).strict().optional(),
     // --- The world (memory/world.md): moon patches, glades, doors, shortcuts, route claims.
     patches: z.array(z.object({ id: z.string().min(1), x: int, y: int }).strict()).optional(),
     glades: z

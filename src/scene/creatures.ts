@@ -41,6 +41,8 @@ const base = {
   hp: int.min(1).max(12).optional(),
   guards,
   senses,
+  /** A story flag set when it dies (src/sim/kit.ts: the old burrback's root gate). */
+  sets: z.string().min(1).optional(),
 };
 
 export const ENEMIES = z

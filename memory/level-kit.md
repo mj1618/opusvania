@@ -17,6 +17,9 @@ sim doesn't have yet"). Sim: `src/sim/kit.ts` (+ `kit-data.ts` types, `kit-event
 | `lures[].swing` | `{length, reach?, period?, phase?}` | the lure hangs `length` under a pivot over its `x, y` (the bottom of the arc), swings `reach` px each side, one swing there and back per `period` frames |
 | `camera.zones` | `[{id, x, y, w, h, zoom?, fit?, lock?, bounds?}]` | render only: inside the rect (her body centre) the view eases to `zoom` (`fit`: the frame inside the 16:9 safe area) and keeps inside `bounds` (`lock`: the zone itself) |
 | `routes[].flags` | `string[]` | the world check: the way needs these flags |
+| `lures[].after` | flag | the lure burns only once the flag is set (out before, lit the step it appears, out for good once snuffed: the firefly's glow-cap W-ff after the glimpse) |
+| `enemies[].sets` | flag | set when the creature dies (`flagSet` by its id): a flag gate opens behind it (the old burrback's root gate). The world check cannot see it: leave it out of `routes[].flags` |
+| `reform` | `{x, y}` | where a fade re-forms her in this room while no moon patch is saved (no light either), instead of her last safe ground beside whatever faded her (`src/sim/index.ts`) |
 Ids share the room's id space (`two things are called`). Bark / gate must not overlap a solid (they ARE the solid);
 a swinging lure's core must be clear along the whole arc and its pivot inside the room.
 

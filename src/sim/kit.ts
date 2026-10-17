@@ -311,6 +311,31 @@ export function updateKit(
       events.push({ type: 'flagSet', flag: tr.sets, by: tr.id, x: tr.x + tr.w / 2, y: tr.y + tr.h / 2 });
     }
   }
+  // A creature whose death opens the way (`sets`: the old burrback's root gate, wood.md R10).
+  const spawns = scene.enemies ?? [];
+  for (let i = 0; i < spawns.length; i++) {
+    const sp = spawns[i];
+    const e = state.enemies[i];
+    if (!sp?.sets || !e || save.flags.includes(sp.sets) || (e.mode !== 'dead' && !e.gone)) continue;
+    save.flags.push(sp.sets);
+    events.push({ type: 'flagSet', flag: sp.sets, by: sp.id, x: e.x + e.w / 2, y: e.y + e.h });
+  }
+  // A lure that burns only once a story flag is set (`after`: the firefly's glow-cap, wood.md R7). Out
+  // before it, lit the step the flag appears, and out for good once she has snuffed it.
+  const lures = scene.lures ?? [];
+  for (let i = 0; i < lures.length; i++) {
+    const l = lures[i];
+    if (!l?.after) continue;
+    const want = save.flags.includes(l.after) && !save.snuffed.includes(`${scene.id}:${l.id}`);
+    const hp = state.lures.hp[i] ?? 0;
+    if (!want && hp > 0) {
+      state.lures.hp[i] = 0;
+      state.lures.out[i] = 1;
+    } else if (want && hp <= 0) {
+      state.lures.hp[i] = t.lures.kinds[l.kind]?.hp ?? 1;
+      state.lures.out[i] = 0;
+    }
+  }
   const gates = scene.gates ?? [];
   for (let i = 0; i < gates.length; i++) {
     const g = gates[i];

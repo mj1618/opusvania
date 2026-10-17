@@ -1,30 +1,53 @@
 {
   "id": "wood-well",
-  "title": "STUB: the well (R10 not built)",
+  "title": "The well: the old burrback, glade 2 (greybox)",
   "region": "wood",
   "width": 3840,
   "height": 1600,
-  "spawn": { "x": 2300, "y": 1472 },
+  "spawn": { "x": 2400, "y": 1472 },
   "edgeKick": false,
   "abilities": ["glide"],
   "art": { "mode": "greybox", "labels": true },
+  "reform": { "x": 512, "y": 1472 },
   "exits": [
     { "id": "n", "edge": "n", "from": 384, "to": 640 },
     { "id": "out", "edge": "n", "from": 2560, "to": 2944 }
   ],
-  "patches": [{ "id": "p4", "x": 2300, "y": 1472 }],
-  "glades": [{ "id": "glade-claws", "x": 2048, "y": 1216, "w": 512, "h": 256, "ability": "wallJump" }],
+  "patches": [{ "id": "p4", "x": 2400, "y": 1472 }],
+  "glades": [{ "id": "glade-claws", "x": 2304, "y": 1152, "w": 256, "h": 320, "ability": "wallJump" }],
   "solids": [
-    { "tag": "ground", "x": 0, "y": 640, "w": 384, "h": 64, "kick": false },
-    { "tag": "trunk", "x": 320, "y": 0, "w": 64, "h": 640, "kick": false },
-    { "tag": "trunk", "x": 640, "y": 0, "w": 64, "h": 704, "kick": false },
-    { "tag": "ground", "x": 704, "y": 640, "w": 1344, "h": 64, "kick": false },
+    { "tag": "ground", "x": 0, "y": 0, "w": 384, "h": 704, "kick": false },
+    { "tag": "ground", "x": 640, "y": 0, "w": 1856, "h": 704, "kick": false },
     { "tag": "ground", "x": 0, "y": 1472, "w": 2944, "h": 128 },
-    { "tag": "ground", "x": 2048, "y": 0, "w": 512, "h": 1216, "kick": "east" },
+    { "tag": "trunk", "x": 2496, "y": 0, "w": 64, "h": 1088, "kick": "east" },
+    { "tag": "root", "x": 2112, "y": 1248, "w": 192, "h": 32 },
     { "tag": "ground", "x": 2944, "y": 0, "w": 896, "h": 1600, "kick": "west" },
     { "tag": "root", "x": 2880, "y": 736, "w": 64, "h": 32 }
   ],
   "oneWays": [],
+  "gates": [
+    {
+      "id": "root-gate",
+      "x": 2048,
+      "y": 1088,
+      "w": 64,
+      "h": 384,
+      "flag": "wood-old-burrback-down",
+      "kick": false
+    }
+  ],
+  "lures": [{ "id": "wick-pit", "kind": "wick", "x": 2000, "y": 992 }],
+  "enemies": [
+    {
+      "id": "old-burr",
+      "kind": "oldBurrback",
+      "x": 1600,
+      "y": 1472,
+      "facing": -1,
+      "radius": 1000,
+      "sets": "wood-old-burrback-down"
+    }
+  ],
   "routes": [
     { "from": "n", "to": "p4", "oneWay": true },
     { "from": "spawn", "to": "p4" },
@@ -32,25 +55,54 @@
     { "from": "p4", "to": "out", "needs": ["wallJump"], "oneWay": true },
     { "from": "out", "to": "p4", "oneWay": true }
   ],
+  "camera": { "zones": [{ "id": "pit", "x": 0, "y": 704, "w": 2048, "h": 896, "lock": true, "fit": true }] },
   "marks": {
     "notes": [
       {
-        "x": 200,
-        "y": 900,
-        "text": "STUB: R10 wood-well is not built (another builder): only what joins the world"
+        "x": 720,
+        "y": 120,
+        "text": "R10 wood-well  PURPOSE: mini-boss + glade (the old burrback, glade 2, the wall-jump lock room)"
       },
       {
-        "x": 200,
-        "y": 960,
-        "text": "TODO: the old burrback (pogo exam), W8 + the root gate + its ledge, the pit camera lock, slick well walls"
+        "x": 720,
+        "y": 180,
+        "text": "N in: down the hub's well (one way); slick walls (no kick); she falls ~1400 into the pit"
       },
-      { "x": 2100, "y": 1150, "text": "glade 2: WALL JUMP, P4" },
+      {
+        "x": 100,
+        "y": 780,
+        "text": "THE PIT (camera locked): the old burrback sleeps at 1600, wakes over 60 frames, never strikes on her landing"
+      },
+      {
+        "x": 100,
+        "y": 840,
+        "text": "while braced only a pogo on its shell lands; bait its ram into a wall (or the gate) for a 90-frame stun"
+      },
+      { "x": 1700, "y": 900, "text": "W8 wick-pit: 480 over the pit floor, out of reach in the fight" },
+      { "x": 2120, "y": 1200, "text": "root ledge behind the gate: W8 in jump-cut reach" },
+      {
+        "x": 1780,
+        "y": 1060,
+        "text": "root gate: opens when the old burrback dies (flag wood-old-burrback-down)"
+      },
+      { "x": 2300, "y": 1100, "text": "GLADE 2: WALL JUMP, P4" },
       {
         "x": 2600,
         "y": 600,
-        "text": "climb-out (both faces kickable), rest ledge at 736; up through the hub's grate"
+        "text": "climb-out: both faces kickable, a rest ledge at 736; up through the hub's grate"
+      },
+      {
+        "x": 100,
+        "y": 1540,
+        "text": "a fade here re-forms her at P3 (the hub), ~15 s from the well; never rested at P3: under the well (re-form point)"
       }
     ]
   },
-  "shots": { "wide": [{ "name": "glade", "x": 2300, "y": 1472 }] }
+  "shots": {
+    "wide": [
+      { "name": "pit", "x": 1200, "y": 1472 },
+      { "name": "glade", "x": 2400, "y": 1472 },
+      { "name": "climb", "x": 2750, "y": 800 }
+    ]
+  }
 }

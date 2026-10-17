@@ -62,7 +62,7 @@ Catch `below`: x 224-6144, y 1600-2816. A caught fall returns her `returnInset` 
   section (432-1072 stays 1022-1024 for the hang points). Marks unchanged in meaning: cocoon hang points on S1's
   underside, Tatter (1210, 1031: in the dip), swarm through the moon (1420, 544), camera hints vista / swarm / promise (4110, 636) / drop (6300, 1700).
 
-## The wood, greybox (2026-10-18): the rooms built so far (R2-R9; R10 / R11 stubs)
+## The wood, greybox (2026-10-18): the rooms built so far (R2-R10; R11 a stub)
 From docs/design/regions/wood.md draft 2 (§3 placement, §7 specs); `art: greybox`, `region: wood`, `edgeKick: false`,
 `abilities: []` (glide comes from R5's glade); every beat / lock / TODO is a `marks.notes` label (G). Tests:
 `tests/unit/wood-rooms.test.ts` (placement, links, each room's claims, measured in the sim).
@@ -76,26 +76,24 @@ From docs/design/regions/wood.md draft 2 (§3 placement, §7 specs); `art: greyb
 | R7 `wood-hollow` (hub) | 27584, 7168 | 3840x3248 | **SEAM FIX: the interior sits 256 lower than the paper** (R6's T4 and the hawkers' floor are both world y 10048 = hub local 2880; the paper's shelf 2624 / floor 2880 would put the W door under the shelf): root shelf 0-960 y2880 (the W door), floor y3136, alcove under the shelf 384-960 (back wall 0-384: an explorer crossing the well to reach a back floor fell in), well 384-640 (S exit, one way), east arch steps 3584 (3008) and 3712 (2880) up to the E door. Up-shaft walls 2496-2560 / 2944-3008 (inner faces kickable) from y640 down to 2976 (160 to walk under), crown shelf 1856-2496 (no kick) + 3008-3840 y640, `wick-crown` (3392, 448), `lantern-gap` (1280, 512) spin 1, far branch 256-768 y512 no kick, `wick-firefly` (512, 400). Grate: shortcut 2560-2944 y3136 h32 `opens: s` over the S exit `climb` (her head meets it from below 16 px under: the entry inset). Trigger `glimpse` at P3 sets `wood-firefly-glimpse`. P3 1280 + Tatter facing east |
 | R8 `wood-hawkers` | 31424, 8768 | 3200x1600 | flat floor y1280; `wick-hawk` (1024, 968) guarded by `hawk-first` (3 hp, home (1024, 800)); dark east half; S1: bark panel 2400-2464 (y1088-1280) into a root mound 2464-2784 with `wick-bark` (2660, 1216) |
 | R9 `wood-lantern` | 34624, 8768 | 3200x1600 | floor y1280, root step (one-way 864-1024 y1120), P (one-way 1024-1536 y960), `lantern-hall` (1280, 704) guarded by `burr-lantern` (patrol 768-1856); shaft 2560-3072: west wall 2432-2560 hangs to 1088 (kick east 800-1088, thorns 480-800 on its face, slick above), east wall 3072 (slick 960-1280, kick west 0-960); DJ ledge 192-448 y640 on a slick stalk + `wick-high`. N exit 2560-3072 |
-| R10 `wood-well`, R11 `wood-climb` | 27584, 10416 / 37184, 6208 | 3840x1600 / 2048x2560 | **STUBS** (title `STUB: ...`). R10: well column, pit floor, glade `glade-claws` (wallJump) + P4, the climb-out 2560-2944 (both faces kickable) up into the hub's grate; no old burrback / W8 / root gate yet. R11: a plain two-face shaft and P5; no E exit yet |
+| R10 `wood-well` | 27584, 10416 | 3840x1600 | well column 384-640 (slick walls, rock roof to y704), pit 0-2048 x 704-1472 with camera zone `pit` (lock, fit), `old-burr` (oldBurrback, `sets: wood-old-burrback-down`), root gate 2048 (y1088-1472, flag gate: 384 tall, a jump cleared 256), W8 `wick-pit` (2000, 992) and the root ledge 2112-2304 y1248 behind the gate (23 of 27 jump-cuts), glade 2 `glade-claws` (wallJump) + P4 2400, climb-out 2560-2944 (west face a hanging trunk to 1088, east face full height, rest ledge 736) up into the hub's grate; `reform` (512, 1472) under the well when P3 was never rested at |
+| R11 `wood-climb` | 37184, 6208 | 2048x2560 | **STUB** (title `STUB: ...`): a plain two-face shaft and P5 |
 Measured (headless sim): every run-up jump across the dip is caught by W1 (11/11 launch points); standing jumps
 held >= 10 frames are caught, a 6-frame tap passes under and is slung onto M; beaten free holding right she lands on M;
 at the knob her centre is 108 px from W2 and a standing forward cut snuffs it; R5 without glide: 0 of 155 jump
 timings reach Z, every one a catch; walk-off glide and jump-glides all cross. The lab-world rooms moved to `tests`
 (memory/world.md). Bot and page times vs wood.md §9: memory/playtest-harness.md "The wood, first rooms".
-**Second batch (R4, R6-R9), what play showed against the paper:**
-- R4: no jump crosses the seed-case gap (the roof caps a jump at ~200 of rise); a short hop and a down cut over each
-  case crosses with 2 pogos (39 of 40 hop / cut timings in a probe). W3: a full held jump-cut from 60-140 px to the
-  side puts it out in 1-2 of 9 timings (the paper: 3-5), never caught; `burr-first` curls up (`enemyDisperse`).
-- R6: gap 1 as the paper's numbers. **W4 sits on two lines**: a jump-glide from E0's last ~48 px ends in its core
-  (the paper: "a tug, harmless"; caught, the throw lands her anywhere from E0 to gap 2's thorns), and while it burns
-  its field catches any jump from T2's lip, before W5. With W4 out, W5 catches the jump-glide and a beat-free holding
-  right lands on T3 (the paper's +1515, measured 3014-3499), the walk-off passes under. **Gliding on after W5's throw
-  carries her over T3 and under the thorn branch to T4: the gap-3 test can be skipped.** Gap 3: the jump-glide hits
-  the thorn branch from every lead, the walk-off glide lands at 4842 (the paper: 4841), clear of the burrback.
-- R8: W7 jump-cuts put it out in 4-6 of 9 timings, 1 of 9 is pulled into its core. R9: L1 is hit in only 2 of 9
-  timings (on the way up), and 1-3 of 9 are pulled into the core (the paper: 3-5 hits, never caught).
-- The broken face climbs as written with wall jump (west face to ~900, kick-glide across, up the east face), no thorn
-  touched; the up-shaft, T-ret and the return bough, and the grate from R10's climb-out all work with wall jump.
+**What play showed against the paper, and what changed:** wood.md §12 (the changelog table). Notes:
+- **Jump-cut claims hold with the paper's method** (jump held through the cut, cut in the rise at 2-18 frames,
+  60-140 px to the side): W3 3.4 / 9, W4 6.0, W7 6.0, L1 4.0, none caught; W8 from its ledge 23 of 27. Letting go
+  of jump at the cut and cutting late reads far lower and gets L1 caught: measure with `jumpCuts` in the test.
+- R6: W4 now (1800, 640): every jump-glide from E0 passes under it; the jump-glide from T2's lip is W5's (the
+  combine); anything airborne under W4 (a hop, a short drop) is pulled into it. The thorn branch is thorns all over
+  (no stem to land on): a glide on after W5's throw lands on T3 or meets the branch, never T4. Beaten free holding
+  right with jump let go: T3 in ~5 of 8 beat timings, gap 2's thorns otherwise.
+- Data pieces added for these rooms (memory/level-kit.md): room `reform`, lure `after`, creature `sets`.
+- A lure with `after` burns for the one step of a room entry before the kit puts it out (createLures lights all):
+  render can see it for a frame; the test steps once before it looks.
 
 ## The room camera (`room.camera`, src/render/camera/)
 - Framing overrides: `cameraFor(room)` (tuning.ts) = `cameraTuning` + the room's `anchorY`, `lookaheadX`,

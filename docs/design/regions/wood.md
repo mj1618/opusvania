@@ -446,8 +446,8 @@ y 0   [N in 256-896]                  ┃hanging trunk 1600-1664 (to y 704)
   free bounce).
 - **The seed-case gap** (2816–3456, level with the step's top, 1152): a root roof at 768–864 (288 over the gap) caps
   any jump to ~200 px of rise, which is too short to cross 640. Seed-cases hang at (3008, 1152) and (3296, 1152),
-  290 apart. Hop, down-cut, bounce 125, drift, down-cut, land on F3. Below is a safe floor (1408) with root steps
-  back up to F2. A miss costs ~6 s.
+  290 apart. Hop, down-cut, bounce 125, drift, down-cut, land on F3. Below is a safe floor (1472) with root steps
+  (160) back up to the root step. A miss costs ~6 s.
 - F3 (3456–4480, y 1152). **P1** at 3776 with Tatter. The **hole** (4096–4352) is the south exit to R5. W3's freed
   moths fly into it.
 - **W-hi4** (wall jump + glide) at (3136, 704), over the root roof. The trunk at 4416–4480 hangs from y 192 to 1024
@@ -455,7 +455,7 @@ y 0   [N in 256-896]                  ┃hanging trunk 1600-1664 (to y 704)
   jump-glide west: 768 across, 192 down, and a jump-glide carries 760 before the pull takes her. She lands on the
   root roof and walks off. Seen from P1 at 4:45.
 - With wall jump the hole opens from below (R5's hollow is climbable). Until P1 is touched, a fade re-forms her at
-  R3's landing.
+  the burrow's west door (room `reform` point (300, 1280)), not beside the burrback.
 
 ### 5 `wood-glade`: glade 1, glide's lock room (2880×2304; purpose: glade)
 ```
@@ -487,13 +487,14 @@ y 0  [N in 256-512]
 2240                                    thorns 2240                    burrback  pocket
 ```
 - **Safe:** E0 (0–576, y 512) → gap 800, drop 448 → T2 (1376–1984, y 960). Jump 688 ✗, walk-off 1045 ✓, jump-glide
-  1319 ✓. Below is a safe floor (576–1376, y 1408) with root steps (≤ 192) back to E0. **W4** at (1920, 760) on T2
-  is glide's first lamp: a jump-cut, or a tug at the end of a long jump-glide (harmless over T2).
+  1319 ✓. Below is a safe floor (576–1376, y 1408) with one-way root rungs (576–672, y 1216 / 1024 / 832 / 704) back to
+  E0. **W4** at (1800, 640) on T2, 320 up, is glide's first lamp: a jump-cut (6 of 9); every jump-glide from E0
+  passes under it and lands on T2.
 - **Combine:** T2 lip 1984 → T3 (3008–3648, y 1472): gap 1024, drop 512. Walk-off 1193 ✓, jump-glide 1467 ✓, jump 717
   ✗. **W5** at (2434, 860), spin 1: measured, the jump-glide is caught; beating free while holding right lands her at
   +1515 (T3). The walk-off passes under untouched and lands at +1192. Thorns at y 1920 under the gap.
-- **Test:** T3 lip 3648 → T4 (4672–5760, y 1984): gap 1024, drop 512. A **thorn branch** (3798–4198, y 1176–1272,
-  underside 200 over T3) hangs over the jump's hump. Measured, the jump-glide hits it (1 pip, back to T3); the
+- **Test:** T3 lip 3648 → T4 (4672–5760, y 1984): gap 1024, drop 512. A **thorn branch** (3798–4198, y 1112–1272,
+  thorny all over, underside 200 over T3) hangs over the jump's hump. Measured, the jump-glide hits it (1 pip, back to T3); the
   walk-off glide passes ~240 under it and lands at +1193 (4841). Thorns at 2240 below. **W6** at (5120, 1784) with
   burrback `burr-ledge` (5 hp, guards W6) patrolling 4992–5248, so the landing at ~4841 is clear.
 - **Rotten-bark wall** (5376–5440, y 1600–1984) on the CP: spores drift from its seams, W6's freed moths slip through,
@@ -506,6 +507,9 @@ y 0  [N in 256-512]
 - Time: 3:00–4:30.
 
 ### 7 `wood-hollow`: the hub (3840×3248; purpose: hub + rest + story)
+**As built, everything below the canopy sits 256 lower than written here** (shelf 2880, floor 3136, alcove roof
+2944, steps up to the E arch at 2880): the W door (R6's T4) and the E door (the hawkers' floor) are both at world
+y 10048 = local 2880. W-ff burns only once `wood-firefly-glimpse` is set (lure `after`).
 ```
  400 (W-ff)·                                      ▓ canopy log (T3 stub)
  512 ═far branch═╗   (L-gap)· spin 1      ══crown shelf═════(W-crown)·═══
@@ -581,13 +585,14 @@ y 0  [N in: well 384-640]                                 [N out: hub grate 2560
   frames (rim to hunt colour, uncurl); it never strikes on her landing. Camera lock on the pit (0–2048 × 704–1600).
 - **Old burrback** (§6): pogo its braced shell, or bait its ram into the west wall or the root gate for a 90-frame
   stun and cut it then.
-- **W8** hangs at (1984, 992), 480 over the pit floor: out of reach in the fight. When the old burrback dies the root
-  gate (2048, 1216–1472) opens, and a root ledge behind it (2112–2304, y 1248) puts W8 in jump-cut reach (256 up,
-  ~128 to the side).
+- **W8** hangs at (2000, 992), 480 over the pit floor: out of reach in the fight. When the old burrback dies the root
+  gate (2048, 1088–1472: 384 tall, so no jump clears it) opens (`sets` on the creature, a flag gate), and a root
+  ledge behind it (2112–2304, y 1248) puts W8 in jump-cut reach (256 up, ~100–140 to the side; 23 of 27).
 - **Glade 2** (2048–2560): moon shaft, **P4**, the wall-jump item line.
 - **The climb-out** (2560–2944, both faces kickable) rises 1472 with a **rest ledge** at 736. At the top she pushes up
   through the hub's grate (`wood-grate-open`) and the up-shaft carries straight on.
-- A fade in the pit re-forms her at P3, 15 s from the well. Not a softlock.
+- A fade in the pit re-forms her at P3, 15 s from the well (never rested at P3: under the well, the room's
+  `reform` point). Not a softlock.
 
 ### 11 `wood-climb`: the wall-jump test and the look back (2048×2560; purpose: test + vista)
 ```
@@ -810,3 +815,31 @@ vista and the title, the glimpse and the relight.
 15. **Lanterns are designed static** until the path-follow block exists. The swing is welcome later, and no room
     depends on it.
 16. **The wood runs ~38 minutes at the median** (35–45 target). journey.md's 45–60 isn't the target.
+
+---
+
+## 12. Changelog: built vs paper (greybox, 2026-10-18)
+
+What the greybox build changed, each measured in the sim (`tests/unit/wood-rooms.test.ts`, memory/rooms.md).
+Rooms built: R2–R10. R11 `wood-climb` is a stub.
+
+| Room | Paper | Built | Why |
+|---|---|---|---|
+| R3 | W2 (2072, 918) | (2072, 896) | the knob sat inside its core |
+| R3 | — | a shaft wall 896–1024 to y 576 (no kick) | a fall held right drifted into W1's field |
+| R2 | twigs over C | one one-way 3584–4224 y 768, C to over D | short twigs trapped walkers between a missed walk-off and a missed jump |
+| R5 | P2 in the shaft | P2 at x 448 | where a fall from the hole lands |
+| R4 | safe floor 1408 | 1472 | a full jump climbed F3's 256 face and skipped the pogo |
+| R4 | fade before P1 → R3's landing | → the burrow's door (300, 1280) | room-local re-form point; R3 has nothing that can fade her |
+| R6 | root steps back to E0 | one-way rungs at 576–672 | steps toward T2 let a plain jump reach it |
+| R6 | W4 (1920, 760) | (1800, 640) | at 200 up it caught the jump-glide from E0's lip and every jump from T2's lip before W5 |
+| R6 | thorn branch 1176–1272 under a stem | thorns 1112–1272, no stem | a glide on after W5's throw landed on the stem's top and went on to T4 |
+| R7 | shelf 2624, floor 2880 | shelf 2880, floor 3136, arch steps | the doors did not meet R6 and the hawkers |
+| R7 | alcove 256–960 | 384–960 (back wall 0–384) | an explorer reaching for a floor behind the well fell in |
+| R10 | gate 1216–1472, W8 (1984, 992) | gate 1088–1472, W8 (2000, 992) | a jump cleared a 256 gate; W8 out of reach from the ledge |
+
+**Jump-cut claims hold with this doc's method** (jump held through the cut, cut in the rise, 9 timings 2–18
+frames, 60–140 px to the side): W3 3.4 of 9, W4 6.0, W7 6.0, L1 4.0, none caught. An earlier test that let go of
+jump at the cut and cut late (6–22 frames) read W3 at 1–2 and L1 caught; that was the test, not the room.
+Still open: beaten free from W5 holding right lands on T3 in ~5 of 8 beat timings, the rest in gap 2's thorns.
+

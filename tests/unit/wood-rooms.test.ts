@@ -80,7 +80,7 @@ describe('the wood: placement (wood.md §3, world px)', () => {
     expect(placed('wood-hollow')).toEqual({ x: 27584, y: 7168, w: 3840, h: 3248 });
     expect(placed('wood-hawkers')).toEqual({ x: 31424, y: 8768, w: 3200, h: 1600 });
     expect(placed('wood-lantern')).toEqual({ x: 34624, y: 8768, w: 3200, h: 1600 });
-    // The stubs hold R10's and R11's places until those rooms are built.
+    // The stub holds R11's place until it is built.
     expect(placed('wood-well')).toEqual({ x: 27584, y: 10416, w: 3840, h: 1600 });
     expect(placed('wood-climb')).toEqual({ x: 37184, y: 6208, w: 2048, h: 2560 });
   });
@@ -314,7 +314,7 @@ describe('R5 wood-glade: glade 1, the glide lock', () => {
   });
 
   it('the stubs are marked as stubs', () => {
-    for (const id of ['wood-well', 'wood-climb']) {
+    for (const id of ['wood-climb']) {
       const room: Room = getRoom(id);
       expect(room.title).toMatch(/^STUB/);
     }
@@ -357,23 +357,43 @@ function beatFree(s: ReturnType<typeof play>, dir = 0): void {
   }
 }
 
+/**
+ * The paper's jump-cut sweep (wood.md "Measured reach"): 60-140 px to the side facing the flame, jump held,
+ * a forward cut in the rise (frames 2-18), jump still held after it. Returns hits and catches of 45.
+ */
+function jumpCuts(room: string, fx: number, floorY: number, abilities: string[] = ['glide']) {
+  let hits = 0;
+  let caught = 0;
+  for (const off of [60, 80, 100, 120, 140]) {
+    for (let k = 2; k <= 18; k += 2) {
+      const s = play(room, abilities);
+      s.g.teleport(fx - off, floorY);
+      s.run(R, 1);
+      const ev = s.run(J, k).concat(s.run(J | A, 1), s.run(J, 30), s.run(0, 30));
+      if (ev.some((e) => e.type === 'lureHit' || e.type === 'lureSnuff')) hits++;
+      if (has(ev, 'lureCaught')) caught++;
+    }
+  }
+  return { hits, caught };
+}
+
 describe('R4 wood-burrow: the blade against things', () => {
-  it('W3 hangs 200 over F2: a jump-cut from the side can snuff it, is never caught; its burrback curls up', () => {
-    // Measured (full held jumps, 9 cut timings, 100 px to the side): 1 of 9 goes out (the paper said 3-5).
-    let snuffed = 0;
-    for (const cut of [6, 8, 10, 12, 14, 16, 18, 20, 22]) {
-      const s = play('wood-burrow');
-      // From 100 px to the side, facing it (the paper's 60-140).
+  it("W3 hangs 200 over F2: the paper's jump-cut sweep puts it out in 3-5 of 9, never caught; its burrback curls up", () => {
+    const { hits, caught } = jumpCuts('wood-burrow', 1984, 1344, []);
+    // Measured: 17 of 45 (3.4 of 9).
+    expect(hits).toBeGreaterThanOrEqual(15);
+    expect(hits).toBeLessThanOrEqual(25);
+    expect(caught).toBe(0);
+    const s = play('wood-burrow');
+    s.g.teleport(1884, 1344);
+    s.run(R, 1);
+    let out: SimEvent[] = [];
+    for (let k = 2; k <= 18 && !has(out, 'lureSnuff'); k += 2) {
       s.g.teleport(1884, 1344);
       s.run(R, 1);
-      const ev = s.run(J, cut).concat(s.run(J | A, 1), s.run(0, 60));
-      expect(has(ev, 'lureCaught'), `cut at ${cut}`).toBe(false);
-      if (has(ev, 'lureSnuff')) {
-        snuffed++;
-        expect(ev.find((e) => e.type === 'enemyDisperse')).toMatchObject({ lure: 'wick-burr' });
-      }
+      out = s.run(J, k).concat(s.run(J | A, 1), s.run(J, 30), s.run(0, 30));
     }
-    expect(snuffed).toBeGreaterThanOrEqual(1);
+    expect(s.events.find((e) => e.type === 'enemyDisperse')).toMatchObject({ lure: 'wick-burr' });
   });
 
   it('the seed-case gap: no jump crosses it, the safe floor does not climb to F3, two pogos do', () => {
@@ -450,21 +470,36 @@ describe('R4 wood-burrow: the blade against things', () => {
     for (let i = 0; i < 400 && s.g.state.room === 'wood-burrow'; i++) s.run(R);
     expect(s.g.state.room).toBe('wood-glade');
   });
+
+  it('a fade before P1 stands her up at the burrow door, not beside the burrback', () => {
+    const s = play('wood-burrow');
+    s.g.state.player.hp = 1;
+    s.g.teleport(1700, 1344);
+    // Into W3's light and the burrback's ram until the blow fades her.
+    for (let i = 0; i < 900 && !has(s.events, 'reform'); i++) s.run(R);
+    expect(has(s.events, 'fade')).toBe(true);
+    expect(Math.abs(s.feet().x - 300)).toBeLessThanOrEqual(16);
+    expect(s.feet().y).toBe(1280);
+  });
 });
 
 describe('R6 wood-glidewalk: the glide ladder', () => {
   /** A walk-off glide off the lip at (lipX, y): a hop first, jump held through the landing and off the end. */
-  function walkOff(lipX: number, y: number, w4out = false) {
+  function walkOff(lipX: number, y: number, w4out = false, back = 200) {
     const s = play('wood-glidewalk', ['glide']);
-    s.g.teleport(lipX - 200, y);
+    // A short drop onto the floor with jump held (as a glide lands): jump is held, no hop (a hop under W4
+    // is pulled into it).
+    s.g.teleport(lipX - back, y - 40);
     if (w4out) {
       s.g.state.lures.hp[0] = 0;
       s.g.state.lures.out[0] = 1;
     }
     s.run(J, 1);
-    for (let i = 0; i < 60 && !(s.g.state.player.grounded && i > 3); i++) s.run(J);
+    for (let i = 0; i < 60 && !s.g.state.player.grounded; i++) s.run(J);
     for (let i = 0; i < 400 && s.g.state.player.grounded && s.feet().x < lipX + 40; i++) s.run(R | J);
-    return { s, ev: s.run(R | J, 300) };
+    // (The landing beyond the lip: lower than where she walked off.)
+    const ev = s.run(R | J, 300).filter((e) => e.type !== 'land' || e.y > y);
+    return { s, ev };
   }
   /** Runs to `lead` px before the lip and jumps, jump held. */
   function jumpGlide(s: ReturnType<typeof play>, lipX: number, lead: number, frames = 300) {
@@ -472,7 +507,7 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
     return s.run(R | J, frames);
   }
 
-  it('gap 1 (800, drop 448): no jump from E0 or a rung makes T2; both glides do', () => {
+  it('gap 1 (800, drop 448): no jump from E0 or a rung makes T2; both glides do, and W4 never catches one', () => {
     const p = play('wood-glidewalk', []);
     p.g.teleport(300, 512);
     jumpGlide(p, 576, 24, 22);
@@ -484,35 +519,55 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
     r.run(R, 200);
     expect(r.feet().y).toBe(1408);
     expect(walkOff(576, 512).ev.find((e) => e.type === 'land')).toMatchObject({ y: 960 });
-    // A jump-glide from a step or more back lands on T2; from the lip's last ~48 px it ends in W4's core
-    // over T2 (the paper: "a tug, harmless over T2"; measured, a catch, and the throw lands her anywhere
-    // from E0 to gap 2's thorns, by when she beats).
-    const j = play('wood-glidewalk', ['glide']);
-    j.g.teleport(300, 512);
-    expect(jumpGlide(j, 576, 96).find((e) => e.type === 'land')).toMatchObject({ y: 960 });
-    const t = play('wood-glidewalk', ['glide']);
-    t.g.teleport(300, 512);
-    expect(jumpGlide(t, 576, 0, 200).find((e) => e.type === 'lureCaught')).toMatchObject({
-      id: 'wick-landing',
-    });
+    // W4 hangs 320 over T2 (the paper's 200 put it on the jump-glide's end): a long glide passes under.
+    for (const lead of [0, 24, 48, 72, 96, 120]) {
+      const j = play('wood-glidewalk', ['glide']);
+      j.g.teleport(300, 512);
+      const ev = jumpGlide(j, 576, lead);
+      expect(has(ev, 'lureCaught'), `lead ${lead}`).toBe(false);
+      expect(
+        ev.find((e) => e.type === 'land'),
+        `lead ${lead}`,
+      ).toMatchObject({ y: 960 });
+    }
+    const { hits, caught } = jumpCuts('wood-glidewalk', 1800, 960);
+    expect(hits).toBeGreaterThanOrEqual(15);
+    expect(caught).toBe(0);
   });
 
-  it('gap 2 (1024, drop 512): with W4 out, the jump-glide is caught by W5 and beaten free onto T3; the walk-off passes under', () => {
-    const j = play('wood-glidewalk', ['glide']);
-    j.g.teleport(1800, 960);
-    // W4 out: it hangs over T2's east end, and burning, its field catches any jump from this lip first.
-    j.g.state.lures.hp[0] = 0;
-    j.g.state.lures.out[0] = 1;
-    expect(jumpGlide(j, 1984, 24, 120).find((e) => e.type === 'lureCaught')).toMatchObject({
-      id: 'wick-line',
-    });
-    // Beaten free holding right, jump let go: T3 (the paper's +1515). (Gliding on after the throw instead
-    // carries her over T3 and under the thorn branch to T4: memory/rooms.md.)
-    beatFree(j, R);
-    expect(j.run(R, 300).find((e) => e.type === 'land')).toMatchObject({ y: 1472 });
-    const w = walkOff(1984, 960, true);
-    expect(w.ev.some((e) => e.type === 'lureCaught' && e.id === 'wick-line')).toBe(false);
-    expect(w.ev.find((e) => e.type === 'land')).toMatchObject({ y: 1472 });
+  it('gap 2 (1024, drop 512): the jump-glide from the lip is caught by W5 and beaten free onto T3; the walk-off passes under', () => {
+    for (const lead of [0, 24, 48]) {
+      const j = play('wood-glidewalk', ['glide']);
+      j.g.teleport(1800, 960);
+      expect(
+        jumpGlide(j, 1984, lead, 120).find((e) => e.type === 'lureCaught'),
+        `lead ${lead}`,
+      ).toMatchObject({
+        id: 'wick-line',
+      });
+    }
+    // Beaten free holding right, jump let go: T3 (the paper's +1515) in most beat timings, gap 2's thorns
+    // in the rest (measured 5 of 8 and 3 of 8); never past T3.
+    let t3 = 0;
+    for (const lead of [0, 8, 16, 24, 32, 40, 48, 56]) {
+      const j = play('wood-glidewalk', ['glide']);
+      j.g.teleport(1800, 960);
+      jumpGlide(j, 1984, lead, 4);
+      for (let i = 0; i < 200 && j.g.state.player.lure < 0 && !j.g.state.player.grounded; i++) j.run(R | J);
+      if (j.g.state.player.lure < 0) continue;
+      beatFree(j, R);
+      const first = j.run(R, 300).find((e) => e.type === 'land' || e.type === 'thornHit') as { y: number };
+      expect(first.y).toBeLessThan(1984);
+      if (first.y === 1472) t3++;
+    }
+    expect(t3).toBeGreaterThanOrEqual(4);
+    // The walk-off line from gap 1 on: landed on T2 with jump held, she walks on and off T2's lip with the
+    // wings open, under W5, onto T3 (W4 never catches a walker; a hop under it does).
+    const w = walkOff(576, 512);
+    const lands = w.ev
+      .concat(w.s.run(R | J, 300))
+      .filter((e) => e.type === 'land' || e.type === 'lureCaught');
+    expect(lands.map((e) => (e.type === 'land' ? e.y : e.id)).slice(0, 2)).toEqual([960, 1472]);
   });
 
   it('gap 3 (1024, drop 512): the jump-glide hits the thorn branch; the walk-off glide lands on T4 clear of the burrback', () => {
@@ -529,6 +584,20 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
     expect(land.y).toBe(1984);
     expect(land.x).toBeGreaterThan(4700);
     expect(land.x).toBeLessThan(4992 - 60);
+  });
+
+  it("gliding on after W5's throw never skips T3 for T4: she lands on T3 or meets the (thorny all over) branch", () => {
+    for (const lead of [0, 8, 16, 24, 32, 40, 48, 56]) {
+      const j = play('wood-glidewalk', ['glide']);
+      j.g.teleport(1800, 960);
+      jumpGlide(j, 1984, lead, 4);
+      for (let i = 0; i < 200 && j.g.state.player.lure < 0 && !j.g.state.player.grounded; i++) j.run(R | J);
+      if (j.g.state.player.lure < 0) continue;
+      beatFree(j, R);
+      const ev = j.run(R | J, 300);
+      const first = ev.find((e) => e.type === 'land' || e.type === 'thornHit') as { type: string; y: number };
+      expect(first.type === 'thornHit' || first.y === 1472, `lead ${lead}`).toBe(true);
+    }
   });
 
   it('rotten bark: the wall takes 3 cuts; the floor panel opens to W-pocket and she climbs back out', () => {
@@ -593,11 +662,17 @@ describe('R7 wood-hollow: the hub', () => {
     expect(s.g.state.room).toBe('wood-hollow');
     for (let i = 0; i < 60 && !s.g.state.player.grounded; i++) s.run(R);
     expect(s.feet().y).toBe(2880);
+    // W-ff (the firefly's glow-cap) is not there before the glimpse...
+    const ff = (s.g.scene.lures ?? []).findIndex((l) => l.id === 'wick-firefly');
+    s.run(0, 1);
+    expect(s.g.state.lures.hp[ff]).toBe(0);
     s.runTo(1280);
     s.run(0, 50);
     expect(s.feet().y).toBe(3136);
     expect(s.events.some((e) => e.type === 'patchRest')).toBe(true);
     expect(s.events.find((e) => e.type === 'flagSet')).toMatchObject({ flag: 'wood-firefly-glimpse' });
+    // ...and burns once it is set.
+    expect(s.g.state.lures.hp[ff]).toBeGreaterThan(0);
   });
 
   it('east along the unbroken floor, up the arch steps and out to the hawkers at floor level', () => {
@@ -650,23 +725,21 @@ describe('R7 wood-hollow: the hub', () => {
 });
 
 describe('R8 wood-hawkers: the hawker over a safe floor', () => {
-  it('W7 hangs 312 up: jump-cuts snuff it in about half the timings, and the hawker leaves', () => {
-    let snuffed = 0;
-    let caught = 0;
-    for (const cut of [8, 10, 12, 14, 16, 18, 20, 22, 24]) {
-      const s = play('wood-hawkers', ['glide']);
+  it("W7 hangs 312 up: the paper's jump-cut sweep puts it out in 5-6 of 9, and the hawker leaves", () => {
+    const { hits, caught } = jumpCuts('wood-hawkers', 1024, 1280);
+    // Measured: 30 of 45 (6.0 of 9), none caught.
+    expect(hits).toBeGreaterThanOrEqual(22);
+    expect(caught).toBe(0);
+    const s = play('wood-hawkers', ['glide']);
+    for (let k = 2; k <= 18 && !has(s.events, 'lureSnuff'); k += 2) {
       s.g.teleport(1024 - 100, 1280);
       s.run(R, 1);
-      const ev = s.run(J, cut).concat(s.run(J | A, 1), s.run(0, 60));
-      if (has(ev, 'lureCaught')) caught++;
-      if (has(ev, 'lureSnuff')) {
-        snuffed++;
-        expect(ev.find((e) => e.type === 'enemyDisperse')).toMatchObject({ lure: 'wick-hawk' });
-      }
+      s.run(J, k);
+      s.run(J | A, 1);
+      s.run(J, 30);
+      s.run(0, 30);
     }
-    // Measured: 4 of 9 go out, 1 of 9 is pulled into the core (the paper: 5-6 of 9).
-    expect(snuffed).toBeGreaterThanOrEqual(3);
-    expect(caught).toBeLessThanOrEqual(2);
+    expect(s.events.find((e) => e.type === 'enemyDisperse')).toMatchObject({ lure: 'wick-hawk' });
   });
 
   it('S1: the bark panel in the mound takes 3 cuts and opens an alcove with a wick', () => {
@@ -683,31 +756,22 @@ describe('R8 wood-hawkers: the hawker over a safe floor', () => {
 });
 
 describe('R9 wood-lantern: the first lantern, the broken face', () => {
-  it('L1 takes two jump-cuts from P', () => {
-    // Measured (9 timings, 60-140 px to the side): 2 of 9 hit, 1-3 of 9 pulled into the core (the paper:
-    // 3-5 of 9, never caught).
-    let hits = 0;
-    for (const cut of [6, 8, 10, 12, 14, 16, 18, 20, 22]) {
-      const s = play('wood-lantern', ['glide']);
-      s.g.teleport(1180, 960);
-      s.run(R, 1);
-      const ev = s.run(J, cut).concat(s.run(J | A, 1), s.run(0, 60));
-      if (ev.some((e) => e.type === 'lureHit' || e.type === 'lureSnuff')) hits++;
-    }
-    expect(hits).toBeGreaterThanOrEqual(2);
+  it('L1 takes two jump-cuts from P: 3-5 of 9 land, never caught', () => {
+    const { hits, caught } = jumpCuts('wood-lantern', 1280, 960);
+    // Measured: 20 of 45 (4.0 of 9), none caught.
+    expect(hits).toBeGreaterThanOrEqual(15);
+    expect(caught).toBe(0);
     const s = play('wood-lantern', ['glide']);
-    let out = false;
-    for (let k = 0; k < 8 && !out; k++) {
+    for (let k = 0; k < 9 && !has(s.events, 'lureSnuff'); k++) {
       s.g.teleport(1180, 960);
       s.run(R, 1);
-      // The cut on the way up (8 frames into the jump) lands; the second one puts it out.
-      const ev = s.run(J, 8).concat(s.run(J | A, 1), s.run(0, 60));
-      beatFree(s);
-      s.run(0, 60);
-      out = has(ev, 'lureSnuff') || s.g.state.lures.hp[0] === 0;
+      s.run(J, 4 + k);
+      s.run(J | A, 1);
+      s.run(J, 30);
+      s.run(0, 30);
     }
-    expect(out).toBe(true);
     expect(s.events.filter((e) => e.type === 'lureHit').length).toBeGreaterThanOrEqual(1);
+    expect(has(s.events, 'lureSnuff')).toBe(true);
   });
 
   it('the shaft: a lock without wall jump; with it, up the west face, across, and up the east face to the climb', () => {
@@ -726,6 +790,91 @@ describe('R9 wood-lantern: the first lantern, the broken face', () => {
     ev = ev.concat(climb(s, 1, () => s.g.state.room !== 'wood-lantern', 1500));
     expect(s.g.state.room).toBe('wood-climb');
     expect(has(ev, 'thornHit')).toBe(false);
+  });
+});
+
+describe('R10 wood-well: the old burrback, glade 2', () => {
+  /** Down the hub's well into the pit. */
+  function pit() {
+    const s = play('wood-hollow', ['glide']);
+    s.g.teleport(700, 3136);
+    for (let i = 0; i < 300 && s.g.state.room === 'wood-hollow'; i++) s.run(L);
+    for (let i = 0; i < 200 && !s.g.state.player.grounded; i++) s.run(0);
+    return s;
+  }
+  const old = (s: ReturnType<typeof play>) => s.g.state.enemies.find((e) => e.id === 'old-burr');
+
+  it('down the well (slick walls, no kick) into the pit: the old burrback wakes and never strikes on her landing', () => {
+    const s = pit();
+    expect(s.g.state.room).toBe('wood-well');
+    expect(s.feet().y).toBe(1472);
+    expect(s.feet().x).toBeGreaterThan(384);
+    expect(s.feet().x).toBeLessThan(640);
+    expect(has(s.events, 'enemyWake')).toBe(true);
+    expect(s.events.some((e) => e.type === 'hurt')).toBe(false);
+    // The well's walls refuse a kick: with wall jump, still no way back up.
+    const w = play('wood-well', ['glide', 'wallJump']);
+    w.g.teleport(500, 1472);
+    climb(w, -1, () => w.feet().y < 700, 400, 14);
+    expect(w.feet().y).toBeGreaterThan(1000);
+  });
+
+  it('the root gate holds the pit shut (no jump clears it) until the old burrback dies, then opens for good', () => {
+    const s = pit();
+    s.g.teleport(1900, 1472);
+    s.run(R | J, 30);
+    s.run(R, 60);
+    expect(s.feet().x).toBeLessThan(2048);
+    expect(s.g.state.save.abilities).not.toContain('wallJump');
+    const e = old(s);
+    if (!e) throw new Error('no old burrback');
+    e.mode = 'dead';
+    e.gone = true;
+    const ev = s.run(0, 3);
+    expect(ev.find((x) => x.type === 'flagSet')).toMatchObject({
+      flag: 'wood-old-burrback-down',
+      by: 'old-burr',
+    });
+    expect(ev.find((x) => x.type === 'gateOpen')).toMatchObject({ id: 'root-gate' });
+    s.run(R, 120);
+    expect(s.feet().x).toBeGreaterThan(2304);
+    expect(s.g.state.save.abilities).toContain('wallJump');
+    expect(s.events.find((x) => x.type === 'gladeGrant')).toMatchObject({ ability: 'wallJump' });
+  });
+
+  it('W8 is out of reach in the fight, and a gimme from the root ledge behind the gate', () => {
+    const s = pit();
+    s.g.teleport(1950, 1472);
+    s.run(R, 1);
+    for (const k of [6, 10, 14, 18]) {
+      s.g.teleport(1950, 1472);
+      expect(has(s.run(J, k).concat(s.run(J | A, 1), s.run(J, 30)), 'lureSnuff')).toBe(false);
+    }
+    let out = 0;
+    for (const off of [100, 120, 140]) {
+      for (let k = 2; k <= 18; k += 2) {
+        const t = play('wood-well', ['glide']);
+        t.g.state.save.flags.push('wood-old-burrback-down');
+        t.run(0, 2);
+        t.g.teleport(2000 + off, 1248);
+        t.run(L, 1);
+        if (has(t.run(J, k).concat(t.run(J | A, 1), t.run(J, 30)), 'lureSnuff')) out++;
+      }
+    }
+    // Measured: 23 of 27.
+    expect(out).toBeGreaterThanOrEqual(18);
+  });
+
+  it('a fade in the pit re-forms her at P3 in the hub', () => {
+    const s = play('wood-hollow', ['glide']);
+    s.g.teleport(1280, 3136);
+    s.run(0, 40);
+    expect(s.g.state.save.patch).toEqual({ room: 'wood-hollow', id: 'p3' });
+    s.g.goto('wood-well', 1200, 1472);
+    s.g.state.player.hp = 1;
+    for (let i = 0; i < 1200 && s.g.state.room === 'wood-well'; i++) s.run(i % 60 < 30 ? R : L);
+    expect(s.g.state.room).toBe('wood-hollow');
+    expect(s.feet()).toEqual({ x: 1280, y: 3136 });
   });
 });
 

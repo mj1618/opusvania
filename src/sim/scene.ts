@@ -113,6 +113,8 @@ export interface EnemySpawn {
    * (the weaver runs along them). `x`, `y` = the hub.
    */
   strands?: Array<[number, number, number, number]>;
+  /** A story flag set when it dies (the old burrback's root gate: src/sim/kit.ts). */
+  sets?: string;
   /**
    * Web: points that hold strands besides solids and the room's edges (the great lamp's heart, which
    * hangs on its own chain: a spoke cut from it falls alone).
@@ -159,6 +161,8 @@ export interface Lure {
   spin?: 1 | -1;
   /** It hangs on a chain and swings (src/sim/paths.ts, memory/level-kit.md); `x`, `y` = the bottom of the swing. */
   swing?: Swing;
+  /** It burns only once this story flag is set (the firefly's glow-cap after the glimpse: src/sim/kit.ts). */
+  after?: string;
 }
 
 /**
@@ -313,6 +317,11 @@ export interface Scene {
   bark?: Bark[];
   gates?: FlagGate[];
   triggers?: FlagTrigger[];
+  /**
+   * Where a fade re-forms her in this room while no moon patch is saved (instead of her last safe
+   * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4).
+   */
+  reform?: { x: number; y: number };
   /** A boss fight (src/sim/boss/, memory/bosses.md): its arena, lock, flags and the things it is made of. */
   boss?: BossSpec;
 }

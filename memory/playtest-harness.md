@@ -125,6 +125,15 @@ gap that is a south exit; its headway resets per room (a stale best x from the l
 Not done: planners cannot wall-climb (R10's stub, R9's shaft, the up-shaft) and do not choose a glide line; the
 cautious one does not look ahead from a lip.
 
+## The well (R10), 2026-10-18 (bots from the hub, HEAD's harness)
+Every persona goes down the well and loses to the old burrback: naive 22 hits / 10 fades, speedrunner 38, explorer
+60, cautious 61, in 2-3.5 min; none opens the gate. Skills the bots need for R10 and the glide rooms (for the harness
+agent): **pogo a braced creature's shell** (down cut on the tell, one per brace) and **bait a ram into a wall** for the
+stun window; **kick-climb a two-face shaft** (R10's climb-out, R9's broken face, the up-shaft); **pick the walk-off
+line** at a gap with something over the jump's hump (R6 gap 3: the planners jump-glide into the thorn branch 14-48
+times); **don't hop under a wick** (R6's W4 pulls anything airborne beneath it); **turn back to a one-way drop** after
+a lock (the naive ping-pongs hawkers / lantern and never finds the well).
+
 ## Multi-room notes (2026-10-18)
 - Planner fix: its memory (exits, lights, pickups, walked cells, given-up targets, move tries) is **per room**
   (`RoomMemory`); before, a given-up `exit:e` in one room shut the next room's `e`, and the cautious bot ended "done"

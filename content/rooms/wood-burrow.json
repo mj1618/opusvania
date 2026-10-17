@@ -8,6 +8,7 @@
   "edgeKick": false,
   "abilities": [],
   "art": { "mode": "greybox", "labels": true },
+  "reform": { "x": 300, "y": 1280 },
   "exits": [
     { "id": "w", "edge": "w", "from": 1024, "to": 1280 },
     { "id": "hole", "edge": "s", "from": 4096, "to": 4352 }
@@ -82,9 +83,9 @@
       { "x": 3600, "y": 1000, "text": "P1 moon patch, Tatter resting" },
       { "x": 4100, "y": 1300, "text": "hole: down into wood-glade (W3's freed moths fly into it)" },
       {
-        "x": 3600,
-        "y": 1060,
-        "text": "TODO sim: until P1 is touched, a fade re-forms her at wood-wicks' landing"
+        "x": 100,
+        "y": 1160,
+        "text": "re-form point: until P1 is rested at, a fade stands her up here at the door, not beside the burrback"
       }
     ]
   },

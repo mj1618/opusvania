@@ -358,7 +358,8 @@ export function step(
       resetBoss(state, scene, t, events);
     } else {
       const light = restPoint(state, S, t);
-      reformPlayer(state, S, P, events, light);
+      // (No light: the room's own re-form point, if it names one, before her safe ground.)
+      reformPlayer(state, S, P, events, light ?? S.reform);
       goalReformed(state.goal, light);
       resetEnemies(state, S, t, events);
       resetBoss(state, scene, t, events);

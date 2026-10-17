@@ -35,7 +35,7 @@
   "lures": [
     { "id": "wick-crown", "kind": "wick", "x": 3392, "y": 448 },
     { "id": "lantern-gap", "kind": "lantern", "x": 1280, "y": 512, "spin": 1 },
-    { "id": "wick-firefly", "kind": "wick", "x": 512, "y": 400 }
+    { "id": "wick-firefly", "kind": "wick", "x": 512, "y": 400, "after": "wood-firefly-glimpse" }
   ],
   "routes": [
     { "from": "spawn", "to": "p3" },
@@ -79,11 +79,7 @@
         "y": 300,
         "text": "far branch (no kick): W-ff glow-cap (postgame: fling or double jump + glide)"
       },
-      {
-        "x": 260,
-        "y": 340,
-        "text": "TODO sim: W-ff should appear with the glimpse; it burns from the start for now"
-      },
+      { "x": 260, "y": 340, "text": "W-ff burns only once the glimpse flag is set (lure `after`)" },
       {
         "x": 3300,
         "y": 2780,
