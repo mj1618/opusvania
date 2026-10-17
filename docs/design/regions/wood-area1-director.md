@@ -662,3 +662,15 @@ play, in one or two sentences, with the moment it was decided.
   past the root's cut. Sim: if `reformPatch` took only patches at or below where she lay, the oak would use it.
 - Kept from round 2: W-ff snuffed from above (the bridge's tip), the dark way (the ledge's hole, the tunnel, the
   chimney to the bridge), the crown wick off the rim's lip, the root as a 1-cut curtain on the rim.
+
+### The oak, round 4 (area1-video-r2 #1, #3; memory/rooms.md "The oak")
+- **W-ff's catch is a choice.** It hangs 300 px off the near face over a floor (1776) that stands out of its pull;
+  the near face holds only up to that floor. She hops into W-ff from the floor; the throw lands on the knot bridge,
+  whose tip is over W-ff (the pogo snuff). Nothing grabs her on the face.
+- **Falls stop within 600 px everywhere on the climb** (rungs, the floor, face ledges at 1248 / 1080 / 840, an upper
+  rung at 1000, chimney rungs). A fade above the rest ledge re-forms her at P-ledge (`reformPatch`, 8036fc0).
+- **The crown wick is off the climb** (2560, 720 over the upper rung): the last face to the rim has no lamp and no
+  hawker lane. **For the creatures agent:** have `hawk-crown` leave on `wood-crown` (the finale's flag) so it stops
+  diving through the release.
+- **The first visit:** P3's glimpse holds 300 frames with the rest inside it; the east arch is shut until it has
+  played; Tatter leads her out (`stage.tatters`, render's `climb.lead`).

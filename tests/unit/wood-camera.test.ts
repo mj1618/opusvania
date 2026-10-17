@@ -165,16 +165,16 @@ describe('the fall camera in the wood rooms', () => {
 });
 
 describe('the fall camera down the oak', () => {
-  it('down the trunk in the oak (one room now): from the near face to P-ledge her feet stay <= 0.80', () => {
+  it('down the trunk in the oak (one room now): off the knot bridge onto the floor under W-ff her feet stay <= 0.80', () => {
     const scene = getRoom('wood-hollow');
     const t = cloneTuning(defaultTuning);
     const events: SimEvent[] = [];
     const s = createState(1, t, scene, events);
     const ct = cameraFor(scene);
     const p = s.player;
-    // Off the near face over the thorns, already falling: ~540 px down to P-ledge's buttress (2240).
-    const START = 1700;
-    p.x = 2924 - p.w / 2;
+    // Off the knot bridge's west part, already falling: ~460 px down to the floor under W-ff (1776).
+    const START = 1320;
+    p.x = 2300 - p.w / 2;
     p.y = START - p.h;
     p.grounded = false;
     p.vy = 2;
@@ -187,11 +187,11 @@ describe('the fall camera down the oak', () => {
       const v = lerpCamera(cam, cam, 1);
       const top = v.y - cam.vh / 2 / cam.zoom;
       const feet = ((s.player.y + s.player.h - top) * cam.zoom - (cam.vh - SAFE_H) / 2) / SAFE_H;
-      if (s.player.y + s.player.h - START > FALL && 2240 - (s.player.y + s.player.h) > NEAR)
+      if (s.player.y + s.player.h - START > FALL && 1776 - (s.player.y + s.player.h) > NEAR)
         worst = Math.max(worst, feet);
       frames = f;
     }
-    expect(frames).toBeGreaterThan(20);
+    expect(frames).toBeGreaterThan(15);
     expect(worst).toBeLessThanOrEqual(FALL_FEET);
   });
 });

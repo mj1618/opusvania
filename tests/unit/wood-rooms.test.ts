@@ -942,7 +942,8 @@ describe('R7 wood-hollow: the oak, its hollow floor (the trunk and crown: wood-o
     expect(s.events.find((e) => e.type === 'flagSet')).toMatchObject({ flag: 'wood-firefly-glimpse' });
     const glimpse = (getRoom('wood-hollow').triggers ?? []).find((t) => t.id === 'glimpse');
     expect(glimpse?.hold).toBeGreaterThan(0);
-    expect(glimpse?.hold).toBeLessThanOrEqual(180);
+    // (Round 4: the oak's glimpse is a long held beat, 300, with the rest inside it: wood-oak.test.ts.)
+    expect(glimpse?.hold).toBeLessThanOrEqual(300);
   });
 
   it('one way on: east along the flat floor to the clearing at floor level, and back west to the glidewalk', () => {

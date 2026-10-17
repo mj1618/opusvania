@@ -116,40 +116,37 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
 - **The column** x 2560-2816 from the hollow up to the rest ledge (west face holds; the east face is P-ledge's slick
   buttress 2816-2944 from 2240 down), one-way **catch rungs** across it at 3264 and 2752.
 - **Rest ledge (2240):** the solid ledge 2192-2560 with `wick-rest` (2380, 2196) and `dang-knot` hung under the
-  bridge over it (drop 880); the one-way across the column; **P-ledge** (2880) on the buttress, 500 px from W-rest
-  (dark: the dangler never drops on a rester). The dark way's hole is at the ledge's back (2112-2192).
-- **Middle:** the near face (2944) holds 1640-2816, slick 1344-1640 with the **thorn band 1404-1544** (140; was
-  200). `wick-firefly` W-ff (2788, 1460). The **glow-cap ledge** (one-way 2720-2856, y 1760) stands under it out of
-  its pull: a hop (10 f) from anywhere on it is caught; beaten free up-left she lands on the knot bridge in 36 of 36
-  rhythms x orbit phases (up: bridge or the foothold; straight right: the thorns). The **knot bridge** (one-way
-  2112-2784, y 1312) runs on from the band's top and the chimney's lid (all one walk, 1792-2784); its tip is over W-ff:
-  walk off and down-cut in frames 0-8 (snuff, pogo, onto the foothold 2848-2944 at 1248). A fall from the bridge
-  lands on the glow-cap ledge. Zone `snuff` (0.85) frames the tip.
-- **Falls:** from every face and the bridge she lands within 620 px (tested at 12 drop points): rungs 3264 / 2752,
-  the ledge and buttress 2240, the glow-cap ledge 1760, the bridge 1312, the foothold 1248, a face ledge 1080 and
-  the catch ledge 2736-2880 at 912 under the crown wick's orbit. (A catch ledge that reaches the near face catches a
-  one-wall climber's kick-out: she bounces between it and the face and never gets up. Keep ledges 64+ px off a face
-  she climbs, or right against it.)
-- **Top:** `wick-crown` (2838, 540) off the rim's lip; `hawk-crown` on its **rhythm** (`orbit: wick-crown`, perches
-  260 each side, 150 up: the east one, 3098, is why the root's knot sits at 3136): a catch timed after a pass is
-  thrown onto the rim, a mistimed one is struck straight down onto the 1080 / 912 ledges (10 of 13 timings rim).
-  The rim 576 from 2944 east. `root-knot` (bark, 1 cut, full height, 3136) bars it; trigger `root-cut` sets
-  `wood-root-ladder`. P5 3456. The **finale**: trigger `crown` (3392-3584) `hold: 540, finale: true, endSets:
-  "wood-crown-gone"`; gate `crown-gate` (3712-3776, flag `wood-crown-gone`) shuts the `canopy` exit until the hold
-  ends. Stage: `cloud` (flag wood-crown), `vista` (zoom 0.5, hold 9 s), `rootFall`, the ladder down the near face
-  (x 2928, 576-3840). **Tatter:** a room has one `marks.tatter`; the oak's is the floor one (`until` the root), so
-  its climb to the crown and its seat beside her need staging (a second mark or a climb path).
-- **Fades:** `reform` (1280, 3840): a fade in the oak re-forms her at her patch if it is in the oak (P3 / P-ledge /
-  P5), else at P3, never in R8. Not `reformPatch`: its nearest patch is P5 for any fade near the top, which skips the
-  root's cut and the hawker (it should take only patches at or below where she lay).
-- **The glimpse:** trigger hold 180 at P3; `stage.glimpse` looks at (2752, 1300) at 0.5 (the crown ring and W-ff in
-  one frame), the firefly flies up the trunk and hangs at W-ff's own point; Tatter's `want` is W-ff.
-- A zoom-out zone over the hollow's floor (0.5) lurched the camera (20 px/f^2 at the room's foot clamp): left to the
-  camera agent. wood-rooms keeps "no zone over the hollow floor".
-- **Bots** (from the hollow with glide + claws, 2 runs each, 2026-10-18): speedrunner through (150 s, 0 hits,
-  W-crown snuffed); cautious through in 1 of 2 (33 s; the other lost at the near face, 6 thorn hits); explorer
-  lost around the rest ledge / tunnel; naive leaves east. Planner limits: a jump from a ledge to a face across a gap,
-  catching on purpose.
+  floor above (1800, drop 400); the one-way across the column; **P-ledge** (2880) on the buttress, 500 px from
+  W-rest (dark: the dangler never drops on a rester). The dark way's hole is at the ledge's back (2112-2192).
+- **Middle (round 4: the catch is a choice).** The near face (2944) holds only from P-ledge up to **the floor under
+  W-ff** (one-way 2112-2944, y 1776); above it, slick 1344-1776 with the **thorn band 1404-1544**. W-ff hangs at
+  (2620, 1460), 300 px off the face: a held-right climber from P-ledge is never caught and never meets the thorns
+  (24 press rhythms: 16 reach the floor, the rest still climbing at 10 s). From the floor, out of the pull, a hop
+  (10 f) under W-ff is caught; beaten free up-left she lands on the **knot bridge** (one-way 2112-2624, y 1312, on
+  from the band's top and the chimney's lid) in 36 of 36 rhythms x orbit phases. The bridge's tip is over W-ff:
+  walk off and down-cut in frames 0-4 (snuff, pogo, onto the foothold 2848-2944 at 1248). With W-ff out the far
+  band climbs from the floor to the bridge (the permanence way). Zone `snuff` (0.85) frames the tip.
+- **Falls:** from 18 drop points on the faces, the bridge, the upper rung and the chimney she lands within 600 px:
+  rungs 3264 / 2752, the ledge and buttress 2240, the floor 1776, the bridge 1312, the foothold 1248, face ledges
+  1080 and 840, the upper rung 1000 (1856-2700), chimney rungs 1900 / 2400. (A ledge 64+ px off a face she
+  climbs catches a one-wall climber's kick-out and she bounces between it and the face: keep ledges right against
+  the face or well clear of it.)
+- **Top:** the near face from the foothold to the rim is clean (no lamp's pull, no hawker's lane). **The crown wick
+  is a choice off the climb:** `wick-crown` (2560, 720) over the upper rung (a hop from the rung is caught), its cut
+  stub (2380-2460, y 760: a standing cut from 2440), `hawk-crown` on its rhythm (`orbit: wick-crown`, perches 2300 /
+  2820 at 570, clear of the face). The rim 576 from 2944 east. `root-knot` (bark, 1 cut, full height, 3136) bars it;
+  trigger `root-cut` sets `wood-root-ladder`. P5 3456. The **finale**: trigger `crown` (3392-3584) `hold: 540,
+  finale: true, endSets: "wood-crown-gone"`; gate `crown-gate` (3712-3776) shuts the `canopy` exit until the hold
+  ends. Stage: `cloud`, `vista` (1920, -150, zoom 0.5, hold 9 s), `rootFall`, the root ladder down the near face.
+- **Fades:** `reformPatch: true` (8036fc0: the nearest patch at or below where she lay): a fade above the rest ledge
+  re-forms her at P-ledge, below it at P3; `reform` (P3) stays as the fallback. Never in R8.
+- **The first visit (round 4: it lasted 10 s):** the glimpse trigger is P3's patch box (1224-1336) with `hold: 300,
+  finale: true` (a long beat; the rest happens inside it); the **east arch is shut** (`arch-gate`, flag
+  `wood-firefly-glimpse`) until it has played. `stage.glimpse` frames the crown ring and W-ff (2752, 1300, 0.5, 6 s).
+  Tatter: `marks.tatter` looks up at W-ff until the glimpse; `stage.tatters`: it leads her out of the east arch
+  (`climb.path` + `lead`) until `wood-climbout`, sits under the trunk looking up until the root, then climbs the root.
+- **For the creatures agent:** `hawk-crown` keeps swooping through the finale's wide frame: it should leave on
+  `wood-crown` (the finale trigger's flag). No creature field reads a flag yet.
 - Gotcha: a scratchpad is shared by sibling agents: use your own subfolder for probes. Keep in-progress room data
   loadable in the shared tree (a room that fails to parse breaks every agent's tests): work in a scratch copy.
 

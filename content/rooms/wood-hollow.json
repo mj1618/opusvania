@@ -31,7 +31,12 @@
         "w": 640,
         "h": 384,
         "zoom": 0.5,
-        "bounds": { "x": 0, "y": 0, "w": 3840, "h": 4208 }
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 3840,
+          "h": 4208
+        }
       },
       {
         "id": "snuff",
@@ -126,12 +131,13 @@
   "triggers": [
     {
       "id": "glimpse",
-      "x": 1152,
+      "x": 1224,
       "y": 3648,
-      "w": 256,
+      "w": 112,
       "h": 192,
       "sets": "wood-firefly-glimpse",
-      "hold": 180
+      "hold": 300,
+      "finale": true
     },
     {
       "id": "root-cut",
@@ -257,9 +263,9 @@
     {
       "tag": "trunk",
       "x": 2944,
-      "y": 1640,
+      "y": 1776,
       "w": 896,
-      "h": 1176,
+      "h": 1040,
       "kick": "west"
     },
     {
@@ -275,7 +281,7 @@
       "x": 2944,
       "y": 1344,
       "w": 896,
-      "h": 296,
+      "h": 432,
       "kick": false
     },
     {
@@ -315,12 +321,6 @@
     },
     {
       "tag": "root",
-      "x": 2720,
-      "y": 1760,
-      "w": 136
-    },
-    {
-      "tag": "root",
       "x": 1792,
       "y": 1312,
       "w": 192
@@ -329,7 +329,7 @@
       "tag": "root",
       "x": 2112,
       "y": 1312,
-      "w": 672
+      "w": 512
     },
     {
       "tag": "root",
@@ -339,15 +339,45 @@
     },
     {
       "tag": "root",
-      "x": 2736,
-      "y": 912,
-      "w": 144
+      "x": 2880,
+      "y": 1080,
+      "w": 64
+    },
+    {
+      "tag": "root",
+      "x": 2112,
+      "y": 1776,
+      "w": 832
     },
     {
       "tag": "root",
       "x": 2880,
-      "y": 1080,
+      "y": 840,
       "w": 64
+    },
+    {
+      "tag": "root",
+      "x": 1856,
+      "y": 1000,
+      "w": 844
+    },
+    {
+      "tag": "root",
+      "x": 2380,
+      "y": 760,
+      "w": 80
+    },
+    {
+      "tag": "root",
+      "x": 1792,
+      "y": 1900,
+      "w": 192
+    },
+    {
+      "tag": "root",
+      "x": 1792,
+      "y": 2400,
+      "w": 192
     }
   ],
   "thorns": [
@@ -385,6 +415,15 @@
       "h": 576,
       "flag": "wood-crown-gone",
       "kick": false
+    },
+    {
+      "id": "arch-gate",
+      "x": 3712,
+      "y": 3584,
+      "w": 64,
+      "h": 256,
+      "flag": "wood-firefly-glimpse",
+      "kick": false
     }
   ],
   "lures": [
@@ -397,7 +436,7 @@
     {
       "id": "wick-firefly",
       "kind": "wick",
-      "x": 2788,
+      "x": 2620,
       "y": 1460,
       "spin": 1,
       "after": "wood-firefly-glimpse"
@@ -405,8 +444,8 @@
     {
       "id": "wick-crown",
       "kind": "wick",
-      "x": 2838,
-      "y": 540,
+      "x": 2560,
+      "y": 720,
       "spin": -1
     },
     {
@@ -428,16 +467,16 @@
       "id": "dang-knot",
       "kind": "dangler",
       "x": 2380,
-      "y": 1336,
+      "y": 1800,
       "facing": 1,
-      "drop": 880,
+      "drop": 400,
       "guards": "wick-rest"
     },
     {
       "id": "hawk-crown",
       "kind": "hawker",
-      "x": 2648,
-      "y": 470,
+      "x": 2400,
+      "y": 600,
       "facing": 1,
       "radius": 160,
       "hp": 3,
@@ -453,10 +492,6 @@
     {
       "from": "w",
       "to": "p3"
-    },
-    {
-      "from": "p3",
-      "to": "e"
     },
     {
       "from": "p3",
@@ -509,6 +544,19 @@
       "from": "p5",
       "to": "p-ledge",
       "oneWay": true
+    },
+    {
+      "from": "p3",
+      "to": "glimpse"
+    },
+    {
+      "from": "p3",
+      "to": "e",
+      "flags": ["wood-firefly-glimpse"]
+    },
+    {
+      "from": "e",
+      "to": "p3"
     }
   ],
   "marks": {
@@ -516,8 +564,8 @@
       "x": 2700,
       "y": 3840,
       "facing": 1,
-      "want": [2788, 1460],
-      "until": "wood-root-ladder"
+      "want": [2620, 1460],
+      "until": "wood-firefly-glimpse"
     },
     "notes": [
       {
@@ -533,7 +581,7 @@
       {
         "x": 1150,
         "y": 3604,
-        "text": "P3 moon patch. THE GLIMPSE (hold 180): the camera looks up the trunk; the firefly hangs W-ff in frame"
+        "text": "P3 moon patch. THE GLIMPSE (hold 300): the camera rises the trunk to the crown; the firefly hangs W-ff; Tatter leads her out. The east arch is shut until it has played"
       },
       {
         "x": 1700,
@@ -583,15 +631,15 @@
       {
         "x": 2960,
         "y": 1780,
-        "text": "the near face holds up to W-ff; a slick stretch with the thorn band over it"
+        "text": "the near face holds from P-ledge up to the floor under W-ff; slick above, the thorn band in it"
       },
       {
-        "x": 2600,
-        "y": 1860,
-        "text": "the glow-cap ledge: stand under W-ff, out of its pull; jump up into it"
+        "x": 2300,
+        "y": 1830,
+        "text": "the floor under W-ff (one-way): stand under it, out of its pull; hop up into it: the catch is a choice"
       },
       {
-        "x": 2420,
+        "x": 2380,
         "y": 1560,
         "text": "W-ff (lit after the glimpse): caught, beat free up-left: thrown onto the knot bridge"
       },
@@ -606,9 +654,9 @@
         "text": "FIND: bark knot, W-knot behind it"
       },
       {
-        "x": 2600,
-        "y": 980,
-        "text": "the open crown: W-crown off the rim's lip; hawk-crown swoops through its orbit on a rhythm (perches 260 each side); a mistimed catch drops her onto the catch ledge"
+        "x": 1900,
+        "y": 1050,
+        "text": "the open crown: W-crown hangs off the climb, over the upper rung; hawk-crown swoops through its orbit on a rhythm; a cut from the stub at 760 snuffs it"
       },
       {
         "x": 3090,
@@ -629,14 +677,40 @@
     "stage": {
       "tatters": [
         {
+          "x": 2700,
+          "y": 3840,
+          "facing": 1,
+          "when": "wood-firefly-glimpse",
+          "until": "wood-climbout",
+          "climb": {
+            "path": [[2700, 3840], [3780, 3840]],
+            "lead": 260
+          }
+        },
+        {
+          "x": 2700,
+          "y": 3840,
+          "facing": 1,
+          "want": [2620, 1460],
+          "when": "wood-climbout",
+          "until": "wood-root-ladder"
+        },
+        {
           "x": 2896,
           "y": 3840,
           "facing": 1,
           "when": "wood-root-ladder",
-          "climb": { "path": [[2896, 3840], [2896, 576], [3360, 576]] }
+          "climb": {
+            "path": [[2896, 3840], [2896, 576], [3360, 576]]
+          }
         }
       ],
-      "hatchTree": { "x": -27472, "y": -3392, "top": -6208, "w": 224 },
+      "hatchTree": {
+        "x": -27472,
+        "y": -3392,
+        "top": -6208,
+        "w": 224
+      },
       "moon": {
         "x": 3500,
         "y": 120,
@@ -654,9 +728,9 @@
         "x": 2752,
         "y": 1300,
         "zoom": 0.5,
-        "secs": 4.5,
-        "path": [[3600, 3500], [3150, 3000], [2780, 2500], [2760, 1900], [2788, 1460]],
-        "away": [[2788, 1460], [2760, 900], [2752, 200], [2752, -500]]
+        "secs": 6,
+        "path": [[3600, 3500], [3150, 3000], [2780, 2500], [2700, 1900], [2620, 1460]],
+        "away": [[2620, 1460], [2760, 900], [2752, 200], [2752, -500]]
       },
       "ladders": [
         {
@@ -723,5 +797,6 @@
         "y": 576
       }
     ]
-  }
+  },
+  "reformPatch": true
 }

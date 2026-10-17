@@ -10,9 +10,10 @@ import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
  * The oak (`wood-hollow`): the hollow at its foot, the trunk and the crown in one room (area 1 plan r3 item 3,
  * director doc "Round 3 revisions" 1; memory/rooms.md "The oak"), and the area-2 stub `wood-canopy` east of the
  * crown. Each claim is measured in the sim. Room coordinates: the floor y 3840; the column x 2560-2944 (catch
- * rungs at 3264 and 2752); the rest ledge y 2240 (P-ledge, W-rest over the column); W-ff (2788, 1460) over the
- * glow-cap ledge (1800), the thorn band 1404-1544 on the near face; the knot bridge y 1312 (from the band's top
- * to its tip at 2784); the rim y 576 with the root's knot, P5, the finale trigger and the gate.
+ * rungs at 3264 and 2752); the rest ledge y 2240 (P-ledge on its buttress, W-rest); the floor under W-ff (1776)
+ * and W-ff (2620, 1460) out of the near face's reach, the thorn band 1404-1544 above where the face holds; the
+ * knot bridge y 1312 (from the band's top to its tip over W-ff); the upper rung (1000) under the crown wick
+ * (2560, 720), off the climb; the rim y 576 with the root's knot, P5, the finale trigger and the gate (round 4).
  */
 
 const R = ActionBit.right;
@@ -27,7 +28,8 @@ const has = (ev: SimEvent[], type: string, id?: string) =>
 const OAK = getRoom('wood-hollow');
 const FLOOR = 3840;
 const LEDGE = 2240;
-const CAP_LEDGE = 1760;
+const MID = 1776;
+const WFF = { x: 2620, y: 1460 };
 const BRIDGE = 1312;
 const RIM = 576;
 const S0 = 2560;
@@ -99,7 +101,7 @@ function land(s: Play, mask = 0, max = 240): SimEvent[] {
 
 /** From the bridge's tip: walk off east and down-cut after `k` frames (the pogo snuff of W-ff). */
 function tipCut(s: Play, k: number): SimEvent[] {
-  s.g.teleport(2760, BRIDGE);
+  s.g.teleport(2600, BRIDGE);
   let ev = s.run(0, 3);
   for (let i = 0; i < 30 && s.g.state.player.grounded; i++) ev = ev.concat(s.run(R));
   return ev.concat(s.run(0, k), s.run(D | A, 1), s.run(D, 6));
@@ -122,20 +124,20 @@ describe('the oak: one room from the roots to the crown', () => {
     expect(getRoom('wood-canopy').title).toMatch(/^STUB/);
   });
 
-  it('with the claws the climb from the floor to the crown never leaves the room; without them the walls slide', () => {
+  it('with the claws the climb from the floor to the rest ledge and up the near face never leaves the room', () => {
     const s = play();
     s.g.teleport(2700, FLOOR);
     // Up the column's west face to the rest ledge (no room change on the way).
     let ev = climb(s, -1, () => s.g.state.player.grounded && s.feet().y <= LEDGE, 1500, 14);
     expect(s.feet().y).toBe(LEDGE);
-    // Over to P-ledge's buttress and up the near face into W-ff's grip.
+    // Over to P-ledge's buttress and up the near face onto the floor under W-ff.
     for (let i = 0; i < 80 && s.feet().x < 2860; i++) ev = ev.concat(s.run(R | (i < 20 ? J : 0)));
     ev = ev.concat(
       land(s, R),
-      climb(s, 1, () => s.g.state.player.lure >= 0, 900),
+      climb(s, 1, () => s.g.state.player.grounded && s.feet().y === MID, 900),
     );
     expect(has(ev, 'roomExit')).toBe(false);
-    expect(s.lureIs('wick-firefly')).toBe(true);
+    expect(s.feet().y).toBe(MID);
     const no = play({ abilities: ['glide'] });
     no.g.teleport(2700, FLOOR);
     climb(no, 1, () => false, 600, 14);
@@ -152,10 +154,16 @@ describe('the oak: one room from the roots to the crown', () => {
       [2790, 2400],
       [2924, 2100],
       [2924, 1700],
+      [2400, 1700],
+      [2200, 1350],
+      [2500, 1350],
       [2924, 1200],
       [2924, 1000],
       [2924, 700],
-      [2770, BRIDGE + 30],
+      [2300, 900],
+      [2000, 900],
+      [1880, 2000],
+      [1880, 2500],
     ];
     for (const [x, y] of drops) {
       const s = play({ glimpse: false });
@@ -164,24 +172,34 @@ describe('the oak: one room from the roots to the crown', () => {
       const y0 = s.feet().y;
       for (let i = 0; i < 300 && !s.g.state.player.grounded; i++) s.run(0);
       expect(s.g.state.player.grounded, `${x},${y}`).toBe(true);
-      expect(s.feet().y - y0, `${x},${y} -> ${s.feet().y}`).toBeLessThanOrEqual(620);
+      expect(s.feet().y - y0, `${x},${y} -> ${s.feet().y}`).toBeLessThanOrEqual(600);
     }
   });
 });
 
 describe('the hollow at the foot of the oak', () => {
-  it('the glimpse is a held beat of 180 at P3, and the firefly hangs its glow-cap where W-ff burns, in the room', () => {
+  it('the glimpse at P3 holds 300 (the rest happens in it); the firefly hangs W-ff in the room; the east arch is shut until then', () => {
     const glimpse = (OAK.triggers ?? []).find((t) => t.id === 'glimpse');
-    expect(glimpse?.hold).toBe(180);
+    expect(glimpse?.hold).toBe(300);
     const path = OAK.marks?.stage?.glimpse?.path ?? [];
-    const wff = (OAK.lures ?? []).find((l) => l.id === 'wick-firefly');
-    expect(path[path.length - 1]).toEqual([wff?.x, wff?.y]);
-    expect(OAK.marks?.tatter?.want).toEqual([wff?.x, wff?.y]);
+    expect(path[path.length - 1]).toEqual([WFF.x, WFF.y]);
+    expect(OAK.marks?.tatter?.want).toEqual([WFF.x, WFF.y]);
+    // Before the glimpse the arch is shut: a runner who never reached P3 (placed past it) stays in.
+    const shut = play({ glimpse: false });
+    shut.g.teleport(3500, FLOOR);
+    shut.run(R, 120);
+    expect(shut.g.state.room).toBe('wood-hollow');
+    expect(shut.feet().x).toBeLessThan(3712);
+    // In from the west: P3's beat holds her 300 frames and rests her; then the arch is open.
     const s = play({ glimpse: false });
-    s.g.teleport(1500, FLOOR);
+    s.g.teleport(900, FLOOR);
     s.run(0, 3);
-    const ev = s.run(L, 30);
-    expect(ev.find((e) => e.type === 'storyHold')).toMatchObject({ id: 'glimpse', frames: 180 });
+    let ev = s.run(R, 60);
+    expect(ev.find((e) => e.type === 'storyHold')).toMatchObject({ id: 'glimpse', frames: 300 });
+    ev = ev.concat(s.run(R, 300));
+    expect(has(ev, 'patchRest')).toBe(true);
+    for (let i = 0; i < 600 && s.g.state.room === 'wood-hollow'; i++) s.run(R);
+    expect(s.g.state.room).toBe('wood-hawkers');
   });
 });
 
@@ -243,80 +261,87 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
     expect(after.g.state.lures.out[i]).toBe(0);
   });
 
-  it('the glow-cap ledge stands under it out of its pull; a jump up from it is caught', () => {
-    for (const x of [2730, 2788, 2846]) {
-      const s = play();
-      s.g.teleport(x, CAP_LEDGE);
-      expect(has(s.run(0, 120), 'lureCaught')).toBe(false);
-      expect(s.feet()).toEqual({ x, y: CAP_LEDGE });
-      s.run(J, 10);
-      for (let i = 0; i < 40 && s.g.state.player.lure < 0; i++) s.run(0);
-      expect(s.lureIs('wick-firefly'), `from ${x}`).toBe(true);
+  it('climbing the near face never enters its pull: a held-right climber from P-ledge ends on the floor under it', () => {
+    let floor = 0;
+    for (const delay of [0, 2, 4, 6, 8, 10, 12, 14]) {
+      for (const press of [4, 7, 12]) {
+        const s = play();
+        s.g.teleport(2880, LEDGE);
+        s.run(0, 2);
+        let slide = 0;
+        let pr = 0;
+        const ev: SimEvent[] = [];
+        for (let f = 0; f < 600; f++) {
+          const p = s.g.state.player;
+          slide = p.wallDir === 1 && !p.grounded ? slide + 1 : 0;
+          if ((p.grounded && f > 2 && s.feet().y > 2000) || slide === delay + 1) pr = press;
+          ev.push(...s.run(R | (pr > 0 ? J : 0)));
+          pr--;
+          if (s.g.state.player.grounded && s.feet().y === MID) break;
+        }
+        expect(has(ev, 'lureCaught'), `delay ${delay} press ${press}`).toBe(false);
+        expect(has(ev, 'thornHit'), `delay ${delay} press ${press}`).toBe(false);
+        if (s.feet().y === MID) floor++;
+      }
     }
+    // Measured: 16 of 24 press rhythms reach the floor (the rest are still climbing at 10 s), none caught, no thorns.
+    expect(floor).toBeGreaterThanOrEqual(12);
   });
 
-  it('beaten free up-left she is thrown over the thorn band onto the knot bridge (>= 90%); straight right, the thorns', () => {
+  it('the floor under it stands out of its pull; a hop up from it is caught; beaten free up-left she lands on the bridge', () => {
     let bridge = 0;
     let n = 0;
-    for (const x of [2730, 2788, 2846]) {
+    for (const x of [2560, 2620, 2680]) {
+      const s = play();
+      s.g.teleport(x, MID);
+      expect(has(s.run(0, 120), 'lureCaught')).toBe(false);
+      expect(s.feet()).toEqual({ x, y: MID });
       for (const gap of [6, 9, 12, 15]) {
         for (const wait of [0, 7, 14]) {
-          const s = play();
-          s.g.teleport(x, CAP_LEDGE);
-          s.run(0, 2);
-          s.run(J, 10);
-          for (let i = 0; i < 40 && s.g.state.player.lure < 0; i++) s.run(0);
-          s.run(0, wait);
-          const ev = beatFree(s, U | L, gap).concat(land(s, L, 160));
+          const q = play();
+          q.g.teleport(x, MID);
+          q.run(0, 2);
+          q.run(J, 10);
+          for (let i = 0; i < 40 && q.g.state.player.lure < 0; i++) q.run(0);
+          expect(q.lureIs('wick-firefly'), `hop from ${x}`).toBe(true);
+          q.run(0, wait);
+          const ev = beatFree(q, U | L, gap).concat(land(q, L, 160));
           n++;
-          expect(has(ev, 'thornHit'), `x ${x} gap ${gap} wait ${wait}`).toBe(false);
-          if (s.feet().y === BRIDGE) bridge++;
+          expect(has(ev, 'thornHit')).toBe(false);
+          if (q.feet().y === BRIDGE) bridge++;
         }
       }
     }
+    // Measured: 36 of 36.
     expect(bridge / n).toBeGreaterThanOrEqual(0.9);
-    const ur = play();
-    ur.g.teleport(2788, CAP_LEDGE);
-    ur.run(J, 10);
-    for (let i = 0; i < 40 && ur.g.state.player.lure < 0; i++) ur.run(0);
-    // Straight across (right): into the thorn band. (Up-right reaches the near face over it.)
-    expect(has(beatFree(ur, R).concat(land(ur, R, 160)), 'thornHit')).toBe(true);
   });
 
-  it('from the bridge’s tip a walk-off down-cut puts it out; the pogo carries her over the thorns; a late cut lands on the glow-cap ledge', () => {
-    for (const k of [0, 2, 4, 6]) {
+  it('from the bridge’s tip a walk-off down-cut puts it out and the pogo carries her to the foothold over the thorns', () => {
+    for (const k of [0, 2, 4]) {
       const s = play();
       expect(has(tipCut(s, k), 'lureSnuff', 'wick-firefly'), `cut at ${k}`).toBe(true);
       const after: SimEvent[] = [];
-      for (let i = 0; i < 60 && s.g.state.player.wallDir !== 1 && !s.g.state.player.grounded; i++)
+      for (let i = 0; i < 90 && s.g.state.player.wallDir !== 1 && !s.g.state.player.grounded; i++)
         after.push(...s.run(R));
-      expect(s.feet().y, `cut at ${k}`).toBeLessThan(1404);
+      expect(s.feet(), `cut at ${k}`).toEqual({ x: 2890, y: 1248 });
       expect(has(after, 'thornHit')).toBe(false);
     }
-    // A miss: no cut at all. She is caught (thrown again) or lands on the glow-cap ledge, never on the thorns.
+    // A miss (no cut): caught again (another throw) or onto the floor under it, never the thorns.
     const m = play({ glimpse: false });
-    m.g.teleport(2760, BRIDGE);
+    m.g.teleport(2600, BRIDGE);
     m.run(0, 3);
     const ev = m.run(R, 8).concat(land(m, 0, 120));
     expect(has(ev, 'thornHit')).toBe(false);
-    expect(m.feet().y).toBe(CAP_LEDGE);
+    expect(m.feet().y).toBe(MID);
   });
 
-  it('with W-ff out, a kick-glide from the near face reaches the far band; the band’s top is the bridge', () => {
-    for (const y of [1740, 1780, 1820]) {
-      const s = play({ glimpse: false });
-      s.g.teleport(2900, y);
-      s.run(R, 8);
-      expect(s.g.state.player.wallDir, `on the face at ${y}`).toBe(1);
-      let reached = false;
-      for (let i = 0; i < 150 && !reached && !s.g.state.player.grounded; i++) {
-        s.run(L | J);
-        reached = i > 10 && s.g.state.player.wallDir === -1;
-      }
-      expect(reached, `kick-glide from ${y}`).toBe(true);
-      climb(s, -1, () => s.g.state.player.grounded && s.feet().y <= BRIDGE, 600);
-      expect(s.feet().y).toBe(BRIDGE);
-    }
+  it('with W-ff out the way is still there: from the floor under it, the far band climbs to the bridge', () => {
+    const s = play({ glimpse: false });
+    s.g.teleport(2300, MID);
+    s.run(0, 3);
+    for (let i = 0; i < 80 && s.g.state.player.wallDir !== -1; i++) s.run(L);
+    climb(s, -1, () => s.g.state.player.grounded && s.feet().y <= BRIDGE, 900, 10);
+    expect(s.feet().y).toBe(BRIDGE);
   });
 
   it('the dark way: the hole at the ledge’s back, the tunnel and the chimney to the bridge; no lamp near; slower', () => {
@@ -335,7 +360,7 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
     const darkFrames = dark.g.state.frame;
     // The light way from the same ledge: across to the glow-cap ledge's foot of the near face, up, caught, thrown.
     const light = play();
-    light.g.teleport(2788, CAP_LEDGE);
+    light.g.teleport(WFF.x, MID);
     light.run(J, 10);
     for (let i = 0; i < 40 && light.g.state.player.lure < 0; i++) light.run(0);
     beatFree(light, U | L);
@@ -359,51 +384,36 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
   });
 });
 
-describe('the top of the trunk: the crown wick and its hawker', () => {
-  /** From the bridge (W-ff snuffed on the way) across to the near face over the thorns. */
-  function toUpperFace(): Play {
+describe('the top of the trunk: the near face to the rim; the crown wick off the climb', () => {
+  it('from the foothold over the thorns the near face climbs to the rim, out of the crown wick’s grip and its hawker’s lane', () => {
     const s = play();
-    tipCut(s, 2);
-    for (let i = 0; i < 60 && s.g.state.player.wallDir !== 1 && !s.g.state.player.grounded; i++) s.run(R);
-    return s;
-  }
+    s.g.teleport(2900, 1248);
+    s.run(0, 3);
+    const ev = climb(s, 1, () => s.g.state.player.grounded && s.feet().y <= RIM, 900);
+    expect(s.feet().y).toBe(RIM);
+    expect(has(ev, 'lureCaught')).toBe(false);
+    expect(has(ev, 'hurt')).toBe(false);
+  });
 
-  it('on a rhythm the hawker swoops through the crown wick’s orbit; the top of the climb is in its grip', () => {
+  it('the crown wick is a choice: a hop from the upper rung is caught; its hawker swoops through the orbit on a rhythm', () => {
     const r = play();
-    r.g.teleport(2780, 912);
+    r.g.teleport(2780, 1000);
     const passes = r
       .run(0, 500)
       .filter((e) => e.type === 'enemyDive' && (e as { id?: string }).id === 'hawk-crown');
     expect(passes.length).toBeGreaterThanOrEqual(2);
-    const s = toUpperFace();
-    const ev = climb(
-      s,
-      1,
-      () => s.g.state.player.lure >= 0 || (s.g.state.player.grounded && s.feet().y <= RIM),
-      900,
-    );
-    expect(has(ev, 'lureCaught', 'wick-crown')).toBe(true);
-  });
-
-  it('caught and beaten free up-right she is thrown onto the rim; caught as it passes, struck down onto a ledge under the orbit', () => {
-    const ends = new Set<number>();
-    for (let w = 0; w <= 240; w += 20) {
-      const q = toUpperFace();
-      q.run(R, w);
-      climb(q, 1, () => q.g.state.player.lure >= 0, 600);
-      beatFree(q, U | R);
-      land(q, R, 200);
-      ends.add(q.feet().y);
-    }
-    // Measured: 10 of 13 timings on the rim; the rest struck straight down onto a ledge under the orbit (1080).
-    expect(ends.has(RIM)).toBe(true);
-    for (const y of ends) expect([RIM, 912, 1080], `ended at ${y}`).toContain(y);
-  });
-
-  it('from the rim’s lip a standing cut puts the crown wick out and the hawker leaves', () => {
     const s = play();
-    s.g.teleport(2964, RIM);
-    s.run(L, 1);
+    s.g.teleport(2560, 1000);
+    s.run(0, 60);
+    s.run(J, 10);
+    for (let i = 0; i < 40 && s.g.state.player.lure < 0; i++) s.run(0);
+    expect(s.lureIs('wick-crown')).toBe(true);
+  });
+
+  it('from the stub beside it a standing cut puts the crown wick out and the hawker leaves', () => {
+    const s = play();
+    s.g.teleport(2440, 760);
+    s.run(R, 1);
     s.run(0, 2);
     const ev = s.run(A, 1).concat(s.run(0, 20));
     expect(has(ev, 'lureSnuff', 'wick-crown')).toBe(true);
@@ -453,22 +463,24 @@ describe('the crown: the root, P5, the cloud, the gate', () => {
     expect(g.feet().x).toBeLessThan(3712);
   });
 
-  it('a fade anywhere in the oak re-forms her in the oak: at her patch here, else at P3 (never in R8)', () => {
-    // Her patch in R8 (rested there), then a fade high in the trunk: P3.
-    const s = play();
-    s.g.state.save.patch = { room: 'wood-hawkers', id: 'p-dark' };
-    s.g.teleport(2900, 1000);
-    s.g.state.player.faded = 2;
-    s.run(0, 3);
-    expect(s.g.state.room).toBe('wood-hollow');
-    expect(s.feet()).toEqual({ x: 1280, y: FLOOR });
-    // Rested at P-ledge: there.
-    const r = play();
-    r.g.state.save.patch = { room: 'wood-hollow', id: 'p-ledge' };
-    r.g.teleport(2900, 1000);
-    r.g.state.player.faded = 2;
-    r.run(0, 3);
-    expect(r.feet()).toEqual({ x: 2880, y: LEDGE });
+  it('a fade in the oak re-forms her at its nearest patch at or below her: P-ledge above the ledge, P3 below (never R8)', () => {
+    const at = (x: number, y: number, patch?: { room: string; id: string }) => {
+      const s = play();
+      if (patch) s.g.state.save.patch = patch;
+      s.g.teleport(x, y);
+      s.g.state.player.faded = 2;
+      s.run(0, 3);
+      return { room: s.g.state.room, feet: s.feet() };
+    };
+    expect(at(2900, 1000, { room: 'wood-hawkers', id: 'p-dark' })).toEqual({
+      room: 'wood-hollow',
+      feet: { x: 2880, y: LEDGE },
+    });
+    expect(at(2400, BRIDGE)).toEqual({ room: 'wood-hollow', feet: { x: 2880, y: LEDGE } });
+    expect(at(2700, 3000, { room: 'wood-hawkers', id: 'p-dark' })).toEqual({
+      room: 'wood-hollow',
+      feet: { x: 1280, y: FLOOR },
+    });
   });
 
   it('the crown lantern (postgame) never pulls on the way up: every critical-path point is out of its field', () => {
@@ -477,7 +489,8 @@ describe('the crown: the root, P5, the cloud, the gate', () => {
     const radius = defaultTuning.lures.kinds.lantern.radius;
     const pts: [number, number][] = [];
     for (let y = RIM; y <= FLOOR; y += 32) pts.push([S1 - 20, y - 40], [S0 + 20, y - 40]);
-    for (let x = 1792; x <= 2784; x += 32) pts.push([x, BRIDGE - 40]);
+    for (let x = 1792; x <= 2624; x += 32) pts.push([x, BRIDGE - 40]);
+    for (let x = 2112; x <= 2944; x += 32) pts.push([x, MID - 40]);
     for (let x = S1; x <= 3840; x += 32) pts.push([x, RIM - 40]);
     for (const [x, y] of pts)
       expect(Math.hypot(x - (lantern?.x ?? 0), y - (lantern?.y ?? 0)), `${x},${y}`).toBeGreaterThan(
