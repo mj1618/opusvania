@@ -186,9 +186,7 @@ Each hunts one moment of the lamp verb; placement is the builders', these are th
 - **`straightKnock`** (hawker row): any other blow of it while she stands knocks her straight up, never sideways (the
   crown rim). Struck in the air or caught, she flies along her aimed throw (`strikeOut`) as before.
 - **Round 4** (area1-video-r2 #4: 0 hawker hits on a caught moth in 9 runs: a masher is free in ~0.4 s):
-  - after a pass it rests `passRestFrames` 90 on its perch: a catch then is safe (the timing). Caught in its orbit
-    any later, it snatches at once: a `snapPassFrames` 20 pass (no tell; its rhythm was the tell), crossing the orbit
-    16 f after the catch, before the fastest masher is free.
+  - (round 4's snatch, `snapPassFrames`, is off since round 5: see below.)
   - a pass bends through her when she circles in its orbit (it takes a moth; she is one): a mistimed catch is struck.
   - its pull-back (6 f) is harmless, still the tell (crown: a climber wall-jumped into its perch as a pass began).
   - `rim: <x>` (spawn): every blow of it sends her toward that x, up and over (caught: thrown at the throw's speed
@@ -197,6 +195,45 @@ Each hunts one moment of the lamp verb; placement is the builders', these are th
     every creature of the room away (the crown hawker dived red through the finale).
 - Lab station F (`?room=lab-creatures`, x ~13500): hawk-f on a rhythm through wick-f. Greybox reads: the tell ring at
   the perch, then the swoop's trail through the flame.
+
+## Round 5 (area1-plan-r5): the boss under the oak, the throw-cut, the carriers, a fair R8
+- **The old burrback, three phases** (`phased`, 16 hp; `EnemyState.phase/camp/taps/streak`; spawn `taproot: [x0, x1]`
+  = the root column's x span; its den floor = the spawn's y):
+  - P1 (16 to 9) the beetle rule. A missed ram opens it 2 cuts (`missOpenHits`), a wall or a flip 3.
+  - **Anti-camp** (every phase): her feet over its floor (on a ledge, or hopping about one; in P2 also under a
+    ledge) for `campFrames` 180: `enemyRear` 36 f, then `enemySlam` (`shook`): she is kicked off toward its home
+    (`slamKick` 22, `slamLift` 9), and it does not brace for `slamCalmFrames` 75. In P2 the slam comes at its next
+    wall bounce.
+  - P2 at 60%: `enemyPhase {2}`, a big slam, `curl` 90 f (30 on a retry: save flag `<id>:rolled`), then `roll`: a ball
+    `rollTouchPx` 64 high (a hop clears it), 6 px/f +1.5 a wall bounce (`enemyBounce`) to 13; it turns at a ledge's
+    mouth too. Cuts spark; a landing on it (slash or not), her thrown body, or a throw-cut: `enemyUnroll {how}`,
+    belly-up as a wall stun. Its roll hitting her: it stops curled 90 f (`rollRestFrames`).
+  - P3 at 25%: `curl` beat, then no brace: a 28 f tell, rams of 640 px at 12 px/f, 3 in a row (a hit or ending under a
+    ledge ends the run), rest 70 f. Into the taproot: `enemyTaproot {n}`, open 300 f for 2 cuts; the second lies open
+    900 f, no limit: her last cut. Death: the kit's `sets` flag and story hold as before.
+  - Slow pilot (den replica: walls, a taproot, a one-way ledge): all 24 win, 19 first try, 28-89 s; masher fades.
+    Human-like in d8fe1be's den (with `radius` 1000, `taproot` [3200, 3296], `crack` set locally): 4 of 9 kill it
+    (average 43 / 66 s, skilled 25 / 28 s), 0-1 fades there; the rest leave the fight after 90-160 s (they hop the
+    ball but walk off from it lying open, and never use W-den). A roll tires after 6 walls (`rollTireBounces`: open,
+    no standoff). The bots want a roll tactic (pogo it, cut it open, the throw).
+  - **Past the taproot** (the strip it cannot reach) counts as camping in every phase: the slam throws her back
+    under the root along the floor (`slamRefugeKick` 42, no lift).
+  - **`crack`** (spawn): the flag set as phase 2 begins (the plug first cracks; `flagSet`); a retry has it: short beat.
+- **Throw-cut, creature side** (`throwCut` = `player.attackHeavy`, the sim's; `KindRules.heavy`, `enemyHeavy`):
+  never glances; a beetle braced or walking flips belly-up; the rolling old burrback unrolls; a hawker in its tell,
+  dive or stall is knocked out and flees (`leave`) once it rights itself (3x power kills a 3 hp one); a dangler's
+  silk parts (it falls stunned, no damage).
+- **R4's adult flips by itself** (`stepRamPx` 240, `wallFlip`, lamp rooms only): she stands on a step past its range
+  end (a wall at its body height), feet 24-240 px up, within `strikePx` of the face: it braces and rams the face, and
+  any ram into a wall lays it belly-up (`stunned`, harmless) for `recoverWallFrames`.
+- **R8 hawker, fair** (plan §6b): it never starts a pass while she is caught in its orbit (the tell holds); a pass
+  that strikes her knocks her out of the pull and that lamp gives her `passGraceFrames` 120; one strike a pass.
+- **Danglers**: no drop within `returnCalmFrames` 120 of a fall return.
+- **The carriers** (`kind: 'carrier'`, src/sim/enemies/carrier.ts; spawn `x, y` = trail start (feet), `trail:
+  [[x, y], ...]` (last = the crack) or `follow: '<id>'`, `phase` 0..1, `guards`): on rails at 1.4 px/f, `under` 120 f
+  in the crack (`enemyUnder` / `enemyEmerge`; render: don't draw `under`), sense always, 1 hp, bite on contact; one
+  with her on its trail ahead (36 px) tells 18 f (`enemyNotice`) and snaps 10 f (`bite`). Lamp out: they finish the
+  trip and stay in (`gone`). Lab station F has three under lantern-f.
 
 ## Round 4 for every hunter: nothing arrives from off-screen while she is helpless
 `EnemyState.catchSeen`: whether it was within `enemies.screenHalfW/H` (900 x 500) of her as her latest catch (a lamp's

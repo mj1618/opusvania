@@ -385,7 +385,13 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
       frames: 0,
     });
   }
-  e.chargeLeft = frames(B.chargePx, 1);
+  startBrace(e, info, B);
+  return true;
+}
+
+/** The brace begins (`windup`, `enemyWindup`): facing as it is. */
+function startBrace(e: EnemyState, info: StepInfo, B: Row): void {
+  e.chargeLeft = frames(e.phase === 3 ? B.p3ChargePx : B.chargePx, 1);
   const n = tellFrames(e, B);
   // (Curled, it uncurls into the brace.)
   e.tuck = 0;
@@ -409,6 +415,46 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
     px: e.chargeLeft,
     speed: e.rams < B.firstTellRams ? B.chargeSpeed * B.firstRamSpeedMult : B.chargeSpeed,
   });
+}
+
+/**
+ * Round 5 (area1-plan-r5 §6d: "the beetle rule clicks only at the boss"): she stands on a step just past
+ * the end of its range, the step's face a wall at its body height, her feet 24..`stepRamPx` over its floor
+ * and within `strikePx` of the face: it braces at her anyway and rams the face. A wall stops it: in a lamp
+ * room it flips belly-up (`wallFlip`), and she sees the belly before she has to use it (R4's root step).
+ */
+function stepBrace(e: EnemyState, info: StepInfo, B: Row): boolean {
+  const p = info.state.player;
+  if (B.stepRamPx <= 0 || B.strikePx <= 0 || e.sense === 0 || e.strikeCd > 0 || e.calm > 0) return false;
+  if (p.hp <= 0 || p.faded > 0 || !p.grounded || heldUnseen(e, p) || p.kindling >= 0 || p.kindlingLamp >= 0)
+    return false;
+  if (e.roused === 0 && seenBy(e, info) === 0) return false;
+  const rise = e.y + e.h - (p.y + p.h);
+  if (rise < 24 || rise > B.stepRamPx) return false;
+  span(e, info.scene, B);
+  const side = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
+  const face = side > 0 ? RANGE_R : RANGE_L;
+  // (The range ends at a wall on her side: the step's face.)
+  if (!solidAt(info.scene, side > 0 ? face : face - 1, e.y, 1, e.h - 2)) return false;
+  const past = side > 0 ? p.x - face : face - (p.x + p.w);
+  if (past < -p.w / 2 || past > B.strikePx) return false;
+  // (Not from point blank either: room for a ram that reaches the face.)
+  if ((side > 0 ? face - (e.x + e.w) : e.x - face) < 24) return false;
+  if (e.facing !== side) {
+    e.facing = side;
+    info.events.push({
+      type: 'enemyTurn',
+      id: e.id,
+      kind: e.kind,
+      x: e.x + e.w / 2,
+      y: e.y + e.h / 2,
+      dir: e.facing,
+      cause: 'hunt',
+      frames: 0,
+    });
+  }
+  e.stunned = false;
+  startBrace(e, info, B);
   return true;
 }
 
@@ -445,7 +491,10 @@ function spend(
   e.chargeLeft = 0;
   // (The old burrback: winded, its shell is open (`openWinded`: after any ram; else only a wall stun).)
   // Only a ram that missed her or met a wall lays it open: the window is earned (feel review r2).
-  e.stunned = B.pogoShell && !touch && (cause === 'wall' || B.openWinded);
+  // (Round 5: in a lamp room any ram that meets a wall flips it belly-up, open: `wallFlip`.)
+  e.stunned =
+    (B.pogoShell && !touch && (cause === 'wall' || B.openWinded)) ||
+    (cause === 'wall' && B.wallFlip && e.sense !== 0);
   e.taken = 0;
   e.strikeCd = n + cooldown;
   e.rams++;
@@ -464,6 +513,287 @@ function spend(
     tired,
     broken,
   });
+  if (e.phase === 3) desperate(e, info, B, cause);
+  // (Phases 1-2: a missed ram opens it for `missOpenHits` cuts, a wall (or a flip) for `openHits`.)
+  else if (e.phase > 0) e.streak = cause === 'wall' ? B.openHits : B.missOpenHits;
+}
+
+/**
+ * Phase 3's ram is over (round 5): into the taproot it is stunned long (`enemyTaproot`; the second time for
+ * good: her last cut); into a wall, the usual stun; otherwise it turns and rams again at once, `p3Streak`
+ * in a row, then rests (shut).
+ */
+function desperate(e: EnemyState, info: StepInfo, B: Row, cause: string): void {
+  if (cause === 'wall') {
+    e.streak = 0;
+    const front = e.facing > 0 ? e.x + e.w : e.x;
+    if (e.targetX >= 0 && front >= e.targetX - 8 && front <= e.targetY + 8) {
+      e.taps++;
+      const n = frames(e.taps >= 2 ? B.lastStunFrames : B.taprootFrames, 1);
+      e.timer = n;
+      e.stunned = true;
+      e.strikeCd = n + frames(B.strikeCooldown);
+      info.events.push({
+        type: 'enemyTaproot',
+        id: e.id,
+        kind: e.kind,
+        x: front,
+        y: e.y + e.h / 2,
+        n: e.taps,
+        frames: n,
+      });
+    }
+    return;
+  }
+  e.stunned = false;
+  // (A ram that hit her ends the run of rams: it rests, as after the last. So does one that ended under a
+  // ledge: no ram after ram into a corner.)
+  const roofed = lowCeiling(info.scene, e.x, e.y, e.w, e.h, B.strikeHeadroomPx);
+  e.streak = cause === 'touch' || roofed ? B.p3Streak : e.streak + 1;
+  if (e.streak < B.p3Streak) {
+    e.timer = 1;
+    e.strikeCd = 1;
+  } else {
+    e.streak = 0;
+    e.timer = frames(B.p3RestFrames, 1);
+    e.strikeCd = e.timer + 1;
+  }
+}
+
+/** The cuts an open window takes: `openHits`, phase 3's `p3OpenHits`, none at all after the second taproot. */
+function openHitsOf(e: EnemyState, B: Row): number {
+  if (e.phase === 3) return e.taps >= 2 ? 0 : B.p3OpenHits;
+  return e.phase > 0 && e.streak > 0 ? e.streak : B.openHits;
+}
+
+/**
+ * The slam (round 5, anti-camp; the big one at phase 2): `enemySlam`; she stands on a ledge (any top over
+ * its den floor) within `slamReachPx`: she is shaken off it, toward it.
+ */
+function slam(e: EnemyState, info: StepInfo, B: Row, big: boolean): void {
+  const p = info.state.player;
+  const cx = e.x + e.w / 2;
+  const pc = p.x + p.w / 2;
+  const past = refuge(e, p);
+  const shook =
+    p.hp > 0 &&
+    p.faded === 0 &&
+    (p.y + p.h < e.fromY - B.campRisePx ||
+      past ||
+      lowCeiling(info.scene, p.x, p.y, p.w, p.h, B.strikeHeadroomPx)) &&
+    Math.abs(pc - cx) <= B.slamReachPx;
+  if (shook) {
+    // (Toward the middle of its den (its home), off the ledge and out from under it; from past the taproot,
+    // back under it to its side, harder.)
+    const d = past ? (cx < pc ? -1 : 1) : e.homeX < pc ? -1 : 1;
+    p.kickX = d * (past ? B.slamRefugeKick : B.slamKick);
+    // (Along the floor from past the root: lifted, she would meet its underside.)
+    if (!past) {
+      p.vy = -B.slamLift;
+      p.grounded = false;
+    }
+  }
+  e.camp = 0;
+  // (She is down off her ledge: a beat to find her feet before it may brace.)
+  e.strikeCd = Math.max(e.strikeCd, frames(B.slamCalmFrames));
+  info.events.push({
+    type: 'enemySlam',
+    id: e.id,
+    kind: e.kind,
+    x: cx,
+    y: e.fromY,
+    big,
+    shook,
+    px: B.slamReachPx,
+  });
+}
+
+/** She is past the taproot from it (the strip it cannot reach: the root stops a body 96 tall, not hers). */
+function refuge(e: EnemyState, p: { x: number; w: number }): boolean {
+  if (e.targetX < 0) return false;
+  const cx = e.x + e.w / 2;
+  return cx < e.targetX ? p.x >= e.targetY : p.x + p.w <= e.targetX;
+}
+
+/** A phase begins (`enemyPhase`): 2 = a big slam, then it curls and rolls; 3 = a beat, then the desperate rams. */
+function toPhase(e: EnemyState, info: StepInfo, B: Row, n: number): void {
+  e.phase = n;
+  e.taps = 0;
+  e.streak = 0;
+  e.stunned = false;
+  e.taken = 0;
+  e.knockVx = 0;
+  e.vx = 0;
+  e.rx = 0;
+  info.events.push({
+    type: 'enemyPhase',
+    id: e.id,
+    kind: e.kind,
+    x: e.x + e.w / 2,
+    y: e.y + e.h / 2,
+    phase: n,
+  });
+  if (n === 2) {
+    slam(e, info, B, true);
+    // (The plug first cracks: the spawn's `crack` flag (staging's), else `<id>:rolled`. A retry skips the long
+    // beat: the save has the flag already.)
+    const key = info.scene.enemies?.find((q) => q.id === e.id)?.crack ?? `${e.id}:rolled`;
+    const flags = info.state.save.flags;
+    const retry = flags.includes(key);
+    if (!retry) {
+      flags.push(key);
+      info.events.push({ type: 'flagSet', flag: key, by: e.id, x: e.x + e.w / 2, y: e.y + e.h / 2 });
+    }
+    setMode(e, 'curl', frames(retry ? B.transRetryFrames : B.transFrames, 1));
+  } else setMode(e, 'curl', frames(B.recurlFrames, 1));
+}
+
+/** Curled, it rolls at her (`enemyRoll`). */
+function startRoll(e: EnemyState, info: StepInfo, B: Row): void {
+  const p = info.state.player;
+  e.facing = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
+  setMode(e, 'roll', 0);
+  e.ramSpeed = B.rollSpeed;
+  // (`taps` counts this roll's wall bounces in phase 2.)
+  e.taps = 0;
+  e.rx = 0;
+  info.events.push({
+    type: 'enemyRoll',
+    id: e.id,
+    kind: e.kind,
+    x: e.x + e.w / 2,
+    y: e.y + e.h / 2,
+    dir: e.facing,
+    speed: e.ramSpeed,
+  });
+}
+
+/** Out of its roll (a pogo, her thrown body, a throw-cut): belly-up, open, as after a wall (`enemyUnroll`). */
+function unroll(e: EnemyState, info: StepInfo, how: 'pogo' | 'thrown' | 'heavy' | 'tired'): void {
+  info.events.push({ type: 'enemyUnroll', id: e.id, kind: e.kind, x: e.x + e.w / 2, y: e.y + e.h / 2, how });
+  e.ramSpeed = 0;
+  e.vx = 0;
+  // (However it ends, it lies open as after a wall: long enough to cross its den to it.)
+  spend(e, info, 'wall');
+  e.stunned = true;
+}
+
+/** One step of the roll: across its den, bouncing off walls (and brinks), faster each time. Its touch is live. */
+function roll(e: EnemyState, info: StepInfo, B: Row): boolean {
+  const p = info.state.player;
+  for (const ev of info.events)
+    if (ev.type === 'enemyBlock' && ev.id === e.id && ev.slash === 'down') {
+      unroll(e, info, 'pogo');
+      return false;
+    }
+  // (Curled, it is a ball `rollTouchPx` high at its feet: a hop clears it.)
+  const top = e.y + e.h - B.rollTouchPx;
+  const over = p.x < e.x + e.w && e.x < p.x + p.w && p.y < e.y + e.h && top < p.y + p.h;
+  if (over && p.thrown && p.lureThrow > 0) {
+    unroll(e, info, 'thrown');
+    p.vy = -info.t.attack.pogoSpeed;
+    return false;
+  }
+  // (Coming down on top of the ball (her feet over its top a step ago): a pogo, slash or not.)
+  if (over && !p.grounded && p.vy > 0 && p.y + p.h - p.vy <= top + info.t.enemies.stompPx) {
+    unroll(e, info, 'pogo');
+    p.vy = -info.t.attack.pogoSpeed;
+    return false;
+  }
+  e.vx = e.facing * e.ramSpeed;
+  e.rx += e.vx;
+  let n = roundHalfAway(e.rx);
+  e.rx -= n;
+  while (n !== 0) {
+    const d = n > 0 ? 1 : -1;
+    // (A ledge's mouth turns it as a wall does: under an escape ledge she is never rolled over.)
+    if (roofAhead(e, info.scene, d, B.strikeHeadroomPx) || nudge(e, info.scene, d, 0) !== 0) {
+      e.facing = d > 0 ? -1 : 1;
+      e.rx = 0;
+      e.ramSpeed = Math.min(B.rollMax, e.ramSpeed + B.rollAccel);
+      info.events.push({
+        type: 'enemyBounce',
+        id: e.id,
+        kind: e.kind,
+        x: d > 0 ? e.x + e.w : e.x,
+        y: e.y + e.h / 2,
+        dir: e.facing,
+        speed: e.ramSpeed,
+      });
+      // (Anti-camp in the roll: the wall it meets shakes her off her ledge.)
+      if (e.camp >= frames(B.campFrames)) slam(e, info, B, false);
+      // (No standoff: after `rollTireBounces` walls it rolls itself dizzy and lies open, briefly.)
+      if (++e.taps >= B.rollTireBounces) {
+        e.taps = 0;
+        unroll(e, info, 'tired');
+        return false;
+      }
+      break;
+    }
+    n -= d;
+  }
+  return true;
+}
+
+/**
+ * The old burrback's boss phases (round 5), each step before its ordinary rules: the camp count, the phase
+ * changes, the rear and slam, the curl, the roll. Returns what `update` returns, or null to go on with the
+ * ordinary rules (phase 1 and 3's brace and ram, every stagger and open window).
+ */
+function phaseStep(e: EnemyState, info: StepInfo, B: Row): boolean | null {
+  const p = info.state.player;
+  const cx = e.x + e.w / 2;
+  // (Up off its floor, on a ledge or hopping about one, or tucked under one: the count runs; only her feet
+  // on its open floor end it.)
+  const near = p.hp > 0 && p.faded === 0 && Math.abs(p.x + p.w / 2 - cx) <= B.slamReachPx;
+  // (Under a ledge counts in the roll only: its rams stop at a ledge's mouth, open, and that is a window.
+  // Past the taproot, where it cannot follow, counts always.)
+  const up =
+    near &&
+    (p.y + p.h < e.fromY - B.campRisePx ||
+      refuge(e, p) ||
+      (e.phase === 2 && p.grounded && lowCeiling(info.scene, p.x, p.y, p.w, p.h, B.strikeHeadroomPx)));
+  if (up) e.camp++;
+  else if (p.grounded || p.hp <= 0 || p.faded > 0) e.camp = 0;
+  if (e.mode === 'hurt' || e.mode === 'dead') return null;
+  if (e.phase === 1 && e.hp <= Math.floor(e.hpMax * B.p2At)) {
+    toPhase(e, info, B, 2);
+    return false;
+  }
+  if (e.phase === 2 && e.hp <= Math.floor(e.hpMax * B.p3At)) {
+    toPhase(e, info, B, 3);
+    return false;
+  }
+  if (e.mode === 'rear') {
+    e.vx = 0;
+    if (--e.timer <= 0) {
+      slam(e, info, B, false);
+      setMode(e, 'walk', 0);
+    }
+    return false;
+  }
+  if (e.mode === 'curl') {
+    e.vx = 0;
+    if (--e.timer <= 0) {
+      if (e.phase === 2) startRoll(e, info, B);
+      else setMode(e, 'walk', 0);
+    }
+    return false;
+  }
+  if (e.mode === 'roll') return roll(e, info, B);
+  const free = (e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert') && e.knockVx === 0;
+  if (free && e.phase === 2) {
+    setMode(e, 'curl', frames(B.recurlFrames, 1));
+    return false;
+  }
+  if (free && e.camp >= frames(B.campFrames)) {
+    const n = frames(B.rearFrames, 1);
+    setMode(e, 'rear', n);
+    e.camp = 0;
+    info.events.push({ type: 'enemyRear', id: e.id, kind: e.kind, x: cx, y: e.y + e.h / 2, frames: n });
+    return false;
+  }
+  return null;
 }
 
 /**
@@ -481,6 +811,7 @@ function sheltered(e: EnemyState, info: StepInfo): boolean {
 }
 
 function tellFrames(e: EnemyState, B: Row): number {
+  if (e.phase === 3) return frames(B.p3TellFrames, 1);
   const base = e.span > 0 ? e.span : B.windupFrames;
   return frames(e.rams < B.firstTellRams ? base * B.firstTellMult : base, 1);
 }
@@ -747,6 +1078,10 @@ export const burrback: KindRules = {
     e.walkLeft = nextWalk(e, rowOf(t, e));
     // (A placement may give its brace a longer tell: R4's teaching one. Kept in `span`, unused by crawlers.)
     e.span = Math.max(0, spawn.windup ?? 0);
+    // (Round 5, the old burrback: its den floor (feet) and the taproot's x span, -1 = none.)
+    e.fromY = Math.round(spawn.y);
+    e.targetX = spawn.taproot ? spawn.taproot[0] : -1;
+    e.targetY = spawn.taproot ? spawn.taproot[1] : -1;
     // (The old burrback sleeps in its den until she comes down to it.)
     if (rowOf(t, e).asleep) {
       e.mode = 'sleep';
@@ -830,6 +1165,11 @@ export const burrback: KindRules = {
       if (--e.timer <= 0) setMode(e, 'walk', 0);
       return false;
     }
+    // (Round 5: the old burrback's boss phases: the slam, the roll, the taproot.)
+    if (e.phase > 0) {
+      const r = phaseStep(e, info, B);
+      if (r !== null) return r;
+    }
     // Dispersed and out of any fight: back to sleep.
     if (e.dispersed && free && e.roused === 0 && e.stirred === 0 && e.tuck === 0) {
       setMode(e, 'sleep', 0);
@@ -850,6 +1190,8 @@ export const burrback: KindRules = {
     if (free && e.calm === 0 && dodgeDrop(e, info)) return true;
     // She is in front of it, close: it braces (out of a walk, a rest, a turn or a flinch).
     if (free && brace(e, info)) return true;
+    // (On the step past its range: it rams the step's face, round 5.)
+    if (free && stepBrace(e, info, B)) return true;
     // The director's beetle hunts landings (wood-area1-director.md): she lands in its light, on its ground,
     // within `landHuntPx`: it turns to her at once (and walks at her: its brace comes as she is in front).
     // (Lamp rooms only: the test grove's tuned fights are left as they were.)
@@ -953,6 +1295,8 @@ export const burrback: KindRules = {
         e.ramSpeed = B.ramUnderJump ? underJump(e, info, B) : 0;
         // (Round 4: the first rams of a try are slower too: a late jump still clears them.)
         if (e.ramSpeed === 0 && e.rams < B.firstTellRams) e.ramSpeed = B.chargeSpeed * B.firstRamSpeedMult;
+        // (Phase 3: desperate, fast.)
+        if (e.phase === 3) e.ramSpeed = Math.max(e.ramSpeed, B.p3ChargeSpeed);
         events.push({
           type: 'enemyCharge',
           id: e.id,
@@ -1169,13 +1513,23 @@ export const burrback: KindRules = {
   /** Inside a lit lantern's sanctuary (it was there when the lantern caught, or was shoved in): harmless. */
   harmless(e, info) {
     // (Round 4: only its ram hurts (`bodyHarmless`); the body shoulders her out instead.)
-    if (rowOf(info.t, e).bodyHarmless && e.mode !== 'charge' && e.mode !== 'feint') return true;
+    if (rowOf(info.t, e).bodyHarmless && e.mode !== 'charge' && e.mode !== 'feint' && e.mode !== 'roll')
+      return true;
     return sheltered(e, info);
   },
 
   /** Its touch hurt her (or met her kindling): it is shoved back from her, flinches, and turns away. */
   touched(e, info, dir) {
     if (e.mode === 'dead') return;
+    // (Rolling, it hit her: it stops, curled and shut, `rollRestFrames` (no ball back at her every second), then
+    // rolls at her again.)
+    if (e.mode === 'roll') {
+      e.facing = dir > 0 ? -1 : 1;
+      e.rx = 0;
+      e.vx = 0;
+      setMode(e, 'curl', frames(rowOf(info.t, e).rollRestFrames, 1));
+      return;
+    }
     const B = rowOf(info.t, e);
     const away = dir > 0 ? -1 : 1;
     // Its ram hit her: it bounces back off her, turns away and stands spent.
@@ -1240,6 +1594,8 @@ export const burrback: KindRules = {
    */
   touches(e, p, t) {
     const B = rowOf(t, e);
+    // (Rolling: the ball, `rollTouchPx` high.)
+    if (e.mode === 'roll') return p.y + p.h > e.y + e.h - B.rollTouchPx;
     if (!B.domeContact) return true;
     const H = e.h * B.domeHeight;
     const sy = H * B.domeShoulder;
@@ -1249,6 +1605,30 @@ export const burrback: KindRules = {
     const u = Math.min(1, Math.abs(nx - cx) / (e.w / 2));
     const top = e.y + (e.h - H) + sy * (1 - Math.sqrt(1 - u * u));
     return p.y + p.h > top;
+  },
+
+  /**
+   * A throw-cut (round 5): braced (or curled), it is flipped belly-up from any side, open as after a wall
+   * (`recoverWallFrames`); the blow lands.
+   */
+  heavy(e, info) {
+    if (e.mode === 'dead' || e.mode === 'sleep') return false;
+    if (e.mode === 'roll') {
+      unroll(e, info, 'heavy');
+      return false;
+    }
+    if (
+      e.braced ||
+      e.mode === 'feint' ||
+      e.tuck > 0 ||
+      e.mode === 'walk' ||
+      e.mode === 'alert' ||
+      e.mode === 'pause'
+    ) {
+      spend(e, info, 'wall');
+      e.stunned = true;
+    }
+    return false;
   },
 
   /** Her down slash on its back is always a pogo (the framework's stomp). */
@@ -1273,7 +1653,7 @@ export const burrback: KindRules = {
       return 0;
     }
     // Open, it takes `openHits` cuts at most, then the window closes as its stagger ends.
-    if (B.pogoShell && e.stunned && B.openHits > 0 && ++e.taken >= B.openHits)
+    if (B.pogoShell && e.stunned && openHitsOf(e, B) > 0 && ++e.taken >= openHitsOf(e, B))
       e.strikeCd = Math.min(e.strikeCd, frames(B.strikeCooldown));
     const k = knockback * rowOf(t, e).knockScale;
     const kb = dir === 'fwd' ? k : k * rowOf(t, e).knockVertical;

@@ -165,7 +165,12 @@ export function fightTactics(scene: Scene, i: number, toward: number, lead = 0):
         const d = toE(s, e);
         // `lead` (a person, frames behind what they see): the jump goes where the ram will be, not where it is.
         const near = dx(s, e) - Math.abs(e.vx) * lead < 200;
-        if (p.grounded && (e.mode === 'charge' || e.mode === 'windup') && near && !(prev & J))
+        if (
+          p.grounded &&
+          (e.mode === 'charge' || e.mode === 'windup' || e.mode === 'roll') &&
+          near &&
+          !(prev & J)
+        )
           return J | dirBit(d);
         if (!p.grounded) return J | dirBit(d);
         if (dx(s, e) < 120 && !braced(e) && !(prev & A)) return A | (p.facing !== d ? dirBit(d) : 0);
@@ -194,7 +199,7 @@ export function fightTactics(scene: Scene, i: number, toward: number, lead = 0):
             }
             if (
               p.grounded &&
-              (e.mode === 'charge' || (e.mode as string) === 'feint') &&
+              (e.mode === 'charge' || (e.mode as string) === 'feint' || e.mode === 'roll') &&
               dx(s, e) - Math.abs(e.vx) * lead < 150 &&
               !(prev & J)
             )

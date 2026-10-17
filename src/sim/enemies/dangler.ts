@@ -205,6 +205,9 @@ export const dangler: KindRules = {
     }
     if (e.mode === 'sit') {
       at(e, e.fromX, perchY(e));
+      // (Round 5: never over a fall's return: put back on safe ground, she has `returnCalmFrames` first.)
+      for (const ev of info.events)
+        if (ev.type === 'fallReturn') e.strikeCd = Math.max(e.strikeCd, frames(D.returnCalmFrames));
       // It hunts the stop (wood-area1-director.md): it drops once she has stood still in its sight for
       // `stopFrames` (on the spot she stands on to cut the flame); one running through is let pass.
       // (`lost` counts those frames.)
@@ -289,6 +292,20 @@ export const dangler: KindRules = {
     if (!segmentInBox(top, box.x, box.y, box.x + box.w, box.y + box.h)) return -1;
     cut(e, info);
     return 0;
+  },
+
+  /** A throw-cut parts its silk wherever it lands (hanging): it falls, and lies stunned. */
+  heavy(e, info) {
+    const hanging =
+      e.mode === 'drop' ||
+      e.mode === 'swing' ||
+      e.mode === 'stall' ||
+      e.mode === 'climb' ||
+      e.mode === 'windup' ||
+      e.mode === 'sit';
+    if (!hanging || e.broken) return false;
+    cut(e, info);
+    return true;
   },
 
   /** Its lamp went out: it climbs away up its thread for good (gone at once if it was out when she came in). */

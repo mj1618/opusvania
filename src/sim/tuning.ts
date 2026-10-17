@@ -714,6 +714,61 @@ export const defaultTuning = withVariants({
     touchCalmFrames: 0,
     /** It braces at her under a roof lower than `strikeHeadroomPx` too (its ram pulls up at the roof's mouth). */
     braceUnderRoof: false,
+    /**
+     * Round 5 (lamp rooms only): `wallFlip` = a ram that meets a wall flips it belly-up, open (stunned,
+     * harmless); `stepRamPx` = it rams the face of a step past its range's end at her standing on it (her
+     * feet up to this over its floor): R4's adult shows its belly by itself. 0 = never.
+     */
+    wallFlip: true,
+    stepRamPx: 240,
+    /**
+     * Round 5 (area1-plan-r5 §1): the old burrback as a three-phase boss (`phased`). Phase 2 from `p2At` of
+     * its hp, phase 3 from `p3At`.
+     * - Anti-camp: she stands on a ledge (feet `campRisePx` over its den floor) `campFrames`: it rears
+     *   (`rearFrames`, the tell) and slams: every ledge in `slamReachPx` shakes her off it (a kick of `slamKick`
+     *   toward it, a lift of `slamLift`).
+     * - Phase 2: a big slam, it curls (`transFrames`; `transRetryFrames` on a retry) and rolls: from `rollSpeed`
+     *   px/f, `rollAccel` faster at each wall, at most `rollMax`. Cuts spark off; a pogo on it, her thrown body
+     *   or a throw-cut flips it belly-up (as a wall stun); getting up it curls (`recurlFrames`) and rolls on.
+     * - Phase 3: no brace, a `p3TellFrames` tell, rams of `p3ChargePx` at `p3ChargeSpeed`, `p3Streak` in a row,
+     *   then a `p3RestFrames` rest. A ram into the taproot (`taproot` spawn) stuns it `taprootFrames` (open
+     *   `p3OpenHits` cuts); the second lays it belly-up for good (`lastStunFrames`, no limit): her last cut.
+     */
+    phased: false,
+    p2At: 0.6,
+    p3At: 0.25,
+    campFrames: 180,
+    campRisePx: 24,
+    rearFrames: 36,
+    slamReachPx: 2000,
+    slamKick: 22,
+    slamLift: 9,
+    /** From past the taproot (the strip it cannot reach) the slam throws her back under it, this hard. */
+    slamRefugeKick: 42,
+    /** After a slam it may not brace for this long (she is finding her feet). */
+    slamCalmFrames: 75,
+    transFrames: 90,
+    transRetryFrames: 30,
+    rollSpeed: 6,
+    rollAccel: 1.5,
+    rollMax: 13,
+    recurlFrames: 24,
+    /** Its roll hit her: it stops, curled (harmless), this long before it rolls on. */
+    rollRestFrames: 90,
+    /** Curled, the ball is this high at its feet (its touch; render draws it so): a hop of hers clears it. */
+    rollTouchPx: 64,
+    /** After this many wall bounces in one roll it rolls itself dizzy: open briefly (no standoff in phase 2). */
+    rollTireBounces: 6,
+    p3TellFrames: 28,
+    p3ChargePx: 640,
+    p3ChargeSpeed: 12,
+    p3Streak: 3,
+    p3RestFrames: 70,
+    taprootFrames: 300,
+    p3OpenHits: 2,
+    /** Phases 1-2: a ram that missed her opens it for this many cuts (a wall, a flip: `openHits`). */
+    missOpenHits: 2,
+    lastStunFrames: 900,
     ramUnderMax: 40,
     underExtraPx: 60,
     // (First-timer r2: the plain one's touch is its drawn dome too.)
@@ -812,7 +867,10 @@ export const defaultTuning = withVariants({
      * 0 = no snatch.
      */
     passRestFrames: 90,
-    snapPassFrames: 20,
+    // (Round 5, area1-plan-r5 §6b: "never starts a dive while she is caught": the snatch is off (0); a pass
+    // that strikes her throws her out of the pull, and that lamp leaves her alone `passGraceFrames`.)
+    snapPassFrames: 0,
+    passGraceFrames: 120,
     /** A blow of a hawker with a `rim` (spawn): free, she is kicked toward it at `rimKick` px/f, lifted `rimLift`. */
     rimKick: 9,
     rimLift: 11,
@@ -968,6 +1026,8 @@ export const defaultTuning = withVariants({
     stillVx: 3,
     /** A landing of hers in its sight is a stop too (it tells at once). */
     landStop: true,
+    /** After a fall puts her back on safe ground it starts no drop for this long (round 5: none over a return). */
+    returnCalmFrames: 120,
     minDrop: 120,
     maxDrop: 640,
     tellFrames: 30,
@@ -990,6 +1050,29 @@ export const defaultTuning = withVariants({
     contactDamage: 1,
     value: 0,
     valueFinisher: 0,
+  },
+  /**
+   * The carriers (ants; area1-plan-r5 §2.1, src/sim/enemies/carrier.ts): scavengers on a trail from under a
+   * lamp to a crack. `speed` px/f along the trail; `underFrames` in the crack before the next trip; one on
+   * the trail ahead of her (`noticePx`, her feet within `trailYPx` of its) tells `noticeFrames` and bites
+   * (`biteFrames`, a snap of `biteLunge` px/f), then lets her be `biteCooldownFrames`. 1 hp: one cut.
+   */
+  carrier: {
+    width: 30,
+    height: 14,
+    hp: 1,
+    speed: 1.4,
+    underFrames: 120,
+    noticePx: 36,
+    trailYPx: 16,
+    noticeFrames: 18,
+    biteFrames: 10,
+    biteLunge: 8,
+    biteCooldownFrames: 60,
+    hurtFrames: 10,
+    hurtSafeFrames: 0,
+    deadFrames: 30,
+    contactDamage: 1,
   },
   /**
    * The Weaver, the wood's boss (docs/design/regions/wood.md §6, memory/bosses.md). One exam a phase:
@@ -1391,7 +1474,7 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       // Feel review r2: twice the size (it was shorter than she is), its dome and ram to match.
       width: 160,
       height: 96,
-      hp: 12,
+      hp: 16,
       speed: 2.2,
       noticePx: 2400,
       dozePx: 0,
@@ -1442,6 +1525,11 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       bodyHarmless: true,
       landBounce: true,
       touchRestFrames: 90,
+      // (Its den has its own rule for ledges: the slam.)
+      stepRamPx: 0,
+      // (Round 5: the three-phase boss under the oak; 16 hp: phase 1 to 9, phase 2 to 4, phase 3 the last 4: two
+      // taproot windows of 2 cuts.)
+      phased: true,
       pogoShell: true,
       asleep: true,
       wakePx: 1400,

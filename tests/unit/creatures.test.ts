@@ -271,6 +271,9 @@ describe('the old burrback', () => {
     o.strikeCd = 212;
     o.stunned = true;
     o.hp = 1;
+    // (Its last cut: phase 3, belly-up after the second taproot.)
+    o.phase = 3;
+    o.taps = 2;
     s.place(o.x - 30, FLOOR);
     s.state.player.facing = 1;
     const ev = s.run('A1 .2');
@@ -370,6 +373,9 @@ describe('the old burrback', () => {
     o.strikeCd = 212;
     o.stunned = true;
     o.taken = 0;
+    // (The window's mechanism, unphased; from just over its first third: 3 cuts cross it.)
+    o.phase = 0;
+    o.hp = 12;
     s.place(o.x - 30, FLOOR);
     s.state.player.facing = 1;
     const ev = s.run('A1 .22 A1 .22 A1 .40');
@@ -922,18 +928,26 @@ describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not r
     expect((ev.find((x) => x.e.type === 'enemyDive')?.f ?? 0) - notice).toBe(H.passTellFrames);
   });
 
-  it('caught as it passes, she is struck straight down (a pip and the slow way below)', () => {
+  it('caught as it passes, she is struck straight down, out of the pull, with 2 s before that lamp can take her again (round 5)', () => {
     const s = newSim(scene());
     s.place(1400, FLOOR);
-    // Wait for the first tell, then into the core and stay.
+    // Wait for a pass to begin, then into the core in the middle of it.
     let ev: SimEvent[] = [];
-    for (let i = 0; i < 400 && !types(ev).includes('enemyNotice'); i++) ev = s.run('.1');
+    for (let i = 0; i < 400 && !types(ev).includes('enemyDive'); i++) ev = s.run('.1');
+    s.run('.8');
     s.place(2000, 540);
-    let hurt: SimEvent[] = [];
-    for (let i = 0; i < 80 && !types(hurt).includes('hurt'); i++) hurt = s.run('.1');
+    const hurt: SimEvent[] = [];
+    for (let i = 0; i < 40 && !types(hurt).includes('hurt'); i++) hurt.push(...s.run('.1'));
     expect(of(hurt, 'hurt')[0]?.source).toEqual({ kind: 'hawker', id: 'h' });
-    expect(s.state.player.vx).toBe(0);
-    expect(s.state.player.vy).toBeGreaterThan(0);
+    expect(types(hurt)).toContain('lureFree');
+    const p = s.state.player;
+    expect(p.vx).toBe(0);
+    expect(p.vy).toBeGreaterThan(0);
+    expect(p.lure).toBe(-1);
+    expect(p.lureGraceFrames).toBeGreaterThanOrEqual(H.passGraceFrames - 2);
+    // Never twice in one pass.
+    const rest = s.run(`.${H.passFrames}`);
+    expect(of(rest, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
   });
 
   it('caught just after a pass, a slow player (beats 6-10 frames apart, 20-30 frames to start) is free long before the next', () => {
@@ -951,29 +965,23 @@ describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not r
       }
   });
 
-  it('round 4: caught after its rest, she is snatched before a masher is free (a pass through her, struck down)', () => {
+  it('round 5: it never starts a pass while she is caught in its orbit: its tell holds until she is free', () => {
     const s = newSim(scene());
     s.place(1400, FLOOR);
     let ev: SimEvent[] = [];
     for (let i = 0; i < 600 && !types(ev).includes('enemySnatch'); i++) ev = s.run('.1');
     for (let i = 0; i < 60 && s.state.enemies[0]?.mode === 'dive'; i++) s.run('.1');
     s.run(`.${H.passRestFrames + 2}`);
+    // Caught and held there (no beats) through where its next pass would have come.
     s.place(2000, 540);
-    // Mashing from the first frame, as fast as beats count (`lures.beatCd` apart): still held as it crosses.
-    const cd = T.lures.beatCd;
-    const seq = ['.4', 'J1', `.${cd}`, 'J1', `.${cd}`, 'J1', '.30'].join(' ').split(' ');
-    let f = 0;
-    let at = -1;
-    for (const tok of seq) {
-      const m = /^(\D*)(\d+)$/.exec(tok);
-      for (let k = 0; k < Number(m?.[2] ?? 0) && at < 0; k++, f++)
-        if (of(s.run(`${m?.[1] ?? '.'}1`), 'hurt').some((e) => e.source?.kind === 'hawker')) at = f;
-    }
-    // Struck as it crosses the orbit (`diveWindupFrames` + half its snap pass after the catch), straight down.
-    expect(at).toBeGreaterThan(0);
-    expect(at).toBeLessThanOrEqual(H.diveWindupFrames + H.snapPassFrames);
-    expect(s.state.player.vy).toBeGreaterThan(0);
-    expect(s.state.player.vx).toBe(0);
+    const held = s.run(`.${H.passPeriod + 40}`);
+    expect(s.state.player.lure).toBeGreaterThanOrEqual(0);
+    expect(types(held)).not.toContain('enemyDive');
+    expect(of(held, 'hurt')).toEqual([]);
+    // Free, the pass comes.
+    const free = s.run('J1 .6 J1 .6 J1 .60');
+    expect(types(free)).toContain('lureFree');
+    expect(types(free)).toContain('enemyDive');
   });
 
   it('round 4: a rim (spawn) sends her toward it, up and over, whatever struck her', () => {
@@ -985,9 +993,8 @@ describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not r
     );
     s.place(1400, FLOOR);
     let ev: SimEvent[] = [];
-    for (let i = 0; i < 600 && !types(ev).includes('enemySnatch'); i++) ev = s.run('.1');
-    for (let i = 0; i < 60 && s.state.enemies[0]?.mode === 'dive'; i++) s.run('.1');
-    s.run(`.${H.passRestFrames + 2}`);
+    for (let i = 0; i < 400 && !types(ev).includes('enemyDive'); i++) ev = s.run('.1');
+    s.run('.8');
     s.place(2000, 540);
     const x0 = s.state.player.x;
     let hit = false;
@@ -1050,6 +1057,298 @@ describe('round 4: nothing arrives from off-screen while she is helpless', () =>
     const free = held.findIndex((e) => e.type === 'lureFree');
     const tell = held.findIndex((e) => e.type === 'enemyWindup');
     expect(tell === -1 || (free >= 0 && tell > free)).toBe(true);
+  });
+});
+
+describe('round 5: the old burrback as a three-phase boss under the oak (area1-plan-r5 §1)', () => {
+  const O = T.oldBurrback;
+  // The den in miniature: walls at 0 and 3000, a taproot column at 2000-2080, an escape ledge on the west wall.
+  const den = () =>
+    room(
+      [{ id: 'o', kind: 'oldBurrback', x: 1200, y: FLOOR, facing: -1, radius: 2000, taproot: [2000, 2080] }],
+      [],
+      {
+        solids: [
+          { tag: 'ground', x: 0, y: FLOOR, w: 4000, h: 200 },
+          { tag: 'ground', x: 0, y: 0, w: 300, h: FLOOR },
+          { tag: 'ground', x: 3000, y: 0, w: 300, h: FLOOR },
+          // (The taproot stops 88 px over the floor: she walks under it, the 96-tall beetle cannot.)
+          { tag: 'root', x: 2000, y: 0, w: 80, h: FLOOR - 88 },
+        ],
+        oneWays: [{ tag: 'root', x: 300, y: FLOOR - 192, w: 160 }],
+      },
+    );
+  const awake = (s: Sim) => {
+    const o = enemy(s, 'o');
+    o.mode = 'walk';
+    o.dozing = false;
+    return o;
+  };
+
+  it('on a ledge for campFrames, it rears (a tell) and slams: she is shaken off toward it', () => {
+    const s = newSim(den());
+    const o = awake(s);
+    o.strikeCd = 9999;
+    s.place(380, FLOOR - 192);
+    const ev = s.run(`.${O.campFrames + O.rearFrames + 4}`);
+    const rear = ev.findIndex((e) => e.type === 'enemyRear');
+    const slam = ev.findIndex((e) => e.type === 'enemySlam');
+    expect(rear).toBeGreaterThanOrEqual(0);
+    expect(slam).toBeGreaterThan(rear);
+    expect(of(ev, 'enemySlam')[0]?.shook).toBe(true);
+    s.run('.60');
+    expect(s.state.player.y + s.state.player.h).toBe(FLOOR);
+    expect(types(ev)).not.toContain('hurt');
+  });
+
+  it('past the taproot (where it cannot follow) is no refuge: the slam throws her back under the root', () => {
+    const s = newSim(den());
+    const o = awake(s);
+    o.strikeCd = 9999;
+    s.place(2400, FLOOR);
+    const ev = s.run(`.${O.campFrames + O.rearFrames + 4}`);
+    expect(of(ev, 'enemySlam')[0]?.shook).toBe(true);
+    s.run('.90');
+    expect(s.state.player.x + s.state.player.w).toBeLessThan(2000);
+  });
+
+  it('phase 2 sets its `crack` flag (the plug first cracks); a retry has the flag and a short beat', () => {
+    const sc = den();
+    const sp = sc.enemies?.[0];
+    if (sp) sp.crack = 'den-cracked';
+    const s = newSim(sc);
+    const o = awake(s);
+    o.hp = Math.floor(o.hpMax * O.p2At);
+    s.place(700, FLOOR);
+    const ev = s.run('.4');
+    expect(of(ev, 'flagSet')[0]?.flag).toBe('den-cracked');
+    expect(o.timer).toBeGreaterThan(O.transRetryFrames);
+    const t = newSim(sc);
+    t.state.save.flags.push('den-cracked');
+    const p = awake(t);
+    p.hp = Math.floor(p.hpMax * O.p2At);
+    t.place(700, FLOOR);
+    t.run('.2');
+    expect(p.mode).toBe('curl');
+    expect(p.timer).toBeLessThanOrEqual(O.transRetryFrames);
+  });
+
+  it('at p2At of its health: a big slam, a curl, then it rolls, faster at each wall; a landing on it flips it open', () => {
+    const s = newSim(den());
+    const o = awake(s);
+    o.hp = Math.floor(o.hpMax * O.p2At);
+    s.place(700, FLOOR);
+    let ev = s.run(`.${O.transFrames + 4}`);
+    expect(of(ev, 'enemyPhase')[0]?.phase).toBe(2);
+    expect(of(ev, 'enemySlam')[0]?.big).toBe(true);
+    expect(types(ev)).toContain('enemyRoll');
+    // Out of its way (on the far side of the taproot), let it bounce a few times.
+    s.place(2600, FLOOR);
+    ev = s.run('.400');
+    const b = of(ev, 'enemyBounce').map((e) => e.speed);
+    expect(b.length).toBeGreaterThanOrEqual(2);
+    expect(b[1] ?? 0).toBeGreaterThan(b[0] ?? 0);
+    // Dropped onto it: a pogo, and it lies open.
+    expect(o.mode).toBe('roll');
+    s.place(o.x + o.w / 2 + (o.facing > 0 ? 40 : -40), o.y - 120);
+    const un: SimEvent[] = [];
+    for (let i = 0; i < 40 && !types(un).includes('enemyUnroll'); i++) un.push(...s.run('.1'));
+    expect(of(un, 'enemyUnroll')[0]?.how).toBe('pogo');
+    expect(o.stunned).toBe(true);
+    expect(types(un)).not.toContain('hurt');
+  });
+
+  it('rolling, cuts spark off it; a throw-cut flips it open (and her thrown body does too)', () => {
+    for (const how of ['cut', 'heavy'] as const) {
+      const s = newSim(den());
+      const o = awake(s);
+      o.phase = 2;
+      o.mode = 'roll';
+      o.ramSpeed = 0.01;
+      o.facing = -1;
+      s.place(o.x - 30, FLOOR);
+      s.state.player.facing = 1;
+      if (how === 'heavy') {
+        s.state.player.thrown = true;
+        s.state.player.lureThrow = 20;
+      }
+      const ev = s.run('A1 .3');
+      if (how === 'cut') {
+        expect(types(ev)).toContain('enemyBlock');
+        expect(o.mode).toBe('roll');
+      } else {
+        expect(of(ev, 'enemyUnroll')[0]?.how).toBe('heavy');
+        expect(o.stunned).toBe(true);
+      }
+    }
+  });
+
+  it('phase 3: desperate rams; one into the taproot stuns it long, the second lays it open for good', () => {
+    const s = newSim(den());
+    const o = awake(s);
+    o.phase = 3;
+    o.hp = 3;
+    o.x = 1300;
+    o.facing = 1;
+    // She stands just west of the taproot and jumps each ram: it meets the root.
+    let taps = 0;
+    let last = -1;
+    for (let k = 0; k < 2400 && taps < 2; k++) {
+      s.place(1950, FLOOR);
+      const ev = s.run(o.mode === 'windup' && o.timer < 10 ? 'J20' : '.1');
+      for (const e of of(ev, 'enemyTaproot')) {
+        taps = e.n;
+        last = e.frames;
+      }
+      if (o.stunned && o.mode === 'recover' && taps === 1) {
+        // (Two cuts in the first window: then it gets up.)
+        o.timer = 1;
+      }
+    }
+    expect(taps).toBe(2);
+    expect(last).toBe(O.lastStunFrames);
+    expect(o.stunned).toBe(true);
+  });
+});
+
+describe('round 5: the throw-cut, the creature side (area1-plan-r5 §2.2)', () => {
+  const heavy = (s: Sim) => {
+    s.state.player.thrown = true;
+    s.state.player.lureThrow = 20;
+  };
+
+  it('a braced beetle is flipped belly-up from the front, and the blow lands', () => {
+    const s = newSim(room([{ id: 'b', kind: 'burrback', x: 2000, y: FLOOR, facing: -1, radius: 400 }]));
+    const b = enemy(s, 'b');
+    b.mode = 'walk';
+    s.place(b.x - 100, FLOOR);
+    let ev: SimEvent[] = [];
+    for (let i = 0; i < 200 && !types(ev).includes('enemyWindup'); i++) ev = s.run('.1');
+    s.place(b.x - 30, FLOOR);
+    s.state.player.facing = 1;
+    heavy(s);
+    const hit = s.run('A1 .2');
+    expect(types(hit)).toContain('enemyHeavy');
+    expect(types(hit)).toContain('enemyHit');
+    expect(types(hit)).not.toContain('enemyBlock');
+    expect(b.stunned).toBe(true);
+  });
+
+  it('a hawker in its dive is knocked out of it and flees; a dangler on its silk falls, cut', () => {
+    const s = newSim(
+      room(
+        [
+          { id: 'h', kind: 'hawker', x: 2260, y: 350, facing: -1, orbit: 'w' },
+          { id: 'd', kind: 'dangler', x: 3000, y: 300, facing: 1 },
+        ],
+        [wick('w', 2000, 500)],
+        {
+          solids: [
+            { tag: 'ground', x: 0, y: FLOOR, w: 4000, h: 200 },
+            { tag: 'trunk', x: 2800, y: 240, w: 400, h: 60 },
+          ],
+        },
+      ),
+    );
+    const h = enemy(s, 'h');
+    s.place(1400, FLOOR);
+    let pre: SimEvent[] = [];
+    for (let i = 0; i < 400 && !types(pre).includes('enemyDive'); i++) pre = s.run('.1');
+    s.run('.8');
+    // Beside it in the air, facing it, in a throw's launch.
+    s.place(h.x - 22, h.y + h.h / 2 + 40);
+    s.state.player.facing = 1;
+    s.state.player.invuln = 30;
+    // (A throw-cut hits 3x: with its own 3 hp it dies; here a tougher one shows the flight.)
+    h.hp = 10;
+    heavy(s);
+    const ev = s.run('A1 .60');
+    expect(types(ev)).toContain('enemyHeavy');
+    expect(h.mode).toBe('leave');
+    const d = enemy(s, 'd');
+    s.place(d.x + d.w / 2 - 40, d.y + d.h + 40);
+    s.state.player.vy = 0;
+    heavy(s);
+    const ev2 = s.run('U+A1 .4');
+    expect(types(ev2)).toContain('enemyThreadCut');
+  });
+});
+
+describe("round 5: R4's adult rams the root step and flips by itself", () => {
+  it('she stands on a step past its range: it braces anyway, rams the face, and lies belly-up', () => {
+    const s = newSim(
+      room(
+        [{ id: 'b', kind: 'burrback', x: 1600, y: FLOOR, facing: 1, radius: 300 }],
+        [wick('w', 1800, 500)],
+        {
+          solids: [
+            { tag: 'ground', x: 0, y: FLOOR, w: 4000, h: 200 },
+            { tag: 'root', x: 1900, y: FLOOR - 192, w: 400, h: 192 },
+          ],
+        },
+      ),
+    );
+    s.place(1960, FLOOR - 192);
+    const ev: SimEvent[] = [];
+    for (let i = 0; i < 900 && !of(ev, 'enemyRecover').some((e) => e.cause === 'wall'); i++)
+      ev.push(...s.run('.1'));
+    expect(of(ev, 'enemyRecover').some((e) => e.cause === 'wall')).toBe(true);
+    expect(enemy(s, 'b').stunned).toBe(true);
+    expect(types(ev)).not.toContain('hurt');
+  });
+});
+
+describe('round 5: the carriers (ants)', () => {
+  const ants = () =>
+    room(
+      [
+        { id: 'a1', kind: 'carrier', x: 1000, y: FLOOR, facing: 1, trail: [[1600, FLOOR]] },
+        { id: 'a2', kind: 'carrier', x: 1000, y: FLOOR, facing: 1, follow: 'a1', phase: 0.5 },
+      ],
+      [],
+    );
+  const C = T.carrier;
+
+  it('they walk the trail to the crack, go in, and come out at its start; a line is spaced out by phase', () => {
+    const s = newSim(ants());
+    s.place(3000, FLOOR);
+    const a1 = enemy(s, 'a1');
+    const a2 = enemy(s, 'a2');
+    expect(a2.x).toBeGreaterThan(a1.x);
+    const n = Math.ceil(600 / C.speed);
+    const ev = s.run(`.${n + C.underFrames + 4}`);
+    expect(of(ev, 'enemyUnder').some((e) => e.id === 'a1')).toBe(true);
+    expect(of(ev, 'enemyEmerge').some((e) => e.id === 'a1')).toBe(true);
+  });
+
+  it('they do not hunt her; one finds her on its trail ahead: a tell, then a bite. One cut kills one', () => {
+    const s = newSim(ants());
+    const a1 = enemy(s, 'a1');
+    s.place(1300, FLOOR);
+    const ev = s.run('.200');
+    const notice = ev.findIndex((e) => e.type === 'enemyNotice' && e.id === 'a1');
+    const hurt = ev.findIndex((e) => e.type === 'hurt');
+    expect(notice).toBeGreaterThanOrEqual(0);
+    expect(hurt).toBeGreaterThan(notice);
+    const s2 = newSim(ants());
+    const b = enemy(s2, 'a1');
+    s2.place(b.x + b.w + 30, FLOOR);
+    s2.state.player.facing = -1;
+    expect(types(s2.run('A1 .4'))).toContain('enemyDie');
+    expect(a1.kind).toBe('carrier');
+  });
+
+  it('their lamp out, they finish the trip and stop coming', () => {
+    const s = newSim(
+      room(
+        [{ id: 'a1', kind: 'carrier', x: 1000, y: FLOOR, facing: 1, trail: [[1300, FLOOR]], guards: 'w' }],
+        [wick('w', 1000, 600)],
+      ),
+    );
+    s.place(3000, FLOOR);
+    snuff(s, 0);
+    s.run(`.${Math.ceil(300 / C.speed) + C.underFrames + 10}`);
+    expect(enemy(s, 'a1').gone).toBe(true);
   });
 });
 

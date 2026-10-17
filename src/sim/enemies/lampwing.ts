@@ -347,6 +347,8 @@ function swoop(e: EnemyState, info: StepInfo, t: L, f: { x: number; y: number },
   const cy = e.y + e.h / 2;
   setMode(e, 'dive', span);
   e.span = span;
+  // (One strike a pass at most: `taken` = it has struck her in this one.)
+  e.taken = 0;
   e.fromX = cx;
   e.fromY = cy;
   e.targetX = f.x - e.side * t.passRadius;
@@ -442,7 +444,11 @@ function rhythm(e: EnemyState, info: StepInfo, t: L): boolean {
     steer(e, 0, 0, t.curiousAccel);
     drift(e, info.scene, t);
     e.flap += t.flapCurious;
-    if (--e.timer <= 0) swoop(e, info, t, f, frames(t.passFrames, 1));
+    // (Round 5: it never starts a pass while she is caught in its orbit: the tell holds until she is free.)
+    if (--e.timer <= 0) {
+      if (info.state.player.lure === e.orbit) e.timer = 1;
+      else swoop(e, info, t, f, frames(t.passFrames, 1));
+    }
   } else {
     // The pass: a pull-back, then a curve from its perch down through the flame and up to the mirror perch
     // (through her, if she circles in that orbit: it takes a moth from it, and she is one).
@@ -754,6 +760,8 @@ export const lampwing: KindRules = {
     // (Its pull-back is still the tell: one climbing past its perch as a pass begins is not struck, round 4.)
     if (e.orbit >= 0 && e.mode === 'dive' && e.span - e.timer < frames(rowOf(info.t, e).diveWindupFrames))
       return true;
+    // (Never two strikes in one pass, round 5.)
+    if (e.orbit >= 0 && e.mode === 'dive' && e.taken > 0) return true;
     if (e.mode === 'curious' && e.modeFrames <= rowOf(info.t, e).noticeSafeFrames) return true;
     // Stalled at the bottom of its dive it is open; and for a beat as it lifts away. Having given up
     // (it hangs, then flies home) it is no danger either: its dive is its attack, and a body left
@@ -776,6 +784,12 @@ export const lampwing: KindRules = {
   },
 
   /** Its lamp went out: it leaves the room (gone at once if the lamp was already out when she came in). */
+  /** A throw-cut: out of its dive or its pass (or its tell) it is knocked away, and flees once it rights itself. */
+  heavy(e) {
+    if (e.mode === 'dive' || e.mode === 'curious' || e.mode === 'stall') e.broken = true;
+    return false;
+  },
+
   disperse(e, info, quiet) {
     setMode(e, 'leave', frames(rowOf(info.t, e).leaveFrames, 1));
     e.chase = 0;
@@ -883,6 +897,12 @@ export const lampwing: KindRules = {
         e.knockVy = 0;
         e.vx = 0;
         e.vy = 0;
+        // (A throw-cut knocked it out of its dive (`broken`): it flees for good, round 5.)
+        if (e.broken) {
+          e.dispersed = true;
+          setMode(e, 'leave', frames(t.leaveFrames, 1));
+          return true;
+        }
         // Struck, it climbs to come at her again if it can see her; else home (calmed: home).
         if (!over && e.calm === 0 && inLeash(e, p, t) && sees(e, p, scene, 0)) {
           climb(e, info);
@@ -1089,13 +1109,15 @@ export const lampwing: KindRules = {
     const p = info.state.player;
     // (`rim`: every blow of it sends her toward the rim, up and over, never off it: the crown, round 4.)
     const rim = info.scene.enemies?.find((s) => s.id === e.id)?.rim;
-    if (rim !== undefined) {
-      toRim(info, t, rim);
-      if (e.orbit >= 0 && e.mode === 'dive') return;
-    }
+    if (rim !== undefined) toRim(info, t, rim);
     // On a rhythm: a moth caught in the orbit as it passes is struck straight down (into the tunnel under
     // a throw gap: a pip and the slow way), and the pass goes on to the other perch.
     if (e.orbit >= 0 && e.mode === 'dive') {
+      e.taken = 1;
+      // (Round 5: out of the pull, and that lamp leaves her alone `passGraceFrames`: no catch, strike, catch.)
+      p.lureGrace = e.orbit;
+      p.lureGraceFrames = Math.max(p.lureGraceFrames, frames(t.passGraceFrames));
+      if (rim !== undefined) return;
       p.vx = 0;
       p.pullX = 0;
       p.vy = t.passKnockDown;

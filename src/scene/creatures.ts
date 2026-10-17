@@ -65,6 +65,10 @@ export const ENEMIES = z
           kind: z.literal('oldBurrback'),
           radius: int.min(40).max(4000).optional(),
           fenced: z.boolean().optional(),
+          // (Round 5: the den's taproot, the root column its third phase is baited into: its x span.)
+          taproot: z.tuple([int, int]).optional(),
+          // (The flag set as its phase 2 begins: the plug first cracks, `marks.stage.den.crack`.)
+          crack: z.string().min(1).optional(),
         })
         .strict(),
       z
@@ -114,6 +118,21 @@ export const ENEMIES = z
       z.object({ ...base, kind: z.literal('weaverBoss') }).strict(),
       // The dangler (memory/creatures.md): `x`, `y` = where its thread is tied; `drop` = its longest drop.
       z.object({ ...base, kind: z.literal('dangler'), drop: int.min(80).max(1200).optional() }).strict(),
+      // The carriers (ants, src/sim/enemies/carrier.ts): `x`, `y` = the trail's start (feet); `trail` = the rest
+      // of it (the last point the crack), or `follow` = the carrier whose trail it walks; `phase` 0..1.
+      z
+        .object({
+          ...base,
+          kind: z.literal('carrier'),
+          trail: z
+            .array(z.tuple([int, int]))
+            .min(1)
+            .max(32)
+            .optional(),
+          follow: z.string().min(1).optional(),
+          phase: z.number().min(0).max(1).optional(),
+        })
+        .strict(),
     ]),
   )
   .default([]);
@@ -349,7 +368,20 @@ export function checkCreatures(s: RoomLike, seen: Set<string>): void {
     else if (e.kind === 'burrback' || e.kind === 'oldBurrback' || e.kind === 'juvenileBurrback')
       checkCrawler(s, e);
     else if (e.kind === 'dangler') checkDangler(s, e);
-    else if (e.kind === 'web') {
+    else if (e.kind === 'carrier') {
+      if ((e.trail === undefined) === (e.follow === undefined))
+        throw new Error(`Scene "${s.id}": carrier "${e.id}" needs a trail or a follow (one of them)`);
+      if (e.follow !== undefined) {
+        const f = s.enemies.find((q) => q.id === e.follow);
+        if (f?.kind !== 'carrier' || f.trail === undefined)
+          throw new Error(
+            `Scene "${s.id}": carrier "${e.id}" follows "${e.follow}", which is no carrier with a trail`,
+          );
+      }
+      for (const [x, y] of [[e.x, e.y], ...(e.trail ?? [])] as Array<[number, number]>)
+        if (x < 0 || x > s.width || y < Math.min(0, s.ceilingY ?? 0) || y > s.height)
+          throw new Error(`Scene "${s.id}": carrier "${e.id}" has a trail point outside the scene`);
+    } else if (e.kind === 'web') {
       const strands = [...(e.strands ?? []), ...(e.orb ? orbStrands(s, e.x, e.y, e.orb) : [])];
       if (strands.length === 0) throw new Error(`Scene "${s.id}": web "${e.id}" has no strands`);
       e.strands = strands;

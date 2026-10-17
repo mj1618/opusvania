@@ -291,6 +291,8 @@ export function humanTactic(
     case 'oldBurrback':
       // The ram's tell: jump in it (it carries the ram past or short of her); braced and close: pogo the shell.
       if (mode === 'windup' || mode === 'charge') return 'hop over';
+      // (Round 5, its phase 2: a rolling ball; a person jumps it as it comes.)
+      if (mode === 'roll') return 'hop over';
       // Safe up on a ledge over its ground: a person comes down to bait it (it does not climb to her).
       if (above) return 'come down';
       if ((e.braced || mode === 'feint') && dist < 160) return 'pogo';

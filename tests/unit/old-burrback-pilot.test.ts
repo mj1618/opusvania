@@ -15,7 +15,11 @@ import type { Scene } from '../../src/sim/scene';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 
 const FLOOR = 1472;
-/** R10's pit in miniature: 2048 px of floor between two walls, the old burrback asleep in the middle. */
+/**
+ * The den in miniature (round 5, area1-plan-r5 §1): 2048 px of floor between two walls, a taproot column
+ * about a third in from the east wall, an escape ledge on the west wall, the old burrback asleep in the middle.
+ */
+const TAPROOT: [number, number] = [1600, 1680];
 function pit(): Scene {
   return {
     id: 'pit',
@@ -27,9 +31,10 @@ function pit(): Scene {
       { tag: 'ground', x: 0, y: FLOOR, w: 2304, h: 328 },
       { tag: 'ground', x: 0, y: 600, w: 128, h: 872 },
       { tag: 'ground', x: 2176, y: 600, w: 128, h: 872 },
+      { tag: 'root', x: TAPROOT[0], y: 600, w: TAPROOT[1] - TAPROOT[0], h: 872 },
     ],
-    oneWays: [],
-    enemies: [{ id: 'old', kind: 'oldBurrback', x: 1300, y: FLOOR, facing: -1 }],
+    oneWays: [{ tag: 'root', x: 128, y: FLOOR - 192, w: 128 }],
+    enemies: [{ id: 'old', kind: 'oldBurrback', x: 1100, y: FLOOR, facing: -1, taproot: TAPROOT }],
   };
 }
 
@@ -87,6 +92,15 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
       // Close: over it. Further: straight up (and a few step back first).
       jumpDir = Math.abs(dx) < 170 ? 1 : dice(2, roll++) < 300 ? -1 : 0;
     }
+    // The roll (phase 2): jump it as it comes (a reaction late, a little off); over it, a down cut (the pogo).
+    if (e.mode === 'roll' && jumpAt < 0 && jumpHold === 0 && p.grounded) {
+      const coming = -dx * e.facing > 0;
+      const gap = Math.abs(dx) - (p.w + e.w) / 2;
+      if (coming && gap < e.ramSpeed * (react + 6) + 40) {
+        jumpAt = f + (dice(5, roll++) % (slop + 1));
+        jumpDir = 0;
+      }
+    }
     if (jumpAt >= 0 && f >= jumpAt && p.grounded) {
       jumpHold = 16;
       jumpAt = -1;
@@ -94,6 +108,12 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
     if (jumpHold > 0) {
       m |= J | (jumpDir > 0 ? toward : jumpDir < 0 ? away : 0);
       jumpHold--;
+    } else if (e.mode === 'roll' && !p.grounded && p.vy > 0 && Math.abs(dx) < e.w / 2 + 20 && dice(6, f >> 4) < 600) {
+      // Coming down over the ball: a down cut, most times.
+      if (f - lastPress >= 10) {
+        m |= ActionBit.down | A;
+        lastPress = f;
+      }
     } else if (e.stunned && (e.mode === 'recover' || e.mode === 'hurt')) {
       // Open (on its back): run in a reaction later and mash.
       if (openSince < 0) openSince = f;
@@ -106,8 +126,12 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
       }
     } else {
       openSince = -1;
+      // Phase 3: stand in front of the taproot (its far side from it) and let it come.
+      const spot = ec < TAPROOT[0] ? TAPROOT[0] - p.w / 2 - 30 : TAPROOT[1] + p.w / 2 + 30;
+      if (e.phase === 3 && e.mode !== 'windup' && e.mode !== 'charge' && Math.abs(pc - spot) > 24)
+        m |= pc < spot ? ActionBit.right : ActionBit.left;
       // Otherwise: close in to about 220 px and wait; now and then it walks in and slashes anyway.
-      if (e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert') {
+      else if (e.phase !== 3 && (e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert')) {
         if (Math.abs(dx) > 240) m |= toward;
         // (Now and then it walks in and slashes the closed shell anyway; once that has hurt it, it mostly stops.)
         else if (dice(4, Math.floor(f / 90)) < (learned ? 50 : 250)) {
@@ -136,6 +160,8 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
           console.log(f, ev.type, before);
       }
     prev = m;
+    if (process.env.OLD_STATE && seed === Number(process.env.OLD_SEED ?? 1) && react === Number(process.env.OLD_REACT ?? 20) && f % 60 === 0)
+      console.log(`t${f / 60} ph${e.phase} ${e.mode}:${e.timer} st${e.stunned ? 1 : 0} hp${e.hp} ex${Math.round(e.x)} spd${e.ramSpeed} | p ${Math.round(p.x)},${Math.round(p.y)} hp${p.hp} camp${e.camp}`);
     for (let i = from; i < events.length; i++) {
       const ev = events[i] as SimEvent;
       if (ev.type === 'hurt') {
@@ -207,7 +233,7 @@ describe('the old burrback will not be beaten by standing and mashing', () => {
   });
 });
 
-describe('the old burrback, a first mini-boss: a slow, sloppy first-timer always wins, most in 1-2 attempts', () => {
+describe('the old burrback, the boss under the oak: a slow, sloppy first-timer wins, most in 1-2 attempts', () => {
   const runs: Array<Run & { react: number; seed: number }> = [];
   for (const react of [20, 25, 30])
     for (let seed = 1; seed <= 8; seed++) runs.push({ ...pilot(react, 8, seed), react, seed });
@@ -226,13 +252,19 @@ describe('the old burrback, a first mini-boss: a slow, sloppy first-timer always
     }
   });
 
-  it('every run wins; the 20- and 25-frame reactors in at most 2 attempts', () => {
-    // (Since feel review round 2, problem 7, a fade makes the old burrback whole again and her too, at her door:
-    // no attrition. The slowest hands (30 frames, sloppy) take 3-9 attempts, like an HK boss for a new player.)
-    for (const r of runs) {
-      expect(r.won, `react ${r.react} seed ${r.seed}`).toBe(true);
-      if (r.react <= 25) expect(r.fades + 1, `react ${r.react} seed ${r.seed}`).toBeLessThanOrEqual(2);
-    }
+  it('the 20- and 25-frame reactors win in at most 2 attempts; the slowest hands mostly win (a boss now, round 5)', () => {
+    // (A fade makes the old burrback whole again and her too, at her door: no attrition. Since round 5 it is a
+    // three-phase boss: the slowest hands (30 frames, sloppy) take 1-7 attempts, like an HK boss for a new player.)
+    for (const r of runs)
+      if (r.react <= 25) {
+        expect(r.won, `react ${r.react} seed ${r.seed}`).toBe(true);
+        expect(r.fades + 1, `react ${r.react} seed ${r.seed}`).toBeLessThanOrEqual(2);
+      }
+    expect(runs.filter((r) => r.react === 30 && r.won).length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('a first-try win takes the three phases: 25 s or more even for quick hands, no standoff', () => {
+    for (const r of runs) if (r.won && r.fades === 0) expect(r.frames / 60).toBeGreaterThanOrEqual(25);
   });
 
   it('most win at the first or second attempt', () => {

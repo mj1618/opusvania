@@ -82,6 +82,16 @@ export function heldUnseen(e: EnemyState, p: { lure: number; grab: number }): bo
   return (p.lure >= 0 || p.grab >= 0) && e.catchSeen === 0;
 }
 
+/**
+ * A throw-cut (area1-plan-r5 §2.2): the sim decides it as the slash starts (`player.attackHeavy`: a slash
+ * begun in a throw's launch). The creature side: it never glances, and each kind answers it its own way
+ * (`KindRules.heavy`: a braced beetle flips, the rolling old burrback unrolls, a hawker is knocked out of its
+ * dive, a dangler's silk is cut). Its damage and hold are the slash's (`power`, hitstop: the player's side).
+ */
+export function throwCut(p: { attackHeavy: boolean }): boolean {
+  return p.attackHeavy;
+}
+
 export interface StepInfo {
   state: GameState;
   scene: Scene;
@@ -179,6 +189,11 @@ export interface KindRules {
   deathHold?(t: Tuning): number;
   /** Coming down on its back in a down slash bounces her instead of hurting her (a shell: the burrbacks). */
   stompable?(e: EnemyState): boolean;
+  /**
+   * A throw-cut lands on it (`throwCut`): its own answer before the blow is dealt (it never glances). `side` =
+   * the way the blow sends it.
+   */
+  heavy?(e: EnemyState, info: StepInfo, dir: 'fwd' | 'up' | 'down', side: number): boolean;
   /** Coming down on its top bounces her even without a slash (and whatever it is doing): a drop onto it is a pogo. */
   bouncy?(e: EnemyState, t: Tuning): boolean;
   /** Her box overlaps its box: does its body really touch her (its drawn shape)? Default: yes. */

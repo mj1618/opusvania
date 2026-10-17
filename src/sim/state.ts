@@ -432,7 +432,12 @@ export type EnemyMode =
   | 'skitter'
   | 'flee'
   | 'hunt'
-  | 'drop';
+  | 'drop'
+  | 'under'
+  | 'rear'
+  | 'slam'
+  | 'curl'
+  | 'roll';
 
 /**
  * One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. One flat
@@ -636,6 +641,15 @@ export interface EnemyState {
    * off-screen while she is helpless). Kept up to date while she is free.
    */
   catchSeen: number;
+  /**
+   * The old burrback as a boss (area1-plan-r5 §1, `tuning.oldBurrback.phased`): `phase` 1 the beetle rule,
+   * 2 the roll, 3 the taproot (0 = not phased); `camp` = frames she has stood on a ledge (the slam comes at
+   * `campFrames`); `taps` = its rams into the taproot this phase; `streak` = rams in a row (phase 3).
+   */
+  phase: number;
+  camp: number;
+  taps: number;
+  streak: number;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */

@@ -303,6 +303,35 @@
       "orbit": "wick-f"
     },
     {
+      "id": "ant-k1",
+      "kind": "carrier",
+      "x": 13450,
+      "y": 1280,
+      "facing": 1,
+      "guards": "lantern-f",
+      "trail": [[13800, 1280], [13820, 1290]]
+    },
+    {
+      "id": "ant-k2",
+      "kind": "carrier",
+      "x": 13450,
+      "y": 1280,
+      "facing": 1,
+      "guards": "lantern-f",
+      "follow": "ant-k1",
+      "phase": 0.25
+    },
+    {
+      "id": "ant-k3",
+      "kind": "carrier",
+      "x": 13450,
+      "y": 1280,
+      "facing": 1,
+      "guards": "lantern-f",
+      "follow": "ant-k1",
+      "phase": 0.5
+    },
+    {
       "id": "burr-g",
       "kind": "burrback",
       "x": 17200,
@@ -377,7 +406,7 @@
       {
         "x": 13750,
         "y": 640,
-        "text": "F  hawker on a rhythm through the wick's orbit: catch after its swoop (R8, the crown)"
+        "text": "F  hawker on a rhythm through the wick's orbit: catch after its swoop (R8, the crown); carriers from under the lantern into a crack"
       },
       {
         "x": 16600,

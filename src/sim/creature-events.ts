@@ -72,6 +72,42 @@ export type CreatureEvent =
       hpMax: number;
       third: number;
     }
+  /**
+   * A throw-cut (a cut in a throw's launch) met it: it answers in its own way (a braced beetle flips, the old
+   * burrback unrolls, a hawker is knocked out of its dive, a dangler's silk parts). `mode` = what it was doing.
+   */
+  | { type: 'enemyHeavy'; id: string; kind: EnemyKind; x: number; y: number; dir: number; mode: string }
+  /**
+   * The old burrback as a boss (round 5): `enemyPhase` (2 the roll, 3 the taproot); `enemyRear` the slam's
+   * tell; `enemySlam` (`y` = its den floor; `big` at phase 2; `shook` = she was shaken off a ledge; `px` its
+   * reach); `enemyRoll` / `enemyBounce` (off a wall) / `enemyUnroll` (`how`); `enemyTaproot` (`n` = which).
+   */
+  | { type: 'enemyPhase'; id: string; kind: EnemyKind; x: number; y: number; phase: number }
+  | { type: 'enemyRear'; id: string; kind: EnemyKind; x: number; y: number; frames: number }
+  | {
+      type: 'enemySlam';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      big: boolean;
+      shook: boolean;
+      px: number;
+    }
+  | { type: 'enemyRoll'; id: string; kind: EnemyKind; x: number; y: number; dir: number; speed: number }
+  | { type: 'enemyBounce'; id: string; kind: EnemyKind; x: number; y: number; dir: number; speed: number }
+  | {
+      type: 'enemyUnroll';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      how: 'pogo' | 'thrown' | 'heavy' | 'tired';
+    }
+  | { type: 'enemyTaproot'; id: string; kind: EnemyKind; x: number; y: number; n: number; frames: number }
+  /** A carrier went into its crack (`under`), or came back out at its trail's start (`emerge`). `y` = its feet. */
+  | { type: 'enemyUnder'; id: string; kind: EnemyKind; x: number; y: number }
+  | { type: 'enemyEmerge'; id: string; kind: EnemyKind; x: number; y: number }
   /** A hawker on a rhythm swept through its lamp's orbit and took a moth (`lure` = the lamp; `x`, `y` = the flame). */
   | { type: 'enemySnatch'; id: string; kind: EnemyKind; x: number; y: number; lure: string }
   /** A dangler's thread was cut (tied at `fromX`, `fromY`): it falls. */

@@ -21,7 +21,16 @@
 
 import { weaverBoss } from './boss/weaver';
 import { burrback, juvenileBurrback, oldBurrback } from './enemies/burrback';
-import { frames, type KindRules, type StepInfo, saltOf, segmentBlocked, setMode } from './enemies/common';
+import { carrier } from './enemies/carrier';
+import {
+  frames,
+  type KindRules,
+  type StepInfo,
+  saltOf,
+  segmentBlocked,
+  setMode,
+  throwCut,
+} from './enemies/common';
 import { dangler } from './enemies/dangler';
 import { hawker, lampwing } from './enemies/lampwing';
 import { litNow, SENSE_WALLET, seenBy, senseCode } from './enemies/senses';
@@ -43,6 +52,7 @@ const KINDS: Record<EnemyKind, KindRules> = {
   weaverBoss,
   dangler,
   juvenileBurrback,
+  carrier,
 };
 const KIND_LIST: EnemyKind[] = [
   'burrback',
@@ -54,6 +64,7 @@ const KIND_LIST: EnemyKind[] = [
   'weaverBoss',
   'dangler',
   'juvenileBurrback',
+  'carrier',
 ];
 
 /** The rules of a kind (its box, numbers and behaviour). */
@@ -150,7 +161,8 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
         (spawn.kind === 'oldBurrback' ||
         spawn.kind === 'weaver' ||
         spawn.kind === 'weaverBoss' ||
-        spawn.kind === 'juvenileBurrback'
+        spawn.kind === 'juvenileBurrback' ||
+        spawn.kind === 'carrier'
           ? 'always'
           : scene?.senses),
     ),
@@ -169,6 +181,10 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     orbit: spawn.orbit ? (scene?.lures ?? []).findIndex((l) => l.id === spawn.orbit) : -1,
     period: Math.max(0, spawn.period ?? 0),
     catchSeen: 1,
+    phase: spawn.kind === 'oldBurrback' && t.oldBurrback.phased ? 1 : 0,
+    camp: 0,
+    taps: 0,
+    streak: 0,
   };
   K.place(e, spawn, t);
   if (scene) K.init?.(e, spawn, scene, t);
@@ -609,9 +625,23 @@ export function slashEnemies(
     const K = KINDS[e.kind];
     const cx = e.x + e.w / 2;
     const cy = e.y + e.h / 2;
+    // A throw-cut never glances: the kind answers it its own way first (area1-plan-r5 §2.2).
+    const heavy = throwCut(b);
+    if (heavy) {
+      const hs = dir === 'fwd' ? (facing < 0 ? -1 : 1) : cx < px ? -1 : cx > px ? 1 : facing < 0 ? -1 : 1;
+      const mode = e.mode;
+      const taken = K.heavy?.(e, info(state, scene, t, events), dir, hs) === true;
+      events.push({ type: 'enemyHeavy', id: e.id, kind: e.kind, x: cx, y: cy, dir: hs, mode });
+      // (Taken its own way: a dangler's silk parted. The slash is spent on it.)
+      if (taken) {
+        e.hitBy = seq;
+        hits++;
+        continue;
+      }
+    }
     // Its shell is forward and the cut meets it: it glances off. Nothing is taken, it does not
     // stagger, and this slash is spent on it.
-    if (K.blocks?.(e, dir, px, t)) {
+    if (!heavy && K.blocks?.(e, dir, px, t)) {
       e.hitBy = seq;
       BLOCKS++;
       events.push({

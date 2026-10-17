@@ -92,7 +92,8 @@ export type EnemyKind =
   | 'weaver'
   | 'weaverBoss'
   | 'dangler'
-  | 'juvenileBurrback';
+  | 'juvenileBurrback'
+  | 'carrier';
 
 /**
  * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is
@@ -157,6 +158,17 @@ export interface EnemySpawn {
   rim?: number;
   /** Once this story flag is set it leaves for good (`enemyDisperse`; round 4: the crown hawker at the finale). */
   until?: string;
+  /**
+   * Carrier: the rest of its trail after (`x`, `y`), feet points, the last one the crack it goes into; or
+   * `follow` = another carrier whose trail it walks. `phase` (0..1) = where in its loop it starts.
+   */
+  trail?: Array<[number, number]>;
+  follow?: string;
+  phase?: number;
+  /** Old burrback: the den's taproot (a root column, a solid in the room): its x span, `[x0, x1]`. */
+  taproot?: [number, number];
+  /** Old burrback: the story flag set as its phase 2 begins (the plug first cracks: staging's `crack`). */
+  crack?: string;
   /** A story flag set when it dies (the old burrback's root gate: src/sim/kit.ts). */
   sets?: string;
   /**
