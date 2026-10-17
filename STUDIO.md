@@ -1,7 +1,7 @@
 # Studio loop
 
-Matt decided on 2026-10-18: the game is designed and played in **greybox** first, a whole region at a time, and art
-comes after the region plays great. Scene 1 (`wood-hatch`) keeps its art as the look target for the wood. Everything
+Matt decided on 2026-10-18: the game is designed and played in **greybox** first, a whole region at a time. **Art is
+left until the end**: scene 1 proved the look can reach the bar, so the art pass comes once the game plays great in grey. Scene 1 (`wood-hatch`) keeps its art as the look target for the wood. Everything
 else uses minimal graphics: flat shapes, hitboxes and labels, with Wing's own rig.
 
 ## The unit of work: a region
@@ -37,7 +37,7 @@ must feel good in a plain room before any room is built around it.
 - The boss is fair: tells read and deaths are the player's fault.
 - **Matt plays it and says it's fun.**
 
-Only then does the region get its art pass, using the kit proven in scene 1, and the next region starts.
+Only then does the next region start. The art passes, using the kit proven in scene 1, come at the end.
 
 ## Playtesting without Matt
 - **Persona bots:** a naive player (holds right, jumps at walls), an explorer (visits every exit), a speedrunner, and a

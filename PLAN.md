@@ -40,4 +40,4 @@ min, glide and wall jump, the first predators, the Weaver).
 - **Phase 1:** a multi-room engine (exits between rooms, moon patches that save and respawn, glades that give
   abilities, a map), then every wood room greyboxed from the paper design.
 - **Phase 2:** loop the region (playtest → design review → revise) until it meets STUDIO.md's exit criteria and Matt
-  says it's fun. Then the wood's art pass, then the valley.
+  says it's fun. Then the valley. Art is left until the end (Matt, 2026-10-18).
