@@ -9,5 +9,7 @@ export default defineConfig(({ command, isPreview }) => ({
   test: {
     include: ['tests/unit/**/*.test.ts'],
     environment: 'node',
+    // Sim sweeps (e.g. critical-path's 60-start-time arrivals) take 6-10 s on the CI runner.
+    testTimeout: 30_000,
   },
 }));
