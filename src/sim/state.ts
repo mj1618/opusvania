@@ -116,6 +116,13 @@ export interface PlayerState {
   faded: number;
   hurtDir: number;
   hurtSeq: number;
+  /**
+   * After a hazard return or a re-form (`room.returnFadeIn`): `fadeIn` = frames left of the fade-in (no
+   * input reaches her, she cannot be hurt); `inputLock` = the input bits held as she came back: none is a
+   * press until it is let go (a fresh press then counts); its hold still acts. Both 0 in ordinary play.
+   */
+  fadeIn: number;
+  inputLock: number;
   /** Index of the lantern she is kindling this frame (`scene.lanterns`), -1 = none (memory/goal.md). */
   kindling: number;
   /** The same for a wayside lamp (`scene.lamps`), -1 = none. Never both at once. */
