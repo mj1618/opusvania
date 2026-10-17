@@ -165,6 +165,10 @@ export interface KindRules {
     seq: number,
     dir: 'fwd' | 'up' | 'down',
   ): number;
+  /** The killing blow's extra hold, frames (default `enemies.killHitstopBonus`). */
+  killHold?(t: Tuning): number;
+  /** Frames of story hold after its death (a mini-boss: the body lies, the world answers). 0 = none. */
+  deathHold?(t: Tuning): number;
   /** Coming down on its back in a down slash bounces her instead of hurting her (a shell: the burrbacks). */
   stompable?(e: EnemyState): boolean;
   /** Her box overlaps its box: does its body really touch her (its drawn shape)? Default: yes. */

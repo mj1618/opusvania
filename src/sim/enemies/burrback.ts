@@ -1206,6 +1206,10 @@ export const oldBurrback: KindRules = {
   hurtSafeFrames: (t) => t.oldBurrback.hurtSafeFrames,
   contactDamage: (t) => t.oldBurrback.contactDamage,
   value: (t, finisher) => (finisher ? t.oldBurrback.valueFinisher : t.oldBurrback.value),
+  // Its death is a beat: a long hold on the killing blow, the body lying, a story hold.
+  deadFrames: (t) => t.oldBurrback.deadFrames || t.enemies.deadFrames,
+  killHold: (t) => t.oldBurrback.killHitstopFrames,
+  deathHold: (t) => t.oldBurrback.deathHoldFrames,
 };
 
 /**

@@ -663,6 +663,10 @@ export const defaultTuning = withVariants({
      */
     landHuntPx: 420,
     noticeFrames: 0,
+    /** A death that is a beat (the old burrback): the killing blow's hold, how long the body lies, a story hold (0 = the shared numbers / none). */
+    killHitstopFrames: 0,
+    deadFrames: 0,
+    deathHoldFrames: 0,
     // (First-timer r2: the plain one's touch is its drawn dome too.)
     domeContact: true,
     domeHeight: 0.86,
@@ -1342,6 +1346,10 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       riseFrames: 30,
       domeContact: true,
       domeShoulder: 0.62,
+      // Explorer r2: "the kill has no moment". A 20-frame hold, the body lies 2.5 s, 1.5 s of story hold.
+      killHitstopFrames: 20,
+      deadFrames: 150,
+      deathHoldFrames: 90,
       pogoShell: true,
       asleep: true,
       wakePx: 1400,

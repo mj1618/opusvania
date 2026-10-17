@@ -35,6 +35,8 @@ function pit(): Scene {
 
 /** Hits she took, by what it was doing (OLD_TRACE prints it). */
 const HURT_BY: Record<string, number> = {};
+/** What it was doing the step before each hit she took (it must never be a state drawn as open). */
+const HURT_FROM: Record<string, number> = {};
 
 interface Run {
   won: boolean;
@@ -119,6 +121,7 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
     }
     // A press needs a gap since the last frame it was held (the sim reads edges).
     if ((m & J) !== 0 && (prev & J) === 0 && !p.grounded) m &= ~J;
+    const modeBefore = `${e.mode}${e.stunned ? '/open' : ''}`;
     const from = events.length;
     const before = `${e.mode}:${e.timer} cd${e.strikeCd} gap ${Math.round(Math.abs(dx) - (p.w + e.w) / 2)} her ${p.grounded ? 'g' : 'air'} vy ${p.vy.toFixed(1)} m ${m}`;
     step(s.state, m, t, scene, events);
@@ -138,6 +141,7 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
       if (ev.type === 'hurt') {
         run.hits++;
         if (e.mode === 'alert' || e.mode === 'walk') learned = true;
+        HURT_FROM[modeBefore] = (HURT_FROM[modeBefore] ?? 0) + 1;
         const k = `${e.mode}${e.feints ? `/f${e.feints}` : ''}`;
         HURT_BY[k] = (HURT_BY[k] ?? 0) + 1;
       }
@@ -214,6 +218,13 @@ describe('the old burrback, a first mini-boss: a slow, sloppy first-timer always
       );
 
   if (process.env.OLD_TRACE) console.log('hits by its mode:', JSON.stringify(HURT_BY));
+
+  it('anything drawn as open (on its back, getting up, asleep) never hurts her', () => {
+    for (const k of Object.keys(HURT_FROM)) {
+      expect(k.includes('/open')).toBe(false);
+      expect(['recover', 'wake', 'sleep']).not.toContain(k);
+    }
+  });
 
   it('every run wins; the 20- and 25-frame reactors in at most 2 attempts', () => {
     // (Since feel review round 2, problem 7, a fade makes the old burrback whole again and her too, at her door:

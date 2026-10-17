@@ -210,6 +210,49 @@ describe('the old burrback', () => {
   const pit = (x = 2000) => room([{ id: 'o', kind: 'oldBurrback', x, y: FLOOR, facing: -1 }]);
   const O = T.oldBurrback;
 
+  it('its tell runs on its own clock: the ram comes windupFrames after the brace, whether she is up or down', () => {
+    for (const jumpAt of [-1, 0, 4, 10, 20]) {
+      const s = newSim(pit());
+      const o = enemy(s, 'o');
+      o.mode = 'walk';
+      s.place(o.x - O.strikeMinPx - 40, FLOOR);
+      let ev: SimEvent[] = [];
+      for (let i = 0; i < 200 && !types(ev).includes('enemyWindup'); i++) ev = s.run('.1');
+      let f = 0;
+      for (let k = 1; k <= 60; k++) {
+        // (She jumps at `jumpAt` frames into the tell and holds it: in the air through most of it.)
+        const held = jumpAt >= 0 && k > jumpAt && k <= jumpAt + 24;
+        if (types(s.run(held ? 'J1' : '.1')).includes('enemyCharge')) {
+          f = k;
+          break;
+        }
+      }
+      expect(f).toBe(O.windupFrames);
+    }
+  });
+
+  it('its death is a beat: a long hold on the killing blow, the body lying, a story hold', () => {
+    const s = newSim(pit());
+    const o = enemy(s, 'o');
+    o.mode = 'recover';
+    o.timer = 200;
+    o.strikeCd = 212;
+    o.stunned = true;
+    o.hp = 1;
+    s.place(o.x - 30, FLOOR);
+    s.state.player.facing = 1;
+    const ev = s.run('A1 .2');
+    const die = of(ev, 'enemyDie')[0];
+    expect(die?.hitstop).toBeGreaterThanOrEqual(O.killHitstopFrames);
+    expect(of(ev, 'storyHold')[0]).toMatchObject({ id: 'o', frames: O.deathHoldFrames });
+    // No input reaches her during the hold; the body is still there after it.
+    const x0 = s.state.player.x;
+    s.run(`R${O.deathHoldFrames - 10}`);
+    // (Only the cut's recoil moves her: holding toward it does nothing.)
+    expect(s.state.player.x).toBeLessThanOrEqual(x0);
+    expect(o.gone).toBe(false);
+  });
+
   it('a ram that hits her lays nothing open: it stops shut, then braces again', () => {
     const s = newSim(pit());
     const o = enemy(s, 'o');

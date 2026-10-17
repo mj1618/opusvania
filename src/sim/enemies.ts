@@ -622,7 +622,17 @@ export function slashEnemies(
     // The killing blow holds longer (feel review problem 2), her and the body alike.
     const kill = e.hp <= 0 && !K.undying?.(e);
     if (kill) KILLS++;
-    const stop = hitstop > 0 && kill ? hitstop + frames(E.killHitstopBonus) : hitstop;
+    const stop = hitstop > 0 && kill ? hitstop + frames(K.killHold?.(t) || E.killHitstopBonus) : hitstop;
+    // A mini-boss's death is a beat (explorer r2): her hold as long as its, then a short story hold (no
+    // input, nothing hurts her) while the body lies and the world answers (the gate, the claws' beam).
+    if (kill && (K.deathHold?.(t) ?? 0) > 0) {
+      const n = frames(K.deathHold?.(t) ?? 0);
+      b.hitstop = Math.max(b.hitstop, stop);
+      state.kit.story = Math.max(state.kit.story, n);
+      state.kit.storyBy = e.id;
+      b.invuln = Math.max(b.invuln, n);
+      events.push({ type: 'storyHold', id: e.id, frames: n, x: b.x + b.w / 2, y: b.y + b.h });
+    }
     // +1: updateEnemies still runs this step, so it is held exactly as long as she is.
     e.hitstop = stop > 0 ? stop + 1 : 0;
     e.vx = 0;

@@ -60,6 +60,13 @@ round 2 (feel review r2 #1, #2: "a masher wins in 10.8 s", "shorter than she is"
   reactions, sloppy, learns not to walk into it after one hit) wins every run, **22 of 24 at the first attempt**, 11-38 s,
   0-5 hits. Lab bots: explorer and speedrunner kill it in ~12 s with 0 hits.
 - For the level: at 160 x 96 the pit needs its floor clear of anything 96 px over the old burrback's feet.
+- **Explorer r2** (played before round 2): "holds its red wind-up while I'm in the air and lunges the moment I land" and
+  "its green state still hurts". Now tested: the tell runs on its own clock (the ram comes exactly `windupFrames` after
+  the brace however she jumps), and over every pilot run no hit ever comes from a state drawn as open (on its back,
+  getting up, asleep).
+- **Its death is a beat**: the killing blow holds 20 f extra (`killHitstopFrames`, her and it), the body lies 150 f
+  (`deadFrames`), and a 90 f story hold (`deathHoldFrames`: the kit's `storyHold` / `storyHoldEnd`, no input, she cannot
+  be hurt) covers the gate's opening and the claws' beam. `KindRules.killHold` / `deathHold`.
 
 ## The plain burrback, round 2 (first-timer casual r2: "↓+C on it hurt me", "hit from a body-length", "it slid to
 where I landed")
