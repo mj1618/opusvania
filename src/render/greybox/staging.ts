@@ -40,6 +40,10 @@ export const STAGING = {
   bask: { motes: 14, rise: 120 },
   /** The wings-twitch: two flicks in `len` s, then at most once every `every` s while she stands there. */
   twitch: { len: 1.0, every: 6 },
+  /** The moths climbing the oak: per moth freed, at most, px/s up, swirl (share of its width), alpha. */
+  oak: { per: 0.25, max: 48, speed: 70, swirl: 0.35, alpha: 0.7 },
+  /** The crown cloud: at most this many specks; seconds to lift away, the spread of their starts, the rise (px). */
+  cloud: { max: 600, lift: 6, stagger: 2.5, arc: 260 },
   /** Far things' parallax when the vista sets none. */
   parallax: 0.25,
 };
@@ -121,6 +125,8 @@ export class StagingView {
   private readonly scatter = new Map<string, number>();
   /** Seconds since the root was cut (large = not this visit). */
   private rootT = 1e6;
+  /** Seconds since the crown cloud lifted (-1 = waiting; `DONE` = it went before this visit). */
+  private cloudT = -1;
 
   constructor(private readonly stage: StageMarks | undefined) {
     const v = stage?.vista;
@@ -146,10 +152,12 @@ export class StagingView {
       if (e.type === 'roomEnter') {
         this.catches = 0;
         this.scatter.clear();
+        this.cloudT = -1;
       } else if (e.type === 'fallCatch') this.catches++;
       else if (e.type === 'lureSnuff' && this.stage?.circlers?.some((c) => c.lure === e.id))
         this.scatter.set(e.id, 0);
       else if (e.type === 'flagSet' && e.flag === this.stage?.rootFall?.flag) this.rootT = 0;
+      else if (e.type === 'flagSet' && e.flag === this.stage?.cloud?.flag) this.cloudT = 0;
     }
   }
 
@@ -163,6 +171,8 @@ export class StagingView {
     for (const p of S.props ?? []) this.deadMoth(back, p.x, p.y, p.facing ?? 1);
     for (const l of S.ladders ?? []) if (sim.save.flags.includes(l.flag)) this.ladder(back, l.x, l.y0, l.y1);
     this.drawRootFall(back, dt);
+    this.drawOakClimb(back, clock, sim);
+    this.drawCloud(front, dt, clock, sim);
     this.drawStragglers(front, clock);
     this.drawCirclers(front, dt, clock, sim);
     this.drawGlimpse(front, clock);
@@ -392,6 +402,64 @@ export class StagingView {
         .lineTo(sx + Math.cos(ang + 0.35 * s) * len * 0.55, sy + Math.sin(ang + 0.35 * s) * len * 0.55)
         .closePath()
         .fill({ color: C.wing, alpha: 0.55 * open });
+    }
+  }
+
+  /**
+   * Every moth she has freed, seen climbing the oak's column where it stands in the room (the hub: "up the
+   * trunk, moonlight at the top, every freed moth spiralling up and out"). As many as her count (a few per
+   * ten, capped), each on its own slow spiral, gone into the crown's light.
+   */
+  private drawOakClimb(g: Graphics, clock: number, sim: SimView): void {
+    const oak = this.stage?.oak;
+    if (!oak || sim.save.moths <= 0) return;
+    const R = sim.scene;
+    if (oak.x < 0 || oak.x > R.width || oak.top > R.height || oak.y < 0) return;
+    const T = STAGING.oak;
+    const n = Math.min(T.max, Math.ceil(sim.save.moths * T.per));
+    const w = oak.w ?? 320;
+    const h = oak.y - oak.top;
+    for (let i = 0; i < n; i++) {
+      const u = (clock * (T.speed / h) * (0.7 + 0.6 * hash01('oak', i)) + hash01('oak', i + 99)) % 1;
+      const y = oak.y - u * h;
+      const a = clock * (0.8 + hash01('oak', i + 7)) + i * 2.4;
+      const x = oak.x + Math.sin(a) * w * T.swirl;
+      const fade = Math.min(1, u / 0.1) * Math.min(1, (1 - u) / 0.15);
+      moth(g, x, y, Math.sin(clock * 22 + i), fade * T.alpha, GB.moth);
+    }
+  }
+
+  /**
+   * The crown cloud (the director's finale): every moth she freed, waiting at the crown as a breathing swarm
+   * of specks (and a few wings), its size her count; on its flag it lifts off toward the valley.
+   */
+  private drawCloud(g: Graphics, dt: number, clock: number, sim: SimView): void {
+    const C = this.stage?.cloud;
+    if (!C) return;
+    if (this.cloudT < 0 && sim.save.flags.includes(C.flag)) return; // it went on an earlier visit
+    if (this.cloudT >= 0) this.cloudT += dt;
+    const T = STAGING.cloud;
+    const t = this.cloudT;
+    if (t > T.lift + T.stagger + 1) return;
+    const n = Math.min(T.max, sim.save.moths);
+    for (let i = 0; i < n; i++) {
+      const a = hash01('cloud', i) * Math.PI * 2;
+      const rr = Math.sqrt(hash01('cloud', i + 500)) * C.r;
+      const hx = C.x + Math.cos(a + clock * 0.15 * (0.5 + hash01('cloud', i + 9))) * rr;
+      const hy = C.y + Math.sin(a + clock * 0.2) * rr * 0.45 + Math.sin(clock * 2 + i) * 6;
+      let x = hx;
+      let y = hy;
+      let alpha = 0.75;
+      if (t >= 0) {
+        // Off toward the valley: each a little after the last, along a rising curve, thinning into the dark.
+        const u = Math.min(1, Math.max(0, (t - hash01('cloud', i + 77) * T.stagger) / T.lift));
+        const e = u * u * (3 - 2 * u);
+        x = hx + (C.to[0] - C.x) * e;
+        y = hy + (C.to[1] - C.y) * e - Math.sin(Math.PI * u) * T.arc;
+        alpha *= 1 - u * u;
+      }
+      if (i % 9 === 0) moth(g, x, y, Math.sin(clock * 24 + i), alpha, GB.moth);
+      else g.rect(x - 1.5, y - 1, 3, 2).fill({ color: GB.moth, alpha: alpha * 0.8 });
     }
   }
 

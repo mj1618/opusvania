@@ -241,6 +241,6 @@ export class LureView {
         front.stroke({ color: GB.flameHot, width: 3, alpha: 1 - u });
       }
     }
-    this.moths.update(dt, clock, p.cx, p.cy, front);
+    this.moths.update(dt, clock, p.cx, p.cy, front, sim.scene.marks?.stage?.oak ?? null);
   }
 }

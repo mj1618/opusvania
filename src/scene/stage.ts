@@ -115,6 +115,25 @@ export const StageSchema = z
       .strict()
       .optional(),
     /**
+     * The great hollow oak (the director's area 1, docs/design/regions/wood-area1-director.md), in this room's
+     * coordinates (it may lie outside the room): `x` its trunk's middle, `y` the foot of the column the moths
+     * climb, `top` its crown ring, `w` the hollow's width. Freed moths follow her a moment, then fly to it and
+     * up inside it; where it stands in the room, every moth she has freed is seen spiralling up the column.
+     */
+    oak: z
+      .object({ x: z.number(), y: z.number(), top: z.number(), w: z.number().positive().optional() })
+      .strict()
+      .optional(),
+    /**
+     * The crown cloud: every moth she has freed (`save.moths`), waiting at (x, y) in an ellipse `r` wide, lifts
+     * off toward `to` when `flag` is set (the finale's trigger; a `hold` on it holds the view). Once the flag is
+     * saved the cloud has gone.
+     */
+    cloud: z
+      .object({ x: z.number(), y: z.number(), r: z.number().positive(), flag: z.string().min(1), to: pt })
+      .strict()
+      .optional(),
+    /**
      * The wings-twitch cue (wood.md R5: a tapper never opens the wings): after `catches` fall catches in the
      * room, standing within `r` of (x, y) (her feet) plays her wings flicking open twice, now and then.
      */

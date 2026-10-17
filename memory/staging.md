@@ -73,3 +73,17 @@ flies into, the player in control, input never held; the camera may lift, widen 
   with `hold`; the hub glimpse trigger's `hold`; ~250 px more ground under the hub floor.
 - The dangler and the weaver are spiders in greybox (creatures.ts `spider`): abdomen, head, eight legs that tuck
   on the tell and splay in the drop, fangs as the danger part; the dangler's silk and its drop line in the tell.
+
+## The director's area 1: moths to the oak, the crown cloud (2026-10-18, 5e31bee)
+Contract with the builders (room data, render only; none placed yet):
+- `marks.stage.oak {x, y, top, w?}` in **every room the moths should head for it from**, in that room's coordinates
+  (outside the room is fine): `x` the trunk's middle, `y` the column's foot, `top` the crown ring, `w` the hollow's
+  width (default 320). Freed moths (greybox/moths.ts `TO_OAK`) follow her 2.4 s, then steer to the trunk at up to
+  520 px/s, climb the column spiralling and are gone at `top`; to an oak out of the room they fly toward it and fade
+  over 5 s. Without an oak mark: the old follow-6-s-then-up-east. Where the oak stands in the room (the hub), the
+  staging draws her freed moths climbing the column all the time (a quarter of `save.moths`, at most 48).
+- `marks.stage.cloud {x, y, r, flag, to}` (the crown room): every moth she freed (`save.moths`, at most 600 specks,
+  every ninth with wings) waits breathing in an ellipse `r` at (x, y); on `flagSet` of `flag` they lift off toward
+  `to` along a rising curve over ~6-8 s. Once the flag is saved the cloud is gone. Give the trigger a `hold` and a
+  `stage.vista`-style framing if the view should hold (stage-cam reads `storyHold`).
+- Still to come: the throw arc while caught (the sim agent exposes the predicted arc on the player state).

@@ -11,6 +11,21 @@ import { GB } from './palette';
 const SPIRAL = 1.1;
 const FOLLOW = 6;
 const LEAVE = 4;
+/**
+ * To the oak (the director's area 1: every freed moth flies up inside the great hollow oak): with an oak in
+ * the room's marks they follow her only `follow` s, then fly to its trunk at up to `speed` px/s (steering),
+ * and climb its column spiralling (`climb` px/s, `swirl` of its width), gone at the crown ring; an oak out of
+ * the room they fly toward until `gone` s have passed.
+ */
+export const TO_OAK = { follow: 2.4, speed: 520, steer: 2.6, climb: 260, swirl: 0.38, near: 140, gone: 5 };
+
+/** Where the oak is, for the moths (room coordinates; marks.stage.oak). */
+export interface OakPoint {
+  x: number;
+  y: number;
+  top: number;
+  w?: number;
+}
 /** The follow spring: stiffness (1/s²) and damping (1/s). */
 const SPRING = 14;
 const DAMP = 4.5;
@@ -72,8 +87,8 @@ export class FreedMoths {
     return this.list.length;
   }
 
-  /** Advances by `dt` s toward her (px, py: her body centre) and draws into `g`. */
-  update(dt: number, clock: number, px: number, py: number, g: Graphics): void {
+  /** Advances by `dt` s toward her (px, py: her body centre), or on to the `oak`, and draws into `g`. */
+  update(dt: number, clock: number, px: number, py: number, g: Graphics, oak: OakPoint | null = null): void {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const m = this.list[i] as Moth;
       m.age += dt;
@@ -90,6 +105,28 @@ export class FreedMoths {
         }
         m.x = nx;
         m.y = ny;
+      } else if (oak && m.age >= SPIRAL + TO_OAK.follow) {
+        // To the oak, then up inside it.
+        const T = TO_OAK;
+        const w = oak.w ?? 320;
+        const u = m.age - SPIRAL - T.follow;
+        const atTrunk = Math.abs(m.x - oak.x) < T.near && m.y <= oak.y + 60;
+        let tx = oak.x + Math.sin(ang) * w * T.swirl;
+        let ty = oak.y - 80;
+        if (atTrunk || m.y < oak.y - 200) ty = m.y - T.climb; // climbing: always a little above itself
+        if (atTrunk) tx = oak.x + Math.sin(ang * 1.4) * w * T.swirl;
+        const dx = tx - m.x;
+        const dy = ty - m.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const sp = atTrunk ? T.climb : T.speed;
+        m.vx += ((dx / d) * sp - m.vx) * Math.min(1, dt * T.steer);
+        m.vy += ((dy / d) * sp - m.vy) * Math.min(1, dt * T.steer);
+        m.x += m.vx * dt;
+        m.y += m.vy * dt;
+        if (m.y < oak.top || u > T.gone + 8) {
+          this.list.splice(i, 1);
+          continue;
+        }
       } else if (m.age < SPIRAL + FOLLOW) {
         // Loosely round her: a soft spring (px/s), so they stream after her when she moves.
         const tx = px + Math.cos(ang) * m.r;
@@ -112,7 +149,14 @@ export class FreedMoths {
       }
       // A moth: a chevron about 12 px across whose wings beat (the V opens and closes), and a body dot.
       const beat = Math.sin(clock * 26 + m.bob);
-      const fade = m.age > SPIRAL + FOLLOW ? Math.max(0, 1 - (m.age - SPIRAL - FOLLOW) / LEAVE) : 1;
+      let fade = m.age > SPIRAL + FOLLOW ? Math.max(0, 1 - (m.age - SPIRAL - FOLLOW) / LEAVE) : 1;
+      if (oak && m.age >= SPIRAL + TO_OAK.follow) {
+        // Into the crown's light near the top; an oak off in the distance takes them out of sight.
+        const toTop = (m.y - oak.top) / 300;
+        const far = Math.hypot(m.x - oak.x, m.y - oak.y) > 2500;
+        const u = m.age - SPIRAL - TO_OAK.follow;
+        fade = Math.min(1, Math.max(0, toTop)) * (far ? Math.max(0, 1 - u / TO_OAK.gone) : 1);
+      }
       const span = 6 + 1.5 * Math.abs(beat);
       const lift = 2 + 5 * beat;
       g.moveTo(m.x - span, m.y - lift)
