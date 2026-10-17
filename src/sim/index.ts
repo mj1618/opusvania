@@ -1,254 +1,147 @@
 /**
- * Sim entry point. Pure and deterministic: (state, input, tuning) -> next state + events.
+ * Sim entry point. Pure and deterministic: (state, input, tuning, scene) -> next state + events.
  * No Pixi, DOM, audio, Math.random or Date.now anywhere under src/sim (enforced by
  * tsconfig.sim.json, biome overrides and tests/unit/sim-purity.test.ts).
  */
-import { tickSold } from './ai/boss';
-import {
-  enemyBookkeeping,
-  enemyHitsOnKid,
-  leviedHitsEnemies,
-  spawnEnemy,
-  springEnemies,
-  updateEnemies,
-} from './ai/enemy';
-import { shotsHitKid, updateShots } from './ai/shots';
-import { applyHitstop, beginHitstopStep } from './combat/hitstop';
-import {
-  hurtKid,
-  kidAction,
-  kidBookkeeping,
-  kidCountStep,
-  kidDown,
-  kidHits,
-  kidInputMask,
-  kidInvulnerable,
-  kidMovementCancels,
-  kidRunMult,
-  latchAction,
-  slipClean,
-  staticLeak,
-} from './combat/kid';
+import { contactDamage, createEnemies, enemyTouched, resetEnemies, updateEnemies } from './enemies';
 import type { SimEvent } from './events';
+import { markOfferTarget, updateOffer } from './giving';
+import { createGoal, goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
 import type { InputFrame } from './input';
-import { springContacts, updateLevied } from './levied';
-import { BASE_PROFILE, resolveParams } from './player/params';
-import { createPlayer, latchOnly, updatePlayer } from './player/player';
-import { updateWeight } from './player/weight';
+import { createPickups, dropGlints, updateDrops, updatePickups } from './pickups';
+import { resolveParams } from './player/params';
+import {
+  createPlayer,
+  hurtPlayer,
+  keepOffer,
+  reformPlayer,
+  trackSafeGround,
+  updatePlayer,
+} from './player/player';
+import { createPods, updatePods } from './pods';
 import { seedRng } from './rng';
-import { chinMax, newRun } from './run';
-import { retryPending } from './sound';
-import { buildLocal } from './sources';
+import type { Scene } from './scene';
+import { markSeen } from './seen';
 import type { GameState } from './state';
 import type { Tuning } from './tuning';
-import { rebuildSolids } from './world/dynamic';
-import { updatePlatesAndGates } from './world/gates';
-import { DEFAULT_ROOM, getRoom } from './world/rooms';
 
 export const SIM_HZ = 60;
 
-export interface NewGameOptions {
-  seed: number;
-  roomId?: string;
-  spawn?: string;
-}
-
-export function createState(opts: NewGameOptions, t: Tuning, events: SimEvent[] = []): GameState {
-  const roomId = opts.roomId ?? DEFAULT_ROOM;
-  const room = getRoom(roomId);
-  const sp = room.spawns.default;
-  if (!sp) throw new Error(`Room "${roomId}" has no spawn`);
-  const local = buildLocal(room, t);
+export function createState(seed: number, t: Tuning, scene: Scene, events: SimEvent[] = []): GameState {
   const state: GameState = {
-    version: 5,
+    version: 20,
     frame: 0,
-    seed: opts.seed >>> 0,
-    rng: seedRng(opts.seed),
-    roomId,
+    seed: seed >>> 0,
+    rng: seedRng(seed),
     prevInput: 0,
-    player: null as unknown as GameState['player'],
-    transition: null,
-    roomStats: { deaths: 0, goal: false, optional: false, frames: 0 },
-    hitstop: 0,
-    hitstopReq: { frames: 0, cls: 'light' },
-    run: newRun(),
-    local,
+    player: createPlayer(scene.spawn.x, scene.spawn.y, t, scene),
+    pickups: createPickups(scene),
+    pods: createPods(scene),
+    enemies: createEnemies(scene, t),
+    goal: createGoal(scene),
   };
-  rebuildSolids(state, t.world.tileSize);
-  state.player = createPlayer(sp, t, room, { abilities: room.abilities });
-  loadRoom(state, roomId, opts.spawn, t, events);
+  events.push({ type: 'spawn', x: scene.spawn.x, y: scene.spawn.y });
   return state;
 }
 
 /**
- * Puts the player at a spawn in a room. Keeps the frame count, RNG, the run (Poundage, Lien,
- * Corner), the player's Chin and movement profile. Abilities come from the room (gym semantics).
- * Room-local state (sources, sounds, bag, levied objects, enemies, shots, plates, gates) is
- * rebuilt from the room data: leaving a room regenerates it and every sound goes home. A Runner
- * holding Kid's Poundage waits in the room where she went down.
+ * Puts a fresh player with its feet centre at (x, y): at rest, facing right, every timer cleared.
+ * The frame count, the RNG, what has been collected, the enemies, the lanterns, her health, her
+ * last safe ground and the slash count are kept (a player placed while faded is whole again).
  */
-export function loadRoom(
+export function placePlayer(
   state: GameState,
-  roomId: string,
-  spawn: string | undefined,
+  x: number,
+  y: number,
   t: Tuning,
+  scene: Scene,
   events: SimEvent[],
 ): void {
-  const room = getRoom(roomId);
-  const key = spawn ?? 'default';
-  const sp = room.spawns[key];
-  if (!sp)
-    throw new Error(`Room "${roomId}" has no spawn "${key}". Known: ${Object.keys(room.spawns).join(', ')}`);
-  // Carrying the bag: the weight class starts at feather (the bag is empty on entry).
-  const profile = room.abilities.seize ? 'feather' : (state.player?.profile ?? BASE_PROFILE);
-  const max = chinMax(state, t);
   const old = state.player;
-  const chin = old && !old.down ? Math.max(1, Math.min(max, old.chin)) : max;
-  state.roomId = roomId;
-  state.local = buildLocal(room, t);
-  const r = state.run.runner;
-  if (r && r.roomId === roomId) spawnEnemy(state.local, 'runner', r.x, r.feetY);
-  state.hitstop = 0;
-  state.hitstopReq.frames = 0;
-  rebuildSolids(state, t.world.tileSize);
-  state.player = createPlayer(sp, t, room, { abilities: room.abilities, profile, chin, chinMax: max });
+  state.player = createPlayer(x, y, t, scene);
+  if (old.hp > 0) state.player.hp = Math.min(old.hp, state.player.hpMax);
+  // Being placed somewhere does not make it safe ground: the last safe spot stands until she earns a new one.
+  state.player.safeX = old.safeX;
+  state.player.safeY = old.safeY;
+  // Slashes stay numbered on: targets remember the last slash that hit them (`hitBy`), so a
+  // number used again would pass through whatever it hit before.
+  state.player.attackSeq = old.attackSeq;
+  keepOffer(state.player, old);
   state.prevInput = 0;
-  state.transition = null;
-  state.roomStats = { deaths: 0, goal: false, optional: false, frames: 0 };
-  events.push({
-    type: 'roomEnter',
-    roomId,
-    x: state.player.x + state.player.w / 2,
-    y: state.player.y + state.player.h,
-  });
+  events.push({ type: 'spawn', x, y });
 }
 
-/**
- * Edge exit arrival: the player keeps its whole state (velocity, facing, jump and dash timers,
- * coyote, Chin) and moves by `offset` px into the target room's coordinates, so the body sits at
- * the same world position. Room-local state is rebuilt as in loadRoom; room-relative player fields
- * are translated (fall tracking) or reset to the new room (respawn marker, last safe ground).
- * Input edge state (`prevInput`) is kept so a held button is not pressed again.
- */
-export function enterRoomAt(
-  state: GameState,
-  roomId: string,
-  offset: [number, number],
-  t: Tuning,
-  events: SimEvent[],
-): void {
-  const room = getRoom(roomId);
-  const p = state.player;
-  const [ox, oy] = offset;
-  p.x -= ox;
-  p.y -= oy;
-  p.dropY -= oy;
-  p.airTopY -= oy;
-  p.respawn = null;
-  p.safeX = p.x + p.w / 2;
-  p.safeY = p.y + p.h;
-  // Gym semantics, as loadRoom: the room sets the abilities; carrying the bag starts at feather.
-  p.abilities = { ...room.abilities };
-  if (room.abilities.seize) p.profile = 'feather';
-  state.roomId = roomId;
-  state.local = buildLocal(room, t);
-  const r = state.run.runner;
-  if (r && r.roomId === roomId) spawnEnemy(state.local, 'runner', r.x, r.feetY);
-  state.hitstop = 0;
-  state.hitstopReq.frames = 0;
-  rebuildSolids(state, t.world.tileSize);
-  state.transition = null;
-  state.roomStats = { deaths: 0, goal: false, optional: false, frames: 0 };
-  events.push({ type: 'roomEnter', roomId, x: p.x + p.w / 2, y: p.y + p.h });
-}
-
-export function reseed(state: GameState, seed: number): void {
-  state.seed = seed >>> 0;
-  state.rng = seedRng(seed);
-}
-
-/** Debug/test: spawns an enemy with its feet at (x, feetY) (a replay op when done via Game). */
-export function spawnEnemyAt(state: GameState, type: string, x: number, feetY: number): number {
-  return spawnEnemy(state.local, type, x, feetY);
-}
-
-/**
- * Advances the sim by exactly one 1/60 s step, mutating `state` and appending to `events`.
- * Per-step order (combat-spec §3.1): transition, hitstop, sold lots + dynamic solids, Kid action
- * (or her Count), movement, levied entities, shots, enemies, resolution (Kid's hits, enemy hits
- * and shots on Kid, levied projectiles, springs, plates/gates), hitstop apply, weight, bookkeeping.
- */
-export function step(state: GameState, input: InputFrame, t: Tuning, events: SimEvent[]): void {
-  const tr = state.transition;
-  if (tr) {
-    tr.timer--;
-    if (tr.timer <= 0) {
-      if (tr.offset) enterRoomAt(state, tr.to, tr.offset, t, events);
-      else loadRoom(state, tr.to, tr.spawn, t, events);
-    }
-  } else {
-    const room = getRoom(state.roomId);
-    const P = resolveParams(t, state.player.profile);
-    if (state.hitstop > 0) {
-      // 2. Global hitstop: nothing moves and no timers run; presses are latched.
-      state.hitstop--;
-      latchOnly(state, room, input, P);
-      latchAction(state, input, t);
-    } else {
-      const p = state.player;
-      beginHitstopStep(state);
-      // 3. Sold lots come back; dynamic solids (pending sources re-solidify first when clear).
-      tickSold(state, events);
-      retryPending(state, events);
-      rebuildSolids(state, P.tileSize);
-      let prevFeet = p.y + p.h;
-      if (p.down) {
-        // Down for her Count: the world keeps moving, Kid doesn't.
-        kidCountStep(state, input, t, events);
-      } else {
-        // 4. Kid action. 5. Movement (the L2 controller) with the hurt lock, a rooting move,
-        // the Cross's planted run cap and the punch recoil.
-        kidAction(state, room, input, t, P, events);
-        P.maxRun *= kidRunMult(state);
-        if (p.recoilT > 0) p.vx = p.recoilVx;
-        prevFeet = p.y + p.h;
-        const before = events.length;
-        updatePlayer(state, room, kidInputMask(state, input, t), P, events);
-        kidMovementCancels(state, events, before);
-      }
-      // 6. Levied entities and shots. 7. Enemies.
-      updateLevied(state, room, t, events);
-      updateShots(state, room, t, events);
-      updateEnemies(state, room, t, events);
-      // 8. Resolution.
-      const kid = state.player;
-      if (!kid.down) {
-        kidHits(state, t, P, events);
-        const inv = kidInvulnerable(state, t, P);
-        const slipped = { enemy: 0 };
-        const hit = enemyHitsOnKid(state, t, events, inv, slipped) ?? shotsHitKid(state, inv, slipped);
-        if (slipped.enemy) slipClean(state, slipped.enemy, t, events);
-        if (hit) hurtKid(state, room, hit.dmg, hit.fromX, hit.enemy?.id ?? -1, hit.attack, t, events);
-        // A hazard took the last pip: down for the Count instead of the safe-ground respawn.
-        if (kid.chin <= 0 && kid.hazardRespawn && !kid.down) kidDown(state, t, events);
-      }
-      leviedHitsEnemies(state, t, events);
-      springContacts(state, room, t, P, prevFeet, events);
-      springEnemies(state, t, events);
-      updatePlatesAndGates(state, t, events);
-      staticLeak(state, t, events);
-      // 9. Hitstop. 10. Weight (applies from the next step). 11. Bookkeeping.
-      applyHitstop(state, t, events);
-      updateWeight(state, t, events);
-      kidBookkeeping(state, events);
-      enemyBookkeeping(state, t, events);
-      state.roomStats.frames++;
-    }
+/** Advances the sim by exactly one 1/60 s step, mutating `state` and appending to `events`. */
+export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scene, events: SimEvent[]): void {
+  const P = resolveParams(t);
+  const first = events.length;
+  // The end of a fade: she re-forms at the last safe ground and the living enemies go home.
+  if (state.player.faded > 0 && --state.player.faded === 0) {
+    dropGlints(state, scene, t.health.fadeDrop, events);
+    const light = restPoint(state, scene, t);
+    reformPlayer(state, scene, P, events, light);
+    goalReformed(state.goal, light);
+    resetEnemies(state, scene, t, events);
   }
+  // From the end of the run on she is held (no input reaches her; she walks into the heart and
+  // stops) and nothing can hurt her.
+  const held = goalHolds(state.goal, t.goal);
+  const ran = updatePlayer(state, scene, held ? heldInput(state, scene, t.goal) : input, P, t.pods, events);
+  // Her offer (memory/giving.md): a glint given this step, one arriving.
+  updateOffer(state, scene, t, held ? 0 : input, held, events);
+  const touch = updateEnemies(state, scene, t, events, first);
+  const p = state.player;
+  const e = touch >= 0 ? state.enemies[touch] : undefined;
+  if (e && p.invuln === 0 && p.hp > 0 && !state.goal.gathered) {
+    const pc = p.x + p.w / 2;
+    const ec = e.x + e.w / 2;
+    const dir = pc < ec ? -1 : pc > ec ? 1 : -p.facing;
+    // Kindling a lantern or a lamp (`kindling` is last step's: she was in the channel) nothing can hurt her:
+    // what touches her is turned away as if it had, and she is not.
+    if (p.kindling < 0 && p.kindlingLamp < 0) {
+      const hitX = (Math.max(p.x, e.x) + Math.min(p.x + p.w, e.x + e.w)) / 2;
+      const hitY = (Math.max(p.y, e.y) + Math.min(p.y + p.h, e.y + e.h)) / 2;
+      hurtPlayer(
+        state,
+        P,
+        dir,
+        contactDamage(state, touch, t),
+        { kind: e.kind, id: e.id },
+        hitX,
+        hitY,
+        events,
+      );
+    }
+    enemyTouched(state, scene, touch, dir, t, events);
+  }
+  if (ran) trackSafeGround(state, scene, P);
+  updatePods(state, scene, t.pickups.comboFrames, events);
+  updatePickups(state, scene, t.pickups, events);
+  updateDrops(state, t.pickups, events);
+  updateGoal(state, scene, t, input, events, first);
+  markSeen(state, t);
+  markOfferTarget(state, scene, t, goalHolds(state.goal, t.goal));
   state.prevInput = input;
   state.frame++;
 }
 
+export type { SimEvent } from './events';
+export { goalHolds, heartBox, lampCost, lanternBox, lanternCost } from './goal';
 export { hashState } from './hash';
-export type { GameState, PlayerState } from './state';
+export { slashBox, slashTuning } from './player/attack';
+export type { EnemyKind, EnemySpawn, Lantern, Pickup, PickupKind, Pod, PodMount, Scene } from './scene';
+export type {
+  AttackDir,
+  EnemyMode,
+  EnemyState,
+  GameState,
+  GlintDrop,
+  GoalState,
+  LanternState,
+  Motion,
+  PickupsState,
+  PlayerMode,
+  PlayerState,
+  PodsState,
+} from './state';
 export { cloneState } from './state';

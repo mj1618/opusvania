@@ -1,6 +1,7 @@
 node_modules/
 dist/
 clips/
+shots/
 test-results/
 playwright-report/
 blob-report/

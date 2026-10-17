@@ -16,6 +16,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "tests", "tools", "vite.config.ts", "playwright.config.ts"],
-  "exclude": ["tools/ideation"]
+  "include": ["src", "tests", "tools", "vite.config.ts", "playwright.config.ts"]
 }

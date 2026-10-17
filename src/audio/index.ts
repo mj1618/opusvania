@@ -1,242 +1,264 @@
-import type { EventBus, SimEvent } from '../sim/events';
-import { audioData, type DuckName, type LayerName, type MuffleKind } from './data';
-import { AudioEngine, type PlayOpts } from './engine';
-import type { HumStatus } from './hum';
-import type { MusicStats } from './music';
-import type { NoiseColour } from './noise';
-import type { OfflineResult } from './offline';
-import { EventRouter, type RoutedEvent, type RouterState } from './router';
-import { type AudioSettings, loadSettings, saveSettings, type VolumeKey } from './settings';
-import type { Point } from './spatial';
-
-export interface AudioStats {
-  /** 'locked' until the first user gesture creates the AudioContext. */
-  state: AudioContextState | 'locked';
-  time: number;
-  sampleRate: number;
-  settings: AudioSettings;
-  muffle: MuffleKind;
-  room: string | null;
-  voices: { active: number; hums: number; loops: number; byName: Record<string, number> };
-  played: number;
-  dropped: number;
-  playedByName: Record<string, number>;
-  hums: { id: string; colour: NoiseColour; status: HumStatus; x: number; y: number }[];
-  music: MusicStats | null;
-  /** Last routed sim events (event type -> sound, and whether it actually played). */
-  recent: RoutedEvent[];
-}
-
-/** `window.__game.audio`. Everything returns plain JSON (render() returns a Promise of JSON). */
-export interface AudioDebugApi {
-  /** Creates/resumes the AudioContext. Only reaches 'running' inside or after a user gesture. */
-  unlock(): Promise<string>;
-  stats(): AudioStats;
-  play(name: string, opts?: Pick<PlayOpts, 'x' | 'y' | 'volume' | 'pitch' | 'pan'>): boolean;
-  sounds(): string[];
-  mute(on?: boolean): boolean;
-  volume(key: VolumeKey, v?: number): number;
-  muffle(kind?: MuffleKind): MuffleKind;
-  duck(name?: DuckName): void;
-  /** Starts a hum (default position: the player). Returns its id, or null while locked. */
-  hum(colour: NoiseColour, x?: number, y?: number, id?: string): string | null;
-  /** Seizes a hum into the player's hands. */
-  seize(id: string): boolean;
-  /** Throws a hum at (x, y). Returns the land time (context seconds). */
-  levy(id: string, x: number, y: number): number | null;
-  stopHum(id: string): boolean;
-  /** No arg: stats. A layer: start/crossfade on the next bar. 'stop': fade out. */
-  music(layer?: LayerName | 'stop'): MusicStats | null;
-  /** Renders offline scenarios (see src/audio/scenarios.ts) and returns level stats (+ WAV). */
-  render(names?: string[], opts?: { wav?: boolean }): Promise<OfflineResult[]>;
-  scenarios(): Promise<string[]>;
-  /** Renders a recorded run's audio offline (clip --audio): WAV base64 + levels. */
-  renderTrack(
-    cues: import('./offline').TrackCue[],
-    seconds: number,
-  ): Promise<{ wavBase64: string; stats: import('./wav').LevelStats }>;
-}
-
-export interface AudioSystemDeps {
-  bus: EventBus<SimEvent>;
-  state: () => RouterState;
-  /** Listener position in world pixels (the camera centre). */
-  listener: () => Point;
-  target?: Window;
-}
-
-const GESTURES = ['pointerdown', 'keydown', 'touchend'] as const;
-
 /**
- * Owns the live AudioContext and wires the engine to the game: routes sim events, updates the
- * listener and schedulers every render frame, unlocks on the first gesture, persists settings.
- * Read-only with respect to the sim.
+ * The audio director: built in main.ts beside RenderStage, under the same contract. It reads sim
+ * events and state after each step (`game.afterStep`) and the camera after each render frame
+ * (`stage.afterUpdate`), never changes the sim, and render never imports it.
+ *
+ * MUTED BY DEFAULT: no AudioContext exists until the player presses M (kept in localStorage) or
+ * the URL has `?audio` (`?audio=0` forces it off). The context is made in that key press, or in the
+ * first key or pointer press after unmuting (browsers allow no sooner); the sounds are baked over a few idle callbacks, then the mix fades
+ * in. Muted, the director still routes cues (`__game.audio.cues(n)`) and can record a tape for an
+ * offline clip (offline.ts), so tests and clips need no sound. In `manual` and `frozen` modes the
+ * context is suspended.
  */
-export class AudioSystem {
-  engine: AudioEngine | null = null;
-  readonly router: EventRouter;
-  readonly debug: AudioDebugApi;
+import type { Game } from '../game';
+import type { SimEvent } from '../sim/events';
+import { bakeSteps } from './bake';
+import { Conductor } from './conductor';
+import { AudioEngine } from './engine';
+import { type ProView, viewOf } from './prologue';
+import { type AudioCam, type AudioSnap, type Cue, snapOf } from './router';
+import { AUDIO, type BusId } from './tuning';
+
+/** One render frame of a recording: the camera, render clock and the sim steps since the last. */
+export interface TapeFrame {
+  clock: number;
+  cam: AudioCam;
+  steps: Array<{ events: SimEvent[]; snap: AudioSnap }>;
+  /** The prologue as it stood this frame (absent once it is over). */
+  pro?: ProView;
+  /** The state before any step of the recording (the first frame only). */
+  prime?: AudioSnap;
+}
+
+/** What `AudioDirector.prologue` may return: the director's plan (render/prologue/plan.ts) and whether it is over. */
+export type PrologueSource = () => { plan: Parameters<typeof viewOf>[0]; done: boolean } | null;
+
+const STORE_KEY = 'wing.audio';
+
+function stored(): boolean | null {
+  try {
+    const v = localStorage.getItem(STORE_KEY);
+    return v === null ? null : v === 'on';
+  } catch {
+    return null;
+  }
+}
+
+function store(on: boolean): void {
+  try {
+    localStorage.setItem(STORE_KEY, on ? 'on' : 'off');
+  } catch {
+    // Private windows: the choice lasts the session.
+  }
+}
+
+export class AudioDirector {
+  muted: boolean;
+  /** Called when muted flips (the key legend shows it). */
+  onChange: ((muted: boolean) => void) | null = null;
+  readonly conductor: Conductor;
   private ctx: AudioContext | null = null;
-  private settings: AudioSettings = loadSettings();
-  private readonly target: Window;
+  private engine: AudioEngine | null = null;
+  private cam: AudioCam = { x: 0, y: 0, zoom: 1 };
+  private quiet = false;
+  private tape: TapeFrame[] | null = null;
+  private pending: TapeFrame['steps'] = [];
+  private faded = 0;
+  private suspending = false;
+  /**
+   * The prologue's director, read-only (main.ts: `audio.prologue = () => prologue`). Without it the
+   * director falls back to `__game.prologue.state()` (beats and their clocks only: no glint, bumps,
+   * sneeze or Sorrel's body), and without either the prologue is silent (the old `quiet`).
+   */
+  prologue: PrologueSource | null = null;
 
-  constructor(private readonly deps: AudioSystemDeps) {
-    this.target = deps.target ?? window;
-    const data = audioData();
-    this.router = new EventRouter(
-      {
-        play: (name, opts) => this.engine?.play(name, opts) ?? false,
-        loopGain: (name, g) => this.engine?.loopGain(name, g),
-        setRoom: (id) => this.engine?.setRoom(id),
-        hums: {
-          reset: (list) => {
-            const e = this.engine;
-            if (!e) return;
-            for (const h of e.humInfo()) if (h.id.startsWith('s')) e.getHum(h.id)?.stop(0.2);
-            for (const h of list) e.hum(h.id, h.colour as NoiseColour, h.pos);
-          },
-          seize: (id, holder) => void this.engine?.getHum(id)?.seize(holder),
-          fly: (id, from, towards) => this.engine?.getHum(id)?.fly(from, towards),
-          land: (id, at, thud) => this.engine?.getHum(id)?.land(at, thud),
-          setPosition: (id, at) => {
-            const h = this.engine?.getHum(id);
-            if (h && h.status !== 'carried') h.setPosition(at);
-          },
-        },
-      },
-      data.sfx,
-    );
-    // Every sim event goes to the router; it ignores types it has no sound for.
-    deps.bus.onAny((e) => {
-      const s = deps.state();
-      this.router.handle(e, s.frame, s);
-    });
-    for (const g of GESTURES) this.target.addEventListener(g, this.onGesture, { capture: true });
-    this.target.document?.addEventListener('visibilitychange', this.onVisibility);
-    this.debug = this.makeDebugApi();
+  constructor(
+    private readonly game: Game,
+    params: URLSearchParams = new URLSearchParams(),
+  ) {
+    const url = params.get('audio');
+    this.muted = url !== null ? url === '0' : !(stored() ?? false);
+    this.conductor = new Conductor({ scene: game.scene, seed: game.seed });
+    game.afterStep.add((events) => this.onStep(events));
+    // Unmuted (a remembered choice, or a review URL), the context still waits for the first gesture.
   }
 
-  /** Call once per render frame, after stepping the sim. */
-  update(): void {
-    const e = this.engine;
-    if (!e) return;
-    e.listener = this.deps.listener();
-    const s = this.deps.state();
-    this.router.update(s);
-    // A seized ("carried") sound travels with the player.
-    const held = { x: s.player.x + s.player.w / 2, y: s.player.y + s.player.h / 2 };
-    for (const h of e.humInfo()) if (h.status === 'carried') e.getHum(h.id)?.setPosition(held);
-    e.tick();
-  }
-
-  /** Creates the context on first use. Safe to call repeatedly. */
-  ensureEngine(): AudioEngine {
-    if (this.engine) return this.engine;
-    const ctx = new AudioContext({ latencyHint: 'interactive' });
-    this.ctx = ctx;
-    const engine = new AudioEngine(ctx, audioData(), this.settings);
-    this.engine = engine;
-    engine.listener = this.deps.listener();
-    engine.setRoom(this.deps.state().roomId);
-    // Hums for the room we're already in (the roomEnter event came before audio unlocked).
-    this.router.rehum(this.deps.state());
-    const m = engine.data.music;
-    if (m.autoStart) engine.music.start(m.startLayer);
-    ctx.addEventListener('statechange', () => {
-      if (ctx.state === 'running') {
-        for (const g of GESTURES) this.target.removeEventListener(g, this.onGesture, { capture: true });
-      }
-    });
-    return engine;
-  }
-
-  private readonly onGesture = (): void => {
-    this.ensureEngine();
-    void this.ctx?.resume();
-  };
-
-  private readonly onVisibility = (): void => {
-    if (!this.ctx || this.ctx.state === 'closed') return;
-    if (this.target.document.visibilityState === 'hidden') void this.ctx.suspend();
-    else void this.ctx.resume();
-  };
-
-  private setSettings(patch: Partial<AudioSettings>): void {
-    this.settings = { ...this.settings, ...patch };
-    saveSettings(this.settings);
-    if (this.engine) {
-      this.engine.settings = { ...this.settings };
-      this.engine.applySettings();
-    }
-  }
-
-  private makeDebugApi(): AudioDebugApi {
-    const player = (): Point => {
-      const p = this.deps.state().player;
-      return { x: p.x + p.w / 2, y: p.y + p.h / 2 };
+  /** Listens for the first gesture, which may make or resume the context. */
+  install(target: Window = window): void {
+    const gesture = () => {
+      if (!this.muted) this.wake();
     };
+    target.addEventListener('keydown', gesture);
+    target.addEventListener('pointerdown', gesture);
+  }
+
+  /** M: flips mute. Call from a key handler: it is the gesture that may create the context. */
+  toggle(): boolean {
+    this.mute(!this.muted);
+    store(!this.muted);
+    return this.muted;
+  }
+
+  mute(on: boolean): void {
+    if (this.muted === on) return;
+    this.muted = on;
+    if (!on) this.wake();
+    this.onChange?.(on);
+  }
+
+  /** Makes the context (once) and resumes it if it should run. */
+  private wake(): void {
+    if (typeof AudioContext === 'undefined') return;
+    if (!this.ctx) {
+      this.ctx = new AudioContext({ latencyHint: 'interactive' });
+      this.bake(this.ctx);
+    }
+    if (this.ctx.state === 'suspended' && this.game.mode === 'realtime') void this.ctx.resume();
+  }
+
+  /** Bakes the sounds over idle callbacks, then builds the graph and fades the mix in. */
+  private bake(ctx: AudioContext): void {
+    const { out, steps } = bakeSteps(ctx.sampleRate, this.game.seed);
+    const idle: (fn: () => void) => void =
+      typeof requestIdleCallback === 'function'
+        ? (fn) => requestIdleCallback(fn, { timeout: 200 })
+        : (fn) => setTimeout(fn, 0);
+    let i = 0;
+    const next = () => {
+      const t0 = performance.now();
+      while (i < steps.length && performance.now() - t0 < 12) steps[i++]?.();
+      if (i < steps.length) return idle(next);
+      this.engine = new AudioEngine(ctx, out);
+      this.conductor.engine = this.engine;
+      this.engine.graph.setVolumes(ctx.currentTime);
+      this.faded = 0;
+    };
+    idle(next);
+  }
+
+  private when(): number {
+    return (this.ctx?.currentTime ?? 0) + AUDIO.lookahead;
+  }
+
+  private get audible(): boolean {
+    return !!this.engine && !this.muted && !this.quiet && this.ctx?.state === 'running';
+  }
+
+  private onStep(events: readonly SimEvent[]): void {
+    const g = this.game;
+    const snap = snapOf(g.state, g.scene, g.tuning.goal.channelFrames, g.tuning.giving.giftCalmFrames);
+    // The prologue plays another version of the scene, then hands over the whole Grove.
+    this.conductor.ctx.scene = g.scene;
+    // A restart begins the frame count again.
+    if (snap.frame === 0) this.conductor.reset();
+    this.conductor.step(events, snap, this.cam, this.when(), this.audible);
+    if (this.tape) this.pending.push({ events: events.map((e) => ({ ...e })), snap });
+  }
+
+  /**
+   * After each render frame: the camera (view centre and zoom) and the render clock. `quiet` holds
+   * the mix silent (the prologue has its own silence).
+   */
+  update(clock: number, cam: AudioCam, quiet = false): void {
+    this.cam = { x: cam.x, y: cam.y, zoom: cam.zoom };
+    const pro = this.proView();
+    // The prologue sounds once audio can see it; otherwise it keeps its old silence.
+    this.quiet = quiet && !pro;
+    quiet = this.quiet;
+    if (this.tape) {
+      const fr: TapeFrame = { clock, cam: this.cam, steps: this.pending };
+      if (pro) fr.pro = pro;
+      if (this.tape.length === 0) fr.prime = this.snap();
+      this.tape.push(fr);
+      this.pending = [];
+    }
+    this.conductor.prime(this.snap());
+    this.conductor.prologue(pro, this.cam, this.when(), this.audible);
+    const ctx = this.ctx;
+    const engine = this.engine;
+    if (!ctx || !engine) return;
+    const run = !this.muted && this.game.mode === 'realtime';
+    if (run && ctx.state === 'suspended') void ctx.resume();
+    const target = run && !quiet ? 1 : 0;
+    if (target !== this.faded) {
+      engine.fade(target, ctx.currentTime, target ? 0.5 : 0.08);
+      this.faded = target;
+    }
+    // Faded out: let the fade finish, then stop the clock (nothing costs anything muted).
+    if (!run && ctx.state === 'running' && !this.suspending) {
+      this.suspending = true;
+      setTimeout(() => {
+        this.suspending = false;
+        if (this.muted || this.game.mode !== 'realtime') void ctx.suspend();
+      }, 300);
+    }
+    if (ctx.state === 'running') this.conductor.frame(this.cam, clock, this.when());
+  }
+
+  private snap(): AudioSnap {
+    const g = this.game;
+    return snapOf(g.state, g.scene, g.tuning.goal.channelFrames, g.tuning.giving.giftCalmFrames);
+  }
+
+  /** The prologue now, if it is playing and audio can see it. */
+  private proView(): ProView | null {
+    const src = this.prologue?.();
+    if (src) return src.done ? null : viewOf(src.plan, false);
+    const api = (globalThis as { __game?: { prologue?: { state(): Record<string, unknown> } | null } }).__game
+      ?.prologue;
+    if (!api) return null;
+    const st = api.state() as {
+      beat?: string;
+      bt?: number;
+      t?: number;
+      done?: boolean;
+      phase?: string;
+      leg?: number;
+    };
+    if (st.done || typeof st.beat !== 'string') return null;
+    return { beat: st.beat, bt: st.bt ?? 0, t: st.t ?? 0, done: false, phase: st.phase, leg: st.leg };
+  }
+
+  /** Records every step and frame from now (for an offline clip); false stops and drops it. */
+  record(on = true): number {
+    this.tape = on ? [] : null;
+    this.pending = [];
+    return 0;
+  }
+
+  /** The recording so far. */
+  recording(): TapeFrame[] {
+    return this.tape ?? [];
+  }
+
+  /** Sets a bus or the master volume (dB) and returns the levels. */
+  volume(bus?: BusId | 'master', db?: number): Record<string, number> {
+    if (bus && db !== undefined) {
+      if (bus === 'master') AUDIO.master = db;
+      else if (bus in AUDIO.bus) AUDIO.bus[bus] = db;
+      else throw new Error(`Unknown bus "${bus}"`);
+      this.applyVolumes();
+    }
+    return { master: AUDIO.master, ...AUDIO.bus };
+  }
+
+  /** Re-reads the volumes from tuning (Tweakpane edits). */
+  applyVolumes(): void {
+    if (this.engine && this.ctx) this.engine.graph.setVolumes(this.ctx.currentTime);
+  }
+
+  /** The last n cues routed (muted or not), newest last. */
+  cues(n = 20): Cue[] {
+    return this.conductor.recent.slice(-n).map((c) => ({ ...c }));
+  }
+
+  state(): { muted: boolean; context: string; ready: boolean; sampleRate: number; recording: number } {
     return {
-      unlock: async () => {
-        this.ensureEngine();
-        const ctx = this.ctx;
-        if (!ctx) return 'locked';
-        await Promise.race([ctx.resume(), new Promise((r) => setTimeout(r, 500))]);
-        return ctx.state;
-      },
-      stats: () => {
-        const e = this.engine;
-        return {
-          state: this.ctx?.state ?? 'locked',
-          time: this.ctx?.currentTime ?? 0,
-          sampleRate: this.ctx?.sampleRate ?? 0,
-          settings: { ...this.settings },
-          muffle: e?.muffleKind ?? 'none',
-          room: e?.room ?? null,
-          voices: e?.voiceStats() ?? { active: 0, hums: 0, loops: 0, byName: {} },
-          played: e?.counters.played ?? 0,
-          dropped: e?.counters.dropped ?? 0,
-          playedByName: { ...(e?.counters.playedByName ?? {}) },
-          hums: e?.humInfo() ?? [],
-          music: e?.music.stats() ?? null,
-          recent: this.router.log.slice(-8),
-        };
-      },
-      play: (name, opts) => this.ensureEngine().play(name, opts),
-      sounds: () => Object.keys(audioData().sfx.sounds),
-      mute: (on) => {
-        this.setSettings({ muted: on ?? !this.settings.muted });
-        return this.settings.muted;
-      },
-      volume: (key, v) => {
-        if (v !== undefined) this.setSettings({ [key]: Math.max(0, Math.min(1, v)) });
-        return this.settings[key];
-      },
-      muffle: (kind) => {
-        const e = this.ensureEngine();
-        if (kind) e.setMuffle(kind);
-        return e.muffleKind;
-      },
-      duck: (name = 'heavy') => this.ensureEngine().duck(name),
-      hum: (colour, x, y, id) => {
-        const pos = x !== undefined && y !== undefined ? { x, y } : player();
-        return this.ensureEngine().hum(id, colour, pos).id;
-      },
-      seize: (id) => this.engine?.getHum(id)?.seize(player()) ?? false,
-      levy: (id, x, y) => this.engine?.getHum(id)?.levy({ x, y }) ?? null,
-      stopHum: (id) => {
-        const h = this.engine?.getHum(id);
-        h?.stop();
-        return !!h;
-      },
-      music: (layer) => {
-        const e = this.ensureEngine();
-        if (layer === 'stop') e.music.stop();
-        else if (layer) e.music.start(layer);
-        return e.music.stats();
-      },
-      render: async (names, opts) => (await import('./offline')).renderScenarios(names, opts),
-      scenarios: async () => (await import('./scenarios')).scenarioNames(),
-      renderTrack: async (cues, seconds) => (await import('./offline')).renderTrack(cues, seconds),
+      muted: this.muted,
+      context: this.ctx ? this.ctx.state : 'none',
+      ready: !!this.engine,
+      sampleRate: this.ctx?.sampleRate ?? 0,
+      recording: this.tape?.length ?? -1,
     };
   }
 }

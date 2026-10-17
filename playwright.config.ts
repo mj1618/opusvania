@@ -10,15 +10,13 @@ const PORT = Number(process.env.E2E_PORT);
 
 export default defineConfig({
   testDir: 'tests/e2e',
-  // Screenshot goldens (tests/e2e/gfx.spec.ts) are shared across platforms: headless Chromium
-  // renders with SwiftShader both locally and on CI, and the tests compare with a tolerance.
-  snapshotPathTemplate: '{testDir}/__screenshots__/{testFileName}/{arg}{ext}',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  // CI renders with software GL at ~1 fps: boot/gfx tests took 24-30 s of the default 30 s and
-  // flaked (memory/toolchain.md). Local runs keep the default.
-  timeout: process.env.CI ? 90_000 : 30_000,
+  // CI renders with software GL at ~1 fps: the old suite needed more than the default 30 s
+  // (memory/toolchain.md). Local runs keep the default.
+  // Software GL boots slowly now (terrain, background blur and matte bakes): ~28 s before the first frame.
+  timeout: 90_000,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
     baseURL: `http://localhost:${PORT}/opusvania/`,

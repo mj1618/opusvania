@@ -1,167 +1,76 @@
-import type { SimEvent } from '../sim/events';
+/**
+ * Offline renders for clips with sound (`npm run clip -- --audio`): a tape recorded while the clip
+ * stepped the game (index.ts `record`) is played through the same conductor and engine into an
+ * OfflineAudioContext, at the clip's frame times. One tape always renders the same audio.
+ */
+import type { Scene } from '../sim/scene';
+import { bakeAll } from './bake';
+import { Conductor } from './conductor';
 import { AudioEngine } from './engine';
-import type { NoiseColour } from './noise';
-import { EventRouter, type RouterState } from './router';
-import { buildScenarios, type Scenario } from './scenarios';
-import { encodeWav, type LevelStats, levelStats } from './wav';
+import type { TapeFrame } from './index';
+import type { BusId } from './tuning';
+import { encodeWav, type LevelStats, levelStats, toBase64 } from './wav';
 
-/**
- * Renders scenarios faster than real time with OfflineAudioContext (browser only). Timed actions
- * and the engine's scheduler tick run inside `ctx.suspend(t)` callbacks, so the engine sees
- * `currentTime` advance exactly as it would live. Used by tools/audio-render.ts and the e2e test.
- */
+export interface RenderOptions {
+  /** Seconds of the tape's first frame in the clip (the clip's frame 1 is 1/60 s in). */
+  offset?: number;
+  /** Extra seconds after the last frame (tails). */
+  tail?: number;
+  sampleRate?: number;
+  /** Buses left out (the A/B take without the Hush: ['hush']). */
+  mute?: BusId[];
+}
 
-export interface OfflineResult {
-  name: string;
-  seconds: number;
-  sampleRate: number;
+export interface RenderResult {
+  wavBase64: string;
   stats: LevelStats;
-  /** 16-bit stereo WAV, base64 (only when requested). */
-  wavBase64?: string;
+  seconds: number;
+  /** Wall-clock ms: baking, and rendering. */
+  bakeMs: number;
+  renderMs: number;
+  /** Cues played, by sound. */
+  cues: Record<string, number>;
 }
 
-const QUANTUM = 128;
-const TICK_SECS = 0.05;
-
-export async function renderScenario(
-  sc: Scenario,
-  { sampleRate = 48000, wav = false } = {},
-): Promise<OfflineResult> {
-  const frames = Math.ceil(sc.seconds * sampleRate);
-  const ctx = new OfflineAudioContext(2, frames, sampleRate);
-  const engine = new AudioEngine(ctx);
-
-  // suspend() times must be distinct render-quantum boundaries after 0.
-  const byFrame = new Map<number, ((e: AudioEngine) => void)[]>();
-  const at = (t: number, fn: (e: AudioEngine) => void) => {
-    const f = Math.min(frames - QUANTUM, Math.round((t * sampleRate) / QUANTUM) * QUANTUM);
-    const list = byFrame.get(f) ?? [];
-    list.push(fn);
-    byFrame.set(f, list);
-  };
-  for (const [t, run] of sc.actions) at(t, run);
-  for (let t = 0; t < sc.seconds; t += TICK_SECS) at(t, (e) => e.tick());
-
-  for (const [f, fns] of [...byFrame].sort((a, b) => a[0] - b[0])) {
-    if (f <= 0) {
-      for (const fn of fns) fn(engine);
-      continue;
-    }
-    ctx.suspend(f / sampleRate).then(() => {
-      for (const fn of fns) fn(engine);
-      return ctx.resume();
-    });
-  }
-  const buf = await ctx.startRendering();
-  const channels = [buf.getChannelData(0), buf.getChannelData(1)];
-  return {
-    name: sc.name,
-    seconds: sc.seconds,
-    sampleRate,
-    stats: levelStats(channels, sampleRate),
-    wavBase64: wav ? toBase64(encodeWav(channels, sampleRate)) : undefined,
-  };
-}
-
-/** Renders scenarios by name (all if `names` is empty; a trailing '/' or '*' matches a prefix). */
-export async function renderScenarios(
-  names: string[] = [],
-  opts: { wav?: boolean } = {},
-): Promise<OfflineResult[]> {
-  const all = buildScenarios();
-  const match = (n: string) =>
-    names.length === 0 ||
-    names.some((q) => (q.endsWith('*') || q.endsWith('/') ? n.startsWith(q.replace(/\*$/, '')) : n === q));
-  const out: OfflineResult[] = [];
-  for (const sc of all.filter((s) => match(s.name))) out.push(await renderScenario(sc, opts));
-  return out;
-}
-
-function toBase64(bytes: Uint8Array): string {
-  let s = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return btoa(s);
-}
-
-/** One video frame of a recorded fight: its time, the camera centre, the step's events and state. */
-export interface TrackCue {
-  t: number;
-  listener: { x: number; y: number };
-  events: SimEvent[];
-  state: RouterState;
-}
-
-/**
- * Renders the game's audio for a recorded run offline (clips with sound: `npm run clip -- --audio`).
- * The real EventRouter and hum voices play the recorded sim events at their video times, with the
- * room ambience and the music director running, so a clip sounds like the game.
- */
-export async function renderTrack(
-  cues: TrackCue[],
-  seconds: number,
-  { sampleRate = 48000 } = {},
-): Promise<{ wavBase64: string; stats: LevelStats }> {
-  const frames = Math.ceil(seconds * sampleRate);
-  const ctx = new OfflineAudioContext(2, frames, sampleRate);
-  const engine = new AudioEngine(ctx);
-  const router = new EventRouter(
-    {
-      play: (name, opts) => engine.play(name, opts),
-      loopGain: (name, g) => engine.loopGain(name, g),
-      setRoom: (id) => engine.setRoom(id),
-      hums: {
-        reset: (list) => {
-          for (const h of engine.humInfo()) if (h.id.startsWith('s')) engine.getHum(h.id)?.stop(0.2);
-          for (const h of list) engine.hum(h.id, h.colour as NoiseColour, h.pos);
-        },
-        seize: (id, holder) => void engine.getHum(id)?.seize(holder),
-        fly: (id, from, towards) => engine.getHum(id)?.fly(from, towards),
-        land: (id, at, thud) => engine.getHum(id)?.land(at, thud),
-        setPosition: (id, at) => {
-          const h = engine.getHum(id);
-          if (h && h.status !== 'carried') h.setPosition(at);
-        },
-      },
-    },
-    engine.data.sfx,
-  );
-  const byFrame = new Map<number, (() => void)[]>();
-  const at = (t: number, fn: () => void) => {
-    const f = Math.min(frames - QUANTUM, Math.max(0, Math.round((t * sampleRate) / QUANTUM) * QUANTUM));
-    const list = byFrame.get(f) ?? [];
-    list.push(fn);
-    byFrame.set(f, list);
-  };
-  const first = cues[0];
-  at(0, () => {
-    if (first) {
-      engine.listener = first.listener;
-      router.update(first.state);
-    }
-    const m = engine.data.music;
-    if (m.autoStart) engine.music.start(m.startLayer);
+export async function renderTape(
+  tape: TapeFrame[],
+  scene: Scene,
+  seed: number,
+  opts: RenderOptions = {},
+): Promise<RenderResult> {
+  const sr = opts.sampleRate ?? 48000;
+  const offset = opts.offset ?? 1 / 60;
+  const seconds = offset + tape.length / 60 + (opts.tail ?? 0);
+  const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sr), sr);
+  const t0 = performance.now();
+  const baked = bakeAll(sr, seed);
+  const bakeMs = performance.now() - t0;
+  const engine = new AudioEngine(ctx, baked);
+  for (const b of opts.mute ?? []) engine.graph.off.add(b);
+  engine.graph.setVolumes(0);
+  // In over the first half second, out over the last quarter.
+  engine.fade(1, 0, 0.15);
+  engine.fade(0, Math.max(0, seconds - 0.4), 0.08);
+  const conductor = new Conductor({ scene, seed }, engine);
+  const cues: Record<string, number> = {};
+  tape.forEach((fr, k) => {
+    const t = offset + k / 60;
+    if (fr.prime) conductor.prime(fr.prime);
+    for (const s of fr.steps)
+      for (const c of conductor.step(s.events, s.snap, fr.cam, t)) cues[c.sound] = (cues[c.sound] ?? 0) + 1;
+    for (const c of conductor.prologue(fr.pro ?? null, fr.cam, t)) cues[c.sound] = (cues[c.sound] ?? 0) + 1;
+    conductor.frame(fr.cam, fr.clock, t, k === 0);
   });
-  for (const c of cues)
-    at(c.t, () => {
-      engine.listener = c.listener;
-      for (const e of c.events) router.handle(e, c.state.frame, c.state);
-      router.update(c.state);
-      const p = c.state.player;
-      const held = { x: p.x + p.w / 2, y: p.y + p.h / 2 };
-      for (const h of engine.humInfo()) if (h.status === 'carried') engine.getHum(h.id)?.setPosition(held);
-    });
-  for (let t = 0; t < seconds; t += TICK_SECS) at(t, () => engine.tick());
-  for (const [f, fns] of [...byFrame].sort((a, b) => a[0] - b[0])) {
-    if (f <= 0) {
-      for (const fn of fns) fn();
-      continue;
-    }
-    ctx.suspend(f / sampleRate).then(() => {
-      for (const fn of fns) fn();
-      return ctx.resume();
-    });
-  }
+  const t1 = performance.now();
   const buf = await ctx.startRendering();
-  const channels = [buf.getChannelData(0), buf.getChannelData(1)];
-  return { wavBase64: toBase64(encodeWav(channels, sampleRate)), stats: levelStats(channels, sampleRate) };
+  const renderMs = performance.now() - t1;
+  const chs = [buf.getChannelData(0), buf.getChannelData(1)];
+  return {
+    wavBase64: toBase64(encodeWav(chs, sr)),
+    stats: levelStats(chs),
+    seconds,
+    bakeMs,
+    renderMs,
+    cues,
+  };
 }

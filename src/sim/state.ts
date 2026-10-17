@@ -1,459 +1,631 @@
-import type { Colour, HitClass, MoveDir } from './events';
 import type { InputFrame } from './input';
-import type { Body } from './physics/aabb';
-import type { Abilities, Spawn } from './world/rooms';
-
-/** Everything the sim needs to continue. Plain JSON: no classes, Maps, typed arrays or functions. */
-export interface GameState {
-  version: 5;
-  /** Sim steps since the state was created. The sim's only clock. */
-  frame: number;
-  /** Seed the RNG was last seeded with (informational; `rng` is the live RNG state). */
-  seed: number;
-  rng: number;
-  roomId: string;
-  /** Input mask consumed on the previous step, for edge detection. */
-  prevInput: InputFrame;
-  player: PlayerState;
-  /** Set while a room transition fades out; the player is frozen until it loads the target. */
-  transition: {
-    to: string;
-    spawn?: string;
-    timer: number;
-    /** Edge exit: px to subtract from the body's position on arrival (the target room's origin minus this one's). */
-    offset?: [number, number];
-  } | null;
-  /** Per-visit room stats (reset when a room loads). */
-  roomStats: { deaths: number; goal: boolean; optional: boolean; frames: number };
-  /** Frames of global freeze left (combat-spec §2): nothing moves, presses are latched. */
-  hitstop: number;
-  /**
-   * This step's hitstop requests, max-merged (combat-spec §2). Cleared at the start of every
-   * non-frozen step and after it is applied, so it is always empty between steps (L3 audit #4:
-   * no module-level request state).
-   */
-  hitstopReq: { frames: number; cls: HitClass };
-  /** Persists across rooms: Poundage, the Corner, the Runner/Lien, Beat-the-Count use (combat-spec §3.5). */
-  run: RunState;
-  /**
-   * Room-local state (L3 brief §2.2): rebuilt from the room data by every loadRoom, which is the
-   * room regeneration rule (every sound goes home when you leave). Arrays are sorted by id.
-   */
-  local: LocalState;
-}
+import type { EnemyKind } from './scene';
 
 /**
- * Where a sound is. `consumed` = swallowed (the owner is Hoarse until the room reloads);
- * `held` = bought by a boss (Selling Your Bag), `at` = the enemy id; it goes home once he uses it.
+ * The whole sim state: plain JSON (finite numbers, strings, booleans, null), so it can be cloned,
+ * hashed and compared. The scene is static and lives outside it.
  */
-export type SoundStatus = 'home' | 'bag' | 'levied' | 'flight' | 'consumed' | 'held';
 
-/** Run-level state (survives room loads; combat-spec §3.4-3.5). */
-export interface RunState {
-  poundage: number;
-  /** `garnish` death mode: Poundage owed, paid from 50% of future earnings. */
-  debt: number;
-  /** Chin pips under a Lien (max Chin is reduced by this until the Runner is caught). */
-  lien: number;
-  /** The Runner holding your Poundage and Lien, waiting in the room (and spot) where you went down. */
-  runner: { roomId: string; poundage: number; lien: number; x: number; feetY: number } | null;
-  /** Last Corner rested at (where a counted-out Kid wakes up). */
-  corner: { roomId: string; spawn: string };
-  /** Beat the Count already used since the last Corner visit. */
-  beatUsed: boolean;
-  /** Times counted out this session. */
-  countedOut: number;
-  /** Every death this session (hazard deaths in gym rooms + counted outs): the HUD's counter, never reset by a room reload. */
-  deaths: number;
-  /** World fever (combat-spec C9): a debug integer in Phase 2. */
-  fever: number;
-}
-
-/** A sound (combat-spec §7): conserved; each id is in exactly one place. */
-export interface Sound {
-  id: number;
-  /** Data name (`partition`, `bark`...). */
-  name: string;
-  colour: Colour;
-  /** Voices come from creatures (they regrow), deeds from objects. */
-  kind: 'voice' | 'deed';
-  /** Source id that owns it (where it goes home to). */
-  owner: number;
-  status: SoundStatus;
-  /** Levied entity id while levied/in flight, else 0. */
-  at: number;
-  /** Frames away from home (voices revoice after combat.revoiceFrames). */
-  awayFrames: number;
-}
-
-export type SourceKind = 'object' | 'enemy' | 'levied' | 'shot';
+/** Controller state machine. */
+export type PlayerMode = 'normal' | 'wallSlide' | 'dash';
 
 /**
- * The one sound-source component (combat-spec §7 anti-rework rule): humming walls, furnaces,
- * static, enemies and levied objects all go through it. `rect` follows the entity for enemy and
- * levied sources. A source is armed while any of its sounds is home.
+ * What the body is doing, for animation: derived at the end of every step from mode, ground
+ * contact, velocity and input. `dash` includes the freeze frames at its start. `glide` is the wing
+ * glide (mode stays 'normal', `gliding` is true).
  */
-export interface Source {
-  id: number;
-  kind: SourceKind;
-  /** Entity id for enemy/levied sources (0 for objects). */
-  ent: number;
-  /** Room char it came from (objects). */
-  char: string;
+export type Motion = 'idle' | 'run' | 'skid' | 'rise' | 'fall' | 'glide' | 'wallSlide' | 'dash';
+
+/** The thorn slash's direction; 'none' when she is not slashing. */
+export type AttackDir = 'none' | 'fwd' | 'up' | 'down';
+
+export interface PlayerState {
+  // --- Body. (x, y) is the top-left of the collision box, integers. Feet centre = (x + w/2, y + h).
   x: number;
   y: number;
-  w: number;
-  h: number;
-  soundIds: number[];
-  /** Objects: solid while armed (humming walls, furnaces, static). */
-  solidWhenArmed: boolean;
-  /** Seized: dashed outline, passable. */
-  ghost: boolean;
-  /** Re-armed but an actor overlaps it; re-solidifies when clear (retried every step). */
-  pendingSolid: boolean;
-  /** Objects Kid can't seize although they hum (the Auctioneer's lots: "under the hammer"). */
-  locked?: boolean;
-  /** Frames left ghosted by a SOLD (the Auctioneer's Cadence); a ghost regardless of its sounds. */
-  soldT?: number;
-}
-
-/**
- * An enemy projectile or hanging object (combat-spec §1.4 rule 1: every projectile carries its
- * owner's sound, so it can be caught). The sound stays `home` while the shot flies; a Seize on the
- * shot takes it (disarming that attack). Shots are sources too (kind 'shot').
- */
-export interface Shot {
-  id: number;
-  /** Enemy id that fired it, its source id, the sound it carries and the attack it belongs to. */
-  enemy: number;
-  owner: number;
-  soundId: number;
-  attackId: string;
-  /** dart | mortar | wave | ring | word | slab. */
-  kind: string;
-  colour: Colour;
-  x: number;
-  y: number;
+  /** Sub-pixel remainders in [-0.5, 0.5]. */
   rx: number;
   ry: number;
   w: number;
   h: number;
+  /** Velocity in px/frame (x60 = px/s). vy > 0 is down. */
   vx: number;
   vy: number;
-  /** px/f² added to vy each step. */
-  gravity: number;
-  dmg: number;
-  /** Frames left; 0 = removed at the end of the step. */
-  life: number;
-  age: number;
-  seizable: boolean;
-  /** Already hit Kid (one hit per shot). */
-  spent: boolean;
-  /** Mortar: on landing it becomes a shockwave of this size for `waveFrames`. */
-  landW: number;
-  landH: number;
-  landFrames: number;
-  /** Words: follow Kid's head with a lag (Selling Your Bag), else hang in place. */
-  follow: boolean;
-  born: number;
-}
 
-/** A levied sound as an Actor on the movement physics (brown slab, pink spring, violet dart). */
-export interface Levied {
-  id: number;
-  soundId: number;
-  colour: Colour;
-  /** Source id of the sound's owner (Return to sender). */
-  owner: number;
-  x: number;
-  y: number;
-  rx: number;
-  ry: number;
-  w: number;
-  h: number;
-  vx: number;
-  vy: number;
-  gravityMult: number;
-  phase: 'flight' | 'landed';
-  /** Landed slab that has materialised (in the dynamic solid list). */
-  solid: boolean;
-  dmg: number;
-  /** Enemy ids already hit by this throw. */
-  hitList: number[];
-  /** Frames left showing a spring squash (render). */
-  squash: number;
-  /** state.frame of the spawn step: it doesn't move that step, so the spawn position is hit-tested. */
-  born: number;
-  /** Frames left before it flies home (violet darts: levy.violetLife; 0 = no limit). */
-  life: number;
-  /** Ricochets left (violet darts bounce once off a solid). */
-  bounces: number;
-}
-
-export type EnemyMode =
-  | 'PATROL'
-  | 'CHASE'
-  | 'TELEGRAPH'
-  | 'ACTIVE'
-  | 'RECOVERY'
-  | 'RETRIEVE'
-  | 'ABSORB'
-  | 'STAGGER'
-  | 'LAUNCHED'
-  | 'DOWN'
-  | 'COUNT'
-  | 'REPOSSESSED'
-  | 'RISE'
-  | 'KO'
-  | 'FLINCH'
-  | 'HOP'
-  | 'FLEE';
-
-export interface Enemy {
-  id: number;
-  type: string;
-  /** Its sound-source component. */
-  source: number;
-  x: number;
-  y: number;
-  rx: number;
-  ry: number;
-  w: number;
-  h: number;
-  vx: number;
-  vy: number;
-  /** Knockback velocity (px/f), decays by combat.enemyKbDecay. */
-  kb: number;
-  facing: 1 | -1;
+  // --- What an animator reads.
+  facing: -1 | 1;
+  mode: PlayerMode;
+  /** Frames since `mode` last changed. */
+  modeFrames: number;
+  motion: Motion;
+  /** Frames since `motion` last changed (0 on the frame it changes). */
+  motionFrames: number;
   grounded: boolean;
-  state: EnemyMode;
-  stateFrame: number;
-  hp: number;
-  /** Current / last attack id ('' = none). */
-  attackId: string;
-  /** Last attack started (no immediate repeat). */
-  lastAttack: string;
-  /** Frames before another attack may start. */
-  cooldown: number;
-  /** Frames the voices stay open after a punch. */
-  rattled: number;
-  /** Stagger / launch / down frames left for the current state. */
-  timer: number;
-  /** Count beat (1..countBeats) while in COUNT. */
-  beat: number;
-  /** Holds an attack token (TELEGRAPH/ACTIVE). */
-  token: boolean;
-  /** Sound id being retrieved (0 = none). */
-  target: number;
-  /** Charge distance travelled, or telegraph backstep done (px). */
-  travel: number;
-  furious: boolean;
-  /** Hit list of the current attack instance (only Kid, id 0). */
-  hitList: number[];
-  /** Voices swallowed from it: those attacks are gone for the visit, it stops retrieving (§3.4). */
-  hoarse: boolean;
-  /** Home point (flyers hover around Kid; walkers patrol). Bob phase for flyers. */
-  homeX: number;
-  homeY: number;
-  /** Locked aim (dive vector, mortar target) in px/f or px. */
-  aimX: number;
-  aimY: number;
-  /** Projectiles left to fire in this attack, and frames to the next. */
-  shotsLeft: number;
-  shotT: number;
-  /** Seizes the Runner still slips (combat-spec §3.5). */
-  slips: number;
-  /** Poundage it pays on a KO (x2 on a repossession). */
-  poundage: number;
-  /** Boss-only state (the Auctioneer), else null. */
-  boss: BossState | null;
-}
-
-/** The Auctioneer's own state (combat-spec §5). */
-export interface BossState {
-  phase: 1 | 2;
-  /** Actions started (Cadence is forced every 3rd). */
-  actions: number;
-  /** Lot indices marked by the current Cadence (-1 = none). */
-  lots: number[];
-  /** Cadence beat (1..3) while calling. */
-  beat: number;
-  /** Shot id of the hanging TWICE word (0 = none). */
-  word: number;
-  /** Phase 1 ended with the Gavel repossessed: phase 2 loses Gavel and the SOLD wave. */
-  noGavel: boolean;
-  /** Sound id bought by Selling Your Bag, used by his next action (0 = none). */
-  bought: number;
-  /** Final knockdown reached (a Seize now wins). */
-  final: boolean;
-  /** Target x for Hop / the pink spring. */
-  hopTo: number;
-  /** Pips Selling Your Bag charges this step (an empty bag pays in Chin); applied with the hits on Kid. */
-  charge: number;
-  /** Frames his voices stay guarded after a Return to sender (no grab-throw stagger lock). */
-  guardT: number;
-}
-
-export interface Plate {
-  char: string;
-  /** Tile coords [tx, ty] pairs, flattened. */
-  tiles: number[];
-  pressed: boolean;
-  by: '' | 'slab' | 'heavy';
-}
-
-export interface Gate {
-  char: string;
-  tiles: number[];
-  open: boolean;
-  opensOn: 'plate' | 'clear';
-}
-
-export interface LocalState {
-  nextId: number;
-  sources: Source[];
-  sounds: Sound[];
-  /** Sound ids, oldest first. */
-  bag: number[];
-  levied: Levied[];
-  enemies: Enemy[];
-  shots: Shot[];
-  plates: Plate[];
-  gates: Gate[];
-  /** Every enemy KO'd or repossessed (and there were enemies). */
-  clear: boolean;
-  /** Room fever (0..4): the Count's beat and boss tempo (combat-spec C9). */
-  fever: number;
-  /** Frames Kid has spent in a white-static zone (the bag leaks every combat.staticLeakFrames). */
-  staticT: number;
-}
-
-/** A move in progress (content/moves.json). `frame` 1 is the press-consuming step. */
-export interface MoveState {
-  id: string;
-  frame: number;
-  dir: MoveDir;
-  facing: 1 | -1;
-  outcome: 'none' | 'take' | 'whiff' | 'guard' | 'refused' | 'hit';
-  /** Target ids already hit by this instance. */
-  hitList: number[];
-  /** Total frames for this instance when the data can't know it up front (Swallow's channel), else 0. */
-  len: number;
-  /** A Counter (a strike inside the clean-slip window): x2 damage, knockdown, bigger box. */
-  counter: boolean;
-  /** Swallow: the sound being eaten. */
-  soundId: number;
-}
-
-/** Controller states (movement-spec §2.1). POGO is an impulse inside 'normal', not a state. */
-export type PlayerMode = 'normal' | 'wallSlide' | 'dash' | 'dead';
-
-/** Kid's own Count after Chin runs out (combat-spec §3.5): Beat the Count or be Counted Out. */
-export interface KidCount {
-  /** Frames since she went down. */
-  t: number;
-  beat: number;
-  /** Beat the Count is possible (unused since the Corner and a voice in the bag). */
-  canRise: boolean;
-  /** The one press was used (a mash counts as one press). */
-  pressed: boolean;
-}
-
-export interface PlayerState extends Body {
-  /** px/f, +y is down. */
-  vx: number;
-  vy: number;
-  facing: 1 | -1;
-  state: PlayerMode;
-  /** Ended the last frame standing on ground (solid or one-way). */
-  grounded: boolean;
-  /** Wall touching on that side (1 px probe): -1, 0 or 1. While sliding, the slide side. */
+  /** Frames since `grounded` last changed: time on the ground, or time in the air. */
+  contactFrames: number;
+  /** A solid is touching this side: -1 left, 1 right, 0 none. While wall sliding, the slide side. */
   wallDir: number;
-  /** Ability gates. Rooms grant/deny these on load; the debug API can override. */
-  abilities: Abilities;
-  /** Movement profile name ('base' or a key of tuning.profiles). */
-  profile: string;
-
-  // Timers: N means N more usable frames. Used before they are decremented (spec §2.2).
-  coyote: number;
-  jumpBuf: number;
-  /** Separate window for a buffered press to become a double jump (HK preset queues longer). */
-  djBuf: number;
-  dashBuf: number;
-  /** Wall-jump forced-vx frames left, and the forced direction. */
-  forceTimer: number;
-  forceDir: number;
-  dashCd: number;
-  /** Dash frames left (moving frames), and freeze frames left (hitstop-style: nothing moves). */
-  dashTimer: number;
+  /** Held horizontal input this step: -1, 0, 1. */
+  inputX: number;
+  /** Braking against ground momentum. */
+  skid: boolean;
+  /** Dash direction (valid in mode 'dash') and frames of dash travel left. */
   dashDir: number;
+  dashTimer: number;
+  /** Freeze frames left (dash start: the body hangs before it moves). */
   freeze: number;
-  /** Frames holding away from the wall while sliding. */
-  stick: number;
-  /** Frames in the current wall slide (the slide speed cap ramps up with it). */
-  slideT: number;
-  /** Wall speed retention (spec §2.4): vx that a wall zeroed, restorable for retainTimer frames. */
-  retainVx: number;
-  retainTimer: number;
-  /** Drop-through: one-ways are ignored while dropTimer > 0 and top <= dropY. */
-  dropTimer: number;
-  dropY: number;
-  pogoTimer: number;
-  deathTimer: number;
-
-  // Jump model (spec §2.5).
-  /** Rising from a jump that release can cut. */
-  fromJump: boolean;
-  /** Released early: extra gravity (or vy = 0 in releaseMode 'zero') until the apex. */
-  cut: boolean;
-  /** Fixed-height bounce (pogo): jump release has no effect until the apex. */
-  cutDisabled: boolean;
-  /** Preset-only sustain (Celeste VarJumpTime): frames left holding vy at sustainV. */
-  sustain: number;
-  sustainV: number;
-  framesSinceJump: number;
-
   /** Air dashes and double jumps left this airtime. */
   airDash: number;
   dj: number;
-
-  /** Highest point (min y) since leaving the ground, for land.fallPx. */
+  /**
+   * Highest point (smallest y) of the current airtime. A glide carries her, so it restarts the
+   * count: after a glide this is where the wings last let go (a glided landing is never `hard`).
+   */
   airTopY: number;
-  /** Grounded distance since the last footstep event. */
-  stepDist: number;
-  /** Turning around on the ground (for the skid event's rising edge). */
-  skid: boolean;
-  /** Last respawn marker touched (null = the room's P). */
-  respawn: Spawn | null;
-
-  // L3 combat foundations.
-  move: MoveState | null;
-  /** Newest buffered action press: the button (`attack|seize|levy|special`), resolved to a move on the start frame. */
-  actBuf: { id: string; frames: number } | null;
-  chin: number;
-  /** Max Chin (kid.chin minus any Lien). */
-  chinMax: number;
-  iframes: number;
-  hurtLock: number;
-  /** Ringing (combat-spec §3.2): frames the last lost pip can still be won back. */
-  ring: number;
-  /** Counter window frames left after a clean Slip (combat-spec C4). */
-  counter: number;
-  /** This Slip already registered clean. */
-  slipClean: boolean;
-  /** Last safe ground (feet-centre px) for hazard respawns (combat-spec §3.1). */
+  /** Wing glide: wings open, sinking slowly (jump held while falling). `motion` is 'glide'. */
+  gliding: boolean;
+  /**
+   * Thorn slash. `attack` is its direction from the `slash` event until `slashEnd` ('none'
+   * otherwise); it and `attackFacing` (the side she faced when it started; a fwd slash goes that
+   * way) never change mid-slash, whatever she does. `attackFrames` counts steps since it started
+   * (0 on the `slash` frame; it holds during hitstop). `attackActive`: the hit area is live this
+   * frame. `attackSeq` numbers the slashes (0 = none yet); `attackHits` = targets this one has hit.
+   */
+  attack: AttackDir;
+  attackFacing: -1 | 1;
+  attackFrames: number;
+  attackActive: boolean;
+  attackSeq: number;
+  attackHits: number;
+  /**
+   * Combo step of the current (or last) slash: 1 the cut, 2 the return cut, 3 the finisher
+   * (`attackFinisher`). A down slash is always step 1 and leaves the chain where it was.
+   */
+  attackStep: number;
+  attackFinisher: boolean;
+  /**
+   * Lunge: extra horizontal px/f on top of `vx` from a forward slash on the ground, fading over a
+   * few frames (signed: the slash's side). `hang`: frames left of the air hang of a forward / up
+   * slash, while her fall is being held back.
+   */
+  lungeX: number;
+  hang: number;
+  /**
+   * Hitstop frames left: a slash connected and the sim holds her for a beat (no movement, no
+   * timers, `attackFrames` / `motionFrames` stand still; presses are still buffered). The rest of
+   * the sim (pickups, pod glints, the frame count) and render time keep running.
+   */
+  hitstop: number;
+  /** Recoil: extra horizontal px/f on top of `vx` (a shove from a slash that hit), fading fast. */
+  kickX: number;
+  /**
+   * Health (memory/enemies.md). `hp` of `hpMax` lights. `invuln`: frames left in which nothing can
+   * hurt her (she passes through enemies). `stagger`: frames left of the knockback after a hit,
+   * while she is out of control (`hurtDir` = the way she was thrown, -1 / 1; `hurtSeq` counts the
+   * hits taken). `faded`: at no health, frames left until she re-forms at the last safe ground
+   * (no control; she falls and lies where the blow left her). All three are 0 in ordinary play.
+   */
+  hp: number;
+  hpMax: number;
+  invuln: number;
+  stagger: number;
+  faded: number;
+  hurtDir: number;
+  hurtSeq: number;
+  /** Index of the lantern she is kindling this frame (`scene.lanterns`), -1 = none (memory/goal.md). */
+  kindling: number;
+  /** The same for a wayside lamp (`scene.lamps`), -1 = none. Never both at once. */
+  kindlingLamp: number;
+  /**
+   * Being seen (src/sim/giving.ts, memory/giving.md): the creatures notice her by the light she
+   * carries. `seenLevel` 0-4 (0 = she carries nothing: unseen; the steps are `tuning.giving.seen1..4`
+   * of her wallet), `seen` = the same as 0..1 (level / 4). Set at the end of every step from
+   * `pickups.count`; the creatures read the wallet as it stands when they move.
+   */
+  seen: number;
+  seenLevel: number;
+  /**
+   * Offer (the `offer` action): `offering` = frames left of her holding a glint out (the pose; 0 =
+   * none), `offerSeq` numbers her offers. The glint in flight: `giftTo` = what it goes to (`''` none,
+   * `enemy`, `lantern`, `lamp`, `heart`), `giftIndex` its index in the scene's list, `giftTimer`
+   * frames until it arrives, `giftX, giftY` the point it flies to (as it was when she gave it).
+   */
+  offering: number;
+  offerSeq: number;
+  giftTo: '' | 'enemy' | 'lantern' | 'lamp' | 'heart';
+  giftIndex: number;
+  giftTimer: number;
+  giftX: number;
+  giftY: number;
+  /** Offer: a buffered press, and frames until the next offer may go; frames the button has been held (the stream). */
+  offerBuf: number;
+  offerCd: number;
+  offerHold: number;
+  /**
+   * What a press of offer would land on THIS frame (the same rules as the offer: `offerTarget` in
+   * src/sim/giving.ts), `{kind: burrback | lampwing | lantern | lamp | heart, id}`, or null (nothing in
+   * reach, empty hands, out of control, the run over). Set at the end of every step. The HUD's offer
+   * cap shows only while this is a creature (a press never meets "nothing in reach").
+   */
+  offerTarget: { kind: string; id: string } | null;
+  /** The flight of the glint now in the air, frames in all (`giftTimer` counts it down): 3 to a lampwing after her, 8 to a light, 10 to a creature. */
+  giftFrames: number;
+  /** Last safe ground (feet centre): where she re-forms. `safeFrames` = frames in a row on safe ground. */
   safeX: number;
   safeY: number;
-  /** The respawn after this death freeze is a hazard respawn at safe ground (not a death). */
-  hazardRespawn: boolean;
-  /** Down for the Count (Chin 0), else null. */
-  down: KidCount | null;
-  /** Kid recoil after a punch lands (px/f) and frames left. */
-  recoilVx: number;
-  recoilT: number;
+  safeFrames: number;
+
+  // --- Controller internals (timers, buffers). Renderers should not need these.
+  coyote: number;
+  jumpBuf: number;
+  djBuf: number;
+  dashBuf: number;
+  forceTimer: number;
+  /** Frames left of a wall kick's rise that letting go of jump cannot cut (`tuning.wall.kickFrames`). */
+  kick: number;
+  forceDir: number;
+  dashCd: number;
+  stick: number;
+  slideT: number;
+  retainVx: number;
+  retainTimer: number;
+  dropTimer: number;
+  dropY: number;
+  fromJump: boolean;
+  cut: boolean;
+  sustain: number;
+  sustainV: number;
+  framesSinceJump: number;
+  stepDist: number;
+  /** The current jump hold launched a ground-type jump, from this y (glide: see `carriedDropPx`). */
+  carried: boolean;
+  launchY: number;
+  /** Slash: buffered press, and frames until the next one may start. */
+  attackBuf: number;
+  attackCd: number;
+  /** Combo: the step the chain is on (0 = none), frames left to continue it, hangs used this airtime (bits). */
+  comboStep: number;
+  comboTimer: number;
+  hangUsed: number;
 }
 
-/** Deep copy via JSON, which also guarantees the state stays plain JSON. */
+/** A cluster of dropped glints (see `PickupsState.drops`). */
+export interface GlintDrop {
+  id: number;
+  x: number;
+  y: number;
+  value: number;
+  left: number;
+  timer: number;
+}
+
+/** Collectibles (src/sim/pickups.ts). */
+export interface PickupsState {
+  /**
+   * One entry per `scene.pickups`, same order: 0 = waiting, n > 0 = woken and on its way (it is
+   * collected in n more steps), -1 = collected.
+   */
+  timers: number[];
+  /**
+   * The wallet: the value she carries now (a great glint counts for more than one). Everything
+   * gathered goes in; kindling a lantern takes its cost out (`spent`).
+   */
+  count: number;
+  /**
+   * Value spent so far: on lanterns, lamps, rests, and given by hand (the `offer` action) to
+   * creatures and to dormant lights. `count + spent + lost + offered` = everything gathered this run.
+   */
+  spent: number;
+  /** Of `spent`: glints she gave by hand to creatures (memory/giving.md). */
+  gifted: number;
+  /** Value given to the heart: by hand during the run (`goal.heartGiven`), and all she carries at the end (memory/goal.md: the offering). */
+  offered: number;
+  /** Value lying in dropped clusters (`drops`), still to be picked up again. */
+  lost: number;
+  /**
+   * Extra glints creatures have paid over their base worth (a kill by the finisher pays more):
+   * counted at the kill. The ending's tally leaves them out of "found of all there were".
+   */
+  bonus: number;
+  /**
+   * Clusters of glints she dropped when she faded, oldest first: `id` (1, 2, ...), where it lies
+   * (`x`, `y` = its centre), `value` = what it held, `left` = glints not yet back with her, `timer`
+   * = 0 while it lies there, else frames until the next of them reaches her. Removed when `left`
+   * is 0; kept through fades (a second fade adds another); gone on a restart.
+   */
+  drops: GlintDrop[];
+  /** Clusters dropped so far (the next one's id - 1). */
+  dropSeq: number;
+  /** How many pickups have been collected. */
+  taken: number;
+  /** Index of the last pickup in the current chain (0 = first), and frames left to extend it. */
+  combo: number;
+  comboTimer: number;
+  /** Frames until the collect queue is free: keeps pickups woken together from landing together. */
+  gate: number;
+}
+
+/** Lumen pods (src/sim/pods.ts). Every array has one entry per `scene.pods`, same order. */
+export interface PodsState {
+  /**
+   * Hit points left; 0 = burst and open (until the scene restarts). It starts at the pod's `hp`
+   * in the scene (default 1), which is its `hpMax`.
+   */
+  hp: number[];
+  /** `attackSeq` of the last slash that hit it (one hit per slash). */
+  hitBy: number[];
+  /**
+   * Glints set loose and still on their way to her, frames until the next one arrives, the gap
+   * between them, and how many of the pod's worth have been set loose so far.
+   */
+  left: number[];
+  timer: number[];
+  gap: number[];
+  paid: number[];
+  /** How many pods have burst. */
+  burst: number;
+}
+
+/**
+ * What an enemy is doing. Every kind: `hurt` (staggered by a hit), `dead`.
+ * Burrback: `walk`, `pause` (standing: a turn-around if `turning`, else a rest), `alert` (a flinch),
+ * `windup` (braced, shell forward: the tell of its ram), `charge` (the ram), `recover` (spent: it
+ * stands open after a ram).
+ * Lampwing: `hover` (wandering round its home), `curious` (it has noticed her: the tell), `dive`
+ * (the committed swoop at where she stood when the tell ended), `stall` (it hangs at the bottom of
+ * the arc, open, its touch harmless), `pursue` (it climbs to a perch above her to try again), `rest`
+ * (it has given up, or just touched her: it hangs where it is), `return` (flying home; it notices
+ * nothing until it is there).
+ */
+export type EnemyMode =
+  | 'walk'
+  | 'pause'
+  | 'alert'
+  | 'hover'
+  | 'curious'
+  | 'pursue'
+  | 'dive'
+  | 'stall'
+  | 'rest'
+  | 'return'
+  | 'windup'
+  | 'charge'
+  | 'recover'
+  | 'hurt'
+  | 'dead';
+
+/**
+ * One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. One flat
+ * record for every kind (plain JSON): a field a kind does not use stays at its start value.
+ */
+export interface EnemyState {
+  id: string;
+  kind: EnemyKind;
+  // --- Body. (x, y) is the top-left of its box, integers; feet centre = (x + w/2, y + h).
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Sub-pixel remainders of its movement. */
+  rx: number;
+  ry: number;
+  /**
+   * Velocity this step, px/f. Burrback: the walk (facing x speed) or the knockback, 0 when it
+   * stands; `vy` is always 0. Lampwing: its flight (its own drift; while `hurt` / `dead` the
+   * knockback and the fall).
+   */
+  vx: number;
+  vy: number;
+  /** The way it faces (a lampwing: the way it looks, toward what draws it). */
+  facing: -1 | 1;
+  hp: number;
+  hpMax: number;
+  mode: EnemyMode;
+  /** Frames since `mode` last changed (0 on the frame it changes; it holds during `hitstop`). */
+  modeFrames: number;
+  /** Frames left of a timed mode (pause, alert, windup, recover, curious, rest, hurt, dead); 0 otherwise. */
+  timer: number;
+  /** Where it started: the centre of its box then (a lampwing's home, the middle of its territory). */
+  homeX: number;
+  homeY: number;
+  /** The current pause is a turn-around (`facing` flipped when it began). Burrback. */
+  turning: boolean;
+  /** Distance walked so far, px (walking only, never knockback): drive the legs with it. Burrback. */
+  stride: number;
+  /** Knockback left, px/f (signed), fading; it moves the body while hurt or dead. */
+  knockVx: number;
+  knockVy: number;
+  /** Frames it is held still by a hit (the same beat the player holds). */
+  hitstop: number;
+  /** The last hit: slash number, direction of the shove (-1 / 0 / 1), power, and the sim frame (-1 = never). */
+  hitBy: number;
+  hitDir: number;
+  hitPower: number;
+  hitFrame: number;
+  /** Side of the ledge a shove pushed it to the brink of (-1 / 1), until it walks again; else 0. Burrback. */
+  teeter: number;
+  /** Dead and its body has been removed: draw nothing. */
+  gone: boolean;
+  /**
+   * Lampwing: what it is drawn to, in scene px: its wander point while it hovers, her body centre
+   * (where it last saw her) while `curious` / `pursue`, its home on the way back. `lookX, lookY` =
+   * the unit vector from its centre toward that (0, 0 before it has one).
+   */
+  targetX: number;
+  targetY: number;
+  lookX: number;
+  lookY: number;
+  /**
+   * Lampwing: wing-beat phase in [0, 1), one unit = one full beat. The sim advances it every step
+   * at a rate that follows its effort (slow in a hover, faster in pursuit, a flutter while
+   * `curious`, nearly still while tumbling; it stands still in a hitstop and once dead).
+   */
+  flap: number;
+  /** Lampwing: the dead body has come to rest on something (it is `gone` a few frames later). */
+  landed: boolean;
+  // --- Internals.
+  /** Frames until it may flinch again; frames of walking until its next rest; rests taken; schedule salt. */
+  alertCd: number;
+  walkLeft: number;
+  rests: number;
+  salt: number;
+  /** Lampwing: territory radius; frames of this pursuit so far; frames since it last saw her. */
+  radius: number;
+  chase: number;
+  lost: number;
+  /** Lampwing: wander points drawn so far, frames until the next, the side its wander is mirrored to. */
+  wander: number;
+  wanderLeft: number;
+  side: number;
+  /** Lampwing: the push away from other lampwings this step, px/f². */
+  pushX: number;
+  pushY: number;
+  /**
+   * Burrback: its shell is forward (`windup`, `charge`): a forward cut from the side it faces
+   * glances off. `strikeCd`: frames until it may brace again; `chargeLeft`: px left of its ram (set
+   * when it braces: the length it will go).
+   */
+  braced: boolean;
+  strikeCd: number;
+  chargeLeft: number;
+  /**
+   * Burrback: `rams` = times it has stood winded this life (from the second on it is tired: it
+   * stands longer); `roused` = frames left of having been cut (it comes round to her and braces
+   * from further off, in its range or not); `stirred` = frames left of having rammed (it comes
+   * round to one inside its range); `broken`: the blow it is staggering from broke its brace (it
+   * stands winded when the stagger ends).
+   */
+  rams: number;
+  roused: number;
+  stirred: number;
+  broken: boolean;
+  /** Burrback: neither its ram nor a shove takes it out of its range (the scene's `fenced`). */
+  fenced: boolean;
+  /**
+   * Burrback: frames left curled up after a down cut landed on it (`enemyTuck`; 0 = not curled):
+   * a down cut glances off its shell (she bounces off it, nothing is taken). The count holds at 1
+   * until it may brace again; then it uncurls, into a brace if she is near (over it included).
+   */
+  tuck: number;
+  /**
+   * Lampwing: `dives` = dives made at her since it noticed her; `span` = the length of the current
+   * dive in frames (`timer` counts it down) and `fromX, fromY` = where it began (centre): the arc
+   * runs from there to `targetX, targetY`; `sight` = how far it notices her from.
+   */
+  dives: number;
+  span: number;
+  fromX: number;
+  fromY: number;
+  sight: number;
+  /**
+   * Lampwing: frames left in which it notices only one well inside its leash
+   * (`lampwing.retellMarginPx`), after a tell or a chase came to nothing because she was out of it
+   * (`enemyGiveUp` cause `far`): one at the edge of its reach is told once, not every jump.
+   */
+  noticeCd: number;
+  /** Frames left of a calm (a lantern was kindled near it, or the run ended): its touch does nothing meanwhile. */
+  calm: number;
+  /**
+   * Frames left of the calm a glint she gave it bought (memory/giving.md; `calm` covers it too, so
+   * its touch does nothing, a burrback braces at nothing, a lampwing notices nothing). 0 = none.
+   * A blow ends it. `gifts` = glints she has given it this life.
+   */
+  gift: number;
+  gifts: number;
+  /**
+   * Frames left of its being aware of her (memory/giving.md): it has seen the light she carries, or
+   * it is in a fight with her (a lampwing's tell, dive, stall and climb; a burrback that is braced,
+   * roused or stirred). `enemyAware` fires as it becomes aware; 0 = she is unseen by it. Never while
+   * it is calmed. Render: a lifted head, a turned eye; the HUD: "she is seen".
+   */
+  aware: number;
+  /**
+   * Burrback: it sleeps where it stands (round 3, memory/giving.md): she is within `burrback.dozePx`
+   * and carries too little light to be seen, and it is not in a fight with her. It does not patrol
+   * meanwhile; it wakes the step she carries light again (or leaves, or cuts it).
+   */
+  dozing: boolean;
+  /**
+   * Lampwing: it roosts (round 4, memory/giving.md): she is within `lampwing.roostPx` and too dark to
+   * be seen; it hangs still, wings folded, lamp low; it wakes the step she carries light.
+   */
+  roosting: boolean;
+  /** Glints spilled on death still on their way to her, frames to the next, and the gap between them. */
+  spill: number;
+  spillTimer: number;
+  spillGap: number;
+}
+
+/** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */
+export interface LanternState {
+  /** Kindled: it burns until the scene restarts (a fade / re-form does not put it out). */
+  lit: boolean;
+  /** The sim frame it was kindled on, -1 while dormant (glow-up from `sim.frame - litFrame`). */
+  litFrame: number;
+  /** Frames she has stood at it kindling, 0 = not being kindled (of `tuning.goal.channelFrames`). */
+  channel: number;
+  /** Lit: frames she has stood at it hurt, toward being made whole (of `tuning.goal.restFrames`). */
+  rest: number;
+  /** Frames she has stood still at it carrying too little (it tells her at `tuning.goal.refuseFrames`). */
+  short: number;
+  /** It has told her she carries too little; it will not again until she has gone away and come back. */
+  refused: boolean;
+  /** She has come near it while it was dormant (`lanternNotice` fired); cleared once she is well away. */
+  noticed: boolean;
+  /**
+   * She has come near it at least once this run (it stays set). A wayside lamp she has passed is a
+   * re-form point even while dark (src/sim/goal.ts `restPoint`).
+   */
+  passed: boolean;
+  /**
+   * Dormant: she stood at it short while enough glints were already on their way to her (a pod
+   * she had just cut). It catches the step they have landed, wherever she is by then.
+   */
+  pledged: boolean;
+  /**
+   * Frames she has stood still at it (no direction held, not cutting). A wayside lamp starts to
+   * catch only after `tuning.goal.lampStillFrames` of that: spending there is a choice.
+   */
+  still: number;
+  /**
+   * It has what it needs besides its price: always true for a lantern without a `key` in the scene;
+   * for one with a key, true once she has gathered that great glint (`lanternKey` fires then).
+   */
+  keyed: boolean;
+  /** Glints given to it by hand while dormant (the `offer` action): its price is less by that much. */
+  given: number;
+}
+
+/** The goal of the scene (src/sim/goal.ts, memory/goal.md): the lanterns, the heart, the ending. */
+export interface GoalState {
+  lanterns: LanternState[];
+  /** How many are lit. */
+  lit: number;
+  /**
+   * The lit lantern she last stood at: where she re-forms (index into `scene.lanterns`), -1 = none
+   * yet, or the last light she stood at was a wayside lamp (`restLamp`).
+   */
+  restAt: number;
+  /**
+   * Wayside lamps (`scene.lamps`, same order): lesser lanterns with the same rules that do not count
+   * toward the heart. `lampsLit` = how many burn; `restLamp` = the lit lamp she last stood at, if
+   * that is more recent than any lantern (-1 otherwise): she re-forms there.
+   */
+  lamps: LanternState[];
+  lampsLit: number;
+  restLamp: number;
+  /**
+   * She has just re-formed at her rest point (`restAt` / `restLamp`): it does not make her whole
+   * until she has stepped out of it and come back.
+   */
+  restHold: boolean;
+  /**
+   * The heart of the grove. `awake` once every lantern is lit; `frames` counts up from the frame
+   * it woke (0 while asleep); `hinted`: she has walked up to it asleep (`heartSleep` fired);
+   * `ready`: its wake has played (`tuning.goal.heartWakeFrames` after it woke: `heartReady`), only
+   * now does standing in it end the run; `waited`: she stood in it before that (`heartWait`).
+   */
+  heart: { awake: boolean; frames: number; hinted: boolean; ready: boolean; waited: boolean };
+  /** She has reached the woken heart (`gather`): control is taken and nothing can hurt her. */
+  gathered: boolean;
+  /**
+   * The ending hold: `frames` since `gather` (it stops at `tuning.goal.holdFrames`), and the run's
+   * summary as the `gather` event gave it (all 0 until then).
+   */
+  ending: {
+    frames: number;
+    /** Glints found of `glintsTotal` (never more than it); `bonus` = what finisher kills paid on top. */
+    glints: number;
+    bonus: number;
+    time: number;
+    kills: number;
+    hits: number;
+    /**
+     * The tally: what there was to find (`...Total`) against what she found, and how often she faded.
+     * `glintsTotal` = every pickup, every pod and every creature at its base worth.
+     */
+    glintsTotal: number;
+    pods: number;
+    podsTotal: number;
+    greats: number;
+    greatsTotal: number;
+    enemiesTotal: number;
+    deaths: number;
+    /** Wayside lamps lit, of how many there are. */
+    lamps: number;
+    lampsTotal: number;
+    /** The offering: what she carried into the heart (all of it is given during the hold), and the tier that reaches (0-3). */
+    offered: number;
+    offerTier: number;
+    /** Glints her offering was short of the next tier (0 at the top tier). */
+    offerNext: number;
+    /** Glints she gave creatures by hand during the run, and how many creatures one calmed (memory/giving.md). */
+    gifted: number;
+    calmed: number;
+  };
+  /**
+   * The offering to the woken heart, as it goes in during the ending hold: `total` = what she
+   * carried at `gather`, `given` = how much of it has reached the heart so far, `tier` = the
+   * thresholds (`tuning.goal.offerTier1..3`) `given` has passed (0-3).
+   */
+  offer: { total: number; given: number; tier: number };
+  /**
+   * What the grove has answered the offering with so far, one part more per tier passed
+   * (`groveWake` fires as each is set): tier 1 the shrine's flowers, tier 2 the glow plants along
+   * the three lanterns' paths, tier 3 the lights of the whole canopy.
+   */
+  grove: { flowers: boolean; paths: boolean; canopy: boolean };
+  /** The hold is over (`endHold`): the scene stays calm until the restart. */
+  ended: boolean;
+  /** Glints given to the heart by hand during the run (the `offer` action): they count in the offering. */
+  heartGiven: number;
+  /** The run so far: the frame of her first input (-1 = none yet), the hits she has taken, the times she faded. */
+  run: { start: number; hits: number; deaths: number };
+}
+
+export interface GameState {
+  version: 20;
+  /** Sim steps taken. The sim's only clock. */
+  frame: number;
+  seed: number;
+  /** Seeded RNG state (src/sim/rng.ts). */
+  rng: number;
+  prevInput: InputFrame;
+  player: PlayerState;
+  pickups: PickupsState;
+  pods: PodsState;
+  enemies: EnemyState[];
+  goal: GoalState;
+}
+
 export function cloneState(s: GameState): GameState {
-  return JSON.parse(JSON.stringify(s)) as GameState;
+  return {
+    ...s,
+    player: { ...s.player },
+    pickups: {
+      ...s.pickups,
+      timers: s.pickups.timers.slice(),
+      drops: s.pickups.drops.map((d) => ({ ...d })),
+    },
+    pods: {
+      hp: s.pods.hp.slice(),
+      hitBy: s.pods.hitBy.slice(),
+      left: s.pods.left.slice(),
+      timer: s.pods.timer.slice(),
+      gap: s.pods.gap.slice(),
+      paid: s.pods.paid.slice(),
+      burst: s.pods.burst,
+    },
+    enemies: s.enemies.map((e) => ({ ...e })),
+    goal: {
+      ...s.goal,
+      lanterns: s.goal.lanterns.map((l) => ({ ...l })),
+      lamps: s.goal.lamps.map((l) => ({ ...l })),
+      heart: { ...s.goal.heart },
+      ending: { ...s.goal.ending },
+      offer: { ...s.goal.offer },
+      grove: { ...s.goal.grove },
+      run: { ...s.goal.run },
+    },
+  };
 }

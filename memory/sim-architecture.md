@@ -1,62 +1,87 @@
 # Sim / runtime architecture
 
-- `src/sim/` pure: `step(state, inputMask, tuning, events)` mutates a plain-JSON `GameState` and appends
-  `SimEvent`s. `hashState` = cyrb53 over key-sorted JSON. RNG state (`state.rng`, mulberry32) is in the state.
-- `src/game.ts` (`Game`) is the harness: keeps `prev` + `state` for render interpolation (JSON-cloned
-  every step; fine while state is tiny, revisit if it grows), scripted input queue, replay recorder, and
-  dispatches events on an `EventBus`. No DOM, so it runs in Vitest.
-- `src/loop.ts` fixed-step accumulator (max 5 steps/frame, then drops time; snaps near-60Hz frame
-  times, see loop-timing.md). `src/main.ts` wires rAF.
-- Input edge detection and buffering live in the sim (`src/sim/input.ts`, `prevInput` in state), not in
-  `src/input/`, so buffered presses replay exactly. `src/input/` only turns devices into a bitmask.
-- Tuning is a mutable module object (`src/sim/tuning.ts`) passed into `step`. Replays snapshot it at the
-  start and the recorder diffs it before every step (records a `tuning` op), so live tweaks replay exactly.
-  Anything else that mutates state outside `step()` must go through a `Game` method that records a
-  replay op (see `load`/`reseed`/`setState` in `src/game.ts`), or replays silently diverge.
-- `hashState` throws on NaN/Infinity (JSON would turn them into null and hash them like null).
-- No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): V8, SpiderMonkey and JSC
-  can differ in the last bit, so a replay from Firefox/Safari would diverge in Node. Add a deterministic
-  helper in `src/sim` (lookup table or polynomial) when needed. `sqrt/floor/round/abs/min/max` are exact.
-- Live keyboard is sampled on every step even when scripted input wins (and flushed while in manual
-  mode), so taps made during a script or pause don't fire later.
-- Render never runs its own clock: `Game.afterStep` calls render once per sim step with that step's
-  events, and the camera (`src/render/camera/`) and juice (`src/render/fx.ts`) step there. Both are pure
-  TS with a render-side seeded RNG, so clips are deterministic and camera tests run headless.
-- Rooms are JSON in `content/gym/` (+ the compiled LDtk world, `content/world.compiled.json`) bundled by `src/sim/world/content.ts` (the one place the sim imports
-  outside `src/sim`; the purity test allows `content/**.json`). See gym-rooms.md.
-- Per-step params: `step()` calls `resolveParams(tuning, player.profile)` (src/sim/player/params.ts),
-  which applies the movement profile and turns disabled assists into 0/false. The controller never
-  reads `tuning` directly.
-- Room transitions are sim state (`state.transition`): touching G (or Up at a door) freezes the player
-  for `world.transitionFrames`, then `loadRoom` runs inside `step`, so replays and hashes cover them.
-  Edge exits (level-authoring.md) set `transition.offset` and arrive via `enterRoomAt`, which keeps the
-  player state and translates the body.
+- `src/sim/` is pure: `step(state, inputMask, tuning, scene, events)` mutates a plain-JSON `GameState`
+  (`{version, frame, seed, rng, prevInput, player, pickups, pods, enemies, goal}` (version 20)) and appends `SimEvent`s. The scene is static and
+  not in the state. `hashState` = cyrb53 over key-sorted JSON (throws on NaN/Infinity). RNG state
+  (`state.rng`, mulberry32, `src/sim/rng.ts`) is in the state; nothing uses it yet.
+- No engine-approximated Math in the sim (`sin/cos/atan2/exp/log/pow/**`...): engines can differ in the
+  last bit. `sqrt/floor/round/abs/min/max` are exact. Enforced by `tests/unit/sim-purity.test.ts`,
+  `tsconfig.sim.json` (no DOM lib) and a Biome override.
+- Scene data: `src/scene/index.ts` (outside the sim: it uses Zod and imports the JSON) validates
+  `content/scene/grove.json` and exports `GROVE`; the sim only knows the `Scene` type.
+- `src/game.ts` (`Game`) is the harness: `prev` + `state` for interpolation, the scripted input queue,
+  `reset()` / `teleport()`, and `afterStep` listeners that receive each step's events. Modes: realtime,
+  frozen, manual. No DOM, so it runs in Vitest.
+- Input edges and buffering live in the sim (`prevInput` in state); `src/input/` only turns devices into a
+  bitmask (`left right up down jump dash attack`). Live keys are sampled every step even when scripted input wins,
+  and flushed while not realtime, so stray taps never fire later.
+- `src/loop.ts`: fixed-step accumulator (max 5 steps per frame; snaps near-60Hz deltas, loop-timing.md).
+- `src/render/stage.ts` is the render driver: it steps the camera once per sim step (in `afterStep`, so
+  it is deterministic), and per render frame interpolates player and camera by the loop's alpha, applies
+  the camera to the layers, then calls `SceneRenderer.update` → `CharacterRenderer.update` →
+  `PostStage.update`. Render time (`dt`, `clock`) is separate from sim time: it runs while frozen and
+  advances exactly 1/60 per `__game.step`.
+- Tuning is a mutable module object (`src/sim/tuning.ts`) passed into `step`; `resolveParams` flattens it
+  (and turns disabled assists into 0/false) every step. The controller never reads `tuning` directly.
 
-## Sim events (for audio/render; defined in `src/sim/events.ts`)
-Positions are the player's feet centre unless noted. `dir` is -1/1.
-- `jump {kind: ground|coyote|buffered|wall|double|dashJump, dir}`: wall `dir` = away from the wall.
-- `land {vy, fallPx, hard}`: `vy` = impact speed; `hard` = fallPx >= misc.hardLandFallPx or vy >= maxFall.
-- `step` (footstep every misc.footstepPx grounded), `skid {dir}` (ground turn-around starts).
-- `wallSlideStart/End {dir = wall side}`: slide volume can follow `state.player.vy` while sliding.
-- `dashStart {dir, air}`, `dashEnd {dir}`, `headBump` (y = head), `cornerCorrect {kind: head|ledge|dash, dx, dy}`.
-- `dropThrough`, `pogo {target: orb|spike}` (no `jump` event for a pogo), `death` (y = body centre),
-  `respawn`, `checkpoint` (touched an R marker).
-- `goal {kind: main|optional, roomId}`, `roomExit {roomId, to}` (fade-out starts), `roomEnter {roomId}`,
-  `profileChange {from, to}`.
-- L3 (src/sim/events.ts; positions = the target's centre): `moveStart{move,dir}`, `whiff{move,reason?}`,
-  `hit{cls,move,target,dmg,dir}`, `hitstop{frames,cls}` (one per step, the max request), `seizeTake
-  {soundId,colour,kind,owner}`, `seizeGuarded`, `seizeRefused`, `catch{enemy,attackId}`, `ghost{source,on}`,
-  `levyThrow{soundId,colour,dir,levied}`, `levyLand`, `levyDry`, `recoilHop`, `springBounce{levied,target}`,
-  `bagPush`, `snatch`, `absorb`, `revoice`, `retrieve`, `hurt{dmg,src}`, `telegraph{enemy,attackId,colour,frames}`,
-  `attackActive`, `down`, `countTick{beat}`, `repossess`, `rise`, `ko`, `plate{char,by}`, `gateOpen`, `roomClear`.
-  Audio hums follow seizeTake/levyThrow/levyLand/bagPush/snatch/absorb/revoice (src/audio/router.ts).
-- L4 (combat-spec §2): `hurt{dmg,src,attack}` (attack id or 'contact'), `hit.cls` adds 'counter',
-  `flinch`, `slipStart`, `slipClean`, `counterOpen`, `counterHit`, `ringStart|Recover|Lost`, `hazard`,
-  `swallowStart|Commit|Spill|Refused`, `bagLeak`, `hoarse`, `shot{kind}`, `shotLand`, `hop`,
-  `runnerSlip`, `kidDown`, `beatCountTick{beat,canRise}`, `beatCountRise{paid}`, `countedOut`,
-  `corner`, `distrained`, `redistrained`, `auctioned`, `poundage{amount}`, boss: `lotMarked{lot,beat}`,
-  `sold`, `soldBag`, `outbid`, `bossPhase`, `fever{level}`.
-- Step order since L4 (src/sim/index.ts): transition → hitstop → sold lots, pending sources, dynamic
-  solids → Kid action (or her Count while down) → movement → levied → shots → enemies → Kid's hits →
-  enemy hits and shots on Kid (clean Slips) → levied hits → springs → plates/gates → static leak →
-  hitstop apply → weight → bookkeeping. `state.run` survives room loads; `state.local` doesn't.
+## What an animator reads (`PlayerView`, `src/render/contract.ts`)
+The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
+- `vx`, `vy` (px/frame), `facing` (-1/1), `inputX` (held direction), `grounded`, `contactFrames` (frames
+  since `grounded` changed = time on ground / in air), `wallDir` (-1/0/1 touching side).
+- `mode` (`normal | wallSlide | dash`) + `modeFrames`; `motion` (`idle | run | skid | rise | fall | glide |
+  wallSlide | dash`) + `motionFrames` (0 on the frame it changes).
+- Wing glide: `gliding` (true exactly while `motion === 'glide'`; `mode` stays `normal`). `vy` eases to
+  4.8 px/f (from up to 21.3 over ~11 frames: the catch), `vx` up to 10.56. `facing` follows the held
+  direction at once while `vx` takes ~22 frames to reverse, so a turn has `sign(vx) != facing` for a while.
+- `dashDir`, `dashTimer`, `freeze` (dash wind-up frames left: the body hangs for 2 frames before it moves),
+  `airDash`, `dj` (left this airtime), `airTopY`, `skid`.
+- Slash: `attack` (`none | fwd | up | down`), `attackFacing`, `attackFrames`, `attackActive`,
+  `attackSeq`, `attackHits`, `attackStep` (1-3), `attackFinisher`, `lungeX`, `hang`; `hitstop` (frames the sim is holding her after a hit: x, y and every
+  player timer stand still, so hold the pose) and `kickX` (recoil shove). Details: combat.md.
+- Health: `hp`, `hpMax`, `invuln`, `stagger`, `faded`, `hurtDir`, `hurtSeq` (enemies.md).
+- `kindling`: index of the lantern she is kindling this frame, -1 = none (goal.md). `kindlingLamp`: the same for a
+  wayside lamp (`scene.lamps`); never both.
+- While wall sliding `facing` points **away** from the wall (a `turn` event fires on contact).
+- `motion` is `run` whenever a direction is held or vx != 0 on the ground, including pushing into a wall
+  (vx = 0): check `vx` if that should look different.
+
+## Sim events (`src/sim/events.ts`)
+`x, y` = feet centre at the event; `dir` = -1/1.
+- `spawn`: placed (boot, load, teleport): snap, don't interpolate.
+- `jump {kind: ground|coyote|buffered|wall|double|dashJump, dir}` (wall: `dir` = away from the wall).
+- `fall` (left the ground without jumping), `apex` (stopped rising), `land {vy, fallPx, hard}`
+  (`vy` = impact speed px/f; `hard` = fallPx >= 420: a real fall, not a ledge drop).
+- `step` (every 96 px of grounded travel), `turn {dir, grounded}`, `skid {dir}`.
+- `wallSlideStart/End {dir = wall side}`, `dashStart {dir, air}`, `dashEnd {dir}`.
+- `slash`, `slashHit`, `impact`, `slashEnd`, `podHit`, `podBurst`, and pod glints as `pickup {pod: true}`: combat.md.
+- `enemyTurn`, `enemyAlert`, **`enemyWindup`, `enemyCharge`, `enemyRecover`, `enemyBlock`** (burrback: its ram), `enemyNotice`, **`enemyDive`, `enemyStall`, `enemyClimb`** (its dive, playtest 5), `enemyGiveUp` (lampwing), `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`, then **`enemyReset`** for each living creature that went home hurt or from elsewhere), and
+  enemy glints as `pickup {enemy: true}`: enemies.md. `slashEnd` / `glideEnd` have a reason `hurt`.
+- `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a
+  long fall, up to 32 out of a fast fall) and `glideEnd {reason: release|land|wall|dash|fastfall}`; one
+  pair per glide. Same-step order: `glideEnd:land` then `land`; `glideEnd:wall` then `wallSlideStart`;
+  `glideEnd:dash` then `dashStart`.
+- `headBump`, `cornerCorrect {kind: head|ledge|dash, dx, dy}`, `dropThrough`.
+- `pickupWake {id, kind, x, y, frames}`, `pickup {id, kind, value, x, y, px, py, combo, total}`: here
+  `x, y` = where the pickup hung (not the feet), `px, py` = body-box centre when it goes in. `state.pickups`
+  (`timers[]` per `scene.pickups[i]`, `count`, `taken`, `combo`...) and the rule are in pickups.md.
+- `glintsDrop`, `dropWake` and `pickup {drop: true}` (a fade's dropped glints): pickups.md.
+  `enemyTurn` causes `lantern` / `wary`, `enemyAlert` cause `touch`: enemies.md.
+- `lanternNotice` (she came within 260 px of a dormant one: once per approach), `lanternRefuse`, `lanternChannel`,
+  `lanternCancel`, `lanternKindle {..., pledged, away}` (it can fire with her elsewhere: goal.md "pledge"), `lanternRest`; the same six for wayside lamps as `lamp...`; `heartSleep`,
+  `heartWake`, **`heartWait`, `heartReady`** (the wake has a length), **`lanternKey`** (the ember a lantern wants has reached her; `lanternNotice / lanternRefuse.key`), `gather`, **`heartOffer`, `heartTier`, `groveWake`** (the offering during the hold and what it wakes), `endHold`: goal.md (`x, y` = the lantern's foot / the heart, not her feet).
+- Giving (giving.md): `enemyAware`, `offer`, `offerMiss`, `enemyGift`, `lanternGift`, `lampGift`, `heartGift`,
+  `giftReturn`; `enemyGiveUp` cause `gift`; `lanternRest / lampRest` carry `free, cost, wallet, short`.
+- Input: 8 actions now (`offer` = bit 128, DSL `O`).
+- Scene fields the player code reads besides the rects: `ceilingY`, the tag `pool`, and **`edgeKick: false`
+  / a solid's `kick: false`** (no wall slide, no wall kick on that face: movement-controller.md).
+
+## Step order
+`step()`: re-form if a fade just ended (a third of the wallet is dropped where she lay; she is back
+at the lit lantern she last stood at, else the last safe ground, with 2 lights) → player (slash hits resolved inside, pods and enemies; from `gather` on her input is replaced:
+goal.md) → **her offer** (`updateOffer`, giving.md: a press, a glint landing) → enemies (they read the wallet: giving.md) → contact damage (none from a calmed creature or one inside a lit lantern's sanctuary; while she
+kindles the touch only turns the creature away; off from `gather` on) → safe-ground tracking → pod glints →
+pickups → dropped clusters → the goal (`updateGoal`: lanterns, heart, ending; last, so a glint landing this frame counts). The scene's `ceilingY` (the
+canopy, movement-controller.md) and the tag `pool` (safe ground, enemies.md) are the only scene
+fields besides the rects that the player code reads; the lampwing reads both too (it stays under the
+canopy and off the water). Enemies are a framework with a module per kind: `src/sim/enemies.ts` +
+`src/sim/enemies/` (enemies.md).

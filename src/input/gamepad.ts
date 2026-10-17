@@ -37,7 +37,7 @@ export class GamepadSource {
  * browser reports with any other mapping ('' = unknown; e.g. some Switch/DirectInput pads on
  * Firefox or Safari) has arbitrary indices, so its buttons would fire the wrong actions. Such pads
  * only drive movement from the left stick until a remapping UI exists; a warning is logged once
- * per pad and __game.info().gamepads reports it.
+ * per pad.
  */
 export function isStandardPad(pad: Pick<Gamepad, 'mapping'>): boolean {
   return pad.mapping === 'standard';
@@ -56,13 +56,4 @@ function checkMapping(pad: Gamepad): boolean {
     );
   }
   return false;
-}
-
-/** Connected pads and whether their buttons are usable (for __game.info()). */
-export function padReport(): { id: string; mapping: string; buttonsUsable: boolean }[] {
-  if (typeof navigator === 'undefined' || !navigator.getGamepads) return [];
-  return navigator
-    .getGamepads()
-    .filter((p): p is Gamepad => !!p?.connected)
-    .map((p) => ({ id: p.id, mapping: p.mapping, buttonsUsable: isStandardPad(p) }));
 }

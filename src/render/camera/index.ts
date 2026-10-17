@@ -1,280 +1,194 @@
 /**
- * The camera (movement-spec §4): a pure TS module, no Pixi. It is stepped once per sim frame from
- * the post-step sim state and that frame's events, so it is deterministic and unit-testable
- * headless (tests/unit/camera.test.ts). The renderer keeps prev/curr and interpolates both the
- * camera and the player with the same alpha, then rounds to device pixels.
+ * The follow camera: a pure TS module, no Pixi. It is stepped once per sim frame from the
+ * post-step sim state, so it is deterministic and unit-testable headless. The render driver keeps
+ * the previous and current CameraState and interpolates them with the same alpha as the player.
  *
- * Pipeline per frame: follow (x look-ahead, y platform snapping / fall follow) -> look up/down ->
- * camera zones (blended on the clamped target, capped speed) -> clamp to room bounds -> [pre-shake view, used by tests] -> shake + kick.
+ * Per frame: horizontal look-ahead from averaged travel (further in a glide), spring follow -> vertical
+ * dead zone / landing band / fall follow / glide look-down -> clamp to the scene bounds, with headroom
+ * above the scene top (`viewTop`). Standing still at a lantern or the heart eases the view toward it;
+ * while she is faded the view holds. Soft everywhere: nothing snaps except on a `spawn` event (and
+ * the re-form's snap is covered by a render-side pan: `reform.ts`).
  */
-import type { SimEvent } from '../../sim/events';
-import type { GameState } from '../../sim/index';
-import { isHeld } from '../../sim/input';
-import { defaultTuning } from '../../sim/tuning';
-import type { CameraZone, Room } from '../../sim/world/rooms';
+import type { Scene } from '../../sim/scene';
+import type { GameState } from '../../sim/state';
+import { type CameraView, VIEW_H, VIEW_W } from '../contract';
 import { type CameraTuning, cameraTuning } from './tuning';
 
-/** Reference resolution. Everything renders at this size and the canvas is CSS-scaled to fit. */
-export const VIEW_W = 1920;
-export const VIEW_H = 1080;
-
 export interface CameraState {
-  roomId: string;
-  /** Frames stepped (drives the shake noise). */
-  t: number;
-  /** Free-follow view centre x and anchor-line y (feet level), before zones and clamping. */
+  /** Free-follow view centre x and anchor-line y (feet level), before clamping. */
   fx: number;
   fy: number;
+  /** Follow velocity (px/frame): the springs keep it continuous, so the view never jerks. */
+  fvx: number;
+  fvy: number;
   targetY: number;
-  focusDir: number;
-  /** Reversal in progress: direction and where it started. */
-  revDir: number;
-  revStartX: number;
-  look: number;
-  lookTimer: number;
-  /** Active zone index (-1 none). */
-  zone: number;
-  /** Blend offset: the jump in target view when the zone changed, decaying by zoneLerp per frame. */
-  offX: number;
-  offY: number;
-  /** View top-left after clamping, before shake. */
+  /** Slow average of the travel direction, -1..1. Scales the look-ahead. */
+  lead: number;
+  /** 0..1: how far the glide framing (longer look-ahead, look-down) is in. */
+  glide: number;
+  /** Frames she has been on the ground without a break; frames she has stood still. */
+  grounded: number;
+  still: number;
+  /** Eased offset toward the lantern / heart she is standing at (world px). */
+  restX: number;
+  restY: number;
+  /** View top-left after clamping to the scene, world px. */
   x: number;
   y: number;
-  /** True when a room bound clamped the view this frame (framing rules yield to bounds). */
-  clampedX: boolean;
-  clampedY: boolean;
-  trauma: number;
-  kickX: number;
-  shakeX: number;
-  shakeY: number;
 }
 
-function feetOf(s: GameState) {
-  const p = s.player;
-  return { cx: p.x + p.w / 2, cy: p.y + p.h / 2, feet: p.y + p.h };
+/**
+ * Critically damped spring toward `target` (Game Programming Gems 4, "smooth damp"), one frame.
+ * Returns [position, velocity]. Position and velocity are both continuous whatever the target does.
+ */
+export function smoothDamp(pos: number, vel: number, target: number, frames: number): [number, number] {
+  const omega = 2 / Math.max(frames, 0.001);
+  const k = 1 / (1 + omega + 0.48 * omega * omega + 0.235 * omega * omega * omega);
+  const d = pos - target;
+  const t = (vel + omega * d) * 1;
+  return [target + (d + t) * k, (vel - omega * t) * k];
 }
 
-function zoneIndexAt(room: Room, x: number, y: number, current: number): number {
-  const zs = room.cameraZones;
-  const inside = (z: CameraZone) => x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h;
-  const cur = zs[current];
-  // Last zone entered wins: keep the current one while inside it.
-  if (cur && inside(cur)) return current;
-  return zs.findIndex(inside);
-}
-
-export function createCamera(s: GameState, room: Room, ct: CameraTuning = cameraTuning): CameraState {
-  const f = feetOf(s);
-  const cam: CameraState = {
-    roomId: room.id,
-    t: 0,
-    fx: f.cx + s.player.facing * ct.lookaheadX,
-    fy: f.feet,
-    targetY: f.feet,
-    focusDir: s.player.facing,
-    revDir: 0,
-    revStartX: s.player.x,
-    look: 0,
-    lookTimer: 0,
-    zone: zoneIndexAt(room, f.cx, f.cy, -1),
-    offX: 0,
-    offY: 0,
-    x: 0,
-    y: 0,
-    clampedX: false,
-    clampedY: false,
-    trauma: 0,
-    kickX: 0,
-    shakeX: 0,
-    shakeY: 0,
-  };
-  place(cam, room, ct);
-  return cam;
-}
-
-function freeView(cam: CameraState, ct: CameraTuning) {
-  return { x: cam.fx - VIEW_W / 2, y: cam.fy - ct.anchorY * VIEW_H + cam.look };
-}
-
-/** The view a zone asks for, given the free-follow view. */
-function zoneView(room: Room, zi: number, vx: number, vy: number) {
-  const z = room.cameraZones[zi];
-  if (!z) return { x: vx, y: vy };
-  switch (z.mode) {
-    case 'lock':
-      return { x: z.cx - VIEW_W / 2, y: z.cy - VIEW_H / 2 };
-    case 'clampX':
-      return { x: z.cx - VIEW_W / 2, y: vy };
-    case 'clampY':
-      return { x: vx, y: z.cy - VIEW_H / 2 };
-    case 'bounds':
-      return { x: clampAxis(vx, z.x, z.w, VIEW_W), y: clampAxis(vy, z.y, z.h, VIEW_H) };
-  }
-}
-
-/** Clamps a view edge to [lo, lo + size]; centres it if the span is smaller than the view. */
-function clampAxis(v: number, lo: number, size: number, view: number): number {
+/** Clamps a view edge to [lo, lo + size - view]; centres it if the span is smaller than the view. */
+export function clampAxis(v: number, lo: number, size: number, view: number): number {
   if (size <= view) return lo + (size - view) / 2;
   return Math.min(Math.max(v, lo), lo + size - view);
 }
 
-const TS = defaultTuning.world.tileSize;
-
-/** Target view: free follow, overridden by the active zone. Unclamped. */
-function targetView(cam: CameraState, room: Room, ct: CameraTuning) {
-  const free = freeView(cam, ct);
-  return zoneView(room, cam.zone, free.x, free.y);
+/**
+ * The highest the view's top edge can go (world y, <= 0): `headroom` above the scene's canopy ceiling.
+ * The layer tree builds its coverage from this, so a change here grows the layers too.
+ */
+export function viewTop(scene: Scene, ct: CameraTuning = cameraTuning): number {
+  return Math.min(0, (scene.ceilingY ?? 0) - ct.headroom);
 }
 
-function clampView(room: Room, vx: number, vy: number) {
-  return { x: clampAxis(vx, 0, room.width * TS, VIEW_W), y: clampAxis(vy, 0, room.height * TS, VIEW_H) };
+function place(cam: CameraState, scene: Scene, ct: CameraTuning): void {
+  const top = viewTop(scene, ct);
+  cam.x = clampAxis(cam.fx - VIEW_W / 2, 0, scene.width, VIEW_W);
+  cam.y = clampAxis(cam.fy - ct.anchorY * VIEW_H, top, scene.height - top, VIEW_H);
+  // Held by the top or the bottom: the spring rests there too, so the view answers at once when
+  // she comes back (a glide off the summit), not after the spring has crossed the slack.
+  const fy = cam.y + ct.anchorY * VIEW_H;
+  if (fy !== cam.fy) {
+    if ((cam.fy < fy && cam.fvy < 0) || (cam.fy > fy && cam.fvy > 0)) cam.fvy = 0;
+    cam.fy = fy;
+  }
 }
 
-/** Target view clamped to the room: the basis the zone blend offset is measured and applied on. */
-function clampedTarget(cam: CameraState, room: Room, ct: CameraTuning) {
-  const t = targetView(cam, room, ct);
-  const c = clampView(room, t.x, t.y);
-  return { x: c.x, y: c.y, clampedX: Math.abs(c.x - t.x) > 1e-6, clampedY: Math.abs(c.y - t.y) > 1e-6 };
+/** Where the view should lean while she stands still at (cx, feet): toward a lantern or the heart in reach. */
+export function restOffset(
+  cx: number,
+  feet: number,
+  scene: Scene,
+  ct: CameraTuning = cameraTuning,
+): { x: number; y: number } {
+  const R = ct.rest;
+  let best: { x: number; y: number } | null = null;
+  let bestD = Number.POSITIVE_INFINITY;
+  const spots = scene.heart ? [...(scene.lanterns ?? []), scene.heart] : (scene.lanterns ?? []);
+  for (const o of spots) {
+    const d = Math.abs(o.x - cx);
+    if (d > R.reachX || Math.abs(o.y - feet) > R.reachY || d >= bestD) continue;
+    best = o;
+    bestD = d;
+  }
+  if (!best) return { x: 0, y: 0 };
+  return { x: Math.max(-R.maxX, Math.min(R.maxX, (best.x - cx) * R.share)), y: -R.lift };
 }
 
-function place(cam: CameraState, room: Room, ct: CameraTuning): void {
-  // The blend offset is added to the *clamped* target (the same basis it was measured on at the
-  // zone change), then clamped again. Adding it to the unclamped target turned blends into cuts
-  // whenever the free-follow target was past a room bound (L2 playtest P1).
-  const t = clampedTarget(cam, room, ct);
-  const c = clampView(room, t.x + cam.offX, t.y + cam.offY);
-  cam.clampedX = t.clampedX || Math.abs(c.x - (t.x + cam.offX)) > 1e-6;
-  cam.clampedY = t.clampedY || Math.abs(c.y - (t.y + cam.offY)) > 1e-6;
-  cam.x = c.x;
-  cam.y = c.y;
-}
-
-/** 1-D value noise in [-1, 1] from an integer hash (render RNG, deterministic per seed). */
-export function valueNoise(seed: number, u: number): number {
-  const i = Math.floor(u);
-  const f = u - i;
-  const h = (n: number) => {
-    let x = Math.imul(n ^ Math.imul(seed, 0x9e3779b1), 0x85ebca6b);
-    x ^= x >>> 13;
-    x = Math.imul(x, 0xc2b2ae35);
-    x ^= x >>> 16;
-    return ((x >>> 0) / 4294967295) * 2 - 1;
+/** A camera already settled on the player. */
+export function createCamera(s: GameState, scene: Scene, ct: CameraTuning = cameraTuning): CameraState {
+  const p = s.player;
+  const feet = p.y + p.h;
+  const cam: CameraState = {
+    fx: p.x + p.w / 2,
+    fy: feet,
+    fvx: 0,
+    fvy: 0,
+    targetY: feet,
+    lead: 0,
+    glide: 0,
+    grounded: 0,
+    still: 0,
+    restX: 0,
+    restY: 0,
+    x: 0,
+    y: 0,
   };
-  const s = f * f * (3 - 2 * f);
-  return h(i) + (h(i + 1) - h(i)) * s;
+  place(cam, scene, ct);
+  return cam;
 }
 
-/** Steps the camera one sim frame. `events` are the events of that sim step. */
+/** Steps the camera one sim frame toward the player. */
 export function stepCamera(
   cam: CameraState,
   s: GameState,
-  room: Room,
-  events: readonly SimEvent[],
+  scene: Scene,
   ct: CameraTuning = cameraTuning,
 ): void {
-  if (cam.roomId !== room.id || events.some((e) => e.type === 'roomEnter' || e.type === 'respawn')) {
-    const fresh = createCamera(s, room, ct);
-    Object.assign(cam, fresh, { trauma: cam.trauma });
-  }
-  cam.t++;
   const p = s.player;
-  const f = feetOf(s);
-  const dashing = p.state === 'dash';
+  const cx = p.x + p.w / 2;
+  const feet = p.y + p.h;
 
-  // Horizontal: dual forward focus. Flip only after moving focusSwitchPx the other way.
-  const moveDir = p.vx > 0 ? 1 : p.vx < 0 ? -1 : 0;
-  if (moveDir !== 0 && moveDir !== cam.focusDir) {
-    if (cam.revDir !== moveDir) {
-      cam.revDir = moveDir;
-      cam.revStartX = p.x;
-    }
-    if ((p.x - cam.revStartX) * moveDir >= ct.focusSwitchPx) {
-      cam.focusDir = moveDir;
-      cam.revDir = 0;
-    }
-  } else if (moveDir === cam.focusDir) cam.revDir = 0;
-  const targetX = f.cx + cam.focusDir * ct.lookaheadX;
-  const panMax = Math.max(ct.panMaxX, Math.abs(p.vx) * ct.panMaxVxMult);
-  const stepX = (targetX - cam.fx) * (dashing ? ct.lerpXDash : ct.lerpX);
-  cam.fx += Math.max(-panMax, Math.min(panMax, stepX));
-
-  // Vertical: platform snapping, window, fast-fall follow.
-  let lerpY = ct.lerpY;
-  const feetScreen = (f.feet - cam.y) / VIEW_H;
-  if (p.vy > ct.fallFollowVy) {
-    cam.targetY = f.feet + ct.fallLookahead;
-    lerpY = ct.lerpYFall;
-  } else if (p.grounded || p.state === 'wallSlide' || feetScreen < ct.winTop || feetScreen > ct.winBot) {
-    cam.targetY = f.feet;
+  // Faded: the view holds where she fell (the springs run out; the re-form's pan starts from here).
+  if (p.faded > 0) {
+    [cam.fx, cam.fvx] = smoothDamp(cam.fx, cam.fvx, cam.fx, ct.smoothX);
+    [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, cam.fy, ct.smoothY);
+    cam.targetY = cam.fy;
+    place(cam, scene, ct);
+    return;
   }
-  cam.fy += (cam.targetY - cam.fy) * lerpY;
 
-  // Look up / down.
-  const inp = s.prevInput;
-  const up = isHeld(inp, 'up');
-  const down = isHeld(inp, 'down');
-  const noX = !isHeld(inp, 'left') && !isHeld(inp, 'right');
-  const looking = p.grounded && noX && up !== down && p.state === 'normal';
-  cam.lookTimer = looking ? cam.lookTimer + 1 : 0;
-  const lookTarget = looking && cam.lookTimer >= ct.lookDelay ? (up ? -ct.lookUp : ct.lookDown) : 0;
-  cam.look += (lookTarget - cam.look) * ct.lookLerp;
+  // Standing still at a lantern or the heart: lean toward it, eased in and out.
+  cam.grounded = p.grounded ? cam.grounded + 1 : 0;
+  cam.still = p.grounded && Math.abs(p.vx) < 0.5 ? cam.still + 1 : 0;
+  const rest = cam.still > ct.rest.frames ? restOffset(cx, feet, scene, ct) : { x: 0, y: 0 };
+  cam.restX += (rest.x - cam.restX) / ct.rest.ease;
+  cam.restY += (rest.y - cam.restY) / ct.rest.ease;
 
-  // Zones (last entered wins). A zone change leaves an offset that decays by zoneLerp per frame.
-  const zi = zoneIndexAt(room, f.cx, f.cy, cam.zone);
-  if (zi !== cam.zone) {
-    // Offset from the current view to the new zone's target, both clamped (see place()).
-    cam.zone = zi;
-    const after = clampedTarget(cam, room, ct);
-    cam.offX = cam.x - after.x;
-    cam.offY = cam.y - after.y;
-  }
-  // Exponential ease, capped so a long blend starts as a pan instead of a lurch.
-  let dx = cam.offX * ct.zoneLerp;
-  let dy = cam.offY * ct.zoneLerp;
-  const d = Math.sqrt(dx * dx + dy * dy);
-  if (d > ct.zoneBlendMaxPx) {
-    dx *= ct.zoneBlendMaxPx / d;
-    dy *= ct.zoneBlendMaxPx / d;
-  }
-  cam.offX -= dx;
-  cam.offY -= dy;
-  place(cam, room, ct);
+  // Horizontal: lead by the slow-averaged travel direction (further, and sooner, in a glide), then
+  // follow on a damped spring.
+  const G = ct.glide;
+  cam.glide += ((p.gliding ? 1 : 0) - cam.glide) / (p.gliding ? G.easeIn : G.easeOut);
+  const want = Math.max(-1, Math.min(1, p.vx / ct.leadFullSpeed));
+  cam.lead += (want - cam.lead) / (ct.leadFrames + (G.leadFrames - ct.leadFrames) * cam.glide);
+  const targetX = cx + cam.lead * (ct.lookaheadX + G.extraX * cam.glide) + cam.restX;
+  [cam.fx, cam.fvx] = smoothDamp(cam.fx, cam.fvx, targetX, p.mode === 'dash' ? ct.smoothXDash : ct.smoothX);
 
-  // Trauma and kick (added after clamping; rooms draw a solid apron so this never shows void).
-  for (const e of events) {
-    if (e.type === 'land' && e.hard) cam.trauma = Math.min(1, cam.trauma + ct.traumaHardLand);
-    else if (e.type === 'death') cam.trauma = Math.min(1, cam.trauma + ct.traumaDeath);
-    else if (e.type === 'dashStart') cam.kickX += e.dir * ct.dashKickPx;
+  // Vertical: dead zone (the target holds while the feet stay in the window), fast-fall follow.
+  let smoothY = ct.smoothY;
+  const feetScreen = (feet - cam.y) / VIEW_H;
+  if (p.vy > ct.fallFollowVy && feet > cam.targetY + ct.fallBelow) {
+    // A real fall (past the line the view rests on; coming down from a jump is not one).
+    cam.targetY = feet + ct.fallLookahead;
+    smoothY = ct.smoothYFall;
+  } else if (p.mode === 'wallSlide' || feetScreen < ct.winTop || feetScreen > ct.winBot) {
+    cam.targetY = feet;
+  } else if (p.grounded) {
+    // A landing near the line the view rests on leaves it alone (no bob from hop to hop); staying
+    // on the ground settles it on her feet.
+    // Just out of a glide the look-down runs out with the glide share, so a chain of glides (land,
+    // run, take off again) keeps one line instead of rising at every landing.
+    const line = feet + cam.restY + G.lookDown * cam.glide;
+    const d = line - cam.targetY;
+    if (cam.grounded > ct.settleFrames || cam.glide > 0.02 || d < -ct.landUp || d > ct.landDown)
+      cam.targetY = line;
   }
-  const amp = ct.shakeMaxPx * cam.trauma * cam.trauma;
-  const u = (cam.t * ct.shakeHz) / 60;
-  cam.shakeX = amp * valueNoise(ct.shakeSeed, u) + cam.kickX;
-  cam.shakeY = amp * valueNoise(ct.shakeSeed + 1, u + 17.3);
-  cam.trauma = Math.max(0, cam.trauma - ct.traumaDecay);
-  cam.kickX *= ct.dashKickDecay;
+  if (p.gliding) {
+    // She is sinking: lead below her feet so the landing is in view. Only ever downward.
+    cam.targetY = Math.max(cam.targetY, feet + G.lookDown * cam.glide);
+    smoothY = G.smoothY;
+  }
+  [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, cam.targetY, smoothY);
+  place(cam, scene, ct);
 }
 
-/** View centre (pre-shake), handy for tests and the debug API. */
-export function viewCentre(cam: CameraState): { x: number; y: number } {
-  return { x: cam.x + VIEW_W / 2, y: cam.y + VIEW_H / 2 };
-}
-
-/** Is a world rect (partly) inside the pre-shake view? */
-export function inView(cam: CameraState, x: number, y: number, w: number, h: number): boolean {
-  return x < cam.x + VIEW_W && x + w > cam.x && y < cam.y + VIEW_H && y + h > cam.y;
-}
-
-/** Legacy helper (Phase 0): centre on a point, clamped to the room. */
-export function clampCamera(
-  focusX: number,
-  focusY: number,
-  roomW: number,
-  roomH: number,
-  viewW = VIEW_W,
-  viewH = VIEW_H,
-) {
+/** The view between two camera states (alpha 0 = prev, 1 = cur), at zoom 1. */
+export function lerpCamera(prev: CameraState, cur: CameraState, alpha: number): CameraView {
   return {
-    x: Math.round(clampAxis(focusX - viewW / 2, 0, roomW, viewW)),
-    y: Math.round(clampAxis(focusY - viewH / 2, 0, roomH, viewH)),
+    x: prev.x + (cur.x - prev.x) * alpha + VIEW_W / 2,
+    y: prev.y + (cur.y - prev.y) * alpha + VIEW_H / 2,
+    zoom: 1,
   };
 }

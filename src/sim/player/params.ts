@@ -1,19 +1,14 @@
-import { derive, type MovementProfile, type Tuning } from '../tuning';
+import type { Tuning } from '../tuning';
 
 /**
- * The flat, per-frame parameter set the controller reads. Built from the live tuning, the
- * player's movement profile and the assist toggles, so the controller never branches on "is this
- * assist on": a disabled assist just shows up here as 0 / false (spec §3.1).
- *
- * Profile pipeline (MovementProfile in tuning.ts): base tuning -> `shape` re-derives the jump
- * constants -> `set` replaces values -> `scale` multiplies them -> assists applied.
+ * The flat, per-frame parameter set the controller reads. Built from the live tuning and the
+ * assist toggles, so the controller never branches on "is this assist on": a disabled assist just
+ * shows up here as 0 / false.
  */
 export interface MoveParams {
-  tileSize: number;
   gravity: number;
   jumpSpeed: number;
   doubleJumpSpeed: number;
-  pogoSpeed: number;
   fallMult: number;
   releaseMult: number;
   releaseZero: boolean;
@@ -55,6 +50,7 @@ export interface MoveParams {
   stickFrames: number;
   wallJumpVx: number;
   wallForceFrames: number;
+  wallKickFrames: number;
   wallCheckPx: number;
   wallJumpRefill: boolean;
 
@@ -68,83 +64,96 @@ export interface MoveParams {
   dashBufferFrames: number;
   airDashes: number;
 
-  pogoActiveFrames: number;
-  pogoProbeW: number;
-  pogoProbeH: number;
-  orbSize: number;
+  glide: boolean;
+  glideFall: number;
+  glideCatchRate: number;
+  glideCatchMin: number;
+  glideSinkAccel: number;
+  glideMinVy: number;
+  glideMaxRun: number;
+  glideAccel: number;
+  glideDecel: number;
+  glideTurn: number;
+  glideCarriedDropPx: number;
 
-  spikeDepthPx: number;
-  spikeInsetPx: number;
-  deathFreezeFrames: number;
+  /** The live tuning (the slash's geometry is read from it by `slashBox`). */
+  tuning: Tuning;
+  /** Combo steps 1-3 (index 0-2). */
+  steps: readonly SlashStep[];
+  attackBuffer: number;
+  comboWindow: number;
+  recoilDecay: number;
+  recoilUp: number;
+  lungeFrames: number;
+  hangVy: number;
+  hangKeep: number;
+  pogoSpeed: number;
+  pogo: boolean;
 
   dropThroughFrames: number;
   footstepPx: number;
   hardLandFallPx: number;
-  transitionFrames: number;
-  goalBeatFrames: number;
-  doorTriggerTiles: number;
-  /** Combat rooms (the seize kit): hazards cost Chin and respawn at the last safe ground. */
-  hazardDmg: number;
-  hazardRespawnFrames: number;
-  hazardIframes: number;
+
+  ceilingRate: number;
+
+  hpMax: number;
+  hurtVx: number;
+  hurtVy: number;
+  staggerFrames: number;
+  steerFrames: number;
+  hurtDecel: number;
+  invulnFrames: number;
+  fadeFrames: number;
+  reformInvulnFrames: number;
+  safeFrames: number;
+  safeEnemyPx: number;
 }
 
-type Groups = Record<string, Record<string, unknown>>;
+/** One combo step's numbers, frames rounded. */
+export interface SlashStep {
+  startup: number;
+  active: number;
+  duration: number;
+  cooldown: number;
+  power: number;
+  hitstopBonus: number;
+  knockback: number;
+  recoil: number;
+  recoilFoe: number;
+  hitstopFoe: number;
+  lunge: number;
+  hangFrames: number;
+}
 
-/** Applies a profile to a tuning, returning a new object that shares untouched groups. */
-export function applyProfile(t: Tuning, profile: MovementProfile): Tuning {
-  const out = { ...t } as unknown as Groups;
-  const touch = (group: string): Record<string, unknown> => {
-    const src = (t as unknown as Groups)[group];
-    if (!src) throw new Error(`Profile references unknown tuning group "${group}"`);
-    if (out[group] === src) out[group] = { ...src };
-    return out[group] as Record<string, unknown>;
+function slashStep(s: Tuning['slash1']): SlashStep {
+  return {
+    startup: Math.max(0, Math.round(s.startupFrames)),
+    active: Math.max(1, Math.round(s.activeFrames)),
+    duration: Math.max(1, Math.round(s.durationFrames)),
+    cooldown: Math.max(1, Math.round(s.cooldownFrames)),
+    power: s.power,
+    hitstopBonus: Math.max(0, Math.round(s.hitstopBonus)),
+    knockback: s.knockback,
+    recoil: s.recoil,
+    recoilFoe: s.recoilFoe,
+    hitstopFoe: Math.max(0, Math.round(s.hitstopFoe)),
+    lunge: s.lunge,
+    hangFrames: Math.max(0, Math.round(s.hangFrames)),
   };
-  if (profile.shape) {
-    const shape = { ...t.shape, ...profile.shape };
-    Object.assign(touch('shape'), shape);
-    Object.assign(touch('jump'), derive(shape));
-  }
-  for (const [path, v] of Object.entries(profile.set ?? {})) {
-    const [g = '', k = ''] = path.split('.');
-    const grp = touch(g);
-    if (!(k in grp)) throw new Error(`Profile sets unknown tuning path "${path}"`);
-    grp[k] = v;
-  }
-  for (const [path, m] of Object.entries(profile.scale ?? {})) {
-    const [g = '', k = ''] = path.split('.');
-    const grp = touch(g);
-    const cur = grp[k];
-    if (typeof cur !== 'number') throw new Error(`Profile scales non-numeric tuning path "${path}"`);
-    grp[k] = cur * m;
-  }
-  return out as unknown as Tuning;
 }
 
-/** The base profile name: no overrides. */
-export const BASE_PROFILE = 'base';
-
-export function resolveTuning(t: Tuning, profile: string): Tuning {
-  if (profile === BASE_PROFILE) return t;
-  const p = t.profiles[profile];
-  if (!p) throw new Error(`Unknown movement profile "${profile}". Known: base, ${Object.keys(t.profiles)}`);
-  return applyProfile(t, p);
-}
-
-export function resolveParams(base: Tuning, profile: string): MoveParams {
-  const t = resolveTuning(base, profile);
+export function resolveParams(t: Tuning): MoveParams {
   const a = t.assists;
   const j = t.jump;
   const r = t.run;
   const s = t.assist;
   const w = t.wall;
   const d = t.dash;
+  const gl = t.glide;
   return {
-    tileSize: t.world.tileSize,
     gravity: j.gravity,
     jumpSpeed: j.jumpSpeed,
     doubleJumpSpeed: j.doubleJumpSpeed,
-    pogoSpeed: j.pogoSpeed,
     fallMult: j.fallMult,
     releaseMult: j.releaseMult,
     releaseZero: j.releaseMode === 'zero',
@@ -187,6 +196,7 @@ export function resolveParams(base: Tuning, profile: string): MoveParams {
     stickFrames: w.stickFrames,
     wallJumpVx: w.jumpVx,
     wallForceFrames: a.wallJumpForce ? w.forceFrames : 0,
+    wallKickFrames: Math.max(0, Math.round(w.kickFrames)),
     // Without grace the wall must be touching (1 px probe).
     wallCheckPx: a.wallJumpGrace ? Math.max(1, w.checkPx) : 1,
     wallJumpRefill: a.wallJumpRefill,
@@ -201,23 +211,46 @@ export function resolveParams(base: Tuning, profile: string): MoveParams {
     dashBufferFrames: Math.max(1, d.bufferFrames),
     airDashes: d.airDashes,
 
-    pogoActiveFrames: t.pogo.activeFrames,
-    pogoProbeW: t.pogo.probeW,
-    pogoProbeH: t.pogo.probeH,
-    orbSize: t.pogo.orbSize,
+    glide: a.glide,
+    glideFall: gl.fallSpeed,
+    glideCatchRate: gl.catchRate,
+    glideCatchMin: gl.catchMin,
+    glideSinkAccel: gl.sinkAccel,
+    glideMinVy: gl.minVy,
+    glideMaxRun: r.maxSpeed * gl.speedMult,
+    glideAccel: gl.accel,
+    glideDecel: gl.decel,
+    glideTurn: gl.turn,
+    glideCarriedDropPx: gl.carriedDropPx,
 
-    spikeDepthPx: t.hazard.spikeDepthPx,
-    spikeInsetPx: t.hazard.spikeInsetPx,
-    deathFreezeFrames: t.hazard.deathFreezeFrames,
+    tuning: t,
+    steps: [slashStep(t.slash1), slashStep(t.slash2), slashStep(t.slash3)],
+    attackBuffer: Math.max(1, Math.round(t.attack.bufferFrames)),
+    comboWindow: Math.max(0, Math.round(t.attack.comboWindowFrames)),
+    recoilDecay: t.attack.recoilDecay,
+    recoilUp: t.attack.recoilUp,
+    lungeFrames: Math.max(1, Math.round(t.attack.lungeFrames)),
+    hangVy: t.attack.hangVy,
+    hangKeep: t.attack.hangKeep,
+    pogoSpeed: t.attack.pogoSpeed,
+    pogo: a.pogo,
 
     dropThroughFrames: t.misc.dropThroughFrames,
     footstepPx: t.misc.footstepPx,
     hardLandFallPx: t.misc.hardLandFallPx,
-    transitionFrames: t.world.transitionFrames,
-    goalBeatFrames: t.world.goalBeatFrames,
-    doorTriggerTiles: t.world.doorTriggerTiles,
-    hazardDmg: t.kid.hazardDmg,
-    hazardRespawnFrames: t.kid.hazardRespawnFrames,
-    hazardIframes: t.kid.iframes,
+
+    ceilingRate: Math.max(0, Math.min(1, t.ceiling.rate)),
+
+    hpMax: Math.max(1, Math.round(t.health.max)),
+    hurtVx: t.health.hurtVx,
+    hurtVy: t.health.hurtVy,
+    staggerFrames: Math.max(0, Math.round(t.health.staggerFrames)),
+    steerFrames: Math.max(0, Math.round(t.health.steerFrames)),
+    hurtDecel: t.health.hurtDecel,
+    invulnFrames: Math.max(0, Math.round(t.health.invulnFrames)),
+    fadeFrames: Math.max(1, Math.round(t.health.fadeFrames)),
+    reformInvulnFrames: Math.max(0, Math.round(t.health.reformInvulnFrames)),
+    safeFrames: Math.max(1, Math.round(t.health.safeFrames)),
+    safeEnemyPx: t.health.safeEnemyPx,
   };
 }

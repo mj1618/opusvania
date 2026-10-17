@@ -10,7 +10,7 @@
       body {
         margin: 0;
         height: 100%;
-        background: #000;
+        background: #020a0e;
         overflow: hidden;
       }
       #app {
@@ -20,11 +20,8 @@
         align-items: center;
         justify-content: center;
       }
-      /* 1920x1080 canvas, letterboxed to fit the window. */
+      /* The canvas is sized by src/render/app.ts: 16:9, letterboxed, full device resolution. */
       #app canvas {
-        width: min(100vw, calc(100vh * 16 / 9));
-        height: auto;
-        aspect-ratio: 16 / 9;
         display: block;
       }
       #hint {
@@ -34,12 +31,39 @@
         font: 12px/1.4 ui-monospace, monospace;
         color: #8890a4;
         pointer-events: none;
+        transition: opacity 1.2s ease;
+      }
+      #hint.quiet {
+        opacity: 0;
       }
     </style>
   </head>
   <body>
     <div id="app"></div>
-    <div id="hint">Opusvania · arrows/WASD move · Z/Space jump · X/Shift slip (dash) · C jab (Up+C uppercut, Down+C in the air overhand/pogo, C C cross) · V seize (Up/Down+V aims) · B levy (Up/Down+B aims) · Q swallow · Up enters doors · 1-0 gym 1-10 · Shift+1-4 gym 11-14 · Shift+5-9 lot-7, yard, the-pit, auction, ring-barker · H hub · F2 hitboxes · F3 blind A/B · F4 perf · ` tuning</div>
+    <div id="hint">arrows/WASD move · Z/Space jump (again in air: somersault · hold while falling: glide) · X/Shift dash · C attack (with ↑ or ↓ · ↓ on a target bounces) · V/F give a glint (calms a creature · into a lantern or the heart) · R restart · <span id="sound-key">M sound</span> · H keys</div>
+    <script>
+      // The key legend shows at start, fades once the player has been playing a while, and returns on H.
+      (() => {
+        const hint = document.getElementById('hint');
+        let quietTimer = 0;
+        const quietSoon = () => {
+          clearTimeout(quietTimer);
+          quietTimer = setTimeout(() => hint.classList.add('quiet'), 12000);
+        };
+        let started = false;
+        addEventListener('keydown', (e) => {
+          if (e.key === 'h' || e.key === 'H') {
+            hint.classList.remove('quiet');
+            quietSoon();
+            return;
+          }
+          if (!started) {
+            started = true;
+            quietSoon();
+          }
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

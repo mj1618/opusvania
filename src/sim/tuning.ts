@@ -1,25 +1,22 @@
 /**
- * Every gameplay number lives here (movement-spec §3). The Tweakpane panel (backquote key) edits
- * the live `tuning` object; write values you like back into this file ("Copy JSON" in the panel).
+ * Every gameplay number lives here. The Tweakpane panel (backquote key) edits the live `tuning`
+ * object; write values you like back into this file ("Copy JSON" in the panel).
  *
- * Units: the sim works per frame at the fixed 60 Hz step. Distances are px at the 1920x1080
- * reference (64 px tiles), velocities px/f (x60 = px/s), accelerations px/f², durations frames.
+ * Units: the sim works per frame at the fixed 60 Hz step. Distances are sim px (the logical view
+ * is 1920x1080 sim px, 64 px = one "tile"), velocities px/f (x60 = px/s), accelerations px/f²,
+ * durations frames.
  *
  * Layout:
- *  - `shape` is the jump shape; `jump.gravity/jumpSpeed/doubleJumpSpeed/pogoSpeed` are derived
- *    from it with `derive()` (Pittman, discrete form, spec §3.1). Change the shape, then call
- *    `applyShape(t)` (the panel does this).
- *  - `assists` are the A/B toggles. When one is off, its parameter is treated as 0/false by
+ *  - `shape` is the jump shape; `jump.gravity/jumpSpeed/doubleJumpSpeed` are derived from it with
+ *    `derive()` (Pittman, discrete form). Change the shape, then call `applyShape(t)`.
+ *  - `assists` are on/off toggles. When one is off, its parameter is treated as 0/false by
  *    `resolveParams` (src/sim/player/params.ts), so the controller code path is identical.
- *  - `PRESETS` (`opus`, `celeste`, `hk`) are override sets on top of the defaults (§3.3).
- *  - `profiles` are named movement profiles (weight classes, water...) applied per player at
- *    runtime on top of the live tuning; see src/sim/player/params.ts.
  */
 
-export const SHAPE = { jumpHeightPx: 272, apexFrames: 24, doubleJumpHeightPx: 192, pogoHeightPx: 176 };
+export const SHAPE = { jumpHeightPx: 272, apexFrames: 24, doubleJumpHeightPx: 192 };
 export type JumpShape = typeof SHAPE;
 
-/** Launch speed that reaches height h under gravity g with our integrator (spec §3.1). */
+/** Launch speed that reaches height h under gravity g with our integrator. */
 export function speedForHeight(g: number, h: number): number {
   return (g * (-1 + Math.sqrt(1 + (8 * h) / g))) / 2;
 }
@@ -31,38 +28,13 @@ export function derive(s: JumpShape = SHAPE) {
     gravity: g,
     jumpSpeed: g * s.apexFrames,
     doubleJumpSpeed: speedForHeight(g, s.doubleJumpHeightPx),
-    pogoSpeed: speedForHeight(g, s.pogoHeightPx),
   };
 }
 
 const D = derive(SHAPE);
 
-/**
- * A movement profile: a named override set applied to the live tuning for one player
- * (weight classes next loop: feather / middle / heavy; later water). `shape` re-derives the jump
- * constants from the base shape merged with it; then `set` replaces values; then `scale`
- * multiplies them. Keys are `group.key` tuning paths (e.g. `"jump.fallMult"`).
- */
-export interface MovementProfile {
-  shape?: Partial<JumpShape>;
-  set?: Record<string, number | boolean | string>;
-  scale?: Record<string, number>;
-}
-
 export const defaultTuning = {
-  world: {
-    /** Tile edge in px (64 px tiles at 1080p, spec §1.1). */
-    tileSize: 64,
-    /** Frames the player is frozen while a room transition fades out. */
-    transitionFrames: 10,
-    /** Touching G: the freeze before the warp is this long (the "cleared" beat). */
-    goalBeatFrames: 45,
-    /** Door triggers are this many tiles wide, centred on the door tile (the drawn door). */
-    doorTriggerTiles: 3,
-    /** Minimum room size in tiles; smaller rooms are padded with solid (spec §6.1). */
-    minRoomW: 30,
-    minRoomH: 17,
-  },
+  /** The player's collision box in sim px (the drawn character is a little taller: ears). */
   body: {
     width: 40,
     height: 80,
@@ -75,8 +47,6 @@ export const defaultTuning = {
     jumpSpeed: D.jumpSpeed,
     /** DJ_V (derived from shape.doubleJumpHeightPx). */
     doubleJumpSpeed: D.doubleJumpSpeed,
-    /** POGO_V (derived from shape.pogoHeightPx). */
-    pogoSpeed: D.pogoSpeed,
     /** Gravity multiplier while falling (vy >= 0). */
     fallMult: 1.6,
     /** Gravity multiplier after releasing jump while rising (releaseMode 'gravity'). */
@@ -90,7 +60,7 @@ export const defaultTuning = {
     /** Apex hang: gravity x apexHangMult while |vy| < apexHangVy and jump is held. */
     apexHangVy: 3,
     apexHangMult: 0.5,
-    /** Double jumps per airtime (refilled on ground, wall jump and pogo). */
+    /** Double jumps per airtime (refilled on ground and wall jump). */
     doubleJumps: 1,
     /** Horizontal boost added in the input direction on a ground jump. */
     hBoost: 0,
@@ -102,8 +72,8 @@ export const defaultTuning = {
   },
   run: {
     maxSpeed: 9.6,
-    groundAccel: 3.2,
-    groundDecel: 3.2,
+    groundAccel: 1.6,
+    groundDecel: 2,
     groundTurn: 4.8,
     airAccel: 2.4,
     airDecel: 1.2,
@@ -115,8 +85,9 @@ export const defaultTuning = {
   assist: {
     coyoteFrames: 6,
     jumpBufferFrames: 6,
-    /** How long a buffered press can still become a double jump (HK queues these for longer). */
+    /** How long a buffered press can still become a double jump. */
     doubleJumpBufferFrames: 6,
+    /** Corner corrections, px: head bump, ledge pop-up, dash. */
     headCorrectPx: 20,
     ledgePopPx: 16,
     dashCorrectPx: 24,
@@ -124,8 +95,7 @@ export const defaultTuning = {
   },
   wall: {
     /** Slide speed cap: starts at slideStartMax and rises by slideRamp per frame of sliding up to
-     * slideMax (Celeste's WallSlideStartMax/WallSlideTime), so a quick touch-and-jump is calm but a
-     * long slide gets out of the way. L2 playtest: a flat 4 px/f felt glued. */
+     * slideMax, so a quick touch-and-jump is calm but a long slide gets out of the way. */
     slideMax: 6.5,
     slideStartMax: 2.5,
     slideRamp: 0.25,
@@ -137,6 +107,11 @@ export const defaultTuning = {
     forceFrames: 8,
     /** Wall-jump grace: a wall within this many px counts. */
     checkPx: 20,
+    /**
+     * A wall kick rises for at least this many frames however short the press (letting go cannot
+     * cut it before then), so a player who taps climbs a shaft, or one wall, as surely as one who holds.
+     */
+    kickFrames: 24,
   },
   dash: {
     speed: 24,
@@ -150,23 +125,655 @@ export const defaultTuning = {
     bufferFrames: 6,
     airDashes: 1,
   },
-  pogo: {
-    activeFrames: 8,
-    probeW: 48,
-    probeH: 64,
-    orbSize: 48,
+  /**
+   * Wing glide: holding jump while falling opens the wings. The fall is caught (not clamped) and
+   * she sinks slowly with a little more reach. Rules: memory/movement-controller.md.
+   */
+  glide: {
+    /** Steady sink speed, px/f (22.5% of maxFall). */
+    fallSpeed: 4.8,
+    /** The catch: each frame sheds this fraction of the speed above fallSpeed, at least catchMin px/f. */
+    catchRate: 0.3,
+    catchMin: 0.4,
+    /** Acceleration up to fallSpeed when the glide starts slower than it (just after an apex), px/f². */
+    sinkAccel: 0.35,
+    /** Falling at least this fast before the wings can open, px/f. */
+    minVy: 1,
+    /** Top horizontal speed while gliding = run.maxSpeed x this. */
+    speedMult: 1.1,
+    /** Horizontal accel toward the held direction, drift decel with nothing held, and turn-around. */
+    accel: 0.6,
+    decel: 0.25,
+    turn: 0.9,
+    /** A hold carried over from a ground jump only glides once she is this far below the launch height. */
+    carriedDropPx: 16,
   },
-  hazard: {
-    spikeDepthPx: 32,
-    spikeInsetPx: 8,
-    deathFreezeFrames: 20,
+  /**
+   * Thorn slash (rules: memory/combat.md): what all three steps of the combo share. The steps'
+   * own numbers are in `slash1` / `slash2` / `slash3` below; the hit area is `slashBox` in
+   * src/sim/player/attack.ts.
+   */
+  attack: {
+    /** An early press waits this long for the cooldown (it never expires during a dash). */
+    bufferFrames: 8,
+    /** A slash that starts within this many frames of the last one's cooldown ending is the next step. */
+    comboWindowFrames: 14,
+    /** Forward: how far behind the body centre the area starts, and how far above centre it sits. */
+    fwdBack: 14,
+    fwdRaise: 8,
+    /** Down slash (always the same, whatever the step): width, and reach from the body centre. */
+    downWidth: 100,
+    downReach: 120,
+    /** Recoil on a hit: the shove back (`slashN.recoil`) fades by this each frame. Up, in the air: vy += recoilUp. */
+    recoilDecay: 1,
+    recoilUp: 2,
+    /** Pogo: a down slash that hits sets vy to minus this (a hop of about 125 px, 17 frames up). */
+    pogoSpeed: 15.5,
+    /** Lunge (ground, forward): `slashN.lunge` px/f at the start, fading to nothing over this many frames. */
+    lungeFrames: 5,
+    /** Air hang (forward / up): for `slashN.hangFrames` her fall speed above hangVy is cut to this fraction each frame. */
+    hangVy: 1.5,
+    hangKeep: 0.5,
+  },
+  /** Combo step 1: the quick cut. Frames count from the press. */
+  slash1: {
+    /** Frames before the hit area is live, and how long it stays live. */
+    startupFrames: 1,
+    activeFrames: 6,
+    /** Length of the whole slash (`slashEnd`), and the soonest the next one can start (press to press). */
+    durationFrames: 14,
+    cooldownFrames: 17,
+    /** Forward: reach ahead of the body centre and height. Up: reach from the body centre and width. */
+    fwdReach: 110,
+    fwdHeight: 88,
+    upReach: 124,
+    upWidth: 100,
+    /** Weight of a hit (events), extra hitstop frames on top of the target's, knockback for targets (px/f). */
+    power: 1,
+    hitstopBonus: 0,
+    knockback: 6,
+    /** Her own shove back on a forward hit, px/f. */
+    recoil: 3,
+    /** The same against a creature (a pod keeps `recoil`): the push she feels on a hit that counts. */
+    recoilFoe: 4,
+    /** Extra hitstop on a creature, on top of `enemies.hitstopFrames` (pods use `hitstopBonus`). */
+    hitstopFoe: 0,
+    /** Forward lunge on the ground, px/f at the start. Air hang, frames. */
+    lunge: 3,
+    hangFrames: 4,
+  },
+  /** Combo step 2: the return cut. The same blow; the finisher can follow a little later. */
+  slash2: {
+    startupFrames: 1,
+    activeFrames: 6,
+    durationFrames: 14,
+    cooldownFrames: 19,
+    fwdReach: 110,
+    fwdHeight: 88,
+    upReach: 124,
+    upWidth: 100,
+    power: 1,
+    hitstopBonus: 0,
+    knockback: 6,
+    recoil: 3,
+    /** The same against a creature (a pod keeps `recoil`): the push she feels on a hit that counts. */
+    recoilFoe: 4,
+    /** Extra hitstop on a creature, on top of `enemies.hitstopFrames` (pods use `hitstopBonus`). */
+    hitstopFoe: 0,
+    lunge: 3,
+    hangFrames: 4,
+  },
+  /** Combo step 3: the finisher. A longer wind, a bigger and longer blow, a longer recovery. */
+  slash3: {
+    startupFrames: 3,
+    activeFrames: 8,
+    durationFrames: 20,
+    cooldownFrames: 27,
+    fwdReach: 135,
+    fwdHeight: 108,
+    upReach: 144,
+    upWidth: 120,
+    power: 2,
+    hitstopBonus: 1,
+    knockback: 11,
+    recoil: 4,
+    /** The same against a creature (a pod keeps `recoil`): the push she feels on a hit that counts. */
+    recoilFoe: 6,
+    /** Extra hitstop on a creature, on top of `enemies.hitstopFrames` (pods use `hitstopBonus`). */
+    hitstopFoe: 3,
+    lunge: 5.5,
+    hangFrames: 6,
+  },
+  /** Lumen pods (src/sim/pods.ts): breakables that spill glints. A pod's toughness (`hp` 1-3) is scene data. */
+  pods: {
+    /** Half the size of the pod's box. */
+    radius: 22,
+    /** Glints a pod is worth in all, by its toughness (1, 2, 3 hp). */
+    value1: 3,
+    value2: 6,
+    value3: 10,
+    /** Glints knocked loose by each hit that does not burst it (part of its worth, not extra). */
+    hitGlints: 1,
+    /** Hitstop when a slash hits one, frames (the combo step may add to it). */
+    hitstopFrames: 2,
+    /**
+     * Glints set loose reach her one at a time: the first this long after the hit, the rest
+     * releaseStagger apart, or releaseStaggerBig apart when bigRelease or more go at once.
+     */
+    releaseFrames: 16,
+    releaseStagger: 5,
+    releaseStaggerBig: 3,
+    bigRelease: 6,
+  },
+  /**
+   * Vesper's health (rules: memory/enemies.md). She has `max` lights; contact with an enemy costs
+   * one, knocks her back and makes her untouchable for a while. At none she fades and re-forms at
+   * the last safe ground.
+   */
+  health: {
+    max: 4,
+    /** Knockback on a hit: px/f away from what hurt her, and up. */
+    hurtVx: 7,
+    hurtVy: 7,
+    /** Frames she is out of control after a hit; held directions count again for the last `steerFrames` of them. */
+    staggerFrames: 12,
+    steerFrames: 3,
+    /** How fast the knockback's vx fades while she is out of control, px/f². */
+    hurtDecel: 0.3,
+    /** Frames she cannot be hurt again, counted from the hit (the stagger is inside them). */
+    invulnFrames: 70,
+    /** At no health: frames she lies faded before she re-forms, and her invulnerability after. */
+    fadeFrames: 50,
+    reformInvulnFrames: 90,
+    /** What a fade costs: she re-forms with this much health, and leaves this share of her wallet where she fell. */
+    reformHp: 2,
+    fadeDrop: 1 / 3,
+    /** Safe ground: this many frames in a row on solid ground, at least this far from any living enemy. */
+    safeFrames: 30,
+    safeEnemyPx: 200,
+  },
+  /** What every enemy shares (src/sim/enemies.ts). */
+  enemies: {
+    /** Hitstop when a slash hits one, frames (the combo step may add to it). The creature holds for as long. */
+    hitstopFrames: 4,
+    /** The same for a down slash (the pogo): short, so the bounce rhythm stays what it was. */
+    pogoHitstopFrames: 2,
+    /** A cut that glances off a braced shell: she holds this long and is thrown back at this, px/f (fading by `attack.recoilDecay`). */
+    blockHitstopFrames: 6,
+    blockRecoil: 8,
+    /** How long a dead body stays (for its death animation) before it is removed. */
+    deadFrames: 30,
+    /** Glints spilled on death reach her like a pod's: the first after this long, then a stagger apart. */
+    releaseFrames: 16,
+    releaseStagger: 5,
+    releaseStaggerBig: 3,
+    bigRelease: 6,
+  },
+  /** The burrback: a small armoured beetle that trundles along its platform. */
+  burrback: {
+    /** Collision box. */
+    width: 52,
+    height: 34,
+    /** Hit points unless the scene gives it its own (`hp`): two exchanges for one who reads it. */
+    hp: 5,
+    /** Walking speed, px/f. */
+    speed: 1.6,
+    /**
+     * It is aware of her (`EnemyState.aware`, `enemyAware`: it lifts its head, nothing else changes)
+     * within this of its centre, her body centre, with a clear line, scaled by the light she carries
+     * (memory/giving.md: 165 / 220 / 264 / 319 px at levels 1-4; never while she carries nothing).
+     */
+    noticePx: 220,
+    /** Round 3 (giving.md): an unseen burrback sleeps where it stands while she is within this (centres, px). */
+    dozePx: 340,
+    /** Frames it stands still when it turns round at a ledge or a wall. */
+    turnPauseFrames: 24,
+    /** The same when it shies from a lit lantern's light or from an edge she is under: a longer beat, room for the flinch. */
+    turnPauseShyFrames: 36,
+    /** Now and then it rests mid-walk: every restEveryMin..Max frames of walking, for restMin..Max frames. */
+    restEveryMin: 150,
+    restEveryMax: 330,
+    restMin: 20,
+    restMax: 34,
+    /** She lands or slashes within alertPx of it: it flinches for alertFrames, at most once per alertCooldown. */
+    alertPx: 160,
+    alertFrames: 18,
+    alertCooldown: 45,
+    /** Stagger after a hit, and how much of it (from the hit) its touch is harmless. */
+    hurtFrames: 14,
+    hurtSafeFrames: 8,
+    /** Knockback (the slash's `knockback`, px/f) fades by this each frame; an up / down cut gives this share sideways. */
+    knockDecay: 1,
+    knockVertical: 0.5,
+    /** A shove may leave this much of it hanging over a ledge, never more: it does not fall. */
+    teeterPx: 10,
+    /**
+     * Lips. Where its ground ends in a drop it turns `lipClear` short of the edge (walls it walks
+     * right up to), and it never takes a rest within `restLipClear` of one. While she is below it
+     * (her feet more than `waryBelowPx` lower) and within `waryPx` sideways of such an edge, it keeps
+     * away from that edge: it will not walk toward it inside `waryReachPx` of it. A platform too
+     * short for all that keeps at least `minPatrol` px of walk.
+     */
+    lipClear: 96,
+    restLipClear: 120,
+    waryPx: 200,
+    waryBelowPx: 24,
+    waryReachPx: 320,
+    waryStandFrames: 30,
+    minPatrol: 48,
+    /** Its touch hurt her: it is shoved back at this speed (fading by `knockDecay`), flinches this long, and turns away. */
+    touchRecoil: 8.5,
+    touchFlinchFrames: 30,
+    /** A blow shoves it at the slash's `knockback` x this (px/f, fading by `knockDecay`): 32 px for a cut, 102 for the finisher. */
+    knockScale: 1.25,
+    /**
+     * Its ram (memory/enemies.md). She is in front of it on its ground within `strikePx` (box to
+     * box; 0 = it never rams), her feet no more than `strikeAbovePx` above / `strikeBelowPx` below
+     * its own: it braces for `windupFrames` (the tell; a forward cut from its front glances off from
+     * here to the end of the ram), rams `chargePx` at `chargeSpeed`, then stands spent for
+     * `recoverFrames` and will not brace again for `strikeCooldown` after that. Cut from behind, it
+     * comes round to her if she is within `turnOnHitPx`.
+     */
+    strikePx: 130,
+    strikeAbovePx: 56,
+    strikeBelowPx: 8,
+    /**
+     * Unprovoked it braces only at one inside its own range (the scene's `radius`): beside its patch
+     * she is left alone. Cut (the blow lands), it braces as the stagger ends if she is within
+     * `provokedPx`, wherever she stands. The ram itself runs its length, range or no range. Never at
+     * one with a solid lower than `strikeHeadroomPx` over the ground she stands on (she could not
+     * jump it).
+     */
+    provokedPx: 150,
+    strikeHeadroomPx: 136,
+    windupFrames: 26,
+    chargeSpeed: 10,
+    chargePx: 180,
+    /**
+     * Winded after a ram (or a blow that broke its brace): open and harmless for `recoverFrames`
+     * (about two cuts' worth) the first time, `recoverTiredFrames` every time after (the whole
+     * chain: the kill is the finisher), `recoverWallFrames` when a wall stopped the ram (stunned).
+     * `strikeCooldown` more and it may brace again. For `rouseFrames` after a cut (and after a
+     * ram, past the time it stands winded) the fight is on: it comes round to her and braces
+     * again; cut, wherever she stands, having only rammed, if she is inside its range.
+     */
+    recoverFrames: 30,
+    recoverTiredFrames: 66,
+    recoverWallFrames: 90,
+    strikeCooldown: 12,
+    rouseFrames: 300,
+    turnOnHitPx: 320,
+    /**
+     * A ram whose length runs out with a wall within `chargeCarryPx` ahead carries on into it (a wall
+     * stun): its weight does not stop a stride short of the bark. In the shaft the ram from the
+     * doorway's mouth ended 21-24 px short of trunk B: always `spent`, never `wall` (playtest 6).
+     */
+    chargeCarryPx: 32,
+    /**
+     * After its touch or its ram hurt her it does not brace again until a ram could not reach her
+     * sooner than `rehitGapFrames` after her safety (`health.invulnFrames`) has run out.
+     */
+    rehitGapFrames: 10,
+    /**
+     * The pogo (playtest 6: four bounces killed it, no ram, no risk). A down cut that lands curls it
+     * up for `tuckFrames` (and on until it may brace again): a down cut glances off the curled shell
+     * and she bounces off it, nothing taken. A braced shell glances a down cut the same way (a bounce
+     * over the ram, not a break). Uncurling, it braces at her if she is near, even over it (her feet
+     * up to `tuckBraceAbovePx` above its ground); while she is above its ground and near (on a
+     * branch over it, dropping onto it) it stays curled. One pogo an exchange.
+     */
+    tuckFrames: 40,
+    tuckBraceAbovePx: 200,
+    /**
+     * A drop onto it (playtest 6: the blind drop from the summit landed on burr-shaft): while she falls
+     * from more than `dropPx` over its top toward its box (her box within `dropClearPx` of its own,
+     * sideways), it hurries out from under her at `dropSpeed`, and it does not brace at her until she
+     * is down.
+     */
+    dropPx: 300,
+    dropClearPx: 12,
+    dropSpeed: 3,
+    /** What its touch costs her. */
+    contactDamage: 1,
+    /** Glints it spills when it dies, and when the finisher killed it. */
+    value: 4,
+    valueFinisher: 6,
+  },
+  /**
+   * The lampwing: a small pale moth-wisp that hovers in the open air and is drawn to her light
+   * (rules and the reasons for these numbers: memory/enemies.md). No attack: its touch hurts.
+   */
+  lampwing: {
+    /** Collision box (drawn about 40 px across). */
+    width: 36,
+    height: 30,
+    hp: 3,
+    /** Territory: it wanders within this of its home unless the scene gives a `radius`. */
+    radius: 120,
+    /**
+     * Round 4 (giving.md): a lampwing that cannot see her ROOSTS while she is within `roostPx` (centres)
+     * and too dark to be seen: it brakes at `roostBrake` and hangs still, no wander, no bob, wings
+     * nearly still (`flapRoost` beats a frame). It wakes the step she carries light (then it may notice).
+     */
+    roostPx: 340,
+    roostBrake: 0.05,
+    flapRoost: 0.012,
+    /** Hover: drift speed and acceleration, px/f and px/f²; it slows inside `arrivePx` of a wander point. */
+    hoverSpeed: 0.7,
+    hoverAccel: 0.03,
+    arrivePx: 40,
+    /** A new wander point every wanderMin..Max frames (or when it gets there). */
+    wanderMin: 90,
+    wanderMax: 200,
+    /** The bob: up to this much vertical speed, px/f, on a cycle of `bobFrames`. */
+    bobSpeed: 0.16,
+    bobFrames: 84,
+    /** It notices her within this (centre to centre) with a clear line; then the tell, `curiousFrames`. */
+    noticePx: 260,
+    curiousFrames: 36,
+    /** Its touch does nothing for this long after it notices her (the start of the tell). */
+    noticeSafeFrames: 20,
+    /** While curious it brakes and rises at this, px/f. */
+    curiousRise: 0.5,
+    curiousAccel: 0.06,
+    /**
+     * The dive (memory/enemies.md). When the tell ends it commits: a swoop along an arc to where
+     * her body centre is at that moment (a gliding hero is led: `diveLeadGlide` x where her glide
+     * will have carried her), `diveSpeed` px/f on average (slow out, fast through the middle, slow
+     * in), never shorter than `diveMinFrames` or longer than `diveMaxFrames`, never further than
+     * `diveMaxPx`. The arc bends by `diveBend` (0 = a straight line, 1 = straight down first, then
+     * along). At the bottom it hangs for `stallFrames`, open, its touch harmless; then it climbs
+     * (`pursue`) at up to `pursueSpeed` to a perch `perchUpPx` above her and `perchSidePx` to its
+     * own side, for at most `pursueFrames`, harmless for the first `climbSafeFrames`, and tells
+     * again. After `maxDives` it has had enough (`tired`).
+     */
+    diveSpeed: 5.4,
+    diveMinFrames: 20,
+    diveMaxFrames: 52,
+    diveMaxPx: 340,
+    diveBend: 0.75,
+    diveLeadGlide: 1,
+    stallFrames: 34,
+    perchUpPx: 170,
+    perchSidePx: 110,
+    climbSafeFrames: 12,
+    maxDives: 3,
+    /** The climb back to a perch: top speed and acceleration. */
+    pursueSpeed: 3.4,
+    pursueAccel: 0.22,
+    /** The climb lasts at most this long. It gives up when it has not seen her for `lostFrames`, or she is `leashPx` from its home. */
+    pursueFrames: 70,
+    lostFrames: 90,
+    leashPx: 520,
+    /**
+     * Playtest 6: lamp-sky told every 2 s at one climbing the far cliff and never dived (she came into
+     * its leash at the top of each jump and was out of it when the tell ended). For `retellFrames`
+     * after a tell or a pursuit she left (`enemyGiveUp` cause `far`) it notices only one at least
+     * `retellMarginPx` inside its leash (one who comes right back to it is seen at once).
+     */
+    retellFrames: 300,
+    retellMarginPx: 200,
+    /** Having given up (or touched her) it hangs for `restFrames`, braking at `restBrake`, then flies home. */
+    restFrames: 60,
+    restBrake: 0.14,
+    returnSpeed: 1.8,
+    returnAccel: 0.06,
+    /** Home is reached within this many px; it hovers (and can notice) again from there. */
+    homePx: 24,
+    /** It bounces off her at this speed, px/f, when its touch hurts her. */
+    bounceSpeed: 5,
+    /**
+     * Stagger after a hit, and how much of it (from the hit) its touch is harmless: all of it. A
+     * gliding hero cannot stop, so a mid-glide cut has to let her fly on through the tumbling thing:
+     * 24 frames + the hitstop is 290 px of glide, more than her reach and its shove together, so a
+     * cut that connects always clears the way (at 16 a cut from the end of her reach met it again as
+     * it righted itself: playtest 4's `lamp-sky`).
+     */
+    hurtFrames: 24,
+    hurtSafeFrames: 24,
+    /** Knockback = the slash's `knockback` x `knockScale`, along the cut, fading `knockDecay` a frame. */
+    knockScale: 1.1,
+    knockDecay: 0.75,
+    /** Dead: it falls (gravity, capped) for at most `deadFrames`; once it lands it lies `landFrames`. */
+    deadFrames: 40,
+    landFrames: 6,
+    gravity: 0.45,
+    maxFall: 9,
+    /** Two lampwings closer than `sepPx` (centres) push apart, up to `sepAccel` px/f². */
+    sepPx: 72,
+    sepAccel: 0.3,
+    /** It stays `poolClear` px above the water, which stands `poolDepth` over a pool's floor. */
+    poolDepth: 50,
+    poolClear: 12,
+    /** What its touch costs her. */
+    contactDamage: 1,
+    /** Glints it spills when it dies, and when the finisher killed it. */
+    value: 3,
+    valueFinisher: 5,
+    /** Wing beats per frame: hovering, at full pursuit speed, while curious, while tumbling. */
+    flapHover: 0.1,
+    flapPursue: 0.17,
+    flapCurious: 0.21,
+    flapHurt: 0.04,
+    /** In the dive its wings are folded back (nearly still); stalled it beats slowly. */
+    flapDive: 0.03,
+    flapStall: 0.07,
+  },
+  /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
+  pickups: {
+    /** A glint within this many px of the body wakes and is hers. */
+    wakePx: 84,
+    /** Frames from waking to being absorbed (render: a beat of notice, then the flight). */
+    flightFrames: 18,
+    /** Great glints want a closer approach and take a longer, ceremonial pickup. */
+    greatWakePx: 56,
+    greatFrames: 54,
+    greatValue: 5,
+    /** Pickups woken together are absorbed at least this many frames apart, nearest first. */
+    staggerFrames: 4,
+    /** A pickup this soon after the last one continues the combo. */
+    comboFrames: 50,
+    /** Glints she dropped when she faded lie in a cluster: touched (within `wakePx`), the first is back after `dropFrames`, the rest `dropStagger` apart. */
+    dropFrames: 18,
+    dropStagger: 3,
+  },
+  /**
+   * The goal (src/sim/goal.ts, memory/goal.md): three moth-lanterns to kindle with gathered light,
+   * then the heart of the grove wakes.
+   */
+  goal: {
+    /** Glints a lantern takes unless the scene gives it its own `cost`. */
+    cost: 12,
+    /**
+     * A wayside lamp (`scene.lamps`): a lesser lantern, optional. The same rules (stand, channel, lit
+     * for good: rest, re-form, sanctuary, calm) but it does not count toward the heart. What it
+     * takes unless the scene gives it its own `cost`.
+     */
+    lampCost: 8,
+    /**
+     * A dormant lantern or lamp is noticed once per approach: when her body centre first comes
+     * within `noticePx` of the centre of its trigger box (`lanternNotice` / `lampNotice`, with what
+     * she carries and what it takes), and not again until she has been `noticeLeavePx` away.
+     */
+    noticePx: 260,
+    noticeLeavePx: 420,
+    /** A lantern's trigger box: centred on its foot, standing up from the surface. */
+    lanternWidth: 48,
+    lanternHeight: 64,
+    /**
+     * She kindles one by being at it this many frames. It starts when she stands in its box; once
+     * started it runs on while she stays within `kindleLeashPx` sideways and `kindleLeashUpPx` up or
+     * down of the middle of that box, moving or not, jumping, cutting (a player who never stands
+     * still lights it too). Leaving that leash or being hurt starts it over.
+     */
+    channelFrames: 30,
+    kindleLeashPx: 260,
+    kindleLeashUpPx: 330,
+    /**
+     * A wayside lamp is optional spending, so it wants intent: its channel only starts once she has
+     * stood still at it (no direction held, not cutting) this long. A lantern starts at once.
+     */
+    lampStillFrames: 20,
+    /** Standing at a lit one this long makes her whole again. */
+    restFrames: 45,
+    /**
+     * Too little light: a lantern says so once she has stood still at it (|vx| under `refuseStillVx`)
+     * for `refuseFrames` (a run through it says nothing). `refuseShowFrames` rides on the event: how
+     * long the price is worth showing.
+     */
+    refuseFrames: 12,
+    refuseStillVx: 0.5,
+    refuseShowFrames: 150,
+    /**
+     * A lit lantern is a sanctuary. Burrbacks on its ground turn round `sanctuaryPx` short of it
+     * (box edge to its foot) and one caught inside is harmless until it has walked out; lampwings
+     * give up a pursuit `lampSanctuaryPx` from its centre and are harmless inside that.
+     */
+    sanctuaryPx: 110,
+    lampSanctuaryPx: 160,
+    /**
+     * A lit wayside lamp's sanctuary is only its own standing spot, and only while she stands in it
+     * (her box at the lamp reaches 63 px from its foot): then burrbacks keep `waysidePx` from its
+     * foot and lampwings `waysideWingPx` from its centre. As a lantern's (110 / 160, always) a lamp
+     * beside a fight stopped the ram and took the brace of one shoved into it: one tell a fight.
+     */
+    waysidePx: 64,
+    waysideWingPx: 90,
+    /** It tells her again only after she has been this far from it (sideways). */
+    refuseLeavePx: 160,
+    /** Kindling calms the creatures within this of the lantern for `calmFrames` (burrbacks stand, lampwings give up). */
+    calmPx: 900,
+    calmFrames: 120,
+    /**
+     * A lantern's key (the ember): from the step it wakes to her until `keyCalmFrames` after it has
+     * reached her, the creatures within `keyCalmPx` of her (body or home) are calmed: harmless, and
+     * a lampwing that has noticed her gives up.
+     */
+    keyCalmPx: 600,
+    keyCalmFrames: 60,
+    /** The heart's trigger box: centred on its point, standing up from the ground. */
+    heartWidth: 96,
+    heartHeight: 96,
+    /**
+     * The wake is a sequence of its own: standing in the woken heart ends the run only once it has
+     * been awake this long. One who is there sooner stands in the waking light first (`heartWait`,
+     * then `heartReady`); her input is never taken for it.
+     */
+    heartWakeFrames: 180,
+    /** The woken heart keeps the creatures within this of it (body or home) calm until the run ends (a blow still wakes one). */
+    heartCalmPx: 600,
+    /** Held at the end, she walks on to within this of the heart's centre and stops there (0 = she stops where she is). */
+    heartWalkPx: 12,
+    /** Reaching the woken heart takes control for this many frames (`gather` ... `endHold`). */
+    holdFrames: 240,
+    /**
+     * The offering: what she still carries goes into the heart during the hold, from
+     * `offerDelayFrames` after `gather`, spread over `offerSpanFrames`. What she gives counts in
+     * tiers (`offerTier1..3`) for the grove to answer.
+     */
+    offerDelayFrames: 45,
+    offerSpanFrames: 140,
+    offerTier1: 25,
+    offerTier2: 50,
+    offerTier3: 100,
+    /** After `endHold`: false = she stays held until the restart; true = she may walk on (nothing can hurt her). */
+    endedControl: false,
+  },
+  /**
+   * Giving (src/sim/giving.ts, memory/giving.md): the game plays like giving.
+   *
+   * SEEN: the creatures notice her by the light she carries (`pickups.count`), not by nearness
+   * alone. Empty-handed (level 0) a burrback does not brace at her nor flinch at her, and a
+   * lampwing does not see her at all: she slips past at arm's length (its touch still hurts if she
+   * walks into it). Carrying, her level is the highest `seenN` she has reached (1-4) and their
+   * notice ranges are scaled by `scaleN`: the burrback's brace reach (`burrback.strikePx`), the
+   * lampwing's sight (`lampwing.noticePx` or the scene's `sight`). Level 2 (the handful a lantern
+   * costs) is the old tuned fight; a hoard is seen from much further. A creature she has CUT knows
+   * her (`roused`): that does not depend on what she carries.
+   *
+   * OFFER (the `offer` action): one glint from her wallet to what is in reach: a creature (it is
+   * calmed for `giftCalmFrames`: harmless, it braces at nothing, a lampwing gives up and goes
+   * home; a braced or ramming burrback stops and lowers first, standing `giftStandFrames`), a
+   * dormant lantern or lamp (a part of its price, kept: `LanternState.given`), or the heart (into
+   * the offering, ahead of the ending). The glint flies `offerFlightFrames`, then takes effect.
+   *
+   * REST = GIVE: a lit light makes her whole for `restCost` glints a light. Below
+   * `health.reformHp` it lifts her that far free (a fade is never a better heal than a rest).
+   */
+  giving: {
+    /**
+     * Wallet thresholds for the levels 1-4 of being seen. Under `seen1` she is unseen: empty-handed,
+     * or one glint (too small a light to find her; the first lantern leaves her one, and she meets
+     * burr-path dark: giving round 2, teach the rule by contrast).
+     */
+    seen1: 2,
+    seen2: 6,
+    seen3: 15,
+    seen4: 45,
+    /** Notice range at each level, as a share of the creature's own (level 0 = unseen). */
+    scale1: 0.75,
+    scale2: 1,
+    scale3: 1.2,
+    scale4: 1.45,
+    /** Offer: reach (her body centre to the nearest point of the target's box), the glint's flight, the gap between offers, a press good for this long. */
+    offerReachPx: 150,
+    offerFlightFrames: 10,
+    offerCooldownFrames: 14,
+    offerBufferFrames: 16,
+    /** Frames she holds the glint out (the pose; it never locks her movement). */
+    offerPoseFrames: 16,
+    /**
+     * HOLDING offer (as the prologue teaches): after `offerStreamDelayFrames` held, one glint every
+     * `offerStreamFrames` into a dormant light or the heart (never a creature: a creature takes one per
+     * press). A glint to a light / the heart flies `offerLightFlightFrames` (= the stream's gap: one in
+     * flight at a time).
+     */
+    offerStreamDelayFrames: 16,
+    offerStreamFrames: 8,
+    offerLightFlightFrames: 8,
+    /**
+     * A lampwing that is after her (its tell, dive, stall, climb) can be given to as far off as it
+     * sees her (its sight x her `scaleN`, never less than `offerReachPx`), and a glint to it lands in
+     * `offerWingFlightFrames` (playtest-giving: the dive's touch came before every glint landed).
+     */
+    offerWingFlightFrames: 3,
+    /**
+     * What one glint buys a creature: `giftCalmFrames` of calm (`EnemyState.gift` counts them down:
+     * the warmth fades), and then on for as long as she stays on its ground (her body centre within
+     * `giftStayPx` of its home SIDEWAYS, at any height: the shaft climb above it counts as staying;
+     * it holds at 1); it ends once she has left (rule 3: once she warms
+     * one, it knows her; a player who slides back down the shaft is not taxed again). A burrback
+     * first stands lowered `giftStandFrames`.
+     */
+    giftStayPx: 520,
+    /**
+     * Round 4: what the player means. A creature that is aware of her or braced (its tell, its ram)
+     * is in reach this far (her body centre to its box), and it comes before any dormant light or the
+     * heart (playtest round 3: two presses went into lamp-rise while burr-rise rammed her at 157 px).
+     */
+    offerAwareReachPx: 200,
+    giftCalmFrames: 600,
+    giftStandFrames: 60,
+    /** Rest at a lit light: glints a light restored (above the free floor of `health.reformHp`). */
+    restCost: 1,
+    /** A creature stays aware of her (`EnemyState.aware`) this long after it last saw her. */
+    awareFrames: 45,
+  },
+  /**
+   * The canopy: a soft ceiling at the scene's `ceilingY` (scene data; none if absent), so she never
+   * leaves the top of the picture (the camera stops at the scene's top). The top of her box can
+   * rise no faster than `rate` x its distance below it, so a jump eases to a stop there: no bump,
+   * no event, sideways speed untouched.
+   */
+  ceiling: {
+    rate: 0.5,
   },
   misc: {
     dropThroughFrames: 10,
     /** Grounded distance between `step` (footstep) events. */
     footstepPx: 96,
-    /** A landing is "hard" (big dust, shake, heavy SFX) past this fall height or at max fall speed. */
-    hardLandFallPx: 320,
+    /** A landing is "hard" past this fall height (a drop off a ledge is not; max fall speed is reached after 160 px). */
+    hardLandFallPx: 420,
   },
   assists: {
     coyote: true,
@@ -184,395 +791,29 @@ export const defaultTuning = {
     landingPreference: true,
     dashJumpCancel: true,
     wallJumpRefill: true,
+    glide: true,
+    /** A down slash that hits bounces her up and refills the air dash and double jump. */
+    pogo: true,
   },
-  /**
-   * Combat foundations (combat-spec §2, L3 brief §2.3). Hitstop per class in frames; knockback in
-   * px/f; everything else in frames unless stated.
-   */
-  combat: {
-    hitstopLight: 4,
-    hitstopMedium: 6,
-    hitstopHeavy: 10,
-    hitstopSeizeTake: 5,
-    hitstopCatch: 10,
-    hitstopCounter: 12,
-    hitstopRepossess: 16,
-    hitstopHurt: 8,
-    hitstopCap: 16,
-    actionBufferFrames: 8,
-    /** Frames an enemy's voices stay open after it takes a punch. */
-    rattledFrames: 30,
-    staggerFrames: 36,
-    enemyKbLight: 6,
-    enemyKbMedium: 10,
-    enemyKbHeavy: 14,
-    enemyKbSeizeTug: 4,
-    /** Enemy knockback decays by this much per frame. */
-    enemyKbDecay: 1,
-    kidRecoilGroundLight: -4,
-    kidRecoilAirLight: -6,
-    kidRecoilMedium: -5,
-    kidRecoilFrames: 4,
-    maxAttackTokens: 2,
-    retrieveSpeedMult: 1.25,
-    absorbFrames: 8,
-    revoiceFrames: 480,
-    downFrames: 12,
-    countBeats: 10,
-    countBeatFrames: 12,
-    /** Return to sender damage multiplier (rounded up); it always knocks the owner down. */
-    returnMult: 1.5,
-    launchVy: -14,
-    launchFrames: 30,
-    /** Snatch pushes Kid back at this speed (px/f). */
-    snatchPushVx: 8,
-    /** Enemy physics: gravity (px/f²) and max fall (px/f). */
-    enemyGravity: 0.9,
-    enemyMaxFall: 20,
-    /** Furious rise: telegraphs never drop below this. */
-    minTelegraph: 15,
-    /** Frames an enemy takes to get up after the Count runs out with HP left. */
-    riseFrames: 12,
-    /** Chasers stop closing in when the gap between their body and Kid's is this small (px). */
-    chaseGapPx: 24,
-    /** Enemy knockback of a Counter hit (px/f; it also knocks down). */
-    enemyKbCounter: 16,
-    /** Uppercut / launch: vy given to a light enemy (kbScale >= launchMinKbScale). */
-    uppercutVy: -12,
-    launchMinKbScale: 0.5,
-    /** A brown levy knocks down enemies with kbScale above this (heavy enemies only stagger). */
-    knockdownKbScale: 0.5,
-    /** Count beat length by fever 0..4 (combat-spec §4.5). */
-    countBeatByFever: [12, 11, 10, 9, 8],
-    /** An attack may only start with the enemy's hurtbox inside Kid's view, inset by this (px). */
-    viewInsetPx: 32,
-    /** The sim's stand-in for the camera view (combat-spec T5): px, centred on Kid, clamped to the room. */
-    viewW: 1920,
-    viewH: 1080,
-    /** Snatch: Kid is pushed at this speed; Snatch grants no i-frames. */
-    snatchPushFrames: 4,
-    /** Enemies' own seize priority groups (see combat/priority.ts). Boss sounds revoice faster. */
-    bossRevoiceFrames: 240,
-    /** Return to sender on a boss: stagger instead of knockdown. */
-    bossReturnStagger: 90,
-    /** White-static zones leak the bag's oldest sound this often (combat-spec §3.3). */
-    staticLeakFrames: 180,
-    /** Poundage: KO pays x1, repossession x2 (combat-spec §3.4 point 6). */
-    repossessPayMult: 2,
-    /** Beat the Count / the Kid's count uses the same beat as enemies at the room's fever. */
-    kidCountBeats: 10,
-  },
-  /** Kid Tallow's health and hurt reaction (combat-spec §3.1). */
-  kid: {
-    chin: 5,
-    contactDmg: 1,
-    iframes: 78,
-    hurtLock: 12,
-    hurtVx: 10,
-    hurtVy: -8,
-    /** The Slip (dash) is invulnerable on frames 1..slipIframesTo. */
-    slipIframesTo: 10,
-    /** A clean Slip (i-frames over a live hitbox) opens a Counter window this long and refunds the cooldown. */
-    counterFrames: 30,
-    counterDmgMult: 2,
-    /** Counter hitboxes grow by this factor (about their centre). */
-    counterBoxScale: 1.25,
-    /** Slip may cancel the hurt control lock from this lock frame ("roll with it"). */
-    standSlipFrom: 8,
-    /** Ringing (the rally): the last lost pip can be won back for this long (combat-spec §3.2). */
-    ringFrames: 120,
-    /** Hazards (spikes, static) cost this much Chin, then respawn at the last safe ground. */
-    hazardDmg: 1,
-    /** Frames between the hazard hit and the respawn at safe ground. */
-    hazardRespawnFrames: 30,
-    /** Beat the Count: press Jump within +-this many frames of beats riseBeatMin..riseBeatMax. */
-    riseWindow: 5,
-    riseBeatMin: 3,
-    riseBeatMax: 8,
-    riseChin: 1,
-    riseIframes: 90,
-    /** Frames of the fade after being Counted Out, before waking at the Corner. */
-    countedOutFrames: 40,
-    /** Assist: Beat the Count automatically when allowed (combat-spec §3.5, ships in Phase 2). */
-    autoBeatCount: false,
-    /** Recoil on Kid when a medium hit lands (px/f; light ones are in combat). */
-    recoilMedium: -5,
-  },
-  /** Swallow (combat-spec §3.4): channel frames and heal per voice colour. */
-  swallow: {
-    channelViolet: 16,
-    channelPink: 24,
-    channelBrown: 40,
-    healViolet: 1,
-    healPink: 1,
-    healBrown: 2,
-    /** Refusal (a deed, or not on the ground for pink/brown) freezes nothing but costs this many frames. */
-    refusalFrames: 6,
-    /** A Hoarse owner turns aggressive: speed x this. */
-    hoarseSpeedMult: 1.2,
-  },
-  /** Death loop (combat-spec §3.5): 'runner' (default) or 'garnish' (debt from future earnings). */
-  death: {
-    mode: 'runner' as 'runner' | 'garnish',
-    lienPips: 1,
-    /** Garnish: this share of every future payout goes to the debt. */
-    garnishShare: 0.5,
-  },
-  /** The Auctioneer's room fever effects (combat-spec §5). */
-  boss: {
-    feverMax: 3,
-  },
-  bag: {
-    slots: 3,
-  },
-  /**
-   * Levy by colour (combat-spec §1.5; traversal behaviour from the L3 brief). Flight speeds px/f,
-   * gravity as a multiple of the base (feather) jump gravity. `dropVy` = straight-down speed of a
-   * downward levy; `upVy` = speed of an upward levy; recoil/spring heights in px.
-   */
-  levy: {
-    brownVx: 8,
-    brownVy: -10,
-    brownUpVy: -16,
-    brownDropVy: 24,
-    brownGravityMult: 1.2,
-    brownDmg: 6,
-    brownW: 64,
-    brownH: 48,
-    brownRecoilPx: 176,
-    pinkVx: 6,
-    pinkVy: -12,
-    pinkUpVy: -18,
-    pinkDropVy: 0,
-    pinkGravityMult: 1,
-    pinkDmg: 2,
-    pinkW: 64,
-    pinkH: 16,
-    /** Kid's spring bounce height (brief §8 #4: 448, not the spec's 240). */
-    pinkSpringPx: 448,
-    pinkRecoilPx: 128,
-    pinkEnemyLaunchVy: -14,
-    /** Frames a spring shows compressed after a bounce (render reads it). */
-    pinkSquashFrames: 4,
-    violetVx: 20,
-    violetVy: 0,
-    violetUpVy: -20,
-    violetDropVy: 20,
-    violetGravityMult: 0,
-    violetDmg: 3,
-    violetW: 32,
-    violetH: 16,
-    violetRecoilPx: 96,
-    /** Violet darts: upward drift (px/f² , negative = up), frames in the air before flying home, pierce and ricochets. */
-    violetDrift: -0.05,
-    violetLife: 60,
-    violetPierce: 2,
-    violetBounces: 1,
-    /** Levy placement: how far (px) either side a blocked spawn looks for free space. */
-    placeSearchPx: 32,
-    /** Fraction of Kid's vx added to a forward levy (0 = the spec: fixed throw speed). */
-    inheritVx: 0,
-  },
-  /** Weight class from brown sounds in the bag (critique A graft). */
-  weight: {
-    middleAt: 1,
-    heavyAt: 2,
-    /** Knockback taken per class (heavy ignores it; i-frames still apply). */
-    kbFeather: 1.25,
-    kbMiddle: 1,
-    kbHeavy: 0,
-    /** Extra punch damage while heavy; jab recovery change while feather (frames). */
-    heavyPunchBonus: 1,
-    featherJabRecovery: -2,
-  },
-  plate: {
-    /** A slab presses a plate when it overlaps the plate tiles by at least this much. */
-    minOverlapPx: 16,
-  },
-  /**
-   * Movement profiles (see MovementProfile). The L3 weight classes: `feather` is exactly the
-   * L2-tuned base (brief §8 #3); `middle` and `heavy` are heavier variants (3.5 and 2.5 tiles).
-   */
-  profiles: {
-    feather: {},
-    middle: {
-      shape: { jumpHeightPx: 224, apexFrames: 22 },
-      scale: { 'jump.fallMult': 1.1, 'run.maxSpeed': 0.95 },
-    },
-    heavy: {
-      shape: { jumpHeightPx: 160, apexFrames: 20 },
-      scale: { 'jump.fallMult': 1.3, 'run.maxSpeed': 0.85, 'wall.slideMax': 1.5 },
-    },
-  } as Record<string, MovementProfile>,
 };
 
 export type Tuning = typeof defaultTuning;
-export type AssistName = keyof Tuning['assists'];
-export const ASSIST_NAMES = Object.keys(defaultTuning.assists) as AssistName[];
-
-/** Groups the tuning panel edits as plain values (profiles are edited as JSON). */
-export const VALUE_GROUPS = [
-  'world',
-  'body',
-  'shape',
-  'jump',
-  'run',
-  'assist',
-  'wall',
-  'dash',
-  'pogo',
-  'hazard',
-  'misc',
-  'assists',
-  'combat',
-  'kid',
-  'bag',
-  'levy',
-  'weight',
-  'plate',
-  'swallow',
-  'death',
-  'boss',
-] as const;
-
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
-export type TuningOverrides = DeepPartial<Omit<Tuning, 'profiles'>>;
-
-const RUN_INSTANT = 999;
-
-/**
- * Presets for blind A/B (spec §3.3). Celeste and Hollow Knight values are converted to our scale
- * (1 Celeste px = 8 px, 1 HK unit = 64 px, HK 50 Hz -> 60 Hz). Jump speeds for double jump and
- * pogo are re-derived from the preset's gravity by `applyPreset` so the gym heights still hold.
- */
-export const PRESETS: Record<'opus' | 'celeste' | 'hk', TuningOverrides> = {
-  opus: {},
-  celeste: {
-    jump: {
-      gravity: 2,
-      jumpSpeed: 14,
-      fallMult: 1,
-      releaseMult: 1,
-      releaseMode: 'gravity',
-      sustainFrames: 12,
-      minJumpFrames: 0,
-      apexHangVy: 16 / 3,
-      apexHangMult: 0.5,
-    },
-    run: {
-      maxSpeed: 12,
-      groundAccel: 20 / 9,
-      // RunReduce 400 px/s² (stopping with no input); RunAccel 1000 only when accelerating/turning.
-      groundDecel: 8 / 9,
-      groundTurn: 20 / 9,
-      airAccel: (20 / 9) * 0.65,
-      airDecel: (8 / 9) * 0.65,
-      airTurn: (20 / 9) * 0.65,
-      overspeedDecelGround: 8 / 9,
-      overspeedDecelAir: (8 / 9) * 0.65,
-    },
-    assist: {
-      coyoteFrames: 6,
-      jumpBufferFrames: 5,
-      doubleJumpBufferFrames: 5,
-      headCorrectPx: 32,
-      ledgePopPx: 0,
-    },
-    // Celeste's slide cap lerps from WallSlideStartMax 20 px/s to MaxFall 160 px/s over
-    // WallSlideTime 1.2 s (72 f).
-    wall: {
-      slideMax: 64 / 3,
-      slideStartMax: 8 / 3,
-      slideRamp: 56 / 3 / 72,
-      jumpVx: 52 / 3,
-      forceFrames: 10,
-    },
-    dash: { speed: 32, frames: 9, freezeFrames: 3, cooldownFrames: 12, endVx: 64 / 3, jumpVx: 104 / 3 },
-  },
-  hk: {
-    // Sustain 9 f gives a 5.56-tile jump with apex at 0.50 s (HK reference: ~5.6 u, 0.52 s); the
-    // spec's 12 overshoots to 6.39 tiles (checked by the L2 feel report).
-    jump: {
-      gravity: 0.8427,
-      jumpSpeed: 17.76,
-      fallMult: 1,
-      releaseMode: 'zero',
-      sustainFrames: 9,
-      minJumpFrames: 5,
-    },
-    run: {
-      maxSpeed: 8.853,
-      groundAccel: RUN_INSTANT,
-      groundDecel: RUN_INSTANT,
-      groundTurn: RUN_INSTANT,
-      airAccel: RUN_INSTANT,
-      airDecel: RUN_INSTANT,
-      airTurn: RUN_INSTANT,
-      overspeedDecelGround: RUN_INSTANT,
-      overspeedDecelAir: RUN_INSTANT,
-    },
-    // HK's LEDGE_BUFFER_STEPS / JUMP_QUEUE_STEPS are 2 steps at 50 Hz = 40 ms = 2.4 frames at
-    // 60 Hz; 3 frames keeps the whole 40 ms window (2 frames would be 33 ms).
-    assist: {
-      coyoteFrames: 3,
-      jumpBufferFrames: 3,
-      doubleJumpBufferFrames: 12,
-      headCorrectPx: 0,
-      ledgePopPx: 16,
-    },
-    // HK slides at a constant WALLSLIDE_SPEED (8 u/s): no ramp.
-    wall: { slideMax: 8.53, slideStartMax: 8.53, slideRamp: 0, jumpVx: 17.07, forceFrames: 6 },
-    dash: { speed: 21.33, frames: 15, freezeFrames: 0, cooldownFrames: 36, bufferFrames: 12 },
-    assists: { apexHang: false },
-  },
-};
-export type PresetName = keyof typeof PRESETS;
-export const PRESET_NAMES = Object.keys(PRESETS) as PresetName[];
-
-/** The live tuning object. The debug panel mutates it; the sim only reads it. */
-export const tuning: Tuning = cloneTuning(defaultTuning);
 
 export function cloneTuning(t: Tuning): Tuning {
   return JSON.parse(JSON.stringify(t)) as Tuning;
 }
 
+/** The live tuning object. The debug panel mutates it; the sim only reads it. */
+export const tuning: Tuning = cloneTuning(defaultTuning);
+
 /** Copies every value of `src` into `target` in place (keeps object identity for live references). */
 export function assignTuning(target: Tuning, src: Tuning): void {
   const t = target as unknown as Record<string, Record<string, unknown>>;
   const s = src as unknown as Record<string, Record<string, unknown>>;
-  for (const group of Object.keys(s)) {
-    const from = s[group];
-    if (!from) continue;
-    const to = t[group] ?? {};
-    if (group === 'profiles') for (const k of Object.keys(to)) if (!(k in from)) delete to[k];
-    t[group] = Object.assign(to, JSON.parse(JSON.stringify(from)));
-  }
+  for (const group of Object.keys(s)) Object.assign(t[group] ?? {}, JSON.parse(JSON.stringify(s[group])));
 }
 
 /** Re-derives the jump constants from `t.shape` (after a shape edit). */
 export function applyShape(t: Tuning): void {
   Object.assign(t.jump, derive(t.shape));
-}
-
-/** Full tuning for a preset: defaults with the preset's overrides on top. */
-export function presetTuning(name: PresetName): Tuning {
-  const preset = PRESETS[name];
-  if (!preset) throw new Error(`Unknown preset "${name}". Known: ${PRESET_NAMES.join(', ')}`);
-  const t = cloneTuning(defaultTuning);
-  const tt = t as unknown as Record<string, Record<string, unknown>>;
-  for (const [group, values] of Object.entries(preset)) Object.assign(tt[group] ?? {}, values);
-  const pj = preset.jump;
-  if (pj?.gravity !== undefined) {
-    // Keep the gym's double-jump and pogo heights under the preset's gravity.
-    t.jump.doubleJumpSpeed = speedForHeight(t.jump.gravity, t.shape.doubleJumpHeightPx);
-    t.jump.pogoSpeed = speedForHeight(t.jump.gravity, t.shape.pogoHeightPx);
-  }
-  return t;
-}
-
-/** Writes a preset into the live tuning object in place (keeps profiles). */
-export function applyPreset(t: Tuning, name: PresetName): void {
-  const p = presetTuning(name);
-  p.profiles = JSON.parse(JSON.stringify(t.profiles)) as Tuning['profiles'];
-  assignTuning(t, p);
 }

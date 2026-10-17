@@ -1,0 +1,460 @@
+/**
+ * GLSL for the post pipeline (WebGL2). Pixi adds `#version 300 es` itself. Fragments declare highp
+ * and never redeclare Pixi's own filter uniforms (their precision would have to match the vertex
+ * shader's): everything they need from them arrives as a varying.
+ */
+import { GOAL_LIGHTS, MAX_LIGHTS } from './config';
+
+/** For passes into our own targets: the quad fills the whole target whatever its size. */
+export const PASS_VERT = /* glsl */ `
+in vec2 aPosition;
+out vec2 vTextureCoord;
+out vec2 vPos;
+out vec4 vClamp;
+uniform vec4 uInputSize;
+uniform vec4 uInputClamp;
+uniform vec4 uOutputFrame;
+uniform vec4 uOutputTexture;
+void main(void) {
+  gl_Position = vec4(aPosition.x * 2.0 - 1.0, (aPosition.y * 2.0 - 1.0) * uOutputTexture.z, 0.0, 1.0);
+  vTextureCoord = aPosition * (uOutputFrame.zw * uInputSize.zw);
+  vPos = aPosition;
+  vClamp = uInputClamp;
+}
+`;
+
+/** For the last pass, into whatever the filter system hands us (usually the canvas). */
+export const FINAL_VERT = /* glsl */ `
+in vec2 aPosition;
+out vec2 vTextureCoord;
+out vec2 vPos;
+out vec4 vClamp;
+out vec2 vUvScale;
+uniform vec4 uInputSize;
+uniform vec4 uInputClamp;
+uniform vec4 uOutputFrame;
+uniform vec4 uOutputTexture;
+void main(void) {
+  vec2 position = aPosition * uOutputFrame.zw + uOutputFrame.xy;
+  position.x = position.x * (2.0 / uOutputTexture.x) - 1.0;
+  position.y = position.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
+  gl_Position = vec4(position, 0.0, 1.0);
+  vUvScale = uOutputFrame.zw * uInputSize.zw;
+  vTextureCoord = aPosition * vUvScale;
+  vPos = aPosition;
+  vClamp = uInputClamp;
+}
+`;
+
+/** Scene -> first bloom level: box downsample, keeping only what is brighter than the threshold. */
+export const PREFILTER_FRAG = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vTextureCoord;
+in vec4 vClamp;
+out vec4 finalColor;
+uniform sampler2D uTexture;
+uniform vec2 uTap;
+uniform vec3 uCurve;
+uniform float uSaturation;
+uniform float uBoost;
+uniform sampler2D uMatte;
+uniform float uHeroSource;
+in vec2 vPos;
+
+// rgb: the part of the texel that glows; a: its plain brightness (max channel), unthresholded.
+vec4 bright(vec2 uv) {
+  vec3 c = texture(uTexture, clamp(uv, vClamp.xy, vClamp.zw)).rgb;
+  float b = max(c.r, max(c.g, c.b));
+  float soft = clamp(b - uCurve.x + uCurve.y, 0.0, 2.0 * uCurve.y);
+  soft = soft * soft * uCurve.z;
+  // Saturated light (glow plants, the ember) blooms harder than pale light (fog, sky).
+  float sat = (b - min(c.r, min(c.g, c.b))) / max(b, 1e-4);
+  return vec4(c * (max(soft, b - uCurve.x) / max(b, 1e-4)) * (1.0 + uBoost * sat), b);
+}
+
+void main(void) {
+  vec4 a4 = bright(vTextureCoord + uTap * vec2(-1.0, -1.0));
+  vec4 b4 = bright(vTextureCoord + uTap * vec2(1.0, -1.0));
+  vec4 c4 = bright(vTextureCoord + uTap * vec2(-1.0, 1.0));
+  vec4 d4 = bright(vTextureCoord + uTap * vec2(1.0, 1.0));
+  vec3 a = a4.rgb;
+  vec3 b = b4.rgb;
+  vec3 c = c4.rgb;
+  vec3 d = d4.rgb;
+  // Weighting each tap by 1 / (1 + luma) stops a single hot texel from flickering (Karis average).
+  vec4 w = 1.0 / (1.0 + vec4(dot(a, vec3(0.3, 0.5, 0.2)), dot(b, vec3(0.3, 0.5, 0.2)),
+                             dot(c, vec3(0.3, 0.5, 0.2)), dot(d, vec3(0.3, 0.5, 0.2))));
+  vec3 col = (a * w.x + b * w.y + c * w.z + d * w.w) / (w.x + w.y + w.z + w.w);
+  float l = dot(col, vec3(0.3, 0.5, 0.2));
+  col = max(mix(vec3(l), col, uSaturation), 0.0);
+  // The hero feeds the bloom only a little (her eyes and lantern tips may glow; her pale face and
+  // rims must not put a soft halo round her outline).
+  col *= 1.0 - uHeroSource * smoothstep(0.25, 0.5, texture(uMatte, vPos).a);
+  // Alpha carries the plain local brightness down the chain (the composite reads it from uWide to
+  // tell a small light from a bright area, whatever its value).
+  finalColor = vec4(col, (a4.a + b4.a + c4.a + d4.a) * 0.25);
+}
+`;
+
+/**
+ * Hero matte (1920x1080 alpha) -> 480x270: an exact 4x4 box in four bilinear taps. The start of the
+ * soft matte the composite uses to find "just behind her outline".
+ */
+export const MATTE_FRAG = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vPos;
+out vec4 finalColor;
+uniform sampler2D uMatte;
+uniform vec2 uTap;
+void main(void) {
+  float a = texture(uMatte, vPos + uTap * vec2(-1.0, -1.0)).a + texture(uMatte, vPos + uTap * vec2(1.0, -1.0)).a
+          + texture(uMatte, vPos + uTap * vec2(-1.0, 1.0)).a + texture(uMatte, vPos + uTap * vec2(1.0, 1.0)).a;
+  finalColor = vec4(vec3(a * 0.25), 1.0);
+}
+`;
+
+/** Dual-filter downsample: centre + four diagonal taps. `uTexel` = one input texel in uv. */
+export const DOWN_FRAG = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vTextureCoord;
+out vec4 finalColor;
+uniform sampler2D uTexture;
+uniform vec2 uTexel;
+void main(void) {
+  vec2 uv = vTextureCoord;
+  vec4 col = texture(uTexture, uv) * 4.0;
+  col += texture(uTexture, uv + uTexel * vec2(-1.0, -1.0));
+  col += texture(uTexture, uv + uTexel * vec2(1.0, -1.0));
+  col += texture(uTexture, uv + uTexel * vec2(-1.0, 1.0));
+  col += texture(uTexture, uv + uTexel * vec2(1.0, 1.0));
+  finalColor = col * 0.125;
+}
+`;
+
+/**
+ * Dual-filter upsample of the wider level (uTexture), blended with this level's own detail
+ * (uBase). `uTexel` = one input (wider level) texel in uv times the radius knob.
+ */
+export const UP_FRAG = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vTextureCoord;
+out vec4 finalColor;
+uniform sampler2D uTexture;
+uniform sampler2D uBase;
+uniform vec2 uTexel;
+uniform float uSpread;
+void main(void) {
+  vec2 uv = vTextureCoord;
+  vec2 h = uTexel * 0.5;
+  vec3 col = texture(uTexture, uv + vec2(-h.x * 2.0, 0.0)).rgb;
+  col += texture(uTexture, uv + vec2(h.x * 2.0, 0.0)).rgb;
+  col += texture(uTexture, uv + vec2(0.0, -h.y * 2.0)).rgb;
+  col += texture(uTexture, uv + vec2(0.0, h.y * 2.0)).rgb;
+  col += texture(uTexture, uv + vec2(-h.x, h.y)).rgb * 2.0;
+  col += texture(uTexture, uv + vec2(h.x, h.y)).rgb * 2.0;
+  col += texture(uTexture, uv + vec2(-h.x, -h.y)).rgb * 2.0;
+  col += texture(uTexture, uv + vec2(h.x, -h.y)).rgb * 2.0;
+  col /= 12.0;
+  finalColor = vec4(mix(texture(uBase, uv).rgb, col, uSpread), 1.0);
+}
+`;
+
+/**
+ * The light map. rgb: the point lights as they land on surfaces, i.e. multiplied by the playfield
+ * mask (lib/fx-mask.ts), softened a little. a: a wider, fainter halo for the glow hanging in the
+ * air around each light, unmasked. Positions and radii are in view heights.
+ */
+export const LIGHTS_FRAG = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vPos;
+out vec4 finalColor;
+uniform sampler2D uMask;
+uniform vec4 uLights[${MAX_LIGHTS}];
+uniform vec4 uLightColors[${MAX_LIGHTS}];
+uniform int uLightCount;
+uniform vec4 uShape;  // aspect, falloff, halo radius factor, light reaching non-playfield
+uniform vec2 uMaskTexel;
+uniform float uDim;
+uniform float uDirection;
+void main(void) {
+  vec2 p = vec2(vPos.x * uShape.x, vPos.y);
+  vec3 sum = vec3(0.0);
+  float halo = 0.0;
+  vec2 toward = vec2(0.0);
+  for (int i = 0; i < ${MAX_LIGHTS}; i++) {
+    if (i >= uLightCount) break;
+    vec4 l = uLights[i];
+    vec2 d = (p - l.xy) / l.z;
+    float r2 = dot(d, d);
+    float q = clamp(1.0 - r2, 0.0, 1.0);
+    // A smooth window that reaches zero at the radius, with a brighter core.
+    float f = pow(q, uShape.y) * (0.5 + 0.5 * q * q);
+    sum += uLightColors[i].rgb * (f * l.w);
+    toward -= d * (f * l.w);
+    float h = clamp(1.0 - r2 / (uShape.z * uShape.z), 0.0, 1.0);
+    halo += h * h * h * l.w;
+  }
+  float mask = 0.0;
+  if (halo > 0.0005) {
+    // Nine taps: a soft mask (no hard edge where a cliff face ends) and its gradient.
+    vec2 t = uMaskTexel * 3.0;
+    vec4 c = texture(uMask, vPos);
+    vec4 e = texture(uMask, vPos + vec2(t.x, 0.0));
+    vec4 w = texture(uMask, vPos - vec2(t.x, 0.0));
+    vec4 n = texture(uMask, vPos - vec2(0.0, t.y));
+    vec4 s = texture(uMask, vPos + vec2(0.0, t.y));
+    vec4 dg = texture(uMask, vPos + t * 0.7) + texture(uMask, vPos - t * 0.7)
+            + texture(uMask, vPos + vec2(t.x, -t.y) * 0.7) + texture(uMask, vPos + vec2(-t.x, t.y) * 0.7);
+    vec4 m = c * 0.2 + (e + w + n + s) * 0.12 + dg * 0.08;
+    mask = m.a;
+    // The mask's gradient is a cheap normal at silhouettes: edges that face the light catch it,
+    // edges that face away fall off. Flat interiors sit in between.
+    vec2 normal = vec2(w.a - e.a, n.a - s.a);
+    float edge = min(length(normal) * 2.5, 1.0);
+    float facing = dot(normalize(normal + 1e-5), normalize(toward + 1e-5));
+    sum *= clamp(0.82 + uDirection * facing * edge, 0.15, 1.6);
+    // Where the place is bright already (the light well) the hero's light matters less.
+    float ambient = dot(m.rgb, vec3(0.3, 0.55, 0.15)) / max(m.a, 0.05);
+    sum *= mix(1.0, uDim, smoothstep(0.22, 0.6, ambient));
+  }
+  finalColor = vec4(sum * mix(uShape.w, 1.0, mask), halo);
+}
+`;
+
+/** Scene + lights + bloom, then the grade, vignette and grain. */
+export const COMPOSITE_FRAG = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vTextureCoord;
+in vec2 vPos;
+in vec4 vClamp;
+in vec2 vUvScale;
+out vec4 finalColor;
+uniform sampler2D uTexture;
+uniform sampler2D uBloom;
+uniform sampler2D uLight;
+uniform sampler2D uMatte;
+uniform sampler2D uWide;
+uniform sampler2D uSoft;     // the hero matte, blurred (r): non-zero only within ~25 px of her outline
+uniform vec4 uProtect;    // hero matte strength, lit-surface luminance cap, bloom cut on the hero, debug: show the matte
+uniform vec4 uMix;        // bloom intensity, light gain, light haze, chroma
+uniform vec4 uTone;       // exposure, shoulder, contrast, pivot
+uniform vec4 uShadow;     // rgb tint, lift
+uniform vec4 uHighlight;  // rgb tint, warmth
+uniform vec4 uVignette;   // inner, outer, strength, tint amount
+uniform vec4 uVignetteTint; // rgb, saturation
+uniform vec4 uGrain;      // amplitude, time, aspect, mid-tone lift
+uniform vec4 uLightBack;  // bloom cut on pale brights, glint, warm add, leaf light wrap
+uniform vec4 uHalo;       // rgb: the lights' mean colour
+uniform vec4 uLit;        // light colour tint 0..1, chroma gain, per-channel ceiling, gain on the soft matte (separation)
+uniform vec4 uHero;       // x, y (view heights), pocket radius, darkening
+uniform vec4 uHero2;      // inner radius left untouched, desaturation, luminance ceiling, pull toward it
+uniform vec4 uDeep;       // toe: luminance it ends at, extra exponent; spark: amount, whiteness of the core
+uniform vec4 uRich;       // rgb: tint multiplied into darks and mid-tones, a: their saturation
+uniform vec4 uGoal[${GOAL_LIGHTS}];  // the goal's lights (lit lanterns, heart): x, y, radius (view heights), strength 0..1
+uniform vec4 uSep;        // separation behind the hero: pivot luminance, width, lift, darkening
+uniform vec4 uSepLook;    // xy: the lift fades out between these two luminances; z: how much of the vignette lights are spared, w: from what value (max channel)
+uniform vec4 uSepTint;    // rgb: the colour of the lift (luminance 1), a: desaturation under it
+uniform vec4 uGoalLook;   // how much the lit-surface caps rise under them, how much the pocket lets go, extra light-colour tint, unused
+
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+vec3 shoulder(vec3 x, float k) {
+  vec3 over = max(x - k, 0.0);
+  return min(x, vec3(k)) + (1.0 - k) * (1.0 - exp(-over / (1.0 - k)));
+}
+
+void main(void) {
+  vec2 c = vPos - 0.5;
+  vec2 cv = vec2(c.x * uGrain.z, c.y);
+  float r2 = dot(cv, cv);
+
+  // Scene, with the red and blue channels pulled apart a little toward the corners.
+  vec3 col = texture(uTexture, vTextureCoord).rgb;
+  if (uMix.w > 0.0) {
+    vec2 off = c * vUvScale * (uMix.w * r2);
+    col.r = texture(uTexture, clamp(vTextureCoord - off, vClamp.xy, vClamp.zw)).r;
+    col.b = texture(uTexture, clamp(vTextureCoord + off, vClamp.xy, vClamp.zw)).b;
+  }
+
+  // Points of light: a small, very bright thing (a glint, a firefly or glow-plant core) is far
+  // brighter than the blurred glow around it; a bright AREA (sky opening, lit fog) is not. Measured
+  // here on the untouched scene, used after the grade to let those few cores be truly light.
+  float smx = max(col.r, max(col.g, col.b));
+  float ssat = (smx - min(col.r, min(col.g, col.b))) / max(smx, 1e-4);
+  vec3 srcHue = col / max(smx, 1e-4);
+
+  // The hero matte: the hero's own pixels are exempt from everything that darkens the frame
+  // around them (pocket, vignette) and from their own light.
+  float hero = smoothstep(0.25, 0.5, texture(uMatte, vPos).a) * uProtect.x;
+
+  // A pocket of calm around the hero: what lies around them (not on them) goes a little darker
+  // and greyer, so a small figure separates from a busy, glowing forest without an outline.
+  vec2 hd = cv - (uHero.xy - vec2(0.5 * uGrain.z, 0.5));
+  float h2 = dot(hd, hd);
+  float nearHero = exp(-h2 / (uHero.z * uHero.z));
+  // The lights she has lit: how strongly one of them reaches this pixel, and whether this is its
+  // very core (the flame). Beside a lit lantern the pocket lets go and the flame may spark.
+  float goalHere = 0.0;
+  float goalCore = 0.0;
+  for (int i = 0; i < ${GOAL_LIGHTS}; i++) {
+    vec4 gl = uGoal[i];
+    if (gl.w <= 0.0) continue;
+    vec2 gd = (cv - (gl.xy - vec2(0.5 * uGrain.z, 0.5))) / gl.z;
+    float gq = clamp(1.0 - dot(gd, gd), 0.0, 1.0);
+    goalHere += gq * gq * gl.w;
+    goalCore = max(goalCore, smoothstep(0.85, 0.95, gq) * min(gl.w * 2.0, 1.0));
+  }
+  goalHere = min(goalHere, 1.0);
+  float pocket = nearHero * (1.0 - exp(-h2 / (uHero2.x * uHero2.x))) * (1.0 - uGoalLook.y * goalHere);
+  // Bright surroundings are pulled down hardest (toward the ceiling in uHero2.z); dark ones are
+  // left nearly alone, so the pocket never reads as a grey disc.
+  float pl = dot(col, LUMA);
+  // Small lights (glints, glow caps, fireflies) keep their full value inside the pocket.
+  float pmx = max(col.r, max(col.g, col.b));
+  float psat = (pmx - min(col.r, min(col.g, col.b))) / max(pmx, 1e-4);
+  pocket *= (1.0 - smoothstep(0.55, 0.85, pmx) * smoothstep(0.3, 0.6, psat)) * (1.0 - hero);
+  float over = max(pl - uHero2.z, 0.0);
+  float keep = 1.0 - pocket * (uHero.w + uHero2.w * over / max(pl, 1e-3));
+  col = mix(col, vec3(pl), pocket * uHero2.y) * keep;
+
+  // Big pale bright areas (sky, lit fog) are bright enough already: they take little bloom
+  // themselves, so the glow budget goes to halos around small, coloured lights.
+  float mx = max(col.r, max(col.g, col.b));
+  float pale = smoothstep(0.5, 0.9, mx) * (1.0 - (mx - min(col.r, min(col.g, col.b))) / max(mx, 1e-4));
+
+  // Point lights. On surfaces the light is a gain on the surface's own colour: hue and the
+  // light-to-dark shading of the thing survive (a lit blade of grass is a brighter, richer blade,
+  // not a paler one). Chroma is raised with the gain, the light's own colour tints only a little,
+  // and the result is kneed by luminance with the colour scaled as a whole, so nothing drifts
+  // toward white. Bright wet spots glint. In the air: a wide faint halo.
+  vec4 lit = texture(uLight, vPos);
+  // The hero is not lit by their own light (it would lift their dark body more than anything
+  // else, being nearest): the matte takes the light, the halo and most of the bloom off them.
+  float ll = dot(col, LUMA);
+  float lm = max(lit.r, max(lit.g, lit.b));
+  if (lm > 0.002) {
+    // The tint fades in with the light: at full strength right from the light's rim it drew the
+    // rim as a hard-edged disc against anything bright behind (the sky opening).
+    vec3 tint = mix(vec3(1.0), lit.rgb / lm, min(uLit.x + uGoalLook.z * goalHere, 1.0) * smoothstep(0.0, 0.25, lm));
+    float g = lm * uMix.y * (1.0 - smoothstep(0.55, 1.0, ll));
+    // A floor under the gain so near-black soil still shows a little of the pool.
+    vec3 lc = (col + vec3(uLightBack.z) * min(g, 1.0)) * (1.0 + g) * tint;
+    float sl = dot(lc, LUMA);
+    lc = mix(vec3(sl), lc, 1.0 + uLit.y * min(g, 1.5));
+    lc = max(lc, 0.0);
+    // Knee on luminance, applied to the whole colour.
+    sl = dot(lc, LUMA);
+    // (under a lit lantern or the heart the caps sit higher: their pool is the light of the place)
+    float capUp = 1.0 + uGoalLook.x * goalHere;
+    float cap = uProtect.y * capUp;
+    float knee = cap * 0.6;
+    if (sl > knee) lc *= (knee + (cap - knee) * (1.0 - exp(-(sl - knee) / (cap - knee)))) / sl;
+    // No channel may clip: scale back instead, which keeps the hue.
+    float top = max(lc.r, max(lc.g, lc.b));
+    if (top > uLit.z * capUp) lc *= uLit.z * capUp / top;
+    lc += lit.rgb * (ll * ll * uLightBack.y);
+    col = mix(col, lc, 1.0 - hero);
+  }
+  col += uHalo.rgb * (lit.a * uMix.z * (1.0 - hero));
+
+  // Bloom.
+  vec3 bloom = texture(uBloom, vPos).rgb;
+  // Light wrap: dark foliage right next to a bright opening takes some of that light through its
+  // edge, in its own colour brightened toward yellow-green, like backlit leaves.
+  float wrap = dot(bloom, LUMA) * (1.0 - smoothstep(0.12, 0.5, ll)) * uLightBack.w * (1.0 - hero);
+  col += (col * 3.0 + vec3(0.05, 0.085, 0.025)) * bloom * wrap;
+  col += bloom * (uMix.x * (1.0 - uLightBack.x * pale) * (1.0 - hero * uProtect.z));
+
+  // Tone: exposure, a soft shoulder instead of clipping, an S-curve around the pivot.
+  // The hero keeps her authored values: no exposure, no highlight roll-off (it greyed her face).
+  col = mix(shoulder(col * uTone.x, uTone.y), col, hero);
+  float l = dot(col, LUMA);
+  float lc = clamp(l, 1e-4, 1.0);
+  float curved = lc < uTone.w
+    ? uTone.w * pow(lc / uTone.w, 1.0 + uTone.z)
+    : 1.0 - (1.0 - uTone.w) * pow((1.0 - lc) / (1.0 - uTone.w), 1.0 + uTone.z);
+  col *= curved / lc;
+
+  // The toe: the big dark-grey masses (canopy, shaded trunks, the earth under the walk line) fall
+  // to near-black, while everything above uDeep.x keeps its place. Not on the hero.
+  l = dot(col, LUMA);
+  float toe = clamp(l / uDeep.x, 1e-3, 1.0);
+  col *= mix(pow(toe, uDeep.y), 1.0, hero);
+
+  // A gentle lift of the mid-tones only: blacks and highlights stay where they are.
+  l = dot(col, LUMA);
+  col *= 1.0 + uGrain.w * smoothstep(0.07, 0.3, l) * (1.0 - smoothstep(0.45, 0.85, l)) * (1.0 - hero);
+
+  // Split tone: shadows lift toward teal-indigo, highlights lean warm.
+  l = dot(col, LUMA);
+  float sh = 1.0 - smoothstep(0.0, 0.45, l);
+  // (not on the hero: the lift turned her deep plum darks grey-violet)
+  col += uShadow.rgb * (sh * sh * uShadow.a * (1.0 - hero));
+  float hi = smoothstep(0.35, 0.95, l);
+  col *= mix(vec3(1.0), uHighlight.rgb, hi * uHighlight.a);
+
+  // Saturation. Highlights take the plain amount; darks and mid-tones are made richer and leaned
+  // toward the zone's hue (uRich), less where they are saturated already or lit by a point light
+  // (lit grass near the hero must not go neon). The hero only gets the plain amount.
+  l = dot(col, LUMA);
+  float gmx = max(col.r, max(col.g, col.b));
+  float gsat = (gmx - min(col.r, min(col.g, col.b))) / max(gmx, 1e-4);
+  float low = (1.0 - smoothstep(0.3, 0.62, l)) * (1.0 - hero);
+  float rich = low * (1.0 - 0.75 * smoothstep(0.55, 0.9, gsat)) * (1.0 - 0.8 * smoothstep(0.05, 0.4, lm));
+  col = max(mix(vec3(l), col, uVignetteTint.a + (uRich.a - 1.0) * rich), 0.0);
+  vec3 leaned = col * uRich.rgb;
+  col = mix(col, leaned * (l / max(dot(leaned, LUMA), 1e-4)), low);
+
+  // The few true highlights: cores of small lights go white-hot (the rest of the light keeps its
+  // colour, so it reads as a crisp point with a coloured edge, not a halo).
+  // (uWide is the bloom chain's 240x135 level: what this pixel would glow like if the light were
+  // an area, against what is really there once ~16 px around it are averaged.)
+  float glowHere = dot(texture(uWide, vPos).rgb, LUMA);
+  float ownGlow = max(smx - 0.55, 0.02) * (1.0 + 1.3 * ssat) * (0.4 + 0.6 * (1.0 - ssat));
+  float point = smoothstep(0.78, 0.95, smx) * (1.0 - smoothstep(0.3, 0.6, glowHere / ownGlow));
+  // Never beside the hero: nothing around her may go pale.
+  col = mix(col, mix(srcHue, vec3(1.0), uDeep.w), point * uDeep.z * (1.0 - hero) * (1.0 - nearHero * (1.0 - min(goalCore, 1.0))));
+
+  // Separation by value BEHIND the hero (never on her). Within ~20 px of her outline the
+  // background's values are pushed away from her own dark value (the pivot): what is a little
+  // lighter than she is goes a little paler, cooler and greyer (a breath of mist), what is darker
+  // goes darker. A background that is already clearly lighter (uSepLook.xy) is not touched, so no
+  // ring can form against mist or sky.
+  float sepW = min(texture(uSoft, vPos).r * uLit.w, 1.0);
+  sepW = sepW * sepW * (3.0 - 2.0 * sepW) * (1.0 - smoothstep(0.0, 0.5, texture(uMatte, vPos).a));
+  if (sepW > 0.002) {
+    float bl = dot(col, LUMA);
+    float up = smoothstep(uSep.x, uSep.x + uSep.y, bl) * (1.0 - smoothstep(uSepLook.x, uSepLook.y, bl)) * sepW;
+    float down = (1.0 - smoothstep(uSep.x - uSep.y, uSep.x, bl)) * sepW;
+    col = mix(col, vec3(bl), uSepTint.a * up);
+    col += uSepTint.rgb * (up * uSep.z);
+    col *= 1.0 - uSep.w * down;
+  }
+
+  // Vignette: darker, cooler corners.
+  float v = smoothstep(uVignette.x, uVignette.y, sqrt(r2)) * (1.0 - 0.85 * hero);
+  // Lights keep most of their value at the frame edge: the vignette closes the frame by taking the
+  // dark and middle values down, but a small light 30 px from the edge (a glint on the sky line)
+  // must still read as a light. Only SMALL lights: the pixel has to stand well above the plain
+  // brightness of the ~30 px around it (uWide's alpha), so mist and sky at the edge still close.
+  float around = max(texture(uWide, vPos).a, 0.03);
+  v *= 1.0 - uSepLook.z * smoothstep(uSepLook.w, uSepLook.w + 0.25, smx) * smoothstep(1.6, 3.2, smx / around);
+  col *= mix(vec3(1.0), uVignetteTint.rgb, v * uVignette.w) * (1.0 - v * uVignette.z);
+
+  // Grain: triangular noise, new every frame, a touch stronger in the mid-darks.
+  vec2 gp = gl_FragCoord.xy + fract(uGrain.y * vec2(7.13, 3.71)) * 517.0;
+  float n = hash12(gp) + hash12(gp + 71.7) - 1.0;
+  col += n * uGrain.x * (1.0 - 0.5 * smoothstep(0.3, 1.0, l));
+
+  finalColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+  // Debug (POST.debugMatte): the hero matte as the tools see it.
+  if (uProtect.w > 0.5) finalColor = vec4(vec3(texture(uMatte, vPos).a), 1.0);
+  if (uProtect.w > 1.5) finalColor = vec4(vec3(texture(uSoft, vPos).r), 1.0);
+}
+`;
