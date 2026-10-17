@@ -958,6 +958,8 @@ describe('R7 wood-hollow: the oak, its hollow floor (the trunk and crown: wood-o
 
   it('one way on: east along the flat floor to the clearing at floor level, and back west to the glidewalk', () => {
     const s = play('wood-hollow', ['glide']);
+    // (Round 5: the trunk's foot has a bark door, Tatter's crack: wood-oak.test.ts. Opened here.)
+    s.g.state.save.opened.push('wood-hollow:bark-foot');
     s.g.teleport(1280, 3840);
     naive(s, () => s.g.state.room !== 'wood-hollow', 900);
     expect(s.g.state.room).toBe('wood-hawkers');

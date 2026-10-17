@@ -136,17 +136,15 @@
       "w": 112,
       "h": 192,
       "sets": "wood-firefly-glimpse",
-      "hold": 300,
-      "finale": true
+      "hold": 180
     },
     {
-      "id": "look-up",
-      "x": 2384,
+      "id": "oak-hollow",
+      "x": 3072,
       "y": 3648,
-      "w": 160,
+      "w": 256,
       "h": 192,
-      "sets": "wood-oak-looked",
-      "hold": 180
+      "sets": "wood-oak-hollow"
     },
     {
       "id": "root-cut",
@@ -300,6 +298,14 @@
       "w": 896,
       "h": 768,
       "kick": "west"
+    },
+    {
+      "tag": "root",
+      "x": 3008,
+      "y": 3584,
+      "w": 384,
+      "h": 64,
+      "kick": false
     }
   ],
   "oneWays": [
@@ -397,19 +403,16 @@
       "w": 64,
       "h": 576,
       "hp": 1
-    }
-  ],
-  "gates": [
+    },
     {
-      "id": "arch-gate",
-      "x": 3712,
-      "y": 3584,
+      "id": "bark-foot",
+      "x": 3008,
+      "y": 3648,
       "w": 64,
-      "h": 256,
-      "flag": "wood-oak-looked",
-      "kick": false
+      "h": 192
     }
   ],
+  "gates": [],
   "lures": [
     {
       "id": "wick-rest",
@@ -437,6 +440,12 @@
       "kind": "wick",
       "x": 1608,
       "y": 1270
+    },
+    {
+      "id": "wick-foot",
+      "kind": "wick",
+      "x": 3200,
+      "y": 3712
     }
   ],
   "enemies": [
@@ -529,8 +538,7 @@
     },
     {
       "from": "p3",
-      "to": "e",
-      "flags": ["wood-oak-looked"]
+      "to": "e"
     },
     {
       "from": "e",
@@ -538,7 +546,11 @@
     },
     {
       "from": "p3",
-      "to": "look-up"
+      "to": "oak-hollow"
+    },
+    {
+      "from": "p3",
+      "to": "hollow-night"
     }
   ],
   "marks": {
@@ -547,7 +559,7 @@
       "y": 3840,
       "facing": 1,
       "want": [2620, 1460],
-      "until": "wood-oak-looked"
+      "until": "wood-firefly-glimpse"
     },
     "notes": [
       {
@@ -574,11 +586,6 @@
         "x": 2200,
         "y": 3764,
         "text": "the first firefly sign at the trunk's foot: a ring of picked glow-cap stumps"
-      },
-      {
-        "x": 2580,
-        "y": 3584,
-        "text": "TATTER'S LOOK-UP (trigger look-up, hold 180): under the trunk, Tatter looks up at W-ff and she with it; the east arch opens; Tatter leads her out"
       },
       {
         "x": 2580,
@@ -649,6 +656,11 @@
         "x": 3380,
         "y": 330,
         "text": "P5, THE CROWN (finale hold 540, the trigger the rim's full height: no way to the exit but through it): the look-out, the cloud lifts off"
+      },
+      {
+        "x": 3010,
+        "y": 3520,
+        "text": "THE TRUNK'S FOOT: Tatter goes in at the crack (bark, 3 cuts); inside, W-foot with three stragglers (the oak's first snuff, the moths spiral up the trunk), the night eyes hollow, Tatter in the moonlight; the passage under the flare's roof is the way east"
       }
     ],
     "stage": {
@@ -657,11 +669,24 @@
           "x": 2700,
           "y": 3840,
           "facing": 1,
-          "when": "wood-oak-looked",
+          "when": "wood-firefly-glimpse",
+          "until": "wood-oak-hollow",
+          "climb": {
+            "path": [[2700, 3840], [3000, 3840]],
+            "lead": 220,
+            "vanish": true
+          }
+        },
+        {
+          "x": 3176,
+          "y": 3840,
+          "facing": -1,
+          "when": "wood-oak-hollow",
           "until": "wood-climbout",
           "climb": {
-            "path": [[2700, 3840], [3780, 3840]],
-            "lead": 260
+            "path": [[3176, 3840], [3780, 3840]],
+            "lead": 260,
+            "vanish": true
           }
         },
         {
@@ -679,6 +704,18 @@
           "when": "wood-root-ladder",
           "climb": {
             "path": [[2896, 3840], [2896, 576], [3480, 576]]
+          },
+          "until": "wood-crown-gone"
+        },
+        {
+          "x": 3480,
+          "y": 576,
+          "facing": 1,
+          "when": "wood-crown-gone",
+          "climb": {
+            "path": [[3480, 576], [3836, 576]],
+            "lead": 240,
+            "vanish": true
           }
         }
       ],
@@ -743,7 +780,14 @@
         "zoom": 0.6,
         "hold": 9,
         "parallax": 0.25
-      }
+      },
+      "circlers": [
+        {
+          "lure": "wick-foot",
+          "count": 3,
+          "r": 46
+        }
+      ]
     }
   },
   "shots": {
@@ -775,5 +819,15 @@
       }
     ]
   },
-  "reformPatch": true
+  "reformPatch": true,
+  "hollows": [
+    {
+      "id": "hollow-night",
+      "x": 3120,
+      "y": 3664,
+      "w": 96,
+      "h": 176,
+      "upgrade": "nightEyes"
+    }
+  ]
 }

@@ -727,3 +727,16 @@ play, in one or two sentences, with the moment it was decided.
   holds 180 (the trunk-foot zone frames it tall); the east arch is shut until both have played; then Tatter leads her
   out (`stage.tatters`, render's `climb.lead`). That is ~8 s of held beats plus the walk: ~15-17 s, still short of 25.
   Longer would need more held input (I'd rather not) or a reason to stand that isn't a hold.
+
+### The oak, round 5 (plan r5 items 7, 9; memory/rooms.md "The oak")
+- **The first visit is lived:** the glimpse holds 180; then Tatter goes in at a crack in the root flare at the trunk's
+  foot; the bark (3 cuts) is the way east; the hollow inside holds W-foot (three stragglers, the oak's first snuff),
+  night eyes, and Tatter in the moonlight, which leads her out to the east arch. No other held beat on the floor.
+- **Tatter's crown beat:** a `stage.tatters` entry walks it ahead of her onto the canopy road east once
+  `wood-crown-gone` is set (`vanish` at the exit); its wings, hop and look on `wood-crown` are render's poses.
+- **The den under the oak (agreed for builder 1):** the boundary stays the oak's bottom edge (world y 10416); the
+  oak's floor over the den is its ground (368) with the root mesh over the `climb` exit (oak x 2560-2944, world
+  32192-32576, `noDrop` until `wood-climbout`). The **plug** is the den's: a flag gate in its room under the mesh,
+  cleared by `wood-old-burrback-down` (the boss's `sets`); the climb-out goes up the column through that exit onto
+  the mesh, and the den's top sets `wood-climbout` as now. The oak needs no new flag; its staging can read
+  `wood-old-burrback-down` (the mesh breathing until then, the moon column stopping at P3's floor).

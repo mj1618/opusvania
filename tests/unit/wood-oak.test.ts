@@ -174,33 +174,48 @@ describe('the oak: one room from the roots to the crown', () => {
 });
 
 describe('the hollow at the foot of the oak', () => {
-  it('the glimpse at P3 holds 300 (the rest inside it), Tatter’s look-up under the trunk 180; the east arch is shut until both', () => {
+  it('the first visit is lived: a glimpse of 180 at P3, then Tatter’s crack at the trunk’s foot is the way east', () => {
     const glimpse = (OAK.triggers ?? []).find((t) => t.id === 'glimpse');
-    expect(glimpse?.hold).toBe(300);
+    expect(glimpse?.hold).toBe(180);
     const path = OAK.marks?.stage?.glimpse?.path ?? [];
     expect(path[path.length - 1]).toEqual([WFF.x, WFF.y]);
-    expect(OAK.marks?.tatter?.want).toEqual([WFF.x, WFF.y]);
-    // Before the glimpse the arch is shut: a runner who never reached P3 (placed past it) stays in.
-    const shut = play({ glimpse: false });
-    shut.g.teleport(3500, FLOOR);
-    shut.run(R, 120);
-    expect(shut.g.state.room).toBe('wood-hollow');
-    expect(shut.feet().x).toBeLessThan(3712);
-    // In from the west: P3's beat holds her 300 frames and rests her; then the arch is open.
-    const s = play({ glimpse: false });
-    s.g.teleport(900, FLOOR);
-    s.run(0, 3);
-    let ev = s.run(R, 60);
-    expect(ev.find((e) => e.type === 'storyHold')).toMatchObject({ id: 'glimpse', frames: 300 });
-    ev = ev.concat(s.run(R, 300));
+    // In from the west door, held right: the glimpse (and the rest in it), then the bark at the trunk's foot stops
+    // her; three cuts; the hollow inside: night eyes, W-foot; out east under the flare's roof.
+    const s = play({ glimpse: false, abilities: ['glide'] });
+    s.g.teleport(60, FLOOR);
+    const ev: SimEvent[] = [];
+    for (let f = 0; f < 3600 && s.g.state.room === 'wood-hollow'; f++) {
+      const p = s.g.state.player;
+      const pressed = p.wallDir === 1 && p.grounded;
+      if (s.feet().x > 3150 && s.feet().x < 3250 && (s.g.state.lures.hp[4] ?? 0) > 0 && p.grounded) {
+        // In the hollow, under W-foot: a standing up-cut.
+        ev.push(...s.run(U | A, 1), ...s.run(0, 10));
+        continue;
+      }
+      ev.push(...s.run(R | (pressed && f % 20 === 0 ? A : 0)));
+    }
+    expect(ev.find((e) => e.type === 'storyHold')).toMatchObject({ id: 'glimpse', frames: 180 });
     expect(has(ev, 'patchRest')).toBe(true);
-    // Under the trunk Tatter's look-up holds her 180 more; then the arch is open and she leaves.
-    for (let i = 0; i < 600 && s.g.state.room === 'wood-hollow'; i++) ev = ev.concat(s.run(R));
-    expect(ev.filter((e) => e.type === 'storyHold').map((e) => (e as { id?: string }).id)).toEqual([
-      'glimpse',
-      'look-up',
-    ]);
+    expect(has(ev, 'barkBreak', 'bark-foot')).toBe(true);
+    expect(ev.find((e) => e.type === 'hollowGrant')).toMatchObject({ upgrade: 'nightEyes' });
+    expect(s.g.state.save.flags).toContain('wood-oak-hollow');
+    expect(has(ev, 'lureSnuff', 'wick-foot')).toBe(true);
+    expect(has(ev, 'lureCaught')).toBe(false);
     expect(s.g.state.room).toBe('wood-hawkers');
+    // No held beat in the oak's first visit is over 4 s.
+    for (const t of OAK.triggers ?? [])
+      if (t.id !== 'crown') expect(t.hold ?? 0, t.id).toBeLessThanOrEqual(240);
+  });
+
+  it('the bark is the only way east before the claws: the flare’s roof can’t be reached from under the trunk', () => {
+    const s = play({ abilities: ['glide'] });
+    s.g.teleport(2900, FLOOR);
+    s.run(0, 3);
+    for (let i = 0; i < 4; i++) {
+      s.run(R | J, 20);
+      s.run(R, 20);
+    }
+    expect(s.feet().x).toBeLessThan(3008);
   });
 });
 
@@ -487,6 +502,7 @@ describe('the crown: the root, the crown wick, P5, the finale', () => {
     expect((OAK.lures ?? []).map((l) => l.id).sort()).toEqual([
       'wick-crown',
       'wick-firefly',
+      'wick-foot',
       'wick-knot',
       'wick-rest',
     ]);

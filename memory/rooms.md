@@ -167,15 +167,13 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   room's top now), the chimney rungs (frontier the personas could not reach).
 - **Fades:** `reformPatch: true` (8036fc0: the nearest patch at or below where she lay): a fade above the rest ledge
   re-forms her at P-ledge, below it at P3; `reform` (P3) stays as the fallback. Never in R8.
-- **The first visit (round 4: it lasted 10 s):** the glimpse trigger is P3's patch box (1224-1336) with `hold: 300,
-  finale: true` (a long beat; the rest happens inside it); then **Tatter's look-up** under the trunk (trigger
-  `look-up`, 2384-2544 west of the mesh, hold 180, sets `wood-oak-looked`; the trunk-foot zone frames tall); the
-  **east arch is shut** (`arch-gate`, flag `wood-oak-looked`) until both have played. Human-like runs before the
-  look-up: first visit 12 s (target 25). `stage.glimpse` frames the crown ring and W-ff (2752, 1300, 0.5, 6 s).
-  Tatter: `marks.tatter` looks up at W-ff until the look-up; `stage.tatters`: it leads her out of the east arch
-  (`climb.path` + `lead`) until `wood-climbout`, sits under the trunk looking up until the root, then climbs the root.
-- The first visit's glimpse is also `finale` (its 300 hold): it sends the oak's creatures away for that visit (no
-  claws yet, so nothing is lost; they are fresh when she comes back up through the mesh).
+- **The first visit (round 5: lived, not held):** the glimpse at P3 holds 180 (no `finale`; holds <= 4 s except the
+  crown). Then **the trunk's foot**: a root flare (roof 3008-3392 at 3584-3648) east of the trunk's base, its west wall
+  `bark-foot` (3 cuts). Tatter walks to it and goes in at the crack (`stage.tatters`, `vanish`). The passage under
+  the roof is the only way east before the claws (the trunk wall overhead stops a jump onto the roof from the west):
+  inside, `wick-foot` (3200, 3712: a standing up-cut; above the walk line, so a walker isn't caught) with three
+  stragglers (`circlers`), `hollow-night` (night eyes), trigger `oak-hollow` (`wood-oak-hollow`): Tatter sits in the
+  moonlight there, then leads her out east to the arch. No arch gate any more.
 - Gotcha: a scratchpad is shared by sibling agents: use your own subfolder for probes. Keep in-progress room data
   loadable in the shared tree (a room that fails to parse breaks every agent's tests): work in a scratch copy.
 

@@ -209,11 +209,14 @@ G11 (≥ 3 kinds of optional reward).*
 | **Moonlit hollows** (upgrades) | a small hidden shaft of moonlight, usually behind a secret. The glade ritual, shorter: one line, one small upgrade | ~12 (10 in main areas, 2 in optional ones) | an ability-adjacent upgrade, each a tuning number: quick wings (beat free in 2 presses), keen blade (+20 px snuff reach), long gust, wide throw (fling bend ±60°), second wind (a snuff refills double jump), quick dash, heavy fold, drift (steer while shrouded), night eyes (each room's unseen lamps on the map), moon reserve (+30% Moonflight), warm heart (lanterns and bigger give 2 health back), silent wings (double jump and dash are quiet to bats). Region docs set the final list | S each (a number in `resolveParams`) |
 
 And two rewards that are not finds:
-1. **Health from moth milestones:** +1 max health at fixed moth counts set for the full game: **110 / 350 / 800 /
+1. **Health from moth milestones:** +1 max health at fixed moth counts set for the full game: **60 / 350 / 800 /
    1,400 / 2,100** of ~2,800 (draft 1: 140 / 280 / 550 / 800 of ~1,000), never percentages, since the total grows with
-   each tier. That is 4 pips at the start and 9 at most. The first milestone falls on the critical path (the Weaver's
-   great lamp, `regions/wood.md` §8). The rest need exploring; Tier 1 can award the first three. *Easy path:* no
-   separate heart-piece hunt with fragments and its own UI. *Reason for the new counts: the moth total nearly tripled.*
+   each tier. That is 4 pips at the start and 9 at most. The first milestone falls before area 1's boss (the old
+   burrback under the oak): the critical path's lamps before the den hold ~55–65 moths. The rest need exploring; Tier 1
+   can award the first three. *Easy path:* no separate heart-piece hunt with fragments and its own UI. *Reason for the
+   new counts: the moth total nearly tripled. Reason for 60 (area 1 plan r5): at 110 the first reward fell outside
+   area 1; at 60 a player who snuffs what she passes plus a find or two gets a light before the boss, so the finds pay
+   for the fight.*
 2. **Abilities** (section 4).
 
 **Secrets** pay in moths, hollows, signs or a stone: lamps behind rotten bark (the wood's language, then one tell a
