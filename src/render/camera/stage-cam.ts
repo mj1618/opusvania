@@ -8,6 +8,9 @@
  * for it yet, the first entry into a camera zone this visit (and only if the flag is not in the save).
  * The bask starts on the room's `gladeGrant`. One beat at a time; the newest wins.
  *
+ * When the trigger carries a sim hold (`storyHold` / `storyHoldEnd`), the framing holds exactly as long as
+ * her input does.
+ *
  * `STAGE_BEATS` publishes how long each beat has been running (render s; -1 = not this visit; `DONE` = done
  * in an earlier visit) for the greybox staging that draws the rest (render/greybox/staging.ts).
  */
@@ -104,6 +107,14 @@ export class StageCamera {
             this.start('glimpse', g.x, g.y, g.zoom ?? 1, g.secs - 1.5);
         } else if (e.type === 'gladeGrant' && S.bask)
           this.start('bask', S.bask.x, S.bask.y, S.bask.zoom ?? 1, S.bask.secs);
+      }
+      // A sim-held story beat (a trigger with `hold`, memory/level-kit.md): the beat its flag just started
+      // holds while her input does, and lets go when it does (she has the view back as she has control).
+      for (const e of events) {
+        const sh = this.shot;
+        if (!sh) break;
+        if (e.type === 'storyHold' && sh.t === 0) sh.hold = Math.max(sh.hold, e.frames / 60 - sh.in);
+        else if (e.type === 'storyHoldEnd' && sh.t > sh.in && sh.t < sh.in + sh.hold) sh.hold = sh.t - sh.in;
       }
       if (zone && !this.zonesSeen.has(zone)) {
         this.zonesSeen.add(zone);

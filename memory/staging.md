@@ -67,7 +67,9 @@ flies into, the player in control, input never held; the camera may lift, widen 
   end over a floor panel reads as a door (R9).
 
 ## Round 2 (feel review r2)
-- Still owed by others: a sim `hold` trigger kind (input ignored <= 2.5-3 s) for the vista and the glimpse, and a
-  vista trigger on a ledge where she must stop. Until then the glimpse is 3 s with input live.
+- The sim's held story beat (a trigger's `hold`, daccfee, memory/level-kit.md) is wired: on `storyHold` the beat
+  that trigger's flag just started holds its framing as long as her input is held, and eases back on
+  `storyHoldEnd` (stage-cam.ts). Still owed by the level (chunk redesign): the R2 vista trigger where she stops,
+  with `hold`; the hub glimpse trigger's `hold`; ~250 px more ground under the hub floor.
 - The dangler and the weaver are spiders in greybox (creatures.ts `spider`): abdomen, head, eight legs that tuck
   on the tell and splay in the drop, fangs as the danger part; the dangler's silk and its drop line in the tell.

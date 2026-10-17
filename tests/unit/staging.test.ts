@@ -87,3 +87,16 @@ describe('story staging camera bounds', () => {
     if (r) r.x = 1500;
   });
 });
+
+describe('story staging camera with a sim hold', () => {
+  it('holds while her input is held and gives the view back when it ends', () => {
+    const c = new StageCamera(room, []);
+    const hold = { type: 'storyHold', id: 'g', frames: 150, x: 0, y: 0 } as SimEvent;
+    c.update(1 / 60, [flagSet('glimpse'), hold], '', view, []);
+    for (let i = 0; i < 120; i++) c.update(1 / 60, [], '', view, []);
+    expect(c.weight).toBeCloseTo(1, 3);
+    c.update(1 / 60, [{ type: 'storyHoldEnd', id: 'g', x: 0, y: 0 } as SimEvent], '', view, []);
+    for (let i = 0; i < 6; i++) c.update(1 / 60, [], '', view, []);
+    expect(c.weight).toBeLessThan(1);
+  });
+});
