@@ -30,7 +30,7 @@ the climb and the hub are one room. All nine replays matched the headless state 
   - the whole climb (casual s3, casual s2);
   - the crown finale.
 
-Black frames were counted with `ffmpeg blackdetect`. The skilled runs' videos were still rendering when I wrote this, so their findings come from their traces and the same rooms seen in the casual and average videos. My stills and cuts are in this session's scratchpad
+Black frames were counted with `ffmpeg blackdetect`. The skilled videos finished after the first draft. A cut of skilled s1's climb (14:00–14:36) confirms the same pattern seen in casual s2: reach the top, get struck by the crown hawker, fall, get caught by W-ff, hit the band, climb again. My stills and cuts are in this session's scratchpad
 (`video-review-r2/`).
 
 **How to read the bots.** Same caveats as round 1:
