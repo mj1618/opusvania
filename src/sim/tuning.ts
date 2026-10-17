@@ -468,6 +468,8 @@ export const defaultTuning = withVariants({
     killHitstopBonus: 3,
     /** The same for a down slash (the pogo): short, so the bounce rhythm stays what it was. */
     pogoHitstopFrames: 2,
+    /** A down slash under way as she comes down on a shell (her feet this far into its top, at most) is a pogo, never a hurt. */
+    stompPx: 24,
     /** A cut that glances off a braced shell: she holds this long and is thrown back at this, px/f (fading by `attack.recoilDecay`). */
     blockHitstopFrames: 6,
     blockRecoil: 8,
@@ -639,9 +641,16 @@ export const defaultTuning = withVariants({
     riseFrames: 0,
     /** Open, it takes at most this many cuts, then gets up (0 = no limit): a fight of a few exchanges. */
     openHits: 0,
-    domeContact: false,
+    /** Its ram hit her: it stands this long, shut (no opening), then braces again (0 = the winded time). */
+    touchRecoverFrames: 0,
+    /** Waking or getting up, it pushes her out of its body at this, px/f (0 = no push). */
+    risePush: 0,
+    /** It never braces at one closer than this (box to box): it backs away first (0 = any distance). */
+    strikeMinPx: 0,
+    // (First-timer r2: the plain one's touch is its drawn dome too.)
+    domeContact: true,
     domeHeight: 0.86,
-    domeShoulder: 0.62,
+    domeShoulder: 0.58,
   },
   /**
    * The lampwing: a small pale moth-wisp that hovers in the open air and is drawn to her light
@@ -699,6 +708,15 @@ export const defaultTuning = withVariants({
     diveLeadGlide: 1,
     /** One on foot is led too, by this share of her run (0: it dives at where she stood). */
     diveLeadRun: 0,
+    /**
+     * A strike instead of the eased arc (`strikeSpeed` > 0, the hawker): `diveWindupFrames` pulling back
+     * `diveBackPx` along the line, then straight at the committed point at `strikeSpeed` px/f (at most
+     * `strikeMaxFrames`: a far one is faster). 0 = the lampwing's arc.
+     */
+    strikeSpeed: 0,
+    strikeMaxFrames: 34,
+    diveWindupFrames: 0,
+    diveBackPx: 0,
     stallFrames: 34,
     perchUpPx: 170,
     perchSidePx: 110,
@@ -808,8 +826,8 @@ export const defaultTuning = withVariants({
    * and bites (`biteFrames`, its touch live, `contactDamage`) if she is still held; else it goes home.
    */
   weaver: {
-    width: 40,
-    height: 36,
+    width: 56,
+    height: 48,
     hp: 4,
     speed: 5,
     countFrames: 24,
@@ -838,8 +856,9 @@ export const defaultTuning = withVariants({
    * Its thread cut: it falls (`gravity`, `maxFall`), lies stunned `stunFrames` (open), then leaves.
    */
   dangler: {
-    width: 30,
-    height: 26,
+    // (Feel review r2: a 30 x 26 box read as a speck at play zoom; she is 40 x 80.)
+    width: 44,
+    height: 40,
     hp: 2,
     // (It tells as she comes, so a runner who doesn't stop for the thread meets the drop or the swing.)
     noticePx: 300,
@@ -1263,19 +1282,20 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
     ...base,
     oldBurrback: {
       ...(base.burrback as T['burrback']),
-      width: 84,
-      height: 50,
+      // Feel review r2: twice the size (it was shorter than she is), its dome and ram to match.
+      width: 160,
+      height: 96,
       hp: 12,
       speed: 2.2,
       noticePx: 2400,
       dozePx: 0,
-      strikePx: 190,
-      provokedPx: 300,
+      strikePx: 230,
+      provokedPx: 320,
       // First-timer review r1: a shorter tell and a quicker, shorter ram, so a jump anywhere in the tell
       // clears it and the ram leaves her close; then a long open window (green, on its back) for cuts.
-      windupFrames: 24,
-      chargePx: 240,
-      chargeSpeed: 14,
+      windupFrames: 28,
+      chargePx: 300,
+      chargeSpeed: 16,
       recoverFrames: 70,
       recoverTiredFrames: 70,
       recoverWallFrames: 120,
@@ -1283,14 +1303,20 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       feintFrames: 18,
       // (Long enough to answer after the feint with a 20-30 frame reaction.)
       feintBraceFrames: 30,
-      feintFrom: 0.67,
+      // Feel review r2 / first-timers: no feint on the first mini-boss (0 = never; the move stays for variants).
+      feintFrom: 0,
       openWinded: true,
       huntSpeed: 4.2,
       // (It stops this far off and braces from there: a ram from point blank was unanswerable.)
-      huntStopPx: 140,
-      riseFrames: 18,
+      huntStopPx: 180,
       openHits: 3,
+      touchRecoverFrames: 24,
+      risePush: 7,
+      strikeMinPx: 140,
+      // (Getting up is her cue to step out: long enough to see.)
+      riseFrames: 30,
       domeContact: true,
+      domeShoulder: 0.62,
       pogoShell: true,
       asleep: true,
       wakePx: 1400,
@@ -1302,8 +1328,9 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
     },
     hawker: {
       ...(base.lampwing as T['lampwing']),
-      width: 52,
-      height: 24,
+      // (A 52 x 24 sliver at 480 px over her: now a body she can read and cut.)
+      width: 72,
+      height: 32,
       radius: 150,
       // It sees her anywhere in its lamp's light that its leash reaches (its home hangs ~440 px over the
       // floor: at 480 a runner crossing the light was never seen).
@@ -1315,7 +1342,12 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       diveMaxPx: 600,
       diveMaxFrames: 72,
       diveSpeed: 6.4,
-      diveLeadRun: 0.8,
+      diveLeadRun: 1,
+      // Feel review r2: the 65-frame dive was a drift. Now 6 frames pulling back, then a 15 px/f strike.
+      strikeSpeed: 15,
+      strikeMaxFrames: 34,
+      diveWindupFrames: 6,
+      diveBackPx: 24,
       // (A breather after a hit: one who stood still under it was hit every 4 s and faded in a loop.)
       touchCalmFrames: 180,
       value: 0,

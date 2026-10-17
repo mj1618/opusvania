@@ -139,6 +139,8 @@ export interface EnemySpawn {
   strands?: Array<[number, number, number, number]>;
   /** Dangler: the longest drop on its thread, px below the tie point (default `tuning.dangler.maxDrop`). */
   drop?: number;
+  /** Burrback: its brace's tell in frames, if not the row's (a first encounter's is longer). */
+  windup?: number;
   /** A story flag set when it dies (the old burrback's root gate: src/sim/kit.ts). */
   sets?: string;
   /**

@@ -64,6 +64,7 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
   let lastPress = -100;
   const run: Run = { won: false, fades: 0, frames: 0, hits: 0, landed: 0, clangs: 0, feints: 0 };
   let prev = 0;
+  let learned = false;
   for (let f = 0; f < maxFrames; f++) {
     const p = s.state.player;
     const e = s.state.enemies[0];
@@ -106,7 +107,8 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
       // Otherwise: close in to about 220 px and wait; now and then it walks in and slashes anyway.
       if (e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert') {
         if (Math.abs(dx) > 240) m |= toward;
-        else if (dice(4, Math.floor(f / 90)) < 250) {
+        // (Now and then it walks in and slashes the closed shell anyway; once that has hurt it, it mostly stops.)
+        else if (dice(4, Math.floor(f / 90)) < (learned ? 50 : 250)) {
           m |= toward;
           if (Math.abs(dx) < 130 && f - lastPress >= 14) {
             m |= A;
@@ -120,7 +122,11 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
     const from = events.length;
     const before = `${e.mode}:${e.timer} cd${e.strikeCd} gap ${Math.round(Math.abs(dx) - (p.w + e.w) / 2)} her ${p.grounded ? 'g' : 'air'} vy ${p.vy.toFixed(1)} m ${m}`;
     step(s.state, m, t, scene, events);
-    if (process.env.OLD_DEBUG && seed === 1 && react === 20)
+    if (
+      process.env.OLD_DEBUG &&
+      seed === Number(process.env.OLD_SEED ?? 1) &&
+      react === Number(process.env.OLD_REACT ?? 20)
+    )
       for (let i = from; i < events.length; i++) {
         const ev = events[i] as SimEvent;
         if (/hurt|enemyWindup|enemyFeint|enemyCharge|enemyRecover|enemyWake|fade|enemyHit/.test(ev.type))
@@ -131,10 +137,13 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
       const ev = events[i] as SimEvent;
       if (ev.type === 'hurt') {
         run.hits++;
+        if (e.mode === 'alert' || e.mode === 'walk') learned = true;
         const k = `${e.mode}${e.feints ? `/f${e.feints}` : ''}`;
         HURT_BY[k] = (HURT_BY[k] ?? 0) + 1;
       }
       if (ev.type === 'fade') run.fades++;
+      // (R10 re-forms her at its moon patch, whole: a fresh attempt.)
+      if (ev.type === 'reform') s.state.player.hp = s.state.player.hpMax;
       if (ev.type === 'enemyHit' || ev.type === 'enemyDie') run.landed++;
       if (ev.type === 'enemyBlock') run.clangs++;
       if (ev.type === 'enemyFeint') run.feints++;
@@ -143,6 +152,56 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
   }
   return run;
 }
+
+/**
+ * The no-dodge masher (feel review r2: "a masher wins in 10.8 s"): it walks up to the old burrback and
+ * slashes, never jumps, never steps back. Returns whether it faded before it killed it (one attempt).
+ */
+function masher(
+  seed: number,
+  maxFrames = 60 * 120,
+): { faded: boolean; won: boolean; frames: number; landed: number } {
+  const t = cloneTuning(defaultTuning);
+  const scene = pit();
+  const events: SimEvent[] = [];
+  const state = createState(seed, t, scene, events);
+  let last = -100;
+  let landed = 0;
+  for (let f = 0; f < maxFrames; f++) {
+    const p = state.player;
+    const e = state.enemies[0];
+    if (!e || e.mode === 'dead') return { faded: false, won: true, frames: f, landed };
+    const dx = e.x + e.w / 2 - (p.x + p.w / 2);
+    let m = Math.abs(dx) > e.w / 2 + 60 ? (dx < 0 ? ActionBit.left : ActionBit.right) : 0;
+    // It mashes every 12-20 frames once it is close.
+    if (Math.abs(dx) < e.w / 2 + 140 && f - last >= 12 + (mix(seed, f) % 9)) {
+      m |= ActionBit.attack;
+      last = f;
+    }
+    const from = events.length;
+    step(state, m, t, scene, events);
+    for (let i = from; i < events.length; i++) {
+      const ev = events[i] as SimEvent;
+      if (ev.type === 'fade') return { faded: true, won: false, frames: f, landed };
+      if (ev.type === 'enemyHit' || ev.type === 'enemyDie') landed++;
+    }
+  }
+  return { faded: false, won: false, frames: maxFrames, landed };
+}
+
+describe('the old burrback will not be beaten by standing and mashing', () => {
+  const runs = [1, 2, 3, 4, 5, 6, 7, 8].map((seed) => ({ seed, ...masher(seed) }));
+  if (process.env.OLD_TRACE)
+    for (const r of runs)
+      console.log(
+        `masher seed ${r.seed}: ${r.faded ? 'faded' : r.won ? 'WON' : 'timeout'} at ${(r.frames / 60).toFixed(1)} s, landed ${r.landed}`,
+      );
+
+  it('the masher fades on most seeds, and never wins', () => {
+    expect(runs.filter((r) => r.faded).length).toBeGreaterThanOrEqual(6);
+    expect(runs.some((r) => r.won)).toBe(false);
+  });
+});
 
 describe('the old burrback, a first mini-boss: a slow, sloppy first-timer always wins, most in 1-2 attempts', () => {
   const runs: Array<Run & { react: number; seed: number }> = [];

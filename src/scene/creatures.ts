@@ -53,6 +53,7 @@ export const ENEMIES = z
           ...base,
           kind: z.literal('burrback'),
           radius: int.min(40).max(2000).optional(),
+          windup: int.min(20).max(60).optional(),
           fenced: z.boolean().optional(),
         })
         .strict(),

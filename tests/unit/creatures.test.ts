@@ -208,6 +208,19 @@ describe('the hawker', () => {
 
 describe('the old burrback', () => {
   const pit = (x = 2000) => room([{ id: 'o', kind: 'oldBurrback', x, y: FLOOR, facing: -1 }]);
+  const O = T.oldBurrback;
+
+  it('a ram that hits her lays nothing open: it stops shut, then braces again', () => {
+    const s = newSim(pit());
+    const o = enemy(s, 'o');
+    o.mode = 'walk';
+    s.place(o.x - O.strikeMinPx - 40, FLOOR);
+    const ev = s.run('.120');
+    const rec = of(ev, 'enemyRecover')[0];
+    expect(types(ev)).toContain('hurt');
+    expect(rec).toMatchObject({ cause: 'touch', frames: O.touchRecoverFrames });
+    expect(o.stunned).toBe(false);
+  });
 
   it('sleeps until she is down on its ground, then wakes harmless for wakeFrames', () => {
     const s = newSim(pit());
@@ -221,13 +234,14 @@ describe('the old burrback', () => {
     expect(hurt === -1 || hurt - wake >= T.oldBurrback.wakeFrames).toBe(true);
   });
 
-  it('feints: brace, the shell drops, the real brace, then a ram of chargePx', () => {
-    const s = newSim(pit());
+  it('a variant that feints: brace, the shell drops, the real brace, then a ram of chargePx', () => {
+    // (The wood's old burrback does not feint (feintFrom 0: feel review r2); the move stays for variants.)
+    const t = cloneTuning(defaultTuning);
+    t.oldBurrback.feintFrom = 1;
+    const s = newSim(pit(), t);
     const o = enemy(s, 'o');
     o.mode = 'walk';
-    // (Only from its second health third: a first-timer meets the plain ram first.)
-    o.hp = Math.floor(o.hpMax * T.oldBurrback.feintFrom);
-    s.place(o.x - 120, FLOOR);
+    s.place(o.x - O.strikeMinPx - 60, FLOOR);
     const frameOf: Record<string, number> = {};
     for (let f = 0; f < 200; f++) {
       for (const e of s.run('.1')) {
@@ -240,14 +254,13 @@ describe('the old burrback', () => {
         }
       }
     }
-    const O = T.oldBurrback;
     const { w1 = -1, feint = -1, w2 = -1, charge = -1 } = frameOf;
     expect(feint - w1).toBe(O.windupFrames);
     expect(w2 - feint).toBe(O.feintFrames);
     expect(charge - w2).toBe(O.feintBraceFrames);
   });
 
-  it('at full health it does not feint', () => {
+  it("the wood's old burrback never feints", () => {
     const s = newSim(pit());
     const o = enemy(s, 'o');
     o.mode = 'walk';
@@ -574,6 +587,27 @@ describe('the hawker engages', () => {
     expect(of(ev, 'enemyDive').length).toBe(1);
     // Told for the whole tell first.
     expect(ev.slice(notice, hurt).some((e) => e.type === 'enemyDive')).toBe(true);
+  });
+
+  it('it strikes, not drifts: a short pull-back, then fast and straight; a stander is hit, a stepper never is', () => {
+    const H = T.hawker;
+    for (const x of [1850, 1900, 2000, 2100, 2200]) {
+      // The stander.
+      const a = newSim(scene());
+      a.place(x, FLOOR);
+      const ev = a.run('.200');
+      const dive = ev.findIndex((e) => e.type === 'enemyDive');
+      const hurt = ev.findIndex((e) => e.type === 'hurt');
+      expect(hurt).toBeGreaterThan(dive);
+      expect(hurt - dive).toBeLessThanOrEqual(H.diveWindupFrames + H.strikeMaxFrames + 1);
+      // The stepper: still through most of the tell, then a step away from it.
+      const b = newSim(scene());
+      b.place(x, FLOOR);
+      const away = x < 2000 ? 'L' : 'R';
+      const ev2 = b.run(`.${H.curiousFrames - 10} ${away}14 .120`);
+      expect(types(ev2)).toContain('enemyDive');
+      expect(types(ev2)).not.toContain('hurt');
+    }
   });
 
   it('after its touch it leaves her be for touchCalmFrames', () => {

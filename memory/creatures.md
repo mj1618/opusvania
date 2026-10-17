@@ -42,31 +42,36 @@ Same ram, second beat, pogo curl, drop dodge, lips, fair placement (enemies.md);
 lab walk into its ram once each (1 hit) and pass.
 
 ## The old burrback (`kind: 'oldBurrback'`, row `tuning.oldBurrback` = the burrback's + overrides)
-Reworked 2026-10-18 as a first mini-boss (False Knight standard) after the impatient first-timer (chunk1-firsttimer-
-impatient-r1: ~80 s, 2 deaths, 1 hit landed in 3 attempts; "its hurt area feels bigger than the box", "the long red
-wind-up punishes an early jump", 17 clangs and 8 feints never seen).
-- 84 x 50, **12 hp**, `sense` always, asleep until she is down on its floor within 1400 px (`enemyWake`, 60 f harmless).
-- **Hunts quickly**: 4.2 px/f while she is over 360 px away (it took ~8 s to cross the pit), and **stops 140 px short**
-  of her (`huntStopPx`) to brace from there: a ram from point blank was unanswerable at a 20-30 f reaction.
-- **Ram**: brace **24 f** -> 240 px at 14 px/f. A full-hold jump anywhere in the tell clears it from 140 px; the ram
-  leaves it ~100-250 px from her.
-- **Open after every ram** (`openWinded`, `stunned` = on its back): 70 f (120 at a wall), every cut lands, its touch does
-  nothing (staggered included: it used to hurt her 8 f into its stagger while she mashed), and it takes at most
-  **3 cuts** (`openHits`, `taken`) before it gets up. Getting up is a harmless 18 f beat (`wake`, `riseFrames`) before it
-  may brace: its window never closes on her with a live touch.
-- **Shell**: braced, only a pogo lands (one a brace, no stagger: it rams on under her; render draws the amber "pogo me"
-  top); walking, everything glances (`enemyBlock`, render's clang star).
-- **Feint only from its second health third** (`feintFrom` 0.67): brace 24 -> feint 18 -> brace **30** (long enough to
-  answer with a 20-30 f reaction) -> ram.
-- **Its touch is its drawn dome** (`domeContact`: `domeHeight` 0.86 of the box, round to `domeShoulder` 0.62; render's
-  greybox dome uses the same numbers): her feet over the box's empty top corners do not count (`KindRules.touches`).
-- **Health for render**: `hp / hpMax` on the state; `enemyCrack {hpLeft, hpMax, third}` when it loses each third (any
-  creature with 6+ hp).
-- **Slow first-timer pilot** (`tests/unit/old-burrback-pilot.test.ts`, `OLD_TRACE=1`: reacts 20 / 25 / 30 f, presses off
-  by up to 8 f, jumps the ram, mashes when it lies open, slashes the closed shell now and then; 8 seeds each): every run
-  wins, 1 attempt in 20 of 24 runs and 2 in the rest, 8-20 s, 2-5 hits taken (mostly rams). Before: 1-8 attempts,
-  3-16 hits. Lab bots: explorer / speedrunner / cautious kill it in 10-20 s with 1-2 hits (cautious faded 6 times
-  there before); naive hops out of the open lab pit. The plain burrback still has the box contact (its pilots pin it).
+First mini-boss (False Knight standard). Round 1 (impatient first-timer: 1 hit landed in 3 attempts) made it readable;
+round 2 (feel review r2 #1, #2: "a masher wins in 10.8 s", "shorter than she is") made the window earned and the body big.
+- **160 x 96** (2x: she is 40 x 80), 12 hp, `sense` always, asleep until she is down on its floor (`enemyWake` 60 f).
+- **Hunts** at 4.2 px/f when she is over 360 px away, stops 180 px short, and **never braces closer than 140 px**
+  (`strikeMinPx`): too close (or she is inside it) it backs away facing her, unless there is no room behind it.
+- **Ram**: brace 28 f -> 300 px at 16 px/f. From 140+ px a 20-30 f reaction plus a full jump clears it.
+- **The window is earned**: a ram that **misses** her lays it on its back, open (`stunned`) for 70 f (120 at a wall):
+  every cut lands, its touch does nothing, at most 3 cuts (`openHits`), then a harmless 30 f get-up (`wake`) that
+  shoulders her out of its body (`risePush`). A ram that **hits** her gives nothing: it stands shut 24 f
+  (`touchRecoverFrames`) and braces again.
+- **Shell**: braced, only a pogo lands (one a brace, no stagger); walking, everything glances (`enemyBlock`).
+- **No feint** (`feintFrom` 0); the move stays in the code for variants (a test runs it with `feintFrom` 1).
+- **Dome contact** (`domeContact`, height 0.86, shoulder 0.62). `enemyCrack {third}` per health third.
+- Pilots (`tests/unit/old-burrback-pilot.test.ts`; `OLD_TRACE=1`; creatures heal when she fades and she re-forms whole,
+  as in the game): the **no-dodge masher always fades** (13-31 s, 0 cuts landed); the slow first-timer (20/25/30 f
+  reactions, sloppy, learns not to walk into it after one hit) wins every run, **22 of 24 at the first attempt**, 11-38 s,
+  0-5 hits. Lab bots: explorer and speedrunner kill it in ~12 s with 0 hits.
+- For the level: at 160 x 96 the pit needs its floor clear of anything 96 px over the old burrback's feet.
+
+## The plain burrback, round 2 (first-timer casual r2: "↓+C on it hurt me", "hit from a body-length", "it slid to
+where I landed")
+- **A down slash coming down on any burrback's back is always a pogo, never a hurt** (the framework's `stomp`,
+  `KindRules.stompable`): her feet within `enemies.stompPx` 24 of its top at the start of the step, falling, a down slash
+  under way -> she bounces (`enemyBlock` slash `down`, no damage either way). Rising off its back with her feet in that
+  band is never a hurt either (a bounce's first frames).
+- **Dome contact** for the plain one too (shoulder 0.58, render's numbers).
+- **Its drop dodge** goes away from where she is heading (it used to take the shorter way, sometimes to her landing).
+- **`windup` on a burrback spawn** (20-60): a longer tell for a first encounter. **R4's burr-first should say
+  `windup: 32`**: the slow first-timer pilot (`tests/unit/burrback-firsttimer.test.ts`, R4 replica) then wins every run
+  with 0 fades and at most 2 hits (with the row's 26: 3 fades in 18 runs). Not changed globally: the grove's pilots pin 26.
 
 ## The hawker (`kind: 'hawker'`, row `tuning.hawker` = the lampwing's + overrides)
 - The lampwing's sim (tell 36, harmless 20, committed dive, stall 34 open, climb, 3 dives), box 52 x 24,
@@ -77,6 +82,13 @@ wind-up punishes an early jump", 17 clangs and 8 feints never seen).
   miss (now **diveMaxPx 600, diveMaxFrames 72, diveSpeed 6.4**). It also **leads a runner by 0.8 of her run**
   (`diveLeadRun`; the lampwing 0): stopping, turning back or jumping dodges it, running on at full speed usually still
   clears the end of a long dive. Stander in R8: noticed at the light's edge, hit 81 frames after the tell began.
+- **A strike, not a drift** (feel review r2 #5: "65 frames at 6.4 px/f, a leaf"): after the 36 f tell, 6 f pulling back
+  24 px along the line (`diveWindupFrames`, `diveBackPx`), then straight at the committed point at 15 px/f
+  (`strikeSpeed`; at most `strikeMaxFrames` 34, so a far one is faster): 34-40 f in all. A stander is hit ~32 f after
+  the dive starts; one who steps away anywhere in the tell is never hit (unit test at five spots); a runner is led by
+  her whole run (`diveLeadRun` 1). Box **72 x 32** (was 52 x 24). Cautious bot in the lab: kills hawk-b taking 4 hits
+  (it jumps at it to pogo), a fade only because burr-a had already taken 2.
+- R8's exposure test now measures 84 f from lit to hummock B (the strike misses the hopper; the slow dive used to hit it).
 - A dive under way when its lamp goes out lands first; then it leaves (the framework does not disperse in `dive`).
 - In a lamp room the dive is committed (no `dark` give-up mid-dive); dark at the end of the tell, the stall or the climb,
   it gives up `dark`. `lampwing` stays for the test grove.
@@ -86,7 +98,7 @@ wind-up punishes an early jump", 17 clangs and 8 feints never seen).
 ## The dangler (`kind: 'dangler'`, src/sim/enemies/dangler.ts, row `tuning.dangler`)
 - A small spider on a thread: the Weaver's P2 drop made small. Spawn `{id, kind: 'dangler', x, y (where its thread is
   tied: within 48 px under a solid's underside, a one-way, or the room's top), facing, guards?, drop? (longest drop,
-  default 640), hp? (2)}`. Box 30 x 26, sense by lamp light (it drops only while she is lit).
+  default 640), hp? (2)}`. Box **44 x 40** (was 30 x 26: a speck at play zoom), sense by lamp light (it drops only while she is lit).
 - `sit` at the perch (harmless) -> she is lit, below it, within `noticePx` **300** sideways, a clear line ->
   `windup` **34 f** (`enemyWindup {px: the drop}`; the thread is shown to `targetX, targetY` = level with her body,
   clamped 120..`drop`, short of the ground) -> `drop` 14 f (t², live) -> `swing` 48 f, one swing of **130 px** toward
@@ -135,7 +147,7 @@ wind-up punishes an early jump", 17 clangs and 8 feints never seen).
   last touch. Its box = the strands' bounds; it never hurts and takes no blows (`slashed` instead: every intact strand
   the slash box meets is cut, then strands no longer joined to an anchor fall; `webCut {cut, fell, left}`; no
   hitstop, no pogo). Touch = her box within `strandHalf` 5 of an intact strand: `webTouch`, `grab`.
-- **Weaver**: lives on the strands (`seg`, `segT`; Dijkstra over the strand graph each step while it moves, cut strands
+- **Weaver** (box **56 x 48**, was 40 x 36): lives on the strands (`seg`, `segT`; Dijkstra over the strand graph each step while it moves, cut strands
   are no road). Senses touches, not cuts: on a grab `enemyRun {px, frames}` at 5 px/f, then `windup` 24 (`enemyWindup`
   px 0: the count), then `bite` 10 frames (its only live touch: contact damage 1, which frees her). Free before the
   count ends: it waits 30 and goes home at 3 px/f (`back`). The count (24) > the fastest beat-free (19 frames), tested

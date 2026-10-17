@@ -932,8 +932,9 @@ describe('R8 wood-hawkers: the hawker over the hummocks, the canopy line', () =>
       if (f > jumpUntil + 1 && p.grounded && (p.wallDir === 1 || !ahead)) jumpUntil = f + 14;
       s.run(R | (f < jumpUntil ? J : 0));
     }
-    // Measured: lit at 84, noticed at 93, hit at 165, on hummock B at 194.
-    expect(onB - lit).toBeGreaterThanOrEqual(90);
+    // Measured: lit at 84, noticed at 93, on hummock B at 168. (Since the hawker strikes instead of drifting
+    // (feel review r2 #5) its strike misses this hopper, which no longer loses time to a hit.)
+    expect(onB - lit).toBeGreaterThanOrEqual(80);
     expect(has(s.events, 'enemyNotice')).toBe(true);
     expect(has(s.events, 'enemyDive')).toBe(true);
   });

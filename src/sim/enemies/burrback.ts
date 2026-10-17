@@ -206,6 +206,17 @@ function walk(e: EnemyState, info: StepInfo): void {
     const p = state.player;
     const level = Math.abs(p.y + p.h - (e.y + e.h)) <= t.provokedPx;
     const gap = e.facing > 0 ? p.x - (e.x + e.w) : e.x - (p.x + p.w);
+    // Too close to brace at (or she is inside it): it backs away from her, turned to face her.
+    const dxc = p.x + p.w / 2 - (e.x + e.w / 2);
+    if (level && t.strikeMinPx > 0 && Math.abs(dxc) - (p.w + e.w) / 2 < t.strikeMinPx) {
+      const back = dxc < 0 ? 1 : -1;
+      e.facing = back > 0 ? -1 : 1;
+      e.vx = back * t.speed;
+      let n = Math.max(1, Math.round(t.speed));
+      while (n-- > 0 && nudge(e, scene, back, 0) === 0) e.stride += 1;
+      e.rx = 0;
+      return;
+    }
     if (level && gap > -p.w && gap <= t.huntStopPx) {
       e.vx = 0;
       e.rx = 0;
@@ -333,6 +344,15 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
   const front = inFront(e, info, reach, e.facing, over);
   const round = (provoked || e.stirred > 0) && !front && inFront(e, info, reach, -e.facing, over);
   if (!round && !front) return false;
+  // (Too close to answer: the old burrback backs off first (`walk`), then braces from `strikeMinPx`.)
+  if (B.strikeMinPx > 0) {
+    const pc = p.x + p.w / 2;
+    const gap = Math.abs(pc - (e.x + e.w / 2)) - (p.w + e.w) / 2;
+    // (With no room behind it to back into, it braces where it is.)
+    span(e, info.scene, B);
+    const behind = pc < e.x + e.w / 2 ? MAX_X - (e.x + e.w) : e.x - MIN_X;
+    if (gap < B.strikeMinPx && behind > 8) return false;
+  }
   if (burrback.harmless?.(e, info)) return false;
   if (lowCeiling(info.scene, p.x, p.y, p.w, p.h, B.strikeHeadroomPx)) return false;
   span(e, info.scene, B);
@@ -352,7 +372,7 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
     });
   }
   e.chargeLeft = frames(B.chargePx, 1);
-  const n = frames(B.windupFrames, 1);
+  const n = frames(e.span > 0 ? e.span : B.windupFrames, 1);
   // (Curled, it uncurls into the brace.)
   e.tuck = 0;
   // (A fresh exchange: the old burrback's feint comes first, one pogo a brace, its shell shut.)
@@ -392,8 +412,16 @@ function spend(
 ): void {
   const B = rowOf(info.t, e);
   const tired = e.rams > 0;
+  // (A ram that hit her is no opening: the old burrback stops, turns and goes back to brace.)
+  const touch = cause === 'touch' && B.touchRecoverFrames > 0;
   const n = frames(
-    cause === 'wall' ? B.recoverWallFrames : tired ? B.recoverTiredFrames : B.recoverFrames,
+    touch
+      ? B.touchRecoverFrames
+      : cause === 'wall'
+        ? B.recoverWallFrames
+        : tired
+          ? B.recoverTiredFrames
+          : B.recoverFrames,
     1,
   );
   const cooldown = frames(B.strikeCooldown);
@@ -402,7 +430,8 @@ function spend(
   e.rx = 0;
   e.chargeLeft = 0;
   // (The old burrback: winded, its shell is open (`openWinded`: after any ram; else only a wall stun).)
-  e.stunned = B.pogoShell && (cause === 'wall' || B.openWinded);
+  // Only a ram that missed her or met a wall lays it open: the window is earned (feel review r2).
+  e.stunned = B.pogoShell && !touch && (cause === 'wall' || B.openWinded);
   e.taken = 0;
   e.strikeCd = n + cooldown;
   e.rams++;
@@ -538,7 +567,8 @@ function dodgeDrop(e: EnemyState, info: StepInfo): boolean {
   const canL = toL >= lo;
   const canR = toR + e.w <= hi;
   let side = 0;
-  if (canL && canR) side = e.x - toL <= toR - e.x ? -1 : 1;
+  // (Both ways open: away from where she is heading, so it never runs to where she will land; else the shorter.)
+  if (canL && canR) side = Math.abs(p.vx) > 1 ? (p.vx > 0 ? -1 : 1) : e.x - toL <= toR - e.x ? -1 : 1;
   else if (canL) side = -1;
   else if (canR) side = 1;
   e.knockVx = 0;
@@ -644,6 +674,8 @@ export const burrback: KindRules = {
     e.radius = Math.max(0, spawn.radius ?? 0);
     e.fenced = spawn.fenced === true && e.radius > 0;
     e.walkLeft = nextWalk(e, rowOf(t, e));
+    // (A placement may give its brace a longer tell: R4's teaching one. Kept in `span`, unused by crawlers.)
+    e.span = Math.max(0, spawn.windup ?? 0);
     // (The old burrback sleeps in its den until she comes down to it.)
     if (rowOf(t, e).asleep) {
       e.mode = 'sleep';
@@ -703,6 +735,11 @@ export const burrback: KindRules = {
     // Waking: the rim to its hunt colour, uncurling. Harmless; it never strikes on her landing.
     if (e.mode === 'wake') {
       e.vx = 0;
+      // (Getting up, the old burrback shoulders her out of its body: she is never inside it when it is live.)
+      if (B.risePush > 0 && p.x < e.x + e.w && e.x < p.x + p.w && p.y < e.y + e.h && e.y < p.y + p.h) {
+        const away = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
+        if (p.kickX * away < B.risePush) p.kickX = away * B.risePush;
+      }
       if (--e.timer <= 0) setMode(e, 'walk', 0);
       return false;
     }
@@ -1000,7 +1037,10 @@ export const burrback: KindRules = {
     const away = dir > 0 ? -1 : 1;
     // Its ram hit her: it bounces back off her, turns away and stands spent.
     // Its next ram may not reach her sooner than `rehitGapFrames` after her safety has run out.
-    const rehit = frames(info.t.health.invulnFrames + B.rehitGapFrames) - frames(B.windupFrames, 1) - 1;
+    const rehit =
+      frames(info.t.health.invulnFrames + B.rehitGapFrames) -
+      frames(e.span > 0 ? e.span : B.windupFrames, 1) -
+      1;
     if (e.mode === 'windup' || e.mode === 'charge') {
       e.facing = away;
       spend(e, info, 'touch');
@@ -1065,6 +1105,9 @@ export const burrback: KindRules = {
     const top = e.y + (e.h - H) + sy * (1 - Math.sqrt(1 - u * u));
     return p.y + p.h > top;
   },
+
+  /** Her down slash on its back is always a pogo (the framework's stomp). */
+  stompable: () => true,
 
   /** The old burrback's braced shell takes a pogo without a stagger: it rams on under her. */
   tough: (e, dir, t) => rowOf(t, e).pogoShell && e.braced && dir === 'down',

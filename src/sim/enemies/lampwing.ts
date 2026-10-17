@@ -285,6 +285,11 @@ function startDive(e: EnemyState, info: StepInfo): void {
   let ty = p.y + p.h / 2;
   const span = (x: number, y: number): number => {
     const d = Math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy));
+    // A strike (the hawker): a short pull-back, then fast and straight (`strikeSpeed`, at most `strikeMaxFrames`).
+    if (t.strikeSpeed > 0) {
+      const m = Math.max(1, Math.min(frames(t.strikeMaxFrames, 1), Math.ceil(d / t.strikeSpeed)));
+      return frames(t.diveWindupFrames) + m;
+    }
     const lo = frames(t.diveMinFrames, 1);
     const hi = Math.max(lo, frames(t.diveMaxFrames, 1));
     return Math.max(lo, Math.min(hi, Math.round(d / Math.max(0.1, t.diveSpeed))));
@@ -342,7 +347,30 @@ function startDive(e: EnemyState, info: StepInfo): void {
 /** Where the dive's arc is after `k` of its frames: a curve from its start that bends down first, eased. */
 let arcX = 0;
 let arcY = 0;
-function arc(e: EnemyState, k: number, bend: number): void {
+function arc(e: EnemyState, k: number, bend: number, t: L): void {
+  if (t.strikeSpeed > 0) {
+    // The strike: `diveWindupFrames` pulling back along the line (wings folding), then straight at the
+    // committed point at an even speed.
+    const w = frames(t.diveWindupFrames);
+    let ux = e.targetX - e.fromX;
+    let uy = e.targetY - e.fromY;
+    const d = Math.sqrt(ux * ux + uy * uy);
+    ux = d > 0 ? ux / d : 0;
+    uy = d > 0 ? uy / d : 1;
+    const bx = e.fromX - ux * t.diveBackPx;
+    const by = e.fromY - uy * t.diveBackPx;
+    if (k <= w) {
+      const q = w > 0 ? k / w : 1;
+      const s = q * q * (3 - 2 * q);
+      arcX = e.fromX + (bx - e.fromX) * s;
+      arcY = e.fromY + (by - e.fromY) * s;
+      return;
+    }
+    const q = Math.min(1, (k - w) / Math.max(1, e.span - w));
+    arcX = bx + (e.targetX - bx) * q;
+    arcY = by + (e.targetY - by) * q;
+    return;
+  }
   const u = Math.max(0, Math.min(1, k / Math.max(1, e.span)));
   const s = u * u * (3 - 2 * u);
   // The bend point: under (or over) its start, at her height, a little toward her.
@@ -665,7 +693,7 @@ export const lampwing: KindRules = {
     } else if (e.mode === 'dive') {
       // Committed: along the arc to where she was, whatever she does now.
       const k = e.span - e.timer + 1;
-      arc(e, k, Math.max(0, Math.min(1, t.diveBend)));
+      arc(e, k, Math.max(0, Math.min(1, t.diveBend)), t);
       const cx = e.x + e.w / 2 + e.rx;
       const cy = e.y + e.h / 2 + e.ry;
       e.vx = arcX - cx;

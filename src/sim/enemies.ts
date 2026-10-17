@@ -350,11 +350,56 @@ export function updateEnemies(
         p.y < e.y + e.h &&
         e.y < p.y + p.h &&
         (K.touches?.(e, p, t) ?? true)
-      )
+      ) {
+        // Coming down on its back in a down slash is always a pogo, never a hurt (first-timer r2: the
+        // controls say ↓+C, and a slash pressed a beat early used to land her on it).
+        if (K.stompable?.(e) && stomp(e, p, t, events)) continue;
+        // (Rising off its back, her feet still in its top band (a bounce's first frames): no hurt either.)
+        if (K.stompable?.(e) && p.vy < 0 && p.y + p.h <= e.y + t.enemies.stompPx) continue;
         touch = i;
+      }
     }
   }
   return touch;
+}
+
+/**
+ * She comes down on its back (falling, her feet within `enemies.stompPx` of its top) while a down slash
+ * of hers is under way: she bounces as off a pogo (`enemyBlock` slash `down`), nothing is taken from either.
+ */
+function stomp(e: EnemyState, p: PlayerState, t: Tuning, events: SimEvent[]): boolean {
+  if (p.attack !== 'down' || p.grounded || p.vy < 0 || p.mode !== 'normal') return false;
+  // (Where her feet were at the start of this step: a fast fall moves her 20-30 px a frame.)
+  if (p.y + p.h - Math.max(0, p.vy) > e.y + t.enemies.stompPx) return false;
+  p.vy = -t.attack.pogoSpeed;
+  p.fromJump = false;
+  p.cut = false;
+  p.sustain = 0;
+  p.hangUsed = 0;
+  p.hitstop = Math.max(p.hitstop, frames(t.enemies.pogoHitstopFrames));
+  if (p.gliding) {
+    p.gliding = false;
+    events.push({ type: 'glideEnd', x: p.x + p.w / 2, y: p.y + p.h, reason: 'fastfall' });
+  }
+  e.hitBy = p.attackSeq;
+  events.push({
+    type: 'enemyBlock',
+    id: e.id,
+    kind: e.kind,
+    x: e.x + e.w / 2,
+    y: e.y + e.h / 2,
+    hitX: p.x + p.w / 2,
+    hitY: e.y,
+    facing: e.facing,
+    slash: 'down',
+    dir: p.attackFacing < 0 ? -1 : 1,
+    step: p.attackStep,
+    hitstop: frames(t.enemies.pogoHitstopFrames),
+    recoil: 0,
+    mode: e.mode,
+    frames: e.timer,
+  });
+  return true;
 }
 
 /** Its lamp went out: it gives up its own way (`KindRules.disperse`), `enemyDisperse`. */
