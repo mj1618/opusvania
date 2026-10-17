@@ -24,6 +24,7 @@ sim doesn't have yet"). Sim: `src/sim/kit.ts` (+ `kit-data.ts` types, `kit-event
 | `hollows` | `[{id, x, y, w, h, upgrade}]` | moonlit hollow: body centre inside grants `upgrade` (an id of `UPGRADE_IDS`) |
 | world.json `areas` | `[{id, rooms: [placed ids]}]` | the areas a moth-stone can draw; each room in one area |
 | `lures[].after` | flag | the lure burns only once the flag is set (out before, lit the step it appears, out for good once snuffed: the firefly's glow-cap W-ff after the glimpse) |
+| `oneWays[].noDrop` | bool | down + jump does not drop through it (still passable from below): the hub's root mesh over R10's climb-out, whose drop-through skipped the pit (sim: `noDropUnder` in physics/aabb.ts, checked in `tryJump`) |
 | `enemies[].sets` | flag | set when the creature dies (`flagSet` by its id): a flag gate opens behind it (the old burrback's root gate). The world check cannot see it: leave it out of `routes[].flags` |
 | `reform` | `{x, y}` | where a fade re-forms her in this room while no moon patch is saved (no light either), instead of her last safe ground beside whatever faded her (`src/sim/index.ts`) |
 Ids share the room's id space (`two things are called`). Bark / gate must not overlap a solid (they ARE the solid);

@@ -88,6 +88,17 @@ export function oneWayUnder(scene: Scene, x: number, y: number, w: number, h: nu
   return false;
 }
 
+/** True if a one-way under the box (as `oneWayUnder`) refuses drop-through (`noDrop`). */
+export function noDropUnder(scene: Scene, x: number, y: number, w: number, h: number): boolean {
+  const bottom = y + h;
+  const ows = scene.oneWays;
+  for (let i = 0; i < ows.length; i++) {
+    const o = ows[i];
+    if (o?.noDrop && o.y === bottom && x < o.x + o.w && o.x < x + w) return true;
+  }
+  return false;
+}
+
 /** What an Actor collides with. The player's collider knows about one-ways and drop-through. */
 export interface Collider {
   /** Would moving the body 1 px along the axis in `dir` be blocked? */

@@ -102,7 +102,9 @@ timings reach Z, every one a catch; walk-off glide and jump-glides all cross. Th
 - **Caps (batch 2):** a cap on the walk line bounces everyone who steps on it (walking onto it counts as landing), and
   a bounce under a platform bonks its underside: put a cap against the next step's *face* (R14), or as a bracket off
   the walk line (the hub's B1 over the W door: the door's walk-in passes under it). The hub's grate is now a one-way
-  root mesh (an opened shortcut is a hole forever); the climb-out lands on it.
+  root mesh (an opened shortcut is a hole forever); the climb-out lands on it. It is `noDrop`: down + jump on a
+  plain one-way drops through, and here that was a sequence break to glade 2 past the old burrback (bots, eff24e3).
+  Tatter now waits under the root shelf (800, 3136) facing west, gazing at B1 (staging's `want`).
 - **Bots and the loop:** the way into R10 is now R9's bark floor (a down cut). The playtest bots don't down-cut floor
   panels, so the region run stops in R9 (lost) until the harness learns it (playtest-harness.md).
 - A lure with `after` burns for the one step of a room entry before the kit puts it out (createLures lights all):

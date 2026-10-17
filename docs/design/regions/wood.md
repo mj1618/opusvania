@@ -642,10 +642,11 @@ y 10048 = local 2880. W-ff burns only once `wood-firefly-glimpse` is set (lure `
 - **Round 1, batch 2: the cap climb to R14.** Bracket caps on the west wall: **B1** (0–192, top 2656, big) over the W
   door, a jump from the root shelf (the door's walk-in passes under it, so the main path is never bounced), **B2**
   (448–704, 2048), **B3** (0–256, 1440), then up through a one-way root (0–384, y 832) to **NW** (576–832), R14's
-  door. Tatter at P3 looks up at it (its want; staging's `marks.tatter.want` still points at the shelf's end, 930,
-  2870: move it to B1, ~96, 2656). **The root mesh**: the grate became a one-way root mesh over the climb (no hole
+  door. Tatter looks up at B1 (its want, `marks.tatter.want` (96, 2656)). **The root mesh**: the grate became a one-way root mesh over the climb (no hole
   under the up-shaft: the curious first-timer fell into the well jumping across it, and climbing out landed below the
-  floor); the climb-out kicks up through it and lands on it. A **root lip** (640–672, 48 tall) before the well: going
+  floor); the climb-out kicks up through it and lands on it; it is `noDrop` (down + jump would drop through it to glade 2
+  past the old burrback: the bots found it). **Tatter** waits under the root shelf (800, 3136) facing west, looking up
+  at B1: stuck, wanting up. A **root lip** (640–672, 48 tall) before the well: going
   down is a choice, not a short jump's accident.
 - **Round 1:** camera zones **rest** (fit over the floor: the whole hub, bounds 0–3840 × 380–3248) and **look-up**
   (the shaft framed tall, bounds 2176–3328 × 300–3248). **The well lid**: a flag gate over the well (384–640, y

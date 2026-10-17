@@ -861,11 +861,27 @@ describe('R7 wood-hollow: the hub', () => {
     expect(s.feet().x).toBeGreaterThan(3008);
   });
 
-  it('the root mesh over the climb holds from above (no hole under the up-shaft); the climb-out comes up through it and lands', () => {
+  it('the root mesh over the climb holds from above and refuses drop-through (noDrop); the climb-out comes up through it and lands', () => {
     const top = play('wood-hollow', ['glide']);
     top.g.teleport(2750, 3136);
     top.run(0, 60);
     expect(top.feet().y).toBe(3136);
+    // No sequence break (eff24e3): down + jump on the mesh does not drop her through to R10's climb-out and
+    // glade 2 (wall jump without the old burrback). Every spot on it, pressed afresh or held.
+    for (let x = 2580; x <= 2924; x += 24) {
+      const d = play('wood-hollow', ['glide']);
+      d.g.teleport(x, 3136);
+      d.run(0, 5);
+      const ev = d.run(D, 3).concat(d.run(D | J, 10), d.run(D, 40), d.run(0, 20));
+      expect(has(ev, 'dropThrough'), `x ${x}`).toBe(false);
+      expect(d.g.state.room, `x ${x}`).toBe('wood-hollow');
+      expect(d.feet().y, `x ${x}`).toBeLessThanOrEqual(3136);
+    }
+    // (A plain one-way still drops: the high root by NW.)
+    const o = play('wood-hollow', ['glide']);
+    o.g.teleport(200, 832);
+    o.run(0, 5);
+    expect(has(o.run(D | J, 10), 'dropThrough')).toBe(true);
     // A jump across the shaft's foot lands on the mesh, not in the well.
     top.g.teleport(2400, 3136);
     top.run(R | J, 20);

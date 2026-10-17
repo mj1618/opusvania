@@ -60,7 +60,9 @@ const SceneSchema = z
         kick: z.union([z.boolean(), z.literal('east'), z.literal('west')]).optional(),
       }),
     ),
-    oneWays: z.array(z.object({ tag: TAG, x: int, y: int, w: int.positive() })),
+    oneWays: z.array(
+      z.object({ tag: TAG, x: int, y: int, w: int.positive(), noDrop: z.boolean().optional() }),
+    ),
     pickups: z
       .array(
         z
