@@ -42,13 +42,21 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
   - Starts when: airborne, jump held, Down not held, `vy > minVy` (1), and no buffered press is still
     waiting to become a jump (`jumpPending`: double jump left, coyote, wall in range, or ground within
     buffer reach). So a press is always the jump first; the hold after it is the glide.
-  - **Held-jump rule**: a hold that launched a ground-type jump (ground/coyote/buffered/dash jump:
-    `carried`) only glides once she is `carriedDropPx` (16) below the launch height. Flat jumps and jumps
+  - **Held-jump rule**: a hold that launched a ground-type jump (ground/buffered/dash jump; **not coyote**, since
+    2026-10-17: off a ledge there is a drop under it, so a held coyote jump glides from its apex: `carried`) only
+    glides once she is `carriedDropPx` (16) below the launch height. Flat jumps and jumps
     up to a platform are bit-for-bit what they were (tested against `assists.glide = false`); jumping off
     a ledge with jump held opens the wings as she drops past the ledge, with the double jump still in hand.
     Plain "any held jump glides" doubled the airtime of every held hop (49 → ~100 frames). Landing clears
     `carried`, so a jump still held when she walks off an edge glides at once. Double and wall jumps are
     never carried: hold and she glides from the apex.
+  - **A late press off an edge is the walk-off glide** (curious first-timer, 2026-10-17: "pressing jump as I left
+    the edge counted as a jump", into R6's thorn branch): with the wings and no double jump left, only the first
+    `glide.coyoteFrames` 3 of the 6 coyote frames give a coyote jump; a press later in the window (held) opens the
+    wings at once. With a double jump in hand the window is whole (a press in the air is a jump anyway). Left as it
+    was: a held ground jump opens the wings only below its launch (the same first-timer, in the glade: wings 52 frames
+    after the press, then let go 8 later). An apex rule over a drop (no ground within 400 px) was tried: it took R6's
+    W5 catch off the jump-glide line and moved R7's canopy line, so that is a level call, not a sim fix.
   - Fall: above `fallSpeed` (4.8 = 22.5% of max fall) each frame sheds `max(catchMin, catchRate x excess)`:
     from max fall `21.3 → 16.4 12.9 10.5 8.8 7.6 6.8 6.2 5.8 5.4 5.0 4.8` (11 frames, 114 px lost).
     A linear or instant clamp read as hitting a shelf. Below it (just after an apex) `sinkAccel` 0.35.

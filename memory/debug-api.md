@@ -35,8 +35,8 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   for a teleport and started the swarm late, specks on the moon before the hatch). A `teleport` instead skips the
   hatching on purpose (no fade, no hatch beats, the swarm's late stream): use it for stills of a place, not of the
   opening. Recipe: `npm run clip -- --setup "g.load()" --pre 0 --wide --script "<presses and run>"`.
-- The hatching (`wood-hatch` starts shut in the cocoon, `state().hatch`): three presses of any button after the
-  fade-up (150 frames), or wait 720 frames. **A `teleport` ends it silently**, so the capture tools just teleport.
+- The hatching (`wood-hatch` starts shut in the cocoon, `state().hatch`): three presses of any button or direction
+  (counted from frame 1; it breaks no sooner than the fade-up's 150 frames), or wait 720 frames. **A `teleport` ends it silently**, so the capture tools just teleport.
 - `state()` the sim state (`src/sim/state.ts`); `hash()`; `info()` (mode, frame, clock, `view` = the logical view `{w, h, left, top, scale}` and `safe`, canvas size, GPU);
   `scene()` the scene data; `events()` events of the last `step()` call, `events(n)` of the last n frames
   (each with `f`, the frame).
