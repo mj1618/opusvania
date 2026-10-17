@@ -110,7 +110,19 @@ const SH_SEAM: Shade = {
   alpha: 0.7,
 };
 const SH_THREAD: Shade = { c0: SILK, c1: SILK_DIM, rim: 0.4, cool: 0, form: 0, band: 0.5, alpha: 0.75 };
-const SH_EDGE: Shade = { c0: SILK, c1: SILK_DIM, rim: 0.6, cool: 0, form: 0, band: 0.5, alpha: 0.55 };
+/** Silk with a per-sample tone (`silkTone`). */
+const SH_SILK: Shade = { c0: SILK_DIM, c1: SILK_DIM, rim: 0.2, cool: 0, form: 0, band: 0.5, alpha: 0.8 };
+
+/** Silk catches the moon only in short segments that slide slowly along it: sample `i` at `d` px along. */
+function silkTone(p: Painter, i: number, d: number, clock: number, ph: number): void {
+  const g = Math.sin(d * 0.11 + clock * 0.9 + ph);
+  const lit = sat((g - 0.55) * 2.6);
+  const k = 0.45 + 0.55 * lit;
+  p.pc[i * 3] = lerp(SILK_DIM[0] * 0.55, SILK[0], lit) * k;
+  p.pc[i * 3 + 1] = lerp(SILK_DIM[1] * 0.55, SILK[1], lit) * k;
+  p.pc[i * 3 + 2] = lerp(SILK_DIM[2] * 0.55, SILK[2], lit) * k;
+}
+
 const SH_WISP: Shade = { c0: SILK_DIM, c1: SILK_DIM, rim: 0.5, cool: 0, form: 0, band: 0.5, alpha: 0.3 };
 
 /** Body samples along the spine. */
@@ -262,7 +274,7 @@ class Pod {
     this.halves = [!(k === 'torn' && lostSide === 0), !(k === 'torn' && lostSide === 1)];
     const g = k === 'peeled' ? 0.2 : k === 'bell' ? 0.1 : k === 'torn' ? 0.16 : 0.04;
     this.gape = [-(g + 0.12 * h(6)), g + 0.12 * h(7)];
-    const nThreads = this.hers ? 3 : 2 + Math.floor(h(8) * 2.5);
+    const nThreads = this.hers ? 3 : 1 + Math.floor(h(8) * 2.2);
     const crooked = !this.hers && (k === 'torn' || h(9) < 0.2);
     this.lean0 = crooked ? (h(10) < 0.5 ? -1 : 1) * (0.14 + 0.1 * h(11)) : (h(12) - 0.5) * 0.06;
     this.threads = [];
@@ -616,7 +628,7 @@ export class CocoonRow {
     if (hers && this.broke < COCOON.push && this.broke + dt >= COCOON.push) hers.push();
     // Her climb hauls on its silk: the empty husk jerks with each pull and with the scramble off it.
     if (hers)
-      for (const at of [BIRTH.pulls[0][0], BIRTH.pulls[1][0], BIRTH.hop[0]])
+      for (const at of [BIRTH.silk[0][0], BIRTH.silk[1][0], BIRTH.bark[0][0]])
         if (this.broke < at && this.broke + dt >= at) {
           hers.swing.v += 0.9;
           hers.bend.v -= 4;
@@ -872,24 +884,40 @@ export class CocoonRow {
     for (const s of this.wisps) if (s.on) this.drawStrand(p, s, SH_WISP, 0.32);
   }
 
+  /**
+   * Silk (round 3, review: "ruler-straight white lines"): fine, bowed by its own sag and the wind, dark
+   * along most of its length and catching the moon only in short segments that slide along it.
+   */
   private drawThreads(p: Painter, pod: Pod, clock: number): void {
     const shake = pod.shake;
-    for (const t of pod.threads) {
+    const w = wind(pod.x, clock - 0.25, pod.phase + 0.5);
+    for (let k = 0; k < pod.threads.length; k++) {
+      const t = pod.threads[k]!;
       if (pod.split && pod.hers && t.snaps) continue;
       const x0 = pod.x + t.ax;
       const y0 = pod.y - 1.5;
       const x1 = pod.tipX + t.tx;
       const y1 = pod.tipY + 1;
-      const n = 5;
+      const dx = x1 - x0;
+      const dy = y1 - y0;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+      // Bowed sideways: its own lie, the wind, and the swing (the silk lags the cocoon).
+      const bow = (t.sag * 2.2 + w * 3.5 - pod.swing.v * 6) * (k % 2 === 0 ? 1 : 0.8);
+      const n = 9;
       for (let i = 0; i < n; i++) {
         const u = i / (n - 1);
-        const sag = t.sag * Math.sin(Math.PI * u);
+        const b =
+          bow * Math.sin(Math.PI * u) +
+          0.6 * Math.sin(Math.PI * 2 * u + clock * 1.3 + k) * Math.sin(Math.PI * u);
         const sh = shake * 1.2 * Math.sin(clock * 40 + i * 2 + t.ax) * Math.sin(Math.PI * u);
-        p.px[i] = lerp(x0, x1, u) + sh;
-        p.py[i] = lerp(y0, y1, u) + sag;
-        p.pw[i] = lerp(0.55, 0.42, u);
+        p.px[i] = x0 + dx * u + nx * (b + sh);
+        p.py[i] = y0 + dy * u + ny * (b + sh);
+        p.pw[i] = 0.34;
+        silkTone(p, i, u * len, clock, pod.phase * 7 + k * 2.3);
       }
-      p.ribbon(n, SH_THREAD, false, false);
+      p.ribbon(n, SH_SILK, false, false, true);
     }
   }
 
@@ -967,9 +995,10 @@ export class CocoonRow {
         for (let i = 0; i < sm.n; i++) {
           p.px[i] = sm.pts[i * 2]!;
           p.py[i] = sm.pts[i * 2 + 1]!;
-          p.pw[i] = 0.55 * Math.sin((Math.PI * (i + 0.5)) / sm.n);
+          p.pw[i] = 0.5 * Math.sin((Math.PI * (i + 0.5)) / sm.n);
+          silkTone(p, i, i * 5, 0, pod.phase * 9 + side * 2);
         }
-        p.ribbon(sm.n, SH_EDGE, false, false);
+        p.ribbon(sm.n, SH_SILK, false, false, true);
       }
     }
   }
@@ -979,15 +1008,16 @@ export class CocoonRow {
     const len = 10 + 14 * hash1(pod.seed * 3 + 1);
     const x0 = pod.sx[N - 1]!;
     const y0 = pod.sy[N - 1]!;
-    const k = 5;
+    const k = 6;
     const w = wind(pod.x, clock - 0.4, pod.phase + 0.2);
     for (let i = 0; i < k; i++) {
       const u = i / (k - 1);
       p.px[i] = x0 + (w * 6 + 2 * Math.sin(clock * 1.9 + pod.phase * 6 + u * 2)) * u * u;
       p.py[i] = y0 + len * u;
-      p.pw[i] = 0.42 * (1 - 0.6 * u);
+      p.pw[i] = 0.32 * (1 - 0.5 * u);
+      silkTone(p, i, u * len, clock, pod.phase * 5 + 1.7);
     }
-    p.ribbon(k, SH_WISP, false, false);
+    p.ribbon(k, SH_SILK, false, false, true);
   }
 
   private drawStrand(p: Painter, s: Strand, sh: Shade, w: number): void {

@@ -1044,13 +1044,14 @@ describe('vesper acting at the lanterns and the heart', () => {
     }
     const reach = (w: 0 | 1): number => {
       let m = 0;
+      // (the mean of its strands: a torn wing keeps its leading edge and loses the rest unevenly)
       for (const c of sec.wings[w].strands) {
         const d = Math.hypot((c.rx[c.n - 1] ?? 0) - (c.rx[0] ?? 0), (c.ry[c.n - 1] ?? 0) - (c.ry[0] ?? 0));
         expect(Number.isFinite(d)).toBe(true);
-        m = Math.max(m, d);
+        m += d / sec.wings[w].strands.length;
       }
       return m;
     };
-    expect(reach(1)).toBeLessThan(reach(0) * 0.85);
+    expect(reach(1)).toBeLessThan(reach(0) * 0.8);
   });
 });

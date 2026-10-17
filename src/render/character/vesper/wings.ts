@@ -114,7 +114,7 @@ const ANT_ACT = { straight: -0.07, past: 0.3, arch: 0.05, sway: 0.018, swayLifte
  * and the wrong flutter of what is left (rad per segment at the tip, its rate in Hz).
  */
 const TEAR = {
-  len: [0.3, 0.62, 0.4, 0.66, 0.52],
+  len: [0.0, 0.58, 0.12, 0.72, 0.4],
   droop: [-10, -2, 8, 17, 26],
   flutter: 0.11,
   hz: 7.3,

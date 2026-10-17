@@ -60,6 +60,8 @@ const SLASH_LOOK = {
  */
 /** Just born and her light not yet on, she is this much darker (`Painter.dimK`): damp, a dark thing out of a husk. */
 const BIRTH_DARK = 0.45;
+/** The limb's painted underside runs this far above the cocoons' silk ties (scene/lib/pf-branch.ts `cocoonSilk`). */
+const BIRTH_UNDER = 16;
 
 const EDGE = { px: 1.5, color: [0.035, 0.022, 0.055] as const, alpha: 0.95, hidden: false };
 
@@ -628,33 +630,41 @@ export class VesperCharacter implements CharacterSkin {
     };
     let fy = walk;
     let fx = 1;
-    if (hl.inside || t < B.hop[1]) {
-      const f0 = hl.botY - 8;
-      const fh = hl.tipY + 60;
-      const fp = Math.min(fh, hl.y + 48);
-      if (hl.inside || t < B.emerge[0]) fy = f0;
-      else if (t < B.pulls[0][0]) fy = f0 + (fh - f0) * ease((t - B.emerge[0]) / (B.emerge[1] - B.emerge[0]));
-      else if (t < B.hop[0]) {
-        fy = fh;
-        for (let i = 0; i < B.pulls.length; i++) {
-          const [a0, a1] = B.pulls[i]!;
-          const from = fh + ((fp - fh) * i) / B.pulls.length;
-          const to = fh + ((fp - fh) * (i + 1)) / B.pulls.length;
-          if (t >= a0) {
-            const m = a0 + 0.6 * (a1 - a0);
-            // The haul, then a small sag as the hands let go for the next grip.
-            fy =
-              from +
-              (to - from) * ease((t - a0) / (m - a0)) +
-              3 * Math.sin(Math.PI * sat((t - m) / (a1 - m)));
-          }
-        }
-      } else {
-        const u = (t - B.hop[0]) / (B.hop[1] - B.hop[0]);
-        const e = 1 - (1 - sat(u)) ** 2;
-        fy = fp + (walk - fp) * e - 16 * Math.sin(Math.PI * sat(u));
+    // Feet heights along the way: curled in the husk, hanging under its tip, hands at the limb's
+    // underside (the painted underside runs `BIRTH_UNDER` above the silk's tie), hands at the lip.
+    const f0 = hl.botY - 8;
+    const fh = hl.tipY + 60;
+    const fl = walk + 50;
+    const fu = Math.max(fl, Math.min(fh, hl.y - BIRTH_UNDER + 62));
+    /** Hauls from `a` to `b` over [t0, t1]: most of the rise in the first part, a small sag as the grip changes. */
+    const haul = (a: number, b: number, t0: number, t1: number, k: number): number => {
+      const m = t0 + k * (t1 - t0);
+      return a + (b - a) * ease((t - t0) / (m - t0)) + 2.5 * Math.sin(Math.PI * sat((t - m) / (t1 - m)));
+    };
+    const steps = (from: number, to: number, list: readonly (readonly number[])[], k: number): number => {
+      let y = from;
+      for (let i = 0; i < list.length; i++) {
+        const [a0, a1] = list[i]!;
+        if (t < a0!) break;
+        const s0 = from + ((to - from) * i) / list.length;
+        const s1 = from + ((to - from) * (i + 1)) / list.length;
+        y = t >= a1! ? s1 : haul(s0, s1, a0!, a1!, k);
       }
-      fx = hl.inside ? 1 : 1 - ease((t - B.hop[0]) / (B.hop[1] - B.hop[0]));
+      return y;
+    };
+    if (hl.inside || t < B.over[1]) {
+      if (hl.inside || t < B.emerge[0]) fy = f0;
+      else if (t < B.silk[0]![0]!)
+        fy = f0 + (fh - f0) * ease((t - B.emerge[0]) / (B.emerge[1] - B.emerge[0]));
+      else if (t < B.bark[0]![0]!) fy = steps(fh, fu, B.silk, 0.6);
+      else if (t < B.hook[0]) fy = steps(fu, fl, B.bark, 0.7);
+      else if (t < B.over[0]) fy = fl + 3 * Math.sin((Math.PI * (t - B.hook[0])) / (B.hook[1] - B.hook[0]));
+      else {
+        const u = (t - B.over[0]) / (B.over[1] - B.over[0]);
+        fy = fl + (walk - fl) * (1 - (1 - sat(u)) ** 2);
+      }
+      // On the silk (under her cocoon's tie) and the bark right above it; over the lip she comes to her own place.
+      fx = hl.inside || t < B.over[0] ? 1 : 1 - ease((t - B.over[0]) / (B.over[1] - B.over[0]));
     } else fx = 0;
     const dy = (fy - walk) * this.dropK;
     const dx = (hl.x - p.cx) * fx * this.dropK;

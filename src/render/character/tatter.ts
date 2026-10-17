@@ -35,9 +35,12 @@ export const TATTER = {
   /** How torn the near wing is (0..1), and how far it is held off its back (degrees: it cannot fold it). */
   tear: 1,
   hold: 0,
-  /** The torn wing hangs open, splayed behind it (of the glide's spread), drooped toward the branch (degrees). */
-  splay: 0.5,
-  droop: 62,
+  /**
+   * The torn wing is held half open at a wrong angle (of the glide's spread), raised off its back
+   * (degrees, negative = up) so its bitten outline shows against the pale stage over the branch.
+   */
+  splay: 0.9,
+  droop: 25,
   /** Its try at the air: a hop off the branch (px) at the wings' peak, and how hard it lands back (it crumples). */
   hop: 16,
   /** Its snapped antenna's length (of a whole one). */
@@ -150,7 +153,8 @@ export class Tatter {
       stream: 0,
       eyeLit: TATTER.eyes,
       unarmed: true,
-      tips: this.torn === 1 ? [0, 1] : [1, 0],
+      // (no lantern balls: its light is out)
+      tips: [0, 0],
     };
   }
 
@@ -266,6 +270,7 @@ export class Tatter {
     rig.perch = Math.min(1, rig.perch + crumple);
     // The torn wing hangs splayed and limp, twitching now and then; in the try it lifts only a little.
     this.sec.hold[this.torn] = TATTER.hold;
+    this.sec.splay[this.torn] = TATTER.splay;
     this.sec.droop[this.torn] = TATTER.droop * (1 + 0.06 * noise1(clock * 0.7, 181)) * (1 - 0.45 * tw);
     rig.update(dt, clock, this.me, []);
     const fresh = !this.started;

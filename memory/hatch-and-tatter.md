@@ -1,4 +1,4 @@
-# The hatch, the cocoon row and Tatter (render, `src/render/character/`; rounds 1-2, 2026-10-17)
+# The hatch, the cocoon row and Tatter (render, `src/render/character/`; rounds 1-3, 2026-10-17)
 
 Scene 1's acting (docs/design/scenes/01-hatching-branch.md). Sim side: memory/rooms.md (`state.hatch`, `hatchStir`, `hatch`).
 
@@ -34,37 +34,51 @@ Scene 1's acting (docs/design/scenes/01-hatching-branch.md). Sim side: memory/ro
   thing: the moon and her eyes are). Her pulls and the scramble jerk the empty husk (`BIRTH.pulls`, `hop`).
 - **Half rotation gotcha**: y is down, so a half turns by `-ang`: a negative `halfL` swings the left half OUT.
 
-## The birth (vesper `rig.ts` `BIRTH`, `index.ts emerge()`; 3 s, any step or jump ends it)
+## The birth (vesper `rig.ts` `BIRTH`, `index.ts emerge()`; 4 s, any step or jump ends it)
 - While inside the rig is held at `birthT = 0` (curled `CURLED`) so its springs are settled at the reveal; the skin
   is not drawn and her light is 0 (`hatchLink.inside`).
-- `emerge()` moves her render position (x and y; the sim body already stands on the walk line) from the cocoon's
-  geometry in `hatchLink` (`x`, `y` the silk's tie, `tipY`, `botY`): curled in the husk (bottom - 8) -> hanging
-  from the silk (`HANG`: hands gripped at face height, legs dangling, feet at tip + 60) over `emerge` -> two
-  hand-over-hand `pulls` (each: the haul to `PULL` over 60% of it, then the reach and a 3 px sag) up to the
-  underside + 48 -> the `hop`: a scramble up the bark onto the lip with one beat of the damp wings (`hopSpread`
-  0.34, `hopRaise` 14), a 16 px arc -> crouched on the lip (`CURLED`), first breath, wings open ONCE
-  (`unfold`, spread 0.46 raised 32: the review's favourite moment), stands by 2.9 s.
-- Her rig cannot put hands over her head (arms 17 px, head 20): a hang is hands at face height, body below.
-- Dark and damp until her light comes on (`light` 1.5-2.5 s, `BIRTH_DARK`), thorn faded in at the stand
-  (`View.thornA`), no contact shadow while she hangs (`View.shadowA`), damp wings fill 0.72 -> 1 (`wingFill`).
+- **Round 3 (review: "pops through the bark in 4 frames")**: the climb goes up the FRONT of the limb, in front of
+  its face, and over the lip; it never jumps. `emerge()` moves her render position (the sim body already stands on
+  the walk line) from the cocoon's geometry in `hatchLink` (`x`, `y` the silk's tie, `tipY`, `botY`):
+  curled in the husk (bottom - 8) -> hanging under its tip (`HANG`, feet tip + 60) over `emerge` -> two `silk`
+  pulls (`PULL`, haul over 60% then the reach) until her hands are at the limb's underside (`BIRTH_UNDER` 16 px
+  above the tie: scene/lib/pf-branch.ts `cocoonSilk`) -> three `bark` pulls, hand over hand and knee over knee
+  (`CLIMB_A` <-> `CLIMB_B`, haul over 70%) up to hands at the lip (feet walk + 50) -> `hook` 0.22 s, forearms
+  over the top, a heave (`LIP`) -> `over` 0.38 s, a knee onto the top with one beat of the damp wings (`OVER`,
+  `hopSpread` 0.3) -> crouched on the lip, first breath, wings open ONCE (`unfold`, spread 0.46 raised 32: the
+  review's favourite moment), stands by 3.9 s. The bark climb + lip is ~1.45 s.
+- Her rig cannot put hands over her head (arms 17 px, head 20) nor turn its back to us: the climb is side on,
+  hands at face height. Against the near-black bark face she is dark on dark (weak at zoom 1).
+- Dark and damp until her light comes on (`light` 2.4-3.5 s, `BIRTH_DARK`), thorn faded in at the stand
+  (`View.thornA`), no contact shadow off the ground (`View.shadowA`), damp wings fill 0.72 -> 1 (`wingFill`).
 - `__vesper.birth` reads `{t, w, light, fill, drop}`. Unit tests in character-vesper.test.ts.
 
+## Silk (round 3, review: "ruler-straight white lines")
+Every thread, tail and torn-seam edge is a 0.32-0.5 px ribbon with per-sample tone (`silkTone`): dark along most
+of it, catching the moon only in short segments that slide along it; threads bow sideways by their own lie, the
+wind and the swing (`drawThreads`), 1-3 per husk. **The sagging "clothesline" thread between the cocoons with the
+pale beads is NOT ours**: it is the playfield painter's silk pads (scene/lib/pf-branch.ts, `cocoons` hang pads).
+
 ## Tatter
-- Wing's rig at 0.82 her size, re-paletted (`Painter.grade`), unarmed (`View.unarmed`), sat low and hunched
-  (`PERCH`), antennae drooped, the far antenna snapped (`Secondary.antLen` 0.5, no tip light: `View.tips`).
-- **The torn wing** (round 2, review: "reads as her little sibling"): `Secondary.tear` shortens its strands
-  unevenly (a ragged hem), `Secondary.splay` 0.5 holds it open on its own (behind it, it cannot fold it) and
-  `Secondary.droop` 62 deg lowers it (100 hung it as an ordinary cape: the tear stopped showing), a stutter flutter; in its try it lifts only a little.
-- Timeline (render s after the break): watches her cocoon while she is inside (a stir makes it sit up); a small
+- Wing's rig at 0.82 her size, re-paletted (`Painter.grade`), unarmed (`View.unarmed`), no lantern balls on its
+  antennae (`View.tips` [0, 0]; review: a cap with a white ball read as a jester), the far antenna snapped
+  (`Secondary.antLen` 0.5).
+- **Round 3 (review: "a caped imp")**: a MOTH's crouch, not a biped's (`PERCH`: pelvis 12.5, spine leaned 1.02 rad
+  so the body is near level, forelegs down on the bark ahead); `STRAIN` lifts the front for the swarm.
+- **The torn wing**: the near wing held open on its own at a wrong angle (`Secondary.splay` 0.9, `droop` 25: up
+  and back off its body) with its strands torn to uneven lengths (`TEAR.len` [0, 0.58, 0.12, 0.72, 0.4]: leading
+  edge whole, then long/short teeth = a bitten, frayed forewing with its eye-spot). Splay 0.5 with droop 60-100
+  read as a ragged cape; splay 0.55 / droop -18 with the old lengths read as a horn. The intact wing stays folded.
+- Timeline (render s after the break): watches her cocoon while she is inside (a stir makes it lift); a small
   rise at the break; looks at her within 900 px. **The swarm** (render/swarm/timing.ts: `SWARM_PASS` in 2.4 /
   full 3.8 / hold 8.0 / out 9.5, `swarmPassWeight`, `swarmPassFocus` = the moon in view px): it looks up 0.6 s
   ahead of the pass weight at the moon taken into the world round where the camera would be with her
   (`max(960, her x)`, her feet - 238: an approximation, the cast gets no camera) drifting -260..+320 px; strains
-  from `in` - 0.4; **the try** `full` + 0.3..1.8: two beats (the good wing opens wide, the torn one barely), a
-  16 px hop off the branch at `full` + 0.75, lands and crumples (head down, low) until it sinks `hold` - 1 ..
-  + 0.8; then a glance the way she went every 7.5 s. Live knobs: `__tatter.knobs`, state `__tatter.info`.
+  from `in` - 0.4; **the try** `full` + 0.3..1.8: two beats (the good wing opens, the torn one barely), a
+  16 px hop at `full` + 0.75, lands and crumples until it sinks `hold` - 1 .. + 0.8; then a glance the way she
+  went every 7.5 s. Live knobs: `__tatter.knobs` (splay / droop are read every frame), state `__tatter.info`.
 - `rig.look {x, y, w}`, `rig.perch / strain / tryWings`, `rig.antExtra / antCurlExtra`. Lowering the chin LIFTS
-  the antennae into rods; Tatter adds `antExtra` 34 when it looks down. `window.__tatter.info` for tools.
+  the antennae into rods; Tatter adds `antExtra` 34 when it looks down.
 
 ## Her light and her darkness
 Antenna tips, wing eye-spots, scale dust, trails, fx dust and her point light are pale silver-cream (`LAMP*` in
@@ -82,9 +96,9 @@ crown) and the hem band by 0.5; the face, hands and feet keep their tone.
 cocoon, `(1150, 990, 3)` for Tatter. A teleport ends the hatching silently (the shots tool shows an open husk).
 Clip: `npm run clip -- --script ".170 J1 .20 J1 .20 J1 .130" --zoom 1.5 --name hatch-r1`.
 
-## Weak (round 2)
-- The husks are better shapes (peeled, bell, torn, shrivelled) but still read a little as pairs of dark leaves;
-  no thickness to the shell, no inside light.
-- The scramble from under the branch onto the lip crosses the whole bark face in 0.33 s: it reads as a flutter-hop,
-  not a climb; there is no grip on the lip.
-- Tatter's try and crumple read at zoom 3; at zoom 1 it is ~60 px and the torn wing is a few dark px.
+## Weak (round 3)
+- The bark climb is dark on dark: she is a near-black figure on the near-black limb face; the pulls read in
+  close-up, at zoom 1 it is a slow rise. No handholds are drawn on the bark.
+- Tatter's torn wing reads as torn in close-up; its teeth are sharp and even, closer to a bat's or a dragon's
+  than a moth's frayed scales, and at zoom 1 it is still small.
+- The husks still read a little as pairs of dark leaves: no shell thickness, no inner surface.
