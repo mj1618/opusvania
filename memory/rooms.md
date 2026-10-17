@@ -177,8 +177,9 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   floor above (1800, drop 400); the one-way across the column; **P-ledge** (2880) on the buttress, 500 px from
   W-rest (dark: the dangler never drops on a rester). Walled west (the dark way, cut in round 6b: see below).
 - **Middle (round 4: the catch is a choice).** The near face (2944) holds only from P-ledge up to **the floor under
-  W-ff** (one-way 2112-2944, y 1776: `noDrop` over the dangler 2112-2560, a drop-through over the column and the
-  buttress 2560-2944 onto the rest ledge, the way back down); above it, slick 1344-1776. **No thorns in the oak** (first-timer r6: the band ~900 px over P-ledge was off screen
+  W-ff** (one-way 2112-2944, y 1776: `noDrop` over the dangler 2112-2560, a drop-through over the column 2560-2816
+  onto the rest ledge, the way back down; `noDrop` again by the near face, where a jump pressed on the way down kicked
+  her back up over the floor, a bot loop); above it, slick 1344-1776. **No thorns in the oak** (first-timer r6: the band ~900 px over P-ledge was off screen
   when a climb began, and W-ff's release held right flung her into it). W-ff hangs at
   (2620, 1460), 300 px off the face: a held-right climber from P-ledge is never caught
   (24 press rhythms: 16 reach the floor, the rest still climbing at 10 s). From the floor, out of the pull, a hop

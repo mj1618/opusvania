@@ -174,9 +174,10 @@ describe('the oak: one room from the roots to the crown', () => {
 });
 
 describe('the way back down the trunk', () => {
-  it('from the floor under W-ff a drop-through over the column or the buttress lands on the rest ledge; over the hole it refuses', () => {
-    // (Round 6b: the whole floor was noDrop and the upper trunk had no way down; the personas wandered it after the finale.)
-    for (const x of [2600, 2780, 2900]) {
+  it('from the floor under W-ff a drop-through over the column lands on the rest ledge; elsewhere it refuses', () => {
+    // (Round 6b: the whole floor was noDrop and the upper trunk had no way down; the personas wandered it after the finale.
+    // Not by the near face: a jump pressed on the way down kicks off it, back up over the floor, a loop.)
+    for (const x of [2600, 2700, 2780]) {
       const s = play({ glimpse: false });
       s.g.teleport(x, MID);
       s.run(0, 3);
@@ -184,7 +185,7 @@ describe('the way back down the trunk', () => {
       for (let i = 0; i < 200 && !(s.g.state.player.grounded && s.feet().y > MID); i++) s.run(0);
       expect(s.feet().y, `through at ${x}`).toBe(LEDGE);
     }
-    for (const x of [2160, 2300, 2480]) {
+    for (const x of [2160, 2300, 2480, 2900]) {
       const s = play({ glimpse: false });
       s.g.teleport(x, MID);
       s.run(0, 3);
