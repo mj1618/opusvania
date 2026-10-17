@@ -15,13 +15,13 @@ There are no lamps, enemies or text yet.
 |---|---|---|
 | 0 | Black. Wind in the leaves (muted audio is fine). The picture fades up | nothing |
 | ~3 | A high branch over a deep, dark wood at blue hour. A row of split, empty cocoons hangs along it, with one still closed. The real moon is high and cool. Far below and far off there's a faint warm afterglow on the horizon (the valley's lamps, unseen yet). **Tatter**, a moth of her kind with one torn wing, sits on the branch | watches |
-| ~6 | The closed cocoon twitches. Each jump press shakes it harder | first input |
+| ~6 | The closed cocoon twitches. Each press of any button shakes it harder. With no input it twitches harder on its own, and after ~12 s it breaks by itself | first input |
 | ≤ 8 | The third press: she breaks out (silk and husk flakes, a small shake). **Control** | |
 | ~10 | **The swarm** streams overhead past the moon: a river of small moths, leaving. The camera leans toward them | looks up, follows |
-| 10–30 | She runs along the branch after them: a short, lovely run with a couple of small gaps and steps (twigs, a knot, a fork) that ask for a jump or two, and maybe one thorn to pogo. The swarm stays just ahead and above. Tatter watches her go and does not follow | runs, jumps |
+| 10–30 | She runs along the branch after them: a short, lovely run with a couple of small gaps and steps (twigs, a knot, a fork) that ask for a jump or two. No thorns or hazards yet. The swarm stays just ahead and above. Partway along, the swarm crosses a wide gap to a far branch she can't reach (a promise that glide answers later), and her way bends down instead. Tatter watches her go and does not follow | runs, jumps |
 | ~30 | The branch ends in the dark canopy. She drops off after the swarm: the exit | |
 
-Until scene 2 exists, the exit fades to black and restarts the scene.
+Until scene 2 exists, the exit fades to black and restarts the scene. Falling off the branch anywhere costs nothing: she is back on the branch at once.
 
 ## Rules
 - **Starting kit only:** run, variable jump, fast fall, the blade (forward, up, down), pogo. No glide, dash, double jump
@@ -44,4 +44,6 @@ Until scene 2 exists, the exit fades to black and restarts the scene.
 5. **Tatter** reads at once as one of her kind, hurt, left behind.
 6. **Where to go** is obvious without text.
 7. **Feel:** running and jumping along the branch is a pleasure (Ori standard).
-8. `npm run check` passes, the debug API works, and the test grove is still reachable from the debug panel.
+8. **Play checks:** a naive bot (hold right, press jump at walls and gaps) gets from the break-out to the exit, and a
+   first-time player finishes in under 45 s without being told anything.
+9. `npm run check` passes, the debug API works, and the test grove is still reachable from the debug panel.
