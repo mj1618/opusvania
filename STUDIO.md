@@ -1,55 +1,57 @@
 # Studio loop
 
-Matt decided on 2026-10-18: the game is designed and played in **greybox** first, a whole region at a time. **Art is
-left until the end**: scene 1 proved the look can reach the bar, so the art pass comes once the game plays great in grey. Scene 1 (`wood-hatch`) keeps its art as the look target for the wood. Everything
-else uses minimal graphics: flat shapes, hitboxes and labels, with Wing's own rig.
+The game is designed and played in **greybox** (flat shapes, hitboxes and labels, with Wing's own rig), and art is
+left until the end (Matt, 2026-10-18). Scene 1 (`wood-hatch`) keeps its art as the look target for the wood.
 
-## The unit of work: a region
-A region (the wood first) is about 12 rooms and 35–45 minutes. It is the smallest chunk where the things that make a
-metroidvania good can be judged: pacing, getting lost and found, gates and backtracking, teaching an ability, a boss.
-One room can't show any of these, and the whole game is too big to iterate on.
+"Quality" in greybox means everything except the art. It covers the level design, pacing, encounters, game feel, wayfinding,
+secrets and rewards, teaching, the camera, readability, and how the story is staged. The bar is the first areas of the reference
+games (`docs/design/quality-bar.md`): Hollow Knight's King's Pass and Forgotten Crossroads, Ori's Sunken Glades and
+Hollow Grove, Nine Sols' opening area, Celeste's first chapter.
 
-## Two loops
+## The onion: build a chunk fast, then make it great, then check the layers above it
 
-**Outer loop: the region** (top-down). Repeat until the region plays great in grey.
-1. **Paper design** in `docs/design/regions/<region>.md`:
-   - a beat sheet with minute marks and an intensity curve;
-   - a room graph with gates, keys, loops, shortcuts, rest points and secrets;
-   - an encounter list and a lamp list;
-   - for each ability, how it is taught (show the lock, the glade, then the test);
-   - room specs.
-   It is checked against `docs/research/metroidvania-craft.md` §8 and `docs/design/core.md` / `world.md`.
-2. **Greybox every room** from the specs, all of them connected, so the region plays start to end.
-3. **Playtest the whole region** with persona bots and agent players (below), plus Matt when he can.
-4. **Design review** by a separate agent: pacing against the curve, where players got lost, difficulty spikes, dead
-   rooms, gates that don't teach, backtracking that drags. It ranks the 5 worst problems.
-5. **Revise the paper design and the rooms.** Go to 3.
+**1. Build a chunk quickly.** A chunk is about 15–25 minutes of play: a run of rooms that holds its own arc, such as the
+wood up to its hub and both branches. It is built from the paper design to "plays end to end", without polishing any room.
 
-**Inner loop: a room, encounter or verb** (bottom-up), inside step 2 or 5.
-Design note → greybox → bot and agent play with metrics → tune in `tuning.ts` and the room JSON. A verb or creature
-must feel good in a plain room before any room is built around it.
+**2. Iterate on the chunk until it meets the bar.** Each round:
+1. **Review panel.** Independent reviewers, none of whom built the chunk, each work through one lens and score it against
+   the quality bar's rubric:
+   - **Level and pacing designer:** room by room and minute by minute.
+   - **Feel and combat:** movement, the verbs, the creatures, the camera.
+   - **First-timer agents:** they play with real keys and keep a journal.
+   - **Persona bots:** numbers.
+2. **Synthesis.** The orchestrator merges the reviews into a ranked list of the worst problems. The list is about the
+   chunk as a whole, not about any one room. Typical answers are:
+   - make a room bigger or cut it;
+   - add a secret, a shortcut or a landmark;
+   - change the order;
+   - add a new encounter type;
+   - retune a verb.
+3. **Iterate.** Builders and engineers fix the top problems, each in their own area.
+4. **Repeat** until every rubric item passes on two rounds in a row and the orchestrator agrees from its own play.
+   Matt plays it when he can, and his notes outrank everything.
 
-**Exit criteria for a region:**
-- The bots and agent players finish it, with no softlocks and the sequence-break check passing.
-- No first-time persona is lost for more than 2 minutes.
-- Time and intensity follow the curve.
-- Every room has a stated purpose, and every ability is taught before it is tested.
-- The boss is fair: tells read and deaths are the player's fault.
-- **Matt plays it and says it's fun.**
+**3. Build the next chunk** the same way, then iterate on it.
 
-Only then does the next region start. The art passes, using the kit proven in scene 1, come at the end.
+**4. Layer reviews** check the structure above the chunks:
+- **When a region is complete:** whole-region pacing, the hub and backtracking, the ability ladder across chunks, and
+  whether the region's three feelings come through.
+- **Every two regions, and before any art:** the whole game so far. This covers the difficulty curve, repetition, the story
+  arc, whether it hangs together, and anything that feels disjointed.
+
+Problems found at a higher layer go back into the chunk loop for the rooms they touch.
 
 ## Playtesting without Matt
-- **Persona bots:** a naive player (holds right, jumps at walls), an explorer (visits every exit), a speedrunner, and a
-  "first-timer" agent that plays with real keys through the page and writes down what it understood.
-- **Telemetry for every run:** time per room, deaths and where they happened, the path trace, time spent lost (no new
-  room for N s), lamps found, backtracking time, input density. A run report with a heatmap per room.
-- **Matt's play is the gate** at each region milestone. His notes outrank every metric.
+- **Persona bots** (`npm run playtest`): naive, explorer, speedrunner and cautious. Each run records telemetry: time per room,
+  deaths, the trace, time lost, hits per encounter, lamps and moths found.
+- **First-timer agents** play in the page with real keys, take screenshots, and write what they understood and felt.
+- **Matt's play is the gate** for each chunk and region.
 
 ## Working rules
-- Sub-agents work in parallel, and each owns one directory or one area. They commit only their own files
-  (`git commit -- <paths>`) and never run `git add -A`, stash or reset.
-- Each one runs `npm run check` and looks at its own result.
-- Reviewers are separate from implementers, and harsh.
-- AI scores are lint, not the bar (`memory/ai-critics.md`). The orchestrator plays or watches the result itself
-  before calling anything done.
+- Sub-agents work in parallel, and each owns one directory or area.
+- Agents commit only their own files (`git commit -- <paths>`). Never `git add -A`, stash or reset.
+- Each agent runs `npm run check` and looks at its own result.
+- Reviewers are separate from builders, and harsh. "Good for greybox" is a fail: the bar is the reference games minus
+  their art.
+- AI scores are lint, not the bar (`memory/ai-critics.md`). The orchestrator plays or watches the result before calling
+  anything done.
