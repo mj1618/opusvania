@@ -6,7 +6,12 @@ import labWorldAJson from '../../content/rooms/lab-world-a.json' with { type: 'j
 import labWorldBJson from '../../content/rooms/lab-world-b.json' with { type: 'json' };
 import labWorldCJson from '../../content/rooms/lab-world-c.json' with { type: 'json' };
 import testGroveJson from '../../content/rooms/test-grove.json' with { type: 'json' };
+import woodBurrowJson from '../../content/rooms/wood-burrow.json' with { type: 'json' };
+import woodChaseJson from '../../content/rooms/wood-chase.json' with { type: 'json' };
+import woodGladeJson from '../../content/rooms/wood-glade.json' with { type: 'json' };
+import woodGlidewalkJson from '../../content/rooms/wood-glidewalk.json' with { type: 'json' };
 import woodHatchJson from '../../content/rooms/wood-hatch.json' with { type: 'json' };
+import woodWicksJson from '../../content/rooms/wood-wicks.json' with { type: 'json' };
 import worldJson from '../../content/world.json' with { type: 'json' };
 import { ABILITIES } from '../sim/abilities';
 import { defaultTuning } from '../sim/tuning';
@@ -566,6 +571,11 @@ export function parseScene(json: unknown): Room {
 
 const FILES: readonly unknown[] = [
   woodHatchJson,
+  woodChaseJson,
+  woodWicksJson,
+  woodBurrowJson,
+  woodGladeJson,
+  woodGlidewalkJson,
   labWorldAJson,
   labWorldBJson,
   labWorldCJson,

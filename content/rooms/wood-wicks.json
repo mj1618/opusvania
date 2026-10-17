@@ -1,0 +1,70 @@
+{
+  "id": "wood-wicks",
+  "title": "The first wicks (greybox)",
+  "region": "wood",
+  "width": 3840,
+  "height": 2176,
+  "spawn": { "x": 640, "y": 960 },
+  "edgeKick": false,
+  "abilities": [],
+  "art": { "mode": "greybox", "labels": true },
+  "exits": [
+    { "id": "n", "edge": "n", "from": 256, "to": 896 },
+    { "id": "e", "edge": "e", "from": 896, "to": 1152 }
+  ],
+  "solids": [
+    { "tag": "trunk", "x": 0, "y": 0, "w": 128, "h": 2176, "kick": false },
+    { "tag": "ground", "x": 128, "y": 960, "w": 1024, "h": 1216 },
+    { "tag": "ground", "x": 1152, "y": 1120, "w": 256, "h": 1056 },
+    { "tag": "ground", "x": 1408, "y": 960, "w": 640, "h": 1216 },
+    { "tag": "root", "x": 1984, "y": 936, "w": 64, "h": 24 },
+    { "tag": "ground", "x": 2048, "y": 1152, "w": 1792, "h": 1024 },
+    { "tag": "trunk", "x": 1600, "y": 0, "w": 64, "h": 704 },
+    { "tag": "trunk", "x": 896, "y": 0, "w": 128, "h": 576, "kick": false }
+  ],
+  "oneWays": [],
+  "lures": [
+    { "id": "wick-caught", "kind": "wick", "x": 1280, "y": 720, "spin": -1 },
+    { "id": "wick-first", "kind": "wick", "x": 2072, "y": 896 },
+    { "id": "wick-high", "kind": "wick", "x": 1408, "y": 352 }
+  ],
+  "marks": {
+    "notes": [
+      { "x": 300, "y": 120, "text": "R3 wood-wicks  PURPOSE: teach (pull, Caught and snuff by consequence)" },
+      { "x": 300, "y": 200, "text": "N in (one way): she falls ~900 and lands on L in the dark" },
+      { "x": 300, "y": 900, "text": "L  (128-1152, y 960): W1's field is 300+ px away" },
+      {
+        "x": 920,
+        "y": 120,
+        "text": "shaft wall (no kick): a fall held right slides down it onto L, not into W1"
+      },
+      { "x": 1060, "y": 560, "text": "W1 FIRST CATCH: a run-up jump across the dip is pulled in, caught" },
+      { "x": 1060, "y": 600, "text": "beat free: 3 presses of jump or attack (the cocoon's input)" },
+      {
+        "x": 1060,
+        "y": 640,
+        "text": "TODO render: the stragglers from the vista circle W1 before she gets here"
+      },
+      { "x": 1160, "y": 1240, "text": "the dip (1152-1408, floor 1120): a walker drops in, hops out" },
+      { "x": 1160, "y": 1290, "text": "TODO render: a dead moth lies here" },
+      { "x": 1700, "y": 1060, "text": "M  (1408-2048, y 960)" },
+      { "x": 1880, "y": 1010, "text": "root knob 64x24: she stops, and so does the drag" },
+      { "x": 2120, "y": 800, "text": "W2 FIRST SNUFF: a standing forward cut from the knob" },
+      { "x": 2120, "y": 840, "text": "(moved 22 up from the paper's 918: the knob sat in its core)" },
+      { "x": 1460, "y": 220, "text": "W-hi3 LOCK: wall jump's first lock, by the hanging trunk" },
+      { "x": 1690, "y": 690, "text": "hanging trunk (1600-1664, to y 704): touchable, not climbable yet" },
+      { "x": 2300, "y": 1260, "text": "N  drop 192 (2048-3840, y 1152): east to wood-burrow" }
+    ],
+    "camera": [
+      { "id": "w1", "x": 1280, "y": 800, "note": "ease toward a flame while she is inside its field" },
+      { "id": "w2", "x": 2072, "y": 900, "note": "the first snuff" }
+    ]
+  },
+  "shots": {
+    "wide": [
+      { "name": "landing", "x": 640, "y": 960 },
+      { "name": "first-catch", "x": 1280, "y": 960 },
+      { "name": "first-snuff", "x": 1960, "y": 960 }
+    ]
+  }
+}

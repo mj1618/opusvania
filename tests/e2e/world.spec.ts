@@ -22,6 +22,7 @@ test('20 room swaps leak nothing: textures and buffers come back to the same cou
   page,
 }) => {
   const errors = await boot(page, '?manual&room=lab-world-a');
+  // The lab rooms are test rooms now (wood-chase took their place in the world): goto still swaps.
   const cdp = await page.context().newCDPSession(page);
   const heap = async (): Promise<number> => {
     await cdp.send('HeapProfiler.collectGarbage');
@@ -49,31 +50,31 @@ test('20 room swaps leak nothing: textures and buffers come back to the same cou
 });
 
 test('a run crosses from one room into the next with its speed, and the map draws', async ({ page }) => {
-  const errors = await boot(page, '?manual&room=lab-world-a');
+  const errors = await boot(page, '?manual&room=wood-wicks');
   const r = await page.evaluate(() => {
     const g = window.__game;
-    g.teleport(2000, 1152);
+    g.teleport(3200, 1152);
     g.input('R120');
     let st = g.step(40);
     const vx = st.player.vx;
-    for (let i = 0; i < 80 && st.room === 'lab-world-a'; i++) st = g.step(1);
+    for (let i = 0; i < 80 && st.room === 'wood-wicks'; i++) st = g.step(1);
     const enter = g.events(80).find((e) => e.type === 'roomEnter');
     const w = g.world();
     const map = g.map(true);
     g.step(1);
     g.map(false);
-    return { room: st.room, vx, after: g.state().player.vx, enter, link: w.links['lab-world-a#e-up'], map };
+    return { room: st.room, vx, after: g.state().player.vx, enter, link: w.links['wood-wicks#e'], map };
   });
-  expect(r.room).toBe('lab-world-b');
-  expect(r.enter).toMatchObject({ room: 'lab-world-b', from: 'lab-world-a#e-up' });
+  expect(r.room).toBe('wood-burrow');
+  expect(r.enter).toMatchObject({ room: 'wood-burrow', from: 'wood-wicks#e' });
   expect(r.after).toBeCloseTo(r.vx, 3);
-  expect(r.link).toEqual({ to: 'lab-world-b', exit: 'w' });
+  expect(r.link).toEqual({ to: 'wood-burrow', exit: 'w' });
   expect(r.map).toBe(true);
   expect(errors).toEqual([]);
 });
 
 test('the save slot: rest at a moon patch, reload, and the game continues there', async ({ page }) => {
-  // A game whose save says she has been to the lab: Continue starts there (greybox, no bakes).
+  // A game whose save says she rested in the glade: Continue starts there (greybox, no bakes).
   await page.addInitScript(() => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
@@ -84,10 +85,10 @@ test('the save slot: rest at a moon patch, reload, and the game continues there'
       taken: [],
       flags: [],
       opened: [],
-      visited: ['wood-hatch', 'lab-world-a'],
+      visited: ['wood-hatch', 'wood-chase', 'wood-wicks', 'wood-burrow', 'wood-glade'],
       seen: [],
       crossed: [],
-      patch: { room: 'lab-world-a', id: 'p1' },
+      patch: { room: 'wood-glade', id: 'p2' },
       time: 1,
     };
     localStorage.setItem('lampfall.save', JSON.stringify({ version: 1, save }));
@@ -96,23 +97,29 @@ test('the save slot: rest at a moon patch, reload, and the game continues there'
   const a = await page.evaluate(() => {
     const g = window.__game;
     const st = g.state();
-    // Into B (the save follows), then glide-less B: grant glide by hand and rest back at P1.
-    g.goto('lab-world-b');
-    g.goto('lab-world-a', 1408, 1152);
-    g.grant('glide');
+    // Up to the burrow (the save follows), then back to rest at P2 in the moon shaft (the glade).
+    g.goto('wood-burrow');
+    g.goto('wood-glade', 448, 1664);
     g.step(40);
     return { room: st.room, at: [st.player.x + st.player.w / 2, st.player.y + st.player.h], save: g.save() };
   });
-  expect(a.room).toBe('lab-world-a');
-  expect(a.at).toEqual([1408, 1152]);
+  expect(a.room).toBe('wood-glade');
+  expect(a.at).toEqual([448, 1664]);
   expect(a.save.autosave).toBe(true);
-  expect(a.save.stored?.visited).toEqual(['wood-hatch', 'lab-world-a', 'lab-world-b']);
+  expect(a.save.stored?.visited).toEqual([
+    'wood-hatch',
+    'wood-chase',
+    'wood-wicks',
+    'wood-burrow',
+    'wood-glade',
+  ]);
   expect(a.save.stored?.abilities).toEqual(['glide']);
+  expect(a.save.stored?.taken).toEqual(['wood-glade:glade-glide']);
   await page.reload();
   await page.waitForFunction(() => document.body.dataset.ready === 'true');
   const b = await page.evaluate(() => ({ room: window.__game.room(), save: window.__game.state().save }));
-  expect(b.room).toBe('lab-world-a');
+  expect(b.room).toBe('wood-glade');
   expect(b.save.abilities).toEqual(['glide']);
-  expect(b.save.patch).toEqual({ room: 'lab-world-a', id: 'p1' });
+  expect(b.save.patch).toEqual({ room: 'wood-glade', id: 'p2' });
   expect(errors).toEqual([]);
 });

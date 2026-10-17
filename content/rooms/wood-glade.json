@@ -1,0 +1,260 @@
+{
+  "id": "wood-glade",
+  "title": "Glade 1: wings (greybox)",
+  "region": "wood",
+  "width": 2880,
+  "height": 2304,
+  "spawn": {
+    "x": 448,
+    "y": 1664
+  },
+  "edgeKick": false,
+  "abilities": [],
+  "art": {
+    "mode": "greybox",
+    "labels": true
+  },
+  "exits": [
+    {
+      "id": "n",
+      "edge": "n",
+      "from": 256,
+      "to": 512
+    },
+    {
+      "id": "e",
+      "edge": "e",
+      "from": 1920,
+      "to": 2176
+    }
+  ],
+  "catches": [
+    {
+      "id": "chasm",
+      "x": 1408,
+      "y": 2240,
+      "w": 960,
+      "h": 64
+    }
+  ],
+  "patches": [
+    {
+      "id": "p2",
+      "x": 448,
+      "y": 1664
+    }
+  ],
+  "glades": [
+    {
+      "id": "glade-glide",
+      "x": 192,
+      "y": 1344,
+      "w": 384,
+      "h": 320,
+      "ability": "glide"
+    }
+  ],
+  "solids": [
+    {
+      "tag": "trunk",
+      "x": 0,
+      "y": 0,
+      "w": 192,
+      "h": 1664,
+      "kick": "east"
+    },
+    {
+      "tag": "trunk",
+      "x": 576,
+      "y": 0,
+      "w": 448,
+      "h": 1280,
+      "kick": "west"
+    },
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1664,
+      "w": 1408,
+      "h": 640
+    },
+    {
+      "tag": "ground",
+      "x": 2368,
+      "y": 2176,
+      "w": 512,
+      "h": 128
+    },
+    {
+      "tag": "trunk",
+      "x": 2816,
+      "y": 0,
+      "w": 64,
+      "h": 1920,
+      "kick": "west"
+    }
+  ],
+  "oneWays": [],
+  "routes": [
+    {
+      "from": "spawn",
+      "to": "p2"
+    },
+    {
+      "from": "n",
+      "to": "p2",
+      "oneWay": true
+    },
+    {
+      "from": "p2",
+      "to": "n",
+      "needs": ["wallJump"],
+      "oneWay": true
+    },
+    {
+      "from": "p2",
+      "to": "glade-glide"
+    },
+    {
+      "from": "p2",
+      "to": "e",
+      "needs": ["glide"],
+      "oneWay": true
+    },
+    {
+      "from": "e",
+      "to": "p2",
+      "needs": ["wallJump"],
+      "oneWay": true
+    }
+  ],
+  "marks": {
+    "notes": [
+      {
+        "x": 640,
+        "y": 120,
+        "text": "R5 wood-glade  PURPOSE: glade (glade 1, glide's lock room)"
+      },
+      {
+        "x": 640,
+        "y": 200,
+        "text": "N in: down the hollow from wood-burrow's hole; she falls ~1600 into moonlight"
+      },
+      {
+        "x": 210,
+        "y": 700,
+        "text": "hollow (192-576): both faces kickable"
+      },
+      {
+        "x": 210,
+        "y": 740,
+        "text": "wall jump: the way back up to wood-burrow"
+      },
+      {
+        "x": 210,
+        "y": 1250,
+        "text": "GLADE 1: GLIDE. She lands inside the moon shaft: it can't be skipped"
+      },
+      {
+        "x": 210,
+        "y": 1290,
+        "text": "TODO render: the bask (3 s), then 'Your wings have dried. Hold jump to glide' + glyph"
+      },
+      {
+        "x": 380,
+        "y": 1760,
+        "text": "P2 moon patch (no Tatter): where a fall from the hole lands"
+      },
+      {
+        "x": 1100,
+        "y": 1630,
+        "text": "the lip (1408, 1664)"
+      },
+      {
+        "x": 1500,
+        "y": 1500,
+        "text": "LOCK ROOM: the only way out is a glide. Gap 960, drop 512, no lamp"
+      },
+      {
+        "x": 1500,
+        "y": 1540,
+        "text": "jump 717 (243 short)  walk-off glide 1193  jump-glide 1467"
+      },
+      {
+        "x": 1500,
+        "y": 1580,
+        "text": "TODO render: after 2 catches, the wings-twitch cue on the lip"
+      },
+      {
+        "x": 1500,
+        "y": 2200,
+        "text": "chasm: a catch back to the lip, no cost"
+      },
+      {
+        "x": 2400,
+        "y": 2120,
+        "text": "Z  (2368-2880, y 2176): east to wood-glidewalk"
+      },
+      {
+        "x": 2400,
+        "y": 1500,
+        "text": "east trunk (to y 1920, west face kickable)"
+      },
+      {
+        "x": 2400,
+        "y": 1540,
+        "text": "wall jump: kick up from Z, kick-glide west home"
+      }
+    ],
+    "camera": [
+      {
+        "id": "bask",
+        "x": 384,
+        "y": 1400,
+        "note": "frame the moon shaft while she basks"
+      },
+      {
+        "id": "lip",
+        "x": 1900,
+        "y": 1900,
+        "note": "on the lip, look ahead east so Z is on screen (camera zone lip)"
+      }
+    ]
+  },
+  "camera": {
+    "zones": [
+      {
+        "id": "lip",
+        "x": 960,
+        "y": 1344,
+        "w": 448,
+        "h": 320,
+        "bounds": {
+          "x": 960,
+          "y": 1216,
+          "w": 1920,
+          "h": 1088
+        }
+      }
+    ]
+  },
+  "shots": {
+    "wide": [
+      {
+        "name": "glade",
+        "x": 500,
+        "y": 1664
+      },
+      {
+        "name": "chasm",
+        "x": 1900,
+        "y": 1900
+      },
+      {
+        "name": "lip",
+        "x": 1300,
+        "y": 1664
+      }
+    ]
+  }
+}

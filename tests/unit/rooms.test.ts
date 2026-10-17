@@ -55,7 +55,7 @@ describe('the room registry', () => {
     expect(ROOM_IDS[0]).toBe(worldJson.start);
     expect(getRoom('test-grove')).toBe(GROVE);
     expect(GROVE.id).toBe('test-grove');
-    expect(() => getRoom('nowhere')).toThrow(/Rooms: wood-hatch, lab-world-a/);
+    expect(() => getRoom('nowhere')).toThrow(/Rooms: wood-hatch, wood-chase/);
   });
 
   it('every room has shot stops inside it', () => {

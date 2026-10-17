@@ -1,0 +1,66 @@
+{
+  "id": "wood-burrow",
+  "title": "STUB: the burrow (R4 not built)",
+  "region": "wood",
+  "width": 4480,
+  "height": 1792,
+  "spawn": { "x": 600, "y": 1280 },
+  "edgeKick": false,
+  "abilities": [],
+  "art": { "mode": "greybox", "labels": true },
+  "exits": [
+    { "id": "w", "edge": "w", "from": 1024, "to": 1280 },
+    { "id": "hole", "edge": "s", "from": 4096, "to": 4352 }
+  ],
+  "patches": [{ "id": "p1", "x": 3776, "y": 1152 }],
+  "solids": [
+    { "tag": "ground", "x": 0, "y": 1280, "w": 1216, "h": 512 },
+    { "tag": "ground", "x": 1216, "y": 1344, "w": 1600, "h": 448 },
+    { "tag": "root", "x": 2624, "y": 1152, "w": 192, "h": 192 },
+    { "tag": "ground", "x": 2816, "y": 1408, "w": 640, "h": 384 },
+    { "tag": "root", "x": 2816, "y": 1280, "w": 96, "h": 128 },
+    { "tag": "ground", "x": 3456, "y": 1152, "w": 640, "h": 640 },
+    { "tag": "trunk", "x": 4352, "y": 0, "w": 128, "h": 1792, "kick": false }
+  ],
+  "oneWays": [{ "tag": "branch", "x": 3072, "y": 1152, "w": 128 }],
+  "marks": {
+    "notes": [
+      {
+        "x": 200,
+        "y": 300,
+        "text": "STUB: R4 wood-burrow is not built (it waits on the burrback and seed-cases)"
+      },
+      {
+        "x": 200,
+        "y": 360,
+        "text": "this stand-in only joins wood-wicks to wood-glade for the world check and the bots"
+      },
+      { "x": 200, "y": 1200, "text": "F1 (0-1216, y 1280): dark" },
+      {
+        "x": 1400,
+        "y": 1080,
+        "text": "TODO W3 wick-burr at (1984, 1144), guarded by burr-first (4 hp, patrol 1408-2560)"
+      },
+      { "x": 2500, "y": 1080, "text": "root step (2624-2816, top 1152)" },
+      {
+        "x": 2830,
+        "y": 700,
+        "text": "TODO the seed-case gap: root roof 768-864, seed-cases at (3008, 1152), (3296, 1152)"
+      },
+      {
+        "x": 2830,
+        "y": 760,
+        "text": "STUB plank (one-way at 3072): stands in for the seed-cases. Delete it with R4"
+      },
+      { "x": 2830, "y": 1520, "text": "safe floor under the gap, root steps back up" },
+      {
+        "x": 3000,
+        "y": 500,
+        "text": "TODO W-hi4 (3136, 704); trunk 4416-4480 (y 192-1024); shelf H (3904-4416, y 512); F3 past the hole"
+      },
+      { "x": 3700, "y": 1000, "text": "P1 moon patch, Tatter resting (TODO render)" },
+      { "x": 4000, "y": 1300, "text": "hole: down into wood-glade" }
+    ]
+  },
+  "shots": { "wide": [{ "name": "patch", "x": 3776, "y": 1152 }] }
+}

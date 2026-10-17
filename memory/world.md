@@ -8,7 +8,7 @@ seen), `src/scene/world.ts` (`GAME_WORLD`, the world check), `src/render/lifecyc
 ## world.json
 ```json
 { "start": "wood-hatch",
-  "rooms": [{ "id": "wood-hatch", "x": 0, "y": 0 }, { "id": "lab-world-a", "x": 5760, "y": 2816 }, ...],
+  "rooms": [{ "id": "wood-hatch", "x": 0, "y": 0 }, { "id": "wood-chase", "x": 5760, "y": 2816 }, ...],
   "tests": ["test-grove", "lab-lamps"] }
 ```
 `rooms` = the world graph (placed, linked, on the map, checked); `tests` = playable by `?room=` / `goto`, no links.
@@ -49,12 +49,13 @@ room and glade must be reached; from every reached node a moon patch must be rea
 got there (no softlock). `progression(world)` returns the order abilities are found. Boot logs problems as
 `[world]` warnings (the page still runs).
 
-## The lab-world (greybox; wired below wood-hatch's drop for now: it sits where wood-chase will go)
-A 2560x2816 at (5760, 2816): N arrival from the hatch, patch P1 on the upper floor, one-way stairs down to the lower
-hall, `e-up` to B, `e-low` to C. B 2560x1536 at (8320, 2816): a wick, the `hole` (one-way S drop at the east wall).
-C 2560x1280 at (8320, 4352): N arrival, the glide glade, an 800 px gap only a glide crosses (drop 384), a burrback,
-the `gate` shortcut (opens from the east) before the W exit back into A's lower hall. Loop: A -> B -> C -> A.
-When wood-chase is built: move or delete the lab rooms (the check will say what no longer lines up).
+## The lab-world (greybox test rooms since 2026-10-18)
+A 2560x2816, B 2560x1536, C 2560x1280: arrival + patch P1 + one-way stairs, a wick and a one-way `hole`, the glide
+glade + an 800 px glide gap + a burrback + the `gate` shortcut; loop A -> B -> C -> A. They were the first world under
+wood-hatch's drop; wood-chase took that place, so they are `tests` in world.json now (unlinked in the game).
+`tests/unit/world.test.ts` links them on their own (`LAB_WORLD`, the old placement A (5760, 2816), B (8320, 2816),
+C (8320, 4352)) for the engine's crossing / patch / glade / gate / re-form tests; `?room=lab-world-a` and `goto` still
+work (a crossing there restarts the room: no link). The wood's rooms: memory/rooms.md "The wood, greybox".
 
 ## A designer's new connected room
 1. `content/rooms/<id>.json` (id `<region>-<name>`, `region`, greybox `art`), one import line in `FILES`.

@@ -21,10 +21,26 @@ const L = ActionBit.left;
 const U = ActionBit.up;
 const J = ActionBit.jump;
 
-/** A game in the world, booted in `room` with `abilities`, every event kept. */
-function play(room: string, abilities: string[] | null = null) {
+/**
+ * The lab-world (memory/world.md): three greybox rooms that were the engine's first world, now test
+ * rooms outside the game's world (wood-chase took their place under the hatch). Linked here on their
+ * own, at their old placement, for the engine's crossing, patch, glade, gate and re-form tests.
+ */
+const LAB_WORLD: World = linkWorld(
+  'lab-world-a',
+  (
+    [
+      ['lab-world-a', 5760, 2816],
+      ['lab-world-b', 8320, 2816],
+      ['lab-world-c', 8320, 4352],
+    ] as const
+  ).map(([id, x, y]) => ({ id, x, y, placed: true, scene: getRoom(id) })),
+);
+
+/** A game in the world (the game's, or `world`), booted in `room` with `abilities`, every event kept. */
+function play(room: string, abilities: string[] | null = null, world: World = GAME_WORLD) {
   const t = cloneTuning(defaultTuning);
-  const g = new Game(t, getRoom(room), 1, () => 0, abilities, { world: GAME_WORLD });
+  const g = new Game(t, getRoom(room), 1, () => 0, abilities, { world });
   g.mode = 'manual';
   const events: SimEvent[] = [];
   g.afterStep.add((ev) => events.push(...ev));
@@ -59,19 +75,28 @@ describe('the world check', () => {
     expect(validateWorld()).toEqual([]);
     const p = progression(GAME_WORLD);
     expect(p.abilities).toEqual(['glide']);
-    for (const id of ['wood-hatch', 'lab-world-a', 'lab-world-b', 'lab-world-c'])
+    for (const id of [
+      'wood-hatch',
+      'wood-chase',
+      'wood-wicks',
+      'wood-burrow',
+      'wood-glade',
+      'wood-glidewalk',
+    ])
       expect([...p.reached].some((n) => n.startsWith(`${id}:`))).toBe(true);
   });
 
   it('exits link where the neighbours meet; a one-way drop is arrival only on the far side', () => {
-    expect(GAME_WORLD.links['wood-hatch#drop']).toEqual({ to: 'lab-world-a', exit: 'n' });
-    expect(GAME_WORLD.links['lab-world-a#n']).toBeNull();
-    expect(GAME_WORLD.links['lab-world-a#e-up']).toEqual({ to: 'lab-world-b', exit: 'w' });
-    expect(GAME_WORLD.links['lab-world-b#w']).toEqual({ to: 'lab-world-a', exit: 'e-up' });
-    expect(GAME_WORLD.links['lab-world-b#hole']).toEqual({ to: 'lab-world-c', exit: 'n' });
-    expect(GAME_WORLD.links['lab-world-c#n']).toBeNull();
+    expect(GAME_WORLD.links['wood-hatch#drop']).toEqual({ to: 'wood-chase', exit: 'n' });
+    expect(GAME_WORLD.links['wood-chase#n']).toBeNull();
+    expect(LAB_WORLD.links['lab-world-a#n']).toBeFalsy();
+    expect(LAB_WORLD.links['lab-world-a#e-up']).toEqual({ to: 'lab-world-b', exit: 'w' });
+    expect(LAB_WORLD.links['lab-world-b#w']).toEqual({ to: 'lab-world-a', exit: 'e-up' });
+    expect(LAB_WORLD.links['lab-world-b#hole']).toEqual({ to: 'lab-world-c', exit: 'n' });
+    expect(LAB_WORLD.links['lab-world-c#n']).toBeNull();
     // Test rooms are outside the world: no links.
     expect(Object.keys(GAME_WORLD.links).some((k) => k.startsWith('test-grove'))).toBe(false);
+    expect(Object.keys(GAME_WORLD.links).some((k) => k.startsWith('lab-world'))).toBe(false);
   });
 
   /** A tiny world of boxes: `a` at 0,0 and `b` beside it, with the exits given. */
@@ -164,38 +189,38 @@ describe('the world check', () => {
 });
 
 describe('crossing between rooms', () => {
-  it('the hatching branch drops into the lab: the room changes in the sim, her fall carries on, the save goes with her', () => {
+  it('the hatching branch drops into the chase: the room changes in the sim, her fall carries on, the save goes with her', () => {
     const s = play('wood-hatch', ['glide']);
     const drop = WOOD_HATCH.marks?.drop ?? { x: 0, y: 0 };
     s.g.teleport(drop.x - 120, drop.y);
-    const ev = s.until(R, () => s.g.state.room === 'lab-world-a', 400);
+    const ev = s.until(R, () => s.g.state.room === 'wood-chase', 400);
     const out = ev.find((e) => e.type === 'roomExit');
     expect(out).toMatchObject({
       id: 'drop',
       edge: 's',
-      to: 'lab-world-a',
+      to: 'wood-chase',
       frames: s.t.room.transitionFrames,
     });
     const i = ev.findIndex((e) => e.type === 'roomEnter');
-    expect(ev[i]).toMatchObject({ room: 'lab-world-a', from: 'wood-hatch#drop' });
+    expect(ev[i]).toMatchObject({ room: 'wood-chase', from: 'wood-hatch#drop' });
     expect(ev[i + 1]?.type).toBe('spawn');
     const p = s.g.state.player;
     // Still falling, inside the top of the room, over the arrival opening.
     expect(p.vy).toBeGreaterThan(5);
     expect(p.y + p.h / 2).toBeGreaterThanOrEqual(s.t.room.entryInset - 1);
     expect(p.x).toBeGreaterThanOrEqual(384);
-    expect(s.g.scene.id).toBe('lab-world-a');
+    expect(s.g.scene.id).toBe('wood-chase');
     expect(s.g.state.save.abilities).toEqual(['glide']);
-    expect(s.g.state.save.visited).toEqual(['wood-hatch', 'lab-world-a']);
-    expect(s.g.state.save.crossed).toEqual(['wood-hatch:drop', 'lab-world-a:n']);
+    expect(s.g.state.save.visited).toEqual(['wood-hatch', 'wood-chase']);
+    expect(s.g.state.save.crossed).toEqual(['wood-hatch:drop', 'wood-chase:n']);
     expect(s.g.state.hatch).toBeNull();
-    // She lands on the upper floor.
+    // She lands on bough A.
     s.until(0, () => s.g.state.player.grounded, 200);
-    expect(s.g.state.player.y + s.g.state.player.h).toBe(1152);
+    expect(s.g.state.player.y + s.g.state.player.h).toBe(704);
   });
 
   it('a run through a side exit keeps its speed; the way back works', () => {
-    const s = play('lab-world-a');
+    const s = play('lab-world-a', null, LAB_WORLD);
     s.g.teleport(2000, 1152);
     s.run(R, 40);
     const vx = s.g.state.player.vx;
@@ -217,7 +242,7 @@ describe('crossing between rooms', () => {
 
   it('the same inputs across three rooms give the same hash', () => {
     const run = () => {
-      const s = play('lab-world-a');
+      const s = play('lab-world-a', null, LAB_WORLD);
       s.g.teleport(2000, 1152);
       s.run(R, 200);
       s.run(R | J, 20);
@@ -233,7 +258,7 @@ describe('crossing between rooms', () => {
 
 describe('moon patches, glades, shortcuts, the re-form', () => {
   it('standing still in a patch rests her: whole, saved, her re-form point; once per stay', () => {
-    const s = play('lab-world-a');
+    const s = play('lab-world-a', null, LAB_WORLD);
     s.g.state.player.hp = 1;
     s.g.teleport(1408, 1152);
     const ev = s.run(0, s.t.patch.restFrames + 5);
@@ -251,7 +276,7 @@ describe('moon patches, glades, shortcuts, the re-form', () => {
   });
 
   it('a glade gives its ability once', () => {
-    const s = play('lab-world-c');
+    const s = play('lab-world-c', null, LAB_WORLD);
     expect(s.g.state.save.abilities).toEqual([]);
     const ev = s.until(L, () => s.g.state.save.abilities.includes('glide'), 120);
     expect(ev.filter((e) => e.type === 'gladeGrant')).toMatchObject([
@@ -263,7 +288,7 @@ describe('moon patches, glades, shortcuts, the re-form', () => {
   });
 
   it('running in from A at full speed she meets the gate: the dip never carries her through a wall of the next room', () => {
-    const s = play('lab-world-a');
+    const s = play('lab-world-a', null, LAB_WORLD);
     s.g.teleport(2200, 2560);
     s.until(R, () => s.g.state.room === 'lab-world-c', 200);
     s.run(R, 60);
@@ -273,7 +298,7 @@ describe('moon patches, glades, shortcuts, the re-form', () => {
   });
 
   it('the gate is a wall from the west; pushed from the east it opens for good', () => {
-    const s = play('lab-world-c');
+    const s = play('lab-world-c', null, LAB_WORLD);
     s.g.teleport(40, 1024);
     s.run(R, 60);
     // Stopped by its west face.
@@ -289,7 +314,7 @@ describe('moon patches, glades, shortcuts, the re-form', () => {
   });
 
   it('a fade re-forms her at the patch she last rested at, in another room, keeping everything earned', () => {
-    const s = play('lab-world-a');
+    const s = play('lab-world-a', null, LAB_WORLD);
     s.g.teleport(1408, 1152);
     s.run(0, s.t.patch.restFrames + 2);
     expect(s.g.state.save.patch).toEqual({ room: 'lab-world-a', id: 'p1' });
@@ -317,7 +342,7 @@ describe('moon patches, glades, shortcuts, the re-form', () => {
   });
 
   it('a lure put out stays out when she comes back, and the moths count once', () => {
-    const s = play('lab-world-b');
+    const s = play('lab-world-b', null, LAB_WORLD);
     const t = s.t;
     s.g.state.save.snuffed.push('lab-world-b:b-wick');
     s.g.goto('lab-world-a', 1000, 1152);
@@ -331,12 +356,12 @@ describe('save and continue', () => {
   it('continue starts at the patch with the save; a fresh save starts at the world start', () => {
     const t = cloneTuning(defaultTuning);
     const save = newSave(['glide']);
-    save.visited.push('wood-hatch', 'lab-world-a');
-    save.patch = { room: 'lab-world-a', id: 'p1' };
+    save.visited.push('wood-hatch', 'wood-chase', 'wood-wicks', 'wood-burrow', 'wood-glade');
+    save.patch = { room: 'wood-glade', id: 'p2' };
     const ev: SimEvent[] = [];
     const st = continueState(1, t, GAME_WORLD, save, ev);
-    expect(st.room).toBe('lab-world-a');
-    expect([st.player.x + st.player.w / 2, st.player.y + st.player.h]).toEqual([1408, 1152]);
+    expect(st.room).toBe('wood-glade');
+    expect([st.player.x + st.player.w / 2, st.player.y + st.player.h]).toEqual([448, 1664]);
     expect(st.save.abilities).toEqual(['glide']);
     expect(ev.map((e) => e.type)).toEqual(['roomEnter', 'spawn']);
     const fresh = continueState(1, t, GAME_WORLD, newSave([]));

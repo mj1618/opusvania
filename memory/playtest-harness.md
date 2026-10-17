@@ -101,3 +101,22 @@ done at 83 s (6 catches). Read these as "what a bot does", not yet as the lab's 
 - The view is the follow camera at the 16:9 safe size (1920x1080); beats (the hatch framing, the lean) are not in it.
 - Reach is approximate; a jump the bot drops may still be makeable by a person (the note says which).
 - `npm run check` on a loaded machine (load average 170+ from parallel agents): the e2e boots time out; rerun later.
+
+## The wood, first rooms (2026-10-18, `--until none` from wood-hatch; R4 / R6 stubs)
+| persona | chase (30-60 s) | wicks (60-120 s) | glade (45-90 s) | notes |
+|---|---|---|---|---|
+| naive | 15.8 s | 10.1 s | never leaves | it taps (14-frame jumps), so it never glides: lost 120 s at R5's lip, 48 catches. The design's "tapper" risk (wood.md §3); the fix is render's hint / wings cue, not geometry |
+| cautious | 17.7 s | 11.7 s | 8.0 s | no deaths; caught by W2 at the knob, not W1 (its standing jump is short) |
+| explorer | 16.5 s | 29.6 s | 53.9 s | 39 chasm catches before a glide stuck (its glide hands) |
+| speedrunner | 10.0 s | 6.6 s | 5.3 s | |
+A scripted careful player in the page with real keys (vista look 2.5 s, caught by W1, beat free, cut W2 at the knob,
+a pause in the glade, jump-glide): chase 13.1 s, wicks 8.0 s, glade 5.8 s. **The bots run these rooms in 1/3 to 1/10 of
+the first-timer targets**: the targets count reading, the vista hold, the bask and trying things; geometry is fixed by
+world placement, so judge with the first-timer agent and Matt, not by stretching rooms.
+- Planner fix: its memory (exits, lights, pickups, walked cells, given-up targets, move tries) is **per room**
+  (`RoomMemory`); before, a given-up `exit:e` in one room shut the next room's `e`, and the cautious bot ended "done"
+  in wood-chase chasing wood-hatch's exits. On entering a room the opening she came in by is given up (planners
+  bounced between two rooms' facing exits), and given-up exits no longer hide the forward frontier.
+- `playwright-cli` + `eval` of a long in-page player on the dev server died with "execution context destroyed" while
+  other agents edited files (HMR reloads). A snapshot works: `npx vite build --outDir <scratch>/dist` and
+  `npx vite preview --outDir <scratch>/dist --port 5191`, then `http://localhost:5191/opusvania/?room=...`.

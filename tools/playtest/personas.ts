@@ -179,6 +179,49 @@ interface Target {
   done?: (o: Obs) => boolean;
 }
 
+/** A planner's memory of one room. */
+interface RoomMemory {
+  tries: Map<string, number>;
+  given: Set<string>;
+  visited: Set<string>;
+  pickupsSeen: Map<string, { x: number; y: number }>;
+  pickupsGone: Set<string>;
+  lightsSeen: Map<string, { x: number; y: number }>;
+  lightsVisited: Set<string>;
+  exitsSeen: Map<string, { x: number; y: number; edge: string }>;
+}
+
+/** The id of the exit whose opening is nearest a point (feet), or null in a room with none. */
+function nearestExit(scene: Scene, x: number, y: number): string | null {
+  let best: string | null = null;
+  let bestD = Infinity;
+  for (const e of scene.exits ?? []) {
+    const along = e.edge === 'n' || e.edge === 's' ? x : y;
+    const off = Math.max(0, e.from - along, along - e.to);
+    const across =
+      e.edge === 'n' ? y : e.edge === 's' ? scene.height - y : e.edge === 'w' ? x : scene.width - x;
+    const d = off + Math.max(0, across);
+    if (d < bestD) {
+      bestD = d;
+      best = e.id;
+    }
+  }
+  return best;
+}
+
+function roomMemory(): RoomMemory {
+  return {
+    tries: new Map(),
+    given: new Set(),
+    visited: new Set(),
+    pickupsSeen: new Map(),
+    pickupsGone: new Set(),
+    lightsSeen: new Map(),
+    lightsVisited: new Set(),
+    exitsSeen: new Map(),
+  };
+}
+
 /** A persona that plans routes on its map (explorer, speedrunner, cautious). */
 class Planner implements Persona {
   readonly notes: string[] = [];
@@ -197,14 +240,37 @@ class Planner implements Persona {
   private djUsed = false;
   private moveSince = 0;
   private moveKey = '';
-  private readonly tries = new Map<string, number>();
-  private readonly given = new Set<string>();
-  private readonly visited = new Set<string>();
-  private readonly pickupsSeen = new Map<string, { x: number; y: number }>();
-  private readonly pickupsGone = new Set<string>();
-  private readonly lightsSeen = new Map<string, { x: number; y: number }>();
-  private readonly lightsVisited = new Set<string>();
-  private readonly exitsSeen = new Map<string, { x: number; y: number; edge: string }>();
+  /**
+   * What it remembers, one record per room: ids (exits, lights, pickups) and cells repeat from room to
+   * room (every room has an `n` or an `e`), so a given-up `exit:e` in one room must not shut the next one's.
+   */
+  private readonly memory = new Map<string, RoomMemory>();
+  private room = '';
+  private mem: RoomMemory = roomMemory();
+  private get tries() {
+    return this.mem.tries;
+  }
+  private get given() {
+    return this.mem.given;
+  }
+  private get visited() {
+    return this.mem.visited;
+  }
+  private get pickupsSeen() {
+    return this.mem.pickupsSeen;
+  }
+  private get pickupsGone() {
+    return this.mem.pickupsGone;
+  }
+  private get lightsSeen() {
+    return this.mem.lightsSeen;
+  }
+  private get lightsVisited() {
+    return this.mem.lightsVisited;
+  }
+  private get exitsSeen() {
+    return this.mem.exitsSeen;
+  }
   private nextStop = 0;
   private stopUntil = -1;
   private lookUntil = -1;
@@ -232,6 +298,21 @@ class Planner implements Persona {
   }
 
   private mind(o: Obs, scene: Scene): Mind {
+    let mem = this.memory.get(o.room);
+    if (!mem) {
+      mem = roomMemory();
+      this.memory.set(o.room, mem);
+    }
+    this.mem = mem;
+    if (o.room !== this.room) {
+      // Just came in: the opening she came through is not the way on (two planners used to bounce
+      // between two rooms' facing exits). It stays known; she can still leave by it later on foot.
+      if (this.room !== '') {
+        const back = nearestExit(scene, o.feetX, o.feetY);
+        if (back) mem.given.add(`exit:${back}`);
+      }
+      this.room = o.room;
+    }
     let m = this.minds.get(o.room);
     if (!m || m.scene !== scene) {
       m = new Mind(scene, this.opt.knowsAll);
@@ -415,7 +496,10 @@ class Planner implements Persona {
 
   private candidates(o: Obs, mind: Mind): Array<Target & { rank: number }> {
     const out: Array<Target & { rank: number }> = [];
-    const exits = [...this.exitsSeen.entries()].map(([id, e]) => this.exitTarget(mind, id, e));
+    // Exits it gave up on (the arrival opening among them) leave the forward frontier open.
+    const exits = [...this.exitsSeen.entries()]
+      .map(([id, e]) => this.exitTarget(mind, id, e))
+      .filter((e) => !this.given.has(e.key));
     if (this.opt.pick === 'exit' && exits.length > 0) return exits.map((e) => ({ ...e, rank: 0 }));
     if (this.opt.pick === 'forward' || this.opt.pick === 'exit') {
       if (exits.length > 0) return exits.map((e) => ({ ...e, rank: 0 }));

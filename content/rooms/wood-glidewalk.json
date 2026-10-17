@@ -1,0 +1,38 @@
+{
+  "id": "wood-glidewalk",
+  "title": "STUB: the glidewalk (R6 not built)",
+  "region": "wood",
+  "width": 5760,
+  "height": 2368,
+  "spawn": { "x": 160, "y": 512 },
+  "edgeKick": false,
+  "abilities": ["glide"],
+  "art": { "mode": "greybox", "labels": true },
+  "exits": [{ "id": "w", "edge": "w", "from": 256, "to": 512 }],
+  "patches": [{ "id": "p-stub", "x": 384, "y": 512 }],
+  "solids": [
+    { "tag": "ground", "x": 0, "y": 512, "w": 576, "h": 1856 },
+    { "tag": "trunk", "x": 576, "y": 0, "w": 64, "h": 2368, "kick": false }
+  ],
+  "oneWays": [],
+  "marks": {
+    "notes": [
+      {
+        "x": 100,
+        "y": 200,
+        "text": "STUB: R6 wood-glidewalk is not built (it waits on thorns and rotten bark)"
+      },
+      {
+        "x": 100,
+        "y": 260,
+        "text": "only E0 exists (walled at 576), so wood-glade's glide has somewhere to land"
+      },
+      {
+        "x": 100,
+        "y": 320,
+        "text": "STUB patch p-stub: keeps the world check's no-softlock rule; delete it with R6"
+      }
+    ]
+  },
+  "shots": { "wide": [{ "name": "e0", "x": 384, "y": 512 }] }
+}

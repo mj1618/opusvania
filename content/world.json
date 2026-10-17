@@ -2,9 +2,19 @@
   "start": "wood-hatch",
   "rooms": [
     { "id": "wood-hatch", "x": 0, "y": 0 },
-    { "id": "lab-world-a", "x": 5760, "y": 2816 },
-    { "id": "lab-world-b", "x": 8320, "y": 2816 },
-    { "id": "lab-world-c", "x": 8320, "y": 4352 }
+    { "id": "wood-chase", "x": 5760, "y": 2816 },
+    { "id": "wood-wicks", "x": 11264, "y": 4736 },
+    { "id": "wood-burrow", "x": 15104, "y": 4608 },
+    { "id": "wood-glade", "x": 18944, "y": 6400 },
+    { "id": "wood-glidewalk", "x": 21824, "y": 8064 }
   ],
-  "tests": ["test-grove", "lab-lamps", "lab-kit", "lab-creatures"]
+  "tests": [
+    "test-grove",
+    "lab-lamps",
+    "lab-world-a",
+    "lab-world-b",
+    "lab-world-c",
+    "lab-kit",
+    "lab-creatures"
+  ]
 }

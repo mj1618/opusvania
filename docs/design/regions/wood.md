@@ -707,21 +707,21 @@ twice has two rows, and the harness sums them.
 
 | Room (visit) | Time (first-timer) | Max lost | Deaths | First-run lamps (naive / explorer) |
 |---|---|---|---|---|
-| 1 hatch | 0:20–0:45 | 0:10 | 0 | none |
-| 2 chase | 0:30–1:00 | 0:15 | 0 | none |
-| 3 wicks | 1:00–2:00 | 0:30 | 0 | 2/3 / 3/3 (the high wick on the return) |
-| 4 burrow | 1:30–3:00 | 0:30 | 0–1 | 1/2 / 2/2 |
-| 5 glade | 0:45–1:30 | 1:00 (tapper) | 0 | none |
-| 6 glidewalk | 3:00–4:30 | 0:45 | 0–1 (2–4 pips) | 3/4 / 4/4 |
-| 7 hollow (first) | 0:45–1:30 | 1:00 | 0 | 0/1 / 1/1 |
-| 8 hawkers | 1:30–2:30 | 0:30 | 0–1 | 1/2 / 2/2 |
-| 9 lantern (to the lock, and back) | 2:20–4:10 | 1:00 | 0–1 | 1/1 / 1/1 |
-| 10 well | 3:00–5:00 | 0:30 | 1–2 | 1/1 / 1/1 |
+| 1 `wood-hatch` | 0:20–0:45 | 0:10 | 0 | none |
+| 2 `wood-chase` | 0:30–1:00 | 0:15 | 0 | none |
+| 3 `wood-wicks` | 1:00–2:00 | 0:30 | 0 | 2/3 / 3/3 (the high wick on the return) |
+| 4 `wood-burrow` | 1:30–3:00 | 0:30 | 0–1 | 1/2 / 2/2 |
+| 5 `wood-glade` | 0:45–1:30 | 1:00 (tapper) | 0 | none |
+| 6 `wood-glidewalk` | 3:00–4:30 | 0:45 | 0–1 (2–4 pips) | 3/4 / 4/4 |
+| 7 `wood-hollow` (first) | 0:45–1:30 | 1:00 | 0 | 0/1 / 1/1 |
+| 8 `wood-hawkers` | 1:30–2:30 | 0:30 | 0–1 | 1/2 / 2/2 |
+| 9 `wood-lantern` (to the lock, and back) | 2:20–4:10 | 1:00 | 0–1 | 1/1 / 1/1 |
+| 10 `wood-well` | 3:00–5:00 | 0:30 | 1–2 | 1/1 / 1/1 |
 | 7 hollow (crown) | 0:45–1:30 | 0:30 | 0 | |
 | 8 → 9 (walk east and the shaft) | 1:25–2:30 | 0:30 | 0 | |
-| 11 climb | 2:30–4:00 | 0:45 | 0–1 | 2/3 / 3/3 |
-| 12 web | 3:00–4:30 | 1:00 | 0–1 | 1/2 / 2/2 |
-| 13 grove (fight, chimney, edge) | 5:00–9:00 | 0:30 | 1–3 | 2/2 / 2/2 |
+| 11 `wood-climb` | 2:30–4:00 | 0:45 | 0–1 | 2/3 / 3/3 |
+| 12 `wood-web` | 3:00–4:30 | 1:00 | 0–1 | 1/2 / 2/2 |
+| 13 `wood-grove` (fight, chimney, edge) | 5:00–9:00 | 0:30 | 1–3 | 2/2 / 2/2 |
 | **Region** | **27–47 min, median ~38** | **≤ 2:00 anywhere** | **3–7** | **naive ≥ 13 of 21 first-run lamps; first-timer ≥ 16; explorer 21/21** |
 
 Also:

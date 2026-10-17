@@ -46,7 +46,7 @@ stretch table below is the source); a test checks widths, abutting, steps <= 12 
 Trees (`marks.trees`, centre x / width / top..bottom): `west` 112 / 224 / -500..2816, the only solid; `crown` 3360 / 200 /
 -500..2816 (the gap between S4 and S5 is this trunk: she drops past it); `droop` 5152 / 170 / 260..2816. All `plane: 'walk'`.
 `marks.farBranch`: no collision now, a polyline for a back layer, (4930, 536) -> (7700, 470), width 56; `promise` 3296..4930, y 736.
-Room 7424 x 2816. Exit `drop`: the south edge 6144-7424, **`at` 1790** (fires while she is still in the frame), `oneWay`: it leads into the room below (lab-world-a for now, wood-chase later).
+Room 7424 x 2816. Exit `drop`: the south edge 6144-7424, **`at` 1790** (fires while she is still in the frame), `oneWay`: it leads into wood-chase (she lands on bough A).
 Catch `below`: x 224-6144, y 1600-2816. A caught fall returns her `returnInset` in from the end of the whole rolling top.
 - **Rules learned for paintable joins:** abutting steps only for small changes (a +64 burl, a -96 knee); bigger height
   changes go across a gap. Abutting +96 / +128 / -192 steps painted as square boxes. Rolling tops: the painter must
@@ -61,6 +61,22 @@ Catch `below`: x 224-6144, y 1600-2816. A caught fall returns her `returnInset` 
 - S1 rolls west (1026 -> 1010 -> 1022 over 224-520) and east (1032 dip at 1150, 1004 rise at 1420) of the cocoon
   section (432-1072 stays 1022-1024 for the hang points). Marks unchanged in meaning: cocoon hang points on S1's
   underside, Tatter (1210, 1031: in the dip), swarm through the moon (1420, 544), camera hints vista / swarm / promise (4110, 636) / drop (6300, 1700).
+
+## The wood, greybox (2026-10-18): the rooms built so far
+From docs/design/regions/wood.md draft 2 (§3 placement, §7 specs); `art: greybox`, `region: wood`, `edgeKick: false`,
+`abilities: []` (glide comes from R5's glade); every beat / lock / TODO is a `marks.notes` label (G). Tests:
+`tests/unit/wood-rooms.test.ts` (placement, links, each room's claims, measured in the sim).
+| room | world x, y | size | what is in it |
+|---|---|---|---|
+| R2 `wood-chase` | 5760, 2816 | 6400x1920 | A 256-2048 y704, gap 256, B rolling ~832 (7 rects, steps <= 8), C 3200-3840 y960, gap 320, D 4160-5056 y1024, V 5056-5760 y896 (a cliff to the floor). Twig line: ONE one-way 3584-4224 y768, from over C across the gap to over D (two short twigs over C trapped bots: a walk-off missed C, a jump from their end missed D and the catch put them back on the twig). Catch 256-5056 y>=1600. S exit 5760-6400 one-way (all of the lip's east). Camera zone `vista` (bounds 4416-6400 x 0-1152) |
+| R3 `wood-wicks` | 11264, 4736 | 3840x2176 | L 128-1152 y960, dip 1152-1408 floor 1120, M 1408-2048 y960 + knob 1984-2048 (24 tall), N 2048-3840 y1152, hanging trunk 1600-1664 to y704. W1 `wick-caught` (1280, 720) spin -1, W2 `wick-first` **(2072, 896)** (the paper's 918 put the knob inside its core: the validator refuses), W-hi3 `wick-high` (1408, 352). **Shaft wall 896-1024, y0-576, `kick: false`**: without it a fall held right drifts ~500 px and lands in W1's field (the bots did) |
+| R5 `wood-glade` | 18944, 6400 | 2880x2304 | hollow 192-576 (west face `kick: east`, east block 576-1024 to y1280 `kick: west`), glade `glade-glide` 192-576 x 1344-1664, **P2 at x 448** (a fall from the hole with no input lands at ~493: her walk-in speed carries), floor 0-1408 y1664, chasm catch 1408-2368, Z 2368-2880 y2176, east trunk 2816-2880 to y1920 (`kick: west`). Routes: p2 -> e needs glide, e -> p2 / p2 -> n need wallJump. Camera zone `lip` (bounds 960-2880 x 1216-2304: lip and Z both on screen) |
+| R4 `wood-burrow`, R6 `wood-glidewalk` | 15104, 4608 / 21824, 8064 | 4480x1792 / 5760x2368 | **STUBS** (title `STUB: ...`): only what joins the world. R4: floors F1/F2/F3, root step, P1, a one-way plank standing in for the seed-cases, a wall east of the hole. R6: E0 walled at 576 and a stub patch `p-stub` (the world check's no-softlock rule). Replace both files when the rooms are built |
+Measured (headless sim): every run-up jump across the dip is caught by W1 (11/11 launch points); standing jumps
+held >= 10 frames are caught, a 6-frame tap passes under and is slung onto M; beaten free holding right she lands on M;
+at the knob her centre is 108 px from W2 and a standing forward cut snuffs it; R5 without glide: 0 of 155 jump
+timings reach Z, every one a catch; walk-off glide and jump-glides all cross. The lab-world rooms moved to `tests`
+(memory/world.md). Bot and page times vs wood.md §9: memory/playtest-harness.md "The wood, first rooms".
 
 ## The room camera (`room.camera`, src/render/camera/)
 - Framing overrides: `cameraFor(room)` (tuning.ts) = `cameraTuning` + the room's `anchorY`, `lookaheadX`,
