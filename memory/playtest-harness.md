@@ -135,6 +135,9 @@ A bot that plays like a person, over the whole chunk, watched as video. Built 20
 - **Lamp-guarders** (`fight.ts` tactic `snuff its lamp`): to the flame a creature guards, cut it (up, down or ahead);
   R9's beetle and dangler at one wick go together. The human player uses it for ground creatures (not a flyer's lamp:
   that is often the throw it needs).
+- **Planner fixes (the oak, round 6b):** a solid's top less than her height under the room's top edge is no ground
+  unless a north exit spans it (the oak's west wall at y 0 was "unwalked ground" after the finale until lost); a
+  walk-off is not planned onto a lower surface when another surface lies under the lip first (she lands on that).
 - **Planner fixes (builder 1's R8 report)**: a walk-off is refused when any solid fills the fall column; a wall in a
   gap counts from the take-off height; an `up` move needs headroom over its launch spot; a side exit's target
   accepts the surface it was computed on after it grows (the hub floor: bots ping-ponged hollow <-> glidewalk); a fight

@@ -252,8 +252,8 @@
       "tag": "trunk",
       "x": 1984,
       "y": 2240,
-      "w": 128,
-      "h": 320,
+      "w": 208,
+      "h": 448,
       "kick": "west"
     },
     {
@@ -268,7 +268,7 @@
       "tag": "trunk",
       "x": 1408,
       "y": 1312,
-      "w": 384,
+      "w": 576,
       "h": 1376,
       "kick": "east"
     },
@@ -404,13 +404,6 @@
     },
     {
       "tag": "root",
-      "x": 1792,
-      "y": 1312,
-      "w": 192,
-      "noDrop": true
-    },
-    {
-      "tag": "root",
       "x": 2112,
       "y": 1312,
       "w": 512
@@ -431,8 +424,14 @@
       "tag": "root",
       "x": 2112,
       "y": 1776,
-      "w": 832,
+      "w": 448,
       "noDrop": true
+    },
+    {
+      "tag": "root",
+      "x": 2560,
+      "y": 1776,
+      "w": 384
     },
     {
       "tag": "root",
@@ -670,11 +669,6 @@
         "x": 2700,
         "y": 2200,
         "text": "P-ledge (moon patch) on the buttress, out of W-rest's light; the column's east face is slick under it"
-      },
-      {
-        "x": 1820,
-        "y": 2520,
-        "text": "THE DARK WAY: the hole at the ledge's back, the tunnel, the chimney (no lamps, slower) to the bridge"
       },
       {
         "x": 2960,

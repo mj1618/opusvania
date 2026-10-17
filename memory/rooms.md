@@ -175,20 +175,21 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   buttress 2816-2944 from 2240 down), one-way **catch rungs** across it at 3264 and 2752.
 - **Rest ledge (2240):** the solid ledge 2192-2560 with `wick-rest` (2380, 2196) and `dang-knot` hung under the
   floor above (1800, drop 400); the one-way across the column; **P-ledge** (2880) on the buttress, 500 px from
-  W-rest (dark: the dangler never drops on a rester). The dark way's hole is at the ledge's back (2112-2192).
+  W-rest (dark: the dangler never drops on a rester). Walled west (the dark way, cut in round 6b: see below).
 - **Middle (round 4: the catch is a choice).** The near face (2944) holds only from P-ledge up to **the floor under
-  W-ff** (one-way 2112-2944, y 1776); above it, slick 1344-1776. **No thorns in the oak** (first-timer r6: the band ~900 px over P-ledge was off screen
+  W-ff** (one-way 2112-2944, y 1776: `noDrop` over the dangler 2112-2560, a drop-through over the column and the
+  buttress 2560-2944 onto the rest ledge, the way back down); above it, slick 1344-1776. **No thorns in the oak** (first-timer r6: the band ~900 px over P-ledge was off screen
   when a climb began, and W-ff's release held right flung her into it). W-ff hangs at
   (2620, 1460), 300 px off the face: a held-right climber from P-ledge is never caught
   (24 press rhythms: 16 reach the floor, the rest still climbing at 10 s). From the floor, out of the pull, a hop
   (10 f) under W-ff is caught; beaten free up-left she lands on the **knot bridge** (one-way 2112-2624, y 1312, on
-  from the band's top and the chimney's lid) in 36 of 36 rhythms x orbit phases. The bridge's tip is over W-ff:
+  from the band's top and the filled chimney's) in 36 of 36 rhythms x orbit phases. The bridge's tip is over W-ff:
   walk off and down-cut in frames 0-4 (snuff, pogo, onto the foothold 2848-2944 at 1248). With W-ff out the far
   band climbs from the floor to the bridge (the permanence way). Zone `snuff` (0.85) frames the tip; zone `trunk`
   (0.8, last, so the others win) is the climb's look-ahead: at zoom 1 the follow's dead zone let her rise to ~290 px
   under the view's top while climbing; at 0.8 ~480, and from P-ledge the whole face and the floor over it show.
 - **Falls:** from 16 drop points on the faces, the bridge and the upper rung she lands within 600 px: rungs 3264 /
-  2752, the ledge and buttress 2240, the floor 1776 and the chimney's lid 1312 (`noDrop`: human-like personas dropped through them, 900-1400 px), the bridge
+  2752, the ledge and buttress 2240, the floor 1776 (`noDrop` west of 2560: human-like personas dropped through into the old hole, 900-1400 px), the bridge
   1312, the shelf 2680-2944 at 1248 (a step up from the bridge's tip), footholds against the face at 1048 and 800,
   the upper rung 2240-2700 at 1000. (A ledge 64+ px off a face she climbs catches a one-wall climber's kick-out and
   she bounces between it and the face: keep ledges right against the face or well clear of it.)
@@ -211,7 +212,10 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   at the root's knot) frame its two beats; the finale's pull-out is render's.
 - **Cut in round 4:** the postgame crown lantern (in view of the rim it drew players off the top: human-like
   personas chased it and fell), the west crown's top (an unreachable ledge in view: the west wood is solid to the
-  room's top now), the chimney rungs (frontier the personas could not reach).
+  room's top now), the chimney rungs (frontier the personas could not reach). **Round 6b:** the dark way (the hole at
+  the rest ledge's back, the tunnel, the chimney to the bridge): its tunnel floor was a goal to every persona after the
+  finale and none found the hole (it dropped onto the tunnel's dead end); nobody used it; the far band and W-ff are
+  the two ways up the middle. Filled solid (1408-1984 and 1984-2192 down to 2688).
 - **Fades:** `reformPatch: true` (8036fc0: the nearest patch at or below where she lay): a fade above the rest ledge
   re-forms her at P-ledge, below it at P3; `reform` (P3) stays as the fallback. Never in R8.
 - **The first visit (round 5: lived, not held):** the glimpse at P3 holds 180 (no `finale`; holds <= 4 s except the

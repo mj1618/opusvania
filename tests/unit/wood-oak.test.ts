@@ -173,6 +173,28 @@ describe('the oak: one room from the roots to the crown', () => {
   });
 });
 
+describe('the way back down the trunk', () => {
+  it('from the floor under W-ff a drop-through over the column or the buttress lands on the rest ledge; over the hole it refuses', () => {
+    // (Round 6b: the whole floor was noDrop and the upper trunk had no way down; the personas wandered it after the finale.)
+    for (const x of [2600, 2780, 2900]) {
+      const s = play({ glimpse: false });
+      s.g.teleport(x, MID);
+      s.run(0, 3);
+      s.run(D | J, 2);
+      for (let i = 0; i < 200 && !(s.g.state.player.grounded && s.feet().y > MID); i++) s.run(0);
+      expect(s.feet().y, `through at ${x}`).toBe(LEDGE);
+    }
+    for (const x of [2160, 2300, 2480]) {
+      const s = play({ glimpse: false });
+      s.g.teleport(x, MID);
+      s.run(0, 3);
+      s.run(D | J, 2);
+      s.run(0, 60);
+      expect(s.feet().y, `held at ${x}`).toBe(MID);
+    }
+  });
+});
+
 describe('the hollow at the foot of the oak', () => {
   it('the first visit is lived: a glimpse of 180 at P3, then Tatter’s crack at the trunk’s foot is the way east', () => {
     const glimpse = (OAK.triggers ?? []).find((t) => t.id === 'glimpse');
@@ -367,29 +389,13 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
     expect(s.feet().y).toBe(BRIDGE);
   });
 
-  it('the dark way: the hole at the ledge’s back, the tunnel and the chimney to the bridge; no lamp near; slower', () => {
-    const dark = play();
-    dark.g.teleport(2220, LEDGE);
-    dark.run(0, 3);
-    let ev: SimEvent[] = [];
-    for (let i = 0; i < 120 && dark.feet().y <= LEDGE; i++) ev = ev.concat(dark.run(L));
-    ev = ev.concat(land(dark, L));
-    expect(dark.feet().y).toBe(2688);
-    for (let i = 0; i < 120 && dark.feet().x > 1880; i++) ev = ev.concat(dark.run(L));
-    ev = ev.concat(climb(dark, -1, () => dark.feet().y <= BRIDGE - 20 && dark.g.state.player.vy > 0, 1200));
-    ev = ev.concat(land(dark, R, 120));
-    expect(dark.feet().y).toBe(BRIDGE);
-    expect(has(ev, 'lureCaught')).toBe(false);
-    const darkFrames = dark.g.state.frame;
-    // The light way from the same ledge: across to the glow-cap ledge's foot of the near face, up, caught, thrown.
-    const light = play();
-    light.g.teleport(WFF.x, MID);
-    light.run(J, 10);
-    for (let i = 0; i < 40 && light.g.state.player.lure < 0; i++) light.run(0);
-    beatFree(light, U | L);
-    land(light, L, 160);
-    expect(light.feet().y).toBe(BRIDGE);
-    expect(darkFrames).toBeGreaterThan(light.g.state.frame + 60);
+  it('no dark way (cut in round 6b: the personas never found its hole and wandered for its tunnel): the rest ledge is walled west', () => {
+    const s = play();
+    s.g.teleport(2220, LEDGE);
+    s.run(0, 3);
+    s.run(L, 90);
+    expect(s.feet().y).toBe(LEDGE);
+    expect(s.g.state.player.grounded).toBe(true);
   });
 
   it('the bark knot: three cuts from the bridge’s west end, W-knot behind it a standing cut from the doorway', () => {

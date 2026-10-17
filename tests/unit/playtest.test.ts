@@ -469,6 +469,39 @@ describe('playtest harness: walls the planner reads (builder 1, R8)', () => {
     expect(walled.some((m) => m.kind === 'drop' && m.from === 0 && m.to === 1 && m.dir === 1)).toBe(false);
   });
 
+  it('no walk-off planned onto a far floor when a nearer floor lies under the lip (the oak: a floor over its tunnel)', () => {
+    const ledge = surf(0, 0, 1000, 1000);
+    const tunnel = surf(1, 0, 2000, 1900);
+    const between = surf(2, 900, 1400, 1400, true);
+    expect(
+      buildMoves([ledge, tunnel], reach).some((m) => m.kind === 'drop' && m.from === 0 && m.to === 1),
+    ).toBe(true);
+    expect(
+      buildMoves([ledge, tunnel, between], reach).some(
+        (m) => m.kind === 'drop' && m.from === 0 && m.to === 1,
+      ),
+    ).toBe(false);
+  });
+
+  it('a top under the room’s top edge is no ground, except under a north exit', () => {
+    const scene = {
+      ...gapRoom(),
+      solids: [
+        { tag: 'trunk' as const, x: 0, y: 0, w: 400, h: 600 },
+        { tag: 'trunk' as const, x: 400, y: 600, w: 400, h: 50 },
+      ],
+    };
+    expect(buildSurfaces(scene, [0, 1], []).map((q) => q.x0)).toEqual([400]);
+    const open = {
+      ...scene,
+      exits: [{ id: 'up', edge: 'n' as const, from: 100, to: 300 }],
+    } as unknown as Room;
+    expect(buildSurfaces(open, [0, 1], []).map((q) => [q.x0, q.x1])).toEqual([
+      [100, 300],
+      [400, 800],
+    ]);
+  });
+
   it('a wall in a gap counts from where she takes off, not from the higher ledge beyond', () => {
     const near = surf(0, 0, 500, 1000);
     const far = surf(1, 650, 1200, 850);

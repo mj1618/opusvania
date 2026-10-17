@@ -752,3 +752,7 @@ play, in one or two sentences, with the moment it was decided.
   only punished W-ff's throw, and it sat ~900 px over P-ledge, off screen when the climb began; no place on the
   trunk was both in view from a patch and clear of every throw. No thorns in the oak now. Zone `trunk` (0.8) over
   the climb so the wall ahead shows (a climb look-up in the follow camera would be render's).
+- **Round 6b (human-like runs on fddf488: 1 of 9 through, 5 lost in the oak after the finale):** the dark way is cut
+  (its tunnel floor was every persona's goal and nobody found its hole); the floor under W-ff drops through over the
+  column and buttress onto the rest ledge (the upper trunk had no way down); two harness planner fixes (a top at the
+  room's top edge is no ground; no walk-off planned past a nearer floor).

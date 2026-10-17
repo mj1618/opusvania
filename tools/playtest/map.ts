@@ -109,9 +109,16 @@ export function buildSurfaces(
     .map((i) => scene.solids[i])
     .filter((r) => r !== undefined);
   const pieces: Piece[] = [];
+  // The room's top edge closes over a top less than her height under it (no ground: the oak's west wall seen from
+  // the crown, its top at y 0, was a goal the personas went for until lost), except under a north exit.
+  const norths = (scene.exits ?? []).filter((e) => e.edge === 'n');
   for (const s of topRects) {
     // The top, minus where another solid sits on it (no room for her body there).
     let spans: Array<[number, number]> = [[s.x, s.x + s.w]];
+    if (s.y < BODY_H)
+      spans = norths
+        .map((e): [number, number] => [Math.max(s.x, e.from), Math.min(s.x + s.w, e.to)])
+        .filter(([a, b]) => b > a);
     for (const o of rects) {
       if (o === s) continue;
       if (!(o.y < s.y && o.y + o.h > s.y - BODY_H)) continue;
@@ -353,7 +360,18 @@ export function buildMoves(
           });
           continue;
         }
-        if (a.x1 > b.x0 + 24 && a.x1 < b.x1 - 24 && !solidBetween(a.x1 + 30))
+        // Nor when a surface lies under the lip first (a floor over a lower one, `noDrop` or not: she lands on it).
+        const landsFirst = (x: number) =>
+          surfaces.some(
+            (c) =>
+              c !== a &&
+              c !== b &&
+              c.x0 <= x &&
+              c.x1 >= x &&
+              yAt(c, x) > ya + ROLL &&
+              yAt(c, x) < yAt(b, x) - ROLL,
+          );
+        if (a.x1 > b.x0 + 24 && a.x1 < b.x1 - 24 && !solidBetween(a.x1 + 30) && !landsFirst(a.x1 + 30))
           push({
             from: a.id,
             to: b.id,
@@ -363,7 +381,7 @@ export function buildMoves(
             rise: yb - ya,
             cost: (yb - ya) * 0.5 + 30,
           });
-        if (a.x0 < b.x1 - 24 && a.x0 > b.x0 + 24 && !solidBetween(a.x0 - 30))
+        if (a.x0 < b.x1 - 24 && a.x0 > b.x0 + 24 && !solidBetween(a.x0 - 30) && !landsFirst(a.x0 - 30))
           push({
             from: a.id,
             to: b.id,
