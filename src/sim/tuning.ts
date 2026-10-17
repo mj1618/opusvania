@@ -374,8 +374,17 @@ export const defaultTuning = withVariants({
      * before it), so the arrow she sees is the throw (src/sim/lures.ts `lureThrowAim`).
      */
     graceFrames: 50,
-    /** Every other burning core the throw passes through in its first `throwFrames` gets `graceFrames` too. */
+    /**
+     * The throw is a launch (director's area 1, "the throw must not depend on holding jump"): for its first
+     * `throwFrames` she flies under `launchGravity` x gravity whatever jump does (no apex hang, no wings, no
+     * cut), so every throw has the same strength; after it, held jump opens the wings as usual (throw +
+     * glide). Every other burning core the throw passes through in those frames gets `graceFrames` too.
+     */
     throwFrames: 20,
+    launchGravity: 0.5,
+    /** While caught, the throw's predicted flight (`player.lureArc`): a point every `arcEvery` frames, up to `arcFrames`. */
+    arcEvery: 3,
+    arcFrames: 60,
     /** Half the size of the flame's box the blade has to touch. */
     flameRadius: 20,
     /** Hitstop when a cut lands on a flame and it holds, and when it goes out (the loudest beat). */

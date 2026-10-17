@@ -124,6 +124,9 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     lureAimY: -1,
     lureThrow: 0,
     lureCore: 0,
+    lureBack: -1,
+    lureArc: [],
+    thrown: false,
     grab: -1,
     grabX: 0,
     grabY: 0,
@@ -712,6 +715,7 @@ function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {
   p.coyote = 0;
   p.grounded = false;
   p.fromJump = true;
+  p.thrown = false;
   p.cut = false;
   p.sustain = c.P.sustainFrames;
   p.sustainV = p.vy;
@@ -926,6 +930,8 @@ function updateGlide(c: Ctx): void {
     return;
   }
   if (!want || p.vy <= P.glideMinVy) return;
+  // (Not in the throw's launch: the wings open after it, so the throw is the same with jump held or not.)
+  if (p.lureThrow > 0) return;
   if (p.carried && p.y < p.launchY + P.glideCarriedDropPx) return;
   if (jumpPending(c)) return;
   p.gliding = true;
@@ -948,6 +954,11 @@ function gravity(c: Ctx): void {
     glideFall(c);
     return;
   }
+  // The throw's launch (`lures.throwFrames`): one strength, whatever the jump button does.
+  if (p.lureThrow > 0 && p.lure < 0) {
+    p.vy = Math.min(p.vy + P.gravity * P.tuning.lures.launchGravity, P.maxFall);
+    return;
+  }
   const heldEff = c.held(ActionBit.jump);
   // variableJump off: releasing never cuts or ends the sustain (every jump is full height).
   const holdsRise = heldEff || !P.variableJump;
@@ -956,7 +967,8 @@ function gravity(c: Ctx): void {
   let g = P.gravity;
   if (p.vy >= 0) g *= P.fallMult;
   else if (p.cut && !P.releaseZero) g *= P.releaseMult;
-  if (heldEff && Math.abs(p.vy) < P.apexHangVy) g *= P.apexHangMult;
+  // (Not on a throw's flight: its strength never depends on the jump button.)
+  if (heldEff && !p.thrown && Math.abs(p.vy) < P.apexHangVy) g *= P.apexHangMult;
   const cap = c.held(ActionBit.down) && p.vy >= P.maxFall ? P.fastFallMax : P.maxFall;
   p.vy = p.vy > cap ? approach(p.vy, cap, P.fastFallAccel) : Math.min(p.vy + g, cap);
   if (p.sustain > 0) {
@@ -1335,6 +1347,7 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
   }
   p.grounded = p.vy >= 0 && c.groundAt(p.x, p.y);
   if (p.grounded) {
+    p.thrown = false;
     // Coyote: N usable airborne frames after the frame that left the ground.
     p.coyote = P.coyoteFrames;
     p.airDash = P.airDashes;

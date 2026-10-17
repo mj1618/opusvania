@@ -38,8 +38,16 @@ every ability; `&abilities=none` for the starting kit). Tests: `tests/unit/lures
 - **Beating free**: each press of jump **or attack** is a beat, queued (`beatQueue` 2) and counted `beatCd` 6
   apart, so a mash is never lost; a press buffered just before the catch counts. Each pushes the circle out
   `beatPush` (sinks back `beatSink`/f). The 3rd throws her **exactly along the held direction (8-way)**; with
-  nothing held, out along the radius she is at (`lureThrowAim`); `freeSpeed` 14 (sideways part into `pullX`) +
-  `freeLift` 7 up; double jump and air dash back; `graceFrames` 50 from that lure, **and from every core the throw
+  nothing held, **back the way she came in** (`player.lureBack`, set at the catch: director's area 1, "holding nothing
+  throws her back", it costs nothing; R3: back onto L 17 of 17); `freeSpeed` 14 (sideways part into `pullX`) +
+  `freeLift` 7 up, then **a launch**: for `throwFrames` 20 she flies under `launchGravity` 0.5 x gravity whatever
+  jump does, no wings, and no apex hang until she lands (`player.thrown`), so the strength never depends on holding
+  jump (casual first-timer r2 found the strong throw only by holding it); held jump opens the wings after the launch
+  (throw + glide). Flat floor 260 px under the flame: right 676 px, up-right 863 px and 369 up (it was 398 / 440 with
+  jump released / held). While caught, **`player.lureArc`** is the predicted flight (src/sim/arc.ts: the real
+  controller on a copy, the last beat taken now with the held direction; body-centre points every `arcEvery` 3
+  frames up to `arcFrames` 60, ending where she lands or is caught again), for render's preview; double jump and air
+  dash back; `graceFrames` 50 from that lure, **and from every core the throw
   passes through in its first `throwFrames` 20** (`lures.grace[i]`: no re-catch by the next wick). **The orbit
   stands still while the last beat is due** (`lureBeats = beats - 1` and `lureCd > 0`), and `lureAimX/Y` is the
   throw from where she is, so the arrow render draws is the throw she gets. A dash (owned, off cooldown) frees her at
@@ -84,6 +92,9 @@ caught (unchanged). R6 W5 catches the jump-glide 3 of 3; beaten free holding rig
 ## What feels good, what doesn't yet
 - Good: the gap slingshot (a gravity assist that a first jump discovers), the throw out of the lantern, the
   pogo snuff, the snuff burst + moths.
+- Throws re-measured with the launch (2026-10-18): R3 W1 holding right or up-right lands on M 17 / 17 (x ~1650),
+  nothing held back onto L 17 / 17; R6 W5 holding right, jump let go: T3 8 / 8 (x 3200-3274); gliding on after it
+  carries to T4 (5356) or into W6; lab B across 18 / 18.
 - Not yet: (1) gliding near flames: `glidePullMult` 0.6 and the inward rule are the first try; watch a dense
   field. (2) No sound yet. (3) The moths leave up and east: rooms have no migration line yet (core.md §3).
 

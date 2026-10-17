@@ -154,6 +154,16 @@ export interface PlayerState {
   lureAimY: number;
   lureThrow: number;
   lureCore: number;
+  /** The way she came into the lure that holds her (-1 / 1): with nothing held the throw sends her back that way. */
+  lureBack: number;
+  /**
+   * While caught: the flight the last beat would give her now, body-centre points `lures.arcEvery` frames
+   * apart (flat `[x0, y0, x1, y1, ...]`, from the real controller on a copy of the state: walls, other
+   * lures' pull). Empty when not caught. Render draws the throw's arc from it.
+   */
+  lureArc: number[];
+  /** A throw's flight, from the last beat until she lands or jumps: no apex hang (one strength, held jump or not). */
+  thrown: boolean;
   /**
    * A grab (src/sim/grab.ts, memory/creatures.md): `grab` = index of the creature (a web: `enemies[i]`)
    * holding her, -1 = none. Held where it caught her (`grabX, grabY` = her body centre then); beating
@@ -921,7 +931,7 @@ export interface GameState {
 export function cloneState(s: GameState): GameState {
   return {
     ...s,
-    player: { ...s.player },
+    player: { ...s.player, lureArc: s.player.lureArc.slice() },
     pickups: {
       ...s.pickups,
       timers: s.pickups.timers.slice(),

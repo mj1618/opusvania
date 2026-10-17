@@ -223,14 +223,13 @@ export function lureCatchAt(state: GameState, scene: Scene, t: Tuning, px: numbe
 
 /**
  * The unit direction the last beat throws her (into `out`): the held direction, exactly (8-way), so the
- * stick alone picks it (Ori's Bash; the old radius bent by the stick threw her the wrong way in 7 of 34
- * rhythms). With nothing held, the radius she is at (out from the flame; Up at its very centre) is the
- * tie-break. (Up as that default put R3's mashers into W-hi3 over W1 in 5 of 9 rhythms; the radius in 2.)
+ * stick alone picks it (Ori's Bash). With nothing held, back the way she came in (`player.lureBack`): it
+ * costs nothing (director's area 1, R3 / R4: "holding nothing throws her back").
  */
 export function lureThrowAim(
   state: GameState,
-  scene: Scene,
-  t: Tuning,
+  _scene: Scene,
+  _t: Tuning,
   aimX: number,
   aimY: number,
   out: { x: number; y: number },
@@ -241,19 +240,8 @@ export function lureThrowAim(
     out.y = aimY / hm;
     return out;
   }
-  out.x = 0;
-  out.y = -1;
-  const p = state.player;
-  const l = scene.lures?.[p.lure];
-  if (!l) return out;
-  const f = flameAt(state.lures, p.lure, l, state.frame, t, F);
-  const rx = centreX(p) - f.x;
-  const ry = centreY(p) - f.y;
-  const d = Math.sqrt(rx * rx + ry * ry);
-  if (d > 0.001) {
-    out.x = rx / d;
-    out.y = ry / d;
-  }
+  out.x = state.player.lureBack < 0 ? -1 : 1;
+  out.y = 0;
   return out;
 }
 
@@ -278,6 +266,8 @@ export function catchPlayer(state: GameState, scene: Scene, i: number, t: Tuning
   p.lureOut = Math.max(0, d - K.core * t.lures.orbitShare);
   p.lureCore = 0;
   p.lureThrow = 0;
+  // The way she came in: a throw with nothing held sends her back out that way (it costs nothing).
+  p.lureBack = p.vx + p.pullX > 0 ? -1 : p.vx + p.pullX < 0 ? 1 : -p.facing;
   p.pullX = 0;
   events.push({ type: 'lureCaught', id: l.id, kind: l.kind, x: f.x, y: f.y, spin: l.spin ?? 1 });
 }
@@ -324,6 +314,7 @@ export function freePlayer(
     p.pullX = vx;
     p.vy = vy;
     p.lureThrow = Math.max(0, Math.round(T.throwFrames));
+    p.thrown = true;
   } else {
     p.pullX = 0;
   }

@@ -241,22 +241,73 @@ describe('lures: caught', () => {
         expect(f.vy + L.freeLift, `${mask} ${wait}`).toBeCloseTo((dy / m) * L.freeSpeed, 9);
       }
     }
-    // Nothing held: out along the radius she is at (the tie-break), the way the arrow points.
-    for (const wait of [0, 9, 23, 40]) {
-      const s = newSim(scene);
-      caughtBy(s, 2000, 500);
-      hold(s, 0, wait);
-      s.run('J1 .5 J1 .5');
-      const p = s.state.player;
-      const [rx, ry] = [p.x + p.rx + 20 - 2000, p.y + p.ry + 40 - 500];
-      const aim = [p.lureAimX, p.lureAimY];
-      const f = s.run('J1').find((e) => e.type === 'lureFree');
-      if (f?.type !== 'lureFree') throw new Error('not freed');
-      const d = Math.hypot(rx, ry);
-      expect(f.vx / L.freeSpeed, `${wait}`).toBeCloseTo(rx / d, 6);
-      expect((f.vy + L.freeLift) / L.freeSpeed, `${wait}`).toBeCloseTo(ry / d, 6);
-      expect(aim[0]).toBeCloseTo(rx / d, 6);
+    // Nothing held: back the way she came in (director's area 1: "holding nothing throws her back", it costs
+    // nothing), whatever the orbit; the arrow says so.
+    for (const [dir, back] of [
+      [ActionBit.right, -1],
+      [ActionBit.left, 1],
+    ] as const) {
+      for (const wait of [0, 9, 23, 40]) {
+        const s = newSim(scene);
+        const side = dir === ActionBit.right ? 1 : -1;
+        centreOn(s, 2000 - 70 * side, 490);
+        s.state.player.vx = 8 * side;
+        let ev: SimEvent[] = [];
+        for (let i = 0; i < 40 && s.state.player.lure < 0; i++) ev = hold(s, dir, 1);
+        expect(s.state.player.lure, `${dir}`).toBe(0);
+        hold(s, 0, wait);
+        s.run('J1 .5 J1 .5');
+        expect(s.state.player.lureAimX).toBe(back);
+        const f = s.run('J1').find((e) => e.type === 'lureFree');
+        if (f?.type !== 'lureFree') throw new Error('not freed');
+        expect(f.vx, `${dir} ${wait}`).toBe(back * L.freeSpeed);
+        expect(f.vy).toBe(-L.freeLift);
+        void ev;
+      }
     }
+  });
+
+  it('the throw is a launch: one strength whether jump is held or not (director: found by accident), the wings only after it', () => {
+    const flight = (after: number, abilities: string[]) => {
+      const s = newSim(withLures([wick(2000, 500)]));
+      s.state.save.abilities = abilities as typeof s.state.save.abilities;
+      caughtBy(s, 2000, 500);
+      s.run('U+R+J1 U+R6 U+R+J1 U+R6 U+R+J1');
+      expect(s.state.player.lure).toBe(-1);
+      const path: number[] = [];
+      for (let i = 0; i < 120 && !s.state.player.grounded; i++) {
+        hold(s, ActionBit.up | ActionBit.right | after, 1);
+        path.push(s.state.player.x, s.state.player.y);
+      }
+      return path;
+    };
+    // No wings: the same flight to the frame, jump held or not.
+    expect(flight(ActionBit.jump, [])).toEqual(flight(0, []));
+    // With wings: the same launch; held jump opens them only after it (throw + glide).
+    const held = flight(ActionBit.jump, ['glide']);
+    const not = flight(0, ['glide']);
+    const n = 2 * (L.throwFrames - 1);
+    expect(held.slice(0, n)).toEqual(not.slice(0, n));
+  });
+
+  it('while caught, lureArc is the flight the last beat would give her (the real one, point for point)', () => {
+    const s = newSim(withLures([wick(2000, 500)]));
+    caughtBy(s, 2000, 500);
+    s.run('U+R+J1 U+R6 U+R+J1 U+R6');
+    const arc = s.state.player.lureArc.slice();
+    expect(arc.length).toBeGreaterThanOrEqual(8);
+    // Now the last beat, holding the same: she flies along it.
+    const every = L.arcEvery;
+    const got: number[] = [];
+    const p = s.state.player;
+    for (let f = 0; f < (arc.length / 2) * every; f++) {
+      hold(s, f === 0 ? ActionBit.up | ActionBit.right | ActionBit.jump : ActionBit.up | ActionBit.right, 1);
+      if (f % every === 0) got.push(Math.round(p.x + p.w / 2), Math.round(p.y + p.h / 2));
+      if (p.grounded) break;
+    }
+    expect(got.slice(0, 8)).toEqual(arc.slice(0, 8));
+    // Not caught: no arc.
+    expect(s.state.player.lureArc).toEqual([]);
   });
 
   it('the orbit stands still while the last beat is due, and the aim she is shown is the throw', () => {

@@ -4,6 +4,7 @@
  * tsconfig.sim.json, biome overrides and tests/unit/sim-purity.test.ts).
  */
 import { ABILITIES, normalizeAbilities } from './abilities';
+import { lureArc } from './arc';
 import { lockedScene, resetBoss, updateBoss } from './boss/index';
 import { contactDamage, enemyTouched, resetEnemies, updateEnemies } from './enemies';
 import type { SimEvent } from './events';
@@ -368,6 +369,9 @@ export function step(
   const ran = updatePlayer(state, S, held ? heldInput(state, S, t.goal) : live, P, t.pods, events);
   // (After its last held step: whatever she still holds is not a press when input comes back.)
   if (storyEnd) state.player.inputLock = 0xffff;
+  // Caught by a lure: the throw's arc from here, for render (src/sim/arc.ts).
+  if (state.player.lure >= 0) state.player.lureArc = lureArc(state, S, t, P, live);
+  else if (state.player.lureArc.length > 0) state.player.lureArc = [];
   // Her offer (memory/giving.md): a glint given this step, one arriving.
   updateOffer(state, S, t, held ? 0 : live, held, events);
   // The level kit (memory/level-kit.md): triggers set flags, gates open, thorns hurt and send her back.
