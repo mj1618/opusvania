@@ -97,6 +97,8 @@ export interface View {
   unarmed?: boolean;
   /** Per antenna (index as `antennae`), its lantern tip's light (0 = none: a snapped antenna). */
   tips?: readonly [number, number];
+  /** 0..1: her contact shadow (0 while she hangs on the silk: the ground under her is not hers). */
+  shadowA?: number;
   /** 0..1: the thorn at her hip is drawn this solid (the birth: it is not there while she is curled). */
   thornA?: number;
 }
@@ -105,24 +107,30 @@ function dim(c: RGB, k: number): RGB {
   return [c[0] * k, c[1] * k, c[2] * k];
 }
 
-// --- Colours. Plum-charcoal family, pale ash fur, one light: pale gold.
-const WING_TOP = rgb(0x553a6e);
-const WING_MID = rgb(0x30204a);
-const WING_LOW = rgb(0x150f28);
-const BAND = rgb(0xc4b4aa);
-const TUNIC_TOP = rgb(0x34274e);
-const TUNIC_LOW = rgb(0x171128);
-const SLEEVE = rgb(0x3f3060);
-const SLEEVE_LOW = rgb(0x211838);
-const LEG_TOP = rgb(0x2b2044);
-const LEG_LOW = rgb(0x130e22);
+// --- Colours. Plum-charcoal family, pale ash fur, one light: pale silver (the eyes gold).
+/**
+ * Her dark body, scaled down as one (review round 1: body p50 45 against <= 30, "darker and subtler"):
+ * she reads as a silhouette on the mist band, the face and eyes are her only light tones.
+ */
+const BODY_K = 0.48;
+const body = (hex: number): RGB => dim(rgb(hex), BODY_K);
+const WING_TOP = body(0x553a6e);
+const WING_MID = body(0x30204a);
+const WING_LOW = body(0x150f28);
+const BAND = dim(rgb(0xc4b4aa), 0.5);
+const TUNIC_TOP = body(0x34274e);
+const TUNIC_LOW = body(0x171128);
+const SLEEVE = body(0x3f3060);
+const SLEEVE_LOW = body(0x211838);
+const LEG_TOP = body(0x2b2044);
+const LEG_LOW = body(0x130e22);
 const FUR = rgb(0xb2aab8);
 const FUR_SHADE = rgb(0x746c90);
 // Soft pale fur in moonlight, never white: the eyes and lanterns are her brightest points.
 const FACE_LIT = rgb(0xc6bdc8);
 const FACE_SHADE = rgb(0x8a82a4);
-const CROWN_TOP = rgb(0x2e2246);
-const CROWN_LOW = rgb(0x100b1c);
+const CROWN_TOP = body(0x2e2246);
+const CROWN_LOW = body(0x100b1c);
 const HAND = rgb(0xb4aab0);
 const WRAP = rgb(0x968ea0);
 const METAL = rgb(0xcdb98a);
@@ -1223,7 +1231,7 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   const oy = j[J_ORIGIN * 2 + 1]!;
   // Her contact shadow shrinks and fades as she leaves the ground in the finisher's hop.
   const hk = 1 / (1 + v.hop / 14);
-  p.soft(ox, oy + 1, 24 * hk, 4.5 * hk, SHADOW, 0.5 * s[S_GROUND]! * hk);
+  p.soft(ox, oy + 1, 24 * hk, 4.5 * hk, SHADOW, 0.5 * s[S_GROUND]! * hk * (v.shadowA ?? 1));
 
   // Spread for the glide, both wings lie behind her and she hangs in front of them; the far one
   // is only a little dimmer, and the two trade places smoothly as she turns under them.

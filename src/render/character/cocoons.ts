@@ -1,8 +1,8 @@
 // biome-ignore-all lint/style/noNonNullAssertion: typed-array maths; indices are in range by construction
 /**
  * The cocoon row on the hatching branch (memory/hatch-and-tatter.md): the split, empty husks of the
- * others and her own closed cocoon, each hanging off the branch's near lip on a few silk threads (the
- * room's `marks.cocoons`). Each is a pendulum (swing + a lagging bend) pushed by the scene's wind. Hers
+ * others and her own closed cocoon, each hanging UNDER the branch on a few silk threads, against the
+ * fog of the drop (the room's `marks.cocoons`; a hang point inside a solid is moved to its underside). Each is a pendulum (swing + a lagging bend) pushed by the scene's wind. Hers
  * twitches when a button stirs it and on its own, harder as time passes; on `hatch` it splits: threads
  * snap, the two halves of the shell swing open on their hinge, husk flakes and silk fall into the drop.
  *
@@ -16,11 +16,15 @@ import type { HatchState } from '../../sim/state';
 import { KEY_LIGHT, wind } from '../scene/lib/look';
 import { clamp, hash1, lerp, Spring, sat, smoothstep } from './math';
 import { type Painter, type RGB, rgb, type Shade } from './vesper/paint';
+import { BIRTH } from './vesper/rig';
 
 /** Knobs. Lengths in world px, times in seconds, angles in radians. */
 export const COCOON = {
-  /** The silk threads from the branch's lip to the cocoon's tip. */
-  thread: 9,
+  /** The silk threads from the branch's underside to the cocoon's tip: husks (shortest, longest), hers. */
+  thread: [20, 56],
+  threadHers: 30,
+  /** Her cocoon's body is at least this long (she is curled inside it). */
+  bodyHers: 82,
   /** Width of a cocoon at its widest, as a fraction of its body's length. */
   wide: 0.37,
   /** How far the wind swings a husk / her (full) cocoon. */
@@ -53,12 +57,12 @@ export const COCOON = {
   crack: 1.1,
   push: 0.13,
   pushKick: 2.2,
-  gape: [0.34, 0.27],
-  flakes: 22,
+  gape: [0.24, 0.2],
+  flakes: 24,
   wisps: 5,
-  flashR: 34,
-  flashT: 0.24,
-  flash: 0.3,
+  flashR: 26,
+  flashT: 0.22,
+  flash: 0.16,
   /** Falling flakes: gravity, drag (1/s), the wind's push (px/s^2 at wind 1), a steady drift, flutter. */
   gravity: 280,
   drag: 1.5,
@@ -106,6 +110,7 @@ const SH_SEAM: Shade = {
   alpha: 0.7,
 };
 const SH_THREAD: Shade = { c0: SILK, c1: SILK_DIM, rim: 0.4, cool: 0, form: 0, band: 0.5, alpha: 0.75 };
+const SH_EDGE: Shade = { c0: SILK, c1: SILK_DIM, rim: 0.6, cool: 0, form: 0, band: 0.5, alpha: 0.55 };
 const SH_WISP: Shade = { c0: SILK_DIM, c1: SILK_DIM, rim: 0.5, cool: 0, form: 0, band: 0.5, alpha: 0.3 };
 
 /** Body samples along the spine. */
@@ -134,6 +139,9 @@ interface Strand {
   age: number;
   ph: number;
   alpha: number;
+  /** Gravity (px/s^2) and air drag (1/s): silk pulled out at the break falls into the drop, shed silk drifts. */
+  grav: number;
+  drag: number;
   on: boolean;
 }
 
@@ -155,10 +163,25 @@ interface Flake {
   on: boolean;
 }
 
+/** What is left of an empty husk: peeled wide, a bell with its mouth torn open, one half torn away, shrivelled. */
+type HuskKind = 'closed' | 'peeled' | 'bell' | 'torn' | 'shrivel';
+/** Husks in order along the branch (no two alike side by side). */
+const KINDS: readonly HuskKind[] = ['peeled', 'bell', 'torn', 'shrivel', 'peeled', 'torn', 'bell'];
+
 /** One cocoon on the branch. */
 class Pod {
   readonly x: number;
   readonly y: number;
+  /** Its silk's length from the underside to its tip. */
+  readonly thread: number;
+  readonly kind: HuskKind;
+  /** Where the halves end along the body (1 = the tip: whole; less = the bottom torn away, ragged). */
+  readonly cut: number;
+  /** How far each half curls outward along its length (rad at its end), and how ragged its edges are (px). */
+  readonly curlOut: [number, number];
+  readonly jag: number;
+  /** Shrivelled: the outline crumpled in (0..1). */
+  readonly crumple: number;
   /** Body length (the mark's `len` less the threads). */
   readonly body: number;
   readonly w: number;
@@ -198,30 +221,55 @@ class Pod {
   tipX = 0;
   tipY = 0;
 
-  constructor(m: CocoonMark, index: number) {
+  constructor(m: CocoonMark, index: number, husk: number, room: Room) {
     this.x = m.x;
-    this.y = m.y;
     this.hers = m.state === 'closed';
     this.seed = index * 7 + 3;
     const h = (k: number): number => hash1(this.seed * 131 + k * 17);
-    this.body = Math.max(30, m.len - COCOON.thread);
-    this.w = this.body * COCOON.wide * (this.hers ? 1.04 : 0.9 + 0.2 * h(1));
+    // Under the branch: a hang point inside a solid goes to its underside.
+    let y = m.y;
+    for (const r of room.solids)
+      if (m.x >= r.x && m.x <= r.x + r.w && y >= r.y && y < r.y + r.h) y = r.y + r.h - 3;
+    this.y = y;
+    this.kind = this.hers ? 'closed' : KINDS[husk % KINDS.length]!;
+    const k = this.kind;
+    this.thread = this.hers ? COCOON.threadHers : lerp(COCOON.thread[0], COCOON.thread[1], h(13));
+    const body = m.len - (this.hers ? COCOON.threadHers + 8 : this.thread);
+    this.body = this.hers
+      ? clamp(body, COCOON.bodyHers, COCOON.bodyHers * 1.15)
+      : Math.max(40, body * (k === 'shrivel' ? 0.85 : 0.95 + 0.2 * h(14)));
+    this.w =
+      this.body *
+      COCOON.wide *
+      (this.hers ? 1.04 : k === 'shrivel' ? 0.62 : k === 'bell' ? 1.12 : 0.9 + 0.2 * h(1));
     this.phase = h(2);
-    this.bow = (h(3) - 0.5) * (this.hers ? 0.06 : 0.16);
+    this.bow = (h(3) - 0.5) * (this.hers ? 0.06 : 0.2);
     this.split = !this.hers;
-    // Husks differ: one has lost a half, one hangs crooked from a single thread, the gapes differ.
-    const lost = !this.hers && h(4) < 0.28;
+    this.crumple = k === 'shrivel' ? 0.3 : 0;
+    this.jag = k === 'closed' ? 0 : k === 'shrivel' ? 1.2 : 2 + 1.5 * h(15);
+    this.cut =
+      k === 'bell' ? 0.72 + 0.08 * h(16) : k === 'torn' ? 0.8 + 0.1 * h(16) : k === 'peeled' ? 0.93 : 1;
+    this.curlOut =
+      k === 'peeled'
+        ? [0.22 + 0.2 * h(17), 0.18 + 0.2 * h(18)]
+        : k === 'bell'
+          ? [0.38 + 0.2 * h(17), 0.32 + 0.2 * h(18)]
+          : k === 'torn'
+            ? [0.2, 0.2]
+            : [0.04, 0.04];
+    // One half torn away from the 'torn' ones; the gapes differ by kind.
     const lostSide = h(5) < 0.5 ? 0 : 1;
-    this.halves = [!(lost && lostSide === 0), !(lost && lostSide === 1)];
-    this.gape = [-(0.05 + 0.2 * h(6)), 0.05 + 0.2 * h(7)];
+    this.halves = [!(k === 'torn' && lostSide === 0), !(k === 'torn' && lostSide === 1)];
+    const g = k === 'peeled' ? 0.2 : k === 'bell' ? 0.1 : k === 'torn' ? 0.16 : 0.04;
+    this.gape = [-(g + 0.12 * h(6)), g + 0.12 * h(7)];
     const nThreads = this.hers ? 3 : 2 + Math.floor(h(8) * 2.5);
-    const crooked = !this.hers && h(9) < 0.3;
+    const crooked = !this.hers && (k === 'torn' || h(9) < 0.2);
     this.lean0 = crooked ? (h(10) < 0.5 ? -1 : 1) * (0.14 + 0.1 * h(11)) : (h(12) - 0.5) * 0.06;
     this.threads = [];
     for (let i = 0; i < (crooked ? 1 : nThreads); i++) {
       const u = nThreads > 1 ? i / (nThreads - 1) - 0.5 : 0;
       this.threads.push({
-        ax: crooked ? -this.lean0 * 30 : u * (12 + 6 * h(20 + i)) + (h(30 + i) - 0.5) * 3,
+        ax: crooked ? -this.lean0 * this.thread : u * (12 + 6 * h(20 + i)) + (h(30 + i) - 0.5) * 3,
         tx: u * 2.4,
         sag: 0.6 + 1.2 * h(40 + i),
         snaps: this.hers && i !== 1,
@@ -230,6 +278,7 @@ class Pod {
     this.swing.snap(this.lean0);
     this.halfL.snap(this.split ? this.gape[0] : 0);
     this.halfR.snap(this.split ? this.gape[1] : 0);
+    this.solve(0);
   }
 
   /** Back to the closed cocoon (a restart). */
@@ -306,7 +355,7 @@ class Pod {
     const breathe = this.split ? 0 : 0.012 * Math.sin(clock * 1.7 + this.phase * 6);
     const wid = this.w * (1 + 1.3 * sq + breathe);
     // Tip: the threads' length below the hang point, swung.
-    const tl = COCOON.thread;
+    const tl = this.thread;
     this.tipX = this.x + Math.sin(th) * tl;
     this.tipY = this.y + Math.cos(th) * tl;
     let x = this.tipX;
@@ -332,13 +381,36 @@ class Pod {
       let hw = (wid / 2) * Math.sin(Math.PI * sp) ** 0.72;
       hw = Math.max(hw, s < 0.5 ? 1.4 : 0.4);
       const bump = bAmp * Math.exp(-(((s - this.bulgeAt) / 0.14) ** 2));
-      this.wl[i] = hw + (this.bulgeSide < 0 ? bump : bump * 0.25);
-      this.wr[i] = hw + (this.bulgeSide > 0 ? bump : bump * 0.25);
+      // Shrivelled: dented in, unevenly each side.
+      const cl = this.crumple
+        ? 1 - this.crumple * (0.5 + 0.5 * Math.sin(s * 17 + this.seed)) * Math.sin(Math.PI * s)
+        : 1;
+      const cr = this.crumple
+        ? 1 - this.crumple * (0.5 + 0.5 * Math.sin(s * 13 + this.seed * 2.1)) * Math.sin(Math.PI * s)
+        : 1;
+      this.wl[i] = hw * cl + (this.bulgeSide < 0 ? bump : bump * 0.25);
+      this.wr[i] = hw * cr + (this.bulgeSide > 0 ? bump : bump * 0.25);
     }
   }
 
-  /** Outline of the whole body into p.px/py; returns the count. `k` scales the widths. */
-  outline(p: Painter, k = 1): number {
+  /** Outline of the whole body into p.px/py (down to `cut` of its length); returns the count. `k` scales the widths. */
+  outline(p: Painter, k = 1, cut = 1): number {
+    if (cut < 0.999) {
+      const q = HALF_Q;
+      let n = 0;
+      const steps = 14;
+      for (let side = -1; side <= 1; side += 2)
+        for (let j = 0; j <= steps; j++) {
+          const i = side < 0 ? j : steps - j;
+          const s = (i / steps) * cut;
+          this.at(s, side, q);
+          const w = q.w * k * (i === steps ? 0.6 : 1);
+          p.px[n] = q.x + side * Math.cos(q.a) * w;
+          p.py[n] = q.y - side * Math.sin(q.a) * w;
+          n++;
+        }
+      return n;
+    }
     let n = 0;
     for (let i = 0; i < N; i++) {
       const c = Math.cos(this.sa[i]!);
@@ -357,48 +429,71 @@ class Pod {
     return n;
   }
 
+  /** Spine point, angle and half-width at `s` (0..1 along the body), side -1 / 1. */
+  private at(s: number, side: number, out: { x: number; y: number; a: number; w: number }): void {
+    const fi = clamp(s, 0, 1) * (N - 1);
+    const i0 = Math.min(N - 2, Math.floor(fi));
+    const q = fi - i0;
+    const ws = side < 0 ? this.wl : this.wr;
+    out.x = lerp(this.sx[i0]!, this.sx[i0 + 1]!, q);
+    out.y = lerp(this.sy[i0]!, this.sy[i0 + 1]!, q);
+    out.a = lerp(this.sa[i0]!, this.sa[i0 + 1]!, q);
+    out.w = lerp(ws[i0]!, ws[i0 + 1]!, q);
+  }
+
   /**
-   * One half of the split shell, turned on its hinge at the tip by `ang`: the outer edge (side -1 =
-   * left) down to the point, back up along the seam (a little past the spine, so the halves overlap).
-   * Returns the count; `cx, cy` get its middle.
+   * One half of the split shell as a ribbon (p.px / py / pw; returns the sample count): turned on its
+   * hinge at the tip by `ang` and curled outward along its length (`curlOut`), from the tip down to
+   * `cut` with a ragged torn end; its inner edge is the torn seam, short of the spine (a dark slit
+   * shows between the halves). `seam` gets the seam edge's points (x, y pairs) for its silk edge.
    */
-  half(p: Painter, side: number, ang: number, mid: { x: number; y: number }): number {
-    // (y is down: a negative angle swings the left half's lower end out to the left)
-    const ca = Math.cos(ang);
-    const sa = Math.sin(-ang);
+  half(p: Painter, side: number, ang: number, seam?: { n: number; pts: Float32Array }): number {
     const hx = this.tipX;
     const hy = this.tipY;
-    let n = 0;
-    let mx = 0;
-    let my = 0;
-    const put = (x: number, y: number): void => {
+    const curl = this.curlOut[side < 0 ? 0 : 1] * side;
+    const cut = this.split ? this.cut : 1;
+    const q = HALF_Q;
+    const steps = 18;
+    const rot = (x: number, y: number, s: number, out: { x: number; y: number }): void => {
       const dx = x - hx;
       const dy = y - hy;
-      p.px[n] = hx + dx * ca - dy * sa;
-      p.py[n] = hy + dx * sa + dy * ca;
-      mx += p.px[n]!;
-      my += p.py[n]!;
-      n++;
+      // (y is down: a negative angle swings the left half's lower end out to the left)
+      const r = -(ang + curl * s ** 1.6);
+      const ca = Math.cos(r);
+      const sa = Math.sin(r);
+      out.x = hx + dx * ca - dy * sa;
+      out.y = hy + dx * sa + dy * ca;
     };
-    const ws = side < 0 ? this.wl : this.wr;
-    for (let i = 0; i < N; i++) {
-      const c = Math.cos(this.sa[i]!);
-      const s = Math.sin(this.sa[i]!);
-      put(this.sx[i]! + side * c * ws[i]!, this.sy[i]! - side * s * ws[i]!);
+    const o = HALF_O;
+    const i2 = HALF_I;
+    if (seam) seam.n = 0;
+    for (let i = 0; i <= steps; i++) {
+      const s = (i / steps) * cut;
+      this.at(s, side, q);
+      const c = Math.cos(q.a);
+      const sn = Math.sin(q.a);
+      rot(q.x + side * c * q.w, q.y - side * sn * q.w, s, o);
+      const rag = this.split ? 0.08 + 0.2 * hash1(this.seed * 53 + i * 7 + (side > 0 ? 1 : 0)) : 0;
+      rot(q.x + side * c * q.w * rag, q.y - side * sn * q.w * rag, s, i2);
+      // The torn end: ragged teeth (the last few samples narrow unevenly).
+      const end = this.split && cut < 0.99 ? sat((i - (steps - 3)) / 3) : 0;
+      const tooth = end > 0 ? 1 - end * (0.35 + 0.65 * hash1(this.seed * 29 + i * 11 + side)) : 1;
+      p.px[i] = (o.x + i2.x) / 2;
+      p.py[i] = (o.y + i2.y) / 2;
+      p.pw[i] = Math.max(0.3, (Math.hypot(o.x - i2.x, o.y - i2.y) / 2) * tooth);
+      if (seam && this.split && i > 0 && i < steps) {
+        seam.pts[seam.n * 2] = i2.x;
+        seam.pts[seam.n * 2 + 1] = i2.y;
+        seam.n++;
+      }
     }
-    // The torn seam: back up short of the spine (a dark slit shows between the halves), ragged.
-    for (let i = N - 2; i >= 1; i--) {
-      const c = Math.cos(this.sa[i]!);
-      const s = Math.sin(this.sa[i]!);
-      const rag = 0.1 + 0.16 * hash1(this.seed * 53 + i * 7 + (side > 0 ? 1 : 0));
-      const o = side * ws[i]! * rag;
-      put(this.sx[i]! + c * o, this.sy[i]! - s * o);
-    }
-    mid.x = mx / n;
-    mid.y = my / n;
-    return n;
+    return steps + 1;
   }
 }
+
+const HALF_O = { x: 0, y: 0 };
+const HALF_I = { x: 0, y: 0 };
+const HALF_Q = { x: 0, y: 0, a: 0, w: 0 };
 
 function newStrand(n: number): Strand {
   return {
@@ -413,6 +508,8 @@ function newStrand(n: number): Strand {
     age: 0,
     ph: 0,
     alpha: 1,
+    grav: 26,
+    drag: 2.4,
     on: false,
   };
 }
@@ -431,16 +528,16 @@ export class CocoonRow {
   private ownCount = 0;
   private shedT: number[];
   private shedCount = 0;
-  private readonly mid = { x: 0, y: 0 };
   private readonly bottom: number;
 
   constructor(room: Room) {
     const marks = room.marks?.cocoons ?? [];
-    this.pods = marks.map((m, i) => new Pod(m, i));
+    let husk = 0;
+    this.pods = marks.map((m, i) => new Pod(m, i, m.state === 'closed' ? 0 : husk++, room));
     this.hers = this.pods.find((p) => p.hers) ?? null;
     for (let i = 0; i < 40; i++) this.flakes.push(this.blankFlake());
-    for (let i = 0; i < 24; i++) this.wisps.push(newStrand(5));
-    if (this.hers) for (const _ of this.hers.threads) this.snapped.push(newStrand(4));
+    for (let i = 0; i < 24; i++) this.wisps.push(newStrand(7));
+    if (this.hers) for (const _ of this.hers.threads) this.snapped.push(newStrand(6));
     this.shedT = this.pods.map((p, i) => 1 + hash1(i * 97 + 5) * COCOON.husksShed * (p.hers ? 9 : 1));
     this.bottom = room.height + 200;
   }
@@ -453,6 +550,20 @@ export class CocoonRow {
   get hersAt(): { x: number; y: number } | null {
     return this.hers ? { x: this.hers.x, y: this.hers.y } : null;
   }
+
+  /** Her cocoon now: where its silk is tied (x, y), its tip and its bottom (world y), or null. */
+  get hersGeom(): { x: number; y: number; tipY: number; botY: number } | null {
+    const h = this.hers;
+    if (!h) return null;
+    const g = this.geom;
+    g.x = h.x;
+    g.y = h.y;
+    g.tipY = h.tipY;
+    g.botY = h.sy[N - 1]!;
+    return g;
+  }
+
+  private readonly geom = { x: 0, y: 0, tipY: 0, botY: 0 };
 
   /** Seconds since the break (large = none seen). */
   get sinceBreak(): number {
@@ -503,6 +614,14 @@ export class CocoonRow {
     }
     this.wasInside = inside;
     if (hers && this.broke < COCOON.push && this.broke + dt >= COCOON.push) hers.push();
+    // Her climb hauls on its silk: the empty husk jerks with each pull and with the scramble off it.
+    if (hers)
+      for (const at of [BIRTH.pulls[0][0], BIRTH.pulls[1][0], BIRTH.hop[0]])
+        if (this.broke < at && this.broke + dt >= at) {
+          hers.swing.v += 0.9;
+          hers.bend.v -= 4;
+          hers.shake = 1;
+        }
     this.broke += dt;
     for (const p of this.pods) p.update(dt, clock);
     // Silk drifts off the empty husks now and then.
@@ -545,7 +664,7 @@ export class CocoonRow {
       s.life = 1e9;
       s.alpha = 0.7;
       s.ph = hash1(i * 7 + 2);
-      s.seg = COCOON.thread / (s.n - 1) + 1.2;
+      s.seg = h.thread / (s.n - 1) + 1.2;
       for (let k = 0; k < s.n; k++) {
         const u = k / (s.n - 1);
         s.x[k] = lerp(h.x + t.ax, h.tipX + t.tx, u);
@@ -573,9 +692,9 @@ export class CocoonRow {
       f.spin = (r(7) - 0.5) * 14;
       f.flip = r(8) * 6.28;
       f.flipRate = 4 + 9 * r(9);
-      f.size = 1.6 + 3.6 * r(10) ** 1.5;
+      f.size = 2.2 + 4.2 * r(10) ** 1.4;
       f.aspect = 0.35 + 0.4 * r(11);
-      f.lit = r(12) < 0.35 ? 1 : 0;
+      f.lit = r(12) < 0.5 ? 1 : 0.4;
       f.age = 0;
       f.life = 7 + 4 * r(13);
       f.ph = r(14);
@@ -584,7 +703,16 @@ export class CocoonRow {
     for (let i = 0; i < COCOON.wisps; i++) {
       const r = (k: number): number => hash1(i * 71 + k * 29 + 3);
       const k = Math.round((0.15 + 0.7 * r(1)) * (h.sx.length - 1));
-      this.spawnWisp(h.sx[k]!, h.sy[k]!, (r(2) - 0.5) * 90, -30 - 40 * r(3), 7 + 5 * r(4), 0.5);
+      this.spawnWisp(
+        h.sx[k]!,
+        h.sy[k]!,
+        (r(2) - 0.5) * 90,
+        -30 - 40 * r(3),
+        7 + 5 * r(4),
+        0.6,
+        150 + 80 * r(5),
+        1.3,
+      );
     }
   }
 
@@ -612,9 +740,20 @@ export class CocoonRow {
     return this.flakes.find((f) => !f.on);
   }
 
-  private spawnWisp(x: number, y: number, vx: number, vy: number, life: number, alpha: number): void {
+  private spawnWisp(
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    life: number,
+    alpha: number,
+    grav = 26,
+    drag = 2.4,
+  ): void {
     const s = this.wisps.find((w) => !w.on);
     if (!s) return;
+    s.grav = grav;
+    s.drag = drag;
     s.on = true;
     s.pinned = false;
     s.age = 0;
@@ -691,7 +830,7 @@ export class CocoonRow {
     for (const s of this.wisps) {
       if (!s.on) continue;
       s.age += dt;
-      step(s, 26, 2.4);
+      step(s, s.grav, s.drag);
       if (s.age > s.life || s.y[0]! > this.bottom) s.on = false;
     }
   }
@@ -804,18 +943,34 @@ export class CocoonRow {
   }
 
   private drawInside(p: Painter, pod: Pod): void {
-    const n = pod.outline(p, 0.86);
+    const n = pod.outline(
+      p,
+      pod.kind === 'shrivel' ? 0.7 : 0.86,
+      pod.split ? Math.min(1, pod.cut + 0.06) : 1,
+    );
     const m = Math.floor(N * 0.45);
     p.shape(n, pod.sx[m]!, pod.sy[m]!, SH_INSIDE, pod.sx[0]!, pod.sy[0]!, pod.sx[N - 1]!, pod.sy[N - 1]!);
   }
+
+  private readonly seam = { n: 0, pts: new Float32Array(64) };
 
   private drawHalves(p: Painter, pod: Pod): void {
     const sh = pod.hers ? SH_HERS : SH_HUSK;
     for (let side = -1; side <= 1; side += 2) {
       if (!pod.halves[side < 0 ? 0 : 1]) continue;
       const ang = side < 0 ? pod.halfL.x : pod.halfR.x;
-      const n = pod.half(p, side, ang, this.mid);
-      p.shape(n, this.mid.x, this.mid.y, sh, pod.tipX, pod.tipY, pod.tipX, pod.tipY + pod.body);
+      const n = pod.half(p, side, ang, this.seam);
+      p.ribbon(n, sh, true, false);
+      // The torn seam's edge is silk: it catches the moon.
+      const sm = this.seam;
+      if (sm.n > 1) {
+        for (let i = 0; i < sm.n; i++) {
+          p.px[i] = sm.pts[i * 2]!;
+          p.py[i] = sm.pts[i * 2 + 1]!;
+          p.pw[i] = 0.55 * Math.sin((Math.PI * (i + 0.5)) / sm.n);
+        }
+        p.ribbon(sm.n, SH_EDGE, false, false);
+      }
     }
   }
 

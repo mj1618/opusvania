@@ -558,6 +558,7 @@ export class VesperCharacter implements CharacterSkin {
     view.eyeLit = rig.eyeLit * seenAt(SEEN.eyes) * (0.35 + 0.65 * born);
     // Curled in the husk her thorn would stick out of it: it is there once she stands.
     view.thornA = 1 - rig.birthW;
+    view.shadowA = 1 - sat(Math.abs(this.offY) / 6);
     // While nothing can hurt her she pulses softly (alpha, never a white flash); gone when she has faded.
     const safe = player.invuln > 0 && player.stagger <= 0 && player.faded <= 0 ? sat(player.invuln / 12) : 0;
     const pulse = 0.5 - 0.5 * Math.cos(clock * 6.283 * HURT.flickerHz);
@@ -604,21 +605,62 @@ export class VesperCharacter implements CharacterSkin {
     e.intensity = unseen ? 0 : glow * 1.15 * lit * seenAt(SEEN.light) * born;
   }
 
-  /** 0..1: how much of the emergence's drop is left (it lets go fast once she moves). */
+  /** 0..1: how much of the climb's offset is left (it lets go fast once she moves). */
   private dropK = 1;
+  /** Px she is drawn off her sim position this frame (the climb). */
+  private offY = 0;
 
   /**
-   * The emergence: at the break she is still down in the husk (`BIRTH.drop` px under her feet, drawn
-   * behind its open halves) and is pulled up onto the branch over `BIRTH.rise` s. Render only.
+   * The climb out of the husk (memory/hatch-and-tatter.md): her sim body already stands on the walk
+   * line; render draws her from inside the cocoon, hanging and hauling up its silk, then scrambling up
+   * onto the lip (`BIRTH`). Render only; a step or a jump lets go of it at once.
    */
   private emerge(dt: number, p: PlayerView): PlayerView {
     const hl = hatchLink;
-    if (hl.inside || hl.birthT < 0.02) this.dropK = 1;
+    const t = hl.birthT;
+    if (hl.inside || t < 0.02) this.dropK = 1;
     else if (!p.grounded || Math.abs(p.vx) > 0.4) this.dropK = Math.max(0, this.dropK - dt * 9);
-    const u = hl.inside ? 0 : sat((hl.birthT - BIRTH.riseAt) / BIRTH.rise);
-    const drop = BIRTH.drop * (1 - u * u * (3 - 2 * u)) * this.dropK;
-    if (drop < 0.05) return p;
-    return { ...p, y: p.y + drop, cy: p.cy + drop, feetY: p.feetY + drop };
+    const B = BIRTH;
+    const walk = p.feetY;
+    const ease = (u: number): number => {
+      const q = sat(u);
+      return q * q * (3 - 2 * q);
+    };
+    let fy = walk;
+    let fx = 1;
+    if (hl.inside || t < B.hop[1]) {
+      const f0 = hl.botY - 8;
+      const fh = hl.tipY + 60;
+      const fp = Math.min(fh, hl.y + 48);
+      if (hl.inside || t < B.emerge[0]) fy = f0;
+      else if (t < B.pulls[0][0]) fy = f0 + (fh - f0) * ease((t - B.emerge[0]) / (B.emerge[1] - B.emerge[0]));
+      else if (t < B.hop[0]) {
+        fy = fh;
+        for (let i = 0; i < B.pulls.length; i++) {
+          const [a0, a1] = B.pulls[i]!;
+          const from = fh + ((fp - fh) * i) / B.pulls.length;
+          const to = fh + ((fp - fh) * (i + 1)) / B.pulls.length;
+          if (t >= a0) {
+            const m = a0 + 0.6 * (a1 - a0);
+            // The haul, then a small sag as the hands let go for the next grip.
+            fy =
+              from +
+              (to - from) * ease((t - a0) / (m - a0)) +
+              3 * Math.sin(Math.PI * sat((t - m) / (a1 - m)));
+          }
+        }
+      } else {
+        const u = (t - B.hop[0]) / (B.hop[1] - B.hop[0]);
+        const e = 1 - (1 - sat(u)) ** 2;
+        fy = fp + (walk - fp) * e - 16 * Math.sin(Math.PI * sat(u));
+      }
+      fx = hl.inside ? 1 : 1 - ease((t - B.hop[0]) / (B.hop[1] - B.hop[0]));
+    } else fx = 0;
+    const dy = (fy - walk) * this.dropK;
+    const dx = (hl.x - p.cx) * fx * this.dropK;
+    this.offY = dy;
+    if (Math.abs(dy) < 0.05 && Math.abs(dx) < 0.05) return p;
+    return { ...p, x: p.x + dx, cx: p.cx + dx, y: p.y + dy, cy: p.cy + dy, feetY: p.feetY + dy };
   }
 
   /**

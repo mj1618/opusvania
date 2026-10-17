@@ -11,7 +11,9 @@ export const hatchLink = {
    * see: a room without a cocoon, a teleport, a page loaded after it).
    */
   birthT: 9,
-  /** The cocoon's hang point (world px), for the skin's emergence. */
+  /** Her cocoon (world px), for the skin's climb out of it: where its silk is tied under the branch, its tip (top) and its bottom. */
   x: 0,
   y: 0,
+  tipY: 0,
+  botY: 0,
 };

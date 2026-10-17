@@ -16,6 +16,7 @@ import type { Room } from '../../scene/room';
 import { createPlayer } from '../../sim/player/player';
 import { tuning } from '../../sim/tuning';
 import type { PlayerView, RenderContext } from '../contract';
+import { SWARM_PASS, swarmPassFocus, swarmPassWeight } from '../swarm/timing';
 import { clamp, lerp, noise1, sat, smoothstep } from './math';
 import { drawVesper, type View } from './vesper/draw';
 import { Painter, rgb } from './vesper/paint';
@@ -25,7 +26,7 @@ import { Secondary } from './vesper/wings';
 /** Knobs (seconds of render time, world px). */
 export const TATTER = {
   /** Its size next to hers. */
-  scale: 0.86,
+  scale: 0.82,
   /** The re-palette: saturation and value of its solids and of its lights, and a tint (greyer, a little cooler). */
   grade: { sat: 0.42, val: 0.92, tint: rgb(0xf2f0f6), lightSat: 0.4, lightVal: 0.55 },
   /** Its lantern tips are nearly out; its eyes are dim. */
@@ -33,20 +34,30 @@ export const TATTER = {
   eyes: 0.62,
   /** How torn the near wing is (0..1), and how far it is held off its back (degrees: it cannot fold it). */
   tear: 1,
-  hold: 34,
+  hold: 0,
+  /** The torn wing hangs open, splayed behind it (of the glide's spread), drooped toward the branch (degrees). */
+  splay: 0.5,
+  droop: 62,
+  /** Its try at the air: a hop off the branch (px) at the wings' peak, and how hard it lands back (it crumples). */
+  hop: 16,
   /** Its snapped antenna's length (of a whole one). */
   antenna: 0.5,
   /**
-   * The swarm (fallback timing; render/swarm is screen-framed and shares no state): after the break
-   * it looks up from `swarm[0]` s to `swarm[1]` s, following a point that crosses the sky from
-   * `swarmDx[0]` to `swarmDx[1]` px of its x at the room's swarm path height.
+   * The swarm (render/swarm/timing.ts: `SWARM_PASS`, `swarmPassWeight`, `swarmPassFocus`): it looks up
+   * `swarmLead` s ahead of the pass weight, at the pass's focus (the moon, view px) taken into the world
+   * round where the camera would be with her (`camDy` above her feet), drifting `swarmDx` across it.
    */
-  swarm: [1.1, 6.2],
-  swarmDx: [-700, 900],
-  /** Its try at the air: up off its heels, then the wings lift (start, peak, end), then it sinks back and looks down. */
-  strain: [1.6, 2.4, 5.6],
-  tryWings: [2.5, 3.1, 4.0],
-  sink: [5.6, 7.4],
+  swarmLead: 0.6,
+  swarmDx: [-260, 320],
+  camDy: -238,
+  /**
+   * Its try at the air, in s relative to the pass (`SWARM_PASS`): up off its heels from `in` + strain[0]
+   * to `full` + strain[1]; the wings lift from `full` + tryWings[0..2]; it sinks back and looks down from
+   * `hold` + sink[0..1]. (The crumple after its hop holds it low until the sink lets go.)
+   */
+  strain: [-0.4, 0, -1.0],
+  tryWings: [0.3, 0.9, 1.8],
+  sink: [-1.0, 0.8],
   /** She is "near" within this many px (it watches her); further, it lets go and only glances her way. */
   near: 900,
   /** After she has gone: a glance the way she went about every `glanceEvery` s. */
@@ -65,6 +76,8 @@ export class Tatter {
   private readonly y: number;
   private readonly facing: number;
   private readonly swarmY: number;
+  /** Where the swarm's pass is densest (view px), or null. */
+  private readonly focus: { x: number; y: number } | null;
   private started = false;
   private lookW = 0;
   private lookX = 0;
@@ -94,6 +107,7 @@ export class Tatter {
       if (at.x >= a[0] && at.x <= b[0]) sy = lerp(a[1], b[1], (at.x - a[0]) / Math.max(1, b[0] - a[0]));
     }
     this.swarmY = sy;
+    this.focus = swarmPassFocus(room);
     const p = this.painter;
     p.mesh.label = 'tatter';
     this.mesh = p.mesh;
@@ -103,6 +117,7 @@ export class Tatter {
     p.mesh.scale.set(TATTER.scale);
     this.torn = this.facing < 0 ? 1 : 0;
     this.sec.tear[this.torn] = TATTER.tear;
+    this.sec.splay[this.torn] = TATTER.splay;
     // ... and one antenna snapped short (the far one: it shows over its head).
     this.sec.antLen[this.torn === 1 ? 0 : 1] = TATTER.antenna;
     this.rig.perch = 1;
@@ -154,6 +169,7 @@ export class Tatter {
     const T = TATTER;
     const rig = this.rig;
     const t = sinceBreak;
+    this.lastT = t;
     const headY = this.y - 46;
     // --- What it looks at, and how firmly.
     let lx = this.x + this.facing * 200;
@@ -181,20 +197,25 @@ export class Tatter {
         lw = 0.35 + 0.55 * k;
       }
     }
-    // The swarm passing: its head comes up and follows it across the sky.
-    const sw =
-      smoothstep(T.swarm[0], T.swarm[0] + 0.5, t) * (1 - smoothstep(T.swarm[1] - 0.8, T.swarm[1], t));
+    // The swarm passing over the moon: its head comes up and follows it across the sky.
+    const P = SWARM_PASS;
+    const sw = swarmPassWeight(t + T.swarmLead);
     if (sw > 1e-3) {
-      const u = sat((t - T.swarm[0]) / (T.swarm[1] - T.swarm[0]));
-      const sx = this.x + lerp(T.swarmDx[0], T.swarmDx[1], u);
-      lx = lerp(lx, sx, sw);
-      ly = lerp(ly, this.swarmY, sw);
+      const u = sat((t - P.in) / (P.out - P.in));
+      const camX = Math.max(960, her?.cx ?? this.x);
+      const camY = (her?.feetY ?? this.y) + T.camDy;
+      const f = this.focus;
+      const sx = f ? camX + (f.x - 960) : this.x + 300;
+      const sy = f ? camY + (f.y - 540) : this.swarmY;
+      lx = lerp(lx, sx + lerp(T.swarmDx[0], T.swarmDx[1], u), sw);
+      ly = lerp(ly, sy, sw);
       lw = lerp(lw, 1, sw);
     }
     // ... and after it, a look down at the branch: it stays.
     const sink =
-      t < T.sink[1] + 1
-        ? smoothstep(T.sink[0], T.sink[0] + 0.5, t) * (1 - smoothstep(T.sink[1] - 0.6, T.sink[1], t))
+      t < P.hold + T.sink[1] + 1
+        ? smoothstep(P.hold + T.sink[0], P.hold + T.sink[0] + 0.5, t) *
+          (1 - smoothstep(P.hold + T.sink[1] - 0.6, P.hold + T.sink[1], t))
         : 0;
     if (sink > 1e-3) {
       lx = lerp(lx, this.x + this.facing * 70, sink);
@@ -220,21 +241,32 @@ export class Tatter {
     // --- Its body: up off its heels for the swarm (and a little at her break), the wings' one try.
     const brk = t < 2 ? smoothstep(0, 0.25, t) * (1 - smoothstep(0.9, 1.8, t)) * 0.35 : 0;
     const strain =
-      t < T.strain[2] + 1
-        ? smoothstep(T.strain[0], T.strain[1], t) * (1 - smoothstep(T.strain[2] - 0.9, T.strain[2], t))
+      t < P.hold + T.strain[2] + 1
+        ? smoothstep(P.in + T.strain[0], P.full + T.strain[1], t) *
+          (1 - smoothstep(P.hold + T.strain[2] - 0.9, P.hold + T.strain[2], t))
         : 0;
     const stir = stirred ? 1 : 0;
     this.stirK = Math.max(this.stirK * Math.exp(-3 * dt), stir);
     rig.strain = Math.max(brk, strain, 0.18 * this.stirK);
     rig.perch = 1 - 0.75 * rig.strain;
     const tw =
-      t < T.tryWings[2]
-        ? smoothstep(T.tryWings[0], T.tryWings[1], t) * (1 - smoothstep(T.tryWings[1], T.tryWings[2], t))
+      t < P.full + T.tryWings[2]
+        ? smoothstep(P.full + T.tryWings[0], P.full + T.tryWings[1], t) *
+          (1 - smoothstep(P.full + T.tryWings[1], P.full + T.tryWings[2], t))
         : 0;
-    // The try fails: the lift shakes, and the torn wing stutters.
-    rig.tryWings = tw * (0.85 + 0.15 * noise1(clock * 9, 171));
-    // The torn wing is held off its back, limp, and twitches now and then.
-    this.sec.hold[this.torn] = TATTER.hold * (1 + 0.08 * noise1(clock * 0.7, 181)) * (1 - 0.6 * tw);
+    // The try: two beats of the wings (the torn one barely lifts), a hop off the branch, and it fails.
+    const beats = Math.sin(Math.PI * 2.4 * Math.max(0, t - P.full - T.tryWings[0])) ** 2;
+    rig.tryWings = tw * (0.5 + 0.5 * beats) * (0.9 + 0.1 * noise1(clock * 9, 171));
+    const hu = (t - (P.full + T.tryWings[1] - 0.15)) / 0.5;
+    this.hopY = hu > 0 && hu < 1 ? -T.hop * Math.sin(Math.PI * hu) ** 1.5 : 0;
+    // ... and lands back hard: a crumple (lower, head down) that lets go slowly.
+    const crumple =
+      hu >= 1 && t < P.hold + T.sink[1] ? 1 - smoothstep(P.hold + T.sink[0], P.hold + T.sink[1], t) : 0;
+    rig.strain *= 1 - crumple;
+    rig.perch = Math.min(1, rig.perch + crumple);
+    // The torn wing hangs splayed and limp, twitching now and then; in the try it lifts only a little.
+    this.sec.hold[this.torn] = TATTER.hold;
+    this.sec.droop[this.torn] = TATTER.droop * (1 + 0.06 * noise1(clock * 0.7, 181)) * (1 - 0.45 * tw);
     rig.update(dt, clock, this.me, []);
     const fresh = !this.started;
     if (fresh) this.sec.reset();
@@ -255,6 +287,25 @@ export class Tatter {
   }
 
   private stirK = 0;
+  private lastT = 99;
+
+  /** For tools (`__tatter`): what it is doing now. */
+  get info(): Record<string, number> {
+    const r = this.rig;
+    return {
+      t: this.lastT,
+      perch: r.perch,
+      strain: r.strain,
+      tryWings: r.tryWings,
+      soar: r.soar,
+      soarW0: this.sec.soarW[0],
+      soarW1: this.sec.soarW[1],
+      hopY: this.hopY,
+      lookW: r.look.w,
+    };
+  }
+  /** The hop of its try, px (up = negative). */
+  private hopY = 0;
   /** Which wing is torn (the near one as it sits). */
   private readonly torn: 0 | 1;
 
@@ -271,6 +322,7 @@ export class Tatter {
     p.outline = 1.5;
     p.outlineColor = [0.03, 0.025, 0.045];
     p.outlineAlpha = 0.95;
+    p.mesh.position.set(this.me.cx, this.me.feetY + this.hopY * TATTER.scale);
     p.begin();
     drawVesper(p, this.rig.frame, this.view, clock);
     p.outline = 0;

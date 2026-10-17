@@ -14,7 +14,7 @@ import type { PlayerView, RenderContext } from '../contract';
 import { CocoonRow, propLight } from './cocoons';
 import { hatchLink } from './hatch-link';
 import { clamp } from './math';
-import { Tatter } from './tatter';
+import { TATTER, Tatter } from './tatter';
 import { Painter } from './vesper/paint';
 
 export class Cast {
@@ -32,6 +32,16 @@ export class Cast {
     this.row = new CocoonRow(room);
     const t = room.marks?.tatter;
     this.tatter = t ? new Tatter(ctx, layer, room, t) : null;
+    if (typeof window !== 'undefined') {
+      const self = this;
+      (window as unknown as { __tatter?: unknown }).__tatter = {
+        get info(): Record<string, number> | null {
+          return self.tatter?.info ?? null;
+        },
+        /** Its knobs, live (tools: change one, then step). */
+        knobs: TATTER,
+      };
+    }
     this.back.mesh.label = 'cocoons';
     this.front.mesh.label = 'cocoon-front';
     this.bounds = new Rectangle(-200, -200, room.width + 400, room.height + 400);
@@ -56,10 +66,16 @@ export class Cast {
   link(dt: number, hatch: Readonly<HatchState> | null, events: readonly SimEvent[]): void {
     const inside = !!hatch && !hatch.done;
     const l = hatchLink;
-    const at = this.row.hersAt ?? this.ctx.scene.hatch ?? null;
-    if (at) {
-      l.x = at.x;
-      l.y = at.y;
+    const g = this.row.hersGeom;
+    if (g) {
+      l.x = g.x;
+      l.y = g.y;
+      l.tipY = g.tipY;
+      l.botY = g.botY;
+    } else if (this.ctx.scene.hatch) {
+      const h = this.ctx.scene.hatch;
+      l.x = h.x;
+      l.y = l.tipY = l.botY = h.y;
     }
     if (inside) {
       l.inside = true;

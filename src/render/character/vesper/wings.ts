@@ -175,6 +175,9 @@ export class Secondary {
   readonly tear: [number, number] = [0, 0];
   /** Per wing, degrees it is held out from the cape (back and up), set by the owner (Tatter's torn wing, held off its back). */
   readonly hold: [number, number] = [0, 0];
+  /** Per wing: held open this far on its own (of the glide's spread), and drooped this many degrees (down toward the ground). */
+  readonly splay: [number, number] = [0, 0];
+  readonly droop: [number, number] = [0, 0];
   /** Per antenna, its length (1 = whole; Tatter's far one is snapped short). */
   readonly antLen: [number, number] = [1, 1];
 
@@ -304,7 +307,11 @@ export class Secondary {
         (1 - smoothstep(0.34, 0.86, yf)) *
         (0.72 + 0.28 * noise1(Math.floor(yu) * 1.37, 141 + w * 3));
       const shut = yearn - tryK;
-      const soar = Math.min(1, soarAll + YEARN.beat * tryK * (1 - soarAll)) * (1 - 0.7 * fold);
+      // (a wing held open on its own: Tatter's torn one, splayed and dragging)
+      const soar = Math.max(
+        Math.min(1, soarAll + YEARN.beat * tryK * (1 - soarAll)) * (1 - 0.7 * fold),
+        this.splay[w]!,
+      );
       const span = soar * soar;
       this.soarW[w] = soar;
       const pressed = soarAll > 0.15 && fold > 0.02;
@@ -424,6 +431,7 @@ export class Secondary {
         // Torn: what is left of it hangs lower and limp.
         lift += this.tear[w]! * TEAR.droop[k]!;
         lift -= this.hold[w]! * (1 - 0.1 * k) * (1 - soar);
+        lift += this.droop[w]! * (1 - 0.12 * k);
         c.lift = lift * DEG;
         const curl =
           (0.05 * run - 0.07 * glide - 0.03 * up + 0.02 * dash) * (1 - k * 0.12) * (1 - tuck) +

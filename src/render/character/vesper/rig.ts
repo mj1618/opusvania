@@ -812,38 +812,53 @@ const CURLED = pose([
 ]);
 /** Tatter at rest: sat back on its heels on the branch, hunched, hands in its lap, head a little low. */
 const PERCH = pose([
-  -2, 15, 0.3, 0.42, 0.34, -7.5, 1.2, 1.4, -11.5, 1.2, 1.4, 6.4, -9.4, 4.2, -8.6, 0, 0.6, 0.4, 0.8,
+  -2.5, 12.5, 0.42, 0.5, 0.4, -7.5, 1.2, 1.4, -11.5, 1.2, 1.4, 7, -8.6, 4.8, -8, 0, 0.55, 0.45, 0.8,
 ]);
 /** ... up off its heels, straining toward the sky: chest open, chin up, hands a little out. */
 const STRAIN = pose([
   0.5, 27, -0.06, -0.14, -0.42, 6.5, 0.1, 0.6, -5, 0, 0.5, 6.5, -6, 2.5, -9, 0, 1, -0.7, 0.9,
 ]);
+/** Hanging from the silk by her hands (gripped at face height: her arms cannot reach over her head), legs dangling, toes down, looking up. */
+const HANG = pose([
+  0.5, 37, -0.04, 0.06, -0.3, 1.5, 0, 1.45, -1.5, 2.5, 1.35, 3.6, 13.5, 4.4, 10.5, 0, 0.7, -0.8, 0.8,
+]);
+/** ... the pull: hands drawn down to her chest, body hauled up, knees tucked, head down with the effort. */
+const PULL = pose([
+  1, 24, 0.12, 0.3, 0.22, 5.5, 7, 0.7, 2.5, 10, 0.6, 4.6, 1.5, 5.4, -1, 0.05, 0.45, 0.2, 0.75,
+]);
 /**
- * The birth's timeline, seconds after the break: `riseAt` + `rise` she is pulled up out of the husk
- * (render draws her `drop` px lower at the break, the owner's job); `breath` the first breath (in, full, out);
- * `eyes` they open (start, open); `unfold` her wings open once (start, full, folded); `stand` she
- * straightens (start, up); `light` her light comes on (start, full); `fill` the damp wings fill out.
+ * The birth's timeline, render seconds after the break (memory/hatch-and-tatter.md). The owner moves
+ * her (render only: the skin's `emerge`) from inside the husk up its silk and over the lip onto the walk
+ * line; the rig gives the body: `emerge` curled -> hanging from the silk under the cocoon's tip; two
+ * hand-over-hand `pulls` (each: the haul, then the reach for the next grip); the `hop`, a scramble
+ * up the bark with one beat of her damp wings; then crouched on the lip, the first `breath`, her wings
+ * open once (`unfold`, raised `raise` over the glide's shape at `spread`), she `stand`s. Her light
+ * comes on over `light`, the damp wings fill out over `fill`.
  */
 export const BIRTH = {
-  drop: 80,
   /** The crack and its flash show alone this long (she is not drawn yet). */
   seen: 0.05,
-  /** She is pulled up out of it from `riseAt` over `rise` s. */
-  riseAt: 0.14,
-  rise: 0.5,
-  breath: [0.38, 0.62, 0.98],
-  eyes: [0.5, 0.82],
-  unfold: [0.62, 0.86, 1.28],
-  /** Spread of the one wing opening (of the glide's) and how far it is raised over that shape, degrees. */
+  emerge: [0.1, 0.45],
+  pulls: [
+    [0.5, 0.78],
+    [0.88, 1.16],
+  ],
+  hop: [1.22, 1.55],
+  /** The hop's beat of the wings: spread and raise. */
+  hopSpread: 0.34,
+  hopRaise: 14,
+  breath: [1.62, 1.86, 2.2],
+  eyes: [0.28, 0.6],
+  unfold: [1.85, 2.1, 2.6],
   spread: 0.46,
   raise: 32,
-  stand: [0.85, 1.4],
-  light: [0.45, 1.3],
-  fill: [0.3, 1.2],
+  stand: [2.45, 2.9],
+  light: [1.5, 2.5],
+  fill: [1.7, 2.5],
   /** The damp wings' size at the break. */
   wet: 0.72,
   /** How long until it is over (the weight eases off from `stand[1]`). */
-  len: 1.5,
+  len: 3.0,
 } as const;
 
 /** Tatter's try at the air (`Rig.tryWings` 1): its wings' spread (of the glide's) and their raise, degrees. */
@@ -1145,8 +1160,9 @@ export class Rig {
   giveW = 0;
   /**
    * The birth (memory/hatch-and-tatter.md; set by the owner before `update`): seconds since she broke
-   * out of her cocoon (large = never, or long ago). While it runs (`BIRTH`, under 1.5 s) she is curled,
-   * damp and dark, takes a first breath, opens her wings once and stands. Moving ends it at once.
+   * out of her cocoon (large = never, or long ago). While it runs (`BIRTH`, 3 s) she climbs out of the
+   * husk and up its silk, scrambles onto the lip, takes a first breath, opens her wings once and stands.
+   * Moving ends it at once.
    */
   birthT = 9;
   /** 0..1: how much of the birth is on her now (eased; 0 once she has moved). */
@@ -1156,8 +1172,9 @@ export class Rig {
   /** Her wing membranes' size (the birth: damp and crumpled, they fill out): 1 = as usual. */
   wingFill = 1;
   private birthGone = false;
-  /** 0..1: the birth's one opening of the wings, this frame. */
+  /** 0..1: the birth's one opening of the wings, and the beat of the scramble, this frame. */
   private birthOpen = 0;
+  private birthHop = 0;
   /**
    * Something to look at (world px) and how firmly (0..1): head, eyes and antennae turn to it, over the
    * shoulder if it is behind. Set by the owner each frame (the cast: Tatter watching her go).
@@ -2221,7 +2238,12 @@ export class Rig {
     const unfurl = this.endOn ? quintic((this.endT - ACT.unfurlAt) / ACT.unfurl) : 0;
     this.soar = Math.max(this.soar, unfurl * this.endW, this.waitOpen * (1 - this.spinW));
     // The birth's one opening of the wings, and the cast's try at the air.
-    this.soar = Math.max(this.soar, BIRTH.spread * this.birthOpen, CAST_SPREAD * this.tryWings);
+    this.soar = Math.max(
+      this.soar,
+      BIRTH.spread * this.birthOpen,
+      BIRTH.hopSpread * this.birthHop,
+      CAST_SPREAD * this.tryWings,
+    );
     this.catchK = this.catchS.step(sat(decel / GLIDE.catchDecel), dt);
     // Banking: the wing plane tips toward where she is going and leans into a turn.
     const gax = this.gAxS.step(glide ? clamp(ax, -1.2, 1.2) : 0, dt);
@@ -3664,9 +3686,24 @@ export class Rig {
       this.wingFill = live ? fillT : this.wingFill + (fillT - this.wingFill) * approach(5, dt);
       const bw = this.birthW * aw;
       this.birthOpen = 0;
+      this.birthHop = 0;
       if (bw > 1e-3) {
         const B = BIRTH;
-        const curl = 1 - smoothstep(B.stand[0], B.stand[1], t);
+        // Curled in the shell, and again crouched on the lip after the scramble; standing lets it go.
+        const inShell = 1 - smoothstep(B.emerge[0], B.emerge[1], t);
+        const onLip = smoothstep(B.hop[1] - 0.08, B.hop[1], t) * (1 - smoothstep(B.stand[0], B.stand[1], t));
+        const climb =
+          smoothstep(B.emerge[0] + 0.1, B.emerge[1], t) *
+          (1 - smoothstep(B.hop[0] + 0.12, B.hop[1] - 0.06, t));
+        // Each pull: the haul over the first 60% of its span, then the hands go up for the next grip.
+        let haul = 0;
+        for (const [a0, a1] of B.pulls) {
+          const m = a0 + 0.6 * (a1 - a0);
+          haul = Math.max(haul, smoothstep(a0, m, t) * (1 - smoothstep(m + 0.04, a1, t)));
+        }
+        // The scramble up the bark: knees up, hands hauling (the pull's shape), the wings beat once.
+        const hop =
+          t > B.hop[0] && t < B.hop[1] ? Math.sin((Math.PI * (t - B.hop[0])) / (B.hop[1] - B.hop[0])) : 0;
         const br =
           t < B.breath[2]
             ? smoothstep(B.breath[0], B.breath[1], t) * (1 - smoothstep(B.breath[1], B.breath[2], t))
@@ -3677,23 +3714,30 @@ export class Rig {
             ? smoothstep(B.unfold[0], B.unfold[1], t) * (1 - smoothstep(B.unfold[1], B.unfold[2], t))
             : 0;
         const wet = 1 - smoothstep(B.unfold[0], B.unfold[2], t);
+        const curl = Math.max(inShell, onLip);
         this.mix(out, CURLED, curl * bw, nearA);
-        // The first breath: the chest fills and opens, the head comes up off her knees.
+        this.mix(out, HANG, climb * bw, nearA);
+        this.mix(out, PULL, Math.max(haul * climb, 0.8 * hop) * bw, nearA);
+        // A little sway on the silk, and the strain in the pull.
+        out[TW]! += 0.08 * Math.sin(clock * 2.3) * climb * bw;
+        out[CURL]! += 0.06 * haul * climb * bw;
+        // The first breath on the lip: the chest fills and opens, the head comes up off her knees.
         out[PU]! += 3.4 * br * bw;
         out[CURL]! -= 0.34 * br * bw;
         out[LEAN]! -= 0.14 * br * bw;
         out[HT]! -= 0.5 * br * bw;
-        out[EYE] = lerp(out[EYE]!, eyes, bw * curl);
+        out[EYE] = lerp(out[EYE]!, eyes * (1 - 0.35 * haul * climb), bw * (curl + climb));
         // Damp antennae lie back along her head until the breath lifts them.
         ant += (44 * wet - 34 * br) * bw;
         antC += 0.12 * wet * bw;
-        // Wrapped round her, then opened once (and shaken dry) and let fall as the cape.
-        cloak -= 0.9 * wet * (1 - u) * bw;
-        shiver = Math.max(shiver, 0.7 * u * bw);
+        // Wrapped round her, beaten once in the scramble, then opened once (shaken dry) and let fall as the cape.
+        cloak -= 0.9 * wet * (1 - u) * (1 - hop) * bw;
+        shiver = Math.max(shiver, 0.7 * u * bw, 0.5 * hop * bw);
         this.birthOpen = u * bw;
+        this.birthHop = hop * bw;
         gzx += 0.3 * bw * curl;
-        gzy += (0.9 * (1 - eyes) - 0.6 * br) * bw * curl;
-        gzw += bw * curl;
+        gzy += (0.9 * (1 - eyes) - 0.6 * br) * bw * curl - 0.9 * climb * bw;
+        gzw += bw * (curl + climb);
       }
     }
 
@@ -3742,6 +3786,7 @@ export class Rig {
       ACT.endRaise * this.endW,
       ACT.waitRaise * sat(this.waitOpen / ACT.waitOpen),
       BIRTH.raise * sat(this.birthOpen * 5),
+      BIRTH.hopRaise * sat(this.birthHop * 5),
       CAST_RAISE * sat(this.tryWings * 5),
     );
 
