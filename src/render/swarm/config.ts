@@ -36,6 +36,13 @@ export interface SwarmLayerCfg {
   tail: number;
   /** Antennae and a separate head (only worth drawing when the moth is big enough). */
   detail: boolean;
+  /** Lateral spread of the core (x the band; default 1) and the share of ragged-edge moths past it (0.08). */
+  core?: number;
+  fringe?: number;
+  /** View tilt of the wingbeat (rad; default `flap.tilt`): low = seen from below, both broad wings spread. */
+  tilt?: number;
+  /** Body width x (near moths: a fat moth body, not a bat's). */
+  body?: number;
 }
 
 export const SWARM = {
@@ -102,6 +109,11 @@ export const SWARM = {
    * on reads as a moth at 15 px.
    */
   flap: { amp: 1.15, tilt: 0.7 },
+  /**
+   * A wing-phase wave down the river: `waves` crests along the whole path, `share` of each moth's beat
+   * phase follows it (the rest its own). The crests travel with the flow: the direction reads.
+   */
+  phaseWave: { waves: 7, share: 0.7 },
   /** Heading swing (rad) on top of the velocity, and the bank flutter. */
   heading: { swing: 0.3 },
   /** A brief silver glint under the wings: share of moths, how often each one can (s), length (s). */
@@ -127,20 +139,22 @@ export const SWARM = {
    * stream is full there. `strength` = its peak alpha of the rim colour (keep it faint: a value step
    * of a few luma), `width` x the band, `patches` = how many soft patches along the path.
    */
-  haze: { strength: 0.28, width: 1.9, patches: 7 },
+  haze: { strength: 0.45, width: 1.25, patches: 7 },
   /** The moon's halo reach (x the disc radius) for rim and wing light. */
   halo: 3.2,
   layers: [
     {
       layer: 'swarmFar',
-      count: 700,
+      count: 1100,
       size: [5, 10],
       speed: 0.85,
-      band: 1.25,
+      band: 0.8,
+      core: 0.75,
+      fringe: 0.04,
       dx: 40,
-      dy: -40,
+      dy: -30,
       flutter: 3,
-      beat: [9, 15],
+      beat: [10, 11],
       blur: 0,
       haze: 0,
       alpha: 0.92,
@@ -151,14 +165,17 @@ export const SWARM = {
     },
     {
       layer: 'swarmMid',
-      count: 300,
-      size: [8, 17],
+      count: 340,
+      size: [10, 28],
       speed: 1,
       band: 1,
+      core: 0.85,
+      fringe: 0.1,
       dx: 0,
       dy: 0,
       flutter: 9,
-      beat: [7, 11],
+      beat: [6.6, 7.4],
+      tilt: 0.5,
       blur: 0,
       haze: 0.08,
       alpha: 1,
@@ -169,21 +186,23 @@ export const SWARM = {
     },
     {
       layer: 'swarmNear',
-      count: 14,
-      size: [30, 56],
-      speed: 1.55,
+      count: 5,
+      size: [40, 64],
+      speed: 1.45,
       band: 2.2,
       dx: -60,
-      dy: 360,
-      flutter: 14,
-      beat: [8, 11],
-      blur: 3.5,
+      dy: 300,
+      flutter: 12,
+      beat: [5, 6],
+      blur: 2.6,
       haze: 0,
       alpha: 0.96,
       rim: 0.8,
       peak: 1,
-      tail: 0.45,
+      tail: 0.25,
       detail: true,
+      tilt: 0.3,
+      body: 1.6,
     },
   ] as SwarmLayerCfg[],
 };

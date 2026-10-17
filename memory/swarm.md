@@ -118,9 +118,30 @@ give each its own mesh set or move the plan into per-instance attributes (a beha
   `g.input('R1' | 'R+J1'); g.step(1)` per frame) recorded as a DSL string, then `npm run clip -- --wide
   --pre 160 --script "J1 .8 J1 .8 J1 .38 <recorded>"`.
 
-## Weak (judged harshly, round 3, 2026-10-17)
-1. Single moths are specks at 1x: the river reads as a stream of dark insects, but wings only read at 2x.
-2. During the run the giant trunks and canopy cover much of the river's middle (they draw over the swarm
-   layers), so on the crown it is two pieces: the left stream and the moths on the moon.
-3. Near moths read as dark leaves or bats (blurred blobs crossing low), and the promise-gap crossing is only
-   its own beat for a player slower than ~10 s to the gap; a fast runner gets it merged with the pass.
+## Round 4 (review round 2, problem 4: "a scatter of birds")
+- **Core and edge**: each moth's lateral place is a narrow core (mean of 4 uniforms x `core`) or, for
+  `fringe` of them, a ragged edge 1.05-2.2 band widths out (index.ts `buildMesh`). Far: 1100 moths, band 0.8,
+  core 0.75, fringe 4% = the dark dense core; mid: 340 at 10-28 px, fringe 10% = the ragged edge.
+- **The haze carries the shape**: `haze.strength` 0.45, `width` 1.25 (narrow, on the core). On the 17-38 sky
+  it is a faint moonlit arc that survives the post toe and makes the river one curved shape in a 480 px
+  thumbnail (0.28 was invisible at play size; wider than ~1.9 reads as a cloud).
+- **Flow direction**: a wing-phase wave travels down the river (`phaseWave`: 7 crests along the path, 70% of
+  each moth's phase; a near-common beat per layer, 6.6-7.4 Hz mid) so ripples run with the flow, and the
+  sheen rides on it.
+- **Disc 8-20**: a neck at the moon point of `pass` (half width 40, speed weight 1.25 = moths pass it
+  quickly) and a knot after it. Measured with the debug count and a disc mask at the measured moon centre:
+  4-17 from 3.7 s on (a knot crossing can touch ~20).
+- **Per-layer look** (`uShape`): `tilt` (near 0.3: seen from below, both broad wings spread; mid 0.5) and
+  `body` (near 1.6: a fat moth body). Wing round 4: straight costa, rounded apex out past a smaller hindwing
+  set back, an abdomen that shows past the hindwings: at 0.3 tilt it reads as a moth from below, not a fan.
+- Trunks: the swarm layers are drawn after `mid` already; what "chopped" the river was dark moths on dark
+  trunks. The haze (in `swarmFar`, after `mid`) now lies over the mid giants, so the dark moths show on it.
+  Trunks in the playfield layer (the giant the branch slabs sit on) still cover it: correct depth.
+
+## Weak (judged harshly, round 4, 2026-10-17)
+1. The haze arc is smooth and even: a contrail or a milky way more than dust stirred by wings. It needs
+   knots that brighten with the moth density and a ragged edge.
+2. Far moths are dark specks; the core reads as dark dots on a pale arc, not as a dense mass of moths.
+   Wings read at 1x only on the larger mid moths (18-28 px).
+3. Near moths in an edge-on part of the beat smear into dark dashes; and the run on the redesigned route
+   (it changed again this round) is captured only partly (the naive bot falls at ~2400).

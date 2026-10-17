@@ -32,6 +32,7 @@ uniform vec4 uBeh4;     // loop radius min, max, straggle lateral, straggle slow
 uniform vec4 uBeh5;     // wander rate, heading swing, glint share, glint every
 uniform vec4 uBeh6;     // glint dur, glint gain, view tilt (rad: 0 from below, pi/2 side on), flap amplitude (rad)
 uniform vec4 uDebug;    // lineup 0/1 (every moth in a still row in front of the camera: shape work), spacing px, unused x2
+uniform vec4 uShape;    // per layer: view tilt (rad), body scale, wing-phase waves along the path, share of the beat in that wave
 
 const float TAU = 6.2831853;
 
@@ -100,6 +101,7 @@ out vec4 vFlap;         // upper tip, lower tip, glint, alpha
 out vec4 vMoon;         // moon direction (local), halo, on the disc
 out vec4 vLook;         // device px per unit, blur in device px, haze, detail
 out float vSheen;       // how squarely the wings face the moon this instant (the beat), 0..1
+out float vBody;        // body scale (near moths: a fat body)
 
 // A pulse of length dur every [every.x, every.y] s (per moth), as 0..1 progress or -1 when idle.
 float pulse(float tau, vec2 every, float dur, float s) {
@@ -171,14 +173,16 @@ void main(void) {
   // A moth that wrapped this frame would turn round: keep the path's heading instead.
   vec2 dir = (length(vel) > 0.5 && abs(w - w0) < 0.5) ? normalize(vel) : tang;
 
-  float size = mix(uLook.x, uLook.y, pow(aB.w, 1.5));
+  float size = mix(uLook.x, uLook.y, pow(aB.w, 1.25));
   float unit = size * 0.5;
   // Flutter: sideways at 2-5 Hz, a bob with the beat. Neighbours never in step.
   vec2 nrm = vec2(-dir.y, dir.x);
   float fz = mix(2.0, 5.0, fract(aB.y * 13.7));
   float fl = sin(TAU * fz * t + TAU * aB.z) + 0.4 * sin(TAU * fz * 1.9 * t + TAU * aB.x);
+  // One beat rate per layer (a little jitter) and a wing-phase wave travelling down the river: crests
+  // move forward along the flow, so you see which way it goes (a murmuration's ripple).
   float beatHz = mix(uBeat.x, uBeat.y, fract(aB.x * 7.31));
-  float beat = TAU * beatHz * t + TAU * aB.y;
+  float beat = TAU * (beatHz * t - uShape.w * uShape.z * w + (1.0 - uShape.w) * aB.y);
   // Now and then a moth glides a few beats, wings held.
   float glide = smoothstep(0.62, 0.86, noise1(t * 0.45 + aB.z * 40.0));
   pos += nrm * uLook.z * (size / uLook.y) * fl * 0.5 + nrm * unit * 0.12 * sin(beat) * (1.0 - glide);
@@ -194,7 +198,7 @@ void main(void) {
 
   // The wingbeat, seen from a little below and to the side (beta): each tip's reach across the body.
   float th = uBeh6.w * sin(beat) * (1.0 - 0.75 * glide);
-  float beta = uBeh6.z;
+  float beta = uShape.x;
   float tipU = cos(th - beta);
   float tipL = cos(th + beta);
 
@@ -233,6 +237,7 @@ void main(void) {
   vMoon = vec4(dot(dn, fwd), dot(dn, side), halo, disc);
   vLook = vec4(devUnit, blurDev, uMoon.w, uBeat.z);
   vSheen = 0.5 + 0.5 * sin(beat + 0.9);
+  vBody = uShape.y;
 
   mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
   gl_Position = a > 0.001 ? vec4((mvp * vec3(layerPos, 1.0)).xy, 0.0, 1.0) : vec4(2.0, 2.0, 2.0, 1.0);
@@ -246,6 +251,7 @@ in vec4 vFlap;
 in vec4 vMoon;
 in vec4 vLook;
 in float vSheen;
+in float vBody;
 out vec4 o;
 
 uniform vec4 uMoon;     // disc radius, halo reach, rim gain, haze
@@ -286,13 +292,13 @@ float sdSeg(vec2 p, vec2 a, vec2 b) {
 // A forewing like a swept triangle (straight leading edge, pointed apex, slanted outer margin) over
 // a rounder hindwing lobe; the notch between them is what says "moth" at 15 px.
 float wing(vec2 q) {
-  // Broad and soft: a rounded forewing, its apex a little forward of the outer margin, over a big
-  // round hindwing. Sharp corners read as bats or leaves.
-  float fore = sdQuad(q, vec2(0.0, 0.16), vec2(0.86, 0.02), vec2(0.66, -0.4), vec2(0.0, -0.14)) - 0.1;
-  vec2 h = q - vec2(0.26, -0.42);
+  // A broad forewing (straight costa, rounded apex out past the hindwing) over a smaller round
+  // hindwing set back, so the notch between them and the abdomen past them show: a moth, not a fan.
+  float fore = sdQuad(q, vec2(0.0, 0.17), vec2(0.96, 0.0), vec2(0.72, -0.34), vec2(0.0, -0.12)) - 0.08;
+  vec2 h = q - vec2(0.24, -0.43);
   float c = 0.9;
   float sn = 0.44;
-  float hind = sdEllipse(vec2(c * h.x + sn * h.y, -sn * h.x + c * h.y), vec2(0.32, 0.27));
+  float hind = sdEllipse(vec2(c * h.x + sn * h.y, -sn * h.x + c * h.y), vec2(0.27, 0.21));
   return min(fore, hind);
 }
 
@@ -308,9 +314,11 @@ float moth(vec2 p, out float wingMask, out float span, out float antMask) {
   float dw = min(du, dl);
   span = max(-p.y / tipU, p.y / tipL);
   // Abdomen, thorax, head.
-  float body = sdEllipse(p - vec2(-0.24, 0.0), vec2(0.5, 0.085));
-  body = min(body, sdEllipse(p - vec2(0.1, 0.0), vec2(0.17, 0.11)));
-  body = min(body, length(p - vec2(0.31, 0.0)) - 0.075);
+  float bw = vBody;
+  // A long abdomen that shows past the hindwings, a thorax, a head.
+  float body = sdEllipse(p - vec2(-0.32, 0.0), vec2(0.58, 0.085 * bw));
+  body = min(body, sdEllipse(p - vec2(0.1, 0.0), vec2(0.17, 0.11 * bw)));
+  body = min(body, length(p - vec2(0.31, 0.0)) - 0.075 * bw);
   if (vLook.w > 0.5) {
     // Feathered antennae, swept back a little.
     float ant = min(sdSeg(p, vec2(0.34, 0.03), vec2(0.6, 0.2)), sdSeg(p, vec2(0.34, -0.03), vec2(0.6, -0.2)));

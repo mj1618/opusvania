@@ -61,8 +61,11 @@ function buildMesh(
   const a = new Float32Array(n * 4);
   const b = new Float32Array(n * 4);
   for (let i = 0; i < n; i++) {
-    // Lateral place in the band: a bell (mean of three uniforms), a dense core with a thin fringe.
-    const lat = ((rnd() + rnd() + rnd()) / 3) * 2 - 1;
+    // Lateral place in the band: a dense core (mean of four uniforms, x `core`) and a ragged fringe
+    // (`fringe` of the moths out past the band's edge).
+    const core = ((rnd() + rnd() + rnd() + rnd()) / 4) * 2 - 1;
+    const fr = rnd();
+    const lat = fr < (cfg.fringe ?? 0.08) ? Math.sign(core || 1) * (1.05 + fr * 14) : core * (cfg.core ?? 1);
     a.set([rnd(), rnd(), lat, rnd()], i * 4);
     b.set([rnd(), rnd(), rnd(), rnd()], i * 4);
   }
@@ -108,6 +111,7 @@ function buildMesh(
     uSheen: vec4(),
     uDebug: vec4(),
     uHaze: vec4(),
+    uShape: vec4(),
   };
   const group = new UniformGroup(uniforms);
   const shader = new Shader({
@@ -331,6 +335,7 @@ export class SwarmRenderer {
       set(u.uSheen, S.sheen.gain, S.sheen.floor, S.sheen.rim, 0);
       set(u.uDebug, S.debug.lineup ? 1 : 0, S.debug.spacing, 0, 0);
       set(u.uHaze, S.haze.strength, S.haze.width, S.haze.patches, 0);
+      set(u.uShape, cfg.tilt ?? S.flap.tilt, cfg.body ?? 1, S.phaseWave.waves, S.phaseWave.share);
     }
   }
 }
