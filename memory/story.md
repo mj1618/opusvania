@@ -4,7 +4,7 @@
 Truemoon, Lampblind, Moonblind, Mothward. Moonward was taken: a Play Store game and a Critical Role series. Nearby games to set ourselves apart from:
 The Moth and the Moon, Mothkeep. Avoid moth-and-moon titles). The hero is **Wing**, the dark moth with glowing eyes (code id `vesper`). Matt chose this story on
 2026-10-17 from ten pitches. It merges "Moonward" (false lights) with "The Long Flight" (migration), and the firefly
-answers who lit the lamps. The old "Kept World" story and prologue were deleted the same day; git history has them.
+answers who lit the lamps. The ten pitches and the Q&A are in git history (`docs/storylines/round-1.md`). The old "Kept World" story and prologue were deleted the same day; git history has them.
 Why the story is this light: `docs/research/story-direction.md`. Reference games per design problem: `reference-games.md`.
 
 ## In one line
