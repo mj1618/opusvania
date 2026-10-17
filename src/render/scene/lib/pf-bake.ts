@@ -158,6 +158,11 @@ export interface BakeLook {
   sky: string;
   /** float: what a body's interior (far from its edges) sinks to. */
   interior: string;
+  /** Appended to the silhouette rim, the chips and the key on bark (GLSL, e.g. ' * mix(0.3, 1.0, moss)'):
+   *  empty in the Grove (its text stays as it was). */
+  rimScale: string;
+  chipScale: string;
+  keyScale: string;
 }
 
 export const GROVE_BAKE: BakeLook = {
@@ -167,6 +172,9 @@ export const GROVE_BAKE: BakeLook = {
   zone: 'mix(mix(vec3(0.7, 0.95, 1.2) * 0.85, mix(vec3(0.84, 1.06, 0.62), vec3(1.14, 1.0, 0.64), sun) * 0.9, zA), vec3(1.08, 0.62, 1.2) * 0.72, zB)',
   sky: 'vec3(0.5, 0.8, 1.0)',
   interior: 'uShade.w',
+  rimScale: '',
+  chipScale: '',
+  keyScale: '',
 };
 
 const litFrag = (fills: readonly MistFill[], L: BakeLook): string => `#version 300 es
@@ -321,16 +329,16 @@ void main() {
   vec3 warm = ${L.key};
   float plane = smoothstep(0.24, 0.44, hs.r / ha);
   float reach = mix(0.14, 1.4, sun) * mix(0.3, 1.0, plane);
-  float k = key * uShade.x * reach;
+  float k = key * uShade.x * reach${L.keyScale};
   vec3 keyCol = mix(warm, ${L.mossKey}, moss);
   c += base * keyCol * k * 1.35 + keyCol * (k * k) * uShade.y * 0.3;
   // A crisp rim right at the silhouette where it faces the light.
   float edge = 1.0 - smoothstep(0.5, 0.82, fine.a);
   float rim = edge * smoothstep(0.12, 0.45, key) * reach;
-  c += (base * 1.3 + 0.07) * keyCol * rim * uShade.y * 4.0;
+  c += (base * 1.3 + 0.07) * keyCol * rim * uShade.y * 4.0${L.rimScale};
   // Chipped highlights: hard little planes of light on stone and wood where it turns to the key.
   float chip = smoothstep(0.59, 0.66, key + (fineStroke - 0.5) * 0.7 + (dab - 0.5) * 0.3) * (1.0 - moss) * reach;
-  c += (base * 0.9 + 0.03) * warm * chip * uBrush.w * (0.4 + 0.6 * edge + 0.5 * crev);
+  c += (base * 0.9 + 0.03) * warm * chip * uBrush.w * (0.4 + 0.6 * edge + 0.5 * crev)${L.chipScale};
   // Sky bounce on anything facing up, cool.
   float up = clamp(-n.y, 0.0, 1.0);
   c += base * ${L.sky} * up * 0.3 * (1.0 - moss * 0.75) * mix(0.4, 1.0, plane);

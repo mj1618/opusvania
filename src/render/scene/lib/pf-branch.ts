@@ -38,10 +38,8 @@ export const BRANCH = {
   /** The climb face at the cocoon row: a little moonlight on the mid flank, a fog-light rim underneath. */
   climbLift: 0.14,
   climbRim: 0x3a5470,
-  /** A fork's crotch: this share of the way from the parent's end to the child's, this far under both
-   *  walk lines, px. */
-  forkAt: 0.38,
-  forkDrop: 150,
+  /** A dip fork sags this far under the lower walk line plus the limb's thickness, px. */
+  dipBelow: 70,
   /** A trunk's collar round a limb's root, px. */
   collar: 46,
   /** A trunk that ends in view: how much it narrows toward its broken top, how far it leans (share of its
@@ -57,7 +55,11 @@ export const BRANCH = {
   flareFall: 90,
   /** The painted top: [bias, slow roll, fast roll] px (+ = down) round the flat collision top, and over
    *  the last `endRound` px of a free end it rounds away by up to `endDrop`. */
-  roll: [1.8, 3.2, 1.3] as readonly number[],
+  roll: [1.8, 2.2, 1.2] as readonly number[],
+  /** A slow roll of the painted top over the collision, px (render only), and bark bumps on it. */
+  rollBig: 6,
+  bumpGap: [160, 420] as readonly number[],
+  bumpLift: [3, 6] as readonly number[],
   endRound: 26,
   endDrop: 12,
   /** Moss tufts that break the line: gap between them and how far they rise over it, px. */
@@ -111,6 +113,11 @@ export const WOOD_BAKE: BakeLook = {
   zone: 'vec3(0.86, 0.95, 1.06)',
   sky: 'vec3(0.32, 0.5, 0.8)',
   interior: '0.66',
+  // The walk's moss keeps the moon on its rim; bark (descending limbs, snaps, twigs) keeps far less, so
+  // the brightest wood in the playfield is always the wood she walks on.
+  rimScale: ' * mix(0.16, 1.0, moss)',
+  chipScale: ' * 0.15',
+  keyScale: ' * mix(0.55, 1.0, moss)',
 };
 
 /** A painted limb: a centre line, a full width per point, a relief height and what grows on it. */
@@ -733,9 +740,25 @@ function planStretches(room: Room, trees: TreeLike[]): Stretch[] {
     };
     const fe = freeEast(st) && st.east !== 'knee';
     const fw = freeWest(st);
+    // Bark bumps: low swellings that break the line where feet won't notice.
+    const rb = rngFor(seed, 77);
+    const bumps: Array<[number, number, number]> = [];
+    for (
+      let x = st.x0 + range(rb, 40, 160);
+      x < st.x1 - 40;
+      x += range(rb, B.bumpGap[0] as number, B.bumpGap[1] as number)
+    )
+      bumps.push([x, range(rb, 22, 60), range(rb, B.bumpLift[0] as number, B.bumpLift[1] as number)]);
+    const ends = (x: number): number => smoothstep(st.x0, st.x0 + 60, x) * smoothstep(st.x1, st.x1 - 60, x);
     st.top = (x: number): number => {
       const [r0, r1, r2] = B.roll as [number, number, number];
       let y = curve(x) + r0 + r1 * wobble(x, seed + 31, 280) + r2 * wobble(x, seed + 32, 64);
+      // A slow roll of the painted top over the collision (render only: the moss takes the difference).
+      y += B.rollBig * wobble(x, seed + 34, 420) * ends(x);
+      for (const [bx, bw, bh] of bumps) {
+        const d = (x - bx) / bw;
+        if (d > -1 && d < 1) y -= bh * (1 - d * d) ** 2;
+      }
       const dE = st.x1 - x;
       const dW = x - st.x0;
       if (fe && dE < B.endRound) y += ((B.endRound - dE) / B.endRound) ** 2 * B.endDrop;
@@ -1353,7 +1376,7 @@ function paintCanopy(
     const rx = range(r, 70, 170);
     const ry = rx * range(r, 0.5, 0.8);
     p.solid(
-      chaikin(blob(cx, cy + ry * 0.25, rx * 0.6, ry * 0.55, seed + k * 11, 0.4, 22), 1),
+      chaikin(blob(cx, cy, rx * 0.5, ry * 0.5, seed + k * 11, 0.6, 22), 1),
       B.leafDark,
       B.backH - 0.06,
       {
@@ -1361,6 +1384,7 @@ function paintCanopy(
       },
     );
     plan.clumps.push({ x: cx, y: cy, rx, ry });
+    plan.hangs.push({ x0: cx - rx * 0.5, x1: cx + rx * 0.5, y: () => cy + ry * 0.7, deep: true, reach: 70 });
   }
   plan.clumps.sort((a, b) => b.y - a.y);
   // Deep in, the tangle sinks into the dark below (no mist: the drop goes to black).
@@ -1403,13 +1427,14 @@ function snapped(p: Paint, plan: BranchPlan, st: Stretch, dir: 1 | -1, seed: num
   for (let x = xIn; dir > 0 ? x <= xe - 6 : x >= xe + 6; x += dir * 8) poly.push(x, st.top(x));
   poly.push(...brk);
   for (let x = xe; dir > 0 ? x >= xIn : x <= xIn; x -= dir * 8) poly.push(x, st.under(x));
-  p.solid(poly, B.bark, B.walkH, { bark: 0.12 });
-  shadeJoint(p, poly, top, bot);
+  // Dark broken wood: relief sloping down toward the break (a flat plateau caught the moon as a pale nose).
+  p.solid(poly, B.barkDark, B.walkH - 0.08, { bark: 0.12 });
+  p.tint(poly, B.barkDeep, 0.45);
   // The face: pale torn wood just inside the break, cracks, a dark heart.
   const face: number[] = [...brk];
   for (let k = nb; k >= 0; k--)
     face.push((brk[k * 2] as number) - dir * range(r, 12, 22), brk[k * 2 + 1] as number);
-  p.tint(face, B.wood, 0.55);
+  p.tint(face, B.wood, 0.35);
   p.tint(blob(xe + dir * (out - 4), lerp(top, bot, 0.55), 6, h * 0.18, seed + 3, 0.4, 12), B.barkDeep, 0.75);
   for (let k = 0; k < 4; k++) {
     const y = lerp(top + 8, bot - 6, range(r, 0, 1));
@@ -1460,18 +1485,27 @@ function snapped(p: Paint, plan: BranchPlan, st: Stretch, dir: 1 | -1, seed: num
   );
 }
 
+/** How a fork joins its two stretches (varied along the route: no silhouette twice). */
+type ForkKind = 'dip' | 'behind' | 'hang';
+
 /**
- * A fork: past its walk the parent limb bends down into a crotch below the gap and splits. One tine
- * rises into the next stretch (its root end); the other goes on down and away and frays into twigs in
- * the mist. One limb, visibly: nothing floats, nothing props anything up.
+ * A fork. Three ways, chosen along the route so no two look alike, none an X and none a limb plunging
+ * off the frame:
+ *   dip     the limb sags under the gap and rises into the next stretch (one limb going on); a short
+ *           tine curls up off the parent's end into twigs
+ *   behind  the next stretch grows from behind: a dark back-plane limb leaves the parent's flank and
+ *           comes forward into it; the parent's end curls up into a leafy tine
+ *   hang    the parent's end droops into a hanging tine; the next stretch grows out of it partway down
+ *           and the rest hangs on in twigs and leaves
  */
 function fork(
   p: Paint,
   plan: BranchPlan,
-  info: TerrainInfo,
+  _info: TerrainInfo,
   st: Stretch,
   child: Stretch,
   seed: number,
+  kind: ForkKind,
 ): void {
   const B = BRANCH;
   const r = rngFor(seed, 51);
@@ -1482,84 +1516,158 @@ function fork(
   const thE = st.th(xe);
   const cTop = child.top(cx0);
   const cTh = child.th(cx0 + dir * 30);
-  // The crotch: well under both walk lines, a little nearer the parent's end.
-  const cx = lerp(xe, cx0, B.forkAt);
-  const cy = Math.max(child.from[1], topE + B.forkDrop, cTop + B.forkDrop * 0.8);
-  // The parent bends down into the crotch and goes on as the lower tine.
-  const ex = cx + dir * range(r, 130, 200);
-  const ey = cy + range(r, 230, 320);
-  const dip = [
-    ...cubic(
-      xe - dir * 60,
-      topE + thE / 2,
-      xe + dir * 20,
-      topE + thE / 2 + 10,
-      cx - dir * 40,
-      cy - 40,
-      cx,
-      cy,
-      14,
-    ),
-    ...cubic(cx, cy, cx + dir * 30, cy + 40, ex - dir * 40, ey - 90, ex, ey, 14).slice(2),
-  ];
-  const L = lineLimb(
-    dip,
-    (t) => thE * lerp(0.98, 0.26, smoothstep(0.3, 1, t)),
-    B.walkH - 0.04,
-    seed + 1,
-    0.4,
-    0.8,
-  );
-  paintLimb(p, L);
-  const n = L.pts.length / 2;
-  p.tint(band(L, -0.5, 0.5, Math.round(n * 0.55), n - 1), B.barkDeep, 0.45);
-  info.mist.push({
-    x: ex,
-    y: ey - 40,
-    rx: 150,
-    ry: 140,
-    amount: B.mistAmount,
-    color: B.mist,
-    power: 1.3,
-    backOnly: 0.4,
-  });
-  twig(p, plan, ex, ey, Math.PI / 2 + dir * 0.5, range(r, 40, 70), 6, B.walkH - 0.12, seed + 2);
-  twig(
-    p,
-    plan,
-    ex - dir * 10,
-    ey - 20,
-    dir > 0 ? 0.3 : Math.PI - 0.3,
-    range(r, 30, 50),
-    5,
-    B.walkH - 0.12,
-    seed + 3,
-  );
-  // The rising tine: from the crotch up into the child's root end.
   const ax = cx0 + dir * 40;
   const ay = child.top(ax) + child.th(ax) / 2;
-  const rise = cubic(cx, cy, cx + dir * 30, cy - 50, ax - dir * 70, ay + 20, ax, ay, 16);
-  paintLimb(
-    p,
-    lineLimb(rise, (t) => lerp(thE * 0.8, cTh, t), B.walkH, seed + 4, 0.5, 1),
-  );
-  // The crotch swells; a knot in it.
-  const w = Math.max(thE, cTh) * 0.62;
-  p.solid(blob(cx, cy - w * 0.15, w * 0.9, w * 0.75, seed + 5, 0.2, 18), B.bark, B.walkH, { bark: 0.12 });
-  dome(p, cx, cy - w * 0.1, w * 0.8, w * 0.65, B.walkH + 0.04, B.walkH + 0.14, seed + 6);
-  p.tint(blob(cx, cy + w * 0.35, w * 0.8, w * 0.35, seed + 7, 0.3, 14), B.barkDeep, 0.5);
-  knot(p, cx - dir * w * 0.2, cy - w * 0.15, Math.max(6, w * 0.16), 0.4, B.walkH, seed + 8);
-  plan.hangs.push({
-    x0: Math.min(cx, ex),
-    x1: Math.max(cx, ex),
-    y: (x) => lerp(cy + w * 0.5, ey, clamp((x - cx) / (ex - cx || 1), 0, 1)),
-    deep: true,
-    reach: 80,
-  });
+  // A short tine curling up off the parent's end, fraying into twigs and leaves inside the frame.
+  const curl = (len: number, up: number, w: number): void => {
+    const sx = xe - dir * 34;
+    const sy = topE + thE * 0.45;
+    // Out and slightly up, then drooping at the end under its leaves (an upward hook read as a horn).
+    const tx = xe + dir * len;
+    const ty = topE + thE * 0.2 - up * 0.35;
+    const line = cubic(
+      sx,
+      sy,
+      xe + dir * len * 0.4,
+      sy - up * 0.6,
+      tx - dir * len * 0.2,
+      ty - up * 0.3,
+      tx,
+      ty,
+      14,
+    );
+    paintLimb(
+      p,
+      lineLimb(line, (t) => Math.max(4, w * (1 - t) ** 1.1), B.walkH - 0.06, seed + 9, 0.4, 0.5),
+    );
+    const a = Math.atan2(ty - (ty + up * 0.4), dir * len * 0.1);
+    twig(p, plan, tx, ty, a - dir * 0.3, range(r, 30, 52), 5, B.walkH - 0.1, seed + 10);
+    twig(p, plan, tx, ty + 4, a + dir * 0.7, range(r, 26, 44), 4, B.walkH - 0.1, seed + 11);
+  };
+  const swell = (x: number, y: number, w: number): void => {
+    p.solid(blob(x, y, w * 0.85, w * 0.7, seed + 5, 0.2, 18), B.bark, B.walkH - 0.02, { bark: 0.12 });
+    dome(p, x, y, w * 0.75, w * 0.6, B.walkH + 0.02, B.walkH + 0.1, seed + 6);
+    p.tint(blob(x, y + w * 0.35, w * 0.75, w * 0.32, seed + 7, 0.3, 14), B.barkDeep, 0.5);
+  };
+  if (kind === 'dip') {
+    const cx = lerp(xe, cx0, range(r, 0.42, 0.58));
+    const cy = Math.max(topE, cTop) + Math.max(thE, cTh) + B.dipBelow;
+    const line = [
+      ...cubic(
+        xe - dir * 60,
+        topE + thE / 2,
+        xe + dir * 30,
+        topE + thE / 2 + 24,
+        cx - dir * 80,
+        cy,
+        cx,
+        cy,
+        14,
+      ),
+      ...cubic(cx, cy, cx + dir * 80, cy, ax - dir * 70, ay + 40, ax, ay, 14).slice(2),
+    ];
+    const L = lineLimb(
+      line,
+      (t) => lerp(thE * 0.92, cTh, smoothstep(0, 1, t)) * (1 - 0.14 * Math.sin(Math.PI * t)),
+      B.walkH - 0.04,
+      seed + 1,
+      0.4,
+      0.9,
+    );
+    paintLimb(p, L);
+    const n = L.pts.length / 2;
+    p.tint(band(L, -0.5, 0.5, Math.round(n * 0.25), Math.round(n * 0.75)), B.barkDeep, 0.35);
+    curl(range(r, 70, 100), range(r, 28, 46), thE * 0.45);
+    plan.hangs.push({
+      x0: Math.min(xe, cx0) + 30,
+      x1: Math.max(xe, cx0) - 30,
+      y: () => cy + thE * 0.42,
+      deep: false,
+      reach: 120,
+    });
+  } else if (kind === 'behind') {
+    const sx = xe - dir * range(r, 120, 170);
+    const sy = topE + thE * 0.6;
+    const line = cubic(sx, sy, xe + dir * 30, sy + thE * 0.9, ax - dir * 100, ay + 60, ax, ay, 22);
+    const L = lineLimb(
+      line,
+      (t) => lerp(thE * 0.7, cTh, smoothstep(0.2, 1, t)),
+      B.backH + 0.06,
+      seed + 1,
+      0.3,
+      0.6,
+    );
+    paintLimb(p, L);
+    const n = L.pts.length / 2;
+    p.tint(band(L, -0.5, 0.5, 0, Math.round(n * 0.85)), B.barkDeep, 0.45);
+    curl(range(r, 90, 130), range(r, 46, 74), thE * 0.55);
+    stub(
+      p,
+      xe - dir * 70,
+      st.under(xe - dir * 70) - 6,
+      Math.PI / 2 + dir * 0.4,
+      range(r, 16, 26),
+      10,
+      B.walkH - 0.04,
+    );
+  } else {
+    // Hanging: the end droops; the child grows out of it partway down; the rest hangs on.
+    const hx = xe + dir * range(r, 50, 80);
+    const hy = Math.max(cTop + cTh + 70, topE + 230);
+    const line = cubic(
+      xe - dir * 60,
+      topE + thE / 2,
+      xe + dir * 40,
+      topE + thE / 2 + 6,
+      hx + dir * 10,
+      hy - 140,
+      hx,
+      hy,
+      24,
+    );
+    const L = lineLimb(line, (t) => thE * lerp(0.95, 0.3, t), B.walkH - 0.04, seed + 1, 0.4, 0.8);
+    paintLimb(p, L);
+    const n = L.pts.length / 2;
+    let q = n - 1;
+    for (let i = 0; i < n; i++)
+      if ((L.pts[i * 2 + 1] as number) >= ay) {
+        q = i;
+        break;
+      }
+    const cx = L.pts[q * 2] as number;
+    const cy = L.pts[q * 2 + 1] as number;
+    const w = L.w[q] as number;
+    const tine = cubic(cx, cy, cx + dir * 40, cy - 6, ax - dir * 50, ay + 4, ax, ay, 14);
+    paintLimb(
+      p,
+      lineLimb(tine, (t) => lerp(w * 0.9, cTh, t), B.walkH, seed + 2, 0.4, 0.9),
+    );
+    swell(cx, cy, Math.max(w, cTh) * 0.7);
+    p.tint(band(L, -0.5, 0.5, q, n - 1), B.barkDeep, 0.4);
+    for (let k = 0; k < 3; k++)
+      twig(
+        p,
+        plan,
+        hx,
+        hy,
+        Math.PI / 2 + dir * range(r, -0.5, 0.6),
+        range(r, 40, 80),
+        5,
+        B.walkH - 0.1,
+        seed + 20 + k,
+      );
+    plan.hangs.push({
+      x0: Math.min(xe, hx) - 10,
+      x1: Math.max(xe, hx) + 10,
+      y: (x) => lerp(topE + thE, hy, clamp((x - xe) / (hx - xe || 1), 0, 1)),
+      deep: false,
+      reach: 90,
+    });
+  }
 }
 
 /** The child's end at a fork: its top corner rounds over into the tine that rises into it. */
-function crotchEnd(p: Paint, st: Stretch, dir: 1 | -1, seed: number): void {
+function crotchEnd(p: Paint, st: Stretch, dir: 1 | -1, _seed: number): void {
   const B = BRANCH;
   const xe = dir < 0 ? st.x0 : st.x1;
   const th0 = st.th(xe - dir * 40);
@@ -1582,7 +1690,6 @@ function crotchEnd(p: Paint, st: Stretch, dir: 1 | -1, seed: number): void {
   const poly = chaikin(k, 2);
   p.solid(poly, B.bark, B.walkH, { bark: 0.12 });
   shadeJoint(p, poly, top, top + th0);
-  knot(p, xe - dir * 40, top + th0 * 0.5, 8, -0.6, B.walkH, seed);
 }
 
 /** A blunt natural end (a limb's outer end that she lands on): rounded, moss over it, twigs. */
@@ -1704,10 +1811,13 @@ export function paintBranchTerrain(
   const childOf = (st: Stretch): Stretch | undefined => stretches.find((o) => o.parent === st.id);
 
   // 1. Forks (the parent's dip, the lower tine, the crotch, the rising tine) behind the walk.
+  const kinds: ForkKind[] = ['dip', 'behind', 'hang'];
+  let forks = 0;
   for (const st of stretches) {
     const far = st.grows > 0 ? st.east : st.west;
     const child = childOf(st);
-    if (far === 'fork' && child) fork(p, plan, info, st, child, sdOf(st) + 3);
+    if (far === 'fork' && child)
+      fork(p, plan, info, st, child, sdOf(st) + 3, kinds[forks++ % kinds.length] as ForkKind);
   }
 
   // 2. The stretches. A root in a tree runs on into it (the trunk's collar wraps it, step 3).
@@ -1772,7 +1882,6 @@ export function paintBranchTerrain(
   // 4. The ends and joins over the limbs.
   for (const st of stretches) {
     const sd = sdOf(st);
-    const r = rngFor(sd, 7);
     for (const dir of [-1, 1] as const) {
       const end = dir > 0 ? st.east : st.west;
       if (end === 'snap') snapped(p, plan, st, dir, sd + 5 + dir);
@@ -1812,10 +1921,8 @@ export function paintBranchTerrain(
         p.solid(poly, B.bark, B.walkH, { bark: 0.12 });
         shadeJoint(p, poly, yA, yB + thN);
         dome(p, x1 - 14, midY + 12, 34, 40, B.walkH + 0.05, B.walkH + 0.18, sd + 7);
-        knot(p, x1 - 6, midY + 12, 11, Math.PI / 2, B.walkH, sd + 9);
         bendGrain(p, x1, yA, st.th(x1 - 200), yB, thN, sd + 8);
         p.tint(chaikin(belly.concat([x1 - 220, yB + 10, x1 + 40, yB + 20]), 1), B.barkDeep, 0.5);
-        twig(p, plan, x1 - 10, yA + 10, -0.35, range(r, 130, 170), 12, B.walkH - 0.12, sd + 10);
       }
     }
     if (st.west === 'burl') {

@@ -33,19 +33,25 @@ export const RIM = {
   /** How much brighter the moss is where she walked (0..1) and its half width, px. */
   trailGain: 0.55,
   trailReach: 26,
+  /** Brightness along the rim: [min, base, max]; + this much per px a spot rises over the mean of the top
+   *  `riseReach` px either side; +- `patch` in slow patches (dimmer between tufts). */
+  level: [0.4, 0.78, 1.15] as readonly number[],
+  riseReach: 60,
+  risePerPx: 0.06,
+  patch: 0.28,
 } as const;
 
-const STRIDE = 5;
+const STRIDE = 6;
 
 const VERT = `#version 300 es
 precision highp float;
 in vec2 aPosition;
-in vec3 aRim;     // walk line y, end fade, seed
+in vec4 aRim;     // walk line y, end fade, seed, glow (brighter on rises, dimmer between)
 uniform mat3 uProjectionMatrix;
 uniform mat3 uWorldTransformMatrix;
 uniform mat3 uTransformMatrix;
 out vec2 vWorld;
-out vec3 vRim;
+out vec4 vRim;
 void main() {
   mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
   gl_Position = vec4((mvp * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
@@ -59,7 +65,7 @@ const c3 = (c: number): string =>
 const FRAG = `#version 300 es
 precision highp float;
 in vec2 vWorld;
-in vec3 vRim;
+in vec4 vRim;
 uniform vec4 uTime;      // clock, -, -, -
 uniform vec4 uTrail[${RIM.trail}];  // x, feet y, strength, -
 out vec4 o;
@@ -114,7 +120,7 @@ void main() {
   }
   mem = min(1.0, mem);
   col = mix(col, ${c3(RIM.lit)} * 1.35, mem * ${RIM.trailGain.toFixed(3)});
-  float alpha = a * bright * vRim.y * (0.75 + 0.25 * lit + 0.3 * mem);
+  float alpha = a * bright * vRim.y * vRim.w * (0.75 + 0.25 * lit + 0.3 * mem);
   o = vec4(col * alpha, alpha);
 }`;
 
@@ -146,10 +152,22 @@ export class Rim {
       for (let i = 0; i <= n; i++) {
         const x = x0 + ((x1 - x0) * i) / n;
         const fade = Math.min(1, (x - x0) / (freeL ? 24 : 8), (x1 - x) / (freeR ? 24 : 8));
-        // It follows the painted, rolled top (the moss rises ~2 px over the bark).
-        const y = st.top(Math.min(st.x1, Math.max(st.x0, x))) - 2;
-        verts.push(x, y - 12, y, fade, seed);
-        verts.push(x, y + 12, y, fade, seed);
+        // It follows the painted, rolled top (the moss rises ~2 px over the bark), brighter where the
+        // top rises over its neighbours, dimmer in the hollows and in slow patches between: never a ruler.
+        const at = (xx: number): number => st.top(Math.min(st.x1, Math.max(st.x0, xx)));
+        const y = at(x) - 2;
+        const rise = (at(x - RIM.riseReach) + at(x + RIM.riseReach)) / 2 - at(x);
+        const glow = Math.min(
+          RIM.level[2] as number,
+          Math.max(
+            RIM.level[0] as number,
+            (RIM.level[1] as number) +
+              rise * RIM.risePerPx +
+              RIM.patch * Math.sin(x * 0.011 + seed * 3.1) * Math.sin(x * 0.0043 + seed),
+          ),
+        );
+        verts.push(x, y - 12, y, fade, seed, glow);
+        verts.push(x, y + 12, y, fade, seed, glow);
         if (i > 0) {
           const k = base + i * 2;
           index.push(k - 2, k - 1, k, k - 1, k + 1, k);
@@ -169,7 +187,7 @@ export class Rim {
     const geometry = new Geometry({
       attributes: {
         aPosition: { buffer: buf, format: 'float32x2', stride: STRIDE * 4, offset: 0 },
-        aRim: { buffer: buf, format: 'float32x3', stride: STRIDE * 4, offset: 8 },
+        aRim: { buffer: buf, format: 'float32x4', stride: STRIDE * 4, offset: 8 },
       },
       indexBuffer: new Uint32Array(index),
     });

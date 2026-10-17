@@ -77,26 +77,31 @@ function sprig(b: FloraBuilder, r: Rng, x: number, y: number, a: number, size: n
 
 /** A leaf clump of the canopy: leaves on short stems round a dome, lit along its crown. */
 function clump(b: FloraBuilder, r: Rng, cx: number, cy: number, rx: number, ry: number): void {
-  const n = Math.round((rx * ry) / 38);
+  const n = Math.round((rx * ry) / 34);
   for (let i = 0; i < n; i++) {
-    const a = range(r, -Math.PI, 0.25);
+    // All the way round (a flat underside read as a floating platform); the lower half is sparser,
+    // darker and droops, trailing ragged below the dome.
+    const a = range(r, -Math.PI, Math.PI);
+    const low = Math.sin(a) > 0;
+    if (low && r() < 0.35) continue;
     const d = Math.sqrt(r());
     const px = cx + Math.cos(a) * rx * d;
-    const py = cy + Math.sin(a) * ry * d * (a > 0 ? 0.6 : 1);
+    const py = cy + Math.sin(a) * ry * d * (low ? 1.25 : 1) + (low ? range(r, 0, 26) * d : 0);
     const crown = Math.max(0, -Math.sin(a)) * d;
-    const la = a + range(r, -0.7, 0.7);
+    const la = low ? Math.PI / 2 + range(r, -0.9, 0.9) : a + range(r, -0.7, 0.7);
     const len = range(r, 12, 24) * (1.2 - d * 0.4);
-    b.plant(px, py, len * 2, (px * 0.003) % 1, 2.4 + crown * 2, 0, 0.15);
-    const lit = crown > 0.7 && r() < 0.6;
+    b.plant(px, py, len * 2, (px * 0.003) % 1, 2.4 + crown * 2, 0, low ? -0.1 : 0.15);
+    const lit = crown > 0.7 && r() < 0.5;
+    const dark = low ? mix(T.leafDark, 0x02080b, 0.6) : T.leafDark;
     b.leaf(
       px,
       py,
       la,
       len,
       len * 0.6,
-      T.leafDark,
-      lit ? T.leafLit : mix(T.leafDark, T.leafMid, d),
-      lit ? T.leafRim : T.leafDark,
+      dark,
+      lit ? T.leafLit : mix(dark, T.leafMid, low ? 0.2 : d),
+      lit ? T.leafRim : dark,
       range(r, -0.25, 0.25),
       1,
       3,

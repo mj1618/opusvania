@@ -56,12 +56,24 @@ that read as stalks. Round 3 paints from the room's **tree and stretch marks** (
   down. A trunk that ends in view (`droop`, top 260) narrows (`trunkTaper`), leans (`trunkLean`), has a dark broken top
   and `droopCrown`: thin dark limbs hanging straight down with twigs (arching ones read as horns, a lit jagged top
   as a crown on a fence post). `crown` stands in the walk plane between S4 and S5; she drops past it.
-- **Ends:** `fork` (`fork()`): the parent bends down past its walk into a crotch `forkDrop` 150 under both walk
-  lines, `forkAt` 0.38 of the way across; the lower tine goes on down into mist and twigs, the rising tine climbs
-  into the child's end (`crotchEnd` rounds its corner). `snap` (`snapped`): jagged slanting break, dark torn wood,
-  splinters; moss and the rim stop short of it. `nub`: blunt rounded end + twigs. `tip` (`tipTangle`): the limb
-  thins to a fray of twigs over a dense canopy (`canopyClumps` 44 within `canopyDepth` 760 under the end). Knee and
-  burl as before (the knee's round shoulder now reads as a bend).
+- **Ends:** `fork` (`fork()`, round 4: three kinds cycled along the route, `ForkKind`): `dip` (the limb sags
+  `dipBelow` under the gap and rises into the child's belly, a short tine off the parent's end), `behind` (a dark
+  back-plane limb from the parent's flank comes forward into the child; the parent's end becomes a tine), `hang`
+  (the parent's end droops; the child grows out of it partway down; the rest hangs on in twigs). Tines go out,
+  slightly up and DROOP at the end under twigs (an upward hook read as a horn). Never the X / plunging limb of round 3
+  (review 3: it looked like a moonlit ramp). `crotchEnd` rounds the child's corner (no knot eye: S6's eye + twig
+  tongue read as an animal head; the knee lost them too). `snap` (`snapped`): dark wood (`barkDark` solid, a
+  `barkDeep` tint, dim torn face; a flat plateau caught the moon as a pale nose), splinters; moss and the rim stop
+  short. `nub`, `tip` (`tipTangle`) as before.
+- **Light hierarchy (round 4):** `WOOD_BAKE.rimScale` / `chipScale` / `keyScale` cut the bake's silhouette rim,
+  chips and key on bark (`mix(0.16, 1, moss)`, 0.15, `mix(0.55, 1, moss)`): only moss keeps the moon, so the walk's
+  rim is the playfield's top value (wide stops p99.9 outside the moon 108-125; descending limbs no longer white).
+  Grove shader text unchanged (the knobs default to '').
+- **The top never a ruler:** `rollBig` 6 px slow roll of the painted top over the collision (render only, eased to
+  0 at the ends), bark `bump`s (`bumpGap`, `bumpLift` 3-6 px), and the rim's brightness varies along it (pf-rim.ts
+  `level` [0.4, 0.78, 1.15]: brighter where the top rises over its neighbours `risePerPx`, dimmer in slow `patch`es).
+- **Exit canopy clumps** (flora `clump`): leaves all the way round, the lower half sparser, darker, drooping and
+  trailing below; small ragged dark bases (`blob` rough 0.6); beards under each. No flat undersides.
 - **No struts, nothing floating:** no side limbs; the canopy's tangle limbs are off (`tangleLimbs` 0: they floated).
 - **Cocoon row:** each cocoon hangs on silk from the underside (flora); the clothesline between them is gone (a few
   short wisps). The climb face there gets `climbLift` (cool moonlight on the mid flank), a `climbRim` of fog-light
