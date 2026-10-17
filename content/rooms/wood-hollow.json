@@ -683,12 +683,12 @@
         "y": 420,
         "r": 320,
         "flag": "wood-crown",
-        "to": [5200, -700]
+        "to": [3500, -950]
       },
       "vista": {
         "flag": "wood-crown",
         "x": 1920,
-        "y": 640,
+        "y": -150,
         "zoom": 0.5,
         "hold": 9,
         "parallax": 0.25
