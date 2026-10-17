@@ -1,10 +1,9 @@
 name: Deploy Pages
 
-# Deploys main to https://mj1618.github.io/opusvania/ after CI passes on it.
+# Deploys main to https://mj1618.github.io/opusvania/ on every push. There is no CI: tests run locally
+# (`npm run check`) when needed (Matt, 2026-10-17).
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches: [main]
   workflow_dispatch:
 
@@ -19,12 +18,9 @@ concurrency:
 
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: 24

@@ -15,8 +15,8 @@
   imports leaving src/sim incl. side-effect imports). It's regex-based: a determined bypass is possible.
 - **Pushing workflow changes:** the `gh` HTTPS token lacks the `workflow` scope, so a push that touches
   `.github/workflows/` is rejected. Push over SSH instead: `git push git@github.com:mj1618/opusvania.git main`.
-- **CI/Pages:** `ci.yml` runs `npm run check` (WebGL works in headless Chromium on ubuntu runners);
-  `pages.yml` deploys `main` only after CI succeeds (workflow_run), or on manual dispatch.
+- **No CI (removed 2026-10-17, Matt: "let's just run tests locally when we need to"):** run `npm run check` locally.
+  `pages.yml` builds and deploys `main` on every push (about 40 s), or on manual dispatch.
 - **Biome and worktrees**: agent worktrees live in `.claude/worktrees/` (untracked); Biome found their
   `biome.json` as nested roots and refused to run, so `biome.json` excludes `.claude`.
 - **JSON imports need `with { type: 'json' }`**: Playwright loads specs as native Node ESM, which rejects
