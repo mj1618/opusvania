@@ -1,6 +1,8 @@
 # Lampfall: technical foundation
 
-Draft 1, 2026-10-17. How the code grows from one test scene (the Grove) to five regions of rooms without rework.
+Draft 1, 2026-10-17; §2.2, §3, §4, §5, §6 and §7 rescoped 2026-10-18 for an Ori-length game: 14 areas in five
+regions, **~155 main rooms plus ~20 optional and ~285 lamps** (draft 1: 68 rooms, ~73 lamps), four kinds of find and
+fast travel in Tier 2 (`world.md` §1–4, README). How the code grows from one test scene (the Grove) to that many rooms without rework.
 This doc assumes `docs/design/core.md` (abilities are flags, lamps stay out for good, moon patches are the save
 points, an auto-map with lamp markers, region sky driven by the share of its lamps snuffed). Calls big enough for
 Matt are at the end, each with a recommendation. The doc assumes the recommendation until he answers.
@@ -67,19 +69,25 @@ Choose rooms, and fight the disjointed feeling directly:
 ### 2.2 Data format: adding a region means adding files
 
 ```
-content/world.json                    regions [{id, kit, name}], rooms [{id, x, y}] (world px), start {room, patch}
+content/world.json                    regions [{id, kit, name}], areas [{id, region, hub: "room#patch"}],
+                                      rooms [{id, x, y}] (world px), start {room, patch}
 content/rooms/<region>/<room>.json    one room = today's scene format + the fields below
 src/render/kits/<kit>/                one module per region kit (painters + defaults)
 ```
-New fields on a room. Everything else (solids, oneWays, enemies, ceilingY, kick faces) stays as it is now:
+**Areas** (rescoped 2026-10-18) are a grouping, not a new level of tech: a room names its area, the area names its
+hub patch (the fast-travel point, §4) and its region (the kit). The map, the moth-stone reveal, the per-area lints
+(§5) and the area-run tapes key on it. New fields on a room. Everything else (solids, oneWays, enemies, ceilingY,
+kick faces) stays as it is now:
 
 | Field | Shape | Notes |
 |---|---|---|
-| `id`, `region` | `wood-hatch`, `wood` | id = `<region>-<name>`. The file path must match |
+| `id`, `region`, `area` | `wood-hatch`, `wood`, `wood-floor` | id = `<region>-<name>`. The file path must match. `area` is one of world.json's areas (rescoped 2026-10-18) |
+| `purpose` | `["teach", "rest"]` | the room's job (teach, test, combine, hub, glade, rest, vista, boss, set piece, secret, corridor; `regions/wood.md` §7 uses them). Read by the lints (§5) and the `room new` templates (rescoped 2026-10-18) |
+| `finds` | `[{id, kind: stone\|sign\|hollow, x, y, upgrade?}]` | the three non-lamp finds (core.md §6). A hollow names its upgrade, a tuning id read by `resolveParams` (rescoped 2026-10-18) |
 | `exits` | `[{edge: n\|s\|e\|w, from, to}]` | A span along a room edge (room px) where the implicit edge wall is open. **The target is not authored:** the world validator finds the neighbour whose mirror exit covers the same world span (the L5 rule) |
 | `doors` | `[{id, x, y, to: "room#door"}]` | Only for non-edge links: a hollow in a trunk, a cave mouth. Press up |
 | `gates` | `[{id, rect, needs: "wallJump"}]` | Declarative only. It says which ability a route needs and is checked by tests (§5). No sim effect |
-| `lamps`, `patches`, `glades` | core.md's lamp rows, moon patches, ability glades | Each has an `id` that is stable forever, because the save refers to it |
+| `lamps`, `patches`, `glades` | core.md's lamp rows, moon patches, ability glades | Each has an `id` that is stable forever, because the save refers to it. A patch can be `hub: true` (one an area, the fast-travel point) |
 | `migration` | `[[x, y], ...]` | The freed moths' line toward the next room or region (core.md §3) |
 | `camera` | `{locks?: [{rect, view}], vistas?: [{x, y, lift}]}` | Default: clamp to the room plus ceiling headroom, as today |
 | `art` | `{seed, moods: [{x, mood}], landmarks: [{kind, x, y, ...}], ...}` | Read only by the region's kit (§2.4) |
@@ -159,7 +167,20 @@ GameState = {
 - **Determinism:** loading a save means `createState(seed, save)`. A tape records its start `save`, so tests can
   start "in the valley with glide and wall jump" in one line.
 
-## 4. Map screen and fast travel
+**At full size (rescoped 2026-10-18).** The built save (v22, `memory/save.md`) also keeps `opened`, `seen` and
+`crossed` for the map. Three additions carry the rescope, and none is a new system:
+- **Finds** are `taken` entries like glade gifts (`room:stone-1`, `room:sign-2`, `room:hollow-1`). Moonlit hollows
+  also feed `resolveParams(tuning, save.abilities, hollows)`, so an upgrade is a tuning number, as an ability is a
+  flag. The health milestones (110 / 350 / 800 / 1,400 / 2,100 moths) are computed from `save.moths`, never stored.
+- **Fast-travel points** are the hub patches she has rested at: a `rested` list of `room:patch` ids (Tier 2, §4).
+- **Size.** At ~175 rooms the id lists grow: ~285 snuffed lamps, ~800 `seen` ids (lamps, exits, patches, finds),
+  ~450 crossed exits, ~175 visited rooms. As flat `room:id` strings that is ~50 KB of JSON, three times the 16 KB
+  budget (§6), and it sits inside the state that is cloned and hashed. **Store the lists grouped by room**
+  (`{"valley-roost-chasm": ["lantern-3", ...]}`), which drops the repeated room prefix (about half the bytes), and
+  keep `seen` and `crossed` (map-only data) out of `hashState`'s per-frame path by hashing a save revision counter
+  that bumps on every write. Measure both with a full-game save fixture before Tier 2.
+
+## 4. Map screen and fast travel (rescoped 2026-10-18)
 
 **Map v1** (needed before the second region, M): a pause overlay in render, outside the sim. It is drawn
 automatically from `world.json` and each room's solids and one-ways, scaled to about 1/20 and simplified to soft
@@ -167,11 +188,21 @@ shapes in the region's map tint. Visited rooms show (`save.visited`). Markers: W
 lamp still burning as a lit dot (core.md: "the map is the to-do list"), with snuffed lamps as dim husks. It needs
 no hand-drawn map art and no mapmaker.
 
-**Fast travel:** nothing at first. The moths' road runs mostly one way, and core.md puts a moon patch at every
-boss door. Add patch-to-patch travel from the map (M) once playtests show backtracking for unreachable lamps taking
-more than about 2 minutes a trip. The data needed for it (`save.patch`, the patch ids) exists from stage 1.
+**Map at scale (rescoped 2026-10-18).** Map v1 exists (Tab, `memory/world.md`) and scales the visited rooms to fit
+(≤ 1/8). At ~175 rooms that is unreadable, so the map opens on her **area** at a fixed scale and zooms out to the
+region and the whole road. A touched moth-stone draws its area's unvisited rooms faint and shows the area's count of
+unseen lamps (core.md §6); collected firefly signs show as a row of glyphs. Per-area map textures are cached and
+rebuilt only when that area's `visited` or `seen` changes.
 
-## 5. Content authoring and validation
+**Fast travel (rescoped 2026-10-18): ships with Tier 2.** Travel between the hub moon patches from the map, from a
+hub patch to any hub patch she has rested at (README rescope call 11). *Reason:* G5 asks that a return to the hub
+take ≤ 2 minutes once play passes ~4 hours, and from the marsh on the shortcuts alone can't do that across five
+regions; Tier 1 still has none (shortcuts instead). It is M: a `hub: true` flag on one patch an area, the `rested`
+list (§3), a map pick, and a pure `travel(state, world, patch)` that `Game` applies between steps, as it applies
+Continue, so a tape records it as an input event and replays identically. The room swap is the existing room change
+with a longer dip.
+
+## 5. Content authoring and validation (rescoped 2026-10-18)
 
 **How rooms get made: hand-written JSON rects by agents**, as the Grove is today. Agents are good at it, the
 pilots say exactly what broke, and the painters dress the rects automatically. Rejected or deferred:
@@ -201,7 +232,46 @@ pilots say exactly what broke, and the painters dress the rects automatically. R
 The Grove's hand-scripted pilots stay as the Grove's tests. The Grove becomes `test-grove`, playable with
 `?room=test-grove` but outside the world graph, so its pilots keep guarding the movement feel.
 
-## 6. Performance budgets and testing as the game grows
+### 5.1 At ~155 rooms (rescoped 2026-10-18)
+
+Draft 1 planned 68 rooms; the rescope plans ~155 main rooms, ~20 optional ones and ~285 lamps, about 2.3x, written
+by agents chunk by chunk (14 area chunks plus 2 optional, `world.md` §4.1). The wood's first 10 rooms show the cost:
+each took a paper spec, a greybox, bot runs and fixes. At that rate the plan only works if everything per room that
+can be generated or computed is. What that changes:
+
+**Authoring.**
+- **`npm run room new <id> --area <area> --purpose <kind>` is required now, not "a bit at a time".** It writes the room
+  file from a purpose template (the room kinds the wood's first chunk settles: teach, test, hub, glade, corridor,
+  boss, set piece, secret), places it in a free world slot next to its neighbour with mirrored standard-span exits
+  (`world.md` §5 rule 5), and adds its line to the room list. Today a room is also one hand-written import line in
+  `FILES` (`src/scene/index.ts`, because tsx tools can't glob); at ~175 rooms that list is **generated** from
+  `content/rooms/` (a codegen step in `npm run check` that fails if it is stale), not hand-edited.
+- **`npm run room sheet <id>` and `sheet --area <area>`**: the PNG plan (solids, exits, lamps, finds, jump-reach arcs)
+  per room and per area. Agents and reviewers read an area from one sheet instead of opening 12 rooms.
+- **Hooks into old rooms are data** (`world.md` §5 rule 8): each tier adds lamp, find and solid rows to earlier
+  rooms. A `room hooks <tier>` report lists every gate row whose ability arrives in that tier, so no promised lock is
+  left unpaid.
+- **Ids stay forever** across ~1,000 lamp, exit, patch and find ids. The world check rejects a duplicate or a reused
+  retired id (a `retired` list in world.json).
+
+**Validation.**
+- **The world check stays symbolic and cheap.** Its BFS over `room:thing` nodes grows from ~100 nodes to ~1,000; it is
+  still milliseconds. It gains the rescope's rules: every area has exactly one hub patch and one moth-stone, every
+  ability's glade is reachable in `core.md` §4's order, every hollow names an upgrade that exists, and `world.md`
+  §3's rule 8 (breakables and passables are one-way safe).
+- **Route claims need the cache.** At ~3–5 routes a room, ~600 claims each needing a bot search is minutes, not
+  seconds. The cache by room hash plus sim fingerprint (draft 1) becomes required: `npm run check` re-searches only
+  rooms whose hash changed, and a tuning change that moves the fingerprint is a `check:full` job, run per region.
+- **Lints computed from room data** (new, `world.md` §4.1), per area and per chunk, against the bar's chunk rubric
+  (`quality-bar.md` §3b): purpose tags, the novelty minute (first-timer minutes come from the playtest harness's
+  persona runs, `memory/playtest-harness.md`, kept in a per-area timing file), finds per minute (C3: one every 2–3
+  min, ≥ 2 kinds), threat density per lit screen, rest spacing (C5, G6: a patch within ~4 min, one at every boss door),
+  and creature kinds per chunk (C2: ≥ 3). They report in check and fail only on the musts.
+- **Shots per room, reviewed per change.** ~175 rooms at ~3 stops is ~500 PNGs; nobody looks at all of them each loop.
+  `npm run shots -- --room <id>` and `--area <area>` shoot what changed; a whole-region pass belongs to the region
+  review (`STUDIO.md`).
+
+## 6. Performance budgets and testing as the game grows (rescoped 2026-10-18)
 
 **Measured today** (the Grove, production build, M5 Pro, Chromium on Metal, 1920×1080):
 
@@ -224,8 +294,10 @@ The Grove's hand-scripted pilots stay as the Grove's tests. The Grove becomes `t
 | Frame | 16.7 ms; GPU ≤ 8 ms at 4K on M-series; CPU (sim + render update) ≤ 4 ms | Leaves headroom for bosses and swarms of freed moths |
 | First boot to title | ≤ 2 s | Pages deploy, first impression |
 | Transition visible time | ≤ 0.3 s | Momentum carry has to feel continuous |
-| Bundle | split per region kit (dynamic `import()`) once over 2 MB | Load only the region you're in |
-| Save | < 16 KB | localStorage, instant |
+| Bundle | split per region kit (dynamic `import()`) once over 2 MB; room JSON split per region too (~175 rooms at ~6 KB is ~1 MB) | Load only the region you're in |
+| Save | < 16 KB, with id lists grouped by room (§3); measured with a full-game fixture | localStorage, instant; it is inside the cloned and hashed state |
+| Map | open ≤ 100 ms; per-area textures cached | ~175 rooms drawn from solids (§4) |
+| `npm run check` | ≤ ~30 s at full size, with the route cache | agents run it every loop |
 
 This needs real teardown: every renderer and environment module gets a `destroy()` that frees its textures and
 meshes (today only a few do), plus a leak test (load and unload a room 20 times, texture count flat).
@@ -235,16 +307,21 @@ meshes (today only a few do), plus a leak test (load and unload a room 20 times,
 - Per room, generated from the room list: schema, exits, route claims (cached), and that the shot stops exist.
 - World: progression graph; save round-trip (save, load, equal hash); room-crossing determinism (a tape across
   three rooms gives the same hash in Node and in Chrome).
-- Region-run tapes recorded by the bot. They go stale on tuning changes (a warning) and fail on hash changes with
-  the same tuning.
+- Area-run tapes recorded by the bot, one per area (16 at full size; draft 1 had one per region). They go stale on
+  tuning changes (a warning) and fail on hash changes with the same tuning. An area's tape starts from a saved
+  `save` at its entrance, so one area's change never invalidates the others.
 - `npm run check` stays under about 30 s, using caches. `npm run check:full` re-searches everything, run locally
-  before merging region work (there is no CI now).
+  before merging region work (there is no CI now). At ~600 route claims it is long: run it per region
+  (`check:full -- --region <id>`) and in full before a tier ships.
 - `npm run perf -- --room <id>`: build ms, texture MB and frame ms against the budgets. Run locally, it reports
   and doesn't block.
 
-## 7. Staged roadmap
+## 7. Staged roadmap (rescoped 2026-10-18)
 
-Sizes: S ≈ a session, M ≈ a few sessions, L ≈ a week of loops.
+Sizes: S ≈ a session, M ≈ a few sessions, L ≈ a week of loops. Status on 2026-10-18: most of stages 0 and 1, and the
+world check and map v1 from stage 2, are built (`memory/world.md`, `memory/save.md`, `memory/rooms.md`); the kit
+seam is partial, and the boss framework's cue timelines exist (`memory/bosses.md`). The rescope adds stage 1b and
+moves fast travel into stage 3.
 
 **Stage 0: before the first real room** (the hatching branch in the wood). Still one room, but with real plumbing.
 
@@ -267,20 +344,39 @@ Sizes: S ≈ a session, M ≈ a few sessions, L ≈ a week of loops.
 | Camera locks and vista lifts per room | S |
 | `npm run room new / check / sheet` | S |
 
-**Stage 2: before the second region** (the valley of lamps).
+**Stage 1b: with the wood floor's current chunk** (new 2026-10-18; the chunk needs finds and the volume needs the
+tools before the second area).
 
 | Item | Size |
 |---|---|
-| Kit v2: kits as code-split modules, the valley kit built as a module plus data | L |
-| Generic route bot, route claims per room, result cache | M |
-| World progression check (symbolic) | S |
-| Map screen v1 | M |
-| Perf harness and budgets per room; region-run tapes | S |
+| The find framework: `finds` rows (moth-stone, firefly sign, moonlit hollow) on the pickup tech, `taken` ids, hollows in `resolveParams`, the stone's map reveal (§3, §4) | S |
+| `world.json` areas and the room `area` and `purpose` fields; the world check's per-area rules (§5.1) | S |
+| `room new` with purpose templates and world placement, `sheet --area`, the generated room list (§5.1) | M |
+| The lints from room data: novelty minute, finds per minute, threat density, rest spacing, kinds per chunk (§5.1) | M |
 
-**Stage 3: later, when play asks for it.** Fast travel between patches (M). The in-game nudge editor (M). The
-neighbour peek across seams if the dip feels disjointed (M). Save slots and the settings/assist menu (S).
-Scripted-beat support for the firefly relighting a lamp and for boss intros: a deterministic cue timeline in the
-sim (M, try when we get there).
+**Stage 2: before the second region** (the valley of lamps, area 3).
+
+| Item | Size |
+|---|---|
+| Kit v2: kits as code-split modules, the valley kit built as a module plus data; room JSON split per region | L |
+| Generic route bot, route claims per room, result cache (required at this volume, §5.1) | M |
+| World progression check (symbolic) | S (built) |
+| Map screen v1, then the area view and zoom (§4) | M (v1 built) + S |
+| Perf harness and budgets per room; area-run tapes | S |
+
+**Stage 3: before Tier 2** (the marsh, area 6).
+
+| Item | Size |
+|---|---|
+| **Fast travel between hub patches** from the map (§4; README rescope call 11) | M |
+| Save id lists grouped by room, the revision-counter hash, a full-game save fixture against the budget (§3, §6) | S |
+| `room hooks <tier>`: the report of old rooms owed Tier 2 hooks (§5.1) | S |
+| `check:full` per region | S |
+
+**Stage 4: later, when play asks for it.** The in-game nudge editor (M). The neighbour peek across seams if the dip
+feels disjointed (M). Save slots and the settings/assist menu (S). Scripted beats (the firefly's relights, the chase,
+the drowned roots' rising water, the storm's gusts) run on the boss framework's deterministic cue timeline, which
+exists; each new beat is data plus its hazard (S–M each).
 
 ## 8. Easy-path choices
 
@@ -290,7 +386,8 @@ sim (M, try when we get there).
 | Exits found from world placement | wiring each door by hand | No mismatched links. The map is free |
 | Creatures reset on re-entry; only `save` persists | per-actor persistence | Standard in the genre, and what core.md already says |
 | Auto-map drawn from collision | hand-drawn map art | No one gets lost, and it costs no art per room |
-| No fast travel at first | building it up front | The road is mostly one way. Add it when playtests ask |
+| No fast travel in Tier 1; hub-to-hub travel in Tier 2 (rescoped 2026-10-18) | building it up front, or never | Tier 1 ends before ~4 h of play and its shortcuts are enough; from the marsh on, G5's ≤ 2-minute return needs it, and it reuses the room change |
+| Generated room list, templates and lints (rescoped 2026-10-18) | hand-wiring ~175 rooms | the same rooms, with the bookkeeping done by tools so agents spend their time on layout |
 | Hand-written JSON rects | an editor or LDtk | Agents write JSON well. The dressing is already generated |
 | One kit per region with per-room parameters | bespoke art code per room | Variety comes from seeds, moods and landmarks |
 | Save = a few KB of JSON in localStorage | a save backend or cloud | It's a browser game and offline is fine |
@@ -307,5 +404,7 @@ sim (M, try when we get there).
 4. **Save model.** *Recommend:* autosave on every progress event and room entry, Continue at the last moon patch,
    one slot at first. Nothing the player earned can be lost to a crash.
 5. **Fast travel.** *Recommend:* not until playtests show backtracking for unreachable lamps is a chore.
+   **Decided 2026-10-18** (README rescope call 11): hub-to-hub fast travel ships with Tier 2, because G5 requires a
+   ≤ 2-minute return to the hub once play passes ~4 h. Tier 1 has none.
 6. **Gamepad as first-class?** The input layer already has it (`src/input/gamepad.ts`). *Recommend:* yes, test
    every room with a pad, since the genre is played that way.

@@ -1,6 +1,8 @@
 # Lampfall: look and sound
 
-Draft 1, 2026-10-17. How five regions look and sound distinct and Ori/HK-grade without building each one by hand.
+Draft 1, 2026-10-17; §1.3, §2, §4, §5, §6 and §7 rescoped 2026-10-18 for an Ori-length game (five regions split
+into 14 areas, 12 abilities, four kinds of find; `world.md` §2, `core.md` §4 and §6). How five regions and their
+14 areas look and sound distinct and Ori/HK-grade without building each one by hand.
 Builds on `core.md` (pillars, lamp kinds), `world.md` (regions, rooms, tiers) and `tech.md` (rooms, region kits as
 modules plus per-room `art` data). The quality bar and the Grove's rules stay in `docs/art-direction.md` and the
 `memory/` notes. This doc changes the light language and adds what new regions need. The Grove is the proof of
@@ -52,6 +54,9 @@ Rules:
 | Threats | Predators hunt in the light, so they are backlit: a dark body with a warm rim on the lamp side and eyes that catch the gold. Tells are a **value** change (a pale flash or a pale edge), not a hue change. Never cyan, because cyan is friendly |
 | Hazards | Thorns are dark with pale tips; water is black with moon glints. A hazard never glows warm |
 | Glass lamps | A gold core inside a cool glassy shell with a hard specular highlight; trapped moths drawn inside (world.md Q4) |
+| Terrain toys (rescoped 2026-10-18) | Each new toy reads by **shape and value first**, and none glows warm. **Bounce caps** are dark mushroom caps with a moon-silver rim and a springy squash, never glowing, so they never read as a glow-cap wick. **Crumbling and crust surfaces** are rotten bark's language: pale cracks that widen (crumbling bark on a timer, crusts under a Fold). **Frost faces** carry a white-blue sheen and glints, distinct from the kickable stone faces. **Briar curtains** are thorns (dark with pale tips) hung in strands, so they read as thorns first and as passable only once Shadow dash teaches it. **Wind and updrafts** show as streaks, blown seeds or spindrift moving with the field's direction and period, the same way motes show a pull |
+| Finds (rescoped 2026-10-18) | **Moth-stones** are carved stone, moonlit (cool), with a moth in relief. **Firefly signs** are things it hung and left, drawn cold like a husk (grey-blue, no glow) so warm stays reserved for lamps; when she stands still beside one it plays its rhythm once in a dim, small gold with no pull, then goes cold again. **Moonlit hollows** are small moon shafts (a glade, smaller), hidden but leaking a sliver of silver light |
+| Her new moves | **Gust** is a pale cool ripple of air, never warm, that bends motes and snuffs a flame on contact. **Fold** is a dark dart with a pale streak and an impact ring. **Shadow dash** is a shrouded dash: her eyes the only light, a smear of dark |
 
 ### 1.4 Moths en masse (performance)
 Moths are the reward and the completion count, so there will be many on screen. They are **not rigged and not CPU
@@ -68,7 +73,7 @@ sprites** (today's 5-moth flock in `air.ts` moves on the CPU and would not scale
 
 Target for all moths: ≤ 0.3 ms GPU at 4K and ≤ 0.1 ms CPU (tech.md's frame budget leaves room for this).
 
-## 2. Region kits
+## 2. Region kits and their areas (rescoped 2026-10-18)
 
 Each region is one kit module (tech.md §2.4). What changes between regions, in order of how much it changes the
 picture: **palette and moon colour, the background plan's shapes, the playfield's material and species, the air's
@@ -89,12 +94,44 @@ Every lamp burns the same firefly gold whatever its housing. Housings are what c
 | Mood references | Ori BF Sunken Glades and Hollow Grove at night; HK Greenpath; Ori WotW Silent Woods | Ori BF Valley of the Wind; HK Howling Cliffs for scale and open sky; Gris for one colour per place | Ori BF Thornfelt Swamp; Ori WotW Inkwater Marsh and Luma Pools; HK Fog Canyon and Queen's Gardens | Ori BF Sorrow Pass; Ori WotW Baur's Reach; HK Crystal Peak's verticality | HK Crystal Peak and Resting Grounds; Ori BF Moon Grotto; Ori WotW Mouldwood Depths (light vs dark) |
 | Background plan | `buildForest` as is | **new** `buildMeadow`: stems, blades, seed heads (re-uses `clump`, `taper`, the sway mesh) | `buildForest` sparse (snags) + **new** reed walls (sway mesh strips) | **new** `buildCrags`: big rock masses from `paintRock` at background scale, with snow caps | **new** cave backdrop: rock walls in place of sky (a variant of `buildCrags`), the mouth as the only sky |
 | Playfield material | moss and earth (today) | soil, grass sea, stems as climbable faces | mud, wide water (generalise `pf-water.ts` from a pool to a water band), reeds | rock and frost (kick faces in stone exist: `paintClimbFace`) | wet stone; the collection painted as props |
-| New painters | none (re-key only, §3) | meadow plan, grass-sea species, seed-pod lamp housing, roost tree | reed species, water band, drifter and glass housings, fog volumes | crags, snow caps, wind streak particles, beacon (L) | cave backdrop, ceiling with moths, blaze grade |
+| New painters | re-key (§3); bounce caps, crumbling bark | meadow plan, grass-sea species, seed-pod lamp housing, roost tree, seed wheels, thistledown, lantern chains | reed species, water band, crusts, drifter and glass housings, fog volumes, the bridge | crags, snow caps, wind streak particles, frost faces, updrafts, beacon (L) and its beam | cave backdrop, briar and glow-worm curtains, ceiling with moths, blaze grade |
 
 **Vistas and the mountain.** One shared `vista` painter draws the mountain under the moon: a fixed seeded ridge so
 it is always the same mountain, with a distance parameter per region (scale, haze, how much moonlit snow shows). It
 appears only in vista rooms and on the camera lift after a snuff (core.md), as an extra far layer behind far0. It
 never needs to be in view elsewhere. Underground, the moths are the wayfinding.
+
+### 2.1 Areas inside a kit (rescoped 2026-10-18)
+
+The rescope splits each region into two or three areas of 30–50 minutes (`world.md` §2.2), and G7 asks every area
+for a picture a player can name. **The kit stays per region, not per area** (`world.md` §4.1): an area is a set of
+**mood records** in its kit (the per-room `art.moods` stops, tech.md §2.4), one or two **landmark painters**, and the
+props of its signature toy. An area never gets its own palette or background plan; it moves inside its region's
+along three axes: **height** (floor, canopy, crown, sky), **openness** (enclosed, a clearing, the open sky) and
+**how lit** (dark galleries, a few lamps, a lamp field). The night still deepens region by region, not area by area.
+
+| # | Area | Mood inside the kit | The picture to name (G7) | Landmarks and props | New painters (beyond the kit) |
+|---|---|---|---|---|---|
+| 1 | wood floor | the forest floor in blue hour: trunks wider than the screen, moon shafts through canopy gaps | "the hollow oak", "the well" | the cocoon branch, the hollow oak hub, the well, the grate, the moth-stone on the cap stair | bounce caps (a cap species with a rim and squash) |
+| 2 | high wood | up in the boughs at the canopy line: more sky, more moon, branches as bridges; the web hall heavy with wings | "the web hall", "the knot", "the canopy edge" | the knot (a great burl hollow, the hub), the web hall, the grove's clearing ringed by trunks, the canopy edge where the first open moonlight falls | crumbling bark (rotten bark's painter on a crack timer); the great lamp (wood variant) |
+| 3 | rim | the bowl seen whole from its lip: open sky, the lamp field below, grass-stem faces | "the rim" | the arrival vista, lantern chains, Physalis seed-pod lamps, the fling pit | lantern chains (strands), seed-pod housing, flicker housing |
+| 4 | roost | the crossroads in the bowl: three loops around one dead tree | "the roost tree" | the dead roost tree (climbed whole as set piece 8), seed wheels, thistledown rafts on wind paths, Tatter's lamp | the roost tree (L), seed wheels, thistledown |
+| 5 | bright floor | under the great lamp: the brightest place before the cave, warm close and cool far | "the bright floor" | the great lamp, the mantis's wing-littered perch, lantern rings | the great lamp (valley variant) |
+| 6 | reedbeds | low, wet, horizontal: reed walls and open water in fog | "the reedbeds" | lily pads, crust floors, drifter lamps, the fog wall where the chase ends | water band, reed walls, crusts, fog volumes |
+| 7 | fen | the drowned wood: dead snags out of black water, fog banks, the darkest so far | "the meadow" | sunken logs, glass and ember housings, the empty meadow (husks, the firefly-shaped lamp) | glass and ember housings, the meadow (S) |
+| 8 | bridge | the span over black water, the colony's dark beneath it; then the drowned roots | "the bridge", "the drowned roots" | the bridge, the roost of bats, glass lamps hung below; the roots' shafts (the wood kit's roots, drowned and darker) | the bridge (M), rising black water |
+| 9 | scree | open slopes under the largest moon, wind-cut rock, cairns | "the storm crossing" | cairns, falling scree, ice, the saddle in the storm | wind-field streaks, scree, ice |
+| 10 | cliffs | vertical faces, cornices, updraft columns; the coldest and emptiest | "the cliffs" | frost faces, cornices, Tatter's empty patches | frost-face material, updraft spindrift |
+| 11 | beacon | the crag under the beacon, lit by its beam | "the beacon" | the beacon (a dead tree hung with lights), swinging arms, the sweeping beam | the beacon (L), the beam (a moving light volume) |
+| 12 | cave mouth | dark galleries; the last moonlight through a crack in the roof | "the crack of moonlight" | the wall-less face below the mouth, briar curtains, glow-worm curtains, drips, the ceiling stains | briar curtains, glow-worm curtains |
+| 13 | cave of lights | the blaze: warm is the ambient, once | "the cave of lights" | the collection hung everywhere, the Bat-eater's ceiling | the blaze grade |
+| 14 | home | the collection's nest, then black, then the mouth's view | "home" | the firefly's nest, the sleeping ceiling, the mouth vista over the whole road | the ending ceiling, the journey vista |
+| opt | canopy | above the trees in the open sky: the wood kit at its highest, crown seas below | "the canopy" | sky lamps, updrafts, the canopy's great wick | none (the wood kit's crown seas, `memory/background-layers.md`) |
+| opt | underways | root tunnels under the valley: the wood's roots and the cave's dark | "the underways" | crusts, glass lamps, the old toad's flooded chamber | none (the wood kit's roots in its darkest mood, the same root shafts the drowned roots use) |
+
+So the 16 areas cost about **ten landmark painters and twenty toy, housing or effect painters** beyond the five
+kits, most of them S, against draft 1's five kits with 1–3 painters each. No area needs its own background plan;
+both optional areas reuse what their neighbours' kits already have.
 
 ## 3. Shared pipeline work (so a new region is mostly data)
 
@@ -126,9 +163,12 @@ hand-tuned fixes live in its own `art` block, not in shared code.
 ## 4. Character and creature animation at scale
 
 - **Wing stays hand-built.** Her rig (`vesper/rig.ts`, generators cross-faded by weight, springs, 120 Hz chains) is
-  the game's best asset. Each new ability is one new generator: fling orbit and release (M), caught and beating free
-  (S), Shroud's folded seed-fall (M, wings wrapped, her eyes the only light), Moonflight wingbeats (M, can reuse the
-  glide's wing strands).
+  the game's best asset. Each new ability is one new generator, or a variant of one (rescoped 2026-10-18 for twelve
+  abilities): Gust's wingbeat (S, one sharp beat and a recoil), fling orbit and release (M), caught and beating free
+  (S), Fold's dive (M, wings folded, a streak, a landing impact), Shroud as the same fold gone dark (S on Fold, wings
+  wrapped, her eyes the only light), Soar's full-span glide (S, the glide's generator with a wider span and an
+  updraft lift), Grip's cling and slow climb (M, claws on the face), Moonflight wingbeats (M, can reuse the glide's
+  wing strands), Shadow dash (S, the dash generator with Shroud's look).
 - **Creatures are built from templates, not from scratch.** The burrback is 2149 lines, which is too much per
   creature. Shared already: `character/math.ts` (springs, IK), `enemies/gait.ts` (a stateless tripod gait), the
   painter. Step one: merge `enemies/paint.ts` (a copy of Wing's painter) back into one shared painter (S). Then four
@@ -136,9 +176,9 @@ hand-tuned fixes live in its own `art` block, not in shared code.
 
 | Template | Built from | Creatures | Size |
 |---|---|---|---|
-| Walker (6 or 8 legs) | `gait.ts`, generalised to n legs | spiders, beetles, the mantis's base (+ scythe arms) | M once, then S–M per creature |
-| Flyer | Wing's wing strands and the lampwing's hover | bats, moths, the firefly | M once |
-| Hopper | squash-and-stretch jump generator | toads | S–M |
+| Walker (6 or 8 legs) | `gait.ts`, generalised to n legs | spiders (danglers too), beetles (the bombardier), the mantis's base (+ scythe arms) | M once, then S–M per creature |
+| Flyer | Wing's wing strands and the lampwing's hover | dragonflies, bats, the firefly; birds (ravens, the nightjar) as a feathered variant | M once, then M for the bird |
+| Hopper | squash-and-stretch jump generator | toads, frogs, the skink's dart (low and long) | S–M |
 | Chain | `vesper/chain.ts` verlet | centipedes, leeches, silk lines, the beacon's hanging lights | S |
 
 - Every creature is a pure function of sim state plus springs (as today), so any frame can be drawn from the state:
@@ -155,8 +195,8 @@ The HUD sits outside post (as now), top left, small, and uses **only cool tones,
 |---|---|---|
 | Health | A row of small moon-drops: pale silver beads on fine filaments. Lost = an empty grey husk. Today's gutter, shake, swing and rekindle animation stays | re-skin `hud/lights.ts` (it draws warm lanterns, which would read as false lights). S |
 | Moth count | A tiny moth glyph and a number that fades in on change and ticks with a small pop | the glint count's behaviour in `hud/index.ts`, new glyph. S |
-| Map (pause) | A night sky, not parchment: rooms as dim silver-blue shapes, **burning lamps as warm points** (the to-do list), snuffed lamps as tiny cold husks, moon patches as silver crescents, Wing as a gold eye-mark, migration lines as faint moth trails | tech.md §4 map v1 supplies the data. M |
-| Item line at a glade | One line, small caps, pale silver, low centre, fades; one button glyph in the same style | `hud/prompts.ts`. S |
+| Map (pause) | A night sky, not parchment: rooms as dim silver-blue shapes, **burning lamps as warm points** (the to-do list), snuffed lamps as tiny cold husks, moon patches as silver crescents, Wing as a gold eye-mark, migration lines as faint moth trails. Rescoped 2026-10-18: at ~175 rooms it opens on her **area** and zooms out to the region and the road; an area whose moth-stone she has touched draws its unvisited rooms faint and shows its count of unseen lamps; collected firefly signs are a row of rhythm glyphs along the bottom; from Tier 2 the hub patches she has rested at are brighter crescents she can travel to | tech.md §4 map v1 supplies the data. M, then S for the stones, the glyphs and travel |
+| Item line at a glade | One line, small caps, pale silver, low centre, fades; one button glyph in the same style. A moonlit hollow uses the same line without a glyph | `hud/prompts.ts`. S |
 | Title | Over the moon at the opening (story.md) | S |
 
 No boss name cards and no other text (core.md pillar 5).
@@ -180,7 +220,10 @@ re-uses the Hush's beating-tone voice and its rule "regular is the enemy".
 | Freed moths | a soft rising rush of many wings, panned as the swarm follows her, fading the way the migration line goes |
 | Moon patch, glade | the forest chord in rubbed glass (today's lantern-bowl voices, re-aimed); a glade plays the full chord with Wing's motif |
 
-**Per-region ambience**, all from today's voices plus a few new ones:
+**Per-region ambience**, all from today's voices plus a few new ones. Areas vary their region's bed the way they
+vary its look (rescoped 2026-10-18): by density and distance (fewer hums in the rim's open air, the bright floor's
+hums massed; the high wood's wind louder than the floor's; the bridge's colony rustle under the fen's still air), not
+by new voices.
 
 | Region | Bed | Signature |
 |---|---|---|
@@ -192,16 +235,21 @@ re-uses the Hush's beating-tone voice and its rule "regular is the enemy".
 
 **Music: sparse and adaptive.** No constant score; silence is the default. Music appears at vistas, glades, great
 lamps and bosses. Each region has 2–3 layers (bed, Wing's plucked motif, tension) crossfaded by state: in the dark,
-in a pull, in a fight. Bosses get the only rhythmic pieces (L each; try one for the mantis first).
+in a pull, in a fight. The six major bosses and the two escapes (the chase and the drowned roots) get the only
+rhythmic pieces (L each; try one for the mantis first); mini-bosses and the other set pieces use their region's
+tension layer (rescoped 2026-10-18).
 
 **Build first:** (1) the lamp set (hum, pull, caught, snuff, freed moths) with the first lamp increment, M; (2) the
 bowls re-aimed to moon patches, S; (3) retire the Hush layer and the giving sounds with their systems, S; (4) the
 valley's ambience, M; (5) a vista and glade sting, M. Each step ends in an A/B clip for Matt
 (`npm run clip -- --audio --ab`), as now.
 
-## 7. Cost and order
+## 7. Cost and order (rescoped 2026-10-18)
 
-S = a day or less of agent work, M = a few days, L = a week or more. Tier 1 = wood + valley (world.md).
+S = a day or less of agent work, M = a few days, L = a week or more. Tiers as in the README and `world.md` §4: Tier 1
+= wood + valley (areas 1–5, ~55 rooms, ~3.5 h); Tier 2 = marsh + pass + the underways (areas 6–11, +81 rooms); Tier
+3 = cave + the canopy (areas 12–14, +36 rooms). Art waits for each chunk to pass in greybox (`STUDIO.md`), so the
+order inside a tier follows the chunks.
 
 | # | Item | Size | Tier |
 |---|---|---|---|
@@ -210,19 +258,26 @@ S = a day or less of agent work, M = a few days, L = a week or more. Tier 1 = wo
 | 3 | **Moth swarms**: instanced orbit, freed flight with leaders, migration line, warm-to-cool shift | M | 1, same increment |
 | 4 | Lamp sound set | M | 1, same increment (muted) |
 | 5 | Kit refactor: palette and moon per room, mood stops (one zone source), derived mist stage, set dressing as art data, Grove as `test-grove` | L, staged | 1, before room 2 |
-| 6 | Wood kit polish across ~12 rooms: seeds, moods, 1–2 landmarks per room | M + S per room | 1 |
-| 7 | Valley kit: `buildMeadow`, grass sea species, seed-pod lamps, flicker housing, roost tree | L | 1 |
-| 8 | Great lamp (wood and valley variants) | L | 1 |
-| 9 | Vista painter (the mountain) and sky stars plus the progress uniform | M + S | 1 |
-| 10 | HUD moth count, item lines; map screen look | S + M | 1 |
-| 11 | Shared creature painter; walker and flyer templates; Tier 1 creatures | S + 2M + S–M each | 1 |
-| 12 | Wing: fling, caught | M + S | 1 |
-| 13 | Valley ambience, stings, the mantis boss music | M + M + L | 1 |
-| 14 | Marsh kit (reeds, water band, fog volumes, drifter and glass housings), Shroud's look | L + M | 2 |
-| 15 | Pass kit (crags, snow, wind), the beacon, Moonflight's look | L + L + M | 2 |
-| 16 | Cave kit (backdrop, the blaze, the ending ceiling), the firefly | L + L + L | 3 |
+| 6 | Wood kit polish across **~17 rooms** in two areas (the floor's 11, the high wood's 6): seeds, moods, 1–2 landmarks per room; the area moods (§2.1) | M + S per room | 1 |
+| 7 | Wood toys and finds: bounce caps, crumbling bark, the moth-stone, firefly signs, the moonlit hollow (§1.3) | S each | 1, with the wood floor's chunk |
+| 8 | Valley kit: `buildMeadow`, grass sea species, seed-pod lamps, flicker housing; the roost tree (L); seed wheels, thistledown, lantern chains; **~38 rooms** in three areas | L + L + S each | 1 |
+| 9 | Great lamp (wood and valley variants) | L | 1 |
+| 10 | Vista painter (the mountain) and sky stars plus the progress uniform | M + S | 1 |
+| 11 | HUD moth count, item lines; map screen look with areas, moth-stones and the sign glyphs | S + M + S | 1 |
+| 12 | Shared creature painter; walker and flyer templates; Tier 1 creatures (9 kinds, `creatures.md` §6) | S + 2M + S–M each | 1 |
+| 13 | Wing: Gust, fling, caught | S + M + S | 1 |
+| 14 | Wood and valley ambience, stings, the Weaver's and the Mantis's music, the chase | M + M + L + L + L | 1 |
+| 15 | Marsh kit (reeds, water band, crusts, fog volumes, drifter, glass and ember housings, the bridge, rising water), the meadow, Fold's and Shroud's look, Soar's | L + M + S + M + S | 2 |
+| 16 | Pass kit (crags, snow, wind streaks, frost faces, updrafts), the beacon and its beam, Grip's look, Moonflight's | L + L + M + M | 2 |
+| 17 | The underways (the wood kit's roots in a dark mood, shared with the drowned roots) | M | 2 |
+| 18 | Map: fast travel between hub patches | S | 2 |
+| 19 | Marsh and pass ambience, the Colony's, the Beacon's and the drowned roots' music | M + M + L + L + L | 2 |
+| 20 | Cave kit (backdrop, briar and glow-worm curtains, the blaze, the ending ceiling), the firefly, Shadow dash's look | L + S + L + L + L + S | 3 |
+| 21 | The canopy (the wood kit at crown height, sky lamps) | S–M | 3 |
+| 22 | Cave ambience, the Bat-eater's and the firefly's music, the ending | M + L + L + M | 3 |
 
-Order inside Tier 1: 1 → 2–4 (the core verb, in the Grove, Matt plays it) → 5 → 7 → the rest as rooms need them.
+Order inside Tier 1: 1 → 2–4 (the core verb, in the Grove, Matt plays it) → 5 → 6–7 per wood chunk → 8 → the rest
+as rooms need them.
 
 ## 8. Easy-path choices and open questions
 
@@ -233,6 +288,7 @@ Order inside Tier 1: 1 → 2–4 (the core verb, in the Grove, Matt plays it) �
 | One flame shader + per-region housings | bespoke lamps per region | The variety players notice is the housing and the place; the glow is the lamps' shared identity |
 | Moths as a stateless instanced mesh with a few spring leaders | boids or per-moth AI | Hundreds on screen for ~0.3 ms; it looks like a swarm |
 | Region look as kit data plus 1–3 new painters each | hand-painted rooms | HK's areas work the same way; variety comes from seeds, moods and landmarks |
+| Areas as moods and landmarks inside their region's kit (rescoped 2026-10-18) | a kit per area | 14 nameable pictures from five kits; each area moves its region along height, openness and how lit |
 | Time of night deepening along the road | five unrelated colour schemes | Each region is distinct by construction, and the road reads as a journey |
 | Region progress as one uniform | re-arting "restored" rooms | The Gris effect from one parameter (core.md) |
 | The mountain as one seeded vista painter | a mountain in every background | It is a reward view; one painter, five distances |
