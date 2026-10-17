@@ -7,16 +7,44 @@
   "spawn": { "x": 1500, "y": 3136 },
   "edgeKick": false,
   "abilities": ["glide"],
-  "art": { "mode": "greybox", "labels": true },
-  "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
+  "art": { "mode": "greybox", "labels": false },
+  "camera": {
+    "realFallPx": 250,
+    "targetSmoothY": 10,
+    "smoothYFastFall": 6,
+    "fallLookahead": 320,
+    "zones": [
+      {
+        "id": "rest",
+        "x": 640,
+        "y": 2624,
+        "w": 1920,
+        "h": 512,
+        "fit": true,
+        "bounds": { "x": 0, "y": 380, "w": 3840, "h": 2868 }
+      },
+      {
+        "id": "look-up",
+        "x": 2560,
+        "y": 640,
+        "w": 384,
+        "h": 2496,
+        "bounds": { "x": 2176, "y": 300, "w": 1152, "h": 2948 }
+      }
+    ]
+  },
   "exits": [
     { "id": "w", "edge": "w", "from": 2624, "to": 2880 },
     { "id": "e", "edge": "e", "from": 2624, "to": 2880 },
     { "id": "well", "edge": "s", "from": 384, "to": 640, "oneWay": true },
-    { "id": "climb", "edge": "s", "from": 2560, "to": 2944 }
+    { "id": "climb", "edge": "s", "from": 2560, "to": 2944 },
+    { "id": "e-high", "edge": "e", "from": 384, "to": 640 }
   ],
   "patches": [{ "id": "p3", "x": 1280, "y": 3136 }],
   "shortcuts": [{ "id": "grate", "x": 2560, "y": 3136, "w": 384, "h": 32, "opens": "s" }],
+  "gates": [
+    { "id": "well-lid", "x": 384, "y": 3136, "w": 256, "h": 32, "flag": "wood-climbout", "kick": false }
+  ],
   "triggers": [{ "id": "glimpse", "x": 1152, "y": 2944, "w": 256, "h": 192, "sets": "wood-firefly-glimpse" }],
   "solids": [
     { "tag": "root", "x": 0, "y": 2880, "w": 960, "h": 64 },
@@ -42,7 +70,8 @@
     { "from": "spawn", "to": "p3" },
     { "from": "w", "to": "p3" },
     { "from": "p3", "to": "e" },
-    { "from": "p3", "to": "well", "oneWay": true },
+    { "from": "p3", "to": "well", "flags": ["wood-climbout"], "oneWay": true },
+    { "from": "p3", "to": "e-high", "needs": ["wallJump"] },
     { "from": "climb", "to": "p3", "door": "grate" }
   ],
   "marks": {
@@ -51,6 +80,31 @@
       { "x": 40, "y": 2560, "text": "R7 wood-hollow  PURPOSE: hub + rest + story" },
       { "x": 40, "y": 2620, "text": "W: in from wood-glidewalk onto the root shelf; drop 256 to the floor" },
       { "x": 300, "y": 3010, "text": "the well alcove (dark, moonlit): the well, one way down to wood-well" },
+      {
+        "x": 300,
+        "y": 3180,
+        "text": "the well lid (flag gate wood-climbout): shut until she has climbed out of the well once; then the shortcut down"
+      },
+      {
+        "x": 3300,
+        "y": 400,
+        "text": "E-HIGH: off the crown shelf east onto the canopy line over the hawkers and the lantern"
+      },
+      {
+        "x": 1500,
+        "y": 2560,
+        "text": "camera zone rest: the whole floor, P3 to the arches, framed while she rests"
+      },
+      {
+        "x": 2580,
+        "y": 1900,
+        "text": "camera zone look-up: the shaft framed tall, the crown in view as she climbs"
+      },
+      {
+        "x": 700,
+        "y": 2400,
+        "text": "LANDMARK: the hollow trunk's heart, a canopy gap of moonlight over the patch"
+      },
       { "x": 40, "y": 3080, "text": "drowned-roots stub: seeping back wall (T2, opens from the marsh side)" },
       {
         "x": 1150,
@@ -65,7 +119,7 @@
       {
         "x": 2580,
         "y": 3060,
-        "text": "the grate: shows glade 2's moonlight; opens from below (wood-well's climb-out)"
+        "text": "the grate: shows glade 2's moonlight; opens from below (wood-well's climb-out, which sets wood-climbout)"
       },
       {
         "x": 2580,

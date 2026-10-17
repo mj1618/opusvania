@@ -17,7 +17,6 @@ import { dropGlints, updateDrops, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
 import {
   createPlayer,
-  freshStart,
   hurtPlayer,
   keepOffer,
   reformPlayer,
@@ -26,9 +25,8 @@ import {
 } from './player/player';
 import { updatePods } from './pods';
 import { updateGlades, updatePatches, updateSeen, updateShortcuts } from './progress';
-import { clearOfThorns, returnPoint } from './return';
 import { seedRng } from './rng';
-import type { RoomDoor, RoomExit, Scene } from './scene';
+import type { RoomDoor, RoomExit, Scene, SolidRect } from './scene';
 import { markSeen } from './seen';
 import { cloneSave, type GameState, newSave, type SaveState } from './state';
 import type { Tuning } from './tuning';
@@ -139,6 +137,36 @@ export function gotoRoom(
   state.exit = null;
   state.caught = null;
   enterRoom(state, t, world, to, { kind: 'point', x, y }, from, events);
+}
+
+/**
+ * Where a caught fall puts her back: her last safe ground, moved `room.returnInset` px in from the end
+ * of the top she fell from. A rolling top is a run of abutting rects whose tops differ by at most
+ * `ground.stepUp`: the run is the top, and she lands on whichever of its rects is under the new x.
+ */
+function returnPoint(sx: number, sy: number, scene: Scene, t: Tuning): { x: number; y: number } {
+  const solids = scene.solids;
+  const step = Math.max(0, Math.round(t.ground.stepUp));
+  const at = solids.find((q) => q.y === sy && sx >= q.x && sx < q.x + q.w);
+  if (!at) return { x: sx, y: sy };
+  const next = (q: SolidRect, dir: 1 | -1): SolidRect | undefined =>
+    solids.find(
+      (o) =>
+        o !== q &&
+        o.tag !== 'trunk' &&
+        Math.abs(o.y - q.y) <= step &&
+        (dir > 0 ? o.x === q.x + q.w : o.x + o.w === q.x),
+    );
+  let x0 = at.x;
+  let x1 = at.x + at.w;
+  for (let q = next(at, -1); q; q = next(q, -1)) x0 = q.x;
+  for (let q = next(at, 1); q; q = next(q, 1)) x1 = q.x + q.w;
+  const inset = Math.min(Math.round(t.room.returnInset), Math.floor((x1 - x0) / 2));
+  const x = Math.round(Math.max(x0 + inset, Math.min(x1 - inset, sx)));
+  const under = solids.find(
+    (q) => q.tag !== 'trunk' && x >= q.x && x < q.x + q.w && Math.abs(q.y - sy) <= 4 * step + 1,
+  );
+  return { x, y: under ? under.y : sy };
 }
 
 /** The catch zone her box centre is in, if any. */
@@ -294,16 +322,12 @@ export function step(
   // Caught after a fall: held a moment, then back on her last safe ground (it costs nothing).
   if (state.caught && ++state.caught.frames >= catchHold(state, t)) {
     const id = state.caught.id;
-    const safe = returnPoint(state.player.safeX, state.player.safeY, S, t);
-    // (Not where her natural next jump carries her straight back into thorns.)
-    const back = clearOfThorns(state, safe.x, safe.y, state.player.safeX, S, t, P);
+    const back = returnPoint(state.player.safeX, state.player.safeY, S, t);
     const x = back.x;
     const y = back.y;
-    events.push({ type: 'fallReturn', id, x, y, fadeIn: Math.max(0, Math.round(t.room.returnFadeIn)) });
+    events.push({ type: 'fallReturn', id, x, y });
     placePlayer(state, x, y, t, S, events);
     afterCatch(state, t);
-    // A fade-in, and what she held waits to be pressed again (no chain back into the hazard).
-    freshStart(state.player, t);
   }
   // Shut in the cocoon: presses stir it, no input moves her.
   const shut = updateHatch(state, S, input, state.prevInput, t, events);
@@ -315,7 +339,9 @@ export function step(
     const patch = state.save.patch;
     const pr = patch && world ? world.rooms[patch.room] : undefined;
     const pp = pr && patch ? pr.scene.patches?.find((q) => q.id === patch.id) : undefined;
-    if (pr && pp && world) {
+    // A room with its own re-form point keeps her in it when her patch is in another room (wood.md R10:
+    // a fade in the well's pit stands her up at the chute's patch, not back at the hub).
+    if (pr && pp && world && (pr.id === scene.id || !S.reform)) {
       if (pr.id !== scene.id) {
         // Another room: she re-forms there (the room's creatures are fresh anyway).
         gotoRoom(state, t, world, pr.id, pp.x, pp.y, 'reform', events);

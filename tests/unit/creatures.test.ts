@@ -225,8 +225,6 @@ describe('the old burrback', () => {
     const s = newSim(pit());
     const o = enemy(s, 'o');
     o.mode = 'walk';
-    // (Only from its second health third: a first-timer meets the plain ram first.)
-    o.hp = Math.floor(o.hpMax * T.oldBurrback.feintFrom);
     s.place(o.x - 120, FLOOR);
     const frameOf: Record<string, number> = {};
     for (let f = 0; f < 200; f++) {
@@ -245,47 +243,6 @@ describe('the old burrback', () => {
     expect(feint - w1).toBe(O.windupFrames);
     expect(w2 - feint).toBe(O.feintFrames);
     expect(charge - w2).toBe(O.feintBraceFrames);
-  });
-
-  it('at full health it does not feint', () => {
-    const s = newSim(pit());
-    const o = enemy(s, 'o');
-    o.mode = 'walk';
-    s.place(o.x - 160, FLOOR);
-    const ev = s.run('.120');
-    expect(types(ev)).toContain('enemyCharge');
-    expect(types(ev)).not.toContain('enemyFeint');
-  });
-
-  it("its touch is its drawn dome: her feet over the box's empty top corner do not count", () => {
-    const s = newSim(pit());
-    const o = enemy(s, 'o');
-    o.mode = 'windup';
-    o.braced = true;
-    o.timer = 999;
-    // Her box overlapping only the box's top-right corner (above the dome's curve there).
-    s.place(o.x + o.w + 18, o.y + 6);
-    s.state.player.vy = 0;
-    const K = { x: s.state.player.x, y: s.state.player.y, w: s.state.player.w, h: s.state.player.h };
-    expect(K.x < o.x + o.w && K.y + K.h > o.y).toBe(true);
-    const ev = s.run('.1');
-    expect(types(ev)).not.toContain('hurt');
-  });
-
-  it('it cracks at each third of its health (enemyCrack) and gets up after openHits cuts in a window', () => {
-    const s = newSim(pit());
-    const o = enemy(s, 'o');
-    o.mode = 'recover';
-    o.timer = 200;
-    o.strikeCd = 212;
-    o.stunned = true;
-    o.taken = 0;
-    s.place(o.x - 30, FLOOR);
-    s.state.player.facing = 1;
-    const ev = s.run('A1 .22 A1 .22 A1 .40');
-    expect(of(ev, 'enemyHit').length + of(ev, 'enemyDie').length).toBe(T.oldBurrback.openHits);
-    expect(of(ev, 'enemyCrack')[0]).toMatchObject({ third: 1, hpMax: T.oldBurrback.hp });
-    expect(o.stunned).toBe(false);
   });
 
   it('braced, a forward cut clangs even from behind; a pogo lands without breaking the brace; a second pogo in the same brace glances', () => {
@@ -316,9 +273,9 @@ describe('the old burrback', () => {
     expect(o.hp).toBe(T.oldBurrback.hp - 1);
   });
 
-  it('walking, its shell glances everything', () => {
+  it('walking, its shell glances everything; a ram into a wall stuns it open and cuts land', () => {
     // Near the west wall of the room: it rams west into it.
-    const s = newSim(pit(300));
+    const s = newSim(pit(250));
     const o = enemy(s, 'o');
     o.mode = 'walk';
     o.facing = 1;
@@ -326,23 +283,16 @@ describe('the old burrback', () => {
     s.state.player.facing = -1;
     const glance = s.run('A1 .1');
     expect(types(glance)).toContain('enemyBlock');
-  });
-
-  it('a ram into a wall stuns it open (on its back): cuts land', () => {
-    const s = newSim(pit(300));
-    const o = enemy(s, 'o');
-    o.mode = 'walk';
-    o.facing = -1;
-    // Stand west of it (between it and the wall), and jump over it in its tell: the ram passes under her into the wall.
-    s.place(o.x - 118, FLOOR);
+    // Stand west of it, then step out of the ram's way.
+    s.place(o.x - 100, FLOOR);
     let ev: SimEvent[] = [];
-    for (let i = 0; i < 200 && !(types(ev).includes('enemyWindup') && o.facing < 0); i++) ev = s.run('.1');
-    const ram = s.run('R+J24 .4');
+    for (let i = 0; i < 120 && !types(ev).includes('enemyCharge'); i++) ev = s.run('.1');
+    // Jump over the ram.
+    const ram = s.run('R+J14 R10');
     for (let i = 0; i < 80 && !types(ram).includes('enemyRecover'); i++) ram.push(...s.run('.1'));
     const rec = of(ram, 'enemyRecover')[0];
     expect(rec?.cause).toBe('wall');
     expect(rec?.frames).toBe(T.oldBurrback.recoverWallFrames);
-    expect(types(ram)).not.toContain('hurt');
     expect(o.stunned).toBe(true);
     s.place(o.x + o.w + 30, FLOOR);
     s.state.player.facing = -1;

@@ -42,31 +42,17 @@ Same ram, second beat, pogo curl, drop dodge, lips, fair placement (enemies.md);
 lab walk into its ram once each (1 hit) and pass.
 
 ## The old burrback (`kind: 'oldBurrback'`, row `tuning.oldBurrback` = the burrback's + overrides)
-Reworked 2026-10-18 as a first mini-boss (False Knight standard) after the impatient first-timer (chunk1-firsttimer-
-impatient-r1: ~80 s, 2 deaths, 1 hit landed in 3 attempts; "its hurt area feels bigger than the box", "the long red
-wind-up punishes an early jump", 17 clangs and 8 feints never seen).
-- 84 x 50, **12 hp**, `sense` always, asleep until she is down on its floor within 1400 px (`enemyWake`, 60 f harmless).
-- **Hunts quickly**: 4.2 px/f while she is over 360 px away (it took ~8 s to cross the pit), and **stops 140 px short**
-  of her (`huntStopPx`) to brace from there: a ram from point blank was unanswerable at a 20-30 f reaction.
-- **Ram**: brace **24 f** -> 240 px at 14 px/f. A full-hold jump anywhere in the tell clears it from 140 px; the ram
-  leaves it ~100-250 px from her.
-- **Open after every ram** (`openWinded`, `stunned` = on its back): 70 f (120 at a wall), every cut lands, its touch does
-  nothing (staggered included: it used to hurt her 8 f into its stagger while she mashed), and it takes at most
-  **3 cuts** (`openHits`, `taken`) before it gets up. Getting up is a harmless 18 f beat (`wake`, `riseFrames`) before it
-  may brace: its window never closes on her with a live touch.
-- **Shell**: braced, only a pogo lands (one a brace, no stagger: it rams on under her; render draws the amber "pogo me"
-  top); walking, everything glances (`enemyBlock`, render's clang star).
-- **Feint only from its second health third** (`feintFrom` 0.67): brace 24 -> feint 18 -> brace **30** (long enough to
-  answer with a 20-30 f reaction) -> ram.
-- **Its touch is its drawn dome** (`domeContact`: `domeHeight` 0.86 of the box, round to `domeShoulder` 0.62; render's
-  greybox dome uses the same numbers): her feet over the box's empty top corners do not count (`KindRules.touches`).
-- **Health for render**: `hp / hpMax` on the state; `enemyCrack {hpLeft, hpMax, third}` when it loses each third (any
-  creature with 6+ hp).
-- **Slow first-timer pilot** (`tests/unit/old-burrback-pilot.test.ts`, `OLD_TRACE=1`: reacts 20 / 25 / 30 f, presses off
-  by up to 8 f, jumps the ram, mashes when it lies open, slashes the closed shell now and then; 8 seeds each): every run
-  wins, 1 attempt in 20 of 24 runs and 2 in the rest, 8-20 s, 2-5 hits taken (mostly rams). Before: 1-8 attempts,
-  3-16 hits. Lab bots: explorer / speedrunner / cautious kill it in 10-20 s with 1-2 hits (cautious faded 6 times
-  there before); naive hops out of the open lab pit. The plain burrback still has the box contact (its pilots pin it).
+- 84 x 50, 10 hp, `sense` always, `hunt` (turns to her on its ground, `enemyTurn` cause `hunt`), strikePx 190.
+- **Asleep** at start (`mode: 'sleep'`), harmless; wakes when she is grounded on its ground (feet within
+  `strikeAbovePx` of its own) within `wakePx` 1400: `enemyWake {frames 60}`, harmless 60 frames, then hunts.
+- **Feint**: brace 26 (`enemyWindup`) -> `feint` 18 (`enemyFeint`, shell down, touch live) -> brace 20 (`enemyWindup`
+  again, turned to her) -> ram 260 at 11 px/f -> winded 44 (90 at a wall).
+- **Shell** (`pogoShell`): braced (both braces and the ram) only a down cut lands, **one per brace** (`pogoed`), and
+  it does not stagger (`KindRules.tough`): it rams on under her. Forward / up cuts clang from any side. Any other time
+  everything glances (a down cut still bounces her), **except after a wall stun** (`stunned`): every cut lands for
+  the 90 frames. So: pogo the tell (twice an exchange with the feint) or bait the ram into a wall.
+- Lab (bots don't pogo): naive / speedrunner take 1 hit and hop out of the open pit; in the first run the cautious
+  bot (it waits while a creature faces it) faded 6 times in the pit. R10's pit is closed: this is the fight to tune.
 
 ## The hawker (`kind: 'hawker'`, row `tuning.hawker` = the lampwing's + overrides)
 - The lampwing's sim (tell 36, harmless 20, committed dive, stall 34 open, climb, 3 dives), box 52 x 24,

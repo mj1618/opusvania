@@ -2,12 +2,12 @@
   "id": "wood-lantern",
   "title": "The first lantern (greybox)",
   "region": "wood",
-  "width": 3200,
-  "height": 1600,
-  "spawn": { "x": 300, "y": 1280 },
+  "width": 3840,
+  "height": 2992,
+  "spawn": { "x": 300, "y": 2624 },
   "edgeKick": false,
   "abilities": ["glide"],
-  "art": { "mode": "greybox", "labels": true },
+  "art": { "mode": "greybox", "labels": false },
   "camera": {
     "realFallPx": 250,
     "targetSmoothY": 10,
@@ -17,71 +17,114 @@
     "leadFrames": 36
   },
   "exits": [
-    { "id": "w", "edge": "w", "from": 1024, "to": 1280 },
-    { "id": "n", "edge": "n", "from": 2560, "to": 3072 }
+    { "id": "w", "edge": "w", "from": 2368, "to": 2624 },
+    { "id": "w-high", "edge": "w", "from": 128, "to": 384 },
+    { "id": "n", "edge": "n", "from": 3072, "to": 3584 },
+    { "id": "panel", "edge": "s", "from": 3200, "to": 3456, "oneWay": true }
   ],
   "solids": [
-    { "tag": "ground", "x": 0, "y": 1280, "w": 3200, "h": 320 },
-    { "tag": "branch", "x": 192, "y": 640, "w": 256, "h": 32, "kick": false },
-    { "tag": "trunk", "x": 288, "y": 672, "w": 64, "h": 608, "kick": false },
-    { "tag": "trunk", "x": 2432, "y": 0, "w": 128, "h": 480, "kick": false },
-    { "tag": "trunk", "x": 2432, "y": 480, "w": 128, "h": 320, "kick": false },
-    { "tag": "trunk", "x": 2432, "y": 800, "w": 128, "h": 288, "kick": "east" },
-    { "tag": "trunk", "x": 3072, "y": 960, "w": 128, "h": 320, "kick": false },
-    { "tag": "trunk", "x": 3072, "y": 0, "w": 128, "h": 960, "kick": "west" }
+    { "tag": "ground", "x": 0, "y": 2624, "w": 1600, "h": 368 },
+    { "tag": "ground", "x": 1600, "y": 2432, "w": 1152, "h": 560 },
+    { "tag": "ground", "x": 2752, "y": 2624, "w": 448, "h": 368 },
+    { "tag": "ground", "x": 3456, "y": 2624, "w": 128, "h": 368 },
+    { "tag": "trunk", "x": 2944, "y": 0, "w": 128, "h": 448, "kick": false },
+    { "tag": "trunk", "x": 2944, "y": 752, "w": 128, "h": 848, "kick": false },
+    { "tag": "trunk", "x": 2944, "y": 1600, "w": 128, "h": 320, "kick": false },
+    { "tag": "trunk", "x": 2944, "y": 1920, "w": 128, "h": 480, "kick": "east" },
+    { "tag": "trunk", "x": 3584, "y": 2304, "w": 256, "h": 688, "kick": false },
+    { "tag": "trunk", "x": 3584, "y": 0, "w": 256, "h": 2304, "kick": "west" },
+    { "tag": "branch", "x": 0, "y": 384, "w": 960, "h": 48 },
+    { "tag": "branch", "x": 1280, "y": 512, "w": 896, "h": 48 },
+    { "tag": "branch", "x": 2496, "y": 704, "w": 576, "h": 48 },
+    { "tag": "branch", "x": 448, "y": 1984, "w": 256, "h": 32, "kick": false },
+    { "tag": "root", "x": 544, "y": 432, "w": 64, "h": 1552, "kick": false },
+    { "tag": "root", "x": 1408, "y": 1824, "w": 192, "h": 32, "kick": false }
   ],
   "oneWays": [
-    { "tag": "root", "x": 864, "y": 1120, "w": 160 },
-    { "tag": "branch", "x": 1024, "y": 960, "w": 512 }
+    { "tag": "root", "x": 864, "y": 2464, "w": 160 },
+    { "tag": "branch", "x": 1024, "y": 2304, "w": 512 }
   ],
-  "thorns": [{ "id": "thorn-band", "x": 2560, "y": 480, "w": 16, "h": 320 }],
+  "thorns": [{ "id": "thorn-band", "x": 3072, "y": 1600, "w": 16, "h": 320 }],
+  "bark": [{ "id": "bark-panel", "x": 3200, "y": 2624, "w": 256, "h": 64, "floor": true }],
   "lures": [
-    { "id": "lantern-hall", "kind": "lantern", "x": 1280, "y": 704 },
-    { "id": "wick-high", "kind": "wick", "x": 320, "y": 560 }
+    { "id": "lantern-hall", "kind": "lantern", "x": 1280, "y": 2048 },
+    { "id": "wick-high", "kind": "wick", "x": 672, "y": 1880 }
   ],
   "enemies": [
     {
       "id": "burr-lantern",
       "kind": "burrback",
-      "x": 1312,
-      "y": 1280,
+      "x": 1280,
+      "y": 2304,
       "facing": -1,
-      "radius": 544,
+      "radius": 180,
+      "fenced": true,
       "guards": "lantern-hall"
-    }
+    },
+    { "id": "dang-lantern", "kind": "dangler", "x": 1480, "y": 1860, "facing": -1, "guards": "lantern-hall" }
   ],
   "routes": [
     { "from": "spawn", "to": "w" },
+    { "from": "w", "to": "panel", "oneWay": true },
     { "from": "w", "to": "n", "needs": ["wallJump"], "oneWay": true },
-    { "from": "n", "to": "w", "oneWay": true }
+    { "from": "n", "to": "w", "oneWay": true },
+    { "from": "w-high", "to": "n", "needs": ["wallJump"] },
+    { "from": "w-high", "to": "w", "oneWay": true }
   ],
   "marks": {
     "notes": [
       {
         "x": 100,
-        "y": 1380,
-        "text": "R8b wood-lantern  PURPOSE: teach + lock + combine (the first lantern; the broken face)"
+        "y": 2200,
+        "text": "R9 wood-lantern  PURPOSE: teach + lock + combine (the first lantern; the broken face; the way down)"
       },
-      { "x": 1000, "y": 560, "text": "L1 lantern-hall: 2 hits, jump-cuts from P (256 below it)" },
-      { "x": 1000, "y": 1080, "text": "root step 160, platform P (one-way, 1024-1536, y 960)" },
-      { "x": 800, "y": 1240, "text": "burr-lantern patrols the floor under P (headroom 320); it guards L1" },
-      { "x": 100, "y": 560, "text": "DJ ledge, slick stalk: a wick (postgame: double jump)" },
+      { "x": 900, "y": 1800, "text": "LANDMARK: L1, the first lantern, hung over a two-level floor" },
       {
-        "x": 2000,
+        "x": 900,
+        "y": 2240,
+        "text": "root step 160, platform P (one-way, 320 up), L1 256 over P: 2 jump-cuts"
+      },
+      {
+        "x": 700,
+        "y": 2580,
+        "text": "burr-lantern on P (fenced, 1100-1460): pogo its braced shell to reach L1, or fight it on the perch"
+      },
+      {
+        "x": 1380,
+        "y": 1780,
+        "text": "a root shelf: dang-lantern hangs over P's east end; both guard L1 (one snuff sends both off)"
+      },
+      { "x": 1700, "y": 2380, "text": "the upper floor; down a step to the shaft" },
+      {
+        "x": 2700,
         "y": 200,
-        "text": "THE BROKEN FACE (wall jump): kick up the west face, kick-glide across, up the east face"
+        "text": "THE BROKEN FACE (wall jump): kick up the west face, kick-glide across, up the east face to the climb"
       },
-      { "x": 2000, "y": 600, "text": "west face: thorn band 800-480 (and slick above)" },
-      { "x": 2000, "y": 1000, "text": "west face kickable 1088-800" },
-      { "x": 2700, "y": 1180, "text": "east face slick 1280-960, kickable 960-0" },
+      { "x": 3100, "y": 1580, "text": "west face: kickable 2400-1920, thorns 1920-1600, slick above" },
+      { "x": 3100, "y": 2280, "text": "east face slick to 2304, kickable above" },
       {
-        "x": 2600,
-        "y": 100,
-        "text": "N: up to wood-climb. TODO render: L1's freed moths fly up the shaft (up, later)"
-      }
+        "x": 3150,
+        "y": 2740,
+        "text": "THE WAY DOWN: a rotten-bark floor at the shaft's foot, moonlight welling up (TODO render): cut it, drop to the well"
+      },
+      {
+        "x": 100,
+        "y": 300,
+        "text": "CANOPY LINE (from the hawkers' high door): over the lantern, through a window into the shaft"
+      },
+      {
+        "x": 2500,
+        "y": 640,
+        "text": "the window (448-704) into the shaft: the canopy line meets the broken face halfway up"
+      },
+      { "x": 350, "y": 1780, "text": "FIND: a wick on a hanging ledge, dropped onto from the canopy line" }
     ]
   },
   "shots": {
-    "wide": [{ "name": "lantern", "x": 1280, "y": 1280 }, { "name": "shaft", "x": 2800, "y": 1280 }]
+    "wide": [
+      { "name": "lantern", "x": 1280, "y": 2624 },
+      { "name": "shaft-foot", "x": 3000, "y": 2624 },
+      { "name": "window", "x": 2700, "y": 704 }
+    ]
   }
 }

@@ -2,56 +2,122 @@
   "id": "wood-hawkers",
   "title": "The hawker (greybox)",
   "region": "wood",
-  "width": 3200,
-  "height": 1600,
-  "spawn": { "x": 300, "y": 1280 },
+  "width": 3840,
+  "height": 2752,
+  "spawn": { "x": 300, "y": 2624 },
   "edgeKick": false,
   "abilities": ["glide"],
-  "art": { "mode": "greybox", "labels": true },
+  "art": { "mode": "greybox", "labels": false },
   "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
   "exits": [
-    { "id": "w", "edge": "w", "from": 1024, "to": 1280 },
-    { "id": "e", "edge": "e", "from": 1024, "to": 1280 }
+    { "id": "w", "edge": "w", "from": 2368, "to": 2624 },
+    { "id": "w-high", "edge": "w", "from": 128, "to": 384 },
+    { "id": "e", "edge": "e", "from": 2368, "to": 2624 },
+    { "id": "e-high", "edge": "e", "from": 128, "to": 384 }
   ],
+  "patches": [{ "id": "p-dark", "x": 3520, "y": 2624 }],
   "solids": [
-    { "tag": "ground", "x": 0, "y": 1280, "w": 3200, "h": 320 },
-    { "tag": "root", "x": 2464, "y": 1088, "w": 320, "h": 64 },
-    { "tag": "root", "x": 2720, "y": 1152, "w": 64, "h": 128 }
+    { "tag": "ground", "x": 0, "y": 2624, "w": 1088, "h": 128 },
+    { "tag": "root", "x": 1088, "y": 2432, "w": 384, "h": 320 },
+    { "tag": "ground", "x": 1472, "y": 2688, "w": 256, "h": 64 },
+    { "tag": "root", "x": 1728, "y": 2432, "w": 384, "h": 320 },
+    { "tag": "ground", "x": 2112, "y": 2624, "w": 1728, "h": 128 },
+    { "tag": "root", "x": 2752, "y": 2464, "w": 448, "h": 32 },
+    { "tag": "root", "x": 3136, "y": 2496, "w": 64, "h": 128 },
+    { "tag": "branch", "x": 0, "y": 384, "w": 704, "h": 48 },
+    { "tag": "branch", "x": 1024, "y": 448, "w": 640, "h": 48 },
+    { "tag": "branch", "x": 1984, "y": 512, "w": 768, "h": 48 },
+    { "tag": "branch", "x": 3072, "y": 384, "w": 768, "h": 48 }
   ],
   "oneWays": [],
-  "bark": [{ "id": "bark-mound", "x": 2400, "y": 1088, "w": 64, "h": 192 }],
+  "bark": [{ "id": "bark-mound", "x": 2688, "y": 2464, "w": 64, "h": 160 }],
   "lures": [
-    { "id": "wick-hawk", "kind": "wick", "x": 1024, "y": 968 },
-    { "id": "wick-bark", "kind": "wick", "x": 2660, "y": 1216 }
+    { "id": "wick-hummock", "kind": "wick", "x": 1280, "y": 2250 },
+    { "id": "wick-hawk", "kind": "wick", "x": 1920, "y": 2120 },
+    { "id": "wick-bark", "kind": "wick", "x": 2920, "y": 2560 },
+    { "id": "wick-canopy", "kind": "wick", "x": 2368, "y": 300 }
   ],
   "enemies": [
     {
       "id": "hawk-first",
       "kind": "hawker",
-      "x": 1024,
-      "y": 800,
+      "x": 1640,
+      "y": 2200,
       "facing": -1,
       "radius": 160,
       "hp": 3,
       "guards": "wick-hawk"
+    },
+    {
+      "id": "dang-canopy",
+      "kind": "dangler",
+      "x": 2300,
+      "y": 8,
+      "facing": -1,
+      "drop": 520,
+      "guards": "wick-canopy"
     }
+  ],
+  "routes": [
+    { "from": "spawn", "to": "w" },
+    { "from": "w", "to": "e" },
+    { "from": "w", "to": "p-dark" },
+    { "from": "w-high", "to": "e-high" },
+    { "from": "w-high", "to": "w", "oneWay": true },
+    { "from": "e-high", "to": "e", "oneWay": true }
   ],
   "marks": {
     "notes": [
-      { "x": 100, "y": 700, "text": "R8a wood-hawkers  PURPOSE: teach (the hawker over a flat, safe floor)" },
       {
-        "x": 700,
-        "y": 600,
-        "text": "hawk-first (3 hp) guards W7: it notices her only in W7's light. Snuff W7 and it leaves"
+        "x": 100,
+        "y": 2200,
+        "text": "R8 wood-hawkers  PURPOSE: teach (the hawker), with a canopy line above"
       },
-      { "x": 800, "y": 1080, "text": "W7 wick-hawk 312 up: a jump-cut" },
-      { "x": 1900, "y": 900, "text": "the dark half: a breath" },
       {
-        "x": 2300,
-        "y": 1000,
-        "text": "S1: a rotten-bark panel in a root mound, an alcove with a wick (secret)"
+        "x": 1000,
+        "y": 2300,
+        "text": "LANDMARK: twin hummocks over a dip, the hawker's dive lane across them"
+      },
+      {
+        "x": 1500,
+        "y": 1900,
+        "text": "hawk-first (3 hp) guards W7, its home 232 over the hummocks: it sees her in any lamp's light"
+      },
+      {
+        "x": 1000,
+        "y": 2140,
+        "text": "W-hummock (not its lamp) lights hummock A: she is seen here, and snuffing it does not send the hawker off"
+      },
+      {
+        "x": 1700,
+        "y": 2060,
+        "text": "W7 wick-hawk 312 over hummock B: a jump-cut from inside the dive lane, ~1.5 s of light after the first"
+      },
+      {
+        "x": 2200,
+        "y": 120,
+        "text": "dang-canopy (guards W-canopy): drops over the canopy landing; step back west to dodge"
+      },
+      { "x": 2300, "y": 2300, "text": "the dark half: a breath" },
+      {
+        "x": 2600,
+        "y": 2380,
+        "text": "S1: a bark panel in a low root mound (160: going back west it is a plain hop)"
+      },
+      { "x": 3300, "y": 2540, "text": "P-dark moon patch (no creature sees it)" },
+      { "x": 2350, "y": 2580, "text": "FIND (pending kit): a firefly sign in the dark half" },
+      {
+        "x": 100,
+        "y": 300,
+        "text": "CANOPY LINE (from the hub's crown, wall jump): east over the room, a wick, on to the lantern room"
       }
     ]
   },
-  "shots": { "wide": [{ "name": "hawker", "x": 900, "y": 1280 }, { "name": "dark", "x": 2300, "y": 1280 }] }
+  "shots": {
+    "wide": [
+      { "name": "hummocks", "x": 1500, "y": 2624 },
+      { "name": "dark", "x": 3000, "y": 2624 },
+      { "name": "canopy", "x": 2000, "y": 512 }
+    ]
+  }
 }

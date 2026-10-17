@@ -7,7 +7,7 @@
   "spawn": { "x": 1600, "y": 640 },
   "edgeKick": false,
   "abilities": ["glide", "wallJump"],
-  "art": { "mode": "greybox", "labels": true },
+  "art": { "mode": "greybox", "labels": false },
   "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
   "exits": [{ "id": "s", "edge": "s", "from": 0, "to": 512 }],
   "patches": [{ "id": "p5", "x": 1600, "y": 640 }],

@@ -7,21 +7,34 @@
   "spawn": { "x": 288, "y": 512 },
   "edgeKick": false,
   "abilities": ["glide"],
-  "art": { "mode": "greybox", "labels": true },
+  "art": { "mode": "greybox", "labels": false },
   "camera": {
     "realFallPx": 250,
     "targetSmoothY": 10,
     "smoothYFastFall": 6,
     "fallLookahead": 320,
     "lookaheadX": 330,
-    "leadFrames": 36
+    "leadFrames": 36,
+    "zones": [
+      {
+        "id": "gap1",
+        "x": 0,
+        "y": 256,
+        "w": 1376,
+        "h": 1152,
+        "fit": true,
+        "bounds": { "x": 0, "y": 160, "w": 2100, "h": 1440 }
+      }
+    ]
   },
   "exits": [
     { "id": "w", "edge": "w", "from": 256, "to": 512 },
     { "id": "e", "edge": "e", "from": 1728, "to": 1984 }
   ],
+  "patches": [{ "id": "p-t3", "x": 3200, "y": 1472 }],
   "solids": [
     { "tag": "ground", "x": 0, "y": 512, "w": 576, "h": 1856 },
+    { "tag": "root", "x": 320, "y": 256, "w": 480, "h": 64, "kick": false },
     { "tag": "ground", "x": 576, "y": 1408, "w": 800, "h": 960 },
     { "tag": "ground", "x": 1376, "y": 960, "w": 608, "h": 1408 },
     { "tag": "ground", "x": 1984, "y": 1952, "w": 1024, "h": 416 },
@@ -81,7 +94,7 @@
   ],
   "thorns": [
     { "id": "thorns-2", "x": 1984, "y": 1920, "w": 1024, "h": 32 },
-    { "id": "thorn-branch", "x": 3798, "y": 1112, "w": 400, "h": 160 },
+    { "id": "thorn-branch", "x": 3798, "y": 920, "w": 400, "h": 120 },
     { "id": "thorns-3", "x": 3648, "y": 2240, "w": 1024, "h": 32 }
   ],
   "bark": [
@@ -109,6 +122,8 @@
   "routes": [
     { "from": "spawn", "to": "w" },
     { "from": "w", "to": "e", "needs": ["glide"], "oneWay": true },
+    { "from": "w", "to": "p-t3", "needs": ["glide"], "oneWay": true },
+    { "from": "p-t3", "to": "e", "needs": ["glide"], "oneWay": true },
     { "from": "e", "to": "w", "needs": ["wallJump"], "oneWay": true }
   ],
   "marks": {
@@ -124,6 +139,15 @@
         "y": 640,
         "text": "SAFE: gap 800, drop 448. jump 688 (miss)  walk-off glide 1045  jump-glide 1319"
       },
+      {
+        "x": 330,
+        "y": 200,
+        "text": "a root roof over E0's lip (192 clear): a jump bumps it; walk off and glide (the walk-off, taught)"
+      },
+      { "x": 40, "y": 420, "text": "camera zone gap1: the whole gap and T2 in view from E0" },
+      { "x": 3060, "y": 1380, "text": "P-t3 moon patch on T3 (the halfway rest: ~4 min from P2)" },
+      { "x": 2500, "y": 1700, "text": "FIND (pending kit): a firefly sign scratched on T3's face" },
+      { "x": 2600, "y": 200, "text": "LANDMARK: the long bough overhead, the glidewalk's line under it" },
       { "x": 620, "y": 1360, "text": "safe floor; root rungs (one-ways) back up to E0" },
       {
         "x": 1500,
@@ -149,13 +173,8 @@
       { "x": 3020, "y": 1420, "text": "T3" },
       {
         "x": 3700,
-        "y": 1050,
-        "text": "TEST: a thorn branch over the jump's hump: the jump-glide hits it, the walk-off glide passes under"
-      },
-      {
-        "x": 3700,
-        "y": 1010,
-        "text": "thorny all over (a glide on after W5's throw met its top and landed on it, then T4)"
+        "y": 860,
+        "text": "a thorn branch over the jump's apex (76 clear): the jump-glide and the walk-off both cross; a ceiling for later"
       },
       { "x": 3700, "y": 2200, "text": "thorns under gap 3" },
       { "x": 4700, "y": 1930, "text": "T4: the landing at ~4841 is clear of burr-ledge (patrol 4992-5248)" },

@@ -7,7 +7,7 @@
   "spawn": { "x": 600, "y": 1280 },
   "edgeKick": false,
   "abilities": [],
-  "art": { "mode": "greybox", "labels": true },
+  "art": { "mode": "greybox", "labels": false },
   "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
   "reform": { "x": 300, "y": 1280 },
   "exits": [
@@ -16,7 +16,10 @@
   ],
   "patches": [{ "id": "p1", "x": 3776, "y": 1152 }],
   "solids": [
-    { "tag": "ground", "x": 0, "y": 1280, "w": 1216, "h": 512 },
+    { "tag": "ground", "x": 0, "y": 1280, "w": 384, "h": 512 },
+    { "tag": "ground", "x": 480, "y": 1280, "w": 736, "h": 64 },
+    { "tag": "ground", "x": 640, "y": 1344, "w": 576, "h": 128 },
+    { "tag": "ground", "x": 384, "y": 1472, "w": 832, "h": 320 },
     { "tag": "ground", "x": 1216, "y": 1344, "w": 1600, "h": 448 },
     { "tag": "root", "x": 2624, "y": 1152, "w": 192, "h": 192 },
     { "tag": "ground", "x": 2816, "y": 1472, "w": 640, "h": 320 },
@@ -28,10 +31,16 @@
     { "tag": "branch", "x": 3904, "y": 512, "w": 512, "h": 64 }
   ],
   "oneWays": [],
-  "seedCases": [{ "id": "seed-1", "x": 3008, "y": 1152 }, { "id": "seed-2", "x": 3296, "y": 1152 }],
+  "seedCases": [
+    { "id": "seed-0", "x": 1000, "y": 1176 },
+    { "id": "seed-1", "x": 3008, "y": 1152 },
+    { "id": "seed-2", "x": 3296, "y": 1152 }
+  ],
+  "bark": [{ "id": "bark-pocket", "x": 384, "y": 1280, "w": 96, "h": 64, "floor": true }],
   "lures": [
     { "id": "wick-burr", "kind": "wick", "x": 1984, "y": 1144 },
-    { "id": "wick-high", "kind": "wick", "x": 3136, "y": 704 }
+    { "id": "wick-high", "kind": "wick", "x": 3300, "y": 640 },
+    { "id": "wick-pocket", "kind": "wick", "x": 560, "y": 1408 }
   ],
   "enemies": [
     {
@@ -55,6 +64,21 @@
         "text": "R4 wood-burrow  PURPOSE: teach + rest (the blade against things: first predator, pogo intro, the required pogo)"
       },
       { "x": 200, "y": 1200, "text": "F1 (0-1216, y 1280): dark" },
+      {
+        "x": 880,
+        "y": 1060,
+        "text": "seed-0: a seed-case over a safe floor. Jump, down-cut it, bounce in place (the pogo, before the gap)"
+      },
+      {
+        "x": 300,
+        "y": 1360,
+        "text": "FIND: a bark floor panel by the door; down-cut it, a pocket with a wick (W-pocket)"
+      },
+      {
+        "x": 1400,
+        "y": 200,
+        "text": "LANDMARK: the burrback's ram groove worn into F2, the seed-case pair over the gap"
+      },
       { "x": 1500, "y": 960, "text": "W3 wick-burr, 200 up: a jump-cut works and is never caught" },
       {
         "x": 1500,
@@ -75,9 +99,9 @@
         "text": "a miss lands on a safe floor (1472: at the paper's 1408 a jump climbed F3 and skipped the pogo); root steps back up"
       },
       {
-        "x": 3000,
-        "y": 560,
-        "text": "W-hi4 wick-high: wall jump + glide from shelf H (a lock seen from P1)"
+        "x": 3160,
+        "y": 500,
+        "text": "W-hi4 wick-high: wall jump + glide from shelf H (a lock seen from P1); 420+ from the seed-case hops (no pull)"
       },
       { "x": 3920, "y": 460, "text": "shelf H (3904-4416, y 512)" },
       { "x": 4200, "y": 160, "text": "trunk (to y 1024), west face kickable" },

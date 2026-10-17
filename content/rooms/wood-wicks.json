@@ -7,7 +7,7 @@
   "spawn": { "x": 640, "y": 960 },
   "edgeKick": false,
   "abilities": [],
-  "art": { "mode": "greybox", "labels": true },
+  "art": { "mode": "greybox", "labels": false },
   "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
   "exits": [
     { "id": "n", "edge": "n", "from": 256, "to": 896 },
@@ -21,7 +21,11 @@
     { "tag": "root", "x": 1984, "y": 936, "w": 64, "h": 24 },
     { "tag": "ground", "x": 2048, "y": 1152, "w": 1792, "h": 1024 },
     { "tag": "trunk", "x": 1600, "y": 0, "w": 64, "h": 704 },
-    { "tag": "trunk", "x": 896, "y": 0, "w": 128, "h": 576, "kick": false }
+    { "tag": "trunk", "x": 896, "y": 0, "w": 128, "h": 576, "kick": false },
+    { "tag": "root", "x": 1024, "y": 192, "w": 576, "h": 56, "kick": false },
+    { "tag": "root", "x": 1152, "y": 248, "w": 24, "h": 300, "kick": false },
+    { "tag": "root", "x": 1264, "y": 248, "w": 24, "h": 140, "kick": false },
+    { "tag": "root", "x": 1320, "y": 248, "w": 24, "h": 240, "kick": false }
   ],
   "oneWays": [],
   "lures": [
@@ -54,7 +58,13 @@
       { "x": 2120, "y": 840, "text": "(moved 22 up from the paper's 918: the knob sat in its core)" },
       { "x": 1460, "y": 220, "text": "W-hi3 LOCK: wall jump's first lock, by the hanging trunk" },
       { "x": 1690, "y": 690, "text": "hanging trunk (1600-1664, to y 704): touchable, not climbable yet" },
-      { "x": 2300, "y": 1260, "text": "N  drop 192 (2048-3840, y 1152): east to wood-burrow" }
+      { "x": 2300, "y": 1260, "text": "N  drop 192 (2048-3840, y 1152): east to wood-burrow" },
+      {
+        "x": 1040,
+        "y": 150,
+        "text": "LANDMARK: THE ROOT KNOT: a root bridges the shaft wall to the hanging trunk, tendrils hang round W1"
+      },
+      { "x": 1100, "y": 1330, "text": "LORE (stand-in): the dead moth in the dip, under the knot" }
     ],
     "camera": [
       { "id": "w1", "x": 1280, "y": 800, "note": "ease toward a flame while she is inside its field" },

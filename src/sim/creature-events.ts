@@ -58,20 +58,6 @@ export type CreatureEvent =
       px: number;
       frames: number;
     }
-  /**
-   * A big creature (`hpMax` 6 or more: the old burrback) lost another third of its health: `third` = how
-   * many thirds are gone (1, 2). Render: a crack in the shell; its health is `enemies[i].hp / hpMax`.
-   */
-  | {
-      type: 'enemyCrack';
-      id: string;
-      kind: EnemyKind;
-      x: number;
-      y: number;
-      hpLeft: number;
-      hpMax: number;
-      third: number;
-    }
   /** A dangler's thread was cut (tied at `fromX`, `fromY`): it falls. */
   | {
       type: 'enemyThreadCut';

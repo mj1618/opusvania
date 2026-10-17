@@ -4,135 +4,54 @@
   "region": "wood",
   "width": 6400,
   "height": 1920,
-  "spawn": {
-    "x": 768,
-    "y": 704
-  },
+  "spawn": { "x": 768, "y": 704 },
   "edgeKick": false,
   "abilities": [],
-  "art": {
-    "mode": "greybox",
-    "labels": true
-  },
+  "art": { "mode": "greybox", "labels": false },
   "exits": [
-    {
-      "id": "n",
-      "edge": "n",
-      "from": 384,
-      "to": 1664
-    },
-    {
-      "id": "s",
-      "edge": "s",
-      "from": 5760,
-      "to": 6400,
-      "oneWay": true
-    }
+    { "id": "n", "edge": "n", "from": 384, "to": 1664 },
+    { "id": "s", "edge": "s", "from": 5760, "to": 6400, "oneWay": true }
   ],
   "catches": [
-    {
-      "id": "below",
-      "x": 256,
-      "y": 1600,
-      "w": 4800,
-      "h": 320
-    }
+    { "id": "below", "x": 256, "y": 1520, "w": 3200, "h": 200 },
+    { "id": "below-2", "x": 4480, "y": 1520, "w": 128, "h": 200 }
   ],
   "solids": [
-    {
-      "tag": "trunk",
-      "x": 0,
-      "y": 0,
-      "w": 256,
-      "h": 1920,
-      "kick": false
-    },
-    {
-      "tag": "branch",
-      "x": 256,
-      "y": 704,
-      "w": 1792,
-      "h": 128
-    },
-    {
-      "tag": "branch",
-      "x": 2304,
-      "y": 832,
-      "w": 128,
-      "h": 128
-    },
-    {
-      "tag": "branch",
-      "x": 2432,
-      "y": 824,
-      "w": 128,
-      "h": 128
-    },
-    {
-      "tag": "branch",
-      "x": 2560,
-      "y": 818,
-      "w": 128,
-      "h": 128
-    },
-    {
-      "tag": "branch",
-      "x": 2688,
-      "y": 816,
-      "w": 128,
-      "h": 128
-    },
-    {
-      "tag": "branch",
-      "x": 2816,
-      "y": 820,
-      "w": 128,
-      "h": 128
-    },
-    {
-      "tag": "branch",
-      "x": 2944,
-      "y": 828,
-      "w": 128,
-      "h": 128
-    },
-    {
-      "tag": "branch",
-      "x": 3072,
-      "y": 832,
-      "w": 128,
-      "h": 128
-    },
-    {
-      "tag": "branch",
-      "x": 3200,
-      "y": 960,
-      "w": 640,
-      "h": 128
-    },
-    {
-      "tag": "branch",
-      "x": 4160,
-      "y": 1024,
-      "w": 896,
-      "h": 128
-    },
-    {
-      "tag": "ground",
-      "x": 5056,
-      "y": 896,
-      "w": 704,
-      "h": 1024
-    }
+    { "tag": "trunk", "x": 0, "y": 0, "w": 64, "h": 1920, "kick": false },
+    { "tag": "trunk", "x": 64, "y": 0, "w": 192, "h": 448, "kick": false },
+    { "tag": "trunk", "x": 64, "y": 704, "w": 192, "h": 1216, "kick": false },
+    { "tag": "branch", "x": 256, "y": 704, "w": 1344, "h": 128 },
+    { "tag": "trunk", "x": 1600, "y": 704, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 1664, "y": 715, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 1728, "y": 727, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 1792, "y": 738, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 1856, "y": 750, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 1920, "y": 760, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 1984, "y": 771, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2048, "y": 780, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2112, "y": 790, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2176, "y": 798, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2240, "y": 807, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2304, "y": 814, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2368, "y": 822, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2432, "y": 829, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2496, "y": 836, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2560, "y": 843, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2624, "y": 851, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2688, "y": 858, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2752, "y": 867, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2816, "y": 875, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2880, "y": 884, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 2944, "y": 893, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 3008, "y": 903, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 3072, "y": 913, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 3136, "y": 925, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 3200, "y": 936, "w": 64, "h": 160 },
+    { "tag": "trunk", "x": 3264, "y": 948, "w": 64, "h": 160 },
+    { "tag": "ground", "x": 3456, "y": 1280, "w": 1024, "h": 640 },
+    { "tag": "ground", "x": 4608, "y": 1600, "w": 1152, "h": 320 }
   ],
-  "oneWays": [
-    {
-      "tag": "branch",
-      "x": 3584,
-      "y": 768,
-      "w": 640
-    }
-  ],
+  "oneWays": [{ "tag": "branch", "x": 3584, "y": 1056, "w": 640 }],
   "marks": {
     "notes": [
       {
@@ -146,78 +65,41 @@
         "text": "N in: she falls from the hatching branch's end, still running after the swarm"
       },
       {
-        "x": 700,
-        "y": 600,
-        "text": "A  (256-2048, y 704): a run off the hatch's end lands here"
-      },
-      {
-        "x": 2060,
-        "y": 1000,
-        "text": "gap 256, drop 128"
-      },
-      {
-        "x": 2560,
-        "y": 720,
-        "text": "B  rolling (2304-3200, ~y 832)"
-      },
-      {
-        "x": 3200,
-        "y": 1150,
-        "text": "C  step down 128 (3200-3840, y 960)"
-      },
-      {
-        "x": 3328,
-        "y": 700,
-        "text": "twig line (one-way y 768): the high line from C over the gap; it ends over D"
-      },
-      {
-        "x": 3860,
-        "y": 1240,
-        "text": "gap 320, drop 64"
-      },
-      {
-        "x": 4300,
-        "y": 1220,
-        "text": "D  (4160-5056, y 1024), then step up 128"
-      },
-      {
-        "x": 5100,
-        "y": 560,
-        "text": "V  THE VISTA: camera zone vista lifts the view from x 5000 (TODO: the ~2 s hold, input free after 1 s)"
-      },
-      {
         "x": 5100,
         "y": 640,
         "text": "TODO render: the swarm pours into the valley's lamps; LAMPFALL over the moon"
       },
-      {
-        "x": 5100,
-        "y": 720,
-        "text": "TODO render: ~8 stragglers peel off the river and dive over the lip"
-      },
+      { "x": 5100, "y": 720, "text": "TODO render: ~8 stragglers peel off the river and dive over the lip" },
       {
         "x": 5100,
         "y": 800,
         "text": "locked view: the valley's lamps across the gulf; later (T3) a Moonflight lamp here"
       },
       {
-        "x": 5800,
-        "y": 1500,
-        "text": "S out: everything east of the lip drops into wood-wicks (one way)"
+        "x": 80,
+        "y": 380,
+        "text": "FIND: a hollow in the trunk behind her landing (64-256 x 448-704): W-cave, a standing up-cut"
       },
+      { "x": 700, "y": 600, "text": "A  (256-1600, y 704): a run off the hatch's end lands here" },
       {
-        "x": 1800,
-        "y": 1700,
-        "text": "catch: a fall between boughs costs nothing (back to the bough)"
-      }
+        "x": 1700,
+        "y": 560,
+        "text": "LANDMARK: THE FALLEN TRUNK (1600-3328), rolling down from 704 to 960: she runs its back"
+      },
+      { "x": 3330, "y": 1180, "text": "real drop 320 off the trunk's end, gap 128: a run clears it" },
+      { "x": 3600, "y": 1000, "text": "twig line (one-way y 1056): the high line over E" },
+      { "x": 3700, "y": 1360, "text": "E  (3456-4480, y 1280)" },
+      { "x": 4500, "y": 1500, "text": "real drop 320, gap 128, onto the lookout V2" },
+      {
+        "x": 4700,
+        "y": 1000,
+        "text": "V2  THE VISTA (4608-5760, y 1600): camera zone vista from x 4800 (TODO: the ~2 s hold, input free after 1 s)"
+      },
+      { "x": 5800, "y": 1700, "text": "S out: off V2's end into wood-wicks (one way)" },
+      { "x": 1800, "y": 1820, "text": "catch: a fall off the trunk or between E and V2 costs nothing" }
     ],
     "camera": [
-      {
-        "id": "vista",
-        "x": 5600,
-        "y": 640,
-        "note": "lift from x 5000; hold ~2 s on V for the title"
-      }
+      { "id": "vista", "x": 5600, "y": 640, "note": "lift from x 5000; hold ~2 s on V for the title" }
     ]
   },
   "camera": {
@@ -230,36 +112,21 @@
     "zones": [
       {
         "id": "vista",
-        "x": 5000,
-        "y": 384,
-        "w": 760,
-        "h": 640,
-        "bounds": {
-          "x": 4416,
-          "y": 0,
-          "w": 1984,
-          "h": 1152
-        }
+        "x": 4800,
+        "y": 1088,
+        "w": 960,
+        "h": 512,
+        "bounds": { "x": 4416, "y": 576, "w": 1984, "h": 1344 }
       }
     ]
   },
   "shots": {
     "wide": [
-      {
-        "name": "landing",
-        "x": 900,
-        "y": 704
-      },
-      {
-        "name": "boughs",
-        "x": 3200,
-        "y": 900
-      },
-      {
-        "name": "vista",
-        "x": 5500,
-        "y": 896
-      }
+      { "name": "landing", "x": 900, "y": 704 },
+      { "name": "trunk", "x": 2600, "y": 900 },
+      { "name": "drops", "x": 4200, "y": 1280 },
+      { "name": "vista", "x": 5300, "y": 1600 }
     ]
-  }
+  },
+  "lures": [{ "id": "wick-cave", "kind": "wick", "x": 160, "y": 590 }]
 }

@@ -165,8 +165,6 @@ export interface KindRules {
     seq: number,
     dir: 'fwd' | 'up' | 'down',
   ): number;
-  /** Her box overlaps its box: does its body really touch her (its drawn shape)? Default: yes. */
-  touches?(e: EnemyState, p: { x: number; y: number; w: number; h: number }, t: Tuning): boolean;
   /** A blow going `dir` that lands does not stagger it (the old burrback's braced shell takes a pogo and rams on). */
   tough?(e: EnemyState, dir: 'fwd' | 'up' | 'down', t: Tuning): boolean;
   /**

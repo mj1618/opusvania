@@ -126,8 +126,10 @@ right, y down, y = the top of a floor). The wood's kit has no double jump and no
 | Swirl | 0.5 | 0.6 |
 | Hits / moths | 1 / 5 | 2 / 10 |
 
-- **Beating free**: 3 presses of jump or attack. The throw is 14 px/f outward plus 7 up, bent toward the held
-  direction (0.8), then 50 frames of grace.
+- **Beating free**: 3 presses of jump or attack. The throw is 14 px/f plus 7 up, exactly along the held direction
+  (8-way; outward from the flame only when nothing is held), then 50 frames of grace for that lure and for every
+  core the throw passes through (feel review r1, 3834228). A catch needs her moving inward, or 4 frames in the core.
+  Measured since: W1 → M 17 of 17, W5 → T3 8 of 8 holding right.
 - **Snuff**: 9 frames of hitstop, 1 health back.
 - **Lanterns are static in the sim today.** The swing in this doc waits for the path-follow block, and every lantern
   room works without it.
@@ -471,7 +473,13 @@ y 0   [N in: x 384-1664]
  896                                                        ╚═V═══════|lip 5760  VISTA
 1920 ═══════ catch (x 256-5056, y 1600+) ═══════════════════════[S out: 5760-6400]
 ```
-- A (256–2048, y 704) → gap 256, drop 128 → B (2304–3200, y 832, rolling) → step down 128 → C (3200–3840, y 960) →
+- **As built (round 1):** A (256–1600, y 704) → **the fallen trunk** (1600–3328), rolling down from 704 to ~960: she
+  runs its back → a **real drop** of ~330 over a 128 gap → E (3456–4480, y 1280) → a second real drop of 320 →
+  the lookout V2 (4608–5760, y 1600). A twig line (one-way 3584–4224, y 1056) is the high line over E. A **trunk
+  hollow** behind the landing (64–256 × 448–704) holds **W-cave**, a jump-cut from its floor (the chunk's first
+  find, ten seconds in). Catches 200 above the room's foot (the camera keeps her in frame). Landmark: the fallen
+  trunk. The vista zone frames V2 (bounds 4416–6400 × 576–1920).
+- (Paper) A (256–2048, y 704) → gap 256, drop 128 → B (2304–3200, y 832, rolling) → step down 128 → C (3200–3840, y 960) →
   gap 320, drop 64 → D (4160–5056, y 1024) → step up 128 → V (5056–5760, y 896). Every gap ≤ 320, every step ≤ 128.
   No thorns, no pips. A fall between boughs is a catch.
 - **The vista**: a camera lift from x 5000. On V the camera holds ~2 s (input free after 1 s), the swarm pours into
@@ -501,6 +509,10 @@ y 0   [N in 256-896]                  ┃hanging trunk 1600-1664 (to y 704)
   touch it but can't climb it. With wall jump: kick up its west face to ~400, kick west into the field, cut. Her jump
   apex over the dip (y ~690) stays ~340 px from it, so it never interferes with W1.
 - CP: L → W1 → M → W2 → N → E. Camera: ease toward a flame inside its field.
+- **Round 1: the root knot** (landmark): a root bridges the shaft wall to the hanging trunk at y 192–248, and three
+  tendrils hang round W1 (to 548, 388 and 488; the east one clear of W-hi3's core). It sits above every reach
+  without wall jump (W1's throw apex is ~478), so it can't be stood on to cheat W-hi3. The dead moth lies in the
+  dip under it (a stand-in note until render draws it).
 
 ### 4 `wood-burrow`: the blade against things (4480×1792; purpose: teach + rest)
 ```
@@ -528,6 +540,11 @@ y 0   [N in 256-896]                  ┃hanging trunk 1600-1664 (to y 704)
   root roof and walks off. Seen from P1 at 4:45.
 - With wall jump the hole opens from below (R5's hollow is climbable). Until P1 is touched, a fade re-forms her at
   the burrow's west door (room `reform` point (300, 1280)), not beside the burrback.
+- **Round 1:** **seed-0** at (1000, 1176) over F1, a safe floor: a hop and a down cut bounce her in place (the pogo
+  taught where a miss costs nothing, before the gap; chunk1-plan item 11, the impatient first-timer's pit). **W-hi4**
+  moved to (3300, 640), 420+ px from the seed-case hops, so its pull no longer lifts them. A **bark floor panel** by
+  the door (384–480, y 1280) opens a pocket (384–640 × 1344–1472) with **W-pocket**; a hop climbs back out. Landmark:
+  the seed-case pair over the gap, under the root roof.
 
 ### 5 `wood-glade`: glade 1, glide's lock room (2880×2304; purpose: glade)
 ```
@@ -546,6 +563,9 @@ y 0  [N in 256-512]
   carries ~1000 px at the kick's height and ~380 more down to the glade floor. The **hollow** (walls at 192 and 576)
   climbs 1664 px to the hole into R4.
 - Camera: frame the moon shaft while she basks; on the lip, look ahead east so that Z is on screen.
+- **Round 1:** an **alcove under the lip** (1216–1408 × 1856–2048) with **W-alcove**: walk off, turn back and glide
+  in (the only lamp in the room, below every line out). The room is 200 taller (2504) so the chasm's catch sits 200
+  above its foot and the camera keeps her in frame until it fires. Landmark: the lip over the moonlit chasm.
 
 ### 6 `wood-glidewalk`: the glide ladder (5760×2368; purpose: teach → test; 6.5 screens for three gaps and the bough)
 ```
@@ -572,6 +592,12 @@ y 0  [N in 256-512]
 - **Rotten-bark wall** (5376–5440, y 1600–1984) on the CP: spores drift from its seams, W6's freed moths slip through,
   3 cuts. **Right after it, a rotten-bark floor panel** (5456–5552) breaks with down cuts into a pocket holding
   **W-pocket**: the language used once more, a few metres on.
+- **Round 1:** a **root roof** over E0's lip (320–800, y 256–320, 192 clear) caps a jump at ~112 of rise: the jump
+  bumps, the walk-off glide is the way (taught at the safe gap, with the rungs under it). Camera zone **gap1** (fit,
+  bounds 0–2100 × 160–1600) frames E0, the gap and T2 at once. **P-t3** on T3 (3200, 1472): the halfway rest, so a
+  death at gap 3 costs ~10 s, not ~40. The **thorn branch** moved up over the jump's apex (3798–4198, y 920–1040,
+  76 px clear): "hold jump to glide" teaches the jump-glide, and the branch sat on its arc (the impatient
+  first-timer: 8 hits, 2 deaths). Both glides now cross gap 3; a glide on after W5's throw lands on T3 or T4.
 - **Return bough** (wall jump): trunk T-ret (5632–5696) hangs from 256 to 1728 (256 over T4: touchable, and walked
   under to the exit), with kickable faces. At its top the rolling bough runs west at y 192 and rises to y 32 over
   E0 (448 up, so it can't be jumped onto from E0, and the jump hump from E0 clears it by ~24). It ends over E0:
@@ -609,62 +635,82 @@ y 10048 = local 2880. W-ff burns only once `wood-firefly-glimpse` is set (lure `
   confirm 0 over a full sweep. If it doesn't, raise the branch to 448 and move it 128 west. `edgeKick: false`, and
   every face around the gap is `kick: false`.
 - Camera: rest framing at P3, the glimpse look-up, a vertical look-up under the shaft, a vista lift on the crown.
+- **Round 1:** camera zones **rest** (fit over the floor: the whole hub, bounds 0–3840 × 380–3248) and **look-up**
+  (the shaft framed tall, bounds 2176–3328 × 300–3248). **The well lid**: a flag gate over the well (384–640, y
+  3136) shut until `wood-climbout` (set by climbing out of R10): the way into the well is now R9's floor, and the
+  well is the shortcut back down once she has the claws. **E-high** (384–640 on the east edge, off the crown shelf):
+  the canopy line east over R8 and R9 to R9's shaft window. Landmark: the canopy gap of moonlight over P3.
 
-### 8 `wood-hawkers`: the hawker (3200×1600; purpose: teach)
+### 8 `wood-hawkers`: the hawker over the hummocks (3840×2752; purpose: teach; round 1)
 ```
- 800        hawker home (1024, 800), radius 160
- 968        (W7)·                                 (dark half)
-1280 [W]═══════════ flat safe floor ═══════════════▌S1 bark▐══════[E]
+ 384 [W-high]═canopy═╗  ═══╗      ═══(W-canopy)·══╗     ════[E-high]     (dangler over the canopy landing)
+2120            (W-hummock)·  hawker home (1640, 2200)   (W7)·
+2432         ▄▄hummock A▄▄  dip  ▄▄hummock B▄▄        ▄▒mound▒▄ (W-bark in the cavity)
+2624 [W]════════╝          ╚═══╝              ╚═══════▌bark▐════════════[P-dark]══[E]
 ```
-- A flat floor (y 1280) the whole way. **W7** at (1024, 968), 312 up (a jump-cut works in 5–6 of 9 timings).
-  Hawker `hawk-first` (3 hp, guards W7) notices her only in W7's light (R 240). Snuff W7 and it leaves.
-- The east half (1800–3200) is dark: the alternation and a breath. **S1**: a rotten-bark panel in a root mound
-  (2400–2464, floor level), with an alcove holding a wick.
-- Time: 1:30–2:30.
+- Floor y 2624, **hummocks** A (1088–1472) and B (1728–2112), tops 2432, over a dip (floor 2688). **W7** at (1920, 2120),
+  312 over hummock B: a jump-cut from inside the dive lane (6.0 of 9). **W-hummock** (1280, 2250) over hummock A is
+  not the hawker's lamp: it lights her early, and snuffing it does not send the hawker off. **Hawker** `hawk-first`
+  (3 hp, guards W7), home (1640, 2200), 232 over the hummocks. Measured, a runner: lit at frame 84, noticed 93, hit
+  165, on hummock B (the only reach) at 194: 1.8 s in the light before she can cut W7.
+- The dark half (2112–3840): **S1** (bark 2688–2752 in a root mound, top 2464) opens a cavity with **W-bark** at
+  (2920, 2560) (out of the bark cuts' reach, and of the jump over the mound). **P-dark** at 3520. A firefly sign
+  goes here when the kit lands.
+- **The canopy line** (from the hub's crown, wall jump): branches at 384–512 with 320 gaps, **W-canopy** (2368, 300),
+  and a **dangler** (`dang-canopy`, guards W-canopy) tied to the room top over the landing at 2300.
+- Landmark: twin hummocks with the hawker's lane over them. Time: 1:30–2:30.
 
-### 9 `wood-lantern`: the first lantern and the broken face (3200×1600; purpose: teach + lock + combine)
+### 9 `wood-lantern`: the first lantern, the broken face, the way down (3840×2992; purpose: teach + lock + combine; round 1)
 ```
-  0                                                ║shaft 2560-3072 [N out]
- 480                                         thorn ▲║   ║ east face kickable 960-0
- 640 ══DJ══(wick)  (kick:false stalk)          band▲║   ║
- 704              (L1)·                   (west face)║   ║ slick (kick:false) 1280-960
- 960          ════P═════ (1024-1536)    kickable ║   ║
-1280 [W]═══ burrback 768-1856 ═════════════════════════════════╝
+ 384 [W-high]═canopy══╗  ═══╗          ═══window╗║        ║[N out 3072-3584]
+1860            ┃root (dangler)          ▓thorn ║  shaft  ║ east face kickable above 2304
+1984  ══ledge(W-high)┃    (L1)·             band║         ║
+2304           ════P════ burrback (fenced)       ║kickable║ slick
+2432                         ══upper floor══════╗         ║
+2624 [W]══floor══ step ╝                        ╚═══════▒bark floor▒══╝
+                                                         ↓ the way down: R10's chute
 ```
-- Floor y 1280. Root steps (160 each) up to platform **P** (1024–1536, y 960). **L1** (lantern) at (1280, 704), 256
-  over P: jump-cuts from P (3–5 of 9 timings each, never caught), 2 hits. Burrback `burr-lantern` patrols the floor
-  under P (headroom 320). No hawker.
-- **The east shaft** (2560–3072, 512 wide) climbs 1280 to R11. It is a **broken face**:
-  - the west face is kickable 1280–800, then a 320 px thorn band (800–480);
-  - the east face is slick from 1280 to 960, then kickable 960–0.
+- Floor y 2624, an upper level (1600–2752, y 2432). Root step (864–1024, y 2464) and platform **P** (one-way 1024–1536,
+  y 2304). **L1** (lantern) at (1280, 2048), 256 over P (4.0 of 9 with its guards gone). The burrback **on P**
+  (`fenced`, radius 180: it stays 1100–1460) and a **dangler** on a root shelf over P's east end (1480, 1860): both
+  guard L1, one snuff sends both off. The chunk's first two-creature combination (rescope item 1).
+- **The broken face** (shaft 3072–3584): west face kickable 2400–1920, a thorn band 1920–1600, slick above; east face
+  slick to 2304, kickable above. Kick up the west face, kick-glide across, up the east face to R11.
+- **The way down**: a rotten-bark **floor** at the shaft's foot (3200–3456) breaks to down cuts and drops her onto
+  R10's chute patch (one way). This is the loop: the lock (the shaft) and its key (the well) meet here. TODO render:
+  moonlight welling up through its seams, so the dead end reads as a door.
+- **The canopy line** from R8 crosses over L1 (a hanging ledge 448–704 y 1984 on a root from the canopy, with
+  **W-high** at (672, 1880): a first-run find dropped onto from above) to a **window** (448–704) into the shaft,
+  halfway up the broken face.
+- Round-1 fix: the west door is clear (the ledge's root hangs from the canopy, it no longer stands on the floor
+  where it boxed in the door and the spawn). Landmark: L1 over the two-level floor. Time: 2:20–4:10.
 
-  Kick up the west face, then kick-glide across (she meets the east face ~229 higher, about y 570), then up the east
-  face. Before wall jump it is the lock, and L1's moths fly up it.
-- **DJ ledge** (192–448, y 640) with a wick: 320 over P (a jump is 48 short, a double jump reaches it), on a slick
-  stalk. It is ≥ 2000 px from any kickable face, so wall jump + glide can't reach it.
-- Time: 2:00–3:30 the first time, ~1:00 through the shaft later.
-
-### 10 `wood-well`: the old burrback and glade 2 (3840×1600; purpose: mini-boss + glade)
+### 10 `wood-well`: the chute, the old burrback, glade 2, the climb-out (11264×2240; purpose: mini-boss + glade; round 1)
 ```
-y 0  [N in: well 384-640]                                 [N out: hub grate 2560-2944]
-     ║slick║ (kick: false)                                 ║climb-out ║
- 704 ╚═════╩═══ rock roof ══════════════╗                  ║  ▬ rest  ║ ledge at 736
- 992                        (W8)·        ║ moon shaft       ║          ║
-1248                                ═ledge═                ║          ║
-1472 ═══ pit floor 0-2048 ═ old burrback ▌gate▐═[P4]═glade══╝          ║
+  0 [N: hub well 384-640]  [out: climb 2560-2944]                         [shaft: from R9's floor 10880-11136]
+ 448                                                                    ══L0══[P-chute]
+ 640                                                          ══L1══
+ 896                                         ══L2══(W-chute)·  (dangler over L2)
+1088                              ══L3══
+1216                ══L4══ (west end over the roof hole)
+1344 ▓roof▓║well║▓▓▓▓▓▓▓║climb║▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓║hole║
+1600              ║rest  ║  (W8)·   ┃gate floor-to-roof┃  THE PIT (sealed, camera lock)
+1888                          ═ledge═
+2112 ═══west hall═══╝     ╚═══glade 2 [P4]═══╝═════ pit floor, old burrback ═════════╝ catch 1840+ under the chute
 ```
-- The well drops ~1400 into the pit. She lands at 384–640. The old burrback sleeps at x 1600 and wakes over 60
-  frames (rim to hunt colour, uncurl); it never strikes on her landing. Camera lock on the pit (0–2048 × 704–1600).
-- **Old burrback** (§6): pogo its braced shell, or bait its ram into the west wall or the root gate for a 90-frame
-  stun and cut it then.
-- **W8** hangs at (2000, 992), 480 over the pit floor: out of reach in the fight. When the old burrback dies the root
-  gate (2048, 1088–1472: 384 tall, so no jump clears it) opens (`sets` on the creature, a flag gate), and a root
-  ledge behind it (2112–2304, y 1248) puts W8 in jump-cut reach (256 up, ~100–140 to the side; 23 of 27).
-- **Glade 2** (2048–2560): moon shaft, **P4**, the wall-jump item line.
-- **The climb-out** (2560–2944, both faces kickable) rises 1472 with a **rest ledge** at 736. At the top she pushes up
-  through the hub's grate (`wood-grate-open`) and the up-shaft carries straight on.
-- A fade in the pit re-forms her at P3, 15 s from the well (never rested at P3: under the well, the room's
-  `reform` point). Not a softlock.
+- In from R9's floor onto **P-chute** (L0). **The chute**: root ledges stepping down west in the dark, two 640 gaps
+  that want a jump-glide, a 384 and a 320; **W-chute** at (8736, 700) over L2 and a **dangler** (`dang-chute`, its
+  silk from the room top) over L2's landing. A fall is a catch back to the last ledge.
+- **The pit** (3584–5632 × 1344–2112): in through the roof hole off L4's west end. Sealed to the roof: the root gate
+  (3520, 1344–2112) is floor-to-roof, so no throw, pogo or glide gets past it while the old burrback lives (tested:
+  no-skip sweep). Camera lock. The old burrback sleeps at 4600 and wakes on her landing.
+- When it dies the gate opens: **glade 2** (3008–3520), **P4**, wall jump; **W8** (3392, 1600) over a ledge
+  (3264–3456, y 1888), a gimme behind the gate (18 of 27), out of reach from the pit.
+- **The climb-out** (2560–2944, both faces kickable down to 1888, walked under at floor level) rises to the hub's
+  grate; the top sets `wood-climbout`, which lifts the well lid. **The west hall** under the well: the shortcut down
+  lands here (~2700 px of fall), a short walk to P4.
+- A fade here re-forms her at P-chute (the room's `reform` point wins over a patch in another room: a small sim
+  rule), so the pit is retried from the chute, not from the hub. Landmark: the sealed pit under its roof hole.
 
 ### 11 `wood-climb`: the wall-jump test and the look back (2048×2560; purpose: test + vista)
 ```
@@ -914,4 +960,31 @@ Rooms built: R2–R10. R11 `wood-climb` is a stub.
 frames, 60–140 px to the side): W3 3.4 of 9, W4 6.0, W7 6.0, L1 4.0, none caught. An earlier test that let go of
 jump at the cut and cut late (6–22 frames) read W3 at 1–2 and L1 caught; that was the test, not the room.
 Still open: beaten free from W5 holding right lands on T3 in ~5 of 8 beat timings, the rest in gap 2's thorns.
+(Since the stick throw, 3834228: 8 of 8.)
+
+**Round 1 of the quality iteration** (docs/design/regions/reviews/chunk1-plan-r1.md; the impatient first-timer):
+
+| Room | Before | Round 1 | Why (plan item) |
+|---|---|---|---|
+| R10 | gate 384 tall under an open roof; W8 over the pit | the pit sealed to the roof, the gate floor to roof, W8 behind it | the throw and a pogo skipped the mini-boss (1) |
+| R9 | DJ ledge on a floor stalk | hung from the canopy; spawn and door clear | the stalk boxed in the west door (2) |
+| R8 | wick-bark 22 px from the root post | the cavity's wick at (2920, 2560), deep in the mound | its pull dragged the westward jump short; the bark cuts put it out (2) |
+| R9→R10 | the well from the hub only | R9's shaft floor drops into R10's chute; the hub's well is a lid until the climb-out | a loop: the lock and its key meet (3) |
+| R7→R8→R9 | — | e-high off the crown, the canopy line east to R9's shaft window | a high route after wall jump (3, 5) |
+| R2, R4, R5, R8, R9, R10 | 3 optional lamps | + W-cave, W-pocket, W-alcove, W-hummock, W-canopy, W-high (R9), W-chute | finds every 2–3 min (4) |
+| R8, R9 | 3200×1600 flat boxes | 3840×2752 / 3840×2992, two levels, two lines | rooms you remember (5) |
+| R2 | rolling boughs | the fallen trunk, two real drops, the trunk hollow | a landmark, real drops (5) |
+| R3 | — | the root knot over W1 | a landmark (5) |
+| R7 | no zones | rest (fit) and look-up zones | the hub reads as a hub (8) |
+| R6 | — | the root roof over E0's lip, the gap1 zone, P-t3 | walk-off taught; rest before the test (9, 10) |
+| R8 | — | P-dark | patches every ≤ 4 min (10) |
+| R4 | — | seed-0 over F1; W-hi4 moved off the hops | a pogo intro where a miss is free (11) |
+| R6 | thorn branch on the jump-glide's hump | over the apex, 76 clear | "hold jump to glide" teaches that arc (first-timer) |
+| R8, R9, R10 | one creature under one lamp | two lamps over the hawker's lane; burrback + dangler + L1 on P; danglers over R8's canopy landing and R10's chute landing | ≥ 4 creature + terrain combinations (6) |
+| R2, R5, R10 | catches at the room's foot | 200 above the foot (R5 grew 200) | the camera kept her in frame until the catch (feel r1) |
+| all | labels on | `art.labels: false` (G shows them) | players saw the designer's notes (first-timer) |
+
+Measured (tests/unit/wood-rooms.test.ts): W7 30 of 45 jump-cuts, L1 20 of 45, W8 18 of 27; the hawker hits a runner
+before she reaches W7 (1.8 s lit first); the chute to the pit 754 frames with jump-glides and no catch; the no-skip
+sweep never gets west of 3584 or above the roof.
 

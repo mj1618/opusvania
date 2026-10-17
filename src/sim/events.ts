@@ -111,11 +111,8 @@ export type SimEvent =
    * `frames` (= `tuning.room.catchFrames`), then `fallReturn` puts her back on her last safe ground.
    */
   | { type: 'fallCatch'; id: string; x: number; y: number; frames: number }
-  /**
-   * Back on her last safe ground after a catch (`x, y` = there); a `spawn` follows at once. She fades in
-   * for `fadeIn` frames (no input, untouchable) and the buttons she held wait to be pressed afresh.
-   */
-  | { type: 'fallReturn'; id: string; x: number; y: number; fadeIn: number }
+  /** Back on her last safe ground after a catch (`x, y` = there); a `spawn` follows at once. */
+  | { type: 'fallReturn'; id: string; x: number; y: number }
   /**
    * The cocoon stirs (`scene.hatch`, src/sim/hatch.ts): a press of any button (`auto` false;
    * `presses` of `of` so far) or, with no input, on its own (`auto`, harder as `frames` grows toward
@@ -574,8 +571,7 @@ export type SimEvent =
   /**
    * She re-formed at the last safe ground (`x`, `y`, feet centre) from where she lay (`fromX`,
    * `fromY`), with full health and `invuln` frames of safety. Living enemies are back at their starts.
-   * A `spawn` event follows in the same step (she was placed: nothing should interpolate). She fades in
-   * for `fadeIn` frames (no input) and the buttons she held wait to be pressed afresh, as after `fallReturn`.
+   * A `spawn` event follows in the same step (she was placed: nothing should interpolate).
    */
   | {
       type: 'reform';
@@ -586,7 +582,6 @@ export type SimEvent =
       hp: number;
       hpMax: number;
       invuln: number;
-      fadeIn: number;
     }
   /**
    * Lantern events (src/sim/goal.ts, memory/goal.md): `x`, `y` = the lantern's foot (its point in

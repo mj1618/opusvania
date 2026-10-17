@@ -614,25 +614,6 @@ export const defaultTuning = withVariants({
     wakePx: 0,
     wakeFrames: 60,
     hunt: false,
-    /**
-     * The old burrback as a first mini-boss (memory/creatures.md, first-timer review r1): it feints only
-     * once its hit points are down to `feintFrom` of its most; `openWinded`: winded after any ram its shell
-     * is open (every cut lands: `stunned`), not only after a wall; `huntSpeed` = its walk while she is more
-     * than `huntFarPx` away (it does not waddle 8 s across its den), and it stops `huntStopPx` short of her;
-     * `riseFrames`: open on its back, it gets up (harmless) before it may brace; `domeContact`: its touch is
-     * its drawn dome (`domeHeight` of the box, round down to `domeShoulder` of that), not the box's corners.
-     */
-    feintFrom: 1,
-    openWinded: false,
-    huntSpeed: 0,
-    huntFarPx: 360,
-    huntStopPx: 24,
-    riseFrames: 0,
-    /** Open, it takes at most this many cuts, then gets up (0 = no limit): a fight of a few exchanges. */
-    openHits: 0,
-    domeContact: false,
-    domeHeight: 0.86,
-    domeShoulder: 0.62,
   },
   /**
    * The lampwing: a small pale moth-wisp that hovers in the open air and is drawn to her light
@@ -1241,32 +1222,20 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       ...(base.burrback as T['burrback']),
       width: 84,
       height: 50,
-      hp: 12,
+      hp: 10,
       speed: 2.2,
       noticePx: 2400,
       dozePx: 0,
       strikePx: 190,
       provokedPx: 300,
-      // First-timer review r1: a shorter tell and a quicker, shorter ram, so a jump anywhere in the tell
-      // clears it and the ram leaves her close; then a long open window (green, on its back) for cuts.
-      windupFrames: 24,
-      chargePx: 240,
-      chargeSpeed: 14,
-      recoverFrames: 70,
-      recoverTiredFrames: 70,
-      recoverWallFrames: 120,
+      chargePx: 260,
+      chargeSpeed: 11,
+      recoverFrames: 44,
+      recoverTiredFrames: 44,
+      recoverWallFrames: 90,
       knockScale: 0.5,
       feintFrames: 18,
-      // (Long enough to answer after the feint with a 20-30 frame reaction.)
-      feintBraceFrames: 30,
-      feintFrom: 0.67,
-      openWinded: true,
-      huntSpeed: 4.2,
-      // (It stops this far off and braces from there: a ram from point blank was unanswerable.)
-      huntStopPx: 140,
-      riseFrames: 18,
-      openHits: 3,
-      domeContact: true,
+      feintBraceFrames: 20,
       pogoShell: true,
       asleep: true,
       wakePx: 1400,

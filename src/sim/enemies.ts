@@ -158,7 +158,6 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     goalSeg: -1,
     goalT: 0,
     cut: '',
-    taken: 0,
   };
   K.place(e, spawn, t);
   if (scene) K.init?.(e, spawn, scene, t);
@@ -341,14 +340,7 @@ export function updateEnemies(
       !(e.mode === 'hurt' && e.modeFrames < frames(K.hurtSafeFrames(t))) &&
       !K.harmless?.(e, I)
     ) {
-      if (
-        p.x < e.x + e.w &&
-        e.x < p.x + p.w &&
-        p.y < e.y + e.h &&
-        e.y < p.y + p.h &&
-        (K.touches?.(e, p, t) ?? true)
-      )
-        touch = i;
+      if (p.x < e.x + e.w && e.x < p.x + p.w && p.y < e.y + e.h && e.y < p.y + p.h) touch = i;
     }
   }
   return touch;
@@ -555,20 +547,7 @@ export function slashEnemies(
     e.hitDir = side;
     e.hitPower = power;
     e.hitFrame = state.frame;
-    const hpWas = e.hp;
     e.hp = Math.max(0, e.hp - Math.max(1, Math.round(power)));
-    // A big creature (a mini-boss) cracks at each third of its health: render's crack and pips (memory/creatures.md).
-    if (e.hpMax >= 6 && e.hp > 0 && Math.ceil((e.hp * 3) / e.hpMax) < Math.ceil((hpWas * 3) / e.hpMax))
-      events.push({
-        type: 'enemyCrack',
-        id: e.id,
-        kind: e.kind,
-        x: e.x + e.w / 2,
-        y: e.y + e.h / 2,
-        hpLeft: e.hp,
-        hpMax: e.hpMax,
-        third: 3 - Math.ceil((e.hp * 3) / e.hpMax),
-      });
     // The killing blow holds longer (feel review problem 2), her and the body alike.
     const kill = e.hp <= 0 && !K.undying?.(e);
     if (kill) KILLS++;
