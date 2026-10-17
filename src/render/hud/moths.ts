@@ -10,6 +10,7 @@
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import { getRoom, WORLD } from '../../scene/index';
+import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView, ViewSize } from '../contract';
 
 export const MOTHS_HUD = {
@@ -55,7 +56,7 @@ export class MothCount {
   private readonly flyers: Flyer[] = [];
   private seed = 0;
   private areaKey = '';
-  private area: { out: number; total: number } | null = null;
+  private area: { out: number; total: number; freed: number; moths: number } | null = null;
 
   constructor(family: string) {
     const style = { fontFamily: family, fontSize: MOTHS_HUD.font, fill: 0xdfe6f2 };
@@ -136,7 +137,7 @@ export class MothCount {
     }
     const area = this.area;
     if (area && a > 0.003) {
-      this.lamps.text = `lamps ${area.out} / ${area.total}`;
+      this.lamps.text = `lamps ${area.out} / ${area.total} · moths ${area.freed} / ${area.moths}`;
       this.lamps.position.set(ix - 10, iy + 34);
       this.lamps.alpha = 0.75 * a;
       this.lamps.visible = true;
@@ -151,13 +152,15 @@ export class MothCount {
   }
 
   /** The area of the room she is in, if its moth-stone has been read: lamps out of all its lamps. */
-  private areaOf(sim: SimView): { out: number; total: number } | null {
+  private areaOf(sim: SimView): { out: number; total: number; freed: number; moths: number } | null {
     const save = sim.save;
     const a = WORLD.areas.find((x) => x.rooms.includes(sim.scene.id));
     if (!a) return null;
     let read = false;
     let total = 0;
     let out = 0;
+    let freed = 0;
+    let moths = 0;
     for (const id of a.rooms) {
       let room: ReturnType<typeof getRoom>;
       try {
@@ -167,11 +170,16 @@ export class MothCount {
       }
       for (const m of room.mothStones ?? []) if (save.taken.includes(`${id}:${m.id}`)) read = true;
       for (const l of room.lures ?? []) {
+        const m = Math.round(tuning.lures.kinds[l.kind]?.moths ?? 0);
         total++;
-        if (save.snuffed.includes(`${id}:${l.id}`)) out++;
+        moths += m;
+        if (save.snuffed.includes(`${id}:${l.id}`)) {
+          out++;
+          freed += m;
+        }
       }
     }
-    return read ? { out, total } : null;
+    return read ? { out, total, freed, moths } : null;
   }
 
   /** A moth: a chevron whose wings beat (the greybox freed moths' look). */

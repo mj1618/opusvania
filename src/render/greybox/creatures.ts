@@ -56,6 +56,12 @@ export const CREATURE = {
   feint: 0xffb347,
 } as const;
 
+/**
+ * A death that is a beat (the old burrback, the area's mini-boss): no shards; after the kill's
+ * freeze it collapses over `collapse` s to `flat` of its height, `grey`, and lies there for the visit.
+ */
+const DEATH = { collapse: 0.7, flat: 0.35, grey: 0x3e3b3d };
+
 /** Seconds per sim frame (render time runs at the sim's rate). */
 const F = 1 / 60;
 /** Squash on a hit: scale x / y at the peak, frames to relax after the hold. */
@@ -83,6 +89,8 @@ interface Fx {
   /** The dive's smear: body centres, newest last, one per sim frame. */
   trail: number[];
   trailFrame: number;
+  /** A big one's body as it fell (feet centre, size, facing): it lies there for the visit. */
+  corpse: { x: number; y: number; w: number; h: number; m: number } | null;
 }
 
 interface Shard {
@@ -119,6 +127,7 @@ function newFx(): Fx {
     diveY: Number.NaN,
     trail: [],
     trailFrame: -1,
+    corpse: null,
   };
 }
 
@@ -337,20 +346,60 @@ export class CreatureView {
     for (const e of sim.enemies) {
       if (e.kind === 'web') continue;
       const f = this.get(e.id);
+      const big = e.kind === 'oldBurrback';
       if (e.gone) {
-        if (f.dieT < 1e5 && !f.burst) this.burst(e, f);
+        if (big && f.corpse) this.husk(back, f.corpse, 1);
+        else if (f.dieT < 1e5 && !f.burst) this.burst(e, f);
         continue;
       }
       if (e.mode === 'dead') {
         if (f.dieT >= 1e5) continue; // dead with no blow seen (a load mid-death): nothing to show
         if (f.dieT < f.dieHold || e.hitstop > 0) {
           this.body(e, front, CREATURE.flash, 1);
+        } else if (big) {
+          // A death that is a beat (the old burrback; explorer r2): after the freeze it does not burst; it
+          // sags, settles and lies there, grey, with a breath of dust. Quiet.
+          if (!f.burst) {
+            f.burst = true;
+            f.corpse = { x: e.x + e.w / 2, y: e.y + e.h, w: e.w, h: e.h, m: e.facing };
+            this.bursts.push({
+              kind: 'ring',
+              x: e.x + e.w / 2,
+              y: e.y + e.h - 6,
+              r: e.w * 0.4,
+              t: 0,
+              life: 0.6,
+            });
+          }
+          if (f.corpse) {
+            f.corpse.x = e.x + e.w / 2;
+            f.corpse.y = e.y + e.h;
+            this.husk(back, f.corpse, Math.min(1, (f.dieT - f.dieHold) / DEATH.collapse));
+          }
         } else if (!f.burst) this.burst(e, f);
         continue;
       }
       this.creature(e, f, sim, clock, back, front);
     }
     this.effects(dt, front);
+  }
+
+  /**
+   * A big one's body, collapsing (`u` 0 -> 1) and then lying: the dome sags to a third of its height and
+   * spreads, its colour drains to a cold grey; a dark crack line across it.
+   */
+  private husk(g: Graphics, c: { x: number; y: number; w: number; h: number; m: number }, u: number): void {
+    const e = u * u * (3 - 2 * u);
+    const sy = 1 - (1 - DEATH.flat) * e;
+    const sx = 1 + 0.12 * e;
+    const w = c.w * sx;
+    const h = c.h * 0.86 * sy;
+    const pts = domePts(w, h, 0.6, this.pa).map((v, i) => (i % 2 === 0 ? c.x - w / 2 + v : c.y - h + v));
+    g.poly(pts).fill({ color: mix(CREATURE.oldBurrback, DEATH.grey, e) });
+    g.moveTo(c.x - w * 0.3, c.y - h * 0.6)
+      .lineTo(c.x - w * 0.05, c.y - h * 0.4)
+      .lineTo(c.x + w * 0.2, c.y - h * 0.7)
+      .stroke({ color: CREATURE.ridge, width: 2, alpha: 0.6 * e });
   }
 
   /** The kill's burst: 8 shards and a ring from the body's centre. */

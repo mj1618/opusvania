@@ -77,6 +77,8 @@ export const cameraTuning = {
       fade: 0.6,
       hurt: 0.5,
       snuff: 0.45,
+      /** The mini-boss's death (the old burrback): the area's loudest kill. */
+      bigKill: 0.55,
       kill: 0.3,
       crack: 0.3,
       wallRam: 0.3,

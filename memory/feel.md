@@ -15,6 +15,7 @@ side (hurt hitstop 8 / last light 14, kill bonus +3, `slashTerrain`, the lure th
 | her last light (`hurt` with hp 0) | 0.6 | 13.9 |
 | her hurt | 0.5 | 10.6 |
 | snuff (`lureSnuff`) | 0.45 | 9.1 |
+| the old burrback's death (`bigKill`) | 0.55 | 12.2 |
 | kill, crack (`enemyCrack`), a ram into a wall, a bark break | 0.3 | 4.9 |
 | hard landing (`land.hard`) | 0.2 | 2.7 |
 | the finisher (`impact` power 2) | 0.12 | 1.2 |

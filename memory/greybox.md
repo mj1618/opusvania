@@ -60,3 +60,13 @@ STUDIO.md: regions are designed and played in grey before any art. A room whose 
 - Wing is dark: the background must stay a step above black (`skyTop #2e3542`, `skyBottom #1c2029`) or she
   disappears; solids are a step lighter still and she stands on a bright top.
 - `?nopickups` keeps lures (they are not pickups).
+
+## Explorer r2 (2026-10-18)
+- Lamps (lures.ts): the core ring brightens and thickens as she nears it (where it catches her); a crisp pale rim
+  with four ticks on the flame whenever a standing forward or up cut would reach it now (`slashBox` vs the flame's
+  box, keen blade included); while caught, the throw's arc is the sim's own `player.lureArc` (dots every 3 frames,
+  brighter once the last beat is due, a ring where she lands) instead of the old arrow.
+- The old burrback's death is a beat (creatures.ts `DEATH`): the kill's long freeze in white, then it sags over
+  0.7 s to a flat grey husk and lies there for the visit; a breath of dust, no shards; shake `bigKill` 0.55.
+- HUD (hud/moths.ts): after the area's moth-stone, "lamps a / b · moths c / d" (moths freed in the area of all its
+  lamps' moths, from `tuning.lures.kinds[kind].moths`).

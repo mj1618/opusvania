@@ -8,6 +8,7 @@
 import type { Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import { flameAt, lureRowNow } from '../../sim/lures';
+import { slashBox } from '../../sim/player/attack';
 import { tuning } from '../../sim/tuning';
 import { withUpgrades } from '../../sim/upgrades';
 import { STAGE_BEATS } from '../camera/stage-cam';
@@ -76,6 +77,8 @@ export class LureView {
     const list = sim.scene.lures ?? [];
     const p = sim.player;
     const T = tuning.lures;
+    // The flame's box half-size with her upgrades (keen blade reaches further), for the reach rim.
+    const FR = list.length > 0 ? withUpgrades(tuning, sim.save).lures.flameRadius : T.flameRadius;
     for (const [id, t] of this.outT) this.outT.set(id, t + dt);
     // First the dark where flames went out: under every field still burning.
     for (let i = 0; i < list.length; i++) {
@@ -136,13 +139,41 @@ export class LureView {
             alpha: grace ? 0.12 : 0.3,
           });
       }
-      // The core.
-      back.circle(lx, ly, K.core).stroke({ color: GB.core, width: held ? 4 : 2, alpha: held ? 1 : 0.6 });
+      // The core: where it catches her. It brightens and thickens as she nears it (explorer r2: the catch read
+      // as an unseen rule).
+      const dc = Math.hypot(p.cx - lx, p.cy - ly);
+      const near = held
+        ? 1
+        : Math.max(0, Math.min(1, 1 - (dc - K.core) / Math.max(1, (K.radius - K.core) * 0.7)));
+      back.circle(lx, ly, K.core).stroke({
+        color: GB.core,
+        width: held ? 4 : 2 + 2 * near,
+        alpha: held ? 1 : 0.45 + 0.5 * near * near,
+      });
       // The flame: a warm dot that breathes.
       const fl = 1 + 0.12 * Math.sin(clock * 9 + i * 1.7) + 0.06 * Math.sin(clock * 23 + i);
       back.circle(lx, ly, T.flameRadius * 1.6 * fl).fill({ color: GB.flame, alpha: 0.18 });
       back.circle(lx, ly, T.flameRadius * 0.75 * fl).fill({ color: GB.flame });
       back.circle(lx, ly - 2, T.flameRadius * 0.32 * fl).fill({ color: GB.flameHot });
+      // In reach of her blade now (a standing forward or up cut would meet the flame's box): a crisp pale
+      // rim and four ticks on the flame, so the snuff is a thing she sees she can do.
+      if (!held && !grace && dc < 400) {
+        const fr = FR;
+        const body = { x: p.x, y: p.y, w: p.w, h: p.h };
+        const hit = (b: { x: number; y: number; w: number; h: number }) =>
+          lx + fr > b.x && lx - fr < b.x + b.w && ly + fr > b.y && ly - fr < b.y + b.h;
+        if (hit(slashBox(body, 'fwd', p.facing, tuning)) || hit(slashBox(body, 'up', p.facing, tuning))) {
+          const rr = fr + 7 + 1.5 * Math.sin(clock * 8);
+          back.circle(lx, ly, rr).stroke({ color: GB.flameHot, width: 2, alpha: 0.85 });
+          for (let k = 0; k < 4; k++) {
+            const a = (k * Math.PI) / 2 + Math.PI / 4;
+            back
+              .moveTo(lx + Math.cos(a) * (rr + 3), ly + Math.sin(a) * (rr + 3))
+              .lineTo(lx + Math.cos(a) * (rr + 10), ly + Math.sin(a) * (rr + 10));
+          }
+          back.stroke({ color: GB.flameHot, width: 2, alpha: 0.85 });
+        }
+      }
       // Guarded by its boss (memory/bosses.md): a silk cage round the flame, the blade passes through.
       if ((sim.lures.live?.shield[i] ?? 0) > 0) {
         back.circle(lx, ly, T.flameRadius * 2.2).stroke({ color: 0xe6ecf5, width: 3, alpha: 0.7 });
@@ -185,17 +216,26 @@ export class LureView {
           front.circle(x, top, 7).fill({ color: k < p.lureBeats ? GB.flameHot : GB.husk, alpha: 0.95 });
           front.circle(x, top, 7).stroke({ color: GB.flameHot, width: 2, alpha: 0.8 });
         }
-        const ox = p.lureAimX;
-        const oy = p.lureAimY;
+        // The throw's arc (`player.lureArc`, the sim's own prediction: where the last beat would send her now):
+        // dots along her flight, brighter once the last beat is due, and a ring where she lands.
         const last = p.lureBeats >= of - 1;
-        const x0 = p.cx + ox * 30;
-        const y0 = p.cy + oy * 30;
-        const x1 = p.cx + ox * (last ? 140 : 90);
-        const y1 = p.cy + oy * (last ? 140 : 90);
-        front.moveTo(x0, y0).lineTo(x1, y1);
-        front.moveTo(x1, y1).lineTo(x1 - ox * 18 - oy * 10, y1 - oy * 18 + ox * 10);
-        front.moveTo(x1, y1).lineTo(x1 - ox * 18 + oy * 10, y1 - oy * 18 - ox * 10);
-        front.stroke({ color: GB.flameHot, width: last ? 4 : 2, alpha: last ? 0.9 : 0.4 });
+        const arc = p.lureArc;
+        const n = arc.length >> 1;
+        for (let k = 1; k < n; k++) {
+          const ax = arc[k * 2] as number;
+          const ay = arc[k * 2 + 1] as number;
+          const fade = 1 - (0.6 * k) / n;
+          front
+            .circle(ax, ay, last ? 3.5 : 2.5)
+            .fill({ color: GB.flameHot, alpha: (last ? 0.85 : 0.4) * fade });
+        }
+        if (n > 1) {
+          const ex = arc[(n - 1) * 2] as number;
+          const ey = arc[(n - 1) * 2 + 1] as number;
+          front
+            .circle(ex, ey, last ? 12 : 9)
+            .stroke({ color: GB.flameHot, width: 2, alpha: last ? 0.8 : 0.35 });
+        }
       }
     }
     // Effects.

@@ -73,7 +73,7 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
         add += B.snuff;
         break;
       case 'enemyDie':
-        add += B.kill;
+        add += e.kind === 'oldBurrback' ? B.bigKill : B.kill;
         break;
       case 'enemyCrack':
         add += B.crack;
