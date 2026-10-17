@@ -56,6 +56,18 @@ fades instead (`CharacterSkin.fade`, character/index.ts): out over the sim's hol
 - The floor-exit seam look-through opened on a hop over a roofed floor exit (the oak's root mesh): it now needs
   nothing under her (`landBelow`) before the room's floor. That was the 20-34 px/f^2 lurch in wood-camera's hollow run.
 
+## Gaps read honestly (round 4, 2026-10-18)
+`camera/index.ts gapAhead` + `gapLook`: at a lip (no ground 40 px past her toes) the view leads half way to the first
+ground across (at most 560 px); in a glide it leads to where her path (speed, sink) meets the world, and the view's
+feet line goes down to it (at most 520 px) on a tighter spring (10). A first-timer glided 15 times into the face of
+R10's pillar: now the pillar's top is seen above her the whole glide. The usual lead counts toward it.
+
+## Hits that answer (round 4)
+Blocked cuts (`enemyBlock`, greybox/creatures.ts `BLOCK_FX`): a 56 px clink star, a ring, five sparks thrown back,
+a dust puff off her feet the recoil's way; shake budget `clang` 0.18. Bark: every `barkHit` chips; a cut whose box
+came within 28 px of unbroken bark in its live frames and hit nothing ticks and shakes the panel ("tink").
+The dangler's tell draws its swing: dashes down the drop, then round the arc toward her side to its end.
+
 ## Gotchas
 - Pixi v8 `Graphics.poly(points)` keeps the array (`new Polygon(flat)` does not copy): a scratch array reused for
   two polys redraws both as the last. creatures.ts `Xf.map` returns a new array every call for this reason.

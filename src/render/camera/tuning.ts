@@ -90,7 +90,7 @@ export const cameraTuning = {
       barkBreak: 0.3,
       hardLand: 0.2,
       finisher: 0.12,
-      clang: 0.1,
+      clang: 0.18,
       capBounce: 0.1,
       /** A cut into rotten bark: the crunch (first-timer r3: it gave no feedback). */
       barkHit: 0.16,
@@ -135,6 +135,25 @@ export const cameraTuning = {
    * glide share takes to come and go; on landing the view eases back on the usual springs.
    */
   glide: { extraX: 300, leadFrames: 26, lookDown: 240, smoothY: 18, easeIn: 22, easeOut: 40 },
+  /**
+   * Gaps read honestly (area1-video-r2, first-timer r4: 15 glides into the same wall; the view lagged and the far
+   * ledge looked in reach). At a lip (no ground `near` px ahead of her toes, facing it) and in a glide, the view leads
+   * toward the far side: the first ground found within `scan` px ahead (no deeper than `below` under her feet), or a
+   * glide's projected meeting with the world (her speed, the glide's sink, `frames` ahead). Half the way there, at
+   * most `lead` px, eased over `ease` frames; in a glide the view's feet line also goes down to the projected
+   * meeting (at most `down` px below her feet), followed on `smoothY` (tighter than the glide's own).
+   */
+  gapLook: {
+    near: 40,
+    scan: 1400,
+    step: 32,
+    below: 640,
+    lead: 560,
+    ease: 24,
+    frames: 150,
+    down: 520,
+    smoothY: 10,
+  },
   /**
    * Standing at a lantern or the heart: once she has stood still for `frames`, within `reachX` /
    * `reachY` of one (its foot), the view eases `share` of the way from her to it (at most `maxX`) and

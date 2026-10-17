@@ -15,6 +15,7 @@
  * same and only sees more around; the clamp to the scene uses the real size.
  */
 import { isGreybox, type Room } from '../../scene/room';
+import { solidAt } from '../../sim/physics/aabb';
 import type { Scene } from '../../sim/scene';
 import type { GameState } from '../../sim/state';
 import { type CameraView, SAFE_H, SAFE_W } from '../contract';
@@ -36,6 +37,9 @@ export interface CameraState {
   tvy: number;
   /** Slow average of the travel direction, -1..1. Scales the look-ahead. */
   lead: number;
+  /** The gap look's eased lead (world px, `gapLook`) and its spring's velocity. */
+  gapX: number;
+  gapV: number;
   /** 0..1: how far the glide framing (longer look-ahead, look-down) is in. */
   glide: number;
   /** Frames she has been on the ground without a break; frames she has stood still. */
@@ -271,6 +275,8 @@ export function createCamera(
     tvy: 0,
     groundY: feet,
     lead: 0,
+    gapX: 0,
+    gapV: 0,
     glide: 0,
     grounded: 0,
     still: 0,
@@ -345,7 +351,16 @@ export function stepCamera(
   cam.glide += ((p.gliding ? 1 : 0) - cam.glide) / (p.gliding ? G.easeIn : G.easeOut);
   const want = Math.max(-1, Math.min(1, p.vx / ct.leadFullSpeed));
   cam.lead += (want - cam.lead) / (ct.leadFrames + (G.leadFrames - ct.leadFrames) * cam.glide);
-  const targetX = cx + cam.lead * (ct.lookaheadX + G.extraX * cam.glide) + cam.restX;
+  // A lip or a glide: lead toward the far side so the landing (or the wall she would meet) is in view.
+  const gap = gapAhead(scene, p, ct);
+  const GL = ct.gapLook;
+  const gapWant = gap ? Math.sign(gap.x - cx) * Math.min(GL.lead, Math.abs(gap.x - cx) / 2) : 0;
+  [cam.gapX, cam.gapV] = smoothDamp(cam.gapX, cam.gapV, gapWant, GL.ease);
+  // (The usual lead counts toward it: the gap look only adds what is missing.)
+  const usual = cam.lead * (ct.lookaheadX + G.extraX * cam.glide);
+  const sg = Math.sign(cam.gapX);
+  const lead = usual + sg * Math.max(0, Math.abs(cam.gapX) - usual * sg);
+  const targetX = cx + lead + cam.restX;
   [cam.fx, cam.fvx] = smoothDamp(cam.fx, cam.fvx, targetX, p.mode === 'dash' ? ct.smoothXDash : ct.smoothX);
 
   if (p.grounded) cam.groundY = feet;
@@ -419,6 +434,12 @@ export function stepCamera(
     // She is sinking: lead below her feet so the landing is in view. Only ever downward.
     cam.targetY = Math.max(cam.targetY, feet + G.lookDown * cam.glide);
     smoothY = G.smoothY;
+    // Down to where the glide meets the world (the far ledge's face or the floor short of it), so a ledge out of
+    // reach is seen to be out of reach; followed tighter, so the view does not lag her sink.
+    if (gap && gap.y > feet) {
+      cam.targetY = Math.max(cam.targetY, Math.min(gap.y, feet + GL.down));
+      smoothY = GL.smoothY;
+    }
   }
   // Rooms with the fall rule: the target never asks for a view past the scene's top or bottom, so the
   // springs ease into the bound instead of being stopped dead by the clamp (a fall toward a catch zone
@@ -439,6 +460,43 @@ export function stepCamera(
   }
   [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, target, smoothY);
   stepZones(cam, scene, cx, p.y + p.h / 2, ct);
+}
+
+/**
+ * Where a gap ahead of her ends (`gapLook`), or null: in a glide, where her path (her speed, the glide's sink)
+ * first meets a solid (the far ledge's face or top, or the floor short of it); standing or walking at a lip facing
+ * a drop, the first ground across it.
+ */
+export function gapAhead(
+  scene: Scene,
+  p: GameState['player'],
+  ct: CameraTuning = cameraTuning,
+): { x: number; y: number } | null {
+  const GL = ct.gapLook;
+  const feet = p.y + p.h;
+  if (p.gliding) {
+    if (Math.abs(p.vx) < 0.5) return null;
+    let x = p.x;
+    let y = p.y;
+    const vy = Math.max(p.vy, 0.5);
+    for (let f = 1; f <= GL.frames; f++) {
+      x += p.vx;
+      y += vy;
+      if (solidAt(scene, x, y, p.w, p.h)) return { x: x + p.w / 2, y: y + p.h };
+    }
+    return { x: x + p.w / 2, y: y + p.h };
+  }
+  if (!p.grounded) return null;
+  const dir = p.facing;
+  const toe = dir > 0 ? p.x + p.w : p.x;
+  // At a lip: no ground right ahead of her toes.
+  if (solidAt(scene, toe + dir * GL.near, feet, 1, 8)) return null;
+  for (let d = GL.near + GL.step; d <= GL.scan; d += GL.step) {
+    const x = toe + dir * d;
+    const land = landBelow(scene, x, feet - 160);
+    if (land <= feet + GL.below) return { x, y: land };
+  }
+  return null;
 }
 
 /** The view between two camera states (alpha 0 = prev, 1 = cur), with the current view's size (zoom 1 outside camera zones). */

@@ -116,3 +116,15 @@ Contract with the builders (room data, render only; none placed yet):
   wide frame shows it on the west horizon.
 - The glimpse holds for the trigger's whole `storyHold` (measured: zoom 0.5 from ~0.9 s to ~3.3 s after the
   trigger at hold 180); a `storyHold` only stretches a beat started the same frame.
+
+## Area 1 round 4, render (2026-10-18)
+- **Tatter leads** (`stage.tatters[].climb`): progress is her nearest point along the path plus `lead` (a floor path
+  walks, a root path climbs in pulls); `vanish: true` fades it out at the path's end (a door) and it stays gone this
+  session. The oak's first visit: builder 2's floor path to the east arch. R8's "walks into the dark way" needs the
+  builders' mark (a path ending in the tunnel's door, `vanish`).
+- **Tatter's halo**: below camera zoom 0.8 a pale disc behind it (full at 0.55), so it reads as someone among the
+  moths in the finale. The hatching tree far is drawn only below zoom 0.8 (it hung in the hollow at play zoom).
+- **The finale frame** (oak vista): x 3100, y -60, zoom 0.6; a sky beat may look `skyAbove` px past the room's top and
+  sides, so the valley east of the rim is in frame; the valley's lights moved past the rim (x 3920-4560, y 620).
+- **The crowd at the far oak's crown** (`STAGING.crowd`, `areaShare`): the area's freed share of moths as specks
+  round the far oak's ring, which brightens with it. In the oak itself the crown cloud is `save.moths`.

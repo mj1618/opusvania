@@ -7,7 +7,8 @@
  */
 import { Container, Graphics, type Text } from 'pixi.js';
 import type { Room } from '../../scene/room';
-import type { SimEvent } from '../../sim/events';
+import type { SimEvent, SlashDir } from '../../sim/events';
+import { slashBox } from '../../sim/player/attack';
 import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
 import { GB } from './palette';
@@ -62,6 +63,9 @@ function rhythmLit(rhythm: string, t0: number): boolean {
   return false;
 }
 
+/** How near (px) a cut's box must come to rotten bark for a graze to show. */
+const BARK_GRAZE = 28;
+
 interface Fx {
   kind:
     | 'chip'
@@ -74,7 +78,8 @@ interface Fx {
     | 'bounce'
     | 'stone'
     | 'grant'
-    | 'nope';
+    | 'nope'
+    | 'tink';
   x: number;
   y: number;
   w: number;
@@ -84,6 +89,7 @@ interface Fx {
 }
 
 const LIFE: Record<Fx['kind'], number> = {
+  tink: 0.3,
   nope: 0.35,
   chip: 0.45,
   break: 0.8,
@@ -199,6 +205,23 @@ export class KitView {
       } else if (e.type === 'slashTerrain' && sim && this.isLock(sim, e.x, e.y)) {
         // A cut into a lock that a later ability or the other side opens: a dull "not yet".
         this.add('nope', e.x, e.y, 0, 0);
+      } else if (e.type === 'slash' && sim) {
+        // Watched over its live frames (`watchGraze`, each step) for a graze on rotten bark.
+        this.live = {
+          dir: e.dir,
+          from: sim.frame + e.startup,
+          to: sim.frame + e.startup + e.active,
+          near: null,
+        };
+      } else if (e.type === 'slashEnd' && this.live) {
+        // A cut that only grazed rotten bark (first-timer r4: a pogo off its edge "gave no feedback at all"):
+        // the panel still shakes and ticks, so a near miss reads as a miss, not as a lock.
+        const near = this.live.near;
+        if (e.hits === 0 && near) {
+          this.shake.set(near.id, 0);
+          this.add('tink', near.x, near.y, 0, 0);
+        }
+        this.live = null;
       } else if (e.type === 'barkBreak') this.add('break', e.x, e.y, e.w, e.h);
       else if (e.type === 'capBounce') {
         this.squash.set(e.id, 0);
@@ -215,6 +238,48 @@ export class KitView {
       else if (e.type === 'flagSet') this.add('flag', e.x, e.y, 0, 0);
       else if (e.type === 'thornHit') this.add('thorn', e.x, e.y - 40, 0, 0);
     }
+  }
+
+  /** The slash in progress (its live frames, sim frame numbers) and the nearest graze on bark seen in them. */
+  private live: {
+    dir: SlashDir;
+    from: number;
+    to: number;
+    near: { id: string; x: number; y: number; d: number } | null;
+  } | null = null;
+
+  /** Each frame: while the slash is live, the nearest bark its box comes within `BARK_GRAZE` px of. */
+  private watchGraze(sim: SimView): void {
+    const L = this.live;
+    if (!L || sim.frame < L.from || sim.frame > L.to + 1) return;
+    const g = this.barkGrazed(sim, L.dir);
+    if (g && (!L.near || g.d < L.near.d)) L.near = g;
+  }
+
+  /**
+   * Unbroken bark within `BARK_GRAZE` px of the cut's box (where she is now, the way it swung): the panel and the
+   * point on it nearest the blade. A down cut reaches below her feet, a forward one ahead of her.
+   */
+  private barkGrazed(sim: SimView, dir: SlashDir): { id: string; x: number; y: number; d: number } | null {
+    const room = sim.scene;
+    const p = sim.player;
+    const box = slashBox({ x: p.x, y: p.y, w: p.w, h: p.h }, dir, p.facing, tuning);
+    const m = BARK_GRAZE;
+    let best: { id: string; x: number; y: number; d: number } | null = null;
+    let bd = Number.POSITIVE_INFINITY;
+    (room.bark ?? []).forEach((b, i) => {
+      if ((sim.kit.bark[i] ?? 0) <= 0 || sim.save.opened.includes(`${room.id}:${b.id}`)) return;
+      const nx = Math.max(b.x, Math.min(box.x + box.w / 2, b.x + b.w));
+      const ny = Math.max(b.y, Math.min(box.y + box.h / 2, b.y + b.h));
+      const gx = Math.max(box.x - nx, 0, nx - (box.x + box.w));
+      const gy = Math.max(box.y - ny, 0, ny - (box.y + box.h));
+      const d = Math.hypot(gx, gy);
+      if (d <= m && d < bd) {
+        bd = d;
+        best = { id: b.id, x: nx, y: ny, d };
+      }
+    });
+    return best;
   }
 
   /** A shut shortcut, a shut gate or a floor panel (a side cut does nothing to it) at (x, y)? */
@@ -235,6 +300,7 @@ export class KitView {
 
   /** `designer`: draw the designer's marks too (camera zones, trigger plates): with the labels (G), not in play. */
   draw(dt: number, clock: number, sim: SimView, designer = true): void {
+    this.watchGraze(sim);
     const room = sim.scene;
     const save = sim.save;
     const g = this.back.clear();
@@ -388,6 +454,22 @@ export class KitView {
             alpha: 0.35 * a,
           });
         }
+      } else if (e.kind === 'tink') {
+        // A graze on bark: a small bright tick star and two splinters, smaller than a chip.
+        const r = 18 + 14 * k;
+        for (let c = 0; c < 4; c++) {
+          const ang = (c / 4) * Math.PI * 2 + Math.PI / 4;
+          f.moveTo(e.x + Math.cos(ang) * 4, e.y + Math.sin(ang) * 4).lineTo(
+            e.x + Math.cos(ang) * r,
+            e.y + Math.sin(ang) * r,
+          );
+        }
+        f.stroke({ color: 0xf2e6c8, width: 3.5, alpha: a });
+        for (let c = 0; c < 2; c++)
+          f.circle(e.x + (c ? 14 : -14) * e.t * 4, e.y - 40 * e.t + 200 * e.t * e.t, 4).fill({
+            color: KC.spore,
+            alpha: 0.5 * a,
+          });
       } else if (e.kind === 'nope') {
         // "Not yet": a dull grey ring and a short cross, no sparks.
         const r = 10 + 14 * k;

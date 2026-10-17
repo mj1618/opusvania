@@ -16,6 +16,7 @@
  * thin and fades.
  */
 import { Container, Graphics, Text } from 'pixi.js';
+import { getRoom, WORLD } from '../../scene/index';
 import type { StageMarks } from '../../scene/stage';
 import type { SimEvent } from '../../sim/events';
 import { flameAt } from '../../sim/lures';
@@ -42,6 +43,10 @@ export const STAGING = {
   twitch: { len: 1.0, every: 6 },
   /** A hawker's snatch from a lamp's swarm: wing scales falling `fall` px over `secs` s. */
   snatch: { secs: 1.1, scales: 3, fall: 70 },
+  /** The hatching tree far: drawn below a camera zoom of `from`, in full `over` lower. */
+  hatchFar: { from: 0.8, over: 0.15 },
+  /** The crowd at the far oak's crown: specks at most (all freed), their size (px at k 1), opacity, spin, ring glow. */
+  crowd: { max: 70, dot: 9, alpha: 0.75, spin: 0.25, ring: 0.5 },
   /** The wing carpet: px of floor per wing, a wing's length, how high the middle is piled, its opacity. */
   carpet: { every: 11, len: 30, pile: 18, alpha: 0.7 },
   /**
@@ -574,11 +579,14 @@ export class StagingView {
   private drawHatchFar(g: Graphics, cam: CameraView, sim: SimView): void {
     const m = this.stage?.hatchTree;
     if (!m) return;
+    // Only in a wide frame (the finale's, the glimpse's): on the oak's floor at play zoom it would hang in the hollow.
+    const wide = Math.min(1, Math.max(0, (STAGING.hatchFar.from - cam.zoom) / STAGING.hatchFar.over));
+    if (wide <= 0) return;
     const f = this.farPlace(m, cam, sim);
     if (!f) return;
     const T = STAGING.oakFar;
     const { x, topY, footY, w, h } = f;
-    const a = T.alpha;
+    const a = T.alpha * wide;
     g.poly([
       x - w * 0.4,
       topY + h * 0.2,
@@ -648,6 +656,31 @@ export class StagingView {
       alpha: T.ringAlpha * pulse,
     });
     g.rect(x - w * 0.18, topY + h * 0.02, w * 0.36, h * 0.6).fill({ color: T.ring, alpha: 0.05 * pulse });
+    // The crowd at the crown (first-timer r4: "moths 40/160 is a counter, not a crowd"): her freed moths of the
+    // area's, a breathing swarm round the ring, more and brighter as she frees them; the ring brightens too.
+    const share = areaShare(sim);
+    if (share > 0) {
+      const C = STAGING.crowd;
+      const n = Math.max(1, Math.round(C.max * share));
+      const rx = w * 0.7;
+      const ry = Math.max(3, h * 0.05);
+      const cy = topY + h * 0.02;
+      const dot = Math.max(1.2, C.dot * k * z);
+      for (let i = 0; i < n; i++) {
+        const a = hash01('crowd', i) * Math.PI * 2 + clock * C.spin * (0.6 + 0.8 * hash01('crowd', i + 50));
+        const rr = 0.55 + 0.75 * hash01('crowd', i + 100);
+        const lift = (0.5 + Math.sin(clock * 1.3 + i) * 0.5) * ry * 2.5;
+        g.circle(x + Math.cos(a) * rx * rr, cy + Math.sin(a) * ry * rr - lift, dot).fill({
+          color: T.ring,
+          alpha: C.alpha * (0.5 + 0.5 * share),
+        });
+      }
+      g.ellipse(x, cy, rx, ry).stroke({
+        color: T.ring,
+        width: Math.max(1, 6 * k * z),
+        alpha: C.ring * share * pulse,
+      });
+    }
   }
 
   /**
@@ -865,4 +898,35 @@ export class StagingView {
 /** The fractional part (hashing). */
 function fract(v: number): number {
   return v - Math.floor(v);
+}
+
+/** Cache for `areaShare`: the save's snuffed count and the room it was worked out for. */
+const SHARE = { key: '', share: 0 };
+
+/**
+ * The share of her area's moths she has freed (0..1): the lamps she has put out in every room of the area she is
+ * in, weighted by the moths each frees (the HUD's tally, hud/moths.ts, without needing the moth-stone read).
+ */
+export function areaShare(sim: SimView): number {
+  const key = `${sim.scene.id}:${sim.save.snuffed.length}`;
+  if (key === SHARE.key) return SHARE.share;
+  const a = WORLD.areas.find((x) => x.rooms.includes(sim.scene.id));
+  let all = 0;
+  let freed = 0;
+  for (const id of a?.rooms ?? []) {
+    let room: ReturnType<typeof getRoom>;
+    try {
+      room = getRoom(id);
+    } catch {
+      continue;
+    }
+    for (const l of room.lures ?? []) {
+      const m = Math.round(tuning.lures.kinds[l.kind]?.moths ?? 0);
+      all += m;
+      if (sim.save.snuffed.includes(`${id}:${l.id}`)) freed += m;
+    }
+  }
+  SHARE.key = key;
+  SHARE.share = all > 0 ? freed / all : 0;
+  return SHARE.share;
 }

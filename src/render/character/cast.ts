@@ -35,19 +35,36 @@ export const COCOON_PIPS = {
 };
 
 /** A climbing Tatter's path (src/scene/stage.ts `tatters[].climb`). */
-type TatterClimb = { path: [number, number][]; lead?: number; speed?: number };
+type TatterClimb = { path: [number, number][]; lead?: number; speed?: number; vanish?: boolean };
 
-/** Tatter's climb: px above her feet it keeps, px/s while it pulls, seconds of each pull and of each rest. */
-export const TATTER_CLIMB = { lead: 420, speed: 260, pull: 0.45, rest: 0.55 };
+type TatterEntry = {
+  t: Tatter;
+  climb: TatterClimb | null;
+  u: number;
+  pull: number;
+  gone: number;
+  key: string;
+};
+
+/** Tatters gone through their door this session (`room:index`): they do not come back on a re-entry. */
+const VANISHED = new Set<string>();
+
+/** Tatter's climb: px along its path ahead of her, px/s, seconds of each pull and rest up a root, seconds to fade through a door. */
+export const TATTER_CLIMB = { lead: 420, speed: 260, pull: 0.45, rest: 0.55, vanish: 0.8 };
+
+/** Tatter's halo: from a camera zoom of `from` (none) to `full`; radius and lift (world px), colour, opacity. */
+export const TATTER_HALO = { from: 0.8, full: 0.55, r: 54, up: 30, color: 0xc6d4ff, alpha: 0.2 };
 
 export class Cast {
   private readonly row: CocoonRow;
   /** Tatter, once per mark (`marks.tatter`, then `marks.stage.tatters`), each with its climb if it has one. */
-  private readonly tatters: { t: Tatter; climb: TatterClimb | null; u: number; pull: number }[] = [];
+  private readonly tatters: TatterEntry[] = [];
   private readonly back = new Painter();
   private readonly front = new Painter();
   private readonly bounds: Rectangle;
   private readonly pips = new Graphics({ label: 'cocoon-pips' });
+  /** A pale halo behind Tatter in a wide frame, so it reads as someone among the moths (the finale at zoom 0.5). */
+  private readonly halo = new Graphics({ label: 'tatter-halo' });
   private pipA = 0;
   private pipN = 0;
 
@@ -58,9 +75,14 @@ export class Cast {
     const room = ctx.scene;
     this.row = new CocoonRow(room);
     const t = room.marks?.tatter;
-    if (t) this.tatters.push({ t: new Tatter(ctx, layer, room, t), climb: null, u: 0, pull: 0 });
-    for (const m of room.marks?.stage?.tatters ?? [])
-      this.tatters.push({ t: new Tatter(ctx, layer, room, m), climb: m.climb ?? null, u: 0, pull: 0 });
+    if (t)
+      this.tatters.push({ t: new Tatter(ctx, layer, room, t), climb: null, u: 0, pull: 0, gone: 0, key: '' });
+    for (const [i, m] of (room.marks?.stage?.tatters ?? []).entries()) {
+      const key = `${room.id}:${i}`;
+      const e = { t: new Tatter(ctx, layer, room, m), climb: m.climb ?? null, u: 0, pull: 0, gone: 0, key };
+      if (VANISHED.has(key)) e.gone = 1;
+      this.tatters.push(e);
+    }
     if (typeof window !== 'undefined') {
       const self = this;
       (window as unknown as { __tatter?: unknown }).__tatter = {
@@ -77,6 +99,7 @@ export class Cast {
     // Behind the hero (she is added after this): the husks, then Tatter.
     layer.addChildAt(this.back.mesh, 0);
     for (const [i, c] of this.tatters.entries()) layer.addChildAt(c.t.mesh, 1 + i);
+    layer.addChildAt(this.halo, 1);
     layer.addChild(this.front.mesh);
     layer.addChild(this.pips);
     const visible = this.row.any;
@@ -159,10 +182,19 @@ export class Cast {
     // Tatter is somewhere only once / until its story flag (`when` / `until`).
     const stirred = events.some((e) => e.type === 'hatchStir');
     const rested = events.some((e) => e.type === 'patchRest');
+    const hl = this.halo.clear();
+    // (The camera's zoom alone: a small window is not a wide frame.)
+    const zoom = Math.abs(this.layer.scale.x);
+    const wide = clamp((TATTER_HALO.from - zoom) / (TATTER_HALO.from - TATTER_HALO.full), 0, 1);
     for (const c of this.tatters) {
       const t = c.t;
       t.mesh.visible = t.present(flags);
       if (!t.mesh.visible) continue;
+      if (wide > 0 && c.gone < 1)
+        hl.circle(t.mesh.position.x, t.mesh.position.y - TATTER_HALO.up, TATTER_HALO.r).fill({
+          color: TATTER_HALO.color,
+          alpha: TATTER_HALO.alpha * wide,
+        });
       if (c.climb) this.climb(c, dt, her);
       // (It is drawn about its mark: her, seen from where it has climbed to.)
       const seen = hatchLink.inside
@@ -178,11 +210,7 @@ export class Cast {
    * A climbing Tatter (`stage.tatters[].climb`): up its path, `lead` px above her feet as she climbs (never back
    * down), in pulls (`TATTER_CLIMB.pull` s on, `rest` s still), at most `speed` px/s, then sat at the path's end.
    */
-  private climb(
-    c: { t: Tatter; climb: TatterClimb | null; u: number; pull: number },
-    dt: number,
-    her: PlayerView,
-  ) {
+  private climb(c: TatterEntry, dt: number, her: PlayerView) {
     const C = c.climb as TatterClimb;
     const K = TATTER_CLIMB;
     const pts = C.path;
@@ -195,14 +223,40 @@ export class Cast {
       lens.push(l);
       total += l;
     }
-    // How far up she is, as a share of the path's rise (the path climbs: y falls).
+    // How far along the path she is (her nearest point on it), plus its lead: up the root as she climbs, along
+    // the floor as she walks.
     const y0 = (pts[0] as [number, number])[1];
-    const y1 = (pts[pts.length - 1] as [number, number])[1];
-    const want = clamp((y0 - (her.feetY - (C.lead ?? K.lead))) / Math.max(1, y0 - y1), 0, 1) * total;
+    let along = 0;
+    let best = Number.POSITIVE_INFINITY;
+    let acc = 0;
+    let vertical = false;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1] as [number, number];
+      const b = pts[i] as [number, number];
+      const l = lens[i - 1] as number;
+      const dx = b[0] - a[0];
+      const dy = b[1] - a[1];
+      const k = l > 0 ? clamp(((her.cx - a[0]) * dx + (her.feetY - a[1]) * dy) / (l * l), 0, 1) : 0;
+      const d = Math.hypot(a[0] + dx * k - her.cx, a[1] + dy * k - her.feetY);
+      if (d < best) {
+        best = d;
+        along = acc + k * l;
+        vertical = Math.abs(dy) > Math.abs(dx);
+      }
+      acc += l;
+    }
+    const want = clamp(along + (C.lead ?? K.lead), 0, total);
+    // Up a root it climbs in pulls; along a floor it walks.
     c.pull = (c.pull + dt) % (K.pull + K.rest);
-    const pulling = c.pull < K.pull;
-    if (pulling && want > c.u)
-      c.u = Math.min(want, c.u + ((C.speed ?? K.speed) * dt * (K.pull + K.rest)) / K.pull);
+    const pulling = !vertical || c.pull < K.pull;
+    const speed = (C.speed ?? K.speed) * (vertical ? (K.pull + K.rest) / K.pull : 1);
+    if (pulling && want > c.u) c.u = Math.min(want, c.u + speed * dt);
+    // Through a door (`vanish`): at the path's end it fades out, and stays gone this session.
+    if (C.vanish && c.u >= total - 1) {
+      c.gone = Math.min(1, c.gone + dt / K.vanish);
+      if (c.gone >= 1) VANISHED.add(c.key);
+    }
+    c.t.mesh.alpha = 1 - c.gone;
     let d = c.u;
     let x = (pts[0] as [number, number])[0];
     let y = y0;
@@ -244,6 +298,7 @@ export class Cast {
 
   destroy(): void {
     this.pips.destroy();
+    this.halo.destroy();
     this.back.mesh.destroy();
     this.front.mesh.destroy();
     for (const c of this.tatters) c.t.destroy();

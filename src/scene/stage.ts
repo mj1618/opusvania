@@ -140,8 +140,8 @@ export const StageSchema = z
     /**
      * More of Tatter (the room's `marks.tatter` is the first; plan r3: the oak holds it at its floor, then on the
      * root after the cut, then by P5 at the finale). Each like `marks.tatter`, here by `when` / `until`; with `climb`
-     * it goes up `path` (from its mark) staying `lead` px above her feet as she climbs (never back down), at most
-     * `speed` px/s, in effortful pulls, and sits at the path's end.
+     * it goes along `path` (from its mark) staying `lead` px ahead of her nearest point on it (never back), at most
+     * `speed` px/s (up a root in effortful pulls), and sits at the path's end, or with `vanish` goes through it.
      */
     tatters: z
       .array(
@@ -154,7 +154,13 @@ export const StageSchema = z
             when: z.string().min(1).optional(),
             until: z.string().min(1).optional(),
             climb: z
-              .object({ path, lead: z.number().optional(), speed: z.number().positive().optional() })
+              .object({
+                path,
+                lead: z.number().optional(),
+                speed: z.number().positive().optional(),
+                /** It goes through a door at the path's end: it fades out there, gone for the session. */
+                vanish: z.boolean().optional(),
+              })
               .strict()
               .optional(),
           })

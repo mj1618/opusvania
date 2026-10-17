@@ -110,8 +110,22 @@ interface Shard {
   life: number;
 }
 
+/** A blocked cut (`enemyBlock`): star radii (side cut / down cut), its life, the ring's, sparks, the recoil puff. */
+export const BLOCK_FX = {
+  star: 56,
+  starDown: 34,
+  life: 0.3,
+  ringLife: 0.28,
+  sparkR: 70,
+  sparkLife: 0.35,
+  puffR: 16,
+  puffLife: 0.45,
+};
+
 interface Burst {
-  kind: 'ring' | 'star';
+  kind: 'ring' | 'star' | 'puff' | 'sparks';
+  /** `puff` / `sparks`: the way they go (unit x). */
+  dir?: number;
   x: number;
   y: number;
   r: number;
@@ -263,7 +277,11 @@ export class CreatureView {
   }
 
   /** Reads this render frame's events. */
-  onEvents(events: readonly SimEvent[]): void {
+  /** `sim` (optional): her, for the recoil puff of a blocked cut. */
+  /** Her centre x this frame (the dangler's tell swings toward her side). */
+  private herX = 0;
+
+  onEvents(events: readonly SimEvent[], sim?: SimView): void {
     for (const e of events) {
       switch (e.type) {
         case 'spawn':
@@ -286,17 +304,42 @@ export class CreatureView {
           break;
         }
         case 'enemyBlock': {
+          // Unmistakable (first-timer r4: "the armoured front gave only a small spark"; HK's nail clink): a big
+          // white clink star and a ring at the blade, sparks thrown back toward her, and a puff of dust off her
+          // feet the way the recoil throws her.
           const f = this.get(e.id);
           f.clangT = 0;
           const big = e.slash !== 'down';
+          const B = BLOCK_FX;
           this.bursts.push({
             kind: 'star',
             x: e.hitX,
             y: e.hitY,
-            r: big ? 34 : 18,
+            r: big ? B.star : B.starDown,
             t: 0,
-            life: big ? 0.22 : 0.14,
+            life: B.life,
           });
+          this.bursts.push({ kind: 'ring', x: e.hitX, y: e.hitY, r: 10, t: 0, life: B.ringLife });
+          const back = big ? -e.facing : 0;
+          this.bursts.push({
+            kind: 'sparks',
+            x: e.hitX,
+            y: e.hitY,
+            r: B.sparkR,
+            t: 0,
+            life: B.sparkLife,
+            dir: back,
+          });
+          if (big && sim)
+            this.bursts.push({
+              kind: 'puff',
+              x: sim.player.cx,
+              y: sim.player.feetY,
+              r: B.puffR,
+              t: 0,
+              life: B.puffLife,
+              dir: back,
+            });
           break;
         }
         case 'hurt':
@@ -344,6 +387,7 @@ export class CreatureView {
 
   /** Draws every creature: bodies into `back` (under her), danger parts and effects into `front`. */
   draw(dt: number, clock: number, sim: SimView, back: Graphics, front: Graphics): void {
+    this.herX = sim.player.cx;
     for (const f of this.fx.values()) {
       f.hitT += dt;
       f.dieT += dt;
@@ -792,9 +836,32 @@ export class CreatureView {
         .lineTo(cx, cy - e.h / 2)
         .stroke({ color: 0xdfe6f2, width: 1.5, alpha: 0.7 });
     if (e.mode === 'windup') {
+      // The tell shows the whole path (first-timer r4: "the dashed line showed a vertical drop, then it swung
+      // sideways into me"): dashes down the drop, then on round the swing's arc toward her side (the side the
+      // sim swings to is hers when the drop ends), its far end marked, and a fainter arc the other way.
       const d = Math.max(0, e.targetY - cy);
       for (let y = 18; y < d; y += 22) back.moveTo(cx, cy + y).lineTo(cx, cy + Math.min(d, y + 10));
       back.stroke({ color: CREATURE.hunt, width: 2, alpha: 0.5 });
+      const D = tuning.dangler;
+      const len = Math.max(1, e.targetY - e.fromY);
+      const reach = Math.asin(Math.min(1, Math.min(D.swingPx, len * 0.9) / len));
+      const side = this.herX < e.fromX ? -1 : 1;
+      for (const sd of [side, -side]) {
+        const strong = sd === side;
+        const n = Math.max(3, Math.round((len * reach) / 22));
+        for (let i = 0; i < n; i += 2) {
+          const a0 = (reach * i) / n;
+          const a1 = (reach * Math.min(n, i + 1)) / n;
+          back
+            .moveTo(e.fromX + Math.sin(a0) * len * sd, e.fromY + Math.cos(a0) * len)
+            .lineTo(e.fromX + Math.sin(a1) * len * sd, e.fromY + Math.cos(a1) * len);
+        }
+        back.stroke({ color: CREATURE.hunt, width: 2, alpha: strong ? 0.6 : 0.2 });
+        if (strong)
+          back
+            .circle(e.fromX + Math.sin(reach) * len * sd, e.fromY + Math.cos(reach) * len, 7)
+            .stroke({ color: CREATURE.hunt, width: 2, alpha: 0.6 });
+      }
     }
     this.spider(
       e,
@@ -954,7 +1021,34 @@ export class CreatureView {
         continue;
       }
       const ease = 1 - (1 - u) * (1 - u);
-      if (b.kind === 'ring') {
+      if (b.kind === 'sparks') {
+        // Five sparks fanned back from the blade (straight up for a down cut), slowing and falling.
+        const d = b.dir ?? 0;
+        for (let k = 0; k < 5; k++) {
+          const a =
+            d === 0 ? -Math.PI / 2 + (k - 2) * 0.5 : (d > 0 ? 0 : Math.PI) + (k - 2) * 0.32 - d * 0.25;
+          const dist = b.r * ease;
+          const x0 = b.x + Math.cos(a) * dist;
+          const y0 = b.y + Math.sin(a) * dist + 90 * b.t * b.t;
+          g.moveTo(x0, y0)
+            .lineTo(x0 - Math.cos(a) * 12 * (1 - u), y0 - Math.sin(a) * 12 * (1 - u))
+            .stroke({ color: CREATURE.flash, width: 3, alpha: 1 - u });
+        }
+      } else if (b.kind === 'puff') {
+        // Dust kicked up behind her feet as she is thrown back: three grey rounds drifting the recoil's way.
+        const d = b.dir ?? 0;
+        for (let k = 0; k < 3; k++) {
+          const ox = d * (10 + 40 * ease) * (0.6 + 0.3 * k) - d * 8 * k;
+          g.circle(
+            b.x + ox,
+            b.y - 6 - 14 * ease * (k % 2 ? 1 : 0.6),
+            b.r * (0.5 + 0.5 * ease) * (1 - 0.2 * k),
+          ).fill({
+            color: 0x8a93a8,
+            alpha: 0.4 * (1 - u),
+          });
+        }
+      } else if (b.kind === 'ring') {
         g.circle(b.x, b.y, b.r + 70 * ease).stroke({
           color: CREATURE.flash,
           width: 4 * (1 - u) + 1,

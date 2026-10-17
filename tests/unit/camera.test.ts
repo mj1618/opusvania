@@ -280,7 +280,8 @@ describe('camera glide', () => {
     expect(g.ahead).toBeGreaterThan(120);
     expect(g.ahead).toBeLessThanOrEqual(ct.lookaheadX + ct.glide.extraX);
     expect(g.below).toBeGreaterThan(60);
-    expect(g.below).toBeLessThanOrEqual(ct.glide.lookDown);
+    // (Down to where the glide meets the world when that is further: `gapLook.down` at most.)
+    expect(g.below).toBeLessThanOrEqual(Math.max(ct.glide.lookDown, ct.gapLook.down));
     // Landed and standing: the glide share runs out and the view comes back to her feet.
     for (let i = 0; i < 400 && !g.s.state.player.grounded; i++) {
       g.s.run('R+J1');

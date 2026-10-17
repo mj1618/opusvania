@@ -21,7 +21,7 @@ import type { CameraView } from '../contract';
 /** Seconds of each beat's ease in / out (the hold is the data's). */
 export const STAGE_CAM = {
   finale: { in: 1.4, out: 1.6 },
-  /** How far over the room's top the finale's wide frame may look (open sky over the crown), px. */
+  /** How far over the room's top (and past its sides) the finale's wide frame may look (open sky over the crown), px. */
   skyAbove: 1600,
   vista: { in: 1.0, out: 1.1 },
   glimpse: { in: 0.7, out: 0.8 },
@@ -159,7 +159,15 @@ export class StageCamera {
     const hw = follow.w / 2 / s.zoom;
     const hh = follow.h / 2 / s.zoom;
     const R = this.room;
-    const tx = R.width > 2 * hw ? Math.min(R.width - hw, Math.max(hw, s.x)) : R.width / 2;
+    // (The finale may also look past the room's sides into the sky beyond: the valley east, the hatching tree west.)
+    const side =
+      s.kind === 'finale' ||
+      (s.kind === 'vista' && R.marks?.stage?.cloud?.flag === R.marks?.stage?.vista?.flag)
+        ? STAGE_CAM.skyAbove
+        : 0;
+    const left = -side;
+    const right = R.width + side;
+    const tx = right - left > 2 * hw ? Math.min(right - hw, Math.max(left + hw, s.x)) : (left + right) / 2;
     // (The finale, or a vista on the cloud's flag, may look up past the room's top into the open sky over the
     // crown: `skyAbove` px.)
     const sky =
