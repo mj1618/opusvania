@@ -369,3 +369,39 @@ describe('the save slot', () => {
     expect(mem.has(SAVE_KEY)).toBe(false);
   });
 });
+
+describe('doors', () => {
+  it('up at a door takes her to the door it names, at rest; the way back too', () => {
+    const t = cloneTuning(defaultTuning);
+    const room = (id: string, to: string): Room => ({
+      id,
+      width: 2000,
+      height: 1000,
+      spawn: { x: 300, y: 800 },
+      solids: [{ tag: 'ground', x: 0, y: 800, w: 2000, h: 200 }],
+      oneWays: [],
+      doors: [{ id: 'hollow', x: 1000, y: 800, to }],
+    });
+    const rooms: WorldRoom[] = [
+      { id: 'a', x: 0, y: 0, placed: true, scene: room('a', 'b#hollow') },
+      { id: 'b', x: 5000, y: 0, placed: true, scene: room('b', 'a#hollow') },
+    ];
+    const world = linkWorld('a', rooms);
+    expect(world.doors).toEqual({
+      'a#hollow': { to: 'b', exit: 'hollow' },
+      'b#hollow': { to: 'a', exit: 'hollow' },
+    });
+    const g = new Game(t, rooms[0]?.scene as Room, 1, () => 0, null, { world });
+    g.mode = 'manual';
+    const events: SimEvent[] = [];
+    g.afterStep.add((ev) => events.push(...ev));
+    g.teleport(1000, 800);
+    g.queueInput([0, U]);
+    for (let i = 0; i < 2 + t.room.transitionFrames; i++) g.stepOnce();
+    expect(events.find((e) => e.type === 'roomExit')).toMatchObject({ id: 'hollow', edge: 'door', to: 'b' });
+    expect(g.state.room).toBe('b');
+    const p = g.state.player;
+    expect([p.x + p.w / 2, p.y + p.h, p.vx]).toEqual([1000, 800, 0]);
+    expect(validateWorld(world)).toEqual([]);
+  });
+});
