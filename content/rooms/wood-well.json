@@ -21,13 +21,12 @@
         "w": 1600,
         "h": 576,
         "lock": true,
-        "zoom": 1.45,
-        "until": "wood-old-burrback-down",
+        "fit": true,
         "bounds": { "x": 1888, "y": 1400, "w": 1728, "h": 840 }
       },
       {
         "id": "window",
-        "x": 3872,
+        "x": 3936,
         "y": 1640,
         "w": 256,
         "h": 216,
@@ -56,9 +55,13 @@
   ],
   "triggers": [
     { "id": "climbed", "x": 2560, "y": 0, "w": 384, "h": 128, "sets": "wood-climbout" },
-    { "id": "window", "x": 3872, "y": 1640, "w": 256, "h": 216, "sets": "wood-window", "hold": 180 }
+    { "id": "window", "x": 3936, "y": 1640, "w": 256, "h": 216, "sets": "wood-window", "hold": 180 }
   ],
-  "catches": [{ "id": "chute", "x": 7040, "y": 1840, "w": 2688, "h": 200 }],
+  "catches": [
+    { "id": "chute-1", "x": 9280, "y": 1840, "w": 448, "h": 200, "back": { "x": 10000, "y": 640 } },
+    { "id": "chute-2", "x": 7968, "y": 1840, "w": 480, "h": 200, "back": { "x": 9150, "y": 896 } },
+    { "id": "chute-3", "x": 7040, "y": 1840, "w": 448, "h": 200, "back": { "x": 7880, "y": 1040 } }
+  ],
   "gates": [
     {
       "id": "plug",
@@ -70,6 +73,7 @@
       "kick": false
     }
   ],
+  "bark": [{ "id": "bark-nest", "x": 3872, "y": 1440, "w": 64, "h": 416 }],
   "solids": [
     { "tag": "ground", "x": 0, "y": 0, "w": 2496, "h": 444, "kick": false },
     { "tag": "ground", "x": 0, "y": 700, "w": 2496, "h": 900, "kick": false },
@@ -90,6 +94,12 @@
     { "tag": "ground", "x": 3872, "y": 1856, "w": 2656, "h": 384 },
     { "tag": "root", "x": 4480, "y": 1728, "w": 288, "h": 128 },
     { "tag": "root", "x": 5600, "y": 1728, "w": 288, "h": 128 },
+    { "tag": "root", "x": 4160, "y": 1440, "w": 96, "h": 72, "kick": false },
+    { "tag": "root", "x": 5136, "y": 1440, "w": 160, "h": 96, "kick": false },
+    { "tag": "root", "x": 6016, "y": 1440, "w": 80, "h": 56, "kick": false },
+    { "tag": "root", "x": 9320, "y": 0, "w": 360, "h": 200, "kick": false },
+    { "tag": "root", "x": 8000, "y": 0, "w": 400, "h": 420, "kick": false },
+    { "tag": "root", "x": 7080, "y": 0, "w": 360, "h": 600, "kick": false },
     { "tag": "ground", "x": 6528, "y": 1152, "w": 512, "h": 1088 },
     { "tag": "ground", "x": 7488, "y": 1040, "w": 480, "h": 1200 },
     { "tag": "ground", "x": 8448, "y": 896, "w": 832, "h": 1344 },
@@ -108,7 +118,8 @@
     { "tag": "root", "x": 2560, "y": 1700, "w": 64 },
     { "tag": "root", "x": 3616, "y": 1660, "w": 96 },
     { "tag": "root", "x": 3776, "y": 1280, "w": 96 },
-    { "tag": "root", "x": 3616, "y": 900, "w": 96 }
+    { "tag": "root", "x": 3616, "y": 1000, "w": 96 },
+    { "tag": "root", "x": 3616, "y": 700, "w": 256 }
   ],
   "lures": [
     { "id": "wick-den", "kind": "wick", "x": 2240, "y": 1760 },
@@ -137,7 +148,7 @@
       "x": 5800,
       "y": 1728,
       "facing": -1,
-      "trail": [[5600, 1728], [5560, 1856], [3960, 1856]],
+      "trail": [[5600, 1728], [5560, 1856], [4320, 1856]],
       "guards": "wick-nest-a"
     },
     {
@@ -166,7 +177,7 @@
       "x": 4680,
       "y": 1728,
       "facing": -1,
-      "trail": [[4480, 1728], [4440, 1856], [3960, 1856]],
+      "trail": [[4480, 1728], [4440, 1856], [4320, 1856]],
       "guards": "wick-nest-b"
     },
     {
@@ -188,6 +199,35 @@
       "follow": "ants-nest-b-1",
       "phase": 0.67,
       "guards": "wick-nest-b"
+    },
+    {
+      "id": "ants-road-1",
+      "kind": "carrier",
+      "x": 2440,
+      "y": 700,
+      "facing": -1,
+      "trail": [[96, 700]],
+      "guards": "wick-road"
+    },
+    {
+      "id": "ants-road-2",
+      "kind": "carrier",
+      "x": 2440,
+      "y": 700,
+      "facing": -1,
+      "follow": "ants-road-1",
+      "phase": 0.33,
+      "guards": "wick-road"
+    },
+    {
+      "id": "ants-road-3",
+      "kind": "carrier",
+      "x": 2440,
+      "y": 700,
+      "facing": -1,
+      "follow": "ants-road-1",
+      "phase": 0.67,
+      "guards": "wick-road"
     },
     {
       "id": "dang-nest-a",
@@ -259,6 +299,21 @@
         "x": 5700,
         "y": 700,
         "text": "gaps 448 / 480 / 448: each a plain jump from its open lip; the first also a walk-off glide"
+      },
+      {
+        "x": 3880,
+        "y": 1400,
+        "text": "the nest's west exit is a BARK PLUG (the ants go down a crack 380 short of it: never a trail over P-den's ledge): cut it (cracks on every cut) to reach the window and the den's door"
+      },
+      {
+        "x": 9300,
+        "y": 1800,
+        "text": "each stair gap its own catch: back on the ledge she fell from, set back from its lip"
+      },
+      {
+        "x": 1800,
+        "y": 640,
+        "text": "the road's mouth on the column's climb: ants walk west into it (W-road's line)"
       },
       {
         "x": 4000,

@@ -887,6 +887,7 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
   it('no bark wall on the path any more; the floor panel past T4 opens to W-pocket and she climbs back out', () => {
     expect((getRoom('wood-glidewalk').bark ?? []).map((b) => b.id)).toEqual(['bark-floor']);
     const s = play('wood-glidewalk', ['glide']);
+    for (const e of s.g.state.enemies) e.gone = true;
     s.g.teleport(7552, 1984);
     let broke = false;
     for (let k = 0; k < 6 && !broke; k++) {
@@ -1327,7 +1328,7 @@ describe('R10 wood-well: the root stair, the nest, the den under the oak, the cl
     return s.run(0, 3);
   }
 
-  it('down the root stair into the nest, the window beat over the den, and the drop to P-den at its door', () => {
+  it('down the root stair into the nest, its bark plug cut, the window beat over the den, and the drop to P-den at its door', () => {
     const s = play('wood-well', ['glide']);
     s.g.teleport(10944, 448);
     stair(s, () => s.feet().x < 6528 && s.g.state.player.grounded && s.feet().y === 1856);
@@ -1341,9 +1342,16 @@ describe('R10 wood-well: the root stair, the nest, the den under the oak, the cl
         s.run(L | (f % 10 === 0 ? J : 0));
         continue;
       }
+      // At the bark plug (the nest's west exit): cut it.
+      if (p.grounded && s.feet().x < 4000 && s.feet().y === 1856) {
+        s.run(L | (f % 8 === 0 ? A : 0));
+        continue;
+      }
       if (p.grounded && solidAt(s.g.scene, s.feet().x - 30, s.feet().y - 8, 1, 1) && f > ju + 1) ju = f + 14;
       s.run(L | (f < ju ? J : 0));
     }
+    expect(has(s.events, 'barkBreak')).toBe(true);
+    expect(s.events.some((e) => e.type === 'fade')).toBe(false);
     expect(s.g.state.save.flags).toContain('wood-window');
     for (let i = 0; i < 120 && !s.g.state.player.grounded; i++) s.run(0);
     expect(s.feet().y).toBe(2112);
@@ -1351,7 +1359,7 @@ describe('R10 wood-well: the root stair, the nest, the den under the oak, the cl
     expect(s.g.state.save.patch).toEqual({ room: 'wood-well', id: 'p-den' });
     // A jump (256) back up to the nest: the den's door is not a trap.
     s.run(R | J, 20);
-    s.run(R, 40);
+    for (let i = 0; i < 300 && !(s.g.state.player.grounded && s.feet().x > 3900); i++) s.run(R);
     expect(s.feet().y).toBe(1856);
   });
 
@@ -1409,6 +1417,57 @@ describe('R10 wood-well: the root stair, the nest, the den under the oak, the cl
         expect(s.feet().y, `from ${x0} glide ${glide}`).toBe(next);
       }
     }
+  });
+
+  it('a fall in a stair gap returns her to the ledge she fell from, set back from its lip (no catch loop)', () => {
+    for (const [x0, back] of [
+      [9500, { x: 10000, y: 640 }],
+      [8200, { x: 9150, y: 896 }],
+      [7260, { x: 7880, y: 1040 }],
+    ] as const) {
+      const s = play('wood-well', ['glide']);
+      for (const e of s.g.state.enemies) e.gone = true;
+      s.g.teleport(x0, 1700);
+      for (let i = 0; i < 200 && !has(s.events, 'fallReturn'); i++) s.run(0);
+      s.run(0, 3);
+      expect(s.feet(), `gap at ${x0}`).toEqual(back);
+    }
+  });
+
+  it('no skip past the den while the old burrback lives: without the claws nothing from its door, the nest or the den floor reaches the column, the road or the nest shaft', () => {
+    let highShaft = Number.POSITIVE_INFINITY;
+    let highColumn = Number.POSITIVE_INFINITY;
+    for (const [x0, y0] of [
+      [3664, 1660],
+      [3700, 1856],
+      [3760, 1856],
+      [3744, 2112],
+      [2600, 2112],
+      [2752, 2112],
+      [2900, 2112],
+      [2592, 1700],
+    ] as const) {
+      for (const k of [4, 10, 16, 22]) {
+        for (const m of [L | J, R | J, J]) {
+          const t = play('wood-well', ['glide']);
+          // (The others out of the way; the old burrback stays: a gone one counts as dead and drops the plug.)
+          for (const e of t.g.state.enemies) if (e.kind !== 'oldBurrback') e.gone = true;
+          t.g.teleport(x0, y0);
+          t.run(0, 2);
+          for (let i = 0; i < k; i++) t.run(m);
+          for (let i = 0; i < 90; i++) {
+            t.run((i % 30 < 14 ? J : 0) | (m & (L | R)));
+            const f = t.feet();
+            if (f.x > 3616 && f.x < 3872) highShaft = Math.min(highShaft, f.y);
+            if (f.x > 2560 && f.x < 2944) highColumn = Math.min(highColumn, f.y);
+          }
+          expect(t.g.state.room, `${x0},${y0}`).toBe('wood-well');
+          expect(t.g.state.save.flags, `${x0},${y0}`).not.toContain('wood-old-burrback-down');
+        }
+      }
+    }
+    expect(highShaft).toBeGreaterThan(1280);
+    expect(highColumn).toBeGreaterThan(1600);
   });
 
   it('the den: through the door at floor level; she walks under the taproot (88 clear), the old burrback (96 tall) cannot', () => {
@@ -1476,7 +1535,7 @@ describe('R10 wood-well: the root stair, the nest, the den under the oak, the cl
   it('the carriers: every trail in the roots ends in the nest, and each line has its lamp', () => {
     for (const id of ['wood-glidewalk', 'wood-silk', 'wood-well']) {
       const ants = (getRoom(id).enemies ?? []).filter((e) => e.kind === 'carrier');
-      expect(ants.length, id).toBeGreaterThanOrEqual(3);
+      expect(ants.length, id).toBeGreaterThanOrEqual(2);
       for (const a of ants) expect(a.guards, `${id} ${a.id}`).toBeDefined();
     }
   });
@@ -1582,15 +1641,29 @@ describe('the west root road (claws): the nest, over the den, under R6, up throu
     expect(s.feet().x).toBeLessThanOrEqual(420);
   });
 
-  it("R5's root panel: floor from above (a lock seen in act 1); from below the claws climb to it and open it for good", () => {
+  it("R5's root grate: floor from above (the shaft seen through it, a lock in act 1); a drop once the old burrback is down; the claws climb up through it", () => {
     const a = play('wood-glade', ['glide']);
     a.g.teleport(2688, 2176);
     a.run(0, 30);
     expect(a.feet().y).toBe(2176);
+    a.run(D, 3);
+    a.run(D | J, 10);
+    a.run(0, 30);
+    expect(a.g.state.room).toBe('wood-glade');
+    expect(a.feet().y).toBe(2176);
+    const d = play('wood-glade', ['glide']);
+    d.g.state.save.flags.push('wood-old-burrback-down');
+    d.run(0, 2);
+    d.g.teleport(2688, 2176);
+    d.run(0, 5);
+    d.run(D, 3);
+    d.run(D | J, 10);
+    for (let i = 0; i < 200 && d.g.state.room === 'wood-glade'; i++) d.run(0);
+    expect(d.g.state.room).toBe('wood-rootshaft');
     const s = play('wood-glade', ['glide', 'wallJump']);
     s.g.teleport(2600, 2490);
-    kickUp(s, L, () => s.g.state.save.opened.includes('wood-glade:panel-road'), 120);
-    expect(s.g.state.save.opened).toContain('wood-glade:panel-road');
+    kickUp(s, L, () => s.feet().y <= 2176 && s.g.state.player.grounded, 240);
+    expect(s.feet().y).toBe(2176);
   });
 });
 

@@ -18,16 +18,30 @@
     { "tag": "trunk", "x": 0, "y": 0, "w": 256, "h": 1024, "kick": "east" },
     { "tag": "trunk", "x": 512, "y": 0, "w": 64, "h": 600, "kick": "west" },
     { "tag": "ground", "x": 576, "y": 0, "w": 4032, "h": 600, "kick": false },
-    { "tag": "ground", "x": 4608, "y": 0, "w": 3776, "h": 428, "kick": false },
+    { "tag": "ground", "x": 4608, "y": 0, "w": 1792, "h": 428, "kick": false },
+    { "tag": "trunk", "x": 6400, "y": 0, "w": 64, "h": 428, "kick": "east" },
+    { "tag": "ground", "x": 6464, "y": 0, "w": 192, "h": 200, "kick": false },
+    { "tag": "trunk", "x": 6656, "y": 0, "w": 64, "h": 428, "kick": "west" },
+    { "tag": "ground", "x": 6720, "y": 0, "w": 1664, "h": 428, "kick": false },
     { "tag": "ground", "x": 256, "y": 900, "w": 3840, "h": 124 },
     { "tag": "root", "x": 4096, "y": 836, "w": 512, "h": 188 },
     { "tag": "root", "x": 4608, "y": 772, "w": 512, "h": 252 },
     { "tag": "ground", "x": 5120, "y": 684, "w": 3264, "h": 340 }
   ],
   "oneWays": [],
-  "lures": [{ "id": "wick-roadside", "kind": "wick", "x": 2400, "y": 720 }],
+  "lures": [
+    { "id": "wick-roadside", "kind": "wick", "x": 2400, "y": 720 },
+    { "id": "wick-niche", "kind": "wick", "x": 6560, "y": 300 }
+  ],
   "routes": [{ "from": "n", "to": "e" }, { "from": "e", "to": "n", "needs": ["wallJump"], "oneWay": true }],
   "marks": {
+    "stage": {
+      "circlers": [
+        { "lure": "wick-niche", "count": 6, "r": 90 },
+        { "lure": "wick-roadside", "count": 3, "r": 95 }
+      ],
+      "oak": { "x": 11136, "y": -384, "top": -3876, "w": 384 }
+    },
     "notes": [
       {
         "x": 300,
@@ -38,8 +52,13 @@
       { "x": 2200, "y": 640, "text": "W-roadside, a pocket lamp on the road" },
       { "x": 4200, "y": 640, "text": "root steps up east (64 each) to R10's road tunnel" },
       { "x": 7600, "y": 360, "text": "east: R10's tunnel over the den, the column, the nest's shaft" }
-    ],
-    "stage": { "oak": { "x": 11136, "y": -384, "top": -3876, "w": 384 } }
+    ]
   },
-  "shots": { "wide": [{ "name": "foot", "x": 600, "y": 900 }, { "name": "steps", "x": 4600, "y": 772 }] }
+  "shots": {
+    "wide": [
+      { "name": "foot", "x": 600, "y": 900 },
+      { "name": "steps", "x": 4600, "y": 772 },
+      { "name": "niche", "x": 6560, "y": 684 }
+    ]
+  }
 }

@@ -46,6 +46,9 @@
     { "tag": "ground", "x": 4000, "y": 1152, "w": 96, "h": 320 },
     { "tag": "ground", "x": 4352, "y": 1152, "w": 128, "h": 640 },
     { "tag": "trunk", "x": 4416, "y": 192, "w": 64, "h": 832, "kick": "west" },
+    { "tag": "root", "x": 0, "y": 0, "w": 480, "h": 640, "kick": false },
+    { "tag": "root", "x": 1120, "y": 0, "w": 520, "h": 300, "kick": false },
+    { "tag": "root", "x": 2880, "y": 0, "w": 512, "h": 400, "kick": false },
     { "tag": "branch", "x": 3904, "y": 512, "w": 512, "h": 64 }
   ],
   "oneWays": [
@@ -84,6 +87,26 @@
   ],
   "marks": {
     "tatter": { "x": 3880, "y": 1152, "facing": -1 },
+    "stage": {
+      "circlers": [{ "lure": "wick-pocket", "count": 1, "r": 70 }],
+      "stragglers": { "count": 2, "path": [[700, 1180], [560, 1230], [432, 1270], [432, 1300]] },
+      "props": [{ "kind": "deadMoth", "x": 420, "y": 1280, "facing": 1 }],
+      "guide": {
+        "path": [
+          [700, 1150],
+          [1900, 1180],
+          [2700, 1050],
+          [3100, 900],
+          [3500, 1040],
+          [3900, 1040],
+          [4224, 1080],
+          [4224, 1420]
+        ],
+        "ahead": 360,
+        "count": 2
+      },
+      "oak": { "x": 17280, "y": 5440, "top": 1948, "w": 384 }
+    },
     "notes": [
       {
         "x": 200,
@@ -143,24 +166,7 @@
         "text": "re-form point: until P1 is rested at, a fade stands her up at the door"
       },
       { "x": 1400, "y": 200, "text": "LANDMARK: the burrback's groove in F2 and the roof over the gap" }
-    ],
-    "stage": {
-      "guide": {
-        "path": [
-          [700, 1150],
-          [1900, 1180],
-          [2700, 1050],
-          [3100, 900],
-          [3500, 1040],
-          [3900, 1040],
-          [4224, 1080],
-          [4224, 1420]
-        ],
-        "ahead": 360,
-        "count": 2
-      },
-      "oak": { "x": 17280, "y": 5440, "top": 1948, "w": 384 }
-    }
+    ]
   },
   "shots": {
     "wide": [

@@ -60,7 +60,8 @@
   "oneWays": [
     { "tag": "root", "x": 1216, "y": 1920, "w": 96 },
     { "tag": "root", "x": 1216, "y": 1792, "w": 96 },
-    { "tag": "root", "x": 1216, "y": 1664, "w": 96 }
+    { "tag": "root", "x": 1216, "y": 1664, "w": 96 },
+    { "tag": "root", "x": 2560, "y": 2176, "w": 256, "noDrop": "wood-old-burrback-down" }
   ],
   "routes": [
     { "from": "spawn", "to": "p2" },
@@ -114,7 +115,7 @@
       {
         "x": 2400,
         "y": 2260,
-        "text": "THE WEST ROOT ROAD comes up here: a root panel in Z's floor, opens from below (claws); from above it is floor"
+        "text": "THE WEST ROOT ROAD's mouth: a root grate in Z's floor over the shaft down (no drop until the old burrback is down; climbs up through it)"
       }
     ],
     "camera": [
@@ -135,6 +136,5 @@
     ]
   },
   "lures": [{ "id": "wick-alcove", "kind": "wick", "x": 1310, "y": 1960 }],
-  "reform": { "x": 448, "y": 1664 },
-  "shortcuts": [{ "id": "panel-road", "x": 2560, "y": 2176, "w": 256, "h": 64, "opens": "s" }]
+  "reform": { "x": 448, "y": 1664 }
 }

@@ -143,17 +143,22 @@ snuff, bounce, L2.
   jump-cut); R9 under the composition to the bark panel; the nest, each pocket's pool to a crack at its west end.
   Carrier trails shift with a room's `dy` in the generator (lib.shift).
 - **Round 6 (area1-video-r4):** the nest's west exit is a bark plug (3872-3936, 1440-1856: the window and the den's
-  door are behind it); its ants go down a crack just short of it (standing at a trail's end she is bitten: a plug at
-  a trail's end faded every bot). Each stair gap has its own catch with `back` on the ledge she fell from, set back
+  door are behind it); its ants go down a crack at 4320, 380 short of it (standing at a trail's end she is bitten: a plug at
+  a trail's end faded every bot; first-timer r6: no trail over a save point's ledge). Each stair gap has its own catch with `back` on the ledge she fell from, set back
   from its lip (`chute-1..3`; the one zone looped a bot 33 times). The road's mouth on the column's climb: ants walk
   west into the tunnel from the column; the nest's claw shaft tops out in a one-way flush with the tunnel's floor
-  (bots hung about a ledge under the lip); the road's own find is a claw niche in its roof (W-niche, stragglers).
+  (bots hung about a ledge under the lip); the road's own find is a claw niche in its roof (W-niche, stragglers). R5's panel is now a root grate
+  (a one-way, `noDrop: wood-old-burrback-down`) over the shaft down: a mouth seen on the main path, a drop after the boss.
   R6's ants moved off T4 into the floor pocket at T5 (they killed 3 runs on the throw-cut's landing). R4's pocket
   is signposted (a straggler circling over the panel, stragglers drifting in, a dead moth on it): the bots don't read
   signposts, so they still miss it. R8's doorway lintel ends 64 over the opening. Dressing: root masses hung high in
   R4, R9 and over the stair's gaps, stalactites in the nest (all above every arc). The generator keeps others'
   stage keys in a base room beside mine (render's `guide`). Human-like: 9 of 9 through; R9's floor to the den's door
-  1:34-2:27; the road 0 of 9.
+  1:34-2:27; the road 0 of 9. Void marks: a 16 px root lip at a gap's lip moved the jump's take-off 40 px early and
+  bots fell short (cut): the voids are the catch zones (`chute-1..3`), for render to haze. No 21-40 px step on a
+  critical-path floor (checked by script over every area-1 room).
+  **The den's flag fires on a `gone` boss too** (src/sim/kit.ts: `dead || gone`): any way the old burrback leaves without
+  dying opens the plug and the glade. A no-skip test (den door, nest, den floor, no claws, the boss alive) holds.
 - A one-way's `noDrop` may name a flag (refuses drop-through until it is set).
 - A floor bark panel is hit by a down cut from the air (cut ~70-90 px over it, falling): each hit bounces
   her; cut as she lands and it hits with no bounce; a standing down cut does not reach it.

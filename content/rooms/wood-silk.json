@@ -34,7 +34,13 @@
     { "tag": "root", "x": 2780, "y": 2600, "w": 64, "h": 24 },
     { "tag": "branch", "x": 2680, "y": 2100, "w": 160, "h": 32, "kick": false },
     { "tag": "branch", "x": 320, "y": 1900, "w": 192, "h": 32, "kick": false },
-    { "tag": "root", "x": 400, "y": 0, "w": 32, "h": 1900, "kick": false }
+    { "tag": "root", "x": 400, "y": 0, "w": 32, "h": 1900, "kick": false },
+    { "tag": "root", "x": 0, "y": 0, "w": 400, "h": 520, "kick": false },
+    { "tag": "root", "x": 432, "y": 0, "w": 768, "h": 520, "kick": false },
+    { "tag": "root", "x": 1200, "y": 0, "w": 900, "h": 360, "kick": false },
+    { "tag": "root", "x": 2100, "y": 0, "w": 1000, "h": 620, "kick": false },
+    { "tag": "root", "x": 3100, "y": 0, "w": 740, "h": 440, "kick": false },
+    { "tag": "root", "x": 3520, "y": 2160, "w": 320, "h": 48, "kick": false }
   ],
   "oneWays": [
     { "tag": "root", "x": 1888, "y": 2752, "w": 96 },

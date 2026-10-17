@@ -149,33 +149,23 @@
       "guards": "wick-ledge"
     },
     {
-      "id": "ants-ledge-1",
+      "id": "ants-pocket-1",
       "kind": "carrier",
-      "x": 4800,
-      "y": 1984,
+      "x": 7528,
+      "y": 2176,
       "facing": 1,
-      "trail": [[5436, 1984]],
-      "guards": "wick-ledge"
+      "trail": [[7792, 2176]],
+      "guards": "wick-pocket"
     },
     {
-      "id": "ants-ledge-2",
+      "id": "ants-pocket-2",
       "kind": "carrier",
-      "x": 4800,
-      "y": 1984,
+      "x": 7528,
+      "y": 2176,
       "facing": 1,
-      "follow": "ants-ledge-1",
-      "phase": 0.33,
-      "guards": "wick-ledge"
-    },
-    {
-      "id": "ants-ledge-3",
-      "kind": "carrier",
-      "x": 4800,
-      "y": 1984,
-      "facing": 1,
-      "follow": "ants-ledge-1",
-      "phase": 0.67,
-      "guards": "wick-ledge"
+      "follow": "ants-pocket-1",
+      "phase": 0.5,
+      "guards": "wick-pocket"
     }
   ],
   "routes": [
@@ -221,7 +211,7 @@
       {
         "x": 4700,
         "y": 1700,
-        "text": "T4: a forgiving landing (the beetle's patrol starts 380 past the lip); W6 beside the beetle, west of it: caught there, a throw right meets its braced front (the throw-cut flips it); ants from W6's pool to the root lip's crack"
+        "text": "T4: a forgiving landing (the beetle's patrol starts 380 past the lip); W6 beside the beetle, west of it: caught there, a throw right meets its braced front (the throw-cut flips it), the beetle alone there (no ants: video r4)"
       },
       {
         "x": 5400,
@@ -236,7 +226,7 @@
       {
         "x": 7300,
         "y": 1700,
-        "text": "T5 at the oak's west door; a bark floor panel opens a pocket with W-pocket"
+        "text": "T5 at the oak's west door; a bark floor panel opens a pocket with W-pocket, its ants carrying wings into the pocket's crack"
       },
       {
         "x": 7000,
