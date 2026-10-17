@@ -11,7 +11,7 @@ import type { SaveState } from './state';
 import type { Tuning } from './tuning';
 
 /** Every upgrade, in the order the region docs list them. */
-export const UPGRADE_IDS = ['quickWings', 'keenBlade'] as const;
+export const UPGRADE_IDS = ['quickWings', 'keenBlade', 'nightEyes'] as const;
 export type UpgradeId = (typeof UPGRADE_IDS)[number];
 
 /** What each one changes. */
@@ -23,6 +23,9 @@ const APPLY: Record<UpgradeId, (t: Tuning) => Tuning> = {
     ...t,
     lures: { ...t.lures, flameRadius: t.lures.flameRadius + t.upgrades.keenBlade.flameRadiusAdd },
   }),
+  // Night eyes (area 1 plan r5): the map shows each room's lamps she has not seen. No sim number: the map
+  // reads `upgradesOwned(save)`.
+  nightEyes: (t) => t,
 };
 
 export function isUpgrade(id: string): id is UpgradeId {

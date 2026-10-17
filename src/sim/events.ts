@@ -178,7 +178,14 @@ export type SimEvent =
       cooldown: number;
       lunge: number;
       hang: number;
+      /** A throw-cut (`player.attackHeavy`): started in a lamp throw's launch, it hits heavy. Always set by the sim. */
+      heavy?: boolean;
     }
+  /**
+   * A throw-cut began (area 1 plan r5): a slash started during a lamp throw's launch. It hits
+   * `attack.throwCutPower` x as hard and holds `throwCutHitstop` longer on what it meets; `seq` = the slash.
+   */
+  | { type: 'throwCut'; x: number; y: number; dir: SlashDir; facing: number; seq: number; step: number }
   /**
    * The slash hit a target (once per target per slash). `x`, `y` = the target's centre; `px`, `py` =
    * the centre of the player's box. `pogo`: a down slash, she bounces off it. `hitstop` = frames the
@@ -571,6 +578,11 @@ export type SimEvent =
       invuln: number;
       hitstop: number;
     }
+  /**
+   * Her freed moths reached a milestone (`health.mothMilestones`, `milestone` = it): one more light (`hpMax`),
+   * and it is filled (`hp`). `x`, `y` = her feet.
+   */
+  | { type: 'healthUp'; x: number; y: number; hpMax: number; hp: number; moths: number; milestone: number }
   /** Her last light went out: she fades for `frames` (no control), then re-forms. */
   | { type: 'fade'; x: number; y: number; frames: number }
   /**

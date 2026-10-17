@@ -94,6 +94,7 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     attackSeq: 0,
     attackHits: 0,
     attackWall: false,
+    attackHeavy: false,
     attackStep: 1,
     attackFinisher: false,
     lungeX: 0,
@@ -355,6 +356,20 @@ function stepOf(c: Ctx): SlashStep {
   return c.P.steps[c.p.attackStep - 1] ?? (c.P.steps[0] as SlashStep);
 }
 
+/** The step's numbers for what it hits: a throw-cut (`attackHeavy`) hits `throwCutPower` x as hard and holds longer. */
+function hitStepOf(c: Ctx): SlashStep {
+  const st = stepOf(c);
+  if (!c.p.attackHeavy) return st;
+  const A = c.P.tuning.attack;
+  const h = Math.max(0, Math.round(A.throwCutHitstop));
+  return {
+    ...st,
+    power: st.power * Math.max(1, A.throwCutPower),
+    hitstopBonus: st.hitstopBonus + h,
+    hitstopFoe: st.hitstopFoe + h,
+  };
+}
+
 /**
  * The slash's own clock, then a buffered press: a slash starts as soon as the cooldown allows, in
  * any mode but the dash (the press waits for the dash to end). It never locks movement.
@@ -401,6 +416,8 @@ function updateSlash(c: Ctx): void {
   p.attackSeq++;
   p.attackHits = 0;
   p.attackWall = false;
+  // The throw-cut: a slash started in a lamp throw's launch is heavy (area 1 plan r5).
+  p.attackHeavy = p.thrown && p.lureThrow > 0 && p.lure < 0;
   p.attackBuf = 0;
   p.attackCd = st.cooldown;
   // Commitment through motion: a lunge on the ground, a brief hang in the air (once per step per airtime).
@@ -426,7 +443,18 @@ function updateSlash(c: Ctx): void {
     cooldown: st.cooldown,
     lunge: p.lungeX,
     hang: p.hang,
+    heavy: p.attackHeavy,
   });
+  if (p.attackHeavy)
+    c.events.push({
+      type: 'throwCut',
+      x: c.fx,
+      y: c.fy,
+      dir,
+      facing: p.attackFacing,
+      seq: p.attackSeq,
+      step,
+    });
 }
 
 /**
@@ -473,7 +501,7 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
   const P = c.P;
   if (p.attack === 'none' || !p.attackActive) return;
   const dir = p.attack;
-  const st = stepOf(c);
+  const st = hitStepOf(c);
   const pogo = dir === 'down' && P.pogo && !p.grounded;
   const box = slashBox(p, dir, p.attackFacing, P.tuning, p.attackStep);
   const podStop = Math.max(0, Math.round(podsT.hitstopFrames)) + st.hitstopBonus;

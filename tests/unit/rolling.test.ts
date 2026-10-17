@@ -81,8 +81,8 @@ describe('rolling ground: step-up and ground snap', () => {
     expect(r.log.some((f) => !f.grounded)).toBe(true);
   });
 
-  it('a 13 px ledge is a wall again, a 13 px drop a fall', () => {
-    const hi = run(rolling(13), { x: 640, y: 800 }, [[R, 60]]);
+  it('a 21 px ledge is a wall again (step-up 20 since area 1 r5), a 13 px drop a fall (snap 12)', () => {
+    const hi = run(rolling(21), { x: 640, y: 800 }, [[R, 60]]);
     expect(hi.s.player.vx).toBe(0);
     // Index 5 (x 920) is the hill's top: east of it every rect steps down 13 px.
     const lo = run(rolling(13), { x: 940, y: rolling(13).solids.find((q) => q.x === 920)?.y ?? 0 }, [

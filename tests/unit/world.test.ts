@@ -306,7 +306,7 @@ describe('moon patches, glades, shortcuts, the re-form', () => {
     expect(s.g.state.player.y + s.g.state.player.h).toBe(2560);
   });
 
-  it('a fade re-forms her at the patch she last rested at, in another room, keeping everything earned', () => {
+  it('a fade re-forms her in the room she died in (area 1 r5: a patch in another room does not count), keeping everything earned', () => {
     const s = play('lab-world-a', null, LAB_WORLD);
     s.g.teleport(1408, 1152);
     s.run(0, s.t.patch.restFrames + 2);
@@ -319,19 +319,21 @@ describe('moon patches, glades, shortcuts, the re-form', () => {
     // Light in her hands, or the creature does not see her (memory/giving.md).
     s.g.state.pickups.count = 6;
     // Walk into the burrback until the blow fades her, then wait out the fade.
-    const ev = s.until(R, () => s.g.state.room === 'lab-world-a', 900);
-    const i = ev.findIndex((e) => e.type === 'roomEnter');
+    const ev = s.until(
+      R,
+      () => s.g.state.player.faded === 0 && s.events.some((e) => e.type === 'reform'),
+      900,
+    );
     expect(ev.some((e) => e.type === 'fade')).toBe(true);
-    expect(ev[i]).toMatchObject({ room: 'lab-world-a', from: 'reform' });
-    expect(ev.slice(i).some((e) => e.type === 'reform')).toBe(true);
+    expect(ev.some((e) => e.type === 'roomEnter')).toBe(false);
+    expect(ev.find((e) => e.type === 'reform')).toBeDefined();
+    expect(s.g.state.room).toBe('lab-world-c');
     const p = s.g.state.player;
-    expect([p.x + p.w / 2, p.y + p.h]).toEqual([1408, 1152]);
     expect(p.hp).toBe(p.hpMax);
     expect(s.g.state.save.abilities).toEqual(['glide']);
     expect(s.g.state.save.taken).toEqual(['lab-world-c:glade-glide']);
-    // No rest event at once (she re-formed in it), and the room is A's own.
-    expect(s.run(0, 60).some((e) => e.type === 'patchRest')).toBe(false);
-    expect(s.g.scene.id).toBe('lab-world-a');
+    // The patch she rested at is still the save's (R takes her there).
+    expect(s.g.state.save.patch).toEqual({ room: 'lab-world-a', id: 'p1' });
   });
 
   it('a lure put out stays out when she comes back, and the moths count once', () => {

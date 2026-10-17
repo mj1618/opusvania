@@ -109,8 +109,9 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
 
 ## Rolling ground (2026-10-17, `tuning.ground`)
 The easy path to slopes: a walk made of narrow flat rects whose tops differ by a few px.
-- **Step-up** (`stepUp` 12): grounded, normal mode, blocked by a ledge at most 12 px high -> she is lifted onto it
-  inside `moveX` (`onBlockX`), speed kept, no event. 13 px is a wall.
+- **Step-up** (`stepUp` **20** since area 1 r5, "tiny steps stop a walk"; it was 12. Not 24 as the plan said: R3's and
+  R9's 24 px root knobs stop her for a standing snuff): grounded, normal mode, blocked by a ledge at most that high -> she is lifted onto it
+  inside `moveX` (`onBlockX`), speed kept, no event. 21 px is a wall.
 - **Ground snap** (`snapDown` 12): on the ground last step, not now, not jumping, `vy >= 0`, and ground within 12 px
   of where she stood at the step's start (gravity's pull counts) -> she follows it down, stays grounded: no `fall`,
   no `land`, coyote untouched. Measured from the step's start y (`c.y0`), or a 13 px drop gets snapped too.

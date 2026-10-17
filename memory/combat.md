@@ -95,6 +95,14 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
   the enemy's kind) and a down slash pogos off them; unlike pods they need a clear line (enemies.md).
 - `impact {x, y, dir, facing, step, power, hits}`: once per blow that hits anything, on its first hit
   frame, for camera and screen effects. The sim shakes nothing.
+- **The throw-cut** (area 1 plan r5, item 2; no new button): a slash *started* during a lamp throw's launch (`player.thrown`
+  and `lureThrow > 0`) is heavy: `player.attackHeavy`, `slash.heavy`, a `throwCut` event, `attack.throwCutPower` 3 x its
+  power on every target (a lantern goes out on one) and `throwCutHitstop` 4 more hitstop. What it does to each creature
+  is the creature's rule (`KindRules.heavy`, the creatures agent's); they should read `attackHeavy` (decided at the
+  slash's start), not the launch at the hit frame.
+- **Health from moths**: `health.mothMilestones` [60, 350, 800, 1400, 2100] (core.md §6): each reached is +1 light
+  (`step` puts them on `health.max`); crossing one fires `healthUp {hpMax, hp, moths, milestone}` and fills it.
+  `mothMilestone(t, moths)` (exported) = `{lights, prev, next}` for the HUD's "x / 60".
 - **A cut into terrain** (feel review problem 10: "slashes at walls feel like whiffs"): a forward or up slash
   that has hit nothing, on its first live frame whose area overlaps a solid beyond her body (forward: in front
   of her body and above her feet less `ground.stepUp`, so the floor and a runnable ledge never count; up: above

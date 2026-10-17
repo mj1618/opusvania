@@ -21,7 +21,7 @@ sim doesn't have yet"). Sim: `src/sim/kit.ts` (+ `kit-data.ts` types, `kit-event
 | `caps` | `[{id, x, y, w, h, tier?: small/mid/big, height?, kick?}]` | bounce cap: a solid (`kit: 'cap'`, never safe ground) whose top throws her up `kit.caps.tiers[tier]` px (or `height`) |
 | `mothStones` | `[{id, x, y (foot on a top), area}]` | touched: draws `area` (world.json `areas`) on the map |
 | `signs` | `[{id, x, y (foot on a top), flag?, rhythm?}]` | firefly sign: read by standing still beside it; `rhythm` `.`/`-` for render |
-| `hollows` | `[{id, x, y, w, h, upgrade}]` | moonlit hollow: body centre inside grants `upgrade` (an id of `UPGRADE_IDS`) |
+| `hollows` | `[{id, x, y, w, h, upgrade}]` | moonlit hollow: body centre inside grants `upgrade` (an id of `UPGRADE_IDS`: `quickWings`, `keenBlade`, **`nightEyes`** (r5: no sim number; the map shows each room's unseen lamps when `upgradesOwned` has it)) |
 | world.json `areas` | `[{id, rooms: [placed ids]}]` | the areas a moth-stone can draw; each room in one area |
 | `lures[].after` | flag | the lure burns only once the flag is set (out before, lit the step it appears, out for good once snuffed: the firefly's glow-cap W-ff after the glimpse) |
 | `oneWays[].noDrop` | bool or a flag (refuses until the flag is set) | down + jump does not drop through it (still passable from below): the hub's root mesh over R10's climb-out, whose drop-through skipped the pit (sim: `noDropUnder` in physics/aabb.ts, checked in `tryJump`) |

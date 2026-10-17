@@ -73,7 +73,7 @@ every ability; `&abilities=none` for the starting kit). Tests: `tests/unit/lures
 | pullXKeep / pullXMax | 0.97 / 12 | half-life ~23 frames: the throw lasts the rest of a jump, not forever |
 | throw direction | the stick, exactly | feel review problem 6: the radius bent by the stick (`freeSteer` 0.8) threw her left in 7 of 34 rhythms holding right and up into W-hi3 in 3. Then a radius share of 0.25 (the review's `held + 0.25 radial`): a glide on from R6's W5 ducked under the thorn branch to T4 in 3 of 8, 0.1 too; 0 never does. Up as the nothing-held default put R3's mashers into W-hi3 in 5 of 9 rhythms, the radius 2 of 9 |
 | catchFrames | 4 | standing still in a core (placed, or a flame swinging onto her) holds her after 4 frames; moving through it outward escapes |
-| glidePullMult | 0.6 | glide is slow, the full pull glued gliders to flames (memory's old "not yet" 1) |
+| glidePullMult | 0.45 (0.6 until area 1 r5: a kinder stair) | glide is slow, the full pull glued gliders to flames (memory's old "not yet" 1) |
 | throwFrames | 20 | the first 20 frames of a throw (~280 px) |
 | orbitSpeed | 7 | ~0.85 s a turn at the last beat's radius: slow enough to time the throw, fast enough to feel held |
 

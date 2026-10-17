@@ -154,7 +154,8 @@ The rule in one line: **stand and mash loses, read the tell and punish wins, and
   With wounds kept every attempt counts; the price is the fade's (a third of the wallet, the walk back).
 - **Since feel review round 2 (problem 7, 2026-10-18) that is the test grove's rule only** (`scene.senses` wallet,
   and scenes built in code). In lamp rooms (every room JSON) a fade costs a walk, not attrition: she re-forms at the
-  moon patch (as before; **a room with `reformPatch` uses its own patch nearest to where she lay, at or below her**, the oak), else
+  moon patch **only if it is in this room** (area 1 r5: "a death re-forms her a room back"; a patch elsewhere does not
+  count; R still goes there) (**a room with `reformPatch` uses its own patch nearest to where she lay, at or below her**, the oak), else
   the room's `reform`, else **her door** (`state.entry`: the first ground she stood on
   in the room), never beside the fight, **whole** (not `reformHp`), and **the creatures heal** (`enemyReset.healed`).
   Fall catches and thorns stay cheap (last ground, movement-controller.md / level-kit.md). Old burrback pilot after

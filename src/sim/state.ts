@@ -81,6 +81,8 @@ export interface PlayerState {
   attackSeq: number;
   attackHits: number;
   attackWall: boolean;
+  /** The throw-cut: this slash started during a lamp throw's launch and hits heavy (`attack.throwCutPower`). */
+  attackHeavy: boolean;
   /**
    * Combo step of the current (or last) slash: 1 the cut, 2 the return cut, 3 the finisher
    * (`attackFinisher`). A down slash is always step 1 and leaves the chain where it was.

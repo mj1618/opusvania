@@ -162,6 +162,30 @@ function glideAssistOver(state: GameState, scene: Scene): boolean {
 }
 
 /**
+ * Health from moth milestones (core.md §6, area 1 plan r5): `lights` = milestones in `health.mothMilestones` her
+ * freed moths (`save.moths`) have reached; `prev` = the last one reached (0 = none), `next` = the one ahead (0 =
+ * all reached). The HUD's "x / 60" is `moths / next`.
+ */
+export function mothMilestone(t: Tuning, moths: number): { lights: number; prev: number; next: number } {
+  let lights = 0;
+  let prev = 0;
+  let next = 0;
+  for (const m of t.health.mothMilestones) {
+    if (moths >= m) {
+      lights++;
+      prev = m;
+    } else if (next === 0) next = m;
+  }
+  return { lights, prev, next };
+}
+
+/** `t` with her earned lights on top of `health.max` (`t` itself with none). */
+function withMothLights(t: Tuning, moths: number): Tuning {
+  const n = mothMilestone(t, moths).lights;
+  return n > 0 ? { ...t, health: { ...t.health, max: t.health.max + n } } : t;
+}
+
+/**
  * The room's moon patch nearest to her (feet) **at or below** where she lies, if it has one (area 1 r4: a fade
  * near the crown re-forms her at the rest ledge, never past the climb, never above where she was).
  */
@@ -282,9 +306,13 @@ export function step(
   events: SimEvent[],
   world?: World,
 ): void {
-  // The moonlit hollows' upgrades she owns, applied to the numbers (src/sim/upgrades.ts).
-  const t = withUpgrades(base, state.save);
+  // The moonlit hollows' upgrades she owns, applied to the numbers (src/sim/upgrades.ts), and the lights her
+  // freed moths have earned (`health.mothMilestones`).
+  const moths0 = state.save.moths;
+  const t = withMothLights(withUpgrades(base, state.save), moths0);
   const P = resolveParams(t, state.save.abilities);
+  // (A loaded or placed player made from the bare numbers takes the earned lights silently.)
+  if (state.player.hpMax < P.hpMax) state.player.hpMax = P.hpMax;
   const first = events.length;
   state.save.time++;
   // The scene as played: closed shortcuts are solids (memory/world.md), and a boss's doors while sealed.
@@ -393,9 +421,10 @@ export function step(
       resetEnemies(state, S, t, events);
       resetBoss(state, scene, t, events);
     }
-    // A room with its own re-form point keeps her in it when her patch is in another room (wood.md R10:
-    // a fade in the well's pit stands her up at the chute's patch, not back at the hub).
-    else if (pr && pp && world && (pr.id === scene.id || !S.reform)) {
+    // A death re-forms her in the room she died in (area 1 plan r5, item 5): in lamp rooms the saved patch
+    // counts only when it is in this room; else the room's `reform` point, else her door (below). (The test
+    // grove's rule: a patch anywhere unless the room names its own `reform`.)
+    else if (pr && pp && world && (pr.id === scene.id || (S.senses !== 'lamp' && !S.reform))) {
       if (pr.id !== scene.id) {
         // Another room: she re-forms there (the room's creatures are fresh anyway).
         gotoRoom(state, t, world, pr.id, pp.x, pp.y, 'reform', events);
@@ -550,6 +579,22 @@ export function step(
   if (S.senses !== 'lamp') markOfferTarget(state, S, t, goalHolds(state.goal, t.goal));
   else if (state.player.offerTarget) state.player.offerTarget = null;
   updateSeen(state, scene, t);
+  // A moth milestone crossed this step (a snuff's moths): one more light, and that light filled.
+  const gained = mothMilestone(base, state.save.moths).lights - mothMilestone(base, moths0).lights;
+  if (gained > 0) {
+    const hp = state.player;
+    hp.hpMax += gained;
+    hp.hp = Math.min(hp.hpMax, hp.hp + gained);
+    events.push({
+      type: 'healthUp',
+      x: hp.x + hp.w / 2,
+      y: hp.y + hp.h,
+      hpMax: hp.hpMax,
+      hp: hp.hp,
+      moths: state.save.moths,
+      milestone: mothMilestone(base, state.save.moths).prev,
+    });
+  }
   // Caught by a lure: the throw's arc from here, for render (src/sim/arc.ts). Last in the step, so a blow
   // that freed her this step leaves no arc behind.
   if (state.player.lure >= 0) state.player.lureArc = lureArc(state, S, t, P, live);

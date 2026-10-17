@@ -187,6 +187,14 @@ export const defaultTuning = withVariants({
      */
     terrainHitstop: 2,
     terrainRecoil: 2,
+    /**
+     * The throw-cut (area 1 plan r5, item 2): a slash started during a lamp throw's launch
+     * (`lures.throwFrames` after beating free) is heavy: `throwCutPower` x its power, `throwCutHitstop` more
+     * hitstop on what it hits, `slash.heavy` / `slashHit.heavy` and a `throwCut` event. What it does to each
+     * creature is the creature's rule (it may read `player.attackHeavy`).
+     */
+    throwCutPower: 3,
+    throwCutHitstop: 4,
   },
   /** Combo step 1: the quick cut. Frames count from the press. */
   slash1: {
@@ -349,7 +357,7 @@ export const defaultTuning = withVariants({
      * the pull; and a core catches her only if she is moving inward (relative to the flame) or has
      * been inside it `catchFrames` frames in a row.
      */
-    glidePullMult: 0.6,
+    glidePullMult: 0.45,
     catchFrames: 4,
     /** Caught: she circles the flame at this share of its core radius, this fast (px/f along the circle). */
     orbitShare: 0.6,
@@ -450,6 +458,11 @@ export const defaultTuning = withVariants({
     hurtDecel: 0.3,
     /** Frames she cannot be hurt again, counted from the hit (the stagger is inside them). */
     invulnFrames: 70,
+    /**
+     * Health from moth milestones (core.md §6; area 1 plan r5): +1 light at each of these freed-moth counts
+     * (`save.moths`), on top of `max`. The first falls before area 1's boss.
+     */
+    mothMilestones: [60, 350, 800, 1400, 2100],
     /**
      * A blow lands (chunk-1 feel review, problem 1: "0 freeze: getting hit has no impact"): she and the
      * creature that hit her hold this many frames before the throw (thorns too); on her last light,
@@ -1263,7 +1276,7 @@ export const defaultTuning = withVariants({
    * down and stays grounded (no fall, no land, coyote untouched). 0 turns either off.
    */
   ground: {
-    stepUp: 12,
+    stepUp: 20,
     snapDown: 12,
   },
   /** Rooms (docs/design/tech.md §2.3). */
