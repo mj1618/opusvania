@@ -5,17 +5,25 @@ A metroidvania whose look and feel could sit next to Ori and the Blind Forest or
 `memory/story.md`: Wing the moth flies by the real moon through the last firefly's false lights to bring her kind
 home. The story is told by the world and the play, not by cutscenes or text. `docs/art-direction.md` is the visual brief and the bar.
 
-## Where we are (2026-10-18)
+## Where we are (2026-10-18, overnight)
 **Wood area 1, in greybox, is being iterated on.** It runs from the hatching branch (`wood-hatch`, the only painted
-room; art is paused) through to the crown of the great oak: 11 rooms, a target of about 35 minutes.
+room; art is paused) to the crown of the great oak: 10 rooms. The hub and the trunk climb are now one room, the oak
+(`wood-hollow`).
 
-**The rebuild.** It follows the director's redesign (`docs/design/regions/wood-area1-director.md`), which came after
-two review rounds and the first-timer reports found the chunk "random and disjointed". The through-line is "up, back
-to the sky". The core set:
+**Where the reviews stand:**
+- **One journey:** the round 4 reviews say area 1 reads as one journey from the vista to the crown, with about ten good
+  beats in 17–20 minutes.
+- **First-timer:** a first-timer agent finished it with 0 deaths and said they'd keep playing.
+- **Gap to the references:** it's close to the reference first areas in shape and staging but below them in depth. It
+  needs a real boss, more creature kinds that work with the lamp, a second kind of reward, a more web-like world, and a
+  role for Tatter.
+- **Next:** round 5 is that depth pass (`docs/design/regions/reviews/area1-plan-r5.md`).
+
+**The design:** the through-line is "up, back to the sky" (`docs/design/regions/wood-area1-director.md`, with the
+revisions at its top). The core set:
 - **The lamp,** with three moments: caught, thrown and snuffed. Each moment has a predator that hunts it: the beetle,
-  the dangler and the hawker.
+  the dangler and the rhythm hawker.
 - **Glide and claws.**
-- **A rule for every room:** the lit line is fast, the dark line is slow and safe.
 
 **Systems in place:**
 - Rooms, exits, saves, moon patches, glades and the map.
