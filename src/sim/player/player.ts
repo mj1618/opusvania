@@ -147,6 +147,8 @@ class Ctx implements Collider {
   skipMove = false;
   dashMoving = false;
   jumped = false;
+  /** Her y at the start of the step (the rolling-ground snap measures the drop from it). */
+  y0 = 0;
 
   constructor(
     readonly p: PlayerState,
@@ -222,6 +224,19 @@ class Ctx implements Collider {
             });
             return true;
           }
+        }
+      }
+      return false;
+    }
+    // Rolling ground: running into a low ledge she rises onto it, speed and grounding kept.
+    if (p.grounded && p.mode === 'normal') {
+      for (let k = 1; k <= P.stepUpPx; k++) {
+        const ny = b.y - k;
+        if (this.solid(b.x, ny)) return false;
+        if (!this.solid(b.x + dir, ny)) {
+          b.y = ny;
+          b.ry = 0;
+          return true;
         }
       }
       return false;
@@ -865,6 +880,7 @@ function controller(c: Ctx): void {
   updateSlash(c);
   const wasGrounded = p.grounded;
   const x0 = p.x;
+  c.y0 = p.y;
   const vy0 = p.vy;
 
   // Wall speed retention: a wall zeroed vx recently and has gone -> restore it. Moving the other
@@ -947,6 +963,19 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
     }
   }
 
+  // Rolling ground: on the ground last frame, not now, and the ground only a few px lower: follow it down.
+  if (wasGrounded && !c.jumped && p.vy >= 0 && p.mode !== 'wallSlide' && !c.groundAt(p.x, p.y)) {
+    // Measured from where she stood: gravity's pull this frame counts toward the drop.
+    for (let k = 1; p.y + k - c.y0 <= P.snapDownPx; k++) {
+      if (c.solid(p.x, p.y + k)) break;
+      if (c.groundAt(p.x, p.y + k)) {
+        p.y += k;
+        p.ry = 0;
+        p.vy = 0;
+        break;
+      }
+    }
+  }
   p.grounded = p.vy >= 0 && c.groundAt(p.x, p.y);
   if (p.grounded) {
     // Coyote: N usable airborne frames after the frame that left the ground.
@@ -980,8 +1009,10 @@ function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void 
 
   // Walls: 1 px probes. While sliding, wallDir stays the slide side.
   const inX = c.inX;
-  const touchR = c.solid(p.x + 1, p.y);
-  const touchL = c.solid(p.x - 1, p.y);
+  // On the ground, a rolling step she would just run up is not a wall.
+  const lip = p.grounded && P.stepUpPx > 0;
+  const touchR = c.solid(p.x + 1, p.y) && !(lip && !c.solid(p.x + 1, p.y - P.stepUpPx));
+  const touchL = c.solid(p.x - 1, p.y) && !(lip && !c.solid(p.x - 1, p.y - P.stepUpPx));
   if (p.mode === 'wallSlide') {
     const d = p.wallDir;
     if (p.grounded || !(d > 0 ? touchR : touchL) || !c.kickable(p.x + d, p.y)) {

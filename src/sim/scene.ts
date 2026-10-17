@@ -117,6 +117,12 @@ export interface RoomExit {
   edge: 'n' | 's' | 'e' | 'w';
   from: number;
   to: number;
+  /**
+   * Where along the span the crossing counts (room px across the edge: y for `s` / `n`, x for `e` /
+   * `w`). Default: the edge itself. A `s` exit with `at` above the room's bottom fires while she is
+   * still in view (the fade over the drop starts sooner); the edge stays open as before.
+   */
+  at?: number;
 }
 
 export interface Scene {

@@ -91,6 +91,18 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
   up onto a lip), dash (≤ 24 px up/down). Each emits `cornerCorrect`.
 - **Performance**: no closures in the per-step path; keep `solidAt` allocation-free.
 
+## Rolling ground (2026-10-17, `tuning.ground`)
+The easy path to slopes: a walk made of narrow flat rects whose tops differ by a few px.
+- **Step-up** (`stepUp` 12): grounded, normal mode, blocked by a ledge at most 12 px high -> she is lifted onto it
+  inside `moveX` (`onBlockX`), speed kept, no event. 13 px is a wall.
+- **Ground snap** (`snapDown` 12): on the ground last step, not now, not jumping, `vy >= 0`, and ground within 12 px
+  of where she stood at the step's start (gravity's pull counts) -> she follows it down, stays grounded: no `fall`,
+  no `land`, coyote untouched. Measured from the step's start y (`c.y0`), or a 13 px drop gets snapped too.
+- **Walls**: on the ground, a rolling step she would run up is not a wall (`touchR/L` ignore it), so `wallDir` stays
+  0 there (a bot keyed on `wallDir` jumped at every rolling step).
+- The test grove has no steps under 64 px: its tests and pilots are unchanged (`tests/unit/rolling.test.ts` covers
+  full speed both ways, jumps, 13 px steps, gap edges, switched off).
+
 ## Reach (default tuning, for laying out the scene)
 - Jump: 272 px high (4.25 tiles), apex after 24 frames (28 with apex hang), ~43 frames of airtime on the
   flat = ~410 px (6.4 tiles) of horizontal travel at run speed (9.6 px/f). Double jump adds 192 px (3 tiles).

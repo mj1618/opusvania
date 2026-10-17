@@ -100,6 +100,9 @@ export interface MoveParams {
   hardLandFallPx: number;
 
   ceilingRate: number;
+  /** Rolling ground: the highest ledge she runs up onto, and the deepest drop she follows down, px. */
+  stepUpPx: number;
+  snapDownPx: number;
 
   hpMax: number;
   hurtVx: number;
@@ -254,6 +257,8 @@ export function resolveParams(t: Tuning, abilities: readonly AbilityId[] = ABILI
     hardLandFallPx: t.misc.hardLandFallPx,
 
     ceilingRate: Math.max(0, Math.min(1, t.ceiling.rate)),
+    stepUpPx: Math.max(0, Math.round(t.ground.stepUp)),
+    snapDownPx: Math.max(0, Math.round(t.ground.snapDown)),
 
     hpMax: Math.max(1, Math.round(t.health.max)),
     hurtVx: t.health.hurtVx,

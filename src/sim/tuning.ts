@@ -768,13 +768,23 @@ export const defaultTuning = {
   ceiling: {
     rate: 0.5,
   },
+  /**
+   * Rolling ground (the easy path to slopes): a run of flat rects whose tops differ by a few px.
+   * Running on the ground into a ledge at most `stepUp` px high, she rises onto it without losing
+   * speed (no jump, no land); when the ground under her drops by at most `snapDown` px she follows it
+   * down and stays grounded (no fall, no land, coyote untouched). 0 turns either off.
+   */
+  ground: {
+    stepUp: 12,
+    snapDown: 12,
+  },
   /** Rooms (docs/design/tech.md §2.3). */
   room: {
     /**
      * Frames she is held after crossing an open room edge (`scene.exits`) before the room restarts
      * (until neighbouring rooms exist). She keeps falling with no input; render fades over them.
      */
-    exitFrames: 42,
+    exitFrames: 36,
     /** Frames she is held after falling into a catch zone (`scene.catches`) before she is back on her last safe ground. */
     catchFrames: 18,
     /** Put back after a catch, she stands at least this far in from the end of the top she fell from, px. */

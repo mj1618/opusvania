@@ -16,7 +16,7 @@ The game is built room by room (docs/design/tech.md). The Grove is the test bed 
 | field | what |
 |---|---|
 | `abilities: AbilityId[]` | the starting kit (`src/sim/abilities.ts`: `glide, wallJump, doubleJump, dash`). Absent = all (test scenes, the grove) |
-| `exits: [{id, edge: n/s/e/w, from, to}]` | an open span of an edge (no wall there: `solidAt` / `kickableAt` honour it). Box centre past the edge inside the span: `roomExit`, she is held `tuning.room.exitFrames` (42) with no input, then the room restarts in the sim (`roomEnter` + `spawn`; `save` and the frame count go on). The target is never authored (stage 1 finds it from world placement) |
+| `exits: [{id, edge: n/s/e/w, from, to, at?}]` | an open span of an edge (`at`: the line across the edge where the crossing counts, default the edge) (no wall there: `solidAt` / `kickableAt` honour it). Box centre past the edge inside the span: `roomExit`, she is held `tuning.room.exitFrames` (42) with no input, then the room restarts in the sim (`roomEnter` + `spawn`; `save` and the frame count go on). The target is never authored (stage 1 finds it from world placement) |
 | `catches: [{id, x, y, w, h}]` | a fall into the rect costs nothing: `fallCatch`, held `catchFrames` (18), then `fallReturn` + `spawn` at her last safe ground, moved `returnInset` (72) px in from that top's end (the lip she fell from loops a hold-right player otherwise) |
 | `hatch: {x, y}` | she starts shut in the cocoon at (x, y) (render); her body stands at `spawn`, no input moves her. Presses of ANY button (a bit set that was not the step before) after `tuning.hatch.listenFrom` (150, the fade-up) stir it (`hatchStir`); the 3rd breaks it (`hatch`); with no input it stirs on its own every 90 frames from 300 and breaks at 720 (`auto`). The breaking press is not also a jump. **`placePlayer` (teleport) ends it silently** |
 State v21: `room`, `save: {abilities}`, `exit`, `caught`, `hatch`. `resolveParams(t, abilities)` turns off what she does not own:
@@ -24,51 +24,57 @@ glide; wall slide AND wall kick (`P.wallJump`, checked in `wallInRange`); double
 in `canDash`). Run, variable jump, fast fall, the blade and pogo stay. The Game harness keeps a granted kit through
 restarts (`Game.setAbilities`, `?abilities=`).
 
-## wood-hatch (round 2, 2026-10-17; tops are walk lines, all `branch` solids)
-Redesigned after review round 1 (docs/design/scenes/reviews/01-round-1.md, problems 3 and 5): longer, with height, no box steps.
-| stretch | x | top y | join to the next (what pf-branch makes of it) |
-|---|---|---|---|
-| trunk | 0-224 | (0-2432) | the bole (`kick: false`) |
-| S1 | 224-1600 | 1024 | the cocoon row: spawn 864; abutting +64: a **burl** |
-| S2 | 1600-2240 | 960 | gap A 256, rising 96: a **fork** |
-| S3 | 2496-2944 | 864 | gap 160, rising 128: fork |
-| S4 | 3104-3520 | 736 | **the crown** (highest). The promise gap begins at its end (3520-5056, `marks.promise`); her way: gap 128, down 160 |
-| S5 | 3648-4320 | 896 | gap B 256, down 64 |
-| S6 | 4576-4928 | 960 | abutting -96: a **knee** |
-| S7 | 4928-5440 | 1056 | gap C 192, down 96 |
-| S8 | 5632-6208 | 1152 | gap D 128, down 128 |
-| S9 | 6336-6592 | 1280 | the end (`marks.drop` 6592, 1280): walk off east = the exit |
-| far | 5056-7424 | 512 | another tree's branch to the east edge: 448+ above every top under it (`rooms.test.ts`) |
-Room 7424 x 2432. Exit `drop`: the south edge 6400-7424. Catch `below`: x 224-6400, y 1600-2432. No ceilingY.
+## wood-hatch (round 3, 2026-10-17): rolling stretches on trees
+Round 2 review (docs/design/scenes/reviews/01-round-2.md, problems 1-2): planks two rounds running because the walk
+was flat in the sim. Now every stretch is a run of 48-128 px rects whose tops roll (steps <= 12 px, the sim's rolling
+ground runs over them: movement-controller.md "Rolling ground"). Generated from control points (scratch script, the
+stretch table below is the source); a test checks widths, abutting, steps <= 12 and a roll >= 8 per stretch.
+| stretch | x | tops (roll) | parent (`from`) | end |
+|---|---|---|---|---|
+| S1 | 224-1504 | 1024 -> 1006 (flat +-2 under the cocoons, 430-1100) | tree `west` (230, 1070) | burl: S2 abuts 64 higher |
+| S2 | 1504-2048 | 938-960 | S1 | fork: gap A 256, S3 ~96 higher |
+| S3 | 2304-2720 | 854-872 | S2 | snap: gap 160 to another tree's limb, 128 higher |
+| S4 | 2880-3296 | 729-740 (the crown) | tree `crown` (3262, 770), grows west | trunk: its root is the crown tree |
+| S5 | 3424-4032 | 890-914 | tree `crown` (3458, 930) | fork: gap B 256, down ~64 |
+| S6 | 4288-4608 | 968-980 | S5 | knee: S7 abuts ~96 lower |
+| S7 | 4608-5056 | 1076-1088 | S6 | snap: gap C 192 (the `droop` tree), down ~96 |
+| S8 | 5248-5760 | 1176-1196 | tree `droop` (5236, 1220) | fork: gap D 128, down ~128 |
+| S9 | 5888-6112 | 1316-1332 | S8 | tip: the exit |
+Trees (`marks.trees`, centre x / width / top..bottom): `west` 112 / 224 / -500..2816, the only solid; `crown` 3360 / 200 /
+-500..2816 (the gap between S4 and S5 is this trunk: she drops past it); `droop` 5152 / 170 / 260..2816. All `plane: 'walk'`.
+`marks.farBranch`: no collision now, a polyline for a back layer, (4930, 536) -> (7700, 470), width 56; `promise` 3296..4930, y 736.
+Room 7424 x 2816. Exit `drop`: the south edge 6144-7424, **`at` 1790** (fires while she is still in the frame).
+Catch `below`: x 224-6144, y 1600-2816. A caught fall returns her `returnInset` in from the end of the whole rolling top.
 - **Rules learned for paintable joins:** abutting steps only for small changes (a +64 burl, a -96 knee); bigger height
-  changes go across a gap (the painter makes a fork with a dipping main mass). Abutting +96 / +128 / -192 steps
-  painted as square boxes. Vary the stretch lengths (a test keeps them distinct).
+  changes go across a gap. Abutting +96 / +128 / -192 steps painted as square boxes. Rolling tops: the painter must
+  group rects by `marks.stretches` (until it does, every rect join reads as a burl with struts: round 3's first shots).
 - **The room may not be wider than ~7450** (with the wood's far plans): far0 must bake as ONE tile (coverage x 0.62
   <= 2048 px), or far.ts cannot build the far pair pass, the opaque far composite hides the sky and **the moon
-  vanishes** (seen at 8192). Guarded in `rooms.test.ts`. `art.anchorX` 2560 keeps the backdrop lined up as it was
-  composed (for the old 5120 room): new field, default the room's centre.
-- Timing: the naive bot (hold right, 14-frame jump 12 px from an edge or when blocked; also 24 px) takes **11.6 s
-  from the hatch to the exit** with no catches (12.1-14.3 s with a 2.5 s look at the swarm). A first-time player who
-  watches the pass: ~15-20 s. Room for more length is limited by the far0 tile (above).
-- Marks: cocoon hang points are now **on S1's underside** (top + painter thickness ~96-124: y 1148..1120 from west
-  to east), irregular gaps 52-108, `len` 78-130 (silk + body), hers at 864 (len 130). With the feet line at 0.62
-  the closed one's body sits at ~0.72-0.82 of the frame (the look target's 0.62-0.70 needs a thinner limb there).
-  Tatter 1210 facing west. `swarm` polyline crosses the moon at (1420, 544) in the opening frame. `camera` hints:
-  vista (960, 894), swarm (1090, 734), promise (4288, 636), drop (6592, 1650).
-- `art`: kit `wood`, seed 7, moon (view px 1420, 190, r 88), afterglow (1500, 850, 1.0), `anchorY` 880, `anchorX` 2560.
+  vanishes** (seen at 8192). Guarded in `rooms.test.ts`. `art.anchorX` 2560 keeps the backdrop lined up.
+- **The end must be ~1300 px short of the east edge** for the fall to stay mid-frame (she drifts ~400 px east
+  before the fade is black; the camera's east clamp is width - 960 on 16:9). So the route was shortened ~480 px.
+- Timing: the naive bot takes **10.2 s from the hatch to the exit**, no catches (13.0 s with a 2.5 s look at the
+  swarm); a player who looks: ~15-20 s. Leaving the branch to black: ~1.0 s walking off, ~1.15 s jumping off.
+- Marks unchanged in meaning: cocoon hang points on S1's underside (S1 is flat +-2 there, so they stay put), Tatter
+  (1210, 1019), swarm through the moon (1420, 544), camera hints vista / swarm / promise (4110, 636) / drop (6300, 1700).
 
 ## The room camera (`room.camera`, src/render/camera/)
 - Framing overrides: `cameraFor(room)` (tuning.ts) = `cameraTuning` + `anchorY` / `lookaheadX` / `fallLookahead` /
   `smoothYFall` from the room; a room with none (test-grove) gets `cameraTuning` itself. wood-hatch: feet line 0.62
-  (grove 0.72), fall lead 320.
-- Beats (`beats.ts` `CameraBeats`, render-side offsets like the kick): `hatchKick` 8 px down on `hatch`, back in ~0.3 s;
-  `lean` (130 right, 160 up) on SIM time after `hatch`: in 2.4-3.8 s, held to 8.0, out by 9.5, the swarm's
-  `SWARM_PASS` (src/render/swarm/timing.ts; the numbers are copied into the room JSON, keep them in step). Any
-  placement except a fall's return ends it.
-- `fadeIn` 2.5 s (room-fade.ts): up from black at boot (**not when booted `?manual`**: tools and tests want the
-  picture at once), on every restart (`load()` / R) and after a room exit. Matches the sim's 150-frame listen.
-- The exit: the room runs 832 px past the branch end, so the follow camera (and its fall lead) frames the end at
-  ~0.57 (16:9) to 0.68 (21:9) and follows her down; the fade reaches black ~1.4 s after she leaves the branch.
+  (grove 0.72), fall lead 320, fall follow 4 frames.
+- Beats (`beats.ts` `CameraBeats`, render-side offsets like the kick):
+  - `hatchFrame` {y 130, hold 2.4, out 1.4}: shut in, the view sits 130 px lower, so the cocoon is framed at ~0.62-0.70
+    (the walk line at ~0.50); after `hatch` it holds 2.4 s and eases back over 1.4 s.
+  - `hatchKick` 8 px down on `hatch`, back in ~0.3 s.
+  - `lean` (130 right, 160 up) on SIM time after `hatch`: in 2.4-3.8 s, held to 8.0, out by 9.5 (the swarm's
+    `SWARM_PASS`; numbers copied into the room JSON).
+  - **Both yield to the run**: they hold only while she is shut in or on the ground slower than 2.5 px/f; once she
+    runs they give way in 0.35 s (feet back at 0.62), and come back over 0.9 s if she stops.
+  - Any placement except a fall's return ends them.
+- `fadeIn` 2.5 s (room-fade.ts): up from black at boot (**not when booted `?manual`**), on every restart and after a
+  room exit. Matches the sim's 150-frame listen.
+- The exit: while `state.exit` is set and she falls, the follow camera leads her down every frame (target feet +
+  `fallLookahead`, `smoothYFall`): she stays at ~0.36-0.6 of the frame until it is black.
 
 ## Per-room look: what is per room now, what is still Grove-only
 `src/render/scene/lib/room-look.ts` `setRoomLook(room)` runs first in `RenderStage` (shaders are built after it, so

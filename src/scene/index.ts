@@ -110,7 +110,15 @@ const SceneSchema = z
     abilities: z.array(z.enum(ABILITIES)).optional(),
     exits: z
       .array(
-        z.object({ id: z.string().min(1), edge: z.enum(['n', 's', 'e', 'w']), from: int, to: int }).strict(),
+        z
+          .object({
+            id: z.string().min(1),
+            edge: z.enum(['n', 's', 'e', 'w']),
+            from: int,
+            to: int,
+            at: int.optional(),
+          })
+          .strict(),
       )
       .optional(),
     catches: z
@@ -155,6 +163,45 @@ const SceneSchema = z
           .optional(),
         swarm: z.array(z.tuple([z.number(), z.number()])).optional(),
         promise: z.object({ x0: int, x1: int, y: int }).strict().optional(),
+        trees: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1),
+                x: int,
+                w: int.positive(),
+                top: int,
+                bottom: int,
+                plane: z.enum(['walk', 'back']),
+                solid: z.boolean().optional(),
+              })
+              .strict(),
+          )
+          .optional(),
+        stretches: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1),
+                x0: int,
+                x1: int,
+                parent: z.string().min(1),
+                from: z.tuple([int, int]),
+                grows: z.enum(['east', 'west']),
+                end: z.enum(['burl', 'knee', 'fork', 'snap', 'trunk', 'tip']),
+              })
+              .strict(),
+          )
+          .optional(),
+        farBranch: z
+          .object({
+            points: z.array(z.tuple([z.number(), z.number()])).min(2),
+            width: z.number().positive(),
+            tipWidth: z.number().positive().optional(),
+            tree: z.string().optional(),
+          })
+          .strict()
+          .optional(),
         drop: z.object({ x: int, y: int }).strict().optional(),
         camera: z
           .array(
@@ -180,6 +227,10 @@ const SceneSchema = z
         smoothYFall: z.number().positive().optional(),
         fadeIn: z.number().min(0).max(10).optional(),
         hatchKick: z.number().min(0).max(40).optional(),
+        hatchFrame: z
+          .object({ y: z.number(), hold: z.number().min(0), out: z.number().positive() })
+          .strict()
+          .optional(),
         lean: z
           .object({
             x: z.number(),

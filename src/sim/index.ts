@@ -22,7 +22,7 @@ import {
 } from './player/player';
 import { createPods, updatePods } from './pods';
 import { seedRng } from './rng';
-import type { Scene } from './scene';
+import type { Scene, SolidRect } from './scene';
 import { markSeen } from './seen';
 import type { GameState } from './state';
 import type { Tuning } from './tuning';
@@ -71,6 +71,36 @@ function restartRoom(state: GameState, t: Tuning, scene: Scene, from: string, ev
   Object.assign(state, { ...fresh, frame: state.frame, rng: state.rng, save: state.save });
 }
 
+/**
+ * Where a caught fall puts her back: her last safe ground, moved `room.returnInset` px in from the end
+ * of the top she fell from. A rolling top is a run of abutting rects whose tops differ by at most
+ * `ground.stepUp`: the run is the top, and she lands on whichever of its rects is under the new x.
+ */
+function returnPoint(sx: number, sy: number, scene: Scene, t: Tuning): { x: number; y: number } {
+  const solids = scene.solids;
+  const step = Math.max(0, Math.round(t.ground.stepUp));
+  const at = solids.find((q) => q.y === sy && sx >= q.x && sx < q.x + q.w);
+  if (!at) return { x: sx, y: sy };
+  const next = (q: SolidRect, dir: 1 | -1): SolidRect | undefined =>
+    solids.find(
+      (o) =>
+        o !== q &&
+        o.tag !== 'trunk' &&
+        Math.abs(o.y - q.y) <= step &&
+        (dir > 0 ? o.x === q.x + q.w : o.x + o.w === q.x),
+    );
+  let x0 = at.x;
+  let x1 = at.x + at.w;
+  for (let q = next(at, -1); q; q = next(q, -1)) x0 = q.x;
+  for (let q = next(at, 1); q; q = next(q, 1)) x1 = q.x + q.w;
+  const inset = Math.min(Math.round(t.room.returnInset), Math.floor((x1 - x0) / 2));
+  const x = Math.round(Math.max(x0 + inset, Math.min(x1 - inset, sx)));
+  const under = solids.find(
+    (q) => q.tag !== 'trunk' && x >= q.x && x < q.x + q.w && Math.abs(q.y - sy) <= 4 * step + 1,
+  );
+  return { x, y: under ? under.y : sy };
+}
+
 /** The catch zone her box centre is in, if any. */
 function inCatch(state: GameState, scene: Scene): string | null {
   const zones = scene.catches;
@@ -94,12 +124,12 @@ function crossedExit(state: GameState, scene: Scene): { id: string; edge: 'n' | 
     if (along < e.from || along > e.to) continue;
     const out =
       e.edge === 's'
-        ? cy > scene.height
+        ? cy > (e.at ?? scene.height)
         : e.edge === 'n'
-          ? cy < 0
+          ? cy < (e.at ?? 0)
           : e.edge === 'e'
-            ? cx > scene.width
-            : cx < 0;
+            ? cx > (e.at ?? scene.width)
+            : cx < (e.at ?? 0);
     if (out) return e;
   }
   return null;
@@ -152,15 +182,9 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
   // Caught after a fall: held a moment, then back on her last safe ground (it costs nothing).
   if (state.caught && ++state.caught.frames >= Math.max(1, Math.round(t.room.catchFrames))) {
     const id = state.caught.id;
-    const y = state.player.safeY;
-    // Not on the very lip she fell from: a step in from the end of that top.
-    let x = state.player.safeX;
-    const inset = Math.round(t.room.returnInset);
-    for (const q of scene.solids) {
-      if (q.y !== y || x < q.x || x >= q.x + q.w) continue;
-      x = Math.max(q.x + Math.min(inset, q.w / 2), Math.min(q.x + q.w - Math.min(inset, q.w / 2), x));
-      x = Math.round(x);
-    }
+    const back = returnPoint(state.player.safeX, state.player.safeY, scene, t);
+    const x = back.x;
+    const y = back.y;
     events.push({ type: 'fallReturn', id, x, y });
     placePlayer(state, x, y, t, scene, events);
   }

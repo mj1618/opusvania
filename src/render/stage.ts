@@ -204,7 +204,12 @@ export class RenderStage {
     const events = this.pending;
     this.pending = [];
     this.kick.update(dt, events);
-    this.beats.update(dt, this.game.state.frame, alpha);
+    const st = this.game.state;
+    this.beats.update(dt, st.frame, alpha, {
+      hatch: st.hatch,
+      vx: st.player.vx,
+      grounded: st.player.grounded,
+    });
     const rs = this.reformShot;
     rs.update(dt);
     this.dip.set(rs.dip, vs);

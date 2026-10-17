@@ -218,6 +218,12 @@ export function stepCamera(
     if (cam.grounded > ct.settleFrames || cam.glide > 0.02 || d < -ct.landUp || d > ct.landDown)
       cam.targetY = line;
   }
+  if (s.exit && p.vy > 0) {
+    // Leaving the room by a drop: lead her down every frame, so she falls through the middle of the
+    // frame while the room fades out (rooms without exits never get here).
+    cam.targetY = feet + ct.fallLookahead;
+    smoothY = ct.smoothYFall;
+  }
   if (p.gliding) {
     // She is sinking: lead below her feet so the landing is in view. Only ever downward.
     cam.targetY = Math.max(cam.targetY, feet + G.lookDown * cam.glide);

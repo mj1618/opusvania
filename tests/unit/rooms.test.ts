@@ -8,7 +8,7 @@ import { coverRect } from '../../src/render/scene/lib/bg-bake';
 import { DEFAULT_ROOM, GROVE, getRoom, parseScene, ROOM_IDS, WOOD_HATCH } from '../../src/scene/index';
 import { ABILITIES } from '../../src/sim/abilities';
 import type { SimEvent } from '../../src/sim/events';
-import { createState, type GameState, step } from '../../src/sim/index';
+import { createState, type GameState, placePlayer, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
 import { solidAt } from '../../src/sim/physics/aabb';
 import { resolveParams } from '../../src/sim/player/params';
@@ -183,9 +183,9 @@ describe('falls and the exit', () => {
   it('a fall off the branch costs nothing: caught, she is back on her last ground at once', () => {
     const s = sim(WOOD_HATCH);
     hatched(s);
-    // Stand on the burl's stretch a while (safe ground), then walk off the edge of gap A (2240).
-    s.state.player.x = 2000;
-    s.state.player.y = 960 - s.state.player.h;
+    // Stand on S2 a while (safe ground), then walk off the edge of gap A.
+    const s2 = stretch('S2');
+    place(s, s2.x1 - 100);
     s.run(0, 30);
     const ev = s.run(R, 160);
     const caught = ev.find((e) => e.type === 'fallCatch');
@@ -194,8 +194,8 @@ describe('falls and the exit', () => {
     expect(back).toBeDefined();
     const i = ev.findIndex((e) => e.type === 'fallReturn');
     expect(ev[i + 1]?.type).toBe('spawn');
-    // Back on the branch west of the gap, nothing lost.
-    expect(back).toMatchObject({ x: 2240 - s.t.room.returnInset, y: 960 });
+    // Back on the branch west of the gap, a step in from the lip (the rolling top counts as one), nothing lost.
+    expect(back).toMatchObject({ x: s2.x1 - s.t.room.returnInset, y: topAt(s2.x1 - s.t.room.returnInset) });
     expect(s.state.player.hp).toBe(s.state.player.hpMax);
     expect(s.state.save.abilities).toEqual([]);
   });
@@ -205,16 +205,14 @@ describe('falls and the exit', () => {
     hatched(s);
     const ev: SimEvent[] = [];
     // From the branch end, walk off into the dark.
-    const st = s.state;
     const drop = WOOD_HATCH.marks?.drop ?? { x: 0, y: 0 };
-    st.player.x = drop.x - 120 - st.player.w / 2;
-    st.player.y = drop.y - st.player.h;
+    place(s, drop.x - 120);
     ev.push(...s.run(R, 200));
     const out = ev.find((e) => e.type === 'roomExit');
     expect(out).toMatchObject({ id: 'drop', edge: 's', frames: s.t.room.exitFrames });
     const enter = ev.findIndex((e) => e.type === 'roomEnter');
     expect(enter).toBeGreaterThan(0);
-    expect(ev[enter + 1]).toMatchObject({ type: 'spawn', x: 864, y: 1024 });
+    expect(ev[enter + 1]).toMatchObject({ type: 'spawn', ...WOOD_HATCH.spawn });
     // A fresh room: the cocoon again, the save kept.
     expect(s.state.hatch).toEqual({ frames: expect.any(Number), presses: 0, done: false });
     expect(s.state.save.abilities).toEqual(['glide']);
@@ -223,10 +221,28 @@ describe('falls and the exit', () => {
 });
 
 /** Feet centre and whether there is a top under the point `ahead` px in front of her leading edge. */
+/** Ground `ahead` px in front of her leading edge, within a rolling step (16 px) below her feet: no gap there. */
 function groundAhead(scene: Scene, st: GameState, ahead: number): boolean {
   const p = st.player;
   const x = p.x + p.w + ahead;
-  return solidAt(scene, x, p.y + p.h, 1, 1);
+  return solidAt(scene, x, p.y + p.h, 1, 16);
+}
+
+/** The walk top under x (the highest branch rect there). */
+function topAt(x: number): number {
+  const q = WOOD_HATCH.solids.filter((o) => o.tag === 'branch' && x >= o.x && x < o.x + o.w);
+  return Math.min(...q.map((o) => o.y));
+}
+
+function stretch(id: string) {
+  const s = WOOD_HATCH.marks?.stretches?.find((q) => q.id === id);
+  if (!s) throw new Error(`no stretch ${id}`);
+  return s;
+}
+
+/** Stands her (feet centre) on the walk top at x, at rest. */
+function place(s: { state: GameState; t: Tuning }, x: number): void {
+  placePlayer(s.state, x, topAt(x), s.t, WOOD_HATCH, []);
 }
 
 describe('wood-hatch play checks', () => {
@@ -275,39 +291,60 @@ describe('wood-hatch play checks', () => {
     expect(run).toBeLessThan(30);
   });
 
-  it('the route has height: it rises to a crown and comes down into the canopy', () => {
-    const far = WOOD_HATCH.solids.find((q) => q.tag === 'branch' && q.x + q.w === WOOD_HATCH.width);
-    const path = WOOD_HATCH.solids.filter((q) => q.tag === 'branch' && q !== far).sort((a, b) => a.x - b.x);
-    const ys = path.map((q) => q.y);
-    const start = ys[0] ?? 0;
-    expect(start - Math.min(...ys)).toBeGreaterThanOrEqual(256);
-    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(512);
-    // No two stretches alike in length; none longer than the cocoon row's.
-    const lens = path.map((q) => q.w);
-    expect(new Set(lens).size).toBeGreaterThanOrEqual(lens.length - 2);
+  it('the route has height and every stretch rolls: rises to a crown, comes down into the canopy', () => {
+    const stretches = WOOD_HATCH.marks?.stretches ?? [];
+    expect(stretches.length).toBeGreaterThanOrEqual(8);
+    const walk = WOOD_HATCH.solids.filter((q) => q.tag === 'branch');
+    const tops = stretches.map((st) => walk.filter((q) => q.x >= st.x0 && q.x < st.x1));
+    const mean = tops.map((qs) => qs.reduce((a, q) => a + q.y * q.w, 0) / qs.reduce((a, q) => a + q.w, 0));
+    expect((mean[0] ?? 0) - Math.min(...mean)).toBeGreaterThanOrEqual(256);
+    expect(Math.max(...mean) - Math.min(...mean)).toBeGreaterThanOrEqual(512);
+    tops.forEach((qs, i) => {
+      const id = stretches[i]?.id;
+      // Covered end to end by narrow rects, each joint a rolling step, the whole stretch rolling.
+      expect(
+        qs.every((q) => q.w >= 48 && q.w <= 128),
+        `${id} widths`,
+      ).toBe(true);
+      for (let k = 1; k < qs.length; k++) {
+        const a = qs[k - 1];
+        const b = qs[k];
+        expect(b?.x, `${id} abuts`).toBe((a?.x ?? 0) + (a?.w ?? 0));
+        expect(Math.abs((b?.y ?? 0) - (a?.y ?? 0)), `${id} step`).toBeLessThanOrEqual(12);
+      }
+      const ys = qs.map((q) => q.y);
+      if (qs.length > 3) expect(Math.max(...ys) - Math.min(...ys), `${id} roll`).toBeGreaterThanOrEqual(8);
+    });
+    // No two stretches alike in length.
+    const lens = stretches.map((st) => st.x1 - st.x0);
+    expect(new Set(lens).size).toBeGreaterThanOrEqual(lens.length - 1);
   });
 
-  it('the far branch across the promise gap is out of reach with the starting kit', () => {
-    // The far branch: another tree's, entering from the room's east edge beyond the promise gap.
-    const far = WOOD_HATCH.solids.find((q) => q.tag === 'branch' && q.x + q.w === WOOD_HATCH.width);
-    const promise = WOOD_HATCH.marks?.promise;
+  it('the stretches grow from the trees and each other; the far branch is only a picture', () => {
+    const m = WOOD_HATCH.marks;
+    const ids = new Set([...(m?.trees ?? []).map((t) => t.id), ...(m?.stretches ?? []).map((t) => t.id)]);
+    for (const st of m?.stretches ?? [])
+      expect(ids.has(st.parent), `${st.id} parent ${st.parent}`).toBe(true);
+    // Only the west trunk is collision.
+    for (const t of m?.trees ?? [])
+      expect(WOOD_HATCH.solids.some((q) => q.tag === 'trunk' && q.x <= t.x && q.x + q.w >= t.x)).toBe(
+        !!t.solid,
+      );
+    // The far branch is a back-layer picture: no solid on its line, and it starts past the promise gap.
+    const far = m?.farBranch;
     expect(far).toBeDefined();
-    expect(far?.x).toBe(promise?.x1);
-    // Every top she can stand on is more than a jump (272) under it, or more than a running jump
-    // (~410 px on the flat, less rising) short of it.
-    const tops = WOOD_HATCH.solids.filter((q) => q !== far && q.tag === 'branch');
-    const farTop = far?.y ?? 0;
-    for (const q of tops) {
-      const dx = Math.max(0, (far?.x ?? 0) - (q.x + q.w));
-      const dy = q.y - farTop;
-      expect(dy >= 300 || dx > 450, `top at ${q.x},${q.y}`).toBe(true);
-    }
-    // And the wide gap itself: a held running jump off the crown's end comes down below it, on the way on.
+    expect(far?.points[0]?.[0]).toBe(m?.promise?.x1);
+    for (const [x, y] of far?.points ?? [])
+      expect(WOOD_HATCH.solids.some((q) => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h)).toBe(
+        false,
+      );
+  });
+
+  it('a held running jump off the crown into the promise gap comes down on her way on, below', () => {
+    const promise = WOOD_HATCH.marks?.promise;
     const s = sim(WOOD_HATCH);
     hatched(s);
-    const x0 = promise?.x0 ?? 0;
-    s.state.player.x = x0 - 300;
-    s.state.player.y = (promise?.y ?? 0) - s.state.player.h;
+    place(s, (promise?.x0 ?? 0) - 300);
     s.run(R, 22);
     s.run(R | J, 20);
     const land = s.run(R, 40).find((e) => e.type === 'land');
@@ -337,22 +374,34 @@ describe('the room camera', () => {
     expect((feet - cam.y) / SAFE_H).toBeCloseTo(0.62, 2);
   });
 
-  it('the lean follows sim time after the hatch; a teleport or a restart ends it', () => {
-    const lean = WOOD_HATCH.camera?.lean;
-    expect(lean).toBeDefined();
-    if (!lean) return;
+  it('the beats: the cocoon framed higher while shut in, the kick, the lean on sim time; running yields; a restart ends them', () => {
+    const cam = WOOD_HATCH.camera;
+    const lean = cam?.lean;
+    const hf = cam?.hatchFrame;
+    expect(lean && hf).toBeTruthy();
+    if (!lean || !hf) return;
     expect(leanWeight(lean, lean.from - 0.1)).toBe(0);
     expect(leanWeight(lean, lean.from + lean.in + 0.1)).toBe(1);
     expect(leanWeight(lean, lean.from + lean.in + lean.hold + lean.out + 0.1)).toBe(0);
-    const b = new CameraBeats(WOOD_HATCH.camera);
+    const shut = { hatch: { frames: 100, presses: 0, done: false }, vx: 0, grounded: true };
+    const out = { hatch: { frames: 200, presses: 3, done: true }, vx: 0, grounded: true };
+    const running = { ...out, vx: 9.6 };
+    const b = new CameraBeats(cam);
+    b.update(1 / 60, 100, 1, shut);
+    expect(b.y).toBe(hf.y);
     b.onStep([{ type: 'hatch', x: 0, y: 0, cx: 0, cy: 0, auto: false, frames: 200 }], 201);
-    b.update(1 / 60, 201, 1);
-    expect(b.y).toBeCloseTo(WOOD_HATCH.camera?.hatchKick ?? 0, 0);
+    b.update(1 / 60, 201, 1, out);
+    expect(b.y).toBeCloseTo(hf.y + (cam?.hatchKick ?? 0), 0);
     const mid = 201 + Math.round((lean.from + lean.in + 1) * 60);
-    for (let i = 0; i < 30; i++) b.update(1 / 60, mid, 1);
+    for (let i = 0; i < 30; i++) b.update(1 / 60, mid, 1, out);
     expect([b.x, b.y]).toEqual([lean.x, lean.y]);
+    // She runs: within half a second the lean has given way; she stops: it comes back.
+    for (let i = 0; i < 30; i++) b.update(1 / 60, mid, 1, running);
+    expect(Math.abs(b.y)).toBeLessThan(1);
+    for (let i = 0; i < 60; i++) b.update(1 / 60, mid, 1, out);
+    expect(b.y).toBeCloseTo(lean.y, 0);
     b.onStep([{ type: 'spawn', x: 0, y: 0 }], mid + 1);
-    b.update(1 / 60, mid + 1, 1);
+    b.update(1 / 60, mid + 1, 1, out);
     expect([b.x, b.y]).toEqual([0, 0]);
   });
 });
