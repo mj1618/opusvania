@@ -5,25 +5,36 @@ A metroidvania whose look and feel could sit next to Ori and the Blind Forest or
 `memory/story.md`: Wing the moth flies by the real moon through the last firefly's false lights to bring her kind
 home. The story is told by the world and the play, not by cutscenes or text. `docs/art-direction.md` is the visual brief and the bar.
 
-## Where we are
-**Rooms (tech stage 0, 2026-10-17).** The page boots into scene 1, `wood-hatch` (`content/rooms/wood-hatch.json`,
-blocked out: the hatching branch, the promise gap, the bend down, the drop; plain wood-kit art). Abilities are
-gated in the sim (it starts with none of glide, wall jump, double jump, dash). `?room=test-grove` (or the debug
-panel's Room list) loads the old demo level as a test bed. memory/rooms.md.
+## Where we are (2026-10-18)
+**Wood area 1, in greybox, is being iterated on.** It runs from the hatching branch (`wood-hatch`, the only painted
+room; art is paused) through to the crown of the great oak: 11 rooms, a target of about 35 minutes.
 
-The test grove (`content/rooms/test-grove.json`), about three screens wide, has:
-- A deterministic 60Hz sim with the full movement set (run, variable jump, coyote time, jump buffer, apex hang,
-  double jump, dash, glide, wall slide and wall jump, fast fall, corner corrections, one-way platforms), the blade,
-  health with fade and re-form.
-- Wing, the moth (`src/render/character/vesper/`).
-- Glints, giving, three lanterns and the heart of the grove (the scene's goal).
-- Two creatures, the burrback and the lampwing.
-- A HUD.
-- The painterly layered environment, post, camera, and muted gameplay audio.
-- Tools: `npm run shots` (stills) and `npm run clip` (motion).
+**The rebuild.** It follows the director's redesign (`docs/design/regions/wood-area1-director.md`), which came after
+two review rounds and the first-timer reports found the chunk "random and disjointed". The through-line is "up, back
+to the sky". The core set:
+- **The lamp,** with three moments: caught, thrown and snuffed. Each moment has a predator that hunts it: the beetle,
+  the dangler and the hawker.
+- **Glide and claws.**
+- **A rule for every room:** the lit line is fast, the dark line is slow and safe.
 
-The earlier games (the L-loop levels, Kid Tallow, the "Kept World" story and its prologue, the other hero skins) were
-deleted; git history has them.
+**Systems in place:**
+- Rooms, exits, saves, moon patches, glades and the map.
+- The level kit: thorns, bark, caps, gates, triggers, camera zones and story holds.
+- Lures (the lamps).
+- Creatures: the juvenile beetle, the beetle, the old burrback, the hawker, the dangler, and the web and weaver.
+- The Weaver boss, in `lab-weaver` (area 2).
+- Finds: the moth-stone, firefly signs and moonlit hollows.
+- Feel: hitstop, shake, hurt feedback, motes, the throw arc.
+- Greybox staging: the vista and title, the firefly glimpse, Tatter, the moth flight to the oak, the crown cloud.
+
+**Testing:**
+- Persona bots: `npm run playtest`.
+- Human-like playthroughs, rendered as video: `npm run humanplay -- run`.
+- First-timer agents: `npm run firsttimer`.
+- Reviews are in `docs/design/regions/reviews/`.
+
+**The process:** `STUDIO.md` (the onion; cohesion first, the rubric as lint; no sunk cost) and
+`docs/design/quality-bar.md`. **The test grove** (`?room=test-grove`) is the old demo level, kept as a test bed.
 
 ## The plan for the whole game
 `docs/design/` (start at its README): pillars, the ability chain, the world map and scope tiers, creatures and
