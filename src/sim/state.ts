@@ -344,6 +344,9 @@ export interface LureLive {
  * Weaver: `sit` (at home on its web), `run` (along the strands to where she touched), `windup` (the
  * count before the bite: its tell), `bite` (its touch is live), `back` (home along the strands).
  * Web: `hang`.
+ * Dangler (memory/creatures.md): `sit` (at its perch), `windup` (the tell: its thread shown), `drop`,
+ * `swing` (live), `stall` (hangs open), `climb` (back up), `fall` (its thread cut), `recover` (stunned
+ * where it fell), `leave`.
  * The Weaver boss (memory/bosses.md) adds: `swing` (on its thread), `climb` (up a thread or a trunk),
  * `perch` (up in the canopy or on a trunk, out of play), `fall` (its thread cut), `skitter` (running
  * off along the floor), `flee` (gone for good), `hunt` (on the floor, facing her).
@@ -379,7 +382,8 @@ export type EnemyMode =
   | 'fall'
   | 'skitter'
   | 'flee'
-  | 'hunt';
+  | 'hunt'
+  | 'drop';
 
 /**
  * One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. One flat

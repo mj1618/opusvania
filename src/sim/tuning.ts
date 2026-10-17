@@ -620,6 +620,8 @@ export const defaultTuning = withVariants({
     diveMaxPx: 340,
     diveBend: 0.75,
     diveLeadGlide: 1,
+    /** One on foot is led too, by this share of her run (0: it dives at where she stood). */
+    diveLeadRun: 0,
     stallFrames: 34,
     perchUpPx: 170,
     perchSidePx: 110,
@@ -747,6 +749,43 @@ export const defaultTuning = withVariants({
     /** Its lamp snuffed: it climbs off up its web and is gone (`leaveSpeed`, at most `leaveFrames`). */
     leaveSpeed: 4,
     leaveFrames: 150,
+    value: 0,
+    valueFinisher: 0,
+  },
+  /**
+   * The dangler (memory/creatures.md): a small spider on a thread over her path, the Weaver's drop made
+   * small. Lit and below it within `noticePx` sideways: the tell (`tellFrames`, its thread shown to where it
+   * drops: level with her body, `minDrop` .. `maxDrop` under the tie point, short of the ground), the drop
+   * (`dropFrames`, live), one swing toward her (`swingFrames`, `swingPx` out, live), then it hangs open
+   * (`hangFrames`, bobbing `bobPx` every `bobFrames`), climbs back (`climbSpeed`) and waits `cooldownFrames`.
+   * Its thread cut: it falls (`gravity`, `maxFall`), lies stunned `stunFrames` (open), then leaves.
+   */
+  dangler: {
+    width: 30,
+    height: 26,
+    hp: 2,
+    // (It tells as she comes, so a runner who doesn't stop for the thread meets the drop or the swing.)
+    noticePx: 300,
+    minDrop: 120,
+    maxDrop: 640,
+    tellFrames: 34,
+    dropFrames: 14,
+    swingFrames: 48,
+    swingPx: 130,
+    hangFrames: 60,
+    bobPx: 6,
+    bobFrames: 30,
+    climbSpeed: 4,
+    cooldownFrames: 90,
+    hurtFrames: 14,
+    hurtSafeFrames: 14,
+    gravity: 0.6,
+    maxFall: 12,
+    stunFrames: 90,
+    leaveSpeed: 4,
+    leaveFrames: 120,
+    deadFrames: 40,
+    contactDamage: 1,
     value: 0,
     valueFinisher: 0,
   },
@@ -1162,7 +1201,17 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       width: 52,
       height: 24,
       radius: 150,
-      noticePx: 480,
+      // It sees her anywhere in its lamp's light that its leash reaches (its home hangs ~440 px over the
+      // floor: at 480 a runner crossing the light was never seen).
+      noticePx: 620,
+      leashPx: 640,
+      // Round 1 review: "never dived". Its home hangs ~440 px over the floor at its wick, and a 340 px dive
+      // stalled 130 px over her head: the first dive was always a miss. Now the dive reaches the floor,
+      // a little faster, and leads a runner by half her run (stopping or turning back dodges it).
+      diveMaxPx: 600,
+      diveMaxFrames: 72,
+      diveSpeed: 6.4,
+      diveLeadRun: 0.8,
       // (A breather after a hit: one who stood still under it was hit every 4 s and faded in a loop.)
       touchCalmFrames: 180,
       value: 0,

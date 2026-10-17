@@ -81,7 +81,7 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   enemy glints as `pickup {enemy: true}`: enemies.md. `slashEnd` / `glideEnd` have a reason `hurt`.
 - Creatures (memory/creatures.md, src/sim/creature-events.ts): `grab`, `grabBeat`, `grabFree {how}`, `enemyDisperse
   {lure, how: sleep|leave|slack, quiet}`, `enemyFeint`, `enemyWake`, `webTouch {strand}`, `webCut {cut, fell, left}`,
-  `enemyRun {px, frames}`, `enemyBite {hit}`; `enemyTurn` cause `hunt`. `player.lit` is set at the start of
+  `enemyRun {px, frames}`, `enemyBite {hit}`, `enemyThreadCut {fromX, fromY}` (a dangler's silk); `enemyTurn` cause `hunt`. `player.lit` is set at the start of
   `updateEnemies`; a web is taken by a slash in `slashEnemies` (`KindRules.slashed`), a grab in its own update.
 - `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a
   long fall, up to 32 out of a fast fall) and `glideEnd {reason: release|land|wall|dash|fastfall}`; one

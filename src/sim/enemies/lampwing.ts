@@ -291,6 +291,13 @@ function startDive(e: EnemyState, info: StepInfo): void {
   };
   let n = span(tx, ty);
   // A gliding hero holds her line: it dives at where the glide will have carried her.
+  // (A hawker leads one on foot too, sideways only: her run, not her fall.)
+  if (!p.gliding && t.diveLeadRun > 0 && p.vx !== 0) {
+    for (let k = 0; k < 3; k++) {
+      tx = p.x + p.w / 2 + p.vx * n * t.diveLeadRun;
+      n = span(tx, ty);
+    }
+  }
   if (p.gliding && t.diveLeadGlide > 0) {
     for (let k = 0; k < 3; k++) {
       tx = p.x + p.w / 2 + p.vx * n * t.diveLeadGlide;

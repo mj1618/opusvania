@@ -66,7 +66,15 @@ export interface Pod {
  * The kinds of enemy (src/sim/enemies.ts). `burrback`: a small armoured beetle that walks its
  * platform. `lampwing`: a small pale moth-wisp that hovers in the open air and drifts after her light.
  */
-export type EnemyKind = 'burrback' | 'lampwing' | 'oldBurrback' | 'hawker' | 'web' | 'weaver' | 'weaverBoss';
+export type EnemyKind =
+  | 'burrback'
+  | 'lampwing'
+  | 'oldBurrback'
+  | 'hawker'
+  | 'web'
+  | 'weaver'
+  | 'weaverBoss'
+  | 'dangler';
 
 /**
  * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is
@@ -113,6 +121,8 @@ export interface EnemySpawn {
    * (the weaver runs along them). `x`, `y` = the hub.
    */
   strands?: Array<[number, number, number, number]>;
+  /** Dangler: the longest drop on its thread, px below the tie point (default `tuning.dangler.maxDrop`). */
+  drop?: number;
   /** A story flag set when it dies (the old burrback's root gate: src/sim/kit.ts). */
   sets?: string;
   /**

@@ -55,12 +55,50 @@ lab walk into its ram once each (1 hit) and pass.
   bot (it waits while a creature faces it) faded 6 times in the pit. R10's pit is closed: this is the fight to tune.
 
 ## The hawker (`kind: 'hawker'`, row `tuning.hawker` = the lampwing's + overrides)
-- The lampwing's sim (tell 36, harmless 20, committed dive, stall 34 open, climb, 3 dives), box 52 x 24, sight 480
-  (its home hangs ~440 over the floor at its wick, so 320 never saw a walker), `touchCalmFrames` 180 after its touch.
-- In a lamp room the dive is committed (no `dark` give-up mid-dive); dark at the end of the tell, the stall or the
-  climb, it gives up `dark`. `lampwing` stays for the test grove (its dive still gives up when her wallet empties).
-- Moving on dodges it: naive / speedrunner pass both lab hawkers with 0 hits. The stop-start cautious bot was hit 10
-  times in 72 s and faded 5 times at station B (it stops and creeps in the light: each tell ends on a still target).
+- The lampwing's sim (tell 36, harmless 20, committed dive, stall 34 open, climb, 3 dives), box 52 x 24,
+  `touchCalmFrames` 180 after its touch (a breather: no notice, harmless).
+- **Round 1 review: "never dived"** (chunk1-level-r1 R8, feel item 7). Two causes, both fixed 2026-10-18: its home hangs
+  ~440 px over the floor at its wick, so (1) at sight 480 a runner crossing the light was never seen (sight now **620**,
+  leash **640**), and (2) the lampwing's 340 px dive cap stalled 130 px over a stander's head: the first dive was always a
+  miss (now **diveMaxPx 600, diveMaxFrames 72, diveSpeed 6.4**). It also **leads a runner by 0.8 of her run**
+  (`diveLeadRun`; the lampwing 0): stopping, turning back or jumping dodges it, running on at full speed usually still
+  clears the end of a long dive. Stander in R8: noticed at the light's edge, hit 81 frames after the tell began.
+- A dive under way when its lamp goes out lands first; then it leaves (the framework does not disperse in `dive`).
+- In a lamp room the dive is committed (no `dark` give-up mid-dive); dark at the end of the tell, the stall or the climb,
+  it gives up `dark`. `lampwing` stays for the test grove.
+- **What the sim cannot fix (placement)**: a one-cut wick reachable from where she first enters its light is snuffed
+  before the first dive lands (explorer in R8: dispersed 0.6 s after notice). The tell + dive is ~1.3-1.8 s.
+
+## The dangler (`kind: 'dangler'`, src/sim/enemies/dangler.ts, row `tuning.dangler`)
+- A small spider on a thread: the Weaver's P2 drop made small. Spawn `{id, kind: 'dangler', x, y (where its thread is
+  tied: within 48 px under a solid's underside, a one-way, or the room's top), facing, guards?, drop? (longest drop,
+  default 640), hp? (2)}`. Box 30 x 26, sense by lamp light (it drops only while she is lit).
+- `sit` at the perch (harmless) -> she is lit, below it, within `noticePx` **300** sideways, a clear line ->
+  `windup` **34 f** (`enemyWindup {px: the drop}`; the thread is shown to `targetX, targetY` = level with her body,
+  clamped 120..`drop`, short of the ground) -> `drop` 14 f (t², live) -> `swing` 48 f, one swing of **130 px** toward
+  the side she is on as the drop ends (live) -> `stall` 60 f hanging open, bobbing 6 px (harmless: two cuts kill it)
+  -> `climb` 4 px/f -> `sit`, 90 f cooldown.
+- **Cut its silk** (a slash meeting the thread above its body, not the body, while it hangs): `enemyThreadCut`,
+  `fall` (harmless) -> `recover` 90 f stunned and open -> `leave` (gone). A blow on the body is the shared hit (the
+  framework's `slashed` hook now returns -1 for "not taken here").
+- Lamp-guarder: snuffed, it climbs away for good. Render reads `fromX, fromY` (tie point), `span` (silk length),
+  `targetX, targetY` (the tell's end), `side`, `broken`; the debug overlay draws the silk (dashed during the tell).
+- Fair: the tell + drop is 48 f before contact under it; stepping back ~150 px from the thread during the tell clears
+  the swing (unit test). A runner at full speed who ignores the thread usually passes just behind the swing's end.
+
+## Composed encounters and placement guidance (for the level builder)
+- Creatures ignore each other (no collisions), so any overlap works; one lure can be guarded by several (a snuff
+  disperses them all: lab station I).
+- **Hawker**: home no more than ~450 px over the line she walks, inside its lamp's light (wick 384 px, lantern 576).
+  Put its lamp so she spends ≥ 1.5 s in the light before she can cut it (high, or reachable only from a spot in the
+  dive lane: a hummock, a cap bounce). A dark half beside it is the rest.
+- **Dangler**: over where she has to stop or land: a glide landing, a platform with a burrback (station I), a ledge
+  top after a climb, the foot of a jump. Its lamp must light the approach ~300 px before the tie point (station H's
+  wick was moved for this), and the floor under it should have ≥ 300 px of safe room to step back into.
+- **Burrback on a platform** under a dangler / lantern (R9's twist): `fenced` with a `radius` short of the platform's
+  ends; the pogo off its braced shell reaches the lantern if the flame is ≤ ~180 px over the shell.
+- Lab `?room=lab-creatures`: H dangler alone over a safe floor, I burrback on P + dangler over P + the lantern over
+  both, J a glide onto a landing a dangler guards.
 
 ## Grabs are Caught (src/sim/grab.ts)
 - `player.grab` = the creature's index (-1), `grabX/Y` = where; she is held still (no orbit). Beats share the lure's
@@ -98,6 +136,15 @@ lab walk into its ram once each (1 hit) and pass.
 did about her to the last, hits, grabs, ended killed / dispersed / passed: recorder.ts). Observe gives personas
 `strands` (silk in view; webs are not `enemies`) and `lured` covers a grab; the slashing personas cut silk ahead.
 The explorer counts a lure that is out as visited (it stood under each wick for 45 s before).
+
+Round 2 (2026-10-18, the bots now fight, 12 creatures, 300 s): explorer done 171 s, 6 hits, 0 deaths, 9 of 10 lamps
+snuffed (everything dispersed or killed); speedrunner done 162 s, 3 hits, kills both hawkers and dang-h with 0 hits from
+them; naive 14 hits / 5 deaths (it ping-pongs the dead-end lab, mostly burrbacks; 1 hawker hit, 0 dangler hits);
+cautious 2 hits, killed hawk-b with 0 hits (was 10 hits / 5 fades), then **stuck 129 s in the web (87 grabs)**: it
+never cuts silk. Danglers took 0 hits from every bot (they run on, or snuff / kill it in its hang). R8 alone: the
+speedrunner took 1 hawker hit and killed it, the explorer snuffed the wick 0.6 s after the notice.
+
+Round 1 table (before the dangler and the hawker rework):
 
 | persona | time | hits | deaths | snuffed | notes |
 |---|---|---|---|---|---|

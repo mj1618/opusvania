@@ -58,5 +58,15 @@ export type CreatureEvent =
       px: number;
       frames: number;
     }
+  /** A dangler's thread was cut (tied at `fromX`, `fromY`): it falls. */
+  | {
+      type: 'enemyThreadCut';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      fromX: number;
+      fromY: number;
+    }
   /** The weaver's bite: `hit` = she was still held (its touch is live for `frames`). */
   | { type: 'enemyBite'; id: string; kind: EnemyKind; x: number; y: number; hit: boolean; frames: number };

@@ -22,6 +22,7 @@
 import { weaverBoss } from './boss/weaver';
 import { burrback, oldBurrback } from './enemies/burrback';
 import { frames, type KindRules, type StepInfo, saltOf, segmentBlocked, setMode } from './enemies/common';
+import { dangler } from './enemies/dangler';
 import { hawker, lampwing } from './enemies/lampwing';
 import { litNow, SENSE_WALLET, seenBy, senseCode } from './enemies/senses';
 import { weaver } from './enemies/weaver';
@@ -40,6 +41,7 @@ const KINDS: Record<EnemyKind, KindRules> = {
   web,
   weaver,
   weaverBoss,
+  dangler,
 };
 const KIND_LIST: EnemyKind[] = [
   'burrback',
@@ -49,6 +51,7 @@ const KIND_LIST: EnemyKind[] = [
   'web',
   'weaver',
   'weaverBoss',
+  'dangler',
 ];
 
 /** The rules of a kind (its box, numbers and behaviour). */
@@ -317,7 +320,8 @@ export function updateEnemies(
     e.modeFrames++;
     const K = KINDS[e.kind];
     // A lamp-guarder whose lamp has gone out gives up (creatures.md §1.2): once, after any tumble.
-    if (e.guard >= 0 && !e.dispersed && e.mode !== 'dead' && e.mode !== 'hurt') {
+    // (A dive under way is committed: it lands, then the hawker leaves.)
+    if (e.guard >= 0 && !e.dispersed && e.mode !== 'dead' && e.mode !== 'hurt' && e.mode !== 'dive') {
       if ((state.lures.hp[e.guard] ?? 1) <= 0) disperse(e, K, I);
     }
     const alive = K.update(e, i, I);
@@ -484,8 +488,12 @@ export function slashEnemies(
     // A kind that takes a blow its own way (a web: the blade cuts its strands).
     const own = KINDS[e.kind].slashed;
     if (own) {
-      hits += own(e, i, info(state, scene, t, events), box, seq, dir);
-      continue;
+      // (Negative: not taken its own way; the shared hit below decides, a dangler's body for one.)
+      const took = own(e, i, info(state, scene, t, events), box, seq, dir);
+      if (took >= 0) {
+        hits += took;
+        continue;
+      }
     }
     const l = Math.max(box.x, e.x);
     const r = Math.min(box.x + box.w, e.x + e.w);

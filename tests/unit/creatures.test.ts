@@ -422,6 +422,120 @@ describe('grabs: the orb web and its weaver', () => {
   });
 });
 
+describe('the dangler', () => {
+  // Tied under a canopy block at (2000, 300); the floor at 800 (her body centre 760: a 460 px drop);
+  // a wick lights the floor round it. It guards the wick.
+  const scene = () =>
+    room([{ id: 'd', kind: 'dangler', x: 2000, y: 300, facing: 1, guards: 'w' }], [wick('w', 1900, 560)], {
+      solids: [
+        { tag: 'ground', x: 0, y: FLOOR, w: 4000, h: 200 },
+        { tag: 'trunk', x: 1800, y: 240, w: 400, h: 60 },
+      ],
+    });
+  const D = T.dangler;
+
+  it('in the light it tells first (the thread shown to her height), then drops and swings: one who stands under it is hit', () => {
+    const s = newSim(scene());
+    s.place(2000, FLOOR);
+    const ev = s.run('.120');
+    const w = of(ev, 'enemyWindup')[0];
+    expect(w?.frames).toBe(D.tellFrames);
+    expect(w?.px).toBe(460);
+    const tellAt = ev.findIndex((e) => e.type === 'enemyWindup');
+    const hurtAt = ev.findIndex((e) => e.type === 'hurt');
+    expect(hurtAt).toBeGreaterThan(tellAt);
+    // (Counted in frames: the hit comes after the whole tell.)
+    const d = enemy(s, 'd');
+    expect(d.targetY).toBe(760);
+    expect(of(ev, 'hurt')[0]?.source).toEqual({ kind: 'dangler', id: 'd' });
+  });
+
+  it('in the dark it does not drop', () => {
+    const s = newSim(scene());
+    snuff(s, 0);
+    s.run('.2');
+    s.place(2000, FLOOR);
+    expect(types(s.run('.120'))).not.toContain('enemyWindup');
+    expect(enemy(s, 'd').gone).toBe(true);
+  });
+
+  it('fair: step back out of the swing during the tell and it never touches her; then two cuts in its hang kill it', () => {
+    const s = newSim(scene());
+    s.place(2100, FLOOR);
+    s.run('.2');
+    expect(enemy(s, 'd').mode).toBe('windup');
+    // Out of the swing's reach (swingPx + half its box + half hers, with room to spare).
+    const ev = s.run(`R10 .${D.tellFrames + D.dropFrames + D.swingFrames}`);
+    expect(types(ev)).not.toContain('hurt');
+    expect(enemy(s, 'd').mode).toBe('stall');
+    s.place(1960, FLOOR);
+    s.state.player.facing = 1;
+    const kill = s.run('A1 .20 A1 .40');
+    expect(types(kill)).toContain('enemyDie');
+    expect(types(kill)).not.toContain('hurt');
+  });
+
+  it('a cut across its silk drops it: it falls, lies stunned (open, harmless), then leaves', () => {
+    const s = newSim(scene());
+    s.place(2100, FLOOR);
+    s.run(`.2 R10 .${D.tellFrames + D.dropFrames + D.swingFrames + 4}`);
+    const d = enemy(s, 'd');
+    expect(d.mode).toBe('stall');
+    // Jump beside it and cut the thread above its body.
+    s.place(2060, FLOOR);
+    s.state.player.facing = -1;
+    const ev = s.run('J12 A1 .10');
+    expect(types(ev)).toContain('enemyThreadCut');
+    expect(d.broken).toBe(true);
+    s.run('.60');
+    expect(d.mode).toBe('recover');
+    s.run(`.${D.stunFrames + D.leaveFrames + 4}`);
+    expect(d.gone).toBe(true);
+  });
+
+  it('snuffed while it hangs, it climbs away for good', () => {
+    const s = newSim(scene());
+    s.place(2000, FLOOR);
+    s.run('.40');
+    snuff(s, 0);
+    const ev = s.run('.3');
+    expect(of(ev, 'enemyDisperse')[0]?.how).toBe('leave');
+    s.run(`.${D.leaveFrames}`);
+    expect(enemy(s, 'd').gone).toBe(true);
+  });
+});
+
+describe('the hawker engages', () => {
+  // Its home 440 px over the floor beside its wick, as in wood-hawkers (R8).
+  const scene = () =>
+    room(
+      [{ id: 'h', kind: 'hawker', x: 2000, y: 360, facing: 1, guards: 'far' }],
+      [wick('light', 2000, 528), wick('far', 3700, 200)],
+    );
+
+  it('the first dive reaches one standing on the floor (it used to stall 130 px over her head)', () => {
+    const s = newSim(scene());
+    s.place(1900, FLOOR);
+    const ev = s.run('.200');
+    const notice = ev.findIndex((e) => e.type === 'enemyNotice');
+    const hurt = ev.findIndex((e) => e.type === 'hurt');
+    expect(notice).toBeGreaterThanOrEqual(0);
+    expect(hurt).toBeGreaterThan(notice);
+    expect(of(ev, 'enemyDive').length).toBe(1);
+    // Told for the whole tell first.
+    expect(ev.slice(notice, hurt).some((e) => e.type === 'enemyDive')).toBe(true);
+  });
+
+  it('after its touch it leaves her be for touchCalmFrames', () => {
+    const s = newSim(scene());
+    s.place(1900, FLOOR);
+    let ev: SimEvent[] = [];
+    for (let i = 0; i < 300 && !types(ev).includes('hurt'); i++) ev = s.run('.1');
+    const after = s.run(`.${T.hawker.touchCalmFrames - 10}`);
+    expect(types(after)).not.toContain('enemyNotice');
+  });
+});
+
 describe('fairness: every attack is told, with time to answer', () => {
   it('telegraphs are at least 20 frames, and the weaver count outlasts the fastest beat-free', () => {
     expect(T.burrback.windupFrames).toBeGreaterThanOrEqual(20);
@@ -429,6 +543,7 @@ describe('fairness: every attack is told, with time to answer', () => {
     expect(T.oldBurrback.feintBraceFrames).toBeGreaterThanOrEqual(20);
     expect(T.hawker.curiousFrames).toBeGreaterThanOrEqual(30);
     expect(T.hawker.noticeSafeFrames).toBeGreaterThanOrEqual(20);
+    expect(T.dangler.tellFrames).toBeGreaterThanOrEqual(30);
     // Fastest escape: the first beat on the catch frame, then one every beatCd.
     const fastest = (T.grab.beats - 1) * T.lures.beatCd + 1;
     expect(T.weaver.countFrames).toBeGreaterThan(fastest);

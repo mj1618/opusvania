@@ -98,6 +98,8 @@ export const ENEMIES = z
         .strict(),
       // The Weaver boss (memory/bosses.md): its fight is the room's `boss` block (src/scene/boss.ts).
       z.object({ ...base, kind: z.literal('weaverBoss') }).strict(),
+      // The dangler (memory/creatures.md): `x`, `y` = where its thread is tied; `drop` = its longest drop.
+      z.object({ ...base, kind: z.literal('dangler'), drop: int.min(80).max(1200).optional() }).strict(),
     ]),
   )
   .default([]);
@@ -285,6 +287,30 @@ function checkCrawler(s: RoomLike, e: Enemy): void {
 }
 
 /**
+ * A dangler's tie point: inside the room, in open air (its perch box clear of solids), with something
+ * to tie to within 48 px above it (a solid's underside, a one-way branch, or the room's top), away from
+ * the spawn sideways (never a drop on her as she arrives).
+ */
+function checkDangler(s: RoomLike, e: Enemy): void {
+  const D = defaultTuning.dangler;
+  if (e.x < D.width || e.x > s.width - D.width || e.y < 0 || e.y + D.height + 8 > s.height)
+    throw new Error(`Scene "${s.id}": dangler "${e.id}" is outside the scene`);
+  const x0 = e.x - D.width / 2;
+  const x1 = e.x + D.width / 2;
+  const y0 = e.y + 2;
+  const y1 = e.y + D.height + 6;
+  if (s.solids.some((q) => x1 > q.x && x0 < q.x + q.w && y1 > q.y && y0 < q.y + q.h))
+    throw new Error(`Scene "${s.id}": dangler "${e.id}" hangs inside a solid`);
+  const tied =
+    e.y <= 48 ||
+    s.solids.some((q) => e.x >= q.x && e.x <= q.x + q.w && q.y + q.h <= e.y + 2 && q.y + q.h >= e.y - 48) ||
+    s.oneWays.some((q) => e.x >= q.x && e.x <= q.x + q.w && q.y <= e.y + 2 && q.y >= e.y - 48);
+  if (!tied) throw new Error(`Scene "${s.id}": dangler "${e.id}" has nothing above it to tie its thread to`);
+  if (Math.abs(e.x - s.spawn.x) < ENEMY_SPAWN_CLEAR && e.y < s.spawn.y)
+    throw new Error(`Scene "${s.id}": dangler "${e.id}" hangs over the spawn point`);
+}
+
+/**
  * Every creature of a parsed room: unique ids (`seen`, shared with pickups and pods), placement per
  * kind, `guards` names a lure of the room, a web's strands inside the room and clear of the spawn
  * (an `orb` is expanded into `strands` here), a weaver names a web and sits on it.
@@ -298,6 +324,7 @@ export function checkCreatures(s: RoomLike, seen: Set<string>): void {
       throw new Error(`Scene "${s.id}": enemy "${e.id}" guards "${e.guards}", which is no lure of the room`);
     if (e.kind === 'lampwing' || e.kind === 'hawker') checkFlyer(s, e);
     else if (e.kind === 'burrback' || e.kind === 'oldBurrback') checkCrawler(s, e);
+    else if (e.kind === 'dangler') checkDangler(s, e);
     else if (e.kind === 'web') {
       const strands = [...(e.strands ?? []), ...(e.orb ? orbStrands(s, e.x, e.y, e.orb) : [])];
       if (strands.length === 0) throw new Error(`Scene "${s.id}": web "${e.id}" has no strands`);

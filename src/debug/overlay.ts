@@ -269,6 +269,14 @@ export function drawEnemyBoxes(g: Graphics, enemies: readonly EnemyState[], ramP
     g.moveTo(fx, e.y + e.h / 2)
       .lineTo(fx + e.facing * 10, e.y + e.h / 2)
       .stroke({ color, width: 2 });
+    // A dangler's silk: from its tie point to its body (dashed to the drop's end during the tell).
+    if (e.kind === 'dangler' && !e.broken && e.mode !== 'dead') {
+      if (e.mode === 'windup')
+        for (let y = e.fromY; y < e.targetY; y += 24)
+          g.moveTo(e.fromX, y).lineTo(e.fromX, Math.min(e.targetY, y + 12));
+      else g.moveTo(e.fromX, e.fromY).lineTo(e.x + e.w / 2, e.y);
+      g.stroke({ color: 0xdfe6f2, width: 2, alpha: 0.8 });
+    }
     if (e.kind !== 'lampwing' && e.kind !== 'hawker') continue;
     const cx = e.x + e.w / 2;
     const cy = e.y + e.h / 2;
