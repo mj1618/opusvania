@@ -32,7 +32,12 @@ target, is the wood and the valley of lamps as a standalone chapter (27 rooms, 2
 The demo level is a test bed (`test-grove`) and constrains nothing in the real game.
 
 ## Next
-One increment at a time, each played by Matt and polished to the bar before the next (`docs/design/README.md`,
-"How we build it"). First: the lamp verb in the test grove as a greybox (pull with swirl, caught and beat free, snuff
-with the blade, its predators scatter). Matt plays it. Then the lamp brought to the bar (flame, snuff, freed moths,
-the two-light re-key), then tech stage 0 and the first real room, the hatching branch.
+Art is paused (Matt, 2026-10-18). Scene 1 keeps its art as the wood's look target. The game is now designed and
+played in greybox one region at a time: `STUDIO.md` has the loop. First region: **the wood** (about 12 rooms, 35–45
+min, glide and wall jump, the first predators, the Weaver).
+- **Phase 0:** a greybox render mode, the lamp verb (pull, caught, snuff) in a lab room, the wood's paper design
+  (`docs/design/regions/wood.md`), and a playtest harness with persona bots and telemetry.
+- **Phase 1:** a multi-room engine (exits between rooms, moon patches that save and respawn, glades that give
+  abilities, a map), then every wood room greyboxed from the paper design.
+- **Phase 2:** loop the region (playtest → design review → revise) until it meets STUDIO.md's exit criteria and Matt
+  says it's fun. Then the wood's art pass, then the valley.
