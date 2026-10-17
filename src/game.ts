@@ -78,10 +78,15 @@ export class Game {
     this.scripted = [];
   }
 
-  /** Restarts the room: fresh state at the spawn, frame 0, same seed (and the same granted abilities). */
+  /**
+   * Restarts the room: fresh state at the spawn, frame 0, same seed (and the same granted abilities).
+   * Its events are `roomEnter {from: 'load'}` then `spawn`, so render restarts every room beat (the
+   * swarm waits for the hatch again) even when the frame count did not go back (a paused page at 0).
+   */
   reset(): void {
     this.scripted = [];
-    const events: SimEvent[] = [];
+    const s = this.scene.spawn;
+    const events: SimEvent[] = [{ type: 'roomEnter', room: this.scene.id, from: 'load', x: s.x, y: s.y }];
     this.state = this.fresh(events);
     this.prev = cloneState(this.state);
     for (const fn of this.afterStep) fn(events);

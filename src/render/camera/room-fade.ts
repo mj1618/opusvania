@@ -59,7 +59,7 @@ export class RoomFade {
     const R = ct.room;
     for (const e of events) {
       if (e.type === 'roomExit') this.go(1, e.frames / 60 - R.exitEarly);
-      else if (e.type === 'roomEnter') {
+      else if (e.type === 'roomEnter' && e.from !== 'load') {
         this.k = 1;
         this.go(0, this.roomFadeIn > 0 ? this.roomFadeIn : R.exitLift);
       } else if (e.type === 'fallCatch') this.go(R.catchDepth, e.frames / 60);

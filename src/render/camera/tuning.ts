@@ -31,6 +31,20 @@ export const cameraTuning = {
   fallLookahead: 128,
   smoothYFall: 9,
   /**
+   * The faster follow of a long fall: used for a fall of more than `realFallPx` px (from the top of her
+   * airtime) and for a room exit's drop; ordinary drops between ledges keep `smoothYFall`. With
+   * `realFallPx` > 0 a long fall is also led every frame (not only when she passes the line). The
+   * defaults (9, 0) keep the classic rule, every real fall at 9 (the test grove).
+   */
+  smoothYFastFall: 9,
+  realFallPx: 0,
+  /**
+   * Frames of a spring the vertical TARGET runs through before the view follows it (0 = none). With
+   * it, a target that jumps (a fall's lead switching on) starts the view moving with no step in its
+   * velocity: the onset eases in. Rooms set it; the test grove has none.
+   */
+  targetSmoothY: 0,
+  /**
    * The kick when a slash lands (render-side, `kick.ts`): the view jumps this many world px against
    * the cut (a cut, the finisher), `vertical` x that for up / down cuts, and returns on a critically
    * damped spring of `omega` rad/s (35 = home, to within 5%, in about 8 frames). The blow that kills
@@ -105,18 +119,24 @@ export type CameraTuning = typeof cameraTuning;
 
 /**
  * The follow camera's tuning for a room: `cameraTuning` with the room's own framing (`room.camera`:
- * `anchorY`, `lookaheadX`, `fallLookahead`, `smoothYFall`) on top. A room that sets none (the test
+ * `anchorY`, `lookaheadX`, `leadFrames`, `fallLookahead`, `smoothYFall`, `smoothYFastFall`, `realFallPx`,
+ * `targetSmoothY`) on top. A room that sets none (the test
  * grove) gets `cameraTuning` itself, the very object.
  */
 export function cameraFor(room: Room): CameraTuning {
   const c = room.camera;
-  if (!c || (c.anchorY ?? c.lookaheadX ?? c.fallLookahead ?? c.smoothYFall) === undefined)
-    return cameraTuning;
-  return {
-    ...cameraTuning,
-    anchorY: c.anchorY ?? cameraTuning.anchorY,
-    lookaheadX: c.lookaheadX ?? cameraTuning.lookaheadX,
-    fallLookahead: c.fallLookahead ?? cameraTuning.fallLookahead,
-    smoothYFall: c.smoothYFall ?? cameraTuning.smoothYFall,
-  };
+  const keys = [
+    'anchorY',
+    'lookaheadX',
+    'leadFrames',
+    'fallLookahead',
+    'smoothYFall',
+    'smoothYFastFall',
+    'realFallPx',
+    'targetSmoothY',
+  ] as const;
+  if (!c || keys.every((k) => c[k] === undefined)) return cameraTuning;
+  const out = { ...cameraTuning };
+  for (const k of keys) out[k] = c[k] ?? cameraTuning[k];
+  return out;
 }

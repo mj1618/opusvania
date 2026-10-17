@@ -55,19 +55,32 @@ Catch `below`: x 224-6144, y 1600-2816. A caught fall returns her `returnInset` 
   before the fade is black; the camera's east clamp is width - 960 on 16:9). So the route was shortened ~480 px.
 - Timing: the naive bot takes **10.2 s from the hatch to the exit**, no catches (13.0 s with a 2.5 s look at the
   swarm); a player who looks: ~15-20 s. Leaving the branch to black: ~1.0 s walking off, ~1.15 s jumping off.
-- Marks unchanged in meaning: cocoon hang points on S1's underside (S1 is flat +-2 there, so they stay put), Tatter
-  (1210, 1019), swarm through the moon (1420, 544), camera hints vista / swarm / promise (4110, 636) / drop (6300, 1700).
+- S1 rolls west (1026 -> 1010 -> 1022 over 224-520) and east (1032 dip at 1150, 1004 rise at 1420) of the cocoon
+  section (432-1072 stays 1022-1024 for the hang points). Marks unchanged in meaning: cocoon hang points on S1's
+  underside, Tatter (1210, 1031: in the dip), swarm through the moon (1420, 544), camera hints vista / swarm / promise (4110, 636) / drop (6300, 1700).
 
 ## The room camera (`room.camera`, src/render/camera/)
-- Framing overrides: `cameraFor(room)` (tuning.ts) = `cameraTuning` + `anchorY` / `lookaheadX` / `fallLookahead` /
-  `smoothYFall` from the room; a room with none (test-grove) gets `cameraTuning` itself. wood-hatch: feet line 0.62
-  (grove 0.72), fall lead 320, fall follow 4 frames.
+- Framing overrides: `cameraFor(room)` (tuning.ts) = `cameraTuning` + the room's `anchorY`, `lookaheadX`,
+  `leadFrames`, `fallLookahead`, `smoothYFall`, `smoothYFastFall`, `realFallPx`, `targetSmoothY`; a room with none
+  (test-grove) gets `cameraTuning` itself. wood-hatch: feet line 0.62, look-ahead 330 built over 36 frames (the
+  follow spring lags ~155 px at her 9.6 px/f, so she sits at x ~0.41 running right, mirrored left; it eases back
+  when she stops), fall lead 320.
+- **Falls (round 4, review 3's lurch):** `smoothYFall` 4 had been applied to every gap drop: 0 -> 35 px/f in one
+  frame. Now (rooms with `realFallPx` > 0): the vertical target runs through its own spring (`targetSmoothY` 10)
+  before the view follows it, so the view's velocity never steps; below her last ground the fall lead and the follow
+  speed grow smoothly with the drop (`k` = (drop / `realFallPx` 250)^2: a gap drop gets a little lead on the usual
+  9-frame follow, a long fall or the exit the full lead on `smoothYFastFall` 5). Measured on the naive run: peak
+  camera acceleration 0.85 px/f^2 on the gap drops, 5.8 in the final drop; she stays at 0.47-0.78 of the frame
+  through the drop and the fade. `tests/unit/rooms.test.ts` runs the camera headless over the whole run (< 8).
+- **A rounding bug, fixed:** `place()` zeroed the spring's velocity whenever `cam.y + line` missed `cam.fy` by an ulp
+  (it took that for a clamp); a fast follow stuttered every other frame at half speed. Now only a real clamp does.
 - Beats (`beats.ts` `CameraBeats`, render-side offsets like the kick):
   - `hatchFrame` {y 130, hold 2.4, out 1.4}: shut in, the view sits 130 px lower, so the cocoon is framed at ~0.62-0.70
     (the walk line at ~0.50); after `hatch` it holds 2.4 s and eases back over 1.4 s.
   - `hatchKick` 8 px down on `hatch`, back in ~0.3 s.
-  - `lean` (130 right, 160 up) on SIM time after `hatch`: in 2.4-3.8 s, held to 8.0, out by 9.5 (the swarm's
-    `SWARM_PASS`; numbers copied into the room JSON).
+  - `lean` (130 right, 160 up) on SIM time after `hatch`: from 4.0 s (after the birth: the unfold on the lip ends
+    ~3.9 s; the hatch framing has eased out by 3.8), in over 1.2 s, held to 8.0, out by 9.5 (the swarm's
+    `SWARM_PASS` ends then).
   - **Both yield to the run**: they hold only while she is shut in or on the ground slower than 2.5 px/f; once she
     runs they give way in 0.35 s (feet back at 0.62), and come back over 0.9 s if she stops.
   - Any placement except a fall's return ends them.

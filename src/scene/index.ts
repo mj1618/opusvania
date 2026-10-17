@@ -225,6 +225,10 @@ const SceneSchema = z
         lookaheadX: z.number().min(0).optional(),
         fallLookahead: z.number().min(0).optional(),
         smoothYFall: z.number().positive().optional(),
+        smoothYFastFall: z.number().positive().optional(),
+        realFallPx: z.number().min(0).optional(),
+        targetSmoothY: z.number().min(0).optional(),
+        leadFrames: z.number().positive().optional(),
         fadeIn: z.number().min(0).max(10).optional(),
         hatchKick: z.number().min(0).max(40).optional(),
         hatchFrame: z

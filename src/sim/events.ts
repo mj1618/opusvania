@@ -30,7 +30,10 @@ export type SimEvent =
    * render fades out over them. Fires once per exit.
    */
   | { type: 'roomExit'; id: string; edge: 'n' | 's' | 'e' | 'w'; x: number; y: number; frames: number }
-  /** The room started again after an exit (`from` = its id); a `spawn` follows at once. */
+  /**
+   * The room started again after an exit (`from` = its id), or from scratch (`from` = 'load': the
+   * Game harness's restart, `__game.load()` / R); a `spawn` follows at once.
+   */
   | { type: 'roomEnter'; room: string; from: string; x: number; y: number }
   /**
    * She fell into a catch zone (`scene.catches`, `id`): it costs nothing. She is held (no input) for

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CameraBeats, leanWeight } from '../../src/render/camera/beats';
-import { createCamera } from '../../src/render/camera/index';
+import { createCamera, lerpCamera, stepCamera } from '../../src/render/camera/index';
 import { cameraFor, cameraTuning } from '../../src/render/camera/tuning';
 import { SAFE_H } from '../../src/render/contract';
 import { LayerTree } from '../../src/render/scene/layer-tree';
@@ -403,5 +403,40 @@ describe('the room camera', () => {
     b.onStep([{ type: 'spawn', x: 0, y: 0 }], mid + 1);
     b.update(1 / 60, mid + 1, 1, out);
     expect([b.x, b.y]).toEqual([0, 0]);
+  });
+});
+
+describe('the room camera on a full naive run', () => {
+  it('no lurch on the drops (camera acceleration under 8 px/f2 until the exit), space ahead while she runs', () => {
+    const ct = cameraFor(WOOD_HATCH);
+    const s = sim(WOOD_HATCH);
+    hatched(s);
+    const cam = createCamera(s.state, WOOD_HATCH, ct);
+    let prevY = lerpCamera(cam, cam, 1).y;
+    let prevV = 0;
+    let maxA = 0;
+    const ahead: number[] = [];
+    let hold = 0;
+    for (let f = 0; f < 60 * 30 && !s.state.exit; f++) {
+      const p = s.state.player;
+      if (hold === 0 && p.grounded && (p.wallDir === 1 || !groundAhead(WOOD_HATCH, s.state, 12))) hold = 14;
+      s.run(R | (hold > 0 ? J : 0), 1);
+      if (hold > 0) hold--;
+      stepCamera(cam, s.state, WOOD_HATCH, ct);
+      const v = lerpCamera(cam, cam, 1);
+      const vy = v.y - prevY;
+      if (f > 2) maxA = Math.max(maxA, Math.abs(vy - prevV));
+      prevY = v.y;
+      prevV = vy;
+      const q = s.state.player;
+      if (q.grounded && q.vx > 9 && f > 120) ahead.push(v.x - (q.x + q.w / 2));
+    }
+    expect(s.state.exit).not.toBeNull();
+    expect(maxA).toBeLessThan(8);
+    // Running right she sits at x 0.38-0.44 of the 1920 frame: the view's centre 115-230 px ahead of her.
+    ahead.sort((a, b) => a - b);
+    const mid = ahead[Math.floor(ahead.length / 2)] ?? 0;
+    expect(mid).toBeGreaterThan(115);
+    expect(mid).toBeLessThan(230);
   });
 });

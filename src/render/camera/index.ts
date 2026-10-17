@@ -27,6 +27,11 @@ export interface CameraState {
   fvx: number;
   fvy: number;
   targetY: number;
+  /** Her feet's y the last time she stood on the ground (a long fall is measured from it). */
+  groundY: number;
+  /** The vertical target after its own spring (`targetSmoothY`), and that spring's velocity. */
+  ty: number;
+  tvy: number;
   /** Slow average of the travel direction, -1..1. Scales the look-ahead. */
   lead: number;
   /** 0..1: how far the glide framing (longer look-ahead, look-down) is in. */
@@ -84,7 +89,9 @@ function place(cam: CameraState, scene: Scene, ct: CameraTuning): void {
   // Held by the top or the bottom: the spring rests there too, so the view answers at once when
   // she comes back (a glide off the summit), not after the spring has crossed the slack.
   const fy = cam.y + line;
-  if (fy !== cam.fy) {
+  // (Only a real clamp: `cam.y + line` can miss `cam.fy` by a rounding ulp, and zeroing the spring's
+  // velocity on that made a fast follow stutter, every other frame, at half speed.)
+  if (Math.abs(fy - cam.fy) > 1e-6) {
     if ((cam.fy < fy && cam.fvy < 0) || (cam.fy > fy && cam.fvy > 0)) cam.fvy = 0;
     cam.fy = fy;
   }
@@ -130,6 +137,9 @@ export function createCamera(
     fvx: 0,
     fvy: 0,
     targetY: feet,
+    ty: feet,
+    tvy: 0,
+    groundY: feet,
     lead: 0,
     glide: 0,
     grounded: 0,
@@ -198,14 +208,18 @@ export function stepCamera(
   const targetX = cx + cam.lead * (ct.lookaheadX + G.extraX * cam.glide) + cam.restX;
   [cam.fx, cam.fvx] = smoothDamp(cam.fx, cam.fvx, targetX, p.mode === 'dash' ? ct.smoothXDash : ct.smoothX);
 
+  if (p.grounded) cam.groundY = feet;
   // Vertical: dead zone (the target holds while the feet stay in the window), fast-fall follow.
   let smoothY = ct.smoothY;
+  /** 0..1: how far into a long fall (or the exit's drop) she is: the target's spring shortens with it. */
+  let fastK = 0;
   // Where her feet are in the safe area (0 top, 1 bottom): the window is the same on every screen.
   const feetScreen = (feet - cam.y - (cam.vh - SAFE_H) / 2) / SAFE_H;
   if (p.vy > ct.fallFollowVy && feet > cam.targetY + ct.fallBelow) {
     // A real fall (past the line the view rests on; coming down from a jump is not one).
     cam.targetY = feet + ct.fallLookahead;
-    smoothY = ct.smoothYFall;
+    // A long fall (or the room's exit) gets the faster follow; a drop between ledges the usual one.
+    smoothY = feet - cam.groundY > ct.realFallPx ? ct.smoothYFastFall : ct.smoothYFall;
   } else if (p.mode === 'wallSlide' || feetScreen < ct.winTop || feetScreen > ct.winBot) {
     cam.targetY = feet;
   } else if (p.grounded) {
@@ -218,18 +232,35 @@ export function stepCamera(
     if (cam.grounded > ct.settleFrames || cam.glide > 0.02 || d < -ct.landUp || d > ct.landDown)
       cam.targetY = line;
   }
-  if (s.exit && p.vy > 0) {
+  // Rooms that set `realFallPx`: below her last ground and falling, the view is led every frame, and
+  // the lead and the follow's speed grow smoothly with the drop (`k` 0 -> 1 over `realFallPx`): a drop
+  // between ledges gets a little lead on the usual follow, a long fall or the exit the full lead on the
+  // fast one. Nothing switches in one frame.
+  const drop = feet - cam.groundY - ct.fallBelow;
+  if (ct.realFallPx > 0 && !p.grounded && p.vy > 0 && (drop > 0 || s.exit)) {
+    const k = s.exit ? 1 : Math.min(1, Math.max(0, drop / ct.realFallPx)) ** 2;
+    cam.targetY = Math.max(cam.targetY, feet + ct.fallLookahead * k);
+    smoothY = ct.smoothYFall + (ct.smoothYFastFall - ct.smoothYFall) * k;
+    fastK = k;
+  } else if (s.exit && p.vy > 0) {
     // Leaving the room by a drop: lead her down every frame, so she falls through the middle of the
-    // frame while the room fades out (rooms without exits never get here).
+    // frame while the room fades out.
     cam.targetY = feet + ct.fallLookahead;
-    smoothY = ct.smoothYFall;
+    smoothY = ct.smoothYFastFall;
+    fastK = 1;
   }
   if (p.gliding) {
     // She is sinking: lead below her feet so the landing is in view. Only ever downward.
     cam.targetY = Math.max(cam.targetY, feet + G.lookDown * cam.glide);
     smoothY = G.smoothY;
   }
-  [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, cam.targetY, smoothY);
+  // The target through its own spring first (when the room asks): the view's velocity never steps.
+  let target = cam.targetY;
+  if (ct.targetSmoothY > 0) {
+    [cam.ty, cam.tvy] = smoothDamp(cam.ty, cam.tvy, cam.targetY, ct.targetSmoothY * (1 - 0.5 * fastK));
+    target = cam.ty;
+  }
+  [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, target, smoothY);
   place(cam, scene, ct);
 }
 

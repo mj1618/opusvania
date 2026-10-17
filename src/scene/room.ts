@@ -31,6 +31,13 @@ export interface RoomCamera {
   /** How far below her feet the view leads in a real fall, px. */
   fallLookahead?: number;
   smoothYFall?: number;
+  /** Frames of the faster follow of a long fall (more than `realFallPx`) and of an exit's drop. */
+  smoothYFastFall?: number;
+  realFallPx?: number;
+  /** Frames of the spring the vertical target runs through (no step in the view's velocity). */
+  targetSmoothY?: number;
+  /** Frames the look-ahead takes to build up (and to ease back when she stops). */
+  leadFrames?: number;
   /** Seconds of fade up from black at boot and at every restart of the room (0 / absent: none). */
   fadeIn?: number;
   /** A shove of the view on the `hatch` event, px (down: the cocoon bursts). */
