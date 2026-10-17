@@ -79,6 +79,11 @@ export const TATTER = {
    * at the shelf (the swarm's try, timed from her arrival by `tryAt` s) and fails.
    */
   want: { arrive: 420, tryAt: 0.9, gaze: 0.6 },
+  /**
+   * She rests at the patch beside it (`patchRest` within `near` px): it turns its head to her and lifts a
+   * little, its wings stirring once, for `secs` (the first-timer: "the moth companion needs one reaction").
+   */
+  rest: { near: 700, secs: 3.2, lift: 0.3, wings: 0.35 },
 } as const;
 
 export class Tatter {
@@ -103,6 +108,8 @@ export class Tatter {
   /** What it wants and cannot reach (world px), and seconds since she arrived (-1 = not yet). */
   private readonly want: readonly [number, number] | null;
   private wantT = -1;
+  /** Seconds since she rested near it (large = not lately). */
+  private restT = 1e6;
 
   constructor(
     private readonly ctx: RenderContext,
@@ -187,6 +194,7 @@ export class Tatter {
     cocoon: { x: number; y: number } | null,
     sinceBreak: number,
     stirred: boolean,
+    rested = false,
   ): void {
     const T = TATTER;
     const rig = this.rig;
@@ -196,6 +204,10 @@ export class Tatter {
       this.wantT = 0;
     else if (this.wantT >= 0) this.wantT += dt;
     const t = want ? (this.wantT >= 0 ? this.wantT + T.want.tryAt : 1e6) : sinceBreak;
+    if (rested && her && Math.hypot(her.cx - this.x, her.feetY - this.y) < T.rest.near) this.restT = 0;
+    else this.restT += dt;
+    /** 0..1: how much of the rest reaction is on (in fast, out slowly). */
+    const rk = smoothstep(0, 0.35, this.restT) * (1 - smoothstep(T.rest.secs - 1, T.rest.secs, this.restT));
     this.lastT = t;
     const headY = this.y - 46;
     // --- What it looks at, and how firmly.
@@ -256,6 +268,12 @@ export class Tatter {
       ly = lerp(ly, this.y + 30, sink);
       lw = lerp(lw, 0.9, sink);
     }
+    // She rests beside it: it looks at her.
+    if (rk > 1e-3 && her) {
+      lx = lerp(lx, her.cx, rk);
+      ly = lerp(ly, her.feetY - 60, rk);
+      lw = lerp(lw, 1, rk);
+    }
     // Looking down, the antennae droop with the head (a lowered chin alone lifts them into rods).
     rig.antExtra = 34 * sink;
     rig.antCurlExtra = 0.12 * sink;
@@ -281,7 +299,7 @@ export class Tatter {
         : 0;
     const stir = stirred ? 1 : 0;
     this.stirK = Math.max(this.stirK * Math.exp(-3 * dt), stir);
-    rig.strain = Math.max(brk, strain, 0.18 * this.stirK);
+    rig.strain = Math.max(brk, strain, 0.18 * this.stirK, T.rest.lift * rk);
     rig.perch = 1 - 0.75 * rig.strain;
     const tw =
       t < P.full + T.tryWings[2]
@@ -290,7 +308,10 @@ export class Tatter {
         : 0;
     // The try: two beats of the wings (the torn one barely lifts), a hop off the branch, and it fails.
     const beats = Math.sin(Math.PI * 2.4 * Math.max(0, t - P.full - T.tryWings[0])) ** 2;
-    rig.tryWings = tw * (0.5 + 0.5 * beats) * (0.9 + 0.1 * noise1(clock * 9, 171));
+    rig.tryWings = Math.max(
+      tw * (0.5 + 0.5 * beats) * (0.9 + 0.1 * noise1(clock * 9, 171)),
+      T.rest.wings * rk * Math.sin(Math.PI * Math.min(1, this.restT / 1.2)) ** 2,
+    );
     const hu = (t - (P.full + T.tryWings[1] - 0.15)) / 0.5;
     this.hopY = hu > 0 && hu < 1 ? -T.hop * Math.sin(Math.PI * hu) ** 1.5 : 0;
     // ... and lands back hard: a crumple (lower, head down) that lets go slowly.

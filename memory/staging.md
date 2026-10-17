@@ -41,3 +41,16 @@ flies into, the player in control, input never held; the camera may lift, widen 
   only open air is under them at the vista (they draw behind solids, so elsewhere they hide).
 - The twitch is an overlay, not the rig's acting: a real wings cue belongs in the Vesper rig later.
 - The bask and vista do not hold input (render can't); if a held beat is wanted it is a sim trigger (<= 3 s).
+
+## The curious first-timer's render items (2026-10-18)
+- **Moth count** (`hud/moths.ts`, in the HUD under the lights, real top-left corner): `save.moths`; on a snuff up
+  to 8 small moths leave the flame's place on screen and fly into it, each arrival ticks it (the HUD gets the
+  drawn camera view from the stage to place the flame). Shown on a snuff, a stone read or a rest, then away. After
+  an area's moth-stone is read, a line under it: `lamps out / all` of that area (`WORLD.areas`, `save.snuffed`).
+- **Item line** (`hud/item-line.ts`): a grant's line (glade or hollow) in screen space, centred in the safe area
+  at 0.8 of its height, so no view shape or camera position cuts it (it hung over her in the world and was clipped
+  off the left edge by the glade's west wall). Glide now says "Hold jump as you fall to glide." (the held-jump rule:
+  a hold from the take-off only opens the wings once she drops). The world views draw only the burst now.
+- **Tatter at a rest**: a `patchRest` within 700 px turns its look to her, lifts it a little and stirs its wings
+  once for ~3 s (`TATTER.rest`), at P1, P3 and wherever it sits.
+- Story-camera framings are clamped inside the room at the beat's zoom (the glade's bask showed past its west wall).

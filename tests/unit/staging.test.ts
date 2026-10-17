@@ -7,9 +7,11 @@ import type { SimEvent } from '../../src/sim/events';
 
 const room = {
   id: 'stage-test',
+  width: 4000,
+  height: 2000,
   marks: {
     stage: StageSchema.parse({
-      vista: { flag: 'vista', zone: 'v', x: 1000, y: 500, zoom: 0.9, hold: 2 },
+      vista: { flag: 'vista', zone: 'v', x: 1500, y: 1000, zoom: 0.9, hold: 2 },
       glimpse: {
         flag: 'glimpse',
         x: 200,
@@ -41,7 +43,7 @@ describe('story staging camera (marks.stage)', () => {
       peak = Math.max(peak, c.weight);
     }
     expect(peak).toBeCloseTo(1, 3);
-    expect(c.x).toBeCloseTo(1000, 0);
+    expect(c.x).toBeCloseTo(1500, 0);
     expect(c.zoom).toBeCloseTo(0.9, 3);
     for (let i = 0; i < 60 * 2; i++) c.update(1 / 60, [], '', view, []);
     expect([c.x, c.y, c.zoom]).toEqual([0, 0, 1]);
@@ -71,5 +73,17 @@ describe('story staging camera (marks.stage)', () => {
       if (f > 600) break;
     }
     expect(f / 60).toBeCloseTo(4, 0);
+  });
+});
+
+describe('story staging camera bounds', () => {
+  it('a framing by the room edge stays inside the room', () => {
+    const c = new StageCamera(room, []);
+    const r = room.marks?.stage?.vista;
+    if (r) r.x = 100;
+    c.update(1 / 60, [flagSet('vista')], '', view, []);
+    for (let i = 0; i < 90; i++) c.update(1 / 60, [], '', view, []);
+    expect(c.x).toBeCloseTo(1920 / 2 / 0.9, 0);
+    if (r) r.x = 1500;
   });
 });

@@ -343,7 +343,7 @@ export class RenderStage {
     this.giving.update(dt, this.clock, view, sim);
     this.swarm.update(dt, this.clock, view, sim);
     this.post.update(dt, this.clock, view);
-    this.hud.update(dt, this.clock, sim, vs);
+    this.hud.update(dt, this.clock, sim, vs, view);
     this.overlay.draw(view, player);
     this.view = view;
     this.drawn = player;

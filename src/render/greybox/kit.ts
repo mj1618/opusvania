@@ -34,12 +34,6 @@ const KC = {
   hollow: 0xd8e6ff,
 } as const;
 
-/** What a hollow's upgrade says (core.md §6: one line, the glade ritual shorter). */
-const UPGRADE_LINES: Record<string, string> = {
-  quickWings: 'QUICK WINGS: beat free in two',
-  keenBlade: 'KEEN BLADE: a longer reach to the flame',
-};
-
 /** Seconds one pass of a sign's rhythm takes, and the rest between its two passes. */
 function rhythmLen(rhythm: string): number {
   let at = 0;
@@ -191,10 +185,8 @@ export class KitView {
       } else if (e.type === 'stoneRead') this.add('stone', e.x, e.y - 60, 0, 0);
       else if (e.type === 'signRead') this.reading.set(e.id, 0);
       else if (e.type === 'hollowGrant') {
+        // (Its line is the HUD's item line, hud/item-line.ts.)
         this.add('grant', e.x, e.y, 0, 0);
-        this.line?.destroy();
-        this.line = label(UPGRADE_LINES[e.upgrade] ?? e.upgrade, e.x, e.y - 220, 0xffffff, 30);
-        this.front.addChild(this.line);
       } else if (e.type === 'kitClang') this.add('clang', e.hitX, e.hitY, 0, 0);
       else if (e.type === 'slashHit' && (e.target.kind === 'seedCase' || e.target.kind === 'thorns'))
         this.add('pogo', e.x, e.y, 0, 0);

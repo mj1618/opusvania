@@ -126,7 +126,16 @@ export class Cast {
     }
     if (this.tatter) {
       const stirred = events.some((e) => e.type === 'hatchStir');
-      this.tatter.update(dt, clock, hatchLink.inside ? null : her, row.hersAt, row.sinceBreak, stirred);
+      const rested = events.some((e) => e.type === 'patchRest');
+      this.tatter.update(
+        dt,
+        clock,
+        hatchLink.inside ? null : her,
+        row.hersAt,
+        row.sinceBreak,
+        stirred,
+        rested,
+      );
     }
   }
 

@@ -126,8 +126,15 @@ export class StageCamera {
       return;
     }
     const w = this.weight;
-    this.x = (s.x - follow.x) * w;
-    this.y = (s.y - follow.y) * w;
+    // The framing stays inside the room (a bask by its west wall must not show past it), the view's
+    // real size at the beat's zoom; a room smaller than that view is centred.
+    const hw = follow.w / 2 / s.zoom;
+    const hh = follow.h / 2 / s.zoom;
+    const R = this.room;
+    const tx = R.width > 2 * hw ? Math.min(R.width - hw, Math.max(hw, s.x)) : R.width / 2;
+    const ty = R.height > 2 * hh ? Math.min(R.height - hh, Math.max(hh, s.y)) : R.height / 2;
+    this.x = (tx - follow.x) * w;
+    this.y = (ty - follow.y) * w;
     this.zoom = 1 + (s.zoom / follow.zoom - 1) * w;
   }
 }

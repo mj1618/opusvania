@@ -1,8 +1,7 @@
 /**
  * The world's things in greybox (memory/world.md, memory/greybox.md): moon patches (a pale shaft of
  * moonlight on the ground, brighter while she stands in it, a ring the moment she rests), glades (a
- * pillar of pale light, gone dim once taken; the grant flashes and its line hangs over her a few
- * seconds), shortcuts (amber while shut, with a white bar on the side that opens them; an outline once
+ * pillar of pale light, gone dim once taken; the grant flashes; its line is the HUD's item line), shortcuts (amber while shut, with a white bar on the side that opens them; an outline once
  * open) and doors (a green arch). Read from the scene, the save and the sim events; draws nothing that
  * moves the sim.
  */
@@ -12,14 +11,6 @@ import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
 import { GB } from './palette';
 import { label } from './static';
-
-/** What a glade's grant says (core.md: one item line per ability; the wood's lines, wood.md §4). */
-const LINES: Record<string, string> = {
-  glide: 'Your wings have dried. Hold jump to glide.',
-  wallJump: 'Your claws have hardened. Jump at a wall to climb.',
-  doubleJump: 'DOUBLE JUMP: jump again in the air',
-  dash: 'DASH',
-};
 
 interface Flash {
   kind: 'rest' | 'grant' | 'open';
@@ -42,15 +33,16 @@ export class WorldView {
   onEvents(events: readonly SimEvent[]): void {
     for (const e of events) {
       if (e.type === 'patchRest') this.add('rest', e.x, e.y - 100, 0.9, 'rested · saved');
-      else if (e.type === 'gladeGrant') this.add('grant', e.x, e.y - 260, 5, LINES[e.ability] ?? e.ability);
+      // (The grant's line is the HUD's item line, hud/item-line.ts: in screen space, never cut off.)
+      else if (e.type === 'gladeGrant') this.add('grant', e.x, e.y - 260, 5, '');
       else if (e.type === 'shortcutOpen') this.add('open', e.x, e.y, 0.8, 'opened');
       else if (e.type === 'spawn' && events.some((o) => o.type === 'roomEnter')) this.clear();
     }
   }
 
   private add(kind: Flash['kind'], x: number, y: number, life: number, text: string): void {
-    const t = label(text, x, y, kind === 'grant' ? 0xffffff : GB.label, kind === 'grant' ? 30 : 20);
-    this.texts.addChild(t);
+    const t = text ? label(text, x, y, GB.label, 20) : null;
+    if (t) this.texts.addChild(t);
     this.flashes.push({ kind, x, y, t: 0, life, text: t });
   }
 
