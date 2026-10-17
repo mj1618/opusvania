@@ -1,4 +1,4 @@
-import { homeClear, slashBlocks, slashEnemies } from '../enemies';
+import { homeClear, slashBlocks, slashEnemies, slashKills } from '../enemies';
 import type { GlideEndReason, HurtSource, JumpKind, SimEvent, SlashDir, SlashEndReason } from '../events';
 import { beatGrab, freeGrab, tickGrab } from '../grab';
 import { ActionBit, axisX, type InputFrame } from '../input';
@@ -7,18 +7,28 @@ import {
   beatLure,
   catchPlayer,
   freePlayer,
-  lureCoreAt,
+  lureCatchAt,
   lurePull,
+  lureThrowAim,
   orbitStep,
   slashLures,
   tickLures,
 } from '../lures';
-import { type Body, type Collider, kickableAt, moveX, moveY, oneWayUnder, solidAt } from '../physics/aabb';
+import {
+  type Body,
+  type Collider,
+  edgeOpen,
+  kickableAt,
+  moveX,
+  moveY,
+  oneWayUnder,
+  solidAt,
+} from '../physics/aabb';
 import { slashPods } from '../pods';
 import type { Scene } from '../scene';
 import type { EnemyState, GameState, Motion, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
-import { slashBox } from './attack';
+import { type Box, slashBox } from './attack';
 import type { MoveParams, SlashStep } from './params';
 
 /**
@@ -82,6 +92,7 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     attackActive: false,
     attackSeq: 0,
     attackHits: 0,
+    attackWall: false,
     attackStep: 1,
     attackFinisher: false,
     lungeX: 0,
@@ -106,6 +117,10 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     pullX: 0,
     lureGrace: -1,
     lureGraceFrames: 0,
+    lureAimX: 0,
+    lureAimY: -1,
+    lureThrow: 0,
+    lureCore: 0,
     grab: -1,
     grabX: 0,
     grabY: 0,
@@ -371,6 +386,7 @@ function updateSlash(c: Ctx): void {
   p.attackActive = st.startup === 0;
   p.attackSeq++;
   p.attackHits = 0;
+  p.attackWall = false;
   p.attackBuf = 0;
   p.attackCd = st.cooldown;
   // Commitment through motion: a lunge on the ground, a brief hang in the air (once per step per airtime).
@@ -529,6 +545,7 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
   }
   if (hits === 0) {
     if (glanced && pogo) pogoBounce(c);
+    else if (!glanced && !kit.clang && p.attackHits === 0) slashTerrain(c, box, dir, p.attackStep);
     return;
   }
   // A flame: a short beat while it holds (the pogo keeps its own), the loudest one when it goes out.
@@ -541,8 +558,11 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
           ? Math.max(0, Math.round(E.pogoHitstopFrames))
           : Math.max(0, Math.round(L.hitstopFrames)) + st.hitstopBonus
         : 0;
+  // The killing blow holds longer (`enemies.killHitstopBonus`: feel review problem 2).
+  const killStop =
+    foes > 0 && slashKills() > 0 && foeStop > 0 ? Math.max(0, Math.round(E.killHitstopBonus)) : 0;
   const hitstop = Math.max(
-    foes > 0 ? foeStop : 0,
+    foes > 0 ? foeStop + killStop : 0,
     pods > 0 ? podStop : 0,
     lureStop,
     kit.hits > 0 ? kit.stop : 0,
@@ -569,6 +589,96 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
   } else if (dir === 'up') {
     if (!p.grounded && p.mode === 'normal') p.vy += P.recoilUp;
   } else if (pogo && (others > 0 || kit.bounce || glanced)) pogoBounce(c);
+}
+
+/** Scratch for the terrain contact. */
+const WALL = { x: 0, y: 0 };
+
+/**
+ * A forward or up cut that hit nothing met terrain (feel review problem 10): the first live frame its
+ * area overlaps a solid (or the room's edge) on the side it swings to, once per slash. She holds
+ * `attack.terrainHitstop`, a forward cut throws her back `terrainRecoil` and its lunge stops, and
+ * `slashTerrain` gives render the contact point and the face's normal for sparks.
+ */
+function slashTerrain(c: Ctx, box: Box, dir: 'fwd' | 'up' | 'down', step: number): void {
+  const p = c.p;
+  if (dir === 'down' || p.attackWall) return;
+  const facing = p.attackFacing;
+  if (!terrainContact(c.scene, box, dir, facing, p, c.P.stepUpPx, WALL)) return;
+  const A = c.P.tuning.attack;
+  const stop = Math.max(0, Math.round(A.terrainHitstop));
+  const recoil = dir === 'fwd' ? Math.max(0, A.terrainRecoil) : 0;
+  p.attackWall = true;
+  p.hitstop = Math.max(p.hitstop, stop);
+  if (dir === 'fwd') {
+    p.lungeX = 0;
+    if (p.mode === 'normal' && Math.abs(p.kickX) < recoil) p.kickX = -facing * recoil;
+  }
+  c.events.push({
+    type: 'slashTerrain',
+    x: WALL.x,
+    y: WALL.y,
+    nx: dir === 'fwd' ? -facing : 0,
+    ny: dir === 'fwd' ? 0 : 1,
+    dir,
+    facing,
+    step,
+    hitstop: stop,
+    recoil,
+  });
+}
+
+/**
+ * Where a slash area meets terrain beyond her body (into `out`). `fwd`: the part of the area in front of
+ * her body and above her feet less `stepUp` (the floor and a ledge she runs up are not walls); the
+ * nearest face there, at that part's middle height (clamped to the solid). `up`: the part above her
+ * head; the nearest underside, over her centre. Solids and the room's left / right edges (not an open
+ * exit's span) count; one-ways do not. False when nothing is met.
+ */
+function terrainContact(
+  scene: Scene,
+  box: Box,
+  dir: 'fwd' | 'up',
+  facing: number,
+  b: Body,
+  stepUp: number,
+  out: { x: number; y: number },
+): boolean {
+  const cx = b.x + b.w / 2;
+  const fwd = dir === 'fwd';
+  const x0 = fwd && facing > 0 ? Math.max(box.x, b.x + b.w) : box.x;
+  const x1 = fwd && facing < 0 ? Math.min(box.x + box.w, b.x) : box.x + box.w;
+  const y0 = box.y;
+  const y1 = Math.min(box.y + box.h, fwd ? b.y + b.h - stepUp : b.y);
+  if (x1 <= x0 || y1 <= y0) return false;
+  const midY = (y0 + y1) / 2;
+  let best = Number.POSITIVE_INFINITY;
+  const solids = scene.solids;
+  for (let i = 0; i < solids.length; i++) {
+    const s = solids[i];
+    if (!s || x0 >= s.x + s.w || s.x >= x1 || y0 >= s.y + s.h || s.y >= y1) continue;
+    const face = !fwd ? Math.min(y1, s.y + s.h) : facing > 0 ? Math.max(x0, s.x) : Math.min(x1, s.x + s.w);
+    const dist = !fwd ? y1 - face : facing > 0 ? face - x0 : x1 - face;
+    if (dist >= best) continue;
+    best = dist;
+    out.x = !fwd ? Math.max(s.x, Math.min(s.x + s.w, cx)) : face;
+    out.y = !fwd ? face : Math.max(s.y, Math.min(s.y + s.h, midY));
+  }
+  // The room's outer walls (not through an open exit).
+  if (fwd) {
+    const edge =
+      facing > 0
+        ? x1 > scene.width && !edgeOpen(scene, 'e', y0, y1)
+        : x0 < 0 && !edgeOpen(scene, 'w', y0, y1);
+    const ex = facing > 0 ? scene.width : 0;
+    const dist = facing > 0 ? ex - x0 : x1 - ex;
+    if (edge && dist < best) {
+      best = dist;
+      out.x = ex;
+      out.y = midY;
+    }
+  }
+  return best < Number.POSITIVE_INFINITY;
 }
 
 /** The pogo: a fixed hop off what the down slash met, the air dash and double jump back. */
@@ -904,11 +1014,12 @@ export function updatePlayer(
   const motion0 = p.motion;
   const grounded0 = p.grounded;
   const facing0 = p.facing;
-  if (p.invuln > 0) p.invuln--;
+  // (Held by a hitstop her i-frames stand still: a blow's hold costs her none of them.)
+  if (p.invuln > 0 && p.hitstop === 0) p.invuln--;
   // Out of control: thrown by a hit (directions come back for the tail of it), or faded.
   const sides = ActionBit.left | ActionBit.right;
   const eff = p.faded > 0 || p.stagger > P.steerFrames ? 0 : p.stagger > 0 ? input & sides : input;
-  tickLures(p);
+  tickLures(state);
   tickGrab(p);
   const c = new Ctx(state, p, scene, eff, state.prevInput, P, events);
   c.inX = axisX(eff);
@@ -968,6 +1079,9 @@ function controller(c: Ctx): void {
   const x0 = p.x;
   c.y0 = p.y;
   const vy0 = p.vy;
+  // Her body centre before the move (a core catches her only moving inward: memory/lures.md).
+  const pcx = p.x + p.rx + p.w / 2;
+  const pcy = p.y + p.ry + p.h / 2;
 
   // Wall speed retention: a wall zeroed vx recently and has gone -> restore it. Moving the other
   // way cancels it (Celeste does the same); otherwise it undoes wall jumps and turn-arounds.
@@ -1022,19 +1136,20 @@ function controller(c: Ctx): void {
     events.push({ type: 'apex', x: c.fx, y: c.fy });
   // Reaching a burning core in ordinary flight (a dash passes through; a blow's throw does not catch).
   if (p.mode === 'normal' && p.stagger === 0 && p.faded === 0 && p.hp > 0) {
-    const i = lureCoreAt(c.state, c.scene, P.tuning);
+    const i = lureCatchAt(c.state, c.scene, P.tuning, pcx, pcy);
     if (i >= 0) {
       endGlide(c, 'lure');
       catchPlayer(c.state, c.scene, i, P.tuning, events);
     }
-  }
+  } else p.lureCore = 0;
 }
 
 /**
  * The pull of the lures (src/sim/lures.ts) on what the mode made of her velocity. In the air: the
  * vertical part into `vy`, the sideways part into `pullX` (kept `pullXKeep` a frame). On the ground:
- * `pullX` eases toward a weak drag, so she can always walk away. Not in a dash (it ignores the pull)
- * or on a wall (she clings).
+ * `pullX` eases toward a weak drag while she holds a direction (standing still she never drifts), so
+ * she can always walk away. A gliding body feels `glidePullMult` of it. Not in a dash (it ignores the
+ * pull) or on a wall (she clings).
  */
 function pull(c: Ctx): void {
   const p = c.p;
@@ -1045,16 +1160,18 @@ function pull(c: Ctx): void {
   }
   const a = lurePull(c.state, c.scene, c.P.tuning);
   if (p.grounded) {
-    const drag = Math.max(-L.groundMax, Math.min(L.groundMax, a.ax * L.groundDrag));
+    const drag = c.inX === 0 ? 0 : Math.max(-L.groundMax, Math.min(L.groundMax, a.ax * L.groundDrag));
     p.pullX = approach(p.pullX, drag, L.groundDecel);
     return;
   }
-  p.pullX = Math.max(-L.pullXMax, Math.min(L.pullXMax, p.pullX * L.pullXKeep + a.ax));
-  p.vy += a.ay;
+  const m = p.gliding ? L.glidePullMult : 1;
+  p.pullX = Math.max(-L.pullXMax, Math.min(L.pullXMax, p.pullX * L.pullXKeep + a.ax * m));
+  p.vy += a.ay * m;
 }
 
-/** Scratch for the orbit step. */
+/** Scratch for the orbit step and the throw's aim. */
 const ORBIT = { dx: 0, dy: 0 };
+const AIM_NOW = { x: 0, y: 0 };
 
 /**
  * One frame caught by a lure. A dash (owned, ready) frees her at once and the dash starts as usual; a
@@ -1087,9 +1204,11 @@ function caught(c: Ctx): boolean {
   p.jumpBuf = 0;
   p.djBuf = 0;
   p.attackBuf = 0;
+  const aimY = (c.held(ActionBit.down) ? 1 : 0) - (c.held(ActionBit.up) ? 1 : 0);
+  let beat = false;
   if (p.lurePend > 0 && p.lureCd === 0) {
     p.lurePend--;
-    const aimY = (c.held(ActionBit.down) ? 1 : 0) - (c.held(ActionBit.up) ? 1 : 0);
+    beat = true;
     const free = grab
       ? beatGrab(c.state, t, c.events, c.inX, aimY)
       : beatLure(c.state, c.scene, t, c.events, c.inX, aimY);
@@ -1101,9 +1220,13 @@ function caught(c: Ctx): boolean {
       p.sustain = 0;
       return false;
     }
-  } else p.lureOut = Math.max(0, p.lureOut - L.beatSink);
-  // A grab holds her where it took her; a lure's core turns her round its flame.
-  if (grab) {
+  }
+  // The last beat is due (`beatCd` after the one before it): the orbit stands still, so the throw
+  // arrow she sees is the throw she gets (feel review problem 6). A grab holds her where it took her;
+  // otherwise the core turns her round its flame.
+  const frozen = grab || (p.lureBeats === Math.max(1, Math.round(L.beats)) - 1 && p.lureCd > 0);
+  if (!beat && !frozen) p.lureOut = Math.max(0, p.lureOut - L.beatSink);
+  if (frozen) {
     ORBIT.dx = 0;
     ORBIT.dy = 0;
   } else orbitStep(c.state, c.scene, t, ORBIT);
@@ -1114,6 +1237,12 @@ function caught(c: Ctx): boolean {
   p.vy = ORBIT.dy;
   moveX(p, ORBIT.dx, c);
   moveY(p, ORBIT.dy, c);
+  // Where the last beat would throw her from here (render's arrow).
+  if (!grab) {
+    const a = lureThrowAim(c.state, c.scene, t, c.inX, aimY, AIM_NOW);
+    p.lureAimX = a.x;
+    p.lureAimY = a.y;
+  }
   p.grounded = false;
   p.coyote = 0;
   p.airTopY = p.y;
@@ -1281,6 +1410,8 @@ export function hurtPlayer(
   p.hurtSeq++;
   p.stagger = P.staggerFrames;
   p.invuln = out ? 0 : P.invulnFrames;
+  // The blow lands: she (and what hit her: step) holds before the throw; her timers stand still.
+  const hold = out ? P.fadeHitstop : P.hurtHitstop;
   events.push({
     type: 'hurt',
     x,
@@ -1294,6 +1425,7 @@ export function hurtPlayer(
     hitY,
     stagger: p.stagger,
     invuln: p.invuln,
+    hitstop: hold,
   });
   if (p.attack !== 'none') {
     events.push({ type: 'slashEnd', x, y, dir: p.attack, hits: p.attackHits, reason: 'hurt' });
@@ -1319,7 +1451,7 @@ export function hurtPlayer(
   p.motionFrames = 0;
   p.skid = false;
   p.freeze = 0;
-  p.hitstop = 0;
+  p.hitstop = hold;
   p.kickX = 0;
   p.lungeX = 0;
   p.pullX = 0;

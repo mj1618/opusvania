@@ -410,6 +410,8 @@ export function step(
         hitY,
         events,
       );
+      // The creature that hit her holds as long as she does (the blow lands: `health.hurtHitstop`).
+      e.hitstop = Math.max(e.hitstop, state.player.hitstop);
       // A blow knocks her out of a lure's hold (memory/lures.md).
       if (state.player.lure >= 0) freePlayer(state, S, t, 'hurt', events);
     }

@@ -265,7 +265,8 @@ describe('burrbacks in the grove, piloted', () => {
         hurt = s.events.slice(from).some((ev) => ev.type === 'hurt');
       }
       expect(hurt, id).toBe(true);
-      for (let f = 0; f < 120; f++) {
+      // (Two hurt holds fit in the wait: by the pool the ram comes again.)
+      for (let f = 0; f < 120 + 2 * defaultTuning.health.hurtHitstop; f++) {
         step(s.state, 0, s.tuning, s.scene, s.events);
         const p = s.state.player;
         expect(p.x).toBeGreaterThanOrEqual(0);

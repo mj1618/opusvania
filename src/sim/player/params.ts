@@ -111,6 +111,8 @@ export interface MoveParams {
   steerFrames: number;
   hurtDecel: number;
   invulnFrames: number;
+  hurtHitstop: number;
+  fadeHitstop: number;
   fadeFrames: number;
   reformInvulnFrames: number;
   safeFrames: number;
@@ -267,6 +269,8 @@ export function resolveParams(t: Tuning, abilities: readonly AbilityId[] = ABILI
     steerFrames: Math.max(0, Math.round(t.health.steerFrames)),
     hurtDecel: t.health.hurtDecel,
     invulnFrames: Math.max(0, Math.round(t.health.invulnFrames)),
+    hurtHitstop: Math.max(0, Math.round(t.health.hurtHitstop)),
+    fadeHitstop: Math.max(0, Math.round(t.health.fadeHitstop)),
     fadeFrames: Math.max(1, Math.round(t.health.fadeFrames)),
     reformInvulnFrames: Math.max(0, Math.round(t.health.reformInvulnFrames)),
     safeFrames: Math.max(1, Math.round(t.health.safeFrames)),

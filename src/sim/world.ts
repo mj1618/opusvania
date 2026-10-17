@@ -264,6 +264,8 @@ export function enterRoom(
   p.grabGrace = 0;
   p.lureGrace = fresh.lureGrace;
   p.lureGraceFrames = 0;
+  p.lureThrow = 0;
+  p.lureCore = 0;
   p.pullX = 0;
   p.kindling = -1;
   p.kindlingLamp = -1;

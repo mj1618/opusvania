@@ -628,9 +628,11 @@ describe('naive players finish the grove: the lanterns are the critical path', (
     expect(naive(5, 9).hash).toBe(naive(5, 9).hash);
   });
 
-  it('the careful first-timer (an 18-frame reaction: reads the brace, hops the ram, cuts it winded; steps out of a dive; rests at her lights)', () => {
-    const r = naive(14, 12, { read: 18 });
-    trace('careful first-timer, reaction 18', r);
+  it('the careful first-timer (a 16-frame reaction: reads the brace, hops the ram, cuts it winded; steps out of a dive; rests at her lights)', () => {
+    // (18 frames was the edge: at 19 the shaft's fight already lost its second tell. The feel review's
+    // holds (a kill +3, a hurt 8) moved that edge to 17; at 12-16 this bot's claims hold either way.)
+    const r = naive(14, 12, { read: 16 });
+    trace('careful first-timer, reaction 16', r);
     expect(r.ended).toBe(true);
     expect(r.lit).toBe(3);
     const died = r.events.filter((e) => e.type === 'enemyDie');

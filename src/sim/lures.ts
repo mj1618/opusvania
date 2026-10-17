@@ -10,8 +10,10 @@
  *  - **Caught.** Reaching the core she circles the flame (a tangent step, then back onto the circle
  *    with a sqrt: no trig), moving through moveX / moveY so walls still stop her. Her moves are
  *    replaced by beating free: each press of jump (or the blade) pushes her circle out; `beats`
- *    presses throw her outward along the radius she is at, with a grace from that lure. A dash (owned)
- *    frees her at once; a blow frees her. A gentle lure does no damage.
+ *    presses throw her along the held direction (the radius she is at when none is held), with a grace
+ *    from that lure and from every core the throw passes through. A dash (owned)
+ *    frees her at once; a blow frees her. A gentle lure does no damage. A core catches her only when she
+ *    moves into it, or stays in it `catchFrames` (gravity she rides, not glue: feel review problem 9).
  *  - **Snuff.** The flame is a slash target like a pod: one hit per slash, hitstop, the down cut is a
  *    pogo. At 0 hp it is out for good: no pull, no catch; its moths are freed (`lureSnuff`).
  *
@@ -108,12 +110,13 @@ export function createLures(scene: Scene, t: Tuning, snuffed: readonly string[] 
     out: isOut.map((o) => (o ? 1 : 0)),
     snuffed: isOut.filter((o) => o).length,
     freed: 0,
+    grace: list.map(() => 0),
   };
 }
 
 /** Is lure `i` burning and allowed to act on her (not the one she just broke free of)? */
 function acts(state: GameState, i: number): boolean {
-  if ((state.lures.hp[i] ?? 0) <= 0) return false;
+  if ((state.lures.hp[i] ?? 0) <= 0 || (state.lures.grace[i] ?? 0) > 0) return false;
   const p = state.player;
   return !(p.lureGrace === i && p.lureGraceFrames > 0);
 }
@@ -186,6 +189,77 @@ export function lureCoreAt(state: GameState, scene: Scene, t: Tuning): number {
   return -1;
 }
 
+/**
+ * After her move in ordinary flight: the lure whose core catches her now (-1 = none). `px, py` = her
+ * body centre before the move. A core catches her only when she moves inward (closer to its flame, which
+ * may swing) or has been inside it `catchFrames` frames in a row (`player.lureCore`): she can stand or
+ * drift beside a low wick without being glued to it. While her throw is young (`player.lureThrow`), a
+ * core she passes through is given grace instead (no re-catch by the next wick).
+ */
+export function lureCatchAt(state: GameState, scene: Scene, t: Tuning, px: number, py: number): number {
+  const p = state.player;
+  const i = lureCoreAt(state, scene, t);
+  const l = i >= 0 ? scene.lures?.[i] : undefined;
+  if (!l) {
+    p.lureCore = 0;
+    return -1;
+  }
+  if (p.lureThrow > 0) {
+    state.lures.grace[i] = Math.max(state.lures.grace[i] ?? 0, Math.max(0, Math.round(t.lures.graceFrames)));
+    p.lureCore = 0;
+    return -1;
+  }
+  p.lureCore++;
+  const now = flameAt(state.lures, i, l, state.frame, t, F);
+  const nx = centreX(p) - now.x;
+  const ny = centreY(p) - now.y;
+  const dNow = nx * nx + ny * ny;
+  const was = flameAt(state.lures, i, l, state.frame - 1, t, F);
+  const bx = px - was.x;
+  const by = py - was.y;
+  const inward = dNow < bx * bx + by * by;
+  return inward || p.lureCore >= Math.max(1, Math.round(t.lures.catchFrames)) ? i : -1;
+}
+
+/**
+ * The unit direction the last beat throws her (into `out`): the held direction, exactly (8-way), so the
+ * stick alone picks it (Ori's Bash; the old radius bent by the stick threw her the wrong way in 7 of 34
+ * rhythms). With nothing held, the radius she is at (out from the flame; Up at its very centre) is the
+ * tie-break. (Up as that default put R3's mashers into W-hi3 over W1 in 5 of 9 rhythms; the radius in 2.)
+ */
+export function lureThrowAim(
+  state: GameState,
+  scene: Scene,
+  t: Tuning,
+  aimX: number,
+  aimY: number,
+  out: { x: number; y: number },
+): { x: number; y: number } {
+  const hm = Math.sqrt(aimX * aimX + aimY * aimY);
+  if (hm > 0) {
+    out.x = aimX / hm;
+    out.y = aimY / hm;
+    return out;
+  }
+  out.x = 0;
+  out.y = -1;
+  const p = state.player;
+  const l = scene.lures?.[p.lure];
+  if (!l) return out;
+  const f = flameAt(state.lures, p.lure, l, state.frame, t, F);
+  const rx = centreX(p) - f.x;
+  const ry = centreY(p) - f.y;
+  const d = Math.sqrt(rx * rx + ry * ry);
+  if (d > 0.001) {
+    out.x = rx / d;
+    out.y = ry / d;
+  }
+  return out;
+}
+
+/** Scratch for the throw's aim. */
+const AIM = { x: 0, y: 0 };
+
 /** Caught by lure `i`: her circle starts where she is and sinks in to the orbit. */
 export function catchPlayer(state: GameState, scene: Scene, i: number, t: Tuning, events: SimEvent[]): void {
   const l = scene.lures?.[i];
@@ -202,16 +276,18 @@ export function catchPlayer(state: GameState, scene: Scene, i: number, t: Tuning
   p.lureCd = 0;
   p.lurePend = 0;
   p.lureOut = Math.max(0, d - K.core * t.lures.orbitShare);
+  p.lureCore = 0;
+  p.lureThrow = 0;
   p.pullX = 0;
   events.push({ type: 'lureCaught', id: l.id, kind: l.kind, x: f.x, y: f.y, spin: l.spin ?? 1 });
 }
 
 /**
- * She is out of lure `p.lure`'s hold. `beat`: thrown outward along the radius she is at, bent toward
- * the held direction (`aimX`, `aimY`) by `freeSteer` (`freeSpeed`, the sideways part as `pullX`,
- * plus `freeLift` up), double jump and air dash back.
- * `dash` / `hurt` / `snuff`: no throw (the dash or the blow moves her). Either way that lure leaves
- * her alone for `graceFrames`.
+ * She is out of lure `p.lure`'s hold. `beat`: thrown along `lureThrowAim` (the held direction `aimX`,
+ * `aimY`; the radius she is at when none is held) at `freeSpeed` (the sideways part as `pullX`, plus
+ * `freeLift` up), double jump and air dash back; for `throwFrames` every core she passes through gets
+ * grace too. `dash` / `hurt` / `snuff`: no throw (the dash or the blow moves her). Either way that lure
+ * leaves her alone for `graceFrames`.
  */
 export function freePlayer(
   state: GameState,
@@ -238,38 +314,24 @@ export function freePlayer(
   let vx = 0;
   let vy = 0;
   if (how === 'beat') {
-    let ox = centreX(p) - fx;
-    let oy = centreY(p) - fy;
-    const d = Math.sqrt(ox * ox + oy * oy);
-    if (d > 0.001) {
-      ox /= d;
-      oy /= d;
-    } else {
-      ox = 0;
-      oy = -1;
-    }
-    // A held direction bends the throw toward it (forgiving: the timing need not be exact).
-    const am = Math.sqrt(aimX * aimX + aimY * aimY);
-    if (am > 0 && T.freeSteer > 0) {
-      ox += (aimX / am) * T.freeSteer;
-      oy += (aimY / am) * T.freeSteer;
-      const n = Math.sqrt(ox * ox + oy * oy);
-      if (n > 0.001) {
-        ox /= n;
-        oy /= n;
-      }
-    }
-    vx = ox * T.freeSpeed;
-    vy = oy * T.freeSpeed - T.freeLift;
+    // (`p.lure` is cleared above: aim with the lure's index restored for the radius.)
+    p.lure = i;
+    const a = lureThrowAim(state, scene, t, aimX, aimY, AIM);
+    p.lure = -1;
+    vx = a.x * T.freeSpeed;
+    vy = a.y * T.freeSpeed - T.freeLift;
     p.vx = 0;
     p.pullX = vx;
     p.vy = vy;
+    p.lureThrow = Math.max(0, Math.round(T.throwFrames));
   } else {
     p.pullX = 0;
   }
   const grace = Math.max(0, Math.round(T.graceFrames));
   p.lureGrace = i;
   p.lureGraceFrames = grace;
+  state.lures.grace[i] = Math.max(state.lures.grace[i] ?? 0, grace);
+  p.lureCore = 0;
   events.push({ type: 'lureFree', id: l.id, x: fx, y: fy, how, vx, vy, grace });
 }
 
@@ -332,9 +394,13 @@ export function orbitStep(state: GameState, scene: Scene, t: Tuning, out: { dx: 
   out.dy = ly + (ny * r) / n - cy;
 }
 
-/** Per-step bookkeeping that runs whatever she does (also in hitstop): the grace counts down. */
-export function tickLures(p: PlayerState): void {
+/** Per-step bookkeeping that runs whatever she does (also in hitstop): the graces count down. */
+export function tickLures(state: GameState): void {
+  const p = state.player;
   if (p.lureGraceFrames > 0 && --p.lureGraceFrames === 0) p.lureGrace = -1;
+  if (p.lureThrow > 0) p.lureThrow--;
+  const g = state.lures.grace;
+  for (let i = 0; i < g.length; i++) if ((g[i] as number) > 0) g[i] = (g[i] as number) - 1;
 }
 
 /**

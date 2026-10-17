@@ -142,7 +142,7 @@ export class LureView {
         }
       }
       // Held: the beats it takes, as pips over the flame (over her), and where the last beat would
-      // throw her: out along the radius she is at, bent toward the held direction (as the sim does).
+      // throw her: the sim's own aim (`lureAimX, lureAimY`: the held direction; the radius when none).
       if (held) {
         // (Quick wings beats free in fewer: the upgraded number, src/sim/upgrades.ts.)
         const of = Math.max(1, Math.round(withUpgrades(tuning, sim.save).lures.beats));
@@ -152,17 +152,8 @@ export class LureView {
           front.circle(x, top, 7).fill({ color: k < p.lureBeats ? GB.flameHot : GB.husk, alpha: 0.95 });
           front.circle(x, top, 7).stroke({ color: GB.flameHot, width: 2, alpha: 0.8 });
         }
-        let ox = p.cx - lx;
-        let oy = p.cy - ly;
-        const d = Math.hypot(ox, oy) || 1;
-        ox /= d;
-        oy /= d;
-        if (p.inputX !== 0) {
-          ox += p.inputX * T.freeSteer;
-          const n = Math.hypot(ox, oy) || 1;
-          ox /= n;
-          oy /= n;
-        }
+        const ox = p.lureAimX;
+        const oy = p.lureAimY;
         const last = p.lureBeats >= of - 1;
         const x0 = p.cx + ox * 30;
         const y0 = p.cy + oy * 30;

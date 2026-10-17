@@ -669,6 +669,7 @@ describe('vesper rig', () => {
         hitY: 1260,
         stagger: 12,
         invuln: 70,
+        hitstop: 8,
       },
     ]);
     expect(rig.sig.hurt).toBe(true);

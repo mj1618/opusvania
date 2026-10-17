@@ -223,7 +223,7 @@ describe('burrback: the flinch', () => {
 });
 
 describe('contact: Vesper can be hurt', () => {
-  it('touching a burrback costs one light, throws her back and up, and makes her safe for 70 frames', () => {
+  it('touching a burrback costs one light, holds them both (the blow lands), throws her back and up, and makes her safe for 70 frames', () => {
     const s = newSim(scene([burr(2200)]), noRam());
     s.place(2100, FLOOR);
     expect([s.state.player.hp, s.state.player.hpMax, H.max]).toEqual([4, 4, 4]);
@@ -237,7 +237,8 @@ describe('contact: Vesper can be hurt', () => {
         expect(hurtAt).toBe(-1);
         hurtAt = f;
         x0 = p.x;
-        expect(h).toMatchObject({ dir: -1, hp: 3, hpMax: 4, damage: 1, stagger: 12, invuln: 70 });
+        expect(h).toMatchObject({ dir: -1, hp: 3, hpMax: 4, damage: 1, stagger: 12, invuln: 70, hitstop: 8 });
+        expect([p.hitstop, foe(s).hitstop]).toEqual([H.hurtHitstop, H.hurtHitstop]);
         expect(h.source).toEqual({ kind: 'burrback', id: 'b2200' });
         expect(h.y).toBe(FLOOR);
         expect([p.vx, p.vy, p.grounded, p.stagger, p.invuln, p.hurtDir, p.hurtSeq]).toEqual([
@@ -251,11 +252,14 @@ describe('contact: Vesper can be hurt', () => {
         ]);
       }
       if (hurtAt >= 0 && landAt < 0 && of(ev, 'land').length) landAt = f;
-      if (hurtAt >= 0) expect(p.invuln).toBe(Math.max(0, 70 - (f - hurtAt)));
+      // Held: she does not move, her i-frames stand still; then they run.
+      const held = Math.min(f - hurtAt, H.hurtHitstop);
+      if (hurtAt >= 0 && f > hurtAt && f <= hurtAt + H.hurtHitstop) expect(p.x).toBe(x0);
+      if (hurtAt >= 0) expect(p.invuln).toBe(Math.max(0, 70 - (f - hurtAt - held)));
     });
     expect(hurtAt).toBeGreaterThan(0);
-    // A short hop back: about 55 px and 24 px up, down again 13 frames later.
-    expect(landAt - hurtAt).toBe(13);
+    // A short hop back: about 55 px and 24 px up, down again 13 frames after the hold.
+    expect(landAt - hurtAt).toBe(13 + H.hurtHitstop);
     expect(x0 - s.state.player.x).toBeGreaterThanOrEqual(50);
     expect(x0 - s.state.player.x).toBeLessThanOrEqual(64);
     expect(s.state.player.hp).toBe(3);
@@ -278,22 +282,24 @@ describe('contact: Vesper can be hurt', () => {
       const ev = s.run(script);
       return { p: s.state.player, ev };
     };
-    const base = run('.1 .9');
+    // (She is held `hurtHitstop` frames first: nothing she presses then counts either.)
+    const hs = `.1 .${H.hurtHitstop}`;
+    const base = run(`${hs} .9`);
     // Jump, dash and attack do nothing for the first nine frames, nor does a direction.
     for (const held of ['J9', 'X9', 'A9', 'R9', 'L9', 'R+J+X+A9']) {
-      const r = run(`.1 ${held}`);
+      const r = run(`.1 J${H.hurtHitstop} ${held}`);
       expect([r.p.x, r.p.y, r.p.vx, r.p.vy], held).toEqual([base.p.x, base.p.y, base.p.vx, base.p.vy]);
       expect(r.ev.filter((e) => ['jump', 'dashStart', 'slash'].includes(e.type))).toEqual([]);
     }
     // The last three frames of the stagger listen to left / right only.
-    const a = run('.1 .12');
-    const toward = run('.1 .9 R3');
-    const away = run('.1 .9 L3');
+    const a = run(`${hs} .12`);
+    const toward = run(`${hs} .9 R3`);
+    const away = run(`${hs} .9 L3`);
     expect(toward.p.x).toBeGreaterThan(a.p.x);
     expect(away.p.x).toBeLessThan(a.p.x);
-    expect(run('.1 .9 J3').p.vy).toBe(a.p.vy);
+    expect(run(`${hs} .9 J3`).p.vy).toBe(a.p.vy);
     // Then she is hers again: a jump pressed on the first free frame is a jump (the double jump).
-    const j = run('.1 .12 J1 .3');
+    const j = run(`${hs} .12 J1 .3`);
     expect(of(j.ev, 'jump')).toHaveLength(1);
   });
 
@@ -356,9 +362,9 @@ describe('contact: Vesper can be hurt', () => {
     expect(s.state.player.invuln).toBe(1);
     const again = of(s.run('.1'), 'hurt');
     expect(again).toHaveLength(1);
-    // Hit to hit is exactly `invulnFrames`.
+    // Hit to hit is exactly `invulnFrames` after the hold.
     expect(s.state.frame - 1 - (s.events.findIndex((e) => e.type === 'hurt') >= 0 ? firstHurtFrame : 0)).toBe(
-      H.invulnFrames,
+      H.invulnFrames + H.hurtHitstop,
     );
     expect(s.state.player.hp).toBe(2);
 
@@ -395,7 +401,7 @@ describe('contact: Vesper can be hurt', () => {
 });
 
 describe('burrback: taking hits', () => {
-  it('three hit points: cut, cut, finisher kills it; hitstop 4 / 4 / 7; it is held, shoved, staggered', () => {
+  it('three hit points: cut, cut, finisher kills it; hitstop 4 / 4 / 7 + 3 for the kill; it is held, shoved, staggered', () => {
     const s = duel();
     const log: string[] = [];
     const stops: number[] = [];
@@ -425,12 +431,13 @@ describe('burrback: taking hits', () => {
       '47 die p2 v6 kb13.75 d1',
       '47 impact p2',
     ]);
-    expect(stops).toEqual([4, 4, 7]);
+    expect(stops).toEqual([4, 4, 10]);
     expect(stops).toEqual([
       EN.hitstopFrames,
       EN.hitstopFrames,
-      EN.hitstopFrames + defaultTuning.slash3.hitstopFoe,
+      EN.hitstopFrames + defaultTuning.slash3.hitstopFoe + EN.killHitstopBonus,
     ]);
+    expect(of(s.events, 'enemyDie')[0]?.hitstop).toBe(10);
     // The shove: the slash's 6 px/f x 1.25 fading by 1 = 32 px for a cut, 102 for the finisher (11 x 1.25).
     expect((xs[1] as number) - (xs[0] as number)).toBe(32);
     expect(foe(s).x - (xs[2] as number)).toBe(102);
@@ -486,8 +493,9 @@ describe('burrback: taking hits', () => {
     expect([foe(s).mode, s.state.player.hp]).toEqual(['dead', 4]);
     // From straight above the shove is sideways and half as hard.
     expect(of(s.events, 'enemyHit')[0]?.knockback).toBe(3 * B.knockScale);
-    // The pogo keeps its short beat (the bounce rhythm is what it was), a glance too.
-    expect(of(s.events, 'slashHit').map((h) => h.hitstop)).toEqual([2, 2, 2]);
+    // The pogo keeps its short beat (the bounce rhythm is what it was), a glance too; the killing
+    // bounce holds the kill's bonus on top.
+    expect(of(s.events, 'slashHit').map((h) => h.hitstop)).toEqual([2, 2, 2 + EN.killHitstopBonus]);
     expect(of(s.events, 'enemyBlock').map((h) => [h.hitstop, h.recoil])).toEqual([
       [2, 0],
       [2, 0],

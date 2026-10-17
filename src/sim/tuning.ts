@@ -174,6 +174,12 @@ export const defaultTuning = withVariants({
     /** Air hang (forward / up): for `slashN.hangFrames` her fall speed above hangVy is cut to this fraction each frame. */
     hangVy: 1.5,
     hangKeep: 0.5,
+    /**
+     * A forward or up cut that meets terrain and nothing else (`slashTerrain`, feel review problem 10):
+     * she holds this many frames and is pushed back this many px/f (fading by `recoilDecay`: ~3 px).
+     */
+    terrainHitstop: 2,
+    terrainRecoil: 2,
   },
   /** Combo step 1: the quick cut. Frames count from the press. */
   slash1: {
@@ -330,6 +336,14 @@ export const defaultTuning = withVariants({
     groundDrag: 1.2,
     groundMax: 2.4,
     groundDecel: 0.6,
+    /**
+     * Gravity you ride, not glue (feel review problem 9). The ground drag acts only while she holds a
+     * direction (standing still never drifts her into a core); a gliding body feels `glidePullMult` of
+     * the pull; and a core catches her only if she is moving inward (relative to the flame) or has
+     * been inside it `catchFrames` frames in a row.
+     */
+    glidePullMult: 0.6,
+    catchFrames: 4,
     /** Caught: she circles the flame at this share of its core radius, this fast (px/f along the circle). */
     orbitShare: 0.6,
     orbitSpeed: 7,
@@ -346,9 +360,15 @@ export const defaultTuning = withVariants({
     /** Freed: thrown out at this speed (px/f, plus `freeLift` up), and that lure leaves her alone for `graceFrames`. */
     freeSpeed: 14,
     freeLift: 7,
-    /** How far a held direction bends the throw toward it (0 = the radius only; 1 = halfway at most). */
-    freeSteer: 0.8,
+    /**
+     * The throw's direction is exactly the held direction, 8-way (feel review problem 6: the radius bent by
+     * the stick, `freeSteer` 0.8, threw her the wrong way in 7 of 34 rhythms); with nothing held, the
+     * radius she is at. The orbit stands still while the last beat is due (`beatCd` frames after the one
+     * before it), so the arrow she sees is the throw (src/sim/lures.ts `lureThrowAim`).
+     */
     graceFrames: 50,
+    /** Every other burning core the throw passes through in its first `throwFrames` gets `graceFrames` too. */
+    throwFrames: 20,
     /** Half the size of the flame's box the blade has to touch. */
     flameRadius: 20,
     /** Hitstop when a cut lands on a flame and it holds, and when it goes out (the loudest beat). */
@@ -411,6 +431,13 @@ export const defaultTuning = withVariants({
     hurtDecel: 0.3,
     /** Frames she cannot be hurt again, counted from the hit (the stagger is inside them). */
     invulnFrames: 70,
+    /**
+     * A blow lands (chunk-1 feel review, problem 1: "0 freeze: getting hit has no impact"): she and the
+     * creature that hit her hold this many frames before the throw (thorns too); on her last light,
+     * `fadeHitstop`. Her i-frames and stagger stand still while she is held, so the hold costs nothing.
+     */
+    hurtHitstop: 8,
+    fadeHitstop: 14,
     /** At no health: frames she lies faded before she re-forms, and her invulnerability after. */
     fadeFrames: 50,
     reformInvulnFrames: 90,
@@ -425,6 +452,11 @@ export const defaultTuning = withVariants({
   enemies: {
     /** Hitstop when a slash hits one, frames (the combo step may add to it). The creature holds for as long. */
     hitstopFrames: 4,
+    /**
+     * Extra hitstop on the killing blow, for her and the body (feel review problem 2): a kill holds 7 on
+     * a cut, 10 on the finisher, 5 on a pogo.
+     */
+    killHitstopBonus: 3,
     /** The same for a down slash (the pogo): short, so the bounce rhythm stays what it was. */
     pogoHitstopFrames: 2,
     /** A cut that glances off a braced shell: she holds this long and is thrown back at this, px/f (fading by `attack.recoilDecay`). */

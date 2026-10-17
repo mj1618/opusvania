@@ -615,7 +615,8 @@ describe('lampwing: contact', () => {
       const h = of(ev, 'hurt')[0];
       if (!h) return;
       at = f;
-      expect(h).toMatchObject({ dir: -1, hp: 3, hpMax: 4, damage: 1, stagger: 12, invuln: 70 });
+      expect(h).toMatchObject({ dir: -1, hp: 3, hpMax: 4, damage: 1, stagger: 12, invuln: 70, hitstop: 8 });
+      expect(foe(s).hitstop).toBe(H.hurtHitstop);
       expect(h.source).toEqual({ kind: 'lampwing', id: 'l2200' });
       const p = s.state.player;
       expect([p.vx, p.vy, p.stagger, p.invuln, p.hurtDir]).toEqual([-H.hurtVx, -H.hurtVy, 12, 70, -1]);
@@ -629,7 +630,8 @@ describe('lampwing: contact', () => {
     expect(at).toBeGreaterThan(0);
     // It does not sit inside her: the two part at once, and it comes to rest a body's width off.
     const x0 = mid(foe(s)).x;
-    frames(s, '.30', () => expect(overlap(s, foe(s))).toBe(false));
+    // (Both are held `hurtHitstop` frames first: it keeps its bounce for after the hold.)
+    frames(s, `.${30 + H.hurtHitstop}`, () => expect(overlap(s, foe(s))).toBe(false));
     expect(mid(foe(s)).x - x0).toBeGreaterThan(30);
     expect(Math.hypot(foe(s).vx, foe(s).vy)).toBe(0);
     expect(s.state.player.grounded).toBe(true);
@@ -700,7 +702,7 @@ describe('lampwing: contact', () => {
 });
 
 describe('lampwing: taking hits', () => {
-  it('two hit points: cut, cut kills it; hitstop 4 / 4; held, batted 32 px along the cut, tumbling 24 frames', () => {
+  it('two hit points: cut, cut kills it; hitstop 4 / 4 + 3 for the kill; held, batted 32 px along the cut, tumbling 24 frames', () => {
     const s = duel();
     const log: string[] = [];
     const xs: number[] = [];
@@ -728,7 +730,7 @@ describe('lampwing: taking hits', () => {
       '1 stop4',
       '1 hit p1 hp1/2 kb6.60 d1 f24',
       '1 impact p1',
-      '36 stop4',
+      `36 stop${EN.hitstopFrames + EN.killHitstopBonus}`,
       '36 die p1 v3 st5 f40',
       '36 impact p1',
     ]);
@@ -744,12 +746,12 @@ describe('lampwing: taking hits', () => {
     expect(s.state.player.hp).toBe(4);
   });
 
-  it('the finisher kills it outright (hitstop 7) and it spills 5 instead of 3', () => {
+  it('the finisher kills it outright (hitstop 7 + 3 for the kill) and it spills 5 instead of 3', () => {
     const s = duel();
     // Two cuts into the air behind her, the finisher into it.
     const ev = s.run('L+A1 .16 L+A1 .18 R+A1 .90');
     expect(of(ev, 'enemyHit')).toEqual([]);
-    expect(of(ev, 'slashHit').map((h) => [h.step, h.power, h.hitstop])).toEqual([[3, 2, 7]]);
+    expect(of(ev, 'slashHit').map((h) => [h.step, h.power, h.hitstop])).toEqual([[3, 2, 10]]);
     const die = of(ev, 'enemyDie')[0];
     expect(die).toMatchObject({
       kind: 'lampwing',
@@ -873,9 +875,9 @@ describe('lampwing: death', () => {
       if (e.mode === 'dead' && !e.gone) ys.push(mid(e).y);
       if (goneAt < 0 && e.gone) goneAt = f;
     });
-    // Killed on frame 1 (a down slash: the pogo's short hold, 2 frames), then 40 frames of falling:
-    // 0.45 px/f², capped at 9 px/f.
-    expect(goneAt).toBe(1 + EN.pogoHitstopFrames + L.deadFrames);
+    // Killed on frame 1 (a down slash: the pogo's short hold, 2 frames, + the kill's 3), then 40 frames
+    // of falling: 0.45 px/f², capped at 9 px/f.
+    expect(goneAt).toBe(1 + EN.pogoHitstopFrames + EN.killHitstopBonus + L.deadFrames);
     const drop = (ys.at(-1) as number) - 300;
     expect(drop).toBeGreaterThan(280);
     expect(drop).toBeLessThan(L.maxFall * L.deadFrames);
@@ -918,7 +920,9 @@ describe('lampwing: death', () => {
       for (const p of of(ev, 'pickup')) {
         expect(p).toMatchObject({ id: 'l2200', kind: 'glint', value: 1, enemy: true });
         expect(p.pod).toBeUndefined();
-        expect([p.x, p.y]).toEqual([mid(e).x, mid(e).y]);
+        // (From where the body was as the step began: it may still be falling.)
+        expect(p.x).toBe(mid(e).x);
+        expect(Math.abs(p.y - mid(e).y)).toBeLessThanOrEqual(L.maxFall);
         got.push(f - die);
       }
     });

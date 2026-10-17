@@ -234,10 +234,12 @@ describe('wing-rise and lamp-rise: its dive never ends at the lamp’s post', ()
 
   it('where she fights burr-rise it does come: its dives end over the rise’s open ground, 100 px and more from the post', () => {
     const s = newSim();
-    s.state.player.invuln = 1e9;
     const stalls: number[] = [];
     for (const x of [4930, 5000, 5080]) {
       s.place(x, 1088);
+      // (Untouchable at each spot: `place` makes her afresh. A hurt's hold would stand her still under
+      // the dive, and its touch would end it before the stall this test is about.)
+      s.state.player.invuln = 1e9;
       const from = s.events.length;
       idle(s, 500);
       for (const e of of(s.events.slice(from), 'enemyStall')) if (e.id === 'wing-rise') stalls.push(e.x);

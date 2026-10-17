@@ -311,10 +311,10 @@ export function updateEnemies(
       if (e.gift > 1 || !near) e.gift--;
       e.calm = Math.max(e.calm, e.gift);
     }
+    // Held by a hitstop (a slash landed on it: its velocity was zeroed then; or it hit her: it keeps
+    // the bounce its touch gave it for after the hold).
     if (e.hitstop > 0) {
       e.hitstop--;
-      e.vx = 0;
-      e.vy = 0;
       continue;
     }
     e.modeFrames++;
@@ -440,6 +440,14 @@ export function slashBlocks(): number {
   return BLOCKS;
 }
 
+// How many enemies the last `slashEnemies` call killed (their hold has `killHitstopBonus` on top).
+let KILLS = 0;
+
+/** Kills made by the last `slashEnemies` call: the killing blow holds `enemies.killHitstopBonus` longer. */
+export function slashKills(): number {
+  return KILLS;
+}
+
 /**
  * Applies slash number `seq` (hit area `box`) to every living enemy it overlaps, has not hit yet
  * and can reach. Pushes `slashHit` and `enemyHit` / `enemyDie`; returns how many it hit this step.
@@ -461,6 +469,7 @@ export function slashEnemies(
 ): number {
   const list = state.enemies;
   BLOCKS = 0;
+  KILLS = 0;
   if (list.length === 0) return 0;
   const E = t.enemies;
   const b: PlayerState = state.player;
@@ -539,8 +548,12 @@ export function slashEnemies(
     e.hitPower = power;
     e.hitFrame = state.frame;
     e.hp = Math.max(0, e.hp - Math.max(1, Math.round(power)));
+    // The killing blow holds longer (feel review problem 2), her and the body alike.
+    const kill = e.hp <= 0 && !K.undying?.(e);
+    if (kill) KILLS++;
+    const stop = hitstop > 0 && kill ? hitstop + frames(E.killHitstopBonus) : hitstop;
     // +1: updateEnemies still runs this step, so it is held exactly as long as she is.
-    e.hitstop = hitstop > 0 ? hitstop + 1 : 0;
+    e.hitstop = stop > 0 ? stop + 1 : 0;
     e.vx = 0;
     e.vy = 0;
     hits++;
@@ -554,7 +567,7 @@ export function slashEnemies(
       px,
       py,
       pogo,
-      hitstop,
+      hitstop: stop,
       step,
       power,
       knockback,
@@ -576,7 +589,7 @@ export function slashEnemies(
         hpLeft: e.hp,
         hpMax: e.hpMax,
         knockback: kb,
-        hitstop,
+        hitstop: stop,
         frames: n,
       });
       continue;
@@ -606,7 +619,7 @@ export function slashEnemies(
       power,
       hpMax: e.hpMax,
       knockback: kb,
-      hitstop,
+      hitstop: stop,
       frames: n,
       value,
       glintFrames,

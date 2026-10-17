@@ -516,10 +516,13 @@ describe('naive players', () => {
     expect(
       ev.filter((e) => e.type === 'lanternNotice').map((e) => (e.type === 'lanternNotice' ? e.id : '')),
     ).toEqual(['lantern-stone']);
-    // At the foot of the bluff (a tap is not a climb): burr-path keeps 116 px off that wall now.
-    expect(feet(s).x).toBeGreaterThan(2300);
-    expect(feet(s).x).toBeLessThan(bluff.x);
-    const late = ev.filter((e) => e.type === 'hurt' && e.x > 2330);
+    // She reaches the foot of the bluff, unhurt there: burr-path keeps 116 px off that wall now.
+    // (Whether her taps then kick her up it depends on their phase: one wall is enough for a tap since
+    // the wall kick took no hold (movement-controller.md), and the 8-frame hurt hold of the feel review
+    // moved this script's phase onto a kick. Only the way to the wall is this test's.)
+    const atWall = ev.findIndex((e) => e.type === 'wallSlideStart' && e.x < bluff.x && e.x > 2300);
+    expect(atWall).toBeGreaterThan(0);
+    const late = ev.slice(0, atWall).filter((e) => e.type === 'hurt' && e.x > 2330);
     expect(late).toEqual([]);
   });
 

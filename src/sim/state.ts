@@ -71,7 +71,8 @@ export interface PlayerState {
    * otherwise); it and `attackFacing` (the side she faced when it started; a fwd slash goes that
    * way) never change mid-slash, whatever she does. `attackFrames` counts steps since it started
    * (0 on the `slash` frame; it holds during hitstop). `attackActive`: the hit area is live this
-   * frame. `attackSeq` numbers the slashes (0 = none yet); `attackHits` = targets this one has hit.
+   * frame. `attackSeq` numbers the slashes (0 = none yet); `attackHits` = targets this one has hit;
+   * `attackWall`: this one has met terrain (`slashTerrain`, once per slash).
    */
   attack: AttackDir;
   attackFacing: -1 | 1;
@@ -79,6 +80,7 @@ export interface PlayerState {
   attackActive: boolean;
   attackSeq: number;
   attackHits: number;
+  attackWall: boolean;
   /**
    * Combo step of the current (or last) slash: 1 the cut, 2 the return cut, 3 the finisher
    * (`attackFinisher`). A down slash is always step 1 and leaves the chain where it was.
@@ -124,7 +126,12 @@ export interface PlayerState {
    * caught her, `lureBeats` pressed so far, `lureOut` = px her circle is pushed out by them, sinking
    * back; `lureCd` frames until the next beat counts). `pullX` = the pull's sideways momentum, on top
    * of `vx` in the move (her steering never eats it, so a pass through a field throws her).
-   * `lureGrace` = the lure she last broke free of, which leaves her alone for `lureGraceFrames` more.
+   * `lureGrace` = the lure she last broke free of, which leaves her alone for `lureGraceFrames` more
+   * (cores a throw passes through get theirs in `lures.grace`). `lureAimX, lureAimY` = the unit direction
+   * the last beat would throw her now (set every caught frame: render's throw arrow). `lureThrow` = frames
+   * left of the throw's window in which any core she passes through is given grace. `lureCore` = frames
+   * in a row her centre has been inside a burning core without being caught (a core catches her moving
+   * inward, or after `lures.catchFrames`).
    */
   lure: number;
   lureFrames: number;
@@ -136,6 +143,10 @@ export interface PlayerState {
   pullX: number;
   lureGrace: number;
   lureGraceFrames: number;
+  lureAimX: number;
+  lureAimY: number;
+  lureThrow: number;
+  lureCore: number;
   /**
    * A grab (src/sim/grab.ts, memory/creatures.md): `grab` = index of the creature (a web: `enemies[i]`)
    * holding her, -1 = none. Held where it caught her (`grabX, grabY` = her body centre then); beating
@@ -312,6 +323,11 @@ export interface LuresState {
   /** How many have gone out, and the moths freed in all. */
   snuffed: number;
   freed: number;
+  /**
+   * Frames each lure leaves her alone (no pull, no catch): the one she broke free of and every core
+   * her throw passed through (`lures.throwFrames`). 0 = acts.
+   */
+  grace: number[];
   /**
    * Lures a boss drives (memory/bosses.md), per `scene.lures` index; absent in rooms without one.
    * `row`: the tuning row it pulls by now ('' = its scene kind's: a great lamp's heart reaches further
@@ -902,6 +918,7 @@ export function cloneState(s: GameState): GameState {
       out: s.lures.out.slice(),
       snuffed: s.lures.snuffed,
       freed: s.lures.freed,
+      grace: s.lures.grace.slice(),
       ...(s.lures.live
         ? {
             live: {

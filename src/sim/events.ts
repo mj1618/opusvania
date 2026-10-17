@@ -212,6 +212,25 @@ export type SimEvent =
     }
   | { type: 'slashEnd'; x: number; y: number; dir: SlashDir; hits: number; reason: SlashEndReason }
   /**
+   * A forward or up slash met terrain (a wall, a ceiling, the room's edge) and hit nothing else: once
+   * per slash, on its first live frame that overlaps a solid on the side it swings to. `x`, `y` = the
+   * contact point on the solid's face; `nx`, `ny` = that face's outward normal (fwd: `-facing, 0`; up:
+   * `0, 1`), for sparks. She is held `hitstop` frames and pushed back `recoil` px/f (fading); the lunge
+   * stops. `step` = the combo step.
+   */
+  | {
+      type: 'slashTerrain';
+      x: number;
+      y: number;
+      nx: number;
+      ny: number;
+      dir: SlashDir;
+      facing: number;
+      step: number;
+      hitstop: number;
+      recoil: number;
+    }
+  /**
    * A slash hit a lumen pod (`x`, `y` = its centre) and it held: `hpLeft` of `hpMax` hit points
    * remain (`power` were taken). `value` glints are now on their way from it (those just knocked
    * loose plus any still in flight): the first reaches her `frames` steps from now, the rest
@@ -528,6 +547,9 @@ export type SimEvent =
    * She was hurt: thrown toward `dir` (-1 / 1), `hp` of `hpMax` left after losing `damage`. `x`, `y` =
    * her feet centre; `hitX`, `hitY` = where the two bodies met. She is out of control for `stagger`
    * frames and cannot be hurt for `invuln` frames (both 0 when `hp` is 0: a `fade` follows).
+   * `hitstop`: frames the sim holds her (and the creature that hit her) before the throw, so the blow
+   * lands (`health.hurtHitstop`, `health.fadeHitstop` on her last light); the stagger and the
+   * i-frames start after it (`invuln` stands still while she is held).
    */
   | {
       type: 'hurt';
@@ -542,6 +564,7 @@ export type SimEvent =
       hitY: number;
       stagger: number;
       invuln: number;
+      hitstop: number;
     }
   /** Her last light went out: she fades for `frames` (no control), then re-forms. */
   | { type: 'fade'; x: number; y: number; frames: number }

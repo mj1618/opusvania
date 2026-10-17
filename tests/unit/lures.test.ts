@@ -33,10 +33,13 @@ function hold(s: Sim, mask: number, n: number): SimEvent[] {
   for (let i = 0; i < n; i++) step(s.state, mask, s.tuning, s.scene, s.events);
   return s.events.slice(from);
 }
-/** Caught by the lure at (x, y): placed on its flame, one step. */
+/**
+ * Caught by the lure at (x, y): placed on its flame (not moving inward, so the core takes
+ * `catchFrames` steps to hold her).
+ */
 function caughtBy(s: Sim, x: number, y: number): void {
   centreOn(s, x, y);
-  const ev = hold(s, 0, 1);
+  const ev = hold(s, 0, L.catchFrames);
   expect(types(ev)).toContain('lureCaught');
   expect(s.state.player.lure).toBeGreaterThanOrEqual(0);
 }
@@ -80,7 +83,7 @@ describe('lures: scene data', () => {
 
   it('the test grove has none and plays as before', () => {
     const s = newSim(GROVE);
-    expect(s.state.lures).toEqual({ hp: [], hitBy: [], out: [], snuffed: 0, freed: 0 });
+    expect(s.state.lures).toEqual({ hp: [], hitBy: [], out: [], snuffed: 0, freed: 0, grace: [] });
     s.run('R60 R+J20 R40');
     expect(s.state.player.pullX).toBe(0);
   });
@@ -127,14 +130,42 @@ describe('lures: the pull', () => {
     }
   });
 
-  it('only drags her a little on the ground, standing still', () => {
-    const s = newSim(withLures([wick(2000, FLOOR - 120, 1)]));
-    s.place(2150, FLOOR);
-    hold(s, 0, 60);
-    const moved = 2150 - feet(s).x;
-    expect(moved).toBeGreaterThan(10);
-    expect(moved).toBeLessThan(60 * L.groundMax + 1);
-    expect(s.state.player.lure).toBe(-1);
+  it('standing still she never drifts (feel review 9: idle on R3’s knob she was caught); walking, it drags a little', () => {
+    // A low wick whose core reaches down to her body: wherever she stands in its field, she stays put.
+    for (const dx of [-200, -120, -60, 60, 120, 200]) {
+      const s = newSim(withLures([wick(2000, FLOOR - 70, 1)]));
+      s.place(2000 + dx, FLOOR);
+      const ev = hold(s, 0, 240);
+      expect(feet(s).x).toBe(2000 + dx);
+      expect(types(ev)).not.toContain('lureCaught');
+    }
+    // Walking toward it, the drag adds to her run (at most `groundMax`); away, it holds her back.
+    const walk = (mask: number) => {
+      const s = newSim(withLures([wick(2000, FLOOR - 120, 1)]));
+      s.place(2200, FLOOR);
+      hold(s, mask, 8);
+      return feet(s).x;
+    };
+    const none = newSim(flatScene());
+    none.place(2200, FLOOR);
+    hold(none, ActionBit.left, 8);
+    expect(walk(ActionBit.left)).toBeLessThan(feet(none).x);
+    expect(feet(none).x - walk(ActionBit.left)).toBeLessThan(8 * L.groundMax + 1);
+  });
+
+  it('a gliding body feels glidePullMult of it', () => {
+    const fall = (glide: boolean) => {
+      const t = cloneTuning(defaultTuning);
+      if (!glide) t.lures.glidePullMult = 1;
+      const s = newSim(withLures([wick(2000, 300, 1)]), t);
+      // Gliding under the field's edge, west of the flame: the pull bends her toward it.
+      centreOn(s, 1790, 420);
+      s.run('J1');
+      hold(s, ActionBit.jump, 30);
+      return s.state.player.pullX;
+    };
+    expect(Math.abs(fall(true))).toBeGreaterThan(0);
+    expect(Math.abs(fall(true))).toBeLessThan(Math.abs(fall(false)));
   });
 });
 
@@ -171,21 +202,109 @@ describe('lures: caught', () => {
     expect(types(ev)).toContain('lureFree');
   });
 
-  it('a held direction bends the throw toward it', () => {
-    const throwOf = (mask: number) => {
-      const s = newSim(withLures([wick(2000, 400)]));
-      caughtBy(s, 2000, 400);
-      hold(s, 0, 10);
-      const ev = hold(s, ActionBit.jump | mask, 1).concat(
-        hold(s, mask, 7),
-        hold(s, ActionBit.jump | mask, 1),
-      );
-      ev.push(...hold(s, mask, 7), ...hold(s, ActionBit.jump | mask, 1));
+  it('the throw goes where the stick holds, whatever the orbit (feel review 6: 34 rhythms, 34 that way)', () => {
+    // W1 with W-hi3 over it (wood R3's pair): 34 beat rhythms (presses every 6-22 frames, two phases),
+    // holding right: every throw goes right, strongly, and nothing catches her again.
+    const scene = withLures([wick(2000, 500), wick(2000, 230, -1, 'hi')]);
+    const throwOf = (mask: number, gap: number, wait: number) => {
+      const s = newSim(scene);
+      caughtBy(s, 2000, 500);
+      hold(s, mask, wait);
+      const ev: SimEvent[] = [];
+      for (let b = 0; b < 3; b++) ev.push(...hold(s, ActionBit.jump | mask, 1), ...hold(s, mask, gap - 1));
       const f = ev.find((e) => e.type === 'lureFree');
       if (f?.type !== 'lureFree') throw new Error('not freed');
-      return f.vx;
+      const after = hold(s, mask, 90);
+      return { f, again: types(after).includes('lureCaught'), aim: [s.state.player.lureAimX] };
     };
-    expect(throwOf(ActionBit.right)).toBeGreaterThan(throwOf(ActionBit.left));
+    let n = 0;
+    for (let gap = 6; gap <= 22; gap++)
+      for (const wait of [3, 17]) {
+        const { f, again } = throwOf(ActionBit.right, gap, wait);
+        expect(f.vx, `gap ${gap} wait ${wait}`).toBe(L.freeSpeed);
+        expect(f.vy, `gap ${gap} wait ${wait}`).toBe(-L.freeLift);
+        expect(again, `gap ${gap} wait ${wait}`).toBe(false);
+        n++;
+      }
+    expect(n).toBe(34);
+    // Each way: exactly the held direction (8-way), whatever the orbit.
+    for (const [mask, dx, dy] of [
+      [ActionBit.left, -1, 0],
+      [ActionBit.up, 0, -1],
+      [ActionBit.down, 0, 1],
+      [ActionBit.up | ActionBit.right, 1, -1],
+    ] as const) {
+      for (const wait of [0, 9, 23, 40]) {
+        const { f } = throwOf(mask, 7, wait);
+        const m = Math.hypot(dx, dy);
+        expect(f.vx, `${mask} ${wait}`).toBeCloseTo((dx / m) * L.freeSpeed, 9);
+        expect(f.vy + L.freeLift, `${mask} ${wait}`).toBeCloseTo((dy / m) * L.freeSpeed, 9);
+      }
+    }
+    // Nothing held: out along the radius she is at (the tie-break), the way the arrow points.
+    for (const wait of [0, 9, 23, 40]) {
+      const s = newSim(scene);
+      caughtBy(s, 2000, 500);
+      hold(s, 0, wait);
+      s.run('J1 .5 J1 .5');
+      const p = s.state.player;
+      const [rx, ry] = [p.x + p.rx + 20 - 2000, p.y + p.ry + 40 - 500];
+      const aim = [p.lureAimX, p.lureAimY];
+      const f = s.run('J1').find((e) => e.type === 'lureFree');
+      if (f?.type !== 'lureFree') throw new Error('not freed');
+      const d = Math.hypot(rx, ry);
+      expect(f.vx / L.freeSpeed, `${wait}`).toBeCloseTo(rx / d, 6);
+      expect((f.vy + L.freeLift) / L.freeSpeed, `${wait}`).toBeCloseTo(ry / d, 6);
+      expect(aim[0]).toBeCloseTo(rx / d, 6);
+    }
+  });
+
+  it('the orbit stands still while the last beat is due, and the aim she is shown is the throw', () => {
+    const s = newSim(withLures([wick(2000, 400)]));
+    caughtBy(s, 2000, 400);
+    hold(s, 0, 10);
+    s.run('J1 .7 J1');
+    const p = s.state.player;
+    const at = [p.x, p.y];
+    const aim = [p.lureAimX, p.lureAimY];
+    hold(s, ActionBit.right, L.beatCd - 1);
+    expect([p.x, p.y]).toEqual(at);
+    expect(p.lureAimX).toBeGreaterThan(0.9);
+    expect(Math.hypot(aim[0] as number, aim[1] as number)).toBeCloseTo(1, 9);
+    const ev = hold(s, ActionBit.right | ActionBit.jump, 1);
+    const f = ev.find((e) => e.type === 'lureFree');
+    if (f?.type !== 'lureFree') throw new Error('not freed');
+    expect(f.vx / L.freeSpeed).toBeCloseTo(p.lureAimX, 5);
+  });
+
+  it('a throw is never caught by the next core it passes through (grace for every one in its first frames)', () => {
+    // A second wick right of the first, its core in the throw's path.
+    const s = newSim(withLures([wick(2000, 400), wick(2160, 330, 1, 'next')]));
+    caughtBy(s, 2000, 400);
+    const ev = s.run('R+J1 R7 R+J1 R7 R+J1 R60');
+    expect(types(ev).filter((t) => t === 'lureCaught')).toHaveLength(0);
+    expect(types(ev)).toContain('lureFree');
+    // Without the throw's grace the second core would hold her.
+    const t = cloneTuning(defaultTuning);
+    t.lures.throwFrames = 0;
+    const u = newSim(s.scene, t);
+    caughtBy(u, 2000, 400);
+    expect(types(u.run('R+J1 R7 R+J1 R7 R+J1 R60'))).toContain('lureCaught');
+  });
+
+  it('a core holds her only moving inward, or after catchFrames inside it', () => {
+    // Rising straight up through the side of a core, moving away from the flame's height: not caught
+    // if she is out within catchFrames; jumping into it from below and inward: caught at once.
+    const s = newSim(withLures([wick(2000, 500)]));
+    centreOn(s, 2000, 500);
+    s.state.player.vy = 6;
+    // Moving down and out of the core from its centre: out before catchFrames (40 px at 6+ px/f).
+    expect(types(hold(s, 0, L.catchFrames - 1))).not.toContain('lureCaught');
+    const u = newSim(withLures([wick(2000, 500)]));
+    centreOn(u, 2000, 560);
+    u.state.player.vy = -10;
+    const ev = hold(u, 0, 3);
+    expect(types(ev)).toContain('lureCaught');
   });
 
   it('a dash frees her at once (when she owns it); without it, a dash press does nothing', () => {
