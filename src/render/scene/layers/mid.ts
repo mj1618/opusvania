@@ -821,9 +821,19 @@ export class MidLayer implements EnvModule {
     const anchorY = ctx.layers.anchor.y;
     const atm = woodMidAtm(anchorY);
     const zone = { ...woodZone(ZONE.parallax, 0x14283c), anchorX: ctx.layers.anchor.x };
-    const b = buildWoodMid(rect, anchorY);
+    const b = buildWoodMid(rect, anchorY, ctx.scene, ctx.layers.anchor.x);
     this.view = new LayerView(
-      bakeLayer(ctx.renderer, b.content, rect, MID.bakeScale, atm, TO_LIGHT, b.lights, 0),
+      // (Capped in the wood: the room is 2816 tall and mid must bake as one row of tiles, <= 4096 px.)
+      bakeLayer(
+        ctx.renderer,
+        b.content,
+        rect,
+        Math.min(MID.bakeScale, 4000 / rect.h),
+        atm,
+        TO_LIGHT,
+        b.lights,
+        0,
+      ),
       woodMidFog(anchorY),
       // The leaf masses up high stir; the trunks below them stay put.
       { amp: MID.rustle, y0: rect.y + rect.h * 0.3, y1: rect.y + rect.h * 0.45 },
@@ -836,7 +846,7 @@ export class MidLayer implements EnvModule {
     b.content.destroy({ children: true });
     this.sway = new SwaySet(
       ctx.renderer,
-      woodMidHangers(b.hooks, (c, x, y) => atmTone(atm, c, x, y)),
+      woodMidHangers(b.sprays, (c, x, y) => atmTone(atm, c, x, y)),
       MID.bakeScale * 0.5,
       zone,
     );

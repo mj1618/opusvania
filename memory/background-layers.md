@@ -252,7 +252,7 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   190 px of air over it or the arc to its neighbour (a function of the camera alone). The near top-left mass hung
   over F2 / the F1-F2 arc from the first lantern's ground and over F3 from burr-path.
 
-## The wood: canopy height (scene 1, rounds 1-2, 2026-10-17)
+## The wood: canopy height (scene 1, rounds 1-3, 2026-10-17)
 Room kit `wood` (room-look.ts) takes its own path in far.ts / mid.ts (`initWood`); the Grove's plans are untouched
 (test-grove backdrop pixel-identical; only Wing's own pixels changed with the acting agent). Builders and every
 knob: `lib/bg-wood.ts` (`WOOD`, `WOOD_STAGE`).
@@ -280,7 +280,23 @@ knob: `lib/bg-wood.ts` (`WOOD`, `WOOD_STAGE`).
   hash, washed out near the moon and in the haze), clouds drifting 16 px/s with moonlit edges, the moon's face
   (`maria`, soft `edge`, limb darkening), halo `glowK`, horizon haze and afterglow riding at far0's parallax.
   The halo measured ~130-160 at 1.3-2 r is mostly post bloom, not `glowK`.
+- **Round 3 (review round 2: "repeated lumpy blobs", "floating islands", "drop never goes dark")**:
+  - No `clump()` domes anywhere in the wood. far rows mix `raggedCrown` (irregular lobes, a ragged leaf fringe
+    on the upper outline, holes, only moon-facing tips lit), `spire` and `cone` (broad low conifer); sizes
+    0.7-1.25x the row's range, per-crown height jitter: no row is a level shelf. A lit dome top reads as a
+    ledge you could stand on (R12).
+  - mid foliage: `spray()` in three `Species` (droop curtains, flat `tiers`, `needles`), one kind per giant
+    (`SPECIES`), built from separate small leaves with air between. Limb sprays are **sway items**
+    (`woodMidHangers(sprays)`), so they move with `wind()`; the giants' overhead crowns stay baked. No moss
+    beards (they read as sticks).
+  - The drop sinks under the pale band: `deep` from 0.83-0.84 to 0.95-1.0 (k 0.8-0.97), mid's from 0.86;
+    air has no mist sheets in the drop. Bottom quarter 6-20 (was 20-30).
+  - `marks.farBranch` (the level's: world polyline west to east, `width`, `tree: 'beyond'`): painted by
+    `farBranch()` in mid's bake BEHIND the giants, hazed 60% toward the fog, thick at the east, fraying west
+    into twigs and sprays; placed for the promise camera (4110, 636). Absent mark = nothing.
+  - mid's bake scale is capped so its rect stays one row of tiles (room 2816 tall: `4000 / rect.h`).
 - far crown seas: `WOOD_LIFE` (far.ts) and 1.2x rustle: the lower frame must not be still in an idle second.
-- Measured round 2 (look:stats, 8 stops x 1920x1080 / 2560x1080 / 1440x1080): mean 22-33, near-black 32-54%,
-  >150 0.7-1.2%, p99.9 193-223, chroma 26-36, azure 99%, top quarter 17-33, bottom quarter 9-27; sky away from the
-  moon 17-38 (corners 9-18 under the vignette); warm pixels 0.15-0.2% where the right horizon is in view.
+- Measured round 3 (look:stats, 8 stops x 1920x1080 / 2560x1080 / 1440x1080): mean 21-30, near-black 39-56%,
+  >150 0.5-1.2%, p99.9 198-227, chroma 25-33, azure 99%, top quarter 17-33, bottom quarter 6-22 (crown stop
+  20-22); sky away from the moon 23-35 (corners 9-21 under the vignette). Idle motion (1 s, > 6 luma): 5.8% at
+  the burl, 13.9% at 'under' (the swaying sprays).

@@ -61,13 +61,13 @@ export const SKY = {
    * far warm afterglow (`art.afterglow`) as a low band on the right, `bandHalf` px half height.
    */
   wood: {
-    core: 0xeef4fc,
+    core: 0xf6f9ff,
     glowK: 0.5,
     parallax: 0.02,
     /** Shaded at half the logical view (the Grove's quarter is too coarse for stars and a moon's face). */
     renderScale: 0.5,
     /** The moon's face: darker seas (share of value lost), edge softness (px). */
-    maria: 0.13,
+    maria: 0.07,
     edge: 2.5,
     /** Stars: chance per cell, cell size (view px), peak brightness, how far up the haze lets them go. */
     stars: 0.16,

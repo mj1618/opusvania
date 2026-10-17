@@ -307,9 +307,9 @@
   the crowns to 17, under the branch's shadow: review round 1). Exposure and toe trade against each other: 1.16 /
   0.45 measured mean 39 and near-black 30%; 1.04 / 0.65 sits in the target. The moon's disc ~200-205.
 - Air: `AIR_WOOD` (air.ts; `A` is the room's config, set in init): thin cool beams, low fog sheets, 420 cool motes
-  (150 showed 3-6), no fireflies, no ambient moth flock, 6 leaves. `WOOD_AIR`: `Silk` (9 loose threads drifting
-  across the view on `wind()`, nearly level and sagging a little: straight or V-shaped ones read as shooting
-  stars or birds) and `gust` streaks crossing the frame at the wind envelope's ~460 px/s (additive, airBack).
+  (150 showed 3-6), no fireflies, no ambient moth flock, 6 leaves. `WOOD_AIR`: `Silk` (4 loose threads drifting
+  on `wind()`, soft (a wide faint stroke under a fine one) and lit only near the moon (`moonReach`): 9 bright
+  ones everywhere read as lens scratches; straight or V-shaped ones as shooting stars or birds) and `gust` streaks crossing the frame at the wind envelope's ~460 px/s (additive, airBack).
 - Foreground: `FOREGROUND.wood`: no floor band; flipped `leafBranch` twigs in the bottom corners; `opening`: a
   dark mass in the opening frame's lower left (own seed); top boughs withdraw off the moon (`moonClear`).
 - Motion, idle 1 s at the burl (pixels changing > 6 luma): 1.7% (round 1) -> 4.9%; the haze band and the dark

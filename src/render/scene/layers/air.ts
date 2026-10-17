@@ -47,7 +47,7 @@ import { playfieldMaskTexture } from '../lib/fx-mask';
 import { noiseTexture } from '../lib/fx-noise';
 import { zoneColor, zoneMix, zoneWeights } from '../lib/fx-zones';
 import { KEY_LIGHT, mix, PALETTE, prng, wind } from '../lib/look';
-import { isGroveKit } from '../lib/room-look';
+import { isGroveKit, LOOK } from '../lib/room-look';
 
 type Three<T> = readonly [T, T, T];
 /** Size of the two volume targets (shafts, mist): half the logical view. */
@@ -260,8 +260,9 @@ const AIR_WOOD: typeof AIR = {
     opacity: [0, 0, 0],
     // Fog lying in the drop under the branch, lit where a shaft crosses it.
     sheets: [
-      { y: 1330, thickness: 150, opacity: 0.06 },
-      { y: 1720, thickness: 200, opacity: 0.04 },
+      // (None in the drop: it must sink to black under the pale band.)
+      { y: 1330, thickness: 150, opacity: 0 },
+      { y: 1720, thickness: 200, opacity: 0 },
     ],
   },
   motes: {
@@ -291,12 +292,16 @@ const AIR_WOOD: typeof AIR = {
 const WOOD_AIR = {
   silk: {
     /** Strands in the view at once (they wrap around it), length range px, drift px/s, colour, opacity. */
-    count: 9,
+    // Few and soft: gossamer that shows only where the moon is behind it (more, or bright
+    // everywhere, read as lens scratches: review round 2).
+    count: 4,
     length: [110, 210] as const,
     drift: [14, 34] as const,
-    color: 0xa8bcd8,
-    alpha: [0.12, 0.26] as const,
+    color: 0xb8cce6,
+    alpha: [0.18, 0.32] as const,
     width: 1.1,
+    /** How far from the moon (screen px) a strand still catches its light. */
+    moonReach: 420,
     /** How far the wind carries a strand sideways, how much its body ripples and sags (px). */
     sway: 50,
     ripple: 12,
@@ -360,9 +365,21 @@ class Silk {
           w * c.ripple * 0.5;
         pts.push(x, y);
       }
-      g.moveTo(pts[0] as number, pts[1] as number);
-      for (let k = 2; k < pts.length; k += 2) g.lineTo(pts[k] as number, pts[k + 1] as number);
-      g.stroke({ color: c.color, width: c.width, alpha: s.a });
+      // Lit only near the moon (screen-fixed: LOOK.moon), soft: a wide faint stroke under a fine one.
+      const moon = LOOK.moon;
+      const sx = (pts[10] as number) - (vis.x + vis.w / 2) + 960;
+      const sy = (pts[11] as number) - (vis.y + vis.h / 2) + 540;
+      const near = moon ? Math.exp(-Math.hypot(sx - moon.x, sy - moon.y) / c.moonReach) : 0;
+      const a = s.a * near;
+      if (a < 0.01) continue;
+      for (const [w, k] of [
+        [c.width * 3, 0.25],
+        [c.width, 1],
+      ] as const) {
+        g.moveTo(pts[0] as number, pts[1] as number);
+        for (let q = 2; q < pts.length; q += 2) g.lineTo(pts[q] as number, pts[q + 1] as number);
+        g.stroke({ color: c.color, width: w, alpha: a * k });
+      }
     }
   }
 }

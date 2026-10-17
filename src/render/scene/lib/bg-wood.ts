@@ -30,16 +30,16 @@ import {
 import {
   type BarkLook,
   blob,
-  clump,
   drawTrunk,
   fbm1,
   type LeafLook,
-  mossCurtain,
+  leafPts,
   type Pt,
   quad,
   type Rng,
   ribbon,
   rr,
+  TO_LIGHT,
   Trunk,
   taper,
 } from './bg-shapes';
@@ -59,7 +59,7 @@ export const WOOD = {
   fogPale: 0x34557a,
   deep: 0x03070d,
   /** Share of the crowns that are fir spires. */
-  spires: 0.4,
+  spires: 0.35,
   /** far0: top of each crown row (screen), crown radius range (layer px), fog pooled under each. */
   far0: {
     rows: [0.8, 0.82, 0.85, 0.89, 0.94, 1.0, 1.08, 1.18],
@@ -122,7 +122,7 @@ export const WOOD = {
  * The walk line runs along the branch solids west to east; one that overlaps the line (the far
  * branch) gets its own thinner sheet.
  */
-export const WOOD_STAGE = { color: 0x5a7ca0, strength: 0.5, height: 340, below: 230, ledgeK: 0.35 };
+export const WOOD_STAGE = { color: 0x5a7ca0, strength: 0.5, height: 340, below: 190, ledgeK: 0.35 };
 
 export function woodStage(scene: Scene): StageSpec {
   const tops = scene.solids.filter((s) => s.tag !== 'trunk').sort((a, b) => a.x - b.x);
@@ -244,9 +244,11 @@ function farAtm(i: 0 | 1 | 2, anchorY: number): Atmosphere {
     blur: [6, 4, 2.2][i] as number,
     deep: {
       color: WOOD.deep,
-      y0: layerY([0.9, 0.9, 0.9][i] as number, p, anchorY),
-      y1: layerY([1.15, 1.1, 1.06][i] as number, p, anchorY),
-      k: [0.7, 0.85, 0.95][i] as number,
+      // Under the pale band the drop sinks to blue-black (review round 2: bottom quarter 20-30,
+      // target 6-16; the bottom 15% <= 12).
+      y0: layerY([0.84, 0.84, 0.83][i] as number, p, anchorY),
+      y1: layerY([1.0, 0.98, 0.95][i] as number, p, anchorY),
+      k: [0.8, 0.92, 0.97][i] as number,
     },
   };
 }
@@ -315,7 +317,7 @@ export function woodMidAtm(anchorY: number): Atmosphere {
     gain: 0.95,
     saturation: 1,
     blur: 1.1,
-    deep: { color: WOOD.deep, y0: layerY(0.95, p, anchorY), y1: layerY(1.4, p, anchorY), k: 0.8 },
+    deep: { color: WOOD.deep, y0: layerY(0.86, p, anchorY), y1: layerY(1.05, p, anchorY), k: 0.9 },
   };
 }
 
@@ -367,6 +369,64 @@ function fogPool(
   }
   // The fog is not lit by the crowns' light blobs.
   for (let x = x0; x <= x1; x += 300) L.reset(x, y + depth * 0.6, 340, depth * 0.9, 0.9);
+}
+
+/**
+ * A broadleaf crown seen from above and a little to the side: an irregular mass of overlapping lobes
+ * with a ragged leafy fringe all round its upper part and gaps you can see through, dark, the moon
+ * catching only its upper edge. (Round domes with lit tops read as cloud or as floating islands you
+ * could stand on: review round 2.)
+ */
+function raggedCrown(
+  g: Graphics,
+  L: LightMap,
+  r: Rng,
+  x: number,
+  y: number,
+  rad: number,
+  look: LeafLook,
+  detail: number,
+): void {
+  const wide = rr(r, 0.8, 1.35);
+  const lobes = 3 + Math.floor(r() * 5);
+  const pts: Array<[number, number, number]> = [];
+  for (let k = 0; k < lobes; k++) {
+    const a = rr(r, -Math.PI, 0.2);
+    const d = rad * rr(r, 0.1, 0.65);
+    pts.push([x + Math.cos(a) * d * wide, y + Math.sin(a) * d * 0.75 + rad * 0.15, rad * rr(r, 0.35, 0.62)]);
+  }
+  for (const [lx, ly, lr] of pts) g.poly(blob(lx, ly, lr * wide, lr * rr(r, 0.7, 1), r, 0.34, 18));
+  g.fill(look.core);
+  // The ragged fringe: leaf tips pointing out of the upper outline, a few loose sprigs beyond it.
+  const tips = Math.round(10 + 22 * detail * (rad / 60));
+  const edge: number[][] = [];
+  const lit: number[][] = [];
+  for (let k = 0; k < tips; k++) {
+    const [lx, ly, lr] = pts[Math.floor(r() * pts.length)] as [number, number, number];
+    const a = rr(r, -Math.PI * 0.98, 0.15);
+    const px = lx + Math.cos(a) * lr * wide * rr(r, 0.8, 1.05);
+    const py = ly + Math.sin(a) * lr * rr(r, 0.7, 0.95);
+    const len = rad * rr(r, 0.1, 0.24) * (r() < 0.1 ? 2 : 1);
+    const leaf = leafPts(px, py, a + rr(r, -0.5, 0.5), len, len * rr(r, 0.3, 0.5), Math.floor(r() * 3));
+    // Tips facing the moon (upper right) carry its light; the rest stay in the silhouette.
+    if (Math.cos(a) * TO_LIGHT.x + Math.sin(a) * TO_LIGHT.y > 0.55 && r() < 0.7) lit.push(leaf);
+    else edge.push(leaf);
+  }
+  for (const p of edge) g.poly(p);
+  g.fill(look.core);
+  for (const p of lit) g.poly(p);
+  g.fill(look.mid);
+  // Holes: sky or fog seen through the crown.
+  const holes = Math.floor(r() * 3);
+  for (let k = 0; k < holes; k++) {
+    const [lx, ly, lr] = pts[Math.floor(r() * pts.length)] as [number, number, number];
+    g.poly(
+      blob(lx + rr(r, -0.4, 0.4) * lr, ly + rr(r, -0.2, 0.3) * lr, lr * 0.16, lr * 0.12, r, 0.4, 10),
+    ).cut();
+  }
+  L.reset(x, y + rad * 0.3, rad * 1.5, rad * 1.3);
+  L.lit(x + TO_LIGHT.x * rad * 0.55, y + TO_LIGHT.y * rad * 0.45, rad * 0.55, rad * 0.25, 0.22);
+  L.shade(x, y + rad * 0.55, rad * 1.2, rad * 0.7, 0.6);
 }
 
 /**
@@ -428,24 +488,25 @@ function crownRow(
   rad: readonly [number, number],
   look: LeafLook,
   bottom: number,
-  light: number,
+  _light: number,
   detail: number,
   seed: number,
   spireH: readonly [number, number],
 ): void {
   const swell = fbm1(seed);
-  const crowns: Array<{ x: number; y: number; r: number; spire: boolean }> = [];
+  const crowns: Array<{ x: number; y: number; r: number; kind: 'spire' | 'cone' | 'crown' }> = [];
   for (let x = x0 - rad[1]; x < x1 + rad[1]; ) {
-    const cr = rr(r, rad[0], rad[1]);
-    // Tops of a canopy: rolling, a crown now and then standing above its neighbours.
-    const up = r() < 0.15 ? cr * rr(r, 0.3, 0.9) : 0;
+    // Sizes vary a lot (young and old trees), heights too: no row reads as a level shelf.
+    const cr = rr(r, rad[0] * 0.7, rad[1] * 1.25);
+    const up = r() < 0.2 ? cr * rr(r, 0.3, 1.1) : 0;
+    const pick = r();
     crowns.push({
       x,
-      y: y + cr * 0.7 + swell(x / (rad[1] * 6)) * rad[1] * 0.7 - up,
+      y: y + cr * 0.7 + swell(x / (rad[1] * 5)) * rad[1] + rr(r, -0.45, 0.45) * rad[1] - up,
       r: cr,
-      spire: r() < WOOD.spires,
+      kind: pick < WOOD.spires ? 'spire' : pick < WOOD.spires + 0.15 ? 'cone' : 'crown',
     });
-    x += cr * rr(r, 0.9, 1.5);
+    x += cr * rr(r, 0.75, 1.45);
   }
   // The body under the tops.
   const body: number[] = [];
@@ -457,23 +518,21 @@ function crownRow(
     g.poly(body).fill(look.core);
   }
   for (const c of crowns) {
-    if (c.spire) {
+    if (c.kind === 'spire') {
       spire(g, L, r, c.x, c.y + c.r * 0.6, c.r * rr(r, spireH[0], spireH[1]), c.r * rr(r, 1.1, 1.5), look);
-      continue;
-    }
-    L.reset(c.x, c.y + c.r, c.r * 1.4, c.r * 1.4);
-    clump(g, L, c.x, c.y, c.r * 0.8, look, r, { light, detail, leaf: rr(r, 0.8, 1.2) });
-    // Knobbly satellites on the top and sides: a crown, not a puff.
-    const n = 2 + Math.floor(r() * 3);
-    for (let k = 0; k < n; k++) {
-      const a = -Math.PI * rr(r, 0.05, 0.95);
-      const d = c.r * rr(r, 0.55, 0.85);
-      clump(g, L, c.x + Math.cos(a) * d, c.y + Math.sin(a) * d * 0.7, c.r * rr(r, 0.28, 0.45), look, r, {
-        light,
-        detail,
-        leaf: rr(r, 0.7, 1),
-      });
-    }
+    } else if (c.kind === 'cone') {
+      // A broad old conifer: a low wide spire.
+      spire(
+        g,
+        L,
+        r,
+        c.x,
+        c.y + c.r * 0.7,
+        c.r * rr(r, spireH[0], spireH[1]) * 0.6,
+        c.r * rr(r, 2, 2.6),
+        look,
+      );
+    } else raggedCrown(g, L, r, c.x, c.y, c.r, look, detail);
   }
   // Shadow falls under the tops into the body.
   for (const c of crowns) L.shade(c.x, c.y + c.r * 1.3, c.r * 1.3, c.r * 0.9, 0.55);
@@ -689,6 +748,201 @@ function barkRelief(g: Graphics, L: LightMap, tr: Trunk, w: number, r: Rng): voi
   }
 }
 
+type Species = 'droop' | 'tiers' | 'needles';
+/** The giants' kinds, in WOOD.mid.trunks order (repeating): no two neighbours alike. */
+const SPECIES: readonly Species[] = ['tiers', 'droop', 'needles', 'droop', 'tiers'];
+
+/**
+ * A spray of foliage on a twig, one of three kinds, built from small separate leaves with air
+ * between them (refs ori-wotw/06, ori-bf/01, Neva: masses are many shapes, never a lumpy ball):
+ * - droop: a fan of thin twigs whose leaves hang down in curtains
+ * - tiers: flat horizontal plates of small leaves stacked with gaps (cedar-like)
+ * - needles: tufts of fine needles bursting up and out at the twig ends
+ * Dark; only leaves facing the moon (upper right) take a step of light.
+ */
+function spray(
+  g: Graphics,
+  L: LightMap,
+  r: Rng,
+  x: number,
+  y: number,
+  dir: 1 | -1,
+  size: number,
+  kind: Species,
+  look: LeafLook,
+  bark: number = BARK.base,
+): void {
+  const dark: number[][] = [];
+  const lit: number[][] = [];
+  const twigs: number[][] = [];
+  const leaf = (px: number, py: number, a: number, len: number, wid: number, k: number): void => {
+    const pts = leafPts(px, py, a, len, wid, k);
+    const f = Math.cos(a) * TO_LIGHT.x + Math.sin(a) * TO_LIGHT.y;
+    (f > 0.4 && r() < 0.6 ? lit : dark).push(pts);
+  };
+  const twig = (x0: number, y0: number, x1: number, y1: number, w: number): void => {
+    twigs.push(
+      taper(
+        quad(
+          { x: x0, y: y0 },
+          { x: (x0 + x1) / 2, y: Math.min(y0, y1) - Math.abs(x1 - x0) * 0.08 },
+          { x: x1, y: y1 },
+        ),
+        w,
+        0.8,
+        6,
+      ),
+    );
+  };
+  if (kind === 'droop') {
+    const n = 4 + Math.floor(r() * 4);
+    for (let i = 0; i < n; i++) {
+      const a = (-0.35 + (i / n) * 1.1 + rr(r, -0.1, 0.1)) * Math.PI * 0.5;
+      const len = size * rr(r, 0.5, 1);
+      const ex = x + dir * Math.cos(a) * len;
+      const ey = y + Math.sin(a) * len * 0.6;
+      twig(x, y, ex, ey, size * 0.025);
+      const leaves = Math.round(len / (size * 0.07));
+      for (let k = 1; k <= leaves; k++) {
+        const t = k / leaves;
+        const px = x + (ex - x) * t;
+        const py = y + (ey - y) * t;
+        // Hanging, longer toward the tip: a curtain, ragged at its hem.
+        const l = size * rr(r, 0.1, 0.2) * (0.6 + t);
+        leaf(px, py, Math.PI / 2 + rr(r, -0.35, 0.35), l, l * rr(r, 0.25, 0.4), 2);
+      }
+    }
+  } else if (kind === 'tiers') {
+    const n = 2 + Math.floor(r() * 3);
+    for (let i = 0; i < n; i++) {
+      const ty = y - i * size * rr(r, 0.22, 0.34);
+      const w = size * rr(r, 0.5, 1) * (1 - i * 0.18);
+      const cx = x + dir * size * rr(r, -0.1, 0.3);
+      twig(cx - w * 0.5, ty + 4, cx + w * 0.5, ty, size * 0.02);
+      // A thin flat plate: leaves splayed sideways and a little up, thick in the middle.
+      const leaves = Math.round(w / (size * 0.035));
+      for (let k = 0; k < leaves; k++) {
+        const u = rr(r, -0.5, 0.5);
+        const px = cx + u * w;
+        const py = ty + rr(r, -1, 1) * size * 0.05 * (1 - Math.abs(u) * 1.6);
+        const a = (u < 0 ? Math.PI : 0) + rr(r, -0.6, 0.6) - 0.15;
+        const l = size * rr(r, 0.07, 0.14);
+        leaf(px, py, a, l, l * rr(r, 0.35, 0.55), 1);
+      }
+    }
+  } else {
+    const n = 3 + Math.floor(r() * 4);
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + dir * rr(r, -0.2, 1.1);
+      const len = size * rr(r, 0.35, 0.75);
+      const ex = x + Math.cos(a) * len;
+      const ey = y + Math.sin(a) * len * 0.7;
+      twig(x, y, ex, ey, size * 0.03);
+      // A burst of needles at the end and a few along the twig.
+      const needles = 10 + Math.floor(r() * 10);
+      for (let k = 0; k < needles; k++) {
+        const t = k < needles * 0.7 ? 1 : rr(r, 0.4, 0.9);
+        const px = x + (ex - x) * t;
+        const py = y + (ey - y) * t;
+        const na = a + rr(r, -1.3, 1.3);
+        const l = size * rr(r, 0.1, 0.22);
+        leaf(px, py, na, l, l * 0.12, 0);
+      }
+    }
+  }
+  for (const p of twigs) g.poly(p);
+  g.fill(bark);
+  for (const p of dark) g.poly(p);
+  g.fill(look.core);
+  for (const p of lit) g.poly(p);
+  g.fill(look.mid);
+  L.reset(x, y, size, size * 0.8, 0.6);
+}
+
+/**
+ * The far branch (the promise she can't reach yet): another tree's limb (`marks.farBranch`: a world
+ * polyline west to east, its width, the tree it grows from beyond the east edge). Painted in mid
+ * behind the giants, hazed one step toward the fog, no moss rim: a place out of reach, not a ledge.
+ */
+export interface FarBranchMark {
+  points: ReadonlyArray<readonly [number, number]>;
+  width: number;
+}
+
+export function farBranchMark(room?: { marks?: unknown }): FarBranchMark | null {
+  const m = (room?.marks as { farBranch?: FarBranchMark } | undefined)?.farBranch;
+  if (!m || !Array.isArray(m.points) || m.points.length < 2 || typeof m.width !== 'number') return null;
+  return m;
+}
+
+/** The camera the far branch is placed for (world px): where she sees it, over the promise gap. */
+const FAR_BRANCH_CAM = { x: 4110, y: 636 };
+
+function farBranch(
+  g: Graphics,
+  L: LightMap,
+  fb: FarBranchMark,
+  p: number,
+  anchorX: number,
+  anchorY: number,
+  r: Rng,
+): void {
+  // World -> this layer, for the promise camera: layer = world + (1 - p) * (anchor - cam).
+  const dx = (1 - p) * (anchorX - FAR_BRANCH_CAM.x);
+  const dy = (1 - p) * (anchorY - FAR_BRANCH_CAM.y);
+  const pts = fb.points.map(([x, y]) => ({ x: x + dx, y: y + dy }));
+  const n = pts.length - 1;
+  // t 0 = the east end (where it leaves its tree, thick), 1 = the west tip (thin).
+  const roll = fbm1((pts[0]?.x ?? 0) * 0.01 + 3);
+  const c = (t: number): Pt => {
+    const u = (1 - t) * n;
+    const i = Math.min(n - 1, Math.floor(u));
+    const f = u - i;
+    const a = pts[i] as Pt;
+    const b = pts[i + 1] as Pt;
+    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f + roll(t * 5) * fb.width * 0.35 };
+  };
+  const half = (t: number): number => (fb.width / 2) * (1.35 - t * 1.05) + 1;
+  const haze = (col: number): number => mix(col, WOOD.fog, 0.6);
+  g.poly(ribbon(c, half, 48)).fill(haze(BARK.base));
+  g.poly(
+    ribbon(
+      (t) => ({ x: c(t).x, y: c(t).y - half(t) * 0.5 }),
+      (t) => half(t) * 0.3,
+      48,
+    ),
+  ).fill({
+    color: haze(BARK.lit),
+    alpha: 0.3,
+  });
+  // Side twigs and sprays off it, as hazy as the limb; the tip frays into a twiggy fork.
+  const look = crownLook(18, 0.2, 0.3);
+  const hl: LeafLook = {
+    ...look,
+    core: haze(look.core),
+    dark: haze(look.dark),
+    mid: haze(look.mid),
+    lit: haze(look.lit),
+    sun: haze(look.sun),
+  };
+  for (let k = 0; k < 11; k++) {
+    const t = k < 2 ? rr(r, 0.92, 1) : rr(r, 0.1, 0.95);
+    const o = c(t);
+    const up = r() < 0.55;
+    const tl = fb.width * rr(r, 1.5, 3.5);
+    const e = { x: o.x - tl * rr(r, 0.2, 0.8), y: o.y + (up ? -tl : tl * 0.6) };
+    g.poly(
+      taper(quad(o, { x: (o.x + e.x) / 2, y: (o.y + e.y) / 2 - tl * 0.1 }, e), half(t) * 0.5, 1, 8),
+    ).fill(haze(BARK.base));
+    if (r() < 0.75)
+      spray(g, L, r, e.x, e.y, -1, rr(r, 60, 120), r() < 0.5 ? 'droop' : 'needles', hl, haze(BARK.base));
+  }
+  for (let k = 0; k <= 10; k++) {
+    const q = c(k / 10);
+    L.reset(q.x, q.y, fb.width * 2.5, fb.width * 2, 0.8);
+  }
+}
+
 /** A stable 0..1 per number (phase of a trunk's bends). */
 function lrand(n: number): number {
   const s = Math.sin(n * 12.9898) * 43758.5453;
@@ -706,19 +960,34 @@ export interface WoodMidBuild {
   content: Container;
   lights: LightMap;
   hooks: Pt[];
+  sprays: SprayPlace[];
 }
 
 /** Builds the mid layer of the wood: colossal trunks out of the drop, limbs, leaf masses up high. */
-export function buildWoodMid(rect: LayerRect, anchorY: number): WoodMidBuild {
+export function buildWoodMid(
+  rect: LayerRect,
+  anchorY: number,
+  room?: { marks?: unknown },
+  anchorX = 2560,
+): WoodMidBuild {
   const p = 0.68;
   const hooks: Pt[] = [];
+  const sprays: SprayPlace[] = [];
   const top = rect.y - 200;
   const base = rect.y + rect.h + 200;
   // Dark leaf pads: silhouettes against the sky, not lit puffs (lit, they read as cloud).
   const look = crownLook(22, 0.3, 0.55);
   const { content, lights } = withLightMap((c, L) => {
     const r = prng(7300);
-    for (const spec of WOOD.mid.trunks) {
+    // Another tree's branch, one plane back: drawn first, so the giants stand in front of it.
+    const fb = farBranchMark(room);
+    if (fb) {
+      const g = c.addChild(new Graphics());
+      farBranch(g, L, fb, p, anchorX, anchorY, prng(7400));
+    }
+    WOOD.mid.trunks.forEach((spec, ti) => {
+      // Each giant is its own kind of tree: its sprays differ from its neighbours'.
+      const species = SPECIES[ti % SPECIES.length] as Species;
       // Limbs go behind the trunk: they grow out of its silhouette, their roots hidden in it.
       const gl = c.addChild(new Graphics());
       const g = c.addChild(new Graphics());
@@ -781,14 +1050,15 @@ export function buildWoodMid(rect: LayerRect, anchorY: number): WoodMidBuild {
         }
         const tips = limb(gl, L, from, side, len, spec.w * rr(lr, 0.12, 0.17), lr);
         for (const tip of tips) {
-          // Pads of leaves strung out toward the tip, flatter than tall.
-          const n = 2 + Math.floor(lr() * 2);
+          // Sprays of this tree's own kind strung toward the tip, with air between them
+          // (sway items: they move with the wind).
+          const n = 2 + Math.floor(lr() * 3);
           for (let q = 0; q < n; q++) {
-            const u = 1 - q * 0.28;
-            const px = from.x + (tip.x - from.x) * u + rr(lr, -20, 20);
-            const py = from.y + (tip.y - from.y) * u - rr(lr, 10, 30);
+            const u = 1 - q * rr(lr, 0.16, 0.28);
+            const px = from.x + (tip.x - from.x) * u + rr(lr, -24, 24);
+            const py = from.y + (tip.y - from.y) * u - rr(lr, 0, 16);
             if (blocked(px, py, p, anchorY)) continue;
-            clump(gl, L, px, py, rr(lr, 40, 70) * (1 - q * 0.15), look, lr, { light: 0.12, detail: 0.8 });
+            sprays.push({ x: px, y: py, dir: side, size: rr(lr, 90, 160) * (1 - q * 0.15), species });
           }
           hooks.push({ x: tip.x + rr(lr, -40, 40), y: tip.y + 10 });
         }
@@ -796,12 +1066,12 @@ export function buildWoodMid(rect: LayerRect, anchorY: number): WoodMidBuild {
       }
       // Leaf masses at the top of the frame: the giants' own crowns overhead.
       const crownY = layerY(-0.02, p, anchorY);
-      for (let k = 0; k < 4; k++) {
+      for (let k = 0; k < 7; k++) {
         const q = tr.center((base - crownY) / (base - top));
         const cx = q.x + rr(lr, -1.4, 1.4) * spec.w;
         const cy = crownY + rr(lr, -260, -40);
         if (blocked(cx, cy, p, anchorY)) continue;
-        clump(g, L, cx, cy, rr(lr, 120, 190), look, lr, { light: 0.12, detail: 0.6 });
+        spray(g, L, lr, cx, cy, lr() < 0.5 ? -1 : 1, rr(lr, 140, 230), species, look);
       }
       // Moss on the bark, in tufts down the trunk's moon side.
       for (let k = 0; k < 4; k++) {
@@ -811,38 +1081,57 @@ export function buildWoodMid(rect: LayerRect, anchorY: number): WoodMidBuild {
           alpha: 0.5,
         });
       }
-    }
+    });
   });
-  return { content, lights, hooks };
+  return { content, lights, hooks, sprays };
 }
 
 /** Moss and silk hanging from mid's limbs: they swing with the same wind as the plants. */
+/** Where mid's limbs carry a spray: drawn as sway items, so every spray moves with the wind. */
+export interface SprayPlace {
+  x: number;
+  y: number;
+  dir: 1 | -1;
+  size: number;
+  species: Species;
+}
+
+/** No-op light map for sprays drawn outside the bake (sway items take their tone from `tone`). */
+const NO_LIGHT = { lit: (): void => {}, shade: (): void => {}, reset: (): void => {} } as unknown as LightMap;
+
+/**
+ * The limbs' sprays as sway items: they bend with wind() (the same wave as every plant), so a gust
+ * is seen passing through the giants' foliage. (Moss beards and static silk read as sticks and
+ * render seams: gone.) `tone` puts a colour where the layer's atmosphere would.
+ */
 export function woodMidHangers(
-  hooks: readonly Pt[],
+  sprays: readonly SprayPlace[],
   tone: (color: number, x: number, y: number) => number,
 ): SwayItem[] {
   const r = prng(7311);
-  const items: SwayItem[] = [];
-  for (const h of hooks) {
-    const n = r() < 0.3 ? 1 : 0;
-    for (let k = 0; k < n; k++) {
-      const x = h.x + rr(r, -50, 50);
-      const len = rr(r, 140, 300);
-      const w = rr(r, 18, 34);
-      const seed = Math.floor(r() * 1e9);
-      const cols = MOSS.map((c) => tone(c, x, h.y + len * 0.5));
-      items.push({
-        x,
-        y: h.y,
-        w: w + 20,
-        h: len + 10,
-        up: 6,
-        amp: 0.07,
-        phase: r(),
-        draw: (g) => mossCurtain(g, 0, 0, w, len, prng(seed), cols, 2.2),
-      });
-    }
-    // (No hanging silk threads: static 1 px lines read as render seams, review round 1. Silk drifts in air.ts.)
-  }
-  return items;
+  return sprays.map((sp) => {
+    const seed = Math.floor(r() * 1e9);
+    const lk = crownLook(22, 0.3, 0.55);
+    const t = (c: number): number => tone(c, sp.x, sp.y);
+    const look: LeafLook = {
+      ...lk,
+      core: t(lk.core),
+      dark: t(lk.dark),
+      mid: t(lk.mid),
+      lit: t(lk.lit),
+      sun: t(lk.sun),
+    };
+    const bark = t(BARK.base);
+    return {
+      x: sp.x,
+      y: sp.y,
+      w: sp.size * 2.6,
+      h: sp.size * 1.1,
+      up: sp.size * 1.15,
+      amp: sp.species === 'droop' ? 0.09 : 0.05,
+      phase: r(),
+      flutter: 0.25,
+      draw: (g: Graphics) => spray(g, NO_LIGHT, prng(seed), 0, 0, sp.dir, sp.size, sp.species, look, bark),
+    };
+  });
 }
