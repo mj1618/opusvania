@@ -669,9 +669,13 @@ play, in one or two sentences, with the moment it was decided.
   whose tip is over W-ff (the pogo snuff). Nothing grabs her on the face.
 - **Falls stop within 600 px everywhere on the climb** (rungs, the floor, face ledges at 1248 / 1080 / 840, an upper
   rung at 1000, chimney rungs). A fade above the rest ledge re-forms her at P-ledge (`reformPatch`, 8036fc0).
-- **The crown wick is off the climb** (2560, 720 over the upper rung): the last face to the rim has no lamp and no
-  hawker lane. **For the creatures agent:** have `hawk-crown` leave on `wood-crown` (the finale's flag) so it stops
-  diving through the release.
+- **The crown, after human-like runs in the oak:** footholds against the last face make it a stair of plain jumps;
+  on the rim the root's knot, the crown wick (a standing cut, its hawker's blows land her on the rim: `rim`), P5 and
+  the finale trigger sit close together, so the wick is out (and its hawker gone) before the release. The finale
+  trigger spans the rim's full height and is the shut door (no gate). The postgame crown lantern is cut: in view
+  of the rim it drew players off the top (the Fling promise belongs to area 2's canopy road). The human-like
+  personas still end "lost" after the finale: they explore every unwalked cell before leaving (the pocket, the
+  band's top), which a player who has just seen the cloud go would not do; claws -> P5 is ~45 s for every persona.
 - **The first visit:** P3's glimpse holds 300 frames with the rest inside it; then Tatter's look-up under the trunk
   holds 180 (the trunk-foot zone frames it tall); the east arch is shut until both have played; then Tatter leads her
   out (`stage.tatters`, render's `climb.lead`). That is ~8 s of held beats plus the walk: ~15-17 s, still short of 25.

@@ -32,8 +32,6 @@ const MID = 1776;
 const WFF = { x: 2620, y: 1460 };
 const BRIDGE = 1312;
 const RIM = 576;
-const S0 = 2560;
-const S1 = 2944;
 
 /** A game in the world booted in `room` (the oak by default), every event kept; the glimpse seen unless `glimpse` is false. */
 function play(opts: { room?: string; abilities?: string[]; glimpse?: boolean } = {}) {
@@ -162,8 +160,6 @@ describe('the oak: one room from the roots to the crown', () => {
       [2924, 700],
       [2300, 900],
       [2000, 900],
-      [1880, 2000],
-      [1880, 2500],
     ];
     for (const [x, y] of drops) {
       const s = play({ glimpse: false });
@@ -389,8 +385,8 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
   });
 });
 
-describe('the top of the trunk: the near face to the rim; the crown wick off the climb', () => {
-  it('from the foothold over the thorns the near face climbs to the rim, out of the crown wick’s grip and its hawker’s lane', () => {
+describe('the top of the trunk: the near face to the rim, footholds up it', () => {
+  it('from the shelf over the thorns the near face climbs to the rim, with no lamp’s grip and no hawker on the way', () => {
     const s = play();
     s.g.teleport(2900, 1248);
     s.run(0, 3);
@@ -400,33 +396,19 @@ describe('the top of the trunk: the near face to the rim; the crown wick off the
     expect(has(ev, 'hurt')).toBe(false);
   });
 
-  it('the crown wick is a choice: a hop from the upper rung is caught; its hawker swoops through the orbit on a rhythm', () => {
-    const r = play();
-    r.g.teleport(2780, 1000);
-    const passes = r
-      .run(0, 500)
-      .filter((e) => e.type === 'enemyDive' && (e as { id?: string }).id === 'hawk-crown');
-    expect(passes.length).toBeGreaterThanOrEqual(2);
+  it('footholds against the face (1048, 800) make the last climb a stair of plain jumps to the rim', () => {
     const s = play();
-    s.g.teleport(2560, 1000);
-    s.run(0, 60);
-    s.run(J, 10);
-    for (let i = 0; i < 40 && s.g.state.player.lure < 0; i++) s.run(0);
-    expect(s.lureIs('wick-crown')).toBe(true);
-  });
-
-  it('from the stub beside it a standing cut puts the crown wick out and the hawker leaves', () => {
-    const s = play();
-    s.g.teleport(2440, 760);
-    s.run(R, 1);
-    s.run(0, 2);
-    const ev = s.run(A, 1).concat(s.run(0, 20));
-    expect(has(ev, 'lureSnuff', 'wick-crown')).toBe(true);
-    expect(has(ev, 'enemyDisperse', 'hawk-crown')).toBe(true);
+    s.g.teleport(2904, 1248);
+    s.run(0, 3);
+    for (const y of [1048, 800, RIM]) {
+      s.run(J | (y === RIM ? R : 0), 20);
+      land(s, y === RIM ? R : 0, 120);
+      expect(s.feet().y).toBe(y);
+    }
   });
 });
 
-describe('the crown: the root, P5, the cloud, the gate', () => {
+describe('the crown: the root, the crown wick, P5, the finale', () => {
   it('the root’s knot bars the rim until it is cut; one cut, and Tatter’s root falls (wood-root-ladder)', () => {
     const s = play();
     s.g.teleport(2964, RIM);
@@ -442,30 +424,43 @@ describe('the crown: the root, P5, the cloud, the gate', () => {
     expect(s.g.state.save.flags).toContain('wood-root-ladder');
   });
 
-  it('the finale holds her for the whole cloud (540 f), the gate stays shut till it has gone, then east to area 2', () => {
+  it('on the rim past the root: the crown wick is a standing cut and its hawker leaves; its rhythm passes over the rim', () => {
+    const r = play();
+    r.g.state.save.opened.push('wood-hollow:root-knot');
+    r.g.teleport(3100, RIM);
+    const passes = r
+      .run(0, 500)
+      .filter((e) => e.type === 'enemyDive' && (e as { id?: string }).id === 'hawk-crown');
+    expect(passes.length).toBeGreaterThanOrEqual(2);
     const s = play();
     s.g.state.save.opened.push('wood-hollow:root-knot');
-    s.g.teleport(3240, RIM);
+    s.g.teleport(3164, RIM);
+    s.run(R, 1);
+    s.run(0, 2);
+    const ev = s.run(A, 1).concat(s.run(0, 20));
+    expect(has(ev, 'lureSnuff', 'wick-crown')).toBe(true);
+    expect(has(ev, 'enemyDisperse', 'hawk-crown')).toBe(true);
+  });
+
+  it('the finale holds her for the whole cloud (540 f), then east to area 2; no way to the exit but through it', () => {
+    const crown = (OAK.triggers ?? []).find((t) => t.id === 'crown');
+    // The rim's full height: no jump carries her over it to the exit.
+    expect(crown && [crown.y, crown.y + crown.h]).toEqual([0, RIM]);
+    const s = play();
+    s.g.state.save.opened.push('wood-hollow:root-knot');
+    s.g.teleport(3320, RIM);
     s.run(0, 3);
     let ev = s.run(R, 30);
     const hold = ev.find((e) => e.type === 'storyHold') as { frames: number } | undefined;
     expect(hold?.frames).toBe(540);
     expect(s.g.state.save.flags).toContain('wood-crown');
-    expect(s.g.state.save.flags).not.toContain('wood-crown-gone');
     ev = s.run(R, 520);
     expect(s.g.state.room).toBe('wood-hollow');
-    expect(s.g.state.save.flags).not.toContain('wood-crown-gone');
     expect(has(ev, 'patchRest')).toBe(true);
     ev = s.run(R, 40);
     expect(s.g.state.save.flags).toContain('wood-crown-gone');
     for (let i = 0; i < 400 && s.g.state.room === 'wood-hollow'; i++) s.run(R);
     expect(s.g.state.room).toBe('wood-canopy');
-    // Before the cloud the gate holds even a runner who skipped the hold (a flag-less save).
-    const g = play();
-    g.g.teleport(3600, RIM);
-    g.run(R, 120);
-    expect(g.g.state.room).toBe('wood-hollow');
-    expect(g.feet().x).toBeLessThan(3712);
   });
 
   it('a fade in the oak re-forms her at its nearest patch at or below her: P-ledge above the ledge, P3 below (never R8)', () => {
@@ -488,18 +483,12 @@ describe('the crown: the root, P5, the cloud, the gate', () => {
     });
   });
 
-  it('the crown lantern (postgame) never pulls on the way up: every critical-path point is out of its field', () => {
-    const lantern = OAK.lures?.find((l) => l.id === 'lantern-crown');
-    expect(lantern).toBeDefined();
-    const radius = defaultTuning.lures.kinds.lantern.radius;
-    const pts: [number, number][] = [];
-    for (let y = RIM; y <= FLOOR; y += 32) pts.push([S1 - 20, y - 40], [S0 + 20, y - 40]);
-    for (let x = 1792; x <= 2624; x += 32) pts.push([x, BRIDGE - 40]);
-    for (let x = 2112; x <= 2944; x += 32) pts.push([x, MID - 40]);
-    for (let x = S1; x <= 3840; x += 32) pts.push([x, RIM - 40]);
-    for (const [x, y] of pts)
-      expect(Math.hypot(x - (lantern?.x ?? 0), y - (lantern?.y ?? 0)), `${x},${y}`).toBeGreaterThan(
-        radius + 60,
-      );
+  it('no postgame lantern in the oak (round 4: one in view of the rim drew players off it): the lamps are the climb’s', () => {
+    expect((OAK.lures ?? []).map((l) => l.id).sort()).toEqual([
+      'wick-crown',
+      'wick-firefly',
+      'wick-knot',
+      'wick-rest',
+    ]);
   });
 });

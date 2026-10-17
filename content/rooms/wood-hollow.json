@@ -107,7 +107,7 @@
     },
     {
       "id": "p5",
-      "x": 3456,
+      "x": 3392,
       "y": 576
     }
   ],
@@ -158,10 +158,10 @@
     },
     {
       "id": "crown",
-      "x": 3392,
-      "y": 384,
+      "x": 3328,
+      "y": 0,
       "w": 192,
-      "h": 192,
+      "h": 576,
       "sets": "wood-crown",
       "hold": 540,
       "finale": true,
@@ -186,9 +186,9 @@
     {
       "tag": "trunk",
       "x": 0,
-      "y": 640,
+      "y": 0,
       "w": 1408,
-      "h": 2176,
+      "h": 2816,
       "kick": false
     },
     {
@@ -249,9 +249,9 @@
     {
       "tag": "trunk",
       "x": 1408,
-      "y": 640,
+      "y": 0,
       "w": 384,
-      "h": 480,
+      "h": 1120,
       "kick": false
     },
     {
@@ -342,51 +342,34 @@
     },
     {
       "tag": "root",
-      "x": 2848,
+      "x": 2680,
       "y": 1248,
-      "w": 96
+      "w": 264
     },
     {
       "tag": "root",
-      "x": 2880,
-      "y": 1080,
-      "w": 64
+      "x": 2864,
+      "y": 1048,
+      "w": 80
     },
     {
       "tag": "root",
       "x": 2112,
       "y": 1776,
-      "w": 832
+      "w": 832,
+      "noDrop": true
     },
     {
       "tag": "root",
-      "x": 2880,
-      "y": 840,
-      "w": 64
-    },
-    {
-      "tag": "root",
-      "x": 1856,
-      "y": 1000,
-      "w": 844
-    },
-    {
-      "tag": "root",
-      "x": 2380,
-      "y": 760,
+      "x": 2864,
+      "y": 800,
       "w": 80
     },
     {
       "tag": "root",
-      "x": 1792,
-      "y": 1900,
-      "w": 192
-    },
-    {
-      "tag": "root",
-      "x": 1792,
-      "y": 2400,
-      "w": 192
+      "x": 2240,
+      "y": 1000,
+      "w": 460
     }
   ],
   "thorns": [
@@ -417,15 +400,6 @@
   ],
   "gates": [
     {
-      "id": "crown-gate",
-      "x": 3712,
-      "y": 0,
-      "w": 64,
-      "h": 576,
-      "flag": "wood-crown-gone",
-      "kick": false
-    },
-    {
       "id": "arch-gate",
       "x": 3712,
       "y": 3584,
@@ -453,8 +427,8 @@
     {
       "id": "wick-crown",
       "kind": "wick",
-      "x": 2560,
-      "y": 720,
+      "x": 3264,
+      "y": 536,
       "spin": -1
     },
     {
@@ -462,13 +436,6 @@
       "kind": "wick",
       "x": 1608,
       "y": 1270
-    },
-    {
-      "id": "lantern-crown",
-      "kind": "lantern",
-      "x": 2168,
-      "y": 340,
-      "spin": 1
     }
   ],
   "enemies": [
@@ -484,13 +451,14 @@
     {
       "id": "hawk-crown",
       "kind": "hawker",
-      "x": 2400,
-      "y": 600,
+      "x": 3264,
+      "y": 400,
       "facing": 1,
       "radius": 160,
       "hp": 3,
       "guards": "wick-crown",
-      "orbit": "wick-crown"
+      "orbit": "wick-crown",
+      "rim": 3100
     }
   ],
   "routes": [
@@ -667,9 +635,9 @@
         "text": "FIND: bark knot, W-knot behind it"
       },
       {
-        "x": 1900,
-        "y": 1050,
-        "text": "the open crown: W-crown hangs off the climb, over the upper rung; hawk-crown swoops through its orbit on a rhythm; a cut from the stub at 760 snuffs it"
+        "x": 3000,
+        "y": 250,
+        "text": "the crown wick on the rim's walk (a standing cut, like R3's knob); hawk-crown swoops through its orbit over the rim; snuffed, it leaves before the finale"
       },
       {
         "x": 3090,
@@ -679,12 +647,7 @@
       {
         "x": 3380,
         "y": 330,
-        "text": "P5, THE CROWN (finale hold 540): the look-out, the cloud lifts off; the gate opens when it has gone"
-      },
-      {
-        "x": 2000,
-        "y": 220,
-        "text": "postgame: the lantern over the crown gap (the Fling promise)"
+        "text": "P5, THE CROWN (finale hold 540, the trigger the rim's full height: no way to the exit but through it): the look-out, the cloud lifts off"
       }
     ],
     "stage": {
@@ -714,7 +677,7 @@
           "facing": 1,
           "when": "wood-root-ladder",
           "climb": {
-            "path": [[2896, 3840], [2896, 576], [3360, 576]]
+            "path": [[2896, 3840], [2896, 576], [3480, 576]]
           }
         }
       ],

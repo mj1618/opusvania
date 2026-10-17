@@ -144,18 +144,20 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   from the band's top and the chimney's lid) in 36 of 36 rhythms x orbit phases. The bridge's tip is over W-ff:
   walk off and down-cut in frames 0-4 (snuff, pogo, onto the foothold 2848-2944 at 1248). With W-ff out the far
   band climbs from the floor to the bridge (the permanence way). Zone `snuff` (0.85) frames the tip.
-- **Falls:** from 18 drop points on the faces, the bridge, the upper rung and the chimney she lands within 600 px:
-  rungs 3264 / 2752, the ledge and buttress 2240, the floor 1776, the bridge 1312, the foothold 1248, face ledges
-  1080 and 840, the upper rung 1000 (1856-2700), chimney rungs 1900 / 2400. (A ledge 64+ px off a face she
-  climbs catches a one-wall climber's kick-out and she bounces between it and the face: keep ledges right against
-  the face or well clear of it.)
-- **Top:** the near face from the foothold to the rim is clean (no lamp's pull, no hawker's lane). **The crown wick
-  is a choice off the climb:** `wick-crown` (2560, 720) over the upper rung (a hop from the rung is caught), its cut
-  stub (2380-2460, y 760: a standing cut from 2440), `hawk-crown` on its rhythm (`orbit: wick-crown`, perches 2300 /
-  2820 at 570, clear of the face). The rim 576 from 2944 east. `root-knot` (bark, 1 cut, full height, 3136) bars it;
-  trigger `root-cut` sets `wood-root-ladder`. P5 3456. The **finale**: trigger `crown` (3392-3584) `hold: 540,
-  finale: true, endSets: "wood-crown-gone"`; gate `crown-gate` (3712-3776) shuts the `canopy` exit until the hold
-  ends. Stage: `cloud`, `vista` (1920, -150, zoom 0.5, hold 9 s), `rootFall`, the root ladder down the near face.
+- **Falls:** from 16 drop points on the faces, the bridge and the upper rung she lands within 600 px: rungs 3264 /
+  2752, the ledge and buttress 2240, the floor 1776 (`noDrop`: bots dropped through it to the tunnel), the bridge
+  1312, the shelf 2680-2944 at 1248 (a step up from the bridge's tip), footholds against the face at 1048 and 800,
+  the upper rung 2240-2700 at 1000. (A ledge 64+ px off a face she climbs catches a one-wall climber's kick-out and
+  she bounces between it and the face: keep ledges right against the face or well clear of it.)
+- **Top (round 4, after human-like runs in the oak):** the footholds make the last face a stair of plain jumps to the
+  rim. On the rim, close together: the root's knot (bark, 1 cut, 3136), `wick-crown` (3264, 536: a standing cut,
+  like R3's knob) with `hawk-crown` on its rhythm over the rim (`rim: 3100`, 2953d05: every blow sends her up and
+  over onto the rim), P5 3392, then the finale trigger `crown` (3328-3520, **the rim's full height**, so no jump
+  skips it: `hold: 540, finale: true, endSets: "wood-crown-gone"`; a finale's hold sends the room's creatures away)
+  and the exit `canopy` (no gate: the hold is the shut door; a gate made the bots plan the exit as unreachable).
+- **Cut in round 4:** the postgame crown lantern (in view of the rim it drew players off the top: human-like
+  personas chased it and fell), the west crown's top (an unreachable ledge in view: the west wood is solid to the
+  room's top now), the chimney rungs (frontier the personas could not reach).
 - **Fades:** `reformPatch: true` (8036fc0: the nearest patch at or below where she lay): a fade above the rest ledge
   re-forms her at P-ledge, below it at P3; `reform` (P3) stays as the fallback. Never in R8.
 - **The first visit (round 4: it lasted 10 s):** the glimpse trigger is P3's patch box (1224-1336) with `hold: 300,
@@ -165,8 +167,8 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   look-up: first visit 12 s (target 25). `stage.glimpse` frames the crown ring and W-ff (2752, 1300, 0.5, 6 s).
   Tatter: `marks.tatter` looks up at W-ff until the look-up; `stage.tatters`: it leads her out of the east arch
   (`climb.path` + `lead`) until `wood-climbout`, sits under the trunk looking up until the root, then climbs the root.
-- **For the creatures agent:** `hawk-crown` keeps swooping through the finale's wide frame: it should leave on
-  `wood-crown` (the finale trigger's flag). No creature field reads a flag yet.
+- The first visit's glimpse is also `finale` (its 300 hold): it sends the oak's creatures away for that visit (no
+  claws yet, so nothing is lost; they are fresh when she comes back up through the mesh).
 - Gotcha: a scratchpad is shared by sibling agents: use your own subfolder for probes. Keep in-progress room data
   loadable in the shared tree (a room that fails to parse breaks every agent's tests): work in a scratch copy.
 
