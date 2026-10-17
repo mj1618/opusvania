@@ -46,3 +46,9 @@
   sidecar) adds hero p10/p90 and p90 / mean of the 300 px around. `--stops[=dir]` shoots the seven wide stops
   with hero boxes and measures them in one go (stop list duplicated from tools/shots.ts: keep in step).
   `--only=wide`, `--json`. Decodes with ffmpeg/ffprobe, no extra dependency.
+
+## Vite dependency cache per server (2026-10-18)
+`vite.config.ts` puts the dependency cache in `<checkout>/.vite` (gitignored), not `node_modules/.vite`. Snapshot
+worktrees symlink `node_modules`, so a shared cache let every dev server overwrite the others' optimized deps, and
+pages failed with "Failed to fetch dynamically imported module …/.vite/deps/…". A second dev server in the **same**
+checkout must set its own cache: `VITE_CACHE_DIR=.vite-<port> npx vite --port <port>`.

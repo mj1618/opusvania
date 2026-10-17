@@ -6,6 +6,10 @@ export default defineConfig(({ command, isPreview }) => ({
   base: command === 'build' || isPreview ? '/opusvania/' : '/',
   build: { target: 'es2023', sourcemap: true },
   server: { port: 5180 },
+  // Each checkout (and each extra dev server, via VITE_CACHE_DIR) keeps its own dependency cache. Snapshot
+  // worktrees symlink node_modules, so the default node_modules/.vite was shared by every server, and they
+  // overwrote each other's optimized deps ("Failed to fetch dynamically imported module …/.vite/deps/…").
+  cacheDir: process.env.VITE_CACHE_DIR ?? '.vite',
   test: {
     include: ['tests/unit/**/*.test.ts'],
     environment: 'node',

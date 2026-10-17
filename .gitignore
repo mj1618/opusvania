@@ -12,3 +12,4 @@ blob-report/
 .scratch/
 .claude/
 playtest-reports/
+.vite-*/
