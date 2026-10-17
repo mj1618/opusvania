@@ -21,7 +21,7 @@
         "w": 2048,
         "h": 768,
         "lock": true,
-        "fit": true,
+        "zoom": 1.25,
         "bounds": { "x": 3392, "y": 1280, "w": 2304, "h": 896 }
       },
       {
@@ -31,7 +31,7 @@
         "w": 448,
         "h": 316,
         "fit": true,
-        "bounds": { "x": 2944, "y": 700, "w": 3712, "h": 1540 }
+        "bounds": { "x": 4100, "y": 1000, "w": 2200, "h": 1240 }
       }
     ]
   },
@@ -44,7 +44,7 @@
   "glades": [{ "id": "glade-claws", "x": 2560, "y": 1920, "w": 704, "h": 192, "ability": "wallJump" }],
   "triggers": [
     { "id": "climbed", "x": 2560, "y": 0, "w": 384, "h": 128, "sets": "wood-climbout" },
-    { "id": "window", "x": 5760, "y": 1000, "w": 448, "h": 216, "sets": "wood-window", "hold": 120 }
+    { "id": "window", "x": 5760, "y": 1000, "w": 448, "h": 216, "sets": "wood-window", "hold": 180 }
   ],
   "catches": [{ "id": "chute", "x": 5760, "y": 1840, "w": 4928, "h": 200 }],
   "solids": [
@@ -58,11 +58,13 @@
     { "tag": "ground", "x": 3520, "y": 0, "w": 1856, "h": 1344, "kick": false },
     { "tag": "ground", "x": 5632, "y": 1280, "w": 128, "h": 960, "kick": false },
     { "tag": "ground", "x": 5760, "y": 1216, "w": 896, "h": 1024 },
-    { "tag": "ground", "x": 7040, "y": 1088, "w": 640, "h": 1152 },
-    { "tag": "ground", "x": 8320, "y": 896, "w": 768, "h": 1344 },
-    { "tag": "ground", "x": 9728, "y": 640, "w": 640, "h": 1600 },
+    { "tag": "ground", "x": 7296, "y": 1088, "w": 512, "h": 1152 },
+    { "tag": "ground", "x": 8448, "y": 896, "w": 768, "h": 1344 },
+    { "tag": "ground", "x": 9728, "y": 640, "w": 960, "h": 1600 },
     { "tag": "ground", "x": 10688, "y": 448, "w": 576, "h": 1792 },
-    { "tag": "root", "x": 9728, "y": 520, "w": 300, "h": 40, "kick": false }
+    { "tag": "root", "x": 9688, "y": 0, "w": 584, "h": 560, "kick": false },
+    { "tag": "root", "x": 3584, "y": 1920, "w": 128, "h": 32 },
+    { "tag": "root", "x": 5504, "y": 1920, "w": 128, "h": 32 }
   ],
   "oneWays": [{ "tag": "root", "x": 2560, "y": 160, "w": 160 }],
   "gates": [
@@ -80,7 +82,7 @@
     { "id": "wick-pit", "kind": "wick", "x": 3392, "y": 1600 },
     { "id": "wick-pogo", "kind": "wick", "x": 9640, "y": 760 },
     { "id": "wick-chute", "kind": "wick", "x": 8736, "y": 700 },
-    { "id": "wick-pocket", "kind": "wick", "x": 7360, "y": 900 }
+    { "id": "wick-pocket", "kind": "wick", "x": 7488, "y": 900 }
   ],
   "enemies": [
     {
@@ -95,7 +97,7 @@
     {
       "id": "dang-chute",
       "kind": "dangler",
-      "x": 8800,
+      "x": 8736,
       "y": 8,
       "facing": 1,
       "drop": 900,
@@ -104,7 +106,7 @@
     {
       "id": "dang-pocket",
       "kind": "dangler",
-      "x": 7300,
+      "x": 7488,
       "y": 8,
       "facing": 1,
       "drop": 1100,
@@ -131,15 +133,24 @@
       {
         "x": 9740,
         "y": 480,
-        "text": "a root ceiling over L1's lip: no jump here. THE POGO-WICK just under the lip: drop, down-cut it, it snuffs and bounces her on to L2"
+        "text": "a root mass over L1's west half (80 clear): walk under it, no jump. THE POGO-WICK just under the lip: drop, down-cut it, it snuffs and bounces her on to L2"
       },
       { "x": 9500, "y": 1100, "text": "a miss: the catch puts her back on L1" },
       {
         "x": 8500,
         "y": 400,
-        "text": "a lit pocket: W-chute over L2 with dang-chute's silk over the landing"
+        "text": "a narrow lit landing (L2, 512): W-chute over it, dang-chute's silk over the cut spot"
       },
-      { "x": 7100, "y": 600, "text": "a lit pocket: W-pocket over L3 with dang-pocket over the landing" },
+      {
+        "x": 7100,
+        "y": 600,
+        "text": "a narrow lit landing (L3, 384): W-pocket over it, dang-pocket over the cut spot"
+      },
+      {
+        "x": 3600,
+        "y": 1880,
+        "text": "escape ledges on both pit walls: hop up over the ram, no corner trap"
+      },
       {
         "x": 5800,
         "y": 900,

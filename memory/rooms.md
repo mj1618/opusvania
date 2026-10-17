@@ -84,6 +84,18 @@ line (to area 2). `wood-lantern` is now `wood-silk`.
 Measured: R3 throw back west lands on L; R4 gap throw onto F3 from 0/40/80 px back; R8 up-right throw clears
 the thorns to the far ledge; R9 up-right throw lands on the shelf; R10 pogo-wick cut 2-6 frames after walking off:
 snuff, bounce, L2.
+- **Round 3 (2026-10-18, reviews/area1-plan-r3.md):** R1 has a ledge 192 under the trunk gap's far lip (2736-2848,
+  y 935: not abutting, so not a wall). R3 moved its dip, W1, M, W2, the knot and the hanging trunk 400 east: she
+  lands 500+ px outside W1's field (the shaft wall now reaches y 860), one camera zone `lesson` frames the catch, the
+  stragglers circle W2, the dip is a retry (a root rung back to L, no tunnel), and M steps straight down onto N (no
+  hole). R4: the juvenile alone (no lamp) at 850-1150; W3 over a widened root step (2432-2816) at (2560, 1000), a
+  standing up-cut, its pull 320 clear of the patrol; zone `gap` frames the throw. R6 grew to 7808 (everything east of
+  it moved 2048 east in world.json: the oak to x 29632, the clearing 33472, the silk hall 37312, the roots 29632, the canopy stub 33472): T4 4672-5504 (the beetle 300+ past gap 3's lip), the lamp chain C1 (5818, 1640)
+  -> C2 (6718, 1765) over a chasm with a free catch, T5 at the door; the chain's second throw is up-right; a root lip at T4's far edge turns walk-offs into jumps, and the chasm's floor is the dark way (a root step up to T5). R8: the
+  pit under the throw is the tunnel's mouth (no floor, no thorns; the west hatch is gone), zone `throw`, hawker B `orbit: wick-throw`. R10: L1 runs
+  to L0 (a step), a root mass over L1 (9688-10272, to the room top) so no jump skips the pogo-wick; narrow lit landings
+  L2 (8448-9088) and L3 (7296-7680); the window holds 180 and frames the old burrback close; escape ledges on both pit
+  walls (3584 and 5504, y 1920). R5's chasm catch has `glideAssist: 2`.
 - A one-way's `noDrop` may name a flag (refuses drop-through until it is set).
 - A floor bark panel is hit by a down cut from the air (cut ~70-90 px over it, falling): each hit bounces
   her; cut as she lands and it hits with no bounce; a standing down cut does not reach it.

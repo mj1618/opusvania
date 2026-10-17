@@ -106,8 +106,8 @@ function tipCut(s: Play, k: number): SimEvent[] {
 }
 
 describe('the oak: one room from the roots to the crown', () => {
-  it('replaces the hub and wood-heart: placed at the bowl, the column at world x 30144-30528, its doors linked', () => {
-    expect(WORLD.rooms.find((r) => r.id === 'wood-hollow')).toEqual({ id: 'wood-hollow', x: 27584, y: 6208 });
+  it('replaces the hub and wood-heart: placed at the bowl, the column at world x 32192-32576, its doors linked', () => {
+    expect(WORLD.rooms.find((r) => r.id === 'wood-hollow')).toEqual({ id: 'wood-hollow', x: 29632, y: 6208 });
     expect([OAK.width, OAK.height]).toEqual([3840, 4208]);
     expect(WORLD.rooms.map((r) => r.id)).not.toContain('wood-heart');
     // The floor is world y 10048 (R6's T4, R8's floor), as the hub's was.

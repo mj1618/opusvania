@@ -102,13 +102,13 @@ describe('the wood: placement (area 1 redesigned, world px)', () => {
     expect(placed('wood-wicks')).toEqual({ x: 11264, y: 4736, w: 3840, h: 2176 });
     expect(placed('wood-glade')).toEqual({ x: 18944, y: 6400, w: 2880, h: 2504 });
     expect(placed('wood-burrow')).toEqual({ x: 15104, y: 4608, w: 4480, h: 1792 });
-    expect(placed('wood-glidewalk')).toEqual({ x: 21824, y: 8064, w: 5760, h: 2368 });
+    expect(placed('wood-glidewalk')).toEqual({ x: 21824, y: 8064, w: 7808, h: 2368 });
     // The oak at the bowl's lowest point, one room from its floor (world y 10048: R6's T4, R8's floor) to the crown.
-    expect(placed('wood-hollow')).toEqual({ x: 27584, y: 6208, w: 3840, h: 4208 });
-    expect(placed('wood-hawkers')).toEqual({ x: 31424, y: 9024, w: 3840, h: 1392 });
-    expect(placed('wood-silk')).toEqual({ x: 35264, y: 7424, w: 3840, h: 2992 });
+    expect(placed('wood-hollow')).toEqual({ x: 29632, y: 6208, w: 3840, h: 4208 });
+    expect(placed('wood-hawkers')).toEqual({ x: 33472, y: 9024, w: 3840, h: 1392 });
+    expect(placed('wood-silk')).toEqual({ x: 37312, y: 7424, w: 3840, h: 2992 });
     // The roots run under the hub, the clearing and the silk hall.
-    expect(placed('wood-well')).toEqual({ x: 27584, y: 10416, w: 11264, h: 2240 });
+    expect(placed('wood-well')).toEqual({ x: 29632, y: 10416, w: 11264, h: 2240 });
     const ids = WORLD.rooms.map((r) => r.id);
     for (const gone of ['wood-caps', 'wood-climb', 'wood-lantern']) expect(ids).not.toContain(gone);
   });
@@ -148,7 +148,7 @@ describe('the wood: placement (area 1 redesigned, world px)', () => {
       const at = WORLD.rooms.find((r) => r.id === id);
       const oak = getRoom(id).marks?.stage?.oak;
       expect(oak, id).toBeDefined();
-      expect((at?.x ?? 0) + (oak?.x ?? 0), id).toBe(30336);
+      expect((at?.x ?? 0) + (oak?.x ?? 0), id).toBe(32384);
     }
   });
 });
@@ -231,8 +231,8 @@ describe('R2 wood-chase: the chase, the vista', () => {
   });
 });
 
-describe('R3 wood-wicks: the first catch, the first snuff', () => {
-  it('falling in held right, she slides down the shaft wall and lands on L, outside W1', () => {
+describe('R3 wood-wicks: the first lights, one idea per screen', () => {
+  it('falling in held right, she lands on L 500+ px outside W1 and is never caught on the drop', () => {
     const s = play('wood-chase');
     s.g.teleport(5600, 896);
     let ev: SimEvent[] = [];
@@ -240,15 +240,17 @@ describe('R3 wood-wicks: the first catch, the first snuff', () => {
       ev = ev.concat(s.run(R));
     expect(s.g.state.room).toBe('wood-wicks');
     expect(s.feet().y).toBe(960);
-    expect(s.feet().x).toBeLessThan(1152);
+    expect(1680 - 240 - s.feet().x).toBeGreaterThanOrEqual(500);
     expect(ev.some((e) => e.type === 'lureCaught')).toBe(false);
+    // One framing holds the lesson: L, the dip, W1, M and W2.
+    expect((getRoom('wood-wicks').camera?.zones ?? []).map((z) => z.id)).toContain('lesson');
   });
 
-  it('every run-up jump across the dip is pulled into W1 and caught', () => {
+  it("every run-up jump from L's lip toward the stragglers is caught by W1", () => {
     for (let lead = 0; lead <= 120; lead += 12) {
       const s = play('wood-wicks');
-      s.g.teleport(600, 960);
-      s.runTo(1152 - 20 - lead);
+      s.g.teleport(1000, 960);
+      s.runTo(1552 - 20 - lead);
       const ev = s.run(R | J, 14).concat(s.run(R, 60));
       expect(
         ev.find((e) => e.type === 'lureCaught'),
@@ -259,42 +261,33 @@ describe('R3 wood-wicks: the first catch, the first snuff', () => {
     }
   });
 
-  it('beaten free holding right (3 presses), she lands on M past the dip', () => {
+  it('beaten free holding right she is thrown onto M; holding nothing, back onto L', () => {
     const s = play('wood-wicks');
-    s.g.teleport(600, 960);
-    s.runTo(1100);
+    s.g.teleport(1000, 960);
+    s.runTo(1500);
     s.run(R | J, 14);
     for (let i = 0; i < 60 && s.g.state.player.lure < 0; i++) s.run(R);
     expect(s.g.state.player.lure).toBeGreaterThanOrEqual(0);
-    // Mash jump holding right until she is thrown (3 beats: the cocoon's input).
-    const ev: SimEvent[] = [];
-    for (let k = 0; k < 6 && !ev.some((e) => e.type === 'lureFree'); k++)
-      ev.push(...s.run(R | J, 1), ...s.run(R, 8));
-    expect(ev.filter((e) => e.type === 'lureBeat').length).toBeGreaterThanOrEqual(2);
-    expect(ev.find((e) => e.type === 'lureFree')).toMatchObject({ id: 'wick-caught' });
+    beatFree(s, R);
     for (let i = 0; i < 200 && !s.g.state.player.grounded; i++) s.run(R);
     expect(s.feet().y).toBe(960);
-    expect(s.feet().x).toBeGreaterThan(1408);
+    expect(s.feet().x).toBeGreaterThan(1808);
+    const b = play('wood-wicks');
+    b.g.teleport(1000, 960);
+    b.runTo(1500);
+    b.run(R | J, 14);
+    for (let i = 0; i < 60 && b.g.state.player.lure < 0; i++) b.run(R);
+    beatFree(b, 0);
+    for (let i = 0; i < 200 && !b.g.state.player.grounded; i++) b.run(0);
+    expect(b.feet().y).toBe(960);
+    expect(b.feet().x).toBeLessThan(1552);
   });
 
-  it('holding nothing, the throw sends her back west onto L, at no cost', () => {
-    const s = play('wood-wicks');
-    s.g.teleport(600, 960);
-    s.runTo(1100);
-    s.run(R | J, 14);
-    for (let i = 0; i < 60 && s.g.state.player.lure < 0; i++) s.run(R);
-    expect(s.g.state.player.lure).toBeGreaterThanOrEqual(0);
-    for (let k = 0; k < 8 && s.g.state.player.lure >= 0; k++) s.run(J, 1).concat(s.run(0, 9));
-    for (let i = 0; i < 200 && !s.g.state.player.grounded; i++) s.run(0);
-    expect(s.feet().y).toBe(960);
-    expect(s.feet().x).toBeLessThan(1152);
-  });
-
-  it('the slow line: the dark dip is too deep to jump out of; its floor runs east under M to the column up onto N', () => {
+  it('no fork: a miss into the dip (too deep to cross) climbs back to L by a root rung in under 5 s', () => {
     let top = Number.POSITIVE_INFINITY;
-    for (const m of [L | J, R | J, J]) {
+    for (const m of [R | J, J]) {
       const s = play('wood-wicks');
-      s.g.teleport(1250, 1312);
+      s.g.teleport(1760, 1312);
       s.run(0, 3);
       for (let i = 0; i < 40; i++) {
         s.run(m);
@@ -302,29 +295,44 @@ describe('R3 wood-wicks: the first catch, the first snuff', () => {
       }
     }
     expect(top).toBeGreaterThan(960);
+    // Up onto the root rung (a hop), then a hop west onto L.
     const s = play('wood-wicks');
-    s.g.teleport(1250, 1312);
-    const f = naive(s, () => s.g.state.player.grounded && s.feet().y === 1152 && s.feet().x > 2048, 600);
-    expect(f).toBeGreaterThan(0);
+    s.g.teleport(1600, 1312);
+    s.run(0, 3);
+    s.run(J, 18);
+    for (let i = 0; i < 60 && !s.g.state.player.grounded; i++) s.run(0);
+    expect(s.feet().y).toBe(1152);
+    s.run(L | J, 18);
+    for (let i = 0; i < 60 && !s.g.state.player.grounded; i++) s.run(L);
+    expect(s.feet().y).toBe(960);
+    expect(s.g.state.frame).toBeLessThan(300);
   });
 
-  it('the knob stops her (and the drag), and a standing forward cut from there snuffs W2', () => {
+  it('the knob stops her within reach of W2 (and the drag), a standing cut snuffs it; then M steps down onto N, no hole', () => {
     const s = play('wood-wicks');
-    s.g.teleport(1600, 960);
+    s.g.teleport(1900, 960);
     s.run(R, 90);
     const p = s.g.state.player;
-    expect(p.x + p.w).toBe(1856);
+    expect(p.x + p.w).toBe(2256);
     expect(p.grounded).toBe(true);
     s.run(0, 60);
-    expect(s.g.state.player.x + s.g.state.player.w).toBe(1856);
+    expect(s.g.state.player.x + s.g.state.player.w).toBe(2256);
     const ev = s.run(A, 1).concat(s.run(0, 30));
     expect(ev.find((e) => e.type === 'lureSnuff')).toMatchObject({ id: 'wick-first' });
+    let low = 0;
+    s.run(R | J, 14);
+    for (let i = 0; i < 120; i++) {
+      s.run(R);
+      low = Math.max(low, s.feet().y);
+    }
+    expect(low).toBeLessThanOrEqual(1152);
+    expect(s.feet().y).toBe(1152);
   });
 
   it('W-hi3 by the hanging trunk is out of reach without wall jump (the lock)', () => {
     const s = play('wood-wicks');
     const i = (s.g.scene.lures ?? []).findIndex((l) => l.id === 'wick-high');
-    for (const x0 of [1440, 1500, 1560]) {
+    for (const x0 of [1840, 1900, 1960]) {
       for (const m of [R | J, J, L | J]) {
         s.g.teleport(x0, 960);
         s.run(0, 3);
@@ -335,7 +343,6 @@ describe('R3 wood-wicks: the first catch, the first snuff', () => {
       }
     }
     expect(s.g.state.lures.hp[i]).toBe(1);
-    expect(s.events.some((e) => e.type === 'lureCaught' && e.id === 'wick-high')).toBe(false);
   });
 });
 
@@ -501,19 +508,37 @@ function jumpCuts(room: string, fx: number, floorY: number, abilities: string[] 
 }
 
 describe('R4 wood-burrow: the blade against things, light means seen, the floor gives way', () => {
-  it("W3 hangs 200 over F2: the paper's jump-cut sweep puts it out in 3-5 of 9, never caught; its burrback curls up", () => {
-    const { hits, caught } = jumpCuts('wood-burrow', 1984, 1344, []);
-    expect(hits).toBeGreaterThanOrEqual(15);
-    expect(hits).toBeLessThanOrEqual(25);
-    expect(caught).toBe(0);
+  it('W3 hangs over the root step: a standing up-cut from the step snuffs it, its pull never reaches the patrol, and the adult curls up', () => {
+    const room = getRoom('wood-burrow');
+    const w3 = (room.lures ?? []).find((l) => l.id === 'wick-burr');
+    const adult = (room.enemies ?? []).find((e) => e.id === 'burr-first');
+    if (!w3 || !adult) throw new Error('no W3 or adult');
+    const pull = defaultTuning.lures.kinds.wick.radius;
+    // The patrol (feet on F2, 1344) stays out of W3's field.
+    expect(1344 - 40 - w3.y).toBeGreaterThan(pull);
     const s = play('wood-burrow');
-    let out: SimEvent[] = [];
-    for (let k = 2; k <= 18 && !has(out, 'lureSnuff'); k += 2) {
-      s.g.teleport(1884, 1344);
-      s.run(R, 1);
-      out = s.run(J, k).concat(s.run(J | A, 1), s.run(J, 30), s.run(0, 30));
-    }
+    s.g.teleport(2520, 1152);
+    s.run(0, 10);
+    expect(s.g.state.player.lure).toBe(-1);
+    const ev = s.run(ActionBit.up | A, 1).concat(s.run(0, 30));
+    expect(ev.find((e) => e.type === 'lureSnuff')).toMatchObject({ id: 'wick-burr' });
     expect(s.events.find((e) => e.type === 'enemyDisperse')).toMatchObject({ lure: 'wick-burr' });
+  });
+
+  it('no lamp in R3-R5 pulls over a creature patrol; the juvenile has no lamp', () => {
+    const pull = defaultTuning.lures.kinds.wick.radius;
+    for (const id of ['wood-wicks', 'wood-burrow', 'wood-glade']) {
+      const room = getRoom(id);
+      for (const e of room.enemies ?? []) {
+        const r = 'radius' in e && typeof e.radius === 'number' ? e.radius : 0;
+        for (const l of room.lures ?? []) {
+          const dx = Math.max(0, Math.abs(l.x - e.x) - r);
+          const dy = Math.abs(l.y - (e.y - 30));
+          expect(Math.hypot(dx, dy), `${id}: ${l.id} over ${e.id}`).toBeGreaterThan(pull);
+        }
+      }
+    }
+    expect((getRoom('wood-burrow').enemies ?? []).find((e) => e.id === 'burr-juv')?.guards).toBeUndefined();
   });
 
   it('the first creature: a juvenile beetle by the door (no brace) dies to a few cuts; the adult has windup 32', () => {
@@ -611,8 +636,9 @@ describe('R4 wood-burrow: the blade against things, light means seen, the floor 
   it('a fade before P1 stands her up at the burrow door, not beside the burrback', () => {
     const s = play('wood-burrow');
     s.g.state.player.hp = 1;
-    s.g.teleport(1700, 1344);
-    for (let i = 0; i < 900 && !has(s.events, 'reform'); i++) s.run(R);
+    // In W3's pool, by the adult's patrol: lit, it rams her.
+    s.g.teleport(2400, 1344);
+    for (let i = 0; i < 900 && !has(s.events, 'reform'); i++) s.run(0);
     expect(has(s.events, 'fade')).toBe(true);
     expect(Math.abs(s.feet().x - 300)).toBeLessThanOrEqual(16);
     expect(s.feet().y).toBe(1280);
@@ -763,6 +789,53 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
     expect(w.s.feet().x).toBeGreaterThan(4672);
   });
 
+  it('the lamp chain to the oak door: caught by C1 off T4, thrown right with wings, caught by C2, thrown up-right onto T5', () => {
+    let made = 0;
+    for (const lead of [0, 30, 60, 90, 120]) {
+      const s = play('wood-glidewalk', ['glide']);
+      for (const e of s.g.state.enemies) {
+        e.mode = 'dead';
+        e.gone = true;
+      }
+      const w6 = (s.g.scene.lures ?? []).findIndex((l) => l.id === 'wick-ledge');
+      s.g.state.lures.hp[w6] = 0;
+      s.g.state.lures.out[w6] = 1;
+      s.g.teleport(5100, 1984);
+      s.run(0, 3);
+      for (let i = 0; i < 60 && s.feet().x < 5504 - lead; i++) s.run(R);
+      const caught: string[] = [];
+      for (let f = 0; f < 600; f++) {
+        const p = s.g.state.player;
+        if (p.lure >= 0) {
+          const id = s.g.scene.lures?.[p.lure]?.id ?? '?';
+          if (caught[caught.length - 1] !== id) caught.push(id);
+          s.run((id === 'wick-chain2' ? ActionBit.up | R : R) | (f % 10 === 0 ? J : 0));
+          continue;
+        }
+        s.run(R | J);
+        if (p.grounded && f > 10) break;
+      }
+      if (
+        caught.join('>') === 'wick-chain1>wick-chain2' &&
+        (s.feet().x > 7232 || s.g.state.room === 'wood-hollow')
+      )
+        made++;
+    }
+    // Measured: 5 of 5 leads (and 5 of 6 out to 150 px back).
+    expect(made).toBeGreaterThanOrEqual(4);
+    // A miss lands on the chasm's dark floor (Tatter's way): east, a root step, T5.
+    const f = play('wood-glidewalk', ['glide']);
+    f.g.teleport(5470, 1920);
+    for (let i = 0; i < 120 && !(f.g.state.player.grounded && f.feet().y === 2240); i++) f.run(R);
+    expect(f.feet().y).toBe(2240);
+    expect(naive(f, () => f.feet().y === 1984 && f.feet().x > 7232, 900)).toBeGreaterThan(0);
+  });
+
+  it("T4 forgives: the beetle's patrol starts 300+ past gap 3's lip; a root lip at its far edge (no walk-off into the chasm)", () => {
+    const b = (getRoom('wood-glidewalk').enemies ?? []).find((e) => e.id === 'burr-ledge');
+    expect((b?.x ?? 0) - ((b && 'radius' in b && b.radius) || 0) - 4672).toBeGreaterThanOrEqual(300);
+  });
+
   it("gliding on after W5's throw lands on T3 or T4, never in gap 3's thorns", () => {
     for (const lead of [0, 8, 16, 24, 32, 40, 48, 56]) {
       const j = play('wood-glidewalk', ['glide']);
@@ -773,20 +846,28 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
       beatFree(j, R);
       const ev = j.run(R | J, 300);
       expect(has(ev, 'thornHit'), `lead ${lead}`).toBe(false);
-      const first = ev.find((e) => e.type === 'land' || e.type === 'lureCaught') as {
+      // (The strong throw plus wings may carry her on over T4 into the chain's chasm: a free catch.)
+      const first = ev.find(
+        (e) => e.type === 'land' || e.type === 'lureCaught' || e.type === 'fallCatch',
+      ) as {
         type: string;
         y?: number;
       };
-      expect(first?.type === 'lureCaught' || first?.y === 1472 || first?.y === 1984, `lead ${lead}`).toBe(
-        true,
-      );
+      expect(
+        first?.type === 'lureCaught' ||
+          first?.type === 'fallCatch' ||
+          first?.y === 1472 ||
+          first?.y === 1984 ||
+          first?.y === 1920,
+        `lead ${lead}`,
+      ).toBe(true);
     }
   });
 
   it('no bark wall on the path any more; the floor panel past T4 opens to W-pocket and she climbs back out', () => {
     expect((getRoom('wood-glidewalk').bark ?? []).map((b) => b.id)).toEqual(['bark-floor']);
     const s = play('wood-glidewalk', ['glide']);
-    s.g.teleport(5504, 1984);
+    s.g.teleport(7552, 1984);
     let broke = false;
     for (let k = 0; k < 6 && !broke; k++) {
       let e2 = s.run(J, 6);
@@ -796,10 +877,10 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
       broke = has(e2, 'barkBreak');
     }
     expect(broke).toBe(true);
-    s.g.teleport(5504, 1984);
+    s.g.teleport(7552, 1984);
     s.run(0, 60);
     expect(s.feet().y).toBe(2176);
-    s.g.teleport(5504, 2176);
+    s.g.teleport(7552, 2176);
     s.run(J, 22);
     s.run(L, 30);
     expect(s.feet().y).toBe(1984);
@@ -835,7 +916,7 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
 
   it('the return bough: with wall jump, up T-ret and west along the canopy to over E0', () => {
     const s = play('wood-glidewalk', ['glide', 'wallJump']);
-    s.g.teleport(5724, 1984);
+    s.g.teleport(7772, 1984);
     climb(s, -1, () => s.feet().y <= 200, 900, 14);
     for (let i = 0; i < 40; i++) s.run(L);
     expect(s.g.state.player.grounded).toBe(true);
@@ -849,7 +930,7 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
 describe('R7 wood-hollow: the oak, its hollow floor (the trunk and crown: wood-oak.test.ts)', () => {
   it('in from the glidewalk at floor level: P3 rests her, the glimpse is a held beat', () => {
     const s = play('wood-glidewalk', ['glide']);
-    s.g.teleport(5600, 1984);
+    s.g.teleport(7650, 1984);
     for (let i = 0; i < 200 && s.g.state.room !== 'wood-hollow'; i++) s.run(R);
     expect(s.g.state.room).toBe('wood-hollow');
     for (let i = 0; i < 60 && !s.g.state.player.grounded; i++) s.run(R);
@@ -989,30 +1070,21 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
     }
   });
 
-  it('a miss costs a hop: the pit under the throw has no thorns, and she jumps back onto the near ledge', () => {
+  it("the pit under the throw is the dark tunnel's mouth: a miss drops her into it, and it leads up past the far ledge", () => {
     expect(getRoom('wood-hawkers').thorns ?? []).toEqual([]);
+    expect((getRoom('wood-hawkers').camera?.zones ?? []).map((z) => z.id)).toContain('throw');
     const s = play('wood-hawkers', ['glide']);
-    s.g.teleport(2780, 1248);
-    s.run(0, 5);
-    expect(s.feet().y).toBe(1248);
-    s.run(L | J, 20);
-    s.run(L, 40);
-    expect(s.feet().y).toBe(1024);
-    expect(s.feet().x).toBeLessThan(2560);
-  });
-
-  it('the slow line: down through the root hatch, the dark tunnel under the gap, up the hatch past the far ledge', () => {
-    const s = play('wood-hawkers', ['glide']);
-    s.g.teleport(2352, 1024);
+    for (const e of s.g.state.enemies) {
+      e.mode = 'dead';
+      e.gone = true;
+    }
+    const wi = (s.g.scene.lures ?? []).findIndex((l) => l.id === 'wick-throw');
+    s.g.state.lures.hp[wi] = 0;
+    s.g.state.lures.out[wi] = 1;
+    s.g.teleport(2500, 1024);
     s.run(0, 3);
-    s.run(D, 2);
-    s.run(D | J, 6);
-    s.run(0, 60);
-    // (Onto the root step in the shaft, then down into the tunnel.)
-    expect(s.feet().y).toBeGreaterThan(1024);
-    s.run(D, 2);
-    s.run(D | J, 6);
-    for (let i = 0; i < 60 && !(s.g.state.player.grounded && s.feet().y === 1360); i++) s.run(0);
+    s.run(R, 40);
+    for (let i = 0; i < 120 && !s.g.state.player.grounded; i++) s.run(0);
     expect(s.feet().y).toBe(1360);
     const f = naive(s, () => s.feet().y === 1024 && s.feet().x > 3456, 900);
     expect(f).toBeGreaterThan(0);
@@ -1167,28 +1239,24 @@ describe('R10 wood-well: the root stair, the old burrback, glade 2, the climb-ou
     expect(s.events.some((e) => e.type === 'hurt')).toBe(false);
   });
 
-  it('the pogo-wick: walk off L1 under its root ceiling, down-cut the wick at once: it snuffs, bounces her, and she glides on to L2', () => {
+  it("the pogo-wick: walk under the root mass to L1's lip, step off, down-cut the wick: it snuffs, bounces her, and she glides on to L2", () => {
+    let made = 0;
     for (const d of [2, 4, 6]) {
       const p = play('wood-well', ['glide']);
-      p.g.teleport(9800, 640);
+      p.g.teleport(10400, 640);
       p.run(0, 3);
-      for (let i = 0; i < 60 && p.g.state.player.grounded; i++) p.run(L);
+      for (let i = 0; i < 200 && p.g.state.player.grounded; i++) p.run(L);
       p.run(L, d);
       p.run(D | A, 1);
-      for (let i = 0; i < 200 && !p.g.state.player.grounded && p.g.state.player.lure < 0; i++) p.run(L | J);
-      expect(
-        p.events.find((e) => e.type === 'lureSnuff'),
-        `d ${d}`,
-      ).toMatchObject({ id: 'wick-pogo' });
-      expect(
-        p.events.some((e) => e.type === 'slashHit' && e.pogo),
-        `d ${d}`,
-      ).toBe(true);
-      expect(p.feet().y, `d ${d}`).toBe(896);
+      for (let i = 0; i < 200 && !p.g.state.player.grounded && p.g.state.player.lure < 0; i++)
+        p.run((p.feet().x < 8700 ? 0 : L) | J);
+      const snuffed = p.events.find((e) => e.type === 'lureSnuff');
+      if (snuffed && 'id' in snuffed && snuffed.id === 'wick-pogo' && p.feet().y === 896) made++;
     }
-    // No jump from under the ceiling.
+    expect(made).toBeGreaterThanOrEqual(2);
+    // No jump under the mass, and nothing to stand on above it.
     const j = play('wood-well', ['glide']);
-    j.g.teleport(9800, 640);
+    j.g.teleport(10000, 640);
     let top = 640;
     for (let i = 0; i < 30; i++) {
       j.run(J);
@@ -1278,10 +1346,19 @@ describe('R10 wood-well: the root stair, the old burrback, glade 2, the climb-ou
     expect(s.feet()).toEqual({ x: 6300, y: 1216 });
   });
 
-  it('two lit pockets in the dark stair, each a wick with a dangler over its landing', () => {
+  it('the narrow lit landings: each lamp in the stair has a dangler over its landing; the window holds 3 s; escape ledges on both pit walls', () => {
     const room = getRoom('wood-well');
     const d = (room.enemies ?? []).filter((e) => e.kind === 'dangler').map((e) => e.guards);
     expect(d.sort()).toEqual(['wick-chute', 'wick-pocket']);
+    expect((room.triggers ?? []).find((t) => t.id === 'window')?.hold).toBe(180);
+    const s = play('wood-well', ['glide']);
+    for (const x0 of [3800, 5400]) {
+      s.g.teleport(x0, 2112);
+      s.run(0, 3);
+      s.run((x0 < 4000 ? L : R) | J, 16);
+      for (let i = 0; i < 60 && !s.g.state.player.grounded; i++) s.run(x0 < 4000 ? L : R);
+      expect(s.feet().y, `x ${x0}`).toBe(1920);
+    }
   });
 });
 

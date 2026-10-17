@@ -8,7 +8,23 @@
   "edgeKick": false,
   "abilities": [],
   "art": { "mode": "greybox", "labels": false },
-  "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
+  "camera": {
+    "realFallPx": 250,
+    "targetSmoothY": 10,
+    "smoothYFastFall": 6,
+    "fallLookahead": 320,
+    "zones": [
+      {
+        "id": "gap",
+        "x": 2432,
+        "y": 800,
+        "w": 1024,
+        "h": 352,
+        "fit": true,
+        "bounds": { "x": 2400, "y": 560, "w": 1760, "h": 990 }
+      }
+    ]
+  },
   "reform": { "x": 300, "y": 1280 },
   "exits": [
     { "id": "w", "edge": "w", "from": 1024, "to": 1280 },
@@ -21,7 +37,7 @@
     { "tag": "ground", "x": 640, "y": 1344, "w": 576, "h": 128 },
     { "tag": "ground", "x": 384, "y": 1472, "w": 832, "h": 320 },
     { "tag": "ground", "x": 1216, "y": 1344, "w": 1600, "h": 448 },
-    { "tag": "root", "x": 2624, "y": 1152, "w": 192, "h": 192 },
+    { "tag": "root", "x": 2432, "y": 1152, "w": 384, "h": 192 },
     { "tag": "root", "x": 2752, "y": 768, "w": 768, "h": 96, "kick": false },
     { "tag": "root", "x": 2816, "y": 1312, "w": 96, "h": 160 },
     { "tag": "ground", "x": 2816, "y": 1472, "w": 1280, "h": 320 },
@@ -40,29 +56,20 @@
     { "id": "bark-hole", "x": 4096, "y": 1152, "w": 256, "h": 64, "floor": true }
   ],
   "lures": [
-    { "id": "wick-door", "kind": "wick", "x": 1000, "y": 1100 },
-    { "id": "wick-burr", "kind": "wick", "x": 1984, "y": 1144 },
+    { "id": "wick-burr", "kind": "wick", "x": 2560, "y": 1000 },
     { "id": "wick-gap", "kind": "wick", "x": 2990, "y": 920 },
     { "id": "wick-high", "kind": "wick", "x": 3820, "y": 430 },
     { "id": "wick-pocket", "kind": "wick", "x": 560, "y": 1408 }
   ],
   "enemies": [
-    {
-      "id": "burr-juv",
-      "kind": "juvenileBurrback",
-      "x": 1000,
-      "y": 1280,
-      "facing": -1,
-      "radius": 160,
-      "guards": "wick-door"
-    },
+    { "id": "burr-juv", "kind": "juvenileBurrback", "x": 1000, "y": 1280, "facing": 1, "radius": 150 },
     {
       "id": "burr-first",
       "kind": "burrback",
       "x": 1984,
       "y": 1344,
       "facing": -1,
-      "radius": 576,
+      "radius": 448,
       "hp": 4,
       "windup": 32,
       "guards": "wick-burr"
@@ -78,9 +85,9 @@
         "text": "R4 wood-burrow  PURPOSE: the blade against things; light means seen; the throw's aim; the floor gives way"
       },
       {
-        "x": 860,
+        "x": 760,
         "y": 1000,
-        "text": "the juvenile beetle (2 cuts, no brace) under a small wick by the door: hit it, it reacts"
+        "text": "S1: the juvenile beetle alone on the dark floor, no lamp near it, walking away: 2 cuts (HK's crawlid)"
       },
       {
         "x": 300,
@@ -88,14 +95,14 @@
         "text": "FIND: a bark floor panel by the door; down-cut it, a pocket with W-pocket"
       },
       {
-        "x": 1500,
-        "y": 960,
-        "text": "W3 wick-burr, 200 up: a jump-cut from the root step; snuffed, the adult curls up asleep"
+        "x": 2300,
+        "y": 900,
+        "text": "S2: W3 hangs over the root step (152 up): a standing up-cut from the step; its pull never reaches the patrol below"
       },
       {
         "x": 1500,
         "y": 1000,
-        "text": "burr-first (4 hp, windup 32) guards W3: it ignores her in the dark, notices her in W3's light"
+        "text": "burr-first (4 hp, windup 32) patrols F2 in W3's pool, its ram meets the step's face; snuff W3 and it curls up asleep"
       },
       { "x": 2440, "y": 1080, "text": "root step 192 at the patrol's east end" },
       { "x": 2780, "y": 680, "text": "root roof over the gap: no jump crosses 640" },
@@ -142,7 +149,7 @@
         "ahead": 360,
         "count": 2
       },
-      "oak": { "x": 15232, "y": 5440, "top": 1948, "w": 384 }
+      "oak": { "x": 17280, "y": 5440, "top": 1948, "w": 384 }
     }
   },
   "shots": {

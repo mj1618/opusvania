@@ -8,7 +8,23 @@
   "edgeKick": false,
   "abilities": ["glide"],
   "art": { "mode": "greybox", "labels": false },
-  "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
+  "camera": {
+    "realFallPx": 250,
+    "targetSmoothY": 10,
+    "smoothYFastFall": 6,
+    "fallLookahead": 320,
+    "zones": [
+      {
+        "id": "throw",
+        "x": 2112,
+        "y": 640,
+        "w": 448,
+        "h": 384,
+        "fit": true,
+        "bounds": { "x": 2048, "y": 340, "w": 1664, "h": 936 }
+      }
+    ]
+  },
   "exits": [
     { "id": "w", "edge": "w", "from": 768, "to": 1024 },
     { "id": "e", "edge": "e", "from": 768, "to": 1024 }
@@ -19,9 +35,7 @@
     { "tag": "root", "x": 1088, "y": 832, "w": 384, "h": 560 },
     { "tag": "ground", "x": 1472, "y": 1088, "w": 256, "h": 304 },
     { "tag": "root", "x": 1728, "y": 832, "w": 384, "h": 560 },
-    { "tag": "ground", "x": 2112, "y": 1024, "w": 192, "h": 240 },
-    { "tag": "ground", "x": 2400, "y": 1024, "w": 160, "h": 240 },
-    { "tag": "ground", "x": 2560, "y": 1248, "w": 448, "h": 16 },
+    { "tag": "ground", "x": 2112, "y": 1024, "w": 448, "h": 240 },
     { "tag": "root", "x": 3008, "y": 704, "w": 448, "h": 160 },
     { "tag": "root", "x": 3008, "y": 864, "w": 192, "h": 400 },
     { "tag": "root", "x": 3200, "y": 1024, "w": 256, "h": 240 },
@@ -32,8 +46,6 @@
     { "tag": "ground", "x": 3712, "y": 1264, "w": 128, "h": 96 }
   ],
   "oneWays": [
-    { "tag": "root", "x": 2304, "y": 1024, "w": 96 },
-    { "tag": "root", "x": 2304, "y": 1200, "w": 96 },
     { "tag": "root", "x": 3600, "y": 1200, "w": 112 },
     { "tag": "root", "x": 3600, "y": 1024, "w": 112 },
     { "tag": "root", "x": 3456, "y": 864, "w": 96 }
@@ -63,7 +75,8 @@
       "facing": -1,
       "radius": 160,
       "hp": 3,
-      "guards": "wick-throw"
+      "guards": "wick-throw",
+      "orbit": "wick-throw"
     }
   ],
   "routes": [
@@ -88,7 +101,7 @@
       {
         "x": 2150,
         "y": 700,
-        "text": "EAST: the throw gap. W-throw hangs over a dark pit (no thorns: a miss is a hop back up); hawker B hunts its orbit"
+        "text": "EAST: the throw gap, framed whole (camera zone throw). W-throw over the tunnel's mouth; hawker B hunts its orbit"
       },
       {
         "x": 2150,
@@ -103,7 +116,7 @@
       {
         "x": 2250,
         "y": 1320,
-        "text": "SLOW LINE: drop through the root hatch (down + jump) into the dark tunnel under the gap; up through the hatch at 3600 (~15 s)"
+        "text": "THE DARK WAY (Tatter's): the pit under the gap is the tunnel's mouth, in view from the ledge; a miss drops her in; up the hatch at 3600"
       },
       { "x": 3020, "y": 660, "text": "the far ledge: snuff W-throw from here with a jump-cut, and B leaves" },
       {

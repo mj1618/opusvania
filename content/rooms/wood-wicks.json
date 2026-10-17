@@ -1,6 +1,6 @@
 {
   "id": "wood-wicks",
-  "title": "The first wicks (greybox)",
+  "title": "The first lights (greybox)",
   "region": "wood",
   "width": 3840,
   "height": 2176,
@@ -8,108 +8,97 @@
   "edgeKick": false,
   "abilities": [],
   "art": { "mode": "greybox", "labels": false },
-  "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
+  "camera": {
+    "realFallPx": 250,
+    "targetSmoothY": 10,
+    "smoothYFastFall": 6,
+    "fallLookahead": 320,
+    "zones": [
+      {
+        "id": "lesson",
+        "x": 128,
+        "y": 560,
+        "w": 2192,
+        "h": 400,
+        "fit": true,
+        "bounds": { "x": 128, "y": 300, "w": 2304, "h": 1296 }
+      }
+    ]
+  },
   "exits": [
     { "id": "n", "edge": "n", "from": 256, "to": 896 },
     { "id": "e", "edge": "e", "from": 896, "to": 1152 }
   ],
   "solids": [
     { "tag": "trunk", "x": 0, "y": 0, "w": 128, "h": 2176, "kick": false },
-    { "tag": "ground", "x": 128, "y": 960, "w": 1024, "h": 1216 },
-    { "tag": "trunk", "x": 896, "y": 0, "w": 128, "h": 576, "kick": false },
-    { "tag": "root", "x": 1024, "y": 192, "w": 576, "h": 56, "kick": false },
-    { "tag": "root", "x": 1152, "y": 248, "w": 24, "h": 300, "kick": false },
-    { "tag": "root", "x": 1152, "y": 248, "w": 24, "h": 300, "kick": false },
-    { "tag": "ground", "x": 1152, "y": 1312, "w": 768, "h": 864 },
-    { "tag": "root", "x": 1264, "y": 248, "w": 24, "h": 140, "kick": false },
-    { "tag": "root", "x": 1264, "y": 248, "w": 24, "h": 140, "kick": false },
-    { "tag": "root", "x": 1320, "y": 248, "w": 24, "h": 240, "kick": false },
-    { "tag": "root", "x": 1320, "y": 248, "w": 24, "h": 240, "kick": false },
-    { "tag": "ground", "x": 1408, "y": 960, "w": 512, "h": 256 },
-    { "tag": "trunk", "x": 1600, "y": 0, "w": 64, "h": 704 },
-    { "tag": "root", "x": 1856, "y": 936, "w": 64, "h": 24 },
-    { "tag": "ground", "x": 1920, "y": 1312, "w": 128, "h": 864 },
-    { "tag": "ground", "x": 2048, "y": 1152, "w": 1792, "h": 1024 }
+    { "tag": "ground", "x": 128, "y": 960, "w": 1424, "h": 1216 },
+    { "tag": "trunk", "x": 896, "y": 0, "w": 128, "h": 860, "kick": false },
+    { "tag": "root", "x": 1024, "y": 192, "w": 1040, "h": 56, "kick": false },
+    { "tag": "root", "x": 1552, "y": 248, "w": 24, "h": 300, "kick": false },
+    { "tag": "root", "x": 1664, "y": 248, "w": 24, "h": 140, "kick": false },
+    { "tag": "root", "x": 1720, "y": 248, "w": 24, "h": 240, "kick": false },
+    { "tag": "ground", "x": 1552, "y": 1312, "w": 256, "h": 864 },
+    { "tag": "ground", "x": 1808, "y": 960, "w": 512, "h": 1216 },
+    { "tag": "trunk", "x": 2000, "y": 0, "w": 64, "h": 704 },
+    { "tag": "root", "x": 2256, "y": 936, "w": 64, "h": 24 },
+    { "tag": "ground", "x": 2320, "y": 1152, "w": 1520, "h": 1024 }
   ],
-  "oneWays": [],
+  "oneWays": [{ "tag": "root", "x": 1552, "y": 1152, "w": 96 }],
   "lures": [
-    { "id": "wick-caught", "kind": "wick", "x": 1280, "y": 720, "spin": -1 },
-    { "id": "wick-first", "kind": "wick", "x": 1944, "y": 896 },
-    { "id": "wick-high", "kind": "wick", "x": 1530, "y": 420 }
+    { "id": "wick-caught", "kind": "wick", "x": 1680, "y": 720, "spin": -1 },
+    { "id": "wick-first", "kind": "wick", "x": 2344, "y": 896 },
+    { "id": "wick-high", "kind": "wick", "x": 1930, "y": 420 }
   ],
   "marks": {
-    "stage": {
-      "circlers": [{ "lure": "wick-caught", "count": 7, "r": 95 }],
-      "props": [{ "kind": "deadMoth", "x": 1300, "y": 1312, "facing": -1 }],
-      "oak": { "x": 19072, "y": 5312, "top": 1820, "w": 384 }
-    },
-    "notes": [
-      { "x": 300, "y": 120, "text": "R3 wood-wicks  PURPOSE: teach (pull, Caught and snuff by consequence)" },
-      { "x": 300, "y": 200, "text": "N in (one way): she falls ~900 and lands on L in the dark" },
-      { "x": 300, "y": 900, "text": "L  (128-1152, y 960): W1's field is 300+ px away" },
-      {
-        "x": 920,
-        "y": 120,
-        "text": "shaft wall (no kick): a fall held right slides down it onto L, not into W1"
-      },
-      {
-        "x": 1060,
-        "y": 640,
-        "text": "TODO render: the stragglers from the vista circle W1 before she gets here"
-      },
-      { "x": 1460, "y": 220, "text": "W-hi3 LOCK: wall jump's first lock, by the hanging trunk" },
-      { "x": 1690, "y": 690, "text": "hanging trunk (1600-1664, to y 704): touchable, not climbable yet" },
-      { "x": 2300, "y": 1260, "text": "N  drop 192 (2048-3840, y 1152): east to wood-burrow" },
-      {
-        "x": 1040,
-        "y": 150,
-        "text": "LANDMARK: THE ROOT KNOT: a root bridges the shaft wall to the hanging trunk, tendrils hang round W1"
-      },
-      { "x": 1100, "y": 1330, "text": "LORE (stand-in): the dead moth in the dip, under the knot" },
-      {
-        "x": 1040,
-        "y": 150,
-        "text": "LANDMARK: THE ROOT KNOT: a root bridges the shaft wall to the hanging trunk, tendrils hang round W1"
-      },
-      { "x": 1100, "y": 1330, "text": "LORE (stand-in): the dead moth in the dip, under the knot" },
-      {
-        "x": 1060,
-        "y": 560,
-        "text": "W1 (the stragglers' wick) THE FAST LINE: jump at it from L, get caught, beat free holding right: thrown onto M"
-      },
-      {
-        "x": 1060,
-        "y": 600,
-        "text": "holding nothing she is thrown back west onto L (it costs nothing). Then a jump-cut from M frees the stragglers"
-      },
-      {
-        "x": 1160,
-        "y": 1360,
-        "text": "THE SLOW LINE: the dark dip (352 down, too tall to climb), its floor runs on east under M, up at the column by the knob (~6 s)"
-      },
-      { "x": 1420, "y": 1060, "text": "M (1408-1920, y 960): a shelf over the tunnel" },
-      {
-        "x": 1700,
-        "y": 900,
-        "text": "the knob (1856-1920): she stops, so does the drag; W2 (1944, 896) a standing forward cut"
-      },
-      { "x": 1930, "y": 1250, "text": "the column (1920-2048): from the dip floor a jump up onto N" },
-      {
-        "x": 1380,
-        "y": 300,
-        "text": "W-hi3 by the hanging trunk (1530, 420), clear of the knot: the claws' first lock, plainly up a face she can't climb yet"
-      }
-    ],
     "camera": [
-      { "id": "w1", "x": 1280, "y": 800, "note": "ease toward a flame while she is inside its field" },
-      { "id": "w2", "x": 2072, "y": 900, "note": "the first snuff" }
-    ]
+      { "id": "w1", "x": 1680, "y": 800, "note": "the catch: one framing holds L, the dip, W1, M and W2" },
+      { "id": "w2", "x": 2344, "y": 900, "note": "the first snuff" }
+    ],
+    "notes": [
+      {
+        "x": 300,
+        "y": 120,
+        "text": "R3 wood-wicks  PURPOSE: lights trap moths; a light grabs you and throws you; cutting it frees them"
+      },
+      {
+        "x": 300,
+        "y": 200,
+        "text": "N in (one way): she falls ~900 and lands on L, 500+ px outside W1's field"
+      },
+      { "x": 920, "y": 120, "text": "shaft wall (no kick): a fall held right slides down it onto L" },
+      {
+        "x": 1100,
+        "y": 520,
+        "text": "W1: two moths still circling it, the dead moth in the dip below. Jump at it from L's lip: caught; beat free holding right: thrown onto M"
+      },
+      {
+        "x": 1100,
+        "y": 560,
+        "text": "holding nothing she is thrown back onto L. A miss into the dip: a root rung and a hop back up to L (~4 s)"
+      },
+      {
+        "x": 1820,
+        "y": 860,
+        "text": "M; THE KNOB (2256-2320) stops her within reach of W2, where the stragglers circle: a standing cut frees them"
+      },
+      { "x": 2330, "y": 1100, "text": "after the knob M steps down 192 onto N: no hole. East to the burrow" },
+      { "x": 1780, "y": 300, "text": "W-hi3 by the hanging trunk: the claws' first lock" },
+      { "x": 1040, "y": 150, "text": "LANDMARK: the root knot over W1" }
+    ],
+    "stage": {
+      "circlers": [
+        { "lure": "wick-first", "count": 7, "r": 95 },
+        { "lure": "wick-caught", "count": 2, "r": 95 }
+      ],
+      "props": [{ "kind": "deadMoth", "x": 1700, "y": 1312, "facing": -1 }],
+      "oak": { "x": 21120, "y": 5312, "top": 1820, "w": 384 }
+    }
   },
   "shots": {
     "wide": [
       { "name": "landing", "x": 640, "y": 960 },
-      { "name": "first-catch", "x": 1280, "y": 960 },
-      { "name": "first-snuff", "x": 1960, "y": 960 }
+      { "name": "first-catch", "x": 1680, "y": 960 },
+      { "name": "first-snuff", "x": 2360, "y": 960 }
     ]
   }
 }

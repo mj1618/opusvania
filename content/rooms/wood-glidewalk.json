@@ -2,7 +2,7 @@
   "id": "wood-glidewalk",
   "title": "The glidewalk (greybox)",
   "region": "wood",
-  "width": 5760,
+  "width": 7808,
   "height": 2368,
   "spawn": { "x": 288, "y": 512 },
   "edgeKick": false,
@@ -24,6 +24,15 @@
         "h": 1152,
         "fit": true,
         "bounds": { "x": 0, "y": 160, "w": 2100, "h": 1440 }
+      },
+      {
+        "id": "chain",
+        "x": 5184,
+        "y": 1500,
+        "w": 320,
+        "h": 484,
+        "fit": true,
+        "bounds": { "x": 5000, "y": 788, "w": 2808, "h": 1580 }
       }
     ]
   },
@@ -40,10 +49,13 @@
     { "tag": "ground", "x": 1984, "y": 1952, "w": 1024, "h": 416 },
     { "tag": "ground", "x": 3008, "y": 1472, "w": 640, "h": 896 },
     { "tag": "ground", "x": 3648, "y": 2272, "w": 1024, "h": 96 },
-    { "tag": "ground", "x": 4672, "y": 1984, "w": 784, "h": 384 },
-    { "tag": "ground", "x": 5552, "y": 1984, "w": 208, "h": 64 },
-    { "tag": "ground", "x": 5456, "y": 2176, "w": 304, "h": 192 },
-    { "tag": "trunk", "x": 5632, "y": 256, "w": 64, "h": 1472 },
+    { "tag": "ground", "x": 4672, "y": 1984, "w": 832, "h": 384 },
+    { "tag": "root", "x": 5440, "y": 1920, "w": 64, "h": 64 },
+    { "tag": "ground", "x": 5504, "y": 2240, "w": 1728, "h": 128 },
+    { "tag": "ground", "x": 7232, "y": 1984, "w": 272, "h": 384 },
+    { "tag": "ground", "x": 7600, "y": 1984, "w": 208, "h": 64 },
+    { "tag": "ground", "x": 7504, "y": 2176, "w": 304, "h": 192 },
+    { "tag": "trunk", "x": 7680, "y": 256, "w": 64, "h": 1472 },
     { "tag": "branch", "x": 448, "y": 32, "w": 128, "h": 64 },
     { "tag": "branch", "x": 576, "y": 43, "w": 128, "h": 64 },
     { "tag": "branch", "x": 704, "y": 55, "w": 128, "h": 64 },
@@ -84,34 +96,53 @@
     { "tag": "branch", "x": 5184, "y": 192, "w": 128, "h": 64 },
     { "tag": "branch", "x": 5312, "y": 192, "w": 128, "h": 64 },
     { "tag": "branch", "x": 5440, "y": 196, "w": 128, "h": 64 },
-    { "tag": "branch", "x": 5568, "y": 196, "w": 128, "h": 64 }
+    { "tag": "branch", "x": 5568, "y": 196, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 5696, "y": 192, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 5824, "y": 192, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 5952, "y": 196, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 6080, "y": 196, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 6208, "y": 192, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 6336, "y": 192, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 6464, "y": 196, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 6592, "y": 196, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 6720, "y": 192, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 6848, "y": 192, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 6976, "y": 196, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 7104, "y": 196, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 7232, "y": 192, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 7360, "y": 192, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 7488, "y": 196, "w": 128, "h": 64 },
+    { "tag": "branch", "x": 7616, "y": 196, "w": 128, "h": 64 }
   ],
   "oneWays": [
     { "tag": "root", "x": 576, "y": 1216, "w": 96 },
     { "tag": "root", "x": 576, "y": 1024, "w": 96 },
     { "tag": "root", "x": 576, "y": 832, "w": 96 },
-    { "tag": "root", "x": 576, "y": 704, "w": 96 }
+    { "tag": "root", "x": 576, "y": 704, "w": 96 },
+    { "tag": "root", "x": 7136, "y": 2112, "w": 96 }
   ],
   "thorns": [
     { "id": "thorns-2", "x": 1984, "y": 1920, "w": 1024, "h": 32 },
     { "id": "thorns-3", "x": 3648, "y": 2240, "w": 1024, "h": 32 }
   ],
-  "bark": [{ "id": "bark-floor", "x": 5456, "y": 1984, "w": 96, "h": 64, "floor": true }],
+  "bark": [{ "id": "bark-floor", "x": 7504, "y": 1984, "w": 96, "h": 64, "floor": true }],
   "lures": [
     { "id": "wick-landing", "kind": "wick", "x": 1800, "y": 640 },
     { "id": "wick-line", "kind": "wick", "x": 2434, "y": 860, "spin": 1 },
     { "id": "wick-bend", "kind": "wick", "x": 4150, "y": 1440, "spin": 1 },
-    { "id": "wick-ledge", "kind": "wick", "x": 4880, "y": 1800 },
-    { "id": "wick-pocket", "kind": "wick", "x": 5680, "y": 2100 }
+    { "id": "wick-ledge", "kind": "wick", "x": 5180, "y": 1800 },
+    { "id": "wick-chain1", "kind": "wick", "x": 5818, "y": 1640 },
+    { "id": "wick-chain2", "kind": "wick", "x": 6718, "y": 1765 },
+    { "id": "wick-pocket", "kind": "wick", "x": 7728, "y": 2100 }
   ],
   "enemies": [
     {
       "id": "burr-ledge",
       "kind": "burrback",
-      "x": 4950,
+      "x": 5180,
       "y": 1984,
       "facing": -1,
-      "radius": 220,
+      "radius": 120,
       "hp": 5,
       "guards": "wick-ledge"
     }
@@ -142,7 +173,7 @@
       {
         "x": 2050,
         "y": 640,
-        "text": "GAP 2: the fast line: caught at W5, thrown, wings open: on to T3. The slow line: a walk-off glide under the pull"
+        "text": "GAP 2: caught at W5, thrown, wings open: on to T3. Or a walk-off glide under the pull"
       },
       { "x": 2200, "y": 1880, "text": "thorns: 1 light and back to T2" },
       { "x": 3060, "y": 1380, "text": "T3, P-t3 moon patch" },
@@ -155,33 +186,38 @@
       {
         "x": 4700,
         "y": 1700,
-        "text": "T4: the landing's wick W6 and burr-ledge under it: snuff it on the pass (a glide cut) and land in the dark, or land in its light and fight"
+        "text": "T4: a forgiving landing (the beetle's patrol starts 380 past the lip); W6 over the beetle at the chasm's edge"
       },
       {
         "x": 5400,
-        "y": 2290,
-        "text": "a bark floor panel: down cuts open a pocket with W-pocket (the secret language)"
+        "y": 1500,
+        "text": "THE LAMP CHAIN over the chasm to the oak's door: a root lip at T4's edge (hop it: no walk-off), into C1, throw right, wings, caught by C2, throw up-right, T5"
       },
       {
-        "x": 5000,
+        "x": 5600,
+        "y": 2180,
+        "text": "THE DARK WAY (Tatter's): the chasm's floor, in view from T4's lip: a miss lands here; walk east, a root step up onto T5 (slow, safe)"
+      },
+      {
+        "x": 7300,
+        "y": 1700,
+        "text": "T5 at the oak's west door; a bark floor panel opens a pocket with W-pocket"
+      },
+      {
+        "x": 7000,
         "y": 140,
         "text": "RETURN BOUGH (wall jump): kick up T-ret's east face, walk west, drop onto E0"
       },
-      {
-        "x": 5480,
-        "y": 1700,
-        "text": "T-ret: 256 over T4, walked under to the exit. From T4 the oak's west door fills the frame"
-      },
-      { "x": 2600, "y": 200, "text": "LANDMARK: the long bough overhead, the glidewalk's line under it" }
+      { "x": 2600, "y": 200, "text": "LANDMARK: the long bough overhead; ahead, the oak's door" }
     ],
-    "stage": { "oak": { "x": 8512, "y": 1984, "top": -1508, "w": 384 } }
+    "stage": { "oak": { "x": 10560, "y": 1984, "top": -1508, "w": 384 } }
   },
   "shots": {
     "wide": [
       { "name": "gap1", "x": 700, "y": 512 },
       { "name": "gap2", "x": 2300, "y": 960 },
       { "name": "gap3", "x": 3700, "y": 1472 },
-      { "name": "landing", "x": 4900, "y": 1984 }
+      { "name": "chain", "x": 6300, "y": 1984 }
     ]
   }
 }
