@@ -386,7 +386,7 @@ export function bakeSoft(renderer: Renderer, c: Container, rect: LayerRect, scal
     clearColor: [0, 0, 0, 0],
     transform: new Matrix(scale, 0, 0, scale, -rect.x * scale, -rect.y * scale),
   });
-  c.destroy({ children: true });
+  c.destroy({ children: true, context: true });
   return rt;
 }
 
@@ -444,7 +444,7 @@ export class LightMap {
       clearColor: [0.5, 0.5, 0.5, 1],
       transform: new Matrix(scale, 0, 0, scale, -rect.x * scale, -rect.y * scale),
     });
-    this.c.destroy({ children: true });
+    this.c.destroy({ children: true, context: true });
     return rt;
   }
 }
@@ -1148,7 +1148,7 @@ export class SwaySet {
       clearColor: [0, 0, 0, 0],
       transform: new Matrix(scale, 0, 0, scale, 0, 0),
     });
-    sheet.destroy({ children: true });
+    sheet.destroy({ children: true, context: true });
     const n = SWAY_SEGMENTS;
     const per = (n + 1) * 2;
     const pos = new Float32Array(slots.length * per * 2);

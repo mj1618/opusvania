@@ -1065,7 +1065,7 @@ export class PickupRenderer {
         // It is tougher than we drew it (the tuning changed and the scene restarted): redraw it.
         const again = new PodView(v.pod, sim.scene, hash01(v.pod.id), Math.min(3, left));
         this.podBack.addChildAt(again.root, this.podBack.getChildIndex(v.root));
-        v.root.destroy({ children: true });
+        v.root.destroy({ children: true, context: true });
         this.pods[i] = again;
         continue;
       }

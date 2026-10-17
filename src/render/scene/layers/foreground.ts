@@ -490,7 +490,7 @@ export class ForegroundLayer implements EnvModule {
     again.filters = [new BlurFilter({ strength: blur, quality: 4, resolution: 1 })];
     holder.addChild(again);
     renderer.render({ container: holder, target: atlas, clear: true, clearColor: [0, 0, 0, 0] });
-    holder.destroy({ children: true });
+    holder.destroy({ children: true, context: true });
     raw.destroy(true);
 
     for (const c of cells) {

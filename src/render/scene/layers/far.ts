@@ -842,7 +842,7 @@ export class FarLayers implements EnvModule {
       }
       const b: ForestBuild = buildForest(plan);
       const tiles = bakeLayer(ctx.renderer, b.content, plan.rect, scale, atm, TO_LIGHT, b.lights);
-      b.content.destroy({ children: true });
+      b.content.destroy({ children: true, context: true });
       const rustle = { amp: RUSTLE[i] ?? 0, y0: plan.canopyY + 60, y1: plan.canopyY + 320 };
       let view: LayerView | FarPairView | null = null;
       const sky = SKY_OUTPUT.texture;
@@ -902,7 +902,7 @@ export class FarLayers implements EnvModule {
       if (!layer || !rect) return;
       const b = buildWoodFar(k, rect, anchorY);
       const tiles = bakeLayer(ctx.renderer, b.content, rect, BAKE_SCALE[k], atm, TO_LIGHT, b.lights, 0);
-      b.content.destroy({ children: true });
+      b.content.destroy({ children: true, context: true });
       const zone = { ...z, anchorX: ctx.layers.anchor.x } as ZoneSpec;
       // The crowns stir everywhere (no canopy line to keep still under).
       const rustle = { amp: (RUSTLE[k] ?? 0) * 2, y0: rect.y + rect.h + 1000, y1: rect.y + rect.h + 1001 };

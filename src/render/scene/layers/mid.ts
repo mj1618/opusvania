@@ -749,7 +749,7 @@ export class MidLayer implements EnvModule {
       });
     }
     layer.addChild(this.view.container);
-    b.content.destroy({ children: true });
+    b.content.destroy({ children: true, context: true });
 
     this.sway = new SwaySet(
       ctx.renderer,
@@ -843,7 +843,7 @@ export class MidLayer implements EnvModule {
       // (No stage here: the wood's mist stage is in far2's pass, behind these trunks: bg-wood WOOD_STAGE.)
     );
     ctx.layers.mid.addChild(this.view.container);
-    b.content.destroy({ children: true });
+    b.content.destroy({ children: true, context: true });
     this.sway = new SwaySet(
       ctx.renderer,
       woodMidHangers(b.sprays, (c, x, y) => atmTone(atm, c, x, y)),
