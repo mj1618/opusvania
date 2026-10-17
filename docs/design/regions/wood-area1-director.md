@@ -20,6 +20,53 @@ why.
   bring an earned window and 2× size for the old burrback, a hawker that strikes, burrback stomps, deaths that cost a
   walk, and held story beats. This design assumes them.
 
+## Round 5 revisions: the depth pass (2026-10-18, `reviews/area1-plan-r5.md`)
+
+After rounds 3–4 the area reads as one journey (video r3, first-timer r5) and lacks depth. These win over everything
+below, including the round 3 list. The thread: **the dead go somewhere.** Carriers take the moths that die at the
+lamps down to a nest in the roots. The old beetle grew huge on them under the oak's floor, and her fight breaks that
+floor and lets the moon in.
+
+1. **The den is under the oak, and the boss gives the claws.**
+   - The old burrback's arena sits directly under the oak's floor (the mesh and an earth plug are its ceiling).
+   - **Glade 2 merges into it.** The den is the glade once the plug falls.
+   - Three phases (~90 s):
+     1. the beetle rule, with an anti-camp slam;
+     2. a roll she breaks by being thrown down from W-den, or with a throw-cut;
+     3. desperate rams she baits into the taproot.
+   - Its death lets the moon column down the trunk into the den. In that light the wing-lined walls and the blind old
+     beetle show, and she gets the claws where it died.
+   - The climb-out is the column itself.
+   - From the oak's floor the mesh now shows the dark and something breathing, not moonlight.
+2. **One new creature kind: the carriers (ants),** scavengers on trails from a lamp's pool to cracks.
+   - They are fodder that makes lit floors busy.
+   - Their trails signpost finds and holes.
+   - All trails end at the nest.
+   - Never in R3–R5.
+3. **The throw-cut:** a cut during a throw's launch is heavy. It breaks a brace, ends the roll, knocks a hawker off
+   and cuts silk. It is taught at R6's T4 (W6's throw aimed at the landing's beetle).
+4. **The second reward kind:** three moonlit hollows, one per act:
+   - keen blade (R4's door pocket);
+   - quick wings (R8);
+   - night eyes (the oak's trunk-foot hollow).
+
+   The first health milestone moves to **60 moths**, before the den, and the HUD shows "x / 60".
+5. **The roots are a place and a web.** The root stair passes through **the nest** (a wide hall where every trail
+   ends, the window onto the sleeping beetle in its west wall). From the nest, **the west root road** (claws) climbs
+   to R5's glade floor: a loop back west to the high-wick locks. There are three floor–roots crossings: R5, the oak,
+   R9.
+6. **Tatter acts once and looks once.**
+   - At the oak's first visit it leads her through a crack into the trunk-foot hollow: the oak's first snuff, with
+     the moths spiralling up the trunk, and night eyes.
+   - At the crown it tries its torn wings, looks at her, and walks ahead onto the canopy road.
+7. **Teaching and fairness:**
+   - R4's gap needs up-right, and the aim glyph shows on the first catch.
+   - R4's adult flips by itself against the root step (the beetle rule seen first).
+   - Deaths re-form her in the same room.
+   - R8's hawker strikes only on its telegraphed pass and knocks her out of the pull with grace.
+   - Held beats fade the HUD and show her looking, with no letterbox.
+   - The descent keeps a fall-return point free of danglers.
+
 ## Round 3 revisions (2026-10-18, `reviews/area1-plan-r3.md`)
 
 The video review (`reviews/area1-video-r1.md`) and first-timer r3 (`reviews/area1-firsttimer-average-r3.md`) showed
