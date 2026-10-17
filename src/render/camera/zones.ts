@@ -18,8 +18,16 @@ export function zonesOf(scene: Scene): readonly CameraZone[] {
 }
 
 /** The zone a point is in (the first that holds it), or null. */
-export function zoneAt(zones: readonly CameraZone[], x: number, y: number): CameraZone | null {
-  for (const z of zones) if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) return z;
+export function zoneAt(
+  zones: readonly CameraZone[],
+  x: number,
+  y: number,
+  flags: readonly string[] = [],
+): CameraZone | null {
+  for (const z of zones) {
+    if (z.until && flags.includes(z.until)) continue;
+    if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) return z;
+  }
   return null;
 }
 

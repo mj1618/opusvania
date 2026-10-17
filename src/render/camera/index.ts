@@ -177,6 +177,7 @@ function stepZones(
   cy: number,
   ct: CameraTuning,
   snap = false,
+  flags: readonly string[] = [],
 ): void {
   const zones = zonesOf(scene);
   if (zones.length === 0 && cam.zoom === 1 && cam.ox === 0 && cam.oy === 0) {
@@ -184,7 +185,7 @@ function stepZones(
     return;
   }
   const Z = ct.zones;
-  const z = zoneAt(zones, cx, cy);
+  const z = zoneAt(zones, cx, cy, flags);
   cam.zone = z ? z.id : '';
   const want = z ? zoneZoom(z) : 1;
   if (snap) {
@@ -297,7 +298,7 @@ export function createCamera(
     seam: 0,
     seamV: 0,
   };
-  stepZones(cam, scene, p.x + p.w / 2, p.y + p.h / 2, ct, true);
+  stepZones(cam, scene, p.x + p.w / 2, p.y + p.h / 2, ct, true, s.save.flags);
   return cam;
 }
 
@@ -334,7 +335,7 @@ export function stepCamera(
     [cam.fx, cam.fvx] = smoothDamp(cam.fx, cam.fvx, cam.fx, ct.smoothX);
     [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, cam.fy, ct.smoothY);
     cam.targetY = cam.fy;
-    stepZones(cam, scene, cx, p.y + p.h / 2, ct);
+    stepZones(cam, scene, cx, p.y + p.h / 2, ct, false, s.save.flags);
     return;
   }
 
@@ -459,7 +460,7 @@ export function stepCamera(
     target = cam.ty;
   }
   [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, target, smoothY);
-  stepZones(cam, scene, cx, p.y + p.h / 2, ct);
+  stepZones(cam, scene, cx, p.y + p.h / 2, ct, false, s.save.flags);
 }
 
 /**

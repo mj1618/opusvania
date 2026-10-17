@@ -11,6 +11,7 @@ import { Graphics, Rectangle } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import type { HatchState } from '../../sim/state';
 import { tuning } from '../../sim/tuning';
+import { CLOSE, TATTER_FOCUS } from '../camera/stage-cam';
 import type { PlayerView, RenderContext } from '../contract';
 import { CocoonRow, propLight } from './cocoons';
 import { hatchLink } from './hatch-link';
@@ -46,7 +47,12 @@ type TatterEntry = {
   key: string;
   /** Its try at the air starts on this story flag's `flagSet` (`stage.tatters[].tryOn`). */
   tryOn: string | null;
+  /** px of its path left (a climb), for the camera's close-up as it goes through its door. */
+  left?: number;
 };
+
+/** px of its path left when Tatter's door close-up starts. */
+const CLOSE_DOOR = 220;
 
 /** Tatters gone through their door this session (`room:index`): they do not come back on a re-entry. */
 const VANISHED = new Set<string>();
@@ -169,6 +175,11 @@ export class Cast {
     flags: readonly string[] = [],
   ): void {
     const row = this.row;
+    // (Reset every frame, before any early way out: a room without Tatter leaves nothing behind for the camera.)
+    TATTER_FOCUS.near = false;
+    TATTER_FOCUS.ending = false;
+    TATTER_FOCUS.hx = her.cx;
+    TATTER_FOCUS.hy = her.feetY;
     if (!row.any && this.tatters.length === 0) return;
     row.update(dt, clock, hatch, events);
     const scale = Math.max(1e-3, Math.abs(this.layer.scale.x) * this.ctx.viewScale());
@@ -204,10 +215,27 @@ export class Cast {
     // (The camera's zoom alone: a small window is not a wide frame.)
     const zoom = Math.abs(this.layer.scale.x);
     const wide = clamp((TATTER_HALO.from - zoom) / (TATTER_HALO.from - TATTER_HALO.full), 0, 1);
+    const F = TATTER_FOCUS;
     for (const c of this.tatters) {
       const t = c.t;
       t.mesh.visible = t.present(flags);
       if (!t.mesh.visible) continue;
+      // For the camera (stage-cam.ts): a Tatter beside her, or one going through its door.
+      if (c.gone < 1) {
+        const tx = t.mesh.position.x;
+        const ty = t.mesh.position.y;
+        if (Math.hypot(tx - her.cx, ty - her.feetY) < CLOSE.near) {
+          F.near = true;
+          F.x = tx;
+          F.y = ty;
+        }
+        if (c.climb?.vanish && c.left !== undefined && c.left < CLOSE_DOOR && c.gone === 0) {
+          F.ending = true;
+          F.key = c.key;
+          F.x = tx;
+          F.y = ty;
+        }
+      }
       if (wide > 0 && c.gone < 1)
         hl.circle(t.mesh.position.x, t.mesh.position.y - TATTER_HALO.up, TATTER_HALO.r).fill({
           color: TATTER_HALO.color,
@@ -271,6 +299,7 @@ export class Cast {
     const speed = (C.speed ?? K.speed) * (vertical ? (K.pull + K.rest) / K.pull : 1);
     if (pulling && want > c.u) c.u = Math.min(want, c.u + speed * dt);
     // Through a door (`vanish`): at the path's end it fades out, and stays gone this session.
+    c.left = total - c.u;
     if (C.vanish && c.u >= total - 1) {
       c.gone = Math.min(1, c.gone + dt / K.vanish);
       if (c.gone >= 1) VANISHED.add(c.key);

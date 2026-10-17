@@ -65,6 +65,8 @@ export const STAGING = {
     wallsIn: 1.5,
     wallAlpha: 0.6,
   },
+  /** Leaks: beams per crack, their length (px), fan (rad-ish per beam), opacity, shimmer rate. */
+  leaks: { beams: 4, len: 220, fan: 0.12, alpha: 0.12, shimmer: 0.9 },
   /** The wing carpet: px of floor per wing, a wing's length, how high the middle is piled, its opacity. */
   carpet: { every: 11, len: 30, pile: 18, alpha: 0.7 },
   /**
@@ -268,6 +270,8 @@ export class StagingView {
     if (!S) return;
     this.drawFar(far, clock, cam, sim);
     this.drawCarpet(back);
+    this.drawLeaks(back, clock);
+    this.drawStrays(front, clock);
     this.drawDen(back, front, dt, clock, sim);
     for (const p of S.props ?? []) this.deadMoth(back, p.x, p.y, p.facing ?? 1);
     for (const l of S.ladders ?? []) if (sim.save.flags.includes(l.flag)) this.ladder(back, l.x, l.y0, l.y1);
@@ -990,6 +994,67 @@ export class StagingView {
                 .closePath()
                 .fill({ color: h < 0.3 ? C.wing : C.dead, alpha: T.wallAlpha * lit });
             }
+    }
+  }
+
+  /**
+   * Moonlight leaking through cracks (`stage.leaks`, round 6): from each crack a few thin pale beams fanned out of its
+   * face, long and faint, shimmering slowly: a hollow behind the bark, seen from across the room.
+   */
+  private drawLeaks(g: Graphics, clock: number): void {
+    const L = STAGING.leaks;
+    for (const [i, r] of (this.stage?.leaks ?? []).entries()) {
+      if (r.up) {
+        // Up through a floor panel's cracks: beams rising from its top, leaning a little each way.
+        for (let k = 0; k < L.beams; k++) {
+          const x = r.x + ((k + 0.5) / L.beams) * r.w;
+          const sh = 0.6 + 0.4 * Math.sin(clock * L.shimmer + k * 1.7 + i);
+          const len = L.len * (0.6 + 0.4 * hash01('leak', k + i * 7));
+          const lean = (k - (L.beams - 1) / 2) * L.fan * len;
+          g.poly([x - 2, r.y, x + 2, r.y, x + lean + 10, r.y - len, x + lean - 10, r.y - len]).fill({
+            color: C.moonlight,
+            alpha: L.alpha * sh,
+          });
+        }
+        g.rect(r.x, r.y, r.w, r.h).stroke({ color: C.moonlight, width: 1.5, alpha: 0.35 });
+        continue;
+      }
+      const dirs = r.dir === undefined || r.dir === 0 ? [-1, 1] : [r.dir];
+      for (const d of dirs)
+        for (let k = 0; k < L.beams; k++) {
+          const y = r.y + ((k + 0.5) / L.beams) * r.h;
+          const x0 = d > 0 ? r.x + r.w : r.x;
+          const sh = 0.6 + 0.4 * Math.sin(clock * L.shimmer + k * 1.7 + i);
+          const len = L.len * (0.6 + 0.4 * hash01('leak', k + i * 7));
+          const spread = (k - (L.beams - 1) / 2) * L.fan;
+          g.poly([
+            x0,
+            y - 2,
+            x0,
+            y + 2,
+            x0 + d * len,
+            y + spread * len + 10,
+            x0 + d * len,
+            y + spread * len - 10,
+          ]).fill({
+            color: C.moonlight,
+            alpha: L.alpha * sh,
+          });
+        }
+      g.rect(r.x, r.y, r.w, r.h).stroke({ color: C.moonlight, width: 1.5, alpha: 0.35 });
+    }
+  }
+
+  /** Stragglers circling a spot (`stage.strays`): moths wheeling round it, as round a lamp. */
+  private drawStrays(g: Graphics, clock: number): void {
+    for (const [i, s] of (this.stage?.strays ?? []).entries()) {
+      const n = s.count ?? 1;
+      for (let k = 0; k < n; k++) {
+        const a = clock * (1.3 + 0.4 * hash01('stray', k + i * 5)) + (k * Math.PI * 2) / n;
+        const x = s.x + Math.cos(a) * s.r;
+        const y = s.y + Math.sin(a) * s.r * 0.6 + Math.sin(clock * 2.3 + k) * 6;
+        moth(g, x, y, Math.sin(clock * 24 + k * 1.3), 0.9);
+      }
     }
   }
 

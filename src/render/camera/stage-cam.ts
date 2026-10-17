@@ -21,6 +21,7 @@ import type { CameraView } from '../contract';
 /** Seconds of each beat's ease in / out (the hold is the data's). */
 export const STAGE_CAM = {
   finale: { in: 1.4, out: 1.6 },
+  close: { in: 0.6, out: 0.8 },
   /**
    * The camera never stands still in a held beat: over its hold it pushes in by `push` (a share of its zoom) and
    * drifts `drift` px (toward where it looks); a `storyHold` with no shot pushes in on her by `holdPush` over
@@ -39,10 +40,25 @@ export const STAGE_CAM = {
   bask: { in: 0.7, out: 0.9 },
 };
 
+/**
+ * Tatter's close-ups (round 6): the zoom, how far over its feet the frame centres (px), seconds held at its door and
+ * at the crown (before the crown's vista pulls out over `pull` s), and how near her a Tatter counts as beside her (px).
+ */
+export const CLOSE = { zoom: 1.5, lift: 40, doorSecs: 1.8, crownSecs: 2.4, pull: 2.2, near: 600 };
+/** Half the safe area's height (logical px). */
+const SAFE_HALF_H = 540;
+
 /** A beat done in an earlier visit (its after-state is drawn, nothing plays). */
 export const DONE = 1e6;
 
-export const STAGE_BEATS = { vista: -1, glimpse: -1, bask: -1, finale: -1 };
+export const STAGE_BEATS = { vista: -1, glimpse: -1, bask: -1, finale: -1, close: -1 };
+
+/**
+ * Tatter, for the camera (round 6, video r4 #8: "Tatter's beats are a few pixels"): written by the cast each frame.
+ * `near`: a Tatter is here, within `CLOSE.near` px of her (`x`, `y` its feet; `hx`, `hy` hers); `ending`: one walking
+ * into its door (`vanish`) is about to go through (`key` names it, so its close-up plays once).
+ */
+export const TATTER_FOCUS = { x: 0, y: 0, hx: 0, hy: 0, near: false, ending: false, key: '' };
 
 /**
  * A held beat reads as a scene, not a freeze (plan r5, item 9): `held` 0..1 = how far a beat holds the view now (a
@@ -57,7 +73,7 @@ function smoother(a: number, b: number, t: number): number {
 }
 
 interface Shot {
-  kind: 'vista' | 'glimpse' | 'bask' | 'finale';
+  kind: 'vista' | 'glimpse' | 'bask' | 'finale' | 'close';
   x: number;
   y: number;
   zoom: number;
@@ -65,6 +81,8 @@ interface Shot {
   hold: number;
   out: number;
   t: number;
+  /** A first frame held `secs` into the hold (the crown's close-up on her and Tatter), then eased to the shot's. */
+  pre?: { x: number; y: number; zoom: number; secs: number };
 }
 
 export class StageCamera {
@@ -73,6 +91,8 @@ export class StageCamera {
   y = 0;
   zoom = 1;
   private shot: Shot | null = null;
+  /** The Tatter close-ups played this visit. */
+  private readonly closeSeen = new Set<string>();
   /** A sim `storyHold` with no shot of its own: seconds since it began (-1 = none) and its length. */
   private holdT = -1;
   private holdLen = 0;
@@ -105,6 +125,25 @@ export class StageCamera {
     return smoother(0, s.in, s.t) * (1 - smoother(s.in + s.hold, s.in + s.hold + s.out, s.t));
   }
 
+  /**
+   * A vista on its flag. The crown's (on the cloud's flag) with Tatter beside her opens close on the two of them,
+   * low in the frame (her and Tatter in its lower third), for `CLOSE.crownSecs`, then pulls out to the wide frame.
+   */
+  private startVista(v: { x: number; y: number; zoom?: number; hold: number; flag?: string }): void {
+    const T = TATTER_FOCUS;
+    const crown = v.flag !== undefined && v.flag === this.room.marks?.stage?.cloud?.flag;
+    if (crown && T.near) {
+      const mx = (T.x + T.hx) / 2;
+      const my = (T.y + T.hy) / 2;
+      // (Their feet two thirds down the frame: the frame's centre a sixth of its height above them.)
+      const cy = my - SAFE_HALF_H / CLOSE.zoom / 3 - CLOSE.lift;
+      this.start('vista', v.x, v.y, v.zoom ?? 1, v.hold);
+      if (this.shot) this.shot.pre = { x: mx, y: cy, zoom: CLOSE.zoom, secs: CLOSE.crownSecs };
+      return;
+    }
+    this.start('vista', v.x, v.y, v.zoom ?? 1, v.hold);
+  }
+
   private start(kind: Shot['kind'], x: number, y: number, zoom: number, hold: number): void {
     const E = STAGE_CAM[kind];
     this.shot = { kind, x, y, zoom, in: E.in, hold, out: E.out, t: 0 };
@@ -121,15 +160,14 @@ export class StageCamera {
   ): void {
     if (events.some((e) => e.type === 'roomEnter')) this.reset(flags);
     const S = this.room.marks?.stage;
-    for (const k of ['vista', 'glimpse', 'bask', 'finale'] as const)
+    for (const k of ['vista', 'glimpse', 'bask', 'finale', 'close'] as const)
       if (STAGE_BEATS[k] >= 0 && STAGE_BEATS[k] < DONE) STAGE_BEATS[k] += dt;
     if (S) {
       const v = S.vista;
       const g = S.glimpse;
       for (const e of events) {
         if (e.type === 'flagSet') {
-          if (v && e.flag === v.flag && STAGE_BEATS.vista < 0)
-            this.start('vista', v.x, v.y, v.zoom ?? 1, v.hold);
+          if (v && e.flag === v.flag && STAGE_BEATS.vista < 0) this.startVista(v);
           if (g && e.flag === g.flag && STAGE_BEATS.glimpse < 0)
             this.start('glimpse', g.x, g.y, g.zoom ?? 1, g.secs - 1.5);
           // The finale: the wide frame held while every moth she freed lifts off (the cloud's own seconds).
@@ -159,6 +197,12 @@ export class StageCamera {
         if (!sh) continue;
         if (e.type === 'storyHold' && sh.t === 0) sh.hold = Math.max(sh.hold, e.frames / 60 - sh.in);
         else if (e.type === 'storyHoldEnd' && sh.t > sh.in && sh.t < sh.in + sh.hold) sh.hold = sh.t - sh.in;
+      }
+      // Tatter going through its door (the oak's hollow): a close-up on it, once.
+      const T = TATTER_FOCUS;
+      if (T.ending && T.key && !this.closeSeen.has(T.key) && !this.shot) {
+        this.closeSeen.add(T.key);
+        this.start('close', T.x, T.y - CLOSE.lift, CLOSE.zoom, CLOSE.doorSecs);
       }
       if (zone && !this.zonesSeen.has(zone)) {
         this.zonesSeen.add(zone);
@@ -200,8 +244,18 @@ export class StageCamera {
     const w = this.weight;
     // The framing stays inside the room (a bask by its west wall must not show past it), the view's
     // real size at the beat's zoom; a room smaller than that view is centred.
-    const hw = follow.w / 2 / s.zoom;
-    const hh = follow.h / 2 / s.zoom;
+    // The shot's frame now: its own, or (opening close on Tatter) the close-up's, easing out to it.
+    let sx = s.x;
+    let sy = s.y;
+    let sz = s.zoom;
+    if (s.pre) {
+      const k = smoother(s.pre.secs, s.pre.secs + CLOSE.pull, s.t);
+      sx = s.pre.x + (s.x - s.pre.x) * k;
+      sy = s.pre.y + (s.y - s.pre.y) * k;
+      sz = Math.exp(Math.log(s.pre.zoom) + (Math.log(s.zoom) - Math.log(s.pre.zoom)) * k);
+    }
+    const hw = follow.w / 2 / sz;
+    const hh = follow.h / 2 / sz;
     const R = this.room;
     // (The finale may also look past the room's sides into the sky beyond: the valley east, the hatching tree west.)
     const side =
@@ -211,7 +265,7 @@ export class StageCamera {
         : 0;
     const left = -side;
     const right = R.width + side;
-    const tx = right - left > 2 * hw ? Math.min(right - hw, Math.max(left + hw, s.x)) : (left + right) / 2;
+    const tx = right - left > 2 * hw ? Math.min(right - hw, Math.max(left + hw, sx)) : (left + right) / 2;
     // (The finale, or a vista on the cloud's flag, may look up past the room's top into the open sky over the
     // crown: `skyAbove` px.)
     const sky =
@@ -221,20 +275,20 @@ export class StageCamera {
         : 0;
     const top = Math.min(0, R.ceilingY ?? 0) - sky;
     const ty =
-      R.height - top > 2 * hh ? Math.min(R.height - hh, Math.max(top + hh, s.y)) : (R.height + top) / 2;
+      R.height - top > 2 * hh ? Math.min(R.height - hh, Math.max(top + hh, sy)) : (R.height + top) / 2;
     // Through the hold the camera keeps moving: a slow push in and a drift toward what it shows.
     const C = STAGE_CAM;
     const u = Math.min(1, Math.max(0, (s.t - s.in) / Math.max(0.1, s.hold + s.out)));
     const ease = u * u * (3 - 2 * u);
-    const dx = s.x - follow.x;
-    const dy = s.y - follow.y;
+    const dx = sx - follow.x;
+    const dy = sy - follow.y;
     const dl = Math.max(1, Math.hypot(dx, dy));
     this.x = (tx - follow.x) * w + (dx / dl) * C.drift * ease * w;
     this.y = (ty - follow.y) * w + (dy / dl) * C.drift * 0.5 * ease * w;
-    this.zoom = (1 + (s.zoom / follow.zoom - 1) * w) * (1 + C.push * ease * w);
+    this.zoom = (1 + (sz / follow.zoom - 1) * w) * (1 + C.push * ease * w);
     STAGE_HOLD.held = w;
-    STAGE_HOLD.look.x = s.x;
-    STAGE_HOLD.look.y = s.y;
+    STAGE_HOLD.look.x = sx;
+    STAGE_HOLD.look.y = sy;
     STAGE_HOLD.look.w = w;
   }
 }

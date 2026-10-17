@@ -99,6 +99,8 @@ export const CAMERA_ZONES = z
         fit: z.boolean().optional(),
         lock: z.boolean().optional(),
         bounds: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict().optional(),
+        /** Only until this story flag is saved (the den's close frame lets go once the beetle is down). */
+        until: z.string().min(1).optional(),
       })
       .strict(),
   )

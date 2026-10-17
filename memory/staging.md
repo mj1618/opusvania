@@ -149,3 +149,13 @@ Contract with the builders (room data, render only; none placed yet):
 - **Carriers** (`kind: 'carrier'`): a small dark ant (3 segments, 6 walking legs, a feeler) with a pale moth wing on
   its back; not drawn `under`; their `trail` drawn as faint scent dots to a dark notch (the crack).
 - Clips that need a phase use a test-only handle on the game in a scratch copy (no debug API sets a creature's mode).
+
+## Round 6 (video r4): Tatter close, the den close, the hollow signposted (2026-10-18)
+- **Tatter's close-ups** (stage-cam.ts `CLOSE`, `TATTER_FOCUS` written by the cast): a Tatter walking into its door
+  (`climb.vanish`, its last 220 px) gets a 1.5x close-up once (1.8 s); the crown's vista (on the cloud's flag), with
+  Tatter within 600 px of her, opens close on the two of them in the frame's lower third (2.4 s) and eases out to the
+  wide frame over 2.2 s (`Shot.pre`). Both automatic, no marks. At the crown Tatter sits where she stops: they overlap.
+- **Camera zones `until`**: a zone applies until its flag is saved (the den's 1.45 frame lets go when the beetle is
+  down). At 1.45 the beetle is still about her own height on screen: ≥ 2.5x needs the creature scaled.
+- **`stage.leaks [{x, y, w, h, dir?, up?}]`**: thin moonlight beams out of a crack (up through a floor panel with
+  `up`); **`stage.strays [{x, y, r, count?}]`**: moths wheeling round a spot. For the builders' signposts.

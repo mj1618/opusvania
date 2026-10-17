@@ -95,6 +95,8 @@ export interface CameraZone {
   fit?: boolean;
   lock?: boolean;
   bounds?: { x: number; y: number; w: number; h: number };
+  /** Only until this story flag is saved. */
+  until?: string;
 }
 
 /** One of the art kit's mood stops: from world x on, the room leans this way (blended between stops). */

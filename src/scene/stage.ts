@@ -91,6 +91,38 @@ export const StageSchema = z
       })
       .strict()
       .optional(),
+    /**
+     * Moonlight leaking through cracks (round 6, video r4 #6: a hollow behind bark nobody found): thin pale beams
+     * out of each rect's face (`dir` the way they fall: 1 = right, -1 = left, 0 = both), a slow shimmer.
+     */
+    leaks: z
+      .array(
+        z
+          .object({
+            x: z.number(),
+            y: z.number(),
+            w: z.number().positive(),
+            h: z.number().positive(),
+            dir: z.union([z.literal(-1), z.literal(0), z.literal(1)]).optional(),
+            /** Up out of its top face instead (a floor panel over a hollow). */
+            up: z.boolean().optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    /** Stragglers circling a spot (a crack with a lamp or a hollow behind it): `count` moths round (x, y) at `r`. */
+    strays: z
+      .array(
+        z
+          .object({
+            x: z.number(),
+            y: z.number(),
+            r: z.number().positive(),
+            count: z.number().int().positive().optional(),
+          })
+          .strict(),
+      )
+      .optional(),
     carpet: z
       .object({
         x0: z.number(),

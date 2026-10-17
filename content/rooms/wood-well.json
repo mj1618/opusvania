@@ -21,7 +21,8 @@
         "w": 1600,
         "h": 576,
         "lock": true,
-        "fit": true,
+        "zoom": 1.45,
+        "until": "wood-old-burrback-down",
         "bounds": { "x": 1888, "y": 1400, "w": 1728, "h": 840 }
       },
       {
