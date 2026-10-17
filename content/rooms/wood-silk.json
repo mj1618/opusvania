@@ -16,6 +16,7 @@
     "lookaheadX": 330,
     "leadFrames": 36
   },
+  "reform": { "x": 300, "y": 2624 },
   "exits": [
     { "id": "w", "edge": "w", "from": 2368, "to": 2624 },
     { "id": "panel", "edge": "s", "from": 3200, "to": 3456, "oneWay": true }

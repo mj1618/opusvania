@@ -15,6 +15,8 @@ import woodGlidewalkJson from '../../content/rooms/wood-glidewalk.json' with { t
 import woodHatchJson from '../../content/rooms/wood-hatch.json' with { type: 'json' };
 import woodHawkersJson from '../../content/rooms/wood-hawkers.json' with { type: 'json' };
 import woodHollowJson from '../../content/rooms/wood-hollow.json' with { type: 'json' };
+import woodRootroadJson from '../../content/rooms/wood-rootroad.json' with { type: 'json' };
+import woodRootshaftJson from '../../content/rooms/wood-rootshaft.json' with { type: 'json' };
 import woodSilkJson from '../../content/rooms/wood-silk.json' with { type: 'json' };
 import woodWellJson from '../../content/rooms/wood-well.json' with { type: 'json' };
 import woodWicksJson from '../../content/rooms/wood-wicks.json' with { type: 'json' };
@@ -185,6 +187,7 @@ const SceneSchema = z
             w: int.positive(),
             h: int.positive(),
             ability: z.enum(ABILITIES),
+            when: z.string().min(1).optional(),
           })
           .strict(),
       )
@@ -610,6 +613,8 @@ const FILES: readonly unknown[] = [
   woodHawkersJson,
   woodSilkJson,
   woodWellJson,
+  woodRootshaftJson,
+  woodRootroadJson,
   labWorldAJson,
   labWorldBJson,
   labWorldCJson,

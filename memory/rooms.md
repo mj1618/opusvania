@@ -118,6 +118,23 @@ snuff, bounce, L2.
   1 px knuckle on the far ledge's lip (3007, 765) were removed (round 4c; the open shaft stays, it is design): without them all four look-ahead bots' region
   results are unchanged and 9 of 9 human-like runs go through (7 of 9 with them). Level geometry need not carry
   bot hacks; tell the playtest tools engineer when the bots misread a room.
+- **Round 5 (2026-10-18, reviews/area1-plan-r5.md), the roots:** R10 `wood-well` is the stair, the nest and the den.
+  Local x 0 is the oak's west edge; the oak's column is x 2560-2944 (exit `out`, under the oak's mesh). East to
+  west: the stair (L0-L3, E0 6528-7040 @1152; no danglers over its landings: they are fall-return points), the nest
+  (3872-6528, floor 1856, ceiling 1440; two lit pockets @1728 with a dangler each), the window (trigger 3872-4128,
+  hold 180; a 60 px slot in the den's east wall), P-den (3744, 2112, the room's `reform`; a 256 jump back up), the
+  den (1952-3552, floor 2112, ceiling 1600): the old burrback (`sets wood-old-burrback-down`), W-den (2240, 1760:
+  caught from a jump, off the climb line), the taproot (3200-3296, 88 over the floor: she walks under, the 96-tall
+  beetle rams it), the column's faces hanging to 1872 (240 clear: a claw jump reaches them). The plug is a gate
+  (2560-2944, 1536-1600) on that flag, and the glade-claws rect (2240-3072) has `when: wood-old-burrback-down`
+  (glades take `when`, sim + schema). The road's tunnel (y 444-700) runs from the nest's claw shaft (3616-3872,
+  kickable faces, catch ledges) west over the den, across the column, out exit `w` into `wood-rootroad` (world
+  21248, 10432; 8384 x 1024) and `wood-rootshaft` (world 18944, 8904; a claw shaft) up to R5's Z, whose root panel is
+  a shortcut (`panel-road`, opens from below; floor from above). R4: no roof over the gap; W-gap (2990, 860) and a
+  high ledge (3456-3712 @900): up-right lands on it, right alone meets its face; the keen-blade hollow in the door's
+  pocket (deepened to 1536); W-hi4 moved to (3980, 400) off the high ledge's reach. R6: a root step under T3's lip
+  (2752-3008 @1664), thorns-2 768 wide. Each critical-path room names a `reform`. The descent from R9's floor to the
+  den's door is ~0:45-1:05 for the human-like bots (the nest adds ~30 s; carriers will add more).
 - A one-way's `noDrop` may name a flag (refuses drop-through until it is set).
 - A floor bark panel is hit by a down cut from the air (cut ~70-90 px over it, falling): each hit bounces
   her; cut as she lands and it hits with no bounce; a standing down cut does not reach it.

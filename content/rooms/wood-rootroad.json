@@ -1,0 +1,44 @@
+{
+  "id": "wood-rootroad",
+  "title": "The west root road (greybox)",
+  "region": "wood",
+  "width": 8384,
+  "height": 1024,
+  "spawn": { "x": 3000, "y": 900 },
+  "edgeKick": false,
+  "abilities": ["glide", "wallJump"],
+  "art": { "mode": "greybox", "labels": false },
+  "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
+  "reform": { "x": 3000, "y": 900 },
+  "exits": [
+    { "id": "n", "edge": "n", "from": 256, "to": 512 },
+    { "id": "e", "edge": "e", "from": 428, "to": 684 }
+  ],
+  "solids": [
+    { "tag": "trunk", "x": 0, "y": 0, "w": 256, "h": 1024, "kick": "east" },
+    { "tag": "trunk", "x": 512, "y": 0, "w": 64, "h": 600, "kick": "west" },
+    { "tag": "ground", "x": 576, "y": 0, "w": 4032, "h": 600, "kick": false },
+    { "tag": "ground", "x": 4608, "y": 0, "w": 3776, "h": 428, "kick": false },
+    { "tag": "ground", "x": 256, "y": 900, "w": 3840, "h": 124 },
+    { "tag": "root", "x": 4096, "y": 836, "w": 512, "h": 188 },
+    { "tag": "root", "x": 4608, "y": 772, "w": 512, "h": 252 },
+    { "tag": "ground", "x": 5120, "y": 684, "w": 3264, "h": 340 }
+  ],
+  "oneWays": [],
+  "lures": [{ "id": "wick-roadside", "kind": "wick", "x": 2400, "y": 720 }],
+  "routes": [{ "from": "n", "to": "e" }, { "from": "e", "to": "n", "needs": ["wallJump"], "oneWay": true }],
+  "marks": {
+    "notes": [
+      {
+        "x": 300,
+        "y": 40,
+        "text": "wood-rootroad  PURPOSE: the west root road (claws): the dark under the floor from the nest back west to R5"
+      },
+      { "x": 300, "y": 760, "text": "the shaft's foot: up (claws) to R5's Z" },
+      { "x": 2200, "y": 640, "text": "W-roadside, a pocket lamp on the road" },
+      { "x": 4200, "y": 640, "text": "root steps up east (64 each) to R10's road tunnel" },
+      { "x": 7600, "y": 360, "text": "east: R10's tunnel over the den, the column, the nest's shaft" }
+    ]
+  },
+  "shots": { "wide": [{ "name": "foot", "x": 600, "y": 900 }, { "name": "steps", "x": 4600, "y": 772 }] }
+}

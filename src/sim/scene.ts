@@ -257,6 +257,11 @@ export interface Glade {
   w: number;
   h: number;
   ability: AbilityId;
+  /**
+   * Shut until this flag is set (the den under the oak: the claws come in the moonlight the old burrback's death
+   * lets in, where it died; before that the glade is the arena's floor and grants nothing).
+   */
+  when?: string;
 }
 
 /**

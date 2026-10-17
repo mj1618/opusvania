@@ -31,17 +31,18 @@
     { "id": "hole", "edge": "s", "from": 4096, "to": 4352 }
   ],
   "patches": [{ "id": "p1", "x": 3776, "y": 1152 }],
+  "hollows": [{ "id": "hollow-blade", "x": 392, "y": 1376, "w": 152, "h": 144, "upgrade": "keenBlade" }],
   "solids": [
     { "tag": "ground", "x": 0, "y": 1280, "w": 384, "h": 512 },
     { "tag": "ground", "x": 480, "y": 1280, "w": 736, "h": 64 },
-    { "tag": "ground", "x": 640, "y": 1344, "w": 576, "h": 128 },
-    { "tag": "ground", "x": 384, "y": 1472, "w": 832, "h": 320 },
+    { "tag": "ground", "x": 640, "y": 1344, "w": 576, "h": 192 },
+    { "tag": "ground", "x": 384, "y": 1536, "w": 832, "h": 256 },
     { "tag": "ground", "x": 1216, "y": 1344, "w": 1600, "h": 448 },
     { "tag": "root", "x": 2432, "y": 1152, "w": 384, "h": 192 },
-    { "tag": "root", "x": 2752, "y": 768, "w": 768, "h": 96, "kick": false },
     { "tag": "root", "x": 2816, "y": 1312, "w": 96, "h": 160 },
     { "tag": "ground", "x": 2816, "y": 1472, "w": 1280, "h": 320 },
     { "tag": "ground", "x": 3456, "y": 1152, "w": 448, "h": 192 },
+    { "tag": "root", "x": 3456, "y": 900, "w": 256, "h": 252 },
     { "tag": "ground", "x": 4000, "y": 1152, "w": 96, "h": 320 },
     { "tag": "ground", "x": 4352, "y": 1152, "w": 128, "h": 640 },
     { "tag": "trunk", "x": 4416, "y": 192, "w": 64, "h": 832, "kick": "west" },
@@ -57,9 +58,9 @@
   ],
   "lures": [
     { "id": "wick-burr", "kind": "wick", "x": 2560, "y": 1000 },
-    { "id": "wick-gap", "kind": "wick", "x": 2990, "y": 920 },
-    { "id": "wick-high", "kind": "wick", "x": 3820, "y": 430 },
-    { "id": "wick-pocket", "kind": "wick", "x": 560, "y": 1408 }
+    { "id": "wick-gap", "kind": "wick", "x": 2990, "y": 860 },
+    { "id": "wick-high", "kind": "wick", "x": 3980, "y": 400 },
+    { "id": "wick-pocket", "kind": "wick", "x": 590, "y": 1440 }
   ],
   "enemies": [
     { "id": "burr-juv", "kind": "juvenileBurrback", "x": 1000, "y": 1280, "facing": 1, "radius": 150 },
@@ -75,7 +76,12 @@
       "guards": "wick-burr"
     }
   ],
-  "routes": [{ "from": "spawn", "to": "w" }, { "from": "w", "to": "p1" }, { "from": "p1", "to": "hole" }],
+  "routes": [
+    { "from": "spawn", "to": "w" },
+    { "from": "w", "to": "p1" },
+    { "from": "p1", "to": "hole" },
+    { "from": "w", "to": "hollow-blade" }
+  ],
   "marks": {
     "tatter": { "x": 3880, "y": 1152, "facing": -1 },
     "notes": [
@@ -92,7 +98,7 @@
       {
         "x": 300,
         "y": 1360,
-        "text": "FIND: a bark floor panel by the door; down-cut it, a pocket with W-pocket"
+        "text": "FIND: a bark floor panel by the door (moonlight leaks through its cracks); down-cut it: a pocket with W-pocket and the KEEN BLADE hollow (+20 snuff reach: the high wicks come into reach)"
       },
       {
         "x": 2300,
@@ -102,14 +108,18 @@
       {
         "x": 1500,
         "y": 1000,
-        "text": "burr-first (4 hp, windup 32) patrols F2 in W3's pool, its ram meets the step's face; snuff W3 and it curls up asleep"
+        "text": "burr-first (4 hp, windup 32) patrols F2 in W3's pool; it rams at her on the root step and meets the step's face: wall stun, belly-up (the beetle rule, seen by itself first)"
       },
       { "x": 2440, "y": 1080, "text": "root step 192 at the patrol's east end" },
-      { "x": 2780, "y": 680, "text": "root roof over the gap: no jump crosses 640" },
+      {
+        "x": 2780,
+        "y": 680,
+        "text": "no roof over the gap (round 5): the up-right throw needs the air; no jump crosses 640 without wings"
+      },
       {
         "x": 2900,
         "y": 980,
-        "text": "THE GAP (fast line): W-gap pulls a jump off the root step; caught, beat free holding right: thrown onto F3"
+        "text": "THE GAP (fast line): W-gap pulls a jump off the root step; caught, beat free UP-RIGHT: thrown onto the high ledge (right alone meets its face)"
       },
       {
         "x": 2900,

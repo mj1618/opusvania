@@ -26,7 +26,8 @@
   },
   "exits": [
     { "id": "n", "edge": "n", "from": 256, "to": 512 },
-    { "id": "e", "edge": "e", "from": 1920, "to": 2176 }
+    { "id": "e", "edge": "e", "from": 1920, "to": 2176 },
+    { "id": "s", "edge": "s", "from": 2560, "to": 2816 }
   ],
   "catches": [
     {
@@ -51,7 +52,8 @@
     { "tag": "ground", "x": 0, "y": 1856, "w": 1216, "h": 648 },
     { "tag": "ground", "x": 1216, "y": 2048, "w": 192, "h": 456 },
     { "tag": "ground", "x": 1216, "y": 2048, "w": 192, "h": 456 },
-    { "tag": "ground", "x": 2368, "y": 2176, "w": 512, "h": 328 },
+    { "tag": "trunk", "x": 2368, "y": 2176, "w": 192, "h": 328, "kick": "east" },
+    { "tag": "trunk", "x": 2816, "y": 2176, "w": 64, "h": 328, "kick": "west" },
     { "tag": "ground", "x": 1408, "y": 2304, "w": 960, "h": 200 },
     { "tag": "ground", "x": 1408, "y": 2304, "w": 960, "h": 200 }
   ],
@@ -108,6 +110,11 @@
         "x": 1000,
         "y": 1960,
         "text": "root rungs up a slot from the alcove to a hatch in the glade floor: the alcove is never a place she can't leave (a fall from it returns her there)"
+      },
+      {
+        "x": 2400,
+        "y": 2260,
+        "text": "THE WEST ROOT ROAD comes up here: a root panel in Z's floor, opens from below (claws); from above it is floor"
       }
     ],
     "camera": [
@@ -127,5 +134,7 @@
       { "name": "lip", "x": 1300, "y": 1664 }
     ]
   },
-  "lures": [{ "id": "wick-alcove", "kind": "wick", "x": 1310, "y": 1960 }]
+  "lures": [{ "id": "wick-alcove", "kind": "wick", "x": 1310, "y": 1960 }],
+  "reform": { "x": 448, "y": 1664 },
+  "shortcuts": [{ "id": "panel-road", "x": 2560, "y": 2176, "w": 256, "h": 64, "opens": "s" }]
 }

@@ -1,0 +1,41 @@
+{
+  "id": "wood-rootshaft",
+  "title": "The root shaft (greybox)",
+  "region": "wood",
+  "width": 2880,
+  "height": 1528,
+  "spawn": { "x": 2768, "y": 1120 },
+  "edgeKick": false,
+  "abilities": ["glide", "wallJump"],
+  "art": { "mode": "greybox", "labels": false },
+  "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
+  "exits": [
+    { "id": "n", "edge": "n", "from": 2560, "to": 2816 },
+    { "id": "s", "edge": "s", "from": 2560, "to": 2816 }
+  ],
+  "solids": [
+    { "tag": "ground", "x": 0, "y": 0, "w": 2496, "h": 1528, "kick": false },
+    { "tag": "trunk", "x": 2496, "y": 0, "w": 64, "h": 1528, "kick": "east" },
+    { "tag": "trunk", "x": 2816, "y": 0, "w": 64, "h": 1528, "kick": "west" }
+  ],
+  "oneWays": [
+    { "tag": "root", "x": 2720, "y": 1120, "w": 96 },
+    { "tag": "root", "x": 2560, "y": 700, "w": 96 },
+    { "tag": "root", "x": 2720, "y": 300, "w": 96 }
+  ],
+  "routes": [
+    { "from": "n", "to": "s", "oneWay": true },
+    { "from": "s", "to": "n", "needs": ["wallJump"], "oneWay": true }
+  ],
+  "marks": {
+    "notes": [
+      {
+        "x": 20,
+        "y": 40,
+        "text": "wood-rootshaft  PURPOSE: the west root road's climb (claws) up to R5's Z, through its root panel"
+      },
+      { "x": 20, "y": 760, "text": "catch ledges every ~420, alternating faces" }
+    ]
+  },
+  "shots": { "wide": [{ "name": "shaft", "x": 2688, "y": 1120 }] }
+}

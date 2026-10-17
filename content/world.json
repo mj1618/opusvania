@@ -11,6 +11,8 @@
     { "id": "wood-hawkers", "x": 33472, "y": 9024 },
     { "id": "wood-silk", "x": 37312, "y": 7424 },
     { "id": "wood-well", "x": 29632, "y": 10416 },
+    { "id": "wood-rootshaft", "x": 18944, "y": 8904 },
+    { "id": "wood-rootroad", "x": 21248, "y": 10432 },
     { "id": "wood-canopy", "x": 33472, "y": 5952 }
   ],
   "areas": [
@@ -26,7 +28,9 @@
         "wood-hollow",
         "wood-hawkers",
         "wood-silk",
-        "wood-well"
+        "wood-well",
+        "wood-rootshaft",
+        "wood-rootroad"
       ]
     },
     { "id": "wood-high", "rooms": ["wood-canopy"] }

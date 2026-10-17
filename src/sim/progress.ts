@@ -83,6 +83,7 @@ export function updateGlades(state: GameState, scene: Scene, events: SimEvent[])
   const cy = p.y + p.h / 2;
   for (const g of list) {
     if (cx < g.x || cx >= g.x + g.w || cy < g.y || cy >= g.y + g.h) continue;
+    if (g.when && !state.save.flags.includes(g.when)) continue;
     if (!remember(state.save.taken, `${scene.id}:${g.id}`)) continue;
     state.save.abilities = normalizeAbilities([...state.save.abilities, g.ability]);
     events.push({ type: 'gladeGrant', id: g.id, ability: g.ability, x: g.x + g.w / 2, y: g.y + g.h });

@@ -36,6 +36,7 @@
       }
     ]
   },
+  "reform": { "x": 3200, "y": 1472 },
   "exits": [
     { "id": "w", "edge": "w", "from": 256, "to": 512 },
     { "id": "e", "edge": "e", "from": 1728, "to": 1984 }
@@ -48,6 +49,7 @@
     { "tag": "ground", "x": 1376, "y": 960, "w": 608, "h": 1408 },
     { "tag": "ground", "x": 1984, "y": 1952, "w": 1024, "h": 416 },
     { "tag": "ground", "x": 3008, "y": 1472, "w": 640, "h": 896 },
+    { "tag": "root", "x": 2752, "y": 1664, "w": 256, "h": 288 },
     { "tag": "ground", "x": 3648, "y": 2272, "w": 1024, "h": 96 },
     { "tag": "ground", "x": 4672, "y": 1984, "w": 832, "h": 384 },
     { "tag": "root", "x": 5440, "y": 1920, "w": 64, "h": 64 },
@@ -122,7 +124,7 @@
     { "tag": "root", "x": 7136, "y": 2112, "w": 96 }
   ],
   "thorns": [
-    { "id": "thorns-2", "x": 1984, "y": 1920, "w": 1024, "h": 32 },
+    { "id": "thorns-2", "x": 1984, "y": 1920, "w": 768, "h": 32 },
     { "id": "thorns-3", "x": 3648, "y": 2240, "w": 1024, "h": 32 }
   ],
   "bark": [{ "id": "bark-floor", "x": 7504, "y": 1984, "w": 96, "h": 64, "floor": true }],
@@ -175,7 +177,11 @@
         "y": 640,
         "text": "GAP 2: caught at W5, thrown, wings open: on to T3. Or a walk-off glide under the pull"
       },
-      { "x": 2200, "y": 1880, "text": "thorns: 1 light and back to T2" },
+      {
+        "x": 2200,
+        "y": 1880,
+        "text": "thorns: 1 light and back to T2; a root step under T3's lip (2752-3008, 192 down): a short glide lands on it"
+      },
       { "x": 3060, "y": 1380, "text": "T3, P-t3 moon patch" },
       {
         "x": 3700,

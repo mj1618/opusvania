@@ -171,5 +171,8 @@
     ]
   },
   "lures": [{ "id": "wick-cave", "kind": "wick", "x": 160, "y": 590 }],
-  "triggers": [{ "id": "vista", "x": 4800, "y": 1344, "w": 384, "h": 256, "sets": "wood-vista", "hold": 150 }]
+  "triggers": [
+    { "id": "vista", "x": 4800, "y": 1344, "w": 384, "h": 256, "sets": "wood-vista", "hold": 150 }
+  ],
+  "reform": { "x": 768, "y": 704 }
 }

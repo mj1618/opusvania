@@ -1,10 +1,10 @@
 {
   "id": "wood-well",
-  "title": "The roots: the stair, the old burrback, glade 2 (greybox)",
+  "title": "The roots: the stair, the nest, the den under the oak (greybox)",
   "region": "wood",
   "width": 11264,
   "height": 2240,
-  "spawn": { "x": 3136, "y": 2112 },
+  "spawn": { "x": 3744, "y": 2112 },
   "edgeKick": false,
   "abilities": ["glide"],
   "art": { "mode": "greybox", "labels": false },
@@ -15,48 +15,80 @@
     "fallLookahead": 320,
     "zones": [
       {
-        "id": "pit",
-        "x": 3584,
-        "y": 1344,
-        "w": 2048,
-        "h": 768,
+        "id": "den",
+        "x": 1952,
+        "y": 1536,
+        "w": 1600,
+        "h": 576,
         "lock": true,
-        "zoom": 1.25,
-        "bounds": { "x": 3392, "y": 1280, "w": 2304, "h": 896 }
+        "fit": true,
+        "bounds": { "x": 1888, "y": 1400, "w": 1728, "h": 840 }
       },
       {
         "id": "window",
-        "x": 5760,
-        "y": 900,
-        "w": 384,
-        "h": 316,
+        "x": 3872,
+        "y": 1640,
+        "w": 256,
+        "h": 216,
         "fit": true,
-        "bounds": { "x": 4100, "y": 1000, "w": 2200, "h": 1240 }
+        "bounds": { "x": 1888, "y": 1400, "w": 2400, "h": 840 }
       }
     ]
   },
-  "reform": { "x": 6000, "y": 1216 },
+  "reform": { "x": 3744, "y": 2112 },
   "exits": [
     { "id": "out", "edge": "n", "from": 2560, "to": 2944 },
-    { "id": "shaft", "edge": "n", "from": 10880, "to": 11136 }
+    { "id": "shaft", "edge": "n", "from": 10880, "to": 11136 },
+    { "id": "w", "edge": "w", "from": 444, "to": 700 }
   ],
-  "patches": [{ "id": "p4", "x": 3136, "y": 2112 }, { "id": "p-chute", "x": 6000, "y": 1216 }],
-  "glades": [{ "id": "glade-claws", "x": 2560, "y": 1920, "w": 704, "h": 192, "ability": "wallJump" }],
+  "patches": [{ "id": "p-den", "x": 3744, "y": 2112 }],
+  "glades": [
+    {
+      "id": "glade-claws",
+      "x": 2240,
+      "y": 1856,
+      "w": 832,
+      "h": 256,
+      "ability": "wallJump",
+      "when": "wood-old-burrback-down"
+    }
+  ],
   "triggers": [
     { "id": "climbed", "x": 2560, "y": 0, "w": 384, "h": 128, "sets": "wood-climbout" },
-    { "id": "window", "x": 5760, "y": 1000, "w": 384, "h": 216, "sets": "wood-window", "hold": 180 }
+    { "id": "window", "x": 3872, "y": 1640, "w": 256, "h": 216, "sets": "wood-window", "hold": 180 }
   ],
-  "catches": [{ "id": "chute", "x": 5760, "y": 1840, "w": 4928, "h": 200 }],
+  "catches": [{ "id": "chute", "x": 7040, "y": 1840, "w": 2688, "h": 200 }],
+  "gates": [
+    {
+      "id": "plug",
+      "x": 2560,
+      "y": 1536,
+      "w": 384,
+      "h": 64,
+      "flag": "wood-old-burrback-down",
+      "kick": false
+    }
+  ],
   "solids": [
-    { "tag": "ground", "x": 0, "y": 0, "w": 2496, "h": 1344, "kick": false },
-    { "tag": "ground", "x": 0, "y": 2112, "w": 5632, "h": 128 },
-    { "tag": "trunk", "x": 2496, "y": 0, "w": 64, "h": 1888, "kick": "east" },
-    { "tag": "trunk", "x": 2944, "y": 0, "w": 64, "h": 1888, "kick": "west" },
-    { "tag": "ground", "x": 3008, "y": 0, "w": 512, "h": 1344, "kick": false },
-    { "tag": "root", "x": 3264, "y": 1888, "w": 192, "h": 32 },
-    { "tag": "ground", "x": 3520, "y": 0, "w": 1856, "h": 1344, "kick": false },
-    { "tag": "ground", "x": 5632, "y": 1280, "w": 128, "h": 960, "kick": false },
-    { "tag": "ground", "x": 5760, "y": 1216, "w": 384, "h": 1024 },
+    { "tag": "ground", "x": 0, "y": 0, "w": 2496, "h": 444, "kick": false },
+    { "tag": "ground", "x": 0, "y": 700, "w": 2496, "h": 900, "kick": false },
+    { "tag": "ground", "x": 0, "y": 1600, "w": 1952, "h": 512, "kick": false },
+    { "tag": "ground", "x": 0, "y": 2112, "w": 3872, "h": 128 },
+    { "tag": "trunk", "x": 2496, "y": 0, "w": 64, "h": 444, "kick": "east" },
+    { "tag": "trunk", "x": 2496, "y": 700, "w": 64, "h": 1172, "kick": "east" },
+    { "tag": "trunk", "x": 2944, "y": 0, "w": 64, "h": 444, "kick": "west" },
+    { "tag": "trunk", "x": 2944, "y": 700, "w": 64, "h": 1172, "kick": "west" },
+    { "tag": "ground", "x": 3008, "y": 0, "w": 864, "h": 444, "kick": false },
+    { "tag": "ground", "x": 3008, "y": 700, "w": 544, "h": 900, "kick": false },
+    { "tag": "root", "x": 3200, "y": 1600, "w": 96, "h": 424, "kick": false },
+    { "tag": "trunk", "x": 3552, "y": 700, "w": 64, "h": 940, "kick": "east" },
+    { "tag": "trunk", "x": 3552, "y": 1700, "w": 64, "h": 156, "kick": "east" },
+    { "tag": "ground", "x": 3872, "y": 0, "w": 64, "h": 700, "kick": false },
+    { "tag": "trunk", "x": 3872, "y": 700, "w": 64, "h": 740, "kick": "west" },
+    { "tag": "ground", "x": 3936, "y": 0, "w": 2272, "h": 1440, "kick": false },
+    { "tag": "ground", "x": 3872, "y": 1856, "w": 2656, "h": 384 },
+    { "tag": "root", "x": 4480, "y": 1728, "w": 288, "h": 128 },
+    { "tag": "root", "x": 5600, "y": 1728, "w": 288, "h": 128 },
     { "tag": "ground", "x": 6528, "y": 1152, "w": 512, "h": 1088 },
     { "tag": "ground", "x": 7488, "y": 1040, "w": 480, "h": 1200 },
     { "tag": "ground", "x": 8448, "y": 896, "w": 832, "h": 1344 },
@@ -69,26 +101,19 @@
   ],
   "oneWays": [
     { "tag": "root", "x": 2560, "y": 160, "w": 160 },
-    { "tag": "root", "x": 3584, "y": 1920, "w": 128 },
-    { "tag": "root", "x": 5504, "y": 1920, "w": 128 },
-    { "tag": "root", "x": 2560, "y": 1700, "w": 64 },
-    { "tag": "root", "x": 2880, "y": 1280, "w": 64 },
+    { "tag": "root", "x": 2880, "y": 440, "w": 64 },
     { "tag": "root", "x": 2560, "y": 860, "w": 64 },
-    { "tag": "root", "x": 2880, "y": 460, "w": 64 }
-  ],
-  "gates": [
-    {
-      "id": "root-gate",
-      "x": 3520,
-      "y": 1344,
-      "w": 64,
-      "h": 768,
-      "flag": "wood-old-burrback-down",
-      "kick": false
-    }
+    { "tag": "root", "x": 2880, "y": 1280, "w": 64 },
+    { "tag": "root", "x": 2560, "y": 1700, "w": 64 },
+    { "tag": "root", "x": 3616, "y": 1660, "w": 96 },
+    { "tag": "root", "x": 3776, "y": 1280, "w": 96 },
+    { "tag": "root", "x": 3616, "y": 900, "w": 96 }
   ],
   "lures": [
-    { "id": "wick-pit", "kind": "wick", "x": 3392, "y": 1600 },
+    { "id": "wick-den", "kind": "wick", "x": 2240, "y": 1760 },
+    { "id": "wick-road", "kind": "wick", "x": 1200, "y": 560 },
+    { "id": "wick-nest-a", "kind": "wick", "x": 5744, "y": 1600 },
+    { "id": "wick-nest-b", "kind": "wick", "x": 4624, "y": 1600 },
     { "id": "wick-pogo", "kind": "wick", "x": 9684, "y": 780 },
     { "id": "wick-chute", "kind": "wick", "x": 8736, "y": 700 },
     { "id": "wick-pocket", "kind": "wick", "x": 7600, "y": 852 }
@@ -97,46 +122,62 @@
     {
       "id": "old-burr",
       "kind": "oldBurrback",
-      "x": 4600,
+      "x": 2400,
       "y": 2112,
-      "facing": -1,
-      "radius": 1000,
+      "facing": 1,
+      "radius": 560,
       "sets": "wood-old-burrback-down"
     },
     {
-      "id": "dang-chute",
+      "id": "dang-nest-a",
       "kind": "dangler",
-      "x": 8736,
-      "y": 8,
+      "x": 5744,
+      "y": 1448,
       "facing": 1,
-      "drop": 900,
-      "guards": "wick-chute"
+      "drop": 220,
+      "guards": "wick-nest-a"
     },
     {
-      "id": "dang-pocket",
+      "id": "dang-nest-b",
       "kind": "dangler",
-      "x": 7600,
-      "y": 8,
-      "facing": 1,
-      "drop": 1100,
-      "guards": "wick-pocket"
+      "x": 4624,
+      "y": 1448,
+      "facing": -1,
+      "drop": 220,
+      "guards": "wick-nest-b"
     }
   ],
   "routes": [
-    { "from": "shaft", "to": "p-chute", "needs": ["glide"], "oneWay": true },
-    { "from": "p-chute", "to": "p4", "oneWay": true },
-    { "from": "spawn", "to": "p4" },
-    { "from": "p4", "to": "glade-claws" },
-    { "from": "p4", "to": "climbed", "needs": ["wallJump"], "oneWay": true },
+    { "from": "shaft", "to": "p-den", "needs": ["glide"], "oneWay": true },
+    { "from": "p-den", "to": "glade-claws" },
+    { "from": "glade-claws", "to": "climbed", "needs": ["wallJump"], "oneWay": true },
     { "from": "climbed", "to": "out", "oneWay": true },
-    { "from": "out", "to": "p4", "oneWay": true }
+    { "from": "out", "to": "p-den", "oneWay": true },
+    { "from": "p-den", "to": "w", "needs": ["wallJump"] },
+    { "from": "w", "to": "p-den" }
   ],
   "marks": {
+    "stage": {
+      "carpet": { "x0": 1980, "x1": 3540, "y": 2112 },
+      "den": {
+        "flag": "wood-old-burrback-down",
+        "plug": { "x": 2560, "y": 1536, "w": 384, "h": 64 },
+        "column": { "x": 2752, "top": 0, "foot": 2112, "w": 384 },
+        "breath": { "x": 2752, "y": 1820, "r": 520 },
+        "walls": [
+          { "x": 1952, "y": 1600, "w": 64, "h": 512 },
+          { "x": 3488, "y": 1600, "w": 64, "h": 256 },
+          { "x": 2016, "y": 1600, "w": 480, "h": 48 },
+          { "x": 3008, "y": 1600, "w": 480, "h": 48 }
+        ]
+      },
+      "oak": { "x": 2752, "y": -368, "top": -3860, "w": 384 }
+    },
     "notes": [
       {
         "x": 10200,
         "y": 120,
-        "text": "R10 wood-well  PURPOSE: the dark under everything, and the threshold. In from the silk hall's floor (one way)"
+        "text": "R10 wood-well  PURPOSE: the dark under everything, where the dead go, and the threshold. In from the silk hall's floor (one way)"
       },
       { "x": 9000, "y": 360, "text": "THE ROOT STAIR: dark ledges stepping down west, glide gaps" },
       {
@@ -148,57 +189,60 @@
       {
         "x": 8500,
         "y": 400,
-        "text": "a lit landing (L2, 832): W-chute over it, dang-chute's silk over the cut spot"
+        "text": "a lit landing (L2): W-chute over it (no dangler over a fall-return point)"
       },
-      {
-        "x": 7500,
-        "y": 600,
-        "text": "a narrow lit landing (L3, 480): W-pocket over it, dang-pocket over the cut spot: the only floor between two dark gaps"
-      },
-      { "x": 6560, "y": 1080, "text": "L3b, dark: the third glide gap's landing" },
+      { "x": 7500, "y": 600, "text": "a lit landing (L3): W-pocket over it" },
+      { "x": 6560, "y": 1080, "text": "E0: the stair's foot; drop into the nest" },
       {
         "x": 5700,
         "y": 700,
-        "text": "gaps 448 / 480 / 448 / 384: each a plain jump from its open lip (the first-timer: glides fell ~20-80 short at 512-640)"
+        "text": "gaps 448 / 480 / 448: each a plain jump from its open lip; the first also a walk-off glide"
       },
       {
-        "x": 3600,
-        "y": 1880,
-        "text": "escape ledges on both pit walls: hop up over the ram, no corner trap"
+        "x": 4000,
+        "y": 1500,
+        "text": "THE NEST: a low root hall where every carriers' trail ends, piled with wings; two lit pockets, a dangler over each"
       },
       {
-        "x": 5800,
-        "y": 900,
-        "text": "THE WINDOW (a held beat): through the roof hole, the old burrback asleep on a carpet of wings; past it the moon column on glade 2"
+        "x": 3880,
+        "y": 1580,
+        "text": "THE WINDOW (a held beat): through the slot in the den's wall, the old burrback asleep on its carpet of wings"
       },
-      { "x": 6200, "y": 1150, "text": "P-chute at the pit door: a death costs a short walk" },
-      { "x": 3700, "y": 1420, "text": "THE PIT (camera locked; the gate in frame): the old burrback" },
-      { "x": 3540, "y": 1300, "text": "root gate, floor to roof: opens when the old burrback dies" },
-      { "x": 3100, "y": 1540, "text": "W8 wick-pit over the ledge behind the gate" },
+      {
+        "x": 3640,
+        "y": 2040,
+        "text": "P-den at the den's door: a fade re-forms her here, 5 s from the fight; a jump (256) back up to the nest"
+      },
+      {
+        "x": 2000,
+        "y": 1560,
+        "text": "THE DEN under the oak: its ceiling the plug (the column's foot). The old burrback; W-den high in the west half, off the column's line (caught only, from a jump); the taproot (rams stun on it; she walks under)"
+      },
+      {
+        "x": 2560,
+        "y": 1300,
+        "text": "its death sets wood-old-burrback-down: the plug falls, the moon column pours in, the claws where it died (glade, shut till then)"
+      },
       {
         "x": 2580,
-        "y": 1750,
-        "text": "GLADE 2: the moon column down the trunk, under the hub's mesh: CLAWS. P4"
-      },
-      { "x": 300, "y": 1500, "text": "the west hall under the hub: the drowned-roots stub (scenery only)" },
-      {
-        "x": 2580,
         "y": 900,
-        "text": "the climb-out: both faces, catch ledges every ~420 px alternating sides (one-ways), a root step at the top; up through the hub's root mesh (sets wood-climbout)"
-      }
+        "text": "the climb-out is the column: both faces, catch ledges, the root step at the top; up through the oak's root mesh (sets wood-climbout)"
+      },
+      {
+        "x": 600,
+        "y": 400,
+        "text": "THE WEST ROOT ROAD (claws): the tunnel from the nest's shaft west over the den, across the column; W-road a find"
+      },
+      { "x": 3640, "y": 900, "text": "the nest's claw shaft up to the road" }
     ],
-    "tatter": { "x": 3236, "y": 2112, "facing": -1, "when": "wood-root-ladder" },
-    "stage": {
-      "oak": { "x": 2752, "y": -368, "top": -3860, "w": 384 },
-      "carpet": { "x0": 3700, "x1": 5560, "y": 2112 }
-    }
+    "tatter": { "x": 3236, "y": 2112, "facing": -1, "when": "wood-root-ladder" }
   },
   "shots": {
     "wide": [
       { "name": "stair", "x": 9000, "y": 896 },
-      { "name": "window", "x": 6000, "y": 1216 },
-      { "name": "pit", "x": 4600, "y": 2112 },
-      { "name": "glade", "x": 3000, "y": 2112 }
+      { "name": "nest", "x": 5000, "y": 1856 },
+      { "name": "window", "x": 3990, "y": 1856 },
+      { "name": "den", "x": 2752, "y": 2112 }
     ]
   }
 }
