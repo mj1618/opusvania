@@ -90,3 +90,21 @@ Contract with the builders (room data, render only; none placed yet):
 - The glide reminder (hud/item-line.ts `REMIND`): in a room with `stage.twitch`, once she owns glide, the
   `twitch.catches`-th fall catch there and every third after show "Hold jump as you fall to glide." again (a
   human-like run looped R5's chasm 14 times in 21 s).
+
+## Area 1 plan r3, render (2026-10-18)
+- **The oak far** (staging.ts `drawOakFar`, `STAGING.oakFar`): in every room whose `stage.oak` lies outside it, a dark
+  trunk + crown + pale ring in the sky layer, projected toward the real oak (nearer = bigger), x kept `margin` inside
+  the frame, the crown's top kept in the sky part (`marginY`, `skyK`: the tree slides, height kept). In-room oaks skip it.
+- **The finale**: `cloud.secs` (default 9) paces the lift; `cloud.view {x,y,zoom}` starts a `finale` stage-cam shot
+  for those seconds, unless a `vista` shares the cloud's flag (builder 2's oak uses the vista, hold 9: fine). Either
+  may frame up to `STAGE_CAM.skyAbove` (1600 px) over the room's top. The cloud's specks grow up to 2.5x as the view
+  widens (else 1 px at zoom 0.5). MothCount holds on screen while `STAGE_BEATS.finale` runs.
+- **Wing carpet** `stage.carpet {x0, x1, y, count?}`: hashed still wing chevrons on a floor (R10's pit).
+- **Snatch** (`enemySnatch {lure}` from the rhythm hawker): one circler fewer at that lamp, 3 wing scales fall.
+  Only shows where the lamp has `stage.circlers`.
+- **Glide-lip assist** (`player.wingsHeld`, the sim opened her wings): a moonlit cup of air rises under her wings,
+  then faint updraft streaks while held (`STAGING.wingsAssist`). An outline of the wings read as an X over her: no.
+- **Cocoon pips** (character/cast.ts `COCOON_PIPS`): the three presses as the lure catch's pips, under the cocoon
+  (the branch is over it), from 1.2 s; fade out after she breaks out.
+- **Attack glyph** (greybox/lures.ts `LURE_GLYPH`): before her first snuff, 1.5 s in reach of a flame without a
+  slash shows a "C" key cap over it, once a page load; gone on a slash, after 4 s or 0.8 s out of reach.

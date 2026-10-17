@@ -7,9 +7,10 @@
  * silk] in front of her (`front`, kept on top by the renderer).
  */
 import type { Container } from 'pixi.js';
-import { Rectangle } from 'pixi.js';
+import { Graphics, Rectangle } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import type { HatchState } from '../../sim/state';
+import { tuning } from '../../sim/tuning';
 import type { PlayerView, RenderContext } from '../contract';
 import { CocoonRow, propLight } from './cocoons';
 import { hatchLink } from './hatch-link';
@@ -17,12 +18,31 @@ import { clamp } from './math';
 import { TATTER, Tatter } from './tatter';
 import { Painter } from './vesper/paint';
 
+/**
+ * Her cocoon's presses as pips under it, the same look as a lamp catch's beats (greybox/lures.ts), so the
+ * three presses here teach the three beats later (plan r3, item 1). Seconds to fade in once the picture is
+ * up, to fade out after she breaks out; px below its foot (the branch is over it), between pips, radius.
+ */
+export const COCOON_PIPS = {
+  from: 1.2,
+  in: 0.6,
+  out: 0.5,
+  below: 22,
+  gap: 26,
+  r: 8,
+  hot: 0xfff0c0,
+  husk: 0x6b7385,
+};
+
 export class Cast {
   private readonly row: CocoonRow;
   private readonly tatter: Tatter | null;
   private readonly back = new Painter();
   private readonly front = new Painter();
   private readonly bounds: Rectangle;
+  private readonly pips = new Graphics({ label: 'cocoon-pips' });
+  private pipA = 0;
+  private pipN = 0;
 
   constructor(
     private readonly ctx: RenderContext,
@@ -49,6 +69,7 @@ export class Cast {
     layer.addChildAt(this.back.mesh, 0);
     if (this.tatter) layer.addChildAt(this.tatter.mesh, 1);
     layer.addChild(this.front.mesh);
+    layer.addChild(this.pips);
     const visible = this.row.any;
     this.back.mesh.visible = visible;
     this.front.mesh.visible = visible;
@@ -125,6 +146,7 @@ export class Cast {
       const b = p.mesh.boundsArea;
       b.copyFrom(this.bounds);
     }
+    this.drawPips(dt, hatch);
     // Tatter is somewhere only once / until its story flag (`marks.tatter.when` / `until`).
     if (this.tatter) this.tatter.mesh.visible = this.tatter.present(flags);
     if (this.tatter?.mesh.visible) {
@@ -142,7 +164,30 @@ export class Cast {
     }
   }
 
+  /** The presses over her cocoon: in while she is shut in, out once she is free. */
+  private drawPips(dt: number, hatch: Readonly<HatchState> | null): void {
+    const P = COCOON_PIPS;
+    const g = this.row.hersGeom;
+    const inside = !!hatch && !hatch.done;
+    if (hatch) this.pipN = hatch.done ? Math.max(this.pipN, hatch.presses) : hatch.presses;
+    const want = inside && hatch.frames / 60 >= P.from ? 1 : 0;
+    this.pipA = want > this.pipA ? Math.min(1, this.pipA + dt / P.in) : Math.max(0, this.pipA - dt / P.out);
+    const pg = this.pips;
+    pg.clear();
+    if (!g || this.pipA <= 0) return;
+    const of = Math.max(1, Math.round(tuning.hatch.presses));
+    const done = !!hatch?.done;
+    const top = g.botY + P.below;
+    for (let k = 0; k < of; k++) {
+      const x = g.x + (k - (of - 1) / 2) * P.gap;
+      const on = done || k < this.pipN;
+      pg.circle(x, top, P.r).fill({ color: on ? P.hot : P.husk, alpha: 0.95 * this.pipA });
+      pg.circle(x, top, P.r).stroke({ color: P.hot, width: 2, alpha: 0.8 * this.pipA });
+    }
+  }
+
   destroy(): void {
+    this.pips.destroy();
     this.back.mesh.destroy();
     this.front.mesh.destroy();
     this.tatter?.destroy();

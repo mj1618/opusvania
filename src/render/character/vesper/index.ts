@@ -85,6 +85,8 @@ const SEEN = {
 };
 
 export class VesperCharacter implements CharacterSkin {
+  /** 0..1: the catch fade (CharacterRenderer): she goes out over a catch's hold and comes back on the return. */
+  fade = 1;
   private readonly painter = new Painter();
   private readonly rig = new Rig();
   private readonly sec = new Secondary();
@@ -555,7 +557,7 @@ export class VesperCharacter implements CharacterSkin {
     const lit = (0.5 + 0.5 * hpK) * low * whole * rig.eyeLit;
     // Just born, her light is still coming on (and she is darker for it).
     const born = rig.birthLight;
-    view.glow = glow * lit * (1 - 0.6 * rig.hurtDim) * seenAt(SEEN.glow) * born;
+    view.glow = glow * lit * (1 - 0.6 * rig.hurtDim) * seenAt(SEEN.glow) * born * this.fade;
     this.seenDark = Math.max(seenAt(SEEN.dark), BIRTH_DARK * (1 - born));
     view.eyeLit = rig.eyeLit * seenAt(SEEN.eyes) * (0.35 + 0.65 * born);
     // Curled in the husk her thorn would stick out of it: it is there once she stands.
@@ -572,8 +574,8 @@ export class VesperCharacter implements CharacterSkin {
     p.begin();
     this.trails[2]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.2, clock);
     this.trails[3]!.draw(p, FX_GOLD_DEEP, FX_GOLD, 0.2, clock);
-    p.alphaK = bodyA;
-    p.glowK = whole;
+    p.alphaK = bodyA * this.fade;
+    p.glowK = whole * this.fade;
     p.dimK = Math.max(rig.hurtDim, this.seenDark);
     p.outline = EDGE.hidden ? 0 : EDGE.px;
     p.outlineColor = EDGE.color;

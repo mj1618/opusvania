@@ -167,6 +167,9 @@ export class RenderStage {
         // from a view of the old room).
         if (rebuilt) this.reformShot.clear();
         else if (events.some((e) => e.type === 'reform')) this.reformShot.reform(from, this.followView);
+        // A fall catch's or a thorn's return: the view glides to where she is put, the world lit.
+        else if (events.some((e) => e.type === 'fallReturn'))
+          this.reformShot.reform(from, this.followView, undefined, false);
         else if (game.state !== state) {
           this.reformShot.restart();
           this.roomFade.fadeIn();

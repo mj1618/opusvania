@@ -5,7 +5,7 @@
  * the beats: a ring per `lureBeat`, a flash per `lureHit`, a burst per `lureSnuff` (the loudest
  * thing on screen) and the freed moths.
  */
-import type { Graphics } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import { flameAt, lureRowNow } from '../../sim/lures';
 import { slashBox } from '../../sim/player/attack';
@@ -39,6 +39,27 @@ const LIFE = { beat: 0.35, hit: 0.25, snuff: 0.9, catch: 0.4, free: 0.45 } as co
  */
 const DARK = { color: 0x04060a, grow: 0.5, settle: 0.7, peak: 0.42, wash: 0.2, flash: 2 } as const;
 
+/**
+ * The attack glyph (plan r3, item 1: a first-timer stood at W2's knob and never cut): before her first snuff
+ * ever, once she has stood in reach of a flame `wait` s without cutting, a key cap over the flame says which
+ * button cuts. Once a page load; gone when she cuts, after `hold` s, or `leave` s out of reach.
+ */
+export const LURE_GLYPH = {
+  wait: 1.5,
+  in: 0.25,
+  hold: 4,
+  out: 0.45,
+  leave: 0.8,
+  above: 64,
+  key: 'C',
+  size: 24,
+  cap: 40,
+  color: 0xe8ecf6,
+  alpha: 0.85,
+};
+/** Shown this page load (the glyph shows once). */
+let glyphShown = false;
+
 /** Scratch for a flame's position this frame. */
 const AT = { x: 0, y: 0 };
 
@@ -47,6 +68,33 @@ export class LureView {
   readonly moths = new FreedMoths();
   /** Seconds since each lure went out while she was here (by id); absent = out before. */
   private readonly outT = new Map<string, number>();
+  /** The attack glyph: a key cap and its letter, over her (add `glyph` to a layer over the lures). */
+  readonly glyph = new Container({ label: 'greybox-attack-glyph' });
+  private readonly glyphCap = new Graphics();
+  private readonly glyphKey: Text;
+  /** Seconds in reach without a cut; the glyph's age (-1 = not up) and its fade; seconds out of reach. */
+  private reachT = 0;
+  private glyphT = -1;
+  private glyphA = 0;
+  private awayT = 0;
+  private glyphEnd = false;
+
+  constructor() {
+    const G = LURE_GLYPH;
+    this.glyphKey = new Text({
+      text: G.key,
+      style: {
+        fontFamily: 'Menlo, Consolas, monospace',
+        fontSize: G.size,
+        fontWeight: 'bold',
+        fill: G.color,
+      },
+      resolution: 2,
+    });
+    this.glyphKey.anchor.set(0.5, 0.5);
+    this.glyph.addChild(this.glyphCap, this.glyphKey);
+    this.glyph.visible = false;
+  }
 
   /** Reads this render frame's events. */
   onEvents(events: readonly SimEvent[], sim: SimView): void {
@@ -56,6 +104,9 @@ export class LureView {
         this.moths.clear();
         this.fx.length = 0;
         this.outT.clear();
+      } else if (e.type === 'slash') {
+        this.reachT = 0;
+        if (this.glyphT >= 0) this.glyphEnd = true;
       } else if (e.type === 'lureBeat')
         this.fx.push({ kind: 'beat', x: e.x, y: e.y, t: 0, life: LIFE.beat, r: 30 + e.out });
       else if (e.type === 'lureHit')
@@ -80,6 +131,7 @@ export class LureView {
     // The flame's box half-size with her upgrades (keen blade reaches further), for the reach rim.
     const FR = list.length > 0 ? withUpgrades(tuning, sim.save).lures.flameRadius : T.flameRadius;
     for (const [id, t] of this.outT) this.outT.set(id, t + dt);
+    let reach: { x: number; y: number } | null = null;
     // First the dark where flames went out: under every field still burning.
     for (let i = 0; i < list.length; i++) {
       const l = list[i];
@@ -163,6 +215,7 @@ export class LureView {
         const hit = (b: { x: number; y: number; w: number; h: number }) =>
           lx + fr > b.x && lx - fr < b.x + b.w && ly + fr > b.y && ly - fr < b.y + b.h;
         if (hit(slashBox(body, 'fwd', p.facing, tuning)) || hit(slashBox(body, 'up', p.facing, tuning))) {
+          reach = { x: lx, y: ly };
           const rr = fr + 7 + 1.5 * Math.sin(clock * 8);
           back.circle(lx, ly, rr).stroke({ color: GB.flameHot, width: 2, alpha: 0.85 });
           for (let k = 0; k < 4; k++) {
@@ -282,5 +335,42 @@ export class LureView {
       }
     }
     this.moths.update(dt, clock, p.cx, p.cy, front, sim.scene.marks?.stage?.oak ?? null);
+    this.drawGlyph(dt, sim, reach);
+  }
+
+  /** The attack glyph over the flame in reach (once, before her first snuff). */
+  private drawGlyph(dt: number, sim: SimView, reach: { x: number; y: number } | null): void {
+    const G = LURE_GLYPH;
+    const first = sim.save.snuffed.length === 0 && sim.lures.snuffed === 0;
+    if (this.glyphT < 0) {
+      this.reachT = reach && first && !glyphShown ? this.reachT + dt : 0;
+      if (this.reachT >= G.wait && reach) {
+        glyphShown = true;
+        this.glyphT = 0;
+        this.glyphEnd = false;
+        this.awayT = 0;
+        this.glyph.position.set(reach.x, reach.y - G.above);
+      }
+    }
+    if (this.glyphT >= 0) {
+      this.glyphT += dt;
+      this.awayT = reach ? 0 : this.awayT + dt;
+      if (reach) this.glyph.position.set(reach.x, reach.y - G.above);
+      if (this.glyphT > G.hold || this.awayT > G.leave || !first) this.glyphEnd = true;
+      this.glyphA = this.glyphEnd
+        ? Math.max(0, this.glyphA - dt / G.out)
+        : Math.min(1, this.glyphA + dt / G.in);
+      if (this.glyphEnd && this.glyphA <= 0) this.glyphT = -1;
+    }
+    this.glyph.visible = this.glyphA > 0;
+    if (!this.glyph.visible) return;
+    this.glyph.alpha = G.alpha * this.glyphA;
+    const c = G.cap / 2;
+    this.glyphCap
+      .clear()
+      .roundRect(-c, -c, G.cap, G.cap, 7)
+      .fill({ color: 0x0b0e14, alpha: 0.75 })
+      .roundRect(-c, -c, G.cap, G.cap, 7)
+      .stroke({ color: G.color, width: 2, alpha: 0.9 });
   }
 }

@@ -21,7 +21,14 @@ const ORDER = ['vesper'];
 // v2: the owner chose Vesper (2026-10-13); a new key so an older remembered choice does not override the default.
 const KEY = 'opusvania.char.v2';
 
+/** The catch fade (seconds): out over a catch's start, in on the return. */
+const CATCH_FADE = { out: 0.18, in: 0.35 };
+
 export class CharacterRenderer {
+  private fade = 1;
+  private fadeTo = 1;
+  private outSecs = CATCH_FADE.out;
+  private inSecs = CATCH_FADE.in;
   readonly skins: readonly SkinDef[];
   private current: CharacterSkin | null = null;
   private currentId = '';
@@ -134,6 +141,27 @@ export class CharacterRenderer {
     flags: readonly string[] = [],
   ): void {
     this.cast.link(dt, hatch, events);
+    // A fall catch or a thorn's hold: she fades out where she is and back in where she is put (plan r3, item 9:
+    // the world stays lit, no cut to black).
+    for (const e of events) {
+      if (e.type === 'fallCatch' || (e.type === 'thornHit' && e.frames > 0)) {
+        // Gone by the end of the hold (the sim's frames), so she is never seen jumping to the return.
+        this.fadeTo = 0;
+        this.outSecs = Math.max(1 / 60, Math.min(CATCH_FADE.out, e.frames / 60));
+      } else if (e.type === 'fallReturn') {
+        this.fadeTo = 1;
+        this.fade = 0;
+        // Back in over the sim's own fade-in (no input until then).
+        this.inSecs = e.fadeIn > 0 ? e.fadeIn / 60 : CATCH_FADE.in;
+      } else if (e.type === 'spawn' && !events.some((o) => o.type === 'fallReturn'))
+        this.fade = this.fadeTo = 1;
+    }
+    const rate = this.fadeTo < this.fade ? dt / this.outSecs : dt / this.inSecs;
+    this.fade =
+      this.fadeTo < this.fade
+        ? Math.max(this.fadeTo, this.fade - rate)
+        : Math.min(this.fadeTo, this.fade + rate);
+    if (this.current) this.current.fade = this.fade;
     this.current?.update(dt, clock, player, events);
     this.cast.update(dt, clock, hatch, player, events, flags);
   }

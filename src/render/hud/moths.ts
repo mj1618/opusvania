@@ -11,6 +11,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { getRoom, WORLD } from '../../scene/index';
 import { tuning } from '../../sim/tuning';
+import { STAGE_BEATS } from '../camera/stage-cam';
 import type { CameraView, SimView, ViewSize } from '../contract';
 
 export const MOTHS_HUD = {
@@ -117,6 +118,8 @@ export class MothCount {
       const y = f.y0 + (iy - f.y0) * e - Math.sin(Math.PI * u) * (120 + 80 * h01(f.seed + 7));
       this.moth(g, x, y, Math.sin(clock * 26 + f.seed), 1 - 0.4 * u, 0.9);
     }
+    // The finale (every moth she freed lifting off the crown): the count stays up the whole while.
+    if (STAGE_BEATS.finale >= 0 && STAGE_BEATS.finale < 12) this.hold = Math.max(this.hold, 1);
     this.hold -= dt;
     const want = this.hold > 0 && this.shown > 0 ? 1 : 0;
     this.alpha = Math.min(1, Math.max(0, this.alpha + (want > this.alpha ? dt / M.in : -dt / M.out)));

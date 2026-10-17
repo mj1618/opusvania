@@ -11,6 +11,8 @@ export interface CharacterSkin {
   update(dt: number, clock: number, player: PlayerView, events: readonly SimEvent[]): void;
   /** Remove everything this skin added to the layer and the light registry. */
   destroy(): void;
+  /** 0..1: how much of her is shown (the catch fade: she goes, the world stays lit). Optional. */
+  fade?: number;
 }
 
 export interface SkinDef {

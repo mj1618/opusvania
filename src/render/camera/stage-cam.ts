@@ -20,6 +20,9 @@ import type { CameraView } from '../contract';
 
 /** Seconds of each beat's ease in / out (the hold is the data's). */
 export const STAGE_CAM = {
+  finale: { in: 1.4, out: 1.6 },
+  /** How far over the room's top the finale's wide frame may look (open sky over the crown), px. */
+  skyAbove: 1600,
   vista: { in: 1.0, out: 1.1 },
   glimpse: { in: 0.7, out: 0.8 },
   bask: { in: 0.7, out: 0.9 },
@@ -28,7 +31,7 @@ export const STAGE_CAM = {
 /** A beat done in an earlier visit (its after-state is drawn, nothing plays). */
 export const DONE = 1e6;
 
-export const STAGE_BEATS = { vista: -1, glimpse: -1, bask: -1 };
+export const STAGE_BEATS = { vista: -1, glimpse: -1, bask: -1, finale: -1 };
 
 function smoother(a: number, b: number, t: number): number {
   const u = Math.min(1, Math.max(0, (t - a) / (b - a)));
@@ -36,7 +39,7 @@ function smoother(a: number, b: number, t: number): number {
 }
 
 interface Shot {
-  kind: 'vista' | 'glimpse' | 'bask';
+  kind: 'vista' | 'glimpse' | 'bask' | 'finale';
   x: number;
   y: number;
   zoom: number;
@@ -69,6 +72,7 @@ export class StageCamera {
     STAGE_BEATS.vista = S?.vista?.flag && flags.includes(S.vista.flag) ? DONE : -1;
     STAGE_BEATS.glimpse = S?.glimpse?.flag && flags.includes(S.glimpse.flag) ? DONE : -1;
     STAGE_BEATS.bask = -1;
+    STAGE_BEATS.finale = S?.cloud && flags.includes(S.cloud.flag) ? DONE : -1;
   }
 
   /** 0..1: how far the current beat's framing is in. */
@@ -94,7 +98,7 @@ export class StageCamera {
   ): void {
     if (events.some((e) => e.type === 'roomEnter')) this.reset(flags);
     const S = this.room.marks?.stage;
-    for (const k of ['vista', 'glimpse', 'bask'] as const)
+    for (const k of ['vista', 'glimpse', 'bask', 'finale'] as const)
       if (STAGE_BEATS[k] >= 0 && STAGE_BEATS[k] < DONE) STAGE_BEATS[k] += dt;
     if (S) {
       const v = S.vista;
@@ -105,6 +109,19 @@ export class StageCamera {
             this.start('vista', v.x, v.y, v.zoom ?? 1, v.hold);
           if (g && e.flag === g.flag && STAGE_BEATS.glimpse < 0)
             this.start('glimpse', g.x, g.y, g.zoom ?? 1, g.secs - 1.5);
+          // The finale: the wide frame held while every moth she freed lifts off (the cloud's own seconds).
+          // (A vista on the same flag frames it instead: only the cloud's clock runs then.)
+          const c = S.cloud;
+          if (c && e.flag === c.flag && STAGE_BEATS.finale < 0 && c.view && v?.flag !== c.flag) {
+            const F = STAGE_CAM.finale;
+            this.start(
+              'finale',
+              c.view.x,
+              c.view.y,
+              c.view.zoom,
+              Math.max(0.5, (c.secs ?? 9) - F.in - F.out),
+            );
+          } else if (c && e.flag === c.flag && STAGE_BEATS.finale < 0) STAGE_BEATS.finale = 0;
         } else if (e.type === 'gladeGrant' && S.bask)
           this.start('bask', S.bask.x, S.bask.y, S.bask.zoom ?? 1, S.bask.secs);
       }
@@ -143,7 +160,16 @@ export class StageCamera {
     const hh = follow.h / 2 / s.zoom;
     const R = this.room;
     const tx = R.width > 2 * hw ? Math.min(R.width - hw, Math.max(hw, s.x)) : R.width / 2;
-    const ty = R.height > 2 * hh ? Math.min(R.height - hh, Math.max(hh, s.y)) : R.height / 2;
+    // (The finale, or a vista on the cloud's flag, may look up past the room's top into the open sky over the
+    // crown: `skyAbove` px.)
+    const sky =
+      s.kind === 'finale' ||
+      (s.kind === 'vista' && R.marks?.stage?.cloud?.flag === R.marks?.stage?.vista?.flag)
+        ? STAGE_CAM.skyAbove
+        : 0;
+    const top = Math.min(0, R.ceilingY ?? 0) - sky;
+    const ty =
+      R.height - top > 2 * hh ? Math.min(R.height - hh, Math.max(top + hh, s.y)) : (R.height + top) / 2;
     this.x = (tx - follow.x) * w;
     this.y = (ty - follow.y) * w;
     this.zoom = 1 + (s.zoom / follow.zoom - 1) * w;

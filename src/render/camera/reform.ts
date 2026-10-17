@@ -61,8 +61,11 @@ export class ReformShot {
     if (this.phase === 'idle') this.phase = 'in';
   }
 
-  /** She re-formed: the follow view went from `from` to `to` in one frame. */
-  reform(from: CameraView, to: CameraView, ct: CameraTuning = cameraTuning): void {
+  /**
+   * She re-formed: the follow view went from `from` to `to` in one frame. `dark` false (a fall catch's or a
+   * thorn's return, plan r3 item 9): the same glide with no dip; she fades back in where she is put.
+   */
+  reform(from: CameraView, to: CameraView, ct: CameraTuning = cameraTuning, dark = true): void {
     const R = ct.reform;
     let dx = from.x - to.x;
     let dy = from.y - to.y;
@@ -80,7 +83,7 @@ export class ReformShot {
       // Close by: only the ease. Whatever dip was coming on lifts.
       this.startOut(R.secNear);
     } else {
-      this.depth = dist > R.panCap ? R.dipCut : R.dip;
+      this.depth = dark ? (dist > R.panCap ? R.dipCut : R.dip) : 0;
       this.phase = 'pan';
     }
   }

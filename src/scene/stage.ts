@@ -66,6 +66,19 @@ export const StageSchema = z
           .strict(),
       )
       .optional(),
+    /**
+     * A carpet of fallen wings on a floor (plan r3 items 5 and 8: the old burrback sleeps on what it has eaten):
+     * pale wing chevrons from x0 to x1 along the floor at y, `count` of them (default one per 11 px).
+     */
+    carpet: z
+      .object({
+        x0: z.number(),
+        x1: z.number(),
+        y: z.number(),
+        count: z.number().int().positive().optional(),
+      })
+      .strict()
+      .optional(),
     /** Still props: a dead moth on the ground (feet point). */
     props: z
       .array(
@@ -130,7 +143,17 @@ export const StageSchema = z
      * saved the cloud has gone.
      */
     cloud: z
-      .object({ x: z.number(), y: z.number(), r: z.number().positive(), flag: z.string().min(1), to: pt })
+      .object({
+        x: z.number(),
+        y: z.number(),
+        r: z.number().positive(),
+        flag: z.string().min(1),
+        to: pt,
+        /** Seconds the lift lasts, the view held wide the while (plan r3 item 7: ~9 s). Default 9. */
+        secs: z.number().positive().optional(),
+        /** The wide frame held while they go (centre, zoom): the hatching tree west, the valley east. */
+        view: z.object({ x: z.number(), y: z.number(), zoom: z.number().positive() }).strict().optional(),
+      })
       .strict()
       .optional(),
     /**

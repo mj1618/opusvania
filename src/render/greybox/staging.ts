@@ -40,12 +40,53 @@ export const STAGING = {
   bask: { motes: 14, rise: 120 },
   /** The wings-twitch: two flicks in `len` s, then at most once every `every` s while she stands there. */
   twitch: { len: 1.0, every: 6 },
+  /** A hawker's snatch from a lamp's swarm: wing scales falling `fall` px over `secs` s. */
+  snatch: { secs: 1.1, scales: 3, fall: 70 },
+  /** The wing carpet: px of floor per wing, a wing's length, how high the middle is piled, its opacity. */
+  carpet: { every: 11, len: 30, pile: 18, alpha: 0.7 },
+  /**
+   * The glide-lip assist (plan r3 item 1; `player.wingsHeld`: the sim opened her wings with no button): the
+   * air lifts them: a moonlit cup under her wings rising over `flare` s (`span` px each side, `cupBelow` under her
+   * centre), then `streaks` updraft streaks (`streak` px, rising `rise` px/s over `drop` px) at `hold` while they
+   * stay open by themselves; in and out over `in` s.
+   */
+  wingsAssist: {
+    flare: 0.6,
+    in: 0.2,
+    hold: 0.35,
+    flareAlpha: 0.85,
+    span: 74,
+    cupBelow: 46,
+    cupDepth: 14,
+    streaks: 3,
+    streak: 16,
+    rise: 90,
+    drop: 60,
+  },
+  /**
+   * The oak far off: its size and place shrink by `near` / distance (between `minK` and `maxK`), it is kept `margin`
+   * px inside the frame on its side, `widen` x its trunk's width; colours.
+   */
+  oakFar: {
+    /** The crown's top on screen: at least `marginY` under the frame's top, at least `skyK` x its height above the centre. */
+    marginY: 70,
+    skyK: 0.12,
+    near: 2600,
+    minK: 0.1,
+    maxK: 0.5,
+    margin: 140,
+    widen: 1.4,
+    color: 0x12161e,
+    alpha: 0.85,
+    ring: 0xc6d4ff,
+    ringAlpha: 0.55,
+  },
   /** The guide straggler: px ahead of her, px/s at most, moths, alpha; px from the end she must be to send it through, s to go. */
   guide: { ahead: 360, speed: 420, count: 2, alpha: 0.85, through: 260, out: 1.4 },
   /** The moths climbing the oak: per moth freed, at most, px/s up, swirl (share of its width), alpha. */
   oak: { per: 0.25, max: 48, speed: 70, swirl: 0.35, alpha: 0.7 },
   /** The crown cloud: at most this many specks; seconds to lift away, the spread of their starts, the rise (px). */
-  cloud: { max: 600, lift: 6, stagger: 2.5, arc: 260 },
+  cloud: { max: 600, lift: 6, stagger: 2.5, arc: 260, grow: 2.5 },
   /** Far things' parallax when the vista sets none. */
   parallax: 0.25,
 };
@@ -123,6 +164,14 @@ export class StagingView {
   /** Seconds she has stood at the twitch spot; seconds since the last twitch started. */
   private twitchStand = 0;
   private twitchT = 1e6;
+  /** The assisted wings: seconds since they opened by themselves (big = not lately) and the outline's fade. */
+  private assistT = 1e6;
+  private assistA = 0;
+  private glideStarted = false;
+  /** Moths taken from each lamp's swarm by a hawker's pass (`enemySnatch`), by lure id; the snatches' puffs. */
+  private readonly snatched = new Map<string, number>();
+  private lureIds: string[] = [];
+  private readonly puffs: { x: number; y: number; t: number }[] = [];
   /** Each circling lure's moths, once it is out: seconds since (they scatter). */
   private readonly scatter = new Map<string, number>();
   /** The guide's place along its path (arc length, eased) and seconds since it went through the end. */
@@ -160,8 +209,17 @@ export class StagingView {
         this.guideS = -1;
         this.guideGone = -1;
         this.cloudT = -1;
+        this.snatched.clear();
+        this.puffs.length = 0;
       } else if (e.type === 'fallCatch') this.catches++;
-      else if (e.type === 'lureSnuff' && this.stage?.circlers?.some((c) => c.lure === e.id))
+      else if (e.type === 'glideStart') this.glideStarted = true;
+      else if ((e as { type: string }).type === 'enemySnatch') {
+        // A hawker's swoop through a lamp took one of its moths (the creatures' rhythm hawker).
+        const sn = e as unknown as { lure?: string | number; x: number; y: number };
+        const lure = typeof sn.lure === 'number' ? this.lureIds[sn.lure] : sn.lure;
+        if (lure !== undefined) this.snatched.set(lure, (this.snatched.get(lure) ?? 0) + 1);
+        this.puffs.push({ x: sn.x, y: sn.y, t: 0 });
+      } else if (e.type === 'lureSnuff' && this.stage?.circlers?.some((c) => c.lure === e.id))
         this.scatter.set(e.id, 0);
       else if (e.type === 'flagSet' && e.flag === this.stage?.rootFall?.flag) this.rootT = 0;
       else if (e.type === 'flagSet' && e.flag === this.stage?.cloud?.flag) this.cloudT = 0;
@@ -172,20 +230,57 @@ export class StagingView {
     const far = this.far.clear();
     const back = this.back.clear();
     const front = this.front.clear();
+    this.drawWingsAssist(front, dt, clock, sim);
     const S = this.stage;
     if (!S) return;
-    this.drawFar(far, clock, cam);
+    this.drawFar(far, clock, cam, sim);
+    this.drawCarpet(back);
     for (const p of S.props ?? []) this.deadMoth(back, p.x, p.y, p.facing ?? 1);
     for (const l of S.ladders ?? []) if (sim.save.flags.includes(l.flag)) this.ladder(back, l.x, l.y0, l.y1);
     this.drawRootFall(back, dt);
     this.drawOakClimb(back, clock, sim);
     this.drawGuide(front, dt, clock, sim);
-    this.drawCloud(front, dt, clock, sim);
+    this.drawCloud(front, dt, clock, sim, cam.zoom);
     this.drawStragglers(front, clock);
     this.drawCirclers(front, dt, clock, sim);
     this.drawGlimpse(front, clock);
     this.drawBask(front, clock, sim);
     this.drawTwitch(back, dt, sim);
+  }
+
+  /**
+   * Her wings opened by the glade lip's assist: the air under her lifts them. A moonlit cup of air under her
+   * wings rises and fades as they open, then a few faint streaks of updraft under her while they stay open
+   * by themselves (not an outline of the wings: the painted ones are bigger and say it better).
+   */
+  private drawWingsAssist(g: Graphics, dt: number, clock: number, sim: SimView): void {
+    const W = STAGING.wingsAssist;
+    const p = sim.player;
+    if (this.glideStarted && p.wingsHeld) this.assistT = 0;
+    this.glideStarted = false;
+    this.assistT += dt;
+    const on = p.wingsHeld && p.gliding;
+    this.assistA = on ? Math.min(1, this.assistA + dt / W.in) : Math.max(0, this.assistA - dt / W.in);
+    if (this.assistA <= 0) return;
+    const flare = this.assistT < W.flare ? 1 - this.assistT / W.flare : 0;
+    if (flare > 0) {
+      // The cup: an arc under her wings, from below her up to her wingline.
+      const u = 1 - flare;
+      const cy = p.cy + W.cupBelow * (1 - u * 0.7);
+      const half = W.span * (0.7 + 0.3 * u);
+      g.moveTo(p.cx - half, cy - W.cupDepth)
+        .quadraticCurveTo(p.cx, cy + W.cupDepth, p.cx + half, cy - W.cupDepth)
+        .stroke({ color: C.moonlight, width: 3, alpha: W.flareAlpha * flare * this.assistA });
+    }
+    // The updraft: short streaks rising under her (render time; the same for every take).
+    for (let k = 0; k < W.streaks; k++) {
+      const x = p.cx + (k - (W.streaks - 1) / 2) * (W.span / W.streaks) * 1.4;
+      const ph = (clock * W.rise + k * 37) % W.drop;
+      const y0 = p.cy + W.drop + 10 - ph;
+      const a = Math.sin((ph / W.drop) * Math.PI);
+      g.moveTo(x, y0).lineTo(x, y0 - W.streak);
+      g.stroke({ color: C.moonlight, width: 1.5, alpha: W.hold * a * this.assistA });
+    }
   }
 
   /** World point -> screen (the sky layer's logical units) at parallax `par` about the anchor. */
@@ -203,7 +298,7 @@ export class StagingView {
     return out;
   }
 
-  private drawFar(g: Graphics, clock: number, cam: CameraView): void {
+  private drawFar(g: Graphics, clock: number, cam: CameraView, sim: SimView): void {
     const S = this.stage as StageMarks;
     const v = S.vista;
     const ax = v?.x ?? cam.x;
@@ -219,6 +314,7 @@ export class StagingView {
       g.circle(m.x, m.y, S.moon.r * z * 1.35).fill({ color: C.moon, alpha: 0.06 });
       g.circle(m.x, m.y, S.moon.r * z).fill({ color: C.moon, alpha: 0.5 });
     }
+    this.drawOakFar(g, clock, cam, sim);
     // The valley's lamps: dim warm points far below that flicker, one by one.
     const L = S.lights;
     if (L) {
@@ -299,6 +395,23 @@ export class StagingView {
   private drawCirclers(g: Graphics, dt: number, clock: number, sim: SimView): void {
     const S = this.stage as StageMarks;
     const list = sim.scene.lures ?? [];
+    this.lureIds = list.map((l) => l.id);
+    // A snatch: a few wing scales falling where the moth was taken.
+    const P = STAGING.snatch;
+    for (let i = this.puffs.length - 1; i >= 0; i--) {
+      const q = this.puffs[i] as { x: number; y: number; t: number };
+      q.t += dt;
+      if (q.t >= P.secs) {
+        this.puffs.splice(i, 1);
+        continue;
+      }
+      const u = q.t / P.secs;
+      for (let k = 0; k < P.scales; k++) {
+        const sx = q.x + (k - (P.scales - 1) / 2) * 7 + Math.sin(clock * 5 + k * 2.3) * 5 * u;
+        const sy = q.y + P.fall * u * (0.6 + 0.2 * k);
+        g.circle(sx, sy, 2).fill({ color: C.wing, alpha: 0.8 * (1 - u) });
+      }
+    }
     for (const c of S.circlers ?? []) {
       const i = list.findIndex((l) => l.id === c.lure);
       const l = list[i];
@@ -312,7 +425,9 @@ export class StagingView {
         if (sc > 2.5) continue;
       }
       const f = flameAt(sim.lures, i, l, sim.frame - 2 + sim.alpha, tuning, FLAME);
-      for (let k = 0; k < c.count; k++) {
+      // (Each snatch takes the last one: the rest keep their paths.)
+      const left = Math.max(0, c.count - (this.snatched.get(c.lure) ?? 0));
+      for (let k = 0; k < left; k++) {
         const ph = hash01(c.lure, k) * Math.PI * 2;
         const w = (1.4 + 0.9 * hash01(c.lure, k + 20)) * (k % 2 === 0 ? 1 : -1);
         const r = c.r * (0.7 + 0.5 * hash01(c.lure, k + 40)) + Math.sin(clock * 2.1 + k) * 10;
@@ -414,6 +529,71 @@ export class StagingView {
   }
 
   /**
+   * The great oak as a far landmark (plan r3 item 2: no frame before minute 14 said "the tree"), in every room it
+   * stands outside of: a dark column taller than anything, its crown a dark mass with a pale ring of moonlight at
+   * the top. Projected toward where it really is (`stage.oak`, room coordinates): nearer rooms see it bigger and
+   * closer to its true place; a far one is drawn smaller and pulled in to stay inside the frame on its side.
+   * Screen space (the sky layer), behind the terrain.
+   */
+  private drawOakFar(g: Graphics, clock: number, cam: CameraView, sim: SimView): void {
+    const oak = this.stage?.oak;
+    if (!oak) return;
+    const R = sim.scene;
+    if (oak.x >= 0 && oak.x <= R.width && oak.y >= 0 && oak.top <= R.height) return; // the oak is this room
+    const T = STAGING.oakFar;
+    const z = cam.zoom;
+    const midY = (oak.y + oak.top) / 2;
+    const dist = Math.hypot(oak.x - cam.x, midY - cam.y);
+    const k = Math.min(T.maxK, Math.max(T.minK, T.near / Math.max(1, dist)));
+    // Where it sits on screen: toward it, compressed by k, kept inside the frame's edge.
+    const halfW = cam.w / 2 - T.margin;
+    let sx = (oak.x - cam.x) * k * z;
+    if (Math.abs(sx) > halfW) sx = Math.sign(sx) * halfW;
+    let footY = 540 + (oak.y - cam.y) * k * z;
+    let topY = 540 + (oak.top - cam.y) * k * z;
+    // Its crown kept in the sky part of the frame (a room far under it would sink the ring below the floor; one
+    // far over it would lift it off the top): the whole tree slides, its height kept.
+    const lo = 540 - cam.h / 2 + T.marginY;
+    const hi = 540 - cam.h * T.skyK;
+    const shift = topY < lo ? lo - topY : topY > hi ? hi - topY : 0;
+    topY += shift;
+    footY += shift;
+    const x = 960 + sx;
+    const w = (oak.w ?? 384) * k * z * T.widen;
+    const h = footY - topY;
+    if (h < 4) return;
+    const a = T.alpha;
+    // The trunk, flaring at its foot.
+    g.poly([
+      x - w * 0.5,
+      topY + h * 0.15,
+      x + w * 0.5,
+      topY + h * 0.15,
+      x + w * 0.9,
+      footY,
+      x - w * 0.9,
+      footY,
+    ]).fill({
+      color: T.color,
+      alpha: a,
+    });
+    // The crown: a dark mass over the top.
+    for (let i = 0; i < 5; i++) {
+      const ox = (i - 2) * w * 0.9;
+      const oy = topY + h * 0.12 + Math.abs(i - 2) * h * 0.03;
+      g.ellipse(x + ox, oy, w * 1.4, h * 0.11).fill({ color: T.color, alpha: a });
+    }
+    // Its ring of moonlight at the top: the way out.
+    const pulse = 0.85 + 0.15 * Math.sin(clock * 0.8);
+    g.ellipse(x, topY + h * 0.02, w * 0.7, Math.max(2, h * 0.025)).stroke({
+      color: T.ring,
+      width: Math.max(1.5, 12 * k * z),
+      alpha: T.ringAlpha * pulse,
+    });
+    g.rect(x - w * 0.18, topY + h * 0.02, w * 0.36, h * 0.6).fill({ color: T.ring, alpha: 0.05 * pulse });
+  }
+
+  /**
    * The straggler that leads: it keeps `ahead` px along the path ahead of where she is (her nearest point on
    * it), waits there wheeling, and goes on through the end once she nears it.
    */
@@ -499,15 +679,19 @@ export class StagingView {
    * The crown cloud (the director's finale): every moth she freed, waiting at the crown as a breathing swarm
    * of specks (and a few wings), its size her count; on its flag it lifts off toward the valley.
    */
-  private drawCloud(g: Graphics, dt: number, clock: number, sim: SimView): void {
+  private drawCloud(g: Graphics, dt: number, clock: number, sim: SimView, zoom = 1): void {
     const C = this.stage?.cloud;
     if (!C) return;
     if (this.cloudT < 0 && sim.save.flags.includes(C.flag)) return; // it went on an earlier visit
     if (this.cloudT >= 0) this.cloudT += dt;
     const T = STAGING.cloud;
     const t = this.cloudT;
-    if (t > T.lift + T.stagger + 1) return;
+    // The lift lasts the cloud's `secs` (default 9: plan r3 item 7), the starts spread over its first part.
+    const lift = Math.max(2, (C.secs ?? 9) - T.stagger - 0.5);
+    if (t > lift + T.stagger + 1) return;
     const n = Math.min(T.max, sim.save.moths);
+    // Drawn bigger as the view widens (the finale holds a wide frame: specks a pixel across would vanish).
+    const k = Math.min(T.grow, Math.max(1, 1 / Math.max(0.05, zoom)));
     for (let i = 0; i < n; i++) {
       const a = hash01('cloud', i) * Math.PI * 2;
       const rr = Math.sqrt(hash01('cloud', i + 500)) * C.r;
@@ -518,14 +702,17 @@ export class StagingView {
       let alpha = 0.75;
       if (t >= 0) {
         // Off toward the valley: each a little after the last, along a rising curve, thinning into the dark.
-        const u = Math.min(1, Math.max(0, (t - hash01('cloud', i + 77) * T.stagger) / T.lift));
+        const u = Math.min(1, Math.max(0, (t - hash01('cloud', i + 77) * T.stagger) / lift));
         const e = u * u * (3 - 2 * u);
         x = hx + (C.to[0] - C.x) * e;
         y = hy + (C.to[1] - C.y) * e - Math.sin(Math.PI * u) * T.arc;
         alpha *= 1 - u * u;
       }
-      if (i % 9 === 0) moth(g, x, y, Math.sin(clock * 24 + i), alpha, GB.moth);
-      else g.rect(x - 1.5, y - 1, 3, 2).fill({ color: GB.moth, alpha: alpha * 0.8 });
+      if (i % 9 === 0) {
+        g.setTransform(k, 0, 0, k, x * (1 - k), y * (1 - k));
+        moth(g, x, y, Math.sin(clock * 24 + i), alpha, GB.moth);
+        g.setTransform(1, 0, 0, 1, 0, 0);
+      } else g.rect(x - 1.5 * k, y - k, 3 * k, 2 * k).fill({ color: GB.moth, alpha: alpha * 0.8 });
     }
   }
 
@@ -565,6 +752,38 @@ export class StagingView {
   }
 
   /** A dead moth on its back on the ground: grey, still, wings flat. */
+  /** The wing carpet (`stage.carpet`): pale chevrons strewn on the floor, denser in the middle, all still. */
+  private drawCarpet(g: Graphics): void {
+    const c = this.stage?.carpet;
+    if (!c) return;
+    const W = STAGING.carpet;
+    const span = Math.max(1, c.x1 - c.x0);
+    const n = c.count ?? Math.round(span / W.every);
+    for (let i = 0; i < n; i++) {
+      // Hashed, not random: the same carpet every frame and every screenshot.
+      const h1 = fract(Math.sin(i * 12.9898 + c.x0 * 0.013) * 43758.5453);
+      const h2 = fract(Math.sin(i * 78.233 + c.y * 0.007) * 24634.6345);
+      const h3 = fract(Math.sin(i * 37.719) * 12345.678);
+      // Bunched toward the middle (two draws averaged), a few lying on top of the others.
+      const u = (h1 + h2) / 2;
+      const x = c.x0 + u * span;
+      const y = c.y - 2 - h3 * W.pile * (1 - Math.abs(u - 0.5) * 2);
+      const len = W.len * (0.7 + 0.5 * h2);
+      const ang = (h3 - 0.5) * 0.9 + (h1 < 0.5 ? 0 : Math.PI);
+      const ca = Math.cos(ang);
+      const sa = Math.sin(ang);
+      // One wing: a long narrow chevron, a vein down it.
+      const pt = (a: number, b: number): [number, number] => [x + ca * a - sa * b, y + sa * a + ca * b];
+      const [ax, ay] = pt(0, 0);
+      const [bx, by] = pt(len * 0.55, -len * 0.22);
+      const [tx, ty] = pt(len, -len * 0.05);
+      const [dx, dy] = pt(len * 0.5, len * 0.12);
+      g.moveTo(ax, ay).lineTo(bx, by).lineTo(tx, ty).lineTo(dx, dy).closePath();
+      g.fill({ color: h2 < 0.3 ? C.wing : C.dead, alpha: W.alpha * (0.6 + 0.4 * h1) });
+      g.moveTo(ax, ay).lineTo(tx, ty).stroke({ color: 0x3e4350, width: 1, alpha: 0.5 });
+    }
+  }
+
   private deadMoth(g: Graphics, x0: number, y: number, facing: number): void {
     // Drawn about its feet point at 1.3x (it has to read at play zoom, on a grey floor).
     const k = 1.3;
@@ -584,4 +803,9 @@ export class StagingView {
       .stroke({ color: C.dead, width: 1.5, alpha: 0.9 });
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
+}
+
+/** The fractional part (hashing). */
+function fract(v: number): number {
+  return v - Math.floor(v);
 }

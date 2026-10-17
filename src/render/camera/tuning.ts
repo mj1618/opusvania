@@ -159,8 +159,9 @@ export const cameraTuning = {
     dipIn: 0.3,
     dipRise: 0.1,
     dipHold: 0.3,
-    dip: 0.8,
-    dipCut: 1,
+    /** (r3 item 9: lighter, so a re-form is a dimmed glide, never a cut to black.) */
+    dip: 0.45,
+    dipCut: 0.6,
     restartDip: 0.9,
     restartSec: 0.5,
   },
@@ -179,7 +180,8 @@ export const cameraTuning = {
     exitEarly: 0.12,
     exitLift: 0.9,
     enterLift: 0.3,
-    catchDepth: 0.85,
+    /** 0: a catch or a hazard return no longer dips the world (plan r3, item 9: black cuts); she fades instead. */
+    catchDepth: 0,
     catchLift: 0.35,
   },
 };

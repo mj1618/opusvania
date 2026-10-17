@@ -1,7 +1,8 @@
 /**
  * What never moves in a greybox room, drawn once: the world grid, solids (flat fill, a bright
  * walkable top, darker faces where a wall takes no kick), one-ways as lines, hazards red, catch
- * zones, exits, rest points, the spawn; and the labels (marker ids and the room's notes).
+ * zones, rest points, the spawn; and the labels (marker ids, the room's notes, and the designer's marks: catch
+ * zones and exits).
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Room } from '../../scene/room';
@@ -52,14 +53,6 @@ export function buildStatic(room: Room): Graphics {
     for (let x = o.x + 8; x < o.x + o.w - 4; x += 24) g.rect(x, o.y + 4, 2, 8);
   }
   g.fill({ color: GB.oneWay });
-  // Exits: a green bar along the open span of the edge, and a chevron pointing out.
-  for (const e of room.exits ?? []) {
-    const ns = e.edge === 'n' || e.edge === 's';
-    const at = e.at ?? (e.edge === 's' ? room.height : e.edge === 'e' ? room.width : 0);
-    if (ns) g.rect(e.from, at - 3, e.to - e.from, 6);
-    else g.rect(at - 3, e.from, 6, e.to - e.from);
-  }
-  g.fill({ color: GB.exit, alpha: 0.9 });
   // Rest points (lanterns, wayside lamps): a cyan pillar on the ground; the heart a violet box.
   for (const l of [...(room.lanterns ?? []), ...(room.lamps ?? [])]) {
     g.rect(l.x - 14, l.y - 96, 28, 96).stroke({ color: GB.rest, width: 3, alpha: 0.9 });
@@ -86,6 +79,15 @@ export function buildLabels(room: Room): Container {
     dashRect(cz, z.x, z.y, z.w, z.h, 18, 12);
     cz.stroke({ color: GB.catchZone, width: 2, alpha: 0.45 });
   }
+  // Exits: a green bar along the open span of the edge (a designer's mark: with the labels only, plan r3 item 2:
+  // the trunk's top exit read as a green line in play).
+  for (const e of room.exits ?? []) {
+    const ns = e.edge === 'n' || e.edge === 's';
+    const at = e.at ?? (e.edge === 's' ? room.height : e.edge === 'e' ? room.width : 0);
+    if (ns) cz.rect(e.from, at - 3, e.to - e.from, 6);
+    else cz.rect(at - 3, e.from, 6, e.to - e.from);
+  }
+  cz.fill({ color: GB.exit, alpha: 0.9 });
   c.addChild(cz);
   // Under the core (her orbit circles over it): id, kind and which way it swirls.
   for (const l of room.lures ?? [])

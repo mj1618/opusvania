@@ -43,6 +43,11 @@ side (hurt hitstop 8 / last light 14, kill bonus +3, `slashTerrain`, the lure th
 
 ## Creatures, motes and the snuff: greybox only (memory/greybox.md)
 
+## Catches and thorn returns: no black (plan r3 item 9, 2026-10-18)
+`room.catchDepth` is 0 and a `fallReturn` glides the view with no dip (`ReformShot.reform(..., dark=false)`). She
+fades instead (`CharacterSkin.fade`, character/index.ts): out over the sim's hold (`fallCatch.frames` /
+`thornHit.frames`, at most 0.18 s), in over `fallReturn.fadeIn`. A real death's reform keeps its (lighter) dip.
+
 ## Gotchas
 - Pixi v8 `Graphics.poly(points)` keeps the array (`new Polygon(flat)` does not copy): a scratch array reused for
   two polys redraws both as the last. creatures.ts `Xf.map` returns a new array every call for this reason.
