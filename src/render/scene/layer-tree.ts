@@ -35,6 +35,10 @@ export const LAYERS = [
   { name: 'far1', parallax: 0.25, screen: false },
   { name: 'far2', parallax: 0.42, screen: false },
   { name: 'mid', parallax: 0.68, screen: false },
+  // The moth swarm (src/render/swarm): far specks (hazed, slow; drawn over mid so the trunks never hide
+  // the river), mid moths, and below a few blurred near ones in front of her.
+  { name: 'swarmFar', parallax: 0.4, screen: false },
+  { name: 'swarmMid', parallax: 0.75, screen: false },
   // Light shafts that pass behind the terrain and the character (owned by layers/air.ts).
   { name: 'airBack', parallax: 1, screen: false },
   // Warm light that passes behind the terrain: the heart waking, the ending (src/render/goal).
@@ -53,6 +57,7 @@ export const LAYERS = [
   { name: 'playfieldFront', parallax: 1, screen: false },
   // Enemies' lower legs, dust and debris: in front of the grass fringe, so the scuttling feet read.
   { name: 'enemiesFront', parallax: 1, screen: false },
+  { name: 'swarmNear', parallax: 1.2, screen: false },
   { name: 'foreground', parallax: 1.35, screen: false },
   { name: 'air', parallax: 1, screen: false },
 ] as const;

@@ -38,6 +38,7 @@ import { PickupRenderer } from './pickups/index';
 import { PostStage } from './post/index';
 import { SceneRenderer } from './scene/index';
 import { setRoomLook } from './scene/lib/room-look';
+import { SwarmRenderer } from './swarm/index';
 
 /**
  * Debug camera override (`__game.cam`). Every field is optional: a missing x / y follows the game
@@ -67,6 +68,8 @@ export class RenderStage {
   readonly goal: GoalRenderer;
   /** Giving, drawn: the glint she gives in flight, it being received, a calmed creature's warmth (memory/giving-render.md). */
   readonly giving: GivingRenderer;
+  /** The moth swarm leaving without her (memory/swarm.md). */
+  readonly swarm: SwarmRenderer;
   readonly hud: Hud;
   readonly post: PostStage;
   readonly overlay: HitboxOverlay;
@@ -120,6 +123,7 @@ export class RenderStage {
       front: L.pickups,
     });
     this.giving = new GivingRenderer(this.ctx, L.pickups, L.get('goal'), this.goal);
+    this.swarm = new SwarmRenderer(this.ctx, L);
     this.post = new PostStage(this.ctx, this.scene.layers.root);
     this.hud = new Hud();
     this.overlay = new HitboxOverlay(scene);
@@ -235,6 +239,7 @@ export class RenderStage {
     this.pickups.update(dt, this.clock, view, sim);
     this.goal.update(dt, this.clock, view, sim);
     this.giving.update(dt, this.clock, view, sim);
+    this.swarm.update(dt, this.clock, view, sim);
     this.post.update(dt, this.clock, view);
     this.hud.update(dt, this.clock, sim, vs);
     this.overlay.draw(view, player);
