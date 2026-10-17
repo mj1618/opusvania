@@ -10,7 +10,8 @@ say what each tests). Tests: `tests/unit/creatures.test.ts`.
   grove says `wallet`; a scene built in code without the field is `wallet` (all the old tests). A spawn may override
   (`senses: 'wallet' | 'lamp' | 'always'`): lab-world-c's `c-burr` is `wallet` (world.test fades her on it).
 - `EnemyState.sense` 0 wallet / 1 lamp / 2 always. The old burrback and the weaver default to `always`.
-- **Test-grove only now** (still built, still tested, inert in lamp rooms): the wallet `seen` levels (seen.ts), the
+- **Test-grove only now** (still built, still tested, inert in lamp rooms; since 2026-10-18 `updateOffer` /
+  `markOfferTarget` do not run at all when `scene.senses` is lamp: the O key made `offerMiss` events in R4): the wallet `seen` levels (seen.ts), the
   offer / gifts (giving.ts: no glints in lamp rooms, so nothing to give), lantern / lamp sanctuary and calm (goal.ts,
   sanctuary.ts), glint spill on a kill. Drop them when the grove goes.
 

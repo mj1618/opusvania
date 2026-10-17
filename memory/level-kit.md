@@ -12,7 +12,7 @@ sim doesn't have yet"). Sim: `src/sim/kit.ts` (+ `kit-data.ts` types, `kit-event
 |---|---|---|
 | `thorns` | `[{id, x, y, w, h}]` | hazard rect, not a solid (sit it on / against a solid) |
 | `seedCases` | `[{id, x, y}]` centre | static pogo target, box `kit.seedCase.size` 56 square, never breaks, never blocks |
-| `bark` | `[{id, x, y, w, h, floor?, hp?, kick?}]` | rotten bark: a solid until `hp` (default 3) cuts; `floor: true` = a floor panel (down cuts only) |
+| `bark` | `[{id, x, y, w, h, floor?, hp?, kick?}]` | rotten bark: a solid until `hp` (default 3) cuts; `floor: true` = a floor panel (down cuts only; **on the ground ↓ + attack is a down-cut when the down area reaches a standing floor panel** (on it or her side within ~30 px of it: `floorBarkAt`), else the forward cut as before: average first-timer r3 spent 150 tries at R4's panel, reachable only by a down-cut from the air within ~80 px; every cut a `barkHit` with `hpLeft`, then `barkBreak`. Landing hard on it does nothing yet) |
 | `gates` | `[{id, x, y, w, h, flag, kick?}]` | a solid while `save.flags` lacks `flag` (the silk curtain) |
 | `triggers` | `[{id, x, y, w, h, sets, hold?}]` | her box centre inside sets the flag `sets`, once; **`hold`** (frames, <= `kit.storyHoldMax` 180: journey.md's 3 s) makes it a held story beat: from the next step no input for `hold` frames, untouchable, `storyHold {id, frames}` / `storyHoldEnd {id}`, a button still held at the end is not a press (feel review round 2, problem 8: for the staging's vista and glimpse) |
 | `lures[].swing` | `{length, reach?, period?, phase?}` | the lure hangs `length` under a pivot over its `x, y` (the bottom of the arc), swings `reach` px each side, one swing there and back per `period` frames |

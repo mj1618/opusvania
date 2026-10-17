@@ -373,7 +373,8 @@ export function step(
   if (state.player.lure >= 0) state.player.lureArc = lureArc(state, S, t, P, live);
   else if (state.player.lureArc.length > 0) state.player.lureArc = [];
   // Her offer (memory/giving.md): a glint given this step, one arriving.
-  updateOffer(state, S, t, held ? 0 : live, held, events);
+  // (Giving is the test grove's: in lamp rooms there is no offer, no wallet to give from; the key does nothing.)
+  if (S.senses !== 'lamp') updateOffer(state, S, t, held ? 0 : live, held, events);
   // The level kit (memory/level-kit.md): triggers set flags, gates open, thorns hurt and send her back.
   updateKit(
     state,
@@ -481,7 +482,8 @@ export function step(
   updateDrops(state, t.pickups, events);
   updateGoal(state, S, t, live, events, first);
   markSeen(state, t);
-  markOfferTarget(state, S, t, goalHolds(state.goal, t.goal));
+  if (S.senses !== 'lamp') markOfferTarget(state, S, t, goalHolds(state.goal, t.goal));
+  else if (state.player.offerTarget) state.player.offerTarget = null;
   updateSeen(state, scene, t);
   // Presses are edges of the real input (the hatching counts them while `live` is 0).
   state.prevInput = shut ? input : live;

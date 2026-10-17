@@ -156,6 +156,20 @@ const RES: KitHit = { hits: 0, bounce: false, clang: false, stop: 0 };
  * Slash number `seq` (hit area `box`) against the kit. Pushes `slashHit` (target `thorns` / `seedCase` /
  * `bark`) and `barkHit` / `barkBreak` / `kitClang`; a bark panel that breaks goes into the save at once.
  */
+/**
+ * A standing bark floor panel the down-cut area `box` reaches (a floor she stands on or beside). On the
+ * ground ↓ + attack is a down-cut at such a panel (average first-timer r3: 150 tries at R4's bark floor,
+ * because on the ground ↓ + attack was a forward cut and only a down-cut from the air reached it).
+ */
+export function floorBarkAt(state: GameState, scene: Scene, box: Box): boolean {
+  const bark = scene.bark ?? [];
+  for (let i = 0; i < bark.length; i++) {
+    const b = bark[i];
+    if (b?.floor && (state.kit.bark[i] ?? 0) > 0 && overlaps(box, b.x, b.y, b.w, b.h)) return true;
+  }
+  return false;
+}
+
 export function slashKit(
   state: GameState,
   scene: Scene,

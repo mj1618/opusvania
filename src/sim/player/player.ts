@@ -2,7 +2,7 @@ import { homeClear, slashBlocks, slashEnemies, slashKills } from '../enemies';
 import type { GlideEndReason, HurtSource, JumpKind, SimEvent, SlashDir, SlashEndReason } from '../events';
 import { beatGrab, freeGrab, tickGrab } from '../grab';
 import { ActionBit, axisX, type InputFrame } from '../input';
-import { slashKit, thornAt } from '../kit';
+import { floorBarkAt, slashKit, thornAt } from '../kit';
 import {
   beatLure,
   catchPlayer,
@@ -375,8 +375,12 @@ function updateSlash(c: Ctx): void {
   // Pressed together with a dash that is about to start: the dash goes first, the slash after it.
   if (p.dashBuf > 0 && p.mode === 'normal' && canDash(c)) return;
   endSlash(c, 'chain');
-  // Up wins; Down only in the air (on the ground it is a forward slash, as in Hollow Knight).
-  const dir: SlashDir = c.held(ActionBit.up) ? 'up' : c.held(ActionBit.down) && !p.grounded ? 'down' : 'fwd';
+  // Up wins; Down only in the air (on the ground it is a forward slash, as in Hollow Knight), except over a
+  // bark floor panel: standing on or beside one, ↓ + attack cuts the floor (src/sim/kit.ts `floorBarkAt`).
+  const down =
+    c.held(ActionBit.down) &&
+    (!p.grounded || floorBarkAt(c.state, c.scene, slashBox(p, 'down', p.facing, P.tuning, 1)));
+  const dir: SlashDir = c.held(ActionBit.up) ? 'up' : down ? 'down' : 'fwd';
   // A direction pressed with the slash counts at once; on a wall she already faces away from it.
   const turn = p.mode === 'normal' && p.forceTimer === 0 && c.inX !== 0;
   let step = 1;
