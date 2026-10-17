@@ -268,6 +268,32 @@ export interface GameDebugApi {
       vx: number;
       vy: number;
       target: { x: number; y: number };
+      /** Lamp rules (memory/creatures.md): how it notices her, the lure it guards, gave up when that went out. */
+      sense: 'wallet' | 'lamp' | 'always';
+      guards: string | null;
+      dispersed: boolean;
+      /** Old burrback: its shell open after a wall stun; braces made this exchange (the first is the feint). */
+      stunned: boolean;
+      feints: number;
+    }>;
+  };
+  /**
+   * The lamp-rule creatures (memory/creatures.md): `lit` = how lit she is (0 dark .. 1 at a flame:
+   * what a lamp room's sight hunters see her by), `grab` = what holds her (a web; `beats` of `of`),
+   * `webs` = each web's strands (`intact`, `cut`, `fell`), slack once its lamp is out, and its last touch.
+   */
+  creatures(): {
+    lit: number;
+    grab: { id: string; x: number; y: number; beats: number; of: number; frames: number } | null;
+    grace: number;
+    webs: Array<{
+      id: string;
+      strands: number;
+      intact: number;
+      cut: number;
+      fell: number;
+      slack: boolean;
+      touch: { x: number; y: number; strand: number } | null;
     }>;
   };
   /**
@@ -822,7 +848,43 @@ export function installDebugApi(deps: {
           vx: e.vx,
           vy: e.vy,
           target: { x: e.targetX, y: e.targetY },
+          sense: e.sense === 1 ? 'lamp' : e.sense === 2 ? 'always' : 'wallet',
+          guards: homes[i]?.guards ?? null,
+          dispersed: e.dispersed,
+          stunned: e.stunned,
+          feints: e.feints,
         })),
+      };
+    },
+    creatures() {
+      const st = game.state;
+      const p = st.player;
+      const holder = p.grab >= 0 ? st.enemies[p.grab] : undefined;
+      const count = (e: { cut: string }, c: string) => e.cut.split('').filter((x) => x === c).length;
+      return {
+        lit: p.lit,
+        grab: holder
+          ? {
+              id: holder.id,
+              x: p.grabX,
+              y: p.grabY,
+              beats: p.lureBeats,
+              of: game.tuning.grab.beats,
+              frames: p.lureFrames,
+            }
+          : null,
+        grace: p.grabGrace,
+        webs: st.enemies
+          .filter((e) => e.kind === 'web')
+          .map((e) => ({
+            id: e.id,
+            strands: e.cut.length,
+            intact: count(e, '0'),
+            cut: count(e, '1'),
+            fell: count(e, '2'),
+            slack: e.dispersed,
+            touch: e.seg >= 0 ? { x: e.targetX, y: e.targetY, strand: e.seg } : null,
+          })),
       };
     },
     giving(wallet) {

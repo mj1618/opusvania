@@ -320,6 +320,8 @@ class Planner implements Persona {
       for (const [id, l] of this.lightsSeen)
         if (Math.abs(l.x - o.feetX) < 64 && Math.abs(l.y - o.feetY) < 96) this.lightsVisited.add(id);
     }
+    // A lure hangs in the air (no standing at it): once it is out, it is done with.
+    for (const l of o.lights) if (l.kind === 'lures' && l.out) this.lightsVisited.add(l.id);
     const seenNow = new Set(o.pickups.map((q) => q.id));
     for (const q of o.pickups) this.pickupsSeen.set(q.id, { x: q.x, y: q.y });
     // A pickup it saw that is in view and not there any more was taken.
@@ -361,6 +363,9 @@ class Planner implements Persona {
     const cy = p.y + p.h / 2;
     const e = o.enemies.find((q) => Math.abs(q.x - o.feetX) < 150 && Math.abs(q.y - o.feetY) < 140);
     if (e) return (Math.sign(e.x - o.feetX) || p.facing) === p.facing ? A : 0;
+    // Silk just ahead of her (memory/creatures.md): cut it before walking into it.
+    const fx = o.feetX + p.facing * 70;
+    if (o.strands.some((q) => crosses(q, fx - 55, cy - 50, fx + 55, cy + 40))) return A;
     const l = o.lights.find(
       (q) => q.kind === 'lures' && !q.out && Math.abs(q.x - o.feetX) < 110 && Math.abs(q.y - cy) < 130,
     );
@@ -395,7 +400,12 @@ class Planner implements Persona {
     cands.sort((a, b) => score(a) - score(b));
     const next = cands[0] ?? null;
     if (next && next.key !== t?.key) {
-      this.itinerary.push({ f, why: next.why, x: Math.round(next.x), y: Math.round(next.y) });
+      this.itinerary.push({
+        f,
+        why: next.why,
+        x: Math.round(next.x),
+        y: Math.round(next.y),
+      });
       this.target = next;
       this.targetSince = f;
       this.route = null;
@@ -725,4 +735,20 @@ export function same(a: Surface | null | undefined, b: Surface | null | undefine
 
 function standUnder(mind: Mind, x: number, y: number): (s: Surface) => boolean {
   return (q) => same(mind.standFor(x, y), q);
+}
+
+/** Does strand `q` pass through the box? (Sampled: a dozen points along it are plenty for a bot's eye.) */
+function crosses(
+  q: [number, number, number, number],
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): boolean {
+  for (let k = 0; k <= 12; k++) {
+    const x = q[0] + ((q[2] - q[0]) * k) / 12;
+    const y = q[1] + ((q[3] - q[1]) * k) / 12;
+    if (x >= x0 && x <= x1 && y >= y0 && y <= y1) return true;
+  }
+  return false;
 }

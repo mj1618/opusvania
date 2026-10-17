@@ -68,6 +68,15 @@ export interface RunTrace {
   catches: Array<Where & { id: string }>;
   hurts: Array<Where & { kind: string; id: string; hp: number }>;
   hitsByCreature: Record<string, number>;
+  /**
+   * Encounters (memory/creatures.md): per creature, from the first thing it did about her (noticed,
+   * braced, told, grabbed) to the last; hits it gave; how it ended (killed, dispersed by a snuff, or
+   * passed: she moved on with it alive).
+   */
+  encounters: Record<
+    string,
+    { kind: string; room: string; first: number; last: number; hits: number; grabs: number; outcome: string }
+  >;
   kills: Array<Where & { id: string }>;
   lost: LostStretch[];
   lostFrames: number;
@@ -150,6 +159,7 @@ export class Recorder {
       catches: [],
       hurts: [],
       hitsByCreature: {},
+      encounters: {},
       kills: [],
       lost: [],
       lostFrames: 0,
@@ -313,11 +323,45 @@ export class Recorder {
     return this.frame - this.lastProgress;
   }
 
+  /** A creature did something about her (`id`): its encounter starts or goes on. */
+  private encounter(id: string, kind: string, f: number, room: string, outcome?: string): void {
+    const t = this.t;
+    const key = `${room}:${id}`;
+    let en = t.encounters[key];
+    if (!en) {
+      en = { kind, room, first: f, last: f, hits: 0, grabs: 0, outcome: 'passed' };
+      t.encounters[key] = en;
+    }
+    en.last = f;
+    if (outcome) en.outcome = outcome;
+  }
+
   private event(e: SimEvent, f: number, room: string, state: GameState): void {
     const t = this.t;
     t.events[e.type] = (t.events[e.type] ?? 0) + 1;
     const ex = (e as { x?: number }).x ?? 0;
     const ey = (e as { y?: number }).y ?? 0;
+    // Creature events (enemy*, grab, webTouch) carry its id and kind: the encounter's clock.
+    const cid = (e as { id?: string }).id;
+    const ckind = (e as { kind?: string }).kind;
+    if (
+      cid &&
+      ckind &&
+      (e.type.startsWith('enemy') || e.type === 'grab') &&
+      e.type !== 'enemyReset' &&
+      !(e.type === 'enemyTurn' && (e as { cause?: string }).cause !== 'hit')
+    ) {
+      const key = `${room}:${cid}`;
+      if (e.type === 'enemyDie') this.encounter(cid, ckind, f, room, 'killed');
+      else if (e.type === 'enemyDisperse') {
+        if (t.encounters[key]) this.encounter(cid, ckind, f, room, 'dispersed');
+      } else this.encounter(cid, ckind, f, room);
+      if (e.type === 'grab') (t.encounters[key] as { grabs: number }).grabs++;
+    }
+    if (e.type === 'hurt' && e.source) {
+      this.encounter(e.source.id, e.source.kind, f, room);
+      (t.encounters[`${room}:${e.source.id}`] as { hits: number }).hits++;
+    }
     switch (e.type) {
       case 'hatch':
         t.hatchFrame = f;

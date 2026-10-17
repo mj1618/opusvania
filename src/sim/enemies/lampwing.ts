@@ -22,12 +22,23 @@
 import { roundHalfAway, solidAt } from '../physics/aabb';
 import { nearLitLantern } from '../sanctuary';
 import type { Scene, SolidRect } from '../scene';
-import { seenNow, seenScale } from '../seen';
+import { seenScale } from '../seen';
 import type { EnemyState, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
 import { frames, type KindRules, mix, type StepInfo, segmentBlocked, setMode } from './common';
+import { SENSE_WALLET, seenBy } from './senses';
 
 type L = Tuning['lampwing'];
+
+/** The numbers of this flyer: the lampwing's, or the hawker's (a variant row, tuning.ts). */
+function rowOf(t: Tuning, e: EnemyState): L {
+  return e.kind === 'hawker' ? t.hawker : t.lampwing;
+}
+
+/** The flyers on this rig (they keep apart from each other). */
+function flyer(e: EnemyState | undefined): e is EnemyState {
+  return e?.kind === 'lampwing' || e?.kind === 'hawker';
+}
 
 /** Why a pursuit ended. */
 export type GiveUpCause = 'far' | 'lost' | 'tired' | 'dark' | 'touch' | 'calm' | 'gift';
@@ -195,14 +206,14 @@ function pickWander(e: EnemyState, scene: Scene, t: L): void {
 }
 
 function giveUp(e: EnemyState, info: StepInfo, cause: GiveUpCause): void {
-  const n = frames(info.t.lampwing.restFrames, 1);
+  const n = frames(rowOf(info.t, e).restFrames, 1);
   setMode(e, 'rest', n);
   e.chase = 0;
   e.lost = 0;
   e.dives = 0;
   // She went beyond its reach: for a while it tells only at one well inside it (not at every jump
   // at the edge of it).
-  if (cause === 'far') e.noticeCd = frames(info.t.lampwing.retellFrames);
+  if (cause === 'far') e.noticeCd = frames(rowOf(info.t, e).retellFrames);
   info.events.push({
     type: 'enemyGiveUp',
     id: e.id,
@@ -266,7 +277,7 @@ function detour(e: EnemyState, scene: Scene, t: L): void {
 
 /** The tell is over: it commits to a dive at where she is now (led, if she glides). */
 function startDive(e: EnemyState, info: StepInfo): void {
-  const t = info.t.lampwing;
+  const t = rowOf(info.t, e);
   const p = info.state.player;
   const cx = e.x + e.w / 2;
   const cy = e.y + e.h / 2;
@@ -339,7 +350,7 @@ function arc(e: EnemyState, k: number, bend: number): void {
 
 /** The dive is over (or something stopped it): it hangs where it is, open. */
 function stall(e: EnemyState, info: StepInfo, cause: 'done' | 'wall'): void {
-  const n = frames(info.t.lampwing.stallFrames, 1);
+  const n = frames(rowOf(info.t, e).stallFrames, 1);
   setMode(e, 'stall', n);
   e.vx = 0;
   e.vy = 0;
@@ -359,7 +370,7 @@ function stall(e: EnemyState, info: StepInfo, cause: 'done' | 'wall'): void {
 
 /** Up to a perch above her, on the side it is on, to tell again. */
 function climb(e: EnemyState, info: StepInfo): void {
-  const t = info.t.lampwing;
+  const t = rowOf(info.t, e);
   const p = info.state.player;
   const px = p.x + p.w / 2;
   const py = p.y + p.h / 2;
@@ -384,7 +395,7 @@ function climb(e: EnemyState, info: StepInfo): void {
 /** It has noticed her (or is ready to go again): the tell. */
 function tell(e: EnemyState, info: StepInfo): void {
   const p = info.state.player;
-  const n = frames(info.t.lampwing.curiousFrames, 1);
+  const n = frames(rowOf(info.t, e).curiousFrames, 1);
   setMode(e, 'curious', n);
   e.targetX = p.x + p.w / 2;
   e.targetY = p.y + p.h / 2;
@@ -416,7 +427,7 @@ export const lampwing: KindRules = {
     e.x = Math.round(spawn.x - e.w / 2);
     e.y = Math.round(spawn.y - e.h / 2);
     e.mode = 'hover';
-    e.radius = Math.max(0, spawn.radius ?? t.lampwing.radius);
+    e.radius = Math.max(0, spawn.radius ?? rowOf(t, e).radius);
     e.sight = Math.max(0, spawn.sight ?? 0);
     e.side = e.facing;
     e.targetX = e.x + e.w / 2;
@@ -426,7 +437,7 @@ export const lampwing: KindRules = {
   },
 
   /** Its territory plus its sight: on re-forming she is outside what it can notice from anywhere it hovers. */
-  homeClear: (e, t) => e.radius + Math.max(t.lampwing.noticePx, e.sight),
+  homeClear: (e, t) => e.radius + Math.max(rowOf(t, e).noticePx, e.sight),
 
   /** Lampwings keep a little apart: a soft push between any two closer than `sepPx`. */
   prepare(info) {
@@ -434,7 +445,7 @@ export const lampwing: KindRules = {
     const t = info.t.lampwing;
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
-      if (e?.kind === 'lampwing') {
+      if (flyer(e)) {
         e.pushX = 0;
         e.pushY = 0;
       }
@@ -442,10 +453,10 @@ export const lampwing: KindRules = {
     if (t.sepPx <= 0) return;
     for (let i = 0; i < list.length; i++) {
       const a = list[i];
-      if (a?.kind !== 'lampwing' || a.mode === 'dead') continue;
+      if (!flyer(a) || a.mode === 'dead') continue;
       for (let j = i + 1; j < list.length; j++) {
         const b = list[j];
-        if (b?.kind !== 'lampwing' || b.mode === 'dead') continue;
+        if (!flyer(b) || b.mode === 'dead') continue;
         const dx = b.x + b.w / 2 - (a.x + a.w / 2);
         const dy = b.y + b.h / 2 - (a.y + a.h / 2);
         const d2 = dx * dx + dy * dy;
@@ -469,12 +480,12 @@ export const lampwing: KindRules = {
    */
   harmless(e, info) {
     const G = info.t.goal;
-    if (e.mode === 'curious' && e.modeFrames <= info.t.lampwing.noticeSafeFrames) return true;
+    if (e.mode === 'curious' && e.modeFrames <= rowOf(info.t, e).noticeSafeFrames) return true;
     // Stalled at the bottom of its dive it is open; and for a beat as it lifts away. Having given up
     // (it hangs, then flies home) it is no danger either: its dive is its attack, and a body left
     // hanging in the middle of a fight after it has hit her must not hit her again.
     if (e.mode === 'stall' || e.mode === 'rest' || e.mode === 'return') return true;
-    if (e.mode === 'pursue' && e.modeFrames <= info.t.lampwing.climbSafeFrames) return true;
+    if (e.mode === 'pursue' && e.modeFrames <= rowOf(info.t, e).climbSafeFrames) return true;
     return nearLitLantern(info.state, info.scene, G, e.x + e.w / 2, e.y + e.h / 2);
   },
 
@@ -490,6 +501,16 @@ export const lampwing: KindRules = {
     return 0;
   },
 
+  /** Its lamp went out: it leaves the room (gone at once if the lamp was already out when she came in). */
+  disperse(e, info, quiet) {
+    setMode(e, 'leave', frames(rowOf(info.t, e).leaveFrames, 1));
+    e.chase = 0;
+    e.dives = 0;
+    e.roosting = false;
+    if (quiet) e.gone = true;
+    return 'leave';
+  },
+
   /** One that has noticed her gives up (`calm`): it rests, flies home and notices nothing on the way. */
   calm(e, info) {
     if (e.mode === 'curious' || e.mode === 'pursue' || e.mode === 'dive' || e.mode === 'stall')
@@ -498,7 +519,7 @@ export const lampwing: KindRules = {
 
   update(e, _index, info) {
     const { scene, state } = info;
-    const t = info.t.lampwing;
+    const t = rowOf(info.t, e);
     // The run is over (src/sim/goal.ts): nothing is drawn to her any more.
     const over = state.goal.gathered;
     const p = state.player;
@@ -506,7 +527,7 @@ export const lampwing: KindRules = {
     const py = p.y + p.h / 2;
     let beat = t.flapHover;
     if (e.noticeCd > 0) e.noticeCd--;
-    SEEN = seenNow(state, info.t);
+    SEEN = seenBy(e, info);
     e.roosting = false;
 
     if (e.mode === 'dead') {
@@ -537,6 +558,20 @@ export const lampwing: KindRules = {
         e.vy = 0;
         e.knockVx = 0;
         e.knockVy = 0;
+      }
+      return false;
+    }
+
+    if (e.mode === 'leave') {
+      // Its lamp went out (memory/creatures.md): up and away, harmless, then gone.
+      steer(e, e.side * t.leaveSpeed * 0.5, -t.leaveSpeed, t.pursueAccel);
+      drift(e, scene, t);
+      e.flap += t.flapPursue;
+      while (e.flap >= 1) e.flap -= 1;
+      if (--e.timer <= 0 || e.y + e.h < (scene.ceilingY ?? 0)) {
+        e.gone = true;
+        e.vx = 0;
+        e.vy = 0;
       }
       return false;
     }
@@ -636,7 +671,8 @@ export const lampwing: KindRules = {
       face(e, e.vx, 0.5);
       beat = t.flapDive;
       const G = info.t.goal;
-      if (!lit(p)) giveUp(e, info, 'dark');
+      // (A lamp-room hunter's dive is committed: it reads the dark only once it hangs at the bottom.)
+      if (e.sense === SENSE_WALLET && !lit(p)) giveUp(e, info, 'dark');
       else if (nearLitLantern(state, scene, G, e.x + e.w / 2, e.y + e.h / 2)) giveUp(e, info, 'calm');
       else if (--e.timer <= 0) stall(e, info, 'done');
       else if (hit !== 0 && e.vx === 0 && e.vy === 0) stall(e, info, 'wall');
@@ -742,7 +778,7 @@ export const lampwing: KindRules = {
 
   /** Along the cut, whichever way it goes: it is light. */
   shove(e, dir, side, knockback, t) {
-    const kb = knockback * t.lampwing.knockScale;
+    const kb = knockback * rowOf(t, e).knockScale;
     e.knockVx = dir === 'fwd' ? side * kb : 0;
     e.knockVy = dir === 'up' ? -kb : dir === 'down' ? kb : 0;
     e.rx = 0;
@@ -755,7 +791,7 @@ export const lampwing: KindRules = {
   /** Its touch hurt her: it bounces off, away from her centre, and has had enough for now. */
   touched(e, info, dir) {
     if (e.mode === 'dead') return;
-    const t = info.t.lampwing;
+    const t = rowOf(info.t, e);
     const p = info.state.player;
     const dx = e.x + e.w / 2 - (p.x + p.w / 2);
     const dy = e.y + e.h / 2 - (p.y + p.h / 2);
@@ -765,5 +801,24 @@ export const lampwing: KindRules = {
     e.knockVx = 0;
     e.knockVy = 0;
     giveUp(e, info, 'touch');
+    // (A hawker leaves her be for a while after a hit: harmless, noticing nothing.)
+    if (t.touchCalmFrames > 0) e.calm = Math.max(e.calm, frames(t.touchCalmFrames));
   },
+};
+
+/**
+ * The hawker (creatures.md §2, wood.md R8 / R11): a dusk dragonfly that hunts by sight round its lamp.
+ * The lampwing's tuned sim (tell, committed dive, stall, climb) on its own row (`tuning.hawker`); in a
+ * lamp room it sees her only while she is lit, and as a lamp-guarder it leaves when its lamp goes out.
+ */
+export const hawker: KindRules = {
+  ...lampwing,
+  width: (t) => t.hawker.width,
+  height: (t) => t.hawker.height,
+  hp: (t) => t.hawker.hp,
+  hurtFrames: (t) => t.hawker.hurtFrames,
+  hurtSafeFrames: (t) => t.hawker.hurtSafeFrames,
+  contactDamage: (t) => t.hawker.contactDamage,
+  deadFrames: (t) => t.hawker.deadFrames,
+  value: (t, finisher) => (finisher ? t.hawker.valueFinisher : t.hawker.value),
 };

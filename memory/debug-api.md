@@ -57,6 +57,10 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - `enemies()` → `{alive, total, list: [{id, kind, x, y (feet centre), box, home (the scene's x, y: a burrback's
   feet, a lampwing's home centre), facing, hp, hpMax, mode, modeFrames, braced, strikeCd, gone, vx, vy, target}]}`; the full
   records are `state().enemies` (enemies.md).
+- **Creatures (memory/creatures.md)**: `creatures()` -> `{lit, grab: {id, x, y, beats, of, frames} | null, grace, webs: [{id,
+  strands, intact, cut, fell, slack, touch}]}`; `enemies().list[]` has `sense, guards, dispersed, stunned, feints`.
+  `?room=lab-creatures` is the creature lab. The overlay / greybox draw webs (strands), a yellow dot over a creature
+  aware of her, a grey dash over one asleep / roosting / leaving, a draining bar over a tell (red brace, orange feint).
 - `giving(wallet?)` → `{wallet, seen, level, steps, reach: {burrback: {brace, aware}, lampwing}, target, gift, offerCd,
   gifted, heartGiven, aware: [ids]}`; with a number it sets the wallet first (being seen IS the wallet: giving.md).
   `enemies().list[]` has `aware, calm, gift, gifts`. Keys in the page: V / F / I offer.

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import labCreaturesJson from '../../content/rooms/lab-creatures.json' with { type: 'json' };
 import labKitJson from '../../content/rooms/lab-kit.json' with { type: 'json' };
 import labLampsJson from '../../content/rooms/lab-lamps.json' with { type: 'json' };
 import labWorldAJson from '../../content/rooms/lab-world-a.json' with { type: 'json' };
@@ -9,6 +10,7 @@ import woodHatchJson from '../../content/rooms/wood-hatch.json' with { type: 'js
 import worldJson from '../../content/world.json' with { type: 'json' };
 import { ABILITIES } from '../sim/abilities';
 import { defaultTuning } from '../sim/tuning';
+import { checkCreatures, ENEMIES, SENSES } from './creatures';
 import { CAMERA_ZONES, checkKit, KIT_FIELDS, kitNodes, ROUTE_FLAGS, SWING } from './kit';
 import type { Room } from './room';
 
@@ -46,7 +48,16 @@ const SceneSchema = z
     ),
     oneWays: z.array(z.object({ tag: TAG, x: int, y: int, w: int.positive() })),
     pickups: z
-      .array(z.object({ id: z.string().min(1), kind: z.enum(['glint', 'great']), x: int, y: int }).strict())
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            kind: z.enum(['glint', 'great']),
+            x: int,
+            y: int,
+          })
+          .strict(),
+      )
       .default([]),
     pods: z
       .array(
@@ -61,36 +72,9 @@ const SceneSchema = z
           .strict(),
       )
       .default([]),
-    enemies: z
-      .array(
-        z.discriminatedUnion('kind', [
-          z
-            .object({
-              id: z.string().min(1),
-              kind: z.literal('burrback'),
-              x: int,
-              y: int,
-              facing: z.union([z.literal(-1), z.literal(1)]),
-              radius: int.min(40).max(2000).optional(),
-              hp: int.min(1).max(12).optional(),
-              fenced: z.boolean().optional(),
-            })
-            .strict(),
-          z
-            .object({
-              id: z.string().min(1),
-              kind: z.literal('lampwing'),
-              x: int,
-              y: int,
-              facing: z.union([z.literal(-1), z.literal(1)]),
-              radius: int.min(0).max(400).optional(),
-              hp: int.min(1).max(12).optional(),
-              sight: int.min(60).max(900).optional(),
-            })
-            .strict(),
-        ]),
-      )
-      .default([]),
+    // Creatures (src/scene/creatures.ts, memory/creatures.md): how they notice her, and who they are.
+    senses: SENSES,
+    enemies: ENEMIES,
     lanterns: z
       .array(
         z
@@ -106,7 +90,14 @@ const SceneSchema = z
       .default([]),
     lamps: z
       .array(
-        z.object({ id: z.string().min(1), x: int, y: int, cost: int.min(0).max(99).optional() }).strict(),
+        z
+          .object({
+            id: z.string().min(1),
+            x: int,
+            y: int,
+            cost: int.min(0).max(99).optional(),
+          })
+          .strict(),
       )
       .default([]),
     heart: z.object({ x: int, y: int }).strict().optional(),
@@ -144,7 +135,15 @@ const SceneSchema = z
       .optional(),
     catches: z
       .array(
-        z.object({ id: z.string().min(1), x: int, y: int, w: int.positive(), h: int.positive() }).strict(),
+        z
+          .object({
+            id: z.string().min(1),
+            x: int,
+            y: int,
+            w: int.positive(),
+            h: int.positive(),
+          })
+          .strict(),
       )
       .optional(),
     hatch: z.object({ x: int, y: int }).strict().optional(),
@@ -166,7 +165,14 @@ const SceneSchema = z
       .optional(),
     doors: z
       .array(
-        z.object({ id: z.string().min(1), x: int, y: int, to: z.string().regex(/^[^#]+#[^#]+$/) }).strict(),
+        z
+          .object({
+            id: z.string().min(1),
+            x: int,
+            y: int,
+            to: z.string().regex(/^[^#]+#[^#]+$/),
+          })
+          .strict(),
       )
       .optional(),
     shortcuts: z
@@ -208,7 +214,11 @@ const SceneSchema = z
         seed: int.optional(),
         moon: z.object({ x: z.number(), y: z.number(), r: z.number().positive() }).strict().optional(),
         afterglow: z
-          .object({ x: z.number(), y: z.number(), strength: z.number().min(0).max(1) })
+          .object({
+            x: z.number(),
+            y: z.number(),
+            strength: z.number().min(0).max(1),
+          })
           .strict()
           .optional(),
         moods: z.array(z.object({ x: int, mood: z.enum(['cool', 'warm', 'deep']) }).strict()).optional(),
@@ -233,7 +243,11 @@ const SceneSchema = z
           )
           .optional(),
         tatter: z
-          .object({ x: int, y: int, facing: z.union([z.literal(-1), z.literal(1)]) })
+          .object({
+            x: int,
+            y: int,
+            facing: z.union([z.literal(-1), z.literal(1)]),
+          })
           .strict()
           .optional(),
         swarm: z.array(z.tuple([z.number(), z.number()])).optional(),
@@ -308,7 +322,11 @@ const SceneSchema = z
         fadeIn: z.number().min(0).max(10).optional(),
         hatchKick: z.number().min(0).max(40).optional(),
         hatchFrame: z
-          .object({ y: z.number(), hold: z.number().min(0), out: z.number().positive() })
+          .object({
+            y: z.number(),
+            hold: z.number().min(0),
+            out: z.number().positive(),
+          })
           .strict()
           .optional(),
         lean: z
@@ -349,49 +367,14 @@ export const LANTERN_SPAWN_CLEAR = 300;
 /** A wayside lamp keeps this far (foot to foot, on the same ground) from every lantern and other lamp. */
 export const LAMP_CLEAR = 160;
 
-/** No enemy starts closer to the spawn point than this (feet to feet). */
-export const ENEMY_SPAWN_CLEAR = 300;
-
-/** No lampwing's home is closer to the spawn point than this (home to feet). */
-export const LAMPWING_SPAWN_CLEAR = 350;
-
-/**
- * A lampwing's territory keeps this far from every lumen pod and great glint (edge of the territory
- * to the thing's centre), so collecting one never means standing where a hovering lampwing drifts.
- */
-export const LAMPWING_PRIZE_CLEAR = 100;
+export {
+  ENEMY_SPAWN_CLEAR,
+  LAMPWING_PRIZE_CLEAR,
+  LAMPWING_SPAWN_CLEAR,
+} from './creatures';
 
 /** A hanging pod's stem: the underside or branch it hangs from is at most this far above its top. */
 export const POD_HANG_MAX = 160;
-
-type Parsed = z.infer<typeof SceneSchema>;
-
-/**
- * A lampwing's home (`x`, `y` = the centre of its box): in open air (a box of twice its size is
- * clear of solids, under the canopy, inside the scene, not over a pool's water), away from the
- * spawn, and its territory clear of pods and great glints.
- */
-function checkLampwing(s: Parsed, e: Parsed['enemies'][number]): void {
-  const L = defaultTuning.lampwing;
-  const w = L.width;
-  const h = L.height;
-  const radius = (e.kind === 'lampwing' ? e.radius : undefined) ?? L.radius;
-  const top = s.ceilingY ?? 0;
-  if (e.x - w < 0 || e.x + w > s.width || e.y - h < top || e.y + h > s.height)
-    throw new Error(`Scene "${s.id}": enemy "${e.id}" is outside the scene`);
-  if (s.solids.some((q) => e.x + w > q.x && e.x - w < q.x + q.w && e.y + h > q.y && e.y - h < q.y + q.h))
-    throw new Error(`Scene "${s.id}": enemy "${e.id}" is inside a solid (a lampwing needs open air)`);
-  const dx = e.x - s.spawn.x;
-  const dy = e.y - s.spawn.y;
-  if (dx * dx + dy * dy < LAMPWING_SPAWN_CLEAR * LAMPWING_SPAWN_CLEAR)
-    throw new Error(`Scene "${s.id}": enemy "${e.id}" is too close to the spawn point`);
-  const near = radius + LAMPWING_PRIZE_CLEAR;
-  const prizes = [...s.pods, ...s.pickups.filter((p) => p.kind === 'great')];
-  for (const p of prizes) {
-    if ((p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) < near * near)
-      throw new Error(`Scene "${s.id}": enemy "${e.id}" hovers too close to "${p.id}"`);
-  }
-}
 
 export function parseScene(json: unknown): Room {
   const s = SceneSchema.parse(json);
@@ -461,32 +444,8 @@ export function parseScene(json: unknown): Room {
         `Scene "${s.id}": pod "${p.id}" has nothing to ${p.mount === 'sit' ? 'sit on' : 'hang from'}`,
       );
   }
-  // Enemies. A burrback: feet centre on a surface, the whole box supported and clear, away from the
-  // spawn. A lampwing: its home in open air (see `checkLampwing`).
-  const bw = defaultTuning.burrback.width;
-  const bh = defaultTuning.burrback.height;
-  for (const e of s.enemies) {
-    if (seen.has(e.id)) throw new Error(`Scene "${s.id}": two things are called "${e.id}"`);
-    seen.add(e.id);
-    if (e.kind === 'lampwing') {
-      checkLampwing(s, e);
-      continue;
-    }
-    const x0 = e.x - bw / 2;
-    const x1 = e.x + bw / 2;
-    if (x0 < 0 || x1 > s.width || e.y - bh < 0 || e.y > s.height)
-      throw new Error(`Scene "${s.id}": enemy "${e.id}" is outside the scene`);
-    if (s.solids.some((q) => x1 > q.x && x0 < q.x + q.w && e.y > q.y && e.y - bh < q.y + q.h))
-      throw new Error(`Scene "${s.id}": enemy "${e.id}" is inside a solid`);
-    const under = (x: number) =>
-      [...s.solids, ...s.oneWays].some((q) => q.y === e.y && x >= q.x && x < q.x + q.w);
-    if (!under(x0) || !under(x1 - 1))
-      throw new Error(`Scene "${s.id}": enemy "${e.id}" does not stand on a surface`);
-    const dx = e.x - s.spawn.x;
-    const dy = e.y - s.spawn.y;
-    if (dx * dx + dy * dy < ENEMY_SPAWN_CLEAR * ENEMY_SPAWN_CLEAR)
-      throw new Error(`Scene "${s.id}": enemy "${e.id}" is too close to the spawn point`);
-  }
+  // Creatures (src/scene/creatures.ts): placement per kind, lamps they guard, webs and weavers.
+  checkCreatures(s, seen);
   // Lanterns and the heart: a point on solid ground that is not the pool, the whole trigger box
   // supported and clear of solids. Lanterns keep away from the spawn; the heart needs lanterns.
   const G = defaultTuning.goal;
@@ -532,7 +491,10 @@ export function parseScene(json: unknown): Room {
   if (s.heart) {
     stands('the heart', s.heart, G.heartWidth, G.heartHeight);
     if (s.lanterns.length === 0) throw new Error(`Scene "${s.id}": a heart needs lanterns to wake it`);
-    const hb = { x0: s.heart.x - G.heartWidth / 2, x1: s.heart.x + G.heartWidth / 2 };
+    const hb = {
+      x0: s.heart.x - G.heartWidth / 2,
+      x1: s.heart.x + G.heartWidth / 2,
+    };
     for (const l of [...s.lanterns, ...s.lamps]) {
       if (l.y === s.heart.y && l.x + G.lanternWidth / 2 > hb.x0 && l.x - G.lanternWidth / 2 < hb.x1)
         throw new Error(`Scene "${s.id}": lantern "${l.id}" stands in the heart`);
@@ -610,6 +572,7 @@ const FILES: readonly unknown[] = [
   testGroveJson,
   labLampsJson,
   labKitJson,
+  labCreaturesJson,
 ];
 
 /** Every room, by id. */

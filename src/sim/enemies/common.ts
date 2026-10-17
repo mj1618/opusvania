@@ -147,4 +147,26 @@ export interface KindRules {
    * any hurt, when it meets her while she kindles a lantern: it is turned away.
    */
   touched?(e: EnemyState, info: StepInfo, dir: number): void;
+  /**
+   * Its lamp went out (a lamp-guarder: `EnemyState.guard`, memory/creatures.md): it gives up its own
+   * way and says how (`enemyDisperse.how`). `quiet`: the lamp was out before she came into the room
+   * (it is simply asleep / gone / slack already). Called once, while it is alive and not staggered.
+   */
+  disperse?(e: EnemyState, info: StepInfo, quiet: boolean): 'sleep' | 'leave' | 'slack';
+  /**
+   * A slash's area `box` (number `seq`) meets it: it takes the blow its own way instead of the shared
+   * hit (a web: the blade cuts its strands). Returns the hits that count for her (hitstop, pogo).
+   */
+  slashed?(
+    e: EnemyState,
+    index: number,
+    info: StepInfo,
+    box: Box,
+    seq: number,
+    dir: 'fwd' | 'up' | 'down',
+  ): number;
+  /** A blow going `dir` that lands does not stagger it (the old burrback's braced shell takes a pogo and rams on). */
+  tough?(e: EnemyState, dir: 'fwd' | 'up' | 'down', t: Tuning): boolean;
+  /** Its spawn's own size and start (a web's box is its strands'): called after `place`. */
+  init?(e: EnemyState, spawn: EnemySpawn, scene: Scene, t: Tuning): void;
 }

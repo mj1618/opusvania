@@ -202,6 +202,17 @@ export function reportMarkdown(t: RunTrace, meta: ReportMeta): string {
     );
   const hits = Object.entries(t.hitsByCreature).sort((a, b) => b[1] - a[1]);
   if (hits.length) out.push(`- Hits by creature: ${hits.map(([k, v]) => `${k} ${v}`).join(', ')}.`);
+  const enc = Object.entries(t.encounters ?? {});
+  if (enc.length) {
+    out.push('');
+    out.push('| encounter | kind | from | time | hits | grabs | ended |');
+    out.push('|---|---|---|---|---|---|---|');
+    for (const [k, v] of enc.sort((a, b) => a[1].first - b[1].first))
+      out.push(
+        `| ${k} | ${v.kind} | ${clock(v.first)} | ${sec(v.last - v.first)} | ${v.hits} | ${v.grabs} | ${v.outcome} |`,
+      );
+    out.push('');
+  }
   const unseen = Object.entries(t.lights).filter(([, l]) => l.seen === null);
   if (unseen.length) out.push(`- Lights never seen: ${unseen.map(([k]) => k).join(', ')}.`);
   out.push('');

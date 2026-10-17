@@ -1,5 +1,6 @@
 import { homeClear, slashBlocks, slashEnemies } from '../enemies';
 import type { GlideEndReason, HurtSource, JumpKind, SimEvent, SlashDir, SlashEndReason } from '../events';
+import { beatGrab, freeGrab, tickGrab } from '../grab';
 import { ActionBit, axisX, type InputFrame } from '../input';
 import { slashKit, thornAt } from '../kit';
 import {
@@ -105,6 +106,11 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     pullX: 0,
     lureGrace: -1,
     lureGraceFrames: 0,
+    grab: -1,
+    grabX: 0,
+    grabY: 0,
+    grabGrace: 0,
+    lit: 0,
     seen: 0,
     seenLevel: 0,
     offering: 0,
@@ -342,7 +348,7 @@ function updateSlash(c: Ctx): void {
     else p.attackActive = p.attackFrames >= cur.startup && p.attackFrames < cur.startup + cur.active;
   }
   // Caught by a lure, her moves are replaced by beating free: no new slash (a press is a beat).
-  if (p.attackBuf === 0 || p.attackCd > 0 || p.mode === 'dash' || p.lure >= 0) return;
+  if (p.attackBuf === 0 || p.attackCd > 0 || p.mode === 'dash' || p.lure >= 0 || p.grab >= 0) return;
   // Pressed together with a dash that is about to start: the dash goes first, the slash after it.
   if (p.dashBuf > 0 && p.mode === 'normal' && canDash(c)) return;
   endSlash(c, 'chain');
@@ -903,6 +909,7 @@ export function updatePlayer(
   const sides = ActionBit.left | ActionBit.right;
   const eff = p.faded > 0 || p.stagger > P.steerFrames ? 0 : p.stagger > 0 ? input & sides : input;
   tickLures(p);
+  tickGrab(p);
   const c = new Ctx(state, p, scene, eff, state.prevInput, P, events);
   c.inX = axisX(eff);
   p.inputX = c.inX;
@@ -953,7 +960,8 @@ function controller(c: Ctx): void {
   c.jumpPressedNow = c.pressed(ActionBit.jump);
   // Caught by a lure: she circles its flame and beats free (a dash or the last beat lets the
   // ordinary step below run on from where she is thrown; the slash clock ran inside).
-  const held = p.lure >= 0;
+  // (A grab is the same Caught, held where it took her: src/sim/grab.ts.)
+  const held = p.lure >= 0 || p.grab >= 0;
   if (held && caught(c)) return;
   if (!held) updateSlash(c);
   const wasGrounded = p.grounded;
@@ -1064,8 +1072,10 @@ function caught(c: Ctx): boolean {
   // A slash already swinging plays out (it may put this very flame out); no new one starts.
   updateSlash(c);
   // A dash frees her even with the air dash spent (the hold gives it back: forgiving).
+  const grab = p.grab >= 0;
   if (p.dashBuf > 0 && P.dash && p.dashCd === 0) {
-    freePlayer(c.state, c.scene, t, 'dash', c.events);
+    if (grab) freeGrab(c.state, t, 'dash', c.events);
+    else freePlayer(c.state, c.scene, t, 'dash', c.events);
     p.airDash = Math.max(p.airDash, 1);
     return false;
   }
@@ -1080,7 +1090,10 @@ function caught(c: Ctx): boolean {
   if (p.lurePend > 0 && p.lureCd === 0) {
     p.lurePend--;
     const aimY = (c.held(ActionBit.down) ? 1 : 0) - (c.held(ActionBit.up) ? 1 : 0);
-    if (beatLure(c.state, c.scene, t, c.events, c.inX, aimY)) {
+    const free = grab
+      ? beatGrab(c.state, t, c.events, c.inX, aimY)
+      : beatLure(c.state, c.scene, t, c.events, c.inX, aimY);
+    if (free) {
       p.airDash = P.airDashes;
       p.dj = P.doubleJumps;
       p.grounded = false;
@@ -1089,7 +1102,11 @@ function caught(c: Ctx): boolean {
       return false;
     }
   } else p.lureOut = Math.max(0, p.lureOut - L.beatSink);
-  orbitStep(c.state, c.scene, t, ORBIT);
+  // A grab holds her where it took her; a lure's core turns her round its flame.
+  if (grab) {
+    ORBIT.dx = 0;
+    ORBIT.dy = 0;
+  } else orbitStep(c.state, c.scene, t, ORBIT);
   p.pullX = 0;
   p.kickX = 0;
   p.lungeX = 0;
@@ -1287,6 +1304,8 @@ export function hurtPlayer(
     p.gliding = false;
     events.push({ type: 'glideEnd', x, y, reason: 'hurt' });
   }
+  // A blow knocks her out of a grab (a web's hold, the weaver's bite): src/sim/grab.ts.
+  if (p.grab >= 0) freeGrab(state, P.tuning, 'hurt', events);
   if (p.mode === 'dash') events.push({ type: 'dashEnd', x, y, dir: p.dashDir });
   else if (p.mode === 'wallSlide') events.push({ type: 'wallSlideEnd', x, y, dir: p.wallDir });
   if (p.mode !== 'normal') p.modeFrames = 0;

@@ -1,4 +1,5 @@
 import type { AbilityId } from './abilities';
+import type { CreatureEvent } from './creature-events';
 import type { KitEvent, KitTargetKind } from './kit-events';
 import type { EnemyKind, LureKind, PickupKind, PodMount } from './scene';
 import type { AttackDir } from './state';
@@ -28,6 +29,8 @@ export type HurtSource = { kind: EnemyKind | 'thorns'; id: string };
 export type SimEvent =
   /** The level kit (src/sim/kit-events.ts, memory/level-kit.md). */
   | KitEvent
+  /** The lamp-rule creatures: grabs, dispersal, the old burrback, the web and weaver (src/sim/creature-events.ts). */
+  | CreatureEvent
   /** The player was placed (boot, load, teleport): snap cameras and springs, don't interpolate. */
   | { type: 'spawn'; x: number; y: number }
   /**
@@ -381,7 +384,7 @@ export type SimEvent =
       x: number;
       y: number;
       dir: number;
-      cause: 'ledge' | 'wall' | 'lantern' | 'wary' | 'hit' | 'drop';
+      cause: 'ledge' | 'wall' | 'lantern' | 'wary' | 'hit' | 'drop' | 'hunt';
       frames: number;
     }
   /**

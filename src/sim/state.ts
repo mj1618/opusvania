@@ -137,6 +137,21 @@ export interface PlayerState {
   lureGrace: number;
   lureGraceFrames: number;
   /**
+   * A grab (src/sim/grab.ts, memory/creatures.md): `grab` = index of the creature (a web: `enemies[i]`)
+   * holding her, -1 = none. Held where it caught her (`grabX, grabY` = her body centre then); beating
+   * free uses the lure counters above (`lureFrames`, `lureBeats`, `lureCd`, `lurePend`). `grabGrace`
+   * = frames nothing may grab her again (after a throw or a blow).
+   */
+  grab: number;
+  grabX: number;
+  grabY: number;
+  grabGrace: number;
+  /**
+   * How lit she is by the lures' light (memory/creatures.md): 0 = dark, up to 1 at a flame's core.
+   * In a lamp room a sight hunter sees her only while it is above 0. Set every step.
+   */
+  lit: number;
+  /**
    * Being seen (src/sim/giving.ts, memory/giving.md): the creatures notice her by the light she
    * carries. `seenLevel` 0-4 (0 = she carries nothing: unseen; the steps are `tuning.giving.seen1..4`
    * of her wallet), `seen` = the same as 0..1 (level / 4). Set at the end of every step from
@@ -308,7 +323,13 @@ export interface LuresState {
  * (the committed swoop at where she stood when the tell ended), `stall` (it hangs at the bottom of
  * the arc, open, its touch harmless), `pursue` (it climbs to a perch above her to try again), `rest`
  * (it has given up, or just touched her: it hangs where it is), `return` (flying home; it notices
- * nothing until it is there).
+ * nothing until it is there). The hawker is a lampwing.
+ * Lamp rules (memory/creatures.md): `sleep` (a crawler curled asleep: its lamp went out, or an old
+ * burrback before it wakes), `wake` (the old burrback waking: harmless), `feint` (the old burrback's
+ * shell drops between its two braces), `leave` (a flyer or weaver whose lamp went out, going away).
+ * Weaver: `sit` (at home on its web), `run` (along the strands to where she touched), `windup` (the
+ * count before the bite: its tell), `bite` (its touch is live), `back` (home along the strands).
+ * Web: `hang`.
  */
 export type EnemyMode =
   | 'walk'
@@ -325,7 +346,16 @@ export type EnemyMode =
   | 'charge'
   | 'recover'
   | 'hurt'
-  | 'dead';
+  | 'dead'
+  | 'sleep'
+  | 'wake'
+  | 'feint'
+  | 'leave'
+  | 'sit'
+  | 'run'
+  | 'bite'
+  | 'back'
+  | 'hang';
 
 /**
  * One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. One flat
@@ -487,6 +517,32 @@ export interface EnemyState {
   spill: number;
   spillTimer: number;
   spillGap: number;
+  // --- Lamp rules (memory/creatures.md).
+  /** How it notices her: 0 = `wallet` (test grove), 1 = `lamp` (she is lit), 2 = `always`. */
+  sense: number;
+  /** A lamp-guarder: index of the lure it guards (`scene.lures`), -1 = none. */
+  guard: number;
+  /** Its lamp went out and it gave up (`enemyDisperse`): asleep (crawler), gone (flyer, weaver), slack (web). */
+  dispersed: boolean;
+  /**
+   * Old burrback: `pogoed` = a pogo has landed in this brace (the next glances: one a brace); `stunned`
+   * = its winded time came from a wall (its shell is open: every cut lands); `feints` = braces made in
+   * this exchange (the first is the feint).
+   */
+  pogoed: boolean;
+  stunned: boolean;
+  feints: number;
+  /**
+   * Weaver: where it is on its web (`seg` = strand index, `segT` 0..1 along it from its first end) and
+   * where it is going (`goalSeg`, `goalT`; -1 = nowhere). Web: `cut` = one character per strand:
+   * '0' intact, '1' cut by her blade, '2' fell (no longer joined to an anchor); `seg` = the strand she
+   * touched last, at (`targetX`, `targetY`).
+   */
+  seg: number;
+  segT: number;
+  goalSeg: number;
+  goalT: number;
+  cut: string;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */

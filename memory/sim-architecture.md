@@ -72,6 +72,10 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   State `kit` (room-local); `withShortcuts` also adds standing bark and shut gates; `updateKit` runs after her offer, before enemies.
 - `enemyTurn`, `enemyAlert`, **`enemyWindup`, `enemyCharge`, `enemyRecover`, `enemyBlock`** (burrback: its ram), `enemyNotice`, **`enemyDive`, `enemyStall`, `enemyClimb`** (its dive, playtest 5), `enemyGiveUp` (lampwing), `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`, then **`enemyReset`** for each living creature that went home hurt or from elsewhere), and
   enemy glints as `pickup {enemy: true}`: enemies.md. `slashEnd` / `glideEnd` have a reason `hurt`.
+- Creatures (memory/creatures.md, src/sim/creature-events.ts): `grab`, `grabBeat`, `grabFree {how}`, `enemyDisperse
+  {lure, how: sleep|leave|slack, quiet}`, `enemyFeint`, `enemyWake`, `webTouch {strand}`, `webCut {cut, fell, left}`,
+  `enemyRun {px, frames}`, `enemyBite {hit}`; `enemyTurn` cause `hunt`. `player.lit` is set at the start of
+  `updateEnemies`; a web is taken by a slash in `slashEnemies` (`KindRules.slashed`), a grab in its own update.
 - `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a
   long fall, up to 32 out of a fast fall) and `glideEnd {reason: release|land|wall|dash|fastfall}`; one
   pair per glide. Same-step order: `glideEnd:land` then `land`; `glideEnd:wall` then `wallSlideStart`;

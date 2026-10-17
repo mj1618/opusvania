@@ -1,5 +1,7 @@
 # Giving: the game plays like giving (seen, offer, rest = give)
 
+**Test grove only since 2026-10-17** (memory/creatures.md): lamp rooms see her by lamp light and have no glints to give.
+
 Why: an analysis for the old (deleted) story found the story distinct but the PLAY following Hollow Knight's grammar. The fix: carrying
 light makes you seen, empty-handed you slip through, Offer calms what you would cut, healing is paid by giving. (The
 old story's rules were "give warmth, don't fight" and "moths go unseen". The new story, `story.md`, keeps "the dark is

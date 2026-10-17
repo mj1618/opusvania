@@ -1,5 +1,9 @@
 # Enemies and health: the burrback, the lampwing, being hurt, fade and re-form
 
+**Since 2026-10-17 the real rooms use the lamp rules (memory/creatures.md)**: creatures see her by lamp light, not
+the wallet; lamp-guarders disperse on a snuff; kills spill nothing; new kinds `oldBurrback`, `hawker`, `web`, `weaver`.
+Everything below about the wallet, gifts, lanterns' sanctuary and glint spill is the test grove's (`senses: 'wallet'`).
+
 Sim: `src/sim/enemies.ts` (the framework: hits, hurt / die, glint spill, contact) with one module per
 kind in `src/sim/enemies/` (`burrback.ts`, `lampwing.ts`, shared helpers in `common.ts`),
 `src/sim/player/player.ts` (`hurtPlayer`, `trackSafeGround`, `reformPlayer`), step order in

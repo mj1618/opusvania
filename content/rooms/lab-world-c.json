@@ -80,7 +80,8 @@
       "x": 600,
       "y": 1024,
       "facing": -1,
-      "radius": 240
+      "radius": 240,
+      "senses": "wallet"
     }
   ],
   "routes": [

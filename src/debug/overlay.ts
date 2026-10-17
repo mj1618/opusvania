@@ -173,6 +173,7 @@ export class HitboxOverlay {
       });
     }
     drawEnemyBoxes(g, this.enemies(), this.ramPx());
+    drawWebs(g, this.scene, this.enemies(), p);
     // Shortcuts: solid amber while closed (a bar on the side that opens it), dim once open.
     const opened = this.opened();
     for (const sc of this.scene.shortcuts ?? []) {
@@ -213,18 +214,45 @@ export class HitboxOverlay {
  */
 export function drawEnemyBoxes(g: Graphics, enemies: readonly EnemyState[], ramPx: number): void {
   for (const e of enemies) {
-    if (e.gone) continue;
+    // (A web is its strands: `drawWebs`.)
+    if (e.gone || e.kind === 'web') continue;
+    const asleep = e.mode === 'sleep' || e.mode === 'leave' || e.dozing || e.roosting;
     const color =
       e.mode === 'dead'
         ? 0x8a8a8a
         : e.mode === 'hurt'
           ? 0xff9a3c
-          : e.braced || e.mode === 'dive'
+          : e.braced || e.mode === 'dive' || e.mode === 'bite'
             ? 0xff3030
-            : e.mode === 'recover' || e.mode === 'stall'
-              ? 0x7dff9a
-              : 0xff4cf0;
-    g.rect(e.x, e.y, e.w, e.h).stroke({ color, width: e.braced || e.mode === 'dive' ? 4 : 2 });
+            : e.mode === 'feint' || e.mode === 'wake'
+              ? 0xffb347
+              : e.mode === 'recover' || e.mode === 'stall'
+                ? e.stunned
+                  ? 0xffffff
+                  : 0x7dff9a
+                : asleep
+                  ? 0x8a7aa0
+                  : 0xff4cf0;
+    const thick = e.braced || e.mode === 'dive' || e.mode === 'bite';
+    g.rect(e.x, e.y, e.w, e.h).stroke({ color, width: thick ? 4 : 2 });
+    // What it senses (memory/creatures.md): a yellow eye over one aware of her; a flat grey dash
+    // over one asleep, roosting or leaving.
+    const cx0 = e.x + e.w / 2;
+    if (e.aware > 0 && e.mode !== 'dead') g.circle(cx0, e.y - 12, 5).fill({ color: 0xffe14c });
+    else if (asleep && e.mode !== 'dead')
+      g.moveTo(cx0 - 9, e.y - 10)
+        .lineTo(cx0 + 9, e.y - 10)
+        .stroke({ color: 0x8a7aa0, width: 3 });
+    // The tell counts down: a bar over it that empties (a brace, a feint, a weaver's count).
+    if (
+      (e.mode === 'windup' || e.mode === 'feint' || e.mode === 'wake' || e.mode === 'curious') &&
+      e.timer > 0
+    ) {
+      const of = Math.max(e.timer, e.modeFrames + e.timer);
+      g.rect(e.x, e.y - 24, (e.w * e.timer) / of, 4).fill({
+        color: e.mode === 'windup' ? 0xff3030 : 0xffb347,
+      });
+    }
     // Braced: its armoured front, and (during the windup) how far the ram will carry it.
     if (e.braced) {
       const front = e.facing > 0 ? e.x + e.w : e.x;
@@ -241,7 +269,7 @@ export function drawEnemyBoxes(g: Graphics, enemies: readonly EnemyState[], ramP
     g.moveTo(fx, e.y + e.h / 2)
       .lineTo(fx + e.facing * 10, e.y + e.h / 2)
       .stroke({ color, width: 2 });
-    if (e.kind !== 'lampwing') continue;
+    if (e.kind !== 'lampwing' && e.kind !== 'hawker') continue;
     const cx = e.x + e.w / 2;
     const cy = e.y + e.h / 2;
     g.circle(e.homeX, e.homeY, e.radius).stroke({ color: 0xff4cf0, width: 1, alpha: 0.35 });
@@ -253,5 +281,39 @@ export function drawEnemyBoxes(g: Graphics, enemies: readonly EnemyState[], ramP
     g.moveTo(cx, cy)
       .lineTo(cx + e.vx * 6, cy + e.vy * 6)
       .stroke({ color: 0xffffff, width: 2 });
+  }
+}
+
+/**
+ * Every web as its strands (memory/creatures.md): pale lines while it holds, dim once slack (its lamp
+ * went out); cut and fallen strands are not drawn. Where it holds her: a ring at the touch and the
+ * beats pressed so far. Shared by the hitbox overlay and the greybox renderer.
+ */
+export function drawWebs(
+  g: Graphics,
+  scene: Scene,
+  enemies: readonly EnemyState[],
+  player: { grab: number; grabX: number; grabY: number; lureBeats: number },
+): void {
+  const spawns = scene.enemies ?? [];
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i];
+    const sp = spawns[i];
+    if (e?.kind !== 'web' || !sp?.strands) continue;
+    const slack = e.dispersed;
+    for (let k = 0; k < sp.strands.length; k++) {
+      if (e.cut.charCodeAt(k) !== 48) continue;
+      const s = sp.strands[k] as [number, number, number, number];
+      g.moveTo(s[0], s[1]).lineTo(s[2], s[3]);
+    }
+    g.stroke({ color: slack ? 0x6b7385 : 0xdfe6f2, width: 2, alpha: slack ? 0.35 : 0.75 });
+    if (player.grab === i) {
+      g.circle(player.grabX, player.grabY, 30).stroke({ color: 0xdfe6f2, width: 3 });
+      const of = tuning.grab.beats;
+      for (let k = 0; k < of; k++)
+        g.circle(player.grabX - ((of - 1) * 14) / 2 + k * 14, player.grabY - 52, 5).fill({
+          color: k < player.lureBeats ? 0xffffff : 0x5a6275,
+        });
+    }
   }
 }

@@ -65,7 +65,14 @@ export interface Pod {
  * The kinds of enemy (src/sim/enemies.ts). `burrback`: a small armoured beetle that walks its
  * platform. `lampwing`: a small pale moth-wisp that hovers in the open air and drifts after her light.
  */
-export type EnemyKind = 'burrback' | 'lampwing';
+export type EnemyKind = 'burrback' | 'lampwing' | 'oldBurrback' | 'hawker' | 'web' | 'weaver';
+
+/**
+ * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is
+ * lit by a burning lure: `player.lit`). `wallet`: the test grove's old rule, by the light she carries
+ * (memory/giving.md). `always`: whenever she is in view (a mini-boss in its den).
+ */
+export type SenseMode = 'wallet' | 'lamp' | 'always';
 
 /**
  * Where an enemy starts. Burrback: `x`, `y` = its feet centre, on a surface; `facing` = the way it
@@ -90,6 +97,21 @@ export interface EnemySpawn {
   hp?: number;
   /** Lampwing: how far it notices her from (default `tuning.lampwing.noticePx`): one that watches a long lane. */
   sight?: number;
+  /**
+   * A lamp-guarder (creatures.md §1.2): the id of the lure it guards. When that lure is snuffed it
+   * disperses (`enemyDisperse`): a crawler curls up asleep, a flyer leaves the room, a weaver climbs
+   * away, a web goes slack.
+   */
+  guards?: string;
+  /** How it notices her, if not the room's (`Scene.senses`); an old burrback defaults to `always`. */
+  senses?: SenseMode;
+  /** Weaver: the id of the web (a `web` spawn of the same room) it lives on. */
+  web?: string;
+  /**
+   * Web: its strands, each `[x0, y0, x1, y1]` (room px). Strands that share an end point are joined
+   * (the weaver runs along them). `x`, `y` = the hub.
+   */
+  strands?: Array<[number, number, number, number]>;
 }
 
 /**
@@ -232,6 +254,12 @@ export interface Scene {
   pods?: Pod[];
   /** Enemies, in a fixed order: `GameState.enemies` is indexed like this array. */
   enemies?: EnemySpawn[];
+  /**
+   * How the room's creatures notice her (memory/creatures.md): `lamp` (by lamp light) or `wallet`
+   * (the test grove's old rule). Absent = `wallet` (scenes built in code by the old tests); a room JSON
+   * defaults to `lamp` (src/scene/index.ts), the test grove says `wallet`.
+   */
+  senses?: 'wallet' | 'lamp';
   /** Moth-lanterns, in a fixed order: `GameState.goal.lanterns` is indexed like this array. */
   lanterns?: Lantern[];
   /**

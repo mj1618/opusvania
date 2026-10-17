@@ -33,7 +33,7 @@ export function derive(s: JumpShape = SHAPE) {
 
 const D = derive(SHAPE);
 
-export const defaultTuning = {
+export const defaultTuning = withVariants({
   /** The player's collision box in sim px (the drawn character is a little taller: ears). */
   body: {
     width: 40,
@@ -512,9 +512,24 @@ export const defaultTuning = {
     dropSpeed: 3,
     /** What its touch costs her. */
     contactDamage: 1,
-    /** Glints it spills when it dies, and when the finisher killed it. */
+    /** Glints it spills when it dies, and when the finisher killed it (test grove only: in a lamp room a kill pays nothing). */
     value: 4,
     valueFinisher: 6,
+    /**
+     * The old burrback's moves (memory/creatures.md), off for the plain one. `feintFrames` > 0:
+     * after the first brace its shell drops for that long (the feint), then it braces again for
+     * `feintBraceFrames` and rams. `pogoShell`: braced, only a pogo lands (forward and up cuts clang
+     * from any side; one pogo a brace); otherwise the shell glances everything until a wall stun opens
+     * it. `asleep`: it starts asleep and wakes over `wakeFrames` (harmless) once she is down on the
+     * ground within `wakePx`. `hunt`: it walks toward her along its ground.
+     */
+    feintFrames: 0,
+    feintBraceFrames: 20,
+    pogoShell: false,
+    asleep: false,
+    wakePx: 0,
+    wakeFrames: 60,
+    hunt: false,
   },
   /**
    * The lampwing: a small pale moth-wisp that hovers in the open air and is drawn to her light
@@ -635,6 +650,70 @@ export const defaultTuning = {
     /** In the dive its wings are folded back (nearly still); stalled it beats slowly. */
     flapDive: 0.03,
     flapStall: 0.07,
+    /** Its lamp snuffed (a lamp-guarder, creatures.md §1.2): it leaves the room, up and away at this, harmless; gone after `leaveFrames`. */
+    leaveSpeed: 4,
+    leaveFrames: 150,
+    /** After its touch hurt her it notices nothing for this long (0 = the lampwing: back as soon as it is home). */
+    touchCalmFrames: 0,
+  },
+  /**
+   * Senses by lamp light (memory/creatures.md). In a lamp room (`scene.senses: 'lamp'`, every room JSON
+   * but the test grove) a sight hunter sees her only while she is lit: her body centre within
+   * `litScale` x a burning lure's pull radius (the light reaches a little past the pull). `player.lit`
+   * = 0 (dark) .. 1 (at a flame's core). Lit, she counts as `litLevel` of the old wallet levels (2 = the
+   * ranges every fight was tuned at).
+   */
+  senses: {
+    litScale: 1.6,
+    litLevel: 2,
+  },
+  /**
+   * Grabs are Caught (creatures.md §1.5): a web (and later a toad, a mantis) holds her where she
+   * touched it. Presses of jump or the blade beat free (`beats`, queued and spaced as a lure's:
+   * `lures.beatCd`, `beatQueue`); the last throws her toward the held direction (up if none) at
+   * `freeSpeed` + `freeLift` up, and nothing grabs her for `graceFrames`. A blow frees her too.
+   */
+  grab: {
+    beats: 4,
+    freeSpeed: 11,
+    freeLift: 7,
+    graceFrames: 45,
+  },
+  /**
+   * An orb web (memory/creatures.md): strands as segments. Her box within `strandHalf` of an
+   * intact strand is a touch (Caught, `grab`). A slash cuts every strand its box meets; strands no
+   * longer joined to an anchor (an end within `anchorPx` of a solid or the room's edge) fall too.
+   */
+  web: {
+    strandHalf: 5,
+    anchorPx: 16,
+  },
+  /**
+   * The weaver: an orb-weaver that lives on its web. It senses touches, not cuts: when the web holds
+   * her it runs along the strands at `speed` to where she touched, counts `countFrames` (the tell),
+   * and bites (`biteFrames`, its touch live, `contactDamage`) if she is still held; else it goes home.
+   */
+  weaver: {
+    width: 40,
+    height: 36,
+    hp: 4,
+    speed: 5,
+    countFrames: 24,
+    biteFrames: 10,
+    /** After a bite or an empty count it waits this long, then goes home along the strands. */
+    backDelayFrames: 30,
+    homeSpeed: 3,
+    hurtFrames: 14,
+    hurtSafeFrames: 14,
+    contactDamage: 1,
+    deadFrames: 40,
+    gravity: 0.45,
+    maxFall: 9,
+    /** Its lamp snuffed: it climbs off up its web and is gone (`leaveSpeed`, at most `leaveFrames`). */
+    leaveSpeed: 4,
+    leaveFrames: 150,
+    value: 0,
+    valueFinisher: 0,
   },
   /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
   pickups: {
@@ -935,7 +1014,58 @@ export const defaultTuning = {
     /** A down slash that hits bounces her up and refills the air dash and double jump. */
     pogo: true,
   },
-};
+});
+
+/**
+ * Creature variants (creatures.md §2: "a new creature is first a variant row"): every number of the
+ * base kind, then what the player feels as different. `oldBurrback`: the wood's mini-boss (wood.md
+ * §6): bigger, 10 hp, a ram that carries further, a feint (two braces), a shell only a pogo opens
+ * while braced, asleep in its den until she lands, ignores the lit rule. `hawker`: the dusk
+ * dragonfly, the lampwing's tuned dive on a lamp-guarder that hunts by sight.
+ */
+function withVariants<T extends { burrback: object; lampwing: object }>(base: T) {
+  return {
+    ...base,
+    oldBurrback: {
+      ...(base.burrback as T['burrback']),
+      width: 84,
+      height: 50,
+      hp: 10,
+      speed: 2.2,
+      noticePx: 2400,
+      dozePx: 0,
+      strikePx: 190,
+      provokedPx: 300,
+      chargePx: 260,
+      chargeSpeed: 11,
+      recoverFrames: 44,
+      recoverTiredFrames: 44,
+      recoverWallFrames: 90,
+      knockScale: 0.5,
+      feintFrames: 18,
+      feintBraceFrames: 20,
+      pogoShell: true,
+      asleep: true,
+      wakePx: 1400,
+      wakeFrames: 60,
+      hunt: true,
+      contactDamage: 1,
+      value: 0,
+      valueFinisher: 0,
+    },
+    hawker: {
+      ...(base.lampwing as T['lampwing']),
+      width: 52,
+      height: 24,
+      radius: 150,
+      noticePx: 480,
+      // (A breather after a hit: one who stood still under it was hit every 4 s and faded in a loop.)
+      touchCalmFrames: 180,
+      value: 0,
+      valueFinisher: 0,
+    },
+  };
+}
 
 export type Tuning = typeof defaultTuning;
 

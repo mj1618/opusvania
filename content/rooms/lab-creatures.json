@@ -1,0 +1,313 @@
+{
+  "id": "lab-creatures",
+  "title": "Lab: creatures (greybox)",
+  "width": 20000,
+  "height": 1600,
+  "spawn": {
+    "x": 200,
+    "y": 1280
+  },
+  "edgeKick": false,
+  "senses": "lamp",
+  "art": {
+    "mode": "greybox",
+    "labels": true
+  },
+  "solids": [
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1280,
+      "w": 8000,
+      "h": 320
+    },
+    {
+      "tag": "ground",
+      "x": 8000,
+      "y": 1472,
+      "w": 2000,
+      "h": 128
+    },
+    {
+      "tag": "ground",
+      "x": 10000,
+      "y": 1280,
+      "w": 10000,
+      "h": 320
+    },
+    {
+      "tag": "root",
+      "x": 2700,
+      "y": 1152,
+      "w": 64,
+      "h": 128
+    },
+    {
+      "tag": "trunk",
+      "x": 5800,
+      "y": 0,
+      "w": 1200,
+      "h": 260,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 5800,
+      "y": 260,
+      "w": 64,
+      "h": 800,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 6936,
+      "y": 260,
+      "w": 64,
+      "h": 800,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 11100,
+      "y": 1120,
+      "w": 200,
+      "h": 160
+    },
+    {
+      "tag": "ledge",
+      "x": 11300,
+      "y": 960,
+      "w": 500,
+      "h": 48
+    },
+    {
+      "tag": "root",
+      "x": 15000,
+      "y": 1100,
+      "w": 200,
+      "h": 180
+    },
+    {
+      "tag": "ledge",
+      "x": 15200,
+      "y": 860,
+      "w": 500,
+      "h": 60
+    },
+    {
+      "tag": "ledge",
+      "x": 16500,
+      "y": 1100,
+      "w": 1200,
+      "h": 180
+    }
+  ],
+  "oneWays": [],
+  "lures": [
+    {
+      "id": "wick-a",
+      "kind": "wick",
+      "x": 1600,
+      "y": 1080,
+      "spin": 1
+    },
+    {
+      "id": "wick-b",
+      "kind": "wick",
+      "x": 3900,
+      "y": 968,
+      "spin": -1
+    },
+    {
+      "id": "wick-c",
+      "kind": "wick",
+      "x": 6400,
+      "y": 760,
+      "spin": 1
+    },
+    {
+      "id": "lantern-e",
+      "kind": "lantern",
+      "x": 11550,
+      "y": 704,
+      "spin": 1
+    },
+    {
+      "id": "lantern-f",
+      "kind": "lantern",
+      "x": 13450,
+      "y": 1000,
+      "spin": -1
+    },
+    {
+      "id": "wick-f",
+      "kind": "wick",
+      "x": 14050,
+      "y": 1020,
+      "spin": 1
+    },
+    {
+      "id": "wick-g",
+      "kind": "wick",
+      "x": 17250,
+      "y": 900,
+      "spin": 1
+    }
+  ],
+  "enemies": [
+    {
+      "id": "burr-a",
+      "kind": "burrback",
+      "x": 1600,
+      "y": 1280,
+      "facing": -1,
+      "radius": 500,
+      "hp": 4,
+      "guards": "wick-a"
+    },
+    {
+      "id": "hawk-b",
+      "kind": "hawker",
+      "x": 3900,
+      "y": 800,
+      "facing": 1,
+      "guards": "wick-b"
+    },
+    {
+      "id": "web-c",
+      "kind": "web",
+      "x": 6400,
+      "y": 760,
+      "facing": 1,
+      "guards": "wick-c",
+      "orb": {
+        "r": 460,
+        "spokes": 12,
+        "rings": 4,
+        "frame": 640,
+        "gaps": [[145, 155]]
+      }
+    },
+    {
+      "id": "weaver-c",
+      "kind": "weaver",
+      "x": 6400,
+      "y": 760,
+      "facing": 1,
+      "web": "web-c",
+      "guards": "wick-c"
+    },
+    {
+      "id": "old-d",
+      "kind": "oldBurrback",
+      "x": 9300,
+      "y": 1472,
+      "facing": -1
+    },
+    {
+      "id": "burr-e",
+      "kind": "burrback",
+      "x": 11550,
+      "y": 1280,
+      "facing": 1,
+      "radius": 400,
+      "guards": "lantern-e"
+    },
+    {
+      "id": "hawk-f",
+      "kind": "hawker",
+      "x": 14050,
+      "y": 860,
+      "facing": -1,
+      "guards": "wick-f"
+    },
+    {
+      "id": "burr-g",
+      "kind": "burrback",
+      "x": 17200,
+      "y": 1100,
+      "facing": 1,
+      "radius": 220,
+      "fenced": true,
+      "guards": "wick-g"
+    }
+  ],
+  "marks": {
+    "notes": [
+      {
+        "x": 1600,
+        "y": 760,
+        "text": "A  burrback under a wick: it sees you only in the light; snuff it and it sleeps"
+      },
+      {
+        "x": 3900,
+        "y": 600,
+        "text": "B  hawker at a wick: tell, dive, stall (cut it here), climb"
+      },
+      {
+        "x": 6400,
+        "y": 1380,
+        "text": "C  orb web + weaver: touch = caught (mash), it runs to you and bites; cut strands from outside"
+      },
+      {
+        "x": 9000,
+        "y": 1150,
+        "text": "D  old burrback: feint, then a long ram; only a pogo on its braced shell hurts, or bait it into a wall"
+      },
+      {
+        "x": 11550,
+        "y": 450,
+        "text": "E  burrback under a lantern (R9)"
+      },
+      {
+        "x": 13750,
+        "y": 640,
+        "text": "F  hawker at a wick beside a lantern's pull (R11)"
+      },
+      {
+        "x": 16600,
+        "y": 700,
+        "text": "G  glide onto a burrback's ledge (R6)"
+      }
+    ]
+  },
+  "shots": {
+    "wide": [
+      {
+        "name": "burrback",
+        "x": 1600,
+        "y": 1280
+      },
+      {
+        "name": "hawker",
+        "x": 3900,
+        "y": 1280
+      },
+      {
+        "name": "web",
+        "x": 6400,
+        "y": 1000
+      },
+      {
+        "name": "old",
+        "x": 9000,
+        "y": 1472
+      },
+      {
+        "name": "lantern",
+        "x": 11550,
+        "y": 1280
+      },
+      {
+        "name": "pair",
+        "x": 13750,
+        "y": 1280
+      },
+      {
+        "name": "ledge",
+        "x": 16600,
+        "y": 1100
+      }
+    ]
+  }
+}

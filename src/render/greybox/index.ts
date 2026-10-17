@@ -12,7 +12,7 @@
  *   air        creatures as boxes, lure effects, freed moths, labels (over her)
  */
 import { Container, Graphics } from 'pixi.js';
-import { drawEnemyBoxes } from '../../debug/overlay';
+import { drawEnemyBoxes, drawWebs } from '../../debug/overlay';
 import { tuning } from '../../sim/tuning';
 import type { SceneContext, SceneFrame } from '../scene/index';
 import { KitView, kitLabels } from './kit';
@@ -86,6 +86,8 @@ export class GreyboxLayer {
     this.kit.onEvents(sim.events);
     this.kit.draw(dt, clock, sim);
     const g = this.creatures.clear();
+    // Webs first (their strands), then the creatures over them (memory/creatures.md).
+    drawWebs(g, sim.scene, sim.enemies, sim.player);
     drawEnemyBoxes(g, sim.enemies, tuning.burrback.chargePx);
     this.labels.visible = GREYBOX.labels;
   }

@@ -1,4 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
+import worldJson from '../../content/world.json' with { type: 'json' };
+
+/** Every room id, the game's then the test rooms (content/world.json): a new room needs no edit here. */
+const ROOMS = [...worldJson.rooms.map((r) => r.id), ...worldJson.tests];
 
 /**
  * The whole e2e suite: the game boots clean, the character moves, the debug API works. Keep it
@@ -43,7 +47,16 @@ test('the character runs right and jumps off the ground', async ({ page }) => {
     // The run passes through the first line of glints.
     const glints = g.pickups();
     const glintEvents = g.events(102).map((e) => e.type);
-    return { start, ran, air, landed, events, glints, glintEvents, reset: g.load().pickups.count };
+    return {
+      start,
+      ran,
+      air,
+      landed,
+      events,
+      glints,
+      glintEvents,
+      reset: g.load().pickups.count,
+    };
   });
   expect(r.start.grounded).toBe(true);
   expect(r.ran.x).toBeGreaterThan(r.start.x + 150);
@@ -116,7 +129,12 @@ test('__game API: step, state, input, load, teleport, cam, freeze', async ({ pag
   expect(r.lights.length).toBeGreaterThan(0);
   // Enemies and health are in the state and listed by the API.
   expect([r.enemies.alive, r.enemies.total, r.loaded.enemies.length]).toEqual([13, 13, 13]);
-  expect(r.enemies.list[0]).toMatchObject({ id: 'burr-bank', kind: 'burrback', hp: 5, mode: 'walk' });
+  expect(r.enemies.list[0]).toMatchObject({
+    id: 'burr-bank',
+    kind: 'burrback',
+    hp: 5,
+    mode: 'walk',
+  });
   expect(r.health).toMatchObject({ hp: 4, hpMax: 4, invuln: 0, faded: 0 });
   expect(errors).toEqual([]);
 });
@@ -157,15 +175,7 @@ test('the default boot is scene 1 (wood-hatch): shut in the cocoon, then running
   expect(r.prologue).toBe(false);
   expect(r.mode).toBe('manual');
   expect(r.room).toBe('wood-hatch');
-  expect(r.rooms).toEqual([
-    'wood-hatch',
-    'lab-world-a',
-    'lab-world-b',
-    'lab-world-c',
-    'test-grove',
-    'lab-lamps',
-    'lab-kit',
-  ]);
+  expect(r.rooms).toEqual(ROOMS);
   expect(r.shut).toEqual({ frames: 0, presses: 0, done: false });
   expect(r.hatch).toBe(4);
   expect(r.moved).toBeGreaterThan(150);
@@ -189,15 +199,7 @@ test('?room and ?abilities choose the room and the kit; the panel lists the room
   expect(r).toEqual({
     room: 'test-grove',
     owned: ['glide'],
-    options: [
-      'wood-hatch',
-      'lab-world-a',
-      'lab-world-b',
-      'lab-world-c',
-      'test-grove',
-      'lab-lamps',
-      'lab-kit',
-    ],
+    options: ROOMS,
   });
   expect(errors).toEqual([]);
 });
@@ -212,7 +214,10 @@ test('sound is muted by default: no AudioContext until M, and the game plays the
       g.load();
       g.input('R30 R+J20 R10 .2 J20 R+X3 R30 .20');
       g.step(110);
-      return { hash: g.hash(), cues: g.audio?.cues(50).map((c) => c.sound) ?? [] };
+      return {
+        hash: g.hash(),
+        cues: g.audio?.cues(50).map((c) => c.sound) ?? [],
+      };
     });
   const muted = await page.evaluate(() => window.__game.audio?.state());
   expect(muted).toMatchObject({ muted: true, context: 'none', ready: false });

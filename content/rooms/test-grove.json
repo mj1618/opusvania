@@ -1,6 +1,7 @@
 {
   "id": "test-grove",
   "title": "Test grove (the old demo level)",
+  "senses": "wallet",
   "art": { "kit": "grove", "seed": 1 },
   "shots": {
     "wide": [

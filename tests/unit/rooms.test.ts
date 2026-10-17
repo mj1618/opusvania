@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import worldJson from '../../content/world.json' with { type: 'json' };
 import { CameraBeats, leanWeight } from '../../src/render/camera/beats';
 import { createCamera, lerpCamera, stepCamera } from '../../src/render/camera/index';
 import { cameraFor, cameraTuning } from '../../src/render/camera/tuning';
@@ -49,15 +50,9 @@ function hatched(s: ReturnType<typeof sim>): void {
 describe('the room registry', () => {
   it('boots wood-hatch by default; the test grove is a room of its own', () => {
     expect(DEFAULT_ROOM).toBe('wood-hatch');
-    expect(ROOM_IDS).toEqual([
-      'wood-hatch',
-      'lab-world-a',
-      'lab-world-b',
-      'lab-world-c',
-      'test-grove',
-      'lab-lamps',
-      'lab-kit',
-    ]);
+    // (From content/world.json: the game's rooms, then the test rooms. A new room needs no edit here.)
+    expect(ROOM_IDS).toEqual([...worldJson.rooms.map((r) => r.id), ...worldJson.tests]);
+    expect(ROOM_IDS[0]).toBe(worldJson.start);
     expect(getRoom('test-grove')).toBe(GROVE);
     expect(GROVE.id).toBe('test-grove');
     expect(() => getRoom('nowhere')).toThrow(/Rooms: wood-hatch, lab-world-a/);
@@ -69,7 +64,12 @@ describe('the room registry', () => {
 
   it('rejects exits that are not spans of their edge, and overlapping ones', () => {
     const base = { ...flatScene(), pickups: [], pods: [] };
-    expect(() => parseScene({ ...base, exits: [{ id: 'a', edge: 's', from: 0, to: 9000 }] })).toThrow(/span/);
+    expect(() =>
+      parseScene({
+        ...base,
+        exits: [{ id: 'a', edge: 's', from: 0, to: 9000 }],
+      }),
+    ).toThrow(/span/);
     expect(() =>
       parseScene({
         ...base,
@@ -163,7 +163,11 @@ describe('the hatching', () => {
     const kinds = stirs.map((e) => e.type);
     expect(kinds.filter((k) => k === 'hatchStir')).toHaveLength(3);
     const hatch = stirs.find((e) => e.type === 'hatch');
-    expect(hatch).toMatchObject({ auto: false, cx: WOOD_HATCH.hatch?.x, cy: WOOD_HATCH.hatch?.y });
+    expect(hatch).toMatchObject({
+      auto: false,
+      cx: WOOD_HATCH.hatch?.x,
+      cy: WOOD_HATCH.hatch?.y,
+    });
     // The breaking press was not a jump; from then on she runs.
     expect(kinds).not.toContain('jump');
     s.run(R, 30);
@@ -176,7 +180,10 @@ describe('the hatching', () => {
     const stirs = ev.filter((e) => e.type === 'hatchStir');
     expect(stirs.length).toBeGreaterThanOrEqual(3);
     expect(stirs.every((e) => e.type === 'hatchStir' && e.auto)).toBe(true);
-    expect(ev.find((e) => e.type === 'hatch')).toMatchObject({ auto: true, frames: s.t.hatch.autoFrames });
+    expect(ev.find((e) => e.type === 'hatch')).toMatchObject({
+      auto: true,
+      frames: s.t.hatch.autoFrames,
+    });
   });
 
   it('a teleport ends it silently', () => {
@@ -203,7 +210,10 @@ describe('falls and the exit', () => {
     const i = ev.findIndex((e) => e.type === 'fallReturn');
     expect(ev[i + 1]?.type).toBe('spawn');
     // Back on the branch west of the gap, a step in from the lip (the rolling top counts as one), nothing lost.
-    expect(back).toMatchObject({ x: s2.x1 - s.t.room.returnInset, y: topAt(s2.x1 - s.t.room.returnInset) });
+    expect(back).toMatchObject({
+      x: s2.x1 - s.t.room.returnInset,
+      y: topAt(s2.x1 - s.t.room.returnInset),
+    });
     expect(s.state.player.hp).toBe(s.state.player.hpMax);
     expect(s.state.save.abilities).toEqual([]);
   });
@@ -217,12 +227,20 @@ describe('falls and the exit', () => {
     place(s, drop.x - 120);
     ev.push(...s.run(R, 200));
     const out = ev.find((e) => e.type === 'roomExit');
-    expect(out).toMatchObject({ id: 'drop', edge: 's', frames: s.t.room.exitFrames });
+    expect(out).toMatchObject({
+      id: 'drop',
+      edge: 's',
+      frames: s.t.room.exitFrames,
+    });
     const enter = ev.findIndex((e) => e.type === 'roomEnter');
     expect(enter).toBeGreaterThan(0);
     expect(ev[enter + 1]).toMatchObject({ type: 'spawn', ...WOOD_HATCH.spawn });
     // A fresh room: the cocoon again, the save kept.
-    expect(s.state.hatch).toEqual({ frames: expect.any(Number), presses: 0, done: false });
+    expect(s.state.hatch).toEqual({
+      frames: expect.any(Number),
+      presses: 0,
+      done: false,
+    });
     expect(s.state.save.abilities).toEqual(['glide']);
     expect(s.state.exit).toBeNull();
   });
@@ -261,7 +279,12 @@ describe('wood-hatch play checks', () => {
   function naive(
     wait: 'auto' | 'press',
     edge = 12,
-  ): { exit: string | null; frames: number; catches: number; hatchFrame: number } {
+  ): {
+    exit: string | null;
+    frames: number;
+    catches: number;
+    hatchFrame: number;
+  } {
     const s = sim(WOOD_HATCH);
     if (wait === 'press') hatched(s);
     let hold = 0;
@@ -391,8 +414,16 @@ describe('the room camera', () => {
     expect(leanWeight(lean, lean.from - 0.1)).toBe(0);
     expect(leanWeight(lean, lean.from + lean.in + 0.1)).toBe(1);
     expect(leanWeight(lean, lean.from + lean.in + lean.hold + lean.out + 0.1)).toBe(0);
-    const shut = { hatch: { frames: 100, presses: 0, done: false }, vx: 0, grounded: true };
-    const out = { hatch: { frames: 200, presses: 3, done: true }, vx: 0, grounded: true };
+    const shut = {
+      hatch: { frames: 100, presses: 0, done: false },
+      vx: 0,
+      grounded: true,
+    };
+    const out = {
+      hatch: { frames: 200, presses: 3, done: true },
+      vx: 0,
+      grounded: true,
+    };
     const running = { ...out, vx: 9.6 };
     const b = new CameraBeats(cam);
     b.update(1 / 60, 100, 1, shut);

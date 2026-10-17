@@ -105,8 +105,10 @@ export interface Obs {
   shut: boolean;
   /** No control this frame: an exit's or a caught fall's hold, faded, staggered. */
   held: boolean;
-  /** Caught circling a lure's flame (memory/lures.md): presses beat her free, the blade puts it out. */
+  /** Caught circling a lure's flame (memory/lures.md), or held by a web (memory/creatures.md): presses beat her free. */
   lured: boolean;
+  /** Web strands standing inside the view (`[x0, y0, x1, y1]`): silk she can see (and cut). */
+  strands: Array<[number, number, number, number]>;
   /** Indices into `scene.solids` / `scene.oneWays` inside the view. */
   solids: number[];
   /** Solids whose top edge is inside the view (ground she can see). */
@@ -144,7 +146,8 @@ export function observe(state: GameState, scene: Scene, view: ViewRect, pad = 32
   });
   const enemies: SeenEnemy[] = [];
   for (const e of state.enemies ?? []) {
-    if (e.gone || e.mode === 'dead') continue;
+    // (A web is silk, not a body: `strands`.)
+    if (e.gone || e.mode === 'dead' || e.kind === 'web') continue;
     if (!overlaps(view, e, pad)) continue;
     enemies.push({
       id: e.id,
@@ -169,7 +172,8 @@ export function observe(state: GameState, scene: Scene, view: ViewRect, pad = 32
     shut: !!state.hatch && !state.hatch.done,
     held: !!state.exit || !!state.caught || p.faded > 0 || p.stagger > 0,
     // Read loosely: the lure fields are new in the sim (state v22).
-    lured: ((p as unknown as { lure?: number }).lure ?? -1) >= 0,
+    lured: ((p as unknown as { lure?: number }).lure ?? -1) >= 0 || (p.grab ?? -1) >= 0,
+    strands: seenStrands(state, scene, view, pad),
     solids,
     tops,
     oneWays,
@@ -213,4 +217,27 @@ function seenLights(state: GameState, scene: Scene, view: ViewRect, pad: number)
       const out = l.list === 'lures' && (lureHp?.[l.index] ?? 1) <= 0;
       return { id: l.id, kind: l.kind, x: l.x, y: l.y, lit, out };
     });
+}
+
+/** The intact strands of every web that reach into the view. */
+function seenStrands(state: GameState, scene: Scene, view: ViewRect, pad: number): Obs['strands'] {
+  const out: Obs['strands'] = [];
+  (scene.enemies ?? []).forEach((sp, i) => {
+    const e = state.enemies[i];
+    if (!sp.strands || !e || e.kind !== 'web' || e.dispersed) return;
+    sp.strands.forEach((q, k) => {
+      if (e.cut.charCodeAt(k) !== 48) return;
+      const x0 = Math.min(q[0], q[2]);
+      const y0 = Math.min(q[1], q[3]);
+      if (
+        overlaps(
+          view,
+          { x: x0, y: y0, w: Math.max(1, Math.abs(q[2] - q[0])), h: Math.max(1, Math.abs(q[3] - q[1])) },
+          pad,
+        )
+      )
+        out.push(q);
+    });
+  });
+  return out;
 }

@@ -255,6 +255,8 @@ export function enterRoom(
   const p = state.player;
   // What belonged to the old room: a lure's hold, a lantern she kindled, a glint in flight to something there.
   p.lure = fresh.lure;
+  p.grab = -1;
+  p.grabGrace = 0;
   p.lureGrace = fresh.lureGrace;
   p.lureGraceFrames = 0;
   p.pullX = 0;

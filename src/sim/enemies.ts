@@ -18,25 +18,32 @@
  * Runs after the player each step: slashes are resolved by the player's update (`slashEnemies`)
  * against where the enemies stood, then they move, then contact is tested (`updateEnemies`).
  */
-import { burrback } from './enemies/burrback';
+import { burrback, oldBurrback } from './enemies/burrback';
 import { frames, type KindRules, type StepInfo, saltOf, segmentBlocked, setMode } from './enemies/common';
-import { lampwing } from './enemies/lampwing';
+import { hawker, lampwing } from './enemies/lampwing';
+import { litNow, SENSE_WALLET, seenBy, senseCode } from './enemies/senses';
+import { weaver } from './enemies/weaver';
+import { web } from './enemies/web';
 import type { SimEvent } from './events';
 import type { Box } from './player/attack';
 import type { EnemyKind, EnemySpawn, Scene } from './scene';
-import { seenNow } from './seen';
 import type { AttackDir, EnemyState, GameState, PlayerState } from './state';
 import type { Tuning } from './tuning';
 
-const KINDS: Record<EnemyKind, KindRules> = { burrback, lampwing };
-const KIND_LIST: EnemyKind[] = ['burrback', 'lampwing'];
+const KINDS: Record<EnemyKind, KindRules> = { burrback, lampwing, oldBurrback, hawker, web, weaver };
+const KIND_LIST: EnemyKind[] = ['burrback', 'lampwing', 'oldBurrback', 'hawker', 'web', 'weaver'];
 
 /** The rules of a kind (its box, numbers and behaviour). */
 export function enemyRules(kind: EnemyKind): KindRules {
   return KINDS[kind];
 }
 
-export function createEnemy(spawn: EnemySpawn, t: Tuning): EnemyState {
+/**
+ * A creature as it starts. `scene` (its room) gives it the room's way of noticing her (`senses`), the
+ * lure it guards and anything its kind builds from the room (a web's strands); without it (old tests)
+ * it notices by the wallet and guards nothing.
+ */
+export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyState {
   const K = KINDS[spawn.kind];
   const w = frames(K.width(t), 2);
   const h = frames(K.height(t), 2);
@@ -113,15 +120,30 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning): EnemyState {
     spill: 0,
     spillTimer: 0,
     spillGap: 0,
+    // (An old burrback hunts its den whatever the light (wood.md §6); a weaver feels her touch, lit or not.)
+    sense: senseCode(
+      spawn.senses ?? (spawn.kind === 'oldBurrback' || spawn.kind === 'weaver' ? 'always' : scene?.senses),
+    ),
+    guard: spawn.guards ? (scene?.lures ?? []).findIndex((l) => l.id === spawn.guards) : -1,
+    dispersed: false,
+    pogoed: false,
+    stunned: false,
+    feints: 0,
+    seg: -1,
+    segT: 0,
+    goalSeg: -1,
+    goalT: 0,
+    cut: '',
   };
   K.place(e, spawn, t);
+  if (scene) K.init?.(e, spawn, scene, t);
   e.homeX = e.x + e.w / 2;
   e.homeY = e.y + e.h / 2;
   return e;
 }
 
 export function createEnemies(scene: Scene, t: Tuning): EnemyState[] {
-  return (scene.enemies ?? []).map((s) => createEnemy(s, t));
+  return (scene.enemies ?? []).map((s) => createEnemy(s, t, scene));
 }
 
 /**
@@ -138,8 +160,15 @@ export function resetEnemies(state: GameState, scene: Scene, t: Tuning, events?:
     const e = state.enemies[i];
     const s = list[i];
     if (!e || !s || e.mode === 'dead') continue;
-    const fresh = createEnemy(s, t);
+    const fresh = createEnemy(s, t, scene);
     fresh.hp = Math.min(fresh.hpMax, Math.max(1, e.hp));
+    // (A web keeps its cut strands; one whose lamp went out stays dispersed.)
+    if (e.kind === 'web') fresh.cut = e.cut;
+    if (e.dispersed) {
+      fresh.dispersed = true;
+      fresh.mode = e.mode;
+      fresh.gone = e.gone;
+    }
     fresh.hitFrame = e.hitFrame;
     state.enemies[i] = fresh;
     const healed = 0;
@@ -220,8 +249,10 @@ export function updateEnemies(
   first: number,
 ): number {
   const list = state.enemies;
-  if (list.length === 0) return -1;
   const p = state.player;
+  // How lit she is by the lures (memory/creatures.md): what a lamp room's sight hunters see her by.
+  p.lit = litNow(state, scene, t);
+  if (list.length === 0) return -1;
   const I = info(state, scene, t, events);
   for (let i = first; i < events.length; i++) {
     const ev = events[i];
@@ -240,9 +271,6 @@ export function updateEnemies(
     }
   }
   let touch = -1;
-  // What she carries (memory/giving.md): empty-handed, a creature that is not already in a fight
-  // with her does not see her, and its touch does her no harm (she slips past).
-  const seen = seenNow(state, t);
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
     if (!e) continue;
@@ -267,7 +295,14 @@ export function updateEnemies(
     }
     e.modeFrames++;
     const K = KINDS[e.kind];
+    // A lamp-guarder whose lamp has gone out gives up (creatures.md §1.2): once, after any tumble.
+    if (e.guard >= 0 && !e.dispersed && e.mode !== 'dead' && e.mode !== 'hurt') {
+      if ((state.lures.hp[e.guard] ?? 1) <= 0) disperse(e, K, I);
+    }
     const alive = K.update(e, i, I);
+    // Unseen (the dark in a lamp room; empty hands in the test grove), a creature that is not already
+    // in a fight with her does not notice her, and its touch does her no harm (she slips past).
+    const seen = seenBy(e, I);
     aware(e, K, I, seen);
     if (!alive) continue;
     // Contact: its touch hurts, except for the first beat after it was hit, while it is calmed,
@@ -284,6 +319,25 @@ export function updateEnemies(
     }
   }
   return touch;
+}
+
+/** Its lamp went out: it gives up its own way (`KindRules.disperse`), `enemyDisperse`. */
+function disperse(e: EnemyState, K: KindRules, I: StepInfo): void {
+  e.dispersed = true;
+  const lure = I.scene.lures?.[e.guard];
+  const quiet = (I.state.lures.out[e.guard] ?? 0) === 1;
+  const how = K.disperse ? K.disperse(e, I, quiet) : 'sleep';
+  e.aware = 0;
+  I.events.push({
+    type: 'enemyDisperse',
+    id: e.id,
+    kind: e.kind,
+    x: e.x + e.w / 2,
+    y: e.y + e.h / 2,
+    lure: lure?.id ?? '',
+    how,
+    quiet,
+  });
 }
 
 /** It is in a fight with her, whatever she carries: braced, or roused / stirred (a burrback she has cut, or that has rammed). */
@@ -406,6 +460,12 @@ export function slashEnemies(
       e.hitBy = seq;
       continue;
     }
+    // A kind that takes a blow its own way (a web: the blade cuts its strands).
+    const own = KINDS[e.kind].slashed;
+    if (own) {
+      hits += own(e, i, info(state, scene, t, events), box, seq, dir);
+      continue;
+    }
     const l = Math.max(box.x, e.x);
     const r = Math.min(box.x + box.w, e.x + e.w);
     const top = Math.max(box.y, e.y);
@@ -472,7 +532,8 @@ export function slashEnemies(
     });
     if (e.hp > 0) {
       const n = frames(K.hurtFrames(t), 1);
-      setMode(e, 'hurt', n);
+      // (A tough blow does not stagger it: the old burrback's braced shell takes a pogo and rams on.)
+      if (!K.tough?.(e, dir, t)) setMode(e, 'hurt', n);
       events.push({
         type: 'enemyHit',
         id: e.id,
@@ -493,9 +554,11 @@ export function slashEnemies(
     }
     const n = frames(K.deadFrames(t), 1);
     setMode(e, 'dead', n);
-    const value = frames(K.value(t, power >= 2));
+    // Kills pay in safety, not loot (core.md §5): only the test grove's creatures spill glints.
+    const paid = e.sense === SENSE_WALLET;
+    const value = paid ? frames(K.value(t, power >= 2)) : 0;
     // What a finisher pays over the creature's base worth is a bonus: the tally counts it apart.
-    state.pickups.bonus += Math.max(0, value - frames(K.value(t, false)));
+    if (paid) state.pickups.bonus += Math.max(0, value - frames(K.value(t, false)));
     const glintFrames = frames(E.releaseFrames, 1);
     const stagger = frames(value >= E.bigRelease ? E.releaseStaggerBig : E.releaseStagger, 1);
     e.spill = value;
