@@ -221,6 +221,26 @@ Each hunts one moment of the lamp verb; placement is the builders', these are th
   - **Past the taproot** (the strip it cannot reach) counts as camping in every phase: the slam throws her back
     under the root along the floor (`slamRefugeKick` 42, no lift).
   - **`crack`** (spawn): the flag set as phase 2 begins (the plug first cracks; `flagSet`); a retry has it: short beat.
+- **Round 6** (area1-video-r4 #1: "staged, not a threat": 0-6 hits, 1 death in 6 fights):
+  - 20 hp (P1 to 12, P2 to 5, P3 the last 5). The gentle first rams only on her very first try (save flag
+    `<id>:fought`, set at its first wake). P3 at real pace: a 22 f tell, 16 px/f.
+  - **The slam wave**: a slam told by its rear sends a wave along its den floor each way at `slamWaveSpeed` 12 px/f;
+    on the floor as a front passes, a pip (`waveHit`: the framework hurts her as a touch; jump it). In P1 and P3 it
+    rears and slams every `slamEveryRams` 4 rams, as well as against camping. Pilots and bots now jump it (the pilot
+    from the rear's end; `fight.ts` `waveComing`).
+  - Size stays 160 x 96 in the sim: the jump over a ram, the 88 px under the taproot and the 192 px ledges are built
+    on it. "≥ 2.5x her height on screen" is the camera's zoom.
+  - A roll that starts against a wall rolls out the other way; the roll lands its own pogos (not the shared stomp).
+  - **Gotcha fixed**: kinds scanned `info.events` whole; tests and pilots pass one growing array, so an old event
+    (an `enemyBlock` from minutes ago) unrolled every roll at once. Scan from `info.first` (this step's first event).
+  - Numbers: slow pilot (den replica) 20/25-frame hands win in 1-3 tries, 34-105 s; 30-frame hands half lose in 4
+    min. `npm run humanplay -- den` (6 seeds a skill): all 18 down; casual 1-4 fades (6-22 hits, 36-82 s), average
+    0-5, skilled 0-3 (33-89 s).
+- **First-timer r6**: windows after a miss are 100 f (was 70); its ram and its ball hurt only from their front
+  half (behind it as it goes she is let be). A pogo on its brace and a throw-cut already land (chip / flip). The
+  crack's blade of light is no mechanic: staging should land it on the taproot (phase 3's target), out of the
+  roll's lane. **Carriers**: only the bite hurts (walking they pass under her), and one bite calms every carrier
+  within 600 px for 240 f (`lineCalmFrames`): no chained bites.
 - **Throw-cut, creature side** (`throwCut` = `player.attackHeavy`, the sim's; `KindRules.heavy`, `enemyHeavy`):
   never glances; a beetle braced or walking flips belly-up; the rolling old burrback unrolls; a hawker in its tell,
   dive or stall is knocked out and flees (`leave`) once it rights itself (3x power kills a 3 hp one); a dangler's

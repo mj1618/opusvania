@@ -226,7 +226,8 @@ export const carrier: KindRules = {
   },
 
   /** In the crack it is no one's. */
-  harmless: (e) => e.mode === 'under',
+  // (First-timer r6: "three ant hits in a row on a ledge": only a bite hurts; walking, they pass under her.)
+  harmless: (e) => e.mode !== 'bite',
 
   /** It sees her only while it is about to bite. */
   sees: (e) => e.mode === 'alert' || e.mode === 'bite',
@@ -239,7 +240,16 @@ export const carrier: KindRules = {
 
   /** It bit her: it goes on its way (no second bite for a while). */
   touched(e, info) {
-    e.strikeCd = frames(info.t.carrier.biteCooldownFrames);
+    const c = info.t.carrier;
+    e.strikeCd = frames(c.biteCooldownFrames);
     if (e.mode === 'alert' || e.mode === 'bite') setMode(e, 'walk', 0);
+    // (One bite, then the line lets her be: every carrier near goes on its way for `lineCalmFrames`, never a
+    // chain of bites from the ants behind it.)
+    for (const o of info.state.enemies) {
+      if (o.kind !== 'carrier' || o.mode === 'dead' || o.gone) continue;
+      if (Math.abs(o.x - e.x) > c.lineCalmPx) continue;
+      o.strikeCd = Math.max(o.strikeCd, frames(c.lineCalmFrames));
+      if (o.mode === 'alert' || o.mode === 'bite') setMode(o, 'walk', 0);
+    }
   },
 };

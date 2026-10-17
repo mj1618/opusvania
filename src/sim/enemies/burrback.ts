@@ -570,7 +570,7 @@ function openHitsOf(e: EnemyState, B: Row): number {
  * The slam (round 5, anti-camp; the big one at phase 2): `enemySlam`; she stands on a ledge (any top over
  * its den floor) within `slamReachPx`: she is shaken off it, toward it.
  */
-function slam(e: EnemyState, info: StepInfo, B: Row, big: boolean): void {
+function slam(e: EnemyState, info: StepInfo, B: Row, big: boolean, wave = false): void {
   const p = info.state.player;
   const cx = e.x + e.w / 2;
   const pc = p.x + p.w / 2;
@@ -596,6 +596,11 @@ function slam(e: EnemyState, info: StepInfo, B: Row, big: boolean): void {
   e.camp = 0;
   // (She is down off her ledge: a beat to find her feet before it may brace.)
   e.strikeCd = Math.max(e.strikeCd, frames(B.slamCalmFrames));
+  // (A slam told by its rear sends a wave along its floor: round 6.)
+  if (wave && B.slamWaveSpeed > 0) {
+    e.wave = 1;
+    e.waveX = cx;
+  }
   info.events.push({
     type: 'enemySlam',
     id: e.id,
@@ -652,6 +657,9 @@ function toPhase(e: EnemyState, info: StepInfo, B: Row, n: number): void {
 function startRoll(e: EnemyState, info: StepInfo, B: Row): void {
   const p = info.state.player;
   e.facing = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
+  // (Against a wall (she is over it, on a ledge in the corner): it rolls out, the other way.)
+  if (solidAt(info.scene, e.facing > 0 ? e.x + e.w : e.x - 1, e.y, 1, e.h - 2))
+    e.facing = e.facing > 0 ? -1 : 1;
   setMode(e, 'roll', 0);
   e.ramSpeed = B.rollSpeed;
   // (`taps` counts this roll's wall bounces in phase 2.)
@@ -681,11 +689,13 @@ function unroll(e: EnemyState, info: StepInfo, how: 'pogo' | 'thrown' | 'heavy' 
 /** One step of the roll: across its den, bouncing off walls (and brinks), faster each time. Its touch is live. */
 function roll(e: EnemyState, info: StepInfo, B: Row): boolean {
   const p = info.state.player;
-  for (const ev of info.events)
-    if (ev.type === 'enemyBlock' && ev.id === e.id && ev.slash === 'down') {
+  for (let i = info.first; i < info.events.length; i++) {
+    const ev = info.events[i];
+    if (ev?.type === 'enemyBlock' && ev.id === e.id && ev.slash === 'down') {
       unroll(e, info, 'pogo');
       return false;
     }
+  }
   // (Curled, it is a ball `rollTouchPx` high at its feet: a hop clears it.)
   const top = e.y + e.h - B.rollTouchPx;
   const over = p.x < e.x + e.w && e.x < p.x + p.w && p.y < e.y + e.h && top < p.y + p.h;
@@ -743,6 +753,19 @@ function roll(e: EnemyState, info: StepInfo, B: Row): boolean {
 function phaseStep(e: EnemyState, info: StepInfo, B: Row): boolean | null {
   const p = info.state.player;
   const cx = e.x + e.w / 2;
+  // (The slam's floor wave runs out each way; a front that crosses her feet on its floor hurts her.)
+  e.waveHit = false;
+  if (e.wave > 0) {
+    const was = e.wave;
+    e.wave += B.slamWaveSpeed;
+    const onFloor = p.grounded && p.hp > 0 && p.faded === 0 && Math.abs(p.y + p.h - e.fromY) <= 2;
+    const l0 = e.waveX - e.wave;
+    const l1 = e.waveX - was;
+    const r0 = e.waveX + was;
+    const r1 = e.waveX + e.wave;
+    if (onFloor && ((p.x < l1 && p.x + p.w > l0) || (p.x < r1 && p.x + p.w > r0))) e.waveHit = true;
+    if (e.wave >= B.slamReachPx) e.wave = 0;
+  }
   // (Up off its floor, on a ledge or hopping about one, or tucked under one: the count runs; only her feet
   // on its open floor end it.)
   const near = p.hp > 0 && p.faded === 0 && Math.abs(p.x + p.w / 2 - cx) <= B.slamReachPx;
@@ -767,7 +790,7 @@ function phaseStep(e: EnemyState, info: StepInfo, B: Row): boolean | null {
   if (e.mode === 'rear') {
     e.vx = 0;
     if (--e.timer <= 0) {
-      slam(e, info, B, false);
+      slam(e, info, B, false, true);
       setMode(e, 'walk', 0);
     }
     return false;
@@ -786,7 +809,15 @@ function phaseStep(e: EnemyState, info: StepInfo, B: Row): boolean | null {
     setMode(e, 'curl', frames(B.recurlFrames, 1));
     return false;
   }
-  if (free && e.camp >= frames(B.campFrames)) {
+  // (Round 6: in phases 1 and 3, every `slamEveryRams` rams it rears and slams anyway: the wave is a move.)
+  const rotation =
+    B.slamEveryRams > 0 &&
+    e.phase !== 2 &&
+    e.strikeCd === 0 &&
+    e.rams - e.slams >= B.slamEveryRams &&
+    Math.abs(p.y + p.h - e.fromY) <= 2;
+  if (free && (e.camp >= frames(B.campFrames) || rotation)) {
+    e.slams = e.rams;
     const n = frames(B.rearFrames, 1);
     setMode(e, 'rear', n);
     e.camp = 0;
@@ -1142,6 +1173,13 @@ export const burrback: KindRules = {
         setMode(e, 'wake', n);
         e.dozing = false;
         e.facing = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
+        // (Round 6: its gentle first rams are for her very first try only; a later wake rams at full speed.)
+        if (B.firstTellRams > 0) {
+          const key = `${e.id}:fought`;
+          const flags = info.state.save.flags;
+          if (flags.includes(key)) e.rams = Math.max(e.rams, B.firstTellRams);
+          else flags.push(key);
+        }
         events.push({
           type: 'enemyWake',
           id: e.id,
@@ -1521,6 +1559,8 @@ export const burrback: KindRules = {
   /** Its touch hurt her (or met her kindling): it is shoved back from her, flinches, and turns away. */
   touched(e, info, dir) {
     if (e.mode === 'dead') return;
+    // (Its slam's wave reached her: nothing of its own to answer.)
+    if (e.waveHit) return;
     // (Rolling, it hit her: it stops, curled and shut, `rollRestFrames` (no ball back at her every second), then
     // rolls at her again.)
     if (e.mode === 'roll') {
@@ -1594,6 +1634,11 @@ export const burrback: KindRules = {
    */
   touches(e, p, t) {
     const B = rowOf(t, e);
+    // (First-timer r6: "it hurt to touch from behind". The ram and the ball hurt only from their front half: one
+    // behind it as it goes, or landing behind it, is let be.)
+    if (B.bodyHarmless && (e.mode === 'charge' || e.mode === 'roll')) {
+      if ((p.x + p.w / 2 - (e.x + e.w / 2)) * e.facing < 0) return false;
+    }
     // (Rolling: the ball, `rollTouchPx` high.)
     if (e.mode === 'roll') return p.y + p.h > e.y + e.h - B.rollTouchPx;
     if (!B.domeContact) return true;
@@ -1638,7 +1683,7 @@ export const burrback: KindRules = {
    * Coming down on its top bounces her (`landBounce`: the old burrback, round 4), not while it lies open (she
    * may land in it and cut).
    */
-  bouncy: (e, t) => rowOf(t, e).landBounce && !e.stunned,
+  bouncy: (e, t) => rowOf(t, e).landBounce && !e.stunned && e.mode !== 'roll',
 
   /** The old burrback's braced shell takes a pogo without a stagger: it rams on under her. */
   tough: (e, dir, t) => rowOf(t, e).pogoShell && e.braced && dir === 'down',

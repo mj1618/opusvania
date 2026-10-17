@@ -375,7 +375,7 @@ describe('the old burrback', () => {
     o.taken = 0;
     // (The window's mechanism, unphased; from just over its first third: 3 cuts cross it.)
     o.phase = 0;
-    o.hp = 12;
+    o.hp = 15;
     s.place(o.x - 30, FLOOR);
     s.state.player.facing = 1;
     const ev = s.run('A1 .22 A1 .22 A1 .40');
@@ -1101,6 +1101,50 @@ describe('round 5: the old burrback as a three-phase boss under the oak (area1-p
     expect(types(ev)).not.toContain('hurt');
   });
 
+  it('round 6: its rotation slam (told by a rear) sends a floor wave: a pip on the floor, nothing if she jumps it', () => {
+    for (const jump of [false, true]) {
+      const s = newSim(den());
+      const o = awake(s);
+      o.rams = O.slamEveryRams;
+      s.place(900, FLOOR);
+      const ev: SimEvent[] = [];
+      for (let i = 0; i < 300 && !types(ev).includes('enemySlam'); i++) ev.push(...s.run('.1'));
+      expect(types(ev)).toContain('enemyRear');
+      // The wave runs ~300 px to her at slamWaveSpeed: jump as it comes.
+      const n = Math.max(0, Math.floor(Math.abs(o.x + o.w / 2 - 900) / O.slamWaveSpeed) - 10);
+      const after = s.run(jump ? `.${n} J20 .40` : `.${n + 60}`);
+      expect(types(after).includes('hurt')).toBe(!jump);
+    }
+  });
+
+  it('first-timer r6: its ram hurts only from its front half (behind it as it goes, she is let be)', () => {
+    const s = newSim(den());
+    const o = awake(s);
+    o.mode = 'charge';
+    o.facing = 1;
+    o.chargeLeft = 300;
+    o.ramSpeed = 4;
+    // Just behind its middle, overlapping its back half.
+    s.place(o.x + o.w / 2 - 30, FLOOR);
+    s.state.player.invuln = 0;
+    expect(types(s.run('.3'))).not.toContain('hurt');
+  });
+
+  it('round 6: its gentle first rams are for the very first try; a later wake rams at full speed', () => {
+    const s = newSim(den());
+    const o = enemy(s, 'o');
+    s.place(900, FLOOR);
+    s.run('.5');
+    expect(s.state.save.flags).toContain('o:fought');
+    expect(o.rams).toBe(0);
+    const t = newSim(den());
+    t.state.save.flags.push('o:fought');
+    const q = enemy(t, 'o');
+    t.place(900, FLOOR);
+    t.run('.5');
+    expect(q.rams).toBe(O.firstTellRams);
+  });
+
   it('past the taproot (where it cannot follow) is no refuge: the slam throws her back under the root', () => {
     const s = newSim(den());
     const o = awake(s);
@@ -1108,8 +1152,9 @@ describe('round 5: the old burrback as a three-phase boss under the oak (area1-p
     s.place(2400, FLOOR);
     const ev = s.run(`.${O.campFrames + O.rearFrames + 4}`);
     expect(of(ev, 'enemySlam')[0]?.shook).toBe(true);
-    s.run('.90');
-    expect(s.state.player.x + s.state.player.w).toBeLessThan(2000);
+    // (Thrown back under the root along the floor; the slam's wave may catch her there: round 6.)
+    const after = s.run('.90');
+    expect(s.state.player.x + s.state.player.w < 2000 || types(after).includes('hurt')).toBe(true);
   });
 
   it('phase 2 sets its `crack` flag (the plug first cracks); a retry has the flag and a short beat', () => {
@@ -1150,7 +1195,9 @@ describe('round 5: the old burrback as a three-phase boss under the oak (area1-p
     expect(b[1] ?? 0).toBeGreaterThan(b[0] ?? 0);
     // Dropped onto it: a pogo, and it lies open.
     expect(o.mode).toBe('roll');
-    s.place(o.x + o.w / 2 + (o.facing > 0 ? 40 : -40), o.y - 120);
+    // (Slowed for the test, so the drop meets it.)
+    o.ramSpeed = 0.01;
+    s.place(o.x + o.w / 2, o.y - 120);
     const un: SimEvent[] = [];
     for (let i = 0; i < 40 && !types(un).includes('enemyUnroll'); i++) un.push(...s.run('.1'));
     expect(of(un, 'enemyUnroll')[0]?.how).toBe('pogo');
@@ -1336,6 +1383,19 @@ describe('round 5: the carriers (ants)', () => {
     s2.state.player.facing = -1;
     expect(types(s2.run('A1 .4'))).toContain('enemyDie');
     expect(a1.kind).toBe('carrier');
+  });
+
+  it('first-timer r6: a line of them never chains bites on one standing on their trail; walking, they pass under her', () => {
+    const s = newSim(
+      room([
+        { id: 'a1', kind: 'carrier', x: 1000, y: FLOOR, facing: 1, trail: [[1600, FLOOR]] },
+        { id: 'a2', kind: 'carrier', x: 1000, y: FLOOR, facing: 1, follow: 'a1', phase: 0.1 },
+        { id: 'a3', kind: 'carrier', x: 1000, y: FLOOR, facing: 1, follow: 'a1', phase: 0.2 },
+      ]),
+    );
+    s.place(1300, FLOOR);
+    const ev = s.run('.400');
+    expect(of(ev, 'hurt').length).toBeLessThanOrEqual(1);
   });
 
   it('their lamp out, they finish the trip and stop coming', () => {

@@ -101,6 +101,12 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
         jumpDir = 0;
       }
     }
+    // The rear tells a slam: its wave will run along the floor. Jump as the front comes (a reaction late, off).
+    if (e.mode === 'rear' && e.timer === 1 && jumpAt < 0 && jumpHold === 0) {
+      const arrive = Math.max(0, (Math.abs(dx) - p.w / 2) / t.oldBurrback.slamWaveSpeed);
+      jumpAt = f + Math.max(react - 10, Math.round(arrive) - 8) + (dice(7, roll++) % (2 * slop + 1)) - slop;
+      jumpDir = 0;
+    }
     if (jumpAt >= 0 && f >= jumpAt && p.grounded) {
       jumpHold = 16;
       jumpAt = -1;
@@ -162,8 +168,12 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
     )
       for (let i = from; i < events.length; i++) {
         const ev = events[i] as SimEvent;
-        if (/hurt|enemyWindup|enemyFeint|enemyCharge|enemyRecover|enemyWake|fade|enemyHit/.test(ev.type))
-          console.log(f, ev.type, before);
+        if (
+          /hurt|enemyWindup|enemyFeint|enemyCharge|enemyRecover|enemyWake|fade|enemyHit|enemyUnroll|enemyRoll|enemyBounce|enemySlam/.test(
+            ev.type,
+          )
+        )
+          console.log(f, ev.type, ev.type === 'enemyUnroll' ? JSON.stringify(ev) : '', before);
       }
     prev = m;
     if (
@@ -265,15 +275,16 @@ describe('the old burrback, the boss under the oak: a slow, sloppy first-timer w
     }
   });
 
-  it('the 20- and 25-frame reactors win in at most 2 attempts; the slowest hands mostly win (a boss now, round 5)', () => {
-    // (A fade makes the old burrback whole again and her too, at her door: no attrition. Since round 5 it is a
-    // three-phase boss: the slowest hands (30 frames, sloppy) take 1-7 attempts, like an HK boss for a new player.)
+  it('the 20- and 25-frame reactors win in at most 4 attempts; some of the slowest hands win in 4 minutes (round 6)', () => {
+    // (A fade makes the old burrback whole again and her too, at her door: no attrition. Since round 6 it is a
+    // threat (its slam's floor wave, full-speed rams after the first try, a real phase 3): the video review's
+    // target is 1-3 fades for a casual player; the slowest hands (30 frames, sloppy) take several.)
     for (const r of runs)
       if (r.react <= 25) {
         expect(r.won, `react ${r.react} seed ${r.seed}`).toBe(true);
-        expect(r.fades + 1, `react ${r.react} seed ${r.seed}`).toBeLessThanOrEqual(2);
+        expect(r.fades + 1, `react ${r.react} seed ${r.seed}`).toBeLessThanOrEqual(4);
       }
-    expect(runs.filter((r) => r.react === 30 && r.won).length).toBeGreaterThanOrEqual(6);
+    expect(runs.filter((r) => r.react === 30 && r.won).length).toBeGreaterThanOrEqual(3);
   });
 
   it('a first-try win takes the three phases: 25 s or more even for quick hands, no standoff', () => {
@@ -282,7 +293,7 @@ describe('the old burrback, the boss under the oak: a slow, sloppy first-timer w
 
   it('most win at the first or second attempt', () => {
     const early = runs.filter((r) => r.fades <= 1).length;
-    expect(early / runs.length).toBeGreaterThanOrEqual(0.75);
+    expect(early / runs.length).toBeGreaterThanOrEqual(0.6);
   });
 
   it('it feints only once its health is down a third', () => {

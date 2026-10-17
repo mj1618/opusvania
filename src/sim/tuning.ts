@@ -747,6 +747,13 @@ export const defaultTuning = withVariants({
     slamRefugeKick: 42,
     /** After a slam it may not brace for this long (she is finding her feet). */
     slamCalmFrames: 75,
+    /**
+     * Round 6 (video r4: "the boss never threatens"): a slam told by its rear sends a wave along its den floor
+     * each way at `slamWaveSpeed` px/f (to `slamReachPx`): on the floor as a front passes, she loses a pip (jump
+     * it). In phases 1 and 3 it rears and slams every `slamEveryRams` rams as well as against camping. 0 = none.
+     */
+    slamWaveSpeed: 12,
+    slamEveryRams: 4,
     transFrames: 90,
     transRetryFrames: 30,
     rollSpeed: 6,
@@ -759,9 +766,10 @@ export const defaultTuning = withVariants({
     rollTouchPx: 64,
     /** After this many wall bounces in one roll it rolls itself dizzy: open briefly (no standoff in phase 2). */
     rollTireBounces: 6,
-    p3TellFrames: 28,
+    // (Round 6, video r4: "phase 3 at real pace".)
+    p3TellFrames: 22,
     p3ChargePx: 640,
-    p3ChargeSpeed: 12,
+    p3ChargeSpeed: 16,
     p3Streak: 3,
     p3RestFrames: 70,
     taprootFrames: 300,
@@ -1069,6 +1077,9 @@ export const defaultTuning = withVariants({
     biteFrames: 10,
     biteLunge: 8,
     biteCooldownFrames: 60,
+    /** After one bites her, every carrier within `lineCalmPx` lets her be this long (no chained bites). */
+    lineCalmFrames: 240,
+    lineCalmPx: 600,
     hurtFrames: 10,
     hurtSafeFrames: 0,
     deadFrames: 30,
@@ -1480,7 +1491,7 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       // Feel review r2: twice the size (it was shorter than she is), its dome and ram to match.
       width: 160,
       height: 96,
-      hp: 16,
+      hp: 20,
       speed: 2.2,
       noticePx: 2400,
       dozePx: 0,
@@ -1491,8 +1502,9 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       windupFrames: 28,
       chargePx: 300,
       chargeSpeed: 16,
-      recoverFrames: 70,
-      recoverTiredFrames: 70,
+      // (First-timer r6: "only the flipped belly takes damage" read late: the windows after a miss are longer.)
+      recoverFrames: 100,
+      recoverTiredFrames: 100,
       // (Round 4: a ram into a wall lays it open 3 s: baiting it from a ledge is rewarded.)
       recoverWallFrames: 180,
       knockScale: 0.5,
@@ -1533,8 +1545,8 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       touchRestFrames: 90,
       // (Its den has its own rule for ledges: the slam.)
       stepRamPx: 0,
-      // (Round 5: the three-phase boss under the oak; 16 hp: phase 1 to 9, phase 2 to 4, phase 3 the last 4: two
-      // taproot windows of 2 cuts.)
+      // (Round 5: the three-phase boss under the oak. Round 6, video r4 "fights 60-120 s": 20 hp: phase 1 to 12,
+      // phase 2 to 5, phase 3 the last 5: a taproot window of 2 cuts, then the last lie.)
       phased: true,
       pogoShell: true,
       asleep: true,

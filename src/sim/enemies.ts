@@ -185,6 +185,10 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     camp: 0,
     taps: 0,
     streak: 0,
+    wave: 0,
+    waveX: 0,
+    waveHit: false,
+    slams: 0,
   };
   K.place(e, spawn, t);
   if (scene) K.init?.(e, spawn, scene, t);
@@ -279,6 +283,7 @@ const INFO: StepInfo = {
   t: undefined as unknown as Tuning,
   events: [],
   stir: '',
+  first: 0,
 };
 
 function info(state: GameState, scene: Scene, t: Tuning, events: SimEvent[]): StepInfo {
@@ -287,6 +292,7 @@ function info(state: GameState, scene: Scene, t: Tuning, events: SimEvent[]): St
   INFO.t = t;
   INFO.events = events;
   INFO.stir = '';
+  INFO.first = events.length;
   return INFO;
 }
 
@@ -308,6 +314,7 @@ export function updateEnemies(
   p.lit = litNow(state, scene, t);
   if (list.length === 0) return -1;
   const I = info(state, scene, t, events);
+  I.first = first;
   for (let i = first; i < events.length; i++) {
     const ev = events[i];
     if (ev?.type === 'slash') I.stir = 'slash';
@@ -390,6 +397,11 @@ export function updateEnemies(
     )
       continue;
     if (!alive) continue;
+    // (Round 6: the old burrback's slam wave met her on its floor: a hurt as a touch.)
+    if (touch < 0 && e.waveHit && e.calm === 0) {
+      touch = i;
+      continue;
+    }
     // Contact: its touch hurts, except for the first beat after it was hit, while it is calmed,
     // inside a lit lantern's sanctuary, and when it does not see her (she carries nothing and it is
     // not in a fight with her).

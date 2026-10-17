@@ -650,6 +650,15 @@ export interface EnemyState {
   camp: number;
   taps: number;
   streak: number;
+  /**
+   * Round 6: its slam's floor wave (`wave` = how far its fronts have run from `waveX` each way, px; 0 = none);
+   * `waveHit` = a front met her feet on its floor this step (the framework hurts her); `slams` = its `rams` at
+   * its last slam in the rotation (`slamEveryRams`).
+   */
+  wave: number;
+  waveX: number;
+  waveHit: boolean;
+  slams: number;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */

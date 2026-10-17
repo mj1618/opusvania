@@ -99,6 +99,8 @@ export interface StepInfo {
   events: SimEvent[];
   /** She landed or started a slash this step ('' = neither). */
   stir: 'land' | 'slash' | '';
+  /** Index in `events` of this step's first event (scan from here: the array may hold earlier steps'). */
+  first: number;
 }
 
 /**

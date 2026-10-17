@@ -12,6 +12,7 @@ import { ActionBit } from '../../src/sim/input';
 import { solidAt } from '../../src/sim/physics/aabb';
 import type { Scene } from '../../src/sim/scene';
 import type { EnemyState, GameState } from '../../src/sim/state';
+import { defaultTuning } from '../../src/sim/tuning';
 import { withShortcuts } from '../../src/sim/world';
 import { Aim, type Candidate, dirBit, type Line, type SimCtx } from './lines';
 
@@ -251,6 +252,15 @@ function onOneWay(s: GameState, scene: Scene): boolean {
   return (scene.oneWays ?? []).some((o) => Math.abs(o.y - fy) <= 2 && o.x < p.x + p.w && o.x + o.w > p.x);
 }
 
+/** The old burrback's slam wave (round 6) is on its way to her and close: a person jumps it. */
+function waveComing(s: GameState, e: EnemyState, lead: number): boolean {
+  if (e.wave <= 0) return false;
+  const v = defaultTuning.oldBurrback.slamWaveSpeed;
+  const p = s.player;
+  const ahead = Math.abs(p.x + p.w / 2 - e.waveX) - p.w / 2 - e.wave;
+  return ahead > -v && ahead < v * (lead + 8);
+}
+
 export function fightTactics(scene: Scene, i: number, toward: number, lead = 0): Candidate[] {
   const out: Candidate[] = [];
   const toE = (s: GameState, e: EnemyState) => Math.sign(centre(e).x - (s.player.x + s.player.w / 2)) || 1;
@@ -318,8 +328,8 @@ export function fightTactics(scene: Scene, i: number, toward: number, lead = 0):
         const near = dx(s, e) - Math.abs(e.vx) * lead < 200;
         if (
           p.grounded &&
-          (e.mode === 'charge' || e.mode === 'windup' || e.mode === 'roll') &&
-          near &&
+          (((e.mode === 'charge' || e.mode === 'windup' || e.mode === 'roll') && near) ||
+            waveComing(s, e, lead)) &&
           !(prev & J)
         )
           return J | dirBit(d);
@@ -350,8 +360,9 @@ export function fightTactics(scene: Scene, i: number, toward: number, lead = 0):
             }
             if (
               p.grounded &&
-              (e.mode === 'charge' || (e.mode as string) === 'feint' || e.mode === 'roll') &&
-              dx(s, e) - Math.abs(e.vx) * lead < 150 &&
+              (((e.mode === 'charge' || (e.mode as string) === 'feint' || e.mode === 'roll') &&
+                dx(s, e) - Math.abs(e.vx) * lead < 150) ||
+                waveComing(s, e, lead)) &&
               !(prev & J)
             )
               return J;
