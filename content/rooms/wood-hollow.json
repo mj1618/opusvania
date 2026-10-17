@@ -1,13 +1,23 @@
 {
   "id": "wood-hollow",
-  "title": "The hollow oak: the hub (greybox)",
+  "title": "The oak: the hollow, the trunk and the crown (greybox)",
   "region": "wood",
   "width": 3840,
-  "height": 1392,
-  "spawn": { "x": 1500, "y": 1024 },
+  "height": 4208,
+  "spawn": {
+    "x": 1500,
+    "y": 3840
+  },
   "edgeKick": false,
   "abilities": ["glide"],
-  "art": { "mode": "greybox", "labels": false },
+  "art": {
+    "mode": "greybox",
+    "labels": false
+  },
+  "reform": {
+    "x": 1280,
+    "y": 3840
+  },
   "camera": {
     "realFallPx": 250,
     "targetSmoothY": 10,
@@ -15,106 +25,677 @@
     "fallLookahead": 320,
     "zones": [
       {
-        "id": "look-up",
+        "id": "snuff",
         "x": 2560,
-        "y": 0,
+        "y": 1056,
         "w": 384,
-        "h": 704,
-        "bounds": { "x": 2176, "y": 0, "w": 1152, "h": 1392 }
+        "h": 256,
+        "zoom": 0.85,
+        "bounds": {
+          "x": 1920,
+          "y": 704,
+          "w": 1920,
+          "h": 1280
+        }
+      },
+      {
+        "id": "crown",
+        "x": 2944,
+        "y": 192,
+        "w": 896,
+        "h": 384,
+        "zoom": 0.6,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 3840,
+          "h": 2000
+        }
       }
     ]
   },
   "exits": [
-    { "id": "w", "edge": "w", "from": 768, "to": 1024 },
-    { "id": "e", "edge": "e", "from": 768, "to": 1024 },
-    { "id": "climb", "edge": "s", "from": 2560, "to": 2944 },
-    { "id": "n", "edge": "n", "from": 2560, "to": 2944 }
+    {
+      "id": "w",
+      "edge": "w",
+      "from": 3584,
+      "to": 3840
+    },
+    {
+      "id": "e",
+      "edge": "e",
+      "from": 3584,
+      "to": 3840
+    },
+    {
+      "id": "climb",
+      "edge": "s",
+      "from": 2560,
+      "to": 2944
+    },
+    {
+      "id": "canopy",
+      "edge": "e",
+      "from": 320,
+      "to": 576
+    }
   ],
-  "patches": [{ "id": "p3", "x": 1280, "y": 1024 }],
-  "mothStones": [{ "id": "stone-oak", "x": 1800, "y": 1024, "area": "wood-floor" }],
-  "signs": [{ "id": "sign-trunk", "x": 2300, "y": 1024, "flag": "wood-sign-trunk", "rhythm": ".-.." }],
+  "patches": [
+    {
+      "id": "p3",
+      "x": 1280,
+      "y": 3840
+    },
+    {
+      "id": "p-ledge",
+      "x": 2880,
+      "y": 2240
+    },
+    {
+      "id": "p5",
+      "x": 3328,
+      "y": 576
+    }
+  ],
+  "mothStones": [
+    {
+      "id": "stone-oak",
+      "x": 1800,
+      "y": 3840,
+      "area": "wood-floor"
+    }
+  ],
+  "signs": [
+    {
+      "id": "sign-trunk",
+      "x": 2300,
+      "y": 3840,
+      "flag": "wood-sign-trunk",
+      "rhythm": ".-.."
+    }
+  ],
   "triggers": [
-    { "id": "glimpse", "x": 1152, "y": 832, "w": 256, "h": 192, "sets": "wood-firefly-glimpse", "hold": 150 }
+    {
+      "id": "glimpse",
+      "x": 1152,
+      "y": 3648,
+      "w": 256,
+      "h": 192,
+      "sets": "wood-firefly-glimpse",
+      "hold": 180
+    },
+    {
+      "id": "root-cut",
+      "x": 3072,
+      "y": 384,
+      "w": 128,
+      "h": 192,
+      "sets": "wood-root-ladder"
+    },
+    {
+      "id": "crown",
+      "x": 3264,
+      "y": 384,
+      "w": 192,
+      "h": 192,
+      "sets": "wood-crown",
+      "hold": 540,
+      "finale": true,
+      "endSets": "wood-crown-gone"
+    }
   ],
   "solids": [
-    { "tag": "ground", "x": 0, "y": 1024, "w": 2560, "h": 368 },
-    { "tag": "ground", "x": 2944, "y": 1024, "w": 896, "h": 368 },
-    { "tag": "trunk", "x": 2496, "y": 0, "w": 64, "h": 864, "kick": "east" },
-    { "tag": "trunk", "x": 2944, "y": 0, "w": 64, "h": 864, "kick": "west" }
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 3840,
+      "w": 2560,
+      "h": 368
+    },
+    {
+      "tag": "ground",
+      "x": 2944,
+      "y": 3840,
+      "w": 896,
+      "h": 368
+    },
+    {
+      "tag": "trunk",
+      "x": 0,
+      "y": 640,
+      "w": 1408,
+      "h": 2176,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 2496,
+      "y": 2816,
+      "w": 64,
+      "h": 864,
+      "kick": "east"
+    },
+    {
+      "tag": "trunk",
+      "x": 2816,
+      "y": 2816,
+      "w": 192,
+      "h": 864,
+      "kick": "west"
+    },
+    {
+      "tag": "trunk",
+      "x": 2192,
+      "y": 2240,
+      "w": 368,
+      "h": 448
+    },
+    {
+      "tag": "trunk",
+      "x": 1984,
+      "y": 2240,
+      "w": 128,
+      "h": 320,
+      "kick": "west"
+    },
+    {
+      "tag": "trunk",
+      "x": 1408,
+      "y": 2688,
+      "w": 1152,
+      "h": 128,
+      "kick": "east"
+    },
+    {
+      "tag": "trunk",
+      "x": 1408,
+      "y": 1312,
+      "w": 384,
+      "h": 1376,
+      "kick": "east"
+    },
+    {
+      "tag": "trunk",
+      "x": 1408,
+      "y": 1120,
+      "w": 64,
+      "h": 192,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 1408,
+      "y": 640,
+      "w": 384,
+      "h": 480,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 1984,
+      "y": 1312,
+      "w": 128,
+      "h": 488
+    },
+    {
+      "tag": "trunk",
+      "x": 1984,
+      "y": 1800,
+      "w": 128,
+      "h": 440,
+      "kick": "west"
+    },
+    {
+      "tag": "trunk",
+      "x": 2944,
+      "y": 1640,
+      "w": 896,
+      "h": 1176,
+      "kick": "west"
+    },
+    {
+      "tag": "trunk",
+      "x": 2816,
+      "y": 2240,
+      "w": 128,
+      "h": 576,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 2944,
+      "y": 1344,
+      "w": 896,
+      "h": 296,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 2944,
+      "y": 576,
+      "w": 896,
+      "h": 768,
+      "kick": "west"
+    }
   ],
-  "oneWays": [{ "tag": "root", "x": 2560, "y": 1024, "w": 384, "noDrop": "wood-climbout" }],
+  "oneWays": [
+    {
+      "tag": "root",
+      "x": 2560,
+      "y": 3840,
+      "w": 384,
+      "noDrop": "wood-climbout"
+    },
+    {
+      "tag": "root",
+      "x": 2560,
+      "y": 3264,
+      "w": 256
+    },
+    {
+      "tag": "root",
+      "x": 2560,
+      "y": 2752,
+      "w": 256
+    },
+    {
+      "tag": "root",
+      "x": 2560,
+      "y": 2240,
+      "w": 256
+    },
+    {
+      "tag": "root",
+      "x": 2720,
+      "y": 1760,
+      "w": 136
+    },
+    {
+      "tag": "root",
+      "x": 1792,
+      "y": 1312,
+      "w": 192
+    },
+    {
+      "tag": "root",
+      "x": 2112,
+      "y": 1312,
+      "w": 672
+    },
+    {
+      "tag": "root",
+      "x": 2848,
+      "y": 1248,
+      "w": 96
+    },
+    {
+      "tag": "root",
+      "x": 2848,
+      "y": 912,
+      "w": 96
+    }
+  ],
+  "thorns": [
+    {
+      "id": "thorn-band",
+      "x": 2912,
+      "y": 1404,
+      "w": 32,
+      "h": 140
+    }
+  ],
+  "bark": [
+    {
+      "id": "bark-knot",
+      "x": 1728,
+      "y": 1120,
+      "w": 64,
+      "h": 192
+    },
+    {
+      "id": "root-knot",
+      "x": 3008,
+      "y": 0,
+      "w": 64,
+      "h": 576,
+      "hp": 1
+    }
+  ],
+  "gates": [
+    {
+      "id": "crown-gate",
+      "x": 3712,
+      "y": 0,
+      "w": 64,
+      "h": 576,
+      "flag": "wood-crown-gone",
+      "kick": false
+    }
+  ],
+  "lures": [
+    {
+      "id": "wick-rest",
+      "kind": "wick",
+      "x": 2380,
+      "y": 2196
+    },
+    {
+      "id": "wick-firefly",
+      "kind": "wick",
+      "x": 2788,
+      "y": 1460,
+      "spin": 1,
+      "after": "wood-firefly-glimpse"
+    },
+    {
+      "id": "wick-crown",
+      "kind": "wick",
+      "x": 2838,
+      "y": 540,
+      "spin": -1
+    },
+    {
+      "id": "wick-knot",
+      "kind": "wick",
+      "x": 1608,
+      "y": 1270
+    },
+    {
+      "id": "lantern-crown",
+      "kind": "lantern",
+      "x": 2168,
+      "y": 340,
+      "spin": 1
+    }
+  ],
+  "enemies": [
+    {
+      "id": "dang-knot",
+      "kind": "dangler",
+      "x": 2380,
+      "y": 1336,
+      "facing": 1,
+      "drop": 880,
+      "guards": "wick-rest"
+    },
+    {
+      "id": "hawk-crown",
+      "kind": "hawker",
+      "x": 2648,
+      "y": 470,
+      "facing": 1,
+      "radius": 160,
+      "hp": 3,
+      "guards": "wick-crown"
+    }
+  ],
   "routes": [
-    { "from": "spawn", "to": "p3" },
-    { "from": "w", "to": "p3" },
-    { "from": "p3", "to": "e" },
-    { "from": "p3", "to": "stone-oak" },
-    { "from": "p3", "to": "sign-trunk" },
-    { "from": "climb", "to": "p3", "oneWay": true },
-    { "from": "p3", "to": "climb", "flags": ["wood-climbout"], "oneWay": true },
-    { "from": "p3", "to": "n", "needs": ["wallJump"] },
-    { "from": "n", "to": "p3", "oneWay": true }
+    {
+      "from": "spawn",
+      "to": "p3"
+    },
+    {
+      "from": "w",
+      "to": "p3"
+    },
+    {
+      "from": "p3",
+      "to": "e"
+    },
+    {
+      "from": "p3",
+      "to": "stone-oak"
+    },
+    {
+      "from": "p3",
+      "to": "sign-trunk"
+    },
+    {
+      "from": "climb",
+      "to": "p3",
+      "oneWay": true
+    },
+    {
+      "from": "p3",
+      "to": "climb",
+      "flags": ["wood-climbout"],
+      "oneWay": true
+    },
+    {
+      "from": "p3",
+      "to": "p-ledge",
+      "needs": ["wallJump"]
+    },
+    {
+      "from": "p-ledge",
+      "to": "p3",
+      "oneWay": true
+    },
+    {
+      "from": "p-ledge",
+      "to": "root-cut",
+      "needs": ["wallJump"],
+      "oneWay": true
+    },
+    {
+      "from": "root-cut",
+      "to": "p5"
+    },
+    {
+      "from": "p5",
+      "to": "crown"
+    },
+    {
+      "from": "p5",
+      "to": "canopy"
+    },
+    {
+      "from": "p5",
+      "to": "p-ledge",
+      "oneWay": true
+    }
   ],
   "marks": {
-    "tatter": { "x": 2700, "y": 1024, "facing": 1, "want": [2752, -956], "until": "wood-root-ladder" },
+    "tatter": {
+      "x": 2700,
+      "y": 3840,
+      "facing": 1,
+      "want": [2788, 1460],
+      "until": "wood-root-ladder"
+    },
     "notes": [
       {
         "x": 40,
-        "y": 644,
-        "text": "R7 wood-hollow  PURPOSE: the question (HK's Dirtmouth): a rest, and one way up you can't take yet"
+        "y": 3484,
+        "text": "THE OAK (wood-hollow): the hollow at its foot, the trunk, the crown: one room, no seam (plan r3 item 3)"
       },
-      { "x": 40, "y": 704, "text": "W: in from wood-glidewalk at floor level" },
+      {
+        "x": 40,
+        "y": 3544,
+        "text": "W: in from wood-glidewalk at floor level"
+      },
       {
         "x": 1150,
-        "y": 764,
-        "text": "P3 moon patch. THE GLIMPSE (held beat): the camera looks up the trunk; the firefly hangs W-ff inside it (wood-heart)"
+        "y": 3604,
+        "text": "P3 moon patch. THE GLIMPSE (hold 180): the camera looks up the trunk; the firefly hangs W-ff in frame"
       },
       {
         "x": 1700,
-        "y": 924,
-        "text": "the MOTH-STONE: the area on the map, the roots faint below; its carving: moths climbing the oak"
+        "y": 3764,
+        "text": "the MOTH-STONE: the area on the map; its carving: moths climbing the oak"
       },
       {
         "x": 2200,
-        "y": 924,
+        "y": 3764,
         "text": "the first firefly sign at the trunk's foot: a ring of picked glow-cap stumps"
       },
       {
         "x": 2580,
-        "y": 744,
-        "text": "Tatter under the trunk, looking up: it can't climb. Her kicks slide too (claws: R10's glade 2)"
+        "y": 3584,
+        "text": "Tatter under the trunk, looking up at W-ff: it can't climb. Her kicks slide too (claws: R10's glade 2)"
       },
       {
         "x": 2580,
-        "y": 1104,
-        "text": "the root mesh (one-way; no drop-through until wood-climbout): moonlight from below; up from the climb-out, then the shortcut down to P4"
+        "y": 3944,
+        "text": "the root mesh (one-way; no drop-through until wood-climbout): up from the climb-out, then the shortcut down to P4"
       },
       {
         "x": 2580,
-        "y": 244,
-        "text": "THE TRUNK (wall jump): both inner faces, ~860 of it here (shortened), then up through N into wood-heart (R7b)"
+        "y": 3200,
+        "text": "catch rungs across the column every ~550 (one-ways: she kicks up through them, a fall lands on one)"
       },
-      { "x": 3300, "y": 924, "text": "E arch: the one way on, east to the hawkers' clearing" },
-      { "x": 400, "y": 20, "text": "LANDMARK: the hollow oak, the moon column down its trunk" }
+      {
+        "x": 3300,
+        "y": 3764,
+        "text": "E arch: the one way on before the claws, east to the hawkers' clearing"
+      },
+      {
+        "x": 2200,
+        "y": 2300,
+        "text": "REST LEDGE: W-rest's cut spots; dang-knot drops on them from under the bridge"
+      },
+      {
+        "x": 2700,
+        "y": 2200,
+        "text": "P-ledge (moon patch) on the buttress, out of W-rest's light; the column's east face is slick under it"
+      },
+      {
+        "x": 1820,
+        "y": 2520,
+        "text": "THE DARK WAY: the hole at the ledge's back, the tunnel, the chimney (no lamps, slower) to the bridge"
+      },
+      {
+        "x": 2960,
+        "y": 1780,
+        "text": "the near face holds up to W-ff; a slick stretch with the thorn band over it"
+      },
+      {
+        "x": 2600,
+        "y": 1860,
+        "text": "the glow-cap ledge: stand under W-ff, out of its pull; jump up into it"
+      },
+      {
+        "x": 2420,
+        "y": 1560,
+        "text": "W-ff (lit after the glimpse): caught, beat free up-left: thrown onto the knot bridge"
+      },
+      {
+        "x": 2140,
+        "y": 1270,
+        "text": "the knot bridge: from its tip, walk off and down-cut W-ff (pogo snuff); on to the foothold over the thorns"
+      },
+      {
+        "x": 1480,
+        "y": 1080,
+        "text": "FIND: bark knot, W-knot behind it"
+      },
+      {
+        "x": 2700,
+        "y": 980,
+        "text": "the open crown: W-crown off the rim's lip, hawk-crown dives at her on the face / in the orbit"
+      },
+      {
+        "x": 2960,
+        "y": 360,
+        "text": "the root's knot (one cut): the root falls down the trunk; Tatter climbs"
+      },
+      {
+        "x": 3290,
+        "y": 330,
+        "text": "P5, THE CROWN (finale hold 540): the look-out, the cloud lifts off; the gate opens when it has gone"
+      },
+      {
+        "x": 2000,
+        "y": 220,
+        "text": "postgame: the lantern over the crown gap (the Fling promise)"
+      }
     ],
     "stage": {
-      "ladders": [{ "flag": "wood-root-ladder", "x": 2928, "y0": 0, "y1": 1024 }],
+      "moon": {
+        "x": 3500,
+        "y": 120,
+        "r": 56
+      },
+      "lights": {
+        "x": 3300,
+        "y": 380,
+        "w": 500,
+        "h": 120,
+        "count": 26
+      },
       "glimpse": {
         "flag": "wood-firefly-glimpse",
         "x": 2752,
-        "y": -956,
-        "zoom": 0.75,
-        "secs": 3,
-        "path": [[3600, 444], [3150, -356], [2780, -856], [2860, -1616]],
-        "away": [[2860, -1616], [2800, -2056], [2760, -2756]]
+        "y": 1300,
+        "zoom": 0.5,
+        "secs": 4.5,
+        "path": [[3600, 3500], [3150, 3000], [2780, 2500], [2760, 1900], [2788, 1460]],
+        "away": [[2788, 1460], [2760, 900], [2752, 200], [2752, -500]]
       },
-      "oak": { "x": 2752, "y": 1024, "top": -2468, "w": 384 }
+      "ladders": [
+        {
+          "flag": "wood-root-ladder",
+          "x": 2928,
+          "y0": 576,
+          "y1": 3840
+        }
+      ],
+      "rootFall": {
+        "flag": "wood-root-ladder",
+        "x": 3040,
+        "y": 384,
+        "len": 3264
+      },
+      "oak": {
+        "x": 2752,
+        "y": 3840,
+        "top": 348,
+        "w": 384
+      },
+      "cloud": {
+        "x": 2752,
+        "y": 420,
+        "r": 320,
+        "flag": "wood-crown",
+        "to": [5200, -700]
+      },
+      "vista": {
+        "flag": "wood-crown",
+        "x": 1920,
+        "y": 640,
+        "zoom": 0.5,
+        "hold": 9,
+        "parallax": 0.25
+      }
     }
   },
   "shots": {
     "wide": [
-      { "name": "patch", "x": 1280, "y": 1024 },
-      { "name": "trunk-foot", "x": 2750, "y": 1024 },
-      { "name": "trunk", "x": 2750, "y": 344 }
+      {
+        "name": "patch",
+        "x": 1280,
+        "y": 3840
+      },
+      {
+        "name": "trunk-foot",
+        "x": 2750,
+        "y": 3840
+      },
+      {
+        "name": "ledge",
+        "x": 2860,
+        "y": 2240
+      },
+      {
+        "name": "bridge",
+        "x": 2400,
+        "y": 1312
+      },
+      {
+        "name": "crown",
+        "x": 3328,
+        "y": 576
+      }
     ]
   }
 }

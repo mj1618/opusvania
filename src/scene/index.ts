@@ -14,7 +14,6 @@ import woodGladeJson from '../../content/rooms/wood-glade.json' with { type: 'js
 import woodGlidewalkJson from '../../content/rooms/wood-glidewalk.json' with { type: 'json' };
 import woodHatchJson from '../../content/rooms/wood-hatch.json' with { type: 'json' };
 import woodHawkersJson from '../../content/rooms/wood-hawkers.json' with { type: 'json' };
-import woodHeartJson from '../../content/rooms/wood-heart.json' with { type: 'json' };
 import woodHollowJson from '../../content/rooms/wood-hollow.json' with { type: 'json' };
 import woodSilkJson from '../../content/rooms/wood-silk.json' with { type: 'json' };
 import woodWellJson from '../../content/rooms/wood-well.json' with { type: 'json' };
@@ -606,7 +605,6 @@ const FILES: readonly unknown[] = [
   woodGladeJson,
   woodGlidewalkJson,
   woodHollowJson,
-  woodHeartJson,
   woodCanopyJson,
   woodHawkersJson,
   woodSilkJson,

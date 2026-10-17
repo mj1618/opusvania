@@ -77,7 +77,7 @@ line (to area 2). `wood-lantern` is now `wood-silk`.
 | R4 `wood-burrow` | 15104, 4608 | 4480x1792 | `burr-juv` (juvenileBurrback) under `wick-door`; `burr-first` (windup 32) under W3; `wick-gap` (2990, 920) on the jump's path off the root step: thrown right onto F3; dark floor 1472, tunnel under F3, hatch at 3904; `bark-hole` floor over the hole (full jump, cut ~80 over it: each hit bounces -15.5, the third breaks); W-hi4 (3820, 430) by shelf H |
 | R5 `wood-glade` | 18944, 6400 | 2880x2504 | the alcove's root rungs (1216-1312: 1920, 1792, a hatch at 1664) |
 | R6 `wood-glidewalk` | 21824, 8064 | 5760x2368 | gaps 1-2 as before; `wick-bend` (4150, 1440) over gap 3; `wick-ledge` (4880, 1800) with `burr-ledge` on T4's landing; bark floor pocket only |
-| R7 `wood-hollow` | 27584, 9024 | 3840x1392 | (shortened 1856 from the top: the trunk is ~860 here, then R7b) floor 1024 (368 of ground under it), doors W/E at floor level; P3 1280, glimpse trigger (hold 150), `stone-oak` (1800), `sign-trunk` (2300); trunk walls 2496-2560 / 2944-3008 to 864 (kick inward); root mesh one-way 2560-2944 at 1024, `noDrop: "wood-climbout"`; Tatter (2700, 1024); zone `look-up` (no fit); exit `n` 2560-2944 into wood-heart |
+| R7 `wood-hollow`, **the oak** | 27584, 6208 | 3840x4208 | **one room since round 3** (the hub + the old R7b `wood-heart`, retired): the hollow (floor 3840, 368 of ground under it, doors W/E at floor level, P3 1280, glimpse trigger hold 180, `stone-oak` 1800, `sign-trunk` 2300, Tatter 2700, the root mesh 2560-2944 `noDrop: "wood-climbout"` over exit `climb`), the trunk and the crown (exit `canopy` to the stub): see "The oak" below |
 | R8 `wood-hawkers` | 31424, 9024 | 3840x1392 | (shortened 1600 from the top so R7b fits above it; all y below are the new local ones) hawker A at W7 (1920, 520) over the hummocks (tops 832); the throw gap: near ledge to 2560 (1024), a dark pit 2560-3008 (floor 1248, **no thorns**: a miss is a hop back), far ledge 3008-3456 at 704 (320 up: only the throw), `wick-throw` (2700, 730) + `hawk-throw`; tunnel 2304-3712 (y 1264-1360), hatches at 2304 and 3600; `hollow-wings` behind `bark-hollow`; step 3456 y864 back up onto the far ledge; P-dark 3530 |
 | R9 `wood-silk` | 35264, 7424 | 3840x2992 | floor 2624; knob 760 + W-s1 + `dang-s1`; W-s2 (1400, 2380) throws up-right onto the root shelf 1600-2400 at 2304 past `dang-s2`; dip 1824-2176 (2880) with root steps; knob 2780 + W-s3 with `burr-silk` and `dang-s3` (one snuff, both off); `sign-silk` 3650; `bark-panel` floor 3200-3456 -> R10 `shaft`; postgame W-dj on a hung ledge |
 | R10 `wood-well` | 27584, 10416 | 11264x2240 | west hall (the drowned-roots stub); climb-out 2560-2944 with a top step; glade 2 2560-3264 under the mesh, P4 3136; gate 3520; pit 3584-5632 (zone `pit` frames the gate); `window` trigger (hold 120) + zone on L4; P-chute (6300, 1216) = `reform`; the stair L4..L0, two lit pockets (`wick-pocket`/`dang-pocket` over L3, `wick-chute`/`dang-chute` over L2); `wick-pogo` (9640, 760) under L1's lip with a root ceiling over L1's west end (no jump there) |
@@ -93,37 +93,46 @@ snuff, bounce, L2.
   the view clamps at R7b's foot and her feet reach the bottom of the frame before the room changes (measured 1.03);
   a room's camera can't see past its foot into the room below, so that wants a camera rule, not a seam move.
 
-### R7b `wood-heart` (the oak's heart + the crown) and the area-2 stub `wood-canopy`
-Placed at 28992, 4352 (2560x2816, its bottom on the hub's top); `wood-canopy` (STUB, area `wood-high`) at
-31552, 4096, its `w` exit on the rim's line. Local coordinates; the hub's shaft comes in at x 1152-1536 (the oak's
-column, `stage.oak` x 1344, top 348 = world ~4700). Tests: tests/unit/wood-heart.test.ts (each claim measured).
-- **Lower third:** the lower shaft (both faces hold), the **rest ledge** (704-1152, y 2240) with `wick-rest` (960,
-  2196: a standing cut from either side) and `dang-knot` hanging under the bridge at x 960, drop 880 (it bites a
-  stander at the cut spot; stepping back at its thread clears it; the snuff sends it). A root step on the near face
-  (1472-1536, y 2240). The spawn (the return point for a thorn hit before she has stood anywhere) is the tunnel
-  floor (480, 2688): any spawn from which a walker can drop into the lower shaft fails wood-camera.test (the view
-  clamps at the seam, her feet reach ~0.84 of the frame before the crossing into the hub).
-- **Middle third:** the near (east) face holds to 1640, slick to 1544, the thorn band 1344-1544. `wick-firefly`
-  W-ff (1380, 1460, `after: wood-firefly-glimpse`): a held-right climber is caught at the top of the face (25 of
-  28 timings; 1 thorn). Beaten free up-left: thrown onto the knot bridge (one-way 832-1376, y 1312) or the band's
-  top (1408), never the thorns; up-right or nothing: the thorns. **The snuff:** walk off the bridge's tip and
-  down-cut in the first 0-6 frames: snuff, pogo, holding right onto the foothold over the thorns (1472-1536, 1248).
-  With W-ff out, a kick-glide from the near face at 1740-1840 reaches the far face's band (576-704, 1408-1800;
-  slick below), whose top is a jump from the bridge.
-- **The dark way:** the hole at the ledge's back (704-784) -> the tunnel (2560-2688) -> the chimney (384-576) up
-  through its lid onto the band's top; no lamp near; slower than the throw (tested). The **bark knot** (find) is at
-  the band top's west end (3 cuts) with `wick-knot` behind it (a standing cut from the doorway).
-- **Upper third:** the near face holds 576-1344 to the rim. `wick-crown` (1430, 540) hangs off the rim's lip,
-  `hawk-crown` (1240, 470) guards it: the climb's top runs into the grip, and caught she is struck unless she beats
-  free at once (up-right: onto the rim). From the lip a standing cut west snuffs it and the hawker leaves.
-- **The crown (rim y 576):** `root-knot` bark (1600, the whole height to the room's top, hp 1) bars the rim; behind it
-  trigger `root-cut` sets `wood-root-ladder` (stage `rootFall`, the ladder down the trunk, Tatter at 2080 `when` it).
-  P5 (1920); trigger `crown` (1856-2048, hold 150) sets `wood-crown` (stage `cloud`, `vista`); exit `e` (320-576)
-  -> the stub. `lantern-crown` (760, 340) is postgame: every critical-path point is > its radius + 60 from it.
-- **Bots** (from the hub with glide + claws, 2026-10-18): speedrunner through, 32 s in R7b, 1 hawker hit; explorer
-  through (~90 s, 4 snuffs, the dark way first); cautious through in 1 of 2 runs (110 s; the other never jumps from the
-  band's top to the bridge: a planner limit, 128 across / 96 up). The naive bot does not climb, so it never gets here.
-- Gotcha: a scratchpad is shared by sibling agents: use your own subfolder for probes.
+### The oak (`wood-hollow`, round 3: the hub and R7b merged) and the area-2 stub `wood-canopy`
+Area 1 plan r3 item 3 (the seam strobed and the camera could not show the glimpse across it). One column from the
+mesh to the crown: no room change in the tree. Old hub content sits 2816 lower than in the hub, old R7b content 1408
+east. `wood-heart` is retired (never reuse the id). `wood-canopy` (STUB, area `wood-high`) at 31424, 5952, its `w`
+exit on the crown's `canopy` exit (320-576). Generator: a Python dict (hand edits fine). Tests:
+tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the hollow floor), wood-camera.test.ts.
+- **The hollow** (y 2816-3840): roofed; the trunk's two walls stand in it to 160 over the floor (walk under). West of
+  the trunk, x 0-1408 over the roof is solid wood up to the west crown (640).
+- **The column** x 2560-2816 from the hollow up to the rest ledge (west face holds; the east face is P-ledge's slick
+  buttress 2816-2944 from 2240 down), one-way **catch rungs** across it at 3264 and 2752.
+- **Rest ledge (2240):** the solid ledge 2192-2560 with `wick-rest` (2380, 2196) and `dang-knot` hung under the
+  bridge over it (drop 880); the one-way across the column; **P-ledge** (2880) on the buttress, 500 px from W-rest
+  (dark: the dangler never drops on a rester). The dark way's hole is at the ledge's back (2112-2192).
+- **Middle:** the near face (2944) holds 1640-2816, slick 1344-1640 with the **thorn band 1404-1544** (140; was
+  200). `wick-firefly` W-ff (2788, 1460). The **glow-cap ledge** (one-way 2720-2856, y 1760) stands under it out of
+  its pull: a hop (10 f) from anywhere on it is caught; beaten free up-left she lands on the knot bridge in 36 of 36
+  rhythms x orbit phases (up: bridge or the foothold; straight right: the thorns). The **knot bridge** (one-way
+  2112-2784, y 1312) runs on from the band's top and the chimney's lid (all one walk, 1792-2784); its tip is over W-ff:
+  walk off and down-cut in frames 0-8 (snuff, pogo, onto the foothold 2848-2944 at 1248). A fall from the bridge
+  lands on the glow-cap ledge. Zone `snuff` (0.85) frames the tip.
+- **Falls:** from every face and the bridge she lands within 620 px (tested at 12 drop points): rungs 3264 / 2752,
+  the ledge and buttress 2240, the glow-cap ledge 1760, the bridge 1312, the foothold 1248, a catch ledge 912.
+- **Top:** `wick-crown` (2838, 540) off the rim's lip with `hawk-crown`; the rim 576 from 2944 east. `root-knot`
+  (bark, 1 cut, full height) bars it; trigger `root-cut` sets `wood-root-ladder`. P5 3328. The **finale**: trigger
+  `crown` (3264-3456) `hold: 540, finale: true, endSets: "wood-crown-gone"`; gate `crown-gate` (3712-3776, flag
+  `wood-crown-gone`) shuts the `canopy` exit until the hold ends. Stage: `cloud` (flag wood-crown), `vista` (zoom 0.5,
+  hold 9 s), `rootFall`, the ladder down the near face (x 2928, 576-3840), Tatter at 3488 `when` the root.
+- **Fades:** `reform` (1280, 3840): a fade in the oak re-forms her at her patch if it is in the oak (P3 / P-ledge /
+  P5), else at P3, never in R8. Not `reformPatch`: its nearest patch is P5 for any fade near the top, which skips the
+  root's cut and the hawker (it should take only patches at or below where she lay).
+- **The glimpse:** trigger hold 180 at P3; `stage.glimpse` looks at (2752, 1300) at 0.5 (the crown ring and W-ff in
+  one frame), the firefly flies up the trunk and hangs at W-ff's own point; Tatter's `want` is W-ff.
+- A zoom-out zone over the hollow's floor (0.5) lurched the camera (20 px/f^2 at the room's foot clamp): left to the
+  camera agent. wood-rooms keeps "no zone over the hollow floor".
+- **Bots** (from the hollow with glide + claws, 2 runs each, 2026-10-18): speedrunner through (150 s, 0 hits,
+  W-crown snuffed); cautious through in 1 of 2 (33 s; the other lost at the near face, 6 thorn hits); explorer
+  lost around the rest ledge / tunnel; naive leaves east. Planner limits: a jump from a ledge to a face across a gap,
+  catching on purpose.
+- Gotcha: a scratchpad is shared by sibling agents: use your own subfolder for probes. Keep in-progress room data
+  loadable in the shared tree (a room that fails to parse breaks every agent's tests): work in a scratch copy.
 
 ## The room camera (`room.camera`, src/render/camera/)
 - Framing overrides: `cameraFor(room)` (tuning.ts) = `cameraTuning` + the room's `anchorY`, `lookaheadX`,

@@ -639,25 +639,23 @@ play, in one or two sentences, with the moment it was decided.
 
 ## 9. Build notes (builders write here where they deviate or need to agree something)
 
-### R7b `wood-heart` and the crown, as built (2026-10-18; memory/rooms.md "R7b")
-- **Placement:** R7b at world (28992, 4352), 2560 × 2816, its bottom on the hub's top: the hub's `n` exit (x
-  2560–2944) is R7b's `down` (world x 30144–30528). The oak's column (`stage.oak`) is world x 30336 in both. The
-  crown's rim is world y 4928; its `e` exit leads to the stub `wood-canopy` (area `wood-high`). `wood-climb` is gone.
-- **Flags:** cutting Tatter's root sets `wood-root-ladder` (the hub's Tatter is `until` it; at the crown it is `when`
-  it; a root ladder hangs down the trunk in both rooms). The crown trigger (hold 150) sets `wood-crown` (the cloud).
-- **The hub's staging marks** now point at the trunk: the glimpse's firefly flies in from the east arch, up the
-  trunk, hangs at its top and darts out through it (W-ff itself is R7b's lure, lit `after` the glimpse).
-- **Deviations from §5:**
-  - *W-ff is snuffed from above, not from the far face.* A face 700 px across can't reach it, and a shelf over the
-    far face is a head-bump on its climb. So the throw lands her on **the knot bridge** (a one-way over W-ff) or the
-    band's top, and the snuff is a walk-off **pogo down-cut** from the bridge's tip, which bounces her onto a foothold
-    over the thorn band. That concludes the pogo ladder too (R10's pogo-wick taught it).
-  - *The dark way* is a hole at the back of the rest ledge, a tunnel and a chimney to the band's top: no lamps,
-    measurably slower than the throw. The near face's foot has a root step level with the ledge.
-  - *The crown wick* hangs off the rim's lip, so the last stretch of the climb runs into its grip and the hawker dives
-    at the orbit (the R8 twist, concluded); a standing cut from the lip snuffs it.
-  - *The hanging root* is a bark curtain (1 cut) across the rim between the climb and P5, so cutting it is on the
-    critical path.
-- **For the hub's builder:** the hub's shaft is 2720 px of plain two-face climb before R7b starts (~5,000 px from the
-  hub floor to the crown in all). Consider shortening the hub (its top lower) or giving its shaft a beat; R7b moves
-  down by the same amount.
+### The oak, as built in round 3 (2026-10-18; memory/rooms.md "The oak")
+- **One room:** `wood-hollow` is now the oak, world (27584, 6208), 3840 × 4208: the hollow (floor world y 10048, its
+  doors, P3, the stone, the sign, Tatter, the mesh), the trunk and the crown. `wood-heart` is retired. The stub
+  `wood-canopy` sits at (31424, 5952), on the crown's `canopy` exit. The oak's column is world x 30336.
+- **For the builder of R6 and R8–R10:** when R6 grows (+2048), move `wood-hollow` and `wood-canopy` east with R8–R10
+  (the oak to x 29632, the stub to 33472); nothing inside them changes.
+- **Item 6:** catch rungs every ~550 (no fall over 620, tested from 12 drop points); the thorn band 140 (was 200); the
+  glow-cap ledge under W-ff (a hop from it is caught; up-left beats land on the knot bridge in 36 of 36); the snuff from
+  the bridge's tip in frames 0-8, framed by a zone; P-ledge, a moon patch at the rest ledge. A strike on the rim knocks her
+  straight (the creatures agent, 816bf0d), and the catch ledge at 912 limits any fall off the lip to ~340.
+- **Item 7:** the crown trigger is the finale (hold 540, `endSets: wood-crown-gone`), and the gate on the east exit
+  opens on that flag. The stage `vista` frames the crown at zoom 0.5 for 9 s; the hatching tree's silhouette west is
+  staging's (no prop exists yet).
+- **Item 2:** the glimpse holds 180 and frames the crown ring and W-ff together (2752, 1300, zoom 0.5); the firefly
+  hangs the glow-cap at W-ff's own point. No exit inside the tree (no green line in the trunk). A zoom-out at the
+  trunk's foot is the camera agent's (a 0.5 zone there lurched the camera at the room's foot).
+- **Fades:** `reform` at P3, not `reformPatch`: nearest-patch would stand her up at P5 after any fade near the top,
+  past the root's cut. Sim: if `reformPatch` took only patches at or below where she lay, the oak would use it.
+- Kept from round 2: W-ff snuffed from above (the bridge's tip), the dark way (the ledge's hole, the tunnel, the
+  chimney to the bridge), the crown wick off the rim's lip, the root as a 1-cut curtain on the rim.

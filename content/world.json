@@ -7,12 +7,11 @@
     { "id": "wood-burrow", "x": 15104, "y": 4608 },
     { "id": "wood-glade", "x": 18944, "y": 6400 },
     { "id": "wood-glidewalk", "x": 21824, "y": 8064 },
-    { "id": "wood-hollow", "x": 27584, "y": 9024 },
+    { "id": "wood-hollow", "x": 27584, "y": 6208 },
     { "id": "wood-hawkers", "x": 31424, "y": 9024 },
     { "id": "wood-silk", "x": 35264, "y": 7424 },
     { "id": "wood-well", "x": 27584, "y": 10416 },
-    { "id": "wood-heart", "x": 28992, "y": 6208 },
-    { "id": "wood-canopy", "x": 31552, "y": 5952 }
+    { "id": "wood-canopy", "x": 31424, "y": 5952 }
   ],
   "areas": [
     {
@@ -27,8 +26,7 @@
         "wood-hollow",
         "wood-hawkers",
         "wood-silk",
-        "wood-well",
-        "wood-heart"
+        "wood-well"
       ]
     },
     { "id": "wood-high", "rooms": ["wood-canopy"] }
