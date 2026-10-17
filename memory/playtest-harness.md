@@ -158,6 +158,16 @@ A bot that plays like a person, over the whole chunk, watched as video. Built 20
   fights, all 3 cut).
 - **Glades** seen and open (a `when` flag set) whose gift she lacks are the first target (the claws where the old
   burrback died: the bots had stopped in the den with nothing left to do).
+- **Video review r4's R8 east exit (2026-10-18):** not the wall reading. Two human-like runs stood at R8's east door
+  and turned back west for unwalked tiles across the throw gap (the explore habit), then stalled on standing hops
+  (a one-frame tap through a person's hands never closed the last 20 px). Now a person with an exit seen ahead does
+  not cross more than 900 px back for skipped ground, and a standing hop goes once she has stopped within 28 px:
+  9 of 9 leave R8 east on b62eab5 (7 of 9 before). The trunk post over the exit is read right (the exit's target is
+  the floor 3712-3840 under it). Backing out of a room now heads for the nearest known room (up to 6 links) with an
+  opening seen and never taken into a room not yet been in; a person up a climb who lands 120 px above where they set
+  out has got somewhere. **The west root road:** every persona sees R5's shaft down (`s`) within 1.5 s and can route
+  it (a drop between the pillars) but takes the east door first and rarely comes back; R10's `w` (after the claws)
+  is the other way in. On b62eab5 0 of 9 human-like runs reached it (1 of 9 by chance in one variant).
 - What they found on df4b0c5: R8's throw works but the look-ahead bots take the dark tunnel (cheaper); R10's
   pogo-wick is not required for a glider (the 9728 -> 9088 glide makes it); naive (no look-ahead) still stalls in R8.
 - **Region targets table** the harness reads (targets.ts): any markdown table in `docs/design/regions/*.md` with a

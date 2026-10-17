@@ -425,7 +425,13 @@ export function jumpLine(
           if (q.brake && d <= q.edge + 40 && Math.abs(p.vx) > 0.5) return 0;
           // (Taps of two frames: a one-frame tap through a person's hands does not move her.)
           if (q.brake && d > q.edge + 4 && d <= q.edge + 40) return k % 4 < 2 ? dirBit(q.dir) : 0;
-          if (d <= q.edge + Math.abs(p.vx) * (0.5 + (hands.anticipate ?? 0)) || p.wallDir === q.dir) {
+          // (A standing hop goes from where she has stopped, close enough: a person does not inch to the pixel.)
+          const settled = !!q.brake && d <= q.edge + 28 && Math.abs(p.vx) <= 0.5;
+          if (
+            d <= q.edge + Math.abs(p.vx) * (0.5 + (hands.anticipate ?? 0)) ||
+            p.wallDir === q.dir ||
+            settled
+          ) {
             if (prev & J) return dirBit(q.dir);
             launched = true;
             start = k;

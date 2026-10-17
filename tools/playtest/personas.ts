@@ -1100,18 +1100,36 @@ class Planner implements Persona {
     // A room she has been in with an opening she saw and never took (the rotten floor in the lantern room)
     // draws her back before one she has used up.
     const links = this.opt.world?.links ?? {};
+    // A room with an opening seen and never taken, into a room never been in (R5's shaft down to the root road)
+    // draws her back, the nearest such room first (rooms she has been in, by the links she knows).
+    const opening = (room: string): boolean => {
+      const m = this.memory.get(room);
+      if (!m) return false;
+      for (const id of m.exitsSeen.keys()) {
+        if (m.taken.has(`exit:${id}`) || this.shut.has(`${room}#${id}`)) continue;
+        const to = links[`${room}#${id}`]?.to;
+        if (to && this.roomsBeen.has(to)) continue;
+        return true;
+      }
+      return false;
+    };
     const unfinished = (k: string): number => {
       const dest = links[`${o.room}#${k.slice(5)}`]?.to;
-      const m = dest ? this.memory.get(dest) : undefined;
-      if (!dest || !m) return 1;
-      for (const id of m.exitsSeen.keys())
-        if (
-          !m.taken.has(`exit:${id}`) &&
-          !this.shut.has(`${dest}#${id}`) &&
-          links[`${dest}#${id}`]?.to !== o.room
-        )
-          return 0;
-      return 1;
+      if (!dest || !this.memory.has(dest)) return 99;
+      const seen = new Set([o.room, dest]);
+      let ring = [dest];
+      for (let hops = 0; hops < 6 && ring.length; hops++) {
+        if (ring.some(opening)) return hops;
+        const next: string[] = [];
+        for (const r of ring)
+          for (const [key, v] of Object.entries(links)) {
+            if (!v || !key.startsWith(`${r}#`) || seen.has(v.to) || !this.memory.has(v.to)) continue;
+            seen.add(v.to);
+            next.push(v.to);
+          }
+        ring = next;
+      }
+      return 99;
     };
     const pick = (pool.length ? pool : usable).sort(
       (a, b) => unfinished(a) - unfinished(b) || (this.mem.taken.get(a) ?? 0) - (this.mem.taken.get(b) ?? 0),
@@ -1242,8 +1260,13 @@ class Planner implements Persona {
         done: () => this.lightsVisited.has(id),
       });
     }
-    for (const c of this.frontier(o, mind, false))
+    // A person with a way on in front of them does not cross the room back to walk the ground they skipped
+    // (R8: two runs at the east door went back over the throw gap for unwalked tiles and never came back).
+    const exitAhead = exits.some((e) => (e.x - o.feetX) * this.wayOn > 0);
+    for (const c of this.frontier(o, mind, false)) {
+      if (this.opt.human && exitAhead && (c.x - o.feetX) * this.wayOn < -900) continue;
       out.push({ ...c, rank: c.leave || c.caps || c.climb ? 2 : 1 });
+    }
     for (const e of exits) out.push({ ...e, rank: oneWay(e.key) ? 4 : 3 });
     return out;
   }
@@ -1564,6 +1587,12 @@ class Planner implements Persona {
         return 0;
       }
       if (a.left && !home && goal.kind === 'surface') {
+        // A person up a climb who stands on a ledge well above where they set out has got somewhere: on from there.
+        const fromY = a.from ? topUnder(a.from, Math.max(a.from.x0, Math.min(a.from.x1, o.feetX))) : o.feetY;
+        if (this.opt.human && a.line.name.includes('climb') && o.feetY < fromY - 120) {
+          end(true, `landed higher (${Math.round(o.feetX)}, ${Math.round(o.feetY)})`);
+          return 0;
+        }
         end(false, `landed elsewhere (${Math.round(o.feetX)}, ${Math.round(o.feetY)})`);
         return 0;
       }
