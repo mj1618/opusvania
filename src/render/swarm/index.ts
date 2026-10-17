@@ -287,6 +287,10 @@ export class SwarmRenderer {
     const mx = hw + (mx0 - hw) * view.zoom;
     const my = hh + (my0 - hh) * view.zoom;
     const scale = this.ctx.viewScale();
+    // The pass is drawn for a moon at its rest place; the camera's lean slides the moon a little, so
+    // pull the pass along (frame px at zoom 1) to keep it crossing the disc.
+    const pullX = moon ? (mx0 - (moon.x + 0)) * plan.passShare : 0;
+    const pullY = moon ? (my0 - moon.y) * plan.passShare : 0;
     const c = S.colors;
     for (const l of this.layers) {
       const { cfg, u, parallax: p } = l;
@@ -297,7 +301,7 @@ export class SwarmRenderer {
       const cy = anchor.y + (view.y - anchor.y) * p;
       const path = u.uPath as Float32Array;
       plan.path.forEach((q, i) => {
-        path.set([fx + q[0], fy + q[1], q[2] * cfg.band, this.times[i] ?? 0], i * 4);
+        path.set([fx + q[0] + pullX, fy + q[1] + pullY, q[2] * cfg.band, this.times[i] ?? 0], i * 4);
       });
       const rate = (cfg.speed / S.period) * (3400 / Math.max(len, 1));
       const f = S.feed;

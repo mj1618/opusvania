@@ -30,14 +30,14 @@ export const FORMATIONS = {
    * moon disc and leaves right and up (y 0.1-0.2). A band 10-25% of the frame tall.
    */
   pass: [
-    [-1650, -40, 70, 1.15],
-    [-1050, -120, 95, 1.05],
-    [-520, -235, 120, 1],
-    [-20, -330, 125, 0.95],
-    [440, -360, 105, 0.85],
-    [880, -360, 95, 0.95],
-    [1340, -410, 85, 1.05],
-    [1850, -500, 70, 1.15],
+    [-1650, 70, 50, 1.15],
+    [-1100, -60, 62, 1.05],
+    [-600, -215, 78, 1],
+    [-110, -330, 84, 0.95],
+    [460, -350, 68, 0.85],
+    [900, -290, 62, 0.95],
+    [1320, -320, 58, 1.05],
+    [1850, -470, 50, 1.15],
   ],
   /**
    * The run: the thinner stream ahead and above her (x 0.6-0.95, y 0.08-0.35). It comes in high
@@ -183,6 +183,8 @@ export interface SwarmPlan {
   fy: number;
   /** The blended path (frame px). */
   path: PathPoint[];
+  /** How much of the path is the pass (0..1): it is pulled onto wherever the moon is on screen. */
+  passShare: number;
 }
 
 export interface RiverInput {
@@ -209,6 +211,7 @@ export class RiverBehaviour {
   private tx = 0;
   private prevCamX = 0;
   private prevCamXLock = 0;
+  private releaseFx = -1e9;
   /** Debug: never let go (look at the pass anywhere in the room). */
   hold = false;
 
@@ -261,6 +264,7 @@ export class RiverBehaviour {
         fx: i.camX,
         fy: i.camY,
         path: blendFormations({ pass: 1 }),
+        passShare: 1,
       };
     }
     this.tau += dt;
@@ -274,6 +278,7 @@ export class RiverBehaviour {
       (i.heroX > this.releaseX || this.tx > this.releaseX + 400)
     ) {
       this.releaseTau = this.tau;
+      this.releaseFx = this.fx;
     }
     let tx: number;
     let ty: number;
@@ -281,7 +286,8 @@ export class RiverBehaviour {
     let wx = F.omegaX;
     let wy = F.omegaY;
     if (this.releaseTau < 1e5) {
-      tx = this.crossAt.x;
+      // Never back over her head: if she is already past the gap, it crosses on from where it is.
+      tx = Math.max(this.crossAt.x, this.releaseFx);
       ty = this.crossAt.y;
       wx = wy = SWARM.release.omega;
     } else {
@@ -328,6 +334,14 @@ export class RiverBehaviour {
     const slowest = Math.min(...SWARM.layers.map((l) => l.speed)) * (1 - SWARM.spread);
     const over = this.releaseTau + SWARM.feed.releaseFade + SWARM.period / slowest + 1;
     if (this.tau > over) this.started = false;
-    return { active: true, tau: this.tau, releaseTau: this.releaseTau, fx: this.fx, fy: this.fy, path };
+    return {
+      active: true,
+      tau: this.tau,
+      releaseTau: this.releaseTau,
+      fx: this.fx,
+      fy: this.fy,
+      path,
+      passShare: (1 - lead) * (1 - cross),
+    };
   }
 }

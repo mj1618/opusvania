@@ -99,11 +99,28 @@ Add a formation (8 points; a closed loop works the same, with the first and last
 like `RiverBehaviour` that returns a `SwarmPlan` (frame point, path, tau, release). For many swarms at once,
 give each its own mesh set or move the plan into per-instance attributes (a behaviour id + its own frame).
 
-## Weak (judged harshly, round 2, 2026-10-17)
-1. Not yet seen against the moon in the real opening: the backdrop / room were mid-change during this round
-   (no moon in frame at the hatch). Retune `haze.strength` and the mid rim once the moon and a 18-35 luma sky
-   are back; the disc count (9-50) may then be too dense near 6-7 s.
-2. Single far moths still read as specks, not moths; the river reads as a band, its members don't (only the
-   mid layer's 10-20 px moths show wings, and only at full resolution).
-3. The near layer (9 blurred moths) rarely lands in frame during the pass, and the lead stream after the pass
-   is thin and mostly off the top of the frame on the redesigned route.
+## Round 3 (against the real opening: moon back, a 17-38 luma starry sky, the camera's lean)
+- **Pulled onto the moon**: the pass formation is drawn for a moon at its rest place (`art.moon`); the
+  camera's lean (130 right / 160 up) slides the moon a few px, so the pass is shifted by the moon's screen
+  offset x `plan.passShare` (index.ts `pullX/Y`). It crosses the disc whatever the lean.
+- **A narrower, curvier pass**: band half widths 50-84 (were 70-125), a lazy S (enters at y ~0.55 frame left,
+  climbs to the moon, dips after it), wander 0.25. Read: one curved stream of small dark moths into the moon.
+- Mid moths 8-17 px (300 of them): many small read as insects; at 10-20 px they read as bats or crows.
+- Near moths: 14, and fed in the thin tail too (`tail` 0.45), so a few cross the frame in front of her after
+  the pass, not only during it.
+- **On the release, never back over her head**: on the redesigned route a runner is past the promise gap
+  (x 3520) by ~5 s, during the pass; when the release comes (>= 9.5 s) the frame now goes to
+  `max(promise mark x, where it is)`, so the stream goes on ahead instead of flying back 2000 px.
+- Measured (naive bot, hold right + jump at edges): hatch -> exit ~12 s; she is at the promise gap at ~5 s,
+  so for a fast runner the pass IS the crossing (the river over the gap and the moon at once) and the lead
+  stream is seen on the last stretch. Disc: 5-10 moths at 6-7 s (debug count), not crowded.
+- Capture recipe (scratch, not committed): an in-page naive bot (`solidAt` on `g.scene().solids`, one
+  `g.input('R1' | 'R+J1'); g.step(1)` per frame) recorded as a DSL string, then `npm run clip -- --wide
+  --pre 160 --script "J1 .8 J1 .8 J1 .38 <recorded>"`.
+
+## Weak (judged harshly, round 3, 2026-10-17)
+1. Single moths are specks at 1x: the river reads as a stream of dark insects, but wings only read at 2x.
+2. During the run the giant trunks and canopy cover much of the river's middle (they draw over the swarm
+   layers), so on the crown it is two pieces: the left stream and the moths on the moon.
+3. Near moths read as dark leaves or bats (blurred blobs crossing low), and the promise-gap crossing is only
+   its own beat for a player slower than ~10 s to the gap; a fast runner gets it merged with the pass.

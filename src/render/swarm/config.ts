@@ -95,7 +95,7 @@ export const SWARM = {
   loop: { share: 0.035, every: [6, 11] as [number, number], dur: 1.35, radius: [45, 80] as [number, number] },
   straggle: { share: 0.08, lateral: 2.2, slow: 0.78 },
   /** Lateral wander across the band (share of the half width) and its rate (Hz). */
-  wander: { amp: 0.35, rate: 0.18 },
+  wander: { amp: 0.25, rate: 0.18 },
   /**
    * The wingbeat: how far each wing swings (rad either side) and how we see it: `tilt` 0 = from below
    * (a bow tie that squashes), pi/2 = side on (both wings up, then both down). Most of the way to side
@@ -151,8 +151,8 @@ export const SWARM = {
     },
     {
       layer: 'swarmMid',
-      count: 260,
-      size: [10, 20],
+      count: 300,
+      size: [8, 17],
       speed: 1,
       band: 1,
       dx: 0,
@@ -169,7 +169,7 @@ export const SWARM = {
     },
     {
       layer: 'swarmNear',
-      count: 9,
+      count: 14,
       size: [30, 56],
       speed: 1.55,
       band: 2.2,
@@ -182,7 +182,7 @@ export const SWARM = {
       alpha: 0.96,
       rim: 0.8,
       peak: 1,
-      tail: 0,
+      tail: 0.45,
       detail: true,
     },
   ] as SwarmLayerCfg[],
