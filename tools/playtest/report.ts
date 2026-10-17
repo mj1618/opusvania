@@ -408,3 +408,30 @@ export function regionMarkdown(
   );
   return out.join('\n');
 }
+
+/**
+ * A load failure in plain words: a schema error as `path: message` lines (Zod's JSON), else the error's own
+ * lines; and the room files the commit touched (the usual suspects: Zod does not name the file).
+ */
+export function loadError(text: string, changed: string): string {
+  const out: string[] = [];
+  const json = /\[\s*\{[\s\S]*\}\s*\]/.exec(text)?.[0];
+  if (json) {
+    try {
+      for (const q of JSON.parse(json) as Array<{ path?: unknown[]; message?: string }>)
+        out.push(`${(q.path ?? []).join('.') || '(top)'}: ${q.message ?? '?'}`);
+    } catch {
+      // not Zod's
+    }
+  }
+  if (out.length === 0)
+    out.push(
+      ...text
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l && !/^at |node:internal|^\^|^Node\.js|^\{|^\}/.test(l))
+        .slice(0, 8),
+    );
+  const rooms = changed.split('\n').filter((f) => /^content\/(rooms\/.*|world)\.json$/.test(f.trim()));
+  return `  ${out.slice(0, 8).join('\n  ')}${rooms.length ? `\n  room files this commit changed: ${rooms.join(', ')}` : ''}`;
+}

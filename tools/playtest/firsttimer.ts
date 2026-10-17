@@ -3,12 +3,16 @@
  * short burst at a time, looks at screenshots, and writes down what it understood. One command per turn;
  * a small server keeps the browser between commands (memory/playtest-harness.md "First-timer agent").
  *
- *   npm run firsttimer -- start [--room wood-hatch] [--name s1] [--abilities glide] [--size 1280x720]
+ *   npm run firsttimer -- start --name s1 [--room wood-hatch] [--abilities glide] [--size 1280x720]
  *   npm run firsttimer -- act "R60 R+J20 .30 {Tab}" [--every 2]   # real keys in real time, then the game pauses
  *   npm run firsttimer -- look                             # a screenshot now (the game stays paused)
  *   npm run firsttimer -- note "I think the moths want me to follow them" [--mood lost|unfair|fun|stuck|ok]
  *   npm run firsttimer -- status
  *   npm run firsttimer -- stop                             # report.md + heatmaps + journal.md, browser closed
+ *
+ * Every command after `start` takes the session's `--name` (it may be left out while only one session runs);
+ * several sessions run at once, each with its own pointer (playtest-reports/.firsttimer/<name>.json) and browser,
+ * sharing the pinned build's server. `list` shows them.
  *
  * `act` takes the input DSL (src/input/script.ts): R L U D, J jump, X dash, A attack (cut), O offer, `.`
  * nothing, a number = frames (60 = 1 s), `+` combines (`R+J20`); and a player's other keys in braces: `{Tab}`
@@ -20,18 +24,29 @@
  * them on again; the session turns them off), and the designer keys (G, F2, the panel) are refused. `--labels`
  * keeps the labels, `--dev` allows those keys: only when the orchestrator asks.
  *
- * It plays a **pinned clean build**: `start` makes (or refreshes, when HEAD has moved) a detached git worktree of
- * HEAD in `.scratch/playtest-snapshot` (node_modules linked), serves it with its own Vite on `--snap-port` (5193)
- * and runs the session's server from it, so other agents' half-edited files never reach a playtest. `--tree` plays
- * the working tree on the dev server instead (`--url`, default 5180).
+ * It plays a **pinned clean build**: `start` makes a detached git worktree of HEAD (`.scratch/playtest-snap-<sha>`,
+ * node_modules linked), checks that its rooms and world load (a broken commit is named, nothing starts), serves it
+ * with its own Vite (from `--snap-port` 5193 up) and runs the session's server from it, so other agents'
+ * half-edited files never reach a playtest. `--tree` plays the working tree on the dev server (`--url`, 5180).
  */
 import { execFileSync, spawn } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { createServer } from 'node:http';
 import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { Page } from '@playwright/test';
 import type { RunTrace } from './recorder';
+import { loadError } from './report';
 
 // The client commands import nothing of the game (only the server does, from the pinned snapshot): a
 // half-edited file in the working tree cannot break a turn.
@@ -43,7 +58,7 @@ const { values: args, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     room: { type: 'string', default: 'wood-hatch' },
-    name: { type: 'string', default: 'agent' },
+    name: { type: 'string' },
     abilities: { type: 'string' },
     size: { type: 'string', default: '1280x720' },
     every: { type: 'string', default: '2' },
@@ -62,23 +77,64 @@ const { values: args, positionals } = parseArgs({
 /** The repo the reports belong to (the server runs in the snapshot and is told). */
 const ROOT = resolve(args.root ?? '.');
 const OUT = join(ROOT, 'playtest-reports');
-const POINTER = join(OUT, '.firsttimer.json');
+/** One pointer per session (`--name`): several agents can play at once without crossing wires. */
+const SESSIONS = join(OUT, '.firsttimer');
 
 interface Session {
+  name: string;
   dir: string;
   port: number;
   pid: number;
+  /** The pinned commit it plays ('' with --tree). */
+  sha: string;
 }
 
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sessionFile(name: string): string {
+  return join(SESSIONS, `${name.replace(/[^\w-]/g, '_')}.json`);
+}
+
+/** Live sessions (pointers whose server is still running; dead ones are cleared). */
+function sessions(): Session[] {
+  if (!existsSync(SESSIONS)) return [];
+  const out: Session[] = [];
+  for (const f of readdirSync(SESSIONS).filter((n) => n.endsWith('.json'))) {
+    const s = JSON.parse(readFileSync(join(SESSIONS, f), 'utf8')) as Session;
+    if (alive(s.pid)) out.push(s);
+    else rmSync(join(SESSIONS, f), { force: true });
+  }
+  return out;
+}
+
+/** The session a command is for: `--name`, or the only one running. */
 function session(): Session {
-  if (!existsSync(POINTER)) throw new Error('No session: npm run firsttimer -- start');
-  return JSON.parse(readFileSync(POINTER, 'utf8')) as Session;
+  const live = sessions();
+  if (args.name) {
+    const s = live.find((q) => q.name === args.name);
+    if (!s) throw new Error(`No session named ${args.name}: npm run firsttimer -- start --name ${args.name}`);
+    return s;
+  }
+  if (live.length === 1 && live[0]) return live[0];
+  if (live.length === 0) throw new Error('No session: npm run firsttimer -- start --name <you>');
+  throw new Error(
+    `${live.length} sessions are running (${live.map((q) => q.name).join(', ')}): add --name <yours>`,
+  );
 }
 
 async function call(path: string, body: unknown = {}): Promise<string> {
   const s = session();
   const r = await fetch(`http://127.0.0.1:${s.port}/${path}`, { method: 'POST', body: JSON.stringify(body) });
-  return r.text();
+  const out = await r.text();
+  if (path === 'stop') rmSync(sessionFile(s.name), { force: true });
+  return out;
 }
 
 // ---- The server: one browser page, commands one at a time.
@@ -245,80 +301,145 @@ async function up(url: string): Promise<boolean> {
   }
 }
 
+const git = (cwd: string, ...a: string[]): string =>
+  execFileSync('git', a, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+
+interface Snap {
+  sha: string;
+  dir: string;
+  port: number;
+  pid: number;
+}
+
 /**
- * A detached worktree of HEAD in .scratch/playtest-snapshot (refreshed when HEAD has moved), node_modules
- * linked, served by its own Vite (left running between sessions; restarted with a new HEAD).
+ * The pinned clean build: one detached worktree per commit (`.scratch/playtest-snap-<sha>`, node_modules
+ * linked) with its own Vite, shared by every session on that commit. A newer HEAD gets its own; an older one
+ * that no live session plays is stopped and removed. Before anything is served the build's rooms and world are
+ * loaded (`validate`): a broken commit is reported, not crashed into.
  */
-async function snapshot(): Promise<{ dir: string; url: string }> {
-  const git = (cwd: string, ...a: string[]): string =>
-    execFileSync('git', a, { cwd, encoding: 'utf8' }).trim();
+async function snapshot(): Promise<Snap> {
   const repo = git(ROOT, 'rev-parse', '--show-toplevel');
   const head = git(repo, 'rev-parse', 'HEAD');
-  const dir = join(repo, '.scratch', 'playtest-snapshot');
-  const port = Number(args['snap-port'] ?? 5193);
-  const url = `http://localhost:${port}`;
-  const meta = join(repo, '.scratch', 'playtest-snapshot.json');
+  const sha = head.slice(0, 7);
+  const scratch = join(repo, '.scratch');
+  mkdirSync(scratch, { recursive: true });
+  const regFile = join(scratch, 'playtest-snaps.json');
+  const reg: Record<string, Snap> = existsSync(regFile) ? JSON.parse(readFileSync(regFile, 'utf8')) : {};
+  // Old snapshots nobody plays any more: stop and remove.
+  const used = new Set(sessions().map((q) => q.sha));
+  for (const [k, v] of Object.entries(reg)) {
+    if (k === sha || used.has(k)) continue;
+    if (alive(v.pid))
+      try {
+        process.kill(v.pid);
+      } catch {
+        // gone
+      }
+    try {
+      git(repo, 'worktree', 'remove', '--force', v.dir);
+    } catch {
+      // already gone
+    }
+    delete reg[k];
+  }
+  const dir = join(scratch, `playtest-snap-${sha}`);
   if (!existsSync(join(dir, '.git'))) {
-    mkdirSync(join(repo, '.scratch'), { recursive: true });
     git(repo, 'worktree', 'prune');
     git(repo, 'worktree', 'add', '--detach', '--force', dir, head);
-  } else if (git(dir, 'rev-parse', 'HEAD') !== head) git(dir, 'checkout', '--detach', '--force', head);
+  }
   if (!existsSync(join(dir, 'node_modules')))
     symlinkSync(join(repo, 'node_modules'), join(dir, 'node_modules'));
-  const old = existsSync(meta)
-    ? (JSON.parse(readFileSync(meta, 'utf8')) as { pid: number; head: string })
-    : null;
-  const live = await up(url);
-  if (!(old && old.head === head && live)) {
-    if (old)
-      try {
-        process.kill(old.pid);
-      } catch {
-        // already gone
-      }
-    if (live && !old) throw new Error(`Port ${port} is taken by something else: --snap-port <n>`);
+  // Does this commit load at all? (Its rooms and world, validated as the game does at boot.)
+  try {
+    execFileSync('npx', ['tsx', 'tools/playtest/firsttimer.ts', 'validate'], {
+      cwd: dir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch (e) {
+    const err = e as { stdout?: string; stderr?: string; message?: string };
+    const text = `${err.stdout ?? ''}\n${err.stderr ?? ''}`.trim() || (err.message ?? '');
+    const subject = git(repo, 'log', '-1', '--format=%s', head);
+    throw new Error(
+      `The pinned build ${sha} ("${subject}") does not load, so no session was started.\n` +
+        `${loadError(text, git(repo, 'show', '--name-only', '--format=', head))}\n` +
+        'Fix it in a commit, then start again; or play the working tree with --tree.',
+    );
+  }
+  let snap = reg[sha];
+  if (!snap || !alive(snap.pid) || !(await up(`http://localhost:${snap.port}`))) {
+    let port = Number(args['snap-port'] ?? 5193);
+    const taken = new Set(Object.values(reg).map((v) => v.port));
+    while (taken.has(port) || (await up(`http://localhost:${port}`))) port++;
     const vite = spawn('npx', ['vite', '--port', String(port), '--strictPort'], {
       cwd: dir,
       detached: true,
       stdio: 'ignore',
     });
     vite.unref();
-    writeFileSync(meta, JSON.stringify({ pid: vite.pid, head }));
+    snap = { sha, dir, port, pid: vite.pid ?? 0 };
+    reg[sha] = snap;
+    const url = `http://localhost:${port}`;
     for (let i = 0; i < 300 && !(await up(url)); i++) await new Promise((r) => setTimeout(r, 100));
-    if (!(await up(url))) throw new Error(`The snapshot's Vite did not come up on ${url}`);
+    if (!(await up(url))) throw new Error(`The pinned build's Vite did not come up on ${url}`);
   }
-  console.log(`playing the pinned build ${head.slice(0, 7)} (${relative(ROOT, dir)}, ${url})`);
-  return { dir, url };
+  writeFileSync(regFile, JSON.stringify(reg, null, 1));
+  console.log(`playing the pinned build ${sha} (${relative(ROOT, dir)}, http://localhost:${snap.port})`);
+  return snap;
+}
+
+/** `validate`: load the rooms and the world as the game does (run inside a snapshot by `start`). */
+async function validate(): Promise<void> {
+  const { ROOM_IDS } = await import('../../src/scene/index');
+  const { GAME_WORLD, validateWorld } = await import('../../src/scene/world');
+  const problems = validateWorld(GAME_WORLD);
+  console.log(`${ROOM_IDS.length} rooms load; world: ${problems.length ? problems.join('; ') : 'ok'}`);
 }
 
 async function start(): Promise<void> {
   mkdirSync(OUT, { recursive: true });
+  mkdirSync(SESSIONS, { recursive: true });
+  const name = args.name ?? 'agent';
+  if (sessions().some((q) => q.name === name))
+    throw new Error(
+      `A session named ${name} is running: stop it (--name ${name}) or start with another --name`,
+    );
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const dir = join(OUT, `${stamp}-firsttimer-${(args.name ?? 'agent').replace(/[^\w-]/g, '_')}`);
+  const dir = join(OUT, `${stamp}-firsttimer-${name.replace(/[^\w-]/g, '_')}`);
   mkdirSync(dir, { recursive: true });
   const snap = args.tree ? null : await snapshot();
-  const url = snap ? snap.url : (args.url ?? DEFAULT_URL);
+  const url = snap ? `http://localhost:${snap.port}` : (args.url ?? DEFAULT_URL);
   const argv = ['tsx', 'tools/playtest/firsttimer.ts', 'serve', '--dir', dir, '--root', ROOT, '--url', url];
-  argv.push(
-    '--room',
-    args.room ?? 'wood-hatch',
-    '--name',
-    args.name ?? 'agent',
-    '--size',
-    args.size ?? '1280x720',
-  );
+  argv.push('--room', args.room ?? 'wood-hatch', '--name', name, '--size', args.size ?? '1280x720');
   if (args.abilities) argv.push('--abilities', args.abilities);
   if (args.labels) argv.push('--labels');
   if (args.dev) argv.push('--dev');
-  const child = spawn('npx', argv, { cwd: snap ? snap.dir : ROOT, detached: true, stdio: 'ignore' });
+  const log = join(dir, 'server.log');
+  const out = openSync(log, 'a');
+  const child = spawn('npx', argv, {
+    cwd: snap ? snap.dir : ROOT,
+    detached: true,
+    stdio: ['ignore', out, out],
+  });
   child.unref();
+  let exited = false;
+  child.on('exit', () => {
+    exited = true;
+  });
   const ready = join(dir, 'server.json');
-  for (let i = 0; i < 900 && !existsSync(ready); i++) await new Promise((r) => setTimeout(r, 100));
-  if (!existsSync(ready))
-    throw new Error('The session did not start (with --tree: is the dev server up? npm run dev)');
+  for (let i = 0; i < 900 && !existsSync(ready) && !exited; i++) await new Promise((r) => setTimeout(r, 100));
+  if (!existsSync(ready)) {
+    const tail = existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n').slice(-12).join('\n  ') : '';
+    throw new Error(
+      `The session did not start${snap ? ` (pinned build ${snap.sha})` : ' (with --tree: is the dev server up?)'}:\n  ${tail}`,
+    );
+  }
   const { port, pid } = JSON.parse(readFileSync(ready, 'utf8')) as { port: number; pid: number };
-  writeFileSync(POINTER, JSON.stringify({ dir, port, pid } satisfies Session));
-  console.log(`session: ${relative(ROOT, dir)}`);
+  writeFileSync(
+    sessionFile(name),
+    JSON.stringify({ name, dir, port, pid, sha: snap?.sha ?? '' } satisfies Session),
+  );
+  console.log(`session ${name}: ${relative(ROOT, dir)} (every command: --name ${name})`);
   console.log(await call('look'));
 }
 
@@ -326,6 +447,12 @@ async function main(): Promise<void> {
   switch (cmd) {
     case 'serve':
       return serve();
+    case 'validate':
+      return validate();
+    case 'list':
+      for (const q of sessions())
+        console.log(`${q.name}: ${relative(ROOT, q.dir)} (build ${q.sha || 'working tree'})`);
+      return;
     case 'start':
       return start();
     case 'act':
@@ -343,7 +470,7 @@ async function main(): Promise<void> {
       return;
     default:
       console.log(
-        'npm run firsttimer -- start | act "<keys>" | look | note "<text>" | status | stop (see tools/playtest/firsttimer.ts)',
+        'npm run firsttimer -- start --name <you> | act "<keys>" | look | note "<text>" | status | stop | list (all with --name <you>; see tools/playtest/firsttimer.ts)',
       );
   }
 }

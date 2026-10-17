@@ -10,7 +10,7 @@ import { observe } from '../../tools/playtest/observe';
 import { PERSONAS } from '../../tools/playtest/personas';
 import { crc32, encodePng, Raster } from '../../tools/playtest/png';
 import { Recorder } from '../../tools/playtest/recorder';
-import { cluster, reportMarkdown, summarize } from '../../tools/playtest/report';
+import { cluster, loadError, reportMarkdown, summarize } from '../../tools/playtest/report';
 import { parseTime, targetsFromMarkdown } from '../../tools/playtest/targets';
 
 /** Two floors with a gap between, an exit through the east edge. */
@@ -292,5 +292,17 @@ describe('playtest harness: hands (look-ahead lines, climbs, fights)', () => {
       expect(r.trace.outcome, persona).toBe('exit');
       expect(r.trace.deaths, persona).toHaveLength(0);
     }
+  });
+});
+
+describe('playtest harness: a pinned build that does not load', () => {
+  it('names the schema problem and the room files the commit touched', () => {
+    const text = `ZodError: [\n  {\n    "code": "invalid_type",\n    "path": ["solids", 0, "w"],\n    "message": "Invalid input: expected number, received string"\n  }\n]\n    at parseScene (src/scene/index.ts:1:1)`;
+    const out = loadError(text, 'content/rooms/wood-wicks.json\ntools/playtest/x.ts\n');
+    expect(out).toContain('solids.0.w: Invalid input: expected number, received string');
+    expect(out).toContain('room files this commit changed: content/rooms/wood-wicks.json');
+    expect(
+      loadError('SyntaxError: Unexpected token } in JSON at position 12\n    at JSON.parse', ''),
+    ).toContain('SyntaxError: Unexpected token');
   });
 });

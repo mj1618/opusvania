@@ -32,15 +32,21 @@ freezes the sim, the burst runs on the page clock), `{R}` restart, `{M}` sound, 
 - **What it sees is what a player sees**: greybox designer labels and room notes are off (every room's init turns
   them back on, so the burst re-asserts it on each room change); designer keys `{G}` `{F2}` `{Panel}` are refused.
   `start --labels` keeps the labels, `--dev` allows those keys: only when the orchestrator asks.
-- **It plays a pinned clean build**: `start` makes (or refreshes, when HEAD moved) a detached worktree of HEAD in
-  `.scratch/playtest-snapshot` (gitignored; node_modules linked), serves it with its own Vite on `--snap-port` 5193
-  (left running between sessions, restarted for a new HEAD; its pid in `.scratch/playtest-snapshot.json`) and runs the
-  session server from it. The client commands import nothing of the game. So a half-edited room file in the working
-  tree cannot break a session; what gets played is the last commit. `--tree` plays the working tree on the dev
-  server instead (`--url`, default 5180).
+- **Several sessions at once**: `start --name <you>`; every later command takes the same `--name` (it may be left out
+  while only one session runs; with two or more it refuses and lists them). Each session has its own pointer
+  (`playtest-reports/.firsttimer/<name>.json`, cleared when its server is gone) and browser. `list` shows them. (Round 1
+  had one shared pointer: one agent's commands went to another's session.)
+- **It plays a pinned clean build**: `start` makes a detached worktree of HEAD per commit (`.scratch/playtest-snap-<sha>`,
+  gitignored, node_modules linked), first loads its rooms and world (`firsttimer.ts validate`): a commit that does not
+  load stops `start` with the commit, the problem as `path: message` lines and the room files that commit changed
+  (`loadError` in report.ts), and nothing is started. Then one Vite per commit (from `--snap-port` 5193 up), shared by
+  every session on it; snapshots of older commits nobody plays are stopped and removed at the next `start`
+  (registry `.scratch/playtest-snaps.json`). The session server runs from the snapshot; its log is `server.log` in the
+  session dir, and a session that fails to boot prints its tail. The client commands import nothing of the game.
+  `--tree` plays the working tree on the dev server (`--url`, default 5180).
 **Brief to paste to the sub-agent:**
 > You are playing Lampfall for the first time. Know nothing about it beyond what you see. Run `npm run firsttimer --
-> start --name <you>` from the repo root, then loop: Read the newest screenshot, decide, `act` a short burst (0.5-4 s;
+> start --name <you>` from the repo root and pass `--name <you>` to every command after it; then loop: Read the newest screenshot, decide, `act` a short burst (0.5-4 s;
 > moves `R L U D`, `J` jump, `X` dash, `A` cut, `.` wait, a number of frames after each, `+` to combine, and `{Tab}`
 > for the map, `{R}` to restart), Read what happened and the screenshots. Every minute or at any moment that matters,
 > `note` what you think, in the first person and plainly: what you think you should do ("I think the moths want me to
