@@ -37,7 +37,7 @@ import {
 } from '../lib/fx-foliage';
 import { zoneWeights } from '../lib/fx-zones';
 import { PALETTE, prng, wind } from '../lib/look';
-import { isGroveKit } from '../lib/room-look';
+import { isGroveKit, LOOK } from '../lib/room-look';
 
 export const FOREGROUND = {
   seed: 0xf09e,
@@ -147,7 +147,14 @@ export const FOREGROUND = {
   trunks: [] as Array<{ x: number; width: number; lean: number }>,
   flowerColors: [PALETTE.glowViolet, PALETTE.glowCyan, PALETTE.keyGold, 0xff9fc2] as const,
   /** The wood: twigs reaching up into the bottom corners (spacing and leaf drop, px). */
-  wood: { every: [520, 820] as const, size: [240, 330] as const },
+  wood: {
+    every: [520, 820] as const,
+    size: [240, 330] as const,
+    /** The opening frame's lower-left mass: where on screen, for which camera x, how big (px). */
+    opening: { seed: 0x0f3a, screenX: 230, camX: 960, size: 300 },
+    /** Top boughs stay this far (px) off the moon's disc. */
+    moonClear: 70,
+  },
 };
 
 const WALK_STEP = 16;
@@ -391,6 +398,22 @@ export class ForegroundLayer implements EnvModule {
       }
     }
 
+    if (!isGroveKit()) {
+      // The opening's corner: one big dark out-of-focus leaf mass in the lower left of the first
+      // frame (look target: 5-12% of the frame, never over the cocoon). Its own seed, so the rest
+      // of the layout is unchanged. Near-plane x of a screen x for the opening camera:
+      // x = screen - 960 + anchor.x + (camX - anchor.x) * parallax.
+      const o = FOREGROUND.wood.opening;
+      const ro = prng(o.seed);
+      const px = o.screenX - SAFE_W / 2 + anchor.x + (o.camX - anchor.x) * FOREGROUND.near.parallax;
+      add('near', 'bottom', px, bottom + 70, o.size * 0.9, (g) => {
+        broadLeaves(g, ro, o.size);
+      });
+      add('near', 'bottom', px - o.size * 0.5, bottom + 40, o.size, (g) => {
+        g.scaleTransform(1, -1);
+        leafBranch(g, ro, o.size * 1.4, o.size * 0.8, 1);
+      });
+    }
     this.pieces = pieces;
     for (const plane of ['far', 'near'] as const) {
       this.bake(
@@ -620,6 +643,23 @@ export class ForegroundLayer implements EnvModule {
       }
       const x0 = x + piece.b.x;
       let y0 = y + piece.b.y;
+      const moon = LOOK.moon;
+      if (piece.edge === 'top' && moon) {
+        // The wood: no top bough hangs over the moon (it is the focal light and the swarm's stage).
+        // Its box in screen px against the moon's disc plus a margin; withdraws up, as for `keep`.
+        const sx0 = x0 - (vis.x + vis.w / 2) + SAFE_W / 2;
+        const sy0 = y0 - (vis.y + vis.h / 2) + SAFE_H / 2;
+        const m = moon.r + cfg.wood.moonClear;
+        const ox = Math.min(moon.x + m, sx0 + piece.b.width) - Math.max(moon.x - m, sx0);
+        const oy = Math.min(moon.y + m, sy0 + piece.b.height) - Math.max(moon.y - m, sy0);
+        if (ox > 0 && oy > 0) {
+          const k = Math.min(1, Math.min(ox, oy) / cfg.keep.soft);
+          const o = k * k * (3 - 2 * k);
+          y -= (piece.b.height + 60) * o;
+          y0 = y + piece.b.y;
+          thin *= 1 - o;
+        }
+      }
       if (piece.edge === 'top') {
         // Its box in playfield px (parallax 1: the offset from the view's centre is the world's).
         const wx = cam.x + (x0 - (vis.x + vis.w / 2));

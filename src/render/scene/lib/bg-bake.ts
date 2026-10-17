@@ -540,6 +540,13 @@ export function bakeLayer(
   atm: Atmosphere,
   light: { x: number; y: number },
   lightMap?: LightMap,
+  /**
+   * How far each tile's quad reaches into the next (px). The Grove keeps 0.5. A layer that shows
+   * semi-transparent mist over the sky must use 0: the overlap blends twice and draws a pale 1 px
+   * column down the whole frame (the wood's "render seams", review round 1). Abutting quads share
+   * their edge exactly, so no gap opens.
+   */
+  overlap = 0.5,
 ): BakedTile[] {
   const out: BakedTile[] = [];
   const blur = atm.blur ?? 0;
@@ -660,7 +667,7 @@ export function bakeLayer(
       shader.destroy();
       raw.destroy(true);
       // A hair of overlap so neighbouring tiles never leave a seam.
-      out.push({ texture: final, x: tx, y: ty, w: tw + (i < cols - 1 ? 0.5 : 0), h: th });
+      out.push({ texture: final, x: tx, y: ty, w: tw + (i < cols - 1 ? overlap : 0), h: th });
     }
   }
   lm?.destroy(true);

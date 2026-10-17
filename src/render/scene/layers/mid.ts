@@ -10,7 +10,6 @@
  * thin ground mist.
  */
 import { Container, Graphics, Sprite } from 'pixi.js';
-import type { Scene } from '../../../sim/scene';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import {
   type Atmosphere,
@@ -135,11 +134,6 @@ const MID = {
   /** Slow life of the layer: sway of the canopy masses (px), shimmer of lit leaves, breathing light. */
   life: { breath: 3.2, shimmer: 0.14, openings: 0.07 },
 } as const;
-
-/** The wood's mist stage colour (cool, moonlit; one fog colour for the wood). */
-const WOOD_STAGE = [0x587a9e, 0x587a9e, 0x587a9e] as const;
-/** The wood's stage: strength, and how far it fades up above the walk line (px). */
-const WOOD_STAGE_LOOK = { strength: 0.5, height: 330 };
 
 /** Where the stage lies (playfield px) and what it is made of. Follows content/rooms/test-grove.json (the wood derives its own: `woodStage`). */
 const STAGE: Omit<StageSpec, 'strength'> = {
@@ -339,31 +333,6 @@ function quiet(x: number, y: number): number {
     (1 - st(shaft.x1 - shaft.ease, shaft.x1 + shaft.ease, x)) *
     (y > shaft.y0 && y < shaft.y1 ? 1 : 0);
   return Math.max(inSky, inShaft);
-}
-
-/**
- * The wood kit's mist stage, derived from the room's own rects (the test grove's STAGE is hand-placed
- * from its file): the walk line runs along the solids west to east, each one that starts where the
- * last left off; one that overlaps the line (a far branch above it) gets its own thinner sheet.
- */
-function woodStage(scene: Scene): Omit<StageSpec, 'strength'> {
-  const tops = scene.solids.filter((s) => s.tag !== 'trunk').sort((a, b) => a.x - b.x);
-  const first = tops[0];
-  const steps: Array<[number, number]> = [];
-  const ledges: Array<{ x0: number; x1: number; y: number; k: number }> = [];
-  let y = first?.y ?? scene.height;
-  let end = first ? first.x + first.w : 0;
-  for (const s of tops.slice(1)) {
-    if (s.x < end - 4) {
-      ledges.push({ x0: s.x, x1: s.x + s.w, y: s.y, k: 0.6 });
-      continue;
-    }
-    // The step sits halfway across a gap (or at the joint).
-    steps.push([Math.round((end + s.x) / 2), s.y - y]);
-    y = s.y;
-    end = s.x + s.w;
-  }
-  return { ...STAGE, baseY: first?.y ?? scene.height, steps, ledges, walls: [], pools: [] };
 }
 
 function plan(rect: ForestPlan['rect'], spots: GlowSpot[]): ForestPlan {
@@ -769,7 +738,7 @@ export class MidLayer implements EnvModule {
       back,
       MID.life,
       {
-        ...(isGroveKit() ? STAGE : woodStage(ctx.scene)),
+        ...STAGE,
         strength: [MID.stage.left, MID.stage.centre, MID.stage.right],
       },
     );
@@ -854,26 +823,15 @@ export class MidLayer implements EnvModule {
     const zone = { ...woodZone(ZONE.parallax, 0x14283c), anchorX: ctx.layers.anchor.x };
     const b = buildWoodMid(rect, anchorY);
     this.view = new LayerView(
-      bakeLayer(ctx.renderer, b.content, rect, MID.bakeScale, atm, TO_LIGHT, b.lights),
+      bakeLayer(ctx.renderer, b.content, rect, MID.bakeScale, atm, TO_LIGHT, b.lights, 0),
       woodMidFog(anchorY),
       // The leaf masses up high stir; the trunks below them stay put.
       { amp: MID.rustle, y0: rect.y + rect.h * 0.3, y1: rect.y + rect.h * 0.45 },
       zone,
       undefined,
       MID.life,
-      {
-        ...woodStage(ctx.scene),
-        color: WOOD_STAGE,
-        height: WOOD_STAGE_LOOK.height,
-        strength: [WOOD_STAGE_LOOK.strength, WOOD_STAGE_LOOK.strength, WOOD_STAGE_LOOK.strength],
-      },
+      // (No stage here: the wood's mist stage is in far2's pass, behind these trunks: bg-wood WOOD_STAGE.)
     );
-    if (import.meta.env.DEV) {
-      const g = globalThis as { __bg?: Record<string, unknown> };
-      g.__bg = Object.assign(g.__bg ?? {}, {
-        stage: (l: number, c = l, r = l) => this.view.setStage([l, c, r]),
-      });
-    }
     ctx.layers.mid.addChild(this.view.container);
     b.content.destroy({ children: true });
     this.sway = new SwaySet(

@@ -55,7 +55,7 @@ Room 7424 x 2432. Exit `drop`: the south edge 6400-7424. Catch `below`: x 224-64
   the closed one's body sits at ~0.72-0.82 of the frame (the look target's 0.62-0.70 needs a thinner limb there).
   Tatter 1210 facing west. `swarm` polyline crosses the moon at (1420, 544) in the opening frame. `camera` hints:
   vista (960, 894), swarm (1090, 734), promise (4288, 636), drop (6592, 1650).
-- `art`: kit `wood`, seed 7, moon (view px 1420, 190, r 88), afterglow (1500, 850, 0.35), `anchorY` 880, `anchorX` 2560.
+- `art`: kit `wood`, seed 7, moon (view px 1420, 190, r 88), afterglow (1500, 850, 1.0), `anchorY` 880, `anchorX` 2560.
 
 ## The room camera (`room.camera`, src/render/camera/)
 - Framing overrides: `cameraFor(room)` (tuning.ts) = `cameraTuning` + `anchorY` / `lookaheadX` / `fallLookahead` /
@@ -100,6 +100,6 @@ black 0.12 s before the restart), `roomEnter` lifts it over 0.9 s; `fallCatch` d
 
 ## What the art agents should know
 - The wood's backdrop is its own (canopy height, 2026-10-17): memory/background-layers.md "The wood". It is
-  composed for `art.anchorY` 880 and a reference camera y 800; since round 2 the camera centre runs ~894 at the
-  cocoons (feet line 0.62), ~606 on the crown, ~1150 at the end.
+  composed for `art.anchorY` 880 and a reference camera y 894 (`WOOD.refCamY`, the opening at feet line 0.62);
+  the camera centre runs ~606 on the crown, ~1150 at the end. Move `refCamY` with the feet line.
 - `pf-branch*` / `pf-rim.ts` are the playfield agent's; cocoons, Tatter and the swarm are the acting / swarm agents'.

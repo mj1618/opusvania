@@ -57,7 +57,7 @@ import {
   rr,
   TO_LIGHT,
 } from '../lib/bg-shapes';
-import { buildWoodFar, woodFar } from '../lib/bg-wood';
+import { buildWoodFar, woodFar, woodStage } from '../lib/bg-wood';
 import { mix, PALETTE, prng } from '../lib/look';
 import { isGroveKit } from '../lib/room-look';
 import { SKY_OUTPUT, SKY_RECT } from './sky';
@@ -77,6 +77,15 @@ const RUSTLE = [1.6, 2.4, 3.2] as const;
 const LIFE: readonly LifeSpec[] = [
   { breath: 1.6, shimmer: 0, openings: 0.065 },
   { breath: 2.4, shimmer: 0.1, openings: 0.065 },
+];
+
+/**
+ * The wood's crown seas move more than the Grove's far canopy: they are the whole lower frame, and
+ * an idle second must not be still there (review round 1, R15). Same LifeSpec meaning as LIFE.
+ */
+const WOOD_LIFE: readonly LifeSpec[] = [
+  { breath: 3.5, shimmer: 0.12, openings: 0.065 },
+  { breath: 5.5, shimmer: 0.16, openings: 0.065 },
 ];
 
 /**
@@ -892,11 +901,11 @@ export class FarLayers implements EnvModule {
       const rect = rects[k];
       if (!layer || !rect) return;
       const b = buildWoodFar(k, rect, anchorY);
-      const tiles = bakeLayer(ctx.renderer, b.content, rect, BAKE_SCALE[k], atm, TO_LIGHT, b.lights);
+      const tiles = bakeLayer(ctx.renderer, b.content, rect, BAKE_SCALE[k], atm, TO_LIGHT, b.lights, 0);
       b.content.destroy({ children: true });
       const zone = { ...z, anchorX: ctx.layers.anchor.x } as ZoneSpec;
       // The crowns stir everywhere (no canopy line to keep still under).
-      const rustle = { amp: (RUSTLE[k] ?? 0) * 0.6, y0: rect.y + rect.h + 1000, y1: rect.y + rect.h + 1001 };
+      const rustle = { amp: (RUSTLE[k] ?? 0) * 1.2, y0: rect.y + rect.h + 1000, y1: rect.y + rect.h + 1001 };
       const sky = SKY_OUTPUT.texture;
       let view: LayerView | FarPairView | null = null;
       if (k === 0) {
@@ -912,11 +921,12 @@ export class FarLayers implements EnvModule {
           rustle,
           { texture: sky, ...SKY_RECT },
           ctx.layers.anchor,
-          LIFE[0],
+          WOOD_LIFE[0],
         );
         if (SKY_OUTPUT.sprite) SKY_OUTPUT.sprite.visible = false;
       } else {
-        view = new LayerView(tiles, fog, rustle, zone, undefined, LIFE[1]);
+        // far2 carries the wood's mist stage: behind mid, so the giants stand solid in front of it.
+        view = new LayerView(tiles, fog, rustle, zone, undefined, WOOD_LIFE[1], woodStage(ctx.scene));
       }
       if (view) layer.addChild(view.container);
       const sway = new SwaySet(ctx.renderer, [], 1, zone);
@@ -927,7 +937,7 @@ export class FarLayers implements EnvModule {
   update(frame: SceneFrame): void {
     for (const l of this.built) {
       if (l.view instanceof FarPairView) l.view.update(frame.clock, frame.camera);
-      else l.view?.update(frame.clock, frame.camera.x);
+      else l.view?.update(frame.clock, frame.camera.x, frame.camera.y, this.ctx.layers.anchor.y);
       l.sway.update(frame.clock, frame.camera.x);
       for (const f of l.falls) f.update(frame.clock);
     }

@@ -16,9 +16,17 @@
  * branch whatever the room's background anchor is. Positions across are in layer x.
  */
 import { Container, Graphics } from 'pixi.js';
+import type { Scene } from '../../../sim/scene';
 import { SAFE_H } from '../../contract';
 import type { LayerRect } from '../layer-tree';
-import { type Atmosphere, type FogSpec, LightMap, type SwayItem, type ZoneSpec } from './bg-bake';
+import {
+  type Atmosphere,
+  type FogSpec,
+  LightMap,
+  type StageSpec,
+  type SwayItem,
+  type ZoneSpec,
+} from './bg-bake';
 import {
   type BarkLook,
   blob,
@@ -39,8 +47,12 @@ import { mix, prng } from './look';
 
 /** Knobs of the wood's backdrop. Screen heights are fractions of the safe area (0 top, 1 bottom). */
 export const WOOD = {
-  /** The camera centre y the picture is composed for (the cocoon row and the run sit at ~720-800). */
-  refCamY: 800,
+  /**
+   * The camera centre y the picture is composed for: the opening frame (feet line 0.62 at the
+   * cocoon row, camera ~894; the route runs ~606 on the crown to ~1150 at the end). Move it with the
+   * camera's feet line or the horizon slides behind the branch.
+   */
+  refCamY: 894,
   /** One fog colour for the whole wood (look target: `#1f3550`), and the blue-black of the drop. */
   fog: 0x1f3550,
   /** The fog pooled between rows of crowns: paler than the crowns, so their tops stand dark on it. */
@@ -50,18 +62,23 @@ export const WOOD = {
   spires: 0.4,
   /** far0: top of each crown row (screen), crown radius range (layer px), fog pooled under each. */
   far0: {
-    rows: [0.78, 0.8, 0.83, 0.87, 0.92, 0.99, 1.08],
+    rows: [0.8, 0.82, 0.85, 0.89, 0.94, 1.0, 1.08, 1.18],
     r: [34, 56] as const,
+    /** Fir spires' height, in crown radii. */
+    spireH: [2.2, 3.4] as const,
     fog: 0.62,
   },
   far1: {
-    rows: [0.81, 0.85, 0.9, 0.97, 1.05, 1.15],
+    rows: [0.83, 0.87, 0.92, 0.98, 1.06, 1.16, 1.28],
     r: [58, 92] as const,
+    spireH: [1.9, 2.9] as const,
     fog: 0.58,
   },
   far2: {
-    rows: [0.88, 0.95, 1.03, 1.13, 1.25, 1.4],
+    rows: [0.89, 0.96, 1.04, 1.14, 1.26, 1.4, 1.56, 1.74],
     r: [80, 130] as const,
+    // Short: the near firs must not climb over the horizon (and its afterglow) behind the branch.
+    spireH: [1.4, 2.1] as const,
     fog: 0.42,
     /**
      * Emergent firs standing out of the crown sea against the haze (layer x, top as a screen
@@ -81,10 +98,13 @@ export const WOOD = {
    */
   mid: {
     trunks: [
+      // Placed so no wide stop has the moon fully behind one (round 2's stops: camera x 1850,
+      // 2200, 3250, 3750, 4750, 5900, 6464): a trunk's top crosses the moon at camera x
+      // 2560 + (topX - 3020) / 0.68, here at ~2725, ~4250 and ~5325, between stops.
       { x: 520, w: 260, lean: -120 },
-      { x: 2860, w: 290, lean: 150 },
-      { x: 3780, w: 240, lean: -160 },
-      { x: 4600, w: 320, lean: 100 },
+      { x: 3020, w: 290, lean: 150 },
+      { x: 4290, w: 250, lean: -160 },
+      { x: 4825, w: 320, lean: 100 },
     ],
     /** Limbs per trunk and their reach. */
     limbs: 3,
@@ -94,6 +114,48 @@ export const WOOD = {
     clearBelow: 0.45,
   },
 } as const;
+
+/**
+ * The wood's mist stage: a pale sheet behind the walk line (and a little below it, where the
+ * cocoons hang), drawn in far2's view pass so the giants of mid stand in front of it as solid
+ * silhouettes (drawn in mid's pass it washed them into translucent curtains, review round 1).
+ * The walk line runs along the branch solids west to east; one that overlaps the line (the far
+ * branch) gets its own thinner sheet.
+ */
+export const WOOD_STAGE = { color: 0x5a7ca0, strength: 0.5, height: 340, below: 230, ledgeK: 0.35 };
+
+export function woodStage(scene: Scene): StageSpec {
+  const tops = scene.solids.filter((s) => s.tag !== 'trunk').sort((a, b) => a.x - b.x);
+  const first = tops[0];
+  const steps: Array<[number, number]> = [];
+  const ledges: Array<{ x0: number; x1: number; y: number; k: number }> = [];
+  let y = first?.y ?? scene.height;
+  let end = first ? first.x + first.w : 0;
+  for (const s of tops.slice(1)) {
+    if (s.x < end - 4) {
+      ledges.push({ x0: s.x, x1: s.x + s.w, y: s.y, k: WOOD_STAGE.ledgeK });
+      continue;
+    }
+    // The step sits halfway across a gap (or at the joint).
+    steps.push([Math.round((end + s.x) / 2), s.y - y]);
+    y = s.y;
+    end = s.x + s.w;
+  }
+  const S = WOOD_STAGE;
+  return {
+    strength: [S.strength, S.strength, S.strength],
+    color: [S.color, S.color, S.color],
+    height: S.height,
+    below: S.below,
+    baseY: first?.y ?? scene.height,
+    steps,
+    ease: 150,
+    ledges,
+    walls: [],
+    pools: [],
+    wisp: 0.5,
+  };
+}
 
 /** The layer y of a screen height (fraction of the safe area) for a layer at `parallax`, at the reference camera. */
 export function layerY(screen: number, parallax: number, anchorY: number): number {
@@ -109,11 +171,11 @@ export function layerY(screen: number, parallax: number, anchorY: number): numbe
 function crownLook(size: number, light: number, k: number): LeafLook {
   const c = (hex: number): number => mix(hex, 0x0a1420, k);
   return {
-    core: c(0x09141f),
-    dark: c(0x0c1926),
-    mid: c(0x122233),
-    lit: c(0x1b3044),
-    sun: c(0x2c4660),
+    core: c(0x0b1724),
+    dark: c(0x0f1e2e),
+    mid: c(0x1a2e42),
+    lit: c(0x2e4a64),
+    sun: c(0x5a7896),
     size,
     light,
   };
@@ -163,17 +225,18 @@ function farAtm(i: 0 | 1 | 2, anchorY: number): Atmosphere {
     formShade: [0.2, 0.3, 0.4][i] as number,
     rimDist: [5, 5, 4][i] as number,
     rimColor: 0xb8cce6,
-    rimStrength: [0.08, 0.14, 0.22][i] as number,
+    // Crown tops silvered by the moon (the review: "no tops lit by the moon").
+    rimStrength: [0.22, 0.32, 0.42][i] as number,
     mottle: 0.12,
-    litGain: 0.6,
-    sunMix: 0.25,
+    litGain: 1.0,
+    sunMix: 0.4,
     sunColor: 0x9fb8d6,
     sunColorL: 0x9fb8d6,
     sunColorR: 0x9fb8d6,
     zoneParallax: p,
     sideBody: 0.5,
     sideLit: 0.8,
-    sideRim: 0.6,
+    sideRim: 1.2,
     tint: flat,
     shadeTint: [0.55, 0.6, 0.72],
     gain: 1,
@@ -181,9 +244,9 @@ function farAtm(i: 0 | 1 | 2, anchorY: number): Atmosphere {
     blur: [6, 4, 2.2][i] as number,
     deep: {
       color: WOOD.deep,
-      y0: layerY([0.98, 0.94, 0.9][i] as number, p, anchorY),
-      y1: layerY([1.35, 1.28, 1.2][i] as number, p, anchorY),
-      k: [0.6, 0.8, 0.95][i] as number,
+      y0: layerY([0.9, 0.9, 0.9][i] as number, p, anchorY),
+      y1: layerY([1.15, 1.1, 1.06][i] as number, p, anchorY),
+      k: [0.7, 0.85, 0.95][i] as number,
     },
   };
 }
@@ -236,8 +299,8 @@ export function woodMidAtm(anchorY: number): Atmosphere {
     formShade: 0.5,
     rimDist: 4,
     rimColor: 0xb8cce6,
-    rimStrength: 0.3,
-    mottle: 0.18,
+    rimStrength: 0.26,
+    mottle: 0.24,
     litGain: 0.6,
     sunMix: 0.25,
     sunColor: 0x9fb8d6,
@@ -246,12 +309,12 @@ export function woodMidAtm(anchorY: number): Atmosphere {
     zoneParallax: p,
     sideBody: 0.3,
     sideLit: 0.8,
-    sideRim: 1.6,
+    sideRim: 1.3,
     tint: flat,
     shadeTint: [0.4, 0.45, 0.55],
-    gain: 0.9,
+    gain: 0.95,
     saturation: 1,
-    blur: 2,
+    blur: 1.1,
     deep: { color: WOOD.deep, y0: layerY(0.95, p, anchorY), y1: layerY(1.4, p, anchorY), k: 0.8 },
   };
 }
@@ -368,6 +431,7 @@ function crownRow(
   light: number,
   detail: number,
   seed: number,
+  spireH: readonly [number, number],
 ): void {
   const swell = fbm1(seed);
   const crowns: Array<{ x: number; y: number; r: number; spire: boolean }> = [];
@@ -394,7 +458,7 @@ function crownRow(
   }
   for (const c of crowns) {
     if (c.spire) {
-      spire(g, L, r, c.x, c.y + c.r * 0.6, c.r * rr(r, 2.2, 3.4), c.r * rr(r, 1.1, 1.5), look);
+      spire(g, L, r, c.x, c.y + c.r * 0.6, c.r * rr(r, spireH[0], spireH[1]), c.r * rr(r, 1.1, 1.5), look);
       continue;
     }
     L.reset(c.x, c.y + c.r, c.r * 1.4, c.r * 1.4);
@@ -427,6 +491,7 @@ function crownSea(
   anchorY: number,
   fog: number,
   seed: number,
+  spireH: readonly [number, number],
   before?: (row: number, g: Graphics) => void,
 ): void {
   const r = prng(seed);
@@ -453,6 +518,7 @@ function crownSea(
       0.9 - i * 0.08,
       0.5,
       seed + i * 17,
+      spireH,
     );
     const next = rows[i + 1];
     if (next !== undefined) {
@@ -489,16 +555,29 @@ export function buildWoodFar(
       [0.45, 0.55, 0.65][i] as number,
       [0.5, 0.35, 0.2][i] as number,
     );
-    crownSea(c, L, rect, spec.rows, spec.r, look, p, anchorY, spec.fog, 9100 + i * 1000, (row, g) => {
-      // far2's giants stand behind its first row: their trunks sink into the crowns.
-      if (i !== 2 || row !== 0) return;
-      const r = prng(9900);
-      const base = layerY(1.0, p, anchorY);
-      for (const e of WOOD.far2.emergents) {
-        const top = layerY(e.top, p, anchorY);
-        spire(g, L, r, e.x, base, base - top, e.w, look);
-      }
-    });
+    crownSea(
+      c,
+      L,
+      rect,
+      spec.rows,
+      spec.r,
+      look,
+      p,
+      anchorY,
+      spec.fog,
+      9100 + i * 1000,
+      spec.spireH,
+      (row, g) => {
+        // far2's giants stand behind its first row: their trunks sink into the crowns.
+        if (i !== 2 || row !== 0) return;
+        const r = prng(9900);
+        const base = layerY(1.0, p, anchorY);
+        for (const e of WOOD.far2.emergents) {
+          const top = layerY(e.top, p, anchorY);
+          spire(g, L, r, e.x, base, base - top, e.w, look);
+        }
+      },
+    );
   });
 }
 
@@ -550,6 +629,66 @@ function limb(g: Graphics, L: LightMap, from: Pt, side: 1 | -1, len: number, w: 
   return tips;
 }
 
+/**
+ * Relief that survives distance on a giant's bark (review round 1: "smeared translucent curtains"):
+ * irregular plates between deep fissures, lit on the moon side and lost on the shadow side, a burl
+ * or two, and a hard silver rim down the moon-side flank so the silhouette is a solid edge.
+ */
+function barkRelief(g: Graphics, L: LightMap, tr: Trunk, w: number, r: Rng): void {
+  const plates = Math.round((tr.h / w) * 9);
+  for (let i = 0; i < plates; i++) {
+    const t = r();
+    const u = rr(r, -0.85, 0.92);
+    const lit = Math.max(0, (u + 0.4) / 1.3);
+    const ph = w * rr(r, 0.18, 0.5);
+    const pw = w * rr(r, 0.07, 0.16);
+    const c = tr.at(t, u);
+    // The fissure under the plate: dark, a little longer.
+    g.poly(blob(c.x, c.y + ph * 0.1, pw * 0.35, ph * 0.62, r, 0.25, 12)).fill({
+      color: BARK.dark,
+      alpha: 0.75,
+    });
+    if (lit < 0.15) continue;
+    g.poly(blob(c.x + pw * 0.15, c.y, pw * 0.5, ph * 0.5, r, 0.3, 12)).fill({
+      color: mix(BARK.base, BARK.lit, 0.35 + 0.65 * lit),
+      alpha: 0.35 + 0.45 * lit,
+    });
+  }
+  // Burls: a swelling with a dark eye, on the lit half.
+  for (let i = 0; i < 2; i++) {
+    const c = tr.at(rr(r, 0.2, 0.8), rr(r, -0.2, 0.6));
+    const rad = w * rr(r, 0.12, 0.2);
+    g.poly(blob(c.x, c.y, rad, rad * 1.3, r, 0.25)).fill({
+      color: mix(BARK.base, BARK.lit, 0.55),
+      alpha: 0.7,
+    });
+    g.poly(blob(c.x - rad * 0.15, c.y + rad * 0.1, rad * 0.45, rad * 0.6, r, 0.3)).fill({
+      color: BARK.dark,
+      alpha: 0.9,
+    });
+    L.lit(c.x + rad * 0.3, c.y - rad * 0.3, rad, rad, 0.3);
+  }
+  // The moon-side rim: a faint pale band hugging the right flank, swelling and fading with the
+  // bark (a full-strength even stripe read as a neon outline).
+  const gap = fbm1(w * 1.3 + 2);
+  const edge = (t: number): Pt => tr.at(t, 0.96);
+  for (let k = 0; k < 40; k++) {
+    const t0 = k / 40;
+    const v = gap(t0 * 9);
+    if (v < -0.1) continue;
+    g.poly(
+      ribbon(
+        (t) => edge(t0 + t / 40),
+        (t) => w * 0.014 * Math.sin(Math.PI * t) + 0.5,
+        4,
+      ),
+    ).fill({
+      color: 0x6f88a6,
+      alpha: 0.18 + 0.22 * Math.min(1, v + 0.1),
+    });
+  }
+}
+
 /** A stable 0..1 per number (phase of a trunk's bends). */
 function lrand(n: number): number {
   const s = Math.sin(n * 12.9898) * 43758.5453;
@@ -575,7 +714,8 @@ export function buildWoodMid(rect: LayerRect, anchorY: number): WoodMidBuild {
   const hooks: Pt[] = [];
   const top = rect.y - 200;
   const base = rect.y + rect.h + 200;
-  const look = crownLook(22, 0.5, 0.15);
+  // Dark leaf pads: silhouettes against the sky, not lit puffs (lit, they read as cloud).
+  const look = crownLook(22, 0.3, 0.55);
   const { content, lights } = withLightMap((c, L) => {
     const r = prng(7300);
     for (const spec of WOOD.mid.trunks) {
@@ -615,6 +755,7 @@ export function buildWoodMid(rect: LayerRect, anchorY: number): WoodMidBuild {
         };
       }
       drawTrunk(g, tr, BARK, r);
+      barkRelief(g, L, tr, spec.w, prng(spec.x * 3 + 1));
       L.reset(spec.x, (top + base) / 2, spec.w, (base - top) / 2);
       // Moon on the right flank, shadow on the left.
       for (let t = 0.05; t < 1; t += 0.12) {
@@ -701,26 +842,7 @@ export function woodMidHangers(
         draw: (g) => mossCurtain(g, 0, 0, w, len, prng(seed), cols, 2.2),
       });
     }
-    // A silk thread: one long, very thin strand that catches the moon.
-    if (r() < 0.25) {
-      const len = rr(r, 200, 480);
-      const x = h.x + rr(r, -80, 80);
-      const col = tone(0x6f8496, x, h.y + len * 0.5);
-      items.push({
-        x,
-        y: h.y,
-        w: 8,
-        h: len,
-        amp: 0.11,
-        phase: r(),
-        flutter: 0.4,
-        draw: (g) => {
-          g.moveTo(0, 0)
-            .bezierCurveTo(2, len * 0.3, -2, len * 0.7, 1, len)
-            .stroke({ color: col, width: 1.2, alpha: 0.7 });
-        },
-      });
-    }
+    // (No hanging silk threads: static 1 px lines read as render seams, review round 1. Silk drifts in air.ts.)
   }
   return items;
 }

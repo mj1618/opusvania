@@ -266,8 +266,11 @@ const AIR_WOOD: typeof AIR = {
   },
   motes: {
     ...AIR.motes,
-    count: 150,
-    baseBrightness: 0.45,
+    // (150 measured 3-6 visible per frame in review round 1; the look target wants 20-60.)
+    count: 420,
+    minRadius: 1.2,
+    maxRadius: 2.6,
+    baseBrightness: 0.7,
     litBrightness: 2.6,
     hugGround: 0,
     bokeh: 3,
@@ -280,6 +283,89 @@ const AIR_WOOD: typeof AIR = {
   leaves: { ...AIR.leaves, count: 6 },
   moths: { ...AIR.moths, count: 0 },
 };
+
+/**
+ * The wood's moving air (no Grove equivalent): silk drifting across the frame and a gust you can
+ * see travel. Both ride `wind()` from look.ts, the same wave that bends every plant and thread.
+ */
+const WOOD_AIR = {
+  silk: {
+    /** Strands in the view at once (they wrap around it), length range px, drift px/s, colour, opacity. */
+    count: 9,
+    length: [110, 210] as const,
+    drift: [14, 34] as const,
+    color: 0xa8bcd8,
+    alpha: [0.12, 0.26] as const,
+    width: 1.1,
+    /** How far the wind carries a strand sideways, how much its body ripples and sags (px). */
+    sway: 50,
+    ripple: 12,
+    sag: 0.14,
+  },
+  /**
+   * The gust: a faint pale streak of moving air crossing the frame at the speed of wind()'s gust
+   * envelope (~460 px/s), brighter where it swells: screen heights it passes through, size, peak alpha.
+   */
+  gust: { bands: [0.3, 0.55, 0.86] as const, w: 1100, h: 90, alpha: 0.055, color: 0xa8c0dc, speed: 460 },
+};
+
+/** Long silk threads adrift (the swarm's and the cocoons' leavings), lit by the moon, never static. */
+class Silk {
+  readonly view = new Container({ label: 'silk' });
+  private readonly g = new Graphics();
+  private readonly strands: Array<{
+    u: number;
+    v: number;
+    len: number;
+    drift: number;
+    ph: number;
+    a: number;
+  }> = [];
+
+  constructor() {
+    this.view.addChild(this.g);
+    const c = WOOD_AIR.silk;
+    const r = prng(0x51e7);
+    for (let i = 0; i < c.count; i++)
+      this.strands.push({
+        u: r(),
+        v: r(),
+        len: c.length[0] + r() * (c.length[1] - c.length[0]),
+        drift: c.drift[0] + r() * (c.drift[1] - c.drift[0]),
+        ph: r(),
+        a: c.alpha[0] + r() * (c.alpha[1] - c.alpha[0]),
+      });
+  }
+
+  update(clock: number, vis: LayerRect): void {
+    const c = WOOD_AIR.silk;
+    const g = this.g.clear();
+    const W = vis.w + 600;
+    const H = vis.h + 200;
+    for (const s of this.strands) {
+      // Drift with the air across a tile a little bigger than the view, and wrap.
+      const x0 = vis.x - 300 + ((((s.u * W + clock * s.drift) % W) + W) % W);
+      const y0 = vis.y - 100 + ((((s.v * H + clock * s.drift * 0.18) % H) + H) % H);
+      const pts: number[] = [];
+      for (let k = 0; k <= 10; k++) {
+        const t = k / 10;
+        // The head leads; the tail lags the wind and ripples.
+        const w = wind(x0, clock - t * 0.8, s.ph);
+        // Trailing behind the head, nearly level, sagging in the middle like a loose thread.
+        const x = x0 - t * s.len + w * c.sway * t * t;
+        const y =
+          y0 +
+          Math.sin(t * Math.PI) * s.len * c.sag +
+          Math.sin(clock * 1.7 + t * 7 + s.ph * 9) * c.ripple * t +
+          w * c.ripple * 0.5;
+        pts.push(x, y);
+      }
+      g.moveTo(pts[0] as number, pts[1] as number);
+      for (let k = 2; k < pts.length; k += 2) g.lineTo(pts[k] as number, pts[k + 1] as number);
+      g.stroke({ color: c.color, width: c.width, alpha: s.a });
+    }
+  }
+}
 
 /** The air of the room being played (set in AirLayer.init: one room per page). */
 let A: typeof AIR = AIR;
@@ -773,6 +859,8 @@ export class AirLayer implements EnvModule {
   private frontView!: Sprite;
   private readonly toTarget = new Matrix();
   private ground!: GroundProfile;
+  private silk: Silk | null = null;
+  private gusts: Sprite[] = [];
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
@@ -828,6 +916,20 @@ export class AirLayer implements EnvModule {
     this.leaves = new Leaves(ground, ctx.scene);
     this.fireflies = new Fireflies(ground);
     ctx.layers.air.addChild(this.frontView, this.leaves.view, this.motes, this.fireflies.view);
+    if (!isGroveKit()) {
+      this.silk = new Silk();
+      ctx.layers.air.addChild(this.silk.view);
+      const G = WOOD_AIR.gust;
+      this.gusts = G.bands.map(() => {
+        const s = new Sprite(softTexture());
+        s.anchor.set(0.5);
+        s.tint = G.color;
+        s.blendMode = 'add';
+        s.label = 'gust';
+        return s;
+      });
+      ctx.layers.get('airBack').addChild(...this.gusts);
+    }
     fxDebug('air', A);
     fxDebug('leaves', this.leaves);
   }
@@ -1025,6 +1127,20 @@ export class AirLayer implements EnvModule {
 
     this.fireflies.update(frame, vis);
     this.leaves.update(frame, vis);
+    this.silk?.update(t, vis);
+    // The gust you can see: where wind()'s slow envelope swells, a faint streak of pale air
+    // travels across the frame with it (same function as the plants', so they bend as it passes).
+    const G = WOOD_AIR.gust;
+    this.gusts.forEach((s, i) => {
+      const y = vis.y + vis.h * (G.bands[i] ?? 0.5);
+      // A streak crosses the frame at the wave's speed (~460 px/s), one per band, staggered.
+      const span = vis.w + 2 * G.w;
+      const x = vis.x - G.w + ((((t * G.speed + i * span * 0.37) % span) + span) % span);
+      const env = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.23 - x * 0.0005 + i * 1.3));
+      s.position.set(x, y + Math.sin(t * 0.5 + i) * 30);
+      s.scale.set(G.w / s.texture.width, G.h / s.texture.height);
+      s.alpha = G.alpha * env * env;
+    });
     this.moths.update(frame, this.ctx.layers.visible('airBack', frame.camera));
   }
 }

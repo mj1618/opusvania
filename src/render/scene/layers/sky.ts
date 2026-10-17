@@ -61,20 +61,29 @@ export const SKY = {
    * far warm afterglow (`art.afterglow`) as a low band on the right, `bandHalf` px half height.
    */
   wood: {
-    core: 0xdce8f6,
-    glowK: 0.9,
+    core: 0xeef4fc,
+    glowK: 0.5,
     parallax: 0.02,
-    band: 0x6a4a3e,
-    bandHalf: 26,
+    /** Shaded at half the logical view (the Grove's quarter is too coarse for stars and a moon's face). */
+    renderScale: 0.5,
+    /** The moon's face: darker seas (share of value lost), edge softness (px). */
+    maria: 0.13,
+    edge: 2.5,
+    /** Stars: chance per cell, cell size (view px), peak brightness, how far up the haze lets them go. */
+    stars: 0.16,
+    starCell: 26,
+    starPeak: 0.55,
+    band: 0xb8693a,
+    bandHalf: 28,
     /** How far the afterglow's band reaches left of its x (view px) before it is gone. */
     bandReach: 420,
     /** Night: top, the band above the haze, low (under the horizon, mostly hidden by the crowns). */
-    top: 0x04080f,
-    mid: 0x0a1424,
-    low: 0x0a1320,
+    top: 0x0d182a,
+    mid: 0x13233c,
+    low: 0x101e34,
     /** The moon's halo colour (falls off with `glowK`), and the cool mist that drifts in the sky. */
-    halo: 0x6585ad,
-    mist: 0x16243a,
+    halo: 0x64829f,
+    mist: 0x1a2a44,
     /**
      * The pale haze along the far horizon, right behind the walk line: its centre (view y at the
      * reference camera, bg-wood WOOD.refCamY), how far it fades up and down (px), peak mix, colour.
@@ -82,14 +91,16 @@ export const SKY = {
      */
     horizonY: 800,
     horizonUp: 230,
-    horizonDown: 70,
+    horizonDown: 80,
     horizon: 0.6,
-    horizonCol: 0x2a4562,
+    horizonCol: 0x2e4a68,
     horizonParallax: 0.12,
     /** Thin cloud streaks: amount, and how much the moon silvers the ones near it. */
-    clouds: 0.4,
-    cloud: 0x18294a,
-    cloudLit: 0x7894bc,
+    clouds: 0.55,
+    cloud: 0x1c2e4c,
+    cloudLit: 0x8aa6cc,
+    /** Cloud drift, view px per second (visible in a second's difference, not a rush). */
+    cloudDrift: 16,
   },
 } as const;
 
@@ -164,6 +175,7 @@ uniform vec3 uBandCol;
 uniform vec4 uHorizon;
 uniform vec3 uHorizonCol;
 uniform vec4 uCloud;
+uniform vec4 uMoonFace;
 uniform vec3 uCloudCol;
 uniform vec3 uCloudLit;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
@@ -220,16 +232,39 @@ void main() {
   float hz = exp(-pow(hd / (hd < 0.0 ? uHorizon.y : uHorizon.z), 2.0));
   col = mix(col, uHorizonCol * (0.85 + 0.3 * mist), clamp(hz * uHorizon.w, 0.0, 1.0));
   if (uCloud.x > 0.0) {
-    vec2 cq = q + vec2(t * 3.0, 0.0);
+    // Stars: one chance per cell, a soft point at a random spot in it, twinkling slowly; the moon's
+    // glow and the horizon haze wash them out, clouds hide them.
+    vec2 sc = (p + vec2(uTimeCam.y * 0.01, 0.0)) / uMoonFace.w;
+    vec2 cell = floor(sc);
+    float hs = hash(cell);
+    vec2 sp = fract(sc) - (0.2 + 0.6 * vec2(hash(cell + 7.1), hash(cell + 3.3)));
+    float star = step(1.0 - uMoonFace.z, hs) * exp(-dot(sp, sp) * uMoonFace.w * uMoonFace.w * 0.22);
+    star *= (0.35 + 0.65 * hash(cell + 1.7)) * (0.75 + 0.25 * sin(t * (0.6 + 2.0 * hash(cell + 9.2)) + hs * 40.0));
+    star *= smoothstep(0.62, 0.2, y) * smoothstep(uCloud.y * 1.6, uCloud.y * 5.0, rm);
+    // Clouds: two scales drifting, edges silvered by the moon near it.
+    vec2 cq = q + vec2(t * uCloud.z, 0.0);
     float c1 = texture(uNoise, vec2(cq.x / 2300.0, cq.y / 260.0 + 0.17)).r;
     float c2 = texture(uNoise, vec2(cq.x / 900.0 + 0.4, cq.y / 140.0)).g;
-    float cl = smoothstep(0.52, 0.82, c1 * 0.75 + c2 * 0.35) * smoothstep(0.62, 0.15, y);
+    float c3 = texture(uNoise, vec2(cq.x / 420.0 - t * 0.002, cq.y / 90.0 + 0.6)).b;
+    float cv = c1 * 0.7 + c2 * 0.35 + (c3 - 0.5) * 0.18;
+    float cl = smoothstep(0.5, 0.8, cv) * smoothstep(0.66, 0.12, y);
+    float rimc = smoothstep(0.5, 0.6, cv) - smoothstep(0.62, 0.78, cv);
     float near = exp(-rm / (uCloud.y * 2.6));
     // A clean disc for the swarm to cross: the streaks thin out over it.
     cl *= 1.0 - 0.8 * smoothstep(uCloud.y * 1.25, uCloud.y * 0.9, rm);
+    col += vec3(0.75, 0.84, 1.0) * star * uCloud.w * (1.0 - cl);
     col = mix(col, mix(uCloudCol, uCloudLit, near), cl * uCloud.x);
+    col += uCloudLit * rimc * near * 0.25 * uCloud.x;
+    // The moon's face: soft edge, darker seas, a little limb darkening.
+    float rr0 = rm / max(uDisc.x, 1.0);
+    float face = smoothstep(uDisc.x + uMoonFace.y, uDisc.x - uMoonFace.y, rm) * uDisc.y;
+    vec2 mp = (p - uMoon.xy) / max(uDisc.x, 1.0);
+    float sea = smoothstep(0.45, 0.7, texture(uNoise, mp * 0.32 + 0.21).r * 0.7 + texture(uNoise, mp * 0.9 + 0.6).g * 0.3);
+    vec3 disc = uDiscCol * (1.0 - uMoonFace.x * sea) * (1.0 - 0.12 * rr0 * rr0);
+    col = mix(col, disc, face);
+  } else {
+    col = mix(col, uDiscCol, smoothstep(uDisc.x + 2.0, uDisc.x - 2.0, rm) * uDisc.y);
   }
-  col = mix(col, uDiscCol, smoothstep(uDisc.x + 2.0, uDisc.x - 2.0, rm) * uDisc.y);
   float bx = smoothstep(uBand.x - uDisc.z, uBand.x + 260.0, p.x);
   float by = exp(-pow((p.y - uBand.y) / max(1.0, uBand.w), 2.0));
   col = mix(col, uBandCol, clamp(bx * by * uBand.z, 0.0, 1.0));
@@ -299,7 +334,16 @@ export class SkyLayer implements EnvModule {
       },
       uHorizonCol: { value: rgb(SKY.wood.horizonCol), type: 'vec3<f32>' },
       uCloud: {
-        value: new Float32Array([LOOK.moon ? SKY.wood.clouds : 0, LOOK.moon?.r ?? 1, 0, 0]),
+        value: new Float32Array([
+          LOOK.moon ? SKY.wood.clouds : 0,
+          LOOK.moon?.r ?? 1,
+          SKY.wood.cloudDrift,
+          SKY.wood.starPeak,
+        ]),
+        type: 'vec4<f32>',
+      },
+      uMoonFace: {
+        value: new Float32Array([SKY.wood.maria, SKY.wood.edge, SKY.wood.stars, SKY.wood.starCell]),
         type: 'vec4<f32>',
       },
       uCloudCol: { value: rgb(SKY.wood.cloud), type: 'vec3<f32>' },
@@ -341,7 +385,7 @@ export class SkyLayer implements EnvModule {
     this.mesh = new Mesh({ geometry: quadGeometry(R.x, R.y, R.w, R.h), shader });
     // The sky is all soft gradients and mostly hidden: shade it small, then stretch it (a full-size
     // pass of this shader was the most expensive thing in the background).
-    const k = SKY.renderScale;
+    const k = LOOK.moon ? SKY.wood.renderScale : SKY.renderScale;
     this.renderer = ctx.renderer;
     this.target = RenderTexture.create({
       width: Math.ceil(R.w * k),

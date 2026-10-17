@@ -123,7 +123,7 @@
     "afterglow": {
       "x": 1500,
       "y": 850,
-      "strength": 0.35
+      "strength": 1
     },
     "anchorY": 880,
     "moods": [

@@ -252,28 +252,35 @@ Everything behind the playfield. Files: `scene/layers/{sky,far,mid}.ts` + `scene
   190 px of air over it or the arc to its neighbour (a function of the camera alone). The near top-left mass hung
   over F2 / the F1-F2 arc from the first lantern's ground and over F3 from burr-path.
 
-## The wood: canopy height (scene 1, 2026-10-17)
+## The wood: canopy height (scene 1, rounds 1-2, 2026-10-17)
 Room kit `wood` (room-look.ts) takes its own path in far.ts / mid.ts (`initWood`); the Grove's plans are untouched
-(test-grove wide stops diffed pixel-identical). Builders and every knob: `lib/bg-wood.ts` (`WOOD`).
-- **Composition by screen height**: `layerY(screen, parallax, anchorY)` = the layer y that shows at that fraction of
-  the safe area when the camera is at `WOOD.refCamY` (800: the cocoon row / run). Room `art.anchorY` is 880 (the
-  middle of the run's cameras) so all layers line up near where she is; the default anchor (the lowest view, 1508)
-  put every layer 300-600 px off. **If the camera's feet line moves** (tuning `anchorY` 0.72 now; the look target
-  wants the branch at 0.60-0.66), move `refCamY` by the same screen px or the horizon slides behind the branch.
-- Planes: sky (moon, clouds, horizon haze) / far0 0.12 / far1 0.25 / far2 0.42 crown seas / mid 0.68 giants /
-  playfield / foreground 1.35. far rows: `WOOD.far0..2.rows` (crown-top screen heights; far0 starts at 0.78 =
-  the horizon, just under the walk line), fog pooled between rows (`fogPool`, colour `fogPale`) so dark tops stand
-  on paler fog; `spires` share of fir tops (what makes it read as treetops and not cloud: round puffs alone, or
-  pale lit clumps, always read as cumulus). far2 `emergents`: tall firs standing out against the haze.
-- Depth to blue-black: `Atmosphere.deep` (bg-bake, new, off by default): colour / y0 / y1 / k after fog.
-- mid: `WOOD.mid.trunks` (x, width, lean); axis and flanks are overridden on the `Trunk` (two slow bends + a
-  quick one, swelling flanks: no parallel edges). Limbs (`limb()`) are drawn BEHIND the trunk (their flat root
-  face showed as a sawn plank in front), rise-elbow-droop, leaf pads along them (`light` 0.12: lit pads = clouds).
-  `WOOD.mid.clear` keeps layer x 1640-2460 above screen 0.45 free: the moon at the opening frame and the swarm lean.
-  Trunk x were chosen so no wide stop has the moon fully behind a trunk (camera x where a trunk's top crosses the
-  moon: 2560 + (trunkTopX - 3020) / 0.68; it covers +-(halfWidth + 88) / 0.68 around that).
-- Mist stage in the wood: `WOOD_STAGE` / `WOOD_STAGE_LOOK` in mid.ts (0x587a9e, 0.5, 330 px tall).
-- Sky (`SKY.wood`): night colours, halo `glowK`, `horizon*` (haze band riding at far0's parallax), `clouds`
-  (thinned over the disc so it stays clean for the swarm), afterglow band (also at far0's parallax, `bandReach`).
-- Measured (look:stats, 7 wide stops x 1920x1080 / 2560x1080 / 1440x1080): mean 21-29, near-black 44-61%,
-  >150 0.1-1.3%, p99.9 189-239, chroma 26-31, azure 99%, bottom quarter 8-27 (promise/bend 20-27: too bright).
+(test-grove backdrop pixel-identical; only Wing's own pixels changed with the acting agent). Builders and every
+knob: `lib/bg-wood.ts` (`WOOD`, `WOOD_STAGE`).
+- **Composition by screen height**: `layerY(screen, parallax, anchorY)` = the layer y shown at that fraction of the
+  safe area with the camera at `WOOD.refCamY` (894: the opening frame, feet line 0.62). Room `art.anchorY` 880,
+  `art.anchorX` 2560 (the level agent's: keeps layer x as composed for the old 5120 room). **If the camera's feet
+  line moves, move `refCamY`** or the horizon slides behind the branch. The route's cameras run y ~606-1150.
+- Vertical plan at the opening: walk line 0.62 / pale stage + horizon haze 0.62-0.8 (cocoons hang against it) /
+  warm afterglow 0.78 on the right / far0 treetops from 0.80, far1 0.83, far2 0.89, lit tops 30-48 / blue-black by
+  ~1.05 (`Atmosphere.deep`, bg-bake, off by default). Crowns read as treetops only with fir `spires` among them;
+  `spireH` per layer (far2 short, or near firs climb over the horizon and hide the afterglow).
+- **The mist stage is in far2's pass in the wood** (`woodStage`, `WOOD_STAGE`), not mid's: drawn in front of mid
+  it washed the giants into "smeared translucent curtains" (review round 1). Behind them, they stand solid.
+- **Seams**: `bakeLayer(..., overlap)`: tiles overlapped 0.5 px; a layer whose view pass adds semi-transparent
+  mist over the sky blends that strip twice = a pale 1 px column down the whole frame (the review's "render
+  seams"). The wood bakes with 0; the Grove keeps 0.5. Find lines with a column detector (pixel brighter than both
+  neighbours by > 5, counted per column) on layer-isolated shots. Remaining ones come from the playfield
+  (pf-branch-flora silk strips), not these layers.
+- mid giants: `WOOD.mid.trunks` placed so a trunk's top crosses the moon BETWEEN wide stops (camera x where it
+  crosses: 2560 + (topX - 3020) / 0.68). Axis and flanks overridden on the `Trunk`; `barkRelief` (plates over
+  fissures lit on the moon side, burls, a faint broken rim; a strong even rim read as neon). Limbs behind the trunk,
+  leaf pads dark (lit pads = clouds). `WOOD.mid.clear` keeps the moon's place free at the opening and the lean.
+  No hanging silk threads (static 1 px lines read as seams); silk drifts in air.ts.
+- Sky (`SKY.wood`): shaded at half size (stars and the moon's face need it), night `top/mid/low`, stars (cell
+  hash, washed out near the moon and in the haze), clouds drifting 16 px/s with moonlit edges, the moon's face
+  (`maria`, soft `edge`, limb darkening), halo `glowK`, horizon haze and afterglow riding at far0's parallax.
+  The halo measured ~130-160 at 1.3-2 r is mostly post bloom, not `glowK`.
+- far crown seas: `WOOD_LIFE` (far.ts) and 1.2x rustle: the lower frame must not be still in an idle second.
+- Measured round 2 (look:stats, 8 stops x 1920x1080 / 2560x1080 / 1440x1080): mean 22-33, near-black 32-54%,
+  >150 0.7-1.2%, p99.9 193-223, chroma 26-36, azure 99%, top quarter 17-33, bottom quarter 9-27; sky away from the
+  moon 17-38 (corners 9-18 under the vignette); warm pixels 0.15-0.2% where the right horizon is in view.

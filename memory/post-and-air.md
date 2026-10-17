@@ -301,15 +301,16 @@
   nears its east clamp (4800), where the far lantern stands in the frame's top right over the heart. (The
   black mass that hung over the lantern there was mostly a mid-layer moss curtain: background-layers.md.)
 
-## The wood (2026-10-17)
-- Post: `WOOD_GRADE` (config.ts) replaces `ZONE_GRADE` when the kit is not the grove (index.ts `ZG`). The glade's
-  left-zone grade (exposure 1.3, richSaturation 1.5) turned the wood's big sky and fog royal blue (chroma 50-56);
-  now exposure 1.16, richSaturation 1.25, cool highlight tint. The moon measures ~(200,210,222): cool, not warm
-  (the old warmth was the sky's amber `halo` mist colour, which the wood now overrides).
-- Air: `AIR_WOOD` (air.ts; `A` is the room's config, set in init): five thin cool beams placed so the first lands
-  on the cocoon row, mist sheets low in the drop, 150 cool motes, no fireflies (the last firefly is a character),
-  no ambient moth flock (the swarm owns moths), 6 leaves.
-- Foreground: `FOREGROUND.wood`: no floor band, tier or ground plants; flipped `leafBranch` twigs reach up into
-  the bottom corners (`g.scaleTransform(1, -1)` before drawing). The top boughs are near-black on a near-black sky
-  at the opening frame: they frame by value only.
-- Motion is thin in the wood: 1.7% of pixels change > 6 luma in 1 s idle (target: no 10% region still).
+## The wood (2026-10-17, rounds 1-2)
+- Post: `WOOD_GRADE` (config.ts) replaces `ZONE_GRADE` when the kit is not the grove (index.ts `ZG`): exposure
+  1.04, richSaturation 1.25, cool highlights, **toeDepth 0.65** (the glade's 0.8 crushed the night sky to 3-14 and
+  the crowns to 17, under the branch's shadow: review round 1). Exposure and toe trade against each other: 1.16 /
+  0.45 measured mean 39 and near-black 30%; 1.04 / 0.65 sits in the target. The moon's disc ~200-205.
+- Air: `AIR_WOOD` (air.ts; `A` is the room's config, set in init): thin cool beams, low fog sheets, 420 cool motes
+  (150 showed 3-6), no fireflies, no ambient moth flock, 6 leaves. `WOOD_AIR`: `Silk` (9 loose threads drifting
+  across the view on `wind()`, nearly level and sagging a little: straight or V-shaped ones read as shooting
+  stars or birds) and `gust` streaks crossing the frame at the wind envelope's ~460 px/s (additive, airBack).
+- Foreground: `FOREGROUND.wood`: no floor band; flipped `leafBranch` twigs in the bottom corners; `opening`: a
+  dark mass in the opening frame's lower left (own seed); top boughs withdraw off the moon (`moonClear`).
+- Motion, idle 1 s at the burl (pixels changing > 6 luma): 1.7% (round 1) -> 4.9%; the haze band and the dark
+  top-left corner are the stillest parts.
