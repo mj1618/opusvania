@@ -5,7 +5,7 @@
  *                      a low dark tuft now and then in front of her feet
  *   at joints and ends small polypody ferns, the epiphytes of old limbs
  *   under the limb     old man's beard (pale-tipped lichen strands) in clumps, a few silk threads
- *                      that catch the moon, threads strung along the lip between the cocoons
+ *                      that catch the moon, each cocoon on silk from the underside, a few short wisps
  *   twig ends          leaf sprigs
  *   the end            the dark canopy: leaf clumps, a moon edge on their crowns
  *
@@ -147,22 +147,6 @@ function silk(b: FloraBuilder, r: Rng, x: number, y: number, len: number): void 
     () => T.silk,
     () => T.silk,
     (u) => 0.32 * (1 - u * 0.6),
-  );
-}
-
-/** A thread strung between two points on the lip, sagging. */
-function strung(b: FloraBuilder, r: Rng, x0: number, y0: number, x1: number, y1: number): void {
-  const sag = Math.abs(x1 - x0) * range(r, 0.08, 0.16);
-  const mx = (x0 + x1) / 2;
-  // (Both ends are tied: it does not sway; the cocoons under it do.)
-  b.plant(mx, (y0 + y1) / 2, sag + 1, r(), 0, 0, 0);
-  const line = quad(x0, y0, mx, (y0 + y1) / 2 + sag * 2, x1, y1, 14);
-  b.strip(
-    line,
-    () => 0.9,
-    () => T.silk,
-    () => T.silk,
-    0.22,
   );
 }
 
@@ -326,15 +310,13 @@ export function growBranch(g: Garden, plan: BranchPlan): void {
       );
     }
   }
-  // Silk strung along the lip between neighbouring cocoons (their row is a nursery).
+  // A couple of short broken wisps by the row (a strung line between them read as a clothesline).
   const cs = [...plan.cocoons].sort((a, b) => a.x - b.x);
-  for (let i = 0; i + 1 < cs.length; i++) {
-    const a = cs[i] as { x: number; y: number };
-    const c = cs[i + 1] as { x: number; y: number };
-    const r = rngFor(a.x, c.x, 5);
-    if (c.x - a.x < 160) strung(g.back, r, a.x + 6, a.y + 4, c.x - 6, c.y + 4);
+  for (let i = 1; i < cs.length; i += 3) {
+    const c = cs[i] as { x: number; y: number };
+    const r = rngFor(c.x, c.y, 5);
+    silk(g.back, r, c.x + range(r, 18, 34), c.y - range(r, 6, 14), range(r, 14, 30));
   }
-
   // Twig ends.
   for (const s of plan.sprigs) {
     const r = rngFor(s.x, s.y, 13);

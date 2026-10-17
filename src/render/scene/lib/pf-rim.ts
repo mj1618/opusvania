@@ -136,8 +136,9 @@ export class Rim {
       // Over a free end the rim runs on a little and fades; at a joint it stops flush.
       const freeL = freeWest(st);
       const freeR = freeEast(st);
-      const x0 = st.x0 - (freeL ? 10 : st.west === 'trunk' ? 26 : 0);
-      const x1 = st.x1 + (freeR ? 10 : 0);
+      // (It stops short of a snapped end with the moss: broken wood holds no moonlit moss.)
+      const x0 = st.west === 'snap' ? st.x0 + 22 : st.x0 - (freeL ? 10 : st.west === 'trunk' ? 26 : 0);
+      const x1 = st.east === 'snap' ? st.x1 - 22 : st.x1 + (freeR ? 10 : 0);
       const seed = (st.x0 * 0.0137) % 50;
       const step = 4;
       const n = Math.ceil((x1 - x0) / step);

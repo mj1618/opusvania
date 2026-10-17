@@ -1,21 +1,17 @@
 /**
- * The wood kit's playfield (rooms with `art.kit: 'wood'`): one old living branch high in a tree at
- * night, painted from the room's rects. Collision is boxes; the picture is a limb.
+ * The wood kit's playfield (rooms with `art.kit: 'wood'`): old living limbs high in the trees at night,
+ * painted from the room's tree and stretch marks (`marks.trees`, `marks.stretches`) over its rects.
  *
- *   trunk    the great bole the branch grows out of: bark ridges, the collar that wraps the limb's
- *            root, the wrinkles over it, moss
- *   branch   each walk rect is a stretch of the same limb. How two stretches meet decides the form:
- *            abutting, higher    the knot: a burl swells up over the step
- *            abutting, lower     a knee: the limb kinks down, a thin fork runs on as twigs
- *            a gap to the next   a fork: the upper prong runs to the rect's end and frays into twigs,
- *                                the main mass dives into the mist below; the next stretch's end is
- *                                the top of another prong rising out of it
- *            nothing after it    the end: the tip frays, the main mass dives into the dark canopy
- *            the room's edge     another tree's branch (the far branch): enters thick, tapers
+ *   trees      great trunks (`west` is the solid one at the room's edge; others stand in the walk plane
+ *              and she passes in front of them); a round collar wraps every limb that grows out of one
+ *   stretches  each is ONE limb over a run of rolling rects: its top is a smooth curve through their
+ *              tops, its thickness tapers from its root (`from`, `grows`) and swells at joins. Ends:
+ *              burl (the next abuts higher), knee (abuts lower), fork (the limb dips into a crotch under
+ *              the gap: one tine rises into the next stretch, one goes on down into the mist), snap (a
+ *              broken end facing another tree's limb), nub (a blunt outer end), tip (thins into a twiggy
+ *              tangle over the canopy she drops into)
  *
- * Every stretch's top is its collision top (the moss rim is the path, the live rim in pf-rim.ts lays
- * the moonlight on it); the underside is free, dark and lumpy. Returns the bake's `TerrainInfo` and a
- * `BranchPlan` for the growth (pf-branch-flora.ts) and the rim.
+ * Nothing floats and nothing props anything up. The far branch is the backdrop's (`marks.farBranch`).
  * Structure, knobs and gotchas: memory/playfield.md, "The wood: the hatching branch".
  */
 import type { Room } from '../../../scene/room';
@@ -27,15 +23,32 @@ import { blob, chaikin, clamp, cubic, lerp, quad, range, rngFor, smoothstep, wob
 import type { TerrainInfo } from './pf-terrain';
 
 export const BRANCH = {
-  /** One limb: thickness (px, vertical) at the trunk and at the end of the route, and how much of it
-   *  is left along the cocoon row (the cocoons hang from a thinner limb, against the fog). */
-  thickRoot: 122,
-  thickEnd: 36,
+  /** Out of a tree a limb starts at this share of the trunk's width (clamped); out of a fork each tine
+   *  keeps `forkShare` of what the parent has left. */
+  rootShare: 0.55,
+  rootMin: 80,
+  rootMax: 122,
+  forkShare: 0.82,
+  /** Along the cocoon row the limb keeps this share of its thickness (the cocoons hang from a thinner
+   *  limb, against the fog), easing back over `cocoonFade` px either side. */
   cocoonThin: 0.7,
-  /** How far either side of the cocoon row the limb eases back to full, px. */
   cocoonFade: 200,
   /** Along the row the underside runs this far above the cocoons' hang points (they hang on silk), px. */
   cocoonSilk: 16,
+  /** The climb face at the cocoon row: a little moonlight on the mid flank, a fog-light rim underneath. */
+  climbLift: 0.14,
+  climbRim: 0x3a5470,
+  /** A fork's crotch: this share of the way from the parent's end to the child's, this far under both
+   *  walk lines, px. */
+  forkAt: 0.38,
+  forkDrop: 150,
+  /** A trunk's collar round a limb's root, px. */
+  collar: 46,
+  /** A trunk that ends in view: how much it narrows toward its broken top, how far it leans (share of its
+   *  width), and how many limbs droop from under the break. */
+  trunkTaper: 0.3,
+  trunkLean: 0.35,
+  droopLimbs: 5,
   /** Swell and pinch along the limb: share of the thickness at ~420 px and ~120 px. */
   swell: 0.2,
   ripple: 0.07,
@@ -50,40 +63,19 @@ export const BRANCH = {
   /** Moss tufts that break the line: gap between them and how far they rise over it, px. */
   tuftGap: [80, 240] as readonly number[],
   tuftLift: [5, 11] as readonly number[],
-  /** Prong ends: the last `tipRun` px thin to `tipKeep`, then the prong runs `prongExt` px past the rect. */
-  tipRun: 320,
-  tipKeep: 0.5,
-  prongExt: [60, 104] as readonly number[],
-  /** Across a gap a prong runs this share of the gap toward the stub on the other side. */
-  prongReach: [0.5, 0.66] as readonly number[],
-  /** Per-stretch belly: thickness x (a + b sin(pi u)). */
-  belly: [0.9, 0.18] as readonly number[],
   /** The far branch's tip past its rect, px. */
   tipExt: 40,
-  /** Snapped ends keep this share of the thickness (they broke, they did not taper). */
-  stubKeep: 0.86,
-  /** A rect within this far east of another's end (and within `joinRise` of its top) continues it. */
-  joinGap: 340,
-  joinRise: 220,
-  /** The end's main mass goes this far down before the mist takes it, px. */
-  dive: 640,
   /** The burl's belly swells this far below the limb, px; the knee's shoulder radius, px. */
   burlSwell: 26,
   kneeRound: 44,
   /** Lumps on the underside: one every this many px (range), and their depth (px). */
   lumpGap: [180, 520] as readonly number[],
   lumpDepth: [6, 26] as readonly number[],
-  /** The far branch (another tree, a plane back): thickness at its tip and gained to the edge, its
-   *  relief (dim: barely lit), the haze laid on it and the mist pool over it. */
-  farThin: 34,
-  farThick: 52,
-  farH: 0.24,
-  farHaze: 0x121d2e,
-  farFlat: 0x1b2a40,
-  farMist: 0.55,
   /** The canopy tangle at the end: leaf clumps and twisted limbs. */
-  canopyClumps: 34,
-  tangleLimbs: 9,
+  canopyClumps: 44,
+  /** How deep under the end the tangle reaches (it thins out into the dark below), px. */
+  canopyDepth: 760,
+  tangleLimbs: 0,
   /** Relief heights: the walk plane and the back plane (barely lit: reads as behind). */
   walkH: 0.56,
   backH: 0.22,
@@ -105,7 +97,7 @@ export const BRANCH = {
   mistAmount: 0.85,
   /** The canopy the branch ends in; pale torn wood on a snapped end. */
   leafDark: 0x08171a,
-  wood: 0x4b585c,
+  wood: 0x343f45,
 } as const;
 
 /**
@@ -133,31 +125,47 @@ export interface Limb {
   detail: number;
 }
 
-/** How a stretch's end meets the next. */
-type End = 'trunk' | 'burl' | 'knee' | 'under' | 'tip' | 'stub' | 'end' | 'edge';
+/**
+ * How a stretch's end meets the world. Root ends: `trunk` (grows out of a tree), `burl` / `under` (out
+ * of the stretch it abuts), `crotch` (out of a fork in its parent, rising from below). Far ends: `burl`
+ * / `knee` (the next stretch abuts it), `fork` (the limb dips and splits: one tine rises into the next
+ * stretch, one goes on down), `snap` (broken), `nub` (a blunt natural end), `tip` (thins into twigs).
+ */
+type End = 'trunk' | 'burl' | 'knee' | 'under' | 'crotch' | 'fork' | 'snap' | 'nub' | 'tip';
 
-/** One walk rect as a stretch of limb. */
+/** One stretch of the walk (a run of rolling rects) as one limb. */
 export interface Stretch {
+  id: string;
+  /** The first rect (seeds, collision height). */
   s: SolidRect;
   x0: number;
   x1: number;
+  /** The collision top at x0. */
   y: number;
+  /** The rects' tops, west to east. */
+  rects: Array<{ x0: number; x1: number; top: number }>;
   west: End;
   east: End;
-  /** Vertical thickness at x (the underside is y + th(x), before lumps). */
+  /** +1 grows east (the root is at x0), -1 grows west. */
+  grows: 1 | -1;
+  parent: string;
+  from: [number, number];
+  /** Vertical thickness at x (the underside is top + th(x), before lumps). */
   th: (x: number) => number;
   /** The painted underside at x, lumps included. */
   under: (x: number) => number;
-  /** The painted bark top at x: the walk line rolled a few px (moss rises over it). */
+  /** The painted bark top at x: a smooth curve through the rolling collision tops. */
   top: (x: number) => number;
-  /** Another tree's branch (enters from the room's edge). */
+  /** Always false now (the far branch is the backdrop's); kept for the growth and rim checks. */
   far: boolean;
-  /** Across a gap, how much lower (+) or higher (-) the stretch on that side is. */
-  reachW: number;
-  reachE: number;
-  /** The stretch across the gap on each side (prongs reach toward it). */
+  /** Across a gap: the stretch on that side, and how much lower (+) it is. */
   nbW?: Stretch;
   nbE?: Stretch;
+  reachW: number;
+  reachE: number;
+  /** Thickness at the root and at the far end. */
+  thRoot: number;
+  thEnd: number;
 }
 
 /** What the growth and the live rim read. */
@@ -529,107 +537,210 @@ function stub(p: Paint, x: number, y: number, a: number, len: number, w0: number
 }
 
 // ---------------------------------------------------------------------------------------------
-// The plan: rects -> stretches
+// The plan: the room's stretch and tree marks -> limbs
 
-/** A free west end (a gap's prong or snapped stub, or the far branch's tip). */
+/** A free west end (nothing joins it there). */
 export function freeWest(st: Stretch): boolean {
-  return st.west === 'tip' || st.west === 'stub';
+  return (
+    st.west === 'crotch' || st.west === 'fork' || st.west === 'snap' || st.west === 'nub' || st.west === 'tip'
+  );
 }
 
-/** A free east end (a gap's prong or stub, the end, or a knee's corner). */
+/** A free east end (a knee's corner counts: the rim fades over it). */
 export function freeEast(st: Stretch): boolean {
-  return st.east === 'tip' || st.east === 'stub' || st.east === 'end' || st.east === 'knee';
+  return (
+    st.east === 'crotch' ||
+    st.east === 'fork' ||
+    st.east === 'snap' ||
+    st.east === 'nub' ||
+    st.east === 'tip' ||
+    st.east === 'knee'
+  );
 }
 
-function planStretches(room: Room): Stretch[] {
+interface TreeLike {
+  id: string;
+  x: number;
+  w: number;
+  top: number;
+  bottom: number;
+  plane: 'walk' | 'back';
+}
+
+/** The trees: the room's `marks.trees`, or (a room without them) its trunk solids. */
+function planTrees(room: Room): TreeLike[] {
+  const marks = room.marks?.trees;
+  if (marks?.length) return marks.map((t) => ({ ...t }));
+  return room.solids
+    .filter((s) => s.tag === 'trunk')
+    .map((s, i) => ({
+      id: `trunk${i}`,
+      x: s.x + s.w / 2,
+      w: s.w,
+      top: s.y,
+      bottom: s.y + s.h,
+      plane: 'walk' as const,
+    }));
+}
+
+function planStretches(room: Room, trees: TreeLike[]): Stretch[] {
   const B = BRANCH;
-  const trunks = room.solids.filter((s) => s.tag === 'trunk');
-  const trunkX = trunks.length ? Math.max(...trunks.map((t) => t.x + t.w)) : 0;
-  const rects = room.solids.filter((s) => s.tag !== 'trunk').sort((a, b) => a.x - b.x);
-  const out: Stretch[] = rects.map((s) => ({
-    s,
-    x0: s.x,
-    x1: s.x + s.w,
-    y: s.y,
-    west: 'tip' as End,
-    east: 'end' as End,
-    th: () => 0,
-    under: () => 0,
-    top: () => s.y,
-    far: false,
-    reachW: 0,
-    reachE: 0,
-  }));
+  const branches = room.solids.filter((s) => s.tag !== 'trunk').sort((a, b) => a.x - b.x);
+  // The stretches: the room's marks, or (without them) runs of abutting rects within a step.
+  let marks = room.marks?.stretches ?? [];
+  if (!marks.length) {
+    const runs: SolidRect[][] = [];
+    for (const s of branches) {
+      const last = runs[runs.length - 1];
+      const prev = last?.[last.length - 1];
+      if (last && prev && Math.abs(prev.x + prev.w - s.x) < 2 && Math.abs(prev.y - s.y) <= 12) last.push(s);
+      else runs.push([s]);
+    }
+    marks = runs.map((run, i) => {
+      const first = run[0] as SolidRect;
+      const last = run[run.length - 1] as SolidRect;
+      const tree = trees.find((t) => Math.abs(t.x + t.w / 2 - first.x) < 4);
+      return {
+        id: `R${i}`,
+        x0: first.x,
+        x1: last.x + last.w,
+        parent: tree ? tree.id : '',
+        from: [first.x, first.y + 40] as [number, number],
+        grows: 'east' as const,
+        end: 'tip' as const,
+      };
+    });
+  }
+  const out: Stretch[] = [];
+  for (const m of marks) {
+    const rects = branches.filter((s) => s.x >= m.x0 && s.x < m.x1);
+    if (!rects.length) continue;
+    const first = rects[0] as SolidRect;
+    const last = rects[rects.length - 1] as SolidRect;
+    const grows: 1 | -1 = m.grows === 'west' ? -1 : 1;
+    const farEnd: End = m.end === 'trunk' ? 'nub' : m.end;
+    out.push({
+      id: m.id,
+      s: first,
+      x0: first.x,
+      x1: last.x + last.w,
+      y: first.y,
+      rects: rects.map((s) => ({ x0: s.x, x1: s.x + s.w, top: s.y })),
+      west: grows > 0 ? 'trunk' : farEnd,
+      east: grows > 0 ? farEnd : 'trunk',
+      grows,
+      parent: m.parent,
+      from: m.from,
+      th: () => 0,
+      under: () => 0,
+      top: () => first.y,
+      far: false,
+      reachW: 0,
+      reachE: 0,
+      thRoot: 0,
+      thEnd: 0,
+    });
+  }
+  // Root ends: out of a tree, or out of the parent stretch's far end.
   for (const st of out) {
-    if (trunks.some((t) => Math.abs(t.x + t.w - st.x0) < 2 && st.y >= t.y && st.y < t.y + t.h))
-      st.west = 'trunk';
-    if (st.x1 >= room.width - 1) {
-      st.east = 'edge';
-      st.far = st.west !== 'trunk';
+    const parent = out.find((o) => o.id === st.parent);
+    if (!parent) continue;
+    const pEnd = parent.grows > 0 ? parent.east : parent.west;
+    const root: End =
+      pEnd === 'burl' ? 'burl' : pEnd === 'knee' ? 'under' : pEnd === 'fork' ? 'crotch' : 'nub';
+    if (st.grows > 0) st.west = root;
+    else st.east = root;
+    // Neighbours across a gap.
+    if (pEnd === 'fork' || pEnd === 'snap') {
+      if (parent.x1 <= st.x0) {
+        parent.nbE = st;
+        st.nbW = parent;
+        parent.reachE = st.y - (parent.rects[parent.rects.length - 1] as { top: number }).top;
+        st.reachW = -parent.reachE;
+      }
     }
   }
-  const route = out.filter((o) => !o.far);
-  for (const st of route) {
-    if (st.east === 'edge') continue;
-    const abut = route.find(
-      (o) => o !== st && Math.abs(o.x0 - st.x1) < 2 && Math.abs(o.y - st.y) < B.joinRise,
-    );
-    if (abut) {
-      st.east = abut.y < st.y ? 'burl' : 'knee';
-      abut.west = abut.y < st.y ? 'burl' : 'under';
-      continue;
-    }
-    const next = route
-      .filter(
-        (o) =>
-          o.x0 > st.x1 && o.x0 - st.x1 < B.joinGap && Math.abs(o.y - st.y) < B.joinRise && o.west === 'tip',
-      )
-      .sort((a, b) => a.x0 - b.x0)[0];
-    if (next) {
-      // A break in the limb: the limb thins to a prong reaching across, and goes on beyond from a
-      // snapped stub (the way the limb grows: thick behind, thin ahead).
-      st.east = 'tip';
-      next.west = 'stub';
-      st.reachE = next.y - st.y;
-      next.reachW = st.y - next.y;
-      st.nbE = next;
-      next.nbW = st;
+  for (const st of out) {
+    // A snap faces another tree's limb: the next stretch east is its neighbour.
+    if (st.east === 'snap' && !st.nbE) {
+      const next = out.filter((o) => o.x0 >= st.x1).sort((a, b) => a.x0 - b.x0)[0];
+      if (next) {
+        st.nbE = next;
+        next.nbW = st;
+      }
     }
   }
-  const xEnd = Math.max(trunkX + 1, ...route.map((o) => o.x1));
+  // Thickness: out of a tree a limb starts at about half the trunk's width; out of a limb, at what the
+  // parent has left. Parents first.
+  const done = new Set<string>();
   const cocoons = room.marks?.cocoons ?? [];
   const c0 = cocoons.length ? Math.min(...cocoons.map((c) => c.x)) : 0;
   const c1 = cocoons.length ? Math.max(...cocoons.map((c) => c.x)) : -1;
-  /** 1 along the cocoon row (the limb is thinner there), 0 away from it. */
   const row = (x: number): number =>
     c1 < c0 ? 0 : smoothstep(c0 - B.cocoonFade, c0, x) * smoothstep(c1 + B.cocoonFade, c1, x);
+  const endShare: Record<string, number> = {
+    burl: 0.86,
+    knee: 0.86,
+    fork: 0.8,
+    snap: 0.84,
+    nub: 0.6,
+    tip: 0.16,
+  };
+  for (let pass = 0; pass < out.length + 1; pass++) {
+    for (const st of out) {
+      if (done.has(st.id)) continue;
+      const tree = trees.find((t) => t.id === st.parent);
+      const parent = out.find((o) => o.id === st.parent);
+      if (!tree && parent && !done.has(parent.id)) continue;
+      st.thRoot = tree
+        ? clamp(tree.w * B.rootShare, B.rootMin, B.rootMax)
+        : parent
+          ? parent.thEnd * (parent.east === 'fork' || parent.west === 'fork' ? B.forkShare : 0.97)
+          : B.rootMin;
+      const farEnd = st.grows > 0 ? st.east : st.west;
+      st.thEnd = st.thRoot * (endShare[farEnd] ?? 0.8);
+      done.add(st.id);
+    }
+  }
   for (const st of out) {
-    const h = st.s.h;
     const seed = st.s.x * 3 + st.s.y;
     const span = st.x1 - st.x0;
-    const sag = Math.min(18, span / 70);
+    const hMin = st.s.h * 0.45;
+    const rootTree = trees.some((t) => t.id === st.parent);
+    const farEnd = st.grows > 0 ? st.east : st.west;
     st.th = (x: number): number => {
       const u = clamp((x - st.x0) / Math.max(1, span), 0, 1);
-      let t: number;
-      if (st.far) t = B.farThin + B.farThick * u ** 1.6;
-      else {
-        // One limb: thick at the trunk, tapering ~3:1 to the end, thinner along the cocoon row.
-        const v = clamp((x - trunkX) / (xEnd - trunkX), 0, 1);
-        t = lerp(B.thickRoot, B.thickEnd, v ** 0.65) * lerp(1, B.cocoonThin, row(x));
-      }
-      const taper = (d: number, keep: number, run: number): number => lerp(keep, 1, smoothstep(0, run, d));
-      if (st.east === 'tip' || st.east === 'end') t *= taper(st.x1 - x, B.tipKeep, B.tipRun);
-      if (st.west === 'tip') t *= taper(x - st.x0, B.tipKeep, B.tipRun);
-      if (st.east === 'stub') t *= taper(st.x1 - x, B.stubKeep, 140);
-      if (st.west === 'stub') t *= taper(x - st.x0, B.stubKeep, 140);
-      if (st.west === 'trunk') t += B.flare * Math.exp(-Math.max(0, x - st.x0) / B.flareFall);
-      // Swell and pinch, and a soft belly in long spans (not under the cocoons).
+      const d = st.grows > 0 ? u : 1 - u;
+      let t = lerp(st.thRoot, st.thEnd, d ** 0.9) * lerp(1, B.cocoonThin, row(x));
+      if (rootTree) t += B.flare * Math.exp(-(d * span) / B.flareFall);
       t *= 1 + B.swell * wobble(x, seed + 5, 420) + B.ripple * wobble(x, seed + 6, 120);
-      t += sag * Math.sin(Math.PI * u) * (1 - row(x));
-      // Each stretch swells a little behind its middle: the underside is never parallel to the top.
-      if (!st.far && st.west !== 'trunk')
-        t *= (B.belly[0] as number) + (B.belly[1] as number) * Math.sin(Math.PI * u ** 0.8) ** 0.8;
-      return Math.max(h * 0.42, t);
+      return Math.max(farEnd === 'tip' ? 12 : hMin, t);
+    };
+    // The top: a smooth curve through the rects' tops (each rect's middle at its top, eased between),
+    // a hair of bark roll on that, rounding away over the last px of a free end.
+    const mids = st.rects.map((q) => [(q.x0 + q.x1) / 2, q.top] as [number, number]);
+    const curve = (x: number): number => {
+      const a = mids[0] as [number, number];
+      const z = mids[mids.length - 1] as [number, number];
+      if (x <= a[0]) return a[1];
+      if (x >= z[0]) return z[1];
+      for (let i = 0; i + 1 < mids.length; i++) {
+        const p = mids[i] as [number, number];
+        const q = mids[i + 1] as [number, number];
+        if (x <= q[0]) return lerp(p[1], q[1], smoothstep(p[0], q[0], x));
+      }
+      return z[1];
+    };
+    const fe = freeEast(st) && st.east !== 'knee';
+    const fw = freeWest(st);
+    st.top = (x: number): number => {
+      const [r0, r1, r2] = B.roll as [number, number, number];
+      let y = curve(x) + r0 + r1 * wobble(x, seed + 31, 280) + r2 * wobble(x, seed + 32, 64);
+      const dE = st.x1 - x;
+      const dW = x - st.x0;
+      if (fe && dE < B.endRound) y += ((B.endRound - dE) / B.endRound) ** 2 * B.endDrop;
+      if (fw && dW < B.endRound) y += ((B.endRound - dW) / B.endRound) ** 2 * B.endDrop;
+      return y;
     };
     const r = rngFor(seed, 99);
     const lumps: Array<[number, number, number]> = [];
@@ -644,17 +755,16 @@ function planStretches(room: Room): Stretch[] {
     // on silk), so it slopes and wavers with the row instead of running parallel to the walk line.
     const hangs = cocoons.filter((c) => c.x >= st.x0 && c.x <= st.x1).sort((a, b) => a.x - b.x);
     const hangY = (x: number): number => {
-      if (!hangs.length) return 0;
-      const first = hangs[0] as { x: number; y: number };
-      const last = hangs[hangs.length - 1] as { x: number; y: number };
-      if (x <= first.x) return first.y;
-      if (x >= last.x) return last.y;
+      const a = hangs[0] as { x: number; y: number };
+      const z = hangs[hangs.length - 1] as { x: number; y: number };
+      if (x <= a.x) return a.y;
+      if (x >= z.x) return z.y;
       for (let i = 0; i + 1 < hangs.length; i++) {
-        const a = hangs[i] as { x: number; y: number };
-        const b = hangs[i + 1] as { x: number; y: number };
-        if (x <= b.x) return lerp(a.y, b.y, smoothstep(a.x, b.x, x));
+        const p = hangs[i] as { x: number; y: number };
+        const q = hangs[i + 1] as { x: number; y: number };
+        if (x <= q.x) return lerp(p.y, q.y, smoothstep(p.x, q.x, x));
       }
-      return last.y;
+      return z.y;
     };
     st.under = (x: number): number => {
       let add = 0;
@@ -662,26 +772,12 @@ function planStretches(room: Room): Stretch[] {
         const d = (x - lx) / lw;
         add += ld * Math.exp(-d * d * 2.2);
       }
-      const free = st.y + st.th(x) + add * (0.6 + 0.4 * wobble(x, seed + 8, 90));
+      const top = st.top(clamp(x, st.x0, st.x1));
+      const free = top + st.th(x) + add * (0.6 + 0.4 * wobble(x, seed + 8, 90));
       const w = hangs.length ? row(x) : 0;
       if (w <= 0) return free;
       const along = hangY(x) - B.cocoonSilk + 7 * wobble(x, seed + 12, 140) + 3 * wobble(x, seed + 13, 40);
-      return lerp(free, Math.max(st.y + st.s.h * 0.6, along), w);
-    };
-    // The painted bark top: the walk line rolled a few px (feet won't notice; the eye does), rounding
-    // away over the last px of a free end. Moss cushions rise over it (mossBlanket).
-    const fe = freeEast(st) && st.east !== 'knee';
-    const fw = freeWest(st);
-    st.top = (x: number): number => {
-      const [r0, r1, r2] = B.roll as [number, number, number];
-      let y = st.y + r0 + r1 * wobble(x, seed + 31, 280) + r2 * wobble(x, seed + 32, 64);
-      if (st.far)
-        y += 4 * wobble(x, seed + 33, 500) + 10 * Math.sin(Math.PI * clamp((x - st.x0) / span, 0, 1));
-      const dE = st.x1 - x;
-      const dW = x - st.x0;
-      if (fe && dE < B.endRound) y += ((B.endRound - dE) / B.endRound) ** 2 * B.endDrop;
-      if (fw && dW < B.endRound) y += ((B.endRound - dW) / B.endRound) ** 2 * B.endDrop;
-      return y;
+      return lerp(free, Math.max(top + st.s.h * 0.6, along), w);
     };
   }
   return out;
@@ -980,123 +1076,232 @@ function bendGrain(
   }
 }
 
-/** The great bole at the west edge: the limbs' roots first, then the bole wraps them in its collar. */
-function paintBole(p: Paint, t: SolidRect, roomH: number, joins: Stretch[], seed: number): void {
+/** A limb's root on a trunk: which flank, the limb's top there, its thickness. */
+interface Join {
+  side: -1 | 1;
+  y: number;
+  th: number;
+}
+
+/**
+ * A great trunk: bark ridges, a moonlit right flank, a round collar wrapping every limb that grows out
+ * of it (painted after the limbs, so their roots sink into it), the bark ridge folds over each joint,
+ * the limb's shadow under it, moss streaks; a broken jagged top if the trunk ends in view.
+ */
+function paintTrunk(p: Paint, tree: TreeLike, joins: Join[], roomH: number, seed: number): void {
   const B = BRANCH;
   const r = rngFor(seed, 7);
-  // The collar: where a limb leaves, the bole's flank bulges out round its root.
-  // Round, under the walk line only (above it she walks right up to the trunk): a swelling the
-  // limb grows out of, with a small fillet into the limb's top.
-  const collar = (y: number): number => {
+  const back = tree.plane === 'back';
+  const h0 = back ? B.backH : 0.5;
+  // Round, under the limb's top only (above it she walks or falls past): a swelling the limb grows
+  // out of, with a small fillet into the limb's top.
+  const collar = (side: -1 | 1, y: number): number => {
     let c = 0;
     for (const j of joins) {
-      const th = j.th(j.x0 + 30);
-      const mid = j.y + th * 0.52;
-      const half = th * 0.56;
+      if (j.side !== side) continue;
+      const mid = j.y + j.th * 0.52;
+      const half = j.th * 0.56;
       const d = (y - mid) / half;
-      if (d > -1 && d < 1) c = Math.max(c, 46 * Math.sqrt(1 - d * d));
+      if (d > -1 && d < 1) c = Math.max(c, B.collar * Math.sqrt(1 - d * d));
       const f = (y - (j.y - 14)) / 14;
       if (f > 0 && f < 1) c = Math.max(c, 14 * f * f);
     }
     return c;
   };
+  const y0 = Math.max(-40, tree.top);
+  const y1 = Math.min(roomH + 60, tree.bottom + 60);
+  const broken = tree.top > -40;
+  // A trunk that ends in view tapers toward its broken top and leans a little; others run on up.
+  const rise = (y: number): number => (broken ? smoothstep(y1, y0, y) : 0);
+  const halfAt = (y: number): number => (tree.w / 2) * (1 - B.trunkTaper * rise(y));
+  const lean = (y: number): number => B.trunkLean * tree.w * rise(y) ** 1.4;
   const xr = (y: number): number =>
-    t.x + t.w + 4 + 8 * wobble(y, seed, 300) + 3 * wobble(y, seed + 3, 60) + collar(y);
-  const xl = t.x - 220;
-  const y0 = -40;
-  const y1 = roomH + 60;
-  const edge: number[] = [];
-  for (let y = y0; y <= y1; y += 8) edge.push(xr(y), y);
-  p.solid([xl, y0, ...edge, xl, y1], B.bark, 0.5, { bark: 1 });
+    tree.x + lean(y) + halfAt(y) + 4 + 8 * wobble(y, seed, 300) + 3 * wobble(y, seed + 3, 60) + collar(1, y);
+  const xl = (y: number): number =>
+    tree.x +
+    lean(y) -
+    halfAt(y) -
+    4 -
+    8 * wobble(y, seed + 40, 300) -
+    3 * wobble(y, seed + 43, 60) -
+    collar(-1, y);
+  // The outline: down the right flank, back up the left, a jagged break across the top if it ends here.
+  const poly: number[] = [];
+  for (let y = y0; y <= y1; y += 8) poly.push(xr(y), y);
+  for (let y = y1; y >= y0; y -= 8) poly.push(xl(y), y);
+  const crown: number[] = [];
+  if (broken) {
+    const n = 11;
+    for (let k = 1; k < n; k++) {
+      const x = lerp(xl(y0), xr(y0), (k + range(r, -0.3, 0.3)) / n);
+      const y = y0 - range(r, -14, 1) * (k % 3 ? 1 : -3) - (k === 4 ? range(r, 30, 60) : 0);
+      poly.push(x, y);
+      crown.push(x, y);
+    }
+  }
+  p.solid(poly, B.bark, h0, { bark: 1 });
   const strip = (inset: number, w: number): number[] => {
     const pts: number[] = [];
     for (let y = y0; y <= y1; y += 8) pts.push(xr(y) - inset - w, y);
     for (let y = y1; y >= y0; y -= 8) pts.push(xr(y) - inset, y);
     return pts;
   };
-  // Round: the face turns toward the moon on the right.
-  p.bump(strip(16, 150), 0.6, { bark: 1 });
-  p.bump(strip(36, 90), 0.68, { bark: 1 });
-  p.tint(strip(70, 200), B.barkDark, 0.55);
+  const lstrip = (inset: number, w: number): number[] => {
+    const pts: number[] = [];
+    for (let y = y0; y <= y1; y += 8) pts.push(xl(y) + inset, y);
+    for (let y = y1; y >= y0; y -= 8) pts.push(xl(y) + inset + w, y);
+    return pts;
+  };
+  // Round: the face turns toward the moon on the right, away on the left.
+  p.bump(strip(16, Math.min(150, tree.w * 0.7)), h0 + 0.1, { bark: 1 });
+  p.bump(strip(36, Math.min(90, tree.w * 0.4)), h0 + 0.18, { bark: 1 });
+  p.tint(lstrip(0, tree.w * 0.4), B.barkDark, 0.55);
+  p.tint(lstrip(0, tree.w * 0.18), B.barkDeep, 0.45);
   p.tint(strip(0, 10), B.barkDark, 0.4);
-  // Bark ridges: long vertical fissures that part round the collar.
-  for (let k = 0; k < 18; k++) {
-    const inset = 8 + k * 11 + range(r, -4, 4);
+  // Bark ridges: long vertical fissures that part round the collars.
+  const rows = Math.round(tree.w / 12);
+  for (let k = 0; k < rows; k++) {
+    const inset = 8 + k * 12 + range(r, -4, 4);
     for (let y = y0 + range(r, 0, 120); y < y1; ) {
       const len = range(r, 50, 300);
       const line: number[] = [];
       for (let yy = y; yy <= y + len; yy += 8) {
-        let x = xr(yy) - collar(yy) - inset + 5 * wobble(yy, seed + k * 7, 110);
+        let x = xr(yy) - collar(1, yy) - inset + 5 * wobble(yy, seed + k * 7, 110);
         for (const j of joins) {
           const d = (yy - (j.y + 30)) / 110;
-          if (Math.abs(d) < 2.5 && inset < 150) x -= 30 * Math.exp(-d * d) * (1 - inset / 150);
+          const near = j.side > 0 ? inset : tree.w - inset;
+          if (Math.abs(d) < 2.5 && near < 150) x -= j.side * 30 * Math.exp(-d * d) * (1 - near / 150);
         }
         line.push(x, yy);
       }
       if (line.length >= 6) {
         const w = range(r, 2.4, 5);
-        p.bump(strand(line, w * 1.6), 0.44, { bark: 1, alpha: 0.85 });
+        p.bump(strand(line, w * 1.6), h0 - 0.06, { bark: 1, alpha: 0.85 });
         p.tint(strand(line, w), B.barkDeep, 0.6);
       }
       y += len + range(r, 10, 110);
     }
   }
-  // Over each joint the bark creases in arcs (the branch bark ridge); under it, the limb's shadow.
   for (const j of joins) {
-    const cx = t.x + t.w;
+    const edge = (y: number): number => (j.side > 0 ? xr(y) - collar(1, y) : xl(y) + collar(-1, y));
+    const cx = edge(j.y);
     // The collar's grain wraps round it, parallel to its edge.
-    const th = j.th(j.x0 + 30);
     for (let k = 0; k < 6; k++) {
       const inset = 6 + k * 9 + range(r, -2, 2);
       const arc: number[] = [];
-      for (let y = j.y + 4; y <= j.y + th * 1.08; y += 6)
-        arc.push(xr(y) - inset - (1 - collar(y) / 46) * k * 4, y);
+      for (let y = j.y + 4; y <= j.y + j.th * 1.08; y += 6) {
+        const c = collar(j.side, y);
+        arc.push(edge(y) + j.side * (c - inset - (1 - c / B.collar) * k * 4), y);
+      }
       if (arc.length >= 6) {
         const w = range(r, 2.4, 4);
-        p.bump(strand(arc, w * 2, 0.25), 0.62, { bark: 0.6, alpha: 0.85 });
+        p.bump(strand(arc, w * 2, 0.25), h0 + 0.12, { bark: 0.6, alpha: 0.85 });
         p.tint(strand(arc, w, 0.25), B.barkDeep, 0.45);
       }
     }
     // The branch bark ridge: rough folds running up and back from the top of the joint.
     for (let k = 0; k < 3; k++) {
-      const sx = cx - 4 - k * 10;
+      const sx = cx - j.side * (4 + k * 10);
       const sy = j.y - 2 - k * 12;
       const len = 34 + k * 14 + range(r, -6, 6);
-      const fold = quad(sx, sy, sx - len * 0.55, sy - len * 0.1, sx - len * 0.8, sy - len * 0.7, 10);
-      const w = range(r, 4, 7);
-      p.bump(strand(fold, w * 2.4, 0.4), 0.62, { bark: 0.6, alpha: 0.85 });
-      p.tint(strand(fold, w, 0.4), B.barkDeep, 0.4);
-      p.tint(
-        strand(
-          fold.map((v, i) => (i % 2 ? v - w * 0.8 : v + w * 0.4)),
-          w * 0.6,
-          0.4,
-        ),
-        B.barkLit,
-        0.2,
+      const fold = quad(
+        sx,
+        sy,
+        sx - j.side * len * 0.55,
+        sy - len * 0.1,
+        sx - j.side * len * 0.8,
+        sy - len * 0.7,
+        10,
       );
+      const w = range(r, 4, 7);
+      p.bump(strand(fold, w * 2.4, 0.4), h0 + 0.12, { bark: 0.6, alpha: 0.85 });
+      p.tint(strand(fold, w, 0.4), B.barkDeep, 0.4);
     }
+    // The limb's shadow on the trunk under it.
     const sh: number[] = [];
-    for (let y = j.y + th * 0.85; y <= j.y + th + 560; y += 20) sh.push(xr(y) + 2, y);
-    for (let y = j.y + th + 560; y >= j.y + th * 0.85; y -= 20) sh.push(xr(y) - 140 - (y - j.y) * 0.12, y);
+    for (let y = j.y + j.th * 0.85; y <= j.y + j.th + 560; y += 20) sh.push(edge(y) + j.side * 2, y);
+    for (let y = j.y + j.th + 560; y >= j.y + j.th * 0.85; y -= 20)
+      sh.push(edge(y) - j.side * (140 + (y - j.y) * 0.12), y);
     p.tint(chaikin(sh, 2), B.barkDeep, 0.6);
   }
-  // Moss streaks run down the bole, and lichen.
-  for (let k = 0; k < 8; k++) {
-    const x = range(r, 24, 150);
-    const ya = range(r, 0, roomH * 0.72);
+  // Moss streaks run down the trunk, and lichen.
+  for (let k = 0; k < Math.round(tree.w / 28); k++) {
+    const x = range(r, 24, tree.w - 20);
+    const ya = range(r, y0 + 40, y0 + (y1 - y0) * 0.72);
     const len = range(r, 80, 360);
     const line: number[] = [];
-    for (let y = ya; y <= ya + len; y += 8) line.push(xr(y) - collar(y) - x + 6 * wobble(y, seed + k, 90), y);
-    p.solid(strand(line, range(r, 8, 22), 0.4), B.mossDark, 0.6, { moss: 1, alpha: 0.85 });
+    for (let y = ya; y <= ya + len; y += 8)
+      line.push(xr(y) - collar(1, y) - x + 6 * wobble(y, seed + k, 90), y);
+    p.solid(strand(line, range(r, 8, 22), 0.4), B.mossDark, h0 + 0.1, { moss: 1, alpha: 0.85 });
   }
   for (let k = 0; k < 5; k++)
-    lichen(p, xr(0) - range(r, 20, 120), range(r, 200, roomH * 0.7), 14, 0.55, seed + k);
-  // Deeper down, the bole sinks into the dark wood.
-  const sink: number[] = [xl, roomH * 0.6];
-  for (let y = roomH * 0.6; y <= y1; y += 20) sink.push(xr(y) + 2, y);
-  sink.push(xl, y1);
-  p.tint(sink, B.barkDeep, 0.4);
+    lichen(
+      p,
+      xr(y0) - range(r, 20, Math.min(120, tree.w - 20)),
+      range(r, y0 + 200, y0 + (y1 - y0) * 0.7),
+      14,
+      h0 + 0.05,
+      seed + k,
+    );
+  // Deeper down, the trunk sinks into the dark wood (in soft steps, so no edge shows).
+  const yd = Math.max(y0, roomH * 0.5);
+  for (let k = 0; k < 5; k++) {
+    const yk = yd + k * 110;
+    if (yk >= y1) break;
+    const sk: number[] = [];
+    for (let y = yk; y <= y1; y += 20) sk.push(xr(y) + 2, y);
+    for (let y = y1; y >= yk; y -= 20) sk.push(xl(y) - 2, y);
+    p.tint(sk, B.barkDeep, 0.13);
+  }
+  if (!broken) return;
+  // The broken top: dark splintered wood (it must not catch the moon like a lit crown).
+  const cap: number[] = [xl(y0 + 60), y0 + 60, ...crown, xr(y0 + 60), y0 + 60];
+  p.tint(cap, B.barkDeep, 0.6);
+  p.tint(clipAbove(poly, y0 + 26), B.barkDeep, 0.35);
+}
+
+/** A broken-topped tree's crown: a few limbs drooping out and down from under the break, leaves on them. */
+function droopCrown(p: Paint, plan: BranchPlan, tree: TreeLike, seed: number): void {
+  const B = BRANCH;
+  const r = rngFor(seed, 81);
+  const top = tree.top;
+  const cx = tree.x + B.trunkLean * tree.w;
+  for (let k = 0; k < B.droopLimbs; k++) {
+    const side = k % 2 ? 1 : -1;
+    const sy = top + range(r, 60, 260);
+    const sx = cx + side * tree.w * 0.28;
+    const len = range(r, 160, 300);
+    const ex = sx + side * len * range(r, 0.3, 0.5);
+    const ey = sy + len * range(r, 0.8, 1);
+    // Out a little, then hanging: never arching up (that read as horns).
+    const line = cubic(sx, sy, sx + side * len * 0.3, sy + len * 0.05, ex, ey - len * 0.45, ex, ey, 20);
+    const w0 = range(r, 12, 20);
+    const dl = lineLimb(line, (t) => w0 * (1 - 0.75 * t), B.backH + 0.04, seed + k, 0.3, 0.4);
+    paintLimb(p, dl);
+    p.tint(band(dl), B.barkDeep, 0.45);
+    for (let j = 0; j < 3; j++) {
+      const t = range(r, 0.35, 1);
+      const q = Math.min(19, Math.round(t * 20));
+      twig(
+        p,
+        plan,
+        line[q * 2] as number,
+        line[q * 2 + 1] as number,
+        Math.PI / 2 + side * range(r, 0.1, 0.8),
+        range(r, 50, 100),
+        5,
+        B.walkH - 0.12,
+        seed + k * 7 + j,
+      );
+    }
+    plan.hangs.push({
+      x0: Math.min(sx, ex),
+      x1: Math.max(sx, ex),
+      y: (x) => lerp(sy + 10, ey + 6, clamp((x - sx) / (ex - sx || 1), 0, 1)),
+      deep: false,
+      reach: 140,
+    });
+  }
 }
 
 /**
@@ -1119,7 +1324,7 @@ function paintCanopy(
   // Twisted limbs crossing behind the leaves: the tangle's bones.
   for (let k = 0; k < B.tangleLimbs; k++) {
     const sx = range(r, x0, x1);
-    const sy = range(r, top + 200, roomH);
+    const sy = range(r, top + 160, Math.min(roomH, top + B.canopyDepth));
     const len = range(r, 160, 340);
     // Mostly level or drooping: limbs that rise out of the leaves read as tentacles.
     const a = (r() < 0.5 ? Math.PI : 0) + range(r, -0.35, 0.5) * (r() < 0.5 ? 1 : -1);
@@ -1143,7 +1348,8 @@ function paintCanopy(
   }
   for (let k = 0; k < B.canopyClumps; k++) {
     const cx = range(r, x0, x1);
-    const cy = range(r, top + 60, roomH + 60) + Math.max(0, x0 + 300 - cx) * 0.8;
+    const cy =
+      range(r, top + 150, Math.min(roomH + 60, top + B.canopyDepth)) + Math.max(0, x0 + 300 - cx) * 0.6;
     const rx = range(r, 70, 170);
     const ry = rx * range(r, 0.5, 0.8);
     p.solid(
@@ -1167,168 +1373,6 @@ function paintCanopy(
     color: B.mist,
     power: 1.2,
     backOnly: 1,
-  });
-}
-
-/** A limb of the main mass going down behind the walk (back plane): darker, the mist takes its low part. */
-function dive(
-  p: Paint,
-  info: TerrainInfo,
-  line: number[],
-  wd: (t: number) => number,
-  seed: number,
-  mx: number,
-  my: number,
-  h: number = BRANCH.backH,
-): Limb {
-  const B = BRANCH;
-  const L = lineLimb(line, (t) => wd(t) * (1 + 0.1 * Math.sin(t * 11 + seed)), h, seed, 0.3, 0.6);
-  paintLimb(p, L);
-  const n = L.pts.length / 2;
-  p.tint(band(L, -0.5, 0.5, Math.round(n * 0.3), n - 1), B.barkDeep, 0.4);
-  info.mist.push({
-    x: mx,
-    y: my,
-    rx: 170,
-    ry: 150,
-    amount: B.mistAmount,
-    color: B.mist,
-    power: 1.3,
-    backOnly: 0.5,
-  });
-  return L;
-}
-
-/**
- * A side limb off the underside, going down and away and ending in mid-air in a hook and a twig fan:
- * it cuts holes of fog out of the void under the walk (never a strut: it touches nothing below).
- */
-function subLimb(
-  p: Paint,
-  plan: BranchPlan,
-  info: TerrainInfo,
-  x: number,
-  y: number,
-  th: number,
-  dir: 1 | -1,
-  len: number,
-  seed: number,
-): void {
-  const B = BRANCH;
-  const r = rngFor(seed, x, y);
-  const w0 = th * range(r, 0.34, 0.48);
-  const sx = x;
-  const sy = y - w0 * 0.45;
-  const ex = sx + dir * len * range(r, 0.3, 0.45);
-  const ey = sy + len * range(r, 0.85, 1);
-  // Down and away, easing out a little; it ends in the mist, not in a curl.
-  const line = cubic(
-    sx,
-    sy,
-    sx + dir * len * 0.08,
-    sy + len * 0.4,
-    ex - dir * len * 0.12,
-    ey - len * 0.25,
-    ex,
-    ey,
-    24,
-  );
-  const L = dive(p, info, line, (t) => w0 * (1 - 0.8 * t ** 0.9), seed, ex, ey - len * 0.15, B.backH - 0.04);
-  const n = L.pts.length / 2;
-  // Twigs fan from its end; one more halfway.
-  const tx = L.pts[(n - 1) * 2] as number;
-  const ty = L.pts[(n - 1) * 2 + 1] as number;
-  const a = Math.atan2(ty - (L.pts[(n - 3) * 2 + 1] as number), tx - (L.pts[(n - 3) * 2] as number));
-  twig(p, plan, tx, ty, a - 0.4, range(r, 30, 56), 5, B.backH + 0.02, seed + 1);
-  twig(p, plan, tx, ty, a + 0.5, range(r, 26, 46), 4, B.backH + 0.02, seed + 2);
-  const q = Math.round(n * 0.45);
-  twig(
-    p,
-    plan,
-    L.pts[q * 2] as number,
-    L.pts[q * 2 + 1] as number,
-    Math.PI / 2 - dir * 0.6,
-    range(r, 40, 70),
-    6,
-    B.backH,
-    seed + 3,
-  );
-  // Beards along its lower half.
-  const xa = Math.min(sx, ex);
-  const xb = Math.max(sx, ex);
-  plan.hangs.push({
-    x0: xa + (xb - xa) * 0.2,
-    x1: xb,
-    y: (xx) => lerp(sy + w0 * 0.4, ey + w0 * 0.2, clamp((xx - sx) / (ex - sx || 1), 0, 1)),
-    deep: true,
-    reach: 70,
-  });
-}
-
-/**
- * A free end that reaches across a gap: the limb thins to a prong that runs on past the rect, rising
- * toward the other side when it is higher, drooping when it is lower, and frays into twigs.
- */
-function prong(p: Paint, plan: BranchPlan, st: Stretch, dir: 1 | -1, seed: number): void {
-  const B = BRANCH;
-  const r = rngFor(seed, 17);
-  const xe = dir > 0 ? st.x1 : st.x0;
-  const nb = dir > 0 ? st.nbE : st.nbW;
-  const top = st.top(xe - dir * 4);
-  const th0 = st.under(xe) - top;
-  let tx: number;
-  let ty: number;
-  if (nb) {
-    // Across the gap toward the stub on the other side: aim at its broken face, never above its
-    // top (a thin neck that broke, not a ramp).
-    const gapW = dir > 0 ? nb.x0 - st.x1 : st.x0 - nb.x1;
-    const ext = gapW * range(r, B.prongReach[0] as number, B.prongReach[1] as number);
-    tx = xe + dir * ext;
-    const nx = dir > 0 ? nb.x0 : nb.x1;
-    const aim = nb.top(nx) + (nb.under(nx) - nb.top(nx)) * 0.55;
-    ty = lerp(top + th0 * 0.35, aim, ext / Math.max(1, gapW)) + range(r, 4, 14);
-  } else {
-    // The end: the prong droops away over the drop.
-    const ext = range(r, B.prongExt[0] as number, B.prongExt[1] as number);
-    tx = xe + dir * ext;
-    ty = top + th0 * 0.25 + range(r, 10, 26);
-  }
-  const ext = Math.abs(tx - xe);
-  const line = cubic(
-    xe - dir * 50,
-    top + th0 / 2,
-    xe + dir * ext * 0.3,
-    top + th0 / 2,
-    tx - dir * ext * 0.3,
-    ty,
-    tx,
-    ty,
-    18,
-  );
-  paintLimb(
-    p,
-    lineLimb(line, (t) => Math.max(5, th0 * 0.96 * (1 - t) ** 1.25), B.walkH, seed + 1, 0.5, 0.6),
-  );
-  const a0 = Math.atan2(ty - (top + th0 / 2), tx - xe);
-  twig(p, plan, tx, ty, a0 - 0.35, range(r, 36, 60), 5, B.walkH - 0.08, seed + 2);
-  twig(p, plan, tx - dir * 8, ty + 3, a0 + 0.45, range(r, 28, 46), 4, B.walkH - 0.1, seed + 3);
-  twig(
-    p,
-    plan,
-    xe + dir * ext * 0.45,
-    top + th0 * 0.6,
-    Math.PI / 2 - dir * 0.5,
-    range(r, 24, 40),
-    4,
-    B.walkH - 0.12,
-    seed + 4,
-  );
-  plan.hangs.push({
-    x0: Math.min(xe, tx) + 10,
-    x1: Math.max(xe, tx) - 10,
-    y: (x) => lerp(top + th0, ty + 3, clamp((x - xe) / (tx - xe || 1), 0, 1)),
-    deep: false,
-    reach: 90,
   });
 }
 
@@ -1400,7 +1444,7 @@ function snapped(p: Paint, plan: BranchPlan, st: Stretch, dir: 1 | -1, seed: num
       right.push((pts[i * 2] as number) - nx * ww, (pts[i * 2 + 1] as number) - ny * ww);
     }
     for (let i = nn - 1; i >= 0; i--) left.push(right[i * 2] as number, right[i * 2 + 1] as number);
-    p.solid(left, mix(B.wood, B.bark, range(r, 0, 0.35)), B.walkH + 0.04, { bark: 0.4 });
+    p.solid(left, mix(B.wood, B.bark, range(r, 0.2, 0.6)), B.walkH - 0.04, { bark: 0.4 });
   }
   // A dead twig stub still on the broken end, and moss creeping toward it.
   twig(
@@ -1416,6 +1460,226 @@ function snapped(p: Paint, plan: BranchPlan, st: Stretch, dir: 1 | -1, seed: num
   );
 }
 
+/**
+ * A fork: past its walk the parent limb bends down into a crotch below the gap and splits. One tine
+ * rises into the next stretch (its root end); the other goes on down and away and frays into twigs in
+ * the mist. One limb, visibly: nothing floats, nothing props anything up.
+ */
+function fork(
+  p: Paint,
+  plan: BranchPlan,
+  info: TerrainInfo,
+  st: Stretch,
+  child: Stretch,
+  seed: number,
+): void {
+  const B = BRANCH;
+  const r = rngFor(seed, 51);
+  const dir = st.grows;
+  const xe = dir > 0 ? st.x1 : st.x0;
+  const cx0 = dir > 0 ? child.x0 : child.x1;
+  const topE = st.top(xe);
+  const thE = st.th(xe);
+  const cTop = child.top(cx0);
+  const cTh = child.th(cx0 + dir * 30);
+  // The crotch: well under both walk lines, a little nearer the parent's end.
+  const cx = lerp(xe, cx0, B.forkAt);
+  const cy = Math.max(child.from[1], topE + B.forkDrop, cTop + B.forkDrop * 0.8);
+  // The parent bends down into the crotch and goes on as the lower tine.
+  const ex = cx + dir * range(r, 130, 200);
+  const ey = cy + range(r, 230, 320);
+  const dip = [
+    ...cubic(
+      xe - dir * 60,
+      topE + thE / 2,
+      xe + dir * 20,
+      topE + thE / 2 + 10,
+      cx - dir * 40,
+      cy - 40,
+      cx,
+      cy,
+      14,
+    ),
+    ...cubic(cx, cy, cx + dir * 30, cy + 40, ex - dir * 40, ey - 90, ex, ey, 14).slice(2),
+  ];
+  const L = lineLimb(
+    dip,
+    (t) => thE * lerp(0.98, 0.26, smoothstep(0.3, 1, t)),
+    B.walkH - 0.04,
+    seed + 1,
+    0.4,
+    0.8,
+  );
+  paintLimb(p, L);
+  const n = L.pts.length / 2;
+  p.tint(band(L, -0.5, 0.5, Math.round(n * 0.55), n - 1), B.barkDeep, 0.45);
+  info.mist.push({
+    x: ex,
+    y: ey - 40,
+    rx: 150,
+    ry: 140,
+    amount: B.mistAmount,
+    color: B.mist,
+    power: 1.3,
+    backOnly: 0.4,
+  });
+  twig(p, plan, ex, ey, Math.PI / 2 + dir * 0.5, range(r, 40, 70), 6, B.walkH - 0.12, seed + 2);
+  twig(
+    p,
+    plan,
+    ex - dir * 10,
+    ey - 20,
+    dir > 0 ? 0.3 : Math.PI - 0.3,
+    range(r, 30, 50),
+    5,
+    B.walkH - 0.12,
+    seed + 3,
+  );
+  // The rising tine: from the crotch up into the child's root end.
+  const ax = cx0 + dir * 40;
+  const ay = child.top(ax) + child.th(ax) / 2;
+  const rise = cubic(cx, cy, cx + dir * 30, cy - 50, ax - dir * 70, ay + 20, ax, ay, 16);
+  paintLimb(
+    p,
+    lineLimb(rise, (t) => lerp(thE * 0.8, cTh, t), B.walkH, seed + 4, 0.5, 1),
+  );
+  // The crotch swells; a knot in it.
+  const w = Math.max(thE, cTh) * 0.62;
+  p.solid(blob(cx, cy - w * 0.15, w * 0.9, w * 0.75, seed + 5, 0.2, 18), B.bark, B.walkH, { bark: 0.12 });
+  dome(p, cx, cy - w * 0.1, w * 0.8, w * 0.65, B.walkH + 0.04, B.walkH + 0.14, seed + 6);
+  p.tint(blob(cx, cy + w * 0.35, w * 0.8, w * 0.35, seed + 7, 0.3, 14), B.barkDeep, 0.5);
+  knot(p, cx - dir * w * 0.2, cy - w * 0.15, Math.max(6, w * 0.16), 0.4, B.walkH, seed + 8);
+  plan.hangs.push({
+    x0: Math.min(cx, ex),
+    x1: Math.max(cx, ex),
+    y: (x) => lerp(cy + w * 0.5, ey, clamp((x - cx) / (ex - cx || 1), 0, 1)),
+    deep: true,
+    reach: 80,
+  });
+}
+
+/** The child's end at a fork: its top corner rounds over into the tine that rises into it. */
+function crotchEnd(p: Paint, st: Stretch, dir: 1 | -1, seed: number): void {
+  const B = BRANCH;
+  const xe = dir < 0 ? st.x0 : st.x1;
+  const th0 = st.th(xe - dir * 40);
+  const top = st.top(xe);
+  const rad = 20;
+  const k: number[] = [xe - dir * 120, st.top(xe - dir * 120)];
+  // Round the top corner: the arc from the top to the face (center inside the limb).
+  for (let k2 = 0; k2 <= 7; k2++) {
+    const a = -Math.PI / 2 + (dir * (Math.PI / 2) * k2) / 7;
+    k.push(xe - dir * rad + Math.cos(a) * rad, top + rad + Math.sin(a) * rad);
+  }
+  k.push(
+    xe + dir * 2,
+    top + th0 * 0.6,
+    xe - dir * 14,
+    top + th0 + 8,
+    xe - dir * 120,
+    st.under(xe - dir * 120),
+  );
+  const poly = chaikin(k, 2);
+  p.solid(poly, B.bark, B.walkH, { bark: 0.12 });
+  shadeJoint(p, poly, top, top + th0);
+  knot(p, xe - dir * 40, top + th0 * 0.5, 8, -0.6, B.walkH, seed);
+}
+
+/** A blunt natural end (a limb's outer end that she lands on): rounded, moss over it, twigs. */
+function nub(p: Paint, plan: BranchPlan, st: Stretch, dir: 1 | -1, seed: number): void {
+  const B = BRANCH;
+  const r = rngFor(seed, 61);
+  const xe = dir > 0 ? st.x1 : st.x0;
+  const th0 = st.th(xe);
+  const top = st.top(xe - dir * 6);
+  const tx = xe + dir * 22;
+  const line = cubic(
+    xe - dir * 50,
+    top + th0 / 2,
+    xe - dir * 10,
+    top + th0 / 2,
+    tx - dir * 4,
+    top + th0 * 0.42,
+    tx,
+    top + th0 * 0.5,
+    10,
+  );
+  paintLimb(
+    p,
+    lineLimb(line, (t) => th0 * (1 - t * t * 0.55), B.walkH, seed + 1, 0, 0.6),
+  );
+  twig(
+    p,
+    plan,
+    tx,
+    top + th0 * 0.35,
+    dir > 0 ? -0.5 : Math.PI + 0.5,
+    range(r, 40, 64),
+    6,
+    B.walkH - 0.1,
+    seed + 2,
+  );
+  twig(
+    p,
+    plan,
+    tx - dir * 4,
+    top + th0 * 0.75,
+    dir > 0 ? 0.6 : Math.PI - 0.6,
+    range(r, 26, 44),
+    5,
+    B.walkH - 0.1,
+    seed + 3,
+  );
+}
+
+/**
+ * The end of the walk: the limb thins and frays into a twiggy tangle that runs on into the canopy
+ * she drops into.
+ */
+function tipTangle(
+  p: Paint,
+  plan: BranchPlan,
+  info: TerrainInfo,
+  st: Stretch,
+  room: Room,
+  seed: number,
+): void {
+  const B = BRANCH;
+  const r = rngFor(seed, 71);
+  const dir = st.grows;
+  const xe = dir > 0 ? st.x1 : st.x0;
+  const top = st.top(xe - dir * 4);
+  const th0 = st.under(xe) - top;
+  const tx = xe + dir * range(r, 90, 130);
+  const ty = top + th0 * 0.4 + range(r, 30, 50);
+  const line = cubic(
+    xe - dir * 60,
+    top + th0 / 2,
+    xe + dir * 30,
+    top + th0 / 2,
+    tx - dir * 40,
+    ty - 10,
+    tx,
+    ty,
+    16,
+  );
+  paintLimb(
+    p,
+    lineLimb(line, (t) => Math.max(4, th0 * (1 - t) ** 1.1), B.walkH, seed + 1, 0.4, 0.6),
+  );
+  // The fray: twigs fanning out and down from the last of it, more off the underside.
+  for (let k = 0; k < 6; k++) {
+    const t = range(r, 0.4, 1);
+    const q = Math.min(15, Math.round(t * 16));
+    const px = line[q * 2] as number;
+    const py = line[q * 2 + 1] as number;
+    const a = dir > 0 ? range(r, -0.6, 1.2) : Math.PI - range(r, -0.6, 1.2);
+    twig(p, plan, px, py, a, range(r, 50, 110), range(r, 4, 7), B.walkH - 0.1, seed + 10 + k);
+  }
+  // Under and beyond it, the canopy she drops into.
+  paintCanopy(p, plan, info, xe - dir * 120, room.width + 120, top + 70, room.height, seed + 3);
+}
+
 /** Paints the wood room's playfield. */
 export function paintBranchTerrain(
   room: Room,
@@ -1423,7 +1687,8 @@ export function paintBranchTerrain(
 ): { paint: Paint; info: TerrainInfo; plan: BranchPlan } {
   const B = BRANCH;
   const p = new Paint(room.width, room.height);
-  const stretches = planStretches(room);
+  const trees = planTrees(room);
+  const stretches = planStretches(room, trees);
   const info = terrainInfo(room, stretches);
   const plan: BranchPlan = { stretches, sprigs: [], hangs: [], clear: [], cocoons: [], clumps: [] };
   for (const c of room.marks?.cocoons ?? []) {
@@ -1436,72 +1701,54 @@ export function paintBranchTerrain(
   const cx1 = plan.cocoons.length ? Math.max(...plan.cocoons.map((c) => c.x)) + 120 : -1;
   const busy = (x: number): boolean => (x > cx0 && x < cx1) || (!!tat && Math.abs(x - tat.x) < 140);
   const sdOf = (st: Stretch): number => seed + st.s.x * 7 + st.s.y;
-  const route = stretches.filter((s) => !s.far);
+  const childOf = (st: Stretch): Stretch | undefined => stretches.find((o) => o.parent === st.id);
 
-  // 1. Behind everything: side limbs hooking down into the fog, the end's dive and its canopy.
-  for (const st of route) {
-    const sd = sdOf(st);
-    const r = rngFor(sd, 5);
-    const span = st.x1 - st.x0;
-    // One side limb in a long stretch, away from the cocoons and Tatter.
-    if (span >= 520 && r() < 0.7) {
-      for (let tries = 0; tries < 4; tries++) {
-        const x = lerp(st.x0, st.x1, range(r, 0.3, 0.6));
-        if (busy(x)) continue;
-        const dir: 1 | -1 = r() < 0.5 ? -1 : 1;
-        subLimb(p, plan, info, x, st.under(x), st.th(x), dir, range(r, 200, 340), sd + 30 + tries);
-        break;
-      }
-    }
-    // Under a snapped end the old break sent a limb down: it hooks away beneath the gap.
-    if (st.east === 'end') {
-      const thA = st.th(st.x1 - B.tipRun);
-      const ax = st.x1 - B.tipRun + 10;
-      const ay = st.y + thA * 0.6;
-      const line = cubic(
-        ax,
-        ay,
-        ax + 170,
-        ay + 20,
-        st.x1 + 180,
-        ay + B.dive * 0.3,
-        st.x1 + 260,
-        ay + B.dive,
-        28,
-      );
-      dive(p, info, line, (t) => thA * lerp(0.8, 0.36, t), sd + 1, st.x1 + 200, ay + B.dive * 0.75);
-      plan.hangs.push({ x0: ax + 40, x1: ax + 160, y: () => ay + thA * 0.45, deep: true, reach: 90 });
-      paintCanopy(p, plan, info, st.x1 - 160, room.width + 120, st.y + 90, room.height, sd + 3);
-    }
+  // 1. Forks (the parent's dip, the lower tine, the crotch, the rising tine) behind the walk.
+  for (const st of stretches) {
+    const far = st.grows > 0 ? st.east : st.west;
+    const child = childOf(st);
+    if (far === 'fork' && child) fork(p, plan, info, st, child, sdOf(st) + 3);
   }
 
-  // 2. The stretches (their root runs under the bole's collar). The far branch is another tree one
-  // plane back: thinner, low in the relief (dimly lit), hazed by mist, no moss blanket and no rim.
+  // 2. The stretches. A root in a tree runs on into it (the trunk's collar wraps it, step 3).
   for (const st of stretches) {
     const sd = sdOf(st);
     const r = rngFor(sd, 6);
     const xa = st.west === 'trunk' ? st.x0 - 70 : st.west === 'under' ? st.x0 - 60 : st.x0;
-    const xb = st.east === 'edge' ? st.x1 + 160 : st.east === 'burl' ? st.x1 + 30 : st.x1;
+    const xb = st.east === 'trunk' ? st.x1 + 70 : st.east === 'burl' ? st.x1 + 30 : st.x1;
     const L = stretchLimb(st, xa, xb, sd);
-    if (st.far) {
-      L.h = B.farH;
-      L.moss = 0.55;
-      L.detail = 0.6;
-      paintLimb(p, L);
-      gradBand(p, L, -0.5, 0.5, B.farHaze, 0.45, 0.75, 4);
-      info.mist.push({
-        x: (st.x0 + st.x1) / 2,
-        y: st.y + 30,
-        rx: (st.x1 - st.x0) / 2 + 260,
-        ry: 110,
-        amount: B.farMist,
-        color: B.farFlat,
-        power: 2,
-      });
-      plan.hangs.push({ x0: st.x0 + 40, x1: st.x1, y: (x) => st.under(x) - 4, deep: true, reach: 110 });
-      continue;
-    }
     paintLimb(p, L, knotsFor(L, sd, 640));
+    // Where she climbs out of her cocoon the face is near-black, like her: a little cool moonlight
+    // on the mid flank and a rim of fog-light along the underside, so her silhouette reads on it.
+    const n = L.pts.length / 2;
+    let i0 = -1;
+    let i1 = -1;
+    for (let i = 0; i < n; i++) {
+      const x = L.pts[i * 2] as number;
+      if (x > cx0 && x < cx1) {
+        if (i0 < 0) i0 = i;
+        i1 = i;
+      }
+    }
+    if (i0 >= 0 && i1 - i0 > 4) {
+      p.tint(chaikin(band(L, -0.32, 0.3, i0, i1), 2), B.barkLit, B.climbLift);
+      p.tint(chaikin(band(L, -0.2, 0.18, i0 + 3, i1 - 3), 2), B.barkLit, B.climbLift * 0.8);
+      p.tint(band(L, 0.4, 0.5, i0, i1), B.climbRim, 0.32);
+      p.tint(band(L, 0.45, 0.5, i0, i1), B.climbRim, 0.3);
+      for (let i = i0 + 4; i < i1 - 4; i += Math.max(3, Math.round(range(r, 60, 160) / 6))) {
+        const [nx, ny] = normal(L.pts, i);
+        const w = L.w[i] as number;
+        const v = range(r, -0.15, 0.3);
+        lichen(
+          p,
+          (L.pts[i * 2] as number) + nx * v * w,
+          (L.pts[i * 2 + 1] as number) + ny * v * w,
+          range(r, 4, 9),
+          B.walkH,
+          sd + i,
+        );
+      }
+    }
     for (let x = st.x0 + range(r, 60, 300); x < st.x1 - 60; x += range(r, 260, 620)) {
       if (busy(x)) continue;
       const a = Math.PI / 2 + range(r, -0.7, 0.5);
@@ -1509,55 +1756,29 @@ export function paintBranchTerrain(
     }
   }
 
-  // 3. The bole (wrapping the roots), then the joints and ends over the stretches.
-  for (const t of room.solids)
-    if (t.tag === 'trunk')
-      paintBole(
-        p,
-        t,
-        room.height,
-        stretches.filter((s) => s.west === 'trunk'),
-        seed + t.x,
-      );
+  // 3. The trees, wrapping the roots of the limbs that grow out of them.
+  for (const t of trees) {
+    const joins: Join[] = [];
+    for (const st of stretches) {
+      if (st.parent !== t.id) continue;
+      const side: -1 | 1 = st.grows > 0 ? 1 : -1;
+      const x = st.grows > 0 ? st.x0 + 30 : st.x1 - 30;
+      joins.push({ side, y: st.top(x), th: st.th(x) });
+    }
+    paintTrunk(p, t, joins, room.height, seed + Math.round(t.x));
+    if (t.top > -40) droopCrown(p, plan, t, seed + Math.round(t.x) + 3);
+  }
 
+  // 4. The ends and joins over the limbs.
   for (const st of stretches) {
     const sd = sdOf(st);
     const r = rngFor(sd, 7);
-    if (st.east === 'tip' || st.east === 'end') prong(p, plan, st, 1, sd + 4);
-    if (st.east === 'stub') snapped(p, plan, st, 1, sd + 5);
-    if (st.west === 'stub') snapped(p, plan, st, -1, sd + 6);
-    if (st.west === 'tip') {
-      if (st.far) {
-        // Another tree's tip: thin, hazed, twigs (dim).
-        const th0 = st.th(st.x0);
-        const tx = st.x0 - B.tipExt;
-        const line = cubic(
-          st.x0 + 40,
-          st.y + 2 + th0 / 2,
-          st.x0,
-          st.y + 2 + th0 / 2,
-          tx + 14,
-          st.y + th0 * 0.2,
-          tx,
-          st.y - 4,
-          12,
-        );
-        const tip = lineLimb(line, (t) => th0 * 0.94 * (1 - t * 0.82), B.farH, sd + 16, 0.3, 0.4);
-        paintLimb(p, tip);
-        p.tint(band(tip), B.farHaze, 0.6);
-        twig(
-          p,
-          plan,
-          tx + 3,
-          st.y - 2,
-          Math.PI + range(r, 0.3, 0.8),
-          range(r, 40, 72),
-          6,
-          B.farH - 0.04,
-          sd + 17,
-        );
-        twig(p, plan, tx + 14, st.y + th0 * 0.2, Math.PI - 0.3, range(r, 30, 52), 4, B.farH - 0.04, sd + 18);
-      } else prong(p, plan, st, -1, sd + 7);
+    for (const dir of [-1, 1] as const) {
+      const end = dir > 0 ? st.east : st.west;
+      if (end === 'snap') snapped(p, plan, st, dir, sd + 5 + dir);
+      else if (end === 'nub') nub(p, plan, st, dir, sd + 9 + dir);
+      else if (end === 'crotch') crotchEnd(p, st, dir, sd + 11 + dir);
+      else if (end === 'tip') tipTangle(p, plan, info, st, room, sd + 13 + dir);
     }
     if (st.east === 'knee') {
       const next = stretches.find((o) => Math.abs(o.x0 - st.x1) < 2);
@@ -1565,71 +1786,75 @@ export function paintBranchTerrain(
         // The limb kinks down: its end turns over (a wide round shoulder) and runs down into the lower
         // stretch, with a deep S-curve underneath (no inner corner).
         const x1 = st.x1;
-        const thN = next.under(next.x0 + 80) - next.y;
+        const yA = st.top(x1);
+        const yB = next.top(next.x0);
+        const thN = next.under(next.x0 + 80) - yB;
         const rad = B.kneeRound;
         const k: number[] = [x1 - 200, st.top(x1 - 200)];
         for (let a = -Math.PI / 2; a <= 0.001; a += Math.PI / 16)
-          k.push(x1 - rad + Math.cos(a) * rad, st.y + 2 + rad + Math.sin(a) * rad);
-        const midY = (st.y + next.y) / 2;
-        k.push(x1 + 16, midY - 4, x1 + 18, midY + 16, x1 + 8, next.y - 14, x1 + 14, next.y + 2);
-        k.push(x1 + 70, next.y + 2, x1 + 90, next.y + thN * 0.6);
+          k.push(x1 - rad + Math.cos(a) * rad, yA + 2 + rad + Math.sin(a) * rad);
+        const midY = (yA + yB) / 2;
+        k.push(x1 + 16, midY - 4, x1 + 18, midY + 16, x1 + 8, yB - 14, x1 + 14, yB + 2);
+        k.push(x1 + 70, next.top(x1 + 70), x1 + 90, yB + thN * 0.6);
         const belly = cubic(
           x1 + 60,
-          next.y + thN + 4,
+          yB + thN + 4,
           x1 - 110,
-          next.y + thN + 10,
+          yB + thN + 10,
           x1 - 120,
-          st.y + st.th(x1 - 260),
+          st.under(x1 - 260),
           x1 - 280,
-          st.y + st.th(x1 - 280) - 6,
+          st.under(x1 - 280) - 6,
           14,
         );
         k.push(...belly);
         const poly = chaikin(k, 2);
         p.solid(poly, B.bark, B.walkH, { bark: 0.12 });
-        shadeJoint(p, poly, st.y, next.y + thN);
+        shadeJoint(p, poly, yA, yB + thN);
         dome(p, x1 - 14, midY + 12, 34, 40, B.walkH + 0.05, B.walkH + 0.18, sd + 7);
         knot(p, x1 - 6, midY + 12, 11, Math.PI / 2, B.walkH, sd + 9);
-        bendGrain(p, x1, st.y, st.th(x1 - 200), next.y, thN, sd + 8);
-        p.tint(chaikin(belly.concat([x1 - 220, next.y + 10, x1 + 40, next.y + 20]), 1), B.barkDeep, 0.5);
-        twig(p, plan, x1 - 10, st.y + 10, -0.35, range(r, 130, 170), 12, B.walkH - 0.12, sd + 10);
-        subLimb(p, plan, info, x1 - 60, st.under(x1 - 60), st.th(x1 - 60), 1, range(r, 200, 280), sd + 11);
+        bendGrain(p, x1, yA, st.th(x1 - 200), yB, thN, sd + 8);
+        p.tint(chaikin(belly.concat([x1 - 220, yB + 10, x1 + 40, yB + 20]), 1), B.barkDeep, 0.5);
+        twig(p, plan, x1 - 10, yA + 10, -0.35, range(r, 130, 170), 12, B.walkH - 0.12, sd + 10);
       }
     }
     if (st.west === 'burl') {
       // The knot: the limb swells up over the step, a great eye on its face.
       const prev = stretches.find((o) => Math.abs(o.x1 - st.x0) < 2);
-      const lowY = prev ? prev.y : st.y + 64;
       const x0 = st.x0;
+      const lowY = prev ? prev.top(prev.x1) : st.top(x0) + 64;
+      const hiY = st.top(x0);
       const rad = 22;
       const k: number[] = [x0 + 160, st.top(x0 + 160)];
       for (let a = -Math.PI / 2; a >= -Math.PI - 0.001; a -= Math.PI / 14)
-        k.push(x0 + rad + Math.cos(a) * rad, st.y + 2 + rad + Math.sin(a) * rad);
+        k.push(x0 + rad + Math.cos(a) * rad, hiY + 2 + rad + Math.sin(a) * rad);
       k.push(x0 - 5, lowY - 22, x0 - 16, lowY - 2, x0 - 50, lowY + 4);
       const underPrev = prev ? prev.under(x0 - 80) : lowY + 90;
       const swell = Math.max(underPrev, st.under(x0 + 40)) + B.burlSwell;
       k.push(x0 - 90, underPrev - 6, x0 + 40, swell, x0 + 200, st.under(x0 + 200));
       const poly = chaikin(k, 2);
       p.solid(poly, B.bark, B.walkH, { bark: 0.12 });
-      shadeJoint(p, poly, st.y, swell);
+      shadeJoint(p, poly, hiY, swell);
       // (Relief and tints stay inside the polygon: a tint over relief with no solid under it is a
       // translucent ghost.)
       dome(p, x0 + 34, lowY + 34, 48, 52, B.walkH + 0.05, B.walkH + 0.18, sd + 11);
-      p.tint(blob(x0 + 40, st.y + 28, 34, 16, sd + 12, 0.3, 16), B.barkLit, 0.18);
+      p.tint(blob(x0 + 40, hiY + 28, 34, 16, sd + 12, 0.3, 16), B.barkLit, 0.18);
       p.tint(blob(x0 + 20, lowY + 64, 70, 30, sd + 13, 0.3, 16), B.barkDeep, 0.45);
       knot(p, x0 + 8, lowY + 26, 16, 0.25, B.walkH, sd + 14);
     }
   }
 
-  // 4. Moss on every walk top (not the far branch); the cocoons' silk pads on the underside.
-  for (const st of route) {
+  // 5. Moss on every walk top; the cocoons' silk pads on the underside.
+  for (const st of stretches) {
     const sd = sdOf(st);
+    const r = rngFor(sd, 8);
     const fw = freeWest(st);
     const fe = freeEast(st);
-    const r = rngFor(sd, 8);
-    const m0 = st.west === 'trunk' ? st.x0 - 8 : st.west === 'stub' ? st.x0 + range(r, 10, 24) : st.x0;
-    const m1 = st.east === 'stub' ? st.x1 - range(r, 10, 24) : st.x1;
-    mossBlanket(p, m0, m1, st.top, sd + 17, st.west === 'tip' ? 26 : 0, fe && st.east !== 'stub' ? 30 : 0);
+    const m0 = st.west === 'trunk' ? st.x0 - 8 : st.west === 'snap' ? st.x0 + range(r, 10, 24) : st.x0;
+    const m1 = st.east === 'trunk' ? st.x1 + 8 : st.east === 'snap' ? st.x1 - range(r, 10, 24) : st.x1;
+    const drape = (e: End): number =>
+      e === 'nub' ? 12 : e === 'fork' || e === 'tip' || e === 'knee' || e === 'crotch' ? 28 : 0;
+    mossBlanket(p, m0, m1, st.top, sd + 17, drape(st.west), drape(st.east));
     plan.hangs.push({
       x0: st.x0 + (fw ? 30 : 10),
       x1: st.x1 - (fe ? 30 : 10),
@@ -1639,7 +1864,7 @@ export function paintBranchTerrain(
     });
   }
   for (const c of plan.cocoons) {
-    const st = route.find((o) => c.x >= o.x0 && c.x <= o.x1);
+    const st = stretches.find((o) => c.x >= o.x0 && c.x <= o.x1);
     const uy = st ? Math.min(c.y, st.under(c.x)) : c.y;
     p.solid(
       chaikin(blob(c.x, uy - 3, 9, 4, c.x, 0.4, 12), 1),
