@@ -14,9 +14,9 @@ every ability; `&abilities=none` for the starting kit). Tests: `tests/unit/lures
   the 2^(n-1)th power first (the heart: 4, a well that bites only near its core: a big field at a lantern's profile
   saturates her drift past her run speed). A boss may switch a lure's row, move its flame or shield it
   (`state.lures.live`): every rule reads `lureRowNow` / `flameAt`, not `lureRow` / `lureAt`. The panel shows them as `kinds.wick` / `kinds.lantern` sub-folders.
-- State: `state.lures = {hp[], hitBy[], out[] (frame + 1), snuffed, freed}`; on the player `lure` (index of the
-  lure holding her, -1), `lureFrames`, `lureBeats`, `lureOut`, `lureCd`, `lurePend`, `pullX`, `lureGrace`,
-  `lureGraceFrames`. Version stays 21 (fields added, tests pin 21).
+- State: `state.lures = {hp[], hitBy[], out[] (frame + 1), snuffed, freed, grace[]}`; on the player `lure` (index of
+  the lure holding her, -1), `lureFrames`, `lureBeats`, `lureOut`, `lureCd`, `lurePend`, `pullX`, `lureGrace`,
+  `lureGraceFrames`, `lureAimX/Y`, `lureThrow`, `lureCore`. Version unchanged (fields added).
 
 ## The rules (sim)
 - **Pull** (`lurePull`, applied in the controller after the mode update, before the move, normal mode only):
@@ -24,18 +24,25 @@ every ability; `&abilities=none` for the starting kit). Tests: `tests/unit/lures
   `curve` c; toward the flame plus `swirl * a` along the tangent. In the air `vy += ay` and the sideways part
   goes into **`pullX`**, its own momentum (x `pullXKeep` per frame, cap `pullXMax`), added to the move like
   `kickX`; her steering never eats it, so a pass throws her. On the ground `pullX` eases toward
-  `groundDrag * ax` (cap `groundMax` 2.4 px/f): a drift she always outwalks (9.6 - 2.4). Dash and wall slide
-  zero it. A wall hit zeroes it.
+  `groundDrag * ax` (cap `groundMax` 2.4 px/f) **only while she holds a direction**: a drift she always outwalks
+  (9.6 - 2.4), and standing still she never moves (feel review problem 9: idle on R3's knob she drifted 58 px into
+  W2's core). **A gliding body feels `glidePullMult` 0.6 of the pull.** Dash and wall slide zero it. A wall hit
+  zeroes it.
 - **Caught** (after the move, normal mode, not staggered): body centre within `core` of a burning lure not in
-  grace. She circles: a tangent step of `orbitSpeed`, renormalised with sqrt onto radius `core x orbitShare +
+  grace, **and moving inward** (closer to the flame, which may swing, than before the move) **or inside it
+  `catchFrames` 4 frames in a row** (`lureCore`; Celeste's tight threat box). Walking or jumping into a core
+  still catches at once; being placed in one (teleport, a test's `caughtBy`) takes 4 frames. She circles: a tangent step of `orbitSpeed`, renormalised with sqrt onto radius `core x orbitShare +
   lureOut`, moved through moveX / moveY (walls hold). No new slash; a slash already swinging plays out (and can
   put this flame out: `lureFree how: 'snuff'`). Grounded counts too: a low flame catches a walker who goes into
   its core.
 - **Beating free**: each press of jump **or attack** is a beat, queued (`beatQueue` 2) and counted `beatCd` 6
   apart, so a mash is never lost; a press buffered just before the catch counts. Each pushes the circle out
-  `beatPush` (sinks back `beatSink`/f). The 3rd throws her outward along the radius she is at, **bent toward
-  the held direction** (`freeSteer` 0.8), `freeSpeed` 14 (sideways part into `pullX`) + `freeLift` 7 up;
-  double jump and air dash back; `graceFrames` 50 from that lure. A dash (owned, off cooldown) frees her at
+  `beatPush` (sinks back `beatSink`/f). The 3rd throws her **exactly along the held direction (8-way)**; with
+  nothing held, out along the radius she is at (`lureThrowAim`); `freeSpeed` 14 (sideways part into `pullX`) +
+  `freeLift` 7 up; double jump and air dash back; `graceFrames` 50 from that lure, **and from every core the throw
+  passes through in its first `throwFrames` 20** (`lures.grace[i]`: no re-catch by the next wick). **The orbit
+  stands still while the last beat is due** (`lureBeats = beats - 1` and `lureCd > 0`), and `lureAimX/Y` is the
+  throw from where she is, so the arrow render draws is the throw she gets. A dash (owned, off cooldown) frees her at
   once even with the air dash spent; a blow frees her (`how: 'hurt'`, handled in `step` after `hurtPlayer`).
 - **Snuff** (`slashLures`, from `resolveSlash` after pods): flame box `flameRadius` 20 half-size, one hit per
   slash, `power` per cut; hitstop `hitstopFrames` 3 (+ the step's bonus) while it holds, the pogo's 2 on a down
@@ -54,23 +61,31 @@ every ability; `&abilities=none` for the starting kit). Tests: `tests/unit/lures
 | curve | 0.3 | k² (the first try) bit too late: a jump at the lantern from the lip fell under it untouched |
 | swirl | 0.5 / 0.6 | the swirl is what makes a pass a slingshot (a static radial well alone gives back what it takes) |
 | pullXKeep / pullXMax | 0.97 / 12 | half-life ~23 frames: the throw lasts the rest of a jump, not forever |
-| freeSteer | 0.8 | with the radius only, 3 of 8 beat timings over the pit landed; holding right, 5 of 8 |
+| throw direction | the stick, exactly | feel review problem 6: the radius bent by the stick (`freeSteer` 0.8) threw her left in 7 of 34 rhythms holding right and up into W-hi3 in 3. Then a radius share of 0.25 (the review's `held + 0.25 radial`): a glide on from R6's W5 ducked under the thorn branch to T4 in 3 of 8, 0.1 too; 0 never does. Up as the nothing-held default put R3's mashers into W-hi3 in 5 of 9 rhythms, the radius 2 of 9 |
+| catchFrames | 4 | standing still in a core (placed, or a flame swinging onto her) holds her after 4 frames; moving through it outward escapes |
+| glidePullMult | 0.6 | glide is slow, the full pull glued gliders to flames (memory's old "not yet" 1) |
+| throwFrames | 20 | the first 20 frames of a throw (~280 px) |
 | orbitSpeed | 7 | ~0.85 s a turn at the last beat's radius: slow enough to time the throw, fast enough to feel held |
 
 What the numbers do in the lab (no abilities): **A** the 440 px gap is uncrossable by a plain jump; under the
 anticlockwise wick every jump from the last 130 px before the lip makes it (the swirl throws her to ~20 px/f).
 **B** a jump from the pit's lip is caught by the lantern; beating free while holding right lands across in
-5 of 8 timings. **G** (the row) is crossed by an aimed chain (throw up-right off row-1 and row-2; row-3 is
+18 of 18 rhythms (13 of 18 before the stick throw). **F** idle anywhere beside the low wick: never caught, 0 px
+drift (232 before). **G** (the row) is crossed by an aimed chain (throw up-right off row-1 and row-2; row-3 is
 clockwise because the throw from row-2 passes over it), not by blind timing.
+
+**The wood's lamps, re-measured after the feel fixes (2026-10-17; the same before, except where noted):**
+R3 W1 catches every run-up jump across the dip (11 of 11); beaten free holding right she lands on M in 17 of 17
+rhythms (12 of 17 and 2 re-catches before); idle anywhere on R3's floor: 0 px drift (96 before), never caught.
+Nothing held: re-caught within 4 s in 2 of 9 (W-hi3). Jump-cut sweeps (45): W3 17, W4 30, W7 30, L1 20, none
+caught (unchanged). R6 W5 catches the jump-glide 3 of 3; beaten free holding right, jump let go: T3 in 8 of 8
+(5 of 8 before: wood.md's open "W5's throw into gap 2's thorns" is closed); gliding on: the thorn branch 8 of 8.
 
 ## What feels good, what doesn't yet
 - Good: the gap slingshot (a gravity assist that a first jump discovers), the throw out of the lantern, the
   pogo snuff, the snuff burst + moths.
-- Not yet: (1) with glide and double jump she gets caught a lot when flying near flames (glide is slow, the pull
-  wins): fine at a lamp, maybe too sticky in a dense field; try a weaker pull on a gliding body before cutting
-  anything. (2) The throw arrow ignores Up/Down (render has no held up/down). (3) A grounded walker who idles
-  next to a low lantern drifts into its core and is caught; intended (it is a lure), watch it in playtests.
-  (4) No sound yet. (5) The moths leave up and east: rooms have no migration line yet (core.md §3).
+- Not yet: (1) gliding near flames: `glidePullMult` 0.6 and the inward rule are the first try; watch a dense
+  field. (2) No sound yet. (3) The moths leave up and east: rooms have no migration line yet (core.md §3).
 
 ## Render
 Greybox only for now (memory/greybox.md: field, core, flame, hp pips, a pull line, beat pips and the throw

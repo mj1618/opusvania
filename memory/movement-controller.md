@@ -87,6 +87,11 @@ Code: `src/sim/player/player.ts` (controller), `params.ts` (tuning + assists →
   pod, pogo, glide and enemy pilot passed unchanged; four scripted tests were retimed by 3 frames.
 - **Being hurt** (enemies.md): a hit sets `vx = +-7, vy = -7` and `stagger` 12; while `stagger` is above
   `steerFrames` (3) the controller sees no input and `horizontal()` only fades `vx` by `hurtDecel`.
+  **First the blow lands** (feel review 2026-10-17, problem 1: "0 freeze, nothing is felt"): `hurtPlayer` sets
+  `hitstop` `health.hurtHitstop` 8 (`fadeHitstop` 14 on her last light), and step() holds the creature that
+  touched her as long (`e.hitstop`; it keeps its bounce velocity for after). In hitstop `invuln` does not count
+  down (nor does the stagger), so the hold costs no i-frames: hit to hit is 70 + 8. Presses in it are ignored
+  (the stagger's input mask applies). Thorns use the same hold (inside their 30-frame return).
 - **Corner corrections**: head bump (slide ≤ 20 px sideways around a ceiling corner), ledge pop-up (≤ 16 px
   up onto a lip), dash (≤ 24 px up/down). Each emits `cornerCorrect`.
 - **Performance**: no closures in the per-step path; keep `solidAt` allocation-free.

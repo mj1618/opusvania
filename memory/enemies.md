@@ -302,8 +302,10 @@ A small pale moth-wisp, box 36 x 30 (drawn ~40 px), **3 hp**, drawn to her light
   fades by 0.3 a frame; in the last 3 frames left / right count again (air control), so a held
   direction shortens or lengthens the tail. Then full control. Slash, glide, dash and wall slide end
   (`slashEnd` / `glideEnd` reason `hurt`, `dashEnd`, `wallSlideEnd`); the combo starts over.
-- `invuln` 70 frames from the hit (so 58 after control returns): hit to hit is exactly 70 frames if
-  she stays inside it. She walks through enemies meanwhile.
+- `invuln` 70 frames from the end of the hurt hold (`health.hurtHitstop` 8: she and the creature freeze
+  first, movement-controller.md), so 58 after control returns: hit to hit is exactly 78 frames if she stays
+  inside it. She walks through enemies meanwhile. The creature's own clocks (its `strikeCd`) freeze with
+  it, so the ram-gap rules below hold as they were.
 - 7 / 7 are the orchestrator's starting numbers and the only ones traced (not compared against
   others): she lands 55 px away with the creature's edge ~30 px from her, and it needs the rest of
   her safety to walk that, so standing still after a hit means a second hit exactly as the safety

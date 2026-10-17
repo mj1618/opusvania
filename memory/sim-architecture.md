@@ -62,11 +62,15 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   (`vy` = impact speed px/f; `hard` = fallPx >= 420: a real fall, not a ledge drop).
 - `step` (every 96 px of grounded travel), `turn {dir, grounded}`, `skid {dir}`.
 - `wallSlideStart/End {dir = wall side}`, `dashStart {dir, air}`, `dashEnd {dir}`.
-- `slash`, `slashHit`, `impact`, `slashEnd`, `podHit`, `podBurst`, and pod glints as `pickup {pod: true}`: combat.md.
+- `slash`, `slashHit`, `impact`, `slashEnd`, **`slashTerrain {x, y, nx, ny, dir, facing, step, hitstop, recoil}`**
+  (a cut into a wall or ceiling that hit nothing else), `podHit`, `podBurst`, and pod glints as `pickup {pod: true}`:
+  combat.md. `hurt.hitstop` = the hold of a blow (8, 14 on her last light); `enemyDie.hitstop` includes the kill's +3.
 - Lures (lures.md; `x, y` = the flame): `lureCaught`, `lureBeat`, `lureFree {how: beat|dash|hurt|snuff}`, `lureHit`,
   `lureSnuff {moths, freed, snuffed, heal}`; `slashHit.target.kind` `lure`; `glideEnd` reason `lure`. State `lures`;
-  on the player `lure`, `pullX` (added in the move like `kickX`) and the beat / grace fields. The pull runs in the
-  controller after the mode update; the catch check after `post`; a caught frame replaces mode + move.
+  on the player `lure`, `pullX` (added in the move like `kickX`), the beat / grace fields, `lureAimX/Y` (the throw
+  the last beat would give now: the arrow), `lureThrow`, `lureCore`; `lures.grace[]` per lure. The pull runs in the
+  controller after the mode update; the catch check (`lureCatchAt`, with her centre before the move) after `post`;
+  a caught frame replaces mode + move.
 - Bosses (memory/bosses.md, src/sim/boss-events.ts): `bossLock`, `bossUnlock {how: defeat|reset}`, `bossPhase {phase,
   name, exam}`, `bossCue {set, cue, frame}`, `bossTell {attack: swing|lunge|drop|bite, frames, x0, x1, safeX, px, py,
   len, reach, side, dir}`, `bossAttack`, `bossOpen {how: winded|stunned}`, `bossThreadCut`, `bossRing {ring, left}`,

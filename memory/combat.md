@@ -70,7 +70,11 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
   Like the lunge it never takes her off her footing unless she holds that way (`guardLunge`).
 - **Hitstop**: `player.hitstop` frames. Pods: `pods.hitstopFrames` 2 + `hitstopBonus` = 2 / 2 / 3.
   **Creatures (playtest 4: "2 frames, a 21 px shove: nothing is felt")**: `enemies.hitstopFrames` 4 +
-  `slashN.hitstopFoe` = **4 / 4 / 7**, the creature held as long. **The pogo keeps 2**
+  `slashN.hitstopFoe` = **4 / 4 / 7**, the creature held as long. **The killing blow holds
+  `enemies.killHitstopBonus` 3 more** (feel review 2026-10-17, problem 2): 7 on a cut, 10 on the finisher, 5
+  on a pogo kill (a kill ends the target, so the pogo rhythm on a row is untouched); `slashHit.hitstop` and
+  `enemyDie.hitstop` carry the total (`slashKills()` in enemies.ts tells resolveSlash). Being hit holds too:
+  `health.hurtHitstop` 8 (movement-controller.md). **The pogo keeps 2**
   (`enemies.pogoHitstopFrames`): its rhythm is the bounce and must not change. For those steps
   `updatePlayer` returns early: no movement, no player timers, `attackFrames` / `motionFrames` /
   `contactFrames` stand still, presses still latch. Everything else (frame count, pickups, pod glints)
@@ -91,6 +95,13 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
   the enemy's kind) and a down slash pogos off them; unlike pods they need a clear line (enemies.md).
 - `impact {x, y, dir, facing, step, power, hits}`: once per blow that hits anything, on its first hit
   frame, for camera and screen effects. The sim shakes nothing.
+- **A cut into terrain** (feel review problem 10: "slashes at walls feel like whiffs"): a forward or up slash
+  that has hit nothing, on its first live frame whose area overlaps a solid beyond her body (forward: in front
+  of her body and above her feet less `ground.stepUp`, so the floor and a runnable ledge never count; up: above
+  her head; the room's left / right edges count, one-ways and open exits do not): `slashTerrain {x, y, nx, ny,
+  dir, facing, step, hitstop, recoil}` once per slash (`player.attackWall`). `x, y` = the contact on the face,
+  `nx, ny` its normal. She holds `attack.terrainHitstop` 2, a forward cut throws her back `terrainRecoil` 2
+  px/f (~3 px) and its lunge stops. Not after a glance or a seed-case clang (they have their own).
 
 ## Lumen pods
 - Scene data `pods: [{id, x, y, mount: 'sit' | 'hang', hp?: 1|2|3}]` (centre; box 44 x 44). Validated in
@@ -157,4 +168,4 @@ Nothing in the grove asks for a jump + up cut any more.
   creature) braces her body against the recoil; `enemyBlock` plays the clang pose (blade thrown back). Changing `startupFrames`
   moves the anticipation (`wind` is authored per stroke in rig.ts `STROKES`: keep them equal); changing
   hitstop or knockback needs nothing from render.
-- Wanted from the sim, not there: an event when a cut meets terrain (a wall clang).
+- A cut into a wall: `slashTerrain` (above) for sparks at `x, y` along `nx, ny`.
