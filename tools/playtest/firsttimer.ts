@@ -16,7 +16,7 @@
  *
  * `act` takes the input DSL (src/input/script.ts): R L U D, J jump, X dash, A attack (cut), O offer, `.`
  * nothing, a number = frames (60 = 1 s), `+` combines (`R+J20`); and a player's other keys in braces: `{Tab}`
- * (the map), `{R}` (restart), `{M}` (sound), `{Esc}`, `{Enter}`; `{Tab}30` holds it 30 frames. Keep a burst to
+ * (the map), `{R}` (back to the last save: from the world start the page is the game; another --room is a test boot, where R restarts that room), `{M}` (sound), `{Esc}`, `{Enter}`; `{Tab}30` holds it 30 frames. Keep a burst to
  * 0.5-4 s. It prints what happened in a player's words, where she is, and the screenshots taken (every `--every`
  * s and at hits, deaths, new rooms, abilities, catches). Files: playtest-reports/<stamp>-firsttimer-<name>/.
  *
@@ -147,7 +147,20 @@ async function serve(): Promise<void> {
   const url = args.abilities
     ? `${base}${base.includes('?') ? '&' : '?'}abilities=${encodeURIComponent(args.abilities)}`
     : base;
-  const page: Page = await openGame(browser, url, { width: w, height: h }, 1, true, args.room);
+  // From the world's start the page is **the game** (no ?room=, ?fresh): it autosaves, and R goes back to the last
+  // save as a player's does. A ?room= page is a test boot: the slot is never read or written, and R starts that
+  // room over with its own kit (round 4: R in the roots put her in glade 2 with wall jump and a new tally).
+  // Each session has its own browser and a new context, so its storage (the slot) is its own: never another's.
+  const asGame = (args.room ?? GAME_WORLD.start) === GAME_WORLD.start;
+  const gameUrl = asGame ? `${url}${url.includes('?') ? '&' : '?'}fresh` : url;
+  const page: Page = await openGame(
+    browser,
+    gameUrl,
+    { width: w, height: h },
+    1,
+    true,
+    asGame ? undefined : args.room,
+  );
   page.setDefaultTimeout(0);
   // A fresh run from the room's start, labels off, its telemetry recorded from the first frame; the game waits.
   await page.evaluate(`(async () => {
@@ -182,7 +195,17 @@ async function serve(): Promise<void> {
     } catch {
       build = `${args.build}, pinned for the whole session`;
     }
-  appendFileSync(journal, `# First-timer journal: ${args.name} in ${args.room}\n\nBuild: ${build}.\n\n`);
+  // The save it starts from, stated: the slot of this session's own browser (empty: a new game).
+  const save0 = (await page.evaluate(
+    '(() => { const v = window.__game.save(); return { stored: v.stored, autosave: v.autosave }; })()',
+  )) as { stored: unknown; autosave: boolean };
+  const saveLine = asGame
+    ? `Save: ${save0.stored ? "a slot was there at start (unexpected: this browser is the session's own)" : 'a new game, the slot empty'}; autosave ${save0.autosave ? 'on' : 'OFF'}; R = back to the last save (this session's own).`
+    : `Save: none (a test boot in ${args.room}: the slot is never read or written); R starts ${args.room} over with its own kit.`;
+  appendFileSync(
+    journal,
+    `# First-timer journal: ${args.name} in ${args.room}\n\nBuild: ${build}.\n\n${saveLine}\n\n`,
+  );
   let last = '';
   const handlers: Record<string, (b: Record<string, string>) => Promise<string>> = {
     async look() {
@@ -222,6 +245,15 @@ async function serve(): Promise<void> {
         }
       }
       const s = await summary();
+      if (said.includes('restarted')) {
+        // What R gave back: the room and what the save holds (so a journal shows where a restart put her).
+        const v = (await page.evaluate(
+          '(() => { const s = window.__game.state().save; return { patch: s.patch, moths: s.moths, abilities: s.abilities }; })()',
+        )) as { patch: { room: string; id: string } | null; moths: number; abilities: string[] };
+        said.push(
+          `R: back to ${v.patch ? `the moon patch ${v.patch.id} in ${v.patch.room}` : 'the start'} (moths ${v.moths}, owns ${v.abilities.join(', ') || 'nothing'})`,
+        );
+      }
       files.push(await snap('after'));
       last = files[files.length - 1] ?? '';
       appendFileSync(

@@ -48,6 +48,13 @@ freezes the sim, the burst runs on the page clock), `{R}` restart, `{M}` sound, 
   session dir, and a session that fails to boot prints its tail. The client commands import nothing of the game.
   `--tree` plays the working tree on the dev server (`--url`, default 5180). The journal's header names the build
   (`Build: <sha> ("subject"), pinned for the whole session`); a session never changes build mid-run.
+- **The save and R** (round 4 bug, fixed 2026-10-18): from the world's start the session page is **the game**
+  (no `?room=`, `?fresh`): it autosaves and `{R}` goes back to the last save, as for a player. Any other `--room` is
+  a test boot: the slot is never read or written and `{R}` starts that room over **with its own kit** (that is what
+  put ft4 in glade 2 with wall jump and a new tally: R in wood-well's test boot, not another session's save).
+  Every session has its own Chromium and a fresh context, so its slot is its own (tested: two at once, progress in
+  one, R in the other shows none of it). The journal states the save at start; each `{R}` notes what it gave back
+  (`R: back to the moon patch <id> in <room> (moths n, owns ...)`). Human-like renders boot `?room=` and never press R.
 - **Events are read by identity, not by frame** (live.ts `fresh`): `{R}` and a reload reset the frame count, and a
   frame-window cursor re-read the whole log (round 2: ~1,100 duplicate screenshots and nonsense totals).
 **Brief to paste to the sub-agent:**
