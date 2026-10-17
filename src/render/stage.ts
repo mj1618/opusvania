@@ -18,6 +18,7 @@
  */
 import { HitboxOverlay } from '../debug/overlay';
 import type { Game } from '../game';
+import { isGreybox } from '../scene/room';
 import type { SimEvent } from '../sim/events';
 import type { PlayerState } from '../sim/state';
 import type { GameApp } from './app';
@@ -37,6 +38,7 @@ import { GoalRenderer } from './goal/index';
 import { Hud } from './hud/index';
 import { LightRegistry } from './lights';
 import { PickupRenderer } from './pickups/index';
+import { POST } from './post/config';
 import { PostStage } from './post/index';
 import { SceneRenderer } from './scene/index';
 import { setRoomLook } from './scene/lib/room-look';
@@ -134,6 +136,13 @@ export class RenderStage {
     this.giving = new GivingRenderer(this.ctx, L.pickups, L.get('goal'), this.goal);
     this.swarm = new SwarmRenderer(this.ctx, L);
     this.post = new PostStage(this.ctx, this.scene.layers.root);
+    // Greybox (memory/greybox.md): no post-processing, and the creatures are their boxes (drawn by
+    // the greybox module), not their painted bodies.
+    if (isGreybox(scene)) {
+      POST.enabled = false;
+      L.enemies.visible = false;
+      L.enemiesFront.visible = false;
+    }
     this.hud = new Hud();
     this.overlay = new HitboxOverlay(scene);
     ga.root.addChild(
@@ -253,6 +262,7 @@ export class RenderStage {
       pods: this.game.state.pods,
       enemies: this.game.state.enemies,
       goal: this.game.state.goal,
+      lures: this.game.state.lures,
     };
     this.scene.layers.applyCamera(view);
     this.scene.update(dt, this.clock, view, sim);

@@ -118,6 +118,24 @@ export interface PlayerState {
   /** The same for a wayside lamp (`scene.lamps`), -1 = none. Never both at once. */
   kindlingLamp: number;
   /**
+   * Lures (src/sim/lures.ts, memory/lures.md). `lure` = index of the lure whose core holds her (-1 =
+   * none): she circles the flame and her moves are replaced by beating free (`lureFrames` since it
+   * caught her, `lureBeats` pressed so far, `lureOut` = px her circle is pushed out by them, sinking
+   * back; `lureCd` frames until the next beat counts). `pullX` = the pull's sideways momentum, on top
+   * of `vx` in the move (her steering never eats it, so a pass through a field throws her).
+   * `lureGrace` = the lure she last broke free of, which leaves her alone for `lureGraceFrames` more.
+   */
+  lure: number;
+  lureFrames: number;
+  lureBeats: number;
+  lureOut: number;
+  lureCd: number;
+  /** Beats pressed and not yet counted (a mash faster than `beatCd` waits here). */
+  lurePend: number;
+  pullX: number;
+  lureGrace: number;
+  lureGraceFrames: number;
+  /**
    * Being seen (src/sim/giving.ts, memory/giving.md): the creatures notice her by the light she
    * carries. `seenLevel` 0-4 (0 = she carries nothing: unseen; the steps are `tuning.giving.seen1..4`
    * of her wallet), `seen` = the same as 0..1 (level / 4). Set at the end of every step from
@@ -265,6 +283,19 @@ export interface PodsState {
   paid: number[];
   /** How many pods have burst. */
   burst: number;
+}
+
+/** Lures (src/sim/lures.ts). Every array has one entry per `scene.lures`, same order. */
+export interface LuresState {
+  /** Cuts left; 0 = out, for good (it stays out until the room restarts). */
+  hp: number[];
+  /** `attackSeq` of the last slash that hit it (one hit per slash). */
+  hitBy: number[];
+  /** The frame it went out + 1 (0 = still burning). */
+  out: number[];
+  /** How many have gone out, and the moths freed in all. */
+  snuffed: number;
+  freed: number;
 }
 
 /**
@@ -623,6 +654,8 @@ export interface GameState {
   player: PlayerState;
   pickups: PickupsState;
   pods: PodsState;
+  /** The story's lamps (`scene.lures`): memory/lures.md. */
+  lures: LuresState;
   enemies: EnemyState[];
   goal: GoalState;
   save: SaveState;
@@ -651,6 +684,13 @@ export function cloneState(s: GameState): GameState {
       gap: s.pods.gap.slice(),
       paid: s.pods.paid.slice(),
       burst: s.pods.burst,
+    },
+    lures: {
+      hp: s.lures.hp.slice(),
+      hitBy: s.lures.hitBy.slice(),
+      out: s.lures.out.slice(),
+      snuffed: s.lures.snuffed,
+      freed: s.lures.freed,
     },
     enemies: s.enemies.map((e) => ({ ...e })),
     goal: {

@@ -39,6 +39,10 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   number = frames; a re-press needs a gap (`J1 .1 J1`). Long form `right+jump*12` also works. `clearInput()`.
 - `pickups()` → `{count, taken, worth, list: [{id, kind, x, y, state: waiting|flying|taken}]}`; the count is
   also `state().pickups.count`. Dev handle `window.__pickups` (renderer, `cfg`, `cpuMs`): pickups.md.
+- `lures()` → `{snuffed, freed, total, caught: {id, frames, beats, of, out} | null, pullX, grace: {id, frames} | null,
+  list: [{id, kind, x, y, spin, state: burning|out, hp, hpMax, radius, core, moths, outFrame}]}` (memory/lures.md).
+  `debug.labels(on?)` (also the G key): a greybox room's labels and notes (memory/greybox.md). `?room=lab-lamps` is the
+  lamp lab (greybox, every ability).
 - `pods()` → `{burst, total, worth, list: [{id, x, y, mount, state: closed|open, hp, hpMax, worth, paid,
   left}]}` (`paid` = glints set loose so far, `left` = still flying to her): combat.md.
 - `enemies()` → `{alive, total, list: [{id, kind, x, y (feet centre), box, home (the scene's x, y: a burrback's

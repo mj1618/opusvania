@@ -57,6 +57,10 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
 - `step` (every 96 px of grounded travel), `turn {dir, grounded}`, `skid {dir}`.
 - `wallSlideStart/End {dir = wall side}`, `dashStart {dir, air}`, `dashEnd {dir}`.
 - `slash`, `slashHit`, `impact`, `slashEnd`, `podHit`, `podBurst`, and pod glints as `pickup {pod: true}`: combat.md.
+- Lures (lures.md; `x, y` = the flame): `lureCaught`, `lureBeat`, `lureFree {how: beat|dash|hurt|snuff}`, `lureHit`,
+  `lureSnuff {moths, freed, snuffed, heal}`; `slashHit.target.kind` `lure`; `glideEnd` reason `lure`. State `lures`;
+  on the player `lure`, `pullX` (added in the move like `kickX`) and the beat / grace fields. The pull runs in the
+  controller after the mode update; the catch check after `post`; a caught frame replaces mode + move.
 - `enemyTurn`, `enemyAlert`, **`enemyWindup`, `enemyCharge`, `enemyRecover`, `enemyBlock`** (burrback: its ram), `enemyNotice`, **`enemyDive`, `enemyStall`, `enemyClimb`** (its dive, playtest 5), `enemyGiveUp` (lampwing), `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`, then **`enemyReset`** for each living creature that went home hurt or from elsewhere), and
   enemy glints as `pickup {enemy: true}`: enemies.md. `slashEnd` / `glideEnd` have a reason `hurt`.
 - `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a

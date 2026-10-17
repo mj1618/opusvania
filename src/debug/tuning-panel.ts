@@ -48,6 +48,13 @@ export class TuningPanel {
         // No min/max and no step: Tweakpane snaps bound numbers to its range and step grid on
         // refresh, silently rewriting values set from code.
         else if (typeof v === 'boolean' || typeof v === 'number') folder.addBinding(values, key);
+        else if (v && typeof v === 'object') {
+          // One level of rows inside a group (the lure kinds: `lures.kinds.wick`, ...).
+          for (const [row, nums] of Object.entries(v as Record<string, Record<string, unknown>>)) {
+            const sub = folder.addFolder({ title: `${key}.${row}`, expanded: false });
+            for (const [k, n] of Object.entries(nums)) if (typeof n === 'number') sub.addBinding(nums, k);
+          }
+        }
       }
       if (group === 'shape')
         folder.on('change', () => {

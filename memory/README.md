@@ -4,6 +4,8 @@ Shared project knowledge. One topic per file, one line per file here: `- [Title]
 Keep entries current; delete stale ones.
 
 <!-- entries below -->
+- [Lures](lures.md) — **the lamp verb (2026-10-17)**: pull (with `pullX` momentum, a ground drag she outwalks), caught (orbit, beat free x3, dash / blow free, a throw bent by the held direction), snuff (a slash target, pogo, hitstop 9, moths); `lure` in code while the grove's `lamps` exist; numbers and why; the lab `?room=lab-lamps`
+- [Greybox](greybox.md) — **`art.mode: 'greybox'`**: one flat env module instead of the painted layers, no post, creatures as hitboxes, labels + `marks.notes` (G), palette, gotchas
 - [Rooms](rooms.md) — **rooms, abilities, the hatching (2026-10-17)**: `content/rooms/` + world.json, `?room=` / panel / `--room`, abilities gated in `resolveParams`, exits / catch zones / the cocoon in the sim, **wood-hatch's layout and marks**, what is per-room in render (room-look.ts) and what is still Grove-only
 - [The story](story.md) — **Lampfall, locked 2026-10-17**: Wing flies by the real moon through the last firefly's false lights to the migration cave; mechanics, regions, bosses, ending, ground rules
 - [Reference games](reference-games.md) — **which games to study per design problem** (bosses, openings, secrets, creatures, wordless relationships, mastery), plus market warnings

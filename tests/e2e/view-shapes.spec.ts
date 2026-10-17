@@ -129,6 +129,8 @@ function expectCovered(p: Probe, shape: Shape): void {
 for (const [room, first, then] of [
   ['wood-hatch', '16:10', ['21:9', '4:3']],
   ['test-grove', '4:3', ['16:10', '21:9']],
+  // A greybox room (memory/greybox.md): its flat background must cover every shape too.
+  ['lab-lamps', '21:9', ['4:3', '16:10']],
 ] as const) {
   test(`${room}: the picture covers 16:10, 21:9 and 4:3 windows, booted and resized`, async ({ page }) => {
     const errors = await boot(page, room, first);

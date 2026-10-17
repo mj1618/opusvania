@@ -1,6 +1,16 @@
 import { homeClear, slashBlocks, slashEnemies } from '../enemies';
 import type { GlideEndReason, HurtSource, JumpKind, SimEvent, SlashDir, SlashEndReason } from '../events';
 import { ActionBit, axisX, type InputFrame } from '../input';
+import {
+  beatLure,
+  catchPlayer,
+  freePlayer,
+  lureCoreAt,
+  lurePull,
+  orbitStep,
+  slashLures,
+  tickLures,
+} from '../lures';
 import { type Body, type Collider, kickableAt, moveX, moveY, oneWayUnder, solidAt } from '../physics/aabb';
 import { slashPods } from '../pods';
 import type { Scene } from '../scene';
@@ -85,6 +95,15 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     hurtSeq: 0,
     kindling: -1,
     kindlingLamp: -1,
+    lure: -1,
+    lureFrames: 0,
+    lureBeats: 0,
+    lureOut: 0,
+    lureCd: 0,
+    lurePend: 0,
+    pullX: 0,
+    lureGrace: -1,
+    lureGraceFrames: 0,
     seen: 0,
     seenLevel: 0,
     offering: 0,
@@ -151,6 +170,7 @@ class Ctx implements Collider {
   y0 = 0;
 
   constructor(
+    readonly state: GameState,
     readonly p: PlayerState,
     readonly scene: Scene,
     readonly input: InputFrame,
@@ -320,7 +340,8 @@ function updateSlash(c: Ctx): void {
     if (p.attackFrames >= cur.duration) endSlash(c, 'done');
     else p.attackActive = p.attackFrames >= cur.startup && p.attackFrames < cur.startup + cur.active;
   }
-  if (p.attackBuf === 0 || p.attackCd > 0 || p.mode === 'dash') return;
+  // Caught by a lure, her moves are replaced by beating free: no new slash (a press is a beat).
+  if (p.attackBuf === 0 || p.attackCd > 0 || p.mode === 'dash' || p.lure >= 0) return;
   // Pressed together with a dash that is about to start: the dash goes first, the slash after it.
   if (p.dashBuf > 0 && p.mode === 'normal' && canDash(c)) return;
   endSlash(c, 'chain');
@@ -455,7 +476,21 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
     podsT,
     c.events,
   );
-  const hits = foes + pods;
+  const lures = slashLures(
+    state,
+    c.scene,
+    box,
+    p.attackSeq,
+    dir,
+    p.attackFacing,
+    pogo,
+    p.attackStep,
+    st.power,
+    st.knockback,
+    P.tuning,
+    c.events,
+  );
+  const hits = foes + pods + lures.hits;
   // Glanced off a braced shell: no hit, but she feels it (a beat, and a throw back off it). A down
   // cut that glances (a braced or curled burrback's top) still bounces her: the pogo, nothing taken.
   const glanced = slashBlocks() > 0 && foes === 0;
@@ -468,7 +503,17 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
     if (glanced && pogo) pogoBounce(c);
     return;
   }
-  const hitstop = Math.max(foes > 0 ? foeStop : 0, pods > 0 ? podStop : 0);
+  // A flame: a short beat while it holds (the pogo keeps its own), the loudest one when it goes out.
+  const L = P.tuning.lures;
+  const lureStop =
+    lures.snuffs > 0
+      ? Math.max(0, Math.round(L.snuffHitstop))
+      : lures.hits > 0
+        ? pogo
+          ? Math.max(0, Math.round(E.pogoHitstopFrames))
+          : Math.max(0, Math.round(L.hitstopFrames)) + st.hitstopBonus
+        : 0;
+  const hitstop = Math.max(foes > 0 ? foeStop : 0, pods > 0 ? podStop : 0, lureStop);
   if (p.attackHits === 0) {
     const e = c.events[first];
     if (e?.type === 'slashHit')
@@ -634,6 +679,7 @@ function startDash(c: Ctx, dir: number): void {
   endSlash(c, 'dash');
   p.kickX = 0;
   p.lungeX = 0;
+  p.pullX = 0;
   p.hang = 0;
   p.mode = 'dash';
   p.dashDir = dir;
@@ -829,7 +875,8 @@ export function updatePlayer(
   // Out of control: thrown by a hit (directions come back for the tail of it), or faded.
   const sides = ActionBit.left | ActionBit.right;
   const eff = p.faded > 0 || p.stagger > P.steerFrames ? 0 : p.stagger > 0 ? input & sides : input;
-  const c = new Ctx(p, scene, eff, state.prevInput, P, events);
+  tickLures(p);
+  const c = new Ctx(state, p, scene, eff, state.prevInput, P, events);
   c.inX = axisX(eff);
   p.inputX = c.inX;
   // Hitstop: a slash connected. She holds for a beat; presses are still buffered.
@@ -877,7 +924,11 @@ function controller(c: Ctx): void {
   // 2. Latch presses into buffers.
   latch(c);
   c.jumpPressedNow = c.pressed(ActionBit.jump);
-  updateSlash(c);
+  // Caught by a lure: she circles its flame and beats free (a dash or the last beat lets the
+  // ordinary step below run on from where she is thrown; the slash clock ran inside).
+  const held = p.lure >= 0;
+  if (held && caught(c)) return;
+  if (!held) updateSlash(c);
   const wasGrounded = p.grounded;
   const x0 = p.x;
   c.y0 = p.y;
@@ -896,13 +947,17 @@ function controller(c: Ctx): void {
   else if (p.mode === 'wallSlide') wallSlide(c);
   else if (p.mode === 'dash') dash(c);
 
+  // The lures' pull bends what the mode made of her velocity (memory/lures.md).
+  pull(c);
+
   // 4. Move X then Y, with corner corrections.
   let impactVy = 0;
   if (!c.skipMove) {
     guardLunge(c);
-    if (moveX(p, p.vx + p.kickX + p.lungeX, c)) {
+    if (moveX(p, p.vx + p.kickX + p.lungeX + p.pullX, c)) {
       p.kickX = 0;
       p.lungeX = 0;
+      p.pullX = 0;
       if (P.wallRetainFrames > 0 && p.retainTimer === 0 && p.vx !== 0 && p.mode !== 'dash') {
         p.retainVx = p.vx;
         p.retainTimer = P.wallRetainFrames;
@@ -930,6 +985,104 @@ function controller(c: Ctx): void {
   post(c, wasGrounded, x0, impactVy);
   if (!p.grounded && !wasGrounded && vy0 < 0 && p.vy >= 0 && !c.jumped)
     events.push({ type: 'apex', x: c.fx, y: c.fy });
+  // Reaching a burning core in ordinary flight (a dash passes through; a blow's throw does not catch).
+  if (p.mode === 'normal' && p.stagger === 0 && p.faded === 0 && p.hp > 0) {
+    const i = lureCoreAt(c.state, c.scene, P.tuning);
+    if (i >= 0) {
+      endGlide(c, 'lure');
+      catchPlayer(c.state, c.scene, i, P.tuning, events);
+    }
+  }
+}
+
+/**
+ * The pull of the lures (src/sim/lures.ts) on what the mode made of her velocity. In the air: the
+ * vertical part into `vy`, the sideways part into `pullX` (kept `pullXKeep` a frame). On the ground:
+ * `pullX` eases toward a weak drag, so she can always walk away. Not in a dash (it ignores the pull)
+ * or on a wall (she clings).
+ */
+function pull(c: Ctx): void {
+  const p = c.p;
+  const L = c.P.tuning.lures;
+  if (p.mode !== 'normal') {
+    p.pullX = 0;
+    return;
+  }
+  const a = lurePull(c.state, c.scene, c.P.tuning);
+  if (p.grounded) {
+    const drag = Math.max(-L.groundMax, Math.min(L.groundMax, a.ax * L.groundDrag));
+    p.pullX = approach(p.pullX, drag, L.groundDecel);
+    return;
+  }
+  p.pullX = Math.max(-L.pullXMax, Math.min(L.pullXMax, p.pullX * L.pullXKeep + a.ax));
+  p.vy += a.ay;
+}
+
+/** Scratch for the orbit step. */
+const ORBIT = { dx: 0, dy: 0 };
+
+/**
+ * One frame caught by a lure. A dash (owned, ready) frees her at once and the dash starts as usual; a
+ * press of jump or the blade (buffered, `beatCd` apart) is a beat, and the last beat throws her (the
+ * rest of the step runs on from the throw). Otherwise she circles the flame. Returns true when the
+ * frame was spent circling.
+ */
+function caught(c: Ctx): boolean {
+  const p = c.p;
+  const P = c.P;
+  const t = P.tuning;
+  const L = t.lures;
+  p.lureFrames++;
+  if (p.lureCd > 0) p.lureCd--;
+  // A slash already swinging plays out (it may put this very flame out); no new one starts.
+  updateSlash(c);
+  // A dash frees her even with the air dash spent (the hold gives it back: forgiving).
+  if (p.dashBuf > 0 && P.dash && p.dashCd === 0) {
+    freePlayer(c.state, c.scene, t, 'dash', c.events);
+    p.airDash = Math.max(p.airDash, 1);
+    return false;
+  }
+  // Presses of jump or the blade are beats: queued (up to `beatQueue`), so a mash faster than
+  // `beatCd` is never lost; one buffered just before the catch counts as the first.
+  const now = c.pressed(ActionBit.jump) || c.pressed(ActionBit.attack);
+  const early = p.lureFrames === 1 && !now && (p.jumpBuf > 0 || p.attackBuf > 0);
+  if (now || early) p.lurePend = Math.min(Math.max(1, Math.round(L.beatQueue)), p.lurePend + 1);
+  p.jumpBuf = 0;
+  p.djBuf = 0;
+  p.attackBuf = 0;
+  if (p.lurePend > 0 && p.lureCd === 0) {
+    p.lurePend--;
+    const aimY = (c.held(ActionBit.down) ? 1 : 0) - (c.held(ActionBit.up) ? 1 : 0);
+    if (beatLure(c.state, c.scene, t, c.events, c.inX, aimY)) {
+      p.airDash = P.airDashes;
+      p.dj = P.doubleJumps;
+      p.grounded = false;
+      p.fromJump = false;
+      p.sustain = 0;
+      return false;
+    }
+  } else p.lureOut = Math.max(0, p.lureOut - L.beatSink);
+  orbitStep(c.state, c.scene, t, ORBIT);
+  p.pullX = 0;
+  p.kickX = 0;
+  p.lungeX = 0;
+  p.vx = ORBIT.dx;
+  p.vy = ORBIT.dy;
+  moveX(p, ORBIT.dx, c);
+  moveY(p, ORBIT.dy, c);
+  p.grounded = false;
+  p.coyote = 0;
+  p.airTopY = p.y;
+  if (p.jumpBuf > 0) p.jumpBuf--;
+  if (p.djBuf > 0) p.djBuf--;
+  if (p.dashBuf > 0) p.dashBuf--;
+  if (p.attackBuf > 0) p.attackBuf--;
+  if (p.attackCd > 0) p.attackCd--;
+  if (p.comboTimer > 0) p.comboTimer--;
+  if (p.dashCd > 0) p.dashCd--;
+  if (p.kick > 0) p.kick--;
+  if (p.forceTimer > 0) p.forceTimer--;
+  return true;
 }
 
 /** 5. Post: timers, ground probe, walls, transitions, facing, events. */
@@ -1123,6 +1276,7 @@ export function hurtPlayer(
   p.hitstop = 0;
   p.kickX = 0;
   p.lungeX = 0;
+  p.pullX = 0;
   p.hang = 0;
   p.dashTimer = 0;
   p.coyote = 0;

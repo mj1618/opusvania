@@ -107,6 +107,26 @@ export interface Lantern {
 }
 
 /**
+ * The kinds of lure (`tuning.lures.kinds`): rows of numbers, not code (docs/design/core.md §3).
+ * `wick`: a small glow-cap light, one cut. `lantern`: a bigger hung light, two cuts.
+ */
+export type LureKind = 'wick' | 'lantern';
+
+/**
+ * A lure: one of the story's false lamps (src/sim/lures.ts, memory/lures.md). Named `lure` in code
+ * while the old wayside `lamps` still exist. `x`, `y` = the flame's centre, in open air. It pulls her
+ * in like gravity, catches her at its core, and goes out for good under the blade.
+ */
+export interface Lure {
+  id: string;
+  kind: LureKind;
+  x: number;
+  y: number;
+  /** Which way its swirl turns her: 1 = clockwise on screen (y down), -1 = anticlockwise. Default 1. */
+  spin?: 1 | -1;
+}
+
+/**
  * An open span of a room edge: the edge wall is not there between `from` and `to` (room px along
  * the edge: x for `n` / `s`, y for `e` / `w`). When her box centre crosses the edge inside the span
  * she leaves the room (`roomExit`); until neighbouring rooms exist the room then restarts. The
@@ -179,6 +199,8 @@ export interface Scene {
    * centre, for render; her body stands at `spawn`). Absent = she starts free.
    */
   hatch?: { x: number; y: number };
+  /** Lures (the story's lamps), in a fixed order: `GameState.lures` is indexed like this array. */
+  lures?: Lure[];
 }
 
 /** A rect (sim px) that catches a fall: see `Scene.catches`. */

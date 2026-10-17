@@ -5,6 +5,7 @@ import { Game } from './game';
 import { InputSampler } from './input/index';
 import { FixedStepLoop } from './loop';
 import { createApp } from './render/app';
+import { GREYBOX } from './render/greybox/index';
 import { RenderStage } from './render/stage';
 import { DEFAULT_ROOM, getRoom, ROOM_IDS } from './scene/index';
 import { ABILITIES } from './sim/abilities';
@@ -30,7 +31,7 @@ function abilitiesParam(v: string | null): string[] | null {
  * ?nopickups (the scene without its glints, lumen pods, enemies, lanterns and heart, so without the HUD: clean plates
  * for the look tools), ?audio (sound on for review; ?audio=0 off).
  * Keys: arrows/WASD move, Z/Space/K jump, X/L/Shift dash, Down+Jump drops through branches,
- * F2 collision overlay, ` tuning panel, R restart, M sound on / off (muted by default: src/audio),
+ * F2 collision overlay, G greybox labels, ` tuning panel, R restart, M sound on / off (muted by default: src/audio),
  * Enter (or a double-click on the picture) full screen on / off.
  */
 async function boot(): Promise<void> {
@@ -95,6 +96,7 @@ async function boot(): Promise<void> {
       stage.overlay.toggle();
       e.preventDefault();
     } else if (e.code === 'KeyR') game.reset();
+    else if (e.code === 'KeyG') GREYBOX.labels = !GREYBOX.labels;
     else if (e.code === 'KeyM') audio.toggle();
   });
 

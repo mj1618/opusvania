@@ -10,6 +10,7 @@ import { markOfferTarget, updateOffer } from './giving';
 import { createGoal, goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
 import { createHatch, updateHatch } from './hatch';
 import type { InputFrame } from './input';
+import { createLures, freePlayer } from './lures';
 import { createPickups, dropGlints, updateDrops, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
 import {
@@ -50,6 +51,7 @@ export function createState(
     player: createPlayer(scene.spawn.x, scene.spawn.y, t, scene),
     pickups: createPickups(scene),
     pods: createPods(scene),
+    lures: createLures(scene, t),
     enemies: createEnemies(scene, t),
     goal: createGoal(scene),
     save: { abilities: normalizeAbilities(abilities) },
@@ -227,6 +229,8 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
         hitY,
         events,
       );
+      // A blow knocks her out of a lure's hold (memory/lures.md).
+      if (state.player.lure >= 0) freePlayer(state, scene, t, 'hurt', events);
     }
     enemyTouched(state, scene, touch, dir, t, events);
   }
@@ -263,8 +267,20 @@ export { ABILITIES, isAbility, normalizeAbilities } from './abilities';
 export type { SimEvent } from './events';
 export { goalHolds, heartBox, lampCost, lanternBox, lanternCost } from './goal';
 export { hashState } from './hash';
+export { lureHpMax, lureRow } from './lures';
 export { slashBox, slashTuning } from './player/attack';
-export type { EnemyKind, EnemySpawn, Lantern, Pickup, PickupKind, Pod, PodMount, Scene } from './scene';
+export type {
+  EnemyKind,
+  EnemySpawn,
+  Lantern,
+  Lure,
+  LureKind,
+  Pickup,
+  PickupKind,
+  Pod,
+  PodMount,
+  Scene,
+} from './scene';
 export type {
   AttackDir,
   EnemyMode,
@@ -273,6 +289,7 @@ export type {
   GlintDrop,
   GoalState,
   LanternState,
+  LuresState,
   Motion,
   PickupsState,
   PlayerMode,

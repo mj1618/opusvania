@@ -266,6 +266,63 @@ export const defaultTuning = {
     bigRelease: 6,
   },
   /**
+   * Lures, the story's lamps (src/sim/lures.ts, docs/design/core.md §3, memory/lures.md). Each kind
+   * is a row: `radius` = the pull field (px from the flame to her body centre), `pullEdge` /
+   * `pullCore` = the pull at the field's edge and at the core, px/f² (gravity is 0.91 rising, 1.45
+   * falling), growing with the square of how far in she is; `swirl` = the sideways part as a share of
+   * the pull (she spirals in instead of falling straight in); `core` = the catch radius; `hp` = cuts
+   * to put it out; `moths` = how many it holds (freed when it goes out).
+   */
+  lures: {
+    kinds: {
+      wick: { radius: 240, pullEdge: 0.15, pullCore: 1.9, swirl: 0.5, core: 40, hp: 1, moths: 5 },
+      lantern: { radius: 360, pullEdge: 0.2, pullCore: 2.3, swirl: 0.6, core: 52, hp: 2, moths: 10 },
+    },
+    /**
+     * The pull's sideways push is kept as its own momentum (`player.pullX`), so her steering does not
+     * eat it and a pass through a field throws her (a gravity assist): kept this share per frame in
+     * the air, never faster than `pullXMax`.
+     */
+    pullXKeep: 0.97,
+    /** How the pull grows from the edge to the core: 0 = linearly, 1 = with the square (a well that bites late). */
+    curve: 0.3,
+    pullXMax: 12,
+    /**
+     * On the ground the pull is only a sideways drag: `pullX` eases (at `groundDecel` px/f²) toward
+     * `groundDrag` x the pull's sideways part, at most `groundMax` px/f, so she can always walk away.
+     * The vertical part does nothing there.
+     */
+    groundDrag: 1.2,
+    groundMax: 2.4,
+    groundDecel: 0.6,
+    /** Caught: she circles the flame at this share of its core radius, this fast (px/f along the circle). */
+    orbitShare: 0.6,
+    orbitSpeed: 7,
+    /**
+     * Beating free: presses of jump (or the blade) it takes; each throws her circle `beatPush` px
+     * further out, which sinks back at `beatSink` px/f; a press within `beatCd` frames of the last
+     * beat waits in a queue of `beatQueue`, so a mash is never lost.
+     */
+    beats: 3,
+    beatPush: 18,
+    beatSink: 0.6,
+    beatCd: 6,
+    beatQueue: 2,
+    /** Freed: thrown out at this speed (px/f, plus `freeLift` up), and that lure leaves her alone for `graceFrames`. */
+    freeSpeed: 14,
+    freeLift: 7,
+    /** How far a held direction bends the throw toward it (0 = the radius only; 1 = halfway at most). */
+    freeSteer: 0.8,
+    graceFrames: 50,
+    /** Half the size of the flame's box the blade has to touch. */
+    flameRadius: 20,
+    /** Hitstop when a cut lands on a flame and it holds, and when it goes out (the loudest beat). */
+    hitstopFrames: 3,
+    snuffHitstop: 9,
+    /** Health back for each lure put out (core.md §5). */
+    healOnSnuff: 1,
+  },
+  /**
    * Vesper's health (rules: memory/enemies.md). She has `max` lights; contact with an enemy costs
    * one, knocks her back and makes her untouchable for a while. At none she fades and re-forms at
    * the last safe ground.

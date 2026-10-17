@@ -49,7 +49,7 @@ function hatched(s: ReturnType<typeof sim>): void {
 describe('the room registry', () => {
   it('boots wood-hatch by default; the test grove is a room of its own', () => {
     expect(DEFAULT_ROOM).toBe('wood-hatch');
-    expect(ROOM_IDS).toEqual(['wood-hatch', 'test-grove']);
+    expect(ROOM_IDS).toEqual(['wood-hatch', 'test-grove', 'lab-lamps']);
     expect(getRoom('test-grove')).toBe(GROVE);
     expect(GROVE.id).toBe('test-grove');
     expect(() => getRoom('nowhere')).toThrow(/Rooms: wood-hatch, test-grove/);

@@ -1,4 +1,4 @@
-import type { EnemyKind, PickupKind, PodMount } from './scene';
+import type { EnemyKind, LureKind, PickupKind, PodMount } from './scene';
 import type { AttackDir } from './state';
 
 /**
@@ -13,17 +13,61 @@ export type CornerKind = 'head' | 'ledge' | 'dash';
 /** Why a glide ended: jump released, touched down, a wall slide began, a dash, or Down (fast fall). */
 /** A slash direction (never 'none' in an event). */
 export type SlashDir = Exclude<AttackDir, 'none'>;
-/** What a slash hit: a lumen pod or an enemy (`kind` = the enemy's kind). */
-export type SlashTarget = { kind: 'pod' | EnemyKind; id: string };
+/** What a slash hit: a lumen pod, a lure's flame or an enemy (`kind` = the enemy's kind). */
+export type SlashTarget = { kind: 'pod' | 'lure' | EnemyKind; id: string };
 /** Why a slash ended: it played out, a dash cut it, a new slash replaced it, or she was hurt. */
 export type SlashEndReason = 'done' | 'dash' | 'chain' | 'hurt';
-export type GlideEndReason = 'release' | 'land' | 'wall' | 'dash' | 'fastfall' | 'hurt';
+export type GlideEndReason = 'release' | 'land' | 'wall' | 'dash' | 'fastfall' | 'hurt' | 'lure';
+/** How she got out of a lure's hold: beating free, a dash, a blow, or the flame went out (memory/lures.md). */
+export type LureFreeHow = 'beat' | 'dash' | 'hurt' | 'snuff';
 /** What hurt her. */
 export type HurtSource = { kind: EnemyKind; id: string };
 
 export type SimEvent =
   /** The player was placed (boot, load, teleport): snap cameras and springs, don't interpolate. */
   | { type: 'spawn'; x: number; y: number }
+  /**
+   * Lures (src/sim/lures.ts, memory/lures.md). Here `x`, `y` = the flame's centre, not her feet.
+   * `lureCaught`: its core caught her (`spin` = the way she circles). `lureBeat`: a press while caught
+   * counted (`beats` of `of`; `out` = px her circle is pushed out now). `lureFree`: she is out
+   * (`how`), thrown at `vx, vy`; that lure leaves her alone for `grace` frames. `lureHit`: a cut that
+   * did not put it out (`hpLeft` of `hpMax`). `lureSnuff`: out for good, its `moths` are free (`freed`
+   * = the room's total so far, `snuffed` = lures out; `heal` = health given back).
+   */
+  | { type: 'lureCaught'; id: string; kind: LureKind; x: number; y: number; spin: number }
+  | { type: 'lureBeat'; id: string; x: number; y: number; beats: number; of: number; out: number }
+  | {
+      type: 'lureFree';
+      id: string;
+      x: number;
+      y: number;
+      how: LureFreeHow;
+      vx: number;
+      vy: number;
+      grace: number;
+    }
+  | {
+      type: 'lureHit';
+      id: string;
+      kind: LureKind;
+      x: number;
+      y: number;
+      dir: SlashDir;
+      hpLeft: number;
+      hpMax: number;
+    }
+  | {
+      type: 'lureSnuff';
+      id: string;
+      kind: LureKind;
+      x: number;
+      y: number;
+      dir: SlashDir;
+      moths: number;
+      freed: number;
+      snuffed: number;
+      heal: number;
+    }
   /**
    * She crossed an open room edge (`scene.exits`, `id` = the exit). The room holds her (no input,
    * she keeps falling or running on) for `frames` (= `tuning.room.exitFrames`), then restarts:

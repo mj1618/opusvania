@@ -62,10 +62,17 @@ export interface MoodStop {
 }
 
 export interface RoomArt {
-  /** The region kit that paints it. `grove` = the test grove's hand-placed look (landmarks, waterfall, well). */
-  kit: 'grove' | 'wood';
-  /** Seed for every layout choice the painters make. */
-  seed: number;
+  /**
+   * `greybox`: drawn with flat shapes, hitboxes and labels instead of the painted layers (src/render/greybox,
+   * memory/greybox.md); `kit` and `seed` are then unused. Default `painted`.
+   */
+  mode?: 'painted' | 'greybox';
+  /** Greybox: show the marker labels (ids) at boot (default true; `__game.debug.labels()` / G toggles). */
+  labels?: boolean;
+  /** The region kit that paints it. `grove` = the test grove's hand-placed look (landmarks, waterfall, well). Required when painted. */
+  kit?: 'grove' | 'wood';
+  /** Seed for every layout choice the painters make. Required when painted. */
+  seed?: number;
   /**
    * The moon, the key light: where it hangs in the sky (view px of the 1920x1080 view: the sky is
    * screen space and never moves) and its disc radius in view px.
@@ -123,6 +130,8 @@ export interface RoomMarks {
    * at the base, tapering to `tipWidth` (default `width`) at the tip.
    */
   farBranch?: { points: Array<[number, number]>; width: number; tipWidth?: number; tree?: string };
+  /** Greybox: notes for the designer, written in the room at (x, y) (shown with the labels). */
+  notes?: Array<{ x: number; y: number; text: string }>;
   /** Camera hints for the acting / camera work: named views (centre in world px, optional zoom). */
   camera?: Array<{ id: string; x: number; y: number; zoom?: number; note?: string }>;
 }
@@ -175,4 +184,9 @@ export interface RoomShots {
    * wall close-ups are skipped).
    */
   closeup?: { ground: [number, number]; idle?: [number, number]; wall?: [number, number] };
+}
+
+/** True if the room is drawn in greybox: flat shapes, hitboxes and labels (src/render/greybox, memory/greybox.md). */
+export function isGreybox(room: Room): boolean {
+  return room.art?.mode === 'greybox';
 }

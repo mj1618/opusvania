@@ -1,0 +1,55 @@
+{
+  "id": "lab-lamps",
+  "title": "Lab: lamps (greybox)",
+  "width": 7400,
+  "height": 1800,
+  "spawn": { "x": 300, "y": 1400 },
+  "art": { "mode": "greybox", "labels": true },
+  "solids": [
+    { "tag": "ground", "x": 0, "y": 1400, "w": 800, "h": 400 },
+    { "tag": "ground", "x": 1240, "y": 1400, "w": 460, "h": 400 },
+    { "tag": "ground", "x": 2500, "y": 1400, "w": 3000, "h": 400 },
+    { "tag": "ground", "x": 6600, "y": 1400, "w": 800, "h": 400 },
+    { "tag": "ledge", "x": 3920, "y": 1220, "w": 100, "h": 180 },
+    { "tag": "ledge", "x": 5500, "y": 760, "w": 1100, "h": 60, "kick": false }
+  ],
+  "oneWays": [{ "tag": "branch", "x": 4060, "y": 1040, "w": 200 }],
+  "catches": [
+    { "id": "pit-a", "x": 800, "y": 1500, "w": 440, "h": 300 },
+    { "id": "pit-b", "x": 1700, "y": 1500, "w": 800, "h": 300 },
+    { "id": "pit-g", "x": 5500, "y": 1500, "w": 1100, "h": 300 }
+  ],
+  "lures": [
+    { "id": "gap-wick", "kind": "wick", "x": 1020, "y": 1010, "spin": -1 },
+    { "id": "pit-lantern", "kind": "lantern", "x": 2100, "y": 1060, "spin": 1 },
+    { "id": "pair-cw", "kind": "wick", "x": 2950, "y": 1110, "spin": 1 },
+    { "id": "pair-ccw", "kind": "wick", "x": 3200, "y": 1150, "spin": -1 },
+    { "id": "under-wick", "kind": "wick", "x": 3650, "y": 1170, "spin": 1 },
+    { "id": "pogo-wick", "kind": "wick", "x": 4330, "y": 1250, "spin": -1 },
+    { "id": "low-wick", "kind": "wick", "x": 4900, "y": 1280, "spin": 1 },
+    { "id": "row-1", "kind": "wick", "x": 5760, "y": 1170, "spin": -1 },
+    { "id": "row-2", "kind": "wick", "x": 6080, "y": 1130, "spin": 1 },
+    { "id": "row-3", "kind": "wick", "x": 6400, "y": 1170, "spin": 1 }
+  ],
+  "marks": {
+    "notes": [
+      { "x": 1020, "y": 700, "text": "A  a wick over a gap: let it lift you" },
+      { "x": 2100, "y": 600, "text": "B  a lantern over a pit: get caught, beat free toward the far side" },
+      { "x": 3075, "y": 760, "text": "C  two fields, opposite spins" },
+      { "x": 3650, "y": 860, "text": "D  snuff from below (up cut)" },
+      { "x": 4200, "y": 900, "text": "E  snuff from above (pogo): walk off the branch, down cut" },
+      { "x": 4900, "y": 1000, "text": "F  a low one: walk away" },
+      { "x": 6050, "y": 880, "text": "G  a corridor of three over a pit" }
+    ]
+  },
+  "shots": {
+    "wide": [
+      { "name": "gap", "x": 700, "y": 1400 },
+      { "name": "pit", "x": 1600, "y": 1400 },
+      { "name": "pair", "x": 2800, "y": 1400 },
+      { "name": "snuff", "x": 3900, "y": 1400 },
+      { "name": "low", "x": 4700, "y": 1400 },
+      { "name": "row", "x": 5400, "y": 1400 }
+    ]
+  }
+}

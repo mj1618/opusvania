@@ -26,8 +26,10 @@
  *   Shared helpers that more than one module needs go in src/render/scene/lib/ (create it).
  *   Colours and the value ladder come from docs/art-direction.md.
  */
+import { isGreybox } from '../../scene/room';
 import type { Scene } from '../../sim/scene';
 import type { CameraView, RenderContext, SimView } from '../contract';
+import { GreyboxLayer } from '../greybox/index';
 import { LayerTree } from './layer-tree';
 import { AirLayer } from './layers/air';
 import { FarLayers } from './layers/far';
@@ -77,7 +79,8 @@ export class SceneRenderer {
   /** Builds every layer for the scene. Call once. */
   init(_scene: Scene = this.ctx.scene): void {
     const ctx: SceneContext = { ...this.ctx, viewScale: this.ctx.viewScale, layers: this.layers };
-    for (const M of MODULES) {
+    // A greybox room (memory/greybox.md) builds none of the painted layers: one flat module instead.
+    for (const M of isGreybox(this.ctx.scene) ? [GreyboxLayer] : MODULES) {
       const m = new M();
       m.init(ctx);
       this.modules.push(m);

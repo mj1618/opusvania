@@ -6,6 +6,7 @@ import type { Game, RunMode } from '../game';
 import { type InputScript, parseInputScript } from '../input/script';
 import type { GameApp } from '../render/app';
 import { type CameraView, SAFE_H, SAFE_W, type ViewSize } from '../render/contract';
+import { GREYBOX } from '../render/greybox/index';
 import type { PointLight } from '../render/lights';
 import { POST } from '../render/post/config';
 import type { CameraOverride, RenderStage } from '../render/stage';
@@ -17,6 +18,7 @@ import type { SimEvent } from '../sim/events';
 import { offerTarget } from '../sim/giving';
 import { restPoint } from '../sim/goal';
 import { type GameState, goalHolds, heartBox, lampCost, lanternBox, lanternCost } from '../sim/index';
+import { lureHpMax, lureRow } from '../sim/lures';
 import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
 import { markSeen, seenNow, seenScale } from '../sim/seen';
@@ -134,6 +136,34 @@ export interface GameDebugApi {
       worth: number;
       paid: number;
       left: number;
+    }>;
+  };
+  /**
+   * Lures, the story's lamps (memory/lures.md): how many are out, the moths freed, what holds her
+   * (`caught`: the lure's id, frames, beats of `of`, how far her circle is pushed out; null = free),
+   * her pull momentum `pullX`, the lure leaving her alone (`grace`), and every lure with its kind's
+   * numbers, `hp` left of `hpMax` and `state` (`burning` | `out`).
+   */
+  lures(): {
+    snuffed: number;
+    freed: number;
+    total: number;
+    caught: { id: string; frames: number; beats: number; of: number; out: number } | null;
+    pullX: number;
+    grace: { id: string; frames: number } | null;
+    list: Array<{
+      id: string;
+      kind: string;
+      x: number;
+      y: number;
+      spin: number;
+      state: 'burning' | 'out';
+      hp: number;
+      hpMax: number;
+      radius: number;
+      core: number;
+      moths: number;
+      outFrame: number | null;
     }>;
   };
   /**
@@ -329,6 +359,8 @@ export interface GameDebugApi {
     panel(on?: boolean): boolean;
     /** Post-processing on/off (no argument toggles); redraws. */
     post(on?: boolean): boolean;
+    /** Greybox rooms: the marker labels and notes on/off (no argument toggles; also the G key); redraws. */
+    labels(on?: boolean): boolean;
     /**
      * The canvas's clear colour (what an uncovered pixel shows: the letterbox past the widest or
      * tallest view); no argument reads it. Redraws. The coverage e2e sets a loud one.
@@ -566,6 +598,47 @@ export function installDebugApi(deps: {
         })),
       };
     },
+    lures() {
+      const s = game.state.lures;
+      const p = game.state.player;
+      const list = game.scene.lures ?? [];
+      const held = list[p.lure];
+      const graced = p.lureGraceFrames > 0 ? list[p.lureGrace] : undefined;
+      return {
+        snuffed: s.snuffed,
+        freed: s.freed,
+        total: list.length,
+        caught: held
+          ? {
+              id: held.id,
+              frames: p.lureFrames,
+              beats: p.lureBeats,
+              of: Math.max(1, Math.round(game.tuning.lures.beats)),
+              out: p.lureOut,
+            }
+          : null,
+        pullX: p.pullX,
+        grace: graced ? { id: graced.id, frames: p.lureGraceFrames } : null,
+        list: list.map((l, i) => {
+          const K = lureRow(game.tuning, l.kind);
+          const hp = s.hp[i] ?? 0;
+          return {
+            id: l.id,
+            kind: l.kind,
+            x: l.x,
+            y: l.y,
+            spin: l.spin ?? 1,
+            state: hp > 0 ? ('burning' as const) : ('out' as const),
+            hp,
+            hpMax: lureHpMax(l, game.tuning),
+            radius: K.radius,
+            core: K.core,
+            moths: K.moths,
+            outFrame: (s.out[i] ?? 0) > 0 ? (s.out[i] as number) - 1 : null,
+          };
+        }),
+      };
+    },
     enemies() {
       const homes = game.scene.enemies ?? [];
       return {
@@ -719,6 +792,11 @@ export function installDebugApi(deps: {
         redraw();
         return POST.enabled;
       },
+      labels(on) {
+        GREYBOX.labels = on ?? !GREYBOX.labels;
+        redraw();
+        return GREYBOX.labels;
+      },
       clearColor(rgb) {
         const bg = ga.app.renderer.background;
         if (rgb !== undefined) {
@@ -731,6 +809,7 @@ export function installDebugApi(deps: {
   };
   // The collision overlay draws the enemies' true boxes from the live state.
   stage.overlay.enemies = () => game.state.enemies;
+  stage.overlay.lures = () => game.state.lures.hp;
   stage.overlay.ramPx = () => game.tuning.burrback.chargePx;
   // ... and the lanterns' and the heart's trigger boxes.
   stage.overlay.goal = () => {

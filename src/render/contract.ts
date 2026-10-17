@@ -18,7 +18,7 @@
 import type { Renderer } from 'pixi.js';
 import type { Room } from '../scene/room';
 import type { SimEvent } from '../sim/events';
-import type { EnemyState, GameState, PickupsState, PlayerState, PodsState } from '../sim/state';
+import type { EnemyState, GameState, LuresState, PickupsState, PlayerState, PodsState } from '../sim/state';
 import type { LightRegistry } from './lights';
 
 /** The 16:9 safe area: always on screen, at logical 0..SAFE_W x 0..SAFE_H. */
@@ -110,6 +110,8 @@ export interface SimView {
   /** The scene's objective: lanterns, heart, ending (memory/goal.md). */
   readonly goal: GameState['goal'];
   readonly enemies: readonly Readonly<EnemyState>[];
+  /** Lures (the story's lamps, memory/lures.md): `hp[i] > 0` = `scene.lures[i]` still burns. Read only. */
+  readonly lures: Readonly<LuresState>;
 }
 
 /** Services every renderer gets at construction. */

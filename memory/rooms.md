@@ -18,6 +18,7 @@ The game is built room by room (docs/design/tech.md). The Grove is the test bed 
 | `abilities: AbilityId[]` | the starting kit (`src/sim/abilities.ts`: `glide, wallJump, doubleJump, dash`). Absent = all (test scenes, the grove) |
 | `exits: [{id, edge: n/s/e/w, from, to, at?}]` | an open span of an edge (`at`: the line across the edge where the crossing counts, default the edge) (no wall there: `solidAt` / `kickableAt` honour it). Box centre past the edge inside the span: `roomExit`, she is held `tuning.room.exitFrames` (42) with no input, then the room restarts in the sim (`roomEnter` + `spawn`; `save` and the frame count go on). The target is never authored (stage 1 finds it from world placement) |
 | `catches: [{id, x, y, w, h}]` | a fall into the rect costs nothing: `fallCatch`, held `catchFrames` (18), then `fallReturn` + `spawn` at her last safe ground, moved `returnInset` (72) px in from that top's end (the lip she fell from loops a hold-right player otherwise) |
+| `lures: [{id, kind, x, y, spin?}]` | the story's lamps (memory/lures.md) |
 | `hatch: {x, y}` | she starts shut in the cocoon at (x, y) (render); her body stands at `spawn`, no input moves her. Presses of ANY button (a bit set that was not the step before) after `tuning.hatch.listenFrom` (150, the fade-up) stir it (`hatchStir`); the 3rd breaks it (`hatch`); with no input it stirs on its own every 90 frames from 300 and breaks at 720 (`auto`). The breaking press is not also a jump. **`placePlayer` (teleport) ends it silently** |
 State v21: `room`, `save: {abilities}`, `exit`, `caught`, `hatch`. `resolveParams(t, abilities)` turns off what she does not own:
 glide; wall slide AND wall kick (`P.wallJump`, checked in `wallInRange`); double jump (`doubleJumps 0`); dash (`P.dash`,
@@ -88,6 +89,13 @@ Catch `below`: x 224-6144, y 1600-2816. A caught fall returns her `returnInset` 
   room exit. Matches the sim's 150-frame listen.
 - The exit: while `state.exit` is set and she falls, the follow camera leads her down every frame (target feet +
   `fallLookahead`, `smoothYFall`): she stays at ~0.36-0.6 of the frame until it is black.
+
+## Greybox rooms and the lamp lab
+`art: {mode: 'greybox', labels?}` draws a room flat (memory/greybox.md); `kit` / `seed` are only required for painted
+rooms. `marks.notes: [{x, y, text}]` are designer notes shown with the labels. `lab-lamps` (a test room in world.json,
+every ability) has seven stations for the lamp verb: A a wick over a 440 px gap, B a lantern over an 800 px pit, C two
+fields of opposite spin, D a wick to up-cut from a hop, E a wick to pogo from a branch, F a low wick to walk away from,
+G a row of three over a 1100 px pit (memory/lures.md).
 
 ## Per-room look: what is per room now, what is still Grove-only
 `src/render/scene/lib/room-look.ts` `setRoomLook(room)` runs first in `RenderStage` (shaders are built after it, so

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import labLampsJson from '../../content/rooms/lab-lamps.json' with { type: 'json' };
 import testGroveJson from '../../content/rooms/test-grove.json' with { type: 'json' };
 import woodHatchJson from '../../content/rooms/wood-hatch.json' with { type: 'json' };
 import worldJson from '../../content/world.json' with { type: 'json' };
@@ -104,6 +105,19 @@ const SceneSchema = z
       )
       .default([]),
     heart: z.object({ x: int, y: int }).strict().optional(),
+    lures: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            kind: z.enum(['wick', 'lantern']),
+            x: int,
+            y: int,
+            spin: z.union([z.literal(-1), z.literal(1)]).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
     // --- Rooms (memory/rooms.md).
     title: z.string().optional(),
     region: z.string().optional(),
@@ -129,8 +143,11 @@ const SceneSchema = z
     hatch: z.object({ x: int, y: int }).strict().optional(),
     art: z
       .object({
-        kit: z.enum(['grove', 'wood']),
-        seed: int,
+        // `greybox`: flat shapes and labels instead of the painted layers (src/render/greybox, memory/greybox.md).
+        mode: z.enum(['painted', 'greybox']).optional(),
+        labels: z.boolean().optional(),
+        kit: z.enum(['grove', 'wood']).optional(),
+        seed: int.optional(),
         moon: z.object({ x: z.number(), y: z.number(), r: z.number().positive() }).strict().optional(),
         afterglow: z
           .object({ x: z.number(), y: z.number(), strength: z.number().min(0).max(1) })
@@ -203,6 +220,7 @@ const SceneSchema = z
           .strict()
           .optional(),
         drop: z.object({ x: int, y: int }).strict().optional(),
+        notes: z.array(z.object({ x: int, y: int, text: z.string().min(1) }).strict()).optional(),
         camera: z
           .array(
             z
@@ -461,10 +479,23 @@ export function parseScene(json: unknown): Room {
         throw new Error(`Scene "${s.id}": lantern "${l.id}" stands in the heart`);
     }
   }
+  // Lures: the flame in open air (its core clear of solids), inside the room, ids unique.
+  const L = defaultTuning.lures;
+  for (const l of s.lures ?? []) {
+    if (seen.has(l.id)) throw new Error(`Scene "${s.id}": two things are called "${l.id}"`);
+    seen.add(l.id);
+    const c = L.kinds[l.kind].core;
+    if (l.x - c < 0 || l.x + c > s.width || l.y - c < (s.ceilingY ?? 0) || l.y + c > s.height)
+      throw new Error(`Scene "${s.id}": lure "${l.id}" is outside the scene`);
+    if (s.solids.some((q) => l.x + c > q.x && l.x - c < q.x + q.w && l.y + c > q.y && l.y - c < q.y + q.h))
+      throw new Error(`Scene "${s.id}": lure "${l.id}" has a solid inside its core`);
+  }
+  if (s.art && s.art.mode !== 'greybox' && (s.art.kit === undefined || s.art.seed === undefined))
+    throw new Error(`Scene "${s.id}": a painted room's art needs a kit and a seed`);
   return s;
 }
 
-const FILES: readonly unknown[] = [woodHatchJson, testGroveJson];
+const FILES: readonly unknown[] = [woodHatchJson, testGroveJson, labLampsJson];
 
 /** Every room, by id. */
 export const ROOMS: Readonly<Record<string, Room>> = Object.fromEntries(
