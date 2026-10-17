@@ -254,7 +254,8 @@ export function drawEnemyBoxes(g: Graphics, enemies: readonly EnemyState[], ramP
       });
     }
     // Braced: its armoured front, and (during the windup) how far the ram will carry it.
-    if (e.braced) {
+    // (Only a ram has a front and a reach; a dangler's or a weaver's tell is `windup` too.)
+    if (e.braced && (e.kind === 'burrback' || e.kind === 'oldBurrback')) {
       const front = e.facing > 0 ? e.x + e.w : e.x;
       g.moveTo(front, e.y - 6)
         .lineTo(front, e.y + e.h)
