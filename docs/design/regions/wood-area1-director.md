@@ -740,3 +740,10 @@ play, in one or two sentences, with the moment it was decided.
   cleared by `wood-old-burrback-down` (the boss's `sets`); the climb-out goes up the column through that exit onto
   the mesh, and the den's top sets `wood-climbout` as now. The oak needs no new flag; its staging can read
   `wood-old-burrback-down` (the mesh breathing until then, the moon column stopping at P3's floor).
+
+### The oak, round 6 (video r4 #4, #8; memory/rooms.md "The oak")
+- **The thorn band is 60 px high on the slick face** (was 140; 4–7 hits a run): out of reach of a jump from the floor
+  under W-ff. The climb's danger at the top is the crown wick's hawker.
+- **Dressing:** overhang-only shapes (root curtains from the hollow's roof; the west wall stepping out toward the
+  crown, so the trunk narrows to its ring), so no unreachable ledge is in view.
+- **Tatter framed close:** camera zones `hollow` (1.4) and `crown-close` (1.3) for render's two beats.

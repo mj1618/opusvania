@@ -165,7 +165,7 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   floor above (1800, drop 400); the one-way across the column; **P-ledge** (2880) on the buttress, 500 px from
   W-rest (dark: the dangler never drops on a rester). The dark way's hole is at the ledge's back (2112-2192).
 - **Middle (round 4: the catch is a choice).** The near face (2944) holds only from P-ledge up to **the floor under
-  W-ff** (one-way 2112-2944, y 1776); above it, slick 1344-1776 with the **thorn band 1404-1544**. W-ff hangs at
+  W-ff** (one-way 2112-2944, y 1776); above it, slick 1344-1776 with the **thorn band 1344-1404** (round 6: 60 px, out of a jump from the floor). W-ff hangs at
   (2620, 1460), 300 px off the face: a held-right climber from P-ledge is never caught and never meets the thorns
   (24 press rhythms: 16 reach the floor, the rest still climbing at 10 s). From the floor, out of the pull, a hop
   (10 f) under W-ff is caught; beaten free up-left she lands on the **knot bridge** (one-way 2112-2624, y 1312, on
@@ -186,6 +186,13 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
 - **Human-like runs on 4424bd7** (full chunk, 9): 5 through (0 on 57eee9a); every run with the claws reached P5,
   claws -> P5 69-189 s; the big falls left were drops through the chimney's lid (now `noDrop`) and leaps west off
   the rim; two skilled runs explored the oak's west after the finale until lost (the personas finish every cell).
+- **Dressing (round 6, the review's "boxes on boxes"):** only shapes that overhang, so nothing shows a ledge she
+  can see and not reach (round 4: unreachable tops kept the personas looking for minutes). Root curtains hang from the
+  hollow's roof (x 360, 840, 1640, 2080; none within a jump of the floor); the west wall steps out going up (1792-1920
+  from the top to 880, 1920-2048 to 560), so the trunk narrows toward the crown ring. Landmarks by third: the root
+  flare and the curtains; W-ff over its floor with the knot bridge; the narrowing crown and the rim.
+- **Tatter close (round 6 #8):** zones `hollow` (zoom 1.4, inside the root flare) and `crown-close` (1.3, the rim
+  at the root's knot) frame its two beats; the finale's pull-out is render's.
 - **Cut in round 4:** the postgame crown lantern (in view of the rim it drew players off the top: human-like
   personas chased it and fell), the west crown's top (an unreachable ledge in view: the west wood is solid to the
   room's top now), the chimney rungs (frontier the personas could not reach).

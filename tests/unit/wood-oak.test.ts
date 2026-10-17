@@ -304,6 +304,18 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
     expect(floor).toBeGreaterThanOrEqual(12);
   });
 
+  it('the thorn band (60 px, round 6) is out of reach of a jump from the floor under W-ff, held into the face', () => {
+    for (const x of [2860, 2900, 2924]) {
+      for (const hold of [6, 12, 20]) {
+        const s = play({ glimpse: false });
+        s.g.teleport(x, MID);
+        s.run(0, 2);
+        const ev = s.run(R | J, hold).concat(s.run(R, 60));
+        expect(has(ev, 'thornHit'), `x ${x} hold ${hold}`).toBe(false);
+      }
+    }
+  });
+
   it('the floor under it stands out of its pull; a hop up from it is caught; beaten free up-left she lands on the bridge', () => {
     let bridge = 0;
     let n = 0;
