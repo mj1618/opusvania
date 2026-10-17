@@ -53,9 +53,8 @@ no `art`: unit tests) or `wood`.
   `fx-zones` `ZONE_EDGES` / `zoneGlsl()`, `pf-shape` `ZONES`, `bg-bake` `ZONES`; all-cool pushes both edges out of
   reach); the key light's entry x (the moon's side) and colour (moon silver in the wood; its direction is shared);
   the sky's moon disc + halo and the afterglow band (`sky.ts`, `SKY.wood`; no warm bloom in the wood); the
-  background anchor (`art.anchorY`, unset: default rule); the playfield painter (`pf-wood.ts` for the wood: a
-  bole for `trunk`, a round limb with a moss cap for every other solid, tapering at free ends; the grove keeps
-  `paintTerrain`); mid's mist stage (derived from the rects: `woodStage`); fireflies (cool, one gathering per
+  background anchor (`art.anchorY`, unset: default rule); the playfield painter (`pf-branch.ts` for the wood: one living branch from the rects, its own
+  growth and a live moonlit rim, playfield.md "The wood"; the grove keeps `paintTerrain`); mid's mist stage (derived from the rects: `woodStage`); fireflies (cool, one gathering per
   1000 px) and leaves (greens) in air; mid's leaves.
 - **Grove-only, gated by `isGroveKit()`:** far's waterfall, stone arch, fallen log, birds, live falls and log moss;
   mid's hollow tree (a plain giant at 4560 in the wood), its canopy bough / shaft pendant / moon hole drops and
@@ -77,4 +76,4 @@ black 0.12 s before the restart), `roomEnter` lifts it over 0.9 s; `fallCatch` d
 ## What the art agents should know
 - The wood's backdrop is its own (canopy height, 2026-10-17): memory/background-layers.md "The wood". It is
   composed for `art.anchorY` 880 and a reference camera y 800; the camera's feet line is a backdrop knob too.
-- `pf-wood.ts` / `pf-branch*` are the playfield agent's; cocoons, Tatter and the swarm are the acting / swarm agents'.
+- `pf-branch*` / `pf-rim.ts` are the playfield agent's; cocoons, Tatter and the swarm are the acting / swarm agents'.

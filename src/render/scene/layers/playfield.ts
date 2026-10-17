@@ -3,7 +3,9 @@
  *
  *   layers.playfield
  *     water.back        the pool body (behind the banks' edges and the character)
- *     terrain           baked, lit tiles (lib/pf-terrain.ts painted, lib/pf-bake.ts lit)
+ *     terrain           baked, lit tiles (lib/pf-terrain.ts painted, lib/pf-bake.ts lit; the wood kit:
+ *                       lib/pf-branch.ts)
+ *     rim               the wood's live moonlit moss rim on the path (lib/pf-rim.ts)
  *     plants            live meshes swaying in the wind (lib/pf-plants.ts, lib/pf-flora.ts)
  *     halos             additive glow around lantern flowers and glow mushrooms
  *     fliers            butterflies and moths (lib/pf-flutter.ts)
@@ -20,16 +22,18 @@ import { tuning } from '../../../sim/tuning';
 import { viewTop } from '../../camera/index';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { prng } from '../lib/look';
-import { bakeTerrain } from '../lib/pf-bake';
+import { bakeTerrain, GROVE_BAKE } from '../lib/pf-bake';
+import { paintBranchTerrain, WOOD_BAKE } from '../lib/pf-branch';
+import { growBranch } from '../lib/pf-branch-flora';
 import { Clippings } from '../lib/pf-clippings';
 import { BendField } from '../lib/pf-field';
 import { FloraBuilder, type FloraMesh } from '../lib/pf-flora';
 import { Flutter } from '../lib/pf-flutter';
 import { growGarden } from '../lib/pf-plants';
+import { Rim } from '../lib/pf-rim';
 import { zoneAt } from '../lib/pf-shape';
 import { paintTerrain, type TerrainInfo } from '../lib/pf-terrain';
 import { Water } from '../lib/pf-water';
-import { paintWoodTerrain } from '../lib/pf-wood';
 import { isGroveKit, LOOK } from '../lib/room-look';
 
 export const PLAYFIELD = {
@@ -66,6 +70,7 @@ export class PlayfieldLayer implements EnvModule {
   private flutter!: Flutter;
   private clippings!: Clippings;
   private info!: TerrainInfo;
+  private rim: Rim | null = null;
   /** Grass tufts as [x, top y, colour] triples (Garden.turf). */
   private turf: number[] = [];
   private poolX: [number, number] = [0, 0];
@@ -77,11 +82,14 @@ export class PlayfieldLayer implements EnvModule {
     this.ctx = ctx;
     this.front = ctx.layers.playfieldFront;
     const scene = ctx.scene;
-    // The test grove keeps its hand-tuned painter; the wood kit paints from the room's rects (pf-wood.ts).
-    const { paint, info } = isGroveKit() ? paintTerrain(scene) : paintWoodTerrain(scene, LOOK.seed);
+    // The test grove keeps its hand-tuned painter; the wood kit paints one branch from the room's
+    // rects (pf-branch.ts), grows its own plants (pf-branch-flora.ts) and lays a live rim on the path.
+    const grove = isGroveKit();
+    const wood = grove ? null : paintBranchTerrain(scene, LOOK.seed);
+    const { paint, info } = wood ?? paintTerrain(scene);
     this.info = info;
     const scale = Math.min(PLAYFIELD.bakeScaleMax, Math.max(PLAYFIELD.bakeScaleMin, ctx.viewScale()));
-    const baked = bakeTerrain(ctx.renderer, paint, scale, info.mist);
+    const baked = bakeTerrain(ctx.renderer, paint, scale, info.mist, wood ? WOOD_BAKE : GROVE_BAKE);
     paint.albedo.destroy();
     paint.relief.destroy();
 
@@ -95,7 +103,8 @@ export class PlayfieldLayer implements EnvModule {
       turf: [] as number[],
     };
     // (The top of the highest view: what hangs from the crown has to start above it.)
-    growGarden(garden, info, scene.width, viewTop(scene));
+    if (wood) growBranch(garden, wood.plan);
+    else growGarden(garden, info, scene.width, viewTop(scene));
     this.turf = garden.turf;
     const rect = this.field.rect;
     const back = garden.back.build(this.field.texture, rect, false);
@@ -114,7 +123,12 @@ export class PlayfieldLayer implements EnvModule {
     this.clippings = new Clippings();
     // (Behind the character, the creatures and the slash mark: in `playfieldFront` they flew over
     // the cut itself, flat green triangles on the crescent.)
-    pf.addChild(baked.layer, back.container, this.clippings.mesh, halo.container, this.flutter.mesh);
+    pf.addChild(baked.layer);
+    if (wood) {
+      this.rim = new Rim(wood.plan);
+      pf.addChild(this.rim.container);
+    }
+    pf.addChild(back.container, this.clippings.mesh, halo.container, this.flutter.mesh);
     this.front.addChild(fringe.container);
     // Dev-only handle for profiling (toggle the containers, read cpuMs): see memory/playfield.md.
     if (import.meta.env.DEV)
@@ -228,6 +242,7 @@ export class PlayfieldLayer implements EnvModule {
       f.update(frame.clock, vis.x, vis.x + vis.w, PLAYFIELD.glowGain, PLAYFIELD.haloGain);
     }
     this.flutter.update(frame.clock);
+    this.rim?.update(frame.clock, player.x + player.w / 2, player.y + player.h, player.grounded);
     this.clippings.update(frame.clock);
     if (this.water) {
       const on = this.poolX[1] > vis.x - 40 && this.poolX[0] < vis.x + vis.w + 40;

@@ -140,7 +140,36 @@ void main() {
   o = s;
 }`;
 
-const litFrag = (fills: readonly MistFill[]): string => `#version 300 es
+/**
+ * What a kit may change in the lit bake: GLSL expressions spliced into the shader. The defaults are
+ * the Grove's literals, so its shader text (and its pixels) stay exactly as they were. The wood
+ * (pf-wood.ts, `WOOD_BAKE`) lights by a cool moon from above with leaf-shade dapples.
+ */
+export interface BakeLook {
+  /** vec3: the key light on bark, stone and earth. */
+  key: string;
+  /** vec3: the key light on moss. */
+  mossKey: string;
+  /** float 0..1 from `beam` and `dapple`: how much of the key lands here. */
+  sun: string;
+  /** vec3 from `zA`, `zB`, `sun`: the mood tint. */
+  zone: string;
+  /** vec3: the sky bounce on anything facing up. */
+  sky: string;
+  /** float: what a body's interior (far from its edges) sinks to. */
+  interior: string;
+}
+
+export const GROVE_BAKE: BakeLook = {
+  key: 'vec3(1.0, 0.84, 0.58)',
+  mossKey: 'vec3(1.0, 0.93, 0.5)',
+  sun: 'clamp(beam * 0.28 + dapple * (0.45 + 0.4 * beam), 0.0, 1.0)',
+  zone: 'mix(mix(vec3(0.7, 0.95, 1.2) * 0.85, mix(vec3(0.84, 1.06, 0.62), vec3(1.14, 1.0, 0.64), sun) * 0.9, zA), vec3(1.08, 0.62, 1.2) * 0.72, zB)',
+  sky: 'vec3(0.5, 0.8, 1.0)',
+  interior: 'uShade.w',
+};
+
+const litFrag = (fills: readonly MistFill[], L: BakeLook): string => `#version 300 es
 precision highp float;
 in vec2 vUV;
 in vec2 vWorld;
@@ -219,7 +248,7 @@ void main() {
   float dp = 0.5 + 0.25 * sin(vWorld.x * 0.0131 + 1.7 * sin(vWorld.y * 0.004))
            + 0.25 * sin(vWorld.x * 0.0057 - vWorld.y * 0.0031 + 2.1);
   float dapple = smoothstep(0.5, 0.72, dp);
-  float sun = clamp(beam * 0.28 + dapple * (0.45 + 0.4 * beam), 0.0, 1.0);
+  float sun = ${L.sun};
 
   // Brush strokes that follow the form: along the silhouette near edges, along the grain inside.
   vec2 d = uUvPerWorld * 1.25;
@@ -271,13 +300,13 @@ void main() {
   // The scene's three moods: moonlit blue-green, golden, deep emerald and violet.
   float zA = smoothstep(uZone.x, uZone.y, vWorld.x);
   float zB = smoothstep(uZone.z, uZone.w, vWorld.x);
-  vec3 zoneTint = mix(mix(vec3(0.7, 0.95, 1.2) * 0.85, mix(vec3(0.84, 1.06, 0.62), vec3(1.14, 1.0, 0.64), sun) * 0.9, zA), vec3(1.08, 0.62, 1.2) * 0.72, zB);
+  vec3 zoneTint = ${L.zone};
   c *= zoneTint;
   // Moss dims and cools where the light does not reach.
   c *= mix(mix(0.72, 1.0, sun), mix(0.3, 1.2, sun), moss);
   c = mix(c, c * vec3(0.72, 0.96, 1.2), moss * (1.0 - sun) * 0.55);
   // Interiors sink into shadow; edges keep their colour.
-  c *= mix(1.0, uShade.w, inside * (1.0 - moss * 0.7));
+  c *= mix(1.0, ${L.interior}, inside * (1.0 - moss * 0.7));
   // Shadow side: darker and bluer.
   c *= 1.0 - uShade.z * shd;
   c = mix(c, c * vec3(0.62, 0.86, 1.3), shd * 0.6);
@@ -289,11 +318,11 @@ void main() {
   float castS = clamp((hThere - hHere) * 5.0, 0.0, 1.0) * texture(uMid, cuv).a;
   c *= 1.0 - castS * uCast.y;
   // Key light, warm. Things painted low (the back plane) barely catch it.
-  vec3 warm = vec3(1.0, 0.84, 0.58);
+  vec3 warm = ${L.key};
   float plane = smoothstep(0.24, 0.44, hs.r / ha);
   float reach = mix(0.14, 1.4, sun) * mix(0.3, 1.0, plane);
   float k = key * uShade.x * reach;
-  vec3 keyCol = mix(warm, vec3(1.0, 0.93, 0.5), moss);
+  vec3 keyCol = mix(warm, ${L.mossKey}, moss);
   c += base * keyCol * k * 1.35 + keyCol * (k * k) * uShade.y * 0.3;
   // A crisp rim right at the silhouette where it faces the light.
   float edge = 1.0 - smoothstep(0.5, 0.82, fine.a);
@@ -304,7 +333,7 @@ void main() {
   c += (base * 0.9 + 0.03) * warm * chip * uBrush.w * (0.4 + 0.6 * edge + 0.5 * crev);
   // Sky bounce on anything facing up, cool.
   float up = clamp(-n.y, 0.0, 1.0);
-  c += base * vec3(0.5, 0.8, 1.0) * up * 0.3 * (1.0 - moss * 0.75) * mix(0.4, 1.0, plane);
+  c += base * ${L.sky} * up * 0.3 * (1.0 - moss * 0.75) * mix(0.4, 1.0, plane);
 
   // Mist pooled against the stage (MistFill): toward its colour, keeping a little of the brushwork.
   // Lit moss on the walk plane (the path's rim) shows through it.
@@ -355,6 +384,7 @@ export function bakeTerrain(
   src: BakeSource,
   scale: number,
   fills: readonly MistFill[] = [],
+  look: BakeLook = GROVE_BAKE,
 ): BakeResult {
   const t0 = performance.now();
   const T = BAKE.tile;
@@ -423,7 +453,7 @@ export function bakeTerrain(
     },
   };
   const litShader = Shader.from({
-    gl: { vertex: QUAD_VERT, fragment: litFrag(fills) },
+    gl: { vertex: QUAD_VERT, fragment: litFrag(fills, look) },
     resources: {
       uAlb: rtAlb.source,
       uHgt: rtHgt.source,
