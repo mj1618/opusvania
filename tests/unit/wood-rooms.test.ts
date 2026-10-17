@@ -1132,6 +1132,14 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
     expect(naive(d, () => d.feet().y === 1024 && d.feet().x > 3456, 900)).toBeGreaterThan(0);
   });
 
+  it('both hawkers fly a rhythm round their lamps: A over the hummocks (taught on safe floor), B over the throw', () => {
+    const orbit = (getRoom('wood-hawkers').enemies ?? []).map((e) => [e.id, e.orbit]);
+    expect(orbit).toEqual([
+      ['hawk-first', 'wick-hawk'],
+      ['hawk-throw', 'wick-throw'],
+    ]);
+  });
+
   it("Tatter's walk ends in the dark way's door (the hatch), where it vanishes", () => {
     const room = getRoom('wood-hawkers');
     const t = (room.marks?.stage?.tatters ?? []).find((m) => m.climb?.vanish);
@@ -1458,6 +1466,25 @@ describe('R10 wood-well: the root stair, the old burrback, glade 2, the climb-ou
       s.run((x0 < 4000 ? L : R) | J, 16);
       for (let i = 0; i < 60 && !s.g.state.player.grounded; i++) s.run(x0 < 4000 ? L : R);
       expect(s.feet().y, `x ${x0}`).toBe(1920);
+    }
+    // One-ways: a bot under a solid ledge flush with the wall jumped into its underside for minutes (creatures r4).
+    expect((room.oneWays ?? []).filter((o) => o.y === 1920).map((o) => o.x)).toEqual([3584, 5504]);
+  });
+
+  it('the climb-out: one-way catch ledges up both faces, none more than 460 apart; a slip lands on the next one down', () => {
+    const room = getRoom('wood-well');
+    const ledges = (room.oneWays ?? [])
+      .filter((o) => o.x >= 2560 && o.x + o.w <= 2944)
+      .sort((a, b) => b.y - a.y);
+    const ys = [2112, ...ledges.map((o) => o.y)];
+    for (let i = 1; i < ys.length; i++)
+      expect((ys[i - 1] ?? 0) - (ys[i] ?? 0), `under ${ys[i]}`).toBeLessThanOrEqual(460);
+    expect(ys.at(-1)).toBe(160);
+    for (const o of ledges) {
+      const s = play('wood-well', ['glide', 'wallJump']);
+      s.g.teleport(o.x + 32, o.y - 150);
+      for (let i = 0; i < 120 && !s.g.state.player.grounded; i++) s.run(0);
+      expect(s.feet().y, `ledge ${o.y}`).toBe(o.y);
     }
   });
 });

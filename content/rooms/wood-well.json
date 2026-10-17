@@ -52,7 +52,6 @@
     { "tag": "ground", "x": 0, "y": 2112, "w": 5632, "h": 128 },
     { "tag": "trunk", "x": 2496, "y": 0, "w": 64, "h": 1888, "kick": "east" },
     { "tag": "trunk", "x": 2944, "y": 0, "w": 64, "h": 1888, "kick": "west" },
-    { "tag": "root", "x": 2880, "y": 1056, "w": 64, "h": 32 },
     { "tag": "ground", "x": 3008, "y": 0, "w": 512, "h": 1344, "kick": false },
     { "tag": "root", "x": 3264, "y": 1888, "w": 192, "h": 32 },
     { "tag": "ground", "x": 3520, "y": 0, "w": 1856, "h": 1344, "kick": false },
@@ -66,11 +65,17 @@
     { "tag": "root", "x": 9688, "y": 0, "w": 584, "h": 560, "kick": false },
     { "tag": "root", "x": 8960, "y": 0, "w": 80, "h": 808, "kick": false },
     { "tag": "root", "x": 7704, "y": 0, "w": 80, "h": 952, "kick": false },
-    { "tag": "root", "x": 6800, "y": 0, "w": 80, "h": 1064, "kick": false },
-    { "tag": "root", "x": 3584, "y": 1920, "w": 128, "h": 32 },
-    { "tag": "root", "x": 5504, "y": 1920, "w": 128, "h": 32 }
+    { "tag": "root", "x": 6800, "y": 0, "w": 80, "h": 1064, "kick": false }
   ],
-  "oneWays": [{ "tag": "root", "x": 2560, "y": 160, "w": 160 }],
+  "oneWays": [
+    { "tag": "root", "x": 2560, "y": 160, "w": 160 },
+    { "tag": "root", "x": 3584, "y": 1920, "w": 128 },
+    { "tag": "root", "x": 5504, "y": 1920, "w": 128 },
+    { "tag": "root", "x": 2560, "y": 1700, "w": 64 },
+    { "tag": "root", "x": 2880, "y": 1280, "w": 64 },
+    { "tag": "root", "x": 2560, "y": 860, "w": 64 },
+    { "tag": "root", "x": 2880, "y": 460, "w": 64 }
+  ],
   "gates": [
     {
       "id": "root-gate",
@@ -179,7 +184,7 @@
       {
         "x": 2580,
         "y": 900,
-        "text": "the climb-out: both faces, a rest ledge, a root step at the top; up through the hub's root mesh (sets wood-climbout)"
+        "text": "the climb-out: both faces, catch ledges every ~420 px alternating sides (one-ways), a root step at the top; up through the hub's root mesh (sets wood-climbout)"
       }
     ],
     "tatter": { "x": 3236, "y": 2112, "facing": -1, "when": "wood-root-ladder" },

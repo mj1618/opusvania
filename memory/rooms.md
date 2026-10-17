@@ -108,6 +108,10 @@ snuff, bounce, L2.
   landing skipped); every gap is a jump or glide from its open lip with every lamp out. R9's burr-silk is fenced
   east of the flame (3054-3186), clear of the knob's landing (no R9 deaths since; still 2-4 hits a run: the panel
   is past it). A catch zone may name `back: {x, y}`: the glade's chasm returns her to the lip's top at 1100.
+- **Round 4b (creatures r4's asks):** R8's hawk-first orbits wick-hawk too (the rhythm taught over safe floor).
+  R10's pit escape ledges and the climb-out's catch ledges are one-ways (a bot under a solid ledge flush with a
+  wall jumps into its underside for minutes): the climb-out has one every ~420 px, alternating faces (2560 @1700,
+  2880 @1280, 2560 @860, 2880 @460), then the root step at 160.
 - **The bots' map (tools/playtest/map.ts) reads walls only from below:** a walk-off counts a solid between only if
   it starts under the surface's top, and a side-by-side jump ignores a wall shorter than its reach from the target's
   height. So a floor over a tunnel (R8's pit) reads as walk-offs into the tunnel, and bots retry them for minutes
