@@ -336,22 +336,6 @@
       "kick": false
     },
     {
-      "tag": "trunk",
-      "x": 1792,
-      "y": 0,
-      "w": 128,
-      "h": 880,
-      "kick": false
-    },
-    {
-      "tag": "trunk",
-      "x": 1920,
-      "y": 0,
-      "w": 128,
-      "h": 560,
-      "kick": false
-    },
-    {
       "tag": "root",
       "x": 360,
       "y": 2816,
@@ -742,11 +726,6 @@
         "x": 380,
         "y": 3330,
         "text": "root curtains hang from the hollow roof (overhangs only: no ledge a bot or a player can see and not reach)"
-      },
-      {
-        "x": 1800,
-        "y": 900,
-        "text": "the trunk narrows toward the crown ring (the west wall steps out going up)"
       }
     ],
     "stage": {

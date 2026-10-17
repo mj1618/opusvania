@@ -744,6 +744,7 @@ play, in one or two sentences, with the moment it was decided.
 ### The oak, round 6 (video r4 #4, #8; memory/rooms.md "The oak")
 - **The thorn band is 60 px high on the slick face** (was 140; 4–7 hits a run): out of reach of a jump from the floor
   under W-ff. The climb's danger at the top is the crown wick's hawker.
-- **Dressing:** overhang-only shapes (root curtains from the hollow's roof; the west wall stepping out toward the
-  crown, so the trunk narrows to its ring), so no unreachable ledge is in view.
+- **Dressing:** root curtains from the hollow's roof (their tops covered). Step-outs of the west wall toward the crown
+  were tried and removed: their tops at the room's top edge read as unreachable ground, and the personas wandered
+  the oak after the finale (1 of 9 through). The trunk's narrowing to its ring is render's.
 - **Tatter framed close:** camera zones `hollow` (1.4) and `crown-close` (1.3) for render's two beats.
