@@ -20,6 +20,31 @@ why.
   bring an earned window and 2× size for the old burrback, a hawker that strikes, burrback stomps, deaths that cost a
   walk, and held story beats. This design assumes them.
 
+## Round 3 revisions (2026-10-18, `reviews/area1-plan-r3.md`)
+
+The video review (`reviews/area1-video-r1.md`) and first-timer r3 (`reviews/area1-firsttimer-average-r3.md`) showed
+that the content is no longer random, but most of this design never reaches the screen. Five calls change. **Where a
+section below disagrees with this list, this list wins.** The sections touched carry a "(r3)" note.
+
+1. **One room for the oak.** The hub (R7) and `wood-heart` (R7b) merge into one room: the floor, the trunk and the
+   crown, with no seam. The glimpse, W-ff and the crown ring become visible from the floor, and a fade inside the oak
+   re-forms her inside it. Area 1 is 10 rooms.
+2. **The light/dark rule is narrowed.**
+   - R1–R5 have no forks: a miss is a retry of ≤ 5 s.
+   - From R6 on, a dark way exists only where its entrance is in view from the spot where the light line is taken
+     (R8's tunnel mouth, the oak's chimney).
+   - **The dark way is Tatter's way:** it walks the dark routes, and the player sees it go in.
+   - The permanence fallbacks stay as geometry, not as choices.
+3. **The hawker's twist is timing, not a race.** Stragglers circle R8's throw lamp. Hawker B dives through the orbit
+   on a rhythm and takes one each pass. She goes in just after a pass; caught during one, she is struck down into the
+   tunnel.
+4. **R3 and R4 teach one idea per screen** (the plan's §1):
+   - **R3:** she lands outside W1's field; the stragglers circle W2, the snuff lamp; no hole after the knob.
+   - **R4:** the juvenile has no lamp; W3 hangs over the root step and is put out with a standing cut; no lamp's pull
+     overlaps a patrol before R6.
+5. **R6 grows a lamp chain** (throw → wings → caught → throw) toward the oak's door: the throw's development before
+   R8 times it.
+
 ---
 
 ## 1. Diagnosis: why it feels random and disjointed
@@ -176,6 +201,9 @@ Two smaller set-ups that pay inside the chunk:
 moves between lamps. Everything else is cut or deferred.
 
 ### The rule that ties them together
+(r3: narrowed. No forks in R1–R5; from R6 on, a dark way only where its entrance is in view of the decision, and it is
+Tatter's way. See "Round 3 revisions".)
+
 **Light is the fast line, the dark is the slow line.** This is pillar 1 made into level design.
 - Every lit route (a throw, a lamp's pull bending a glide, a snuff from a guarded spot) is the quick way through, and
   a predator guards it.
@@ -335,6 +363,9 @@ beat on the lip (`hold`, daccfee; ≤ 150 frames).
 - She drops over the lip after them.
 - Find: W-cave behind the landing (kept).
 
+**(r3) R3 and R4 are superseded by `reviews/area1-plan-r3.md` §1, beats 4–11:** one idea per framed screen; the
+stragglers circle W2; the juvenile has no lamp; W3 is cut standing from the root step.
+
 **R3 `wood-wicks`, "the first lights"** (reworked; 1:40–3:00). *Smallness: the light grabs you, and it can throw
 you.*
 - **The stragglers circle W1.** The dip under W1 gets a far wall too tall to climb from the dip floor.
@@ -368,6 +399,9 @@ lip (kept).
 
 ### Act 2: the floor (6:00–20:00)
 
+**(r3) R6 grows a fourth beat:** the lamp chain over a long chasm toward the oak's door. T4's beetle patrols ≥ 300 px
+from gap 3's lip.
+
 **R6 `wood-glidewalk`** (reworked; 6:00–10:00). *Wings become joy, and the lamp joins the glide.*
 - **Gap 1 (safe):** the walk-off under the root roof (kept).
 - **Gap 2:** the high line is **caught at W5, thrown, wings open**: the throw plus a glide carries to T3. The low
@@ -381,6 +415,9 @@ lip (kept).
 - Find: the bark floor pocket.
 - Beat: from T4 the oak's west door fills the frame.
 - Fix needed (feel r2 #6): the one-held-input crossing via `wick-line`'s slingshot.
+
+**(r3) The hub and R7b are one room, "the oak"** (Round 3 revisions, item 1). The two entries below describe its floor
+and its trunk. The glimpse is a held look-up of the whole trunk, ending on Tatter turning to look up.
 
 **R7 `wood-hollow`, the hub: "the hollow oak"** (reworked; first visit 10:00–11:30). *The question.* She enters at
 floor level.
@@ -397,6 +434,12 @@ floor level.
   the crossroads.)
 - Encounter: none.
 - Every cloud freed anywhere in the area flies in through the arch or the door and spirals up the trunk.
+
+**(r3) R8:**
+- the camera frames both ledges and the lamp;
+- the pit under the gap is the tunnel's mouth, in view and lit from below, so a miss drops her into the slow way;
+- hawker B hunts W-throw's orbit on a rhythm (Round 3 revisions, item 3);
+- Tatter walks into the tunnel on the first visit.
 
 **R8 `wood-hawkers`, "the hawkers' clearing"** (reworked; 11:30–15:30). *The hawker, and being caught is being prey.*
 - **West half:** hawker A at W7 over the hummocks, a safe floor. W-hummock is cut, so nothing throws her past its
@@ -480,7 +523,7 @@ at once, going up.* The hub's up-shaft continues into it.
 | Wall jump | ~18 min | ~26:30 |
 | Critical-path snuffs (bots) | 1–2 | ≥ 9: W1, W3, the R4 gap wick (after the throw), W6, R8's two, R9's, the pogo-wick, W-ff |
 | Element kinds in area 1 | ~15, mostly once | 3 lamp moments, 3 predators + 2 rows, glide, claws, pogo, thorns, bark, moonlight: each in ≥ 3 rooms |
-| Rooms | 11 | 11: R14 cut, R7b added, R9 rebuilt |
+| Rooms | 11 | 11: R14 cut, R7b added, R9 rebuilt. (r3: 10, the hub and R7b merged into the oak) |
 | Stretch of the critical path without a threat | ~8 min | ≤ 3 min (only the glade, the hub, the glade 2 rest) |
 | Story on the critical path | the glimpse and Tatter's patches | the vista's oak, the stragglers, the dead moth, Tatter ahead, the glimpse, the stone's carving, the window, the column, the glow-cap snuffed, the root, the cloud |
 
