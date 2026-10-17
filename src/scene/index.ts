@@ -130,6 +130,7 @@ const SceneSchema = z
           .optional(),
         moods: z.array(z.object({ x: int, mood: z.enum(['cool', 'warm', 'deep']) }).strict()).optional(),
         anchorY: int.optional(),
+        anchorX: int.optional(),
       })
       .strict()
       .optional(),
@@ -167,6 +168,28 @@ const SceneSchema = z
               })
               .strict(),
           )
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    camera: z
+      .object({
+        anchorY: z.number().min(0.3).max(0.9).optional(),
+        lookaheadX: z.number().min(0).optional(),
+        fallLookahead: z.number().min(0).optional(),
+        smoothYFall: z.number().positive().optional(),
+        fadeIn: z.number().min(0).max(10).optional(),
+        hatchKick: z.number().min(0).max(40).optional(),
+        lean: z
+          .object({
+            x: z.number(),
+            y: z.number(),
+            from: z.number().min(0),
+            in: z.number().positive(),
+            hold: z.number().min(0),
+            out: z.number().positive(),
+          })
+          .strict()
           .optional(),
       })
       .strict()

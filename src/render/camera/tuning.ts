@@ -1,3 +1,5 @@
+import type { Room } from '../../scene/room';
+
 /**
  * Camera constants. Distances in world px, times in 60 Hz sim frames.
  */
@@ -100,3 +102,21 @@ export const cameraTuning = {
   },
 };
 export type CameraTuning = typeof cameraTuning;
+
+/**
+ * The follow camera's tuning for a room: `cameraTuning` with the room's own framing (`room.camera`:
+ * `anchorY`, `lookaheadX`, `fallLookahead`, `smoothYFall`) on top. A room that sets none (the test
+ * grove) gets `cameraTuning` itself, the very object.
+ */
+export function cameraFor(room: Room): CameraTuning {
+  const c = room.camera;
+  if (!c || (c.anchorY ?? c.lookaheadX ?? c.fallLookahead ?? c.smoothYFall) === undefined)
+    return cameraTuning;
+  return {
+    ...cameraTuning,
+    anchorY: c.anchorY ?? cameraTuning.anchorY,
+    lookaheadX: c.lookaheadX ?? cameraTuning.lookaheadX,
+    fallLookahead: c.fallLookahead ?? cameraTuning.fallLookahead,
+    smoothYFall: c.smoothYFall ?? cameraTuning.smoothYFall,
+  };
+}

@@ -22,6 +22,8 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   room's id throws (use `room(id)`).
 - `abilities()` → `{owned, all}` (`state().save.abilities`); `grant('glide', ...)` / `grant('all')`,
   `revoke('dash')` / `revoke('all')`: from the next step, kept by `load()` / R / a room restart; no redraw.
+- wood-hatch fades up from black at boot (not with `?manual`) and on `load()`: render time has to run (`step` / `tick`
+  ~150 frames) before the picture is up. Clips of the opening: `npm run clip -- --setup "g.load()" --pre 0 ...`.
 - The hatching (`wood-hatch` starts shut in the cocoon, `state().hatch`): three presses of any button after the
   fade-up (150 frames), or wait 720 frames. **A `teleport` ends it silently**, so the capture tools just teleport.
 - `state()` the sim state (`src/sim/state.ts`); `hash()`; `info()` (mode, frame, clock, `view` = the logical view `{w, h, left, top, scale}` and `safe`, canvas size, GPU);

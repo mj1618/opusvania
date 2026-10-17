@@ -24,26 +24,51 @@ glide; wall slide AND wall kick (`P.wallJump`, checked in `wallInRange`); double
 in `canDash`). Run, variable jump, fast fall, the blade and pogo stay. The Game harness keeps a granted kit through
 restarts (`Game.setAbilities`, `?abilities=`).
 
-## wood-hatch (blocked out; tops are walk lines, all `branch` solids)
-| x | top y | what |
-|---|---|---|
-| 0-224 | (0-2048) | the trunk the branch grows from (`kick: false`) |
-| 224-1536 | 1024 | the cocoon row: spawn 864 (her cocoon `hatch` 864, 1086), husks 440-1064 hung at y 1030, Tatter 1200 facing west |
-| 1536-2112 | 960 | the knot: a 64 px step up |
-| 2112-2304 | | gap 1 (192) |
-| 2304-2944 | 960 | ends at **the promise gap** (2944-4608, `marks.promise`): the swarm crosses it to the far branch |
-| 2944-3456 | 1088 | the way bends down (128 under the end of the last) |
-| 3456-3584 | | gap (128) |
-| 3584-4224 | 1216 | |
-| 4224-4352 | | gap (128) |
-| 4352-4736 | 1344 | the branch's end over the dark (`marks.drop` 4736, 1344): walk off it east = the exit |
-| 4608-5120 | 896 | **the far branch**: unreachable with the starting kit (every top under it is > 300 below or > 1000 away; `rooms.test.ts`) |
-Room 5120 x 2048. Exit `drop`: the south edge 4400-5120. Catch `below`: x 224-4400, y 1600-2048. No ceilingY, `edgeKick: false`.
-The naive bot of the brief (hold right, a 14-frame jump when grounded and blocked or 12 px from an edge) reaches the
-exit with no catches, pressed out or waiting the 12 s (`tests/unit/rooms.test.ts`, under 45 s).
-Marks (render / acting only): `cocoons` (hang point + length + split/closed), `tatter`, `swarm` (a world polyline,
-a rough first path), `promise`, `drop`, `camera` (named views: vista, swarm, promise, drop, with notes).
-`art`: kit `wood`, seed 7, moon (view px 1420, 190, r 88), afterglow (view px 1500, 850, 0.35; it rides at far0's parallax), `anchorY` 880, moods all cool.
+## wood-hatch (round 2, 2026-10-17; tops are walk lines, all `branch` solids)
+Redesigned after review round 1 (docs/design/scenes/reviews/01-round-1.md, problems 3 and 5): longer, with height, no box steps.
+| stretch | x | top y | join to the next (what pf-branch makes of it) |
+|---|---|---|---|
+| trunk | 0-224 | (0-2432) | the bole (`kick: false`) |
+| S1 | 224-1600 | 1024 | the cocoon row: spawn 864; abutting +64: a **burl** |
+| S2 | 1600-2240 | 960 | gap A 256, rising 96: a **fork** |
+| S3 | 2496-2944 | 864 | gap 160, rising 128: fork |
+| S4 | 3104-3520 | 736 | **the crown** (highest). The promise gap begins at its end (3520-5056, `marks.promise`); her way: gap 128, down 160 |
+| S5 | 3648-4320 | 896 | gap B 256, down 64 |
+| S6 | 4576-4928 | 960 | abutting -96: a **knee** |
+| S7 | 4928-5440 | 1056 | gap C 192, down 96 |
+| S8 | 5632-6208 | 1152 | gap D 128, down 128 |
+| S9 | 6336-6592 | 1280 | the end (`marks.drop` 6592, 1280): walk off east = the exit |
+| far | 5056-7424 | 512 | another tree's branch to the east edge: 448+ above every top under it (`rooms.test.ts`) |
+Room 7424 x 2432. Exit `drop`: the south edge 6400-7424. Catch `below`: x 224-6400, y 1600-2432. No ceilingY.
+- **Rules learned for paintable joins:** abutting steps only for small changes (a +64 burl, a -96 knee); bigger height
+  changes go across a gap (the painter makes a fork with a dipping main mass). Abutting +96 / +128 / -192 steps
+  painted as square boxes. Vary the stretch lengths (a test keeps them distinct).
+- **The room may not be wider than ~7450** (with the wood's far plans): far0 must bake as ONE tile (coverage x 0.62
+  <= 2048 px), or far.ts cannot build the far pair pass, the opaque far composite hides the sky and **the moon
+  vanishes** (seen at 8192). Guarded in `rooms.test.ts`. `art.anchorX` 2560 keeps the backdrop lined up as it was
+  composed (for the old 5120 room): new field, default the room's centre.
+- Timing: the naive bot (hold right, 14-frame jump 12 px from an edge or when blocked; also 24 px) takes **11.6 s
+  from the hatch to the exit** with no catches (12.1-14.3 s with a 2.5 s look at the swarm). A first-time player who
+  watches the pass: ~15-20 s. Room for more length is limited by the far0 tile (above).
+- Marks: cocoon hang points are now **on S1's underside** (top + painter thickness ~96-124: y 1148..1120 from west
+  to east), irregular gaps 52-108, `len` 78-130 (silk + body), hers at 864 (len 130). With the feet line at 0.62
+  the closed one's body sits at ~0.72-0.82 of the frame (the look target's 0.62-0.70 needs a thinner limb there).
+  Tatter 1210 facing west. `swarm` polyline crosses the moon at (1420, 544) in the opening frame. `camera` hints:
+  vista (960, 894), swarm (1090, 734), promise (4288, 636), drop (6592, 1650).
+- `art`: kit `wood`, seed 7, moon (view px 1420, 190, r 88), afterglow (1500, 850, 0.35), `anchorY` 880, `anchorX` 2560.
+
+## The room camera (`room.camera`, src/render/camera/)
+- Framing overrides: `cameraFor(room)` (tuning.ts) = `cameraTuning` + `anchorY` / `lookaheadX` / `fallLookahead` /
+  `smoothYFall` from the room; a room with none (test-grove) gets `cameraTuning` itself. wood-hatch: feet line 0.62
+  (grove 0.72), fall lead 320.
+- Beats (`beats.ts` `CameraBeats`, render-side offsets like the kick): `hatchKick` 8 px down on `hatch`, back in ~0.3 s;
+  `lean` (130 right, 160 up) on SIM time after `hatch`: in 2.4-3.8 s, held to 8.0, out by 9.5, the swarm's
+  `SWARM_PASS` (src/render/swarm/timing.ts; the numbers are copied into the room JSON, keep them in step). Any
+  placement except a fall's return ends it.
+- `fadeIn` 2.5 s (room-fade.ts): up from black at boot (**not when booted `?manual`**: tools and tests want the
+  picture at once), on every restart (`load()` / R) and after a room exit. Matches the sim's 150-frame listen.
+- The exit: the room runs 832 px past the branch end, so the follow camera (and its fall lead) frames the end at
+  ~0.57 (16:9) to 0.68 (21:9) and follows her down; the fade reaches black ~1.4 s after she leaves the branch.
 
 ## Per-room look: what is per room now, what is still Grove-only
 `src/render/scene/lib/room-look.ts` `setRoomLook(room)` runs first in `RenderStage` (shaders are built after it, so
@@ -75,5 +100,6 @@ black 0.12 s before the restart), `roomEnter` lifts it over 0.9 s; `fallCatch` d
 
 ## What the art agents should know
 - The wood's backdrop is its own (canopy height, 2026-10-17): memory/background-layers.md "The wood". It is
-  composed for `art.anchorY` 880 and a reference camera y 800; the camera's feet line is a backdrop knob too.
+  composed for `art.anchorY` 880 and a reference camera y 800; since round 2 the camera centre runs ~894 at the
+  cocoons (feet line 0.62), ~606 on the crown, ~1150 at the end.
 - `pf-branch*` / `pf-rim.ts` are the playfield agent's; cocoons, Tatter and the swarm are the acting / swarm agents'.

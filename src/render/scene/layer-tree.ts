@@ -112,10 +112,14 @@ export class LayerTree {
     this.playfieldFront = this.get('playfieldFront');
     this.foreground = this.get('foreground');
     this.air = this.get('air');
-    // The room may say where its background is composed for (`art.anchorY`); else the lowest resting view.
-    const anchorY = (scene as Room).art?.anchorY;
+    // The room may say where its background is composed for (`art.anchorX` / `anchorY`); else the
+    // scene's centre and the lowest resting view.
+    const art = (scene as Room).art;
     // Measured with the safe area, so it never moves when the window changes shape.
-    this.anchor = { x: scene.width / 2, y: anchorY ?? Math.max(SAFE_H / 2, scene.height - SAFE_H / 2) };
+    this.anchor = {
+      x: art?.anchorX ?? scene.width / 2,
+      y: art?.anchorY ?? Math.max(SAFE_H / 2, scene.height - SAFE_H / 2),
+    };
   }
 
   get(name: LayerName): Container {

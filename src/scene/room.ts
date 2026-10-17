@@ -16,6 +16,31 @@ export interface Room extends Scene {
   marks?: RoomMarks;
   /** Camera stops and close-up spots for `npm run shots -- --room <id>`. */
   shots?: RoomShots;
+  /** The room's own camera: framing overrides and its scripted beats (src/render/camera/beats.ts). */
+  camera?: RoomCamera;
+}
+
+/**
+ * Per-room camera. The first four override `cameraTuning` (src/render/camera/tuning.ts) for this room;
+ * absent = the shared value (the test grove sets none). The beats are off unless set.
+ */
+export interface RoomCamera {
+  /** Her feet line, as a share of the safe area's height from its top. */
+  anchorY?: number;
+  lookaheadX?: number;
+  /** How far below her feet the view leads in a real fall, px. */
+  fallLookahead?: number;
+  smoothYFall?: number;
+  /** Seconds of fade up from black at boot and at every restart of the room (0 / absent: none). */
+  fadeIn?: number;
+  /** A shove of the view on the `hatch` event, px (down: the cocoon bursts). */
+  hatchKick?: number;
+  /**
+   * A lean of the view (`x`, `y` px) toward something, timed in seconds after the `hatch` event: it
+   * eases in from `from` over `in`, holds `hold`, eases out over `out`. Sim time, so it never depends
+   * on what she does.
+   */
+  lean?: { x: number; y: number; from: number; in: number; hold: number; out: number };
 }
 
 /** One of the art kit's mood stops: from world x on, the room leans this way (blended between stops). */
@@ -46,6 +71,11 @@ export interface RoomArt {
    * line up with the playfield. Absent = the camera's lowest resting y (the Grove's rule).
    */
   anchorY?: number;
+  /**
+   * The camera centre x the background layers line up at (default: the room's centre). Keeps a
+   * backdrop composed for one room width in place when the room grows.
+   */
+  anchorX?: number;
 }
 
 /** A cocoon on the hatching branch: `x`, `y` = where its thread is tied (the hang point), `len` its length. */

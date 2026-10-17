@@ -21,11 +21,13 @@ import type { Game } from '../game';
 import type { SimEvent } from '../sim/events';
 import type { PlayerState } from '../sim/state';
 import type { GameApp } from './app';
+import { CameraBeats } from './camera/beats';
 import { DipOverlay } from './camera/dip';
 import { type CameraState, createCamera, lerpCamera, resizeCamera, stepCamera } from './camera/index';
 import { CameraKick } from './camera/kick';
 import { ReformShot } from './camera/reform';
 import { RoomFade } from './camera/room-fade';
+import { type CameraTuning, cameraFor } from './camera/tuning';
 import { CharacterRenderer } from './character/index';
 import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
 import { EnemyRenderer } from './enemies/index';
@@ -95,13 +97,20 @@ export class RenderStage {
   private readonly reformShot = new ReformShot();
   private readonly dip = new DipOverlay();
   /** Leaving the room (a black fade over the exit's hold) and the dip of a caught fall: camera/room-fade.ts. */
-  private readonly roomFade = new RoomFade();
+  private readonly roomFade: RoomFade;
+  /** The room's scripted beats: the hatch kick, the lean toward the swarm (camera/beats.ts). */
+  private readonly beats: CameraBeats;
+  /** The follow camera's tuning for this room (`room.camera` framing over `cameraTuning`). */
+  private readonly ct: CameraTuning;
 
   constructor(
     private readonly ga: GameApp,
     private readonly game: Game,
   ) {
     const scene = game.scene;
+    this.ct = cameraFor(scene);
+    this.roomFade = new RoomFade(scene.camera?.fadeIn ?? 0);
+    this.beats = new CameraBeats(scene.camera);
     // The room's look first: shaders are built with its zone edges and key light (room-look.ts).
     setRoomLook(scene);
     this.ctx = {
@@ -136,7 +145,10 @@ export class RenderStage {
     );
 
     const v0 = ga.view();
-    this.cam = createCamera(game.state, scene, undefined, v0.w, v0.h);
+    this.cam = createCamera(game.state, scene, this.ct, v0.w, v0.h);
+    // Boot: the room comes up from black (if it says so). Not when booted paused (`?manual`: the tools
+    // and tests want the picture at once); `__game.load()` restarts with the fade.
+    if (game.mode !== 'manual') this.roomFade.fadeIn();
     this.prevCam = { ...this.cam };
     this.view = lerpCamera(this.prevCam, this.cam, 1);
     this.drawn = playerView(game.prev.player, game.state.player, 1);
@@ -151,18 +163,22 @@ export class RenderStage {
       const v = ga.view();
       if (events.some((e) => e.type === 'spawn')) {
         const from = this.followView;
-        this.cam = createCamera(game.state, scene, undefined, v.w, v.h);
+        this.cam = createCamera(game.state, scene, this.ct, v.w, v.h);
         this.prevCam = { ...this.cam };
-        // A re-form glides there under a dip; a restart (a new state) dips; a teleport just cuts.
+        // A re-form glides there under a dip; a restart (a new state) dips (or fades up from black, if
+        // the room says so); a teleport just cuts.
         if (events.some((e) => e.type === 'reform')) this.reformShot.reform(from, this.followView);
-        else if (game.state !== state) this.reformShot.restart();
-        else this.reformShot.clear();
+        else if (game.state !== state) {
+          this.reformShot.restart();
+          this.roomFade.fadeIn();
+        } else this.reformShot.clear();
         state = game.state;
       } else {
-        resizeCamera(this.cam, scene, v.w, v.h);
+        resizeCamera(this.cam, scene, v.w, v.h, this.ct);
         this.prevCam = { ...this.cam };
-        stepCamera(this.cam, game.state, scene);
+        stepCamera(this.cam, game.state, scene, this.ct);
       }
+      this.beats.onStep(events, game.state.frame);
       this.pending.push(...events);
     });
   }
@@ -180,14 +196,15 @@ export class RenderStage {
     this.clock += dt;
     // The window may have changed shape since the last sim step: the camera sees through the new view.
     const vs = this.ga.view();
-    resizeCamera(this.prevCam, this.game.scene, vs.w, vs.h);
-    resizeCamera(this.cam, this.game.scene, vs.w, vs.h);
+    resizeCamera(this.prevCam, this.game.scene, vs.w, vs.h, this.ct);
+    resizeCamera(this.cam, this.game.scene, vs.w, vs.h, this.ct);
     const player = playerView(this.game.prev.player, this.game.state.player, alpha);
     const follow = lerpCamera(this.prevCam, this.cam, alpha);
     const o = this.override;
     const events = this.pending;
     this.pending = [];
     this.kick.update(dt, events);
+    this.beats.update(dt, this.game.state.frame, alpha);
     const rs = this.reformShot;
     rs.update(dt);
     this.dip.set(rs.dip, vs);
@@ -215,8 +232,8 @@ export class RenderStage {
     const view: CameraView = o
       ? { x: base.x + this.kick.x, y: base.y + this.kick.y, zoom: base.zoom, w: vs.w, h: vs.h }
       : {
-          x: base.x + this.kick.x + gc.x + rs.x,
-          y: base.y + this.kick.y + gc.y + rs.y,
+          x: base.x + this.kick.x + gc.x + rs.x + this.beats.x,
+          y: base.y + this.kick.y + gc.y + rs.y + this.beats.y,
           zoom: base.zoom * gc.zoom,
           w: vs.w,
           h: vs.h,
@@ -256,8 +273,8 @@ export class RenderStage {
   /** Call when the canvas size or resolution changed (the view's shape may have too). */
   resize(): void {
     const v = this.ga.view();
-    resizeCamera(this.prevCam, this.game.scene, v.w, v.h);
-    resizeCamera(this.cam, this.game.scene, v.w, v.h);
+    resizeCamera(this.prevCam, this.game.scene, v.w, v.h, this.ct);
+    resizeCamera(this.cam, this.game.scene, v.w, v.h, this.ct);
     this.post.resize();
   }
 }

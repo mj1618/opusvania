@@ -3,6 +3,9 @@
  * holds her for the hold's frames (`roomExit.frames`, `fallCatch.frames`) and then restarts the room
  * (`roomEnter`) or puts her back (`fallReturn`); this is the picture over those beats. A flat black
  * sprite over the post-processed picture, under the HUD. Knobs: `cameraTuning.room`.
+ *
+ * A room with `camera.fadeIn` (src/scene/room.ts) also comes up from black over that many seconds at
+ * boot and at every restart (`fadeIn()`, called by stage.ts), and after a room exit.
  */
 import { Sprite, Texture } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
@@ -22,13 +25,21 @@ export class RoomFade {
   private to = 0;
   private t = 0;
   private dur = 0;
+  /** A fade up from black asked for since the last update (seconds), applied after the frame's events. */
+  private queued: number | null = null;
 
-  constructor() {
+  /** `roomFadeIn`: the room's fade up from black, s (0 = none: a room exit lifts over `exitLift`). */
+  constructor(private readonly roomFadeIn = 0) {
     this.layer = new Sprite(Texture.WHITE);
     this.layer.label = 'room-fade';
     this.layer.tint = 0x000000;
     this.layer.eventMode = 'none';
     this.layer.visible = false;
+  }
+
+  /** From black, up over `seconds` (boot, a restart). Wins over the frame's placement events. */
+  fadeIn(seconds = this.roomFadeIn): void {
+    if (seconds > 0) this.queued = seconds;
   }
 
   private go(to: number, seconds: number): void {
@@ -50,7 +61,7 @@ export class RoomFade {
       if (e.type === 'roomExit') this.go(1, e.frames / 60 - R.exitEarly);
       else if (e.type === 'roomEnter') {
         this.k = 1;
-        this.go(0, R.exitLift);
+        this.go(0, this.roomFadeIn > 0 ? this.roomFadeIn : R.exitLift);
       } else if (e.type === 'fallCatch') this.go(R.catchDepth, e.frames / 60);
       else if (e.type === 'fallReturn') this.go(0, R.catchLift);
       // A placement by hand (teleport, load) shows the picture plainly at once.
@@ -58,6 +69,11 @@ export class RoomFade {
         this.k = this.to = this.from = 0;
         this.dur = 0;
       }
+    }
+    if (this.queued !== null) {
+      this.k = 1;
+      this.go(0, this.queued);
+      this.queued = null;
     }
     if (this.dur > 0 && dt > 0) {
       this.t += dt;

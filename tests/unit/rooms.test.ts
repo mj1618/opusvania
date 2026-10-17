@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { CameraBeats, leanWeight } from '../../src/render/camera/beats';
+import { createCamera } from '../../src/render/camera/index';
+import { cameraFor, cameraTuning } from '../../src/render/camera/tuning';
+import { SAFE_H } from '../../src/render/contract';
+import { LayerTree } from '../../src/render/scene/layer-tree';
+import { coverRect } from '../../src/render/scene/lib/bg-bake';
 import { DEFAULT_ROOM, GROVE, getRoom, parseScene, ROOM_IDS, WOOD_HATCH } from '../../src/scene/index';
 import { ABILITIES } from '../../src/sim/abilities';
 import type { SimEvent } from '../../src/sim/events';
@@ -149,7 +155,7 @@ describe('the hatching', () => {
     const kinds = stirs.map((e) => e.type);
     expect(kinds.filter((k) => k === 'hatchStir')).toHaveLength(3);
     const hatch = stirs.find((e) => e.type === 'hatch');
-    expect(hatch).toMatchObject({ auto: false, cx: 864, cy: 1086 });
+    expect(hatch).toMatchObject({ auto: false, cx: WOOD_HATCH.hatch?.x, cy: WOOD_HATCH.hatch?.y });
     // The breaking press was not a jump; from then on she runs.
     expect(kinds).not.toContain('jump');
     s.run(R, 30);
@@ -167,7 +173,7 @@ describe('the hatching', () => {
 
   it('a teleport ends it silently', () => {
     const s = newSim(WOOD_HATCH);
-    s.place(1700, 960);
+    s.place(1900, 960);
     expect(s.state.hatch?.done).toBe(true);
     expect(s.events.some((e) => e.type === 'hatch')).toBe(false);
   });
@@ -177,8 +183,8 @@ describe('falls and the exit', () => {
   it('a fall off the branch costs nothing: caught, she is back on her last ground at once', () => {
     const s = sim(WOOD_HATCH);
     hatched(s);
-    // Stand on the knot branch a while (safe ground), then walk off the first gap's edge (2112).
-    s.state.player.x = 1900;
+    // Stand on the burl's stretch a while (safe ground), then walk off the edge of gap A (2240).
+    s.state.player.x = 2000;
     s.state.player.y = 960 - s.state.player.h;
     s.run(0, 30);
     const ev = s.run(R, 160);
@@ -189,7 +195,7 @@ describe('falls and the exit', () => {
     const i = ev.findIndex((e) => e.type === 'fallReturn');
     expect(ev[i + 1]?.type).toBe('spawn');
     // Back on the branch west of the gap, nothing lost.
-    expect(back).toMatchObject({ x: 2112 - s.t.room.returnInset, y: 960 });
+    expect(back).toMatchObject({ x: 2240 - s.t.room.returnInset, y: 960 });
     expect(s.state.player.hp).toBe(s.state.player.hpMax);
     expect(s.state.save.abilities).toEqual([]);
   });
@@ -200,8 +206,9 @@ describe('falls and the exit', () => {
     const ev: SimEvent[] = [];
     // From the branch end, walk off into the dark.
     const st = s.state;
-    st.player.x = 4700 - st.player.w / 2;
-    st.player.y = 1344 - st.player.h;
+    const drop = WOOD_HATCH.marks?.drop ?? { x: 0, y: 0 };
+    st.player.x = drop.x - 120 - st.player.w / 2;
+    st.player.y = drop.y - st.player.h;
     ev.push(...s.run(R, 200));
     const out = ev.find((e) => e.type === 'roomExit');
     expect(out).toMatchObject({ id: 'drop', edge: 's', frames: s.t.room.exitFrames });
@@ -227,22 +234,27 @@ describe('wood-hatch play checks', () => {
    * The brief's naive player (done means 8): hold right; press jump (held ~14 frames) when blocked by
    * a wall or at the edge of a gap. Nothing else. From the break-out it has to reach the exit.
    */
-  function naive(wait: 'auto' | 'press'): { exit: string | null; frames: number; catches: number } {
+  function naive(
+    wait: 'auto' | 'press',
+    edge = 12,
+  ): { exit: string | null; frames: number; catches: number; hatchFrame: number } {
     const s = sim(WOOD_HATCH);
     if (wait === 'press') hatched(s);
     let hold = 0;
     let catches = 0;
+    let hatchFrame = s.state.hatch?.done ? s.state.frame : -1;
     for (let f = 0; f < 60 * 60; f++) {
       const p = s.state.player;
-      if (hold === 0 && p.grounded && (p.wallDir === 1 || !groundAhead(WOOD_HATCH, s.state, 12))) hold = 14;
+      if (hold === 0 && p.grounded && (p.wallDir === 1 || !groundAhead(WOOD_HATCH, s.state, edge))) hold = 14;
       const mask = R | (hold > 0 ? J : 0);
       if (hold > 0) hold--;
       for (const e of s.run(mask, 1)) {
+        if (e.type === 'hatch') hatchFrame = s.state.frame;
         if (e.type === 'fallCatch') catches++;
-        if (e.type === 'roomExit') return { exit: e.id, frames: s.state.frame, catches };
+        if (e.type === 'roomExit') return { exit: e.id, frames: s.state.frame, catches, hatchFrame };
       }
     }
-    return { exit: null, frames: s.state.frame, catches };
+    return { exit: null, frames: s.state.frame, catches, hatchFrame };
   }
 
   it('the naive bot gets from the break-out to the exit (pressed out, and waiting for it)', () => {
@@ -252,27 +264,95 @@ describe('wood-hatch play checks', () => {
     expect(waited).toMatchObject({ exit: 'drop', catches: 0 });
     // Under the brief's 45 s even when it waits 12 s for the cocoon.
     expect(waited.frames).toBeLessThan(45 * 60);
+    // The reviewer's bot (jumps 24 px from an edge) too.
+    expect(naive('press', 24)).toMatchObject({ exit: 'drop', catches: 0 });
+    // The run lasts: the brief's 10-30 s from the hatch to the exit, even at full speed with no hesitation.
+    const run = (pressed.frames - pressed.hatchFrame) / 60;
+    console.info(
+      `wood-hatch naive bot: hatch -> exit ${run.toFixed(1)} s, boot -> exit ${(waited.frames / 60).toFixed(1)} s waiting`,
+    );
+    expect(run).toBeGreaterThan(10);
+    expect(run).toBeLessThan(30);
+  });
+
+  it('the route has height: it rises to a crown and comes down into the canopy', () => {
+    const far = WOOD_HATCH.solids.find((q) => q.tag === 'branch' && q.x + q.w === WOOD_HATCH.width);
+    const path = WOOD_HATCH.solids.filter((q) => q.tag === 'branch' && q !== far).sort((a, b) => a.x - b.x);
+    const ys = path.map((q) => q.y);
+    const start = ys[0] ?? 0;
+    expect(start - Math.min(...ys)).toBeGreaterThanOrEqual(256);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(512);
+    // No two stretches alike in length; none longer than the cocoon row's.
+    const lens = path.map((q) => q.w);
+    expect(new Set(lens).size).toBeGreaterThanOrEqual(lens.length - 2);
   });
 
   it('the far branch across the promise gap is out of reach with the starting kit', () => {
-    const far = WOOD_HATCH.solids.find((q) => q.x === 4608 && q.y === 896);
+    // The far branch: another tree's, entering from the room's east edge beyond the promise gap.
+    const far = WOOD_HATCH.solids.find((q) => q.tag === 'branch' && q.x + q.w === WOOD_HATCH.width);
+    const promise = WOOD_HATCH.marks?.promise;
     expect(far).toBeDefined();
-    // Every top she can stand on below it is more than a jump (272) under it, or more than a jump away.
+    expect(far?.x).toBe(promise?.x1);
+    // Every top she can stand on is more than a jump (272) under it, or more than a running jump
+    // (~410 px on the flat, less rising) short of it.
     const tops = WOOD_HATCH.solids.filter((q) => q !== far && q.tag === 'branch');
     const farTop = far?.y ?? 0;
     for (const q of tops) {
       const dx = Math.max(0, (far?.x ?? 0) - (q.x + q.w));
       const dy = q.y - farTop;
-      expect(dy > 300 || dx > 1000, `top at ${q.x},${q.y}`).toBe(true);
+      expect(dy >= 300 || dx > 450, `top at ${q.x},${q.y}`).toBe(true);
     }
-    // And the wide gap itself: a held running jump off the third branch's end comes down below it.
+    // And the wide gap itself: a held running jump off the crown's end comes down below it, on the way on.
     const s = sim(WOOD_HATCH);
     hatched(s);
-    s.state.player.x = 2700;
-    s.state.player.y = 960 - s.state.player.h;
+    const x0 = promise?.x0 ?? 0;
+    s.state.player.x = x0 - 300;
+    s.state.player.y = (promise?.y ?? 0) - s.state.player.h;
     s.run(R, 22);
     s.run(R | J, 20);
-    s.run(R, 120);
-    expect(s.state.player.y + s.state.player.h).toBeGreaterThan(1000);
+    const land = s.run(R, 40).find((e) => e.type === 'land');
+    expect(land?.y).toBeGreaterThan((promise?.y ?? 0) + 100);
+    expect(land?.x).toBeLessThan(promise?.x1 ?? 0);
+  });
+});
+
+describe('wood-hatch fits the wood backdrop', () => {
+  it('far0 bakes as one tile, so the far pair pass (and with it the sky and the moon) is built', () => {
+    // far.ts: far0 is baked at 0.62 with a 60 px pad and shown with the sky only when it is a single
+    // tile (bg-bake MAX_TILE_W 2048). A wider room (a wider camera range) splits it, and the opaque far
+    // composite then hides the sky: no moon (round 2, at 8192 wide).
+    const r = coverRect(new LayerTree(WOOD_HATCH), 'far0', 60);
+    expect(r.w * 0.62).toBeLessThanOrEqual(2048);
+  });
+});
+
+describe('the room camera', () => {
+  it('the test grove keeps the shared tuning; wood-hatch frames her feet at 0.62', () => {
+    expect(cameraFor(GROVE)).toBe(cameraTuning);
+    const ct = cameraFor(WOOD_HATCH);
+    expect(ct.anchorY).toBe(0.62);
+    const st = createState(1, cloneTuning(defaultTuning), WOOD_HATCH);
+    const cam = createCamera(st, WOOD_HATCH, ct);
+    const feet = st.player.y + st.player.h;
+    expect((feet - cam.y) / SAFE_H).toBeCloseTo(0.62, 2);
+  });
+
+  it('the lean follows sim time after the hatch; a teleport or a restart ends it', () => {
+    const lean = WOOD_HATCH.camera?.lean;
+    expect(lean).toBeDefined();
+    if (!lean) return;
+    expect(leanWeight(lean, lean.from - 0.1)).toBe(0);
+    expect(leanWeight(lean, lean.from + lean.in + 0.1)).toBe(1);
+    expect(leanWeight(lean, lean.from + lean.in + lean.hold + lean.out + 0.1)).toBe(0);
+    const b = new CameraBeats(WOOD_HATCH.camera);
+    b.onStep([{ type: 'hatch', x: 0, y: 0, cx: 0, cy: 0, auto: false, frames: 200 }], 201);
+    b.update(1 / 60, 201, 1);
+    expect(b.y).toBeCloseTo(WOOD_HATCH.camera?.hatchKick ?? 0, 0);
+    const mid = 201 + Math.round((lean.from + lean.in + 1) * 60);
+    for (let i = 0; i < 30; i++) b.update(1 / 60, mid, 1);
+    expect([b.x, b.y]).toEqual([lean.x, lean.y]);
+    b.onStep([{ type: 'spawn', x: 0, y: 0 }], mid + 1);
+    b.update(1 / 60, mid + 1, 1);
+    expect([b.x, b.y]).toEqual([0, 0]);
   });
 });
