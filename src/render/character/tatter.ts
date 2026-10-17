@@ -18,9 +18,10 @@ import { tuning } from '../../sim/tuning';
 import type { PlayerView, RenderContext } from '../contract';
 import { SWARM_PASS, swarmPassFocus, swarmPassWeight } from '../swarm/timing';
 import { clamp, lerp, noise1, sat, smoothstep } from './math';
+import { drawMothWing, flapWind, TORN, WHOLE, type WingPose } from './tatter-wing';
 import { drawVesper, type View } from './vesper/draw';
 import { Painter, rgb } from './vesper/paint';
-import { Rig } from './vesper/rig';
+import { J_COLLAR, Rig } from './vesper/rig';
 import { Secondary } from './vesper/wings';
 
 /** Knobs (seconds of render time, world px). */
@@ -43,6 +44,12 @@ export const TATTER = {
   droop: 25,
   /** Its try at the air: a hop off the branch (px) at the wings' peak, and how hard it lands back (it crumples). */
   hop: 16,
+  /**
+   * Its moth wings (tatter-wing.ts), angles of the span on screen for a moth facing west (rad, y down:
+   * negative = raised): the good wing at rest and at the top of its try, the torn one drooping and how
+   * little it lifts; spans in px (the torn one shorter).
+   */
+  wings: { good: -0.85, goodTry: -1.45, torn: 0.34, tornTry: 0, goodSpan: 33, tornSpan: 25 },
   /** Its snapped antenna's length (of a whole one). */
   antenna: 0.5,
   /**
@@ -153,6 +160,7 @@ export class Tatter {
       stream: 0,
       eyeLit: TATTER.eyes,
       unarmed: true,
+      wingsHidden: true,
       // (no lantern balls: its light is out)
       tips: [0, 0],
     };
@@ -292,6 +300,13 @@ export class Tatter {
   }
 
   private stirK = 0;
+  private readonly goodPose: WingPose = { x: 0, y: 0, ang: 0, span: 1, lead: -1 };
+  private readonly tornPose: WingPose = { x: 0, y: 0, ang: 0, span: 1, lead: -1 };
+
+  /** A wing angle authored for a moth facing west (span pointing back = east) turned to its facing. */
+  private angFor(a: number, back: number): number {
+    return back > 0 ? a : Math.PI - a;
+  }
   private lastT = 99;
 
   /** For tools (`__tatter`): what it is doing now. */
@@ -329,7 +344,40 @@ export class Tatter {
     p.outlineAlpha = 0.95;
     p.mesh.position.set(this.me.cx, this.me.feetY + this.hopY * TATTER.scale);
     p.begin();
+    // Its own moth wings (tatter-wing.ts): the good one behind it, the torn one over it.
+    const j = this.rig.frame.j;
+    const rx = j[J_COLLAR * 2]!;
+    const ry = j[J_COLLAR * 2 + 1]!;
+    const back = -this.facing;
+    const W = TATTER.wings;
+    const tryK = this.rig.tryWings;
+    const beat = Math.sin(clock * 9.5);
+    const good = this.goodPose;
+    good.x = rx + back * 1.5;
+    good.y = ry - 1;
+    good.ang = this.angFor(W.good + (W.goodTry - W.good) * tryK * (0.65 + 0.35 * beat), back);
+    good.span = W.goodSpan;
+    good.lead = back > 0 ? -1 : 1;
+    const torn = this.tornPose;
+    const tremble = 0.5 + 0.5 * Math.max(0, noise1(clock * 1.3, 191));
+    torn.x = rx + back * 0.5;
+    torn.y = ry + 1;
+    torn.ang = this.angFor(
+      W.torn +
+        0.05 * Math.sin(clock * 1.1) +
+        0.03 * tremble * Math.sin(clock * 17) +
+        (W.tornTry - W.torn) * tryK * (0.5 + 0.5 * beat),
+      back,
+    );
+    torn.span = W.tornSpan;
+    torn.lead = back > 0 ? -1 : 1;
+    const fw = flapWind(this.x, clock);
+    p.outline = 1.2;
+    drawMothWing(p, good, WHOLE, clock, 0, fw);
+    p.outline = 1.5;
     drawVesper(p, this.rig.frame, this.view, clock);
+    p.outline = 1.2;
+    drawMothWing(p, torn, TORN, clock, tremble, fw);
     p.outline = 0;
     p.end(this.me.cx, this.me.feetY - 40);
   }

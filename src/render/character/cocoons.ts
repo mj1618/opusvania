@@ -79,8 +79,11 @@ const HUSK_LOW = rgb(0x120f18);
 // Hers is new silk, paler than the old husks: the eye goes to it first.
 const HERS_TOP = rgb(0x433d4c);
 const HERS_LOW = rgb(0x1d1825);
-const INSIDE = rgb(0x07050a);
-const INSIDE_LOW = rgb(0x0e0b13);
+// The inside of a husk: its upper hollow catches a little moonlight through the split, the bottom is dark.
+const INSIDE = rgb(0x1e1a26);
+const INSIDE_LOW = rgb(0x08060b);
+/** The shell's cut thickness along a torn edge: paler, the inner surface catching the moon. */
+const SHELL_EDGE = rgb(0x5d5868);
 const SILK = rgb(0xaab3c0);
 const SILK_DIM = rgb(0x5d6470);
 const FIBRE = rgb(0x6d7482);
@@ -110,6 +113,15 @@ const SH_SEAM: Shade = {
   alpha: 0.7,
 };
 const SH_THREAD: Shade = { c0: SILK, c1: SILK_DIM, rim: 0.4, cool: 0, form: 0, band: 0.5, alpha: 0.75 };
+const SH_SHELL_EDGE: Shade = {
+  c0: SHELL_EDGE,
+  c1: rgb(0x3a3542),
+  rim: 0.6,
+  cool: 0.1,
+  form: 0,
+  band: 0.5,
+  alpha: 0.85,
+};
 /** Silk with a per-sample tone (`silkTone`). */
 const SH_SILK: Shade = { c0: SILK_DIM, c1: SILK_DIM, rim: 0.2, cool: 0, form: 0, band: 0.5, alpha: 0.8 };
 
@@ -989,6 +1001,21 @@ export class CocoonRow {
       const ang = side < 0 ? pod.halfL.x : pod.halfR.x;
       const n = pod.half(p, side, ang, this.seam);
       p.ribbon(n, sh, true, false);
+      // The shell's thickness: a pale band just inside the torn seam (the inner surface, lit through the split).
+      const sm0 = this.seam;
+      if (sm0.n > 2) {
+        const mx = pod.sx[Math.floor(N * 0.5)]!;
+        for (let i = 0; i < sm0.n; i++) {
+          const x = sm0.pts[i * 2]!;
+          const y = sm0.pts[i * 2 + 1]!;
+          // Toward the half's own side: the band lies on the shell, not in the slit.
+          const o = (x >= mx ? 1 : -1) * 1.1;
+          p.px[i] = x + o;
+          p.py[i] = y;
+          p.pw[i] = 1.1 * Math.sin((Math.PI * (i + 0.5)) / sm0.n);
+        }
+        p.ribbon(sm0.n, SH_SHELL_EDGE, false, false);
+      }
       // The torn seam's edge is silk: it catches the moon.
       const sm = this.seam;
       if (sm.n > 1) {

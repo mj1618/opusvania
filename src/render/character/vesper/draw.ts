@@ -93,6 +93,8 @@ export interface View {
   pale: number;
   /** The light in her eyes: 1 as usual, lower = the bright core shrinks (her light going into a lantern). */
   eyeLit: number;
+  /** Its wings are not drawn here (the cast: Tatter draws its own moth wings round this call). */
+  wingsHidden?: boolean;
   /** No thorn at the hip (the cast: Tatter carries none). */
   unarmed?: boolean;
   /** Per antenna (index as `antennae`), its lantern tip's light (0 = none: a snapped antenna). */
@@ -1244,8 +1246,9 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   const kNear = lerp(1, lerp(0.74, 1, t), tint);
   // The wing eye-spots answer a glint last, after the eyes.
   const spot = Math.max(v.spot, v.glintT < 0.8 ? v.glintK * bump((v.glintT - 0.3) / 0.14, 0, 1) : 0);
-  wing(p, v.wings[far]!.strands, v.open, kFar, v.glow, clock, v.soarW[far]!, v.back[far]!, spot, v.stream);
-  if (behind)
+  if (!v.wingsHidden)
+    wing(p, v.wings[far]!.strands, v.open, kFar, v.glow, clock, v.soarW[far]!, v.back[far]!, spot, v.stream);
+  if (behind && !v.wingsHidden)
     wing(
       p,
       v.wings[near]!.strands,
@@ -1275,7 +1278,7 @@ export function drawVesper(p: Painter, f: Frame, v: View, clock: number): void {
   if (swFar && !v.bladeFront && !v.bladeOver && v.slashW > 0.5) blade(p, j, sw, v.bladeAng, bk, v.bladeLen);
   torso(p, j);
   leg(p, j, near, false);
-  if (!behind)
+  if (!behind && !v.wingsHidden)
     wing(
       p,
       v.wings[near]!.strands,

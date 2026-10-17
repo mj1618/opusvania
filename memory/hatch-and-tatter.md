@@ -1,4 +1,4 @@
-# The hatch, the cocoon row and Tatter (render, `src/render/character/`; rounds 1-3, 2026-10-17)
+# The hatch, the cocoon row and Tatter (render, `src/render/character/`; rounds 1-4, 2026-10-17; paused: artwork stopped for greybox level design)
 
 Scene 1's acting (docs/design/scenes/01-hatching-branch.md). Sim side: memory/rooms.md (`state.hatch`, `hatchStir`, `hatch`).
 
@@ -53,6 +53,10 @@ Scene 1's acting (docs/design/scenes/01-hatching-branch.md). Sim side: memory/ro
   (`View.thornA`), no contact shadow off the ground (`View.shadowA`), damp wings fill 0.72 -> 1 (`wingFill`).
 - `__vesper.birth` reads `{t, w, light, fill, drop}`. Unit tests in character-vesper.test.ts.
 
+## Husk shells (round 4)
+The inside of a husk is paler near its top (`INSIDE` 0x1e1a26 -> 0x08060b: moonlight through the split) and each
+torn seam has a pale band of the shell's cut thickness on the half's own side (`SH_SHELL_EDGE`).
+
 ## Silk (round 3, review: "ruler-straight white lines")
 Every thread, tail and torn-seam edge is a 0.32-0.5 px ribbon with per-sample tone (`silkTone`): dark along most
 of it, catching the moon only in short segments that slide along it; threads bow sideways by their own lie, the
@@ -65,10 +69,15 @@ pale beads is NOT ours**: it is the playfield painter's silk pads (scene/lib/pf-
   (`Secondary.antLen` 0.5).
 - **Round 3 (review: "a caped imp")**: a MOTH's crouch, not a biped's (`PERCH`: pelvis 12.5, spine leaned 1.02 rad
   so the body is near level, forelegs down on the bark ahead); `STRAIN` lifts the front for the swarm.
-- **The torn wing**: the near wing held open on its own at a wrong angle (`Secondary.splay` 0.9, `droop` 25: up
-  and back off its body) with its strands torn to uneven lengths (`TEAR.len` [0, 0.58, 0.12, 0.72, 0.4]: leading
-  edge whole, then long/short teeth = a bitten, frayed forewing with its eye-spot). Splay 0.5 with droop 60-100
-  read as a ragged cape; splay 0.55 / droop -18 with the old lengths read as a horn. The intact wing stays folded.
+- **The wings (round 4; review: "one rigid black blade with a bullseye")**: Tatter no longer uses the cape
+  strands (`View.wingsHidden`); `tatter-wing.ts` `drawMothWing` paints moth wings off the collar joint: a rounded
+  forewing (Catmull-Rom outline `FORE`) over a hindwing lobe (`HIND`), a dusty fringe (`Painter.sweep` veil), two
+  pale veins, a small soft eye-spot (two `soft` blobs, no ring). `WHOLE` = the good wing, drawn behind the body,
+  raised (`TATTER.wings.good` -0.85 rad, span 33). `TORN` = the near wing, drawn over it: shorter (span 25),
+  paler and worn (`SH_WORN`), irregular `bites` (one a deep slit), a frayed trailing edge that trembles, most of
+  the hindwing gone, a loose `flap` hanging from the tear and fluttering in the wind; it droops (0.34 rad) and
+  barely lifts in the try. Angles are authored for a moth facing west (`angFor` mirrors them). Old cape-tear
+  knobs (`Secondary.tear / splay / droop`) are still in wings.ts, unused by Tatter now.
 - Timeline (render s after the break): watches her cocoon while she is inside (a stir makes it lift); a small
   rise at the break; looks at her within 900 px. **The swarm** (render/swarm/timing.ts: `SWARM_PASS` in 2.4 /
   full 3.8 / hold 8.0 / out 9.5, `swarmPassWeight`, `swarmPassFocus` = the moon in view px): it looks up 0.6 s
@@ -96,9 +105,17 @@ crown) and the hem band by 0.5; the face, hands and feet keep their tone.
 cocoon, `(1150, 990, 3)` for Tatter. A teleport ends the hatching silently (the shots tool shows an open husk).
 Clip: `npm run clip -- --script ".170 J1 .20 J1 .20 J1 .130" --zoom 1.5 --name hatch-r1`.
 
-## Weak (round 3)
-- The bark climb is dark on dark: she is a near-black figure on the near-black limb face; the pulls read in
-  close-up, at zoom 1 it is a slow rise. No handholds are drawn on the bark.
-- Tatter's torn wing reads as torn in close-up; its teeth are sharp and even, closer to a bat's or a dragon's
-  than a moth's frayed scales, and at zoom 1 it is still small.
-- The husks still read a little as pairs of dark leaves: no shell thickness, no inner surface.
+## Where it stopped (2026-10-17, round 4) and what is next
+Artwork is paused for greybox level work. Round 4 (Tatter's moth wings, husk shells) is committed; it was NOT
+reviewed. e2e: under a machine load of ~80 the boot test timed out at 90 s once; run alone the suite passed
+(5/6 then the rest) and round 3 passed 8/8. Next, if the acting resumes:
+- Tatter at zoom 1 (~60 px): check the torn wing's silhouette against the pale band; maybe a slower, bigger
+  droop and the flap larger. Its try (two beats, a hop) with the new wings was not looked at in a clip.
+- The bark climb is dark on dark (she is near-black on the near-black limb face): a rim on her from the moon or
+  a paler bark face behind her would make the pulls read at zoom 1.
+- Wing's / Tatter's antennae read as a jester / bunny cap (owner's pick: raise with Matt).
+
+## Weak (round 4)
+- The torn wing's damage is subtle at zoom 1; in close-up it reads (bitten, paler, smaller than the good wing).
+- The bark climb is dark on dark.
+- The husks read better (cut shell edges) but still a little as pairs of dark leaves.
