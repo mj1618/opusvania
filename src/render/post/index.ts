@@ -25,7 +25,7 @@ import { fxDebug } from '../scene/lib/fx-debug';
 import { renderHeroMatte, renderPlayfieldMask } from '../scene/lib/fx-mask';
 import { zoneColor, zoneMix, zoneWeights } from '../scene/lib/fx-zones';
 import { isGroveKit } from '../scene/lib/room-look';
-import { GOAL_LIGHTS, MAX_LIGHTS, POST, WOOD_GRADE, ZONE_GRADE, type ZoneGrade } from './config';
+import { GOAL_LIGHTS, MAX_LIGHTS, POST, WOOD_GRADE, WOOD_POST, ZONE_GRADE, type ZoneGrade } from './config';
 import { PostFilter } from './pipeline';
 
 export { POST } from './config';
@@ -125,7 +125,7 @@ export class PostStage {
     f.prefilterU.uHeroSource = lights.heroBloomSource;
 
     const u = f.u;
-    u.uMix[0] = bloom.intensity;
+    u.uMix[0] = isGroveKit() ? bloom.intensity : WOOD_POST.bloom;
     u.uMix[1] = lights.gain;
     u.uMix[2] = lights.haze;
     u.uMix[3] = POST.chroma;
@@ -143,7 +143,7 @@ export class PostStage {
     const zn = (zone: readonly [number, number, number], base: number): number =>
       base + (zoneMix(zone, zw) - base) * za;
     u.uTone[0] = zn(ZG.exposure, grade.exposure);
-    u.uTone[1] = Math.min(grade.shoulder, 0.999);
+    u.uTone[1] = Math.min(isGroveKit() ? grade.shoulder : WOOD_POST.shoulder, 0.999);
     u.uTone[2] = zn(ZG.contrast, grade.contrast);
     u.uTone[3] = zn(ZG.pivot, grade.pivot);
     zc(ZG.shadowTint, grade.shadowTint, u.uShadow);
@@ -152,7 +152,7 @@ export class PostStage {
     u.uHighlight[3] = zn(ZG.highlightWarmth, grade.highlightWarmth);
     u.uVignette[0] = vignette.inner;
     u.uVignette[1] = vignette.outer;
-    u.uVignette[2] = vignette.strength;
+    u.uVignette[2] = isGroveKit() ? vignette.strength : WOOD_POST.vignette;
     u.uVignette[3] = vignette.tintAmount;
     u.uSepLook[2] = vignette.lightKeep;
     u.uSepLook[3] = vignette.lightFrom;
@@ -290,7 +290,7 @@ export class PostStage {
     lu.uShape[2] = lights.hazeReach;
     lu.uShape[3] = lights.background;
     lu.uDim = lights.inBrightPlaces;
-    u.uLightBack[0] = bloom.paleCut;
+    u.uLightBack[0] = isGroveKit() ? bloom.paleCut : WOOD_POST.paleCut;
     const sceneH = this.ctx.scene.height;
     const high = Math.min(1, Math.max(0, (sceneH - SAFE_H / 2 - camera.y) / Math.max(1, sceneH - SAFE_H)));
     u.uLightBack[3] = bloom.wrap + (bloom.wrapHigh - bloom.wrap) * high;

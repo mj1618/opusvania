@@ -61,13 +61,16 @@ export const SKY = {
    * far warm afterglow (`art.afterglow`) as a low band on the right, `bandHalf` px half height.
    */
   wood: {
-    core: 0xf6f9ff,
+    core: 0xfafcff,
     glowK: 0.5,
     parallax: 0.02,
     /** Shaded at half the logical view (the Grove's quarter is too coarse for stars and a moon's face). */
     renderScale: 0.5,
-    /** The moon's face: darker seas (share of value lost), edge softness (px). */
-    maria: 0.07,
+    /**
+     * The moon's face: how much value the maria lose (Matt: "moons aren't totally white"; target:
+     * highlands ~205-220, maria ~150-185 after post), edge softness (px).
+     */
+    maria: 0.33,
     edge: 2.5,
     /** Stars: chance per cell, cell size (view px), peak brightness, how far up the haze lets them go. */
     stars: 0.16,
@@ -255,12 +258,45 @@ void main() {
     col += vec3(0.75, 0.84, 1.0) * star * uCloud.w * (1.0 - cl);
     col = mix(col, mix(uCloudCol, uCloudLit, near), cl * uCloud.x);
     col += uCloudLit * rimc * near * 0.25 * uCloud.x;
-    // The moon's face: soft edge, darker seas, a little limb darkening.
+    // The moon's face (Matt: "moons aren't totally white"): a procedural near side, not a copied map.
+    // Large dark maria in a recognisable cluster (a big western sea, a chain of round ones across the
+    // north and east, a small isolated one at the eastern limb), their edges broken by noise; fine
+    // highland mottling; a few craters with lit rims and one young rayed crater in the south; limb
+    // darkening. The edge stays a clean soft disc for the swarm to cross.
     float rr0 = rm / max(uDisc.x, 1.0);
     float face = smoothstep(uDisc.x + uMoonFace.y, uDisc.x - uMoonFace.y, rm) * uDisc.y;
     vec2 mp = (p - uMoon.xy) / max(uDisc.x, 1.0);
-    float sea = smoothstep(0.45, 0.7, texture(uNoise, mp * 0.32 + 0.21).r * 0.7 + texture(uNoise, mp * 0.9 + 0.6).g * 0.3);
-    vec3 disc = uDiscCol * (1.0 - uMoonFace.x * sea) * (1.0 - 0.12 * rr0 * rr0);
+    vec2 warp = (vec2(texture(uNoise, mp * 0.55 + 0.13).r, texture(uNoise, mp * 0.55 + 0.71).g) - 0.5) * 0.22;
+    vec2 mw = mp + warp;
+    float sea = 0.0;
+    sea = max(sea, smoothstep(1.0, 0.55, length((mw - vec2(-0.42, 0.06)) / vec2(0.34, 0.5))));
+    sea = max(sea, smoothstep(1.0, 0.5, length((mw - vec2(-0.2, -0.32)) / vec2(0.3, 0.24))));
+    sea = max(sea, smoothstep(1.0, 0.5, length((mw - vec2(0.12, -0.28)) / vec2(0.2, 0.18))));
+    sea = max(sea, smoothstep(1.0, 0.5, length((mw - vec2(0.3, -0.02)) / vec2(0.24, 0.2))));
+    sea = max(sea, smoothstep(1.0, 0.5, length((mw - vec2(0.08, 0.26)) / vec2(0.22, 0.13))) * 0.8);
+    sea = max(sea, smoothstep(1.0, 0.45, length((mw - vec2(0.62, -0.24)) / vec2(0.12, 0.1))));
+    // Inside the seas the floor is uneven too; the highlands are mottled and grainy.
+    float hm = texture(uNoise, mp * 1.6 + 0.37).b;
+    float hf = texture(uNoise, mp * 4.2 + 0.9).r;
+    sea *= 0.82 + 0.3 * hm;
+    float shade = 1.0 - uMoonFace.x * sea + (hm - 0.5) * 0.1 + (hf - 0.5) * 0.07;
+    // Craters: dark floors with a lit rim on the side away from the sun (light from the upper right).
+    vec3 cr[5] = vec3[5](vec3(-0.05, 0.52, 0.09), vec3(0.47, 0.4, 0.07), vec3(-0.6, -0.45, 0.08), vec3(0.38, -0.56, 0.06), vec3(-0.3, 0.36, 0.06));
+    for (int i = 0; i < 5; i++) {
+      vec2 d = mp - cr[i].xy;
+      float rc = length(d) / cr[i].z;
+      float rim = smoothstep(0.75, 1.0, rc) * smoothstep(1.35, 1.0, rc);
+      shade += rim * 0.1 * (0.5 - 0.5 * dot(normalize(d + 1e-4), vec2(0.42, -0.91)));
+      shade -= smoothstep(1.0, 0.55, rc) * 0.08;
+    }
+    // A young crater in the south with faint rays fanning across the face.
+    vec2 ty = mp - vec2(-0.1, 0.62);
+    float ta = atan(ty.y, ty.x);
+    float rays = smoothstep(0.55, 0.9, texture(uNoise, vec2(ta * 0.9, 0.37)).r) * exp(-length(ty) * 2.2);
+    shade += rays * 0.1 + smoothstep(0.07, 0.025, length(ty)) * 0.1;
+    // Limb darkening: gentle, then a little more right at the edge.
+    shade *= 1.0 - 0.1 * rr0 * rr0 - 0.12 * pow(rr0, 6.0);
+    vec3 disc = mix(uDiscCol, uDiscCol * vec3(0.86, 0.9, 1.0), sea * 0.6) * shade;
     col = mix(col, disc, face);
   } else {
     col = mix(col, uDiscCol, smoothstep(uDisc.x + 2.0, uDisc.x - 2.0, rm) * uDisc.y);

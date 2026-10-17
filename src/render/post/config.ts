@@ -238,6 +238,15 @@ export const ZONE_GRADE = {
  * the glade's exposure and rich-dark saturation turned them a loud royal blue (chroma 50-56 against
  * the look target's 30-42).
  */
+/**
+ * The wood's overrides of global POST knobs (room-keyed in index.ts). The moon is the frame's one
+ * real highlight and it has a face (Matt: "moons aren't totally white"): with the glade's shoulder
+ * (0.74) and bloom (0.7) its highlands fell 215 -> 195 and the bloom lifted its maria 168 -> 183,
+ * a flat white disc. A higher shoulder and less bloom keep the seas readable and the halo near target;
+ * a lighter vignette, because the moon sits out at x ~0.78 in the opening and lost ~15 luma to it.
+ */
+export const WOOD_POST = { shoulder: 0.95, bloom: 0.42, paleCut: 0.9, vignette: 0.5 };
+
 type Three = readonly [number, number, number];
 /** A zone grade table (ZONE_GRADE's shape, any numbers). */
 export type ZoneGrade = { amount: number } & { [K in Exclude<keyof typeof ZONE_GRADE, 'amount'>]: Three };

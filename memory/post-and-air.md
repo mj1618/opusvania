@@ -306,6 +306,9 @@
   1.04, richSaturation 1.25, cool highlights, **toeDepth 0.65** (the glade's 0.8 crushed the night sky to 3-14 and
   the crowns to 17, under the branch's shadow: review round 1). Exposure and toe trade against each other: 1.16 /
   0.45 measured mean 39 and near-black 30%; 1.04 / 0.65 sits in the target. The moon's disc ~200-205.
+- `WOOD_POST` (config.ts): the wood's overrides of global POST knobs: shoulder 0.95, bloom 0.42, paleCut 0.9,
+  vignette 0.5. With the glade's shoulder 0.74 / bloom 0.7 the moon's highlands fell 215 -> 195 and bloom lifted
+  its maria 168 -> 183 (a flat white disc). Compare a shot with `__game.debug.post(false)` to see what post does.
 - Air: `AIR_WOOD` (air.ts; `A` is the room's config, set in init): thin cool beams, low fog sheets, 420 cool motes
   (150 showed 3-6), no fireflies, no ambient moth flock, 6 leaves. `WOOD_AIR`: `Silk` (4 loose threads drifting
   on `wind()`, soft (a wide faint stroke under a fine one) and lit only near the moon (`moonReach`): 9 bright

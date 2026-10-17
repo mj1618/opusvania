@@ -276,6 +276,14 @@ knob: `lib/bg-wood.ts` (`WOOD`, `WOOD_STAGE`).
   fissures lit on the moon side, burls, a faint broken rim; a strong even rim read as neon). Limbs behind the trunk,
   leaf pads dark (lit pads = clouds). `WOOD.mid.clear` keeps the moon's place free at the opening and the lean.
   No hanging silk threads (static 1 px lines read as seams); silk drifts in air.ts.
+- **The moon has a face** (Matt: "moons aren't totally white", 2026-10-17): sky.ts draws a procedural near side
+  in the moon's own coords (`mp` = offset / r): six maria as noise-warped ellipses in a recognisable cluster
+  (a big western sea, a chain across the north and east, a small one at the eastern limb), mottled highlands, five
+  craters with lit rims away from the upper-right sun, one young rayed crater in the south, limb darkening; cool
+  grey core `0xfafcff`, maria tinted grey-blue (`maria` 0.33). Measured after post: highlands 192-210 (p90
+  208-224), maria 163-169. Post flattened it (see post-and-air `WOOD_POST`). The moon's screen x drifts ~1510
+  (opening) -> ~1409 (end): its parallax pivots on `LOOK.keyEntryX`, which grew with the room; the swarm reads
+  the same formula, so don't move one without the other.
 - Sky (`SKY.wood`): shaded at half size (stars and the moon's face need it), night `top/mid/low`, stars (cell
   hash, washed out near the moon and in the haze), clouds drifting 16 px/s with moonlit edges, the moon's face
   (`maria`, soft `edge`, limb darkening), halo `glowK`, horizon haze and afterglow riding at far0's parallax.
