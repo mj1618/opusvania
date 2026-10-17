@@ -8,6 +8,7 @@ import labWorldBJson from '../../content/rooms/lab-world-b.json' with { type: 'j
 import labWorldCJson from '../../content/rooms/lab-world-c.json' with { type: 'json' };
 import testGroveJson from '../../content/rooms/test-grove.json' with { type: 'json' };
 import woodBurrowJson from '../../content/rooms/wood-burrow.json' with { type: 'json' };
+import woodCapsJson from '../../content/rooms/wood-caps.json' with { type: 'json' };
 import woodChaseJson from '../../content/rooms/wood-chase.json' with { type: 'json' };
 import woodClimbJson from '../../content/rooms/wood-climb.json' with { type: 'json' };
 import woodGladeJson from '../../content/rooms/wood-glade.json' with { type: 'json' };
@@ -597,6 +598,7 @@ const FILES: readonly unknown[] = [
   woodLanternJson,
   woodWellJson,
   woodClimbJson,
+  woodCapsJson,
   labWorldAJson,
   labWorldBJson,
   labWorldCJson,

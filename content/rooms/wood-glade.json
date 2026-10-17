@@ -21,8 +21,11 @@
     { "tag": "trunk", "x": 2816, "y": 0, "w": 64, "h": 1920, "kick": "west" },
     { "tag": "ground", "x": 0, "y": 1664, "w": 1408, "h": 192 },
     { "tag": "ground", "x": 0, "y": 1856, "w": 1216, "h": 648 },
+    { "tag": "ground", "x": 0, "y": 1856, "w": 1216, "h": 648 },
+    { "tag": "ground", "x": 1216, "y": 2048, "w": 192, "h": 456 },
     { "tag": "ground", "x": 1216, "y": 2048, "w": 192, "h": 456 },
     { "tag": "ground", "x": 2368, "y": 2176, "w": 512, "h": 328 },
+    { "tag": "ground", "x": 1408, "y": 2304, "w": 960, "h": 200 },
     { "tag": "ground", "x": 1408, "y": 2304, "w": 960, "h": 200 }
   ],
   "oneWays": [],
@@ -35,7 +38,10 @@
     { "from": "e", "to": "p2", "needs": ["wallJump"], "oneWay": true }
   ],
   "marks": {
-    "stage": {"bask": {"x": 400, "y": 1470, "zoom": 1.12, "secs": 3}, "twitch": {"x": 1350, "y": 1664, "r": 110, "catches": 2}},
+    "stage": {
+      "bask": { "x": 400, "y": 1470, "zoom": 1.12, "secs": 3 },
+      "twitch": { "x": 1350, "y": 1664, "r": 110, "catches": 2 }
+    },
     "notes": [
       { "x": 640, "y": 120, "text": "R5 wood-glade  PURPOSE: glade (glade 1, glide's lock room)" },
       {
@@ -60,6 +66,12 @@
       { "x": 2400, "y": 2120, "text": "Z  (2368-2880, y 2176): east to wood-glidewalk" },
       { "x": 2400, "y": 1500, "text": "east trunk (to y 1920, west face kickable)" },
       { "x": 2400, "y": 1540, "text": "wall jump: kick up from Z, kick-glide west home" },
+      {
+        "x": 1000,
+        "y": 1900,
+        "text": "FIND: an alcove under the lip (1216-1408 x 1856-2048): walk off, turn back, glide in. W-alcove"
+      },
+      { "x": 1500, "y": 1440, "text": "LANDMARK: the lip over the moonlit chasm, the far trunk across it" },
       {
         "x": 1000,
         "y": 1900,

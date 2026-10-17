@@ -11,7 +11,8 @@
     { "id": "wood-hawkers", "x": 31424, "y": 7424 },
     { "id": "wood-lantern", "x": 35264, "y": 7424 },
     { "id": "wood-well", "x": 27584, "y": 10416 },
-    { "id": "wood-climb", "x": 38336, "y": 4864 }
+    { "id": "wood-climb", "x": 38336, "y": 4864 },
+    { "id": "wood-caps", "x": 23744, "y": 5376 }
   ],
   "areas": [
     {
@@ -26,7 +27,8 @@
         "wood-hollow",
         "wood-hawkers",
         "wood-lantern",
-        "wood-well"
+        "wood-well",
+        "wood-caps"
       ]
     },
     { "id": "wood-high", "rooms": ["wood-climb"] }

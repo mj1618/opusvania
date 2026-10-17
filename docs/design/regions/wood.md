@@ -477,7 +477,9 @@ y 0   [N in: x 384-1664]
   runs its back → a **real drop** of ~330 over a 128 gap → E (3456–4480, y 1280) → a second real drop of 320 →
   the lookout V2 (4608–5760, y 1600). A twig line (one-way 3584–4224, y 1056) is the high line over E. A **trunk
   hollow** behind the landing (64–256 × 448–704) holds **W-cave**, a jump-cut from its floor (the chunk's first
-  find, ten seconds in). Catches 200 above the room's foot (the camera keeps her in frame). Landmark: the fallen
+  find, ten seconds in, and the up-cut taught where nothing can catch her: 114 over its floor, a standing up-cut
+  from under it). A trigger on V2 (`vista`, 4800–5184 × 1344–1600) sets `wood-vista` so the vista plays once per
+  save (staging). Catches 200 above the room's foot (the camera keeps her in frame). Landmark: the fallen
   trunk. The vista zone frames V2 (bounds 4416–6400 × 576–1920).
 - (Paper) A (256–2048, y 704) → gap 256, drop 128 → B (2304–3200, y 832, rolling) → step down 128 → C (3200–3840, y 960) →
   gap 320, drop 64 → D (4160–5056, y 1024) → step up 128 → V (5056–5760, y 896). Every gap ≤ 320, every step ≤ 128.
@@ -598,6 +600,8 @@ y 0  [N in 256-512]
   death at gap 3 costs ~10 s, not ~40. The **thorn branch** moved up over the jump's apex (3798–4198, y 920–1040,
   76 px clear): "hold jump to glide" teaches the jump-glide, and the branch sat on its arc (the impatient
   first-timer: 8 hits, 2 deaths). Both glides now cross gap 3; a glide on after W5's throw lands on T3 or T4.
+  A **firefly sign** on the safe floor under gap 1 (1100, 1408; `wood-sign-gap1`). **n-bough** (1920–2112 on the top
+  edge): R14's drop lands on the return bough (east to T-ret and the hub, or west home).
 - **Return bough** (wall jump): trunk T-ret (5632–5696) hangs from 256 to 1728 (256 over T4: touchable, and walked
   under to the exit), with kickable faces. At its top the rolling bough runs west at y 192 and rises to y 32 over
   E0 (448 up, so it can't be jumped onto from E0, and the jump hump from E0 clears it by ~24). It ends over E0:
@@ -635,6 +639,14 @@ y 10048 = local 2880. W-ff burns only once `wood-firefly-glimpse` is set (lure `
   confirm 0 over a full sweep. If it doesn't, raise the branch to 448 and move it 128 west. `edgeKick: false`, and
   every face around the gap is `kick: false`.
 - Camera: rest framing at P3, the glimpse look-up, a vertical look-up under the shaft, a vista lift on the crown.
+- **Round 1, batch 2: the cap climb to R14.** Bracket caps on the west wall: **B1** (0–192, top 2656, big) over the W
+  door, a jump from the root shelf (the door's walk-in passes under it, so the main path is never bounced), **B2**
+  (448–704, 2048), **B3** (0–256, 1440), then up through a one-way root (0–384, y 832) to **NW** (576–832), R14's
+  door. Tatter at P3 looks up at it (its want; staging's `marks.tatter.want` still points at the shelf's end, 930,
+  2870: move it to B1, ~96, 2656). **The root mesh**: the grate became a one-way root mesh over the climb (no hole
+  under the up-shaft: the curious first-timer fell into the well jumping across it, and climbing out landed below the
+  floor); the climb-out kicks up through it and lands on it. A **root lip** (640–672, 48 tall) before the well: going
+  down is a choice, not a short jump's accident.
 - **Round 1:** camera zones **rest** (fit over the floor: the whole hub, bounds 0–3840 × 380–3248) and **look-up**
   (the shaft framed tall, bounds 2176–3328 × 300–3248). **The well lid**: a flag gate over the well (384–640, y
   3136) shut until `wood-climbout` (set by climbing out of R10): the way into the well is now R9's floor, and the
@@ -658,6 +670,7 @@ y 10048 = local 2880. W-ff burns only once `wood-firefly-glimpse` is set (lure `
   goes here when the kit lands.
 - **The canopy line** (from the hub's crown, wall jump): branches at 384–512 with 320 gaps, **W-canopy** (2368, 300),
   and a **dangler** (`dang-canopy`, guards W-canopy) tied to the room top over the landing at 2300.
+- A **firefly sign** in the dark half (3250, 2624; flag `wood-sign-dark`).
 - Landmark: twin hummocks with the hawker's lane over them. Time: 1:30–2:30.
 
 ### 9 `wood-lantern`: the first lantern, the broken face, the way down (3840×2992; purpose: teach + lock + combine; round 1)
@@ -698,7 +711,9 @@ y 10048 = local 2880. W-ff burns only once `wood-firefly-glimpse` is set (lure `
 1888                          ═ledge═
 2112 ═══west hall═══╝     ╚═══glade 2 [P4]═══╝═════ pit floor, old burrback ═════════╝ catch 1840+ under the chute
 ```
-- In from R9's floor onto **P-chute** (L0). **The chute**: root ledges stepping down west in the dark, two 640 gaps
+- In from R9's floor onto **P-chute** (L0). The pit's camera lock now frames the gate too (bounds 3392–5696 ×
+  1280–2176; the curious first-timer stood at the gate with it off-screen). A one-way root step at the climb-out's
+  top (2560–2720, y 160): stand, jump, up through the hub's mesh. **The chute**: root ledges stepping down west in the dark, two 640 gaps
   that want a jump-glide, a 384 and a 320; **W-chute** at (8736, 700) over L2 and a **dangler** (`dang-chute`, its
   silk from the room top) over L2's landing. A fall is a catch back to the last ledge.
 - **The pit** (3584–5632 × 1344–2112): in through the roof hole off L4's west end. Sealed to the roof: the root gate
@@ -711,6 +726,30 @@ y 10048 = local 2880. W-ff burns only once `wood-firefly-glimpse` is set (lure `
   lands here (~2700 px of fall), a short walk to P4.
 - A fade here re-forms her at P-chute (the room's `reform` point wins over a patch in another room: a small sim
   rule), so the pit is retried from the chute, not from the hub. Landmark: the sealed pit under its roof hole.
+
+### 14 `wood-caps`: the cap stair (3840×2688; purpose: teach + secret; optional; round 1)
+```
+ 470 (W-c3)·  ▒root▒                                              the hub's NW door is east, 2368-2624
+ 640 ║chute║ ══top══(stone)
+1184         ▄cap-4▄  ║step 3 ║
+1500                          (W-c2)·      branch (dang-c2)
+1760          ▒bark▒[hollow] ▄cap-3▄ ═step 2═══
+2176                                   ▄cap-2▄ ═step 1═
+2440                                                 (W-c1)·   branch (dang-c1)
+2624 ↓ s (to R6's bough)                      ▄cap-1▄══════════════════════════════[E]
+```
+- North-west of the hub, over R6's east end (23744, 5376). In from the hub's cap climb at the east door (floor 2624).
+- **The dangler alone** (`dang-c1`, W-c1 lighting the way in, ~700 px of floor lit before its thread). Then **the cap
+  stair**: four steps west and up, each cap against the next step's face so a bounce never meets an underside:
+  cap-1 (mid) → step 1 (2208) → cap-2 (mid) → step 2 (1792) → cap-3 (big) → step 3 (1216) → cap-4 (big) → the top
+  (640). **Together**: `dang-c2` hangs over step 2 where cap-2 lands her, W-c2 292 above.
+- **The secret**: rotten bark in step 3's face (1024–1088) hides the **moonlit hollow** (quick wings: beat free in
+  2). **The top**: the wood's **moth-stone** (draws `wood-floor` on the map), W-c3, and the **hanging root** (bark,
+  192–256 × 448–640): cut it and step west, a trigger sets `wood-root-ladder` (TODO render: the root falls as
+  Tatter's ladder in the hub; from then on Tatter is ahead), and she drops down the chute (0–192) onto R6's return
+  bough: east to the hub. A loop of ~4 minutes. Patches: none (P3 is a door away); a fade re-forms her at the door.
+- Measured: four bounces to the top with no lamp catch; the hollow grants quick wings; the root cut sets the flag
+  and the drop lands on the bough at R6 y ~160. Landmark: the stair of caps climbing the dark.
 
 ### 11 `wood-climb`: the wall-jump test and the look back (2048×2560; purpose: test + vista)
 ```
@@ -983,6 +1022,11 @@ Still open: beaten free from W5 holding right lands on T3 in ~5 of 8 beat timing
 | R8, R9, R10 | one creature under one lamp | two lamps over the hawker's lane; burrback + dangler + L1 on P; danglers over R8's canopy landing and R10's chute landing | ≥ 4 creature + terrain combinations (6) |
 | R2, R5, R10 | catches at the room's foot | 200 above the foot (R5 grew 200) | the camera kept her in frame until the catch (feel r1) |
 | all | labels on | `art.labels: false` (G shows them) | players saw the designer's notes (first-timer) |
+
+| R14 | — | built: the cap stair, two danglers, three lamps, the moth-stone, the hollow, the root, the drop to R6 | rescope items 2, 3, 5, 7 |
+| R7 | grate (a shortcut hole) | a one-way root mesh; a lip before the well; B1-B3 to NW | the curious first-timer's hub traps; the cap climb |
+| R6, R8 | — | firefly signs (under gap 1, the dark half) | finds (4) |
+| R2 | — | trigger `vista` (wood-vista) | staging: the vista once per save |
 
 Measured (tests/unit/wood-rooms.test.ts): W7 30 of 45 jump-cuts, L1 20 of 45, W8 18 of 27; the hawker hits a runner
 before she reaches W7 (1.8 s lit first); the chute to the pit 754 frames with jump-glides and no catch; the no-skip

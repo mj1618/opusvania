@@ -29,8 +29,10 @@
   },
   "exits": [
     { "id": "w", "edge": "w", "from": 256, "to": 512 },
-    { "id": "e", "edge": "e", "from": 1728, "to": 1984 }
+    { "id": "e", "edge": "e", "from": 1728, "to": 1984 },
+    { "id": "n-bough", "edge": "n", "from": 1920, "to": 2112 }
   ],
+  "signs": [{ "id": "sign-gap1", "x": 1100, "y": 1408, "flag": "wood-sign-gap1", "rhythm": ".-.." }],
   "patches": [{ "id": "p-t3", "x": 3200, "y": 1472 }],
   "solids": [
     { "tag": "ground", "x": 0, "y": 512, "w": 576, "h": 1856 },
@@ -124,6 +126,9 @@
     { "from": "w", "to": "e", "needs": ["glide"], "oneWay": true },
     { "from": "w", "to": "p-t3", "needs": ["glide"], "oneWay": true },
     { "from": "p-t3", "to": "e", "needs": ["glide"], "oneWay": true },
+    { "from": "w", "to": "sign-gap1" },
+    { "from": "n-bough", "to": "e", "oneWay": true },
+    { "from": "n-bough", "to": "w", "oneWay": true },
     { "from": "e", "to": "w", "needs": ["wallJump"], "oneWay": true }
   ],
   "marks": {
@@ -146,7 +151,16 @@
       },
       { "x": 40, "y": 420, "text": "camera zone gap1: the whole gap and T2 in view from E0" },
       { "x": 3060, "y": 1380, "text": "P-t3 moon patch on T3 (the halfway rest: ~4 min from P2)" },
-      { "x": 2500, "y": 1700, "text": "FIND (pending kit): a firefly sign scratched on T3's face" },
+      {
+        "x": 900,
+        "y": 1300,
+        "text": "FIND: a firefly sign on the safe floor under gap 1 (stand still to read it)"
+      },
+      {
+        "x": 1900,
+        "y": 100,
+        "text": "n-bough: the drop from wood-caps (R14) lands on the return bough: east to T-ret and the hub, or west home"
+      },
       { "x": 2600, "y": 200, "text": "LANDMARK: the long bough overhead, the glidewalk's line under it" },
       { "x": 620, "y": 1360, "text": "safe floor; root rungs (one-ways) back up to E0" },
       {

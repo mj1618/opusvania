@@ -53,7 +53,29 @@
   ],
   "oneWays": [{ "tag": "branch", "x": 3584, "y": 1056, "w": 640 }],
   "marks": {
-    "stage": {"moon": {"x": 5980, "y": 930, "r": 64}, "lights": {"x": 5820, "y": 1600, "w": 820, "h": 220, "count": 28}, "stream": {"points": [[4300, 640], [4900, 760], [5500, 960], [5950, 1300], [6150, 1640]], "count": 160, "speed": 240}, "vista": {"flag": "wood-vista", "zone": "vista", "x": 5520, "y": 1300, "zoom": 0.92, "hold": 2.2, "title": "LAMPFALL", "parallax": 0.25}, "stragglers": {"count": 8, "path": [[5200, 1000], [5600, 1200], [5900, 1450], [6000, 1800], [6050, 2050]]}},
+    "stage": {
+      "moon": { "x": 5980, "y": 930, "r": 64 },
+      "lights": { "x": 5820, "y": 1600, "w": 820, "h": 220, "count": 28 },
+      "stream": {
+        "points": [[4300, 640], [4900, 760], [5500, 960], [5950, 1300], [6150, 1640]],
+        "count": 160,
+        "speed": 240
+      },
+      "vista": {
+        "flag": "wood-vista",
+        "zone": "vista",
+        "x": 5520,
+        "y": 1300,
+        "zoom": 0.92,
+        "hold": 2.2,
+        "title": "LAMPFALL",
+        "parallax": 0.25
+      },
+      "stragglers": {
+        "count": 8,
+        "path": [[5200, 1000], [5600, 1200], [5900, 1450], [6000, 1800], [6050, 2050]]
+      }
+    },
     "notes": [
       {
         "x": 1024,
@@ -80,6 +102,24 @@
         "x": 80,
         "y": 380,
         "text": "FIND: a hollow in the trunk behind her landing (64-256 x 448-704): W-cave, a standing up-cut"
+      },
+      {
+        "x": 1700,
+        "y": 560,
+        "text": "LANDMARK: THE FALLEN TRUNK (1600-3328), rolling down from 704 to 960: she runs its back"
+      },
+      { "x": 3330, "y": 1180, "text": "real drop 320 off the trunk's end, gap 128: a run clears it" },
+      { "x": 3700, "y": 1360, "text": "E  (3456-4480, y 1280)" },
+      { "x": 4500, "y": 1500, "text": "real drop 320, gap 128, onto the lookout V2" },
+      {
+        "x": 4700,
+        "y": 1000,
+        "text": "V2  THE VISTA (4608-5760, y 1600): camera zone vista from x 4800 (TODO: the ~2 s hold, input free after 1 s)"
+      },
+      {
+        "x": 80,
+        "y": 380,
+        "text": "FIND + TEACH: a hollow in the trunk behind her landing: W-cave, 114 over its floor: a standing up-cut (up + cut) from under it puts it out, and standing she is never pulled in"
       },
       { "x": 700, "y": 600, "text": "A  (256-1600, y 704): a run off the hatch's end lands here" },
       {
@@ -129,5 +169,6 @@
       { "name": "vista", "x": 5300, "y": 1600 }
     ]
   },
-  "lures": [{ "id": "wick-cave", "kind": "wick", "x": 160, "y": 590 }]
+  "lures": [{ "id": "wick-cave", "kind": "wick", "x": 160, "y": 590 }],
+  "triggers": [{ "id": "vista", "x": 4800, "y": 1344, "w": 384, "h": 256, "sets": "wood-vista" }]
 }

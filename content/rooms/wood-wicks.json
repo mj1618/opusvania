@@ -22,6 +22,9 @@
     { "tag": "ground", "x": 2048, "y": 1152, "w": 1792, "h": 1024 },
     { "tag": "trunk", "x": 1600, "y": 0, "w": 64, "h": 704 },
     { "tag": "trunk", "x": 896, "y": 0, "w": 128, "h": 576, "kick": false },
+    { "tag": "root", "x": 1152, "y": 248, "w": 24, "h": 300, "kick": false },
+    { "tag": "root", "x": 1264, "y": 248, "w": 24, "h": 140, "kick": false },
+    { "tag": "root", "x": 1320, "y": 248, "w": 24, "h": 240, "kick": false },
     { "tag": "root", "x": 1024, "y": 192, "w": 576, "h": 56, "kick": false },
     { "tag": "root", "x": 1152, "y": 248, "w": 24, "h": 300, "kick": false },
     { "tag": "root", "x": 1264, "y": 248, "w": 24, "h": 140, "kick": false },
@@ -34,7 +37,10 @@
     { "id": "wick-high", "kind": "wick", "x": 1408, "y": 352 }
   ],
   "marks": {
-    "stage": {"circlers": [{"lure": "wick-caught", "count": 7, "r": 95}], "props": [{"kind": "deadMoth", "x": 1300, "y": 1120, "facing": -1}]},
+    "stage": {
+      "circlers": [{ "lure": "wick-caught", "count": 7, "r": 95 }],
+      "props": [{ "kind": "deadMoth", "x": 1300, "y": 1120, "facing": -1 }]
+    },
     "notes": [
       { "x": 300, "y": 120, "text": "R3 wood-wicks  PURPOSE: teach (pull, Caught and snuff by consequence)" },
       { "x": 300, "y": 200, "text": "N in (one way): she falls ~900 and lands on L in the dark" },
@@ -60,6 +66,12 @@
       { "x": 1460, "y": 220, "text": "W-hi3 LOCK: wall jump's first lock, by the hanging trunk" },
       { "x": 1690, "y": 690, "text": "hanging trunk (1600-1664, to y 704): touchable, not climbable yet" },
       { "x": 2300, "y": 1260, "text": "N  drop 192 (2048-3840, y 1152): east to wood-burrow" },
+      {
+        "x": 1040,
+        "y": 150,
+        "text": "LANDMARK: THE ROOT KNOT: a root bridges the shaft wall to the hanging trunk, tendrils hang round W1"
+      },
+      { "x": 1100, "y": 1330, "text": "LORE (stand-in): the dead moth in the dip, under the knot" },
       {
         "x": 1040,
         "y": 150,

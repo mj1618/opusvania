@@ -38,10 +38,15 @@
     { "id": "e", "edge": "e", "from": 2624, "to": 2880 },
     { "id": "well", "edge": "s", "from": 384, "to": 640, "oneWay": true },
     { "id": "climb", "edge": "s", "from": 2560, "to": 2944 },
-    { "id": "e-high", "edge": "e", "from": 384, "to": 640 }
+    { "id": "e-high", "edge": "e", "from": 384, "to": 640 },
+    { "id": "nw", "edge": "w", "from": 576, "to": 832 }
+  ],
+  "caps": [
+    { "id": "cap-b1", "x": 0, "y": 2656, "w": 192, "h": 32, "tier": "big" },
+    { "id": "cap-b2", "x": 448, "y": 2048, "w": 256, "h": 32, "tier": "big" },
+    { "id": "cap-b3", "x": 0, "y": 1440, "w": 256, "h": 32, "tier": "big" }
   ],
   "patches": [{ "id": "p3", "x": 1280, "y": 3136 }],
-  "shortcuts": [{ "id": "grate", "x": 2560, "y": 3136, "w": 384, "h": 32, "opens": "s" }],
   "gates": [
     { "id": "well-lid", "x": 384, "y": 3136, "w": 256, "h": 32, "flag": "wood-climbout", "kick": false }
   ],
@@ -52,6 +57,7 @@
     { "tag": "ground", "x": 0, "y": 3136, "w": 384, "h": 112 },
     { "tag": "ground", "x": 640, "y": 3136, "w": 1920, "h": 112 },
     { "tag": "ground", "x": 2944, "y": 3136, "w": 896, "h": 112 },
+    { "tag": "root", "x": 640, "y": 3088, "w": 32, "h": 48 },
     { "tag": "root", "x": 3584, "y": 3008, "w": 128, "h": 128 },
     { "tag": "root", "x": 3712, "y": 2880, "w": 128, "h": 256 },
     { "tag": "trunk", "x": 2496, "y": 640, "w": 64, "h": 2336, "kick": "east" },
@@ -60,7 +66,10 @@
     { "tag": "branch", "x": 3008, "y": 640, "w": 832, "h": 64 },
     { "tag": "branch", "x": 256, "y": 512, "w": 512, "h": 48, "kick": false }
   ],
-  "oneWays": [],
+  "oneWays": [
+    { "tag": "root", "x": 0, "y": 832, "w": 384 },
+    { "tag": "root", "x": 2560, "y": 3136, "w": 384 }
+  ],
   "lures": [
     { "id": "wick-crown", "kind": "wick", "x": 3392, "y": 448 },
     { "id": "lantern-gap", "kind": "lantern", "x": 1280, "y": 512, "spin": 1 },
@@ -72,11 +81,11 @@
     { "from": "p3", "to": "e" },
     { "from": "p3", "to": "well", "flags": ["wood-climbout"], "oneWay": true },
     { "from": "p3", "to": "e-high", "needs": ["wallJump"] },
-    { "from": "climb", "to": "p3", "door": "grate" }
+    { "from": "p3", "to": "nw" },
+    { "from": "climb", "to": "p3", "oneWay": true }
   ],
   "marks": {
-    "stage": {"glimpse": {"flag": "wood-firefly-glimpse", "x": 1300, "y": 620, "zoom": 0.75, "secs": 4.2, "path": [[1900, 180], [1300, 260], [800, 330], [512, 400]], "away": [[512, 400], [300, 260], [-150, 120]]}},
-    "tatter": { "x": 1050, "y": 3136, "facing": -1, "want": [930, 2870] },
+    "tatter": { "x": 1400, "y": 3136, "facing": 1, "want": [930, 2870] },
     "notes": [
       { "x": 40, "y": 2560, "text": "R7 wood-hollow  PURPOSE: hub + rest + story" },
       { "x": 40, "y": 2620, "text": "W: in from wood-glidewalk onto the root shelf; drop 256 to the floor" },
@@ -106,6 +115,16 @@
         "y": 2400,
         "text": "LANDMARK: the hollow trunk's heart, a canopy gap of moonlight over the patch"
       },
+      {
+        "x": 40,
+        "y": 2560,
+        "text": "THE CAP CLIMB (optional): bracket cap B1 over the W door (a jump from the shelf), then B2, B3 and up through the root (one-way, 832) to NW: wood-caps"
+      },
+      {
+        "x": 40,
+        "y": 760,
+        "text": "NW: west into wood-caps (R14), the cap stair. Tatter can't bounce: it looks up at B1 from P3 (its want)"
+      },
       { "x": 40, "y": 3080, "text": "drowned-roots stub: seeping back wall (T2, opens from the marsh side)" },
       {
         "x": 1150,
@@ -120,7 +139,12 @@
       {
         "x": 2580,
         "y": 3060,
-        "text": "the grate: shows glade 2's moonlight; opens from below (wood-well's climb-out, which sets wood-climbout)"
+        "text": "the root mesh over the climb (one-way): stood on from above, climbed up through from wood-well (which sets wood-climbout)"
+      },
+      {
+        "x": 560,
+        "y": 3040,
+        "text": "a root lip before the well: dropping in is a choice, not a short jump's accident"
       },
       {
         "x": 2580,
@@ -146,7 +170,18 @@
         "y": 3220,
         "text": "SEAM FIX: interior 256 lower than the paper so W (R6's T4) and E (hawkers) meet at y 2880"
       }
-    ]
+    ],
+    "stage": {
+      "glimpse": {
+        "flag": "wood-firefly-glimpse",
+        "x": 1300,
+        "y": 620,
+        "zoom": 0.75,
+        "secs": 4.2,
+        "path": [[1900, 180], [1300, 260], [800, 330], [512, 400]],
+        "away": [[512, 400], [300, 260], [-150, 120]]
+      }
+    }
   },
   "shots": {
     "wide": [
