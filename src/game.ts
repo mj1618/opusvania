@@ -142,6 +142,17 @@ export class Game {
   }
 
   /**
+   * R in a game (memory/save.md): back to the moon patch she last rested at **in this run**, everything she
+   * has earned kept (this game's own save, not what storage holds: a slot another session wrote sent a
+   * first-timer forward with an ability she never found). Nothing is granted or skipped. Without a world
+   * (a test page), a fresh restart.
+   */
+  restartAtPatch(): void {
+    if (this.world) this.continueFrom(this.state.save);
+    else this.reset();
+  }
+
+  /**
    * Continue from `save` (memory/save.md): at its moon patch (the world's start if she never rested),
    * with everything it holds. Needs the world.
    */

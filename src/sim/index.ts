@@ -161,13 +161,17 @@ function glideAssistOver(state: GameState, scene: Scene): boolean {
   return false;
 }
 
-/** The room's moon patch nearest to her (feet), if it has any. */
+/**
+ * The room's moon patch nearest to her (feet) **at or below** where she lies, if it has one (area 1 r4: a fade
+ * near the crown re-forms her at the rest ledge, never past the climb, never above where she was).
+ */
 function nearestPatch(scene: Scene, p: { x: number; y: number; w: number; h: number }) {
   const fx = p.x + p.w / 2;
   const fy = p.y + p.h;
   let best: NonNullable<Scene['patches']>[number] | undefined;
   let bd = Number.POSITIVE_INFINITY;
   for (const q of scene.patches ?? []) {
+    if (q.y < fy) continue;
     const d = (q.x - fx) * (q.x - fx) + (q.y - fy) * (q.y - fy);
     if (d < bd) {
       bd = d;
@@ -377,7 +381,8 @@ export function step(
     const patch = state.save.patch;
     const pr = patch && world ? world.rooms[patch.room] : undefined;
     const pp = pr && patch ? pr.scene.patches?.find((q) => q.id === patch.id) : undefined;
-    // A room that keeps its fades (`reformPatch`, the oak): its own moon patch nearest to where she lay.
+    // A room that keeps its fades (`reformPatch`, the oak): its own moon patch nearest to where she lay, at
+    // or below her; with none there, the rules below (the saved patch, the room's `reform`, her door).
     const near = S.reformPatch ? nearestPatch(S, state.player) : undefined;
     if (near) {
       reformPlayer(state, S, P, events, near);

@@ -366,8 +366,9 @@ export interface Scene {
    */
   reform?: { x: number; y: number };
   /**
-   * A fade in this room re-forms her at its moon patch nearest to where she lay (whole), whatever patch the
-   * save holds (area 1 plan r3: a fade anywhere in the oak re-forms her in the oak, never in R8).
+   * A fade in this room re-forms her at its moon patch nearest to where she lay **at or below her** (whole),
+   * whatever patch the save holds (area 1 plan r3 / r4: a fade anywhere in the oak re-forms her in the oak,
+   * never in R8, never above where she was); with none at or below, the usual rules (`reform`, her door).
    */
   reformPatch?: boolean;
   /** A boss fight (src/sim/boss/, memory/bosses.md): its arena, lock, flags and the things it is made of. */

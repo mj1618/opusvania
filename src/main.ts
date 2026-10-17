@@ -101,9 +101,9 @@ async function boot(): Promise<void> {
       stage.present();
     }
   };
+  // R: back to the last moon patch of this run, its progress kept (`Game.restartAtPatch`); a test page restarts.
   const restart = (): void => {
-    const last = session ? readSave(store) : null;
-    if (last) game.continueFrom(last);
+    if (session) game.restartAtPatch();
     else game.reset();
   };
   const panel = new TuningPanel(tuning, restart, {

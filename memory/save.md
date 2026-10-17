@@ -28,6 +28,9 @@ save's patch (the world start's spawn if none), no hatching once anything was vi
   autosave on every `patchRest`, `gladeGrant`, `lureSnuff`, `shortcutOpen` and `roomEnter` (not `from: 'load'`).
   `?fresh` empties the slot first. **`?room=<id>` = a test boot: new game there, slot never read or written** (so the
   tools and tests, which all pass `?room=`, never touch a player's save).
-- R in a game page = back to the last save (`continueFrom`); in a test page = `reset()` as before.
+- R in a game page = `Game.restartAtPatch()`: back to the moon patch she last rested at **in this run**
+  (`continueFrom(game.state.save)`, everything earned kept, nothing granted or skipped; the world's start if she
+  never rested); in a test page = `reset()` as before. Until 2026-10-18 R read the storage slot, so a slot another
+  session wrote sent a first-timer forward with an ability she never found.
 - Debug: `__game.save()` -> `{save, stored, autosave}`, `__game.clearSave()`; tests seed a slot with
   `page.addInitScript` (tests/e2e/world.spec.ts).
