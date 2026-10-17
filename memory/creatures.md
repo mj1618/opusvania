@@ -215,7 +215,9 @@ Each hunts one moment of the lamp verb; placement is the builders', these are th
     Human-like in d8fe1be's den (with `radius` 1000, `taproot` [3200, 3296], `crack` set locally): 4 of 9 kill it
     (average 43 / 66 s, skilled 25 / 28 s), 0-1 fades there; the rest leave the fight after 90-160 s (they hop the
     ball but walk off from it lying open, and never use W-den). A roll tires after 6 walls (`rollTireBounces`: open,
-    no standoff). The bots want a roll tactic (pogo it, cut it open, the throw).
+    no standoff). The bots now have it (fight.ts `the den`, memory/playtest-harness.md): `npm run humanplay -- den`
+    brings it down in 18 of 18 runs (every skill and bot, the taproot set as above); in the chunk on 792b4be's room
+    (no taproot, radius 560) every human-like run that met it killed it.
   - **Past the taproot** (the strip it cannot reach) counts as camping in every phase: the slam throws her back
     under the root along the floor (`slamRefugeKick` 42, no lift).
   - **`crack`** (spawn): the flag set as phase 2 begins (the plug first cracks; `flagSet`); a retry has it: short beat.

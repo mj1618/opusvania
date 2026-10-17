@@ -141,6 +141,23 @@ A bot that plays like a person, over the whole chunk, watched as video. Built 20
   is let be after 10 s (30 s for bots) from the **last** blow either way, not from its start (bots waited on R10's
   escape ledges for minutes); from a ledge over the old burrback a person comes down (`come down`, through a
   one-way); `press and cut` drops through a one-way to a creature below.
+- **The den (the old burrback as a three-phase boss, 792b4be)**: fight.ts `the den`, one controller for every fight
+  persona (the human-like ones through their motor; it keeps its timers for the whole fight): never on a ledge over
+  its floor (down through a one-way); phase 1 and 3 rams: in to draw the ram (with 320 px of its ground behind her,
+  else she vaults over it), straight up in the tell (it lunges under a jump anywhere in it), a decided jump held its
+  full length; phase 3 waits beside the taproot so the ram ends in it (out to draw it if it will not come); the roll:
+  up as the ball comes (eta), steered onto it, a down cut over it (a landing unrolls it), or wait under W-den and jump
+  into it as the ball comes, the throw aimed at it and a cut in the launch (the throw-cut); open on its back: in and
+  cut. A boss awake within 1400 x 600 px is the fight from anywhere, never let be; the plan answers a lamp catch
+  itself. `npm run humanplay -- den [--skills ...] [--seeds ...]` runs it alone (a room whose boss has no `taproot`
+  gets the den's 3200-3296 and radius 1000 for the run): 18 of 18 down (casual 33-57 s, average 38-52, skilled 55 s-3:29),
+  0-1 fades; the throw-cut in a few, the pogo in all.
+- **Carriers (ants)** are terrain, not a fight (`foe` skips them; the passive cut too): on her floor 10-120 px ahead she
+  hops it (10 frames of jump), under a ceiling she waits for it to pass, and cuts one only after 150 frames blocked.
+  Lab (R8 with a trail of three across the first floor): 0 fights and 0 cut for every persona (HEAD's harness: 4
+  fights, all 3 cut).
+- **Glades** seen and open (a `when` flag set) whose gift she lacks are the first target (the claws where the old
+  burrback died: the bots had stopped in the den with nothing left to do).
 - What they found on df4b0c5: R8's throw works but the look-ahead bots take the dark tunnel (cheaper); R10's
   pogo-wick is not required for a glider (the 9728 -> 9088 glide makes it); naive (no look-ahead) still stalls in R8.
 - **Region targets table** the harness reads (targets.ts): any markdown table in `docs/design/regions/*.md` with a

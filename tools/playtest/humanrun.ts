@@ -4,6 +4,7 @@
  *   npm run humanplay -- run                                   # casual / average / skilled x seeds 1-3, rendered
  *   npm run humanplay -- run --skills average --seeds 4 --no-render
  *   npm run humanplay -- render playtest-reports/humanlike-<stamp>/average-s1   # (re)render one run
+ *   npm run humanplay -- den [--skills casual,average,skilled,explorer] [--seeds 1,2,3]   # the old burrback alone
  *
  * `run`: on the pinned clean build of HEAD (snapshot.ts; `--tree` = the working tree, served at --url), each
  * run plays headless at sim speed from the world's start (the persona `human-<skill>`: human.ts motor and
@@ -73,6 +74,9 @@ const { values: args, positionals } = parseArgs({
     url: { type: 'string', default: 'http://localhost:5180' },
     'no-render': { type: 'boolean', default: false },
     sha: { type: 'string', default: '' },
+    room: { type: 'string' },
+    radius: { type: 'string' },
+    at: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -495,6 +499,69 @@ async function run(): Promise<void> {
   );
 }
 
+// ---- den: the old burrback's fight alone, every skill (and the bots), headless.
+
+/**
+ * `npm run humanplay -- den [--skills casual,average,skilled,explorer] [--seeds 1,2,3] [--minutes 5]`: each persona
+ * from the den's patch (`--at x`) in `--room` (wood-well) with glide, until the old burrback is down or time is up.
+ * A room whose boss has no `taproot` yet gets the den's (3200-3296) and `--radius` (1000) for the run, said so.
+ */
+async function den(): Promise<void> {
+  const { runHeadless } = await import('./headless');
+  const { getRoom } = await import('../../src/scene/index');
+  const base = getRoom(args.room ?? 'wood-well');
+  type Spawn = NonNullable<typeof base.enemies>[number] & { taproot?: [number, number]; radius?: number };
+  const patched = (base.enemies ?? []).some((e) => e.kind === 'oldBurrback' && !(e as Spawn).taproot);
+  const room = {
+    ...base,
+    enemies: (base.enemies ?? []).map((e) =>
+      e.kind === 'oldBurrback' && !(e as Spawn).taproot
+        ? { ...e, taproot: [3200, 3296] as [number, number], radius: Number(args.radius ?? 1000) }
+        : e,
+    ),
+  };
+  if (patched)
+    console.log(
+      `(${base.id}'s old burrback has no taproot: the den's 3200-3296 and radius ${args.radius ?? 1000} for this run)`,
+    );
+  const skills = (args.skills ?? '').split(',').filter(Boolean);
+  const seeds = (args.seeds ?? '').split(',').filter(Boolean).map(Number);
+  let wins = 0;
+  for (const skill of skills)
+    for (const seed of seeds) {
+      const human = (SKILL_NAMES as readonly string[]).includes(skill) ? (skill as Skill) : undefined;
+      const unroll: Record<string, number> = {};
+      const r = runHeadless({
+        room,
+        persona: human ? `human-${human}` : skill,
+        ...(human ? { human } : {}),
+        personaSeed: seed,
+        seconds: Number(args.minutes ?? 5) * 60,
+        until: 'none',
+        giveUp: 200,
+        abilities: ['glide'],
+        at: { x: Number(args.at ?? 3744), y: (base.patches?.[0]?.y as number | undefined) ?? 2112 },
+        onStep: (_s, _m, _p, ev) => {
+          for (const e of ev)
+            if ((e.type as string) === 'enemyUnroll') {
+              const how = String((e as unknown as { how?: string }).how);
+              unroll[how] = (unroll[how] ?? 0) + 1;
+            }
+        },
+      });
+      const t = r.trace;
+      const kill = t.kills.find(
+        (k) => /burr/.test(k.id) && t.encounters[`${k.room}:${k.id}`]?.kind === 'oldBurrback',
+      );
+      if (kill) wins++;
+      const enc = Object.values(t.encounters).find((e) => e.kind === 'oldBurrback');
+      console.log(
+        `${skill.padEnd(11)} s${seed}: ${kill ? `down in ${mmss(kill.f)}` : `not down (${t.outcome} after ${mmss(t.frames)})`}, ${t.deaths.length} fades, ${enc?.hits ?? 0} hits, slams ${t.events.enemySlam ?? 0}, unrolled ${JSON.stringify(unroll)}, taproot ${t.events.enemyTaproot ?? 0}, den lamp catches ${t.lureCatches['wick-den'] ?? 0}`,
+      );
+    }
+  console.log(`${wins} of ${skills.length * seeds.length} down`);
+}
+
 async function main(): Promise<void> {
   const cmd = positionals[0];
   if (args.help || !cmd) {
@@ -507,6 +574,7 @@ async function main(): Promise<void> {
   else if (cmd === 'render')
     await render(resolve(positionals[1] ?? '.'), args.url ?? 'http://localhost:5180');
   else if (cmd === 'run') await run();
+  else if (cmd === 'den') await den();
   else throw new Error(`Unknown command "${cmd}" (run | render)`);
 }
 

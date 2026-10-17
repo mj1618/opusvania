@@ -1,5 +1,6 @@
 import { inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
+import { getRoom as getRoomFor } from '../../src/scene/index';
 import type { Room } from '../../src/scene/room';
 import type { SimEvent } from '../../src/sim/events';
 import { createState } from '../../src/sim/index';
@@ -487,4 +488,66 @@ describe('playtest harness: walls the planner reads (builder 1, R8)', () => {
     expect(spots([])).toEqual([460, 840]);
     expect(spots([ceiling])).toEqual([840]);
   });
+});
+
+describe('playtest harness: the den (the old burrback, three phases)', () => {
+  it('a human-like average player brings it down from the den patch (the roll hopped or pogoed, cut open)', () => {
+    const base = getRoomFor('wood-well');
+    const room = {
+      ...base,
+      enemies: (base.enemies ?? []).map((e) =>
+        e.kind === 'oldBurrback' && !(e as { taproot?: unknown }).taproot
+          ? { ...e, taproot: [3200, 3296] as [number, number], radius: 1000 }
+          : e,
+      ),
+    };
+    const r = runHeadless({
+      room,
+      persona: 'human-average',
+      human: 'average',
+      personaSeed: 1,
+      seconds: 240,
+      until: 'none',
+      giveUp: 200,
+      abilities: ['glide'],
+      at: { x: 3744, y: 2112 },
+    });
+    expect(r.trace.kills.some((k) => r.trace.encounters[`${k.room}:${k.id}`]?.kind === 'oldBurrback')).toBe(
+      true,
+    );
+  }, 60_000);
+});
+
+describe('playtest harness: carriers are terrain, not a fight', () => {
+  it('a trail of ants across her floor is hopped or waited out, never fought or chased', () => {
+    const base = getRoomFor('wood-hawkers');
+    const ants = [0, 0.33, 0.67].map((phase, i) =>
+      i === 0
+        ? {
+            id: 'ants-1',
+            kind: 'carrier',
+            x: 1000,
+            y: 1024,
+            facing: -1,
+            trail: [
+              [600, 1024],
+              [150, 1024],
+            ],
+          }
+        : { id: `ants-${i + 1}`, kind: 'carrier', x: 1000, y: 1024, facing: -1, follow: 'ants-1', phase },
+    );
+    const room = { ...base, enemies: [...(base.enemies ?? []), ...ants] } as typeof base;
+    for (const persona of ['explorer', 'cautious']) {
+      const r = runHeadless({
+        room,
+        persona,
+        seconds: 120,
+        until: 'exit',
+        abilities: ['glide'],
+        at: { x: 450, y: 1024 },
+      });
+      expect(r.trace.notes.filter((n) => /fight with ants/.test(n))).toEqual([]);
+      expect(r.trace.kills.filter((k) => /^ants/.test(k.id))).toEqual([]);
+    }
+  }, 60_000);
 });

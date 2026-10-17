@@ -16,7 +16,7 @@ import { solidAt } from '../../src/sim/physics/aabb';
 import { rngInt, seedRng } from '../../src/sim/rng';
 import type { Scene, SolidRect } from '../../src/sim/scene';
 import type { World } from '../../src/sim/world';
-import { chooseTactic, fightTactics, foe } from './fight';
+import { chooseTactic, fightTactics, foe, hostile } from './fight';
 import { humanPick, humanTactic, SKILLS, type Skill, type SkillRow, sample } from './human';
 import {
   Aim,
@@ -627,7 +627,8 @@ class Planner implements Persona {
   }
 
   decide(o: Obs, scene: Scene, ctx: SimCtx): number {
-    const mask = this.think(o, scene, ctx);
+    this.flagsNow = ctx.state.save.flags;
+    const mask = this.antsAhead(o, scene, ctx, this.think(o, scene, ctx));
     this.lastMask = mask;
     return mask;
   }
@@ -673,7 +674,10 @@ class Planner implements Persona {
         this.giveUp(t, ctx.state.caught ? 'it fell (caught) going there' : 'she faded going there', f);
       return 0;
     }
-    if (o.lured) {
+    // (In the den the boss plan answers a catch itself: the throw onto it.)
+    const denCatch =
+      this.fighting?.name === 'the den' && ctx.state.enemies.some((q) => !!q.phase && hostile(q));
+    if (o.lured && !denCatch) {
       // Caught by a lure: the throw aimed at where she is going (the drawn arc read for each way of the stick);
       // a fighter cuts a flame it came for; a dash frees at once.
       if (this.opt.dash && o.abilities.includes('dash') && !(this.lastMask & X)) return X;
@@ -713,8 +717,20 @@ class Planner implements Persona {
 
     // A creature close by: fight it by look-ahead (or slip past it, if that comes out best).
     // (Once in a fight it stays in it until the creature is well away: no flicker at the edge of range.)
+    // A boss awake in its den is the fight, from anywhere in sight of it.
+    const boss = ctx.state.enemies.findIndex(
+      (q) =>
+        !!q.phase &&
+        hostile(q) &&
+        Math.abs(q.x + q.w / 2 - o.feetX) < 1400 &&
+        Math.abs(q.y + q.h - o.feetY) < 600,
+    );
     const fi =
-      f >= this.ignoreFoesUntil ? foe(ctx.state, this.fighting ? 700 : 420, this.fighting ? 400 : 260) : -1;
+      boss >= 0
+        ? boss
+        : f >= this.ignoreFoesUntil
+          ? foe(ctx.state, this.fighting ? 700 : 420, this.fighting ? 400 : 260)
+          : -1;
     if (fi >= 0) return this.fightBeat(o, ctx, scene, fi);
     if (this.fighting) {
       const fz = this.fighting;
@@ -780,7 +796,8 @@ class Planner implements Persona {
       fz.quiet = f;
     }
     const letBe = this.opt.human ? 600 : 1800;
-    if (f - fz.quiet > letBe) {
+    // (Never a boss: the den is shut until it is down.)
+    if (f - fz.quiet > letBe && !e?.phase) {
       this.ignoreFoesUntil = f + 600;
       this.notes.push(`f${f}: let ${id} be (${letBe / 60} s, nothing dealt or taken)`);
       this.fighting = null;
@@ -794,7 +811,9 @@ class Planner implements Persona {
     const look = foeSeen
       ? `${foeSeen.mode}/${foeSeen.braced ? 1 : 0}/${(foeSeen as unknown as { stunned?: boolean }).stunned ? 1 : 0}`
       : '';
-    if (!fz.line || fz.k >= 20 || (this.opt.human && look !== fz.look)) {
+    // (The den's plan is one controller through the whole fight: it keeps its own timers.)
+    const denPlan = fz.name === 'the den' && !!fz.line;
+    if (!denPlan && (!fz.line || fz.k >= 20 || (this.opt.human && look !== fz.look))) {
       fz.look = look;
       const toward = this.target ? Math.sign(this.target.x - o.feetX) || this.wayOn : this.wayOn;
       const h = this.opt.human;
@@ -820,14 +839,20 @@ class Planner implements Persona {
             );
             return cand ? { cand } : null;
           })()
-        : chooseTactic(ctx, scene, tactics, i, fz.name);
+        : (foeNow?.kind as string) === 'oldBurrback' && foeNow?.phase
+          ? // The boss: its own plan through its phases (a rollout of a few seconds cannot see a 16 hp fight).
+            (() => {
+              const cand = tactics.find((q) => q.name === 'the den');
+              return cand ? { cand } : null;
+            })()
+          : chooseTactic(ctx, scene, tactics, i, fz.name);
       if (!pick) return 0;
       fz.line = pick.cand.make();
       fz.k = 0;
       fz.name = pick.cand.name;
       fz.tactics.set(fz.name, (fz.tactics.get(fz.name) ?? 0) + 1);
     }
-    return fz.line.act(ctx.state, fz.k++, this.lastMask);
+    return fz.line ? fz.line.act(ctx.state, fz.k++, this.lastMask) : 0;
   }
 
   private hatch(o: Obs): number {
@@ -841,7 +866,76 @@ class Planner implements Persona {
     return 0;
   }
 
+  private antHopUntil = -1;
+  private antWait = 0;
+
+  /**
+   * Carriers (ants) on her floor ahead are a hazard, not a foe: hop over one as she comes to it; under a low
+   * ceiling (no hop), wait for the gap; cut one only after waiting long (it blocks the only way). Never chased.
+   */
+  private antsAhead(o: Obs, scene: Scene, ctx: SimCtx, mask: number): number {
+    const p = o.p;
+    const f = o.frame;
+    if (f < this.antHopUntil) return mask | J;
+    const dir = mask & ActionBit.right ? 1 : mask & ActionBit.left ? -1 : 0;
+    if (!p.grounded || dir === 0 || mask & J) {
+      if (dir === 0) this.antWait = 0;
+      return mask;
+    }
+    const ant = ctx.state.enemies.find((e) => {
+      if ((e.kind as string) !== 'carrier' || e.gone || (e.mode as string) === 'dead') return false;
+      if ((e.mode as string) === 'under') return false;
+      const ex = e.x + e.w / 2;
+      const ahead = (ex - o.feetX) * dir;
+      return ahead > 10 && ahead < 120 && Math.abs(e.y + e.h - o.feetY) < 28;
+    });
+    if (!ant) {
+      this.antWait = 0;
+      return mask;
+    }
+    // Room to hop over it: no ceiling just over her head (a wall ahead is no ceiling: she hops at it anyway).
+    const cx = p.x + p.w / 2 + dir * 16;
+    const roof = solidAt(scene, cx - 12, p.y - 64, 24, 56);
+    if (!roof) {
+      this.antHopUntil = f + 10;
+      return mask | J;
+    }
+    // Under a ceiling: let it come on past (or go on ahead); cut it only when it has blocked her a while.
+    if (++this.antWait > 150) return (this.lastMask & A ? 0 : A) | dirBit(dir);
+    return Math.sign(ant.vx) === dir ? mask : 0;
+  }
+
+  /** Ability glades seen (room/id), and the save's flags now (a glade `when` a flag opens). */
+  private readonly gladesSeen = new Set<string>();
+  private flagsNow: readonly string[] = [];
+
+  /** A glade it has seen whose gift it does not own (and that is open): stand in it. */
+  private gladeTargets(o: Obs, mind: Mind): Array<Target & { rank: number }> {
+    const out: Array<Target & { rank: number }> = [];
+    for (const g of mind.scene.glades ?? []) {
+      if (!this.gladesSeen.has(`${o.room}/${g.id}`) || o.abilities.includes(g.ability)) continue;
+      const when = (g as { when?: string }).when;
+      if (when && !this.flagsNow.includes(when)) continue;
+      const x = g.x + g.w / 2;
+      const y = g.y + g.h;
+      out.push({
+        key: `glade:${g.id}`,
+        why: `the glade ${g.id}`,
+        x,
+        y,
+        rank: 0,
+        stand: standUnder(mind, x, y - 8),
+        done: (q) => q.abilities.includes(g.ability),
+      });
+    }
+    return out;
+  }
+
   private remember(o: Obs, mind: Mind): void {
+    const v = o.view;
+    for (const g of mind.scene.glades ?? [])
+      if (g.x < v.x + v.w && g.x + g.w > v.x && g.y < v.y + v.h && g.y + g.h > v.y)
+        this.gladesSeen.add(`${o.room}/${g.id}`);
     const p = o.p;
     if (p.grounded) {
       this.visited.add(cellKey(o.feetX, o.feetY));
@@ -903,7 +997,9 @@ class Planner implements Persona {
     if (this.lastMask & A) return 0;
     const p = o.p;
     const cy = p.y + p.h / 2;
-    const e = o.enemies.find((q) => Math.abs(q.x - o.feetX) < 150 && Math.abs(q.y - o.feetY) < 140);
+    const e = o.enemies.find(
+      (q) => q.kind !== 'carrier' && Math.abs(q.x - o.feetX) < 150 && Math.abs(q.y - o.feetY) < 140,
+    );
     if (e) return (Math.sign(e.x - o.feetX) || p.facing) === p.facing ? A : 0;
     // Silk just ahead of her (memory/creatures.md): cut it before walking into it.
     const fx = o.feetX + p.facing * 70;
@@ -1091,6 +1187,9 @@ class Planner implements Persona {
   }
 
   private candidates(o: Obs, mind: Mind): Array<Target & { rank: number }> {
+    // A glade's gift first, whatever the habit (the claws where the old burrback died).
+    const glades = this.gladeTargets(o, mind).filter((g) => !this.given.has(g.key));
+    if (glades.length) return glades;
     const out: Array<Target & { rank: number }> = [];
     // Exits it gave up on (the arrival opening among them) leave the forward frontier open.
     const exits = [...this.exitsSeen.entries()]

@@ -423,7 +423,8 @@ export function jumpLine(
           // A walk-off glide: jump already held from a glide before is kept (a fresh press here would jump).
           if (q.walkOff) return dirBit(q.dir) | (q.glide && prev & J ? J : 0);
           if (q.brake && d <= q.edge + 40 && Math.abs(p.vx) > 0.5) return 0;
-          if (q.brake && d > q.edge + 4 && d <= q.edge + 40) return k % 4 === 0 ? dirBit(q.dir) : 0;
+          // (Taps of two frames: a one-frame tap through a person's hands does not move her.)
+          if (q.brake && d > q.edge + 4 && d <= q.edge + 40) return k % 4 < 2 ? dirBit(q.dir) : 0;
           if (d <= q.edge + Math.abs(p.vx) * (0.5 + (hands.anticipate ?? 0)) || p.wallDir === q.dir) {
             if (prev & J) return dirBit(q.dir);
             launched = true;

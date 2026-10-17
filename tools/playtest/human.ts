@@ -274,6 +274,8 @@ export function humanTactic(
   above = false,
 ): string {
   const mode = e.mode as string;
+  // The boss (round 5's three phases): its own plan (fight.ts `the den`), its tells read through it.
+  if ((e.kind as string) === 'oldBurrback' && (e as unknown as { phase?: number }).phase) return 'the den';
   // It guards a lamp still burning: put the lamp out and it gives up (taught from R3: "snuff and it sleeps").
   // (Not a flyer's: its lamp hangs in the air it hunts, often the throw she needs.)
   const flyer = ['hawker', 'lampwing'].includes(e.kind as string);

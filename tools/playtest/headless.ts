@@ -50,6 +50,8 @@ export interface RunOpts {
    * intent reaches the keys through the motor model (reaction times, jitter, hold errors, stray presses).
    */
   human?: Skill;
+  /** Called after every step (probes and tools: read only). */
+  onStep?: (state: GameState, mask: number, persona: Persona, events: readonly SimEvent[]) => void;
 }
 
 export interface HeadlessResult {
@@ -139,6 +141,7 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
     else stepCamera(cam, game.state, scene, ct);
     rec.record(game.state, mask, events, viewRect(lerpCamera(cam, cam, 1)), scene);
     feel.record(game.state, mask, events);
+    opts.onStep?.(game.state, mask, persona, events);
     if (motor)
       for (const e of events)
         if (surprising(e))

@@ -13,7 +13,7 @@ import { solidAt } from '../../src/sim/physics/aabb';
 import type { Scene } from '../../src/sim/scene';
 import type { EnemyState, GameState } from '../../src/sim/state';
 import { withShortcuts } from '../../src/sim/world';
-import { type Candidate, dirBit, type Line, type SimCtx } from './lines';
+import { Aim, type Candidate, dirBit, type Line, type SimCtx } from './lines';
 
 const D = ActionBit.down;
 const J = ActionBit.jump;
@@ -34,7 +34,8 @@ export function foe(s: GameState, rangeX = 420, rangeY = 260): number {
   let best = -1;
   let bd = Number.POSITIVE_INFINITY;
   s.enemies.forEach((e, i) => {
-    if (!hostile(e)) return;
+    // Carriers (ants) are terrain, not a fight: they bite on contact but never hunt, and the crack sends more.
+    if (!hostile(e) || (e.kind as string) === 'carrier') return;
     const dx = Math.abs(e.x + e.w / 2 - fx);
     const dy = Math.abs(e.y + e.h - fy);
     if (dx > rangeX || dy > rangeY) return;
@@ -56,6 +57,8 @@ function tactic(
   act: (s: GameState, e: EnemyState, k: number, prev: number) => number,
   i: number,
   fresh?: () => (s: GameState, e: EnemyState, k: number, prev: number) => number,
+  /** It handles being caught by a lamp itself (the den's throw), rather than cutting free. */
+  catches = false,
 ): Candidate {
   return {
     name,
@@ -70,7 +73,8 @@ function tactic(
           const caught =
             ((p as unknown as { lure?: number }).lure ?? -1) >= 0 ||
             ((p as unknown as { grab?: number }).grab ?? -1) >= 0;
-          if (caught) return k % 6 < 2 ? A : 0;
+          if (caught && !(catches && e && ((p as unknown as { lure?: number }).lure ?? -1) >= 0))
+            return k % 6 < 2 ? A : 0;
           if (!e) return 0;
           return fn(s, e, k, prev);
         },
@@ -89,6 +93,153 @@ function wallAt(scene: Scene, s: GameState, dir: number, upTo: number): number {
     if (solidAt(played, x, p.y + 8, 1, p.h - 16)) return d;
   }
   return -1;
+}
+
+/** The scene's spawn row of creature `i` (its taproot, its home). */
+function e0(
+  scene: Scene,
+  i: number,
+): (NonNullable<Scene['enemies']>[number] & { taproot?: [number, number] }) | undefined {
+  return scene.enemies?.[i] as
+    | (NonNullable<Scene['enemies']>[number] & { taproot?: [number, number] })
+    | undefined;
+}
+
+/**
+ * The den (the old burrback's three phases), one controller for bots and people alike (`lead`: a person's lag,
+ * frames; their motor adds the rest):
+ * - never camp: off any ledge onto its floor (it slams campers off after 3 s);
+ * - its ram (phase 1, 3): wait for it at a ram's length (in phase 3 with the taproot behind her, so the ram ends in
+ *   the root), hop it as it comes, then cut it while it lies open;
+ * - the roll (phase 2): jump as the ball comes and come down on it (a landing unrolls it), or get caught by the
+ *   den's lamp and throw onto it, cutting at once (the throw-cut unrolls it); then cut it while it lies open.
+ */
+function denTactic(scene: Scene, i: number, lead: number): Candidate {
+  return tactic(
+    'the den',
+    () => 0,
+    i,
+    () => {
+      let aim: Aim | null = null;
+      let lampTries = 0;
+      // A jump decided is held its full length (a person's press; their hands lag the frame it was decided).
+      let jumpUntil = -1;
+      let rootWait = -1;
+      // Its ground: from its home to its fence (`radius`) or a wall either way (where a ram ends).
+      let range: [number, number] | null = null;
+      const groundOf = (e: EnemyState): [number, number] => {
+        const sp = e0(scene, i) as { x: number; y: number; radius?: number } | undefined;
+        const home = sp?.x ?? e.x + e.w / 2;
+        const r = sp?.radius ?? 1000;
+        const fy = (sp?.y ?? e.y + e.h) - 40;
+        let lo = home;
+        while (lo > home - r && !solidAt(scene, lo - 16, fy, 1, 8)) lo -= 16;
+        let hi = home;
+        while (hi < home + r && !solidAt(scene, hi + 16, fy, 1, 8)) hi += 16;
+        return [lo, hi];
+      };
+      const act = (s: GameState, e: EnemyState, k: number, prev: number): number => {
+        range ??= groundOf(e);
+        const p = s.player;
+        const px = p.x + p.w / 2;
+        const fy = p.y + p.h;
+        const c = centre(e);
+        const d = Math.sign(c.x - px) || 1;
+        const dist = Math.abs(c.x - px);
+        const floorY = e.y + e.h;
+        const mode = e.mode as string;
+        const stunned = !!(e as unknown as { stunned?: boolean }).stunned;
+        const lamp = (scene.lures ?? [])
+          .map((l, j) => ({ ...l, j }))
+          .filter(
+            (l) => !(s.lures.out[l.j] ?? 0) && Math.abs(l.y - floorY) < 460 && Math.abs(l.x - c.x) < 1400,
+          )
+          .sort((a, b) => Math.abs(a.x - px) - Math.abs(b.x - px))[0];
+        // Caught by the den's lamp: the throw aimed where the ball will be; free, cut at once (heavy).
+        if (p.lure >= 0) {
+          aim ??= new Aim(() => ({ x: c.x + e.vx * 18, y: floorY }), lead > 0 ? 3 : 1);
+          return aim.act(s, scene, k, prev);
+        }
+        aim = null;
+        if (p.thrown && p.lureThrow > 0) {
+          const flameNear = !!lamp && Math.hypot(lamp.x - px, lamp.y - (p.y + p.h / 2)) < 110;
+          if (dist < 200 && !flameNear && !(prev & A))
+            return A | dirBit(d) | (c.y > p.y + p.h ? ActionBit.down : 0);
+          return dirBit(d) | (prev & J ? J : 0);
+        }
+        // Up on a ledge over its floor: down (camping is slammed).
+        if (p.grounded && floorY - fy > 60) return onOneWay(s, scene) ? (prev & J ? D : D | J) : dirBit(d);
+        // Open on its back: in and cut.
+        if (stunned) {
+          if (!p.grounded) return dirBit(d);
+          if (dist > 90) return dirBit(d);
+          if (p.facing !== d) return dirBit(d);
+          return prev & A ? 0 : A;
+        }
+        if (mode === 'roll') {
+          const coming = Math.sign(e.vx) === -d && Math.abs(e.vx) > 0.5;
+          if (!p.grounded) {
+            // Over it: steer onto it; a down cut as it passes under (a landing unrolls it either way).
+            let m = Math.abs(c.x + e.vx * 4 - px) > 16 ? dirBit(Math.sign(c.x + e.vx * 4 - px)) : 0;
+            if (p.vy < 0 && prev & J) m |= J;
+            if (c.y > p.y + p.h - 40 && Math.abs(c.x - px) < 70 && !(prev & A)) m |= A | ActionBit.down;
+            return m;
+          }
+          const eta = (dist - 70) / Math.max(1, Math.abs(e.vx)) - lead;
+          // The den's lamp (a few tries a fight): wait under it; as the ball comes, up into it (caught, out of
+          // its way), then the throw aimed onto it and a cut as she flies (the throw-cut unrolls it).
+          if (lamp && lampTries < 3 && !process.env.DEN_NO_LAMP) {
+            const ldx = lamp.x - px;
+            if (coming && eta < 22 && Math.abs(ldx) < 50) {
+              lampTries++;
+              return prev & J ? 0 : J;
+            }
+            if (!coming || eta > 40) return Math.abs(ldx) > 24 ? dirBit(Math.sign(ldx)) : 0;
+          }
+          // It comes: up as it is about to reach her (it passes under, she lands on it or behind it).
+          if (coming && eta < 14 && !(prev & J)) return J;
+          return 0;
+        }
+        if (mode === 'windup' || mode === 'charge' || mode === 'feint') {
+          // Its tell: straight up (it lunges under a jump anywhere in the tell and lies open past her), unless
+          // the end of its ground is close behind her (the ram would stop under her): then over it.
+          const behind = d > 0 ? px - range[0] : range[1] - px;
+          const vault = behind < 320;
+          if (!p.grounded) return (prev & J && p.vy < 0 ? J : 0) | (vault ? dirBit(d) : 0);
+          if (mode === 'windup' || dist - Math.abs(e.vx) * lead < 260)
+            return prev & J ? 0 : J | (vault ? dirBit(d) : 0);
+          return 0;
+        }
+        if (!p.grounded) return prev & J && p.vy < 0 ? J : 0;
+        // Curled, rearing, waking: keep a ram's length, on its floor.
+        if (['curl', 'rear', 'wake', 'alert', 'recover'].includes(mode)) return dist < 240 ? dirBit(-d) : 0;
+        // Phase 3: the taproot behind her, so its ram ends in the root.
+        // (If it will not come to her there, out to draw it as in phase 1.)
+        const root = e0(scene, i)?.taproot;
+        if (e.phase >= 3 && root && k - rootWait < 150) {
+          const side = Math.sign(c.x - (root[0] + root[1]) / 2) || -1;
+          const spot = side < 0 ? root[0] - 110 : root[1] + 110;
+          if (Math.abs(spot - px) > 30) return dirBit(Math.sign(spot - px));
+          if (rootWait < 0 || k - rootWait > 400) rootWait = k;
+          return 0;
+        }
+        // Phase 1: in to draw the ram (it braces once she is in its range), not under its nose, and with room
+        // behind her for the ram to carry past (toward the middle of its ground when it is not there).
+        const room = d > 0 ? px - range[0] : range[1] - px;
+        if (e.braced) return dist < 140 ? dirBit(-d) : 0;
+        if (room < 320 && dist > 260) return dirBit(d);
+        if (dist > 170) return dirBit(d);
+        if (dist < 110) return dirBit(-d);
+        return 0;
+      };
+      return (s, e, k, prev) => {
+        const m = act(s, e, k, prev);
+        if (m & J && s.player.grounded && k >= jumpUntil) jumpUntil = k + 20;
+        return k < jumpUntil && s.player.lure < 0 ? m | J : m;
+      };
+    },
+    true,
+  );
 }
 
 /** The tactics a persona knows against creature `i`. `toward`: the way its route goes on. */
@@ -224,6 +375,8 @@ export function fightTactics(scene: Scene, i: number, toward: number, lead = 0):
         },
       ),
     );
+  // The old burrback as a boss (memory/creatures.md round 5): one plan through its three phases.
+  if ((e0(scene, i)?.kind as string) === 'oldBurrback') out.push(denTactic(scene, i, lead));
   // Down to it: off the ledge she waits on (through a one-way, or off the end toward it), to bait its ram.
   out.push(
     tactic(
