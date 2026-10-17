@@ -62,7 +62,7 @@ Baseline from story.md, plus the **upgrade** (last to hatch, chase the swarm). T
 
 | Time | Beat | Player does | Staging and cost |
 |---|---|---|---|
-| 0:00 | Black. Wind in leaves. A warm glow fades up behind a branch | nothing | Audio + post fade. Free |
+| 0:00 | Black. Wind in leaves. Cool moonlight fades up through the canopy (warm only as a faint far afterglow: the two-light rule) | nothing | Audio + post fade. Free |
 | 0:04 | A row of empty, split cocoons on a branch over the dark wood. One still closed. Above, the moon. Tatter sits on the branch | nothing | Static props on the existing Grove layers |
 | 0:08 | The closed cocoon twitches with each button press. Third press: she breaks out | **first input** (jump ×3, the same input as beating free later) | Cocoon prop + rig spawn pose. Control at 8 s |
 | 0:15 | The swarm streams overhead past the moon, a river of small moths leaving | runs along the branch after them | Swarm renderer on a spline. Camera leads toward the swarm |
