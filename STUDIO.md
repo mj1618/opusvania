@@ -41,6 +41,24 @@ wood up to its hub and both branches. It is built from the paper design to "play
 
 Problems found at a higher layer go back into the chunk loop for the rooms they touch.
 
+## Cohesion first, rubric second (Matt, 2026-10-18)
+After two rounds the wood chunk still felt "random, disjointed, and not fun". Fixing against the rubric had produced
+checkbox design: one-off elements added to hit counts. So:
+- **The rubric is lint.** It catches holes. It does not design the chunk.
+- **A director owns the experience.** Each chunk has a director review that plays or watches the whole chunk as one
+  experience next to the references. Its output is a **redesign of the chunk**, not a fix list:
+  - one through-line, what the player wants and why;
+  - an arc;
+  - setups that pay off;
+  - spatial coherence: a geography that makes sense, landmarks seen from elsewhere, sightlines to where you're going;
+  - an ecology for the creatures.
+- **Fewer, deeper mechanics.** Each chunk explores a small set of elements fully: introduce, develop, twist, conclude,
+  the way a Celeste chapter or a Nintendo stage does. An element that appears once and is never developed is cut.
+- **Human-like playthroughs.** Bots with a human motor model play the whole chunk: reaction times of 180–300 ms, timing
+  and position errors, hesitation, a first-timer's knowledge, and the screen as their only view. Each run is recorded
+  as a video. Reviewers watch it and judge feel and flow, not just numbers.
+- **Step back every few rounds.** Ask whether the strategy is working, and write any change here.
+
 ## Playtesting without Matt
 - **Persona bots** (`npm run playtest`): naive, explorer, speedrunner and cautious. Each run records telemetry: time per room,
   deaths, the trace, time lost, hits per encounter, lamps and moths found.
