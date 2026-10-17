@@ -31,6 +31,8 @@
   `@tweakpane/core` is a dev dep only because tweakpane's .d.ts files import it; `tsx` runs `tools/*.ts`.
   Playwright Test's `chromium` is reused by `tools/shots.ts` and `tools/clip.ts`, so there is one browser
   install (`npx playwright install chromium`). `playwright-cli` keeps its files in `.playwright-cli/` (gitignored).
+  The playtest heatmaps (`tools/playtest/png.ts`) encode PNGs with node:zlib (~60 lines) rather than adding a
+  canvas package; the in-page playtest loop is served by Vite from `/tools/playtest/live.ts` (dev server only).
 - **`npm run check` takes ~6 s**: typecheck, Biome, Vitest (~0.2 s), then 3 e2e smoke tests against a fresh
   production build. Looks are never asserted in check; they are judged from `npm run shots`.
 - **CI renders with software GL** (very slow per frame): e2e must not step-and-render hundreds of frames.
