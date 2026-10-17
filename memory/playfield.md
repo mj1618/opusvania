@@ -71,6 +71,13 @@ that read as stalks. Round 3 paints from the room's **tree and stretch marks** (
   `behind` limb joins under the child's belly too; tines and the `hang` droop carry no moss, and the droop is dark
   past the walk's end. Rule: across a gap, nothing at walk height may carry lit moss or keep the top line going.
   Check with `npm run shots -- --hitboxes`.
+- **Decor trees stand behind the walk (2026-10-18):** first-timers and human-like bots fell 6-11 times at the S3 -> S4
+  gap: the crown trunk was painted after the limbs, over S4's and S5's ends, and read as a wall in front of the gap;
+  the snap's lit lip stopped 22 px short of the collision edge. Trees with no collision (`solid` false in
+  `marks.trees`) now paint BEFORE the limbs at `decorH` relief with a `decorHaze` wash; a limb's root sinks into their
+  dark. Lit lips run to the collision edge at snaps (moss to 3 px, rim to 0 with a 6 px fade); only ends she leaves
+  (`tip`, `fork`) round away, landing lips stay level. Check: `npm run clip -- --at 2450,861 --script "R20 R+J22
+  R40 .20" --wide --hitboxes`.
 - **Light hierarchy (round 4):** `WOOD_BAKE.rimScale` / `chipScale` / `keyScale` cut the bake's silhouette rim,
   chips and key on bark (`mix(0.16, 1, moss)`, 0.15, `mix(0.55, 1, moss)`): only moss keeps the moon, so the walk's
   rim is the playfield's top value (wide stops p99.9 outside the moon 108-125; descending limbs no longer white).

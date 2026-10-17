@@ -42,6 +42,10 @@ export const BRANCH = {
   dipBelow: 110,
   /** A dip leaves the parent's underside / joins the child's this far in from the walk's ends, px. */
   dipIn: 150,
+  /** A decor tree (no collision) a step behind the walk: its relief, and the haze laid over it. */
+  decorH: 0.4,
+  decorHaze: 0x14223a,
+  decorHazeA: 0.32,
   /** A trunk's collar round a limb's root, px. */
   collar: 46,
   /** A trunk that ends in view: how much it narrows toward its broken top, how far it leans (share of its
@@ -574,6 +578,8 @@ interface TreeLike {
   top: number;
   bottom: number;
   plane: 'walk' | 'back';
+  /** Has collision (the room's edge trunk). Decor trees stand a step BEHIND the walk (see paintTrunk). */
+  solid?: boolean;
 }
 
 /** The trees: the room's `marks.trees`, or (a room without them) its trunk solids. */
@@ -589,6 +595,7 @@ function planTrees(room: Room): TreeLike[] {
       top: s.y,
       bottom: s.y + s.h,
       plane: 'walk' as const,
+      solid: true,
     }));
 }
 
@@ -740,8 +747,11 @@ function planStretches(room: Room, trees: TreeLike[]): Stretch[] {
       }
       return z[1];
     };
-    const fe = freeEast(st) && st.east !== 'knee';
-    const fw = freeWest(st);
+    // Only an end she leaves from (or the exit tip) rounds away; a landing lip stays level to the edge
+    // (a lip that dropped away made the landing look further than it is).
+    const rounds = (e: End): boolean => e === 'tip' || e === 'fork';
+    const fe = rounds(st.east);
+    const fw = rounds(st.west);
     // Bark bumps: low swellings that break the line where feet won't notice.
     const rb = rngFor(seed, 77);
     const bumps: Array<[number, number, number]> = [];
@@ -1117,7 +1127,11 @@ function paintTrunk(p: Paint, tree: TreeLike, joins: Join[], roomH: number, seed
   const B = BRANCH;
   const r = rngFor(seed, 7);
   const back = tree.plane === 'back';
-  const h0 = back ? B.backH : 0.5;
+  // A tree without collision stands a step behind the walk: lower relief (the bake lights it less) and
+  // a haze laid over it, painted BEFORE the limbs so they read in front of it. First-timers read the
+  // crown trunk, drawn over the ends of S4 / S5, as a wall in front of the gap and fell short.
+  const decor = !tree.solid;
+  const h0 = back ? B.backH : decor ? B.decorH : 0.5;
   // Round, under the limb's top only (above it she walks or falls past): a swelling the limb grows
   // out of, with a small fillet into the limb's top.
   const collar = (side: -1 | 1, y: number): number => {
@@ -1278,6 +1292,17 @@ function paintTrunk(p: Paint, tree: TreeLike, joins: Join[], roomH: number, seed
     for (let y = y1; y >= yk; y -= 20) sk.push(xl(y) - 2, y);
     p.tint(sk, B.barkDeep, 0.13);
   }
+  if (decor)
+    gradBand(
+      p,
+      { pts: [tree.x, y0, tree.x, y1], w: [tree.w * 1.6, tree.w * 1.6], h: h0, seed, moss: 0, detail: 0 },
+      -0.5,
+      0.5,
+      B.decorHaze,
+      B.decorHazeA,
+      B.decorHazeA,
+      1,
+    );
   if (!broken) return;
   // The broken top: dark splintered wood (it must not catch the moon like a lit crown).
   const cap: number[] = [xl(y0 + 60), y0 + 60, ...crown, xr(y0 + 60), y0 + 60];
@@ -1415,7 +1440,8 @@ function snapped(p: Paint, plan: BranchPlan, st: Stretch, dir: 1 | -1, seed: num
   const h = bot - top;
   // The break slants: the top fibres (in tension) tore out further than the bottom.
   const lean = -range(r, 0.3, 0.55) * h;
-  const out = range(r, 10, 20);
+  // (Close to the collision edge: broken wood far past it reads as more floor; the lit lip ends at the edge.)
+  const out = range(r, 2, 7);
   const xIn = xe - dir * 70;
   // The jagged break line, top to bottom.
   const brk: number[] = [];
@@ -1841,14 +1867,50 @@ export function paintBranchTerrain(
       fork(p, plan, info, st, child, sdOf(st) + 3, kinds[forks++ % kinds.length] as ForkKind);
   }
 
-  // 2. The stretches. A root in a tree runs on into it (the trunk's collar wraps it, step 3).
+  // 1b. Decor trees (no collision) stand behind the walk: painted first, the limbs over them.
+  const joinsOf = (t: TreeLike): Join[] => {
+    const joins: Join[] = [];
+    for (const st of stretches) {
+      if (st.parent !== t.id) continue;
+      const side: -1 | 1 = st.grows > 0 ? 1 : -1;
+      const x = st.grows > 0 ? st.x0 + 30 : st.x1 - 30;
+      joins.push({ side, y: st.top(x), th: st.th(x) });
+    }
+    return joins;
+  };
+  for (const t of trees) {
+    if (t.solid) continue;
+    paintTrunk(p, t, joinsOf(t), room.height, seed + Math.round(t.x));
+    if (t.top > -40) droopCrown(p, plan, t, seed + Math.round(t.x) + 3);
+  }
+
+  // 2. The stretches. A root in a solid tree runs on into it (the trunk's collar wraps it, step 3); a
+  // root in a decor tree sinks into its dark.
   for (const st of stretches) {
     const sd = sdOf(st);
     const r = rngFor(sd, 6);
     const xa = st.west === 'trunk' ? st.x0 - 70 : st.west === 'under' ? st.x0 - 60 : st.x0;
     const xb = st.east === 'trunk' ? st.x1 + 70 : st.east === 'burl' ? st.x1 + 30 : st.x1;
     const L = stretchLimb(st, xa, xb, sd);
+    const rootTree = trees.find((t) => t.id === st.parent);
     paintLimb(p, L, knotsFor(L, sd, 640));
+    if (rootTree && !rootTree.solid) {
+      // The root sinks into the decor tree's dark over the part inside its trunk (no cut end in front).
+      const n = L.pts.length / 2;
+      const edge = rootTree.x + (st.grows > 0 ? rootTree.w / 2 : -rootTree.w / 2);
+      for (let k = 1; k <= 5; k++) {
+        const lim = edge - st.grows * (k - 1) * 12;
+        let i0 = -1;
+        let i1 = -1;
+        for (let i = 0; i < n; i++) {
+          if (-st.grows * ((L.pts[i * 2] as number) - lim) >= 0) {
+            if (i0 < 0) i0 = i;
+            i1 = i;
+          }
+        }
+        if (i0 >= 0 && i1 > i0) p.tint(band(L, -0.5, 0.5, i0, i1), B.decorHaze, 0.16);
+      }
+    }
     // Where she climbs out of her cocoon the face is near-black, like her: a little cool moonlight
     // on the mid flank and a rim of fog-light along the underside, so her silhouette reads on it.
     const n = L.pts.length / 2;
@@ -1887,16 +1949,10 @@ export function paintBranchTerrain(
     }
   }
 
-  // 3. The trees, wrapping the roots of the limbs that grow out of them.
+  // 3. Solid trees, wrapping the roots of the limbs that grow out of them.
   for (const t of trees) {
-    const joins: Join[] = [];
-    for (const st of stretches) {
-      if (st.parent !== t.id) continue;
-      const side: -1 | 1 = st.grows > 0 ? 1 : -1;
-      const x = st.grows > 0 ? st.x0 + 30 : st.x1 - 30;
-      joins.push({ side, y: st.top(x), th: st.th(x) });
-    }
-    paintTrunk(p, t, joins, room.height, seed + Math.round(t.x));
+    if (!t.solid) continue;
+    paintTrunk(p, t, joinsOf(t), room.height, seed + Math.round(t.x));
     if (t.top > -40) droopCrown(p, plan, t, seed + Math.round(t.x) + 3);
   }
 
@@ -1975,11 +2031,10 @@ export function paintBranchTerrain(
   // 5. Moss on every walk top; the cocoons' silk pads on the underside.
   for (const st of stretches) {
     const sd = sdOf(st);
-    const r = rngFor(sd, 8);
     const fw = freeWest(st);
     const fe = freeEast(st);
-    const m0 = st.west === 'trunk' ? st.x0 - 8 : st.west === 'snap' ? st.x0 + range(r, 10, 24) : st.x0;
-    const m1 = st.east === 'trunk' ? st.x1 + 8 : st.east === 'snap' ? st.x1 - range(r, 10, 24) : st.x1;
+    const m0 = st.west === 'trunk' ? st.x0 - 8 : st.west === 'snap' ? st.x0 + 3 : st.x0;
+    const m1 = st.east === 'trunk' ? st.x1 + 8 : st.east === 'snap' ? st.x1 - 3 : st.x1;
     const drape = (e: End): number =>
       e === 'nub' ? 12 : e === 'fork' || e === 'tip' || e === 'knee' || e === 'crotch' ? 28 : 0;
     mossBlanket(p, m0, m1, st.top, sd + 17, drape(st.west), drape(st.east));

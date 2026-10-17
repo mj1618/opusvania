@@ -142,16 +142,21 @@ export class Rim {
       // Over a free end the rim runs on a little and fades; at a joint it stops flush.
       const freeL = freeWest(st);
       const freeR = freeEast(st);
-      // (It stops short of a snapped end with the moss: broken wood holds no moonlit moss.)
-      const x0 = st.west === 'snap' ? st.x0 + 22 : st.x0 - (freeL ? 10 : st.west === 'trunk' ? 26 : 0);
-      const x1 = st.east === 'snap' ? st.x1 - 22 : st.x1 + (freeR ? 10 : 0);
+      // At a snapped end the lit lip runs right to the collision edge (a rim stopping short made
+      // first-timers jump late from the real edge's dark and fall short).
+      const x0 = st.west === 'snap' ? st.x0 : st.x0 - (freeL ? 10 : st.west === 'trunk' ? 26 : 0);
+      const x1 = st.east === 'snap' ? st.x1 : st.x1 + (freeR ? 10 : 0);
       const seed = (st.x0 * 0.0137) % 50;
       const step = 4;
       const n = Math.ceil((x1 - x0) / step);
       const base = verts.length / STRIDE;
       for (let i = 0; i <= n; i++) {
         const x = x0 + ((x1 - x0) * i) / n;
-        const fade = Math.min(1, (x - x0) / (freeL ? 24 : 8), (x1 - x) / (freeR ? 24 : 8));
+        // Soft fade only where the limb really thins out; a lip she lands on keeps its light to the edge.
+        const soft = (e: string): boolean => e === 'tip' || e === 'fork' || e === 'knee';
+        const fL = freeL && soft(st.west) ? 24 : 6;
+        const fR = freeR && soft(st.east) ? 24 : 6;
+        const fade = Math.min(1, (x - x0) / fL, (x1 - x) / fR);
         // It follows the painted, rolled top (the moss rises ~2 px over the bark), brighter where the
         // top rises over its neighbours, dimmer in the hollows and in slow patches between: never a ruler.
         const at = (xx: number): number => st.top(Math.min(st.x1, Math.max(st.x0, xx)));
