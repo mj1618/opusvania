@@ -52,7 +52,7 @@ describe('screen shake (trauma)', () => {
     expect(B.kill).toBeGreaterThan(B.clang);
   });
 
-  it('caps at 1, drains at `decay` a second, shakes max x trauma² at most, the same every time', () => {
+  it('caps at 1, drains at `decay` a second, shakes max x trauma^power at most, the same every time', () => {
     const S = cameraTuning.shake;
     const a = new CameraShake();
     const b = new CameraShake();
@@ -66,7 +66,7 @@ describe('screen shake (trauma)', () => {
       b.update(1 / 60, []);
       expect([a.x, a.y]).toEqual([b.x, b.y]);
       peak = Math.max(peak, Math.hypot(a.x, a.y));
-      expect(Math.abs(a.x)).toBeLessThanOrEqual(S.max * before * before + 1e-9);
+      expect(Math.abs(a.x)).toBeLessThanOrEqual(S.max * before ** S.power + 1e-9);
     }
     expect(peak).toBeGreaterThan(2);
     expect(a.trauma).toBeLessThan(0.01);

@@ -34,6 +34,9 @@ const KC = {
   hollow: 0xd8e6ff,
 } as const;
 
+/** A bounce cap taking her: px its top sinks for three frames, then it rings back (feel review r2). */
+const CAP_SQUASH = { dip: 14 };
+
 /** Seconds one pass of a sign's rhythm takes, and the rest between its two passes. */
 function rhythmLen(rhythm: string): number {
   let at = 0;
@@ -200,17 +203,18 @@ export class KitView {
     this.fx.push({ kind, x, y, w, h, t: 0, life: LIFE[kind] });
   }
 
-  draw(dt: number, clock: number, sim: SimView): void {
+  /** `designer`: draw the designer's marks too (camera zones, trigger plates): with the labels (G), not in play. */
+  draw(dt: number, clock: number, sim: SimView, designer = true): void {
     const room = sim.scene;
     const save = sim.save;
     const g = this.back.clear();
     // Camera zones: a dashed frame (the play reads the zoom; this says where it starts).
-    for (const z of room.camera?.zones ?? []) {
+    for (const z of designer ? (room.camera?.zones ?? []) : []) {
       dashed(g, z.x, z.y, z.w, z.h, 28, 18);
       g.stroke({ color: KC.zone, width: 2, alpha: 0.35 });
     }
     // Triggers: a dashed plate, dim once its flag is set.
-    for (const t of room.triggers ?? []) {
+    for (const t of designer ? (room.triggers ?? []) : []) {
       const set = save.flags.includes(t.sets);
       g.rect(t.x, t.y, t.w, t.h).fill({ color: KC.trigger, alpha: set ? 0.03 : 0.08 });
       dashed(g, t.x, t.y, t.w, t.h);
@@ -338,6 +342,15 @@ export class KitView {
         }
         f.rect(e.x - e.w / 2, e.y - e.h / 2, e.w, e.h).stroke({ color: 0xffffff, width: 3, alpha: a * 0.8 });
       } else if (e.kind === 'clang') {
+        // The clang star the old burrback's shell uses (feel review r2: "three ticks" did not read).
+        const sr = 34 * (0.75 + 0.5 * (1 - (1 - k) * (1 - k)));
+        const star: number[] = [];
+        for (let c = 0; c < 16; c++) {
+          const ang = (c / 16) * Math.PI * 2 + 0.2;
+          const rr = c % 2 === 0 ? sr : sr * 0.3;
+          star.push(e.x + Math.cos(ang) * rr, e.y + Math.sin(ang) * rr);
+        }
+        f.poly(star).fill({ color: 0xffffff, alpha: 1 - k * k });
         for (let c = 0; c < 6; c++) {
           const ang = (c / 6) * Math.PI * 2;
           const r0 = 8 + 30 * k;
@@ -356,9 +369,10 @@ export class KitView {
           f.moveTo(x, y0).lineTo(x, Math.min(y0 + e.h, e.y + e.h / 2 + 400));
         }
         f.stroke({ color: KC.silk, width: 2, alpha: a });
-      } else if (e.kind === 'flag')
-        f.circle(e.x, e.y, 30 + 140 * k).stroke({ color: KC.trigger, width: 3, alpha: a });
-      else if (e.kind === 'bounce')
+      } else if (e.kind === 'flag') {
+        // A trigger firing is a designer's mark too (labels only).
+        if (designer) f.circle(e.x, e.y, 30 + 140 * k).stroke({ color: KC.trigger, width: 3, alpha: a });
+      } else if (e.kind === 'bounce')
         f.circle(e.x, e.y, 20 + 60 * k).stroke({ color: KC.capTop, width: 3, alpha: a });
       else if (e.kind === 'stone') {
         f.circle(e.x, e.y, 40 + 500 * k).stroke({ color: KC.stoneGlyph, width: 4, alpha: a });
@@ -387,7 +401,12 @@ export class KitView {
       const since = this.squash.get(c.id);
       let dip = 0;
       if (since !== undefined) {
-        dip = Math.max(0, 1 - since / 0.25) * 12;
+        // Squashed flat for three frames as it takes her, then it springs back past itself and settles.
+        dip =
+          since < 3 / 60
+            ? CAP_SQUASH.dip
+            : CAP_SQUASH.dip * Math.exp(-(since - 0.05) * 9) * Math.cos((since - 0.05) * 26);
+        if (since > 0.6) dip = 0;
         this.squash.set(c.id, since + dt);
       }
       const r = Math.min(c.h, c.w / 2, 28);

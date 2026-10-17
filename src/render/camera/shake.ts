@@ -1,6 +1,6 @@
 /**
  * Screen shake: one trauma value (0..1), render-side (memory/feel.md). Sim events add to it by a
- * budget (`cameraTuning.shake.budget`); it drains over time; the view is offset by `max` x trauma²
+ * budget (`cameraTuning.shake.budget`); it drains over time; the view is offset by `max` x trauma^`power`
  * of smooth value noise. Like the kick it is added to the view at draw time: the follow camera never
  * sees it, so the camera stays as deterministic as the sim. The noise runs on the shake's own render
  * clock (no wall clock, no Math.random), so a capture shakes the same every time.
@@ -97,6 +97,9 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
       case 'kitClang':
         add += B.clang;
         break;
+      case 'capBounce':
+        add += B.capBounce;
+        break;
       case 'slashTerrain':
         add += B.terrain;
         break;
@@ -135,7 +138,7 @@ export class CameraShake {
       this.trauma = Math.max(0, this.trauma - S.decay * dt);
       return;
     }
-    const s = S.max * this.trauma * this.trauma;
+    const s = S.max * this.trauma ** S.power;
     const u = this.t * S.freq;
     this.x = s * valueNoise(u, 1);
     this.y = s * valueNoise(u + 17.3, 2);

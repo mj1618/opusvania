@@ -61,6 +61,8 @@ export interface CameraState {
   ovx: number;
   ovy: number;
   zone: string;
+  /** 0..1: how far a fall is leading the view (the zones yield to it). */
+  fallK: number;
 }
 
 /**
@@ -159,7 +161,8 @@ function stepZones(
   place(cam, scene, ct);
   const b = z ? zoneBounds(z) : null;
   const tx = b ? clampAxis(cam.x, b.x, b.w, shownW(cam)) - cam.x : 0;
-  const ty = b ? clampAxis(cam.y, b.y, b.h, shownH(cam)) - cam.y : 0;
+  // A fall leads down even inside a zone: its vertical bounds yield as the fall's lead comes in.
+  const ty = (b ? clampAxis(cam.y, b.y, b.h, shownH(cam)) - cam.y : 0) * (1 - cam.fallK);
   if (snap) {
     cam.ox = tx;
     cam.oy = ty;
@@ -167,7 +170,7 @@ function stepZones(
     cam.ovy = 0;
   } else {
     [cam.ox, cam.ovx] = smoothDamp(ox, cam.ovx, tx, Z.frames);
-    [cam.oy, cam.ovy] = smoothDamp(oy, cam.ovy, ty, Z.frames);
+    [cam.oy, cam.ovy] = smoothDamp(oy, cam.ovy, ty, Z.frames * (1 - 0.5 * cam.fallK));
     if (Math.abs(cam.ox) < 0.01 && Math.abs(cam.ovx) < 0.01 && tx === 0) cam.ox = cam.ovx = 0;
     if (Math.abs(cam.oy) < 0.01 && Math.abs(cam.ovy) < 0.01 && ty === 0) cam.oy = cam.ovy = 0;
   }
@@ -176,6 +179,18 @@ function stepZones(
     cam.zvz = 0;
   }
   place(cam, scene, ct);
+}
+
+/** The highest top under (x, y) that ends a fall (solid, one-way, catch zone; within her width), or far below. */
+export function landBelow(scene: Scene, x: number, y: number): number {
+  let best = Number.POSITIVE_INFINITY;
+  for (const s of scene.solids)
+    if (x + 18 >= s.x && x - 18 <= s.x + s.w && s.y >= y && s.y < best) best = s.y;
+  for (const o of scene.oneWays)
+    if (x + 18 >= o.x && x - 18 <= o.x + o.w && o.y >= y && o.y < best) best = o.y;
+  // A catch zone ends a fall too (it puts her back): its top counts as ground.
+  for (const c of scene.catches ?? []) if (x >= c.x && x <= c.x + c.w && c.y >= y && c.y < best) best = c.y;
+  return best;
 }
 
 /** Where the view should lean while she stands still at (cx, feet): toward a lantern or the heart in reach. */
@@ -238,6 +253,7 @@ export function createCamera(
     ovx: 0,
     ovy: 0,
     zone: '',
+    fallK: 0,
   };
   stepZones(cam, scene, p.x + p.w / 2, p.y + p.h / 2, ct, true);
   return cam;
@@ -325,9 +341,17 @@ export function stepCamera(
   // between ledges gets a little lead on the usual follow, a long fall or the exit the full lead on the
   // fast one. Nothing switches in one frame.
   const drop = feet - cam.groundY - ct.fallBelow;
+  // The speed lead (feel review r2: at max fall her feet sat at 0.93-0.97), so the view shows the floor
+  // before she reaches it.
+  const L = ct.fallLead;
+  // From the first frame she descends, the lead grows with her fall speed (`vy0` -> `vy1`), never past
+  // the ground under her (`landBelow`): the view starts down with her and stops with the floor in view.
+  const u = Math.min(1, Math.max(0, (p.vy - L.vy0) / (L.vy1 - L.vy0)));
+  const kv = !p.grounded && drop > 0 ? u * u * (3 - 2 * u) : 0;
   if (ct.realFallPx > 0 && !p.grounded && p.vy > 0 && (drop > 0 || s.exit)) {
-    const k = s.exit ? 1 : Math.min(1, Math.max(0, drop / ct.realFallPx)) ** 2;
-    cam.targetY = Math.max(cam.targetY, feet + ct.fallLookahead * k);
+    const k = s.exit ? 1 : Math.max(kv, Math.min(1, Math.max(0, drop / ct.realFallPx)) ** 2);
+    const land = landBelow(scene, cx, feet);
+    cam.targetY = Math.max(cam.targetY, Math.min(feet + ct.fallLookahead * k, land - L.landUp));
     smoothY = ct.smoothYFall + (ct.smoothYFastFall - ct.smoothYFall) * k;
     fastK = k;
   } else if (s.exit && p.vy > 0) {
@@ -337,6 +361,7 @@ export function stepCamera(
     smoothY = ct.smoothYFastFall;
     fastK = 1;
   }
+  cam.fallK = fastK;
   if (p.gliding) {
     // She is sinking: lead below her feet so the landing is in view. Only ever downward.
     cam.targetY = Math.max(cam.targetY, feet + G.lookDown * cam.glide);
@@ -356,7 +381,7 @@ export function stepCamera(
   }
   // The target through its own spring first (when the room asks): the view's velocity never steps.
   if (ct.targetSmoothY > 0) {
-    [cam.ty, cam.tvy] = smoothDamp(cam.ty, cam.tvy, target, ct.targetSmoothY * (1 - 0.5 * fastK));
+    [cam.ty, cam.tvy] = smoothDamp(cam.ty, cam.tvy, target, ct.targetSmoothY * (1 - 0.55 * fastK));
     target = cam.ty;
   }
   [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, target, smoothY);

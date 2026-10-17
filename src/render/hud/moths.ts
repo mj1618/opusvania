@@ -91,7 +91,6 @@ export class MothCount {
             n: i === k - 1 ? e.moths - (k - 1) : 1,
             seed: this.seed++,
           });
-        this.hold = M.hold + M.fly.wait + k * M.fly.every + M.fly.secs;
       } else if (e.type === 'stoneRead' || e.type === 'patchRest') this.hold = Math.max(this.hold, M.hold);
     }
     // Anything not yet accounted for by a flyer (a load, a count from elsewhere) is shown at once.
@@ -105,6 +104,8 @@ export class MothCount {
       if (u >= 1) {
         this.shown += f.n;
         this.pop = 1;
+        // The count shows itself when the first moth reaches it (feel review r2: not a "0" before).
+        this.hold = Math.max(this.hold, M.hold);
         this.flyers.splice(i, 1);
         continue;
       }
@@ -115,9 +116,8 @@ export class MothCount {
       const y = f.y0 + (iy - f.y0) * e - Math.sin(Math.PI * u) * (120 + 80 * h01(f.seed + 7));
       this.moth(g, x, y, Math.sin(clock * 26 + f.seed), 1 - 0.4 * u, 0.9);
     }
-    const busy = this.flyers.length > 0;
-    this.hold = busy ? Math.max(this.hold, 1) : this.hold - dt;
-    const want = this.hold > 0 && (target > 0 || busy) ? 1 : 0;
+    this.hold -= dt;
+    const want = this.hold > 0 && this.shown > 0 ? 1 : 0;
     this.alpha = Math.min(1, Math.max(0, this.alpha + (want > this.alpha ? dt / M.in : -dt / M.out)));
     this.pop *= Math.exp(-dt * 8);
     const a = this.alpha * this.alpha * (3 - 2 * this.alpha);

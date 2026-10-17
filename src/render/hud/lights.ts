@@ -453,8 +453,8 @@ export class HealthLights {
     l.delay = delay;
   }
 
-  /** `quiet`: a clean plate (the scene was opened without pickups): show only when it matters. `keep`: show regardless. */
-  update(dt: number, clock: number, sim: SimView, quiet: boolean, keep = false): void {
+  /** `_quiet` (a clean plate, no pickups) no longer hides them: creatures and lamp light bring them up anywhere. `keep`: show regardless. */
+  update(dt: number, clock: number, sim: SimView, _quiet: boolean, keep = false): void {
     const L = LIGHTS;
     const p = sim.player;
     const max = Math.max(1, Math.min(12, p.hpMax | 0));
@@ -509,13 +509,14 @@ export class HealthLights {
     // --- Is it wanted on screen?
     let busy = false;
     for (let i = 0; i < max; i++) if ((this.lights[i] as Light).anim !== 0) busy = true;
-    if (!quiet) {
-      for (const e of sim.enemies ?? []) {
-        if (e.mode === 'dead' || e.gone) continue;
-        if (Math.abs(e.x + e.w / 2 - p.cx) < L.nearX && Math.abs(e.y + e.h / 2 - p.cy) < L.nearY)
-          this.hold = Math.max(this.hold, 1.6);
-      }
+    // A creature near or aware of her, or a lamp's light on her: the lights are up, so she can see what she
+    // has before the first blow (feel review r2: HK never hides the masks). Quiet rooms too.
+    for (const e of sim.enemies ?? []) {
+      if (e.mode === 'dead' || e.gone || e.kind === 'web') continue;
+      const near = Math.abs(e.x + e.w / 2 - p.cx) < L.nearX && Math.abs(e.y + e.h / 2 - p.cy) < L.nearY;
+      if (near || e.aware > 0) this.hold = Math.max(this.hold, 1.6);
     }
+    if (p.lit > 0.05) this.hold = Math.max(this.hold, 1.2);
     this.hold -= dt;
     // `keep`: the rest of the cluster is up, and the corner has one layout.
     const show = hp < max || p.faded > 0 || busy || this.hold > 0 || keep;

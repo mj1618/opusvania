@@ -393,7 +393,10 @@ export class GivingRenderer {
       if (ev.type === 'enemyAware') {
         // "It sees your light": a thread from its eyes to her, and the glints she carries catch their breath.
         const i = this.enemyIndex(sim, ev.id);
-        if (i >= 0 && sim.player.faded === 0) {
+        // Only where creatures see the light she carries (the test grove's wallet rule). In the lamp rooms
+        // cream means the lamp's pull alone (feel review r2: this thread read as a lamp pulling her).
+        const wallet = sim.scene.senses === 'wallet';
+        if (wallet && i >= 0 && sim.player.faded === 0) {
           const old = this.threads.find((q) => q.enemy === i || q.t >= GIVING.caught.len);
           if (old) {
             old.t = 0;

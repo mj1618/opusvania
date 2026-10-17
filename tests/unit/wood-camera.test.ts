@@ -13,7 +13,7 @@
  * R9, R11; now at most 0.95, and the peak acceleration is 7.1 (R2's drop to the exit).
  */
 import { describe, expect, it } from 'vitest';
-import { createCamera, lerpCamera, stepCamera } from '../../src/render/camera/index';
+import { createCamera, landBelow, lerpCamera, stepCamera } from '../../src/render/camera/index';
 import { type CameraTuning, cameraFor, cameraTuning } from '../../src/render/camera/tuning';
 import { SAFE_H } from '../../src/render/contract';
 import { getRoom, ROOM_IDS } from '../../src/scene/index';
@@ -29,6 +29,10 @@ const L = ActionBit.left;
 const J = ActionBit.jump;
 /** The strip at the room's bottom the view cannot go below (a catch zone, a drop exit live there). */
 const FOOT = 200;
+/** A fall this long or longer must show the floor coming (feet at most `FALL_FEET` of the frame). */
+const FALL = 300;
+const FALL_FEET = 0.8;
+const NEAR = 64;
 
 /** The wood's greybox rooms (wood-hatch, painted, has its own run in rooms.test.ts). */
 const WOOD = ROOM_IDS.filter((id) => id.startsWith('wood-') && id !== 'wood-hatch');
@@ -46,6 +50,9 @@ interface CamRun {
   feetHi: number;
   /** The lowest her feet got on screen while they were above the room's foot (`FOOT`), outside camera zones. */
   feetHiFree: number;
+  /** The lowest her feet got on screen in a fall of more than `FALL` px (zones included), and where. */
+  fallFeet: number;
+  fallAt: string;
   /** The frame of the peak acceleration, and where her feet were then. */
   atA: number;
   atX: number;
@@ -66,6 +73,9 @@ function camRun(room: string, dir: 1 | -1, hop: boolean, ct?: CameraTuning): Cam
   let feetLo = 1;
   let feetHi = 0;
   let feetHiFree = 0;
+  let fallFeet = 0;
+  let fallAt = '';
+  let ground = s.player.y + s.player.h;
   let hold = 0;
   let f = 0;
   let atA = 0;
@@ -102,8 +112,22 @@ function camRun(room: string, dir: 1 | -1, hop: boolean, ct?: CameraTuning): Cam
     // Nor while a camera zone frames the view (its zoom, its bounds' shift): the designer's framing, the kit's tests.
     const zoned = cam.zone !== '' || cam.zoom !== 1 || cam.oy !== 0;
     if (q.y + q.h < scene.height - FOOT && !zoned) feetHiFree = Math.max(feetHiFree, feet);
+    if (q.grounded) ground = q.y + q.h;
+    else if (
+      q.vy > 0 &&
+      q.y + q.h - ground > FALL &&
+      q.y + q.h < scene.height - FOOT &&
+      // (The last `NEAR` px over the floor she lands on: it is in view, the landing is that frame or next.)
+      landBelow(scene, q.x + q.w / 2, q.y + q.h) - (q.y + q.h) > NEAR &&
+      // (Nor while the view stands on the room's floor: it can show no lower; a drop exit lives there.)
+      v.y + cam.vh / 2 / cam.zoom < scene.height - 1 &&
+      feet > fallFeet
+    ) {
+      fallFeet = feet;
+      fallAt = `f${f} (${Math.round(q.x)}, ${Math.round(q.y + q.h)}) zone ${cam.zone || '-'}`;
+    }
   }
-  return { frames: f, maxA, feetLo, feetHi, feetHiFree, atA, atX, atY };
+  return { frames: f, maxA, feetLo, feetHi, feetHiFree, fallFeet, fallAt, atA, atX, atY };
 }
 
 describe('the fall camera in the wood rooms', () => {
@@ -133,6 +157,7 @@ describe('the fall camera in the wood rooms', () => {
         const what = `${id} ${dir > 0 ? 'east' : 'west'} ${hop ? 'runner' : 'walker'} (${r.frames} f)`;
         expect(r.maxA, what).toBeLessThan(8);
         expect(r.feetHiFree, what).toBeLessThan(0.97);
+        expect(r.fallFeet, `${what} ${r.fallAt}`).toBeLessThanOrEqual(FALL_FEET);
         expect(r.feetLo, what).toBeGreaterThan(0.15);
       }
     });

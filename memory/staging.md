@@ -20,7 +20,7 @@ flies into, the player in control, input never held; the camera may lift, widen 
 - `camera/stage-cam.ts` `StageCamera` (stage.ts): the vista hold, the glimpse look-up, the bask framing as an offset
   and zoom factor on the follow view (like the goal camera; not under a debug override, so clip them `--wide`).
   `STAGE_BEATS` = seconds into each beat (-1 none, `DONE` done in an earlier visit); a restart (`roomEnter`) re-reads
-  the save. Ease in / out `STAGE_CAM`; the glimpse's hold is `secs` - 2.3.
+  the save. Ease in / out `STAGE_CAM`; the glimpse's hold is `secs` - 1.5 (r2: 3 s in all; the title comes in 0.1-0.55 s).
 - `greybox/staging.ts` `StagingView`: far things in the sky layer (screen space, under the terrain) with parallax
   about the vista point (`toScreen`), so the moon and the stream show through the sky and the lamps through the gap
   past the lip; the title is a Pixi Text over the moon. Back: props, the twitch's wings (behind her). Front:
@@ -65,3 +65,9 @@ flies into, the player in control, input never held; the camera may lift, widen 
   shelf up to the bracket cap).
 - Floor bark (kit.ts): moonlight wells up through it (pale slits, a faint breathing column over it), so a dead
   end over a floor panel reads as a door (R9).
+
+## Round 2 (feel review r2)
+- Still owed by others: a sim `hold` trigger kind (input ignored <= 2.5-3 s) for the vista and the glimpse, and a
+  vista trigger on a ledge where she must stop. Until then the glimpse is 3 s with input live.
+- The dangler and the weaver are spiders in greybox (creatures.ts `spider`): abdomen, head, eight legs that tuck
+  on the tell and splay in the drop, fangs as the danger part; the dangler's silk and its drop line in the tell.

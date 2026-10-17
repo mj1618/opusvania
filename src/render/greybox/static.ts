@@ -27,12 +27,6 @@ export function buildStatic(room: Room): Graphics {
   for (let x = 0; x <= room.width; x += GB.gridPx) g.moveTo(x, top).lineTo(x, room.height);
   for (let y = room.height; y >= top; y -= GB.gridPx) g.moveTo(0, y).lineTo(room.width, y);
   g.stroke({ color: GB.grid, width: 2, alpha: GB.gridAlpha });
-  // Catch zones: a faint red wash with a dashed rim.
-  for (const c of room.catches ?? []) {
-    g.rect(c.x, c.y, c.w, c.h).fill({ color: GB.catchZone, alpha: 0.07 });
-    dashRect(g, c.x, c.y, c.w, c.h, 18, 12);
-    g.stroke({ color: GB.catchZone, width: 2, alpha: 0.45 });
-  }
   // Solids.
   for (const s of room.solids) {
     const hazard = s.tag === 'pool';
@@ -85,6 +79,14 @@ export function buildStatic(room: Room): Graphics {
 /** The labels: lure ids, exits, catch zones, rest points and the room's notes. */
 export function buildLabels(room: Room): Container {
   const c = new Container({ label: 'greybox-labels' });
+  // Catch zones: a faint red wash with a dashed rim (a designer's mark: with the labels only, feel review r2).
+  const cz = new Graphics();
+  for (const z of room.catches ?? []) {
+    cz.rect(z.x, z.y, z.w, z.h).fill({ color: GB.catchZone, alpha: 0.07 });
+    dashRect(cz, z.x, z.y, z.w, z.h, 18, 12);
+    cz.stroke({ color: GB.catchZone, width: 2, alpha: 0.45 });
+  }
+  c.addChild(cz);
   // Under the core (her orbit circles over it): id, kind and which way it swirls.
   for (const l of room.lures ?? [])
     c.addChild(label(`${l.id}  ${l.kind} ${l.spin === -1 ? '↺' : '↻'}`, l.x, l.y + 96, GB.label, 16));

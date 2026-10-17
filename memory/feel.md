@@ -5,26 +5,27 @@ side (hurt hitstop 8 / last light 14, kill bonus +3, `slashTerrain`, the lure th
 
 ## Screen shake: one trauma value (`src/render/camera/shake.ts`)
 - Render-side like the kick: an offset added to the view at draw time (stage.ts), the follow camera never sees it.
-  Offset = `shake.max` 22 world px x trauma², smooth value noise at `freq` 24 Hz on the shake's own render clock
+  Offset = `shake.max` 30 world px x trauma^`power` 1.5 (r2: 22 x trauma² left a kill at 2 px), smooth value noise at `freq` 24 Hz on the shake's own render clock
   (no wall clock, no Math.random: a capture shakes the same every time). Trauma drains `decay` 1.8 / s, capped at 1.
   A `spawn` (teleport, re-form, room entry) zeroes it.
 - **The budget** (`cameraTuning.shake.budget`, loudest first; keep this order when adding a beat):
 
 | event | trauma | peak px |
 |---|---|---|
-| her last light (`hurt` with hp 0) | 0.6 | 7.9 |
-| her hurt | 0.5 | 5.5 |
-| snuff (`lureSnuff`) | 0.45 | 4.5 |
-| kill (`enemyDie`), a ram into a wall (`enemyRecover` cause wall), a bark break | 0.3 | 2 |
-| hard landing (`land.hard`) | 0.2 | 0.9 |
-| the finisher (`impact` power 2) | 0.12 | 0.3 |
-| a clang (`enemyBlock` not a down cut, `kitClang`) | 0.1 | 0.2 |
-| a cut into a wall (`slashTerrain`) | 0.05 | 0.06 |
+| her last light (`hurt` with hp 0) | 0.6 | 13.9 |
+| her hurt | 0.5 | 10.6 |
+| snuff (`lureSnuff`) | 0.45 | 9.1 |
+| kill, crack (`enemyCrack`), a ram into a wall, a bark break | 0.3 | 4.9 |
+| hard landing (`land.hard`) | 0.2 | 2.7 |
+| the finisher (`impact` power 2) | 0.12 | 1.2 |
+| a clang (`enemyBlock` not a down cut, `kitClang`), a cap bounce | 0.1 | 0.9 |
+| a cut into a wall (`slashTerrain`) | 0.05 | 0.3 |
 
   Small beats are near nothing on their own on purpose (trauma² is the point: they only add up with others);
   the kick carries the cuts.
 - **The kick** (`kick.ts`) now 6 px a cut, 11 the finisher (was 3.5 / 7: invisible at 1080p), x1.4 on a kill, and a
-  snuff kicks as a killing finisher (15 px) whatever cut put it out.
+  snuff kicks as a killing finisher (15 px) whatever cut put it out. Her hurt kicks 12 px the way she is thrown
+  (and 4 down).
 - **Accessibility**: `FEEL.shake` off stops the shake AND the kick. `?shake=off` / `?noshake`, remembered in
   localStorage `lampfall.shake`, `__game.debug.shake(on?)`. No key or menu yet (no options screen exists).
 
@@ -34,9 +35,9 @@ side (hurt hitstop 8 / last light 14, kill bonus +3, `slashTerrain`, the lure th
   pale lavender), so she keeps going DARK (`Painter.dimK`). The white is put where the blow met her instead: a
   white 8-point star and a ring at `hurt.hitX, hitY` (greybox, creatures.ts; painted rooms have no creatures
   that hit yet). Ask Matt before putting white on her.
-- A dark vignette pulse (`camera/hurt-fx.ts`, every room): a radial dark (a breath of red) over the view's edges,
-  in 0.04 s, out over 0.3 s, peak 0.55; her last light peaks 0.85 and holds 0.25 s first. Over the picture, under
-  the dip / HUD.
+- On screen (`camera/hurt-fx.ts`, r2: the old dark vignette only darkened edges already near black): a 2-frame
+  dark flash over the whole view (0.4), then a red edge round it (0.35, out over 0.3 s); her last light 0.6 and
+  held 0.25 s. Nothing white anywhere near her.
 - The shake (0.5 / 0.6). With the sim's 8-frame hold the star and the vignette land inside the freeze.
 
 ## Creatures, motes and the snuff: greybox only (memory/greybox.md)

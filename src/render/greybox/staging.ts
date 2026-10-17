@@ -28,12 +28,14 @@ import { GB } from './palette';
 /** Knobs (seconds of render time, px). */
 export const STAGING = {
   /** The vista: the title's fade in / hold / out (s from the beat's start), the stream's thinning after it. */
-  title: { in: 0.6, full: 1.4, out: 3.6, gone: 4.8, size: 84, spacing: 22, alpha: 0.82 },
+  /** (r2: in sooner, a runner saw it 1.3 s before she left the room.) */
+  title: { in: 0.1, full: 0.55, out: 3.4, gone: 4.6, size: 84, spacing: 22, alpha: 0.82 },
   stream: { count: 150, speed: 240, width: 26, thinFrom: 3, thinTo: 8, alpha: 0.55 },
   /** Stragglers: start (s from the vista), stagger between them, flight time along their path. */
   stragglers: { at: 0.7, every: 0.18, fly: 2.4 },
   /** The glimpse (s from its beat): the firefly flies in, hangs, pulses twice, darts away. */
-  glimpse: { in0: 0.5, in1: 1.9, pulse0: 2.2, pulse1: 2.9, away0: 3.4, away1: 4.0 },
+  /** (r2: 3 s in all, so the camera is off her as briefly as it can be with input live.) */
+  glimpse: { in0: 0.25, in1: 1.15, pulse0: 1.25, pulse1: 1.95, away0: 2.15, away1: 2.6 },
   /** The bask's rising moonlight motes. */
   bask: { motes: 14, rise: 120 },
   /** The wings-twitch: two flicks in `len` s, then at most once every `every` s while she stands there. */

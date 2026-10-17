@@ -18,7 +18,7 @@ import type { CameraView } from '../contract';
 /** Seconds of each beat's ease in / out (the hold is the data's). */
 export const STAGE_CAM = {
   vista: { in: 1.0, out: 1.1 },
-  glimpse: { in: 1.1, out: 1.2 },
+  glimpse: { in: 0.7, out: 0.8 },
   bask: { in: 0.7, out: 0.9 },
 };
 
@@ -101,7 +101,7 @@ export class StageCamera {
           if (v && e.flag === v.flag && STAGE_BEATS.vista < 0)
             this.start('vista', v.x, v.y, v.zoom ?? 1, v.hold);
           if (g && e.flag === g.flag && STAGE_BEATS.glimpse < 0)
-            this.start('glimpse', g.x, g.y, g.zoom ?? 1, g.secs - 2.3);
+            this.start('glimpse', g.x, g.y, g.zoom ?? 1, g.secs - 1.5);
         } else if (e.type === 'gladeGrant' && S.bask)
           this.start('bask', S.bask.x, S.bask.y, S.bask.zoom ?? 1, S.bask.secs);
       }
@@ -109,7 +109,7 @@ export class StageCamera {
         this.zonesSeen.add(zone);
         if (v && v.zone === zone && STAGE_BEATS.vista < 0) this.start('vista', v.x, v.y, v.zoom ?? 1, v.hold);
         if (g && g.zone === zone && STAGE_BEATS.glimpse < 0)
-          this.start('glimpse', g.x, g.y, g.zoom ?? 1, g.secs - 2.3);
+          this.start('glimpse', g.x, g.y, g.zoom ?? 1, g.secs - 1.5);
       }
     }
     const s = this.shot;

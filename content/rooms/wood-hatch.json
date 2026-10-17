@@ -800,7 +800,7 @@
     },
     "lookaheadX": 330,
     "leadFrames": 36,
-    "smoothYFastFall": 5,
+    "smoothYFastFall": 6,
     "realFallPx": 250,
     "targetSmoothY": 10
   }

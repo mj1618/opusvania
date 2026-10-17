@@ -123,6 +123,14 @@ timings reach Z, every one a catch; walk-off glide and jump-glides all cross. Th
   9-frame follow, a long fall or the exit the full lead on `smoothYFastFall` 5). Measured on the naive run: peak
   camera acceleration 0.85 px/f^2 on the gap drops, 5.8 in the final drop; she stays at 0.47-0.78 of the frame
   through the drop and the fade. `tests/unit/rooms.test.ts` runs the camera headless over the whole run (< 8).
+- **Round 2 (feel review r2): the speed lead.** From the first frame she descends past her last ground the fall's
+  lead grows with her speed (`fallLead` vy 2 -> 14) as well as the drop, capped at the ground under her
+  (`landBelow`: solids, one-ways, catch tops); camera zones yield to a fall (their y shift scales by 1 - k, their
+  spring quickens); the target's spring shortens to 45% in a full fall. `wood-camera.test.ts`: feet <= 0.80 in every
+  fall over 300 px (zones included; not in the last 64 px over the floor, nor while the view stands on the room's
+  floor), peak < 8 px/f². wood-hatch went to `smoothYFastFall` 6 with it (5 peaked at 9.9). The hub's `rest` zone is a
+  small frame at P3 (zoom 0.8), but the hub's floor is 112 px above the room's bottom, so standing there her feet
+  are at ~0.9 whatever the camera does: the room needs ~250 px of ground under the floor (level).
 - **Every wood greybox room carries the fall block too (2026-10-17, feel review problem 5):** `realFallPx` 250,
   `targetSmoothY` 10, `fallLookahead` 320, but `smoothYFastFall` **6** (5 gave 8.2-8.7 px/f² at the onset of the
   long straight drops, R2's exit, R9's branch, R11); `lookaheadX` 330 / `leadFrames` 36 in R2, R6 and R9. And in

@@ -34,6 +34,13 @@ export class CameraKick {
       if (e.type === 'enemyDie') kill = true;
       if (e.type === 'lureSnuff') snuff = true;
       if (e.type === 'spawn') this.reset();
+      if (e.type === 'hurt') {
+        // The blow: the view is shoved the way she is thrown, and down a little.
+        this.x = (e.dir >= 0 ? 1 : -1) * k.hurt;
+        this.y = 0.35 * k.hurt;
+        this.vx = this.vy = 0;
+        continue;
+      }
       if (e.type !== 'impact') continue;
       const px = e.power >= 2 || snuffIn(events) ? k.power2 : k.power1;
       // Against the cut: forward cuts shove the view back, an up cut down, a down cut up.

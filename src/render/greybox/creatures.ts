@@ -36,6 +36,7 @@ export const CREATURE = {
   crack: 0xd8cfc0,
   hawker: 0x5f6e86,
   weaver: 0x6e6280,
+  dangler: 0x6a6478,
   other: 0x6b7385,
   belly: 0x2e2a2c,
   /** The danger part at rest, and in a tell / dive / brace (the hunt colour, as the boss view's). */
@@ -220,6 +221,8 @@ function bodyColor(kind: string): number {
       return CREATURE.hawker;
     case 'weaver':
       return CREATURE.weaver;
+    case 'dangler':
+      return CREATURE.dangler;
     default:
       return CREATURE.other;
   }
@@ -393,7 +396,9 @@ export class CreatureView {
     else if (kind === 'weaverBoss') {
       // The boss view draws its body (boss.ts); here only the answer to a blow.
       if (white) front.rect(e.x, e.y, e.w, e.h).fill({ color: CREATURE.flash, alpha: 0.9 });
-    } else this.generic(e, back, front, sq, white);
+    } else if (kind === 'dangler') this.dangler(e, clock, back, front, sq, white);
+    else if (kind === 'weaver') this.spider(e, clock, back, front, sq, white, false);
+    else this.generic(e, back, front, sq, white);
 
     // What it senses (memory/creatures.md): a yellow eye over one aware of her, a grey dash over one asleep.
     const top = isFlyer(kind) && e.mode === 'curious' ? e.y - e.h * 0.25 : e.y;
@@ -691,7 +696,114 @@ export class CreatureView {
     }
   }
 
-  /** Any other kind (the weaver): a filled body with its danger side marked. */
+  /**
+   * The dangler (feel review r2: a 30 x 26 box read as nothing): its silk from the tie point, a round
+   * abdomen about 40 px across and a small head under it, eight legs that fold in on the tell and splay as
+   * it drops; the fangs are its danger part (dim red; hunt red in the tell and the drop). In the tell a
+   * dashed line shows how far the silk will run.
+   */
+  private dangler(
+    e: EnemyState,
+    clock: number,
+    back: Graphics,
+    front: Graphics,
+    sq: number,
+    white: boolean,
+  ): void {
+    const cx = e.x + e.w / 2;
+    const cy = e.y + e.h / 2;
+    const live = e.mode === 'windup' || e.mode === 'drop' || e.mode === 'swing';
+    // The silk.
+    if (!e.broken && e.mode !== 'fall' && e.mode !== 'recover')
+      back
+        .moveTo(e.fromX, e.fromY)
+        .lineTo(cx, cy - e.h / 2)
+        .stroke({ color: 0xdfe6f2, width: 1.5, alpha: 0.7 });
+    if (e.mode === 'windup') {
+      const d = Math.max(0, e.targetY - cy);
+      for (let y = 18; y < d; y += 22) back.moveTo(cx, cy + y).lineTo(cx, cy + Math.min(d, y + 10));
+      back.stroke({ color: CREATURE.hunt, width: 2, alpha: 0.5 });
+    }
+    this.spider(
+      e,
+      clock,
+      back,
+      front,
+      sq,
+      white,
+      true,
+      live,
+      e.mode === 'windup' ? 1 : e.mode === 'drop' ? -1 : 0,
+    );
+  }
+
+  /**
+   * A spider body (the dangler; the weaver small): abdomen, head, eight legs and the fangs. `fold` 1 =
+   * legs tucked (a tell), -1 = splayed up (a drop), 0 = at rest, walking with the clock.
+   */
+  private spider(
+    e: EnemyState,
+    clock: number,
+    back: Graphics,
+    front: Graphics,
+    sq: number,
+    white: boolean,
+    small: boolean,
+    live = e.mode === 'windup' || e.mode === 'bite' || e.mode === 'run',
+    fold = e.mode === 'windup' ? 1 : 0,
+  ): void {
+    const cx = e.x + e.w / 2;
+    const cy = e.y + e.h / 2;
+    const sx = 1 + (SQUASH.x - 1) * sq;
+    const sy = 1 + (SQUASH.y - 1) * sq;
+    const r = Math.max(e.w, e.h) * (small ? 0.68 : 0.55);
+    const body = bodyColor(e.kind);
+    const hot = live ? mix(body, CREATURE.hunt, 0.35) : body;
+    // Legs: four a side, each a bent line from the body; they fold in and out.
+    const legLen = r * (small ? 1.5 : 1.9);
+    for (const side of [-1, 1])
+      for (let k = 0; k < 4; k++) {
+        const base = -0.9 + k * 0.6;
+        const walk = fold === 0 ? Math.sin(clock * 6 + k * 1.7 + side) * 0.12 : 0;
+        const a = side < 0 ? Math.PI - base - walk : base + walk;
+        const tuck = fold > 0 ? 0.45 : fold < 0 ? 1.15 : 1;
+        const kx = cx + Math.cos(a) * r * 0.9 * sx;
+        const ky = cy + Math.sin(a) * r * 0.6 * sy;
+        const ex = cx + Math.cos(a) * legLen * tuck * sx;
+        const ey = cy + (fold < 0 ? -0.7 : 0.55) * legLen * tuck * sy * (0.6 + 0.4 * Math.abs(Math.sin(a)));
+        back
+          .moveTo(cx, cy)
+          .lineTo(kx, ky - 6)
+          .lineTo(ex, ey);
+      }
+    // (Lighter than the belly: dark legs vanished against the night, feel review r2.)
+    back.stroke({
+      color: mix(body, CREATURE.belly, 0.3),
+      width: small ? 3.5 : 3,
+      alpha: 0.95,
+      join: 'round',
+    });
+    // Abdomen and head.
+    back.ellipse(cx, cy - r * 0.15, r * sx, r * 0.9 * sy).fill({ color: hot });
+    back.circle(cx, cy + r * 0.75 * sy, r * 0.42).fill({ color: mix(hot, CREATURE.belly, 0.3) });
+    back.circle(cx - r * 0.15, cy + r * 0.7 * sy, 2.5).fill({ color: CREATURE.aware, alpha: 0.6 });
+    back.circle(cx + r * 0.15, cy + r * 0.7 * sy, 2.5).fill({ color: CREATURE.aware, alpha: 0.6 });
+    // The fangs, over her.
+    const fy = cy + r * 1.05 * sy;
+    for (const side of [-1, 1])
+      front
+        .moveTo(cx + side * r * 0.12, fy)
+        .lineTo(cx + side * r * 0.3, fy + r * 0.35)
+        .lineTo(cx + side * r * 0.05, fy + r * 0.2)
+        .closePath()
+        .fill({ color: live ? CREATURE.hunt : CREATURE.danger, alpha: 0.95 });
+    if (white) {
+      front.ellipse(cx, cy - r * 0.15, r * sx, r * 0.9 * sy).fill({ color: CREATURE.flash, alpha: 0.95 });
+      front.circle(cx, cy + r * 0.75 * sy, r * 0.42).fill({ color: CREATURE.flash, alpha: 0.95 });
+    }
+  }
+
+  /** Any other kind: a filled body with its danger side marked. */
   private generic(e: EnemyState, back: Graphics, front: Graphics, sq: number, white: boolean): void {
     const xf = this.xf.set(e, 'centre', 1 + (SQUASH.x - 1) * sq, 1 + (SQUASH.y - 1) * sq);
     const pts = xf.map([0, 0, e.w, 0, e.w, e.h, 0, e.h]);
