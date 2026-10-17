@@ -38,6 +38,8 @@ async function boot(): Promise<void> {
   const seed = Number(params.get('seed') ?? 1) >>> 0;
   const input = new InputSampler();
   const room = getRoom(params.get('room') ?? DEFAULT_ROOM);
+  // The key legend is for the test bed; the game shows no text (H still brings it up).
+  if (room.id === 'test-grove') document.getElementById('hint')?.classList.remove('quiet');
   const scene = params.has('nopickups')
     ? { ...room, pickups: [], pods: [], enemies: [], lanterns: [], lamps: [], heart: undefined }
     : room;
