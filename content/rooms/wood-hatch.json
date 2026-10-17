@@ -730,6 +730,14 @@
       "width": 64,
       "tipWidth": 20,
       "tree": "beyond"
+    },
+    "stage": {
+      "oak": {
+        "x": 30336,
+        "y": 10048,
+        "top": 4700,
+        "w": 384
+      }
     }
   },
   "shots": {

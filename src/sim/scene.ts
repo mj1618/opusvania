@@ -49,8 +49,9 @@ export interface OneWay {
   /**
    * Down + jump does not drop through it (it still lets her up from below): a mesh over a way she must
    * earn from the other side (the hub's root mesh over R10's climb-out: dropping through skipped the pit).
+   * A flag name: refuses until that story flag is set (then it is a shortcut down: `wood-climbout`).
    */
-  noDrop?: boolean;
+  noDrop?: boolean | string;
 }
 
 /** `glint`: a drop of light worth 1. `great`: a rare one cradled in a bud, worth more. */

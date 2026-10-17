@@ -1,6 +1,6 @@
 {
   "id": "wood-well",
-  "title": "The well: the old burrback, glade 2 (greybox)",
+  "title": "The roots: the stair, the old burrback, glade 2 (greybox)",
   "region": "wood",
   "width": 11264,
   "height": 2240,
@@ -23,23 +23,33 @@
         "lock": true,
         "fit": true,
         "bounds": { "x": 3392, "y": 1280, "w": 2304, "h": 896 }
+      },
+      {
+        "id": "window",
+        "x": 5760,
+        "y": 900,
+        "w": 448,
+        "h": 316,
+        "fit": true,
+        "bounds": { "x": 2944, "y": 700, "w": 3712, "h": 1540 }
       }
     ]
   },
-  "reform": { "x": 10944, "y": 448 },
+  "reform": { "x": 6300, "y": 1216 },
   "exits": [
-    { "id": "n", "edge": "n", "from": 384, "to": 640 },
     { "id": "out", "edge": "n", "from": 2560, "to": 2944 },
     { "id": "shaft", "edge": "n", "from": 10880, "to": 11136 }
   ],
-  "patches": [{ "id": "p4", "x": 3136, "y": 2112 }, { "id": "p-chute", "x": 10944, "y": 448 }],
-  "glades": [{ "id": "glade-claws", "x": 3008, "y": 1792, "w": 512, "h": 320, "ability": "wallJump" }],
-  "triggers": [{ "id": "climbed", "x": 2560, "y": 0, "w": 384, "h": 128, "sets": "wood-climbout" }],
+  "patches": [{ "id": "p4", "x": 3136, "y": 2112 }, { "id": "p-chute", "x": 6300, "y": 1216 }],
+  "glades": [{ "id": "glade-claws", "x": 2560, "y": 1920, "w": 704, "h": 192, "ability": "wallJump" }],
+  "triggers": [
+    { "id": "climbed", "x": 2560, "y": 0, "w": 384, "h": 128, "sets": "wood-climbout" },
+    { "id": "window", "x": 5760, "y": 1000, "w": 448, "h": 216, "sets": "wood-window", "hold": 120 }
+  ],
   "catches": [{ "id": "chute", "x": 5760, "y": 1840, "w": 4928, "h": 200 }],
   "solids": [
+    { "tag": "ground", "x": 0, "y": 0, "w": 2496, "h": 1344, "kick": false },
     { "tag": "ground", "x": 0, "y": 2112, "w": 5632, "h": 128 },
-    { "tag": "ground", "x": 0, "y": 0, "w": 384, "h": 1344, "kick": false },
-    { "tag": "ground", "x": 640, "y": 0, "w": 1856, "h": 1344, "kick": false },
     { "tag": "trunk", "x": 2496, "y": 0, "w": 64, "h": 1888, "kick": "east" },
     { "tag": "trunk", "x": 2944, "y": 0, "w": 64, "h": 1888, "kick": "west" },
     { "tag": "root", "x": 2880, "y": 1056, "w": 64, "h": 32 },
@@ -51,7 +61,8 @@
     { "tag": "ground", "x": 7040, "y": 1088, "w": 640, "h": 1152 },
     { "tag": "ground", "x": 8320, "y": 896, "w": 768, "h": 1344 },
     { "tag": "ground", "x": 9728, "y": 640, "w": 640, "h": 1600 },
-    { "tag": "ground", "x": 10688, "y": 448, "w": 576, "h": 1792 }
+    { "tag": "ground", "x": 10688, "y": 448, "w": 576, "h": 1792 },
+    { "tag": "root", "x": 9728, "y": 520, "w": 300, "h": 40, "kick": false }
   ],
   "oneWays": [{ "tag": "root", "x": 2560, "y": 160, "w": 160 }],
   "gates": [
@@ -67,7 +78,9 @@
   ],
   "lures": [
     { "id": "wick-pit", "kind": "wick", "x": 3392, "y": 1600 },
-    { "id": "wick-chute", "kind": "wick", "x": 8736, "y": 700 }
+    { "id": "wick-pogo", "kind": "wick", "x": 9640, "y": 760 },
+    { "id": "wick-chute", "kind": "wick", "x": 8736, "y": 700 },
+    { "id": "wick-pocket", "kind": "wick", "x": 7360, "y": 900 }
   ],
   "enemies": [
     {
@@ -87,12 +100,20 @@
       "facing": 1,
       "drop": 900,
       "guards": "wick-chute"
+    },
+    {
+      "id": "dang-pocket",
+      "kind": "dangler",
+      "x": 7300,
+      "y": 8,
+      "facing": 1,
+      "drop": 1100,
+      "guards": "wick-pocket"
     }
   ],
   "routes": [
-    { "from": "shaft", "to": "p-chute", "oneWay": true },
+    { "from": "shaft", "to": "p-chute", "needs": ["glide"], "oneWay": true },
     { "from": "p-chute", "to": "p4", "oneWay": true },
-    { "from": "n", "to": "p4", "oneWay": true },
     { "from": "spawn", "to": "p4" },
     { "from": "p4", "to": "glade-claws" },
     { "from": "p4", "to": "climbed", "needs": ["wallJump"], "oneWay": true },
@@ -100,65 +121,55 @@
     { "from": "out", "to": "p4", "oneWay": true }
   ],
   "marks": {
-    "tatter": { "x": 3236, "y": 2112, "facing": -1, "when": "wood-root-ladder" },
     "notes": [
       {
         "x": 10200,
         "y": 120,
-        "text": "R10 wood-well  PURPOSE: mini-boss + glade. In from the lantern room's floor (one way)"
+        "text": "R10 wood-well  PURPOSE: the dark under everything, and the threshold. In from the silk hall's floor (one way)"
       },
+      { "x": 9000, "y": 360, "text": "THE ROOT STAIR: dark ledges stepping down west, glide gaps" },
       {
-        "x": 10600,
-        "y": 380,
-        "text": "P-chute moon patch: where she lands; a fade in the pit re-forms her here"
+        "x": 9740,
+        "y": 480,
+        "text": "a root ceiling over L1's lip: no jump here. THE POGO-WICK just under the lip: drop, down-cut it, it snuffs and bounces her on to L2"
       },
-      {
-        "x": 9000,
-        "y": 560,
-        "text": "THE CHUTE: root ledges down west in the dark; a glide gap or two; a wick (find)"
-      },
+      { "x": 9500, "y": 1100, "text": "a miss: the catch puts her back on L1" },
       {
         "x": 8500,
         "y": 400,
-        "text": "dang-chute on a long silk over L2, the glide's landing, lit by W-chute: land, step back east, cut the silk"
+        "text": "a lit pocket: W-chute over L2 with dang-chute's silk over the landing"
       },
-      { "x": 5400, "y": 1180, "text": "the roof hole: down into the pit (one way)" },
+      { "x": 7100, "y": 600, "text": "a lit pocket: W-pocket over L3 with dang-pocket over the landing" },
       {
-        "x": 3700,
-        "y": 1420,
-        "text": "THE PIT (camera locked, sealed): the old burrback sleeps, wakes over 60 frames"
+        "x": 5800,
+        "y": 900,
+        "text": "THE WINDOW (a held beat): through the roof hole, the old burrback asleep on a carpet of wings; past it the moon column on glade 2"
       },
-      {
-        "x": 3700,
-        "y": 1480,
-        "text": "while braced only a pogo on its shell lands; bait its ram into a wall for a 90-frame stun"
-      },
+      { "x": 6200, "y": 1150, "text": "P-chute at the pit door: a death costs a short walk" },
+      { "x": 3700, "y": 1420, "text": "THE PIT (camera locked; the gate in frame): the old burrback" },
       { "x": 3540, "y": 1300, "text": "root gate, floor to roof: opens when the old burrback dies" },
+      { "x": 3100, "y": 1540, "text": "W8 wick-pit over the ledge behind the gate" },
       {
-        "x": 3100,
-        "y": 1540,
-        "text": "W8 wick-pit over the ledge behind the gate: out of the pit's reach, a gimme after"
+        "x": 2580,
+        "y": 1750,
+        "text": "GLADE 2: the moon column down the trunk, under the hub's mesh: CLAWS. P4"
       },
-      { "x": 3020, "y": 1750, "text": "GLADE 2: WALL JUMP, P4" },
+      { "x": 300, "y": 1500, "text": "the west hall under the hub: the drowned-roots stub (scenery only)" },
       {
         "x": 2580,
         "y": 900,
-        "text": "the climb-out: both faces kickable, a rest ledge; a root step (one-way) at the top: stand, jump, up through the hub's root mesh (sets wood-climbout)"
-      },
-      {
-        "x": 300,
-        "y": 1400,
-        "text": "the hub's well (a lid until the climb-out is done): the shortcut down, ~2700 to P4"
-      },
-      { "x": 5800, "y": 1100, "text": "LANDMARK: the sealed pit under a roof hole" }
-    ]
+        "text": "the climb-out: both faces, a rest ledge, a root step at the top; up through the hub's root mesh (sets wood-climbout)"
+      }
+    ],
+    "tatter": { "x": 3236, "y": 2112, "facing": -1, "when": "wood-root-ladder" },
+    "stage": { "oak": { "x": 2752, "y": -368, "top": -5716, "w": 384 } }
   },
   "shots": {
     "wide": [
-      { "name": "chute", "x": 9000, "y": 896 },
+      { "name": "stair", "x": 9000, "y": 896 },
+      { "name": "window", "x": 6000, "y": 1216 },
       { "name": "pit", "x": 4600, "y": 2112 },
-      { "name": "glade", "x": 3136, "y": 2112 },
-      { "name": "climb", "x": 2750, "y": 1200 }
+      { "name": "glade", "x": 3000, "y": 2112 }
     ]
   }
 }

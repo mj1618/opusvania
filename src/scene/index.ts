@@ -8,15 +8,13 @@ import labWorldBJson from '../../content/rooms/lab-world-b.json' with { type: 'j
 import labWorldCJson from '../../content/rooms/lab-world-c.json' with { type: 'json' };
 import testGroveJson from '../../content/rooms/test-grove.json' with { type: 'json' };
 import woodBurrowJson from '../../content/rooms/wood-burrow.json' with { type: 'json' };
-import woodCapsJson from '../../content/rooms/wood-caps.json' with { type: 'json' };
 import woodChaseJson from '../../content/rooms/wood-chase.json' with { type: 'json' };
-import woodClimbJson from '../../content/rooms/wood-climb.json' with { type: 'json' };
 import woodGladeJson from '../../content/rooms/wood-glade.json' with { type: 'json' };
 import woodGlidewalkJson from '../../content/rooms/wood-glidewalk.json' with { type: 'json' };
 import woodHatchJson from '../../content/rooms/wood-hatch.json' with { type: 'json' };
 import woodHawkersJson from '../../content/rooms/wood-hawkers.json' with { type: 'json' };
 import woodHollowJson from '../../content/rooms/wood-hollow.json' with { type: 'json' };
-import woodLanternJson from '../../content/rooms/wood-lantern.json' with { type: 'json' };
+import woodSilkJson from '../../content/rooms/wood-silk.json' with { type: 'json' };
 import woodWellJson from '../../content/rooms/wood-well.json' with { type: 'json' };
 import woodWicksJson from '../../content/rooms/wood-wicks.json' with { type: 'json' };
 import worldJson from '../../content/world.json' with { type: 'json' };
@@ -61,7 +59,13 @@ const SceneSchema = z
       }),
     ),
     oneWays: z.array(
-      z.object({ tag: TAG, x: int, y: int, w: int.positive(), noDrop: z.boolean().optional() }),
+      z.object({
+        tag: TAG,
+        x: int,
+        y: int,
+        w: int.positive(),
+        noDrop: z.union([z.boolean(), z.string().min(1)]).optional(),
+      }),
     ),
     pickups: z
       .array(
@@ -599,10 +603,8 @@ const FILES: readonly unknown[] = [
   woodGlidewalkJson,
   woodHollowJson,
   woodHawkersJson,
-  woodLanternJson,
+  woodSilkJson,
   woodWellJson,
-  woodClimbJson,
-  woodCapsJson,
   labWorldAJson,
   labWorldBJson,
   labWorldCJson,

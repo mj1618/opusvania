@@ -8,6 +8,24 @@
   "edgeKick": false,
   "abilities": [],
   "art": { "mode": "greybox", "labels": false },
+  "camera": {
+    "realFallPx": 250,
+    "targetSmoothY": 10,
+    "smoothYFastFall": 6,
+    "fallLookahead": 320,
+    "lookaheadX": 330,
+    "leadFrames": 36,
+    "zones": [
+      {
+        "id": "vista",
+        "x": 4800,
+        "y": 1088,
+        "w": 960,
+        "h": 512,
+        "bounds": { "x": 4416, "y": 576, "w": 1984, "h": 1344 }
+      }
+    ]
+  },
   "exits": [
     { "id": "n", "edge": "n", "from": 384, "to": 1664 },
     { "id": "s", "edge": "s", "from": 5760, "to": 6400, "oneWay": true }
@@ -74,7 +92,8 @@
       "stragglers": {
         "count": 8,
         "path": [[5200, 1000], [5600, 1200], [5900, 1450], [6000, 1800], [6050, 2050]]
-      }
+      },
+      "oak": { "x": 24576, "y": 7232, "top": 1884, "w": 384 }
     },
     "notes": [
       {
@@ -143,24 +162,6 @@
       { "id": "vista", "x": 5600, "y": 640, "note": "lift from x 5000; hold ~2 s on V for the title" }
     ]
   },
-  "camera": {
-    "realFallPx": 250,
-    "targetSmoothY": 10,
-    "smoothYFastFall": 6,
-    "fallLookahead": 320,
-    "lookaheadX": 330,
-    "leadFrames": 36,
-    "zones": [
-      {
-        "id": "vista",
-        "x": 4800,
-        "y": 1088,
-        "w": 960,
-        "h": 512,
-        "bounds": { "x": 4416, "y": 576, "w": 1984, "h": 1344 }
-      }
-    ]
-  },
   "shots": {
     "wide": [
       { "name": "landing", "x": 900, "y": 704 },
@@ -170,5 +171,5 @@
     ]
   },
   "lures": [{ "id": "wick-cave", "kind": "wick", "x": 160, "y": 590 }],
-  "triggers": [{ "id": "vista", "x": 4800, "y": 1344, "w": 384, "h": 256, "sets": "wood-vista" }]
+  "triggers": [{ "id": "vista", "x": 4800, "y": 1344, "w": 384, "h": 256, "sets": "wood-vista", "hold": 150 }]
 }

@@ -1,0 +1,123 @@
+{
+  "id": "wood-silk",
+  "title": "The silk hall (greybox)",
+  "region": "wood",
+  "width": 3840,
+  "height": 2992,
+  "spawn": { "x": 300, "y": 2624 },
+  "edgeKick": false,
+  "abilities": ["glide"],
+  "art": { "mode": "greybox", "labels": false },
+  "camera": {
+    "realFallPx": 250,
+    "targetSmoothY": 10,
+    "smoothYFastFall": 6,
+    "fallLookahead": 320,
+    "lookaheadX": 330,
+    "leadFrames": 36
+  },
+  "exits": [
+    { "id": "w", "edge": "w", "from": 2368, "to": 2624 },
+    { "id": "panel", "edge": "s", "from": 3200, "to": 3456, "oneWay": true }
+  ],
+  "signs": [{ "id": "sign-silk", "x": 3650, "y": 2624, "flag": "wood-sign-silk", "rhythm": "..-." }],
+  "solids": [
+    { "tag": "ground", "x": 0, "y": 2624, "w": 1824, "h": 368 },
+    { "tag": "ground", "x": 1824, "y": 2880, "w": 352, "h": 112 },
+    { "tag": "ground", "x": 2176, "y": 2624, "w": 1024, "h": 368 },
+    { "tag": "ground", "x": 3456, "y": 2624, "w": 384, "h": 368 },
+    { "tag": "root", "x": 760, "y": 2600, "w": 64, "h": 24 },
+    { "tag": "branch", "x": 660, "y": 2160, "w": 160, "h": 32, "kick": false },
+    { "tag": "root", "x": 1600, "y": 2304, "w": 800, "h": 48 },
+    { "tag": "branch", "x": 1480, "y": 1900, "w": 160, "h": 32, "kick": false },
+    { "tag": "root", "x": 2780, "y": 2600, "w": 64, "h": 24 },
+    { "tag": "branch", "x": 2680, "y": 2100, "w": 160, "h": 32, "kick": false },
+    { "tag": "branch", "x": 320, "y": 1900, "w": 192, "h": 32, "kick": false },
+    { "tag": "root", "x": 400, "y": 0, "w": 32, "h": 1900, "kick": false }
+  ],
+  "oneWays": [
+    { "tag": "root", "x": 1888, "y": 2752, "w": 96 },
+    { "tag": "root", "x": 2080, "y": 2752, "w": 96 }
+  ],
+  "bark": [{ "id": "bark-panel", "x": 3200, "y": 2624, "w": 256, "h": 64, "floor": true }],
+  "lures": [
+    { "id": "wick-s1", "kind": "wick", "x": 848, "y": 2560 },
+    { "id": "wick-s2", "kind": "wick", "x": 1400, "y": 2380 },
+    { "id": "wick-s3", "kind": "wick", "x": 2868, "y": 2560 },
+    { "id": "wick-dj", "kind": "wick", "x": 485, "y": 1830 }
+  ],
+  "enemies": [
+    { "id": "dang-s1", "kind": "dangler", "x": 740, "y": 2194, "facing": 1, "guards": "wick-s1" },
+    { "id": "dang-s2", "kind": "dangler", "x": 1560, "y": 1934, "facing": -1, "guards": "wick-s2" },
+    {
+      "id": "burr-silk",
+      "kind": "burrback",
+      "x": 2560,
+      "y": 2624,
+      "facing": 1,
+      "radius": 300,
+      "guards": "wick-s3"
+    },
+    { "id": "dang-s3", "kind": "dangler", "x": 2760, "y": 2134, "facing": 1, "guards": "wick-s3" }
+  ],
+  "routes": [
+    { "from": "spawn", "to": "w" },
+    { "from": "w", "to": "sign-silk" },
+    { "from": "w", "to": "panel", "oneWay": true }
+  ],
+  "marks": {
+    "notes": [
+      {
+        "x": 100,
+        "y": 1900,
+        "text": "R9 wood-silk  PURPOSE: the dangler, and the predators together. Silk hangs from the canopy into the light"
+      },
+      {
+        "x": 500,
+        "y": 2100,
+        "text": "1. THE DANGLER ALONE: W-s1 over a knob on a safe floor; it drops on the spot she has to stand on to cut"
+      },
+      {
+        "x": 500,
+        "y": 2140,
+        "text": "the thread shows first: step back, let it drop, cut it while it hangs; or cut the flame from a jump"
+      },
+      {
+        "x": 1300,
+        "y": 1850,
+        "text": "2. OVER A THROW LINE: W-s2's throw up onto the root shelf passes dang-s2's silk: wait out its drop, then go"
+      },
+      { "x": 1830, "y": 2840, "text": "the slow line under the shelf: a dark dip with root steps" },
+      {
+        "x": 2400,
+        "y": 2050,
+        "text": "3. THE COMPOSITION: burr-silk in the light's pool, dang-s3 over the only cut spot (the knob), one wick: one snuff sends both"
+      },
+      {
+        "x": 3300,
+        "y": 2400,
+        "text": "the dark half: the second firefly sign (a half-hung string of glow-caps)"
+      },
+      {
+        "x": 3150,
+        "y": 2700,
+        "text": "THE DEAD END: a bark floor like R4's: down-cuts break it and drop her into the roots"
+      },
+      { "x": 800, "y": 1700, "text": "LANDMARK: the silk hall, threads hanging into the three lights" },
+      {
+        "x": 300,
+        "y": 1840,
+        "text": "POSTGAME: W-dj on a ledge hung from the canopy on a slick root, 724 over the floor (double jump)"
+      }
+    ],
+    "stage": { "oak": { "x": -4928, "y": 2624, "top": -2724, "w": 384 } }
+  },
+  "shots": {
+    "wide": [
+      { "name": "alone", "x": 800, "y": 2624 },
+      { "name": "throw", "x": 1600, "y": 2400 },
+      { "name": "together", "x": 2700, "y": 2624 },
+      { "name": "dead-end", "x": 3400, "y": 2624 }
+    ]
+  }
+}

@@ -29,10 +29,8 @@
   },
   "exits": [
     { "id": "w", "edge": "w", "from": 256, "to": 512 },
-    { "id": "e", "edge": "e", "from": 1728, "to": 1984 },
-    { "id": "n-bough", "edge": "n", "from": 1920, "to": 2112 }
+    { "id": "e", "edge": "e", "from": 1728, "to": 1984 }
   ],
-  "signs": [{ "id": "sign-gap1", "x": 1100, "y": 1408, "flag": "wood-sign-gap1", "rhythm": ".-.." }],
   "patches": [{ "id": "p-t3", "x": 3200, "y": 1472 }],
   "solids": [
     { "tag": "ground", "x": 0, "y": 512, "w": 576, "h": 1856 },
@@ -96,27 +94,24 @@
   ],
   "thorns": [
     { "id": "thorns-2", "x": 1984, "y": 1920, "w": 1024, "h": 32 },
-    { "id": "thorn-branch", "x": 3798, "y": 920, "w": 400, "h": 120 },
     { "id": "thorns-3", "x": 3648, "y": 2240, "w": 1024, "h": 32 }
   ],
-  "bark": [
-    { "id": "bark-wall", "x": 5376, "y": 1600, "w": 64, "h": 384 },
-    { "id": "bark-floor", "x": 5456, "y": 1984, "w": 96, "h": 64, "floor": true }
-  ],
+  "bark": [{ "id": "bark-floor", "x": 5456, "y": 1984, "w": 96, "h": 64, "floor": true }],
   "lures": [
     { "id": "wick-landing", "kind": "wick", "x": 1800, "y": 640 },
     { "id": "wick-line", "kind": "wick", "x": 2434, "y": 860, "spin": 1 },
-    { "id": "wick-ledge", "kind": "wick", "x": 5120, "y": 1784 },
+    { "id": "wick-bend", "kind": "wick", "x": 4150, "y": 1440, "spin": 1 },
+    { "id": "wick-ledge", "kind": "wick", "x": 4880, "y": 1800 },
     { "id": "wick-pocket", "kind": "wick", "x": 5680, "y": 2100 }
   ],
   "enemies": [
     {
       "id": "burr-ledge",
       "kind": "burrback",
-      "x": 5120,
+      "x": 4950,
       "y": 1984,
       "facing": -1,
-      "radius": 128,
+      "radius": 220,
       "hp": 5,
       "guards": "wick-ledge"
     }
@@ -126,9 +121,6 @@
     { "from": "w", "to": "e", "needs": ["glide"], "oneWay": true },
     { "from": "w", "to": "p-t3", "needs": ["glide"], "oneWay": true },
     { "from": "p-t3", "to": "e", "needs": ["glide"], "oneWay": true },
-    { "from": "w", "to": "sign-gap1" },
-    { "from": "n-bough", "to": "e", "oneWay": true },
-    { "from": "n-bough", "to": "w", "oneWay": true },
     { "from": "e", "to": "w", "needs": ["wallJump"], "oneWay": true }
   ],
   "marks": {
@@ -136,83 +128,60 @@
       {
         "x": 40,
         "y": 300,
-        "text": "R6 wood-glidewalk  PURPOSE: teach -> test (glide: safe, combine, test; the secret language)"
+        "text": "R6 wood-glidewalk  PURPOSE: wings become joy, and the lamp joins the glide"
       },
       { "x": 40, "y": 360, "text": "E0 (0-576, y 512): in from wood-glade" },
-      {
-        "x": 620,
-        "y": 640,
-        "text": "SAFE: gap 800, drop 448. jump 688 (miss)  walk-off glide 1045  jump-glide 1319"
-      },
+      { "x": 620, "y": 640, "text": "GAP 1 (safe): gap 800, drop 448. walk-off glide 1045, jump-glide 1319" },
       {
         "x": 330,
         "y": 200,
-        "text": "a root roof over E0's lip (192 clear): a jump bumps it; walk off and glide (the walk-off, taught)"
+        "text": "a root roof over E0's lip: a jump bumps it; walk off and glide (the walk-off, taught)"
       },
-      { "x": 40, "y": 420, "text": "camera zone gap1: the whole gap and T2 in view from E0" },
-      { "x": 3060, "y": 1380, "text": "P-t3 moon patch on T3 (the halfway rest: ~4 min from P2)" },
-      {
-        "x": 900,
-        "y": 1300,
-        "text": "FIND: a firefly sign on the safe floor under gap 1 (stand still to read it)"
-      },
-      {
-        "x": 1900,
-        "y": 100,
-        "text": "n-bough: the drop from wood-caps (R14) lands on the return bough: east to T-ret and the hub, or west home"
-      },
-      { "x": 2600, "y": 200, "text": "LANDMARK: the long bough overhead, the glidewalk's line under it" },
       { "x": 620, "y": 1360, "text": "safe floor; root rungs (one-ways) back up to E0" },
-      {
-        "x": 1500,
-        "y": 900,
-        "text": "T2  W4 wick-landing (1800, 640): glide's first lamp, a jump-cut; a long jump-glide passes under it"
-      },
-      {
-        "x": 1500,
-        "y": 860,
-        "text": "(the paper's (1920, 760) caught the jump-glide from E0's lip and every jump from T2's lip)"
-      },
+      { "x": 1500, "y": 900, "text": "T2  W4 wick-landing (1800, 640): glide's first lamp, a jump-cut" },
       {
         "x": 2050,
         "y": 640,
-        "text": "COMBINE: gap 1024, drop 512. W5 wick-line spin 1 sits on the jump-glide's line"
-      },
-      {
-        "x": 2050,
-        "y": 680,
-        "text": "high line: caught, beat free holding right, land on T3. low line (walk-off): under it"
+        "text": "GAP 2: the fast line: caught at W5, thrown, wings open: on to T3. The slow line: a walk-off glide under the pull"
       },
       { "x": 2200, "y": 1880, "text": "thorns: 1 light and back to T2" },
-      { "x": 3020, "y": 1420, "text": "T3" },
+      { "x": 3060, "y": 1380, "text": "T3, P-t3 moon patch" },
       {
         "x": 3700,
-        "y": 860,
-        "text": "a thorn branch over the jump's apex (76 clear): the jump-glide and the walk-off both cross; a ceiling for later"
+        "y": 1300,
+        "text": "GAP 3: W-bend over the gap: a glide passes through the edge of its pull: steer through, or get caught and throw out to T4"
       },
-      { "x": 3700, "y": 2200, "text": "thorns under gap 3" },
-      { "x": 4700, "y": 1930, "text": "T4: the landing at ~4841 is clear of burr-ledge (patrol 4992-5248)" },
-      { "x": 4900, "y": 1700, "text": "W6 wick-ledge guarded by burr-ledge (5 hp)" },
-      { "x": 5200, "y": 1560, "text": "ROTTEN BARK on the path: spores, W6's moths slip through, 3 cuts" },
+      { "x": 3700, "y": 2200, "text": "thorns under gap 3 (the floor only)" },
+      {
+        "x": 4700,
+        "y": 1700,
+        "text": "T4: the landing's wick W6 and burr-ledge under it: snuff it on the pass (a glide cut) and land in the dark, or land in its light and fight"
+      },
       {
         "x": 5400,
         "y": 2290,
-        "text": "a bark floor panel right after: down cuts open a pocket with W-pocket (the secret language)"
+        "text": "a bark floor panel: down cuts open a pocket with W-pocket (the secret language)"
       },
       {
         "x": 5000,
         "y": 140,
         "text": "RETURN BOUGH (wall jump): kick up T-ret's east face, walk west, drop onto E0"
       },
-      { "x": 5480, "y": 1700, "text": "T-ret: 256 over T4, walked under to the exit" }
-    ]
+      {
+        "x": 5480,
+        "y": 1700,
+        "text": "T-ret: 256 over T4, walked under to the exit. From T4 the oak's west door fills the frame"
+      },
+      { "x": 2600, "y": 200, "text": "LANDMARK: the long bough overhead, the glidewalk's line under it" }
+    ],
+    "stage": { "oak": { "x": 8512, "y": 1984, "top": -3364, "w": 384 } }
   },
   "shots": {
     "wide": [
       { "name": "gap1", "x": 700, "y": 512 },
       { "name": "gap2", "x": 2300, "y": 960 },
       { "name": "gap3", "x": 3700, "y": 1472 },
-      { "name": "bark", "x": 5200, "y": 1984 }
+      { "name": "landing", "x": 4900, "y": 1984 }
     ]
   }
 }

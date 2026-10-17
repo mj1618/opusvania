@@ -140,7 +140,7 @@ describe('the fall camera in the wood rooms', () => {
         250, 10, 6, 320,
       ]);
     }
-    for (const id of ['wood-chase', 'wood-glidewalk', 'wood-lantern']) {
+    for (const id of ['wood-chase', 'wood-glidewalk', 'wood-silk']) {
       const ct = cameraFor(getRoom(id));
       expect([ct.lookaheadX, ct.leadFrames], id).toEqual([330, 36]);
     }

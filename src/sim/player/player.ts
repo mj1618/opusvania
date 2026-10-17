@@ -806,7 +806,7 @@ function tryJump(c: Ctx): void {
       p.grounded &&
       !c.solid(p.x, p.y + 1) &&
       oneWayUnder(c.scene, p.x, p.y, p.w, p.h) &&
-      !noDropUnder(c.scene, p.x, p.y, p.w, p.h);
+      !noDropUnder(c.scene, c.state.save.flags, p.x, p.y, p.w, p.h);
     if (c.held(ActionBit.down) && onOneWayOnly) {
       p.dropTimer = c.P.dropThroughFrames;
       p.dropY = p.y + p.h;

@@ -9,10 +9,8 @@
     { "id": "wood-glidewalk", "x": 21824, "y": 8064 },
     { "id": "wood-hollow", "x": 27584, "y": 7168 },
     { "id": "wood-hawkers", "x": 31424, "y": 7424 },
-    { "id": "wood-lantern", "x": 35264, "y": 7424 },
-    { "id": "wood-well", "x": 27584, "y": 10416 },
-    { "id": "wood-climb", "x": 38336, "y": 4864 },
-    { "id": "wood-caps", "x": 23744, "y": 5376 }
+    { "id": "wood-silk", "x": 35264, "y": 7424 },
+    { "id": "wood-well", "x": 27584, "y": 10416 }
   ],
   "areas": [
     {
@@ -26,12 +24,10 @@
         "wood-glidewalk",
         "wood-hollow",
         "wood-hawkers",
-        "wood-lantern",
-        "wood-well",
-        "wood-caps"
+        "wood-silk",
+        "wood-well"
       ]
-    },
-    { "id": "wood-high", "rooms": ["wood-climb"] }
+    }
   ],
   "tests": [
     "test-grove",
