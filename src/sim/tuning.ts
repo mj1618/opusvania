@@ -846,6 +846,35 @@ export const defaultTuning = {
     catchFrames: 18,
     /** Put back after a catch, she stands at least this far in from the end of the top she fell from, px. */
     returnInset: 72,
+    /**
+     * Frames the dip lasts when there IS a room on the other side (memory/world.md): she goes on with
+     * the input she held as she crossed (her run, her glide), then enters the next room with her
+     * momentum. ~0.3 s (tech.md §6: transition visible time <= 0.3 s).
+     */
+    transitionFrames: 18,
+    /** Entering by an edge, her box centre is put at least this far inside it, px (no crossing straight back). */
+    entryInset: 24,
+    /** A door's box (`scene.doors`): width and height over its foot, px. Press up standing in it. */
+    doorWidth: 96,
+    doorHeight: 160,
+  },
+  /**
+   * Moon patches (`scene.patches`, memory/world.md): the box over a patch's foot (width x height px)
+   * and the frames she stands in it, grounded and still, before she rests (a press of up rests at once).
+   */
+  patch: {
+    width: 128,
+    height: 192,
+    restFrames: 30,
+  },
+  /**
+   * The map (memory/world.md): a lure, exit, door, patch or glade counts as seen once it is within
+   * `seeX` x `seeY` px of her body centre (about the view), checked every `seeEvery` frames.
+   */
+  map: {
+    seeX: 1000,
+    seeY: 600,
+    seeEvery: 10,
   },
   /**
    * The hatching (`scene.hatch`, src/sim/hatch.ts): she is shut in her cocoon until `presses`

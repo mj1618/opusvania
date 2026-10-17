@@ -1,0 +1,29 @@
+{
+  "id": "lab-world-b",
+  "title": "Lab world B: a wick and the hole (greybox)",
+  "region": "lab",
+  "width": 2560,
+  "height": 1536,
+  "spawn": { "x": 500, "y": 1152 },
+  "abilities": [],
+  "art": { "mode": "greybox", "labels": true },
+  "exits": [
+    { "id": "w", "edge": "w", "from": 896, "to": 1152 },
+    { "id": "hole", "edge": "s", "from": 1920, "to": 2176, "oneWay": true }
+  ],
+  "solids": [
+    { "tag": "ground", "x": 0, "y": 1152, "w": 1920, "h": 384 },
+    { "tag": "ground", "x": 2176, "y": 1152, "w": 384, "h": 384 }
+  ],
+  "oneWays": [],
+  "lures": [{ "id": "b-wick", "kind": "wick", "x": 1100, "y": 860, "spin": 1 }],
+  "marks": {
+    "notes": [
+      { "x": 1100, "y": 560, "text": "B  a wick: the map shows it burning until it is out" },
+      { "x": 2048, "y": 900, "text": "the hole: a one-way drop to C" }
+    ]
+  },
+  "shots": {
+    "wide": [{ "name": "wick", "x": 900, "y": 1152 }, { "name": "hole", "x": 1800, "y": 1152 }]
+  }
+}

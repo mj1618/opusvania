@@ -35,13 +35,18 @@ export function lureHpMax(l: Lure, t: Tuning): number {
   return Math.max(1, Math.round(lureRow(t, l.kind).hp));
 }
 
-export function createLures(scene: Scene, t: Tuning): LuresState {
+/**
+ * The room's lures as she finds them: burning, except those the save says she put out (`save.snuffed`
+ * holds `room:id`; memory/save.md): they start out (hp 0, `out` 1) and stay out for good.
+ */
+export function createLures(scene: Scene, t: Tuning, snuffed: readonly string[] = []): LuresState {
   const list = scene.lures ?? [];
+  const isOut = list.map((l) => snuffed.includes(`${scene.id}:${l.id}`));
   return {
-    hp: list.map((l) => lureHpMax(l, t)),
+    hp: list.map((l, i) => (isOut[i] ? 0 : lureHpMax(l, t))),
     hitBy: list.map(() => 0),
-    out: list.map(() => 0),
-    snuffed: 0,
+    out: isOut.map((o) => (o ? 1 : 0)),
+    snuffed: isOut.filter((o) => o).length,
     freed: 0,
   };
 }
@@ -326,6 +331,12 @@ export function slashLures(
     s.snuffed++;
     const moths = Math.max(0, Math.round(lureRow(t, l.kind).moths));
     s.freed += moths;
+    // Out for good (memory/save.md): the save remembers it by `room:id`, and the moths it freed.
+    const key = `${scene.id}:${l.id}`;
+    if (!state.save.snuffed.includes(key)) {
+      state.save.snuffed.push(key);
+      state.save.moths += moths;
+    }
     const heal = Math.max(0, Math.min(p.hpMax - p.hp, Math.round(T.healOnSnuff)));
     p.hp += heal;
     if (p.lure === i) freePlayer(state, scene, t, 'snuff', events);

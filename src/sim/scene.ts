@@ -143,6 +143,63 @@ export interface RoomExit {
    * still in view (the fade over the drop starts sooner); the edge stays open as before.
    */
   at?: number;
+  /**
+   * A one-way drop (memory/world.md): she can leave by it but never come back the same way (a hole,
+   * a ledge too high). Set on the side she leaves from; the neighbour's mirror exit is then arrival
+   * only (crossing it does nothing). The world check treats the link as one-directional.
+   */
+  oneWay?: boolean;
+}
+
+/**
+ * A moon patch (docs/design/core.md §5): a small shaft of real moonlight, the rest and save point.
+ * `x`, `y` = its foot on the ground (a feet-centre point). Standing in it (grounded, still for
+ * `tuning.patch.restFrames`, or a press of up) she rests: full health, the save remembers it, and a
+ * fade re-forms her here from anywhere in the world (`patchRest`).
+ */
+export interface MoonPatch {
+  id: string;
+  x: number;
+  y: number;
+}
+
+/**
+ * A moonlit glade (core.md §4): a trigger rect that gives an ability once (`gladeGrant`; the save
+ * keeps `room:id` in `taken` so it never gives twice).
+ */
+export interface Glade {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  ability: AbilityId;
+}
+
+/**
+ * A door to another room that is not an edge (a hollow in a trunk, a cave mouth): `x`, `y` = its foot
+ * (feet centre); press up standing in it. `to` = `room#door`: she comes out of that door, at rest.
+ */
+export interface RoomDoor {
+  id: string;
+  x: number;
+  y: number;
+  to: string;
+}
+
+/**
+ * A shortcut (memory/world.md): a solid rect while closed, that opens from one side only. Her box
+ * touching its face on the `opens` side (pushing into its west face for `w`, her head on its
+ * underside for `s`, ...) opens it for good (`shortcutOpen`; the save keeps `room:id` in `opened`).
+ * From the other side it is a wall.
+ */
+export interface Shortcut {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  opens: 'n' | 's' | 'e' | 'w';
 }
 
 export interface Scene {
@@ -201,6 +258,14 @@ export interface Scene {
   hatch?: { x: number; y: number };
   /** Lures (the story's lamps), in a fixed order: `GameState.lures` is indexed like this array. */
   lures?: Lure[];
+  /** Moon patches: rest, save and re-form points. */
+  patches?: MoonPatch[];
+  /** Ability glades. */
+  glades?: Glade[];
+  /** Doors to other rooms that are not edges. */
+  doors?: RoomDoor[];
+  /** Shortcuts: solids that open from one side only. */
+  shortcuts?: Shortcut[];
 }
 
 /** A rect (sim px) that catches a fall: see `Scene.catches`. */

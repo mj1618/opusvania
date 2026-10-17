@@ -1,3 +1,4 @@
+import type { AbilityId } from '../sim/abilities';
 import type { Scene } from '../sim/scene';
 
 /**
@@ -18,6 +19,25 @@ export interface Room extends Scene {
   shots?: RoomShots;
   /** The room's own camera: framing overrides and its scripted beats (src/render/camera/beats.ts). */
   camera?: RoomCamera;
+  /**
+   * Reachability claims inside the room for the world check (src/scene/world.ts, memory/world.md).
+   * Absent = every exit, door, patch and glade of the room reaches every other with no ability.
+   */
+  routes?: RouteClaim[];
+}
+
+/**
+ * "From `from` she can get to `to`" (ids of the room's exits, doors, patches, glades, or `spawn`),
+ * with the abilities in `needs` (both ways unless `oneWay`). `door`: the way passes the shortcut of
+ * that id, which opens from the `from` side: `from` -> `to` always (she opens it), `to` -> `from` only
+ * once it is open. An ability gate is geometry plus one of these.
+ */
+export interface RouteClaim {
+  from: string;
+  to: string;
+  needs?: AbilityId[];
+  oneWay?: boolean;
+  door?: string;
 }
 
 /**

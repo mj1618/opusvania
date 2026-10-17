@@ -1,3 +1,4 @@
+import type { AbilityId } from './abilities';
 import type { EnemyKind, LureKind, PickupKind, PodMount } from './scene';
 import type { AttackDir } from './state';
 
@@ -73,12 +74,29 @@ export type SimEvent =
    * she keeps falling or running on) for `frames` (= `tuning.room.exitFrames`), then restarts:
    * render fades out over them. Fires once per exit.
    */
-  | { type: 'roomExit'; id: string; edge: 'n' | 's' | 'e' | 'w'; x: number; y: number; frames: number }
+  | {
+      type: 'roomExit';
+      id: string;
+      edge: 'n' | 's' | 'e' | 'w' | 'door';
+      x: number;
+      y: number;
+      frames: number;
+      /** The room she is going to (`''`: none there, the room will restart). */
+      to: string;
+    }
   /**
-   * The room started again after an exit (`from` = its id), or from scratch (`from` = 'load': the
-   * Game harness's restart, `__game.load()` / R); a `spawn` follows at once.
+   * She entered `room` (memory/world.md): from another room's exit or door (`from` = `room#exit`), the
+   * room restarting after an exit with nothing beyond it (`from` = the exit's id), from scratch
+   * (`from` = 'load': the Game harness's restart, `__game.load()` / R), re-formed at a moon patch in
+   * another room (`'reform'`), or put there by hand (`'goto'`, `'continue'`). A `spawn` follows at once.
    */
   | { type: 'roomEnter'; room: string; from: string; x: number; y: number }
+  /** She rested at a moon patch (`id`): whole again (`hp`), saved, and her re-form point. `x, y` = its foot. */
+  | { type: 'patchRest'; id: string; room: string; x: number; y: number; hp: number }
+  /** A glade gave her an ability (once ever). `x, y` = the bottom centre of its rect. */
+  | { type: 'gladeGrant'; id: string; ability: AbilityId; x: number; y: number }
+  /** She opened a shortcut from its open side (`x, y` = its centre): it stays open for good. */
+  | { type: 'shortcutOpen'; id: string; x: number; y: number }
   /**
    * She fell into a catch zone (`scene.catches`, `id`): it costs nothing. She is held (no input) for
    * `frames` (= `tuning.room.catchFrames`), then `fallReturn` puts her back on her last safe ground.

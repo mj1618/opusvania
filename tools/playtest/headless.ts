@@ -9,6 +9,7 @@ import { createCamera, lerpCamera, stepCamera } from '../../src/render/camera/in
 import { cameraFor } from '../../src/render/camera/tuning';
 import { getRoom } from '../../src/scene/index';
 import type { Room } from '../../src/scene/room';
+import { GAME_WORLD } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { observe, viewRect } from './observe';
@@ -44,7 +45,10 @@ export interface HeadlessResult {
 export function runHeadless(opts: RunOpts): HeadlessResult {
   const room = typeof opts.room === 'string' ? getRoom(opts.room) : opts.room;
   const tuning = cloneTuning(defaultTuning);
-  const game = new Game(tuning, room, opts.seed ?? 1, () => 0, opts.abilities ?? null);
+  // The game's world (memory/world.md): an exit leads into the next room. A room built by a test (not
+  // the registry's) plays alone: its exits restart it.
+  const world = typeof opts.room === 'string' ? GAME_WORLD : null;
+  const game = new Game(tuning, room, opts.seed ?? 1, () => 0, opts.abilities ?? null, { world });
   game.mode = 'manual';
   let events: readonly SimEvent[] = [];
   game.afterStep.add((ev) => {

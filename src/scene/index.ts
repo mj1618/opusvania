@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import labLampsJson from '../../content/rooms/lab-lamps.json' with { type: 'json' };
+import labWorldAJson from '../../content/rooms/lab-world-a.json' with { type: 'json' };
+import labWorldBJson from '../../content/rooms/lab-world-b.json' with { type: 'json' };
+import labWorldCJson from '../../content/rooms/lab-world-c.json' with { type: 'json' };
 import testGroveJson from '../../content/rooms/test-grove.json' with { type: 'json' };
 import woodHatchJson from '../../content/rooms/wood-hatch.json' with { type: 'json' };
 import worldJson from '../../content/world.json' with { type: 'json' };
@@ -131,6 +134,7 @@ const SceneSchema = z
             from: int,
             to: int,
             at: int.optional(),
+            oneWay: z.boolean().optional(),
           })
           .strict(),
       )
@@ -141,6 +145,54 @@ const SceneSchema = z
       )
       .optional(),
     hatch: z.object({ x: int, y: int }).strict().optional(),
+    // --- The world (memory/world.md): moon patches, glades, doors, shortcuts, route claims.
+    patches: z.array(z.object({ id: z.string().min(1), x: int, y: int }).strict()).optional(),
+    glades: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            x: int,
+            y: int,
+            w: int.positive(),
+            h: int.positive(),
+            ability: z.enum(ABILITIES),
+          })
+          .strict(),
+      )
+      .optional(),
+    doors: z
+      .array(
+        z.object({ id: z.string().min(1), x: int, y: int, to: z.string().regex(/^[^#]+#[^#]+$/) }).strict(),
+      )
+      .optional(),
+    shortcuts: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            x: int,
+            y: int,
+            w: int.positive(),
+            h: int.positive(),
+            opens: z.enum(['n', 's', 'e', 'w']),
+          })
+          .strict(),
+      )
+      .optional(),
+    routes: z
+      .array(
+        z
+          .object({
+            from: z.string().min(1),
+            to: z.string().min(1),
+            needs: z.array(z.enum(ABILITIES)).optional(),
+            oneWay: z.boolean().optional(),
+            door: z.string().min(1).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
     art: z
       .object({
         // `greybox`: flat shapes and labels instead of the painted layers (src/render/greybox, memory/greybox.md).
@@ -490,12 +542,65 @@ export function parseScene(json: unknown): Room {
     if (s.solids.some((q) => l.x + c > q.x && l.x - c < q.x + q.w && l.y + c > q.y && l.y - c < q.y + q.h))
       throw new Error(`Scene "${s.id}": lure "${l.id}" has a solid inside its core`);
   }
+  // The world's things (memory/world.md): ids unique among everything in the room.
+  const P = defaultTuning.patch;
+  for (const pt of s.patches ?? []) {
+    if (seen.has(pt.id) || exitIds.has(pt.id))
+      throw new Error(`Scene "${s.id}": two things are called "${pt.id}"`);
+    seen.add(pt.id);
+    stands(`moon patch "${pt.id}"`, pt, P.width, P.height);
+  }
+  for (const g of s.glades ?? []) {
+    if (seen.has(g.id) || exitIds.has(g.id))
+      throw new Error(`Scene "${s.id}": two things are called "${g.id}"`);
+    seen.add(g.id);
+    if (g.x < 0 || g.y < (s.ceilingY ?? 0) || g.x + g.w > s.width || g.y + g.h > s.height)
+      throw new Error(`Scene "${s.id}": glade "${g.id}" leaves the scene bounds`);
+  }
+  const D = defaultTuning.room;
+  for (const d of s.doors ?? []) {
+    if (seen.has(d.id) || exitIds.has(d.id))
+      throw new Error(`Scene "${s.id}": two things are called "${d.id}"`);
+    seen.add(d.id);
+    stands(`door "${d.id}"`, d, D.doorWidth, D.doorHeight);
+  }
+  for (const c of s.shortcuts ?? []) {
+    if (seen.has(c.id) || exitIds.has(c.id))
+      throw new Error(`Scene "${s.id}": two things are called "${c.id}"`);
+    seen.add(c.id);
+    if (c.x < 0 || c.y < 0 || c.x + c.w > s.width || c.y + c.h > s.height)
+      throw new Error(`Scene "${s.id}": shortcut "${c.id}" leaves the scene bounds`);
+  }
+  // Route claims name things of this room ('spawn' too); `door` names a shortcut.
+  const nodes = new Set<string>([
+    'spawn',
+    ...(s.exits ?? []).map((e) => e.id),
+    ...(s.doors ?? []).map((d) => d.id),
+    ...(s.patches ?? []).map((p) => p.id),
+    ...(s.glades ?? []).map((g) => g.id),
+  ]);
+  for (const r of s.routes ?? []) {
+    for (const end of [r.from, r.to])
+      if (!nodes.has(end))
+        throw new Error(
+          `Scene "${s.id}": a route names "${end}", which is no exit, door, patch or glade of the room`,
+        );
+    if (r.door !== undefined && !(s.shortcuts ?? []).some((c) => c.id === r.door))
+      throw new Error(`Scene "${s.id}": a route passes "${r.door}", which is no shortcut of the room`);
+  }
   if (s.art && s.art.mode !== 'greybox' && (s.art.kit === undefined || s.art.seed === undefined))
     throw new Error(`Scene "${s.id}": a painted room's art needs a kit and a seed`);
   return s;
 }
 
-const FILES: readonly unknown[] = [woodHatchJson, testGroveJson, labLampsJson];
+const FILES: readonly unknown[] = [
+  woodHatchJson,
+  labWorldAJson,
+  labWorldBJson,
+  labWorldCJson,
+  testGroveJson,
+  labLampsJson,
+];
 
 /** Every room, by id. */
 export const ROOMS: Readonly<Record<string, Room>> = Object.fromEntries(
@@ -514,8 +619,9 @@ const WorldSchema = z
   .strict();
 
 /**
- * content/world.json: the real game's rooms (world placement in px, for exits and the map later),
- * the room a new game starts in, and the test rooms outside the world.
+ * content/world.json: the real game's rooms (world placement in px: exits link where neighbours'
+ * openings meet, the map draws from it; memory/world.md), the room a new game starts in, and the
+ * test rooms outside the world. The linked world and its check: src/scene/world.ts.
  */
 export const WORLD = WorldSchema.parse(worldJson);
 for (const id of [WORLD.start, ...WORLD.rooms.map((r) => r.id), ...WORLD.tests])

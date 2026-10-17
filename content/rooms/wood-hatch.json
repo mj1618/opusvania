@@ -20,7 +20,8 @@
       "edge": "s",
       "from": 6144,
       "to": 7424,
-      "at": 1790
+      "at": 1790,
+      "oneWay": true
     }
   ],
   "catches": [

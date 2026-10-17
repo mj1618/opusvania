@@ -616,22 +616,71 @@ export interface GoalState {
 }
 
 /**
- * What persists past a room restart (docs/design/tech.md §3; more fields come with save/load). For now
- * only the abilities she owns, in `ABILITIES` order (src/sim/abilities.ts).
+ * What persists (docs/design/tech.md §3, memory/save.md): everything she has earned, across rooms,
+ * fades and sessions. Plain JSON; ids of things in rooms are `room:id` (stable forever:
+ * docs/design/world.md §5.6). Lists grow in the order things happen (deterministic). The rest of
+ * `GameState` besides `player` and the clock is the room's own (`RoomLocal`): rebuilt from the scene
+ * and this on every room entry.
  */
 export interface SaveState {
+  /** The abilities she owns, in `ABILITIES` order (src/sim/abilities.ts). */
   abilities: AbilityId[];
+  /** Lures she put out (`room:lure`): they stay out for good. */
+  snuffed: string[];
+  /** Moths freed in all (the completion count, core.md §6). */
+  moths: number;
+  /** One-time things taken (`room:glade`). */
+  taken: string[];
+  /** Story beats and anything else said once (free-form ids). */
+  flags: string[];
+  /** Shortcuts opened (`room:shortcut`). */
+  opened: string[];
+  /** Rooms she has been in (the map), first visit first. */
+  visited: string[];
+  /** Things she has had in view (`room:id` of lures, exits, doors, patches, glades): the map draws them. */
+  seen: string[];
+  /** Exits and doors she has gone through, either way (`room:exit`): the map tells taken from not. */
+  crossed: string[];
+  /** The moon patch she last rested at: where a fade re-forms her and where Continue starts. */
+  patch: { room: string; id: string } | null;
+  /** Sim frames played (all sessions). */
+  time: number;
 }
 
 /**
- * She crossed an open room edge (`scene.exits`): the room is held for `tuning.room.exitFrames`, then
- * restarts. The same shape for a catch zone (`scene.catches`, `tuning.room.catchFrames`).
+ * She crossed an open room edge (`scene.exits`) or went in at a door (`scene.doors`): the room holds
+ * her for `of` frames (`tuning.room.transitionFrames`, or `exitFrames` when nothing is there and the
+ * room will restart), then she enters `to` by `toExit` (`''` = the room restarts).
  */
-export interface ExitState {
-  /** The exit's (or catch zone's) id in the scene. */
+export interface TransitState {
+  /** The exit's (or door's) id in this room. */
   id: string;
-  /** Frames since she crossed it. */
+  /** Frames since she crossed it, of `of`. */
   frames: number;
+  of: number;
+  /** The input held as she crossed: it goes on being held through the hold (her run, her glide). */
+  input: InputFrame;
+  /** The room she goes to and the exit (or door) she comes out of; `''` = none (the room restarts). */
+  to: string;
+  toExit: string;
+  /** Through a door (she comes out at rest), not an edge (her momentum carries). */
+  door: boolean;
+}
+
+/** Caught after a fall (`scene.catches`): the zone's id and frames since. */
+export interface ExitState {
+  id: string;
+  frames: number;
+}
+
+/**
+ * The moon patch she stands in (`at`: its index in `scene.patches`, -1 = none), frames she has stood
+ * there, and whether she has rested this stay (she must step out and back to rest again).
+ */
+export interface RestState {
+  at: number;
+  frames: number;
+  done: boolean;
 }
 
 /** Shut in the cocoon (src/sim/hatch.ts): frames since the room started, presses counted, broken out yet. */
@@ -641,8 +690,21 @@ export interface HatchState {
   done: boolean;
 }
 
+/** The part of the state that belongs to the room: rebuilt by every room entry (src/sim/world.ts). */
+export interface RoomLocal {
+  pickups: PickupsState;
+  pods: PodsState;
+  lures: LuresState;
+  enemies: EnemyState[];
+  goal: GoalState;
+  exit: TransitState | null;
+  caught: ExitState | null;
+  hatch: HatchState | null;
+  rest: RestState;
+}
+
 export interface GameState {
-  version: 21;
+  version: 22;
   /** The room (scene id) this state belongs to. */
   room: string;
   /** Sim steps taken. The sim's only clock. */
@@ -659,12 +721,14 @@ export interface GameState {
   enemies: EnemyState[];
   goal: GoalState;
   save: SaveState;
-  /** Leaving the room through an exit: null while she is in it. */
-  exit: ExitState | null;
+  /** Leaving the room through an exit or a door: null while she is in it. */
+  exit: TransitState | null;
   /** Caught after a fall (`scene.catches`; `id` = the zone): null unless she is being put back. */
   caught: ExitState | null;
-  /** The hatching: null in a room without one (`scene.hatch`). */
+  /** The hatching: null in a room without one (`scene.hatch`), or one she has been in before. */
   hatch: HatchState | null;
+  /** The moon patch she stands in (`scene.patches`). */
+  rest: RestState;
 }
 
 export function cloneState(s: GameState): GameState {
@@ -703,9 +767,43 @@ export function cloneState(s: GameState): GameState {
       grove: { ...s.goal.grove },
       run: { ...s.goal.run },
     },
-    save: { abilities: s.save.abilities.slice() },
+    save: cloneSave(s.save),
     exit: s.exit ? { ...s.exit } : null,
     caught: s.caught ? { ...s.caught } : null,
     hatch: s.hatch ? { ...s.hatch } : null,
+    rest: { ...s.rest },
+  };
+}
+
+export function cloneSave(s: SaveState): SaveState {
+  return {
+    abilities: s.abilities.slice(),
+    snuffed: s.snuffed.slice(),
+    moths: s.moths,
+    taken: s.taken.slice(),
+    flags: s.flags.slice(),
+    opened: s.opened.slice(),
+    visited: s.visited.slice(),
+    seen: s.seen.slice(),
+    crossed: s.crossed.slice(),
+    patch: s.patch ? { ...s.patch } : null,
+    time: s.time,
+  };
+}
+
+/** A new game's save: owning `abilities` and nothing else. */
+export function newSave(abilities: readonly AbilityId[] = []): SaveState {
+  return {
+    abilities: abilities.slice(),
+    snuffed: [],
+    moths: 0,
+    taken: [],
+    flags: [],
+    opened: [],
+    visited: [],
+    seen: [],
+    crossed: [],
+    patch: null,
+    time: 0,
   };
 }

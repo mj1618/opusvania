@@ -1,5 +1,10 @@
 {
   "start": "wood-hatch",
-  "rooms": [{ "id": "wood-hatch", "x": 0, "y": 0 }],
+  "rooms": [
+    { "id": "wood-hatch", "x": 0, "y": 0 },
+    { "id": "lab-world-a", "x": 5760, "y": 2816 },
+    { "id": "lab-world-b", "x": 8320, "y": 2816 },
+    { "id": "lab-world-c", "x": 8320, "y": 4352 }
+  ],
   "tests": ["test-grove", "lab-lamps"]
 }

@@ -1,0 +1,40 @@
+{
+  "id": "lab-world-a",
+  "title": "Lab world A: arrival and the moon patch (greybox)",
+  "region": "lab",
+  "width": 2560,
+  "height": 2816,
+  "spawn": { "x": 1000, "y": 1152 },
+  "abilities": [],
+  "art": { "mode": "greybox", "labels": true },
+  "exits": [
+    { "id": "n", "edge": "n", "from": 384, "to": 1664 },
+    { "id": "e-up", "edge": "e", "from": 896, "to": 1152 },
+    { "id": "e-low", "edge": "e", "from": 2304, "to": 2560 }
+  ],
+  "patches": [{ "id": "p1", "x": 1408, "y": 1152 }],
+  "solids": [
+    { "tag": "ground", "x": 640, "y": 1152, "w": 1920, "h": 128 },
+    { "tag": "ground", "x": 0, "y": 2560, "w": 2560, "h": 256 }
+  ],
+  "oneWays": [
+    { "tag": "branch", "x": 64, "y": 1240, "w": 576 },
+    { "tag": "branch", "x": 64, "y": 1460, "w": 576 },
+    { "tag": "branch", "x": 64, "y": 1680, "w": 576 },
+    { "tag": "branch", "x": 64, "y": 1900, "w": 576 },
+    { "tag": "branch", "x": 64, "y": 2120, "w": 576 },
+    { "tag": "branch", "x": 64, "y": 2340, "w": 576 }
+  ],
+  "marks": {
+    "notes": [
+      { "x": 1024, "y": 640, "text": "A  she drops in from the hatching branch" },
+      { "x": 1408, "y": 880, "text": "P1  moon patch: stand still in it (or press up) to rest and save" },
+      { "x": 2200, "y": 820, "text": "east: B" },
+      { "x": 1500, "y": 2200, "text": "the lower hall: east to C (its gate opens from C's side only)" },
+      { "x": 352, "y": 1180, "text": "stairs: one-way branches" }
+    ]
+  },
+  "shots": {
+    "wide": [{ "name": "patch", "x": 1408, "y": 1152 }, { "name": "lower", "x": 1700, "y": 2560 }]
+  }
+}

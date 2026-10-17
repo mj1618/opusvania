@@ -1,0 +1,144 @@
+/**
+ * Progress in a room (memory/world.md, memory/save.md): moon patches (rest, save, re-form point),
+ * glades (an ability, once), shortcuts (open from one side), and what she has seen (the map). Each
+ * writes to `state.save` and pushes the event the autosave and render listen for.
+ *
+ * Pure: plain data, + - * / floor round min max abs.
+ */
+import { normalizeAbilities } from './abilities';
+import type { SimEvent } from './events';
+import { type InputFrame, wasPressed } from './input';
+import type { MoonPatch, Scene } from './scene';
+import type { GameState } from './state';
+import type { Tuning } from './tuning';
+import { remember } from './world';
+
+/** The patch box: `patch.width` wide, `patch.height` tall over its foot. */
+export function patchBox(p: MoonPatch, t: Tuning): { x: number; y: number; w: number; h: number } {
+  const w = Math.round(t.patch.width);
+  const h = Math.round(t.patch.height);
+  return { x: p.x - (w >> 1), y: p.y - h, w, h };
+}
+
+/** Index of the patch her feet stand in (grounded), -1 if none. */
+function patchUnder(state: GameState, scene: Scene, t: Tuning): number {
+  const list = scene.patches;
+  if (!list) return -1;
+  const p = state.player;
+  if (!p.grounded) return -1;
+  const fx = p.x + p.w / 2;
+  const fy = p.y + p.h;
+  for (let i = 0; i < list.length; i++) {
+    const b = patchBox(list[i] as MoonPatch, t);
+    if (fx >= b.x && fx < b.x + b.w && fy > b.y && fy <= b.y + b.h + 1) return i;
+  }
+  return -1;
+}
+
+/** She rests at patch `i`: whole again, saved, her re-form point. */
+export function restAt(state: GameState, scene: Scene, i: number, events: SimEvent[]): void {
+  const patch = scene.patches?.[i];
+  if (!patch) return;
+  const p = state.player;
+  p.hp = p.hpMax;
+  state.save.patch = { room: scene.id, id: patch.id };
+  state.rest = { at: i, frames: state.rest.at === i ? state.rest.frames : 0, done: true };
+  events.push({ type: 'patchRest', id: patch.id, room: scene.id, x: patch.x, y: patch.y, hp: p.hp });
+}
+
+/**
+ * Moon patches: standing in one, grounded, still (no direction held) for `patch.restFrames`, or a press
+ * of up in it, rests her once per stay (she steps out and back to rest again).
+ */
+export function updatePatches(
+  state: GameState,
+  scene: Scene,
+  input: InputFrame,
+  prev: InputFrame,
+  t: Tuning,
+  events: SimEvent[],
+): void {
+  const i = state.player.faded > 0 || state.player.hp <= 0 ? -1 : patchUnder(state, scene, t);
+  const r = state.rest;
+  if (i !== r.at) {
+    r.at = i;
+    r.frames = 0;
+    r.done = false;
+  }
+  if (i < 0) return;
+  const still = state.player.inputX === 0 && state.player.vx === 0;
+  r.frames = still ? r.frames + 1 : 0;
+  if (r.done) return;
+  if (r.frames >= Math.max(1, Math.round(t.patch.restFrames)) || wasPressed(input, prev, 'up'))
+    restAt(state, scene, i, events);
+}
+
+/** Glades: her box centre inside one she has not taken gives its ability, once ever. */
+export function updateGlades(state: GameState, scene: Scene, events: SimEvent[]): void {
+  const list = scene.glades;
+  if (!list) return;
+  const p = state.player;
+  if (p.faded > 0) return;
+  const cx = p.x + p.w / 2;
+  const cy = p.y + p.h / 2;
+  for (const g of list) {
+    if (cx < g.x || cx >= g.x + g.w || cy < g.y || cy >= g.y + g.h) continue;
+    if (!remember(state.save.taken, `${scene.id}:${g.id}`)) continue;
+    state.save.abilities = normalizeAbilities([...state.save.abilities, g.ability]);
+    events.push({ type: 'gladeGrant', id: g.id, ability: g.ability, x: g.x + g.w / 2, y: g.y + g.h });
+  }
+}
+
+/**
+ * Shortcuts: her box touching a closed one's face on its `opens` side opens it for good. `scene` is
+ * the room's own scene (the shortcuts are listed there; the solids she collides with come from
+ * `withShortcuts`).
+ */
+export function updateShortcuts(state: GameState, scene: Scene, events: SimEvent[]): void {
+  const list = scene.shortcuts;
+  if (!list) return;
+  const p = state.player;
+  if (p.faded > 0) return;
+  for (const sc of list) {
+    const key = `${scene.id}:${sc.id}`;
+    if (state.save.opened.includes(key)) continue;
+    const alongX = p.x < sc.x + sc.w && sc.x < p.x + p.w;
+    const alongY = p.y < sc.y + sc.h && sc.y < p.y + p.h;
+    const touch =
+      sc.opens === 'w'
+        ? alongY && p.x + p.w === sc.x
+        : sc.opens === 'e'
+          ? alongY && p.x === sc.x + sc.w
+          : sc.opens === 'n'
+            ? alongX && p.y + p.h === sc.y
+            : alongX && p.y === sc.y + sc.h;
+    if (!touch) continue;
+    state.save.opened.push(key);
+    events.push({ type: 'shortcutOpen', id: sc.id, x: sc.x + sc.w / 2, y: sc.y + sc.h / 2 });
+  }
+}
+
+/** One thing of the room to note as seen if it is in view of her (`map.seeX` x `map.seeY` from her centre). */
+function see(state: GameState, room: string, id: string, x: number, y: number, t: Tuning): void {
+  const p = state.player;
+  const dx = x - (p.x + p.w / 2);
+  const dy = y - (p.y + p.h / 2);
+  if (Math.abs(dx) <= t.map.seeX && Math.abs(dy) <= t.map.seeY) remember(state.save.seen, `${room}:${id}`);
+}
+
+/** The map's memory: every `map.seeEvery` frames, lures, exits, doors, patches and glades in view are seen. */
+export function updateSeen(state: GameState, scene: Scene, t: Tuning): void {
+  const every = Math.max(1, Math.round(t.map.seeEvery));
+  if (state.frame % every !== 0) return;
+  const room = scene.id;
+  for (const l of scene.lures ?? []) see(state, room, l.id, l.x, l.y, t);
+  for (const p of scene.patches ?? []) see(state, room, p.id, p.x, p.y, t);
+  for (const g of scene.glades ?? []) see(state, room, g.id, g.x + g.w / 2, g.y + g.h / 2, t);
+  for (const d of scene.doors ?? []) see(state, room, d.id, d.x, d.y, t);
+  for (const e of scene.exits ?? []) {
+    const mid = (e.from + e.to) / 2;
+    const ns = e.edge === 'n' || e.edge === 's';
+    const at = e.at ?? (e.edge === 's' ? scene.height : e.edge === 'e' ? scene.width : 0);
+    see(state, room, e.id, ns ? mid : at, ns ? at : mid, t);
+  }
+}

@@ -4,14 +4,14 @@
  * tsconfig.sim.json, biome overrides and tests/unit/sim-purity.test.ts).
  */
 import { ABILITIES, normalizeAbilities } from './abilities';
-import { contactDamage, createEnemies, enemyTouched, resetEnemies, updateEnemies } from './enemies';
+import { contactDamage, enemyTouched, resetEnemies, updateEnemies } from './enemies';
 import type { SimEvent } from './events';
 import { markOfferTarget, updateOffer } from './giving';
-import { createGoal, goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
+import { goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
 import { createHatch, updateHatch } from './hatch';
-import type { InputFrame } from './input';
-import { createLures, freePlayer } from './lures';
-import { createPickups, dropGlints, updateDrops, updatePickups } from './pickups';
+import { ActionBit, type InputFrame, wasPressed } from './input';
+import { freePlayer } from './lures';
+import { dropGlints, updateDrops, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
 import {
   createPlayer,
@@ -21,18 +21,22 @@ import {
   trackSafeGround,
   updatePlayer,
 } from './player/player';
-import { createPods, updatePods } from './pods';
+import { updatePods } from './pods';
+import { updateGlades, updatePatches, updateSeen, updateShortcuts } from './progress';
 import { seedRng } from './rng';
-import type { Scene, SolidRect } from './scene';
+import type { RoomDoor, RoomExit, Scene, SolidRect } from './scene';
 import { markSeen } from './seen';
-import type { GameState } from './state';
+import { cloneSave, type GameState, newSave, type SaveState } from './state';
 import type { Tuning } from './tuning';
+import { createLocal, enterRoom, remember, type World, withShortcuts } from './world';
 
 export const SIM_HZ = 60;
 
 /**
  * A fresh run in `scene`: she stands at its spawn. `abilities` = what she owns (default: the room's
- * starting kit, `scene.abilities`, or all of them when the room names none).
+ * starting kit, `scene.abilities`, or all of them when the room names none). With a `save` (Continue,
+ * a test that starts mid-game) she has what it says instead, and `abilities` is ignored. The hatching
+ * plays only in a room the save has not been in.
  */
 export function createState(
   seed: number,
@@ -40,37 +44,96 @@ export function createState(
   scene: Scene,
   events: SimEvent[] = [],
   abilities: readonly string[] = scene.abilities ?? ABILITIES,
+  save?: SaveState,
 ): GameState {
+  const sv = save ? cloneSave(save) : newSave(normalizeAbilities(abilities));
+  const first = !sv.visited.includes(scene.id);
+  remember(sv.visited, scene.id);
+  const S = withShortcuts(scene, sv);
   const state: GameState = {
-    version: 21,
+    version: 22,
     room: scene.id,
     frame: 0,
     seed: seed >>> 0,
     rng: seedRng(seed),
     prevInput: 0,
-    player: createPlayer(scene.spawn.x, scene.spawn.y, t, scene),
-    pickups: createPickups(scene),
-    pods: createPods(scene),
-    lures: createLures(scene, t),
-    enemies: createEnemies(scene, t),
-    goal: createGoal(scene),
-    save: { abilities: normalizeAbilities(abilities) },
-    exit: null,
-    caught: null,
-    hatch: createHatch(scene),
+    player: createPlayer(scene.spawn.x, scene.spawn.y, t, S),
+    ...createLocal(S, t, sv, first),
+    save: sv,
   };
   events.push({ type: 'spawn', x: scene.spawn.x, y: scene.spawn.y });
   return state;
 }
 
 /**
- * The room starts again (after an exit, until neighbouring rooms exist): everything that belongs to
- * the room is rebuilt from the scene, as at boot; `save`, the frame count, the seed and the RNG go on.
+ * Continue (memory/save.md): the run `save` left, standing at its moon patch (the world's start room's
+ * spawn if she never rested). Pushes `roomEnter {from: 'continue'}` and `spawn`.
+ */
+export function continueState(
+  seed: number,
+  t: Tuning,
+  world: World,
+  save: SaveState,
+  events: SimEvent[] = [],
+): GameState {
+  const at = save.patch && world.rooms[save.patch.room] ? save.patch : null;
+  const room = world.rooms[at ? at.room : world.start];
+  if (!room) throw new Error(`continueState: no room "${at ? at.room : world.start}"`);
+  const patch = at ? room.scene.patches?.find((p) => p.id === at.id) : undefined;
+  const scratch: SimEvent[] = [];
+  const state = createState(seed, t, room.scene, scratch, undefined, save);
+  // Visited before this boot means no hatching: a Continue never starts in the cocoon.
+  if (save.visited.length > 0) state.hatch = null;
+  if (patch) {
+    placePlayer(state, patch.x, patch.y, t, withShortcuts(room.scene, state.save), scratch);
+    state.player.hp = state.player.hpMax;
+    state.rest = { at: room.scene.patches?.indexOf(patch) ?? -1, frames: 0, done: true };
+  }
+  const p = state.player;
+  const fx = p.x + p.w / 2;
+  const fy = p.y + p.h;
+  p.safeX = fx;
+  p.safeY = fy;
+  events.push({ type: 'roomEnter', room: room.id, from: 'continue', x: fx, y: fy });
+  events.push({ type: 'spawn', x: fx, y: fy });
+  return state;
+}
+
+/**
+ * The room starts again (after an exit with nothing beyond it): everything that belongs to the room
+ * is rebuilt from the scene, as at boot (the hatching too); `save`, the frame count, the seed and the
+ * RNG go on.
  */
 function restartRoom(state: GameState, t: Tuning, scene: Scene, from: string, events: SimEvent[]): void {
   events.push({ type: 'roomEnter', room: scene.id, from, x: scene.spawn.x, y: scene.spawn.y });
-  const fresh = createState(state.seed, t, scene, events, state.save.abilities);
-  Object.assign(state, { ...fresh, frame: state.frame, rng: state.rng, save: state.save });
+  const save = state.save;
+  const S = withShortcuts(scene, save);
+  Object.assign(state, {
+    player: createPlayer(scene.spawn.x, scene.spawn.y, t, S),
+    ...createLocal(S, t, save, false),
+    hatch: createHatch(scene),
+    prevInput: 0,
+  });
+  events.push({ type: 'spawn', x: scene.spawn.x, y: scene.spawn.y });
+}
+
+/**
+ * Puts her in another room at (x, y) (feet centre), at rest, keeping the save (`__game.goto`, a
+ * re-form at a patch in another room). Pushes `roomEnter {from}` and `spawn`.
+ */
+export function gotoRoom(
+  state: GameState,
+  t: Tuning,
+  world: World,
+  to: string,
+  x: number,
+  y: number,
+  from: string,
+  events: SimEvent[],
+): void {
+  state.exit = null;
+  state.caught = null;
+  enterRoom(state, t, world, to, { kind: 'point', x, y }, from, events);
 }
 
 /**
@@ -115,7 +178,7 @@ function inCatch(state: GameState, scene: Scene): string | null {
 }
 
 /** Her box centre has crossed an open edge of the room: she is leaving by that exit. */
-function crossedExit(state: GameState, scene: Scene): { id: string; edge: 'n' | 's' | 'e' | 'w' } | null {
+function crossedExit(state: GameState, scene: Scene): RoomExit | null {
   const exits = scene.exits;
   if (!exits) return null;
   const p = state.player;
@@ -169,14 +232,84 @@ export function placePlayer(
   events.push({ type: 'spawn', x, y });
 }
 
-/** Advances the sim by exactly one 1/60 s step, mutating `state` and appending to `events`. */
-export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scene, events: SimEvent[]): void {
+/** The door (`scene.doors`) her feet stand in, grounded, if any. */
+function doorAt(state: GameState, scene: Scene, t: Tuning): RoomDoor | null {
+  const doors = scene.doors;
+  if (!doors) return null;
+  const p = state.player;
+  if (!p.grounded) return null;
+  const fx = p.x + p.w / 2;
+  const fy = p.y + p.h;
+  const hw = Math.round(t.room.doorWidth) >> 1;
+  const h = Math.round(t.room.doorHeight);
+  for (const d of doors) if (fx >= d.x - hw && fx < d.x + hw && fy > d.y - h && fy <= d.y + 1) return d;
+  return null;
+}
+
+/** Held through an exit's hold: directions and jump (her run, her glide). No presses can start there. */
+const CARRY = ActionBit.left | ActionBit.right | ActionBit.up | ActionBit.down | ActionBit.jump;
+
+/**
+ * Advances the sim by exactly one 1/60 s step, mutating `state` and appending to `events`.
+ *
+ * `world` (memory/world.md): the rooms and their links. Given, an exit leads to its neighbour (or a
+ * door to its target) and a fade re-forms her at her last moon patch in whatever room it is in; the
+ * room then changes inside the step (`state.room`), and the caller passes that room's scene from the
+ * next step on. Without it (tests on one scene, test rooms), an exit restarts the room.
+ */
+export function step(
+  state: GameState,
+  input: InputFrame,
+  t: Tuning,
+  scene: Scene,
+  events: SimEvent[],
+  world?: World,
+): void {
   const P = resolveParams(t, state.save.abilities);
   const first = events.length;
-  // Leaving the room: no input reaches her while the room holds her, then it starts again.
-  if (state.exit) {
-    if (++state.exit.frames >= Math.max(1, Math.round(t.room.exitFrames))) {
-      restartRoom(state, t, scene, state.exit.id, events);
+  state.save.time++;
+  // The scene as played: closed shortcuts are solids (memory/world.md).
+  const S = withShortcuts(scene, state.save);
+  // Leaving the room: no new input reaches her while the room holds her; then the next room, or the
+  // room again when nothing is there.
+  const ex = state.exit;
+  if (ex) {
+    ++ex.frames;
+    const here = world?.rooms[scene.id];
+    const there = ex.to ? world?.rooms[ex.to] : undefined;
+    if (there && here) {
+      if (ex.frames >= ex.of) {
+        const from = `${scene.id}#${ex.id}`;
+        const toExit = there.scene.exits?.find((e) => e.id === ex.toExit);
+        if (ex.door || !toExit) {
+          const d = there.scene.doors?.find((o) => o.id === ex.toExit);
+          const at = d ?? there.scene.spawn;
+          state.player.vx = 0;
+          state.player.vy = 0;
+          enterRoom(state, t, world as World, there.id, { kind: 'point', x: at.x, y: at.y }, from, events);
+        } else {
+          enterRoom(
+            state,
+            t,
+            world as World,
+            there.id,
+            { kind: 'edge', dx: here.x - there.x, dy: here.y - there.y, exit: toExit },
+            from,
+            events,
+          );
+        }
+        remember(state.save.crossed, `${there.id}:${ex.toExit}`);
+        state.frame++;
+        return;
+      }
+      // The dip: she goes on as she was (the input she held as she crossed), the room stands still.
+      updatePlayer(state, S, ex.input, P, t.pods, events);
+      state.prevInput = ex.input;
+      state.frame++;
+      return;
+    }
+    if (ex.frames >= ex.of) {
+      restartRoom(state, t, scene, ex.id, events);
       state.frame++;
       return;
     }
@@ -184,30 +317,55 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
   // Caught after a fall: held a moment, then back on her last safe ground (it costs nothing).
   if (state.caught && ++state.caught.frames >= Math.max(1, Math.round(t.room.catchFrames))) {
     const id = state.caught.id;
-    const back = returnPoint(state.player.safeX, state.player.safeY, scene, t);
+    const back = returnPoint(state.player.safeX, state.player.safeY, S, t);
     const x = back.x;
     const y = back.y;
     events.push({ type: 'fallReturn', id, x, y });
-    placePlayer(state, x, y, t, scene, events);
+    placePlayer(state, x, y, t, S, events);
   }
   // Shut in the cocoon: presses stir it, no input moves her.
-  const shut = updateHatch(state, scene, input, state.prevInput, t, events);
+  const shut = updateHatch(state, S, input, state.prevInput, t, events);
   const live = state.exit || state.caught || shut ? 0 : input;
-  // The end of a fade: she re-forms at the last safe ground and the living enemies go home.
+  // The end of a fade: she re-forms at her last moon patch (any room: everything earned is kept),
+  // else at the last light / safe ground, and the living enemies go home.
   if (state.player.faded > 0 && --state.player.faded === 0) {
-    dropGlints(state, scene, t.health.fadeDrop, events);
-    const light = restPoint(state, scene, t);
-    reformPlayer(state, scene, P, events, light);
-    goalReformed(state.goal, light);
-    resetEnemies(state, scene, t, events);
+    dropGlints(state, S, t.health.fadeDrop, events);
+    const patch = state.save.patch;
+    const pr = patch && world ? world.rooms[patch.room] : undefined;
+    const pp = pr && patch ? pr.scene.patches?.find((q) => q.id === patch.id) : undefined;
+    if (pr && pp && world) {
+      if (pr.id !== scene.id) {
+        // Another room: she re-forms there (the room's creatures are fresh anyway).
+        gotoRoom(state, t, world, pr.id, pp.x, pp.y, 'reform', events);
+        const there = withShortcuts(pr.scene, state.save);
+        reformPlayer(state, there, P, events, pp);
+        state.player.hp = state.player.hpMax;
+        const i = pr.scene.patches?.indexOf(pp) ?? -1;
+        state.rest = { at: i, frames: 0, done: true };
+        events.push({ type: 'spawn', x: pp.x, y: pp.y });
+        state.prevInput = 0;
+        state.frame++;
+        return;
+      }
+      reformPlayer(state, S, P, events, pp);
+      state.player.hp = state.player.hpMax;
+      const i = scene.patches?.indexOf(pp) ?? -1;
+      state.rest = { at: i, frames: 0, done: true };
+      resetEnemies(state, S, t, events);
+    } else {
+      const light = restPoint(state, S, t);
+      reformPlayer(state, S, P, events, light);
+      goalReformed(state.goal, light);
+      resetEnemies(state, S, t, events);
+    }
   }
   // From the end of the run on she is held (no input reaches her; she walks into the heart and
   // stops) and nothing can hurt her.
   const held = goalHolds(state.goal, t.goal);
-  const ran = updatePlayer(state, scene, held ? heldInput(state, scene, t.goal) : live, P, t.pods, events);
+  const ran = updatePlayer(state, S, held ? heldInput(state, S, t.goal) : live, P, t.pods, events);
   // Her offer (memory/giving.md): a glint given this step, one arriving.
-  updateOffer(state, scene, t, held ? 0 : live, held, events);
-  const touch = updateEnemies(state, scene, t, events, first);
+  updateOffer(state, S, t, held ? 0 : live, held, events);
+  const touch = updateEnemies(state, S, t, events, first);
   const p = state.player;
   const e = touch >= 0 ? state.enemies[touch] : undefined;
   if (e && p.invuln === 0 && p.hp > 0 && !state.goal.gathered) {
@@ -230,13 +388,17 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
         events,
       );
       // A blow knocks her out of a lure's hold (memory/lures.md).
-      if (state.player.lure >= 0) freePlayer(state, scene, t, 'hurt', events);
+      if (state.player.lure >= 0) freePlayer(state, S, t, 'hurt', events);
     }
-    enemyTouched(state, scene, touch, dir, t, events);
+    enemyTouched(state, S, touch, dir, t, events);
   }
-  if (ran) trackSafeGround(state, scene, P);
+  if (ran) trackSafeGround(state, S, P);
+  // Progress (memory/world.md): shortcuts she pushes open, glades, the moon patch she stands in.
+  updateShortcuts(state, scene, events);
+  updateGlades(state, scene, events);
+  updatePatches(state, scene, live, state.prevInput, t, events);
   if (!state.exit && !state.caught) {
-    const id = inCatch(state, scene);
+    const id = inCatch(state, S);
     if (id) {
       const frames = Math.max(1, Math.round(t.room.catchFrames));
       state.caught = { id, frames: 0 };
@@ -244,19 +406,58 @@ export function step(state: GameState, input: InputFrame, t: Tuning, scene: Scen
     }
   }
   if (!state.exit && !state.caught) {
-    const out = crossedExit(state, scene);
-    if (out) {
-      const frames = Math.max(1, Math.round(t.room.exitFrames));
-      state.exit = { id: out.id, frames: 0 };
-      events.push({ type: 'roomExit', id: out.id, edge: out.edge, x: p.x + p.w / 2, y: p.y + p.h, frames });
+    const out = crossedExit(state, S);
+    // An exit the other side of a one-way drop is arrival only: crossing it does nothing.
+    const link = out && world ? world.links[`${scene.id}#${out.id}`] : undefined;
+    if (out && link !== null) {
+      const to = link?.to ?? '';
+      const frames = Math.max(1, Math.round(to ? t.room.transitionFrames : t.room.exitFrames));
+      state.exit = {
+        id: out.id,
+        frames: 0,
+        of: frames,
+        input: live & CARRY,
+        to,
+        toExit: link?.exit ?? '',
+        door: false,
+      };
+      if (to) remember(state.save.crossed, `${scene.id}:${out.id}`);
+      events.push({
+        type: 'roomExit',
+        id: out.id,
+        edge: out.edge,
+        x: p.x + p.w / 2,
+        y: p.y + p.h,
+        frames,
+        to,
+      });
     }
   }
-  updatePods(state, scene, t.pickups.comboFrames, events);
-  updatePickups(state, scene, t.pickups, events);
+  if (!state.exit && !state.caught && world && wasPressed(live, state.prevInput, 'up')) {
+    const d = doorAt(state, S, t);
+    const link = d ? world.doors[`${scene.id}#${d.id}`] : undefined;
+    if (d && link) {
+      const frames = Math.max(1, Math.round(t.room.transitionFrames));
+      state.exit = { id: d.id, frames: 0, of: frames, input: 0, to: link.to, toExit: link.exit, door: true };
+      remember(state.save.crossed, `${scene.id}:${d.id}`);
+      events.push({
+        type: 'roomExit',
+        id: d.id,
+        edge: 'door',
+        x: p.x + p.w / 2,
+        y: p.y + p.h,
+        frames,
+        to: link.to,
+      });
+    }
+  }
+  updatePods(state, S, t.pickups.comboFrames, events);
+  updatePickups(state, S, t.pickups, events);
   updateDrops(state, t.pickups, events);
-  updateGoal(state, scene, t, live, events, first);
+  updateGoal(state, S, t, live, events, first);
   markSeen(state, t);
-  markOfferTarget(state, scene, t, goalHolds(state.goal, t.goal));
+  markOfferTarget(state, S, t, goalHolds(state.goal, t.goal));
+  updateSeen(state, scene, t);
   // Presses are edges of the real input (the hatching counts them while `live` is 0).
   state.prevInput = shut ? input : live;
   state.frame++;
@@ -269,6 +470,7 @@ export { goalHolds, heartBox, lampCost, lanternBox, lanternCost } from './goal';
 export { hashState } from './hash';
 export { lureHpMax, lureRow } from './lures';
 export { slashBox, slashTuning } from './player/attack';
+export { patchBox, restAt } from './progress';
 export type {
   EnemyKind,
   EnemySpawn,
@@ -297,4 +499,6 @@ export type {
   PodsState,
   SaveState,
 } from './state';
-export { cloneState } from './state';
+export { cloneSave, cloneState, newSave } from './state';
+export type { Entry, ExitLink, World, WorldRoom } from './world';
+export { enterRoom, exitSegment, linkWorld, mirrorOf, withShortcuts } from './world';
