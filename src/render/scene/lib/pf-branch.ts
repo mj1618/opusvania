@@ -39,7 +39,9 @@ export const BRANCH = {
   climbLift: 0.14,
   climbRim: 0x3a5470,
   /** A dip fork sags this far under the lower walk line plus the limb's thickness, px. */
-  dipBelow: 70,
+  dipBelow: 110,
+  /** A dip leaves the parent's underside / joins the child's this far in from the walk's ends, px. */
+  dipIn: 150,
   /** A trunk's collar round a limb's root, px. */
   collar: 46,
   /** A trunk that ends in view: how much it narrows toward its broken top, how far it leans (share of its
@@ -1538,7 +1540,7 @@ function fork(
     );
     paintLimb(
       p,
-      lineLimb(line, (t) => Math.max(4, w * (1 - t) ** 1.1), B.walkH - 0.06, seed + 9, 0.4, 0.5),
+      lineLimb(line, (t) => Math.max(4, w * (1 - t) ** 1.1), B.walkH - 0.06, seed + 9, 0, 0.5),
     );
     const a = Math.atan2(ty - (ty + up * 0.4), dir * len * 0.1);
     twig(p, plan, tx, ty, a - dir * 0.3, range(r, 30, 52), 5, B.walkH - 0.1, seed + 10);
@@ -1552,46 +1554,57 @@ function fork(
   if (kind === 'dip') {
     const cx = lerp(xe, cx0, range(r, 0.42, 0.58));
     const cy = Math.max(topE, cTop) + Math.max(thE, cTh) + B.dipBelow;
+    // It leaves the parent's UNDERSIDE well before the walk's end and joins the child's belly well
+    // after its start, dark, in the back plane, no moss: the walk line visibly ends at both edges of
+    // the gap (first-timers read a walk-plane U here as floor and fell through it).
+    const sx = xe - dir * B.dipIn;
+    const sy = st.under(sx) - thE * 0.3;
+    const ex = cx0 + dir * B.dipIn;
+    const ey = child.under(ex) - cTh * 0.3;
     const line = [
-      ...cubic(
-        xe - dir * 60,
-        topE + thE / 2,
-        xe + dir * 30,
-        topE + thE / 2 + 24,
-        cx - dir * 80,
-        cy,
-        cx,
-        cy,
-        14,
-      ),
-      ...cubic(cx, cy, cx + dir * 80, cy, ax - dir * 70, ay + 40, ax, ay, 14).slice(2),
+      ...cubic(sx, sy, sx + dir * 90, sy + 40, cx - dir * 90, cy, cx, cy, 14),
+      ...cubic(cx, cy, cx + dir * 90, cy, ex - dir * 90, ey + 40, ex, ey, 14).slice(2),
     ];
     const L = lineLimb(
       line,
-      (t) => lerp(thE * 0.92, cTh, smoothstep(0, 1, t)) * (1 - 0.14 * Math.sin(Math.PI * t)),
-      B.walkH - 0.04,
+      (t) => lerp(thE * 0.62, cTh * 0.66, smoothstep(0, 1, t)) * (1 - 0.18 * Math.sin(Math.PI * t)),
+      B.backH + 0.06,
       seed + 1,
-      0.4,
-      0.9,
+      0,
+      0.8,
     );
     paintLimb(p, L);
-    const n = L.pts.length / 2;
-    p.tint(band(L, -0.5, 0.5, Math.round(n * 0.25), Math.round(n * 0.75)), B.barkDeep, 0.35);
+    p.tint(band(L), B.barkDeep, 0.5);
     curl(range(r, 70, 100), range(r, 28, 46), thE * 0.45);
-    plan.hangs.push({
-      x0: Math.min(xe, cx0) + 30,
-      x1: Math.max(xe, cx0) - 30,
-      y: () => cy + thE * 0.42,
-      deep: false,
-      reach: 120,
-    });
+    // Beards along its low part, hung from its real underside.
+    const n = L.pts.length / 2;
+    const i0 = Math.round(n * 0.3);
+    const i1 = Math.round(n * 0.7);
+    const xa = L.pts[i0 * 2] as number;
+    const xb = L.pts[i1 * 2] as number;
+    const under = (x: number): number => {
+      let best = 0;
+      let bd = Infinity;
+      for (let i = i0; i <= i1; i++) {
+        const d = Math.abs((L.pts[i * 2] as number) - x);
+        if (d < bd) {
+          bd = d;
+          best = i;
+        }
+      }
+      return (L.pts[best * 2 + 1] as number) + (L.w[best] as number) * 0.4;
+    };
+    plan.hangs.push({ x0: Math.min(xa, xb), x1: Math.max(xa, xb), y: under, deep: true, reach: 80 });
   } else if (kind === 'behind') {
     const sx = xe - dir * range(r, 120, 170);
     const sy = topE + thE * 0.6;
-    const line = cubic(sx, sy, xe + dir * 30, sy + thE * 0.9, ax - dir * 100, ay + 60, ax, ay, 22);
+    // It comes in under the child's belly, never at its walk height (that read as floor across the gap).
+    const bx = cx0 + dir * B.dipIn;
+    const by = child.under(bx) - cTh * 0.35;
+    const line = cubic(sx, sy, xe + dir * 30, sy + thE * 1.4, bx - dir * 120, by + 90, bx, by, 22);
     const L = lineLimb(
       line,
-      (t) => lerp(thE * 0.7, cTh, smoothstep(0.2, 1, t)),
+      (t) => lerp(thE * 0.6, cTh * 0.6, smoothstep(0.2, 1, t)),
       B.backH + 0.06,
       seed + 1,
       0.3,
@@ -1625,9 +1638,17 @@ function fork(
       hy,
       24,
     );
-    const L = lineLimb(line, (t) => thE * lerp(0.95, 0.3, t), B.walkH - 0.04, seed + 1, 0.4, 0.8);
+    const L = lineLimb(line, (t) => thE * lerp(0.95, 0.3, t), B.walkH - 0.04, seed + 1, 0, 0.8);
     paintLimb(p, L);
     const n = L.pts.length / 2;
+    // Past the walk's end it is not floor: dark from there on.
+    let e0 = n - 1;
+    for (let i = 0; i < n; i++)
+      if (dir * ((L.pts[i * 2] as number) - xe) > 6) {
+        e0 = i;
+        break;
+      }
+    p.tint(band(L, -0.5, 0.5, e0, n - 1), B.barkDeep, 0.35);
     let q = n - 1;
     for (let i = 0; i < n; i++)
       if ((L.pts[i * 2 + 1] as number) >= ay) {

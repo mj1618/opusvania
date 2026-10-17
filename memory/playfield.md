@@ -65,6 +65,12 @@ that read as stalks. Round 3 paints from the room's **tree and stretch marks** (
   tongue read as an animal head; the knee lost them too). `snap` (`snapped`): dark wood (`barkDark` solid, a
   `barkDeep` tint, dim torn face; a flat plateau caught the moon as a pale nose), splinters; moss and the rim stop
   short. `nub`, `tip` (`tipTangle`) as before.
+- **Paint matches the floor (first-timer fix, 2026-10-17):** two first-timers fell through the S2->S3 dip fork
+  (a walk-plane U that continued the walk line read as floor). Fork connectors now leave the parent's UNDERSIDE
+  `dipIn` 150 px before the walk ends and join the child's belly as far in, thin, dark, back plane, no moss; the
+  `behind` limb joins under the child's belly too; tines and the `hang` droop carry no moss, and the droop is dark
+  past the walk's end. Rule: across a gap, nothing at walk height may carry lit moss or keep the top line going.
+  Check with `npm run shots -- --hitboxes`.
 - **Light hierarchy (round 4):** `WOOD_BAKE.rimScale` / `chipScale` / `keyScale` cut the bake's silhouette rim,
   chips and key on bark (`mix(0.16, 1, moss)`, 0.15, `mix(0.55, 1, moss)`): only moss keeps the moon, so the walk's
   rim is the playfield's top value (wide stops p99.9 outside the moon 108-125; descending limbs no longer white).
