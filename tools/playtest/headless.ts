@@ -11,8 +11,12 @@ import { getRoom } from '../../src/scene/index';
 import type { Room } from '../../src/scene/room';
 import { GAME_WORLD } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
+import { cloneState } from '../../src/sim/index';
+import type { GameState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
-import { observe, viewRect } from './observe';
+import { Feel, surprising } from './feel';
+import { Motor, SKILLS, type Skill } from './human';
+import { observe, type ViewRect, viewRect } from './observe';
 import { makePersona, type Persona } from './personas';
 import { Recorder, type RunTrace } from './recorder';
 
@@ -41,6 +45,11 @@ export interface RunOpts {
   upto?: string;
   /** The chunk's rooms: through once she has been in every one (and out of `upto`, if given). */
   chunk?: string[];
+  /**
+   * A human-like run (human.ts): the persona `human-<skill>` sees the game `perception` frames late and its
+   * intent reaches the keys through the motor model (reaction times, jitter, hold errors, stray presses).
+   */
+  human?: Skill;
 }
 
 export interface HeadlessResult {
@@ -49,6 +58,10 @@ export interface HeadlessResult {
   tape: number[];
   hash: string;
   persona: Persona;
+  /** The timeline per 10 s and the feel metrics (feel.ts). */
+  feel: ReturnType<Feel['finish']>;
+  /** A human-like run's motor: stray presses and double taps it made. */
+  motor?: { strays: number; doubles: number };
 }
 
 export function runHeadless(opts: RunOpts): HeadlessResult {
@@ -92,13 +105,28 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
   let uptoArrival = '';
   let uptoDone = false;
   const been = new Set<string>();
+  const row = opts.human ? SKILLS[opts.human] : null;
+  const motor = row ? new Motor(row, opts.personaSeed ?? 1) : null;
+  // What a person sees is a few frames old: a ring of past states (and their views and rooms).
+  const ring: Array<{ s: GameState; view: ViewRect; scene: Room }> = [];
+  const feel = new Feel();
   for (let i = 0; i < maxFrames; i++) {
     const view = viewRect(lerpCamera(cam, cam, 1));
-    const mask = persona.decide(observe(game.state, scene, view), scene, {
-      state: game.state,
+    let seen = { s: game.state, view, scene };
+    if (row) {
+      ring.push({ s: cloneState(game.state), view, scene });
+      if (ring.length > row.perception + 1) ring.shift();
+      const old = ring[0];
+      // The world on screen is a few frames old; her own body is not (a player feels what their hands just
+      // did: the climb's rhythm, the jump's arc). Across a room change, all of it is now.
+      if (old && old.scene === scene) seen = { ...old, s: { ...old.s, player: game.state.player } };
+    }
+    const intent = persona.decide(observe(seen.s, seen.scene, seen.view), seen.scene, {
+      state: seen.s,
       tuning,
       ...(world ? { world } : {}),
     });
+    const mask = motor ? motor.step(i, intent) : intent;
     tape.push(mask);
     game.queueInput([mask]);
     game.stepOnce();
@@ -110,6 +138,11 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
     if (events.some((e) => e.type === 'spawn')) cam = createCamera(game.state, scene, ct);
     else stepCamera(cam, game.state, scene, ct);
     rec.record(game.state, mask, events, viewRect(lerpCamera(cam, cam, 1)), scene);
+    feel.record(game.state, mask, events);
+    if (motor)
+      for (const e of events)
+        if (surprising(e))
+          motor.surprise(i, e.type === 'hurt' || e.type === 'fallReturn' || e.type === 'reform');
     for (const e of events)
       if (e.type === 'roomEnter' && e.room === opts.upto && world) {
         const link = world.links[e.from];
@@ -137,5 +170,12 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
       break;
     }
   }
-  return { trace: rec.finish(outcome, persona.notes, persona.itinerary), tape, hash: game.hash(), persona };
+  return {
+    trace: rec.finish(outcome, persona.notes, persona.itinerary),
+    tape,
+    hash: game.hash(),
+    persona,
+    feel: feel.finish(),
+    ...(motor ? { motor: { strays: motor.strays, doubles: motor.doubles } } : {}),
+  };
 }

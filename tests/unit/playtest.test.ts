@@ -306,3 +306,144 @@ describe('playtest harness: a pinned build that does not load', () => {
     ).toContain('SyntaxError: Unexpected token');
   });
 });
+
+describe('playtest harness: the human-like player (human.ts, feel.ts)', () => {
+  const J = 1 << 4;
+  it('the motor is deterministic per seed, late by its latency, and keeps a chord together', async () => {
+    const { Motor, SKILLS } = await import('../../tools/playtest/human');
+    const { ActionBit } = await import('../../src/sim/input');
+    const row = { ...SKILLS.average, mispressPerMin: 0, doubleTap: 0 };
+    const play = (seed: number) => {
+      const m = new Motor(row, seed);
+      const out: number[] = [];
+      for (let f = 0; f < 200; f++) {
+        const intent =
+          f >= 20 && f < 40 ? ActionBit.right : f >= 100 && f < 104 ? ActionBit.down | ActionBit.attack : 0;
+        out.push(m.step(f, intent));
+      }
+      return out;
+    };
+    const a = play(3);
+    expect(play(3)).toEqual(a);
+    const firstRight = a.findIndex((k) => k & ActionBit.right);
+    expect(firstRight).toBeGreaterThanOrEqual(20);
+    expect(firstRight).toBeLessThanOrEqual(20 + row.latency + row.jitter);
+    // Down and the cut land on the same frame (a pogo is a chord).
+    const d = a.findIndex((k, f) => f >= 100 && k & ActionBit.down);
+    const c = a.findIndex((k, f) => f >= 100 && k & ActionBit.attack);
+    expect(d).toBe(c);
+    expect(J).toBe(ActionBit.jump);
+  });
+
+  it('a surprise waits a reaction time; a long jump is held at least as long as meant', async () => {
+    const { Motor, SKILLS } = await import('../../tools/playtest/human');
+    const { ActionBit } = await import('../../src/sim/input');
+    const row = { ...SKILLS.casual, mispressPerMin: 0, doubleTap: 0 };
+    const m = new Motor(row, 1);
+    m.surprise(0, true);
+    let pressed = -1;
+    for (let f = 0; f < 60 && pressed < 0; f++) if (m.step(f, ActionBit.left) & ActionBit.left) pressed = f;
+    // 240-330 ms x 1.25, less the eye's share (perception).
+    expect(pressed).toBeGreaterThanOrEqual(Math.round(0.24 * 1.25 * 60) - row.perception - 1);
+    const m2 = new Motor(row, 2);
+    const keys: number[] = [];
+    for (let f = 0; f < 80; f++) keys.push(m2.step(f, f < 18 ? ActionBit.jump : 0));
+    expect(keys.filter((k) => k & ActionBit.jump).length).toBeGreaterThanOrEqual(18);
+  });
+
+  it('a person tries a rule of thumb first, then the next idea after each failure', async () => {
+    const { humanPick } = await import('../../tools/playtest/human');
+    const cands = ['walk off', 'jump (14 px, 18f)', 'standing hop (5f)', 'jump-glide (14 px, 18f)'].map(
+      (name) => ({
+        name,
+        make: () => ({ name, max: 1, act: () => 0 }),
+      }),
+    );
+    const m = { kind: 'jump', gap: 100, rise: 0 } as unknown as Parameters<typeof humanPick>[1];
+    const ctx = { roof: false, glide: true, plainReach: 300, hold: 18 };
+    expect(humanPick(cands, m, 0, ctx)?.name).toBe('jump (14 px, 18f)');
+    expect(humanPick(cands, m, 1, ctx)?.name).toBe('standing hop (5f)');
+    expect(humanPick(cands, m, 0, { ...ctx, roof: true })?.name).toBe('walk off');
+  });
+
+  it('feel: first input, flow, deaths per 10 min and a timeline of 10 s buckets', async () => {
+    const { Feel } = await import('../../tools/playtest/feel');
+    const s = createState(1, cloneTuning(defaultTuning), gapRoom());
+    const feel = new Feel();
+    for (let f = 0; f < 1200; f++) {
+      s.player.x = 400 + f * 2;
+      s.player.vx = f < 600 ? 6 : 0;
+      s.player.grounded = true;
+      feel.record(s, f >= 90 && f < 600 ? 2 : 0, f === 700 ? [{ type: 'fade' } as unknown as SimEvent] : []);
+    }
+    const r = feel.finish();
+    expect(r.buckets.length).toBe(2);
+    expect(r.metrics.firstInputS).toBeCloseTo(1.5);
+    expect(r.metrics.flowPct).toBeCloseTo(50, 0);
+    expect(r.metrics.deathsPer10Min).toBeCloseTo(30);
+  });
+});
+
+describe('playtest harness: area 1 skills (throws, hatches, the pogo-wick, thorn beds)', () => {
+  const room = (extra: Partial<Room>): Room => ({
+    id: 'skills-lab',
+    region: 'lab',
+    width: 3000,
+    height: 1600,
+    spawn: { x: 200, y: 800 },
+    solids: [],
+    oneWays: [],
+    exits: [],
+    ...extra,
+  });
+  const all = (r: Room) => ({
+    solids: r.solids.map((_, i) => i),
+    oneWays: (r.oneWays ?? []).map((_, i) => i),
+  });
+
+  it('a thorn bed and a pit that catches are no floor; a drop through rungs stops at the first rung', () => {
+    const r = room({
+      solids: [
+        { tag: 'ground', x: 0, y: 800, w: 600, h: 800 },
+        { tag: 'ground', x: 1200, y: 1000, w: 600, h: 600 },
+        { tag: 'ground', x: 600, y: 1400, w: 600, h: 200 },
+      ],
+      oneWays: [
+        { tag: 'root', x: 1300, y: 600, w: 100 },
+        { tag: 'root', x: 1300, y: 800, w: 100 },
+      ],
+      thorns: [{ id: 't', x: 1500, y: 968, w: 300, h: 32 }],
+      catches: [{ id: 'pit', x: 600, y: 1340, w: 600, h: 60 }],
+    } as Partial<Room>);
+    const { solids, oneWays } = all(r);
+    const surf = buildSurfaces(r, solids, oneWays);
+    expect(surf.some((s) => s.x0 >= 600 && s.x1 <= 1200 && s.pieces[0]?.y === 1400)).toBe(false);
+    const floor = surf.find((s) => s.pieces[0]?.y === 1000);
+    expect(floor?.x1).toBe(1500);
+    const moves = buildMoves(surf, reachFor(['glide']));
+    const top = surf.find((s) => s.oneWay && s.pieces[0]?.y === 600);
+    const through = moves.filter((m) => m.kind === 'through' && m.from === top?.id);
+    expect(through.map((m) => surf[m.to]?.pieces[0]?.y)).toEqual([800]);
+  });
+
+  it('a gap no jump spans is crossed by a lamp in reach (a throw move), and the aimed throw lands', () => {
+    const a = { id: 0, x0: 0, x1: 500, pieces: [{ x0: 0, x1: 500, y: 1000 }], oneWay: false };
+    const b = { id: 1, x0: 1300, x1: 1800, pieces: [{ x0: 1300, x1: 1800, y: 700 }], oneWay: false };
+    const reach = reachFor(['glide']);
+    expect(buildMoves([a, b], reach).some((m) => m.from === 0 && m.to === 1)).toBe(false);
+    const withLamp = buildMoves([a, b], reach, [], [], [{ x: 640, y: 720 }]);
+    expect(withLamp.find((m) => m.from === 0 && m.to === 1)?.lure).toEqual({ x: 640, y: 720 });
+  });
+
+  it('reading the drawn arc: landing on the goal beats ending near it; through thorns never', async () => {
+    const { arcScore } = await import('../../tools/playtest/lines');
+    const r = room({ thorns: [{ id: 't', x: 900, y: 960, w: 200, h: 40 }] } as Partial<Room>);
+    const goal = { id: 1, x0: 1400, x1: 1900, pieces: [{ x0: 1400, x1: 1900, y: 700 }], oneWay: false };
+    const g = { x: 1600, y: 700, surface: goal };
+    const lands = arcScore([600, 700, 1000, 600, 1500, 660], r, g, 40);
+    const short = arcScore([600, 700, 1000, 800, 1300, 900], r, g, 40);
+    const thorny = arcScore([600, 700, 950, 950, 1500, 660], r, g, 40);
+    expect(lands).toBeLessThan(short);
+    expect(thorny).toBeGreaterThan(1e5);
+  });
+});

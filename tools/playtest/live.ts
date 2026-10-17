@@ -33,6 +33,29 @@ const KEYS: Array<[number, string, string]> = [
   [ActionBit.offer, 'KeyV', 'v'],
 ];
 
+/**
+ * New events since the last call for this reader: the page's event log by identity, not by frame number. A
+ * restart ({R}: back to the save) or a load sets the frame count back, and a frame window then re-read the
+ * whole log (round 2: every later turn re-reported the session, ~1,100 duplicate screenshots, 157 "deaths").
+ */
+function fresh(seen: WeakSet<object>): SimEvent[] {
+  const all = window.__game.events(1e12) as unknown as Array<SimEvent & object>;
+  const out: SimEvent[] = [];
+  for (const e of all)
+    if (!seen.has(e)) {
+      seen.add(e);
+      out.push(e);
+    }
+  return out;
+}
+
+/** Marks everything in the log so far as read (a reader starting now). */
+function cursor(): WeakSet<object> {
+  const seen = new WeakSet<object>();
+  fresh(seen);
+  return seen;
+}
+
 function press(mask: number, prev: number): void {
   for (const [bit, code, key] of KEYS) {
     const now = (mask & bit) !== 0;
@@ -85,6 +108,7 @@ export function play(opts: LiveOpts): Promise<LiveResult> {
   const tape: number[] = [];
   let held = 0;
   let lastF = g.state().frame;
+  const seen = cursor();
   let rafs = 0;
   g.resume();
   return new Promise((resolve) => {
@@ -106,7 +130,7 @@ export function play(opts: LiveOpts): Promise<LiveResult> {
       if (st.room !== scene.id) scene = g.scene() as unknown as Scene;
       const view = viewRect(g.cam().follow);
       if (f > lastF) {
-        const ev = g.events(f - lastF) as unknown as SimEvent[];
+        const ev = fresh(seen);
         for (let i = lastF; i < f; i++) tape.push(held);
         rec.record(st, held, ev, view, scene, f - lastF);
         lastF = f;
@@ -148,6 +172,7 @@ export function record(name = 'human', lostAfter = 10): void {
     regionOf: regionOf(scene),
   });
   let lastF = g.state().frame;
+  const seen = cursor();
   const state = { rec, stop: false, done: Promise.resolve(rec.t) };
   state.done = new Promise<RunTrace>((resolve) => {
     const tick = (): void => {
@@ -155,16 +180,13 @@ export function record(name = 'human', lostAfter = 10): void {
       const f = st.frame;
       if (st.room !== scene.id) scene = g.scene() as unknown as Scene;
       if (f > lastF) {
-        rec.record(
-          st,
-          st.prevInput,
-          g.events(f - lastF) as unknown as SimEvent[],
-          viewRect(g.cam().follow),
-          scene,
-          f - lastF,
-        );
+        rec.record(st, st.prevInput, fresh(seen), viewRect(g.cam().follow), scene, f - lastF);
         lastF = f;
-      } else if (f < lastF) lastF = f; // a load() restarted the frame count
+      } else if (f < lastF) {
+        // A load() or a restart set the frame count back: what happened up to it is read and dropped.
+        lastF = f;
+        fresh(seen);
+      }
       if (state.stop) {
         resolve(rec.finish('stopped'));
         return;
@@ -323,7 +345,7 @@ export function burst(script: string, dev = false): void {
   bursting = b;
   let held = 0;
   let keys: string[] = [];
-  let lastF = g.state().frame;
+  const seen = cursor();
   let room = g.state().room;
   let i = 0;
   // Under the map the sim stands (frozen); out of it, real time.
@@ -332,18 +354,15 @@ export function burst(script: string, dev = false): void {
   keepLabelsOff();
   const tick = (): void => {
     const st = g.state();
-    const f = st.frame;
     if (st.room !== room) {
       room = st.room;
       keepLabelsOff();
     }
-    if (f > lastF) {
-      for (const e of g.events(f - lastF) as unknown as SimEvent[]) {
-        const w = say(e, title);
-        if (w && b.said[b.said.length - 1] !== w) b.said.push(w);
-      }
-      lastF = f;
-    } else if (f < lastF) lastF = f;
+    // Every event once (by identity), across a restart that sets the frame count back.
+    for (const e of fresh(seen)) {
+      const w = say(e, title);
+      if (w && b.said[b.said.length - 1] !== w) b.said.push(w);
+    }
     b.frames = i;
     const step = steps[i++];
     // Keys down for this frame (a key held over frames is pressed once).

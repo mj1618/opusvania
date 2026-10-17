@@ -22,6 +22,8 @@ export interface Surface {
   x1: number;
   pieces: Piece[];
   oneWay: boolean;
+  /** A one-way that refuses a drop-through (scene `noDrop`: true, or until that flag is set). */
+  noDrop?: boolean | string;
   /** A bounce cap's top (never stood on: it throws her up this many px, jump held). */
   cap?: number;
 }
@@ -44,6 +46,8 @@ export interface Move {
   rise: number;
   /** A jump across a gap no jump spans, over a chain of pogo targets (seed-cases): down cuts on the way. */
   pogo?: boolean;
+  /** A gap no jump spans, past this lamp: into it and thrown (aimed), or a down cut on its flame (the pogo-wick). */
+  lure?: { x: number; y: number };
   /** A climb: the face she kicks up first (`dir` = the way she holds into it). */
   faceX?: number;
   /** A bounce: off the cap `from` is (it throws her up this many px with jump held). */
@@ -75,8 +79,8 @@ function pogoChain(pogos: readonly { x: number; y: number }[], ax: number, bx: n
 
 /** Rolling steps up to this many px are walked over (the sim's rolling ground is 12). */
 export const ROLL = 16;
-/** Her body (src/sim tuning: the box is 48 x 96; close enough for clearance checks). */
-const BODY_H = 96;
+/** Her body's height (tuning.body: 40 x 80): a gap this tall under a solid is room to walk (R10's root ceiling). */
+const BODY_H = 80;
 
 export function yAt(s: Surface, x: number): number {
   let best = s.pieces[0];
@@ -121,6 +125,21 @@ export function buildSurfaces(
         return out;
       });
     }
+    // Thorns lying on it are no floor (she sees them: red teeth); nor is the bottom of a pit that catches a fall
+    // (a drop into the dark: she is put back where she fell from).
+    const pits = (
+      (scene as { catches?: Array<{ x: number; y: number; w: number; h: number }> }).catches ?? []
+    ).map((c) => ({ x: c.x, y: c.y, w: c.w, h: c.h + 8 }));
+    for (const t of [...(scene.thorns ?? []), ...pits]) {
+      if (!(t.y < s.y + 4 && t.y + t.h > s.y - 40)) continue;
+      spans = spans.flatMap(([a, b]): Array<[number, number]> => {
+        if (t.x + t.w <= a || t.x >= b) return [[a, b]];
+        const out: Array<[number, number]> = [];
+        if (t.x > a) out.push([a, t.x]);
+        if (t.x + t.w < b) out.push([t.x + t.w, b]);
+        return out;
+      });
+    }
     for (const [a, b] of spans) if (b - a >= 24) pieces.push({ x0: a, x1: b, y: s.y });
   }
   pieces.sort((a, b) => a.x0 - b.x0 || a.y - b.y);
@@ -150,6 +169,7 @@ export function buildSurfaces(
         x1: o.x + o.w,
         pieces: [{ x0: o.x, x1: o.x + o.w, y: o.y }],
         oneWay: true,
+        ...(o.noDrop ? { noDrop: o.noDrop } : {}),
       });
   }
   return out;
@@ -213,6 +233,8 @@ export function buildMoves(
   pogos: readonly { x: number; y: number }[] = [],
   /** Known standing solids (a wall in a gap blocks a jump across it; rotten bark in it is a cut). */
   walls: readonly { x: number; y: number; w: number; h: number; bark?: boolean }[] = [],
+  /** Lamps (flame centres): a gap past a jump is crossed by jumping into one and being thrown (aimed). */
+  lures: readonly { x: number; y: number }[] = [],
 ): Move[] {
   const moves: Move[] = [];
   const byId = new Map(surfaces.map((s) => [s.id, s]));
@@ -245,7 +267,20 @@ export function buildMoves(
           if (inGap.some((w) => w.y < Math.min(ya, ya + dy) - reach.up)) continue;
         }
         const pogo = dx > reach.across(dy) && Math.abs(dy) <= 64 && pogoChain(pogos, ax, bx, ya);
-        if (dx > reach.across(dy) && !pogo) continue;
+        // A lamp in reach of a jump off this end that throws as far as the other side (the throw gap).
+        const throwBy =
+          dx > reach.across(dy) && !pogo
+            ? lures.find(
+                (l) =>
+                  (l.x - ax) * dir > -120 &&
+                  Math.abs(l.x - ax) < 360 &&
+                  l.y > ya - reach.up - 140 &&
+                  l.y < ya + 320 &&
+                  Math.abs(bx - l.x) < 760 &&
+                  ya + dy > l.y - 380,
+              )
+            : undefined;
+        if (dx > reach.across(dy) && !pogo && !throwBy) continue;
         // Abutting at about the same height (a one-way mesh beside the floor), or a step down: walked.
         const walk = dx <= 24 && (dy > 0 || (dx <= 2 && Math.abs(dy) <= ROLL));
         push({
@@ -256,8 +291,9 @@ export function buildMoves(
           launchX: ax,
           gap: dx,
           rise: dy,
-          cost: dx + Math.abs(dy) * (dy < 0 ? 1.5 : 0.5) + (walk ? 10 : pogo ? 200 : 60),
+          cost: dx + Math.abs(dy) * (dy < 0 ? 1.5 : 0.5) + (walk ? 10 : pogo || throwBy ? 200 : 60),
           ...(pogo ? { pogo } : {}),
+          ...(throwBy ? { lure: { x: throwBy.x, y: throwBy.y } } : {}),
         });
         continue;
       }
@@ -284,8 +320,18 @@ export function buildMoves(
             cost: (ya - yb) * 1.5 + 80,
           });
       } else if (yb > ya + ROLL) {
-        // b is below: walk off an end of a that hangs over b, or drop through a one-way.
+        // b is below: walk off an end of a that hangs over b, or drop through a one-way. Not when something
+        // solid lies between (a thorn bed over a tunnel: she would land on it, not on b).
+        const solidBetween = (x: number) =>
+          walls.some((w) => w.x < x + 20 && w.x + w.w > x - 20 && w.y > ya + ROLL && w.y < yAt(b, x) - ROLL);
         if (a.oneWay) {
+          // Down + jump falls through to the first thing under her (rungs stacked over a floor: the next rung).
+          const x = (lo + hi) / 2;
+          const between = surfaces.some(
+            (c) =>
+              c !== a && c !== b && c.x0 <= x && c.x1 >= x && yAt(c, x) > ya + ROLL && yAt(c, x) < yb - ROLL,
+          );
+          if (between || solidBetween(x)) continue;
           push({
             from: a.id,
             to: b.id,
@@ -297,7 +343,7 @@ export function buildMoves(
           });
           continue;
         }
-        if (a.x1 > b.x0 + 24 && a.x1 < b.x1 - 24)
+        if (a.x1 > b.x0 + 24 && a.x1 < b.x1 - 24 && !solidBetween(a.x1 + 30))
           push({
             from: a.id,
             to: b.id,
@@ -307,7 +353,7 @@ export function buildMoves(
             rise: yb - ya,
             cost: (yb - ya) * 0.5 + 30,
           });
-        if (a.x0 < b.x1 - 24 && a.x0 > b.x0 + 24)
+        if (a.x0 < b.x1 - 24 && a.x0 > b.x0 + 24 && !solidBetween(a.x0 - 30))
           push({
             from: a.id,
             to: b.id,
@@ -568,6 +614,8 @@ export class Mind {
   readonly rects: SolidRect[];
   private readonly kit: KitRect[];
   private openKey = '';
+  private flagKey = '';
+  private flags = new Set<string>();
   private openSet = new Set<number>();
   private dirty = true;
   private reach: Reach;
@@ -644,6 +692,12 @@ export class Mind {
         }
       });
     if (save) {
+      const fk = save.flags.join(',');
+      if (fk !== this.flagKey) {
+        this.flagKey = fk;
+        this.flags = new Set(save.flags);
+        fresh = true;
+      }
       const open = new Set<number>();
       this.kit.forEach((k, j) => {
         if ((k.kind === 'gate' ? save.flags : save.opened).includes(k.open)) open.add(n + j);
@@ -710,9 +764,19 @@ export class Mind {
       );
       if (c?.rise) q.cap = c.rise;
     }
-    this.moves = buildMoves(this.surfaces, this.reach, this.scene.seedCases ?? [], walls).filter(
-      (m) => !this.surfaces.find((q) => q.id === m.from)?.cap,
-    );
+    // A one-way that refuses a drop (noDrop, or its flag not set yet) is no way down.
+    const shut = (q: Surface | undefined) =>
+      !!q?.noDrop && (q.noDrop === true || !this.flags.has(q.noDrop as string));
+    this.moves = buildMoves(
+      this.surfaces,
+      this.reach,
+      this.scene.seedCases ?? [],
+      walls,
+      this.scene.lures ?? [],
+    ).filter((m) => {
+      const from = this.surfaces.find((q) => q.id === m.from);
+      return !from?.cap && !(m.kind === 'through' && shut(from));
+    });
     this.moves.push(...buildBounces(this.surfaces, this.abilities.split(',').includes('glide')));
     if (this.abilities.split(',').includes('wallJump'))
       this.moves.push(...buildClimbs(this.surfaces, facesOf(played, standing), this.reach));

@@ -14,11 +14,14 @@
 import { ActionBit } from '../../src/sim/input';
 import { solidAt } from '../../src/sim/physics/aabb';
 import { rngInt, seedRng } from '../../src/sim/rng';
-import type { Scene } from '../../src/sim/scene';
+import type { Scene, SolidRect } from '../../src/sim/scene';
 import type { World } from '../../src/sim/world';
 import { chooseTactic, fightTactics, foe } from './fight';
+import { humanPick, humanTactic, SKILLS, type Skill, type SkillRow, sample } from './human';
 import {
+  Aim,
   type Candidate,
+  type Choice,
   capChain,
   capClimbLine,
   chooseLine,
@@ -30,11 +33,12 @@ import {
   leapLines,
   linesFor,
   nearSurface,
+  type Outcome,
   onCap,
   onSurface,
   type SimCtx,
 } from './lines';
-import { Mind, type Move, moveKey, type Surface, topUnder, yAt } from './map';
+import { Mind, type Move, moveKey, reachFor, type Surface, topUnder, yAt } from './map';
 import type { Obs } from './observe';
 
 const D = ActionBit.down;
@@ -133,8 +137,26 @@ export function makePersona(name: string, seed = 1, w: PersonaWorld = {}): Perso
         waitForCreatures: 420,
         turnBack: true,
       });
-    default:
-      throw new Error(`Unknown persona "${name}". Personas: ${PERSONAS.join(', ')}`);
+    default: {
+      // A human-like player: `human-casual`, `human-average`, `human-skilled` (human.ts; the runner adds the
+      // motor and the perception delay).
+      const skill = /^human-(casual|average|skilled)$/.exec(name)?.[1] as Skill | undefined;
+      if (skill)
+        return new Planner(name, seed, {
+          knowsAll: false,
+          edge: 14,
+          hold: 18,
+          dash: false,
+          hatchAfter: SKILLS[skill].hatchAfter,
+          pick: 'explore',
+          slash: true,
+          turnBack: true,
+          human: SKILLS[skill],
+        });
+      throw new Error(
+        `Unknown persona "${name}". Personas: ${PERSONAS.join(', ')}, human-casual|average|skilled`,
+      );
+    }
   }
 }
 
@@ -347,6 +369,8 @@ interface PlannerOpts {
   goal?: string;
   /** Rooms to cover (a region run's chunk): it heads for the nearest it has not been in. */
   goals?: string[];
+  /** A human-like player (human.ts): no look-ahead, lines by rule of thumb and failure, fights by tells. */
+  human?: SkillRow;
 }
 
 /** Something to go to. `leave`: on arriving, keep going that way (off an end, into an exit). */
@@ -385,6 +409,9 @@ interface RoomMemory {
   taken: Map<string, number>;
   arrival: string;
   lastTurn: number;
+  /** A person's rounds of trying again what failed here. */
+  retries: number;
+  lastRetry: number;
 }
 
 /** The id of the exit whose opening is nearest a point (feet), or null in a room with none. */
@@ -419,6 +446,8 @@ function roomMemory(): RoomMemory {
     taken: new Map(),
     arrival: '',
     lastTurn: -1000,
+    retries: 0,
+    lastRetry: -1000,
   };
 }
 
@@ -503,9 +532,25 @@ class Planner implements Persona {
     hp: number;
     hurt: number;
     tactics: Map<string, number>;
+    /** What the creature was showing when the tactic was picked (a person answers a new tell at once). */
+    look: string;
   } | null = null;
   private ignoreFoesUntil = 0;
+  /** Caught with no line playing: the throw aimed at the target. */
+  private lureAimer: Aim | null = null;
+  private get lureAim(): Aim {
+    this.lureAimer ??= new Aim(
+      () => (this.target ? { x: this.target.x, y: this.target.y } : null),
+      this.opt.human ? 3 : 1,
+    );
+    return this.lureAimer;
+  }
+  /** Hits taken from each kind of creature while fighting it (a person changes plan after a few). */
+  private readonly hitsBy = new Map<string, number>();
+  private lastHurtSeq = 0;
   private airClimbAt = -1000;
+  /** A person's tries at a leap or a climb with no move (per target). */
+  private readonly leapTries = new Map<string, number>();
   private kit = '';
   /** Jumps made at a target from under it (a lamp out of reach is given up after a few). */
   private readonly jumpsAt = new Map<string, number>();
@@ -514,6 +559,8 @@ class Planner implements Persona {
   private frameNow = 0;
   /** Exits (`room#exit`) it could not take, and rooms it has been in. */
   private readonly blocked = new Set<string>();
+  /** Exits under a shut gate or shortcut (`room#id`): no way through, unlike one it gave up on. */
+  private readonly shut = new Set<string>();
   private readonly roomsBeen = new Set<string>();
   /** `room/target` keys no line was found for (not tried again by a turn back). */
   private readonly noLine = new Set<string>();
@@ -623,10 +670,15 @@ class Planner implements Persona {
       return 0;
     }
     if (o.lured) {
-      // Caught by a lure: a fighter cuts the flame (it goes out), the rest beat free with jump; a dash frees at once.
+      // Caught by a lure: the throw aimed at where she is going (the drawn arc read for each way of the stick);
+      // a fighter cuts a flame it came for; a dash frees at once.
       if (this.opt.dash && o.abilities.includes('dash') && !(this.lastMask & X)) return X;
-      return f % 6 < 2 ? (this.opt.slash ? A : J) : 0;
+      const t = this.target;
+      if (!t || (this.opt.slash && t.key.startsWith('light:')))
+        return f % 6 < 2 ? (this.opt.slash ? A : J) : 0;
+      return this.lureAim.act(ctx.state, scene, f, this.lastMask);
     }
+    this.lureAim.reset();
     // Something new seen: targets given up for want of a route get another look.
     if (mind.see(o.solids, o.oneWays, o.abilities, o.tops, o.view, ctx.state.save)) {
       for (const k of this.mem.noRoute) this.given.delete(k);
@@ -676,7 +728,8 @@ class Planner implements Persona {
     if (!t) {
       // Nothing left to go to for 5 s: done with this room.
       if (this.idleSince < 0) this.idleSince = f;
-      else if (f - this.idleSince > 300 && !this.finished) {
+      // (A person first tries again what failed here: turnBack, a round every 10 s, six at most.)
+      else if (f - this.idleSince > 300 && !this.finished && !(this.opt.human && this.mem.retries < 6)) {
         this.finished = true;
         this.notes.push(`f${f}: nothing left to go to here`);
       }
@@ -706,20 +759,54 @@ class Planner implements Persona {
         hp: e?.hp ?? 0,
         hurt: o.p.hurtSeq,
         tactics: new Map(),
+        look: '',
       };
       this.fighting = fz;
       this.notes.push(`f${f}: a fight with ${id} (${e?.kind})`);
     }
     // Long and nothing happening either way: leave it be for a while (it will not come, or cannot be reached).
-    if (f - fz.since > 1800 && (e?.hp ?? 0) === fz.hp && o.p.hurtSeq === fz.hurt) {
+    // A person moves on sooner (10 s).
+    const letBe = this.opt.human ? 600 : 1800;
+    if (f - fz.since > letBe && (e?.hp ?? 0) === fz.hp && o.p.hurtSeq === fz.hurt) {
       this.ignoreFoesUntil = f + 600;
-      this.notes.push(`f${f}: let ${id} be (30 s, nothing dealt or taken)`);
+      this.notes.push(`f${f}: let ${id} be (${letBe / 60} s, nothing dealt or taken)`);
       this.fighting = null;
       return 0;
     }
-    if (!fz.line || fz.k >= 20) {
+    const foeSeen = ctx.state.enemies[i];
+    if (foeSeen && o.p.hurtSeq !== this.lastHurtSeq) {
+      this.lastHurtSeq = o.p.hurtSeq;
+      this.hitsBy.set(foeSeen.kind as string, (this.hitsBy.get(foeSeen.kind as string) ?? 0) + 1);
+    }
+    const look = foeSeen
+      ? `${foeSeen.mode}/${foeSeen.braced ? 1 : 0}/${(foeSeen as unknown as { stunned?: boolean }).stunned ? 1 : 0}`
+      : '';
+    if (!fz.line || fz.k >= 20 || (this.opt.human && look !== fz.look)) {
+      fz.look = look;
       const toward = this.target ? Math.sign(this.target.x - o.feetX) || this.wayOn : this.wayOn;
-      const pick = chooseTactic(ctx, scene, fightTactics(scene, i, toward), i, fz.name);
+      const h = this.opt.human;
+      const tactics = fightTactics(scene, i, toward, h ? h.perception + h.latency + 6 : 0);
+      const foeNow = ctx.state.enemies[i];
+      const pick = this.opt.human
+        ? (() => {
+            // A person reads the tell on screen (no look-ahead); the motor adds the reaction time.
+            const h = this.opt.human as SkillRow;
+            const name = foeNow
+              ? humanTactic(
+                  foeNow,
+                  Math.abs(foeNow.x + foeNow.w / 2 - o.feetX),
+                  this.hitsBy.get(foeNow.kind as string) ?? 0,
+                  h.patience,
+                  foeNow.guard >= 0 && !((ctx.state.lures.out[foeNow.guard] ?? 0) > 0),
+                )
+              : 'wait';
+            const cand = tactics.find((q) => q.name === name) ?? tactics[0];
+            (globalThis as { __ptDebug?: (s: string) => void }).__ptDebug?.(
+              `f${f} fight ${id} ${look} hp ${foeNow?.hp} d ${foeNow ? Math.round(foeNow.x + foeNow.w / 2 - o.feetX) : '?'} -> ${name} (${cand?.name}) her hp ${o.p.hp ?? '?'}`,
+            );
+            return cand ? { cand } : null;
+          })()
+        : chooseTactic(ctx, scene, tactics, i, fz.name);
       if (!pick) return 0;
       fz.line = pick.cand.make();
       fz.k = 0;
@@ -764,6 +851,20 @@ class Planner implements Persona {
     for (const l of o.lights) if (!this.lightsSeen.has(l.id)) this.lightsSeen.set(l.id, { x: l.x, y: l.y });
     for (const e of o.exits)
       if (!this.exitsSeen.has(e.id)) this.exitsSeen.set(e.id, { ...e.point, edge: e.edge });
+    // Rotten bark in a floor, on screen (the secret language, taught in R6): it gives way, so the hole under
+    // it is an opening she knows of, though the bottom of the room is still out of view.
+    for (const b of mind.scene.bark ?? []) {
+      if (!b.floor) continue;
+      const v = o.view;
+      if (b.x + b.w < v.x || b.x > v.x + v.w || b.y + b.h < v.y || b.y > v.y + v.h) continue;
+      for (const e of mind.scene.exits ?? [])
+        if (
+          e.edge === 's' &&
+          !this.exitsSeen.has(e.id) &&
+          Math.min(b.x + b.w, e.to) - Math.max(b.x, e.from) > 0
+        )
+          this.exitsSeen.set(e.id, { x: (e.from + e.to) / 2, y: e.at ?? mind.scene.height, edge: e.edge });
+    }
     if (this.opt.knowsAll)
       for (const e of mind.scene.exits ?? [])
         if (!this.exitsSeen.has(e.id)) {
@@ -851,11 +952,59 @@ class Planner implements Persona {
    */
   private turnBack(o: Obs, mind: Mind, f: number): Array<Target & { rank: number }> {
     if (!this.opt.turnBack) return [];
+    // A person who has run out of ideas here tries again what failed (the pogo gap, the jump), a few times,
+    // before walking back the way they came.
+    const stale = [...this.given].filter(
+      (k) => k.startsWith('exit:') && !this.shut.has(`${o.room}#${k.slice(5)}`),
+    );
+    if (
+      this.opt.human &&
+      (mind.bad.size > 0 || stale.length > 0) &&
+      f - this.mem.lastRetry > 600 &&
+      this.mem.retries < 6
+    ) {
+      this.mem.retries++;
+      this.mem.lastRetry = f;
+      mind.bad.clear();
+      this.tries.clear();
+      for (const k of this.mem.noRoute) this.given.delete(k);
+      this.mem.noRoute.clear();
+      // The openings it gave up on here are worth another go too.
+      for (const k of stale) {
+        this.given.delete(k);
+        this.blocked.delete(`${o.room}#${k.slice(5)}`);
+        this.noLine.delete(`${o.room}/${k}`);
+      }
+      this.hops = null;
+      this.notes.push(`f${f}: nothing else here: tries again what failed (${this.mem.retries})`);
+      return this.candidates(o, mind).filter((c) => !this.given.has(c.key));
+    }
     const keys = [...this.exitsSeen.keys()].map((id) => `exit:${id}`);
-    const usable = keys.filter((k) => !this.mem.noRoute.has(k) && !this.noLine.has(`${o.room}/${k}`));
+    const usable = keys.filter(
+      (k) =>
+        !this.mem.noRoute.has(k) &&
+        !this.noLine.has(`${o.room}/${k}`) &&
+        !this.shut.has(`${o.room}#${k.slice(5)}`),
+    );
     const pool = usable.filter((k) => k !== this.mem.arrival);
+    // A room she has been in with an opening she saw and never took (the rotten floor in the lantern room)
+    // draws her back before one she has used up.
+    const links = this.opt.world?.links ?? {};
+    const unfinished = (k: string): number => {
+      const dest = links[`${o.room}#${k.slice(5)}`]?.to;
+      const m = dest ? this.memory.get(dest) : undefined;
+      if (!dest || !m) return 1;
+      for (const id of m.exitsSeen.keys())
+        if (
+          !m.taken.has(`exit:${id}`) &&
+          !this.shut.has(`${dest}#${id}`) &&
+          links[`${dest}#${id}`]?.to !== o.room
+        )
+          return 0;
+      return 1;
+    };
     const pick = (pool.length ? pool : usable).sort(
-      (a, b) => (this.mem.taken.get(a) ?? 0) - (this.mem.taken.get(b) ?? 0),
+      (a, b) => unfinished(a) - unfinished(b) || (this.mem.taken.get(a) ?? 0) - (this.mem.taken.get(b) ?? 0),
     )[0];
     if (!pick || f - this.mem.lastTurn < 120) return [];
     this.mem.lastTurn = f;
@@ -1138,6 +1287,7 @@ class Planner implements Persona {
       );
       if (kit.some((k) => k.kind !== 'bark') || meshOver) {
         this.blocked.add(`${this.room}#${id}`);
+        this.shut.add(`${this.room}#${id}`);
         return null;
       }
       const bark = kit.sort((a, b) => a.y - b.y)[0];
@@ -1208,11 +1358,21 @@ class Planner implements Persona {
   }
 
   private hands(): Hands {
-    return { edge: this.opt.edge, hold: this.opt.hold, dash: this.opt.dash, cut: this.opt.slash };
+    const h = this.opt.human;
+    return {
+      edge: this.opt.edge,
+      hold: this.opt.hold,
+      dash: this.opt.dash,
+      cut: this.opt.slash,
+      // (Her body is seen now, headless.ts: only the hands lag.)
+      ...(h ? { anticipate: h.latency + 1, aimPer: 3 } : {}),
+    };
   }
 
   /** Waits a line may start with: none, or (a creature in view) a beat or two to let it pass. */
-  private waits(o: Obs): number[] {
+  private waits(o: Obs, risky = true): number[] {
+    // A person stands a moment at an edge before a jump that scares them (no choice of waits: no look-ahead).
+    if (this.opt.human) return [risky ? sample(this.rng, this.opt.human.hesitate) : 0];
     return o.enemies.length > 0 || o.lights.some((l) => l.kind === 'lures' && !l.out) ? [0, 40, 90] : [0];
   }
 
@@ -1282,16 +1442,50 @@ class Planner implements Persona {
         end(true, 'landed');
         return 0;
       }
+      // A person who lands back where they set out has missed (they try again, or something else).
+      if (this.opt.human && a.left && nearSurface(ctx.state, a.from) && goal.kind === 'surface') {
+        end(false, 'fell short (back where it set out)');
+        return 0;
+      }
       if (a.left && !home && goal.kind === 'surface') {
         end(false, `landed elsewhere (${Math.round(o.feetX)}, ${Math.round(o.feetY)})`);
         return 0;
       }
     } else a.left = true;
-    if (a.k >= a.line.max) {
+    // A person is slower than the line foresees (their hands lag): more time before it counts as failed.
+    if (a.k >= (this.opt.human ? Math.round(a.line.max * 1.5) + 30 : a.line.max)) {
       end(false, 'too long');
       return 0;
     }
     return a.line.act(ctx.state, a.k++, this.lastMask);
+  }
+
+  /**
+   * A person's choice (no look-ahead): a rule of thumb, then the next idea after each failure at this move.
+   * Shaped like `chooseLine`'s answer (no foreseen outcome).
+   */
+  private humanChoice(o: Obs, scene: Scene, mind: Mind, cands: Candidate[], move: Move | null): Choice {
+    const tries = move
+      ? (this.tries.get(moveKey(move)) ?? 0)
+      : (this.leapTries.get(this.target?.key ?? '') ?? 0);
+    if (!move && this.target) this.leapTries.set(this.target.key, tries + 1);
+    let roof = false;
+    if (move && move.kind === 'jump') {
+      // Something over the take-off (a root roof): a jump's hump would hit it.
+      const played = { ...scene, solids: mind.standing().map((i) => mind.rects[i] as SolidRect) };
+      const top = o.feetY;
+      const x0 = move.dir > 0 ? move.launchX : move.launchX - 260;
+      roof = solidAt(played, x0, top - 300, 260, 180);
+    }
+    const reach = reachFor(o.abilities.filter((a) => a !== 'glide'));
+    const cand = humanPick(cands, move, tries, {
+      roof,
+      glide: o.abilities.includes('glide'),
+      plainReach: move ? reach.across(move.rise) : 0,
+      hold: this.opt.hold,
+    });
+    const none: Outcome = { ok: false, frames: 0, hits: 0, caught: 0, why: 'no candidate', x: 0, y: 0 };
+    return { cand, outcome: { ...none, ok: !!cand }, tried: 1, fails: '' };
   }
 
   /** Looks ahead over the candidate lines for a move (or a climb into the unknown) and starts the best. */
@@ -1307,7 +1501,9 @@ class Planner implements Persona {
     target: Target | null,
   ): number {
     const f = o.frame;
-    const c = chooseLine(ctx, scene, cands, from, goal);
+    const c = this.opt.human
+      ? this.humanChoice(o, scene, mind, cands, move)
+      : chooseLine(ctx, scene, cands, from, goal);
     this.linesTried += c.tried;
     if (!c.cand) {
       const what = move ? `a ${move.kind} at x ${Math.round(move.launchX)}` : (target?.why ?? 'a climb');
@@ -1379,7 +1575,9 @@ class Planner implements Persona {
         });
       }
       if (cands.length) {
-        const c = chooseLine(ctx, scene, cands, null, { kind: 'rise', fromY: o.feetY, rise: 0 });
+        const c = this.opt.human
+          ? this.humanChoice(o, scene, mind, cands, null)
+          : chooseLine(ctx, scene, cands, null, { kind: 'rise', fromY: o.feetY, rise: 0 });
         if (c.cand) {
           this.active = {
             line: c.cand.make(),
@@ -1456,7 +1654,7 @@ class Planner implements Persona {
     }
     let tx = Math.max(to.x0 + 40, Math.min(to.x1 - 40, t.x));
     let cands = linesFor(m, cur, to, tx, scene, o.abilities, this.hands(), {
-      waits: this.waits(o),
+      waits: this.waits(o, m.kind === 'jump' && (m.gap > 200 || m.rise > 250)),
       faces: mind.faces(),
     });
     // Onto a bounce cap: the move goes on off it (and off the caps after it) to the first real ground.
@@ -1490,7 +1688,7 @@ class Planner implements Persona {
     const k = moveKey(m);
     const n = (this.tries.get(k) ?? 0) + 1;
     this.tries.set(k, n);
-    if (n >= 2) {
+    if (n >= (this.opt.human?.patience ?? 2)) {
       mind.bad.add(k);
       this.notes.push(`f${f}: dropped a ${m.kind} at x ${Math.round(m.launchX)} after ${n} misses (${why})`);
     }

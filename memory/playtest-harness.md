@@ -3,8 +3,8 @@
 STUDIO.md "Playtesting without Matt". Reports go to `playtest-reports/` (gitignored).
 
 ## Run it
-- `npm run playtest -- --region wood --chunk wood-hatch..wood-well,wood-caps --upto wood-well` = **the region run**
-  for chunk 1 (R1-R10 + R14). `--chunk a..b,c` = the region doc's §9 rows from a to b plus c: a run is `through` once
+- `npm run playtest -- --region wood --chunk wood-hatch,wood-chase,wood-wicks,wood-burrow,wood-glade,wood-glidewalk,wood-hollow,wood-hawkers,wood-silk,wood-well --upto wood-well`
+  = **the region run** for area 1 (R1-R10, df4b0c5; `a..b` ranges need the targets table, see "Area 1 skills"). `--chunk a..b,c` = the region doc's §9 rows from a to b plus c: a run is `through` once
   she has been in every chunk room (and left `--upto` by another way than in); the speedrunner heads for the nearest
   chunk room it has not been in. Without `--chunk`, `--upto` alone is the end. It is every persona, headless, from the world's
   start (`--until none`), until it leaves `--upto` by another way than it came in (`through`), gives up lost, or stops.
@@ -46,7 +46,10 @@ freezes the sim, the burst runs on the page clock), `{R}` restart, `{M}` sound, 
   every session on it; snapshots of older commits nobody plays are stopped and removed at the next `start`
   (registry `.scratch/playtest-snaps.json`). The session server runs from the snapshot; its log is `server.log` in the
   session dir, and a session that fails to boot prints its tail. The client commands import nothing of the game.
-  `--tree` plays the working tree on the dev server (`--url`, default 5180).
+  `--tree` plays the working tree on the dev server (`--url`, default 5180). The journal's header names the build
+  (`Build: <sha> ("subject"), pinned for the whole session`); a session never changes build mid-run.
+- **Events are read by identity, not by frame** (live.ts `fresh`): `{R}` and a reload reset the frame count, and a
+  frame-window cursor re-read the whole log (round 2: ~1,100 duplicate screenshots and nonsense totals).
 **Brief to paste to the sub-agent:**
 > You are playing Lampfall for the first time. Know nothing about it beyond what you see. Run `npm run firsttimer --
 > start --name <you>` from the repo root and pass `--name <you>` to every command after it; then loop: Read the newest screenshot, decide, `act` a short burst (0.5-4 s;
@@ -58,13 +61,86 @@ freezes the sim, the burst runs on the page clock), `{R}` restart, `{M}` sound, 
 > code, the room files or the design docs. Play until you reach <goal> or 20 minutes of game time, then `stop` and
 > reply with the journal's path and your five strongest impressions.
 
+## Human-like runs (`npm run humanplay`, tools/playtest/humanrun.ts, human.ts, feel.ts)
+A bot that plays like a person, over the whole chunk, watched as video. Built 2026-10-18 (review:
+`docs/design/regions/reviews/chunk1-humanlike-r1.md`).
+- `npm run humanplay -- run` = casual / average / skilled x seeds 1-3 on the pinned build of HEAD (snapshot.ts, the
+  first-timer's), headless at sim speed (~2 s a run) from the world's start until `through` the chunk, `lost`
+  (`--give-up` 180 s without progress), `done` (gave up: nothing left it can think of) or `--minutes` 40; then each
+  tape is replayed in that build's page and recorded (~real time a run, `--jobs` 3 at once: ~1 h for nine).
+  `--no-render`, `--skills average --seeds 4,5`, `--tree` (the working tree at `--url`), `--chunk id,id`, `--upto`.
+  `render <run dir>` re-renders one. The working tree's harness is copied into the snapshot
+  (`<snapshot>/tools/playtest-human/`) so the tape is played by the code the page replays; `meta.json` `render.match`
+  = the page ended in the headless run's state hash.
+- **Out**: `playtest-reports/humanlike-<stamp>/summary.md` (one row a run, means a skill) and per run
+  `<skill>-s<seed>/`: `video.mp4` (the whole run at 2x, 30 fps, 960x540), `frames/<room>/mm-ss.jpg` (one a second of
+  play), `contact-<room>-NN.jpg` (6 x 6 of those: 36 s a sheet), `moments/mm-ss-<what>.jpg` (hatch, first entry to each
+  room, every hit / death (before and after) / catch, 5 s into each lost stretch, abilities, lamps lit / snuffed, the
+  old burrback's start and end), `report.md` (the usual run report + feel metrics + the timeline), `timeline.md`,
+  `feel.json`, `trace.json`, `tape.txt`, `heatmap-<room>.png`, `meta.json`.
+- **How a reviewer agent watches a run**: read `summary.md`, then a run's `report.md` (feel table, timeline: the
+  `stuck` / `falling` rows are where to look) and Read its `contact-<room>-NN.jpg` sheets (a room at a glance) and the
+  `moments/` stills. For a stretch in motion, cut frames from the video: 1 s of game = 0.5 s of video, so game time
+  `T` s is video `T/2`: `ffmpeg -ss <T/2> -i video.mp4 -t 5 -vf fps=6,scale=480:-1,tile=6x5 sheet.jpg` (10 s of play
+  as 30 pictures in one image) or `-frames:v 1 still.jpg`. Don't Read the mp4 itself.
+- **The body** (human.ts `Motor`, per skill row in `SKILLS`): a press lands `latency +- jitter` frames after the brain
+  wants it (keys pressed together, e.g. down + cut, land together); after a surprise (a hit, a tell, a catch, a wake:
+  feel.ts `surprising`; a ram after its tell is not one) a reaction time (casual 240-330 ms, average 200-280, skilled
+  170-230; x1.25 out of nowhere, less the eye's share); a hold comes out `holdErr` longer or shorter, counted from the
+  real press (a long jump is held at least as long as meant); stray presses (2 / 1 / 0.3 a minute) and double taps.
+  Deterministic per seed.
+- **The eye and the head**: the world is seen `perception` frames late (4-6; a ring of past states), her own body now
+  (a player feels their hands: with a delayed body no wall-jump climb worked). No look-ahead, no sim copy: lines by rule
+  of thumb (`humanPick`: under a roof walk off, a gap past a plain jump jump-glide, else a full jump), the next idea
+  after each failure; landing back where it set out is a miss; a little hesitation at edges; edges and pogos pressed a
+  `latency + 1` early. Fights from the tells on screen (`humanTactic`), answered at once when the tell changes, jumps
+  timed where the ram will be; after `patience` hits from one kind, another plan (burrbacks: bait into a wall). Out of
+  ideas in a room: tries again what failed (six rounds, 10 s apart), then backs out, toward a room with an opening it
+  saw and never took. Rotten bark in a floor on screen means an opening under it (the R6 lesson).
+- **Feel metrics** (feel.ts; 10 s buckets labelled waking / falling / fighting / exploring / stuck / travelling):
+  first input after spawn (the cocoon listens from 2.5 s), flow = moving at half run speed or in the air, stood still,
+  deaths per 10 min, fail-retry loops (a fall or death within 20 s and 300 px of the last), longest stretch over ground
+  already walked, presses a second, seconds between new things (a new 128 px cell, a room, an ability, a lamp out).
+- **Not built**: the LLM-intent mode (an agent picking intents from a screenshot every few seconds); the first-timer
+  agent covers judgement with real eyes for now.
+- **Lab numbers it found** (sim stepped directly, enemies removed where noted): the old burrback's ram (b5c50f2)
+  is cleared by a jump from 14 to 40 frames after its tell starts (28-frame tell): a jump in the first half of
+  the tell lands in the ram. The burrow pogo chain (no glide yet) takes a take-off within -3..+6 frames of the edge and
+  a down cut up to ~4 frames late.
+
+## Area 1 skills (2026-10-18, df4b0c5: the rebuilt area)
+- **Aimed lamp throws** (`Aim`, lines.ts): caught by a lamp, the bot sweeps the stick over the ways within 100 degrees
+  of where it is going and reads `player.lureArc` for each (the arc drawn on screen, for the way held last step:
+  fair), gives the beats meanwhile, and gives the last beat holding the best way when the arc held is about as good
+  as the best seen (or after ~1 s). `arcScore`: landing on the goal surface beats ending near it; an arc through thorns
+  is never taken. A bot sweeps a way a frame, a person every 3 (`Hands.aimPer`). Inside a line the goal is the line's;
+  caught with no line, the persona's target. The map has **throw moves**: a gap no jump spans, with a lamp in reach
+  of a jump off this end (or up to 320 px under the lip) that throws as far as the other side (`Move.lure`); lines
+  `jump into the lamp`, `walk off into the lamp`, `walk off / hop, cut down on the lamp` (the pogo-wick).
+- **Hatches**: a one-way's `noDrop` (true, or a flag) is in the map (`Surface.noDrop`); no drop-through until the flag
+  is in the save. A drop-through goes to the first thing under her (stacked rungs: the next rung), never through a
+  solid.
+- **Floors that are not**: thorn beds lying on a top and the bottom of a pit that catches a fall (`scene.catches`)
+  are not surfaces (people see the teeth and the dark); a walk-off is never planned onto a solid between (R8's thorn
+  bed over the tunnel). The map's body height is the sim's 80 (R10's root ceiling leaves 80: she walks under it).
+- **Lamp-guarders** (`fight.ts` tactic `snuff its lamp`): to the flame a creature guards, cut it (up, down or ahead);
+  R9's beetle and dangler at one wick go together. The human player uses it for ground creatures (not a flyer's lamp:
+  that is often the throw it needs).
+- What they found on df4b0c5: R8's throw works but the look-ahead bots take the dark tunnel (cheaper); R10's
+  pogo-wick is not required for a glider (the 9728 -> 9088 glide makes it); naive (no look-ahead) still stalls in R8.
+- **Region targets table** the harness reads (targets.ts): any markdown table in `docs/design/regions/*.md` with a
+  column whose header contains "room" and one with "target", "time", "min", "minutes" or "duration"; optional "lost",
+  "deaths", "lamps" columns. The room cell must contain the room id (`wood-hatch`, backticks fine); times `1:30`,
+  `90 s`, `2 min`, ranges `1:00-2:00` / `60-90 s`; a room in two rows adds up. Row order is the order `--chunk a..b`
+  uses. Example: `| room | target | lost | deaths |` / `| \`wood-hatch\` | 0:40 | 10 s | 0 |`.
+
 ## Files
 `observe.ts` (what is on screen), `map.ts` (the persona's map: surfaces from solids and the kit's standing pieces —
 bark, shut gates and shortcuts — moves incl. cut and climb, faces, Dijkstra), `lines.ts` (the look-ahead: candidate
 lines played in a sim copy), `fight.ts` (look-ahead tactics against a creature), `personas.ts`, `recorder.ts`,
 `headless.ts` (the `Game` in `GAME_WORLD` + the real follow camera), `live.ts` (in the page: personas, `record()`,
-the first-timer's `burst()`), `firsttimer.ts`, `report.ts` (run + region reports), `heatmap.ts` + `png.ts` (own PNG
-encoder), `targets.ts`, `cli.ts`. `weaver-bot.ts` / `weaver-run.ts` are the boss agent's (memory/bosses.md).
+the first-timer's `burst()`), `firsttimer.ts`, `snapshot.ts` (the pinned build), `human.ts` + `feel.ts` + `humanrun.ts` (human-like runs),
+`report.ts` (run + region reports), `heatmap.ts` + `png.ts` (own PNG encoder), `targets.ts`, `cli.ts`. `weaver-bot.ts` / `weaver-run.ts` are the boss agent's (memory/bosses.md).
 Tests: `tests/unit/playtest.test.ts` (gap lab every persona leaves, determinism, a shaft climbed with wall jump and a
 lock without, a line under a thorn branch, a burrback fought or passed, telemetry, targets, PNG).
 

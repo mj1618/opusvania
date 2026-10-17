@@ -188,10 +188,11 @@ export function score(o: Outcome, wait = 0): number {
 // ---- The pieces lines are made of.
 
 /** Seed-case right under her feet, within the down cut's reach (the pogo). */
-function pogoUnder(s: GameState, scene: Scene): boolean {
+function pogoUnder(s: GameState, scene: Scene, ahead = 0): boolean {
   const p = s.player;
   if (p.grounded) return false;
-  const f = feet(s);
+  const f0 = feet(s);
+  const f = { x: f0.x + p.vx * ahead, y: f0.y + p.vy * ahead };
   return (scene.seedCases ?? []).some(
     (q) => Math.abs(q.x - f.x) < 60 && q.y - 28 - f.y > -12 && q.y - 28 - f.y < 60,
   );
@@ -211,6 +212,101 @@ function barkAhead(s: GameState, scene: Scene): boolean {
 /** Caught by a lure or a web: cut (a fighter: the flame goes out) or beat free with jump. */
 function caughtMask(k: number, cut: boolean): number {
   return k % 6 < 2 ? (cut ? A : J) : 0;
+}
+
+const U = ActionBit.up;
+/** The eight ways the stick can hold (the throw goes exactly along the one held). */
+const AIMS = [R, R | U, U, L | U, L, L | D, D, R | D];
+
+/** Where a throw should take her: a point, and the surface to land on when there is one. */
+export interface ThrowGoal {
+  x: number;
+  y: number;
+  surface?: Surface | null;
+}
+
+/**
+ * How good the throw's drawn arc (`player.lureArc`, body-centre points) is for `goal` (lower is better): landing on
+ * the goal's surface near its x is best; else the distance from where the arc ends; through thorns, never.
+ */
+export function arcScore(arc: readonly number[], scene: Scene, goal: ThrowGoal, halfH: number): number {
+  const n = arc.length >> 1;
+  if (n < 2) return Number.POSITIVE_INFINITY;
+  for (let i = 0; i < n; i++) {
+    const x = arc[2 * i] ?? 0;
+    const y = arc[2 * i + 1] ?? 0;
+    if (
+      (scene.thorns ?? []).some(
+        (t) => x > t.x - 16 && x < t.x + t.w + 16 && y + halfH > t.y - 8 && y < t.y + t.h,
+      )
+    )
+      return 1e6;
+  }
+  const lx = arc[2 * n - 2] ?? 0;
+  const ly = (arc[2 * n - 1] ?? 0) + halfH;
+  const g = goal.surface;
+  if (g && lx > g.x0 + 8 && lx < g.x1 - 8 && Math.abs(ly - topUnder(g, lx)) < 48)
+    return Math.abs(lx - goal.x) * 0.1;
+  return Math.hypot(lx - goal.x, ly - goal.y) + (g ? 400 : 0);
+}
+
+/**
+ * Caught by a lamp, beating free with the throw aimed: the stick swept over the ways toward the goal (each held
+ * `per` frames, its drawn arc read: what a player sees), the beats given meanwhile, the last one when the arc held
+ * is as good as the best seen (or the orbit has gone round once). `per` 1 for a bot, ~3 for a person.
+ */
+export class Aim {
+  private order: number[] = [];
+  private readonly scores = new Map<number, number>();
+  private since = -1;
+  private k0 = 0;
+
+  constructor(
+    private readonly goal: () => ThrowGoal | null,
+    private readonly per = 1,
+  ) {}
+
+  act(s: GameState, scene: Scene, k: number, prev: number): number {
+    const p = s.player;
+    const g = this.goal();
+    if (!g) return k % 6 < 2 ? J : 0;
+    if (this.since < 0) {
+      this.since = k;
+      this.k0 = k;
+      const a = Math.atan2(-(g.y - (p.y + p.h / 2)), g.x - (p.x + p.w / 2));
+      const ang = (m: number) =>
+        Math.atan2((m & U ? 1 : 0) - (m & D ? 1 : 0), (m & R ? 1 : 0) - (m & L ? 1 : 0));
+      const off = (m: number) => Math.abs(Math.atan2(Math.sin(ang(m) - a), Math.cos(ang(m) - a)));
+      // The ways within 100 degrees of the goal, nearest first (a person does not try away from it).
+      this.order = AIMS.filter((m) => off(m) <= 1.75).sort((x, y) => off(x) - off(y));
+    }
+    // The arc drawn now is for what was held last step.
+    const held = (s.prevInput as number) & (L | R | U | D);
+    const sc = arcScore(p.lureArc, scene, g, p.h / 2);
+    if (held) this.scores.set(held, Math.min(sc, this.scores.get(held) ?? Number.POSITIVE_INFINITY));
+    const i = Math.floor((k - this.k0) / this.per);
+    const of = s.save.flags.includes('upgrade:quickWings') ? 2 : 3;
+    const last = p.lureBeats >= of - 1;
+    const beat = !(prev & J) && p.lureCd === 0;
+    if (i < this.order.length) {
+      // Sweeping: hold the next way; give the beats before the last.
+      const m = this.order[i] ?? 0;
+      return m | (!last && beat ? J : 0);
+    }
+    let best = this.order[0] ?? 0;
+    for (const [m, v] of this.scores) if (v < (this.scores.get(best) ?? Number.POSITIVE_INFINITY)) best = m;
+    const bestScore = this.scores.get(best) ?? Number.POSITIVE_INFINITY;
+    if (!last) return best | (beat ? J : 0);
+    // The last beat: when the arc held is about the best seen, or after an orbit's wait.
+    const good = held === best && sc <= bestScore + 40;
+    return best | (beat && (good || k - this.since > 60) ? J : 0);
+  }
+
+  /** Free again: the next catch sweeps afresh. */
+  reset(): void {
+    this.since = -1;
+    this.scores.clear();
+  }
 }
 
 /** Steering in the air onto `to`, toward `tx` once over it (no `to`: on toward `tx`). */
@@ -234,9 +330,20 @@ export interface Hands {
   dash: boolean;
   /** Caught: cut the flame (true) or beat free with jump. */
   cut: boolean;
+  /** Frames each way of the stick is held while reading the throw's arc (1 a bot; a person ~3). */
+  aimPer?: number;
+  /**
+   * Frames a person presses ahead of what they see (their own delay, learnt): edges and pogos are judged where
+   * she will be that many frames on. 0 for the bots.
+   */
+  anticipate?: number;
 }
 
 export interface JumpParams {
+  /** Into this lamp's flame (steered at it until caught; the throw is then aimed at `to`). */
+  lure?: { x: number; y: number };
+  /** With `lure`: a down cut on the flame as she comes down onto it (snuffed, a pogo bounce), not caught. */
+  lureCut?: boolean;
   launchX: number;
   dir: number;
   /** Press this many px before the launch point (0 for an `up`: at the spot). */
@@ -272,11 +379,29 @@ export function jumpLine(
   let launched = false;
   let start = 0;
   let djUsed = false;
+  let y0 = 0;
+  let thrownBy = false;
+  let cutDone = false;
+  // Caught by a lamp on the way: the throw aimed at where the line goes.
+  const aim = new Aim(
+    () => ({
+      x: to ? Math.max(to.x0 + 40, Math.min(to.x1 - 40, tx)) : tx,
+      y: to ? topUnder(to, Math.max(to.x0 + 40, Math.min(to.x1 - 40, tx))) : y0,
+      surface: to,
+    }),
+    hands.aimPer ?? 1,
+  );
   return {
     name,
     max,
     act(s, k, prev) {
       const p = s.player;
+      if (k === 0) y0 = feet(s).y;
+      if (p.lure >= 0) {
+        thrownBy = true;
+        return aim.act(s, scene, k, prev);
+      }
+      aim.reset();
       if (caughtNow(s)) return caughtMask(k, hands.cut);
       if (k < q.wait) return 0;
       if (q.through) return k % 4 < 2 ? D | J : D;
@@ -299,7 +424,7 @@ export function jumpLine(
           if (q.walkOff) return dirBit(q.dir) | (q.glide && prev & J ? J : 0);
           if (q.brake && d <= q.edge + 40 && Math.abs(p.vx) > 0.5) return 0;
           if (q.brake && d > q.edge + 4 && d <= q.edge + 40) return k % 4 === 0 ? dirBit(q.dir) : 0;
-          if (d <= q.edge + Math.abs(p.vx) * 0.5 || p.wallDir === q.dir) {
+          if (d <= q.edge + Math.abs(p.vx) * (0.5 + (hands.anticipate ?? 0)) || p.wallDir === q.dir) {
             if (prev & J) return dirBit(q.dir);
             launched = true;
             start = k;
@@ -320,7 +445,20 @@ export function jumpLine(
           return dirBit(q.dir) | J;
         } else launched = true;
       }
-      let m = steer(s, to, tx, q.up ? { dir: q.dir } : null);
+      let m =
+        q.lure && !thrownBy && !cutDone
+          ? Math.abs(q.lure.x - f.x) > 12
+            ? dirBit(Math.sign(q.lure.x - f.x))
+            : 0
+          : steer(s, to, tx, q.up ? { dir: q.dir } : null);
+      if (q.lure && q.lureCut && !cutDone && !p.grounded) {
+        // The flame under her, inside the down cut's reach: cut down on it (the bounce carries her on).
+        const below = q.lure.y - (p.y + p.h / 2);
+        if (below > 10 && below < 110 && Math.abs(q.lure.x - f.x) < 50 && p.vy > 0 && !(prev & A)) {
+          cutDone = true;
+          return m | A | D;
+        }
+      }
       const hold = !q.walkOff && k - start < (q.pogo ? 4 : q.hold);
       // Wings: held through the fall; after a walk-off, pressed once the coyote frames are past (a press
       // inside them is a jump).
@@ -334,7 +472,7 @@ export function jumpLine(
           start = k;
         }
       }
-      if (q.pogo && pogoUnder(s, scene) && !(prev & A)) m |= A | D;
+      if (q.pogo && pogoUnder(s, scene, hands.anticipate ?? 0) && !(prev & A)) m |= A | D;
       return m;
     },
   };
@@ -380,6 +518,17 @@ export function climbLine(
   let crossed = false;
   let tapUntil = -1;
   let touched = false;
+  const aim = new Aim(
+    () =>
+      goal.kind === 'surface'
+        ? {
+            x: Math.max(goal.surface.x0 + 40, Math.min(goal.surface.x1 - 40, tx)),
+            y: topUnder(goal.surface, tx),
+            surface: goal.surface,
+          }
+        : { x: tx, y: goal.kind === 'rise' ? goal.fromY - goal.rise : 0 },
+    hands.aimPer ?? 1,
+  );
   let room0 = '';
   let slideSince = -1;
   let nextRoom = '';
@@ -389,6 +538,8 @@ export function climbLine(
     max,
     act(s, k, prev) {
       const p = s.player;
+      if (s.player.lure >= 0) return aim.act(s, scene, k, prev);
+      aim.reset();
       if (caughtNow(s)) return caughtMask(k, hands.cut);
       if (k < q.wait) return 0;
       const f = feet(s);
@@ -541,6 +692,14 @@ export function linesFor(
         if (m.pogo) {
           add('pogo hop', { pogo: true });
           break;
+        }
+        // Into the lamp, then thrown (aimed) across: first, as the only way over this gap.
+        if (m.lure) {
+          for (const e of [hands.edge, 60, 140])
+            add(`jump into the lamp (${e} px)`, { edge: e, lure: m.lure });
+          add('walk off into the lamp', { walkOff: true, lure: m.lure });
+          add('walk off, cut down on the lamp', { walkOff: true, lure: m.lure, lureCut: true, glide });
+          add('hop, cut down on the lamp', { edge: hands.edge, hold: 6, lure: m.lure, lureCut: true, glide });
         }
         const edges = [hands.edge, 40, 110];
         const holds = [hands.hold, 10, 5];

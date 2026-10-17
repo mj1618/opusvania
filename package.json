@@ -20,6 +20,7 @@
     "clip": "tsx tools/clip.ts",
     "playtest": "tsx tools/playtest/cli.ts",
     "firsttimer": "tsx tools/playtest/firsttimer.ts",
+    "humanplay": "tsx tools/playtest/humanrun.ts",
     "look:stats": "tsx tools/look-stats.ts",
     "leak": "tsx tools/leak.ts"
   },

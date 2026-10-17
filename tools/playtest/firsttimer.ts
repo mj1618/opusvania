@@ -38,7 +38,6 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { createServer } from 'node:http';
@@ -46,7 +45,7 @@ import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { Page } from '@playwright/test';
 import type { RunTrace } from './recorder';
-import { loadError } from './report';
+import { alive, pinnedBuild, type Snap } from './snapshot';
 
 // The client commands import nothing of the game (only the server does, from the pinned snapshot): a
 // half-edited file in the working tree cannot break a turn.
@@ -71,6 +70,7 @@ const { values: args, positionals } = parseArgs({
     dev: { type: 'boolean', default: false },
     tree: { type: 'boolean', default: false },
     'snap-port': { type: 'string', default: '5193' },
+    build: { type: 'string' },
   },
 });
 
@@ -87,15 +87,6 @@ interface Session {
   pid: number;
   /** The pinned commit it plays ('' with --tree). */
   sha: string;
-}
-
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function sessionFile(name: string): string {
@@ -180,7 +171,18 @@ async function serve(): Promise<void> {
     (await page.evaluate('window.__ft.summary()')) as Record<string, unknown>;
   const where = (s: Record<string, unknown>): string =>
     `${s.title} (${s.room}), x ${s.x} y ${s.y} of ${s.roomSize}; health ${s.hp}; owns ${(s.abilities as string[]).join(', ') || 'nothing yet'}; played ${s.time}${s.shut ? '; still in the cocoon (press any button)' : ''}`;
-  appendFileSync(journal, `# First-timer journal: ${args.name} in ${args.room}\n\n`);
+  // The build it plays, stated once: it never changes during a session (a later session may pin a newer one).
+  let build = 'the working tree (--tree: not pinned)';
+  if (args.build)
+    try {
+      const subject = execFileSync('git', ['log', '-1', '--format=%s', args.build], {
+        encoding: 'utf8',
+      }).trim();
+      build = `${args.build} ("${subject}"), pinned for the whole session`;
+    } catch {
+      build = `${args.build}, pinned for the whole session`;
+    }
+  appendFileSync(journal, `# First-timer journal: ${args.name} in ${args.room}\n\nBuild: ${build}.\n\n`);
   let last = '';
   const handlers: Record<string, (b: Record<string, string>) => Promise<string>> = {
     async look() {
@@ -293,99 +295,13 @@ async function serve(): Promise<void> {
 
 // ---- The pinned build.
 
-async function up(url: string): Promise<boolean> {
-  try {
-    return (await fetch(url)).ok;
-  } catch {
-    return false;
-  }
-}
-
-const git = (cwd: string, ...a: string[]): string =>
-  execFileSync('git', a, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-
-interface Snap {
-  sha: string;
-  dir: string;
-  port: number;
-  pid: number;
-}
-
-/**
- * The pinned clean build: one detached worktree per commit (`.scratch/playtest-snap-<sha>`, node_modules
- * linked) with its own Vite, shared by every session on that commit. A newer HEAD gets its own; an older one
- * that no live session plays is stopped and removed. Before anything is served the build's rooms and world are
- * loaded (`validate`): a broken commit is reported, not crashed into.
- */
+/** HEAD's pinned build, keeping the snapshots that live sessions still play. */
 async function snapshot(): Promise<Snap> {
-  const repo = git(ROOT, 'rev-parse', '--show-toplevel');
-  const head = git(repo, 'rev-parse', 'HEAD');
-  const sha = head.slice(0, 7);
-  const scratch = join(repo, '.scratch');
-  mkdirSync(scratch, { recursive: true });
-  const regFile = join(scratch, 'playtest-snaps.json');
-  const reg: Record<string, Snap> = existsSync(regFile) ? JSON.parse(readFileSync(regFile, 'utf8')) : {};
-  // Old snapshots nobody plays any more: stop and remove.
-  const used = new Set(sessions().map((q) => q.sha));
-  for (const [k, v] of Object.entries(reg)) {
-    if (k === sha || used.has(k)) continue;
-    if (alive(v.pid))
-      try {
-        process.kill(v.pid);
-      } catch {
-        // gone
-      }
-    try {
-      git(repo, 'worktree', 'remove', '--force', v.dir);
-    } catch {
-      // already gone
-    }
-    delete reg[k];
-  }
-  const dir = join(scratch, `playtest-snap-${sha}`);
-  if (!existsSync(join(dir, '.git'))) {
-    git(repo, 'worktree', 'prune');
-    git(repo, 'worktree', 'add', '--detach', '--force', dir, head);
-  }
-  if (!existsSync(join(dir, 'node_modules')))
-    symlinkSync(join(repo, 'node_modules'), join(dir, 'node_modules'));
-  // Does this commit load at all? (Its rooms and world, validated as the game does at boot.)
-  try {
-    execFileSync('npx', ['tsx', 'tools/playtest/firsttimer.ts', 'validate'], {
-      cwd: dir,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-  } catch (e) {
-    const err = e as { stdout?: string; stderr?: string; message?: string };
-    const text = `${err.stdout ?? ''}\n${err.stderr ?? ''}`.trim() || (err.message ?? '');
-    const subject = git(repo, 'log', '-1', '--format=%s', head);
-    throw new Error(
-      `The pinned build ${sha} ("${subject}") does not load, so no session was started.\n` +
-        `${loadError(text, git(repo, 'show', '--name-only', '--format=', head))}\n` +
-        'Fix it in a commit, then start again; or play the working tree with --tree.',
-    );
-  }
-  let snap = reg[sha];
-  if (!snap || !alive(snap.pid) || !(await up(`http://localhost:${snap.port}`))) {
-    let port = Number(args['snap-port'] ?? 5193);
-    const taken = new Set(Object.values(reg).map((v) => v.port));
-    while (taken.has(port) || (await up(`http://localhost:${port}`))) port++;
-    const vite = spawn('npx', ['vite', '--port', String(port), '--strictPort'], {
-      cwd: dir,
-      detached: true,
-      stdio: 'ignore',
-    });
-    vite.unref();
-    snap = { sha, dir, port, pid: vite.pid ?? 0 };
-    reg[sha] = snap;
-    const url = `http://localhost:${port}`;
-    for (let i = 0; i < 300 && !(await up(url)); i++) await new Promise((r) => setTimeout(r, 100));
-    if (!(await up(url))) throw new Error(`The pinned build's Vite did not come up on ${url}`);
-  }
-  writeFileSync(regFile, JSON.stringify(reg, null, 1));
-  console.log(`playing the pinned build ${sha} (${relative(ROOT, dir)}, http://localhost:${snap.port})`);
-  return snap;
+  return pinnedBuild(
+    ROOT,
+    Number(args['snap-port'] ?? 5193),
+    sessions().map((q) => q.sha),
+  );
 }
 
 /** `validate`: load the rooms and the world as the game does (run inside a snapshot by `start`). */
@@ -412,6 +328,7 @@ async function start(): Promise<void> {
   const argv = ['tsx', 'tools/playtest/firsttimer.ts', 'serve', '--dir', dir, '--root', ROOT, '--url', url];
   argv.push('--room', args.room ?? 'wood-hatch', '--name', name, '--size', args.size ?? '1280x720');
   if (args.abilities) argv.push('--abilities', args.abilities);
+  if (snap) argv.push('--build', snap.sha);
   if (args.labels) argv.push('--labels');
   if (args.dev) argv.push('--dev');
   const log = join(dir, 'server.log');

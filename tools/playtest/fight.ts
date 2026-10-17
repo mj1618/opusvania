@@ -92,7 +92,7 @@ function wallAt(scene: Scene, s: GameState, dir: number, upTo: number): number {
 }
 
 /** The tactics a persona knows against creature `i`. `toward`: the way its route goes on. */
-export function fightTactics(scene: Scene, i: number, toward: number): Candidate[] {
+export function fightTactics(scene: Scene, i: number, toward: number, lead = 0): Candidate[] {
   const out: Candidate[] = [];
   const toE = (s: GameState, e: EnemyState) => Math.sign(centre(e).x - (s.player.x + s.player.w / 2)) || 1;
   const dx = (s: GameState, e: EnemyState) => Math.abs(centre(e).x - (s.player.x + s.player.w / 2));
@@ -152,7 +152,9 @@ export function fightTactics(scene: Scene, i: number, toward: number): Candidate
       (s, e, _k, prev) => {
         const p = s.player;
         const d = toE(s, e);
-        if (p.grounded && (e.mode === 'charge' || e.mode === 'windup') && dx(s, e) < 200 && !(prev & J))
+        // `lead` (a person, frames behind what they see): the jump goes where the ram will be, not where it is.
+        const near = dx(s, e) - Math.abs(e.vx) * lead < 200;
+        if (p.grounded && (e.mode === 'charge' || e.mode === 'windup') && near && !(prev & J))
           return J | dirBit(d);
         if (!p.grounded) return J | dirBit(d);
         if (dx(s, e) < 120 && !braced(e) && !(prev & A)) return A | (p.facing !== d ? dirBit(d) : 0);
@@ -182,7 +184,7 @@ export function fightTactics(scene: Scene, i: number, toward: number): Candidate
             if (
               p.grounded &&
               (e.mode === 'charge' || (e.mode as string) === 'feint') &&
-              dx(s, e) < 150 &&
+              dx(s, e) - Math.abs(e.vx) * lead < 150 &&
               !(prev & J)
             )
               return J;
@@ -195,7 +197,7 @@ export function fightTactics(scene: Scene, i: number, toward: number): Candidate
             // Beyond: first over it (a hop as it comes), then the wall on that side.
             if (beyond && side === 0) side = d;
             if (beyond && side !== 0 && Math.sign(centre(e).x - (p.x + p.w / 2)) === side) {
-              if (dx(s, e) < 170 && !(prev & J)) return J | dirBit(side);
+              if (dx(s, e) - Math.abs(e.vx) * lead < 170 && !(prev & J)) return J | dirBit(side);
               return dirBit(side);
             }
             const away = beyond ? side : -d;
@@ -206,6 +208,32 @@ export function fightTactics(scene: Scene, i: number, toward: number): Candidate
         },
       ),
     );
+  // Its lamp: a lamp-guarder (and every creature guarding the same wick, R9's beetle and dangler) gives up when
+  // the flame it guards goes out. To the flame, up to it, cut it (up, down or ahead, as it hangs).
+  out.push(
+    tactic(
+      'snuff its lamp',
+      (s, e, _k, prev) => {
+        const gi = (e as unknown as { guard?: number }).guard ?? -1;
+        const l = scene.lures?.[gi];
+        if (!l || (s.lures.out[gi] ?? 0) > 0) return 0;
+        const p = s.player;
+        const dx = l.x - (p.x + p.w / 2);
+        const dy = l.y - (p.y + p.h / 2);
+        if (Math.abs(dx) < 70 && Math.abs(dy) < 120) {
+          if (prev & A) return 0;
+          if (dy < -50) return A | ActionBit.up;
+          if (dy > 50 && !p.grounded) return A | ActionBit.down;
+          return A | dirBit(Math.sign(dx) || 1);
+        }
+        let m = dirBit(Math.sign(dx));
+        if (p.grounded && dy < -90 && Math.abs(dx) < 170 && !(prev & J)) m |= J;
+        else if (!p.grounded && prev & J && p.vy < 0) m |= J;
+        return m;
+      },
+      i,
+    ),
+  );
   // Run past, on with the route (jumping it if it is in the way).
   out.push(
     tactic(
