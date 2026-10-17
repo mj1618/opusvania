@@ -532,6 +532,8 @@ export function bakeTerrain(
   }
   blurMesh.destroy();
   litMesh.destroy();
+  // (A geometry keeps its GPU buffers unless destroyed with them: render/lifecycle.ts.)
+  geo.destroy(true);
   blurShader.destroy();
   litShader.destroy();
   for (const l of levels) {

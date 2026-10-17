@@ -36,6 +36,12 @@ export class LightRegistry {
     if (this.byId.delete(id)) this.cache = null;
   }
 
+  /** Forgets every light (the room is going: its renderers registered them). */
+  clear(): void {
+    this.byId.clear();
+    this.cache = null;
+  }
+
   /** Every registered light, in registration order. Do not mutate the array. */
   get list(): readonly PointLight[] {
     this.cache ??= [...this.byId.values()];

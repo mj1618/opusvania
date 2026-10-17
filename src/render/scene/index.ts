@@ -30,6 +30,7 @@ import { isGreybox } from '../../scene/room';
 import type { Scene } from '../../sim/scene';
 import type { CameraView, RenderContext, SimView } from '../contract';
 import { GreyboxLayer } from '../greybox/index';
+import { destroyTree } from '../lifecycle';
 import { LayerTree } from './layer-tree';
 import { AirLayer } from './layers/air';
 import { FarLayers } from './layers/far';
@@ -56,6 +57,8 @@ export interface SceneFrame {
 export interface EnvModule {
   init(ctx: SceneContext): void;
   update(frame: SceneFrame): void;
+  /** Frees what the module made outside its layers (the layers themselves are freed for it). */
+  destroy?(): void;
 }
 
 /** Back to front. Add your module here. */
@@ -85,6 +88,16 @@ export class SceneRenderer {
       m.init(ctx);
       this.modules.push(m);
     }
+  }
+
+  /**
+   * Frees every layer and everything in them, the other renderers' display objects included (they
+   * live in this tree): render/lifecycle.ts. Modules with more to free say so in `destroy()`.
+   */
+  destroy(): void {
+    for (const m of this.modules) m.destroy?.();
+    this.modules.length = 0;
+    destroyTree(this.layers.root);
   }
 
   /** Once per render frame, after the camera has been applied to the layers. */

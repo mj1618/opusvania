@@ -13,7 +13,7 @@ export interface RoomChoice {
   room: string;
   /** Every room id (content/world.json order: the game's rooms, then the test rooms). */
   rooms: readonly string[];
-  /** Called with the chosen id (main.ts reloads the page with `?room=`). */
+  /** Called with the chosen id (main.ts: `goto`, the save kept). */
   onRoom(id: string): void;
 }
 
@@ -25,20 +25,22 @@ export interface RoomChoice {
  */
 export class TuningPanel {
   private readonly pane: Pane;
+  private readonly pick = { room: '' };
 
   constructor(tuning: Tuning, onRespawn: () => void, rooms?: RoomChoice) {
     this.pane = new Pane({ title: 'Tuning  ( ` to hide )' });
     this.pane.hidden = true;
     if (rooms) {
-      const pick = { room: rooms.room };
+      this.pick.room = rooms.room;
       this.pane
-        .addBinding(pick, 'room', {
+        .addBinding(this.pick, 'room', {
           label: 'Room',
           options: Object.fromEntries(rooms.rooms.map((id) => [id, id])),
         })
         .on('change', (e) => {
-          if (e.value !== rooms.room) rooms.onRoom(e.value);
+          if (e.value !== this.shown) rooms.onRoom(e.value);
         });
+      this.shown = rooms.room;
     }
     const root = tuning as unknown as Record<string, Record<string, unknown>>;
     for (const [group, values] of Object.entries(root)) {
@@ -94,6 +96,15 @@ export class TuningPanel {
     f.addBinding(AUDIO, 'master');
     for (const k of Object.keys(AUDIO.bus)) f.addBinding(AUDIO.bus, k as keyof typeof AUDIO.bus);
     f.on('change', onChange);
+  }
+
+  /** The room the game is in (the list follows her through exits and `goto`). */
+  private shown = '';
+  setRoom(id: string): void {
+    if (id === this.shown) return;
+    this.shown = id;
+    this.pick.room = id;
+    this.pane.refresh();
   }
 
   /** Re-reads the tuning object (after it was changed from code). */

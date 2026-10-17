@@ -5,6 +5,7 @@
  * Repeat-wrapped, bilinear. Built once from a seeded PRNG.
  */
 import { BufferImageSource, Texture } from 'pixi.js';
+import { shareTexture } from '../../lifecycle';
 import { prng } from './look';
 
 const SIZE = 256;
@@ -69,16 +70,18 @@ export function noiseTexture(): Texture {
   fbmChannel(data, 0, 4, 0x51ed);
   fbmChannel(data, 1, 8, 0xa11ce);
   fbmChannel(data, 2, 6, 0xbeef);
-  cached = new Texture({
-    source: new BufferImageSource({
-      resource: data,
-      width: SIZE,
-      height: SIZE,
-      format: 'rgba8unorm',
-      alphaMode: 'no-premultiply-alpha',
-      scaleMode: 'linear',
-      addressMode: 'repeat',
+  cached = shareTexture(
+    new Texture({
+      source: new BufferImageSource({
+        resource: data,
+        width: SIZE,
+        height: SIZE,
+        format: 'rgba8unorm',
+        alphaMode: 'no-premultiply-alpha',
+        scaleMode: 'linear',
+        addressMode: 'repeat',
+      }),
     }),
-  });
+  );
   return cached;
 }

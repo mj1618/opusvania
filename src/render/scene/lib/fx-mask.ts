@@ -11,6 +11,7 @@
  */
 import { type Container, Matrix, type Renderer, RenderTexture } from 'pixi.js';
 import { SAFE_VIEW, type ViewSize } from '../../contract';
+import { shareTexture } from '../../lifecycle';
 
 export const MASK_W = 480;
 export const MASK_H = 270;
@@ -19,14 +20,16 @@ let texture: RenderTexture | null = null;
 const m = new Matrix();
 
 export function playfieldMaskTexture(): RenderTexture {
-  texture ??= RenderTexture.create({
-    width: MASK_W,
-    height: MASK_H,
-    resolution: 1,
-    antialias: false,
-    scaleMode: 'linear',
-    addressMode: 'clamp-to-edge',
-  });
+  texture ??= shareTexture(
+    RenderTexture.create({
+      width: MASK_W,
+      height: MASK_H,
+      resolution: 1,
+      antialias: false,
+      scaleMode: 'linear',
+      addressMode: 'clamp-to-edge',
+    }),
+  );
   return texture;
 }
 
@@ -65,14 +68,16 @@ export function heroMatteTexture(v?: ViewSize): RenderTexture {
     matte.destroy(true);
     matte = null;
   }
-  matte ??= RenderTexture.create({
-    width: w,
-    height: h,
-    resolution: 1,
-    antialias: false,
-    scaleMode: 'linear',
-    addressMode: 'clamp-to-edge',
-  });
+  matte ??= shareTexture(
+    RenderTexture.create({
+      width: w,
+      height: h,
+      resolution: 1,
+      antialias: false,
+      scaleMode: 'linear',
+      addressMode: 'clamp-to-edge',
+    }),
+  );
   return matte;
 }
 

@@ -29,12 +29,17 @@ export class RoomFade {
   private queued: number | null = null;
 
   /** `roomFadeIn`: the room's fade up from black, s (0 = none: a room exit lifts over `exitLift`). */
-  constructor(private readonly roomFadeIn = 0) {
+  constructor(private roomFadeIn = 0) {
     this.layer = new Sprite(Texture.WHITE);
     this.layer.label = 'room-fade';
     this.layer.tint = 0x000000;
     this.layer.eventMode = 'none';
     this.layer.visible = false;
+  }
+
+  /** The room changed (memory/world.md): its own fade up from black, s. */
+  setRoomFadeIn(seconds: number): void {
+    this.roomFadeIn = seconds;
   }
 
   /** From black, up over `seconds` (boot, a restart). Wins over the frame's placement events. */
@@ -61,7 +66,18 @@ export class RoomFade {
       if (e.type === 'roomExit') this.go(1, e.frames / 60 - R.exitEarly);
       else if (e.type === 'roomEnter' && e.from !== 'load') {
         this.k = 1;
-        this.go(0, this.roomFadeIn > 0 ? this.roomFadeIn : R.exitLift);
+        // From another room's exit or door (`room#exit`), a re-form, a goto: a short lift. A restart: the room's own fade.
+        const across = e.from.includes('#') || e.from === 'goto' || e.from === 'continue';
+        this.go(
+          0,
+          across
+            ? R.enterLift
+            : e.from === 'reform'
+              ? R.exitLift
+              : this.roomFadeIn > 0
+                ? this.roomFadeIn
+                : R.exitLift,
+        );
       } else if (e.type === 'fallCatch') this.go(R.catchDepth, e.frames / 60);
       else if (e.type === 'fallReturn') this.go(0, R.catchLift);
       // A placement by hand (teleport, load) shows the picture plainly at once.

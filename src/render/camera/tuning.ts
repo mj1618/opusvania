@@ -107,10 +107,12 @@ export const cameraTuning = {
    * Leaving a room and being caught after a fall (`roomExit` / `fallCatch`, room-fade.ts): a black
    * fade over the sim's hold (it reaches black `exitEarly` s before the room restarts), lifted over
    * `exitLift` s after `roomEnter`. A catch dips to `catchDepth` over its hold and lifts over `catchLift` s.
+   * Into another room (memory/world.md) the dip lifts over `enterLift` s: the crossing should feel continuous.
    */
   room: {
     exitEarly: 0.12,
     exitLift: 0.9,
+    enterLift: 0.3,
     catchDepth: 0.85,
     catchLift: 0.35,
   },

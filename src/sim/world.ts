@@ -185,8 +185,8 @@ export type Entry =
 
 /**
  * She enters room `to` (memory/world.md). By an edge she keeps her body, speed and timers: moved by the
- * rooms' offset, put at least `room.entryInset` px inside the mirror exit and inside its span, lifted
- * out of any solid. At a point (a door, a re-form, Continue, goto) she stands there at rest. Her last
+ * rooms' offset, put `room.entryInset` px inside the mirror exit and inside its span, lifted out of
+ * any solid. At a point (a door, a re-form, Continue, goto) she stands there at rest. Her last
  * safe ground becomes the ground under where she came in (the room's spawn if there is none). The room's
  * own state is rebuilt from the scene and the save; the save remembers the visit.
  * Pushes `roomEnter {room, from}` then `spawn`.
@@ -221,15 +221,14 @@ export function enterRoom(
     const inset = Math.max(0, Math.round(t.room.entryInset));
     const hw = p.w / 2;
     const hh = p.h / 2;
+    // On the crossing axis she comes in exactly `entryInset` inside the opening, whatever the hold
+    // carried her past the old room's edge (that was in the old room's geometry: it could have taken
+    // her through a wall of this one). Along the opening she keeps her place, inside its span.
     if (e.edge === 'n' || e.edge === 's') {
-      const cy = p.y + hh;
-      if (e.edge === 'n' && cy < inset) p.y = Math.round(inset - hh);
-      if (e.edge === 's' && cy > scene.height - inset) p.y = Math.round(scene.height - inset - hh);
+      p.y = Math.round(e.edge === 'n' ? inset - hh : scene.height - inset - hh);
       p.x = Math.max(e.from, Math.min(e.to - p.w, p.x));
     } else {
-      const cx = p.x + hw;
-      if (e.edge === 'w' && cx < inset) p.x = Math.round(inset - hw);
-      if (e.edge === 'e' && cx > scene.width - inset) p.x = Math.round(scene.width - inset - hw);
+      p.x = Math.round(e.edge === 'w' ? inset - hw : scene.width - inset - hw);
       p.y = Math.max(e.from, Math.min(e.to - p.h, p.y));
     }
     // Floors that do not quite line up: lift her out of the ground rather than leave her in it.

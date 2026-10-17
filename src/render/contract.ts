@@ -18,7 +18,16 @@
 import type { Renderer } from 'pixi.js';
 import type { Room } from '../scene/room';
 import type { SimEvent } from '../sim/events';
-import type { EnemyState, GameState, LuresState, PickupsState, PlayerState, PodsState } from '../sim/state';
+import type {
+  EnemyState,
+  GameState,
+  LuresState,
+  PickupsState,
+  PlayerState,
+  PodsState,
+  RestState,
+  SaveState,
+} from '../sim/state';
 import type { LightRegistry } from './lights';
 
 /** The 16:9 safe area: always on screen, at logical 0..SAFE_W x 0..SAFE_H. */
@@ -112,6 +121,10 @@ export interface SimView {
   readonly enemies: readonly Readonly<EnemyState>[];
   /** Lures (the story's lamps, memory/lures.md): `hp[i] > 0` = `scene.lures[i]` still burns. Read only. */
   readonly lures: Readonly<LuresState>;
+  /** What she has earned (memory/save.md): opened shortcuts, glades taken, her moon patch. Read only. */
+  readonly save: Readonly<SaveState>;
+  /** The moon patch she stands in (`rest.at`: index in `scene.patches`, -1 none) and if she has rested. */
+  readonly rest: Readonly<RestState>;
 }
 
 /** Services every renderer gets at construction. */

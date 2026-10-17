@@ -157,7 +157,14 @@ test('the default boot is scene 1 (wood-hatch): shut in the cocoon, then running
   expect(r.prologue).toBe(false);
   expect(r.mode).toBe('manual');
   expect(r.room).toBe('wood-hatch');
-  expect(r.rooms).toEqual(['wood-hatch', 'test-grove', 'lab-lamps']);
+  expect(r.rooms).toEqual([
+    'wood-hatch',
+    'lab-world-a',
+    'lab-world-b',
+    'lab-world-c',
+    'test-grove',
+    'lab-lamps',
+  ]);
   expect(r.shut).toEqual({ frames: 0, presses: 0, done: false });
   expect(r.hatch).toBe(4);
   expect(r.moved).toBeGreaterThan(150);
@@ -181,7 +188,7 @@ test('?room and ?abilities choose the room and the kit; the panel lists the room
   expect(r).toEqual({
     room: 'test-grove',
     owned: ['glide'],
-    options: ['wood-hatch', 'test-grove', 'lab-lamps'],
+    options: ['wood-hatch', 'lab-world-a', 'lab-world-b', 'lab-world-c', 'test-grove', 'lab-lamps'],
   });
   expect(errors).toEqual([]);
 });

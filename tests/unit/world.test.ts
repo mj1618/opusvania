@@ -207,11 +207,11 @@ describe('crossing between rooms', () => {
     });
     expect(s.g.state.player.vx).toBeCloseTo(vx, 5);
     expect(s.g.state.player.y + s.g.state.player.h).toBe(1152);
-    // And back west: through the dip she runs on, so she comes out where an unbroken world would have her.
+    // And back west: she comes in just inside the opening, at full speed.
     s.run(R, 20);
     s.until(L, () => s.g.state.room === 'lab-world-a', 200);
     const p = s.g.state.player;
-    expect(p.x).toBeGreaterThan(2300);
+    expect(p.x + p.w / 2).toBe(2560 - s.t.room.entryInset);
     expect(p.vx).toBeCloseTo(-s.t.run.maxSpeed, 5);
   });
 
@@ -253,13 +253,21 @@ describe('moon patches, glades, shortcuts, the re-form', () => {
   it('a glade gives its ability once', () => {
     const s = play('lab-world-c');
     expect(s.g.state.save.abilities).toEqual([]);
-    const ev = s.until(R, () => s.g.state.save.abilities.includes('glide'), 120);
-    expect(ev.filter((e) => e.type === 'gladeGrant')).toMatchObject([
-      { id: 'glade-glide', ability: 'glide' },
-    ]);
+    const ev = s.until(L, () => s.g.state.save.abilities.includes('glide'), 120);
+    expect(ev.filter((e) => e.type === 'gladeGrant')).toMatchObject([{ id: 'glade-glide', ability: 'glide' }]);
     expect(s.g.state.save.taken).toEqual(['lab-world-c:glade-glide']);
-    s.run(L, 60);
-    expect(s.run(R, 60).some((e) => e.type === 'gladeGrant')).toBe(false);
+    s.run(R, 40);
+    expect(s.run(L, 40).some((e) => e.type === 'gladeGrant')).toBe(false);
+  });
+
+  it('running in from A at full speed she meets the gate: the dip never carries her through a wall of the next room', () => {
+    const s = play('lab-world-a');
+    s.g.teleport(2200, 2560);
+    s.until(R, () => s.g.state.room === 'lab-world-c', 200);
+    s.run(R, 60);
+    const p = s.g.state.player;
+    expect(p.x + p.w).toBe(96);
+    expect(s.g.state.save.opened).toEqual([]);
   });
 
   it('the gate is a wall from the west; pushed from the east it opens for good', () => {
@@ -283,7 +291,7 @@ describe('moon patches, glades, shortcuts, the re-form', () => {
     s.g.teleport(1408, 1152);
     s.run(0, s.t.patch.restFrames + 2);
     expect(s.g.state.save.patch).toEqual({ room: 'lab-world-a', id: 'p1' });
-    s.g.goto('lab-world-c', 2300, 640);
+    s.g.goto('lab-world-c', 1980, 640);
     s.run(0, 5);
     expect(s.g.state.save.abilities).toEqual(['glide']);
     s.g.teleport(220, 1024);
@@ -334,5 +342,28 @@ describe('save and continue', () => {
     expect(fresh.hatch).not.toBeNull();
     // Deterministic: the same save gives the same state.
     expect(hashState(continueState(1, t, GAME_WORLD, save))).toBe(hashState(st));
+  });
+});
+
+describe('the save slot', () => {
+  it('round-trips, sets aside what it cannot read, and refuses a save of another shape', async () => {
+    const { decodeSave, encodeSave, readSave, writeSave, SAVE_KEY } = await import('../../src/save/storage');
+    const mem = new Map<string, string>();
+    const store = {
+      getItem: (k: string) => mem.get(k) ?? null,
+      setItem: (k: string, v: string) => void mem.set(k, v),
+      removeItem: (k: string) => void mem.delete(k),
+    };
+    const save = newSave(['glide']);
+    save.visited.push('lab-world-a');
+    save.patch = { room: 'lab-world-a', id: 'p1' };
+    expect(writeSave(store, save)).toBe(true);
+    expect(readSave(store)).toEqual(save);
+    expect(decodeSave(encodeSave(save))).toEqual(save);
+    expect(decodeSave('{"version":1,"save":{"abilities":["fly"]}}')).toBeNull();
+    mem.set(SAVE_KEY, 'not json');
+    expect(readSave(store)).toBeNull();
+    expect(mem.get(`${SAVE_KEY}.bad`)).toBe('not json');
+    expect(mem.has(SAVE_KEY)).toBe(false);
   });
 });

@@ -4,36 +4,137 @@
   "region": "lab",
   "width": 2560,
   "height": 1280,
-  "spawn": { "x": 1950, "y": 640 },
+  "spawn": {
+    "x": 2420,
+    "y": 640
+  },
   "abilities": [],
-  "art": { "mode": "greybox", "labels": true },
+  "art": {
+    "mode": "greybox",
+    "labels": true
+  },
   "exits": [
-    { "id": "n", "edge": "n", "from": 1920, "to": 2176 },
-    { "id": "w", "edge": "w", "from": 768, "to": 1024 }
+    {
+      "id": "n",
+      "edge": "n",
+      "from": 2304,
+      "to": 2560
+    },
+    {
+      "id": "w",
+      "edge": "w",
+      "from": 768,
+      "to": 1024
+    }
   ],
-  "glades": [{ "id": "glade-glide", "x": 2200, "y": 400, "w": 240, "h": 240, "ability": "glide" }],
-  "shortcuts": [{ "id": "gate", "x": 96, "y": 768, "w": 64, "h": 256, "opens": "e" }],
-  "catches": [{ "id": "gap", "x": 1000, "y": 1100, "w": 800, "h": 180 }],
+  "glades": [
+    {
+      "id": "glade-glide",
+      "x": 1880,
+      "y": 400,
+      "w": 200,
+      "h": 240,
+      "ability": "glide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "id": "gate",
+      "x": 96,
+      "y": 768,
+      "w": 64,
+      "h": 256,
+      "opens": "e"
+    }
+  ],
+  "catches": [
+    {
+      "id": "gap",
+      "x": 1000,
+      "y": 1100,
+      "w": 800,
+      "h": 180
+    }
+  ],
   "solids": [
-    { "tag": "ground", "x": 0, "y": 1024, "w": 1000, "h": 256 },
-    { "tag": "ground", "x": 1800, "y": 640, "w": 760, "h": 640 }
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1024,
+      "w": 1000,
+      "h": 256
+    },
+    {
+      "tag": "ground",
+      "x": 1800,
+      "y": 640,
+      "w": 760,
+      "h": 640
+    }
   ],
   "oneWays": [],
-  "enemies": [{ "id": "c-burr", "kind": "burrback", "x": 600, "y": 1024, "facing": -1, "radius": 240 }],
+  "enemies": [
+    {
+      "id": "c-burr",
+      "kind": "burrback",
+      "x": 600,
+      "y": 1024,
+      "facing": -1,
+      "radius": 240
+    }
+  ],
   "routes": [
-    { "from": "n", "to": "spawn" },
-    { "from": "spawn", "to": "glade-glide" },
-    { "from": "glade-glide", "to": "w", "needs": ["glide"], "door": "gate" }
+    {
+      "from": "n",
+      "to": "spawn"
+    },
+    {
+      "from": "spawn",
+      "to": "glade-glide"
+    },
+    {
+      "from": "glade-glide",
+      "to": "w",
+      "needs": ["glide"],
+      "door": "gate"
+    }
   ],
   "marks": {
     "notes": [
-      { "x": 2100, "y": 240, "text": "C  she drops in from B; the glade gives glide" },
-      { "x": 1400, "y": 560, "text": "a gap only a glide crosses (jump, then hold)" },
-      { "x": 560, "y": 700, "text": "a burrback: a fade re-forms her at the last patch rested at" },
-      { "x": 260, "y": 640, "text": "the gate opens from this side: push into it" }
+      {
+        "x": 2100,
+        "y": 240,
+        "text": "C  she drops in from B; the glade gives glide"
+      },
+      {
+        "x": 1400,
+        "y": 560,
+        "text": "a gap only a glide crosses (jump, then hold)"
+      },
+      {
+        "x": 560,
+        "y": 700,
+        "text": "a burrback: a fade re-forms her at the last patch rested at"
+      },
+      {
+        "x": 260,
+        "y": 640,
+        "text": "the gate opens from this side: push into it"
+      }
     ]
   },
   "shots": {
-    "wide": [{ "name": "glade", "x": 2100, "y": 640 }, { "name": "gate", "x": 500, "y": 1024 }]
+    "wide": [
+      {
+        "name": "glade",
+        "x": 2100,
+        "y": 640
+      },
+      {
+        "name": "gate",
+        "x": 500,
+        "y": 1024
+      }
+    ]
   }
 }

@@ -26,6 +26,7 @@ import {
   UniformGroup,
 } from 'pixi.js';
 import { VIEW_MAX_H, VIEW_MAX_W } from '../../contract';
+import { shareTexture } from '../../lifecycle';
 import type { LayerName, LayerRect } from '../layer-tree';
 import { mix, prng } from './look';
 import { LOOK } from './room-look';
@@ -133,7 +134,7 @@ export function noiseTexture(): Texture {
     addressMode: 'repeat',
     alphaMode: 'no-premultiply-alpha',
   });
-  noiseTex = new Texture({ source });
+  noiseTex = shareTexture(new Texture({ source }));
   return noiseTex;
 }
 
@@ -353,21 +354,23 @@ export function softTexture(): Texture {
     c2.fillStyle = g;
     c2.fillRect(0, 0, N, N);
   }
-  softTex = Texture.from(canvas);
+  softTex = shareTexture(Texture.from(canvas));
   return softTex;
 }
 
 let clearTex: Texture | null = null;
 function clearTexture(): Texture {
   if (!clearTex) {
-    clearTex = new Texture({
-      source: new BufferImageSource({
-        resource: new Uint8Array([0, 0, 0, 0]),
-        width: 1,
-        height: 1,
-        format: 'rgba8unorm',
+    clearTex = shareTexture(
+      new Texture({
+        source: new BufferImageSource({
+          resource: new Uint8Array([0, 0, 0, 0]),
+          width: 1,
+          height: 1,
+          format: 'rgba8unorm',
+        }),
       }),
-    });
+    );
   }
   return clearTex;
 }
@@ -393,15 +396,17 @@ export function bakeSoft(renderer: Renderer, c: Container, rect: LayerRect, scal
 let neutralTex: Texture | null = null;
 function neutralTexture(): Texture {
   if (!neutralTex) {
-    neutralTex = new Texture({
-      source: new BufferImageSource({
-        resource: new Uint8Array([128, 128, 128, 255]),
-        width: 1,
-        height: 1,
-        format: 'rgba8unorm',
-        alphaMode: 'no-premultiply-alpha',
+    neutralTex = shareTexture(
+      new Texture({
+        source: new BufferImageSource({
+          resource: new Uint8Array([128, 128, 128, 255]),
+          width: 1,
+          height: 1,
+          format: 'rgba8unorm',
+          alphaMode: 'no-premultiply-alpha',
+        }),
       }),
-    });
+    );
   }
   return neutralTex;
 }
@@ -652,17 +657,21 @@ export function bakeLayer(
         // Atmosphere over the whole padded tile, then blur across (padded) and down (cropping).
         const a = RenderTexture.create({ width: rawW, height: rawH, resolution: 1 });
         const b = RenderTexture.create({ width: rawW, height: rawH, resolution: 1 });
-        const full = new Mesh({ geometry: quadGeometry(0, 0, rawW, rawH), shader });
+        const fullQuad = quadGeometry(0, 0, rawW, rawH);
+        const full = new Mesh({ geometry: fullQuad, shader });
         renderer.render({ container: full, target: a, clear: true, clearColor: [0, 0, 0, 0] });
         full.destroy();
         const sigma = blur * scale;
-        blurPass(renderer, a, b, quadGeometry(0, 0, rawW, rawH), [sigma / rawW, 0]);
+        blurPass(renderer, a, b, fullQuad, [sigma / rawW, 0]);
         blurPass(renderer, b, final, mesh.geometry, [0, sigma / rawH]);
+        // (Geometries keep their GPU buffers unless destroyed with them: render/lifecycle.ts.)
+        fullQuad.destroy(true);
         a.destroy(true);
         b.destroy(true);
       } else {
         renderer.render({ container: mesh, target: final, clear: true, clearColor: [0, 0, 0, 0] });
       }
+      mesh.geometry.destroy(true);
       mesh.destroy();
       shader.destroy();
       raw.destroy(true);

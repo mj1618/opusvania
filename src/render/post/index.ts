@@ -47,6 +47,14 @@ export class PostStage {
     fxDebug('zoneGrade', ZONE_GRADE);
   }
 
+  /** Frees the filter and its targets (the room is going). */
+  destroy(): void {
+    this.setFilters(null);
+    this.filter?.destroy();
+    this.filter = null;
+    this.on = false;
+  }
+
   setFilters(filters: Filter[] | null): void {
     this.target.filters = filters && filters.length > 0 ? filters : null;
   }

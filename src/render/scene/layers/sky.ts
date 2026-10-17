@@ -15,6 +15,7 @@ import {
   UniformGroup,
 } from 'pixi.js';
 import { SAFE_H, SAFE_W, VIEW_MAX_H, VIEW_MAX_W } from '../../contract';
+import { destroyTree } from '../../lifecycle';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { BG_VERT, noiseTexture, quadGeometry, rgb, ZONES, zoneWeights } from '../lib/bg-bake';
 import { WOOD } from '../lib/bg-wood';
@@ -321,6 +322,11 @@ export class SkyLayer implements EnvModule {
   private target!: RenderTexture;
   private toTarget!: Matrix;
   private anchorY = 0;
+
+  /** The off-tree mesh that shades the sky into its target (the target's sprite is in the tree). */
+  destroy(): void {
+    destroyTree(this.mesh);
+  }
 
   init(ctx: SceneContext): void {
     this.anchorY = ctx.layers.anchor.y;

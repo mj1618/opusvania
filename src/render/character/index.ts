@@ -49,14 +49,25 @@ export class CharacterRenderer {
       } catch {
         // storage unavailable: fall through to the default
       }
-      window.addEventListener('keydown', (e) => {
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
-        const n = Number.parseInt(e.key, 10);
-        const s = Number.isNaN(n) ? undefined : this.skins[n - 1];
-        if (s) this.select(s.id);
-      });
+      window.addEventListener('keydown', this.onKey);
     }
     this.select(want ?? '', false);
+  }
+
+  private readonly onKey = (e: KeyboardEvent): void => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const n = Number.parseInt(e.key, 10);
+    const s = Number.isNaN(n) ? undefined : this.skins[n - 1];
+    if (s) this.select(s.id);
+  };
+
+  /** Frees the skin and the cast and stops listening (the room is going: render/lifecycle.ts). */
+  destroy(): void {
+    if (typeof window !== 'undefined') window.removeEventListener('keydown', this.onKey);
+    clearTimeout(this.labelTimer);
+    this.current?.destroy();
+    this.current = null;
+    this.cast.destroy();
   }
 
   /** The active skin's id. */

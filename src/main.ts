@@ -6,8 +6,12 @@ import { InputSampler } from './input/index';
 import { FixedStepLoop } from './loop';
 import { createApp } from './render/app';
 import { GREYBOX } from './render/greybox/index';
+import { MapOverlay } from './render/map/index';
 import { RenderStage } from './render/stage';
-import { DEFAULT_ROOM, getRoom, ROOM_IDS } from './scene/index';
+import { clearSave, PROGRESS_EVENTS, pageStore, readSave, writeSave } from './save/storage';
+import { getRoom, ROOM_IDS } from './scene/index';
+import type { Room } from './scene/room';
+import { GAME_WORLD, mapWorld, validateWorld } from './scene/world';
 import { ABILITIES } from './sim/abilities';
 import { tuning } from './sim/tuning';
 
@@ -25,49 +29,106 @@ function abilitiesParam(v: string | null): string[] | null {
 }
 
 /**
- * Boot. URL params: ?room=<id> (default content/world.json's start: wood-hatch; `test-grove` is the
- * old demo level), ?abilities=all|none|glide,wallJump,doubleJump,dash, ?seed=<n>, ?manual (start
+ * Boot. Without ?room= the page is the game: it continues from the save slot (memory/save.md: at the
+ * last moon patch, with everything earned) or starts a new game at content/world.json's start
+ * (wood-hatch), and autosaves on every progress event. ?fresh = a new game (the slot is emptied).
+ * ?room=<id> is a test boot: a new game in that room (`test-grove` is the old demo level), the slot
+ * neither read nor written. The world links every room either way (memory/world.md).
+ * Other params: ?abilities=all|none|glide,wallJump,doubleJump,dash, ?seed=<n>, ?manual (start
  * paused; drive via __game.step), ?hitboxes,
  * ?nopickups (the scene without its glints, lumen pods, enemies, lanterns and heart, so without the HUD: clean plates
  * for the look tools), ?audio (sound on for review; ?audio=0 off).
  * Keys: arrows/WASD move, Z/Space/K jump, X/L/Shift dash, Down+Jump drops through branches,
- * F2 collision overlay, G greybox labels, ` tuning panel, R restart, M sound on / off (muted by default: src/audio),
+ * Tab map, F2 collision overlay, G greybox labels, ` tuning panel, R restart (the game: back to the last
+ * save), M sound on / off (muted by default: src/audio),
  * Enter (or a double-click on the picture) full screen on / off.
  */
 async function boot(): Promise<void> {
   const params = new URLSearchParams(location.search);
   const seed = Number(params.get('seed') ?? 1) >>> 0;
   const input = new InputSampler();
-  const room = getRoom(params.get('room') ?? DEFAULT_ROOM);
+  const roomParam = params.get('room');
+  const strip = (r: Room): Room =>
+    params.has('nopickups')
+      ? { ...r, pickups: [], pods: [], enemies: [], lanterns: [], lamps: [], heart: undefined }
+      : r;
+  const world = params.has('nopickups') ? mapWorld(GAME_WORLD, strip) : GAME_WORLD;
+  for (const problem of validateWorld(GAME_WORLD)) console.warn(`[world] ${problem}`);
+  // The game (no ?room=) keeps a save; a test boot leaves the slot alone.
+  const session = roomParam === null;
+  const store = session ? pageStore() : null;
+  if (params.has('fresh')) clearSave(store);
+  const saved = session ? readSave(store) : null;
+  const room = strip(getRoom(roomParam ?? world.start));
   // The key legend is for the test bed; the game shows no text (H still brings it up).
   if (room.id === 'test-grove') document.getElementById('hint')?.classList.remove('quiet');
-  const scene = params.has('nopickups')
-    ? { ...room, pickups: [], pods: [], enemies: [], lanterns: [], lamps: [], heart: undefined }
-    : room;
-  const game = new Game(tuning, scene, seed, () => input.sample(), abilitiesParam(params.get('abilities')));
+  const game = new Game(
+    tuning,
+    (world.rooms[room.id]?.scene as Room) ?? room,
+    seed,
+    () => input.sample(),
+    abilitiesParam(params.get('abilities')),
+    {
+      world,
+      save: saved,
+    },
+  );
   if (params.has('manual')) game.mode = 'manual';
+  if (session)
+    game.afterStep.add((events) => {
+      if (events.some((e) => PROGRESS_EVENTS.has(e.type) && !(e.type === 'roomEnter' && e.from === 'load')))
+        writeSave(store, game.state.save);
+    });
 
   const root = document.getElementById('app');
   if (!root) throw new Error('#app missing');
   const ga = await createApp(root);
   const stage = new RenderStage(ga, game);
-  const panel = new TuningPanel(tuning, () => game.reset(), {
-    room: room.id,
+  // The map (Tab): over the HUD, under the debug overlay. The game stands still while it is open.
+  const map = new MapOverlay();
+  ga.root.addChildAt(map.layer, ga.root.getChildIndex(stage.overlay.layer));
+  stage.afterUpdate.add((dt) => map.update(dt, stage.clock, game, ga.view()));
+  let modeBeforeMap = game.mode;
+  const toggleMap = (on = !map.open): void => {
+    if (on === map.open) return;
+    map.toggle(on);
+    if (on) {
+      modeBeforeMap = game.mode;
+      if (game.mode === 'realtime') game.mode = 'frozen';
+    } else if (game.mode === 'frozen' && modeBeforeMap === 'realtime') game.mode = 'realtime';
+    if (game.mode === 'manual') {
+      stage.update(0, 1);
+      stage.present();
+    }
+  };
+  const restart = (): void => {
+    const last = session ? readSave(store) : null;
+    if (last) game.continueFrom(last);
+    else game.reset();
+  };
+  const panel = new TuningPanel(tuning, restart, {
+    room: game.scene.id,
     rooms: ROOM_IDS,
-    // Switching room reloads the page with ?room= (the renderers are built once per room).
-    onRoom: (id) => {
-      const q = new URLSearchParams(location.search);
-      q.set('room', id);
-      location.search = q.toString();
-    },
+    // She goes there, the save kept (the renderers rebuild for the room).
+    onRoom: (id) => game.goto(id),
   });
+  stage.onRoom.add((id) => panel.setRoom(id));
   if (params.has('hitboxes')) stage.overlay.toggle(true);
   // Sound reads the sim and the camera like render does (read-only).
   const audio = new AudioDirector(game, params);
   audio.install();
   stage.afterUpdate.add(() => audio.update(stage.clock, stage.view));
   panel.addAudio(() => audio.applyVolumes());
-  installDebugApi({ game, ga, stage, panel, audio });
+  installDebugApi({
+    game,
+    ga,
+    stage,
+    panel,
+    audio,
+    store: pageStore(),
+    autosave: session,
+    map: { toggle: toggleMap, open: () => map.open },
+  });
   const soundKey = document.getElementById('sound-key');
   const showSound = (muted: boolean) => {
     if (soundKey) soundKey.textContent = muted ? 'M sound' : 'M mute';
@@ -95,7 +156,10 @@ async function boot(): Promise<void> {
     else if (e.code === 'F2') {
       stage.overlay.toggle();
       e.preventDefault();
-    } else if (e.code === 'KeyR') game.reset();
+    } else if (e.code === 'Tab') {
+      toggleMap();
+      e.preventDefault();
+    } else if (e.code === 'KeyR') restart();
     else if (e.code === 'KeyG') GREYBOX.labels = !GREYBOX.labels;
     else if (e.code === 'KeyM') audio.toggle();
   });

@@ -10,6 +10,7 @@ import { GREYBOX } from '../render/greybox/index';
 import type { PointLight } from '../render/lights';
 import { POST } from '../render/post/config';
 import type { CameraOverride, RenderStage } from '../render/stage';
+import { clearSave, readSave, type SlotStore } from '../save/storage';
 import { ROOM_IDS } from '../scene/index';
 import type { Room } from '../scene/room';
 import { ABILITIES, type AbilityId, isAbility } from '../sim/abilities';
@@ -45,15 +46,45 @@ export interface GameDebugApi {
   /** Drops queued input. */
   clearInput(): void;
   /**
-   * Restarts the room (fresh state at the spawn, frame 0; abilities granted with `grant` / `?abilities` are
-   * kept). An id other than the current room's throws: rooms switch by reloading (`room(id)`).
+   * A new game in the room (default the current one; another id switches room in place): fresh state
+   * at its spawn, frame 0, a fresh save (abilities granted with `grant` / `?abilities` are kept).
    */
   load(roomId?: string): GameState;
-  /**
-   * The current room's id. With an id: switches to that room by reloading the page with `?room=<id>`
-   * (the page's other params are kept), so nothing after it in the same evaluate runs on the new room.
-   */
+  /** The current room's id. With an id: `goto(id)` (she goes there, the save kept). */
   room(id?: string): string;
+  /**
+   * The world (memory/world.md): its start, every room with its world placement and size (`placed`
+   * false for the test rooms), and where each exit and door leads (`null`: arrival only).
+   */
+  world(): {
+    start: string;
+    rooms: Array<{
+      id: string;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      placed: boolean;
+      region?: string;
+    }>;
+    links: Record<string, { to: string; exit: string } | null>;
+    doors: Record<string, { to: string; exit: string }>;
+  };
+  /**
+   * What she has earned (`state().save`, memory/save.md) and the slot: `stored` = the save in
+   * localStorage now (null: none), `autosave` = whether this page writes it (a page booted without
+   * `?room=`).
+   */
+  save(): { save: GameState['save']; stored: GameState['save'] | null; autosave: boolean };
+  /**
+   * She goes to room `id` with her feet at (x, y) (default its spawn), at rest, keeping the save (the
+   * renderers rebuild for it). The current room: a teleport. Returns the state.
+   */
+  goto(id: string, x?: number, y?: number): GameState;
+  /** Empties the save slot (the game in the page goes on; `load()` or `?fresh` for a new one). */
+  clearSave(): void;
+  /** The map overlay (Tab) open or closed; no argument toggles. Redraws. */
+  map(on?: boolean): boolean;
   /** Every room id: the real game's rooms (content/world.json), then the test rooms. */
   rooms(): string[];
   /** What she owns (`state().save.abilities`) and every ability there is. */
@@ -359,6 +390,19 @@ export interface GameDebugApi {
     panel(on?: boolean): boolean;
     /** Post-processing on/off (no argument toggles); redraws. */
     post(on?: boolean): boolean;
+    /**
+     * What the GPU holds (the leak test, memory/world.md): textures uploaded and their size in MB
+     * (width x height x 4 bytes, mips and MSAA not counted), GPU buffers, and how many times the
+     * room's renderers have been built.
+     */
+    gpu(list?: boolean): {
+      textures: number;
+      textureMB: number;
+      buffers: number;
+      builds: number;
+      /** With `list`: every texture `[uid, w, h, kind, label]`. */
+      list?: Array<[number, number, number, string, string]>;
+    };
     /** Greybox rooms: the marker labels and notes on/off (no argument toggles; also the G key); redraws. */
     labels(on?: boolean): boolean;
     /**
@@ -383,8 +427,14 @@ export function installDebugApi(deps: {
   stage: RenderStage;
   panel: TuningPanel;
   audio?: AudioDirector | null;
+  /** The save slot and whether this page writes it (memory/save.md). */
+  store?: SlotStore | null;
+  autosave?: boolean;
+  /** The map overlay (Tab). */
+  map?: { toggle(on?: boolean): void; open(): boolean };
 }): GameDebugApi {
   const { game, ga, stage, panel } = deps;
+  const store = deps.store ?? null;
   const log: Array<SimEvent & { f: number }> = [];
   let lastCall = 0;
   game.afterStep.add((events) => {
@@ -470,22 +520,56 @@ export function installDebugApi(deps: {
       game.clearInput();
     },
     load(roomId) {
-      if (roomId !== undefined && roomId !== game.scene.id)
-        throw new Error(
-          `This page plays "${game.scene.id}". Switch rooms with room("${roomId}") or ?room=${roomId} (rooms: ${ROOM_IDS.join(', ')}).`,
-        );
-      game.reset();
+      if (roomId !== undefined && !ROOM_IDS.includes(roomId))
+        throw new Error(`Unknown room "${roomId}". Rooms: ${ROOM_IDS.join(', ')}.`);
+      game.reset(roomId);
       redraw();
       return snapshot();
     },
     room(id) {
-      if (id !== undefined && id !== game.scene.id) {
-        if (!ROOM_IDS.includes(id)) throw new Error(`Unknown room "${id}". Rooms: ${ROOM_IDS.join(', ')}.`);
-        const q = new URLSearchParams(location.search);
-        q.set('room', id);
-        location.search = q.toString();
-      }
+      if (id !== undefined && id !== game.scene.id) api.goto(id);
       return game.scene.id;
+    },
+    world() {
+      const w = game.world;
+      if (!w) return { start: game.scene.id, rooms: [], links: {}, doors: {} };
+      return JSON.parse(
+        JSON.stringify({
+          start: w.start,
+          rooms: Object.values(w.rooms).map((r) => ({
+            id: r.id,
+            x: r.x,
+            y: r.y,
+            w: r.scene.width,
+            h: r.scene.height,
+            placed: r.placed,
+            region: (r.scene as Room).region,
+          })),
+          links: w.links,
+          doors: w.doors,
+        }),
+      );
+    },
+    save() {
+      return {
+        save: JSON.parse(JSON.stringify(game.state.save)),
+        stored: readSave(store),
+        autosave: deps.autosave ?? false,
+      };
+    },
+    goto(id, x, y) {
+      if (!ROOM_IDS.includes(id)) throw new Error(`Unknown room "${id}". Rooms: ${ROOM_IDS.join(', ')}.`);
+      game.goto(id, x, y);
+      redraw();
+      return snapshot();
+    },
+    clearSave() {
+      clearSave(store);
+    },
+    map(on) {
+      deps.map?.toggle(on);
+      redraw();
+      return deps.map?.open() ?? false;
     },
     rooms: () => [...ROOM_IDS],
     abilities: () => ({ owned: game.abilities, all: [...ABILITIES] }),
@@ -797,6 +881,38 @@ export function installDebugApi(deps: {
         redraw();
         return GREYBOX.labels;
       },
+      gpu(list) {
+        type Src = {
+          uid: number;
+          pixelWidth: number;
+          pixelHeight: number;
+          label?: string;
+          resource?: unknown;
+        };
+        const r = ga.app.renderer as unknown as {
+          texture: { managedTextures: Array<Src | null> };
+          buffer: { _managedBuffers?: { items: Record<string, unknown> } };
+        };
+        const tex = r.texture.managedTextures.filter((t) => t !== null && t !== undefined);
+        const bytes = tex.reduce((a, t) => a + (t?.pixelWidth ?? 0) * (t?.pixelHeight ?? 0) * 4, 0);
+        return {
+          textures: tex.length,
+          textureMB: Math.round(bytes / 1e5) / 10,
+          buffers: Object.values(r.buffer._managedBuffers?.items ?? {}).filter(
+            (b) => b !== null && b !== undefined,
+          ).length,
+          builds: stage.builds,
+          list: list
+            ? tex.map((t) => [
+                t?.uid ?? 0,
+                t?.pixelWidth ?? 0,
+                t?.pixelHeight ?? 0,
+                (t?.resource as { constructor?: { name?: string } } | undefined)?.constructor?.name ?? 'rt',
+                t?.label ?? '',
+              ])
+            : undefined,
+        };
+      },
       clearColor(rgb) {
         const bg = ga.app.renderer.background;
         if (rgb !== undefined) {
@@ -808,6 +924,7 @@ export function installDebugApi(deps: {
     },
   };
   // The collision overlay draws the enemies' true boxes from the live state.
+  stage.overlay.opened = () => game.state.save.opened;
   stage.overlay.enemies = () => game.state.enemies;
   stage.overlay.lures = () => game.state.lures.hp;
   stage.overlay.ramPx = () => game.tuning.burrback.chargePx;

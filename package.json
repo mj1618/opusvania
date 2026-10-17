@@ -19,7 +19,8 @@
     "shots": "tsx tools/shots.ts",
     "clip": "tsx tools/clip.ts",
     "playtest": "tsx tools/playtest/cli.ts",
-    "look:stats": "tsx tools/look-stats.ts"
+    "look:stats": "tsx tools/look-stats.ts",
+    "leak": "tsx tools/leak.ts"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",

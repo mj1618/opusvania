@@ -11,13 +11,14 @@
  *   goal       lures: field, core, flame, husk (behind her)
  *   air        creatures as boxes, lure effects, freed moths, labels (over her)
  */
-import { type Container, Graphics } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { drawEnemyBoxes } from '../../debug/overlay';
 import { tuning } from '../../sim/tuning';
 import type { SceneContext, SceneFrame } from '../scene/index';
 import { LureView } from './lures';
 import { GB } from './palette';
 import { buildLabels, buildStatic } from './static';
+import { WorldView } from './world';
 
 export { isGreybox } from '../../scene/room';
 
@@ -45,6 +46,7 @@ export class GreyboxLayer {
   private readonly creatures = new Graphics();
   private labels!: Container;
   private readonly lures = new LureView();
+  private world!: WorldView;
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
@@ -54,7 +56,11 @@ export class GreyboxLayer {
     ctx.layers.playfield.addChild(buildStatic(room));
     ctx.layers.get('goal').addChild(this.lureBack);
     this.labels = buildLabels(room);
-    ctx.layers.air.addChild(this.creatures, this.front, this.labels);
+    // Patches, glades, shortcuts and doors (memory/world.md): under her, their flashes and lines over her.
+    const flashText = new Container({ label: 'greybox-world-text' });
+    this.world = new WorldView(flashText);
+    ctx.layers.playfield.addChild(this.world.back);
+    ctx.layers.air.addChild(this.creatures, this.front, this.world.front, this.labels, flashText);
   }
 
   update(frame: SceneFrame): void {
@@ -64,6 +70,8 @@ export class GreyboxLayer {
     this.lureBack.clear();
     this.front.clear();
     this.lures.draw(dt, clock, sim, this.lureBack, this.front);
+    this.world.onEvents(sim.events);
+    this.world.draw(dt, clock, sim);
     const g = this.creatures.clear();
     drawEnemyBoxes(g, sim.enemies, tuning.burrback.chargePx);
     this.labels.visible = GREYBOX.labels;

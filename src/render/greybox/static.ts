@@ -94,7 +94,7 @@ export function buildLabels(room: Room): Container {
     const at = e.at ?? (e.edge === 's' ? room.height : e.edge === 'e' ? room.width : 0);
     const x = ns ? mid : at + (e.edge === 'e' ? -80 : 80);
     const y = ns ? at + (e.edge === 's' ? -12 : 40) : mid;
-    c.addChild(label(`exit ${e.id} (${e.edge})`, x, y, GB.exit));
+    c.addChild(label(`exit ${e.id} (${e.edge}${e.oneWay ? ', one way' : ''})`, x, y, GB.exit));
   }
   for (const z of room.catches ?? [])
     c.addChild(label(`catch ${z.id}`, z.x + z.w / 2, z.y + 32, GB.catchZone, 16));
@@ -102,6 +102,13 @@ export function buildLabels(room: Room): Container {
   for (const l of room.lamps ?? []) c.addChild(label(`rest ${l.id}`, l.x, l.y - 128, GB.rest));
   for (const e of room.enemies ?? []) c.addChild(label(`${e.id}  ${e.kind}`, e.x, e.y - 90, 0xff8cf4, 16));
   for (const n of room.marks?.notes ?? []) c.addChild(label(n.text, n.x, n.y, GB.note, 22));
+  // The world's things (memory/world.md).
+  for (const p of room.patches ?? []) c.addChild(label(`patch ${p.id}`, p.x, p.y - 250, 0xd8e6ff));
+  for (const g of room.glades ?? [])
+    c.addChild(label(`glade ${g.id}: ${g.ability}`, g.x + g.w / 2, g.y - 16, 0xffffff));
+  for (const s of room.shortcuts ?? [])
+    c.addChild(label(`shortcut ${s.id} (opens from ${s.opens})`, s.x + s.w / 2, s.y - 12, 0xffb347, 16));
+  for (const d of room.doors ?? []) c.addChild(label(`door ${d.id} -> ${d.to}`, d.x, d.y - 176, GB.exit, 16));
   c.addChild(label('spawn', room.spawn.x, room.spawn.y - 26, GB.spawn, 14));
   return c;
 }

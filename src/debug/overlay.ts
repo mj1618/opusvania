@@ -61,7 +61,24 @@ export class HitboxOverlay {
     drops: [],
   });
 
-  constructor(private readonly scene: Scene) {
+  /** The opened shortcuts (`save.opened`; set by the debug API): a closed one is drawn as a solid. */
+  opened: () => readonly string[] = () => [];
+
+  constructor(private scene: Scene) {
+    this.drawSolids();
+    this.layer.addChild(this.solids, this.g);
+    this.layer.visible = false;
+  }
+
+  /** Another room (memory/world.md): its solids from now on. */
+  setScene(scene: Scene): void {
+    this.scene = scene;
+    this.drawSolids();
+  }
+
+  private drawSolids(): void {
+    const scene = this.scene;
+    this.solids.clear();
     for (const s of scene.solids) this.solids.rect(s.x, s.y, s.w, s.h);
     this.solids.stroke({ color: 0x3fa7ff, width: 2, alpha: 0.8 });
     for (const o of scene.oneWays) this.solids.moveTo(o.x, o.y).lineTo(o.x + o.w, o.y);
@@ -74,8 +91,17 @@ export class HitboxOverlay {
       this.solids.moveTo(scene.width - 2, top).lineTo(scene.width - 2, scene.height);
     }
     this.solids.stroke({ color: 0x9a9a9a, width: 4, alpha: 0.9 });
-    this.layer.addChild(this.solids, this.g);
-    this.layer.visible = false;
+    // The world's things (memory/world.md): moon patches (pale blue), glades (white), doors (green).
+    const P = tuning.patch;
+    for (const pt of scene.patches ?? [])
+      this.solids.rect(pt.x - P.width / 2, pt.y - P.height, P.width, P.height);
+    this.solids.stroke({ color: 0xa8c8ff, width: 2, alpha: 0.8 });
+    for (const gl of scene.glades ?? []) this.solids.rect(gl.x, gl.y, gl.w, gl.h);
+    this.solids.stroke({ color: 0xffffff, width: 2, alpha: 0.7 });
+    const D = tuning.room;
+    for (const d of scene.doors ?? [])
+      this.solids.rect(d.x - D.doorWidth / 2, d.y - D.doorHeight, D.doorWidth, D.doorHeight);
+    this.solids.stroke({ color: 0x5fd38a, width: 2, alpha: 0.8 });
   }
 
   toggle(on = !this.visible): boolean {
@@ -141,6 +167,19 @@ export class HitboxOverlay {
       });
     }
     drawEnemyBoxes(g, this.enemies(), this.ramPx());
+    // Shortcuts: solid amber while closed (a bar on the side that opens it), dim once open.
+    const opened = this.opened();
+    for (const sc of this.scene.shortcuts ?? []) {
+      const open = opened.includes(`${this.scene.id}:${sc.id}`);
+      g.rect(sc.x, sc.y, sc.w, sc.h).stroke({ color: 0xffb347, width: open ? 1 : 3, alpha: open ? 0.4 : 1 });
+      if (open) continue;
+      const bx = sc.opens === 'e' ? sc.x + sc.w - 4 : sc.x;
+      const by = sc.opens === 's' ? sc.y + sc.h - 4 : sc.y;
+      const horiz = sc.opens === 'n' || sc.opens === 's';
+      g.rect(horiz ? sc.x : bx, horiz ? by : sc.y, horiz ? sc.w : 4, horiz ? 4 : sc.h).fill({
+        color: 0xffffff,
+      });
+    }
     // Lures (memory/lures.md): the pull field (thin orange), the core (thick), the flame's hit box.
     const hp = this.lures();
     const T = tuning.lures;

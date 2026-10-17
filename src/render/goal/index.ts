@@ -20,6 +20,7 @@ import { tuning } from '../../sim/tuning';
 import { vesperLink } from '../character/vesper/link';
 import { type CameraView, type RenderContext, SAFE_H, SAFE_VIEW, SAFE_W, type SimView } from '../contract';
 import { hudLink } from '../hud/link';
+import { shareTexture } from '../lifecycle';
 import type { PointLight } from '../lights';
 import { GlintBatch, K_FLARE, K_GLINT, K_SPARK } from '../pickups/batch';
 import { zoneMix, zoneWeights } from '../scene/lib/fx-zones';
@@ -171,7 +172,7 @@ function glow(tint: number): Sprite {
       g.fillStyle = grad;
       g.fillRect(0, 0, 128, 128);
     }
-    glowTex = Texture.from(c);
+    glowTex = shareTexture(Texture.from(c));
   }
   const s = new Sprite(glowTex);
   s.anchor.set(0.5);

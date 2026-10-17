@@ -24,6 +24,7 @@ import {
   UniformGroup,
 } from 'pixi.js';
 import { SAFE_H, SAFE_W } from '../../contract';
+import { destroyTree } from '../../lifecycle';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import type { LayerName, LayerRect } from '../layer-tree';
 import {
@@ -810,6 +811,11 @@ export class FarLayers implements EnvModule {
   private target!: RenderTexture;
   private readonly toTarget = new Matrix();
   private output!: Sprite;
+
+  /** The off-tree copies (and the tiles their meshes sample) go with the room: render/lifecycle.ts. */
+  destroy(): void {
+    destroyTree(this.scene);
+  }
 
   init(ctx: SceneContext): void {
     const rects = NAMES.map((n) => coverRect(ctx.layers, n, PAD));

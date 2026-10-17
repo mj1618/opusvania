@@ -16,6 +16,7 @@
  * apply the camera to the layers -> SceneRenderer.update -> CharacterRenderer.update ->
  * PickupRenderer.update -> PostStage.update -> hud -> overlay. `present()` then draws the frame.
  */
+import { TexturePool } from 'pixi.js';
 import { HitboxOverlay } from '../debug/overlay';
 import type { Game } from '../game';
 import { isGreybox } from '../scene/room';
@@ -64,18 +65,20 @@ export function playerView(prev: PlayerState, cur: PlayerState, alpha: number): 
 
 export class RenderStage {
   readonly lights = new LightRegistry();
-  readonly ctx: RenderContext;
-  readonly scene: SceneRenderer;
-  readonly character: CharacterRenderer;
-  readonly enemies: EnemyRenderer;
-  readonly pickups: PickupRenderer;
-  readonly goal: GoalRenderer;
+  ctx!: RenderContext;
+  /** The room's renderers: rebuilt whenever she goes into another room (`rebuild`, render/lifecycle.ts). */
+  scene!: SceneRenderer;
+  character!: CharacterRenderer;
+  enemies!: EnemyRenderer;
+  pickups!: PickupRenderer;
+  goal!: GoalRenderer;
   /** Giving, drawn: the glint she gives in flight, it being received, a calmed creature's warmth (memory/giving-render.md). */
-  readonly giving: GivingRenderer;
+  giving!: GivingRenderer;
   /** The moth swarm leaving without her (memory/swarm.md). */
-  readonly swarm: SwarmRenderer;
+  swarm!: SwarmRenderer;
+  post!: PostStage;
+  /** The HUD and the debug overlay stay for the whole session (they read the sim, not the room's art). */
   readonly hud: Hud;
-  readonly post: PostStage;
   readonly overlay: HitboxOverlay;
   /** Seconds of render time since boot. */
   clock = 0;
@@ -85,11 +88,16 @@ export class RenderStage {
    * read (the audio director hears the camera here); render knows nothing of them.
    */
   readonly afterUpdate = new Set<(dt: number) => void>();
+  /** Called after the room's renderers were rebuilt for another room (with its id). */
+  readonly onRoom = new Set<(room: string) => void>();
   /** The camera and player as last drawn. */
   view: CameraView;
   drawn: PlayerView;
-  private cam: CameraState;
-  private prevCam: CameraState;
+  /** The room the renderers are built for, and how many times they have been built. */
+  builtFor = '';
+  builds = 0;
+  private cam!: CameraState;
+  private prevCam!: CameraState;
   private pending: SimEvent[] = [];
   /** A blow landing shoves the view a few px (added at view time; the follow camera never sees it). */
   private readonly kick = new CameraKick();
@@ -101,18 +109,71 @@ export class RenderStage {
   /** Leaving the room (a black fade over the exit's hold) and the dip of a caught fall: camera/room-fade.ts. */
   private readonly roomFade: RoomFade;
   /** The room's scripted beats: the hatch kick, the lean toward the swarm (camera/beats.ts). */
-  private readonly beats: CameraBeats;
+  private beats!: CameraBeats;
   /** The follow camera's tuning for this room (`room.camera` framing over `cameraTuning`). */
-  private readonly ct: CameraTuning;
+  private ct!: CameraTuning;
+  /** Post-processing as the page booted: a greybox room turns it off, a painted one back to this. */
+  private readonly postWanted = POST.enabled;
 
   constructor(
     private readonly ga: GameApp,
     private readonly game: Game,
   ) {
     const scene = game.scene;
-    this.ct = cameraFor(scene);
     this.roomFade = new RoomFade(scene.camera?.fadeIn ?? 0);
+    this.hud = new Hud();
+    this.overlay = new HitboxOverlay(scene);
+    ga.root.addChild(this.dip.layer, this.roomFade.layer, this.hud.layer, this.overlay.layer);
+    this.build();
+    // Boot: the room comes up from black (if it says so). Not when booted paused (`?manual`: the tools
+    // and tests want the picture at once); `__game.load()` restarts with the fade.
+    if (game.mode !== 'manual') this.roomFade.fadeIn();
+    this.view = lerpCamera(this.prevCam, this.cam, 1);
+    this.drawn = playerView(game.prev.player, game.state.player, 1);
+    // The camera steps once per sim frame so it is as deterministic as the sim.
+    let state = game.state;
+    game.afterStep.add((events) => {
+      // Another room (memory/world.md): tear the old room's renderers down and build the new one's.
+      const rebuilt = game.scene.id !== this.builtFor;
+      if (rebuilt) this.rebuild();
+      const fade = events.find((e) => e.type === 'fade');
+      if (fade?.type === 'fade') {
+        const p = game.state.player;
+        this.reformShot.fade(fade.frames, Math.hypot(p.safeX - fade.x, p.safeY - fade.y));
+      }
+      const v = ga.view();
+      if (events.some((e) => e.type === 'spawn')) {
+        const from = this.followView;
+        this.cam = createCamera(game.state, game.scene, this.ct, v.w, v.h);
+        this.prevCam = { ...this.cam };
+        // A re-form glides there under a dip; a restart (a new state) dips (or fades up from black, if
+        // the room says so); a teleport just cuts; into another room the room fade lifts (no glide
+        // from a view of the old room).
+        if (rebuilt) this.reformShot.clear();
+        else if (events.some((e) => e.type === 'reform')) this.reformShot.reform(from, this.followView);
+        else if (game.state !== state) {
+          this.reformShot.restart();
+          this.roomFade.fadeIn();
+        } else this.reformShot.clear();
+        state = game.state;
+      } else {
+        resizeCamera(this.cam, game.scene, v.w, v.h, this.ct);
+        this.prevCam = { ...this.cam };
+        stepCamera(this.cam, game.state, game.scene, this.ct);
+      }
+      this.beats.onStep(events, game.state.frame);
+      this.pending.push(...events);
+    });
+  }
+
+  /** Builds every renderer of the room being played (`game.scene`). */
+  private build(): void {
+    const ga = this.ga;
+    const game = this.game;
+    const scene = game.scene;
+    this.ct = cameraFor(scene);
     this.beats = new CameraBeats(scene.camera);
+    this.roomFade.setRoomFadeIn(scene.camera?.fadeIn ?? 0);
     // The room's look first: shaders are built with its zone edges and key light (room-look.ts).
     setRoomLook(scene);
     this.ctx = {
@@ -138,58 +199,39 @@ export class RenderStage {
     this.post = new PostStage(this.ctx, this.scene.layers.root);
     // Greybox (memory/greybox.md): no post-processing, and the creatures are their boxes (drawn by
     // the greybox module), not their painted bodies.
+    POST.enabled = isGreybox(scene) ? false : this.postWanted;
     if (isGreybox(scene)) {
-      POST.enabled = false;
       L.enemies.visible = false;
       L.enemiesFront.visible = false;
     }
-    this.hud = new Hud();
-    this.overlay = new HitboxOverlay(scene);
-    ga.root.addChild(
-      this.scene.layers.root,
-      this.dip.layer,
-      this.roomFade.layer,
-      this.hud.layer,
-      this.overlay.layer,
-    );
-
-    const v0 = ga.view();
-    this.cam = createCamera(game.state, scene, this.ct, v0.w, v0.h);
-    // Boot: the room comes up from black (if it says so). Not when booted paused (`?manual`: the tools
-    // and tests want the picture at once); `__game.load()` restarts with the fade.
-    if (game.mode !== 'manual') this.roomFade.fadeIn();
+    this.overlay.setScene(scene);
+    ga.root.addChildAt(this.scene.layers.root, 0);
+    const v = ga.view();
+    this.cam = createCamera(game.state, scene, this.ct, v.w, v.h);
     this.prevCam = { ...this.cam };
-    this.view = lerpCamera(this.prevCam, this.cam, 1);
-    this.drawn = playerView(game.prev.player, game.state.player, 1);
-    // The camera steps once per sim frame so it is as deterministic as the sim.
-    let state = game.state;
-    game.afterStep.add((events) => {
-      const fade = events.find((e) => e.type === 'fade');
-      if (fade?.type === 'fade') {
-        const p = game.state.player;
-        this.reformShot.fade(fade.frames, Math.hypot(p.safeX - fade.x, p.safeY - fade.y));
-      }
-      const v = ga.view();
-      if (events.some((e) => e.type === 'spawn')) {
-        const from = this.followView;
-        this.cam = createCamera(game.state, scene, this.ct, v.w, v.h);
-        this.prevCam = { ...this.cam };
-        // A re-form glides there under a dip; a restart (a new state) dips (or fades up from black, if
-        // the room says so); a teleport just cuts.
-        if (events.some((e) => e.type === 'reform')) this.reformShot.reform(from, this.followView);
-        else if (game.state !== state) {
-          this.reformShot.restart();
-          this.roomFade.fadeIn();
-        } else this.reformShot.clear();
-        state = game.state;
-      } else {
-        resizeCamera(this.cam, scene, v.w, v.h, this.ct);
-        this.prevCam = { ...this.cam };
-        stepCamera(this.cam, game.state, scene, this.ct);
-      }
-      this.beats.onStep(events, game.state.frame);
-      this.pending.push(...events);
-    });
+    this.builtFor = scene.id;
+    this.builds++;
+  }
+
+  /** Frees every renderer of the room (render/lifecycle.ts). */
+  private teardown(): void {
+    this.post.destroy();
+    // The tree first (it holds every renderer's display objects, so their geometries are found), then
+    // what each renderer keeps outside it (listeners, timers).
+    this.scene.destroy();
+    this.character.destroy();
+    this.giving.destroy();
+    this.lights.clear();
+    // Filters borrow scratch textures from Pixi's pool (the post stage's are view-sized, a painted
+    // room's bakes are up to 4096 px square): the next room fills it again.
+    TexturePool.clear(true);
+  }
+
+  /** Tears the room's renderers down and builds them for the room now being played. */
+  rebuild(): void {
+    this.teardown();
+    this.build();
+    for (const fn of this.onRoom) fn(this.builtFor);
   }
 
   /** The follow camera's own view (ignoring any override), at the latest sim frame. */
@@ -263,6 +305,8 @@ export class RenderStage {
       enemies: this.game.state.enemies,
       goal: this.game.state.goal,
       lures: this.game.state.lures,
+      save: this.game.state.save,
+      rest: this.game.state.rest,
     };
     this.scene.layers.applyCamera(view);
     this.scene.update(dt, this.clock, view, sim);

@@ -21,8 +21,19 @@
  * - Anything the character is behind turns translucent (`fadeTo`) until it has passed.
  * - Layout is seeded: the same every run, different on every screen of the scene.
  */
-import { BlurFilter, Container, Graphics, Matrix, Rectangle, RenderTexture, Sprite, Texture } from 'pixi.js';
+import {
+  BlurFilter,
+  Container,
+  type Filter,
+  Graphics,
+  Matrix,
+  Rectangle,
+  RenderTexture,
+  Sprite,
+  Texture,
+} from 'pixi.js';
 import { SAFE_H, SAFE_W } from '../../contract';
+import { shareTexture } from '../../lifecycle';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { fxDebug } from '../lib/fx-debug';
 import {
@@ -192,7 +203,7 @@ function hazeTexture(): Texture {
     }
     c2.putImageData(img, 0, 0);
   }
-  hazeTex = Texture.from(canvas);
+  hazeTex = shareTexture(Texture.from(canvas));
   return hazeTex;
 }
 
@@ -223,6 +234,13 @@ export class ForegroundLayer implements EnvModule {
     near: new Container({ label: 'fg-near' }),
   };
   private pieces: Piece[] = [];
+  /** Baked atlases (freed with the room, used or not). */
+  private readonly atlases: RenderTexture[] = [];
+
+  destroy(): void {
+    for (const a of this.atlases) if (!a.source.destroyed) a.destroy(true);
+    this.atlases.length = 0;
+  }
   /** Layer y of the frame's top edge when the camera rests on the ground. */
   private groundTop = 0;
   /** The lowest walk line near each `WALK_STEP` px of world x (see `walkClear`). */
@@ -490,8 +508,11 @@ export class ForegroundLayer implements EnvModule {
     again.filters = [new BlurFilter({ strength: blur, quality: 4, resolution: 1 })];
     holder.addChild(again);
     renderer.render({ container: holder, target: atlas, clear: true, clearColor: [0, 0, 0, 0] });
+    for (const f of [...(soft.filters as Filter[]), ...(again.filters as Filter[])]) f.destroy();
     holder.destroy({ children: true, context: true });
     raw.destroy(true);
+    // The atlas is freed with the sprites cut from it (render/lifecycle.ts); with none it goes now.
+    this.atlases.push(atlas);
 
     for (const c of cells) {
       const p = c.p;
