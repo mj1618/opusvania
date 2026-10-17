@@ -113,7 +113,7 @@ describe('R7b wood-heart: placement and the seam', () => {
     expect([HEART.width, HEART.height]).toEqual([2560, 2816]);
     const down = HEART.exits?.find((e) => e.id === 'down');
     // World x 30144-30528: the hub's shaft (hub-local 2560-2944).
-    expect(HEART_AT).toEqual({ id: 'wood-heart', x: 28992, y: 7168 - HEART.height });
+    expect(HEART_AT).toEqual({ id: 'wood-heart', x: 28992, y: 9024 - HEART.height });
     expect(down && [28992 + down.from, 28992 + down.to]).toEqual([30144, 30528]);
     const w = seamWorld();
     expect(w.links['wood-heart#down']).toEqual({ to: 'wood-hollow', exit: 'n' });
@@ -125,14 +125,14 @@ describe('R7b wood-heart: placement and the seam', () => {
   it('the climb up the hub shaft carries on into the heart and up to the rest ledge; without claws it is a lock', () => {
     const w = seamWorld();
     const s = play({ room: 'wood-hollow', world: w });
-    s.g.teleport(2900, 2880);
+    s.g.teleport(2900, 1024);
     climb(s, 1, () => s.g.state.room === 'wood-heart' && s.feet().y < 2600, 2400, 14);
     expect(s.g.state.room).toBe('wood-heart');
     // On up the east face; across to the ledge's lip.
     expect(s.feet().x).toBeGreaterThan(1152);
     expect(s.feet().x).toBeLessThan(1536);
     const no = play({ room: 'wood-hollow', world: w, abilities: ['glide'] });
-    no.g.teleport(2900, 2880);
+    no.g.teleport(2900, 1024);
     climb(no, 1, () => no.g.state.room !== 'wood-hollow', 600, 14);
     expect(no.g.state.room).toBe('wood-hollow');
   });
@@ -146,7 +146,7 @@ describe('R7b wood-heart: placement and the seam', () => {
     for (let i = 0; i < 400 && !(s.g.state.room === 'wood-hollow' && s.g.state.player.grounded); i++)
       ev = ev.concat(s.run(0));
     expect(s.g.state.room).toBe('wood-hollow');
-    expect(s.feet().y).toBe(2880);
+    expect(s.feet().y).toBe(1024);
     expect(has(ev, 'fallCatch')).toBe(false);
   });
 });

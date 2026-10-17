@@ -162,7 +162,7 @@
       }
     ],
     "tatter": { "x": 3236, "y": 2112, "facing": -1, "when": "wood-root-ladder" },
-    "stage": { "oak": { "x": 2752, "y": -368, "top": -5716, "w": 384 } }
+    "stage": { "oak": { "x": 2752, "y": -368, "top": -3860, "w": 384 } }
   },
   "shots": {
     "wide": [

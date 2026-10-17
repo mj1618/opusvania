@@ -127,7 +127,7 @@
       },
       { "x": 1400, "y": 200, "text": "LANDMARK: the burrback's groove in F2 and the roof over the gap" }
     ],
-    "stage": { "oak": { "x": 15232, "y": 5440, "top": 92, "w": 384 } }
+    "stage": { "oak": { "x": 15232, "y": 5440, "top": 1948, "w": 384 } }
   },
   "shots": {
     "wide": [

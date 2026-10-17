@@ -174,7 +174,7 @@
       },
       { "x": 2600, "y": 200, "text": "LANDMARK: the long bough overhead, the glidewalk's line under it" }
     ],
-    "stage": { "oak": { "x": 8512, "y": 1984, "top": -3364, "w": 384 } }
+    "stage": { "oak": { "x": 8512, "y": 1984, "top": -1508, "w": 384 } }
   },
   "shots": {
     "wide": [

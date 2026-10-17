@@ -104,8 +104,8 @@ describe('the wood: placement (area 1 redesigned, world px)', () => {
     expect(placed('wood-burrow')).toEqual({ x: 15104, y: 4608, w: 4480, h: 1792 });
     expect(placed('wood-glidewalk')).toEqual({ x: 21824, y: 8064, w: 5760, h: 2368 });
     // The hollow oak at the bowl's lowest point; its floor is world y 10048 (R6's T4 and R8's floor).
-    expect(placed('wood-hollow')).toEqual({ x: 27584, y: 7168, w: 3840, h: 3248 });
-    expect(placed('wood-hawkers')).toEqual({ x: 31424, y: 7424, w: 3840, h: 2992 });
+    expect(placed('wood-hollow')).toEqual({ x: 27584, y: 9024, w: 3840, h: 1392 });
+    expect(placed('wood-hawkers')).toEqual({ x: 31424, y: 9024, w: 3840, h: 1392 });
     expect(placed('wood-silk')).toEqual({ x: 35264, y: 7424, w: 3840, h: 2992 });
     // The roots run under the hub, the clearing and the silk hall.
     expect(placed('wood-well')).toEqual({ x: 27584, y: 10416, w: 11264, h: 2240 });
@@ -853,10 +853,10 @@ describe('R7 wood-hollow: the hub, the hollow oak', () => {
     for (let i = 0; i < 200 && s.g.state.room !== 'wood-hollow'; i++) s.run(R);
     expect(s.g.state.room).toBe('wood-hollow');
     for (let i = 0; i < 60 && !s.g.state.player.grounded; i++) s.run(R);
-    expect(s.feet().y).toBe(2880);
+    expect(s.feet().y).toBe(1024);
     s.runTo(1280);
     s.run(0, 60);
-    expect(s.feet().y).toBe(2880);
+    expect(s.feet().y).toBe(1024);
     expect(s.events.some((e) => e.type === 'patchRest')).toBe(true);
     expect(s.events.find((e) => e.type === 'flagSet')).toMatchObject({ flag: 'wood-firefly-glimpse' });
     const glimpse = (getRoom('wood-hollow').triggers ?? []).find((t) => t.id === 'glimpse');
@@ -866,23 +866,23 @@ describe('R7 wood-hollow: the hub, the hollow oak', () => {
 
   it('one way on: east along the flat floor to the clearing at floor level, and back west to the glidewalk', () => {
     const s = play('wood-hollow', ['glide']);
-    s.g.teleport(1280, 2880);
+    s.g.teleport(1280, 1024);
     naive(s, () => s.g.state.room !== 'wood-hollow', 900);
     expect(s.g.state.room).toBe('wood-hawkers');
-    expect(s.feet().y).toBe(2624);
+    expect(s.feet().y).toBe(1024);
     const w = play('wood-hollow', ['glide']);
-    w.g.teleport(1280, 2880);
+    w.g.teleport(1280, 1024);
     glideOn(w, () => w.g.state.room !== 'wood-hollow', 900, -1);
     expect(w.g.state.room).toBe('wood-glidewalk');
   });
 
   it('the trunk: its walls slide without claws; with them she climbs to the top of the hub', () => {
     const no = play('wood-hollow', ['glide']);
-    no.g.teleport(2900, 2880);
+    no.g.teleport(2900, 1024);
     climb(no, 1, () => no.feet().x > 2950, 600, 14);
-    expect(no.feet().y).toBeGreaterThan(2400);
+    expect(no.feet().y).toBeGreaterThan(544);
     const s = play('wood-hollow', ['glide', 'wallJump']);
-    s.g.teleport(2900, 2880);
+    s.g.teleport(2900, 1024);
     climb(s, 1, () => s.feet().y <= 300, 1500, 14);
     expect(s.feet().y).toBeLessThanOrEqual(300);
   });
@@ -890,7 +890,7 @@ describe('R7 wood-hollow: the hub, the hollow oak', () => {
   it('the root mesh: no drop-through until she has climbed out of the roots, then a shortcut down to P4', () => {
     for (let x = 2580; x <= 2924; x += 48) {
       const d = play('wood-hollow', ['glide']);
-      d.g.teleport(x, 2880);
+      d.g.teleport(x, 1024);
       d.run(0, 5);
       const ev = d.run(D, 3).concat(d.run(D | J, 10), d.run(D, 40), d.run(0, 20));
       expect(has(ev, 'dropThrough'), `x ${x}`).toBe(false);
@@ -899,7 +899,7 @@ describe('R7 wood-hollow: the hub, the hollow oak', () => {
     const s = play('wood-hollow', ['glide']);
     s.g.state.save.flags.push('wood-climbout');
     s.run(0, 3);
-    s.g.teleport(2750, 2880);
+    s.g.teleport(2750, 1024);
     s.run(0, 5);
     s.run(D, 2);
     s.run(D | J, 6);
@@ -911,39 +911,39 @@ describe('R7 wood-hollow: the hub, the hollow oak', () => {
   it('the climb-out comes up through the mesh and lands on it, setting the flag', () => {
     const s = play('wood-well', ['glide', 'wallJump']);
     s.g.teleport(2750, 2112);
-    climb(s, 1, () => s.g.state.room === 'wood-hollow' && s.feet().y < 2860, 1800, 10);
+    climb(s, 1, () => s.g.state.room === 'wood-hollow' && s.feet().y < 1004, 1800, 10);
     expect(s.g.state.room).toBe('wood-hollow');
     for (let i = 0; i < 120 && !s.g.state.player.grounded; i++) s.run(0);
-    expect(s.feet().y).toBe(2880);
+    expect(s.feet().y).toBe(1024);
     expect(s.g.state.save.flags).toContain('wood-climbout');
   });
 
   it('the moth-stone and the first firefly sign are read on the hub floor; no camera zone changes the zoom on the floor', () => {
     const a = play('wood-hollow', ['glide']);
-    a.g.teleport(1800, 2880);
+    a.g.teleport(1800, 1024);
     expect(a.run(0, 20).find((e) => e.type === 'stoneRead')).toMatchObject({
       id: 'stone-oak',
       area: 'wood-floor',
     });
     const b = play('wood-hollow', ['glide']);
-    b.g.teleport(2300, 2880);
+    b.g.teleport(2300, 1024);
     expect(b.run(0, 60).find((e) => e.type === 'signRead')).toMatchObject({ id: 'sign-trunk' });
     const zones = getRoom('wood-hollow').camera?.zones ?? [];
     for (const z of zones) {
       expect(z.fit ?? false, z.id).toBe(false);
-      expect(z.y + z.h, z.id).toBeLessThanOrEqual(2560);
+      expect(z.y + z.h, z.id).toBeLessThanOrEqual(704);
     }
   });
 });
 
 describe("R8 wood-hawkers: the hawkers' clearing", () => {
   it("W7 hangs 312 over hummock B: the paper's jump-cut sweep puts it out, and the hawker leaves", () => {
-    const { hits, caught } = jumpCuts('wood-hawkers', 1920, 2432);
+    const { hits, caught } = jumpCuts('wood-hawkers', 1920, 832);
     expect(hits).toBeGreaterThanOrEqual(22);
     expect(caught).toBe(0);
     const s = play('wood-hawkers', ['glide']);
     for (let k = 2; k <= 18 && !has(s.events, 'lureSnuff'); k += 2) {
-      s.g.teleport(1920 - 100, 2432);
+      s.g.teleport(1920 - 100, 832);
       s.run(R, 1);
       s.run(J, k);
       s.run(J | A, 1);
@@ -957,23 +957,23 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
     expect((getRoom('wood-hawkers').lures ?? []).map((l) => l.id)).toEqual(['wick-hawk', 'wick-throw']);
   });
 
-  it('the throw gap: no jump or glide reaches the far ledge; caught by W-throw and thrown up-right, she clears the thorns', () => {
+  it('the throw gap: no jump or glide reaches the far ledge; caught by W-throw and thrown up-right, she clears the pit', () => {
     const g = play('wood-hawkers', ['glide']);
     const wi = (g.g.scene.lures ?? []).findIndex((l) => l.id === 'wick-throw');
     g.g.state.lures.hp[wi] = 0;
     g.g.state.lures.out[wi] = 1;
-    g.g.teleport(2400, 2624);
+    g.g.teleport(2400, 1024);
     g.run(0, 3);
     g.runTo(2540);
     g.run(R | J, 200);
-    expect(g.feet().y === 2304 && g.feet().x > 3008).toBe(false);
+    expect(g.feet().y === 704 && g.feet().x > 3008).toBe(false);
     for (const lead of [0, 40, 80]) {
       const s = play('wood-hawkers', ['glide']);
       for (const e of s.g.state.enemies) {
         e.mode = 'dead';
         e.gone = true;
       }
-      s.g.teleport(2500 - lead, 2624);
+      s.g.teleport(2500 - lead, 1024);
       s.run(0, 3);
       for (let i = 0; i < 40 && s.feet().x < 2540; i++) s.run(R);
       s.run(R | J, 14);
@@ -989,26 +989,38 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
     }
   });
 
+  it('a miss costs a hop: the pit under the throw has no thorns, and she jumps back onto the near ledge', () => {
+    expect(getRoom('wood-hawkers').thorns ?? []).toEqual([]);
+    const s = play('wood-hawkers', ['glide']);
+    s.g.teleport(2780, 1248);
+    s.run(0, 5);
+    expect(s.feet().y).toBe(1248);
+    s.run(L | J, 20);
+    s.run(L, 40);
+    expect(s.feet().y).toBe(1024);
+    expect(s.feet().x).toBeLessThan(2560);
+  });
+
   it('the slow line: down through the root hatch, the dark tunnel under the gap, up the hatch past the far ledge', () => {
     const s = play('wood-hawkers', ['glide']);
-    s.g.teleport(2352, 2624);
+    s.g.teleport(2352, 1024);
     s.run(0, 3);
     s.run(D, 2);
     s.run(D | J, 6);
     s.run(0, 60);
     // (Onto the root step in the shaft, then down into the tunnel.)
-    expect(s.feet().y).toBeGreaterThan(2624);
+    expect(s.feet().y).toBeGreaterThan(1024);
     s.run(D, 2);
     s.run(D | J, 6);
-    for (let i = 0; i < 60 && !(s.g.state.player.grounded && s.feet().y === 2960); i++) s.run(0);
-    expect(s.feet().y).toBe(2960);
-    const f = naive(s, () => s.feet().y === 2624 && s.feet().x > 3456, 900);
+    for (let i = 0; i < 60 && !(s.g.state.player.grounded && s.feet().y === 1360); i++) s.run(0);
+    expect(s.feet().y).toBe(1360);
+    const f = naive(s, () => s.feet().y === 1024 && s.feet().x > 3456, 900);
     expect(f).toBeGreaterThan(0);
   });
 
   it('the find: the bark in the far ledge hides the moonlit hollow (quick wings); P-dark rests her', () => {
     const s = play('wood-hawkers', ['glide']);
-    s.g.teleport(3520, 2624);
+    s.g.teleport(3520, 1024);
     expect(has(s.run(0, 40), 'patchRest')).toBe(true);
     s.run(L, 10);
     for (let k = 0; k < 4; k++) s.run(L | A, 1).concat(s.run(0, 20));
@@ -1023,7 +1035,7 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
       e.mode = 'dead';
       e.gone = true;
     }
-    s.g.teleport(3760, 2624);
+    s.g.teleport(3760, 1024);
     glideOn(s, () => s.g.state.room !== 'wood-hawkers', 3000, -1);
     expect(s.g.state.room).toBe('wood-hollow');
   });
@@ -1044,7 +1056,7 @@ describe('R9 wood-silk: the silk hall', () => {
     const room = getRoom('wood-silk');
     expect(solidAt(room, room.spawn.x - 20, room.spawn.y - 80, 40, 80)).toBe(false);
     const s = play('wood-hawkers', ['glide']);
-    s.g.teleport(3760, 2624);
+    s.g.teleport(3760, 1024);
     for (let i = 0; i < 200 && s.g.state.room !== 'wood-silk'; i++) s.run(R);
     expect(s.g.state.room).toBe('wood-silk');
     expect(s.feet().y).toBe(2624);
@@ -1256,7 +1268,7 @@ describe('R10 wood-well: the root stair, the old burrback, glade 2, the climb-ou
 
   it('a fade in the pit re-forms her at P-chute by the pit door (the room re-form point), not back at the hub', () => {
     const s = play('wood-hollow', ['glide']);
-    s.g.teleport(1280, 2880);
+    s.g.teleport(1280, 1024);
     s.run(0, 40);
     expect(s.g.state.save.patch).toEqual({ room: 'wood-hollow', id: 'p3' });
     s.g.goto('wood-well', 4200, 2112);
@@ -1276,7 +1288,7 @@ describe('R10 wood-well: the root stair, the old burrback, glade 2, the climb-ou
 describe('the firefly signs', () => {
   it("at the trunk's foot in the hub and in the silk hall's dark half: read by standing still", () => {
     const a = play('wood-hollow', ['glide']);
-    a.g.teleport(2300, 2880);
+    a.g.teleport(2300, 1024);
     expect(a.run(0, 60).find((e) => e.type === 'signRead')).toMatchObject({ id: 'sign-trunk' });
     const b = play('wood-silk', ['glide']);
     b.g.teleport(3650, 2624);

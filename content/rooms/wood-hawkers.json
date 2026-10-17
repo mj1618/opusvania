@@ -3,54 +3,53 @@
   "title": "The hawkers' clearing (greybox)",
   "region": "wood",
   "width": 3840,
-  "height": 2992,
-  "spawn": { "x": 300, "y": 2624 },
+  "height": 1392,
+  "spawn": { "x": 300, "y": 1024 },
   "edgeKick": false,
   "abilities": ["glide"],
   "art": { "mode": "greybox", "labels": false },
   "camera": { "realFallPx": 250, "targetSmoothY": 10, "smoothYFastFall": 6, "fallLookahead": 320 },
   "exits": [
-    { "id": "w", "edge": "w", "from": 2368, "to": 2624 },
-    { "id": "e", "edge": "e", "from": 2368, "to": 2624 }
+    { "id": "w", "edge": "w", "from": 768, "to": 1024 },
+    { "id": "e", "edge": "e", "from": 768, "to": 1024 }
   ],
-  "patches": [{ "id": "p-dark", "x": 3530, "y": 2624 }],
+  "patches": [{ "id": "p-dark", "x": 3530, "y": 1024 }],
   "solids": [
-    { "tag": "ground", "x": 0, "y": 2624, "w": 1088, "h": 368 },
-    { "tag": "root", "x": 1088, "y": 2432, "w": 384, "h": 560 },
-    { "tag": "ground", "x": 1472, "y": 2688, "w": 256, "h": 304 },
-    { "tag": "root", "x": 1728, "y": 2432, "w": 384, "h": 560 },
-    { "tag": "ground", "x": 2112, "y": 2624, "w": 192, "h": 240 },
-    { "tag": "ground", "x": 2400, "y": 2624, "w": 160, "h": 240 },
-    { "tag": "ground", "x": 2560, "y": 2848, "w": 448, "h": 16 },
-    { "tag": "root", "x": 3008, "y": 2304, "w": 448, "h": 160 },
-    { "tag": "root", "x": 3008, "y": 2464, "w": 192, "h": 400 },
-    { "tag": "root", "x": 3200, "y": 2624, "w": 256, "h": 240 },
-    { "tag": "ground", "x": 3456, "y": 2624, "w": 144, "h": 240 },
-    { "tag": "ground", "x": 3712, "y": 2624, "w": 128, "h": 240 },
-    { "tag": "ground", "x": 2112, "y": 2960, "w": 1728, "h": 32 },
-    { "tag": "ground", "x": 2112, "y": 2864, "w": 192, "h": 96 },
-    { "tag": "ground", "x": 3712, "y": 2864, "w": 128, "h": 96 }
+    { "tag": "ground", "x": 0, "y": 1024, "w": 1088, "h": 368 },
+    { "tag": "root", "x": 1088, "y": 832, "w": 384, "h": 560 },
+    { "tag": "ground", "x": 1472, "y": 1088, "w": 256, "h": 304 },
+    { "tag": "root", "x": 1728, "y": 832, "w": 384, "h": 560 },
+    { "tag": "ground", "x": 2112, "y": 1024, "w": 192, "h": 240 },
+    { "tag": "ground", "x": 2400, "y": 1024, "w": 160, "h": 240 },
+    { "tag": "ground", "x": 2560, "y": 1248, "w": 448, "h": 16 },
+    { "tag": "root", "x": 3008, "y": 704, "w": 448, "h": 160 },
+    { "tag": "root", "x": 3008, "y": 864, "w": 192, "h": 400 },
+    { "tag": "root", "x": 3200, "y": 1024, "w": 256, "h": 240 },
+    { "tag": "ground", "x": 3456, "y": 1024, "w": 144, "h": 240 },
+    { "tag": "ground", "x": 3712, "y": 1024, "w": 128, "h": 240 },
+    { "tag": "ground", "x": 2112, "y": 1360, "w": 1728, "h": 32 },
+    { "tag": "ground", "x": 2112, "y": 1264, "w": 192, "h": 96 },
+    { "tag": "ground", "x": 3712, "y": 1264, "w": 128, "h": 96 }
   ],
   "oneWays": [
-    { "tag": "root", "x": 2304, "y": 2624, "w": 96 },
-    { "tag": "root", "x": 2304, "y": 2800, "w": 96 },
-    { "tag": "root", "x": 3600, "y": 2800, "w": 112 },
-    { "tag": "root", "x": 3600, "y": 2624, "w": 112 },
-    { "tag": "root", "x": 3456, "y": 2464, "w": 96 }
+    { "tag": "root", "x": 2304, "y": 1024, "w": 96 },
+    { "tag": "root", "x": 2304, "y": 1200, "w": 96 },
+    { "tag": "root", "x": 3600, "y": 1200, "w": 112 },
+    { "tag": "root", "x": 3600, "y": 1024, "w": 112 },
+    { "tag": "root", "x": 3456, "y": 864, "w": 96 }
   ],
-  "thorns": [{ "id": "thorns-gap", "x": 2560, "y": 2816, "w": 448, "h": 32 }],
-  "bark": [{ "id": "bark-hollow", "x": 3392, "y": 2464, "w": 64, "h": 160 }],
-  "hollows": [{ "id": "hollow-wings", "x": 3216, "y": 2480, "w": 160, "h": 144, "upgrade": "quickWings" }],
+  "bark": [{ "id": "bark-hollow", "x": 3392, "y": 864, "w": 64, "h": 160 }],
+  "hollows": [{ "id": "hollow-wings", "x": 3216, "y": 880, "w": 160, "h": 144, "upgrade": "quickWings" }],
   "lures": [
-    { "id": "wick-hawk", "kind": "wick", "x": 1920, "y": 2120 },
-    { "id": "wick-throw", "kind": "wick", "x": 2700, "y": 2330 }
+    { "id": "wick-hawk", "kind": "wick", "x": 1920, "y": 520 },
+    { "id": "wick-throw", "kind": "wick", "x": 2700, "y": 730 }
   ],
   "enemies": [
     {
       "id": "hawk-first",
       "kind": "hawker",
       "x": 1640,
-      "y": 2200,
+      "y": 600,
       "facing": -1,
       "radius": 160,
       "hp": 3,
@@ -60,7 +59,7 @@
       "id": "hawk-throw",
       "kind": "hawker",
       "x": 2700,
-      "y": 2150,
+      "y": 550,
       "facing": -1,
       "radius": 160,
       "hp": 3,
@@ -75,62 +74,58 @@
   ],
   "marks": {
     "notes": [
-      { "x": 100, "y": 2200, "text": "R8 wood-hawkers  PURPOSE: the hawker, and being caught is being prey" },
+      { "x": 100, "y": 600, "text": "R8 wood-hawkers  PURPOSE: the hawker, and being caught is being prey" },
       {
         "x": 1000,
-        "y": 2300,
+        "y": 700,
         "text": "WEST: hawker A over the hummocks at W7, a safe floor: read its tell (the reticle), step aside, cut it in its stall"
       },
       {
         "x": 1700,
-        "y": 2060,
+        "y": 460,
         "text": "W7 wick-hawk 312 over hummock B: a jump-cut from inside the dive lane"
       },
       {
         "x": 2150,
-        "y": 2300,
-        "text": "EAST: the throw gap. W-throw hangs over a thorn-floored gap; hawker B hunts its orbit"
+        "y": 700,
+        "text": "EAST: the throw gap. W-throw hangs over a dark pit (no thorns: a miss is a hop back up); hawker B hunts its orbit"
       },
       {
         "x": 2150,
-        "y": 2340,
+        "y": 740,
         "text": "fast line: jump into its pull, caught; B tells and dives at the orbit: beat free early, throw up-right onto the far ledge (2304)"
       },
       {
         "x": 2150,
-        "y": 2380,
+        "y": 780,
         "text": "a jump or a glide can't reach the far ledge (it is 320 up): the throw is the way"
       },
       {
         "x": 2250,
-        "y": 2920,
+        "y": 1320,
         "text": "SLOW LINE: drop through the root hatch (down + jump) into the dark tunnel under the gap; up through the hatch at 3600 (~15 s)"
       },
-      {
-        "x": 3020,
-        "y": 2260,
-        "text": "the far ledge: snuff W-throw from here with a jump-cut, and B leaves"
-      },
+      { "x": 3020, "y": 660, "text": "the far ledge: snuff W-throw from here with a jump-cut, and B leaves" },
       {
         "x": 3230,
-        "y": 2440,
+        "y": 840,
         "text": "FIND: the bark in the far ledge's east face hides the MOONLIT HOLLOW (quick wings: beat free in 2)"
       },
-      { "x": 3480, "y": 2560, "text": "P-dark moon patch" },
+      { "x": 3480, "y": 960, "text": "P-dark moon patch" },
       {
         "x": 1000,
-        "y": 2400,
+        "y": 800,
         "text": "LANDMARK: twin hummocks under the hawker's lane; the oak's bulk behind the west arch"
       }
     ],
-    "tatter": { "x": 3620, "y": 2624, "facing": -1, "when": "wood-root-ladder" },
-    "stage": { "oak": { "x": -1088, "y": 2624, "top": -2724, "w": 384 } }
+    "tatter": { "x": 3620, "y": 1024, "facing": -1, "when": "wood-root-ladder" },
+    "stage": { "oak": { "x": -1088, "y": 1024, "top": -2468, "w": 384 } }
   },
   "shots": {
     "wide": [
-      { "name": "hummocks", "x": 1500, "y": 2624 },
-      { "name": "throw", "x": 2800, "y": 2624 },
-      { "name": "dark", "x": 3500, "y": 2624 }
+      { "name": "hummocks", "x": 1500, "y": 1024 },
+      { "name": "throw", "x": 2800, "y": 1024 },
+      { "name": "dark", "x": 3500, "y": 1024 }
     ]
   }
 }

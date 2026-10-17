@@ -41,7 +41,7 @@
     "stage": {
       "circlers": [{ "lure": "wick-caught", "count": 7, "r": 95 }],
       "props": [{ "kind": "deadMoth", "x": 1300, "y": 1312, "facing": -1 }],
-      "oak": { "x": 19072, "y": 5312, "top": -36, "w": 384 }
+      "oak": { "x": 19072, "y": 5312, "top": 1820, "w": 384 }
     },
     "notes": [
       { "x": 300, "y": 120, "text": "R3 wood-wicks  PURPOSE: teach (pull, Caught and snuff by consequence)" },

@@ -62,7 +62,7 @@
     "stage": {
       "bask": { "x": 400, "y": 1470, "zoom": 1.12, "secs": 3 },
       "twitch": { "x": 1350, "y": 1664, "r": 110, "catches": 2 },
-      "oak": { "x": 11392, "y": 3648, "top": -1700, "w": 384 }
+      "oak": { "x": 11392, "y": 3648, "top": 156, "w": 384 }
     },
     "notes": [
       { "x": 640, "y": 120, "text": "R5 wood-glade  PURPOSE: glade (glade 1, glide's lock room)" },

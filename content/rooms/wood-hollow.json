@@ -3,8 +3,8 @@
   "title": "The hollow oak: the hub (greybox)",
   "region": "wood",
   "width": 3840,
-  "height": 3248,
-  "spawn": { "x": 1500, "y": 2880 },
+  "height": 1392,
+  "spawn": { "x": 1500, "y": 1024 },
   "edgeKick": false,
   "abilities": ["glide"],
   "art": { "mode": "greybox", "labels": false },
@@ -19,30 +19,30 @@
         "x": 2560,
         "y": 0,
         "w": 384,
-        "h": 2560,
-        "bounds": { "x": 2176, "y": 0, "w": 1152, "h": 3248 }
+        "h": 704,
+        "bounds": { "x": 2176, "y": 0, "w": 1152, "h": 1392 }
       }
     ]
   },
   "exits": [
-    { "id": "w", "edge": "w", "from": 2624, "to": 2880 },
-    { "id": "e", "edge": "e", "from": 2624, "to": 2880 },
+    { "id": "w", "edge": "w", "from": 768, "to": 1024 },
+    { "id": "e", "edge": "e", "from": 768, "to": 1024 },
     { "id": "climb", "edge": "s", "from": 2560, "to": 2944 },
     { "id": "n", "edge": "n", "from": 2560, "to": 2944 }
   ],
-  "patches": [{ "id": "p3", "x": 1280, "y": 2880 }],
-  "mothStones": [{ "id": "stone-oak", "x": 1800, "y": 2880, "area": "wood-floor" }],
-  "signs": [{ "id": "sign-trunk", "x": 2300, "y": 2880, "flag": "wood-sign-trunk", "rhythm": ".-.." }],
+  "patches": [{ "id": "p3", "x": 1280, "y": 1024 }],
+  "mothStones": [{ "id": "stone-oak", "x": 1800, "y": 1024, "area": "wood-floor" }],
+  "signs": [{ "id": "sign-trunk", "x": 2300, "y": 1024, "flag": "wood-sign-trunk", "rhythm": ".-.." }],
   "triggers": [
-    { "id": "glimpse", "x": 1152, "y": 2688, "w": 256, "h": 192, "sets": "wood-firefly-glimpse", "hold": 150 }
+    { "id": "glimpse", "x": 1152, "y": 832, "w": 256, "h": 192, "sets": "wood-firefly-glimpse", "hold": 150 }
   ],
   "solids": [
-    { "tag": "ground", "x": 0, "y": 2880, "w": 2560, "h": 368 },
-    { "tag": "ground", "x": 2944, "y": 2880, "w": 896, "h": 368 },
-    { "tag": "trunk", "x": 2496, "y": 0, "w": 64, "h": 2720, "kick": "east" },
-    { "tag": "trunk", "x": 2944, "y": 0, "w": 64, "h": 2720, "kick": "west" }
+    { "tag": "ground", "x": 0, "y": 1024, "w": 2560, "h": 368 },
+    { "tag": "ground", "x": 2944, "y": 1024, "w": 896, "h": 368 },
+    { "tag": "trunk", "x": 2496, "y": 0, "w": 64, "h": 864, "kick": "east" },
+    { "tag": "trunk", "x": 2944, "y": 0, "w": 64, "h": 864, "kick": "west" }
   ],
-  "oneWays": [{ "tag": "root", "x": 2560, "y": 2880, "w": 384, "noDrop": "wood-climbout" }],
+  "oneWays": [{ "tag": "root", "x": 2560, "y": 1024, "w": 384, "noDrop": "wood-climbout" }],
   "routes": [
     { "from": "spawn", "to": "p3" },
     { "from": "w", "to": "p3" },
@@ -55,66 +55,66 @@
     { "from": "n", "to": "p3", "oneWay": true }
   ],
   "marks": {
-    "tatter": { "x": 2700, "y": 2880, "facing": 1, "want": [2752, 900], "until": "wood-root-ladder" },
+    "tatter": { "x": 2700, "y": 1024, "facing": 1, "want": [2752, -956], "until": "wood-root-ladder" },
     "notes": [
       {
         "x": 40,
-        "y": 2500,
+        "y": 644,
         "text": "R7 wood-hollow  PURPOSE: the question (HK's Dirtmouth): a rest, and one way up you can't take yet"
       },
-      { "x": 40, "y": 2560, "text": "W: in from wood-glidewalk at floor level" },
+      { "x": 40, "y": 704, "text": "W: in from wood-glidewalk at floor level" },
       {
         "x": 1150,
-        "y": 2620,
+        "y": 764,
         "text": "P3 moon patch. THE GLIMPSE (held beat): the camera looks up the trunk; the firefly hangs W-ff inside it (wood-heart)"
       },
       {
         "x": 1700,
-        "y": 2780,
+        "y": 924,
         "text": "the MOTH-STONE: the area on the map, the roots faint below; its carving: moths climbing the oak"
       },
       {
         "x": 2200,
-        "y": 2780,
+        "y": 924,
         "text": "the first firefly sign at the trunk's foot: a ring of picked glow-cap stumps"
       },
       {
         "x": 2580,
-        "y": 2600,
+        "y": 744,
         "text": "Tatter under the trunk, looking up: it can't climb. Her kicks slide too (claws: R10's glade 2)"
       },
       {
         "x": 2580,
-        "y": 2960,
+        "y": 1104,
         "text": "the root mesh (one-way; no drop-through until wood-climbout): moonlight from below; up from the climb-out, then the shortcut down to P4"
       },
       {
         "x": 2580,
-        "y": 1400,
-        "text": "THE TRUNK (wall jump): both inner faces; the top (2560-2944, world x 30144-30528) opens into wood-heart (R7b) when it lands"
+        "y": 244,
+        "text": "THE TRUNK (wall jump): both inner faces, ~860 of it here (shortened), then up through N into wood-heart (R7b)"
       },
-      { "x": 3300, "y": 2780, "text": "E arch: the one way on, east to the hawkers' clearing" },
-      { "x": 400, "y": 1600, "text": "LANDMARK: the hollow oak, the moon column down its trunk" }
+      { "x": 3300, "y": 924, "text": "E arch: the one way on, east to the hawkers' clearing" },
+      { "x": 400, "y": 20, "text": "LANDMARK: the hollow oak, the moon column down its trunk" }
     ],
     "stage": {
-      "ladders": [{ "flag": "wood-root-ladder", "x": 2928, "y0": 0, "y1": 2880 }],
+      "ladders": [{ "flag": "wood-root-ladder", "x": 2928, "y0": 0, "y1": 1024 }],
       "glimpse": {
         "flag": "wood-firefly-glimpse",
         "x": 2752,
-        "y": 900,
+        "y": -956,
         "zoom": 0.75,
         "secs": 3,
-        "path": [[3600, 2300], [3150, 1500], [2780, 1000], [2860, 240]],
-        "away": [[2860, 240], [2800, -200], [2760, -900]]
+        "path": [[3600, 444], [3150, -356], [2780, -856], [2860, -1616]],
+        "away": [[2860, -1616], [2800, -2056], [2760, -2756]]
       },
-      "oak": { "x": 2752, "y": 2880, "top": -2468, "w": 384 }
+      "oak": { "x": 2752, "y": 1024, "top": -2468, "w": 384 }
     }
   },
   "shots": {
     "wide": [
-      { "name": "patch", "x": 1280, "y": 2880 },
-      { "name": "trunk-foot", "x": 2750, "y": 2880 },
-      { "name": "trunk", "x": 2750, "y": 1200 }
+      { "name": "patch", "x": 1280, "y": 1024 },
+      { "name": "trunk-foot", "x": 2750, "y": 1024 },
+      { "name": "trunk", "x": 2750, "y": 344 }
     ]
   }
 }
