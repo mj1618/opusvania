@@ -132,7 +132,7 @@
     { "id": "wick-landing", "kind": "wick", "x": 1800, "y": 640 },
     { "id": "wick-line", "kind": "wick", "x": 2434, "y": 860, "spin": 1 },
     { "id": "wick-bend", "kind": "wick", "x": 4150, "y": 1440, "spin": 1 },
-    { "id": "wick-ledge", "kind": "wick", "x": 5180, "y": 1800 },
+    { "id": "wick-ledge", "kind": "wick", "x": 4900, "y": 1840 },
     { "id": "wick-chain1", "kind": "wick", "x": 5818, "y": 1640 },
     { "id": "wick-chain2", "kind": "wick", "x": 6718, "y": 1765 },
     { "id": "wick-pocket", "kind": "wick", "x": 7728, "y": 2100 }
@@ -146,6 +146,35 @@
       "facing": -1,
       "radius": 120,
       "hp": 5,
+      "guards": "wick-ledge"
+    },
+    {
+      "id": "ants-ledge-1",
+      "kind": "carrier",
+      "x": 4800,
+      "y": 1984,
+      "facing": 1,
+      "trail": [[5436, 1984]],
+      "guards": "wick-ledge"
+    },
+    {
+      "id": "ants-ledge-2",
+      "kind": "carrier",
+      "x": 4800,
+      "y": 1984,
+      "facing": 1,
+      "follow": "ants-ledge-1",
+      "phase": 0.33,
+      "guards": "wick-ledge"
+    },
+    {
+      "id": "ants-ledge-3",
+      "kind": "carrier",
+      "x": 4800,
+      "y": 1984,
+      "facing": 1,
+      "follow": "ants-ledge-1",
+      "phase": 0.67,
       "guards": "wick-ledge"
     }
   ],
@@ -192,7 +221,7 @@
       {
         "x": 4700,
         "y": 1700,
-        "text": "T4: a forgiving landing (the beetle's patrol starts 380 past the lip); W6 over the beetle at the chasm's edge"
+        "text": "T4: a forgiving landing (the beetle's patrol starts 380 past the lip); W6 beside the beetle, west of it: caught there, a throw right meets its braced front (the throw-cut flips it); ants from W6's pool to the root lip's crack"
       },
       {
         "x": 5400,

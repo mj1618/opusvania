@@ -125,8 +125,68 @@
       "x": 2400,
       "y": 2112,
       "facing": 1,
-      "radius": 560,
-      "sets": "wood-old-burrback-down"
+      "radius": 1000,
+      "sets": "wood-old-burrback-down",
+      "taproot": [3200, 3296],
+      "crack": "wood-den-cracked"
+    },
+    {
+      "id": "ants-nest-a-1",
+      "kind": "carrier",
+      "x": 5800,
+      "y": 1728,
+      "facing": -1,
+      "trail": [[5600, 1728], [5560, 1856], [3960, 1856]],
+      "guards": "wick-nest-a"
+    },
+    {
+      "id": "ants-nest-a-2",
+      "kind": "carrier",
+      "x": 5800,
+      "y": 1728,
+      "facing": -1,
+      "follow": "ants-nest-a-1",
+      "phase": 0.33,
+      "guards": "wick-nest-a"
+    },
+    {
+      "id": "ants-nest-a-3",
+      "kind": "carrier",
+      "x": 5800,
+      "y": 1728,
+      "facing": -1,
+      "follow": "ants-nest-a-1",
+      "phase": 0.67,
+      "guards": "wick-nest-a"
+    },
+    {
+      "id": "ants-nest-b-1",
+      "kind": "carrier",
+      "x": 4680,
+      "y": 1728,
+      "facing": -1,
+      "trail": [[4480, 1728], [4440, 1856], [3960, 1856]],
+      "guards": "wick-nest-b"
+    },
+    {
+      "id": "ants-nest-b-2",
+      "kind": "carrier",
+      "x": 4680,
+      "y": 1728,
+      "facing": -1,
+      "follow": "ants-nest-b-1",
+      "phase": 0.33,
+      "guards": "wick-nest-b"
+    },
+    {
+      "id": "ants-nest-b-3",
+      "kind": "carrier",
+      "x": 4680,
+      "y": 1728,
+      "facing": -1,
+      "follow": "ants-nest-b-1",
+      "phase": 0.67,
+      "guards": "wick-nest-b"
     },
     {
       "id": "dang-nest-a",
@@ -161,6 +221,7 @@
       "carpet": { "x0": 1980, "x1": 3540, "y": 2112 },
       "den": {
         "flag": "wood-old-burrback-down",
+        "crack": "wood-den-cracked",
         "plug": { "x": 2560, "y": 1536, "w": 384, "h": 64 },
         "column": { "x": 2752, "top": 0, "foot": 2112, "w": 384 },
         "breath": { "x": 2752, "y": 1820, "r": 520 },
@@ -201,7 +262,7 @@
       {
         "x": 4000,
         "y": 1500,
-        "text": "THE NEST: a low root hall where every carriers' trail ends, piled with wings; two lit pockets, a dangler over each"
+        "text": "THE NEST: a low root hall where every carriers' trail ends, piled with wings; two lit pockets, a dangler over each; ants carry wings from each pocket's pool to the crack at its west end"
       },
       {
         "x": 3880,

@@ -1147,7 +1147,9 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
   });
 
   it('both hawkers fly a rhythm round their lamps: A over the hummocks (taught on safe floor), B over the throw', () => {
-    const orbit = (getRoom('wood-hawkers').enemies ?? []).map((e) => [e.id, e.orbit]);
+    const orbit = (getRoom('wood-hawkers').enemies ?? [])
+      .filter((e) => e.kind === 'hawker')
+      .map((e) => [e.id, e.orbit]);
     expect(orbit).toEqual([
       ['hawk-first', 'wick-hawk'],
       ['hawk-throw', 'wick-throw'],
@@ -1245,13 +1247,16 @@ describe('R9 wood-silk: the silk hall', () => {
 
   it('the composition: a beetle in the pool, a dangler over the cut spot, one wick: one snuff sends both off', () => {
     const room = getRoom('wood-silk');
-    const guards = (room.enemies ?? []).filter((e) => e.guards === 'wick-s3').map((e) => e.kind);
+    const guards = (room.enemies ?? [])
+      .filter((e) => e.guards === 'wick-s3' && e.kind !== 'carrier')
+      .map((e) => e.kind);
     expect(guards.sort()).toEqual(['burrback', 'dangler']);
     const s = play('wood-silk', ['glide']);
     s.g.teleport(2740, 2624);
     const ev = s.run(R, 1).concat(s.run(A, 1), s.run(0, 30));
     expect(ev.find((e) => e.type === 'lureSnuff')).toMatchObject({ id: 'wick-s3' });
-    expect(ev.filter((e) => e.type === 'enemyDisperse').length).toBe(2);
+    const gone = ev.filter((e) => e.type === 'enemyDisperse').map((e) => ('id' in e ? e.id : ''));
+    expect(gone).toEqual(expect.arrayContaining(['burr-silk', 'dang-s3']));
   });
 
   it("the composition's beetle is fenced east of the flame: it never reaches the knob's landing (video r2: it killed 3 runs)", () => {
@@ -1455,6 +1460,24 @@ describe('R10 wood-well: the root stair, the nest, the den under the oak, the cl
     c.run(0, 3);
     climb(c, 1, () => c.g.state.room === 'wood-hollow' && c.feet().y < 3820, 900, 10);
     expect(c.g.state.room).toBe('wood-hollow');
+  });
+
+  it('the boss knows its den: the taproot span, its crack flag (render shares it), a range that reaches the taproot', () => {
+    const room = getRoom('wood-well');
+    const e = (room.enemies ?? []).find((q) => q.id === 'old-burr');
+    const tap = room.solids.find((q) => q.x === 3200 && q.tag === 'root');
+    expect(e && 'taproot' in e ? e.taproot : undefined).toEqual([tap?.x, (tap?.x ?? 0) + (tap?.w ?? 0)]);
+    expect(e && 'crack' in e ? e.crack : undefined).toBe('wood-den-cracked');
+    expect(room.marks?.stage?.den?.crack).toBe('wood-den-cracked');
+    expect((e?.x ?? 0) + (e?.radius ?? 0)).toBeGreaterThan(tap?.x ?? 0);
+  });
+
+  it('the carriers: every trail in the roots ends in the nest, and each line has its lamp', () => {
+    for (const id of ['wood-glidewalk', 'wood-silk', 'wood-well']) {
+      const ants = (getRoom(id).enemies ?? []).filter((e) => e.kind === 'carrier');
+      expect(ants.length, id).toBeGreaterThanOrEqual(3);
+      for (const a of ants) expect(a.guards, `${id} ${a.id}`).toBeDefined();
+    }
   });
 
   it('W-den hangs high in the den: a jump from the floor under it is caught, a stand is not', () => {

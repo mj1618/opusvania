@@ -35,7 +35,8 @@
         "text": "wood-rootshaft  PURPOSE: the west root road's climb (claws) up to R5's Z, through its root panel"
       },
       { "x": 20, "y": 760, "text": "catch ledges every ~420, alternating faces" }
-    ]
+    ],
+    "stage": { "oak": { "x": 13440, "y": 1144, "top": -2348, "w": 384 } }
   },
   "shots": { "wide": [{ "name": "shaft", "x": 2688, "y": 1120 }] }
 }

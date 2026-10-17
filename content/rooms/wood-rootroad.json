@@ -38,7 +38,8 @@
       { "x": 2200, "y": 640, "text": "W-roadside, a pocket lamp on the road" },
       { "x": 4200, "y": 640, "text": "root steps up east (64 each) to R10's road tunnel" },
       { "x": 7600, "y": 360, "text": "east: R10's tunnel over the den, the column, the nest's shaft" }
-    ]
+    ],
+    "stage": { "oak": { "x": 11136, "y": -384, "top": -3876, "w": 384 } }
   },
   "shots": { "wide": [{ "name": "foot", "x": 600, "y": 900 }, { "name": "steps", "x": 4600, "y": 772 }] }
 }

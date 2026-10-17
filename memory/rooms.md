@@ -135,6 +135,13 @@ snuff, bounce, L2.
   pocket (deepened to 1536); W-hi4 moved to (3980, 400) off the high ledge's reach. R6: a root step under T3's lip
   (2752-3008 @1664), thorns-2 768 wide. Each critical-path room names a `reform`. The descent from R9's floor to the
   den's door is ~0:45-1:05 for the human-like bots (the nest adds ~30 s; carriers will add more).
+- **Round 5b (creatures r5, 792b4be):** `old-burr` has `taproot: [3200, 3296]`, `crack: "wood-den-cracked"` (also in
+  `marks.stage.den`) and `radius` 1000 (at 560 it never reached the taproot). The carriers, three a line (a lead with
+  `trail`, two `follow` it at `phase` 0.33 / 0.67, all `guards` their lamp): R6 from W6's pool to the root lip's crack
+  (W6 now at (4900, 1840), west of the beetle: the throw meets its braced front); R8 from W7's pool at hummock B's
+  foot into the hatch, the tunnel, up the shaft to the hollow's bark (kept off hummock B: ants under W7 broke its
+  jump-cut); R9 under the composition to the bark panel; the nest, each pocket's pool to a crack at its west end.
+  Carrier trails shift with a room's `dy` in the generator (lib.shift).
 - A one-way's `noDrop` may name a flag (refuses drop-through until it is set).
 - A floor bark panel is hit by a down cut from the air (cut ~70-90 px over it, falling): each hit bounces
   her; cut as she lands and it hits with no bounce; a standing down cut does not reach it.

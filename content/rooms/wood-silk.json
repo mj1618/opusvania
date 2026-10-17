@@ -60,7 +60,36 @@
       "fenced": true,
       "guards": "wick-s3"
     },
-    { "id": "dang-s3", "kind": "dangler", "x": 2760, "y": 2134, "facing": 1, "guards": "wick-s3" }
+    { "id": "dang-s3", "kind": "dangler", "x": 2760, "y": 2134, "facing": 1, "guards": "wick-s3" },
+    {
+      "id": "ants-silk-1",
+      "kind": "carrier",
+      "x": 2700,
+      "y": 2624,
+      "facing": 1,
+      "trail": [[3328, 2624]],
+      "guards": "wick-s3"
+    },
+    {
+      "id": "ants-silk-2",
+      "kind": "carrier",
+      "x": 2700,
+      "y": 2624,
+      "facing": 1,
+      "follow": "ants-silk-1",
+      "phase": 0.33,
+      "guards": "wick-s3"
+    },
+    {
+      "id": "ants-silk-3",
+      "kind": "carrier",
+      "x": 2700,
+      "y": 2624,
+      "facing": 1,
+      "follow": "ants-silk-1",
+      "phase": 0.67,
+      "guards": "wick-s3"
+    }
   ],
   "routes": [
     { "from": "spawn", "to": "w" },
