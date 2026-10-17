@@ -56,6 +56,8 @@ export interface KitState {
   /** A held story beat (a trigger's `hold`): frames of it left (no input reaches her), and the trigger. */
   story: number;
   storyBy: string;
+  /** Fall catches so far per `scene.catches` (room-local): a zone's `glideAssist` reads it. */
+  catchCount: number[];
 }
 
 /** The save key of a piece of this room. */
@@ -84,6 +86,7 @@ export function createKit(scene: Scene, t: Tuning, save: SaveState): KitState {
     signStill: 0,
     story: 0,
     storyBy: '',
+    catchCount: (scene.catches ?? []).map(() => 0),
   };
 }
 
@@ -102,6 +105,7 @@ export function cloneKit(k: KitState): KitState {
     signStill: k.signStill,
     story: k.story,
     storyBy: k.storyBy,
+    catchCount: k.catchCount.slice(),
   };
 }
 
@@ -449,7 +453,8 @@ export function updateKit(
       save.flags.push(tr.sets);
       events.push({ type: 'flagSet', flag: tr.sets, by: tr.id, x: tr.x + tr.w / 2, y: tr.y + tr.h / 2 });
       // A held story beat: no input reaches her for its length (step), and nothing hurts her.
-      const hold = Math.min(Math.round(tr.hold ?? 0), Math.round(t.kit.storyHoldMax));
+      const cap = tr.finale ? t.kit.finaleHoldMax : t.kit.storyHoldMax;
+      const hold = Math.min(Math.round(tr.hold ?? 0), Math.round(cap));
       if (hold > 0) {
         kit.story = hold;
         kit.storyBy = tr.id;

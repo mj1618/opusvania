@@ -144,6 +144,39 @@ export function gotoRoom(
   enterRoom(state, t, world, to, { kind: 'point', x, y }, from, events);
 }
 
+/**
+ * The glide-lip assist (a catch zone's `glideAssist`): she is in the air over a zone that has caught her
+ * that many times. The wings then open without the button (src/sim/player/player.ts `updateGlide`).
+ */
+function glideAssistOver(state: GameState, scene: Scene): boolean {
+  const zones = scene.catches;
+  const p = state.player;
+  if (!zones || p.grounded) return false;
+  const cx = p.x + p.w / 2;
+  for (let i = 0; i < zones.length; i++) {
+    const z = zones[i];
+    if (!z?.glideAssist || (state.kit.catchCount[i] ?? 0) < z.glideAssist) continue;
+    if (cx >= z.x && cx < z.x + z.w && p.y + p.h <= z.y) return true;
+  }
+  return false;
+}
+
+/** The room's moon patch nearest to her (feet), if it has any. */
+function nearestPatch(scene: Scene, p: { x: number; y: number; w: number; h: number }) {
+  const fx = p.x + p.w / 2;
+  const fy = p.y + p.h;
+  let best: NonNullable<Scene['patches']>[number] | undefined;
+  let bd = Number.POSITIVE_INFINITY;
+  for (const q of scene.patches ?? []) {
+    const d = (q.x - fx) * (q.x - fx) + (q.y - fy) * (q.y - fy);
+    if (d < bd) {
+      bd = d;
+      best = q;
+    }
+  }
+  return best;
+}
+
 /** The catch zone her box centre is in, if any. */
 function inCatch(state: GameState, scene: Scene): string | null {
   const zones = scene.catches;
@@ -305,7 +338,16 @@ export function step(
     const back = clearOfThorns(state, safe.x, safe.y, state.player.groundX, S, t, P);
     const x = back.x;
     const y = back.y;
-    events.push({ type: 'fallReturn', id, x, y, fadeIn: Math.max(0, Math.round(t.room.returnFadeIn)) });
+    const from = state.player;
+    events.push({
+      type: 'fallReturn',
+      id,
+      x,
+      y,
+      fromX: from.x + from.w / 2,
+      fromY: from.y + from.h,
+      fadeIn: Math.max(0, Math.round(t.room.returnFadeIn)),
+    });
     placePlayer(state, x, y, t, S, events);
     afterCatch(state, t);
     // A fade-in, and what she held waits to be pressed again (no chain back into the hazard).
@@ -320,6 +362,12 @@ export function step(
   if (storyEnd) {
     const sp = state.player;
     events.push({ type: 'storyHoldEnd', id: state.kit.storyBy, x: sp.x + sp.w / 2, y: sp.y + sp.h });
+    // Its `endSets` flag (the finale's east gate opens on the cloud's lift).
+    const tr = S.triggers?.find((q) => q.id === state.kit.storyBy);
+    if (tr?.endSets && !state.save.flags.includes(tr.endSets)) {
+      state.save.flags.push(tr.endSets);
+      events.push({ type: 'flagSet', flag: tr.endSets, by: tr.id, x: tr.x + tr.w / 2, y: tr.y + tr.h / 2 });
+    }
   }
   const live = state.exit || state.caught || shut || story ? 0 : input;
   // The end of a fade: she re-forms at her last moon patch (any room: everything earned is kept),
@@ -329,9 +377,18 @@ export function step(
     const patch = state.save.patch;
     const pr = patch && world ? world.rooms[patch.room] : undefined;
     const pp = pr && patch ? pr.scene.patches?.find((q) => q.id === patch.id) : undefined;
+    // A room that keeps its fades (`reformPatch`, the oak): its own moon patch nearest to where she lay.
+    const near = S.reformPatch ? nearestPatch(S, state.player) : undefined;
+    if (near) {
+      reformPlayer(state, S, P, events, near);
+      state.player.hp = state.player.hpMax;
+      state.rest = { at: S.patches?.indexOf(near) ?? -1, frames: 0, done: true };
+      resetEnemies(state, S, t, events);
+      resetBoss(state, scene, t, events);
+    }
     // A room with its own re-form point keeps her in it when her patch is in another room (wood.md R10:
     // a fade in the well's pit stands her up at the chute's patch, not back at the hub).
-    if (pr && pp && world && (pr.id === scene.id || !S.reform)) {
+    else if (pr && pp && world && (pr.id === scene.id || !S.reform)) {
       if (pr.id !== scene.id) {
         // Another room: she re-forms there (the room's creatures are fresh anyway).
         gotoRoom(state, t, world, pr.id, pp.x, pp.y, 'reform', events);
@@ -366,12 +423,10 @@ export function step(
   // From the end of the run on she is held (no input reaches her; she walks into the heart and
   // stops) and nothing can hurt her.
   const held = goalHolds(state.goal, t.goal);
+  state.player.wingsAssist = glideAssistOver(state, S);
   const ran = updatePlayer(state, S, held ? heldInput(state, S, t.goal) : live, P, t.pods, events);
   // (After its last held step: whatever she still holds is not a press when input comes back.)
   if (storyEnd) state.player.inputLock = 0xffff;
-  // Caught by a lure: the throw's arc from here, for render (src/sim/arc.ts).
-  if (state.player.lure >= 0) state.player.lureArc = lureArc(state, S, t, P, live);
-  else if (state.player.lureArc.length > 0) state.player.lureArc = [];
   // Her offer (memory/giving.md): a glint given this step, one arriving.
   // (Giving is the test grove's: in lamp rooms there is no offer, no wallet to give from; the key does nothing.)
   if (S.senses !== 'lamp') updateOffer(state, S, t, held ? 0 : live, held, events);
@@ -426,6 +481,9 @@ export function step(
   if (!state.exit && !state.caught) {
     const id = inCatch(state, S);
     if (id) {
+      // (Counted per zone: a zone's `glideAssist` opens her wings after that many.)
+      const zi = S.catches?.findIndex((z) => z.id === id) ?? -1;
+      if (zi >= 0) state.kit.catchCount[zi] = (state.kit.catchCount[zi] ?? 0) + 1;
       const frames = Math.max(1, Math.round(t.room.catchFrames));
       state.caught = { id, frames: 0 };
       events.push({ type: 'fallCatch', id, x: p.x + p.w / 2, y: p.y + p.h, frames });
@@ -485,6 +543,10 @@ export function step(
   if (S.senses !== 'lamp') markOfferTarget(state, S, t, goalHolds(state.goal, t.goal));
   else if (state.player.offerTarget) state.player.offerTarget = null;
   updateSeen(state, scene, t);
+  // Caught by a lure: the throw's arc from here, for render (src/sim/arc.ts). Last in the step, so a blow
+  // that freed her this step leaves no arc behind.
+  if (state.player.lure >= 0) state.player.lureArc = lureArc(state, S, t, P, live);
+  else if (state.player.lureArc.length > 0) state.player.lureArc = [];
   // Presses are edges of the real input (the hatching counts them while `live` is 0).
   state.prevInput = shut ? input : live;
   state.frame++;

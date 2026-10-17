@@ -24,7 +24,21 @@ export const KIT_FIELDS = {
     .optional(),
   gates: z.array(z.object({ ...rect, flag: id, kick }).strict()).optional(),
   triggers: z
-    .array(z.object({ ...rect, sets: id, hold: int.min(1).max(180).optional() }).strict())
+    .array(
+      z
+        .object({
+          ...rect,
+          sets: id,
+          hold: int.min(1).max(600).optional(),
+          finale: z.boolean().optional(),
+          endSets: id.optional(),
+        })
+        .strict()
+        // journey.md's rule: a held beat is at most 3 s, except the one marked `finale`.
+        .refine((tr) => (tr.hold ?? 0) <= 180 || tr.finale === true, {
+          message: 'a hold over 180 frames must be the finale',
+        }),
+    )
     .optional(),
   caps: z
     .array(
@@ -110,7 +124,17 @@ interface KitRoom {
   seedCases?: Array<{ id: string; x: number; y: number }> | undefined;
   bark?: Array<Box & { id: string }> | undefined;
   gates?: Array<Box & { id: string; flag: string }> | undefined;
-  triggers?: Array<Box & { id: string; sets: string; hold?: number | undefined }> | undefined;
+  triggers?:
+    | Array<
+        Box & {
+          id: string;
+          sets: string;
+          hold?: number | undefined;
+          finale?: boolean | undefined;
+          endSets?: string | undefined;
+        }
+      >
+    | undefined;
   caps?: Array<Box & { id: string }> | undefined;
   mothStones?: Array<{ id: string; x: number; y: number }> | undefined;
   signs?: Array<{ id: string; x: number; y: number }> | undefined;

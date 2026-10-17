@@ -61,6 +61,10 @@ export interface FlagTrigger {
    * `storyHold` / `storyHoldEnd`; she cannot be hurt meanwhile.
    */
   hold?: number;
+  /** The one beat that may hold longer (`kit.finaleHoldMax`): the finale's cloud, ~9 s (area 1 plan r3). */
+  finale?: boolean;
+  /** A flag set when the hold ends (the finale's east gate opens on the cloud's lift). */
+  endSets?: string;
 }
 
 /**

@@ -112,10 +112,12 @@ export type SimEvent =
    */
   | { type: 'fallCatch'; id: string; x: number; y: number; frames: number }
   /**
-   * Back on her last safe ground after a catch (`x, y` = there); a `spawn` follows at once. She fades in
-   * for `fadeIn` frames (no input, untouchable) and the buttons she held wait to be pressed afresh.
+   * Back on her last ground after a catch or thorns (`x, y` = there, feet; `fromX, fromY` = where she was
+   * the step before, for a fade out there and in here instead of a black cut); a `spawn` follows at once. The
+   * hold before it is `fallCatch.frames` (a fall) or `thornHit.frames` (thorns). She fades in for `fadeIn`
+   * frames (no input, untouchable) and the buttons she held wait to be pressed afresh.
    */
-  | { type: 'fallReturn'; id: string; x: number; y: number; fadeIn: number }
+  | { type: 'fallReturn'; id: string; x: number; y: number; fromX: number; fromY: number; fadeIn: number }
   /**
    * The cocoon stirs (`scene.hatch`, src/sim/hatch.ts): a press of any button (`auto` false;
    * `presses` of `of` so far) or, with no input, on its own (`auto`, harder as `frames` grows toward

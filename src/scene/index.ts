@@ -165,12 +165,14 @@ const SceneSchema = z
             y: int,
             w: int.positive(),
             h: int.positive(),
+            glideAssist: int.min(1).max(9).optional(),
           })
           .strict(),
       )
       .optional(),
     hatch: z.object({ x: int, y: int }).strict().optional(),
     reform: z.object({ x: int, y: int }).strict().optional(),
+    reformPatch: z.boolean().optional(),
     // --- The world (memory/world.md): moon patches, glades, doors, shortcuts, route claims.
     patches: z.array(z.object({ id: z.string().min(1), x: int, y: int }).strict()).optional(),
     glades: z

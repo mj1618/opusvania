@@ -24,14 +24,16 @@ export function lureArc(state: GameState, scene: Scene, t: Tuning, P: MoveParams
   const g = cloneState(state);
   const q = g.player;
   const held = input & DIRS;
-  // The last beat, now: the same code path as a real one (the throw, then the rest of that step).
+  // The last beat pressed now: the same code path as a real one (queued until `lureCd` lets it count, the
+  // throw, then the rest of that step), so the arc ends exactly where the throw lands.
   q.lureBeats = Math.max(0, Math.round(t.lures.beats) - 1);
   q.lurePend = 1;
-  q.lureCd = 0;
   q.dashBuf = 0;
   q.jumpBuf = 0;
   q.attackBuf = 0;
   g.prevInput = held;
+  // (Called at the end of a step, before its frame count moves on: the copy starts at the next step's frame.)
+  g.frame = state.frame + 1;
   const every = Math.max(1, Math.round(t.lures.arcEvery));
   const n = Math.max(0, Math.round(t.lures.arcFrames));
   const out: number[] = [];

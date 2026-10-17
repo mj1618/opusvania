@@ -358,6 +358,11 @@ export interface Scene {
    * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4).
    */
   reform?: { x: number; y: number };
+  /**
+   * A fade in this room re-forms her at its moon patch nearest to where she lay (whole), whatever patch the
+   * save holds (area 1 plan r3: a fade anywhere in the oak re-forms her in the oak, never in R8).
+   */
+  reformPatch?: boolean;
   /** A boss fight (src/sim/boss/, memory/bosses.md): its arena, lock, flags and the things it is made of. */
   boss?: BossSpec;
 }
@@ -369,4 +374,10 @@ export interface CatchZone {
   y: number;
   w: number;
   h: number;
+  /**
+   * The glide-lip assist (area 1 plan r3: "no loop longer than 3"): after this many catches here (room-local),
+   * a fall over the zone opens her wings by itself (she owns glide), held open without the button until she
+   * lands, presses Down, dashes or meets a wall.
+   */
+  glideAssist?: number;
 }

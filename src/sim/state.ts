@@ -165,6 +165,13 @@ export interface PlayerState {
   /** A throw's flight, from the last beat until she lands or jumps: no apex hang (one strength, held jump or not). */
   thrown: boolean;
   /**
+   * The glide-lip assist (a catch zone's `glideAssist`): `wingsAssist` = she is over such a zone this step
+   * (set by `step`); `wingsHeld` = her wings were opened by it and stay open without the button until she
+   * lands, presses Down, dashes or meets a wall.
+   */
+  wingsAssist: boolean;
+  wingsHeld: boolean;
+  /**
    * A grab (src/sim/grab.ts, memory/creatures.md): `grab` = index of the creature (a web: `enemies[i]`)
    * holding her, -1 = none. Held where it caught her (`grabX, grabY` = her body centre then); beating
    * free uses the lure counters above (`lureFrames`, `lureBeats`, `lureCd`, `lurePend`). `grabGrace`

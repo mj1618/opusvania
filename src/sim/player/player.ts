@@ -127,6 +127,8 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     lureBack: -1,
     lureArc: [],
     thrown: false,
+    wingsAssist: false,
+    wingsHeld: false,
     grab: -1,
     grabX: 0,
     grabY: 0,
@@ -907,6 +909,7 @@ function horizontal(c: Ctx): void {
 }
 
 function endGlide(c: Ctx, reason: GlideEndReason): void {
+  c.p.wingsHeld = false;
   if (!c.p.gliding) return;
   c.p.gliding = false;
   c.events.push({ type: 'glideEnd', x: c.fx, y: c.fy, reason });
@@ -928,9 +931,11 @@ function updateGlide(c: Ctx): void {
   const p = c.p;
   const P = c.P;
   const jump = c.held(ActionBit.jump);
-  const want = P.glide && jump && !c.held(ActionBit.down) && !p.grounded;
+  // The glide-lip assist: over a zone that has caught her enough, the wings need no button (src/sim/index.ts).
+  const wings = jump || p.wingsAssist || p.wingsHeld;
+  const want = P.glide && wings && !c.held(ActionBit.down) && !p.grounded;
   if (p.gliding) {
-    if (!want) endGlide(c, jump ? 'fastfall' : 'release');
+    if (!want) endGlide(c, wings ? 'fastfall' : 'release');
     return;
   }
   if (!want || p.vy <= P.glideMinVy) return;
@@ -939,6 +944,7 @@ function updateGlide(c: Ctx): void {
   if (p.carried && p.y < p.launchY + P.glideCarriedDropPx) return;
   if (jumpPending(c)) return;
   p.gliding = true;
+  if (!jump && p.wingsAssist) p.wingsHeld = true;
   c.events.push({ type: 'glideStart', x: c.fx, y: c.fy, vy: p.vy });
 }
 

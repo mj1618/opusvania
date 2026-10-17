@@ -44,7 +44,9 @@ every ability; `&abilities=none` for the starting kit). Tests: `tests/unit/lures
   jump does, no wings, and no apex hang until she lands (`player.thrown`), so the strength never depends on holding
   jump (casual first-timer r2 found the strong throw only by holding it); held jump opens the wings after the launch
   (throw + glide). Flat floor 260 px under the flame: right 676 px, up-right 863 px and 369 up (it was 398 / 440 with
-  jump released / held). While caught, **`player.lureArc`** is the predicted flight (src/sim/arc.ts: the real
+  jump released / held). While caught, **`player.lureArc`** is the predicted flight, computed last in the step from
+  the next step's frame and with a press now queued behind `lureCd` like a real one, so it is the throw point for point
+  (tested for wick, lantern, ring, great, a swinging lantern, with a hawker about; plan r3) (src/sim/arc.ts: the real
   controller on a copy, the last beat taken now with the held direction; body-centre points every `arcEvery` 3
   frames up to `arcFrames` 60, ending where she lands or is caught again), for render's preview; double jump and air
   dash back; `graceFrames` 50 from that lure, **and from every core the throw
