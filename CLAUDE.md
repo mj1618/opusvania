@@ -11,6 +11,7 @@ TypeScript (strict), Node 24 and npm, Vite, PixiJS v8 on WebGL2 (shaders in GLSL
 - Stay in your directory: `src/render/scene/` (environment, one file per layer), `src/render/character/`, `src/render/post/`, `src/audio/` (sound: reads the sim like render, never imported by render; `memory/audio.md`). The shared contract is `src/render/contract.ts`; see `memory/scene-and-units.md`.
 - Gameplay numbers go in tuning files (`src/sim/tuning.ts`, `src/render/camera/tuning.ts`), never inline as magic numbers.
 - Keep the `window.__game` debug API working (`memory/debug-api.md`).
+- The picture fills any window shape with no black bars (Matt, 2026-10-17): the view is at least the 16:9 safe area and grows sideways on wider screens and taller on narrower ones. Never assume a fixed 1920x1080 view. Read the real view size, and check new layers, bakes, the HUD and the camera at 16:10 and 21:9 too.
 
 ## Definition of done
 - `npm run check` passes.
