@@ -292,6 +292,27 @@ function heldAt(info: StepInfo): { x: number; y: number } | null {
   return null;
 }
 
+/** She was just knocked out of a lure's orbit (`lureFree` how `hurt` this step): thrown along her aim instead. */
+function strikeOut(info: StepInfo): void {
+  const p = info.state.player;
+  const ev = info.events;
+  let freed = false;
+  for (let i = ev.length - 1; i >= 0 && i >= ev.length - 12; i--) {
+    const x = ev[i];
+    if (x?.type === 'lureFree' && x.how === 'hurt') {
+      freed = true;
+      break;
+    }
+  }
+  if (!freed || (p.lureAimX === 0 && p.lureAimY === 0)) return;
+  const L = info.t.lures;
+  p.vx = 0;
+  p.pullX = p.lureAimX * L.freeSpeed;
+  p.vy = p.lureAimY * L.freeSpeed - L.freeLift;
+  p.lureThrow = Math.max(0, Math.round(L.throwFrames));
+  p.thrown = true;
+}
+
 /** The tell is over: it commits to a dive at where she is now (led, if she glides). */
 function startDive(e: EnemyState, info: StepInfo): void {
   const t = rowOf(info.t, e);
@@ -878,6 +899,10 @@ export const lampwing: KindRules = {
     giveUp(e, info, 'touch');
     // (A hawker leaves her be for a while after a hit: harmless, noticing nothing.)
     if (t.touchCalmFrames > 0) e.calm = Math.max(e.calm, frames(t.touchCalmFrames));
+    // Struck out of a flame's orbit (it hunts the caught): she flies out along the throw she was aiming
+    // (the arc drawn while she circles), not wherever the blow's side would have sent her (human-like r1:
+    // in R8 the blow dropped her into the thorn bed under the throw gap).
+    if (t.huntCaught) strikeOut(info);
   },
 };
 

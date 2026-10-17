@@ -613,6 +613,8 @@ export interface EnemyState {
   cut: string;
   /** Old burrback: cuts that have landed in this open window (it gets up after `openHits`). */
   taken: number;
+  /** Burrback: this ram's speed, px/f (0 = its row's `chargeSpeed`): faster to pass under a jump in progress. */
+  ramSpeed: number;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */

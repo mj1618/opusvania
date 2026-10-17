@@ -456,12 +456,43 @@ function spend(
   });
 }
 
+/**
+ * The ram's speed for one who is in the air in front of it as it starts (she jumped during the tell): fast
+ * enough that its whole body passes under her before her feet could come down to its top (counted with the
+ * jump let go: the shortest fall), at most `ramUnderMax`; and the ram long enough to carry it past her.
+ * 0 when she is on the ground (the ordinary ram: she jumps it as it comes).
+ */
+function underJump(e: EnemyState, info: StepInfo, B: Row): number {
+  const p = info.state.player;
+  if (p.grounded || p.hp <= 0 || p.faded > 0) return 0;
+  const pc = p.x + p.w / 2;
+  const ec = e.x + e.w / 2;
+  if ((pc - ec) * e.facing <= 0) return 0;
+  // (Jumping away from it, she is leaving its reach: the ordinary ram, never one stretched to chase her.)
+  if ((p.vx + p.pullX) * e.facing > 0.5) return 0;
+  const J = info.t.jump;
+  // Frames until her feet would be down at its top.
+  let y = p.y + p.h;
+  let vy = p.vy;
+  let k = 0;
+  while (k < 120 && (vy < 0 || y < e.y)) {
+    vy = Math.min(J.maxFall, vy + J.gravity * (vy < 0 ? J.releaseMult : J.fallMult));
+    y += vy;
+    k++;
+  }
+  // Its front to past her far side, plus its own length.
+  const gap = e.facing > 0 ? p.x - (e.x + e.w) : e.x - (p.x + p.w);
+  const pass = Math.max(0, gap) + e.w + p.w;
+  e.chargeLeft = Math.max(e.chargeLeft, Math.ceil(pass + B.underExtraPx));
+  return Math.max(B.chargeSpeed, Math.min(B.ramUnderMax, pass / Math.max(1, k - 1)));
+}
+
 /** One step of the ram: straight on at `chargeSpeed` until its length is run or something stops it. */
 function charge(e: EnemyState, info: StepInfo): void {
   const { scene, state } = info;
   const B = rowOf(info.t, e);
   const G = info.t.goal;
-  e.vx = e.facing * B.chargeSpeed;
+  e.vx = e.facing * (e.ramSpeed || B.chargeSpeed);
   e.rx += e.vx;
   let n = roundHalfAway(e.rx);
   e.rx -= n;
@@ -862,6 +893,9 @@ export const burrback: KindRules = {
         setMode(e, 'charge', 0);
         e.chargeLeft = left;
         e.rx = 0;
+        // She jumped in the tell and is up in the air in front of it: the ram passes under the jump
+        // in progress (human-like r1: a quick reaction must never land in the ram).
+        e.ramSpeed = B.ramUnderJump ? underJump(e, info, B) : 0;
         events.push({
           type: 'enemyCharge',
           id: e.id,
@@ -870,7 +904,7 @@ export const burrback: KindRules = {
           y: e.y + e.h / 2,
           dir: e.facing,
           px: e.chargeLeft,
-          frames: Math.ceil(e.chargeLeft / Math.max(0.1, B.chargeSpeed)),
+          frames: Math.ceil(e.chargeLeft / Math.max(0.1, e.ramSpeed || B.chargeSpeed)),
         });
       }
       return true;

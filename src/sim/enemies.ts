@@ -161,6 +161,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     goalT: 0,
     cut: '',
     taken: 0,
+    ramSpeed: 0,
   };
   K.place(e, spawn, t);
   if (scene) K.init?.(e, spawn, scene, t);

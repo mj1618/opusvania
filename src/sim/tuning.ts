@@ -667,6 +667,14 @@ export const defaultTuning = withVariants({
     killHitstopFrames: 0,
     deadFrames: 0,
     deathHoldFrames: 0,
+    /**
+     * A ram that starts with her up in the air in front of it (she jumped in the tell) passes under the
+     * jump: as fast as it must (at most `ramUnderMax` px/f) and `underExtraPx` beyond her (human-like r1:
+     * a jump in the tell's first half used to land in the ram).
+     */
+    ramUnderJump: false,
+    ramUnderMax: 40,
+    underExtraPx: 60,
     // (First-timer r2: the plain one's touch is its drawn dome too.)
     domeContact: true,
     domeHeight: 0.86,
@@ -1320,8 +1328,8 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       dozePx: 0,
       strikePx: 230,
       provokedPx: 320,
-      // First-timer review r1: a shorter tell and a quicker, shorter ram, so a jump anywhere in the tell
-      // clears it and the ram leaves her close; then a long open window (green, on its back) for cuts.
+      // The tell and the ram (first-timer r1, feel r2, human-like r1): a 28 f tell, then 300 px at 16 px/f; a
+      // jump started in the tell is passed under (`ramUnderJump`), one started up to ~10 f into the ram clears it.
       windupFrames: 28,
       chargePx: 300,
       chargeSpeed: 16,
@@ -1350,6 +1358,7 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       killHitstopFrames: 20,
       deadFrames: 150,
       deathHoldFrames: 90,
+      ramUnderJump: true,
       pogoShell: true,
       asleep: true,
       wakePx: 1400,

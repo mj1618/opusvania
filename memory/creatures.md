@@ -64,6 +64,14 @@ round 2 (feel review r2 #1, #2: "a masher wins in 10.8 s", "shorter than she is"
   "its green state still hurts". Now tested: the tell runs on its own clock (the ram comes exactly `windupFrames` after
   the brace however she jumps), and over every pilot run no hit ever comes from a state drawn as open (on its back,
   getting up, asleep).
+- **Human-like r1: "a quick reaction lands in the ram"** (a jump cleared it only 14-40 f into the 28 f tell). Now
+  `ramUnderJump`: if she is up in the air in front of it as the ram starts (she jumped in the tell, straight up or over
+  it), the ram is fast enough (up to `ramUnderMax` 40 px/f) to pass its whole body under her before her feet could
+  come down to its top (counted with the jump let go), and runs `underExtraPx` past her. Jumping away from it gets the
+  ordinary ram (it never stretches to chase her). Tested: full jumps (up, over, away) started anywhere from frame 0 to
+  the tell's end + 4, at gaps 140 / 180 / 230, all clear. A tap that lands again before the ram starts is on the ground
+  when it comes: she must jump again (the 12 f window after the ram starts). Human-like bots (9 runs): all 5 that
+  reached the pit killed it (3 of 7 before); hits there 2 / 3 / 2 / 18 / 23.
 - **Its death is a beat**: the killing blow holds 20 f extra (`killHitstopFrames`, her and it), the body lies 150 f
   (`deadFrames`), and a 90 f story hold (`deathHoldFrames`: the kit's `storyHold` / `storyHoldEnd`, no input, she cannot
   be hurt) covers the gate's opening and the claws' beam. `KindRules.killHold` / `deathHold`.
@@ -95,6 +103,10 @@ where I landed")
   the dive starts; one who steps away anywhere in the tell is never hit (unit test at five spots); a runner is led by
   her whole run (`diveLeadRun` 1). Box **72 x 32** (was 52 x 24). Cautious bot in the lab: kills hawk-b taking 4 hits
   (it jumps at it to pogo), a fade only because burr-a had already taken 2.
+- **Struck out of a flame's orbit** (human-like r1: "hawker B knocks her out of the throw lamp into the thorn bed"):
+  she flies along the throw she was aiming (`player.lureAimX/Y`, the arc render draws while she circles), not the blow's
+  side (`strikeOut` in lampwing.ts). Human-like re-run: of R8's thorn-gap deaths, only 1 hit in 9 runs came from the
+  hawker: the rest are throws and glides that miss (the level's).
 - R8's exposure test now measures 84 f from lit to hummock B (the strike misses the hopper; the slow dive used to hit it).
 - A dive under way when its lamp goes out lands first; then it leaves (the framework does not disperse in `dive`).
 - In a lamp room the dive is committed (no `dark` give-up mid-dive); dark at the end of the tell, the stall or the climb,

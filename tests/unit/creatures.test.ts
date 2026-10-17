@@ -231,6 +231,30 @@ describe('the old burrback', () => {
     }
   });
 
+  it('a jump started anywhere in its tell (or just after the ram starts) clears the ram: quick reactions are never punished', () => {
+    for (const gap of [140, 180, 230])
+      for (let off = 0; off <= O.windupFrames + 4; off += 2) {
+        const s = newSim(pit());
+        const o = enemy(s, 'o');
+        o.mode = 'walk';
+        s.place(o.x - gap - 20, FLOOR);
+        let ev: SimEvent[] = [];
+        for (let i = 0; i < 200 && !types(ev).includes('enemyWindup'); i++) ev = s.run('.1');
+        // Straight up, over it, and away from it.
+        for (const jump of ['J24', 'R+J24', 'L+J24']) {
+          const c = newSim(pit());
+          const oc = enemy(c, 'o');
+          oc.mode = 'walk';
+          c.place(oc.x - gap - 20, FLOOR);
+          let e2: SimEvent[] = [];
+          for (let i = 0; i < 200 && !types(e2).includes('enemyWindup'); i++) e2 = c.run('.1');
+          const after = c.run(`${off > 0 ? `.${off} ` : ''}${jump} .80`);
+          expect(types(after)).toContain('enemyCharge');
+          expect(types(after)).not.toContain('hurt');
+        }
+      }
+  });
+
   it('its death is a beat: a long hold on the killing blow, the body lying, a story hold', () => {
     const s = newSim(pit());
     const o = enemy(s, 'o');
@@ -746,6 +770,22 @@ describe('the hawker hunts the caught', () => {
     expect((at.hurt ?? -1) - (at.enemyNotice ?? 0)).toBeGreaterThanOrEqual(
       H.curiousFrames + H.diveWindupFrames,
     );
+  });
+
+  it('struck out of the orbit, she flies along the throw she was aiming (a predictable line), not wherever the blow sent her', () => {
+    for (const [hold, sign] of [
+      ['R', 1],
+      ['L', -1],
+    ] as const) {
+      const s = newSim(scene());
+      s.place(2000, 540);
+      let ev: SimEvent[] = [];
+      for (let i = 0; i < 200 && !types(ev).includes('hurt'); i++) ev = s.run(`${hold}1`);
+      expect(of(ev, 'hurt')[0]?.source?.kind).toBe('hawker');
+      const x0 = s.state.player.x;
+      s.run('.20');
+      expect((s.state.player.x - x0) * sign).toBeGreaterThan(60);
+    }
   });
 
   it('a hawker resting far off is woken by a moth caught in its leash', () => {
