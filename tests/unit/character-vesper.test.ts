@@ -682,7 +682,7 @@ describe('vesper rig', () => {
     for (let i = 0; i < 45; i++) tick();
     expect(rig.fadeK).toBe(1);
     tick({ cx: 400 }, [
-      { type: 'reform', x: 400, y: 1280, fromX: 1000, fromY: 1280, hp: 4, hpMax: 4, invuln: 90 },
+      { type: 'reform', x: 400, y: 1280, fromX: 1000, fromY: 1280, hp: 4, hpMax: 4, invuln: 90, fadeIn: 18 },
       { type: 'spawn', x: 400, y: 1280 },
     ]);
     expect(rig.fadeK).toBe(0);

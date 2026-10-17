@@ -1138,6 +1138,20 @@ export const defaultTuning = withVariants({
     /** Put back after a catch, she stands at least this far in from the end of the top she fell from, px. */
     returnInset: 72,
     /**
+     * Put back after a hazard (a fall catch, thorns) or re-formed after a fade: she fades in for this many
+     * frames (no input, untouchable), and no button held as she came back is a press until it has been
+     * let go and pressed again; its hold still acts (impatient first-timer, 2026-10-17: put back on T3 with jump + right still
+     * held, she re-jumped into the same thorn branch, 3 hearts in ~3 s, twice). Celeste / HK do the same.
+     */
+    returnFadeIn: 18,
+    /**
+     * And not where her natural next move takes her straight back into thorns (src/sim/return.ts): from the
+     * return point she is moved back from the lip `returnProbeStep` px at a time until a jump held toward
+     * it (with the glide that follows) meets no thorns within `returnProbeFrames`.
+     */
+    returnProbeStep: 40,
+    returnProbeFrames: 180,
+    /**
      * Frames the dip lasts when there IS a room on the other side (memory/world.md): she goes on with
      * the input she held as she crossed (her run, her glide), then enters the next room with her
      * momentum. ~0.3 s (tech.md §6: transition visible time <= 0.3 s).
