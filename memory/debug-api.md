@@ -48,6 +48,10 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   list: [{id, kind, x, y, spin, state: burning|out, hp, hpMax, radius, core, moths, outFrame}]}` (memory/lures.md).
   `debug.labels(on?)` (also the G key): a greybox room's labels and notes (memory/greybox.md). `?room=lab-lamps` is the
   lamp lab (greybox, every ability).
+- `kit()` → `{thorns, seedCases, bark: [{id, ..., floor, hp, hpMax, broken}], gates: [{id, flag, open}], triggers: [{id, sets, set}], flags, hold}`;
+  `flag()` lists the save's story flags, `flag(name)` sets, `flag(name, false)` clears (gates follow next step).
+  `lures().list[].x, y` = where the flame is now (a swinging one moves). `cam().zoom` < 1 inside a camera zone.
+  `?room=lab-kit` is the level-kit lab (memory/level-kit.md). F2 draws the kit's boxes.
 - `pods()` → `{burst, total, worth, list: [{id, x, y, mount, state: closed|open, hp, hpMax, worth, paid,
   left}]}` (`paid` = glints set loose so far, `left` = still flying to her): combat.md.
 - `enemies()` → `{alive, total, list: [{id, kind, x, y (feet centre), box, home (the scene's x, y: a burrback's

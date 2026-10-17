@@ -1,5 +1,6 @@
 import type { AbilityId } from './abilities';
 import type { InputFrame } from './input';
+import { cloneKit, type KitState } from './kit';
 import type { EnemyKind } from './scene';
 
 /**
@@ -701,6 +702,8 @@ export interface RoomLocal {
   caught: ExitState | null;
   hatch: HatchState | null;
   rest: RestState;
+  /** The level kit's room state: bark cuts, gates, a thorn's hold (src/sim/kit.ts, memory/level-kit.md). */
+  kit: KitState;
 }
 
 export interface GameState {
@@ -729,6 +732,8 @@ export interface GameState {
   hatch: HatchState | null;
   /** The moon patch she stands in (`scene.patches`). */
   rest: RestState;
+  /** The level kit's room state: bark cuts, gates, a thorn's hold (src/sim/kit.ts, memory/level-kit.md). */
+  kit: KitState;
 }
 
 export function cloneState(s: GameState): GameState {
@@ -772,6 +777,7 @@ export function cloneState(s: GameState): GameState {
     caught: s.caught ? { ...s.caught } : null,
     hatch: s.hatch ? { ...s.hatch } : null,
     rest: { ...s.rest },
+    kit: cloneKit(s.kit),
   };
 }
 

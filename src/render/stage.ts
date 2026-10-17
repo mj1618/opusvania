@@ -307,6 +307,7 @@ export class RenderStage {
       lures: this.game.state.lures,
       save: this.game.state.save,
       rest: this.game.state.rest,
+      kit: this.game.state.kit,
     };
     this.scene.layers.applyCamera(view);
     this.scene.update(dt, this.clock, view, sim);

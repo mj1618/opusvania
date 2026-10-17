@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import labKitJson from '../../content/rooms/lab-kit.json' with { type: 'json' };
 import labLampsJson from '../../content/rooms/lab-lamps.json' with { type: 'json' };
 import labWorldAJson from '../../content/rooms/lab-world-a.json' with { type: 'json' };
 import labWorldBJson from '../../content/rooms/lab-world-b.json' with { type: 'json' };
@@ -8,6 +9,7 @@ import woodHatchJson from '../../content/rooms/wood-hatch.json' with { type: 'js
 import worldJson from '../../content/world.json' with { type: 'json' };
 import { ABILITIES } from '../sim/abilities';
 import { defaultTuning } from '../sim/tuning';
+import { CAMERA_ZONES, checkKit, KIT_FIELDS, kitNodes, ROUTE_FLAGS, SWING } from './kit';
 import type { Room } from './room';
 
 /**
@@ -117,6 +119,7 @@ const SceneSchema = z
             x: int,
             y: int,
             spin: z.union([z.literal(-1), z.literal(1)]).optional(),
+            swing: SWING,
           })
           .strict(),
       )
@@ -189,10 +192,13 @@ const SceneSchema = z
             needs: z.array(z.enum(ABILITIES)).optional(),
             oneWay: z.boolean().optional(),
             door: z.string().min(1).optional(),
+            flags: ROUTE_FLAGS,
           })
           .strict(),
       )
       .optional(),
+    // --- The level kit (src/scene/kit.ts, memory/level-kit.md).
+    ...KIT_FIELDS,
     art: z
       .object({
         // `greybox`: flat shapes and labels instead of the painted layers (src/render/greybox, memory/greybox.md).
@@ -316,6 +322,7 @@ const SceneSchema = z
           })
           .strict()
           .optional(),
+        zones: CAMERA_ZONES,
       })
       .strict()
       .optional(),
@@ -571,6 +578,7 @@ export function parseScene(json: unknown): Room {
     if (c.x < 0 || c.y < 0 || c.x + c.w > s.width || c.y + c.h > s.height)
       throw new Error(`Scene "${s.id}": shortcut "${c.id}" leaves the scene bounds`);
   }
+  checkKit(s, seen);
   // Route claims name things of this room ('spawn' too); `door` names a shortcut.
   const nodes = new Set<string>([
     'spawn',
@@ -578,6 +586,7 @@ export function parseScene(json: unknown): Room {
     ...(s.doors ?? []).map((d) => d.id),
     ...(s.patches ?? []).map((p) => p.id),
     ...(s.glades ?? []).map((g) => g.id),
+    ...kitNodes(s),
   ]);
   for (const r of s.routes ?? []) {
     for (const end of [r.from, r.to])
@@ -600,6 +609,7 @@ const FILES: readonly unknown[] = [
   labWorldCJson,
   testGroveJson,
   labLampsJson,
+  labKitJson,
 ];
 
 /** Every room, by id. */

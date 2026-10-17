@@ -11,11 +11,14 @@
  *  - progression: from the start, with the abilities glades give as they are reached (and the
  *    shortcuts opened from their open side), every placed room and glade is reachable, and from every
  *    reachable place a moon patch can be reached (no softlock). Rooms say what needs what in
- *    `routes` (src/scene/room.ts); a room without them is open inside.
+ *    `routes` (src/scene/room.ts); a room without them is open inside. Story flags work like
+ *    abilities: a route can need `flags` (a flag gate, memory/level-kit.md), and a trigger reached
+ *    sets its flag; a flag no trigger in the world sets is reported.
  */
 import type { AbilityId } from '../sim/abilities';
 import { exitSegment, linkWorld, mirrorOf, type World, type WorldRoom } from '../sim/world';
 import { ROOMS, WORLD } from './index';
+import { kitNodes } from './kit';
 import type { Room } from './room';
 
 /** Every room (placed ones with their world position; test rooms at 0, 0, unplaced). */
@@ -37,11 +40,32 @@ export function mapWorld(world: World, fn: (room: Room) => Room): World {
   return { ...world, rooms };
 }
 
+/** A story flag in the progression's owned set (next to the abilities). */
+function flagKey(flag: string): string {
+  return `flag:${flag}`;
+}
+
+/** Triggers reached set their flags (in `owned`). True if one was new. */
+function setFlags(world: World, reached: ReadonlySet<Node>, owned: Set<string>): boolean {
+  let grew = false;
+  for (const r of Object.values(world.rooms)) {
+    if (!r.placed) continue;
+    for (const t of r.scene.triggers ?? []) {
+      if (!reached.has(`${r.id}:${t.id}`) || owned.has(flagKey(t.sets))) continue;
+      owned.add(flagKey(t.sets));
+      grew = true;
+    }
+  }
+  return grew;
+}
+
 /** A node of the progression graph: `room:thing`. */
 type Node = string;
 interface Edge {
   to: Node;
   needs: readonly AbilityId[];
+  /** Story flags that must be set (`routes[].flags`). */
+  flags: readonly string[];
   /** A shortcut that must be open to pass (`room:shortcut`), or null. */
   door: string | null;
 }
@@ -54,6 +78,7 @@ function nodesOf(room: Room): string[] {
     ...(room.doors ?? []).map((d) => d.id),
     ...(room.patches ?? []).map((p) => p.id),
     ...(room.glades ?? []).map((g) => g.id),
+    ...kitNodes(room),
   ];
 }
 
@@ -80,28 +105,30 @@ function graph(world: World): {
         const a = `${r.id}:${q.from}`;
         const b = `${r.id}:${q.to}`;
         const needs = q.needs ?? [];
+        const flags = q.flags ?? [];
         const door = q.door ? `${r.id}:${q.door}` : null;
         if (door) openers.set(door, a);
-        add(a, { to: b, needs, door: null });
-        if (!q.oneWay) add(b, { to: a, needs, door });
+        add(a, { to: b, needs, flags, door: null });
+        if (!q.oneWay) add(b, { to: a, needs, flags, door });
       }
     } else {
       for (const a of ids)
-        for (const b of ids) if (a !== b) add(`${r.id}:${a}`, { to: `${r.id}:${b}`, needs: [], door: null });
+        for (const b of ids)
+          if (a !== b) add(`${r.id}:${a}`, { to: `${r.id}:${b}`, needs: [], flags: [], door: null });
     }
     for (const e of room.exits ?? []) {
       const link = world.links[`${r.id}#${e.id}`];
-      if (link) add(`${r.id}:${e.id}`, { to: `${link.to}:${link.exit}`, needs: [], door: null });
+      if (link) add(`${r.id}:${e.id}`, { to: `${link.to}:${link.exit}`, needs: [], flags: [], door: null });
     }
     for (const d of room.doors ?? []) {
       const link = world.doors[`${r.id}#${d.id}`];
-      if (link) add(`${r.id}:${d.id}`, { to: `${link.to}:${link.exit}`, needs: [], door: null });
+      if (link) add(`${r.id}:${d.id}`, { to: `${link.to}:${link.exit}`, needs: [], flags: [], door: null });
     }
   }
   return { edges, openers };
 }
 
-/** Breadth-first from `start` with `abilities` owned and `open` shortcuts open. */
+/** Breadth-first from `start` with `abilities` owned (and story flags set: the same set) and `open` shortcuts open. */
 function reach(
   edges: Map<Node, Edge[]>,
   start: Node,
@@ -116,6 +143,7 @@ function reach(
       if (seen.has(e.to)) continue;
       if (e.door && !open.has(e.door)) continue;
       if (!e.needs.every((a) => abilities.has(a))) continue;
+      if (!e.flags.every((f) => abilities.has(flagKey(f)))) continue;
       seen.add(e.to);
       queue.push(e.to);
     }
@@ -128,7 +156,7 @@ export interface Progression {
   reached: Set<Node>;
   /** The abilities in the order the glades give them on the way. */
   abilities: AbilityId[];
-  /** The abilities she has when each node first becomes reachable. */
+  /** The abilities (and story flags, as `flag:<name>`) she has when each node first becomes reachable. */
   firstWith: Map<Node, AbilityId[]>;
 }
 
@@ -154,6 +182,7 @@ export function progression(world: World): Progression {
         }
       }
     }
+    if (setFlags(world, reached, owned)) grew = true;
     for (const [door, from] of openers) {
       if (reached.has(from) && !open.has(door)) {
         open.add(door);
@@ -234,6 +263,15 @@ export function validateWorld(world: World = GAME_WORLD): string[] {
     for (const r of placed)
       if (!seen.has(r.id)) out.push(`room "${r.id}" is not connected to the rest of the world`);
   }
+  // Flag gates: every flag a route needs is set by some trigger in the world.
+  const sources = new Set(placed.flatMap((r) => (r.scene.triggers ?? []).map((t) => t.sets)));
+  for (const r of placed)
+    for (const q of (r.scene as Room).routes ?? [])
+      for (const f of q.flags ?? [])
+        if (!sources.has(f))
+          out.push(
+            `route "${r.id}:${q.from}" -> "${q.to}" needs flag "${f}", which nothing in the world sets`,
+          );
   // Progression.
   const prog = progression(world);
   const { edges } = graph(world);
@@ -262,6 +300,7 @@ export function validateWorld(world: World = GAME_WORLD): string[] {
             grew = true;
           }
         }
+        if (setFlags(world, got, owned)) grew = true;
         const nextOpen = new Set(open);
         for (const [door, from] of openers) if (got.has(from)) nextOpen.add(door);
         if (nextOpen.size > open.size) {

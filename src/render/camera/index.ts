@@ -18,6 +18,7 @@ import type { Scene } from '../../sim/scene';
 import type { GameState } from '../../sim/state';
 import { type CameraView, SAFE_H, SAFE_W } from '../contract';
 import { type CameraTuning, cameraTuning } from './tuning';
+import { zoneAt, zoneBounds, zonesOf, zoneZoom } from './zones';
 
 export interface CameraState {
   /** Free-follow view centre x and anchor-line y (feet level), before clamping. */
@@ -48,6 +49,18 @@ export interface CameraState {
   /** The view's size in world px at zoom 1 (the real logical view, >= the safe area). */
   vw: number;
   vh: number;
+  /**
+   * Camera zones (zones.ts, memory/level-kit.md): the zoom now (1 outside every zone) and its spring's
+   * velocity; the eased shift (`ox`, `oy`, world px) that keeps the view inside the zone's bounds, and
+   * its springs; the zone she is in ('' = none). On screen the view is `vw / zoom` x `vh / zoom` world px.
+   */
+  zoom: number;
+  zvz: number;
+  ox: number;
+  oy: number;
+  ovx: number;
+  ovy: number;
+  zone: string;
 }
 
 /**
@@ -76,16 +89,26 @@ export function viewTop(scene: Scene, ct: CameraTuning = cameraTuning): number {
   return Math.min(0, (scene.ceilingY ?? 0) - ct.headroom);
 }
 
-/** From the view's top edge to the line her feet rest on: the safe area's anchor line. */
+/** From the view's top edge to the line her feet rest on: the safe area's anchor line (world px at the zoom). */
 function feetLine(cam: CameraState, ct: CameraTuning): number {
-  return (cam.vh - SAFE_H) / 2 + ct.anchorY * SAFE_H;
+  return ((cam.vh - SAFE_H) / 2 + ct.anchorY * SAFE_H) / cam.zoom;
+}
+
+/** What the view shows in world px (its size over the zoom). */
+function shownW(cam: CameraState): number {
+  return cam.vw / cam.zoom;
+}
+function shownH(cam: CameraState): number {
+  return cam.vh / cam.zoom;
 }
 
 function place(cam: CameraState, scene: Scene, ct: CameraTuning): void {
   const top = viewTop(scene, ct);
   const line = feetLine(cam, ct);
-  cam.x = clampAxis(cam.fx - cam.vw / 2, 0, scene.width, cam.vw);
-  cam.y = clampAxis(cam.fy - line, top, scene.height - top, cam.vh);
+  const W = shownW(cam);
+  const H = shownH(cam);
+  cam.x = clampAxis(cam.fx - W / 2, 0, scene.width, W);
+  cam.y = clampAxis(cam.fy - line, top, scene.height - top, H);
   // Held by the top or the bottom: the spring rests there too, so the view answers at once when
   // she comes back (a glide off the summit), not after the spring has crossed the slack.
   const fy = cam.y + line;
@@ -95,6 +118,64 @@ function place(cam: CameraState, scene: Scene, ct: CameraTuning): void {
     if ((cam.fy < fy && cam.fvy < 0) || (cam.fy > fy && cam.fvy > 0)) cam.fvy = 0;
     cam.fy = fy;
   }
+  // A camera zone's shift (eased: `stepZones`), then the scene's bounds again.
+  if (cam.ox !== 0 || cam.oy !== 0) {
+    cam.x = clampAxis(cam.x + cam.ox, 0, scene.width, W);
+    cam.y = clampAxis(cam.y + cam.oy, top, scene.height - top, H);
+  }
+}
+
+/**
+ * Camera zones, once a sim frame (or at once with `snap`): the zoom eases toward the zone's (1 outside),
+ * then the view's free position is placed, and the shift that would keep it inside the zone's bounds
+ * eases in (and back out to 0 when she leaves). Springs throughout, so nothing jumps between zones.
+ */
+function stepZones(
+  cam: CameraState,
+  scene: Scene,
+  cx: number,
+  cy: number,
+  ct: CameraTuning,
+  snap = false,
+): void {
+  const zones = zonesOf(scene);
+  if (zones.length === 0 && cam.zoom === 1 && cam.ox === 0 && cam.oy === 0) {
+    place(cam, scene, ct);
+    return;
+  }
+  const Z = ct.zones;
+  const z = zoneAt(zones, cx, cy);
+  cam.zone = z ? z.id : '';
+  const want = z ? zoneZoom(z) : 1;
+  if (snap) {
+    cam.zoom = want;
+    cam.zvz = 0;
+  } else [cam.zoom, cam.zvz] = smoothDamp(cam.zoom, cam.zvz, want, Z.zoomFrames);
+  // The free view (no shift) at this zoom, then the shift its bounds ask for.
+  const ox = cam.ox;
+  const oy = cam.oy;
+  cam.ox = 0;
+  cam.oy = 0;
+  place(cam, scene, ct);
+  const b = z ? zoneBounds(z) : null;
+  const tx = b ? clampAxis(cam.x, b.x, b.w, shownW(cam)) - cam.x : 0;
+  const ty = b ? clampAxis(cam.y, b.y, b.h, shownH(cam)) - cam.y : 0;
+  if (snap) {
+    cam.ox = tx;
+    cam.oy = ty;
+    cam.ovx = 0;
+    cam.ovy = 0;
+  } else {
+    [cam.ox, cam.ovx] = smoothDamp(ox, cam.ovx, tx, Z.frames);
+    [cam.oy, cam.ovy] = smoothDamp(oy, cam.ovy, ty, Z.frames);
+    if (Math.abs(cam.ox) < 0.01 && Math.abs(cam.ovx) < 0.01 && tx === 0) cam.ox = cam.ovx = 0;
+    if (Math.abs(cam.oy) < 0.01 && Math.abs(cam.ovy) < 0.01 && ty === 0) cam.oy = cam.ovy = 0;
+  }
+  if (!z && Math.abs(cam.zoom - 1) < 1e-4 && Math.abs(cam.zvz) < 1e-4) {
+    cam.zoom = 1;
+    cam.zvz = 0;
+  }
+  place(cam, scene, ct);
 }
 
 /** Where the view should lean while she stands still at (cx, feet): toward a lantern or the heart in reach. */
@@ -150,8 +231,15 @@ export function createCamera(
     y: 0,
     vw,
     vh,
+    zoom: 1,
+    zvz: 0,
+    ox: 0,
+    oy: 0,
+    ovx: 0,
+    ovy: 0,
+    zone: '',
   };
-  place(cam, scene, ct);
+  stepZones(cam, scene, p.x + p.w / 2, p.y + p.h / 2, ct, true);
   return cam;
 }
 
@@ -188,7 +276,7 @@ export function stepCamera(
     [cam.fx, cam.fvx] = smoothDamp(cam.fx, cam.fvx, cam.fx, ct.smoothX);
     [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, cam.fy, ct.smoothY);
     cam.targetY = cam.fy;
-    place(cam, scene, ct);
+    stepZones(cam, scene, cx, p.y + p.h / 2, ct);
     return;
   }
 
@@ -214,7 +302,7 @@ export function stepCamera(
   /** 0..1: how far into a long fall (or the exit's drop) she is: the target's spring shortens with it. */
   let fastK = 0;
   // Where her feet are in the safe area (0 top, 1 bottom): the window is the same on every screen.
-  const feetScreen = (feet - cam.y - (cam.vh - SAFE_H) / 2) / SAFE_H;
+  const feetScreen = ((feet - cam.y) * cam.zoom - (cam.vh - SAFE_H) / 2) / SAFE_H;
   if (p.vy > ct.fallFollowVy && feet > cam.targetY + ct.fallBelow) {
     // A real fall (past the line the view rests on; coming down from a jump is not one).
     cam.targetY = feet + ct.fallLookahead;
@@ -261,17 +349,17 @@ export function stepCamera(
     target = cam.ty;
   }
   [cam.fy, cam.fvy] = smoothDamp(cam.fy, cam.fvy, target, smoothY);
-  place(cam, scene, ct);
+  stepZones(cam, scene, cx, p.y + p.h / 2, ct);
 }
 
-/** The view between two camera states (alpha 0 = prev, 1 = cur), at zoom 1, with the current view's size. */
+/** The view between two camera states (alpha 0 = prev, 1 = cur), with the current view's size (zoom 1 outside camera zones). */
 export function lerpCamera(prev: CameraState, cur: CameraState, alpha: number): CameraView {
-  const px = prev.x + prev.vw / 2;
-  const py = prev.y + prev.vh / 2;
+  const px = prev.x + shownW(prev) / 2;
+  const py = prev.y + shownH(prev) / 2;
   return {
-    x: px + (cur.x + cur.vw / 2 - px) * alpha,
-    y: py + (cur.y + cur.vh / 2 - py) * alpha,
-    zoom: 1,
+    x: px + (cur.x + shownW(cur) / 2 - px) * alpha,
+    y: py + (cur.y + shownH(cur) / 2 - py) * alpha,
+    zoom: prev.zoom + (cur.zoom - prev.zoom) * alpha,
     w: cur.vw,
     h: cur.vh,
   };

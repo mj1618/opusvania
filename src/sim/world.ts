@@ -15,6 +15,7 @@ import { createEnemies } from './enemies';
 import type { SimEvent } from './events';
 import { createGoal } from './goal';
 import { createHatch } from './hatch';
+import { createKit, kitSolids } from './kit';
 import { createLures } from './lures';
 import { solidAt } from './physics/aabb';
 import { createPickups } from './pickups';
@@ -120,23 +121,27 @@ export function linkWorld(start: string, rooms: readonly WorldRoom[]): World {
 }
 
 /**
- * The scene as the sim plays it: the room's solids plus every shortcut not yet opened (memory/world.md).
+ * The scene as the sim plays it: the room's solids plus every shortcut not yet opened (memory/world.md)
+ * and the level kit's standing solids, rotten bark not broken and gates still shut (src/sim/kit.ts).
  * The same object comes back while nothing changes (cached per scene), and the scene itself when the
- * room has no closed shortcut.
+ * room has nothing closed.
  */
 const SHORTCUT_SCENES = new WeakMap<Scene, { key: string; scene: Scene }>();
 export function withShortcuts(scene: Scene, save: SaveState): Scene {
-  const list = scene.shortcuts;
-  if (list === undefined || list.length === 0) return scene;
+  const list = scene.shortcuts ?? [];
+  const hasKit = (scene.bark?.length ?? 0) + (scene.gates?.length ?? 0) > 0;
+  if (list.length === 0 && !hasKit) return scene;
   let key = '';
   for (const sc of list) if (!save.opened.includes(`${scene.id}:${sc.id}`)) key += `${sc.id}|`;
-  if (key === '') return scene;
+  const kit = hasKit ? kitSolids(scene, save) : null;
+  if (kit) key += `#${kit.key}`;
+  if (key === '' || key === '#') return scene;
   const hit = SHORTCUT_SCENES.get(scene);
   if (hit && hit.key === key) return hit.scene;
   const shut: SolidRect[] = list
     .filter((sc) => !save.opened.includes(`${scene.id}:${sc.id}`))
     .map((sc) => ({ x: sc.x, y: sc.y, w: sc.w, h: sc.h, tag: 'ledge' }));
-  const eff: Scene = { ...scene, solids: [...scene.solids, ...shut] };
+  const eff: Scene = { ...scene, solids: [...scene.solids, ...shut, ...(kit?.solids ?? [])] };
   SHORTCUT_SCENES.set(scene, { key, scene: eff });
   return eff;
 }
@@ -164,6 +169,7 @@ export function createLocal(scene: Scene, t: Tuning, save: SaveState, fresh: boo
     caught: null,
     hatch: fresh ? createHatch(scene) : null,
     rest: { at: -1, frames: 0, done: false },
+    kit: createKit(scene, t, save),
   };
 }
 

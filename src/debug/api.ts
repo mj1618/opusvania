@@ -19,7 +19,8 @@ import type { SimEvent } from '../sim/events';
 import { offerTarget } from '../sim/giving';
 import { restPoint } from '../sim/goal';
 import { type GameState, goalHolds, heartBox, lampCost, lanternBox, lanternCost } from '../sim/index';
-import { lureHpMax, lureRow } from '../sim/lures';
+import { barkHpMax } from '../sim/kit';
+import { lureAt, lureHpMax, lureRow } from '../sim/lures';
 import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
 import { markSeen, seenNow, seenScale } from '../sim/seen';
@@ -197,6 +198,35 @@ export interface GameDebugApi {
       outFrame: number | null;
     }>;
   };
+  /**
+   * The level kit (memory/level-kit.md): thorns, seed-cases, rotten bark (`hp` cuts left of `hpMax`;
+   * `broken` once the save has it), gates (`open` once their flag is set), triggers (`set`), the save's
+   * story flags, and `hold` (frames of a thorn's hold under way, 0 = none).
+   */
+  kit(): {
+    thorns: Array<{ id: string; x: number; y: number; w: number; h: number }>;
+    seedCases: Array<{ id: string; x: number; y: number }>;
+    bark: Array<{
+      id: string;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      floor: boolean;
+      hp: number;
+      hpMax: number;
+      broken: boolean;
+    }>;
+    gates: Array<{ id: string; flag: string; open: boolean }>;
+    triggers: Array<{ id: string; sets: string; set: boolean }>;
+    flags: string[];
+    hold: number;
+  };
+  /**
+   * Story flags (memory/level-kit.md): `flag()` lists the save's; `flag(name)` sets one, `flag(name,
+   * false)` clears it. Gates follow from the next step (`gateOpen` when one opens). Returns the flags.
+   */
+  flag(name?: string, on?: boolean): string[];
   /**
    * Enemies: how many are alive, and each with where it is (`x`, `y` = feet centre; `box` = its
    * collision box), where it started (`home`: the scene's `x`, `y`: a burrback's feet, a lampwing's
@@ -682,6 +712,43 @@ export function installDebugApi(deps: {
         })),
       };
     },
+    kit() {
+      const sc = game.scene;
+      const k = game.state.kit;
+      const sv = game.state.save;
+      return {
+        thorns: (sc.thorns ?? []).map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })),
+        seedCases: (sc.seedCases ?? []).map((c) => ({ id: c.id, x: c.x, y: c.y })),
+        bark: (sc.bark ?? []).map((b, i) => ({
+          id: b.id,
+          x: b.x,
+          y: b.y,
+          w: b.w,
+          h: b.h,
+          floor: b.floor === true,
+          hp: k.bark[i] ?? 0,
+          hpMax: barkHpMax(b, game.tuning),
+          broken: sv.opened.includes(`${sc.id}:${b.id}`),
+        })),
+        gates: (sc.gates ?? []).map((g) => ({ id: g.id, flag: g.flag, open: sv.flags.includes(g.flag) })),
+        triggers: (sc.triggers ?? []).map((t) => ({
+          id: t.id,
+          sets: t.sets,
+          set: sv.flags.includes(t.sets),
+        })),
+        flags: sv.flags.slice(),
+        hold: k.hold,
+      };
+    },
+    flag(name, on = true) {
+      const flags = game.state.save.flags;
+      if (name !== undefined) {
+        const at = flags.indexOf(name);
+        if (on && at < 0) flags.push(name);
+        if (!on && at >= 0) flags.splice(at, 1);
+      }
+      return flags.slice();
+    },
     lures() {
       const s = game.state.lures;
       const p = game.state.player;
@@ -706,11 +773,12 @@ export function installDebugApi(deps: {
         list: list.map((l, i) => {
           const K = lureRow(game.tuning, l.kind);
           const hp = s.hp[i] ?? 0;
+          const at = lureAt(l, Math.max(0, game.state.frame - 1), game.tuning);
           return {
             id: l.id,
             kind: l.kind,
-            x: l.x,
-            y: l.y,
+            x: at.x,
+            y: at.y,
             spin: l.spin ?? 1,
             state: hp > 0 ? ('burning' as const) : ('out' as const),
             hp,
@@ -927,6 +995,8 @@ export function installDebugApi(deps: {
   stage.overlay.opened = () => game.state.save.opened;
   stage.overlay.enemies = () => game.state.enemies;
   stage.overlay.lures = () => game.state.lures.hp;
+  stage.overlay.frame = () => game.state.frame;
+  stage.overlay.kit = () => ({ kit: game.state.kit, flags: game.state.save.flags });
   stage.overlay.ramPx = () => game.tuning.burrback.chargePx;
   // ... and the lanterns' and the heart's trigger boxes.
   stage.overlay.goal = () => {

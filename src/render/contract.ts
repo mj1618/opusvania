@@ -18,6 +18,7 @@
 import type { Renderer } from 'pixi.js';
 import type { Room } from '../scene/room';
 import type { SimEvent } from '../sim/events';
+import type { KitState } from '../sim/kit';
 import type {
   EnemyState,
   GameState,
@@ -125,6 +126,8 @@ export interface SimView {
   readonly save: Readonly<SaveState>;
   /** The moon patch she stands in (`rest.at`: index in `scene.patches`, -1 none) and if she has rested. */
   readonly rest: Readonly<RestState>;
+  /** The level kit (memory/level-kit.md): bark cuts left, gates open. Read only. */
+  readonly kit: Readonly<KitState>;
 }
 
 /** Services every renderer gets at construction. */

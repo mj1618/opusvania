@@ -1,0 +1,93 @@
+{
+  "id": "lab-kit",
+  "title": "Lab: level kit (greybox)",
+  "width": 10400,
+  "height": 2400,
+  "spawn": { "x": 300, "y": 1600 },
+  "art": { "mode": "greybox", "labels": true },
+  "solids": [
+    { "tag": "ground", "x": 0, "y": 1600, "w": 1700, "h": 800 },
+    { "tag": "ground", "x": 1700, "y": 1856, "w": 640, "h": 544 },
+    { "tag": "ground", "x": 2340, "y": 1600, "w": 1060, "h": 800 },
+    { "tag": "ground", "x": 3400, "y": 1856, "w": 128, "h": 544 },
+    { "tag": "ground", "x": 3528, "y": 1600, "w": 5372, "h": 800 },
+    { "tag": "ground", "x": 9700, "y": 1600, "w": 700, "h": 800 },
+    { "tag": "root", "x": 1764, "y": 1232, "w": 512, "h": 80, "kick": false },
+    { "tag": "root", "x": 2600, "y": 1088, "w": 700, "h": 256 },
+    { "tag": "root", "x": 4500, "y": 1088, "w": 500, "h": 256 },
+    { "tag": "trunk", "x": 5200, "y": 900, "w": 64, "h": 500 },
+    { "tag": "trunk", "x": 5520, "y": 964, "w": 64, "h": 436 },
+    { "tag": "ledge", "x": 5520, "y": 900, "w": 780, "h": 64 },
+    { "tag": "trunk", "x": 6400, "y": 320, "w": 64, "h": 1080 },
+    { "tag": "trunk", "x": 8640, "y": 320, "w": 64, "h": 1080 },
+    { "tag": "ledge", "x": 6464, "y": 320, "w": 2176, "h": 64, "kick": false },
+    { "tag": "trunk", "x": 7040, "y": 384, "w": 96, "h": 728 },
+    { "tag": "trunk", "x": 7968, "y": 384, "w": 96, "h": 728 }
+  ],
+  "oneWays": [
+    { "tag": "branch", "x": 6720, "y": 1344, "w": 320 },
+    { "tag": "branch", "x": 8064, "y": 1344, "w": 320 }
+  ],
+  "catches": [{ "id": "pit-f", "x": 8900, "y": 1700, "w": 800, "h": 700 }],
+  "thorns": [{ "id": "bed-a", "x": 700, "y": 1564, "w": 400, "h": 36 }],
+  "seedCases": [{ "id": "seed-1", "x": 1892, "y": 1600 }, { "id": "seed-2", "x": 2180, "y": 1600 }],
+  "bark": [
+    { "id": "wall-c", "x": 2900, "y": 1344, "w": 64, "h": 256 },
+    { "id": "floor-c", "x": 3400, "y": 1600, "w": 128, "h": 64, "floor": true }
+  ],
+  "triggers": [{ "id": "plate-d", "x": 4200, "y": 1472, "w": 128, "h": 128, "sets": "lab-kit-silk" }],
+  "gates": [{ "id": "silk-d", "x": 4700, "y": 1344, "w": 64, "h": 256, "flag": "lab-kit-silk" }],
+  "shortcuts": [{ "id": "grate-d", "x": 5264, "y": 900, "w": 256, "h": 64, "opens": "s" }],
+  "lures": [
+    { "id": "pocket-wick", "kind": "wick", "x": 3464, "y": 1760, "spin": 1 },
+    {
+      "id": "swing-lantern",
+      "kind": "lantern",
+      "x": 9300,
+      "y": 1250,
+      "spin": 1,
+      "swing": { "length": 420, "reach": 240, "period": 180 }
+    },
+    {
+      "id": "swing-wick",
+      "kind": "wick",
+      "x": 7552,
+      "y": 900,
+      "spin": -1,
+      "swing": { "length": 380, "reach": 200, "period": 150, "phase": 0.25 }
+    }
+  ],
+  "camera": {
+    "zones": [{ "id": "arena-e", "x": 6464, "y": 384, "w": 2176, "h": 1280, "lock": true, "fit": true }]
+  },
+  "marks": {
+    "notes": [
+      {
+        "x": 900,
+        "y": 1300,
+        "text": "A  thorns: a touch costs 1 and puts you back; a down cut on them is a pogo"
+      },
+      { "x": 2020, "y": 1120, "text": "B  seed-cases under a root roof: pogo across (a forward cut clangs)" },
+      { "x": 3060, "y": 980, "text": "C  rotten bark: 3 cuts; the floor panel breaks to down cuts" },
+      { "x": 4560, "y": 980, "text": "D  step on the plate: the silk falls" },
+      { "x": 5392, "y": 780, "text": "D  the grate opens from below: climb the shaft" },
+      {
+        "x": 7552,
+        "y": 1240,
+        "text": "E  camera zone: the arena locks and zooms to fit (its floor in frame)"
+      },
+      { "x": 9300, "y": 640, "text": "F  a lantern on a chain, swinging over a pit" }
+    ]
+  },
+  "shots": {
+    "wide": [
+      { "name": "thorns", "x": 520, "y": 1600 },
+      { "name": "seeds", "x": 1600, "y": 1600 },
+      { "name": "bark", "x": 2760, "y": 1600 },
+      { "name": "gate", "x": 4400, "y": 1600 },
+      { "name": "grate", "x": 5392, "y": 1600 },
+      { "name": "arena", "x": 7552, "y": 1600 },
+      { "name": "lantern", "x": 8800, "y": 1600 }
+    ]
+  }
+}

@@ -1,4 +1,5 @@
 import type { AbilityId } from './abilities';
+import type { KitEvent, KitTargetKind } from './kit-events';
 import type { EnemyKind, LureKind, PickupKind, PodMount } from './scene';
 import type { AttackDir } from './state';
 
@@ -15,16 +16,18 @@ export type CornerKind = 'head' | 'ledge' | 'dash';
 /** A slash direction (never 'none' in an event). */
 export type SlashDir = Exclude<AttackDir, 'none'>;
 /** What a slash hit: a lumen pod, a lure's flame or an enemy (`kind` = the enemy's kind). */
-export type SlashTarget = { kind: 'pod' | 'lure' | EnemyKind; id: string };
+export type SlashTarget = { kind: 'pod' | 'lure' | EnemyKind | KitTargetKind; id: string };
 /** Why a slash ended: it played out, a dash cut it, a new slash replaced it, or she was hurt. */
 export type SlashEndReason = 'done' | 'dash' | 'chain' | 'hurt';
 export type GlideEndReason = 'release' | 'land' | 'wall' | 'dash' | 'fastfall' | 'hurt' | 'lure';
 /** How she got out of a lure's hold: beating free, a dash, a blow, or the flame went out (memory/lures.md). */
 export type LureFreeHow = 'beat' | 'dash' | 'hurt' | 'snuff';
 /** What hurt her. */
-export type HurtSource = { kind: EnemyKind; id: string };
+export type HurtSource = { kind: EnemyKind | 'thorns'; id: string };
 
 export type SimEvent =
+  /** The level kit (src/sim/kit-events.ts, memory/level-kit.md). */
+  | KitEvent
   /** The player was placed (boot, load, teleport): snap cameras and springs, don't interpolate. */
   | { type: 'spawn'; x: number; y: number }
   /**

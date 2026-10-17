@@ -4,6 +4,7 @@ Shared project knowledge. One topic per file, one line per file here: `- [Title]
 Keep entries current; delete stale ones.
 
 <!-- entries below -->
+- [Level kit](level-kit.md) — **thorns (HK spike rule: 1 light, held, back to safe ground), seed-cases (pogo / clang), rotten bark (3 cuts, `save.opened`, floor panels), flag gates + triggers, the grate (`opens: s`), swinging lures (`swing`, paths.ts), camera zones (zoom / fit / lock)**; JSON schema, tuning, events, the lab `?room=lab-kit`
 - [Lures](lures.md) — **the lamp verb (2026-10-17)**: pull (with `pullX` momentum, a ground drag she outwalks), caught (orbit, beat free x3, dash / blow free, a throw bent by the held direction), snuff (a slash target, pogo, hitstop 9, moths); `lure` in code while the grove's `lamps` exist; numbers and why; the lab `?room=lab-lamps`
 - [Greybox](greybox.md) — **`art.mode: 'greybox'`**: one flat env module instead of the painted layers, no post, creatures as hitboxes, labels + `marks.notes` (G), palette, gotchas
 - [World](world.md) — **multi-room engine (2026-10-17)**: world.json placement, exits linked where openings meet (one-way drops, doors), the crossing with momentum, moon patches / glades / shortcuts / routes in room JSON, the world check, the lab-world, how to add a connected room, render lifecycle (`destroyTree`, **the 700 MB heap was Graphics contexts**), leak numbers, map v1 (Tab)

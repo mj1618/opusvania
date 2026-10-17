@@ -38,6 +38,8 @@ export interface RouteClaim {
   needs?: AbilityId[];
   oneWay?: boolean;
   door?: string;
+  /** Story flags that must be set to pass (a flag gate, memory/level-kit.md); set by triggers she reaches. */
+  flags?: string[];
 }
 
 /**
@@ -73,6 +75,25 @@ export interface RoomCamera {
    * on what she does.
    */
   lean?: { x: number; y: number; from: number; in: number; hold: number; out: number };
+  /** Camera zones (src/render/camera/zones.ts, memory/level-kit.md): zoom, lock and bounds while she is inside. */
+  zones?: CameraZone[];
+}
+
+/**
+ * A camera zone: while her body centre is inside the rect, the view eases to `zoom` (default 1; `fit`:
+ * the zoom that puts the whole frame, `bounds` or the zone, inside the 16:9 safe area) and keeps inside
+ * `bounds` (`lock`: the zone's own rect; a view at least that big centres on it).
+ */
+export interface CameraZone {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  zoom?: number;
+  fit?: boolean;
+  lock?: boolean;
+  bounds?: { x: number; y: number; w: number; h: number };
 }
 
 /** One of the art kit's mood stops: from world x on, the room leans this way (blended between stops). */

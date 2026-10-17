@@ -1,6 +1,7 @@
 import { homeClear, slashBlocks, slashEnemies } from '../enemies';
 import type { GlideEndReason, HurtSource, JumpKind, SimEvent, SlashDir, SlashEndReason } from '../events';
 import { ActionBit, axisX, type InputFrame } from '../input';
+import { slashKit, thornAt } from '../kit';
 import {
   beatLure,
   catchPlayer,
@@ -490,7 +491,23 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
     P.tuning,
     c.events,
   );
-  const hits = foes + pods + lures.hits;
+  // The level kit (src/sim/kit.ts): thorns and seed-cases to pogo off, a seed-case's clang, rotten bark.
+  const kit = slashKit(
+    state,
+    c.scene,
+    box,
+    p.attackSeq,
+    dir,
+    p.attackFacing,
+    pogo,
+    p.attackStep,
+    st.power,
+    st.knockback,
+    P.tuning,
+    c.events,
+  );
+  const others = foes + pods + lures.hits;
+  const hits = others + kit.hits;
   // Glanced off a braced shell: no hit, but she feels it (a beat, and a throw back off it). A down
   // cut that glances (a braced or curled burrback's top) still bounces her: the pogo, nothing taken.
   const glanced = slashBlocks() > 0 && foes === 0;
@@ -498,6 +515,11 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
     const stop = pogo ? E.pogoHitstopFrames : E.blockHitstopFrames;
     p.hitstop = Math.max(p.hitstop, Math.max(0, Math.round(stop)));
     if (dir === 'fwd' && p.mode === 'normal') p.kickX = -p.attackFacing * E.blockRecoil;
+  }
+  // A seed-case's clang, when nothing else was hit: the same hold and throw as a glance.
+  if (kit.clang && hits === 0) {
+    p.hitstop = Math.max(p.hitstop, kit.stop);
+    if (dir === 'fwd' && p.mode === 'normal') p.kickX = -p.attackFacing * P.tuning.kit.seedCase.clangRecoil;
   }
   if (hits === 0) {
     if (glanced && pogo) pogoBounce(c);
@@ -513,7 +535,12 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
           ? Math.max(0, Math.round(E.pogoHitstopFrames))
           : Math.max(0, Math.round(L.hitstopFrames)) + st.hitstopBonus
         : 0;
-  const hitstop = Math.max(foes > 0 ? foeStop : 0, pods > 0 ? podStop : 0, lureStop);
+  const hitstop = Math.max(
+    foes > 0 ? foeStop : 0,
+    pods > 0 ? podStop : 0,
+    lureStop,
+    kit.hits > 0 ? kit.stop : 0,
+  );
   if (p.attackHits === 0) {
     const e = c.events[first];
     if (e?.type === 'slashHit')
@@ -535,7 +562,7 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
       p.kickX = -p.attackFacing * (foes > 0 ? st.recoilFoe : st.recoil);
   } else if (dir === 'up') {
     if (!p.grounded && p.mode === 'normal') p.vy += P.recoilUp;
-  } else if (pogo) pogoBounce(c);
+  } else if (pogo && (others > 0 || kit.bounce || glanced)) pogoBounce(c);
 }
 
 /** The pogo: a fixed hop off what the down slash met, the air dash and double jump back. */
@@ -1334,9 +1361,12 @@ export function trackSafeGround(state: GameState, scene: Scene, P: MoveParams): 
     const solids = scene.solids;
     for (let i = 0; i < solids.length; i++) {
       const s = solids[i];
-      if (s !== undefined && s.y === bottom && cx >= s.x && cx < s.x + s.w) ok = s.tag !== 'pool';
+      if (s !== undefined && s.y === bottom && cx >= s.x && cx < s.x + s.w)
+        ok = s.tag !== 'pool' && s.kit === undefined;
     }
   }
+  // Never where a thorn bed is within reach of her box (memory/level-kit.md): she is put back here.
+  if (ok) ok = thornAt(scene, p, P.tuning.kit.thorns.safeMargin) < 0;
   if (ok) ok = !enemyNear(state.enemies, cx, p.y + p.h / 2, P.safeEnemyPx, P.tuning);
   p.safeFrames = ok ? p.safeFrames + 1 : 0;
   if (p.safeFrames >= P.safeFrames) {

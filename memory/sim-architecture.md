@@ -67,6 +67,9 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   `lureSnuff {moths, freed, snuffed, heal}`; `slashHit.target.kind` `lure`; `glideEnd` reason `lure`. State `lures`;
   on the player `lure`, `pullX` (added in the move like `kickX`) and the beat / grace fields. The pull runs in the
   controller after the mode update; the catch check after `post`; a caught frame replaces mode + move.
+- Level kit (memory/level-kit.md): `thornHit`, `barkHit`, `barkBreak`, `kitClang`, `flagSet`, `gateOpen`;
+  `slashHit.target.kind` `thorns | seedCase | bark`; `hurt.source.kind` `thorns`; a thorn's return is `fallReturn` id `thorns:<id>`.
+  State `kit` (room-local); `withShortcuts` also adds standing bark and shut gates; `updateKit` runs after her offer, before enemies.
 - `enemyTurn`, `enemyAlert`, **`enemyWindup`, `enemyCharge`, `enemyRecover`, `enemyBlock`** (burrback: its ram), `enemyNotice`, **`enemyDive`, `enemyStall`, `enemyClimb`** (its dive, playtest 5), `enemyGiveUp` (lampwing), `enemyHit`, `enemyDie`, `hurt`, `fade`, `reform` (followed by `spawn`, then **`enemyReset`** for each living creature that went home hurt or from elsewhere), and
   enemy glints as `pickup {enemy: true}`: enemies.md. `slashEnd` / `glideEnd` have a reason `hurt`.
 - `glideStart {vy}` (`vy` = fall speed the wings have to catch: ~1.1-1.5 just after an apex, 21.3 out of a

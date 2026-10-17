@@ -18,6 +18,7 @@
  * Pure: only + - * / sqrt, min, max, abs, floor, round (memory/sim-architecture.md).
  */
 import type { LureFreeHow, SimEvent, SlashDir } from './events';
+import { swingOffset } from './paths';
 import type { Box } from './player/attack';
 import type { Lure, LureKind, Scene } from './scene';
 import type { GameState, LuresState, PlayerState } from './state';
@@ -29,6 +30,34 @@ export type LureRow = Tuning['lures']['kinds'][LureKind];
 export function lureRow(t: Tuning, kind: LureKind): LureRow {
   return t.lures.kinds[kind];
 }
+
+const SWING = { dx: 0, dy: 0 };
+
+/**
+ * Where lure `l`'s flame is on `frame` (written into `out`): its `x`, `y`, or for a swinging one
+ * (`l.swing`) the point of its arc then (src/sim/paths.ts). Everything a lure does (pull, core,
+ * orbit, the flame's box) happens there. The sim asks for `state.frame` (before the step's count);
+ * render passes its interpolated frame (`frame - 2 + alpha`: the latest step used `frame - 1`).
+ */
+export function lureAt(
+  l: Lure,
+  frame: number,
+  t: Tuning,
+  out: { x: number; y: number } = { x: 0, y: 0 },
+): { x: number; y: number } {
+  if (!l.swing) {
+    out.x = l.x;
+    out.y = l.y;
+    return out;
+  }
+  swingOffset(l.swing, frame, t.lures.swing, SWING);
+  out.x = l.x + SWING.dx;
+  out.y = l.y - SWING.dy;
+  return out;
+}
+
+/** Scratch flame positions (no allocation in the step). */
+const F = { x: 0, y: 0 };
 
 /** Cuts it takes to put out. */
 export function lureHpMax(l: Lure, t: Tuning): number {
@@ -87,8 +116,9 @@ export function lurePull(state: GameState, scene: Scene, t: Tuning): { ax: numbe
     const l = list[i];
     if (!l || !acts(state, i)) continue;
     const K = lureRow(t, l.kind);
-    const rx = l.x - cx;
-    const ry = l.y - cy;
+    const f = lureAt(l, state.frame, t, F);
+    const rx = f.x - cx;
+    const ry = f.y - cy;
     const d2 = rx * rx + ry * ry;
     if (d2 >= K.radius * K.radius || d2 === 0) continue;
     const d = Math.sqrt(d2);
@@ -116,8 +146,9 @@ export function lureCoreAt(state: GameState, scene: Scene, t: Tuning): number {
     const l = list[i];
     if (!l || !acts(state, i)) continue;
     const c = lureRow(t, l.kind).core;
-    const dx = l.x - cx;
-    const dy = l.y - cy;
+    const f = lureAt(l, state.frame, t, F);
+    const dx = f.x - cx;
+    const dy = f.y - cy;
     if (dx * dx + dy * dy <= c * c) return i;
   }
   return -1;
@@ -129,8 +160,9 @@ export function catchPlayer(state: GameState, scene: Scene, i: number, t: Tuning
   if (!l) return;
   const p = state.player;
   const K = lureRow(t, l.kind);
-  const dx = centreX(p) - l.x;
-  const dy = centreY(p) - l.y;
+  const f = lureAt(l, state.frame, t, F);
+  const dx = centreX(p) - f.x;
+  const dy = centreY(p) - f.y;
   const d = Math.sqrt(dx * dx + dy * dy);
   p.lure = i;
   p.lureFrames = 0;
@@ -139,7 +171,7 @@ export function catchPlayer(state: GameState, scene: Scene, i: number, t: Tuning
   p.lurePend = 0;
   p.lureOut = Math.max(0, d - K.core * t.lures.orbitShare);
   p.pullX = 0;
-  events.push({ type: 'lureCaught', id: l.id, kind: l.kind, x: l.x, y: l.y, spin: l.spin ?? 1 });
+  events.push({ type: 'lureCaught', id: l.id, kind: l.kind, x: f.x, y: f.y, spin: l.spin ?? 1 });
 }
 
 /**
@@ -168,11 +200,14 @@ export function freePlayer(
   p.lurePend = 0;
   if (!l) return;
   const T = t.lures;
+  const f = lureAt(l, state.frame, t, F);
+  const fx = f.x;
+  const fy = f.y;
   let vx = 0;
   let vy = 0;
   if (how === 'beat') {
-    let ox = centreX(p) - l.x;
-    let oy = centreY(p) - l.y;
+    let ox = centreX(p) - fx;
+    let oy = centreY(p) - fy;
     const d = Math.sqrt(ox * ox + oy * oy);
     if (d > 0.001) {
       ox /= d;
@@ -203,7 +238,7 @@ export function freePlayer(
   const grace = Math.max(0, Math.round(T.graceFrames));
   p.lureGrace = i;
   p.lureGraceFrames = grace;
-  events.push({ type: 'lureFree', id: l.id, x: l.x, y: l.y, how, vx, vy, grace });
+  events.push({ type: 'lureFree', id: l.id, x: fx, y: fy, how, vx, vy, grace });
 }
 
 /** One beat: a press while caught. Returns true when it was the last one (she is free). */
@@ -223,7 +258,8 @@ export function beatLure(
   p.lureBeats++;
   p.lureOut += T.beatPush;
   p.lureCd = Math.max(0, Math.round(T.beatCd));
-  events.push({ type: 'lureBeat', id: l.id, x: l.x, y: l.y, beats: p.lureBeats, of, out: p.lureOut });
+  const f = lureAt(l, state.frame, t, F);
+  events.push({ type: 'lureBeat', id: l.id, x: f.x, y: f.y, beats: p.lureBeats, of, out: p.lureOut });
   if (p.lureBeats < of) return false;
   freePlayer(state, scene, t, 'beat', events, aimX, aimY);
   return true;
@@ -244,8 +280,11 @@ export function orbitStep(state: GameState, scene: Scene, t: Tuning, out: { dx: 
   const r = K.core * T.orbitShare + p.lureOut;
   const cx = centreX(p);
   const cy = centreY(p);
-  let rx = cx - l.x;
-  let ry = cy - l.y;
+  const f = lureAt(l, state.frame, t, F);
+  const lx = f.x;
+  const ly = f.y;
+  let rx = cx - lx;
+  let ry = cy - ly;
   let d = Math.sqrt(rx * rx + ry * ry);
   if (d < 0.001) {
     rx = 0;
@@ -257,8 +296,8 @@ export function orbitStep(state: GameState, scene: Scene, t: Tuning, out: { dx: 
   const nx = rx + ((-ry * s) / d) * T.orbitSpeed;
   const ny = ry + ((rx * s) / d) * T.orbitSpeed;
   const n = Math.sqrt(nx * nx + ny * ny);
-  out.dx = l.x + (nx * r) / n - cx;
-  out.dy = l.y + (ny * r) / n - cy;
+  out.dx = lx + (nx * r) / n - cx;
+  out.dy = ly + (ny * r) / n - cy;
 }
 
 /** Per-step bookkeeping that runs whatever she does (also in hitstop): the grace counts down. */
@@ -299,8 +338,10 @@ export function slashLures(
     if (hp <= 0 || s.hitBy[i] === seq) continue;
     const l = list[i];
     if (!l) continue;
-    if (l.x + r <= box.x || l.x - r >= box.x + box.w || l.y + r <= box.y || l.y - r >= box.y + box.h)
-      continue;
+    const f = lureAt(l, state.frame, t, F);
+    const lx = f.x;
+    const ly = f.y;
+    if (lx + r <= box.x || lx - r >= box.x + box.w || ly + r <= box.y || ly - r >= box.y + box.h) continue;
     s.hitBy[i] = seq;
     const hpMax = lureHpMax(l, t);
     const hpLeft = Math.max(0, hp - Math.max(1, Math.round(power)));
@@ -309,8 +350,8 @@ export function slashLures(
     const stop = hpLeft > 0 ? Math.round(T.hitstopFrames) : Math.round(T.snuffHitstop);
     events.push({
       type: 'slashHit',
-      x: l.x,
-      y: l.y,
+      x: lx,
+      y: ly,
       dir,
       facing,
       target: { kind: 'lure', id: l.id },
@@ -323,7 +364,7 @@ export function slashLures(
       knockback,
     });
     if (hpLeft > 0) {
-      events.push({ type: 'lureHit', id: l.id, kind: l.kind, x: l.x, y: l.y, dir, hpLeft, hpMax });
+      events.push({ type: 'lureHit', id: l.id, kind: l.kind, x: lx, y: ly, dir, hpLeft, hpMax });
       continue;
     }
     res.snuffs++;
@@ -344,8 +385,8 @@ export function slashLures(
       type: 'lureSnuff',
       id: l.id,
       kind: l.kind,
-      x: l.x,
-      y: l.y,
+      x: lx,
+      y: ly,
       dir,
       moths,
       freed: s.freed,

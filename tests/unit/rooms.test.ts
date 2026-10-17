@@ -56,6 +56,7 @@ describe('the room registry', () => {
       'lab-world-c',
       'test-grove',
       'lab-lamps',
+      'lab-kit',
     ]);
     expect(getRoom('test-grove')).toBe(GROVE);
     expect(GROVE.id).toBe('test-grove');

@@ -10,6 +10,7 @@ import { markOfferTarget, updateOffer } from './giving';
 import { goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
 import { createHatch, updateHatch } from './hatch';
 import { ActionBit, type InputFrame, wasPressed } from './input';
+import { afterCatch, catchHold, updateKit } from './kit';
 import { freePlayer } from './lures';
 import { dropGlints, updateDrops, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
@@ -315,13 +316,14 @@ export function step(
     }
   }
   // Caught after a fall: held a moment, then back on her last safe ground (it costs nothing).
-  if (state.caught && ++state.caught.frames >= Math.max(1, Math.round(t.room.catchFrames))) {
+  if (state.caught && ++state.caught.frames >= catchHold(state, t)) {
     const id = state.caught.id;
     const back = returnPoint(state.player.safeX, state.player.safeY, S, t);
     const x = back.x;
     const y = back.y;
     events.push({ type: 'fallReturn', id, x, y });
     placePlayer(state, x, y, t, S, events);
+    afterCatch(state, t);
   }
   // Shut in the cocoon: presses stir it, no input moves her.
   const shut = updateHatch(state, S, input, state.prevInput, t, events);
@@ -365,6 +367,17 @@ export function step(
   const ran = updatePlayer(state, S, held ? heldInput(state, S, t.goal) : live, P, t.pods, events);
   // Her offer (memory/giving.md): a glint given this step, one arriving.
   updateOffer(state, S, t, held ? 0 : live, held, events);
+  // The level kit (memory/level-kit.md): triggers set flags, gates open, thorns hurt and send her back.
+  updateKit(
+    state,
+    S,
+    t,
+    (dir, damage, id, hitX, hitY) => {
+      hurtPlayer(state, P, dir, damage, { kind: 'thorns', id }, hitX, hitY, events);
+      if (state.player.lure >= 0) freePlayer(state, S, t, 'hurt', events);
+    },
+    events,
+  );
   const touch = updateEnemies(state, S, t, events, first);
   const p = state.player;
   const e = touch >= 0 ? state.enemies[touch] : undefined;
@@ -468,7 +481,11 @@ export { ABILITIES, isAbility, normalizeAbilities } from './abilities';
 export type { SimEvent } from './events';
 export { goalHolds, heartBox, lampCost, lanternBox, lanternCost } from './goal';
 export { hashState } from './hash';
-export { lureHpMax, lureRow } from './lures';
+export type { KitState } from './kit';
+export { barkHpMax } from './kit';
+export type { Bark, FlagGate, FlagTrigger, SeedCase, Swing, Thorns } from './kit-data';
+export { lureAt, lureHpMax, lureRow } from './lures';
+export { cycleSine, swingOffset } from './paths';
 export { slashBox, slashTuning } from './player/attack';
 export { patchBox, restAt } from './progress';
 export type {

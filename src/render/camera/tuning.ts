@@ -109,6 +109,11 @@ export const cameraTuning = {
    * `exitLift` s after `roomEnter`. A catch dips to `catchDepth` over its hold and lifts over `catchLift` s.
    * Into another room (memory/world.md) the dip lifts over `enterLift` s: the crossing should feel continuous.
    */
+  /**
+   * Camera zones (zones.ts, memory/level-kit.md): frames of the spring that eases the view's shift into
+   * (and out of) a zone's bounds, and of the zoom's.
+   */
+  zones: { frames: 30, zoomFrames: 30 },
   room: {
     exitEarly: 0.12,
     exitLift: 0.9,

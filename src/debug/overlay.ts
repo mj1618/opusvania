@@ -1,9 +1,11 @@
 import { Container, Graphics } from 'pixi.js';
 import type { CameraView, PlayerView } from '../render/contract';
 import { placeLayer } from '../render/scene/layer-tree';
+import { lureAt } from '../sim/lures';
 import type { Scene } from '../sim/scene';
 import type { EnemyState } from '../sim/state';
 import { tuning } from '../sim/tuning';
+import { drawKitBoxes, type KitBoxes } from './kit-overlay';
 
 type Rect = { x: number; y: number; w: number; h: number };
 /** What the overlay draws of the goal: `channel` and `rest` are 0..1 (how far along). */
@@ -48,6 +50,10 @@ export class HitboxOverlay {
   enemies: () => readonly EnemyState[] = () => [];
   /** The lures' hp (set by the debug API): a burning one shows its pull field and core. */
   lures: () => readonly number[] = () => [];
+  /** The level kit's state and the save's flags (set by the debug API; memory/level-kit.md). */
+  kit: () => KitBoxes | null = () => null;
+  /** The sim frame (set by the debug API): where a swinging lure's flame is. */
+  frame: () => number = () => 0;
   /** How far a burrback's ram carries it (`tuning.burrback.chargePx`; set by the debug API). */
   ramPx: () => number = () => 0;
   /** The lanterns' and the heart's trigger boxes and what they are doing (set by the debug API). */
@@ -186,11 +192,15 @@ export class HitboxOverlay {
     (this.scene.lures ?? []).forEach((l, i) => {
       const K = T.kinds[l.kind];
       const on = (hp[i] ?? 0) > 0;
-      if (on) g.circle(l.x, l.y, K.radius).stroke({ color: 0xffb347, width: 1, alpha: 0.5 });
-      if (on) g.circle(l.x, l.y, K.core).stroke({ color: 0xff9a3c, width: 3 });
+      // Where the flame is (a swinging one moves: the latest step used frame - 1).
+      const f = lureAt(l, this.frame() - 1, tuning);
+      if (on) g.circle(f.x, f.y, K.radius).stroke({ color: 0xffb347, width: 1, alpha: 0.5 });
+      if (on) g.circle(f.x, f.y, K.core).stroke({ color: 0xff9a3c, width: 3 });
       const r = T.flameRadius;
-      g.rect(l.x - r, l.y - r, 2 * r, 2 * r).stroke({ color: on ? 0xffe14c : 0x8a8a8a, width: 2 });
+      g.rect(f.x - r, f.y - r, 2 * r, 2 * r).stroke({ color: on ? 0xffe14c : 0x8a8a8a, width: 2 });
     });
+    const kit = this.kit();
+    if (kit) drawKitBoxes(g, this.scene, kit);
   }
 }
 

@@ -1,4 +1,5 @@
 import type { AbilityId } from './abilities';
+import type { Bark, FlagGate, FlagTrigger, SeedCase, Swing, Thorns } from './kit-data';
 
 /**
  * A room's collision data, as the sim sees it: plain axis-aligned rects in sim px. This is types
@@ -23,6 +24,8 @@ export interface SolidRect {
    * whose one flank is a shaft wall and whose other is clean bark). Default: every face is a climb.
    */
   kick?: boolean | 'east' | 'west';
+  /** Set on the solids the level kit adds while they stand (src/sim/kit.ts): never safe ground. */
+  kit?: 'bark' | 'gate';
 }
 
 /** A one-way platform: a line at `y` that only blocks a body falling onto it. Down+Jump drops through. */
@@ -124,6 +127,8 @@ export interface Lure {
   y: number;
   /** Which way its swirl turns her: 1 = clockwise on screen (y down), -1 = anticlockwise. Default 1. */
   spin?: 1 | -1;
+  /** It hangs on a chain and swings (src/sim/paths.ts, memory/level-kit.md); `x`, `y` = the bottom of the swing. */
+  swing?: Swing;
 }
 
 /**
@@ -266,6 +271,12 @@ export interface Scene {
   doors?: RoomDoor[];
   /** Shortcuts: solids that open from one side only. */
   shortcuts?: Shortcut[];
+  /** The level kit (src/sim/kit.ts, memory/level-kit.md): hazards, pogo targets, breakables, flag gates, triggers. */
+  thorns?: Thorns[];
+  seedCases?: SeedCase[];
+  bark?: Bark[];
+  gates?: FlagGate[];
+  triggers?: FlagTrigger[];
 }
 
 /** A rect (sim px) that catches a fall: see `Scene.catches`. */

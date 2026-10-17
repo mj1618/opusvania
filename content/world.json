@@ -6,5 +6,5 @@
     { "id": "lab-world-b", "x": 8320, "y": 2816 },
     { "id": "lab-world-c", "x": 8320, "y": 4352 }
   ],
-  "tests": ["test-grove", "lab-lamps"]
+  "tests": ["test-grove", "lab-lamps", "lab-kit"]
 }

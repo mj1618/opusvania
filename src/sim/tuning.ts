@@ -321,6 +321,26 @@ export const defaultTuning = {
     snuffHitstop: 9,
     /** Health back for each lure put out (core.md §5). */
     healOnSnuff: 1,
+    /**
+     * A swinging lure's defaults (`lure.swing`, src/sim/paths.ts, memory/level-kit.md): `reach` px to each
+     * side of its rest point, one swing there and back every `period` frames. Its pull and core go with it.
+     */
+    swing: { reach: 120, period: 150 },
+  },
+  /**
+   * The level kit (src/sim/kit.ts, memory/level-kit.md).
+   * - `thorns`: a touch costs `damage`, she is held `holdFrames` and put back on her last safe ground
+   *   with `returnInvuln` frames of safety; safe ground keeps `safeMargin` px from thorns.
+   * - `seedCase`: the target's box is `size` px square; a forward / up cut clangs: held `clangHitstop`
+   *   (the same as a cut glancing off a braced burrback) and thrown back `clangRecoil` px/f (forward cuts).
+   *   A down cut is the pogo (its hitstop stays `enemies.pogoHitstopFrames`: the bounce's rhythm).
+   * - `bark`: `hp` cuts to break (one a cut, whatever its power); a cut that holds stops her `hitstop`
+   *   (a pogo keeps the pogo's), the one that breaks it `breakHitstop` (nearly a snuff's 9: it is a find).
+   */
+  kit: {
+    thorns: { damage: 1, holdFrames: 30, returnInvuln: 60, safeMargin: 96 },
+    seedCase: { size: 56, clangHitstop: 6, clangRecoil: 8 },
+    bark: { hp: 3, hitstop: 4, breakHitstop: 8 },
   },
   /**
    * Vesper's health (rules: memory/enemies.md). She has `max` lights; contact with an enemy costs

@@ -7,6 +7,7 @@
  */
 import type { Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
+import { lureAt } from '../../sim/lures';
 import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
 import { FreedMoths } from './moths';
@@ -25,6 +26,9 @@ interface Fx {
 }
 
 const LIFE = { beat: 0.35, hit: 0.25, snuff: 0.9, catch: 0.4, free: 0.45 } as const;
+
+/** Scratch for a flame's position this frame. */
+const AT = { x: 0, y: 0 };
 
 export class LureView {
   private readonly fx: Fx[] = [];
@@ -62,17 +66,27 @@ export class LureView {
       if (!l) continue;
       const K = T.kinds[l.kind];
       const hp = sim.lures.hp[i] ?? 0;
+      // Where the flame is now: a swinging one on its arc (memory/level-kit.md), on the sim's frame
+      // interpolated like her (the latest step used frame - 1).
+      const at = lureAt(l, sim.frame - 2 + sim.alpha, tuning, AT);
+      const lx = at.x;
+      const ly = at.y;
+      if (l.swing) {
+        const py = l.y - l.swing.length;
+        back.moveTo(l.x, py).lineTo(lx, ly).stroke({ color: GB.husk, width: 3, alpha: 0.9 });
+        back.circle(l.x, py, 6).fill({ color: GB.husk });
+      }
       if (hp <= 0) {
         // The husk: cold, small, no field.
-        back.circle(l.x, l.y, 14).stroke({ color: GB.husk, width: 2, alpha: 0.5 });
-        back.circle(l.x, l.y, 5).fill({ color: GB.husk, alpha: 0.8 });
+        back.circle(lx, ly, 14).stroke({ color: GB.husk, width: 2, alpha: 0.5 });
+        back.circle(lx, ly, 5).fill({ color: GB.husk, alpha: 0.8 });
         continue;
       }
       const held = p.lure === i;
       const grace = p.lureGrace === i && p.lureGraceFrames > 0;
       // The field: a faint wash and rim (dimmer while it leaves her alone).
-      back.circle(l.x, l.y, K.radius).fill({ color: GB.field, alpha: grace ? 0.015 : 0.035 });
-      back.circle(l.x, l.y, K.radius).stroke({ color: GB.field, width: 2, alpha: grace ? 0.1 : 0.22 });
+      back.circle(lx, ly, K.radius).fill({ color: GB.field, alpha: grace ? 0.015 : 0.035 });
+      back.circle(lx, ly, K.radius).stroke({ color: GB.field, width: 2, alpha: grace ? 0.1 : 0.22 });
       // The swirl's way round: three short arcs on the rim.
       const spin = l.spin ?? 1;
       for (let k = 0; k < 3; k++) {
@@ -80,8 +94,8 @@ export class LureView {
         const ar = K.radius - 10;
         // (A new sub-path first: arc() would join the previous point.)
         back
-          .moveTo(l.x + Math.cos(a0) * ar, l.y + Math.sin(a0) * ar)
-          .arc(l.x, l.y, ar, a0, a0 + 0.35 * spin, spin < 0)
+          .moveTo(lx + Math.cos(a0) * ar, ly + Math.sin(a0) * ar)
+          .arc(lx, ly, ar, a0, a0 + 0.35 * spin, spin < 0)
           .stroke({
             color: GB.field,
             width: 3,
@@ -89,29 +103,29 @@ export class LureView {
           });
       }
       // The core.
-      back.circle(l.x, l.y, K.core).stroke({ color: GB.core, width: held ? 4 : 2, alpha: held ? 1 : 0.6 });
+      back.circle(lx, ly, K.core).stroke({ color: GB.core, width: held ? 4 : 2, alpha: held ? 1 : 0.6 });
       // The flame: a warm dot that breathes.
       const fl = 1 + 0.12 * Math.sin(clock * 9 + i * 1.7) + 0.06 * Math.sin(clock * 23 + i);
-      back.circle(l.x, l.y, T.flameRadius * 1.6 * fl).fill({ color: GB.flame, alpha: 0.18 });
-      back.circle(l.x, l.y, T.flameRadius * 0.75 * fl).fill({ color: GB.flame });
-      back.circle(l.x, l.y - 2, T.flameRadius * 0.32 * fl).fill({ color: GB.flameHot });
+      back.circle(lx, ly, T.flameRadius * 1.6 * fl).fill({ color: GB.flame, alpha: 0.18 });
+      back.circle(lx, ly, T.flameRadius * 0.75 * fl).fill({ color: GB.flame });
+      back.circle(lx, ly - 2, T.flameRadius * 0.32 * fl).fill({ color: GB.flameHot });
       // hp pips over the flame (only for more than one cut).
       const max = Math.max(1, Math.round(K.hp));
       if (max > 1)
         for (let k = 0; k < max; k++) {
-          const x = l.x + (k - (max - 1) / 2) * 14;
-          back.circle(x, l.y - T.flameRadius - 16, 4).fill({ color: k < hp ? GB.flame : GB.husk });
+          const x = lx + (k - (max - 1) / 2) * 14;
+          back.circle(x, ly - T.flameRadius - 16, 4).fill({ color: k < hp ? GB.flame : GB.husk });
         }
       // Inside its field (and not held): a line from her to the flame, as strong as the pull.
       if (!held && !grace) {
-        const dx = l.x - p.cx;
-        const dy = l.y - p.cy;
+        const dx = lx - p.cx;
+        const dy = ly - p.cy;
         const d = Math.hypot(dx, dy);
         if (d < K.radius) {
           const k = Math.max(0, Math.min(1, (K.radius - d) / Math.max(1, K.radius - K.core)));
           back
             .moveTo(p.cx, p.cy)
-            .lineTo(l.x, l.y)
+            .lineTo(lx, ly)
             .stroke({ color: GB.field, width: 1 + 3 * k, alpha: 0.15 + 0.5 * k * k });
         }
       }
@@ -119,14 +133,14 @@ export class LureView {
       // throw her: out along the radius she is at, bent toward the held direction (as the sim does).
       if (held) {
         const of = Math.max(1, Math.round(T.beats));
-        const top = l.y - K.core - T.orbitShare * K.core - 46;
+        const top = ly - K.core - T.orbitShare * K.core - 46;
         for (let k = 0; k < of; k++) {
-          const x = l.x + (k - (of - 1) / 2) * 22;
+          const x = lx + (k - (of - 1) / 2) * 22;
           front.circle(x, top, 7).fill({ color: k < p.lureBeats ? GB.flameHot : GB.husk, alpha: 0.95 });
           front.circle(x, top, 7).stroke({ color: GB.flameHot, width: 2, alpha: 0.8 });
         }
-        let ox = p.cx - l.x;
-        let oy = p.cy - l.y;
+        let ox = p.cx - lx;
+        let oy = p.cy - ly;
         const d = Math.hypot(ox, oy) || 1;
         ox /= d;
         oy /= d;

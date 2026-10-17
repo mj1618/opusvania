@@ -79,6 +79,8 @@ export class RoomFade {
                 : R.exitLift,
         );
       } else if (e.type === 'fallCatch') this.go(R.catchDepth, e.frames / 60);
+      // Thorns (memory/level-kit.md): the same dip over their hold, lifted by the `fallReturn` that ends it.
+      else if (e.type === 'thornHit' && e.frames > 0) this.go(R.catchDepth, e.frames / 60);
       else if (e.type === 'fallReturn') this.go(0, R.catchLift);
       // A placement by hand (teleport, load) shows the picture plainly at once.
       else if (e.type === 'spawn' && !events.some((o) => o.type === 'roomEnter' || o.type === 'fallReturn')) {
