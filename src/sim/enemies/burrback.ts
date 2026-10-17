@@ -200,6 +200,20 @@ function walk(e: EnemyState, info: StepInfo): void {
   }
   e.teeter = 0;
   e.vx = e.facing * t.speed;
+  // (Hunting, it closes the distance quickly: no 8 s waddle across its den. It never walks into her: it
+  // stops a step short and braces when it may.)
+  if (t.hunt && seenBy(e, info) > 0) {
+    const p = state.player;
+    const level = Math.abs(p.y + p.h - (e.y + e.h)) <= t.provokedPx;
+    const gap = e.facing > 0 ? p.x - (e.x + e.w) : e.x - (p.x + p.w);
+    if (level && gap > -p.w && gap <= t.huntStopPx) {
+      e.vx = 0;
+      e.rx = 0;
+      return;
+    }
+    const far = Math.abs(p.x + p.w / 2 - (e.x + e.w / 2)) > t.huntFarPx;
+    if (t.huntSpeed > 0 && far && level) e.vx = e.facing * t.huntSpeed;
+  }
   e.rx += e.vx;
   let n = roundHalfAway(e.rx);
   // (A remainder left by a shove the other way must never count as steps.)
@@ -387,8 +401,9 @@ function spend(
   e.vx = 0;
   e.rx = 0;
   e.chargeLeft = 0;
-  // (The old burrback: a wall stun opens its shell; any other winded time it stays shut.)
-  e.stunned = cause === 'wall' && B.pogoShell;
+  // (The old burrback: winded, its shell is open (`openWinded`: after any ram; else only a wall stun).)
+  e.stunned = B.pogoShell && (cause === 'wall' || B.openWinded);
+  e.taken = 0;
   e.strikeCd = n + cooldown;
   e.rams++;
   e.broken = false;
@@ -736,7 +751,8 @@ export const burrback: KindRules = {
     }
     if (e.mode === 'windup') {
       e.vx = 0;
-      if (--e.timer <= 0 && B.feintFrames > 0 && e.feints === 0) {
+      // (A first mini-boss feints only from its second health third: the first third teaches the plain ram.)
+      if (--e.timer <= 0 && B.feintFrames > 0 && e.feints === 0 && e.hp <= e.hpMax * B.feintFrom) {
         // The old burrback's feint: the first brace was a lie. Its shell drops, then it braces again.
         e.feints = 1;
         const n = frames(B.feintFrames, 1);
@@ -819,6 +835,13 @@ export const burrback: KindRules = {
       else e.vx = 0;
       if (--e.timer <= 0) {
         e.knockVx = 0;
+        // (Open on its back, the old burrback gets up first: a harmless beat, then it may brace. Its touch
+        // never lands the moment its window closes on one still cutting it.)
+        if (e.stunned && B.riseFrames > 0) {
+          e.stunned = false;
+          setMode(e, 'wake', frames(B.riseFrames, 1));
+          return false;
+        }
         e.stunned = false;
         setMode(e, 'walk', 0);
         return true;
@@ -848,6 +871,13 @@ export const burrback: KindRules = {
         const winded = e.strikeCd - frames(B.strikeCooldown);
         if (winded > 0) {
           setMode(e, 'recover', winded);
+          return false;
+        }
+        // (The old burrback's open window is over (its time, or `openHits` cuts): it gets up, harmless.)
+        if (e.stunned && B.riseFrames > 0) {
+          e.stunned = false;
+          e.strikeCd = Math.max(e.strikeCd, frames(B.riseFrames));
+          setMode(e, 'wake', frames(B.riseFrames, 1));
           return false;
         }
         setMode(e, 'walk', 0);
@@ -958,6 +988,8 @@ export const burrback: KindRules = {
 
   /** Inside a lit lantern's sanctuary (it was there when the lantern caught, or was shoved in): harmless. */
   harmless(e, info) {
+    // (Open on its back, staggered by her cuts included, the old burrback's touch does nothing.)
+    if (e.stunned) return true;
     return groundSanctuaryDepth(info.state, info.scene, info.t.goal, e.x, e.x + e.w, e.y + e.h) > 0;
   },
 
@@ -1017,6 +1049,23 @@ export const burrback: KindRules = {
   },
 
   /** Along a forward cut; an up / down cut pushes it aside, away from her, less hard. */
+  /**
+   * Its touch is the dome that is drawn (`domeContact`: the old burrback): her box must reach below the
+   * shell's curve at the nearest x of her span, not just the box's empty top corners.
+   */
+  touches(e, p, t) {
+    const B = rowOf(t, e);
+    if (!B.domeContact) return true;
+    const H = e.h * B.domeHeight;
+    const sy = H * B.domeShoulder;
+    const cx = e.x + e.w / 2;
+    // The nearest x of her box to its middle, as a share of its half width.
+    const nx = Math.max(p.x, Math.min(p.x + p.w, cx));
+    const u = Math.min(1, Math.abs(nx - cx) / (e.w / 2));
+    const top = e.y + (e.h - H) + sy * (1 - Math.sqrt(1 - u * u));
+    return p.y + p.h > top;
+  },
+
   /** The old burrback's braced shell takes a pogo without a stagger: it rams on under her. */
   tough: (e, dir, t) => rowOf(t, e).pogoShell && e.braced && dir === 'down',
 
@@ -1029,6 +1078,9 @@ export const burrback: KindRules = {
       e.broken = false;
       return 0;
     }
+    // Open, it takes `openHits` cuts at most, then the window closes as its stagger ends.
+    if (B.pogoShell && e.stunned && B.openHits > 0 && ++e.taken >= B.openHits)
+      e.strikeCd = Math.min(e.strikeCd, frames(B.strikeCooldown));
     const k = knockback * rowOf(t, e).knockScale;
     const kb = dir === 'fwd' ? k : k * rowOf(t, e).knockVertical;
     // Cut, it is roused: it will come round to her and brace. A blow that lands on a braced one broke its brace.
