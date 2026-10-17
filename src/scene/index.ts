@@ -165,6 +165,7 @@ const SceneSchema = z
             w: int.positive(),
             h: int.positive(),
             glideAssist: int.min(1).max(9).optional(),
+            back: z.object({ x: int, y: int }).strict().optional(),
           })
           .strict(),
       )

@@ -52,10 +52,11 @@
     {
       "id": "burr-silk",
       "kind": "burrback",
-      "x": 2560,
+      "x": 3120,
       "y": 2624,
-      "facing": 1,
-      "radius": 300,
+      "facing": -1,
+      "radius": 40,
+      "fenced": true,
       "guards": "wick-s3"
     },
     { "id": "dang-s3", "kind": "dangler", "x": 2760, "y": 2134, "facing": 1, "guards": "wick-s3" }
@@ -92,6 +93,11 @@
         "x": 2400,
         "y": 2050,
         "text": "3. THE COMPOSITION: burr-silk in the light's pool, dang-s3 over the only cut spot (the knob), one wick: one snuff sends both"
+      },
+      {
+        "x": 2980,
+        "y": 2500,
+        "text": "burr-silk is fenced east of the flame (3054-3186, 186 past it), clear of the knob's landing: land, then snuff, not a duel"
       },
       {
         "x": 3300,

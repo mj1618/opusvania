@@ -336,8 +336,10 @@ export function step(
   // Caught after a fall: held a moment, then back on her last safe ground (it costs nothing).
   if (state.caught && ++state.caught.frames >= catchHold(state, t)) {
     const id = state.caught.id;
-    // The last ground she stood on (any length of time), inset from its lip: a fall costs the gap.
-    const safe = returnPoint(state.player.groundX, state.player.groundY, S, t);
+    // The last ground she stood on (any length of time), inset from its lip: a fall costs the gap. A zone
+    // may name its own return point (`back`: the glade's lip top).
+    const zoneBack = S.catches?.find((z) => z.id === id)?.back;
+    const safe = zoneBack ?? returnPoint(state.player.groundX, state.player.groundY, S, t);
     // (Not where her natural next jump carries her straight back into thorns.)
     const back = clearOfThorns(state, safe.x, safe.y, state.player.groundX, S, t, P);
     const x = back.x;

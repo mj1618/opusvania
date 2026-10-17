@@ -439,6 +439,16 @@ describe('R5 wood-glade: glade 1, the glide lock', () => {
     expect(s.feet().y).toBe(1664);
   });
 
+  it("a catch in the chasm from the alcove's ledge puts her on the lip's top, set back from the edge (video r2: a loop)", () => {
+    const s = play('wood-glade', ['glide']);
+    s.g.teleport(1264, 2048);
+    s.run(0, 5);
+    for (let i = 0; i < 400 && !has(s.events, 'fallCatch'); i++) s.run(R | (i % 30 < 15 ? J : 0));
+    s.run(0, 60);
+    expect(has(s.events, 'fallCatch')).toBe(true);
+    expect(s.feet()).toEqual({ x: 1100, y: 1664 });
+  });
+
   it('the alcove under the lip is never a trap: root rungs up a slot bring her back to the glade floor', () => {
     const s = play('wood-glade', ['glide']);
     s.g.teleport(1264, 2048);
@@ -1052,7 +1062,14 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
     g.runTo(2540);
     g.run(R | J, 200);
     expect(g.feet().y === 704 && g.feet().x > 3008).toBe(false);
-    for (const lead of [0, 40, 80]) {
+    for (const [lead, aim] of [
+      [0, ActionBit.up | R],
+      [40, ActionBit.up | R],
+      [80, ActionBit.up | R],
+      [120, ActionBit.up | R],
+      [0, R],
+      [80, R],
+    ] as const) {
       const s = play('wood-hawkers', ['glide']);
       for (const e of s.g.state.enemies) {
         e.mode = 'dead';
@@ -1067,14 +1084,17 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
         s.events.find((e) => e.type === 'lureCaught'),
         `lead ${lead}`,
       ).toMatchObject({ id: 'wick-throw' });
-      beatFree(s, ActionBit.up | R);
-      for (let i = 0; i < 200 && !s.g.state.player.grounded; i++) s.run(ActionBit.up | R);
+      beatFree(s, aim);
+      for (let i = 0; i < 200 && !s.g.state.player.grounded; i++) s.run(aim);
       expect(has(s.events, 'thornHit'), `lead ${lead}`).toBe(false);
-      expect(s.feet().x, `lead ${lead}`).toBeGreaterThan(3008);
+      // On the far ledge's top (video r2: 8 of 9 throws fell into the tunnel's mouth), clear of both its ends.
+      expect(s.feet().y, `lead ${lead} aim ${aim}`).toBe(800);
+      expect(s.feet().x, `lead ${lead} aim ${aim}`).toBeGreaterThan(3060);
+      expect(s.feet().x, `lead ${lead} aim ${aim}`).toBeLessThan(3456);
     }
   });
 
-  it("the pit under the throw is the dark tunnel's mouth: a miss drops her into it, and it leads up past the far ledge", () => {
+  it('a miss lands in the pit under the throw, a retry: one jump back onto the near ledge; the tunnel has its own door', () => {
     expect(getRoom('wood-hawkers').thorns ?? []).toEqual([]);
     expect((getRoom('wood-hawkers').camera?.zones ?? []).map((z) => z.id)).toContain('throw');
     const s = play('wood-hawkers', ['glide']);
@@ -1089,15 +1109,46 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
     s.run(0, 3);
     s.run(R, 40);
     for (let i = 0; i < 120 && !s.g.state.player.grounded; i++) s.run(0);
-    expect(s.feet().y).toBe(1360);
-    const f = naive(s, () => s.feet().y === 1024 && s.feet().x > 3456, 900);
-    expect(f).toBeGreaterThan(0);
+    expect(s.feet().y).toBe(1248);
+    // The retry ramp: a root step (112 up, then 112 to the near ledge).
+    let back = -1;
+    for (let i = 0; i < 300 && back < 0; i++) {
+      s.run(L | (i % 30 < 15 ? J : 0));
+      if (s.g.state.player.grounded && s.feet().y === 1024 && s.feet().x < 2560) back = i;
+    }
+    expect(back).toBeGreaterThan(0);
+    expect(back).toBeLessThan(120);
+    // The dark way: the root hatch in the near ledge (2208-2368), down + jump, one drop, the tunnel, up past the far ledge.
+    const d = play('wood-hawkers', ['glide']);
+    for (const e of d.g.state.enemies) {
+      e.mode = 'dead';
+      e.gone = true;
+    }
+    d.g.teleport(2256, 1024);
+    d.run(0, 3);
+    d.run(D | J, 2);
+    d.run(0, 60);
+    expect(d.feet().y).toBe(1360);
+    expect(naive(d, () => d.feet().y === 1024 && d.feet().x > 3456, 900)).toBeGreaterThan(0);
+  });
+
+  it("Tatter's walk ends in the dark way's door (the hatch), where it vanishes", () => {
+    const room = getRoom('wood-hawkers');
+    const t = (room.marks?.stage?.tatters ?? []).find((m) => m.climb?.vanish);
+    const end = t?.climb?.path.at(-1);
+    const hatch = (room.oneWays ?? []).find((o) => o.x === 2208 && o.y === 1024);
+    expect(hatch).toBeDefined();
+    expect(end?.[1]).toBe(1024);
+    expect(end?.[0]).toBeGreaterThan(2208);
+    expect(end?.[0]).toBeLessThan(2208 + (hatch?.w ?? 0));
   });
 
   it('the find: the bark in the far ledge hides the moonlit hollow (quick wings); P-dark rests her', () => {
     const s = play('wood-hawkers', ['glide']);
-    s.g.teleport(3520, 1024);
+    s.g.teleport(3776, 1024);
     expect(has(s.run(0, 40), 'patchRest')).toBe(true);
+    s.g.teleport(3520, 1024);
+    s.run(0, 3);
     s.run(L, 10);
     for (let k = 0; k < 4; k++) s.run(L | A, 1).concat(s.run(0, 20));
     expect(has(s.events, 'barkBreak')).toBe(true);
@@ -1179,6 +1230,19 @@ describe('R9 wood-silk: the silk hall', () => {
     const ev = s.run(R, 1).concat(s.run(A, 1), s.run(0, 30));
     expect(ev.find((e) => e.type === 'lureSnuff')).toMatchObject({ id: 'wick-s3' });
     expect(ev.filter((e) => e.type === 'enemyDisperse').length).toBe(2);
+  });
+
+  it("the composition's beetle is fenced east of the flame: it never reaches the knob's landing (video r2: it killed 3 runs)", () => {
+    const s = play('wood-silk', ['glide']);
+    for (const e of s.g.state.enemies) if (e.id !== 'burr-silk') e.gone = true;
+    s.g.teleport(2740, 2624);
+    let least = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < 600; i++) {
+      s.run(0);
+      least = Math.min(least, s.g.state.enemies.find((e) => e.id === 'burr-silk')?.x ?? least);
+    }
+    expect(least).toBeGreaterThan(2740 + 200);
+    expect(s.events.some((e) => e.type === 'hurt')).toBe(false);
   });
 
   it('the dead end: the bark floor breaks to down cuts and drops her into the root stair; the second sign is in the dark half', () => {
@@ -1269,6 +1333,38 @@ describe('R10 wood-well: the root stair, the old burrback, glade 2, the climb-ou
     expect(640 - top).toBeLessThanOrEqual(40);
   });
 
+  it('every stair gap (three dark ones) is a jump or a glide from its lip with every lamp out: no snuffed lamp strands her', () => {
+    for (const [x0, y0, lip, next] of [
+      [10400, 640, 0, 896],
+      [8600, 896, 8448, 1040],
+      [7600, 1040, 7488, 1152],
+      [6700, 1152, 6528, 1216],
+    ] as const) {
+      for (const glide of [false, true]) {
+        const s = play('wood-well', ['glide']);
+        s.g.teleport(x0, y0);
+        s.run(0, 3);
+        for (let i = 0; i < (s.g.scene.lures ?? []).length; i++) {
+          s.g.state.lures.hp[i] = 0;
+          s.g.state.lures.out[i] = 1;
+        }
+        for (const e of s.g.state.enemies) {
+          e.mode = 'dead';
+          e.gone = true;
+        }
+        if (glide || !lip) for (let i = 0; i < 300 && s.g.state.player.grounded; i++) s.run(L);
+        else {
+          for (let i = 0; i < 200 && s.feet().x > lip + 20; i++) s.run(L);
+          s.run(L | J, 14);
+        }
+        for (let i = 0; i < 300 && !s.g.state.player.grounded; i++) s.run(L | J);
+        expect(has(s.events, 'fallCatch'), `from ${x0} glide ${glide}`).toBe(false);
+        expect(s.feet().y, `from ${x0} glide ${glide}`).toBeGreaterThanOrEqual(next);
+        expect(s.feet().y, `from ${x0} glide ${glide}`).toBeLessThanOrEqual(1216);
+      }
+    }
+  });
+
   it('no skip: the pit is sealed to the roof; no jump or glide from the pit floor gets west of the gate while the old burrback lives', () => {
     let least = Number.POSITIVE_INFINITY;
     let highest = Number.POSITIVE_INFINITY;
@@ -1347,7 +1443,7 @@ describe('R10 wood-well: the root stair, the old burrback, glade 2, the climb-ou
     s.g.state.player.faded = 2;
     s.run(0, 3);
     expect(s.g.state.room).toBe('wood-well');
-    expect(s.feet()).toEqual({ x: 6300, y: 1216 });
+    expect(s.feet()).toEqual({ x: 6000, y: 1216 });
   });
 
   it('the narrow lit landings: each lamp in the stair has a dangler over its landing; the window holds 3 s; escape ledges on both pit walls', () => {

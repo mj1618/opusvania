@@ -19,7 +19,7 @@ The game is built room by room (docs/design/tech.md). The Grove is the test bed 
 |---|---|
 | `abilities: AbilityId[]` | the starting kit (`src/sim/abilities.ts`: `glide, wallJump, doubleJump, dash`). Absent = all (test scenes, the grove) |
 | `exits: [{id, edge: n/s/e/w, from, to, at?, oneWay?}]` | an open span of an edge (`at`: the line across the edge where the crossing counts, default the edge) (no wall there: `solidAt` / `kickableAt` honour it). Box centre past the edge inside the span: `roomExit`, then she enters the neighbour found from world placement (memory/world.md). With no neighbour: held `tuning.room.exitFrames` (36) with no input, then the room restarts (`roomEnter` + `spawn`; `save` and the frame count go on) |
-| `catches: [{id, x, y, w, h}]` | a fall into the rect costs nothing: `fallCatch`, held `catchFrames` (18), then `fallReturn` + `spawn` at her last safe ground, moved `returnInset` (72) px in from that top's end (the lip she fell from loops a hold-right player otherwise) |
+| `catches: [{id, x, y, w, h, glideAssist?, back?}]` | a fall into the rect costs nothing: `fallCatch`, held `catchFrames` (18), then `fallReturn` + `spawn` at her last safe ground, moved `returnInset` (72) px in from that top's end (the lip she fell from loops a hold-right player otherwise), or at the zone's `back` point when it names one |
 | `lures: [{id, kind, x, y, spin?}]` | the story's lamps (memory/lures.md) |
 | `hatch: {x, y}` | she starts shut in the cocoon at (x, y) (render); her body stands at `spawn`, no input moves her. Presses of ANY button (a bit set that was not the step before) after `tuning.hatch.listenFrom` (150, the fade-up) stir it (`hatchStir`); the 3rd breaks it (`hatch`); with no input it stirs on its own every 90 frames from 300 and breaks at 720 (`auto`). The breaking press is not also a jump. **`placePlayer` (teleport) ends it silently** |
 State v22 (memory/save.md): `room`, `save` (abilities, snuffed, moths, taken, flags, opened, visited, seen, crossed, patch, time), `exit` (a `TransitState`), `caught`, `hatch`, `rest`. `resolveParams(t, abilities)` turns off what she does not own:
@@ -96,6 +96,24 @@ snuff, bounce, L2.
   to L0 (a step), a root mass over L1 (9688-10272, to the room top) so no jump skips the pogo-wick; narrow lit landings
   L2 (8448-9088) and L3 (7296-7680); the window holds 180 and frames the old burrback close; escape ledges on both pit
   walls (3584 and 5504, y 1920). R5's chasm catch has `glideAssist: 2`.
+- **Round 4 (2026-10-18, reviews/area1-video-r2.md, area1-firsttimer-r4.md):** R8's far ledge is 224 over the
+  near ledge (top 800, 3008-3456): a beat free aimed right or up-right lands on its top (3115-3430), unaimed drops
+  her back on the near ledge; a miss lands in the pit (floor 1248) with a root step (2560-2720 @1136) back up: a
+  retry ramp. The tunnel is not the pit any more: its door is a root hatch in the near ledge (2208-2368, 160 wide
+  for a 40 px body; down + jump, one drop to 1360), in frame of zone `throw`; `stage.tatters` walks Tatter 260 ahead
+  of her over the hummocks to it (`vanish`). The tunnel's way up is an open shaft (3520-3712: a one-way step at
+  1200, the floor mesh at 1024; P-dark moved to 3776). R10's stair: the pogo-wick hangs under
+  L1's lip (9684, 780: a walk-off drops her into its pull), L2 8448-9216 @896, L3 7488-7872 @1040, a third dark
+  landing L3b 6528-6976 @1152, L4 5760-6144 @1216; root curtains 88 over each landing's east part stop glides (no
+  landing skipped); every gap is a jump or glide from its open lip with every lamp out. R9's burr-silk is fenced
+  east of the flame (3054-3186), clear of the knob's landing (no R9 deaths since; still 2-4 hits a run: the panel
+  is past it). A catch zone may name `back: {x, y}`: the glade's chasm returns her to the lip's top at 1100.
+- **The bots' map (tools/playtest/map.ts) reads walls only from below:** a walk-off counts a solid between only if
+  it starts under the surface's top, and a side-by-side jump ignores a wall shorter than its reach from the target's
+  height. So a floor over a tunnel (R8's pit) reads as walk-offs into the tunnel, and bots retry them for minutes
+  (round 4's first try held 4 runs 4-8 min in the pit). R8's pit floor has a 3 px lip under it (1265-1268, 20+
+  past each end) so the map sees a solid between; abutting tunnel-floor seams made it worse (side-by-side walks).
+  Its `up` move also launches 40 px beside a one-way's end without checking the ceiling there: keep that spot open.
 - A one-way's `noDrop` may name a flag (refuses drop-through until it is set).
 - A floor bark panel is hit by a down cut from the air (cut ~70-90 px over it, falling): each hit bounces
   her; cut as she lands and it hits with no bounce; a standing down cut does not reach it.

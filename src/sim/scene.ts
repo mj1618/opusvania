@@ -395,4 +395,9 @@ export interface CatchZone {
    * lands, presses Down, dashes or meets a wall.
    */
   glideAssist?: number;
+  /**
+   * Where a catch here puts her back (feet), instead of the last ground she stood on: the glade's lip, set back
+   * from its edge, when that last ground was a ledge under the lip she glides off again (video r2: 15 catches).
+   */
+  back?: { x: number; y: number };
 }

@@ -43,7 +43,10 @@
     { "tag": "root", "x": 2256, "y": 936, "w": 64, "h": 24 },
     { "tag": "ground", "x": 2320, "y": 1152, "w": 1520, "h": 1024 }
   ],
-  "oneWays": [{ "tag": "root", "x": 1552, "y": 1152, "w": 96 }],
+  "oneWays": [
+    { "tag": "root", "x": 1552, "y": 1152, "w": 96 },
+    { "tag": "root", "x": 1712, "y": 1152, "w": 96 }
+  ],
   "lures": [
     { "id": "wick-caught", "kind": "wick", "x": 1680, "y": 720, "spin": -1 },
     { "id": "wick-first", "kind": "wick", "x": 2344, "y": 896 },
@@ -74,7 +77,7 @@
       {
         "x": 1100,
         "y": 560,
-        "text": "holding nothing she is thrown back onto L. A miss into the dip: a root rung and a hop back up to L (~4 s)"
+        "text": "holding nothing she is thrown back onto L. A miss into the dip: a root rung and a hop back up to L (~4 s); a rung on M's side too, so a snuffed W1 never strands her"
       },
       {
         "x": 1820,

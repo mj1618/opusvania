@@ -29,26 +29,31 @@
     { "id": "w", "edge": "w", "from": 768, "to": 1024 },
     { "id": "e", "edge": "e", "from": 768, "to": 1024 }
   ],
-  "patches": [{ "id": "p-dark", "x": 3530, "y": 1024 }],
+  "patches": [{ "id": "p-dark", "x": 3776, "y": 1024 }],
   "solids": [
     { "tag": "ground", "x": 0, "y": 1024, "w": 1088, "h": 368 },
     { "tag": "root", "x": 1088, "y": 832, "w": 384, "h": 560 },
     { "tag": "ground", "x": 1472, "y": 1088, "w": 256, "h": 304 },
     { "tag": "root", "x": 1728, "y": 832, "w": 384, "h": 560 },
-    { "tag": "ground", "x": 2112, "y": 1024, "w": 448, "h": 240 },
-    { "tag": "root", "x": 3008, "y": 704, "w": 448, "h": 160 },
+    { "tag": "ground", "x": 2112, "y": 1024, "w": 96, "h": 240 },
+    { "tag": "ground", "x": 2368, "y": 1024, "w": 192, "h": 240 },
+    { "tag": "root", "x": 2560, "y": 1248, "w": 448, "h": 17 },
+    { "tag": "root", "x": 2540, "y": 1265, "w": 540, "h": 3 },
+    { "tag": "root", "x": 2560, "y": 1136, "w": 160, "h": 112 },
+    { "tag": "root", "x": 3008, "y": 800, "w": 448, "h": 64 },
     { "tag": "root", "x": 3008, "y": 864, "w": 192, "h": 400 },
     { "tag": "root", "x": 3200, "y": 1024, "w": 256, "h": 240 },
-    { "tag": "ground", "x": 3456, "y": 1024, "w": 144, "h": 240 },
+    { "tag": "ground", "x": 3456, "y": 1024, "w": 64, "h": 240 },
     { "tag": "ground", "x": 3712, "y": 1024, "w": 128, "h": 240 },
     { "tag": "ground", "x": 2112, "y": 1360, "w": 1728, "h": 32 },
-    { "tag": "ground", "x": 2112, "y": 1264, "w": 192, "h": 96 },
+    { "tag": "ground", "x": 2112, "y": 1264, "w": 96, "h": 96 },
     { "tag": "ground", "x": 3712, "y": 1264, "w": 128, "h": 96 },
     { "tag": "trunk", "x": 3776, "y": 448, "w": 64, "h": 320, "kick": false }
   ],
   "oneWays": [
+    { "tag": "root", "x": 2208, "y": 1024, "w": 160 },
     { "tag": "root", "x": 3600, "y": 1200, "w": 112 },
-    { "tag": "root", "x": 3600, "y": 1024, "w": 112 },
+    { "tag": "root", "x": 3520, "y": 1024, "w": 192 },
     { "tag": "root", "x": 3456, "y": 864, "w": 96 }
   ],
   "bark": [{ "id": "bark-hollow", "x": 3392, "y": 864, "w": 64, "h": 160 }],
@@ -87,6 +92,34 @@
     { "from": "p-dark", "to": "hollow-wings" }
   ],
   "marks": {
+    "stage": {
+      "circlers": [{ "lure": "wick-throw", "count": 6, "r": 95 }],
+      "tatters": [
+        {
+          "x": 700,
+          "y": 1024,
+          "facing": 1,
+          "until": "wood-root-ladder",
+          "climb": {
+            "path": [
+              [700, 1024],
+              [1088, 1024],
+              [1088, 832],
+              [1472, 832],
+              [1472, 1088],
+              [1728, 1088],
+              [1728, 832],
+              [2112, 832],
+              [2112, 1024],
+              [2288, 1024]
+            ],
+            "lead": 260,
+            "vanish": true
+          }
+        }
+      ],
+      "oak": { "x": -1088, "y": 1024, "top": -2468, "w": 384 }
+    },
     "notes": [
       { "x": 100, "y": 600, "text": "R8 wood-hawkers  PURPOSE: the hawker, and being caught is being prey" },
       {
@@ -112,12 +145,17 @@
       {
         "x": 2150,
         "y": 780,
-        "text": "a jump or a glide can't reach the far ledge (it is 320 up): the throw is the way"
+        "text": "a jump or a glide can't reach the far ledge (224 up, 448 across): the throw, right or up-right, lands on it or past it"
       },
       {
-        "x": 2250,
+        "x": 2160,
         "y": 1320,
-        "text": "THE DARK WAY (Tatter's): the pit under the gap is the tunnel's mouth, in view from the ledge; a miss drops her in; up the hatch at 3600"
+        "text": "THE DARK WAY (Tatter's): its own door (a root hatch 2208-2368, 160 wide, in the near ledge, in frame): down + jump, one drop; the tunnel; up the open shaft at 3520-3712 (a one-way step at 3600, the floor mesh)"
+      },
+      {
+        "x": 2600,
+        "y": 1180,
+        "text": "the pit under the throw: a miss lands here; a root step (112, 112) back up to the near ledge: a retry ramp, not the dark way"
       },
       { "x": 3020, "y": 660, "text": "the far ledge: snuff W-throw from here with a jump-cut, and B leaves" },
       {
@@ -125,23 +163,14 @@
         "y": 840,
         "text": "FIND: the bark in the far ledge's east face hides the MOONLIT HOLLOW (quick wings: beat free in 2)"
       },
-      { "x": 3480, "y": 960, "text": "P-dark moon patch" },
+      { "x": 3720, "y": 960, "text": "P-dark moon patch" },
       {
         "x": 1000,
         "y": 800,
         "text": "LANDMARK: twin hummocks under the hawker's lane; the oak's bulk behind the west arch"
-      },
-      {
-        "x": 3560,
-        "y": 420,
-        "text": "the east doorway: a trunk post over the door (the way on to the silk hall)"
       }
     ],
-    "tatter": { "x": 3620, "y": 1024, "facing": -1, "when": "wood-root-ladder" },
-    "stage": {
-      "oak": { "x": -1088, "y": 1024, "top": -2468, "w": 384 },
-      "circlers": [{ "lure": "wick-throw", "count": 6, "r": 95 }]
-    }
+    "tatter": { "x": 3620, "y": 1024, "facing": -1, "when": "wood-root-ladder" }
   },
   "shots": {
     "wide": [

@@ -28,7 +28,17 @@
     { "id": "n", "edge": "n", "from": 256, "to": 512 },
     { "id": "e", "edge": "e", "from": 1920, "to": 2176 }
   ],
-  "catches": [{ "id": "chasm", "x": 1408, "y": 2240, "w": 960, "h": 64, "glideAssist": 2 }],
+  "catches": [
+    {
+      "id": "chasm",
+      "x": 1408,
+      "y": 2240,
+      "w": 960,
+      "h": 64,
+      "glideAssist": 2,
+      "back": { "x": 1100, "y": 1664 }
+    }
+  ],
   "patches": [{ "id": "p2", "x": 448, "y": 1664 }],
   "glades": [{ "id": "glade-glide", "x": 192, "y": 1344, "w": 384, "h": 320, "ability": "glide" }],
   "solids": [
