@@ -28,6 +28,9 @@ export class WorldView {
   /** Over her: the flashes. */
   readonly front = new Graphics();
 
+  /** The moon patch's first-time cue ("be still to rest"), shown while she stands in a patch not yet rested. */
+  private hint: Text | null = null;
+
   constructor(private readonly texts: Container) {}
 
   onEvents(events: readonly SimEvent[]): void {
@@ -56,6 +59,7 @@ export class WorldView {
     const save = sim.save;
     const g = this.back.clear();
     const P = tuning.patch;
+    let hintAt: { x: number; y: number } | null = null;
     (scene.patches ?? []).forEach((pt, i) => {
       const here = sim.rest.at === i;
       const mine = save.patch?.room === scene.id && save.patch.id === pt.id;
@@ -71,7 +75,31 @@ export class WorldView {
       g.rect(pt.x - P.width / 2, pt.y - 4, P.width, 4).fill({ color: 0xd8e6ff, alpha: mine ? 0.95 : 0.6 });
       if (mine) g.circle(pt.x, pt.y - P.height - 30, 9).fill({ color: 0xd8e6ff, alpha: 0.9 });
       else g.circle(pt.x, pt.y - P.height - 30, 9).stroke({ color: 0xd8e6ff, width: 2, alpha: 0.6 });
+      // Standing in it, not yet rested this stay (first-timer r3 rested by accident): the moon over it fills
+      // as she keeps still, and until her first rest ever a quiet line says how.
+      if (here && !sim.rest.done) {
+        const k = Math.min(1, sim.rest.frames / Math.max(1, P.restFrames));
+        const cy = pt.y - P.height - 30;
+        const pulse = 0.5 + 0.5 * Math.sin(clock * 3);
+        g.circle(pt.x, cy, 16 + 4 * pulse).stroke({ color: 0xd8e6ff, width: 2, alpha: 0.25 + 0.2 * pulse });
+        if (k > 0)
+          g.moveTo(pt.x + 16, cy)
+            .arc(pt.x, cy, 16, 0, k * Math.PI * 2)
+            .stroke({ color: 0xd8e6ff, width: 3, alpha: 0.9 });
+        hintAt = save.patch === null ? { x: pt.x, y: cy - 40 } : null;
+      }
     });
+    if (!this.hint) {
+      this.hint = label('be still to rest', 0, 0, 0xd8e6ff, 18);
+      this.texts.addChild(this.hint);
+    }
+    // (Set inside the forEach above: TS cannot see that.)
+    const at = hintAt as { x: number; y: number } | null;
+    this.hint.visible = at !== null;
+    if (at) {
+      this.hint.position.set(Math.round(at.x), Math.round(at.y));
+      this.hint.alpha = 0.6 + 0.2 * Math.sin(clock * 2);
+    }
     for (const gl of scene.glades ?? []) {
       const taken = save.taken.includes(`${scene.id}:${gl.id}`);
       const pulse = taken ? 0 : 0.5 + 0.5 * Math.sin(clock * 2.2);

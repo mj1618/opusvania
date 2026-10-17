@@ -100,6 +100,9 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
       case 'capBounce':
         add += B.capBounce;
         break;
+      case 'barkHit':
+        add += B.barkHit;
+        break;
       case 'slashTerrain':
         add += B.terrain;
         break;

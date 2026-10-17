@@ -63,7 +63,18 @@ function rhythmLit(rhythm: string, t0: number): boolean {
 }
 
 interface Fx {
-  kind: 'chip' | 'break' | 'clang' | 'pogo' | 'gate' | 'flag' | 'thorn' | 'bounce' | 'stone' | 'grant';
+  kind:
+    | 'chip'
+    | 'break'
+    | 'clang'
+    | 'pogo'
+    | 'gate'
+    | 'flag'
+    | 'thorn'
+    | 'bounce'
+    | 'stone'
+    | 'grant'
+    | 'nope';
   x: number;
   y: number;
   w: number;
@@ -73,7 +84,8 @@ interface Fx {
 }
 
 const LIFE: Record<Fx['kind'], number> = {
-  chip: 0.3,
+  nope: 0.35,
+  chip: 0.45,
   break: 0.8,
   clang: 0.3,
   pogo: 0.3,
@@ -169,7 +181,8 @@ export class KitView {
     this.front.addChild(this.fg);
   }
 
-  onEvents(events: readonly SimEvent[]): void {
+  /** `sim` (optional): to tell a cut that meets a lock it cannot open yet ("not yet"). */
+  onEvents(events: readonly SimEvent[], sim?: SimView): void {
     for (const e of events) {
       if (e.type === 'spawn' && events.some((o) => o.type === 'roomEnter')) {
         this.fx.length = 0;
@@ -179,8 +192,13 @@ export class KitView {
         this.line?.destroy();
         this.line = null;
       } else if (e.type === 'barkHit') {
+        // Every cut answers (first-timer r3: 150 tries at a floor panel and no feedback): it shakes, a
+        // crack more shows (drawn from the hp left), dust puffs out, and the view feels the crunch (shake.ts).
         this.shake.set(e.id, 0);
         this.add('chip', e.x, e.y, 0, 0);
+      } else if (e.type === 'slashTerrain' && sim && this.isLock(sim, e.x, e.y)) {
+        // A cut into a lock that a later ability or the other side opens: a dull "not yet".
+        this.add('nope', e.x, e.y, 0, 0);
       } else if (e.type === 'barkBreak') this.add('break', e.x, e.y, e.w, e.h);
       else if (e.type === 'capBounce') {
         this.squash.set(e.id, 0);
@@ -197,6 +215,18 @@ export class KitView {
       else if (e.type === 'flagSet') this.add('flag', e.x, e.y, 0, 0);
       else if (e.type === 'thornHit') this.add('thorn', e.x, e.y - 40, 0, 0);
     }
+  }
+
+  /** A shut shortcut, a shut gate or a floor panel (a side cut does nothing to it) at (x, y)? */
+  private isLock(sim: SimView, x: number, y: number): boolean {
+    const room = sim.scene;
+    const near = (r: { x: number; y: number; w: number; h: number }) =>
+      x >= r.x - 10 && x <= r.x + r.w + 10 && y >= r.y - 10 && y <= r.y + r.h + 10;
+    for (const sc of room.shortcuts ?? [])
+      if (!sim.save.opened.includes(`${room.id}:${sc.id}`) && near(sc)) return true;
+    for (const g of room.gates ?? []) if (!sim.save.flags.includes(g.flag) && near(g)) return true;
+    for (const b of room.bark ?? []) if (b.floor && near(b)) return true;
+    return false;
   }
 
   private add(kind: Fx['kind'], x: number, y: number, w: number, h: number): void {
@@ -289,6 +319,20 @@ export class KitView {
         }
       }
       const max = b.hp ?? tuning.kit.bark.hp;
+      // A crack more for every cut taken: the panel shows how close it is.
+      for (let k = 0; k < max - left; k++) {
+        const cx0 = x + b.w * (0.2 + 0.6 * hash01(b.id, k * 5 + 1));
+        // (Spread down the panel: each new crack in its own band.)
+        const band = (k + 0.2 + 0.6 * hash01(b.id, k * 5 + 2)) / Math.max(1, max);
+        const len = Math.min(Math.max(b.w, b.h) / max, Math.min(b.w, b.h) * 1.4);
+        const cy0 = b.y + (b.h - len) * band;
+        const d = hash01(b.id, k * 5 + 3) < 0.5 ? -1 : 1;
+        g.moveTo(cx0, cy0)
+          .lineTo(cx0 + d * len * 0.25, cy0 + len * 0.3)
+          .lineTo(cx0 - d * len * 0.1, cy0 + len * 0.55)
+          .lineTo(cx0 + d * len * 0.3, cy0 + len * 0.85)
+          .stroke({ color: 0x1a1410, width: 3, alpha: 0.85 });
+      }
       for (let k = 0; k < max; k++) {
         const px = b.x + b.w / 2 + (k - (max - 1) / 2) * 14;
         const py = b.floor ? b.y + b.h / 2 : b.y + 18;
@@ -329,9 +373,31 @@ export class KitView {
       e.t += dt;
       const k = Math.min(1, e.t / e.life);
       const a = 1 - k;
-      if (e.kind === 'chip')
+      if (e.kind === 'chip') {
         f.circle(e.x, e.y, 20 + 50 * k).stroke({ color: KC.barkEdge, width: 3, alpha: a });
-      else if (e.kind === 'break') {
+        // A puff of rotten dust and a few splinters.
+        for (let c = 0; c < 7; c++) {
+          const ang = -Math.PI / 2 + (c - 3) * 0.42;
+          const sp = 90 + 30 * (c % 3);
+          f.circle(
+            e.x + Math.cos(ang) * sp * e.t,
+            e.y + Math.sin(ang) * sp * e.t + 120 * e.t * e.t,
+            5 + 10 * k,
+          ).fill({
+            color: KC.spore,
+            alpha: 0.35 * a,
+          });
+        }
+      } else if (e.kind === 'nope') {
+        // "Not yet": a dull grey ring and a short cross, no sparks.
+        const r = 10 + 14 * k;
+        f.circle(e.x, e.y, r).stroke({ color: 0x8a93a8, width: 3, alpha: a });
+        f.moveTo(e.x - 7, e.y - 7)
+          .lineTo(e.x + 7, e.y + 7)
+          .moveTo(e.x + 7, e.y - 7)
+          .lineTo(e.x - 7, e.y + 7)
+          .stroke({ color: 0x8a93a8, width: 3, alpha: a });
+      } else if (e.kind === 'break') {
         // The panel flies apart: chunks thrown out from its centre, falling.
         for (let c = 0; c < 10; c++) {
           const ang = (c / 10) * Math.PI * 2 + 0.3;

@@ -40,6 +40,8 @@ export const STAGING = {
   bask: { motes: 14, rise: 120 },
   /** The wings-twitch: two flicks in `len` s, then at most once every `every` s while she stands there. */
   twitch: { len: 1.0, every: 6 },
+  /** The guide straggler: px ahead of her, px/s at most, moths, alpha; px from the end she must be to send it through, s to go. */
+  guide: { ahead: 360, speed: 420, count: 2, alpha: 0.85, through: 260, out: 1.4 },
   /** The moths climbing the oak: per moth freed, at most, px/s up, swirl (share of its width), alpha. */
   oak: { per: 0.25, max: 48, speed: 70, swirl: 0.35, alpha: 0.7 },
   /** The crown cloud: at most this many specks; seconds to lift away, the spread of their starts, the rise (px). */
@@ -123,6 +125,9 @@ export class StagingView {
   private twitchT = 1e6;
   /** Each circling lure's moths, once it is out: seconds since (they scatter). */
   private readonly scatter = new Map<string, number>();
+  /** The guide's place along its path (arc length, eased) and seconds since it went through the end. */
+  private guideS = -1;
+  private guideGone = -1;
   /** Seconds since the root was cut (large = not this visit). */
   private rootT = 1e6;
   /** Seconds since the crown cloud lifted (-1 = waiting; `DONE` = it went before this visit). */
@@ -152,6 +157,8 @@ export class StagingView {
       if (e.type === 'roomEnter') {
         this.catches = 0;
         this.scatter.clear();
+        this.guideS = -1;
+        this.guideGone = -1;
         this.cloudT = -1;
       } else if (e.type === 'fallCatch') this.catches++;
       else if (e.type === 'lureSnuff' && this.stage?.circlers?.some((c) => c.lure === e.id))
@@ -172,6 +179,7 @@ export class StagingView {
     for (const l of S.ladders ?? []) if (sim.save.flags.includes(l.flag)) this.ladder(back, l.x, l.y0, l.y1);
     this.drawRootFall(back, dt);
     this.drawOakClimb(back, clock, sim);
+    this.drawGuide(front, dt, clock, sim);
     this.drawCloud(front, dt, clock, sim);
     this.drawStragglers(front, clock);
     this.drawCirclers(front, dt, clock, sim);
@@ -402,6 +410,64 @@ export class StagingView {
         .lineTo(sx + Math.cos(ang + 0.35 * s) * len * 0.55, sy + Math.sin(ang + 0.35 * s) * len * 0.55)
         .closePath()
         .fill({ color: C.wing, alpha: 0.55 * open });
+    }
+  }
+
+  /**
+   * The straggler that leads: it keeps `ahead` px along the path ahead of where she is (her nearest point on
+   * it), waits there wheeling, and goes on through the end once she nears it.
+   */
+  private drawGuide(g: Graphics, dt: number, clock: number, sim: SimView): void {
+    const G = this.stage?.guide;
+    if (!G || (G.until && sim.save.flags.includes(G.until))) return;
+    const pts = G.path;
+    let total = 0;
+    for (let i = 1; i < pts.length; i++)
+      total += Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]);
+    // Her place along the path: the nearest point on any segment.
+    const p = sim.player;
+    let best = Number.POSITIVE_INFINITY;
+    let her = 0;
+    let acc = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, ay] = pts[i - 1]!;
+      const [bx, by] = pts[i]!;
+      const l = Math.hypot(bx - ax, by - ay) || 1;
+      const u = Math.max(0, Math.min(1, ((p.cx - ax) * (bx - ax) + (p.cy - ay) * (by - ay)) / (l * l)));
+      const d = Math.hypot(ax + (bx - ax) * u - p.cx, ay + (by - ay) * u - p.cy);
+      if (d < best) {
+        best = d;
+        her = acc + u * l;
+      }
+      acc += l;
+    }
+    const want = Math.min(total, her + (G.ahead ?? STAGING.guide.ahead));
+    // Only ever onward; eased, never faster than a moth flies.
+    if (this.guideS < 0) this.guideS = want;
+    const step = STAGING.guide.speed * dt;
+    this.guideS = Math.max(this.guideS, Math.min(want, this.guideS + step));
+    if (this.guideGone < 0 && her > total - STAGING.guide.through) this.guideGone = 0;
+    let gone = 0;
+    if (this.guideGone >= 0) {
+      this.guideGone += dt;
+      gone = Math.min(1, this.guideGone / STAGING.guide.out);
+      if (gone >= 1) return;
+    }
+    const n = G.count ?? STAGING.guide.count;
+    for (let i = 0; i < n; i++) {
+      const lag = i * 40;
+      const a = along(pts, Math.max(0, this.guideS - lag) / total, AT);
+      const wx = Math.sin(clock * 1.7 + i * 2.1) * 28;
+      const wy = Math.cos(clock * 2.3 + i) * 16 - 30;
+      // Through the end: on along the last segment and out of sight.
+      const on = gone * 260;
+      moth(
+        g,
+        a.x + wx + a.tx * on,
+        a.y + wy + a.ty * on,
+        Math.sin(clock * 24 + i * 1.3),
+        (1 - gone) * STAGING.guide.alpha,
+      );
     }
   }
 

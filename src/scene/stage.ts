@@ -134,6 +134,20 @@ export const StageSchema = z
       .strict()
       .optional(),
     /**
+     * A straggler that shows the way on (first-timer r3: in the burrow the swarm was gone and nothing pointed
+     * onward): a few moths fly `ahead` px (default 360) along `path` ahead of her, waiting for her, and at its
+     * end they go on through (down the hole); gone for good once `until` is set (if given).
+     */
+    guide: z
+      .object({
+        path,
+        ahead: z.number().positive().optional(),
+        count: z.number().int().positive().optional(),
+        until: z.string().min(1).optional(),
+      })
+      .strict()
+      .optional(),
+    /**
      * The wings-twitch cue (wood.md R5: a tapper never opens the wings): after `catches` fall catches in the
      * room, standing within `r` of (x, y) (her feet) plays her wings flicking open twice, now and then.
      */

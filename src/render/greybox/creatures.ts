@@ -31,6 +31,10 @@ import { hash01 } from './moths';
 export const CREATURE = {
   burrback: 0x7b6b5c,
   oldBurrback: 0x6c6358,
+  /** The juvenile beetle: warmer and lighter than the floor so it never reads as a block of it. */
+  juvenile: 0x9a8468,
+  /** Crawlers' eyes: two pale points, so a body reads as a creature (first-timer r3). */
+  eye: 0xf0e2b8,
   ridge: 0x4e463f,
   /** The old burrback's cracked shell (one crack per lost point). */
   crack: 0xd8cfc0,
@@ -225,6 +229,8 @@ function bodyColor(kind: string): number {
       return CREATURE.burrback;
     case 'oldBurrback':
       return CREATURE.oldBurrback;
+    case 'juvenileBurrback':
+      return CREATURE.juvenile;
     case 'hawker':
     case 'lampwing':
       return CREATURE.hawker;
@@ -238,7 +244,7 @@ function bodyColor(kind: string): number {
 }
 
 const isFlyer = (k: string) => k === 'hawker' || k === 'lampwing';
-const isCrawler = (k: string) => k === 'burrback' || k === 'oldBurrback';
+const isCrawler = (k: string) => k === 'burrback' || k === 'oldBurrback' || k === 'juvenileBurrback';
 
 export class CreatureView {
   private readonly fx = new Map<string, Fx>();
@@ -489,6 +495,11 @@ export class CreatureView {
       sx *= 1.06;
       sy *= 0.82;
     }
+    // Alive at rest: it breathes; walking, its shell bobs with its steps (a body, not a block of floor).
+    sy *=
+      e.vx === 0
+        ? 1 + 0.045 * Math.sin(clock * 3.3 + e.x * 0.01)
+        : 1 + 0.05 * Math.abs(Math.sin(e.stride * 0.09));
     const xf = this.xf.set(e, 'feet', sx, sy);
     // A clang: the shell rings, a 4-frame shiver.
     if (f.clangT < 4 * F) xf.dx = (Math.floor(f.clangT / F) % 2 === 0 ? 3 : -3) * e.facing;
@@ -550,8 +561,20 @@ export class CreatureView {
       }
     }
     if (braced) back.poly(dome).stroke({ color: CREATURE.hunt, width: 3 });
-    // The eye, near its front.
-    back.circle(xf.x(w * 0.74), xf.y(h * 0.42), old ? 4 : 3).fill({ color: CREATURE.belly });
+    // The eyes, near its front: two pale points (and two short feelers that twitch).
+    const er = old ? 4 : 3;
+    back.circle(xf.x(w * 0.74), xf.y(h * 0.4), er).fill({ color: CREATURE.eye, alpha: 0.9 });
+    back.circle(xf.x(w * 0.84), xf.y(h * 0.44), er * 0.8).fill({ color: CREATURE.eye, alpha: 0.75 });
+    const tw = Math.sin(clock * (e.vx === 0 ? 3.1 : 9) + e.x * 0.01) * 0.25;
+    for (const k of [0, 1]) {
+      const bx = xf.x(w * (0.8 + 0.06 * k));
+      const by = xf.y(h * 0.3);
+      const a = -0.5 - 0.35 * k + tw * (k ? 1 : -1);
+      back
+        .moveTo(bx, by)
+        .lineTo(bx + Math.cos(a) * 14 * e.facing, by + Math.sin(a) * 14)
+        .stroke({ color: CREATURE.belly, width: 2, alpha: 0.9 });
+    }
     // The danger part: the shell's front plate, over her.
     const plate = [
       w * 0.8,

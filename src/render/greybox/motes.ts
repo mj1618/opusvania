@@ -35,14 +35,22 @@ interface Mote {
   life: number;
 }
 
+/**
+ * The swing (first-timer r3: "I pressed attack and saw no slash"): in greybox every slash also draws its
+ * sweep round her as a pale arc for `life` s, reaching `reach` of the cut's hit area (a finisher wider).
+ */
+const SWING = { life: 0.14, reach: 0.78, color: 0xd8d2f2, alpha: 0.7, width: 7 };
+
 export class Motes {
   private readonly list: Mote[] = [];
+  private swing: { dir: 'fwd' | 'up' | 'down'; facing: number; big: boolean; t: number } | null = null;
   /** A running count: the seed of each new mote's spread. */
   private n = 0;
   private slideAcc = 0;
 
   clear(): void {
     this.list.length = 0;
+    this.swing = null;
     this.slideAcc = 0;
   }
 
@@ -112,6 +120,9 @@ export class Motes {
           }
           break;
         }
+        case 'slash':
+          this.swing = { dir: e.dir, facing: e.facing, big: e.finisher, t: 0 };
+          break;
         case 'slashTerrain': {
           // Sparks off the face, along its normal, fanned.
           for (let i = 0; i < 6; i++) {
@@ -137,6 +148,38 @@ export class Motes {
 
   /** Advances by `dt` s (her state for the wall slide) and draws into `g`. */
   update(dt: number, p: PlayerView, g: Graphics): void {
+    const sw = this.swing;
+    if (sw) {
+      sw.t += dt;
+      const u = sw.t / SWING.life;
+      if (u >= 1) this.swing = null;
+      else {
+        // A sweep: forward cuts arc from over her head down in front; up cuts over her; down cuts under her.
+        const r = (sw.dir === 'fwd' ? 110 : sw.dir === 'up' ? 104 : 90) * SWING.reach * (sw.big ? 1.2 : 1);
+        const f = sw.facing >= 0 ? 1 : -1;
+        let a0: number;
+        let a1: number;
+        if (sw.dir === 'up')
+          [a0, a1] = f > 0 ? [Math.PI * 1.05, Math.PI * 1.95] : [Math.PI * 1.95, Math.PI * 1.05];
+        else if (sw.dir === 'down') [a0, a1] = [Math.PI * 0.15, Math.PI * 0.85];
+        else [a0, a1] = f > 0 ? [-Math.PI * 0.45, Math.PI * 0.3] : [Math.PI * 1.45, Math.PI * 0.7];
+        const head = Math.min(1, u * 3);
+        const n = 10;
+        const cx = p.cx;
+        const cy = p.cy - 8;
+        g.moveTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+        for (let k = 1; k <= n; k++) {
+          const a = a0 + (a1 - a0) * head * (k / n);
+          g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        }
+        g.stroke({
+          color: SWING.color,
+          width: SWING.width * (1 - u) + 1,
+          alpha: SWING.alpha * (1 - u),
+          cap: 'round',
+        });
+      }
+    }
     if (p.mode === 'wallSlide' && p.wallDir !== 0 && p.vy > 0.5) {
       const k = Math.min(1, p.vy / SLIDE.vyMax);
       this.slideAcc += dt;

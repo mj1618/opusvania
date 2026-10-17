@@ -92,6 +92,8 @@ export const cameraTuning = {
       finisher: 0.12,
       clang: 0.1,
       capBounce: 0.1,
+      /** A cut into rotten bark: the crunch (first-timer r3: it gave no feedback). */
+      barkHit: 0.16,
       terrain: 0.05,
     },
   },

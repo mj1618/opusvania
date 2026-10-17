@@ -104,7 +104,7 @@ export class GreyboxLayer {
     this.lures.draw(dt, clock, sim, this.lureBack, this.front);
     this.world.onEvents(sim.events);
     this.world.draw(dt, clock, sim);
-    this.kit.onEvents(sim.events);
+    this.kit.onEvents(sim.events, sim);
     this.kit.draw(dt, clock, sim, GREYBOX.labels);
     this.boss.onEvents(sim.events, sim);
     this.boss.draw(dt, clock, sim);

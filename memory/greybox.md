@@ -70,3 +70,16 @@ STUDIO.md: regions are designed and played in grey before any art. A room whose 
   0.7 s to a flat grey husk and lies there for the visit; a breath of dust, no shards; shake `bigKill` 0.55.
 - HUD (hud/moths.ts): after the area's moth-stone, "lamps a / b · moths c / d" (moths freed in the area of all its
   lamps' moths, from `tuning.lures.kinds[kind].moths`).
+
+## First-timer r3 (2026-10-18)
+- Rotten bark answers every cut (kit.ts): the panel shakes, one more crack shows per cut taken (spread down the
+  panel, so the cuts left read), a puff of spore dust, shake `barkHit` 0.16. A cut into a lock it cannot open yet (a
+  shut shortcut, a shut gate, a floor panel cut from the side: `slashTerrain` on it) draws a dull grey ring and cross,
+  "not yet", instead of sparks.
+- Crawlers have two pale eyes and two feelers that twitch, breathe at rest and bob as they walk; the juvenile beetle
+  is a warmer, lighter brown (it read as a block of floor).
+- Every slash draws a pale greybox sweep round her for 0.14 s (motes.ts `SWING`): the first cut can't be missed.
+- Moon patches (world.ts): standing in one not yet rested this stay, a ring pulses over it and fills as she keeps
+  still (the rest is 30 still frames, or a press of up); until her first rest ever, "be still to rest" over it.
+- `marks.stage.guide {path, ahead?, count?, until?}` (staging.ts): two stragglers keep `ahead` px along the path ahead
+  of her and go on through its end once she nears it. The burrow has one, from the door to the hole's bark floor.
