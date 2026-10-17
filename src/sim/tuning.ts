@@ -647,6 +647,13 @@ export const defaultTuning = withVariants({
     risePush: 0,
     /** It never braces at one closer than this (box to box): it backs away first (0 = any distance). */
     strikeMinPx: 0,
+    /**
+     * The director's beetle hunts landings: she lands in its light on its ground within `landHuntPx`, and it
+     * turns to her at once. `noticeFrames` > 0: the first time it sees her it stops and turns to her that long
+     * (the juvenile's gentle tell).
+     */
+    landHuntPx: 420,
+    noticeFrames: 0,
     // (First-timer r2: the plain one's touch is its drawn dome too.)
     domeContact: true,
     domeHeight: 0.86,
@@ -717,6 +724,12 @@ export const defaultTuning = withVariants({
     strikeMaxFrames: 34,
     diveWindupFrames: 0,
     diveBackPx: 0,
+    /**
+     * It hunts the caught (the director's hawker): a moth held by a flame or a web is seen anywhere in its
+     * leash, even from a rest or on its way home, and its strike goes at the orbit's centre. The tell still
+     * plays in full; beating free before the strike arrives dodges it.
+     */
+    huntCaught: false,
     stallFrames: 34,
     perchUpPx: 170,
     perchSidePx: 110,
@@ -860,8 +873,11 @@ export const defaultTuning = withVariants({
     width: 44,
     height: 40,
     hp: 2,
-    // (It tells as she comes, so a runner who doesn't stop for the thread meets the drop or the swing.)
-    noticePx: 300,
+    // It hunts the stop (the director's dangler): it tells once she has stood still in its sight (lit, below
+    // it, within `noticePx` sideways) for `stopFrames`, moving no faster than `stillVx`. 0 = on sight.
+    noticePx: 220,
+    stopFrames: 8,
+    stillVx: 1.5,
     minDrop: 120,
     maxDrop: 640,
     tellFrames: 34,
@@ -1326,6 +1342,25 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       value: 0,
       valueFinisher: 0,
     },
+    // The juvenile beetle (wood-area1-director.md R4): small, 2 hp, no brace, a gentle tell, then it walks
+    // at her (`hunt`, no stop: it walks into her, the crawlid's danger). Two cuts.
+    juvenileBurrback: {
+      ...(base.burrback as T['burrback']),
+      width: 38,
+      height: 26,
+      hp: 2,
+      speed: 1.3,
+      strikePx: 0,
+      noticePx: 260,
+      noticeFrames: 30,
+      hunt: true,
+      huntStopPx: -1000,
+      landHuntPx: 0,
+      knockScale: 1.6,
+      domeShoulder: 0.58,
+      value: 0,
+      valueFinisher: 0,
+    },
     hawker: {
       ...(base.lampwing as T['lampwing']),
       // (A 52 x 24 sliver at 480 px over her: now a body she can read and cut.)
@@ -1348,6 +1383,7 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       strikeMaxFrames: 34,
       diveWindupFrames: 6,
       diveBackPx: 24,
+      huntCaught: true,
       // (A breather after a hit: one who stood still under it was hit every 4 s and faded in a loop.)
       touchCalmFrames: 180,
       value: 0,

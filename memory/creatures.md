@@ -112,6 +112,23 @@ where I landed")
 - Fair: the tell + drop is 48 f before contact under it; stepping back ~150 px from the thread during the tell clears
   the swing (unit test). A runner at full speed who ignores the thread usually passes just behind the swing's end.
 
+## The director's three predators (wood-area1-director.md, 2026-10-18)
+Each hunts one moment of the lamp verb; placement is the builders', these are the behaviour hooks.
+- **Juvenile beetle** (`kind: 'juvenileBurrback'`, row `tuning.juvenileBurrback`): the first creature (R4, the crawlid
+  slot). 38 x 26, 2 hp, **no brace, no ram** (`strikePx` 0); a gentle tell: the first time it sees her (lit, 260 px) it
+  stops and turns to her 30 f (`noticeFrames`, `enemyNotice`), then walks at her (`hunt`, it does not stop short: its
+  touch is the danger). Two cuts kill it; stomps bounce. Slow pilot: wins every run in 2.7 s, 0 hits.
+- **Beetle hunts landings** (`landHuntPx` 420, lamp rooms only: the grove's tuned fights untouched): she lands lit on its
+  ground within 420 px and it turns to her at once (`enemyTurn` cause `hunt`), walking at her into its brace.
+- **Dangler hunts the stop** (`stopFrames` 8, `stillVx` 1.5, `noticePx` 220): it tells once she has stood still, lit,
+  below it, for 8 frames: the spot she stands on to cut the flame. A runner under it is let pass (it used to drop on
+  runners). Hang it over the cut spot (the knob, the ledge under the wick).
+- **Hawker hunts the caught** (`huntCaught`): a moth held by a flame (or a web) is seen anywhere in its leash, even from
+  a rest or on its way home, and it strikes at the orbit's centre (the flame). The tell plays in full (36 + 6 f, then
+  ~28 f of strike: ~64 f from the notice to contact). Slow pilot (reacting 20-30 f after the tell, beats 6-10 f apart,
+  holding away from it): freed and never struck in 9 of 9 timings. Beating free with no direction can throw her into
+  its lane: "aim the throw out of its lane" is the skill (the director's R8 east half).
+
 ## Composed encounters and placement guidance (for the level builder)
 - Creatures ignore each other (no collisions), so any overlap works; one lure can be guarded by several (a snuff
   disperses them all: lab station I).

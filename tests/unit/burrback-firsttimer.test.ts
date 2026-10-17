@@ -16,7 +16,7 @@ import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 const FLOOR = 1344;
 /** R4's teaching burrback braces longer than the row's 26 (`windup` on its spawn). */
 const TELL = 32;
-function r4(): Scene {
+function r4(kind: 'burrback' | 'juvenileBurrback' = 'burrback'): Scene {
   return {
     id: 'r4',
     width: 3600,
@@ -29,14 +29,14 @@ function r4(): Scene {
     enemies: [
       {
         id: 'burr',
-        kind: 'burrback',
+        kind,
         x: 1984,
         y: FLOOR,
         facing: -1,
-        hp: 4,
+        hp: kind === 'burrback' ? 4 : undefined,
         radius: 576,
         guards: 'w3',
-        windup: TELL,
+        windup: kind === 'burrback' ? TELL : undefined,
       },
     ],
   };
@@ -51,9 +51,15 @@ interface Run {
   stomps: number;
 }
 
-function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 90): Run {
+function pilot(
+  react: number,
+  slop: number,
+  seed: number,
+  kind: 'burrback' | 'juvenileBurrback' = 'burrback',
+  maxFrames = 60 * 90,
+): Run {
   const t = cloneTuning(defaultTuning);
-  const scene = r4();
+  const scene = r4(kind);
   const events: SimEvent[] = [];
   const state = createState(seed, t, scene, events);
   const J = ActionBit.jump;
@@ -197,5 +203,24 @@ describe("R4's first burrback, a slow first-timer", () => {
 
   it('a down slash coming down on its back never hurts her', () => {
     for (const r of runs) expect(r.stompHurts).toBe(0);
+  });
+});
+
+describe("R4's juvenile beetle, the first creature: a slow first-timer", () => {
+  const runs: Array<Run & { react: number; seed: number }> = [];
+  for (const react of [20, 25, 30])
+    for (let seed = 1; seed <= 6; seed++)
+      runs.push({ ...pilot(react, 8, seed, 'juvenileBurrback'), react, seed });
+  if (process.env.R4_TRACE)
+    for (const r of runs)
+      console.log(
+        `juvenile react ${r.react} seed ${r.seed}: ${r.won ? 'won' : 'LOST'} in ${(r.frames / 60).toFixed(1)} s, hits ${r.hits}`,
+      );
+
+  it('kills it every time, taking at most one hit, with no pogo needed', () => {
+    for (const r of runs) {
+      expect(r.won).toBe(true);
+      expect(r.hits).toBeLessThanOrEqual(1);
+    }
   });
 });

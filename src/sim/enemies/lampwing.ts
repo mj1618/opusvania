@@ -19,6 +19,7 @@
  *
  * No gravity, no ground: it is a point of steering in free air, moved 1 px at a time per axis.
  */
+import { lureAt } from '../lures';
 import { roundHalfAway, solidAt } from '../physics/aabb';
 import { nearLitLantern } from '../sanctuary';
 import type { Scene, SolidRect } from '../scene';
@@ -275,6 +276,22 @@ function detour(e: EnemyState, scene: Scene, t: L): void {
   e.chase = 0;
 }
 
+const HELD = { x: 0, y: 0 };
+
+/** Where she is held (a lure's flame she circles, a web's grip), or null if nothing holds her. */
+function heldAt(info: StepInfo): { x: number; y: number } | null {
+  const p = info.state.player;
+  if (p.hp <= 0 || p.faded > 0) return null;
+  const l = p.lure >= 0 ? info.scene.lures?.[p.lure] : undefined;
+  if (l) return lureAt(l, info.state.frame, info.t, HELD);
+  if (p.grab >= 0) {
+    HELD.x = p.grabX;
+    HELD.y = p.grabY;
+    return HELD;
+  }
+  return null;
+}
+
 /** The tell is over: it commits to a dive at where she is now (led, if she glides). */
 function startDive(e: EnemyState, info: StepInfo): void {
   const t = rowOf(info.t, e);
@@ -283,6 +300,12 @@ function startDive(e: EnemyState, info: StepInfo): void {
   const cy = e.y + e.h / 2;
   let tx = p.x + p.w / 2;
   let ty = p.y + p.h / 2;
+  // Prey held by a flame (or a web): it strikes at the orbit's centre, where she is whichever way she circles.
+  const prey = t.huntCaught ? heldAt(info) : null;
+  if (prey) {
+    tx = prey.x;
+    ty = prey.y;
+  }
   const span = (x: number, y: number): number => {
     const d = Math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy));
     // A strike (the hawker): a short pull-back, then fast and straight (`strikeSpeed`, at most `strikeMaxFrames`).
@@ -297,13 +320,13 @@ function startDive(e: EnemyState, info: StepInfo): void {
   let n = span(tx, ty);
   // A gliding hero holds her line: it dives at where the glide will have carried her.
   // (A hawker leads one on foot too, sideways only: her run, not her fall.)
-  if (!p.gliding && t.diveLeadRun > 0 && p.vx !== 0) {
+  if (!prey && !p.gliding && t.diveLeadRun > 0 && p.vx !== 0) {
     for (let k = 0; k < 3; k++) {
       tx = p.x + p.w / 2 + p.vx * n * t.diveLeadRun;
       n = span(tx, ty);
     }
   }
-  if (p.gliding && t.diveLeadGlide > 0) {
+  if (!prey && p.gliding && t.diveLeadGlide > 0) {
     for (let k = 0; k < 3; k++) {
       tx = p.x + p.w / 2 + p.vx * n * t.diveLeadGlide;
       ty = p.y + p.h / 2 + p.vy * n * t.diveLeadGlide;
@@ -611,6 +634,20 @@ export const lampwing: KindRules = {
       return false;
     }
 
+    // Held prey wakes it from a rest or its way home (the director's hawker hunts the caught: wood-area1-director.md).
+    if (
+      (e.mode === 'rest' || e.mode === 'return') &&
+      t.huntCaught &&
+      !over &&
+      e.calm === 0 &&
+      heldAt(info) !== null &&
+      inLeash(e, p, t) &&
+      sees(e, p, scene, t.leashPx)
+    ) {
+      e.dives = 0;
+      tell(e, info);
+    }
+
     if (e.mode === 'hurt') {
       // Batted along the cut, tumbling; the shove fades and stops at solids.
       e.vx = e.knockVx;
@@ -660,9 +697,12 @@ export const lampwing: KindRules = {
       drift(e, scene, t);
       face(e, e.vx, 0.2);
       // (The light she carries sets how far it sees her: memory/giving.md.)
-      const sight = (e.sight > 0 ? e.sight : t.noticePx) * seenScale(SEEN, info.t.giving);
+      // (A moth held by a flame is the easiest prey there is: a hawker sees one anywhere in its leash.)
+      const prey = t.huntCaught && heldAt(info) !== null;
+      const base = (e.sight > 0 ? e.sight : t.noticePx) * seenScale(SEEN, info.t.giving);
+      const sight = prey ? Math.max(base, t.leashPx) : base;
       // (For a while after she has left its leash once, only one well inside it.)
-      const margin = e.noticeCd > 0 ? t.retellMarginPx : 0;
+      const margin = e.noticeCd > 0 && !prey ? t.retellMarginPx : 0;
       if (sight > 0 && !over && e.calm === 0 && inLeash(e, p, t, margin) && sees(e, p, scene, sight)) {
         e.dives = 0;
         tell(e, info);

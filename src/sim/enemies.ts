@@ -20,7 +20,7 @@
  */
 
 import { weaverBoss } from './boss/weaver';
-import { burrback, oldBurrback } from './enemies/burrback';
+import { burrback, juvenileBurrback, oldBurrback } from './enemies/burrback';
 import { frames, type KindRules, type StepInfo, saltOf, segmentBlocked, setMode } from './enemies/common';
 import { dangler } from './enemies/dangler';
 import { hawker, lampwing } from './enemies/lampwing';
@@ -42,6 +42,7 @@ const KINDS: Record<EnemyKind, KindRules> = {
   weaver,
   weaverBoss,
   dangler,
+  juvenileBurrback,
 };
 const KIND_LIST: EnemyKind[] = [
   'burrback',
@@ -52,6 +53,7 @@ const KIND_LIST: EnemyKind[] = [
   'weaver',
   'weaverBoss',
   'dangler',
+  'juvenileBurrback',
 ];
 
 /** The rules of a kind (its box, numbers and behaviour). */

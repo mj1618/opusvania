@@ -68,6 +68,14 @@ export const ENEMIES = z
       z
         .object({
           ...base,
+          kind: z.literal('juvenileBurrback'),
+          radius: int.min(40).max(2000).optional(),
+          fenced: z.boolean().optional(),
+        })
+        .strict(),
+      z
+        .object({
+          ...base,
           kind: z.literal('lampwing'),
           radius: int.min(0).max(400).optional(),
           sight: int.min(60).max(900).optional(),
@@ -268,7 +276,12 @@ function checkFlyer(s: RoomLike, e: Enemy): void {
 
 /** A crawler (burrback, old burrback): feet centre on a surface, the whole box supported and clear, away from the spawn. */
 function checkCrawler(s: RoomLike, e: Enemy): void {
-  const B = e.kind === 'oldBurrback' ? defaultTuning.oldBurrback : defaultTuning.burrback;
+  const B =
+    e.kind === 'oldBurrback'
+      ? defaultTuning.oldBurrback
+      : e.kind === 'juvenileBurrback'
+        ? defaultTuning.juvenileBurrback
+        : defaultTuning.burrback;
   const bw = B.width;
   const bh = B.height;
   const x0 = e.x - bw / 2;
@@ -324,7 +337,8 @@ export function checkCreatures(s: RoomLike, seen: Set<string>): void {
     if (e.guards !== undefined && !lures.has(e.guards))
       throw new Error(`Scene "${s.id}": enemy "${e.id}" guards "${e.guards}", which is no lure of the room`);
     if (e.kind === 'lampwing' || e.kind === 'hawker') checkFlyer(s, e);
-    else if (e.kind === 'burrback' || e.kind === 'oldBurrback') checkCrawler(s, e);
+    else if (e.kind === 'burrback' || e.kind === 'oldBurrback' || e.kind === 'juvenileBurrback')
+      checkCrawler(s, e);
     else if (e.kind === 'dangler') checkDangler(s, e);
     else if (e.kind === 'web') {
       const strands = [...(e.strands ?? []), ...(e.orb ? orbStrands(s, e.x, e.y, e.orb) : [])];

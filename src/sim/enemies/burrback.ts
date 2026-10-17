@@ -33,7 +33,11 @@ import { seenBy } from './senses';
 /** The numbers of this burrback: the plain one's, or the old burrback's (a variant row, tuning.ts). */
 type Row = Tuning['burrback'];
 function rowOf(t: Tuning, e: EnemyState): Row {
-  return e.kind === 'oldBurrback' ? t.oldBurrback : t.burrback;
+  return e.kind === 'oldBurrback'
+    ? t.oldBurrback
+    : e.kind === 'juvenileBurrback'
+      ? t.juvenileBurrback
+      : t.burrback;
 }
 
 /** An integer in [min, max] for the creature's n-th draw of stream k. */
@@ -763,6 +767,54 @@ export const burrback: KindRules = {
     if (free && e.calm === 0 && dodgeDrop(e, info)) return true;
     // She is in front of it, close: it braces (out of a walk, a rest, a turn or a flinch).
     if (free && brace(e, info)) return true;
+    // The director's beetle hunts landings (wood-area1-director.md): she lands in its light, on its ground,
+    // within `landHuntPx`: it turns to her at once (and walks at her: its brace comes as she is in front).
+    // (Lamp rooms only: the test grove's tuned fights are left as they were.)
+    if (free && stir === 'land' && B.landHuntPx > 0 && e.sense !== 0 && e.calm === 0 && seenBy(e, info) > 0) {
+      const pc = p.x + p.w / 2;
+      const ec = e.x + e.w / 2;
+      const side = pc < ec ? -1 : 1;
+      const level = Math.abs(p.y + p.h - (e.y + e.h)) <= B.strikeAbovePx;
+      if (level && Math.abs(pc - ec) <= B.landHuntPx && side !== e.facing) {
+        e.facing = side;
+        if (e.mode !== 'walk') setMode(e, 'walk', 0);
+        events.push({
+          type: 'enemyTurn',
+          id: e.id,
+          kind: e.kind,
+          x: ec,
+          y: e.y + e.h / 2,
+          dir: side,
+          cause: 'hunt',
+          frames: 0,
+        });
+      }
+    }
+    // A gentle tell (the juvenile): the first time it sees her it stops and turns to her (`noticeFrames`).
+    if (
+      free &&
+      B.noticeFrames > 0 &&
+      e.aware === 0 &&
+      e.mode !== 'alert' &&
+      burrback.sees?.(e, info, seenBy(e, info))
+    ) {
+      const pc = p.x + p.w / 2;
+      const ec = e.x + e.w / 2;
+      e.facing = pc < ec ? -1 : 1;
+      const n = frames(B.noticeFrames, 1);
+      setMode(e, 'alert', n);
+      e.vx = 0;
+      events.push({
+        type: 'enemyNotice',
+        id: e.id,
+        kind: e.kind,
+        x: ec,
+        y: e.y + e.h / 2,
+        dir: e.facing,
+        frames: n,
+      });
+      return true;
+    }
     // Round 3 (memory/giving.md): she is near and too dark to be seen, and it is not in a fight with
     // her: it sleeps where it stands (no patrol) until she carries light again, leaves, or cuts it.
     e.dozing = false;
@@ -1154,4 +1206,20 @@ export const oldBurrback: KindRules = {
   hurtSafeFrames: (t) => t.oldBurrback.hurtSafeFrames,
   contactDamage: (t) => t.oldBurrback.contactDamage,
   value: (t, finisher) => (finisher ? t.oldBurrback.valueFinisher : t.oldBurrback.value),
+};
+
+/**
+ * The juvenile beetle (wood-area1-director.md, R4: "the crawlid slot"): the first creature she meets. The
+ * burrback's rules on its own row (`tuning.juvenileBurrback`): small, 2 hp, no brace and no ram, a gentle tell
+ * (it stops and turns to her the first time it sees her), then it walks at her; its touch is the danger.
+ */
+export const juvenileBurrback: KindRules = {
+  ...burrback,
+  width: (t) => t.juvenileBurrback.width,
+  height: (t) => t.juvenileBurrback.height,
+  hp: (t) => t.juvenileBurrback.hp,
+  hurtFrames: (t) => t.juvenileBurrback.hurtFrames,
+  hurtSafeFrames: (t) => t.juvenileBurrback.hurtSafeFrames,
+  contactDamage: (t) => t.juvenileBurrback.contactDamage,
+  value: (t, finisher) => (finisher ? t.juvenileBurrback.valueFinisher : t.juvenileBurrback.value),
 };

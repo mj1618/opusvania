@@ -90,7 +90,8 @@ export type EnemyKind =
   | 'web'
   | 'weaver'
   | 'weaverBoss'
-  | 'dangler';
+  | 'dangler'
+  | 'juvenileBurrback';
 
 /**
  * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is

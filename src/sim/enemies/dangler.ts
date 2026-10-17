@@ -205,7 +205,16 @@ export const dangler: KindRules = {
     }
     if (e.mode === 'sit') {
       at(e, e.fromX, perchY(e));
-      if (e.strikeCd === 0 && sees(e, info)) tell(e, info);
+      // It hunts the stop (wood-area1-director.md): it drops once she has stood still in its sight for
+      // `stopFrames` (on the spot she stands on to cut the flame); one running through is let pass.
+      // (`lost` counts those frames.)
+      const p = info.state.player;
+      const still = p.grounded && Math.abs(p.vx) <= D.stillVx && sees(e, info);
+      e.lost = still ? e.lost + 1 : 0;
+      if (e.strikeCd === 0 && (D.stopFrames > 0 ? e.lost >= D.stopFrames : sees(e, info))) {
+        e.lost = 0;
+        tell(e, info);
+      }
     } else if (e.mode === 'windup') {
       if (--e.timer <= 0) setMode(e, 'drop', frames(D.dropFrames, 1));
     } else if (e.mode === 'drop') {

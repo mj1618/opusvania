@@ -525,7 +525,8 @@ describe('the dangler', () => {
   it('fair: step back out of the swing during the tell and it never touches her; then two cuts in its hang kill it', () => {
     const s = newSim(scene());
     s.place(2100, FLOOR);
-    s.run('.2');
+    // (It drops on one who stops: `stopFrames` still in its sight.)
+    s.run(`.${T.dangler.stopFrames + 2}`);
     expect(enemy(s, 'd').mode).toBe('windup');
     // Out of the swing's reach (swingPx + half its box + half hers, with room to spare).
     const ev = s.run(`R10 .${D.tellFrames + D.dropFrames + D.swingFrames}`);
@@ -541,7 +542,7 @@ describe('the dangler', () => {
   it('a cut across its silk drops it: it falls, lies stunned (open, harmless), then leaves', () => {
     const s = newSim(scene());
     s.place(2100, FLOOR);
-    s.run(`.2 R10 .${D.tellFrames + D.dropFrames + D.swingFrames + 4}`);
+    s.run(`.${D.stopFrames + 2} R10 .${D.tellFrames + D.dropFrames + D.swingFrames + 4}`);
     const d = enemy(s, 'd');
     expect(d.mode).toBe('stall');
     // Jump beside it and cut the thread above its body.
@@ -617,6 +618,115 @@ describe('the hawker engages', () => {
     for (let i = 0; i < 300 && !types(ev).includes('hurt'); i++) ev = s.run('.1');
     const after = s.run(`.${T.hawker.touchCalmFrames - 10}`);
     expect(types(after)).not.toContain('enemyNotice');
+  });
+});
+
+describe("the director's three predators (wood-area1-director.md)", () => {
+  it('the juvenile beetle: a gentle tell, no brace ever, it walks into her, two cuts kill it', () => {
+    const J = T.juvenileBurrback;
+    const s = newSim(
+      room([{ id: 'j', kind: 'juvenileBurrback', x: 2000, y: FLOOR, facing: -1 }], [wick('w', 2000, 600)]),
+    );
+    s.place(1800, FLOOR);
+    const ev = s.run('.240');
+    expect(of(ev, 'enemyNotice')[0]?.frames).toBe(J.noticeFrames);
+    expect(types(ev)).not.toContain('enemyWindup');
+    expect(types(ev)).toContain('hurt');
+    const j = enemy(s, 'j');
+    s.place(j.x - 40, FLOOR);
+    s.state.player.facing = 1;
+    s.state.player.invuln = 0;
+    const kill = s.run('A1 .20 A1 .40');
+    expect(types(kill)).toContain('enemyDie');
+  });
+
+  it('the beetle hunts landings: she lands in its light behind it, and it turns to her at once', () => {
+    const s = newSim(
+      room(
+        [{ id: 'b', kind: 'burrback', x: 2000, y: FLOOR, facing: 1, radius: 400 }],
+        [wick('w', 2000, 600)],
+      ),
+    );
+    const b = enemy(s, 'b');
+    b.facing = 1;
+    // Dropped in behind it (west), in the light.
+    s.place(1760, FLOOR - 200);
+    const ev = s.run('.40');
+    const turn = of(ev, 'enemyTurn').find((e) => e.cause === 'hunt');
+    expect(turn?.dir).toBe(-1);
+  });
+
+  it('the dangler hunts the stop: a runner under it is let pass, one who stands still is dropped on', () => {
+    const scene = () =>
+      room([{ id: 'd', kind: 'dangler', x: 2000, y: 300, facing: 1 }], [wick('w', 1900, 560)], {
+        solids: [
+          { tag: 'ground', x: 0, y: FLOOR, w: 4000, h: 200 },
+          { tag: 'trunk', x: 1800, y: 240, w: 400, h: 60 },
+        ],
+      });
+    const run = newSim(scene());
+    run.place(1700, FLOOR);
+    const ev = run.run('R80');
+    expect(types(ev)).not.toContain('enemyWindup');
+    const stand = newSim(scene());
+    stand.place(1990, FLOOR);
+    const ev2 = stand.run(`.${T.dangler.stopFrames + 4}`);
+    expect(types(ev2)).toContain('enemyWindup');
+  });
+});
+
+describe('the hawker hunts the caught', () => {
+  // A wick she is caught by, the hawker 300 px off (beyond its plain sight of the floor, inside its leash).
+  const scene = () =>
+    room(
+      [{ id: 'h', kind: 'hawker', x: 2300, y: 300, facing: -1, guards: 'far' }],
+      [wick('w', 2000, 500), wick('far', 3700, 200)],
+    );
+  const H = T.hawker;
+
+  /** Steps one frame at a time: the frame of each first event of these types. */
+  const frameOf = (s: Sim, n: number, script = '.1') => {
+    const at: Record<string, number> = {};
+    for (let f = 0; f < n; f++) for (const e of s.run(script)) at[e.type] ??= f;
+    return at;
+  };
+
+  it('a moth held in the orbit is told and struck at the flame; held through it, she is hit', () => {
+    const s = newSim(scene());
+    // Into the core: caught.
+    s.place(2000, 540);
+    const at = frameOf(s, 200);
+    expect(at.lureCaught).toBeDefined();
+    const dive = of(s.events, 'enemyDive')[0];
+    expect(dive?.tx).toBeCloseTo(2000, 0);
+    expect(dive?.ty).toBeCloseTo(500, 0);
+    expect((at.hurt ?? -1) - (at.enemyNotice ?? 0)).toBeGreaterThanOrEqual(
+      H.curiousFrames + H.diveWindupFrames,
+    );
+  });
+
+  it('a hawker resting far off is woken by a moth caught in its leash', () => {
+    const s = newSim(scene());
+    const h = enemy(s, 'h');
+    h.mode = 'return';
+    s.place(2000, 540);
+    const at = frameOf(s, 60);
+    expect(at.enemyNotice).toBeDefined();
+  });
+
+  it('fair: a slow player (reacting 20-30 frames after the tell, presses off by a few) beats free out of its lane and is never struck', () => {
+    for (const react of [20, 25, 30])
+      for (const gap of [6, 8, 10]) {
+        const s = newSim(scene());
+        s.place(2000, 540);
+        let ev: SimEvent[] = [];
+        for (let i = 0; i < 120 && !types(ev).includes('enemyNotice'); i++) ev = s.run('.1');
+        // Away from it (it comes from the east): hold left as she beats.
+        const beats = `L+J1 L${gap} L+J1 L${gap} L+J1`;
+        const after = s.run(`.${react} ${beats} L30 .120`);
+        expect(types(after)).toContain('lureFree');
+        expect(of(after, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
+      }
   });
 });
 
