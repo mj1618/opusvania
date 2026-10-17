@@ -7,7 +7,7 @@
  *
  * Pure: + - * / sqrt, min, max.
  */
-import { lureAt, lureRow } from '../lures';
+import { flameAt, lureRowNow } from '../lures';
 import type { Scene, SenseMode } from '../scene';
 import { seenNow } from '../seen';
 import type { EnemyState, GameState } from '../state';
@@ -34,9 +34,9 @@ export function litAt(state: GameState, scene: Scene, t: Tuning, x: number, y: n
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
     if (!l || (state.lures.hp[i] ?? 0) <= 0) continue;
-    const K = lureRow(t, l.kind);
+    const K = lureRowNow(state.lures, i, l, t);
     const reach = K.radius * S.litScale;
-    lureAt(l, state.frame, t, F);
+    flameAt(state.lures, i, l, state.frame, t, F);
     const dx = x - F.x;
     const dy = y - F.y;
     const d2 = dx * dx + dy * dy;

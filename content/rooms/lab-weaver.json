@@ -1,0 +1,274 @@
+{
+  "id": "lab-weaver",
+  "title": "Lab: the Weaver (greybox boss arena)",
+  "region": "wood",
+  "width": 2944,
+  "height": 2304,
+  "spawn": {
+    "x": 2752,
+    "y": 2176
+  },
+  "edgeKick": false,
+  "abilities": ["glide", "wallJump"],
+  "art": {
+    "mode": "greybox",
+    "labels": true
+  },
+  "solids": [
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 0,
+      "w": 2944,
+      "h": 1088,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 0,
+      "y": 1088,
+      "w": 128,
+      "h": 1088,
+      "kick": "east"
+    },
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 2176,
+      "w": 2944,
+      "h": 128
+    },
+    {
+      "tag": "trunk",
+      "x": 2048,
+      "y": 1088,
+      "w": 128,
+      "h": 256
+    },
+    {
+      "tag": "trunk",
+      "x": 2048,
+      "y": 1600,
+      "w": 128,
+      "h": 416
+    },
+    {
+      "tag": "trunk",
+      "x": 576,
+      "y": 1088,
+      "w": 96,
+      "h": 640
+    },
+    {
+      "tag": "trunk",
+      "x": 1504,
+      "y": 1088,
+      "w": 96,
+      "h": 640
+    },
+    {
+      "tag": "ground",
+      "x": 2560,
+      "y": 1088,
+      "w": 384,
+      "h": 640
+    }
+  ],
+  "oneWays": [
+    {
+      "tag": "branch",
+      "x": 448,
+      "y": 1920,
+      "w": 352
+    },
+    {
+      "tag": "branch",
+      "x": 1376,
+      "y": 1920,
+      "w": 352
+    }
+  ],
+  "gates": [
+    {
+      "id": "curtain",
+      "x": 2048,
+      "y": 1344,
+      "w": 128,
+      "h": 256,
+      "flag": "lab-weaver-down"
+    }
+  ],
+  "lures": [
+    {
+      "id": "heart",
+      "kind": "great",
+      "x": 1088,
+      "y": 1536,
+      "spin": 1
+    },
+    {
+      "id": "ring-1",
+      "kind": "ring",
+      "x": 320,
+      "y": 1792,
+      "spin": 1
+    },
+    {
+      "id": "ring-2",
+      "kind": "ring",
+      "x": 832,
+      "y": 1408,
+      "spin": 1
+    },
+    {
+      "id": "ring-3",
+      "kind": "ring",
+      "x": 1088,
+      "y": 1216,
+      "spin": 1
+    },
+    {
+      "id": "ring-4",
+      "kind": "ring",
+      "x": 1344,
+      "y": 1408,
+      "spin": -1
+    },
+    {
+      "id": "ring-5",
+      "kind": "ring",
+      "x": 1856,
+      "y": 1792,
+      "spin": -1
+    },
+    {
+      "id": "wick-relit",
+      "kind": "wick",
+      "x": 2368,
+      "y": 1400,
+      "spin": 1
+    }
+  ],
+  "enemies": [
+    {
+      "id": "spokes",
+      "kind": "web",
+      "x": 1088,
+      "y": 1536,
+      "facing": 1,
+      "strands": [
+        [1088, 1536, 320, 1792],
+        [1088, 1536, 832, 1408],
+        [1088, 1536, 1088, 1216],
+        [1088, 1536, 1344, 1408],
+        [1088, 1536, 1856, 1792]
+      ],
+      "anchors": [[1088, 1536]]
+    },
+    {
+      "id": "weaver",
+      "kind": "weaverBoss",
+      "x": 1088,
+      "y": 1536,
+      "facing": 1
+    }
+  ],
+  "patches": [
+    {
+      "id": "p-door",
+      "x": 2752,
+      "y": 2176
+    }
+  ],
+  "boss": {
+    "id": "the-weaver",
+    "kind": "weaver",
+    "name": "The Weaver",
+    "arena": {
+      "x": 128,
+      "y": 1088,
+      "w": 1920,
+      "h": 1088
+    },
+    "lock": [
+      {
+        "id": "door-e",
+        "x": 2048,
+        "y": 2016,
+        "w": 128,
+        "h": 160
+      }
+    ],
+    "flag": "lab-weaver-down",
+    "met": "lab-weaver-met",
+    "creature": "weaver",
+    "heart": "heart",
+    "rings": ["ring-1", "ring-2", "ring-3", "ring-4", "ring-5"],
+    "retryOut": ["ring-1", "ring-5"],
+    "web": "spokes",
+    "drops": [664, 1512, 1088],
+    "canopy": 1088,
+    "floor": 2176,
+    "lowered": {
+      "x": 1088,
+      "y": 1792
+    },
+    "relight": "wick-relit"
+  },
+  "camera": {
+    "zones": [
+      {
+        "id": "arena",
+        "x": 0,
+        "y": 1088,
+        "w": 2176,
+        "h": 1216,
+        "fit": true,
+        "lock": true
+      }
+    ]
+  },
+  "marks": {
+    "notes": [
+      {
+        "x": 2560,
+        "y": 1990,
+        "text": "the boss door: rest at the moon patch, walk west (the doors seal)"
+      },
+      {
+        "x": 1088,
+        "y": 2228,
+        "text": "P1 the ring: snuff the 5 ring flames (outer ones from the floor first: their spokes cross the climbs); caught in the heart, it bites after a count"
+      },
+      {
+        "x": 1088,
+        "y": 2260,
+        "text": "P2 the drops: the arc shows first; get off its half (or onto a branch); punish it hanging; cut its thread to drop it"
+      },
+      {
+        "x": 1088,
+        "y": 2292,
+        "text": "P3 the floor: hop or outrun the lunge, pogo its abdomen (front cuts glance); then the lowered heart: 3 cuts"
+      },
+      {
+        "x": 2368,
+        "y": 1250,
+        "text": "the chimney: the curtain falls with the Weaver; the firefly relights this wick"
+      }
+    ]
+  },
+  "shots": {
+    "wide": [
+      {
+        "name": "arena",
+        "x": 1088,
+        "y": 2176
+      },
+      {
+        "name": "door",
+        "x": 2500,
+        "y": 2176
+      }
+    ]
+  }
+}

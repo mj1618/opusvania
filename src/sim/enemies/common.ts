@@ -167,6 +167,11 @@ export interface KindRules {
   ): number;
   /** A blow going `dir` that lands does not stagger it (the old burrback's braced shell takes a pogo and rams on). */
   tough?(e: EnemyState, dir: 'fwd' | 'up' | 'down', t: Tuning): boolean;
+  /**
+   * A boss's creature (memory/bosses.md): at 0 hit points it does not die; the blow is an ordinary hit
+   * (`enemyHit` with `hpLeft` 0) and its fight decides what happens (the next phase sets new hit points).
+   */
+  undying?(e: EnemyState): boolean;
   /** Its spawn's own size and start (a web's box is its strands'): called after `place`. */
   init?(e: EnemyState, spawn: EnemySpawn, scene: Scene, t: Tuning): void;
 }

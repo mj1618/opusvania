@@ -9,8 +9,11 @@ every ability; `&abilities=none` for the starting kit). Tests: `tests/unit/lures
 ## Data
 - Scene: `lures: [{id, kind: 'wick' | 'lantern', x, y (flame centre), spin?: 1 | -1}]` (spin 1 = clockwise on
   screen). Validated: unique ids, inside the room, no solid inside the core.
-- Kinds are rows in `tuning.lures.kinds` (radius, pullEdge, pullCore, swirl, core, hp, moths): a new kind is a
-  row first. The panel shows them as `kinds.wick` / `kinds.lantern` sub-folders.
+- Kinds are rows in `tuning.lures.kinds` (radius, pullEdge, pullCore, swirl, core, hp, moths, `sharp`): a new kind is a
+  row first. `ring` / `great` / `greatWide` are a great lamp's (memory/bosses.md); `sharp` n raises the depth k to
+  the 2^(n-1)th power first (the heart: 4, a well that bites only near its core: a big field at a lantern's profile
+  saturates her drift past her run speed). A boss may switch a lure's row, move its flame or shield it
+  (`state.lures.live`): every rule reads `lureRowNow` / `flameAt`, not `lureRow` / `lureAt`. The panel shows them as `kinds.wick` / `kinds.lantern` sub-folders.
 - State: `state.lures = {hp[], hitBy[], out[] (frame + 1), snuffed, freed}`; on the player `lure` (index of the
   lure holding her, -1), `lureFrames`, `lureBeats`, `lureOut`, `lureCd`, `lurePend`, `pullX`, `lureGrace`,
   `lureGraceFrames`. Version stays 21 (fields added, tests pin 21).

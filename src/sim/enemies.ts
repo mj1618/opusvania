@@ -18,6 +18,8 @@
  * Runs after the player each step: slashes are resolved by the player's update (`slashEnemies`)
  * against where the enemies stood, then they move, then contact is tested (`updateEnemies`).
  */
+
+import { weaverBoss } from './boss/weaver';
 import { burrback, oldBurrback } from './enemies/burrback';
 import { frames, type KindRules, type StepInfo, saltOf, segmentBlocked, setMode } from './enemies/common';
 import { hawker, lampwing } from './enemies/lampwing';
@@ -30,8 +32,24 @@ import type { EnemyKind, EnemySpawn, Scene } from './scene';
 import type { AttackDir, EnemyState, GameState, PlayerState } from './state';
 import type { Tuning } from './tuning';
 
-const KINDS: Record<EnemyKind, KindRules> = { burrback, lampwing, oldBurrback, hawker, web, weaver };
-const KIND_LIST: EnemyKind[] = ['burrback', 'lampwing', 'oldBurrback', 'hawker', 'web', 'weaver'];
+const KINDS: Record<EnemyKind, KindRules> = {
+  burrback,
+  lampwing,
+  oldBurrback,
+  hawker,
+  web,
+  weaver,
+  weaverBoss,
+};
+const KIND_LIST: EnemyKind[] = [
+  'burrback',
+  'lampwing',
+  'oldBurrback',
+  'hawker',
+  'web',
+  'weaver',
+  'weaverBoss',
+];
 
 /** The rules of a kind (its box, numbers and behaviour). */
 export function enemyRules(kind: EnemyKind): KindRules {
@@ -122,7 +140,10 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     spillGap: 0,
     // (An old burrback hunts its den whatever the light (wood.md §6); a weaver feels her touch, lit or not.)
     sense: senseCode(
-      spawn.senses ?? (spawn.kind === 'oldBurrback' || spawn.kind === 'weaver' ? 'always' : scene?.senses),
+      spawn.senses ??
+        (spawn.kind === 'oldBurrback' || spawn.kind === 'weaver' || spawn.kind === 'weaverBoss'
+          ? 'always'
+          : scene?.senses),
     ),
     guard: spawn.guards ? (scene?.lures ?? []).findIndex((l) => l.id === spawn.guards) : -1,
     dispersed: false,
@@ -530,7 +551,7 @@ export function slashEnemies(
       power,
       knockback,
     });
-    if (e.hp > 0) {
+    if (e.hp > 0 || K.undying?.(e)) {
       const n = frames(K.hurtFrames(t), 1);
       // (A tough blow does not stagger it: the old burrback's braced shell takes a pogo and rams on.)
       if (!K.tough?.(e, dir, t)) setMode(e, 'hurt', n);

@@ -17,6 +17,7 @@
  *
  * Pure: only + - * / sqrt, min, max, abs, floor, round (memory/sim-architecture.md).
  */
+import { bossOwnsLure } from './boss/data';
 import type { LureFreeHow, SimEvent, SlashDir } from './events';
 import { swingOffset } from './paths';
 import type { Box } from './player/attack';
@@ -29,6 +30,36 @@ export type LureRow = Tuning['lures']['kinds'][LureKind];
 /** The numbers of a lure's kind. */
 export function lureRow(t: Tuning, kind: LureKind): LureRow {
   return t.lures.kinds[kind];
+}
+
+/**
+ * The numbers lure `i` (`l`) pulls by now: its kind's, or the row a boss has switched it to
+ * (`state.lures.live.row`, memory/bosses.md: a great lamp's heart reaches further in the last phase).
+ */
+export function lureRowNow(lures: LuresState, i: number, l: Lure, t: Tuning): LureRow {
+  const r = lures.live?.row[i];
+  return r ? t.lures.kinds[r as LureKind] : t.lures.kinds[l.kind];
+}
+
+/**
+ * Where lure `i`'s flame is on `frame` (into `out`): `lureAt`, moved by what a boss has done to it
+ * (`state.lures.live.dx, dy`: the heart lowered). Every lure rule uses this.
+ */
+export function flameAt(
+  lures: LuresState,
+  i: number,
+  l: Lure,
+  frame: number,
+  t: Tuning,
+  out: { x: number; y: number } = { x: 0, y: 0 },
+): { x: number; y: number } {
+  lureAt(l, frame, t, out);
+  const live = lures.live;
+  if (live) {
+    out.x += live.dx[i] ?? 0;
+    out.y += live.dy[i] ?? 0;
+  }
+  return out;
 }
 
 const SWING = { dx: 0, dy: 0 };
@@ -115,14 +146,15 @@ export function lurePull(state: GameState, scene: Scene, t: Tuning): { ax: numbe
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
     if (!l || !acts(state, i)) continue;
-    const K = lureRow(t, l.kind);
-    const f = lureAt(l, state.frame, t, F);
+    const K = lureRowNow(state.lures, i, l, t);
+    const f = flameAt(state.lures, i, l, state.frame, t, F);
     const rx = f.x - cx;
     const ry = f.y - cy;
     const d2 = rx * rx + ry * ry;
     if (d2 >= K.radius * K.radius || d2 === 0) continue;
     const d = Math.sqrt(d2);
-    const k = Math.max(0, Math.min(1, (K.radius - d) / Math.max(1, K.radius - K.core)));
+    let k = Math.max(0, Math.min(1, (K.radius - d) / Math.max(1, K.radius - K.core)));
+    for (let n = 1; n < K.sharp; n++) k *= k;
     const c = t.lures.curve;
     const a = K.pullEdge + (K.pullCore - K.pullEdge) * k * (1 - c + c * k);
     const ux = rx / d;
@@ -145,8 +177,8 @@ export function lureCoreAt(state: GameState, scene: Scene, t: Tuning): number {
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
     if (!l || !acts(state, i)) continue;
-    const c = lureRow(t, l.kind).core;
-    const f = lureAt(l, state.frame, t, F);
+    const c = lureRowNow(state.lures, i, l, t).core;
+    const f = flameAt(state.lures, i, l, state.frame, t, F);
     const dx = f.x - cx;
     const dy = f.y - cy;
     if (dx * dx + dy * dy <= c * c) return i;
@@ -159,8 +191,8 @@ export function catchPlayer(state: GameState, scene: Scene, i: number, t: Tuning
   const l = scene.lures?.[i];
   if (!l) return;
   const p = state.player;
-  const K = lureRow(t, l.kind);
-  const f = lureAt(l, state.frame, t, F);
+  const K = lureRowNow(state.lures, i, l, t);
+  const f = flameAt(state.lures, i, l, state.frame, t, F);
   const dx = centreX(p) - f.x;
   const dy = centreY(p) - f.y;
   const d = Math.sqrt(dx * dx + dy * dy);
@@ -200,7 +232,7 @@ export function freePlayer(
   p.lurePend = 0;
   if (!l) return;
   const T = t.lures;
-  const f = lureAt(l, state.frame, t, F);
+  const f = flameAt(state.lures, i, l, state.frame, t, F);
   const fx = f.x;
   const fy = f.y;
   let vx = 0;
@@ -258,7 +290,7 @@ export function beatLure(
   p.lureBeats++;
   p.lureOut += T.beatPush;
   p.lureCd = Math.max(0, Math.round(T.beatCd));
-  const f = lureAt(l, state.frame, t, F);
+  const f = flameAt(state.lures, p.lure, l, state.frame, t, F);
   events.push({ type: 'lureBeat', id: l.id, x: f.x, y: f.y, beats: p.lureBeats, of, out: p.lureOut });
   if (p.lureBeats < of) return false;
   freePlayer(state, scene, t, 'beat', events, aimX, aimY);
@@ -276,11 +308,11 @@ export function orbitStep(state: GameState, scene: Scene, t: Tuning, out: { dx: 
   const l = scene.lures?.[p.lure];
   if (!l) return;
   const T = t.lures;
-  const K = lureRow(t, l.kind);
+  const K = lureRowNow(state.lures, p.lure, l, t);
   const r = K.core * T.orbitShare + p.lureOut;
   const cx = centreX(p);
   const cy = centreY(p);
-  const f = lureAt(l, state.frame, t, F);
+  const f = flameAt(state.lures, p.lure, l, state.frame, t, F);
   const lx = f.x;
   const ly = f.y;
   let rx = cx - lx;
@@ -338,7 +370,9 @@ export function slashLures(
     if (hp <= 0 || s.hitBy[i] === seq) continue;
     const l = list[i];
     if (!l) continue;
-    const f = lureAt(l, state.frame, t, F);
+    // (Guarded by its boss: the blade passes through it, memory/bosses.md.)
+    if ((s.live?.shield[i] ?? 0) > 0) continue;
+    const f = flameAt(s, i, l, state.frame, t, F);
     const lx = f.x;
     const ly = f.y;
     if (lx + r <= box.x || lx - r >= box.x + box.w || ly + r <= box.y || ly - r >= box.y + box.h) continue;
@@ -370,11 +404,12 @@ export function slashLures(
     res.snuffs++;
     s.out[i] = state.frame + 1;
     s.snuffed++;
-    const moths = Math.max(0, Math.round(lureRow(t, l.kind).moths));
+    const moths = Math.max(0, Math.round(lureRowNow(s, i, l, t).moths));
     s.freed += moths;
-    // Out for good (memory/save.md): the save remembers it by `room:id`, and the moths it freed.
+    // Out for good (memory/save.md): the save remembers it by `room:id`, and the moths it freed. A
+    // boss's flames are saved when it is beaten (src/sim/boss/index.ts): a fight lost starts over.
     const key = `${scene.id}:${l.id}`;
-    if (!state.save.snuffed.includes(key)) {
+    if (!bossOwnsLure(scene.boss, l.id) && !state.save.snuffed.includes(key)) {
       state.save.snuffed.push(key);
       state.save.moths += moths;
     }

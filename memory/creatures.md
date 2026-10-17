@@ -77,6 +77,8 @@ lab walk into its ram once each (1 hit) and pass.
   line from each rim end on along the spoke to the first solid / room edge within `frame`; `gaps` = slack sectors in
   degrees, 0 east, 90 down). Shared end points (to the pixel) join strands; an end within `web.anchorPx` 16 of a solid
   or the edge is an anchor.
+- `anchors: [[x, y]]` on a web spawn: points that hold strands like a solid (the Weaver's heart: a spoke cut from it
+  falls alone; without it every spoke of a web hung in open air fell at the first cut).
 - Web state is its EnemyState: `cut` = one char per strand (`0` intact, `1` cut, `2` fell), `seg`/`targetX,Y` = the
   last touch. Its box = the strands' bounds; it never hurts and takes no blows (`slashed` instead: every intact strand
   the slash box meets is cut, then strands no longer joined to an anchor fall; `webCut {cut, fell, left}`; no

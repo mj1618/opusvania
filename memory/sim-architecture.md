@@ -67,6 +67,13 @@ The sim's `PlayerState` with interpolated `x`, `y` plus `cx`, `cy`, `feetY`:
   `lureSnuff {moths, freed, snuffed, heal}`; `slashHit.target.kind` `lure`; `glideEnd` reason `lure`. State `lures`;
   on the player `lure`, `pullX` (added in the move like `kickX`) and the beat / grace fields. The pull runs in the
   controller after the mode update; the catch check after `post`; a caught frame replaces mode + move.
+- Bosses (memory/bosses.md, src/sim/boss-events.ts): `bossLock`, `bossUnlock {how: defeat|reset}`, `bossPhase {phase,
+  name, exam}`, `bossCue {set, cue, frame}`, `bossTell {attack: swing|lunge|drop|bite, frames, x0, x1, safeX, px, py,
+  len, reach, side, dir}`, `bossAttack`, `bossOpen {how: winded|stunned}`, `bossThreadCut`, `bossRing {ring, left}`,
+  `bossDefeat {flag, moths, time}` (+ `flagSet` by the boss id), `bossReset {retry, rings}`, `bossRelight {lure}`. State
+  `boss` (room-local, null without one) and `lures.live` (rows / offsets / shields a boss drives); `updateBoss` runs
+  after the kit, before the enemies; the step's scene is `lockedScene(withShortcuts(...), state.boss)`; a same-room
+  re-form calls `resetBoss` after `resetEnemies`.
 - Level kit (memory/level-kit.md): `thornHit`, `barkHit`, `barkBreak`, `kitClang`, `flagSet`, `gateOpen`;
   `slashHit.target.kind` `thorns | seedCase | bark`; `hurt.source.kind` `thorns`; a thorn's return is `fallReturn` id `thorns:<id>`.
   State `kit` (room-local); `withShortcuts` also adds standing bark and shut gates; `updateKit` runs after her offer, before enemies.

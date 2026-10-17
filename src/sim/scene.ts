@@ -1,4 +1,5 @@
 import type { AbilityId } from './abilities';
+import type { BossSpec } from './boss/data';
 import type { Bark, FlagGate, FlagTrigger, SeedCase, Swing, Thorns } from './kit-data';
 
 /**
@@ -65,7 +66,7 @@ export interface Pod {
  * The kinds of enemy (src/sim/enemies.ts). `burrback`: a small armoured beetle that walks its
  * platform. `lampwing`: a small pale moth-wisp that hovers in the open air and drifts after her light.
  */
-export type EnemyKind = 'burrback' | 'lampwing' | 'oldBurrback' | 'hawker' | 'web' | 'weaver';
+export type EnemyKind = 'burrback' | 'lampwing' | 'oldBurrback' | 'hawker' | 'web' | 'weaver' | 'weaverBoss';
 
 /**
  * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is
@@ -112,6 +113,11 @@ export interface EnemySpawn {
    * (the weaver runs along them). `x`, `y` = the hub.
    */
   strands?: Array<[number, number, number, number]>;
+  /**
+   * Web: points that hold strands besides solids and the room's edges (the great lamp's heart, which
+   * hangs on its own chain: a spoke cut from it falls alone).
+   */
+  anchors?: Array<[number, number]>;
 }
 
 /**
@@ -133,9 +139,11 @@ export interface Lantern {
 
 /**
  * The kinds of lure (`tuning.lures.kinds`): rows of numbers, not code (docs/design/core.md §3).
- * `wick`: a small glow-cap light, one cut. `lantern`: a bigger hung light, two cuts.
+ * `wick`: a small glow-cap light, one cut. `lantern`: a bigger hung light, two cuts. `ring` / `great`:
+ * a great lamp's ring flames and heart (a boss arena, memory/bosses.md); `greatWide` is the heart's
+ * row in its boss's last phase (a room names `great`; the boss switches the row in play).
  */
-export type LureKind = 'wick' | 'lantern';
+export type LureKind = 'wick' | 'lantern' | 'ring' | 'great' | 'greatWide';
 
 /**
  * A lure: one of the story's false lamps (src/sim/lures.ts, memory/lures.md). Named `lure` in code
@@ -305,6 +313,8 @@ export interface Scene {
   bark?: Bark[];
   gates?: FlagGate[];
   triggers?: FlagTrigger[];
+  /** A boss fight (src/sim/boss/, memory/bosses.md): its arena, lock, flags and the things it is made of. */
+  boss?: BossSpec;
 }
 
 /** A rect (sim px) that catches a fall: see `Scene.catches`. */

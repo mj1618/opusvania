@@ -275,8 +275,40 @@ export const defaultTuning = withVariants({
    */
   lures: {
     kinds: {
-      wick: { radius: 240, pullEdge: 0.15, pullCore: 1.9, swirl: 0.5, core: 40, hp: 1, moths: 5 },
-      lantern: { radius: 360, pullEdge: 0.2, pullCore: 2.3, swirl: 0.6, core: 52, hp: 2, moths: 10 },
+      wick: { radius: 240, pullEdge: 0.15, pullCore: 1.9, swirl: 0.5, core: 40, hp: 1, moths: 5, sharp: 1 },
+      lantern: {
+        radius: 360,
+        pullEdge: 0.2,
+        pullCore: 2.3,
+        swirl: 0.6,
+        core: 52,
+        hp: 2,
+        moths: 10,
+        sharp: 1,
+      },
+      /**
+       * A great lamp's ring flame (the Weaver's arena, memory/bosses.md): a wick whose moths feed the
+       * heart (0 here: the heart frees them all when it goes out).
+       */
+      ring: { radius: 240, pullEdge: 0.15, pullCore: 1.9, swirl: 0.5, core: 40, hp: 1, moths: 0, sharp: 1 },
+      /**
+       * A great lamp's heart (wood.md §6: R 700, core 72, pull 0.2 -> 2.3, 3 hits, 60 moths). The boss
+       * switches its row by phase (`state.lures.live.row`): `greatWide` is the last phase's bigger reach.
+       * Both are faint far out and bite late (`sharp` 4: the depth is k^8; 0.05 px/f² at 320 px, 0.3 at
+       * 200, 1.5 at 100): a field this big at a lantern's profile saturated her drift (12 px/f, faster
+       * than her run) and no column face could be climbed (memory/bosses.md).
+       */
+      great: { radius: 700, pullEdge: 0.02, pullCore: 2.3, swirl: 0.4, core: 72, hp: 3, moths: 60, sharp: 4 },
+      greatWide: {
+        radius: 1100,
+        pullEdge: 0.02,
+        pullCore: 2.3,
+        swirl: 0.4,
+        core: 72,
+        hp: 3,
+        moths: 60,
+        sharp: 4,
+      },
     },
     /**
      * The pull's sideways push is kept as its own momentum (`player.pullX`), so her steering does not
@@ -284,7 +316,10 @@ export const defaultTuning = withVariants({
      * the air, never faster than `pullXMax`.
      */
     pullXKeep: 0.97,
-    /** How the pull grows from the edge to the core: 0 = linearly, 1 = with the square (a well that bites late). */
+    /**
+     * How the pull grows from the edge to the core: 0 = linearly, 1 = with the square (a well that bites
+     * late). A row's `sharp` n first raises the depth k to the 2^(n-1)th power (1 = as is, 2 = k², 3 = k⁴).
+     */
     curve: 0.3,
     pullXMax: 12,
     /**
@@ -714,6 +749,75 @@ export const defaultTuning = withVariants({
     leaveFrames: 150,
     value: 0,
     valueFinisher: 0,
+  },
+  /**
+   * The Weaver, the wood's boss (docs/design/regions/wood.md §6, memory/bosses.md). One exam a phase:
+   * P1 glide among the spokes to snuff the ring flames, P2 read the swing and get off its half, P3 pogo
+   * its abdomen, then the heart. Frames at 60 Hz, px, px/f.
+   */
+  weaverBoss: {
+    width: 72,
+    height: 56,
+    contactDamage: 1,
+    hurtFrames: 8,
+    hurtSafeFrames: 8,
+    deadFrames: 40,
+    /** P1: held in the heart's core this long, its eyes counting, then it bites (1, she is thrown out). */
+    biteCount: 60,
+    biteFrames: 10,
+    /** P2: blows to end it (two or three a drop: every drop is seen by a good player). */
+    p2Hp: 6,
+    /** The thread tell (the arc drawn on the floor band), the drop down the thread, the swing (3/4 of a period). */
+    tellFrames: 45,
+    dropFrames: 18,
+    swingFrames: 60,
+    /** The thread from the canopy and the swing's reach each side (L sin 40 deg: the ends rise ~240). */
+    threadPx: 1010,
+    swingReach: 650,
+    /** Hanging winded after a swing (open to every cut); cut its thread and it falls stunned this long. */
+    windedFrames: 90,
+    stunFrames: 120,
+    /** Up its thread to the canopy between drops, and the pause there before the next tell. */
+    climbFrames: 50,
+    perchFrames: 30,
+    fallGravity: 1.2,
+    fallMax: 24,
+    /** P3: pogos to end it (one a winded window). */
+    p3Hp: 3,
+    /** Stands facing her, then the lunge tell (rears up, flashes quickening), then the lunge. */
+    huntFrames: 24,
+    lungeTell: 30,
+    /**
+     * The lunge runs to where she stands and a body past (`lungeOver`), at least `lungePx`, at most
+     * `lungeMax` (wood.md had a flat 240: a player who stood 300 px back was never reached, and P3 was
+     * waiting). The band on the floor shows exactly how far it goes.
+     */
+    lungePx: 240,
+    lungeMax: 560,
+    lungeOver: 80,
+    lungeSpeed: 11,
+    lungeWinded: 60,
+    /** After a pogo: it rights itself and skitters to the trunk away from her, up it, then drops back. */
+    skitterSpeed: 9,
+    climbSpeed: 8,
+    perchY: 1700,
+    dropTell: 30,
+    dropLand: 16,
+    /** ...plus a frame for every this many px it swings across to her (a long drop takes longer). */
+    dropAcross: 60,
+    /** Where a drop lands: her x, kept at least this far into the floor from the trunk it climbed. */
+    dropNear: 160,
+    /** P3 end: it flees up into the canopy; the heart lowers over this long. */
+    fleeSpeed: 10,
+    lowerFrames: 90,
+    /** Cue timelines (frames from the cue set's start; memory/bosses.md). */
+    cues: {
+      intro: { name: 20, start: 80, nameOut: 170 },
+      p1end: { spokesFall: 0, climb: 0, next: 130 },
+      p2end: { fall: 0, flare: 40, next: 100 },
+      p3end: { flee: 0, lower: 30, next: 130 },
+      defeat: { heartOut: 0, burst: 12, sky: 60, curtain: 90, relight: 170, done: 230 },
+    },
   },
   /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
   pickups: {

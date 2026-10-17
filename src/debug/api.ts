@@ -14,13 +14,14 @@ import { clearSave, readSave, type SlotStore } from '../save/storage';
 import { ROOM_IDS } from '../scene/index';
 import type { Room } from '../scene/room';
 import { ABILITIES, type AbilityId, isAbility } from '../sim/abilities';
+import { jumpBoss } from '../sim/boss/index';
 import { enemiesAlive } from '../sim/enemies';
 import type { SimEvent } from '../sim/events';
 import { offerTarget } from '../sim/giving';
 import { restPoint } from '../sim/goal';
 import { type GameState, goalHolds, heartBox, lampCost, lanternBox, lanternCost } from '../sim/index';
 import { barkHpMax } from '../sim/kit';
-import { lureAt, lureHpMax, lureRow } from '../sim/lures';
+import { flameAt, lureHpMax, lureRowNow } from '../sim/lures';
 import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
 import { markSeen, seenNow, seenScale } from '../sim/seen';
@@ -282,6 +283,42 @@ export interface GameDebugApi {
    * what a lamp room's sight hunters see her by), `grab` = what holds her (a web; `beats` of `of`),
    * `webs` = each web's strands (`intact`, `cut`, `fell`), slack once its lamp is out, and its last touch.
    */
+  /**
+   * The room's boss fight (memory/bosses.md), null without one: its stage (`wait` / `intro` / `fight` /
+   * `shift` / `end` / `down`), phase (1-based, with its name), the doors (`locked`), `retry`, the fight's
+   * clock (`time`, `phaseTime` frames), its creature (mode, box centre, hp of this phase, open / stunned),
+   * the tell now showing (`attack`, frames left, the floor span `x0..x1`, `safeX`), its thread, the heart
+   * (where it is now, its row and radius, hp, guarded) and the ring flames. `boss({phase: n})` first sets
+   * the fight up as phase n begins (debug: the doors seal, earlier phases are done).
+   */
+  boss(set?: { phase?: number }): {
+    id: string;
+    name: string;
+    stage: string;
+    phase: number;
+    phaseName: string;
+    locked: boolean;
+    retry: boolean;
+    attempt: number;
+    time: number;
+    phaseTime: number;
+    creature: {
+      mode: string;
+      x: number;
+      y: number;
+      hp: number;
+      hpMax: number;
+      facing: number;
+      open: boolean;
+      stunned: boolean;
+      gone: boolean;
+    } | null;
+    tell: { attack: string; frames: number; x0: number; x1: number; safeX: number } | null;
+    thread: { x0: number; y0: number; side: number; drop: number } | null;
+    heart: { x: number; y: number; row: string; radius: number; hp: number; shield: boolean };
+    rings: Array<{ id: string; burning: boolean }>;
+    flags: { met: boolean; down: boolean };
+  } | null;
   creatures(): {
     lit: number;
     grab: { id: string; x: number; y: number; beats: number; of: number; frames: number } | null;
@@ -797,9 +834,9 @@ export function installDebugApi(deps: {
         pullX: p.pullX,
         grace: graced ? { id: graced.id, frames: p.lureGraceFrames } : null,
         list: list.map((l, i) => {
-          const K = lureRow(game.tuning, l.kind);
+          const K = lureRowNow(s, i, l, game.tuning);
           const hp = s.hp[i] ?? 0;
-          const at = lureAt(l, Math.max(0, game.state.frame - 1), game.tuning);
+          const at = flameAt(s, i, l, Math.max(0, game.state.frame - 1), game.tuning);
           return {
             id: l.id,
             kind: l.kind,
@@ -854,6 +891,66 @@ export function installDebugApi(deps: {
           stunned: e.stunned,
           feints: e.feints,
         })),
+      };
+    },
+    boss(set) {
+      const spec = game.scene.boss;
+      if (!spec || !game.state.boss) return null;
+      if (set?.phase !== undefined) {
+        const events: SimEvent[] = [];
+        jumpBoss(game.state, game.scene, game.tuning, set.phase, events);
+        for (const fn of game.afterStep) fn(events);
+        redraw();
+      }
+      const st = game.state;
+      const b = st.boss as NonNullable<GameState['boss']>;
+      const e = st.enemies.find((x) => x.id === spec.creature);
+      const lures = game.scene.lures ?? [];
+      const hi = lures.findIndex((l) => l.id === spec.heart);
+      const hl = lures[hi];
+      const hf = hl ? flameAt(st.lures, hi, hl, Math.max(0, st.frame - 1), game.tuning) : { x: 0, y: 0 };
+      const names = ['the ring', 'the drops', 'the floor', 'the heart'];
+      return {
+        id: b.id,
+        name: spec.name,
+        stage: b.stage,
+        phase: b.phase,
+        phaseName: names[b.phase - 1] ?? '',
+        locked: b.locked,
+        retry: b.retry,
+        attempt: b.attempt,
+        time: b.time,
+        phaseTime: b.phaseTime,
+        creature: e
+          ? {
+              mode: e.mode,
+              x: e.x + e.w / 2,
+              y: e.y + e.h / 2,
+              hp: e.hp,
+              hpMax: e.hpMax,
+              facing: e.facing,
+              open: e.mode === 'recover',
+              stunned: e.stunned,
+              gone: e.gone,
+            }
+          : null,
+        tell: b.tell
+          ? { attack: b.tell, frames: b.tellFrames, x0: b.tellX0, x1: b.tellX1, safeX: b.safeX }
+          : null,
+        thread: b.thread ? { x0: b.pivotX, y0: b.pivotY, side: b.side, drop: b.drop } : null,
+        heart: {
+          x: hf.x,
+          y: hf.y,
+          row: st.lures.live?.row[hi] || (hl?.kind ?? ''),
+          radius: hl ? lureRowNow(st.lures, hi, hl, game.tuning).radius : 0,
+          hp: st.lures.hp[hi] ?? 0,
+          shield: (st.lures.live?.shield[hi] ?? 0) > 0,
+        },
+        rings: spec.rings.map((id) => ({
+          id,
+          burning: (st.lures.hp[lures.findIndex((l) => l.id === id)] ?? 0) > 0,
+        })),
+        flags: { met: st.save.flags.includes(spec.met), down: st.save.flags.includes(spec.flag) },
       };
     },
     creatures() {

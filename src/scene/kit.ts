@@ -80,7 +80,7 @@ interface KitRoom {
   lures?:
     | Array<{
         id: string;
-        kind: 'wick' | 'lantern';
+        kind: 'wick' | 'lantern' | 'ring' | 'great';
         x: number;
         y: number;
         swing?: { length: number; reach?: number | undefined; period?: number | undefined } | undefined;

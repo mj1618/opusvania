@@ -256,7 +256,7 @@ export const weaver: KindRules = {
       e.vy = 0;
       return false;
     }
-    const g = webGraph(list, scene, info.t);
+    const g = webGraph(list, scene, info.t, scene.enemies?.[wi]?.anchors);
     // Its own strand cut from under it: it steps onto the nearest one still standing (or lets go).
     if (!intact(webE, e.seg)) {
       if (!snap(e, webE, list, e.x + e.w / 2, e.y + e.h / 2)) {

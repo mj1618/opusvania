@@ -13,10 +13,11 @@
  *    reachable place a moon patch can be reached (no softlock). Rooms say what needs what in
  *    `routes` (src/scene/room.ts); a room without them is open inside. Story flags work like
  *    abilities: a route can need `flags` (a flag gate, memory/level-kit.md), and a trigger reached
- *    sets its flag; a flag no trigger in the world sets is reported.
+ *    sets its flag (a boss reached sets its `flag`); a flag nothing in the world sets is reported.
  */
 import type { AbilityId } from '../sim/abilities';
 import { exitSegment, linkWorld, mirrorOf, type World, type WorldRoom } from '../sim/world';
+import { bossNodes } from './boss';
 import { ROOMS, WORLD } from './index';
 import { kitNodes } from './kit';
 import type { Room } from './room';
@@ -45,7 +46,7 @@ function flagKey(flag: string): string {
   return `flag:${flag}`;
 }
 
-/** Triggers reached set their flags (in `owned`). True if one was new. */
+/** Triggers reached set their flags (in `owned`), and so does a boss reached (it can be beaten: its `flag`). True if one was new. */
 function setFlags(world: World, reached: ReadonlySet<Node>, owned: Set<string>): boolean {
   let grew = false;
   for (const r of Object.values(world.rooms)) {
@@ -53,6 +54,11 @@ function setFlags(world: World, reached: ReadonlySet<Node>, owned: Set<string>):
     for (const t of r.scene.triggers ?? []) {
       if (!reached.has(`${r.id}:${t.id}`) || owned.has(flagKey(t.sets))) continue;
       owned.add(flagKey(t.sets));
+      grew = true;
+    }
+    const boss = r.scene.boss;
+    if (boss && reached.has(`${r.id}:${boss.id}`) && !owned.has(flagKey(boss.flag))) {
+      owned.add(flagKey(boss.flag));
       grew = true;
     }
   }
@@ -79,6 +85,7 @@ function nodesOf(room: Room): string[] {
     ...(room.patches ?? []).map((p) => p.id),
     ...(room.glades ?? []).map((g) => g.id),
     ...kitNodes(room),
+    ...bossNodes(room),
   ];
 }
 
@@ -264,7 +271,12 @@ export function validateWorld(world: World = GAME_WORLD): string[] {
       if (!seen.has(r.id)) out.push(`room "${r.id}" is not connected to the rest of the world`);
   }
   // Flag gates: every flag a route needs is set by some trigger in the world.
-  const sources = new Set(placed.flatMap((r) => (r.scene.triggers ?? []).map((t) => t.sets)));
+  const sources = new Set(
+    placed.flatMap((r) => [
+      ...(r.scene.triggers ?? []).map((t) => t.sets),
+      ...(r.scene.boss ? [r.scene.boss.flag] : []),
+    ]),
+  );
   for (const r of placed)
     for (const q of (r.scene as Room).routes ?? [])
       for (const f of q.flags ?? [])

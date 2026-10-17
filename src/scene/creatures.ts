@@ -84,6 +84,7 @@ export const ENEMIES = z
           kind: z.literal('web'),
           strands: z.array(strand).optional(),
           orb: ORB.optional(),
+          anchors: z.array(z.tuple([z.number(), z.number()])).optional(),
         })
         .strict(),
       z
@@ -93,6 +94,8 @@ export const ENEMIES = z
           web: z.string().min(1),
         })
         .strict(),
+      // The Weaver boss (memory/bosses.md): its fight is the room's `boss` block (src/scene/boss.ts).
+      z.object({ ...base, kind: z.literal('weaverBoss') }).strict(),
     ]),
   )
   .default([]);

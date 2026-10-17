@@ -308,6 +308,7 @@ export class RenderStage {
       save: this.game.state.save,
       rest: this.game.state.rest,
       kit: this.game.state.kit,
+      boss: this.game.state.boss,
     };
     this.scene.layers.applyCamera(view);
     this.scene.update(dt, this.clock, view, sim);

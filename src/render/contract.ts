@@ -20,6 +20,7 @@ import type { Room } from '../scene/room';
 import type { SimEvent } from '../sim/events';
 import type { KitState } from '../sim/kit';
 import type {
+  BossState,
   EnemyState,
   GameState,
   LuresState,
@@ -128,6 +129,8 @@ export interface SimView {
   readonly rest: Readonly<RestState>;
   /** The level kit (memory/level-kit.md): bark cuts left, gates open. Read only. */
   readonly kit: Readonly<KitState>;
+  /** The room's boss fight (memory/bosses.md): its stage, phase, tell; null in a room without one. Read only. */
+  readonly boss: Readonly<BossState> | null;
 }
 
 /** Services every renderer gets at construction. */

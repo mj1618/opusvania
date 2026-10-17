@@ -11,6 +11,7 @@
  *
  * Pure: plain data, + - * / floor round min max abs.
  */
+import { createBoss } from './boss/index';
 import { createEnemies } from './enemies';
 import type { SimEvent } from './events';
 import { createGoal } from './goal';
@@ -159,17 +160,21 @@ export function remember(list: string[], id: string): boolean {
  * room (the hatching only plays then).
  */
 export function createLocal(scene: Scene, t: Tuning, save: SaveState, fresh: boolean): RoomLocal {
+  const lures = createLures(scene, t, save.snuffed);
+  const enemies = createEnemies(scene, t);
   return {
     pickups: createPickups(scene),
     pods: createPods(scene),
-    lures: createLures(scene, t, save.snuffed),
-    enemies: createEnemies(scene, t),
+    lures,
+    enemies,
     goal: createGoal(scene),
     exit: null,
     caught: null,
     hatch: fresh ? createHatch(scene) : null,
     rest: { at: -1, frames: 0, done: false },
     kit: createKit(scene, t, save),
+    // The room's boss (memory/bosses.md): beaten for good, a retry, or a first meeting; it sets up its own lures and creature.
+    boss: createBoss(scene, t, { lures, enemies, save }),
   };
 }
 

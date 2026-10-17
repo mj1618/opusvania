@@ -2,6 +2,7 @@ import { z } from 'zod';
 import labCreaturesJson from '../../content/rooms/lab-creatures.json' with { type: 'json' };
 import labKitJson from '../../content/rooms/lab-kit.json' with { type: 'json' };
 import labLampsJson from '../../content/rooms/lab-lamps.json' with { type: 'json' };
+import labWeaverJson from '../../content/rooms/lab-weaver.json' with { type: 'json' };
 import labWorldAJson from '../../content/rooms/lab-world-a.json' with { type: 'json' };
 import labWorldBJson from '../../content/rooms/lab-world-b.json' with { type: 'json' };
 import labWorldCJson from '../../content/rooms/lab-world-c.json' with { type: 'json' };
@@ -20,6 +21,7 @@ import woodWicksJson from '../../content/rooms/wood-wicks.json' with { type: 'js
 import worldJson from '../../content/world.json' with { type: 'json' };
 import { ABILITIES } from '../sim/abilities';
 import { defaultTuning } from '../sim/tuning';
+import { BOSS, bossNodes, checkBoss } from './boss';
 import { checkCreatures, ENEMIES, SENSES } from './creatures';
 import { CAMERA_ZONES, checkKit, KIT_FIELDS, kitNodes, ROUTE_FLAGS, SWING } from './kit';
 import type { Room } from './room';
@@ -116,7 +118,7 @@ const SceneSchema = z
         z
           .object({
             id: z.string().min(1),
-            kind: z.enum(['wick', 'lantern']),
+            kind: z.enum(['wick', 'lantern', 'ring', 'great']),
             x: int,
             y: int,
             spin: z.union([z.literal(-1), z.literal(1)]).optional(),
@@ -215,6 +217,8 @@ const SceneSchema = z
       .optional(),
     // --- The level kit (src/scene/kit.ts, memory/level-kit.md).
     ...KIT_FIELDS,
+    // --- A boss fight (src/scene/boss.ts, memory/bosses.md).
+    boss: BOSS,
     art: z
       .object({
         // `greybox`: flat shapes and labels instead of the painted layers (src/render/greybox, memory/greybox.md).
@@ -551,6 +555,7 @@ export function parseScene(json: unknown): Room {
       throw new Error(`Scene "${s.id}": shortcut "${c.id}" leaves the scene bounds`);
   }
   checkKit(s, seen);
+  checkBoss(s, seen);
   // Route claims name things of this room ('spawn' too); `door` names a shortcut.
   const nodes = new Set<string>([
     'spawn',
@@ -559,6 +564,7 @@ export function parseScene(json: unknown): Room {
     ...(s.patches ?? []).map((p) => p.id),
     ...(s.glades ?? []).map((g) => g.id),
     ...kitNodes(s),
+    ...bossNodes(s),
   ]);
   for (const r of s.routes ?? []) {
     for (const end of [r.from, r.to])
@@ -593,6 +599,7 @@ const FILES: readonly unknown[] = [
   labLampsJson,
   labKitJson,
   labCreaturesJson,
+  labWeaverJson,
 ];
 
 /** Every room, by id. */

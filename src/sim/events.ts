@@ -1,4 +1,5 @@
 import type { AbilityId } from './abilities';
+import type { BossEvent } from './boss-events';
 import type { CreatureEvent } from './creature-events';
 import type { KitEvent, KitTargetKind } from './kit-events';
 import type { EnemyKind, LureKind, PickupKind, PodMount } from './scene';
@@ -31,6 +32,8 @@ export type SimEvent =
   | KitEvent
   /** The lamp-rule creatures: grabs, dispersal, the old burrback, the web and weaver (src/sim/creature-events.ts). */
   | CreatureEvent
+  /** A boss fight: lock, phases, cues, tells, defeat (src/sim/boss-events.ts, memory/bosses.md). */
+  | BossEvent
   /** The player was placed (boot, load, teleport): snap cameras and springs, don't interpolate. */
   | { type: 'spawn'; x: number; y: number }
   /**

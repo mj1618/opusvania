@@ -52,6 +52,13 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   `flag()` lists the save's story flags, `flag(name)` sets, `flag(name, false)` clears (gates follow next step).
   `lures().list[].x, y` = where the flame is now (a swinging one moves). `cam().zoom` < 1 inside a camera zone.
   `?room=lab-kit` is the level-kit lab (memory/level-kit.md). F2 draws the kit's boxes.
+- **Bosses (memory/bosses.md)**: `boss()` → `{id, name, stage, phase, phaseName, locked, retry, attempt, time, phaseTime,
+  creature: {mode, x, y, hp, hpMax, open, stunned, gone}, tell: {attack, frames, x0, x1, safeX} | null, thread, heart:
+  {x, y, row, radius, hp, shield}, rings: [{id, burning}], flags: {met, down}}` (null without a boss); `boss({phase: n})`
+  first sets the fight up as phase n begins (doors sealed, earlier phases done). `lures().list[]` reports the live row
+  (radius) and position a boss gives its heart. `?room=lab-weaver` is the boss lab. The winning bot in a `?manual` page:
+  `const m = await import('/tools/playtest/weaver-bot.ts'); m.stepBot(new m.WeaverBot(), 4000, (s) => ...)`; live with
+  real keys (realtime page): `await m.playLive(180)` -> `{won, frames, hurts, fades}`.
 - `pods()` → `{burst, total, worth, list: [{id, x, y, mount, state: closed|open, hp, hpMax, worth, paid,
   left}]}` (`paid` = glints set loose so far, `left` = still flying to her): combat.md.
 - `enemies()` → `{alive, total, list: [{id, kind, x, y (feet centre), box, home (the scene's x, y: a burrback's

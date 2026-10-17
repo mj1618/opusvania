@@ -312,6 +312,20 @@ export interface LuresState {
   /** How many have gone out, and the moths freed in all. */
   snuffed: number;
   freed: number;
+  /**
+   * Lures a boss drives (memory/bosses.md), per `scene.lures` index; absent in rooms without one.
+   * `row`: the tuning row it pulls by now ('' = its scene kind's: a great lamp's heart reaches further
+   * in the last phase); `dx`, `dy`: where its flame is now from its scene point (the heart lowers);
+   * `shield`: 1 = the blade passes through it (the heart while its boss guards it).
+   */
+  live?: LureLive;
+}
+
+export interface LureLive {
+  row: string[];
+  dx: number[];
+  dy: number[];
+  shield: number[];
 }
 
 /**
@@ -330,6 +344,9 @@ export interface LuresState {
  * Weaver: `sit` (at home on its web), `run` (along the strands to where she touched), `windup` (the
  * count before the bite: its tell), `bite` (its touch is live), `back` (home along the strands).
  * Web: `hang`.
+ * The Weaver boss (memory/bosses.md) adds: `swing` (on its thread), `climb` (up a thread or a trunk),
+ * `perch` (up in the canopy or on a trunk, out of play), `fall` (its thread cut), `skitter` (running
+ * off along the floor), `flee` (gone for good), `hunt` (on the floor, facing her).
  */
 export type EnemyMode =
   | 'walk'
@@ -355,7 +372,14 @@ export type EnemyMode =
   | 'run'
   | 'bite'
   | 'back'
-  | 'hang';
+  | 'hang'
+  | 'swing'
+  | 'climb'
+  | 'perch'
+  | 'fall'
+  | 'skitter'
+  | 'flee'
+  | 'hunt';
 
 /**
  * One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. One flat
@@ -747,6 +771,60 @@ export interface HatchState {
   done: boolean;
 }
 
+/**
+ * A boss fight (src/sim/boss/, memory/bosses.md): room-local, rebuilt on every entry from the scene and
+ * the save (`met`: a retry; `flag`: beaten for good).
+ */
+export interface BossState {
+  /** `scene.boss.id`. */
+  id: string;
+  /**
+   * `wait`: not started, the arena open. `intro`: locked, the name card, nothing attacks. `fight`: a
+   * phase is on. `shift`: between phases (a cue timeline runs, nothing attacks). `end`: beaten, the
+   * defeat timeline runs. `down`: beaten for good (on every later entry too).
+   */
+  stage: 'wait' | 'intro' | 'fight' | 'shift' | 'end' | 'down';
+  /** 0 before the fight, then the phase (1-based; the Weaver: 1 ring, 2 drops, 3 floor, 4 heart). */
+  phase: number;
+  /** The doors are sealed. */
+  locked: boolean;
+  /** This attempt is a retry (the save has `met`): the short first phase. */
+  retry: boolean;
+  /** Locks this visit (1 = the first attempt of this visit). */
+  attempt: number;
+  /** Frames since the lock, and since the phase began. */
+  time: number;
+  phaseTime: number;
+  /** The cue timeline running ('' = none), frames into it, cues fired so far. */
+  cueSet: string;
+  cueFrames: number;
+  cueNext: number;
+  // --- The Weaver (src/sim/boss/weaver.ts); other kinds reuse what fits.
+  /** P2: drops made so far (the next pivot is `drops[drop % n]`). */
+  drop: number;
+  /** The thread: its top (`pivotX`, `pivotY`), whether it holds the spider, its length, its swing's reach. */
+  pivotX: number;
+  pivotY: number;
+  thread: boolean;
+  len: number;
+  reach: number;
+  /** Which end of its arc the swing starts at (-1 west, 1 east). */
+  side: number;
+  /** The tell now showing ('' none): `swing` (P2's arc), `lunge` (P3's run), `drop` (P3's drop), `bite` (P1's count). */
+  tell: string;
+  /** Frames of it left before the attack is live. */
+  tellFrames: number;
+  /** The tell's danger along the floor (x span) and a place the attack never reaches (`safeX`, -1 = none). */
+  tellX0: number;
+  tellX1: number;
+  safeX: number;
+  /** P3: the lunge's way, where the drop lands, pogos taken. */
+  dir: number;
+  landX: number;
+  /** The heart's offset now (it lowers at the end). */
+  heartDy: number;
+}
+
 /** The part of the state that belongs to the room: rebuilt by every room entry (src/sim/world.ts). */
 export interface RoomLocal {
   pickups: PickupsState;
@@ -760,6 +838,8 @@ export interface RoomLocal {
   rest: RestState;
   /** The level kit's room state: bark cuts, gates, a thorn's hold (src/sim/kit.ts, memory/level-kit.md). */
   kit: KitState;
+  /** The room's boss fight (memory/bosses.md), null in a room without one. */
+  boss: BossState | null;
 }
 
 export interface GameState {
@@ -790,6 +870,8 @@ export interface GameState {
   rest: RestState;
   /** The level kit's room state: bark cuts, gates, a thorn's hold (src/sim/kit.ts, memory/level-kit.md). */
   kit: KitState;
+  /** The room's boss fight (memory/bosses.md), null in a room without one. */
+  boss: BossState | null;
 }
 
 export function cloneState(s: GameState): GameState {
@@ -816,6 +898,16 @@ export function cloneState(s: GameState): GameState {
       out: s.lures.out.slice(),
       snuffed: s.lures.snuffed,
       freed: s.lures.freed,
+      ...(s.lures.live
+        ? {
+            live: {
+              row: s.lures.live.row.slice(),
+              dx: s.lures.live.dx.slice(),
+              dy: s.lures.live.dy.slice(),
+              shield: s.lures.live.shield.slice(),
+            },
+          }
+        : {}),
     },
     enemies: s.enemies.map((e) => ({ ...e })),
     goal: {
@@ -834,6 +926,7 @@ export function cloneState(s: GameState): GameState {
     hatch: s.hatch ? { ...s.hatch } : null,
     rest: { ...s.rest },
     kit: cloneKit(s.kit),
+    boss: s.boss ? { ...s.boss } : null,
   };
 }
 

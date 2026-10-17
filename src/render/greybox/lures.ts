@@ -7,7 +7,7 @@
  */
 import type { Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
-import { lureAt } from '../../sim/lures';
+import { flameAt, lureRowNow } from '../../sim/lures';
 import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
 import { FreedMoths } from './moths';
@@ -64,11 +64,11 @@ export class LureView {
     for (let i = 0; i < list.length; i++) {
       const l = list[i];
       if (!l) continue;
-      const K = T.kinds[l.kind];
+      const K = lureRowNow(sim.lures, i, l, tuning);
       const hp = sim.lures.hp[i] ?? 0;
       // Where the flame is now: a swinging one on its arc (memory/level-kit.md), on the sim's frame
       // interpolated like her (the latest step used frame - 1).
-      const at = lureAt(l, sim.frame - 2 + sim.alpha, tuning, AT);
+      const at = flameAt(sim.lures, i, l, sim.frame - 2 + sim.alpha, tuning, AT);
       const lx = at.x;
       const ly = at.y;
       if (l.swing) {
@@ -109,6 +109,17 @@ export class LureView {
       back.circle(lx, ly, T.flameRadius * 1.6 * fl).fill({ color: GB.flame, alpha: 0.18 });
       back.circle(lx, ly, T.flameRadius * 0.75 * fl).fill({ color: GB.flame });
       back.circle(lx, ly - 2, T.flameRadius * 0.32 * fl).fill({ color: GB.flameHot });
+      // Guarded by its boss (memory/bosses.md): a silk cage round the flame, the blade passes through.
+      if ((sim.lures.live?.shield[i] ?? 0) > 0) {
+        back.circle(lx, ly, T.flameRadius * 2.2).stroke({ color: 0xe6ecf5, width: 3, alpha: 0.7 });
+        for (let k = 0; k < 6; k++) {
+          const a = (k * Math.PI) / 3;
+          back
+            .moveTo(lx, ly)
+            .lineTo(lx + Math.cos(a) * T.flameRadius * 2.2, ly + Math.sin(a) * T.flameRadius * 2.2);
+        }
+        back.stroke({ color: 0xe6ecf5, width: 1, alpha: 0.5 });
+      }
       // hp pips over the flame (only for more than one cut).
       const max = Math.max(1, Math.round(K.hp));
       if (max > 1)

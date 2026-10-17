@@ -39,8 +39,16 @@ export interface WebGraph {
 
 const GRAPHS = new WeakMap<object, WebGraph>();
 
-/** The graph of a web's strands (built once per spawn: the scene is static). */
-export function webGraph(strands: readonly Strand[], scene: Scene, t: Tuning): WebGraph {
+/**
+ * The graph of a web's strands (built once per spawn: the scene is static). `anchors`: points that hold
+ * strands besides solids and the room's edges (`EnemySpawn.anchors`: a great lamp's heart).
+ */
+export function webGraph(
+  strands: readonly Strand[],
+  scene: Scene,
+  t: Tuning,
+  anchors: ReadonlyArray<readonly [number, number]> = [],
+): WebGraph {
   const hit = GRAPHS.get(strands);
   if (hit) return hit;
   const g: WebGraph = { nx: [], ny: [], anchored: [], a: [], b: [], len: [], adj: [] };
@@ -53,7 +61,11 @@ export function webGraph(strands: readonly Strand[], scene: Scene, t: Tuning): W
       index.set(k, n);
       g.nx.push(Math.round(x));
       g.ny.push(Math.round(y));
-      g.anchored.push(anchorAt(scene, x, y, t.web.anchorPx));
+      const px = t.web.anchorPx;
+      g.anchored.push(
+        anchorAt(scene, x, y, px) ||
+          anchors.some((a) => (a[0] - x) * (a[0] - x) + (a[1] - y) * (a[1] - y) <= px * px),
+      );
       g.adj.push([]);
     }
     return n;
@@ -279,7 +291,7 @@ export const web: KindRules = {
     }
     if (cut === 0) return 0;
     e.cut = chars.join('');
-    const fell = dropLoose(e, webGraph(list, info.scene, info.t));
+    const fell = dropLoose(e, webGraph(list, info.scene, info.t, info.scene.enemies?.[index]?.anchors));
     let left = 0;
     for (let i = 0; i < e.cut.length; i++) if (e.cut.charCodeAt(i) === 48) left++;
     info.events.push({ type: 'webCut', id: e.id, x: sx / cut, y: sy / cut, cut, fell, left });

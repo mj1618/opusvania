@@ -4,6 +4,7 @@
  * tsconfig.sim.json, biome overrides and tests/unit/sim-purity.test.ts).
  */
 import { ABILITIES, normalizeAbilities } from './abilities';
+import { lockedScene, resetBoss, updateBoss } from './boss/index';
 import { contactDamage, enemyTouched, resetEnemies, updateEnemies } from './enemies';
 import type { SimEvent } from './events';
 import { markOfferTarget, updateOffer } from './giving';
@@ -269,8 +270,8 @@ export function step(
   const P = resolveParams(t, state.save.abilities);
   const first = events.length;
   state.save.time++;
-  // The scene as played: closed shortcuts are solids (memory/world.md).
-  const S = withShortcuts(scene, state.save);
+  // The scene as played: closed shortcuts are solids (memory/world.md), and a boss's doors while sealed.
+  const S = lockedScene(withShortcuts(scene, state.save), state.boss);
   // Leaving the room: no new input reaches her while the room holds her; then the next room, or the
   // room again when nothing is there.
   const ex = state.exit;
@@ -354,11 +355,13 @@ export function step(
       const i = scene.patches?.indexOf(pp) ?? -1;
       state.rest = { at: i, frames: 0, done: true };
       resetEnemies(state, S, t, events);
+      resetBoss(state, scene, t, events);
     } else {
       const light = restPoint(state, S, t);
       reformPlayer(state, S, P, events, light);
       goalReformed(state.goal, light);
       resetEnemies(state, S, t, events);
+      resetBoss(state, scene, t, events);
     }
   }
   // From the end of the run on she is held (no input reaches her; she walks into the heart and
@@ -378,6 +381,8 @@ export function step(
     },
     events,
   );
+  // A boss fight (memory/bosses.md): the lock, its phases and cues, before its creature moves.
+  updateBoss(state, S, t, events);
   const touch = updateEnemies(state, S, t, events, first);
   const p = state.player;
   const e = touch >= 0 ? state.enemies[touch] : undefined;

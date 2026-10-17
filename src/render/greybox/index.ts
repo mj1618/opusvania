@@ -15,6 +15,7 @@ import { Container, Graphics } from 'pixi.js';
 import { drawEnemyBoxes, drawWebs } from '../../debug/overlay';
 import { tuning } from '../../sim/tuning';
 import type { SceneContext, SceneFrame } from '../scene/index';
+import { BossView } from './boss';
 import { KitView, kitLabels } from './kit';
 import { LureView } from './lures';
 import { GB } from './palette';
@@ -50,6 +51,8 @@ export class GreyboxLayer {
   private world!: WorldView;
   /** The level kit (memory/level-kit.md): thorns, seed-cases, bark, gates, triggers, camera zones. */
   private readonly kit = new KitView();
+  /** A boss fight (memory/bosses.md): doors, threads, tells, the label and the name card. */
+  private boss!: BossView;
 
   init(ctx: SceneContext): void {
     this.ctx = ctx;
@@ -63,12 +66,14 @@ export class GreyboxLayer {
     // Patches, glades, shortcuts and doors (memory/world.md): under her, their flashes and lines over her.
     const flashText = new Container({ label: 'greybox-world-text' });
     this.world = new WorldView(flashText);
-    ctx.layers.playfield.addChild(this.world.back, this.kit.back);
+    this.boss = new BossView(flashText);
+    ctx.layers.playfield.addChild(this.world.back, this.kit.back, this.boss.back);
     ctx.layers.air.addChild(
       this.creatures,
       this.front,
       this.world.front,
       this.kit.front,
+      this.boss.front,
       this.labels,
       flashText,
     );
@@ -85,6 +90,8 @@ export class GreyboxLayer {
     this.world.draw(dt, clock, sim);
     this.kit.onEvents(sim.events);
     this.kit.draw(dt, clock, sim);
+    this.boss.onEvents(sim.events, sim);
+    this.boss.draw(dt, clock, sim);
     const g = this.creatures.clear();
     // Webs first (their strands), then the creatures over them (memory/creatures.md).
     drawWebs(g, sim.scene, sim.enemies, sim.player);
